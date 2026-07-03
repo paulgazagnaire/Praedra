@@ -1,0 +1,1699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Praedra</title>
+<style>
+  html, body { margin:0; padding:0; background:#06080d; color:#cfd8e3; font:13px/1.4 ui-monospace, Menlo, Consolas, monospace; overflow:hidden; }
+  #wrap { position:fixed; inset:0; display:flex; flex-direction:column; }
+  #bar { display:flex; gap:10px; align-items:center; padding:6px 10px; background:#0b1018; border-bottom:1px solid #1c2636; flex-wrap:wrap; }
+  #bar label { color:#7f8fa6; }
+  #bar input, #bar select, #bar button { background:#131a26; color:#cfd8e3; border:1px solid #2a3850; border-radius:3px; padding:2px 7px; font:inherit; }
+  #bar button { cursor:pointer; } #bar button:hover { border-color:#4a6version; }
+  #cv { flex:1; display:block; cursor:crosshair; }
+  #hud { position:absolute; top:44px; left:10px; pointer-events:none; white-space:pre; color:#9fb0c8; text-shadow:0 1px 2px #000; }
+  #banner { position:absolute; top:35%; left:0; right:0; text-align:center; font-size:34px; color:#fff; text-shadow:0 2px 8px #000; pointer-events:none; display:none; }
+  #help { position:absolute; right:10px; top:44px; color:#5c6b80; text-align:right; pointer-events:none; white-space:pre; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="bar">
+    <label>seed <input id="seed" type="number" value="1" style="width:70px"></label>
+    <label>density <input id="density" type="number" min="0" max="1" step="0.05" value="0.5" style="width:60px"></label>
+    <label>A <select id="teamA"><option>RAILGUN</option><option>SWARM</option></select></label>
+    <label>B <select id="teamB"><option>SWARM</option><option>RAILGUN</option></select></label>
+    <label>destructible <input id="destr" type="checkbox" checked></label>
+    <label>speed <select id="speed"><option>1</option><option>2</option><option selected>4</option><option>8</option></select></label>
+    <button id="restart">restart</button>
+    <button id="pause">pause</button>
+    <span id="modeinfo" style="color:#7f8fa6"></span>
+  </div>
+  <canvas id="cv"></canvas>
+  <div id="hud"></div>
+  <div id="help"></div>
+  <div id="banner"></div>
+</div>
+
+<script>
+/* ===== SIM BEGIN ===== */
+/* Praedra simulation core — pure JS, DOM-free, deterministic.
+   No window/document/Date/performance/Math.random in this block.
+   Contract: docs/SIM_CONTRACT.md. Units: px, seconds, radians. heading 0 = +x, CCW+.
+   Everything lives inside one IIFE: vm-context global loads are pathologically slow,
+   closure scope keeps the headless harness fast. Only `Praedra` is exported. */
+var Praedra = (function () {
+'use strict';
+
+/* ---------------- CONFIG — every gameplay number lives here ---------------- */
+var CONFIG_DEFAULTS = {
+  tickRate: 60,
+  matchTimerSeconds: 240,          // hard cap; tick cap = tickRate * matchTimerSeconds
+  movementModel: 'newtonian',      // 'newtonian' | 'arcade' (arcade = debug fallback only)
+  fleetMode: 'preset',
+
+  arena: { w: 4400, h: 3200 },
+
+  // --- TERRAIN (one mixed map; terrainDensity is THE flip variable) ---
+  terrainDensity: 0.5,             // 0..1: fraction of map given to dense clusters vs open lanes
+  destructibleAsteroids: true,     // flip harness runs off first (static), then on
+  terrain: {
+    clusterCountMin: 1,            // clusters at density 0
+    clusterCountMax: 13,           // clusters at density 1
+    clusterRadius: [300, 600],
+    clusterFillPerArea: 0.000026,  // rocks per px^2 of cluster area
+    asteroidRadius: [26, 90],
+    sparseRockMin: 2,              // lone rocks scattered outside clusters (low..high density).
+    sparseRockMax: 44,             // High density must be dense EVERYWHERE — capitals park in
+                                   // whatever open pocket exists, so pockets must not exist.
+    spawnClearRadius: 320,         // no rocks near either spawn
+    edgeMargin: 130,
+    spawnDistFrac: 0.40,           // spawn separation as fraction of arena diagonal-ish
+  },
+  asteroidHP: 112,                 // ~4 railgun hits
+  asteroidHPRefRadius: 60,         // HP scales with (r/ref)^2
+
+  // --- DEBRIS PHYSICS ---
+  debris: {
+    fragmentCount: 3,
+    minChildRadius: 15,            // children below this vanish -> cascade terminates
+    childRadiusScale: 0.52,        // child r = parent r * scale (area ~ 1/4 per generation)
+    burstSpeed: 60,                // launch impulse magnitude
+    speedScale: 1.0,
+    drag: 0.6,                     // per-second velocity damping -> debris settles, lingers
+    restitution: 0.35,
+    impactDamageScale: 0.05,       // ship damage = scale * (r^2/1000) * closingSpeed
+    impactMinSpeed: 25,            // below this a fragment just rests against the hull
+  },
+
+  // --- SHIPS (accel = thrust/mass; angular accel = rcs/mass, capped at turnMax rad/s) ---
+  ships: {
+    destroyer:   { cost: 6, hp: 140, mass: 100, thrust: 1600, rcs:  90, turnMax: 0.6,
+                   maxCruiseSpeed: 55,  evasion: 0.05, radius: 26, pdSlots: 2 },
+    frigate:     { cost: 3, hp:  90, mass:  55, thrust: 2300, rcs: 260, turnMax: 1.6,
+                   maxCruiseSpeed: 85,  evasion: 0.15, radius: 16, pdSlots: 3 },
+    bomber:      { cost: 2, hp:  26, mass:  20, thrust: 2300, rcs: 380, turnMax: 3.2,
+                   maxCruiseSpeed: 125, evasion: 0.65, radius: 10, pdSlots: 0 },
+    interceptor: { cost: 1, hp:  14, mass:  12, thrust: 2000, rcs: 520, turnMax: 4.2,
+                   maxCruiseSpeed: 150, evasion: 0.80, radius: 8,  pdSlots: 0 },
+  },
+
+  // --- RAILGUN (Destroyer; fixed-forward, min range, near-hitscan, anti-capital only) ---
+  railgun: {
+    arc: 0.10,                     // rad, total width of firing cone about heading
+    minRange: 150,                 // DEAD ZONE: target closer than this cannot be fired on
+    maxRange: 700,
+    damage: 30,
+    cooldown: 4.0,
+    slugSpeed: 2400,               // near-hitscan; resolved as instant ray (cannot be intercepted)
+    evasionMult: 1.2,              // hit chance = 1 - clamp(evasion * this): int .04, bmb .22, frig .82, dest .94
+  },
+
+  // --- TORPEDOES (Frigate specialist; Destroyer weak afterthought; Interceptor single-use) ---
+  torpedo: {
+    speed: 380,                    // far slower than slug; PD gets a shot or two in transit
+    turnRate: 1.1,                 // rad/s — LOOSE tracking
+    damage: 24,
+    aoeRadius: 45,                 // detonation on PD interception: small AOE
+    aoeDamage: 8,
+    lifetime: 9,
+    hitRadius: 14,                 // terminal proximity (added to target radius)
+    lockLossSeconds: 0.5,          // LOS blocked longer than this -> lock lost, flies dumb.
+                                   // Short: ducking behind a rock actually sheds the torpedo (dense-map counterplay)
+    predictSpeed: 70,              // target slower than this is 'predictable'
+    lobMinRange: 350,              // ROLE discipline, not a weapon limit: the AI stands off and
+                                   // LOBS (§6.5); threats inside this are point-defence's job
+    jinkAccelThreshold: 55,        // lateral-accel EMA above this (and fast) = 'jinking'
+    steadyEvasionMult: 0.15,       // predictable target: hit = 1 - evasion*this  (steady bomber ~.90)
+    jinkEvasionMult: 1.25,         // jinking target:     hit = 1 - evasion*this  (interceptor ~0)
+    frigate:     { range: 950, cooldown: 6.0, salvo: 2, salvoGap: 0.4 },
+    destroyer:   { range: 650, cooldown: 11.0, salvo: 1, salvoGap: 0 },
+    interceptor: { range: 750, ammo: 1 },
+  },
+
+  // --- BOMBS (Bomber; straight-line AOE, no tracking, lead-aimed, self-risk) ---
+  bomb: {
+    speed: 430,                    // fast: sluggish capital cannot drift off-aim during flight
+    maxFlight: 1.6,                // seconds; then fizzles
+    launchRange: 420,              // release distance (beyond PD, inside sightline)
+    runStartFactor: 1.6,           // go steady once LOS is clear within launchRange*this.
+                                   // Open maps: sighted early -> LONG steady run -> torpedo bait.
+                                   // Dense maps: sighted late -> short pop-out run. The flip lives here.
+    standoff: 300,                 // O1 default: medium standoff, artillery-leaning
+    damage: 24,
+    aoeRadius: 60,
+    cooldown: 0.9,                 // streams within a run; saturation, not single pokes
+    armTime: 0.20,                 // won't detonate on its own bomber at the muzzle
+    jinkAimSpread: 0.9,            // rad of aim error at full jink — jinking bombers throw wide
+  },
+
+  // --- INTERCEPTOR GATLING (forward, short; kills lights, small capital chip) ---
+  gatling: {
+    range: 95,                     // MUST stay << pd.range (deep exposed strafe — load-bearing, §5)
+    arc: 0.6,
+    fireRate: 8,                   // shots/s
+    damagePerShot: 2,
+    capitalMult: 0.3,              // chip vs capitals — MODEST by design (§5 flip-flatten watch):
+                                   // worth the dive, but the bomber is the capital-killer
+    evasionMult: 0.85,             // hit = 1 - evasion*this
+  },
+
+  // --- POINT DEFENCE (Destroyer 2 slots / Frigate 3; throughput-capped; MUST stay weak) ---
+  pd: {
+    range: 140,
+    shotsPerSecond: 3.0,           // per slot
+    projectileKillChance: 0.45,    // per shot vs torpedo/bomb (transit ~0.37s -> ~1 shot).
+                                   // MUST stay weak: punishes lone pokes, leaks under saturation (§5)
+    shipDamagePerShot: 4,          // lingering in the bubble is lethal — when slots are free
+    shipEvasionMult: 0.5,          // hit vs ships = 1 - evasion*this. At point-blank the
+                                   // gatling tracks even a jinker: lingering lights get shredded
+                                   // when the slots are free — the open-map anti-strafe trade (§5)
+  },
+
+  // --- COLLISIONS (solid rocks; ships bonk, don't pass) ---
+  collision: {
+    shipRockRestitution: 0.35,
+    shipRockDamageScale: 0.02,     // dmg = scale * closingSpeed * (mass/50), capped
+    shipRockDamageCap: 10,
+    shipShipRestitution: 0.3,
+  },
+
+  // --- ROLE AI ---
+  ai: {
+    retargetSeconds: 0.25,
+    destroyerStandoff: 600,        // hold near (under) railgun max range
+    destroyerRetreatRange: 260,    // back off from lights closer than this
+    frigateStandoff: 780,          // outside enemy railgun reach, inside own torpedo range
+    escortRange: 220,              // frigate keeps PD umbrella near its destroyer
+    bomberBreakRange: 250,         // end run / turn away inside this
+    bomberRegroupRange: 620,       // retreat out to here after a run
+    strafeDivePoint: 60,           // dive aim = this far past the target
+    strafeExitRange: 330,          // strafe exit distance (out of PD bubble)
+    jinkAccel: 0.9,                // fraction of max accel devoted to jinking
+    jinkPeriod: 1.1,               // seconds per jink flip
+    threatJinkRange: 520,          // lights jink when enemies/torpedoes within this
+    rockShootSeconds: 4.0,         // destroyer blasts a blocking rock after this long with no LOS shot
+    // commit waves: lights stage, then attack TOGETHER (saturation is strategic — §5)
+    stageRange: 640,               // lights hold here between waves
+    commitRadius: 780,             // staged = within this of the wave target
+    commitMinLights: 3,            // staged lights needed to trigger a wave (capped at living lights)
+    commitSeconds: 12,             // wave duration (long enough to cross dense fields)
+    commitCooldown: 3,             // regroup time between waves
+    coverMinRange: 220,            // never stage inside the enemy PD bubble
+    navArriveSlack: 14,
+    navBrakeMargin: 0.72,          // use this fraction of max accel when planning braking
+    avoidLookahead: 2.2,           // seconds of velocity lookahead for rock avoidance
+    avoidMargin: 30,               // extra clearance around rocks
+  },
+
+  // --- FLEETS ---
+  presets: {
+    RAILGUN: ['destroyer', 'frigate'],                                             // 9 pts
+    SWARM:   ['bomber', 'bomber', 'bomber',
+              'interceptor', 'interceptor', 'interceptor'],                        // 9 pts (§8: ~2B+3I tuned up)
+  },
+  spawnFormationGap: 70,
+};
+
+/* ---------------- PRNG (mulberry32) + helpers ---------------- */
+function makeRng(seed) {
+  var s = (seed >>> 0) || 1;
+  function next() {
+    s |= 0; s = (s + 0x6D2B79F5) | 0;
+    var t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  return {
+    next: next,
+    range: function (a, b) { return a + (b - a) * next(); },
+    int: function (n) { return Math.floor(next() * n); },
+    chance: function (p) { return next() < p; },
+    angle: function () { return next() * Math.PI * 2; },
+  };
+}
+
+function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function dist(ax, ay, bx, by) { var dx = bx - ax, dy = by - ay; return Math.sqrt(dx * dx + dy * dy); }
+function len(x, y) { return Math.sqrt(x * x + y * y); }
+function normAngle(a) { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; }
+
+function deepClone(o) {
+  if (o === null || typeof o !== 'object') return o;
+  if (Array.isArray(o)) { var a = []; for (var i = 0; i < o.length; i++) a.push(deepClone(o[i])); return a; }
+  var r = {}; for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) r[k] = deepClone(o[k]);
+  return r;
+}
+function deepMerge(base, over) {
+  if (over === null || typeof over !== 'object' || Array.isArray(over)) return deepClone(over);
+  var r = (base === null || typeof base !== 'object' || Array.isArray(base)) ? {} : base;
+  for (var k in over) if (Object.prototype.hasOwnProperty.call(over, k)) r[k] = deepMerge(r[k], over[k]);
+  return r;
+}
+
+/* Segment (ax,ay)-(bx,by) vs circle (cx,cy,r): true if intersecting. */
+function segCircleHit(ax, ay, bx, by, cx, cy, r) {
+  var dx = bx - ax, dy = by - ay;
+  var fx = ax - cx, fy = ay - cy;
+  var a = dx * dx + dy * dy;
+  if (a < 1e-9) return fx * fx + fy * fy <= r * r;
+  var t = clamp(-(fx * dx + fy * dy) / a, 0, 1);
+  var px = ax + t * dx - cx, py = ay + t * dy - cy;
+  return px * px + py * py <= r * r;
+}
+/* ---------------- Terrain generation (one mixed map: lanes + clusters) ---------------- */
+function generateTerrain(state, rng) {
+  var cfg = state.config, T = cfg.terrain, W = cfg.arena.w, H = cfg.arena.h;
+  var density = clamp01(cfg.terrainDensity);
+  var cx = W / 2, cy = H / 2;
+
+  // Randomized spawn axis per seed so terrainDensity is the isolated variable (§8).
+  var th = rng.angle();
+  var rx = (W / 2 - T.edgeMargin - T.spawnClearRadius) * 0.92;
+  var ry = (H / 2 - T.edgeMargin - T.spawnClearRadius) * 0.92;
+  state.spawnA = { x: cx - rx * Math.cos(th), y: cy - ry * Math.sin(th) };
+  state.spawnB = { x: cx + rx * Math.cos(th), y: cy + ry * Math.sin(th) };
+
+  var rocks = [];
+  function clearOfSpawns(x, y, r) {
+    return dist(x, y, state.spawnA.x, state.spawnA.y) > T.spawnClearRadius + r &&
+           dist(x, y, state.spawnB.x, state.spawnB.y) > T.spawnClearRadius + r;
+  }
+  function tryPlace(x, y, r) {
+    if (x < T.edgeMargin + r || x > W - T.edgeMargin - r || y < T.edgeMargin + r || y > H - T.edgeMargin - r) return false;
+    if (!clearOfSpawns(x, y, r)) return false;
+    for (var i = 0; i < rocks.length; i++) {
+      var o = rocks[i];
+      if (dist(x, y, o.x, o.y) < (r + o.r) * 0.82) return false; // slight overlap ok (clumpy clusters)
+    }
+    rocks.push({ x: x, y: y, r: r });
+    return true;
+  }
+  function rockRadius() { var t = rng.next(); return lerp(T.asteroidRadius[0], T.asteroidRadius[1], t * t); }
+
+  var nClusters = Math.round(lerp(T.clusterCountMin, T.clusterCountMax, density));
+  for (var c = 0; c < nClusters; c++) {
+    var R = rng.range(T.clusterRadius[0], T.clusterRadius[1]);
+    var ccx = 0, ccy = 0, ok = false;
+    for (var a = 0; a < 40 && !ok; a++) {
+      ccx = rng.range(T.edgeMargin + R * 0.3, W - T.edgeMargin - R * 0.3);
+      ccy = rng.range(T.edgeMargin + R * 0.3, H - T.edgeMargin - R * 0.3);
+      ok = dist(ccx, ccy, state.spawnA.x, state.spawnA.y) > T.spawnClearRadius + R * 0.35 &&
+           dist(ccx, ccy, state.spawnB.x, state.spawnB.y) > T.spawnClearRadius + R * 0.35;
+    }
+    if (!ok) continue;
+    var n = Math.round(T.clusterFillPerArea * Math.PI * R * R);
+    for (var k = 0; k < n; k++) {
+      for (var att = 0; att < 8; att++) {
+        var rr = R * Math.sqrt(rng.next()), ang = rng.angle();
+        if (tryPlace(ccx + rr * Math.cos(ang), ccy + rr * Math.sin(ang), rockRadius())) break;
+      }
+    }
+  }
+  var nSparse = Math.round(lerp(T.sparseRockMin, T.sparseRockMax, density));
+  for (var s = 0; s < nSparse; s++) {
+    for (var att2 = 0; att2 < 12; att2++) {
+      if (tryPlace(rng.range(T.edgeMargin, W - T.edgeMargin), rng.range(T.edgeMargin, H - T.edgeMargin), rockRadius())) break;
+    }
+  }
+  for (var i2 = 0; i2 < rocks.length; i2++) state.asteroids.push(makeAsteroid(state, rocks[i2].x, rocks[i2].y, rocks[i2].r));
+}
+
+function makeAsteroid(state, x, y, r) {
+  var cfg = state.config;
+  var hp = cfg.asteroidHP * (r / cfg.asteroidHPRefRadius) * (r / cfg.asteroidHPRefRadius);
+  return { id: state.nextId++, x: x, y: y, r: r, hp: hp, maxHp: hp, vx: 0, vy: 0, alive: true, moving: false };
+}
+
+/* ---------------- Spatial grid for rock queries (performance only, no gameplay) ---------------- */
+var GRID_CELL = 300;
+function rebuildGrid(state) {
+  var g = state.grid;
+  if (!g) {
+    g = state.grid = {
+      cw: Math.max(1, Math.ceil(state.config.arena.w / GRID_CELL)),
+      ch: Math.max(1, Math.ceil(state.config.arena.h / GRID_CELL)),
+      cells: [], stamp: 1,
+    };
+    for (var i = 0; i < g.cw * g.ch; i++) g.cells.push([]);
+  }
+  for (var c = 0; c < g.cells.length; c++) g.cells[c].length = 0;
+  var A = state.asteroids;
+  for (var r = 0; r < A.length; r++) {
+    var o = A[r];
+    if (!o.alive) continue;
+    var x0 = Math.max(0, Math.floor((o.x - o.r) / GRID_CELL)), x1 = Math.min(g.cw - 1, Math.floor((o.x + o.r) / GRID_CELL));
+    var y0 = Math.max(0, Math.floor((o.y - o.r) / GRID_CELL)), y1 = Math.min(g.ch - 1, Math.floor((o.y + o.r) / GRID_CELL));
+    for (var gy = y0; gy <= y1; gy++) for (var gx = x0; gx <= x1; gx++) g.cells[gy * g.cw + gx].push(o);
+  }
+}
+/* Visit live rocks near the (padded) segment bbox; fn returning true stops the walk. */
+function rocksNearSeg(state, ax, ay, bx, by, pad, fn) {
+  var g = state.grid;
+  if (!g) {
+    var A = state.asteroids;
+    for (var i = 0; i < A.length; i++) { var o = A[i]; if (o.alive && fn(o)) return; }
+    return;
+  }
+  var x0 = Math.max(0, Math.floor((Math.min(ax, bx) - pad) / GRID_CELL));
+  var x1 = Math.min(g.cw - 1, Math.floor((Math.max(ax, bx) + pad) / GRID_CELL));
+  var y0 = Math.max(0, Math.floor((Math.min(ay, by) - pad) / GRID_CELL));
+  var y1 = Math.min(g.ch - 1, Math.floor((Math.max(ay, by) + pad) / GRID_CELL));
+  var stamp = ++g.stamp;
+  for (var gy = y0; gy <= y1; gy++) for (var gx = x0; gx <= x1; gx++) {
+    var cell = g.cells[gy * g.cw + gx];
+    for (var k = 0; k < cell.length; k++) {
+      var o = cell[k];
+      if (o.gridStamp === stamp) continue;
+      o.gridStamp = stamp;
+      if (fn(o)) return;
+    }
+  }
+}
+
+/* ---------------- Line of sight (solid rocks block shots; ships don't) ---------------- */
+function losClear(state, ax, ay, bx, by) {
+  var clear = true;
+  rocksNearSeg(state, ax, ay, bx, by, 92, function (o) {
+    if (segCircleHit(ax, ay, bx, by, o.x, o.y, o.r)) { clear = false; return true; }
+    return false;
+  });
+  return clear;
+}
+/* Cached per-ship-pair LOS, refreshed every 6 ticks. */
+function losShips(state, a, b) {
+  var key = a.id * 4096 + b.id;
+  var e = state.losCache[key];
+  if (e !== undefined && state.tick - e.t < 6) return e.v;
+  var v = losClear(state, a.x, a.y, b.x, b.y);
+  state.losCache[key] = { t: state.tick, v: v };
+  return v;
+}
+/* First asteroid hit by ray a->b (for railgun blocking/overshoot); returns rock or null. */
+function firstRockOnRay(state, ax, ay, bx, by) {
+  var best = null, bestD2 = Infinity;
+  rocksNearSeg(state, ax, ay, bx, by, 92, function (o) {
+    if (segCircleHit(ax, ay, bx, by, o.x, o.y, o.r)) {
+      var d2 = (o.x - ax) * (o.x - ax) + (o.y - ay) * (o.y - ay);
+      if (d2 < bestD2) { bestD2 = d2; best = o; }
+    }
+    return false;
+  });
+  return best;
+}
+
+/* ---------------- Ship construction ---------------- */
+function makeShip(state, cls, team, x, y, heading) {
+  var def = state.config.ships[cls];
+  if (!def) throw new Error('unknown ship class: ' + cls);
+  var tcfg = state.config.torpedo[cls];
+  return {
+    id: state.nextId++, team: team, cls: cls, def: def,
+    x: x, y: y, vx: 0, vy: 0, heading: heading || 0, angVel: 0,
+    hp: def.hp, maxHp: def.hp, alive: true, pinned: false,
+    jinkEMA: 0, speed: 0,
+    cool: { rail: 0, torp: 0, bomb: 0, gat: 0, pd: 0, salvoLeft: 0, salvoGap: 0 },
+    torpAmmo: (tcfg && tcfg.ammo !== undefined) ? tcfg.ammo : -1, // -1 = cooldown-limited
+    damageDealt: 0,
+    ai: { targetId: -1, retargetAt: 0, mode: 'seek', modeAt: 0, noLosSince: 0, jinkPhase: 0, wp: null },
+    ctl: { torque: 0, thrust: 0, face: null, desiredVX: 0, desiredVY: 0 },
+    nav: null, // {x, y, arrive, speedCap, face, jink}
+  };
+}
+
+/* ---------------- Autopilot (Newtonian: rotate-to-burn, flip-and-burn arrival) ---------------- */
+function autopilot(state, ship, dt) {
+  var cfg = state.config, AI = cfg.ai, def = ship.def;
+  var goal = ship.nav;
+  var accel = def.thrust / def.mass;
+  var aBrake = accel * AI.navBrakeMargin;
+  var flipTime = Math.PI / def.turnMax;
+  ship.ctl.torque = 0; ship.ctl.thrust = 0;
+
+  if (!goal) { faceToward(ship, ship.ctl.face, dt); return; }
+
+  var dx = goal.x - ship.x, dy = goal.y - ship.y;
+  var d = Math.sqrt(dx * dx + dy * dy);
+  var cruise = Math.min(def.maxCruiseSpeed, goal.speedCap || def.maxCruiseSpeed);
+
+  // Target speed: full cruise in transit; flip-and-burn arrival solves
+  // v^2/(2a) + v*tFlip <= d  =>  v = a*(sqrt(tFlip^2 + 2d/a) - tFlip)
+  var vGoal;
+  var dr = Math.max(0, d - AI.navArriveSlack);
+  if (goal.arrive) vGoal = Math.min(cruise, aBrake * (Math.sqrt(flipTime * flipTime + 2 * dr / aBrake) - flipTime));
+  else vGoal = cruise;
+
+  // --- waypoint detour: if the straight path is blocked, swing around the rock's rim
+  //     (a goal just past an obstacle's edge is otherwise a local trap) ---
+  var gx = goal.x, gy = goal.y;
+  if (ship.wpCacheT !== undefined && state.tick - ship.wpCacheT < 6 &&
+      Math.abs(goal.x - (ship.wpGoalX || 0)) < 40 && Math.abs(goal.y - (ship.wpGoalY || 0)) < 40) {
+    gx = ship.wpX; gy = ship.wpY;
+  } else if (d > AI.navArriveSlack * 2) {
+    var blk = null, blkT = Infinity;
+    rocksNearSeg(state, ship.x, ship.y, goal.x, goal.y, 92 + def.radius + AI.avoidMargin, function (ob) {
+      var rInf = ob.r + def.radius + AI.avoidMargin;
+      // skip rocks we're already inside the margin of (collision/probe handles those)
+      var dRock = dist(ship.x, ship.y, ob.x, ob.y);
+      if (dRock < rInf - 5) return false;
+      if (dist(goal.x, goal.y, ob.x, ob.y) < rInf - 12) return false; // goal snug against this rock: go direct
+      if (segCircleHit(ship.x, ship.y, goal.x, goal.y, ob.x, ob.y, rInf - 8)) {
+        if (dRock < blkT) { blkT = dRock; blk = ob; }
+      }
+      return false;
+    });
+    if (blk) {
+      var rI = blk.r + def.radius + AI.avoidMargin;
+      var t = ((blk.x - ship.x) * dx + (blk.y - ship.y) * dy) / (d * d);
+      t = clamp(t, 0, 1);
+      var prx = ship.x + dx * t - blk.x, pry = ship.y + dy * t - blk.y;
+      var pl = len(prx, pry);
+      if (pl < 1) { prx = -dy / d; pry = dx / d; pl = 1; }
+      gx = blk.x + (prx / pl) * (rI + 22);
+      gy = blk.y + (pry / pl) * (rI + 22);
+    }
+    ship.wpCacheT = state.tick; ship.wpGoalX = goal.x; ship.wpGoalY = goal.y;
+    ship.wpX = gx; ship.wpY = gy;
+  }
+  var ddx = gx - ship.x, ddy = gy - ship.y;
+  var dd = Math.sqrt(ddx * ddx + ddy * ddy);
+  var dirx = dd > 1e-6 ? ddx / dd : Math.cos(ship.heading), diry = dd > 1e-6 ? ddy / dd : Math.sin(ship.heading);
+
+  // --- stall-breaker: parked against a rock far from the goal -> sidestep hard ---
+  if (ship.speed < 18 && d > AI.navArriveSlack * 3) ship.stallT = (ship.stallT || 0) + dt;
+  else ship.stallT = 0;
+  if (ship.stallT > 1.5) {
+    var sside = ((ship.id + Math.floor(state.time / 2)) % 2 === 0) ? 1 : -1;
+    var rx = dirx * Math.cos(sside * 1.35) - diry * Math.sin(sside * 1.35);
+    var ry = dirx * Math.sin(sside * 1.35) + diry * Math.cos(sside * 1.35);
+    dirx = rx; diry = ry;
+    vGoal = Math.max(vGoal, cruise * 0.5);
+  }
+
+  // --- solid-rock avoidance: probe along current velocity, steer around + shed speed ---
+  var sp = ship.speed;
+  var avoiding = false;
+  var probeT = AI.avoidLookahead;
+  if (sp > 15) {
+    var pex = ship.x + ship.vx * probeT, pey = ship.y + ship.vy * probeT;
+    var threat = null, threatD = Infinity;
+    rocksNearSeg(state, ship.x, ship.y, pex, pey, 92 + def.radius + AI.avoidMargin, function (o) {
+      var rr = o.r + def.radius + AI.avoidMargin;
+      var ddx = o.x - ship.x, ddy = o.y - ship.y;
+      var dd = Math.sqrt(ddx * ddx + ddy * ddy);
+      if (dd - rr > sp * probeT) return false;
+      if (segCircleHit(ship.x, ship.y, pex, pey, o.x, o.y, rr)) {
+        if (dd < threatD) { threatD = dd; threat = o; }
+      }
+      return false;
+    });
+    if (threat) {
+      var tx = threat.x - ship.x, ty = threat.y - ship.y;
+      var td = Math.sqrt(tx * tx + ty * ty) || 1;
+      var vdx = ship.vx / sp, vdy = ship.vy / sp;
+      // steer to the side of the velocity vector the rock is NOT on — and COMMIT to
+      // that side for a while (per-rock hysteresis kills the dither that stalled ships)
+      var side;
+      if (ship.avoidRock === threat.id && state.time < ship.avoidUntil) side = ship.avoidSide;
+      else {
+        side = (vdx * ty - vdy * tx) > 0 ? -1 : 1;
+        ship.avoidRock = threat.id; ship.avoidSide = side; ship.avoidUntil = state.time + 0.8;
+      }
+      var surf = Math.max(6, td - (threat.r + def.radius + AI.avoidMargin));
+      var urg = clamp01(1 - surf / (sp * probeT + 1));
+      var avx = vdx * Math.cos(side * (0.5 + urg)) - vdy * Math.sin(side * (0.5 + urg));
+      var avy = vdx * Math.sin(side * (0.5 + urg)) + vdy * Math.cos(side * (0.5 + urg));
+      dirx = dirx * (1 - urg) + avx * urg;
+      diry = diry * (1 - urg) + avy * urg;
+      var dl = len(dirx, diry) || 1; dirx /= dl; diry /= dl;
+      // never carry more speed toward a wall of rock than we can shed
+      vGoal = Math.min(vGoal, Math.sqrt(2 * aBrake * surf) + 25);
+      avoiding = true;
+    }
+  }
+
+  var dvxWant = dirx * vGoal, dvyWant = diry * vGoal;
+
+  // --- jink: square-wave lateral weave for lights under threat (suppressed on steady runs
+  //     and while threading rocks — the rock IS the cover, weaving into it helps nobody) ---
+  if (goal.jink && !avoiding) {
+    var ph = state.time / AI.jinkPeriod + ship.ai.jinkPhase;
+    var sq = (Math.floor(ph * 2) % 2 === 0) ? 1 : -1;
+    dvxWant += -diry * cruise * 0.55 * sq;
+    dvyWant += dirx * cruise * 0.55 * sq;
+  }
+
+  var dvx = dvxWant - ship.vx, dvy = dvyWant - ship.vy;
+  var dvm = Math.sqrt(dvx * dvx + dvy * dvy);
+
+  if (dvm < 8) {
+    // coast: hold position/velocity, point where the AI wants the nose (aiming)
+    if (d < AI.navArriveSlack * 2 && ship.speed > 3 && goal.arrive) {
+      // kill residual drift
+      burnToward(ship, Math.atan2(-ship.vy, -ship.vx), Math.min(1, ship.speed / (accel * 0.3)), dt);
+    } else {
+      faceToward(ship, goal.face != null ? goal.face : Math.atan2(diry, dirx), dt);
+    }
+    return;
+  }
+  var burnAng = Math.atan2(dvy, dvx);
+  burnToward(ship, burnAng, clamp(dvm / (accel * 0.25), 0, 1), dt);
+}
+
+/* Rotate toward angle `want` (deadbeat controller on angular velocity); no thrust. */
+function faceToward(ship, want, dt) {
+  if (want == null) { ship.ctl.torque = clamp(-ship.angVel / ((ship.def.rcs / ship.def.mass) * dt || 1), -1, 1); return; }
+  var err = normAngle(want - ship.heading);
+  var desiredW = clamp(err * 3.5, -ship.def.turnMax, ship.def.turnMax);
+  var maxA = ship.def.rcs / ship.def.mass;
+  ship.ctl.torque = clamp((desiredW - ship.angVel) / (maxA * dt), -1, 1);
+}
+/* Rotate toward burn angle and thrust when roughly aligned. */
+function burnToward(ship, burnAng, throttle, dt) {
+  faceToward(ship, burnAng, dt);
+  var err = Math.abs(normAngle(burnAng - ship.heading));
+  ship.ctl.thrust = err < 0.35 ? throttle : (err < 0.85 ? throttle * 0.35 : 0);
+}
+
+/* ---------------- Integration + collisions ---------------- */
+function integrateShip(state, ship, dt) {
+  var def = ship.def, cfg = state.config;
+  // rotation (pinned ships may rotate to aim, per contract)
+  var maxAngA = def.rcs / def.mass;
+  ship.angVel = clamp(ship.angVel + maxAngA * clamp(ship.ctl.torque, -1, 1) * dt, -def.turnMax, def.turnMax);
+  ship.heading = normAngle(ship.heading + ship.angVel * dt);
+
+  if (ship.pinned) { ship.vx = 0; ship.vy = 0; ship.speed = 0; return; }
+
+  if (cfg.movementModel === 'arcade') {
+    // debug fallback: direct kinematics, no momentum
+    var wantX = ship.ctl.desiredVX, wantY = ship.ctl.desiredVY;
+    ship.vx = wantX; ship.vy = wantY;
+    if (len(wantX, wantY) > 5) ship.heading = Math.atan2(wantY, wantX);
+  } else {
+    var a = (def.thrust / def.mass) * clamp(ship.ctl.thrust, 0, 1);
+    var ax = Math.cos(ship.heading) * a, ay = Math.sin(ship.heading) * a;
+    ship.vx += ax * dt; ship.vy += ay * dt;
+    // lateral-accel EMA (torpedo predictability + bomb aim skew read this)
+    var s = len(ship.vx, ship.vy);
+    var alat = s > 20 ? Math.abs(ax * (ship.vy / s) - ay * (ship.vx / s)) : a;
+    ship.jinkEMA += (alat - ship.jinkEMA) * Math.min(1, dt / 0.4);
+  }
+  ship.x += ship.vx * dt; ship.y += ship.vy * dt;
+  ship.speed = len(ship.vx, ship.vy);
+
+  // arena walls: clamp + damp
+  var W = cfg.arena.w, H = cfg.arena.h, r = def.radius;
+  if (ship.x < r) { ship.x = r; ship.vx = Math.abs(ship.vx) * 0.4; }
+  if (ship.x > W - r) { ship.x = W - r; ship.vx = -Math.abs(ship.vx) * 0.4; }
+  if (ship.y < r) { ship.y = r; ship.vy = Math.abs(ship.vy) * 0.4; }
+  if (ship.y > H - r) { ship.y = H - r; ship.vy = -Math.abs(ship.vy) * 0.4; }
+}
+
+function collideShipsAndRocks(state, dt) {
+  var cfg = state.config, C = cfg.collision, D = cfg.debris;
+  var ships = state.ships, rocks = state.asteroids;
+  for (var i = 0; i < ships.length; i++) {
+    var sh = ships[i];
+    if (!sh.alive || sh.pinned) continue;
+    var near = [];
+    rocksNearSeg(state, sh.x, sh.y, sh.x, sh.y, sh.def.radius + 96, function (o) { near.push(o); return false; });
+    for (var j = 0; j < near.length; j++) {
+      var o = near[j];
+      var dx = sh.x - o.x, dy = sh.y - o.y;
+      var rr = sh.def.radius + o.r;
+      var d2 = dx * dx + dy * dy;
+      if (d2 >= rr * rr || d2 < 1e-9) continue;
+      var d = Math.sqrt(d2), nx = dx / d, ny = dy / d;
+      var mShip = sh.def.mass, mRock = o.r * o.r / 10;
+      var invS = 1 / mShip, invR = o.moving ? 1 / mRock : 0; // settled rocks are immovable to ships
+      var rvx = sh.vx - o.vx, rvy = sh.vy - o.vy;
+      var vn = rvx * nx + rvy * ny;
+      var closing = -vn;
+      if (vn < 0) {
+        var jimp = -(1 + C.shipRockRestitution) * vn / (invS + invR);
+        sh.vx += jimp * invS * nx; sh.vy += jimp * invS * ny;
+        o.vx -= jimp * invR * nx; o.vy -= jimp * invR * ny;
+        if (invR > 0 && len(o.vx, o.vy) > 2) o.moving = true;
+        var dmg;
+        if (o.moving && closing > D.impactMinSpeed) {
+          dmg = D.impactDamageScale * (o.r * o.r / 1000) * closing; // shrapnel strike
+        } else {
+          dmg = Math.min(C.shipRockDamageCap, C.shipRockDamageScale * closing * (mShip / 50)); // bonk
+        }
+        if (dmg > 0.3) applyDamage(state, sh, dmg, null, 'rock');
+      }
+      var push = (rr - d) + 0.5;
+      sh.x += nx * push * (invR > 0 ? invS / (invS + invR) : 1);
+      sh.y += ny * push * (invR > 0 ? invS / (invS + invR) : 1);
+      if (invR > 0) { o.x -= nx * push * (invR / (invS + invR)); o.y -= ny * push * (invR / (invS + invR)); }
+    }
+    // ship-ship separation (no damage)
+    for (var k = i + 1; k < ships.length; k++) {
+      var ot = ships[k];
+      if (!ot.alive) continue;
+      var dx2 = sh.x - ot.x, dy2 = sh.y - ot.y;
+      var rr2 = sh.def.radius + ot.def.radius;
+      var dd2 = dx2 * dx2 + dy2 * dy2;
+      if (dd2 >= rr2 * rr2 || dd2 < 1e-9) continue;
+      var dd = Math.sqrt(dd2), nx2 = dx2 / dd, ny2 = dy2 / dd;
+      var push2 = (rr2 - dd) / 2 + 0.25;
+      if (!sh.pinned) { sh.x += nx2 * push2; sh.y += ny2 * push2; }
+      if (!ot.pinned) { ot.x -= nx2 * push2; ot.y -= ny2 * push2; }
+      var rvn = (sh.vx - ot.vx) * nx2 + (sh.vy - ot.vy) * ny2;
+      if (rvn < 0) {
+        var jj = -(1 + C.shipShipRestitution) * rvn / (1 / sh.def.mass + 1 / ot.def.mass);
+        if (!sh.pinned) { sh.vx += jj * nx2 / sh.def.mass; sh.vy += jj * ny2 / sh.def.mass; }
+        if (!ot.pinned) { ot.vx -= jj * nx2 / ot.def.mass; ot.vy -= jj * ny2 / ot.def.mass; }
+      }
+    }
+  }
+}
+
+function updateAsteroids(state, dt) {
+  var cfg = state.config, D = cfg.debris, W = cfg.arena.w, H = cfg.arena.h;
+  var A = state.asteroids;
+  var anyMoving = 0;
+  for (var i = 0; i < A.length; i++) {
+    var o = A[i];
+    if (!o.alive || !o.moving) continue;
+    anyMoving++;
+    o.x += o.vx * dt; o.y += o.vy * dt;
+    var damp = Math.max(0, 1 - D.drag * dt);
+    o.vx *= damp; o.vy *= damp;
+    if (o.x < o.r) { o.x = o.r; o.vx = Math.abs(o.vx) * D.restitution; }
+    if (o.x > W - o.r) { o.x = W - o.r; o.vx = -Math.abs(o.vx) * D.restitution; }
+    if (o.y < o.r) { o.y = o.r; o.vy = Math.abs(o.vy) * D.restitution; }
+    if (o.y > H - o.r) { o.y = H - o.r; o.vy = -Math.abs(o.vy) * D.restitution; }
+    if (len(o.vx, o.vy) < 2) { o.vx = 0; o.vy = 0; o.moving = false; }
+  }
+  state.movingRocks = anyMoving;
+  if (!anyMoving) return;
+  // rock-rock collisions (momentum-conserving; only pairs involving a mover)
+  for (var a = 0; a < A.length; a++) {
+    var p = A[a];
+    if (!p.alive) continue;
+    for (var b = a + 1; b < A.length; b++) {
+      var q = A[b];
+      if (!q.alive || (!p.moving && !q.moving)) continue;
+      var dx = p.x - q.x, dy = p.y - q.y, rr = p.r + q.r;
+      var d2 = dx * dx + dy * dy;
+      if (d2 >= rr * rr || d2 < 1e-9) continue;
+      var d = Math.sqrt(d2), nx = dx / d, ny = dy / d;
+      var mp = p.r * p.r, mq = q.r * q.r;
+      var vn = (p.vx - q.vx) * nx + (p.vy - q.vy) * ny;
+      if (vn < 0) {
+        var jimp = -(1 + D.restitution) * vn / (1 / mp + 1 / mq);
+        p.vx += jimp * nx / mp; p.vy += jimp * ny / mp;
+        q.vx -= jimp * nx / mq; q.vy -= jimp * ny / mq;
+        if (len(p.vx, p.vy) > 2) p.moving = true;
+        if (len(q.vx, q.vy) > 2) q.moving = true;
+      }
+      var push = (rr - d) / 2 + 0.25;
+      p.x += nx * push; p.y += ny * push;
+      q.x -= nx * push; q.y -= ny * push;
+    }
+  }
+}
+/* ---------------- Damage, AOE, asteroid destruction ---------------- */
+function pushEvent(state, ev) {
+  ev.t = state.tick;
+  state.events.push(ev);
+  if (state.events.length > 500) state.events.splice(0, 250);
+}
+
+function applyDamage(state, ship, dmg, attacker, src) {
+  if (!ship.alive || dmg <= 0) return;
+  ship.hp -= dmg;
+  var by = src || 'other';
+  var dt = state.stats.dmgTo[ship.team];
+  dt[by] = (dt[by] || 0) + dmg;
+  if (attacker && attacker.team !== ship.team) {
+    state.damage[attacker.team] += dmg;
+    attacker.damageDealt += dmg;
+  }
+  if (ship.hp <= 0) {
+    ship.hp = 0; ship.alive = false;
+    state.stats.deaths.push({ team: ship.team, cls: ship.cls, t: Math.round(state.time), by: by, mode: ship.ai.mode });
+    pushEvent(state, { kind: 'shipboom', x: ship.x, y: ship.y, r: ship.def.radius * 2.5 });
+  }
+}
+
+function damageAsteroid(state, rock, dmg) {
+  if (!rock.alive) return;
+  if (!state.config.destructibleAsteroids) return; // static terrain: rocks are invulnerable scenery
+  rock.hp -= dmg;
+  if (rock.hp <= 0) splitAsteroid(state, rock);
+}
+
+function splitAsteroid(state, rock) {
+  var D = state.config.debris;
+  rock.alive = false;
+  state.gridDirty = true;
+  pushEvent(state, { kind: 'shatter', x: rock.x, y: rock.y, r: rock.r });
+  var childR = rock.r * D.childRadiusScale;
+  if (childR < D.minChildRadius) return; // fragments vanish -> cascade terminates
+  var base = state.rng.angle();
+  for (var i = 0; i < D.fragmentCount; i++) {
+    var ang = base + i * (2 * Math.PI / D.fragmentCount) + state.rng.range(-0.3, 0.3);
+    var c = makeAsteroid(state, rock.x + Math.cos(ang) * rock.r * 0.45, rock.y + Math.sin(ang) * rock.r * 0.45,
+                         childR * state.rng.range(0.85, 1.1));
+    var sp = D.burstSpeed * D.speedScale * state.rng.range(0.7, 1.3);
+    c.vx = rock.vx + Math.cos(ang) * sp;
+    c.vy = rock.vy + Math.sin(ang) * sp;
+    c.moving = true;
+    state.asteroids.push(c);
+  }
+}
+
+function applyAoe(state, x, y, radius, dmg, attacker, src) {
+  var ships = state.ships;
+  for (var i = 0; i < ships.length; i++) {
+    var sh = ships[i];
+    if (!sh.alive) continue;
+    var d = dist(x, y, sh.x, sh.y) - sh.def.radius;
+    if (d <= radius) applyDamage(state, sh, dmg * (1 - 0.6 * clamp01(d / radius)), attacker, src); // friendlies included
+  }
+  var A = state.asteroids;
+  for (var j = 0; j < A.length; j++) {
+    var o = A[j];
+    if (!o.alive) continue;
+    var dr = dist(x, y, o.x, o.y) - o.r;
+    if (dr <= radius) damageAsteroid(state, o, dmg * (1 - 0.6 * clamp01(dr / radius)));
+  }
+}
+
+/* ---------------- Railgun (fixed-forward, min range, instant ray, uninterceptable) ---------------- */
+function railgunReady(state, ship, target) {
+  var RG = state.config.railgun;
+  if (ship.cool.rail > 0) return 'cooldown';
+  var d = dist(ship.x, ship.y, target.x, target.y);
+  if (d < RG.minRange) return 'deadzone';       // the dead zone lights exploit — cannot fire at all
+  if (d > RG.maxRange) return 'range';
+  if (Math.abs(normAngle(Math.atan2(target.y - ship.y, target.x - ship.x) - ship.heading)) > RG.arc / 2) return 'arc';
+  if (!losShips(state, ship, target)) return 'los';
+  return 'ok';
+}
+function fireRailgun(state, ship, target) {
+  var RG = state.config.railgun;
+  ship.cool.rail = RG.cooldown;
+  state.stats.railShots++;
+  var ang = Math.atan2(target.y - ship.y, target.x - ship.x);
+  var d = dist(ship.x, ship.y, target.x, target.y);
+  var endX = ship.x + Math.cos(ang) * RG.maxRange, endY = ship.y + Math.sin(ang) * RG.maxRange;
+  var rock = firstRockOnRay(state, ship.x, ship.y, endX, endY);
+  var rockD = rock ? dist(ship.x, ship.y, rock.x, rock.y) - rock.r : Infinity;
+  if (rock && rockD < d - target.def.radius) {
+    damageAsteroid(state, rock, RG.damage);      // slug slams into the cover instead
+    pushEvent(state, { kind: 'rail', x: ship.x, y: ship.y, x2: rock.x, y2: rock.y, team: ship.team, hit: 'rock' });
+    return;
+  }
+  var pHit = 1 - clamp01(target.def.evasion * RG.evasionMult);
+  if (state.rng.chance(pHit)) {
+    state.stats.railHitsShip++;
+    applyDamage(state, target, RG.damage, ship, 'rail');
+    pushEvent(state, { kind: 'rail', x: ship.x, y: ship.y, x2: target.x, y2: target.y, team: ship.team, hit: 'ship' });
+  } else {
+    if (rock) damageAsteroid(state, rock, RG.damage); // missed slug flies on into whatever rock is downrange
+    pushEvent(state, { kind: 'rail', x: ship.x, y: ship.y, x2: endX, y2: endY, team: ship.team, hit: 'miss' });
+  }
+}
+function fireRailgunAtRock(state, ship, rock) {
+  var RG = state.config.railgun;
+  ship.cool.rail = RG.cooldown;
+  var hit = firstRockOnRay(state, ship.x, ship.y,
+    ship.x + Math.cos(ship.heading) * RG.maxRange, ship.y + Math.sin(ship.heading) * RG.maxRange) || rock;
+  damageAsteroid(state, hit, RG.damage);
+  pushEvent(state, { kind: 'rail', x: ship.x, y: ship.y, x2: hit.x, y2: hit.y, team: ship.team, hit: 'rock' });
+}
+
+/* ---------------- Torpedoes (long range, loose tracking, LOS lock, PD-interceptable) ---------------- */
+function launchTorpedo(state, owner, target) {
+  var T = state.config.torpedo;
+  var ang = Math.atan2(target.y - owner.y, target.x - owner.x);
+  state.torps.push({
+    id: state.nextId++, team: owner.team, ownerId: owner.id, targetId: target.id,
+    x: owner.x + Math.cos(ang) * (owner.def.radius + 6), y: owner.y + Math.sin(ang) * (owner.def.radius + 6),
+    heading: ang, vx: Math.cos(ang) * T.speed, vy: Math.sin(ang) * T.speed,
+    life: T.lifetime, lockLost: 0, spent: false, alive: true,
+  });
+  state.stats.torpsFired[owner.team]++;
+  state.stats.torpLaunch[owner.team].push(Math.round(dist(owner.x, owner.y, target.x, target.y)));
+  pushEvent(state, { kind: 'launch', x: owner.x, y: owner.y });
+}
+function findShip(state, id) {
+  var s = state.shipById[id];
+  return (s && s.alive) ? s : null;
+}
+function updateTorpedoes(state, dt) {
+  var T = state.config.torpedo, torps = state.torps;
+  for (var i = 0; i < torps.length; i++) {
+    var tp = torps[i];
+    if (!tp.alive) continue;
+    tp.life -= dt;
+    if (tp.life <= 0) { tp.alive = false; continue; }
+    var target = findShip(state, tp.targetId);
+    if (!tp.spent && target) {
+      // LOS-gated lock (load-bearing for the flip: cover breaks tracking)
+      if (state.tick % 6 === 0) tp.hasLos = losClear(state, tp.x, tp.y, target.x, target.y);
+      if (tp.hasLos === false) {
+        tp.lockLost += dt;
+        if (tp.lockLost > T.lockLossSeconds) tp.spent = true; // flies dumb forever
+      } else {
+        tp.lockLost = 0;
+        var d = dist(tp.x, tp.y, target.x, target.y);
+        var tLead = Math.min(1.5, d / T.speed);
+        var want = Math.atan2(target.y + target.vy * tLead - tp.y, target.x + target.vx * tLead - tp.x);
+        var err = normAngle(want - tp.heading);
+        tp.heading += clamp(err, -T.turnRate * dt, T.turnRate * dt); // LOOSE tracking
+        tp.vx = Math.cos(tp.heading) * T.speed; tp.vy = Math.sin(tp.heading) * T.speed;
+      }
+    } else if (!tp.spent && !target) {
+      tp.spent = true;
+    }
+    tp.x += tp.vx * dt; tp.y += tp.vy * dt;
+    if (tp.x < -50 || tp.y < -50 || tp.x > state.config.arena.w + 50 || tp.y > state.config.arena.h + 50) { tp.alive = false; continue; }
+    // rock collision -> detonate on the rock
+    var boom = false;
+    rocksNearSeg(state, tp.x, tp.y, tp.x, tp.y, 96, function (o) {
+      if (dist(tp.x, tp.y, o.x, o.y) < o.r + 4) {
+        damageAsteroid(state, o, T.damage);
+        detonateTorpedo(state, tp);
+        boom = true; return true;
+      }
+      return false;
+    });
+    if (boom) continue;
+    // terminal approach on the tracked target
+    if (!tp.spent && target && dist(tp.x, tp.y, target.x, target.y) < T.hitRadius + target.def.radius) {
+      // predictability gate: slow OR steady-vector targets are reliably hit; fast jinkers are missed
+      var predictable = target.speed < T.predictSpeed || target.jinkEMA < T.jinkAccelThreshold;
+      var pHit = predictable ? 1 - clamp01(target.def.evasion * T.steadyEvasionMult)
+                             : 1 - clamp01(target.def.evasion * T.jinkEvasionMult);
+      if (state.rng.chance(pHit)) {
+        var owner = state.shipById[tp.ownerId];
+        state.stats.torpsHit[tp.team]++;
+        applyDamage(state, target, T.damage, owner && owner.team === tp.team ? owner : null, 'torp');
+        tp.alive = false;
+        pushEvent(state, { kind: 'boom', x: tp.x, y: tp.y, r: T.aoeRadius * 0.6 });
+      } else {
+        tp.spent = true; // sails past, no re-attack
+      }
+    }
+  }
+}
+function detonateTorpedo(state, tp) {
+  var T = state.config.torpedo;
+  tp.alive = false;
+  var owner = state.shipById[tp.ownerId];
+  applyAoe(state, tp.x, tp.y, T.aoeRadius, T.aoeDamage, owner && owner.team === tp.team ? owner : null, 'torpAoe');
+  pushEvent(state, { kind: 'boom', x: tp.x, y: tp.y, r: T.aoeRadius });
+}
+
+/* ---------------- Bombs (straight-line AOE; lead-aimed; jink skews own aim; self-risk) ---------------- */
+function launchBomb(state, owner, target) {
+  var B = state.config.bomb;
+  // lead solve: t^2(|vT|^2 - vB^2) + 2t(rel.vT) + rel.rel = 0
+  var relx = target.x - owner.x, rely = target.y - owner.y;
+  var a = target.vx * target.vx + target.vy * target.vy - B.speed * B.speed;
+  var b = 2 * (relx * target.vx + rely * target.vy);
+  var c = relx * relx + rely * rely;
+  var t;
+  if (Math.abs(a) < 1e-6) t = -c / b;
+  else {
+    var disc = b * b - 4 * a * c;
+    if (disc < 0) t = -1;
+    else {
+      var sq = Math.sqrt(disc);
+      var t1 = (-b - sq) / (2 * a), t2 = (-b + sq) / (2 * a);
+      t = Math.min(t1 > 0 ? t1 : Infinity, t2 > 0 ? t2 : Infinity);
+    }
+  }
+  if (!(t > 0) || t === Infinity) t = Math.sqrt(c) / B.speed; // fallback: aim direct
+  var aimX = target.x + target.vx * t, aimY = target.y + target.vy * t;
+  var ang = Math.atan2(aimY - owner.y, aimX - owner.x);
+  // own-velocity skew: a jinking bomber throws its bombs wide (steady run = accurate)
+  var accel = owner.def.thrust / owner.def.mass;
+  var spread = B.jinkAimSpread * clamp01(owner.jinkEMA / (accel * 0.7));
+  ang += state.rng.range(-spread, spread);
+  state.bombs.push({
+    id: state.nextId++, team: owner.team, ownerId: owner.id,
+    x: owner.x + Math.cos(ang) * (owner.def.radius + 5), y: owner.y + Math.sin(ang) * (owner.def.radius + 5),
+    vx: Math.cos(ang) * B.speed, vy: Math.sin(ang) * B.speed,
+    age: 0, alive: true,
+  });
+  state.stats.bombsFired[owner.team]++;
+}
+function detonateBomb(state, bomb) {
+  var B = state.config.bomb;
+  bomb.alive = false;
+  var owner = state.shipById[bomb.ownerId];
+  applyAoe(state, bomb.x, bomb.y, B.aoeRadius, B.damage, owner && owner.team === bomb.team ? owner : null, 'bomb');
+  pushEvent(state, { kind: 'boom', x: bomb.x, y: bomb.y, r: B.aoeRadius });
+}
+function updateBombs(state, dt) {
+  var B = state.config.bomb, bombs = state.bombs;
+  for (var i = 0; i < bombs.length; i++) {
+    var bm = bombs[i];
+    if (!bm.alive) continue;
+    bm.age += dt;
+    if (bm.age > B.maxFlight) { bm.alive = false; continue; } // fizzle
+    bm.x += bm.vx * dt; bm.y += bm.vy * dt;
+    var hit = false;
+    rocksNearSeg(state, bm.x, bm.y, bm.x, bm.y, 96, function (o) {
+      if (dist(bm.x, bm.y, o.x, o.y) < o.r + 4) {
+        damageAsteroid(state, o, B.damage); detonateBomb(state, bm); hit = true; return true;
+      }
+      return false;
+    });
+    if (hit) continue;
+    var ships = state.ships;
+    for (var k = 0; k < ships.length; k++) {
+      var sh = ships[k];
+      if (!sh.alive) continue;
+      if (sh.id === bm.ownerId && bm.age < B.armTime) continue; // not armed at own muzzle
+      if (dist(bm.x, bm.y, sh.x, sh.y) < sh.def.radius + 4) {
+        if (sh.team !== bm.team) state.stats.bombsHitShip[bm.team]++;
+        detonateBomb(state, bm); break; // contact only — lights dodge
+      }
+    }
+  }
+}
+
+/* ---------------- Gatling (interceptor forward gun; kills lights, chips capitals) ---------------- */
+function updateGatling(state, ship, target, dt) {
+  var G = state.config.gatling;
+  ship.cool.gat -= dt;
+  if (!target || !target.alive) return;
+  var d = dist(ship.x, ship.y, target.x, target.y);
+  if (d > G.range) return;
+  if (Math.abs(normAngle(Math.atan2(target.y - ship.y, target.x - ship.x) - ship.heading)) > G.arc / 2) return;
+  if (!losShips(state, ship, target)) return;
+  while (ship.cool.gat <= 0) {
+    ship.cool.gat += 1 / G.fireRate;
+    var pHit = 1 - clamp01(target.def.evasion * G.evasionMult);
+    if (state.rng.chance(pHit)) {
+      var capital = target.cls === 'destroyer' || target.cls === 'frigate';
+      applyDamage(state, target, G.damagePerShot * (capital ? G.capitalMult : 1), ship, 'gat');
+    }
+    pushEvent(state, { kind: 'gat', x: ship.x, y: ship.y, x2: target.x, y2: target.y, team: ship.team });
+  }
+  if (ship.cool.gat < 0) ship.cool.gat = 0;
+}
+
+/* ---------------- Point defence (short range, slot-capped throughput; saturation leaks) ---------------- */
+function updatePD(state, ship, dt) {
+  var P = state.config.pd, slots = ship.def.pdSlots;
+  if (slots <= 0) return;
+  ship.cool.pd += dt;
+  var interval = 1 / P.shotsPerSecond;
+  if (ship.cool.pd < interval) return;
+  ship.cool.pd -= interval;
+
+  // gather threats in the bubble: incoming projectiles first (closest first), then enemy ships
+  var threats = [];
+  var torps = state.torps, bombs = state.bombs, ships = state.ships;
+  for (var i = 0; i < torps.length; i++) {
+    var tp = torps[i];
+    if (tp.alive && tp.team !== ship.team) {
+      var d = dist(ship.x, ship.y, tp.x, tp.y);
+      if (d <= P.range) threats.push({ kind: 'torp', obj: tp, d: d });
+    }
+  }
+  for (var j = 0; j < bombs.length; j++) {
+    var bm = bombs[j];
+    if (bm.alive && bm.team !== ship.team) {
+      var d2 = dist(ship.x, ship.y, bm.x, bm.y);
+      if (d2 <= P.range) threats.push({ kind: 'bomb', obj: bm, d: d2 });
+    }
+  }
+  threats.sort(function (a, b) { return a.d - b.d; });
+  var shipThreats = [];
+  for (var k = 0; k < ships.length; k++) {
+    var sh = ships[k];
+    if (sh.alive && sh.team !== ship.team) {
+      var d3 = dist(ship.x, ship.y, sh.x, sh.y);
+      if (d3 <= P.range + sh.def.radius) shipThreats.push({ kind: 'ship', obj: sh, d: d3 });
+    }
+  }
+  shipThreats.sort(function (a, b) { return a.d - b.d; });
+  threats = threats.concat(shipThreats);
+
+  // throughput cap: at most `slots` engaged this volley; the (N+1)th leaks through
+  var n = Math.min(slots, threats.length);
+  for (var s = 0; s < n; s++) {
+    var th = threats[s];
+    if (!losClear(state, ship.x, ship.y, th.kind === 'ship' ? th.obj.x : th.obj.x, th.obj.y)) continue;
+    if (th.kind === 'ship') {
+      var pHit = 1 - clamp01(th.obj.def.evasion * P.shipEvasionMult);
+      if (state.rng.chance(pHit)) applyDamage(state, th.obj, P.shipDamagePerShot, ship, 'pd');
+      pushEvent(state, { kind: 'pd', x: ship.x, y: ship.y, x2: th.obj.x, y2: th.obj.y, team: ship.team });
+    } else {
+      pushEvent(state, { kind: 'pd', x: ship.x, y: ship.y, x2: th.obj.x, y2: th.obj.y, team: ship.team });
+      if (state.rng.chance(P.projectileKillChance)) {
+        if (th.kind === 'torp') { state.stats.torpsPD[th.obj.team]++; detonateTorpedo(state, th.obj); }
+        else { state.stats.bombsPD[th.obj.team]++; detonateBomb(state, th.obj); } // bomb blows anyway — self-risk
+      }
+    }
+  }
+}
+/* ---------------- Role AI (deliberately simple; serves the §5 counter-web) ---------------- */
+function livingEnemies(state, team) { return team === 'A' ? state.aliveB : state.aliveA; }
+function isCapital(s) { return s.cls === 'destroyer' || s.cls === 'frigate'; }
+function isLight(s) { return s.cls === 'bomber' || s.cls === 'interceptor'; }
+
+function nearestWhere(state, ship, list, pred) {
+  var best = null, bestD = Infinity;
+  for (var i = 0; i < list.length; i++) {
+    var e = list[i];
+    if (pred && !pred(e)) continue;
+    var d = dist(ship.x, ship.y, e.x, e.y);
+    if (d < bestD) { bestD = d; best = e; }
+  }
+  return best ? { ship: best, d: bestD } : null;
+}
+/* Is a live enemy torpedo tracking me nearby? (lights jink in response) */
+function torpedoThreat(state, ship) {
+  var torps = state.torps;
+  for (var i = 0; i < torps.length; i++) {
+    var tp = torps[i];
+    if (tp.alive && !tp.spent && tp.team !== ship.team && tp.targetId === ship.id &&
+        dist(tp.x, tp.y, ship.x, ship.y) < 650) return true;
+  }
+  return false;
+}
+function threatened(state, ship) {
+  var AI = state.config.ai;
+  var near = nearestWhere(state, ship, livingEnemies(state, ship.team), null);
+  return (near && near.d < AI.threatJinkRange) || torpedoThreat(state, ship);
+}
+
+function tryTorpedo(state, ship, dt) {
+  var TC = state.config.torpedo[ship.cls];
+  if (!TC) return;
+  if (ship.torpAmmo === 0) return;
+  var enemies = livingEnemies(state, ship.team);
+  // continue a salvo in progress
+  if (ship.cool.salvoLeft > 0) {
+    ship.cool.salvoGap -= dt;
+    if (ship.cool.salvoGap <= 0) {
+      var t2 = torpedoPick(state, ship, enemies, TC);
+      if (t2) { launchTorpedo(state, ship, t2); }
+      ship.cool.salvoLeft--; ship.cool.salvoGap = TC.salvoGap || 0;
+    }
+    return;
+  }
+  if (ship.cool.torp > 0) return;
+  var target = torpedoPick(state, ship, enemies, TC);
+  if (!target) return;
+  launchTorpedo(state, ship, target);
+  if (ship.torpAmmo > 0) ship.torpAmmo--;
+  ship.cool.torp = TC.cooldown || 9999;
+  ship.cool.salvoLeft = (TC.salvo || 1) - 1;
+  ship.cool.salvoGap = TC.salvoGap || 0;
+}
+/* torpedoes go after capitals, else predictable (slow/steady) targets — not jinking lights */
+function torpedoPick(state, ship, enemies, TC) {
+  var T = state.config.torpedo;
+  var self = this;
+  var cap = nearestWhere(state, ship, enemies, function (e) {
+    var de = dist(ship.x, ship.y, e.x, e.y);
+    return isCapital(e) && de >= T.lobMinRange && de <= TC.range && losShips(state, ship, e);
+  });
+  if (cap) return cap.ship;
+  if (ship.cls === 'interceptor') return null; // save the one shot for a capital
+  // among lights, only bombers are worth a torpedo (steady/slow = predictable = bait);
+  // an interceptor jinks the moment it's threatened and the torpedo is always wasted
+  var steady = nearestWhere(state, ship, enemies, function (e) {
+    var de = dist(ship.x, ship.y, e.x, e.y);
+    return e.cls === 'bomber' &&
+           (e.speed < T.predictSpeed || e.jinkEMA < T.jinkAccelThreshold) &&
+           de >= T.lobMinRange && de <= TC.range && losShips(state, ship, e);
+  });
+  return steady ? steady.ship : null;
+}
+
+function aiDestroyer(state, ship, dt) {
+  var cfg = state.config, AI = cfg.ai, RG = cfg.railgun;
+  var enemies = livingEnemies(state, ship.team);
+  if (!enemies.length) { ship.nav = null; return; }
+  // railgun food first (slow, low evasion), then whatever is nearest
+  var pick = nearestWhere(state, ship, enemies, isCapital) || nearestWhere(state, ship, enemies, null);
+  var target = pick.ship;
+  var d = pick.d;
+  var aim = Math.atan2(target.y - ship.y, target.x - ship.x);
+  var closeLight = nearestWhere(state, ship, enemies, function (e) { return isLight(e); });
+
+  if (closeLight && closeLight.d < AI.destroyerRetreatRange) {
+    // lights in the dead zone: burn away (nose turns away — the railgun is now useless, by design)
+    var ux = (ship.x - closeLight.ship.x) / (closeLight.d || 1), uy = (ship.y - closeLight.ship.y) / (closeLight.d || 1);
+    ship.nav = { x: ship.x + ux * 500, y: ship.y + uy * 500, arrive: false, jink: false };
+  } else if (d > AI.destroyerStandoff + 100) {
+    var ux2 = (target.x - ship.x) / d, uy2 = (target.y - ship.y) / d;
+    ship.nav = { x: target.x - ux2 * AI.destroyerStandoff, y: target.y - uy2 * AI.destroyerStandoff,
+                 arrive: true, face: aim };
+  } else if (d < AI.destroyerStandoff - 140 && isCapital(target)) {
+    var ux3 = (ship.x - target.x) / d, uy3 = (ship.y - target.y) / d;
+    ship.nav = { x: target.x + ux3 * AI.destroyerStandoff, y: target.y + uy3 * AI.destroyerStandoff,
+                 arrive: true, face: aim };
+  } else {
+    ship.nav = { x: ship.x, y: ship.y, arrive: true, face: aim }; // hold and orient to fire
+  }
+
+  var st = railgunReady(state, ship, target);
+  if (st === 'ok') { fireRailgun(state, ship, target); ship.ai.noLos = 0; }
+  else if (st === 'los') {
+    ship.ai.noLos = (ship.ai.noLos || 0) + dt;
+    // blow open the cover: after a while with no shot, shoot the rock in the way
+    if (ship.ai.noLos > AI.rockShootSeconds && cfg.destructibleAsteroids && d < RG.maxRange && ship.cool.rail <= 0) {
+      var rock = firstRockOnRay(state, ship.x, ship.y, target.x, target.y);
+      if (rock) {
+        if (ship.nav) ship.nav.face = Math.atan2(rock.y - ship.y, rock.x - ship.x);
+        if (Math.abs(normAngle(Math.atan2(rock.y - ship.y, rock.x - ship.x) - ship.heading)) < RG.arc / 2)
+          fireRailgunAtRock(state, ship, rock);
+      }
+    }
+  } else ship.ai.noLos = 0;
+  tryTorpedo(state, ship, dt); // weak secondary — only ever finds capital/steady targets
+}
+
+function aiFrigate(state, ship, dt) {
+  var cfg = state.config, AI = cfg.ai;
+  var enemies = livingEnemies(state, ship.team);
+  if (!enemies.length) { ship.nav = null; return; }
+  var own = (ship.team === 'A' ? state.aliveA : state.aliveB);
+  var dest = null;
+  for (var i = 0; i < own.length; i++) if (own[i].cls === 'destroyer') { dest = own[i]; break; }
+  var near = nearestWhere(state, ship, enemies, null);
+  var aim = Math.atan2(near.ship.y - ship.y, near.ship.x - ship.x);
+  if (dest) {
+    // escort: park the PD umbrella between the destroyer and the threat axis
+    var ex = near.ship.x - dest.x, ey = near.ship.y - dest.y;
+    var el = len(ex, ey) || 1;
+    ship.nav = { x: dest.x + (ex / el) * AI.escortRange, y: dest.y + (ey / el) * AI.escortRange,
+                 arrive: true, face: aim };
+  } else {
+    var eCap = nearestWhere(state, ship, enemies, function (e) { return e.cls === 'destroyer'; });
+    var anchor = eCap || near;
+    var ux = (ship.x - anchor.ship.x) / (anchor.d || 1), uy = (ship.y - anchor.ship.y) / (anchor.d || 1);
+    var stand = eCap ? AI.frigateStandoff : 500;
+    ship.nav = { x: anchor.ship.x + ux * stand, y: anchor.ship.y + uy * stand, arrive: true, face: aim };
+  }
+  tryTorpedo(state, ship, dt); // the torpedo specialist
+}
+
+function teamCommitting(state, team) {
+  if (state.time < state.commit[team].until) return true;
+  // no PD capitals on the other side: nothing to saturate, no reason to hold back
+  var enemies = livingEnemies(state, team);
+  for (var i = 0; i < enemies.length; i++) if (isCapital(enemies[i])) return false;
+  return true;
+}
+function updateCommits(state) {
+  var AI = state.config.ai;
+  var teams = ['A', 'B'];
+  for (var t = 0; t < teams.length; t++) {
+    var team = teams[t];
+    var own = team === 'A' ? state.aliveA : state.aliveB;
+    var lights = [];
+    for (var i = 0; i < own.length; i++) if (isLight(own[i])) lights.push(own[i]);
+    if (!lights.length) continue;
+    var enemies = livingEnemies(state, team);
+    if (!enemies.length) continue;
+    var c = state.commit[team];
+    // wave target: the enemy destroyer, else any capital, else nearest to the pack
+    var cx = 0, cy = 0;
+    for (var j = 0; j < lights.length; j++) { cx += lights[j].x; cy += lights[j].y; }
+    var probe = { x: cx / lights.length, y: cy / lights.length };
+    var tgt = null, bestD = Infinity;
+    for (var k = 0; k < enemies.length; k++) {
+      var e = enemies[k];
+      var pri = e.cls === 'destroyer' ? 0 : (isCapital(e) ? 1 : 2);
+      var d = dist(probe.x, probe.y, e.x, e.y) + pri * 100000;
+      if (d < bestD) { bestD = d; tgt = e; }
+    }
+    c.targetId = tgt.id;
+    if (state.time < c.until || state.time < c.cool) continue;
+    // staged = in position AND slowed to hold — the wave assembles before it goes in.
+    // In the open that dwell is naked torpedo exposure; in dense it happens behind rocks.
+    var staged = 0, stagedBombers = 0, aliveBombers = 0;
+    for (var s = 0; s < lights.length; s++) {
+      var L = lights[s];
+      if (L.cls === 'bomber') aliveBombers++;
+      if (dist(L.x, L.y, tgt.x, tgt.y) < AI.commitRadius && L.speed < L.def.maxCruiseSpeed * 0.5) {
+        staged++;
+        if (L.cls === 'bomber') stagedBombers++;
+      }
+    }
+    // don't blow the wave before the payload is in position
+    if (aliveBombers > 0 && stagedBombers === 0) continue;
+    if (staged >= Math.min(lights.length, AI.commitMinLights)) {
+      c.until = state.time + AI.commitSeconds;
+      c.cool = c.until + AI.commitCooldown;
+      state.stats.waves[team]++;
+    }
+  }
+}
+
+/* Find a staging point in the LOS shadow of a rock near the wave ring: behind cover
+   from the enemy's torpedo source. Returns null on open maps — exposure is the point. */
+function coverPoint(state, ship, tgt, minD, maxD) {
+  var key = Math.round(minD) + ':' + Math.round(maxD);
+  if (state.tick - (ship.ai.coverAt || -999) < 30 && ship.ai.cover && ship.ai.coverKey === key) return ship.ai.cover;
+  ship.ai.coverAt = state.tick; ship.ai.coverKey = key;
+  // hide from the enemy's TORPEDO platform — the frigate is the specialist; the
+  // destroyer's shadow is worthless if the frigate has a sightline around the rock
+  var enemies = livingEnemies(state, ship.team);
+  var threat = nearestWhere(state, ship, enemies, function (e) { return e.cls === 'frigate'; }) ||
+               nearestWhere(state, ship, enemies, isCapital);
+  var thx = threat ? threat.ship.x : tgt.x, thy = threat ? threat.ship.y : tgt.y;
+  var cands = [];
+  rocksNearSeg(state, tgt.x, tgt.y, tgt.x, tgt.y, maxD + 92, function (o) {
+    if (o.r < 32) return false;
+    var dTgt = dist(o.x, o.y, tgt.x, tgt.y);
+    if (dTgt < minD || dTgt > maxD) return false;
+    var dth = dist(o.x, o.y, thx, thy) || 1;
+    var sx = (o.x - thx) / dth, sy = (o.y - thy) / dth;
+    var hx = o.x + sx * (o.r + 55), hy = o.y + sy * (o.r + 55);
+    // creep to the INNERMOST shadow behind the BIGGEST rock: a wide umbra tolerates
+    // both our drift and the emitter's movement; a small rock's shadow is a knife-edge
+    var score = dTgt + 0.3 * dist(ship.x, ship.y, hx, hy) + (90 - Math.min(90, o.r)) * 3;
+    cands.push({ score: score, x: hx, y: hy, sx: sx, sy: sy });
+    return false;
+  });
+  cands.sort(function (a, b) { return a.score - b.score; });
+  // validate lazily: reject hide points embedded in a neighbouring rock (stall traps)
+  var best = null;
+  for (var c = 0; c < cands.length && c < 6; c++) {
+    var cd = cands[c], embedded = false;
+    rocksNearSeg(state, cd.x, cd.y, cd.x, cd.y, 120, function (o2) {
+      if (dist(cd.x, cd.y, o2.x, o2.y) < o2.r + 28) { embedded = true; return true; }
+      return false;
+    });
+    if (!embedded) { best = { x: cd.x, y: cd.y, sx: cd.sx, sy: cd.sy }; break; }
+  }
+  ship.ai.cover = best;
+  return best;
+}
+/* Approach a cover point through its shadow cone so the braking phase stays hidden. */
+function navToCover(ship, cover, jink) {
+  var dx = cover.x - ship.x, dy = cover.y - ship.y;
+  if (dx * dx + dy * dy > 260 * 260)
+    return { x: cover.x + cover.sx * 220, y: cover.y + cover.sy * 220, arrive: false, jink: jink };
+  return { x: cover.x, y: cover.y, arrive: true, jink: jink };
+}
+
+function aiBomber(state, ship, dt) {
+  var cfg = state.config, AI = cfg.ai, B = cfg.bomb;
+  var enemies = livingEnemies(state, ship.team);
+  if (!enemies.length) { ship.nav = null; return; }
+  var pick = nearestWhere(state, ship, enemies, function (e) { return e.cls === 'destroyer'; }) ||
+             nearestWhere(state, ship, enemies, isCapital) ||
+             nearestWhere(state, ship, enemies, null);
+  var target = pick.ship, d = pick.d;
+  var thr = threatened(state, ship);
+  var committing = teamCommitting(state, ship.team);
+  var m = ship.ai.mode;
+  if (m !== 'run' && m !== 'break' && m !== 'approach') m = 'stage';
+  if (m === 'stage' && committing) { m = 'approach'; }
+  if ((m === 'approach' || m === 'run') && !committing) m = 'break';
+
+  if (m === 'stage') {
+    // hold the ring between waves — in the LOS shadow of a rock when the map offers one.
+    // Coasting exposed is torpedo bait (open maps); cover blocks the lock (dense maps).
+    var cover = coverPoint(state, ship, target, AI.coverMinRange, AI.stageRange * 1.4);
+    if (cover) ship.nav = navToCover(ship, cover, thr);
+    else {
+      var sx = (ship.x - target.x) / (d || 1), sy = (ship.y - target.y) / (d || 1);
+      ship.nav = { x: target.x + sx * AI.stageRange, y: target.y + sy * AI.stageRange, arrive: true, jink: thr };
+    }
+  }
+  if (m === 'approach') {
+    // committed push straight at the target — the waypoint router threads the rocks.
+    // In dense fields LOS opens naturally at short range (fire late, duck early);
+    // in the open it opens at launch range and the whole run is naked. That IS the flip.
+    ship.nav = { x: target.x, y: target.y, arrive: false, jink: thr };
+    // a bomb needs a steady vector BEFORE release: go steady as soon as the target is
+    // sighted inside run-start range — early in the open (long, exposed), late in dense
+    if (d <= B.launchRange * B.runStartFactor && losShips(state, ship, target)) {
+      m = 'run'; ship.ai.modeAt = state.time; ship.ai.runBombs = 0;
+    }
+  }
+  if (m === 'run') {
+    // steady bomb-run vector: accurate bombs, torpedo-predictable — the enforced tradeoff.
+    // Pop out, stream a pair, duck back before the answering torpedo lands.
+    ship.nav = { x: target.x, y: target.y, arrive: false, jink: false };
+    var clear = losShips(state, ship, target);
+    if (ship.cool.bomb <= 0 && d <= B.launchRange && clear) {
+      // don't waste the bomb on a rock: the LEAD path (not just the sightline) must be clear
+      var tl = Math.min(B.maxFlight, d / B.speed);
+      var aimX = target.x + target.vx * tl, aimY = target.y + target.vy * tl;
+      if (losClear(state, ship.x, ship.y, aimX, aimY)) {
+        launchBomb(state, ship, target);
+        ship.cool.bomb = B.cooldown;
+        ship.ai.runBombs = (ship.ai.runBombs || 0) + 1;
+      }
+    }
+    if ((ship.ai.runBombs || 0) >= 3 || d < AI.bomberBreakRange ||
+        (!clear && state.time - ship.ai.modeAt > 1.0)) m = 'break';
+  }
+  if (m === 'break') {
+    // duck behind the NEAREST solid rock — the pursuing torpedo must lose its lock NOW,
+    // not after a cross-map transit. No rock nearby (open map) = no duck. That's the flip.
+    var duck = null, duckD = Infinity;
+    var AR = state.asteroids;
+    var thrShip = nearestWhere(state, ship, enemies, function (e) { return e.cls === 'frigate'; }) ||
+                  nearestWhere(state, ship, enemies, isCapital);
+    for (var ri = 0; ri < AR.length; ri++) {
+      var ro = AR[ri];
+      if (!ro.alive || ro.r < 40) continue;
+      var rd2 = dist(ship.x, ship.y, ro.x, ro.y);
+      if (rd2 < 380 && rd2 < duckD) { duckD = rd2; duck = ro; }
+    }
+    if (duck && thrShip) {
+      var tdx = duck.x - thrShip.ship.x, tdy = duck.y - thrShip.ship.y;
+      var tdl = len(tdx, tdy) || 1;
+      ship.nav = { x: duck.x + (tdx / tdl) * (duck.r + 50), y: duck.y + (tdy / tdl) * (duck.r + 50),
+                   arrive: true, jink: true };
+    } else {
+      var ux = (ship.x - target.x) / (d || 1), uy = (ship.y - target.y) / (d || 1);
+      var side = (ship.id % 2 === 0) ? 1 : -1;
+      ship.nav = { x: ship.x + (ux * 0.8 + -uy * side * 0.6) * 400, y: ship.y + (uy * 0.8 + ux * side * 0.6) * 400,
+                   arrive: false, jink: true };
+    }
+    if (d > AI.bomberRegroupRange) m = committing ? 'approach' : 'stage';
+  }
+  ship.ai.mode = m;
+}
+
+function aiInterceptor(state, ship, dt) {
+  var cfg = state.config, AI = cfg.ai, G = cfg.gatling, TC = cfg.torpedo.interceptor;
+  var enemies = livingEnemies(state, ship.team);
+  if (!enemies.length) { ship.nav = null; return; }
+  var committing = teamCommitting(state, ship.team);
+  // the one anti-capital punch: held for the wave, then volleyed together (saturation)
+  if (ship.torpAmmo > 0 && committing) tryTorpedo(state, ship, dt);
+
+  var thr = threatened(state, ship);
+  var light = nearestWhere(state, ship, enemies, function (e) { return isLight(e); });
+  var gatTarget = null;
+
+  if (light && light.d < 700) {
+    // screen: hunt enemy lights (keep theirs off our bombers)
+    var lt = light.ship;
+    var tLead = Math.min(1.2, light.d / Math.max(1, ship.def.maxCruiseSpeed));
+    ship.nav = { x: lt.x + lt.vx * tLead, y: lt.y + lt.vy * tLead, arrive: false,
+                 jink: thr && light.d > 260 };
+    gatTarget = lt;
+    ship.ai.mode = 'screen';
+  } else {
+    var cap = nearestWhere(state, ship, enemies, isCapital) || nearestWhere(state, ship, enemies, null);
+    var tgt = cap.ship, d = cap.d;
+    gatTarget = tgt;
+    var m = ship.ai.mode;
+    if (m !== 'strafe_in' && m !== 'strafe_out') m = 'strafe_in';
+    if (!committing) {
+      // hold the ring until the wave goes in — behind cover when the map offers it
+      var cov = coverPoint(state, ship, tgt, AI.coverMinRange, AI.stageRange * 1.4);
+      if (cov) ship.nav = navToCover(ship, cov, thr);
+      else {
+        var sx = (ship.x - tgt.x) / (d || 1), sy = (ship.y - tgt.y) / (d || 1);
+        ship.nav = { x: tgt.x + sx * AI.stageRange, y: tgt.y + sy * AI.stageRange, arrive: true, jink: thr };
+      }
+      ship.ai.mode = 'strafe_in';
+      updateGatling(state, ship, gatTarget, dt);
+      return;
+    }
+    // committed strafe runs: dive through the PD bubble to gatling range, dump, exit.
+    // Deep and exposed by design (§5) — PD makes lingering lethal, saturation makes
+    // the pass survivable. So: dive WITH the bomb stream (PD slots prioritise projectiles),
+    // hold outside the bubble when no bombs fly. With no bombers left, spent interceptors
+    // commit regardless (O3: fights end on kills, not the clock).
+    var own = ship.team === 'A' ? state.aliveA : state.aliveB;
+    var bombersLeft = false, bomberRunning = false;
+    for (var oi = 0; oi < own.length; oi++) {
+      if (own[oi].cls === 'bomber') {
+        bombersLeft = true;
+        if (own[oi].ai.mode === 'run') bomberRunning = true;
+      }
+    }
+    var bombsFlying = false;
+    for (var bi2 = 0; bi2 < state.bombs.length; bi2++) {
+      if (state.bombs[bi2].alive && state.bombs[bi2].team === ship.team) { bombsFlying = true; break; }
+    }
+    var diveWindow = bomberRunning || bombsFlying || !bombersLeft || d < cfg.pd.range * 1.15;
+    if (!diveWindow) {
+      var hx2 = (ship.x - tgt.x) / (d || 1), hy2 = (ship.y - tgt.y) / (d || 1);
+      ship.nav = { x: tgt.x + hx2 * AI.strafeExitRange, y: tgt.y + hy2 * AI.strafeExitRange,
+                   arrive: true, jink: thr };
+      ship.ai.mode = 'strafe_in';
+      updateGatling(state, ship, gatTarget, dt);
+      return;
+    }
+    var m = ship.ai.mode;
+    if (m !== 'strafe_in' && m !== 'strafe_out') m = 'strafe_in';
+    if (m === 'strafe_in') {
+      var ux = (tgt.x - ship.x) / (d || 1), uy = (tgt.y - ship.y) / (d || 1);
+      ship.nav = { x: tgt.x + ux * AI.strafeDivePoint, y: tgt.y + uy * AI.strafeDivePoint,
+                   arrive: false, jink: thr && d > cfg.pd.range * 1.3 };
+      if (d < G.range * 0.8) m = 'strafe_out';
+    } else {
+      var ux2 = (ship.x - tgt.x) / (d || 1), uy2 = (ship.y - tgt.y) / (d || 1);
+      var side = (ship.id % 2 === 0) ? 1 : -1;
+      ship.nav = { x: tgt.x + (ux2 * 0.75 + -uy2 * side * 0.66) * AI.strafeExitRange * 1.6,
+                   y: tgt.y + (uy2 * 0.75 + ux2 * side * 0.66) * AI.strafeExitRange * 1.6,
+                   arrive: false, jink: true };
+      if (d > AI.strafeExitRange) m = 'strafe_in'; // do not loiter: out, around, in again
+    }
+    ship.ai.mode = m;
+  }
+  updateGatling(state, ship, gatTarget, dt);
+}
+
+function aiPinned(state, ship, dt) {
+  // test scenarios: no navigation, but rotate to aim and use every weapon that is legal
+  var enemies = livingEnemies(state, ship.team);
+  ship.nav = null;
+  if (!enemies.length) return;
+  var pick = nearestWhere(state, ship, enemies, null);
+  var target = pick.ship;
+  ship.ctl.face = Math.atan2(target.y - ship.y, target.x - ship.x);
+  if (ship.cls === 'destroyer') {
+    var st = railgunReady(state, ship, target);
+    if (st === 'ok') fireRailgun(state, ship, target);
+  }
+  if (ship.cls === 'interceptor') updateGatling(state, ship, target, dt);
+  if (ship.cls === 'bomber' && ship.cool.bomb <= 0 &&
+      pick.d <= state.config.bomb.launchRange && losShips(state, ship, target)) {
+    launchBomb(state, ship, target); ship.cool.bomb = state.config.bomb.cooldown;
+  }
+  tryTorpedo(state, ship, dt);
+}
+
+function aiTick(state, ship, dt) {
+  ship.cool.rail -= dt; ship.cool.torp -= dt; ship.cool.bomb -= dt;
+  if (ship.pinned) { aiPinned(state, ship, dt); return; }
+  if (ship.cls === 'destroyer') aiDestroyer(state, ship, dt);
+  else if (ship.cls === 'frigate') aiFrigate(state, ship, dt);
+  else if (ship.cls === 'bomber') aiBomber(state, ship, dt);
+  else aiInterceptor(state, ship, dt);
+}
+
+/* ---------------- Match orchestration ---------------- */
+function resolveMatch(state, reason) {
+  function fleetValue(team) {
+    var v = 0;
+    for (var i = 0; i < state.ships.length; i++) {
+      var s = state.ships[i];
+      if (s.alive && s.team === team) v += s.def.cost * (s.hp / s.maxHp);
+    }
+    return v;
+  }
+  function survivors(team) {
+    var out = {};
+    for (var i = 0; i < state.ships.length; i++) {
+      var s = state.ships[i];
+      if (s.alive && s.team === team) out[s.cls] = (out[s.cls] || 0) + 1;
+    }
+    return out;
+  }
+  var va = fleetValue('A'), vb = fleetValue('B');
+  var winner;
+  if (Math.abs(va - vb) > 1e-9) winner = va > vb ? 'A' : 'B';
+  else if (Math.abs(state.damage.A - state.damage.B) > 1e-9) winner = state.damage.A > state.damage.B ? 'A' : 'B';
+  else winner = 'draw';
+  return {
+    winner: winner, reason: reason,
+    ticks: state.tick, seconds: state.tick / state.config.tickRate,
+    nonResolution: reason === 'timer',
+    fleetValueA: va, fleetValueB: vb,
+    damageA: state.damage.A, damageB: state.damage.B,
+    survivorsA: survivors('A'), survivorsB: survivors('B'),
+    stats: deepClone(state.stats),
+  };
+}
+
+function stepMatch(match) {
+  var state = match.state;
+  if (match.done) return;
+  var dt = 1 / state.config.tickRate;
+  state.tick++; state.time += dt;
+  // static terrain: build once; rebuild only when rocks split or drift
+  if (!state.grid || state.gridDirty || state.movingRocks > 0) {
+    rebuildGrid(state);
+    state.gridDirty = false;
+  }
+  if (state.tick % 6 === 0) state.losCache = {};
+
+  // alive rosters (stable order)
+  state.aliveA = []; state.aliveB = [];
+  for (var i = 0; i < state.ships.length; i++) {
+    var s = state.ships[i];
+    if (s.alive) (s.team === 'A' ? state.aliveA : state.aliveB).push(s);
+  }
+
+  updateCommits(state);
+  for (var a = 0; a < state.ships.length; a++) {
+    var sh = state.ships[a];
+    if (!sh.alive) continue;
+    aiTick(state, sh, dt);
+    updatePD(state, sh, dt);
+  }
+  for (var b = 0; b < state.ships.length; b++) {
+    var sb = state.ships[b];
+    if (!sb.alive) continue;
+    autopilot(state, sb, dt);
+    integrateShip(state, sb, dt);
+  }
+  collideShipsAndRocks(state, dt);
+  updateTorpedoes(state, dt);
+  updateBombs(state, dt);
+  updateAsteroids(state, dt);
+  if (state.tick % 30 === 0) {
+    state.torps = state.torps.filter(function (t) { return t.alive; });
+    state.bombs = state.bombs.filter(function (bm) { return bm.alive; });
+    state.asteroids = state.asteroids.filter(function (o) { return o.alive; });
+  }
+
+  var na = 0, nb = 0;
+  for (var c = 0; c < state.ships.length; c++) {
+    var sc = state.ships[c];
+    if (sc.alive) { if (sc.team === 'A') na++; else nb++; }
+  }
+  if ((na === 0 || nb === 0) && state.hadBothTeams) {
+    match.result = resolveMatch(state, 'elimination');
+    match.done = true;
+  } else if (state.tick >= state.tickCap) {
+    match.result = resolveMatch(state, 'timer'); // force-resolve: the sim can NEVER hang
+    match.done = true;
+  }
+  match.tick = state.tick;
+}
+
+function baseState(seed, overrides) {
+  var config = deepMerge(deepClone(CONFIG_DEFAULTS), overrides || {});
+  var rng = makeRng((seed >>> 0) || 1);
+  rng.next(); rng.next(); rng.next(); // warm up small seeds
+  return {
+    config: config, rng: rng, seed: seed,
+    tick: 0, time: 0, nextId: 1,
+    ships: [], shipById: {}, asteroids: [], torps: [], bombs: [],
+    events: [], losCache: {}, damage: { A: 0, B: 0 },
+    stats: { railShots: 0, railHitsShip: 0, railHitsRock: 0,
+             torpsFired: { A: 0, B: 0 }, torpsPD: { A: 0, B: 0 }, torpsHit: { A: 0, B: 0 },
+             bombsFired: { A: 0, B: 0 }, bombsPD: { A: 0, B: 0 }, bombsHitShip: { A: 0, B: 0 },
+             dmgTo: { A: {}, B: {} }, deaths: [], waves: { A: 0, B: 0 },
+             torpLaunch: { A: [], B: [] } },
+    aliveA: [], aliveB: [], spawnA: null, spawnB: null,
+    commit: { A: { until: -1, cool: 0, targetId: -1 }, B: { until: -1, cool: 0, targetId: -1 } },
+    tickCap: 0, hadBothTeams: false,
+  };
+}
+function finishSetup(state) {
+  state.tickCap = Math.round(state.config.matchTimerSeconds * state.config.tickRate);
+  var a = 0, b = 0;
+  for (var i = 0; i < state.ships.length; i++) {
+    state.shipById[state.ships[i].id] = state.ships[i];
+    if (state.ships[i].team === 'A') a++; else b++;
+    state.ships[i].ai.jinkPhase = (state.ships[i].id * 0.37) % 1;
+  }
+  state.hadBothTeams = a > 0 && b > 0;
+}
+function resolveFleet(config, spec) {
+  if (typeof spec === 'string') {
+    var p = config.presets[spec];
+    if (!p) throw new Error('unknown preset: ' + spec);
+    return p;
+  }
+  return spec || [];
+}
+function makeMatchObject(state) {
+  var match = { state: state, config: state.config, tick: 0, done: false, result: null };
+  match.step = function () { stepMatch(match); };
+  return match;
+}
+
+var api = {
+  defaultConfig: function () { return deepClone(CONFIG_DEFAULTS); },
+  PRESETS: deepClone(CONFIG_DEFAULTS.presets),
+
+  createMatch: function (opts) {
+    var state = baseState(opts.seed, opts.overrides);
+    generateTerrain(state, state.rng);
+    var fa = resolveFleet(state.config, opts.teamA || 'RAILGUN');
+    var fb = resolveFleet(state.config, opts.teamB || 'SWARM');
+    var gap = state.config.spawnFormationGap;
+    function spawnFleet(fleet, at, facing, team) {
+      var px = -Math.sin(facing), py = Math.cos(facing); // perpendicular line abreast
+      for (var i = 0; i < fleet.length; i++) {
+        var off = (i - (fleet.length - 1) / 2) * gap;
+        state.ships.push(makeShip(state, fleet[i], team, at.x + px * off, at.y + py * off, facing));
+      }
+    }
+    var faceA = Math.atan2(state.spawnB.y - state.spawnA.y, state.spawnB.x - state.spawnA.x);
+    spawnFleet(fa, state.spawnA, faceA, 'A');
+    spawnFleet(fb, state.spawnB, normAngle(faceA + Math.PI), 'B');
+    finishSetup(state);
+    return makeMatchObject(state);
+  },
+
+  createScenario: function (opts) {
+    var state = baseState(opts.seed, opts.overrides);
+    state.spawnA = { x: 0, y: 0 }; state.spawnB = { x: 0, y: 0 };
+    var rocks = opts.asteroids || [];
+    for (var i = 0; i < rocks.length; i++) state.asteroids.push(makeAsteroid(state, rocks[i].x, rocks[i].y, rocks[i].r));
+    var ships = opts.ships || [];
+    for (var j = 0; j < ships.length; j++) {
+      var sp = ships[j];
+      var sh = makeShip(state, sp.cls, sp.team, sp.x, sp.y, sp.heading || 0);
+      sh.vx = sp.vx || 0; sh.vy = sp.vy || 0;
+      sh.pinned = !!sp.pinned;
+      state.ships.push(sh);
+    }
+    finishSetup(state);
+    return makeMatchObject(state);
+  },
+
+  runMatch: function (opts) {
+    var m = api.createMatch(opts);
+    var guard = m.state.tickCap + 5;
+    while (!m.done && guard-- > 0) m.step();
+    return m.result;
+  },
+};
+return api;
+})();
+/* ===== SIM END ===== */
+</script>
+
+<script>
+/* ===== RENDER/APP (DOM side; the sim above never touches this) ===== */
+</script>
+</body>
+</html>
+</script>
+</body>
+</html>
