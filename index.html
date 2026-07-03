@@ -10,7 +10,7 @@
   #bar { display:flex; gap:10px; align-items:center; padding:6px 10px; background:#0b1018; border-bottom:1px solid #1c2636; flex-wrap:wrap; }
   #bar label { color:#7f8fa6; }
   #bar input, #bar select, #bar button { background:#131a26; color:#cfd8e3; border:1px solid #2a3850; border-radius:3px; padding:2px 7px; font:inherit; }
-  #bar button { cursor:pointer; } #bar button:hover { border-color:#4a6version; }
+  #bar button { cursor:pointer; } #bar button:hover { border-color:#4a6a9a; }
   #cv { flex:1; display:block; cursor:crosshair; }
   #hud { position:absolute; top:44px; left:10px; pointer-events:none; white-space:pre; color:#9fb0c8; text-shadow:0 1px 2px #000; }
   #banner { position:absolute; top:35%; left:0; right:0; text-align:center; font-size:34px; color:#fff; text-shadow:0 2px 8px #000; pointer-events:none; display:none; }
@@ -107,12 +107,12 @@ var CONFIG_DEFAULTS = {
     damage: 30,
     cooldown: 4.0,
     slugSpeed: 2400,               // near-hitscan; resolved as instant ray (cannot be intercepted)
-    evasionMult: 1.2,              // hit chance = 1 - clamp(evasion * this): int .04, bmb .22, frig .82, dest .94
+    evasionMult: 1.0,              // hit chance = 1 - evasion: int .20, bmb .35, frig .85, dest .95
   },
 
   // --- TORPEDOES (Frigate specialist; Destroyer weak afterthought; Interceptor single-use) ---
   torpedo: {
-    speed: 380,                    // far slower than slug; PD gets a shot or two in transit
+    speed: 420,                    // far slower than slug; PD gets a shot or two in transit
     turnRate: 1.1,                 // rad/s — LOOSE tracking
     damage: 24,
     aoeRadius: 45,                 // detonation on PD interception: small AOE
@@ -141,7 +141,7 @@ var CONFIG_DEFAULTS = {
                                    // Open maps: sighted early -> LONG steady run -> torpedo bait.
                                    // Dense maps: sighted late -> short pop-out run. The flip lives here.
     standoff: 300,                 // O1 default: medium standoff, artillery-leaning
-    damage: 24,
+    damage: 32,
     aoeRadius: 60,
     cooldown: 0.9,                 // streams within a run; saturation, not single pokes
     armTime: 0.20,                 // won't detonate on its own bomber at the muzzle
@@ -154,7 +154,7 @@ var CONFIG_DEFAULTS = {
     arc: 0.6,
     fireRate: 8,                   // shots/s
     damagePerShot: 2,
-    capitalMult: 0.3,              // chip vs capitals — MODEST by design (§5 flip-flatten watch):
+    capitalMult: 0.4,              // chip vs capitals — MODEST by design (§5 flip-flatten watch):
                                    // worth the dive, but the bomber is the capital-killer
     evasionMult: 0.85,             // hit = 1 - evasion*this
   },
@@ -163,12 +163,11 @@ var CONFIG_DEFAULTS = {
   pd: {
     range: 140,
     shotsPerSecond: 3.0,           // per slot
-    projectileKillChance: 0.45,    // per shot vs torpedo/bomb (transit ~0.37s -> ~1 shot).
+    projectileKillChance: 0.4,     // per shot vs torpedo/bomb (transit ~0.37s -> ~1 shot).
                                    // MUST stay weak: punishes lone pokes, leaks under saturation (§5)
-    shipDamagePerShot: 4,          // lingering in the bubble is lethal — when slots are free
-    shipEvasionMult: 0.5,          // hit vs ships = 1 - evasion*this. At point-blank the
-                                   // gatling tracks even a jinker: lingering lights get shredded
-                                   // when the slots are free — the open-map anti-strafe trade (§5)
+    shipDamagePerShot: 2.5,        // lingering in the bubble is lethal — when slots are free
+    shipEvasionMult: 0.65,         // hit vs ships = 1 - evasion*this; punishes lingerers
+                                   // when slots are free without shutting the strafe game down
   },
 
   // --- COLLISIONS (solid rocks; ships bonk, don't pass) ---
@@ -186,7 +185,7 @@ var CONFIG_DEFAULTS = {
     destroyerRetreatRange: 260,    // back off from lights closer than this
     frigateStandoff: 780,          // outside enemy railgun reach, inside own torpedo range
     escortRange: 220,              // frigate keeps PD umbrella near its destroyer
-    bomberBreakRange: 250,         // end run / turn away inside this
+    bomberBreakRange: 310,         // end run / turn away inside this (turnaround stays out of PD reach)
     bomberRegroupRange: 620,       // retreat out to here after a run
     strafeDivePoint: 60,           // dive aim = this far past the target
     strafeExitRange: 330,          // strafe exit distance (out of PD bubble)
@@ -198,7 +197,7 @@ var CONFIG_DEFAULTS = {
     stageRange: 640,               // lights hold here between waves
     commitRadius: 780,             // staged = within this of the wave target
     commitMinLights: 3,            // staged lights needed to trigger a wave (capped at living lights)
-    commitSeconds: 12,             // wave duration (long enough to cross dense fields)
+    commitSeconds: 16,             // wave duration (long enough to cross dense fields)
     commitCooldown: 3,             // regroup time between waves
     coverMinRange: 220,            // never stage inside the enemy PD bubble
     navArriveSlack: 14,
@@ -537,13 +536,15 @@ function autopilot(state, ship, dt) {
 
   var dvxWant = dirx * vGoal, dvyWant = diry * vGoal;
 
-  // --- jink: square-wave lateral weave for lights under threat (suppressed on steady runs
-  //     and while threading rocks — the rock IS the cover, weaving into it helps nobody) ---
-  if (goal.jink && !avoiding) {
+  // --- jink: square-wave lateral weave for lights under threat (suppressed on steady
+  //     runs, half-amplitude while threading rocks so nav still works but the vector
+  //     stays torpedo-unpredictable) ---
+  if (goal.jink) {
     var ph = state.time / AI.jinkPeriod + ship.ai.jinkPhase;
     var sq = (Math.floor(ph * 2) % 2 === 0) ? 1 : -1;
-    dvxWant += -diry * cruise * 0.55 * sq;
-    dvyWant += dirx * cruise * 0.55 * sq;
+    var jamp = cruise * 0.55 * (avoiding ? 0.45 : 1);
+    dvxWant += -diry * jamp * sq;
+    dvyWant += dirx * jamp * sq;
   }
 
   var dvx = dvxWant - ship.vx, dvy = dvyWant - ship.vy;
@@ -1231,7 +1232,7 @@ function updateCommits(state) {
     var tgt = null, bestD = Infinity;
     for (var k = 0; k < enemies.length; k++) {
       var e = enemies[k];
-      var pri = e.cls === 'destroyer' ? 0 : (isCapital(e) ? 1 : 2);
+      var pri = isCapital(e) ? 0 : 1; // any capital; the pack naturally hits the escort first
       var d = dist(probe.x, probe.y, e.x, e.y) + pri * 100000;
       if (d < bestD) { bestD = d; tgt = e; }
     }
@@ -1310,8 +1311,9 @@ function aiBomber(state, ship, dt) {
   var cfg = state.config, AI = cfg.ai, B = cfg.bomb;
   var enemies = livingEnemies(state, ship.team);
   if (!enemies.length) { ship.nav = null; return; }
-  var pick = nearestWhere(state, ship, enemies, function (e) { return e.cls === 'destroyer'; }) ||
-             nearestWhere(state, ship, enemies, isCapital) ||
+  // nearest capital first: strip the escort (torpedoes + 3 PD slots), THEN the blinded
+  // destroyer is §5's helpless victim. Only achievable where the approach is covered.
+  var pick = nearestWhere(state, ship, enemies, isCapital) ||
              nearestWhere(state, ship, enemies, null);
   var target = pick.ship, d = pick.d;
   var thr = threatened(state, ship);
@@ -1432,27 +1434,6 @@ function aiInterceptor(state, ship, dt) {
     // the pass survivable. So: dive WITH the bomb stream (PD slots prioritise projectiles),
     // hold outside the bubble when no bombs fly. With no bombers left, spent interceptors
     // commit regardless (O3: fights end on kills, not the clock).
-    var own = ship.team === 'A' ? state.aliveA : state.aliveB;
-    var bombersLeft = false, bomberRunning = false;
-    for (var oi = 0; oi < own.length; oi++) {
-      if (own[oi].cls === 'bomber') {
-        bombersLeft = true;
-        if (own[oi].ai.mode === 'run') bomberRunning = true;
-      }
-    }
-    var bombsFlying = false;
-    for (var bi2 = 0; bi2 < state.bombs.length; bi2++) {
-      if (state.bombs[bi2].alive && state.bombs[bi2].team === ship.team) { bombsFlying = true; break; }
-    }
-    var diveWindow = bomberRunning || bombsFlying || !bombersLeft || d < cfg.pd.range * 1.15;
-    if (!diveWindow) {
-      var hx2 = (ship.x - tgt.x) / (d || 1), hy2 = (ship.y - tgt.y) / (d || 1);
-      ship.nav = { x: tgt.x + hx2 * AI.strafeExitRange, y: tgt.y + hy2 * AI.strafeExitRange,
-                   arrive: true, jink: thr };
-      ship.ai.mode = 'strafe_in';
-      updateGatling(state, ship, gatTarget, dt);
-      return;
-    }
     var m = ship.ai.mode;
     if (m !== 'strafe_in' && m !== 'strafe_out') m = 'strafe_in';
     if (m === 'strafe_in') {
@@ -1691,6 +1672,202 @@ return api;
 
 <script>
 /* ===== RENDER/APP (DOM side; the sim above never touches this) ===== */
+(function () {
+  'use strict';
+  var cv = document.getElementById('cv');
+  var g = cv.getContext('2d');
+  var hud = document.getElementById('hud');
+  var banner = document.getElementById('banner');
+  var help = document.getElementById('help');
+  var ui = {
+    seed: document.getElementById('seed'),
+    density: document.getElementById('density'),
+    teamA: document.getElementById('teamA'),
+    teamB: document.getElementById('teamB'),
+    destr: document.getElementById('destr'),
+    speed: document.getElementById('speed'),
+    restart: document.getElementById('restart'),
+    pause: document.getElementById('pause'),
+    modeinfo: document.getElementById('modeinfo'),
+  };
+  var COLORS = { A: '#4da3ff', B: '#ff7a5c' };
+  var match = null, paused = false, effects = [];
+
+  function newMatch() {
+    match = Praedra.createMatch({
+      seed: parseInt(ui.seed.value, 10) || 1,
+      overrides: {
+        terrainDensity: Math.max(0, Math.min(1, parseFloat(ui.density.value) || 0.5)),
+        destructibleAsteroids: ui.destr.checked,
+      },
+      teamA: ui.teamA.value, teamB: ui.teamB.value,
+    });
+    effects = [];
+    banner.style.display = 'none';
+    ui.modeinfo.textContent = 'newtonian | spectate AI vs AI';
+  }
+  ui.restart.onclick = newMatch;
+  ui.pause.onclick = function () { paused = !paused; ui.pause.textContent = paused ? 'resume' : 'pause'; };
+  help.textContent = 'blue = ' + 'RAILGUN side A   orange = side B\nlines: white rail / cyan PD / yellow gatling\nspectator build — flip gate first';
+
+  function consumeEvents() {
+    var evs = match.state.events;
+    for (var i = 0; i < evs.length; i++) {
+      var e = evs[i], ttl = 0.4;
+      if (e.kind === 'pd') ttl = 0.12;
+      else if (e.kind === 'gat') ttl = 0.09;
+      else if (e.kind === 'boom' || e.kind === 'shatter') ttl = 0.5;
+      else if (e.kind === 'shipboom') ttl = 0.8;
+      else if (e.kind === 'launch') continue;
+      effects.push({ e: e, ttl: ttl, max: ttl });
+    }
+    evs.length = 0;
+  }
+
+  function fleetValue(team) {
+    var v = 0, st = match.state;
+    for (var i = 0; i < st.ships.length; i++) {
+      var s = st.ships[i];
+      if (s.alive && s.team === team) v += s.def.cost * (s.hp / s.maxHp);
+    }
+    return v;
+  }
+
+  function drawShip(s, scale) {
+    g.save();
+    g.translate(s.x, s.y);
+    // velocity vector so momentum reads
+    g.strokeStyle = 'rgba(255,255,255,0.25)';
+    g.lineWidth = 1 / scale;
+    g.beginPath(); g.moveTo(0, 0); g.lineTo(s.vx * 1.2, s.vy * 1.2); g.stroke();
+    g.rotate(s.heading);
+    g.fillStyle = COLORS[s.team];
+    g.strokeStyle = '#0a0f18';
+    g.lineWidth = 1.5 / scale;
+    var r = s.def.radius;
+    g.beginPath();
+    if (s.cls === 'interceptor') {            // small triangle, apex = nose
+      g.moveTo(r * 1.4, 0); g.lineTo(-r, r * 0.9); g.lineTo(-r, -r * 0.9);
+    } else if (s.cls === 'bomber') {          // diamond, nose marked
+      g.moveTo(r * 1.5, 0); g.lineTo(0, r); g.lineTo(-r * 1.2, 0); g.lineTo(0, -r);
+    } else if (s.cls === 'frigate') {         // square
+      g.rect(-r, -r, 2 * r, 2 * r);
+    } else {                                  // destroyer: long rectangle
+      g.rect(-r * 1.3, -r * 0.75, 2.6 * r, 1.5 * r);
+    }
+    g.closePath(); g.fill(); g.stroke();
+    // unambiguous front marker
+    g.strokeStyle = '#fff';
+    g.beginPath(); g.moveTo(r * 0.4, 0); g.lineTo(r * 1.6, 0); g.stroke();
+    g.restore();
+    // hp bar
+    var frac = s.hp / s.maxHp;
+    if (frac < 0.999) {
+      g.fillStyle = '#222';
+      g.fillRect(s.x - 14, s.y - s.def.radius - 10, 28, 3);
+      g.fillStyle = frac > 0.5 ? '#6c6' : (frac > 0.25 ? '#cc5' : '#c55');
+      g.fillRect(s.x - 14, s.y - s.def.radius - 10, 28 * frac, 3);
+    }
+  }
+
+  function render() {
+    var dpr = window.devicePixelRatio || 1;
+    var w = cv.clientWidth, h = cv.clientHeight;
+    if (cv.width !== w * dpr || cv.height !== h * dpr) { cv.width = w * dpr; cv.height = h * dpr; }
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.fillStyle = '#06080d';
+    g.fillRect(0, 0, w, h);
+    if (!match) return;
+    var st = match.state, cfg = match.config;
+    var scale = Math.min(w / cfg.arena.w, h / cfg.arena.h) * 0.98;
+    var ox = (w - cfg.arena.w * scale) / 2, oy = (h - cfg.arena.h * scale) / 2;
+    g.translate(ox, oy); g.scale(scale, scale);
+
+    g.strokeStyle = '#1c2636';
+    g.lineWidth = 2 / scale;
+    g.strokeRect(0, 0, cfg.arena.w, cfg.arena.h);
+
+    // asteroids
+    for (var i = 0; i < st.asteroids.length; i++) {
+      var o = st.asteroids[i];
+      if (!o.alive) continue;
+      g.fillStyle = o.moving ? '#585048' : '#3c4148';
+      g.strokeStyle = '#565e68';
+      g.lineWidth = 1 / scale;
+      g.beginPath(); g.arc(o.x, o.y, o.r, 0, 6.2832); g.fill(); g.stroke();
+    }
+    // torpedoes / bombs
+    for (var t = 0; t < st.torps.length; t++) {
+      var tp = st.torps[t];
+      if (!tp.alive) continue;
+      g.strokeStyle = COLORS[tp.team];
+      g.lineWidth = 2 / scale;
+      g.beginPath(); g.moveTo(tp.x - tp.vx * 0.05, tp.y - tp.vy * 0.05); g.lineTo(tp.x, tp.y); g.stroke();
+    }
+    g.fillStyle = '#ffd75c';
+    for (var b = 0; b < st.bombs.length; b++) {
+      var bm = st.bombs[b];
+      if (!bm.alive) continue;
+      g.beginPath(); g.arc(bm.x, bm.y, 3, 0, 6.2832); g.fill();
+    }
+    // effects (firing lines fade; blocked shots visibly end at the rock)
+    for (var e2 = effects.length - 1; e2 >= 0; e2--) {
+      var fx = effects[e2], ev = fx.e, a = fx.ttl / fx.max;
+      if (ev.kind === 'rail') {
+        g.strokeStyle = 'rgba(240,248,255,' + (0.85 * a) + ')';
+        g.lineWidth = (ev.hit === 'ship' ? 2.5 : 1.5) / scale;
+        g.beginPath(); g.moveTo(ev.x, ev.y); g.lineTo(ev.x2, ev.y2); g.stroke();
+      } else if (ev.kind === 'pd') {
+        g.strokeStyle = 'rgba(120,235,255,' + (0.7 * a) + ')';
+        g.lineWidth = 1 / scale;
+        g.beginPath(); g.moveTo(ev.x, ev.y); g.lineTo(ev.x2, ev.y2); g.stroke();
+      } else if (ev.kind === 'gat') {
+        g.strokeStyle = 'rgba(255,225,120,' + (0.55 * a) + ')';
+        g.lineWidth = 1 / scale;
+        g.beginPath(); g.moveTo(ev.x, ev.y); g.lineTo(ev.x2, ev.y2); g.stroke();
+      } else if (ev.kind === 'boom' || ev.kind === 'shipboom' || ev.kind === 'shatter') {
+        g.strokeStyle = (ev.kind === 'shatter' ? 'rgba(180,180,180,' : 'rgba(255,160,80,') + a + ')';
+        g.lineWidth = 2 / scale;
+        g.beginPath(); g.arc(ev.x, ev.y, ev.r * (1.6 - 0.6 * a), 0, 6.2832); g.stroke();
+      }
+    }
+    // ships
+    for (var s2 = 0; s2 < st.ships.length; s2++) {
+      var sh = st.ships[s2];
+      if (sh.alive) drawShip(sh, scale);
+    }
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    hud.textContent = 't=' + (st.tick / 60).toFixed(0) + 's / ' + cfg.matchTimerSeconds + 's' +
+      '   A ' + fleetValue('A').toFixed(1) + '  vs  B ' + fleetValue('B').toFixed(1) +
+      (match.done ? '   [ended: ' + match.result.winner + ' by ' + match.result.reason + ']' : '');
+    if (match.done && banner.style.display === 'none') {
+      banner.textContent = match.result.winner === 'draw' ? 'DRAW' :
+        'TEAM ' + match.result.winner + ' WINS  (' + match.result.reason + ')';
+      banner.style.color = match.result.winner === 'draw' ? '#ccc' : COLORS[match.result.winner];
+      banner.style.display = 'block';
+    }
+  }
+
+  var last = performance.now();
+  function frame(now) {
+    requestAnimationFrame(frame);
+    var dtReal = Math.min(0.1, (now - last) / 1000);
+    last = now;
+    if (match && !paused && !match.done) {
+      var steps = parseInt(ui.speed.value, 10) || 1;
+      for (var i = 0; i < steps && !match.done; i++) match.step();
+      consumeEvents();
+    }
+    for (var e = effects.length - 1; e >= 0; e--) {
+      effects[e].ttl -= dtReal;
+      if (effects[e].ttl <= 0) effects.splice(e, 1);
+    }
+    render();
+  }
+  newMatch();
+  requestAnimationFrame(frame);
+})();
 </script>
 </body>
 </html>
