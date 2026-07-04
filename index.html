@@ -16,20 +16,69 @@
   #hud { position:absolute; top:8px; left:10px; pointer-events:none; white-space:pre; color:#9fb0c8; text-shadow:0 1px 2px #000; }
   #banner { position:absolute; top:35%; left:0; right:0; text-align:center; font-size:34px; color:#fff; text-shadow:0 2px 8px #000; pointer-events:none; display:none; }
   #help { position:absolute; right:10px; top:8px; color:#5c6b80; text-align:right; pointer-events:none; white-space:pre; }
+  #matchup { color:#9fb0c8; }
+  #bar .sep { width:1px; align-self:stretch; background:#1c2636; margin:0 2px; }
+  #newbattle { border-color:#3a6ea5 !important; color:#eaf2ff; }
+
+  /* ---- fleet setup overlay ---- */
+  #setup { position:absolute; inset:0; z-index:30; background:rgba(5,7,11,0.975);
+           display:flex; align-items:center; justify-content:center; overflow:auto; padding:22px; box-sizing:border-box; }
+  #setup.hidden { display:none; }
+  #setupPanel { width:100%; max-width:940px; }
+  #setupTitle { text-align:center; font-size:22px; letter-spacing:4px; color:#dbe6f2; margin:0 0 4px; }
+  #setupSub { text-align:center; color:#5c6b80; margin-bottom:18px; letter-spacing:1px; }
+  #teams { display:flex; gap:16px; align-items:stretch; }
+  .teamCard { flex:1 1 0; min-width:0; background:#0b1018; border:1px solid #1c2636; border-radius:6px; padding:14px 14px 12px; box-sizing:border-box; }
+  .teamCard.A { border-top:3px solid #4da3ff; }
+  .teamCard.B { border-top:3px solid #ff7a5c; }
+  .teamHead { font-size:15px; letter-spacing:2px; font-weight:bold; margin-bottom:12px; }
+  .teamCard.A .teamHead { color:#4da3ff; }
+  .teamCard.B .teamHead { color:#ff7a5c; }
+  .presetRow { display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap; }
+  .presetRow button { background:#131a26; color:#cfd8e3; border:1px solid #2a3850; border-radius:3px; padding:3px 10px; cursor:pointer; font:inherit; }
+  .presetRow button:hover { border-color:#4a6a9a; }
+  .classRow { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid #131a26; }
+  .glyph { width:18px; text-align:center; font-size:15px; }
+  .teamCard.A .glyph { color:#4da3ff; } .teamCard.B .glyph { color:#ff7a5c; }
+  .cname { flex:1 1 auto; }
+  .ccost { color:#7f8fa6; width:44px; text-align:right; }
+  .stepper { display:flex; align-items:center; gap:5px; }
+  .stepper button { width:24px; height:24px; padding:0; line-height:22px; text-align:center;
+                    background:#131a26; color:#cfd8e3; border:1px solid #2a3850; border-radius:3px; cursor:pointer; font:inherit; }
+  .stepper button:hover:not(:disabled) { border-color:#4a6a9a; }
+  .stepper button:disabled { opacity:0.3; cursor:not-allowed; }
+  .count { width:26px; text-align:center; color:#eaf2ff; }
+  .subtotal { width:52px; text-align:right; color:#9fb0c8; }
+  .budget { margin-top:12px; display:flex; justify-content:space-between; align-items:baseline; }
+  .budget .spent { font-size:15px; color:#eaf2ff; }
+  .budget .rem { color:#7f8fa6; }
+  .budget.full .spent { color:#7cffb2; }
+  .budget.empty .spent { color:#ff7a5c; }
+  #settings { display:flex; gap:20px; align-items:center; justify-content:center; margin:18px 0 6px; flex-wrap:wrap;
+              background:#0b1018; border:1px solid #1c2636; border-radius:6px; padding:12px 14px; }
+  #settings label { color:#7f8fa6; }
+  #settings input, #settings select, #settings button { background:#131a26; color:#cfd8e3; border:1px solid #2a3850; border-radius:3px; padding:2px 7px; font:inherit; }
+  #settings button { cursor:pointer; } #settings button:hover { border-color:#4a6a9a; }
+  #settings input[type=range] { vertical-align:middle; }
+  #densityVal { color:#9fb0c8; display:inline-block; width:30px; }
+  #startWrap { text-align:center; margin-top:14px; }
+  #startBtn { font-size:16px; letter-spacing:3px; padding:11px 34px; background:#15304d; color:#eaf2ff;
+              border:1px solid #3a6ea5; border-radius:5px; cursor:pointer; font-family:inherit; }
+  #startBtn:hover:not(:disabled) { background:#1b3d63; border-color:#5a8ec5; }
+  #startBtn:disabled { opacity:0.45; cursor:not-allowed; }
+  #startReason { color:#ff9a7c; margin-top:9px; min-height:16px; letter-spacing:0.5px; }
 </style>
 </head>
 <body>
 <div id="wrap">
   <div id="bar">
-    <label>seed <input id="seed" type="number" value="1" style="width:70px"></label>
-    <label>density <input id="density" type="number" min="0" max="1" step="0.05" value="0.5" style="width:60px"></label>
-    <label>A <select id="teamA"><option>RAILGUN</option><option>SWARM</option></select></label>
-    <label>B <select id="teamB"><option>SWARM</option><option>RAILGUN</option></select></label>
-    <label>destructible <input id="destr" type="checkbox" checked></label>
-    <label>speed <select id="speed"><option>1</option><option>2</option><option selected>4</option><option>8</option></select></label>
+    <button id="newbattle">new battle</button>
     <button id="restart">restart</button>
     <button id="pause">pause</button>
+    <label>speed <select id="speed"><option>1</option><option>2</option><option selected>4</option><option>8</option></select></label>
     <label>mode <select id="mode"><option value="play" selected>play</option><option value="spectate">spectate</option></select></label>
+    <span class="sep"></span>
+    <span id="matchup">—</span>
     <span id="modeinfo" style="color:#7f8fa6"></span>
   </div>
   <div id="stage">
@@ -37,6 +86,37 @@
     <div id="hud"></div>
     <div id="help"></div>
     <div id="banner"></div>
+    <div id="setup" class="hidden">
+      <div id="setupPanel">
+        <div id="setupTitle">PRAEDRA — FLEET SETUP</div>
+        <div id="setupSub">42-point budget · heavies deploy up front · partial fleets allowed</div>
+        <div id="teams">
+          <div class="teamCard A" id="cardA">
+            <div class="teamHead">TEAM A — YOU</div>
+            <div class="presetRow" id="presetA"></div>
+            <div class="classRows" id="rowsA"></div>
+            <div class="budget" id="budgetA"></div>
+          </div>
+          <div class="teamCard B" id="cardB">
+            <div class="teamHead">TEAM B — ENEMY AI</div>
+            <div class="presetRow" id="presetB"></div>
+            <div class="classRows" id="rowsB"></div>
+            <div class="budget" id="budgetB"></div>
+          </div>
+        </div>
+        <div id="settings">
+          <label>seed <input id="setSeed" type="number" value="1" style="width:80px"></label>
+          <button id="setRandom">🎲 random</button>
+          <label>density <input id="setDensity" type="range" min="0" max="1" step="0.01" value="0.5" style="width:120px"><span id="densityVal">0.50</span></label>
+          <label>destructible <input id="setDestr" type="checkbox" checked></label>
+          <label>mode <select id="setMode"><option value="play" selected>play</option><option value="spectate">spectate</option></select></label>
+        </div>
+        <div id="startWrap">
+          <button id="startBtn">START BATTLE</button>
+          <div id="startReason"></div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -240,13 +320,25 @@ var CONFIG_DEFAULTS = {
     avoidMargin: 30,               // extra clearance around rocks
   },
 
-  // --- FLEETS ---
+  // --- FLEETS (42-point budget; costs: destroyer 6 / frigate 3 / bomber 2 / interceptor 1) ---
+  fleetPoints: 42,
   presets: {
-    RAILGUN: ['destroyer', 'frigate'],                                             // 9 pts
-    SWARM:   ['bomber', 'bomber', 'bomber',
-              'interceptor', 'interceptor', 'interceptor'],                        // 9 pts (§8: ~2B+3I tuned up)
+    RAILGUN:  ['destroyer', 'destroyer', 'destroyer', 'destroyer',
+               'frigate', 'frigate', 'frigate', 'frigate', 'frigate', 'frigate'],          // 4D+6F = 42
+    SWARM:    ['bomber', 'bomber', 'bomber', 'bomber', 'bomber',
+               'bomber', 'bomber', 'bomber', 'bomber', 'bomber',
+               'interceptor', 'interceptor', 'interceptor', 'interceptor', 'interceptor',
+               'interceptor', 'interceptor', 'interceptor', 'interceptor', 'interceptor',
+               'interceptor', 'interceptor', 'interceptor', 'interceptor', 'interceptor',
+               'interceptor', 'interceptor', 'interceptor', 'interceptor', 'interceptor',
+               'interceptor', 'interceptor'],                                              // 10B+22I = 42
+    BALANCED: ['destroyer', 'destroyer', 'frigate', 'frigate', 'frigate', 'frigate',
+               'bomber', 'bomber', 'bomber', 'bomber', 'bomber',
+               'interceptor', 'interceptor', 'interceptor', 'interceptor',
+               'interceptor', 'interceptor', 'interceptor', 'interceptor'],                // 2D+4F+5B+8I = 42
   },
   spawnFormationGap: 70,
+  spawnRankSize: 8,                // ships per rank; big fleets deploy in a block, not a wall
 };
 
 /* ---------------- PRNG (mulberry32) + helpers ---------------- */
@@ -2130,10 +2222,15 @@ var api = {
     var fb = resolveFleet(state.config, opts.teamB || 'SWARM');
     var gap = state.config.spawnFormationGap;
     function spawnFleet(fleet, at, facing, team) {
-      var px = -Math.sin(facing), py = Math.cos(facing); // perpendicular line abreast
+      var px = -Math.sin(facing), py = Math.cos(facing); // rank axis
+      var bx = -Math.cos(facing), by = -Math.sin(facing); // ranks stack rearward
+      var perRank = state.config.spawnRankSize;
       for (var i = 0; i < fleet.length; i++) {
-        var off = (i - (fleet.length - 1) / 2) * gap;
-        state.ships.push(makeShip(state, fleet[i], team, at.x + px * off, at.y + py * off, facing));
+        var rank = Math.floor(i / perRank), col = i % perRank;
+        var inRank = Math.min(perRank, fleet.length - rank * perRank);
+        var off = (col - (inRank - 1) / 2) * gap;
+        var back = rank * gap * 1.25;
+        state.ships.push(makeShip(state, fleet[i], team, at.x + px * off + bx * back, at.y + py * off + by * back, facing));
       }
     }
     var faceA = Math.atan2(state.spawnB.y - state.spawnA.y, state.spawnB.x - state.spawnA.x);
@@ -2198,38 +2295,154 @@ return api;
   var banner = document.getElementById('banner');
   var help = document.getElementById('help');
   var ui = {
-    seed: document.getElementById('seed'),
-    density: document.getElementById('density'),
-    teamA: document.getElementById('teamA'),
-    teamB: document.getElementById('teamB'),
-    destr: document.getElementById('destr'),
     speed: document.getElementById('speed'),
+    newbattle: document.getElementById('newbattle'),
     restart: document.getElementById('restart'),
     pause: document.getElementById('pause'),
     mode: document.getElementById('mode'),
     modeinfo: document.getElementById('modeinfo'),
+    matchup: document.getElementById('matchup'),
+    // --- setup overlay ---
+    setup: document.getElementById('setup'),
+    rows: { A: document.getElementById('rowsA'), B: document.getElementById('rowsB') },
+    presets: { A: document.getElementById('presetA'), B: document.getElementById('presetB') },
+    budget: { A: document.getElementById('budgetA'), B: document.getElementById('budgetB') },
+    setSeed: document.getElementById('setSeed'),
+    setRandom: document.getElementById('setRandom'),
+    setDensity: document.getElementById('setDensity'),
+    densityVal: document.getElementById('densityVal'),
+    setDestr: document.getElementById('setDestr'),
+    setMode: document.getElementById('setMode'),
+    startBtn: document.getElementById('startBtn'),
+    startReason: document.getElementById('startReason'),
   };
   var COLORS = { A: '#4da3ff', B: '#ff7a5c' };
   var SEL_COLOR = '#7cffb2';
   var match = null, paused = false, effects = [], markers = [];
+  var overlayVisible = false;       // setup screen shown -> sim never steps
   var selectedSet = new Set();      // ids of currently-selected friendly (team A) ships
   var renderedEnemyIds = [];        // enemy ids drawn as real ships last frame (fog predicate)
   var hover = null, drag = null, down = null;
 
   function isSpectate() { return ui.mode.value === 'spectate'; }
 
-  function newMatch() {
-    match = Praedra.createMatch({
-      seed: parseInt(ui.seed.value, 10) || 1,
-      overrides: {
-        terrainDensity: Math.max(0, Math.min(1, parseFloat(ui.density.value) || 0.5)),
-        destructibleAsteroids: ui.destr.checked,
-      },
-      teamA: ui.teamA.value, teamB: ui.teamB.value,
+  /* ================= FLEET SETUP SCREEN ================= */
+  var CFG = Praedra.defaultConfig();
+  var BUDGET = CFG.fleetPoints;                                  // 42
+  // heavies first: spawn ranks put earlier array entries at the front
+  var CLASSES = [
+    { cls: 'destroyer',   letter: 'D', glyph: '▮' },        // ▮ rectangle
+    { cls: 'frigate',     letter: 'F', glyph: '■' },        // ■ square
+    { cls: 'bomber',      letter: 'B', glyph: '◆' },        // ◆ diamond
+    { cls: 'interceptor', letter: 'I', glyph: '▲' },        // ▲ triangle
+  ];
+  function costOf(cls) { return CFG.ships[cls].cost; }
+  // per-team live counts
+  var fleets = { A: emptyCounts(), B: emptyCounts() };
+  var currentSetup = null;          // snapshot used by the running match / restart
+  // DOM handles built by buildSetupDOM()
+  var countEl = { A: {}, B: {} }, subEl = { A: {}, B: {} }, plusEl = { A: {}, B: {} }, minusEl = { A: {}, B: {} };
+
+  function emptyCounts() { return { destroyer: 0, frigate: 0, bomber: 0, interceptor: 0 }; }
+  function copyCounts(c) { return { destroyer: c.destroyer, frigate: c.frigate, bomber: c.bomber, interceptor: c.interceptor }; }
+  function spentOf(counts) { var s = 0; for (var i = 0; i < CLASSES.length; i++) s += counts[CLASSES[i].cls] * costOf(CLASSES[i].cls); return s; }
+  function shipsOf(counts) { var n = 0; for (var i = 0; i < CLASSES.length; i++) n += counts[CLASSES[i].cls]; return n; }
+  function countsFromPreset(name) {
+    var arr = CFG.presets[name] || [], c = emptyCounts();
+    for (var i = 0; i < arr.length; i++) if (c[arr[i]] != null) c[arr[i]]++;
+    return c;
+  }
+  function fleetArray(counts) {                                  // heavies-first class-name array for createMatch
+    var out = [];
+    for (var i = 0; i < CLASSES.length; i++) { var cl = CLASSES[i].cls; for (var k = 0; k < counts[cl]; k++) out.push(cl); }
+    return out;
+  }
+  // over-budget is impossible: clamp any assignment so spent never exceeds BUDGET
+  function setCount(team, cls, n) {
+    n = Math.max(0, Math.floor(n));
+    var others = spentOf(fleets[team]) - fleets[team][cls] * costOf(cls);
+    var maxN = Math.floor((BUDGET - others) / costOf(cls));
+    fleets[team][cls] = Math.min(n, Math.max(0, maxN));
+    renderSetup();
+  }
+  function applyPreset(team, name) { fleets[team] = countsFromPreset(name); renderSetup(); }
+  function mirrorA() { fleets.B = copyCounts(fleets.A); renderSetup(); }
+
+  function buildSetupDOM() {
+    ['A', 'B'].forEach(function (team) {
+      // preset buttons
+      var presetSpecs = [['Railgun', 'RAILGUN'], ['Swarm', 'SWARM'], ['Balanced', 'BALANCED']];
+      presetSpecs.forEach(function (p) {
+        var b = document.createElement('button');
+        b.textContent = p[0];
+        b.onclick = (function (nm) { return function () { applyPreset(team, nm); }; })(p[1]);
+        ui.presets[team].appendChild(b);
+      });
+      if (team === 'B') {
+        var mb = document.createElement('button');
+        mb.textContent = 'Mirror A'; mb.onclick = mirrorA;
+        ui.presets[team].appendChild(mb);
+      }
+      // class rows
+      CLASSES.forEach(function (c) {
+        var row = document.createElement('div'); row.className = 'classRow';
+        var gl = document.createElement('span'); gl.className = 'glyph'; gl.textContent = c.glyph;
+        var nm = document.createElement('span'); nm.className = 'cname'; nm.textContent = c.cls;
+        var co = document.createElement('span'); co.className = 'ccost'; co.textContent = costOf(c.cls) + ' pts';
+        var st = document.createElement('span'); st.className = 'stepper';
+        var minus = document.createElement('button'); minus.textContent = '−';
+        var cnt = document.createElement('span'); cnt.className = 'count';
+        var plus = document.createElement('button'); plus.textContent = '+';
+        minus.onclick = (function (cl) { return function () { setCount(team, cl, fleets[team][cl] - 1); }; })(c.cls);
+        plus.onclick = (function (cl) { return function () { setCount(team, cl, fleets[team][cl] + 1); }; })(c.cls);
+        st.appendChild(minus); st.appendChild(cnt); st.appendChild(plus);
+        var sub = document.createElement('span'); sub.className = 'subtotal';
+        row.appendChild(gl); row.appendChild(nm); row.appendChild(co); row.appendChild(st); row.appendChild(sub);
+        ui.rows[team].appendChild(row);
+        countEl[team][c.cls] = cnt; subEl[team][c.cls] = sub;
+        plusEl[team][c.cls] = plus; minusEl[team][c.cls] = minus;
+      });
     });
-    effects = []; markers = []; selectedSet.clear();
-    renderedEnemyIds = []; hover = null; drag = null; down = null;
-    banner.style.display = 'none';
+  }
+
+  function teamTag(counts) {                                     // "42pts (2D 4F 5B 8I)"
+    var parts = [];
+    for (var i = 0; i < CLASSES.length; i++) { var n = counts[CLASSES[i].cls]; if (n) parts.push(n + CLASSES[i].letter); }
+    return spentOf(counts) + 'pts (' + (parts.length ? parts.join(' ') : '—') + ')';
+  }
+  function updateMatchup() {
+    ui.matchup.textContent = 'A ' + teamTag(fleets.A) + '  vs  B ' + teamTag(fleets.B);
+  }
+
+  function renderSetup() {
+    ['A', 'B'].forEach(function (team) {
+      var counts = fleets[team], spent = spentOf(counts), rem = BUDGET - spent;
+      for (var i = 0; i < CLASSES.length; i++) {
+        var cl = CLASSES[i].cls, n = counts[cl], cost = costOf(cl);
+        countEl[team][cl].textContent = n;
+        subEl[team][cl].textContent = (n * cost) + ' pts';
+        plusEl[team][cl].disabled = (cost > rem);                // + disabled when the class no longer fits
+        minusEl[team][cl].disabled = (n <= 0);
+      }
+      var bud = ui.budget[team];
+      bud.className = 'budget' + (spent === BUDGET ? ' full' : (spent === 0 ? ' empty' : ''));
+      bud.innerHTML = '<span class="spent">SPENT ' + spent + ' / ' + BUDGET + '</span>' +
+        '<span class="rem">' + rem + ' left · ' + shipsOf(counts) + ' ships</span>';
+    });
+    // START validity: only 0 ships is invalid; any total up to 42 is legal
+    var na = shipsOf(fleets.A), nb = shipsOf(fleets.B), reason = '';
+    if (na === 0 && nb === 0) reason = 'Both teams need at least one ship.';
+    else if (na === 0) reason = 'Team A has no ships.';
+    else if (nb === 0) reason = 'Team B has no ships.';
+    ui.startBtn.disabled = !!reason;
+    ui.startReason.textContent = reason;
+    updateMatchup();
+  }
+
+  /* ---- mode kept in sync between the bar and the overlay ---- */
+  function setMode(m) {
+    if (m !== 'play' && m !== 'spectate') m = 'play';
+    ui.mode.value = m; ui.setMode.value = m;
     updateModeInfo();
   }
   function updateModeInfo() {
@@ -2238,9 +2451,60 @@ return api;
       : 'play: you command TEAM A (blue)');
   }
   function setPaused(v) { paused = v; ui.pause.textContent = paused ? 'resume' : 'pause'; }
-  ui.restart.onclick = newMatch;
+
+  /* ---- overlay show / hide ---- */
+  function showSetup() {
+    overlayVisible = true;
+    ui.setDensity.value = String(currentDensity());   // keep the slider readout coherent
+    ui.densityVal.textContent = (parseFloat(ui.setDensity.value) || 0).toFixed(2);
+    ui.setMode.value = ui.mode.value;
+    ui.setup.classList.remove('hidden');
+    renderSetup();
+  }
+  function hideSetup() { overlayVisible = false; ui.setup.classList.add('hidden'); }
+  function currentDensity() { return clampNum(parseFloat(ui.setDensity.value), 0, 1, 0.5); }
+  function clampNum(v, lo, hi, dflt) { if (isNaN(v)) return dflt; return v < lo ? lo : v > hi ? hi : v; }
+
+  /* ---- build / (re)create the match ---- */
+  function createFromSetup(s) {
+    match = Praedra.createMatch({
+      seed: s.seed,
+      overrides: { terrainDensity: s.density, destructibleAsteroids: s.destr },
+      teamA: fleetArray(s.A), teamB: fleetArray(s.B),
+    });
+    effects = []; markers = []; selectedSet.clear();
+    renderedEnemyIds = []; hover = null; drag = null; down = null;
+    banner.style.display = 'none';
+    setPaused(false);
+    updateModeInfo();
+    updateMatchup();
+  }
+  function startBattle() {
+    if (shipsOf(fleets.A) === 0 || shipsOf(fleets.B) === 0) return false;
+    currentSetup = {
+      A: copyCounts(fleets.A), B: copyCounts(fleets.B),
+      seed: parseInt(ui.setSeed.value, 10) || 1,
+      density: currentDensity(),
+      destr: ui.setDestr.checked,
+    };
+    createFromSetup(currentSetup);
+    hideSetup();
+    return true;
+  }
+  function restartBattle() {                                     // same fleets / seed / density, no overlay
+    if (!currentSetup) { showSetup(); return; }
+    createFromSetup(currentSetup);
+  }
+
+  buildSetupDOM();
+  ui.startBtn.onclick = startBattle;
+  ui.newbattle.onclick = showSetup;
+  ui.restart.onclick = restartBattle;
   ui.pause.onclick = function () { setPaused(!paused); };
-  ui.mode.onchange = function () { updateModeInfo(); };
+  ui.mode.onchange = function () { setMode(ui.mode.value); };
+  ui.setMode.onchange = function () { setMode(ui.setMode.value); };
+  ui.setRandom.onclick = function () { ui.setSeed.value = 1 + Math.floor(Math.random() * 999999); };
+  ui.setDensity.oninput = function () { ui.densityVal.textContent = currentDensity().toFixed(2); };
   help.textContent =
     'L-click select | drag box | shift+click toggle | dbl-click all of type\n' +
     'R-click move / attack ship / blast rock | shift+R attack-move | S hold\n' +
@@ -2434,6 +2698,7 @@ return api;
     }
   });
   window.addEventListener('keydown', function (e) {
+    if (overlayVisible || !match) return;                        // setup screen owns the keyboard
     var tag = (document.activeElement && document.activeElement.tagName) || '';
     if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
     if (e.code === 'Space') {
@@ -2500,9 +2765,31 @@ return api;
     renderedEnemies: function () { return renderedEnemyIds.slice(); },
     view: function () { return getView(); },
     worldToScreen: function (x, y) { var v = getView(); return { x: v.ox + x * v.scale, y: v.oy + y * v.scale }; },
-    setMode: function (m) { ui.mode.value = m; updateModeInfo(); },
+    setMode: function (m) { setMode(m); },
     setPaused: function (v) { setPaused(!!v); },
     isPaused: function () { return paused; },
+    // --- setup-screen automation ---
+    setupOpen: function () { return overlayVisible; },
+    counts: function (team) { return copyCounts(fleets[team]); },
+    setFleet: function (team, spec) {
+      spec = spec || {};
+      // build target (start from current, override provided keys) then clamp the WHOLE
+      // fleet heavy-first so a valid full spec lands exactly and over-budget stays impossible
+      var target = copyCounts(fleets[team]);
+      for (var i = 0; i < CLASSES.length; i++) { var cl = CLASSES[i].cls; if (spec[cl] != null) target[cl] = Math.max(0, Math.floor(spec[cl])); }
+      var rem = BUDGET, out = emptyCounts();
+      for (var j = 0; j < CLASSES.length; j++) {
+        var c2 = CLASSES[j].cls, cost = costOf(c2);
+        var n = Math.min(target[c2], Math.floor(rem / cost));
+        out[c2] = n; rem -= n * cost;
+      }
+      fleets[team] = out;
+      renderSetup();
+      return copyCounts(fleets[team]);
+    },
+    preset: function (team, name) { applyPreset(team, name); return copyCounts(fleets[team]); },
+    start: function () { return startBattle(); },
+    openSetup: function () { showSetup(); },
   };
 
   function consumeEvents() {
@@ -2755,7 +3042,7 @@ return api;
     requestAnimationFrame(frame);
     var dtReal = Math.min(0.1, (now - last) / 1000);
     last = now;
-    if (match && !paused && !match.done) {
+    if (match && !paused && !match.done && !overlayVisible) {   // setup screen freezes the sim
       var steps = parseInt(ui.speed.value, 10) || 1;
       for (var i = 0; i < steps && !match.done; i++) match.step();
     }
@@ -2770,7 +3057,15 @@ return api;
     }
     render();
   }
-  newMatch();
+
+  /* ---- first-load defaults: BALANCED vs BALANCED, seed 1, density 0.5, play, overlay open ---- */
+  fleets.A = countsFromPreset('BALANCED');
+  fleets.B = countsFromPreset('BALANCED');
+  ui.setSeed.value = '1';
+  ui.setDensity.value = '0.5';
+  ui.setDestr.checked = true;
+  setMode('play');
+  showSetup();                    // no match steps until START
   requestAnimationFrame(frame);
 })();
 </script>

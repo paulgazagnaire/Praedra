@@ -28,8 +28,10 @@ level).
   - `seed` (integer, required) — all randomness derives from it; same opts ⇒ identical run.
   - `overrides` (object, optional) — deep-merged onto default CONFIG. Dotted keys are
     NOT used; pass nested objects, e.g. `{ terrainDensity: 0.2, railgun: { minRange: 180 } }`.
-  - `teamA`, `teamB` — preset name string (`'RAILGUN'`/`'SWARM'`) or array of class
-    names from `'destroyer' | 'frigate' | 'bomber' | 'interceptor'`.
+  - `teamA`, `teamB` — preset name string (`'RAILGUN'`/`'SWARM'`/`'BALANCED'`, each a
+    42-point fleet; budget constant in `config.fleetPoints`) or an arbitrary array of
+    class names from `'destroyer' | 'frigate' | 'bomber' | 'interceptor'` (custom
+    fleets; ships spawn in ranks of `spawnRankSize`, array order front-to-back).
 - Match object:
   - `match.step()` — advance exactly one fixed 60 Hz tick.
   - `match.tick` (int), `match.done` (bool), `match.result` (null until done).
@@ -66,7 +68,9 @@ level).
   1. Every match force-resolves at tick cap = `matchTimerSeconds × 60`. `runMatch`
      can never loop unbounded.
   2. Deterministic from `seed` + config + teams.
-  3. A full match runs headless in well under 2 s wall-clock on this machine.
+  3. Headless speed scales with fleet size: a small (~9-pt) match runs well under
+     2 s wall-clock; full 42-point armadas (default presets, 30-70 ships) run
+     ~10 s. Per-tick cost stays well under the 16 ms real-time budget either way.
 
 ## Detection (a ship must be SEEN to be targetable)
 

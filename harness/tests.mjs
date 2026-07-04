@@ -179,11 +179,15 @@ function dist2D(ax, ay, bx, by) { return Math.sqrt((ax - bx) * (ax - bx) + (ay -
 // their ships are pinned (never touch the walls) and have no debris/AI ships that
 // would; new tests use this offset to stay clear of wall effects on principle.
 const MID = { x: 2000, y: 1500 };
+// presets are 42-pt armadas now (~10s headless); timing/battery tests use small fleets
+const SMALL_A = ['destroyer', 'frigate'];
+const SMALL_B = ['bomber', 'bomber', 'bomber', 'interceptor', 'interceptor', 'interceptor'];
+
 
 // ---------------------------------------------------------------------- tests
 
 test('determinism', () => {
-  const opts = () => ({ seed: 7, overrides: { terrainDensity: 0.5 }, teamA: 'RAILGUN', teamB: 'SWARM' });
+  const opts = () => ({ seed: 7, overrides: { terrainDensity: 0.5 }, teamA: SMALL_A, teamB: SMALL_B });
   const r1 = Praedra.runMatch(opts());
   const r2 = Praedra.runMatch(opts());
   assert(isDeepStrictEqual(r1, r2), 'same seed + config + teams produced different results');
@@ -200,7 +204,7 @@ test('always-resolves', () => {
   for (let seed = 1; seed <= 5; seed++) {
     for (const terrainDensity of [0.1, 0.5, 0.9]) {
       const tag = `seed ${seed} density ${terrainDensity}`;
-      const r = Praedra.runMatch({ seed, overrides: { terrainDensity }, teamA: 'RAILGUN', teamB: 'SWARM' });
+      const r = Praedra.runMatch({ seed, overrides: { terrainDensity }, teamA: SMALL_A, teamB: SMALL_B });
       assert(r && Number.isFinite(r.ticks), `${tag}: no numeric ticks in result`);
       assert(r.ticks <= cap + 2, `${tag}: ticks ${r.ticks} exceeds tick cap ${cap} (+2 slack)`);
       assert(['A', 'B', 'draw'].includes(r.winner), `${tag}: winner is ${JSON.stringify(r.winner)}`);
@@ -335,7 +339,7 @@ test('tick-cap-forced', () => {
 
 test('wallclock', () => {
   const t0 = Date.now(); // harness may use Date; only the sim may not
-  const r = Praedra.runMatch({ seed: 1, overrides: { terrainDensity: 0.5 }, teamA: 'RAILGUN', teamB: 'SWARM' });
+  const r = Praedra.runMatch({ seed: 1, overrides: { terrainDensity: 0.5 }, teamA: SMALL_A, teamB: SMALL_B });
   const ms = Date.now() - t0;
   assert(r && r.winner !== undefined, 'runMatch returned no result object');
   assert(ms < 2000, `full match took ${ms} ms wall-clock (budget 2000 ms)`);
@@ -447,7 +451,7 @@ test('asteroid-splits', () => {
 // issueOrder sets a goal the autopilot flies to; a completed move/attackmove order
 // becomes {type:'hold'} (PRD §9, never silently reverts to auto).
 test('order-move-hold', () => {
-  const m = Praedra.createMatch({ seed: 1, overrides: { terrainDensity: 0.3 }, teamA: 'RAILGUN', teamB: 'SWARM' });
+  const m = Praedra.createMatch({ seed: 1, overrides: { terrainDensity: 0.3 }, teamA: SMALL_A, teamB: SMALL_B });
   const ship = findShip(m, 'A', 'frigate'); // nimble enough to close & settle within the window
   const cx = m.config.arena.w / 2, cy = m.config.arena.h / 2;
   const dx = cx - ship.x, dy = cy - ship.y;
