@@ -49,7 +49,7 @@ var Praedra = (function () {
 /* ---------------- CONFIG — every gameplay number lives here ---------------- */
 var CONFIG_DEFAULTS = {
   tickRate: 60,
-  matchTimerSeconds: 240,          // hard cap; tick cap = tickRate * matchTimerSeconds
+  matchTimerSeconds: 300,          // hard cap (PRD band 150-300); dense sieges need the room
   movementModel: 'newtonian',      // 'newtonian' | 'arcade' (arcade = debug fallback only)
   fleetMode: 'preset',
 
@@ -122,8 +122,9 @@ var CONFIG_DEFAULTS = {
     lockLossSeconds: 0.5,          // LOS blocked longer than this -> lock lost, flies dumb.
                                    // Short: ducking behind a rock actually sheds the torpedo (dense-map counterplay)
     predictSpeed: 70,              // target slower than this is 'predictable'
-    lobMinRange: 350,              // ROLE discipline, not a weapon limit: the AI stands off and
-                                   // LOBS (§6.5); threats inside this are point-defence's job
+    armDistance: 260,              // REAL minimum range: a torpedo that has not flown this far
+                                   // is a dud — no terminal roll, no AOE, no rock damage
+    lobMinRange: 300,              // AI discipline on top: don't waste shots barely past arming
     jinkAccelThreshold: 55,        // lateral-accel EMA above this (and fast) = 'jinking'
     steadyEvasionMult: 0.15,       // predictable target: hit = 1 - evasion*this  (steady bomber ~.90)
     jinkEvasionMult: 1.25,         // jinking target:     hit = 1 - evasion*this  (interceptor ~0)
@@ -136,14 +137,18 @@ var CONFIG_DEFAULTS = {
   bomb: {
     speed: 430,                    // fast: sluggish capital cannot drift off-aim during flight
     maxFlight: 1.6,                // seconds; then fizzles
-    launchRange: 420,              // release distance (beyond PD, inside sightline)
+    launchRange: 380,              // release distance — inside the PD reaction envelope
+                                   // (bombs fired closer than ~350 arrive before tracking completes)
     runStartFactor: 1.6,           // go steady once LOS is clear within launchRange*this.
                                    // Open maps: sighted early -> LONG steady run -> torpedo bait.
                                    // Dense maps: sighted late -> short pop-out run. The flip lives here.
     standoff: 300,                 // O1 default: medium standoff, artillery-leaning
-    damage: 32,
+    damage: 28,
     aoeRadius: 60,
-    cooldown: 0.9,                 // streams within a run; saturation, not single pokes
+    salvo: 3,                      // bombs per trigger pull — a slot-cap-breaking spike
+    salvoSpread: 0.13,             // rad of fan — wide enough that only tight/point-blank
+                                   // clusters chain when PD picks one off
+    cooldown: 2.5,                 // per salvo
     armTime: 0.20,                 // won't detonate on its own bomber at the muzzle
     jinkAimSpread: 0.9,            // rad of aim error at full jink — jinking bombers throw wide
   },
@@ -162,10 +167,14 @@ var CONFIG_DEFAULTS = {
   // --- POINT DEFENCE (Destroyer 2 slots / Frigate 3; throughput-capped; MUST stay weak) ---
   pd: {
     range: 140,
+    trackRange: 700,               // PD starts tracking (LOS required) out here
+    reactionSeconds: 0.5,          // continuous track needed before it may engage: pop-outs
+                                   // from cover beat the reaction; open-field targets are
+                                   // tracked long before they arrive (the terrain gate)
     shotsPerSecond: 3.0,           // per slot
-    projectileKillChance: 0.4,     // per shot vs torpedo/bomb (transit ~0.37s -> ~1 shot).
-                                   // MUST stay weak: punishes lone pokes, leaks under saturation (§5)
-    shipDamagePerShot: 2.5,        // lingering in the bubble is lethal — when slots are free
+    projectileKillChance: 0.7,     // per shot vs a TRACKED torpedo/bomb — reaction gating
+                                   // is the weakness now: untracked pop-outs leak entirely (§5)
+    shipDamagePerShot: 2.5,        // lethal to TRACKED lingerers; untracked divers get grace
     shipEvasionMult: 0.65,         // hit vs ships = 1 - evasion*this; punishes lingerers
                                    // when slots are free without shutting the strafe game down
   },
@@ -200,6 +209,7 @@ var CONFIG_DEFAULTS = {
     commitSeconds: 16,             // wave duration (long enough to cross dense fields)
     commitCooldown: 3,             // regroup time between waves
     coverMinRange: 220,            // never stage inside the enemy PD bubble
+    coverHoldTicks: 30,            // how long a chosen cover point is held before rescoring
     navArriveSlack: 14,
     navBrakeMargin: 0.72,          // use this fraction of max accel when planning braking
     avoidLookahead: 2.2,           // seconds of velocity lookahead for rock avoidance
@@ -785,6 +795,13 @@ function applyAoe(state, x, y, radius, dmg, attacker, src) {
     var dr = dist(x, y, o.x, o.y) - o.r;
     if (dr <= radius) damageAsteroid(state, o, dmg * (1 - 0.6 * clamp01(dr / radius)));
   }
+  // sympathetic detonation: any blast sets off live bombs caught in it (a PD hit on a
+  // clustered salvo chains the whole cluster — and splashes whoever is nearby)
+  var bombs = state.bombs;
+  for (var b2 = 0; b2 < bombs.length; b2++) {
+    var bm2 = bombs[b2];
+    if (bm2.alive && dist(x, y, bm2.x, bm2.y) <= radius + 4) detonateBomb(state, bm2);
+  }
 }
 
 /* ---------------- Railgun (fixed-forward, min range, instant ray, uninterceptable) ---------------- */
@@ -839,7 +856,7 @@ function launchTorpedo(state, owner, target) {
     id: state.nextId++, team: owner.team, ownerId: owner.id, targetId: target.id,
     x: owner.x + Math.cos(ang) * (owner.def.radius + 6), y: owner.y + Math.sin(ang) * (owner.def.radius + 6),
     heading: ang, vx: Math.cos(ang) * T.speed, vy: Math.sin(ang) * T.speed,
-    life: T.lifetime, lockLost: 0, spent: false, alive: true,
+    life: T.lifetime, lockLost: 0, spent: false, alive: true, traveled: 0,
   });
   state.stats.torpsFired[owner.team]++;
   state.stats.torpLaunch[owner.team].push(Math.round(dist(owner.x, owner.y, target.x, target.y)));
@@ -876,20 +893,23 @@ function updateTorpedoes(state, dt) {
       tp.spent = true;
     }
     tp.x += tp.vx * dt; tp.y += tp.vy * dt;
+    tp.traveled += Math.sqrt(tp.vx * tp.vx + tp.vy * tp.vy) * dt;
     if (tp.x < -50 || tp.y < -50 || tp.x > state.config.arena.w + 50 || tp.y > state.config.arena.h + 50) { tp.alive = false; continue; }
-    // rock collision -> detonate on the rock
+    var armed = tp.traveled >= T.armDistance;
+    // rock collision -> detonate on the rock (a dud just crumples)
     var boom = false;
     rocksNearSeg(state, tp.x, tp.y, tp.x, tp.y, 96, function (o) {
       if (dist(tp.x, tp.y, o.x, o.y) < o.r + 4) {
-        damageAsteroid(state, o, T.damage);
+        if (armed) damageAsteroid(state, o, T.damage);
         detonateTorpedo(state, tp);
+        tp.alive = false;
         boom = true; return true;
       }
       return false;
     });
     if (boom) continue;
-    // terminal approach on the tracked target
-    if (!tp.spent && target && dist(tp.x, tp.y, target.x, target.y) < T.hitRadius + target.def.radius) {
+    // terminal approach on the tracked target — only once armed
+    if (armed && !tp.spent && target && dist(tp.x, tp.y, target.x, target.y) < T.hitRadius + target.def.radius) {
       // predictability gate: slow OR steady-vector targets are reliably hit; fast jinkers are missed
       var predictable = target.speed < T.predictSpeed || target.jinkEMA < T.jinkAccelThreshold;
       var pHit = predictable ? 1 - clamp01(target.def.evasion * T.steadyEvasionMult)
@@ -909,6 +929,7 @@ function updateTorpedoes(state, dt) {
 function detonateTorpedo(state, tp) {
   var T = state.config.torpedo;
   tp.alive = false;
+  if (tp.traveled < T.armDistance) return; // unarmed: a dud — no blast at all
   var owner = state.shipById[tp.ownerId];
   applyAoe(state, tp.x, tp.y, T.aoeRadius, T.aoeDamage, owner && owner.team === tp.team ? owner : null, 'torpAoe');
   pushEvent(state, { kind: 'boom', x: tp.x, y: tp.y, r: T.aoeRadius });
@@ -940,13 +961,23 @@ function launchBomb(state, owner, target) {
   var accel = owner.def.thrust / owner.def.mass;
   var spread = B.jinkAimSpread * clamp01(owner.jinkEMA / (accel * 0.7));
   ang += state.rng.range(-spread, spread);
-  state.bombs.push({
-    id: state.nextId++, team: owner.team, ownerId: owner.id,
-    x: owner.x + Math.cos(ang) * (owner.def.radius + 5), y: owner.y + Math.sin(ang) * (owner.def.radius + 5),
-    vx: Math.cos(ang) * B.speed, vy: Math.sin(ang) * B.speed,
-    age: 0, alive: true,
-  });
-  state.stats.bombsFired[owner.team]++;
+  // salvo release: a fanned cluster. Breaks the PD slot cap by volume — but the bombs
+  // fly close enough that one interception can sympathetically detonate the rest.
+  var n = Math.max(1, B.salvo | 0);
+  var reach = Math.min(B.speed * B.maxFlight, dist(owner.x, owner.y, aimX, aimY) + 40);
+  for (var i = 0; i < n; i++) {
+    var a2 = ang + (i - (n - 1) / 2) * B.salvoSpread;
+    // each fan lane checks its own path — an outer bomb clipping a rock edge would
+    // chain-detonate the whole cluster right next to the bomber
+    if (!losClear(state, owner.x, owner.y, owner.x + Math.cos(a2) * reach, owner.y + Math.sin(a2) * reach)) continue;
+    state.bombs.push({
+      id: state.nextId++, team: owner.team, ownerId: owner.id,
+      x: owner.x + Math.cos(a2) * (owner.def.radius + 5), y: owner.y + Math.sin(a2) * (owner.def.radius + 5),
+      vx: Math.cos(a2) * B.speed, vy: Math.sin(a2) * B.speed,
+      age: 0, alive: true,
+    });
+    state.stats.bombsFired[owner.team]++;
+  }
 }
 function detonateBomb(state, bomb) {
   var B = state.config.bomb;
@@ -1009,24 +1040,50 @@ function updateGatling(state, ship, target, dt) {
 function updatePD(state, ship, dt) {
   var P = state.config.pd, slots = ship.def.pdSlots;
   if (slots <= 0) return;
+
+  // --- tracking pass (every tick): a threat must be held in continuous LOS-track for
+  //     reactionSeconds before the guns may engage it. Track breaks when LOS breaks. ---
+  if (!ship.pdTrack) ship.pdTrack = {};
+  var tr = ship.pdTrack, seen = {};
+  var torps = state.torps, bombs = state.bombs, ships = state.ships;
+  function trackOne(id, x, y) {
+    if (dist(ship.x, ship.y, x, y) > P.trackRange) return;
+    if (!losClear(state, ship.x, ship.y, x, y)) return;
+    seen[id] = true;
+    if (tr[id] === undefined) tr[id] = state.time;
+  }
+  for (var ti = 0; ti < torps.length; ti++) {
+    var tt = torps[ti];
+    if (tt.alive && tt.team !== ship.team) trackOne(tt.id, tt.x, tt.y);
+  }
+  for (var bi = 0; bi < bombs.length; bi++) {
+    var bb = bombs[bi];
+    if (bb.alive && bb.team !== ship.team) trackOne(bb.id, bb.x, bb.y);
+  }
+  for (var si = 0; si < ships.length; si++) {
+    var ss = ships[si];
+    if (ss.alive && ss.team !== ship.team) trackOne(ss.id, ss.x, ss.y);
+  }
+  for (var key in tr) if (!seen[key]) delete tr[key]; // LOS/range broken -> re-acquire from zero
+  function tracked(id) { return tr[id] !== undefined && state.time - tr[id] >= P.reactionSeconds; }
+
   ship.cool.pd += dt;
   var interval = 1 / P.shotsPerSecond;
   if (ship.cool.pd < interval) return;
   ship.cool.pd -= interval;
 
-  // gather threats in the bubble: incoming projectiles first (closest first), then enemy ships
+  // gather TRACKED threats in the bubble: incoming projectiles first, then enemy ships
   var threats = [];
-  var torps = state.torps, bombs = state.bombs, ships = state.ships;
   for (var i = 0; i < torps.length; i++) {
     var tp = torps[i];
-    if (tp.alive && tp.team !== ship.team) {
+    if (tp.alive && tp.team !== ship.team && tracked(tp.id)) {
       var d = dist(ship.x, ship.y, tp.x, tp.y);
       if (d <= P.range) threats.push({ kind: 'torp', obj: tp, d: d });
     }
   }
   for (var j = 0; j < bombs.length; j++) {
     var bm = bombs[j];
-    if (bm.alive && bm.team !== ship.team) {
+    if (bm.alive && bm.team !== ship.team && tracked(bm.id)) {
       var d2 = dist(ship.x, ship.y, bm.x, bm.y);
       if (d2 <= P.range) threats.push({ kind: 'bomb', obj: bm, d: d2 });
     }
@@ -1035,7 +1092,7 @@ function updatePD(state, ship, dt) {
   var shipThreats = [];
   for (var k = 0; k < ships.length; k++) {
     var sh = ships[k];
-    if (sh.alive && sh.team !== ship.team) {
+    if (sh.alive && sh.team !== ship.team && tracked(sh.id)) {
       var d3 = dist(ship.x, ship.y, sh.x, sh.y);
       if (d3 <= P.range + sh.def.radius) shipThreats.push({ kind: 'ship', obj: sh, d: d3 });
     }
@@ -1047,7 +1104,7 @@ function updatePD(state, ship, dt) {
   var n = Math.min(slots, threats.length);
   for (var s = 0; s < n; s++) {
     var th = threats[s];
-    if (!losClear(state, ship.x, ship.y, th.kind === 'ship' ? th.obj.x : th.obj.x, th.obj.y)) continue;
+    if (!losClear(state, ship.x, ship.y, th.obj.x, th.obj.y)) continue;
     if (th.kind === 'ship') {
       var pHit = 1 - clamp01(th.obj.def.evasion * P.shipEvasionMult);
       if (state.rng.chance(pHit)) applyDamage(state, th.obj, P.shipDamagePerShot, ship, 'pd');
@@ -1263,7 +1320,7 @@ function updateCommits(state) {
    from the enemy's torpedo source. Returns null on open maps — exposure is the point. */
 function coverPoint(state, ship, tgt, minD, maxD) {
   var key = Math.round(minD) + ':' + Math.round(maxD);
-  if (state.tick - (ship.ai.coverAt || -999) < 30 && ship.ai.cover && ship.ai.coverKey === key) return ship.ai.cover;
+  if (state.tick - (ship.ai.coverAt || -999) < state.config.ai.coverHoldTicks && ship.ai.cover && ship.ai.coverKey === key) return ship.ai.cover; // hold: a stable point you can arrive at beats a perfect one that keeps moving
   ship.ai.coverAt = state.tick; ship.ai.coverKey = key;
   // hide from the enemy's TORPEDO platform — the frigate is the specialist; the
   // destroyer's shadow is worthless if the frigate has a sightline around the rock
@@ -1342,6 +1399,7 @@ function aiBomber(state, ship, dt) {
     // sighted inside run-start range — early in the open (long, exposed), late in dense
     if (d <= B.launchRange * B.runStartFactor && losShips(state, ship, target)) {
       m = 'run'; ship.ai.modeAt = state.time; ship.ai.runBombs = 0;
+      state.stats.runEntries++;
     }
   }
   if (m === 'run') {
@@ -1349,17 +1407,22 @@ function aiBomber(state, ship, dt) {
     // Pop out, stream a pair, duck back before the answering torpedo lands.
     ship.nav = { x: target.x, y: target.y, arrive: false, jink: false };
     var clear = losShips(state, ship, target);
-    if (ship.cool.bomb <= 0 && d <= B.launchRange && clear) {
+    if (ship.cool.bomb > 0) state.stats.fireBlocked.cooldown++;
+    else if (d > B.launchRange) state.stats.fireBlocked.range++;
+    else if (!clear) state.stats.fireBlocked.los++;
+    else {
       // don't waste the bomb on a rock: the LEAD path (not just the sightline) must be clear
       var tl = Math.min(B.maxFlight, d / B.speed);
       var aimX = target.x + target.vx * tl, aimY = target.y + target.vy * tl;
-      if (losClear(state, ship.x, ship.y, aimX, aimY)) {
+      if (!losClear(state, ship.x, ship.y, aimX, aimY)) state.stats.fireBlocked.lane++;
+      else {
         launchBomb(state, ship, target);
+        state.stats.salvosFired++;
         ship.cool.bomb = B.cooldown;
         ship.ai.runBombs = (ship.ai.runBombs || 0) + 1;
       }
     }
-    if ((ship.ai.runBombs || 0) >= 3 || d < AI.bomberBreakRange ||
+    if ((ship.ai.runBombs || 0) >= 2 || d < AI.bomberBreakRange ||
         (!clear && state.time - ship.ai.modeAt > 1.0)) m = 'break';
   }
   if (m === 'break') {
@@ -1388,6 +1451,7 @@ function aiBomber(state, ship, dt) {
     }
     if (d > AI.bomberRegroupRange) m = committing ? 'approach' : 'stage';
   }
+  if (m !== ship.ai.mode) ship.ai.modeAt = state.time;
   ship.ai.mode = m;
 }
 
@@ -1503,7 +1567,22 @@ function resolveMatch(state, reason) {
   }
   var va = fleetValue('A'), vb = fleetValue('B');
   var winner;
-  if (Math.abs(va - vb) > 1e-9) winner = va > vb ? 'A' : 'B';
+  if (reason === 'timer') {
+    // timer resolution: the side that DESTROYED more of the enemy fleet wins —
+    // hiding a fat surviving hull behind PD is not winning
+    function hpFracLost(team) {
+      var cur = 0;
+      for (var i = 0; i < state.ships.length; i++) {
+        var sh = state.ships[i];
+        if (sh.team === team && sh.alive) cur += sh.hp;
+      }
+      return 1 - cur / (state.initialHp[team] || 1);
+    }
+    var lostA = hpFracLost('A'), lostB = hpFracLost('B');
+    if (Math.abs(lostA - lostB) > 1e-9) winner = lostA < lostB ? 'A' : 'B';
+    else if (Math.abs(state.damage.A - state.damage.B) > 1e-9) winner = state.damage.A > state.damage.B ? 'A' : 'B';
+    else winner = 'draw';
+  } else if (Math.abs(va - vb) > 1e-9) winner = va > vb ? 'A' : 'B';
   else if (Math.abs(state.damage.A - state.damage.B) > 1e-9) winner = state.damage.A > state.damage.B ? 'A' : 'B';
   else winner = 'draw';
   return {
@@ -1587,7 +1666,8 @@ function baseState(seed, overrides) {
              torpsFired: { A: 0, B: 0 }, torpsPD: { A: 0, B: 0 }, torpsHit: { A: 0, B: 0 },
              bombsFired: { A: 0, B: 0 }, bombsPD: { A: 0, B: 0 }, bombsHitShip: { A: 0, B: 0 },
              dmgTo: { A: {}, B: {} }, deaths: [], waves: { A: 0, B: 0 },
-             torpLaunch: { A: [], B: [] } },
+             torpLaunch: { A: [], B: [] },
+             runEntries: 0, fireBlocked: { cooldown: 0, range: 0, los: 0, lane: 0 }, salvosFired: 0 },
     aliveA: [], aliveB: [], spawnA: null, spawnB: null,
     commit: { A: { until: -1, cool: 0, targetId: -1 }, B: { until: -1, cool: 0, targetId: -1 } },
     tickCap: 0, hadBothTeams: false,
@@ -1596,10 +1676,13 @@ function baseState(seed, overrides) {
 function finishSetup(state) {
   state.tickCap = Math.round(state.config.matchTimerSeconds * state.config.tickRate);
   var a = 0, b = 0;
+  state.initialHp = { A: 0, B: 0 };
   for (var i = 0; i < state.ships.length; i++) {
-    state.shipById[state.ships[i].id] = state.ships[i];
-    if (state.ships[i].team === 'A') a++; else b++;
-    state.ships[i].ai.jinkPhase = (state.ships[i].id * 0.37) % 1;
+    var sh = state.ships[i];
+    state.shipById[sh.id] = sh;
+    if (sh.team === 'A') a++; else b++;
+    state.initialHp[sh.team] += sh.maxHp;
+    sh.ai.jinkPhase = (sh.id * 0.37) % 1;
   }
   state.hadBothTeams = a > 0 && b > 0;
 }

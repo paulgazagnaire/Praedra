@@ -1,31 +1,31 @@
 # STATUS
 
-**Phase:** 1 complete through the flip gate (§6.6). **GATE RESULT: FLIP NOT ACHIEVED — stopped per §8, awaiting human design decision.** Phase 2 (player controls, polish) deliberately NOT started.
+**Phase:** 1 + approved mechanics A-D integrated. **Flip gate: still short of a stable crossover — reported to human with data and options.** Phase 2 not started.
 
-## Gate numbers (definitive, RAILGUN=A vs SWARM=B, preset fleets, seeded)
+## Approved mechanics (all implemented & tested)
+- **A. PD reaction gating:** PD tracks threats from `pd.trackRange` (700, LOS required) and may only engage after `pd.reactionSeconds` (0.5) of continuous track; track resets when LOS breaks. Bombs launched inside ~350 px arrive before tracking completes and leak entirely.
+- **B. Bomb salvos + sympathetic detonation:** bombers release a fanned salvo (`bomb.salvo` 3, spread 0.13 rad, per-lane launch checks); ANY blast (incl. a PD interception) detonates live bombs inside its radius — tight clusters chain, splashing whoever is near, including the bomber.
+- **C. Timer scoring by destruction:** timer-resolved matches are won by the side that destroyed the larger FRACTION of the enemy fleet's HP (tiebreak damage, then draw). Elimination scoring unchanged.
+- **D. Torpedo arming distance:** `torpedo.armDistance` (260) — an unarmed torpedo is a dud (no terminal roll, no AOE, no rock damage); AI additionally lobs only beyond `torpedo.lobMinRange` (300).
 
-Static terrain (`destructibleAsteroids: off`), 60 seeds per density:
+## Gate numbers (final config, 60 seeds/density static; 40 destructible)
 
-| terrainDensity | A-win% | B-win% | non-resolutions | avg match (s) |
-|---|---|---|---|---|
-| 0.10 | 86.7 | 13.3 | 0 | 60 |
-| 0.25 | 61.7 | 38.3 | 5 | 83 |
-| 0.40 | 71.7 | 28.3 | 3 | 90 |
-| 0.55 | 70.0 | 30.0 | 7 | 121 |
-| 0.70 | 68.3 | 31.7 | 17 | 135 |
-| 0.90 | 61.7 | 38.3 | 20 | 142 |
+| terrainDensity | static A-win% | static B-win% | destructible-on A-win% |
+|---|---|---|---|
+| 0.10 | 81.7 | 18.3 | 77.5 |
+| 0.50 | 65.0 | 35.0 | 67.5 |
+| 0.90 | 56.7 | 43.3 | 75.0 |
 
-- **Flip metric: +25.0 pts** (target ≈ +60). Clear downward trend from open to dense (endpoints 86.7 → 61.7, with mid-sweep seed noise), **but no crossover** — RAILGUN holds a majority at every density. Destructible-on (40 seeds): 85.0 / 72.5 / 70.0 → flip +15, also no crossover.
-- Every match resolves (timer force-resolve verified; non-resolutions are a scored finding, not hangs). Zero draws, zero errors across all batches.
-- ~50 configurations evaluated across 7 exploration rounds, including every explicitly sanctioned lever (railgunMinRange, pdSlots, evasion, cruise speeds, terrain scaling, PD strength, bomb damage/cadence, torpedo speed/standoff, comp variants 2B5I/3B3I/4B1I, commit-wave shape). Dense-end SWARM ceiling ≈ 38–43%; every further push collapses the open end first. See LESSONS.md for the three structural walls and the mechanic-change candidates that need a human decision.
+- Static flip **+25.0 pts**, no win-rate crossover (SWARM ceiling ~43-50% at 0.9 across the tuned front). **At density 0.9 SWARM leads eliminations 24-18** — the timer channel (A 12-6) nets it back; `matchTimerSeconds` 330 (out of PRD band) gave SWARM 53.3%, 300 (in-band, baked) gives ~50/50 on the deepest variant.
+- **Destructible-on washes the gradient out (+2.5)**: the railgun side profits from shattering cover (opens its own torpedo/railgun lanes; debris punishes the swarm's close-quarters game).
+- Every match force-resolves; zero draws/errors across all batches; 8/8 acceptance tests pass; browser build console-clean.
+- ~80 configurations evaluated post-mechanics + pre-mechanics rounds. Pareto front: (open A 82%, dense B 45%) / (open A 72%, dense B 50%) — the target corner (open ≥ 80, dense B ≥ 60) was never reached.
+
+## Key structural findings for the next design decision
+1. The reaction envelope (A) is distance-gated, not terrain-gated: sub-350 launches leak in the open too, once a bomber survives to get there. What terrain actually gates is *surviving the approach* — that asymmetry is real but only worth ~15-25 pts.
+2. PD is now correctly "strong when tracking" (`projectileKillChance` 0.7 vs tracked salvos in the open) — that alone held the open end at ~82%.
+3. Cover-point stability trades ends: rescoring every 0.5 s (baked) preserves the open-end torpedo tax; holding 2 s helps dense arrivals but shelters open bombers (flip -> 0). `ai.coverHoldTicks` exposes this.
+4. Destructible terrain is a RAILGUN buff as implemented — if the flip must survive destructibles (§8), cover destruction economics likely need a design pass (e.g., slower rock HP scaling, debris that threatens the shooter side too).
 
 ## Built & verified
-- `index.html` — self-contained, runs in browser with **no console errors** (verified via headless Chromium): DOM-free deterministic sim core (60 Hz fixed timestep, seeded PRNG, hard tick cap force-resolve), Newtonian movement + autopilot (flip-and-burn, waypoint routing around solid rocks, stall-breaker, per-rock avoidance hysteresis), procedural mixed map with `terrainDensity` knob, segment-circle LOS, full roster + weapons per PRD §4 (fixed-forward railgun with dead zone, LOS-locked loose-tracking torpedoes, straight-line bombs with own-jink skew and self-risk AOE, interceptor gatling, slot-capped PD), destructible asteroids splitting into momentum-carrying debris (bounded cascade), role AI (commit waves, cover staging in LOS shadows, strafe passes, pop-out bomb runs, frigate-first focus), fleet-value scoring with damage tiebreak. Spectator renderer with firing lines/blocked shots, HUD, seed/density/team/speed controls.
-- `harness/run.mjs` — batch flip runner (density sweep, workers, `--set` overrides, JSON dumps, flip metric + crossover detection).
-- `harness/tests.mjs` — **8/8 acceptance tests pass**: determinism, always-resolves, LOS blocked/clear, min-range dead zone, railgun evasion gate, tick-cap force-resolve at exactly the cap, wallclock < 2 s/match.
-- Performance: ~0.5 s/match open, ~2 s dense (spatial grid + IIFE scoping; ~5× gain).
-
-## Known issues / open items
-- The flip crossover itself (above) — blocked on a design/mechanic decision.
-- `railgun.evasionMult` 1.0 gives the railgun a 20% hit rate vs interceptors (PRD flavor says "almost always misses"); it protects the open end. Flag for review.
-- `torpedo.lobMinRange` is an AI-discipline constant standing in for a real torpedo arming-distance mechanic (candidate change).
+(unchanged from previous entry — sim core, autopilot, terrain, LOS, all weapons + new mechanics, role AI, harness, 8/8 tests, browser clean, deterministic, ~0.5-2 s/match headless)
