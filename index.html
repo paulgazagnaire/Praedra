@@ -11,10 +11,11 @@
   #bar label { color:#7f8fa6; }
   #bar input, #bar select, #bar button { background:#131a26; color:#cfd8e3; border:1px solid #2a3850; border-radius:3px; padding:2px 7px; font:inherit; }
   #bar button { cursor:pointer; } #bar button:hover { border-color:#4a6a9a; }
-  #cv { flex:1; display:block; cursor:crosshair; }
-  #hud { position:absolute; top:44px; left:10px; pointer-events:none; white-space:pre; color:#9fb0c8; text-shadow:0 1px 2px #000; }
+  #stage { position:relative; flex:1; min-height:0; }
+  #cv { position:absolute; inset:0; width:100%; height:100%; display:block; cursor:crosshair; }
+  #hud { position:absolute; top:8px; left:10px; pointer-events:none; white-space:pre; color:#9fb0c8; text-shadow:0 1px 2px #000; }
   #banner { position:absolute; top:35%; left:0; right:0; text-align:center; font-size:34px; color:#fff; text-shadow:0 2px 8px #000; pointer-events:none; display:none; }
-  #help { position:absolute; right:10px; top:44px; color:#5c6b80; text-align:right; pointer-events:none; white-space:pre; }
+  #help { position:absolute; right:10px; top:8px; color:#5c6b80; text-align:right; pointer-events:none; white-space:pre; }
 </style>
 </head>
 <body>
@@ -28,12 +29,15 @@
     <label>speed <select id="speed"><option>1</option><option>2</option><option selected>4</option><option>8</option></select></label>
     <button id="restart">restart</button>
     <button id="pause">pause</button>
+    <label>mode <select id="mode"><option value="play" selected>play</option><option value="spectate">spectate</option></select></label>
     <span id="modeinfo" style="color:#7f8fa6"></span>
   </div>
-  <canvas id="cv"></canvas>
-  <div id="hud"></div>
-  <div id="help"></div>
-  <div id="banner"></div>
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div id="hud"></div>
+    <div id="help"></div>
+    <div id="banner"></div>
+  </div>
 </div>
 
 <script>
@@ -2202,10 +2206,17 @@ return api;
     speed: document.getElementById('speed'),
     restart: document.getElementById('restart'),
     pause: document.getElementById('pause'),
+    mode: document.getElementById('mode'),
     modeinfo: document.getElementById('modeinfo'),
   };
   var COLORS = { A: '#4da3ff', B: '#ff7a5c' };
-  var match = null, paused = false, effects = [];
+  var SEL_COLOR = '#7cffb2';
+  var match = null, paused = false, effects = [], markers = [];
+  var selectedSet = new Set();      // ids of currently-selected friendly (team A) ships
+  var renderedEnemyIds = [];        // enemy ids drawn as real ships last frame (fog predicate)
+  var hover = null, drag = null, down = null;
+
+  function isSpectate() { return ui.mode.value === 'spectate'; }
 
   function newMatch() {
     match = Praedra.createMatch({
@@ -2216,24 +2227,301 @@ return api;
       },
       teamA: ui.teamA.value, teamB: ui.teamB.value,
     });
-    effects = [];
+    effects = []; markers = []; selectedSet.clear();
+    renderedEnemyIds = []; hover = null; drag = null; down = null;
     banner.style.display = 'none';
-    ui.modeinfo.textContent = 'newtonian | spectate AI vs AI';
+    updateModeInfo();
   }
+  function updateModeInfo() {
+    ui.modeinfo.textContent = 'newtonian | ' + (isSpectate()
+      ? 'spectate (fog off, AI vs AI)'
+      : 'play: you command TEAM A (blue)');
+  }
+  function setPaused(v) { paused = v; ui.pause.textContent = paused ? 'resume' : 'pause'; }
   ui.restart.onclick = newMatch;
-  ui.pause.onclick = function () { paused = !paused; ui.pause.textContent = paused ? 'resume' : 'pause'; };
-  help.textContent = 'blue = ' + 'RAILGUN side A   orange = side B\nlines: white rail / cyan PD / yellow gatling\nspectator build — flip gate first';
+  ui.pause.onclick = function () { setPaused(!paused); };
+  ui.mode.onchange = function () { updateModeInfo(); };
+  help.textContent =
+    'L-click select | drag box | shift+click toggle | dbl-click all of type\n' +
+    'R-click move / attack ship / blast rock | shift+R attack-move | S hold\n' +
+    'Space pause (orders work paused) | Esc deselect | mode: play / spectate';
+
+  /* ---- view transform: identical math to render(); used for screen<->world hit-testing ---- */
+  function getView() {
+    var w = cv.clientWidth, h = cv.clientHeight, cfg = match.config;
+    var scale = Math.min(w / cfg.arena.w, h / cfg.arena.h) * 0.98;
+    return { w: w, h: h, scale: scale,
+             ox: (w - cfg.arena.w * scale) / 2, oy: (h - cfg.arena.h * scale) / 2 };
+  }
+  function evToCanvas(e) {
+    var r = cv.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  /* ---- selection bookkeeping ---- */
+  function pruneSelection() {
+    if (!match) return;
+    var byId = match.state.shipById, dead = [];
+    selectedSet.forEach(function (id) {
+      var s = byId[id];
+      if (!s || !s.alive || s.team !== 'A') dead.push(id);
+    });
+    for (var i = 0; i < dead.length; i++) selectedSet.delete(dead[i]);
+  }
+  function aliveSelectedIds() {
+    var out = [];
+    selectedSet.forEach(function (id) {
+      var s = match.state.shipById[id];
+      if (s && s.alive && s.team === 'A') out.push(id);
+    });
+    return out;
+  }
+  function selectionSummary() {
+    var ids = aliveSelectedIds();
+    if (!ids.length) return 'none';
+    var counts = {};
+    for (var i = 0; i < ids.length; i++) { var c = match.state.shipById[ids[i]].cls; counts[c] = (counts[c] || 0) + 1; }
+    var parts = []; for (var k in counts) parts.push(counts[k] + ' ' + k);
+    return ids.length + '  (' + parts.join(', ') + ')';
+  }
+  function enemyVisible(sh) {                     // fog-of-war predicate for team-B ships
+    if (isSpectate()) return true;
+    var det = match.state.detA;
+    for (var i = 0; i < det.length; i++) if (det[i].id === sh.id) return true;
+    return false;
+  }
+
+  /* ---- screen-space pickers (pixel radii: ships radius+6 min 10; asteroids exact) ---- */
+  function pickFriendly(sx, sy, v) {
+    var ships = match.state.ships, best = null, bd = Infinity;
+    for (var i = 0; i < ships.length; i++) {
+      var s = ships[i];
+      if (!s.alive || s.team !== 'A') continue;
+      var dx = sx - (v.ox + s.x * v.scale), dy = sy - (v.oy + s.y * v.scale);
+      var d = Math.sqrt(dx * dx + dy * dy), pr = Math.max(10, s.def.radius * v.scale + 6);
+      if (d <= pr && d < bd) { bd = d; best = s; }
+    }
+    return best;
+  }
+  function pickEnemy(sx, sy, v) {
+    var ships = match.state.ships, best = null, bd = Infinity;
+    for (var i = 0; i < ships.length; i++) {
+      var s = ships[i];
+      if (!s.alive || s.team !== 'B' || !enemyVisible(s)) continue;
+      var dx = sx - (v.ox + s.x * v.scale), dy = sy - (v.oy + s.y * v.scale);
+      var d = Math.sqrt(dx * dx + dy * dy), pr = Math.max(10, s.def.radius * v.scale + 6);
+      if (d <= pr && d < bd) { bd = d; best = s; }
+    }
+    return best;
+  }
+  function pickRock(sx, sy, v) {
+    var A = match.state.asteroids, best = null, bd = Infinity;
+    for (var i = 0; i < A.length; i++) {
+      var o = A[i];
+      if (!o.alive) continue;
+      var dx = sx - (v.ox + o.x * v.scale), dy = sy - (v.oy + o.y * v.scale);
+      var d = Math.sqrt(dx * dx + dy * dy), pr = o.r * v.scale;   // exact radius
+      if (d <= pr && d < bd) { bd = d; best = o; }
+    }
+    return best;
+  }
+
+  /* ---- order feedback markers ---- */
+  function selectionCentroid() {
+    var ids = aliveSelectedIds(), cx = 0, cy = 0;
+    if (!ids.length) return null;
+    for (var i = 0; i < ids.length; i++) { var s = match.state.shipById[ids[i]]; cx += s.x; cy += s.y; }
+    return { x: cx / ids.length, y: cy / ids.length };
+  }
+  function addMarker(kind, x, y, targetId) {
+    var c = selectionCentroid();
+    markers.push({ kind: kind, x: x, y: y, targetId: (targetId == null ? null : targetId),
+                   cx: c ? c.x : x, cy: c ? c.y : y, ttl: 1.5, max: 1.5 });
+  }
+
+  function issueSmartOrder(canvas, shift) {
+    var ids = aliveSelectedIds();
+    if (!ids.length) return;
+    var v = getView();
+    var wx = (canvas.x - v.ox) / v.scale, wy = (canvas.y - v.oy) / v.scale;
+    if (shift) {
+      Praedra.issueOrder(match, ids, { type: 'attackmove', x: wx, y: wy });
+      addMarker('attackmove', wx, wy, null);
+      return;
+    }
+    var en = pickEnemy(canvas.x, canvas.y, v);
+    if (en) { Praedra.issueOrder(match, ids, { type: 'attack', targetId: en.id }); addMarker('attack', en.x, en.y, en.id); return; }
+    var rk = pickRock(canvas.x, canvas.y, v);
+    if (rk) { Praedra.issueOrder(match, ids, { type: 'attackrock', targetId: rk.id }); addMarker('attackrock', rk.x, rk.y, null); return; }
+    Praedra.issueOrder(match, ids, { type: 'move', x: wx, y: wy }); addMarker('move', wx, wy, null);
+  }
+
+  /* ---- selection gestures ---- */
+  function clickSelect(sx, sy, shift) {
+    var f = pickFriendly(sx, sy, getView());
+    if (f) {
+      if (shift) { if (selectedSet.has(f.id)) selectedSet.delete(f.id); else selectedSet.add(f.id); }
+      else { selectedSet.clear(); selectedSet.add(f.id); }
+    } else if (!shift) {
+      selectedSet.clear();
+    }
+  }
+  function boxSelect(r, shift) {
+    var v = getView();
+    var xmin = Math.min(r.x0, r.x1), xmax = Math.max(r.x0, r.x1);
+    var ymin = Math.min(r.y0, r.y1), ymax = Math.max(r.y0, r.y1);
+    if (!shift) selectedSet.clear();
+    var ships = match.state.ships;
+    for (var i = 0; i < ships.length; i++) {
+      var s = ships[i];
+      if (!s.alive || s.team !== 'A') continue;
+      var scx = v.ox + s.x * v.scale, scy = v.oy + s.y * v.scale;
+      if (scx >= xmin && scx <= xmax && scy >= ymin && scy <= ymax) selectedSet.add(s.id);
+    }
+  }
+  function updateHover(sx, sy) {
+    var v = getView();
+    var f = pickFriendly(sx, sy, v);
+    if (f) { hover = { kind: 'friendly', s: f }; cv.style.cursor = 'pointer'; return; }
+    if (aliveSelectedIds().length) {
+      var en = pickEnemy(sx, sy, v);
+      if (en) { hover = { kind: 'enemy', s: en }; cv.style.cursor = 'cell'; return; }
+      var rk = pickRock(sx, sy, v);
+      if (rk) { hover = { kind: 'rock', o: rk }; cv.style.cursor = 'cell'; return; }
+    }
+    hover = null; cv.style.cursor = 'crosshair';
+  }
+
+  /* ---- input listeners ---- */
+  cv.addEventListener('mousedown', function (e) {
+    if (e.button !== 0 || !match) return;
+    var c = evToCanvas(e);
+    down = { x: c.x, y: c.y, shift: e.shiftKey, moved: false };
+    drag = null;
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', function (e) {
+    if (!match) return;
+    var c = evToCanvas(e);
+    if (down) {
+      var dx = c.x - down.x, dy = c.y - down.y;
+      if (down.moved || dx * dx + dy * dy > 25) { down.moved = true; drag = { x0: down.x, y0: down.y, x1: c.x, y1: c.y }; }
+    } else {
+      updateHover(c.x, c.y);
+    }
+  });
+  window.addEventListener('mouseup', function (e) {
+    if (e.button !== 0 || !down || !match) return;
+    var c = evToCanvas(e);
+    if (down.moved && drag) boxSelect(drag, down.shift);
+    else clickSelect(c.x, c.y, down.shift);
+    down = null; drag = null;
+  });
+  cv.addEventListener('contextmenu', function (e) {
+    e.preventDefault();
+    if (match) issueSmartOrder(evToCanvas(e), e.shiftKey);
+  });
+  cv.addEventListener('dblclick', function (e) {
+    if (!match) return;
+    var c = evToCanvas(e);
+    var f = pickFriendly(c.x, c.y, getView());
+    if (!f) return;
+    selectedSet.clear();
+    var ships = match.state.ships;
+    for (var i = 0; i < ships.length; i++) {
+      var s = ships[i];
+      if (s.alive && s.team === 'A' && s.cls === f.cls) selectedSet.add(s.id);
+    }
+  });
+  window.addEventListener('keydown', function (e) {
+    var tag = (document.activeElement && document.activeElement.tagName) || '';
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+    if (e.code === 'Space') {
+      e.preventDefault(); setPaused(!paused);
+    } else if (e.key === 'Escape') {
+      selectedSet.clear();
+    } else if (e.key === 's' || e.key === 'S') {
+      var ids = aliveSelectedIds();
+      if (!ids.length) return;
+      Praedra.issueOrder(match, ids, { type: 'hold' });
+      for (var i = 0; i < ids.length; i++) {
+        var s = match.state.shipById[ids[i]];
+        markers.push({ kind: 'hold', x: s.x, y: s.y, targetId: null, cx: s.x, cy: s.y, ttl: 1.2, max: 1.2 });
+      }
+    }
+  });
+
+  /* ---- lumpy-polygon drawing for rocks & tumbling debris ---- */
+  function drawAsteroid(o, scale) {
+    var n = o.shape.length;
+    g.beginPath();
+    for (var i = 0; i < n; i++) {
+      var a = o.rot + i * 6.2831853 / n, rr = o.r * o.shape[i];
+      var px = o.x + Math.cos(a) * rr, py = o.y + Math.sin(a) * rr;
+      if (i === 0) g.moveTo(px, py); else g.lineTo(px, py);
+    }
+    g.closePath();
+    g.fillStyle = o.moving ? '#585048' : '#3c4148';
+    g.strokeStyle = '#565e68';
+    g.lineWidth = 1 / scale;
+    g.fill(); g.stroke();
+  }
+  function drawGhost(x, y, scale) {                // faded last-seen marker for lost contacts
+    g.strokeStyle = 'rgba(255,122,92,0.4)';
+    g.lineWidth = 1.2 / scale;
+    g.beginPath(); g.arc(x, y, 9, 0, 6.2832); g.stroke();
+    g.beginPath();
+    g.moveTo(x - 4, y); g.lineTo(x + 4, y);
+    g.moveTo(x, y - 4); g.lineTo(x, y + 4);
+    g.stroke();
+  }
+  function drawReticle(x, y, r) {                  // attack-hover targeting reticle
+    g.beginPath(); g.arc(x, y, r, 0, 6.2832); g.stroke();
+    g.beginPath();
+    g.moveTo(x - r * 1.5, y); g.lineTo(x - r * 0.7, y);
+    g.moveTo(x + r * 0.7, y); g.lineTo(x + r * 1.5, y);
+    g.moveTo(x, y - r * 1.5); g.lineTo(x, y - r * 0.7);
+    g.moveTo(x, y + r * 0.7); g.lineTo(x, y + r * 1.5);
+    g.stroke();
+  }
+
+  /* ---- tiny debug/automation handle ---- */
+  window.__praedra = {
+    match: function () { return match; },
+    select: function (ids) {
+      selectedSet.clear();
+      if (ids) for (var i = 0; i < ids.length; i++) {
+        var s = match.state.shipById[ids[i]];
+        if (s && s.alive && s.team === 'A') selectedSet.add(s.id);
+      }
+      return aliveSelectedIds();
+    },
+    selected: function () { return aliveSelectedIds(); },
+    renderedEnemies: function () { return renderedEnemyIds.slice(); },
+    view: function () { return getView(); },
+    worldToScreen: function (x, y) { var v = getView(); return { x: v.ox + x * v.scale, y: v.oy + y * v.scale }; },
+    setMode: function (m) { ui.mode.value = m; updateModeInfo(); },
+    setPaused: function (v) { setPaused(!!v); },
+    isPaused: function () { return paused; },
+  };
 
   function consumeEvents() {
     var evs = match.state.events;
     for (var i = 0; i < evs.length; i++) {
       var e = evs[i], ttl = 0.4;
+      if (e.kind === 'launch' || e.kind === 'order') continue;   // launch: silent; order: app draws its own markers
       if (e.kind === 'pd') ttl = 0.12;
       else if (e.kind === 'gat') ttl = 0.09;
-      else if (e.kind === 'boom' || e.kind === 'shatter') ttl = 0.5;
+      else if (e.kind === 'boom') ttl = 0.5;
+      else if (e.kind === 'shatter') ttl = 0.6;
       else if (e.kind === 'shipboom') ttl = 0.8;
-      else if (e.kind === 'launch') continue;
-      effects.push({ e: e, ttl: ttl, max: ttl });
+      var fx = { e: e, ttl: ttl, max: ttl };
+      if (e.kind === 'shatter' || e.kind === 'shipboom') {       // flying specks (app-side RNG is fine)
+        var nsp = e.kind === 'shatter' ? 6 : 8, sp = [];
+        for (var k = 0; k < nsp; k++) sp.push({ a: Math.random() * 6.2832, v: 0.6 + Math.random() * 0.9, l: 0.25 + Math.random() * 0.5 });
+        fx.specks = sp;
+      }
+      effects.push(fx);
     }
     evs.length = 0;
   }
@@ -2247,7 +2535,21 @@ return api;
     return v;
   }
 
-  function drawShip(s, scale) {
+  function drawShip(s, scale, selected) {
+    var r = s.def.radius;
+    // selection ring (under the hull, in world space)
+    if (selected) {
+      g.strokeStyle = SEL_COLOR;
+      g.lineWidth = 2 / scale;
+      g.beginPath(); g.arc(s.x, s.y, r + 6, 0, 6.2832); g.stroke();
+    }
+    // hold indicator: small hollow square — station-keeping, weapons free
+    if (s.order && s.order.type === 'hold') {
+      var hs = r + 5;
+      g.strokeStyle = 'rgba(200,220,255,0.65)';
+      g.lineWidth = 1 / scale;
+      g.strokeRect(s.x - hs, s.y - hs, hs * 2, hs * 2);
+    }
     g.save();
     g.translate(s.x, s.y);
     // velocity vector so momentum reads
@@ -2258,7 +2560,6 @@ return api;
     g.fillStyle = COLORS[s.team];
     g.strokeStyle = '#0a0f18';
     g.lineWidth = 1.5 / scale;
-    var r = s.def.radius;
     g.beginPath();
     if (s.cls === 'interceptor') {            // small triangle, apex = nose
       g.moveTo(r * 1.4, 0); g.lineTo(-r, r * 0.9); g.lineTo(-r, -r * 0.9);
@@ -2301,14 +2602,10 @@ return api;
     g.lineWidth = 2 / scale;
     g.strokeRect(0, 0, cfg.arena.w, cfg.arena.h);
 
-    // asteroids
+    // asteroids + tumbling debris (lumpy polygons)
     for (var i = 0; i < st.asteroids.length; i++) {
       var o = st.asteroids[i];
-      if (!o.alive) continue;
-      g.fillStyle = o.moving ? '#585048' : '#3c4148';
-      g.strokeStyle = '#565e68';
-      g.lineWidth = 1 / scale;
-      g.beginPath(); g.arc(o.x, o.y, o.r, 0, 6.2832); g.fill(); g.stroke();
+      if (o.alive) drawAsteroid(o, scale);
     }
     // torpedoes / bombs
     for (var t = 0; t < st.torps.length; t++) {
@@ -2339,22 +2636,112 @@ return api;
         g.strokeStyle = 'rgba(255,225,120,' + (0.55 * a) + ')';
         g.lineWidth = 1 / scale;
         g.beginPath(); g.moveTo(ev.x, ev.y); g.lineTo(ev.x2, ev.y2); g.stroke();
-      } else if (ev.kind === 'boom' || ev.kind === 'shipboom' || ev.kind === 'shatter') {
-        g.strokeStyle = (ev.kind === 'shatter' ? 'rgba(180,180,180,' : 'rgba(255,160,80,') + a + ')';
+      } else if (ev.kind === 'shatter') {
+        var prog = 1 - a, rr = ev.r * (0.5 + 1.5 * prog);
+        g.strokeStyle = 'rgba(152,142,124,' + (0.7 * a) + ')';
+        g.lineWidth = 2 / scale;
+        g.beginPath(); g.arc(ev.x, ev.y, rr, 0, 6.2832); g.stroke();
+        if (fx.specks) {
+          g.strokeStyle = 'rgba(122,112,98,' + (0.85 * a) + ')';
+          g.lineWidth = 1.4 / scale;
+          for (var sk = 0; sk < fx.specks.length; sk++) {
+            var sp = fx.specks[sk], d0 = ev.r * (0.4 + prog * sp.v * 1.4), d1 = d0 + ev.r * sp.l;
+            g.beginPath();
+            g.moveTo(ev.x + Math.cos(sp.a) * d0, ev.y + Math.sin(sp.a) * d0);
+            g.lineTo(ev.x + Math.cos(sp.a) * d1, ev.y + Math.sin(sp.a) * d1);
+            g.stroke();
+          }
+        }
+      } else if (ev.kind === 'boom' || ev.kind === 'shipboom') {
+        g.strokeStyle = 'rgba(255,160,80,' + a + ')';
         g.lineWidth = 2 / scale;
         g.beginPath(); g.arc(ev.x, ev.y, ev.r * (1.6 - 0.6 * a), 0, 6.2832); g.stroke();
+        if (fx.specks && ev.kind === 'shipboom') {
+          var pg = 1 - a;
+          g.strokeStyle = 'rgba(255,190,120,' + (0.8 * a) + ')';
+          g.lineWidth = 1.5 / scale;
+          for (var q = 0; q < fx.specks.length; q++) {
+            var s3 = fx.specks[q], e0 = ev.r * (0.3 + pg * s3.v * 1.4), e1 = e0 + ev.r * s3.l;
+            g.beginPath();
+            g.moveTo(ev.x + Math.cos(s3.a) * e0, ev.y + Math.sin(s3.a) * e0);
+            g.lineTo(ev.x + Math.cos(s3.a) * e1, ev.y + Math.sin(s3.a) * e1);
+            g.stroke();
+          }
+        }
       }
     }
-    // ships
+    // order markers (fade ~1.5s): green move / red-ish attack-move + attack flash
+    for (var mi = markers.length - 1; mi >= 0; mi--) {
+      var mk = markers[mi], ma = mk.ttl / mk.max;
+      var col = mk.kind === 'move' ? '124,255,150'
+        : (mk.kind === 'hold' ? '200,220,255' : '255,110,90');
+      var tx = mk.x, ty = mk.y;
+      if (mk.targetId != null) { var ts = st.shipById[mk.targetId]; if (ts && ts.alive) { tx = ts.x; ty = ts.y; } }
+      if (mk.kind === 'move' || mk.kind === 'attackmove') {
+        g.strokeStyle = 'rgba(' + col + ',' + (0.5 * ma) + ')';
+        g.lineWidth = 1.2 / scale;
+        g.beginPath(); g.moveTo(mk.cx, mk.cy); g.lineTo(mk.x, mk.y); g.stroke();
+        g.fillStyle = 'rgba(' + col + ',' + (0.9 * ma) + ')';
+        g.beginPath(); g.arc(mk.x, mk.y, 4, 0, 6.2832); g.fill();
+        g.strokeStyle = 'rgba(' + col + ',' + (0.7 * ma) + ')';
+        g.lineWidth = 1.5 / scale;
+        g.beginPath(); g.arc(mk.x, mk.y, 14 * (1.4 - 0.4 * ma), 0, 6.2832); g.stroke();
+      } else {
+        g.strokeStyle = 'rgba(' + col + ',' + (0.85 * ma) + ')';
+        g.lineWidth = 2 / scale;
+        var fr = (mk.kind === 'hold' ? 10 : 18) * (1.5 - 0.5 * ma);
+        g.beginPath(); g.arc(tx, ty, fr, 0, 6.2832); g.stroke();
+      }
+    }
+    // ghosts: undetected enemies remembered within memorySeconds (play mode only)
+    renderedEnemyIds = [];
+    if (!isSpectate()) {
+      var mem = cfg.detection.memorySeconds || 5;
+      for (var gi = 0; gi < st.ships.length; gi++) {
+        var gs = st.ships[gi];
+        if (!gs.alive || gs.team !== 'B' || enemyVisible(gs)) continue;
+        var ls = st.lastSeenShip[gs.id];
+        if (ls && (st.time - ls.t) < mem) drawGhost(ls.x, ls.y, scale);
+      }
+    }
+    // ships: friendlies always; enemies only if visible under the fog
     for (var s2 = 0; s2 < st.ships.length; s2++) {
       var sh = st.ships[s2];
-      if (sh.alive) drawShip(sh, scale);
+      if (!sh.alive) continue;
+      if (sh.team === 'B') {
+        if (!enemyVisible(sh)) continue;
+        renderedEnemyIds.push(sh.id);
+      }
+      drawShip(sh, scale, sh.team === 'A' && selectedSet.has(sh.id));
     }
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // attack reticle over hovered enemy/rock when a selection exists
+    if (hover && (hover.kind === 'enemy' || hover.kind === 'rock') && aliveSelectedIds().length) {
+      var ht = hover.kind === 'enemy' ? hover.s : hover.o;
+      if (ht && ht.alive) {
+        g.strokeStyle = '#ff5a3c';
+        g.lineWidth = 1.5 / scale;
+        drawReticle(ht.x, ht.y, (hover.kind === 'enemy' ? ht.def.radius : ht.r) + 8);
+      }
+    }
 
+    // ---- screen-space overlay ----
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (drag) {
+      var rx = Math.min(drag.x0, drag.x1), ry = Math.min(drag.y0, drag.y1);
+      var rw = Math.abs(drag.x1 - drag.x0), rh = Math.abs(drag.y1 - drag.y0);
+      g.fillStyle = 'rgba(124,255,178,0.10)';
+      g.fillRect(rx, ry, rw, rh);
+      g.strokeStyle = 'rgba(124,255,178,0.85)';
+      g.lineWidth = 1;
+      g.strokeRect(rx + 0.5, ry + 0.5, rw, rh);
+    }
+
+    pruneSelection();
     hud.textContent = 't=' + (st.tick / 60).toFixed(0) + 's / ' + cfg.matchTimerSeconds + 's' +
       '   A ' + fleetValue('A').toFixed(1) + '  vs  B ' + fleetValue('B').toFixed(1) +
-      (match.done ? '   [ended: ' + match.result.winner + ' by ' + match.result.reason + ']' : '');
+      (paused ? '   [PAUSED]' : '') +
+      (match.done ? '   [ended: ' + match.result.winner + ' by ' + match.result.reason + ']' : '') +
+      '\nselected: ' + selectionSummary();
     if (match.done && banner.style.display === 'none') {
       banner.textContent = match.result.winner === 'draw' ? 'DRAW' :
         'TEAM ' + match.result.winner + ' WINS  (' + match.result.reason + ')';
@@ -2371,20 +2758,21 @@ return api;
     if (match && !paused && !match.done) {
       var steps = parseInt(ui.speed.value, 10) || 1;
       for (var i = 0; i < steps && !match.done; i++) match.step();
-      consumeEvents();
     }
+    if (match) consumeEvents();   // every frame: clears order events even while paused
     for (var e = effects.length - 1; e >= 0; e--) {
       effects[e].ttl -= dtReal;
       if (effects[e].ttl <= 0) effects.splice(e, 1);
+    }
+    for (var m = markers.length - 1; m >= 0; m--) {
+      markers[m].ttl -= dtReal;
+      if (markers[m].ttl <= 0) markers.splice(m, 1);
     }
     render();
   }
   newMatch();
   requestAnimationFrame(frame);
 })();
-</script>
-</body>
-</html>
 </script>
 </body>
 </html>
