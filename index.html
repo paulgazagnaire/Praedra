@@ -205,6 +205,9 @@ var CONFIG_DEFAULTS = {
     minAccel: 0.25,                // px/s^2 cutoff: beyond this the well ends (perf + sanity)
     maxAccel: 45,                  // clamp: no singularity slingshots at point-blank
     rockWake: 3.0,                 // settled rock starts sliding only above this pull
+    shipEscapeCap: 0.65,           // pull on a ship never exceeds this fraction of its own
+                                   // max thrust accel — wells threaten, they never imprison
+                                   // (also what keeps the x3 slider playable)
     shipMult: 1.0,                 // per-family feel multipliers
     rockMult: 1.0,
     projectileMult: 1.0,           // torpedoes/bombs bend course but keep their speed
@@ -314,6 +317,9 @@ var CONFIG_DEFAULTS = {
     shipRockDamageScale: 0.02,     // dmg = scale * closingSpeed * (mass/50), capped
     shipRockDamageCap: 10,
     shipShipRestitution: 0.3,
+    pushableRockRadius: 55,        // ships shove settled rocks smaller than this aside —
+                                   // gravity accretes pebble shells around parked fleets,
+                                   // and an immovable shell entombs a capital alive
   },
 
   // --- ROLE AI ---
@@ -716,11 +722,31 @@ function autopilot(state, ship, dt) {
   var dd = Math.sqrt(ddx * ddx + ddy * ddy);
   var dirx = dd > 1e-6 ? ddx / dd : Math.cos(ship.heading), diry = dd > 1e-6 ? ddy / dd : Math.sin(ship.heading);
 
-  // --- stall-breaker: parked against a rock far from the goal -> sidestep hard ---
+  // --- stall-breaker: parked against a rock far from the goal -> sidestep hard.
+  //     COMMIT to one side for the whole stall episode: alternating sides every
+  //     couple of seconds cancels itself out, and against a gravity well (thrust
+  //     barely above the pull) that dither pinned capitals to the rim for minutes ---
   if (ship.speed < 18 && d > AI.navArriveSlack * 3) ship.stallT = (ship.stallT || 0) + dt;
-  else ship.stallT = 0;
+  else { ship.stallT = 0; ship.stallSide = 0; }
   if (ship.stallT > 1.5) {
-    var sside = ((ship.id + Math.floor(state.time / 2)) % 2 === 0) ? 1 : -1;
+    var stallEp = Math.floor((ship.stallT - 1.5) / 9); // long episodes: a destroyer needs ~5s just to turn around
+    if (!ship.stallSide) {
+      // sidestep AWAY from whatever we're pinned against; id parity in open space
+      var pin = null, pinD = Infinity;
+      rocksNearSeg(state, ship.x, ship.y, ship.x, ship.y, def.radius + 260, function (ob) {
+        var dd = dist(ship.x, ship.y, ob.x, ob.y) - ob.r;
+        if (dd < pinD) { pinD = dd; pin = ob; }
+        return false;
+      });
+      if (pin && pinD < 200)
+        ship.stallSide = (dirx * (pin.y - ship.y) - diry * (pin.x - ship.x)) > 0 ? -1 : 1;
+      else ship.stallSide = ((ship.id + Math.floor(state.time / 2)) % 2 === 0) ? 1 : -1;
+      ship.stallEp = stallEp;
+    } else if (stallEp !== ship.stallEp) {
+      ship.stallEp = stallEp;
+      ship.stallSide = -ship.stallSide;  // 6s of futility: try the other way around
+    }
+    var sside = ship.stallSide;
     var rx = dirx * Math.cos(sside * 1.35) - diry * Math.sin(sside * 1.35);
     var ry = dirx * Math.sin(sside * 1.35) + diry * Math.cos(sside * 1.35);
     dirx = rx; diry = ry;
@@ -866,7 +892,8 @@ function collideShipsAndRocks(state, dt) {
       if (d2 >= rr * rr || d2 < 1e-9) continue;
       var d = Math.sqrt(d2), nx = dx / d, ny = dy / d;
       var mShip = sh.def.mass, mRock = o.r * o.r / 10;
-      var invS = 1 / mShip, invR = o.moving ? 1 / mRock : 0; // settled rocks are immovable to ships
+      // settled rocks are immovable walls — except pebbles, which a hull shoves aside
+      var invS = 1 / mShip, invR = (o.moving || o.r < C.pushableRockRadius) ? 1 / mRock : 0;
       var rvx = sh.vx - o.vx, rvy = sh.vy - o.vy;
       var vn = rvx * nx + rvy * ny;
       var closing = -vn;
@@ -874,7 +901,7 @@ function collideShipsAndRocks(state, dt) {
         var jimp = -(1 + C.shipRockRestitution) * vn / (invS + invR);
         sh.vx += jimp * invS * nx; sh.vy += jimp * invS * ny;
         o.vx -= jimp * invR * nx; o.vy -= jimp * invR * ny;
-        if (invR > 0 && len(o.vx, o.vy) > 2) o.moving = true;
+        if (invR > 0 && !o.moving && len(o.vx, o.vy) > 2) { o.moving = true; rockWoke(state, o); }
         var dmg;
         if (o.moving && closing > D.impactMinSpeed) {
           dmg = D.impactDamageScale * (o.r * o.r / 1000) * closing; // shrapnel strike
@@ -951,9 +978,11 @@ function updateAsteroids(state, dt) {
         q.vx -= jimp * nx / mq; q.vy -= jimp * ny / mq;
         if (!q.moving && len(q.vx, q.vy) > 2) { q.moving = true; rockWoke(state, q); }
       }
-      var push = (rr - d) / 2 + 0.25;
-      p.x += nx * push; p.y += ny * push;
-      q.x -= nx * push; q.y -= ny * push;
+      // mass-weighted separation: accreting pebbles must not bulldoze a monster rock
+      // across the map (equal pushes visibly displaced BIG asteroids over a match)
+      var wp = (1 / mp) / (1 / mp + 1 / mq), push = (rr - d) + 0.5;
+      p.x += nx * push * wp; p.y += ny * push * wp;
+      q.x -= nx * push * (1 - wp); q.y -= ny * push * (1 - wp);
       return false;
     });
   }
@@ -1007,8 +1036,13 @@ function applyGravity(state, dt) {
     var sh = ships[i];
     if (!sh.alive || sh.pinned) continue;   // pinned ships hold station by contract
     gravityAt(GR, srcs, sh.x, sh.y, -1);
-    sh.vx += GVEC.ax * GR.shipMult * dt;
-    sh.vy += GVEC.ay * GR.shipMult * dt;
+    var gax = GVEC.ax * GR.shipMult, gay = GVEC.ay * GR.shipMult;
+    // escape guarantee: a ship can always out-burn the well (see shipEscapeCap)
+    var gcap = (sh.def.thrust / sh.def.mass) * GR.shipEscapeCap;
+    var gm = len(gax, gay);
+    if (gm > gcap) { gax *= gcap / gm; gay *= gcap / gm; }
+    sh.vx += gax * dt;
+    sh.vy += gay * dt;
   }
   var A = state.asteroids;
   for (i = 0; i < A.length; i++) {

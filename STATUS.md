@@ -10,6 +10,7 @@
 - **Tuning**: gravity slider ×0–3 in the fleet-setup screen AND a live slider in the top bar (mutates `match.config.gravity.G` mid-match; restart keeps the tuned value). `__praedra.setGravity(mult)` for automation.
 - Renderer: massive rocks get a cratered look + faint field-contour rings (strong-pull and well-edge).
 - Perf: spatial grid now holds settled rocks only (movers scanned as a short list); grid rebuilds only on settle/wake/split flips. Small-fleet match ~430µs/tick.
+- Anti-entombment set (found by adversarial batteries): ships shove settled pebbles (r < `collision.pushableRockRadius`) aside instead of being walled in by accretion shells; pull on a ship is capped at `gravity.shipEscapeCap` × its own thrust accel (wells threaten, never imprison — keeps the ×3 slider playable); rock-rock separation is mass-weighted (pebbles no longer bulldoze a monster rock across the map); the autopilot stall-breaker commits to one sidestep side per stall episode (picked away from the pinning rock) instead of dithering.
 
 **Sim (DOM-free, deterministic, force-resolving):**
 - **Friendly fire universal**: railgun/gatling hit the first hull on the firing ray regardless of team; torpedoes contact-detonate on any non-owner hull; all AOE (bombs, chains, torpedo interceptions) hits everyone.
@@ -28,9 +29,10 @@
 ## Verification
 - `harness/tests.mjs`: **15/15 pass** (original 12 + big-asteroids-every-seed, gravity-attracts-debris, gravity-pulls-ships).
 - Headless Chromium: zero console errors; 13/13 mandatory + 9/9 supplementary UI assertions (selection, orders, active-pause ordering, fog subset checks, spectate).
-- Determinism from seed: verified. Matches resolve 47–172 s typical (timer cap 300 s per PRD band); zero draws/errors in latest batteries; ~4–6 asteroid shatters per match.
+- Determinism from seed: verified (incl. with gravity overrides; deep state compare at tick 600). Zero draws/errors across 135+ battery matches; no NaN at any gravity multiplier 0–3×.
+- Resolution: ~90% of 42-pt armada matches end by elimination (90-match battery: BvB 5/45 timer, RvS 4/45); timer matches score a correct winner via the HP-lost tiebreak. Residual timeouts are fleets standing off behind a monster rock's LOS shadow — the tactical terrain doing its job, see known items.
 
 ## Known items / notes
-- Balance: the flip-gate question is parked (see LESSONS.md and git history for the full record); current AI-vs-AI win rates lean RAILGUN at most densities. The sandbox direction (detection, FF, demolition) reshuffled balance — retune when the flip work resumes. The bigger arena + gravity reshuffle it further; occasional armada matches now resolve on the timer (endgame interceptor-vs-capital slog, scored correctly) — revisit with the flip retune.
+- Balance: the flip-gate question is parked (see LESSONS.md and git history for the full record); current AI-vs-AI win rates lean RAILGUN at most densities. The sandbox direction (detection, FF, demolition) reshuffled balance — retune when the flip work resumes. The bigger arena + gravity reshuffle it further; ~10% of armada matches resolve on the timer (both fleets camped in the mutual LOS shadow of a BIG asteroid, or the endgame interceptor-vs-capital slog — scored correctly either way). Cutting that further is hunt-AI tuning; revisit with the flip retune.
 - A fully-static scenario where a rock permanently blocks the only sightline is a stalemate by design (never-detected targets can't be engaged); irrelevant in real matches (documented in SIM_CONTRACT).
 - `destructibleAsteroids` config key is ignored (kept for compat).

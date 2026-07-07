@@ -136,8 +136,9 @@ with mass `r^3`. Acceleration toward a source at distance `d` is
 `G * r^3 / (d^2 + (softening*r)^2)`, clamped to `maxAccel`, ignored below `minAccel`
 (the well's edge). It acts every tick on:
 
-- **ships** (× `gravity.shipMult`) — the autopilot fights the drift; `pinned` ships
-  are exempt (they hold station by contract);
+- **ships** (× `gravity.shipMult`, additionally capped at `gravity.shipEscapeCap` ×
+  the ship's own max thrust accel so a well can threaten but never imprison) — the
+  autopilot fights the drift; `pinned` ships are exempt (they hold station by contract);
 - **rocks** (× `gravity.rockMult`) — moving debris curls into the wells; a settled
   rock wakes only when the pull exceeds `gravity.rockWake` AND nothing supports it
   on the down-well side (so accretion piles are stable and the far field never
@@ -195,7 +196,7 @@ deal their base damage directly (no multiplier) via `attackrock` orders only.
 - `terrain.bigRadius` / `terrain.bigCountMax` — BIG-asteroid size band and max count
   (min count is always 1 on procedural maps).
 - `gravity.G` / `sourceMinRadius` / `softening` / `minAccel` / `maxAccel` / `rockWake`
-  / `shipMult` / `rockMult` / `projectileMult` — see Terrain above.
+  / `shipEscapeCap` / `shipMult` / `rockMult` / `projectileMult` — see Terrain above.
 - `destructibleAsteroids` (bool, present but IGNORED — see above).
 - `matchTimerSeconds` (number).
 - `presets` — fleet presets (same object as `Praedra.PRESETS`).
