@@ -137,7 +137,11 @@ var Praedra = (function () {
 /* ---------------- CONFIG — every gameplay number lives here ---------------- */
 var CONFIG_DEFAULTS = {
   tickRate: 60,
-  matchTimerSeconds: 360,          // hard cap; titan-scale maps need transit room (was PRD 150-300)
+  matchTimerSeconds: 360,          // hard cap; titan-scale maps need transit room (was PRD
+                                   // 150-300). Symmetric armada mirrors are attrition wars
+                                   // whose kill rate decays — they resolve on points at the
+                                   // cap regardless of how much more time they get (verified
+                                   // at 480s: durations inflated, nonres barely moved)
   movementModel: 'newtonian',      // 'newtonian' | 'arcade' (arcade = debug fallback only)
   fleetMode: 'preset',
 
@@ -366,6 +370,10 @@ var CONFIG_DEFAULTS = {
     avoidMargin: 30,               // extra clearance around rocks
     bigRockAvoidPad: 70,           // extra clearance around gravity sources: the well
                                    // drags ships into the rim while they round it
+    hugeRockRadius: 500,           // rocks this big get RIM-FOLLOWED (tangent-bug):
+                                   // a perpendicular detour nudge never clears a
+                                   // titan's shadow and ships parked at its rim
+                                   // otherwise dive back into the well forever
   },
 
   // --- FLEETS (42-point budget; costs: destroyer 6 / frigate 3 / bomber 2 / interceptor 1) ---
@@ -480,7 +488,9 @@ function generateTerrain(state, rng) {
     rocks.push({ x: tx, y: ty, r: tR });
     tPlaced = true;
   }
-  if (!tPlaced) { // centre always clears both spawns (they hug opposite arena edges)
+  if (!tPlaced) { // near-unreachable fallback (80 tries on a mostly-open arena): the
+    // centre clears both spawn CLEAR zones on any axis, though a worst-case vertical
+    // spawn axis can shave the extra titanSpawnClear comfort margin
     bigs.push({ x: cx, y: cy, r: tR });
     rocks.push({ x: cx, y: cy, r: tR });
   }
@@ -501,10 +511,13 @@ function generateTerrain(state, rng) {
       if (dist(bx, by, state.spawnB.x, state.spawnB.y) < T.bigSpawnClear + bR) continue;
       var clearB = true;
       for (var bj = 0; bj < bigs.length; bj++) {
-        // pairs with the titan relax to 1.1: full bigSeparation against a 1600-radius
-        // rock would forbid most of the arena and starve the placement search
-        var sep = bigs[bj].r > T.bigRadius[1] * 1.5 ? 1.1 : T.bigSeparation;
-        if (dist(bx, by, bigs[bj].x, bigs[bj].y) < (bR + bigs[bj].r) * sep) { clearB = false; break; }
+        // pairs with the titan use an absolute gap instead of 1.35x the radii sum
+        // (which would forbid most of the arena): outside the titan's rock-wake
+        // shell, so a placed BIG anchors the layout instead of sliding into it
+        var need = bigs[bj].r > T.bigRadius[1] * 1.5
+          ? bigs[bj].r + bR + state.config.gravity.rockWakeShell + 40
+          : (bR + bigs[bj].r) * T.bigSeparation;
+        if (dist(bx, by, bigs[bj].x, bigs[bj].y) < need) { clearB = false; break; }
       }
       if (!clearB) continue;
       bigs.push({ x: bx, y: by, r: bR });
@@ -519,8 +532,12 @@ function generateTerrain(state, rng) {
         var fx = cand[fc][0], fy = cand[fc][1], okF = true;
         if (dist(fx, fy, state.spawnA.x, state.spawnA.y) < T.bigSpawnClear + bR) okF = false;
         if (dist(fx, fy, state.spawnB.x, state.spawnB.y) < T.bigSpawnClear + bR) okF = false;
-        for (var fj = 0; fj < bigs.length && okF; fj++)
-          if (dist(fx, fy, bigs[fj].x, bigs[fj].y) < bR + bigs[fj].r + 40) okF = false;
+        for (var fj = 0; fj < bigs.length && okF; fj++) {
+          var needF = bigs[fj].r > T.bigRadius[1] * 1.5
+            ? bigs[fj].r + bR + state.config.gravity.rockWakeShell + 40
+            : bR + bigs[fj].r + 40;
+          if (dist(fx, fy, bigs[fj].x, bigs[fj].y) < needF) okF = false;
+        }
         if (okF) {
           bigs.push({ x: fx, y: fy, r: bR });
           rocks.push({ x: fx, y: fy, r: bR });
@@ -750,10 +767,12 @@ function autopilot(state, ship, dt) {
     var blk = null, blkT = Infinity;
     rocksNearSeg(state, ship.x, ship.y, goal.x, goal.y, 92 + def.radius + AI.avoidMargin + AI.bigRockAvoidPad, function (ob) {
       var rInf = ob.r + def.radius + AI.avoidMargin * (def.avoidMult || 1) + massivePad(cfg, ob);
-      // skip rocks we're already inside the margin of (collision/probe handles those)
+      var huge = ob.r >= AI.hugeRockRadius;
+      // skip small rocks we're already inside the margin of (collision/probe handles
+      // those) — but a HUGE rock must stay in play precisely when we're at its rim
       var dRock = dist(ship.x, ship.y, ob.x, ob.y);
-      if (dRock < rInf - 5) return false;
-      if (dist(goal.x, goal.y, ob.x, ob.y) < rInf - 12) return false; // goal snug against this rock: go direct
+      if (dRock < rInf - 5 && !huge) return false;
+      if (dist(goal.x, goal.y, ob.x, ob.y) < rInf - 12 && !huge) return false; // goal snug: go direct
       if (segCircleHit(ship.x, ship.y, goal.x, goal.y, ob.x, ob.y, rInf - 8)) {
         if (dRock < blkT) { blkT = dRock; blk = ob; }
       }
@@ -761,13 +780,34 @@ function autopilot(state, ship, dt) {
     });
     if (blk) {
       var rI = blk.r + def.radius + AI.avoidMargin + massivePad(cfg, blk);
-      var t = ((blk.x - ship.x) * dx + (blk.y - ship.y) * dy) / (d * d);
-      t = clamp(t, 0, 1);
-      var prx = ship.x + dx * t - blk.x, pry = ship.y + dy * t - blk.y;
-      var pl = len(prx, pry);
-      if (pl < 1) { prx = -dy / d; pry = dx / d; pl = 1; }
-      gx = blk.x + (prx / pl) * (rI + 22);
-      gy = blk.y + (pry / pl) * (rI + 22);
+      if (blk.r >= AI.hugeRockRadius) {
+        // tangent-bug rim-following: walk the inflated rim toward the goal side,
+        // with a sticky side choice so the ship commits to one way around. The
+        // ride radius must clear the velocity-probe margin (which scales with
+        // avoidMult) or avoidance braking throttles the whole transit to a crawl.
+        var rRide = blk.r + def.radius + AI.avoidMargin * (def.avoidMult || 1) + massivePad(cfg, blk) + 50;
+        var side2;
+        if (ship.rimRock === blk.id && state.time < ship.rimUntil) side2 = ship.rimSide;
+        else {
+          var angS = Math.atan2(ship.y - blk.y, ship.x - blk.x);
+          var angG = Math.atan2(goal.y - blk.y, goal.x - blk.x);
+          side2 = normAngle(angG - angS) > 0 ? 1 : -1;
+          ship.rimRock = blk.id; ship.rimSide = side2;
+        }
+        ship.rimUntil = state.time + 2.5; // stays committed while continuously engaged
+        var step2 = clamp(380 / rRide, 0.2, 0.9);
+        var na = Math.atan2(ship.y - blk.y, ship.x - blk.x) + side2 * step2;
+        gx = blk.x + Math.cos(na) * rRide;
+        gy = blk.y + Math.sin(na) * rRide;
+      } else {
+        var t = ((blk.x - ship.x) * dx + (blk.y - ship.y) * dy) / (d * d);
+        t = clamp(t, 0, 1);
+        var prx = ship.x + dx * t - blk.x, pry = ship.y + dy * t - blk.y;
+        var pl = len(prx, pry);
+        if (pl < 1) { prx = -dy / d; pry = dx / d; pl = 1; }
+        gx = blk.x + (prx / pl) * (rI + 22);
+        gy = blk.y + (pry / pl) * (rI + 22);
+      }
     }
     ship.wpCacheT = state.tick; ship.wpGoalX = goal.x; ship.wpGoalY = goal.y;
     ship.wpX = gx; ship.wpY = gy;
@@ -779,10 +819,13 @@ function autopilot(state, ship, dt) {
   // --- stall-breaker: parked against a rock far from the goal -> sidestep hard.
   //     COMMIT to one side for the whole stall episode: alternating sides every
   //     couple of seconds cancels itself out, and against a gravity well (thrust
-  //     barely above the pull) that dither pinned capitals to the rim for minutes ---
+  //     barely above the pull) that dither pinned capitals to the rim for minutes.
+  //     Suppressed while rim-following a huge rock — the rim path IS the escape,
+  //     and a 77-degree sidestep off it just dives back into the well ---
+  var rimming = state.time < (ship.rimUntil || -1);
   if (ship.speed < 18 && d > AI.navArriveSlack * 3) ship.stallT = (ship.stallT || 0) + dt;
   else { ship.stallT = 0; ship.stallSide = 0; }
-  if (ship.stallT > 1.5) {
+  if (ship.stallT > 1.5 && !rimming) {
     var stallEp = Math.floor((ship.stallT - 1.5) / 9); // long episodes: a destroyer needs ~5s just to turn around
     if (!ship.stallSide) {
       // sidestep AWAY from whatever we're pinned against; id parity in open space
@@ -816,6 +859,11 @@ function autopilot(state, ship, dt) {
     var threat = null, threatD = Infinity;
     rocksNearSeg(state, ship.x, ship.y, pex, pey, 92 + def.radius + AI.avoidMargin * (def.avoidMult || 1) + AI.bigRockAvoidPad, function (o) {
       var rr = o.r + def.radius + AI.avoidMargin * (def.avoidMult || 1) + massivePad(cfg, o);
+      // the massive pad is a transit-comfort margin, not a wall: when the GOAL itself
+      // legitimately sits inside it (ordered point, cover spot at the rim), drop the
+      // pad for this rock or the probe deflects the ship around it forever
+      if (rr > o.r + def.radius + AI.avoidMargin && dist(goal.x, goal.y, o.x, o.y) < rr)
+        rr = o.r + def.radius + AI.avoidMargin;
       var ddx = o.x - ship.x, ddy = o.y - ship.y;
       var dd = Math.sqrt(ddx * ddx + ddy * ddy);
       if (dd - rr > sp * probeT) return false;
@@ -865,7 +913,24 @@ function autopilot(state, ship, dt) {
   var dvx = dvxWant - ship.vx, dvy = dvyWant - ship.vy;
   var dvm = Math.sqrt(dvx * dvx + dvy * dvy);
 
-  if (dvm < 8) {
+  // --- gravity feed-forward: in a well the burn must buy BOTH the velocity change
+  //     and the hover. A gravity-blind burn aims all thrust tangentially, sinks the
+  //     ship into the rock it's rounding, and full-throttle "progress" nets zero ---
+  var gfx = 0, gfy = 0;
+  if (state.gravSources && state.gravSources.length) {
+    gravityAt(cfg.gravity, state.gravSources, ship.x, ship.y, -1, 0);
+    var gm2 = len(GVEC.ax, GVEC.ay);
+    if (gm2 > 0) {
+      var gcap2 = accel * cfg.gravity.shipEscapeCap;
+      var gs = gm2 > gcap2 ? gcap2 / gm2 : 1; // mirror the cap applyGravity enforces
+      gfx = -GVEC.ax * cfg.gravity.shipMult * gs;
+      gfy = -GVEC.ay * cfg.gravity.shipMult * gs;
+    }
+  }
+  var awx = dvx * 4 + gfx, awy = dvy * 4 + gfy; // desired accel: dv over ~0.25s + hover
+  var awm = len(awx, awy);
+
+  if (dvm < 8 && awm < accel * 0.5) {
     // coast: hold position/velocity, point where the AI wants the nose (aiming)
     if (d < AI.navArriveSlack * 2 && ship.speed > 3 && goal.arrive) {
       // kill residual drift
@@ -875,8 +940,8 @@ function autopilot(state, ship, dt) {
     }
     return;
   }
-  var burnAng = Math.atan2(dvy, dvx);
-  burnToward(ship, burnAng, clamp(dvm / (accel * 0.25), 0, 1), dt);
+  var burnAng = Math.atan2(awy, awx);
+  burnToward(ship, burnAng, clamp(awm / accel, 0, 1), dt);
 }
 
 /* Rotate toward angle `want` (deadbeat controller on angular velocity); no thrust. */
@@ -1029,14 +1094,24 @@ function updateAsteroids(state, dt) {
       if (vn < 0) {
         var jimp = -(1 + D.restitution) * vn / (1 / mp + 1 / mq);
         p.vx += jimp * nx / mp; p.vy += jimp * ny / mp;
-        q.vx -= jimp * nx / mq; q.vy -= jimp * ny / mq;
-        if (!q.moving && len(q.vx, q.vy) > 2) { q.moving = true; rockWoke(state, q); }
+        if (q.moving) {
+          q.vx -= jimp * nx / mq; q.vy -= jimp * ny / mq;
+        } else if (len(q.vx - jimp * nx / mq, q.vy - jimp * ny / mq) > 2) {
+          // the hit is hard enough to genuinely dislodge it
+          q.vx -= jimp * nx / mq; q.vy -= jimp * ny / mq;
+          q.moving = true; rockWoke(state, q);
+        } // else: settled rock is terrain — it shrugs the tap off entirely
       }
-      // mass-weighted separation: accreting pebbles must not bulldoze a monster rock
-      // across the map (equal pushes visibly displaced BIG asteroids over a match)
-      var wp = (1 / mp) / (1 / mp + 1 / mq), push = (rr - d) + 0.5;
-      p.x += nx * push * wp; p.y += ny * push * wp;
-      q.x -= nx * push * (1 - wp); q.y -= ny * push * (1 - wp);
+      // separation: movers split by mass; a still-settled rock absorbs nothing —
+      // sustained accretion jitter was walking the titan ~1px/s across the map
+      var push = (rr - d) + 0.5;
+      if (q.moving) {
+        var wp = (1 / mp) / (1 / mp + 1 / mq);
+        p.x += nx * push * wp; p.y += ny * push * wp;
+        q.x -= nx * push * (1 - wp); q.y -= ny * push * (1 - wp);
+      } else {
+        p.x += nx * push; p.y += ny * push;
+      }
       return false;
     });
   }
@@ -1070,8 +1145,10 @@ function gravitySources(state) {
   return out;
 }
 /* Sum field accel at (x,y) into GVEC; excludeId skips a source pulling on itself.
-   GVEC.wakeOK: some contributing source is close enough to wake settled rocks. */
-function gravityAt(GR, srcs, x, y, excludeId) {
+   GVEC.wakeOK: some contributing source is close enough — and strictly BIGGER than
+   bodyR — to wake a settled rock (pebbles accrete onto monsters; a monster is never
+   stirred by its lessers, so the titan stays the map's fixed anchor). */
+function gravityAt(GR, srcs, x, y, excludeId, bodyR) {
   var ax = 0, ay = 0, wakeOK = false;
   for (var i = 0; i < srcs.length; i++) {
     var s = srcs[i];
@@ -1083,7 +1160,7 @@ function gravityAt(GR, srcs, x, y, excludeId) {
     if (a > GR.maxAccel) a = GR.maxAccel;
     var d = Math.sqrt(d2);
     if (d > s.fade0) a *= (s.reach - d) / (s.reach - s.fade0); // smooth edge, no cliff
-    if (d2 <= s.wakeD2) wakeOK = true;
+    if (d2 <= s.wakeD2 && s.o.r > bodyR) wakeOK = true;
     ax += (dx / d) * a; ay += (dy / d) * a;
   }
   GVEC.ax = ax; GVEC.ay = ay; GVEC.wakeOK = wakeOK;
@@ -1098,7 +1175,7 @@ function applyGravity(state, dt) {
   for (i = 0; i < ships.length; i++) {
     var sh = ships[i];
     if (!sh.alive || sh.pinned) continue;   // pinned ships hold station by contract
-    gravityAt(GR, srcs, sh.x, sh.y, -1);
+    gravityAt(GR, srcs, sh.x, sh.y, -1, 0);
     var gax = GVEC.ax * GR.shipMult, gay = GVEC.ay * GR.shipMult;
     // escape guarantee: a ship can always out-burn the well (see shipEscapeCap)
     var gcap = (sh.def.thrust / sh.def.mass) * GR.shipEscapeCap;
@@ -1111,7 +1188,7 @@ function applyGravity(state, dt) {
   for (i = 0; i < A.length; i++) {
     var o = A[i];
     if (!o.alive) continue;
-    gravityAt(GR, srcs, o.x, o.y, o.id);
+    gravityAt(GR, srcs, o.x, o.y, o.id, o.r);
     var g2 = GVEC.ax * GVEC.ax + GVEC.ay * GVEC.ay;
     if (g2 <= 0) continue;
     if (!o.moving) {
@@ -1141,7 +1218,7 @@ function applyGravity(state, dt) {
   for (i = 0; i < torps.length; i++) {
     var tp = torps[i];
     if (!tp.alive) continue;
-    gravityAt(GR, srcs, tp.x, tp.y, -1);
+    gravityAt(GR, srcs, tp.x, tp.y, -1, 0);
     if (GVEC.ax === 0 && GVEC.ay === 0) continue;
     var tvx = tp.vx + GVEC.ax * GR.projectileMult * dt;
     var tvy = tp.vy + GVEC.ay * GR.projectileMult * dt;
@@ -1153,7 +1230,7 @@ function applyGravity(state, dt) {
   for (i = 0; i < bombs.length; i++) {
     var bm = bombs[i];
     if (!bm.alive) continue;
-    gravityAt(GR, srcs, bm.x, bm.y, -1);
+    gravityAt(GR, srcs, bm.x, bm.y, -1, 0);
     if (GVEC.ax === 0 && GVEC.ay === 0) continue;
     var bvx = bm.vx + GVEC.ax * GR.projectileMult * dt;
     var bvy = bm.vy + GVEC.ay * GR.projectileMult * dt;
@@ -1648,12 +1725,44 @@ function isDetectedBy(state, team, ship) {
   for (var i = 0; i < det.length; i++) if (det[i].id === ship.id) return true;
   return false;
 }
-/* Where a ship with no live contacts should look: recent memory, else the enemy spawn. */
+/* Where a ship with no live contacts should look: recent memory, else the enemy
+   fleet's rough centroid (strategic picture, not targeting — it gates no weapon).
+   The old enemy-SPAWN fallback was equally omniscient but pointed at where the
+   enemy USED to be; on titan-scale maps that turned endgames into six-minute
+   hide-and-seek around the monster rock's LOS shadow and ran out the clock. */
 function huntPoint(state, ship) {
   var D = state.config.detection;
   var lc = state.lastContact[ship.team];
   if (lc && state.time - lc.t < D.memorySeconds * 2.5) return lc;
+  var foes = ship.team === 'A' ? state.aliveB : state.aliveA;
+  if (foes.length) {
+    var cx = 0, cy = 0;
+    for (var i = 0; i < foes.length; i++) { cx += foes[i].x; cy += foes[i].y; }
+    return { x: cx / foes.length, y: cy / foes.length };
+  }
   return ship.team === 'A' ? state.spawnB : state.spawnA;
+}
+/* Route a hunt goal AROUND titan-scale rocks: give the autopilot a flank point far
+   outside the well and its accretion shell instead of a goal in the rock's shadow.
+   Threading the rim — deep in gravity, through accreted pebbles, in an escort
+   scrum — parked whole fleets against the titan for entire matches. */
+function routeAround(state, ship, pt) {
+  var AI = state.config.ai, T = state.config.terrain;
+  var huge = null;
+  rocksNearSeg(state, ship.x, ship.y, pt.x, pt.y, 92 + 900, function (o) {
+    if (o.r < AI.hugeRockRadius) return false;
+    if (segCircleHit(ship.x, ship.y, pt.x, pt.y, o.x, o.y, o.r + 700)) { huge = o; return true; }
+    return false;
+  });
+  if (!huge) return pt;
+  var ring = huge.r + 900;
+  var angS = Math.atan2(ship.y - huge.y, ship.x - huge.x);
+  var angG = Math.atan2(pt.y - huge.y, pt.x - huge.x);
+  var side = normAngle(angG - angS) > 0 ? 1 : -1;
+  var na = angS + side * clamp(700 / ring, 0.3, 0.9);
+  var W = state.config.arena.w, H = state.config.arena.h;
+  return { x: clamp(huge.x + Math.cos(na) * ring, T.edgeMargin, W - T.edgeMargin),
+           y: clamp(huge.y + Math.sin(na) * ring, T.edgeMargin, H - T.edgeMargin) };
 }
 
 /* ---------------- Role AI (deliberately simple; serves the §5 counter-web) ---------------- */
@@ -1788,7 +1897,7 @@ function aiDestroyer(state, ship, dt) {
   var cfg = state.config, AI = cfg.ai, RG = cfg.railgun;
   var enemies = livingEnemies(state, ship.team);
   if (!enemies.length) {
-    var hp = huntPoint(state, ship);
+    var hp = routeAround(state, ship, huntPoint(state, ship));
     ship.nav = { x: hp.x, y: hp.y, arrive: true, speedCap: ship.def.maxCruiseSpeed * 0.8 };
     blastCoverNearGhosts(state, ship, dt);
     return;
@@ -1845,7 +1954,7 @@ function aiFrigate(state, ship, dt) {
     var own0 = ship.team === 'A' ? state.aliveA : state.aliveB;
     var d0 = null;
     for (var i0 = 0; i0 < own0.length; i0++) if (own0[i0].cls === 'destroyer') { d0 = own0[i0]; break; }
-    var hp = d0 ? { x: d0.x, y: d0.y } : huntPoint(state, ship);
+    var hp = routeAround(state, ship, d0 ? { x: d0.x, y: d0.y } : huntPoint(state, ship));
     ship.nav = { x: hp.x, y: hp.y, arrive: true };
     blastCoverNearGhosts(state, ship, dt);
     return;
@@ -1980,7 +2089,7 @@ function aiBomber(state, ship, dt) {
   var cfg = state.config, AI = cfg.ai, B = cfg.bomb;
   var enemies = livingEnemies(state, ship.team);
   if (!enemies.length) {
-    var hp = huntPoint(state, ship);
+    var hp = routeAround(state, ship, huntPoint(state, ship));
     ship.nav = { x: hp.x, y: hp.y, arrive: true, jink: false };
     return;
   }
@@ -2082,7 +2191,7 @@ function aiInterceptor(state, ship, dt) {
   var cfg = state.config, AI = cfg.ai, G = cfg.gatling, TC = cfg.torpedo.interceptor;
   var enemies = livingEnemies(state, ship.team);
   if (!enemies.length) {
-    var hp = huntPoint(state, ship);
+    var hp = routeAround(state, ship, huntPoint(state, ship));
     ship.nav = { x: hp.x, y: hp.y, arrive: false, jink: false, speedCap: ship.def.maxCruiseSpeed * 0.85 };
     return;
   }

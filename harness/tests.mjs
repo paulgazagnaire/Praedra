@@ -551,12 +551,12 @@ test('gravity-attracts-debris', () => {
     `gravity.G = 0 but the small rock still moved ${(offStartX - s1.x).toFixed(1)}px — gravity not disableable`);
 });
 
-// Gravity acts on ships: a destroyer holding station near a massive rock acquires
-// velocity toward it while the autopilot is still coasting (first half-second);
-// with G zeroed it stays at rest. Pinned ships are exempt by contract.
+// Gravity acts on ships — and the autopilot fights it with a hover burn (gravity
+// feed-forward). Contract-visible effect: a destroyer holding station in a well
+// keeps its position ONLY by sustained throttle (plume up, per detection rules);
+// with G zeroed the same ship holds station dark and motionless. Pinned exempt.
 test('gravity-pulls-ships', () => {
-  const cfg = Praedra.defaultConfig();
-  function drift(G) {
+  function hover(G) {
     const overrides = G == null ? {} : { gravity: { G } };
     const m = Praedra.createScenario({
       seed: 32,
@@ -566,16 +566,25 @@ test('gravity-pulls-ships', () => {
     });
     const ship = findShip(m, 'A', 'destroyer');
     Praedra.issueOrder(m, [ship.id], { type: 'hold' }); // station-keep: no role-AI wandering
-    stepSeconds(m, 0.5);
-    const s = m.state.ships.find((x) => x.id === ship.id);
-    return -s.vx; // positive = toward the rock (rock is at -x from the ship)
+    stepSeconds(m, 4); // settle into the hover regime
+    let thr = 0, n = 0;
+    for (let i = 0; i < 3 * TICK_RATE && !m.done; i++) {
+      m.step();
+      thr += ship.throttle; n++;
+    }
+    const drift = dist2D(ship.x, ship.y, MID.x + 500, MID.y);
+    return { thr: thr / n, drift };
   }
-  const withG = drift(null);
-  assert(withG > 1,
-    `ship gained only ${withG.toFixed(2)}px/s toward the massive rock in 0.5s — gravity not acting on ships`);
-  const withoutG = drift(0);
-  assert(Math.abs(withoutG) < 0.5,
-    `gravity.G = 0 but the ship still drifted at ${withoutG.toFixed(2)}px/s — hold-at-rest should stay at rest`);
+  const on = hover(null);
+  assert(on.thr > 0.08,
+    `avg throttle ${on.thr.toFixed(3)} while holding station in a well — autopilot is not hover-burning against gravity`);
+  assert(on.drift < 150,
+    `ship drifted ${on.drift.toFixed(0)}px off its hold point in a well — gravity is winning against the autopilot`);
+  const off = hover(0);
+  assert(off.thr < 0.05,
+    `gravity.G = 0 but avg hold throttle is ${off.thr.toFixed(3)} — ship should hold station dark`);
+  assert(off.drift < 20,
+    `gravity.G = 0 but the ship drifted ${off.drift.toFixed(0)}px — hold-at-rest should stay at rest`);
 });
 
 runAll();

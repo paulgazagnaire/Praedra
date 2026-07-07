@@ -101,7 +101,10 @@ hiding it, since neither the enemy nor a "ghost" of it ever entered memory.
   (`ai.rockShootSeconds`-gated; memory itself never expires but is only "recent"
   within `detection.memorySeconds`, default 5s).
 - `state.lastContact[team] = { x, y, t }` — most recent sighting per team, used for
-  `huntPoint` when a team has no live detected contacts.
+  `huntPoint` when a team has no live detected contacts. When it goes stale
+  (> `memorySeconds*2.5`), hunting falls back to the enemy fleet's rough CENTROID
+  (strategic picture only — it gates no weapon; the old enemy-spawn fallback was
+  equally omniscient but stale, and on titan-scale maps it ran matches into the timer).
 
 ## Player orders
 
@@ -150,9 +153,10 @@ tick on:
   autopilot fights the drift; `pinned` ships are exempt (they hold station by contract);
 - **rocks** (× `gravity.rockMult`) — moving debris curls into the wells; a settled
   rock wakes only when the pull exceeds `gravity.rockWake` AND it sits within
-  `gravity.rockWakeShell` px of some source's surface AND nothing supports it on
-  the down-well side (so accretion is a local shell around each well, piles are
-  stable, and the far field never drifts — cover stays dependable);
+  `gravity.rockWakeShell` px of the surface of some source STRICTLY BIGGER than
+  itself AND nothing supports it on the down-well side (so accretion is a local
+  shell around each well, piles are stable, the far field never drifts, and the
+  titan — never out-massed — never moves: cover and the landmark stay dependable);
 - **torpedoes and bombs** (× `gravity.projectileMult`) — their course bends but
   their speed is renormalised to the design speed (guidance and lead-aim semantics
   survive; a well only curves the path).
