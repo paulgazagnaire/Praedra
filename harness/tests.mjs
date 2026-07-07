@@ -174,7 +174,7 @@ function assertDetectable(cfg, cls, dist, marginPx, label) {
 
 function dist2D(ax, ay, bx, by) { return Math.sqrt((ax - bx) * (ax - bx) + (ay - by) * (ay - by)); }
 
-// Mid-arena anchor for new scenario tests (arena is 4400x3200; (0,0) is a corner).
+// Mid-arena anchor for new scenario tests (arena is 5600x4000; (0,0) is a corner).
 // The old tests use small coordinates near that corner and get away with it because
 // their ships are pinned (never touch the walls) and have no debris/AI ships that
 // would; new tests use this offset to stay clear of wall effects on principle.
@@ -475,6 +475,91 @@ test('order-move-hold', () => {
   assert((final.order && final.order.type === 'hold') || stationKeeping,
     `order never completed to hold and ship is not station-keeping near the point ` +
     `(order=${JSON.stringify(final.order)}, speed=${final.speed && final.speed.toFixed(1)})`);
+});
+
+// ------------------------------------------------- new: BIG asteroids + gravity
+
+// Every generated map carries 1..terrain.bigCountMax BIG asteroids (r >= bigRadius[0]),
+// regardless of seed or density (SIM_CONTRACT §Terrain). createScenario terrain is
+// explicit and exempt. Thresholds read from live config, not hardcoded.
+test('big-asteroids-every-seed', () => {
+  const cfg = Praedra.defaultConfig();
+  const bigMin = cfg.terrain && cfg.terrain.bigRadius && cfg.terrain.bigRadius[0];
+  assert(typeof bigMin === 'number', 'no terrain.bigRadius in live config — big-asteroid support missing');
+  const bigMax = cfg.terrain.bigCountMax;
+  for (let seed = 1; seed <= 12; seed++) {
+    for (const terrainDensity of [0, 0.5, 1]) {
+      const m = Praedra.createMatch({ seed, overrides: { terrainDensity }, teamA: SMALL_A, teamB: SMALL_B });
+      const bigs = m.state.asteroids.filter((o) => o.alive && o.r >= bigMin);
+      assert(bigs.length >= 1,
+        `seed ${seed} density ${terrainDensity}: no BIG asteroid (r >= ${bigMin}) on the map`);
+      assert(bigs.length <= bigMax,
+        `seed ${seed} density ${terrainDensity}: ${bigs.length} BIG asteroids exceeds bigCountMax ${bigMax}`);
+      for (const o of bigs) {
+        assert(o.x > 0 && o.x < m.config.arena.w && o.y > 0 && o.y < m.config.arena.h,
+          `seed ${seed} density ${terrainDensity}: BIG asteroid centre (${o.x | 0},${o.y | 0}) outside the arena`);
+      }
+    }
+  }
+});
+
+// Gravity: a massive rock wakes a settled small rock inside its well and pulls it in;
+// with gravity.G zeroed the same rock never moves. Displacement thresholds are loose —
+// the point is direction and the on/off differential, not the exact constant.
+test('gravity-attracts-debris', () => {
+  function scenario(G) {
+    const overrides = G == null ? {} : { gravity: { G } };
+    return Praedra.createScenario({
+      seed: 31,
+      overrides,
+      ships: [], // rocks only: gravity acts on terrain independent of any fleet
+      asteroids: [{ x: MID.x, y: MID.y, r: 300 }, { x: MID.x + 600, y: MID.y, r: 30 }],
+    });
+  }
+  const on = scenario(null); // default (gravity enabled)
+  const small0 = on.state.asteroids.find((o) => o.r < 100);
+  const startX = small0.x;
+  stepSeconds(on, 8);
+  const small1 = on.state.asteroids.find((o) => o.r < 100);
+  assert(small1 && small1.alive, 'small rock vanished from a rocks-only scenario');
+  const pulled = startX - small1.x;
+  assert(pulled > 20,
+    `small rock drifted only ${pulled.toFixed(1)}px toward the massive rock in 8s — gravity not pulling debris`);
+
+  const off = scenario(0);
+  const s0 = off.state.asteroids.find((o) => o.r < 100);
+  const offStartX = s0.x;
+  stepSeconds(off, 8);
+  const s1 = off.state.asteroids.find((o) => o.r < 100);
+  assert(Math.abs(s1.x - offStartX) < 1,
+    `gravity.G = 0 but the small rock still moved ${(offStartX - s1.x).toFixed(1)}px — gravity not disableable`);
+});
+
+// Gravity acts on ships: a destroyer holding station near a massive rock acquires
+// velocity toward it while the autopilot is still coasting (first half-second);
+// with G zeroed it stays at rest. Pinned ships are exempt by contract.
+test('gravity-pulls-ships', () => {
+  const cfg = Praedra.defaultConfig();
+  function drift(G) {
+    const overrides = G == null ? {} : { gravity: { G } };
+    const m = Praedra.createScenario({
+      seed: 32,
+      overrides,
+      ships: [{ cls: 'destroyer', team: 'A', x: MID.x + 500, y: MID.y, heading: 0 }],
+      asteroids: [{ x: MID.x, y: MID.y, r: 300 }],
+    });
+    const ship = findShip(m, 'A', 'destroyer');
+    Praedra.issueOrder(m, [ship.id], { type: 'hold' }); // station-keep: no role-AI wandering
+    stepSeconds(m, 0.5);
+    const s = m.state.ships.find((x) => x.id === ship.id);
+    return -s.vx; // positive = toward the rock (rock is at -x from the ship)
+  }
+  const withG = drift(null);
+  assert(withG > 1,
+    `ship gained only ${withG.toFixed(2)}px/s toward the massive rock in 0.5s — gravity not acting on ships`);
+  const withoutG = drift(0);
+  assert(Math.abs(withoutG) < 0.5,
+    `gravity.G = 0 but the ship still drifted at ${withoutG.toFixed(2)}px/s — hold-at-rest should stay at rest`);
 });
 
 runAll();

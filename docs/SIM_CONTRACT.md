@@ -122,6 +122,35 @@ hiding it, since neither the enemy nor a "ghost" of it ever entered memory.
   ship's `order` field is set but never read, since `aiPinned` runs unconditionally.
 - Issuing any order pushes an `{ kind: 'order', x, y, order: type }` event (see Events).
 
+## Terrain: BIG asteroids (guaranteed) + gravity
+
+Every `createMatch` map (procedural terrain) contains **1..`terrain.bigCountMax` BIG
+asteroids** with `r` in `terrain.bigRadius` (default `[220, 380]`) — never zero,
+regardless of seed or `terrainDensity`. They are placed first (clusters and sparse
+rocks flow around them) and anchor the map layout. `createScenario` terrain stays
+fully explicit — no bigs are injected there.
+
+**Gravity** (CONFIG `gravity`): every live rock with `r >= gravity.sourceMinRadius`
+(default 100 — the BIGs and their first-generation fragments) is a gravity source
+with mass `r^3`. Acceleration toward a source at distance `d` is
+`G * r^3 / (d^2 + (softening*r)^2)`, clamped to `maxAccel`, ignored below `minAccel`
+(the well's edge). It acts every tick on:
+
+- **ships** (× `gravity.shipMult`) — the autopilot fights the drift; `pinned` ships
+  are exempt (they hold station by contract);
+- **rocks** (× `gravity.rockMult`) — moving debris curls into the wells; a settled
+  rock wakes only when the pull exceeds `gravity.rockWake` AND nothing supports it
+  on the down-well side (so accretion piles are stable and the far field never
+  drifts — cover stays dependable);
+- **torpedoes and bombs** (× `gravity.projectileMult`) — their course bends but
+  their speed is renormalised to the design speed (guidance and lead-aim semantics
+  survive; a well only curves the path).
+
+`gravity.G: 0` (or `sourceMinRadius: Infinity`) disables the whole system; the app's
+UI sliders scale `G` live via `match.config.gravity.G` (deterministic per run only
+if left untouched, which headless code always is). Gravity is pure state math — no
+RNG — so determinism from seed is unaffected.
+
 ## Asteroids: always-destructible, always-splitting
 
 `destructibleAsteroids` is IGNORED — destruction is unconditionally on regardless of
@@ -163,6 +192,10 @@ deal their base damage directly (no multiplier) via `attackrock` orders only.
 ## Key CONFIG fields harness code may rely on
 
 - `terrainDensity` (0..1) — the flip variable.
+- `terrain.bigRadius` / `terrain.bigCountMax` — BIG-asteroid size band and max count
+  (min count is always 1 on procedural maps).
+- `gravity.G` / `sourceMinRadius` / `softening` / `minAccel` / `maxAccel` / `rockWake`
+  / `shipMult` / `rockMult` / `projectileMult` — see Terrain above.
 - `destructibleAsteroids` (bool, present but IGNORED — see above).
 - `matchTimerSeconds` (number).
 - `presets` — fleet presets (same object as `Praedra.PRESETS`).

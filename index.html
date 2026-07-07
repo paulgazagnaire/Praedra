@@ -61,6 +61,8 @@
   #settings button { cursor:pointer; } #settings button:hover { border-color:#4a6a9a; }
   #settings input[type=range] { vertical-align:middle; }
   #densityVal { color:#9fb0c8; display:inline-block; width:30px; }
+  #gravVal, #setGravVal { color:#9fb0c8; display:inline-block; width:44px; }
+  #bar input[type=range] { vertical-align:middle; }
   #startWrap { text-align:center; margin-top:14px; }
   #startBtn { font-size:16px; letter-spacing:3px; padding:11px 34px; background:#15304d; color:#eaf2ff;
               border:1px solid #3a6ea5; border-radius:5px; cursor:pointer; font-family:inherit; }
@@ -76,6 +78,7 @@
     <button id="restart">restart</button>
     <button id="pause">pause</button>
     <label>speed <select id="speed"><option>1</option><option>2</option><option selected>4</option><option>8</option></select></label>
+    <label>gravity <input id="grav" type="range" min="0" max="3" step="0.05" value="1" style="width:90px"><span id="gravVal">×1.00</span></label>
     <label>mode <select id="mode"><option value="play" selected>play</option><option value="spectate">spectate</option></select></label>
     <span class="sep"></span>
     <span id="matchup">—</span>
@@ -108,6 +111,7 @@
           <label>seed <input id="setSeed" type="number" value="1" style="width:80px"></label>
           <button id="setRandom">🎲 random</button>
           <label>density <input id="setDensity" type="range" min="0" max="1" step="0.01" value="0.5" style="width:120px"><span id="densityVal">0.50</span></label>
+          <label>gravity <input id="setGrav" type="range" min="0" max="3" step="0.05" value="1" style="width:120px"><span id="setGravVal">×1.00</span></label>
           <label>destructible <input id="setDestr" type="checkbox" checked></label>
           <label>mode <select id="setMode"><option value="play" selected>play</option><option value="spectate">spectate</option></select></label>
         </div>
@@ -137,7 +141,7 @@ var CONFIG_DEFAULTS = {
   movementModel: 'newtonian',      // 'newtonian' | 'arcade' (arcade = debug fallback only)
   fleetMode: 'preset',
 
-  arena: { w: 4400, h: 3200 },
+  arena: { w: 5600, h: 4000 },     // big: room for BIG asteroids without choking the lanes
 
   // --- DETECTION (LOS is necessary but not sufficient: you also have to SEE it) ---
   detection: {
@@ -152,16 +156,23 @@ var CONFIG_DEFAULTS = {
   destructibleAsteroids: true,     // ALWAYS ON (kept for override compat; the sim ignores false)
   terrain: {
     clusterCountMin: 1,            // clusters at density 0
-    clusterCountMax: 13,           // clusters at density 1
+    clusterCountMax: 18,           // clusters at density 1 (scaled with the larger arena)
     clusterRadius: [300, 600],
     clusterFillPerArea: 0.000026,  // rocks per px^2 of cluster area
     asteroidRadius: [26, 90],
-    sparseRockMin: 2,              // lone rocks scattered outside clusters (low..high density).
-    sparseRockMax: 44,             // High density must be dense EVERYWHERE — capitals park in
+    sparseRockMin: 3,              // lone rocks scattered outside clusters (low..high density).
+    sparseRockMax: 64,             // High density must be dense EVERYWHERE — capitals park in
                                    // whatever open pocket exists, so pockets must not exist.
     spawnClearRadius: 320,         // no rocks near either spawn
     edgeMargin: 130,
     spawnDistFrac: 0.40,           // spawn separation as fraction of arena diagonal-ish
+    // --- BIG asteroids: every generated seed gets 1..bigCountMax of them. They are
+    //     placed FIRST (clusters and sparse rocks flow around them), they anchor the
+    //     map layout, and they are the dominant gravity wells (see `gravity` below).
+    bigRadius: [220, 380],
+    bigCountMax: 3,                // roll is uniform 1..bigCountMax — never zero
+    bigSeparation: 1.35,           // min centre distance between bigs = (r1+r2)*this
+    bigSpawnClear: 520,            // extra clearance from fleet spawns (their wells reach far)
   },
   asteroidHP: 80,                  // rocks crack fast — demolition is a tactic
   asteroidHPRefRadius: 60,         // HP scales with (r/ref)^2
@@ -179,6 +190,24 @@ var CONFIG_DEFAULTS = {
     impactMinSpeed: 25,            // below this a fragment just rests against the hull
     maxAsteroids: 500,             // hard cap on live rocks (cascade safety)
     spinMax: 1.4,                  // rad/s visual tumble for flung fragments
+  },
+
+  // --- GRAVITY (massive rocks bend everything; cinematic constant, not Kepler) ---
+  // accel toward a source rock = G * r^3 / (d^2 + (softening*r)^2), clamped to maxAccel.
+  // Mass goes with r^3 so surface pull scales with radius: only the BIG asteroids (and
+  // their first-generation fragments) matter — a pebble's well is beneath minAccel.
+  // Ships, drifting rocks, torpedoes and bombs all feel it; settled terrain only starts
+  // sliding above rockWake, so the far field stays put and cover stays dependable.
+  gravity: {
+    G: 0.045,                      // the one true knob (UI slider scales it live)
+    softening: 0.5,                // core softening length as a fraction of source radius
+    sourceMinRadius: 100,          // rocks smaller than this pull too weakly to compute
+    minAccel: 0.25,                // px/s^2 cutoff: beyond this the well ends (perf + sanity)
+    maxAccel: 45,                  // clamp: no singularity slingshots at point-blank
+    rockWake: 3.0,                 // settled rock starts sliding only above this pull
+    shipMult: 1.0,                 // per-family feel multipliers
+    rockMult: 1.0,
+    projectileMult: 1.0,           // torpedoes/bombs bend course but keep their speed
   },
 
   // --- SHIPS (accel = thrust/mass; angular accel = rcs/mass, capped at turnMax rad/s) ---
@@ -318,6 +347,8 @@ var CONFIG_DEFAULTS = {
     navBrakeMargin: 0.72,          // use this fraction of max accel when planning braking
     avoidLookahead: 2.2,           // seconds of velocity lookahead for rock avoidance
     avoidMargin: 30,               // extra clearance around rocks
+    bigRockAvoidPad: 70,           // extra clearance around gravity sources: the well
+                                   // drags ships into the rim while they round it
   },
 
   // --- FLEETS (42-point budget; costs: destroyer 6 / frigate 3 / bomber 2 / interceptor 1) ---
@@ -419,6 +450,36 @@ function generateTerrain(state, rng) {
   }
   function rockRadius() { var t = rng.next(); return lerp(T.asteroidRadius[0], T.asteroidRadius[1], t * t); }
 
+  // --- BIG asteroids first: they own the map, everything else flows around them.
+  //     Every seed gets 1..bigCountMax — one lone monster or a spread of wells. ---
+  var nBig = 1 + rng.int(Math.max(1, T.bigCountMax | 0));
+  var bigs = [];
+  for (var bg = 0; bg < nBig; bg++) {
+    var tB = rng.next();
+    if (nBig === 1) tB = 0.55 + 0.45 * tB;   // a lone monster leans monstrous
+    var bR = lerp(T.bigRadius[0], T.bigRadius[1], tB);
+    var placed = false;
+    for (var bAtt = 0; bAtt < 60 && !placed; bAtt++) {
+      var bx = rng.range(T.edgeMargin + bR, W - T.edgeMargin - bR);
+      var by = rng.range(T.edgeMargin + bR, H - T.edgeMargin - bR);
+      if (dist(bx, by, state.spawnA.x, state.spawnA.y) < T.bigSpawnClear + bR) continue;
+      if (dist(bx, by, state.spawnB.x, state.spawnB.y) < T.bigSpawnClear + bR) continue;
+      var clearB = true;
+      for (var bj = 0; bj < bigs.length; bj++)
+        if (dist(bx, by, bigs[bj].x, bigs[bj].y) < (bR + bigs[bj].r) * T.bigSeparation) { clearB = false; break; }
+      if (!clearB) continue;
+      bigs.push({ x: bx, y: by, r: bR });
+      rocks.push({ x: bx, y: by, r: bR });
+      placed = true;
+    }
+    // hard guarantee: at least one big per seed. The arena centre always clears both
+    // spawns (they sit near opposite edges of the spawn axis through the centre).
+    if (!placed && bigs.length === 0) {
+      bigs.push({ x: cx, y: cy, r: bR });
+      rocks.push({ x: cx, y: cy, r: bR });
+    }
+  }
+
   var nClusters = Math.round(lerp(T.clusterCountMin, T.clusterCountMax, density));
   for (var c = 0; c < nClusters; c++) {
     var R = rng.range(T.clusterRadius[0], T.clusterRadius[1]);
@@ -457,7 +518,12 @@ function makeAsteroid(state, x, y, r) {
            rot: state.rng.angle(), rotVel: 0, shape: shape, alive: true, moving: false };
 }
 
-/* ---------------- Spatial grid for rock queries (performance only, no gameplay) ---------------- */
+/* ---------------- Spatial grid for rock queries (performance only, no gameplay) ----------------
+   The grid holds SETTLED rocks only and is rebuilt when a rock's settled/moving state
+   flips (state.gridDirty). Moving rocks live in state.movers — a short list refreshed
+   every tick and scanned linearly with a bbox reject. Gravity keeps dozens of rocks
+   creeping into the wells for minutes at a stretch; rebuilding the whole grid every
+   tick for them dominated the profile. */
 var GRID_CELL = 300;
 function rebuildGrid(state) {
   var g = state.grid;
@@ -473,11 +539,17 @@ function rebuildGrid(state) {
   var A = state.asteroids;
   for (var r = 0; r < A.length; r++) {
     var o = A[r];
-    if (!o.alive) continue;
+    if (!o.alive || o.moving) continue;   // movers are scanned via state.movers instead
     var x0 = Math.max(0, Math.floor((o.x - o.r) / GRID_CELL)), x1 = Math.min(g.cw - 1, Math.floor((o.x + o.r) / GRID_CELL));
     var y0 = Math.max(0, Math.floor((o.y - o.r) / GRID_CELL)), y1 = Math.min(g.ch - 1, Math.floor((o.y + o.r) / GRID_CELL));
     for (var gy = y0; gy <= y1; gy++) for (var gx = x0; gx <= x1; gx++) g.cells[gy * g.cw + gx].push(o);
   }
+}
+/* A rock that starts (or resumes) moving leaves the static grid: track it and mark
+   the grid for rebuild. Call every time code flips o.moving from false to true. */
+function rockWoke(state, o) {
+  state.gridDirty = true;
+  if (state.movers) state.movers.push(o);
 }
 /* Visit live rocks near the (padded) segment bbox; fn returning true stops the walk. */
 function rocksNearSeg(state, ax, ay, bx, by, pad, fn) {
@@ -487,11 +559,22 @@ function rocksNearSeg(state, ax, ay, bx, by, pad, fn) {
     for (var i = 0; i < A.length; i++) { var o = A[i]; if (o.alive && fn(o)) return; }
     return;
   }
-  var x0 = Math.max(0, Math.floor((Math.min(ax, bx) - pad) / GRID_CELL));
-  var x1 = Math.min(g.cw - 1, Math.floor((Math.max(ax, bx) + pad) / GRID_CELL));
-  var y0 = Math.max(0, Math.floor((Math.min(ay, by) - pad) / GRID_CELL));
-  var y1 = Math.min(g.ch - 1, Math.floor((Math.max(ay, by) + pad) / GRID_CELL));
+  var xmin = Math.min(ax, bx) - pad, xmax = Math.max(ax, bx) + pad;
+  var ymin = Math.min(ay, by) - pad, ymax = Math.max(ay, by) + pad;
   var stamp = ++g.stamp;
+  // moving rocks first: short list, bbox reject (they are NOT in the cells)
+  var mv = state.movers;
+  if (mv) for (var m = 0; m < mv.length; m++) {
+    var mo = mv[m];
+    if (!mo.alive || mo.gridStamp === stamp) continue;
+    if (mo.x + mo.r < xmin || mo.x - mo.r > xmax || mo.y + mo.r < ymin || mo.y - mo.r > ymax) continue;
+    mo.gridStamp = stamp;
+    if (fn(mo)) return;
+  }
+  var x0 = Math.max(0, Math.floor(xmin / GRID_CELL));
+  var x1 = Math.min(g.cw - 1, Math.floor(xmax / GRID_CELL));
+  var y0 = Math.max(0, Math.floor(ymin / GRID_CELL));
+  var y1 = Math.min(g.ch - 1, Math.floor(ymax / GRID_CELL));
   for (var gy = y0; gy <= y1; gy++) for (var gx = x0; gx <= x1; gx++) {
     var cell = g.cells[gy * g.cw + gx];
     for (var k = 0; k < cell.length; k++) {
@@ -570,6 +653,10 @@ function makeShip(state, cls, team, x, y, heading) {
 }
 
 /* ---------------- Autopilot (Newtonian: rotate-to-burn, flip-and-burn arrival) ---------------- */
+/* Extra clearance when rounding a gravity source: the well drags the ship into the rim. */
+function massivePad(cfg, o) {
+  return o.r >= cfg.gravity.sourceMinRadius ? cfg.ai.bigRockAvoidPad : 0;
+}
 function autopilot(state, ship, dt) {
   var cfg = state.config, AI = cfg.ai, def = ship.def;
   var goal = ship.nav;
@@ -599,8 +686,8 @@ function autopilot(state, ship, dt) {
     gx = ship.wpX; gy = ship.wpY;
   } else if (d > AI.navArriveSlack * 2) {
     var blk = null, blkT = Infinity;
-    rocksNearSeg(state, ship.x, ship.y, goal.x, goal.y, 92 + def.radius + AI.avoidMargin, function (ob) {
-      var rInf = ob.r + def.radius + AI.avoidMargin * (def.avoidMult || 1);
+    rocksNearSeg(state, ship.x, ship.y, goal.x, goal.y, 92 + def.radius + AI.avoidMargin + AI.bigRockAvoidPad, function (ob) {
+      var rInf = ob.r + def.radius + AI.avoidMargin * (def.avoidMult || 1) + massivePad(cfg, ob);
       // skip rocks we're already inside the margin of (collision/probe handles those)
       var dRock = dist(ship.x, ship.y, ob.x, ob.y);
       if (dRock < rInf - 5) return false;
@@ -611,7 +698,7 @@ function autopilot(state, ship, dt) {
       return false;
     });
     if (blk) {
-      var rI = blk.r + def.radius + AI.avoidMargin;
+      var rI = blk.r + def.radius + AI.avoidMargin + massivePad(cfg, blk);
       var t = ((blk.x - ship.x) * dx + (blk.y - ship.y) * dy) / (d * d);
       t = clamp(t, 0, 1);
       var prx = ship.x + dx * t - blk.x, pry = ship.y + dy * t - blk.y;
@@ -645,8 +732,8 @@ function autopilot(state, ship, dt) {
   if (sp > 15) {
     var pex = ship.x + ship.vx * probeT, pey = ship.y + ship.vy * probeT;
     var threat = null, threatD = Infinity;
-    rocksNearSeg(state, ship.x, ship.y, pex, pey, 92 + def.radius + AI.avoidMargin * (def.avoidMult || 1), function (o) {
-      var rr = o.r + def.radius + AI.avoidMargin * (def.avoidMult || 1);
+    rocksNearSeg(state, ship.x, ship.y, pex, pey, 92 + def.radius + AI.avoidMargin * (def.avoidMult || 1) + AI.bigRockAvoidPad, function (o) {
+      var rr = o.r + def.radius + AI.avoidMargin * (def.avoidMult || 1) + massivePad(cfg, o);
       var ddx = o.x - ship.x, ddy = o.y - ship.y;
       var dd = Math.sqrt(ddx * ddx + ddy * ddy);
       if (dd - rr > sp * probeT) return false;
@@ -667,7 +754,7 @@ function autopilot(state, ship, dt) {
         side = (vdx * ty - vdy * tx) > 0 ? -1 : 1;
         ship.avoidRock = threat.id; ship.avoidSide = side; ship.avoidUntil = state.time + 0.8;
       }
-      var surf = Math.max(6, td - (threat.r + def.radius + AI.avoidMargin));
+      var surf = Math.max(6, td - (threat.r + def.radius + AI.avoidMargin + massivePad(cfg, threat)));
       var urg = clamp01(1 - surf / (sp * probeT + 1));
       var avx = vdx * Math.cos(side * (0.5 + urg)) - vdy * Math.sin(side * (0.5 + urg));
       var avy = vdx * Math.sin(side * (0.5 + urg)) + vdy * Math.cos(side * (0.5 + urg));
@@ -837,20 +924,22 @@ function updateAsteroids(state, dt) {
     if (o.x > W - o.r) { o.x = W - o.r; o.vx = -Math.abs(o.vx) * D.restitution; }
     if (o.y < o.r) { o.y = o.r; o.vy = Math.abs(o.vy) * D.restitution; }
     if (o.y > H - o.r) { o.y = H - o.r; o.vy = -Math.abs(o.vy) * D.restitution; }
-    if (len(o.vx, o.vy) < 2) { o.vx = 0; o.vy = 0; o.moving = false; }
+    if (len(o.vx, o.vy) < 2) { o.vx = 0; o.vy = 0; o.moving = false; state.gridDirty = true; } // rejoin the static grid
   }
   state.movingRocks = anyMoving;
   if (!anyMoving) return;
-  // rock-rock collisions (momentum-conserving; only pairs involving a mover)
-  for (var a = 0; a < A.length; a++) {
-    var p = A[a];
-    if (!p.alive) continue;
-    for (var b = a + 1; b < A.length; b++) {
-      var q = A[b];
-      if (!q.alive || (!p.moving && !q.moving)) continue;
+  // rock-rock collisions (momentum-conserving; only pairs involving a mover).
+  // Grid query per mover, not the all-pairs sweep: gravity keeps a few dozen rocks
+  // creeping into the wells for long stretches and O(n^2) over 200+ rocks adds up.
+  for (var a2 = 0; a2 < A.length; a2++) {
+    var p = A[a2];
+    if (!p.alive || !p.moving) continue;
+    rocksNearSeg(state, p.x, p.y, p.x, p.y, p.r + 6, function (q) {
+      if (q.id === p.id) return false;
+      if (q.moving && q.id < p.id) return false;  // mover-mover pair: handled once, from the lower id
       var dx = p.x - q.x, dy = p.y - q.y, rr = p.r + q.r;
       var d2 = dx * dx + dy * dy;
-      if (d2 >= rr * rr || d2 < 1e-9) continue;
+      if (d2 >= rr * rr || d2 < 1e-9) return false;
       var d = Math.sqrt(d2), nx = dx / d, ny = dy / d;
       var mp = p.r * p.r, mq = q.r * q.r;
       var vn = (p.vx - q.vx) * nx + (p.vy - q.vy) * ny;
@@ -858,15 +947,122 @@ function updateAsteroids(state, dt) {
         var jimp = -(1 + D.restitution) * vn / (1 / mp + 1 / mq);
         p.vx += jimp * nx / mp; p.vy += jimp * ny / mp;
         q.vx -= jimp * nx / mq; q.vy -= jimp * ny / mq;
-        if (len(p.vx, p.vy) > 2) p.moving = true;
-        if (len(q.vx, q.vy) > 2) q.moving = true;
+        if (!q.moving && len(q.vx, q.vy) > 2) { q.moving = true; rockWoke(state, q); }
       }
       var push = (rr - d) / 2 + 0.25;
       p.x += nx * push; p.y += ny * push;
       q.x -= nx * push; q.y -= ny * push;
-    }
+      return false;
+    });
   }
 }
+/* ---------------- Gravity (BIG rocks bend trajectories; everything with mass feels it) ----------------
+   Sources: live rocks with r >= gravity.sourceMinRadius (the BIG asteroids + their
+   first-generation fragments). Mass = r^3, accel = G*m/(d^2 + (softening*r)^2), clamped.
+   Bodies: ships (autopilot fights the drift — that IS the navigation impact), drifting
+   rocks (debris curls into the wells and accretes), settled rocks close enough that the
+   pull beats rockWake (local creep, stable far field), and projectiles (torpedoes/bombs
+   bend course but keep their design speed — guidance and lead-aim semantics survive). */
+var GVEC = { ax: 0, ay: 0 };
+function gravitySources(state) {
+  var GR = state.config.gravity;
+  var out = [];
+  if (!GR || GR.G <= 0) return out;
+  var A = state.asteroids;
+  for (var i = 0; i < A.length; i++) {
+    var o = A[i];
+    if (!o.alive || o.r < GR.sourceMinRadius) continue;
+    var m = o.r * o.r * o.r;
+    var soft = GR.softening * o.r;
+    out.push({ o: o, m: m, soft2: soft * soft, maxD2: (GR.G * m) / GR.minAccel });
+  }
+  return out;
+}
+/* Sum field accel at (x,y) into GVEC; excludeId skips a source pulling on itself. */
+function gravityAt(GR, srcs, x, y, excludeId) {
+  var ax = 0, ay = 0;
+  for (var i = 0; i < srcs.length; i++) {
+    var s = srcs[i];
+    if (s.o.id === excludeId) continue;
+    var dx = s.o.x - x, dy = s.o.y - y;
+    var d2 = dx * dx + dy * dy;
+    if (d2 > s.maxD2 || d2 < 1e-6) continue;
+    var a = GR.G * s.m / (d2 + s.soft2);
+    if (a > GR.maxAccel) a = GR.maxAccel;
+    var d = Math.sqrt(d2);
+    ax += (dx / d) * a; ay += (dy / d) * a;
+  }
+  GVEC.ax = ax; GVEC.ay = ay;
+}
+function applyGravity(state, dt) {
+  var GR = state.config.gravity;
+  var srcs = gravitySources(state);
+  state.gravSources = srcs;                 // renderers/inspectors read this; sim-internal otherwise
+  if (!srcs.length) return;
+  var i, wake2 = GR.rockWake * GR.rockWake;
+  var ships = state.ships;
+  for (i = 0; i < ships.length; i++) {
+    var sh = ships[i];
+    if (!sh.alive || sh.pinned) continue;   // pinned ships hold station by contract
+    gravityAt(GR, srcs, sh.x, sh.y, -1);
+    sh.vx += GVEC.ax * GR.shipMult * dt;
+    sh.vy += GVEC.ay * GR.shipMult * dt;
+  }
+  var A = state.asteroids;
+  for (i = 0; i < A.length; i++) {
+    var o = A[i];
+    if (!o.alive) continue;
+    gravityAt(GR, srcs, o.x, o.y, o.id);
+    var g2 = GVEC.ax * GVEC.ax + GVEC.ay * GVEC.ay;
+    if (g2 <= 0) continue;
+    if (!o.moving) {
+      if (g2 < wake2) continue;             // far field stays settled: cover is dependable
+      // supported: resting against something on the down-well side (the source itself,
+      // or the accretion pile stacked on it) — normal force holds it, don't stir it
+      var gl = Math.sqrt(g2), gux = GVEC.ax / gl, guy = GVEC.ay / gl;
+      var supported = false;
+      rocksNearSeg(state, o.x, o.y, o.x, o.y, o.r + 4, function (q) {
+        if (q.id === o.id) return false;
+        var ddx = q.x - o.x, ddy = q.y - o.y;
+        if (ddx * ddx + ddy * ddy > (o.r + q.r + 3) * (o.r + q.r + 3)) return false;
+        if (ddx * gux + ddy * guy > 0) { supported = true; return true; }
+        return false;
+      });
+      if (supported) continue;
+      o.moving = true;
+      // starter kick along the pull: below the settle threshold (2 px/s) the very next
+      // updateAsteroids would zero the nascent creep and re-pin the rock every tick
+      o.vx += gux * 4; o.vy += guy * 4;
+      rockWoke(state, o);
+    }
+    o.vx += GVEC.ax * GR.rockMult * dt;
+    o.vy += GVEC.ay * GR.rockMult * dt;
+  }
+  var torps = state.torps, T = state.config.torpedo;
+  for (i = 0; i < torps.length; i++) {
+    var tp = torps[i];
+    if (!tp.alive) continue;
+    gravityAt(GR, srcs, tp.x, tp.y, -1);
+    if (GVEC.ax === 0 && GVEC.ay === 0) continue;
+    var tvx = tp.vx + GVEC.ax * GR.projectileMult * dt;
+    var tvy = tp.vy + GVEC.ay * GR.projectileMult * dt;
+    var tl = len(tvx, tvy) || 1;            // bend, don't accelerate: powered flight
+    tp.vx = (tvx / tl) * T.speed; tp.vy = (tvy / tl) * T.speed;
+    tp.heading = Math.atan2(tp.vy, tp.vx);  // guided torps re-steer from here next tick
+  }
+  var bombs = state.bombs, B = state.config.bomb;
+  for (i = 0; i < bombs.length; i++) {
+    var bm = bombs[i];
+    if (!bm.alive) continue;
+    gravityAt(GR, srcs, bm.x, bm.y, -1);
+    if (GVEC.ax === 0 && GVEC.ay === 0) continue;
+    var bvx = bm.vx + GVEC.ax * GR.projectileMult * dt;
+    var bvy = bm.vy + GVEC.ay * GR.projectileMult * dt;
+    var bl = len(bvx, bvy) || 1;
+    bm.vx = (bvx / bl) * B.speed; bm.vy = (bvy / bl) * B.speed;
+  }
+}
+
 /* ---------------- Damage, AOE, asteroid destruction ---------------- */
 function pushEvent(state, ev) {
   ev.t = state.tick;
@@ -919,6 +1115,7 @@ function splitAsteroid(state, rock) {
     c.rotVel = state.rng.range(-D.spinMax, D.spinMax);
     c.moving = true;
     state.asteroids.push(c);
+    rockWoke(state, c); // visible to queries this tick, never enters the static grid
   }
 }
 
@@ -2107,8 +2304,15 @@ function stepMatch(match) {
   if (match.done) return;
   var dt = 1 / state.config.tickRate;
   state.tick++; state.time += dt;
-  // static terrain: build once; rebuild only when rocks split or drift
-  if (!state.grid || state.gridDirty || state.movingRocks > 0) {
+  // movers list first (queries scan it alongside the static grid), then the grid —
+  // rebuilt only when a rock's settled/moving state flipped or a rock split/died
+  var mv = state.movers;
+  mv.length = 0;
+  for (var m0 = 0; m0 < state.asteroids.length; m0++) {
+    var mr = state.asteroids[m0];
+    if (mr.alive && mr.moving) mv.push(mr);
+  }
+  if (!state.grid || state.gridDirty) {
     rebuildGrid(state);
     state.gridDirty = false;
   }
@@ -2129,6 +2333,7 @@ function stepMatch(match) {
     aiTick(state, sh, dt);
     updatePD(state, sh, dt);
   }
+  applyGravity(state, dt); // before the pilots plan: they see (and fight) the drift
   for (var b = 0; b < state.ships.length; b++) {
     var sb = state.ships[b];
     if (!sb.alive) continue;
@@ -2167,7 +2372,7 @@ function baseState(seed, overrides) {
   return {
     config: config, rng: rng, seed: seed,
     tick: 0, time: 0, nextId: 1,
-    ships: [], shipById: {}, asteroids: [], torps: [], bombs: [],
+    ships: [], shipById: {}, asteroids: [], torps: [], bombs: [], movers: [],
     events: [], losCache: {}, damage: { A: 0, B: 0 },
     stats: { railShots: 0, railHitsShip: 0, railHitsRock: 0,
              torpsFired: { A: 0, B: 0 }, torpsPD: { A: 0, B: 0 }, torpsHit: { A: 0, B: 0 },
@@ -2176,7 +2381,7 @@ function baseState(seed, overrides) {
              torpLaunch: { A: [], B: [] },
              runEntries: 0, fireBlocked: { cooldown: 0, range: 0, los: 0, lane: 0 }, salvosFired: 0,
              splits: 0 },
-    aliveA: [], aliveB: [], spawnA: null, spawnB: null,
+    aliveA: [], aliveB: [], spawnA: null, spawnB: null, gravSources: [],
     detA: [], detB: [],                       // enemy ships DETECTED by team A / team B
     lastSeenShip: {},                         // shipId -> {x, y, t} (team-shared memory)
     lastContact: { A: null, B: null },        // most recent enemy sighting per team
@@ -2296,6 +2501,8 @@ return api;
   var help = document.getElementById('help');
   var ui = {
     speed: document.getElementById('speed'),
+    grav: document.getElementById('grav'),
+    gravVal: document.getElementById('gravVal'),
     newbattle: document.getElementById('newbattle'),
     restart: document.getElementById('restart'),
     pause: document.getElementById('pause'),
@@ -2311,6 +2518,8 @@ return api;
     setRandom: document.getElementById('setRandom'),
     setDensity: document.getElementById('setDensity'),
     densityVal: document.getElementById('densityVal'),
+    setGrav: document.getElementById('setGrav'),
+    setGravVal: document.getElementById('setGravVal'),
     setDestr: document.getElementById('setDestr'),
     setMode: document.getElementById('setMode'),
     startBtn: document.getElementById('startBtn'),
@@ -2457,21 +2666,27 @@ return api;
     overlayVisible = true;
     ui.setDensity.value = String(currentDensity());   // keep the slider readout coherent
     ui.densityVal.textContent = (parseFloat(ui.setDensity.value) || 0).toFixed(2);
+    ui.setGrav.value = ui.grav.value;                 // bar slider is the live source of truth
+    ui.setGravVal.textContent = '×' + currentGravity().toFixed(2);
     ui.setMode.value = ui.mode.value;
     ui.setup.classList.remove('hidden');
     renderSetup();
   }
   function hideSetup() { overlayVisible = false; ui.setup.classList.add('hidden'); }
   function currentDensity() { return clampNum(parseFloat(ui.setDensity.value), 0, 1, 0.5); }
+  function currentGravity() { return clampNum(parseFloat(ui.setGrav.value), 0, 3, 1); }
   function clampNum(v, lo, hi, dflt) { if (isNaN(v)) return dflt; return v < lo ? lo : v > hi ? hi : v; }
 
   /* ---- build / (re)create the match ---- */
   function createFromSetup(s) {
     match = Praedra.createMatch({
       seed: s.seed,
-      overrides: { terrainDensity: s.density, destructibleAsteroids: s.destr },
+      overrides: { terrainDensity: s.density, destructibleAsteroids: s.destr,
+                   gravity: { G: CFG.gravity.G * s.grav } },
       teamA: fleetArray(s.A), teamB: fleetArray(s.B),
     });
+    ui.grav.value = String(s.grav);                       // live slider mirrors the match
+    ui.gravVal.textContent = '×' + s.grav.toFixed(2);
     effects = []; markers = []; selectedSet.clear();
     renderedEnemyIds = []; hover = null; drag = null; down = null;
     banner.style.display = 'none';
@@ -2485,6 +2700,7 @@ return api;
       A: copyCounts(fleets.A), B: copyCounts(fleets.B),
       seed: parseInt(ui.setSeed.value, 10) || 1,
       density: currentDensity(),
+      grav: currentGravity(),
       destr: ui.setDestr.checked,
     };
     createFromSetup(currentSetup);
@@ -2505,6 +2721,13 @@ return api;
   ui.setMode.onchange = function () { setMode(ui.setMode.value); };
   ui.setRandom.onclick = function () { ui.setSeed.value = 1 + Math.floor(Math.random() * 999999); };
   ui.setDensity.oninput = function () { ui.densityVal.textContent = currentDensity().toFixed(2); };
+  ui.setGrav.oninput = function () { ui.setGravVal.textContent = '×' + currentGravity().toFixed(2); };
+  ui.grav.oninput = function () {                          // LIVE gravity tuning mid-match
+    var m = clampNum(parseFloat(ui.grav.value), 0, 3, 1);
+    ui.gravVal.textContent = '×' + m.toFixed(2);
+    if (match) match.config.gravity.G = CFG.gravity.G * m; // the sim reads config every tick
+    if (currentSetup) currentSetup.grav = m;               // restart keeps the tuned value
+  };
   help.textContent =
     'L-click select | drag box | shift+click toggle | dbl-click all of type\n' +
     'R-click move / attack ship / blast rock | shift+R attack-move | S hold\n' +
@@ -2717,7 +2940,7 @@ return api;
   });
 
   /* ---- lumpy-polygon drawing for rocks & tumbling debris ---- */
-  function drawAsteroid(o, scale) {
+  function drawAsteroid(o, scale, massive) {
     var n = o.shape.length;
     g.beginPath();
     for (var i = 0; i < n; i++) {
@@ -2726,10 +2949,17 @@ return api;
       if (i === 0) g.moveTo(px, py); else g.lineTo(px, py);
     }
     g.closePath();
-    g.fillStyle = o.moving ? '#585048' : '#3c4148';
-    g.strokeStyle = '#565e68';
+    g.fillStyle = massive ? '#4a4344' : (o.moving ? '#585048' : '#3c4148');
+    g.strokeStyle = massive ? '#75655a' : '#565e68';
     g.lineWidth = 1 / scale;
     g.fill(); g.stroke();
+    if (massive) {                            // cratered core: the monster reads at a glance
+      g.strokeStyle = 'rgba(18,14,12,0.55)';
+      g.lineWidth = 2 / scale;
+      g.beginPath(); g.arc(o.x, o.y, o.r * 0.52, 0, 6.2832); g.stroke();
+      g.beginPath(); g.arc(o.x - o.r * 0.3, o.y + o.r * 0.22, o.r * 0.16, 0, 6.2832); g.stroke();
+      g.beginPath(); g.arc(o.x + o.r * 0.34, o.y - o.r * 0.18, o.r * 0.11, 0, 6.2832); g.stroke();
+    }
   }
   function drawGhost(x, y, scale) {                // faded last-seen marker for lost contacts
     g.strokeStyle = 'rgba(255,122,92,0.4)';
@@ -2767,6 +2997,12 @@ return api;
     worldToScreen: function (x, y) { var v = getView(); return { x: v.ox + x * v.scale, y: v.oy + y * v.scale }; },
     setMode: function (m) { setMode(m); },
     setPaused: function (v) { setPaused(!!v); },
+    setGravity: function (mult) {                   // live-tune hook (same path as the slider)
+      ui.grav.value = String(mult);
+      ui.grav.oninput();
+      return match ? match.config.gravity.G : null;
+    },
+    gravityG: function () { return match ? match.config.gravity.G : null; },
     isPaused: function () { return paused; },
     // --- setup-screen automation ---
     setupOpen: function () { return overlayVisible; },
@@ -2889,10 +3125,29 @@ return api;
     g.lineWidth = 2 / scale;
     g.strokeRect(0, 0, cfg.arena.w, cfg.arena.h);
 
+    // gravity wells first (under everything): faint rings where the pull still bites
+    var GRV = cfg.gravity;
+    var massiveR = GRV && GRV.G > 0 ? GRV.sourceMinRadius : Infinity;
+    if (GRV && GRV.G > 0) {
+      for (var gv = 0; gv < st.asteroids.length; gv++) {
+        var go = st.asteroids[gv];
+        if (!go.alive || go.r < massiveR) continue;
+        var gm = go.r * go.r * go.r;
+        var gsoft2 = (GRV.softening * go.r) * (GRV.softening * go.r);
+        var thrs = [4, 1.2];                       // px/s^2 contours: strong pull, well's edge
+        for (var gt = 0; gt < thrs.length; gt++) {
+          var rr2 = GRV.G * gm / thrs[gt] - gsoft2;
+          if (rr2 <= go.r * go.r) continue;
+          g.strokeStyle = gt === 0 ? 'rgba(150,175,255,0.11)' : 'rgba(150,175,255,0.055)';
+          g.lineWidth = 1 / scale;
+          g.beginPath(); g.arc(go.x, go.y, Math.sqrt(rr2), 0, 6.2832); g.stroke();
+        }
+      }
+    }
     // asteroids + tumbling debris (lumpy polygons)
     for (var i = 0; i < st.asteroids.length; i++) {
       var o = st.asteroids[i];
-      if (o.alive) drawAsteroid(o, scale);
+      if (o.alive) drawAsteroid(o, scale, o.r >= massiveR);
     }
     // torpedoes / bombs
     for (var t = 0; t < st.torps.length; t++) {
@@ -3063,6 +3318,7 @@ return api;
   fleets.B = countsFromPreset('BALANCED');
   ui.setSeed.value = '1';
   ui.setDensity.value = '0.5';
+  ui.setGrav.value = '1'; ui.grav.value = '1';
   ui.setDestr.checked = true;
   setMode('play');
   showSetup();                    // no match steps until START
