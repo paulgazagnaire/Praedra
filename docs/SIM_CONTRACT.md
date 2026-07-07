@@ -130,15 +130,22 @@ hiding it, since neither the enemy nor a "ghost" of it ever entered memory.
 ## Terrain: the TITAN + BIG asteroids (guaranteed) + gravity
 
 Every `createMatch` map (procedural terrain) contains **exactly one TITAN** with `r`
-in `terrain.titanRadius` (default `[1150, 1600]` — ~5x a BIG) **and
+in `terrain.titanRadius` (default `[1035, 1440]` — ~5x a BIG) **and
 1..`terrain.bigCountMax` BIG asteroids** with `r` in `terrain.bigRadius` (default
 `[220, 380]`) — never zero, regardless of seed or `terrainDensity`. The titan is
-placed first, then the bigs (clusters and sparse rocks flow around them all); they
-anchor the map layout. `createScenario` terrain stays fully explicit — no titan or
-bigs are injected there.
+placed first and roams anywhere — it MAY be cut by the arena boundary, but always
+keeps **at least 65% of its disc inside the playable zone** (so it always shapes
+the fight). The bigs are placed next, fully inside the margins (clusters and sparse
+rocks flow around them all); they anchor the map layout. `createScenario` terrain
+stays fully explicit — no titan or bigs are injected there.
 
-Asteroid outlines (`shape`) have 12..56 vertices scaling with radius (two low-freq
-harmonics + fine grit); still visual-only, physics stays circular on `r`.
+Asteroid outlines (`shape`) have 18..160 vertices scaling with radius (three
+harmonics + fine grit — detail rank follows size rank; the titan carries 130+).
+The contour is also the **contact surface**: rock-rock resting/collision, ship
+hull bonks, gravity-accretion support, and torpedo/bomb rock strikes all resolve
+against the interpolated shape polygon (`contourR`), so accretion hugs the lumps
+rather than an invisible bounding circle. LOS, detection, the railgun ray, AOE
+radii, avoidance margins and `attackrock` ranges stay circular on `r`.
 
 **Gravity** (CONFIG `gravity`): every live rock with `r >= gravity.sourceMinRadius`
 (default 100 — the titan, the BIGs, and their large fragments) is a gravity source
@@ -161,6 +168,15 @@ tick on:
   their speed is renormalised to the design speed (guidance and lead-aim semantics
   survive; a well only curves the path).
 
+Everything responds to gravity per the equivalence principle (acceleration is
+mass-independent), and trajectory deflection scales as `~ g·L/v²`: a 420 px/s
+torpedo visibly curls through a well, while the 2400 px/s railgun slug's real
+sagitta is ~1 px — it stays hitscan mechanically, and the app renders its trace
+with that sagitta boosted `gravity.slugBendVisual`× (render-only) so the speed
+hierarchy reads on screen. Inertial mass appears wherever momentum is exchanged
+(ships `def.mass`, rocks `r²` in collisions, `r³` as gravitational source mass;
+warheads detonate on contact rather than exchanging momentum).
+
 `gravity.G: 0` (or `sourceMinRadius: Infinity`) disables the whole system; the app's
 UI sliders scale `G` live via `match.config.gravity.G` (deterministic per run only
 if left untouched, which headless code always is). Gravity is pure state math — no
@@ -172,9 +188,12 @@ RNG — so determinism from seed is unaffected.
 config value (the field is kept only for override-compatibility with older harness
 code). Every asteroid is `{ id, x, y, r, hp, maxHp, vx, vy, rot, rotVel, shape,
 alive, moving }`: `hp = asteroidHP × (r / asteroidHPRefRadius)²`; `shape` is a
-deterministic array of per-vertex radius jitter (visual only, physics stays
-circular on `r`); `rot`/`rotVel` are the visual spin; `moving` is true while the
-rock has residual velocity (settled/static rocks are immovable to ship impacts).
+deterministic array of per-vertex radius factors — the render outline AND the
+contact surface (see §Terrain: contacts resolve on the interpolated contour;
+LOS/rays/ranges stay circular on `r`); `rot`/`rotVel` are the spin (the contact
+contour tumbles with `rot`); `moving` is true while the rock has residual velocity
+(settled rocks are immovable to ship impacts, except pebbles below
+`collision.pushableRockRadius`, which hulls shove aside).
 Any hit that brings `hp` to ≤0 splits it into `debris.fragmentCount` (default 4)
 children at `r × debris.childRadiusScale`, each with outward burst velocity +
 random spin, `moving: true`. Children below `debris.minChildRadius` don't spawn

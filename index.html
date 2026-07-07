@@ -172,7 +172,7 @@ var CONFIG_DEFAULTS = {
     spawnDistFrac: 0.40,           // spawn separation as fraction of arena diagonal-ish
     // --- THE TITAN: every seed gets exactly one colossal asteroid, ~5x a BIG one.
     //     It is the map's landmark, its widest LOS shadow, and its deepest well.
-    titanRadius: [1150, 1600],
+    titanRadius: [1035, 1440],     // ~5x a BIG, trimmed 10%
     titanSpawnClear: 760,          // extra clearance from fleet spawns (well reaches far)
     // --- BIG asteroids: every generated seed also gets 1..bigCountMax of them. They
     //     are placed after the titan but before everything else (clusters and sparse
@@ -225,7 +225,13 @@ var CONFIG_DEFAULTS = {
                                    // (also what keeps the x3 slider playable)
     shipMult: 1.0,                 // per-family feel multipliers
     rockMult: 1.0,
-    projectileMult: 1.0,           // torpedoes/bombs bend course but keep their speed
+    projectileMult: 1.0,           // torpedoes/bombs bend course but keep their speed.
+                                   // Deflection is naturally ~ g/v^2: a 420px/s torpedo
+                                   // curls visibly, a 2400px/s railgun slug barely at all
+    slugBendVisual: 40,            // RENDER-ONLY: rail traces draw with their (physically
+                                   // ~1px) gravitational sagitta boosted this many times,
+                                   // so the speed hierarchy reads on screen. Hit
+                                   // resolution is untouched — the slug is still hitscan
   },
 
   // --- SHIPS (accel = thrust/mass; angular accel = rcs/mass, capped at turnMax rad/s) ---
@@ -475,20 +481,37 @@ function generateTerrain(state, rng) {
   }
   function rockRadius() { var t = rng.next(); return lerp(T.asteroidRadius[0], T.asteroidRadius[1], t * t); }
 
-  // --- THE TITAN first: one colossal rock, ~5x a BIG one. Guaranteed every seed. ---
+  // --- THE TITAN first: one colossal rock, ~5x a BIG one. Guaranteed every seed.
+  //     It roams anywhere — including CUT by the arena edge — as long as at least
+  //     65% of its disc stays in the playable zone, so it always shapes the fight. ---
   var bigs = [];
   var tR = lerp(T.titanRadius[0], T.titanRadius[1], rng.next());
+  // deterministic 24x24 disc sampler (no rng draws): fraction of the disc in-arena
+  function discInsideFrac(x, y, r) {
+    var inside = 0, total = 0;
+    for (var si = 0; si < 24; si++) for (var sj = 0; sj < 24; sj++) {
+      var px = -1 + (si + 0.5) / 12, py = -1 + (sj + 0.5) / 12;
+      if (px * px + py * py > 1) continue;
+      total++;
+      var sx = x + px * r, sy = y + py * r;
+      if (sx >= 0 && sx <= W && sy >= 0 && sy <= H) inside++;
+    }
+    return inside / total;
+  }
   var tPlaced = false;
-  for (var tAtt = 0; tAtt < 80 && !tPlaced; tAtt++) {
-    var tx = rng.range(T.edgeMargin + tR, W - T.edgeMargin - tR);
-    var ty = rng.range(T.edgeMargin + tR, H - T.edgeMargin - tR);
+  for (var tAtt = 0; tAtt < 120 && !tPlaced; tAtt++) {
+    // a single straight edge cuts <=35% of the disc when the centre is >=0.24r
+    // inside it; the sampler is the exact gate (it also catches corner double-cuts)
+    var tx = rng.range(tR * 0.24, W - tR * 0.24);
+    var ty = rng.range(tR * 0.24, H - tR * 0.24);
+    if (discInsideFrac(tx, ty, tR) < 0.66) continue; // gate above 65% for sampler slack
     if (dist(tx, ty, state.spawnA.x, state.spawnA.y) < T.titanSpawnClear + tR) continue;
     if (dist(tx, ty, state.spawnB.x, state.spawnB.y) < T.titanSpawnClear + tR) continue;
     bigs.push({ x: tx, y: ty, r: tR });
     rocks.push({ x: tx, y: ty, r: tR });
     tPlaced = true;
   }
-  if (!tPlaced) { // near-unreachable fallback (80 tries on a mostly-open arena): the
+  if (!tPlaced) { // near-unreachable fallback (120 tries on a mostly-open arena): the
     // centre clears both spawn CLEAR zones on any axis, though a worst-case vertical
     // spawn axis can shave the extra titanSpawnClear comfort margin
     bigs.push({ x: cx, y: cy, r: tR });
@@ -579,20 +602,38 @@ function generateTerrain(state, rng) {
 function makeAsteroid(state, x, y, r) {
   var cfg = state.config;
   var hp = cfg.asteroidHP * (r / cfg.asteroidHPRefRadius) * (r / cfg.asteroidHPRefRadius);
-  // lumpy deterministic outline (visual only; physics stays circular on r).
-  // Two low-frequency harmonics carve continent-scale lobes, fine per-vertex grit
-  // roughens the edge; vertex count scales with radius so a titan isn't a decagon.
-  var nv = clamp(Math.round(r / 5) + 8, 12, 56), shape = [];
-  var k1 = 2 + state.rng.int(3), k2 = 5 + state.rng.int(4);
-  var p1 = state.rng.angle(), p2 = state.rng.angle();
+  // lumpy deterministic outline. Three harmonics: continent lobes (k1), ridge-scale
+  // relief (k2), crater-scale detail (k3); fine per-vertex grit on top. Vertex count
+  // scales with radius — small rocks ~19, BIGs ~50, the titan 130+ — so detail rank
+  // follows size rank. The contour is also the CONTACT surface (see contourR): rocks,
+  // ships and warheads rest/strike along it, so accretion hugs the lumps, not the
+  // bounding circle. LOS, detection and the railgun ray stay circular on r.
+  var nv = clamp(Math.round(r * 0.12) + 16, 18, 160), shape = [];
+  var k1 = 2 + state.rng.int(3), k2 = 5 + state.rng.int(4), k3 = 11 + state.rng.int(7);
+  var p1 = state.rng.angle(), p2 = state.rng.angle(), p3 = state.rng.angle();
   var a1 = state.rng.range(0.06, 0.13), a2 = state.rng.range(0.03, 0.07);
+  var a3 = state.rng.range(0.015, 0.035);
   for (var i = 0; i < nv; i++) {
     var th = i * 2 * Math.PI / nv;
     shape.push(clamp(1 + a1 * Math.sin(k1 * th + p1) + a2 * Math.sin(k2 * th + p2)
-                       + state.rng.range(-0.05, 0.05), 0.72, 1.2));
+                       + a3 * Math.sin(k3 * th + p3)
+                       + state.rng.range(-0.04, 0.04), 0.7, 1.22));
   }
   return { id: state.nextId++, x: x, y: y, r: r, hp: hp, maxHp: hp, vx: 0, vy: 0,
            rot: state.rng.angle(), rotVel: 0, shape: shape, alive: true, moving: false };
+}
+/* Effective surface radius of rock o toward point (x,y): linear interpolation of the
+   shape polygon, matching exactly what drawAsteroid renders (including tumble rot).
+   This is the CONTACT surface — accretion piles, hull bonks and warhead strikes all
+   land on the lumps, not on an invisible bounding circle. */
+function contourR(o, x, y) {
+  var n = o.shape.length;
+  var a = Math.atan2(y - o.y, x - o.x) - o.rot;
+  a -= Math.floor(a / (2 * Math.PI)) * 2 * Math.PI; // wrap to [0, 2PI)
+  var f = a * n / (2 * Math.PI);
+  var i = Math.floor(f);
+  if (i >= n) i = n - 1;
+  return o.r * lerp(o.shape[i], o.shape[(i + 1) % n], f - i);
 }
 
 /* ---------------- Spatial grid for rock queries (performance only, no gameplay) ----------------
@@ -1006,9 +1047,11 @@ function collideShipsAndRocks(state, dt) {
     for (var j = 0; j < near.length; j++) {
       var o = near[j];
       var dx = sh.x - o.x, dy = sh.y - o.y;
-      var rr = sh.def.radius + o.r;
       var d2 = dx * dx + dy * dy;
-      if (d2 >= rr * rr || d2 < 1e-9) continue;
+      var rrMax = sh.def.radius + o.r * 1.22;          // cheap bound, then exact contour
+      if (d2 >= rrMax * rrMax || d2 < 1e-9) continue;
+      var rr = sh.def.radius + contourR(o, sh.x, sh.y); // hulls bonk the lumps, not the circle
+      if (d2 >= rr * rr) continue;
       var d = Math.sqrt(d2), nx = dx / d, ny = dy / d;
       var mShip = sh.def.mass, mRock = o.r * o.r / 10;
       // settled rocks are immovable walls — except pebbles, which a hull shoves aside
@@ -1082,12 +1125,15 @@ function updateAsteroids(state, dt) {
   for (var a2 = 0; a2 < A.length; a2++) {
     var p = A[a2];
     if (!p.alive || !p.moving) continue;
-    rocksNearSeg(state, p.x, p.y, p.x, p.y, p.r + 6, function (q) {
+    rocksNearSeg(state, p.x, p.y, p.x, p.y, p.r * 1.25 + 6, function (q) {
       if (q.id === p.id) return false;
       if (q.moving && q.id < p.id) return false;  // mover-mover pair: handled once, from the lower id
-      var dx = p.x - q.x, dy = p.y - q.y, rr = p.r + q.r;
+      var dx = p.x - q.x, dy = p.y - q.y;
       var d2 = dx * dx + dy * dy;
-      if (d2 >= rr * rr || d2 < 1e-9) return false;
+      var rrMax = (p.r + q.r) * 1.22;             // cheap bound, then exact contour:
+      if (d2 >= rrMax * rrMax || d2 < 1e-9) return false;
+      var rr = contourR(p, q.x, q.y) + contourR(q, p.x, p.y); // accretion hugs the lumps
+      if (d2 >= rr * rr) return false;
       var d = Math.sqrt(d2), nx = dx / d, ny = dy / d;
       var mp = p.r * p.r, mq = q.r * q.r;
       var vn = (p.vx - q.vx) * nx + (p.vy - q.vy) * ny;
@@ -1197,10 +1243,11 @@ function applyGravity(state, dt) {
       // or the accretion pile stacked on it) — normal force holds it, don't stir it
       var gl = Math.sqrt(g2), gux = GVEC.ax / gl, guy = GVEC.ay / gl;
       var supported = false;
-      rocksNearSeg(state, o.x, o.y, o.x, o.y, o.r + 4, function (q) {
+      rocksNearSeg(state, o.x, o.y, o.x, o.y, o.r * 1.25 + 6, function (q) {
         if (q.id === o.id) return false;
         var ddx = q.x - o.x, ddy = q.y - o.y;
-        if (ddx * ddx + ddy * ddy > (o.r + q.r + 3) * (o.r + q.r + 3)) return false;
+        var reach2 = contourR(o, q.x, q.y) + contourR(q, o.x, o.y) + 4; // contact on the contour
+        if (ddx * ddx + ddy * ddy > reach2 * reach2) return false;
         if (ddx * gux + ddy * guy > 0) { supported = true; return true; }
         return false;
       });
@@ -1450,7 +1497,7 @@ function updateTorpedoes(state, dt) {
     // rock collision -> detonate on the rock (a dud just crumples)
     var boom = false;
     rocksNearSeg(state, tp.x, tp.y, tp.x, tp.y, 96, function (o) {
-      if (dist(tp.x, tp.y, o.x, o.y) < o.r + 4) {
+      if (dist(tp.x, tp.y, o.x, o.y) < contourR(o, tp.x, tp.y) + 4) { // strike the lump itself
         if (armed) damageAsteroid(state, o, T.damage * T.rockDamageMult);
         detonateTorpedo(state, tp);
         tp.alive = false;
@@ -1564,7 +1611,7 @@ function updateBombs(state, dt) {
     bm.x += bm.vx * dt; bm.y += bm.vy * dt;
     var hit = false;
     rocksNearSeg(state, bm.x, bm.y, bm.x, bm.y, 96, function (o) {
-      if (dist(bm.x, bm.y, o.x, o.y) < o.r + 4) {
+      if (dist(bm.x, bm.y, o.x, o.y) < contourR(o, bm.x, bm.y) + 4) { // strike the lump itself
         damageAsteroid(state, o, B.damage); detonateBomb(state, bm); hit = true; return true;
       }
       return false;
@@ -3169,6 +3216,27 @@ return api;
       g.beginPath(); g.arc(o.x + o.r * 0.34, o.y - o.r * 0.18, o.r * 0.11, 0, 6.2832); g.stroke();
     }
   }
+  /* Local gravity field for visual effects — mirrors the sim's bounded-well model. */
+  function fieldAt(st, GRV, x, y) {
+    var gx = 0, gy = 0;
+    if (!GRV || GRV.G <= 0) return { x: 0, y: 0 };
+    var A = st.asteroids;
+    for (var i = 0; i < A.length; i++) {
+      var o = A[i];
+      if (!o.alive || o.r < GRV.sourceMinRadius) continue;
+      var dx = o.x - x, dy = o.y - y;
+      var d2 = dx * dx + dy * dy;
+      if (d2 < 1e-6) continue;
+      var reach = o.r * GRV.wellReach;
+      if (d2 > reach * reach) continue;
+      var soft = GRV.softening * o.r;
+      var acc = Math.min(GRV.maxAccel, GRV.G * o.r * o.r * o.r / (d2 + soft * soft));
+      var d = Math.sqrt(d2), fade0 = reach * 0.85;
+      if (d > fade0) acc *= (reach - d) / (reach - fade0);
+      gx += (dx / d) * acc; gy += (dy / d) * acc;
+    }
+    return { x: gx, y: gy };
+  }
   function drawGhost(x, y, scale) {                // faded last-seen marker for lost contacts
     g.strokeStyle = 'rgba(255,122,92,0.4)';
     g.lineWidth = 1.2 / scale;
@@ -3380,9 +3448,23 @@ return api;
     for (var e2 = effects.length - 1; e2 >= 0; e2--) {
       var fx = effects[e2], ev = fx.e, a = fx.ttl / fx.max;
       if (ev.kind === 'rail') {
+        // hitscan mechanically — but a well bends even a slug a little. Sagitta is
+        // real physics (g_perp * tFlight^2 / 8 at slugSpeed), boosted for legibility:
+        // deflection goes as 1/v^2, so the rail barely bows where a torpedo curls.
+        var rdx = ev.x2 - ev.x, rdy = ev.y2 - ev.y;
+        var rl = Math.sqrt(rdx * rdx + rdy * rdy) || 1;
+        var perpx = -rdy / rl, perpy = rdx / rl;
+        var fld = fieldAt(st, GRV, (ev.x + ev.x2) / 2, (ev.y + ev.y2) / 2);
+        var tFly = rl / cfg.railgun.slugSpeed;
+        var sag = (fld.x * perpx + fld.y * perpy) * tFly * tFly / 8 * (GRV.slugBendVisual || 0);
+        if (sag > 30) sag = 30; else if (sag < -30) sag = -30;
         g.strokeStyle = 'rgba(240,248,255,' + (0.85 * a) + ')';
         g.lineWidth = (ev.hit === 'ship' ? 2.5 : 1.5) / scale;
-        g.beginPath(); g.moveTo(ev.x, ev.y); g.lineTo(ev.x2, ev.y2); g.stroke();
+        g.beginPath(); g.moveTo(ev.x, ev.y);
+        if (sag > 0.5 || sag < -0.5) // control point at 2x sagitta bows the curve by sag
+          g.quadraticCurveTo((ev.x + ev.x2) / 2 + perpx * sag * 2, (ev.y + ev.y2) / 2 + perpy * sag * 2, ev.x2, ev.y2);
+        else g.lineTo(ev.x2, ev.y2);
+        g.stroke();
       } else if (ev.kind === 'pd') {
         g.strokeStyle = 'rgba(120,235,255,' + (0.7 * a) + ')';
         g.lineWidth = 1 / scale;

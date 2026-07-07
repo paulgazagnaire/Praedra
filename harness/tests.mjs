@@ -511,10 +511,28 @@ test('big-asteroids-every-seed', () => {
         assert(o.x > 0 && o.x < m.config.arena.w && o.y > 0 && o.y < m.config.arena.h,
           `seed ${seed} density ${terrainDensity}: huge asteroid centre (${o.x | 0},${o.y | 0}) outside the arena`);
       }
+      // titan may be cut by the boundary but must keep >= 65% of its disc in play
+      {
+        const t = titans[0], W = m.config.arena.w, H = m.config.arena.h;
+        let inside = 0, total = 0;
+        for (let i = 0; i < 24; i++) for (let j = 0; j < 24; j++) {
+          const px = -1 + (i + 0.5) / 12, py = -1 + (j + 0.5) / 12;
+          if (px * px + py * py > 1) continue;
+          total++;
+          const sx = t.x + px * t.r, sy = t.y + py * t.r;
+          if (sx >= 0 && sx <= W && sy >= 0 && sy <= H) inside++;
+        }
+        const frac = inside / total;
+        assert(frac >= 0.63, // sampler tolerance on the sim's own 65% gate
+          `seed ${seed} density ${terrainDensity}: titan only ${(frac * 100).toFixed(0)}% inside the playable zone`);
+      }
+      // outline detail scales with size: grit floor for pebbles, 100+ for the titan
       for (const o of m.state.asteroids) {
-        assert(o.shape.length >= 12,
+        assert(o.shape.length >= 18,
           `seed ${seed} density ${terrainDensity}: asteroid r=${o.r | 0} has only ${o.shape.length} outline vertices`);
       }
+      assert(titans[0].shape.length >= 100,
+        `seed ${seed} density ${terrainDensity}: titan has only ${titans[0].shape.length} outline vertices`);
     }
   }
 });
@@ -585,6 +603,37 @@ test('gravity-pulls-ships', () => {
     `gravity.G = 0 but avg hold throttle is ${off.thr.toFixed(3)} — ship should hold station dark`);
   assert(off.drift < 20,
     `gravity.G = 0 but the ship drifted ${off.drift.toFixed(0)}px — hold-at-rest should stay at rest`);
+});
+
+// Accretion rests on the CONTOUR, not the bounding circle: a pebble that falls onto
+// a massive rock must settle at the interpolated shape radius toward its resting
+// bearing (SIM_CONTRACT §Terrain). Reimplements the contour interpolation from the
+// contract and compares against the actual resting distance.
+test('accretion-follows-contour', () => {
+  const m = Praedra.createScenario({
+    seed: 41,
+    ships: [],
+    asteroids: [{ x: MID.x, y: MID.y, r: 300 }, { x: MID.x + 520, y: MID.y, r: 24 }],
+  });
+  const big = m.state.asteroids.find((o) => o.r > 100);
+  const peb = m.state.asteroids.find((o) => o.r < 100);
+  stepSeconds(m, 60); // fall + settle
+  assert(big.x === MID.x && big.y === MID.y, 'massive rock moved while a pebble accreted onto it');
+  assert(!peb.moving, `pebble still moving after 60s (at ${peb.x | 0},${peb.y | 0}) — never accreted`);
+  function contour(o, x, y) {
+    const n = o.shape.length;
+    let a = Math.atan2(y - o.y, x - o.x) - o.rot;
+    a -= Math.floor(a / (2 * Math.PI)) * 2 * Math.PI;
+    const f = a * n / (2 * Math.PI);
+    const i = Math.min(n - 1, Math.floor(f));
+    const t = f - Math.floor(f);
+    return o.r * (o.shape[i] * (1 - t) + o.shape[(i + 1) % n] * t);
+  }
+  const d = dist2D(peb.x, peb.y, big.x, big.y);
+  const expected = contour(big, peb.x, peb.y) + contour(peb, big.x, big.y);
+  assert(Math.abs(d - expected) < 15,
+    `pebble rests at ${d.toFixed(1)}px from centre but the contour contact is ${expected.toFixed(1)}px ` +
+    `(bounding circles would be ${(big.r + peb.r).toFixed(0)}) — accretion not following the contour`);
 });
 
 runAll();
