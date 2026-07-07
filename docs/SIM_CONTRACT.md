@@ -68,9 +68,11 @@ level).
   1. Every match force-resolves at tick cap = `matchTimerSeconds × 60`. `runMatch`
      can never loop unbounded.
   2. Deterministic from `seed` + config + teams.
-  3. Headless speed scales with fleet size: a small (~9-pt) match runs well under
-     2 s wall-clock; full 42-point armadas (default presets, 30-70 ships) run
-     ~10 s. Per-tick cost stays well under the 16 ms real-time budget either way.
+  3. Headless speed: per-tick cost stays well under the 16 ms real-time budget
+     (small fleets ~0.7 ms/tick, full armadas a few ms). Wall-clock per match is
+     bounded by the tick cap; titan-scale maps (8000x5600, 360 s timer) make long
+     hunts legitimately long in SIM seconds, so budget wall-clock per tick, not
+     per match.
 
 ## Detection (a ship must be SEEN to be targetable)
 
@@ -122,27 +124,35 @@ hiding it, since neither the enemy nor a "ghost" of it ever entered memory.
   ship's `order` field is set but never read, since `aiPinned` runs unconditionally.
 - Issuing any order pushes an `{ kind: 'order', x, y, order: type }` event (see Events).
 
-## Terrain: BIG asteroids (guaranteed) + gravity
+## Terrain: the TITAN + BIG asteroids (guaranteed) + gravity
 
-Every `createMatch` map (procedural terrain) contains **1..`terrain.bigCountMax` BIG
-asteroids** with `r` in `terrain.bigRadius` (default `[220, 380]`) — never zero,
-regardless of seed or `terrainDensity`. They are placed first (clusters and sparse
-rocks flow around them) and anchor the map layout. `createScenario` terrain stays
-fully explicit — no bigs are injected there.
+Every `createMatch` map (procedural terrain) contains **exactly one TITAN** with `r`
+in `terrain.titanRadius` (default `[1150, 1600]` — ~5x a BIG) **and
+1..`terrain.bigCountMax` BIG asteroids** with `r` in `terrain.bigRadius` (default
+`[220, 380]`) — never zero, regardless of seed or `terrainDensity`. The titan is
+placed first, then the bigs (clusters and sparse rocks flow around them all); they
+anchor the map layout. `createScenario` terrain stays fully explicit — no titan or
+bigs are injected there.
+
+Asteroid outlines (`shape`) have 12..56 vertices scaling with radius (two low-freq
+harmonics + fine grit); still visual-only, physics stays circular on `r`.
 
 **Gravity** (CONFIG `gravity`): every live rock with `r >= gravity.sourceMinRadius`
-(default 100 — the BIGs and their first-generation fragments) is a gravity source
+(default 100 — the titan, the BIGs, and their large fragments) is a gravity source
 with mass `r^3`. Acceleration toward a source at distance `d` is
-`G * r^3 / (d^2 + (softening*r)^2)`, clamped to `maxAccel`, ignored below `minAccel`
-(the well's edge). It acts every tick on:
+`G * r^3 / (d^2 + (softening*r)^2)`, clamped to `maxAccel`, ignored below `minAccel`,
+and bounded to a well radius of `r * wellReach` (fading smoothly to zero over the
+outer 15% — without this bound the titan's mass would act map-wide). It acts every
+tick on:
 
 - **ships** (× `gravity.shipMult`, additionally capped at `gravity.shipEscapeCap` ×
   the ship's own max thrust accel so a well can threaten but never imprison) — the
   autopilot fights the drift; `pinned` ships are exempt (they hold station by contract);
 - **rocks** (× `gravity.rockMult`) — moving debris curls into the wells; a settled
-  rock wakes only when the pull exceeds `gravity.rockWake` AND nothing supports it
-  on the down-well side (so accretion piles are stable and the far field never
-  drifts — cover stays dependable);
+  rock wakes only when the pull exceeds `gravity.rockWake` AND it sits within
+  `gravity.rockWakeShell` px of some source's surface AND nothing supports it on
+  the down-well side (so accretion is a local shell around each well, piles are
+  stable, and the far field never drifts — cover stays dependable);
 - **torpedoes and bombs** (× `gravity.projectileMult`) — their course bends but
   their speed is renormalised to the design speed (guidance and lead-aim semantics
   survive; a well only curves the path).
@@ -193,10 +203,12 @@ deal their base damage directly (no multiplier) via `attackrock` orders only.
 ## Key CONFIG fields harness code may rely on
 
 - `terrainDensity` (0..1) — the flip variable.
+- `terrain.titanRadius` — TITAN size band (count is always exactly 1 on procedural maps).
 - `terrain.bigRadius` / `terrain.bigCountMax` — BIG-asteroid size band and max count
   (min count is always 1 on procedural maps).
-- `gravity.G` / `sourceMinRadius` / `softening` / `minAccel` / `maxAccel` / `rockWake`
-  / `shipEscapeCap` / `shipMult` / `rockMult` / `projectileMult` — see Terrain above.
+- `gravity.G` / `sourceMinRadius` / `softening` / `minAccel` / `maxAccel` / `wellReach`
+  / `rockWake` / `rockWakeShell` / `shipEscapeCap` / `shipMult` / `rockMult` /
+  `projectileMult` — see Terrain above.
 - `destructibleAsteroids` (bool, present but IGNORED — see above).
 - `matchTimerSeconds` (number).
 - `presets` — fleet presets (same object as `Praedra.PRESETS`).

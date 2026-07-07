@@ -174,7 +174,7 @@ function assertDetectable(cfg, cls, dist, marginPx, label) {
 
 function dist2D(ax, ay, bx, by) { return Math.sqrt((ax - bx) * (ax - bx) + (ay - by) * (ay - by)); }
 
-// Mid-arena anchor for new scenario tests (arena is 5600x4000; (0,0) is a corner).
+// Mid-arena-ish anchor for new scenario tests (arena is 8000x5600; (0,0) is a corner).
 // The old tests use small coordinates near that corner and get away with it because
 // their ships are pinned (never touch the walls) and have no debris/AI ships that
 // would; new tests use this offset to stay clear of wall effects on principle.
@@ -337,12 +337,17 @@ test('tick-cap-forced', () => {
   assert(m.result.reason === 'timer', `result.reason is ${JSON.stringify(m.result.reason)}, want 'timer'`);
 });
 
+// Titan-scale maps (8000x5600, 360s timer) made small-fleet matches legitimately LONG
+// in sim-seconds (hunt + transit), so the wall-clock budget is per-tick-derived: the
+// SIM_CONTRACT bound is per-tick cost, and the worst case is the full tick cap.
 test('wallclock', () => {
   const t0 = Date.now(); // harness may use Date; only the sim may not
   const r = Praedra.runMatch({ seed: 1, overrides: { terrainDensity: 0.5 }, teamA: SMALL_A, teamB: SMALL_B });
   const ms = Date.now() - t0;
   assert(r && r.winner !== undefined, 'runMatch returned no result object');
-  assert(ms < 2000, `full match took ${ms} ms wall-clock (budget 2000 ms)`);
+  const usPerTick = (ms * 1000) / r.ticks;
+  assert(usPerTick < 2000, `small-fleet match cost ${usPerTick.toFixed(0)} us/tick (budget 2000 us/tick)`);
+  assert(ms < 20000, `full match took ${ms} ms wall-clock (hard budget 20 s at the 360 s tick cap)`);
 });
 
 // ------------------------------------------------------------- new: detection
@@ -479,25 +484,36 @@ test('order-move-hold', () => {
 
 // ------------------------------------------------- new: BIG asteroids + gravity
 
-// Every generated map carries 1..terrain.bigCountMax BIG asteroids (r >= bigRadius[0]),
+// Every generated map carries exactly 1 TITAN (r >= titanRadius[0]) and
+// 1..terrain.bigCountMax BIG asteroids (bigRadius[0] <= r < titanRadius[0]),
 // regardless of seed or density (SIM_CONTRACT §Terrain). createScenario terrain is
-// explicit and exempt. Thresholds read from live config, not hardcoded.
+// explicit and exempt. Thresholds read from live config, not hardcoded. Also checks
+// outline detail: every asteroid's shape has at least 12 vertices (visual realism).
 test('big-asteroids-every-seed', () => {
   const cfg = Praedra.defaultConfig();
   const bigMin = cfg.terrain && cfg.terrain.bigRadius && cfg.terrain.bigRadius[0];
+  const titanMin = cfg.terrain && cfg.terrain.titanRadius && cfg.terrain.titanRadius[0];
   assert(typeof bigMin === 'number', 'no terrain.bigRadius in live config — big-asteroid support missing');
+  assert(typeof titanMin === 'number', 'no terrain.titanRadius in live config — titan support missing');
   const bigMax = cfg.terrain.bigCountMax;
   for (let seed = 1; seed <= 12; seed++) {
     for (const terrainDensity of [0, 0.5, 1]) {
       const m = Praedra.createMatch({ seed, overrides: { terrainDensity }, teamA: SMALL_A, teamB: SMALL_B });
-      const bigs = m.state.asteroids.filter((o) => o.alive && o.r >= bigMin);
+      const titans = m.state.asteroids.filter((o) => o.alive && o.r >= titanMin);
+      const bigs = m.state.asteroids.filter((o) => o.alive && o.r >= bigMin && o.r < titanMin);
+      assert(titans.length === 1,
+        `seed ${seed} density ${terrainDensity}: ${titans.length} titans (r >= ${titanMin}), want exactly 1`);
       assert(bigs.length >= 1,
-        `seed ${seed} density ${terrainDensity}: no BIG asteroid (r >= ${bigMin}) on the map`);
+        `seed ${seed} density ${terrainDensity}: no BIG asteroid (${bigMin} <= r < ${titanMin}) on the map`);
       assert(bigs.length <= bigMax,
         `seed ${seed} density ${terrainDensity}: ${bigs.length} BIG asteroids exceeds bigCountMax ${bigMax}`);
-      for (const o of bigs) {
+      for (const o of titans.concat(bigs)) {
         assert(o.x > 0 && o.x < m.config.arena.w && o.y > 0 && o.y < m.config.arena.h,
-          `seed ${seed} density ${terrainDensity}: BIG asteroid centre (${o.x | 0},${o.y | 0}) outside the arena`);
+          `seed ${seed} density ${terrainDensity}: huge asteroid centre (${o.x | 0},${o.y | 0}) outside the arena`);
+      }
+      for (const o of m.state.asteroids) {
+        assert(o.shape.length >= 12,
+          `seed ${seed} density ${terrainDensity}: asteroid r=${o.r | 0} has only ${o.shape.length} outline vertices`);
       }
     }
   }

@@ -137,11 +137,11 @@ var Praedra = (function () {
 /* ---------------- CONFIG — every gameplay number lives here ---------------- */
 var CONFIG_DEFAULTS = {
   tickRate: 60,
-  matchTimerSeconds: 300,          // hard cap (PRD band 150-300); dense sieges need the room
+  matchTimerSeconds: 360,          // hard cap; titan-scale maps need transit room (was PRD 150-300)
   movementModel: 'newtonian',      // 'newtonian' | 'arcade' (arcade = debug fallback only)
   fleetMode: 'preset',
 
-  arena: { w: 5600, h: 4000 },     // big: room for BIG asteroids without choking the lanes
+  arena: { w: 8000, h: 5600 },     // titan-scale: one asteroid alone is up to 3200px across
 
   // --- DETECTION (LOS is necessary but not sufficient: you also have to SEE it) ---
   detection: {
@@ -156,22 +156,27 @@ var CONFIG_DEFAULTS = {
   destructibleAsteroids: true,     // ALWAYS ON (kept for override compat; the sim ignores false)
   terrain: {
     clusterCountMin: 1,            // clusters at density 0
-    clusterCountMax: 18,           // clusters at density 1 (scaled with the larger arena)
+    clusterCountMax: 24,           // clusters at density 1 (scaled with the larger arena)
     clusterRadius: [300, 600],
     clusterFillPerArea: 0.000026,  // rocks per px^2 of cluster area
     asteroidRadius: [26, 90],
-    sparseRockMin: 3,              // lone rocks scattered outside clusters (low..high density).
-    sparseRockMax: 64,             // High density must be dense EVERYWHERE — capitals park in
+    sparseRockMin: 4,              // lone rocks scattered outside clusters (low..high density).
+    sparseRockMax: 90,             // High density must be dense EVERYWHERE — capitals park in
                                    // whatever open pocket exists, so pockets must not exist.
     spawnClearRadius: 320,         // no rocks near either spawn
     edgeMargin: 130,
     spawnDistFrac: 0.40,           // spawn separation as fraction of arena diagonal-ish
-    // --- BIG asteroids: every generated seed gets 1..bigCountMax of them. They are
-    //     placed FIRST (clusters and sparse rocks flow around them), they anchor the
-    //     map layout, and they are the dominant gravity wells (see `gravity` below).
+    // --- THE TITAN: every seed gets exactly one colossal asteroid, ~5x a BIG one.
+    //     It is the map's landmark, its widest LOS shadow, and its deepest well.
+    titanRadius: [1150, 1600],
+    titanSpawnClear: 760,          // extra clearance from fleet spawns (well reaches far)
+    // --- BIG asteroids: every generated seed also gets 1..bigCountMax of them. They
+    //     are placed after the titan but before everything else (clusters and sparse
+    //     rocks flow around them) and anchor the mid-scale map layout.
     bigRadius: [220, 380],
     bigCountMax: 3,                // roll is uniform 1..bigCountMax — never zero
     bigSeparation: 1.35,           // min centre distance between bigs = (r1+r2)*this
+                                   // (pairs with the titan relax to 1.1 — see generateTerrain)
     bigSpawnClear: 520,            // extra clearance from fleet spawns (their wells reach far)
   },
   asteroidHP: 80,                  // rocks crack fast — demolition is a tactic
@@ -204,6 +209,12 @@ var CONFIG_DEFAULTS = {
     sourceMinRadius: 100,          // rocks smaller than this pull too weakly to compute
     minAccel: 0.25,                // px/s^2 cutoff: beyond this the well ends (perf + sanity)
     maxAccel: 45,                  // clamp: no singularity slingshots at point-blank
+    wellReach: 2.7,                // absolute well radius = source r * this; the pull fades
+                                   // to zero across the outer 15%. Without this bound the
+                                   // titan's r^3 mass would drag the ENTIRE map into itself
+    rockWakeShell: 650,            // settled rocks can only be WOKEN within this many px of a
+                                   // source's SURFACE — an accretion shell, not hemispheric
+                                   // collapse (the titan's raw well covers half the map)
     rockWake: 3.0,                 // settled rock starts sliding only above this pull
     shipEscapeCap: 0.65,           // pull on a ship never exceeds this fraction of its own
                                    // max thrust accel — wells threaten, they never imprison
@@ -456,10 +467,28 @@ function generateTerrain(state, rng) {
   }
   function rockRadius() { var t = rng.next(); return lerp(T.asteroidRadius[0], T.asteroidRadius[1], t * t); }
 
-  // --- BIG asteroids first: they own the map, everything else flows around them.
+  // --- THE TITAN first: one colossal rock, ~5x a BIG one. Guaranteed every seed. ---
+  var bigs = [];
+  var tR = lerp(T.titanRadius[0], T.titanRadius[1], rng.next());
+  var tPlaced = false;
+  for (var tAtt = 0; tAtt < 80 && !tPlaced; tAtt++) {
+    var tx = rng.range(T.edgeMargin + tR, W - T.edgeMargin - tR);
+    var ty = rng.range(T.edgeMargin + tR, H - T.edgeMargin - tR);
+    if (dist(tx, ty, state.spawnA.x, state.spawnA.y) < T.titanSpawnClear + tR) continue;
+    if (dist(tx, ty, state.spawnB.x, state.spawnB.y) < T.titanSpawnClear + tR) continue;
+    bigs.push({ x: tx, y: ty, r: tR });
+    rocks.push({ x: tx, y: ty, r: tR });
+    tPlaced = true;
+  }
+  if (!tPlaced) { // centre always clears both spawns (they hug opposite arena edges)
+    bigs.push({ x: cx, y: cy, r: tR });
+    rocks.push({ x: cx, y: cy, r: tR });
+  }
+
+  // --- BIG asteroids next: they own the mid-scale, everything else flows around them.
   //     Every seed gets 1..bigCountMax — one lone monster or a spread of wells. ---
   var nBig = 1 + rng.int(Math.max(1, T.bigCountMax | 0));
-  var bigs = [];
+  var nBigPlaced = 0;
   for (var bg = 0; bg < nBig; bg++) {
     var tB = rng.next();
     if (nBig === 1) tB = 0.55 + 0.45 * tB;   // a lone monster leans monstrous
@@ -471,18 +500,34 @@ function generateTerrain(state, rng) {
       if (dist(bx, by, state.spawnA.x, state.spawnA.y) < T.bigSpawnClear + bR) continue;
       if (dist(bx, by, state.spawnB.x, state.spawnB.y) < T.bigSpawnClear + bR) continue;
       var clearB = true;
-      for (var bj = 0; bj < bigs.length; bj++)
-        if (dist(bx, by, bigs[bj].x, bigs[bj].y) < (bR + bigs[bj].r) * T.bigSeparation) { clearB = false; break; }
+      for (var bj = 0; bj < bigs.length; bj++) {
+        // pairs with the titan relax to 1.1: full bigSeparation against a 1600-radius
+        // rock would forbid most of the arena and starve the placement search
+        var sep = bigs[bj].r > T.bigRadius[1] * 1.5 ? 1.1 : T.bigSeparation;
+        if (dist(bx, by, bigs[bj].x, bigs[bj].y) < (bR + bigs[bj].r) * sep) { clearB = false; break; }
+      }
       if (!clearB) continue;
       bigs.push({ x: bx, y: by, r: bR });
       rocks.push({ x: bx, y: by, r: bR });
-      placed = true;
+      placed = true; nBigPlaced++;
     }
-    // hard guarantee: at least one big per seed. The arena centre always clears both
-    // spawns (they sit near opposite edges of the spawn axis through the centre).
-    if (!placed && bigs.length === 0) {
-      bigs.push({ x: cx, y: cy, r: bR });
-      rocks.push({ x: cx, y: cy, r: bR });
+    // hard guarantee: at least one BIG per seed besides the titan. Quarter points all
+    // clear both spawns; pick the first that also clears the titan and other bigs.
+    if (!placed && nBigPlaced === 0) {
+      var cand = [[W * 0.28, H * 0.28], [W * 0.72, H * 0.28], [W * 0.28, H * 0.72], [W * 0.72, H * 0.72], [cx, cy]];
+      for (var fc = 0; fc < cand.length; fc++) {
+        var fx = cand[fc][0], fy = cand[fc][1], okF = true;
+        if (dist(fx, fy, state.spawnA.x, state.spawnA.y) < T.bigSpawnClear + bR) okF = false;
+        if (dist(fx, fy, state.spawnB.x, state.spawnB.y) < T.bigSpawnClear + bR) okF = false;
+        for (var fj = 0; fj < bigs.length && okF; fj++)
+          if (dist(fx, fy, bigs[fj].x, bigs[fj].y) < bR + bigs[fj].r + 40) okF = false;
+        if (okF) {
+          bigs.push({ x: fx, y: fy, r: bR });
+          rocks.push({ x: fx, y: fy, r: bR });
+          nBigPlaced++;
+          break;
+        }
+      }
     }
   }
 
@@ -517,9 +562,18 @@ function generateTerrain(state, rng) {
 function makeAsteroid(state, x, y, r) {
   var cfg = state.config;
   var hp = cfg.asteroidHP * (r / cfg.asteroidHPRefRadius) * (r / cfg.asteroidHPRefRadius);
-  // lumpy deterministic outline (visual only; physics stays circular on r)
-  var nv = 9 + state.rng.int(5), shape = [];
-  for (var i = 0; i < nv; i++) shape.push(state.rng.range(0.72, 1.18));
+  // lumpy deterministic outline (visual only; physics stays circular on r).
+  // Two low-frequency harmonics carve continent-scale lobes, fine per-vertex grit
+  // roughens the edge; vertex count scales with radius so a titan isn't a decagon.
+  var nv = clamp(Math.round(r / 5) + 8, 12, 56), shape = [];
+  var k1 = 2 + state.rng.int(3), k2 = 5 + state.rng.int(4);
+  var p1 = state.rng.angle(), p2 = state.rng.angle();
+  var a1 = state.rng.range(0.06, 0.13), a2 = state.rng.range(0.03, 0.07);
+  for (var i = 0; i < nv; i++) {
+    var th = i * 2 * Math.PI / nv;
+    shape.push(clamp(1 + a1 * Math.sin(k1 * th + p1) + a2 * Math.sin(k2 * th + p2)
+                       + state.rng.range(-0.05, 0.05), 0.72, 1.2));
+  }
   return { id: state.nextId++, x: x, y: y, r: r, hp: hp, maxHp: hp, vx: 0, vy: 0,
            rot: state.rng.angle(), rotVel: 0, shape: shape, alive: true, moving: false };
 }
@@ -994,7 +1048,7 @@ function updateAsteroids(state, dt) {
    rocks (debris curls into the wells and accretes), settled rocks close enough that the
    pull beats rockWake (local creep, stable far field), and projectiles (torpedoes/bombs
    bend course but keep their design speed — guidance and lead-aim semantics survive). */
-var GVEC = { ax: 0, ay: 0 };
+var GVEC = { ax: 0, ay: 0, wakeOK: false };
 function gravitySources(state) {
   var GR = state.config.gravity;
   var out = [];
@@ -1005,13 +1059,20 @@ function gravitySources(state) {
     if (!o.alive || o.r < GR.sourceMinRadius) continue;
     var m = o.r * o.r * o.r;
     var soft = GR.softening * o.r;
-    out.push({ o: o, m: m, soft2: soft * soft, maxD2: (GR.G * m) / GR.minAccel });
+    // well ends at the earlier of the minAccel horizon and the bounded reach —
+    // an unbounded titan-mass well would swallow the whole map
+    var reach = o.r * GR.wellReach;
+    var maxD2 = Math.min((GR.G * m) / GR.minAccel, reach * reach);
+    out.push({ o: o, m: m, soft2: soft * soft, maxD2: maxD2,
+               reach: reach, fade0: reach * 0.85,
+               wakeD2: (o.r + GR.rockWakeShell) * (o.r + GR.rockWakeShell) });
   }
   return out;
 }
-/* Sum field accel at (x,y) into GVEC; excludeId skips a source pulling on itself. */
+/* Sum field accel at (x,y) into GVEC; excludeId skips a source pulling on itself.
+   GVEC.wakeOK: some contributing source is close enough to wake settled rocks. */
 function gravityAt(GR, srcs, x, y, excludeId) {
-  var ax = 0, ay = 0;
+  var ax = 0, ay = 0, wakeOK = false;
   for (var i = 0; i < srcs.length; i++) {
     var s = srcs[i];
     if (s.o.id === excludeId) continue;
@@ -1021,9 +1082,11 @@ function gravityAt(GR, srcs, x, y, excludeId) {
     var a = GR.G * s.m / (d2 + s.soft2);
     if (a > GR.maxAccel) a = GR.maxAccel;
     var d = Math.sqrt(d2);
+    if (d > s.fade0) a *= (s.reach - d) / (s.reach - s.fade0); // smooth edge, no cliff
+    if (d2 <= s.wakeD2) wakeOK = true;
     ax += (dx / d) * a; ay += (dy / d) * a;
   }
-  GVEC.ax = ax; GVEC.ay = ay;
+  GVEC.ax = ax; GVEC.ay = ay; GVEC.wakeOK = wakeOK;
 }
 function applyGravity(state, dt) {
   var GR = state.config.gravity;
@@ -1052,7 +1115,7 @@ function applyGravity(state, dt) {
     var g2 = GVEC.ax * GVEC.ax + GVEC.ay * GVEC.ay;
     if (g2 <= 0) continue;
     if (!o.moving) {
-      if (g2 < wake2) continue;             // far field stays settled: cover is dependable
+      if (g2 < wake2 || !GVEC.wakeOK) continue; // far field stays settled: cover is dependable
       // supported: resting against something on the down-well side (the source itself,
       // or the accretion pile stacked on it) — normal force holds it, don't stir it
       var gl = Math.sqrt(g2), gux = GVEC.ax / gl, guy = GVEC.ay / gl;
@@ -3170,13 +3233,18 @@ return api;
         if (!go.alive || go.r < massiveR) continue;
         var gm = go.r * go.r * go.r;
         var gsoft2 = (GRV.softening * go.r) * (GRV.softening * go.r);
+        var reach = go.r * (GRV.wellReach || 1e9); // wells are bounded — rings must be too
         var thrs = [4, 1.2];                       // px/s^2 contours: strong pull, well's edge
+        var prevRing = 0;
         for (var gt = 0; gt < thrs.length; gt++) {
           var rr2 = GRV.G * gm / thrs[gt] - gsoft2;
           if (rr2 <= go.r * go.r) continue;
+          var ringR = Math.min(Math.sqrt(rr2), reach);
+          if (ringR <= prevRing * 1.04) continue;  // both contours clamped to the reach: draw once
+          prevRing = ringR;
           g.strokeStyle = gt === 0 ? 'rgba(150,175,255,0.11)' : 'rgba(150,175,255,0.055)';
           g.lineWidth = 1 / scale;
-          g.beginPath(); g.arc(go.x, go.y, Math.sqrt(rr2), 0, 6.2832); g.stroke();
+          g.beginPath(); g.arc(go.x, go.y, ringR, 0, 6.2832); g.stroke();
         }
       }
     }

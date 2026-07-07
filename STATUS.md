@@ -4,12 +4,14 @@
 
 ## What's in the build (all verified)
 
-**BIG asteroids + gravity (new):**
-- **Every procedural seed carries 1–3 BIG asteroids** (r 220–380, vs 26–90 for ordinary rocks), placed first so clusters/lanes flow around them; arena grown 4400×3200 → 5600×4000 (rock counts rescaled) to make room.
+**TITAN + BIG asteroids + gravity (new):**
+- **Every procedural seed carries exactly one TITAN** (r 1150–1600, ~5× a BIG — up to 3200px across) **plus 1–3 BIG asteroids** (r 220–380, vs 26–90 for ordinary rocks), placed in that order so clusters/lanes flow around them; arena grown 4400×3200 → 8000×5600 and match timer 300s → 360s to give titan-scale maps transit room (rock counts rescaled).
+- Asteroid outlines: 12–56 vertices scaling with radius (two low-frequency harmonic lobes + fine grit) instead of the old 9–13 uniform-noise polygons — monsters no longer render as decagons.
+- Wells are **bounded**: pull fades to zero at `wellReach`×radius (the titan's raw r³ well would otherwise act map-wide), and settled rocks can only be woken within a `rockWakeShell` (650px) of a source's surface — accretion is a local shell, not hemispheric terrain collapse.
 - **Gravity**: rocks with r ≥ 100 (the BIGs + their first-gen fragments) are wells with mass r³, accel `G·r³/(d²+(0.5r)²)`, clamped/cutoff. Ships drift and must burn against it (heavies near a monster rock genuinely struggle); debris curls into the wells and **accretes** (settled rocks wake above a pull threshold unless supported down-well — far-field terrain never drifts, cover stays dependable); torpedoes/bombs bend course but keep design speed. Cinematic constant, deterministic (no RNG).
 - **Tuning**: gravity slider ×0–3 in the fleet-setup screen AND a live slider in the top bar (mutates `match.config.gravity.G` mid-match; restart keeps the tuned value). `__praedra.setGravity(mult)` for automation.
 - Renderer: massive rocks get a cratered look + faint field-contour rings (strong-pull and well-edge).
-- Perf: spatial grid now holds settled rocks only (movers scanned as a short list); grid rebuilds only on settle/wake/split flips. Small-fleet match ~430µs/tick.
+- Perf: spatial grid now holds settled rocks only (movers scanned as a short list); grid rebuilds only on settle/wake/split flips. Small-fleet match ~700µs/tick at titan scale (harness budget is per-tick now — titan-scale hunts are legitimately long in sim-seconds).
 - Anti-entombment set (found by adversarial batteries): ships shove settled pebbles (r < `collision.pushableRockRadius`) aside instead of being walled in by accretion shells; pull on a ship is capped at `gravity.shipEscapeCap` × its own thrust accel (wells threaten, never imprison — keeps the ×3 slider playable); rock-rock separation is mass-weighted (pebbles no longer bulldoze a monster rock across the map); the autopilot stall-breaker commits to one sidestep side per stall episode (picked away from the pinning rock) instead of dithering.
 
 **Sim (DOM-free, deterministic, force-resolving):**
