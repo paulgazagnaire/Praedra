@@ -579,7 +579,9 @@ function rocksNearSeg(state, ax, ay, bx, by, pad, fn) {
     var cell = g.cells[gy * g.cw + gx];
     for (var k = 0; k < cell.length; k++) {
       var o = cell[k];
-      if (o.gridStamp === stamp) continue;
+      // a settled rock killed mid-tick lingers in the cells until the next rebuild —
+      // without this check its corpse still blocks shots and shoves its own fragments
+      if (!o.alive || o.gridStamp === stamp) continue;
       o.gridStamp = stamp;
       if (fn(o)) return;
     }
