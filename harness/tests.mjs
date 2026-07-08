@@ -347,7 +347,11 @@ test('wallclock', () => {
   assert(r && r.winner !== undefined, 'runMatch returned no result object');
   const usPerTick = (ms * 1000) / r.ticks;
   assert(usPerTick < 2000, `small-fleet match cost ${usPerTick.toFixed(0)} us/tick (budget 2000 us/tick)`);
-  assert(ms < 20000, `full match took ${ms} ms wall-clock (hard budget 20 s at the 360 s tick cap)`);
+  // per-tick is THE contract bound (SIM_CONTRACT: budget wall-clock per tick, not per match);
+  // the absolute ceiling only guards catastrophic blowups. It used to sit at 20s — a mere ~4%
+  // above the measured runtime once whole-well gravity landed — and would flake on any loaded
+  // runner without a real defect.
+  assert(ms < 40000, `full match took ${ms} ms wall-clock (catastrophic-blowup ceiling 40 s)`);
 });
 
 // ------------------------------------------------------------- new: detection
@@ -897,18 +901,49 @@ test('battleship-durability', () => {
 // spawn-gap fix are all pure/deterministic). Same seed twice -> identical result.
 test('determinism-with-battleship', () => {
   const opts = () => ({
-    seed: 5,
-    overrides: { terrainDensity: 0.5 },
+    // seed 1: verified the heavy rail actually CONNECTS within the cap (450 hrail dmg by 150s;
+    // most nearby seeds resolve on torpedoes with the turrets never landing a hit)
+    seed: 1,
+    // 150s cap: determinism is proven by the comparison, not the match length — running the
+    // full 360s twice (~29s wall) bought nothing. The assertion below guarantees the turret
+    // slew/stagger/fire RNG path is genuinely exercised before the cap.
+    overrides: { terrainDensity: 0.5, matchTimerSeconds: 150 },
     teamA: ['battleship', 'destroyer', 'frigate', 'frigate'],
     teamB: ['destroyer', 'destroyer', 'frigate', 'frigate'],
   });
   const r1 = Praedra.runMatch(opts());
   const r2 = Praedra.runMatch(opts());
+  assert((r1.stats.dmgTo.B.hrail || 0) > 0,
+    'the heavy rail never dealt damage in the determinism window — the seed/cap no longer ' +
+    'exercises the turret RNG path; pick a seed where the turrets connect');
   assert(isDeepStrictEqual(r1, r2),
     'same seed + config + a battleship fleet produced different results — turret slew/stagger/fire not deterministic');
   const m = Praedra.createMatch(opts());
   assert(m.state.ships.some((s) => s.team === 'A' && s.cls === 'battleship'),
     'determinism fleet spawned no battleship — guards a silent spawn regression');
+});
+
+// TEST — BATTLESHIP FLEET REAL-MATCH EFFECTIVENESS (smoke guard, NOT a balance lock). The heavy-rail
+// turrets are lethal in isolation, but a raw battleship fleet in cluttered createMatch armadas used to
+// deal ~0 enemy damage: the slow radius-78 / turnMax-0.14 hull fell to the rear past terrain LOS and,
+// above all, was dragged into the titan/BIG gravity wells and ground to death (by:'rock') before it
+// ever fired — measured median BB damage 0 vs capital fleets. The aiBattleship fixes (engagement-aware
+// standoff + noLos cover-clear + the gravity-well SKIRT, all config-driven) restored it: a 42-pt
+// two-battleship fleet now puts real heavy-rail damage on a RAILGUN fleet. Seeds 1 and 5 are picked
+// because they EXERCISE the fix — on the pre-fix (git HEAD) sim the BB was entombed and dealt 0 + 0 on
+// both; on this build it deals 960 + 270 = 1230. Threshold 600 is a wide-margin smoke bound (catches a
+// regression back to the entombed / rock-shooting behaviour without pinning the balance, which still
+// needs the deep flip retune). BB enemy damage == dmgTo.B.hrail (only team A carries battleships).
+test('battleship-fleet-effectiveness', () => {
+  const bbFleet = ['battleship', 'battleship', 'frigate', 'frigate', 'frigate', 'frigate']; // 30 + 12 = 42 pts
+  let total = 0;
+  for (const seed of [1, 5]) {
+    const r = Praedra.runMatch({ seed, overrides: { terrainDensity: 0.3 }, teamA: bbFleet, teamB: 'RAILGUN' });
+    total += (r.stats && r.stats.dmgTo && r.stats.dmgTo.B && r.stats.dmgTo.B.hrail) || 0;
+  }
+  assert(total > 600,
+    `BB fleet dealt only ${Math.round(total)} heavy-rail dmg vs RAILGUN across seeds 1+5 (want >600; ` +
+    'measured ~1230 here, 0 on the pre-fix sim when the BB is entombed/rear-parked) — effectiveness regressed');
 });
 
 // ------------------------------------------ new: capital pathing / fire-discipline
@@ -1058,9 +1093,12 @@ test('lane-clear-combat-priority', () => {
   assert(dEnemy < bombVis && dEnemy > cfg.bomb.launchRange && dEnemy < cfg.heavyRail.maxRange,
     `combat-priority enemy distance ${dEnemy} not in the intended band ` +
     `(bomber vis ${bombVis}, bomb range ${cfg.bomb.launchRange}, heavyRail range ${cfg.heavyRail.maxRange})`);
-  function run(withEnemy) {
+  function run(enemy) { // enemy: null | 'bomber' | 'destroyer'
     const ships = [{ cls: 'battleship', team: 'A', x: 2200, y: 2800, heading: 0 }];
-    if (withEnemy) ships.push(pinned('bomber', 'B', 2200, 2800 + dEnemy, -Math.PI / 2));
+    // the bomber is class-gated (turrets can NEVER engage it); the destroyer sits abeam with a
+    // clear lane (trackable: a legal turret target -> combat owns the gun)
+    if (enemy === 'bomber') ships.push(pinned('bomber', 'B', 2200, 2800 + dEnemy, -Math.PI / 2));
+    if (enemy === 'destroyer') ships.push(pinned('destroyer', 'B', 2200, 2800 + 1000, -Math.PI / 2));
     const m = Praedra.createScenario({ seed: 5, ships, asteroids: [{ x: 3000, y: 2800, r: 100 }] });
     const bb = findShip(m, 'A', 'battleship');
     Praedra.issueOrder(m, [bb.id], { type: 'move', x: 6000, y: 2800 });
@@ -1068,11 +1106,19 @@ test('lane-clear-combat-priority', () => {
     for (let i = 0; i < 22 * TICK_RATE && !m.done; i++) { m.step(); if (m.state.detA.length) detected = true; }
     return { splits: m.state.stats.splits, detected };
   }
-  const withE = run(true), ctrl = run(false);
-  assert(withE.detected, 'combat-priority enemy was never detected — the gate test would pass for the wrong reason');
+  const withTrackable = run('destroyer'), withLight = run('bomber'), ctrl = run(null);
+  assert(withTrackable.detected && withLight.detected,
+    'combat-priority enemy was never detected — the gate test would pass for the wrong reason');
   assert(ctrl.splits >= 1, `control (no enemy) failed to demolish the blocking rock (splits ${ctrl.splits}) — lane-clearing not firing`);
-  assert(withE.splits === 0,
-    `a detected enemy in weapon range did NOT suppress rock fire (splits ${withE.splits}) — combat-priority gate leaking`);
+  // a TRACKABLE target in range owns the turrets: no rock fire
+  assert(withTrackable.splits === 0,
+    `a detected trackable capital in weapon range did NOT suppress rock fire (splits ${withTrackable.splits}) — combat-priority gate leaking`);
+  // an UNTRACKABLE light must NOT suppress lane-clearing: the class gate means the turrets can
+  // never engage it, and an ordered battleship stranded behind a rock by a loitering bomber it
+  // cannot shoot is exactly the failure this guards against
+  assert(withLight.splits >= 1,
+    `a class-gated bomber the turrets can never hit suppressed lane-clearing (splits ${withLight.splits}) — ` +
+    'the battleship combat-priority gate must only respect trackable targets');
 });
 
 runAll();
