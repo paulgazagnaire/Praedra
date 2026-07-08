@@ -1088,10 +1088,15 @@ function autopilot(state, ship, dt) {
       // pad for this rock or the probe deflects the ship around it forever
       if (rr > o.r + def.radius + AI.avoidMargin && dist(goal.x, goal.y, o.x, o.y) < rr)
         rr = o.r + def.radius + AI.avoidMargin;
-      // LEAD moving debris: probe against where the fragment will be, not where it is —
-      // a shard closing head-on used to be invisible until contact (top fighter killer)
+      // LEAD moving debris — but only shards CLOSING on us: a fragment closing head-on used
+      // to be invisible to the probe until contact (top fighter killer), while leading
+      // receding debris just balloons the avoidance bubble and stalls transits through a
+      // freshly-shattered wall (the fragments fly OUT of the lane being cleared)
       var ox = o.x, oy = o.y;
-      if (o.moving && (o.vx || o.vy)) { ox += o.vx * probeT * 0.5; oy += o.vy * probeT * 0.5; }
+      if (o.moving && (o.vx || o.vy) &&
+          (ship.x - o.x) * o.vx + (ship.y - o.y) * o.vy > 0) {
+        ox += o.vx * probeT * 0.5; oy += o.vy * probeT * 0.5;
+      }
       var ddx = ox - ship.x, ddy = oy - ship.y;
       var dd = Math.sqrt(ddx * ddx + ddy * ddy);
       if (dd - rr > sp * probeT) return false;
