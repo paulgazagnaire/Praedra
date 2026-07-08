@@ -1088,14 +1088,17 @@ function autopilot(state, ship, dt) {
       // pad for this rock or the probe deflects the ship around it forever
       if (rr > o.r + def.radius + AI.avoidMargin && dist(goal.x, goal.y, o.x, o.y) < rr)
         rr = o.r + def.radius + AI.avoidMargin;
-      // LEAD moving debris — but only shards CLOSING on us: a fragment closing head-on used
-      // to be invisible to the probe until contact (top fighter killer), while leading
-      // receding debris just balloons the avoidance bubble and stalls transits through a
-      // freshly-shattered wall (the fragments fly OUT of the lane being cleared)
+      // LEAD moving debris for LIGHTS, and only shards CLOSING on us: a fragment closing
+      // head-on used to be invisible to the probe until contact (top fighter killer in the
+      // round-1 diagnostics). Lights only — a capital's inflated avoidMult margin already
+      // covers drift, and leading its own outward-bursting lane-clearing fragments stalled
+      // wall transits. Short horizon (0.5s): drag 0.35 bleeds fragment speed fast, so a
+      // linear long-lead lands far past where the shard will really be.
       var ox = o.x, oy = o.y;
-      if (o.moving && (o.vx || o.vy) &&
+      if (o.moving && isLight(ship) && (o.vx || o.vy) &&
           (ship.x - o.x) * o.vx + (ship.y - o.y) * o.vy > 0) {
-        ox += o.vx * probeT * 0.5; oy += o.vy * probeT * 0.5;
+        var leadT = Math.min(probeT * 0.5, 0.5);
+        ox += o.vx * leadT; oy += o.vy * leadT;
       }
       var ddx = ox - ship.x, ddy = oy - ship.y;
       var dd = Math.sqrt(ddx * ddx + ddy * ddy);
