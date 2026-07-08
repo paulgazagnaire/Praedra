@@ -1179,12 +1179,15 @@ function autopilot(state, ship, dt) {
   var burnAng = Math.atan2(awy, awx);
   var thrWant = clamp(awm / accel, 0, 1);
   if (goal.faceLock && goal.face != null) {
-    // weapon-locked: never rotate the hull away from the firing bearing — thrust only with
-    // whatever component the current heading offers. Aim beats maneuver until the lock lifts
-    // (role AI only locks while a shot is imminent, so braking happens in gun dead-time).
+    // weapon-locked: never rotate the hull away from the firing bearing — thrust the
+    // PROJECTION of the desired burn (which already contains the gravity hover) onto the
+    // locked heading. A hard angle gate here zeroed the hover term and sank faceLocked
+    // destroyers into well rims; the projection gives everything the physics allows.
+    // Aim beats maneuver until the lock lifts (role AI only locks while a shot is
+    // imminent, so braking happens in gun dead-time).
     faceToward(ship, goal.face, dt);
-    var ferr = Math.abs(normAngle(burnAng - ship.heading));
-    ship.ctl.thrust = ferr < 0.35 ? thrWant : (ferr < 0.85 ? thrWant * 0.35 : 0);
+    var alongH = (awx * Math.cos(ship.heading) + awy * Math.sin(ship.heading)) / accel;
+    ship.ctl.thrust = clamp(alongH, 0, 1);
     return;
   }
   burnToward(ship, burnAng, thrWant, dt);
@@ -2296,7 +2299,10 @@ function ambushNav(state, ship, huntPt) {
   var cfg = state.config, AI = cfg.ai, D = cfg.detection;
   if (!smartTeam(state, ship.team)) return null;
   var lc = state.lastContact[ship.team];
-  if (!lc || state.time - lc.t > D.memorySeconds * 2.5) { ship.ai.ambushUntil = 0; return null; }
+  if (!lc || state.time - lc.t > D.memorySeconds * 2.5) {
+    ship.ai.ambush = null; ship.ai.ambushUntil = 0;  // stale contact: drop the lurk point too
+    return null;
+  }
   var dc = dist(ship.x, ship.y, lc.x, lc.y);
   if (dc > AI.ambushContactMax || dc < 420) return null; // too far to lurk / already on top of it
   if (state.time < (ship.ai.ambushCoolT || 0)) return null;
