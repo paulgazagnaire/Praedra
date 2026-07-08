@@ -205,8 +205,10 @@ var CONFIG_DEFAULTS = {
   // accel toward a source rock = G * r^3 / (d^2 + (softening*r)^2), clamped to maxAccel.
   // Mass goes with r^3 so surface pull scales with radius: only the BIG asteroids (and
   // their first-generation fragments) matter — a pebble's well is beneath minAccel.
-  // Ships, drifting rocks, torpedoes and bombs all feel it; settled terrain only starts
-  // sliding above rockWake, so the far field stays put and cover stays dependable.
+  // Ships, drifting rocks, torpedoes and bombs all feel it; EVERYTHING inside a well
+  // responds — a settled rock anywhere in a well wakes once the pull beats rockWake
+  // (no distance shell). Only the sub-rockWake fringe (where creep would stall against
+  // drag and re-settle) and down-well-supported piles hold still.
   gravity: {
     G: 0.045,                      // the one true knob (UI slider scales it live)
     softening: 0.5,                // core softening length as a fraction of source radius
@@ -216,10 +218,16 @@ var CONFIG_DEFAULTS = {
     wellReach: 2.7,                // absolute well radius = source r * this; the pull fades
                                    // to zero across the outer 15%. Without this bound the
                                    // titan's r^3 mass would drag the ENTIRE map into itself
-    rockWakeShell: 650,            // settled rocks can only be WOKEN within this many px of a
-                                   // source's SURFACE — an accretion shell, not hemispheric
-                                   // collapse (the titan's raw well covers half the map)
-    rockWake: 3.0,                 // settled rock starts sliding only above this pull
+    rockWakeShell: 650,            // TERRAIN PLACEMENT ONLY: generateTerrain keeps BIGs this
+                                   // far outside the titan's surface so they anchor the layout
+                                   // instead of spawning mid-fall. (Its old wake-gating role
+                                   // is gone: rocks wake ANYWHERE in a well — see rockWake)
+    rockWake: 1.2,                 // settled rock starts sliding above this pull, anywhere in
+                                   // the well. The floor is drag-derived: below ~0.7 px/s^2
+                                   // terminal creep (a/drag) sits under the 2 px/s settle
+                                   // threshold and a woken rock just re-settles (thrash).
+                                   // 1.2 = the rendered "well's edge" ring: what you see
+                                   // creeping is what creeps
     shipEscapeCap: 0.65,           // pull on a ship never exceeds this fraction of its own
                                    // max thrust accel — wells threaten, they never imprison
                                    // (also what keeps the x3 slider playable)
@@ -635,13 +643,28 @@ function contourR(o, x, y) {
   if (i >= n) i = n - 1;
   return o.r * lerp(o.shape[i], o.shape[(i + 1) % n], f - i);
 }
+/* Cached pair contact distance: contourR(p toward q) + contourR(q toward p), memoized
+   a few ticks. Gravity-fed accretion fields evaluate thousands of identical near-pairs
+   every tick and contourR's atan2 dominated the profile. Within the TTL the relative
+   bearing of a creeping pair drifts by ~a pixel, so the cached sum is within noise of
+   exact (and it converges to exact once a pair comes to rest). Cache is wiped
+   periodically in stepMatch so dead pairs don't accumulate. */
+function pairContact(state, p, q) {
+  var key = p.id < q.id ? p.id * 1000000 + q.id : q.id * 1000000 + p.id;
+  var e = state.contactCache[key];
+  if (e !== undefined && state.tick - e.t < 4) return e.rr;
+  var rr = contourR(p, q.x, q.y) + contourR(q, p.x, p.y);
+  state.contactCache[key] = { t: state.tick, rr: rr };
+  return rr;
+}
 
 /* ---------------- Spatial grid for rock queries (performance only, no gameplay) ----------------
-   The grid holds SETTLED rocks only and is rebuilt when a rock's settled/moving state
-   flips (state.gridDirty). Moving rocks live in state.movers — a short list refreshed
-   every tick and scanned linearly with a bbox reject. Gravity keeps dozens of rocks
-   creeping into the wells for minutes at a stretch; rebuilding the whole grid every
-   tick for them dominated the profile. */
+   The STATIC grid holds SETTLED rocks only and is rebuilt when a rock's settled/moving
+   state flips (state.gridDirty). Moving rocks live in state.movers AND a second, coarse
+   MOVER grid (state.moverGrid) rebuilt every tick — cheap, movers are the short list.
+   The mover grid matters because now that gravity wakes whole fields (hundreds of rocks
+   creeping into the wells at once), the old linear movers scan per query turned
+   O(movers^2) in dense regions and blew the per-tick budget. */
 var GRID_CELL = 300;
 function rebuildGrid(state) {
   var g = state.grid;
@@ -665,11 +688,50 @@ function rebuildGrid(state) {
     for (var gy = y0; gy <= y1; gy++) for (var gx = x0; gx <= x1; gx++) g.cells[gy * g.cw + gx].push(o);
   }
 }
+/* Movers bucket grid: rebuilt EVERY tick from state.movers (movers change position
+   constantly, so per-tick rebuild beats incremental upkeep). Queried by rocksNearSeg
+   alongside the static grid. Bboxes get +8px slack so a mover's sub-cell drift within
+   the tick can't slip a contact past a query. */
+function moverGridInsert(state, o) {
+  var mg = state.moverGrid;
+  if (!mg) return;
+  var re = o.r * 1.22 + 8; // max contour radius + a tick of drift
+  var x0 = Math.max(0, Math.floor((o.x - re) / GRID_CELL)), x1 = Math.min(mg.cw - 1, Math.floor((o.x + re) / GRID_CELL));
+  var y0 = Math.max(0, Math.floor((o.y - re) / GRID_CELL)), y1 = Math.min(mg.ch - 1, Math.floor((o.y + re) / GRID_CELL));
+  for (var gy = y0; gy <= y1; gy++) for (var gx = x0; gx <= x1; gx++) mg.cells[gy * mg.cw + gx].push(o);
+}
+function rebuildMoverGrid(state) {
+  var mg = state.moverGrid;
+  if (!mg) {
+    mg = state.moverGrid = {
+      cw: Math.max(1, Math.ceil(state.config.arena.w / GRID_CELL)),
+      ch: Math.max(1, Math.ceil(state.config.arena.h / GRID_CELL)),
+      cells: [],
+    };
+    for (var i = 0; i < mg.cw * mg.ch; i++) mg.cells.push([]);
+  }
+  var cells = mg.cells, cw = mg.cw, ch = mg.ch;
+  for (var c = 0; c < cells.length; c++) cells[c].length = 0;
+  // inlined insert (this runs every tick over every mover — call/property overhead adds up)
+  var mv = state.movers;
+  for (var m = 0; m < mv.length; m++) {
+    var o = mv[m];
+    var re = o.r * 1.22 + 8;
+    var x0 = ((o.x - re) / GRID_CELL) | 0; if (x0 < 0) x0 = 0;
+    var x1 = ((o.x + re) / GRID_CELL) | 0; if (x1 > cw - 1) x1 = cw - 1;
+    var y0 = ((o.y - re) / GRID_CELL) | 0; if (y0 < 0) y0 = 0;
+    var y1 = ((o.y + re) / GRID_CELL) | 0; if (y1 > ch - 1) y1 = ch - 1;
+    for (var gy = y0; gy <= y1; gy++) for (var gx = x0; gx <= x1; gx++) cells[gy * cw + gx].push(o);
+  }
+}
 /* A rock that starts (or resumes) moving leaves the static grid: track it and mark
-   the grid for rebuild. Call every time code flips o.moving from false to true. */
+   the grid for rebuild. Call every time code flips o.moving from false to true.
+   Also stamped into the mover grid immediately so a fragment spawned or a rock woken
+   MID-tick is visible to queries this same tick (load-bearing for splitAsteroid). */
 function rockWoke(state, o) {
   state.gridDirty = true;
   if (state.movers) state.movers.push(o);
+  moverGridInsert(state, o);
 }
 /* Visit live rocks near the (padded) segment bbox; fn returning true stops the walk. */
 function rocksNearSeg(state, ax, ay, bx, by, pad, fn) {
@@ -682,15 +744,33 @@ function rocksNearSeg(state, ax, ay, bx, by, pad, fn) {
   var xmin = Math.min(ax, bx) - pad, xmax = Math.max(ax, bx) + pad;
   var ymin = Math.min(ay, by) - pad, ymax = Math.max(ay, by) + pad;
   var stamp = ++g.stamp;
-  // moving rocks first: short list, bbox reject (they are NOT in the cells)
-  var mv = state.movers;
-  if (mv) for (var m = 0; m < mv.length; m++) {
-    var mo = mv[m];
-    if (!mo.alive || mo.gridStamp === stamp) continue;
-    var mre = mo.r * 1.22; // bbox by max contour radius (same reason as rebuildGrid)
-    if (mo.x + mre < xmin || mo.x - mre > xmax || mo.y + mre < ymin || mo.y - mre > ymax) continue;
-    mo.gridStamp = stamp;
-    if (fn(mo)) return;
+  // moving rocks first, via the per-tick mover grid (linear-scan fallback only for
+  // states that have never stepped). Whole creeping fields made the flat scan O(n^2).
+  var mg = state.moverGrid;
+  if (mg) {
+    var mx0 = Math.max(0, Math.floor(xmin / GRID_CELL));
+    var mx1 = Math.min(mg.cw - 1, Math.floor(xmax / GRID_CELL));
+    var my0 = Math.max(0, Math.floor(ymin / GRID_CELL));
+    var my1 = Math.min(mg.ch - 1, Math.floor(ymax / GRID_CELL));
+    for (var mgy = my0; mgy <= my1; mgy++) for (var mgx = mx0; mgx <= mx1; mgx++) {
+      var mcell = mg.cells[mgy * mg.cw + mgx];
+      for (var mk = 0; mk < mcell.length; mk++) {
+        var mo = mcell[mk];
+        if (!mo.alive || mo.gridStamp === stamp) continue;
+        mo.gridStamp = stamp;
+        if (fn(mo)) return;
+      }
+    }
+  } else {
+    var mv = state.movers;
+    if (mv) for (var m = 0; m < mv.length; m++) {
+      var mo2 = mv[m];
+      if (!mo2.alive || mo2.gridStamp === stamp) continue;
+      var mre = mo2.r * 1.22; // bbox by max contour radius (same reason as rebuildGrid)
+      if (mo2.x + mre < xmin || mo2.x - mre > xmax || mo2.y + mre < ymin || mo2.y - mre > ymax) continue;
+      mo2.gridStamp = stamp;
+      if (fn(mo2)) return;
+    }
   }
   var x0 = Math.max(0, Math.floor(xmin / GRID_CELL));
   var x1 = Math.min(g.cw - 1, Math.floor(xmax / GRID_CELL));
@@ -1141,6 +1221,10 @@ function updateAsteroids(state, dt) {
   for (var a2 = 0; a2 < A.length; a2++) {
     var p = A[a2];
     if (!p.alive || !p.moving) continue;
+    // creeping rocks collide-check every 2nd tick (staggered by id): gravity keeps whole
+    // fields drifting at <0.5px/tick where penetration risk is nil, and this pass is the
+    // per-tick hot loop. Fast debris (shatter bursts) keeps the every-tick check.
+    if ((p.vx * p.vx + p.vy * p.vy) < 900 && ((state.tick + p.id) & 1)) continue;
     rocksNearSeg(state, p.x, p.y, p.x, p.y, p.r * 1.25 + 6, function (q) {
       if (q.id === p.id) return false;
       if (q.moving && q.id < p.id) return false;  // mover-mover pair: handled once, from the lower id
@@ -1148,7 +1232,7 @@ function updateAsteroids(state, dt) {
       var d2 = dx * dx + dy * dy;
       var rrMax = (p.r + q.r) * 1.22;             // cheap bound, then exact contour:
       if (d2 >= rrMax * rrMax || d2 < 1e-9) return false;
-      var rr = contourR(p, q.x, q.y) + contourR(q, p.x, p.y); // accretion hugs the lumps
+      var rr = pairContact(state, p, q);          // accretion hugs the lumps (cached contour)
       if (d2 >= rr * rr) return false;
       var d = Math.sqrt(d2), nx = dx / d, ny = dy / d;
       var mp = p.r * p.r, mq = q.r * q.r;
@@ -1182,9 +1266,10 @@ function updateAsteroids(state, dt) {
    Sources: live rocks with r >= gravity.sourceMinRadius (the BIG asteroids + their
    first-generation fragments). Mass = r^3, accel = G*m/(d^2 + (softening*r)^2), clamped.
    Bodies: ships (autopilot fights the drift — that IS the navigation impact), drifting
-   rocks (debris curls into the wells and accretes), settled rocks close enough that the
-   pull beats rockWake (local creep, stable far field), and projectiles (torpedoes/bombs
-   bend course but keep their design speed — guidance and lead-aim semantics survive). */
+   rocks (debris curls into the wells and accretes), settled rocks ANYWHERE in a well
+   where the pull beats rockWake (whole fields creep and accrete — nothing in a well is
+   exempt; only down-well-supported piles and the sub-wake fringe rest), and projectiles
+   (torpedoes/bombs bend course but keep design speed — guidance/lead-aim survive). */
 var GVEC = { ax: 0, ay: 0, wakeOK: false };
 function gravitySources(state) {
   var GR = state.config.gravity;
@@ -1201,15 +1286,14 @@ function gravitySources(state) {
     var reach = o.r * GR.wellReach;
     var maxD2 = Math.min((GR.G * m) / GR.minAccel, reach * reach);
     out.push({ o: o, m: m, soft2: soft * soft, maxD2: maxD2,
-               reach: reach, fade0: reach * 0.85,
-               wakeD2: (o.r + GR.rockWakeShell) * (o.r + GR.rockWakeShell) });
+               reach: reach, fade0: reach * 0.85 });
   }
   return out;
 }
 /* Sum field accel at (x,y) into GVEC; excludeId skips a source pulling on itself.
-   GVEC.wakeOK: some contributing source is close enough — and strictly BIGGER than
-   bodyR — to wake a settled rock (pebbles accrete onto monsters; a monster is never
-   stirred by its lessers, so the titan stays the map's fixed anchor). */
+   GVEC.wakeOK: some contributing source is strictly BIGGER than bodyR — anything in a
+   well falls toward what out-masses it (pebbles onto BIGs, BIGs onto the titan), but a
+   monster is never stirred by its lessers, so the titan stays the map's fixed anchor. */
 function gravityAt(GR, srcs, x, y, excludeId, bodyR) {
   var ax = 0, ay = 0, wakeOK = false;
   for (var i = 0; i < srcs.length; i++) {
@@ -1222,7 +1306,7 @@ function gravityAt(GR, srcs, x, y, excludeId, bodyR) {
     if (a > GR.maxAccel) a = GR.maxAccel;
     var d = Math.sqrt(d2);
     if (d > s.fade0) a *= (s.reach - d) / (s.reach - s.fade0); // smooth edge, no cliff
-    if (d2 <= s.wakeD2 && s.o.r > bodyR) wakeOK = true;
+    if (s.o.r > bodyR) wakeOK = true;
     ax += (dx / d) * a; ay += (dy / d) * a;
   }
   GVEC.ax = ax; GVEC.ay = ay; GVEC.wakeOK = wakeOK;
@@ -1250,11 +1334,15 @@ function applyGravity(state, dt) {
   for (i = 0; i < A.length; i++) {
     var o = A[i];
     if (!o.alive) continue;
+    // settled rocks: run the wake evaluation every 3rd tick, staggered by id — with the
+    // shell gone, WHOLE fields are wake-eligible and a per-tick field+support check for
+    // every parked rock is pure waste. A <=2-tick wake latency is invisible at creep speed.
+    if (!o.moving && ((state.tick + o.id) % 3) !== 0) continue;
     gravityAt(GR, srcs, o.x, o.y, o.id, o.r);
     var g2 = GVEC.ax * GVEC.ax + GVEC.ay * GVEC.ay;
     if (g2 <= 0) continue;
     if (!o.moving) {
-      if (g2 < wake2 || !GVEC.wakeOK) continue; // far field stays settled: cover is dependable
+      if (g2 < wake2 || !GVEC.wakeOK) continue; // sub-wake fringe: creep would stall on drag
       // supported: resting against something on the down-well side (the source itself,
       // or the accretion pile stacked on it) — normal force holds it, don't stir it
       var gl = Math.sqrt(g2), gux = GVEC.ax / gl, guy = GVEC.ay / gl;
@@ -1262,8 +1350,11 @@ function applyGravity(state, dt) {
       rocksNearSeg(state, o.x, o.y, o.x, o.y, o.r * 1.25 + 6, function (q) {
         if (q.id === o.id) return false;
         var ddx = q.x - o.x, ddy = q.y - o.y;
-        var reach2 = contourR(o, q.x, q.y) + contourR(q, o.x, o.y) + 4; // contact on the contour
-        if (ddx * ddx + ddy * ddy > reach2 * reach2) return false;
+        var dd2 = ddx * ddx + ddy * ddy;
+        var loose = (o.r + q.r) * 1.22 + 4;       // cheap bound before the contour math
+        if (dd2 > loose * loose) return false;
+        var reach2 = pairContact(state, o, q) + 4; // contact on the contour (cached)
+        if (dd2 > reach2 * reach2) return false;
         if (ddx * gux + ddy * guy > 0) { supported = true; return true; }
         return false;
       });
@@ -2587,7 +2678,10 @@ function stepMatch(match) {
     rebuildGrid(state);
     state.gridDirty = false;
   }
+  rebuildMoverGrid(state); // every tick: movers relocate constantly, the list is short
   if (state.tick % 6 === 0) state.losCache = {};
+  if (state.tick % 90 === 0) state.contactCache = {}; // entries carry their own TTL; the
+                                                      // wipe just stops dead pairs piling up
 
   // alive rosters (stable order)
   state.aliveA = []; state.aliveB = [];
@@ -2644,7 +2738,7 @@ function baseState(seed, overrides) {
     config: config, rng: rng, seed: seed,
     tick: 0, time: 0, nextId: 1,
     ships: [], shipById: {}, asteroids: [], torps: [], bombs: [], movers: [],
-    events: [], losCache: {}, damage: { A: 0, B: 0 },
+    events: [], losCache: {}, contactCache: {}, damage: { A: 0, B: 0 },
     stats: { railShots: 0, railHitsShip: 0, railHitsRock: 0,
              torpsFired: { A: 0, B: 0 }, torpsPD: { A: 0, B: 0 }, torpsHit: { A: 0, B: 0 },
              bombsFired: { A: 0, B: 0 }, bombsPD: { A: 0, B: 0 }, bombsHitShip: { A: 0, B: 0 },
@@ -3427,7 +3521,9 @@ return api;
         var gm = go.r * go.r * go.r;
         var gsoft2 = (GRV.softening * go.r) * (GRV.softening * go.r);
         var reach = go.r * (GRV.wellReach || 1e9); // wells are bounded — rings must be too
-        var thrs = [4, 1.2];                       // px/s^2 contours: strong pull, well's edge
+        var thrs = [4, GRV.rockWake || 1.2];       // px/s^2 contours: strong pull, and the
+                                                   // wake threshold — the ring inside which
+                                                   // settled rocks actually start to creep
         var prevRing = 0;
         for (var gt = 0; gt < thrs.length; gt++) {
           var rr2 = GRV.G * gm / thrs[gt] - gsoft2;

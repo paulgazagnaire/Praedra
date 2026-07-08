@@ -605,6 +605,47 @@ test('gravity-pulls-ships', () => {
     `gravity.G = 0 but the ship drifted ${off.drift.toFixed(0)}px — hold-at-rest should stay at rest`);
 });
 
+// EVERYTHING inside a well responds to gravity: the old 650px surface wake-shell is
+// gone and the wake threshold sits just above the drag/settle stall boundary. Two
+// regressions that FAILED under the old rules:
+// (a) a pebble 2500px from a titan-scale rock's CENTER — far outside the old shell
+//     (surface + 650 = 1850) but inside the well (reach 2.7r = 3240) — must wake and fall;
+// (b) a pebble 700px from an r=300 source (pull ~2.2 px/s^2, below the OLD rockWake 3.0)
+//     must now creep inward.
+test('gravity-wakes-whole-well', () => {
+  const cfg = Praedra.defaultConfig();
+  assert(cfg.gravity.rockWake < 2.0,
+    `gravity.rockWake is ${cfg.gravity.rockWake} — whole-well wake expects the low threshold`);
+
+  const far = Praedra.createScenario({
+    seed: 33,
+    ships: [],
+    asteroids: [{ x: 4000, y: 2800, r: 1200 }, { x: 6500, y: 2800, r: 40 }],
+  });
+  const fp0 = far.state.asteroids.find((o) => o.r < 100);
+  const fx0 = fp0.x;
+  stepSeconds(far, 12);
+  const fp1 = far.state.asteroids.find((o) => o.r < 100);
+  assert(fp1 && fp1.alive, 'far-field pebble vanished from a rocks-only scenario');
+  assert(fx0 - fp1.x > 100,
+    `pebble 2500px out (old shell ended at 1850) fell only ${(fx0 - fp1.x).toFixed(1)}px in 12s — ` +
+    'far-field rocks are still not affected by gravity');
+  const titan = far.state.asteroids.find((o) => o.r >= 1000);
+  assert(titan.x === 4000 && titan.y === 2800, 'the titan itself moved — it must stay the fixed anchor');
+
+  const mid = Praedra.createScenario({
+    seed: 34,
+    ships: [],
+    asteroids: [{ x: MID.x, y: MID.y, r: 300 }, { x: MID.x + 700, y: MID.y, r: 30 }],
+  });
+  const mp0 = mid.state.asteroids.find((o) => o.r < 100);
+  const mx0 = mp0.x;
+  stepSeconds(mid, 15);
+  const mp1 = mid.state.asteroids.find((o) => o.r < 100);
+  assert(mx0 - mp1.x > 40,
+    `pebble under ~2.2 px/s^2 pull (old rockWake 3.0 ignored it) crept only ${(mx0 - mp1.x).toFixed(1)}px in 15s`);
+});
+
 // Accretion rests on the CONTOUR, not the bounding circle: a pebble that falls onto
 // a massive rock must settle at the interpolated shape radius toward its resting
 // bearing (SIM_CONTRACT §Terrain). Reimplements the contour interpolation from the

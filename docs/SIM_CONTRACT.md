@@ -159,11 +159,16 @@ tick on:
   the ship's own max thrust accel so a well can threaten but never imprison) — the
   autopilot fights the drift; `pinned` ships are exempt (they hold station by contract);
 - **rocks** (× `gravity.rockMult`) — moving debris curls into the wells; a settled
-  rock wakes only when the pull exceeds `gravity.rockWake` AND it sits within
-  `gravity.rockWakeShell` px of the surface of some source STRICTLY BIGGER than
-  itself AND nothing supports it on the down-well side (so accretion is a local
-  shell around each well, piles are stable, the far field never drifts, and the
-  titan — never out-massed — never moves: cover and the landmark stay dependable);
+  rock ANYWHERE in a well wakes when the pull exceeds `gravity.rockWake` (default
+  1.2 px/s², just above the drag/settle stall boundary — there is NO distance shell;
+  everything a well reaches, it moves) provided some contributing source is STRICTLY
+  BIGGER than the rock AND nothing supports it on the down-well side. Whole fields
+  creep and accrete; BIG asteroids themselves fall into the titan's well over
+  minutes. Piles are stable once in contact (support), rocks outside every well or
+  in the sub-`rockWake` fringe rest, and the titan — never out-massed — never moves:
+  the landmark stays dependable even though the cover around it migrates.
+  (`gravity.rockWakeShell` still exists but is TERRAIN-PLACEMENT ONLY: generateTerrain
+  keeps BIGs that far off the titan's surface so they anchor the layout at spawn);
 - **torpedoes and bombs** (× `gravity.projectileMult`) — their course bends but
   their speed is renormalised to the design speed (guidance and lead-aim semantics
   survive; a well only curves the path).
@@ -230,8 +235,9 @@ deal their base damage directly (no multiplier) via `attackrock` orders only.
 - `terrain.bigRadius` / `terrain.bigCountMax` — BIG-asteroid size band and max count
   (min count is always 1 on procedural maps).
 - `gravity.G` / `sourceMinRadius` / `softening` / `minAccel` / `maxAccel` / `wellReach`
-  / `rockWake` / `rockWakeShell` / `shipEscapeCap` / `shipMult` / `rockMult` /
-  `projectileMult` — see Terrain above.
+  / `rockWake` / `shipEscapeCap` / `shipMult` / `rockMult` /
+  `projectileMult` — see Terrain above. (`gravity.rockWakeShell` remains as a
+  terrain-placement separation constant only; it no longer gates rock wake-up.)
 - `destructibleAsteroids` (bool, present but IGNORED — see above).
 - `matchTimerSeconds` (number).
 - `presets` — fleet presets (same object as `Praedra.PRESETS`).
