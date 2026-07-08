@@ -1088,10 +1088,14 @@ function autopilot(state, ship, dt) {
       // pad for this rock or the probe deflects the ship around it forever
       if (rr > o.r + def.radius + AI.avoidMargin && dist(goal.x, goal.y, o.x, o.y) < rr)
         rr = o.r + def.radius + AI.avoidMargin;
-      var ddx = o.x - ship.x, ddy = o.y - ship.y;
+      // LEAD moving debris: probe against where the fragment will be, not where it is —
+      // a shard closing head-on used to be invisible until contact (top fighter killer)
+      var ox = o.x, oy = o.y;
+      if (o.moving && (o.vx || o.vy)) { ox += o.vx * probeT * 0.5; oy += o.vy * probeT * 0.5; }
+      var ddx = ox - ship.x, ddy = oy - ship.y;
       var dd = Math.sqrt(ddx * ddx + ddy * ddy);
       if (dd - rr > sp * probeT) return false;
-      if (segCircleHit(ship.x, ship.y, pex, pey, o.x, o.y, rr)) {
+      if (segCircleHit(ship.x, ship.y, pex, pey, ox, oy, rr)) {
         if (dd < threatD) { threatD = dd; threat = o; }
       }
       return false;
@@ -2648,24 +2652,32 @@ function aiFrigate(state, ship, dt) {
     return;
   }
   var own = (ship.team === 'A' ? state.aliveA : state.aliveB);
-  var dest = null;
-  for (var i = 0; i < own.length; i++) if (own[i].cls === 'destroyer') { dest = own[i]; break; }
+  var dest = null, gIdx = 0, gSibs = 1;
+  if (smartTeam(state, ship.team)) {
+    // distribute escorts: frigate k guards destroyer k % nDest — one PD umbrella per hull,
+    // not every frigate stacked on the lead destroyer while the rest of the line dies alone
+    var dests = [], fidx = 0, fsibs = 0;
+    for (var i = 0; i < own.length; i++) {
+      if (own[i].cls === 'destroyer') dests.push(own[i]);
+      else if (own[i].cls === 'frigate') { if (own[i].id < ship.id) fidx++; fsibs++; }
+    }
+    if (dests.length) {
+      dest = dests[fidx % dests.length];
+      gIdx = Math.floor(fidx / dests.length);                       // slot within my destroyer's guard group
+      gSibs = Math.max(1, Math.ceil((fsibs - (fidx % dests.length)) / dests.length));
+    }
+  } else {
+    for (var i2 = 0; i2 < own.length; i2++) if (own[i2].cls === 'destroyer') { dest = own[i2]; break; }
+  }
   var near = nearestWhere(state, ship, enemies, null);
   var aim = Math.atan2(near.ship.y - ship.y, near.ship.x - ship.x);
   if (dest) {
     // escort: park the PD umbrella between the destroyer and the threat axis
     var ex = near.ship.x - dest.x, ey = near.ship.y - dest.y;
-    var el = len(ex, ey) || 1;
     var ea = Math.atan2(ey, ex);
-    if (smartTeam(state, ship.team)) {
-      // escort RING: each frigate takes its own slot around the threat axis — they used to
-      // all compute the identical escort point and stack into one blast-sized clump
-      var fsibs = 0, fidx = 0;
-      var fown = ship.team === 'A' ? state.aliveA : state.aliveB;
-      for (var fi = 0; fi < fown.length; fi++)
-        if (fown[fi].cls === 'frigate') { if (fown[fi].id < ship.id) fidx++; fsibs++; }
-      if (fsibs > 1) ea += (fidx - (fsibs - 1) / 2) * AI.escortRingSpread;
-    }
+    // escort RING: each guard takes its own slot around the threat axis — stacked escorts
+    // were one blast-sized clump (and one torpedo AOE) waiting to happen
+    if (gSibs > 1) ea += (gIdx - (gSibs - 1) / 2) * AI.escortRingSpread;
     ship.nav = { x: dest.x + Math.cos(ea) * AI.escortRange, y: dest.y + Math.sin(ea) * AI.escortRange,
                  arrive: true, face: aim };
   } else {
