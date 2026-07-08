@@ -321,7 +321,7 @@ var CONFIG_DEFAULTS = {
     jinkAccelThreshold: 55,        // lateral-accel EMA above this (and fast) = 'jinking'
     steadyEvasionMult: 0.15,       // predictable target: hit = 1 - evasion*this  (steady bomber ~.90)
     jinkEvasionMult: 1.25,         // jinking target:     hit = 1 - evasion*this  (interceptor ~0)
-    frigate:     { range: 950, cooldown: 6.0, salvo: 2, salvoGap: 0.4 },
+    frigate:     { range: 950, cooldown: 12.0, salvo: 2, salvoGap: 0.4 },  // was 6.0: halved fire rate — 14 frigates at 42pts deleted everything
     destroyer:   { range: 650, cooldown: 11.0, salvo: 1, salvoGap: 0 },
     interceptor: { range: 750, ammo: 1 },
   },
@@ -441,6 +441,37 @@ var CONFIG_DEFAULTS = {
                                    //   so fragments (peak ~110px/s, drag 0.35, dangerous over ~244px) settle
                                    //   below impactMinSpeed(25) before reaching the shooter. Scaled per
                                    //   hull via def.radius; verified 0.00 self rock-damage in scenario runs.
+
+    // --- coordinated fleet AI (the "smart" layer; sweepable per team for self-play A/B) ---
+    smartTeams: 'AB',              // which teams run the coordinated layer: '', 'A', 'B', 'AB'.
+                                   //   Gates focus fire, capital pincers, escort rings, ambushes,
+                                   //   and the destroyer gun-discipline governor — NOT the squadron
+                                   //   spacing (squadron.enabledTeams gates that separately)
+    focusRetargetSeconds: 1.0,     // fleet focus-target rescore cadence
+    capitalPincerBearing: 0.55,    // rad: sibling capitals approach a shared target on offset
+                                   //   bearings instead of single file — crossfire + LOS diversity
+    escortRingSpread: 0.85,        // rad between frigate escort slots around their destroyer
+                                   //   (they used to all compute the SAME escort point and stack)
+    ambushLingerSeconds: 9,        // hunting capital waits this long in a LOS-shadow ambush
+    ambushCooldown: 14,            // per-ship pause between ambush episodes (bounds stalemate risk)
+    ambushContactMax: 2200,        // only ambush when the stale contact is within this range —
+                                   //   the enemy is coming; across the map you march, not lurk
+  },
+
+  // --- SQUADRON (fighter swarm coordinator: spacing, spread attack lanes, loose formation) ---
+  squadron: {
+    enabledTeams: 'AB',            // which teams' lights use the coordinator ('', 'A', 'B', 'AB')
+    size: 5,                       // max members per squadron (per team, per class, id-ordered)
+    bomberSep: 135,                // comfortable bomber spacing: > 2x bomb aoeRadius (60) so one
+                                   //   intercepted bomb can never splash-chain a squadmate
+    lightSep: 82,                  // baseline spacing between any two friendly lights
+    sepGain: 1.1,                  // nav-goal displacement per px of spacing intrusion
+    runSepGain: 0.5,               // reduced on a steady bomb run (aim beats spacing, never zero)
+    bearingSpread: 0.5,            // rad between adjacent members' approach lanes on a shared
+                                   //   target — separated lanes = no cross-bomber sympathetic chain
+    formGain: 0.3,                 // weak pull toward the transit-formation slot; formation must
+                                   //   NEVER fight pathing (autopilot avoidance dominates)
+    reformTicks: 45,               // membership refresh cadence (death/merge reshuffle)
   },
 
   // --- FLEETS (42-point budget; costs: destroyer 6 / frigate 3 / bomber 2 / interceptor 1) ---
@@ -1134,7 +1165,17 @@ function autopilot(state, ship, dt) {
     return;
   }
   var burnAng = Math.atan2(awy, awx);
-  burnToward(ship, burnAng, clamp(awm / accel, 0, 1), dt);
+  var thrWant = clamp(awm / accel, 0, 1);
+  if (goal.faceLock && goal.face != null) {
+    // weapon-locked: never rotate the hull away from the firing bearing — thrust only with
+    // whatever component the current heading offers. Aim beats maneuver until the lock lifts
+    // (role AI only locks while a shot is imminent, so braking happens in gun dead-time).
+    faceToward(ship, goal.face, dt);
+    var ferr = Math.abs(normAngle(burnAng - ship.heading));
+    ship.ctl.thrust = ferr < 0.35 ? thrWant : (ferr < 0.85 ? thrWant * 0.35 : 0);
+    return;
+  }
+  burnToward(ship, burnAng, thrWant, dt);
 }
 
 /* Rotate toward angle `want` (deadbeat controller on angular velocity); no thrust. */
@@ -2109,6 +2150,171 @@ function routeAround(state, ship, pt) {
   ship.ai.detourPt = null; return pt; // wall too costly to round: transit and clear it
 }
 
+/* ---------------- Coordinated fleet layer (focus fire, squadrons, ambush) ----------------
+   Everything here is deterministic pure-state math (no RNG) and gated by ai.smartTeams /
+   squadron.enabledTeams so self-play sweeps can A/B the smart layer against the base AI. */
+function smartTeam(state, team) { return state.config.ai.smartTeams.indexOf(team) >= 0; }
+function squadronTeam(state, team) { return state.config.squadron.enabledTeams.indexOf(team) >= 0; }
+
+/* Fleet focus fire: ONE deletion-ordered primary per team. LESSONS: frigate-first strips the
+   torpedo platform + PD escort, and only then is the blinded destroyer helpless. Among equal
+   classes, finish the most-wounded; distance from the fleet centroid breaks remaining ties.
+   Sticky between rescores — target stability beats micro-optimal switching. */
+function focusRank(cls) {
+  return cls === 'frigate' ? 0 : (cls === 'destroyer' ? 1 : (cls === 'battleship' ? 2 : (cls === 'bomber' ? 3 : 4)));
+}
+function updateFleetPlan(state) {
+  var AI = state.config.ai;
+  var teams = ['A', 'B'];
+  for (var t = 0; t < 2; t++) {
+    var team = teams[t];
+    if (!smartTeam(state, team)) continue;
+    var p = state.plan[team];
+    var cur = state.shipById[p.focusId];
+    if (cur && cur.alive && isDetectedBy(state, team, cur) &&
+        state.time - p.focusAt < AI.focusRetargetSeconds) continue;
+    var enemies = livingEnemies(state, team);
+    if (!enemies.length) { p.focusId = -1; continue; }
+    var own = team === 'A' ? state.aliveA : state.aliveB;
+    var cx = 0, cy = 0, n = own.length || 1;
+    for (var i = 0; i < own.length; i++) { cx += own[i].x; cy += own[i].y; }
+    cx /= n; cy /= n;
+    var best = null, bestKey = Infinity;
+    for (var j = 0; j < enemies.length; j++) {
+      var e = enemies[j];
+      var key = focusRank(e.cls) * 1e8 + (e.hp / e.maxHp) * 1e6 + dist(cx, cy, e.x, e.y);
+      if (key < bestKey) { bestKey = key; best = e; }
+    }
+    p.focusId = best ? best.id : -1;
+    p.focusAt = state.time;
+  }
+}
+function focusTarget(state, ship) {
+  if (!smartTeam(state, ship.team)) return null;
+  var f = state.shipById[state.plan[ship.team].focusId];
+  return f && f.alive && isDetectedBy(state, ship.team, f) ? f : null;
+}
+
+/* Squadron membership: per team, per light class, id-ordered chunks of squadron.size.
+   Deterministic (roster order == id order); refreshed on a cadence so deaths compact slots. */
+function updateSquadrons(state) {
+  var SQ = state.config.squadron;
+  if (state.squads.at >= 0 && state.tick - state.squads.at < SQ.reformTicks) return;
+  state.squads.at = state.tick;
+  var teams = ['A', 'B'];
+  for (var t = 0; t < 2; t++) {
+    var own = teams[t] === 'A' ? state.aliveA : state.aliveB;
+    var classes = ['bomber', 'interceptor'];
+    for (var c = 0; c < 2; c++) {
+      var members = [];
+      for (var i = 0; i < own.length; i++) if (own[i].cls === classes[c]) members.push(own[i]);
+      for (var m = 0; m < members.length; m++) {
+        var sh = members[m];
+        var sq = Math.floor(m / SQ.size);
+        sh.ai.sqSlot = m % SQ.size;
+        sh.ai.sqN = Math.min(SQ.size, members.length - sq * SQ.size);
+        sh.ai.sqLead = members[sq * SQ.size].id;
+      }
+    }
+  }
+}
+
+/* Swarm-coordinator nav pass (auto-AI lights only; player orders are never touched):
+   (1) SEPARATION — displace the nav goal away from crowding friendlies, so bombers never fly
+       inside each other's blast/sympathetic-chain radius and one PD interception costs the
+       squadron ONE ship's salvo, not the squadron;
+   (2) loose transit FORMATION — a weak pull toward an echelon slot off the squadron lead while
+       nothing is detected. Both gains are small, additive nav-goal nudges: the autopilot's
+       avoidance/pathing always dominates, so navigation never degrades. */
+function squadronNav(state, ship) {
+  var SQ = state.config.squadron;
+  if (!ship.nav || !isLight(ship) || !squadronTeam(state, ship.team)) return;
+  var own = ship.team === 'A' ? state.aliveA : state.aliveB;
+  var sepX = 0, sepY = 0;
+  for (var i = 0; i < own.length; i++) {
+    var o = own[i];
+    if (o.id === ship.id || !isLight(o)) continue;
+    var want = (ship.cls === 'bomber' && o.cls === 'bomber') ? SQ.bomberSep : SQ.lightSep;
+    var d = dist(ship.x, ship.y, o.x, o.y);
+    if (d >= want || d < 1e-6) continue;
+    var w = (want - d) / want;
+    sepX += ((ship.x - o.x) / d) * w * want;
+    sepY += ((ship.y - o.y) / d) * w * want;
+  }
+  var gain = ship.ai.mode === 'run' ? SQ.runSepGain : SQ.sepGain;
+  var sm = len(sepX, sepY), cap = SQ.bomberSep * 1.6;
+  if (sm > cap) { sepX *= cap / sm; sepY *= cap / sm; }
+  ship.nav.x += sepX * gain;
+  ship.nav.y += sepY * gain;
+  if (ship.ai.sqLead != null && livingEnemies(state, ship.team).length === 0) {
+    var lead = state.shipById[ship.ai.sqLead];
+    if (lead && lead.alive && lead.id !== ship.id) {
+      var ux = lead.speed > 12 ? lead.vx / lead.speed : Math.cos(lead.heading);
+      var uy = lead.speed > 12 ? lead.vy / lead.speed : Math.sin(lead.heading);
+      var side = (ship.ai.sqSlot % 2 === 1) ? 1 : -1;
+      var k = Math.ceil(ship.ai.sqSlot / 2);
+      var sep2 = ship.cls === 'bomber' ? SQ.bomberSep : SQ.lightSep;
+      var sx = lead.x - ux * k * sep2 * 0.8 - uy * side * k * sep2;
+      var sy = lead.y - uy * k * sep2 * 0.8 + ux * side * k * sep2;
+      ship.nav.x = ship.nav.x * (1 - SQ.formGain) + sx * SQ.formGain;
+      ship.nav.y = ship.nav.y * (1 - SQ.formGain) + sy * SQ.formGain;
+    }
+  }
+}
+
+/* Slot-separated attack lane: squadmates converge on a shared target along bearings fanned
+   around the SQUADRON LEAD's line of approach. Adjacent release lanes end up ~2x the bomb
+   AOE apart, so a PD interception can never sympathetically chain across lanes. */
+function spreadPoint(state, ship, tgt, standDist) {
+  var SQ = state.config.squadron;
+  if (!squadronTeam(state, ship.team) || ship.ai.sqN == null || ship.ai.sqN < 2)
+    return { x: tgt.x, y: tgt.y };
+  var lead = state.shipById[ship.ai.sqLead];
+  var ref = lead && lead.alive ? lead : ship;
+  var base = Math.atan2(ref.y - tgt.y, ref.x - tgt.x);
+  var a = base + (ship.ai.sqSlot - (ship.ai.sqN - 1) / 2) * SQ.bearingSpread;
+  return { x: tgt.x + Math.cos(a) * standDist, y: tgt.y + Math.sin(a) * standDist };
+}
+
+/* LOS-shadow ambush: a hunting capital with a FRESH but blind contact nearby parks in the
+   shadow of a rock on the expected approach, gun trained on the corridor, instead of marching
+   into the open. Strictly bounded (linger cap + cooldown + contact-freshness) so two ambushing
+   fleets cannot camp the clock out — when nothing shows, the hunt resumes. */
+function ambushNav(state, ship, huntPt) {
+  var cfg = state.config, AI = cfg.ai, D = cfg.detection;
+  if (!smartTeam(state, ship.team)) return null;
+  var lc = state.lastContact[ship.team];
+  if (!lc || state.time - lc.t > D.memorySeconds * 2.5) { ship.ai.ambushUntil = 0; return null; }
+  var dc = dist(ship.x, ship.y, lc.x, lc.y);
+  if (dc > AI.ambushContactMax || dc < 420) return null; // too far to lurk / already on top of it
+  if (state.time < (ship.ai.ambushCoolT || 0)) return null;
+  if (ship.ai.ambush && state.time < ship.ai.ambushUntil) {
+    var a = ship.ai.ambush;
+    return { x: a.x, y: a.y, arrive: true, face: Math.atan2(lc.y - a.y, lc.x - a.x) };
+  }
+  if (ship.ai.ambushUntil && state.time >= ship.ai.ambushUntil) {
+    ship.ai.ambush = null; ship.ai.ambushUntil = 0;          // nothing showed: march again,
+    ship.ai.ambushCoolT = state.time + AI.ambushCooldown;    // cooldown before the next lurk
+    return null;
+  }
+  var best = null, bestScore = Infinity;
+  rocksNearSeg(state, ship.x, ship.y, lc.x, lc.y, 92 + 520, function (o) {
+    if (o.r < 46 || o.r > 420) return false;                 // big enough to hide a hull, not a titan
+    var dTgt = dist(o.x, o.y, lc.x, lc.y);
+    if (dTgt < 480 || dTgt > AI.ambushContactMax) return false;
+    var hx = o.x + ((o.x - lc.x) / (dTgt || 1)) * (o.r + 60);
+    var hy = o.y + ((o.y - lc.y) / (dTgt || 1)) * (o.r + 60);
+    // prefer a shadow near us whose rock sits about weapon range off the expected path
+    var score = dist(ship.x, ship.y, hx, hy) + Math.abs(dTgt - 700) * 0.5;
+    if (score < bestScore) { bestScore = score; best = { x: hx, y: hy }; }
+    return false;
+  });
+  if (!best) return null;
+  ship.ai.ambush = best;
+  ship.ai.ambushUntil = state.time + AI.ambushLingerSeconds;
+  return { x: best.x, y: best.y, arrive: true, face: Math.atan2(lc.y - best.y, lc.x - best.x) };
+}
+
 /* ---------------- Role AI (deliberately simple; serves the §5 counter-web) ---------------- */
 function livingEnemies(state, team) { return team === 'A' ? state.detA : state.detB; } // DETECTED enemies only
 function isCapital(s) { return s.cls === 'destroyer' || s.cls === 'frigate' || s.cls === 'battleship'; }
@@ -2168,6 +2374,12 @@ function tryTorpedo(state, ship, dt) {
 function torpedoPick(state, ship, enemies, TC) {
   var T = state.config.torpedo;
   var self = this;
+  // fleet focus fire: put the warhead on the team's deletion target when it's in the basket
+  var f = focusTarget(state, ship);
+  if (f && isCapital(f)) {
+    var df = dist(ship.x, ship.y, f.x, f.y);
+    if (df >= T.lobMinRange && df <= TC.range && losShips(state, ship, f)) return f;
+  }
   var cap = nearestWhere(state, ship, enemies, function (e) {
     var de = dist(ship.x, ship.y, e.x, e.y);
     return isCapital(e) && de >= T.lobMinRange && de <= TC.range && losShips(state, ship, e);
@@ -2331,6 +2543,10 @@ function aiDestroyer(state, ship, dt) {
   var cfg = state.config, AI = cfg.ai, RG = cfg.railgun;
   var enemies = livingEnemies(state, ship.team);
   if (!enemies.length) {
+    // fresh blind contact nearby: set an LOS-shadow ambush on the expected approach
+    // instead of marching into the open (smart teams; strictly time-bounded)
+    var amb = ambushNav(state, ship, null);
+    if (amb) { ship.nav = amb; blastCoverNearGhosts(state, ship, dt); return; }
     var hp = routeAround(state, ship, huntPoint(state, ship));
     ship.nav = { x: hp.x, y: hp.y, arrive: true, speedCap: ship.def.maxCruiseSpeed * 0.8 };
     blastCoverNearGhosts(state, ship, dt);
@@ -2341,21 +2557,43 @@ function aiDestroyer(state, ship, dt) {
   var pick = nearestWhere(state, ship, enemies, isCapital) || nearestWhere(state, ship, enemies, null);
   var target = pick.ship;
   var d = pick.d;
+  // fleet focus fire: swing onto the team's deletion target when it's a capital within reach
+  var focus = focusTarget(state, ship);
+  if (focus && isCapital(focus)) {
+    var df = dist(ship.x, ship.y, focus.x, focus.y);
+    if (df <= Math.max(RG.maxRange * 2.2, d * 1.3)) { target = focus; d = df; }
+  }
   var aim = Math.atan2(target.y - ship.y, target.x - ship.x);
   var closeLight = nearestWhere(state, ship, enemies, function (e) { return isLight(e); });
 
   // a big hull wants open ground and a clean lane, not a rock maze
   if (state.tick % 30 === (ship.id % 30)) ship.ai.anchorBias = openLaneBias(state, ship, target);
   var bias = ship.ai.anchorBias || { x: 0, y: 0 };
+  var smart = smartTeam(state, ship.team);
 
   if (closeLight && closeLight.d < AI.destroyerRetreatRange) {
     // lights in the dead zone: burn away (nose turns away — the railgun is now useless, by design)
     var ux = (ship.x - closeLight.ship.x) / (closeLight.d || 1), uy = (ship.y - closeLight.ship.y) / (closeLight.d || 1);
     ship.nav = { x: ship.x + ux * 500, y: ship.y + uy * 500, arrive: false, jink: false };
   } else if (d > AI.destroyerStandoff + 100) {
-    var ux2 = (target.x - ship.x) / d, uy2 = (target.y - ship.y) / d;
-    ship.nav = { x: target.x - ux2 * AI.destroyerStandoff + bias.x, y: target.y - uy2 * AI.destroyerStandoff + bias.y,
+    var appAng = Math.atan2(ship.y - target.y, ship.x - target.x);
+    var scap = null;
+    if (smart) {
+      // pincer: sibling destroyers swing onto offset bearings — a crossfire, not a queue
+      var sibs = 0, idx = 0;
+      var own2 = ship.team === 'A' ? state.aliveA : state.aliveB;
+      for (var s2 = 0; s2 < own2.length; s2++)
+        if (own2[s2].cls === 'destroyer') { if (own2[s2].id < ship.id) idx++; sibs++; }
+      if (sibs > 1) appAng += (idx % 2 === 0 ? 1 : -1) * AI.capitalPincerBearing * (1 + (idx >> 1) * 0.5);
+      // approach governor: bleed speed on the way in so arrival needs no flip-and-burn —
+      // the flip is what used to swing the gun off target at exactly the wrong moment
+      var aB = (ship.def.thrust / ship.def.mass) * AI.navBrakeMargin;
+      scap = clamp(Math.sqrt(2 * aB * Math.max(0, d - AI.destroyerStandoff)) + 18, 34, ship.def.maxCruiseSpeed);
+    }
+    ship.nav = { x: target.x + Math.cos(appAng) * AI.destroyerStandoff + bias.x,
+                 y: target.y + Math.sin(appAng) * AI.destroyerStandoff + bias.y,
                  arrive: true, face: aim };
+    if (scap != null) ship.nav.speedCap = scap;
   } else if (d < AI.destroyerStandoff - 140 && isCapital(target)) {
     var ux3 = (ship.x - target.x) / d, uy3 = (ship.y - target.y) / d;
     ship.nav = { x: target.x + ux3 * AI.destroyerStandoff + bias.x, y: target.y + uy3 * AI.destroyerStandoff + bias.y,
@@ -2364,6 +2602,14 @@ function aiDestroyer(state, ship, dt) {
     ship.nav = { x: ship.x + bias.x, y: ship.y + bias.y, arrive: true, face: aim }; // hold in the open, gun on target
   }
 
+  if (smart && ship.nav && !(closeLight && closeLight.d < AI.destroyerRetreatRange)) {
+    // gun discipline: while a shot is imminent the nose stays ON TARGET (no flip-and-burn
+    // wander); during cooldown dead-time the pilot may brake/maneuver freely and realign
+    // before the gun comes back up — slower repositioning, but the weapon stays live
+    var gunHot = ship.cool.rail <= 1.4;
+    if (gunHot && d <= RG.maxRange * 1.15) { ship.nav.face = aim; ship.nav.faceLock = true; }
+    else if (!gunHot) ship.nav.face = null;
+  }
   var st = railgunReady(state, ship, target);
   if (st === 'ok') { fireRailgun(state, ship, target); ship.ai.noLos = 0; }
   else if (st === 'los') {
@@ -2389,6 +2635,12 @@ function aiFrigate(state, ship, dt) {
     var own0 = ship.team === 'A' ? state.aliveA : state.aliveB;
     var d0 = null;
     for (var i0 = 0; i0 < own0.length; i0++) if (own0[i0].cls === 'destroyer') { d0 = own0[i0]; break; }
+    if (!d0) {
+      // no destroyer to escort: a frigate with a fresh blind contact lurks in a LOS shadow
+      // (torpedoes from ambush) instead of strolling into the open
+      var ambF = ambushNav(state, ship, null);
+      if (ambF) { ship.nav = ambF; blastCoverNearGhosts(state, ship, dt); return; }
+    }
     var hp = routeAround(state, ship, d0 ? { x: d0.x, y: d0.y } : huntPoint(state, ship));
     ship.nav = { x: hp.x, y: hp.y, arrive: true };
     blastCoverNearGhosts(state, ship, dt);
@@ -2404,7 +2656,17 @@ function aiFrigate(state, ship, dt) {
     // escort: park the PD umbrella between the destroyer and the threat axis
     var ex = near.ship.x - dest.x, ey = near.ship.y - dest.y;
     var el = len(ex, ey) || 1;
-    ship.nav = { x: dest.x + (ex / el) * AI.escortRange, y: dest.y + (ey / el) * AI.escortRange,
+    var ea = Math.atan2(ey, ex);
+    if (smartTeam(state, ship.team)) {
+      // escort RING: each frigate takes its own slot around the threat axis — they used to
+      // all compute the identical escort point and stack into one blast-sized clump
+      var fsibs = 0, fidx = 0;
+      var fown = ship.team === 'A' ? state.aliveA : state.aliveB;
+      for (var fi = 0; fi < fown.length; fi++)
+        if (fown[fi].cls === 'frigate') { if (fown[fi].id < ship.id) fidx++; fsibs++; }
+      if (fsibs > 1) ea += (fidx - (fsibs - 1) / 2) * AI.escortRingSpread;
+    }
+    ship.nav = { x: dest.x + Math.cos(ea) * AI.escortRange, y: dest.y + Math.sin(ea) * AI.escortRange,
                  arrive: true, face: aim };
   } else {
     var eCap = nearestWhere(state, ship, enemies, function (e) { return e.cls === 'destroyer'; });
@@ -2565,6 +2827,12 @@ function updateCommits(state) {
       var d = dist(probe.x, probe.y, e.x, e.y) + pri * 100000;
       if (d < bestD) { bestD = d; tgt = e; }
     }
+    if (smartTeam(state, team)) {
+      // the whole wave saturates the fleet's ONE focus victim (a capital) instead of whatever
+      // happens to be nearest — coordinated deletion beats spread damage
+      var f = state.shipById[state.plan[team].focusId];
+      if (f && f.alive && isCapital(f) && isDetectedBy(state, team, f)) tgt = f;
+    }
     c.targetId = tgt.id;
     if (state.time < c.until || state.time < c.cool) continue;
     // staged = in position AND slowed to hold — the wave assembles before it goes in.
@@ -2652,6 +2920,8 @@ function aiBomber(state, ship, dt) {
   var pick = nearestWhere(state, ship, enemies, isCapital) ||
              nearestWhere(state, ship, enemies, null);
   var target = pick.ship, d = pick.d;
+  var focus = focusTarget(state, ship);
+  if (focus && isCapital(focus)) { target = focus; d = dist(ship.x, ship.y, focus.x, focus.y); }
   var thr = threatened(state, ship);
   var committing = teamCommitting(state, ship.team);
   var m = ship.ai.mode;
@@ -2679,8 +2949,16 @@ function aiBomber(state, ship, dt) {
       var wy = target.y + (fx * sa + fy * ca) * AI.flankOffset;
       if (dist(ship.x, ship.y, wx, wy) > AI.flankDone) {
         ship.nav = { x: wx, y: wy, arrive: false, jink: thr };
-      } else ship.nav = { x: target.x, y: target.y, arrive: false, jink: thr };
-    } else ship.nav = { x: target.x, y: target.y, arrive: false, jink: thr };
+      } else {
+        var ap = d > B.launchRange * 1.25 ? spreadPoint(state, ship, target, B.launchRange * 1.1) : target;
+        ship.nav = { x: ap.x, y: ap.y, arrive: false, jink: thr };
+      }
+    } else {
+      // slot-separated approach lane: squadmates fan around the lead's bearing so their
+      // release lanes never overlap (one interception cannot chain the wave)
+      var ap2 = d > B.launchRange * 1.25 ? spreadPoint(state, ship, target, B.launchRange * 1.1) : target;
+      ship.nav = { x: ap2.x, y: ap2.y, arrive: false, jink: thr };
+    }
     // a bomb needs a steady vector BEFORE release: go steady as soon as the target is
     // sighted inside run-start range — early in the open (long, exposed), late in dense
     if (d <= B.launchRange * B.runStartFactor && losShips(state, ship, target)) {
@@ -2768,6 +3046,8 @@ function aiInterceptor(state, ship, dt) {
   } else {
     var cap = nearestWhere(state, ship, enemies, isCapital) || nearestWhere(state, ship, enemies, null);
     var tgt = cap.ship, d = cap.d;
+    var focusI = focusTarget(state, ship);
+    if (focusI && isCapital(focusI)) { tgt = focusI; d = dist(ship.x, ship.y, focusI.x, focusI.y); }
     gatTarget = tgt;
     var m = ship.ai.mode;
     if (m !== 'strafe_in' && m !== 'strafe_out') m = 'strafe_in';
@@ -2798,6 +3078,11 @@ function aiInterceptor(state, ship, dt) {
         ship.nav = { x: tgt.x + (gx2 * ca2 - gy2 * sa2) * AI.flankOffset,
                      y: tgt.y + (gx2 * sa2 + gy2 * ca2) * AI.flankOffset,
                      arrive: false, jink: thr };
+      } else if (d > AI.strafeExitRange * 1.5) {
+        // fan the inbound lanes around the squadron lead's bearing — spaced divers split the
+        // PD picture and never eat one shared bomb-chain blast on the way in
+        var apI = spreadPoint(state, ship, tgt, Math.max(AI.strafeExitRange, d * 0.4));
+        ship.nav = { x: apI.x, y: apI.y, arrive: false, jink: thr && d > cfg.pd.range * 1.3 };
       } else {
         var ux = (tgt.x - ship.x) / (d || 1), uy = (tgt.y - ship.y) / (d || 1);
         ship.nav = { x: tgt.x + ux * AI.strafeDivePoint, y: tgt.y + uy * AI.strafeDivePoint,
@@ -3116,11 +3401,14 @@ function stepMatch(match) {
   }
 
   computeDetection(state);
+  updateFleetPlan(state);   // fleet focus target (smart teams)
+  updateSquadrons(state);   // fighter squadron membership (squadron teams)
   updateCommits(state);
   for (var a = 0; a < state.ships.length; a++) {
     var sh = state.ships[a];
     if (!sh.alive) continue;
     aiTick(state, sh, dt);
+    if (!sh.pinned && !sh.order) squadronNav(state, sh); // swarm spacing/formation (auto AI only)
     updatePD(state, sh, dt);
   }
   applyGravity(state, dt); // before the pilots plan: they see (and fight) the drift
@@ -3176,6 +3464,8 @@ function baseState(seed, overrides) {
     lastSeenShip: {},                         // shipId -> {x, y, t} (team-shared memory)
     lastContact: { A: null, B: null },        // most recent enemy sighting per team
     commit: { A: { until: -1, cool: 0, targetId: -1, flank: 0 }, B: { until: -1, cool: 0, targetId: -1, flank: 0 } },
+    plan: { A: { focusId: -1, focusAt: -1 }, B: { focusId: -1, focusAt: -1 } }, // fleet focus-fire picture
+    squads: { at: -1 },                       // squadron membership refresh bookkeeping
     tickCap: 0, hadBothTeams: false,
   };
 }

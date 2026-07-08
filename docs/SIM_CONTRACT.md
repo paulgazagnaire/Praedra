@@ -294,6 +294,29 @@ instead of a fixed-forward railgun. Each ship carries `ship.turrets = [{ ang, co
   transiting capital routes around a cluttered field and shoots blockers out of its own corridor;
   they add no new API, event, or state field. Present for override sweeps only.
 
+- `torpedo.frigate.cooldown` — **12.0 s** as of the frigate balance pass (was 6.0; an
+  all-frigate 42-pt fleet beat every preset 70–100%). Salvo (2 × 0.4 s gap) unchanged.
+- `ai.smartTeams` (`''`/`'A'`/`'B'`/`'AB'`, default `'AB'`) — which teams run the
+  coordinated fleet layer: fleet focus fire (`state.plan[team].focusId`, deletion-ordered
+  frigate → destroyer → battleship, wounded first), capital pincer bearings
+  (`ai.capitalPincerBearing`), frigate escort rings (`ai.escortRingSpread`), LOS-shadow
+  ambushes while hunting a fresh blind contact (`ai.ambushLingerSeconds` /
+  `ambushCooldown` / `ambushContactMax` — strictly time-bounded so ambushes cannot camp
+  the clock out), and the destroyer gun-discipline governor (approach speed cap +
+  `nav.faceLock`: the hull never rotates away from the firing bearing while a railgun
+  shot is imminent; braking happens in cooldown dead-time). Sweep `'A'` vs `''` for
+  smart-vs-base self-play.
+- `squadron.*` — fighter swarm coordinator (bombers + interceptors), gated by
+  `squadron.enabledTeams` (same format, default `'AB'`). Per-team, per-class, id-ordered
+  squadrons of `size` (5). Members get: SEPARATION nav-goal displacement
+  (`bomberSep` 135 > 2× bomb `aoeRadius`, so one intercepted bomb can no longer
+  sympathetically chain-kill squadmates; `lightSep` 82 between any lights; `sepGain`,
+  reduced to `runSepGain` on a steady bomb run), slot-separated ATTACK LANES fanned
+  `bearingSpread` rad apart around the squadron lead's approach bearing, and a weak
+  (`formGain`) echelon FORMATION pull toward the lead during no-contact transit only.
+  All pure deterministic state math; never applied to pinned ships or ships under
+  player orders.
+
 Everything else in CONFIG is sim-internal; sweep it via `overrides` generically.
 
 ## Events
