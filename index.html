@@ -3321,6 +3321,125 @@ return api;
   };
   var COLORS = { A: '#4da3ff', B: '#ff7a5c' };
   var SEL_COLOR = '#7cffb2';
+  // Ship visual models (render-side only). Vertices in multiples of def.radius; +x = nose, +y = starboard.
+  var SHIP_PALETTE = {
+    A: { base: '#4da3ff', dark: '#2b5f9e', accent: '#b3d6ff' },
+    B: { base: '#ff7a5c', dark: '#a34630', accent: '#ffc9b5' }
+  };
+  var HULLS = {
+    interceptor: [[1.6,0],[-0.1,0.5],[-1.0,0.95],[-0.75,0.25],[-0.75,-0.25],[-1.0,-0.95],[-0.1,-0.5]],
+    bomber:      [[1.5,0],[0.6,0.35],[0.2,0.95],[-0.5,1.0],[-0.55,0.4],[-1.1,0.3],[-1.1,-0.3],[-0.55,-0.4],[-0.5,-1.0],[0.2,-0.95],[0.6,-0.35]],
+    frigate:     [[1.7,0],[1.05,0.40],[0.35,0.52],[-0.75,0.52],[-1.05,0.38],[-1.3,0.38],[-1.3,-0.38],[-1.05,-0.38],[-0.75,-0.52],[0.35,-0.52],[1.05,-0.40]],
+    destroyer:   [[1.8,0],[1.0,0.42],[0.2,0.55],[-1.0,0.55],[-1.6,0.42],[-1.6,-0.42],[-1.0,-0.55],[0.2,-0.55],[1.0,-0.42]],
+    battleship:  [[1.7,0],[1.15,0.30],[0.55,0.46],[-0.9,0.50],[-1.25,0.42],[-1.5,0.30],[-1.5,-0.30],[-1.25,-0.42],[-0.9,-0.50],[0.55,-0.46],[1.15,-0.30]]
+  };
+  var ENGINE = { // [exitX, plumeHalfWidth] in r-units
+    interceptor: [-0.75, 0.25], bomber: [-1.1, 0.28], frigate: [-1.3, 0.34],
+    destroyer:   [-1.6, 0.36],  battleship: [-1.5, 0.40]
+  };
+  var TURRET_X_FALLBACK = [0.90, 0.30, -0.55]; // battleship turret centers, x*r on centerline
+  // LOD_DETAIL tuned down from the spec's 3 to 2.5: at the default 1600x1000 window against
+  // this sim's 8000x5600 arena (scale ~0.168), the frigate (r=16) sits at px~2.69 -- just under
+  // 3, so it fell back to hull+marker like the smaller classes and read as an indistinct blob.
+  // 2.5 keeps interceptor (px~1.35) and bomber (px~1.68) in the simplified tier as designed
+  // (they're meant to stay simple "at full zoom-out") while bringing the frigate's dark
+  // engine block + accent deck strip into view, restoring 5-way silhouette distinguishability.
+  var LOD_DETAIL = 2.5, LOD_FINE = 7;          // thresholds on px = def.radius * scale
+
+  function polyPath(g, pts, r) {
+    g.beginPath(); g.moveTo(pts[0][0] * r, pts[0][1] * r);
+    for (var i = 1; i < pts.length; i++) g.lineTo(pts[i][0] * r, pts[i][1] * r);
+    g.closePath();
+  }
+
+  function drawPlume(g, r, exitX, halfW, throttle) {
+    if (!(throttle > 0.02)) return;
+    var len = r * (0.7 + 1.6 * throttle) * (0.85 + 0.3 * Math.random());
+    var w = r * halfW * (0.6 + 0.4 * throttle), ex = exitX * r;
+    g.fillStyle = 'rgba(120,180,255,' + (0.25 + 0.35 * throttle) + ')';
+    g.beginPath(); g.moveTo(ex, w); g.lineTo(ex - len, 0); g.lineTo(ex, -w); g.closePath(); g.fill();
+    g.fillStyle = 'rgba(230,244,255,' + (0.5 + 0.35 * throttle) + ')';
+    g.beginPath(); g.moveTo(ex, w * 0.45); g.lineTo(ex - len * 0.6, 0); g.lineTo(ex, -w * 0.45); g.closePath(); g.fill();
+  }
+
+  // Draws hull + machinery/superstructure layers + LOD-gated fine details + turrets.
+  // Called from drawShip inside the translated+rotated ship frame.
+  function drawHull(g, s, scale) {
+    var r = s.def.radius, P = SHIP_PALETTE[s.team], px = r * scale;
+    var eng = ENGINE[s.cls];
+    drawPlume(g, r, eng[0], eng[1], s.throttle || 0);
+    g.fillStyle = P.base; g.strokeStyle = '#0a0f18'; g.lineWidth = 1.5 / scale;
+    polyPath(g, HULLS[s.cls], r); g.fill(); g.stroke();
+    if (px < LOD_DETAIL) { // tiny: keep white nose marker, skip detail
+      g.strokeStyle = '#fff'; g.lineWidth = 1.5 / scale;
+      g.beginPath(); g.moveTo(r * 0.4, 0); g.lineTo(r * 1.7, 0); g.stroke();
+      return;
+    }
+    var fine = px >= LOD_FINE;
+    if (s.cls === 'interceptor') {
+      g.fillStyle = P.accent;
+      g.beginPath(); g.moveTo(0.9 * r, 0); g.lineTo(0.1 * r, 0.18 * r); g.lineTo(0.1 * r, -0.18 * r); g.closePath(); g.fill();
+    } else if (s.cls === 'bomber') {
+      g.fillStyle = P.accent;
+      g.beginPath(); g.moveTo(0.95 * r, 0); g.lineTo(0.3 * r, 0.16 * r); g.lineTo(0.3 * r, -0.16 * r); g.closePath(); g.fill();
+      if (fine) {
+        g.fillStyle = P.dark;
+        g.fillRect(-0.15 * r, 0.55 * r, 0.55 * r, 0.22 * r);
+        g.fillRect(-0.15 * r, -0.77 * r, 0.55 * r, 0.22 * r);
+      }
+    } else if (s.cls === 'frigate') {
+      g.fillStyle = P.dark;   g.fillRect(-1.3 * r, -0.40 * r, 0.35 * r, 0.80 * r);
+      g.fillStyle = P.accent; g.fillRect(-0.55 * r, -0.12 * r, 1.30 * r, 0.24 * r);
+      if (fine) {
+        g.fillStyle = P.dark;
+        g.fillRect(0.85 * r, 0.10 * r, 0.16 * r, 0.16 * r);
+        g.fillRect(0.85 * r, -0.26 * r, 0.16 * r, 0.16 * r);
+      }
+    } else if (s.cls === 'destroyer') {
+      g.fillStyle = P.dark;   g.fillRect(0.20 * r, -0.07 * r, 1.35 * r, 0.14 * r);   // spinal railgun
+      g.fillStyle = P.accent; g.fillRect(-0.55 * r, -0.28 * r, 0.65 * r, 0.56 * r);  // bridge
+      g.fillStyle = P.dark;   g.fillRect(-1.6 * r, -0.34 * r, 0.30 * r, 0.68 * r);   // engines
+      if (fine) {
+        g.fillStyle = P.accent;
+        g.fillRect(1.50 * r, -0.04 * r, 0.12 * r, 0.08 * r);
+        g.fillRect(-1.56 * r, -0.26 * r, 0.12 * r, 0.18 * r);
+        g.fillRect(-1.56 * r, 0.08 * r, 0.12 * r, 0.18 * r);
+      }
+    } else if (s.cls === 'battleship') {
+      g.fillStyle = P.dark;   g.fillRect(-1.10 * r, -0.14 * r, 2.50 * r, 0.28 * r);  // armored spine
+      g.fillStyle = P.accent; g.fillRect(-0.32 * r, -0.22 * r, 0.38 * r, 0.44 * r);  // superstructure
+      g.fillStyle = P.dark;   g.fillRect(-1.5 * r, -0.36 * r, 0.28 * r, 0.72 * r);   // engines
+      if (fine) {
+        g.fillStyle = P.accent;
+        for (var ny = 0; ny < 3; ny++) g.fillRect(-1.46 * r, (-0.28 + 0.21 * ny) * r, 0.12 * r, 0.14 * r);
+        g.strokeStyle = P.dark; g.lineWidth = 1 / scale;
+        g.beginPath();
+        g.moveTo(-0.8 * r, 0.40 * r); g.lineTo(0.5 * r, 0.40 * r);
+        g.moveTo(-0.8 * r, -0.40 * r); g.lineTo(0.5 * r, -0.40 * r);
+        g.stroke();
+      }
+      var HR = match.config.heavyRail;
+      var coolMax = (HR && HR.cooldown) || 4;                          // per-turret cooldown, from CONFIG
+      var turretX = (HR && HR.turretMounts) || TURRET_X_FALLBACK;      // fractions of def.radius, sim-mirrored
+      var ts = s.turrets || [];
+      for (var i = 0; i < ts.length && i < turretX.length; i++) {
+        var t = ts[i], a = t.ang - s.heading;
+        var f = Math.max(0, Math.min(1, (t.cool - (coolMax - 0.18)) / 0.18)); // 1 just fired -> 0
+        g.save(); g.translate(turretX[i] * r, 0); g.rotate(a);
+        g.fillStyle = P.dark;
+        g.beginPath(); g.arc(0, 0, 0.18 * r, 0, 6.2832); g.fill();
+        g.fillRect((0.10 - 0.06 * f) * r, -0.04 * r, 0.46 * r, 0.08 * r); // barrel w/ recoil
+        g.fillStyle = P.base;
+        g.beginPath(); g.arc(0, 0, 0.11 * r, 0, 6.2832); g.fill();
+        if (f > 0) {
+          g.fillStyle = 'rgba(255,235,180,' + f + ')';
+          g.beginPath(); g.moveTo((0.56 - 0.06 * f) * r, 0);
+          g.lineTo(0.80 * r, 0.09 * r); g.lineTo(0.80 * r, -0.09 * r); g.closePath(); g.fill();
+        }
+        g.restore();
+      }
+    }
+  }
   var match = null, paused = false, effects = [], markers = [];
   var overlayVisible = false;       // setup screen shown -> sim never steps
   var selectedSet = new Set();      // ids of currently-selected friendly (team A) ships
@@ -3898,31 +4017,16 @@ return api;
     g.lineWidth = 1 / scale;
     g.beginPath(); g.moveTo(0, 0); g.lineTo(s.vx * 1.2, s.vy * 1.2); g.stroke();
     g.rotate(s.heading);
-    g.fillStyle = COLORS[s.team];
-    g.strokeStyle = '#0a0f18';
-    g.lineWidth = 1.5 / scale;
-    g.beginPath();
-    if (s.cls === 'interceptor') {            // small triangle, apex = nose
-      g.moveTo(r * 1.4, 0); g.lineTo(-r, r * 0.9); g.lineTo(-r, -r * 0.9);
-    } else if (s.cls === 'bomber') {          // diamond, nose marked
-      g.moveTo(r * 1.5, 0); g.lineTo(0, r); g.lineTo(-r * 1.2, 0); g.lineTo(0, -r);
-    } else if (s.cls === 'frigate') {         // square
-      g.rect(-r, -r, 2 * r, 2 * r);
-    } else {                                  // destroyer: long rectangle
-      g.rect(-r * 1.3, -r * 0.75, 2.6 * r, 1.5 * r);
-    }
-    g.closePath(); g.fill(); g.stroke();
-    // unambiguous front marker
-    g.strokeStyle = '#fff';
-    g.beginPath(); g.moveTo(r * 0.4, 0); g.lineTo(r * 1.6, 0); g.stroke();
+    drawHull(g, s, scale);
     g.restore();
     // hp bar
     var frac = s.hp / s.maxHp;
     if (frac < 0.999) {
+      var bw = Math.max(28, r);
       g.fillStyle = '#222';
-      g.fillRect(s.x - 14, s.y - s.def.radius - 10, 28, 3);
+      g.fillRect(s.x - bw / 2, s.y - s.def.radius - 10, bw, 3);
       g.fillStyle = frac > 0.5 ? '#6c6' : (frac > 0.25 ? '#cc5' : '#c55');
-      g.fillRect(s.x - 14, s.y - s.def.radius - 10, 28 * frac, 3);
+      g.fillRect(s.x - bw / 2, s.y - s.def.radius - 10, bw * frac, 3);
     }
   }
 
