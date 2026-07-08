@@ -256,6 +256,14 @@ var CONFIG_DEFAULTS = {
     interceptor: { cost: 1, hp:  14, mass:  12, thrust: 2000, rcs: 520, turnMax: 4.2,
                    maxCruiseSpeed: 150, evasion: 0.80, radius: 8,  pdSlots: 0,
                    signature: 750,  avoidMult: 1.0 },
+    // BATTLESHIP: ponderous turreted gun platform. Two fit the 42-pt budget. Deliberately
+    // fragile to bombs (radius-78 hull is fully in AOE, see applyAoe) but a 5+ bomber wave
+    // immolates itself on the durable hull — a pair fails, a squad gets it. Turns/moves like
+    // a barn; holds the line, never chases. Huge signature 4200 lights up the sky (largest in
+    // the game) so its 3200-range guns get the detection-lit targets they need. See design §1/§5.
+    battleship:  { cost: 15, hp: 620, mass: 900, thrust: 6000, rcs: 700, turnMax: 0.14,
+                   maxCruiseSpeed: 28,  evasion: 0.02, radius: 78, pdSlots: 4,
+                   signature: 4200, avoidMult: 3.0 },
   },
 
   // --- RAILGUN (Destroyer; fixed-forward, min range, near-hitscan, anti-capital only) ---
@@ -268,6 +276,30 @@ var CONFIG_DEFAULTS = {
     slugSpeed: 2400,               // near-hitscan; resolved as instant ray (cannot be intercepted)
     rockDamageMult: 2.2,           // a kinetic slug SHATTERS rock — cover demolition weapon
     evasionMult: 1.0,              // hit chance = 1 - evasion: int .20, bmb .35, frig .85, dest .95
+  },
+
+  // --- HEAVY RAILGUN (Battleship; 3 independent turrets, staggered, ponderous slew) ---
+  // Detection-bounded artillery: maxRange 3200 is far past railgun 700, but ALL targeting is
+  // detection-gated, so at long range only LIT-UP (burning/spotted) ships can be hit. Hard
+  // class gate never lets a turret touch a bomber/interceptor; a speed gate makes a frigate at
+  // cruise (85) untouchable and a slowed one very hittable. See design §2/§3.
+  heavyRail: {
+    turrets: 3,                    // three big-gun turrets, independent state (renderer draws them)
+    turretMounts: [0.90, 0.30, -0.55], // turret centre as a fraction of def.radius along the spine
+                                   // (bow->aft; index 0 = bow). fireHeavyRail rays originate here.
+    damage: 30,                    // identical to the destroyer railgun (requirement)
+    cooldown: 2.0,                 // PER TURRET; ~1 slug / 0.67 s ship-wide via stagger
+    minRange: 220,                 // DEAD ZONE (radius 78 + margin; big guns can't depress point-blank)
+    maxRange: 3200,                // HUGE; detection-bounded (coasting dest visible 1680, burning 3360)
+    slugSpeed: 2400,               // near-hitscan, resolved as an instant ray like the railgun
+    slewRate: 0.9,                 // rad/s per-turret rotation (ponderous; renderer animates t.ang)
+    aimTolerance: 0.06,            // rad; a turret may fire only within this of the target bearing
+    rockDamageMult: 2.2,           // == railgun; blasts asteroids out of transit lanes
+    evasionMult: 1.0,              // base hit = 1 - evasion*this (dest .98, frig .85 baseline)
+    trackClasses: ['destroyer', 'frigate', 'battleship'], // HARD gate: never bomber/interceptor
+    speedFullTrack: 55,            // target speed <= this: no penalty (factor 1)
+    speedNoTrack: 85,              // target speed >= this: untrackable (frigate cruise 85 -> factor 0)
+    event: 'hrail',                // event kind for the renderer (unknown kinds are contract-safe)
   },
 
   // --- TORPEDOES (Frigate specialist; Destroyer weak afterthought; Interceptor single-use) ---
@@ -841,7 +873,7 @@ function makeShip(state, cls, team, x, y, heading) {
   var def = state.config.ships[cls];
   if (!def) throw new Error('unknown ship class: ' + cls);
   var tcfg = state.config.torpedo[cls];
-  return {
+  var s = {
     id: state.nextId++, team: team, cls: cls, def: def,
     x: x, y: y, vx: 0, vy: 0, heading: heading || 0, angVel: 0,
     hp: def.hp, maxHp: def.hp, alive: true, pinned: false,
@@ -851,8 +883,19 @@ function makeShip(state, cls, team, x, y, heading) {
     damageDealt: 0,
     ai: { targetId: -1, retargetAt: 0, mode: 'seek', modeAt: 0, noLosSince: 0, jinkPhase: 0, wp: null },
     ctl: { torque: 0, thrust: 0, face: null, desiredVX: 0, desiredVY: 0 },
+    turrets: null, // battleship heavy-rail turrets: [{ ang, cool }], index 0 = bow (see below)
     nav: null, // {x, y, arrive, speedCap, face, jink}
   };
+  // Heavy-rail turrets, mirroring the lazy pdTrack pattern. Deterministic cooldown stagger:
+  // turret i starts cool = i*(cooldown/turrets) so the guns fire at 0.00 / 0.67 / 1.33 s phases.
+  // `ang` is the world-space turret facing (renderer draws it); `cool` is seconds until ready.
+  if (cls === 'battleship') {
+    var HR = state.config.heavyRail;
+    s.turrets = [];
+    for (var ti = 0; ti < HR.turrets; ti++)
+      s.turrets.push({ ang: (heading || 0), cool: ti * (HR.cooldown / HR.turrets) });
+  }
+  return s;
 }
 
 /* ---------------- Autopilot (Newtonian: rotate-to-burn, flip-and-burn arrival) ---------------- */
@@ -1530,6 +1573,69 @@ function fireRailgunAtRock(state, ship, rock) {
   pushEvent(state, { kind: 'rail', x: ship.x, y: ship.y, x2: hit.x, y2: hit.y, team: ship.team, hit: 'rock' });
 }
 
+/* ---------------- Heavy railgun (Battleship turrets: staggered, ponderous, class/speed-gated) ----
+   Modelled exactly on fireRailgun for identical friendly-fire semantics (first hull on the ray of
+   ANY team eats it; a blocking rock absorbs damage*rockDamageMult and stops the slug). The only
+   RNG draw is the terminal hit roll, ordered by ship-iteration then turret index (see updateTurrets).
+   Rays originate at the turret MOUNT point (design decision 2); range/dead-zone stay measured from
+   the ship centre in the fire gating, consistent with the railgun. */
+function heavyRailTrackable(HR, e) { return HR.trackClasses.indexOf(e.cls) >= 0; }
+function heavyRailSpeedFactor(HR, target) {
+  // v<=speedFullTrack -> 1 (no penalty); v>=speedNoTrack -> 0 (untrackable). Frigate cruise 85 -> 0.
+  return clamp01((HR.speedNoTrack - target.speed) / (HR.speedNoTrack - HR.speedFullTrack));
+}
+function turretMountPoint(state, ship, ti) {
+  var HR = state.config.heavyRail;
+  var frac = (HR.turretMounts && HR.turretMounts[ti] != null) ? HR.turretMounts[ti] : 0;
+  var off = frac * ship.def.radius;
+  return { x: ship.x + Math.cos(ship.heading) * off, y: ship.y + Math.sin(ship.heading) * off };
+}
+function fireHeavyRail(state, ship, ti, target) {
+  var HR = state.config.heavyRail;
+  var mp = turretMountPoint(state, ship, ti);
+  var ang = Math.atan2(target.y - ship.y, target.x - ship.x);   // bearing from the ship centre
+  var dm = dist(mp.x, mp.y, target.x, target.y);                 // range from the mount (for blocking cmp)
+  var endX = mp.x + Math.cos(ang) * HR.maxRange, endY = mp.y + Math.sin(ang) * HR.maxRange;
+  var rock = firstRockOnRay(state, mp.x, mp.y, endX, endY);
+  var rockD = rock ? dist(mp.x, mp.y, rock.x, rock.y) - rock.r : Infinity;
+  // friendly fire: whatever hull is in the line (any team) catches the slug first
+  var blocker = firstShipOnRay(state, ship, mp.x, mp.y, endX, endY);
+  if (blocker && blocker.id !== target.id) {
+    var bd = dist(mp.x, mp.y, blocker.x, blocker.y) - blocker.def.radius;
+    if (bd < Math.min(rockD, dm - target.def.radius)) {
+      if (state.rng.chance(1 - clamp01(blocker.def.evasion * HR.evasionMult))) {
+        applyDamage(state, blocker, HR.damage, ship, 'hrail');
+        if (blocker.team !== ship.team) state.stats.railHitsShip++;
+      }
+      pushEvent(state, { kind: 'hrail', x: mp.x, y: mp.y, x2: blocker.x, y2: blocker.y, team: ship.team, turret: ti, hit: 'ship' });
+      return;
+    }
+  }
+  if (rock && rockD < dm - target.def.radius) {
+    damageAsteroid(state, rock, HR.damage * HR.rockDamageMult); // slug slams into the cover instead
+    pushEvent(state, { kind: 'hrail', x: mp.x, y: mp.y, x2: rock.x, y2: rock.y, team: ship.team, turret: ti, hit: 'rock' });
+    return;
+  }
+  var pHit = (1 - clamp01(target.def.evasion * HR.evasionMult)) * heavyRailSpeedFactor(HR, target);
+  if (state.rng.chance(pHit)) {
+    state.stats.railHitsShip++;
+    applyDamage(state, target, HR.damage, ship, 'hrail');
+    pushEvent(state, { kind: 'hrail', x: mp.x, y: mp.y, x2: target.x, y2: target.y, team: ship.team, turret: ti, hit: 'ship' });
+  } else {
+    if (rock) damageAsteroid(state, rock, HR.damage * HR.rockDamageMult); // missed slug flies on downrange
+    pushEvent(state, { kind: 'hrail', x: mp.x, y: mp.y, x2: endX, y2: endY, team: ship.team, turret: ti, hit: 'miss' });
+  }
+}
+function fireHeavyRailAtRock(state, ship, ti, rock) {
+  var HR = state.config.heavyRail;
+  var mp = turretMountPoint(state, ship, ti);
+  var ang = Math.atan2(rock.y - ship.y, rock.x - ship.x);
+  var hit = firstRockOnRay(state, mp.x, mp.y,
+    mp.x + Math.cos(ang) * HR.maxRange, mp.y + Math.sin(ang) * HR.maxRange) || rock;
+  damageAsteroid(state, hit, HR.damage * HR.rockDamageMult);
+  pushEvent(state, { kind: 'hrail', x: mp.x, y: mp.y, x2: hit.x, y2: hit.y, team: ship.team, turret: ti, hit: 'rock' });
+}
+
 /* ---------------- Torpedoes (long range, loose tracking, LOS lock, PD-interceptable) ---------------- */
 function launchTorpedoAtRock(state, owner, rock) {
   var T = state.config.torpedo;
@@ -1921,7 +2027,7 @@ function routeAround(state, ship, pt) {
 
 /* ---------------- Role AI (deliberately simple; serves the §5 counter-web) ---------------- */
 function livingEnemies(state, team) { return team === 'A' ? state.detA : state.detB; } // DETECTED enemies only
-function isCapital(s) { return s.cls === 'destroyer' || s.cls === 'frigate'; }
+function isCapital(s) { return s.cls === 'destroyer' || s.cls === 'frigate' || s.cls === 'battleship'; }
 function isLight(s) { return s.cls === 'bomber' || s.cls === 'interceptor'; }
 
 function nearestWhere(state, ship, list, pred) {
@@ -2020,7 +2126,7 @@ function openLaneBias(state, ship, target) {
    frigate. This shatters hiding spots, spawns debris, and makes a glorious mess. */
 function blastCoverNearGhosts(state, ship, dt) {
   var cfg = state.config, AI = cfg.ai, D = cfg.detection;
-  if (ship.cls !== 'destroyer' && ship.cls !== 'frigate') return;
+  if (ship.cls !== 'destroyer' && ship.cls !== 'frigate' && ship.cls !== 'battleship') return;
   ship.cool.rockTorp = (ship.cool.rockTorp || 0) - dt;
   var best = null, bestT = -1;
   for (var id in state.lastSeenShip) {
@@ -2040,6 +2146,12 @@ function blastCoverNearGhosts(state, ship, dt) {
     if (ship.cool.rail <= 0 && rd >= RG.minRange && rd <= RG.maxRange &&
         Math.abs(normAngle(Math.atan2(rock.y - ship.y, rock.x - ship.x) - ship.heading)) < RG.arc / 2)
       fireRailgunAtRock(state, ship, rock);
+  } else if (ship.cls === 'battleship') {
+    // turrets must slew before they can fire, so leave a rock-aim hint for updateTurrets to
+    // demolish the cover (a later lane-clearing stage sets the same ai.rockAim field)
+    var HR = cfg.heavyRail;
+    if (rd >= HR.minRange && rd <= HR.maxRange)
+      ship.ai.rockAim = { x: rock.x, y: rock.y, rockId: rock.id, until: state.time + AI.rockShootSeconds };
   } else if (ship.cool.rockTorp <= 0 && rd >= cfg.torpedo.armDistance * 1.1 &&
              rd <= cfg.torpedo.frigate.range) {
     launchTorpedoAtRock(state, ship, rock);
@@ -2133,6 +2245,123 @@ function aiFrigate(state, ship, dt) {
   }
   blastCoverNearGhosts(state, ship, dt);
   tryTorpedo(state, ship, dt); // the torpedo specialist
+}
+
+/* ---------------- Battleship: heavy-rail turrets + role AI ---------------- */
+/* Focused fire, deletion-ordered: one primary per tick, ranked battleship > destroyer > frigate,
+   nearest within [minRange, maxRange], detected (livingEnemies is the detected set) and LOS-clear.
+   All turrets slew to and fire on it — 3x30/2s deletes a destroyer (140 hp) in ~3-4s. */
+function heavyRailClassRank(cls) { return cls === 'battleship' ? 0 : (cls === 'destroyer' ? 1 : 2); }
+function pickHeavyRailPrimary(state, ship) {
+  var HR = state.config.heavyRail;
+  var enemies = livingEnemies(state, ship.team); // DETECTED enemies only
+  var best = null, bestKey = Infinity;
+  for (var i = 0; i < enemies.length; i++) {
+    var e = enemies[i];
+    if (!heavyRailTrackable(HR, e)) continue;                       // HARD class gate
+    var d = dist(ship.x, ship.y, e.x, e.y);
+    if (d < HR.minRange || d > HR.maxRange) continue;               // dead zone / range (from centre)
+    if (!losShips(state, ship, e)) continue;                        // LOS gate
+    var key = heavyRailClassRank(e.cls) * 1e7 + d;                  // big ships first, then nearest
+    if (key < bestKey) { bestKey = key; best = e; }
+  }
+  return best;
+}
+/* Per-turret update, pure/deterministic (slew + stagger are geometry/index only; the sole RNG is
+   fireHeavyRail's terminal roll, in ship-iteration then turret-index order). Called EVERY tick for a
+   battleship from every path (aiBattleship / aiPinned / weaponsFree / executeOrder). Priority per
+   design decision 4: (a) the ship-level primary; (b) else a fresh ai.rockAim -> demolish that rock;
+   (c) else recentre toward the hull heading. */
+function updateTurrets(state, ship, dt) {
+  if (!ship.turrets) return;
+  var HR = state.config.heavyRail;
+  var primary = pickHeavyRailPrimary(state, ship);
+  var ra = ship.ai.rockAim;
+  var rockFresh = !primary && ra && state.time < ra.until;
+  var rock = null;
+  if (rockFresh) {
+    for (var ri = 0; ri < state.asteroids.length; ri++) {
+      var o = state.asteroids[ri];
+      if (o.alive && o.id === ra.rockId) { rock = o; break; }
+    }
+    if (!rock) rockFresh = false;
+  }
+  for (var i = 0; i < ship.turrets.length; i++) {
+    var t = ship.turrets[i];
+    t.cool -= dt;
+    var want, mode;
+    if (primary) { want = Math.atan2(primary.y - ship.y, primary.x - ship.x); mode = 'ship'; }
+    else if (rockFresh) { want = Math.atan2(ra.y - ship.y, ra.x - ship.x); mode = 'rock'; }
+    else { want = ship.heading; mode = 'idle'; }
+    // slew the gun toward the wanted bearing at slewRate; a fast crosser outruns it and never aligns
+    t.ang = normAngle(t.ang + clamp(normAngle(want - t.ang), -HR.slewRate * dt, HR.slewRate * dt));
+    if (t.cool > 0 || mode === 'idle') continue;
+    if (Math.abs(normAngle(want - t.ang)) > HR.aimTolerance) continue; // not aligned yet
+    if (mode === 'ship') {
+      var d = dist(ship.x, ship.y, primary.x, primary.y);
+      if (d < HR.minRange || d > HR.maxRange) continue;
+      if (!losShips(state, ship, primary)) continue;
+      fireHeavyRail(state, ship, i, primary);
+      t.cool = HR.cooldown;
+    } else { // rock demolition
+      var dr = dist(ship.x, ship.y, rock.x, rock.y);
+      if (dr < HR.minRange || dr > HR.maxRange) continue;
+      fireHeavyRailAtRock(state, ship, i, rock);
+      t.cool = HR.cooldown;
+    }
+  }
+}
+
+function aiBattleship(state, ship, dt) {
+  var cfg = state.config, AI = cfg.ai, HR = cfg.heavyRail, def = ship.def;
+  var enemies = livingEnemies(state, ship.team);
+  if (!enemies.length) {
+    // no contacts: advance on the hunt point at cruise, clearing rocks as it goes
+    var hpn = routeAround(state, ship, huntPoint(state, ship));
+    ship.nav = { x: hpn.x, y: hpn.y, arrive: true, speedCap: def.maxCruiseSpeed * 0.8 };
+    blastCoverNearGhosts(state, ship, dt);
+    updateTurrets(state, ship, dt);
+    return;
+  }
+  // navigation anchor: the heavy-rail primary if any, else the nearest capital, else nearest
+  var primary = pickHeavyRailPrimary(state, ship);
+  var pick = primary ? { ship: primary, d: dist(ship.x, ship.y, primary.x, primary.y) }
+                     : (nearestWhere(state, ship, enemies, isCapital) || nearestWhere(state, ship, enemies, null));
+  var target = pick.ship, d = pick.d;
+  var aim = Math.atan2(target.y - ship.y, target.x - ship.x);
+
+  // light-swarm centroid within ~450px (the only counter to divers besides PD is creeping away)
+  var lcx = 0, lcy = 0, ln = 0;
+  for (var i = 0; i < enemies.length; i++) {
+    var e = enemies[i];
+    if (isLight(e) && dist(ship.x, ship.y, e.x, e.y) < 450) { lcx += e.x; lcy += e.y; ln++; }
+  }
+
+  if (state.tick % 30 === (ship.id % 30)) ship.ai.anchorBias = openLaneBias(state, ship, target);
+  var bias = ship.ai.anchorBias || { x: 0, y: 0 };
+  var stand = HR.maxRange * 0.85; // hold near the top of the gun's reach
+
+  if (ship.hp < 0.3 * ship.maxHp && ln > 0) {
+    // low and swarmed: crawl toward the friendly fleet centroid (cruise 28 barely helps — intended)
+    var own = ship.team === 'A' ? state.aliveA : state.aliveB;
+    var fx = 0, fy = 0, fn = 0;
+    for (var k = 0; k < own.length; k++) if (own[k].id !== ship.id) { fx += own[k].x; fy += own[k].y; fn++; }
+    var goal = fn ? { x: fx / fn, y: fy / fn } : huntPoint(state, ship);
+    var hpr = routeAround(state, ship, goal);
+    ship.nav = { x: hpr.x, y: hpr.y, arrive: true, speedCap: def.maxCruiseSpeed, face: aim };
+  } else if (ln > 0) {
+    // creep directly away from the diver centroid to buy PD reaction time; keep them on the nose
+    var cx = lcx / ln, cy = lcy / ln, dc = dist(ship.x, ship.y, cx, cy) || 1;
+    var ux = (ship.x - cx) / dc, uy = (ship.y - cy) / dc;
+    ship.nav = { x: ship.x + ux * 300 + bias.x, y: ship.y + uy * 300 + bias.y, arrive: true, speedCap: def.maxCruiseSpeed, face: aim };
+  } else {
+    // standoff at maxRange*0.85 along the ship->primary line, plus the open-lane bias
+    var ux2 = (target.x - ship.x) / (d || 1), uy2 = (target.y - ship.y) / (d || 1);
+    ship.nav = { x: target.x - ux2 * stand + bias.x, y: target.y - uy2 * stand + bias.y,
+                 arrive: true, speedCap: def.maxCruiseSpeed, face: aim };
+  }
+  blastCoverNearGhosts(state, ship, dt); // sets ai.rockAim on a rock hiding a ghost (turrets slew to it)
+  updateTurrets(state, ship, dt);        // turrets fire every tick regardless of nav state
 }
 
 function teamCommitting(state, team) {
@@ -2434,6 +2663,7 @@ function aiPinned(state, ship, dt) {
       pick.d <= state.config.bomb.launchRange && losShips(state, ship, target)) {
     launchBomb(state, ship, target); ship.cool.bomb = state.config.bomb.cooldown;
   }
+  if (ship.cls === 'battleship') updateTurrets(state, ship, dt); // turrets pick their own detected primary
   tryTorpedo(state, ship, dt);
 }
 
@@ -2451,6 +2681,9 @@ function weaponsFree(state, ship, dt) {
   } else if (ship.cls === 'frigate') {
     blastCoverNearGhosts(state, ship, dt);
     tryTorpedo(state, ship, dt);
+  } else if (ship.cls === 'battleship') {
+    blastCoverNearGhosts(state, ship, dt);
+    updateTurrets(state, ship, dt);
   } else if (ship.cls === 'interceptor') {
     if (near) updateGatling(state, ship, near.ship, dt);
     if (ship.torpAmmo > 0) tryTorpedo(state, ship, dt);
@@ -2479,6 +2712,7 @@ function executeOrder(state, ship, dt) {
       if (hit && hit.d < 950) { // engage what you meet, resume after
         if (ship.cls === 'destroyer') aiDestroyer(state, ship, dt);
         else if (ship.cls === 'frigate') aiFrigate(state, ship, dt);
+        else if (ship.cls === 'battleship') aiBattleship(state, ship, dt);
         else if (ship.cls === 'bomber') aiBomber(state, ship, dt);
         else aiInterceptor(state, ship, dt);
         return;
@@ -2546,6 +2780,14 @@ function executeOrder(state, ship, dt) {
         if (d > AI.bomberRegroupRange * 0.9) m = 'approach';
       }
       ship.ai.mode = m;
+    } else if (ship.cls === 'battleship') {
+      // stand off at the top of the gun's reach, face the target, let the turrets work
+      var HRa = state.config.heavyRail;
+      var uxb = (ship.x - tgt.x) / (d || 1), uyb = (ship.y - tgt.y) / (d || 1);
+      ship.nav = { x: tgt.x + uxb * HRa.maxRange * 0.85, y: tgt.y + uyb * HRa.maxRange * 0.85,
+                   arrive: true, speedCap: ship.def.maxCruiseSpeed, face: aim };
+      blastCoverNearGhosts(state, ship, dt);
+      updateTurrets(state, ship, dt);
     } else { // interceptor
       if (ship.torpAmmo > 0 && isCapital(tgt) && ship.cool.torp <= 0 &&
           d >= state.config.torpedo.lobMinRange && d <= state.config.torpedo.interceptor.range && losShips(state, ship, tgt)) {
@@ -2590,6 +2832,14 @@ function executeOrder(state, ship, dt) {
         }
         if (ship.cool.gat < 0) ship.cool.gat = 0;
       }
+    } else if (ship.cls === 'battleship') {
+      // close to a sensible standoff and flag the rock so the turrets slew to and demolish it
+      var HRb = state.config.heavyRail;
+      var wantR = clamp(rd, HRb.minRange + rock.r + 80, HRb.maxRange * 0.8);
+      ship.nav = { x: rock.x + rux * wantR, y: rock.y + ruy * wantR, arrive: true, speedCap: ship.def.maxCruiseSpeed, face: rAim };
+      if (rd >= HRb.minRange && rd <= HRb.maxRange)
+        ship.ai.rockAim = { x: rock.x, y: rock.y, rockId: rock.id, until: state.time + 0.2 };
+      updateTurrets(state, ship, dt);
     } else { // bomber
       var B2 = state.config.bomb;
       ship.nav = { x: rock.x + rux * (B2.launchRange * 0.8), y: rock.y + ruy * (B2.launchRange * 0.8), arrive: true, face: rAim };
@@ -2608,6 +2858,7 @@ function aiTick(state, ship, dt) {
   if (ship.order) { executeOrder(state, ship, dt); return; } // Ordered beats Auto (PRD §9)
   if (ship.cls === 'destroyer') aiDestroyer(state, ship, dt);
   else if (ship.cls === 'frigate') aiFrigate(state, ship, dt);
+  else if (ship.cls === 'battleship') aiBattleship(state, ship, dt);
   else if (ship.cls === 'bomber') aiBomber(state, ship, dt);
   else aiInterceptor(state, ship, dt);
 }
@@ -2790,11 +3041,15 @@ var api = {
     generateTerrain(state, state.rng);
     var fa = resolveFleet(state.config, opts.teamA || 'RAILGUN');
     var fb = resolveFleet(state.config, opts.teamB || 'SWARM');
-    var gap = state.config.spawnFormationGap;
     function spawnFleet(fleet, at, facing, team) {
       var px = -Math.sin(facing), py = Math.cos(facing); // rank axis
       var bx = -Math.cos(facing), by = -Math.sin(facing); // ranks stack rearward
       var perRank = state.config.spawnRankSize;
+      // per-fleet pitch: a radius-78 battleship at the flat 70-px gap would spawn interpenetrating
+      // and blow the formation apart, so open the rank/ranks to 2.4x the fleet's largest hull.
+      var maxR = 0;
+      for (var q = 0; q < fleet.length; q++) maxR = Math.max(maxR, state.config.ships[fleet[q]].radius);
+      var gap = Math.max(state.config.spawnFormationGap, 2.4 * maxR); // 2.4*78 = 187 for a BB fleet
       for (var i = 0; i < fleet.length; i++) {
         var rank = Math.floor(i / perRank), col = i % perRank;
         var inRank = Math.min(perRank, fleet.length - rank * perRank);
@@ -2905,6 +3160,7 @@ return api;
   var BUDGET = CFG.fleetPoints;                                  // 42
   // heavies first: spawn ranks put earlier array entries at the front
   var CLASSES = [
+    { cls: 'battleship',  letter: 'BB', glyph: '⬢' },       // ⬢ hexagon (heaviest — front rank)
     { cls: 'destroyer',   letter: 'D', glyph: '▮' },        // ▮ rectangle
     { cls: 'frigate',     letter: 'F', glyph: '■' },        // ■ square
     { cls: 'bomber',      letter: 'B', glyph: '◆' },        // ◆ diamond
@@ -2917,8 +3173,9 @@ return api;
   // DOM handles built by buildSetupDOM()
   var countEl = { A: {}, B: {} }, subEl = { A: {}, B: {} }, plusEl = { A: {}, B: {} }, minusEl = { A: {}, B: {} };
 
-  function emptyCounts() { return { destroyer: 0, frigate: 0, bomber: 0, interceptor: 0 }; }
-  function copyCounts(c) { return { destroyer: c.destroyer, frigate: c.frigate, bomber: c.bomber, interceptor: c.interceptor }; }
+  // generalised over CLASSES so a new class row (e.g. battleship) can't desync the setup UI
+  function emptyCounts() { var c = {}; for (var i = 0; i < CLASSES.length; i++) c[CLASSES[i].cls] = 0; return c; }
+  function copyCounts(c) { var o = {}; for (var i = 0; i < CLASSES.length; i++) o[CLASSES[i].cls] = c[CLASSES[i].cls] || 0; return o; }
   function spentOf(counts) { var s = 0; for (var i = 0; i < CLASSES.length; i++) s += counts[CLASSES[i].cls] * costOf(CLASSES[i].cls); return s; }
   function shipsOf(counts) { var n = 0; for (var i = 0; i < CLASSES.length; i++) n += counts[CLASSES[i].cls]; return n; }
   function countsFromPreset(name) {
@@ -3421,6 +3678,7 @@ return api;
       if (e.kind === 'launch' || e.kind === 'order') continue;   // launch: silent; order: app draws its own markers
       if (e.kind === 'pd') ttl = 0.12;
       else if (e.kind === 'gat') ttl = 0.09;
+      else if (e.kind === 'hrail') ttl = 0.5;   // heavy-rail traces linger a touch longer than 'rail'
       else if (e.kind === 'boom') ttl = 0.5;
       else if (e.kind === 'shatter') ttl = 0.6;
       else if (e.kind === 'shipboom') ttl = 0.8;
@@ -3577,6 +3835,12 @@ return api;
           g.quadraticCurveTo((ev.x + ev.x2) / 2 + perpx * sag * 2, (ev.y + ev.y2) / 2 + perpy * sag * 2, ev.x2, ev.y2);
         else g.lineTo(ev.x2, ev.y2);
         g.stroke();
+      } else if (ev.kind === 'hrail') {
+        // heavy-rail slug: thicker/warmer than a railgun trace, from the turret mount (ev.x,ev.y).
+        // Minimal for now — a later visual pass draws the turret barrels; keep it hitscan-straight.
+        g.strokeStyle = 'rgba(255,240,200,' + a + ')';
+        g.lineWidth = (ev.hit === 'ship' ? 3.5 : 2.5) / scale;
+        g.beginPath(); g.moveTo(ev.x, ev.y); g.lineTo(ev.x2, ev.y2); g.stroke();
       } else if (ev.kind === 'pd') {
         g.strokeStyle = 'rgba(120,235,255,' + (0.7 * a) + ')';
         g.lineWidth = 1 / scale;

@@ -677,4 +677,238 @@ test('accretion-follows-contour', () => {
     `(bounding circles would be ${(big.r + peb.r).toFixed(0)}) — accretion not following the contour`);
 });
 
+// ------------------------------------------------- new: BATTLESHIP heavy railgun
+
+// Live heavy-rail config (read at runtime, never hardcoded — same discipline as the rest).
+function heavyRailCfg(cfg) {
+  assert(cfg.heavyRail && cfg.ships.battleship,
+    'no heavyRail block / ships.battleship in live config — battleship support missing');
+  return cfg.heavyRail;
+}
+// Count 'hrail' events of a given hit kind seen this tick; caller consumes state.events so the
+// capped ring buffer isn't re-scanned (the sim itself never reads state.events, so clearing it
+// is a harmless renderer-style consume).
+function drainHrail(match, hitKind) {
+  let n = 0;
+  for (const e of match.state.events) if (e.kind === 'hrail' && (!hitKind || e.hit === hitKind)) n++;
+  match.state.events.length = 0;
+  return n;
+}
+
+// TEST 1 — three turrets delete a DETECTED capital far beyond railgun range (range 3200 >> 700,
+// damage 30, hitscan, detection-gated). Destroyer at 1400px: past railgun 700, inside its own
+// coasting detection 1680, inside heavyRail [220,3200].
+test('heavyRail-hits-capital', () => {
+  const cfg = Praedra.defaultConfig();
+  const HR = heavyRailCfg(cfg);
+  const d = 1400;
+  assert(d > cfg.railgun.maxRange, `dist ${d} is not beyond railgun maxRange ${cfg.railgun.maxRange}`);
+  assert(d > HR.minRange && d < HR.maxRange, `dist ${d} outside heavyRail [${HR.minRange},${HR.maxRange}]`);
+  assertDetectable(cfg, 'destroyer', d, 100, 'heavyRail-hits-capital');
+  const m = Praedra.createScenario({
+    seed: 1,
+    ships: [pinned('battleship', 'A', MID.x, MID.y, 0), pinned('destroyer', 'B', MID.x + d, MID.y, Math.PI)],
+    asteroids: [],
+  });
+  const dst = findShip(m, 'B', 'destroyer');
+  stepSeconds(m, 20);
+  assert(hpOf(m, dst.id) === 0,
+    `destroyer survived 20s of heavy-rail at ${d}px (hp ${hpOf(m, dst.id)}) — turrets not deleting capitals past railgun range`);
+});
+
+// TEST 2 — HARD class gate: turrets can never touch a bomber/interceptor even when detected and
+// in range. Both lights sit inside their coasting detection range but OUTSIDE PD range (so PD is
+// not the reason they're spared), and the bomber bombs the BB (scenario is live, not inert).
+test('heavyRail-hard-class-gate', () => {
+  const cfg = Praedra.defaultConfig();
+  heavyRailCfg(cfg);
+  const dB = 360, dI = 380; // bomber inside launchRange 380 so it actually bombs the BB
+  assertDetectable(cfg, 'bomber', dB, 120, 'heavyRail-hard-class-gate/bomber');
+  assertDetectable(cfg, 'interceptor', dI, 50, 'heavyRail-hard-class-gate/interceptor');
+  assert(dB > cfg.pd.range && dI > cfg.pd.range,
+    `lights must sit outside PD range ${cfg.pd.range} so PD isn't the reason they're untouched`);
+  const m = Praedra.createScenario({
+    seed: 2,
+    ships: [
+      pinned('battleship', 'A', MID.x, MID.y, 0),
+      pinned('bomber', 'B', MID.x + dB, MID.y, Math.PI),
+      pinned('interceptor', 'B', MID.x, MID.y + dI, -Math.PI / 2),
+    ],
+    asteroids: [],
+  });
+  const bmb = findShip(m, 'B', 'bomber'), icp = findShip(m, 'B', 'interceptor'), bb = findShip(m, 'A', 'battleship');
+  const bmb0 = bmb.hp, icp0 = icp.hp, bb0 = bb.hp;
+  let hrailShip = 0;
+  for (let i = 0; i < 40 * TICK_RATE && !m.done; i++) { m.step(); hrailShip += drainHrail(m, 'ship'); }
+  assert(hpOf(m, bmb.id) === bmb0, `bomber lost hp (${bmb0}->${hpOf(m, bmb.id)}) — turrets must never hit a bomber`);
+  assert(hpOf(m, icp.id) === icp0, `interceptor lost hp (${icp0}->${hpOf(m, icp.id)}) — turrets must never hit an interceptor`);
+  assert(hrailShip === 0, `${hrailShip} heavy-rail ship-hits against a lights-only enemy set — class gate leaking`);
+  assert(hpOf(m, bb.id) < bb0, 'BB took no bomb damage — the scenario was inert, class-gate result is meaningless');
+});
+
+// TEST 3 — frigate speed gate. (a) a pinned (speed 0) frigate is very hittable; (b) a non-pinned
+// frigate ordered to cross the BB's front at cruise (== speedNoTrack) is untrackable. The mover
+// carries an initial cruise velocity so it's at full speed from tick 0 (no standing-start window
+// where a briefly-slow frigate would be shot); it must be DETECTED throughout so the SPEED gate,
+// not detection, is what spares it.
+test('heavyRail-frigate-speed-gate', () => {
+  const cfg = Praedra.defaultConfig();
+  const HR = heavyRailCfg(cfg);
+  const d = 900; // inside frigate coasting vis 1020, inside heavyRail range, outside PD
+  assertDetectable(cfg, 'frigate', d, 100, 'heavyRail-frigate-speed-gate');
+  assert(d > HR.minRange && d < HR.maxRange, `standoff ${d} outside heavyRail [${HR.minRange},${HR.maxRange}]`);
+
+  const ma = Praedra.createScenario({
+    seed: 3,
+    ships: [pinned('battleship', 'A', MID.x, MID.y, 0), pinned('frigate', 'B', MID.x + d, MID.y, Math.PI)],
+    asteroids: [],
+  });
+  const fa = findShip(ma, 'B', 'frigate'), fa0 = fa.hp;
+  stepSeconds(ma, 30);
+  const lostStationary = fa0 - hpOf(ma, fa.id);
+  assert(lostStationary >= 0.4 * fa.maxHp,
+    `pinned frigate lost only ${lostStationary}/${fa.maxHp} in 30s — turrets not hitting slow frigates`);
+
+  const cruise = cfg.ships.frigate.maxCruiseSpeed;
+  const mb = Praedra.createScenario({
+    seed: 3,
+    ships: [
+      pinned('battleship', 'A', MID.x, MID.y, 0),
+      { cls: 'frigate', team: 'B', x: MID.x + d, y: MID.y - d, heading: Math.PI / 2, vx: 0, vy: cruise },
+    ],
+    asteroids: [],
+  });
+  const fb = mb.state.ships.find((s) => s.team === 'B' && s.cls === 'frigate');
+  const fb0 = fb.hp, fbId = fb.id;
+  Praedra.issueOrder(mb, [fbId], { type: 'move', x: MID.x + d, y: MID.y + 3000 }); // perpendicular crossing
+  let detTicks = 0;
+  for (let i = 0; i < 30 * TICK_RATE && !mb.done; i++) {
+    mb.step();
+    if (mb.state.detA.some((s) => s.id === fbId)) detTicks++;
+  }
+  const lostMoving = fb0 - hpOf(mb, fbId);
+  assert(detTicks > 0, 'moving frigate was never detected — the speed-gate test would pass for the wrong reason');
+  assert(lostMoving < 0.25 * lostStationary,
+    `moving frigate at cruise ${cruise} lost ${lostMoving.toFixed(1)} vs stationary ${lostStationary} ` +
+    `(ratio ${(lostMoving / (lostStationary || 1)).toFixed(2)}, want <0.25) — speed gate not sparing fast crossers`);
+});
+
+// TEST 4 — dead zone: a target closer than minRange cannot be fired on at all. Placed inside the
+// dead zone but OUTSIDE the BB's PD ship-engagement range (pd.range + target radius), so ANY hp
+// loss or 'hrail' event would indict the turrets rather than PD.
+test('heavyRail-dead-zone', () => {
+  const cfg = Praedra.defaultConfig();
+  const HR = heavyRailCfg(cfg);
+  const pdShip = cfg.pd.range + cfg.ships.destroyer.radius;
+  const d = Math.round((pdShip + HR.minRange) / 2);
+  assert(d > pdShip && d < HR.minRange && d > 0,
+    `dead-zone dist ${d} not between PD-ship range ${pdShip} and minRange ${HR.minRange}`);
+  assertDetectable(cfg, 'destroyer', d, 100, 'heavyRail-dead-zone');
+  const m = Praedra.createScenario({
+    seed: 4,
+    ships: [pinned('battleship', 'A', MID.x, MID.y, 0), pinned('destroyer', 'B', MID.x + d, MID.y, Math.PI)],
+    asteroids: [],
+  });
+  const dst = findShip(m, 'B', 'destroyer');
+  const hp0 = dst.hp;
+  let hrail = 0;
+  for (let i = 0; i < 15 * TICK_RATE && !m.done; i++) { m.step(); hrail += drainHrail(m, null); }
+  assert(hrail === 0, `${hrail} heavy-rail shots fired at a target inside the dead zone (${d} < minRange ${HR.minRange})`);
+  assert(hpOf(m, dst.id) === hp0, `destroyer at ${d}px (dead zone) lost hp ${hp0}->${hpOf(m, dst.id)}`);
+});
+
+// TEST 6 — battleship spawns with its fleet at full hp, and the widened per-fleet spawn pitch
+// (2.4 x the largest hull's radius) keeps a radius-78 hull from spawning interpenetrating.
+test('battleship-spawns-with-fleet', () => {
+  const cfg = Praedra.defaultConfig();
+  assert(cfg.ships.battleship, 'no battleship def in live config');
+  const m = Praedra.createMatch({
+    seed: 5,
+    teamA: ['battleship', 'destroyer', 'frigate'],
+    teamB: ['destroyer', 'frigate', 'frigate'],
+  });
+  const bb = m.state.ships.find((s) => s.team === 'A' && s.cls === 'battleship');
+  assert(bb, 'no team-A battleship spawned from the custom fleet');
+  assert(bb.maxHp === cfg.ships.battleship.hp, `battleship maxHp ${bb.maxHp} != cfg hp ${cfg.ships.battleship.hp}`);
+  const sh = m.state.ships;
+  for (let i = 0; i < sh.length; i++) for (let j = i + 1; j < sh.length; j++) {
+    const dd = dist2D(sh[i].x, sh[i].y, sh[j].x, sh[j].y);
+    const sumR = sh[i].def.radius + sh[j].def.radius;
+    assert(dd >= sumR, `${sh[i].cls}/${sh[j].cls} spawned overlapping: centres ${dd.toFixed(0)}px < r+r ${sumR}`);
+  }
+  let nn = Infinity;
+  for (const s of sh) if (s !== bb) nn = Math.min(nn, dist2D(bb.x, bb.y, s.x, s.y));
+  const wantPitch = 2.4 * cfg.ships.battleship.radius;
+  assert(nn >= wantPitch - 1,
+    `battleship nearest neighbour ${nn.toFixed(1)}px < widened pitch ${wantPitch.toFixed(1)} — spawn-gap fix not applied`);
+});
+
+// A committed bomber wave: laterally spaced on one flank, 3 depth echelons, ~1500px out — the
+// design's calibration placement (scratchpad bbsim*/bbfinal). The BB sits at the ARENA CORNER
+// (0,0), exactly as the design measured: the walls funnel divers into convergence so they
+// self-splash (design finding #1) — that emergent self-attrition is what makes a *pair* fail
+// while a squad succeeds, and it is the whole point of the tune. (Other new tests use MID to
+// stay clear of walls; this one deliberately uses the corner to reproduce the measured regime.)
+function bomberWave(n, seed, origin, dist, lat, dep) {
+  let s = (seed >>> 0) || 1;
+  const nx = () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; };
+  const a = nx() * Math.PI * 2, ca = Math.cos(a), sa = Math.sin(a), out = [];
+  for (let i = 0; i < n; i++) {
+    const L = (i - (n - 1) / 2) * lat, D = (i % 3) * dep, r = dist + D;
+    const px = origin.x - ca * r - sa * L, py = origin.y - sa * r + ca * L;
+    out.push({ cls: 'bomber', team: 'B', x: px, y: py, heading: Math.atan2(origin.y - py, origin.x - px) });
+  }
+  return out;
+}
+function bbMinHpFrac(nBombers, seed, capSeconds) {
+  const origin = { x: 0, y: 0 };
+  const ships = [pinned('battleship', 'A', origin.x, origin.y, Math.PI)]
+    .concat(bomberWave(nBombers, seed, origin, 1500, 150, 240));
+  const m = Praedra.createScenario({ seed, ships, asteroids: [] });
+  const bb = findShip(m, 'A', 'battleship');
+  const mh = bb.maxHp;
+  let minFrac = 1;
+  const cap = Math.round(capSeconds * TICK_RATE);
+  for (let i = 0; i < cap && !m.done; i++) {
+    m.step();
+    if (bb.alive) minFrac = Math.min(minFrac, bb.hp / mh);
+    else return 0;
+  }
+  return minFrac;
+}
+
+// TEST 7 — durability regression from the simulated tune (loose bounds; a guard, not exact-match).
+// A PAIR of bombers must fail (BB stays healthy); a SQUAD of 6 must be a real threat (drives it
+// below half). 2 seeds each, 240s cap. Uses min-hp (robust) not the noisy binary kill.
+test('battleship-durability', () => {
+  const cfg = Praedra.defaultConfig();
+  assert(cfg.ships.battleship.hp > 0 && cfg.ships.battleship.pdSlots >= 0, 'battleship def missing hp/pdSlots');
+  for (const seed of [7, 22]) {
+    const frac = bbMinHpFrac(2, seed, 240);
+    assert(frac > 0.55, `seed ${seed}: 2 bombers drove the BB to ${(frac * 100).toFixed(0)}% min-hp (want >55%) — a pair should fail`);
+  }
+  for (const seed of [7, 22]) {
+    const frac = bbMinHpFrac(6, seed, 240);
+    assert(frac < 0.5, `seed ${seed}: 6 bombers only reached ${(frac * 100).toFixed(0)}% min-hp (want <50%) — a squad should threaten it`);
+  }
+});
+
+// TEST 8 — determinism with a battleship in the custom fleet (turret slew/stagger/fire and the
+// spawn-gap fix are all pure/deterministic). Same seed twice -> identical result.
+test('determinism-with-battleship', () => {
+  const opts = () => ({
+    seed: 5,
+    overrides: { terrainDensity: 0.5 },
+    teamA: ['battleship', 'destroyer', 'frigate', 'frigate'],
+    teamB: ['destroyer', 'destroyer', 'frigate', 'frigate'],
+  });
+  const r1 = Praedra.runMatch(opts());
+  const r2 = Praedra.runMatch(opts());
+  assert(isDeepStrictEqual(r1, r2),
+    'same seed + config + a battleship fleet produced different results — turret slew/stagger/fire not deterministic');
+  const m = Praedra.createMatch(opts());
+  assert(m.state.ships.some((s) => s.team === 'A' && s.cls === 'battleship'),
+    'determinism fleet spawned no battleship — guards a silent spawn regression');
+});
+
 runAll();

@@ -30,8 +30,9 @@ level).
     NOT used; pass nested objects, e.g. `{ terrainDensity: 0.2, railgun: { minRange: 180 } }`.
   - `teamA`, `teamB` — preset name string (`'RAILGUN'`/`'SWARM'`/`'BALANCED'`, each a
     42-point fleet; budget constant in `config.fleetPoints`) or an arbitrary array of
-    class names from `'destroyer' | 'frigate' | 'bomber' | 'interceptor'` (custom
-    fleets; ships spawn in ranks of `spawnRankSize`, array order front-to-back).
+    class names from `'battleship' | 'destroyer' | 'frigate' | 'bomber' | 'interceptor'`
+    (custom fleets; ships spawn in ranks of `spawnRankSize`, array order front-to-back).
+    The three presets contain no battleships; build a BB fleet with a custom array.
 - Match object:
   - `match.step()` — advance exactly one fixed 60 Hz tick.
   - `match.tick` (int), `match.done` (bool), `match.result` (null until done).
@@ -88,8 +89,10 @@ hiding it, since neither the enemy nor a "ghost" of it ever entered memory.
 - `visibleRange(ship) = ship.signature × lerp(detection.thrustMultMin, detection.thrustMultMax, ship.throttle)`.
   A `pinned` ship's throttle is always 0 (coasting), so its visible range is always
   `signature × detection.thrustMultMin` (defaults: 0.6). Signatures (CONFIG_DEFAULTS.ships):
-  destroyer 2800, frigate 1700, bomber 900, interceptor 750 → coasting visible ranges
-  1680 / 1020 / 540 / 450 px respectively.
+  battleship 4200, destroyer 2800, frigate 1700, bomber 900, interceptor 750 → coasting
+  visible ranges 2520 / 1680 / 1020 / 540 / 450 px respectively (burning, ×thrustMultMax
+  1.2: battleship 5040 / destroyer 3360 / …). The battleship has the largest signature in
+  the game — it lights up the sky and is detected early, which its long guns rely on.
 - Team-shared sensor picture, recomputed every `detection.checkEvery` ticks (default 6):
   an enemy is detected if ANY living friendly has LOS to it within the enemy's own
   (thrust-modulated) visible range. Results live in `state.detA` / `state.detB` —
@@ -213,11 +216,16 @@ deal their base damage directly (no multiplier) via `attackrock` orders only.
 
 ## Friendly fire (universal, always on)
 
-- **Railgun / gatling**: hit the FIRST ship hull intersecting the firing ray,
-  regardless of team — a teammate standing in the line of fire eats the shot
-  instead of the intended (possibly enemy) target. If nothing living is in the
+- **Railgun / gatling / heavy railgun**: hit the FIRST ship hull intersecting the
+  firing ray, regardless of team — a teammate standing in the line of fire eats the
+  shot instead of the intended (possibly enemy) target. If nothing living is in the
   way, a railgun MISS on the intended target continues down the ray and can still
   crack a rock further out (`fireRailgun`'s "missed slug flies on downrange" path).
+  The battleship's `heavyRail` uses the identical semantics (`fireHeavyRail`): first
+  hull of any team eats the slug, a blocking rock absorbs `damage × rockDamageMult`
+  and stops it, an on-target miss cracks the rock behind the target. Its ray
+  originates at the firing turret's MOUNT point (a small offset along the hull spine),
+  not the ship centre.
 - **Torpedoes**: contact-detonate against ANY non-owner hull they touch in flight
   (friend or foe), not just their locked target; the locked target itself keeps
   its own evasion-gated terminal-approach roll instead of a flat contact check.
@@ -227,6 +235,36 @@ deal their base damage directly (no multiplier) via `attackrock` orders only.
 - `applyDamage`'s `attacker`/team bookkeeping (`state.damage`, `damageDealt`) only
   credits damage dealt to an actual enemy — friendly-fire hits still reduce the
   victim's hp but are not counted in `result.damageA`/`damageB`.
+
+## Heavy railgun (Battleship turrets)
+
+The battleship (`ships.battleship`) mounts `heavyRail.turrets` (3) independent turrets
+instead of a fixed-forward railgun. Each ship carries `ship.turrets = [{ ang, cool }]`
+(index 0 = bow); `ang` is the turret's absolute world facing (the renderer draws it),
+`cool` is seconds until that turret is ready. Deterministic firing model:
+
+- **Stagger**: at spawn, turret `i` starts `cool = i × (cooldown / turrets)` so the guns
+  fire out of phase (0.00 / 0.67 / 1.33 s), ~1 slug every 0.67 s ship-wide.
+- **Slew**: each turret rotates toward the target bearing at `slewRate` rad/s and may
+  fire only when within `aimTolerance` of it — a target whose bearing changes faster
+  than `slewRate` outruns the turret and is never engaged. Slew/stagger are pure
+  geometry/index (no RNG).
+- **Class gate (hard)**: a turret can only ever target a class in
+  `heavyRail.trackClasses` (`destroyer`, `frigate`, `battleship`) — it can NEVER hit a
+  bomber or interceptor, regardless of range or detection.
+- **Speed gate**: final hit chance is `(1 − evasion×evasionMult) × speedFactor`, where
+  `speedFactor = clamp01((speedNoTrack − v) / (speedNoTrack − speedFullTrack))`. A target
+  at/above `speedNoTrack` (85, the frigate cruise) is untrackable (factor 0); at/below
+  `speedFullTrack` (55, the destroyer cruise) there is no penalty (factor 1).
+- **Dead zone / range**: no fire inside `minRange` (220) or beyond `maxRange` (3200);
+  range is measured from the ship centre. `maxRange` is far past the railgun's 700 but
+  detection-bounded — at long range only lit-up (burning/scouted) ships are engageable.
+- **Friendly fire**: identical to the railgun (see above) — same first-hull / blocking-rock
+  ray semantics via `fireHeavyRail`.
+- **Determinism**: the ONLY RNG draw in the whole heavy-rail path is the terminal hit
+  roll (`state.rng.chance`), taken in ship-iteration then turret-index order.
+- **Event**: each shot pushes `{ kind: 'hrail', x, y, x2, y2, team, turret, hit }` where
+  `x,y` is the turret mount point and `hit ∈ 'ship'|'rock'|'miss'`.
 
 ## Key CONFIG fields harness code may rely on
 
@@ -243,6 +281,11 @@ deal their base damage directly (no multiplier) via `attackrock` orders only.
 - `presets` — fleet presets (same object as `Praedra.PRESETS`).
 - `detection.thrustMultMin` / `thrustMultMax` / `checkEvery` / `memorySeconds`.
 - `ships.<cls>.signature` — per-class detection signature.
+- `ships.battleship` — the battleship def (`hp`, `radius` 78, `pdSlots`, `signature` 4200,
+  `avoidMult`, etc.); largest hull in the game.
+- `heavyRail.*` — the battleship's turret weapon: `turrets`, `turretMounts`, `damage`,
+  `cooldown`, `minRange`, `maxRange`, `slewRate`, `aimTolerance`, `rockDamageMult`,
+  `evasionMult`, `trackClasses`, `speedFullTrack`, `speedNoTrack` (see Heavy railgun above).
 - `railgun.rockDamageMult`, `torpedo.rockDamageMult`, `asteroidHP`, `asteroidHPRefRadius`.
 - `debris.fragmentCount`, `debris.childRadiusScale`, `debris.minChildRadius`, `debris.maxAsteroids`.
 
@@ -252,7 +295,9 @@ Everything else in CONFIG is sim-internal; sweep it via `overrides` generically.
 
 `match.state.events` is a capped ring buffer (trimmed to the most recent 250 once it
 exceeds 500) of `{ t: tick, kind, ... }` records for renderers/inspectors. Kinds seen
-in the sim: `rail`, `gat`, `pd`, `launch`, `boom` (torpedo/bomb detonation), `shatter`
-(asteroid destroyed), `shipboom` (ship destroyed), and `order` (an `issueOrder` call —
-`{ kind: 'order', x, y, order: type }`). Harness code should treat unknown kinds as
-forward-compatible no-ops rather than asserting an exhaustive kind list.
+in the sim: `rail`, `hrail` (battleship heavy-rail turret shot — see Heavy railgun above;
+`{ kind: 'hrail', x, y, x2, y2, team, turret, hit }`), `gat`, `pd`, `launch`, `boom`
+(torpedo/bomb detonation), `shatter` (asteroid destroyed), `shipboom` (ship destroyed),
+and `order` (an `issueOrder` call — `{ kind: 'order', x, y, order: type }`). Harness code
+should treat unknown kinds as forward-compatible no-ops rather than asserting an exhaustive
+kind list.
