@@ -1,8 +1,31 @@
 # STATUS
 
-**Phase:** Combat-sandbox build complete (user-directed pivot from the flip gate), now with **BIG asteroids + gravity**. The game is playable: RTS controls, fog of war, universal friendly fire, always-destructible terrain, detection, flanking, cover demolition, and gravity wells that bend everything.
+**Phase:** Combat-sandbox build complete (user-directed pivot from the flip gate), now with **BIG asteroids + gravity** plus a **balance + fleet-AI pass** (frigate nerf, fighter squadrons, coordinated fleet layer). The game is playable: RTS controls, fog of war, universal friendly fire, always-destructible terrain, detection, flanking, cover demolition, and gravity wells that bend everything.
 
 ## What's in the build (all verified)
+
+**Balance + fleet AI pass (new):**
+- **Frigate torpedo cooldown 6.0 → 12.0 s** (fire rate halved). Measured cause: a 14-frigate
+  42-pt fleet beat RAILGUN 70-80%, BALANCED 80-90%, SWARM 90-100%. The nerf thins its margins
+  (surviving fleet value −25-40%) but the wall still wins — residual dominance is structural:
+  42 PD slots (interception wall) + kiting (cruise 85 / torpedo 950 vs destroyer 55 / railgun
+  700). Verified by lever isolation: cooldown 15 changes nothing vs RAILGUN. See Known items.
+- **Fighter squadron coordinator** (`squadron.*`, gated by `enabledTeams`, default AB): id-ordered
+  per-class squadrons of 5; separation steering (bomberSep 135 > 2× bomb AOE — one intercepted
+  bomb no longer chain-kills the wave), slot-fanned attack lanes around the squadron lead, weak
+  echelon formation during no-contact transit (never fights pathing; skipped for ordered/pinned
+  ships). SWARM-mirror A/B: squadron side won 22/24 as team A (control: base side bias ~63%);
+  bomb deaths −36%, bomber lifetime +31%.
+- **Coordinated fleet layer** (`ai.smartTeams`, default AB, sweepable for self-play): fleet
+  focus fire (deletion-ordered frigate→destroyer→battleship, wounded-first; drives torpedo
+  picks, railgun/wave targets), destroyer approach-speed governor + `nav.faceLock` gun
+  discipline (brake during railgun dead-time, nose stays on target while a shot is imminent —
+  fixes the reverse-burn-then-realign waste), capital pincer bearings, frigate escorts
+  distributed across all destroyers in ring slots, LOS-shadow ambushes on fresh blind contacts
+  (strictly time-bounded), lights lead-dodge closing debris shards (top fighter killer in
+  diagnostics). Round-1 self-play: smart side 61% over 144 mirror matches (SWARM 92% as A).
+- **`harness/diagnose.mjs`** (new): headless diagnostics — ordnance economy, deaths-by-cause,
+  clumping/chain-risk exposure, bomber lifetime, per-seed table, `--json`.
 
 **TITAN + BIG asteroids + gravity (new):**
 - **Every procedural seed carries exactly one TITAN** (r 1035–1440, ~5× a BIG) **plus 1–3 BIG asteroids** (r 220–380, vs 26–90 for ordinary rocks), placed in that order so clusters/lanes flow around them; arena grown 4400×3200 → 8000×5600 and match timer 300s → 360s to give titan-scale maps transit room (rock counts rescaled). The titan roams anywhere — including cut by the arena boundary — but always keeps ≥65% of its disc in the playable zone (deterministic disc sampler), so it always shapes the fight.
