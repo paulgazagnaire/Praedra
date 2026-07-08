@@ -911,4 +911,168 @@ test('determinism-with-battleship', () => {
     'determinism fleet spawned no battleship — guards a silent spawn regression');
 });
 
+// ------------------------------------------ new: capital pathing / fire-discipline
+//
+// Two composable capital behaviours added in the pathing/fire-discipline upgrade:
+//   (1) field-density DETOUR in routeAround (AUTO/hunt path): a capital rounds a compact,
+//       clutter-heavy field instead of grinding through it.
+//   (2) lane-clearing FIRE in clearTransitLane (auto-hunt + ordered move/attackmove/hold): a
+//       transiting capital blasts a blocking rock out of its corridor, combat-priority-gated.
+// Layouts are built from a LOCAL LCG so they don't touch the sim RNG and are identical every run
+// (createScenario terrain is fully explicit — no titan/bigs injected). Thresholds are grounded in
+// measurements of THIS build vs git HEAD (the pre-feature sim): every criterion below fails on HEAD
+// (baseline never fires to clear / never rounds the field) and passes here. See the design doc and
+// scratchpad measure scripts. All coords in the 8000x5600 arena.
+function lcgLayout(seed) {
+  let s = (seed >>> 0) || 1;
+  return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; };
+}
+// A dense single rock-column spanning the arena at x=3560 with a rock dead-ahead at y=2800; the
+// intact gaps are too tight for the wide destroyer hull to thread, so it must shatter blockers to
+// punch through. r 88..108 -> children r46..56 (mostly pushable pebbles the hull shoves aside).
+// `step` sets the vertical pitch (destroyer 308: it can thread the cleared gap; frigate 296: the
+// nimble hull would thread 308 without ever firing, so the frigate variant uses a tighter wall
+// that forces the torpedo — the two hulls avoid at very different widths, documented deviation
+// from the design's single shared wall).
+function rockColumn(step) {
+  const nx = lcgLayout(4242);
+  const rocks = [];
+  for (let y = 1500; y <= 4100; y += step) rocks.push({ x: 3560, y, r: 88 + nx() * 20 });
+  for (let i = 0; i < 22; i++) rocks.push({ x: 3300 + nx() * 520, y: 2000 + nx() * 1600, r: 28 + nx() * 18 });
+  return rocks;
+}
+// A compact well: a big impassable core (r320, excluded from the clutter metric as > rockClearMaxRadius
+// and routed AROUND, not shot) ringed by a dense band of medium rocks (the counted clutter signal) and
+// a pebble shell. The straight lane through it clutters hard (~650); a lateral flank clears it.
+function wellField() {
+  const nx = lcgLayout(555);
+  const rocks = [{ x: 3600, y: 2800, r: 320 }];
+  for (let i = 0; i < 22; i++) {
+    const a = (i / 22) * Math.PI * 2 + nx() * 0.15, rr = 430 + nx() * 130;
+    rocks.push({ x: 3600 + Math.cos(a) * rr, y: 2800 + Math.sin(a) * rr, r: 78 + nx() * 55 });
+  }
+  for (let i = 0; i < 40; i++) {
+    const a = nx() * Math.PI * 2, rr = 360 + nx() * 520;
+    rocks.push({ x: 3600 + Math.cos(a) * rr, y: 2800 + Math.sin(a) * rr, r: 28 + nx() * 22 });
+  }
+  return rocks;
+}
+
+// Drive one ship on an ordered attackmove straight across a rock column; track how far it punches
+// and whether it arrives. Returns the observed extrema plus splits and self rock-damage.
+function transitAcross(cls, rocks, seconds) {
+  const m = Praedra.createScenario({
+    seed: 77,
+    ships: [{ cls, team: 'A', x: 2200, y: 2800, heading: 0 }],
+    asteroids: rocks,
+  });
+  const ship = findShip(m, 'A', cls);
+  Praedra.issueOrder(m, [ship.id], { type: 'attackmove', x: 5000, y: 2800 });
+  let minDgoal = Infinity, maxX = ship.x;
+  const cap = Math.round(seconds * TICK_RATE);
+  for (let i = 0; i < cap && !m.done; i++) {
+    m.step();
+    const s = m.state.ships.find((x) => x.id === ship.id);
+    if (!s || !s.alive) break;
+    const dg = dist2D(s.x, s.y, 5000, 2800);
+    if (dg < minDgoal) minDgoal = dg;
+    if (s.x > maxX) maxX = s.x;
+    if (dg < 60) break; // arrived — stop early
+  }
+  return { splits: m.state.stats.splits, minDgoal, maxX, rockDmg: m.state.stats.dmgTo.A.rock || 0 };
+}
+
+// TEST — LANE-CLEAR ACROSS A WALL (headline; ordered attackmove). A destroyer ordered to cross a
+// wall it cannot thread must railgun the blockers out of its lane and punch through. Measured HEAD
+// baseline (pre-feature): splits 0, maxX ~3891, never arrives. This build: splits 2, punches past,
+// arrives ~140s. rockDmg is an absolute debris-safety bound (the pad keeps self-damage low; measured
+// ~13.8 here, ~13.3 on HEAD — both low, the point is it does not blow up when firing amid the wall).
+test('lane-clear-wall', () => {
+  const r = transitAcross('destroyer', rockColumn(308), 158);
+  assert(r.splits >= 2, `destroyer split only ${r.splits} rocks crossing the wall (want >=2; HEAD fires 0)`);
+  assert(r.maxX > 4300, `destroyer only reached x=${r.maxX.toFixed(0)} (want >4300, past the wall; HEAD stuck ~3891)`);
+  assert(r.minDgoal < 80, `destroyer never arrived (best ${r.minDgoal.toFixed(0)}px from goal; want <80)`);
+  assert(r.rockDmg < 16, `destroyer took ${r.rockDmg.toFixed(1)} rock damage clearing the lane (debris-safety bound 16)`);
+});
+
+// TEST — LANE-CLEAR ACROSS A WALL, FRIGATE (torpedo variant). Same builder, tighter pitch (the nimble
+// frigate threads the destroyer's wall without firing). It must torpedo at least one blocker and punch
+// past. HEAD baseline: splits 0, stuck ~3529. This build: splits >=1, arrives ~71s.
+test('lane-clear-wall-frigate', () => {
+  const r = transitAcross('frigate', rockColumn(296), 130);
+  assert(r.splits >= 1, `frigate split only ${r.splits} rocks (want >=1 torpedoed blocker; HEAD fires 0)`);
+  assert(r.maxX > 4300, `frigate only reached x=${r.maxX.toFixed(0)} (want >4300, past the wall; HEAD stuck ~3529)`);
+  assert(r.rockDmg < 15, `frigate took ${r.rockDmg.toFixed(1)} rock damage (guard; torp shatters far from the hull)`);
+});
+
+// TEST — LANE-CLEAR ACROSS A WALL, BATTLESHIP. The turrets demolish blockers in the corridor (many
+// splits). Cruise 28 is slow, so a generous but bounded budget; only splits are asserted (arrival is
+// not the point — the turret lane-clearing is). HEAD baseline: splits 0.
+test('battleship-lane-clear', () => {
+  const r = transitAcross('battleship', rockColumn(308), 70);
+  assert(r.splits >= 2,
+    `battleship turrets split only ${r.splits} rocks crossing the wall (want >=2; HEAD fires 0)`);
+});
+
+// TEST — FIELD DETOUR AROUND A WELL (auto hunt; robust damage reduction). An un-ordered destroyer
+// hunts toward a pinned foe on the far side of a compact, clutter-heavy field. routeAround must round
+// the field rather than grind through it: it reaches the far side having taken almost no rock damage.
+// The pinned foe stays hidden behind the core until the hunter has rounded it (LOS blocked), so the
+// detour drives the whole approach. HEAD baseline: trapped short (minDgoal ~2204, maxX ~3009, rockDmg
+// ~16.6). This build: rounds it (maxX ~4849), reaches the far vicinity (minDgoal ~546), rockDmg ~0.
+test('field-detour', () => {
+  const m = Praedra.createScenario({
+    seed: 88,
+    ships: [
+      { cls: 'destroyer', team: 'A', x: 2200, y: 2800, heading: 0 },
+      { cls: 'destroyer', team: 'B', x: 5200, y: 2800, heading: Math.PI, pinned: true },
+    ],
+    asteroids: wellField(),
+  });
+  const a = findShip(m, 'A', 'destroyer');
+  let minDgoal = Infinity, maxX = a.x;
+  for (let i = 0; i < 140 * TICK_RATE && !m.done; i++) {
+    m.step();
+    const s = m.state.ships.find((x) => x.id === a.id);
+    if (!s || !s.alive) break; // may perish in the far-side firefight AFTER rounding; extrema already recorded
+    const dg = dist2D(s.x, s.y, 5200, 2800);
+    if (dg < minDgoal) minDgoal = dg;
+    if (s.x > maxX) maxX = s.x;
+  }
+  const rockDmg = m.state.stats.dmgTo.A.rock || 0;
+  assert(maxX > 4600, `hunter only reached x=${maxX.toFixed(0)} (want >4600, rounded the well; HEAD trapped ~3009)`);
+  assert(minDgoal < 900, `hunter never reached the far vicinity (best ${minDgoal.toFixed(0)}px; want <900; HEAD ~2204)`);
+  assert(rockDmg < 10, `hunter took ${rockDmg.toFixed(1)} rock damage (want <10; the detour avoids the field; HEAD ~16.6)`);
+});
+
+// TEST — COMBAT-PRIORITY GATE (mutation guard). clearTransitLane must NOT spend the gun on a rock while
+// a detected enemy sits inside weapon range. A battleship transiting toward a rock blocker, with a
+// pinned bomber detected within heavy-rail range (but beyond bomb range, so inert, and class-gated from
+// the turrets so the turrets themselves never engage it): the rock survives ONLY because the gate
+// suppresses lane-clearing. Remove the gate and the turrets would demolish the rock — so the control
+// (no enemy) MUST clear it. Distinguishes the gate, not just presence/absence of the feature.
+test('lane-clear-combat-priority', () => {
+  const cfg = Praedra.defaultConfig();
+  const bombVis = cfg.ships.bomber.signature * cfg.detection.thrustMultMin; // 900*0.6 = 540
+  const dEnemy = 450; // detected (<540) but beyond bomb launchRange (380) so the bomber is inert
+  assert(dEnemy < bombVis && dEnemy > cfg.bomb.launchRange && dEnemy < cfg.heavyRail.maxRange,
+    `combat-priority enemy distance ${dEnemy} not in the intended band ` +
+    `(bomber vis ${bombVis}, bomb range ${cfg.bomb.launchRange}, heavyRail range ${cfg.heavyRail.maxRange})`);
+  function run(withEnemy) {
+    const ships = [{ cls: 'battleship', team: 'A', x: 2200, y: 2800, heading: 0 }];
+    if (withEnemy) ships.push(pinned('bomber', 'B', 2200, 2800 + dEnemy, -Math.PI / 2));
+    const m = Praedra.createScenario({ seed: 5, ships, asteroids: [{ x: 3000, y: 2800, r: 100 }] });
+    const bb = findShip(m, 'A', 'battleship');
+    Praedra.issueOrder(m, [bb.id], { type: 'move', x: 6000, y: 2800 });
+    let detected = false;
+    for (let i = 0; i < 22 * TICK_RATE && !m.done; i++) { m.step(); if (m.state.detA.length) detected = true; }
+    return { splits: m.state.stats.splits, detected };
+  }
+  const withE = run(true), ctrl = run(false);
+  assert(withE.detected, 'combat-priority enemy was never detected — the gate test would pass for the wrong reason');
+  assert(ctrl.splits >= 1, `control (no enemy) failed to demolish the blocking rock (splits ${ctrl.splits}) — lane-clearing not firing`);
+  assert(withE.splits === 0,
+    `a detected enemy in weapon range did NOT suppress rock fire (splits ${withE.splits}) — combat-priority gate leaking`);
+});
+
 runAll();

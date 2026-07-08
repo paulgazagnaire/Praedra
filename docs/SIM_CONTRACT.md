@@ -288,6 +288,11 @@ instead of a fixed-forward railgun. Each ship carries `ship.turrets = [{ ang, co
   `evasionMult`, `trackClasses`, `speedFullTrack`, `speedNoTrack` (see Heavy railgun above).
 - `railgun.rockDamageMult`, `torpedo.rockDamageMult`, `asteroidHP`, `asteroidHPRefRadius`.
 - `debris.fragmentCount`, `debris.childRadiusScale`, `debris.minChildRadius`, `debris.maxAsteroids`.
+- `ai.clutterDetour*` (`Threshold`/`Gain`/`OffsetCost`/`Offsets`/`RefreshTicks`) and `ai.rockClear*`
+  (`MinGoalDist`/`Lookahead`/`MaxRadius`/`DebrisPad`) tune the capital field-detour (`routeAround`)
+  and lane-clearing fire (`clearTransitLane`). These are **AI-internal** — they change how a
+  transiting capital routes around a cluttered field and shoots blockers out of its own corridor;
+  they add no new API, event, or state field. Present for override sweeps only.
 
 Everything else in CONFIG is sim-internal; sweep it via `overrides` generically.
 

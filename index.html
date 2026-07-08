@@ -420,6 +420,27 @@ var CONFIG_DEFAULTS = {
                                    // a perpendicular detour nudge never clears a
                                    // titan's shadow and ships parked at its rim
                                    // otherwise dive back into the well forever
+
+    // --- field-density detour (routeAround extension; AUTO/hunt path only, capitals) ---
+    clutterDetourThreshold: 220,   // straight-corridor clutter (Sum of radii of 55..200px rocks in
+                                   //   the inflated lane) above which a detour is considered.
+                                   //   measured: lone r90 rock ~90, compact well core ~320, wall ~365
+    clutterDetourGain:      0.6,   // a flank corridor must be <= this * straight clutter to qualify
+    clutterDetourOffsetCost: 0.3,  // clutter-units charged per px of lateral detour in the score:
+                                   //   makes compact fields detour (700px offset wins) but tall walls
+                                   //   transit+clear (every offset scores worse than going straight)
+    clutterDetourOffsets: [700, 1000, 1300, 1600], // candidate lateral flank offsets, scored each side
+    clutterRefreshTicks:    20,    // recompute detour every N ticks, staggered by ship.id (cache between)
+
+    // --- lane-clearing fire (clearTransitLane; auto hunt + ordered transit) ---
+    rockClearMinGoalDist:  500,    // only clear when the nav goal is farther than this (real transit)
+    rockClearLookahead:    900,    // corridor length searched ahead for a blocker (capped by weapon range)
+    rockClearMaxRadius:    200,    // never shatter rocks bigger than this: debris too dangerous / futile,
+                                   //   these are routed AROUND. (min radius reuses pushableRockRadius 55)
+    rockClearDebrisPad:    280,    // DEBRIS SAFETY: require dist(ship,rock) >= def.radius + rock.r + this,
+                                   //   so fragments (peak ~110px/s, drag 0.35, dangerous over ~244px) settle
+                                   //   below impactMinSpeed(25) before reaching the shooter. Scaled per
+                                   //   hull via def.radius; verified 0.00 self rock-damage in scenario runs.
   },
 
   // --- FLEETS (42-point budget; costs: destroyer 6 / frigate 3 / bomber 2 / interceptor 1) ---
@@ -1025,6 +1046,11 @@ function autopilot(state, ship, dt) {
     var pex = ship.x + ship.vx * probeT, pey = ship.y + ship.vy * probeT;
     var threat = null, threatD = Infinity;
     rocksNearSeg(state, ship.x, ship.y, pex, pey, 92 + def.radius + AI.avoidMargin * (def.avoidMult || 1) + AI.bigRockAvoidPad, function (o) {
+      // don't weave around a harmless pushable pebble: the hull shoves it aside for a small bonk,
+      // and steering around a shattered-debris field (which lane-clearing deliberately spawns) pins
+      // a slow capital in its own wreckage. Fast fragments (>= impactMinSpeed, a real shrapnel
+      // threat) are still avoided; a settled or slow-drifting pebble is not.
+      if (o.r < cfg.collision.pushableRockRadius && len(o.vx, o.vy) < cfg.debris.impactMinSpeed) return false;
       var rr = o.r + def.radius + AI.avoidMargin * (def.avoidMult || 1) + massivePad(cfg, o);
       // the massive pad is a transit-comfort margin, not a wall: when the GOAL itself
       // legitimately sits inside it (ordered point, cover spot at the rim), drop the
@@ -2006,23 +2032,81 @@ function huntPoint(state, ship) {
    outside the well and its accretion shell instead of a goal in the rock's shadow.
    Threading the rim — deep in gravity, through accreted pebbles, in an escort
    scrum — parked whole fleets against the titan for entire matches. */
+/* Sum of radii of transit-relevant rocks (pushableRockRadius..rockClearMaxRadius) whose
+   inflated disc intersects the corridor a->b — the field-density metric the capital detour
+   scores. Pebbles (hull-shoved) and titans (huge-rock flank handles them) are excluded. */
+function corridorClutter(state, ax, ay, bx, by, ship) {
+  var AI = state.config.ai, C = state.config.collision;
+  var infl = ship.def.radius + AI.avoidMargin * (ship.def.avoidMult || 1);
+  var sum = 0;
+  rocksNearSeg(state, ax, ay, bx, by, 92 + 900, function (o) {
+    if (o.r < C.pushableRockRadius || o.r > AI.rockClearMaxRadius) return false;
+    if (segCircleHit(ax, ay, bx, by, o.x, o.y, o.r + infl)) sum += o.r;
+    return false;
+  });
+  return sum;
+}
+
 function routeAround(state, ship, pt) {
-  var AI = state.config.ai, T = state.config.terrain;
-  var huge = null;
+  var AI = state.config.ai, T = state.config.terrain, C = state.config.collision;
+  var W = state.config.arena.w, H = state.config.arena.h;
+  var infl = ship.def.radius + AI.avoidMargin * (ship.def.avoidMult || 1);
+  // one segment scan: find the first titan-scale blocker AND accumulate straight-lane clutter
+  // (the clutter sum only matters when there is NO huge blocker, and the scan then completes)
+  var huge = null, straightC = 0;
   rocksNearSeg(state, ship.x, ship.y, pt.x, pt.y, 92 + 900, function (o) {
+    if (!huge && o.r >= C.pushableRockRadius && o.r <= AI.rockClearMaxRadius &&
+        segCircleHit(ship.x, ship.y, pt.x, pt.y, o.x, o.y, o.r + infl)) straightC += o.r;
     if (o.r < AI.hugeRockRadius) return false;
     if (segCircleHit(ship.x, ship.y, pt.x, pt.y, o.x, o.y, o.r + 700)) { huge = o; return true; }
     return false;
   });
-  if (!huge) return pt;
-  var ring = huge.r + 900;
-  var angS = Math.atan2(ship.y - huge.y, ship.x - huge.x);
-  var angG = Math.atan2(pt.y - huge.y, pt.x - huge.x);
-  var side = normAngle(angG - angS) > 0 ? 1 : -1;
-  var na = angS + side * clamp(700 / ring, 0.3, 0.9);
-  var W = state.config.arena.w, H = state.config.arena.h;
-  return { x: clamp(huge.x + Math.cos(na) * ring, T.edgeMargin, W - T.edgeMargin),
-           y: clamp(huge.y + Math.sin(na) * ring, T.edgeMargin, H - T.edgeMargin) };
+  if (huge) {
+    // existing titan/huge-rock behavior: rim-flank far outside the well (kept fully intact)
+    var ring = huge.r + 900;
+    var angS = Math.atan2(ship.y - huge.y, ship.x - huge.x);
+    var angG = Math.atan2(pt.y - huge.y, pt.x - huge.x);
+    var side = normAngle(angG - angS) > 0 ? 1 : -1;
+    var na = angS + side * clamp(700 / ring, 0.3, 0.9);
+    return { x: clamp(huge.x + Math.cos(na) * ring, T.edgeMargin, W - T.edgeMargin),
+             y: clamp(huge.y + Math.sin(na) * ring, T.edgeMargin, H - T.edgeMargin) };
+  }
+  // --- field-density detour: capitals round a compact field, transit an un-detourable wall ---
+  if (!isCapital(ship)) return pt; // lights keep the titan-only routing above
+  // stagger + cache (budget + determinism): recompute on this ship's tick phase, reuse between
+  var fresh = ship.ai.detourPt && (state.tick - (ship.ai.detourT || -999)) < AI.clutterRefreshTicks &&
+              Math.abs((ship.ai.detourForX || 0) - pt.x) < 60 && Math.abs((ship.ai.detourForY || 0) - pt.y) < 60;
+  if (state.tick % AI.clutterRefreshTicks !== ship.id % AI.clutterRefreshTicks && fresh)
+    return ship.ai.detourPt;
+  ship.ai.detourT = state.tick; ship.ai.detourForX = pt.x; ship.ai.detourForY = pt.y;
+  if (straightC < AI.clutterDetourThreshold) { ship.ai.detourPt = null; return pt; } // clean lane: direct
+  // goal-snug guard: the goal legitimately sits inside the field -> transit, lane-clearing takes over
+  var snug = false;
+  rocksNearSeg(state, pt.x, pt.y, pt.x, pt.y, AI.rockClearMaxRadius + infl + 40, function (o) {
+    if (o.r < C.pushableRockRadius || o.r > AI.rockClearMaxRadius) return false;
+    if (dist(pt.x, pt.y, o.x, o.y) < ship.def.radius + o.r + AI.avoidMargin) { snug = true; return true; }
+    return false;
+  });
+  if (snug) { ship.ai.detourPt = null; return pt; }
+  // two-leg flank scoring: midpoint + perpendicular offset, both sides, penalised per px of detour
+  var mx = (ship.x + pt.x) / 2, my = (ship.y + pt.y) / 2;
+  var dx = pt.x - ship.x, dy = pt.y - ship.y, dl = len(dx, dy) || 1;
+  var perpx = -dy / dl, perpy = dx / dl;
+  var best = null, bestScore = straightC, bestLeg = Infinity, offs = AI.clutterDetourOffsets;
+  for (var s = 0; s < 2; s++) {
+    var sgn = s === 0 ? 1 : -1;
+    for (var k = 0; k < offs.length; k++) {
+      var off = offs[k];
+      var fx = clamp(mx + perpx * sgn * off, T.edgeMargin, W - T.edgeMargin);
+      var fy = clamp(my + perpy * sgn * off, T.edgeMargin, H - T.edgeMargin);
+      var leg = corridorClutter(state, ship.x, ship.y, fx, fy, ship) +
+                corridorClutter(state, fx, fy, pt.x, pt.y, ship);
+      var score = leg + off * AI.clutterDetourOffsetCost;
+      if (score < bestScore) { bestScore = score; best = { x: fx, y: fy }; bestLeg = leg; }
+    }
+  }
+  if (best && bestLeg <= AI.clutterDetourGain * straightC) { ship.ai.detourPt = best; return best; }
+  ship.ai.detourPt = null; return pt; // wall too costly to round: transit and clear it
 }
 
 /* ---------------- Role AI (deliberately simple; serves the §5 counter-web) ---------------- */
@@ -2159,6 +2243,90 @@ function blastCoverNearGhosts(state, ship, dt) {
   }
 }
 
+/* Per-class rock-fire primitive for lane-clearing: reach, cooldown accessor, and a fire()
+   that aims+fires that class's rock-capable weapon. Any capital with such a weapon path-clears. */
+function rockClearPrimitive(state, ship) {
+  var cfg = state.config, AI = cfg.ai;
+  if (ship.cls === 'destroyer') {
+    var RG = cfg.railgun;
+    return { maxRange: RG.maxRange, engageRange: RG.maxRange,
+      cooldownLeft: function (s) { return s.cool.rail; },
+      fire: function (st, sh, rock, ta) {
+        var b = Math.atan2(rock.y - sh.y, rock.x - sh.x);
+        // yaw to aim (like blastCoverNearGhosts), but only for a near-forward rock: overriding the
+        // face toward a wide-bearing rock fights the transit vector into a weave (deliverable 5).
+        if (sh.nav && Math.abs(normAngle(b - ta)) < 0.5) sh.nav.face = b;
+        var rd = dist(sh.x, sh.y, rock.x, rock.y);
+        if (sh.cool.rail <= 0 && rd >= RG.minRange && rd <= RG.maxRange &&
+            Math.abs(normAngle(b - sh.heading)) < RG.arc / 2) fireRailgunAtRock(st, sh, rock);
+      } };
+  }
+  if (ship.cls === 'frigate') {
+    var T = cfg.torpedo;
+    return { maxRange: T.frigate.range, engageRange: T.frigate.range,
+      cooldownLeft: function (s) { return s.cool.rockTorp || 0; },       // shares cover-torp cadence (no spam)
+      fire: function (st, sh, rock) {
+        var rd = dist(sh.x, sh.y, rock.x, rock.y);
+        if (rd >= T.armDistance * 1.1 && rd <= T.frigate.range) {
+          launchTorpedoAtRock(st, sh, rock); sh.cool.rockTorp = AI.rockTorpCooldown;
+        }
+      } };
+  }
+  if (ship.cls === 'battleship') {
+    var HR = cfg.heavyRail;
+    return { maxRange: HR.maxRange, engageRange: HR.maxRange,
+      cooldownLeft: function (s) {                                       // ready when ANY turret is
+        var m = Infinity;                                               //   off cooldown
+        if (s.turrets) for (var i = 0; i < s.turrets.length; i++) if (s.turrets[i].cool < m) m = s.turrets[i].cool;
+        return m === Infinity ? 0 : m;
+      },
+      fire: function (st, sh, rock) {
+        // turrets must slew before firing: flag the rock, updateTurrets demolishes it (same field
+        // blastCoverNearGhosts uses). Deadline gives the ponderous slew time to line up.
+        sh.ai.rockAim = { x: rock.x, y: rock.y, rockId: rock.id, until: st.time + 1.5 };
+      } };
+  }
+  return null;
+}
+
+/* Lane-clearing fire: a transiting capital blasts a blocking rock out of its corridor. Combat
+   owns the gun first (a DETECTED enemy in weapon range suppresses rock fire); the debris-safety
+   pad keeps fragments settled before they can reach the shooter. Runs on the auto-hunt path AND
+   under player move/attackmove/hold orders (via weaponsFree) — every ordered transit. */
+function clearTransitLane(state, ship, dt) {
+  var cfg = state.config, AI = cfg.ai, def = ship.def;
+  var prim = rockClearPrimitive(state, ship);            if (!prim) return;
+  var goal = ship.nav;                                   if (!goal) return;
+  var dgoal = dist(ship.x, ship.y, goal.x, goal.y);      if (dgoal < AI.rockClearMinGoalDist) return;
+  var enemies = livingEnemies(state, ship.team);
+  var ne = enemies.length ? nearestWhere(state, ship, enemies, null) : null;
+  if (ne && ne.d <= prim.engageRange) return;            // COMBAT PRIORITY: the gun has a real target
+  if (prim.cooldownLeft(ship) > 0) return;               // respect cooldown economy
+  var ux, uy;
+  if (ship.speed > 15) { ux = ship.vx / ship.speed; uy = ship.vy / ship.speed; }
+  else { ux = (goal.x - ship.x) / dgoal; uy = (goal.y - ship.y) / dgoal; }
+  var reach = Math.min(dgoal, AI.rockClearLookahead, prim.maxRange);
+  var ex = ship.x + ux * reach, ey = ship.y + uy * reach;
+  var ta = Math.atan2(uy, ux);
+  // Pick the MOST-ALIGNED qualifying blocker (smallest bearing offset from the transit axis),
+  // distance as tiebreak. A fixed-arc railgun must yaw onto its target; targeting the nearest
+  // (often off-axis) rock makes the ship yaw wide and fight the transit into a stall/weave, so
+  // clear the rock most dead-ahead first — it is the one truly plugging the lane. (Turrets and
+  // torpedoes track off-axis fine, but the same choice serves them: clear the centre of the lane.)
+  var best = null, bestScore = Infinity, C = cfg.collision;
+  rocksNearSeg(state, ship.x, ship.y, ex, ey, 92 + def.radius + 60, function (o) {
+    if (o.r < C.pushableRockRadius || o.r > AI.rockClearMaxRadius) return false;   // pebble / futile-huge
+    var rd = dist(ship.x, ship.y, o.x, o.y);
+    if (rd < def.radius + o.r + AI.rockClearDebrisPad) return false;               // DEBRIS SAFETY
+    if (!segCircleHit(ship.x, ship.y, ex, ey, o.x, o.y, o.r + def.radius + 30)) return false; // blocks lane?
+    var boff = Math.abs(normAngle(Math.atan2(o.y - ship.y, o.x - ship.x) - ta));
+    var score = boff * 10000 + rd;                                                // alignment first, then near
+    if (score < bestScore) { bestScore = score; best = o; }
+    return false;
+  });
+  if (best) prim.fire(state, ship, best, ta);
+}
+
 function aiDestroyer(state, ship, dt) {
   var cfg = state.config, AI = cfg.ai, RG = cfg.railgun;
   var enemies = livingEnemies(state, ship.team);
@@ -2166,6 +2334,7 @@ function aiDestroyer(state, ship, dt) {
     var hp = routeAround(state, ship, huntPoint(state, ship));
     ship.nav = { x: hp.x, y: hp.y, arrive: true, speedCap: ship.def.maxCruiseSpeed * 0.8 };
     blastCoverNearGhosts(state, ship, dt);
+    clearTransitLane(state, ship, dt);
     return;
   }
   // railgun food first (slow, low evasion), then whatever is nearest
@@ -2223,6 +2392,7 @@ function aiFrigate(state, ship, dt) {
     var hp = routeAround(state, ship, d0 ? { x: d0.x, y: d0.y } : huntPoint(state, ship));
     ship.nav = { x: hp.x, y: hp.y, arrive: true };
     blastCoverNearGhosts(state, ship, dt);
+    clearTransitLane(state, ship, dt);
     return;
   }
   var own = (ship.team === 'A' ? state.aliveA : state.aliveB);
@@ -2320,6 +2490,7 @@ function aiBattleship(state, ship, dt) {
     var hpn = routeAround(state, ship, huntPoint(state, ship));
     ship.nav = { x: hpn.x, y: hpn.y, arrive: true, speedCap: def.maxCruiseSpeed * 0.8 };
     blastCoverNearGhosts(state, ship, dt);
+    clearTransitLane(state, ship, dt);   // set ai.rockAim before turrets process it this tick
     updateTurrets(state, ship, dt);
     return;
   }
@@ -2677,12 +2848,15 @@ function weaponsFree(state, ship, dt) {
       if (railgunReady(state, ship, near.ship) === 'ok') fireRailgun(state, ship, near.ship);
     }
     blastCoverNearGhosts(state, ship, dt);
+    clearTransitLane(state, ship, dt);   // clear a blocking rock across ordered move/attackmove/hold
     tryTorpedo(state, ship, dt);
   } else if (ship.cls === 'frigate') {
     blastCoverNearGhosts(state, ship, dt);
+    clearTransitLane(state, ship, dt);   // shares ship.cool.rockTorp with blastCoverNearGhosts (no spam)
     tryTorpedo(state, ship, dt);
   } else if (ship.cls === 'battleship') {
     blastCoverNearGhosts(state, ship, dt);
+    clearTransitLane(state, ship, dt);   // set ai.rockAim before turrets process it this tick
     updateTurrets(state, ship, dt);
   } else if (ship.cls === 'interceptor') {
     if (near) updateGatling(state, ship, near.ship, dt);
