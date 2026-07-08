@@ -299,6 +299,13 @@ var CONFIG_DEFAULTS = {
     trackClasses: ['destroyer', 'frigate', 'battleship'], // HARD gate: never bomber/interceptor
     speedFullTrack: 55,            // target speed <= this: no penalty (factor 1)
     speedNoTrack: 85,              // target speed >= this: untrackable (frigate cruise 85 -> factor 0)
+    standoffFrac: 0.85,            // aiBattleship holds at maxRange*this (~2720) when it HAS a firing
+                                   //   solution far out — the huge-range delete. Engagement-aware
+                                   //   below it: never retreat out of a shot it already has.
+    standoffMin: 1500,             // when it CAN'T fire (lane blocked / target out of reach), close to
+                                   //   ~this range to regain LOS+detection and blast the plugging rock,
+                                   //   instead of parking at extreme range with an idle gun. Stays well
+                                   //   outside destroyer railgun 700 / frigate torpedo 950.
     event: 'hrail',                // event kind for the renderer (unknown kinds are contract-safe)
   },
 
@@ -420,6 +427,13 @@ var CONFIG_DEFAULTS = {
                                    // a perpendicular detour nudge never clears a
                                    // titan's shadow and ships parked at its rim
                                    // otherwise dive back into the well forever
+    bbWellSkirtFrac: 1.9,          // BATTLESHIP-ONLY well skirt: the uniquely slow BB (turnMax 0.14,
+                                   // ~22s flip) is dragged into a BIG asteroid's well (r*wellReach) and
+                                   // grinds to death before it can burn clear — the design's flagged
+                                   // entombment, and the dominant real-match killer. In its AUTO role AI
+                                   // only (ordered transit untouched), aiBattleship routes its nav goal
+                                   // around any BIG (sub-hugeRockRadius) well at this fraction of the
+                                   // source radius, keeping the ponderous hull out of the killing core.
 
     // --- field-density detour (routeAround extension; AUTO/hunt path only, capitals) ---
     clutterDetourThreshold: 220,   // straight-corridor clutter (Sum of radii of 55..200px rocks in
@@ -703,7 +717,9 @@ function contourR(o, x, y) {
    exact (and it converges to exact once a pair comes to rest). Cache is wiped
    periodically in stepMatch so dead pairs don't accumulate. */
 function pairContact(state, p, q) {
-  var key = p.id < q.id ? p.id * 1000000 + q.id : q.id * 1000000 + p.id;
+  var key = p.id < q.id ? p.id * 10000000 + q.id : q.id * 10000000 + p.id; // 1e7 pack: ids stay
+                                                  // ~1e2-1e3 in real matches (probed), 1e7 keeps the
+                                                  // pack injective even under pathological overrides
   var e = state.contactCache[key];
   if (e !== undefined && state.tick - e.t < 4) return e.rr;
   var rr = contourR(p, q.x, q.y) + contourR(q, p.x, p.y);
@@ -2109,6 +2125,57 @@ function routeAround(state, ship, pt) {
   ship.ai.detourPt = null; return pt; // wall too costly to round: transit and clear it
 }
 
+/* Battleship-only gravity-well skirt (see ai.bbWellSkirtFrac). The uniquely slow BB (turnMax 0.14,
+   ~22s flip) cannot out-manoeuvre a gravity well: a source's pull (bounded to shipEscapeCap*accel, but
+   with a ~22s reorient it drags the hull in faster than the guns can correct) curls the ponderous ship
+   PAST its own nav goal and into the rock, where it grinds to death — the design's flagged entombment,
+   and the dominant real-match killer (traced: the titan's 3750px well swallows a BB whose goal sits a
+   mere ~1000px away, before routeAround's path-geometry ever sees a blocker). So for the BB, and only
+   in its AUTO role AI (ordered move/attackmove/hold untouched -> lane-clear tests unaffected): whenever
+   the hull is inside a well AND its goal/path would keep it in the killing core, hand back a rim
+   waypoint at the well's skirt radius on the goal side. The BB then rounds the rim; its 3200px guns
+   still reach deep into the well from there, so 'skirt the well and shell across it' loses no coverage
+   and fits the long-range-artillery identity. Applies to EVERY source (BIGs and the titan) — routeAround
+   only reroutes when the straight segment clips a huge rock, which gravity-drag defeats. */
+function bbSkirtWell(state, ship, pt) {
+  var srcs = state.gravSources;
+  if (!srcs || !srcs.length) return pt;
+  var AI = state.config.ai, T = state.config.terrain, W = state.config.arena.w, H = state.config.arena.h;
+  // Among the wells the BB is INSIDE, pick the one whose surface it is nearest — the immediate grind
+  // threat. A slug-slow hull can't be trusted to hold even a wide standoff (traced: dragged in from
+  // 1020px of clearance), so the safe radius is out at the well edge where the pull has faded, not a
+  // fixed rim — the skirt makes the hull CLIMB outward each tick, leaning toward the goal side.
+  var best = null, bestSurf = Infinity, bestReach = 0, bestRing = 0;
+  for (var i = 0; i < srcs.length; i++) {
+    var o = srcs[i].o;
+    var reach = srcs[i].reach;
+    var dShip = dist(ship.x, ship.y, o.x, o.y);
+    if (dShip > reach) continue;                                      // outside this well: no drag
+    var ring = Math.max(o.r * AI.bbWellSkirtFrac, o.r + ship.def.radius + 180); // inner floor (BIG wells)
+    // fine only if the goal AND path already clear the core (goal beyond the well on a clean lane)
+    if (dist(pt.x, pt.y, o.x, o.y) >= ring &&
+        !segCircleHit(ship.x, ship.y, pt.x, pt.y, o.x, o.y, ring)) continue;
+    var surf = dShip - o.r;
+    if (surf < bestSurf) { bestSurf = surf; best = o; bestReach = reach; bestRing = ring; }
+  }
+  if (!best) return pt;
+  var dShip2 = dist(ship.x, ship.y, best.x, best.y);
+  var targetR = clamp(dShip2 + 250, bestRing, bestReach);            // climb OUTWARD toward the well edge
+  var angS = Math.atan2(ship.y - best.y, ship.x - best.x);
+  var angG = Math.atan2(pt.y - best.y, pt.x - best.x);
+  // sticky-side rim-follow (mirrors routeAround's titan handling): COMMIT to one way around for a
+  // few seconds and take a real tangential step, so a goal across the well makes the hull
+  // circumnavigate the rim toward it instead of dithering radially out and grinding to a halt
+  // between the climb-out vector and the goal pull (the observed stuck-grind death).
+  var side;
+  if (ship.ai.skirtRock === best.id && state.time < (ship.ai.skirtUntil || -1)) side = ship.ai.skirtSide;
+  else { side = normAngle(angG - angS) > 0 ? 1 : -1; ship.ai.skirtRock = best.id; ship.ai.skirtSide = side; }
+  ship.ai.skirtUntil = state.time + 2.5;
+  var na = angS + side * clamp(560 / targetR, 0.3, 0.9);             // orbit toward the goal side
+  return { x: clamp(best.x + Math.cos(na) * targetR, T.edgeMargin, W - T.edgeMargin),
+           y: clamp(best.y + Math.sin(na) * targetR, T.edgeMargin, H - T.edgeMargin) };
+}
+
 /* ---------------- Role AI (deliberately simple; serves the §5 counter-web) ---------------- */
 function livingEnemies(state, team) { return team === 'A' ? state.detA : state.detB; } // DETECTED enemies only
 function isCapital(s) { return s.cls === 'destroyer' || s.cls === 'frigate' || s.cls === 'battleship'; }
@@ -2275,6 +2342,11 @@ function rockClearPrimitive(state, ship) {
   if (ship.cls === 'battleship') {
     var HR = cfg.heavyRail;
     return { maxRange: HR.maxRange, engageRange: HR.maxRange,
+      // combat only owns the turrets when they have a target they can LEGALLY engage: the
+      // heavy rail is hard class-gated out of lights, so a loitering bomber must NOT
+      // suppress lane-clearing forever (the generic nearest-any gate below would strand
+      // an ordered battleship behind a rock while a bomber it can never shoot circles it)
+      combatHold: function (st, sh) { return !!pickHeavyRailPrimary(st, sh); },
       cooldownLeft: function (s) {                                       // ready when ANY turret is
         var m = Infinity;                                               //   off cooldown
         if (s.turrets) for (var i = 0; i < s.turrets.length; i++) if (s.turrets[i].cool < m) m = s.turrets[i].cool;
@@ -2299,8 +2371,13 @@ function clearTransitLane(state, ship, dt) {
   var goal = ship.nav;                                   if (!goal) return;
   var dgoal = dist(ship.x, ship.y, goal.x, goal.y);      if (dgoal < AI.rockClearMinGoalDist) return;
   var enemies = livingEnemies(state, ship.team);
-  var ne = enemies.length ? nearestWhere(state, ship, enemies, null) : null;
-  if (ne && ne.d <= prim.engageRange) return;            // COMBAT PRIORITY: the gun has a real target
+  // COMBAT PRIORITY: the gun has a real target. Class-aware where the weapon is (the
+  // battleship's combatHold only respects targets its turrets can legally track).
+  if (prim.combatHold) { if (prim.combatHold(state, ship)) return; }
+  else {
+    var ne = enemies.length ? nearestWhere(state, ship, enemies, null) : null;
+    if (ne && ne.d <= prim.engageRange) return;
+  }
   if (prim.cooldownLeft(ship) > 0) return;               // respect cooldown economy
   var ux, uy;
   if (ship.speed > 15) { ux = ship.vx / ship.speed; uy = ship.vy / ship.speed; }
@@ -2422,7 +2499,7 @@ function aiFrigate(state, ship, dt) {
    nearest within [minRange, maxRange], detected (livingEnemies is the detected set) and LOS-clear.
    All turrets slew to and fire on it — 3x30/2s deletes a destroyer (140 hp) in ~3-4s. */
 function heavyRailClassRank(cls) { return cls === 'battleship' ? 0 : (cls === 'destroyer' ? 1 : 2); }
-function pickHeavyRailPrimary(state, ship) {
+function pickHeavyRailPrimary(state, ship, ignoreLos) {
   var HR = state.config.heavyRail;
   var enemies = livingEnemies(state, ship.team); // DETECTED enemies only
   var best = null, bestKey = Infinity;
@@ -2431,7 +2508,7 @@ function pickHeavyRailPrimary(state, ship) {
     if (!heavyRailTrackable(HR, e)) continue;                       // HARD class gate
     var d = dist(ship.x, ship.y, e.x, e.y);
     if (d < HR.minRange || d > HR.maxRange) continue;               // dead zone / range (from centre)
-    if (!losShips(state, ship, e)) continue;                        // LOS gate
+    if (!ignoreLos && !losShips(state, ship, e)) continue;          // LOS gate (skipped for the APPROACH pick)
     var key = heavyRailClassRank(e.cls) * 1e7 + d;                  // big ships first, then nearest
     if (key < bestKey) { bestKey = key; best = e; }
   }
@@ -2486,8 +2563,8 @@ function aiBattleship(state, ship, dt) {
   var cfg = state.config, AI = cfg.ai, HR = cfg.heavyRail, def = ship.def;
   var enemies = livingEnemies(state, ship.team);
   if (!enemies.length) {
-    // no contacts: advance on the hunt point at cruise, clearing rocks as it goes
-    var hpn = routeAround(state, ship, huntPoint(state, ship));
+    // no contacts: advance on the hunt point at cruise, skirting BIG wells + clearing rocks as it goes
+    var hpn = bbSkirtWell(state, ship, routeAround(state, ship, huntPoint(state, ship)));
     ship.nav = { x: hpn.x, y: hpn.y, arrive: true, speedCap: def.maxCruiseSpeed * 0.8 };
     blastCoverNearGhosts(state, ship, dt);
     clearTransitLane(state, ship, dt);   // set ai.rockAim before turrets process it this tick
@@ -2510,28 +2587,61 @@ function aiBattleship(state, ship, dt) {
 
   if (state.tick % 30 === (ship.id % 30)) ship.ai.anchorBias = openLaneBias(state, ship, target);
   var bias = ship.ai.anchorBias || { x: 0, y: 0 };
-  var stand = HR.maxRange * 0.85; // hold near the top of the gun's reach
+  var maxStand = HR.maxRange * HR.standoffFrac; // top of the gun's reach (the huge-range hold)
+  var coverRock = null;                          // a rock to blast out of the firing lane (below)
 
+  // each branch sets goalPt + navFace; the final goal is routed through the BIG-well skirt and the
+  // titan/field routeAround before it becomes ship.nav (the slow hull dies in wells otherwise).
+  var goalPt, navFace = aim;
   if (ship.hp < 0.3 * ship.maxHp && ln > 0) {
     // low and swarmed: crawl toward the friendly fleet centroid (cruise 28 barely helps — intended)
     var own = ship.team === 'A' ? state.aliveA : state.aliveB;
     var fx = 0, fy = 0, fn = 0;
     for (var k = 0; k < own.length; k++) if (own[k].id !== ship.id) { fx += own[k].x; fy += own[k].y; fn++; }
-    var goal = fn ? { x: fx / fn, y: fy / fn } : huntPoint(state, ship);
-    var hpr = routeAround(state, ship, goal);
-    ship.nav = { x: hpr.x, y: hpr.y, arrive: true, speedCap: def.maxCruiseSpeed, face: aim };
+    goalPt = fn ? { x: fx / fn, y: fy / fn } : huntPoint(state, ship);
+    ship.ai.noLos = 0;
   } else if (ln > 0) {
     // creep directly away from the diver centroid to buy PD reaction time; keep them on the nose
     var cx = lcx / ln, cy = lcy / ln, dc = dist(ship.x, ship.y, cx, cy) || 1;
     var ux = (ship.x - cx) / dc, uy = (ship.y - cy) / dc;
-    ship.nav = { x: ship.x + ux * 300 + bias.x, y: ship.y + uy * 300 + bias.y, arrive: true, speedCap: def.maxCruiseSpeed, face: aim };
+    goalPt = { x: ship.x + ux * 300 + bias.x, y: ship.y + uy * 300 + bias.y };
+    ship.ai.noLos = 0;
   } else {
-    // standoff at maxRange*0.85 along the ship->primary line, plus the open-lane bias
-    var ux2 = (target.x - ship.x) / (d || 1), uy2 = (target.y - ship.y) / (d || 1);
-    ship.nav = { x: target.x - ux2 * stand + bias.x, y: target.y - uy2 * stand + bias.y,
-                 arrive: true, speedCap: def.maxCruiseSpeed, face: aim };
+    // ENGAGEMENT-AWARE STANDOFF. The real-match failure was parking at maxRange*0.85 (~2720) where
+    // the slow BB fell to the rear of its own formation and stood off past terrain LOS, gun idle. So:
+    //  - HAS a firing primary  -> hold at its range (never retreat out of a shot), capped at reach;
+    //  - detected heavy target in reach but LANE BLOCKED -> close to standoffMin AND, after
+    //    rockShootSeconds, flag the plugging rock for the turrets to demolish (mirrors aiDestroyer's
+    //    noLos cover-clear — the turrets already out-gun any cover, so advancing + shooting through
+    //    is on-theme). blastCoverNearGhosts/clearTransitLane both skip this case, so it's handled here;
+    //  - detected capital out of reach -> close to acquire; only distant lights -> keep artillery spacing.
+    var navT = target, navD = d, stand = maxStand;
+    if (primary) {
+      stand = clamp(d, HR.standoffMin, maxStand);
+      ship.ai.noLos = 0;
+    } else {
+      var approach = pickHeavyRailPrimary(state, ship, true); // nearest detected trackable in reach, LOS ignored
+      if (approach) {
+        navT = approach; navD = dist(ship.x, ship.y, approach.x, approach.y);
+        stand = HR.standoffMin;
+        ship.ai.noLos = (ship.ai.noLos || 0) + dt;
+        if (ship.ai.noLos > AI.rockShootSeconds)
+          coverRock = firstRockOnRay(state, ship.x, ship.y, approach.x, approach.y);
+      } else if (isCapital(target)) {
+        stand = HR.standoffMin; ship.ai.noLos = 0;
+      } else {
+        ship.ai.noLos = 0;
+      }
+    }
+    navFace = Math.atan2(navT.y - ship.y, navT.x - ship.x);
+    var uxn = (navT.x - ship.x) / (navD || 1), uyn = (navT.y - ship.y) / (navD || 1);
+    goalPt = { x: navT.x - uxn * stand + bias.x, y: navT.y - uyn * stand + bias.y };
   }
+  var g = bbSkirtWell(state, ship, routeAround(state, ship, goalPt));
+  ship.nav = { x: g.x, y: g.y, arrive: true, speedCap: def.maxCruiseSpeed, face: navFace };
   blastCoverNearGhosts(state, ship, dt); // sets ai.rockAim on a rock hiding a ghost (turrets slew to it)
+  if (coverRock) // the approach-lane blocker takes precedence: turrets shoot through to the heavy target
+    ship.ai.rockAim = { x: coverRock.x, y: coverRock.y, rockId: coverRock.id, until: state.time + AI.rockShootSeconds };
   updateTurrets(state, ship, dt);        // turrets fire every tick regardless of nav state
 }
 
