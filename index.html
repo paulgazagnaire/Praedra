@@ -658,8 +658,10 @@ function rebuildGrid(state) {
   for (var r = 0; r < A.length; r++) {
     var o = A[r];
     if (!o.alive || o.moving) continue;   // movers are scanned via state.movers instead
-    var x0 = Math.max(0, Math.floor((o.x - o.r) / GRID_CELL)), x1 = Math.min(g.cw - 1, Math.floor((o.x + o.r) / GRID_CELL));
-    var y0 = Math.max(0, Math.floor((o.y - o.r) / GRID_CELL)), y1 = Math.min(g.ch - 1, Math.floor((o.y + o.r) / GRID_CELL));
+    var re = o.r * 1.22; // stamp by the MAX CONTOUR radius: contact now reaches past r,
+                         // and a titan bulge (~0.22*1440px) can exceed the cell slack
+    var x0 = Math.max(0, Math.floor((o.x - re) / GRID_CELL)), x1 = Math.min(g.cw - 1, Math.floor((o.x + re) / GRID_CELL));
+    var y0 = Math.max(0, Math.floor((o.y - re) / GRID_CELL)), y1 = Math.min(g.ch - 1, Math.floor((o.y + re) / GRID_CELL));
     for (var gy = y0; gy <= y1; gy++) for (var gx = x0; gx <= x1; gx++) g.cells[gy * g.cw + gx].push(o);
   }
 }
@@ -685,7 +687,8 @@ function rocksNearSeg(state, ax, ay, bx, by, pad, fn) {
   if (mv) for (var m = 0; m < mv.length; m++) {
     var mo = mv[m];
     if (!mo.alive || mo.gridStamp === stamp) continue;
-    if (mo.x + mo.r < xmin || mo.x - mo.r > xmax || mo.y + mo.r < ymin || mo.y - mo.r > ymax) continue;
+    var mre = mo.r * 1.22; // bbox by max contour radius (same reason as rebuildGrid)
+    if (mo.x + mre < xmin || mo.x - mre > xmax || mo.y + mre < ymin || mo.y - mre > ymax) continue;
     mo.gridStamp = stamp;
     if (fn(mo)) return;
   }
@@ -1038,6 +1041,7 @@ function integrateShip(state, ship, dt) {
 
 function collideShipsAndRocks(state, dt) {
   var cfg = state.config, C = cfg.collision, D = cfg.debris;
+  var W = cfg.arena.w, H = cfg.arena.h;
   var ships = state.ships, rocks = state.asteroids;
   for (var i = 0; i < ships.length; i++) {
     var sh = ships[i];
@@ -1073,8 +1077,20 @@ function collideShipsAndRocks(state, dt) {
         if (dmg > 0.3) applyDamage(state, sh, dmg, null, 'rock');
       }
       var push = (rr - d) + 0.5;
-      sh.x += nx * push * (invR > 0 ? invS / (invS + invR) : 1);
-      sh.y += ny * push * (invR > 0 ? invS / (invS + invR) : 1);
+      var wS = invR > 0 ? invS / (invS + invR) : 1;
+      var pnx = nx, pny = ny;
+      if (invR === 0) {
+        // edge-cut titan wedge: if the radial exit points through the arena wall the
+        // clamp just feeds the ship back in — slide tangentially along the contour
+        var txp = sh.x + nx * push * wS, typ = sh.y + ny * push * wS;
+        var rW = sh.def.radius;
+        if (txp < rW || txp > W - rW || typ < rW || typ > H - rW) {
+          var tside = (sh.vx * -ny + sh.vy * nx) >= 0 ? 1 : -1;
+          pnx = -ny * tside; pny = nx * tside;
+        }
+      }
+      sh.x += pnx * push * wS;
+      sh.y += pny * push * wS;
       if (invR > 0) { o.x -= nx * push * (invR / (invS + invR)); o.y -= ny * push * (invR / (invS + invR)); }
     }
     // ship-ship separation (no damage)
