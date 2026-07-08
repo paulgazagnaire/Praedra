@@ -174,7 +174,7 @@ function assertDetectable(cfg, cls, dist, marginPx, label) {
 
 function dist2D(ax, ay, bx, by) { return Math.sqrt((ax - bx) * (ax - bx) + (ay - by) * (ay - by)); }
 
-// Mid-arena anchor for new scenario tests (arena is 4400x3200; (0,0) is a corner).
+// Mid-arena-ish anchor for new scenario tests (arena is 8000x5600; (0,0) is a corner).
 // The old tests use small coordinates near that corner and get away with it because
 // their ships are pinned (never touch the walls) and have no debris/AI ships that
 // would; new tests use this offset to stay clear of wall effects on principle.
@@ -337,12 +337,17 @@ test('tick-cap-forced', () => {
   assert(m.result.reason === 'timer', `result.reason is ${JSON.stringify(m.result.reason)}, want 'timer'`);
 });
 
+// Titan-scale maps (8000x5600, 360s timer) made small-fleet matches legitimately LONG
+// in sim-seconds (hunt + transit), so the wall-clock budget is per-tick-derived: the
+// SIM_CONTRACT bound is per-tick cost, and the worst case is the full tick cap.
 test('wallclock', () => {
   const t0 = Date.now(); // harness may use Date; only the sim may not
   const r = Praedra.runMatch({ seed: 1, overrides: { terrainDensity: 0.5 }, teamA: SMALL_A, teamB: SMALL_B });
   const ms = Date.now() - t0;
   assert(r && r.winner !== undefined, 'runMatch returned no result object');
-  assert(ms < 2000, `full match took ${ms} ms wall-clock (budget 2000 ms)`);
+  const usPerTick = (ms * 1000) / r.ticks;
+  assert(usPerTick < 2000, `small-fleet match cost ${usPerTick.toFixed(0)} us/tick (budget 2000 us/tick)`);
+  assert(ms < 20000, `full match took ${ms} ms wall-clock (hard budget 20 s at the 360 s tick cap)`);
 });
 
 // ------------------------------------------------------------- new: detection
@@ -475,6 +480,160 @@ test('order-move-hold', () => {
   assert((final.order && final.order.type === 'hold') || stationKeeping,
     `order never completed to hold and ship is not station-keeping near the point ` +
     `(order=${JSON.stringify(final.order)}, speed=${final.speed && final.speed.toFixed(1)})`);
+});
+
+// ------------------------------------------------- new: BIG asteroids + gravity
+
+// Every generated map carries exactly 1 TITAN (r >= titanRadius[0]) and
+// 1..terrain.bigCountMax BIG asteroids (bigRadius[0] <= r < titanRadius[0]),
+// regardless of seed or density (SIM_CONTRACT §Terrain). createScenario terrain is
+// explicit and exempt. Thresholds read from live config, not hardcoded. Also checks
+// outline detail: every asteroid's shape has at least 12 vertices (visual realism).
+test('big-asteroids-every-seed', () => {
+  const cfg = Praedra.defaultConfig();
+  const bigMin = cfg.terrain && cfg.terrain.bigRadius && cfg.terrain.bigRadius[0];
+  const titanMin = cfg.terrain && cfg.terrain.titanRadius && cfg.terrain.titanRadius[0];
+  assert(typeof bigMin === 'number', 'no terrain.bigRadius in live config — big-asteroid support missing');
+  assert(typeof titanMin === 'number', 'no terrain.titanRadius in live config — titan support missing');
+  const bigMax = cfg.terrain.bigCountMax;
+  for (let seed = 1; seed <= 12; seed++) {
+    for (const terrainDensity of [0, 0.5, 1]) {
+      const m = Praedra.createMatch({ seed, overrides: { terrainDensity }, teamA: SMALL_A, teamB: SMALL_B });
+      const titans = m.state.asteroids.filter((o) => o.alive && o.r >= titanMin);
+      const bigs = m.state.asteroids.filter((o) => o.alive && o.r >= bigMin && o.r < titanMin);
+      assert(titans.length === 1,
+        `seed ${seed} density ${terrainDensity}: ${titans.length} titans (r >= ${titanMin}), want exactly 1`);
+      assert(bigs.length >= 1,
+        `seed ${seed} density ${terrainDensity}: no BIG asteroid (${bigMin} <= r < ${titanMin}) on the map`);
+      assert(bigs.length <= bigMax,
+        `seed ${seed} density ${terrainDensity}: ${bigs.length} BIG asteroids exceeds bigCountMax ${bigMax}`);
+      for (const o of titans.concat(bigs)) {
+        assert(o.x > 0 && o.x < m.config.arena.w && o.y > 0 && o.y < m.config.arena.h,
+          `seed ${seed} density ${terrainDensity}: huge asteroid centre (${o.x | 0},${o.y | 0}) outside the arena`);
+      }
+      // titan may be cut by the boundary but must keep >= 65% of its disc in play
+      {
+        const t = titans[0], W = m.config.arena.w, H = m.config.arena.h;
+        let inside = 0, total = 0;
+        for (let i = 0; i < 24; i++) for (let j = 0; j < 24; j++) {
+          const px = -1 + (i + 0.5) / 12, py = -1 + (j + 0.5) / 12;
+          if (px * px + py * py > 1) continue;
+          total++;
+          const sx = t.x + px * t.r, sy = t.y + py * t.r;
+          if (sx >= 0 && sx <= W && sy >= 0 && sy <= H) inside++;
+        }
+        const frac = inside / total;
+        assert(frac >= 0.63, // sampler tolerance on the sim's own 65% gate
+          `seed ${seed} density ${terrainDensity}: titan only ${(frac * 100).toFixed(0)}% inside the playable zone`);
+      }
+      // outline detail scales with size: grit floor for pebbles, 100+ for the titan
+      for (const o of m.state.asteroids) {
+        assert(o.shape.length >= 18,
+          `seed ${seed} density ${terrainDensity}: asteroid r=${o.r | 0} has only ${o.shape.length} outline vertices`);
+      }
+      assert(titans[0].shape.length >= 100,
+        `seed ${seed} density ${terrainDensity}: titan has only ${titans[0].shape.length} outline vertices`);
+    }
+  }
+});
+
+// Gravity: a massive rock wakes a settled small rock inside its well and pulls it in;
+// with gravity.G zeroed the same rock never moves. Displacement thresholds are loose —
+// the point is direction and the on/off differential, not the exact constant.
+test('gravity-attracts-debris', () => {
+  function scenario(G) {
+    const overrides = G == null ? {} : { gravity: { G } };
+    return Praedra.createScenario({
+      seed: 31,
+      overrides,
+      ships: [], // rocks only: gravity acts on terrain independent of any fleet
+      asteroids: [{ x: MID.x, y: MID.y, r: 300 }, { x: MID.x + 600, y: MID.y, r: 30 }],
+    });
+  }
+  const on = scenario(null); // default (gravity enabled)
+  const small0 = on.state.asteroids.find((o) => o.r < 100);
+  const startX = small0.x;
+  stepSeconds(on, 8);
+  const small1 = on.state.asteroids.find((o) => o.r < 100);
+  assert(small1 && small1.alive, 'small rock vanished from a rocks-only scenario');
+  const pulled = startX - small1.x;
+  assert(pulled > 20,
+    `small rock drifted only ${pulled.toFixed(1)}px toward the massive rock in 8s — gravity not pulling debris`);
+
+  const off = scenario(0);
+  const s0 = off.state.asteroids.find((o) => o.r < 100);
+  const offStartX = s0.x;
+  stepSeconds(off, 8);
+  const s1 = off.state.asteroids.find((o) => o.r < 100);
+  assert(Math.abs(s1.x - offStartX) < 1,
+    `gravity.G = 0 but the small rock still moved ${(offStartX - s1.x).toFixed(1)}px — gravity not disableable`);
+});
+
+// Gravity acts on ships — and the autopilot fights it with a hover burn (gravity
+// feed-forward). Contract-visible effect: a destroyer holding station in a well
+// keeps its position ONLY by sustained throttle (plume up, per detection rules);
+// with G zeroed the same ship holds station dark and motionless. Pinned exempt.
+test('gravity-pulls-ships', () => {
+  function hover(G) {
+    const overrides = G == null ? {} : { gravity: { G } };
+    const m = Praedra.createScenario({
+      seed: 32,
+      overrides,
+      ships: [{ cls: 'destroyer', team: 'A', x: MID.x + 500, y: MID.y, heading: 0 }],
+      asteroids: [{ x: MID.x, y: MID.y, r: 300 }],
+    });
+    const ship = findShip(m, 'A', 'destroyer');
+    Praedra.issueOrder(m, [ship.id], { type: 'hold' }); // station-keep: no role-AI wandering
+    stepSeconds(m, 4); // settle into the hover regime
+    let thr = 0, n = 0;
+    for (let i = 0; i < 3 * TICK_RATE && !m.done; i++) {
+      m.step();
+      thr += ship.throttle; n++;
+    }
+    const drift = dist2D(ship.x, ship.y, MID.x + 500, MID.y);
+    return { thr: thr / n, drift };
+  }
+  const on = hover(null);
+  assert(on.thr > 0.08,
+    `avg throttle ${on.thr.toFixed(3)} while holding station in a well — autopilot is not hover-burning against gravity`);
+  assert(on.drift < 150,
+    `ship drifted ${on.drift.toFixed(0)}px off its hold point in a well — gravity is winning against the autopilot`);
+  const off = hover(0);
+  assert(off.thr < 0.05,
+    `gravity.G = 0 but avg hold throttle is ${off.thr.toFixed(3)} — ship should hold station dark`);
+  assert(off.drift < 20,
+    `gravity.G = 0 but the ship drifted ${off.drift.toFixed(0)}px — hold-at-rest should stay at rest`);
+});
+
+// Accretion rests on the CONTOUR, not the bounding circle: a pebble that falls onto
+// a massive rock must settle at the interpolated shape radius toward its resting
+// bearing (SIM_CONTRACT §Terrain). Reimplements the contour interpolation from the
+// contract and compares against the actual resting distance.
+test('accretion-follows-contour', () => {
+  const m = Praedra.createScenario({
+    seed: 41,
+    ships: [],
+    asteroids: [{ x: MID.x, y: MID.y, r: 300 }, { x: MID.x + 520, y: MID.y, r: 24 }],
+  });
+  const big = m.state.asteroids.find((o) => o.r > 100);
+  const peb = m.state.asteroids.find((o) => o.r < 100);
+  stepSeconds(m, 60); // fall + settle
+  assert(big.x === MID.x && big.y === MID.y, 'massive rock moved while a pebble accreted onto it');
+  assert(!peb.moving, `pebble still moving after 60s (at ${peb.x | 0},${peb.y | 0}) — never accreted`);
+  function contour(o, x, y) {
+    const n = o.shape.length;
+    let a = Math.atan2(y - o.y, x - o.x) - o.rot;
+    a -= Math.floor(a / (2 * Math.PI)) * 2 * Math.PI;
+    const f = a * n / (2 * Math.PI);
+    const i = Math.min(n - 1, Math.floor(f));
+    const t = f - Math.floor(f);
+    return o.r * (o.shape[i] * (1 - t) + o.shape[(i + 1) % n] * t);
+  }
+  const d = dist2D(peb.x, peb.y, big.x, big.y);
+  const expected = contour(big, peb.x, peb.y) + contour(peb, big.x, big.y);
+  assert(Math.abs(d - expected) < 15,
+    `pebble rests at ${d.toFixed(1)}px from centre but the contour contact is ${expected.toFixed(1)}px ` +
+    `(bounding circles would be ${(big.r + peb.r).toFixed(0)}) — accretion not following the contour`);
 });
 
 runAll();
