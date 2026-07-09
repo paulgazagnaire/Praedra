@@ -1,3 +1,17 @@
+/* Doctrine dispatch: the per-class role AI for this ship's team level (config.doctrine).
+   Pinned ships and direct player 'attack' fire-control stay doctrine-independent. */
+function roleAI(state, ship) {
+  var v2 = doctrineOf(state, ship.team) === 'v2';
+  if (ship.cls === 'destroyer') return v2 ? aiDestroyerV2 : aiDestroyer;
+  if (ship.cls === 'frigate') return v2 ? aiFrigateV2 : aiFrigate;
+  if (ship.cls === 'battleship') return v2 ? aiBattleshipV2 : aiBattleship;
+  if (ship.cls === 'bomber') return v2 ? aiBomberV2 : aiBomber;
+  return v2 ? aiInterceptorV2 : aiInterceptor;
+}
+function tryTorpedoD(state, ship, dt) {
+  (doctrineOf(state, ship.team) === 'v2' ? tryTorpedoV2 : tryTorpedo)(state, ship, dt);
+}
+
 function aiPinned(state, ship, dt) {
   // test scenarios: no navigation, but rotate to aim and use every weapon that is legal
   var enemies = livingEnemies(state, ship.team);
@@ -30,11 +44,11 @@ function weaponsFree(state, ship, dt) {
     }
     blastCoverNearGhosts(state, ship, dt);
     clearTransitLane(state, ship, dt);   // clear a blocking rock across ordered move/attackmove/hold
-    tryTorpedo(state, ship, dt);
+    tryTorpedoD(state, ship, dt);
   } else if (ship.cls === 'frigate') {
     blastCoverNearGhosts(state, ship, dt);
     clearTransitLane(state, ship, dt);   // shares ship.cool.rockTorp with blastCoverNearGhosts (no spam)
-    tryTorpedo(state, ship, dt);
+    tryTorpedoD(state, ship, dt);
   } else if (ship.cls === 'battleship') {
     blastCoverNearGhosts(state, ship, dt);
     clearTransitLane(state, ship, dt);   // set ai.rockAim before turrets process it this tick
@@ -65,11 +79,7 @@ function executeOrder(state, ship, dt) {
       var foes = livingEnemies(state, ship.team);
       var hit = foes.length ? nearestWhere(state, ship, foes, null) : null;
       if (hit && hit.d < 950) { // engage what you meet, resume after
-        if (ship.cls === 'destroyer') aiDestroyer(state, ship, dt);
-        else if (ship.cls === 'frigate') aiFrigate(state, ship, dt);
-        else if (ship.cls === 'battleship') aiBattleship(state, ship, dt);
-        else if (ship.cls === 'bomber') aiBomber(state, ship, dt);
-        else aiInterceptor(state, ship, dt);
+        roleAI(state, ship)(state, ship, dt);
         return;
       }
     }
@@ -211,10 +221,6 @@ function aiTick(state, ship, dt) {
   ship.cool.rail -= dt; ship.cool.torp -= dt; ship.cool.bomb -= dt;
   if (ship.pinned) { aiPinned(state, ship, dt); return; }
   if (ship.order) { executeOrder(state, ship, dt); return; } // Ordered beats Auto (PRD §9)
-  if (ship.cls === 'destroyer') aiDestroyer(state, ship, dt);
-  else if (ship.cls === 'frigate') aiFrigate(state, ship, dt);
-  else if (ship.cls === 'battleship') aiBattleship(state, ship, dt);
-  else if (ship.cls === 'bomber') aiBomber(state, ship, dt);
-  else aiInterceptor(state, ship, dt);
+  roleAI(state, ship)(state, ship, dt);
 }
 

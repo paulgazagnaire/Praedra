@@ -294,7 +294,10 @@ var CONFIG_DEFAULTS = {
                                    // (bow->aft; index 0 = bow). Slugs launch from here.
     damage: 30,                    // identical to the destroyer railgun (requirement)
     cooldown: 5.0,                 // PER TURRET reload; with loadTime + stagger, ~1 slug / 2.1 s ship-wide
-    minRange: 220,                 // DEAD ZONE (radius 78 + margin; big guns can't depress point-blank)
+    minRange: 420,                 // DEAD ZONE: big guns can't depress point-blank. Deliberately wide —
+                                   //   PD ship-fire only reaches ~pd.range+target radius (~156 from centre),
+                                   //   so 156..420 is a genuine knife-fight ring where a small ship that
+                                   //   survives the approach gets a REAL shot at killing the battleship
     maxRange: 3200,                // HUGE; detection-bounded (coasting dest visible 1680, burning 3360)
     slugSpeed: 2400,               // px/s of the REAL flying slug (crosses 1400 px in ~0.6 s)
     slewRate: 0.35,                // rad/s per-turret rotation (~20 deg/s; WWII-ponderous, renderer animates t.ang)
@@ -401,6 +404,48 @@ var CONFIG_DEFAULTS = {
     pushableRockRadius: 55,        // ships shove settled rocks smaller than this aside —
                                    // gravity accretes pebble shells around parked fleets,
                                    // and an immovable shell entombs a capital alive
+  },
+
+  // --- DOCTRINE (per-team AI level: 'v1' = legacy greedy AI, 'v2' = veteran doctrine) ---
+  // v2 layers researched combat doctrine on top of v1's mechanics: coordinated focus fire
+  // (Lanchester concentration), defeat-in-detail wave targeting, wolfpack dead-zone dives,
+  // synchronized torpedo volleys (PD saturation), split-axis anvil strikes, emission-control
+  // approaches, masked (cover-hopping) approaches, battleship broadside discipline and the
+  // min-gap field gate. Selectable per team so batteries can measure v2 vs v1 head-to-head.
+  doctrine: { A: 'v2', B: 'v2' },
+  ai2: {
+    focusEvery: 15,              // ticks between doctrine (team-picture) passes
+    isolationRadius: 900,        // mutual-support radius: enemies with fewer allies inside this
+                                 //   are ISOLATED -> preferred wave/focus targets (defeat in detail)
+    packMinFrigates: 2,          // wolfpack: frigates needed on one victim before a dead-zone dive
+    packDiveRange: 300,          // point-blank orbit radius: outside PD ship-fire (~156 from a BB
+                                 //   centre), inside heavyRail.minRange 420 -> main-battery-proof
+    packBearingSpread: 1.0,      // rad between packmates' attack bearings (anvil the PD arcs)
+    packEscortMax: 1,            // dive only when <= this many enemy capitals guard the victim
+                                 //   within isolationRadius (never knife-fight a full battle line)
+    volleyWaitMax: 1.2,          // max s a ready torpedo boat holds for a synchronized volley
+                                 //   (measured: long holds cost launch volume with no PD-leak gain)
+    emconNear: 1.05,             // burn-and-coast band: cut the plume when the nearest enemy sits
+    emconFar: 2.2,               //   between visRange*near and visRange*far of us (approach unseen)
+    anvilMinBombers: 4,          // commit waves split into two attack axes at this many bombers
+    screenBomberRange: 900,      // interceptors guard own bombers from enemy lights inside this
+    diveNeedsSaturation: true,   // interceptors enter a PD bubble only alongside live ordnance
+    bbBroadside: true,           // battleship turns beam-on when holding a firing solution (3 turrets
+                                 //   bear on the beam vs 2 over the bow — WWII battle-line discipline)
+    bbMinGap: 300,               // narrowest opening (surface-to-surface) the BB will ever thread;
+                                 //   tighter pinches are detoured or DEMOLISHED, never entered
+    bbDemolishMaxR: 240,         // BB turrets may blast rocks up to this radius to make room
+                                 //   (v1 capitals stop at ai.rockClearMaxRadius 200). Was 320:
+                                 //   an r-320 rock splits into r-166 children whose drifting mass
+                                 //   shredded the shooter — measured 2x battleship rock-deaths
+    bbDebrisRPad: 0.8,           // extra demolition standoff per px of target-rock radius: bigger
+                                 //   rocks throw bigger (deadlier at any speed) fragments
+    bbGapLookahead: 1100,        // corridor length scanned ahead for pinch points
+    bbDetourMaxClutter: 240,     // flank-corridor clutter above which detouring a pinch is
+                                 //   hopeless (it's a WALL) and the guns make room instead
+    focusHpWeight: 600,          // focus scoring: px-equivalent bonus per missing hp fraction
+                                 //   (finish wounded targets first — no overkill, no half-kills)
+    focusIsolationWeight: 450,   // px-equivalent bonus per missing supporting ally
   },
 
   // --- ROLE AI ---
@@ -2448,10 +2493,15 @@ function clearTransitLane(state, ship, dt) {
   // clear the rock most dead-ahead first — it is the one truly plugging the lane. (Turrets and
   // torpedoes track off-axis fine, but the same choice serves them: clear the centre of the lane.)
   var best = null, bestScore = Infinity, C = cfg.collision;
+  // v2 battleships demolish far bigger rocks than other capitals bother with (RAW POWER:
+  // three heavy turrets out-gun any cover — ai2.bbDemolishMaxR vs ai.rockClearMaxRadius)
+  var bbV2 = ship.cls === 'battleship' && doctrineOf(state, ship.team) === 'v2';
+  var maxClearR = bbV2 ? cfg.ai2.bbDemolishMaxR : AI.rockClearMaxRadius;
+  var rPad = bbV2 ? cfg.ai2.bbDebrisRPad : 0;   // big rocks throw big fragments: stand further off
   rocksNearSeg(state, ship.x, ship.y, ex, ey, 92 + def.radius + 60, function (o) {
-    if (o.r < C.pushableRockRadius || o.r > AI.rockClearMaxRadius) return false;   // pebble / futile-huge
+    if (o.r < C.pushableRockRadius || o.r > maxClearR) return false;               // pebble / futile-huge
     var rd = dist(ship.x, ship.y, o.x, o.y);
-    if (rd < def.radius + o.r + AI.rockClearDebrisPad) return false;               // DEBRIS SAFETY
+    if (rd < def.radius + o.r + AI.rockClearDebrisPad + o.r * rPad) return false;  // DEBRIS SAFETY
     if (!segCircleHit(ship.x, ship.y, ex, ey, o.x, o.y, o.r + def.radius + 30)) return false; // blocks lane?
     var boff = Math.abs(normAngle(Math.atan2(o.y - ship.y, o.x - ship.x) - ta));
     var score = boff * 10000 + rd;                                                // alignment first, then near
@@ -2516,6 +2566,100 @@ function aiDestroyer(state, ship, dt) {
   tryTorpedo(state, ship, dt); // weak secondary — only ever finds capital/steady targets
 }
 
+
+/* ================= Destroyer v2 (veteran doctrine) ================= */
+/* v2 lane bias: openLaneBias + DEFILADE — prefer an offset where a rock blocks the
+   sightline from the SECOND threat while the firing lane to the primary stays open
+   (hull-down gunnery: engage one axis, masked from the other). */
+function openLaneBiasV2(state, ship, target, second) {
+  var best = { x: 0, y: 0 }, bestScore = -Infinity;
+  var offs = [[0, 0], [220, 0], [-220, 0], [0, 220], [0, -220]];
+  for (var i = 0; i < offs.length; i++) {
+    var px = ship.x + offs[i][0], py = ship.y + offs[i][1];
+    var clutter = 0;
+    rocksNearSeg(state, px, py, px, py, 400, function (o) {
+      var dd = dist(px, py, o.x, o.y) - o.r;
+      if (dd < 380) clutter += (380 - Math.max(0, dd)) / 380;
+      return false;
+    });
+    var lane = target && losClear(state, px, py, target.x, target.y) ? 1.6 : 0;
+    var defil = second && !losClear(state, px, py, second.x, second.y) ? 0.8 : 0;
+    var score = lane + defil - clutter * 0.55;
+    if (score > bestScore) { bestScore = score; best = { x: offs[i][0], y: offs[i][1] }; }
+  }
+  return best;
+}
+
+function aiDestroyerV2(state, ship, dt) {
+  var cfg = state.config, AI = cfg.ai, RG = cfg.railgun;
+  var enemies = livingEnemies(state, ship.team);
+  if (!enemies.length) {
+    var hp = routeAround(state, ship, huntPoint(state, ship));
+    ship.nav = { x: hp.x, y: hp.y, arrive: true, speedCap: ship.def.maxCruiseSpeed * 0.8 };
+    blastCoverNearGhosts(state, ship, dt);
+    clearTransitLane(state, ship, dt);
+    return;
+  }
+  // FOCUS FIRE (Lanchester): the fleet's gunline focus when it's sanely reachable,
+  // else the v1 pick (nearest capital, then nearest anything)
+  var focus = focusFor(state, ship, 'gun');
+  var pick = focus ? { ship: focus, d: dist(ship.x, ship.y, focus.x, focus.y) }
+                   : (nearestWhere(state, ship, enemies, isCapital) || nearestWhere(state, ship, enemies, null));
+  var target = pick.ship;
+  var d = pick.d;
+  var aim = Math.atan2(target.y - ship.y, target.x - ship.x);
+  var closeLight = nearestWhere(state, ship, enemies, function (e) { return isLight(e); });
+
+  // defilade anchor: mask from the second capital while keeping the lane to the first
+  var second = nearestWhere(state, ship, enemies, function (e) { return isCapital(e) && e.id !== target.id; });
+  if (state.tick % 30 === (ship.id % 30))
+    ship.ai.anchorBias = openLaneBiasV2(state, ship, target, second && second.ship);
+  var bias = ship.ai.anchorBias || { x: 0, y: 0 };
+
+  if (closeLight && closeLight.d < AI.destroyerRetreatRange) {
+    // lights in the dead zone: burn away (v1)
+    var ux = (ship.x - closeLight.ship.x) / (closeLight.d || 1), uy = (ship.y - closeLight.ship.y) / (closeLight.d || 1);
+    ship.nav = { x: ship.x + ux * 500, y: ship.y + uy * 500, arrive: false, jink: false };
+  } else if (target.cls === 'battleship' && d > RG.maxRange * 1.05) {
+    // MASKED APPROACH (infiltration): the battleship's 3200px guns outrange our 700 —
+    // never stroll the open. Hop rock shadows toward it, engines cold inside the band
+    // where a burn would light us up (EMCON). No cover on the map = jink the approach.
+    var hop = coverHop(state, ship, target, AI.destroyerStandoff);
+    var cap = emconCap(state, ship);
+    if (hop) ship.nav = { x: hop.x, y: hop.y, arrive: true, speedCap: cap || undefined, face: aim };
+    else {
+      var uxm = (target.x - ship.x) / d, uym = (target.y - ship.y) / d;
+      ship.nav = { x: target.x - uxm * AI.destroyerStandoff, y: target.y - uym * AI.destroyerStandoff,
+                   arrive: true, speedCap: cap || undefined, jink: !cap };
+    }
+  } else if (d > AI.destroyerStandoff + 100) {
+    var ux2 = (target.x - ship.x) / d, uy2 = (target.y - ship.y) / d;
+    ship.nav = { x: target.x - ux2 * AI.destroyerStandoff + bias.x, y: target.y - uy2 * AI.destroyerStandoff + bias.y,
+                 arrive: true, face: aim };
+  } else if (d < AI.destroyerStandoff - 140 && isCapital(target)) {
+    var ux3 = (ship.x - target.x) / d, uy3 = (ship.y - target.y) / d;
+    ship.nav = { x: target.x + ux3 * AI.destroyerStandoff + bias.x, y: target.y + uy3 * AI.destroyerStandoff + bias.y,
+                 arrive: true, face: aim };
+  } else {
+    ship.nav = { x: ship.x + bias.x, y: ship.y + bias.y, arrive: true, face: aim };
+  }
+
+  var st = railgunReady(state, ship, target);
+  if (st === 'ok') { fireRailgun(state, ship, target); ship.ai.noLos = 0; }
+  else if (st === 'los') {
+    ship.ai.noLos = (ship.ai.noLos || 0) + dt;
+    if (ship.ai.noLos > AI.rockShootSeconds && d < RG.maxRange && ship.cool.rail <= 0) {
+      var rock = firstRockOnRay(state, ship.x, ship.y, target.x, target.y);
+      if (rock) {
+        if (ship.nav) ship.nav.face = Math.atan2(rock.y - ship.y, rock.x - ship.x);
+        if (Math.abs(normAngle(Math.atan2(rock.y - ship.y, rock.x - ship.x) - ship.heading)) < RG.arc / 2)
+          fireRailgunAtRock(state, ship, rock);
+      }
+    }
+  } else ship.ai.noLos = 0;
+  blastCoverNearGhosts(state, ship, dt);
+  tryTorpedoV2(state, ship, dt);
+}
 function aiFrigate(state, ship, dt) {
   var cfg = state.config, AI = cfg.ai;
   var enemies = livingEnemies(state, ship.team);
@@ -2551,6 +2695,87 @@ function aiFrigate(state, ship, dt) {
   tryTorpedo(state, ship, dt); // the torpedo specialist
 }
 
+
+/* ================= Frigate v2 (veteran doctrine) ================= */
+/* Wolfpack: when the doctrine pass has declared a thinly-escorted capital the pack
+   victim, the frigates stop lobbing from standoff and DIVE — through the heavy rail's
+   speed gate (stay fast, jink) into the dead zone (ai2.packDiveRange sits inside
+   heavyRail.minRange and outside PD's ship reach), on SPREAD BEARINGS so PD and any
+   escort can't cover every axis, and pound torpedoes point-blank where PD's 0.5 s
+   reaction can't track them in time. U-boat wolfpack + PT-boat doctrine. */
+function aiFrigateV2(state, ship, dt) {
+  var cfg = state.config, AI = cfg.ai, A2 = cfg.ai2;
+  var enemies = livingEnemies(state, ship.team);
+  if (!enemies.length) {
+    var own0 = ship.team === 'A' ? state.aliveA : state.aliveB;
+    var d0 = null;
+    for (var i0 = 0; i0 < own0.length; i0++) if (own0[i0].cls === 'destroyer') { d0 = own0[i0]; break; }
+    var hp = routeAround(state, ship, d0 ? { x: d0.x, y: d0.y } : huntPoint(state, ship));
+    ship.nav = { x: hp.x, y: hp.y, arrive: true };
+    blastCoverNearGhosts(state, ship, dt);
+    clearTransitLane(state, ship, dt);
+    return;
+  }
+  var doc = state.doctrine[ship.team];
+  var packVictim = null;
+  if (doc.packTargetId >= 0 && doc.packIds && doc.packIds.indexOf(ship.id) >= 0)
+    packVictim = doctrineShip(state, ship.team, doc.packTargetId);
+
+  if (packVictim) {
+    var n = doc.packIds.length, idx = doc.packIds.indexOf(ship.id);
+    var dV = dist(ship.x, ship.y, packVictim.x, packVictim.y);
+    var aimV = Math.atan2(packVictim.y - ship.y, packVictim.x - ship.x);
+    // spread bearings around the pack's mean approach axis (multi-axis anvil)
+    var own = ship.team === 'A' ? state.aliveA : state.aliveB;
+    var pcx = 0, pcy = 0, pn = 0;
+    for (var p = 0; p < own.length; p++)
+      if (doc.packIds.indexOf(own[p].id) >= 0) { pcx += own[p].x; pcy += own[p].y; pn++; }
+    var ca = pn ? Math.atan2(pcy / pn - packVictim.y, pcx / pn - packVictim.x) : aimV + Math.PI;
+    var slot = ca + (idx - (n - 1) / 2) * A2.packBearingSpread;
+    var ox = packVictim.x + Math.cos(slot) * A2.packDiveRange;
+    var oy = packVictim.y + Math.sin(slot) * A2.packDiveRange;
+    // approach FAST (the heavy rail's speed gate can't track cruise 85; slowing down
+    // outside the dead zone is what gets a boat killed), jinking only under actual
+    // threat — jinking through rock fields for no reason is how boats die to terrain.
+    // Settle only once inside the main-battery blind ring.
+    var inside = dV < cfg.heavyRail.minRange * 0.95;
+    ship.nav = { x: ox, y: oy, arrive: inside, jink: !inside && threatened(state, ship), face: aimV };
+    blastCoverNearGhosts(state, ship, dt);
+    tryTorpedoV2(state, ship, dt); // point-blank release bypasses the volley hold
+    return;
+  }
+
+  var own2 = ship.team === 'A' ? state.aliveA : state.aliveB;
+  var dest = null;
+  for (var i = 0; i < own2.length; i++) if (own2[i].cls === 'destroyer') { dest = own2[i]; break; }
+  var near = nearestWhere(state, ship, enemies, null);
+  var aim = Math.atan2(near.ship.y - ship.y, near.ship.x - ship.x);
+  // the PD umbrella is only worth keeping when the enemy still fields ordnance it
+  // can shoot down (lights' bombs, frigate torpedoes); against a pure gunline the
+  // escort slot is wasted — take the torpedoes to the fight instead
+  var ordnanceThreat = false;
+  for (var e2 = 0; e2 < enemies.length; e2++)
+    if (isLight(enemies[e2]) || enemies[e2].cls === 'frigate') { ordnanceThreat = true; break; }
+  if (dest && ordnanceThreat) {
+    var ex = near.ship.x - dest.x, ey = near.ship.y - dest.y;
+    var el = len(ex, ey) || 1;
+    ship.nav = { x: dest.x + (ex / el) * AI.escortRange, y: dest.y + (ey / el) * AI.escortRange,
+                 arrive: true, face: aim };
+  } else {
+    // standoff torpedo work against the fleet's strike focus (spread + volley handled
+    // by tryTorpedoV2); EMCON on the way in — arrive dim, leave lit
+    var focus = focusFor(state, ship, 'strike');
+    var anchor = focus ? { ship: focus, d: dist(ship.x, ship.y, focus.x, focus.y) }
+                       : (nearestWhere(state, ship, enemies, function (e) { return e.cls === 'destroyer'; }) || near);
+    var ux = (ship.x - anchor.ship.x) / (anchor.d || 1), uy = (ship.y - anchor.ship.y) / (anchor.d || 1);
+    var stand = isCapital(anchor.ship) ? AI.frigateStandoff : 500;
+    var cap = anchor.d > AI.frigateStandoff * 1.3 ? emconCap(state, ship) : null;
+    ship.nav = { x: anchor.ship.x + ux * stand, y: anchor.ship.y + uy * stand,
+                 arrive: true, face: aim, speedCap: cap || undefined };
+  }
+  blastCoverNearGhosts(state, ship, dt);
+  tryTorpedoV2(state, ship, dt);
+}
 /* ---------------- Battleship: heavy-rail turrets + role AI ---------------- */
 /* Focused fire, deletion-ordered: one primary per tick, ranked battleship > destroyer > frigate,
    nearest within [minRange, maxRange], detected (livingEnemies is the detected set) and LOS-clear.
@@ -2568,6 +2793,8 @@ function pickHeavyRailPrimary(state, ship, ignoreLos) {
     if (d < HR.minRange || d > HR.maxRange) continue;               // dead zone / range (from centre)
     if (!ignoreLos && !losShips(state, ship, e)) continue;          // LOS gate (skipped for the APPROACH pick)
     var key = heavyRailClassRank(e.cls) * 1e7 + d;                  // big ships first, then nearest
+    if (doctrineOf(state, ship.team) === 'v2')                      // v2: finish wounded hulls first
+      key -= (1 - e.hp / e.maxHp) * state.config.ai2.focusHpWeight;
     if (key < bestKey) { bestKey = key; best = e; }
   }
   return best;
@@ -2728,6 +2955,239 @@ function aiBattleship(state, ship, dt) {
   updateTurrets(state, ship, dt);        // turrets fire every tick regardless of nav state
 }
 
+
+/* ================= Battleship v2 (veteran doctrine) ================= */
+/* Broadside discipline: when the guns hold a solution, turn the BEAM to the target —
+   arcCenters [0,0,pi] +- 2.36 means a beam-on hull bears ALL THREE turrets where a
+   bow-on hull bears two (WWII battle-line doctrine). Hysteresis keeps the ponderous
+   hull (turnMax 0.14) from flip-flopping between beams mid-slew. */
+function bbBroadsideFace(state, ship, aim) {
+  var s1 = normAngle(aim + Math.PI / 2), s2 = normAngle(aim - Math.PI / 2);
+  var e1 = Math.abs(normAngle(s1 - ship.heading)), e2 = Math.abs(normAngle(s2 - ship.heading));
+  var side = ship.ai.bsSide;
+  if (side !== 1 && side !== -1) side = e1 <= e2 ? 1 : -1;
+  else if (side === 1 && e2 + 0.6 < e1) side = -1;
+  else if (side === -1 && e1 + 0.6 < e2) side = 1;
+  ship.ai.bsSide = side;
+  return side === 1 ? s1 : s2;
+}
+
+/* Min-gap field gate: the battleship NEVER threads an opening narrower than ai2.bbMinGap
+   (surface-to-surface). Scans the corridor ahead for a pinch — a pair of rocks flanking
+   the path whose gap is too tight for the big hull. Verdict:
+     null                                    — lane is fine
+     { type:'demolish', rock, x, y, face }   — hold at debris-safe standoff, guns MAKE room
+     { type:'detour', x, y }                 — both pinch rocks too big to shoot: go around
+   "A WWII battleship once removed an entire hill" — tight gaps get widened, not threaded. */
+function bbGapGate(state, ship, goalPt) {
+  var cfg = state.config, AI = cfg.ai, A2 = cfg.ai2, def = ship.def;
+  // stagger + cache (same cadence as the clutter detour)
+  if (state.tick % AI.clutterRefreshTicks !== (ship.id + 7) % AI.clutterRefreshTicks &&
+      ship.ai.gapGateT !== undefined && state.tick - ship.ai.gapGateT < AI.clutterRefreshTicks &&
+      Math.abs((ship.ai.gapGoalX || 0) - goalPt.x) < 80 && Math.abs((ship.ai.gapGoalY || 0) - goalPt.y) < 80)
+    return ship.ai.gapGate;
+  ship.ai.gapGateT = state.tick; ship.ai.gapGoalX = goalPt.x; ship.ai.gapGoalY = goalPt.y;
+  ship.ai.gapGate = null;
+  var dGoal = dist(ship.x, ship.y, goalPt.x, goalPt.y);
+  if (dGoal < 240) return null;
+  var reach = Math.min(dGoal, A2.bbGapLookahead);
+  var ux = (goalPt.x - ship.x) / dGoal, uy = (goalPt.y - ship.y) / dGoal;
+  var ex = ship.x + ux * reach, ey = ship.y + uy * reach;
+  // corridor rocks big enough to define a pinch. Pebbles are shoved aside, and fast
+  // debris is DISPERSING — counting fragments as jambs re-pinches a gap the guns just
+  // opened and grinds the ship into an endless demolition loop.
+  var rocks = [];
+  var C = cfg.collision;
+  rocksNearSeg(state, ship.x, ship.y, ex, ey, 92 + def.radius + A2.bbMinGap + 260, function (o) {
+    if (o.r < C.pushableRockRadius) return false;
+    if (o.moving && len(o.vx, o.vy) > 18) return false;
+    if (rocks.length < 28) rocks.push(o);
+    return false;
+  });
+  var bestPinch = null, bestD = Infinity;
+  for (var i = 0; i < rocks.length; i++) {
+    for (var j = i + 1; j < rocks.length; j++) {
+      var a = rocks[i], b = rocks[j];
+      var cd = dist(a.x, a.y, b.x, b.y);
+      var gap = cd - a.r - b.r;
+      if (gap >= A2.bbMinGap || gap < -20) continue;      // wide enough / overlapping = one wall
+      // the passage midpoint (between the two surfaces)
+      var gx = a.x + (b.x - a.x) * ((a.r + gap / 2) / (cd || 1));
+      var gy = a.y + (b.y - a.y) * ((a.r + gap / 2) / (cd || 1));
+      // path must actually thread this passage: midpoint near the corridor axis AND the
+      // two rocks on opposite sides of the path
+      var t = clamp(((gx - ship.x) * ux + (gy - ship.y) * uy) / (reach || 1), 0, 1) * reach;
+      var px = ship.x + ux * t, py = ship.y + uy * t;
+      if (dist(px, py, gx, gy) > A2.bbMinGap * 0.5 + def.radius) continue;
+      var sa = ux * (a.y - ship.y) - uy * (a.x - ship.x);
+      var sb = ux * (b.y - ship.y) - uy * (b.x - ship.x);
+      if (sa * sb > 0) continue;                          // both rocks on one side: not a pinch
+      var dPinch = dist(ship.x, ship.y, gx, gy);
+      if (dPinch < bestD) { bestD = dPinch; bestPinch = { a: a, b: b, x: gx, y: gy }; }
+    }
+  }
+  if (!bestPinch) return null;
+  var small = bestPinch.a.r <= bestPinch.b.r ? bestPinch.a : bestPinch.b;
+  var big = small === bestPinch.a ? bestPinch.b : bestPinch.a;
+  // Manoeuvre before munitions: score a flank around the pinch on both sides. When a
+  // reasonably clean detour exists, TAKE IT — demolition is for genuine walls (both
+  // flanks cluttered) or when the detour would leave the arena. "Blow everything to
+  // make room" is the fallback of RAW POWER, not the opening move.
+  var pxp = -uy, pyp = ux;
+  var off = big.r + A2.bbMinGap + 520;
+  var T = cfg.terrain, W = cfg.arena.w, H = cfg.arena.h;
+  var c1x = clamp(bestPinch.x + pxp * off, T.edgeMargin, W - T.edgeMargin);
+  var c1y = clamp(bestPinch.y + pyp * off, T.edgeMargin, H - T.edgeMargin);
+  var c2x = clamp(bestPinch.x - pxp * off, T.edgeMargin, W - T.edgeMargin);
+  var c2y = clamp(bestPinch.y - pyp * off, T.edgeMargin, H - T.edgeMargin);
+  var w1 = corridorClutter(state, ship.x, ship.y, c1x, c1y, ship) +
+           corridorClutter(state, c1x, c1y, goalPt.x, goalPt.y, ship);
+  var w2 = corridorClutter(state, ship.x, ship.y, c2x, c2y, ship) +
+           corridorClutter(state, c2x, c2y, goalPt.x, goalPt.y, ship);
+  var wBest = Math.min(w1, w2);
+  var canDemolish = small.r <= A2.bbDemolishMaxR;
+  if (wBest <= A2.bbDetourMaxClutter || !canDemolish) {
+    ship.ai.gapGate = { type: 'detour', x: w1 <= w2 ? c1x : c2x, y: w1 <= w2 ? c1y : c2y };
+  } else {
+    // DEMOLITION TRANSIT: it's a wall. Hold at a standoff that is BOTH debris-safe and
+    // outside the guns' own dead zone (a hull that creeps inside heavyRail.minRange of
+    // the jamb cannot depress its turrets onto it — the observed breach deadlock), and
+    // blast the smaller jamb until the opening exceeds bbMinGap.
+    var HRg = cfg.heavyRail;
+    var want = Math.max(def.radius + small.r + AI.rockClearDebrisPad + small.r * A2.bbDebrisRPad,
+                        HRg.minRange + 60);
+    var dR = dist(ship.x, ship.y, small.x, small.y) || 1;
+    var bx = ship.x, by = ship.y;
+    if (dR < want) { bx = small.x + ((ship.x - small.x) / dR) * (want + 30); by = small.y + ((ship.y - small.y) / dR) * (want + 30); }
+    ship.ai.gapGate = { type: 'demolish', rockId: small.id, rx: small.x, ry: small.y,
+                        x: bx, y: by, face: Math.atan2(small.y - ship.y, small.x - ship.x) };
+  }
+  return ship.ai.gapGate;
+}
+
+/* Apply a gap-gate verdict to the nav/turret state (highest transit priority; a live
+   firing solution still owns the guns — updateTurrets prefers its ship primary). */
+function bbApplyGate(state, ship, gate, speedCap) {
+  if (gate.type === 'demolish') {
+    ship.nav = { x: gate.x, y: gate.y, arrive: true, face: gate.face, speedCap: speedCap };
+    // demolition LATCH: while the breach is being blown, fragments fly (and are rightly
+    // ignored by the pinch scan) — without a hold, the hull surges into the half-open
+    // throat between salvos, ends up inside its own dead zone, and the breach deadlocks.
+    // Keep station until the rubble has settled and the re-scan stays clean for a while.
+    ship.ai.gapHoldX = gate.x; ship.ai.gapHoldY = gate.y; ship.ai.gapHoldFace = gate.face;
+    ship.ai.gapCalmUntil = state.time + 2.5;
+    var rock = null;
+    for (var ri = 0; ri < state.asteroids.length; ri++) {
+      var o = state.asteroids[ri];
+      if (o.alive && o.id === gate.rockId) { rock = o; break; }
+    }
+    if (rock) ship.ai.rockAim = { x: rock.x, y: rock.y, rockId: rock.id, until: state.time + 1.0 };
+    else ship.ai.gapGate = null; // jamb destroyed: force re-scan next tick
+  } else {
+    ship.nav = { x: gate.x, y: gate.y, arrive: true, speedCap: speedCap };
+  }
+}
+
+/* The demolition-latch hold: true while rubble from an active breach is still settling —
+   the caller should keep station instead of advancing into the throat. */
+function bbGateCalmHold(state, ship) {
+  if (state.time >= (ship.ai.gapCalmUntil || -1)) return false;
+  ship.nav = { x: ship.ai.gapHoldX, y: ship.ai.gapHoldY, arrive: true, face: ship.ai.gapHoldFace };
+  return true;
+}
+
+function aiBattleshipV2(state, ship, dt) {
+  var cfg = state.config, AI = cfg.ai, A2 = cfg.ai2, HR = cfg.heavyRail, def = ship.def;
+  var enemies = livingEnemies(state, ship.team);
+  if (!enemies.length) {
+    // no contacts: hunt like v1 (skirt wells, clear rocks) + NEVER thread a tight gap
+    var hpn = bbSkirtWell(state, ship, routeAround(state, ship, huntPoint(state, ship)));
+    ship.nav = { x: hpn.x, y: hpn.y, arrive: true, speedCap: def.maxCruiseSpeed * 0.8 };
+    blastCoverNearGhosts(state, ship, dt);
+    clearTransitLane(state, ship, dt);
+    var gate0 = bbGapGate(state, ship, hpn);
+    if (gate0) bbApplyGate(state, ship, gate0, def.maxCruiseSpeed * 0.8);
+    else bbGateCalmHold(state, ship);
+    updateTurrets(state, ship, dt);
+    return;
+  }
+  var primary = pickHeavyRailPrimary(state, ship);
+  var pick = primary ? { ship: primary, d: dist(ship.x, ship.y, primary.x, primary.y) }
+                     : (nearestWhere(state, ship, enemies, isCapital) || nearestWhere(state, ship, enemies, null));
+  var target = pick.ship, d = pick.d;
+  var aim = Math.atan2(target.y - ship.y, target.x - ship.x);
+
+  // threat centroid: diving lights within 450 AND any trackable hull knife-fighting
+  // inside the dead zone — creep away from both to reopen the gun window
+  var lcx = 0, lcy = 0, ln = 0;
+  for (var i = 0; i < enemies.length; i++) {
+    var e = enemies[i];
+    var de = dist(ship.x, ship.y, e.x, e.y);
+    if ((isLight(e) && de < 450) || (heavyRailTrackable(HR, e) && de < HR.minRange * 1.05)) {
+      lcx += e.x; lcy += e.y; ln++;
+    }
+  }
+
+  if (state.tick % 30 === (ship.id % 30)) ship.ai.anchorBias = openLaneBias(state, ship, target);
+  var bias = ship.ai.anchorBias || { x: 0, y: 0 };
+  var maxStand = HR.maxRange * HR.standoffFrac;
+  var coverRock = null;
+
+  var goalPt, navFace = aim;
+  if (ship.hp < 0.3 * ship.maxHp && ln > 0) {
+    // low and swarmed: crawl toward the fleet centroid (v1 behavior)
+    var own = ship.team === 'A' ? state.aliveA : state.aliveB;
+    var fx = 0, fy = 0, fn = 0;
+    for (var k = 0; k < own.length; k++) if (own[k].id !== ship.id) { fx += own[k].x; fy += own[k].y; fn++; }
+    goalPt = fn ? { x: fx / fn, y: fy / fn } : huntPoint(state, ship);
+    ship.ai.noLos = 0;
+  } else if (ln > 0) {
+    // creep directly away from the close-threat centroid; keep the beam on the primary
+    // (the turrets stay ready for the moment a knife-fighter drifts back out past minRange)
+    var cx = lcx / ln, cy = lcy / ln, dc = dist(ship.x, ship.y, cx, cy) || 1;
+    var ux = (ship.x - cx) / dc, uy = (ship.y - cy) / dc;
+    goalPt = { x: ship.x + ux * 320 + bias.x, y: ship.y + uy * 320 + bias.y };
+    if (primary && A2.bbBroadside) navFace = bbBroadsideFace(state, ship, aim);
+    ship.ai.noLos = 0;
+  } else {
+    // engagement-aware standoff (v1) + broadside discipline when the solution holds
+    var navT = target, navD = d, stand = maxStand;
+    if (primary) {
+      stand = clamp(d, HR.standoffMin, maxStand);
+      ship.ai.noLos = 0;
+      if (A2.bbBroadside) navFace = bbBroadsideFace(state, ship, aim);
+    } else {
+      var approach = pickHeavyRailPrimary(state, ship, true);
+      if (approach) {
+        navT = approach; navD = dist(ship.x, ship.y, approach.x, approach.y);
+        stand = HR.standoffMin;
+        ship.ai.noLos = (ship.ai.noLos || 0) + dt;
+        if (ship.ai.noLos > AI.rockShootSeconds)
+          coverRock = firstRockOnRay(state, ship.x, ship.y, approach.x, approach.y);
+        navFace = Math.atan2(navT.y - ship.y, navT.x - ship.x);
+      } else if (isCapital(target)) {
+        stand = HR.standoffMin; ship.ai.noLos = 0;
+      } else {
+        ship.ai.noLos = 0;
+      }
+      if (navFace === aim) navFace = Math.atan2(navT.y - ship.y, navT.x - ship.x);
+    }
+    var uxn = (navT.x - ship.x) / (navD || 1), uyn = (navT.y - ship.y) / (navD || 1);
+    goalPt = { x: navT.x - uxn * stand + bias.x, y: navT.y - uyn * stand + bias.y };
+  }
+  var g = bbSkirtWell(state, ship, routeAround(state, ship, goalPt));
+  ship.nav = { x: g.x, y: g.y, arrive: true, speedCap: def.maxCruiseSpeed, face: navFace };
+  blastCoverNearGhosts(state, ship, dt);
+  if (coverRock)
+    ship.ai.rockAim = { x: coverRock.x, y: coverRock.y, rockId: coverRock.id, until: state.time + AI.rockShootSeconds };
+  // transit gap gate — only while there is no live firing solution (combat owns the guns)
+  if (!primary) {
+    var gate = bbGapGate(state, ship, g);
+    if (gate) bbApplyGate(state, ship, gate, def.maxCruiseSpeed);
+    else bbGateCalmHold(state, ship);
+  }
+  updateTurrets(state, ship, dt);
+}
 function teamCommitting(state, team) {
   if (state.time < state.commit[team].until) return true;
   // no PD capitals on the other side: nothing to saturate, no reason to hold back
@@ -2752,10 +3212,18 @@ function updateCommits(state) {
     for (var j = 0; j < lights.length; j++) { cx += lights[j].x; cy += lights[j].y; }
     var probe = { x: cx / lights.length, y: cy / lights.length };
     var tgt = null, bestD = Infinity;
+    var v2 = doctrineOf(state, team) === 'v2';
+    var A2 = state.config.ai2;
     for (var k = 0; k < enemies.length; k++) {
       var e = enemies[k];
       var pri = isCapital(e) ? 0 : 1; // any capital; the pack naturally hits the escort first
       var d = dist(probe.x, probe.y, e.x, e.y) + pri * 100000;
+      if (v2 && isCapital(e)) {
+        // defeat in detail: strike the ISOLATED capital (fewest supporting capitals in
+        // mutual-support range), finish the wounded one — not merely the nearest
+        d += alliesNear(state, e, A2.isolationRadius) * A2.focusIsolationWeight * 2
+           - (1 - e.hp / e.maxHp) * A2.focusHpWeight;
+      }
       if (d < bestD) { bestD = d; tgt = e; }
     }
     c.targetId = tgt.id;
@@ -2779,6 +3247,9 @@ function updateCommits(state) {
       // sometimes the whole wave hooks around a side — war loves a flank
       var r = state.rng.next();
       c.flank = r < AI.flankChance / 2 ? -1 : (r < AI.flankChance ? 1 : 0);
+      // v2 anvil: a big enough bomber wave splits into TWO attack axes (hammer-and-anvil,
+      // the torpedo-bomber doctrine: whichever way the victim turns, one axis gets its beam)
+      c.anvil = v2 && stagedBombers >= state.config.ai2.anvilMinBombers;
       state.stats.waves[team]++;
     }
   }
@@ -2934,6 +3405,111 @@ function aiBomber(state, ship, dt) {
   ship.ai.mode = m;
 }
 
+
+/* ================= Bomber v2 (veteran doctrine) ================= */
+/* Torpedo-bomber anvil: a big committed wave splits into two attack axes (id parity)
+   so whichever way the victim creeps, one group keeps a clean run — and PD's slots
+   face saturation from two bearings at once. Approach flies EMCON (burn-and-coast:
+   full burn far out, engines cold through the enemy's detection band) so the run
+   starts from a pop-out, not a tracked crawl. Focus target from the doctrine pass. */
+function aiBomberV2(state, ship, dt) {
+  var cfg = state.config, AI = cfg.ai, B = cfg.bomb, A2 = cfg.ai2;
+  var enemies = livingEnemies(state, ship.team);
+  if (!enemies.length) {
+    var hp = routeAround(state, ship, huntPoint(state, ship));
+    ship.nav = { x: hp.x, y: hp.y, arrive: true, jink: false };
+    return;
+  }
+  var focus = focusFor(state, ship, 'strike');
+  var pick = (focus && isCapital(focus)) ? { ship: focus, d: dist(ship.x, ship.y, focus.x, focus.y) }
+           : (nearestWhere(state, ship, enemies, isCapital) || nearestWhere(state, ship, enemies, null));
+  var target = pick.ship, d = pick.d;
+  var thr = threatened(state, ship);
+  var committing = teamCommitting(state, ship.team);
+  var m = ship.ai.mode;
+  if (m !== 'run' && m !== 'break' && m !== 'approach') m = 'stage';
+  if (m === 'stage' && committing) { m = 'approach'; }
+  if ((m === 'approach' || m === 'run') && !committing) m = 'break';
+
+  if (m === 'stage') {
+    var cover = coverPoint(state, ship, target, AI.coverMinRange, AI.stageRange * 1.4);
+    if (cover) ship.nav = navToCover(ship, cover, thr);
+    else {
+      var sx = (ship.x - target.x) / (d || 1), sy = (ship.y - target.y) / (d || 1);
+      ship.nav = { x: target.x + sx * AI.stageRange, y: target.y + sy * AI.stageRange, arrive: true, jink: thr };
+    }
+  }
+  if (m === 'approach') {
+    var c = state.commit[ship.team];
+    // ANVIL: two axes by id parity when the wave is big enough; else the wave's flank call
+    var flk = c.anvil ? ((ship.id % 2 === 0) ? 1 : -1) : c.flank;
+    if (flk !== 0 && d > AI.flankDone * 2) {
+      var fx = (ship.x - target.x) / (d || 1), fy = (ship.y - target.y) / (d || 1);
+      var ca = Math.cos(flk * 1.1), sa = Math.sin(flk * 1.1);
+      var wx = target.x + (fx * ca - fy * sa) * AI.flankOffset;
+      var wy = target.y + (fx * sa + fy * ca) * AI.flankOffset;
+      if (dist(ship.x, ship.y, wx, wy) > AI.flankDone) {
+        ship.nav = { x: wx, y: wy, arrive: false, jink: thr };
+      } else ship.nav = { x: target.x, y: target.y, arrive: false, jink: thr };
+    } else ship.nav = { x: target.x, y: target.y, arrive: false, jink: thr };
+    // EMCON: cold-coast the detection band when nothing is actively hunting us —
+    // the run then starts from an untracked pop-out and beats PD's reaction clock
+    if (!thr) {
+      var cap = emconCap(state, ship);
+      if (cap) ship.nav.speedCap = cap;
+    }
+    if (d <= B.launchRange * B.runStartFactor && losShips(state, ship, target)) {
+      m = 'run'; ship.ai.modeAt = state.time; ship.ai.runBombs = 0;
+      state.stats.runEntries++;
+    }
+  }
+  if (m === 'run') {
+    ship.nav = { x: target.x, y: target.y, arrive: false, jink: false };
+    var clear = losShips(state, ship, target);
+    if (ship.cool.bomb > 0) state.stats.fireBlocked.cooldown++;
+    else if (d > B.launchRange) state.stats.fireBlocked.range++;
+    else if (!clear) state.stats.fireBlocked.los++;
+    else {
+      var tl = Math.min(B.maxFlight, d / B.speed);
+      var aimX = target.x + target.vx * tl, aimY = target.y + target.vy * tl;
+      if (!losClear(state, ship.x, ship.y, aimX, aimY)) state.stats.fireBlocked.lane++;
+      else {
+        launchBomb(state, ship, target);
+        state.stats.salvosFired++;
+        ship.cool.bomb = B.cooldown;
+        ship.ai.runBombs = (ship.ai.runBombs || 0) + 1;
+      }
+    }
+    if ((ship.ai.runBombs || 0) >= 2 || d < AI.bomberBreakRange ||
+        (!clear && state.time - ship.ai.modeAt > 1.0)) m = 'break';
+  }
+  if (m === 'break') {
+    var duck = null, duckD = Infinity;
+    var AR = state.asteroids;
+    var thrShip = nearestWhere(state, ship, enemies, function (e) { return e.cls === 'frigate'; }) ||
+                  nearestWhere(state, ship, enemies, isCapital);
+    for (var ri = 0; ri < AR.length; ri++) {
+      var ro = AR[ri];
+      if (!ro.alive || ro.r < 40) continue;
+      var rd2 = dist(ship.x, ship.y, ro.x, ro.y);
+      if (rd2 < 380 && rd2 < duckD) { duckD = rd2; duck = ro; }
+    }
+    if (duck && thrShip) {
+      var tdx = duck.x - thrShip.ship.x, tdy = duck.y - thrShip.ship.y;
+      var tdl = len(tdx, tdy) || 1;
+      ship.nav = { x: duck.x + (tdx / tdl) * (duck.r + 50), y: duck.y + (tdy / tdl) * (duck.r + 50),
+                   arrive: true, jink: true };
+    } else {
+      var ux = (ship.x - target.x) / (d || 1), uy = (ship.y - target.y) / (d || 1);
+      var side = (ship.id % 2 === 0) ? 1 : -1;
+      ship.nav = { x: ship.x + (ux * 0.8 + -uy * side * 0.6) * 400, y: ship.y + (uy * 0.8 + ux * side * 0.6) * 400,
+                   arrive: false, jink: true };
+    }
+    if (d > AI.bomberRegroupRange) m = committing ? 'approach' : 'stage';
+  }
+  if (m !== ship.ai.mode) ship.ai.modeAt = state.time;
+  ship.ai.mode = m;
+}
 function aiInterceptor(state, ship, dt) {
   var cfg = state.config, AI = cfg.ai, G = cfg.gatling, TC = cfg.torpedo.interceptor;
   var enemies = livingEnemies(state, ship.team);
@@ -3010,6 +3586,145 @@ function aiInterceptor(state, ship, dt) {
   updateGatling(state, ship, gatTarget, dt);
 }
 
+
+/* ================= Interceptor v2 (veteran doctrine) ================= */
+/* Is any live friendly ordnance (bombs/torps) inside the victim's PD tracking bubble?
+   The dive doctrine: enter a defended bubble ONLY while PD's slots are busy with
+   projectiles — strike-package timing, not lone heroics. */
+function ordnanceNear(state, team, tgt, range) {
+  var torps = state.torps, bombs = state.bombs;
+  for (var i = 0; i < torps.length; i++) {
+    var tp = torps[i];
+    if (tp.alive && tp.team === team && dist(tp.x, tp.y, tgt.x, tgt.y) < range) return true;
+  }
+  for (var j = 0; j < bombs.length; j++) {
+    var bm = bombs[j];
+    if (bm.alive && bm.team === team && dist(bm.x, bm.y, tgt.x, tgt.y) < range) return true;
+  }
+  return false;
+}
+
+function aiInterceptorV2(state, ship, dt) {
+  var cfg = state.config, AI = cfg.ai, A2 = cfg.ai2, G = cfg.gatling;
+  var enemies = livingEnemies(state, ship.team);
+  if (!enemies.length) {
+    var hp = routeAround(state, ship, huntPoint(state, ship));
+    ship.nav = { x: hp.x, y: hp.y, arrive: false, jink: false, speedCap: ship.def.maxCruiseSpeed * 0.85 };
+    return;
+  }
+  var committing = teamCommitting(state, ship.team);
+  if (ship.torpAmmo > 0 && committing) tryTorpedoV2(state, ship, dt);
+
+  var thr = threatened(state, ship);
+  var own = ship.team === 'A' ? state.aliveA : state.aliveB;
+
+  // SCREEN DOCTRINE: guard the strike package. Prefer enemy lights that are near OUR
+  // bombers (they're hunting the payload), and among lights prefer enemy BOMBERS
+  // (kill their payload — steady bomb-runners are the easy gun kill; jinking
+  // interceptors are the time sink). Boelcke: protect the striking force first.
+  // SELF-DEFENSE overrides the screen: an enemy interceptor already at guns range owns
+  // this fight — flying past it after a bomber is how screens get shredded (measured:
+  // 2x gatling deaths). Otherwise: guard bombers first, kill payloads first.
+  var light = null, lightScore = Infinity, lightD = 0;
+  var pressing = nearestWhere(state, ship, enemies, function (e2) { return e2.cls === 'interceptor'; });
+  if (pressing && pressing.d < 280) { light = pressing.ship; lightD = pressing.d; }
+  else for (var e = 0; e < enemies.length; e++) {
+    var en = enemies[e];
+    if (!isLight(en)) continue;
+    var de = dist(ship.x, ship.y, en.x, en.y);
+    if (de > 950) continue;
+    var guard = 0;
+    for (var b = 0; b < own.length; b++) {
+      if (own[b].cls === 'bomber' && dist(en.x, en.y, own[b].x, own[b].y) < A2.screenBomberRange) { guard = 1; break; }
+    }
+    if (de > 700 && !guard) continue;              // far and harmless: not our fight yet
+    var sc = de - guard * 600 - (en.cls === 'bomber' ? 350 : 0);
+    if (sc < lightScore) { lightScore = sc; light = en; lightD = de; }
+  }
+  var gatTarget = null;
+
+  if (light) {
+    var tLead = Math.min(1.2, lightD / Math.max(1, ship.def.maxCruiseSpeed));
+    ship.nav = { x: light.x + light.vx * tLead, y: light.y + light.vy * tLead, arrive: false,
+                 jink: thr && lightD > 260 };
+    gatTarget = light;
+    ship.ai.mode = 'screen';
+  } else {
+    var focus = focusFor(state, ship, 'strike');
+    var cap = (focus && isCapital(focus)) ? { ship: focus, d: dist(ship.x, ship.y, focus.x, focus.y) }
+            : (nearestWhere(state, ship, enemies, isCapital) || nearestWhere(state, ship, enemies, null));
+    var tgt = cap.ship, d = cap.d;
+    gatTarget = tgt;
+    var m = ship.ai.mode;
+    if (m !== 'strafe_in' && m !== 'strafe_out') m = 'strafe_in';
+    if (!committing) {
+      var cov = coverPoint(state, ship, tgt, AI.coverMinRange, AI.stageRange * 1.4);
+      if (cov) ship.nav = navToCover(ship, cov, thr);
+      else {
+        var sx = (ship.x - tgt.x) / (d || 1), sy = (ship.y - tgt.y) / (d || 1);
+        ship.nav = { x: tgt.x + sx * AI.stageRange, y: tgt.y + sy * AI.stageRange, arrive: true, jink: thr };
+      }
+      ship.ai.mode = 'strafe_in';
+      updateGatling(state, ship, gatTarget, dt);
+      return;
+    }
+    // SATURATION-TIMED DIVES: a defended bubble is entered alongside live ordnance
+    // (PD slots busy) or not at all — unless the strike wing is spent (then it's the
+    // v1 endgame rule: fights end on kills, not the clock).
+    var bombersLeft = 0;
+    for (var ob = 0; ob < own.length; ob++) if (own[ob].cls === 'bomber') bombersLeft++;
+    var pdDefended = tgt.def.pdSlots > 0;
+    var mayDive = !A2.diveNeedsSaturation || !pdDefended || bombersLeft === 0 ||
+                  ordnanceNear(state, ship.team, tgt, cfg.pd.trackRange);
+    if (m === 'strafe_in' && !mayDive && d < AI.stageRange * 1.1) {
+      // hold the rim of the bubble, jinking, until the ordnance wave arrives
+      var hx = (ship.x - tgt.x) / (d || 1), hy = (ship.y - tgt.y) / (d || 1);
+      ship.nav = { x: tgt.x + hx * AI.stageRange * 0.9, y: tgt.y + hy * AI.stageRange * 0.9,
+                   arrive: true, jink: true };
+      updateGatling(state, ship, gatTarget, dt);
+      return;
+    }
+    if (m === 'strafe_in') {
+      var c = state.commit[ship.team];
+      var flk2 = c.anvil ? ((ship.id % 2 === 0) ? 1 : -1) : c.flank;
+      if (flk2 !== 0 && d > AI.flankDone * 2.2) {
+        var gx2 = (ship.x - tgt.x) / (d || 1), gy2 = (ship.y - tgt.y) / (d || 1);
+        var ca2 = Math.cos(flk2 * 1.1), sa2 = Math.sin(flk2 * 1.1);
+        ship.nav = { x: tgt.x + (gx2 * ca2 - gy2 * sa2) * AI.flankOffset,
+                     y: tgt.y + (gx2 * sa2 + gy2 * ca2) * AI.flankOffset,
+                     arrive: false, jink: thr };
+      } else {
+        var ux = (tgt.x - ship.x) / (d || 1), uy = (tgt.y - ship.y) / (d || 1);
+        ship.nav = { x: tgt.x + ux * AI.strafeDivePoint, y: tgt.y + uy * AI.strafeDivePoint,
+                     arrive: false, jink: thr && d > cfg.pd.range * 1.3 };
+      }
+      if (d < G.range * 0.8) m = 'strafe_out';
+    } else {
+      var ux2 = (ship.x - tgt.x) / (d || 1), uy2 = (ship.y - tgt.y) / (d || 1);
+      var side = (ship.id % 2 === 0) ? 1 : -1;
+      ship.nav = { x: tgt.x + (ux2 * 0.75 + -uy2 * side * 0.66) * AI.strafeExitRange * 1.6,
+                   y: tgt.y + (uy2 * 0.75 + ux2 * side * 0.66) * AI.strafeExitRange * 1.6,
+                   arrive: false, jink: true };
+      if (d > AI.strafeExitRange) m = 'strafe_in';
+    }
+    ship.ai.mode = m;
+  }
+  updateGatling(state, ship, gatTarget, dt);
+}
+/* Doctrine dispatch: the per-class role AI for this ship's team level (config.doctrine).
+   Pinned ships and direct player 'attack' fire-control stay doctrine-independent. */
+function roleAI(state, ship) {
+  var v2 = doctrineOf(state, ship.team) === 'v2';
+  if (ship.cls === 'destroyer') return v2 ? aiDestroyerV2 : aiDestroyer;
+  if (ship.cls === 'frigate') return v2 ? aiFrigateV2 : aiFrigate;
+  if (ship.cls === 'battleship') return v2 ? aiBattleshipV2 : aiBattleship;
+  if (ship.cls === 'bomber') return v2 ? aiBomberV2 : aiBomber;
+  return v2 ? aiInterceptorV2 : aiInterceptor;
+}
+function tryTorpedoD(state, ship, dt) {
+  (doctrineOf(state, ship.team) === 'v2' ? tryTorpedoV2 : tryTorpedo)(state, ship, dt);
+}
+
 function aiPinned(state, ship, dt) {
   // test scenarios: no navigation, but rotate to aim and use every weapon that is legal
   var enemies = livingEnemies(state, ship.team);
@@ -3042,11 +3757,11 @@ function weaponsFree(state, ship, dt) {
     }
     blastCoverNearGhosts(state, ship, dt);
     clearTransitLane(state, ship, dt);   // clear a blocking rock across ordered move/attackmove/hold
-    tryTorpedo(state, ship, dt);
+    tryTorpedoD(state, ship, dt);
   } else if (ship.cls === 'frigate') {
     blastCoverNearGhosts(state, ship, dt);
     clearTransitLane(state, ship, dt);   // shares ship.cool.rockTorp with blastCoverNearGhosts (no spam)
-    tryTorpedo(state, ship, dt);
+    tryTorpedoD(state, ship, dt);
   } else if (ship.cls === 'battleship') {
     blastCoverNearGhosts(state, ship, dt);
     clearTransitLane(state, ship, dt);   // set ai.rockAim before turrets process it this tick
@@ -3077,11 +3792,7 @@ function executeOrder(state, ship, dt) {
       var foes = livingEnemies(state, ship.team);
       var hit = foes.length ? nearestWhere(state, ship, foes, null) : null;
       if (hit && hit.d < 950) { // engage what you meet, resume after
-        if (ship.cls === 'destroyer') aiDestroyer(state, ship, dt);
-        else if (ship.cls === 'frigate') aiFrigate(state, ship, dt);
-        else if (ship.cls === 'battleship') aiBattleship(state, ship, dt);
-        else if (ship.cls === 'bomber') aiBomber(state, ship, dt);
-        else aiInterceptor(state, ship, dt);
+        roleAI(state, ship)(state, ship, dt);
         return;
       }
     }
@@ -3223,11 +3934,7 @@ function aiTick(state, ship, dt) {
   ship.cool.rail -= dt; ship.cool.torp -= dt; ship.cool.bomb -= dt;
   if (ship.pinned) { aiPinned(state, ship, dt); return; }
   if (ship.order) { executeOrder(state, ship, dt); return; } // Ordered beats Auto (PRD §9)
-  if (ship.cls === 'destroyer') aiDestroyer(state, ship, dt);
-  else if (ship.cls === 'frigate') aiFrigate(state, ship, dt);
-  else if (ship.cls === 'battleship') aiBattleship(state, ship, dt);
-  else if (ship.cls === 'bomber') aiBomber(state, ship, dt);
-  else aiInterceptor(state, ship, dt);
+  roleAI(state, ship)(state, ship, dt);
 }
 
 /* ---------------- Match orchestration ---------------- */
@@ -3309,6 +4016,7 @@ function stepMatch(match) {
   }
 
   computeDetection(state);
+  updateDoctrine(state); // v2 team battle picture (focus/pack/volley) — before commits consume it
   updateCommits(state);
   for (var a = 0; a < state.ships.length; a++) {
     var sh = state.ships[a];
@@ -3370,7 +4078,9 @@ function baseState(seed, overrides) {
     detA: [], detB: [],                       // enemy ships DETECTED by team A / team B
     lastSeenShip: {},                         // shipId -> {x, y, t} (team-shared memory)
     lastContact: { A: null, B: null },        // most recent enemy sighting per team
-    commit: { A: { until: -1, cool: 0, targetId: -1, flank: 0 }, B: { until: -1, cool: 0, targetId: -1, flank: 0 } },
+    commit: { A: { until: -1, cool: 0, targetId: -1, flank: 0, anvil: false }, B: { until: -1, cool: 0, targetId: -1, flank: 0, anvil: false } },
+    doctrine: { A: { focusStrike: -1, focusGun: -1, packTargetId: -1, packIds: null, volleyGo: false },
+                B: { focusStrike: -1, focusGun: -1, packTargetId: -1, packIds: null, volleyGo: false } },
     tickCap: 0, hadBothTeams: false,
   };
 }
@@ -3474,6 +4184,244 @@ var api = {
     return m.result;
   },
 };
+/* ---------------- Doctrine layer (v2 'veteran' team AI) ----------------
+   Team-level battle picture recomputed every ai2.focusEvery ticks per team, consumed by
+   the v2 per-class AI (aiDestroyerV2 etc.). All of it is deterministic scoring over
+   existing state — no RNG, no new events, no API change. config.doctrine.A/B selects
+   'v1' (legacy greedy AI, kept verbatim for A/B batteries) or 'v2' per team.
+
+   Doctrine sources (docs/TACTICS.md): Lanchester-law concentration -> focus fire with
+   wounded-first finishing and no-overkill spillover; defeat in detail -> isolation-scored
+   targeting; U-boat wolfpack + destroyer torpedo doctrine -> synchronized volleys and
+   multi-bearing dead-zone dives; Hutier infiltration / terrain masking -> covered
+   approach hops; EMCON / burn-and-coast -> plume discipline inside the enemy's likely
+   detection band. */
+
+function doctrineOf(state, team) {
+  var d = state.config.doctrine;
+  return (d && d[team]) === 'v1' ? 'v1' : 'v2';
+}
+
+/* Live-and-detected resolver for a stored focus id. */
+function doctrineShip(state, team, id) {
+  if (id < 0) return null;
+  var s = state.shipById[id];
+  if (!s || !s.alive) return null;
+  return isDetectedBy(state, team, s) ? s : null;
+}
+
+/* Enemy capitals within the mutual-support radius of e (excluding e itself). */
+function alliesNear(state, e, radius) {
+  var own = e.team === 'A' ? state.aliveA : state.aliveB;
+  var n = 0;
+  for (var i = 0; i < own.length; i++) {
+    var s = own[i];
+    if (s.id !== e.id && isCapital(s) && dist(s.x, s.y, e.x, e.y) < radius) n++;
+  }
+  return n;
+}
+
+/* Sum of damage already committed (live friendly torpedoes locked) on a target —
+   the no-overkill ledger: once a victim's hp is spoken for, spill to the next one. */
+function torpsCommitted(state, team, targetId) {
+  var T = state.config.torpedo, sum = 0;
+  for (var i = 0; i < state.torps.length; i++) {
+    var tp = state.torps[i];
+    if (tp.alive && !tp.spent && tp.team === team && tp.targetId === targetId) sum += T.damage;
+  }
+  return sum;
+}
+
+/* Per-team doctrine pass. Builds:
+   - focusStrike: the fleet's strike focus (torpedoes/bombs/waves). Frigate-first (strip
+     the PD/torpedo platform, LESSONS), wounded-first, isolated-first.
+   - focusGun: the gunline focus (railgun/heavy-rail preference). Big hulls first,
+     wounded-first.
+   - pack: wolfpack dive order — set when the strike focus is a thinly-escorted capital
+     and enough frigates live to anvil it inside the battleship's dead zone.
+   - volleyGo: synchronized-torpedo release flag (>=2 boats loaded => volley NOW). */
+function updateDoctrine(state) {
+  var teams = ['A', 'B'];
+  for (var t = 0; t < teams.length; t++) {
+    var team = teams[t];
+    if (doctrineOf(state, team) !== 'v2') continue;
+    var doc = state.doctrine[team];
+    if (state.tick % state.config.ai2.focusEvery !== (t * 7) % state.config.ai2.focusEvery) continue;
+    var A2 = state.config.ai2;
+    var own = team === 'A' ? state.aliveA : state.aliveB;
+    var enemies = livingEnemies(state, team);
+    doc.focusStrike = -1; doc.focusGun = -1;
+    doc.packTargetId = -1; doc.packIds = null; doc.volleyGo = false;
+    if (!enemies.length || !own.length) continue;
+
+    // fleet centroid (reachability anchor for the scoring)
+    var cx = 0, cy = 0;
+    for (var i = 0; i < own.length; i++) { cx += own[i].x; cy += own[i].y; }
+    cx /= own.length; cy /= own.length;
+
+    var bestS = Infinity, bestSId = -1, bestG = Infinity, bestGId = -1;
+    for (var j = 0; j < enemies.length; j++) {
+      var e = enemies[j];
+      var d = dist(cx, cy, e.x, e.y);
+      var wounded = A2.focusHpWeight * (1 - e.hp / e.maxHp);
+      var support = alliesNear(state, e, A2.isolationRadius) * A2.focusIsolationWeight;
+      // strike focus: frigates die first (strip PD + torpedoes), then destroyers, then
+      // the battleship's 620-hp hull; lights are never a fleet focus (chaff)
+      var clsS = e.cls === 'frigate' ? 0 : (e.cls === 'destroyer' ? 250 : (e.cls === 'battleship' ? 500 : 4000));
+      var sScore = d + clsS + support - wounded;
+      if (sScore < bestS) { bestS = sScore; bestSId = e.id; }
+      // gunline focus: what railguns/heavy rail can actually track — biggest first
+      if (isCapital(e)) {
+        var clsG = e.cls === 'battleship' ? 0 : (e.cls === 'destroyer' ? 300 : 600);
+        var gScore = d + clsG + support * 0.5 - wounded;
+        if (gScore < bestG) { bestG = gScore; bestGId = e.id; }
+      }
+    }
+    doc.focusStrike = bestSId;
+    doc.focusGun = bestGId >= 0 ? bestGId : bestSId;
+
+    // wolfpack: dive order on a thinly-escorted BATTLESHIP focus. Battleships ONLY —
+    // the dead zone (heavyRail.minRange) is what makes point-blank safe; diving a
+    // destroyer parks the boats inside its railgun/torpedo envelope (measured: fatal)
+    var victim = doctrineShip(state, team, doc.focusStrike);
+    if (victim && victim.cls === 'battleship' &&
+        alliesNear(state, victim, A2.isolationRadius) <= A2.packEscortMax) {
+      var frigs = [];
+      for (var k = 0; k < own.length; k++) if (own[k].cls === 'frigate') frigs.push(own[k].id);
+      if (frigs.length >= A2.packMinFrigates) {
+        frigs.sort(function (a, b) { return a - b; });
+        doc.packTargetId = victim.id;
+        doc.packIds = frigs;
+      }
+    }
+
+    // synchronized torpedo volley: two or more loaded boats => release together
+    var ready = 0;
+    for (var m = 0; m < own.length; m++) {
+      var s2 = own[m];
+      if (s2.cls === 'frigate' && s2.cool.torp <= 0 && s2.torpAmmo !== 0) ready++;
+    }
+    doc.volleyGo = ready >= 2;
+  }
+}
+
+/* EMCON burn-and-coast: return a speedCap that idles the plume while we sit inside the
+   band where a burn would light us up but a coast keeps us dim. null = burn freely.
+   Uses only own-side knowledge (our signature, distance to enemies WE have detected). */
+function emconCap(state, ship) {
+  var A2 = state.config.ai2, D = state.config.detection;
+  var enemies = livingEnemies(state, ship.team);
+  if (!enemies.length) return null;
+  var near = nearestWhere(state, ship, enemies, null);
+  var visCoast = ship.def.signature * D.thrustMultMin;
+  var visBurn = ship.def.signature * D.thrustMultMax;
+  if (near.d < visCoast * A2.emconNear) return null;  // already inside their picture
+  if (near.d > visBurn * A2.emconFar) return null;    // too far for anyone to see the plume
+  return Math.max(ship.speed, ship.def.maxCruiseSpeed * 0.35); // coast on current momentum
+}
+
+/* Masked approach (terrain infiltration): one covered hop TOWARD tgt — the LOS shadow of
+   a corridor rock, on the far side from tgt, between standRange and our current distance.
+   Cached like coverPoint; null when the map offers no cover (open approach is the tax). */
+function coverHop(state, ship, tgt, standRange) {
+  if (state.tick - (ship.ai.hopAt || -999) < state.config.ai.coverHoldTicks * 1.5 &&
+      ship.ai.hop && Math.abs((ship.ai.hopTX || 0) - tgt.x) < 250 &&
+      Math.abs((ship.ai.hopTY || 0) - tgt.y) < 250) return ship.ai.hop;
+  ship.ai.hopAt = state.tick; ship.ai.hopTX = tgt.x; ship.ai.hopTY = tgt.y;
+  var d = dist(ship.x, ship.y, tgt.x, tgt.y);
+  var best = null, bestScore = Infinity;
+  rocksNearSeg(state, ship.x, ship.y, tgt.x, tgt.y, 92 + 620, function (o) {
+    if (o.r < 45) return false;
+    var dT = dist(o.x, o.y, tgt.x, tgt.y);
+    if (dT < standRange * 0.85 || dT > d - 80) return false; // hop must gain ground
+    var ux = (o.x - tgt.x) / (dT || 1), uy = (o.y - tgt.y) / (dT || 1);
+    var hx = o.x + ux * (o.r + 62), hy = o.y + uy * (o.r + 62);
+    var score = dist(ship.x, ship.y, hx, hy) * 0.6 + dT; // near us, deep as allowed
+    if (score < bestScore) { bestScore = score; best = { x: hx, y: hy }; }
+    return false;
+  });
+  // reject a hop embedded in a neighbouring rock (stall trap), like coverPoint does
+  if (best) {
+    var embedded = false;
+    rocksNearSeg(state, best.x, best.y, best.x, best.y, 120, function (o2) {
+      if (dist(best.x, best.y, o2.x, o2.y) < o2.r + 26) { embedded = true; return true; }
+      return false;
+    });
+    if (embedded) best = null;
+  }
+  ship.ai.hop = best;
+  return best;
+}
+
+/* Resolve the doctrine focus for this ship's weapon family, with a sanity leash: never
+   cross the map for a focus when a same-family target sits at a fraction of the range. */
+function focusFor(state, ship, kind) {
+  var doc = state.doctrine[ship.team];
+  var f = doctrineShip(state, ship.team, kind === 'gun' ? doc.focusGun : doc.focusStrike);
+  if (!f) return null;
+  var near = nearestWhere(state, ship, livingEnemies(state, ship.team), isCapital);
+  if (near && dist(ship.x, ship.y, f.x, f.y) > near.d * 2.5 + 400) return null;
+  return f;
+}
+
+/* v2 torpedo fire control: focus-preferring, overkill-aware, volley-synchronized.
+   Mirrors tryTorpedo's cadence/salvo bookkeeping exactly — only the RELEASE DECISION
+   and target choice differ. */
+function torpedoPickV2(state, ship, enemies, TC) {
+  var T = state.config.torpedo;
+  var focus = focusFor(state, ship, 'strike');
+  var valid = function (e) {
+    var de = dist(ship.x, ship.y, e.x, e.y);
+    if (de < T.lobMinRange || de > TC.range || !losShips(state, ship, e)) return false;
+    // no-overkill ledger: hp already spoken for by torps in the water -> spill over
+    return torpsCommitted(state, ship.team, e.id) < e.hp + T.damage * 0.5;
+  };
+  if (focus && isCapital(focus) && valid(focus)) return focus;
+  var cap = nearestWhere(state, ship, enemies, function (e) { return isCapital(e) && valid(e); });
+  if (cap) return cap.ship;
+  if (ship.cls === 'interceptor') return null; // the one shot is for capitals
+  var steady = nearestWhere(state, ship, enemies, function (e) {
+    return e.cls === 'bomber' &&
+           (e.speed < T.predictSpeed || e.jinkEMA < T.jinkAccelThreshold) && valid(e);
+  });
+  return steady ? steady.ship : null;
+}
+
+function tryTorpedoV2(state, ship, dt) {
+  var TC = state.config.torpedo[ship.cls];
+  if (!TC) return;
+  if (ship.torpAmmo === 0) return;
+  var A2 = state.config.ai2;
+  var enemies = livingEnemies(state, ship.team);
+  if (ship.cool.salvoLeft > 0) { // continue a salvo in progress (same as v1)
+    ship.cool.salvoGap -= dt;
+    if (ship.cool.salvoGap <= 0) {
+      var t2 = torpedoPickV2(state, ship, enemies, TC);
+      if (t2) { launchTorpedo(state, ship, t2); }
+      ship.cool.salvoLeft--; ship.cool.salvoGap = TC.salvoGap || 0;
+    }
+    return;
+  }
+  if (ship.cool.torp > 0) { ship.ai.torpHold = 0; return; }
+  var target = torpedoPickV2(state, ship, enemies, TC);
+  if (!target) { ship.ai.torpHold = 0; return; }
+  // volley discipline (frigates only — the boats with sisters to synchronize with):
+  // hold a loaded tube until the pack is loaded too, so the spread saturates PD's slots
+  // in one wave instead of feeding it torpedoes singly. Knife-fight range fires at will.
+  if (ship.cls === 'frigate') {
+    var doc = state.doctrine[ship.team];
+    var dT = dist(ship.x, ship.y, target.x, target.y);
+    var pointBlank = dT <= A2.packDiveRange * 1.4;
+    ship.ai.torpHold = (ship.ai.torpHold || 0) + dt;
+    if (!pointBlank && !doc.volleyGo && ship.ai.torpHold < A2.volleyWaitMax) return;
+  }
+  ship.ai.torpHold = 0;
+  launchTorpedo(state, ship, target);
+  if (ship.torpAmmo > 0) ship.torpAmmo--;
+  ship.cool.torp = TC.cooldown || 9999;
+  ship.cool.salvoLeft = (TC.salvo || 1) - 1;
+  ship.cool.salvoGap = TC.salvoGap || 0;
+}
 return api;
 })();
 /* ===== SIM END ===== */

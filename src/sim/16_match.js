@@ -77,6 +77,7 @@ function stepMatch(match) {
   }
 
   computeDetection(state);
+  updateDoctrine(state); // v2 team battle picture (focus/pack/volley) — before commits consume it
   updateCommits(state);
   for (var a = 0; a < state.ships.length; a++) {
     var sh = state.ships[a];
@@ -138,7 +139,9 @@ function baseState(seed, overrides) {
     detA: [], detB: [],                       // enemy ships DETECTED by team A / team B
     lastSeenShip: {},                         // shipId -> {x, y, t} (team-shared memory)
     lastContact: { A: null, B: null },        // most recent enemy sighting per team
-    commit: { A: { until: -1, cool: 0, targetId: -1, flank: 0 }, B: { until: -1, cool: 0, targetId: -1, flank: 0 } },
+    commit: { A: { until: -1, cool: 0, targetId: -1, flank: 0, anvil: false }, B: { until: -1, cool: 0, targetId: -1, flank: 0, anvil: false } },
+    doctrine: { A: { focusStrike: -1, focusGun: -1, packTargetId: -1, packIds: null, volleyGo: false },
+                B: { focusStrike: -1, focusGun: -1, packTargetId: -1, packIds: null, volleyGo: false } },
     tickCap: 0, hadBothTeams: false,
   };
 }

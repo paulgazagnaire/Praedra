@@ -158,7 +158,10 @@ var CONFIG_DEFAULTS = {
                                    // (bow->aft; index 0 = bow). Slugs launch from here.
     damage: 30,                    // identical to the destroyer railgun (requirement)
     cooldown: 5.0,                 // PER TURRET reload; with loadTime + stagger, ~1 slug / 2.1 s ship-wide
-    minRange: 220,                 // DEAD ZONE (radius 78 + margin; big guns can't depress point-blank)
+    minRange: 420,                 // DEAD ZONE: big guns can't depress point-blank. Deliberately wide —
+                                   //   PD ship-fire only reaches ~pd.range+target radius (~156 from centre),
+                                   //   so 156..420 is a genuine knife-fight ring where a small ship that
+                                   //   survives the approach gets a REAL shot at killing the battleship
     maxRange: 3200,                // HUGE; detection-bounded (coasting dest visible 1680, burning 3360)
     slugSpeed: 2400,               // px/s of the REAL flying slug (crosses 1400 px in ~0.6 s)
     slewRate: 0.35,                // rad/s per-turret rotation (~20 deg/s; WWII-ponderous, renderer animates t.ang)
@@ -265,6 +268,48 @@ var CONFIG_DEFAULTS = {
     pushableRockRadius: 55,        // ships shove settled rocks smaller than this aside —
                                    // gravity accretes pebble shells around parked fleets,
                                    // and an immovable shell entombs a capital alive
+  },
+
+  // --- DOCTRINE (per-team AI level: 'v1' = legacy greedy AI, 'v2' = veteran doctrine) ---
+  // v2 layers researched combat doctrine on top of v1's mechanics: coordinated focus fire
+  // (Lanchester concentration), defeat-in-detail wave targeting, wolfpack dead-zone dives,
+  // synchronized torpedo volleys (PD saturation), split-axis anvil strikes, emission-control
+  // approaches, masked (cover-hopping) approaches, battleship broadside discipline and the
+  // min-gap field gate. Selectable per team so batteries can measure v2 vs v1 head-to-head.
+  doctrine: { A: 'v2', B: 'v2' },
+  ai2: {
+    focusEvery: 15,              // ticks between doctrine (team-picture) passes
+    isolationRadius: 900,        // mutual-support radius: enemies with fewer allies inside this
+                                 //   are ISOLATED -> preferred wave/focus targets (defeat in detail)
+    packMinFrigates: 2,          // wolfpack: frigates needed on one victim before a dead-zone dive
+    packDiveRange: 300,          // point-blank orbit radius: outside PD ship-fire (~156 from a BB
+                                 //   centre), inside heavyRail.minRange 420 -> main-battery-proof
+    packBearingSpread: 1.0,      // rad between packmates' attack bearings (anvil the PD arcs)
+    packEscortMax: 1,            // dive only when <= this many enemy capitals guard the victim
+                                 //   within isolationRadius (never knife-fight a full battle line)
+    volleyWaitMax: 1.2,          // max s a ready torpedo boat holds for a synchronized volley
+                                 //   (measured: long holds cost launch volume with no PD-leak gain)
+    emconNear: 1.05,             // burn-and-coast band: cut the plume when the nearest enemy sits
+    emconFar: 2.2,               //   between visRange*near and visRange*far of us (approach unseen)
+    anvilMinBombers: 4,          // commit waves split into two attack axes at this many bombers
+    screenBomberRange: 900,      // interceptors guard own bombers from enemy lights inside this
+    diveNeedsSaturation: true,   // interceptors enter a PD bubble only alongside live ordnance
+    bbBroadside: true,           // battleship turns beam-on when holding a firing solution (3 turrets
+                                 //   bear on the beam vs 2 over the bow — WWII battle-line discipline)
+    bbMinGap: 300,               // narrowest opening (surface-to-surface) the BB will ever thread;
+                                 //   tighter pinches are detoured or DEMOLISHED, never entered
+    bbDemolishMaxR: 240,         // BB turrets may blast rocks up to this radius to make room
+                                 //   (v1 capitals stop at ai.rockClearMaxRadius 200). Was 320:
+                                 //   an r-320 rock splits into r-166 children whose drifting mass
+                                 //   shredded the shooter — measured 2x battleship rock-deaths
+    bbDebrisRPad: 0.8,           // extra demolition standoff per px of target-rock radius: bigger
+                                 //   rocks throw bigger (deadlier at any speed) fragments
+    bbGapLookahead: 1100,        // corridor length scanned ahead for pinch points
+    bbDetourMaxClutter: 240,     // flank-corridor clutter above which detouring a pinch is
+                                 //   hopeless (it's a WALL) and the guns make room instead
+    focusHpWeight: 600,          // focus scoring: px-equivalent bonus per missing hp fraction
+                                 //   (finish wounded targets first — no overkill, no half-kills)
+    focusIsolationWeight: 450,   // px-equivalent bonus per missing supporting ally
   },
 
   // --- ROLE AI ---

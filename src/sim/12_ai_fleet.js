@@ -22,10 +22,18 @@ function updateCommits(state) {
     for (var j = 0; j < lights.length; j++) { cx += lights[j].x; cy += lights[j].y; }
     var probe = { x: cx / lights.length, y: cy / lights.length };
     var tgt = null, bestD = Infinity;
+    var v2 = doctrineOf(state, team) === 'v2';
+    var A2 = state.config.ai2;
     for (var k = 0; k < enemies.length; k++) {
       var e = enemies[k];
       var pri = isCapital(e) ? 0 : 1; // any capital; the pack naturally hits the escort first
       var d = dist(probe.x, probe.y, e.x, e.y) + pri * 100000;
+      if (v2 && isCapital(e)) {
+        // defeat in detail: strike the ISOLATED capital (fewest supporting capitals in
+        // mutual-support range), finish the wounded one — not merely the nearest
+        d += alliesNear(state, e, A2.isolationRadius) * A2.focusIsolationWeight * 2
+           - (1 - e.hp / e.maxHp) * A2.focusHpWeight;
+      }
       if (d < bestD) { bestD = d; tgt = e; }
     }
     c.targetId = tgt.id;
@@ -49,6 +57,9 @@ function updateCommits(state) {
       // sometimes the whole wave hooks around a side — war loves a flank
       var r = state.rng.next();
       c.flank = r < AI.flankChance / 2 ? -1 : (r < AI.flankChance ? 1 : 0);
+      // v2 anvil: a big enough bomber wave splits into TWO attack axes (hammer-and-anvil,
+      // the torpedo-bomber doctrine: whichever way the victim turns, one axis gets its beam)
+      c.anvil = v2 && stagedBombers >= state.config.ai2.anvilMinBombers;
       state.stats.waves[team]++;
     }
   }

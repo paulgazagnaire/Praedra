@@ -213,10 +213,15 @@ function clearTransitLane(state, ship, dt) {
   // clear the rock most dead-ahead first — it is the one truly plugging the lane. (Turrets and
   // torpedoes track off-axis fine, but the same choice serves them: clear the centre of the lane.)
   var best = null, bestScore = Infinity, C = cfg.collision;
+  // v2 battleships demolish far bigger rocks than other capitals bother with (RAW POWER:
+  // three heavy turrets out-gun any cover — ai2.bbDemolishMaxR vs ai.rockClearMaxRadius)
+  var bbV2 = ship.cls === 'battleship' && doctrineOf(state, ship.team) === 'v2';
+  var maxClearR = bbV2 ? cfg.ai2.bbDemolishMaxR : AI.rockClearMaxRadius;
+  var rPad = bbV2 ? cfg.ai2.bbDebrisRPad : 0;   // big rocks throw big fragments: stand further off
   rocksNearSeg(state, ship.x, ship.y, ex, ey, 92 + def.radius + 60, function (o) {
-    if (o.r < C.pushableRockRadius || o.r > AI.rockClearMaxRadius) return false;   // pebble / futile-huge
+    if (o.r < C.pushableRockRadius || o.r > maxClearR) return false;               // pebble / futile-huge
     var rd = dist(ship.x, ship.y, o.x, o.y);
-    if (rd < def.radius + o.r + AI.rockClearDebrisPad) return false;               // DEBRIS SAFETY
+    if (rd < def.radius + o.r + AI.rockClearDebrisPad + o.r * rPad) return false;  // DEBRIS SAFETY
     if (!segCircleHit(ship.x, ship.y, ex, ey, o.x, o.y, o.r + def.radius + 30)) return false; // blocks lane?
     var boff = Math.abs(normAngle(Math.atan2(o.y - ship.y, o.x - ship.x) - ta));
     var score = boff * 10000 + rd;                                                // alignment first, then near
