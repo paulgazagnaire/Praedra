@@ -1,0 +1,51 @@
+<div id="wrap">
+  <div id="bar">
+    <button id="newbattle">new battle</button>
+    <button id="restart">restart</button>
+    <button id="pause">pause</button>
+    <label>speed <select id="speed"><option>1</option><option>2</option><option selected>4</option><option>8</option></select></label>
+    <label>gravity <input id="grav" type="range" min="0" max="3" step="0.05" value="1" style="width:90px"><span id="gravVal">×1.00</span></label>
+    <label>mode <select id="mode"><option value="play" selected>play</option><option value="spectate">spectate</option></select></label>
+    <span class="sep"></span>
+    <span id="matchup">—</span>
+    <span id="modeinfo" style="color:#7f8fa6"></span>
+  </div>
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div id="hud"></div>
+    <div id="help"></div>
+    <div id="banner"></div>
+    <div id="setup" class="hidden">
+      <div id="setupPanel">
+        <div id="setupTitle">PRAEDRA — FLEET SETUP</div>
+        <div id="setupSub">42-point budget · heavies deploy up front · partial fleets allowed</div>
+        <div id="teams">
+          <div class="teamCard A" id="cardA">
+            <div class="teamHead">TEAM A — YOU</div>
+            <div class="presetRow" id="presetA"></div>
+            <div class="classRows" id="rowsA"></div>
+            <div class="budget" id="budgetA"></div>
+          </div>
+          <div class="teamCard B" id="cardB">
+            <div class="teamHead">TEAM B — ENEMY AI</div>
+            <div class="presetRow" id="presetB"></div>
+            <div class="classRows" id="rowsB"></div>
+            <div class="budget" id="budgetB"></div>
+          </div>
+        </div>
+        <div id="settings">
+          <label>seed <input id="setSeed" type="number" value="1" style="width:80px"></label>
+          <button id="setRandom">🎲 random</button>
+          <label>density <input id="setDensity" type="range" min="0" max="1" step="0.01" value="0.5" style="width:120px"><span id="densityVal">0.50</span></label>
+          <label>gravity <input id="setGrav" type="range" min="0" max="3" step="0.05" value="1" style="width:120px"><span id="setGravVal">×1.00</span></label>
+          <label>destructible <input id="setDestr" type="checkbox" checked></label>
+          <label>mode <select id="setMode"><option value="play" selected>play</option><option value="spectate">spectate</option></select></label>
+        </div>
+        <div id="startWrap">
+          <button id="startBtn">START BATTLE</button>
+          <div id="startReason"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

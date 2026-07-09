@@ -1,0 +1,64 @@
+  html, body { margin:0; padding:0; background:#06080d; color:#cfd8e3; font:13px/1.4 ui-monospace, Menlo, Consolas, monospace; overflow:hidden; }
+  #wrap { position:fixed; inset:0; display:flex; flex-direction:column; }
+  #bar { display:flex; gap:10px; align-items:center; padding:6px 10px; background:#0b1018; border-bottom:1px solid #1c2636; flex-wrap:wrap; }
+  #bar label { color:#7f8fa6; }
+  #bar input, #bar select, #bar button { background:#131a26; color:#cfd8e3; border:1px solid #2a3850; border-radius:3px; padding:2px 7px; font:inherit; }
+  #bar button { cursor:pointer; } #bar button:hover { border-color:#4a6a9a; }
+  #stage { position:relative; flex:1; min-height:0; }
+  #cv { position:absolute; inset:0; width:100%; height:100%; display:block; cursor:crosshair; }
+  #hud { position:absolute; top:8px; left:10px; pointer-events:none; white-space:pre; color:#9fb0c8; text-shadow:0 1px 2px #000; }
+  #banner { position:absolute; top:35%; left:0; right:0; text-align:center; font-size:34px; color:#fff; text-shadow:0 2px 8px #000; pointer-events:none; display:none; }
+  #help { position:absolute; right:10px; top:8px; color:#5c6b80; text-align:right; pointer-events:none; white-space:pre; }
+  #matchup { color:#9fb0c8; }
+  #bar .sep { width:1px; align-self:stretch; background:#1c2636; margin:0 2px; }
+  #newbattle { border-color:#3a6ea5 !important; color:#eaf2ff; }
+
+  /* ---- fleet setup overlay ---- */
+  #setup { position:absolute; inset:0; z-index:30; background:rgba(5,7,11,0.975);
+           display:flex; align-items:center; justify-content:center; overflow:auto; padding:22px; box-sizing:border-box; }
+  #setup.hidden { display:none; }
+  #setupPanel { width:100%; max-width:940px; }
+  #setupTitle { text-align:center; font-size:22px; letter-spacing:4px; color:#dbe6f2; margin:0 0 4px; }
+  #setupSub { text-align:center; color:#5c6b80; margin-bottom:18px; letter-spacing:1px; }
+  #teams { display:flex; gap:16px; align-items:stretch; }
+  .teamCard { flex:1 1 0; min-width:0; background:#0b1018; border:1px solid #1c2636; border-radius:6px; padding:14px 14px 12px; box-sizing:border-box; }
+  .teamCard.A { border-top:3px solid #4da3ff; }
+  .teamCard.B { border-top:3px solid #ff7a5c; }
+  .teamHead { font-size:15px; letter-spacing:2px; font-weight:bold; margin-bottom:12px; }
+  .teamCard.A .teamHead { color:#4da3ff; }
+  .teamCard.B .teamHead { color:#ff7a5c; }
+  .presetRow { display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap; }
+  .presetRow button { background:#131a26; color:#cfd8e3; border:1px solid #2a3850; border-radius:3px; padding:3px 10px; cursor:pointer; font:inherit; }
+  .presetRow button:hover { border-color:#4a6a9a; }
+  .classRow { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid #131a26; }
+  .glyph { width:18px; text-align:center; font-size:15px; }
+  .teamCard.A .glyph { color:#4da3ff; } .teamCard.B .glyph { color:#ff7a5c; }
+  .cname { flex:1 1 auto; }
+  .ccost { color:#7f8fa6; width:44px; text-align:right; }
+  .stepper { display:flex; align-items:center; gap:5px; }
+  .stepper button { width:24px; height:24px; padding:0; line-height:22px; text-align:center;
+                    background:#131a26; color:#cfd8e3; border:1px solid #2a3850; border-radius:3px; cursor:pointer; font:inherit; }
+  .stepper button:hover:not(:disabled) { border-color:#4a6a9a; }
+  .stepper button:disabled { opacity:0.3; cursor:not-allowed; }
+  .count { width:26px; text-align:center; color:#eaf2ff; }
+  .subtotal { width:52px; text-align:right; color:#9fb0c8; }
+  .budget { margin-top:12px; display:flex; justify-content:space-between; align-items:baseline; }
+  .budget .spent { font-size:15px; color:#eaf2ff; }
+  .budget .rem { color:#7f8fa6; }
+  .budget.full .spent { color:#7cffb2; }
+  .budget.empty .spent { color:#ff7a5c; }
+  #settings { display:flex; gap:20px; align-items:center; justify-content:center; margin:18px 0 6px; flex-wrap:wrap;
+              background:#0b1018; border:1px solid #1c2636; border-radius:6px; padding:12px 14px; }
+  #settings label { color:#7f8fa6; }
+  #settings input, #settings select, #settings button { background:#131a26; color:#cfd8e3; border:1px solid #2a3850; border-radius:3px; padding:2px 7px; font:inherit; }
+  #settings button { cursor:pointer; } #settings button:hover { border-color:#4a6a9a; }
+  #settings input[type=range] { vertical-align:middle; }
+  #densityVal { color:#9fb0c8; display:inline-block; width:30px; }
+  #gravVal, #setGravVal { color:#9fb0c8; display:inline-block; width:44px; }
+  #bar input[type=range] { vertical-align:middle; }
+  #startWrap { text-align:center; margin-top:14px; }
+  #startBtn { font-size:16px; letter-spacing:3px; padding:11px 34px; background:#15304d; color:#eaf2ff;
+              border:1px solid #3a6ea5; border-radius:5px; cursor:pointer; font-family:inherit; }
+  #startBtn:hover:not(:disabled) { background:#1b3d63; border-color:#5a8ec5; }
+  #startBtn:disabled { opacity:0.45; cursor:not-allowed; }
+  #startReason { color:#ff9a7c; margin-top:9px; min-height:16px; letter-spacing:0.5px; }

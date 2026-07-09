@@ -1,0 +1,9 @@
+/* ===== SIM BEGIN ===== */
+/* Praedra simulation core — pure JS, DOM-free, deterministic.
+   No window/document/Date/performance/Math.random in this block.
+   Contract: docs/SIM_CONTRACT.md. Units: px, seconds, radians. heading 0 = +x, CCW+.
+   Everything lives inside one IIFE: vm-context global loads are pathologically slow,
+   closure scope keeps the headless harness fast. Only `Praedra` is exported. */
+var Praedra = (function () {
+'use strict';
+
