@@ -55,7 +55,7 @@ function updateCommits(state) {
     // the flat 3-ship trickle (time-on-target doctrine: PD saturates on pulses, and a
     // dribble of threes feeds its slots one course at a time)
     var needLights = Math.min(lights.length, AI.commitMinLights);
-    if (v2) needLights = Math.min(lights.length, Math.max(AI.commitMinLights, Math.ceil(lights.length * 0.45)));
+    if (v2) needLights = Math.min(lights.length, Math.max(AI.commitMinLights, Math.ceil(lights.length * A2.waveAssembleFrac)));
     if (staged >= needLights) {
       c.until = state.time + AI.commitSeconds;
       c.cool = c.until + AI.commitCooldown;

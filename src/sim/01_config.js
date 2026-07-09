@@ -292,6 +292,10 @@ var CONFIG_DEFAULTS = {
     emconNear: 1.05,             // burn-and-coast band: cut the plume when the nearest enemy sits
     emconFar: 2.2,               //   between visRange*near and visRange*far of us (approach unseen)
     anvilMinBombers: 4,          // commit waves split into two attack axes at this many bombers
+    waveAssembleFrac: 0.45,      // fraction of the light wing that must be staged before a v2
+                                 //   wave commits (time-on-target pulses, not 3-ship trickles).
+                                 //   Only bites vs PD-capital enemies (teamCommitting is always
+                                 //   true against pure-light fleets)
     screenBomberRange: 900,      // interceptors guard own bombers from enemy lights inside this
     diveNeedsSaturation: true,   // interceptors enter a PD bubble only alongside live ordnance
     bbBroadside: true,           // battleship turns beam-on when holding a firing solution (3 turrets

@@ -190,15 +190,37 @@ function torpedoPickV2(state, ship, enemies, TC) {
     // no-overkill ledger: hp already spoken for by torps in the water -> spill over
     return torpsCommitted(state, ship.team, e.id) < e.hp + T.damage * 0.5;
   };
-  if (focus && isCapital(focus) && valid(focus)) return focus;
-  var cap = nearestWhere(state, ship, enemies, function (e) { return isCapital(e) && valid(e); });
-  if (cap) return cap.ship;
-  if (ship.cls === 'interceptor') return null; // the one shot is for capitals
-  var steady = nearestWhere(state, ship, enemies, function (e) {
-    return e.cls === 'bomber' &&
-           (e.speed < T.predictSpeed || e.jinkEMA < T.jinkAccelThreshold) && valid(e);
-  });
-  return steady ? steady.ship : null;
+  // scored pick: near + PD-THIN + fleet-focus. A mutually-escorting cluster eats
+  // torpedoes (measured: focus-firing escorted frigate clusters raised our interception
+  // losses by a third) — shoot the straggler PD can't cover. Capitals only for the
+  // interceptor's one shot; among lights only a steady bomber is worth a torpedo (v1 rule).
+  var best = null, bestScore = Infinity;
+  for (var i = 0; i < enemies.length; i++) {
+    var e = enemies[i];
+    var light = isLight(e);
+    if (light && (ship.cls === 'interceptor' || e.cls !== 'bomber' ||
+        !(e.speed < T.predictSpeed || e.jinkEMA < T.jinkAccelThreshold))) continue;
+    if (!valid(e)) continue;
+    var sc = dist(ship.x, ship.y, e.x, e.y)
+           + pdShadow(state, e) * 120           // every gun shadowing the run costs ~a shot
+           + (light ? 2600 : 0)                 // payload > chaff
+           + (focus && e.id === focus.id ? -400 : 0);
+    if (sc < bestScore) { bestScore = sc; best = e; }
+  }
+  return best;
+}
+
+/* Enemy PD guns whose bubbles shadow a torpedo's terminal approach on e: e's own slots
+   plus any PD ship parked within overlap range (escort umbrellas overlap the target). */
+function pdShadow(state, e) {
+  var foes = e.team === 'A' ? state.aliveA : state.aliveB; // e's own team
+  var slots = e.def.pdSlots || 0;
+  for (var i = 0; i < foes.length; i++) {
+    var s = foes[i];
+    if (s.id === e.id || !s.def.pdSlots) continue;
+    if (dist(s.x, s.y, e.x, e.y) < 300) slots += s.def.pdSlots;
+  }
+  return slots;
 }
 
 function tryTorpedoV2(state, ship, dt) {
