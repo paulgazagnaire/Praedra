@@ -4487,7 +4487,11 @@ function torpedoPickV2(state, ship, enemies, TC) {
                                                   //   thin PD saved (measured: median launch 615 vs 478,
                                                   //   interception 21% vs 15%). Closer beats thinner.
            + (light ? 2600 : 0)                 // payload > chaff
-           + (focus && e.id === focus.id ? -400 : 0);
+           + (focus && e.id === focus.id ? -120 : 0); // focus is a TIE-BREAK for torpedoes:
+                                                  //   at -400 it bought 400px of extra flight,
+                                                  //   and flight time (PD windows + evasion
+                                                  //   time) costs more than concentration buys
+                                                  //   on an interceptable weapon
     if (sc < bestScore) { bestScore = sc; best = e; }
   }
   return best;
