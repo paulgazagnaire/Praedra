@@ -235,11 +235,12 @@ var CONFIG_DEFAULTS = {
     rockMult: 1.0,
     projectileMult: 1.0,           // torpedoes/bombs bend course but keep their speed.
                                    // Deflection is naturally ~ g/v^2: a 420px/s torpedo
-                                   // curls visibly, a 2400px/s railgun slug barely at all
-    slugBendVisual: 40,            // RENDER-ONLY: rail traces draw with their (physically
-                                   // ~1px) gravitational sagitta boosted this many times,
-                                   // so the speed hierarchy reads on screen. Hit
-                                   // resolution is untouched — the slug is still hitscan
+                                   // curls visibly, a 2400px/s rail slug barely at all
+                                   // (heavy-rail slugs skip gravity entirely — see updateHeavySlugs)
+    slugBendVisual: 40,            // RENDER-ONLY: DESTROYER rail traces draw with their
+                                   // (physically ~1px) gravitational sagitta boosted this
+                                   // many times, so the speed hierarchy reads on screen. Hit
+                                   // resolution is untouched — that slug is still hitscan
   },
 
   // --- SHIPS (accel = thrust/mass; angular accel = rcs/mass, capped at turnMax rad/s) ---
@@ -283,17 +284,29 @@ var CONFIG_DEFAULTS = {
   // detection-gated, so at long range only LIT-UP (burning/spotted) ships can be hit. Hard
   // class gate never lets a turret touch a bomber/interceptor; a speed gate makes a frigate at
   // cruise (85) untouchable and a slowed one very hittable. See design §2/§3.
+  // PROJECTILE weapon: each shot is a REAL flying slug (state.slugs, launched along the barrel
+  // after a visible load cycle). Slugs PIERCE trackable-class hulls (one hit roll per hull, the
+  // slug flies on either way) and are STOPPED DEAD by asteroids. WWII turret arcs: the bow pair
+  // is blind astern, the aft turret blind over the bow; full broadside only on the beam.
   heavyRail: {
     turrets: 3,                    // three big-gun turrets, independent state (renderer draws them)
     turretMounts: [0.90, 0.30, -0.55], // turret centre as a fraction of def.radius along the spine
-                                   // (bow->aft; index 0 = bow). fireHeavyRail rays originate here.
+                                   // (bow->aft; index 0 = bow). Slugs launch from here.
     damage: 30,                    // identical to the destroyer railgun (requirement)
-    cooldown: 2.0,                 // PER TURRET; ~1 slug / 0.67 s ship-wide via stagger
+    cooldown: 5.0,                 // PER TURRET reload; with loadTime + stagger, ~1 slug / 2.1 s ship-wide
     minRange: 220,                 // DEAD ZONE (radius 78 + margin; big guns can't depress point-blank)
     maxRange: 3200,                // HUGE; detection-bounded (coasting dest visible 1680, burning 3360)
-    slugSpeed: 2400,               // near-hitscan, resolved as an instant ray like the railgun
-    slewRate: 0.9,                 // rad/s per-turret rotation (ponderous; renderer animates t.ang)
+    slugSpeed: 2400,               // px/s of the REAL flying slug (crosses 1400 px in ~0.6 s)
+    slewRate: 0.35,                // rad/s per-turret rotation (~20 deg/s; WWII-ponderous, renderer animates t.ang)
     aimTolerance: 0.06,            // rad; a turret may fire only within this of the target bearing
+    loadTime: 1.2,                 // s a turret must HOLD a valid solution while the rails charge
+                                   // before the slug releases (the visible loading phase; t.load)
+    loadGrace: 0.25,               // solution lost longer than this dumps the charge (t.load -> 0);
+                                   // a one-tick nav yaw on a burning hull must not dump a full charge
+    arcCenters: [0, 0, Math.PI],   // per-turret firing-arc centre, HULL-RELATIVE: bow pair forward,
+                                   // aft turret astern (matches turretMounts order)
+    arcHalfWidth: 2.36,            // rad (~135 deg): bow turrets blind astern, aft turret blind over
+                                   // the bow, all three bear on either beam (WWII arrangement)
     rockDamageMult: 2.2,           // == railgun; blasts asteroids out of transit lanes
     evasionMult: 1.0,              // base hit = 1 - evasion*this (dest .98, frig .85 baseline)
     trackClasses: ['destroyer', 'frigate', 'battleship'], // HARD gate: never bomber/interceptor
@@ -920,17 +933,20 @@ function makeShip(state, cls, team, x, y, heading) {
     damageDealt: 0,
     ai: { targetId: -1, retargetAt: 0, mode: 'seek', modeAt: 0, noLosSince: 0, jinkPhase: 0, wp: null },
     ctl: { torque: 0, thrust: 0, face: null, desiredVX: 0, desiredVY: 0 },
-    turrets: null, // battleship heavy-rail turrets: [{ ang, cool }], index 0 = bow (see below)
+    turrets: null, // battleship heavy-rail turrets: [{ ang, cool, load, lost }], index 0 = bow (see below)
     nav: null, // {x, y, arrive, speedCap, face, jink}
   };
   // Heavy-rail turrets, mirroring the lazy pdTrack pattern. Deterministic cooldown stagger:
-  // turret i starts cool = i*(cooldown/turrets) so the guns fire at 0.00 / 0.67 / 1.33 s phases.
-  // `ang` is the world-space turret facing (renderer draws it); `cool` is seconds until ready.
+  // turret i starts cool = i*(cooldown/turrets) so the guns fire at 0.00 / 1.67 / 3.33 s phases.
+  // `ang` is the world-space turret facing (renderer draws it) and spawns at the turret's own
+  // arc centre (bow pair forward, aft turret astern); `cool` is seconds until the breech is
+  // ready; `load` is the rail-charge progress toward loadTime; `lost` times a broken solution.
   if (cls === 'battleship') {
     var HR = state.config.heavyRail;
     s.turrets = [];
     for (var ti = 0; ti < HR.turrets; ti++)
-      s.turrets.push({ ang: (heading || 0), cool: ti * (HR.cooldown / HR.turrets) });
+      s.turrets.push({ ang: normAngle((heading || 0) + ((HR.arcCenters && HR.arcCenters[ti]) || 0)),
+                       cool: ti * (HR.cooldown / HR.turrets), load: 0, lost: 0 });
   }
   return s;
 }
@@ -1616,11 +1632,17 @@ function fireRailgunAtRock(state, ship, rock) {
 }
 
 /* ---------------- Heavy railgun (Battleship turrets: staggered, ponderous, class/speed-gated) ----
-   Modelled exactly on fireRailgun for identical friendly-fire semantics (first hull on the ray of
-   ANY team eats it; a blocking rock absorbs damage*rockDamageMult and stops the slug). The only
-   RNG draw is the terminal hit roll, ordered by ship-iteration then turret index (see updateTurrets).
-   Rays originate at the turret MOUNT point (design decision 2); range/dead-zone stay measured from
-   the ship centre in the fire gating, consistent with the railgun. */
+   PROJECTILE model: launchHeavySlug releases a real flying slug (state.slugs) from the turret
+   mount along the barrel angle; updateHeavySlugs flies it at slugSpeed and resolves hits by
+   swept-segment overlap. Every trackable-class hull crossing the flight path (ANY team — friendly
+   fire preserved) gets ONE uniform hit roll (evasion x speed factor) and the slug PIERCES on
+   either way; bombers/interceptors are overpenetrated without fuzing (the hard class gate, now
+   physical); an asteroid stops the slug dead (damage*rockDamageMult). Slugs get no gravity (at
+   2400 px/s the real deflection is ~1 px) and are not PD-interceptable. RNG draws happen only in
+   updateHeavySlugs, in slug-array then along-segment order (the per-hull hit roll, plus the shared
+   asteroid-split RNG when a rock stop destroys its rock) — fully derived from state.
+   Range/dead-zone stay measured from the ship centre in the fire gating, consistent with the
+   railgun. */
 function heavyRailTrackable(HR, e) { return HR.trackClasses.indexOf(e.cls) >= 0; }
 function heavyRailSpeedFactor(HR, target) {
   // v<=speedFullTrack -> 1 (no penalty); v>=speedNoTrack -> 0 (untrackable). Frigate cruise 85 -> 0.
@@ -1632,50 +1654,85 @@ function turretMountPoint(state, ship, ti) {
   var off = frac * ship.def.radius;
   return { x: ship.x + Math.cos(ship.heading) * off, y: ship.y + Math.sin(ship.heading) * off };
 }
-function fireHeavyRail(state, ship, ti, target) {
+function launchHeavySlug(state, ship, ti) {
+  // Fire gate already validated (updateTurrets); the slug leaves the barrel along the turret's
+  // ACTUAL angle t.ang (within aimTolerance of the solution) and hits whatever is physically
+  // in the way downrange. No RNG here — rolls happen in flight (updateHeavySlugs).
   var HR = state.config.heavyRail;
+  var t = ship.turrets[ti];
   var mp = turretMountPoint(state, ship, ti);
-  var ang = Math.atan2(target.y - ship.y, target.x - ship.x);   // bearing from the ship centre
-  var dm = dist(mp.x, mp.y, target.x, target.y);                 // range from the mount (for blocking cmp)
-  var endX = mp.x + Math.cos(ang) * HR.maxRange, endY = mp.y + Math.sin(ang) * HR.maxRange;
-  var rock = firstRockOnRay(state, mp.x, mp.y, endX, endY);
-  var rockD = rock ? dist(mp.x, mp.y, rock.x, rock.y) - rock.r : Infinity;
-  // friendly fire: whatever hull is in the line (any team) catches the slug first
-  var blocker = firstShipOnRay(state, ship, mp.x, mp.y, endX, endY);
-  if (blocker && blocker.id !== target.id) {
-    var bd = dist(mp.x, mp.y, blocker.x, blocker.y) - blocker.def.radius;
-    if (bd < Math.min(rockD, dm - target.def.radius)) {
-      if (state.rng.chance(1 - clamp01(blocker.def.evasion * HR.evasionMult))) {
-        applyDamage(state, blocker, HR.damage, ship, 'hrail');
-        if (blocker.team !== ship.team) state.stats.railHitsShip++;
+  var muzz = ship.def.radius * 0.56; // barrel length: the slug appears at the rail tips
+  var mx = mp.x + Math.cos(t.ang) * muzz, my = mp.y + Math.sin(t.ang) * muzz;
+  state.slugs.push({
+    id: state.nextId++, team: ship.team, ownerId: ship.id, turret: ti,
+    x: mx, y: my, vx: Math.cos(t.ang) * HR.slugSpeed, vy: Math.sin(t.ang) * HR.slugSpeed,
+    traveled: 0, alive: true, rolled: [], hitShip: false,
+  });
+  pushEvent(state, { kind: 'hrailMuzzle', x: mx, y: my, ang: t.ang, team: ship.team, turret: ti });
+}
+/* Along-segment parameter of a circle centre's projection onto a->b (0..1); used to order
+   pierce hits and the stopping rock deterministically along one tick's swept segment. */
+function segHitT(ax, ay, bx, by, cx, cy) {
+  var dx = bx - ax, dy = by - ay;
+  var L2 = dx * dx + dy * dy || 1;
+  return clamp01(((cx - ax) * dx + (cy - ay) * dy) / L2);
+}
+function updateHeavySlugs(state, dt) {
+  var HR = state.config.heavyRail, slugs = state.slugs;
+  for (var i = 0; i < slugs.length; i++) {
+    var sg = slugs[i];
+    if (!sg.alive) continue;
+    // this tick's swept segment (~40 px at 60 Hz)
+    var nx = sg.x + sg.vx * dt, ny = sg.y + sg.vy * dt;
+    // rock stop (NO pierce on asteroids): nearest rock disc on the segment ends the flight
+    var rock = firstRockOnRay(state, sg.x, sg.y, nx, ny);
+    var rockT = rock ? segHitT(sg.x, sg.y, nx, ny, rock.x, rock.y) : Infinity;
+    // ship overlaps: every living trackable-class hull on the segment (ANY team — friendly
+    // fire), except the owner and hulls this slug has already rolled against (pierce = one
+    // roll per hull, ever). Lights are overpenetrated without fuzing: never damaged.
+    var hits = [];
+    for (var k = 0; k < state.ships.length; k++) {
+      var sh = state.ships[k];
+      if (!sh.alive || sh.id === sg.ownerId) continue;
+      if (!heavyRailTrackable(HR, sh)) continue;
+      if (sg.rolled.indexOf(sh.id) >= 0) continue;
+      if (!segCircleHit(sg.x, sg.y, nx, ny, sh.x, sh.y, sh.def.radius)) continue;
+      hits.push({ sh: sh, t: segHitT(sg.x, sg.y, nx, ny, sh.x, sh.y) });
+    }
+    // along-segment order, ship id tiebreak: the RNG draw order is fully state-derived
+    hits.sort(function (a, b) { return (a.t - b.t) || (a.sh.id - b.sh.id); });
+    var owner = state.shipById[sg.ownerId];
+    var attacker = (owner && owner.team === sg.team) ? owner : null; // mirrors torpedo credit
+    for (var h = 0; h < hits.length; h++) {
+      if (hits[h].t >= rockT) break; // the rock stops the slug before this hull
+      var tgt = hits[h].sh;
+      sg.rolled.push(tgt.id);
+      var pHit = (1 - clamp01(tgt.def.evasion * HR.evasionMult)) * heavyRailSpeedFactor(HR, tgt);
+      if (state.rng.chance(pHit)) {
+        applyDamage(state, tgt, HR.damage, attacker, 'hrail');
+        if (tgt.team !== sg.team) state.stats.railHitsShip++;
+        sg.hitShip = true;
+        var hx = sg.x + (nx - sg.x) * hits[h].t, hy = sg.y + (ny - sg.y) * hits[h].t;
+        pushEvent(state, { kind: 'hrail', x: hx, y: hy, x2: hx, y2: hy, team: sg.team, turret: sg.turret, hit: 'ship' });
       }
-      pushEvent(state, { kind: 'hrail', x: mp.x, y: mp.y, x2: blocker.x, y2: blocker.y, team: ship.team, turret: ti, hit: 'ship' });
-      return;
+      // on a miss: already in rolled — the slug pierces on either way
+    }
+    if (rock) {
+      damageAsteroid(state, rock, HR.damage * HR.rockDamageMult); // slams into the cover, stops dead
+      var rx = sg.x + (nx - sg.x) * rockT, ry = sg.y + (ny - sg.y) * rockT;
+      pushEvent(state, { kind: 'hrail', x: rx, y: ry, x2: rx, y2: ry, team: sg.team, turret: sg.turret, hit: 'rock' });
+      sg.x = rx; sg.y = ry; sg.alive = false;
+      continue;
+    }
+    sg.x = nx; sg.y = ny;
+    sg.traveled += HR.slugSpeed * dt;
+    if (sg.traveled >= HR.maxRange ||
+        sg.x < -50 || sg.y < -50 || sg.x > state.config.arena.w + 50 || sg.y > state.config.arena.h + 50) {
+      sg.alive = false; // spent: fell out of range or off the arena (same margin as torpedoes)
+      if (!sg.hitShip)
+        pushEvent(state, { kind: 'hrail', x: sg.x, y: sg.y, x2: sg.x, y2: sg.y, team: sg.team, turret: sg.turret, hit: 'miss' });
     }
   }
-  if (rock && rockD < dm - target.def.radius) {
-    damageAsteroid(state, rock, HR.damage * HR.rockDamageMult); // slug slams into the cover instead
-    pushEvent(state, { kind: 'hrail', x: mp.x, y: mp.y, x2: rock.x, y2: rock.y, team: ship.team, turret: ti, hit: 'rock' });
-    return;
-  }
-  var pHit = (1 - clamp01(target.def.evasion * HR.evasionMult)) * heavyRailSpeedFactor(HR, target);
-  if (state.rng.chance(pHit)) {
-    state.stats.railHitsShip++;
-    applyDamage(state, target, HR.damage, ship, 'hrail');
-    pushEvent(state, { kind: 'hrail', x: mp.x, y: mp.y, x2: target.x, y2: target.y, team: ship.team, turret: ti, hit: 'ship' });
-  } else {
-    if (rock) damageAsteroid(state, rock, HR.damage * HR.rockDamageMult); // missed slug flies on downrange
-    pushEvent(state, { kind: 'hrail', x: mp.x, y: mp.y, x2: endX, y2: endY, team: ship.team, turret: ti, hit: 'miss' });
-  }
-}
-function fireHeavyRailAtRock(state, ship, ti, rock) {
-  var HR = state.config.heavyRail;
-  var mp = turretMountPoint(state, ship, ti);
-  var ang = Math.atan2(rock.y - ship.y, rock.x - ship.x);
-  var hit = firstRockOnRay(state, mp.x, mp.y,
-    mp.x + Math.cos(ang) * HR.maxRange, mp.y + Math.sin(ang) * HR.maxRange) || rock;
-  damageAsteroid(state, hit, HR.damage * HR.rockDamageMult);
-  pushEvent(state, { kind: 'hrail', x: mp.x, y: mp.y, x2: hit.x, y2: hit.y, team: ship.team, turret: ti, hit: 'rock' });
 }
 
 /* ---------------- Torpedoes (long range, loose tracking, LOS lock, PD-interceptable) ---------------- */
@@ -2348,10 +2405,10 @@ function rockClearPrimitive(state, ship) {
       // an ordered battleship behind a rock while a bomber it can never shoot circles it)
       combatHold: function (st, sh) { return !!pickHeavyRailPrimary(st, sh); },
       cooldownLeft: function (s) {                                       // ready when ANY turret is
-        var m = Infinity;                                               //   off cooldown
+        var m = Infinity;                                               //   off cooldown (loadTime
         if (s.turrets) for (var i = 0; i < s.turrets.length; i++) if (s.turrets[i].cool < m) m = s.turrets[i].cool;
-        return m === Infinity ? 0 : m;
-      },
+        return m === Infinity ? 0 : m;                                  //   makes this slightly
+      },                                                                //   optimistic — acceptable)
       fire: function (st, sh, rock) {
         // turrets must slew before firing: flag the rock, updateTurrets demolishes it (same field
         // blastCoverNearGhosts uses). Deadline gives the ponderous slew time to line up.
@@ -2497,7 +2554,8 @@ function aiFrigate(state, ship, dt) {
 /* ---------------- Battleship: heavy-rail turrets + role AI ---------------- */
 /* Focused fire, deletion-ordered: one primary per tick, ranked battleship > destroyer > frigate,
    nearest within [minRange, maxRange], detected (livingEnemies is the detected set) and LOS-clear.
-   All turrets slew to and fire on it — 3x30/2s deletes a destroyer (140 hp) in ~3-4s. */
+   Every turret that can BEAR (WWII arcs) slews to it, loads for loadTime, and fires a real slug
+   every `cooldown` seconds — a bearing pair puts ~1 slug / 2.5 s on the primary. */
 function heavyRailClassRank(cls) { return cls === 'battleship' ? 0 : (cls === 'destroyer' ? 1 : 2); }
 function pickHeavyRailPrimary(state, ship, ignoreLos) {
   var HR = state.config.heavyRail;
@@ -2514,11 +2572,18 @@ function pickHeavyRailPrimary(state, ship, ignoreLos) {
   }
   return best;
 }
-/* Per-turret update, pure/deterministic (slew + stagger are geometry/index only; the sole RNG is
-   fireHeavyRail's terminal roll, in ship-iteration then turret-index order). Called EVERY tick for a
+/* Per-turret update, pure/deterministic (slew/arc/load are geometry/index/time only — NO RNG here;
+   heavy-rail RNG lives in updateHeavySlugs: the in-flight hit roll, plus the shared asteroid-split
+   draws when a slug's rock stop destroys the rock). Called EVERY tick for a
    battleship from every path (aiBattleship / aiPinned / weaponsFree / executeOrder). Priority per
    design decision 4: (a) the ship-level primary; (b) else a fresh ai.rockAim -> demolish that rock;
-   (c) else recentre toward the hull heading. */
+   (c) else recentre toward the turret's own arc centre.
+   WWII arcs: each mount may only train within arcCenters[i] +- arcHalfWidth of the hull heading —
+   an out-of-arc target sends the mount to its limit stop where it waits, holding fire.
+   Loading: the rails charge (t.load += dt) whenever the turret HOLDS a valid solution, including
+   during the breech cooldown, and the slug releases once cool <= 0 AND load >= loadTime. A broken
+   solution only dumps the charge after loadGrace seconds (t.lost) — a maneuvering hull points its
+   nose along the burn every thrust tick, and a single-tick hard reset would starve the guns. */
 function updateTurrets(state, ship, dt) {
   if (!ship.turrets) return;
   var HR = state.config.heavyRail;
@@ -2536,25 +2601,43 @@ function updateTurrets(state, ship, dt) {
   for (var i = 0; i < ship.turrets.length; i++) {
     var t = ship.turrets[i];
     t.cool -= dt;
+    var arcC = normAngle(ship.heading + ((HR.arcCenters && HR.arcCenters[i]) || 0));
+    var mp = turretMountPoint(state, ship, i);
     var want, mode;
-    if (primary) { want = Math.atan2(primary.y - ship.y, primary.x - ship.x); mode = 'ship'; }
-    else if (rockFresh) { want = Math.atan2(ra.y - ship.y, ra.x - ship.x); mode = 'rock'; }
-    else { want = ship.heading; mode = 'idle'; }
-    // slew the gun toward the wanted bearing at slewRate; a fast crosser outruns it and never aligns
-    t.ang = normAngle(t.ang + clamp(normAngle(want - t.ang), -HR.slewRate * dt, HR.slewRate * dt));
-    if (t.cool > 0 || mode === 'idle') continue;
-    if (Math.abs(normAngle(want - t.ang)) > HR.aimTolerance) continue; // not aligned yet
-    if (mode === 'ship') {
-      var d = dist(ship.x, ship.y, primary.x, primary.y);
-      if (d < HR.minRange || d > HR.maxRange) continue;
-      if (!losShips(state, ship, primary)) continue;
-      fireHeavyRail(state, ship, i, primary);
-      t.cool = HR.cooldown;
-    } else { // rock demolition
-      var dr = dist(ship.x, ship.y, rock.x, rock.y);
-      if (dr < HR.minRange || dr > HR.maxRange) continue;
-      fireHeavyRailAtRock(state, ship, i, rock);
-      t.cool = HR.cooldown;
+    // aim from the MOUNT (the slug's true origin): aiming from the ship centre would build a
+    // constant parallax miss of up to the mount offset (~70 px) on abeam targets
+    if (primary) { want = Math.atan2(primary.y - mp.y, primary.x - mp.x); mode = 'ship'; }
+    else if (rockFresh) { want = Math.atan2(ra.y - mp.y, ra.x - mp.x); mode = 'rock'; }
+    else { want = arcC; mode = 'idle'; }
+    // arc clamp: slew to the wanted bearing when it bears, else train to the nearest limit stop
+    var rel = normAngle(want - arcC);
+    var inArc = Math.abs(rel) <= HR.arcHalfWidth;
+    var slewTo = inArc ? want : normAngle(arcC + (rel > 0 ? HR.arcHalfWidth : -HR.arcHalfWidth));
+    // slew the gun at slewRate; a fast crosser outruns it and never aligns
+    t.ang = normAngle(t.ang + clamp(normAngle(slewTo - t.ang), -HR.slewRate * dt, HR.slewRate * dt));
+    // hard clamp in hull-relative space: hull yaw must not drag a stationary barrel past its mount limits
+    var relAng = normAngle(t.ang - arcC);
+    if (relAng > HR.arcHalfWidth) t.ang = normAngle(arcC + HR.arcHalfWidth);
+    else if (relAng < -HR.arcHalfWidth) t.ang = normAngle(arcC - HR.arcHalfWidth);
+    // full firing-solution gate: target mode, in arc (TRUE bearing), aligned, in range, LOS (ship mode)
+    var solution = mode !== 'idle' && inArc && Math.abs(normAngle(want - t.ang)) <= HR.aimTolerance;
+    if (solution) {
+      var d = mode === 'ship' ? dist(ship.x, ship.y, primary.x, primary.y)
+                              : dist(ship.x, ship.y, rock.x, rock.y);
+      if (d < HR.minRange || d > HR.maxRange) solution = false;
+      else if (mode === 'ship' && !losShips(state, ship, primary)) solution = false;
+    }
+    if (solution) {
+      t.lost = 0;
+      if (t.load < HR.loadTime) t.load += dt; // rails charge even while the breech cools
+      if (t.cool <= 0 && t.load >= HR.loadTime) {
+        launchHeavySlug(state, ship, i);
+        t.cool = HR.cooldown;
+        t.load = 0;
+      }
+    } else {
+      t.lost += dt;
+      if (t.lost > HR.loadGrace) t.load = 0; // solution genuinely lost: the charge dumps
     }
   }
 }
@@ -3243,10 +3326,12 @@ function stepMatch(match) {
   collideShipsAndRocks(state, dt);
   updateTorpedoes(state, dt);
   updateBombs(state, dt);
+  updateHeavySlugs(state, dt); // fixed slot: after bombs, before asteroids (deterministic RNG order)
   updateAsteroids(state, dt);
   if (state.tick % 30 === 0) {
     state.torps = state.torps.filter(function (t) { return t.alive; });
     state.bombs = state.bombs.filter(function (bm) { return bm.alive; });
+    state.slugs = state.slugs.filter(function (sg) { return sg.alive; });
     state.asteroids = state.asteroids.filter(function (o) { return o.alive; });
   }
 
@@ -3272,7 +3357,7 @@ function baseState(seed, overrides) {
   return {
     config: config, rng: rng, seed: seed,
     tick: 0, time: 0, nextId: 1,
-    ships: [], shipById: {}, asteroids: [], torps: [], bombs: [], movers: [],
+    ships: [], shipById: {}, asteroids: [], torps: [], bombs: [], slugs: [], movers: [],
     events: [], losCache: {}, contactCache: {}, damage: { A: 0, B: 0 },
     stats: { railShots: 0, railHitsShip: 0, railHitsRock: 0,
              torpsFired: { A: 0, B: 0 }, torpsPD: { A: 0, B: 0 }, torpsHit: { A: 0, B: 0 },
@@ -3530,17 +3615,27 @@ return api;
       }
       var HR = match.config.heavyRail;
       var coolMax = (HR && HR.cooldown) || 4;                          // per-turret cooldown, from CONFIG
+      var loadMax = (HR && HR.loadTime) || 1.2;                        // rail-charge time, from CONFIG
       var turretX = (HR && HR.turretMounts) || TURRET_X_FALLBACK;      // fractions of def.radius, sim-mirrored
       var ts = s.turrets || [];
       for (var i = 0; i < ts.length && i < turretX.length; i++) {
         var t = ts[i], a = t.ang - s.heading;
         var f = Math.max(0, Math.min(1, (t.cool - (coolMax - 0.18)) / 0.18)); // 1 just fired -> 0
+        var lf = Math.max(0, Math.min(1, (t.load || 0) / loadMax));           // rail-charge 0 -> 1
         g.save(); g.translate(turretX[i] * r, 0); g.rotate(a);
         g.fillStyle = P.dark;
         g.beginPath(); g.arc(0, 0, 0.18 * r, 0, 6.2832); g.fill();
-        g.fillRect((0.10 - 0.06 * f) * r, -0.04 * r, 0.46 * r, 0.08 * r); // barrel w/ recoil
+        // twin rails (it reads railgun) with recoil on the whole cradle
+        g.fillRect((0.10 - 0.06 * f) * r, -0.085 * r, 0.46 * r, 0.055 * r);
+        g.fillRect((0.10 - 0.06 * f) * r,  0.030 * r, 0.46 * r, 0.055 * r);
         g.fillStyle = P.base;
         g.beginPath(); g.arc(0, 0, 0.11 * r, 0, 6.2832); g.fill();
+        if (lf > 0.04 && fine) {
+          // charge glow between the rails, cool blue brightening to white as the load completes
+          g.fillStyle = lf >= 1 ? 'rgba(255,255,255,0.95)'
+                                : 'rgba(150,220,255,' + (0.25 + 0.6 * lf) + ')';
+          g.fillRect((0.12 - 0.06 * f) * r, -0.022 * r, 0.42 * r * lf, 0.044 * r);
+        }
         if (f > 0) {
           g.fillStyle = 'rgba(255,235,180,' + f + ')';
           g.beginPath(); g.moveTo((0.56 - 0.06 * f) * r, 0);
@@ -4081,7 +4176,8 @@ return api;
       if (e.kind === 'launch' || e.kind === 'order') continue;   // launch: silent; order: app draws its own markers
       if (e.kind === 'pd') ttl = 0.12;
       else if (e.kind === 'gat') ttl = 0.09;
-      else if (e.kind === 'hrail') ttl = 0.5;   // heavy-rail traces linger a touch longer than 'rail'
+      else if (e.kind === 'hrail') ttl = 0.45;       // heavy-rail impact sparks (x==x2 point records)
+      else if (e.kind === 'hrailMuzzle') ttl = 0.16; // turret muzzle flash, brief
       else if (e.kind === 'boom') ttl = 0.5;
       else if (e.kind === 'shatter') ttl = 0.6;
       else if (e.kind === 'shipboom') ttl = 0.8;
@@ -4202,6 +4298,19 @@ return api;
       if (!bm.alive) continue;
       g.beginPath(); g.arc(bm.x, bm.y, 3, 0, 6.2832); g.fill();
     }
+    // heavy-rail slugs: elongated kinetic tracers along velocity — clearly a solid round, not a beam
+    var slugs = st.slugs || [];
+    for (var sg0 = 0; sg0 < slugs.length; sg0++) {
+      var sg = slugs[sg0];
+      if (!sg.alive) continue;
+      var stx = sg.vx * 0.011, sty = sg.vy * 0.011; // ~26px streak at slugSpeed 2400
+      g.strokeStyle = 'rgba(255,150,70,0.55)';      // warm orange tail
+      g.lineWidth = 3 / scale;
+      g.beginPath(); g.moveTo(sg.x - stx, sg.y - sty); g.lineTo(sg.x, sg.y); g.stroke();
+      g.strokeStyle = 'rgba(255,244,220,0.95)';     // white-hot core
+      g.lineWidth = 1.6 / scale;
+      g.beginPath(); g.moveTo(sg.x - stx * 0.45, sg.y - sty * 0.45); g.lineTo(sg.x, sg.y); g.stroke();
+    }
     // effects (firing lines fade; blocked shots visibly end at the rock)
     for (var e2 = effects.length - 1; e2 >= 0; e2--) {
       var fx = effects[e2], ev = fx.e, a = fx.ttl / fx.max;
@@ -4224,11 +4333,36 @@ return api;
         else g.lineTo(ev.x2, ev.y2);
         g.stroke();
       } else if (ev.kind === 'hrail') {
-        // heavy-rail slug: thicker/warmer than a railgun trace, from the turret mount (ev.x,ev.y).
-        // Minimal for now — a later visual pass draws the turret barrels; keep it hitscan-straight.
-        g.strokeStyle = 'rgba(255,240,200,' + a + ')';
-        g.lineWidth = (ev.hit === 'ship' ? 3.5 : 2.5) / scale;
-        g.beginPath(); g.moveTo(ev.x, ev.y); g.lineTo(ev.x2, ev.y2); g.stroke();
+        // heavy-rail slug IMPACT (x==x2 point records now — the flying slug itself is drawn from
+        // st.slugs): ship = hot flash + expanding ring, rock = dusty spark, miss = faint fizzle
+        if (ev.hit === 'ship') {
+          g.strokeStyle = 'rgba(255,240,200,' + a + ')';
+          g.lineWidth = 2 / scale;
+          g.beginPath(); g.arc(ev.x, ev.y, 4 + 14 * (1 - a), 0, 6.2832); g.stroke();
+          g.fillStyle = 'rgba(255,255,255,' + (0.85 * a) + ')';
+          g.beginPath(); g.arc(ev.x, ev.y, 3.5 * a + 1, 0, 6.2832); g.fill();
+        } else if (ev.hit === 'rock') {
+          g.fillStyle = 'rgba(205,190,164,' + (0.8 * a) + ')';
+          g.beginPath(); g.arc(ev.x, ev.y, 3 + 6 * (1 - a), 0, 6.2832); g.fill();
+        } else { // miss: the spent round fizzles out downrange
+          g.fillStyle = 'rgba(255,240,200,' + (0.3 * a) + ')';
+          g.beginPath(); g.arc(ev.x, ev.y, 2.5, 0, 6.2832); g.fill();
+        }
+      } else if (ev.kind === 'hrailMuzzle') {
+        // turret muzzle flash, oriented along the barrel (ev.ang)
+        var mca = Math.cos(ev.ang), msa = Math.sin(ev.ang);
+        g.strokeStyle = 'rgba(255,246,214,' + (0.9 * a) + ')';
+        g.lineWidth = 3 / scale;
+        g.beginPath(); g.moveTo(ev.x, ev.y); g.lineTo(ev.x + mca * 26 * a, ev.y + msa * 26 * a); g.stroke();
+        g.fillStyle = 'rgba(255,214,140,' + (0.7 * a) + ')';
+        g.beginPath(); g.arc(ev.x, ev.y, 6 * a + 1.5, 0, 6.2832); g.fill();
+        for (var mk = -1; mk <= 1; mk += 2) { // radial specks off the rails
+          g.strokeStyle = 'rgba(255,214,140,' + (0.5 * a) + ')';
+          g.lineWidth = 1.2 / scale;
+          g.beginPath(); g.moveTo(ev.x, ev.y);
+          g.lineTo(ev.x + (mca - msa * mk * 0.45) * 14 * a, ev.y + (msa + mca * mk * 0.45) * 14 * a);
+          g.stroke();
+        }
       } else if (ev.kind === 'pd') {
         g.strokeStyle = 'rgba(120,235,255,' + (0.7 * a) + ')';
         g.lineWidth = 1 / scale;
