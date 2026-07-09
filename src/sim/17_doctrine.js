@@ -204,7 +204,11 @@ function torpedoPickV2(state, ship, enemies, TC) {
         !(e.speed < T.predictSpeed || e.jinkEMA < T.jinkAccelThreshold))) continue;
     if (!valid(e)) continue;
     var sc = dist(ship.x, ship.y, e.x, e.y)
-           + pdShadow(state, e) * 80            // every gun shadowing the run costs most of a shot
+           + pdShadow(state, e) * 25            // PD-thinness is a TIE-BREAK: at 80 it routinely
+                                                  //   out-weighed 100-200px of extra flight, and the
+                                                  //   longer flight cost MORE interceptions than the
+                                                  //   thin PD saved (measured: median launch 615 vs 478,
+                                                  //   interception 21% vs 15%). Closer beats thinner.
            + (light ? 2600 : 0)                 // payload > chaff
            + (focus && e.id === focus.id ? -400 : 0);
     if (sc < bestScore) { bestScore = sc; best = e; }

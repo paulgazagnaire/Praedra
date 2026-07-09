@@ -287,8 +287,9 @@ var CONFIG_DEFAULTS = {
     packBearingSpread: 1.0,      // rad between packmates' attack bearings (anvil the PD arcs)
     packEscortMax: 1,            // dive only when <= this many enemy capitals guard the victim
                                  //   within isolationRadius (never knife-fight a full battle line)
-    volleyWaitMax: 1.2,          // max s a ready torpedo boat holds for a synchronized volley
-                                 //   (measured: long holds cost launch volume with no PD-leak gain)
+    volleyWaitMax: 0.4,          // max s a ready torpedo boat holds for a synchronized volley.
+                                 //   Twice measured DOWN (3.0 -> 1.2 -> 0.4): holds cost launch
+                                 //   volume and same-bearing sync never beat slot-capped PD
     emconNear: 1.05,             // burn-and-coast band: cut the plume when the nearest enemy sits
     emconFar: 2.2,               //   between visRange*near and visRange*far of us (approach unseen)
     anvilMinBombers: 4,          // commit waves split into two attack axes at this many bombers
