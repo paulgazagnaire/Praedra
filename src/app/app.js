@@ -28,6 +28,8 @@
     setGrav: document.getElementById('setGrav'),
     setGravVal: document.getElementById('setGravVal'),
     setDestr: document.getElementById('setDestr'),
+    setDocA: document.getElementById('setDocA'),
+    setDocB: document.getElementById('setDocB'),
     setMode: document.getElementById('setMode'),
     startBtn: document.getElementById('startBtn'),
     startReason: document.getElementById('startReason'),
@@ -320,6 +322,7 @@
     match = Praedra.createMatch({
       seed: s.seed,
       overrides: { terrainDensity: s.density, destructibleAsteroids: s.destr,
+                   doctrine: { A: s.docA, B: s.docB },
                    gravity: { G: CFG.gravity.G * s.grav } },
       teamA: fleetArray(s.A), teamB: fleetArray(s.B),
     });
@@ -340,6 +343,8 @@
       density: currentDensity(),
       grav: currentGravity(),
       destr: ui.setDestr.checked,
+      docA: ui.setDocA.value === 'v1' ? 'v1' : 'v2',
+      docB: ui.setDocB.value === 'v1' ? 'v1' : 'v2',
     };
     createFromSetup(currentSetup);
     hideSetup();
@@ -1031,6 +1036,7 @@
   ui.setDensity.value = '0.5';
   ui.setGrav.value = '1'; ui.grav.value = '1';
   ui.setDestr.checked = true;
+  ui.setDocA.value = 'v2'; ui.setDocB.value = 'v2';
   setMode('play');
   showSetup();                    // no match steps until START
   requestAnimationFrame(frame);

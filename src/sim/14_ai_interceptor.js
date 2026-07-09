@@ -153,7 +153,8 @@ function aiInterceptorV2(state, ship, dt) {
         ship.nav = { x: tgt.x + sx * AI.stageRange, y: tgt.y + sy * AI.stageRange, arrive: true, jink: thr };
       }
       ship.ai.mode = 'strafe_in';
-      updateGatling(state, ship, gatTarget, dt);
+      spreadNav(state, ship, ship.nav);
+  updateGatling(state, ship, gatTarget, dt);
       return;
     }
     // SATURATION-TIMED DIVES: a defended bubble is entered alongside live ordnance
@@ -169,7 +170,8 @@ function aiInterceptorV2(state, ship, dt) {
       var hx = (ship.x - tgt.x) / (d || 1), hy = (ship.y - tgt.y) / (d || 1);
       ship.nav = { x: tgt.x + hx * AI.stageRange * 0.9, y: tgt.y + hy * AI.stageRange * 0.9,
                    arrive: true, jink: true };
-      updateGatling(state, ship, gatTarget, dt);
+      spreadNav(state, ship, ship.nav);
+  updateGatling(state, ship, gatTarget, dt);
       return;
     }
     if (m === 'strafe_in') {
@@ -197,5 +199,6 @@ function aiInterceptorV2(state, ship, dt) {
     }
     ship.ai.mode = m;
   }
+  spreadNav(state, ship, ship.nav);
   updateGatling(state, ship, gatTarget, dt);
 }

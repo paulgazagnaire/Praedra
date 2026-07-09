@@ -1,6 +1,27 @@
 # STATUS
 
-**Phase:** Combat-sandbox build complete (user-directed pivot from the flip gate), now with **BIG asteroids + gravity**. The game is playable: RTS controls, fog of war, universal friendly fire, always-destructible terrain, detection, flanking, cover demolition, and gravity wells that bend everything.
+**Phase:** Combat-sandbox + **v2 'veteran' doctrine AI** + **modular source tree**. The game is playable: RTS controls, fog of war, universal friendly fire, always-destructible terrain, detection, flanking, cover demolition, gravity wells — and both teams now fight under a researched fleet doctrine (selectable per team; the legacy AI is kept as the 'line' tier).
+
+## Architecture (new)
+
+- **`index.html` is a build artifact.** Source lives in `src/` (page shell / 17 sim modules / app); `node build.mjs` assembles the self-contained single file (zero npm deps, byte-stable, keeps the SIM BEGIN/END markers so the harness contract is untouched); `--check` guards staleness. First build was verified byte-identical to the previous hand-maintained file. The double-click single-file deliverable is unchanged.
+- Sim modules concatenate inside ONE IIFE in sorted filename order (vm-perf constraint, see LESSONS).
+
+## v2 doctrine (new — docs/TACTICS.md has the research, SIM_CONTRACT §Doctrine the API)
+
+- `config.doctrine.A/B ∈ {'v1','v2'}` (default v2 both). v1 is the legacy greedy AI kept verbatim — batteries measure doctrine head-to-head with `--set doctrine.A=v2 --set doctrine.B=v1` (+ side-swapped runs: there is a measurable first-mover/side bias, so effects are read across BOTH orientations).
+- **Team layer** (`updateDoctrine`, every 0.25s/team): strike & gunline focus (Lanchester concentration; frigate-first strips PD+torpedo platforms; wounded-first finishing; isolation-scored defeat-in-detail), no-overkill torpedo ledger, wolfpack dive orders, volley-sync flag. Commit waves target the isolated capital and split into two axes (anvil) at ≥4 bombers.
+- **Battleship**: broadside discipline (beam-on = all 3 turrets vs 2 over the bow), **min-gap field gate** (never threads openings < `ai2.bbMinGap` 300: detours when a flank is clean, DEMOLISHES the smaller jamb from a debris-safe + dead-zone-safe fixed anchor when it's a wall, with target latch + rubble-settle hold), dead-zone response (creeps away from knife-fighters), `heavyRail.minRange` 220→**420** (see below).
+- **Frigate**: wolfpack dead-zone dives vs thinly-escorted battleships on spread bearings; round-robin escort assignment (every destroyer gets an umbrella before any gets two); escort only while the enemy fields ordnance PD can stop; volley-synchronized overkill-aware torpedo fire.
+- **Destroyer**: focus fire; defilade anchoring (offset that masks the second threat while keeping the lane to the first); masked cover-hopping + EMCON approach when a battleship outranges it.
+- **Bomber**: split-axis anvil waves; EMCON burn-and-coast through the enemy's detection band; bomber-first target choice when no capitals are up; splash spacing outside runs.
+- **Interceptor**: self-defense-first screening that guards own bombers and hunts enemy payload carriers; saturation-timed dives (enter a PD bubble only alongside live ordnance); splash spacing.
+- **All v2 lights** dodge inbound bombs (`bombThreat` — v1 never reacts to the shot, only the shooter).
+- **Autopilot (shared, both doctrines)**: station-keeping accepts residual drift below 12 px/s for slow hulls — chasing a few px/s cost the turnMax-0.14 battleship ~20s hull rotations per correction and collapsed turret fire uptime; this also fixed v1's wall-stall.
+
+## Minimum engagement distance (user requirement, verified)
+
+`heavyRail.minRange` 420 vs PD ship-reach ~156 from the battleship's centre opens a real 156..420 knife-fight ring. **Measured (scenario battery, 8 seeds): 3 v2 frigates (9 pts) kill a lone unescorted battleship (15 pts) 8/8 with 0 losses; the same frigates under v1 lose 23/24 hulls and kill it 1/8.** An unescorted battleship is Force-Z dead meat by design; its answer is escorts (wolfpack dives are gated off when ≥2 capitals guard the victim within 900). Test gate: `bb-knife-fight-window`.
 
 ## What's in the build (all verified)
 

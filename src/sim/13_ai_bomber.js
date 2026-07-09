@@ -116,8 +116,13 @@ function aiBomberV2(state, ship, dt) {
     return;
   }
   var focus = focusFor(state, ship, 'strike');
+  // capitals first (the payload's purpose); with none on the board, kill enemy BOMBERS —
+  // a steady bomb-runner is a hittable 26hp payload, a jinking interceptor eats the
+  // salvo and lives (measured: bombs on interceptors are the swarm mirror's big waste)
   var pick = (focus && isCapital(focus)) ? { ship: focus, d: dist(ship.x, ship.y, focus.x, focus.y) }
-           : (nearestWhere(state, ship, enemies, isCapital) || nearestWhere(state, ship, enemies, null));
+           : (nearestWhere(state, ship, enemies, isCapital) ||
+              nearestWhere(state, ship, enemies, function (e) { return e.cls === 'bomber'; }) ||
+              nearestWhere(state, ship, enemies, null));
   var target = pick.ship, d = pick.d;
   var thr = threatenedV2(state, ship);
   var committing = teamCommitting(state, ship.team);
@@ -202,6 +207,7 @@ function aiBomberV2(state, ship, dt) {
     }
     if (d > AI.bomberRegroupRange) m = committing ? 'approach' : 'stage';
   }
+  if (m !== 'run') spreadNav(state, ship, ship.nav); // splash spacing (a run needs its straight vector)
   if (m !== ship.ai.mode) ship.ai.modeAt = state.time;
   ship.ai.mode = m;
 }

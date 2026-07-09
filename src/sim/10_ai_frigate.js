@@ -84,8 +84,20 @@ function aiFrigateV2(state, ship, dt) {
   }
 
   var own2 = ship.team === 'A' ? state.aliveA : state.aliveB;
+  // ROUND-ROBIN escort assignment: v1 sends every frigate to the FIRST destroyer in
+  // the roster, leaving the rest of the gunline naked — spread the PD umbrellas
+  // (screening doctrine: every capital gets an escort before any gets two)
+  var dests = [], frigs = [];
+  for (var i = 0; i < own2.length; i++) {
+    if (own2[i].cls === 'destroyer') dests.push(own2[i]);
+    else if (own2[i].cls === 'frigate') frigs.push(own2[i]);
+  }
   var dest = null;
-  for (var i = 0; i < own2.length; i++) if (own2[i].cls === 'destroyer') { dest = own2[i]; break; }
+  if (dests.length) {
+    var myIdx = 0;
+    for (var fi = 0; fi < frigs.length; fi++) if (frigs[fi].id < ship.id) myIdx++;
+    dest = dests[myIdx % dests.length];
+  }
   var near = nearestWhere(state, ship, enemies, null);
   var aim = Math.atan2(near.ship.y - ship.y, near.ship.x - ship.x);
   // the PD umbrella is only worth keeping when the enemy still fields ordnance it

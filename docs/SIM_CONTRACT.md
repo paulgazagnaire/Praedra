@@ -6,6 +6,12 @@ without updating this file.
 
 ## Where the sim lives
 
+**`index.html` is a BUILD ARTIFACT.** The source of truth is `src/` (sim modules in
+`src/sim/*.js`, app in `src/app/`, page shell in `src/page/`); `node build.mjs`
+assembles the self-contained single file, and `node build.mjs --check` fails if the
+artifact is stale. Everything below about `index.html`'s layout is preserved verbatim
+by the build — harness code needs no knowledge of `src/`.
+
 `index.html` contains a `<script>` block with the ENTIRE DOM-free simulation between
 these exact marker lines:
 
@@ -290,7 +296,9 @@ firing solution has been broken. Deterministic firing model:
   `speedFactor = clamp01((speedNoTrack − v) / (speedNoTrack − speedFullTrack))`. A target
   at/above `speedNoTrack` (85, the frigate cruise) is untrackable (factor 0); at/below
   `speedFullTrack` (55, the destroyer cruise) there is no penalty (factor 1).
-- **Dead zone / range**: no fire inside `minRange` (220) or beyond `maxRange` (3200);
+- **Dead zone / range**: no fire inside `minRange` (420 — deliberately wider than PD's
+  ship reach so close-in smalls get a real fighting window, see §Doctrine) or beyond
+  `maxRange` (3200);
   range is measured from the ship centre. `maxRange` is far past the railgun's 700 but
   detection-bounded — at long range only lit-up (burning/scouted) ships are engageable.
 - **Determinism**: the only RNG decision unique to heavy rail is the per-hull hit roll
@@ -303,6 +311,33 @@ firing solution has been broken. Deterministic firing model:
   muzzle; each impact pushes `{ kind: 'hrail', x, y, x2, y2, team, turret, hit }` with
   `x == x2, y == y2` (a point record at the impact) and `hit ∈ 'ship'|'rock'|'miss'`
   ('miss' fires once, where a slug that damaged no ship and hit no rock expires).
+
+## Doctrine (per-team AI level)
+
+`config.doctrine = { A: 'v2', B: 'v2' }` selects each team's AI doctrine:
+
+- `'v2'` (**veteran**, the default): the researched doctrine layer (docs/TACTICS.md) —
+  team battle picture recomputed every `ai2.focusEvery` ticks (focus-fire target
+  selection with wounded-first finishing and isolation scoring, a no-overkill torpedo
+  ledger, wolfpack dive orders against thinly-escorted battleships, synchronized
+  torpedo volleys), per-class behaviors (battleship broadside discipline + min-gap
+  field gate + demolition transit, destroyer masked approach + defilade, frigate
+  dead-zone dives, bomber anvil axis-splitting + EMCON burn-and-coast, interceptor
+  bomber-guarding screens + saturation-timed dives, lights dodging inbound bombs).
+- `'v1'` (**line**): the legacy greedy per-ship AI, kept verbatim so batteries can
+  measure doctrine head-to-head (`--set doctrine.A=v2 --set doctrine.B=v1`).
+
+Doctrine changes AI DECISIONS only — no weapon stats, no new state fields the harness
+must know, no API change, no new RNG draws. Determinism from seed holds for any
+doctrine mix. Pinned ships (`aiPinned`) and the player `attack`-order fire control are
+doctrine-independent. `ai2.*` holds every v2 knob (see CONFIG for the commented list);
+sweep them via `overrides` like anything else.
+
+The battleship's `heavyRail.minRange` is now **420** (was 220): PD ship-fire tops out
+at `pd.range + target radius` (~156 from a battleship's centre), so 156..420 is a real
+knife-fight ring — a small ship that survives the approach is safe from the main
+battery and gets a genuine window to kill the big hull. The v2 wolfpack exploits
+exactly this ring; an unescorted battleship against 2+ frigates is expected to die.
 
 ## Key CONFIG fields harness code may rely on
 
@@ -323,9 +358,14 @@ firing solution has been broken. Deterministic firing model:
   `avoidMult`, etc.); largest hull in the game.
 - `heavyRail.*` — the battleship's turret weapon: `turrets`, `turretMounts`, `damage`,
   `cooldown` (5, per turret), `loadTime` (1.2), `loadGrace`, `arcCenters` ([0, 0, π]),
-  `arcHalfWidth` (2.36), `minRange`, `maxRange`, `slugSpeed`, `slewRate` (0.35),
+  `arcHalfWidth` (2.36), `minRange` (420 — the knife-fight dead zone, see Doctrine
+  above), `maxRange`, `slugSpeed`, `slewRate` (0.35),
   `aimTolerance`, `rockDamageMult`, `evasionMult`, `trackClasses`, `speedFullTrack`,
   `speedNoTrack` (see Heavy railgun above).
+- `doctrine.A` / `doctrine.B` — per-team AI level, `'v1' | 'v2'` (see Doctrine above).
+- `ai2.*` — v2-doctrine knobs (focus scoring, wolfpack, volley sync, EMCON band,
+  anvil size, battleship `bbMinGap`/`bbDemolishMaxR`/`bbDetourMaxClutter`/
+  `bbBroadside`). AI-internal; present for override sweeps only.
 - `railgun.rockDamageMult`, `torpedo.rockDamageMult`, `asteroidHP`, `asteroidHPRefRadius`.
 - `debris.fragmentCount`, `debris.childRadiusScale`, `debris.minChildRadius`, `debris.maxAsteroids`.
 - `ai.clutterDetour*` (`Threshold`/`Gain`/`OffsetCost`/`Offsets`/`RefreshTicks`) and `ai.rockClear*`

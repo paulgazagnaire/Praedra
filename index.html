@@ -113,6 +113,8 @@
           <label>density <input id="setDensity" type="range" min="0" max="1" step="0.01" value="0.5" style="width:120px"><span id="densityVal">0.50</span></label>
           <label>gravity <input id="setGrav" type="range" min="0" max="3" step="0.05" value="1" style="width:120px"><span id="setGravVal">×1.00</span></label>
           <label>destructible <input id="setDestr" type="checkbox" checked></label>
+          <label>A doctrine <select id="setDocA"><option value="v2" selected>veteran</option><option value="v1">line</option></select></label>
+          <label>B doctrine <select id="setDocB"><option value="v2" selected>veteran</option><option value="v1">line</option></select></label>
           <label>mode <select id="setMode"><option value="play" selected>play</option><option value="spectate">spectate</option></select></label>
         </div>
         <div id="startWrap">
@@ -2752,8 +2754,20 @@ function aiFrigateV2(state, ship, dt) {
   }
 
   var own2 = ship.team === 'A' ? state.aliveA : state.aliveB;
+  // ROUND-ROBIN escort assignment: v1 sends every frigate to the FIRST destroyer in
+  // the roster, leaving the rest of the gunline naked — spread the PD umbrellas
+  // (screening doctrine: every capital gets an escort before any gets two)
+  var dests = [], frigs = [];
+  for (var i = 0; i < own2.length; i++) {
+    if (own2[i].cls === 'destroyer') dests.push(own2[i]);
+    else if (own2[i].cls === 'frigate') frigs.push(own2[i]);
+  }
   var dest = null;
-  for (var i = 0; i < own2.length; i++) if (own2[i].cls === 'destroyer') { dest = own2[i]; break; }
+  if (dests.length) {
+    var myIdx = 0;
+    for (var fi = 0; fi < frigs.length; fi++) if (frigs[fi].id < ship.id) myIdx++;
+    dest = dests[myIdx % dests.length];
+  }
   var near = nearestWhere(state, ship, enemies, null);
   var aim = Math.atan2(near.ship.y - ship.y, near.ship.x - ship.x);
   // the PD umbrella is only worth keeping when the enemy still fields ordnance it
@@ -3268,7 +3282,12 @@ function updateCommits(state) {
     }
     // don't blow the wave before the payload is in position
     if (aliveBombers > 0 && stagedBombers === 0) continue;
-    if (staged >= Math.min(lights.length, AI.commitMinLights)) {
+    // v2: assemble REAL waves — a big light wing commits at ~45% strength staged, not
+    // the flat 3-ship trickle (time-on-target doctrine: PD saturates on pulses, and a
+    // dribble of threes feeds its slots one course at a time)
+    var needLights = Math.min(lights.length, AI.commitMinLights);
+    if (v2) needLights = Math.min(lights.length, Math.max(AI.commitMinLights, Math.ceil(lights.length * 0.45)));
+    if (staged >= needLights) {
       c.until = state.time + AI.commitSeconds;
       c.cool = c.until + AI.commitCooldown;
       // sometimes the whole wave hooks around a side — war loves a flank
@@ -3448,8 +3467,13 @@ function aiBomberV2(state, ship, dt) {
     return;
   }
   var focus = focusFor(state, ship, 'strike');
+  // capitals first (the payload's purpose); with none on the board, kill enemy BOMBERS —
+  // a steady bomb-runner is a hittable 26hp payload, a jinking interceptor eats the
+  // salvo and lives (measured: bombs on interceptors are the swarm mirror's big waste)
   var pick = (focus && isCapital(focus)) ? { ship: focus, d: dist(ship.x, ship.y, focus.x, focus.y) }
-           : (nearestWhere(state, ship, enemies, isCapital) || nearestWhere(state, ship, enemies, null));
+           : (nearestWhere(state, ship, enemies, isCapital) ||
+              nearestWhere(state, ship, enemies, function (e) { return e.cls === 'bomber'; }) ||
+              nearestWhere(state, ship, enemies, null));
   var target = pick.ship, d = pick.d;
   var thr = threatenedV2(state, ship);
   var committing = teamCommitting(state, ship.team);
@@ -3534,6 +3558,7 @@ function aiBomberV2(state, ship, dt) {
     }
     if (d > AI.bomberRegroupRange) m = committing ? 'approach' : 'stage';
   }
+  if (m !== 'run') spreadNav(state, ship, ship.nav); // splash spacing (a run needs its straight vector)
   if (m !== ship.ai.mode) ship.ai.modeAt = state.time;
   ship.ai.mode = m;
 }
@@ -3692,7 +3717,8 @@ function aiInterceptorV2(state, ship, dt) {
         ship.nav = { x: tgt.x + sx * AI.stageRange, y: tgt.y + sy * AI.stageRange, arrive: true, jink: thr };
       }
       ship.ai.mode = 'strafe_in';
-      updateGatling(state, ship, gatTarget, dt);
+      spreadNav(state, ship, ship.nav);
+  updateGatling(state, ship, gatTarget, dt);
       return;
     }
     // SATURATION-TIMED DIVES: a defended bubble is entered alongside live ordnance
@@ -3708,7 +3734,8 @@ function aiInterceptorV2(state, ship, dt) {
       var hx = (ship.x - tgt.x) / (d || 1), hy = (ship.y - tgt.y) / (d || 1);
       ship.nav = { x: tgt.x + hx * AI.stageRange * 0.9, y: tgt.y + hy * AI.stageRange * 0.9,
                    arrive: true, jink: true };
-      updateGatling(state, ship, gatTarget, dt);
+      spreadNav(state, ship, ship.nav);
+  updateGatling(state, ship, gatTarget, dt);
       return;
     }
     if (m === 'strafe_in') {
@@ -3736,6 +3763,7 @@ function aiInterceptorV2(state, ship, dt) {
     }
     ship.ai.mode = m;
   }
+  spreadNav(state, ship, ship.nav);
   updateGatling(state, ship, gatTarget, dt);
 }
 /* Doctrine dispatch: the per-class role AI for this ship's team level (config.doctrine).
@@ -4469,6 +4497,27 @@ function bombThreat(state, ship) {
 function threatenedV2(state, ship) {
   return threatened(state, ship) || bombThreat(state, ship);
 }
+
+/* Splash-spread discipline: keep friendly light hulls out of each other's bomb-AOE
+   chain radius (RTS micro: spread against splash). Nudges the nav point directly away
+   from the nearest too-close friendly light; deterministic, no state. The furball's
+   dominant killer is a 3-bomb salvo catching a clump — spacing beats dodging. */
+function spreadNav(state, ship, nav) {
+  if (!nav) return nav;
+  var own = ship.team === 'A' ? state.aliveA : state.aliveB;
+  var nearest = null, nd = Infinity;
+  for (var i = 0; i < own.length; i++) {
+    var s = own[i];
+    if (s.id === ship.id || !isLight(s)) continue;
+    var d = dist(ship.x, ship.y, s.x, s.y);
+    if (d < nd) { nd = d; nearest = s; }
+  }
+  if (!nearest || nd > 110) return nav;
+  var ux = (ship.x - nearest.x) / (nd || 1), uy = (ship.y - nearest.y) / (nd || 1);
+  var push = (110 - nd) * 2.2;
+  nav.x += ux * push; nav.y += uy * push;
+  return nav;
+}
 return api;
 })();
 /* ===== SIM END ===== */
@@ -4505,6 +4554,8 @@ return api;
     setGrav: document.getElementById('setGrav'),
     setGravVal: document.getElementById('setGravVal'),
     setDestr: document.getElementById('setDestr'),
+    setDocA: document.getElementById('setDocA'),
+    setDocB: document.getElementById('setDocB'),
     setMode: document.getElementById('setMode'),
     startBtn: document.getElementById('startBtn'),
     startReason: document.getElementById('startReason'),
@@ -4797,6 +4848,7 @@ return api;
     match = Praedra.createMatch({
       seed: s.seed,
       overrides: { terrainDensity: s.density, destructibleAsteroids: s.destr,
+                   doctrine: { A: s.docA, B: s.docB },
                    gravity: { G: CFG.gravity.G * s.grav } },
       teamA: fleetArray(s.A), teamB: fleetArray(s.B),
     });
@@ -4817,6 +4869,8 @@ return api;
       density: currentDensity(),
       grav: currentGravity(),
       destr: ui.setDestr.checked,
+      docA: ui.setDocA.value === 'v1' ? 'v1' : 'v2',
+      docB: ui.setDocB.value === 'v1' ? 'v1' : 'v2',
     };
     createFromSetup(currentSetup);
     hideSetup();
@@ -5508,6 +5562,7 @@ return api;
   ui.setDensity.value = '0.5';
   ui.setGrav.value = '1'; ui.grav.value = '1';
   ui.setDestr.checked = true;
+  ui.setDocA.value = 'v2'; ui.setDocB.value = 'v2';
   setMode('play');
   showSetup();                    // no match steps until START
   requestAnimationFrame(frame);

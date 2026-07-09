@@ -1300,4 +1300,102 @@ test('lane-clear-combat-priority', () => {
     'the battleship combat-priority gate must only respect trackable targets');
 });
 
+// ------------------------------------------------ v2 doctrine + battleship gates
+
+test('doctrine-mixed-determinism', () => {
+  // v2-vs-v1 must be exactly as deterministic as everything else
+  const opts = {
+    seed: 11, teamA: 'BALANCED', teamB: 'BALANCED',
+    overrides: { doctrine: { A: 'v2', B: 'v1' }, terrainDensity: 0.5, matchTimerSeconds: 90 },
+  };
+  const a = Praedra.runMatch(opts);
+  const b = Praedra.runMatch(opts);
+  assert(isDeepStrictEqual(a, b), 'v2-vs-v1 match not deterministic from seed');
+});
+
+test('bb-knife-fight-window', () => {
+  // The user-facing minimum-engagement-distance mechanic: small ships that manage to
+  // approach must have a REAL chance at killing the battleship. Three v2 frigates
+  // (9 fleet points) vs one lone unescorted BB (15 points) on an open map: the pack
+  // dives the dead zone (heavyRail.minRange 420 vs PD ship-reach ~156) and wins.
+  // v1 frigates in the same spot lob from standoff and lose 23/24 hulls (measured).
+  const m = Praedra.createScenario({
+    seed: 1,
+    overrides: { matchTimerSeconds: 150, doctrine: { A: 'v2', B: 'v2' }, gravity: { G: 0 } },
+    ships: [
+      { cls: 'frigate', team: 'A', x: 1200, y: 2000, heading: 0 },
+      { cls: 'frigate', team: 'A', x: 1200, y: 2400, heading: 0 },
+      { cls: 'frigate', team: 'A', x: 1200, y: 2800, heading: 0 },
+      { cls: 'battleship', team: 'B', x: 4200, y: 2400, heading: Math.PI },
+    ],
+    asteroids: [],
+  });
+  while (!m.done) m.step();
+  const bb = m.state.ships.find((s) => s.cls === 'battleship');
+  const frigsAlive = m.state.ships.filter((s) => s.cls === 'frigate' && s.alive).length;
+  assert(!bb.alive, `lone battleship survived the wolfpack (hp ${bb.hp.toFixed(0)}/${bb.maxHp}) — dead-zone window closed`);
+  assert(frigsAlive >= 2, `wolfpack lost ${3 - frigsAlive}/3 boats — the dead zone is not protecting the divers`);
+});
+
+test('bb-gap-gate-never-threads', () => {
+  // A v2 battleship must NEVER thread an opening narrower than ai2.bbMinGap: two rocks
+  // with a 160px surface gap sit dead on its hunt path; the hull (r 78) would physically
+  // fit but doctrine forbids it. It must round the pinch (open flanks here) instead.
+  const m = Praedra.createScenario({
+    seed: 3,
+    overrides: { matchTimerSeconds: 150, doctrine: { A: 'v2', B: 'v2' }, gravity: { G: 0 } },
+    ships: [
+      { cls: 'battleship', team: 'A', x: 1400, y: 2430, heading: 0 },
+      pinned('destroyer', 'B', 4600, 2430, Math.PI),
+    ],
+    asteroids: [{ x: 2600, y: 2200, r: 150 }, { x: 2600, y: 2660, r: 150 }],
+  });
+  const bb = findShip(m, 'A', 'battleship');
+  let minThroat = Infinity, engaged = false;
+  while (!m.done) {
+    m.step();
+    if (!bb.alive) break;
+    const gd = Math.hypot(bb.x - 2600, bb.y - 2430);
+    if (gd < minThroat) minThroat = gd;
+    if (m.state.stats.railShots > 0 || m.state.slugs.length > 0 ||
+        m.state.events.some((e) => e.kind === 'hrailMuzzle')) engaged = true;
+  }
+  assert(minThroat > 150, `battleship entered the sub-minimum gap (min throat distance ${minThroat.toFixed(0)}px) — gap gate failed`);
+  assert(engaged, 'battleship never opened fire — it must round the pinch AND still prosecute the target');
+});
+
+test('bb-wall-demolition', () => {
+  // When the pinch is part of a WALL (no clean flank), the battleship must MAKE room:
+  // hold at debris-safe standoff and demolish — never thread the tight gap, never stall
+  // silently. "A WWII battleship once removed an entire hill."
+  const wall = [];
+  for (let y = 200; y <= 4800; y += 460) {
+    if (Math.abs(y - 2200) < 10 || Math.abs(y - 2660) < 10) continue;
+    wall.push({ x: 2600, y, r: 170 });
+  }
+  wall.push({ x: 2600, y: 2200, r: 150 }, { x: 2600, y: 2660, r: 150 }); // 160px gap in the wall
+  const m = Praedra.createScenario({
+    seed: 3,
+    overrides: { matchTimerSeconds: 90, doctrine: { A: 'v2', B: 'v2' }, gravity: { G: 0 } },
+    ships: [
+      { cls: 'battleship', team: 'A', x: 1400, y: 2430, heading: 0 },
+      pinned('destroyer', 'B', 4600, 2430, Math.PI),
+    ],
+    asteroids: wall,
+  });
+  const bb = findShip(m, 'A', 'battleship');
+  let slugsFired = 0, minThroat = Infinity;
+  while (!m.done) {
+    const tickBefore = m.state.tick;
+    m.step();
+    slugsFired += m.state.events.filter((e) => e.kind === 'hrailMuzzle' && e.t === tickBefore + 1).length;
+    if (!bb.alive) break;
+    const gd = Math.hypot(bb.x - 2600, bb.y - 2430);
+    if (gd < minThroat) minThroat = gd;
+  }
+  assert(minThroat > 150, `battleship threaded the wall gap (min throat distance ${minThroat.toFixed(0)}px)`);
+  assert(slugsFired >= 8, `battleship fired only ${slugsFired} slugs at the wall in 90s — demolition transit not engaging`);
+  assert(m.state.stats.splits >= 1, `no rock was split (splits ${m.state.stats.splits}) — the wall is not actually being demolished`);
+});
+
 runAll();

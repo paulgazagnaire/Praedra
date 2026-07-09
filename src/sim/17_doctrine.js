@@ -256,3 +256,24 @@ function bombThreat(state, ship) {
 function threatenedV2(state, ship) {
   return threatened(state, ship) || bombThreat(state, ship);
 }
+
+/* Splash-spread discipline: keep friendly light hulls out of each other's bomb-AOE
+   chain radius (RTS micro: spread against splash). Nudges the nav point directly away
+   from the nearest too-close friendly light; deterministic, no state. The furball's
+   dominant killer is a 3-bomb salvo catching a clump — spacing beats dodging. */
+function spreadNav(state, ship, nav) {
+  if (!nav) return nav;
+  var own = ship.team === 'A' ? state.aliveA : state.aliveB;
+  var nearest = null, nd = Infinity;
+  for (var i = 0; i < own.length; i++) {
+    var s = own[i];
+    if (s.id === ship.id || !isLight(s)) continue;
+    var d = dist(ship.x, ship.y, s.x, s.y);
+    if (d < nd) { nd = d; nearest = s; }
+  }
+  if (!nearest || nd > 110) return nav;
+  var ux = (ship.x - nearest.x) / (nd || 1), uy = (ship.y - nearest.y) / (nd || 1);
+  var push = (110 - nd) * 2.2;
+  nav.x += ux * push; nav.y += uy * push;
+  return nav;
+}
