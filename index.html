@@ -423,10 +423,16 @@ var CONFIG_DEFAULTS = {
     packDiveRange: 300,          // point-blank orbit radius: outside PD ship-fire (~156 from a BB
                                  //   centre), inside heavyRail.minRange 420 -> main-battery-proof
     packBearingSpread: 1.0,      // rad between packmates' attack bearings (anvil the PD arcs)
+    packMaxHalfArc: 0.9,         // hard cap on the fan's half-width: keeps every slot's straight
+                                 //   approach chord clear of the victim's hull (95px near-miss
+                                 //   at the old uncapped fan, review-confirmed)
+    packLeash: 3000,             // frigates farther than this from the victim stay on their
+                                 //   current job instead of being yanked across the map
     packEscortMax: 1,            // dive only when <= this many enemy capitals guard the victim
                                  //   within isolationRadius (never knife-fight a full battle line)
-    volleyWaitMax: 1.2,          // max s a ready torpedo boat holds for a synchronized volley
-                                 //   (measured: long holds cost launch volume with no PD-leak gain)
+    volleyWaitMax: 0.4,          // max s a ready torpedo boat holds for a synchronized volley.
+                                 //   Twice measured DOWN (3.0 -> 1.2 -> 0.4): holds cost launch
+                                 //   volume and same-bearing sync never beat slot-capped PD
     emconNear: 1.05,             // burn-and-coast band: cut the plume when the nearest enemy sits
     emconFar: 2.2,               //   between visRange*near and visRange*far of us (approach unseen)
     anvilMinBombers: 4,          // commit waves split into two attack axes at this many bombers
@@ -2763,7 +2769,11 @@ function aiFrigateV2(state, ship, dt) {
     for (var p = 0; p < own.length; p++)
       if (doc.packIds.indexOf(own[p].id) >= 0) { pcx += own[p].x; pcy += own[p].y; pn++; }
     var ca = pn ? Math.atan2(pcy / pn - packVictim.y, pcx / pn - packVictim.x) : aimV + Math.PI;
-    var slot = ca + (idx - (n - 1) / 2) * A2.packBearingSpread;
+    // cap the fan: with 6 boats an uncapped 1.0 rad/slot spread put the outer slots
+    // ~143 deg off the approach axis — the straight chord to such a slot passes THROUGH
+    // the victim's hull (review-confirmed: closest approach 95px vs 94px combined radii)
+    var spreadPer = Math.min(A2.packBearingSpread, n > 1 ? (2 * A2.packMaxHalfArc) / (n - 1) : 0);
+    var slot = ca + (idx - (n - 1) / 2) * spreadPer;
     var ox = packVictim.x + Math.cos(slot) * A2.packDiveRange;
     var oy = packVictim.y + Math.sin(slot) * A2.packDiveRange;
     // approach FAST (the heavy rail's speed gate can't track cruise 85; slowing down
@@ -4366,7 +4376,9 @@ function updateDoctrine(state) {
     if (victim && victim.cls === 'battleship' &&
         alliesNear(state, victim, A2.isolationRadius) <= A2.packEscortMax) {
       var frigs = [];
-      for (var k = 0; k < own.length; k++) if (own[k].cls === 'frigate') frigs.push(own[k].id);
+      for (var k = 0; k < own.length; k++)
+        if (own[k].cls === 'frigate' && dist(own[k].x, own[k].y, victim.x, victim.y) < A2.packLeash)
+          frigs.push(own[k].id); // leash: never yank a cross-map escort into the dive
       if (frigs.length >= A2.packMinFrigates) {
         frigs.sort(function (a, b) { return a - b; });
         doc.packTargetId = victim.id;
@@ -4469,7 +4481,11 @@ function torpedoPickV2(state, ship, enemies, TC) {
         !(e.speed < T.predictSpeed || e.jinkEMA < T.jinkAccelThreshold))) continue;
     if (!valid(e)) continue;
     var sc = dist(ship.x, ship.y, e.x, e.y)
-           + pdShadow(state, e) * 80            // every gun shadowing the run costs most of a shot
+           + pdShadow(state, e) * 25            // PD-thinness is a TIE-BREAK: at 80 it routinely
+                                                  //   out-weighed 100-200px of extra flight, and the
+                                                  //   longer flight cost MORE interceptions than the
+                                                  //   thin PD saved (measured: median launch 615 vs 478,
+                                                  //   interception 21% vs 15%). Closer beats thinner.
            + (light ? 2600 : 0)                 // payload > chaff
            + (focus && e.id === focus.id ? -400 : 0);
     if (sc < bestScore) { bestScore = sc; best = e; }
