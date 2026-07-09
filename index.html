@@ -1201,8 +1201,14 @@ function autopilot(state, ship, dt) {
   var awm = len(awx, awy);
 
   if (dvm < 8 && awm < accel * 0.5) {
-    // coast: hold position/velocity, point where the AI wants the nose (aiming)
-    if (d < AI.navArriveSlack * 2 && ship.speed > 3 && goal.arrive) {
+    // coast: hold position/velocity, point where the AI wants the nose (aiming).
+    // Drift below the tolerance is ACCEPTED: chasing a few px/s costs a full hull
+    // rotation to the brake angle, which for a turnMax-0.14 battleship is ~20 s of
+    // spinning its turret arcs through the sky to correct nothing (traced: this was
+    // the station-keeping fire-uptime killer). The tolerance scales with how cheap
+    // turning is for the hull — agile lights still park crisply.
+    var driftTol = ship.def.turnMax >= 1 ? 3 : 12;
+    if (d < AI.navArriveSlack * 2 && ship.speed > driftTol && goal.arrive) {
       // kill residual drift
       burnToward(ship, Math.atan2(-ship.vy, -ship.vx), Math.min(1, ship.speed / (accel * 0.3)), dt);
     } else {
@@ -2739,7 +2745,7 @@ function aiFrigateV2(state, ship, dt) {
     // threat — jinking through rock fields for no reason is how boats die to terrain.
     // Settle only once inside the main-battery blind ring.
     var inside = dV < cfg.heavyRail.minRange * 0.95;
-    ship.nav = { x: ox, y: oy, arrive: inside, jink: !inside && threatened(state, ship), face: aimV };
+    ship.nav = { x: ox, y: oy, arrive: inside, jink: !inside && threatenedV2(state, ship), face: aimV };
     blastCoverNearGhosts(state, ship, dt);
     tryTorpedoV2(state, ship, dt); // point-blank release bypasses the volley hold
     return;
@@ -2981,6 +2987,23 @@ function bbBroadsideFace(state, ship, aim) {
    "A WWII battleship once removed an entire hill" — tight gaps get widened, not threaded. */
 function bbGapGate(state, ship, goalPt) {
   var cfg = state.config, AI = cfg.ai, A2 = cfg.ai2, def = ship.def;
+  // demolition TARGET LATCH: finish the jamb we started on. Rescanning every refresh
+  // flickered the aim between pinch pairs, dumping the turrets' slew+load investment
+  // each time (traced: fire uptime collapsed to ~10%). One rock, until it dies.
+  if (ship.ai.demolishRockId != null) {
+    var lr = null;
+    for (var li = 0; li < state.asteroids.length; li++) {
+      var lo = state.asteroids[li];
+      if (lo.alive && lo.id === ship.ai.demolishRockId) { lr = lo; break; }
+    }
+    if (lr && dist(ship.x, ship.y, lr.x, lr.y) < A2.bbGapLookahead * 1.4) {
+      ship.ai.gapGate = { type: 'demolish', rockId: lr.id, rx: lr.x, ry: lr.y,
+                          x: ship.ai.gapAnchorX, y: ship.ai.gapAnchorY,
+                          face: Math.atan2(lr.y - ship.ai.gapAnchorY, lr.x - ship.ai.gapAnchorX) };
+      return ship.ai.gapGate;
+    }
+    ship.ai.demolishRockId = null; // jamb dead or left behind: full re-scan
+  }
   // stagger + cache (same cadence as the clutter detour)
   if (state.tick % AI.clutterRefreshTicks !== (ship.id + 7) % AI.clutterRefreshTicks &&
       ship.ai.gapGateT !== undefined && state.tick - ship.ai.gapGateT < AI.clutterRefreshTicks &&
@@ -3057,10 +3080,14 @@ function bbGapGate(state, ship, goalPt) {
     var want = Math.max(def.radius + small.r + AI.rockClearDebrisPad + small.r * A2.bbDebrisRPad,
                         HRg.minRange + 60);
     var dR = dist(ship.x, ship.y, small.x, small.y) || 1;
+    // FIXED firing anchor for the whole demolition episode: holding "current position"
+    // re-evaluated per tick follows the hull's own drift and walks it off-station
     var bx = ship.x, by = ship.y;
     if (dR < want) { bx = small.x + ((ship.x - small.x) / dR) * (want + 30); by = small.y + ((ship.y - small.y) / dR) * (want + 30); }
+    ship.ai.demolishRockId = small.id;
+    ship.ai.gapAnchorX = bx; ship.ai.gapAnchorY = by;
     ship.ai.gapGate = { type: 'demolish', rockId: small.id, rx: small.x, ry: small.y,
-                        x: bx, y: by, face: Math.atan2(small.y - ship.y, small.x - ship.x) };
+                        x: bx, y: by, face: Math.atan2(small.y - by, small.x - bx) };
   }
   return ship.ai.gapGate;
 }
@@ -3424,7 +3451,7 @@ function aiBomberV2(state, ship, dt) {
   var pick = (focus && isCapital(focus)) ? { ship: focus, d: dist(ship.x, ship.y, focus.x, focus.y) }
            : (nearestWhere(state, ship, enemies, isCapital) || nearestWhere(state, ship, enemies, null));
   var target = pick.ship, d = pick.d;
-  var thr = threatened(state, ship);
+  var thr = threatenedV2(state, ship);
   var committing = teamCommitting(state, ship.team);
   var m = ship.ai.mode;
   if (m !== 'run' && m !== 'break' && m !== 'approach') m = 'stage';
@@ -3615,7 +3642,7 @@ function aiInterceptorV2(state, ship, dt) {
   var committing = teamCommitting(state, ship.team);
   if (ship.torpAmmo > 0 && committing) tryTorpedoV2(state, ship, dt);
 
-  var thr = threatened(state, ship);
+  var thr = threatenedV2(state, ship);
   var own = ship.team === 'A' ? state.aliveA : state.aliveB;
 
   // SCREEN DOCTRINE: guard the strike package. Prefer enemy lights that are near OUR
@@ -4421,6 +4448,26 @@ function tryTorpedoV2(state, ship, dt) {
   ship.cool.torp = TC.cooldown || 9999;
   ship.cool.salvoLeft = (TC.salvo || 1) - 1;
   ship.cool.salvoGap = TC.salvoGap || 0;
+}
+
+/* Inbound-bomb threat: any live enemy bomb close enough and CLOSING on us. Bombs are
+   unguided contact-fuzed — lateral displacement (a jink) is a complete defense, but
+   only if the light actually reacts. v1 never does; v2 lights weave the moment one is
+   inbound (flak-evasion doctrine: react to the shot, not just the shooter). */
+function bombThreat(state, ship) {
+  var bombs = state.bombs;
+  for (var i = 0; i < bombs.length; i++) {
+    var bm = bombs[i];
+    if (!bm.alive || bm.team === ship.team) continue;
+    var dx = ship.x - bm.x, dy = ship.y - bm.y;
+    var d2 = dx * dx + dy * dy;
+    if (d2 > 330 * 330) continue;
+    if (bm.vx * dx + bm.vy * dy > 0) return true; // closing
+  }
+  return false;
+}
+function threatenedV2(state, ship) {
+  return threatened(state, ship) || bombThreat(state, ship);
 }
 return api;
 })();

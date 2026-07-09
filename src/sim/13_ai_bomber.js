@@ -119,7 +119,7 @@ function aiBomberV2(state, ship, dt) {
   var pick = (focus && isCapital(focus)) ? { ship: focus, d: dist(ship.x, ship.y, focus.x, focus.y) }
            : (nearestWhere(state, ship, enemies, isCapital) || nearestWhere(state, ship, enemies, null));
   var target = pick.ship, d = pick.d;
-  var thr = threatened(state, ship);
+  var thr = threatenedV2(state, ship);
   var committing = teamCommitting(state, ship.team);
   var m = ship.ai.mode;
   if (m !== 'run' && m !== 'break' && m !== 'approach') m = 'stage';

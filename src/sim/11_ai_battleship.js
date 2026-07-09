@@ -203,6 +203,23 @@ function bbBroadsideFace(state, ship, aim) {
    "A WWII battleship once removed an entire hill" — tight gaps get widened, not threaded. */
 function bbGapGate(state, ship, goalPt) {
   var cfg = state.config, AI = cfg.ai, A2 = cfg.ai2, def = ship.def;
+  // demolition TARGET LATCH: finish the jamb we started on. Rescanning every refresh
+  // flickered the aim between pinch pairs, dumping the turrets' slew+load investment
+  // each time (traced: fire uptime collapsed to ~10%). One rock, until it dies.
+  if (ship.ai.demolishRockId != null) {
+    var lr = null;
+    for (var li = 0; li < state.asteroids.length; li++) {
+      var lo = state.asteroids[li];
+      if (lo.alive && lo.id === ship.ai.demolishRockId) { lr = lo; break; }
+    }
+    if (lr && dist(ship.x, ship.y, lr.x, lr.y) < A2.bbGapLookahead * 1.4) {
+      ship.ai.gapGate = { type: 'demolish', rockId: lr.id, rx: lr.x, ry: lr.y,
+                          x: ship.ai.gapAnchorX, y: ship.ai.gapAnchorY,
+                          face: Math.atan2(lr.y - ship.ai.gapAnchorY, lr.x - ship.ai.gapAnchorX) };
+      return ship.ai.gapGate;
+    }
+    ship.ai.demolishRockId = null; // jamb dead or left behind: full re-scan
+  }
   // stagger + cache (same cadence as the clutter detour)
   if (state.tick % AI.clutterRefreshTicks !== (ship.id + 7) % AI.clutterRefreshTicks &&
       ship.ai.gapGateT !== undefined && state.tick - ship.ai.gapGateT < AI.clutterRefreshTicks &&
@@ -279,10 +296,14 @@ function bbGapGate(state, ship, goalPt) {
     var want = Math.max(def.radius + small.r + AI.rockClearDebrisPad + small.r * A2.bbDebrisRPad,
                         HRg.minRange + 60);
     var dR = dist(ship.x, ship.y, small.x, small.y) || 1;
+    // FIXED firing anchor for the whole demolition episode: holding "current position"
+    // re-evaluated per tick follows the hull's own drift and walks it off-station
     var bx = ship.x, by = ship.y;
     if (dR < want) { bx = small.x + ((ship.x - small.x) / dR) * (want + 30); by = small.y + ((ship.y - small.y) / dR) * (want + 30); }
+    ship.ai.demolishRockId = small.id;
+    ship.ai.gapAnchorX = bx; ship.ai.gapAnchorY = by;
     ship.ai.gapGate = { type: 'demolish', rockId: small.id, rx: small.x, ry: small.y,
-                        x: bx, y: by, face: Math.atan2(small.y - ship.y, small.x - ship.x) };
+                        x: bx, y: by, face: Math.atan2(small.y - by, small.x - bx) };
   }
   return ship.ai.gapGate;
 }

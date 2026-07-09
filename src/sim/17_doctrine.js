@@ -236,3 +236,23 @@ function tryTorpedoV2(state, ship, dt) {
   ship.cool.salvoLeft = (TC.salvo || 1) - 1;
   ship.cool.salvoGap = TC.salvoGap || 0;
 }
+
+/* Inbound-bomb threat: any live enemy bomb close enough and CLOSING on us. Bombs are
+   unguided contact-fuzed — lateral displacement (a jink) is a complete defense, but
+   only if the light actually reacts. v1 never does; v2 lights weave the moment one is
+   inbound (flak-evasion doctrine: react to the shot, not just the shooter). */
+function bombThreat(state, ship) {
+  var bombs = state.bombs;
+  for (var i = 0; i < bombs.length; i++) {
+    var bm = bombs[i];
+    if (!bm.alive || bm.team === ship.team) continue;
+    var dx = ship.x - bm.x, dy = ship.y - bm.y;
+    var d2 = dx * dx + dy * dy;
+    if (d2 > 330 * 330) continue;
+    if (bm.vx * dx + bm.vy * dy > 0) return true; // closing
+  }
+  return false;
+}
+function threatenedV2(state, ship) {
+  return threatened(state, ship) || bombThreat(state, ship);
+}

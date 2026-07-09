@@ -235,8 +235,14 @@ function autopilot(state, ship, dt) {
   var awm = len(awx, awy);
 
   if (dvm < 8 && awm < accel * 0.5) {
-    // coast: hold position/velocity, point where the AI wants the nose (aiming)
-    if (d < AI.navArriveSlack * 2 && ship.speed > 3 && goal.arrive) {
+    // coast: hold position/velocity, point where the AI wants the nose (aiming).
+    // Drift below the tolerance is ACCEPTED: chasing a few px/s costs a full hull
+    // rotation to the brake angle, which for a turnMax-0.14 battleship is ~20 s of
+    // spinning its turret arcs through the sky to correct nothing (traced: this was
+    // the station-keeping fire-uptime killer). The tolerance scales with how cheap
+    // turning is for the hull — agile lights still park crisply.
+    var driftTol = ship.def.turnMax >= 1 ? 3 : 12;
+    if (d < AI.navArriveSlack * 2 && ship.speed > driftTol && goal.arrive) {
       // kill residual drift
       burnToward(ship, Math.atan2(-ship.vy, -ship.vx), Math.min(1, ship.speed / (accel * 0.3)), dt);
     } else {

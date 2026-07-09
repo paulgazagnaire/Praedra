@@ -77,7 +77,7 @@ function aiFrigateV2(state, ship, dt) {
     // threat — jinking through rock fields for no reason is how boats die to terrain.
     // Settle only once inside the main-battery blind ring.
     var inside = dV < cfg.heavyRail.minRange * 0.95;
-    ship.nav = { x: ox, y: oy, arrive: inside, jink: !inside && threatened(state, ship), face: aimV };
+    ship.nav = { x: ox, y: oy, arrive: inside, jink: !inside && threatenedV2(state, ship), face: aimV };
     blastCoverNearGhosts(state, ship, dt);
     tryTorpedoV2(state, ship, dt); // point-blank release bypasses the volley hold
     return;
