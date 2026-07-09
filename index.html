@@ -430,6 +430,9 @@ var CONFIG_DEFAULTS = {
     emconNear: 1.05,             // burn-and-coast band: cut the plume when the nearest enemy sits
     emconFar: 2.2,               //   between visRange*near and visRange*far of us (approach unseen)
     anvilMinBombers: 4,          // commit waves split into two attack axes at this many bombers
+    gunlineSupport: 700,         // a v2 destroyer beyond standoff+350 with NO sister destroyer
+                                 //   within this range falls back to assemble before pressing
+                                 //   (never fight the enemy gunline alone — Lanchester)
     waveAssembleFrac: 0.45,      // fraction of the light wing that must be staged before a v2
                                  //   wave commits (time-on-target pulses, not 3-ship trickles).
                                  //   Only bites vs PD-capital enemies (teamCommitting is always
@@ -2645,9 +2648,26 @@ function aiDestroyerV2(state, ship, dt) {
                    arrive: true, speedCap: cap || undefined, jink: !cap };
     }
   } else if (d > AI.destroyerStandoff + 100) {
+    // GUNLINE COHESION (Lanchester): never press the enemy line alone — a lone
+    // destroyer arriving first fights the whole enemy gunline by itself. While no
+    // living sister destroyer is in support range, close up with the sisters first.
     var ux2 = (target.x - ship.x) / d, uy2 = (target.y - ship.y) / d;
-    ship.nav = { x: target.x - ux2 * AI.destroyerStandoff + bias.x, y: target.y - uy2 * AI.destroyerStandoff + bias.y,
-                 arrive: true, face: aim };
+    var ownD = ship.team === 'A' ? state.aliveA : state.aliveB;
+    var sisters = 0, buddies = 0, scx = 0, scy = 0;
+    for (var od = 0; od < ownD.length; od++) {
+      var oD = ownD[od];
+      if (oD.cls !== 'destroyer' || oD.id === ship.id) continue;
+      sisters++; scx += oD.x; scy += oD.y;
+      if (dist(ship.x, ship.y, oD.x, oD.y) < cfg.ai2.gunlineSupport) buddies++;
+    }
+    if (sisters > 0 && buddies === 0 && d > AI.destroyerStandoff + 350) {
+      // assemble: drift toward the sister centroid at reduced burn, guns still hot
+      ship.nav = { x: (scx / sisters + ship.x) / 2, y: (scy / sisters + ship.y) / 2,
+                   arrive: true, face: aim, speedCap: ship.def.maxCruiseSpeed * 0.55 };
+    } else {
+      ship.nav = { x: target.x - ux2 * AI.destroyerStandoff + bias.x, y: target.y - uy2 * AI.destroyerStandoff + bias.y,
+                   arrive: true, face: aim };
+    }
   } else if (d < AI.destroyerStandoff - 140 && isCapital(target)) {
     var ux3 = (ship.x - target.x) / d, uy3 = (ship.y - target.y) / d;
     ship.nav = { x: target.x + ux3 * AI.destroyerStandoff + bias.x, y: target.y + uy3 * AI.destroyerStandoff + bias.y,
@@ -3479,7 +3499,7 @@ function aiBomberV2(state, ship, dt) {
               nearestWhere(state, ship, enemies, function (e) { return e.cls === 'bomber'; }) ||
               nearestWhere(state, ship, enemies, null));
   var target = pick.ship, d = pick.d;
-  var thr = threatenedV2(state, ship);
+  var thr = threatenedV2(state, ship) && jinkOK(state, ship);
   var committing = teamCommitting(state, ship.team);
   var m = ship.ai.mode;
   if (m !== 'run' && m !== 'break' && m !== 'approach') m = 'stage';
@@ -3671,7 +3691,7 @@ function aiInterceptorV2(state, ship, dt) {
   var committing = teamCommitting(state, ship.team);
   if (ship.torpAmmo > 0 && committing) tryTorpedoV2(state, ship, dt);
 
-  var thr = threatenedV2(state, ship);
+  var thr = threatenedV2(state, ship) && jinkOK(state, ship);
   var own = ship.team === 'A' ? state.aliveA : state.aliveB;
 
   // SCREEN DOCTRINE: guard the strike package. Prefer enemy lights that are near OUR
@@ -4376,7 +4396,9 @@ function emconCap(state, ship) {
   var visBurn = ship.def.signature * D.thrustMultMax;
   if (near.d < visCoast * A2.emconNear) return null;  // already inside their picture
   if (near.d > visBurn * A2.emconFar) return null;    // too far for anyone to see the plume
-  return Math.max(ship.speed, ship.def.maxCruiseSpeed * 0.35); // coast on current momentum
+  // cut the BURN, never the SPEED: a slow coaster is torpedo-predictable (<70) and
+  // heavy-rail trackable (<85) — measured as v2 frigates' top killer. Floor at 85% cruise.
+  return Math.max(ship.speed, ship.def.maxCruiseSpeed * 0.85);
 }
 
 /* Masked approach (terrain infiltration): one covered hop TOWARD tgt — the LOS shadow of
@@ -4447,7 +4469,7 @@ function torpedoPickV2(state, ship, enemies, TC) {
         !(e.speed < T.predictSpeed || e.jinkEMA < T.jinkAccelThreshold))) continue;
     if (!valid(e)) continue;
     var sc = dist(ship.x, ship.y, e.x, e.y)
-           + pdShadow(state, e) * 120           // every gun shadowing the run costs ~a shot
+           + pdShadow(state, e) * 80            // every gun shadowing the run costs most of a shot
            + (light ? 2600 : 0)                 // payload > chaff
            + (focus && e.id === focus.id ? -400 : 0);
     if (sc < bestScore) { bestScore = sc; best = e; }
@@ -4543,6 +4565,21 @@ function spreadNav(state, ship, nav) {
   var push = (110 - nd) * 2.2;
   nav.x += ux * push; nav.y += uy * push;
   return nav;
+}
+
+
+/* Jink-safety: weaving is for open sky. A light that jinks through a debris field or
+   along a rock rim kills itself on terrain (rock impacts are every class's #1 killer)
+   — suppress the weave when the next second of flight has stone in it. */
+function jinkOK(state, ship) {
+  var px = ship.x + ship.vx * 0.9, py = ship.y + ship.vy * 0.9;
+  var safe = true;
+  rocksNearSeg(state, ship.x, ship.y, px, py, 92 + 180, function (o) {
+    if (o.r < 26) return false;
+    if (segCircleHit(ship.x, ship.y, px, py, o.x, o.y, o.r + 150)) { safe = false; return true; }
+    return false;
+  });
+  return safe;
 }
 return api;
 })();

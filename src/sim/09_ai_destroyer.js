@@ -120,9 +120,26 @@ function aiDestroyerV2(state, ship, dt) {
                    arrive: true, speedCap: cap || undefined, jink: !cap };
     }
   } else if (d > AI.destroyerStandoff + 100) {
+    // GUNLINE COHESION (Lanchester): never press the enemy line alone — a lone
+    // destroyer arriving first fights the whole enemy gunline by itself. While no
+    // living sister destroyer is in support range, close up with the sisters first.
     var ux2 = (target.x - ship.x) / d, uy2 = (target.y - ship.y) / d;
-    ship.nav = { x: target.x - ux2 * AI.destroyerStandoff + bias.x, y: target.y - uy2 * AI.destroyerStandoff + bias.y,
-                 arrive: true, face: aim };
+    var ownD = ship.team === 'A' ? state.aliveA : state.aliveB;
+    var sisters = 0, buddies = 0, scx = 0, scy = 0;
+    for (var od = 0; od < ownD.length; od++) {
+      var oD = ownD[od];
+      if (oD.cls !== 'destroyer' || oD.id === ship.id) continue;
+      sisters++; scx += oD.x; scy += oD.y;
+      if (dist(ship.x, ship.y, oD.x, oD.y) < cfg.ai2.gunlineSupport) buddies++;
+    }
+    if (sisters > 0 && buddies === 0 && d > AI.destroyerStandoff + 350) {
+      // assemble: drift toward the sister centroid at reduced burn, guns still hot
+      ship.nav = { x: (scx / sisters + ship.x) / 2, y: (scy / sisters + ship.y) / 2,
+                   arrive: true, face: aim, speedCap: ship.def.maxCruiseSpeed * 0.55 };
+    } else {
+      ship.nav = { x: target.x - ux2 * AI.destroyerStandoff + bias.x, y: target.y - uy2 * AI.destroyerStandoff + bias.y,
+                   arrive: true, face: aim };
+    }
   } else if (d < AI.destroyerStandoff - 140 && isCapital(target)) {
     var ux3 = (ship.x - target.x) / d, uy3 = (ship.y - target.y) / d;
     ship.nav = { x: target.x + ux3 * AI.destroyerStandoff + bias.x, y: target.y + uy3 * AI.destroyerStandoff + bias.y,

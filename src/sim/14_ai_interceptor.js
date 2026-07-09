@@ -103,7 +103,7 @@ function aiInterceptorV2(state, ship, dt) {
   var committing = teamCommitting(state, ship.team);
   if (ship.torpAmmo > 0 && committing) tryTorpedoV2(state, ship, dt);
 
-  var thr = threatenedV2(state, ship);
+  var thr = threatenedV2(state, ship) && jinkOK(state, ship);
   var own = ship.team === 'A' ? state.aliveA : state.aliveB;
 
   // SCREEN DOCTRINE: guard the strike package. Prefer enemy lights that are near OUR

@@ -292,6 +292,9 @@ var CONFIG_DEFAULTS = {
     emconNear: 1.05,             // burn-and-coast band: cut the plume when the nearest enemy sits
     emconFar: 2.2,               //   between visRange*near and visRange*far of us (approach unseen)
     anvilMinBombers: 4,          // commit waves split into two attack axes at this many bombers
+    gunlineSupport: 700,         // a v2 destroyer beyond standoff+350 with NO sister destroyer
+                                 //   within this range falls back to assemble before pressing
+                                 //   (never fight the enemy gunline alone — Lanchester)
     waveAssembleFrac: 0.45,      // fraction of the light wing that must be staged before a v2
                                  //   wave commits (time-on-target pulses, not 3-ship trickles).
                                  //   Only bites vs PD-capital enemies (teamCommitting is always

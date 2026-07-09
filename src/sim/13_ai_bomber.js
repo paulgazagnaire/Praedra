@@ -124,7 +124,7 @@ function aiBomberV2(state, ship, dt) {
               nearestWhere(state, ship, enemies, function (e) { return e.cls === 'bomber'; }) ||
               nearestWhere(state, ship, enemies, null));
   var target = pick.ship, d = pick.d;
-  var thr = threatenedV2(state, ship);
+  var thr = threatenedV2(state, ship) && jinkOK(state, ship);
   var committing = teamCommitting(state, ship.team);
   var m = ship.ai.mode;
   if (m !== 'run' && m !== 'break' && m !== 'approach') m = 'stage';

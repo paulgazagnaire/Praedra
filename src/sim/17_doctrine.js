@@ -131,7 +131,9 @@ function emconCap(state, ship) {
   var visBurn = ship.def.signature * D.thrustMultMax;
   if (near.d < visCoast * A2.emconNear) return null;  // already inside their picture
   if (near.d > visBurn * A2.emconFar) return null;    // too far for anyone to see the plume
-  return Math.max(ship.speed, ship.def.maxCruiseSpeed * 0.35); // coast on current momentum
+  // cut the BURN, never the SPEED: a slow coaster is torpedo-predictable (<70) and
+  // heavy-rail trackable (<85) — measured as v2 frigates' top killer. Floor at 85% cruise.
+  return Math.max(ship.speed, ship.def.maxCruiseSpeed * 0.85);
 }
 
 /* Masked approach (terrain infiltration): one covered hop TOWARD tgt — the LOS shadow of
@@ -202,7 +204,7 @@ function torpedoPickV2(state, ship, enemies, TC) {
         !(e.speed < T.predictSpeed || e.jinkEMA < T.jinkAccelThreshold))) continue;
     if (!valid(e)) continue;
     var sc = dist(ship.x, ship.y, e.x, e.y)
-           + pdShadow(state, e) * 120           // every gun shadowing the run costs ~a shot
+           + pdShadow(state, e) * 80            // every gun shadowing the run costs most of a shot
            + (light ? 2600 : 0)                 // payload > chaff
            + (focus && e.id === focus.id ? -400 : 0);
     if (sc < bestScore) { bestScore = sc; best = e; }
@@ -298,4 +300,19 @@ function spreadNav(state, ship, nav) {
   var push = (110 - nd) * 2.2;
   nav.x += ux * push; nav.y += uy * push;
   return nav;
+}
+
+
+/* Jink-safety: weaving is for open sky. A light that jinks through a debris field or
+   along a rock rim kills itself on terrain (rock impacts are every class's #1 killer)
+   — suppress the weave when the next second of flight has stone in it. */
+function jinkOK(state, ship) {
+  var px = ship.x + ship.vx * 0.9, py = ship.y + ship.vy * 0.9;
+  var safe = true;
+  rocksNearSeg(state, ship.x, ship.y, px, py, 92 + 180, function (o) {
+    if (o.r < 26) return false;
+    if (segCircleHit(ship.x, ship.y, px, py, o.x, o.y, o.r + 150)) { safe = false; return true; }
+    return false;
+  });
+  return safe;
 }
