@@ -333,6 +333,11 @@ doctrine mix. Pinned ships (`aiPinned`) and the player `attack`-order fire contr
 doctrine-independent. `ai2.*` holds every v2 knob (see CONFIG for the commented list);
 sweep them via `overrides` like anything else.
 
+**Note**: the battleship's `heavyRail.minRange` change (220 → 420, below) is a WEAPON
+mechanic, deliberately NOT doctrine-gated — both doctrines fight under the same physical
+rules (that is what makes v2-vs-v1 batteries an honest AI comparison). "v1 kept verbatim"
+refers to the v1 AI decision code, not to global weapon/physics constants.
+
 The battleship's `heavyRail.minRange` is now **420** (was 220): PD ship-fire tops out
 at `pd.range + target radius` (~156 from a battleship's centre), so 156..420 is a real
 knife-fight ring — a small ship that survives the approach is safe from the main
