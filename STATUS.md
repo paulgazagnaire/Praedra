@@ -52,8 +52,37 @@
 - Selection: click / drag-box / shift-toggle / double-click-by-class / Esc. Right-click smart orders (move / attack detected ship / attack rock), shift+right = attack-move, S = hold, Space = ACTIVE PAUSE (orders work while paused). Selection rings, drag rectangle, move vs attack markers, hold indicators, adaptive cursor + reticle.
 - Lumpy polygonal asteroids and tumbling debris; shatter/explosion effects; HUD with selection summary and control cheat-sheet.
 
+## Doctrine battery campaign (~1,600 matches, 7 rounds, both spawn orientations)
+
+Method: v2-vs-v1 mirrors (same fleet both sides) across RAILGUN / SWARM / BALANCED /
+BB-fleet (2BB+4F), densities 0.3+0.6, seeds swept, **both orientations** (there is a
+strong side/first-mover bias — see LESSONS). Iterated: measure → forensics (deaths-by-
+cause, launch-range distributions, per-seed pairing) → fix → re-measure. Final round 7
+(320 matches) + pooled results:
+
+- **SWARM (light-wing warfare): v2 ≈ 60%** — stable across three independent 80-100-match
+  rounds (61.3 / 60.0 / 57.5). Paired per-seed: v2-dominant 10 : 4 v1-dominant.
+  The doctrine levers that did it (each measured): splash spacing, inbound-bomb dodge,
+  payload-first targeting, self-defense-override screens, saturation-timed dives.
+- **Capital mirrors (RAIL/BAL/BB): par (46-52% band across rounds).** The paired
+  analysis explains why: **71% of mirror scenarios (114/160) are decided by spawn side**
+  — titan-scale procedural maps are a terrain lottery for gunlines, and no measured
+  doctrine lever shifts that structural term. Within the small doctrine-sensitive
+  subset capitals split ~even. Features that measurably mattered and are kept:
+  overkill ledger (+2-3pts torpedo hit rate), escort round-robin (destroyer torpedo
+  deaths halved), wounded-first gun focus. Features measured NEUTRAL and kept for
+  their scenario value: EMCON, gunline cohesion, volley sync (ablation-tested).
+  Features measured NEGATIVE and removed/retuned: long-range focus-fire bonus for
+  torpedoes, heavy PD-shadow weighting, stealth-crawl EMCON, >0.4s volley holds.
+- **Scenario-level (where doctrine actually expresses): decisive.** Wolfpack vs lone
+  BB 8/8 with 0 losses (v1: 1/8, losing 23/24 boats); gap-gate never threads
+  sub-minimum openings; wall demolition breaches on schedule; broadside discipline
+  bears 3 turrets where v1 bears 2.
+
 ## Verification
-- `harness/tests.mjs`: **34/34 pass** (17 prior + 11 battleship/heavy-rail — incl. 4 new projectile-rework gates: projectile flight, turret arcs, ship-pierce/rock-stop, reload cadence — + 5 capital pathing/fire-discipline + 1 battleship-fleet real-match effectiveness smoke guard). Each new gate was mutation-verified (break the gate → the matching test fails); the pathing tests and the `battleship-fleet-effectiveness` guard were A/B'd against the pre-feature sim (the guard: a 42-pt BB fleet vs RAILGUN on seeds 1+5 deals 0 heavy-rail dmg when entombed, 1230 on the hitscan build, and a measured 960 after the deliberate projectile-rework nerf — floor retuned to >400). Wall-clock budget holds: the added per-tick corridor scan is staggered+cached, and the BB well-skirt is a cheap per-tick scan of the cached gravity-source list; small-fleet cost stays under the 2000 us/tick harness budget.
+- `harness/tests.mjs`: **38/38 pass** (34 prior + 4 doctrine/battleship gates:
+  doctrine-mixed determinism, bb-knife-fight-window (mutation-verified: v1 loses it),
+  bb-gap-gate-never-threads, bb-wall-demolition) (17 prior + 11 battleship/heavy-rail — incl. 4 new projectile-rework gates: projectile flight, turret arcs, ship-pierce/rock-stop, reload cadence — + 5 capital pathing/fire-discipline + 1 battleship-fleet real-match effectiveness smoke guard). Each new gate was mutation-verified (break the gate → the matching test fails); the pathing tests and the `battleship-fleet-effectiveness` guard were A/B'd against the pre-feature sim (the guard: a 42-pt BB fleet vs RAILGUN on seeds 1+5 deals 0 heavy-rail dmg when entombed, 1230 on the hitscan build, and a measured 960 after the deliberate projectile-rework nerf — floor retuned to >400). Wall-clock budget holds: the added per-tick corridor scan is staggered+cached, and the BB well-skirt is a cheap per-tick scan of the cached gravity-source list; small-fleet cost stays under the 2000 us/tick harness budget.
 - Headless Chromium: zero console errors; 13/13 mandatory + 9/9 supplementary UI assertions (selection, orders, active-pause ordering, fog subset checks, spectate).
 - Determinism from seed: verified (incl. with gravity overrides; deep state compare at tick 600). Zero draws/errors across 135+ battery matches; no NaN at any gravity multiplier 0–3×.
 - Resolution at titan scale: asymmetric matchups resolve decisively (RAILGUN vs SWARM: 100% railgun across a 30-match sweep, 60-77% by elimination, the rest scored blowouts at the cap with SWARM ground to fleet value ≈ 0). The symmetric BALANCED mirror is an attrition war whose kill rate decays — most mirrors resolve on points (HP-lost) at the 360s cap after continuous combat (fleet values 42 → ~8-15); giving them 480s just inflated durations without changing outcomes (verified). Combat is continuous either way — the old "fleets never find each other" stalls are fixed (hunt routing around the titan + gravity feed-forward, below).
