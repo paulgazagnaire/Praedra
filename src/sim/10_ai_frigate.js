@@ -69,7 +69,11 @@ function aiFrigateV2(state, ship, dt) {
     for (var p = 0; p < own.length; p++)
       if (doc.packIds.indexOf(own[p].id) >= 0) { pcx += own[p].x; pcy += own[p].y; pn++; }
     var ca = pn ? Math.atan2(pcy / pn - packVictim.y, pcx / pn - packVictim.x) : aimV + Math.PI;
-    var slot = ca + (idx - (n - 1) / 2) * A2.packBearingSpread;
+    // cap the fan: with 6 boats an uncapped 1.0 rad/slot spread put the outer slots
+    // ~143 deg off the approach axis — the straight chord to such a slot passes THROUGH
+    // the victim's hull (review-confirmed: closest approach 95px vs 94px combined radii)
+    var spreadPer = Math.min(A2.packBearingSpread, n > 1 ? (2 * A2.packMaxHalfArc) / (n - 1) : 0);
+    var slot = ca + (idx - (n - 1) / 2) * spreadPer;
     var ox = packVictim.x + Math.cos(slot) * A2.packDiveRange;
     var oy = packVictim.y + Math.sin(slot) * A2.packDiveRange;
     // approach FAST (the heavy rail's speed gate can't track cruise 85; slowing down

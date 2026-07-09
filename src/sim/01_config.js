@@ -285,6 +285,11 @@ var CONFIG_DEFAULTS = {
     packDiveRange: 300,          // point-blank orbit radius: outside PD ship-fire (~156 from a BB
                                  //   centre), inside heavyRail.minRange 420 -> main-battery-proof
     packBearingSpread: 1.0,      // rad between packmates' attack bearings (anvil the PD arcs)
+    packMaxHalfArc: 0.9,         // hard cap on the fan's half-width: keeps every slot's straight
+                                 //   approach chord clear of the victim's hull (95px near-miss
+                                 //   at the old uncapped fan, review-confirmed)
+    packLeash: 3000,             // frigates farther than this from the victim stay on their
+                                 //   current job instead of being yanked across the map
     packEscortMax: 1,            // dive only when <= this many enemy capitals guard the victim
                                  //   within isolationRadius (never knife-fight a full battle line)
     volleyWaitMax: 0.4,          // max s a ready torpedo boat holds for a synchronized volley.

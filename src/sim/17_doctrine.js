@@ -101,7 +101,9 @@ function updateDoctrine(state) {
     if (victim && victim.cls === 'battleship' &&
         alliesNear(state, victim, A2.isolationRadius) <= A2.packEscortMax) {
       var frigs = [];
-      for (var k = 0; k < own.length; k++) if (own[k].cls === 'frigate') frigs.push(own[k].id);
+      for (var k = 0; k < own.length; k++)
+        if (own[k].cls === 'frigate' && dist(own[k].x, own[k].y, victim.x, victim.y) < A2.packLeash)
+          frigs.push(own[k].id); // leash: never yank a cross-map escort into the dive
       if (frigs.length >= A2.packMinFrigates) {
         frigs.sort(function (a, b) { return a - b; });
         doc.packTargetId = victim.id;
