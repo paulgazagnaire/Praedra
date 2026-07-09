@@ -689,19 +689,26 @@ function heavyRailCfg(cfg) {
     'no heavyRail block / ships.battleship in live config — battleship support missing');
   return cfg.heavyRail;
 }
-// Count 'hrail' events of a given hit kind seen this tick; caller consumes state.events so the
-// capped ring buffer isn't re-scanned (the sim itself never reads state.events, so clearing it
-// is a harmless renderer-style consume).
-function drainHrail(match, hitKind) {
-  let n = 0;
-  for (const e of match.state.events) if (e.kind === 'hrail' && (!hitKind || e.hit === hitKind)) n++;
+// Collect events matching `pred` seen since the last drain; consumes state.events so the capped
+// ring buffer isn't re-scanned (the sim itself never reads state.events, so clearing it is a
+// harmless renderer-style consume).
+function drainEvents(match, pred) {
+  const out = [];
+  for (const e of match.state.events) if (pred(e)) out.push(e);
   match.state.events.length = 0;
-  return n;
+  return out;
+}
+// Count 'hrail' impact events of a given hit kind ('ship'|'rock'|'miss'; falsy = all).
+function drainHrail(match, hitKind) {
+  return drainEvents(match, (e) => e.kind === 'hrail' && (!hitKind || e.hit === hitKind)).length;
 }
 
-// TEST 1 — three turrets delete a DETECTED capital far beyond railgun range (range 3200 >> 700,
-// damage 30, hitscan, detection-gated). Destroyer at 1400px: past railgun 700, inside its own
-// coasting detection 1680, inside heavyRail [220,3200].
+// TEST 1 — the bow turrets delete a DETECTED capital far beyond railgun range (range 3200 >> 700,
+// damage 30, real flying slugs, detection-gated). Destroyer at 1400px: past railgun 700, inside
+// its own coasting detection 1680, inside heavyRail [220,3200]. Post-rework cadence: cooldown 5
+// + loadTime 1.2 -> the two bearing bow turrets land ~10 slugs in 26s (the aft turret is blind
+// over the bow); 5 hits kill the 140hp destroyer. The window includes the last slug's ~0.6s
+// flight time (in-flight rounds must resolve before the assertion).
 test('heavyRail-hits-capital', () => {
   const cfg = Praedra.defaultConfig();
   const HR = heavyRailCfg(cfg);
@@ -715,9 +722,9 @@ test('heavyRail-hits-capital', () => {
     asteroids: [],
   });
   const dst = findShip(m, 'B', 'destroyer');
-  stepSeconds(m, 20);
+  stepSeconds(m, 26);
   assert(hpOf(m, dst.id) === 0,
-    `destroyer survived 20s of heavy-rail at ${d}px (hp ${hpOf(m, dst.id)}) — turrets not deleting capitals past railgun range`);
+    `destroyer survived 26s of heavy-rail at ${d}px (hp ${hpOf(m, dst.id)}) — turrets not deleting capitals past railgun range`);
 });
 
 // TEST 2 — HARD class gate: turrets can never touch a bomber/interceptor even when detected and
@@ -821,6 +828,175 @@ test('heavyRail-dead-zone', () => {
   assert(hpOf(m, dst.id) === hp0, `destroyer at ${d}px (dead zone) lost hp ${hp0}->${hpOf(m, dst.id)}`);
 });
 
+// TEST 5a — PROJECTILE FLIGHT (the "it's a real projectile now" regression gate): on the muzzle
+// tick the target is UNHARMED and a living slug exists in state.slugs; the slug advances at
+// slugSpeed; the first hp drop arrives no sooner than the flight time to the target.
+test('heavyRail-projectile-flight', () => {
+  const cfg = Praedra.defaultConfig();
+  const HR = heavyRailCfg(cfg);
+  const d = 1400;
+  assertDetectable(cfg, 'destroyer', d, 100, 'heavyRail-projectile-flight');
+  const m = Praedra.createScenario({
+    seed: 11,
+    ships: [pinned('battleship', 'A', MID.x, MID.y, 0), pinned('destroyer', 'B', MID.x + d, MID.y, Math.PI)],
+    asteroids: [],
+  });
+  const dst = findShip(m, 'B', 'destroyer');
+  const hp0 = dst.hp;
+  let muzzleTick = -1;
+  for (let i = 0; i < 10 * TICK_RATE && muzzleTick < 0 && !m.done; i++) {
+    m.step();
+    if (drainEvents(m, (e) => e.kind === 'hrailMuzzle').length > 0) muzzleTick = m.tick;
+  }
+  assert(muzzleTick > 0, 'no hrailMuzzle event within 10s — turret never fired');
+  assert(hpOf(m, dst.id) === hp0,
+    `target lost hp on the muzzle tick (${hp0}->${hpOf(m, dst.id)}) — the shot resolved instantly (still hitscan)`);
+  const slug = m.state.slugs.find((s) => s.alive);
+  assert(slug, 'no living slug in state.slugs on the muzzle tick — projectile not spawned');
+  const sx = slug.x, sy = slug.y;
+  m.step();
+  const moved = dist2D(slug.x, slug.y, sx, sy);
+  const wantStep = HR.slugSpeed / TICK_RATE;
+  assert(Math.abs(moved - wantStep) < 2,
+    `slug advanced ${moved.toFixed(1)}px in one tick (want ~${wantStep.toFixed(1)}) — not flying at slugSpeed`);
+  // muzzle sits ~1.46 radii ahead of the BB centre (mount 0.90r + barrel 0.56r); the slug must
+  // cross the remaining gap to the target's near edge before any hp can drop
+  const flightTicks = Math.floor(
+    (d - 1.46 * cfg.ships.battleship.radius - cfg.ships.destroyer.radius) / HR.slugSpeed * TICK_RATE);
+  let hpDropTick = -1;
+  for (let i = 0; i < 15 * TICK_RATE && !m.done; i++) {
+    if (hpOf(m, dst.id) < hp0) { hpDropTick = m.tick; break; }
+    m.step();
+  }
+  assert(hpDropTick > 0, 'target never lost hp within 15s of the first muzzle — slugs never connect');
+  assert(hpDropTick - muzzleTick >= flightTicks - 1,
+    `hp dropped ${hpDropTick - muzzleTick} ticks after the muzzle (flight needs >= ${flightTicks - 1}) — damage is not flight-delayed`);
+});
+
+// TEST 5b — WWII TURRET ARCS. (a) target dead ASTERN: only the aft turret (index 2) may bear —
+// the bow pair is blind astern. A pinned ship still YAWS to face its nearest detected enemy
+// (aiPinned), so a nearer NON-TRACKABLE decoy bomber (class-gated out of the turrets, beyond
+// bomb launchRange so it stays inert, outside PD ship range) anchors the hull facing forward
+// while the turrets engage the trackable destroyer astern. (b) target dead AHEAD: the aft
+// turret is blind over the bow — no turret-2 events at all.
+test('heavyRail-turret-arcs', () => {
+  const cfg = Praedra.defaultConfig();
+  const HR = heavyRailCfg(cfg);
+  assert(Array.isArray(HR.arcCenters) && typeof HR.arcHalfWidth === 'number',
+    'no arcCenters/arcHalfWidth in live config — turret arcs missing');
+  const dDecoy = 450, dTarget = 800;
+  assertDetectable(cfg, 'bomber', dDecoy, 50, 'heavyRail-turret-arcs/decoy');
+  assertDetectable(cfg, 'destroyer', dTarget, 100, 'heavyRail-turret-arcs/target');
+  assert(dDecoy > cfg.bomb.launchRange && dDecoy > cfg.pd.range,
+    `decoy bomber at ${dDecoy} must be beyond bomb launchRange ${cfg.bomb.launchRange} and PD ${cfg.pd.range} to stay inert`);
+  const ma = Praedra.createScenario({
+    seed: 12,
+    ships: [
+      pinned('battleship', 'A', MID.x, MID.y, 0),
+      pinned('bomber', 'B', MID.x + dDecoy, MID.y, Math.PI), // dead ahead: the facing anchor
+      pinned('destroyer', 'B', MID.x - dTarget, MID.y, 0),   // dead astern: the gun target
+    ],
+    asteroids: [],
+  });
+  const dstA = findShip(ma, 'B', 'destroyer');
+  const hpA0 = dstA.hp;
+  const seenA = new Set();
+  for (let i = 0; i < 20 * TICK_RATE && !ma.done; i++) {
+    ma.step();
+    for (const e of drainEvents(ma, (x) => x.kind === 'hrailMuzzle' || x.kind === 'hrail')) seenA.add(e.turret);
+  }
+  assert(seenA.has(2), 'aft turret (2) never fired at a target dead astern — it should cover the stern');
+  assert(!seenA.has(0) && !seenA.has(1),
+    `bow turret events with a target dead astern (turrets seen: ${[...seenA]}) — bow arcs must be blind astern`);
+  assert(hpOf(ma, dstA.id) < hpA0, 'astern destroyer took no damage — the aft turret is not connecting');
+  const mb = Praedra.createScenario({
+    seed: 12,
+    ships: [pinned('battleship', 'A', MID.x, MID.y, 0), pinned('destroyer', 'B', MID.x + dTarget, MID.y, Math.PI)],
+    asteroids: [],
+  });
+  const seenB = new Set();
+  for (let i = 0; i < 20 * TICK_RATE && !mb.done; i++) {
+    mb.step();
+    for (const e of drainEvents(mb, (x) => x.kind === 'hrailMuzzle' || x.kind === 'hrail')) seenB.add(e.turret);
+  }
+  assert(seenB.has(0) && seenB.has(1), `both bow turrets should fire dead ahead (turrets seen: ${[...seenB]})`);
+  assert(!seenB.has(2), 'aft turret fired at a target dead ahead — it must be blind over the bow');
+});
+
+// TEST 5c — SLUGS PIERCE SHIPS, ARE STOPPED BY ROCKS. (a) two destroyers in line dead ahead:
+// one firing line, BOTH take damage (the slug pierces the near hull and rolls the far one too).
+// (b) same geometry with a rock BETWEEN the two destroyers covering the line: the near hull
+// still takes hits, the rock takes the slugs, the far hull takes ZERO. Torpedo damage is zeroed
+// so the destroyers' return fire can't muddy the hp bookkeeping (their torps also can't chip the
+// rock: 0 x rockDamageMult); the near destroyer's railgun only reaches the BB, never the rock.
+// Rock r=120 (hp 80x(120/60)^2 = 320) outlasts 10s of slugs (4 x 66 = 264): no mid-test split.
+test('heavyRail-pierce-ships-not-rocks', () => {
+  const cfg = Praedra.defaultConfig();
+  heavyRailCfg(cfg);
+  const dNear = 700, dFar = 1000;
+  assertDetectable(cfg, 'destroyer', dFar, 100, 'heavyRail-pierce/far');
+  const opts = (asteroids) => ({
+    seed: 13,
+    overrides: { torpedo: { damage: 0, aoeDamage: 0 } },
+    ships: [
+      pinned('battleship', 'A', MID.x, MID.y, 0),
+      pinned('destroyer', 'B', MID.x + dNear, MID.y, Math.PI),
+      pinned('destroyer', 'B', MID.x + dFar, MID.y, Math.PI),
+    ],
+    asteroids,
+  });
+  const ma = Praedra.createScenario(opts([]));
+  const [nearA, farA] = ma.state.ships.filter((s) => s.team === 'B');
+  const na0 = nearA.hp, fa0 = farA.hp;
+  stepSeconds(ma, 10);
+  assert(hpOf(ma, nearA.id) < na0, 'near destroyer took no heavy-rail damage in the clear-line variant');
+  assert(hpOf(ma, farA.id) < fa0,
+    'far destroyer (directly behind the near hull) took no damage — slugs are not piercing ships');
+  const mb = Praedra.createScenario(opts([{ x: MID.x + (dNear + dFar) / 2, y: MID.y, r: 120 }]));
+  const [nearB, farB] = mb.state.ships.filter((s) => s.team === 'B');
+  const rock = mb.state.asteroids[0];
+  const nb0 = nearB.hp, fb0 = farB.hp, rHp0 = rock.hp;
+  stepSeconds(mb, 10);
+  assert(hpOf(mb, nearB.id) < nb0, 'near destroyer (clear of the rock) took no damage in the rock variant');
+  assert(rock.alive && rock.hp < rHp0,
+    `covering rock took no slug hits (hp ${rHp0}->${rock.hp}) — slugs not slamming into cover`);
+  assert(hpOf(mb, farB.id) === fb0,
+    `far destroyer behind the covering rock lost hp (${fb0}->${hpOf(mb, farB.id)}) — asteroids must stop slugs dead`);
+});
+
+// TEST 5d — RELOAD CADENCE: consecutive shots from the SAME turret are >= cooldown (5s) apart.
+// All damage zeroed (zeroDamageOverrides) so the pinned target survives the whole window and
+// the muzzle stream is unbroken; only the two bow turrets bear (target dead ahead).
+test('heavyRail-reload-cadence', () => {
+  const cfg = Praedra.defaultConfig();
+  const HR = heavyRailCfg(cfg);
+  const m = Praedra.createScenario({
+    seed: 14,
+    overrides: zeroDamageOverrides(cfg),
+    ships: [pinned('battleship', 'A', MID.x, MID.y, 0), pinned('destroyer', 'B', MID.x + 1400, MID.y, Math.PI)],
+    asteroids: [],
+  });
+  const times = new Map(); // turret index -> [muzzle times]
+  for (let i = 0; i < 26 * TICK_RATE && !m.done; i++) {
+    m.step();
+    for (const e of drainEvents(m, (x) => x.kind === 'hrailMuzzle')) {
+      if (!times.has(e.turret)) times.set(e.turret, []);
+      times.get(e.turret).push(m.state.time);
+    }
+  }
+  let intervals = 0;
+  for (const [turret, ts] of times) {
+    assert(ts.length >= 4, `turret ${turret} fired only ${ts.length} slugs in 26s (want >=4 at a 5s reload)`);
+    for (let i = 1; i < ts.length; i++) {
+      intervals++;
+      assert(ts[i] - ts[i - 1] >= HR.cooldown - 2.5 / TICK_RATE, // one-tick slack
+        `turret ${turret} refired after ${(ts[i] - ts[i - 1]).toFixed(2)}s (reload must be >= ${HR.cooldown}s)`);
+    }
+  }
+  assert(times.size >= 2 && intervals >= 6,
+    `only ${times.size} turrets / ${intervals} intervals observed — cadence sample too thin`);
+});
+
 // TEST 6 — battleship spawns with its fleet at full hp, and the widened per-fleet spawn pitch
 // (2.4 x the largest hull's radius) keeps a radius-78 hull from spawning interpenetrating.
 test('battleship-spawns-with-fleet', () => {
@@ -901,8 +1077,8 @@ test('battleship-durability', () => {
 // spawn-gap fix are all pure/deterministic). Same seed twice -> identical result.
 test('determinism-with-battleship', () => {
   const opts = () => ({
-    // seed 1: verified the heavy rail actually CONNECTS within the cap (450 hrail dmg by 150s;
-    // most nearby seeds resolve on torpedoes with the turrets never landing a hit)
+    // seed 1: verified the heavy rail actually CONNECTS within the cap (measured 420 hrail dmg
+    // by 150s on the projectile rework; seeds 2/3 deal 0 — the turrets never land a hit there)
     seed: 1,
     // 150s cap: determinism is proven by the comparison, not the match length — running the
     // full 360s twice (~29s wall) bought nothing. The assertion below guarantees the turret
@@ -930,10 +1106,13 @@ test('determinism-with-battleship', () => {
 // ever fired — measured median BB damage 0 vs capital fleets. The aiBattleship fixes (engagement-aware
 // standoff + noLos cover-clear + the gravity-well SKIRT, all config-driven) restored it: a 42-pt
 // two-battleship fleet now puts real heavy-rail damage on a RAILGUN fleet. Seeds 1 and 5 are picked
-// because they EXERCISE the fix — on the pre-fix (git HEAD) sim the BB was entombed and dealt 0 + 0 on
-// both; on this build it deals 960 + 270 = 1230. Threshold 600 is a wide-margin smoke bound (catches a
-// regression back to the entombed / rock-shooting behaviour without pinning the balance, which still
-// needs the deep flip retune). BB enemy damage == dmgTo.B.hrail (only team A carries battleships).
+// because they EXERCISE the fix — on the pre-fix sim the BB was entombed and dealt 0 + 0 on both.
+// The heavy-rail PROJECTILE REWORK is a deliberate nerf (cooldown 2->5s, loadTime 1.2s, slew
+// 0.9->0.35, WWII arcs): the hitscan build measured 960 + 270 = 1230 on these seeds; the rework
+// measures 870 + 90 = 960. Threshold 400 is the retuned wide-margin smoke bound (catches a
+// regression back to the entombed / rock-shooting / never-fires behaviour without pinning the
+// balance, which still needs the deep flip retune). BB enemy damage == dmgTo.B.hrail (only team A
+// carries battleships).
 test('battleship-fleet-effectiveness', () => {
   const bbFleet = ['battleship', 'battleship', 'frigate', 'frigate', 'frigate', 'frigate']; // 30 + 12 = 42 pts
   let total = 0;
@@ -941,9 +1120,9 @@ test('battleship-fleet-effectiveness', () => {
     const r = Praedra.runMatch({ seed, overrides: { terrainDensity: 0.3 }, teamA: bbFleet, teamB: 'RAILGUN' });
     total += (r.stats && r.stats.dmgTo && r.stats.dmgTo.B && r.stats.dmgTo.B.hrail) || 0;
   }
-  assert(total > 600,
-    `BB fleet dealt only ${Math.round(total)} heavy-rail dmg vs RAILGUN across seeds 1+5 (want >600; ` +
-    'measured ~1230 here, 0 on the pre-fix sim when the BB is entombed/rear-parked) — effectiveness regressed');
+  assert(total > 400,
+    `BB fleet dealt only ${Math.round(total)} heavy-rail dmg vs RAILGUN across seeds 1+5 (want >400; ` +
+    'measured 960 on the projectile rework — 870+90; ~1230 pre-nerf; 0 when entombed/rear-parked) — effectiveness regressed');
 });
 
 // ------------------------------------------ new: capital pathing / fire-discipline

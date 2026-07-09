@@ -40,7 +40,8 @@ level).
     `{ id, team ('A'|'B'), cls, x, y, vx, vy, heading, speed, throttle, hp, maxHp,
     alive, pinned, order }` (`order` is `null` unless `issueOrder` was called, see below);
     `state.asteroids` is an array of `{ id, x, y, r, hp, maxHp, vx, vy, rot, rotVel,
-    shape, alive, moving }` (see Asteroids below). `state.detA`/`state.detB` and
+    shape, alive, moving }` (see Asteroids below); `state.slugs` holds in-flight
+    heavy-rail slugs (see Heavy railgun below). `state.detA`/`state.detB` and
     `state.lastSeenShip` hold detection state (see Detection below).
   - `match.config` — the merged config in use.
 - `Praedra.runMatch(opts)` → runs a created match to completion and returns `result`:
@@ -178,8 +179,10 @@ tick on:
 
 Everything responds to gravity per the equivalence principle (acceleration is
 mass-independent), and trajectory deflection scales as `~ g·L/v²`: a 420 px/s
-torpedo visibly curls through a well, while the 2400 px/s railgun slug's real
-sagitta is ~1 px — it stays hitscan mechanically, and the app renders its trace
+torpedo visibly curls through a well, while the 2400 px/s DESTROYER railgun slug's
+real sagitta is ~1 px — it stays hitscan mechanically (the battleship's heavy-rail
+slug is a real projectile, see §Heavy railgun, and gets no gravity at all), and the
+app renders the destroyer trace
 with that sagitta boosted `gravity.slugBendVisual`× (render-only) so the speed
 hierarchy reads on screen. Inertial mass appears wherever momentum is exchanged
 (ships `def.mass`, rocks `r²` in collisions, `r³` as gravitational source mass;
@@ -216,16 +219,19 @@ deal their base damage directly (no multiplier) via `attackrock` orders only.
 
 ## Friendly fire (universal, always on)
 
-- **Railgun / gatling / heavy railgun**: hit the FIRST ship hull intersecting the
+- **Railgun / gatling**: hit the FIRST ship hull intersecting the
   firing ray, regardless of team — a teammate standing in the line of fire eats the
   shot instead of the intended (possibly enemy) target. If nothing living is in the
   way, a railgun MISS on the intended target continues down the ray and can still
   crack a rock further out (`fireRailgun`'s "missed slug flies on downrange" path).
-  The battleship's `heavyRail` uses the identical semantics (`fireHeavyRail`): first
-  hull of any team eats the slug, a blocking rock absorbs `damage × rockDamageMult`
-  and stops it, an on-target miss cracks the rock behind the target. Its ray
-  originates at the firing turret's MOUNT point (a small offset along the hull spine),
-  not the ship centre.
+- **Heavy railgun (battleship)**: no longer first-hull-stops-shot — slugs are real
+  flying projectiles that PIERCE. Every trackable-class hull crossing the flight
+  path, ANY team, rolls the same uniform hit chance (evasion × speed factor) exactly
+  once per slug, and the slug flies on either way; a teammate in the line can still
+  eat a hit, it just no longer shields whatever is behind it. An asteroid stops the
+  slug dead (`damage × rockDamageMult`). Slugs launch from the firing turret's MOUNT
+  point (a small offset along the hull spine) plus a barrel length, along the
+  turret's actual barrel angle. See §Heavy railgun.
 - **Torpedoes**: contact-detonate against ANY non-owner hull they touch in flight
   (friend or foe), not just their locked target; the locked target itself keeps
   its own evasion-gated terminal-approach roll instead of a flat contact check.
@@ -239,32 +245,64 @@ deal their base damage directly (no multiplier) via `attackrock` orders only.
 ## Heavy railgun (Battleship turrets)
 
 The battleship (`ships.battleship`) mounts `heavyRail.turrets` (3) independent turrets
-instead of a fixed-forward railgun. Each ship carries `ship.turrets = [{ ang, cool }]`
-(index 0 = bow); `ang` is the turret's absolute world facing (the renderer draws it),
-`cool` is seconds until that turret is ready. Deterministic firing model:
+instead of a fixed-forward railgun. It is a PROJECTILE weapon: each shot is a real
+flying slug in `state.slugs`, released after a visible load cycle. Each ship carries
+`ship.turrets = [{ ang, cool, load, lost }]` (index 0 = bow); `ang` is the turret's
+absolute world facing (the renderer draws it), `cool` is seconds until the breech is
+ready, `load` is the rail-charge progress toward `loadTime`, `lost` times how long the
+firing solution has been broken. Deterministic firing model:
 
 - **Stagger**: at spawn, turret `i` starts `cool = i × (cooldown / turrets)` so the guns
-  fire out of phase (0.00 / 0.67 / 1.33 s), ~1 slug every 0.67 s ship-wide.
-- **Slew**: each turret rotates toward the target bearing at `slewRate` rad/s and may
-  fire only when within `aimTolerance` of it — a target whose bearing changes faster
-  than `slewRate` outruns the turret and is never engaged. Slew/stagger are pure
-  geometry/index (no RNG).
-- **Class gate (hard)**: a turret can only ever target a class in
-  `heavyRail.trackClasses` (`destroyer`, `frigate`, `battleship`) — it can NEVER hit a
-  bomber or interceptor, regardless of range or detection.
-- **Speed gate**: final hit chance is `(1 − evasion×evasionMult) × speedFactor`, where
+  fire out of phase (0.00 / 1.67 / 3.33 s with `cooldown` 5); with `loadTime` the
+  ship-wide rate is ~1 slug / 2.1 s when all three bear.
+- **Turret arcs (WWII arrangement)**: each turret may only train/fire within
+  `arcCenters[i] ± arcHalfWidth` of the hull heading (hull-relative; bow pair centre 0,
+  aft turret centre π; half-width 2.36 ≈ 135°). The bow turrets are blind astern, the
+  aft turret is blind over the bow; all three bear on either beam. An out-of-arc target
+  sends the mount to its limit stop, where it waits holding fire; hull yaw can never
+  drag a barrel past its mount limits (hard hull-relative clamp). Idle turrets recentre
+  on their own arc centre, and spawn `ang` at it.
+- **Slew**: each turret rotates toward its slew target at `slewRate` (0.35) rad/s and may
+  fire only when within `aimTolerance` of the true bearing — a target whose bearing
+  changes faster than `slewRate` outruns the turret and is never engaged.
+- **Loading**: the rails charge (`load += dt`, capped at `loadTime` 1.2 s) whenever the
+  turret HOLDS a full firing solution (target mode, in arc, aligned, in range window,
+  LOS for ship targets) — including while the breech is still cooling. The slug releases
+  once `cool <= 0` AND `load >= loadTime`, then `cool = cooldown` (5 s per turret),
+  `load = 0`. A broken solution only dumps the charge after `loadGrace` (0.25 s) — brief
+  nav yaws on a burning hull don't reset a nearly-complete load. Pure accumulation, no
+  RNG anywhere in the turret update.
+- **Slug flight** (`updateHeavySlugs`, a fixed `stepMatch` slot after `updateBombs`):
+  slugs fly at `slugSpeed` (2400 px/s) along the barrel angle from the mount point.
+  Slug record: `{ id, team, ownerId, turret, x, y, vx, vy, traveled, alive, rolled,
+  hitShip }`. Slugs receive NO gravity (real deflection at 2400 px/s is ~1 px), are not
+  PD-interceptable, and die at `maxRange` traveled or off-arena (±50 px, like torpedoes).
+  Dead slugs are filtered from `state.slugs` every 30 ticks like torps/bombs.
+- **Pierce (ships) / stop (rocks)**: per tick the slug sweeps a segment; every living
+  trackable-class hull on it — ANY team, friendly fire preserved — that the slug has not
+  already rolled against (ids in `rolled`) gets ONE hit roll, and the slug pierces on
+  whether it hits or misses. The first asteroid on the segment stops the slug dead and
+  absorbs `damage × rockDamageMult`.
+- **Class gate (hard)**: only classes in `heavyRail.trackClasses` (`destroyer`,
+  `frigate`, `battleship`) can be damaged — a slug overpenetrates a bomber or
+  interceptor without fuzing, NEVER damaging it, regardless of range or detection.
+- **Speed gate**: per-hull hit chance is `(1 − evasion×evasionMult) × speedFactor`, where
   `speedFactor = clamp01((speedNoTrack − v) / (speedNoTrack − speedFullTrack))`. A target
   at/above `speedNoTrack` (85, the frigate cruise) is untrackable (factor 0); at/below
   `speedFullTrack` (55, the destroyer cruise) there is no penalty (factor 1).
 - **Dead zone / range**: no fire inside `minRange` (220) or beyond `maxRange` (3200);
   range is measured from the ship centre. `maxRange` is far past the railgun's 700 but
   detection-bounded — at long range only lit-up (burning/scouted) ships are engageable.
-- **Friendly fire**: identical to the railgun (see above) — same first-hull / blocking-rock
-  ray semantics via `fireHeavyRail`.
-- **Determinism**: the ONLY RNG draw in the whole heavy-rail path is the terminal hit
-  roll (`state.rng.chance`), taken in ship-iteration then turret-index order.
-- **Event**: each shot pushes `{ kind: 'hrail', x, y, x2, y2, team, turret, hit }` where
-  `x,y` is the turret mount point and `hit ∈ 'ship'|'rock'|'miss'`.
+- **Determinism**: the only RNG decision unique to heavy rail is the per-hull hit roll
+  (`state.rng.chance`) inside `updateHeavySlugs`, drawn in slug-array order then
+  along-segment order (ties broken by ship id). A rock stop additionally invokes the
+  shared asteroid-split RNG via `damageAsteroid` → `splitAsteroid` (fragment angles/
+  sizes/spins), interleaved at the same deterministic point in that order — everything
+  is fully derived from state.
+- **Events**: firing pushes `{ kind: 'hrailMuzzle', x, y, ang, team, turret }` at the
+  muzzle; each impact pushes `{ kind: 'hrail', x, y, x2, y2, team, turret, hit }` with
+  `x == x2, y == y2` (a point record at the impact) and `hit ∈ 'ship'|'rock'|'miss'`
+  ('miss' fires once, where a slug that damaged no ship and hit no rock expires).
 
 ## Key CONFIG fields harness code may rely on
 
@@ -284,8 +322,10 @@ instead of a fixed-forward railgun. Each ship carries `ship.turrets = [{ ang, co
 - `ships.battleship` — the battleship def (`hp`, `radius` 78, `pdSlots`, `signature` 4200,
   `avoidMult`, etc.); largest hull in the game.
 - `heavyRail.*` — the battleship's turret weapon: `turrets`, `turretMounts`, `damage`,
-  `cooldown`, `minRange`, `maxRange`, `slewRate`, `aimTolerance`, `rockDamageMult`,
-  `evasionMult`, `trackClasses`, `speedFullTrack`, `speedNoTrack` (see Heavy railgun above).
+  `cooldown` (5, per turret), `loadTime` (1.2), `loadGrace`, `arcCenters` ([0, 0, π]),
+  `arcHalfWidth` (2.36), `minRange`, `maxRange`, `slugSpeed`, `slewRate` (0.35),
+  `aimTolerance`, `rockDamageMult`, `evasionMult`, `trackClasses`, `speedFullTrack`,
+  `speedNoTrack` (see Heavy railgun above).
 - `railgun.rockDamageMult`, `torpedo.rockDamageMult`, `asteroidHP`, `asteroidHPRefRadius`.
 - `debris.fragmentCount`, `debris.childRadiusScale`, `debris.minChildRadius`, `debris.maxAsteroids`.
 - `ai.clutterDetour*` (`Threshold`/`Gain`/`OffsetCost`/`Offsets`/`RefreshTicks`) and `ai.rockClear*`
@@ -323,8 +363,10 @@ Everything else in CONFIG is sim-internal; sweep it via `overrides` generically.
 
 `match.state.events` is a capped ring buffer (trimmed to the most recent 250 once it
 exceeds 500) of `{ t: tick, kind, ... }` records for renderers/inspectors. Kinds seen
-in the sim: `rail`, `hrail` (battleship heavy-rail turret shot — see Heavy railgun above;
-`{ kind: 'hrail', x, y, x2, y2, team, turret, hit }`), `gat`, `pd`, `launch`, `boom`
+in the sim: `rail`, `hrail` (battleship heavy-rail slug IMPACT — see Heavy railgun above;
+`{ kind: 'hrail', x, y, x2, y2, team, turret, hit }` with `x == x2, y == y2`),
+`hrailMuzzle` (a turret firing — `{ kind: 'hrailMuzzle', x, y, ang, team, turret }`),
+`gat`, `pd`, `launch`, `boom`
 (torpedo/bomb detonation), `shatter` (asteroid destroyed), `shipboom` (ship destroyed),
 and `order` (an `issueOrder` call — `{ kind: 'order', x, y, order: type }`). Harness code
 should treat unknown kinds as forward-compatible no-ops rather than asserting an exhaustive
