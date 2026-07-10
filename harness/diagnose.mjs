@@ -14,12 +14,10 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import vm from 'node:vm';
+import { loadSim as sharedLoadSimDG } from './simloader.mjs';
 
 const SELF = fileURLToPath(import.meta.url);
 const REPO_ROOT = resolve(dirname(SELF), '..');
-const MARK_BEGIN = '/* ===== SIM BEGIN ===== */';
-const MARK_END = '/* ===== SIM END ===== */';
 
 // Ship-class groupings for clumping/chain-risk metrics. The sim has no single "capital"
 // class — we treat the three non-fighter hulls as "capitals" and bomber+interceptor as
@@ -121,25 +119,6 @@ function parseArgs(argv) {
 }
 
 // ---------------------------------------------------------------- sim loading
-
-function loadSim(file) {
-  let html;
-  try {
-    html = readFileSync(file, 'utf8');
-  } catch (err) {
-    throw new Error(`cannot read sim file ${file}: ${err.message}`);
-  }
-  const b = html.indexOf(MARK_BEGIN);
-  if (b < 0) throw new Error(`marker "${MARK_BEGIN}" not found in ${file}`);
-  const e = html.indexOf(MARK_END, b + MARK_BEGIN.length);
-  if (e < 0) throw new Error(`marker "${MARK_END}" not found after BEGIN in ${file}`);
-  const code = html.slice(b + MARK_BEGIN.length, e);
-  const ctx = { console };
-  vm.runInNewContext(code, ctx, { filename: file });
-  if (!ctx.Praedra || typeof ctx.Praedra.createMatch !== 'function')
-    throw new Error('sim evaluated but no Praedra.createMatch global found');
-  return ctx.Praedra;
-}
 
 // ---------------------------------------------------------------- small math helpers
 
@@ -540,7 +519,7 @@ function printReport(opts, records, agg) {
 function main() {
   const opts = parseArgs(process.argv.slice(2));
   let Praedra;
-  try { Praedra = loadSim(opts.file); } catch (err) { fail(err.message); }
+  try { Praedra = sharedLoadSimDG(opts.file, { requireFn: 'createMatch' }); } catch (err) { fail(err.message); }
 
   const records = [];
   const errors = [];

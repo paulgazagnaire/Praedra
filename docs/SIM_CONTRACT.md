@@ -1,24 +1,29 @@
 # Praedra Sim API Contract (v1)
 
-This contract binds `index.html` (the sim implementation) and everything in `harness/`
-(headless runners/tests). Both sides are built against THIS document. Do not deviate
-without updating this file.
+This contract binds the sim implementation (`src/sim/*.js`) and everything in
+`harness/` (headless runners/tests). Both sides are built against THIS document.
+Do not deviate without updating this file.
 
 ## Where the sim lives
 
-`index.html` contains a `<script>` block with the ENTIRE DOM-free simulation between
-these exact marker lines:
+The DOM-free simulation is split across `src/sim/*.js` modules — pure JS, zero
+DOM/window/document/Date/performance/Math.random references. **Load order matters
+and has a single source of truth: the `<script src="src/sim/...">` tags in
+`index.html`**, currently:
 
 ```
-/* ===== SIM BEGIN ===== */
-...pure JS, zero DOM/window/document/Date/performance/Math.random references...
-/* ===== SIM END ===== */
+config → util → terrain → ship → physics → weapons → detection → fleet → roles → match
 ```
 
-Harness scripts extract the text between the markers and evaluate it with
-`vm.runInNewContext(code, ctx)` where `ctx = { console }`. After evaluation the
-context has a global `Praedra` object (the sim declares `var Praedra = ...` at top
-level).
+The browser loads them as plain scripts sharing global scope; `src/sim/match.js`
+ends with `var Praedra = api;`, the only name the app layer (`src/app.js`)
+consumes. Harness scripts load the sim via `harness/simloader.mjs`, which parses
+the manifest tags out of `index.html`, concatenates the module files in tag order,
+wraps them in a single closure (vm-context global access is pathologically slow),
+and evaluates with `vm.runInNewContext(code, ctx)` where `ctx = { console }`.
+After evaluation the context has the global `Praedra` object. The loader also
+still accepts the legacy single-file format (`/* ===== SIM BEGIN/END ===== */`
+markers with inline code) for older builds passed via `--file`.
 
 ## Praedra API
 

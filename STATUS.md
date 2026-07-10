@@ -49,7 +49,7 @@
 - **Flanking**: 50% of commit waves hook wide left/right before turning in.
 - **Player orders**: `Praedra.issueOrder` — move / attackmove / attack / attackrock / hold / auto, per-class execution, opportunistic weapons-free fire, completed orders drop to Hold (PRD §9 semantics).
 
-**App (browser, single self-contained file, console-clean):**
+**App (browser, console-clean; code split into `src/sim/*.js` modules + `src/app.js`, manifest = script tags in `index.html`, harness loads via `harness/simloader.mjs`):**
 - Play-vs-AI (team A) or spectate. Fog of war: undetected enemies hidden, recent ghosts faded.
 - Selection: click / drag-box / shift-toggle / double-click-by-class / Esc. Right-click smart orders (move / attack detected ship / attack rock), shift+right = attack-move, S = hold, Space = ACTIVE PAUSE (orders work while paused). Selection rings, drag rectangle, move vs attack markers, hold indicators, adaptive cursor + reticle.
 - Lumpy polygonal asteroids and tumbling debris; shatter/explosion effects; HUD with selection summary and control cheat-sheet.

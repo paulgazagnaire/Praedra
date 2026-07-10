@@ -12,7 +12,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import path from 'node:path';
-import vm from 'node:vm';
+import { loadSim as sharedLoadSim } from './simloader.mjs';
 
 // ---------------------------------------------------------------- sim loading
 
@@ -28,35 +28,16 @@ function cliFile() {
 
 const SIM_PATH = path.resolve(cliFile() ?? path.join(HERE, '..', 'index.html'));
 
-function loadSim(file) {
-  let html;
+function loadSimOrExit(file) {
   try {
-    html = readFileSync(file, 'utf8');
+    return sharedLoadSim(file, { requireFn: 'createMatch', timeout: 15000 });
   } catch (err) {
-    console.error(`Cannot read sim file ${file}: ${err.message}`);
+    console.error(err.message);
     process.exit(100);
   }
-  const BEGIN = '/* ===== SIM BEGIN ===== */';
-  const END = '/* ===== SIM END ===== */';
-  const b = html.indexOf(BEGIN);
-  const e = html.indexOf(END);
-  if (b === -1 || e === -1 || e <= b) {
-    console.error(`Sim markers not found in ${file} (need "${BEGIN}" ... "${END}")`);
-    process.exit(100);
-  }
-  const sandbox = { console };
-  vm.runInNewContext(html.slice(b + BEGIN.length, e), sandbox, {
-    filename: 'praedra-sim.js',
-    timeout: 15000,
-  });
-  if (!sandbox.Praedra) {
-    console.error('Sim evaluated but did not define a global `Praedra`.');
-    process.exit(100);
-  }
-  return sandbox.Praedra;
 }
 
-const Praedra = loadSim(SIM_PATH);
+const Praedra = loadSimOrExit(SIM_PATH);
 console.log(`sim: ${SIM_PATH}`);
 
 // ---------------------------------------------------------- micro test runner
@@ -66,10 +47,27 @@ function test(name, fn) { TESTS.push({ name, fn }); }
 function assert(cond, msg) { if (!cond) throw new Error(msg); }
 const warn = (msg) => console.log(`       warn: ${msg}`);
 
+// --test SUBSTR (or --test=SUBSTR), repeatable: run only tests whose name
+// contains any given substring. Full suite takes minutes; iterate with this.
+function cliTestFilters() {
+  const argv = process.argv.slice(2);
+  const out = [];
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === '--test' && argv[i + 1]) out.push(argv[++i]);
+    else if (argv[i].startsWith('--test=')) out.push(argv[i].slice('--test='.length));
+  }
+  return out;
+}
+
 function runAll() {
+  const filters = cliTestFilters();
+  const picked = filters.length
+    ? TESTS.filter(({ name }) => filters.some((f) => name.includes(f)))
+    : TESTS;
+  if (filters.length) console.log(`filter: ${filters.join(', ')} → ${picked.length}/${TESTS.length} tests`);
   let passed = 0;
   let failed = 0;
-  for (const { name, fn } of TESTS) {
+  for (const { name, fn } of picked) {
     try {
       fn();
       passed += 1;
