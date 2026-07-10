@@ -316,10 +316,20 @@
   function clampNum(v, lo, hi, dflt) { if (isNaN(v)) return dflt; return v < lo ? lo : v > hi ? hi : v; }
 
   /* ---- build / (re)create the match ---- */
+  // Arena aspect follows the WINDOW so the field fills the full screen width (matching
+  // aspect + fit-min view = edge-to-edge). Height keeps the tuned 5600; width scales with
+  // the viewport (clamped for pathological windows). Captured once per battle into
+  // currentSetup so "restart" reproduces the exact same arena regardless of later resizes.
+  function arenaForViewport() {
+    var w = cv.clientWidth || 1, h = cv.clientHeight || 1;
+    var aspect = clampNum(w / h, 1.0, 2.6, 10 / 7);
+    return { w: Math.round(CFG.arena.h * aspect / 20) * 20, h: CFG.arena.h };
+  }
   function createFromSetup(s) {
     match = Praedra.createMatch({
       seed: s.seed,
       overrides: { terrainDensity: s.density, destructibleAsteroids: s.destr,
+                   arena: s.arena || arenaForViewport(),
                    gravity: { G: CFG.gravity.G * s.grav } },
       teamA: fleetArray(s.A), teamB: fleetArray(s.B),
     });
@@ -340,6 +350,7 @@
       density: currentDensity(),
       grav: currentGravity(),
       destr: ui.setDestr.checked,
+      arena: arenaForViewport(),
     };
     createFromSetup(currentSetup);
     hideSetup();
@@ -374,7 +385,7 @@
   /* ---- view transform: identical math to render(); used for screen<->world hit-testing ---- */
   function getView() {
     var w = cv.clientWidth, h = cv.clientHeight, cfg = match.config;
-    var scale = Math.min(w / cfg.arena.w, h / cfg.arena.h) * 0.98;
+    var scale = Math.min(w / cfg.arena.w, h / cfg.arena.h); // exact fit: arena aspect tracks the window, so this fills the full width
     return { w: w, h: h, scale: scale,
              ox: (w - cfg.arena.w * scale) / 2, oy: (h - cfg.arena.h * scale) / 2 };
   }
@@ -763,7 +774,7 @@
     g.fillRect(0, 0, w, h);
     if (!match) return;
     var st = match.state, cfg = match.config;
-    var scale = Math.min(w / cfg.arena.w, h / cfg.arena.h) * 0.98;
+    var scale = Math.min(w / cfg.arena.w, h / cfg.arena.h); // exact fit: arena aspect tracks the window, so this fills the full width
     var ox = (w - cfg.arena.w * scale) / 2, oy = (h - cfg.arena.h * scale) / 2;
     g.translate(ox, oy); g.scale(scale, scale);
 

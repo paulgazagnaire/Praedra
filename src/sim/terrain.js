@@ -123,7 +123,10 @@ function generateTerrain(state, rng) {
     }
   }
 
-  var nClusters = Math.round(lerp(T.clusterCountMin, T.clusterCountMax, density));
+  // rock COUNTS were tuned for the reference arena area; a viewport-shaped arena (the app
+  // matches arena aspect to the window) scales them so terrain DENSITY feels identical
+  var areaMult = T.countRefArea ? (W * H) / T.countRefArea : 1;
+  var nClusters = Math.round(lerp(T.clusterCountMin, T.clusterCountMax, density) * areaMult);
   for (var c = 0; c < nClusters; c++) {
     var R = rng.range(T.clusterRadius[0], T.clusterRadius[1]);
     var ccx = 0, ccy = 0, ok = false;
@@ -142,7 +145,7 @@ function generateTerrain(state, rng) {
       }
     }
   }
-  var nSparse = Math.round(lerp(T.sparseRockMin, T.sparseRockMax, density));
+  var nSparse = Math.round(lerp(T.sparseRockMin, T.sparseRockMax, density) * areaMult);
   for (var s = 0; s < nSparse; s++) {
     for (var att2 = 0; att2 < 12; att2++) {
       if (tryPlace(rng.range(T.edgeMargin, W - T.edgeMargin), rng.range(T.edgeMargin, H - T.edgeMargin), rockRadius())) break;

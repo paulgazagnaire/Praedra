@@ -38,6 +38,10 @@ var CONFIG_DEFAULTS = {
                                    // whatever open pocket exists, so pockets must not exist.
     spawnClearRadius: 320,         // no rocks near either spawn
     edgeMargin: 130,
+    countRefArea: 44800000,        // 8000x5600: the area the rock COUNT knobs above were tuned
+                                   // for. generateTerrain scales cluster/sparse counts by
+                                   // (arena.w*arena.h)/this, so viewport-shaped arenas (the app
+                                   // sizes arena aspect to the window) keep the same density feel
     spawnDistFrac: 0.40,           // spawn separation as fraction of arena diagonal-ish
     // --- THE TITAN: every seed gets exactly one colossal asteroid, ~5x a BIG one.
     //     It is the map's landmark, its widest LOS shadow, and its deepest well.
