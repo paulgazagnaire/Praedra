@@ -1101,6 +1101,110 @@ test('heavy-slug-exits-arena', () => {
   }
 });
 
+// GRAVITY (universal) — the 1/d^2 tail never ends inside the arena: a free body far
+// OUTSIDE a source's old wellReach cutoff still feels it. A ballistic torpedo passing
+// 1400px above a BIG rock (old hard edge: 2.7*r ~ 1026px -> zero force) must bend.
+test('gravity-universal-far-field', () => {
+  const cfg = Praedra.defaultConfig();
+  const T = cfg.torpedo;
+  const rockR = 380, rock = { x: MID.x, y: MID.y, r: rockR };
+  const oldReach = rockR * cfg.gravity.wellReach;
+  const startY = MID.y - 1400;
+  assert(1400 > oldReach + 300, `flight path (1400px off the source) must clear the old reach ${oldReach}`);
+  const run = (gravOverride) => {
+    const m = Praedra.createScenario({
+      seed: 5,
+      overrides: Object.assign(zeroDamageOverrides(cfg), gravOverride),
+      ships: [pinned('interceptor', 'A', 200, cfg.arena.h - 200, 0),
+              pinned('interceptor', 'B', cfg.arena.w - 200, cfg.arena.h - 200, 0)],
+      asteroids: [rock],
+    });
+    const st = m.state, tid = st.nextId++;
+    st.torps.push({ id: tid, team: 'A', ownerId: -1, targetId: -1, rockId: -1,
+      x: 200, y: startY, heading: 0, vx: T.speed, vy: 0,
+      life: T.lifetime, lockLost: 0, spent: true, alive: true, traveled: 0 });
+    let lastY = startY, lastX = 200;
+    for (let i = 0; i < 20 * TICK_RATE && !m.done; i++) {
+      m.step();
+      const tp = st.torps.find((t) => t.id === tid);
+      if (tp && tp.alive) { lastY = tp.y; lastX = tp.x; }
+    }
+    return { y: lastY, x: lastX };
+  };
+  const bent = run({});
+  const straight = run({ gravity: { G: 0 } });
+  assert(Math.abs(straight.y - startY) < 1, `G=0 torpedo drifted ${(straight.y - startY).toFixed(1)}px — not a control run`);
+  assert(bent.y - straight.y > 25,
+    `far-field bend only ${(bent.y - straight.y).toFixed(1)}px toward the source — universal tail missing (old cutoff back?)`);
+});
+
+// Two EQUAL mid-size rocks in empty space fall toward each other — mutual attraction
+// (the old wake rule required a strictly bigger source, so equals never moved).
+test('gravity-mutual-rocks-converge', () => {
+  const cfg = Praedra.defaultConfig();
+  const r = 200, gap = 520;
+  assert(r >= cfg.gravity.sourceMinRadius, 'test rocks must be gravity sources');
+  const m = Praedra.createScenario({
+    seed: 8,
+    overrides: zeroDamageOverrides(cfg),
+    ships: [pinned('interceptor', 'A', 200, cfg.arena.h - 200, 0),
+            pinned('interceptor', 'B', cfg.arena.w - 200, 200, 0)],
+    asteroids: [{ x: MID.x - gap / 2, y: MID.y, r }, { x: MID.x + gap / 2, y: MID.y, r }],
+  });
+  const st = m.state;
+  const [a, b] = st.asteroids;
+  const d0 = dist2D(a.x, a.y, b.x, b.y);
+  for (let i = 0; i < 20 * TICK_RATE && !m.done; i++) m.step();
+  const d1 = dist2D(a.x, a.y, b.x, b.y);
+  assert(d0 - d1 > 25, `equal rocks closed only ${(d0 - d1).toFixed(1)}px in 20s — mutual attraction missing`);
+  assert(a.x > MID.x - gap / 2 + 8 && b.x < MID.x + gap / 2 - 8,
+    `motion not mutual (a moved ${(a.x - (MID.x - gap / 2)).toFixed(1)}, b moved ${(b.x - (MID.x + gap / 2)).toFixed(1)})`);
+});
+
+// Saturn-ring accretion: a DRIFTING sub-source rock dislodges a parked pebble beside its
+// path (mover-driven local mutual gravity), and the pair converges. Settled fields stay
+// parked until something moves nearby.
+test('gravity-debris-dislodge', () => {
+  const cfg = Praedra.defaultConfig();
+  const m = Praedra.createScenario({
+    seed: 11,
+    overrides: zeroDamageOverrides(cfg),
+    ships: [pinned('interceptor', 'A', 200, cfg.arena.h - 200, 0),
+            pinned('interceptor', 'B', cfg.arena.w - 200, 200, 0)],
+    asteroids: [{ x: MID.x, y: MID.y, r: 95 }, { x: MID.x + 160, y: MID.y, r: 24 }],
+  });
+  const st = m.state;
+  const [p, q] = st.asteroids;
+  assert(p.r < cfg.gravity.sourceMinRadius, 'driver rock must be sub-source (debris pass, not the global field)');
+  p.moving = true; p.vx = 8; p.vy = 0; st.gridDirty = true;   // set it drifting toward the pebble
+  const q0x = q.x;
+  let woke = false;
+  for (let i = 0; i < 8 * TICK_RATE && !m.done; i++) {
+    m.step();
+    if (q.moving) woke = true;
+  }
+  assert(woke, 'parked pebble never dislodged by the passing mover — debris accretion pass missing');
+  assert(q0x - q.x > 8, `pebble drifted only ${(q0x - q.x).toFixed(1)}px toward the mover in 8s`);
+});
+
+// Space: rotation never decays — every rock tumbles idly (id-derived, deterministic).
+test('rocks-idle-tumble', () => {
+  const cfg = Praedra.defaultConfig();
+  assert(cfg.debris.idleSpin > 0, 'no debris.idleSpin in live config');
+  const m = Praedra.createScenario({
+    seed: 3,
+    overrides: zeroDamageOverrides(cfg),
+    ships: [pinned('interceptor', 'A', 200, cfg.arena.h - 200, 0),
+            pinned('interceptor', 'B', cfg.arena.w - 200, 200, 0)],
+    asteroids: [{ x: MID.x, y: MID.y, r: 60 }, { x: MID.x + 400, y: MID.y, r: 45 },
+                { x: MID.x, y: MID.y + 400, r: 80 }, { x: MID.x + 400, y: MID.y + 400, r: 30 }],
+  });
+  const rot0 = m.state.asteroids.map((o) => o.rot);
+  for (let i = 0; i < 3 * TICK_RATE && !m.done; i++) m.step();
+  const turned = m.state.asteroids.filter((o, i) => Math.abs(o.rot - rot0[i]) > 0.02).length;
+  assert(turned >= 2, `only ${turned}/4 settled rocks tumbled in 3s — idle spin not running for parked rocks`);
+});
+
 // TEST 6 — battleship spawns with its fleet at full hp, and the widened per-fleet spawn pitch
 // (2.4 x the largest hull's radius) keeps a radius-78 hull from spawning interpenetrating.
 test('battleship-spawns-with-fleet', () => {

@@ -610,23 +610,24 @@
       g.beginPath(); g.arc(o.x + o.r * 0.34, o.y - o.r * 0.18, o.r * 0.11, 0, 6.2832); g.stroke();
     }
   }
-  /* Local gravity field for visual effects — mirrors the sim's bounded-well model. */
+  /* Local gravity field for visual effects — mirrors the sim's UNIVERSAL 1/d^2 model
+     (no well edge; the per-source cutoff is the farMinAccel horizon, like gravityAt). */
   function fieldAt(st, GRV, x, y) {
     var gx = 0, gy = 0;
     if (!GRV || GRV.G <= 0) return { x: 0, y: 0 };
     var A = st.asteroids;
+    var floor = GRV.farMinAccel || GRV.minAccel || 0.02;
     for (var i = 0; i < A.length; i++) {
       var o = A[i];
       if (!o.alive || o.r < GRV.sourceMinRadius) continue;
       var dx = o.x - x, dy = o.y - y;
       var d2 = dx * dx + dy * dy;
       if (d2 < 1e-6) continue;
-      var reach = o.r * GRV.wellReach;
-      if (d2 > reach * reach) continue;
+      var m = o.r * o.r * o.r;
+      if (d2 > (GRV.G * m) / floor) continue;
       var soft = GRV.softening * o.r;
-      var acc = Math.min(GRV.maxAccel, GRV.G * o.r * o.r * o.r / (d2 + soft * soft));
-      var d = Math.sqrt(d2), fade0 = reach * 0.85;
-      if (d > fade0) acc *= (reach - d) / (reach - fade0);
+      var acc = Math.min(GRV.maxAccel, GRV.G * m / (d2 + soft * soft));
+      var d = Math.sqrt(d2);
       gx += (dx / d) * acc; gy += (dy / d) * acc;
     }
     return { x: gx, y: gy };

@@ -174,8 +174,15 @@ function makeAsteroid(state, x, y, r) {
                        + a3 * Math.sin(k3 * th + p3)
                        + state.rng.range(-0.04, 0.04), 0.7, 1.22));
   }
-  return { id: state.nextId++, x: x, y: y, r: r, hp: hp, maxHp: hp, vx: 0, vy: 0,
-           rot: state.rng.angle(), rotVel: 0, shape: shape, alive: true, moving: false };
+  // idle tumble: id-derived (Knuth hash -> [-1,1)), NOT an rng draw — adding a draw here
+  // would shift every later sample and reshape all existing seeds/scenarios
+  var id = state.nextId++;
+  // pebbles only: a tumbling contour UNDER a rested pile would excavate it (settled
+  // pairs are never collision-resolved), so pile anchors (mid/BIG/titan) hold still
+  var spins = r < (cfg.debris.idleSpinMaxRadius || 0);
+  var spin = spins ? ((((id * 2654435761) >>> 0) % 2000) / 1000 - 1) * (cfg.debris.idleSpin || 0) : 0;
+  return { id: id, x: x, y: y, r: r, hp: hp, maxHp: hp, vx: 0, vy: 0,
+           rot: state.rng.angle(), rotVel: spin, shape: shape, alive: true, moving: false };
 }
 /* Effective surface radius of rock o toward point (x,y): linear interpolation of the
    shape polygon, matching exactly what drawAsteroid renders (including tumble rot).

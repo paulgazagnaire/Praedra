@@ -121,12 +121,14 @@ function updateAsteroids(state, dt) {
   var anyMoving = 0;
   for (var i = 0; i < A.length; i++) {
     var o = A[i];
-    if (!o.alive || !o.moving) continue;
+    if (!o.alive) continue;
+    o.rot += o.rotVel * dt;   // idle tumble runs for EVERY rock — vacuum: spin never decays
+    if (!o.moving) continue;
     anyMoving++;
     o.x += o.vx * dt; o.y += o.vy * dt;
-    o.rot += o.rotVel * dt;
     var damp = Math.max(0, 1 - D.drag * dt);
-    o.vx *= damp; o.vy *= damp; o.rotVel *= damp;
+    o.vx *= damp; o.vy *= damp; // translational damping only: the gameplay brake that lets
+                                // debris settle; rotVel is exempt (nothing to slow it in space)
     if (o.x < o.r) { o.x = o.r; o.vx = Math.abs(o.vx) * D.restitution; }
     if (o.x > W - o.r) { o.x = W - o.r; o.vx = -Math.abs(o.vx) * D.restitution; }
     if (o.y < o.r) { o.y = o.r; o.vy = Math.abs(o.vy) * D.restitution; }
@@ -201,19 +203,23 @@ function gravitySources(state) {
     if (!o.alive || o.r < GR.sourceMinRadius) continue;
     var m = o.r * o.r * o.r;
     var soft = GR.softening * o.r;
-    // well ends at the earlier of the minAccel horizon and the bounded reach —
-    // an unbounded titan-mass well would swallow the whole map
+    // UNIVERSAL tail: the physics cutoff is the farMinAccel horizon (a per-source bound
+    // that scales with mass — the titan's exceeds any arena, a BIG's self-limits at ~5k px).
+    // `reach` survives as the AI/render/wake "strong well" boundary, NOT an accel bound.
     var reach = o.r * GR.wellReach;
-    var maxD2 = Math.min((GR.G * m) / GR.minAccel, reach * reach);
+    var maxD2 = (GR.G * m) / (GR.farMinAccel || GR.minAccel);
     out.push({ o: o, m: m, soft2: soft * soft, maxD2: maxD2,
-               reach: reach, fade0: reach * 0.85 });
+               reach: reach, reach2: reach * reach });
   }
   return out;
 }
 /* Sum field accel at (x,y) into GVEC; excludeId skips a source pulling on itself.
-   GVEC.wakeOK: some contributing source is strictly BIGGER than bodyR — anything in a
-   well falls toward what out-masses it (pebbles onto BIGs, BIGs onto the titan), but a
-   monster is never stirred by its lessers, so the titan stays the map's fixed anchor. */
+   GVEC.wakeOK: some source AT LEAST as big as bodyR contributes from INSIDE its own
+   reach — the settled-rock wake gate. >= (not >) makes equal masses fall toward each
+   other (mutual attraction); the titan, strictly bigger than everything, is never
+   stirred and stays the map's anchor. The far 1/d^2 tail (past reach) pulls on every
+   FREE body but never wakes parked terrain: far-tail accels sit in the sub-rockWake
+   band where creep stalls on drag and re-settles (the documented thrash zone). */
 function gravityAt(GR, srcs, x, y, excludeId, bodyR) {
   var ax = 0, ay = 0, wakeOK = false;
   for (var i = 0; i < srcs.length; i++) {
@@ -222,11 +228,10 @@ function gravityAt(GR, srcs, x, y, excludeId, bodyR) {
     var dx = s.o.x - x, dy = s.o.y - y;
     var d2 = dx * dx + dy * dy;
     if (d2 > s.maxD2 || d2 < 1e-6) continue;
-    var a = GR.G * s.m / (d2 + s.soft2);
+    var a = GR.G * s.m / (d2 + s.soft2);   // smooth 1/d^2 all the way out — no edge, no taper
     if (a > GR.maxAccel) a = GR.maxAccel;
     var d = Math.sqrt(d2);
-    if (d > s.fade0) a *= (s.reach - d) / (s.reach - s.fade0); // smooth edge, no cliff
-    if (s.o.r > bodyR) wakeOK = true;
+    if (s.o.r >= bodyR && d2 <= s.reach2) wakeOK = true;
     ax += (dx / d) * a; ay += (dy / d) * a;
   }
   GVEC.ax = ax; GVEC.ay = ay; GVEC.wakeOK = wakeOK;
@@ -235,10 +240,9 @@ function applyGravity(state, dt) {
   var GR = state.config.gravity;
   var srcs = gravitySources(state);
   state.gravSources = srcs;                 // renderers/inspectors read this; sim-internal otherwise
-  if (!srcs.length) return;
   var i, wake2 = GR.rockWake * GR.rockWake;
   var ships = state.ships;
-  for (i = 0; i < ships.length; i++) {
+  if (srcs.length) for (i = 0; i < ships.length; i++) {
     var sh = ships[i];
     if (!sh.alive || sh.pinned) continue;   // pinned ships hold station by contract
     gravityAt(GR, srcs, sh.x, sh.y, -1, 0);
@@ -251,13 +255,19 @@ function applyGravity(state, dt) {
     sh.vy += gay * dt;
   }
   var A = state.asteroids;
-  for (i = 0; i < A.length; i++) {
+  if (srcs.length) for (i = 0; i < A.length; i++) {
     var o = A[i];
     if (!o.alive) continue;
     // settled rocks: run the wake evaluation every 3rd tick, staggered by id — with the
     // shell gone, WHOLE fields are wake-eligible and a per-tick field+support check for
     // every parked rock is pure waste. A <=2-tick wake latency is invisible at creep speed.
     if (!o.moving && ((state.tick + o.id) % 3) !== 0) continue;
+    // slow creepers integrate the (slowly-varying) field every 3rd tick at 3x dt — the
+    // universal tail keeps far debris drifting for minutes, and per-tick field math for
+    // a whole creeping map is the wallclock hot spot. Fast debris integrates every tick.
+    var slow = o.moving && (o.vx * o.vx + o.vy * o.vy) < 900;
+    if (slow && ((state.tick + o.id) % 3) !== 0) continue;
+    var gdt = (o.moving && ((state.tick + o.id) % 3) === 0 && slow) ? dt * 3 : dt;
     gravityAt(GR, srcs, o.x, o.y, o.id, o.r);
     var g2 = GVEC.ax * GVEC.ax + GVEC.ay * GVEC.ay;
     if (g2 <= 0) continue;
@@ -285,9 +295,50 @@ function applyGravity(state, dt) {
       o.vx += gux * 4; o.vy += guy * 4;
       rockWoke(state, o);
     }
-    o.vx += GVEC.ax * GR.rockMult * dt;
-    o.vy += GVEC.ay * GR.rockMult * dt;
+    o.vx += GVEC.ax * GR.rockMult * gdt;
+    o.vy += GVEC.ay * GR.rockMult * gdt;
   }
+  // Saturn-ring accretion: local MUTUAL gravity among sub-source debris. Movers drive
+  // the pass — a drifting rock tugs its neighborhood toward itself (and is tugged back),
+  // and can DISLODGE a parked pebble when its pull alone beats the rockWake floor (same
+  // thrash-safe threshold as the wells: dislodged creep survives drag). Settled-settled
+  // pairs never interact, so parked fields stay parked until something moves nearby —
+  // "when an object moves, it influences everything around it." Grid-bounded, K-capped.
+  var AR = GR.debrisAccretionRadius || 0;
+  var dmG = (GR.debrisMult || 0) * GR.G;
+  if (AR > 0 && dmG > 0) {
+    var K = GR.debrisNeighborCap || 6;
+    var ddt = dt * 2; // pass runs every 2nd tick per mover (staggered) — see below
+    for (i = 0; i < A.length; i++) {
+      var p = A[i];
+      if (!p.alive || !p.moving || p.r >= GR.sourceMinRadius) continue;
+      if ((state.tick + p.id) & 1) continue;   // amortized: local field varies slowly
+      var pm3 = p.r * p.r * p.r, taken = 0;
+      rocksNearSeg(state, p.x, p.y, p.x, p.y, AR + 40, function (q) {
+        if (taken >= K) return true;
+        if (q.id === p.id || q.r >= GR.sourceMinRadius) return false;
+        if (q.moving && q.id < p.id) return false; // mover-mover pair once, from the lower id
+        var dx = q.x - p.x, dy = q.y - p.y;
+        var d2 = dx * dx + dy * dy;
+        if (d2 > AR * AR || d2 < 1) return false;
+        taken++;
+        var d = Math.sqrt(d2), ux = dx / d, uy = dy / d;
+        var softL = 0.5 * (p.r + q.r);             // shared softening: no point-blank slingshots
+        var s2 = d2 + softL * softL;
+        var aOnP = dmG * (q.r * q.r * q.r) / s2, aOnQ = dmG * pm3 / s2;
+        p.vx += ux * aOnP * ddt; p.vy += uy * aOnP * ddt;
+        if (q.moving) {
+          q.vx -= ux * aOnQ * ddt; q.vy -= uy * aOnQ * ddt;
+        } else if (aOnQ >= GR.rockWake) {
+          q.moving = true;
+          q.vx -= ux * 4; q.vy -= uy * 4;          // starter kick (see the wake above)
+          rockWoke(state, q);
+        }
+        return false;
+      });
+    }
+  }
+  if (!srcs.length) return;
   var torps = state.torps, T = state.config.torpedo;
   for (i = 0; i < torps.length; i++) {
     var tp = torps[i];

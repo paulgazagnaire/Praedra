@@ -72,35 +72,60 @@ var CONFIG_DEFAULTS = {
     impactMinSpeed: 25,            // below this a fragment just rests against the hull
     maxAsteroids: 500,             // hard cap on live rocks (cascade safety)
     spinMax: 1.4,                  // rad/s visual tumble for flung fragments
+    idleSpin: 0.08,                // rad/s cap on the id-derived tumble small rocks are born
+                                   // with (space: rotation never decays to a standstill —
+                                   // the field is visibly alive even far outside the wells).
+                                   // Deterministic from o.id, no RNG draw (seed streams and
+                                   // scenario layouts are untouched)
+    idleSpinMaxRadius: 60,         // only rocks under this tumble idly: bigger rocks anchor
+                                   // accretion piles, and a rotating contour under a settled
+                                   // pile would excavate it (settled pairs are never
+                                   // collision-resolved)
   },
 
   // --- GRAVITY (massive rocks bend everything; cinematic constant, not Kepler) ---
   // accel toward a source rock = G * r^3 / (d^2 + (softening*r)^2), clamped to maxAccel.
-  // Mass goes with r^3 so surface pull scales with radius: only the BIG asteroids (and
-  // their first-generation fragments) matter — a pebble's well is beneath minAccel.
-  // Ships, drifting rocks, torpedoes and bombs all feel it; EVERYTHING inside a well
-  // responds — a settled rock anywhere in a well wakes once the pull beats rockWake
-  // (no distance shell). Only the sub-rockWake fringe (where creep would stall against
-  // drag and re-settle) and down-well-supported piles hold still.
+  // UNIVERSAL: the 1/d^2 tail is never zeroed inside the arena — every FREE body (ships,
+  // drifting rocks, torpedoes, bombs) feels every source everywhere, however subtly; the
+  // old wellReach hard fade is gone from the physics and survives only as the AI/render
+  // "strong well" boundary. SETTLED rocks are the exception (anti-thrash): they can only
+  // WAKE inside a source's reach where the pull beats rockWake; the far tail never stirs
+  // parked terrain. Equal-mass sources wake each other (mutual attraction — two drifting
+  // monsters fall together); only a strictly-larger body is immune to its lessers, so the
+  // titan stays the map's anchor. Small debris additionally attracts NEARBY debris
+  // (movers only — the Saturn-ring accretion pass; see debris* knobs).
   gravity: {
     G: 0.045,                      // the one true knob (UI slider scales it live)
     softening: 0.5,                // core softening length as a fraction of source radius
-    sourceMinRadius: 100,          // rocks smaller than this pull too weakly to compute
-    minAccel: 0.25,                // px/s^2 cutoff: beyond this the well ends (perf + sanity)
+    sourceMinRadius: 100,          // rocks smaller than this pull too weakly for the GLOBAL
+                                   // field (they still join the local debris-accretion pass)
+    minAccel: 0.25,                // legacy near-well floor (kept for compat; the physics
+                                   // cutoff is farMinAccel below)
+    farMinAccel: 0.02,             // px/s^2 perf cutoff for the universal tail: per-source
+                                   // horizon d = sqrt(G*m/this). The titan's horizon (~62k px)
+                                   // exceeds any arena — effectively no cutoff; a BIG's
+                                   // (~5k px) self-limits. One branch cheaper than the old taper
     maxAccel: 45,                  // clamp: no singularity slingshots at point-blank
-    wellReach: 2.7,                // absolute well radius = source r * this; the pull fades
-                                   // to zero across the outer 15%. Without this bound the
-                                   // titan's r^3 mass would drag the ENTIRE map into itself
+    wellReach: 2.7,                // "strong well" boundary = source r * this. NO LONGER a
+                                   // physics bound: AI routing (bbSkirtWell), the rendered
+                                   // well-edge ring, and the settled-rock WAKE gate use it
     rockWakeShell: 650,            // TERRAIN PLACEMENT ONLY: generateTerrain keeps BIGs this
                                    // far outside the titan's surface so they anchor the layout
                                    // instead of spawning mid-fall. (Its old wake-gating role
                                    // is gone: rocks wake ANYWHERE in a well — see rockWake)
-    rockWake: 1.2,                 // settled rock starts sliding above this pull, anywhere in
-                                   // the well. The floor is drag-derived: below ~0.7 px/s^2
+    rockWake: 1.2,                 // settled rock starts sliding above this pull, INSIDE a
+                                   // source's reach (far-tail pull never wakes terrain).
+                                   // The floor is drag-derived: below ~0.7 px/s^2
                                    // terminal creep (a/drag) sits under the 2 px/s settle
                                    // threshold and a woken rock just re-settles (thrash).
                                    // 1.2 = the rendered "well's edge" ring: what you see
                                    // creeping is what creeps
+    debrisAccretionRadius: 240,    // local mutual-gravity range between a MOVING sub-source
+                                   // rock and its neighbors (grid-bounded; Saturn-ring pass)
+    debrisNeighborCap: 6,          // pairwise partners per mover per tick (perf bound)
+    debrisMult: 1.0,               // feel multiplier for the debris-accretion pass; a settled
+                                   // neighbor is dislodged only when the mover's pull beats
+                                   // rockWake (same thrash-safe floor as the wells)
     shipEscapeCap: 0.65,           // pull on a ship never exceeds this fraction of its own
                                    // max thrust accel — wells threaten, they never imprison
                                    // (also what keeps the x3 slider playable)
