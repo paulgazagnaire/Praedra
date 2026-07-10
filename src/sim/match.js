@@ -232,7 +232,6 @@ var api = {
 
   createScenario: function (opts) {
     var state = baseState(opts.seed, opts.overrides);
-    state.spawnA = { x: 0, y: 0 }; state.spawnB = { x: 0, y: 0 };
     var rocks = opts.asteroids || [];
     for (var i = 0; i < rocks.length; i++) state.asteroids.push(makeAsteroid(state, rocks[i].x, rocks[i].y, rocks[i].r));
     var ships = opts.ships || [];
@@ -243,6 +242,17 @@ var api = {
       sh.pinned = !!sp.pinned;
       state.ships.push(sh);
     }
+    // Scenario spawns = each team's actual starting centroid ("the battle brief"): the
+    // LOS-honest hunt's landmark tier marches at the enemy SPAWN, and the old {0,0}
+    // placeholder sent scenario hunters to the arena corner instead of at the enemy's
+    // origin — every hunt-path scenario test assumes the old omniscient beeline's intent.
+    var ca = { x: 0, y: 0, n: 0 }, cb = { x: 0, y: 0, n: 0 };
+    for (var k = 0; k < state.ships.length; k++) {
+      var c = state.ships[k].team === 'A' ? ca : cb;
+      c.x += state.ships[k].x; c.y += state.ships[k].y; c.n++;
+    }
+    state.spawnA = ca.n ? { x: ca.x / ca.n, y: ca.y / ca.n } : { x: 0, y: 0 };
+    state.spawnB = cb.n ? { x: cb.x / cb.n, y: cb.y / cb.n } : { x: 0, y: 0 };
     finishSetup(state);
     return makeMatchObject(state);
   },
