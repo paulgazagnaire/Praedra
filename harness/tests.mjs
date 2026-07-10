@@ -1205,6 +1205,182 @@ test('rocks-idle-tumble', () => {
   assert(turned >= 2, `only ${turned}/4 settled rocks tumbled in 3s — idle spin not running for parked rocks`);
 });
 
+// ---- Fleet-AI rework gates (LOS-honest intel, anti-clump spacing, admiral layer) ----
+
+// Ported verbatim from harness/diagnose.mjs (clumping metrics).
+function nearestNeighborDists(ships, team, classSet) {
+  const group = ships.filter((s) => s && s.alive && s.team === team && classSet.includes(s.cls));
+  const out = [];
+  for (let i = 0; i < group.length; i++) {
+    let best = Infinity;
+    for (let j = 0; j < group.length; j++) {
+      if (i === j) continue;
+      const d = Math.hypot(group[i].x - group[j].x, group[i].y - group[j].y);
+      if (d < best) best = d;
+    }
+    if (Number.isFinite(best)) out.push(best);
+  }
+  return out;
+}
+function chainExposureFraction(ships, team, classSet, threshold) {
+  const group = ships.filter((s) => s && s.alive && s.team === team && classSet.includes(s.cls));
+  if (group.length === 0) return null;
+  let close = 0;
+  for (let i = 0; i < group.length; i++) {
+    let best = Infinity;
+    for (let j = 0; j < group.length; j++) {
+      if (i === j) continue;
+      const d = Math.hypot(group[i].x - group[j].x, group[i].y - group[j].y);
+      if (d < best) best = d;
+    }
+    if (best < threshold) close++;
+  }
+  return close / group.length;
+}
+
+// Complaint #1: a ship with NO detected contact (and none ever made) must not steer at
+// the true position of an enemy. The destroyer hunts landmarks (enemy spawn <-> centre),
+// so it MOVES — but a pinned, coasting, occluded frigate in a far corner is never found
+// by dead reckoning. The old build beelined straight at it.
+test('hunt-honest-never-detected', () => {
+  const cfg = Praedra.defaultConfig();
+  const W = cfg.arena.w, H = cfg.arena.h;
+  // hide the frigate in the top-right corner behind a rock wall; hunter starts bottom-left.
+  // Landmark tiers aim at spawn(0,0-ish scenario spawns are (0,0)) and centre — never the corner.
+  const fx = W - 600, fy = 600;
+  const m = Praedra.createScenario({
+    seed: 4,
+    ships: [
+      { cls: 'destroyer', team: 'A', x: 600, y: H - 600, heading: 0 },
+      pinned('frigate', 'B', fx, fy, 0),
+    ],
+    asteroids: [{ x: fx - 400, y: fy + 400, r: 260 }], // occluder on the diagonal
+  });
+  const dst = findShip(m, 'A', 'destroyer');
+  let minD = Infinity, moved = 0, sx = dst.x, sy = dst.y;
+  for (let i = 0; i < 30 * TICK_RATE && !m.done; i++) {
+    m.step();
+    assert(m.state.detA.length === 0, 'frigate got detected — scenario geometry broken, move the occluder');
+    minD = Math.min(minD, dist2D(dst.x, dst.y, fx, fy));
+    moved = Math.max(moved, dist2D(dst.x, dst.y, sx, sy));
+  }
+  assert(moved > 800, `hunter barely moved (${moved.toFixed(0)}px) — search pattern dead`);
+  assert(minD > 1500,
+    `blind hunter closed to ${minD.toFixed(0)}px of a never-detected enemy — omniscient hunt is back`);
+});
+
+// Complaint #2 headline: the reported massacre — 5 bombers + 8 interceptors vs ONE enemy
+// interceptor (plus a pinned bait destroyer so the wave has a capital to attack). The old
+// build lost 13 lights to a single chain. Spacing + lanes + staggering must keep friendly-
+// bomb fratricide near zero and total losses far below wipe.
+test('one-interceptor-cannot-chain-wave', () => {
+  const cfg = Praedra.defaultConfig();
+  const ships = [
+    { cls: 'interceptor', team: 'A', x: 3800, y: 2800, heading: Math.PI },
+    pinned('destroyer', 'A', 4200, 2800, Math.PI),
+  ];
+  for (let i = 0; i < 5; i++) ships.push({ cls: 'bomber', team: 'B', x: 1000, y: 2400 + i * 200, heading: 0 });
+  for (let i = 0; i < 8; i++) ships.push({ cls: 'interceptor', team: 'B', x: 800, y: 2300 + i * 160, heading: 0 });
+  const m = Praedra.createScenario({ seed: 6, ships, asteroids: [] });
+  stepSeconds(m, 45);
+  const deaths = m.state.stats.deaths.filter((d) => d.team === 'B');
+  const fratricide = deaths.filter((d) => (d.by === 'bomb' || d.by === 'bombAoe') && d.atkTeam === 'B').length;
+  assert(deaths.length <= 6,
+    `team B lost ${deaths.length}/13 lights to one interceptor + bait — the chain-wipe is back`);
+  assert(fratricide <= 1,
+    `${fratricide} friendly-bomb deaths in one wave (must be <=1) — spacing/lanes failed`);
+});
+
+// Anti-clump invariant DURING bomb runs, in a real battle: sample light spacing while any
+// bomber is in run mode; the p10 nearest-neighbour must clear the single-blast kill radius.
+test('run-phase-spacing', () => {
+  for (const seed of [3, 7]) {
+    const m = Praedra.createMatch({ seed, teamA: 'BALANCED', teamB: 'BALANCED',
+      overrides: { terrainDensity: 0.5, matchTimerSeconds: 240 } });
+    const nn = [], chain = [];
+    for (let i = 0; i < 240 * TICK_RATE && !m.done; i++) {
+      m.step();
+      if (i % 30 !== 0) continue;
+      for (const team of ['A', 'B']) {
+        const running = m.state.ships.some((s) => s.alive && s.team === team &&
+          s.cls === 'bomber' && s.ai.mode === 'run');
+        if (!running) continue;
+        nn.push(...nearestNeighborDists(m.state.ships, team, ['bomber', 'interceptor']));
+        const c = chainExposureFraction(m.state.ships, team, ['bomber', 'interceptor'], 120);
+        if (c !== null) chain.push(c);
+      }
+    }
+    if (!nn.length) { warn(`seed ${seed}: no run-mode samples — battle never reached a bomb run`); continue; }
+    nn.sort((a, b) => a - b);
+    const p10 = nn[Math.floor(nn.length * 0.1)];
+    chain.sort((a, b) => a - b);
+    const medChain = chain[Math.floor(chain.length / 2)];
+    assert(p10 >= 100,
+      `seed ${seed}: p10 light nearest-neighbour ${p10.toFixed(0)}px during bomb runs (need >=100)`);
+    assert(medChain <= 0.25,
+      `seed ${seed}: median chain-exposure ${medChain.toFixed(2)} during runs (need <=0.25)`);
+  }
+});
+
+// Admiral task organization: scouts/screen/main assigned as designed; the gate cleanly
+// disables the whole layer.
+test('admiral-roles-assigned', () => {
+  const cfg = Praedra.defaultConfig();
+  const m = Praedra.createMatch({ seed: 2, teamA: 'BALANCED', teamB: 'BALANCED',
+    overrides: { terrainDensity: 0.5 } });
+  for (let i = 0; i < 120 && !m.done; i++) m.step();
+  for (const team of ['A', 'B']) {
+    const own = m.state.ships.filter((s) => s.alive && s.team === team);
+    const scouts = own.filter((s) => s.ai.fleetRole === 'scout');
+    const screen = own.filter((s) => s.ai.fleetRole === 'screen');
+    const caps = own.filter((s) => isNaN(0) ? false : ['destroyer', 'frigate', 'battleship'].includes(s.cls));
+    assert(scouts.length === cfg.admiral.scoutCount && scouts.every((s) => s.cls === 'interceptor'),
+      `${team}: ${scouts.length} scouts (want ${cfg.admiral.scoutCount}, all interceptors)`);
+    assert(screen.length >= 1, `${team}: no screen assigned`);
+    assert(caps.every((s) => s.ai.fleetRole === 'main'), `${team}: a capital left the main body`);
+    assert(m.state.admiral[team].posture, `${team}: no admiral posture`);
+  }
+  // disabled layer: no roles, match still runs and resolves
+  const r = Praedra.runMatch({ seed: 2, teamA: 'BALANCED', teamB: 'BALANCED',
+    overrides: { terrainDensity: 0.5, matchTimerSeconds: 120, admiral: { enabledTeams: '' } } });
+  assert(r && r.winner, 'admiral-disabled match did not resolve');
+});
+
+// Torpedo threat sense is LOS-gated: no pre-cognitive jinking through solid rock.
+// A/B pair (mirrors los-blocked/los-clear): same inbound tracking torpedo, with and
+// without an occluding rock; the auto bomber's threat response (nav.jink) must differ.
+test('torp-sense-los', () => {
+  const cfg = Praedra.defaultConfig();
+  const run = (withRock) => {
+    const m = Praedra.createScenario({
+      seed: 3,
+      overrides: zeroDamageOverrides(cfg),
+      ships: [
+        { cls: 'bomber', team: 'A', x: MID.x, y: MID.y, heading: 0 },
+        // decoy must be DETECTED (destroyer coasting visible 1680) yet far enough that the
+        // bomber stays in APPROACH mode (jink: threatened) — run mode forces jink off
+        pinned('destroyer', 'B', MID.x + 1400, MID.y + 300, Math.PI),
+      ],
+      asteroids: withRock ? [{ x: MID.x + 250, y: MID.y - 200, r: 120 }] : [],
+    });
+    const st = m.state;
+    const bomber = findShip(m, 'A', 'bomber');
+    // inbound tracking torpedo from behind the rock line (upper-left approach)
+    st.torps.push({ id: st.nextId++, team: 'B', ownerId: -1, targetId: bomber.id, rockId: -1,
+      x: MID.x + 500, y: MID.y - 400, heading: 0, vx: 0, vy: 0,   // parked: geometry stays fixed
+      life: cfg.torpedo.lifetime, lockLost: 0, spent: false, alive: true, traveled: 300 });
+    let jinked = false;
+    for (let i = 0; i < 30 && !m.done; i++) {   // half a second: geometry barely moves
+      m.step();
+      if (bomber.nav && bomber.nav.jink) jinked = true;
+    }
+    return jinked;
+  };
+  assert(run(false) === true, 'clear-LOS tracking torpedo did not trigger a jink — threat sense dead');
+  assert(run(true) === false, 'bomber jinked at a torpedo it cannot see (rock occludes) — pre-cognitive sense is back');
+});
+
+
 // TEST 6 — battleship spawns with its fleet at full hp, and the widened per-fleet spawn pitch
 // (2.4 x the largest hull's radius) keeps a radius-78 hull from spawning interpenetrating.
 test('battleship-spawns-with-fleet', () => {
@@ -1285,14 +1461,14 @@ test('battleship-durability', () => {
 // spawn-gap fix are all pure/deterministic). Same seed twice -> identical result.
 test('determinism-with-battleship', () => {
   const opts = () => ({
-    // seed 1: verified the heavy rail actually CONNECTS within the cap (measured 420 hrail dmg
-    // by 150s on the projectile rework; seeds 2/3 deal 0 — the turrets never land a hit there)
-    seed: 1,
-    // 150s cap: determinism is proven by the comparison, not the match length — running the
-    // full 360s twice (~29s wall) bought nothing. The assertion below guarantees the turret
-    // slew/stagger/fire RNG path is genuinely exercised before the cap.
-    overrides: { terrainDensity: 0.5, matchTimerSeconds: 150 },
-    teamA: ['battleship', 'destroyer', 'frigate', 'frigate'],
+    // seed 8 + interceptor scouts: under LOS-HONEST hunting the turrets need SUSTAINED
+    // detection (the admiral's scouts shadow contacts and keep them lit) — swept seeds
+    // 1-10: this one lands 330 hrail dmg and resolves by elimination at ~74s
+    seed: 8,
+    // cap 120s: determinism is proven by the comparison, not the match length. The
+    // assertion below guarantees the turret slew/stagger/fire RNG path is exercised.
+    overrides: { terrainDensity: 0.1, matchTimerSeconds: 120 },
+    teamA: ['battleship', 'destroyer', 'frigate', 'interceptor', 'interceptor', 'interceptor'],
     teamB: ['destroyer', 'destroyer', 'frigate', 'frigate'],
   });
   const r1 = Praedra.runMatch(opts());

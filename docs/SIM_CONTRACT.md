@@ -110,10 +110,15 @@ hiding it, since neither the enemy nor a "ghost" of it ever entered memory.
   (`ai.rockShootSeconds`-gated; memory itself never expires but is only "recent"
   within `detection.memorySeconds`, default 5s).
 - `state.lastContact[team] = { x, y, t }` — most recent sighting per team, used for
-  `huntPoint` when a team has no live detected contacts. When it goes stale
-  (> `memorySeconds*2.5`), hunting falls back to the enemy fleet's rough CENTROID
-  (strategic picture only — it gates no weapon; the old enemy-spawn fallback was
-  equally omniscient but stale, and on titan-scale maps it ran matches into the timer).
+  `huntPoint` when a team has no live detected contacts. Hunting is LOS-HONEST, tiered:
+  hot memory (`memorySeconds*2.5`) → cold ghost (up to `admiral.ghostMaxAge`) → the
+  team's deterministic admiral SEARCH pattern (expanding ring sweep around the freshest
+  ghost of a living enemy, `admiral.searchRing*`) → a spawn/centre LANDMARK cycle
+  (`admiral.searchWptTimeout` time slices; also the fallback for non-admiral teams).
+  **No navigation or targeting path ever reads the live position of an enemy outside
+  `detA`/`detB`**; torpedo threat sensing additionally requires LOS to the warhead
+  within `ai.torpSenseRange`. (The old fallback read the true centroid of never-detected
+  enemies — fleet-wide omniscient navigation. Gated by `hunt-honest-never-detected`.)
 
 ## Player orders
 
@@ -353,14 +358,41 @@ firing solution has been broken. Deterministic firing model:
   smart-vs-base self-play.
 - `squadron.*` — fighter swarm coordinator (bombers + interceptors), gated by
   `squadron.enabledTeams` (same format, default `'AB'`). Per-team, per-class, id-ordered
-  squadrons of `size` (5). Members get: SEPARATION nav-goal displacement
-  (`bomberSep` 135 > 2× bomb `aoeRadius`, so one intercepted bomb can no longer
-  sympathetically chain-kill squadmates; `lightSep` 82 between any lights; `sepGain`,
-  reduced to `runSepGain` on a steady bomb run), slot-separated ATTACK LANES fanned
-  `bearingSpread` rad apart around the squadron lead's approach bearing, and a weak
-  (`formGain`) echelon FORMATION pull toward the lead during no-contact transit only.
-  All pure deterministic state math; never applied to pinned ships or ships under
-  player orders.
+  squadrons of `size` (5); `ship.ai.sqOrd` is a team-global squadron ordinal (bomber
+  squads first). Members get: SEPARATION nav-goal displacement (`bomberSep` 150 =
+  2×`aoeRadius`+30, applying to ANY pair involving a bomber; `lightSep` 82 between other
+  lights; `sepGain`, reduced to `runSepGain` 0.9 on a steady bomb run), a LIVE-BOMB
+  keep-out term (`bombAvoidMargin`/`bombPushGain`: repelled from friendly bombs in
+  flight, never one's own salvo), slot-separated ATTACK LANES with a chord floor
+  (`slotChord`: adjacent lanes never closer than this at any standDist) fanned around a
+  fleet-stable bearing, per-squadron SECTORS (`sectorSpread` rad apart) so squads own
+  distinct approach corridors, FROZEN parallel bomb-run lanes (`runLaneSep` per slot —
+  bombers fly THROUGH per-slot offsets while `launchBomb` still lead-solves the hull),
+  per-slot duck rocks + shadow-arc spread on break (`duckSlotSpread`) with staggered
+  regroup, and a weak (`formGain`) echelon FORMATION pull during no-contact transit and
+  admiral search/advance. All pure deterministic state math; never applied to pinned
+  ships or ships under player orders. Gated by `one-interceptor-cannot-chain-wave` and
+  `run-phase-spacing`.
+
+- `admiral.*` — fleet command layer, gated by `admiral.enabledTeams` (same format,
+  default `'AB'`). Per team: a POSTURE state machine (`search`/`advance`/`strike`/
+  `withdraw`, hysteresis `postureMinSeconds`; withdraw triggers below
+  `withdrawOwnFrac` fleet value with a known enemy capital, is time-boxed
+  `withdrawSeconds` and disabled past `withdrawLatestFrac` of the timer — a fleet
+  never flees forever), an AXIS + OBJECTIVE (detected-enemy centroid → ghost → search
+  waypoint), a RALLY point behind the main body, deterministic TASK ORGANIZATION
+  (`ship.ai.fleetRole`: `scout` interceptors probe `scoutSpread`-separated lanes and
+  shadow contacts from `scoutHoldRange`; a `screen` picket rides `screenDist` ahead;
+  `main` capitals advance line-abreast (`capitalLineSpacing`, applied to the hunt goal
+  BEFORE routeAround/bbSkirtWell) at a governed common speed (`advanceSpeedFrac`);
+  `reserve` = the highest-ordinal interceptor squads held at the rally until
+  `reserveReleaseFrac` losses or the PD umbrella falls), and SQUADRON-STAGGERED
+  commitment (`ai.commitStaggerSeconds` between squads, `ai.diveSlotStaggerSeconds`
+  within a squad; new waves only open in `strike` posture). `state.admiral[team]`
+  (`posture`, `objective`, `rally`, ...) is inspectable; renderers may draw command
+  overlays. `stats.deaths` records gained `atkTeam` (fratricide attribution). All
+  deterministic, zero new RNG draws; pinned/ordered ships are exempt and never hold
+  fleet roles. Gated by `admiral-roles-assigned` + `determinism-with-battleship`.
 
 Everything else in CONFIG is sim-internal; sweep it via `overrides` generically.
 

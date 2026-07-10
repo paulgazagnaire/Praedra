@@ -18,13 +18,16 @@ function nearestWhere(state, ship, list, pred) {
   }
   return best ? { ship: best, d: bestD } : null;
 }
-/* Is a live enemy torpedo tracking me nearby? (lights jink in response) */
+/* Is a live enemy torpedo tracking me nearby — that I can SEE? (lights jink in
+   response). LOS-gated: the old check sensed warheads through solid rock, so ships
+   jinked pre-cognitively at threats no sensor could report. */
 function torpedoThreat(state, ship) {
-  var torps = state.torps;
+  var AI = state.config.ai, torps = state.torps;
   for (var i = 0; i < torps.length; i++) {
     var tp = torps[i];
     if (tp.alive && !tp.spent && tp.team !== ship.team && tp.targetId === ship.id &&
-        dist(tp.x, tp.y, ship.x, ship.y) < 650) return true;
+        dist(tp.x, tp.y, ship.x, ship.y) < AI.torpSenseRange &&
+        losClear(state, ship.x, ship.y, tp.x, tp.y)) return true;
   }
   return false;
 }
@@ -600,11 +603,15 @@ function updateCommits(state) {
     }
     c.targetId = tgt.id;
     if (state.time < c.until || state.time < c.cool) continue;
+    // admiral posture gate: waves in flight run to completion, NEW waves only open in strike
+    if (admiralTeam(state, team) && state.admiral[team].posture !== 'strike') continue;
     // staged = in position AND slowed to hold — the wave assembles before it goes in.
     // In the open that dwell is naked torpedo exposure; in dense it happens behind rocks.
-    var staged = 0, stagedBombers = 0, aliveBombers = 0;
+    var staged = 0, stagedBombers = 0, aliveBombers = 0, reserveCount = 0;
+    var admOn = admiralTeam(state, team);
     for (var s = 0; s < lights.length; s++) {
       var L = lights[s];
+      if (admOn && L.ai.fleetRole === 'reserve') { reserveCount++; continue; } // held back
       if (L.cls === 'bomber') aliveBombers++;
       if (dist(L.x, L.y, tgt.x, tgt.y) < AI.commitRadius && L.speed < L.def.maxCruiseSpeed * 0.5) {
         staged++;
@@ -613,7 +620,7 @@ function updateCommits(state) {
     }
     // don't blow the wave before the payload is in position
     if (aliveBombers > 0 && stagedBombers === 0) continue;
-    if (staged >= Math.min(lights.length, AI.commitMinLights)) {
+    if (staged >= Math.min(lights.length - reserveCount, AI.commitMinLights)) {
       c.until = state.time + AI.commitSeconds;
       c.cool = c.until + AI.commitCooldown;
       // sometimes the whole wave hooks around a side — war loves a flank
@@ -688,7 +695,7 @@ function aiBomber(state, ship, dt) {
   var focus = focusTarget(state, ship);
   if (focus && isCapital(focus)) { target = focus; d = dist(ship.x, ship.y, focus.x, focus.y); }
   var thr = threatened(state, ship);
-  var committing = teamCommitting(state, ship.team);
+  var committing = squadCommitting(state, ship);   // squadron-staggered wave entry; reserve holds
   var m = ship.ai.mode;
   if (m !== 'run' && m !== 'break' && m !== 'approach') m = 'stage';
   if (m === 'stage' && committing) { m = 'approach'; }
@@ -728,13 +735,23 @@ function aiBomber(state, ship, dt) {
     // sighted inside run-start range — early in the open (long, exposed), late in dense
     if (d <= B.launchRange * B.runStartFactor && losShips(state, ship, target)) {
       m = 'run'; ship.ai.modeAt = state.time; ship.ai.runBombs = 0;
+      var ba = Math.atan2(target.y - ship.y, target.x - ship.x);
+      ship.ai.lane = { px: -Math.sin(ba), py: Math.cos(ba) }; // frozen run-lane perpendicular
       state.stats.runEntries++;
     }
   }
   if (m === 'run') {
     // steady bomb-run vector: accurate bombs, torpedo-predictable — the enforced tradeoff.
     // Pop out, stream a pair, duck back before the answering torpedo lands.
-    ship.nav = { x: target.x, y: target.y, arrive: false, jink: false };
+    // PARALLEL LANES: each squadmate flies through a per-slot offset of the target in the
+    // frame frozen at run entry — the old converge-on-target here was THE clump-wipe cause
+    // (spread lanes collapsed to one point exactly where the bombs go live). launchBomb
+    // still lead-solves the hull itself, so bombs converge while bombers stay 150 apart.
+    var SQn = state.config.squadron;
+    var laneOff = (ship.ai.sqSlot != null && ship.ai.sqN > 1)
+      ? (ship.ai.sqSlot - (ship.ai.sqN - 1) / 2) * SQn.runLaneSep : 0;
+    var ln = ship.ai.lane || { px: 0, py: 0 };
+    ship.nav = { x: target.x + ln.px * laneOff, y: target.y + ln.py * laneOff, arrive: false, jink: false };
     var clear = losShips(state, ship, target);
     if (ship.cool.bomb > 0) state.stats.fireBlocked.cooldown++;
     else if (d > B.launchRange) state.stats.fireBlocked.range++;
@@ -757,7 +774,9 @@ function aiBomber(state, ship, dt) {
   if (m === 'break') {
     // duck behind the NEAREST solid rock — the pursuing torpedo must lose its lock NOW,
     // not after a cross-map transit. No rock nearby (open map) = no duck. That's the flip.
-    var duck = null, duckD = Infinity;
+    // per-slot rock choice + shadow-arc spread + staggered regroup: the whole squadron
+    // used to compute ONE duck point and ONE regroup instant — it re-clumped every wave
+    var ducks = [];
     var AR = state.asteroids;
     var thrShip = nearestWhere(state, ship, enemies, function (e) { return e.cls === 'frigate'; }) ||
                   nearestWhere(state, ship, enemies, isCapital);
@@ -765,12 +784,18 @@ function aiBomber(state, ship, dt) {
       var ro = AR[ri];
       if (!ro.alive || ro.r < 40) continue;
       var rd2 = dist(ship.x, ship.y, ro.x, ro.y);
-      if (rd2 < 380 && rd2 < duckD) { duckD = rd2; duck = ro; }
+      if (rd2 < 380) ducks.push({ o: ro, d: rd2 });
     }
+    ducks.sort(function (a, b) { return (a.d - b.d) || (a.o.id - b.o.id); });
+    var duck = ducks.length ? ducks[(ship.ai.sqSlot || 0) % ducks.length].o : null;
     if (duck && thrShip) {
       var tdx = duck.x - thrShip.ship.x, tdy = duck.y - thrShip.ship.y;
       var tdl = len(tdx, tdy) || 1;
-      ship.nav = { x: duck.x + (tdx / tdl) * (duck.r + 50), y: duck.y + (tdy / tdl) * (duck.r + 50),
+      var SQd = state.config.squadron;
+      var rot = ((ship.ai.sqSlot || 0) - ((ship.ai.sqN || 1) - 1) / 2) * SQd.duckSlotSpread;
+      var ca3 = Math.cos(rot), sa3 = Math.sin(rot);
+      var uxr = (tdx / tdl) * ca3 - (tdy / tdl) * sa3, uyr = (tdx / tdl) * sa3 + (tdy / tdl) * ca3;
+      ship.nav = { x: duck.x + uxr * (duck.r + 50), y: duck.y + uyr * (duck.r + 50),
                    arrive: true, jink: true };
     } else {
       var ux = (ship.x - target.x) / (d || 1), uy = (ship.y - target.y) / (d || 1);
@@ -778,7 +803,7 @@ function aiBomber(state, ship, dt) {
       ship.nav = { x: ship.x + (ux * 0.8 + -uy * side * 0.6) * 400, y: ship.y + (uy * 0.8 + ux * side * 0.6) * 400,
                    arrive: false, jink: true };
     }
-    if (d > AI.bomberRegroupRange) m = committing ? 'approach' : 'stage';
+    if (d > AI.bomberRegroupRange * (1 + 0.06 * (ship.ai.sqSlot || 0))) m = committing ? 'approach' : 'stage';
   }
   if (m !== ship.ai.mode) ship.ai.modeAt = state.time;
   ship.ai.mode = m;
@@ -792,7 +817,7 @@ function aiInterceptor(state, ship, dt) {
     ship.nav = { x: hp.x, y: hp.y, arrive: false, jink: false, speedCap: ship.def.maxCruiseSpeed * 0.85 };
     return;
   }
-  var committing = teamCommitting(state, ship.team);
+  var committing = squadCommitting(state, ship);   // squadron-staggered wave entry; reserve holds
   // the one anti-capital punch: held for the wave, then volleyed together (saturation)
   if (ship.torpAmmo > 0 && committing) tryTorpedo(state, ship, dt);
 
@@ -849,9 +874,20 @@ function aiInterceptor(state, ship, dt) {
         var apI = spreadPoint(state, ship, tgt, Math.max(AI.strafeExitRange, d * 0.4));
         ship.nav = { x: apI.x, y: apI.y, arrive: false, jink: thr && d > cfg.pd.range * 1.3 };
       } else {
-        var ux = (tgt.x - ship.x) / (d || 1), uy = (tgt.y - ship.y) / (d || 1);
-        ship.nav = { x: tgt.x + ux * AI.strafeDivePoint, y: tgt.y + uy * AI.strafeDivePoint,
-                     arrive: false, jink: thr && d > cfg.pd.range * 1.3 };
+        // per-slot dive TIME stagger: squadmates arrive as a stream, not a stack. The dive
+        // geometry itself is untouched (a lateral offset would starve the 95px gatling).
+        var cw = state.commit[ship.team];
+        var goTime = (cw.until - AI.commitSeconds) + (ship.ai.sqOrd || 0) * AI.commitStaggerSeconds
+                                                   + (ship.ai.sqSlot || 0) * AI.diveSlotStaggerSeconds;
+        if (state.time < cw.until && state.time < goTime) {
+          // not my beat yet: hold just outside the PD bubble on my squadron's sector bearing
+          var holdP = spreadPoint(state, ship, tgt, AI.strafeExitRange * 1.35);
+          ship.nav = { x: holdP.x, y: holdP.y, arrive: true, jink: thr };
+        } else {
+          var ux = (tgt.x - ship.x) / (d || 1), uy = (tgt.y - ship.y) / (d || 1);
+          ship.nav = { x: tgt.x + ux * AI.strafeDivePoint, y: tgt.y + uy * AI.strafeDivePoint,
+                       arrive: false, jink: thr && d > cfg.pd.range * 1.3 };
+        }
       }
       if (d < G.range * 0.8) m = 'strafe_out';
     } else {

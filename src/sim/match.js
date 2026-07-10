@@ -84,12 +84,14 @@ function stepMatch(match) {
   computeDetection(state);
   updateFleetPlan(state);   // fleet focus target (smart teams)
   updateSquadrons(state);   // fighter squadron membership (squadron teams)
-  updateCommits(state);
+  updateAdmiral(state);     // fleet command: posture/axis/roles/search (admiral teams)
+  updateCommits(state);     // wave gate (posture-gated when the admiral is on)
   for (var a = 0; a < state.ships.length; a++) {
     var sh = state.ships[a];
     if (!sh.alive) continue;
     aiTick(state, sh, dt);
-    if (!sh.pinned && !sh.order) squadronNav(state, sh); // swarm spacing/formation (auto AI only)
+    if (!sh.pinned && !sh.order) admiralNav(state, sh);  // fleet command nav (auto AI only) —
+    if (!sh.pinned && !sh.order) squadronNav(state, sh); // — then spacing gets the last word
     updatePD(state, sh, dt);
   }
   applyGravity(state, dt); // before the pilots plan: they see (and fight) the drift
@@ -149,18 +151,34 @@ function baseState(seed, overrides) {
     commit: { A: { until: -1, cool: 0, targetId: -1, flank: 0 }, B: { until: -1, cool: 0, targetId: -1, flank: 0 } },
     plan: { A: { focusId: -1, focusAt: -1 }, B: { focusId: -1, focusAt: -1 } }, // fleet focus-fire picture
     squads: { at: -1 },                       // squadron membership refresh bookkeeping
+    admiral: { A: mkAdmiral(), B: mkAdmiral() }, // fleet command state (inspectable)
     tickCap: 0, hadBothTeams: false,
+  };
+}
+function mkAdmiral() {
+  return {
+    posture: 'search',            // 'search' | 'advance' | 'strike' | 'withdraw'
+    postureAt: -1,                // time of last posture change (hysteresis)
+    objective: null, axis: 0, rally: null,
+    mainX: 0, mainY: 0,           // main-body centroid, cached per cadence
+    fleetSpeed: 0,                // capital advance governor (0 = off)
+    search: { n: 0, wpt: null, sinceT: 0, ax: 0, ay: 0 },
+    strikeLights0: 0, reserveReleased: false,
+    withdrawUntil: -1, at: -1,
+    nScreen: 0, nCap: 0, nEligible: 0,
   };
 }
 function finishSetup(state) {
   state.tickCap = Math.round(state.config.matchTimerSeconds * state.config.tickRate);
   var a = 0, b = 0;
   state.initialHp = { A: 0, B: 0 };
+  state.initialValue = { A: 0, B: 0 };        // point value: the admiral's withdraw fraction
   for (var i = 0; i < state.ships.length; i++) {
     var sh = state.ships[i];
     state.shipById[sh.id] = sh;
     if (sh.team === 'A') a++; else b++;
     state.initialHp[sh.team] += sh.maxHp;
+    state.initialValue[sh.team] += sh.def.cost;
     sh.ai.jinkPhase = (sh.id * 0.37) % 1;
   }
   state.hadBothTeams = a > 0 && b > 0;

@@ -39,22 +39,34 @@ function isDetectedBy(state, team, ship) {
   for (var i = 0; i < det.length; i++) if (det[i].id === ship.id) return true;
   return false;
 }
-/* Where a ship with no live contacts should look: recent memory, else the enemy
-   fleet's rough centroid (strategic picture, not targeting — it gates no weapon).
-   The old enemy-SPAWN fallback was equally omniscient but pointed at where the
-   enemy USED to be; on titan-scale maps that turned endgames into six-minute
-   hide-and-seek around the monster rock's LOS shadow and ran out the clock. */
+/* Where a ship with no live contacts should look — LOS-HONEST tiers only. The old
+   fallback read the TRUE centroid of never-detected enemies (fleet-wide omniscience:
+   blind fleets beelined at each other through solid rock). Now:
+     T1 hot memory   — lastContact fresher than memorySeconds*2.5 (genuine detections)
+     T2 cold ghost   — same contact up to admiral.ghostMaxAge (chase the trail)
+     T3 search       — the admiral's deterministic expanding-ring sweep (updateAdmiral)
+     T4 landmarks    — alternate enemy SPAWN <-> arena CENTRE on a fixed time slice.
+   T4 is the resolution backstop: two blind fleets cycling spawn<->centre cross paths
+   repeatedly (capital hulls are visible 1000px+ coasting), so matches still resolve
+   without anyone reading undetected positions. */
 function huntPoint(state, ship) {
-  var D = state.config.detection;
+  var D = state.config.detection, ADM = state.config.admiral;
   var lc = state.lastContact[ship.team];
-  if (lc && state.time - lc.t < D.memorySeconds * 2.5) return lc;
-  var foes = ship.team === 'A' ? state.aliveB : state.aliveA;
-  if (foes.length) {
-    var cx = 0, cy = 0;
-    for (var i = 0; i < foes.length; i++) { cx += foes[i].x; cy += foes[i].y; }
-    return { x: cx / foes.length, y: cy / foes.length };
-  }
-  return ship.team === 'A' ? state.spawnB : state.spawnA;
+  var pt;
+  if (lc && state.time - lc.t < D.memorySeconds * 2.5) pt = lc;
+  else if (lc && state.time - lc.t < ADM.ghostMaxAge) pt = lc;
+  else if (admiralTeam(state, ship.team) && state.admiral[ship.team].search.wpt)
+    pt = state.admiral[ship.team].search.wpt;
+  else pt = landmarkCycle(state, ship.team);
+  // main capitals spread line-abreast on the axis — applied HERE (pre-routing) so
+  // routeAround/bbSkirtWell path the offset goal safely
+  return admiralLineOffset(state, ship, pt);
+}
+function landmarkCycle(state, team) {
+  var ADM = state.config.admiral;
+  var eSpawn = team === 'A' ? state.spawnB : state.spawnA;
+  var ctr = { x: state.config.arena.w / 2, y: state.config.arena.h / 2 };
+  return (Math.floor(state.time / ADM.searchWptTimeout) % 2 === 0) ? eSpawn : ctr;
 }
 /* Route a hunt goal AROUND titan-scale rocks: give the autopilot a flank point far
    outside the well and its accretion shell instead of a goal in the rock's shadow.

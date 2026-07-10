@@ -46,7 +46,9 @@ var CONFIG_DEFAULTS = {
     // --- THE TITAN: every seed gets exactly one colossal asteroid, ~5x a BIG one.
     //     It is the map's landmark, its widest LOS shadow, and its deepest well.
     titanRadius: [1035, 1440],     // ~5x a BIG, trimmed 10%
-    titanSpawnClear: 760,          // extra clearance from fleet spawns (well reaches far)
+    titanSpawnClear: 1400,         // extra clearance from fleet spawns (was 760: fleets
+                                   // spawned inside the titan's accretion infall stream and
+                                   // lost half their lights to debris before first contact)
     // --- BIG asteroids: every generated seed also gets 1..bigCountMax of them. They
     //     are placed after the titan but before everything else (clusters and sparse
     //     rocks flow around them) and anchor the mid-scale map layout.
@@ -69,6 +71,9 @@ var CONFIG_DEFAULTS = {
     drag: 0.35,                    // per-second velocity damping -> debris drifts, then lingers
     restitution: 0.35,
     impactDamageScale: 0.05,       // ship damage = scale * (r^2/1000) * closingSpeed
+    impactDamageCap: 12,           // per-strike ceiling: gravity infall streams pelt hulls
+                                   // with r80+ rocks at terminal speed — a strike hurts any
+                                   // light badly (hp 14-26) but never one-shots from full
     impactMinSpeed: 25,            // below this a fragment just rests against the hull
     maxAsteroids: 500,             // hard cap on live rocks (cascade safety)
     spinMax: 1.4,                  // rad/s visual tumble for flung fragments
@@ -300,6 +305,12 @@ var CONFIG_DEFAULTS = {
     shipRockDamageScale: 0.02,     // dmg = scale * closingSpeed * (mass/50), capped
     shipRockDamageCap: 10,
     shipShipRestitution: 0.3,
+    rockAnchorRadius: 500,         // rocks this big are NEVER dislodged by a collision —
+                                   // they are the map's gravity anchors (the titan); only
+                                   // demolition removes them. BIGs stay dislodgeable.
+    shipRockMinImpactSpeed: 30,    // closing speed below this = contact push only, no damage
+                                   // (universal gravity keeps fields creeping at 3-25 px/s;
+                                   // creep nudges hulls aside — it must not sandpaper them)
     pushableRockRadius: 55,        // ships shove settled rocks smaller than this aside —
                                    // gravity accretes pebble shells around parked fleets,
                                    // and an immovable shell entombs a capital alive
@@ -328,7 +339,12 @@ var CONFIG_DEFAULTS = {
     stageRange: 640,               // lights hold here between waves
     commitRadius: 780,             // staged = within this of the wave target
     commitMinLights: 3,            // staged lights needed to trigger a wave (capped at living lights)
-    commitSeconds: 16,             // wave duration (long enough to cross dense fields)
+    commitSeconds: 18,             // wave duration (long enough to cross dense fields AND give
+                                   //   the trailing staggered squadron time-on-target; was 16)
+    commitStaggerSeconds: 2.0,     // squadron k enters the wave k*this after window-open
+    diveSlotStaggerSeconds: 0.35,  // within a squad, slot s dives s*this after its squadron's beat
+    torpSenseRange: 650,           // a light jinks at a tracking torpedo within this AND in LOS
+                                   //   (was hardcoded 650 with no LOS gate — pre-cognitive jinks)
     commitCooldown: 3,             // regroup time between waves
     coverMinRange: 220,            // never stage inside the enemy PD bubble
     coverHoldTicks: 30,            // how long a chosen cover point is held before rescoring
@@ -391,16 +407,59 @@ var CONFIG_DEFAULTS = {
   squadron: {
     enabledTeams: 'AB',            // which teams' lights use the coordinator ('', 'A', 'B', 'AB')
     size: 5,                       // max members per squadron (per team, per class, id-ordered)
-    bomberSep: 135,                // comfortable bomber spacing: > 2x bomb aoeRadius (60) so one
-                                   //   intercepted bomb can never splash-chain a squadmate
+    bomberSep: 150,                // 2*bomb.aoeRadius(60)+30 — applies to ANY pair involving a
+                                   //   bomber (was bomber-bomber only at 135, which let
+                                   //   interceptors sit 82px inside the sympathetic-chain annulus)
     lightSep: 82,                  // baseline spacing between any two friendly lights
     sepGain: 1.1,                  // nav-goal displacement per px of spacing intrusion
-    runSepGain: 0.5,               // reduced on a steady bomb run (aim beats spacing, never zero)
+    runSepGain: 0.9,               // near-full separation while bombs are live (was 0.5: weakest
+                                   //   spacing at the most dangerous moment; the frozen run lanes
+                                   //   mean squadmates rarely intrude, so the run vector survives)
+    runLaneSep: 150,               // parallel bomb-run lane spacing (frozen frame, per slot)
+    sectorSpread: 0.9,             // rad between squadron approach SECTORS on a shared focus
+                                   //   target — cross-squadron deconfliction (bombers centre,
+                                   //   interceptor squads +-0.9 rad)
+    slotChord: 150,                // min CHORD between adjacent spreadPoint lanes at any standDist
+                                   //   (binds only close-in, where the old angular fan collapsed)
+    duckSlotSpread: 0.35,          // rad of per-slot spread along a shared duck rock's shadow arc
+    bombAvoidMargin: 40,           // live-bomb keep-out = aoeRadius + hull radius + this
+    bombPushGain: 1.4,             // strength of the live friendly-bomb repulsion term
     bearingSpread: 0.5,            // rad between adjacent members' approach lanes on a shared
                                    //   target — separated lanes = no cross-bomber sympathetic chain
     formGain: 0.3,                 // weak pull toward the transit-formation slot; formation must
                                    //   NEVER fight pathing (autopilot avoidance dominates)
     reformTicks: 45,               // membership refresh cadence (death/merge reshuffle)
+  },
+
+  // --- ADMIRAL (fleet command layer: posture, axis, task org, search; A/B-sweepable).
+  //     Deterministic pure-state math, zero RNG draws. Pinned ships and ships under player
+  //     orders are exempt (contract). Read via admiralTeam(), like smartTeams/squadron. ---
+  admiral: {
+    enabledTeams: 'AB',            // which teams get an admiral ('', 'A', 'B', 'AB')
+    cadenceTicks: 30,              // command pass every 0.5s (tick phase 2, offset from detection's 1)
+    postureMinSeconds: 2.0,        // min dwell before search/advance/strike may flip (anti-dither)
+    scoutCount: 2,                 // interceptors detached to probe ahead
+    scoutSpread: 900,              // lateral separation between scout probe lanes
+    scoutHoldRange: 900,           // scouts shadow a detected enemy from here, never press home
+    screenDist: 700,               // picket line this far ahead of the main body on the axis
+    screenSpread: 340,             // lateral spacing between screen slots
+    capitalLineSpacing: 520,       // line-abreast offset between capitals during search/advance
+    advanceSpeedFrac: 0.9,         // body speed = slowest own capital cruise * this (0 capitals = off)
+    strikeRange: 3400,             // detected enemy within this of the main body -> posture 'strike'
+    reserveSquads: 1,              // interceptor squadrons held at the rally during a strike
+    reserveMinSquads: 3,           // fewer light squadrons than this -> no reserve at all
+    reserveReleaseFrac: 0.5,       // release when lights drop below this frac of strike-entry count
+    rallyBehind: 900,              // rally point distance behind the main body along the axis
+    rallySpread: 170,              // lateral spacing between rally slots (> bomberSep)
+    withdrawOwnFrac: 0.35,         // fleet value fraction that triggers a bounded withdraw
+    withdrawSeconds: 20,           // withdraw duration; then forced re-advance (never flees forever)
+    withdrawLatestFrac: 0.7,       // no withdrawals after this fraction of the match timer
+    ghostMaxAge: 30,               // s a lastContact ghost stays navigable (hunt tier T2)
+    searchRingStep: 1100,          // expanding-sweep ring spacing around the last-seen anchor
+    searchRingBearings: 6,         // waypoints per ring
+    searchRings: 4,                // rings before falling back to the spawn/centre landmark cycle
+    searchWptRadius: 650,          // any own ship this close -> next waypoint
+    searchWptTimeout: 22,          // s before an unreachable waypoint is abandoned (also the T4 slice)
   },
 
   // --- FLEETS (42-point budget; costs: destroyer 6 / frigate 3 / bomber 2 / interceptor 1) ---

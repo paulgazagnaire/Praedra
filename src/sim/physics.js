@@ -68,11 +68,15 @@ function collideShipsAndRocks(state, dt) {
         sh.vx += jimp * invS * nx; sh.vy += jimp * invS * ny;
         o.vx -= jimp * invR * nx; o.vy -= jimp * invR * ny;
         if (invR > 0 && !o.moving && len(o.vx, o.vy) > 2) { o.moving = true; rockWoke(state, o); }
-        var dmg;
+        var dmg = 0;
         if (o.moving && closing > D.impactMinSpeed) {
-          dmg = D.impactDamageScale * (o.r * o.r / 1000) * closing; // shrapnel strike
-        } else {
-          dmg = Math.min(C.shipRockDamageCap, C.shipRockDamageScale * closing * (mShip / 50)); // bonk
+          dmg = Math.min(D.impactDamageCap || Infinity,
+                         D.impactDamageScale * (o.r * o.r / 1000) * closing); // shrapnel strike
+        } else if (closing > C.shipRockMinImpactSpeed) {
+          // a real BONK, not field creep: universal gravity keeps whole fields drifting
+          // at 3-25 px/s, and sub-threshold contact must push, never sandpaper — heavy
+          // hulls were ground to death by their own parked neighbourhood (KE ~ v^2)
+          dmg = Math.min(C.shipRockDamageCap, C.shipRockDamageScale * closing * (mShip / 50));
         }
         if (dmg > 0.3) applyDamage(state, sh, dmg, null, 'rock');
       }
@@ -116,7 +120,7 @@ function collideShipsAndRocks(state, dt) {
 }
 
 function updateAsteroids(state, dt) {
-  var cfg = state.config, D = cfg.debris, W = cfg.arena.w, H = cfg.arena.h;
+  var cfg = state.config, D = cfg.debris, C2 = cfg.collision, W = cfg.arena.w, H = cfg.arena.h;
   var A = state.asteroids;
   var anyMoving = 0;
   for (var i = 0; i < A.length; i++) {
@@ -164,8 +168,11 @@ function updateAsteroids(state, dt) {
         p.vx += jimp * nx / mp; p.vy += jimp * ny / mp;
         if (q.moving) {
           q.vx -= jimp * nx / mq; q.vy -= jimp * ny / mq;
-        } else if (len(q.vx - jimp * nx / mq, q.vy - jimp * ny / mq) > 2) {
-          // the hit is hard enough to genuinely dislodge it
+        } else if (q.r < C2.rockAnchorRadius && len(q.vx - jimp * nx / mq, q.vy - jimp * ny / mq) > 2) {
+          // the hit is hard enough to genuinely dislodge it — but ANCHOR-class rocks
+          // (titan) never move for a collision: universal gravity feeds fast heavy
+          // infall that legally cleared the old velocity bar, and a dislodged titan
+          // then ratcheted across the map against its own accretion shell
           q.vx -= jimp * nx / mq; q.vy -= jimp * ny / mq;
           q.moving = true; rockWoke(state, q);
         } // else: settled rock is terrain — it shrugs the tap off entirely
@@ -178,7 +185,11 @@ function updateAsteroids(state, dt) {
         p.x += nx * push * wp; p.y += ny * push * wp;
         q.x -= nx * push * (1 - wp); q.y -= ny * push * (1 - wp);
       } else {
-        p.x += nx * push; p.y += ny * push;
+        // vs settled terrain the mover takes the separation — but a HUGE mover overlapping
+        // a pebble field must GRIND through (capped step), not take the full overlap from
+        // every pebble each tick (that shoved a woken titan 500px in 5 ticks)
+        p.x += nx * (p.r > q.r * 3 ? Math.min(push, 6) : push);
+        p.y += ny * (p.r > q.r * 3 ? Math.min(push, 6) : push);
       }
       return false;
     });

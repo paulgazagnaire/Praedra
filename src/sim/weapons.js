@@ -22,7 +22,8 @@ function applyDamage(state, ship, dmg, attacker, src) {
   }
   if (ship.hp <= 0) {
     ship.hp = 0; ship.alive = false;
-    state.stats.deaths.push({ team: ship.team, cls: ship.cls, t: Math.round(state.time), by: by, mode: ship.ai.mode });
+    state.stats.deaths.push({ team: ship.team, cls: ship.cls, t: Math.round(state.time), by: by, mode: ship.ai.mode,
+                              atkTeam: attacker ? attacker.team : null }); // fratricide attribution
     pushEvent(state, { kind: 'shipboom', x: ship.x, y: ship.y, r: ship.def.radius * 2.5 });
   }
 }
