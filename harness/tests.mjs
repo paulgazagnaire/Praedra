@@ -703,8 +703,8 @@ function drainHrail(match, hitKind) {
 
 // TEST 1 — the bow turrets delete a DETECTED capital far beyond railgun range (range 3200 >> 700,
 // damage 30, real flying slugs, detection-gated). Destroyer at 1400px: past railgun 700, inside
-// its own coasting detection 1680, inside heavyRail [220,3200]. Post-rework cadence: cooldown 5
-// + loadTime 1.2 -> the two bearing bow turrets land ~10 slugs in 26s (the aft turret is blind
+// its own coasting detection 1680, inside heavyRail [220,3200]. Cadence: cooldown 6.25
+// + loadTime 1.2 -> the two bearing bow turrets land ~10 slugs in 34s (the aft turret is blind
 // over the bow); 5 hits kill the 140hp destroyer. The window includes the last slug's ~0.6s
 // flight time (in-flight rounds must resolve before the assertion).
 test('heavyRail-hits-capital', () => {
@@ -720,9 +720,9 @@ test('heavyRail-hits-capital', () => {
     asteroids: [],
   });
   const dst = findShip(m, 'B', 'destroyer');
-  stepSeconds(m, 26);
+  stepSeconds(m, 34);
   assert(hpOf(m, dst.id) === 0,
-    `destroyer survived 26s of heavy-rail at ${d}px (hp ${hpOf(m, dst.id)}) — turrets not deleting capitals past railgun range`);
+    `destroyer survived 34s of heavy-rail at ${d}px (hp ${hpOf(m, dst.id)}) — turrets not deleting capitals past railgun range`);
 });
 
 // TEST 2 — HARD class gate: turrets can never touch a bomber/interceptor even when detected and
@@ -975,7 +975,7 @@ test('heavyRail-reload-cadence', () => {
     asteroids: [],
   });
   const times = new Map(); // turret index -> [muzzle times]
-  for (let i = 0; i < 26 * TICK_RATE && !m.done; i++) {
+  for (let i = 0; i < 34 * TICK_RATE && !m.done; i++) {
     m.step();
     for (const e of drainEvents(m, (x) => x.kind === 'hrailMuzzle')) {
       if (!times.has(e.turret)) times.set(e.turret, []);
@@ -984,7 +984,7 @@ test('heavyRail-reload-cadence', () => {
   }
   let intervals = 0;
   for (const [turret, ts] of times) {
-    assert(ts.length >= 4, `turret ${turret} fired only ${ts.length} slugs in 26s (want >=4 at a 5s reload)`);
+    assert(ts.length >= 4, `turret ${turret} fired only ${ts.length} slugs in 34s (want >=4 at the live reload)`);
     for (let i = 1; i < ts.length; i++) {
       intervals++;
       assert(ts[i] - ts[i - 1] >= HR.cooldown - 2.5 / TICK_RATE, // one-tick slack
@@ -993,6 +993,112 @@ test('heavyRail-reload-cadence', () => {
   }
   assert(times.size >= 2 && intervals >= 6,
     `only ${times.size} turrets / ${intervals} intervals observed — cadence sample too thin`);
+});
+
+// TEST 5b — "fires backwards" guard: a target deep in the REAR QUARTER (135deg off the bow)
+// is out of the bow pair's tightened arc (arcHalfWidth ~93deg) and belongs to the aft turret
+// alone. With the old 135deg half-width both bow guns legally took this shot, which read on
+// screen as the battleship firing backwards. The dead-ahead decoy anchors the pinned hull's
+// facing (aiPinned yaws to the nearest detected enemy), exactly like heavyRail-turret-arcs.
+test('heavyRail-no-rear-quarter-bow-fire', () => {
+  const cfg = Praedra.defaultConfig();
+  const HR = heavyRailCfg(cfg);
+  assert(HR.arcHalfWidth < 3 * Math.PI / 4 - 0.06, // 135deg minus aimTolerance
+    `arcHalfWidth ${HR.arcHalfWidth} lets a bow turret take a 135deg rear-quarter shot`);
+  assert(HR.arcHalfWidth >= Math.PI / 2,
+    `arcHalfWidth ${HR.arcHalfWidth} < pi/2 leaves bearings NO turret can cover`);
+  const dDecoy = 450, dTarget = 800, bearing = 3 * Math.PI / 4;
+  assertDetectable(cfg, 'bomber', dDecoy, 50, 'no-rear-quarter/decoy');
+  assertDetectable(cfg, 'destroyer', dTarget, 100, 'no-rear-quarter/target');
+  const m = Praedra.createScenario({
+    seed: 12,
+    ships: [
+      pinned('battleship', 'A', MID.x, MID.y, 0),
+      pinned('bomber', 'B', MID.x + dDecoy, MID.y, Math.PI), // dead ahead: the facing anchor
+      pinned('destroyer', 'B', MID.x + Math.cos(bearing) * dTarget, MID.y + Math.sin(bearing) * dTarget, 0),
+    ],
+    asteroids: [],
+  });
+  const dst = findShip(m, 'B', 'destroyer');
+  const hp0 = dst.hp;
+  const seen = new Set();
+  for (let i = 0; i < 20 * TICK_RATE && !m.done; i++) {
+    m.step();
+    for (const e of drainEvents(m, (x) => x.kind === 'hrailMuzzle' || x.kind === 'hrail')) seen.add(e.turret);
+  }
+  assert(seen.has(2), 'aft turret (2) never engaged a rear-quarter target — the stern gun should cover it');
+  assert(!seen.has(0) && !seen.has(1),
+    `bow turret fired at a target 135deg off the bow (turrets seen: ${[...seen]}) — reads as firing backwards`);
+  assert(hpOf(m, dst.id) < hp0, 'rear-quarter destroyer took no damage — the aft turret is not connecting');
+});
+
+// TEST 5c — space: a torpedo that hits nothing NEVER vanishes mid-air. Guidance fuel
+// (torpedo.lifetime) burnout flips it to spent (ballistic coast, no steering); the only
+// terminal states are impact or arena exit. A free torpedo injected mid-map must outlive
+// the old 9s despawn and leave the field still moving.
+test('torpedo-ballistic-exits-arena', () => {
+  const cfg = Praedra.defaultConfig();
+  const T = cfg.torpedo;
+  const m = Praedra.createScenario({
+    seed: 5,
+    overrides: zeroDamageOverrides(cfg),
+    ships: [ // far corners, far outside mutual detection: inert spectators that keep the match alive
+      pinned('interceptor', 'A', 200, cfg.arena.h - 200, 0),
+      pinned('interceptor', 'B', cfg.arena.w - 200, 200, 0),
+    ],
+    asteroids: [],
+  });
+  const st = m.state;
+  const tid = st.nextId++;
+  st.torps.push({ id: tid, team: 'A', ownerId: -1, targetId: -1, rockId: -1,
+    x: MID.x, y: MID.y, heading: 0, vx: T.speed, vy: 0,
+    life: T.lifetime, lockLost: 0, spent: false, alive: true, traveled: 0 });
+  const exitSeconds = Math.ceil((cfg.arena.w + 60 - MID.x) / T.speed) + 2;
+  let lastX = MID.x, aliveAtFuelOut = false, spentAtFuelOut = false;
+  for (let i = 0; i < exitSeconds * TICK_RATE && !m.done; i++) {
+    m.step();
+    const tp = st.torps.find((t) => t.id === tid);
+    if (tp && tp.alive) {
+      lastX = tp.x;
+      if (m.state.time > T.lifetime + 1) { aliveAtFuelOut = true; spentAtFuelOut = tp.spent; }
+    }
+  }
+  assert(aliveAtFuelOut, `torpedo despawned mid-air at fuel-out (${T.lifetime}s) — must coast ballistic instead`);
+  assert(spentAtFuelOut, 'fuel-out torpedo still steering — lifetime must end guidance, not existence');
+  assert(!st.torps.some((t) => t.id === tid && t.alive), `torpedo still alive after ${exitSeconds}s — should have exited`);
+  assert(lastX > cfg.arena.w - 5,
+    `torpedo died at x=${lastX.toFixed(0)} (arena.w ${cfg.arena.w}) — vanished mid-air instead of exiting the map`);
+});
+
+// TEST 5d — space: a heavy-rail slug that misses everything keeps flying past the old
+// maxRange flight cap and only dies at the arena edge. maxRange remains the FIRE gate.
+test('heavy-slug-exits-arena', () => {
+  const cfg = Praedra.defaultConfig();
+  const HR = heavyRailCfg(cfg);
+  const m = Praedra.createScenario({
+    seed: 9,
+    overrides: zeroDamageOverrides(cfg),
+    ships: [pinned('battleship', 'A', MID.x, MID.y, 0), pinned('destroyer', 'B', MID.x + 1400, MID.y, Math.PI)],
+    asteroids: [],
+  });
+  const st = m.state;
+  let maxTraveled = 0;
+  const deadAt = [];
+  const lastPos = new Map();
+  for (let i = 0; i < 12 * TICK_RATE && !m.done; i++) {
+    m.step();
+    for (const sg of st.slugs) {
+      if (sg.alive) { maxTraveled = Math.max(maxTraveled, sg.traveled); lastPos.set(sg.id, { x: sg.x, y: sg.y }); }
+      else if (lastPos.has(sg.id)) { deadAt.push({ x: sg.x, y: sg.y }); lastPos.delete(sg.id); } // death coords persist on the object
+    }
+  }
+  assert(maxTraveled > HR.maxRange + 400,
+    `no slug flew past maxRange ${HR.maxRange} (max traveled ${maxTraveled.toFixed(0)}) — mid-air despawn is back`);
+  assert(deadAt.length >= 2, `only ${deadAt.length} slug deaths observed in 12s — sample too thin`);
+  for (const p of deadAt) {
+    const off = p.x < -40 || p.y < -40 || p.x > cfg.arena.w + 40 || p.y > cfg.arena.h + 40;
+    assert(off, `slug died INSIDE the arena at (${p.x.toFixed(0)},${p.y.toFixed(0)}) with no rock to stop it`);
+  }
 });
 
 // TEST 6 — battleship spawns with its fleet at full hp, and the widened per-fleet spawn pitch

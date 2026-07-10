@@ -162,7 +162,7 @@ var CONFIG_DEFAULTS = {
     turretMounts: [0.90, 0.30, -0.55], // turret centre as a fraction of def.radius along the spine
                                    // (bow->aft; index 0 = bow). Slugs launch from here.
     damage: 30,                    // identical to the destroyer railgun (requirement)
-    cooldown: 5.0,                 // PER TURRET reload; with loadTime + stagger, ~1 slug / 2.1 s ship-wide
+    cooldown: 6.25,                // PER TURRET reload (was 5.0; -20% rate of fire per player tuning)
     minRange: 220,                 // DEAD ZONE (radius 78 + margin; big guns can't depress point-blank)
     maxRange: 3200,                // HUGE; detection-bounded (coasting dest visible 1680, burning 3360)
     slugSpeed: 2400,               // px/s of the REAL flying slug (crosses 1400 px in ~0.6 s)
@@ -174,8 +174,11 @@ var CONFIG_DEFAULTS = {
                                    // a one-tick nav yaw on a burning hull must not dump a full charge
     arcCenters: [0, 0, Math.PI],   // per-turret firing-arc centre, HULL-RELATIVE: bow pair forward,
                                    // aft turret astern (matches turretMounts order)
-    arcHalfWidth: 2.36,            // rad (~135 deg): bow turrets blind astern, aft turret blind over
-                                   // the bow, all three bear on either beam (WWII arrangement)
+    arcHalfWidth: 1.62,            // rad (~93 deg): bow turrets cover bow-to-just-past-the-beam, the
+                                   // aft turret covers the stern half — every bearing is coverable
+                                   // (union is gapless for >= pi/2) but a BOW gun can no longer take
+                                   // solutions deep into the rear quarter, which read on screen as
+                                   // "the battleship fires backwards" (was 2.36 rad = 135 deg)
     rockDamageMult: 2.2,           // == railgun; blasts asteroids out of transit lanes
     evasionMult: 1.0,              // base hit = 1 - evasion*this (dest .98, frig .85 baseline)
     trackClasses: ['destroyer', 'frigate', 'battleship'], // HARD gate: never bomber/interceptor
@@ -199,7 +202,8 @@ var CONFIG_DEFAULTS = {
     aoeRadius: 45,                 // detonation on PD interception: small AOE
     aoeDamage: 8,
     rockDamageMult: 2.5,           // warheads crack asteroids open — the other demolition weapon
-    lifetime: 9,
+    lifetime: 9,                   // GUIDANCE FUEL seconds: burnout -> spent (ballistic coast),
+                                   // NOT despawn. A torpedo only dies on impact or arena exit.
     hitRadius: 14,                 // terminal proximity (added to target radius)
     lockLossSeconds: 0.5,          // LOS blocked longer than this -> lock lost, flies dumb.
                                    // Short: ducking behind a rock actually sheds the torpedo (dense-map counterplay)

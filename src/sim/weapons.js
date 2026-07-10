@@ -100,7 +100,11 @@ function fireRailgun(state, ship, target) {
   state.stats.railShots++;
   var ang = Math.atan2(target.y - ship.y, target.x - ship.x);
   var d = dist(ship.x, ship.y, target.x, target.y);
-  var endX = ship.x + Math.cos(ang) * RG.maxRange, endY = ship.y + Math.sin(ang) * RG.maxRange;
+  // maxRange gates WHO may be fired on (railgunReady); the sabot itself is a hyper-velocity
+  // slug in vacuum — it flies until it slams into something or leaves the arena. Resolve the
+  // ray out to guaranteed map exit so misses carry downrange instead of vanishing at 700 px.
+  var flight = state.config.arena.w + state.config.arena.h;
+  var endX = ship.x + Math.cos(ang) * flight, endY = ship.y + Math.sin(ang) * flight;
   var rock = firstRockOnRay(state, ship.x, ship.y, endX, endY);
   var rockD = rock ? dist(ship.x, ship.y, rock.x, rock.y) - rock.r : Infinity;
   // friendly fire: anyone drifting through the firing line catches the slug first
@@ -235,11 +239,11 @@ function updateHeavySlugs(state, dt) {
     }
     sg.x = nx; sg.y = ny;
     sg.traveled += HR.slugSpeed * dt;
-    if (sg.traveled >= HR.maxRange ||
-        sg.x < -50 || sg.y < -50 || sg.x > state.config.arena.w + 50 || sg.y > state.config.arena.h + 50) {
-      sg.alive = false; // spent: fell out of range or off the arena (same margin as torpedoes)
-      if (!sg.hitShip)
-        pushEvent(state, { kind: 'hrail', x: sg.x, y: sg.y, x2: sg.x, y2: sg.y, team: sg.team, turret: sg.turret, hit: 'miss' });
+    // Space: a slug that hits nothing keeps its momentum and leaves the map — no mid-air
+    // vanish. maxRange stays a FIRE-eligibility gate (pickHeavyRailPrimary/updateTurrets),
+    // not a flight limit; the only terminal states are a rock stop or the arena edge.
+    if (sg.x < -50 || sg.y < -50 || sg.x > state.config.arena.w + 50 || sg.y > state.config.arena.h + 50) {
+      sg.alive = false; // exited the arena (same margin as torpedoes)
     }
   }
 }
@@ -280,7 +284,10 @@ function updateTorpedoes(state, dt) {
     var tp = torps[i];
     if (!tp.alive) continue;
     tp.life -= dt;
-    if (tp.life <= 0) { tp.alive = false; continue; }
+    // Space: `life` is GUIDANCE FUEL, not existence. Burnout ends steering (spent -> flies
+    // ballistic on its last vector) — the torpedo itself coasts until it hits something or
+    // exits the arena (bounds check below). No mid-air vanish.
+    if (tp.life <= 0 && !tp.spent) tp.spent = true;
     var target = findShip(state, tp.targetId);
     if (tp.rockId > 0 && !tp.spent) {
       // cover-buster: home on the rock (rocks don't dodge; no lock to lose)
@@ -332,7 +339,9 @@ function updateTorpedoes(state, dt) {
     for (var sc = 0; sc < state.ships.length; sc++) {
       var shc = state.ships[sc];
       if (!shc.alive || shc.id === tp.ownerId) continue;
-      if (target && shc.id === target.id) continue; // the tracked target keeps its evasion model
+      // while ACTIVELY tracking, the target keeps its evasion model (terminal roll below);
+      // a spent/ballistic torpedo is just a drifting warhead — it contact-hits ANY hull
+      if (!tp.spent && target && shc.id === target.id) continue;
       if (dist(tp.x, tp.y, shc.x, shc.y) < shc.def.radius + 6) { struck = shc; break; }
     }
     if (struck) {
