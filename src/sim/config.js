@@ -422,8 +422,10 @@ var CONFIG_DEFAULTS = {
     slotChord: 150,                // min CHORD between adjacent spreadPoint lanes at any standDist
                                    //   (binds only close-in, where the old angular fan collapsed)
     duckSlotSpread: 0.35,          // rad of per-slot spread along a shared duck rock's shadow arc
-    bombAvoidMargin: 40,           // live-bomb keep-out = aoeRadius + hull radius + this
-    bombPushGain: 1.4,             // strength of the live friendly-bomb repulsion term
+    bombAvoidMargin: 60,           // live-bomb keep-out = aoeRadius + hull radius + this
+    bombPushGain: 2.2,             // strength of the live friendly-bomb repulsion term
+                                   //   (tuned up: chasers crossing the corridor at closing
+                                   //   speed need a hard shove, not a suggestion)
     bearingSpread: 0.5,            // rad between adjacent members' approach lanes on a shared
                                    //   target — separated lanes = no cross-bomber sympathetic chain
     formGain: 0.3,                 // weak pull toward the transit-formation slot; formation must

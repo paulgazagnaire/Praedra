@@ -809,6 +809,18 @@ function aiBomber(state, ship, dt) {
   ship.ai.mode = m;
 }
 
+/* Any LIVE friendly bomb arriving near pt within `secs`? Divers hold out of the
+   impact zone instead of strafing through their own bombers' blast wave. */
+function bombsInboundTo(state, team, pt, secs) {
+  var B = state.config.bomb, R = B.aoeRadius + 60;
+  for (var i = 0; i < state.bombs.length; i++) {
+    var bm = state.bombs[i];
+    if (!bm.alive || bm.team !== team) continue;
+    var d = dist(bm.x, bm.y, pt.x, pt.y);
+    if (d < R || d / B.speed < secs) return true;
+  }
+  return false;
+}
 function aiInterceptor(state, ship, dt) {
   var cfg = state.config, AI = cfg.ai, G = cfg.gatling, TC = cfg.torpedo.interceptor;
   var enemies = livingEnemies(state, ship.team);
@@ -879,8 +891,11 @@ function aiInterceptor(state, ship, dt) {
         var cw = state.commit[ship.team];
         var goTime = (cw.until - AI.commitSeconds) + (ship.ai.sqOrd || 0) * AI.commitStaggerSeconds
                                                    + (ship.ai.sqSlot || 0) * AI.diveSlotStaggerSeconds;
-        if (state.time < cw.until && state.time < goTime) {
-          // not my beat yet: hold just outside the PD bubble on my squadron's sector bearing
+        var bombsIn = bombsInboundTo(state, ship.team, tgt, 1.2);
+        if ((state.time < cw.until && state.time < goTime) || bombsIn) {
+          // not my beat yet — or friendly bombs are seconds from the target: hold just
+          // outside the PD bubble on my squadron's sector bearing, never strafe through
+          // the blast wave (the traced 3-interceptors-die-to-own-bombs egress chain)
           var holdP = spreadPoint(state, ship, tgt, AI.strafeExitRange * 1.35);
           ship.nav = { x: holdP.x, y: holdP.y, arrive: true, jink: thr };
         } else {
@@ -893,8 +908,13 @@ function aiInterceptor(state, ship, dt) {
     } else {
       var ux2 = (ship.x - tgt.x) / (d || 1), uy2 = (ship.y - tgt.y) / (d || 1);
       var side = (ship.id % 2 === 0) ? 1 : -1;
-      ship.nav = { x: tgt.x + (ux2 * 0.75 + -uy2 * side * 0.66) * AI.strafeExitRange * 1.6,
-                   y: tgt.y + (uy2 * 0.75 + ux2 * side * 0.66) * AI.strafeExitRange * 1.6,
+      // per-slot egress fan: the two id-parity lanes stacked 4 ships on one exit vector
+      // straight through the live bomb corridor (3 died to one friendly salvo, traced)
+      var eRot = ((ship.ai.sqSlot || 0) - ((ship.ai.sqN || 1) - 1) / 2) * 0.4;
+      var ce = Math.cos(eRot), se = Math.sin(eRot);
+      var ex2 = (ux2 * 0.75 + -uy2 * side * 0.66), ey2 = (uy2 * 0.75 + ux2 * side * 0.66);
+      ship.nav = { x: tgt.x + (ex2 * ce - ey2 * se) * AI.strafeExitRange * 1.6,
+                   y: tgt.y + (ex2 * se + ey2 * ce) * AI.strafeExitRange * 1.6,
                    arrive: false, jink: true };
       if (d > AI.strafeExitRange) m = 'strafe_in'; // do not loiter: out, around, in again
     }
