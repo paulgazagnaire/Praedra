@@ -1,24 +1,29 @@
 # Praedra Sim API Contract (v1)
 
-This contract binds `index.html` (the sim implementation) and everything in `harness/`
-(headless runners/tests). Both sides are built against THIS document. Do not deviate
-without updating this file.
+This contract binds the sim implementation (`src/sim/*.js`) and everything in
+`harness/` (headless runners/tests). Both sides are built against THIS document.
+Do not deviate without updating this file.
 
 ## Where the sim lives
 
-`index.html` contains a `<script>` block with the ENTIRE DOM-free simulation between
-these exact marker lines:
+The DOM-free simulation is split across `src/sim/*.js` modules — pure JS, zero
+DOM/window/document/Date/performance/Math.random references. **Load order matters
+and has a single source of truth: the `<script src="src/sim/...">` tags in
+`index.html`**, currently:
 
 ```
-/* ===== SIM BEGIN ===== */
-...pure JS, zero DOM/window/document/Date/performance/Math.random references...
-/* ===== SIM END ===== */
+config → util → terrain → ship → physics → weapons → detection → fleet → roles → match
 ```
 
-Harness scripts extract the text between the markers and evaluate it with
-`vm.runInNewContext(code, ctx)` where `ctx = { console }`. After evaluation the
-context has a global `Praedra` object (the sim declares `var Praedra = ...` at top
-level).
+The browser loads them as plain scripts sharing global scope; `src/sim/match.js`
+ends with `var Praedra = api;`, the only name the app layer (`src/app.js`)
+consumes. Harness scripts load the sim via `harness/simloader.mjs`, which parses
+the manifest tags out of `index.html`, concatenates the module files in tag order,
+wraps them in a single closure (vm-context global access is pathologically slow),
+and evaluates with `vm.runInNewContext(code, ctx)` where `ctx = { console }`.
+After evaluation the context has the global `Praedra` object. The loader also
+still accepts the legacy single-file format (`/* ===== SIM BEGIN/END ===== */`
+markers with inline code) for older builds passed via `--file`.
 
 ## Praedra API
 
@@ -105,10 +110,15 @@ hiding it, since neither the enemy nor a "ghost" of it ever entered memory.
   (`ai.rockShootSeconds`-gated; memory itself never expires but is only "recent"
   within `detection.memorySeconds`, default 5s).
 - `state.lastContact[team] = { x, y, t }` — most recent sighting per team, used for
-  `huntPoint` when a team has no live detected contacts. When it goes stale
-  (> `memorySeconds*2.5`), hunting falls back to the enemy fleet's rough CENTROID
-  (strategic picture only — it gates no weapon; the old enemy-spawn fallback was
-  equally omniscient but stale, and on titan-scale maps it ran matches into the timer).
+  `huntPoint` when a team has no live detected contacts. Hunting is LOS-HONEST, tiered:
+  hot memory (`memorySeconds*2.5`) → cold ghost (up to `admiral.ghostMaxAge`) → the
+  team's deterministic admiral SEARCH pattern (expanding ring sweep around the freshest
+  ghost of a living enemy, `admiral.searchRing*`) → a spawn/centre LANDMARK cycle
+  (`admiral.searchWptTimeout` time slices; also the fallback for non-admiral teams).
+  **No navigation or targeting path ever reads the live position of an enemy outside
+  `detA`/`detB`**; torpedo threat sensing additionally requires LOS to the warhead
+  within `ai.torpSenseRange`. (The old fallback read the true centroid of never-detected
+  enemies — fleet-wide omniscient navigation. Gated by `hunt-honest-never-detected`.)
 
 ## Player orders
 
@@ -333,6 +343,56 @@ firing solution has been broken. Deterministic firing model:
   and lane-clearing fire (`clearTransitLane`). These are **AI-internal** — they change how a
   transiting capital routes around a cluttered field and shoots blockers out of its own corridor;
   they add no new API, event, or state field. Present for override sweeps only.
+
+- `torpedo.frigate.cooldown` — **12.0 s** as of the frigate balance pass (was 6.0; an
+  all-frigate 42-pt fleet beat every preset 70–100%). Salvo (2 × 0.4 s gap) unchanged.
+- `ai.smartTeams` (`''`/`'A'`/`'B'`/`'AB'`, default `'AB'`) — which teams run the
+  coordinated fleet layer: fleet focus fire (`state.plan[team].focusId`, deletion-ordered
+  frigate → destroyer → battleship, wounded first), capital pincer bearings
+  (`ai.capitalPincerBearing`), frigate escort rings (`ai.escortRingSpread`), LOS-shadow
+  ambushes while hunting a fresh blind contact (`ai.ambushLingerSeconds` /
+  `ambushCooldown` / `ambushContactMax` — strictly time-bounded so ambushes cannot camp
+  the clock out), and the destroyer gun-discipline governor (approach speed cap +
+  `nav.faceLock`: the hull never rotates away from the firing bearing while a railgun
+  shot is imminent; braking happens in cooldown dead-time). Sweep `'A'` vs `''` for
+  smart-vs-base self-play.
+- `squadron.*` — fighter swarm coordinator (bombers + interceptors), gated by
+  `squadron.enabledTeams` (same format, default `'AB'`). Per-team, per-class, id-ordered
+  squadrons of `size` (5); `ship.ai.sqOrd` is a team-global squadron ordinal (bomber
+  squads first). Members get: SEPARATION nav-goal displacement (`bomberSep` 150 =
+  2×`aoeRadius`+30, applying to ANY pair involving a bomber; `lightSep` 82 between other
+  lights; `sepGain`, reduced to `runSepGain` 0.9 on a steady bomb run), a LIVE-BOMB
+  keep-out term (`bombAvoidMargin`/`bombPushGain`: repelled from friendly bombs in
+  flight, never one's own salvo), slot-separated ATTACK LANES with a chord floor
+  (`slotChord`: adjacent lanes never closer than this at any standDist) fanned around a
+  fleet-stable bearing, per-squadron SECTORS (`sectorSpread` rad apart) so squads own
+  distinct approach corridors, FROZEN parallel bomb-run lanes (`runLaneSep` per slot —
+  bombers fly THROUGH per-slot offsets while `launchBomb` still lead-solves the hull),
+  per-slot duck rocks + shadow-arc spread on break (`duckSlotSpread`) with staggered
+  regroup, and a weak (`formGain`) echelon FORMATION pull during no-contact transit and
+  admiral search/advance. All pure deterministic state math; never applied to pinned
+  ships or ships under player orders. Gated by `one-interceptor-cannot-chain-wave` and
+  `run-phase-spacing`.
+
+- `admiral.*` — fleet command layer, gated by `admiral.enabledTeams` (same format,
+  default `'AB'`). Per team: a POSTURE state machine (`search`/`advance`/`strike`/
+  `withdraw`, hysteresis `postureMinSeconds`; withdraw triggers below
+  `withdrawOwnFrac` fleet value with a known enemy capital, is time-boxed
+  `withdrawSeconds` and disabled past `withdrawLatestFrac` of the timer — a fleet
+  never flees forever), an AXIS + OBJECTIVE (detected-enemy centroid → ghost → search
+  waypoint), a RALLY point behind the main body, deterministic TASK ORGANIZATION
+  (`ship.ai.fleetRole`: `scout` interceptors probe `scoutSpread`-separated lanes and
+  shadow contacts from `scoutHoldRange`; a `screen` picket rides `screenDist` ahead;
+  `main` capitals advance line-abreast (`capitalLineSpacing`, applied to the hunt goal
+  BEFORE routeAround/bbSkirtWell) at a governed common speed (`advanceSpeedFrac`);
+  `reserve` = the highest-ordinal interceptor squads held at the rally until
+  `reserveReleaseFrac` losses or the PD umbrella falls), and SQUADRON-STAGGERED
+  commitment (`ai.commitStaggerSeconds` between squads, `ai.diveSlotStaggerSeconds`
+  within a squad; new waves only open in `strike` posture). `state.admiral[team]`
+  (`posture`, `objective`, `rally`, ...) is inspectable; renderers may draw command
+  overlays. `stats.deaths` records gained `atkTeam` (fratricide attribution). All
+  deterministic, zero new RNG draws; pinned/ordered ships are exempt and never hold
+  fleet roles. Gated by `admiral-roles-assigned` + `determinism-with-battleship`.
 
 Everything else in CONFIG is sim-internal; sweep it via `overrides` generically.
 

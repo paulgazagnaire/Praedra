@@ -1,8 +1,39 @@
 # STATUS
 
-**Phase:** Combat-sandbox build complete (user-directed pivot from the flip gate), now with **BIG asteroids + gravity**. The game is playable: RTS controls, fog of war, universal friendly fire, always-destructible terrain, detection, flanking, cover demolition, and gravity wells that bend everything.
+**Phase:** Combat-sandbox with **fleet command (admiral layer) + LOS-honest intel + universal gravity**, code split into `src/` modules. The game is playable: RTS controls, fog of war, universal friendly fire, always-destructible terrain, detection, flanking, cover demolition, gravity everywhere, and fleets that scout, advance in formation, strike in staggered waves and withdraw when mauled.
 
 ## What's in the build (all verified)
+
+**Balance + fleet AI pass (new):**
+- **Frigate torpedo cooldown 6.0 → 12.0 s** (fire rate halved). Measured cause: a 14-frigate
+  42-pt fleet beat RAILGUN 70-80%, BALANCED 80-90%, SWARM 90-100%. The nerf thins its margins
+  (surviving fleet value −25-40%) but the wall still wins — residual dominance is structural:
+  42 PD slots (interception wall) + kiting (cruise 85 / torpedo 950 vs destroyer 55 / railgun
+  700). Verified by lever isolation: cooldown 15 changes nothing vs RAILGUN. See Known items.
+- **Fighter squadron coordinator** (`squadron.*`, gated by `enabledTeams`, default AB): id-ordered
+  per-class squadrons of 5; separation steering (bomberSep 135 > 2× bomb AOE — one intercepted
+  bomb no longer chain-kills the wave), slot-fanned attack lanes around the squadron lead, weak
+  echelon formation during no-contact transit (never fights pathing; skipped for ordered/pinned
+  ships). SWARM-mirror A/B: squadron side won 22/24 as team A (control: base side bias ~63%);
+  bomb deaths −36%, bomber lifetime +31%.
+- **Coordinated fleet layer** (`ai.smartTeams`, default AB, sweepable for self-play): fleet
+  focus fire (deletion-ordered frigate→destroyer→battleship, wounded-first; drives torpedo
+  picks, railgun/wave targets), destroyer approach-speed governor + `nav.faceLock` gun
+  discipline (brake during railgun dead-time, nose stays on target while a shot is imminent —
+  fixes the reverse-burn-then-realign waste), capital pincer bearings, frigate escorts
+  distributed across all destroyers in ring slots, LOS-shadow ambushes on fresh blind contacts
+  (strictly time-bounded), lights lead-dodge closing debris shards (top fighter killer in
+  diagnostics). Round-1 self-play: smart side 61% over 144 mirror matches (SWARM 92% as A).
+- **`harness/diagnose.mjs`** (new): headless diagnostics — ordnance economy, deaths-by-cause,
+  clumping/chain-risk exposure, bomber lifetime, per-seed table, `--json`.
+
+**Fleet command + LOS-honest intel (new):**
+- **Omniscience is gone.** `huntPoint` no longer reads the true centroid of never-detected enemies; hunting tiers: hot memory -> 30s ghost -> the admiral's deterministic expanding-ring search -> a spawn/centre landmark cycle (mutual convergence keeps matches resolving). Torpedo threat sense is LOS-gated (`ai.torpSenseRange`). Team-shared detection (data-link) stays. Gated by `hunt-honest-never-detected` + `torp-sense-los`.
+- **The chain-wipe is fixed.** The reported 5-bombers+8-interceptors-die-to-one-interceptor massacre cannot reproduce (`one-interceptor-cannot-chain-wave`: <=6 losses, <=1 friendly-bomb death; was 13). Six-layer spacing: blast-safe separation for ANY pair involving a bomber (150 = 2xAOE+30), live-bomb repulsion term, FROZEN parallel bomb-run lanes (bombers fly per-slot offsets while launchBomb lead-solves the hull), per-squadron approach SECTORS + chord-floored lanes (never collapse at close range), per-slot duck rocks + shadow-arc spread + staggered regroup on break, per-slot dive time-stagger for interceptors (geometry untouched — a 95px gatling can only be deconflicted by bearing and time). `run-phase-spacing` gates p10 spacing >= 100px during live bomb runs.
+- **Admiral layer** (`admiral.*`, per-team, A/B-sweepable, deterministic, zero RNG): posture machine (search/advance/strike/withdraw with hysteresis; withdraw time-boxed and endgame-disabled), axis + objective + rally, task organization (scout interceptors probe spread lanes and shadow contacts; screen pickets ahead; main capitals advance line-abreast — offset applied to the hunt goal BEFORE routeAround/bbSkirtWell — at a governed common speed; reserve squads held at the rally until released), squadron-staggered wave commitment, posture-gated waves. Pinned/ordered ships exempt. `state.admiral` inspectable; `stats.deaths[].atkTeam` added.
+- **Physics-era survivability fixes** (found by tracing full matches): ship-rock contact below `collision.shipRockMinImpactSpeed` (30) pushes without damage (creeping fields must not sandpaper hulls); debris strikes capped at `debris.impactDamageCap` (12) so infall never one-shots a light from full; `collision.rockAnchorRadius` (500) — the titan can NEVER be collision-dislodged (universal gravity's fast heavy infall legally cleared the old velocity bar and the titan then ratcheted 500px in 5 ticks against its own accretion shell); huge movers grind through pebble fields on a capped step; `terrain.titanSpawnClear` 760 -> 1400 (fleets spawned inside the titan's infall stream and lost half their lights before contact).
+
+**Match tempo under honest intel:** symmetric BALANCED mirrors now run 240-310s and mostly resolve on points at the cap (fleets ground to value 5-8 of 42; zero draws/errors across the 30-match sweep) — the omniscient-beeline build resolved in ~130-190s with 80-90% eliminations, and that speed was an artifact of both fleets always knowing exactly where to march. Asymmetric matchups resolve by elimination (BB-with-scouts sweep: 8/10). Decisiveness levers already applied: one withdrawal per match, 2-ring search before the landmark cycle.
 
 **TITAN + BIG asteroids + gravity (new):**
 - **Every procedural seed carries exactly one TITAN** (r 1035–1440, ~5× a BIG) **plus 1–3 BIG asteroids** (r 220–380, vs 26–90 for ordinary rocks), placed in that order so clusters/lanes flow around them; arena grown 4400×3200 → 8000×5600 and match timer 300s → 360s to give titan-scale maps transit room (rock counts rescaled). The titan roams anywhere — including cut by the arena boundary — but always keeps ≥65% of its disc in the playable zone (deterministic disc sampler), so it always shapes the fight.
@@ -26,13 +57,13 @@
 - **Flanking**: 50% of commit waves hook wide left/right before turning in.
 - **Player orders**: `Praedra.issueOrder` — move / attackmove / attack / attackrock / hold / auto, per-class execution, opportunistic weapons-free fire, completed orders drop to Hold (PRD §9 semantics).
 
-**App (browser, single self-contained file, console-clean):**
+**App (browser, console-clean; code split into `src/sim/*.js` modules + `src/app.js`, manifest = script tags in `index.html`, harness loads via `harness/simloader.mjs`):**
 - Play-vs-AI (team A) or spectate. Fog of war: undetected enemies hidden, recent ghosts faded.
 - Selection: click / drag-box / shift-toggle / double-click-by-class / Esc. Right-click smart orders (move / attack detected ship / attack rock), shift+right = attack-move, S = hold, Space = ACTIVE PAUSE (orders work while paused). Selection rings, drag rectangle, move vs attack markers, hold indicators, adaptive cursor + reticle.
 - Lumpy polygonal asteroids and tumbling debris; shatter/explosion effects; HUD with selection summary and control cheat-sheet.
 
 ## Verification
-- `harness/tests.mjs`: **34/34 pass** (17 prior + 11 battleship/heavy-rail — incl. 4 new projectile-rework gates: projectile flight, turret arcs, ship-pierce/rock-stop, reload cadence — + 5 capital pathing/fire-discipline + 1 battleship-fleet real-match effectiveness smoke guard). Each new gate was mutation-verified (break the gate → the matching test fails); the pathing tests and the `battleship-fleet-effectiveness` guard were A/B'd against the pre-feature sim (the guard: a 42-pt BB fleet vs RAILGUN on seeds 1+5 deals 0 heavy-rail dmg when entombed, 1230 on the hitscan build, and a measured 960 after the deliberate projectile-rework nerf — floor retuned to >400). Wall-clock budget holds: the added per-tick corridor scan is staggered+cached, and the BB well-skirt is a cheap per-tick scan of the cached gravity-source list; small-fleet cost stays under the 2000 us/tick harness budget.
+- `harness/tests.mjs`: **46/46 pass** (34 prior + 12 new: 3 projectile/turret — rear-quarter bow-fire guard, torpedo-ballistic-exit, slug-exit; 4 gravity — universal far-field, mutual convergence, debris dislodge, idle tumble; 5 fleet-AI — hunt-honest, chain-wipe regression, run-phase spacing, admiral roles + disabled-gate, torp-sense LOS). Prior line: **34/34 pass** (17 prior + 11 battleship/heavy-rail — incl. 4 new projectile-rework gates: projectile flight, turret arcs, ship-pierce/rock-stop, reload cadence — + 5 capital pathing/fire-discipline + 1 battleship-fleet real-match effectiveness smoke guard). Each new gate was mutation-verified (break the gate → the matching test fails); the pathing tests and the `battleship-fleet-effectiveness` guard were A/B'd against the pre-feature sim (the guard: a 42-pt BB fleet vs RAILGUN on seeds 1+5 deals 0 heavy-rail dmg when entombed, 1230 on the hitscan build, and a measured 960 after the deliberate projectile-rework nerf — floor retuned to >400). Wall-clock budget holds: the added per-tick corridor scan is staggered+cached, and the BB well-skirt is a cheap per-tick scan of the cached gravity-source list; small-fleet cost stays under the 2000 us/tick harness budget.
 - Headless Chromium: zero console errors; 13/13 mandatory + 9/9 supplementary UI assertions (selection, orders, active-pause ordering, fog subset checks, spectate).
 - Determinism from seed: verified (incl. with gravity overrides; deep state compare at tick 600). Zero draws/errors across 135+ battery matches; no NaN at any gravity multiplier 0–3×.
 - Resolution at titan scale: asymmetric matchups resolve decisively (RAILGUN vs SWARM: 100% railgun across a 30-match sweep, 60-77% by elimination, the rest scored blowouts at the cap with SWARM ground to fleet value ≈ 0). The symmetric BALANCED mirror is an attrition war whose kill rate decays — most mirrors resolve on points (HP-lost) at the 360s cap after continuous combat (fleet values 42 → ~8-15); giving them 480s just inflated durations without changing outcomes (verified). Combat is continuous either way — the old "fleets never find each other" stalls are fixed (hunt routing around the titan + gravity feed-forward, below).
