@@ -737,6 +737,7 @@ function aiBomber(state, ship, dt) {
       m = 'run'; ship.ai.modeAt = state.time; ship.ai.runBombs = 0;
       var ba = Math.atan2(target.y - ship.y, target.x - ship.x);
       ship.ai.lane = { px: -Math.sin(ba), py: Math.cos(ba) }; // frozen run-lane perpendicular
+      ship.ai.laneTgt = target.id;
       state.stats.runEntries++;
     }
   }
@@ -748,6 +749,11 @@ function aiBomber(state, ship, dt) {
     // (spread lanes collapsed to one point exactly where the bombs go live). launchBomb
     // still lead-solves the hull itself, so bombs converge while bombers stay 150 apart.
     var SQn = state.config.squadron;
+    if (ship.ai.laneTgt !== target.id) {   // focus switched mid-run: re-freeze for the NEW target
+      var ba2 = Math.atan2(target.y - ship.y, target.x - ship.x);
+      ship.ai.lane = { px: -Math.sin(ba2), py: Math.cos(ba2) };
+      ship.ai.laneTgt = target.id;
+    }
     var laneOff = (ship.ai.sqSlot != null && ship.ai.sqN > 1)
       ? (ship.ai.sqSlot - (ship.ai.sqN - 1) / 2) * SQn.runLaneSep : 0;
     var ln = ship.ai.lane || { px: 0, py: 0 };

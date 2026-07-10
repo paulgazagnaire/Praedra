@@ -285,6 +285,7 @@ function rebuildMoverGrid(state) {
    Also stamped into the mover grid immediately so a fragment spawned or a rock woken
    MID-tick is visible to queries this same tick (load-bearing for splitAsteroid). */
 function rockWoke(state, o) {
+  o.everMoved = true;   // anchor immunity is for never-moved terrain only (see rockAnchorRadius)
   state.gridDirty = true;
   if (state.movers) state.movers.push(o);
   moverGridInsert(state, o);

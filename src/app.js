@@ -874,10 +874,8 @@
         } else if (ev.hit === 'rock') {
           g.fillStyle = 'rgba(205,190,164,' + (0.8 * a) + ')';
           g.beginPath(); g.arc(ev.x, ev.y, 3 + 6 * (1 - a), 0, 6.2832); g.fill();
-        } else { // miss: the spent round fizzles out downrange
-          g.fillStyle = 'rgba(255,240,200,' + (0.3 * a) + ')';
-          g.beginPath(); g.arc(ev.x, ev.y, 2.5, 0, 6.2832); g.fill();
         }
+        // (no 'miss' branch: ballistic slugs never fizzle mid-air — they exit the arena)
       } else if (ev.kind === 'hrailMuzzle') {
         // turret muzzle flash, oriented along the barrel (ev.ang)
         var mca = Math.cos(ev.ang), msa = Math.sin(ev.ang);

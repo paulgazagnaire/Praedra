@@ -168,7 +168,7 @@ function updateAsteroids(state, dt) {
         p.vx += jimp * nx / mp; p.vy += jimp * ny / mp;
         if (q.moving) {
           q.vx -= jimp * nx / mq; q.vy -= jimp * ny / mq;
-        } else if (q.r < C2.rockAnchorRadius && len(q.vx - jimp * nx / mq, q.vy - jimp * ny / mq) > 2) {
+        } else if ((q.r < C2.rockAnchorRadius || q.everMoved) && len(q.vx - jimp * nx / mq, q.vy - jimp * ny / mq) > 2) {
           // the hit is hard enough to genuinely dislodge it — but ANCHOR-class rocks
           // (titan) never move for a collision: universal gravity feeds fast heavy
           // infall that legally cleared the old velocity bar, and a dislodged titan
@@ -292,10 +292,11 @@ function applyGravity(state, dt) {
         if (q.id === o.id) return false;
         var ddx = q.x - o.x, ddy = q.y - o.y;
         var dd2 = ddx * ddx + ddy * ddy;
-        var loose = (o.r + q.r) * 1.22 + 4;       // cheap bound before the contour math
-        if (dd2 > loose * loose) return false;
-        var reach2 = pairContact(state, o, q) + 4; // contact on the contour (cached)
-        if (dd2 > reach2 * reach2) return false;
+        // ROTATION-STABLE support bound (review finding): the exact contour rotates with
+        // idle tumble and flipped supported on/off, thrashing settled piles in wells.
+        // Generous static bound: anything at most touching-distance down-well holds you.
+        var reach = (o.r + q.r) * 1.25 + 4;
+        if (dd2 > reach * reach) return false;
         if (ddx * gux + ddy * guy > 0) { supported = true; return true; }
         return false;
       });
@@ -328,7 +329,6 @@ function applyGravity(state, dt) {
       rocksNearSeg(state, p.x, p.y, p.x, p.y, AR + 40, function (q) {
         if (taken >= K) return true;
         if (q.id === p.id || q.r >= GR.sourceMinRadius) return false;
-        if (q.moving && q.id < p.id) return false; // mover-mover pair once, from the lower id
         var dx = q.x - p.x, dy = q.y - p.y;
         var d2 = dx * dx + dy * dy;
         if (d2 > AR * AR || d2 < 1) return false;
@@ -336,7 +336,11 @@ function applyGravity(state, dt) {
         var d = Math.sqrt(d2), ux = dx / d, uy = dy / d;
         var softL = 0.5 * (p.r + q.r);             // shared softening: no point-blank slingshots
         var s2 = d2 + softL * softL;
-        var aOnP = dmG * (q.r * q.r * q.r) / s2, aOnQ = dmG * pm3 / s2;
+        // mover-mover pairs are visited from BOTH sides at HALF strength (review finding:
+        // the old lower-id-owns-the-pair rule silently dropped pairs whose owner had
+        // exhausted its neighbor budget) — two half-passes sum to one full application
+        var mm = q.moving ? 0.5 : 1;
+        var aOnP = dmG * (q.r * q.r * q.r) / s2 * mm, aOnQ = dmG * pm3 / s2 * mm;
         p.vx += ux * aOnP * ddt; p.vy += uy * aOnP * ddt;
         if (q.moving) {
           q.vx -= ux * aOnQ * ddt; q.vy -= uy * aOnQ * ddt;

@@ -31,7 +31,9 @@ export function simSource(file) {
     return html.slice(b + MARK_BEGIN.length, e);
   }
   const dir = path.dirname(path.resolve(file));
-  const srcs = [...html.matchAll(/<script\s+src="(src\/sim\/[^"]+)"><\/script>/g)].map((m) => m[1]);
+  // tolerant of extra attributes/whitespace (e.g. defer, reformatting) — a reformatted
+  // tag must not silently drop a sim module from the concatenation
+  const srcs = [...html.matchAll(/<script\b[^>]*\bsrc="(src\/sim\/[^"]+)"[^>]*>/g)].map((m) => m[1]);
   if (!srcs.length) {
     throw new Error(`${file} has neither "${MARK_BEGIN}" markers nor <script src="src/sim/..."> tags`);
   }

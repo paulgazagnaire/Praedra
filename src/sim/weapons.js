@@ -341,8 +341,11 @@ function updateTorpedoes(state, dt) {
       var shc = state.ships[sc];
       if (!shc.alive || shc.id === tp.ownerId) continue;
       // while ACTIVELY tracking, the target keeps its evasion model (terminal roll below);
-      // a spent/ballistic torpedo is just a drifting warhead — it contact-hits ANY hull
+      // a spent/ballistic torpedo is just a drifting warhead — it contact-hits ANY hull,
+      // EXCEPT the target it just evasion-missed (tp.missedId): "sails past" must not
+      // become a guaranteed point-blank contact hit one tick later (review finding)
       if (!tp.spent && target && shc.id === target.id) continue;
+      if (shc.id === tp.missedId) continue;
       if (dist(tp.x, tp.y, shc.x, shc.y) < shc.def.radius + 6) { struck = shc; break; }
     }
     if (struck) {
@@ -367,7 +370,8 @@ function updateTorpedoes(state, dt) {
         tp.alive = false;
         pushEvent(state, { kind: 'boom', x: tp.x, y: tp.y, r: T.aoeRadius * 0.6 });
       } else {
-        tp.spent = true; // sails past, no re-attack
+        tp.spent = true;          // sails past, no re-attack...
+        tp.missedId = target.id;  // ...and never contact-hits THIS hull it just missed
       }
     }
   }

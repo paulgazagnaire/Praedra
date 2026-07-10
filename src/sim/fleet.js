@@ -416,6 +416,10 @@ function updateAdmiral(state) {
       adm.withdrawsUsed = true;
     } else if (adm.posture === 'withdraw') {
       if (state.time >= adm.withdrawUntil) {                 // bounded: ALWAYS re-attacks
+        // re-entering strike is a FRESH strike: re-baseline the reserve bookkeeping
+        // (found in review: the stale strikeLights0/reserveReleased either froze the
+        // reserve at the rally forever or forbade ever rebuilding one)
+        if (engaged) { adm.strikeLights0 = countLights(own); adm.reserveReleased = false; }
         adm.posture = engaged ? 'strike' : 'advance'; adm.postureAt = state.time;
       }
     } else {
