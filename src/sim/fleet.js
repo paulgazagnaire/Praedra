@@ -407,10 +407,13 @@ function updateAdmiral(state) {
     var ownFrac = ownVal / (state.initialValue[team] || 1);
     var lc = state.lastContact[team];
     if (adm.posture !== 'withdraw' && ownFrac < ADM.withdrawOwnFrac &&
-        enemyCapitalKnown(state, team) &&
+        !adm.withdrawsUsed && enemyCapitalKnown(state, team) &&
         state.time < ADM.withdrawLatestFrac * state.config.matchTimerSeconds) {
+      // ONE withdrawal per match: a mauled fleet regroups once, then fights to the end —
+      // withdraw/advance ping-pong between two gutted fleets ran out the clock
       adm.posture = 'withdraw'; adm.postureAt = state.time;
       adm.withdrawUntil = state.time + ADM.withdrawSeconds;
+      adm.withdrawsUsed = true;
     } else if (adm.posture === 'withdraw') {
       if (state.time >= adm.withdrawUntil) {                 // bounded: ALWAYS re-attacks
         adm.posture = engaged ? 'strike' : 'advance'; adm.postureAt = state.time;

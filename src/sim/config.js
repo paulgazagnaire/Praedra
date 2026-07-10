@@ -457,7 +457,9 @@ var CONFIG_DEFAULTS = {
     ghostMaxAge: 30,               // s a lastContact ghost stays navigable (hunt tier T2)
     searchRingStep: 1100,          // expanding-sweep ring spacing around the last-seen anchor
     searchRingBearings: 6,         // waypoints per ring
-    searchRings: 4,                // rings before falling back to the spawn/centre landmark cycle
+    searchRings: 2,                // rings before falling back to the spawn/centre landmark cycle
+                                   // (short: after ~12 local waypoints the landmark cycle forces
+                                   // both fleets through the centre — re-contact beats coverage)
     searchWptRadius: 650,          // any own ship this close -> next waypoint
     searchWptTimeout: 22,          // s before an unreachable waypoint is abandoned (also the T4 slice)
   },

@@ -164,7 +164,7 @@ function mkAdmiral() {
     fleetSpeed: 0,                // capital advance governor (0 = off)
     search: { n: 0, wpt: null, sinceT: 0, ax: 0, ay: 0 },
     strikeLights0: 0, reserveReleased: false,
-    withdrawUntil: -1, at: -1,
+    withdrawUntil: -1, withdrawsUsed: false, at: -1,
     nScreen: 0, nCap: 0, nEligible: 0,
   };
 }
