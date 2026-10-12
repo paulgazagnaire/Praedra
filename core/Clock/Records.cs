@@ -24,6 +24,7 @@ public enum Side { Empire = 0, Alliance = 1 }
 [JsonDerivedType(typeof(LoadSquadronsOrder), "LoadSquadrons")]
 [JsonDerivedType(typeof(UnloadSquadronsOrder), "UnloadSquadrons")]
 [JsonDerivedType(typeof(DebugSetDamageOrder), "DebugSetDamage")]
+[JsonDerivedType(typeof(Rebellion.Core.Defenses.BombardOrder), "Bombard")]
 public abstract record Order(long Sequence, Side Side);
 
 /// <summary>

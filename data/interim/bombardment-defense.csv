@@ -1,0 +1,19 @@
+kind,name,bombard_defense,tag
+troop,Alliance Fleet Regiment,5,units/01 and m3-bombardment B7
+troop,Alliance Army Regiment,5,units/01 and m3-bombardment B7
+troop,Sullustan Regiment,2,units/01 and m3-bombardment B7
+troop,Wookiee Regiment,4,units/01 and m3-bombardment B7
+troop,Mon Calamari Regiment,9,units/01 and m3-bombardment B7
+troop,Stormtrooper Regiment,6,units/01 and m3-bombardment B7
+troop,Imperial Fleet Regiment,2,units/01 and m3-bombardment B7
+troop,Imperial Army Regiment,5,units/01 and m3-bombardment B7
+troop,War Droid Regiment,2,units/01 and m3-bombardment B7
+troop,Dark Trooper Regiment,6,units/01 and m3-bombardment B7
+facility,Mine,5,DEFAULT (MANFACSD and PROFACSD field not in the specs: m3-bombardment Resolution 4)
+facility,Refinery,5,DEFAULT (MANFACSD and PROFACSD field not in the specs: m3-bombardment Resolution 4)
+facility,Orbital Shipyard,5,DEFAULT (MANFACSD and PROFACSD field not in the specs: m3-bombardment Resolution 4)
+facility,Training Facility,5,DEFAULT (MANFACSD and PROFACSD field not in the specs: m3-bombardment Resolution 4)
+facility,Construction Yard,5,DEFAULT (MANFACSD and PROFACSD field not in the specs: m3-bombardment Resolution 4)
+facility,Advanced Shipyard,5,DEFAULT (MANFACSD and PROFACSD field not in the specs: m3-bombardment Resolution 4)
+facility,Advanced Training Facility,5,DEFAULT (MANFACSD and PROFACSD field not in the specs: m3-bombardment Resolution 4)
+facility,Advanced Construction Yard,5,DEFAULT (MANFACSD and PROFACSD field not in the specs: m3-bombardment Resolution 4)

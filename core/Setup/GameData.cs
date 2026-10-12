@@ -1,4 +1,5 @@
 using Rebellion.Core.Construction;
+using Rebellion.Core.Defenses;
 using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
 using Rebellion.Core.Map;
@@ -22,7 +23,8 @@ public sealed record GameData(
     CostData Costs,
     GarrisonWeights Weights,
     IReadOnlyList<StartingFacility> StartingFacilities,
-    TroopData Troops)
+    TroopData Troops,
+    DefenseData Defenses)
 {
     private static readonly Lazy<GameData> _default = new(() => Load(FindRepoRoot()));
 
@@ -42,7 +44,8 @@ public sealed record GameData(
             CostData.Load(Path.Combine(interim, CostData.FileName)),
             GarrisonWeights.Load(Path.Combine(design, GarrisonWeights.FileName)),
             Construction.StartingFacilities.Load(Path.Combine(design, Construction.StartingFacilities.FileName)),
-            TroopData.Load(interim, design));
+            TroopData.Load(interim, design),
+            DefenseData.Load(interim));
     }
 
     /// <summary>The folder that holds Rebellion.sln, searching upwards from the program's folder and then the working folder.</summary>

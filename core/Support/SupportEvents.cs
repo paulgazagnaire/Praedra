@@ -20,5 +20,5 @@ public sealed record UprisingEnded(int Index, int Day, string System, string Rea
 public sealed record IncidentRolled(int Index, int Day, string System, int Score, int Code1, int Code2)
     : GameEvent(Index, Day, nameof(IncidentRolled));
 
-public sealed record RegimentDestroyed(int Index, int Day, int Object, string Class, string System, Side Side)
+public sealed record RegimentDestroyed(int Index, int Day, int Object, string Class, string System, Side Side, string Reason = "UprisingIncident")
     : GameEvent(Index, Day, nameof(RegimentDestroyed));

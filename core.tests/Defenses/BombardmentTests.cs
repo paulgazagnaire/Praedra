@@ -1,0 +1,610 @@
+using Rebellion.Core.Clock;
+using Rebellion.Core.Defenses;
+using Rebellion.Core.Economy;
+using Rebellion.Core.Support;
+using Rebellion.Core.Tests.Economy;
+
+namespace Rebellion.Core.Tests.Defenses;
+
+// m3-bombardment, tests B1 to B22 (B23 is an M6 test, recorded in the sheet), then extra tests named after the rule they check.
+// Dice are injected with the stub generator: per hit t, then r (Dice(t, r)); statistical tests are in BombardmentStatTests.
+public class BombardmentTests
+{
+    private const string Sys = BombWorld.Sys;
+    private static readonly Side Emp = Side.Empire, All = Side.Alliance;
+    private const BombardCategory Mil = BombardCategory.Military, Civ = BombardCategory.Civilian, Gen = BombardCategory.General;
+
+    private static BombardmentStarted Started(BombWorld w) => Assert.Single(w.Events<BombardmentStarted>());
+
+    // m3-bombardment B1
+    [Theory]
+    [InlineData(0, 1)] [InlineData(39, 1)] [InlineData(40, 2)] [InlineData(79, 2)] [InlineData(80, 3)] [InlineData(119, 3)] [InlineData(120, 4)]
+    public void B1_AdmiralMultiplier(int leadership, int multiplier)
+    {
+        var w = new BombWorld();
+        Assert.Equal(multiplier, w.Bomb.AdmiralMultiplier(leadership));
+        int f = w.Fleet(Emp, Sys, "Corellian Corvette"); // base value 1
+        w.Bomb.AdmiralLeadership = _ => leadership;
+        Assert.Equal(multiplier, w.Bomb.Power(w.Game.State.Fleets[f]));
+    }
+
+    // m3-bombardment B2
+    [Theory]
+    [InlineData(0, 8)]
+    [InlineData(80, 24)]
+    public void B2_FourIsdAtLeadership(int leadership, int power)
+    {
+        var w = new BombWorld();
+        w.Hold(All);
+        int f = w.Fleet(Emp, Sys, BombWorld.Isd, 4);
+        w.Bomb.AdmiralLeadership = fl => fl.Id == f ? leadership : 0;
+        Assert.Equal(power, w.Bomb.Power(w.Game.State.Fleets[f]));
+        Assert.Null(w.TryBombard(Emp, f, Sys, Mil));
+        Assert.Equal(power, Started(w).P);
+    }
+
+    // m3-bombardment B3
+    [Fact]
+    public void B3_OneDeathStarIs15HitsAgainstNoShields()
+    {
+        var w = new BombWorld();
+        w.Hold(All);
+        int f = w.Fleet(Emp, Sys, "Death Star");
+        Assert.Null(w.TryBombard(Emp, f, Sys, Mil));
+        var s = Started(w);
+        Assert.Equal((15, 0, 15), (s.P, s.S, s.Hits));
+    }
+
+    // m3-bombardment B4: carrier and squadrons; the squadron counts once at the column's value
+    [Theory]
+    [InlineData("Y-wing", 14)]
+    [InlineData("A-wing", 2)]
+    public void B4_LiberatorCarryingSixSquadrons(string squadron, int power)
+    {
+        var w = new BombWorld();
+        int f = w.Fleets.AddFleet(All, "Lib", new[] { "Liberator Cruiser" }, Sys, Enumerable.Repeat(squadron, 6));
+        Assert.Equal(power, w.Bomb.Power(w.Game.State.Fleets[f]));
+    }
+
+    // m3-bombardment B5 (hits = max(0, P - S)): the powers are built from ships and an injected admiral
+    [Theory]
+    [InlineData("3", "VD6", 0, 24, 40, 0)]                     // 6 Victory Destroyers (4 each) against GenCore I
+    [InlineData("3,6", "DS4+V2", 40, 130, 120, 10)]            // (4 Death Stars + a Victory II = 65) x 2 against GenCore I + II
+    [InlineData("3,6", "DS3+V2", 40, 100, 120, 0)]             // (3 Death Stars + a Victory II = 50) x 2
+    public void B5_ShieldsAbsorbPower(string gens, string ships, int leadership, int power, int shield, int hits)
+    {
+        var w = new BombWorld();
+        w.Hold(All);
+        foreach (var c in gens.Split(',')) w.Facility(c == "3" ? FacilityKind.GenCoreLevelI : FacilityKind.GenCoreLevelII);
+        var list = ships switch
+        {
+            "VD6" => Enumerable.Repeat("Victory Destroyer", 6),
+            "DS4+V2" => Enumerable.Repeat("Death Star", 4).Append("Victory II Star Destroyer"),
+            _ => Enumerable.Repeat("Death Star", 3).Append("Victory II Star Destroyer"),
+        };
+        int fleet = w.Fleet(Emp, Sys, list.ToArray());
+        w.Bomb.AdmiralLeadership = _ => leadership;
+        w.Dice(Enumerable.Repeat((0, 1), 10).ToArray()); // every roll too low to destroy a generator (defense 2 and 3)
+        Assert.Null(w.TryBombard(Emp, fleet, Sys, Mil));
+        var s = Started(w);
+        Assert.Equal((power, shield, hits), (s.P, s.S, s.Hits));
+        Assert.Equal(hits, w.Events<TargetHit>().Count);
+    }
+
+    // m3-bombardment B6: for each bombardment defense d the destroy chance is exactly (10 - d) / 10: r in 1..10, destroyed when r > d
+    [Fact]
+    public void B6_DefenseValueTableDestroysExactlyTenMinusDOfTenRolls()
+    {
+        for (int d = 0; d <= 10; d++)
+        {
+            var w = new BombWorld(data: BombWorld.ArmyDefense(d));
+            w.Hold(All);
+            int f = w.Fleet(Emp, Sys, "Corellian Corvette"); // P = 1
+            int destroyed = 0;
+            for (int r = 1; r <= 10; r++)
+            {
+                int reg = w.Regiment(All, BombWorld.Army);
+                w.Dice((0, r));
+                Assert.Null(w.TryBombard(Emp, f, Sys, Mil));
+                if (w.Eco.Find(reg) == null) destroyed++; else w.Eco.RemoveObject(reg);
+            }
+            Assert.Equal(10 - d, destroyed);
+        }
+    }
+
+    // m3-bombardment B7: the ten regiments, percent of the ten rolls
+    [Fact]
+    public void B7_TheTenRegimentsChances()
+    {
+        var expect = new (Side Side, string Class, int Percent)[]
+        {
+            (All, "Alliance Fleet Regiment", 50), (All, "Alliance Army Regiment", 50), (All, "Sullustan Regiment", 80), (All, "Wookiee Regiment", 60),
+            (All, "Mon Calamari Regiment", 10), (Emp, "Stormtrooper Regiment", 40), (Emp, "Imperial Fleet Regiment", 80),
+            (Emp, "Imperial Army Regiment", 50), (Emp, "War Droid Regiment", 80), (Emp, "Dark Trooper Regiment", 40),
+        };
+        var w = new BombWorld();
+        w.Hold(All);                                  // Denon: Alliance regiments, bombed by the Empire
+        w.Hold(Emp, 100, BombWorld.Imp);              // Coruscant: Empire regiments, bombed by the Alliance
+        int empFleet = w.Fleet(Emp, Sys, "Carrack Light Cruiser");
+        int allFleet = w.Fleet(All, BombWorld.Imp, "Corellian Corvette");
+        foreach (var (side, cls, percent) in expect)
+        {
+            string system = side == All ? Sys : BombWorld.Imp;
+            int destroyed = 0;
+            for (int r = 1; r <= 10; r++)
+            {
+                int reg = w.Regiment(side, cls, system);
+                w.Dice((0, r));
+                Assert.Null(w.TryBombard(side == All ? Emp : All, side == All ? empFleet : allFleet, system, Mil));
+                if (w.Eco.Find(reg) == null) destroyed++; else w.Eco.RemoveObject(reg);
+            }
+            Assert.Equal(percent, destroyed * 10);
+        }
+    }
+
+    // m3-bombardment B11: P = 24 against one GenCore I (40): zero hits, zero draws, the events still come
+    [Fact]
+    public void B11_NoHitsNoDrawsButStillResolved()
+    {
+        var w = new BombWorld();
+        w.Hold(All);
+        w.Facility(FacilityKind.GenCoreLevelI); w.Regiment(All, BombWorld.Army);
+        int f = w.Fleet(Emp, Sys, "Victory Destroyer", 6);
+        Assert.Null(w.TryBombard(Emp, f, Sys, Gen));
+        Assert.Empty(w.Stub.Requests);
+        var s = Started(w);
+        Assert.Equal((24, 40, 0), (s.P, s.S, s.Hits));
+        var r = Assert.Single(w.Events<BombardmentResolved>());
+        Assert.Equal((0, 0, 0, 0, 0), (r.Hits, r.Regiments, r.Facilities, r.Energy, r.Raw));
+        Assert.Empty(w.Events<TargetHit>());
+    }
+
+    // m3-bombardment B12: Military on a world with mines and Army regiments, 30 hits: no mine or energy touched, no support change
+    [Fact]
+    public void B12_MilitaryNeverTouchesMinesEnergyOrSupport()
+    {
+        var w = new BombWorld(stub: false, seed: 12);
+        w.Hold(All, 45);
+        w.Eco.SetSlots(Sys, 4, 2);
+        int m1 = w.Eco.AddFacility(Sys, FacilityKind.Mine), m2 = w.Eco.AddFacility(Sys, FacilityKind.Mine);
+        for (int i = 0; i < 4; i++) w.Regiment(All, BombWorld.Army);
+        int f = w.Fleet(Emp, Sys, "Death Star", 2); // 30 hits
+        Assert.Null(w.TryBombard(Emp, f, Sys, Mil));
+        Assert.Equal(30, Started(w).Hits);
+        Assert.NotNull(w.Eco.Find(m1)); Assert.NotNull(w.Eco.Find(m2));
+        Assert.Equal((4, 2), (w.Eco.SlotsOf(Sys).Energy, w.Eco.SlotsOf(Sys).Raw));
+        Assert.Empty(w.Events<SupportChanged>());
+        Assert.Empty(w.Events<ResourceReduced>());
+        Assert.Equal(0, w.Eco.Objects.Count(o => o.Category == ObjectCategory.Regiment)); // 30 hits at 50 percent clear four regiments
+    }
+
+    // m3-bombardment B13 (the S11 case of the support sheet): one civilian facility destroyed, one -20 to the bomber
+    [Fact]
+    public void B13_CivilianHitMovesSupportByMinus20()
+    {
+        var w = new BombWorld();
+        w.Hold(All, 45);                                   // Alliance 45, Empire 55
+        w.Eco.SetSlots(Sys, 2, 1);
+        int mine = w.Eco.AddFacility(Sys, FacilityKind.Mine);
+        int f = w.Fleet(Emp, Sys, "Carrack Light Cruiser"); // P = 1
+        w.Dice((0, 10));                                   // pool [mine, Energy, Raw]: the mine, a roll of 10
+        Assert.Null(w.TryBombard(Emp, f, Sys, Civ));
+        Assert.Null(w.Eco.Find(mine));
+        var sc = Assert.Single(w.Events<SupportChanged>());
+        Assert.Equal((45, 65, SupportCause.Bombardment), (sc.Old, sc.New, sc.Cause)); // Empire 55 to 35
+        Assert.Equal(35, w.Eco.SupportOf(Sys, Emp));
+        var r = Assert.Single(w.Events<BombardmentResolved>());
+        Assert.Equal((1, 0, 1, 0, 0), (r.Hits, r.Regiments, r.Facilities, r.Energy, r.Raw));
+        Assert.Equal(3, w.Game.Events.Count(e => e is BombardmentStarted or TargetHit or FacilityDestroyed));
+    }
+
+    // m3-bombardment B14: three mines destroyed by a General bombardment: still one -20
+    [Fact]
+    public void B14_ThreeMinesStillOneSupportChange()
+    {
+        var w = new BombWorld();
+        w.Hold(All, 45);
+        w.Eco.SetSlots(Sys, 5, 3);
+        for (int i = 0; i < 3; i++) w.Eco.AddFacility(Sys, FacilityKind.Mine);
+        int f = w.Fleet(Emp, Sys, "Carrack Light Cruiser", 3);
+        w.Dice((0, 10), (0, 10), (0, 10));
+        Assert.Null(w.TryBombard(Emp, f, Sys, Gen));
+        Assert.Equal(3, w.Events<FacilityDestroyed>().Count(e => e.Reason == DestroyReason.Bombardment));
+        var sc = Assert.Single(w.Events<SupportChanged>());
+        Assert.Equal((45, 65), (sc.Old, sc.New));
+    }
+
+    // m3-bombardment B15: Energy hit only: no support change, energy lowered, the over-capacity check runs
+    [Fact]
+    public void B15_EnergyHitLowersEnergyWithoutSupportChange()
+    {
+        var w = new BombWorld();
+        w.Hold(All, 45);
+        w.Eco.SetSlots(Sys, 4, 1);
+        int mine = w.Eco.AddFacility(Sys, FacilityKind.Mine);
+        int f = w.Fleet(Emp, Sys, "Carrack Light Cruiser");
+        w.Dice((1, 10));                                   // pool [mine, Energy, Raw]: Energy
+        Assert.Null(w.TryBombard(Emp, f, Sys, Civ));
+        Assert.Equal(3, w.Eco.SlotsOf(Sys).Energy);
+        Assert.NotNull(w.Eco.Find(mine));
+        Assert.Empty(w.Events<SupportChanged>());
+        Assert.Equal(new[] { "Energy" }, w.Events<ResourceReduced>().Select(e => e.Resource));
+    }
+
+    // m3-bombardment B15 (second half): energy falls below the installed facilities, so the slots sheet's pick draw runs; that collateral is not a civilian hit
+    [Fact]
+    public void B15_EnergyHitRunsTheOverCapacityCheck()
+    {
+        var w = new BombWorld();
+        w.Hold(All, 45);
+        w.Eco.SetSlots(Sys, 2, 1);
+        int mine = w.Eco.AddFacility(Sys, FacilityKind.Mine), yard = w.Eco.AddFacility(Sys, FacilityKind.ConstructionYard);
+        int f = w.Fleet(Emp, Sys, "Carrack Light Cruiser");
+        // pool [mine, yard, Energy, Raw]: t = 2 (Energy), r = 10; then the over-capacity pick rand(0..1) = 0 destroys the mine
+        var stub = w.Stub;
+        stub.Expect(0, 3, 2).Expect(1, 10, 10).Expect(0, 1, 0);
+        Assert.Null(w.TryBombard(Emp, f, Sys, Civ));
+        Assert.Equal(1, w.Eco.SlotsOf(Sys).Energy);
+        var d = Assert.Single(w.Events<FacilityDestroyed>());
+        Assert.Equal((mine, DestroyReason.OverEnergy), (d.Facility, d.Reason));
+        Assert.NotNull(w.Eco.Find(yard));
+        Assert.Equal(1, stub.Count(0, 1));
+        Assert.Empty(w.Events<SupportChanged>());
+    }
+
+    // m3-bombardment B16: a neutral system with a yard: accepted, the yard falls, support moves, no capture
+    [Fact]
+    public void B16_NeutralSystemCanBeBombarded()
+    {
+        var w = new BombWorld();                           // Denon is neutral here
+        w.Eco.SetSlots(Sys, 2, 0);
+        int yard = w.Facility(FacilityKind.ConstructionYard);
+        int f = w.Fleet(Emp, Sys, "Carrack Light Cruiser");
+        w.Dice((0, 10));                                   // pool [yard, Energy]
+        Assert.Null(w.TryBombard(Emp, f, Sys, Civ));
+        Assert.Null(w.Eco.Find(yard));
+        var sc = Assert.Single(w.Events<SupportChanged>());
+        Assert.Equal(sc.Old + 20, sc.New);                 // the Empire loses 20: the Alliance share rises
+        Assert.Null(w.Fleets.OwnerOf(Sys));
+    }
+
+    // m3-bombardment B17: the rejections
+    [Fact]
+    public void B17_Rejections()
+    {
+        var w = new BombWorld();
+        w.Hold(All);
+        int own = w.Fleet(All, Sys, "Corellian Corvette");                       // the holder's own fleet
+        Assert.Equal(BombardReject.OwnSystem, w.TryBombard(All, own, Sys, Mil));
+
+        w.Hold(Emp, 100, BombWorld.Imp);
+        int fl = w.Fleet(Emp, Sys, "Victory Destroyer");
+        w.Fleets.SubmitMove(Emp, fl, BombWorld.Imp);                               // departs this Step
+        w.Run(1);
+        Assert.Equal(RejectReason.InTransit, w.TryBombard(Emp, fl, Sys, Mil));
+
+        int a = w.Fleet(Emp, Sys, "Victory Destroyer");                           // the Alliance fleet is at Denon too
+        Assert.Equal(BombardReject.EnemyFleetPresent, w.TryBombard(Emp, a, Sys, Mil));
+
+        var w2 = new BombWorld();
+        w2.Hold(All);
+        int zero = w2.Fleet(Emp, Sys, "Medium Transport");                        // bombardment modifier 0
+        Assert.Equal(BombardReject.NoBombardPower, w2.TryBombard(Emp, zero, Sys, Mil));
+        int dsFleet = w2.Fleet(Emp, Sys, "Death Star");                           // power 15, but Destroy System is not available in M3
+        Assert.Equal(RejectReason.NotAvailable, w2.TryBombard(Emp, dsFleet, Sys, BombardCategory.DestroySystem));
+    }
+
+    // m3-bombardment §Order and preconditions check 1 (the other codes) and 6 (OrderPending)
+    [Fact]
+    public void FleetCodesAndOrderPending()
+    {
+        var w = new BombWorld();
+        w.Hold(All);
+        int f = w.Fleet(Emp, Sys, "Victory Destroyer");
+        Assert.Equal(RejectReason.UnknownFleet, w.TryBombard(Emp, 9999, Sys, Mil));
+        Assert.Equal(RejectReason.NotYours, w.TryBombard(All, f, Sys, Mil));
+        Assert.Equal(BombardReject.NotAtSystem, w.TryBombard(Emp, f, BombWorld.Other, Mil));
+        long first = w.Bombard(Emp, f, Sys, Mil), second = w.Bombard(Emp, f, Sys, Gen);
+        w.Run(1);
+        Assert.Null(w.RejectionOf(first));
+        Assert.Equal(BombardReject.OrderPending, w.RejectionOf(second));
+        Assert.Single(w.Events<BombardmentStarted>());
+        Assert.Equal(f, w.Events<OrderAccepted>().Last().Fleet);
+    }
+
+    // m3-bombardment B18: a garrison of three loses two to a bombardment: slot 6.1 of the same Step starts the uprising with one arm draw
+    [Fact]
+    public void B18_DeadRegimentsStartAnUprisingTheSameStep()
+    {
+        var w = new BombWorld();
+        w.Hold(All, 35);                                   // N = ceil(25 / 10) = 3
+        Assert.Equal(3, w.S.Sup.RequiredGarrison(Sys));
+        for (int i = 0; i < 3; i++) w.Regiment(All, BombWorld.Army);
+        int f = w.Fleet(Emp, Sys, "Carrack Light Cruiser", 2);
+        w.Dice((0, 10), (0, 10));
+        Assert.Null(w.TryBombard(Emp, f, Sys, Mil));
+        Assert.Equal(1, w.Eco.Objects.Count(o => o.Category == ObjectCategory.Regiment));
+        Assert.Equal(2, w.Events<RegimentDestroyed>().Count(e => e.Reason == "Bombardment"));
+        Assert.Single(w.Events<UprisingStarted>());
+        Assert.Equal(1, w.Stub.Count(0, w.S.Sup.Params.IncidentIntervalSpread)); // the one arm draw of 6.1, after every bombardment draw
+        var kinds = w.Game.Events.Select(e => e.Kind).ToList();
+        Assert.True(kinds.IndexOf(nameof(BombardmentResolved)) < kinds.IndexOf(nameof(UprisingStarted)));
+    }
+
+    // m3-bombardment B19: a shield destroyed at Step K lowers S at K + 1, and with one GenCore left the gate is open
+    [Fact]
+    public void B19_ShieldDestroyedLowersSNextStep()
+    {
+        var w = new BombWorld();
+        w.Hold(All);
+        w.Facility(FacilityKind.GenCoreLevelI); w.Facility(FacilityKind.GenCoreLevelI);
+        int f = w.Fleet(Emp, Sys, new[] { "Death Star", "Death Star", "Death Star", "Death Star", "Death Star", "Victory II Star Destroyer", "Carrack Light Cruiser", "Carrack Light Cruiser" }); // P = 82
+        w.Dice((0, 10), (0, 1)); // the first shield falls (10 > 2), the second survives its roll (1)
+        Assert.Null(w.TryBombard(Emp, f, Sys, Mil));
+        var first = Assert.Single(w.Events<BombardmentStarted>());
+        Assert.Equal((82, 80, 2), (first.P, first.S, first.Hits));
+        Assert.False(w.Def.AssaultForbidden(Sys));
+        w.Dice(Enumerable.Repeat((0, 1), 42).ToArray());
+        Assert.Null(w.TryBombard(Emp, f, Sys, Mil));
+        Assert.Equal(40, w.Events<BombardmentStarted>().Last().S);
+    }
+
+    // m3-bombardment B20: an enemy fleet arrives before 5.1: the order is cancelled, no draw
+    [Fact]
+    public void B20_EnemyFleetArrivingCancelsTheOrder()
+    {
+        var w = new BombWorld();
+        w.Hold(All);
+        w.Regiment(All, BombWorld.Army);
+        int f = w.Fleet(Emp, Sys, "Victory Destroyer");
+        bool arrived = false;
+        w.Game.RegisterHook("5", _ => { if (!arrived) { arrived = true; w.Fleet(All, Sys, "Corellian Corvette"); } }); // before 5.1
+        long seq = w.Bombard(Emp, f, Sys, Mil);
+        w.Run(1);
+        Assert.Null(w.RejectionOf(seq));
+        var c = Assert.Single(w.Events<BombardCancelled>());
+        Assert.Equal((f, Sys, BombardReject.EnemyFleetPresent), (c.Fleet, c.System, c.Reason));
+        Assert.Empty(w.Events<BombardmentStarted>());
+        Assert.Empty(w.Stub.Requests);
+    }
+
+    // m3-bombardment B21: same seed and orders twice: identical draw log, events and state hash
+    [Fact]
+    public void B21_SameSeedSameResult()
+    {
+        BombWorld Run()
+        {
+            var w = new BombWorld(stub: false, seed: 77);
+            w.Hold(All, 45);
+            w.Eco.SetSlots(Sys, 4, 2);
+            w.Eco.AddFacility(Sys, FacilityKind.Mine); w.Eco.AddFacility(Sys, FacilityKind.Refinery); w.Facility(FacilityKind.Kdy150);
+            for (int i = 0; i < 5; i++) w.Regiment(All, BombWorld.Army);
+            int f = w.Fleet(Emp, Sys, "Victory Destroyer", 5);
+            w.TryBombard(Emp, f, Sys, Gen);
+            return w;
+        }
+        var a = Run(); var b = Run();
+        Assert.Equal(a.Game.Rng.Export(), b.Game.Rng.Export());
+        Assert.True(a.Game.Rng.Draws >= 2);
+        Assert.Equal(a.Game.Events.Count, b.Game.Events.Count);
+        Assert.True(a.Game.Events.SequenceEqual(b.Game.Events));
+        Assert.Equal(GameSave.StateHash(a.Game), GameSave.StateHash(b.Game));
+        Assert.Equal(a.Events<TargetHit>().Select(h => (h.TargetKind, h.Id, h.Roll)), b.Events<TargetHit>().Select(h => (h.TargetKind, h.Id, h.Roll)));
+    }
+
+    // m3-bombardment B22: a facility list with a battery: BatteryReturnFire is emitted, ships unchanged
+    [Fact]
+    public void B22_BatteryReturnFireIsOnlyAHook()
+    {
+        var w = new BombWorld();
+        w.Hold(All);
+        int k = w.Facility(FacilityKind.Kdy150); w.Facility(FacilityKind.GenCoreLevelI);
+        int f = w.Fleet(Emp, Sys, "Victory Destroyer", 11);                 // P = 44, S = 40, 4 hits
+        var before = string.Join(";", w.Eco.Objects.Where(o => o.Category == ObjectCategory.CapitalShip).Select(o => $"{o.Hull}:{string.Join(",", o.Hits!)}"));
+        w.Dice(Enumerable.Repeat((0, 1), 4).ToArray());
+        Assert.Null(w.TryBombard(Emp, f, Sys, Mil));
+        Assert.Equal(new[] { k }, Assert.Single(w.Events<BatteryReturnFire>()).Facilities.Items);
+        Assert.Equal(before, string.Join(";", w.Eco.Objects.Where(o => o.Category == ObjectCategory.CapitalShip).Select(o => $"{o.Hull}:{string.Join(",", o.Hits!)}")));
+    }
+
+    // ---------------------------------------------------------------- extra tests
+
+    // m3-bombardment §Draw order: per hit t over the pool of size m (0..m-1), then r (1..10)
+    [Fact]
+    public void DrawOrderIsTThenRAndTheRangesAreThePoolAndTheDie()
+    {
+        var w = new BombWorld();
+        w.Hold(All);
+        for (int i = 0; i < 3; i++) w.Regiment(All, BombWorld.Army);
+        int f = w.Fleet(Emp, Sys, "Carrack Light Cruiser", 2); // 2 hits
+        w.Dice((2, 1), (0, 1));
+        Assert.Null(w.TryBombard(Emp, f, Sys, Mil));
+        Assert.Equal(new[] { (0, 2), (1, 10), (0, 2), (1, 10) }, w.Stub.Requests.Take(4)); // survivors stay: the pool does not shrink
+    }
+
+    // m3-bombardment §Resolution 3: pool rebuilt after every destroyed target; empty pool discards the remaining hits without draws
+    [Fact]
+    public void DestroyedTargetsLeaveThePoolAndAnEmptyPoolStopsTheDraws()
+    {
+        var w = new BombWorld();
+        w.Hold(All);
+        int reg = w.Regiment(All, BombWorld.Army);
+        int f = w.Fleet(Emp, Sys, "Victory Destroyer", 3); // 12 hits
+        w.Dice((0, 10));
+        Assert.Null(w.TryBombard(Emp, f, Sys, Mil));
+        Assert.Null(w.Eco.Find(reg));
+        Assert.Equal(2, w.Stub.Requests.Count);            // one t, one r: the other eleven hits were discarded
+        Assert.Equal(12, w.Events<BombardmentResolved>().Single().Hits);
+        Assert.Equal(1, w.Events<BombardmentResolved>().Single().Regiments);
+    }
+
+    // m3-bombardment §Resolution 3: Military pool = ground regiments of the holder, then completed defenses; not aboard units, not unfinished
+    [Fact]
+    public void MilitaryPoolContents()
+    {
+        var w = new BombWorld();
+        w.Hold(All);
+        w.Regiment(All, BombWorld.Army);
+        w.Facility(FacilityKind.Kdy150, completed: false);                          // unfinished: not a target
+        w.Facility(FacilityKind.ConstructionYard);                               // civilian: not in Military
+        int aboard = w.Regiment(All, BombWorld.Army); w.Eco.Find(aboard)!.AboardShip = 1;                                      // aboard a ship: not a target
+        int k = w.Facility(FacilityKind.LnrSeriesII);
+        int f = w.Fleet(Emp, Sys, "Carrack Light Cruiser");
+        w.Dice((1, 1));
+        Assert.Null(w.TryBombard(Emp, f, Sys, Mil));
+        var hit = Assert.Single(w.Events<TargetHit>());
+        Assert.Equal(("Facility", k, 3), (hit.TargetKind, hit.Id, hit.Defense)); // pool = [regiment, LNR II]: index 1
+        Assert.Equal((0, 1), w.Stub.Requests[0]);
+    }
+
+    // m3-bombardment §Resolution 3: Civilian pool = non-defense completed facilities, Energy, Raw while above 0; General = Military then Civilian
+    [Fact]
+    public void CivilianAndGeneralPools()
+    {
+        var w = new BombWorld();
+        w.Hold(All);
+        w.Eco.SetSlots(Sys, 4, 0);                                               // Raw is 0: not in the pool
+        w.Regiment(All, BombWorld.Army); w.Facility(FacilityKind.Kdy150); w.Facility(FacilityKind.ConstructionYard); w.Facility(FacilityKind.Refinery);
+        int f = w.Fleet(Emp, Sys, "Carrack Light Cruiser");
+        w.Dice((0, 1));
+        w.TryBombard(Emp, f, Sys, Civ);
+        Assert.Equal((0, 2), w.Stub.Requests[0]);                                // [yard, refinery, Energy]: 3 entries
+        var g = new BombWorld();
+        g.Hold(All);
+        g.Eco.SetSlots(Sys, 4, 1);
+        g.Regiment(All, BombWorld.Army); g.Facility(FacilityKind.Kdy150); g.Facility(FacilityKind.ConstructionYard);
+        int f2 = g.Fleet(Emp, Sys, "Carrack Light Cruiser");
+        g.Dice((0, 1));
+        g.TryBombard(Emp, f2, Sys, Gen);
+        Assert.Equal((0, 4), g.Stub.Requests[0]);                                // regiment, KDY, yard, Energy, Raw
+    }
+
+    // m3-bombardment §Resolution 3: with no Energy and no Raw and no facility the Civilian pool is empty
+    [Fact]
+    public void EmptyCivilianPoolDrawsNothing()
+    {
+        var w = new BombWorld();
+        w.Hold(All);
+        w.Eco.SetSlots(Sys, 0, 0);
+        w.Regiment(All, BombWorld.Army);
+        int f = w.Fleet(Emp, Sys, "Death Star");
+        Assert.Null(w.TryBombard(Emp, f, Sys, Civ));
+        Assert.Empty(w.Stub.Requests);
+        Assert.Equal(15, w.Events<BombardmentResolved>().Single().Hits);
+    }
+
+    // m3-bombardment §Resolution 4: a Death Star Shield is a Military target with defense 1; a destroyed defense frees its slot
+    [Fact]
+    public void DefenseFacilitiesAreMilitaryTargets()
+    {
+        var w = new BombWorld();
+        w.Hold(Emp, 100);
+        int dss = w.Facility(FacilityKind.DeathStarShield);
+        int used = w.Eco.EnergyUsed(Sys);
+        int f = w.Fleet(All, Sys, "Corellian Corvette");
+        w.Dice((0, 2));
+        Assert.Null(w.TryBombard(All, f, Sys, Mil));
+        Assert.Null(w.Eco.Find(dss));
+        Assert.Equal(used - 1, w.Eco.EnergyUsed(Sys));
+        Assert.Equal(1, w.Events<TargetHit>().Single().Defense);
+        Assert.Empty(w.Events<SupportChanged>());                                // a defense facility is not a civilian one
+    }
+
+    // m3-bombardment §Resolution 3 (DEFAULT: unfinished facilities are not targets)
+    [Fact]
+    public void UnfinishedFacilitiesAreNeverTargets()
+    {
+        var w = new BombWorld();
+        w.Hold(All);
+        w.Eco.SetSlots(Sys, 0, 0);
+        w.Facility(FacilityKind.ConstructionYard, completed: false);
+        int f = w.Fleet(Emp, Sys, "Carrack Light Cruiser");
+        Assert.Null(w.TryBombard(Emp, f, Sys, Civ));
+        Assert.Empty(w.Stub.Requests);
+    }
+
+    // m3-bombardment §Resolution 4: Energy and Raw have defense 9 (only r = 10 destroys), the destroyed raw never goes below 0
+    [Fact]
+    public void RawEntryHasDefenseNineAndLowersRaw()
+    {
+        var w = new BombWorld();
+        w.Hold(All);
+        w.Eco.SetSlots(Sys, 2, 1);
+        int f = w.Fleet(Emp, Sys, "Carrack Light Cruiser", 2);                   // pool [Energy, Raw]
+        w.Dice((1, 9), (1, 10));
+        Assert.Null(w.TryBombard(Emp, f, Sys, Civ));
+        Assert.Equal(new[] { 9, 9 }, w.Events<TargetHit>().Select(h => h.Defense));
+        Assert.Equal((false, true), (w.Events<TargetHit>()[0].Destroyed, w.Events<TargetHit>()[1].Destroyed));
+        Assert.Equal((2, 0), (w.Eco.SlotsOf(Sys).Energy, w.Eco.SlotsOf(Sys).Raw));
+        Assert.Equal(new[] { "Raw" }, w.Events<ResourceReduced>().Select(e => e.Resource));
+    }
+
+    // m3-bombardment §Where it runs: resolved in system name order, then fleet id; events carry day K + 1
+    [Fact]
+    public void ResolutionOrderIsSystemNameThenFleetId()
+    {
+        var w = new BombWorld();
+        w.Hold(All); w.Hold(All, 100, BombWorld.Other);
+        int a = w.Fleet(Emp, Sys, "Carrack Light Cruiser");
+        int b = w.Fleet(Emp, BombWorld.Other, "Carrack Light Cruiser");
+        int c = w.Fleet(Emp, Sys, "Carrack Light Cruiser"); // a second fleet at Denon, higher id than a
+        // submitted in the "wrong" order: c and a at Denon, then b at Bespin; resolved Bespin (b), Denon (a), Denon (c)
+        w.Bombard(Emp, c, Sys, Mil); w.Bombard(Emp, a, Sys, Mil); w.Bombard(Emp, b, BombWorld.Other, Mil);
+        w.Run(1);
+        var started = w.Events<BombardmentStarted>();
+        Assert.Equal(new[] { b, a, c }, started.Select(e => e.Fleet));
+        Assert.Equal(new[] { BombWorld.Other, Sys, Sys }, started.Select(e => e.System));
+        Assert.All(started, e => Assert.Equal(1, e.Day));
+    }
+
+    // m3-bombardment §Order and preconditions check 6 / step 7: one-shot; the same fleet can be ordered again next Step
+    [Fact]
+    public void OrderIsOneShot()
+    {
+        var w = new BombWorld();
+        w.Hold(All);
+        int f = w.Fleet(Emp, Sys, "Carrack Light Cruiser");
+        Assert.Null(w.TryBombard(Emp, f, Sys, Mil));
+        w.Run(2);
+        Assert.Single(w.Events<BombardmentStarted>());
+        Assert.Null(w.TryBombard(Emp, f, Sys, Mil));
+        Assert.Equal(2, w.Events<BombardmentStarted>().Count);
+    }
+
+    // m3-bombardment §Order and preconditions: every check runs again at 5.1: a fleet ordered away is cancelled InTransit
+    [Fact]
+    public void FleetThatLeavesBeforeResolutionIsCancelled()
+    {
+        var w = new BombWorld();
+        w.Hold(All);
+        int f = w.Fleet(Emp, Sys, "Victory Destroyer");
+        w.Bombard(Emp, f, Sys, Mil);
+        w.Fleets.SubmitMove(Emp, f, BombWorld.Imp);
+        w.Run(1);
+        Assert.Equal(RejectReason.InTransit, Assert.Single(w.Events<BombardCancelled>()).Reason);
+        Assert.Empty(w.Events<BombardmentStarted>());
+    }
+
+    // m3-bombardment §Resolution 1: the power of a fleet counts squadrons aboard only; the multiplier uses the injected admiral
+    [Fact]
+    public void ShipAndFighterValuesComeFromTheData()
+    {
+        var d = Rebellion.Core.Setup.GameData.Default.Ships;
+        Assert.Equal(new[] { 15, 4, 5, 2, 1, 0, 0 }, new[] { "Death Star", "Bulwark Battlecruiser", "Victory II Star Destroyer", "Imperial Star Destroyer",
+            "Corellian Corvette", "Medium Transport", "Imperial Escort Carrier" }.Select(n => d[n].Bombardment));
+        Assert.Equal(new[] { 2, 2, 2, 1, 1, 0 }, new[] { "Y-wing", "B-wing", "TIE Bomber", "X-wing", "TIE Defender", "A-wing" }.Select(n => d[n].Bombardment));
+    }
+
+    // m3-bombardment §Numbers: the order is a polymorphic order that saves and loads
+    [Fact]
+    public void BombardOrderSurvivesASaveBetweenSteps()
+    {
+        var w = new BombWorld();
+        w.Hold(All);
+        int f = w.Fleet(Emp, Sys, "Carrack Light Cruiser");
+        w.Bombard(Emp, f, Sys, Civ);
+        var loaded = GameSave.Load(GameSave.Save(w.Game));
+        var order = Assert.IsType<BombardOrder>(Assert.Single(loaded.Queue));
+        Assert.Equal((f, Sys, Civ), (order.Fleet, order.System, order.Category));
+    }
+}
