@@ -99,3 +99,19 @@ uprising incident and destroyed regiment or facility, plus a table of five syste
 and no regiments, so an uprising starts on day 1 and erodes support 1 point per 30 days; on `--reinforce-day` eight Alliance Army
 Regiments land and the uprising ends the next day. Bespin is blockaded by an Empire fleet (support drifts one point per 30 days).
 Draws no random numbers itself.
+
+## `campaign`: the scripted two-sided test campaign, 1000 days
+
+```
+dotnet run --project sim -- campaign [--days 1000] [--seed 1] [--ruleset Classic|New]
+```
+
+Builds `core/Setup/TestCampaign.cs` through the composition root (`GameHost`, which loads the data and attaches fleets, economy,
+support, construction and control in order) and runs it. This is a TEST scenario, not the real game start: about 17 systems per side in two
+regions with support values, mines, refineries, yards (the starting-facilities rows that fall inside the regions), garrisons, a standing
+navy for maintenance load and a few fleets; then fixed scripted orders by day (periodic build orders, fleet moves, an Interdictor fleet
+parked on Kinyen from day 60 for a blockade) and one scripted capture (Empire takes Denon on day 400, a stand-in for the M3 assault).
+It prints a summary per side on day 0 and every 365 days (systems held, raw, refined, free maintenance with capacity and load, facilities,
+ships, fighters, regiments, uprisings active, items built, objects scrapped), then the event totals, the final state hash, the random
+draws and a runtime line (the runner's own clock). Same seed and ruleset, same output except the runtime. `--ruleset` is the support
+garrison ruleset (default Classic).

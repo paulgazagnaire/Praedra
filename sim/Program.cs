@@ -3,6 +3,7 @@ using Rebellion.Core.Construction;
 using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
 using Rebellion.Core.Map;
+using Rebellion.Core.Setup;
 using Rebellion.Core.Ships;
 using Rebellion.Core.Support;
 
@@ -23,6 +24,9 @@ internal static class SimCli
           dotnet run --project sim -- economy [--days 360] [--seed 1] [--no-incidents]
           dotnet run --project sim -- build [--days 150] [--seed 1] [--picket-leaves <day>|never] [--no-forced-stop]
           dotnet run --project sim -- support [--days 360] [--seed 1] [--ruleset classic|new] [--reinforce-day 120]
+          dotnet run --project sim -- campaign [--days 1000] [--seed 1] [--ruleset Classic|New]
+        campaign runs the scripted two-sided TEST campaign (core/Setup/TestCampaign.cs, built through GameHost) and prints a yearly summary per side,
+        the final state hash, the random draws and how long the run took.
         support runs the same demo with popular support, garrisons and uprisings on and prints the support events and a table every 30 days.
         build runs a fixed demo: an Empire yard builds two fighters, a mine and two regiments; the regiments' delivery is held at a Rebel picket
         until the picket moves away (--picket-leaves <day>, default 100; "never" keeps it there). --no-forced-stop sets DeliveryForcedStop off.
@@ -45,10 +49,11 @@ internal static class SimCli
             if (args[0] == "economy") return Economy(args.Skip(1).ToArray());
             if (args[0] == "build") return Build(args.Skip(1).ToArray());
             if (args[0] == "support") return Support(args.Skip(1).ToArray());
+            if (args[0] == "campaign") return Campaign(args.Skip(1).ToArray());
             if (args[0] != "move") throw new ArgumentException($"Unknown command '{args[0]}'.");
             return Move(Options.Parse(args.Skip(1).ToArray()));
         }
-        catch (Exception e) when (e is ArgumentException or Rebellion.Core.Data.DataLoadException or FileNotFoundException)
+        catch (Exception e) when (e is ArgumentException or Rebellion.Core.Data.DataLoadException or FileNotFoundException or DirectoryNotFoundException)
         {
             Console.Error.WriteLine($"Error: {e.Message}");
             Console.Error.WriteLine();
@@ -101,6 +106,49 @@ internal static class SimCli
         int destroyed = game.Events.OfType<FacilityDestroyed>().Count();
         Console.WriteLine($"Scrapped by autoscrap: {scrapped}. Resource incidents: {incidentsSeen}. Disasters: {disasters}. Facilities destroyed: {destroyed}. Random numbers drawn: {game.Rng.Draws}.");
         Console.WriteLine($"State hash: {GameSave.StateHash(game)}");
+        return 0;
+    }
+
+    // Campaign (engine/04, package P2.5). Builds the scripted two-sided test campaign through the composition root (GameHost) and runs it.
+    // Reads state and events; draws no random numbers itself. The runtime line is the runner's own clock, never the core's.
+    private static int Campaign(string[] a)
+    {
+        int days = 1000; ulong seed = 1; var ruleset = GarrisonRuleset.Classic;
+        for (int i = 0; i < a.Length; i++)
+        {
+            string key = a[i];
+            string Next() => ++i < a.Length ? a[i] : throw new ArgumentException($"{key} needs a value.");
+            switch (key)
+            {
+                case "--days": days = int.TryParse(Next(), out var d) && d > 0 ? d : throw new ArgumentException("--days must be a positive integer."); break;
+                case "--seed": seed = ulong.TryParse(Next(), out var s) ? s : throw new ArgumentException("--seed must be a non-negative integer."); break;
+                case "--ruleset": ruleset = Next().ToLowerInvariant() switch { "classic" => GarrisonRuleset.Classic, "new" => GarrisonRuleset.New, _ => throw new ArgumentException("--ruleset must be Classic or New.") }; break;
+                default: throw new ArgumentException($"Unknown option '{key}'.");
+            }
+        }
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var campaign = TestCampaign.New(seed, new GameSettings { SupportRuleset = ruleset });
+        var host = campaign.Host;
+        Console.WriteLine($"Test campaign (a test scenario, not the real start): {days} days, seed {seed}, support ruleset {ruleset}.");
+        void Summary()
+        {
+            Console.WriteLine($"-- day {host.Game.Day}");
+            foreach (var side in new[] { Side.Empire, Side.Alliance }) Console.WriteLine("  " + SideStats.Of(host, side));
+        }
+        Summary();
+        while (host.Game.Day < days)
+        {
+            campaign.Step();
+            if (host.Game.Day % 365 == 0 && host.Game.Day != days) Summary();
+        }
+        Summary();
+        clock.Stop();
+        var ev = host.Game.Events;
+        Console.WriteLine($"Events: {ev.Count}. Uprisings started: {ev.OfType<UprisingStarted>().Count()}. Items built: {ev.OfType<UnitCompleted>().Count()}, delivered: {ev.OfType<DeliveryArrived>().Count()}. " +
+                          $"Captures: {ev.OfType<Rebellion.Core.Control.SystemCaptured>().Count()}. Blockades started: {ev.OfType<BlockadeStarted>().Count()}.");
+        Console.WriteLine($"State hash: {host.StateHash()}");
+        Console.WriteLine($"Random numbers drawn: {host.Game.Rng.Draws}");
+        Console.WriteLine($"Runtime: {days} days in {clock.Elapsed.TotalMilliseconds:F0} ms.");
         return 0;
     }
 
@@ -344,16 +392,7 @@ internal static class SimCli
         return $"contact at {c.System}: {Describe(s, c.AllianceFleets.Items)} meets {Describe(s, c.EmpireFleets.Items)}";
     }
 
-    private static string FindRoot()
-    {
-        foreach (var start in new[] { AppContext.BaseDirectory, Directory.GetCurrentDirectory() })
-        {
-            var dir = new DirectoryInfo(start);
-            while (dir != null && !File.Exists(Path.Combine(dir.FullName, "Rebellion.sln"))) dir = dir.Parent;
-            if (dir != null) return dir.FullName;
-        }
-        throw new FileNotFoundException("Rebellion.sln not found above the runner or the current folder; run from inside the repository.");
-    }
+    private static string FindRoot() => GameData.FindRepoRoot(); // the composition root's data folder lookup
 
     private sealed class Options
     {
