@@ -55,6 +55,7 @@ internal static class SimCli
             if (args[0] == "support") return Support(args.Skip(1).ToArray());
             if (args[0] == "battle") return Battle(args.Skip(1).ToArray());
             if (args[0] == "campaign") return Campaign(args.Skip(1).ToArray());
+            if (args[0] == "newgame") return NewGameCmd(args.Skip(1).ToArray());
             if (args[0] != "move") throw new ArgumentException($"Unknown command '{args[0]}'.");
             return Move(Options.Parse(args.Skip(1).ToArray()));
         }
@@ -154,6 +155,41 @@ internal static class SimCli
         Console.WriteLine($"State hash: {host.StateHash()}");
         Console.WriteLine($"Random numbers drawn: {host.Game.Rng.Draws}");
         Console.WriteLine($"Runtime: {days} days in {clock.Elapsed.TotalMilliseconds:F0} ms.");
+        return 0;
+    }
+
+    // New game (m5): the real day-one position, then a yearly summary per side.
+    private static int NewGameCmd(string[] a)
+    {
+        int days = 365, seed = 1; var preset = StartPreset.MedA;
+        for (int i = 0; i < a.Length; i++)
+        {
+            string key = a[i];
+            string Next() => ++i < a.Length ? a[i] : throw new ArgumentException($"{key} needs a value.");
+            switch (key)
+            {
+                case "--days": days = int.TryParse(Next(), out var d) && d > 0 ? d : throw new ArgumentException("--days must be a positive integer."); break;
+                case "--seed": seed = int.TryParse(Next(), out var s) ? s : throw new ArgumentException("--seed must be an integer."); break;
+                case "--preset": preset = StartPresets.Parse(Next()); break;
+                default: throw new ArgumentException($"Unknown option '{key}'.");
+            }
+        }
+        var host = NewGame.Create(GameData.Default, new NewGameOptions { Seed = seed, Preset = preset });
+        Console.WriteLine($"New game: preset {StartPresets.Key(preset)} (player {StartPresets.PlayerSide(preset)}), seed {seed}, {days} days. Rebel HQ: {host.HqSystem}.");
+        void Summary()
+        {
+            Console.WriteLine($"-- day {host.Game.Day}");
+            foreach (var side in new[] { Side.Empire, Side.Alliance }) Console.WriteLine("  " + SideStats.Of(host, side));
+        }
+        Summary();
+        while (host.Game.Day < days && host.Victory.Winner == null)
+        {
+            host.Game.Step();
+            if (host.Game.Day % 365 == 0 && host.Game.Day != days) Summary();
+        }
+        Summary();
+        Console.WriteLine(host.Victory.Winner is { } w ? $"Winner: {w} on day {host.Game.Day} ({host.Victory.Reason})." : "No winner yet.");
+        Console.WriteLine($"State hash: {host.StateHash()}");
         return 0;
     }
 

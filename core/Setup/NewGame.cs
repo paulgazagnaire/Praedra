@@ -1,0 +1,169 @@
+using Rebellion.Core.Clock;
+using Rebellion.Core.Construction;
+using Rebellion.Core.Economy;
+using Rebellion.Core.Support;
+using Rebellion.Core.Victory;
+
+namespace Rebellion.Core.Setup;
+
+/// <summary>What a new game needs: a seed, one of the five day-one presets, optional setting overrides and data.</summary>
+public sealed record NewGameOptions
+{
+    public int Seed { get; init; } = 1;
+    public StartPreset Preset { get; init; } = StartPreset.MedA;
+    /// <summary>Null = every default.</summary>
+    public GameSettings? Settings { get; init; }
+    /// <summary>Null = the repository's data.</summary>
+    public GameData? Data { get; init; }
+    /// <summary>Null = the repository's new-game data.</summary>
+    public NewGameData? NewGameData { get; init; }
+}
+
+/// <summary>
+/// Deals a real day-one position on the 360-system galaxy and returns a <see cref="GameHost"/> ready for <c>Game.Step()</c>.
+/// Owners, Alliance support, explored flags and the Rebel HQ come from the day-one file of the preset (setup-victory/09 §1-5, PROPOSAL values).
+/// Facilities, garrisons, fleets and stockpile come from <c>new-game-forces.csv</c> and are DEFAULT choices of the playable slice (the
+/// specs give no starting force numbers); placement is a pure function of the data (no random draw: the only draws are the economy's
+/// incident timers in <see cref="EconomyModule.SetupNewGame"/>), so the same options give the same game.
+/// Victory is switched on (<see cref="ScenarioState.Active"/>). rule: CLAUDE.md "Undecided rules are switches or data values".
+/// </summary>
+public static class NewGame
+{
+    public static GameHost Create(GameData data, NewGameOptions o)
+    {
+        var nd = o.NewGameData ?? NewGameData.Default;
+        var host = GameHost.New((ulong)(uint)o.Seed, o.Settings, data);
+        var fleets = host.Fleets; var eco = host.Economy; var galaxy = data.Galaxy;
+        var rows = nd.DayOne[o.Preset];
+        var forces = nd.Forces;
+        var state = host.Game.State;
+
+        // ---- owners, support, explored, HQ (setup-victory/09 §1-5). Rows for systems off the graph (Ilum, Csilla) are skipped.
+        foreach (var r in rows)
+        {
+            if (!galaxy.TryFindSystem(r.Name, out _)) continue;
+            if (r.Owner is Side owner) fleets.SetOwner(r.Name, owner);
+            eco.SetAllianceSupport(r.Name, r.AllianceSupport);
+            int mask = r.ExploredAll ? 3 : r.ExploredOwner && r.Owner is Side s ? ScenarioState.Bit(s) : 0;
+            if (mask != 0) state.Scenario.Explored[r.Name] = mask;
+            if (r.IsHq) state.Scenario.HqSystem = r.Name;
+        }
+
+        // Fixed owners (Decided) on top of the day-one rows, which ignore them. rule: m5-setup-and-victory §Fixed owners: strong holders,
+        // so Empire support 60..90 (Alliance support 25 here when the row was not already Empire); neutral = 50.
+        foreach (var (sys, owner) in nd.FixedOwners)
+        {
+            if (!galaxy.TryFindSystem(sys, out _)) continue;
+            if (owner is Side fo)
+            {
+                if (fleets.OwnerOf(sys) != fo) { fleets.SetOwner(sys, fo); eco.SetAllianceSupport(sys, fo == Side.Empire ? 25 : 75); }
+            }
+            else { fleets.SetOwner(sys, null); eco.SetAllianceSupport(sys, 50); state.Scenario.Explored.Remove(sys); }
+        }
+        // Support bands that setup fixes (setup-victory/09 §2): Coruscant 0, Yavin and the HQ 100.
+        eco.SetAllianceSupport("Coruscant", 0);
+        eco.SetAllianceSupport("Yavin", 100);
+        if (state.Scenario.HqSystem is { } hq) eco.SetAllianceSupport(hq, 100);
+        state.Scenario.Active = true;
+
+        foreach (var f in data.StartingFacilities)
+        {
+            var holder = fleets.OwnerOf(f.System);
+            if ((f.Side != null && f.Side != holder) || !galaxy.TryFindSystem(f.System, out _)) continue;
+            Place(host, f.System, f.Kind);
+        }
+
+        foreach (var side in new[] { Side.Empire, Side.Alliance })
+            DealSide(host, forces, side);
+
+        host.Construction.GrantResearch(Side.Alliance, "Nebulon-B Frigate"); // research order 1: needs a setup grant (research stub), as TestCampaign
+        eco.SetupNewGame(); // stockpile, then the two incident timers (the only draws of setup)
+        if (o.Settings?.Economy == null) // DEFAULT starting stockpile of the playable slice (the economy's own default is 0/0)
+            foreach (var side in new[] { Side.Empire, Side.Alliance })
+                eco.SetPools(side, forces.Int(side, "start_raw"), forces.Int(side, "start_refined"));
+        return host;
+    }
+
+    public static GameHost Create(NewGameOptions o) => Create(o.Data ?? GameData.Default, o);
+
+    // ------------------------------------------------------------------ one side
+
+    private static List<string> Held(GameHost host, Side side) =>
+        host.Game.State.SystemOwners.Where(kv => kv.Value == side).Select(kv => kv.Key).OrderBy(n => n, StringComparer.Ordinal).ToList();
+
+    private static void DealSide(GameHost host, ForcesTable forces, Side side)
+    {
+        var eco = host.Economy;
+        var held = Held(host, side);
+        if (held.Count == 0) return;
+        string baseWanted = forces.Str(side, "base_system");
+        string baseSys = held.Contains(baseWanted, StringComparer.Ordinal) ? baseWanted : BestEnergy(host, held, null)!;
+
+        // yards at the base, then the extra yard sites (best free energy first)
+        foreach (var (s, kind, count) in forces.BaseFacilities)
+            if (s == side) for (int i = 0; i < count; i++) PlaceNear(host, held, baseSys, kind);
+        var sites = new List<string>();
+        for (int n = 0, extra = forces.Int(side, "extra_yard_sites"); n < extra; n++)
+        {
+            var siteOrNull = BestEnergy(host, held.Where(h => h != baseSys && !sites.Contains(h)).ToList(), null);
+            if (siteOrNull is not { } site) break;
+            sites.Add(site);
+            foreach (var (s, kind, count) in forces.SiteFacilities)
+                if (s == side && CountOf(eco, site, kind) == 0) for (int i = 0; i < count; i++) PlaceNear(host, held, site, kind);
+        }
+
+        // economy: mines and refineries on the systems richest in raw slots
+        int mines = forces.Int(side, "mines_per_system"), refs = forces.Int(side, "refineries_per_system");
+        foreach (var sys in held.Where(h => eco.EffectiveRaw(h) > 0).OrderByDescending(h => eco.EffectiveRaw(h)).ThenBy(h => h, StringComparer.Ordinal)
+                     .Take(forces.Int(side, "economy_systems")).ToList())
+        {
+            for (int i = 0; i < mines; i++) if (eco.CheckPlace(sys, FacilityKind.Mine) == null) eco.AddFacility(sys, FacilityKind.Mine);
+            for (int i = 0; i < refs; i++) if (eco.CheckPlace(sys, FacilityKind.Refinery) == null) eco.AddFacility(sys, FacilityKind.Refinery);
+        }
+
+        // garrison: the sheet's required N for the holder's support, at least min_garrison; extra regiments at the base to load and send
+        // rule: m2-uprisings-and-garrison §Required garrison N (no system starts in uprising)
+        string gClass = forces.Str(side, "garrison_class"); int minG = forces.Int(side, "min_garrison");
+        foreach (var sys in held)
+        {
+            int n = Math.Max(minG, SupportModule.RequiredGarrison(host.Support.Params, eco.SupportOf(sys, side), false, false));
+            for (int i = 0; i < n; i++) eco.AddObject(side, gClass, sys);
+        }
+        for (int i = 0, n = forces.Int(side, "base_regiments"); i < n; i++) eco.AddObject(side, forces.Str(side, "base_regiment_class"), baseSys);
+
+        // fleets: in file order while the maintenance load stays within fill_percent of the capacity
+        int budget = eco.Capacity(side) * forces.Int(side, "fill_percent") / 100;
+        int load = eco.Load(side);
+        string siteSys = sites.Count > 0 ? sites[0] : baseSys;
+        foreach (var f in forces.Fleets.Where(f => f.Side == side))
+        {
+            int shipCost = f.Ships.Sum(c => eco.Costs.Get(c).Maintenance);
+            if (load + shipCost > budget) continue;
+            int berths = f.Ships.Sum(c => host.Data.Ships[c].FighterCapacity);
+            var squads = f.Squadrons.Take(berths).ToList();
+            if (load + shipCost + squads.Sum(c => eco.Costs.Get(c).Maintenance) > budget) squads.Clear();
+            load += shipCost + squads.Sum(c => eco.Costs.Get(c).Maintenance);
+            host.Fleets.AddFleet(side, f.Name, f.Ships, f.AtBase ? baseSys : siteSys, squads);
+        }
+    }
+
+    private static int CountOf(EconomyModule eco, string system, string kindName) =>
+        eco.Objects.Count(x => x.Category == ObjectCategory.Facility && x.System == system && x.Class == kindName);
+
+    /// <summary>The system of <paramref name="candidates"/> with the most free energy slots (ties by name), or null.</summary>
+    private static string? BestEnergy(GameHost host, List<string> candidates, FacilityKind? _) =>
+        candidates.OrderByDescending(h => host.Economy.FreeEnergy(h)).ThenBy(h => h, StringComparer.Ordinal).FirstOrDefault();
+
+    private static void PlaceNear(GameHost host, List<string> held, string preferred, string kindName)
+    {
+        if (!FacilityKinds.TryParse(kindName, out var kind)) throw new InvalidOperationException($"new-game-forces.csv: unknown facility '{kindName}'.");
+        if (host.Economy.CheckPlace(preferred, kind) == null) { host.Economy.AddFacility(preferred, kind); return; }
+        foreach (var sys in held.OrderByDescending(h => host.Economy.FreeEnergy(h)).ThenBy(h => h, StringComparer.Ordinal))
+            if (host.Economy.CheckPlace(sys, kind) == null) { host.Economy.AddFacility(sys, kind); return; }
+    }
+
+    private static void Place(GameHost host, string system, FacilityKind kind)
+    {
+        if (host.Economy.CheckPlace(system, kind) == null) host.Economy.AddFacility(system, kind);
+    }
+}
