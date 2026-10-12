@@ -19,9 +19,11 @@ public sealed record SubmittedOrder(long Sequence, string Kind, string Detail);
 /// Randomness: the AI never draws from the game's generator (that would change the game's random stream). Its few tie-breaks use a
 /// private <see cref="GameRng"/> seeded from (game day, side), so the same game state gives the same orders.
 ///
-/// VISIBILITY: until the fog-of-war rules exist the AI sees everything (enemy fleets, garrisons, the enemy's systems). This is a DEFAULT
-/// that must go: the owner decided the AI plays fair once fog exists. Every look at the enemy goes through <see cref="EnemyFleetsAt"/>,
-/// <see cref="DefendersAt"/> and <see cref="EnemySystems"/>, so fog can be put in those three places.
+/// VISIBILITY: with <see cref="SimpleAiParams.UseFog"/> on, every look at the other side goes through the side's
+/// <see cref="Rebellion.Core.Fog.KnowledgeView"/> (m5-fog-and-hq §N8, the fairness contract): enemy fleets, garrisons, holders, facilities and slot
+/// values come from the side's own picture (possibly stale), the event feed is the side's filtered one, and the Empire's
+/// <see cref="KnownEnemyHq"/> is set only from the Empire's own picture of the HQ. With it off (DEFAULT for now) the AI still sees everything.
+/// The looks are in one block below ("what the AI may see"), so nothing else reads the other side.
 /// </summary>
 public sealed class SimpleAi
 {
@@ -45,7 +47,10 @@ public sealed class SimpleAi
 
     public Side Side => _side;
     public SimpleAiParams Params => _p;
-    /// <summary>The enemy HQ, when the caller knows it (the Empire hunts it first). Null = unknown. No HQ exists in the core yet.</summary>
+    /// <summary>
+    /// The enemy HQ, when known (the Empire hunts it first). Null = unknown. Without fog the caller may set it; with
+    /// <see cref="SimpleAiParams.UseFog"/> it is overwritten every day from the Empire's own picture (m5-fog-and-hq §N5 KnownHq).
+    /// </summary>
     public string? KnownEnemyHq { get; set; }
     /// <summary>The orders queued by the last <see cref="PlanDay"/>.</summary>
     public IReadOnlyList<SubmittedOrder> Submitted => _submitted;
@@ -62,6 +67,9 @@ public sealed class SimpleAi
         _capitalDone = _rallyDone = false; _hops = null; _threats = null; _lost = null; _lostBattles = null;
         int day = Today, phase = (int)_side;
         _rng = new GameRng((ulong)day * 2 + (ulong)_side + 0x5A1D, 0xA1);
+        _view = _p.UseFog ? _h.Fog.ViewFor(_side) : null;
+        _seenForces.Clear();
+        if (_view != null && _side == Side.Empire) KnownEnemyHq = _view.KnownHq?.System; // only what the Empire's own picture shows
         PlanUpkeepCrisis();
         if ((day + phase) % _p.EconomyEvery == 0) PlanEconomy();
         if ((day + phase) % _p.ProductionEvery == 0) PlanProduction();
@@ -82,12 +90,76 @@ public sealed class SimpleAi
 
     // ================================================================== what the AI may see (fog goes here)
 
-    /// <summary>Enemy fleets standing at a system. DEFAULT: sees all.</summary>
-    private List<Fleet> EnemyFleetsAt(string system) => _h.Fleets.FleetsAt(system).Where(f => f.Side != _side).ToList();
-    /// <summary>Regiments of any other side standing on a system. DEFAULT: sees all.</summary>
-    private int DefendersAt(string system) => _h.Troops.RegimentsOnSystem(system, _side).Count;
-    /// <summary>Systems the other side holds. DEFAULT: sees all.</summary>
-    private IEnumerable<string> EnemySystems() => S.SystemOwners.Where(kv => kv.Value == Enemy).Select(kv => kv.Key);
+    private Rebellion.Core.Fog.KnowledgeView? _view;
+    private readonly Dictionary<string, List<Force>> _seenForces = new(StringComparer.Ordinal); // lookup only
+
+    /// <summary>
+    /// One enemy fleet as the AI weighs it: its capital ships as combat units. Without fog: the real fleet (FleetId set, hull and damage read).
+    /// With fog: a fleet of the side's picture (class counts at full hull, FleetId null). At = the system it stands at, null on a lane.
+    /// </summary>
+    private sealed record Force(int? FleetId, string? At, List<Combatant> Units);
+
+    private Force ForceOf(Fleet f) => new(f.Id, f.At, ShipUnits(f));
+
+    private Force ForceOf(string at, Rebellion.Core.Fog.FleetPicture p)
+    {
+        var units = new List<Combatant>();
+        foreach (var (cls, n) in p.Ships) // ordinal class order
+            if (_h.Fleets.ShipClasses.TryGetValue(cls, out var c)) for (int i = 0; i < n; i++) units.Add(_h.Fleets.Strength.Unit(c));
+        return new Force(null, at, units);
+    }
+
+    /// <summary>Enemy fleets standing at a system. No fog: sees all. Fog: group E of the side's picture, unless the look is only Charted (too old).</summary>
+    private List<Force> EnemyFleetsAt(string system)
+    {
+        if (_view == null) return _h.Fleets.FleetsAt(system).Where(f => f.Side != _side).Select(ForceOf).ToList();
+        if (_seenForces.TryGetValue(system, out var cached)) return cached;
+        var list = new List<Force>();
+        var pic = _view.Picture(system);
+        if (pic?.Fleets is { } e && _view.Level(system) is Rebellion.Core.Fog.KnowledgeLevel.Held or Rebellion.Core.Fog.KnowledgeLevel.Observed)
+            foreach (var fp in e.Value) if (fp.Side != _side) list.Add(ForceOf(system, fp));
+        return _seenForces[system] = list;
+    }
+
+    /// <summary>Regiments of any other side standing on a system. No fog: sees all. Fog: group D of the picture, or a guess when never seen.</summary>
+    private int DefendersAt(string system)
+    {
+        if (_view == null) return _h.Troops.RegimentsOnSystem(system, _side).Count;
+        var g = _view.Picture(system)?.Ground;
+        if (g != null) return g.Value.Where(x => x.Side != _side).Sum(x => x.Total);
+        return IsEnemyHeld(system) ? _p.FogUnknownDefenders : 0;
+    }
+
+    /// <summary>Systems the other side holds. No fog: sees all. Fog: those its picture shows as enemy-held (ordinal order).</summary>
+    private IEnumerable<string> EnemySystems() => _view == null
+        ? S.SystemOwners.Where(kv => kv.Value == Enemy).Select(kv => kv.Key)
+        : _h.Data.Galaxy.Systems.Select(s => s.Name).Where(IsEnemyHeld);
+
+    /// <summary>Is the system held by the other side? No fog: the truth. Fog: as the picture shows it.</summary>
+    private bool IsEnemyHeld(string system) => _view == null ? _h.Fleets.OwnerOf(system) == Enemy : _view.Picture(system)?.Owner?.Value.Owner == Enemy;
+
+    /// <summary>Completed facilities at a system of another side. No fog: the truth. Fog: group C of the picture (0 when never seen).</summary>
+    private int FacilitiesAt(string system) => _view == null
+        ? _h.Economy.Objects.Count(o => o.Completed && o.Category == ObjectCategory.Facility && o.System == system)
+        : _view.Picture(system)?.Facilities?.Value.Values.Sum() ?? 0;
+
+    /// <summary>Slot values of a system not held. No fog: the truth. Fog: group A of the picture; never seen = populated, no slots (worth a look).</summary>
+    private (bool Populated, int Energy, int Raw) SlotsSeen(string system)
+    {
+        if (_view == null) { var s = _h.Economy.SlotsOf(system); return (s.Populated, s.Energy, s.Raw); }
+        return _view.Picture(system)?.Status?.Value ?? (true, 0, 0);
+    }
+
+    /// <summary>Two or more shield generators forbid an assault. No fog: the truth. Fog: from group C of the picture (unknown = not forbidden).</summary>
+    private bool AssaultForbiddenSeen(string system)
+    {
+        if (_view == null) return _h.Defenses.AssaultForbidden(system);
+        var fac = _view.Picture(system)?.Facilities;
+        return fac != null && _h.Defenses.AssaultForbiddenBy(fac.Value);
+    }
+
+    /// <summary>The events the AI reads (its own losses, captures, bombardments). No fog: all. Fog: the side's filtered feed (§N8).</summary>
+    private IReadOnlyList<GameEvent> Events => _view == null ? _h.Game.Events : _view.Events;
 
     // ================================================================== helpers
 
@@ -175,7 +247,7 @@ public sealed class SimpleAi
         if (cands.Count == 0) cands = yards;
         if (cands.Count == 0) return _rally = cap;
         string? anchor = KnownEnemyHq;
-        anchor ??= EnemySystems().Select(s => (s, n: _h.Economy.Objects.Count(o => o.Completed && o.Category == ObjectCategory.Facility && o.System == s)))
+        anchor ??= EnemySystems().Select(s => (s, n: FacilitiesAt(s)))
             .OrderByDescending(t => t.n).ThenBy(t => t.s, StringComparer.Ordinal).Select(t => t.s).FirstOrDefault();
         if (anchor == null) return _rally = cands[0];
         _rally = cands.OrderBy(s => Ticks(s, anchor, 100)).ThenBy(s => s, StringComparer.Ordinal).First();
@@ -287,7 +359,7 @@ public sealed class SimpleAi
         var g = _h.Data.Galaxy;
         if (!g.TryFindSystem(system, out var i)) return 0;
         foreach (var n in g.NeighboursOf(i))
-            if (_h.Fleets.OwnerOf(g.Systems[n.System].Name) == Enemy) return 2;
+            if (IsEnemyHeld(g.Systems[n.System].Name)) return 2;
         return 0;
     }
 
@@ -551,26 +623,36 @@ public sealed class SimpleAi
 
     // ================================================================== military
 
-    private Dictionary<string, List<Fleet>>? _threats;
+    private Dictionary<string, List<Force>>? _threats;
     private HashSet<string>? _lost;
 
     /// <summary>Held systems with enemy fleets standing on them or flying toward them (a stop on their path), by system. Fleets in id order.</summary>
-    private Dictionary<string, List<Fleet>> Threats()
+    private Dictionary<string, List<Force>> Threats()
     {
         if (_threats != null) return _threats;
-        var d = new Dictionary<string, List<Fleet>>(StringComparer.Ordinal);
-        void Add(string sys, Fleet f) { if (!d.TryGetValue(sys, out var l)) d[sys] = l = new List<Fleet>(); l.Add(f); }
+        var d = new Dictionary<string, List<Force>>(StringComparer.Ordinal);
+        void Add(string sys, Force f) { if (!d.TryGetValue(sys, out var l)) d[sys] = l = new List<Force>(); l.Add(f); }
+        if (_view != null)
+        {
+            // Fog: only the enemy fleets the side sees standing on its own systems (a fleet on a lane is invisible). rule: m5-fog-and-hq §F3
+            foreach (var (sys, fp) in _view.VisibleFleets())
+                if (fp.Side == Enemy && fp.ShipCount > 0 && Held(sys)) Add(sys, ForceOf(sys, fp));
+            return _threats = d;
+        }
         foreach (var f in S.Fleets.Values.Where(f => f.Side == Enemy && f.Ships.Count > 0).OrderBy(f => f.Id))
         {
-            if (f.At != null) { if (Held(f.At)) Add(f.At, f); }
+            if (f.At != null) { if (Held(f.At)) Add(f.At, ForceOf(f)); }
             else if (f.Transit != null)
                 for (int i = f.Transit.HopIndex + 1; i < f.Transit.Path.Count; i++)
-                    if (Held(f.Transit.Path[i])) Add(f.Transit.Path[i], f);
+                    if (Held(f.Transit.Path[i])) Add(f.Transit.Path[i], ForceOf(f));
         }
         return _threats = d;
     }
 
     private double IncomingEnemyStrength(string system) => Threats().TryGetValue(system, out var l) ? l.Sum(Str) : 0;
+
+    /// <summary>An enemy force's strength against REF (capital ships only), as <see cref="Str(Fleet)"/>.</summary>
+    private double Str(Force x) => x.FleetId is int id && S.Fleets.TryGetValue(id, out var f) ? Str(f) : _h.Fleets.Strength.Of(x.Units, RefUnits());
 
     private Dictionary<string, int>? _lostBattles;
     /// <summary>
@@ -581,7 +663,7 @@ public sealed class SimpleAi
     {
         if (_lostBattles != null) return _lostBattles;
         var d = new Dictionary<string, int>(StringComparer.Ordinal);
-        var ev = _h.Game.Events; int since = Today - _p.LossMemoryDays;
+        var ev = Events; int since = Today - _p.LossMemoryDays;
         for (int i = ev.Count - 1; i >= 0 && ev[i].Day >= since; i--)
             if (ev[i] is BattleEnded b && (_side == Side.Alliance ? b.Result.Alliance : b.Result.Empire) == BattleOutcome.Annihilated && !d.ContainsKey(b.Result.System))
                 d[b.Result.System] = ev[i].Day;
@@ -596,7 +678,7 @@ public sealed class SimpleAi
     {
         if (_lost != null) return _lost;
         var set = new HashSet<string>(StringComparer.Ordinal);
-        var ev = _h.Game.Events; int since = Today - _p.RetakeDays;
+        var ev = Events; int since = Today - _p.RetakeDays;
         for (int i = ev.Count - 1; i >= 0 && ev[i].Day >= since; i--)
             if (ev[i] is Rebellion.Core.Control.SystemCaptured c && c.From == _side && c.To == Enemy) set.Add(c.System);
         return _lost = set;
@@ -606,10 +688,10 @@ public sealed class SimpleAi
     /// Own power as a percent of the other force's: CombatStrength(own, enemy) over CombatStrength(enemy, own), shields full (m4-battle-new §12).
     /// A huge number when the enemy cannot hurt us, 0 when we cannot hurt it, 100 when nobody can.
     /// </summary>
-    private double Duel(IEnumerable<Fleet> own, IEnumerable<Fleet> enemy)
+    private double Duel(IEnumerable<Fleet> own, IEnumerable<Force> enemy)
     {
         var o = own.SelectMany(ShipUnits).ToList();
-        var e = enemy.SelectMany(ShipUnits).ToList();
+        var e = enemy.SelectMany(x => x.Units).ToList();
         if (e.Count == 0) return 1e9;
         if (o.Count == 0) return 0;
         double a = _h.Fleets.Strength.Of(o, e), b = _h.Fleets.Strength.Of(e, o);
@@ -801,7 +883,7 @@ public sealed class SimpleAi
     private int RecentBombardments(string system)
     {
         int n = 0, since = Today - 30;
-        var ev = _h.Game.Events;
+        var ev = Events;
         for (int i = ev.Count - 1; i >= 0 && ev[i].Day >= since; i--)
             if (ev[i] is BombardmentResolved b && b.System == system) n++;
         return n;
@@ -821,7 +903,8 @@ public sealed class SimpleAi
         }
         int aboard = _h.Troops.RegimentsAboard(f).Count;
         int d = DefendersAt(at);
-        if (_h.Defenses.AssaultForbidden(at)) { Leave(f); return; } // rule: m3-planetary-defenses (assault forbidden, 2+ shield generators)
+        if (AssaultForbiddenSeen(at)) { Leave(f); return; } // rule: m3-planetary-defenses (assault forbidden, 2+ shield generators)
+        if (_view != null && !SlotsSeen(at).Populated) { Leave(f); return; } // fog: the target was picked unseen; an empty world cannot be assaulted
         // rule: m3-assault §Order and preconditions: a fleet has one order at a time, so shell one day and land the next.
         bool win = at == WinTarget();
         if (d > 0 && _h.Bombardment.Power(f) > 0 && (win || RecentBombardments(at) < _p.MaxBombardmentsPer30Days))
@@ -897,8 +980,8 @@ public sealed class SimpleAi
             // the system: needs regiments
             if (hops[sys.Index] <= _p.TargetHops || isWin)
             {
-                var slots = _h.Economy.SlotsOf(s);
-                bool ok = slots.Populated && !_h.Defenses.AssaultForbidden(s) && aboard >= 1;
+                var slots = SlotsSeen(s);
+                bool ok = slots.Populated && !AssaultForbiddenSeen(s) && aboard >= 1;
                 if (ok)
                 {
                     int d = DefendersAt(s);
@@ -906,7 +989,7 @@ public sealed class SimpleAi
                     if (ok)
                     {
                         long value = 10 + slots.Energy + 2 * slots.Raw;
-                        if (_h.Fleets.OwnerOf(s) == Enemy) value += 10 + 2 * _h.Economy.Objects.Count(o => o.Completed && o.Category == ObjectCategory.Facility && o.System == s);
+                        if (IsEnemyHeld(s)) value += 10 + 2 * FacilitiesAt(s);
                         if (lost.Contains(s)) value *= 2;
                         if (s == KnownEnemyHq) value += 200;
                         if (isWin) value += 400;

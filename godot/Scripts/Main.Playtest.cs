@@ -271,7 +271,7 @@ public partial class Main
             Expect(gs.Has(">  Ships") && gs.Has(">  Fighters") && gs.Has(">  Troops"), "Build menu has collapsible Ships / Fighters / Troops sections");
             Expect(gs.Click(">  Ships"), "open the Ships section");
             gs.PlayRefresh();
-            var shipBtn = gs.ButtonTexts().FirstOrDefault(t => t.Contains("refined, upkeep") && (t.StartsWith("Medium Transport") || t.StartsWith("Assault Transport") || t.StartsWith("Corellian Corvette") || t.StartsWith("Lancer Frigate")));
+            var shipBtn = gs.ButtonTexts().FirstOrDefault(t => t.Contains("refined, upkeep") && !t.Contains("(not researched)") && t.Contains("   ") && !Rebellion.Core.Economy.FacilityKinds.TryParse(t[..t.IndexOf("   ", StringComparison.Ordinal)], out _)); // any researched ship
             Expect(shipBtn != null, "a basic ship can be chosen in the Ships list");
             if (shipBtn != null)
             {

@@ -42,6 +42,12 @@ public sealed class ControlModule
     /// </summary>
     public event Action<CaptureInfo, bool>? ControlChangeAftermath;
 
+    /// <summary>
+    /// Raised at the end of every <see cref="SetHolder"/> that changed the holder, in the same call. The fog module listens: the loser's
+    /// LossNotice and the Rebel HQ capture rule. rule: m5-fog-and-hq §F2 LossNotice, §F7 Capture (HqLostOnHolderChange).
+    /// </summary>
+    public event Action<CaptureInfo>? HolderChanged;
+
     private ControlModule(Game game, Galaxy galaxy, FleetModule fleets, EconomyModule eco, SupportModule support, ConstructionModule? construction)
     {
         _game = game; _galaxy = galaxy; _fleets = fleets; _eco = eco; _support = support; _construction = construction;
@@ -135,6 +141,9 @@ public sealed class ControlModule
 
         // 8. Blockade flag recomputed now (the owner changed), not a Step later.
         _fleets.RefreshBlockadeFlag(ctx, system, day);
+
+        // M5: the loser is told, and an at-rest Rebel HQ on the system is lost (m5-fog-and-hq §F2, §F7).
+        HolderChanged?.Invoke(info);
 
         // 9. Economy pools: capacity and load are derived from the facilities now on each side, so they are already right.
         return true;

@@ -76,6 +76,10 @@ public static class NewGame
         foreach (var side in new[] { Side.Empire, Side.Alliance })
             DealSide(host, forces, side);
 
+        // Day-0 pictures: explored-for-all systems (A and B), own holdings (OwnLive), the StartFullCopy list. rule: m5-fog-and-hq §F4
+        host.Fog.SetupNewGame(rows.Where(r => r.ExploredAll).Select(r => r.Name)
+            .Where(n => state.Scenario.Explored.TryGetValue(n, out var m) && m == 3));
+
         // No research grant: every side starts at level 0 in every track and builds only order-0 classes (the Nebulon-B Frigates of the
         // starting fleet stay unbuildable until Ship level 1). rule: m5-research §State per side (no setup path preloads a level), RS1.
         eco.SetupNewGame(); // stockpile, then the two incident timers

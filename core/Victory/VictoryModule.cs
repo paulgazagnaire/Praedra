@@ -61,7 +61,13 @@ public sealed class VictoryModule
         string? allianceReason = null, empireReason = null;
         if (Rules.AllianceWinsOnCoruscant && Holds(CoruscantName, Side.Alliance)) allianceReason = "Alliance captured Coruscant";
         if (allianceReason == null && Rules.AllianceWinsWhenEmpireHasNoSystems && !owners.Values.Any(v => v == Side.Empire)) allianceReason = "Empire holds no system";
-        if (Rules.EmpireWinsOnHqLost && S.HqSystem != null && !Holds(S.HqSystem, Side.Alliance)) empireReason = $"Empire captured the Rebel HQ at {S.HqSystem}";
+        // rule: setup-victory/04 §3 (the destroyed bit; a missing HQ counts as destroyed); m5-fog-and-hq §F7 (capture destroys it, DEFAULT AnyCause).
+        // An at-rest HQ on a system the Alliance no longer holds also counts (HqLostOnHolderChange = Never leaves it standing there).
+        var hq = S.Hq;
+        if (Rules.EmpireWinsOnHqLost && hq.Status == Fog.HqStatus.Destroyed)
+            empireReason = hq.DestroyedCause == Fog.FogModule.CauseCaptured ? $"Empire captured the Rebel HQ at {hq.System}" : $"The Rebel HQ was destroyed at {hq.System} ({hq.DestroyedCause})";
+        else if (Rules.EmpireWinsOnHqLost && hq.Status == Fog.HqStatus.AtRest && hq.System != null && !Holds(hq.System, Side.Alliance))
+            empireReason = $"Empire captured the Rebel HQ at {hq.System}";
         if (empireReason == null && Rules.EmpireWinsWhenAllianceHasNoSystems && !owners.Values.Any(v => v == Side.Alliance)) empireReason = "Alliance holds no system";
 
         Side winner; string reason;

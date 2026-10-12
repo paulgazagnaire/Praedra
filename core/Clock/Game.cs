@@ -47,6 +47,8 @@ public sealed class GameState
     /// <summary>HQ system, explored flags, victory result. rule: setup-victory/04, 09.</summary>
     public Rebellion.Core.Victory.ScenarioState Scenario { get; init; } = new();
 
+    /// <summary>Each side's picture of the galaxy, sighting logs and clues. rule: m5-fog-and-hq §F1, §N9.</summary>
+    public Rebellion.Core.Fog.FogState Fog { get; init; } = new();
     /// <summary>Research points, levels, exhausted flags and tick timers per side; the two percents. rule: m5-research §State per side.</summary>
     public Rebellion.Core.Research.ResearchState Research { get; init; } = new();
 
@@ -63,6 +65,7 @@ public sealed class GameState
         Control.CopyFrom(other.Control);
         Battle.CopyFrom(other.Battle);
         Scenario.CopyFrom(other.Scenario);
+        Fog.CopyFrom(other.Fog);
         Research.CopyFrom(other.Research);
     }
 }
@@ -99,10 +102,12 @@ public sealed class Game
         "1",   // Orders
         "2",   // Departures
         "3",   // Arrivals
+        "3.1", // Sightings (M5 fog). rule: m5-fog-and-hq §F8
         "4",   // Forced stops
         "5",   // Contacts and blockade flags
         "5.1", // Bombardments (M3)
         "5.2", // Assaults (M3)
+        "5.4", // Live refresh of each side's picture (M5 fog; 5.3 is mission resolution, m5-missions). rule: m5-fog-and-hq §F8, Lead notes
         "6.1", "6.2", "6.3", "6.4", "6.5", "6.6", "6.7", "6.8", // Day-end hooks (empty in M1)
         "6.9", // Research tick, after strategic repair (6.8). rule: m5-research §Where it runs in the day Step
         "6.11", // Victory check: MUST stay the last day-end slot (characters 6.10 will be added before it). rule: m5-setup-and-victory §Game over
@@ -116,6 +121,8 @@ public sealed class Game
     private readonly List<Order> _queue = new();
     private readonly List<GameEvent> _events = new();
     private long _nextSequence;
+    private readonly List<int> _audience = new();
+    private Order? _currentOrder;
 
     public Game(ulong seed) : this(new GameState(), 0, new GameRng(seed), Array.Empty<Order>(), 1) { }
 
@@ -138,6 +145,16 @@ public sealed class Game
     public long NextSequence => _nextSequence;
     /// <summary>Append-only. Not part of a save.</summary>
     public IReadOnlyList<GameEvent> Events => _events;
+
+    /// <summary>
+    /// Decides who may see an event, when it is raised: bit 1 = Empire, bit 2 = Alliance (as Victory.ScenarioState.Bit). Given the
+    /// event and the order being processed in step 1 (null outside it). Null = everyone sees everything. The fog module sets it.
+    /// rule: m5-fog-and-hq §N8 (event audience: "every event gets an audience when it is raised").
+    /// </summary>
+    public Func<GameEvent, Order?, int>? AudienceResolver { get; set; }
+
+    /// <summary>The audience mask of event <paramref name="index"/> (3 = both sides). Not part of a save, like the events.</summary>
+    public int AudienceOf(int index) => _audience[index];
 
     /// <summary>Add a hook to a work-list slot (steps 2-5.2 and 6.x). Hooks of one slot run in registration order.</summary>
     public void RegisterHook(string slot, Action<StepContext> hook)
@@ -165,7 +182,9 @@ public sealed class Game
         {
             long rejected = _nextSequence++;
             var order = make(rejected);
+            _currentOrder = order;
             EmitEvent((i, d) => new OrderRejected(i, d, order.Sequence, RejectReason.GameOver));
+            _currentOrder = null;
             return rejected;
         }
         long seq = _nextSequence++;
@@ -196,6 +215,7 @@ public sealed class Game
         _markersChanged.Clear();
         foreach (var order in batch)
         {
+            _currentOrder = order;
             var result = _handlers.TryGetValue(order.GetType(), out var handler)
                 ? handler(ctx, order)
                 : OrderResult.Reject(RejectReason.UnknownOrderType);
@@ -207,6 +227,7 @@ public sealed class Game
             }
             EmitEvent(result.Accepted!);
         }
+        _currentOrder = null;
     }
 
     private OrderResult HandleSetMarker(StepContext ctx, SetMarkerOrder m)
@@ -219,5 +240,10 @@ public sealed class Game
     }
 
     // Events carry Day = K, the day at the start of the Step, because Day only changes in step 7.
-    internal void EmitEvent(Func<int, int, GameEvent> make) => _events.Add(make(_events.Count, Day));
+    internal void EmitEvent(Func<int, int, GameEvent> make)
+    {
+        var e = make(_events.Count, Day);
+        _events.Add(e);
+        _audience.Add(AudienceResolver?.Invoke(e, _currentOrder) ?? 3);
+    }
 }

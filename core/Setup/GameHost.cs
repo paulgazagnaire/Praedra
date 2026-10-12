@@ -25,9 +25,11 @@ namespace Rebellion.Core.Setup;
 ///   6. ControlModule    (capture; calls support and construction)
 ///   7. DefenseModule, BombardmentModule (defense queries; the Bombard order and slot 5.1; reads fleets, economy and support, calls support's ChangeSupport)
 ///   8. AssaultModule (the Assault order and slot 5.2; reads troops, defenses and bombardment, calls control's SetHolder)
-///   9. BattleModule (step 5), RepairModule (slot 6.8)
-///  10. ResearchModule (slot 6.9; reads economy and fleets; construction's research gate reads its levels)
-///  11. VictoryModule (slot 6.11, the last day-end slot; must stay last)
+///   9. BattleModule (slot 5), RepairModule (slot 6.8)
+///  10. FogModule (MoveHq; slot 2 after the fleet departures, slot 3 HQ arrival after the fleet arrivals and deliveries, 3.1 sightings, 5.4 live
+///      refresh, 6.8 log pruning after repair; listens to control's HolderChanged; sets the game's event audience). rule: m5-fog-and-hq §F8
+///  11. ResearchModule (slot 6.9; reads economy and fleets; construction's research gate reads its levels)
+///  12. VictoryModule (slot 6.11, the last day-end slot; must stay last)
 /// Cross-wiring done inside the Attach calls: support into economy (Death Star flag) and construction (uprising stops yards),
 /// construction into economy (refined line, removed objects) and control (cancel projects on capture).
 ///
@@ -62,12 +64,14 @@ public sealed class GameHost
     /// <summary>Victory check (slot 6.11, last; runs only in a game made by <see cref="NewGame"/>): <c>Victory.Winner</c> is null while the game runs. rule: setup-victory/04.</summary>
     public Rebellion.Core.Victory.VictoryModule Victory { get; }
 
-    /// <summary>The Rebel HQ system (saved in the game state), null if none.</summary>
+    /// <summary>Fog of war (each side's picture, the read API for the AI and UI) and the Rebel HQ. rule: m5-fog-and-hq.</summary>
+    public Rebellion.Core.Fog.FogModule Fog { get; }
+
+    /// <summary>The Rebel HQ system (where it stands, or stood when destroyed), null in transit or if none. rule: m5-fog-and-hq §F5.</summary>
     public string? HqSystem => Game.State.Scenario.HqSystem;
 
-    /// <summary>Is the system known to the side (dealt at setup, setup-victory/09 §4)? Nothing in the core changes it yet.</summary>
-    public bool IsExplored(string system, Rebellion.Core.Clock.Side side) =>
-        Game.State.Scenario.Explored.TryGetValue(system, out var m) && (m & Rebellion.Core.Victory.ScenarioState.Bit(side)) != 0;
+    /// <summary>Is the system explored in the side's picture (dealt at setup, then widened by fleets, holdings and reveals)? rule: m5-fog-and-hq §F1.</summary>
+    public bool IsExplored(string system, Rebellion.Core.Clock.Side side) => Fog.IsExplored(side, system);
 
     private GameHost(Game game, GameData data, GameSettings settings)
     {
@@ -114,6 +118,7 @@ public sealed class GameHost
         Battles = Rebellion.Core.Battle.BattleModule.Attach(game, data.Galaxy, Fleets, Economy, settings.Battle, data.NewBattle);
         Repair = Rebellion.Core.Repair.RepairModule.Attach(game, Economy, Fleets, data.Repair); // slot 6.8
         Repair.FoughtThisStep = Battles.FoughtThisStep; // no repair on a battle day. rule: m4-retreat-damage-repair §5
+        Fog = Rebellion.Core.Fog.FogModule.Attach(game, data.Galaxy, Fleets, Economy, Support, Control, settings.Fog, settings.Hq); // after repair (shares 6.8)
         Research = Rebellion.Core.Research.ResearchModule.Attach(game, Economy, Fleets, data.Research, settings.Research); // slot 6.9, after repair
         Construction.ResearchOrderReached = Research.OrderReached; // the research gate reads the side's levels. rule: m5-research §Availability test
         Victory = Rebellion.Core.Victory.VictoryModule.Attach(game, settings.Victory); // slot 6.11, the last day-end slot; must stay last

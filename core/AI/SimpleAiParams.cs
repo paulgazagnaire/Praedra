@@ -91,6 +91,16 @@ public sealed record SimpleAiParams
     /// <summary>A fleet whose ships average below this hull percent stays (or goes) to a shipyard instead of launching. DEFAULT.</summary>
     public int RepairBelowPercent { get; init; } = 70;
 
+    // ---- fog of war. rule: m5-fog-and-hq §N8 (the AI reads exactly what its side sees)
+    /// <summary>
+    /// Read the other side only through the side's KnowledgeView (pictures, own sightings, filtered events, own HQ belief). DEFAULT false for
+    /// now so the existing AI behaviour and tests do not change; the owner's decision (economy-ai D4, ai/12 D3) is that the AI plays fair, so
+    /// this is to become true once the M6 AI reads the view itself.
+    /// </summary>
+    public bool UseFog { get; init; }
+    /// <summary>With fog, the regiments assumed on an enemy-held system whose ground forces the side has never seen (a system its picture shows neutral: none). DEFAULT (AI tuning, no rule).</summary>
+    public int FogUnknownDefenders { get; init; } = 2;
+
     // ---- what to build, by side (first class that is buildable, researched and affordable wins). Class names of unit-and-facility-costs.csv. DEFAULT.
     public IReadOnlyList<string> Warships(Side side) => side == Side.Empire ? EmpireWarships : AllianceWarships;
     public IReadOnlyList<string> HeavyWarships(Side side) => side == Side.Empire ? EmpireHeavy : AllianceHeavy;
