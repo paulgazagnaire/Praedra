@@ -5,12 +5,13 @@ using Rebellion.Core.Fleets;
 using Rebellion.Core.Map;
 using Rebellion.Core.Ships;
 using Rebellion.Core.Support;
+using Rebellion.Core.Troops;
 
 namespace Rebellion.Core.Setup;
 
 /// <summary>
 /// Every data file the game loads, read once and immutable: galaxy, ship classes, costs, blockade numbers, garrison weights, slot
-/// values and the starting-facilities list. One place that knows the file names and folders, so a new game, a loaded game, the
+/// values, the starting-facilities list and the troop and special-force classes. One place that knows the file names and folders, so a new game, a loaded game, the
 /// runner and the tests all read the same things. Data values come from files, never from code. rule: CLAUDE.md "Every number comes
 /// from data or a named constant with its source tag".
 /// </summary>
@@ -22,6 +23,7 @@ public sealed record GameData(
     CostData Costs,
     GarrisonWeights Weights,
     IReadOnlyList<StartingFacility> StartingFacilities,
+    TroopData Troops,
     DefenseData Defenses)
 {
     private static readonly Lazy<GameData> _default = new(() => Load(FindRepoRoot()));
@@ -42,6 +44,7 @@ public sealed record GameData(
             CostData.Load(Path.Combine(interim, CostData.FileName)),
             GarrisonWeights.Load(Path.Combine(design, GarrisonWeights.FileName)),
             Construction.StartingFacilities.Load(Path.Combine(design, Construction.StartingFacilities.FileName)),
+            TroopData.Load(interim, design),
             DefenseData.Load(interim));
     }
 

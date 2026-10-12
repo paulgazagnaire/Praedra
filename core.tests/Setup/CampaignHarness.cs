@@ -130,7 +130,7 @@ internal static class CampaignInvariants
         {
             // A unit that is not finished belongs to exactly one project or delivery; a finished one to neither.
             Assert.True(o.Completed != inWork.Contains(o.Id), $"{where}: object {o.Id} ({o.Class}) completed={o.Completed} but inWork={inWork.Contains(o.Id)}");
-            if (o.Completed && o.Category == ObjectCategory.Regiment) Assert.True(o.System != null && o.Side != null, $"{where}: regiment {o.Id} has no place or side");
+            if (o.Completed && o.Category == ObjectCategory.Regiment) Assert.True((o.System != null || o.AboardShip != 0) && o.Side != null, $"{where}: regiment {o.Id} has no place or side");
         }
         // every waiting refinery or yard is in exactly one line, and every line entry is a waiting, completed object
         var rawLines = eco.RawLine(Side.Empire).Concat(eco.RawLine(Side.Alliance)).ToList();
@@ -182,6 +182,32 @@ internal static class CampaignInvariants
             if (f.Ships.Count > 0)
                 Assert.Equal(f.Ships.Max(id => host.Fleets.SpeedOfShip(eco.Find(id)!)), host.Fleets.SpeedOf(f)); // the largest rating decides; aboard squadrons never count
         }
+
+        // ---- troops: a regiment is on a system or aboard a ship of a fleet of its side, never both; aboard counts stay within capacity;
+        //      special forces are never aboard (m3-troops-and-special-forces §Where regiments live; m3-fleets §Carrying rules)
+        var shipFleet = new Dictionary<int, Fleet>(); // lookup only
+        foreach (var f in state.Fleets.Values) foreach (var id in f.Ships) shipFleet[id] = f;
+        var aboard = new Dictionary<int, int>(); // ship id -> regiments aboard (lookup only; checked by key below)
+        foreach (var o in eco.Objects.Where(o => o.Category is ObjectCategory.Regiment or ObjectCategory.SpecialForce))
+        {
+            if (o.Category == ObjectCategory.SpecialForce)
+            {
+                Assert.True(o.AboardShip == 0 && (o.System != null || !o.Completed), $"{where}: special force {o.Id} aboard={o.AboardShip} system={o.System}");
+                continue;
+            }
+            if (o.AboardShip == 0) { Assert.True(o.System != null || !o.Completed, $"{where}: regiment {o.Id} is on no system and aboard nothing"); continue; }
+            Assert.True(o.System == null, $"{where}: regiment {o.Id} is aboard ship {o.AboardShip} and also on {o.System}");
+            Assert.True(o.Completed, $"{where}: unfinished regiment {o.Id} is aboard a ship");
+            Assert.True(shipFleet.TryGetValue(o.AboardShip, out var carrier), $"{where}: regiment {o.Id} rides ship {o.AboardShip}, which is in no fleet");
+            Assert.True(carrier!.Side == o.Side, $"{where}: regiment {o.Id} of {o.Side} rides in a fleet of {carrier.Side}");
+            aboard[o.AboardShip] = aboard.GetValueOrDefault(o.AboardShip) + 1;
+        }
+        foreach (var f in state.Fleets.Values)
+            foreach (var id in f.Ships)
+            {
+                int cap = host.Data.Ships[eco.Find(id)!.Class].TroopCapacity;
+                Assert.True(aboard.GetValueOrDefault(id) <= cap, $"{where}: ship {id} carries {aboard.GetValueOrDefault(id)} regiments, capacity {cap}");
+            }
 
         // ---- owners and the Classic blockade flags (m1-forced-stop-and-blockade §Rule (Classic))
         foreach (var (sys, blockader) in state.Blockades)

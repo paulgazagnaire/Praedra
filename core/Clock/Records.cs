@@ -86,6 +86,14 @@ public sealed record LoadSquadronsOrder(long Sequence, Side Side, int Fleet, Lis
 /// <summary>Squadrons leave their ship and become based at the fleet's system (held by the side). rule: m3-fleets §Orders (UnloadSquadrons).</summary>
 public sealed record UnloadSquadronsOrder(long Sequence, Side Side, int Fleet, List<int> Squadrons) : Order(Sequence, Side);
 
+// ---- troop orders. rule: m3-troops-and-special-forces §Orders (step 1, immediate, in order sequence; rejection changes nothing).
+
+/// <summary>Put landed regiments of the fleet's system aboard its ships (first free slot by ship id); all or nothing. rule: m3-troops-and-special-forces §Orders (LoadRegiments).</summary>
+public sealed record LoadRegimentsOrder(long Sequence, Side Side, int Fleet, List<int> Regiments) : Order(Sequence, Side);
+
+/// <summary>Regiments leave their ship and stand on the fleet's system (held by the side). rule: m3-troops-and-special-forces §Orders (UnloadRegiments).</summary>
+public sealed record UnloadRegimentsOrder(long Sequence, Side Side, int Fleet, List<int> Regiments) : Order(Sequence, Side);
+
 /// <summary>
 /// Debug order: set a ship's hull and six damage counters. For tests and tools; rejected unless debug orders are enabled
 /// (DEFAULT, the same switch as DebugSetHolder). rule: m3-ships-and-fighters §Damaged state (DebugSetDamage).
@@ -142,6 +150,10 @@ public static class RejectReason
     public const string NotAboard = "NotAboard";
     public const string NotYourSystem = "NotYourSystem";
     public const string BadValue = "BadValue";
+    // rule: m3-troops-and-special-forces §Orders. DuplicateRegiment, UnknownRegiment, AlreadyAboard are the sheet's names; EmptySelection is shared.
+    public const string UnknownRegiment = "UnknownRegiment";
+    public const string DuplicateRegiment = "DuplicateRegiment";
+    public const string AlreadyAboard = "AlreadyAboard";
     /// <summary>No handler is registered for this order type (e.g. a save with fleet orders loaded before the fleet module was attached).</summary>
     public const string UnknownOrderType = "UnknownOrderType";
 }
