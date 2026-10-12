@@ -9,3 +9,5 @@
 `design/starting-facilities.csv` is the data list of m2-construction §Starting yards (seven Orbital Shipyards: four Empire, three neutral), written from that sheet's table.
 
 Sources (project folder `rebellion/specs/`): `planets/data/extended-galaxy-v4-*.csv`, `economy/data/slot-values-draft.csv`, `ships/data/*.csv`, `economy/data/unit-and-facility-costs.csv`. Copied 2026-10-12.
+
+`interim/defense-facilities.csv` (the six `DEFFACSD` classes, m3-planetary-defenses) and `interim/bombardment-defense.csv` (regiment and manufacturing-facility bombardment defense, m3-bombardment B7; the facility values are DEFAULT 5 until the importer reads them) were written from those sheets tables.

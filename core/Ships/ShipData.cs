@@ -6,7 +6,7 @@ namespace Rebellion.Core.Ships;
 public enum ShipSide { None = 0, Alliance = 1, Empire = 2 }
 
 /// <summary>
-/// The ship-class fields the core needs so far (travel, forced stop, ship object, carrying capacity). NOTE: loaded from data/interim/ (copies of the spec CSVs, ships/data/*.csv);
+/// The ship-class fields the core needs so far (travel, forced stop, ship object, carrying capacity, bombardment power: <c>Bombardment</c> is a capital ship's bombardment_modifier or a squadron's bombardment value). NOTE: loaded from data/interim/ (copies of the spec CSVs, ships/data/*.csv);
 /// unverified vs original until the importer produces data/original/.
 /// </summary>
 public sealed record ShipClass(
@@ -23,7 +23,8 @@ public sealed record ShipClass(
     int FighterCapacity = 0,
     int TroopCapacity = 0,
     int Id = 0,
-    int ShieldStrength = 0)
+    int ShieldStrength = 0,
+    int Bombardment = 0)
 {
     /// <summary>
     /// Speed rating (percent of normal time, bigger is slower; 0 = cannot move).
@@ -70,6 +71,9 @@ public static class ShipData
         // rule: m3-ships-and-fighters §Class data: hull, fighter_capacity and troop_capacity are ship columns; fighters have none (0).
         bool hasHull = t.HasColumn("hull"), hasFc = t.HasColumn("fighter_capacity"), hasTc = t.HasColumn("troop_capacity");
         bool hasId = t.HasColumn("id"), hasShield = t.HasColumn("shield_strength");
+        // rule: m3-bombardment §Resolution 1: a capital ship's bombardment_modifier; a squadron's value is the fighters.csv column named bombardment_defense (renamed on import).
+        string bombCol = isCapital ? "bombardment_modifier" : "bombardment_defense";
+        bool hasBomb = t.HasColumn(bombCol);
         var list = new List<ShipClass>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
         for (int r = 0; r < t.RowCount; r++)
@@ -84,7 +88,8 @@ public static class ShipData
                 hasGw ? t.GetInt(r, "gravity_well_projector") : 0, t.GetInt(r, "overall_attack_strength"),
                 t.GetInt(r, "refined_material_cost"), HeavyArcs.Any(c => t.GetInt(r, c) > 0),
                 hasHull ? t.GetInt(r, "hull") : 0, hasFc ? t.GetInt(r, "fighter_capacity") : 0, hasTc ? t.GetInt(r, "troop_capacity") : 0,
-                hasId ? t.GetInt(r, "id") : 0, hasShield ? t.GetInt(r, "shield_strength") : 0));
+                hasId ? t.GetInt(r, "id") : 0, hasShield ? t.GetInt(r, "shield_strength") : 0,
+                hasBomb ? t.GetInt(r, bombCol) : 0));
         }
         return list;
     }

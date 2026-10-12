@@ -1,6 +1,7 @@
 using Rebellion.Core.Clock;
 using Rebellion.Core.Construction;
 using Rebellion.Core.Control;
+using Rebellion.Core.Defenses;
 using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
 using Rebellion.Core.Support;
@@ -33,6 +34,12 @@ public sealed class TestCampaign
     public const string BlockadedSystem = "Kinyen";
     public const int BlockadeFrom = 60;
     public const string InterdictionFleet = "Interdiction";
+    /// <summary>
+    /// The day of the one scripted bombardment (m3-bombardment, slot 5.1): the Empire's interdiction fleet, parked at <see cref="BlockadedSystem"/>
+    /// since <see cref="BlockadeFrom"/>, shells that system with a General bombardment. No Alliance fleet is there on that day (the relief fleet
+    /// arrives later), so the order is accepted. The system holds a KDY-150 battery (placed by <see cref="Deal"/>), so the return-fire hook runs too.
+    /// </summary>
+    public const int BombardDay = 200;
     /// <summary>The name of a side's standing reserve fleet (stays at its capital), e.g. "Empire Reserve".</summary>
     public static string ReserveFleet(Side side) => $"{side} Reserve";
 
@@ -110,6 +117,7 @@ public sealed class TestCampaign
         ("Sullust", FacilityKind.TrainingFacility), ("Sullust", FacilityKind.ConstructionYard),
         ("Denon", FacilityKind.TrainingFacility), ("Denon", FacilityKind.ConstructionYard),
         ("Kinyen", FacilityKind.TrainingFacility), ("Thyferra", FacilityKind.OrbitalShipyard),
+        ("Kinyen", FacilityKind.Kdy150), // the battery of the scripted bombardment (m3-planetary-defenses)
     };
 
     // Standing "navy": the ships of each side's reserve fleet. They carry maintenance load like every fleet ship (one registry, m3-fleets).
@@ -240,6 +248,9 @@ public sealed class TestCampaign
         foreach (var m in Moves)
             if (Due(day, m.First, m.Every) && FleetByName(m.Fleet) is { } f)
                 Host.Fleets.SubmitMove(m.Side, f.Id, m.To);
+        // rule: m3-bombardment §Order and preconditions (the interdiction fleet shells the system it blockades)
+        if (day == BombardDay && FleetByName(InterdictionFleet) is { } bomber)
+            Host.Bombardment.SubmitBombard(Side.Empire, bomber.Id, BlockadedSystem, BombardCategory.General);
     }
 
     /// <summary>A fleet by its (unique) name, or null.</summary>

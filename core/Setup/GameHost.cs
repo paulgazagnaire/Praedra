@@ -1,6 +1,7 @@
 using Rebellion.Core.Clock;
 using Rebellion.Core.Construction;
 using Rebellion.Core.Control;
+using Rebellion.Core.Defenses;
 using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
 using Rebellion.Core.Support;
@@ -19,6 +20,7 @@ namespace Rebellion.Core.Setup;
 ///   4. ConstructionModule (3, 4 after the fleets; 6.6; serves the refined line from the economy's event; yards stop in an uprising from support;
 ///      its UnitAppeared event is wired to <see cref="FleetModule.OnUnitAppeared"/>: new ships join the spare fleet)
 ///   5. ControlModule    (capture; calls support and construction)
+///   6. DefenseModule, BombardmentModule (defense queries; the Bombard order and slot 5.1; reads fleets, economy and support, calls support's ChangeSupport)
 /// Cross-wiring done inside the Attach calls: support into economy (Death Star flag) and construction (uprising stops yards),
 /// construction into economy (refined line, removed objects) and control (cancel projects on capture).
 ///
@@ -36,6 +38,9 @@ public sealed class GameHost
     public SupportModule Support { get; }
     public ConstructionModule Construction { get; }
     public ControlModule Control { get; }
+    /// <summary>The defense queries the assault and bombardment call. rule: m3-planetary-defenses §Queries.</summary>
+    public DefenseModule Defenses { get; }
+    public BombardmentModule Bombardment { get; }
 
     private GameHost(Game game, GameData data, GameSettings settings)
     {
@@ -67,6 +72,9 @@ public sealed class GameHost
         Control = ControlModule.Attach(game, data.Galaxy, Fleets, Economy, Support, Construction);
         Control.DebugOrdersEnabled = settings.DebugOrdersEnabled;
         Fleets.DebugOrdersEnabled = settings.DebugOrdersEnabled;
+
+        Defenses = DefenseModule.Attach(Economy, Fleets, data.Defenses, settings.Defense);
+        Bombardment = BombardmentModule.Attach(game, Economy, Fleets, Support, Defenses, settings.Bombard);
     }
 
     /// <summary>A new, empty game (day 0, no owners, no objects) with every module attached. <paramref name="data"/> null = the repository's data.</summary>

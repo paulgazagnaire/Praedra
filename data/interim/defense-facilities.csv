@@ -1,0 +1,7 @@
+id,name,family,cost,maint,research_order,research_difficulty,attack,shield,bombard_defense,side,kind
+1,KDY-150,34,4,4,0,0,2000,0,5,both,battery
+2,LNR Series I,35,7,7,0,0,800,0,4,both,battery
+3,GenCore Level I,36,12,12,0,0,0,40,2,both,shield generator
+4,Death Star Shield,37,25,20,3,24,0,0,1,empire,death star shield
+5,LNR Series II,35,10,4,4,40,5000,0,3,both,battery
+6,GenCore Level II,36,20,7,6,40,0,80,3,both,shield generator

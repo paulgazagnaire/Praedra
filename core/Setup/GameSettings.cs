@@ -1,4 +1,5 @@
 using Rebellion.Core.Construction;
+using Rebellion.Core.Defenses;
 using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
 using Rebellion.Core.Support;
@@ -51,4 +52,10 @@ public sealed record GameSettings
     // ---- control. rule: m2-control-and-capture
     /// <summary>The DebugSetHolder order is accepted only when this is on.</summary>
     public bool DebugOrdersEnabled { get; init; }
+
+    // ---- defenses and bombardment. rule: m3-planetary-defenses §Defaults for undecided items; m3-bombardment §Defaults for undecided items
+    /// <summary>Number tables and switches of the defense queries (assault gate, Death Star Shield counts for the gate). Null = the module's defaults.</summary>
+    public DefenseParams? Defense { get; init; }
+    /// <summary>Number table of the bombardment (admiral step, die, Energy and Raw defense, the -20). Null = the module's defaults.</summary>
+    public BombardParams? Bombard { get; init; }
 }
