@@ -126,7 +126,7 @@ public class ShipTests
     public void S7_AllAvailableLetsTheAllianceOrderABulwark()
     {
         var w = Yard(Side.Alliance);
-        Assert.False(w.Build.RespectResearchOrder); // AllAvailable is the M3 default
+        w.Build.RespectResearchOrder = false; // AllAvailable (the M3 stub; the default is on since m5-research §Defaults)
         Assert.Null(w.TryOrder(Side.Alliance, Home, YardFamily.Shipyard, "Bulwark Battlecruiser", 1)); // research order 11
         Assert.DoesNotContain(w.Game.Events, e => e is OrderRejected);
         // the same order under RespectResearchOrder

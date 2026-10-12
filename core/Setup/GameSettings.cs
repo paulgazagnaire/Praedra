@@ -42,8 +42,12 @@ public sealed record GameSettings
     /// <summary>rule: m2-construction §Lead review note, C20.</summary>
     public LostDestinationRule LostDestination { get; init; } = LostDestinationRule.Pause;
     public bool UnitDestinationMustBeControlled { get; init; } = true;
-    /// <summary>Research stub: off = AllAvailable (DEFAULT since M3), on = RespectResearchOrder. rule: m3-ships-and-fighters §Sides and availability.</summary>
-    public bool RespectResearchOrder { get; init; }
+    /// <summary>
+    /// The research gate: on = an item needs its research order at most the side's level in its track (or a setup grant); off = AllAvailable
+    /// (the M3 stub). DEFAULT on once research is built (m5-research §Defaults; Paul decides the flip, question 1).
+    /// rule: m5-research §Availability test.
+    /// </summary>
+    public bool RespectResearchOrder { get; init; } = true;
     /// <summary>The Death Star class row can be built. rule: m3-ships-and-fighters §Death Star as an ordinary class row.</summary>
     public bool DeathStarClassBuildable { get; init; } = true;
     /// <summary>Yards stop under the Classic blockade flag instead of the economic blockade. rule: m2-construction §Suspension.</summary>
@@ -71,6 +75,10 @@ public sealed record GameSettings
     // ---- battle. rule: m4-battle-classic §Defaults for undecided items; m4-retreat-damage-repair §Defaults
     /// <summary>Switches and numbers of the Classic battle and the retreat (SubsystemRolls, task forces, tactic, RetreatMode, DeathStarStalemate, AI sides). Null = the module's defaults.</summary>
     public Rebellion.Core.Battle.BattleParams? Battle { get; init; }
+
+    // ---- research. rule: m5-research §Defaults for undecided items
+    /// <summary>Research switches (facility and mission income, cost and mission scaling, one class per rung, Sensor Station tier 2). Null = the module's defaults.</summary>
+    public Rebellion.Core.Research.ResearchParams? Research { get; init; }
 
     // ---- victory. rule: setup-victory/04-victory-conditions (HQ-Only flavour)
     /// <summary>Victory switches. Null = all on (DEFAULT).</summary>

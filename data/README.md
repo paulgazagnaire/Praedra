@@ -21,3 +21,7 @@ Sources (project folder `rebellion/specs/`): `planets/data/extended-galaxy-v4-*.
 `design/new-game-forces.csv` holds the starting forces of the playable slice (yards, mines and refineries per side, garrison, fleets, stockpile). Every row is DEFAULT (playable slice 2026-10-12): the setup-victory specs give no starting force numbers, so these are choices to tune, not rules from the original.
 
 `design/fixed-owners.csv` is the seven Decided fixed owners of m5-setup-and-victory (planets/07), applied on top of the day-one CSVs, which ignore them (sheet Contradictions 6). Fixed owners are strong holders (Empire support 60 to 90).
+
+`interim/research-unlocks.csv` is copied unchanged from `rebellion/specs/economy/data/research-unlocks.csv` (the research ladders of m5-research: track, research order and difficulty per class; Traced, unverified vs original). Its row order is the catalogue order of the level check. The loader checks that every class of `unit-and-facility-costs.csv` has one row with the same research order. Copied 2026-10-12.
+
+`design/research-rules.csv` is the data table `ResearchRules` of m5-research (facility tick delay and random span, points per yard, mission point roll, Sensor Station tier 2 rung and cost); each row carries its source tag.

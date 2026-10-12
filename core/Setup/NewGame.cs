@@ -24,7 +24,7 @@ public sealed record NewGameOptions
 /// Owners, Alliance support, explored flags and the Rebel HQ come from the day-one file of the preset (setup-victory/09 §1-5, PROPOSAL values).
 /// Facilities, garrisons, fleets and stockpile come from <c>new-game-forces.csv</c> and are DEFAULT choices of the playable slice (the
 /// specs give no starting force numbers); placement is a pure function of the data (no random draw: the only draws are the economy's
-/// incident timers in <see cref="EconomyModule.SetupNewGame"/>), so the same options give the same game.
+/// incident timers in <see cref="EconomyModule.SetupNewGame"/> and the research tick arming in <see cref="Research.ResearchModule.SetupNewGame"/>), so the same options give the same game.
 /// Victory is switched on (<see cref="ScenarioState.Active"/>). rule: CLAUDE.md "Undecided rules are switches or data values".
 /// </summary>
 public static class NewGame
@@ -80,8 +80,10 @@ public static class NewGame
         host.Fog.SetupNewGame(rows.Where(r => r.ExploredAll).Select(r => r.Name)
             .Where(n => state.Scenario.Explored.TryGetValue(n, out var m) && m == 3));
 
-        host.Construction.GrantResearch(Side.Alliance, "Nebulon-B Frigate"); // research order 1: needs a setup grant (research stub), as TestCampaign
-        eco.SetupNewGame(); // stockpile, then the two incident timers (the only draws of setup)
+        // No research grant: every side starts at level 0 in every track and builds only order-0 classes (the Nebulon-B Frigates of the
+        // starting fleet stay unbuildable until Ship level 1). rule: m5-research §State per side (no setup path preloads a level), RS1.
+        eco.SetupNewGame(); // stockpile, then the two incident timers
+        host.Research.SetupNewGame(); // the research percents, then the two research tick arming draws, Alliance then Empire. rule: m5-research §Random draws (a)
         if (o.Settings?.Economy == null) // DEFAULT starting stockpile of the playable slice (the economy's own default is 0/0)
             foreach (var side in new[] { Side.Empire, Side.Alliance })
                 eco.SetPools(side, forces.Int(side, "start_raw"), forces.Int(side, "start_refined"));

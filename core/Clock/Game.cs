@@ -49,6 +49,8 @@ public sealed class GameState
 
     /// <summary>Each side's picture of the galaxy, sighting logs and clues. rule: m5-fog-and-hq §F1, §N9.</summary>
     public Rebellion.Core.Fog.FogState Fog { get; init; } = new();
+    /// <summary>Research points, levels, exhausted flags and tick timers per side; the two percents. rule: m5-research §State per side.</summary>
+    public Rebellion.Core.Research.ResearchState Research { get; init; } = new();
 
     /// <summary>Copy another state's content into this one (used by Load, which needs ordinal-comparer dictionaries).</summary>
     internal void CopyFrom(GameState other)
@@ -64,6 +66,7 @@ public sealed class GameState
         Battle.CopyFrom(other.Battle);
         Scenario.CopyFrom(other.Scenario);
         Fog.CopyFrom(other.Fog);
+        Research.CopyFrom(other.Research);
     }
 }
 
@@ -106,7 +109,8 @@ public sealed class Game
         "5.2", // Assaults (M3)
         "5.4", // Live refresh of each side's picture (M5 fog; 5.3 is mission resolution, m5-missions). rule: m5-fog-and-hq §F8, Lead notes
         "6.1", "6.2", "6.3", "6.4", "6.5", "6.6", "6.7", "6.8", // Day-end hooks (empty in M1)
-        "6.11", // Victory check: MUST stay the last day-end slot (research 6.9 and characters 6.10 will be added before it). rule: m5-setup-and-victory §Game over
+        "6.9", // Research tick, after strategic repair (6.8). rule: m5-research §Where it runs in the day Step
+        "6.11", // Victory check: MUST stay the last day-end slot (characters 6.10 will be added before it). rule: m5-setup-and-victory §Game over
         "7",   // Day becomes K + 1
     };
 

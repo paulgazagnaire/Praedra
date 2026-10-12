@@ -195,8 +195,18 @@ internal static class SimCli
         }
         Summary();
         Console.WriteLine(host.Victory.Winner is { } w ? $"Winner: {w} on day {host.Game.Day} ({host.Victory.Reason})." : "No winner yet.");
+        Console.WriteLine(ResearchLine(host));
         Console.WriteLine($"State hash: {host.StateHash()}");
         return 0;
+    }
+
+    // Research levels and points per side and track (m5-research §Rule (New) 4: read-only queries).
+    private static string ResearchLine(GameHost host)
+    {
+        var r = host.Research;
+        string Of(Side s) => $"{s} " + string.Join(", ", Rebellion.Core.Research.ResearchModule.Kinds.Select(k =>
+            $"{k} {r.Level(s, k)}{(r.Exhausted(s, k) ? " (done)" : "")} +{r.Points(s, k)}"));
+        return $"Research (level +points): {Of(Side.Alliance)}; {Of(Side.Empire)}. Unlocks: {host.Game.Events.OfType<Rebellion.Core.Research.ResearchLevelReached>().Count()}.";
     }
 
     // AI vs AI: the simple AI on both sides. Reads state and events; the AIs draw nothing from the game generator. Runtime is the runner's own clock.
@@ -249,6 +259,7 @@ internal static class SimCli
         var known = host.Fog.KnownHq(Side.Empire);
         Console.WriteLine($"Rebel HQ: {host.HqSystem ?? "none"}; Empire's picture of it: {(known == null ? "unknown" : $"{known.System} (seen day {known.Stamp})")}. " +
                           $"Explored systems: Empire {host.Data.Galaxy.Systems.Count(s => host.Fog.IsExplored(Side.Empire, s.Name))}, Alliance {host.Data.Galaxy.Systems.Count(s => host.Fog.IsExplored(Side.Alliance, s.Name))}.");
+        Console.WriteLine(ResearchLine(host));
         Console.WriteLine($"AI orders sent: {match.TotalSent}, rejected: {match.TotalRejected}.");
         foreach (var kv in match.Rejected) Console.WriteLine($"  rejected {kv.Key}: {kv.Value}");
         foreach (var kv in match.Sent) Console.WriteLine($"  sent {kv.Key}: {kv.Value}");

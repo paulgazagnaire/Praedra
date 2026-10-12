@@ -61,6 +61,10 @@ public class GameHostTests
         Assert.Equal(eco.Params with { SmugglingTiers = h.Economy.Params.SmugglingTiers }, h.Economy.Params);
         Assert.Equal(sup.Params with { Table1 = h.Support.Params.Table1, Table2 = h.Support.Params.Table2 }, h.Support.Params);
         Assert.Equal(con.Params, h.Construction.Params);
+        // research: null = the module's defaults (m5-research §Defaults); the gate is on
+        Assert.Null(s.Research);
+        Assert.Equal(new Rebellion.Core.Research.ResearchParams(), h.Research.Params);
+        Assert.True(s.RespectResearchOrder);
     }
 
     [Fact]
@@ -71,10 +75,11 @@ public class GameHostTests
             ForcedStopTrigger = ForcedStopTrigger.AnyArmedFleet, IncidentsEnabled = false, BlockadeStopsMining = false,
             AutoscrapMode = AutoscrapMode.Smart, SlotSource = SlotSource.Rolled, SupportRuleset = GarrisonRuleset.New,
             BlockadeSupportEffect = false, DeliveryForcedStop = false, LostDestination = LostDestinationRule.Refuse,
-            UnitDestinationMustBeControlled = false, RespectResearchOrder = true, UseClassicBlockadeFlag = true, DebugOrdersEnabled = true,
+            UnitDestinationMustBeControlled = false, RespectResearchOrder = false, UseClassicBlockadeFlag = true, DebugOrdersEnabled = true,
             DeathStarClassBuildable = false, UnloadOnlyAtHeldSystem = false,
             Economy = new EconomyParams { ScrapPeriod = 7 }, Support = new SupportParams { ErosionPeriod = 11 },
             Construction = new ConstructionParams { StandardCycleDays = 3 },
+            Research = new Rebellion.Core.Research.ResearchParams { FacilityResearch = false, ResearchCostScale = Rebellion.Core.Research.ResearchScale.Fixed },
         };
         void Check(GameHost h)
         {
@@ -83,7 +88,8 @@ public class GameHostTests
             Assert.Equal(AutoscrapMode.Smart, h.Economy.AutoscrapMode); Assert.Equal(SlotSource.Rolled, h.Economy.SlotSource);
             Assert.Equal(GarrisonRuleset.New, h.Support.Ruleset); Assert.False(h.Support.BlockadeSupportEffect);
             Assert.False(h.Construction.DeliveryForcedStop); Assert.Equal(LostDestinationRule.Refuse, h.Construction.LostDestination);
-            Assert.False(h.Construction.UnitDestinationMustBeControlled); Assert.True(h.Construction.RespectResearchOrder);
+            Assert.False(h.Construction.UnitDestinationMustBeControlled); Assert.False(h.Construction.RespectResearchOrder);
+            Assert.False(h.Research.Params.FacilityResearch); Assert.Equal(Rebellion.Core.Research.ResearchScale.Fixed, h.Research.Params.ResearchCostScale);
             Assert.True(h.Construction.UseClassicBlockadeFlag); Assert.True(h.Control.DebugOrdersEnabled);
             Assert.True(h.Fleets.DebugOrdersEnabled); Assert.False(h.Construction.DeathStarClassBuildable);
             Assert.False(h.Troops.UnloadOnlyAtHeldSystem);
