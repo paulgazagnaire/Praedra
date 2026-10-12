@@ -117,6 +117,9 @@ public partial class Main : Control
                 case "--open" when i + 1 < _args.Length: gs.ShotOpenSection(_args[i + 1]); break;
                 case "--moveto" when i + 1 < _args.Length: gs.ShotMove(_args[i + 1]); break;
                 case "--filter" when i + 1 < _args.Length: gs.ShotFilter(_args[i + 1]); break;
+                case "--characters": gs.ShotCharacters(); break;
+                case "--click" when i + 1 < _args.Length: gs.ShotClick(_args[i + 1]); break;
+                case "--pick" when i + 1 < _args.Length: gs.PickSystem(_args[i + 1]); break;
                 case "--fleet" when i + 1 < _args.Length:
                     foreach (var f in gs.S.Game.State.Fleets.Values) if (f.Name == _args[i + 1]) gs.SelectFleet(f.Id, true);
                     break;

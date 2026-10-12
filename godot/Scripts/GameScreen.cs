@@ -90,6 +90,7 @@ public partial class GameScreen : Control
         _fleets.Player = S.Player;
         _fleets.Planned = () => S.PlannedMoves;
         _fleets.EnemyFleets = () => S.Fog.VisibleFleets(S.Player);
+        _fleets.CharacterRoutes = CharacterRoutes;
         _fleets.HqRoute = () => S.OwnHq is { Status: Rebellion.Core.Fog.HqStatus.InTransit } h ? (h.Path, h.HopIndex, GameSession.HqArrivalDay(h)) : null;
         _fleets.Bind(S.Game, G);
 
@@ -177,6 +178,9 @@ public partial class GameScreen : Control
             row.AddChild(b);
         }
         row.AddChild(new VSeparator());
+        _charButton = Btn("Characters", ToggleCharacters, "Your leaders: where they are, their posts and skills (C)");
+        _charButton.ToggleMode = true;
+        row.AddChild(_charButton);
         row.AddChild(Btn("How to play", ToggleHowTo, "Short instructions (F1)"));
         row.AddChild(Btn("Save", SaveGame, "Save to the one save slot"));
         row.AddChild(Btn("Load", AskLoad, "Load the saved game (asks first)"));
@@ -341,6 +345,8 @@ public partial class GameScreen : Control
         "ORDER: a planet needs enough regiments to keep the people calm. Too few and it revolts (red ring): yards and mines there stop.",
         "MAP: wheel or + / - zoom, drag or arrow keys pan, Home resets, Esc cancels. Orange = Alliance, green = Empire, grey = nobody.",
         "FOG OF WAR: you see live only systems you hold or have a fleet at. Other systems show what you saw last (the panel says \"last seen day N\"); dim hollow dots are unexplored. Enemy fleets appear only where you can see them. The Empire does not know where the Rebel HQ is until it finds it.",
+        "CHARACTERS: press Characters (or C) for your leaders: where they are, their post, status and skills. Leaders give bonuses: a fleet's Admiral boosts its bombardment, a fleet's General its regiments in an invasion, a system's General the defenders there.",
+        "   Select a fleet to attach a character standing at the same system (as Admiral, Commander, General or passenger) or to detach one; select one of your systems to name or release its General. Move <name>... sends a character alone: the route and arrival day show before you confirm.",
         "REBEL HQ (Alliance): click your HQ system and press Move HQ..., then click one of your systems. The HQ travels for some days (it cannot be attacked on the way); a big enemy blockade pins it in place.",
         "SAVING: Save / Load in the top bar (one slot). The game also saves itself every 30 days; Continue on the start screen loads that.",
     };
@@ -558,7 +564,7 @@ public partial class GameScreen : Control
         _playButton.Text = _playing ? "Pause" : "Play";
         RefreshHq();
         string banner = null;
-        if (_moveFleet >= 0 || _moveHq) banner = _moveBanner;
+        if (_moveFleet >= 0 || _moveHq || _moveChar >= 0) banner = _moveBanner;
         else if (!_playing && _pauseNote != null) banner = _pauseNote;
         _banner.Text = banner ?? "";
         _banner.Visible = banner != null;
@@ -612,12 +618,14 @@ public partial class GameScreen : Control
             case Key.F1: ToggleHowTo(); break;
             case Key.Space: TogglePlay(); break;
             case Key.N: StepOne(); break;
+            case Key.C: ToggleCharacters(); break;
             case Key.Escape:
                 if (_victoryPanel.Visible) return;
                 if (_confirmPanel.Visible) CloseConfirm();
                 else if (_howPanel.Visible) CloseHowTo();
                 else if (_reportPanel.Visible) _reportPanel.Visible = false;
-                else if (_moveFleet >= 0 || _moveHq) CancelMove();
+                else if (_moveFleet >= 0 || _moveHq || _moveChar >= 0) CancelMove();
+                else if (_charTab) ToggleCharacters();
                 else { _view.SelectedFleet = -1; _view.Select(-1); }
                 break;
             case Key.Home: _view.ResetView(); break;
