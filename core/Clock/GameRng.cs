@@ -12,7 +12,7 @@ public readonly record struct RngState(ulong State, ulong Increment, long Draws)
 ///   state = 0; inc = (stream &lt;&lt; 1) | 1; step(); state += seed; step().
 /// The default stream is 54, so seed 42 starts 2707161783, 2068313097, 3122475824, ... (pinned in tests).
 /// </summary>
-public sealed class GameRng
+public class GameRng
 {
     public const ulong DefaultStream = 54;
     private const ulong Multiplier = 6364136223846793005UL;
@@ -50,7 +50,7 @@ public sealed class GameRng
     }
 
     /// <summary>Uniform integer in [min, max], both inclusive, by rejection (no modulo bias).</summary>
-    public int NextInt(int minInclusive, int maxInclusive)
+    public virtual int NextInt(int minInclusive, int maxInclusive)
     {
         if (maxInclusive < minInclusive) throw new ArgumentException("max must be >= min");
         ulong range = (ulong)((long)maxInclusive - minInclusive + 1);

@@ -1,4 +1,5 @@
 using Rebellion.Core.Clock;
+using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
 using Rebellion.Core.Map;
 using Rebellion.Core.Ships;
@@ -17,6 +18,8 @@ internal static class SimCli
                                            [--owner "<System>=<Alliance|Empire>"]...   system owners (default: all neutral)
                                            [--trigger PaulRule|AnyArmedFleet|GravityWellShip]   (default PaulRule)
                                            [--days 40] [--seed 1]
+          dotnet run --project sim -- economy [--days 360] [--seed 1] [--no-incidents]
+        economy runs a fixed demo setup (four systems per side with mines and refineries) and prints each side's pools every 30 days.
         Ship classes are matched ignoring case; "CR90" and "CR90 Corvette" mean the Corellian Corvette, "ISD" the Imperial Star Destroyer.
         """;
 
@@ -32,6 +35,7 @@ internal static class SimCli
         try
         {
             if (args.Length == 0 || args[0] is "-h" or "--help" or "help") { Console.WriteLine(Usage); return args.Length == 0 ? 1 : 0; }
+            if (args[0] == "economy") return Economy(args.Skip(1).ToArray());
             if (args[0] != "move") throw new ArgumentException($"Unknown command '{args[0]}'.");
             return Move(Options.Parse(args.Skip(1).ToArray()));
         }
@@ -42,6 +46,53 @@ internal static class SimCli
             Console.Error.WriteLine(Usage);
             return 2;
         }
+    }
+
+    // Economy demo (engine/04, package P2.1). Reads the pools and the event list; draws nothing itself.
+    private static int Economy(string[] a)
+    {
+        int days = 360; ulong seed = 1; bool incidents = true;
+        for (int i = 0; i < a.Length; i++)
+        {
+            string key = a[i];
+            string Next() => ++i < a.Length ? a[i] : throw new ArgumentException($"{key} needs a value.");
+            switch (key)
+            {
+                case "--days": days = int.TryParse(Next(), out var d) && d > 0 ? d : throw new ArgumentException("--days must be a positive integer."); break;
+                case "--seed": seed = ulong.TryParse(Next(), out var s) ? s : throw new ArgumentException("--seed must be a non-negative integer."); break;
+                case "--no-incidents": incidents = false; break;
+                default: throw new ArgumentException($"Unknown option '{key}'.");
+            }
+        }
+        var demo = DemoScenario.Create(FindRoot(), seed, incidents);
+        var game = demo.Game; var eco = demo.Economy;
+        Console.WriteLine($"Economy demo: {days} days, seed {seed}, incidents {(incidents ? "on" : "off")}.");
+        Console.WriteLine("day   side      raw  refined  capacity  load  free  mines/refineries  produced  smuggled");
+        var produced = new Dictionary<Side, int>(); var smuggled = new Dictionary<Side, int>();
+        int printed = 0;
+        for (int day = 1; day <= days; day++)
+        {
+            game.Step();
+            for (; printed < game.Events.Count; printed++)
+                if (game.Events[printed] is ResourceProduced p)
+                {
+                    produced[p.PoolSide] = produced.GetValueOrDefault(p.PoolSide) + 1;
+                    if (p.Diverted) smuggled[p.Controller] = smuggled.GetValueOrDefault(p.Controller) + 1;
+                }
+            if (day % 30 != 0 && day != days) continue;
+            foreach (var side in new[] { Side.Alliance, Side.Empire })
+            {
+                int mines = eco.Objects.Count(o => o.Completed && o.Class == "Mine" && eco.OwnerOf(o) == side);
+                int refs = eco.Objects.Count(o => o.Completed && o.Class == "Refinery" && eco.OwnerOf(o) == side);
+                Console.WriteLine($"{game.Day,4}  {side,-8} {eco.Raw(side),5} {eco.Refined(side),8} {eco.Capacity(side),9} {eco.Load(side),5} {eco.Free(side),5}  {mines,7}/{refs,-9} {produced.GetValueOrDefault(side),9} {smuggled.GetValueOrDefault(side),9}");
+            }
+        }
+        int scrapped = game.Events.OfType<ObjectScrapped>().Count();
+        int incidentsSeen = game.Events.OfType<ResourceIncident>().Count(), disasters = game.Events.OfType<Disaster>().Count();
+        int destroyed = game.Events.OfType<FacilityDestroyed>().Count();
+        Console.WriteLine($"Scrapped by autoscrap: {scrapped}. Resource incidents: {incidentsSeen}. Disasters: {disasters}. Facilities destroyed: {destroyed}. Random numbers drawn: {game.Rng.Draws}.");
+        Console.WriteLine($"State hash: {GameSave.StateHash(game)}");
+        return 0;
     }
 
     private static int Move(Options o)

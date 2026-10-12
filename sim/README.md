@@ -56,3 +56,15 @@ After 12 days: Rebel fleet Red is at Kinyen. Random numbers drawn: 0.
 ```
 
 A contact is raised by the core every day while both sides share a system; the log shows it once until the fleets present change.
+
+## `economy`: pools of a fixed demo setup
+
+```
+dotnet run --project sim -- economy [--days 360] [--seed 1] [--no-incidents]
+```
+
+Runs the demo setup of `core/Economy/DemoScenario.cs` (four owned systems per side with mines and refineries, a few yards, ships
+and troops for load, one blockading Interdictor, varied support so smuggling shows) and prints each side's raw and refined
+pools, capacity, load, free maintenance, mine and refinery counts, units produced and units smuggled away, every 30 days.
+The last lines give the autoscrap, incident and destruction counts, the number of random numbers drawn and the state hash.
+Same seed, same output.
