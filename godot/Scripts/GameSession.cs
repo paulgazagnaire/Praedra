@@ -9,6 +9,7 @@ using Rebellion.Core.Control;
 using Rebellion.Core.Defenses;
 using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
+using Rebellion.Core.Fog;
 using Rebellion.Core.Setup;
 using Rebellion.Core.Support;
 using Rebellion.Core.Troops;
@@ -53,7 +54,7 @@ public sealed class GameSession
     readonly Dictionary<long, string> _pending = new();
     readonly Dictionary<long, int> _pendingFleet = new();
     readonly Dictionary<int, PlannedMove> _plannedMoves = new();
-    int _printed;
+    int _printed; // index into the fog's event feed for the player's side (EventsFor), not the unfiltered list
     // Names as they were before the day ran (a destroyed ship or a dissolved fleet is gone afterwards).
     readonly Dictionary<int, string> _classOf = new();
     readonly Dictionary<int, (string Name, Side Side)> _fleetOf = new();
@@ -73,7 +74,7 @@ public sealed class GameSession
     {
         Host = host; Player = player;
         Opponent = GameBoot.CreateOpponent(host, player == Side.Empire ? Side.Alliance : Side.Empire);
-        _printed = host.Game.Events.Count;
+        _printed = host.Fog.EventsFor(player).Count;
         Snapshot();
     }
 
@@ -92,6 +93,80 @@ public sealed class GameSession
     public string You(Side s) => s == Player ? $"{NameOf(s)} (you)" : NameOf(s);
 
     public int QueuedOrders => Game.Queue.Count(o => o.Side == Player);
+
+    // ------------------------------------------------------------------ fog of war: what the player's side knows (rule: m5-fog-and-hq §N8)
+
+    public FogModule Fog => Host.Fog;
+
+    /// <summary>Is the system explored in the player's picture? Unexplored systems show nothing but their name and lanes.</summary>
+    public bool Explored(string system) => Fog.IsExplored(Player, system);
+
+    /// <summary>Does the player's side see the system live today (holds it, or has a fleet there)?</summary>
+    public bool Sees(string system) => Fog.Sees(Player, system);
+
+    /// <summary>The player's picture of a system (null when unexplored).</summary>
+    public SystemPicture Picture(string system) => Fog.Picture(Player, system);
+
+    /// <summary>
+    /// The holder as the player's side knows it: the player's own systems always (own state is truth), otherwise the holder in the side's
+    /// picture (possibly out of date). <c>known</c> is false when the picture has no owner group yet (unexplored).
+    /// </summary>
+    public (bool Known, Side? Owner) KnownOwnerOf(string system)
+    {
+        if (OwnerOf(system) == Player) return (true, Player);
+        var o = Picture(system)?.Owner;
+        if (o == null) return (false, null);
+        // The loser is told at once (LossNotice), so a picture can only say "yours" for a system that is yours; guard anyway.
+        return (true, o.Value.Owner == Player ? null : o.Value.Owner);
+    }
+
+    /// <summary>The day the player's side last looked at the system (live look or a report), or null.</summary>
+    public int? LastSeenDay(string system)
+    {
+        var p = Picture(system);
+        if (p == null) return null;
+        int? best = p.LastLookDay;
+        foreach (int? st in new[] { p.Owner?.Stamp, p.Status?.Stamp, p.Facilities?.Stamp, p.Fleets?.Stamp })
+            if (st is int v && (best == null || v > best)) best = v;
+        return best;
+    }
+
+    /// <summary>The enemy fleets the player's side sees now at a system (class counts only, no names or ids).</summary>
+    public IReadOnlyList<FleetPicture> VisibleEnemyFleetsAt(string system) =>
+        Fog.VisibleFleets(Player).Where(v => v.System == system).Select(v => v.Fleet).ToList();
+
+    /// <summary>The Rebel HQ as the Alliance's own object (status, where, route). Read only for an Alliance player: it is that side's own.</summary>
+    public HqState OwnHq => Player == Side.Alliance ? Game.State.Scenario.Hq : null;
+
+    /// <summary>The day the HQ arrives, while it is moving.</summary>
+    public static int HqArrivalDay(HqState h)
+    {
+        int day = h.DueDay;
+        for (int i = h.HopIndex + 1; i < h.HopTicks.Count; i++) day += h.HopTicks[i];
+        return day;
+    }
+
+    /// <summary>
+    /// The player's own headquarters system (Empire: Coruscant; Alliance: where the HQ stands), or null (the HQ is moving or destroyed).
+    /// </summary>
+    public string MyHqSystem => Player == Side.Empire ? GameBoot.EmpireCapital
+        : (OwnHq.Status == HqStatus.AtRest ? OwnHq.System : null);
+
+    /// <summary>
+    /// The enemy's headquarters as the player's side knows it: the Alliance always knows Coruscant; the Empire only the system its own
+    /// picture shows the Rebel HQ at (KnownHq, rule: m5-fog-and-hq §N5), else null = unknown.
+    /// </summary>
+    public string EnemyHqSystem => Player == Side.Alliance ? GameBoot.EmpireCapital : Fog.KnownHq(Side.Empire)?.System;
+
+    /// <summary>A MoveHq order queued and not yet judged (destination), or null.</summary>
+    public string PendingHqMove { get; private set; }
+
+    /// <summary>Queue the MoveHq order (Alliance). The core judges it when the next day starts. rule: m5-fog-and-hq §F6.</summary>
+    public long SubmitMoveHq(string destination)
+    {
+        PendingHqMove = destination;
+        return Track(Fog.SubmitMoveHq(Player, destination), $"Move the HQ to {destination}");
+    }
 
     // ------------------------------------------------------------------ orders
 
@@ -134,7 +209,7 @@ public sealed class GameSession
         var outcome = new StepOutcome();
         ReadEvents(outcome);
         // Every order given before this day was judged in this Step: nothing is "waiting" any more.
-        _pending.Clear(); _pendingFleet.Clear(); _plannedMoves.Clear();
+        _pending.Clear(); _pendingFleet.Clear(); _plannedMoves.Clear(); PendingHqMove = null;
         Winner = GameBoot.WinnerOf(Host);
         if (Winner is Side w)
         {
@@ -213,16 +288,43 @@ public sealed class GameSession
         BombardReject.EnemyFleetPresent => "an enemy fleet is in the way (win the battle first)",
         BombardReject.NoBombardPower => "this fleet cannot bombard",
         BombardReject.OrderPending => "that fleet already has an attack order",
+        HqRejectReason.NotAlliance => "only the Alliance has a headquarters to move",
+        HqRejectReason.NoHq => "there is no headquarters any more",
+        HqRejectReason.NotHeld => "the headquarters can only move to a system you hold",
+        HqRejectReason.Pinned => "a large enemy blockade pins the headquarters where it is (break the blockade first)",
+        HqRejectReason.NoFunds => "not enough refined material to move the headquarters",
         AssaultReject.NoTroops => "no regiments aboard",
         AssaultReject.FullyShielded => "the planet's shields are too strong (bombard the shield generators first)",
         _ => reason,
     };
 
+    const string HqOrderPrefix = "Move the HQ";
+    static bool IsHqOrder(string what) => what.StartsWith(HqOrderPrefix, StringComparison.Ordinal);
+
+    /// <summary>The words for a refused MoveHq order (the shared reasons read differently for the HQ).</summary>
+    public static string WhyHq(string reason) => reason switch
+    {
+        RejectReason.InTransit => "the headquarters is already moving",
+        RejectReason.AlreadyThere => "the headquarters is already there",
+        RejectReason.Unreachable => "there is no route there",
+        _ => Why(reason),
+    };
+
+    static string HqCauseWords(string cause) => cause switch
+    {
+        FogModule.CauseCaptured => "the system was captured",
+        FogModule.CauseDestinationLost => "its destination was lost while it travelled",
+        FogModule.CauseSystemDestroyed => "the system was destroyed",
+        _ => cause,
+    };
+
     // ------------------------------------------------------------------ events -> messages
 
+    // Only the events the player's side may know: the fog's filtered feed (rule: m5-fog-and-hq §N8 event audience). A battle always has both
+    // sides there, so its report still reaches the player.
     void ReadEvents(StepOutcome o)
     {
-        var events = Game.Events;
+        var events = Fog.EventsFor(Player);
         for (; _printed < events.Count; _printed++)
         {
             bool combat = events[_printed] is Contact or ForcedStop or FleetRetreated or BattleEnded or SystemCaptured
@@ -246,7 +348,11 @@ public sealed class GameSession
         {
             case OrderRejected r when _pending.TryGetValue(r.Sequence, out var what):
                 _pending.Remove(r.Sequence);
-                yield return new Message(d, $"Order refused: {what}. Reason: {Why(r.Reason)}.", null, MsgKind.Bad);
+                yield return new Message(d, $"Order refused: {what}. Reason: {(IsHqOrder(what) ? WhyHq(r.Reason) : Why(r.Reason))}.", null, MsgKind.Bad);
+                break;
+            case OrderAccepted a when _pending.TryGetValue(a.Sequence, out var what) && IsHqOrder(what) && a.Path != null:
+                _pending.Remove(a.Sequence);
+                yield return new Message(d, $"HQ moving to {a.Path.Items[^1]}, arrives day {a.ArrivalDay} ({a.TotalTicks} days on the lanes).", a.Path.Items[^1], MsgKind.Good);
                 break;
             case OrderAccepted a when _pending.TryGetValue(a.Sequence, out var what):
                 _pending.Remove(a.Sequence);
@@ -259,7 +365,21 @@ public sealed class GameSession
                 yield return new Message(d, $"Fleet {FleetName(f.Fleet)} arrived at {f.System}.", f.System, MsgKind.Info);
                 break;
             case FleetArrived f when OwnerOf(f.System) == Player:
-                yield return new Message(d, $"Enemy fleet {FleetName(f.Fleet)} arrived at {f.System}.", f.System, MsgKind.Warn);
+                yield return new Message(d, $"Enemy fleet arrived at {f.System}.", f.System, MsgKind.Warn); // no enemy fleet names (§N8)
+                break;
+            case FleetSighted x when OwnerOf(x.System) != Player: // at your own systems FleetArrived already says it
+                yield return new Message(d, $"Enemy fleet sighted at {x.System}: {x.Detail}.", x.System, MsgKind.Warn);
+                break;
+            case OwnerChangeSeen x:
+                yield return new Message(d, $"News from {x.System}: now held by {(x.Now is Side n ? "the " + NameOf(n) : "nobody")} (was {(x.Was is Side was ? "the " + NameOf(was) : "nobody")}).", x.System, MsgKind.Info);
+                break;
+
+            // ---- the Rebel HQ (HqArrived reaches the Alliance only; the departure is told by the accepted order above)
+            case HqArrived h:
+                yield return new Message(d, $"Your headquarters arrived at {h.System}.", h.System, MsgKind.Good);
+                break;
+            case HqDestroyed h:
+                yield return new Message(d, $"The Rebel headquarters was destroyed at {h.System} ({HqCauseWords(h.Cause)}).", h.System, Player == Side.Empire ? MsgKind.Good : MsgKind.Bad);
                 break;
             case ForcedStop x when Mine(FleetSide(x.Fleet)):
                 yield return new Message(d, $"Fleet {FleetName(x.Fleet)} was stopped at {x.System} by an enemy fleet.", x.System, MsgKind.Warn);

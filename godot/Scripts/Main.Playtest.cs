@@ -104,6 +104,10 @@ public partial class Main
         Expect(!gs.Playing, "paused");
         Expect(gs.Click("2x") && gs.SpeedValue == 2 && gs.Click("5x") && gs.SpeedValue == 5, "speed buttons work");
 
+        PlaytestFog(gs);
+        if (side == Side.Empire) PlaytestEmpireHqUnknown(gs);
+        else PlaytestMoveHq(gs);
+
         // ---------------------------------------------------------------- select the troop fleet, move it to where the regiments are
         var eco = s.Host.Economy; var fm = s.Host.Fleets;
         var troopFleet = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null && fm.FreeTroopSlots(f) > 0).OrderByDescending(f => fm.FreeTroopSlots(f)).First();
@@ -322,16 +326,27 @@ public partial class Main
         // ---------------------------------------------------------------- run to day 400 against the AI
         var sw = System.Diagnostics.Stopwatch.StartNew();
         int pauses = 0;
+        int evStart = s.Game.Events.Count, msgStart = s.Messages.Count;
         while (s.Game.Day < 400 && s.Winner == null)
         {
             if (!gs.PlayDay()) pauses++;
             if (gs.ReportVisible) gs.Click("Close");
         }
+        // The core's unfiltered event list is read here only to check the screens: the AI acted, and the player was told only what its
+        // side may know (rule: m5-fog-and-hq §N8 event audience).
+        var runEvents = Enumerable.Range(evStart, s.Game.Events.Count - evStart).Select(i => (Ev: s.Game.Events[i], Aud: s.Game.AudienceOf(i))).ToList();
+        int enemyActs = runEvents.Count(x => x.Ev is Rebellion.Core.Control.SystemCaptured c && c.To == s.Enemy
+                                          || x.Ev is FleetDeparted fd && s.Game.State.Fleets.TryGetValue(fd.Fleet, out var ef) && ef.Side == s.Enemy);
+        Expect(enemyActs > 0, $"the AI opponent did things ({enemyActs} enemy fleet departures and captures)");
+        int myBit = Rebellion.Core.Victory.ScenarioState.Bit(me);
+        var hiddenCaptures = runEvents.Where(x => x.Ev is Rebellion.Core.Control.SystemCaptured && (x.Aud & myBit) == 0).Select(x => (Rebellion.Core.Control.SystemCaptured)x.Ev).ToList();
+        var newMsgs = s.Messages.Skip(msgStart).ToList();
+        Expect(!hiddenCaptures.Any(c => newMsgs.Any(m => m.Day == c.Day && m.Text.Contains("captured " + c.System))),
+            $"no message about the {hiddenCaptures.Count} captures the player's side could not see");
         GD.Print($"ran to day {s.Game.Day} in {sw.ElapsedMilliseconds} ms, {pauses} auto-pauses, {s.Messages.Count} messages, winner {(s.Winner?.ToString() ?? "none")}");
         Expect(s.Game.Day >= 400 || s.Winner != null, "reached day 400 (or someone won)");
         var owners = s.Game.State.SystemOwners.GroupBy(kv => kv.Value).ToDictionary(g => g.Key, g => g.Count());
         GD.Print("systems: " + string.Join(", ", owners.Select(kv => $"{kv.Key}={kv.Value}")));
-        Expect(s.Messages.Any(m => m.Kind == MsgKind.Battle || m.Text.Contains("captured") || m.Text.Contains("Enemy fleet")), "the AI opponent did things (fleets moved / fights)");
         Expect(GameBoot.SaveExists(GameBoot.AutoSaveSlot), "autosave written during the run");
         Expect(gs.LogRows > 0 && gs.LogRows <= 400, "log stays capped");
 
@@ -347,6 +362,110 @@ public partial class Main
         ShowMenu();
         Expect(UiTest.Click(_screen, "Load saved game") && Gs != null && Gs.S.Game.Day > 0, "Load saved game from the start screen");
         ShowMenu();
+    }
+
+    // ---------------------------------------------------------------- fog of war (rule: m5-fog-and-hq §F3, §N8)
+
+    /// <summary>An enemy fleet the player's side does not see is neither drawn nor listed; what is drawn is only what the side sees.</summary>
+    void PlaytestFog(GameScreen gs)
+    {
+        var s = gs.S; var me = s.Player;
+        gs.PlayRefresh();
+        var drawn = gs.DrawnFleetIds();
+        Expect(drawn.Count > 0 && drawn.All(id => s.Game.State.Fleets[id].Side == me), $"only own fleets are drawn from the core's fleet list ({drawn.Count})");
+        var markers = gs.EnemyMarkerSystems();
+        Expect(markers.All(s.Sees), $"enemy fleet markers only at systems the side sees ({markers.Count})");
+        // the core is read only to find a test case: an enemy fleet at a system the player's side cannot see
+        var hidden = s.Game.State.Fleets.Values.Where(f => f.Side != me && f.At != null && !s.Sees(f.At)).OrderBy(f => f.Id).FirstOrDefault();
+        Expect(hidden != null, "the start position has an enemy fleet the player cannot see");
+        if (hidden != null)
+        {
+            GD.Print($"hidden enemy fleet: '{hidden.Name}' at {hidden.At}");
+            Expect(!drawn.Contains(hidden.Id) && !markers.Contains(hidden.At), $"the unseen enemy fleet at {hidden.At} is not drawn");
+            gs.SelectSystem(hidden.At); gs.PlayRefresh();
+            string panel = gs.PanelText() + "\n" + string.Join("\n", gs.ButtonTexts());
+            Expect(!panel.Contains(hidden.Name) && !panel.Contains("[enemy] "), $"the system panel of {hidden.At} does not list the unseen fleet");
+            Expect(panel.Contains("Last seen day") || panel.Contains("Unexplored") || panel.Contains("Not seen since"), $"the panel says how old the picture of {hidden.At} is");
+            gs.SelectFleet(hidden.Id, false); gs.PlayRefresh();
+            Expect(!gs.PanelText().Contains(hidden.Name), "an enemy fleet cannot be selected by id");
+        }
+        string unexplored = gs.G.Systems.Select(x => x.Name).Where(n => !s.Explored(n) && s.OwnerOf(n) != me).OrderBy(n => n, StringComparer.Ordinal).FirstOrDefault();
+        Expect(unexplored != null, "some systems are unexplored at the start");
+        if (unexplored != null)
+        {
+            Expect(gs.DrawnUnknown(unexplored), $"{unexplored} is drawn as unexplored");
+            Expect(gs.HoverTextFor(unexplored).Contains("unexplored"), "hovering it says unexplored: " + gs.HoverTextFor(unexplored));
+            gs.SelectSystem(unexplored); gs.PlayRefresh();
+            Expect(gs.PanelText().Contains("Unexplored") && !gs.PanelText().Contains("Owner:"), "its panel shows no owner, only 'Unexplored'");
+        }
+        gs.View.Select(-1);
+    }
+
+    /// <summary>Empire: the Rebel HQ is not tagged and the Enemy HQ button says unknown while the Empire's picture has not shown it.</summary>
+    void PlaytestEmpireHqUnknown(GameScreen gs)
+    {
+        var s = gs.S;
+        Expect(s.Fog.KnownHq(Side.Empire) == null, "the Empire does not know the Rebel HQ at the start");
+        Expect(!gs.MapTags().Any(t => t.Text.Contains("REBEL HQ")), "no REBEL HQ (TARGET) tag on the map");
+        Expect(gs.ButtonTexts().Contains("Enemy HQ: unknown"), "the Enemy HQ button says unknown");
+        Expect(gs.Click("Enemy HQ: unknown") && gs.ToastText.Contains("unknown"), "pressing it says the HQ location is unknown: " + gs.ToastText);
+        Expect(gs.MapTags().Any(t => t.Text == "YOUR CAPITAL" && t.System == GameBoot.EmpireCapital), "your capital is tagged");
+    }
+
+    /// <summary>Alliance: Move HQ... with a refused order (plain reason), then a real move that arrives.</summary>
+    void PlaytestMoveHq(GameScreen gs)
+    {
+        var s = gs.S; var me = s.Player; var fm = s.Host.Fleets;
+        string hq = s.MyHqSystem;
+        Expect(hq != null && gs.MapTags().Any(t => t.System == hq && t.Text == "YOUR HQ"), $"your HQ is tagged at {hq}");
+        Expect(gs.ButtonTexts().Contains("Enemy HQ"), "the Alliance knows the enemy capital");
+        Expect(gs.Click("My HQ"), "click My HQ");
+        gs.PlayRefresh();
+        Expect(gs.Has("Move HQ..."), "the HQ system panel offers Move HQ...");
+        int speed = s.Fog.HqRules.Speed;
+        string notHeld = gs.G.Systems.Select(x => x.Name).Where(n => s.OwnerOf(n) != me && fm.FindPath(hq, n, speed).Ok)
+            .OrderBy(n => fm.FindPath(hq, n, speed).TotalTicks).ThenBy(n => n, StringComparer.Ordinal).First();
+        string dest = s.Game.State.SystemOwners.Where(kv => kv.Value == me && kv.Key != hq).Select(kv => kv.Key).Where(n => fm.FindPath(hq, n, speed).Ok)
+            .OrderBy(n => fm.FindPath(hq, n, speed).TotalTicks).ThenBy(n => n, StringComparer.Ordinal).First();
+        GD.Print($"HQ at {hq}: refused try {notHeld}, move to {dest}");
+
+        // refused: a system the Alliance does not hold
+        Expect(gs.Click("Move HQ..."), "click Move HQ...");
+        Expect(gs.Banner.Contains("Move HQ"), "banner asks for a destination: " + gs.Banner);
+        gs.HoverTextFor(notHeld);
+        Expect(gs.Banner.Contains("not yours"), "the preview warns the destination is not held: " + gs.Banner);
+        int before = s.Messages.Count;
+        gs.PickSystem(notHeld);
+        Expect(s.PendingHqMove == notHeld && s.QueuedOrders == 1, "MoveHq order queued");
+        gs.PlayDay();
+        Expect(s.Messages.Skip(before).Any(m => m.Text.StartsWith("Order refused: Move the HQ to " + notHeld, StringComparison.Ordinal) && m.Text.Contains("only move to a system you hold")),
+            "refusal shown with a plain reason: " + string.Join(" | ", s.Messages.Skip(before).Select(m => m.Text)));
+        Expect(s.MyHqSystem == hq, "the HQ stayed");
+
+        // accepted
+        gs.Click("My HQ"); gs.PlayRefresh();
+        Expect(gs.Click("Move HQ..."), "click Move HQ... again");
+        gs.HoverTextFor(dest);
+        Expect(gs.Banner.Contains("HQ to " + dest) && gs.Banner.Contains("arrives day"), "preview shows route and arrival day: " + gs.Banner);
+        before = s.Messages.Count;
+        gs.PickSystem(dest);
+        gs.PlayRefresh();
+        Expect(gs.HqStatusText.Contains(dest), "HQ line says the move is waiting: " + gs.HqStatusText);
+        gs.PlayDay();
+        var h = s.OwnHq;
+        Expect(h.Status == Rebellion.Core.Fog.HqStatus.InTransit || s.MyHqSystem == dest, $"the HQ left {hq} (status {h.Status})");
+        Expect(s.Messages.Skip(before).Any(m => m.Text.StartsWith("HQ moving to " + dest + ", arrives day", StringComparison.Ordinal)), "message 'HQ moving to X, arrives day N': " + string.Join(" | ", s.Messages.Skip(before).Select(m => m.Text)));
+        if (h.Status == Rebellion.Core.Fog.HqStatus.InTransit)
+        {
+            int arrive = GameSession.HqArrivalDay(h);
+            Expect(gs.HqStatusText == $"HQ moving to {dest}, arrives day {arrive}.", "HQ line: " + gs.HqStatusText);
+            Expect(!gs.MapTags().Any(t => t.Text == "YOUR HQ"), "no HQ tag while it travels");
+            Expect(gs.Click("My HQ") && gs.ToastText.Contains("HQ moving to " + dest), "My HQ while moving says where it goes: " + gs.ToastText);
+            Expect(RunUntil(gs, () => s.MyHqSystem == dest, 200), $"the HQ arrived at {dest} (day {s.Game.Day}, expected {arrive})");
+            Expect(s.Game.Day == arrive, $"on the announced day {arrive}");
+        }
+        Expect(s.Messages.Any(m => m.Text == $"Your headquarters arrived at {dest}."), "arrival message");
+        Expect(gs.MapTags().Any(t => t.System == dest && t.Text == "YOUR HQ") && gs.HqStatusText == "", "the HQ tag moved and the HQ line cleared");
     }
 
     void PlaytestEnding(GameScreen gs, bool playerWins)
