@@ -27,7 +27,7 @@ internal static class SimCli
           dotnet run --project sim -- support [--days 360] [--seed 1] [--ruleset classic|new] [--reinforce-day 120]
           dotnet run --project sim -- battle --alliance "<Class>:<n>[,...]" --empire "<Class>:<n>[,...]" [--battles 1000] [--seed 1] [--no-rolls] [--ruleset classic|new] [--carry]
           dotnet run --project sim -- campaign [--days 1000] [--seed 1] [--ruleset Classic|New]
-          dotnet run --project sim -- aivai [--days 730] [--seed 1] [--start meda|campaign] [--passive empire|alliance] [--trace]
+          dotnet run --project sim -- aivai [--days 730] [--seed 1] [--start meda|campaign] [--passive empire|alliance] [--trace] [--hq-unknown]
         aivai plays the simple AI (core/AI) on both sides from the new-game start (MedA, DEFAULT) or the test campaign, printing a yearly summary,
         battle, assault and capture counts, the winner (if any) and the AI's order and rejection counts. The AIs see everything (no fog yet).
         battle runs N seeded battles (Classic: m4-battle-classic, New: m4-battle-new; --ruleset, DEFAULT classic) at a synthetic system where every retreat has a destination, and prints how often each
@@ -200,7 +200,7 @@ internal static class SimCli
     // AI vs AI: the simple AI on both sides. Reads state and events; the AIs draw nothing from the game generator. Runtime is the runner's own clock.
     private static int AiVsAi(string[] a)
     {
-        int days = 730; ulong seed = 1; string start = "meda"; Side? passive = null; bool trace = false;
+        int days = 730; ulong seed = 1; string start = "meda"; Side? passive = null; bool trace = false; bool hqKnown = true;
         for (int i = 0; i < a.Length; i++)
         {
             string key = a[i];
@@ -210,6 +210,7 @@ internal static class SimCli
                 case "--days": days = int.TryParse(Next(), out var d) && d > 0 ? d : throw new ArgumentException("--days must be a positive integer."); break;
                 case "--seed": seed = ulong.TryParse(Next(), out var s) ? s : throw new ArgumentException("--seed must be a non-negative integer."); break;
                 case "--trace": trace = true; break;
+                case "--hq-unknown": hqKnown = false; break;
                 case "--passive": passive = Next().ToLowerInvariant() switch { "empire" => Side.Empire, "alliance" => Side.Alliance, "none" => null, _ => throw new ArgumentException("--passive must be empire, alliance or none.") }; break;
                 case "--start": start = Next().ToLowerInvariant(); if (start is not ("meda" or "campaign")) throw new ArgumentException("--start must be meda or campaign."); break;
                 default: throw new ArgumentException($"Unknown option '{key}'.");
@@ -218,7 +219,7 @@ internal static class SimCli
         var clock = System.Diagnostics.Stopwatch.StartNew();
         var host = start == "meda" ? NewGame.Create(new NewGameOptions { Seed = (int)seed, Preset = StartPreset.MedA }) : TestCampaign.New(seed).Host;
         var match = new Rebellion.Core.AI.AiMatch(host, passive: passive);
-        if (start == "meda" && host.HqSystem != null) match.Empire.KnownEnemyHq = host.HqSystem; // no fog yet: the Empire knows the Rebel HQ (DEFAULT)
+        if (hqKnown && start == "meda" && host.HqSystem != null) match.Empire.KnownEnemyHq = host.HqSystem; // no fog yet: the Empire knows the Rebel HQ (DEFAULT)
         Console.WriteLine($"AI vs AI: {days} days, seed {seed}, start {start}{(passive is Side ps ? $", {ps} passive (gives no orders)" : "")}. The AIs see everything (no fog of war yet).");
         void Summary()
         {

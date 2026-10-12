@@ -623,7 +623,8 @@ public sealed class SimpleAi
     /// when it has a shipyard (so the guard can be topped up); otherwise the guard is whatever fleet already stands there.
     /// </summary>
     private string? GuardSystem() { var c = CriticalSystem(); return c != null && Held(c) ? c : null; }
-    private string? WinTarget() => _side == Side.Empire ? (KnownEnemyHq ?? _h.HqSystem) : Rebellion.Core.Control.ControlModule.CapitalSystem;
+    // The Empire only strikes an HQ it has been told about (KnownEnemyHq); no peeking at the true HQ (economy-ai D4: the AI plays fair with fog of war).
+    private string? WinTarget() => _side == Side.Empire ? KnownEnemyHq : Rebellion.Core.Control.ControlModule.CapitalSystem;
 
     private bool Pending(Fleet f) => _h.Bombardment.HasPending(f.Id) || _h.Assault.HasPending(f.Id);
 
