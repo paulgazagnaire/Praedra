@@ -304,11 +304,21 @@ public sealed class SupportModule
         return code;
     }
 
-    // rule: m2-uprisings-and-garrison §Incident (Effects on the holder). Codes 3 to 5 are M5 (characters, prisoners): no-op, no draw.
+    /// <summary>
+    /// Incident codes 3 (one free character of the holder injured), 4 (one prisoner freed) and 5 (all prisoners freed), given (ctx, hook time,
+    /// system, holder, code). Null (no character module) = no-op, no draw. The character module sets it. rule: m5-characters-and-force
+    /// §What other sheets' effects call; m2-uprisings-and-garrison §Incident.
+    /// </summary>
+    public Action<StepContext, int, string, Side, int>? CharacterIncident { get; set; }
+
+    // rule: m2-uprisings-and-garrison §Incident (Effects on the holder). Codes 3 to 5 go to the character module (no-op without it).
     private void ApplyEffect(StepContext ctx, int t, string sys, Side holder, int code)
     {
         switch (code)
         {
+            case 3: case 4: case 5:
+                CharacterIncident?.Invoke(ctx, t, sys, holder, code);
+                break;
             case 1: // one completed facility destroyed, uniform over facility ids (DEFAULT completed only)
                 var fac = _eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.Completed && o.System == sys).ToList();
                 if (fac.Count > 0) _eco.Destroy(ctx, t, fac[ctx.Rng.NextInt(0, fac.Count - 1)], DestroyReason.UprisingIncident);

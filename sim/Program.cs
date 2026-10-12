@@ -182,6 +182,7 @@ internal static class SimCli
         }
         var host = NewGame.Create(GameData.Default, new NewGameOptions { Seed = seed, Preset = preset });
         Console.WriteLine($"New game: preset {StartPresets.Key(preset)} (player {StartPresets.PlayerSide(preset)}), seed {seed}, {days} days. Rebel HQ: {host.HqSystem}.");
+        PrintCast(host);
         void Summary()
         {
             Console.WriteLine($"-- day {host.Game.Day}");
@@ -198,6 +199,22 @@ internal static class SimCli
         Console.WriteLine(ResearchLine(host));
         Console.WriteLine($"State hash: {host.StateHash()}");
         return 0;
+    }
+
+    // The characters placed at setup (m5-setup-and-victory P9) with where they stand and their Force, per side.
+    private static void PrintCast(GameHost host)
+    {
+        var ch = host.Characters;
+        foreach (var side in new[] { Side.Empire, Side.Alliance })
+        {
+            var placed = ch.InPlay.Where(c => c.Side == side).Select(c =>
+            {
+                string where = c.AttachedFleet != 0 ? $"fleet {c.AttachedFleet} at {ch.LocationOf(c)}" : ch.LocationOf(c) ?? "in transit";
+                string force = c.ForceUser ? $", Force {c.EffectiveForce}{(c.ForceDiscovered ? "" : " hidden")}" : "";
+                return $"{ch.ClassOf(c).Name} ({where}{force})";
+            });
+            Console.WriteLine($"Cast {side}: {string.Join("; ", placed)}. Pool: {ch.PoolOf(side).Count}.");
+        }
     }
 
     // Research levels and points per side and track (m5-research §Rule (New) 4: read-only queries).

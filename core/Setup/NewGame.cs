@@ -76,6 +76,11 @@ public static class NewGame
         foreach (var side in new[] { Side.Empire, Side.Alliance })
             DealSide(host, forces, side);
 
+        // P9 starting characters, after the forces and before the economy timers and the research arming (P10): the roster's creation draws,
+        // then Palpatine at Coruscant, Vader and the officers at random Empire locations, the Empire extras, Mon Mothma at the HQ, the Yavin six,
+        // the Alliance extras. rule: m5-setup-and-victory §P9; m5-characters-and-force §Rolling the stats.
+        host.Characters.SetupNewGame(state.Scenario.HqSystem);
+
         // Day-0 pictures: explored-for-all systems (A and B), own holdings (OwnLive), the StartFullCopy list. rule: m5-fog-and-hq §F4
         host.Fog.SetupNewGame(rows.Where(r => r.ExploredAll).Select(r => r.Name)
             .Where(n => state.Scenario.Explored.TryGetValue(n, out var m) && m == 3));

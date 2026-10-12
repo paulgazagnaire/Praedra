@@ -1,0 +1,9 @@
+mode,side,term,kind,subject,source
+Standard,Empire,1,CharacterCaptured,578,"Traced: m5-setup-and-victory Victory (Luke Skywalker, original id 578)"
+Standard,Empire,2,CharacterCaptured,576,"Traced: m5-setup-and-victory Victory (Mon Mothma, original id 576)"
+Standard,Empire,3,RebelHqGone,,"Traced: m5-setup-and-victory Victory"
+Standard,Alliance,1,CharacterCaptured,641,"Traced: m5-setup-and-victory Victory (Darth Vader, original id 641)"
+Standard,Alliance,2,CharacterCaptured,640,"Traced: m5-setup-and-victory Victory (Emperor Palpatine, original id 640)"
+Standard,Alliance,3,SystemHeldOrDestroyed,Coruscant,"Traced: m5-setup-and-victory Victory"
+HqOnly,Empire,1,RebelHqGone,,"Traced: m5-setup-and-victory Victory (HQ-only)"
+HqOnly,Alliance,1,SystemHeldOrDestroyed,Coruscant,"Traced: m5-setup-and-victory Victory (HQ-only)"

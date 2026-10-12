@@ -131,7 +131,8 @@ public sealed class ControlModule
             ctx.Emit((i, _) => new FacilityTransferred(i, day, id, cls, system, old, newHolder));
         }
 
-        // 4 and 5. Regiments, fleets and characters of the old holder: not touched (DEFAULT; M3 decides, Open question 2).
+        // 4 and 5. Regiments and fleets of the old holder: not touched (DEFAULT; M3 decides, Open question 2). Characters: the old holder's system
+        // General is cleared by the character module on HolderChanged below (m5-characters-and-force §Posts end); the characters stay free there.
 
         // 6. Uprising flag, rebelling side and timers 0x384 and 0x38d cleared; UprisingEnded is the last event.
         _support.ClearUprisingOnCapture(ctx, system);

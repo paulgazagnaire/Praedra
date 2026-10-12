@@ -27,7 +27,8 @@ public sealed record GameData(
     DefenseData Defenses,
     Repair.RepairRules Repair,
     Battle.NewBattleData NewBattle,
-    Research.ResearchData Research)
+    Research.ResearchData Research,
+    Characters.CharacterData Characters)
 {
     private static readonly Lazy<GameData> _default = new(() => Load(FindRepoRoot()));
 
@@ -52,7 +53,8 @@ public sealed record GameData(
             DefenseData.Load(interim),
             Rebellion.Core.Repair.RepairRules.Load(Path.Combine(design, Rebellion.Core.Repair.RepairRules.FileName)),
             Battle.NewBattleData.Load(design),
-            Rebellion.Core.Research.ResearchData.Load(interim, design, costs));
+            Rebellion.Core.Research.ResearchData.Load(interim, design, costs),
+            Rebellion.Core.Characters.CharacterData.Load(interim, design));
     }
 
     /// <summary>The folder that holds Rebellion.sln, searching upwards from the program's folder and then the working folder.</summary>
