@@ -111,7 +111,8 @@ internal static class CampaignInvariants
             Assert.True(eco.Capacity(side) == eco.Params.CapacityPerFacility * Math.Min(mines, refs), $"{where}: {side} capacity {eco.Capacity(side)}");
             Assert.Equal(eco.Capacity(side) - eco.Load(side), eco.Free(side));
         }
-        Assert.True(owned == eco.Objects.Count, $"{where}: {eco.Objects.Count - owned} objects belong to nobody");
+        int neutralFacilities = eco.Objects.Count(o => o.Category == ObjectCategory.Facility && o.System != null && !state.SystemOwners.ContainsKey(o.System)); // m5: the neutral starting shipyards serve nobody
+        Assert.True(owned + neutralFacilities == eco.Objects.Count, $"{where}: {eco.Objects.Count - owned} objects belong to nobody");
 
         // ---- no object in two places (m2-construction §Projects and queues, §Completion and delivery)
         var c = state.Construction;
@@ -253,6 +254,6 @@ internal static class CampaignInvariants
                 Assert.True(state.Support.Systems.TryGetValue(sys, out var s) && s.PresenceDue != 0, $"{where}: blockade on {sys} but no presence timer");
 
         // ---- control only moves by capture: the two regions plus the captured system stay owned (no neutral appears from nowhere)
-        Assert.Equal(34, state.SystemOwners.Count);
+        if (!state.Scenario.Active) Assert.Equal(34, state.SystemOwners.Count); // the test campaign only; a new game (m5) deals 362
     }
 }
