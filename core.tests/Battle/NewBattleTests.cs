@@ -164,8 +164,10 @@ public class NewBattleTests
             if (r2.EmpireOutcome == BattleOutcome.Victorious) monCalAsEmpire++;
         }
         _out.WriteLine($"Mon Calamari v ISD, 100 seeds: wins as Alliance {monCalAsAlliance}, as Empire {monCalAsEmpire} (sheet model about 2 in 3)");
-        Assert.InRange(monCalAsAlliance, 40, 90); // N17: recorded, tuneable, not a hard bound
-        Assert.InRange(monCalAsEmpire, 40, 90);
+        // N17: recorded, tuneable, not a hard bound. space-combat/11 §4: both close to D = 21 and fight at the ISD's ion range, so the ISD now wins most (Mon Calamari 18% of 100 seeds
+        // against 73% under the old m4-battle-new §5 rule). Balance flag for the Space combat owner.
+        Assert.InRange(monCalAsAlliance, 5, 90);
+        Assert.InRange(monCalAsEmpire, 5, 90);
         Assert.InRange(Math.Abs(monCalAsAlliance - monCalAsEmpire), 0, 20); // same rates within sampling noise
     }
 
@@ -175,16 +177,35 @@ public class NewBattleTests
     [Fact]
     public void N7_ShieldDoesNotRegenerateForFiveSecondsAfterAHit()
     {
-        var (nb, units) = QuickBattle.PrepareNew(NewNoRolls, Ships, new[] { (MonCal, 1) }, new[] { (Isd, 1) }, 3);
-        var mc = units.First(x => x.Class.Name == MonCal);
-        var shield = new List<double>(); var hull = new List<double>();
-        nb.AfterTick = t => { shield.Add(nb.ShieldOf(mc)); hull.Add(nb.HullOf(mc)); };
-        nb.Run();
-        // the first tick at which the Mon Calamari's shield went down
-        int hit = Enumerable.Range(1, shield.Count - 1).First(i => shield[i] < shield[i - 1]);
-        for (int k = 1; k <= 4; k++) Assert.Equal(shield[hit], shield[hit + k], 1e-9); // paused
-        double hr = hull[hit + 5] / 2400.0;
-        Assert.Equal(shield[hit] + 15.0 * hr, shield[hit + 5], 1e-9); // regen 15 x hullRatio, no further hit in between
+        // space-combat/11 §4 changed the engagement: both ships now fire from the first seconds at D = 21, so the Mon Calamari is hit again within 5 s on most seeds;
+        // look for the first seed with a hit followed by a quiet spell (a regen at +5), instead of fixing seed 3.
+        bool found = false;
+        for (ulong seed = 1; seed <= 40 && !found; seed++)
+        {
+            var (nb, units) = QuickBattle.PrepareNew(NewNoRolls, Ships, new[] { (MonCal, 1) }, new[] { (Isd, 1) }, seed);
+            var tracks = new List<(List<double>, List<double>, double)>();
+            foreach (var (cls, hullMax) in new[] { (MonCal, 2400.0), (Isd, 2750.0) })
+            {
+                var mc = units.First(x => x.Class.Name == cls);
+                var shield = new List<double>(); var hull = new List<double>();
+                var prevHook = nb.AfterTick;
+                nb.AfterTick = t => { prevHook?.Invoke(t); shield.Add(nb.ShieldOf(mc)); hull.Add(nb.HullOf(mc)); };
+                tracks.Add((shield, hull, hullMax));
+            }
+            nb.Run();
+            foreach (var (shield, hull, hullMax) in tracks)
+                for (int hit = 1; hit + 5 < shield.Count && !found; hit++)
+                {
+                    if (!(shield[hit] < shield[hit - 1])) continue; // a hit
+                    bool quiet = true;
+                    for (int k = 1; k <= 4; k++) if (shield[hit + k] != shield[hit]) quiet = false;
+                    if (!quiet || shield[hit + 5] <= shield[hit]) continue;
+                    double hr = hull[hit + 5] / hullMax;
+                    Assert.Equal(shield[hit] + 15.0 * hr, shield[hit + 5], 1e-9); // regen 15 x hullRatio, no further hit in between
+                    found = true;
+                }
+        }
+        Assert.True(found, "no hit followed by a 5 s pause in 40 seeds");
     }
 
     // ---------------------------------------------------------------- N13, N14 fighters
@@ -354,7 +375,7 @@ public class NewBattleTests
         Assert.Equal(3.75, m.ShotValue(WeaponKind.LaserCannon, 3.75, d.Class("A-wing"), tie), 1e-12); // ratio capped at 1
     }
 
-    // m4-battle-new §6, §8: a battle with Surround closes to 0 and a battle with StandOff stays out; both finish
+    // space-combat/11 §4 (3), (7) (supersedes m4-battle-new §5): StandOff closes to min(reach), Surround closes to 15; both finish
     [Fact]
     public void TacticSurroundClosesTheDistance()
     {
@@ -363,8 +384,8 @@ public class NewBattleTests
         var (su, _) = QuickBattle.PrepareNew(New, Ships, new[] { (Isd, 1) }, new[] { (Isd, 1) }, 4);
         su.SetTactic(Side.Alliance, BattleTactic.Surround); su.SetTactic(Side.Empire, BattleTactic.Surround);
         double minSurround = 1e9; su.AfterTick = _ => minSurround = Math.Min(minSurround, su.Distance); su.Run();
-        Assert.Equal(34, minStand);  // 50 - 16
-        Assert.Equal(0, minSurround);
+        Assert.Equal(21, minStand);      // space-combat/11 §4 (3): min(reach) = 35 - 12 - 2 (was 50 - 16 = 34 under the old m4-battle-new §5)
+        Assert.Equal(15, minSurround);   // space-combat/11 §4 (7): Surround closes to 15 (was 0)
     }
 
     // m4-battle-new §11.5, §13: the battle ends in a result with end hulls and counters; shields are not carried back by the module (BattleModuleTests)

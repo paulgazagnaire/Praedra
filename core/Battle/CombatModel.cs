@@ -23,9 +23,21 @@ public sealed record NewBattleParams
     public int OffsetLarge { get; init; } = 6;
     public int OffsetMedium { get; init; } = 4;
     public int OffsetSmall { get; init; } = 2;
-    /// <summary>StandOff distance is the best weapon's range minus this (the largest offset sum). DEFAULT.</summary>
-    public int StandOffSlack { get; init; } = 16;
-    /// <summary>Fleet distance moves by k x sublight per second. Proposal value (tune).</summary>
+    /// <summary>Share of its in-arc dps the batteries that set the reach must hold. Decided (space-combat/11 section 4 (2), 2026-10-12).</summary>
+    public double ReachDpsShare { get; init; } = 0.9;
+    /// <summary>Cap of the pair offsets taken off the reach. Decided (space-combat/11 section 4 (2)).</summary>
+    public int ReachOffsetCap { get; init; } = 12;
+    /// <summary>Margin taken off the reach. Decided (space-combat/11 section 4 (2)).</summary>
+    public int ReachMargin { get; init; } = 2;
+    /// <summary>The faster side's slowest sublight must be at least this many points above the other's to kite. Decided (space-combat/11 section 4 (4)).</summary>
+    public int KiteSpeedEdge { get; init; } = 1;
+    /// <summary>The chaser of a kite closes at this share of its closing speed. Decided (space-combat/11 section 4 (4)).</summary>
+    public double KiteChaserFactor { get; init; } = 0.5;
+    /// <summary>Seconds without armed contact before both sides close at full speed. Decided (space-combat/11 section 4 (6)).</summary>
+    public int NoFireSeconds { get; init; } = 20;
+    /// <summary>Surround distance, and the distance the no-fire safety closes to. Decided (space-combat/11 section 4 (6), (7)).</summary>
+    public int SurroundDistance { get; init; } = 15;
+    /// <summary>Fleet distance moves by k x slowest sublight of the closing fleet per second. Decided 1.5 (space-combat/11 section 4 (5)), tunable.</summary>
     public double ClosingK { get; init; } = 1.5;
     /// <summary>Pair range of a squadron and the unit it attacks. DEFAULT.</summary>
     public int SquadronRange { get; init; } = 5;
@@ -176,6 +188,20 @@ public sealed class CombatModel
             sum += guns * v;
         }
         return sum;
+    }
+
+    /// <summary>Appends (range, dps x weight) of every battery in <paramref name="arcMask"/> that can hurt t and has guns active, in battery order. No hull ratio. rule: space-combat/11 section 4 (2).</summary>
+    public void BatteryDps(in Combatant a, in Combatant t, int arcMask, List<(int Range, double Dps)> into, double weight = 1.0)
+    {
+        var per = PerBattery(a.Class, t);
+        var batteries = a.Class.Batteries;
+        for (int i = 0; i < batteries.Count; i++)
+        {
+            var b = batteries[i];
+            if ((arcMask & (1 << (int)b.Arc)) == 0 || per[i] <= 0) continue;
+            int guns = GunsActive(b, a);
+            if (guns > 0) into.Add((b.Range, guns * per[i] * weight));
+        }
     }
 
     /// <summary>True when some battery of the class can hurt a target of this class and shield state at any range and in any arc (a quick filter; static per class pair).</summary>

@@ -243,40 +243,71 @@ public sealed class NewBattle
     }
 
     /// <summary>
-    /// StandOff desired distance: from the fore batteries of live capital ships, the weapon type with the largest sum of
-    /// guns_active x damage / reload x hull multiplier (tie: longer range), distance = max(0, R - 16). Surround: 0. A side with nothing armed has no
-    /// preference (keeps D). rule: m4-battle-new §5 (DEFAULT).
+    /// reach_i of a side: per live capital ship, the batteries of its best facing (fore, port or starboard by dps against its targets, tie: fore) are
+    /// listed with their dps against the ship's current target (no live target: the mean over the enemy capital ship classes); the largest range R
+    /// such that the batteries with range >= R hold at least <see cref="NewBattleParams.ReachDpsShare"/> of the side's dps; reach = R - min(offsets, cap)
+    /// - margin, at least 0. Returns -1 when the side has nothing that can hurt the enemy capital ships (no preference). Surround: the safety distance.
+    /// rule: space-combat/11 section 4 (2), (7).
     /// </summary>
-    private double DesiredDistance(Side s)
+    public double Reach(Side s)
     {
-        if (_tactic[I(s)] == BattleTactic.Surround) return 0;
-        foreach (int mask in new[] { CombatModel.ForeMask, 15 }) // DEFAULT fallback: a fleet with no fore guns at all uses every arc
+        if (_tactic[I(s)] == BattleTactic.Surround) return _np.SurroundDistance;
+        var enemies = new List<NU>();
+        int offA = 0, offB = 0;
+        foreach (var e in _u)
+            if (e.Side != s && e.Capital && Targetable(e)) { enemies.Add(e); offB = Math.Max(offB, e.Offset); }
+        if (enemies.Count == 0) return -1;
+        var entries = new List<(int Range, double Dps)>();
+        var reps = new List<NU>(); // enemy capital ship classes by (class, shield state), first of each in id order
+        foreach (var e in enemies)
         {
-            var sum = new double[3]; var range = new int[3];
-            foreach (var u in _u)
-            {
-                if (u.Side != s || !u.Capital || u.State != St.Active) continue;
-                var cmb = _cmb[u.Id];
-                foreach (var b in u.C.Batteries)
-                {
-                    if ((mask & (1 << (int)b.Arc)) == 0) continue;
-                    int guns = _m.GunsActive(b, cmb);
-                    if (guns <= 0) continue;
-                    int k = (int)b.Weapon;
-                    sum[k] += guns * b.ShotDamage / b.Reload * _data.Weapon(b.Weapon).VsHull;
-                    range[k] = Math.Max(range[k], b.Range);
-                }
-            }
-            int best = -1;
-            for (int k = 0; k < 3; k++)
-            {
-                if (sum[k] <= 0) continue;
-                if (best < 0 || sum[k] > sum[best] || (sum[k] == sum[best] && range[k] > range[best])) best = k;
-            }
-            if (best >= 0) return Math.Max(0, range[best] - _np.StandOffSlack);
+            bool seen = false;
+            foreach (var r in reps) if (r.C.Index == e.C.Index && _cmb[r.Id].ShieldUp == _cmb[e.Id].ShieldUp) { seen = true; break; }
+            if (!seen) reps.Add(e);
         }
-        return _d;
+        var targets = new List<NU>();
+        foreach (var u in _u)
+        {
+            if (u.Side != s || !u.Capital || u.State != St.Active) continue;
+            offA = Math.Max(offA, u.Offset);
+            targets.Clear();
+            if (u.Target != null && u.Target.Capital && Targetable(u.Target)) targets.Add(u.Target); else targets.AddRange(reps);
+            int bestMask = CombatModel.ForeMask; double bestDps = -1;
+            foreach (int mask in new[] { CombatModel.ForeMask, CombatModel.PortMask, CombatModel.StarboardMask })
+            {
+                double d = 0;
+                foreach (var t in targets) d += _m.ArcsDps(_cmb[u.Id], _cmb[t.Id], mask);
+                if (d > bestDps) { bestDps = d; bestMask = mask; }
+            }
+            if (bestDps <= 0) continue;
+            foreach (var t in targets) _m.BatteryDps(_cmb[u.Id], _cmb[t.Id], bestMask, entries, 1.0 / targets.Count);
+        }
+        if (entries.Count == 0) return -1;
+        double total = 0;
+        foreach (var e in entries) total += e.Dps;
+        if (total <= 0) return -1;
+        entries.Sort((x, y) => y.Range.CompareTo(x.Range)); // by range only: equal ranges are summed whole, so their order does not matter
+        double cum = 0; int reachR = entries[^1].Range;
+        for (int i = 0; i < entries.Count; i++)
+        {
+            cum += entries[i].Dps;
+            if (i + 1 < entries.Count && entries[i + 1].Range == entries[i].Range) continue; // take whole ranges
+            if (cum >= _np.ReachDpsShare * total - 1e-9) { reachR = entries[i].Range; break; }
+        }
+        return Math.Max(0, reachR - Math.Min(offA + offB, _np.ReachOffsetCap) - _np.ReachMargin);
     }
+
+    private readonly double[] _lastReach = { -1, -1 };
+    /// <summary>The reach of a side as the last movement step computed it (-1: nothing that can hurt). For tests and the viewer. rule: space-combat/11 section 4 (2).</summary>
+    public double LastReach(Side s) => _lastReach[I(s)];
+    private int _idle;          // seconds in a row with no armed contact (no unit with a target and a battery in range)
+    private int _kiteSeconds;   // seconds a kite has lasted (for tests and the viewer)
+    /// <summary>Seconds spent in a kite (the slower chaser closing at half speed inside the kiter's reach). rule: space-combat/11 section 4 (4).</summary>
+    public int KiteSeconds => _kiteSeconds;
+    /// <summary>The fleet distance the movement rule is heading for this tick (for tests). rule: space-combat/11 section 4 (3).</summary>
+    public double TargetDistance { get; private set; }
+    /// <summary>True while the no-fire safety is closing the fleets. rule: space-combat/11 section 4 (6).</summary>
+    public bool SafetyClosing { get; private set; }
 
     private void Movement(int t)
     {
@@ -290,15 +321,53 @@ public sealed class NewBattle
                 }
         double sa = SlowestSublight(Side.Alliance), se = SlowestSublight(Side.Empire);
         if (sa < 0 && se < 0) return;
-        Side mover;
-        double da = sa >= 0 ? DesiredDistance(Side.Alliance) : 0, de = se >= 0 ? DesiredDistance(Side.Empire) : 0;
-        if (sa > se) mover = Side.Alliance;
-        else if (se > sa) mover = Side.Empire;
-        else mover = da >= de ? Side.Alliance : Side.Empire; // tie: the larger desired distance
-        double speed = mover == Side.Alliance ? sa : se, want = mover == Side.Alliance ? da : de;
-        double step = _np.ClosingK * speed;
-        if (_d > want) _d = Math.Max(want, _d - step);
-        else if (_d < want) _d = Math.Min(want, _d + step);
+        SafetyClosing = false;
+        // rule: space-combat/11 section 4 (6): no armed contact for 20 s, both close at full speed to D = 15 (only ever closes)
+        if (_idle >= _np.NoFireSeconds)
+        {
+            SafetyClosing = true; TargetDistance = _np.SurroundDistance;
+            double both = _np.ClosingK * (Math.Max(sa, 0) + Math.Max(se, 0));
+            if (_d > TargetDistance) _d = Math.Max(TargetDistance, _d - both);
+            return;
+        }
+        double ra = sa >= 0 ? Reach(Side.Alliance) : -1, re = se >= 0 ? Reach(Side.Empire) : -1;
+        if (ra < 0 && re < 0) return; // nobody can hurt anybody: hold (the safety rule takes over)
+        double speed, want, k = _np.ClosingK;
+        if (ra < 0 || re < 0)
+        {
+            // one side has no weapon that can hurt: the other one closes to its own reach
+            bool aSide = ra >= 0;
+            want = aSide ? ra : re; speed = aSide ? sa : se;
+        }
+        else
+        {
+            // rule: space-combat/11 section 4 (3): D = min(reach_a, reach_b); the side with the smaller reach is the one that closes
+            want = Math.Min(ra, re);
+            bool aCloses = ra < re || (ra == re && sa >= se);
+            speed = aCloses ? sa : se;
+            // rule: space-combat/11 section 4 (4): kiting needs a speed edge and the larger reach; the chaser then closes at half speed
+            bool aFast = sa >= se + _np.KiteSpeedEdge && ra > re, eFast = se >= sa + _np.KiteSpeedEdge && re > ra;
+            if (aFast || eFast)
+            {
+                double reachFast = aFast ? ra : re;
+                speed = aFast ? se : sa; // the chaser is the slower side
+                if (_d <= reachFast) { speed *= _np.KiteChaserFactor; _kiteSeconds++; } // full speed until the kiter's reach, then half
+            }
+        }
+        TargetDistance = want; _lastReach[I(Side.Alliance)] = ra; _lastReach[I(Side.Empire)] = re;
+        if (_d > want) _d = Math.Max(want, _d - k * speed); // rule: space-combat/11 section 4 (5)
+    }
+
+    /// <summary>After target selection: does any unit have a target with a battery in range now? Counts the no-fire seconds. rule: space-combat/11 section 4 (6).</summary>
+    private void CountContact()
+    {
+        bool contact = false;
+        foreach (var u in _u)
+        {
+            if (!u.OnField || (!u.Capital && _t < u.FireFrom)) continue;
+            if (u.Target != null && Targetable(u.Target) && AnyBatteryInRange(u, u.Target)) { contact = true; break; }
+        }
+        _idle = contact ? 0 : _idle + 1;
     }
 
     // ---------------------------------------------------------------- step 2: facing
@@ -402,6 +471,7 @@ public sealed class NewBattle
             needs.Add(u);
         }
         foreach (var u in needs) Choose(u, t);
+        CountContact();
     }
 
     private void Choose(NU u, int t)
