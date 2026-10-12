@@ -71,4 +71,8 @@ public sealed record GameSettings
     // ---- battle. rule: m4-battle-classic §Defaults for undecided items; m4-retreat-damage-repair §Defaults
     /// <summary>Switches and numbers of the Classic battle and the retreat (SubsystemRolls, task forces, tactic, RetreatMode, DeathStarStalemate, AI sides). Null = the module's defaults.</summary>
     public Rebellion.Core.Battle.BattleParams? Battle { get; init; }
+
+    // ---- victory. rule: setup-victory/04-victory-conditions (HQ-Only flavour)
+    /// <summary>Victory switches. Null = all on (DEFAULT).</summary>
+    public Rebellion.Core.Victory.VictoryRules? Victory { get; init; }
 }
