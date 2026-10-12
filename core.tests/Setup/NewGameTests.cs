@@ -15,12 +15,14 @@ public class NewGameTests
 
     private static int Held(GameHost h, Side s) => h.Game.State.SystemOwners.Count(kv => kv.Value == s);
 
-    // totals of setup-victory/09 §3 (Alliance, Empire)
-    public static IEnumerable<object[]> Totals => new[]
+    // Owners of the day-one CSV with the seven fixed owners on top (m5-setup-and-victory §Fixed owners).
+    private static (int Alliance, int Empire) Expected(StartPreset p)
     {
-        new object[] { StartPreset.Easy, 18, 14 }, new object[] { StartPreset.MedA, 29, 36 }, new object[] { StartPreset.MedE, 43, 22 },
-        new object[] { StartPreset.HardA, 22, 43 }, new object[] { StartPreset.HardE, 50, 14 },
-    };
+        var owners = NewGameData.Default.DayOne[p].ToDictionary(r => r.Name, r => r.Owner);
+        foreach (var (sys, o) in NewGameData.Default.FixedOwners) owners[sys] = o;
+        return (owners.Values.Count(v => v == Side.Alliance), owners.Values.Count(v => v == Side.Empire));
+    }
+    public static IEnumerable<object[]> Totals => Enum.GetValues<StartPreset>().Select(p => new object[] { p, Expected(p).Alliance, Expected(p).Empire });
 
     [Theory, MemberData(nameof(Totals))]
     public void DayOneOwnersMatchTheCsv(StartPreset p, int alliance, int empire)
@@ -52,6 +54,41 @@ public class NewGameTests
             Assert.Contains(h.Game.State.Fleets.Values, f => f.Side == side);
         }
     }
+
+    [Theory, MemberData(nameof(Totals))]
+    public void FixedOwnersAndSupportBands(StartPreset p, int a, int e)
+    {
+        var h = Make(p);
+        Assert.Equal(a, Held(h, Side.Alliance)); Assert.Equal(e, Held(h, Side.Empire));
+        foreach (var s in new[] { "Kuat", "Fondor", "Corellia", "Rendili" }) Assert.Equal(Side.Empire, h.Control.HolderOf(s));
+        foreach (var s in new[] { "Sullust", "Mon Calamari", "Bilbringi" }) Assert.Null(h.Control.HolderOf(s));
+        Assert.Equal(0, h.Economy.SupportOf("Coruscant", Side.Alliance));
+        Assert.Equal(100, h.Economy.SupportOf("Dagobah", Side.Alliance));
+        Assert.Equal(100, h.Economy.SupportOf("Yavin", Side.Alliance));
+        Assert.Contains(h.Economy.Objects, o => o.Category == ObjectCategory.Regiment && o.System == "Rendili" && o.Side == Side.Empire);
+        Assert.Contains(h.Economy.Objects, o => o.Class == "Orbital Shipyard" && o.System == "Kuat");
+    }
+
+    [Fact]
+    public void GameOverFreezesStepAndRejectsOrders()
+    {
+        var h = Make(StartPreset.MedA);
+        CaptureOnNextStep(h, "Dagobah", Side.Empire);
+        h.Game.Step();
+        Assert.True(h.Game.IsOver);
+        int day = h.Game.Day, events = h.Game.Events.Count;
+        h.Game.Step();
+        Assert.Equal(day, h.Game.Day); Assert.Equal(events, h.Game.Events.Count);
+        long seq = h.Game.Submit(Side.Alliance, "x", 1);
+        var rej = Assert.Single(h.Game.Events.OfType<OrderRejected>().Where(e => e.Sequence == seq));
+        Assert.Equal(RejectReason.GameOver, rej.Reason);
+        Assert.Empty(h.Game.Queue);
+        Assert.True(GameHost.Load(h.Save()).Game.IsOver);
+    }
+
+    [Fact]
+    public void VictoryIsTheLastDayEndSlot() =>
+        Assert.Equal("6.11", Game.WorkList[^2]);
 
     [Fact]
     public void SameSeedSameHashAndDifferentSeedDiffers()

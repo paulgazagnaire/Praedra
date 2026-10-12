@@ -100,6 +100,7 @@ public sealed class Game
         "5.1", // Bombardments (M3)
         "5.2", // Assaults (M3)
         "6.1", "6.2", "6.3", "6.4", "6.5", "6.6", "6.7", "6.8", // Day-end hooks (empty in M1)
+        "6.11", // Victory check: MUST stay the last day-end slot (research 6.9 and characters 6.10 will be added before it). rule: m5-setup-and-victory §Game over
         "7",   // Day becomes K + 1
     };
 
@@ -123,6 +124,8 @@ public sealed class Game
     }
 
     public GameState State { get; }
+    /// <summary>A winner is set: Step does nothing and orders are rejected GameOver.</summary>
+    public bool IsOver => State.Scenario.Winner != null;
     /// <summary>Starts at 0 (DEFAULT). rule: m1-clock-and-orders §The clock</summary>
     public int Day { get; private set; }
     public GameRng Rng { get; }
@@ -153,6 +156,13 @@ public sealed class Game
     /// <summary>Queue an order; the core numbers it. It is validated later, in step 1. rule: §Orders in</summary>
     public long Submit(Func<long, Order> make)
     {
+        if (IsOver) // rule: m5-setup-and-victory §Game over: every order is rejected GameOver
+        {
+            long rejected = _nextSequence++;
+            var order = make(rejected);
+            EmitEvent((i, d) => new OrderRejected(i, d, order.Sequence, RejectReason.GameOver));
+            return rejected;
+        }
         long seq = _nextSequence++;
         _queue.Add(make(seq));
         return seq;
@@ -163,6 +173,7 @@ public sealed class Game
     /// <summary>Advance exactly one day. rule: §The clock</summary>
     public void Step()
     {
+        if (IsOver) return; // rule: m5-setup-and-victory §Game over: no slot runs, Day does not change, no event
         var ctx = new StepContext(this, Day);
         foreach (var slot in WorkList)
         {

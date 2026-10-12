@@ -94,8 +94,11 @@ public sealed class NewGameData
 {
     public IReadOnlyDictionary<StartPreset, IReadOnlyList<DayOneRow>> DayOne { get; }
     public ForcesTable Forces { get; }
+    /// <summary>fixed-owners.csv: (system, owner or null = neutral). rule: m5-setup-and-victory §Fixed owners (Decided).</summary>
+    public IReadOnlyList<(string System, Side? Owner)> FixedOwners { get; }
 
-    private NewGameData(IReadOnlyDictionary<StartPreset, IReadOnlyList<DayOneRow>> dayOne, ForcesTable forces) { DayOne = dayOne; Forces = forces; }
+    private NewGameData(IReadOnlyDictionary<StartPreset, IReadOnlyList<DayOneRow>> dayOne, ForcesTable forces, IReadOnlyList<(string, Side?)> fixedOwners)
+    { DayOne = dayOne; Forces = forces; FixedOwners = fixedOwners; }
 
     private static readonly Lazy<NewGameData> _default = new(() => Load(GameData.FindRepoRoot()));
     public static NewGameData Default => _default.Value;
@@ -106,7 +109,13 @@ public sealed class NewGameData
         var dict = new Dictionary<StartPreset, IReadOnlyList<DayOneRow>>();
         foreach (StartPreset p in Enum.GetValues<StartPreset>())
             dict[p] = LoadDayOne(Path.Combine(design, "day-one", $"day-one-{StartPresets.Key(p)}-seed1.csv"));
-        return new NewGameData(dict, ForcesTable.Load(Path.Combine(design, ForcesTable.FileName)));
+        var ft = CsvTable.Load(Path.Combine(design, "fixed-owners.csv"));
+        ft.Require("system", "owner");
+        var fixedOwners = new List<(string, Side?)>();
+        for (int r = 0; r < ft.RowCount; r++)
+            fixedOwners.Add((ft.Get(r, "system").Trim(), ft.Get(r, "owner").Trim() switch
+            { "Empire" => Side.Empire, "Alliance" => Side.Alliance, "Neutral" => null, var x => throw new DataLoadException($"{ft.Where(r)}: owner '{x}'.") }));
+        return new NewGameData(dict, ForcesTable.Load(Path.Combine(design, ForcesTable.FileName)), fixedOwners);
     }
 
     private static IReadOnlyList<DayOneRow> LoadDayOne(string path)

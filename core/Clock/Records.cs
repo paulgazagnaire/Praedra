@@ -106,6 +106,8 @@ public static class RejectReason
 {
     public const string NegativeValue = "NegativeValue";
     public const string AlreadyChanged = "AlreadyChanged";
+    /// <summary>The game has a winner. rule: m5-setup-and-victory §Game over.</summary>
+    public const string GameOver = "GameOver";
 
     // rule: m1-clock-and-orders §Orders in (MoveFleet rejections)
     public const string UnknownFleet = "UnknownFleet";
