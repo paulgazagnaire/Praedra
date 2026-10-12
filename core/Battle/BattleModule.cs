@@ -42,17 +42,19 @@ public sealed class BattleModule
     private readonly FleetModule _fleets;
     private readonly EconomyModule _eco;
 
+    private readonly NewBattleData? _newData;
+
     public BattleParams Params { get; }
 
-    private BattleModule(Game game, Galaxy galaxy, FleetModule fleets, EconomyModule eco, BattleParams p)
+    private BattleModule(Game game, Galaxy galaxy, FleetModule fleets, EconomyModule eco, BattleParams p, NewBattleData? newData)
     {
-        _game = game; _galaxy = galaxy; _fleets = fleets; _eco = eco; Params = p;
+        _game = game; _galaxy = galaxy; _fleets = fleets; _eco = eco; Params = p; _newData = newData;
     }
 
     /// <summary>Register the SetOnContact handler and the step 5 hook. Attach after <see cref="FleetModule.Attach"/> (its contact and blockade hook runs first in slot 5).</summary>
-    public static BattleModule Attach(Game game, Galaxy galaxy, FleetModule fleets, EconomyModule eco, BattleParams? p = null)
+    public static BattleModule Attach(Game game, Galaxy galaxy, FleetModule fleets, EconomyModule eco, BattleParams? p = null, NewBattleData? newData = null)
     {
-        var m = new BattleModule(game, galaxy, fleets, eco, p ?? new BattleParams());
+        var m = new BattleModule(game, galaxy, fleets, eco, p ?? new BattleParams(), newData);
         game.RegisterOrderHandler<SetOnContactOrder>(m.HandleSetOnContact);
         game.RegisterHook("5", m.Resolve);
         return m;
@@ -187,8 +189,12 @@ public sealed class BattleModule
         var has = new bool[2];
         foreach (var s in dest.Keys) has[(int)s] = dest[s].Count > 0;
 
-        var battle = new ClassicBattle(Params, force.Units, new GameRng(force.Seed), has, alert);
-        var result = battle.Run();
+        // rule: m4-battle-new §Rule (New): the second ruleset runs where Classic runs; both give the same result and steps
+        ClassicBattleResult result;
+        if (Params.Ruleset == BattleRuleset.New)
+            result = new NewBattle(Params, _newData ?? NewBattleData.Default, force.Units, new GameRng(force.Seed), has, alert).Run();
+        else
+            result = new ClassicBattle(Params, force.Units, new GameRng(force.Seed), has, alert).Run();
 
         // damage written back to every surviving ship. rule: m4-battle-classic §10 (stored hull = max(1, round half up); counters as they stand)
         foreach (var u in force.Units)
@@ -209,6 +215,11 @@ public sealed class BattleModule
                 case SideRetreatedStep r: left[r.Side] = true; break;
             }
         }
+
+        // New: a surviving squadron that docked on another carrier of its side (its own was lost) rides it. rule: m4-battle-new §10
+        foreach (var u in force.Units)
+            if (!u.IsCapital && !u.Destroyed && !u.Left && u.NewCarrier != 0 && E.Objects.TryGetValue(u.ObjectId, out var sq) && E.Objects.ContainsKey(u.NewCarrier))
+            { sq.AboardShip = u.NewCarrier; sq.System = null; }
 
         // relocation of retreating sides: sets were computed above, before anything moved
         touched.Add(sys);

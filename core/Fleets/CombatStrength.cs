@@ -1,30 +1,40 @@
+using Rebellion.Core.Battle;
 using Rebellion.Core.Ships;
 
 namespace Rebellion.Core.Fleets;
 
 /// <summary>
-/// The one place that measures combat strength and decides "armed".
-/// rule: m1-forced-stop-and-blockade §Update 2026-10-12 (combat strength behind one function), §What "armed" means.
+/// The one place that measures combat strength and decides "armed". Strength is the engine's own measure (m4-battle-new §12): the cost-weighted,
+/// deflection-aware damage rate of a force against another, never a unit count. The strategic layer (forced stop, economic blockade) calls
+/// <see cref="Of(IEnumerable{Combatant}, IEnumerable{Combatant})"/> with shields taken as full; the New battle calls the same arithmetic with live state.
+/// rule: m4-battle-new §12; m1-forced-stop-and-blockade §Update 2026-10-12 (combat strength behind one function), §What "armed" means.
 /// </summary>
-public static class CombatStrength
+public sealed class CombatStrength
 {
-    /// <summary>
-    /// Combat strength of a force: PLACEHOLDER (lead decision 2026-10-12): build cost as a strength proxy until M4
-    /// (space-combat/11 section 10); the printed attack strength is decorative in the original. The sum of
-    /// refined_material_cost of the armed ships and squadrons that carry at least one turbolaser or ion cannon (any arc); laser-only boats (Corellian Corvette, fighters) count 0. Ship count is never used. rule: space-combat/07 last section (stand-in until m4-battle-new §12 CombatStrength). <paramref name="versus"/> is unused now and exists so M4 can make the measure relative.
-    /// Every test that depends on the strength level is marked "M4 re-check".
-    /// </summary>
-    public static long Of(IEnumerable<ShipClass> forces, IEnumerable<ShipClass>? versus = null)
-    {
-        long sum = 0;
-        foreach (var s in forces)
-            if (IsArmed(s) && s.HasHeavyWeapon) sum += s.RefinedMaterialCost; // rule: space-combat/07 last section (stand-in until m4-battle-new §12 CombatStrength)
-        return sum;
-    }
+    private readonly CombatModel _model;
 
-    /// <summary>A ship or squadron is armed when its overall_attack_strength is above 0. rule: §What "armed" means.</summary>
+    /// <param name="data">The per-weapon data (<see cref="NewBattleData.Default"/> for the repository's files).</param>
+    public CombatStrength(NewBattleData data, NewBattleParams? p = null) { _model = new CombatModel(data, p); }
+
+    public NewBattleData Data => _model.Data;
+
+    /// <summary>A ship or squadron class as the strategic layer sees it: shields full, hull ratio and weapons counter as given. rule: m4-battle-new §12.</summary>
+    public Combatant Unit(ShipClass cls, double hullRatio = 1.0, int weaponHits = 0) =>
+        Combatant.Strategic(_model.Data.Class(cls.Name), hullRatio, weaponHits, _model.P.SquadronCraft);
+
+    /// <summary>
+    /// CombatStrength(own, versus): 0 if versus is empty, else sum over own units of d(u) x hullRatio x shieldFactor, d(u) the cost-weighted mean facing dps
+    /// against versus. Strategic call: shields of every unit taken as full. rule: m4-battle-new §12.
+    /// </summary>
+    public double Of(IEnumerable<Combatant> own, IEnumerable<Combatant> versus) => _model.Strength(own.ToList(), versus.ToList());
+
+    /// <summary>The same for plain classes at full health (a delivery, the reference fleet). rule: m4-battle-new §12.</summary>
+    public double Of(IEnumerable<ShipClass> own, IEnumerable<ShipClass> versus) =>
+        _model.Strength(own.Select(c => Unit(c)).ToList(), versus.Select(c => Unit(c)).ToList());
+
+    /// <summary>A ship or squadron is armed when its overall_attack_strength is above 0. rule: m1-forced-stop-and-blockade §What "armed" means.</summary>
     public static bool IsArmed(ShipClass s) => s.OverallAttackStrength > 0;
 
-    /// <summary>A force is armed if at least one ship or squadron in it is. rule: §What "armed" means.</summary>
+    /// <summary>A force is armed if at least one ship or squadron in it is. rule: m1-forced-stop-and-blockade §What "armed" means.</summary>
     public static bool IsArmed(IEnumerable<ShipClass> forces) => forces.Any(IsArmed);
 }

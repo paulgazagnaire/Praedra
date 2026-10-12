@@ -9,7 +9,7 @@ namespace Rebellion.Core.Tests.Fleets;
 //
 // TRIGGERS. The sheet wrote B2, B6, B7 for AnyArmedFleet; the lead's override (section "Update 2026-10-12") makes PaulRule the
 // default. Each test says which trigger(s) it runs under. Tests that depend on strength levels carry "M4 re-check":
-// CombatStrength is a placeholder (sum of refined_material_cost of armed ships, lead decision 2026-10-12) until M4.
+// CombatStrength is m4-battle-new §12 (the M1 placeholder, sum of refined_material_cost, is gone).
 public class ForcedStopTests
 {
     private const string Isd = "Imperial Star Destroyer";
@@ -128,10 +128,17 @@ public class ForcedStopTests
     public void Two_enemy_fleets_passing_B_on_the_same_day_both_stop(ForcedStopTrigger t)
     {
         var (w, f) = Start(t);
-        int e = w.Add(Side.Empire, "E", "D", "Lancer Frigate"); // laser-only: strength 0, like the corvette; equal-zero strengths stop each other by the inclusive rule 0 >= 0.5 x 0 (M4 re-check)
+        int e = w.Add(Side.Empire, "E", "D", "Lancer Frigate"); // laser-only: strength 0, like the corvette
         w.Move(Side.Empire, e, "C"); // D -> B -> C, reaches B on day 16 as well
         w.Move(Side.Alliance, f, "C");
         w.Run(16);
+        if (t == ForcedStopTrigger.PaulRule)
+        {
+            // m4-battle-new §12: CS > 0 is required, and two laser-only fleets cannot hurt each other's shields: they do not stop each other
+            // (changed from "equal-zero strengths stop each other by the inclusive rule 0 >= 0.5 x 0", the M1 placeholder)
+            Assert.Empty(w.Events<ForcedStop>());
+            return;
+        }
         Assert.Equal(new[] { f, e }.OrderBy(x => x), w.Events<ForcedStop>().Select(s => s.Fleet).OrderBy(x => x));
         Assert.Equal("B", w.Fleet(f).At); Assert.Equal("B", w.Fleet(e).At);
         Assert.Equal(new[] { f, e }.OrderBy(x => x).ToArray(), w.Events<ForcedStop>().Select(s => s.Fleet).ToArray()); // fleet id order
@@ -411,15 +418,16 @@ public class ForcedStopTests
         Assert.False(w.Fleets.IsEconomicBlockade("B", Side.Empire));
     }
 
-    [Fact] // equal-zero strengths stop by the inclusive rule: 0 >= 0.5 x 0, so corvettes still stop an unarmed transport
-    public void PaulRule_corvettes_still_stop_an_unarmed_transport()
+    [Fact] // m4-battle-new §12 (forced stop by strength) and its Lead update 3: CS > 0 is required, and a laser never penetrates a capital's shield, so a corvette (laser-only) cannot hurt a shielded transport: no stop. (N12 in the sheet body expected 3.4; changed by the Lead update.)
+    public void PaulRule_corvettes_do_not_stop_a_shielded_transport()
     {
         var w = new World(World.BCMap());
-        int t = w.Add(Side.Empire, "Galleon", "A", "Galleon"); // attack 0, speed 80
-        w.Add(Side.Alliance, "Corvette", "B", Corvette);       // armed (attack > 0), strength 0
+        int t = w.Add(Side.Empire, "Galleon", "A", "Galleon"); // attack 0, speed 80, shield 100
+        w.Add(Side.Alliance, "Corvette", "B", Corvette);       // armed (attack > 0), strength against a shielded ship 0
         w.Move(Side.Empire, t, "C");
-        w.Run(16);
-        Assert.Equal(t, Assert.Single(w.Events<ForcedStop>()).Fleet);
+        w.Run(40);
+        Assert.Empty(w.Events<ForcedStop>());
+        Assert.Equal("C", w.Fleet(t).At);
     }
 
     [Fact] // PaulRule (lead decision 2026-10-12): one corvette (0, laser-only) does NOT stop a single ISD (112); M4 re-check
@@ -433,7 +441,7 @@ public class ForcedStopTests
         Assert.Empty(w.Events<ForcedStop>());
         Assert.Equal("C", w.Fleet(isd).At);
         Assert.Equal(0, w.Fleets.StrengthOf(w.Fleet(cor)));
-        Assert.Equal(112, w.Fleets.StrengthOf(w.Fleet(isd)));
+        Assert.Equal(45.0, w.Fleets.StrengthOf(w.Fleet(isd)), 1e-9); // m4-battle-new N8: 1 ISD v REF (was the placeholder 112)
         var (w2, f) = Start(ForcedStopTrigger.PaulRule); // the other way round: stops
         w2.Add(Side.Empire, "E", "B", Isd);
         w2.Move(Side.Alliance, f, "C");
@@ -484,8 +492,9 @@ public class ForcedStopTests
         var data = World.Blockade;
         Assert.Equal(3, data.EconomicShipCount);
         Assert.Equal(50, data.ThresholdPercent);
-        Assert.Equal(204, w.Fleets.EconomicStrength); // 3 x Victory Destroyer (68), M4 re-check
-        Assert.Equal(data.EconomicShipCount * (long)World.Ships.Value[data.EconomicShipClass].RefinedMaterialCost, w.Fleets.EconomicStrength);
+        Assert.Equal(64.8, w.Fleets.EconomicStrength, 1e-9); // m4-battle-new N8: CS(3 Victory Destroyers, REF = 3 ISD) (was the placeholder 204)
+        Assert.Equal(3, data.ReferenceShipCount);
+        Assert.Equal("Imperial Star Destroyer", data.ReferenceShipClass);
     }
 
     [Fact] // M4 re-check for the strength cases
@@ -499,11 +508,11 @@ public class ForcedStopTests
         Assert.False(w.Fleets.IsEconomicBlockade("B", Side.Empire)); // against the Empire, only Alliance ships count
 
         w.Add(Side.Empire, "One", "C", Isd);
-        Assert.False(w.Fleets.IsEconomicBlockade("C", Side.Alliance)); // 112 < E (204)
-        w.Add(Side.Empire, "Two", "C", Isd); // a second fleet: 112 + 112 = 224 >= E (204), pooled
+        Assert.False(w.Fleets.IsEconomicBlockade("C", Side.Alliance)); // m4-battle-new N8: 1 ISD v REF = 45 < E (64.8)
+        w.Add(Side.Empire, "Two", "C", Isd); // a second fleet: 45 + 45 = 90 >= E (64.8), pooled
         Assert.True(w.Fleets.IsEconomicBlockade("C", Side.Alliance));
 
-        w.Add(Side.Empire, "Three", "A", Vd, Vd, Vd); // three of the E ship: exactly E (3 x 68 = 204)
+        w.Add(Side.Empire, "Three", "A", Vd, Vd, Vd); // three of the E ship: exactly E (64.8)
         Assert.True(w.Fleets.IsEconomicBlockade("A", Side.Alliance));
 
         var w2 = new World(World.BCMap());
@@ -544,16 +553,13 @@ public class ForcedStopTests
         Assert.Equal(a, Run());
     }
 
-    [Fact]
-    public void CombatStrength_is_the_sum_of_cost_of_armed_ships_and_squadrons_and_armed_is_attack_above_zero()
+    [Fact] // m4-battle-new §12 (the placeholder sum of cost is gone; the strength tests are in CombatStrengthTests); "armed" is still attack above zero
+    public void Armed_is_attack_above_zero()
     {
         var s = World.Ships.Value;
-        Assert.Equal(112 + 3, CombatStrength.Of(new[] { s[Isd], s["TIE Bomber"] })); // the Bomber carries a heavy weapon
-        Assert.Equal(112, CombatStrength.Of(new[] { s[Isd], s["TIE Interceptor"], s["Corellian Corvette"] })); // laser-only boats count 0
-        Assert.Equal(0, CombatStrength.Of(new[] { s["Galleon"], s["Bulk Transport"] }));
-        Assert.Equal(0, CombatStrength.Of(Array.Empty<ShipClass>()));
         Assert.False(CombatStrength.IsArmed(new[] { s["Galleon"], s["Bulk Transport"] }));
         Assert.True(CombatStrength.IsArmed(new[] { s["Galleon"], s["TIE Fighter"] })); // a squadron arms a fleet
+        Assert.Equal(0, new CombatStrength(Rebellion.Core.Battle.NewBattleData.Default).Of(Array.Empty<ShipClass>(), new[] { s[Isd] }));
     }
 
     [Fact]

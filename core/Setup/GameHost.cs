@@ -56,7 +56,7 @@ public sealed class GameHost
     private GameHost(Game game, GameData data, GameSettings settings)
     {
         Game = game; Data = data; Settings = settings;
-        Fleets = FleetModule.Attach(game, data.Galaxy, data.Ships, data.Blockade, settings.ForcedStopTrigger);
+        Fleets = FleetModule.Attach(game, data.Galaxy, data.Ships, data.Blockade, settings.ForcedStopTrigger, data.NewBattle);
 
         Economy = EconomyModule.Attach(game, data.Galaxy, data.Slots, data.Costs, Fleets, settings.Economy);
         Economy.IncidentsEnabled = settings.IncidentsEnabled;
@@ -95,7 +95,7 @@ public sealed class GameHost
         Bombardment = BombardmentModule.Attach(game, Economy, Fleets, Support, Defenses, settings.Bombard);
         Assault = AssaultModule.Attach(game, Economy, Fleets, Troops, Control, Defenses, Bombardment, settings.Assault);
         // Slot 5: registered after the fleet module's contact hook, so it runs after it, and (slot 5 precedes 5.1 and 5.2) before bombardment and assault.
-        Battles = Rebellion.Core.Battle.BattleModule.Attach(game, data.Galaxy, Fleets, Economy, settings.Battle);
+        Battles = Rebellion.Core.Battle.BattleModule.Attach(game, data.Galaxy, Fleets, Economy, settings.Battle, data.NewBattle);
         Repair = Rebellion.Core.Repair.RepairModule.Attach(game, Economy, Fleets, data.Repair); // slot 6.8, attached last
         Repair.FoughtThisStep = Battles.FoughtThisStep; // no repair on a battle day. rule: m4-retreat-damage-repair §5
     }
