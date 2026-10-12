@@ -4,6 +4,8 @@ using Rebellion.Core.Construction;
 using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
 using Rebellion.Core.Map;
+using Rebellion.Core.Missions;
+using Rebellion.Core.Characters;
 using Rebellion.Core.Setup;
 using Rebellion.Core.Ships;
 using Rebellion.Core.Support;
@@ -26,6 +28,10 @@ internal static class SimCli
           dotnet run --project sim -- build [--days 150] [--seed 1] [--picket-leaves <day>|never] [--no-forced-stop]
           dotnet run --project sim -- support [--days 360] [--seed 1] [--ruleset classic|new] [--reinforce-day 120]
           dotnet run --project sim -- battle --alliance "<Class>:<n>[,...]" --empire "<Class>:<n>[,...]" [--battles 1000] [--seed 1] [--no-rolls] [--ruleset classic|new] [--carry]
+          dotnet run --project sim -- mission --kind <MissionKind> --agent "<Name>" [--agent ...] [--side Alliance|Empire] [--skills "esp=60,com=50,..."]
+                                              [--sf "<Class>:<n>[,...]"] [--ships "<Class>:<n>[,...]"] [--troops "<Class>:<n>[,...]"]
+                                              [--officer "<Name>" [--officer-esp <n>]] [--target-agent "<Name>"] [--facility <Kind>[,<Kind>...]]
+                                              [--at Coruscant] [--owner Alliance|Empire|neutral] [--support 50] [--missions 1000] [--seed 1]
           dotnet run --project sim -- campaign [--days 1000] [--seed 1] [--ruleset Classic|New]
           dotnet run --project sim -- aivai [--days 730] [--seed 1] [--start meda|campaign] [--passive empire|alliance] [--trace] [--hq-unknown] [--fog]
         aivai plays the simple AI (core/AI) on both sides from the new-game start (MedA, DEFAULT) or the test campaign, printing a yearly summary,
@@ -34,6 +40,13 @@ internal static class SimCli
         KnowledgeView (m5-fog-and-hq), and the Empire knows the HQ only once its own picture shows it.
         battle runs N seeded battles (Classic: m4-battle-classic, New: m4-battle-new; --ruleset, DEFAULT classic) at a synthetic system where every retreat has a destination, and prints how often each
         side won or retreated, and the mean survivors. Battle k uses seed (seed + k - 1). --no-rolls turns the subsystem rolls off. --carry (New) puts squadrons aboard their side's carriers instead of basing them.
+        mission runs N seeded missions (m5-missions) of one kind against a defended system and prints how often the first iteration succeeded,
+        failed or was foiled, with the detection and success chances the core rolled. Mission k uses seed (seed + k - 1) on the full galaxy, with
+        incidents off. The team (--agent, --sf) stands at the target (--at), so it lands at once (no travel). Agents use their record's base skills
+        (no variance) unless --skills sets them (keys dip, esp, ship, troop, fac, com, lead). Defenders belong to the other side: --ships form one
+        fleet at the target (--officer is its Admiral, espionage --officer-esp), --troops are landed regiments, fighters or special forces.
+        --owner holds the target (DEFAULT the other side); --support is the Alliance popular support there. --target-agent places that enemy
+        character at the target (Rescue, Abduction, Assassination); --facility adds facilities (Sabotage).
         campaign runs the scripted two-sided TEST campaign (core/Setup/TestCampaign.cs, built through GameHost) and prints a yearly summary per side,
         the final state hash, the random draws and how long the run took.
         support runs the same demo with popular support, garrisons and uprisings on and prints the support events and a table every 30 days.
@@ -59,6 +72,7 @@ internal static class SimCli
             if (args[0] == "build") return Build(args.Skip(1).ToArray());
             if (args[0] == "support") return Support(args.Skip(1).ToArray());
             if (args[0] == "battle") return Battle(args.Skip(1).ToArray());
+            if (args[0] == "mission") return MissionCmd(args.Skip(1).ToArray());
             if (args[0] == "campaign") return Campaign(args.Skip(1).ToArray());
             if (args[0] == "aivai") return AiVsAi(args.Skip(1).ToArray());
             if (args[0] == "newgame") return NewGameCmd(args.Skip(1).ToArray());
@@ -521,6 +535,148 @@ internal static class SimCli
         Console.WriteLine($"  Alliance wins {aWin} ({Pct(aWin)}), Empire wins {eWin} ({Pct(eWin)}), no winner {none} ({Pct(none)})");
         Console.WriteLine($"  Alliance retreated {aRet} ({Pct(aRet)}), Empire retreated {eRet} ({Pct(eRet)})");
         Console.WriteLine($"  mean survivors: Alliance {Mean(aSurv)}, Empire {Mean(eSurv)}; mean length {Mean(secs)} s");
+        return 0;
+    }
+
+    // Mission batch (m5-missions). Builds each game through GameHost and reads the mission events; draws nothing itself (the character records
+    // are created with their base skills, so the throwaway generator handed to Create changes nothing the mission reads).
+    private static int MissionCmd(string[] a)
+    {
+        int missions = 1000, support = 50; ulong seed = 1; int? officerEsp = null;
+        MissionKind? kind = null; Side side = Side.Alliance; string at = "Coruscant", ownerArg = "";
+        var agents = new List<string>(); var skills = new SortedDictionary<Skill, int>();
+        List<(string, int)> sfs = new(), ships = new(), troops = new(); string? officer = null, targetAgent = null; var facilities = new List<FacilityKind>();
+        for (int i = 0; i < a.Length; i++)
+        {
+            string key = a[i];
+            string Next() => ++i < a.Length ? a[i] : throw new ArgumentException($"{key} needs a value.");
+            switch (key)
+            {
+                case "--kind": kind = Enum.TryParse<MissionKind>(Next(), true, out var k) && Enum.IsDefined(k) ? k : throw new ArgumentException($"--kind must be one of {string.Join(", ", Enum.GetNames<MissionKind>())}."); break;
+                case "--side": side = Enum.TryParse<Side>(Next(), true, out var sd) && Enum.IsDefined(sd) ? sd : throw new ArgumentException("--side must be Alliance or Empire."); break;
+                case "--agent": agents.Add(Next()); break;
+                case "--skills":
+                    foreach (var part in Next().Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    {
+                        var kv = part.Split('=');
+                        Skill sk = kv[0].ToLowerInvariant() switch
+                        {
+                            "dip" => Skill.Diplomacy, "esp" => Skill.Espionage, "ship" => Skill.ShipDesign, "troop" => Skill.TroopTraining,
+                            "fac" => Skill.FacilityDesign, "com" => Skill.Combat, "lead" => Skill.Leadership,
+                            _ => throw new ArgumentException($"Unknown skill '{kv[0]}' (dip, esp, ship, troop, fac, com, lead)."),
+                        };
+                        skills[sk] = kv.Length == 2 && int.TryParse(kv[1], out var v) && v >= 0 ? v : throw new ArgumentException($"Bad skill value in '{part}'.");
+                    }
+                    break;
+                case "--sf": sfs = Options.ParseShipList(Next()); break;
+                case "--ships": ships = Options.ParseShipList(Next()); break;
+                case "--troops": troops = Options.ParseShipList(Next()); break;
+                case "--officer": officer = Next(); break;
+                case "--officer-esp": officerEsp = int.TryParse(Next(), out var oe) && oe >= 0 ? oe : throw new ArgumentException("--officer-esp must be a non-negative integer."); break;
+                case "--target-agent": targetAgent = Next(); break;
+                case "--facility":
+                    foreach (var f in Next().Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                        facilities.Add(Enum.TryParse<FacilityKind>(f, true, out var fk) && Enum.IsDefined(fk) ? fk : throw new ArgumentException($"Unknown facility '{f}'."));
+                    break;
+                case "--at": at = Next(); break;
+                case "--owner": ownerArg = Next(); break;
+                case "--support": support = int.TryParse(Next(), out var su) && su is >= 0 and <= 100 ? su : throw new ArgumentException("--support must be 0..100."); break;
+                case "--missions": missions = int.TryParse(Next(), out var n) && n > 0 ? n : throw new ArgumentException("--missions must be a positive integer."); break;
+                case "--seed": seed = ulong.TryParse(Next(), out var s) ? s : throw new ArgumentException("--seed must be a non-negative integer."); break;
+                default: throw new ArgumentException($"Unknown option '{key}'.");
+            }
+        }
+        if (kind == null) throw new ArgumentException("--kind is required.");
+        if (agents.Count == 0 && sfs.Count == 0) throw new ArgumentException("--agent or --sf is required.");
+        if (officer != null && ships.Count == 0) throw new ArgumentException("--officer needs --ships (the officer is the defending fleet's Admiral).");
+        var data = GameData.Default;
+        at = Canonical(data.Galaxy, at);
+        Side enemy = side == Side.Alliance ? Side.Empire : Side.Alliance;
+        Side? owner = ownerArg.ToLowerInvariant() switch
+        {
+            "" => enemy, "alliance" => Side.Alliance, "empire" => Side.Empire, "neutral" or "none" => null,
+            _ => throw new ArgumentException("--owner must be Alliance, Empire or neutral."),
+        };
+        CharacterClass Char(string name, Side want)
+        {
+            var c = data.Characters.All.FirstOrDefault(x => string.Equals(x.Name, name.Trim(), StringComparison.OrdinalIgnoreCase))
+                ?? (int.TryParse(name, out var id) && data.Characters.TryGet(id, out var byId) ? byId : null)
+                ?? throw new ArgumentException($"Unknown character '{name}'.");
+            if (c.Side != want) throw new ArgumentException($"{c.Name} is not on the {want} side.");
+            return c;
+        }
+        var team = agents.Select(x => Char(x, side)).ToList();
+        var officerClass = officer != null ? Char(officer, enemy) : null;
+        var targetClass = targetAgent != null ? Char(targetAgent, enemy) : null;
+        var settings = new GameSettings { IncidentsEnabled = false };
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+
+        int ok = 0, failed = 0, foiled = 0, ended = 0, detectRolls = 0, detections = 0, memberRolls = 0; long detChance = 0, succChance = 0, days = 0;
+        string? sample = null, rejected = null;
+        for (int r = 0; r < missions; r++)
+        {
+            var host = GameHost.New(seed + (ulong)r, settings, data);
+            var ch = host.Characters;
+            host.Fleets.SetOwner(at, owner);
+            host.Economy.SetAllianceSupport(at, support);
+            CharacterRecord Make(CharacterClass cls)
+            {
+                var c = ch.Get(cls.Id) ?? ch.Create(cls, new GameRng(0));
+                for (int i = 0; i < CharacterClass.SkillCount; i++) c.Skills[i] = cls.SkillBase[i];
+                ch.Place(cls.Id, at);
+                return c;
+            }
+            foreach (var c in team) { var rec = Make(c); foreach (var (sk, v) in skills) rec.Skills[(int)sk] = v; }
+            var sfIds = new List<int>();
+            foreach (var (cls, count) in sfs) for (int i = 0; i < count; i++) sfIds.Add(host.Economy.AddObject(side, cls, at));
+            if (ships.Count > 0)
+            {
+                var names = ships.SelectMany(x => Enumerable.Repeat(ResolveClass(data.Ships, x.Item1), x.Item2)).ToList();
+                int fleet = host.Fleets.AddFleet(enemy, "Defenders", names, at);
+                if (officerClass != null)
+                {
+                    var o = Make(officerClass);
+                    if (officerEsp is int e) o.Skills[(int)Skill.Espionage] = e;
+                    ch.SetPost(officerClass.Id, fleet, CharacterPost.Admiral);
+                }
+            }
+            foreach (var (cls, count) in troops) for (int i = 0; i < count; i++) host.Economy.AddObject(enemy, cls, at);
+            foreach (var f in facilities) host.Economy.AddFacility(at, f);
+            int? tc = targetClass != null ? Make(targetClass).Id : null;
+            long seq = host.Game.Submit(q => new StartMissionOrder(q, side, kind.Value, team.Select(c => c.Id).ToList(), sfIds, new(), tc == null ? at : null, tc));
+            host.Game.Step();
+            if (host.Game.Events.OfType<OrderRejected>().FirstOrDefault(e => e.Sequence == seq) is { } rej) { rejected = rej.Reason; break; }
+            int mission = host.Game.Events.OfType<MissionStarted>().Last().Mission;
+            bool done = false;
+            for (int step = 0; step < 1000 && !done; step++)
+            {
+                int from = host.Game.Events.Count;
+                host.Game.Step();
+                var evs = host.Game.Events.Skip(from).ToList(); // this Step's events
+                foreach (var d in evs.OfType<MissionDetectionRoll>().Where(d => d.Mission == mission)) { detectRolls++; detChance += d.Chance; if (d.Detected) detections++; }
+                foreach (var m in evs.OfType<MissionMemberRoll>().Where(m => m.Mission == mission)) { memberRolls++; succChance += m.Chance; }
+                if (evs.OfType<MissionFoiled>().Any(e => e.Mission == mission)) { foiled++; done = true; }
+                else if (evs.OfType<MissionSucceeded>().Any(e => e.Mission == mission)) { ok++; done = true; }
+                else if (evs.OfType<MissionFailed>().Any(e => e.Mission == mission)) { failed++; done = true; }
+                else if (evs.OfType<MissionIterationDone>().FirstOrDefault(e => e.Mission == mission) is { } it) { if (it.Success) ok++; else failed++; done = true; } // a repeating kind goes on
+                else if (evs.OfType<MissionEnded>().FirstOrDefault(e => e.Mission == mission) is { } end) { ended++; done = true; }
+                if (done && r == 0)
+                {
+                    var rolls = evs.OfType<MissionDetectionRoll>().Where(d => d.Mission == mission).Select(d => $"defender {d.Defender} x {d.X} chance {d.Chance}%").ToList();
+                    sample = rolls.Count == 0 ? "no detection rolls" : string.Join("; ", rolls);
+                }
+            }
+            days += host.Game.Day;
+        }
+        if (rejected != null) { Console.WriteLine($"StartMission was refused: {rejected}"); return 3; }
+        string Pct(int x) => (100.0 * x / missions).ToString("0.0", inv) + "%";
+        string Avg(long sum, int count) => count == 0 ? "-" : ((double)sum / count).ToString("0.0", inv) + "%";
+        Console.WriteLine($"{missions} {kind} missions by the {side} at {at} (owner {(owner?.ToString() ?? "neutral")}, Alliance support {support}), seeds {seed}..{seed + (ulong)missions - 1}");
+        Console.WriteLine($"  team: {string.Join(", ", team.Select(c => c.Name).Concat(sfs.Select(x => $"{x.Item2} x {x.Item1}")))}");
+        Console.WriteLine($"  defenders: {(ships.Count + troops.Count == 0 ? "none" : string.Join(", ", ships.Concat(troops).Select(x => $"{x.Item2} x {x.Item1}")))}{(officerClass != null ? $"; Admiral {officerClass.Name}" : "")}");
+        Console.WriteLine($"  first iteration: succeeded {ok} ({Pct(ok)}), failed {failed} ({Pct(failed)}), foiled {foiled} ({Pct(foiled)}){(ended > 0 ? $", ended without a roll {ended} ({Pct(ended)})" : "")}");
+        Console.WriteLine($"  detection rolls {detectRolls}, detections {detections}, mean chance per detection roll {Avg(detChance, detectRolls)}; success rolls {memberRolls}, mean success chance {Avg(succChance, memberRolls)}");
+        Console.WriteLine($"  mission 1: {sample}; mean end day {((double)days / missions).ToString("0.0", inv)}");
         return 0;
     }
 

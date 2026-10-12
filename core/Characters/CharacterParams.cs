@@ -25,7 +25,9 @@ public enum StartCastOfficers
 public sealed class RuleMissingException : InvalidOperationException
 {
     public string Rule { get; }
-    public RuleMissingException(string rule) : base($"RuleMissing {{{rule}}}: the rule book has no rule for this switch value (m5-characters-and-force).") { Rule = rule; }
+    public RuleMissingException(string rule) : this(rule, "m5-characters-and-force") { }
+    /// <summary>The same refusal for another sheet's switch (m5-missions uses it too).</summary>
+    public RuleMissingException(string rule, string sheet) : base($"RuleMissing {{{rule}}}: the rule book has no rule for this switch value ({sheet}).") { Rule = rule; }
 }
 
 /// <summary>

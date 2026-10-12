@@ -31,7 +31,9 @@ namespace Rebellion.Core.Setup;
 ///  11. ResearchModule (slot 6.9; reads economy and fleets; construction's research gate reads its levels)
 ///  12. CharacterModule (orders; slots 2 and 3 after the fleets, 6.10; wires bombardment's AdmiralLeadership, assault's FleetGeneralLeadership and
 ///      SystemGeneralLeadership, the fleet Navigator speed and fleet-removal hooks, control's HolderChanged, support's incident codes 3-5). rule: m5-characters-and-force
-///  13. VictoryModule (slot 6.11, the last day-end slot; must stay last; reads the characters' captured and dead states)
+///  13. MissionModule (orders; slots 2 and 3 after the characters, 5.3 after assault and before the fog refresh; wires the characters' IsOnMission and
+///      MissionMembershipEnded, the fog's AgentsAt, support's incident terms and per-incident hook). rule: m5-missions
+///  14. VictoryModule (slot 6.11, the last day-end slot; must stay last; reads the characters' captured and dead states)
 /// Cross-wiring done inside the Attach calls: support into economy (Death Star flag) and construction (uprising stops yards),
 /// construction into economy (refined line, removed objects) and control (cancel projects on capture).
 ///
@@ -68,6 +70,9 @@ public sealed class GameHost
 
     /// <summary>Characters, posts, leadership, capture and death, the Force (slots 2, 3, 6.10). rule: m5-characters-and-force.</summary>
     public Rebellion.Core.Characters.CharacterModule Characters { get; }
+
+    /// <summary>Agent missions: teams, decoys, detection, success rolls and effects (slots 2, 3, 5.3). rule: m5-missions.</summary>
+    public Rebellion.Core.Missions.MissionModule Missions { get; }
 
     /// <summary>Fog of war (each side's picture, the read API for the AI and UI) and the Rebel HQ. rule: m5-fog-and-hq.</summary>
     public Rebellion.Core.Fog.FogModule Fog { get; }
@@ -134,6 +139,9 @@ public sealed class GameHost
         Assault.SystemGeneralLeadership = Characters.SystemGeneralLeadership;
         Control.HolderChanged += Characters.OnHolderChanged;
         Support.CharacterIncident = Characters.UprisingIncident;
+        // Missions: orders, slots 2 and 3 after the characters, 5.3; wires the characters' IsOnMission and membership end, the fog's AgentsAt and the
+        // support module's incident terms. rule: m5-missions §Where it runs in the day Step.
+        Missions = Rebellion.Core.Missions.MissionModule.Attach(game, Fleets, Economy, Support, Troops, Research, Characters, Fog, data.Missions, settings.Missions);
         Victory = Rebellion.Core.Victory.VictoryModule.Attach(game, settings.Victory); // slot 6.11, the last day-end slot; must stay last
         Victory.Keys = data.Characters.VictoryKeys;
         Victory.IsCaptured = Characters.IsCaptured;

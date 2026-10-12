@@ -33,6 +33,9 @@ public enum Side { Empire = 0, Alliance = 1 }
 [JsonDerivedType(typeof(Rebellion.Core.Characters.AssignSystemGeneralOrder), "AssignSystemGeneral")]
 [JsonDerivedType(typeof(Rebellion.Core.Characters.ReleaseSystemGeneralOrder), "ReleaseSystemGeneral")]
 [JsonDerivedType(typeof(Rebellion.Core.Characters.MoveCharacterOrder), "MoveCharacter")]
+[JsonDerivedType(typeof(Rebellion.Core.Missions.StartMissionOrder), "StartMission")]
+[JsonDerivedType(typeof(Rebellion.Core.Missions.MoveGroupOrder), "MoveGroup")]
+[JsonDerivedType(typeof(Rebellion.Core.Missions.CancelMissionOrder), "CancelMission")]
 public abstract record Order(long Sequence, Side Side);
 
 /// <summary>
