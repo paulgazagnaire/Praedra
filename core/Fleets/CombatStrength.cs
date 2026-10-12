@@ -9,16 +9,16 @@ namespace Rebellion.Core.Fleets;
 public static class CombatStrength
 {
     /// <summary>
-    /// Combat strength of a force: PLACEHOLDER until M4 provides the real measure (space-combat/11 section 10).
-    /// DEFAULT (sheet): the sum of overall_attack_strength of the armed ships, capital ships and squadrons alike.
-    /// Ship count is never used. <paramref name="versus"/> is unused now and exists so M4 can make the measure relative.
+    /// Combat strength of a force: PLACEHOLDER (lead decision 2026-10-12): build cost as a strength proxy until M4
+    /// (space-combat/11 section 10); the printed attack strength is decorative in the original. The sum of
+    /// refined_material_cost of the armed ships and squadrons that carry at least one turbolaser or ion cannon (any arc); laser-only boats (Corellian Corvette, fighters) count 0. Ship count is never used. rule: space-combat/07 last section (stand-in until m4-battle-new §12 CombatStrength). <paramref name="versus"/> is unused now and exists so M4 can make the measure relative.
     /// Every test that depends on the strength level is marked "M4 re-check".
     /// </summary>
     public static long Of(IEnumerable<ShipClass> forces, IEnumerable<ShipClass>? versus = null)
     {
         long sum = 0;
         foreach (var s in forces)
-            if (IsArmed(s)) sum += s.OverallAttackStrength;
+            if (IsArmed(s) && s.HasHeavyWeapon) sum += s.RefinedMaterialCost; // rule: space-combat/07 last section (stand-in until m4-battle-new §12 CombatStrength)
         return sum;
     }
 

@@ -180,7 +180,7 @@ public class MovementTests
     {
         var w = Real(seed: seed);
         w.Add(Side.Empire, "Red", "Coruscant", Isd);                       // fleet 1
-        w.Add(Side.Alliance, "Picket", "Anoat", "Corellian Corvette");     // fleet 2
+        w.Add(Side.Alliance, "Picket", "Anoat", "CC-7700 Frigate");       // fleet 2: gravity-well ship, stops any fleet under PaulRule
         w.Fleets.SetOwner("Anoat", Side.Alliance);
         w.Fleets.SetOwner("Hoth", Side.Alliance); // the mover ends up alone at an Alliance system: Classic blockade
         return w;

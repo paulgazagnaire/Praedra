@@ -221,7 +221,7 @@ public sealed class FleetModule
                 return gravityFleets;
             default: // PaulRule
                 if (gravityFleets.Count > 0) return armed;
-                // M4 re-check: strength is the placeholder (sum of attack strength). T is a percent from data.
+                // M4 re-check: strength is the placeholder (sum of refined_material_cost of armed ships). T is a percent from data.
                 long enemy = CombatStrength.Of(Classes(armed), Classes(passing));
                 long mine = CombatStrength.Of(Classes(passing));
                 return enemy * 100 >= (long)Blockade.ThresholdPercent * mine ? armed : new List<Fleet>();
