@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 using Rebellion.Core.Map;
+using Side = Rebellion.Core.Clock.Side;
 
 namespace RebellionViewer;
 
@@ -27,6 +28,25 @@ public partial class GalaxyView : Control
     public Func<Vector2, int> FleetPicker;
 
     public event Action StateChanged;
+
+    // ---- game overlays, set by the owner (the map only draws what it is told)
+    public static readonly Color EmpireColor = new(0.35f, 0.85f, 0.35f);
+    public static readonly Color AllianceColor = new(1.0f, 0.55f, 0.15f);
+    public static readonly Color NeutralColor = new(0.55f, 0.57f, 0.62f);
+    /// <summary>Owner of a system by index (null = neutral).</summary>
+    public Func<int, Side?> OwnerOf;
+    /// <summary>True for a headquarters / capital system.</summary>
+    public Func<int, bool> IsHq;
+    /// <summary>A tag drawn under a system at any zoom ("YOUR HQ", "ENEMY CAPITAL"), or null.</summary>
+    public Func<int, (string Text, Color Color)?> CapitalTag;
+    public Func<int, bool> IsUprising;
+    public Func<int, bool> IsBlockaded;
+    /// <summary>While true a click on a system raises <see cref="SystemPicked"/> instead of selecting it (used to choose a destination).</summary>
+    public bool PickMode { get; set; }
+    public event Action<int> SystemPicked;
+    /// <summary>A route to draw on top of the lanes (system indices), e.g. the preview of a move order.</summary>
+    public IReadOnlyList<int> PathPreview { get; set; }
+    public Color PathColor { get; set; } = Colors.White;
 
     Vector2[] _pos;                 // world position per system (map_x, map_y)
     Color[] _color;                 // per system, by sector
@@ -96,6 +116,8 @@ public partial class GalaxyView : Control
         Changed();
     }
 
+    /// <summary>Centre on a system keeping the zoom (zooms in a little if the map is far out).</summary>
+    public void Centre(int system) { _center = _pos[system]; if (_zoom < 2.5f) _zoom = 2.5f; Changed(); }
     public void SetZoom(float zoom) { _zoom = Mathf.Clamp(zoom, MinZoom, MaxZoom); Changed(); }
     public void Select(int system) { SelectedFleet = -1; Selected = system; StateChanged?.Invoke(); QueueRedraw(); }
 
@@ -132,7 +154,12 @@ public partial class GalaxyView : Control
                 if (mb.Pressed) { _dragging = true; _dragMoved = false; _pressAt = mb.Position; }
                 else
                 {
-                    if (_dragging && !_dragMoved && mb.ButtonIndex == MouseButton.Left)
+                    if (_dragging && !_dragMoved && mb.ButtonIndex == MouseButton.Left && PickMode)
+                    {
+                        int pick = Pick(mb.Position);
+                        if (pick >= 0) SystemPicked?.Invoke(pick);
+                    }
+                    else if (_dragging && !_dragMoved && mb.ButtonIndex == MouseButton.Left)
                     {
                         int fleet = FleetPicker?.Invoke(mb.Position) ?? -1;
                         SelectedFleet = fleet;
@@ -231,18 +258,50 @@ public partial class GalaxyView : Control
             }
         }
 
-        // systems
-        float radius = Mathf.Clamp(2.4f + _zoom * 0.9f, 2.6f, 9f);
+        // route preview
+        if (PathPreview is { Count: > 1 })
+        {
+            for (int k = 0; k + 1 < PathPreview.Count; k++)
+                DrawLine(SystemScreen(PathPreview[k]), SystemScreen(PathPreview[k + 1]), PathColor, 4f, true);
+        }
+
+        // systems: fill = owner, thin ring = sector, bigger double ring = headquarters, red ring = uprising
+        float radius = Mathf.Clamp(3.2f + _zoom * 1.0f, 3.6f, 10f);
         for (int i = 0; i < _pos.Length; i++)
         {
             var p = SystemScreen(i);
             if (!screenRect.HasPoint(p)) continue;
             var s = Galaxy.Systems[i];
-            if (s.IsOutsideSectors) DrawArc(p, radius + 3f, 0, Mathf.Tau, 24, new Color(1, 1, 1, 0.8f), 1.5f, true);
-            DrawCircle(p, radius, _color[i]);
+            var owner = OwnerOf?.Invoke(i);
+            var fill = owner == Side.Empire ? EmpireColor : owner == Side.Alliance ? AllianceColor : NeutralColor;
+            if (s.IsOutsideSectors) DrawArc(p, radius + 4.5f, 0, Mathf.Tau, 24, new Color(1, 1, 1, 0.8f), 1.5f, true);
+            DrawArc(p, radius + 1.2f, 0, Mathf.Tau, 20, _color[i], 2.2f, true);
+            DrawCircle(p, radius, fill);
+            if (IsHq?.Invoke(i) == true)
+            {
+                DrawArc(p, radius + 5f, 0, Mathf.Tau, 28, Colors.White, 2f, true);
+                DrawArc(p, radius + 8f, 0, Mathf.Tau, 32, fill, 2f, true);
+            }
+            if (IsUprising?.Invoke(i) == true) DrawArc(p, radius + 11f, 0, Mathf.Tau, 32, new Color(1f, 0.15f, 0.15f), 2.5f, true);
+            if (IsBlockaded?.Invoke(i) == true) DrawArc(p, radius + 14f, 0, Mathf.Tau, 32, new Color(1f, 0.9f, 0.2f, 0.9f), 1.5f, true);
         }
         if (focus >= 0) DrawArc(SystemScreen(focus), radius + 4f, 0, Mathf.Tau, 32, Colors.White, 2f, true);
         if (Hovered >= 0 && Hovered != focus) DrawArc(SystemScreen(Hovered), radius + 3f, 0, Mathf.Tau, 32, new Color(1, 1, 1, 0.6f), 1.5f, true);
+
+        // capital tags: always visible, so the player can find the headquarters at any zoom
+        if (CapitalTag != null)
+            for (int i = 0; i < _pos.Length; i++)
+            {
+                if (CapitalTag(i) is not { } tag) continue;
+                var p = SystemScreen(i);
+                if (!screenRect.HasPoint(p)) continue;
+                int fs = 12;
+                var size = _font.GetStringSize(tag.Text, HorizontalAlignment.Left, -1, fs);
+                var box = new Rect2(p + new Vector2(-size.X / 2f - 4f, radius + 12f), size + new Vector2(8f, 4f));
+                DrawRect(box, new Color(0.03f, 0.04f, 0.07f, 0.9f));
+                DrawRect(box, tag.Color, false, 1.5f);
+                DrawString(_font, box.Position + new Vector2(4f, size.Y - 1f), tag.Text, HorizontalAlignment.Left, -1, fs, tag.Color);
+            }
 
         // system names (zoomed in)
         float nameAlpha = Mathf.Clamp((_zoom - NameZoomFrom) / (NameZoomTo - NameZoomFrom), 0f, 1f);
