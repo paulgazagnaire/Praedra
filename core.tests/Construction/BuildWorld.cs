@@ -3,6 +3,7 @@ using Rebellion.Core.Construction;
 using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
 using Rebellion.Core.Support;
+using Rebellion.Core.Troops;
 using Rebellion.Core.Tests.Economy;
 using Rebellion.Core.Tests.Fleets;
 using Rebellion.Core.Tests.Support;
@@ -36,6 +37,8 @@ internal sealed class BuildWorld
     public FleetModule Fleets { get; private set; } = null!;
     public EconomyModule Eco { get; private set; } = null!;
     public ConstructionModule Build { get; private set; } = null!;
+    public TroopModule Troops { get; private set; } = null!;
+    public static readonly Lazy<TroopData> RealTroops = new(() => TroopData.Load(TestData.InterimDir, TestData.DesignDir));
 
     public SupportModule? Support { get; private set; }
     private readonly bool _withSupport, _wireFleets;
@@ -60,9 +63,12 @@ internal sealed class BuildWorld
         Eco.IncidentsEnabled = false;
         Support = _withSupport ? SupportModule.Attach(Game, TestData.RealGalaxy, Eco, Fleets, SupWorld.Weights.Value) : null;
         Build = ConstructionModule.Attach(Game, Fleets, Eco, support: Support);
-        if (_wireFleets)
-            Build.UnitAppeared += (ctx, o, how) =>
-                Fleets.OnUnitAppeared(ctx, o, how == UnitAppearance.Delivered ? ShipJoinCause.Delivered : ShipJoinCause.Completed);
+        Troops = TroopModule.Attach(Game, Fleets, RealTroops.Value);
+        Build.UnitAppeared += (ctx, o, how) =>
+        {
+            if (_wireFleets) Fleets.OnUnitAppeared(ctx, o, how == UnitAppearance.Delivered ? ShipJoinCause.Delivered : ShipJoinCause.Completed);
+            Troops.OnUnitAppeared(ctx, o); // announces regiments and special forces (RegimentCreated, SpecialForceCreated)
+        };
     }
 
     /// <summary>Save, load and attach the modules again to the loaded game (the save holds state only).</summary>

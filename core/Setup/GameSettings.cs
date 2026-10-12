@@ -48,6 +48,10 @@ public sealed record GameSettings
     public bool UseClassicBlockadeFlag { get; init; }
     public ConstructionParams? Construction { get; init; }
 
+    // ---- troops. rule: m3-troops-and-special-forces §Defaults
+    /// <summary>UnloadRegiments only at a system the side holds (a neutral or enemy system is the assault's). rule: m3-troops-and-special-forces §Defaults (DEFAULT).</summary>
+    public bool UnloadOnlyAtHeldSystem { get; init; } = true;
+
     // ---- control. rule: m2-control-and-capture
     /// <summary>The DebugSetHolder order is accepted only when this is on.</summary>
     public bool DebugOrdersEnabled { get; init; }

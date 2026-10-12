@@ -226,6 +226,22 @@ public sealed class TestCampaign
         new(800, 0, Side.Alliance, "Relief", "Sullust"),
     };
 
+    /// <summary>A load or unload order for a fleet (by name) issued on <c>First</c>, <c>First + Every</c>, ...: <c>Count</c> regiments (the lowest ids that qualify).</summary>
+    private sealed record TroopStep(int First, int Every, Side Side, string Fleet, bool Load, int Count);
+
+    // The Home Fleet (2 ISD, 6 slots) carries two regiments Coruscant -> Corellia and back; the Alliance reserve (one Mon Calamari Cruiser, 1 slot)
+    // loads and unloads one at Sullust. Exercises m3-troops-and-special-forces loading, unloading and the "aboard is not garrison" rule.
+    private static readonly TroopStep[] Troops =
+    {
+        new(100, 300, Side.Empire, "Home Fleet", true, 2), new(170, 300, Side.Empire, "Home Fleet", false, 2),
+        new(180, 300, Side.Empire, "Home Fleet", true, 2), new(250, 300, Side.Empire, "Home Fleet", false, 2),
+        new(120, 100, Side.Alliance, "Alliance Reserve", true, 1), new(130, 100, Side.Alliance, "Alliance Reserve", false, 1),
+    };
+    private static readonly MoveStep[] TroopMoves =
+    {
+        new(101, 300, Side.Empire, "Home Fleet", "Corellia"), new(181, 300, Side.Empire, "Home Fleet", "Coruscant"),
+    };
+
     private static bool Due(int day, int first, int every) => day >= first && (every == 0 ? day == first : (day - first) % every == 0);
 
     /// <summary>
@@ -237,9 +253,19 @@ public sealed class TestCampaign
         foreach (var b in Builds)
             if (Due(day, b.First, b.Every))
                 Host.Construction.SubmitBuild(b.Side, b.Yard, b.Family, b.Class, b.Count, b.Destination);
-        foreach (var m in Moves)
+        foreach (var m in Moves.Concat(TroopMoves))
             if (Due(day, m.First, m.Every) && FleetByName(m.Fleet) is { } f)
                 Host.Fleets.SubmitMove(m.Side, f.Id, m.To);
+        foreach (var t in Troops)
+            if (Due(day, t.First, t.Every) && FleetByName(t.Fleet) is { } f && f.At != null)
+            {
+                var ids = t.Load
+                    ? Game.State.Economy.Objects.Values.Where(o => o.Category == ObjectCategory.Regiment && o.Completed && o.Side == t.Side && o.System == f.At && o.AboardShip == 0)
+                        .Select(o => o.Id).Take(t.Count).ToList()
+                    : Host.Troops.RegimentsAboard(f).Select(a => a.Regiment.Id).Take(t.Count).ToList();
+                if (ids.Count == 0) continue;
+                if (t.Load) Host.Troops.SubmitLoad(t.Side, f.Id, ids); else Host.Troops.SubmitUnload(t.Side, f.Id, ids);
+            }
     }
 
     /// <summary>A fleet by its (unique) name, or null.</summary>

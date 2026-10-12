@@ -30,6 +30,17 @@ public class CampaignSoakTests
         Assert.True(run.Host.Game.Rng.Draws > 0);
     }
 
+    // m3-troops-and-special-forces: the script loads, flies and unloads regiments; the invariants (no regiment both aboard and on a system,
+    // aboard counts within capacity) are checked every day by the run above
+    [Theory, MemberData(nameof(Rulesets))]
+    public void TheScriptLoadsAndUnloadsRegiments(GarrisonRuleset ruleset)
+    {
+        var ev = CampaignHarness.Checked(1, ruleset).Events;
+        Assert.True(ev.OfType<Rebellion.Core.Troops.RegimentsLoaded>().Count() >= 6);
+        Assert.True(ev.OfType<Rebellion.Core.Troops.RegimentsUnloaded>().Count() >= 6);
+        Assert.True(ev.OfType<Rebellion.Core.Troops.RegimentCreated>().Any());
+    }
+
     // ---------------------------------------------------------------- determinism and saves
 
     // m2-mines-refineries-pools P21, m2-slots-and-resources S14: same seed, same hash; another seed, another game
