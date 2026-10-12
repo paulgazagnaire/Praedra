@@ -165,7 +165,7 @@ public class GameHostTests
         Assert.False(Has("Fondor", FacilityKind.OrbitalShipyard)); // outside both regions: not used
         CampaignInvariants.Check(c.Host, "day 0");
         // every region system holds only its side's units
-        foreach (var o in c.Host.Economy.Objects.Where(o => o.Category == ObjectCategory.Regiment))
+        foreach (var o in c.Host.Economy.Objects.Where(o => o.Category == ObjectCategory.Regiment && o.System != null))
             Assert.Equal(o.Side, owners[o.System!]);
         Assert.Equal(Side.Empire, owners["Coruscant"]);
         Assert.Equal(Side.Alliance, owners["Sullust"]);

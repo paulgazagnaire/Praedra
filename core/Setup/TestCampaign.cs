@@ -40,6 +40,13 @@ public sealed class TestCampaign
     /// arrives later), so the order is accepted. The system holds a KDY-150 battery (placed by <see cref="Deal"/>), so the return-fire hook runs too.
     /// </summary>
     public const int BombardDay = 200;
+    /// <summary>
+    /// The day of the one scripted assault (m3-assault, slot 5.2): fifty days after the bombardment, the interdiction fleet lands the
+    /// <see cref="AssaultRegiments"/> Stormtrooper regiments it has carried since the start on the system it blockades and has shelled. The
+    /// Alliance relief fleet only arrives on day 300, so no enemy fleet is there and the order is accepted.
+    /// </summary>
+    public const int AssaultDay = 250;
+    public const int AssaultRegiments = 2; // the Victory Destroyer carries 2
     /// <summary>The name of a side's standing reserve fleet (stays at its capital), e.g. "Empire Reserve".</summary>
     public static string ReserveFleet(Side side) => $"{side} Reserve";
 
@@ -169,7 +176,14 @@ public sealed class TestCampaign
         // Fleets (by name; the script finds them by name).
         fleets.AddFleet(Side.Empire, "Home Fleet", new[] { "Imperial Star Destroyer", "Imperial Star Destroyer" }, "Coruscant");
         fleets.AddFleet(Side.Empire, "Kuat Picket", new[] { "Victory Destroyer" }, "Kuat");
-        fleets.AddFleet(Side.Empire, InterdictionFleet, new[] { "Interdictor Cruiser", "Victory Destroyer" }, "Hosnian Prime");
+        int interdiction = fleets.AddFleet(Side.Empire, InterdictionFleet, new[] { "Interdictor Cruiser", "Victory Destroyer" }, "Hosnian Prime");
+        // The landing force of the scripted assault rides the Victory Destroyer (placed aboard directly: the load order needs a held system).
+        int carrier = host.Game.State.Fleets[interdiction].Ships.Last();
+        for (int i = 0; i < AssaultRegiments; i++)
+        {
+            var reg = eco.Find(eco.AddObject(Side.Empire, Storm, null))!;
+            reg.AboardShip = carrier; reg.System = null;
+        }
         fleets.AddFleet(Side.Empire, "Patrol", new[] { "Carrack Light Cruiser" }, "Coruscant");
         fleets.AddFleet(Side.Alliance, "Sullust Fleet", new[] { "Nebulon-B Frigate", "Corellian Corvette" }, "Sullust", new[] { "X-wing" });
         fleets.AddFleet(Side.Alliance, "Thyferra Picket", new[] { "Corellian Corvette", "Corellian Corvette" }, "Thyferra");
@@ -277,6 +291,9 @@ public sealed class TestCampaign
         // rule: m3-bombardment §Order and preconditions (the interdiction fleet shells the system it blockades)
         if (day == BombardDay && FleetByName(InterdictionFleet) is { } bomber)
             Host.Bombardment.SubmitBombard(Side.Empire, bomber.Id, BlockadedSystem, BombardCategory.General);
+        // rule: m3-assault §Order and preconditions (the same fleet lands its regiments on the system it has shelled)
+        if (day == AssaultDay && FleetByName(InterdictionFleet) is { } lander)
+            Host.Assault.SubmitAssault(Side.Empire, lander.Id, BlockadedSystem);
     }
 
     /// <summary>A fleet by its (unique) name, or null.</summary>

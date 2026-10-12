@@ -55,6 +55,12 @@ public sealed class BombardmentModule
     /// </summary>
     public Func<Fleet, int> AdmiralLeadership { get; set; } = _ => 0;
 
+    /// <summary>True while an accepted bombardment of this fleet waits for slot 5.1 (the fleet flag 0x40).</summary>
+    public bool HasPending(int fleet) => _pending.Any(p => p.Fleet == fleet);
+
+    /// <summary>Set by the assault module: does the fleet have an assault pending? Part of check 6 (no other order pending). rule: m3-bombardment check 6.</summary>
+    public Func<int, bool> OtherOrderPending { get; set; } = _ => false;
+
     private BombardmentModule(Game game, EconomyModule eco, FleetModule fleets, SupportModule support, DefenseModule def, BombardParams p)
     {
         _game = game; _eco = eco; _fleets = fleets; _support = support; _def = def; Params = p;
@@ -113,7 +119,7 @@ public sealed class BombardmentModule
         if (_fleets.FleetsAt(system).Any(x => x.Side != side)) return BombardReject.EnemyFleetPresent;       // 3 (DEFAULT: both sides, any fleet)
         if (Power(f) <= 0) return BombardReject.NoBombardPower;                                              // 4 (DEFAULT)
         if (category == BombardCategory.DestroySystem) return RejectReason.NotAvailable;                     // 5 (M3: no Death Star spec)
-        if (atOrder && _pending.Any(p => p.Fleet == fleetId)) return BombardReject.OrderPending;             // 6 (DEFAULT)
+        if (atOrder && (_pending.Any(p => p.Fleet == fleetId) || OtherOrderPending(fleetId))) return BombardReject.OrderPending;             // 6 (DEFAULT)
         return null;
     }
 

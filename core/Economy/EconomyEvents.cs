@@ -6,7 +6,7 @@ namespace Rebellion.Core.Economy;
 // rule: m1-clock-and-orders §Events out. The slot sheet lists FacilityDestroyed, ResourceIncident and Disaster, the maintenance
 // sheet ObjectScrapped and AutoscrapWarning; ResourceProduced and RefineryWaiting are additions for production and shortage.
 
-public enum DestroyReason { OverEnergy, OverRaw, Disaster, UprisingIncident, Bombardment }
+public enum DestroyReason { OverEnergy, OverRaw, Disaster, UprisingIncident, Bombardment, Assault }
 
 public enum SlotChange { None, RawMinus, EnergyMinus, RawPlus, EnergyPlus }
 
