@@ -13,14 +13,17 @@
     <ProjectReference Include="..\core\Rebellion.Core.csproj" />
   </ItemGroup>
 
-  <!-- Godot imports .csv as translation tables and drops them from exports, so the design
-       tables are copied next to the project as data/*.txt (untracked) before every build. -->
+  <!-- Godot imports .csv as translation tables and drops them from exports, so the data tables are copied next to the
+       project as data/design/*.txt and data/interim/*.txt (untracked) before every build. At start the game copies them
+       to the user folder as .csv and loads them with the core's GameData.Load (it needs real files). -->
   <Target Name="CopyDesignData" BeforeTargets="BeforeBuild">
     <ItemGroup>
       <DesignCsv Include="$(MSBuildThisFileDirectory)..\data\design\*.csv" />
-      <DesignCsv Include="$(MSBuildThisFileDirectory)..\data\interim\capital-ships.csv" />
-      <DesignCsv Include="$(MSBuildThisFileDirectory)..\data\interim\fighters.csv" />
+      <DayOneCsv Include="$(MSBuildThisFileDirectory)..\data\design\day-one\*.csv" />
+      <InterimCsv Include="$(MSBuildThisFileDirectory)..\data\interim\*.csv" />
     </ItemGroup>
-    <Copy SourceFiles="@(DesignCsv)" DestinationFiles="@(DesignCsv->'$(MSBuildThisFileDirectory)data\%(Filename).txt')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(DesignCsv)" DestinationFiles="@(DesignCsv->'$(MSBuildThisFileDirectory)data\design\%(Filename).txt')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(DayOneCsv)" DestinationFiles="@(DayOneCsv->'$(MSBuildThisFileDirectory)data\design\day-one\%(Filename).txt')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(InterimCsv)" DestinationFiles="@(InterimCsv->'$(MSBuildThisFileDirectory)data\interim\%(Filename).txt')" SkipUnchangedFiles="true" />
   </Target>
 </Project>
