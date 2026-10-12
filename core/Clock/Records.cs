@@ -11,6 +11,7 @@ public enum Side { Empire = 0, Alliance = 1 }
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
 [JsonDerivedType(typeof(SetMarkerOrder), "SetMarker")]
 [JsonDerivedType(typeof(MoveFleetOrder), "MoveFleet")]
+[JsonDerivedType(typeof(ScrapObjectOrder), "ScrapObject")]
 public abstract record Order(long Sequence, Side Side);
 
 /// <summary>
@@ -26,6 +27,12 @@ public sealed record SetMarkerOrder(long Sequence, Side Side, string Marker, int
 /// </summary>
 public sealed record MoveFleetOrder(long Sequence, Side Side, int FleetId, string Destination) : Order(Sequence, Side);
 
+/// <summary>
+/// Scrap one completed object of the side at once (step 1). rule: m2-construction §Scrapping, m2-maintenance §Scrapping and
+/// refunds. The handler lives in Rebellion.Core.Economy.EconomyModule (the construction package may take it over).
+/// </summary>
+public sealed record ScrapObjectOrder(long Sequence, Side Side, int ObjectId) : Order(Sequence, Side);
+
 public static class RejectReason
 {
     public const string NegativeValue = "NegativeValue";
@@ -39,6 +46,9 @@ public static class RejectReason
     public const string AlreadyThere = "AlreadyThere";
     public const string UnknownSystem = "UnknownSystem";
     public const string Unreachable = "Unreachable";
+    // rule: m2-construction §Scrapping (ScrapObject rejections; the sheet names no codes: DEFAULT names)
+    public const string UnknownObject = "UnknownObject";
+    public const string NotCompleted = "NotCompleted";
     /// <summary>No handler is registered for this order type (e.g. a save with fleet orders loaded before the fleet module was attached).</summary>
     public const string UnknownOrderType = "UnknownOrderType";
 }

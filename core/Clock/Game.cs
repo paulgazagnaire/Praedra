@@ -1,3 +1,4 @@
+using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
 
 namespace Rebellion.Core.Clock;
@@ -25,6 +26,12 @@ public sealed class GameState
     /// </summary>
     public SortedDictionary<string, Side> Blockades { get; init; } = new(StringComparer.Ordinal);
 
+    /// <summary>
+    /// Economy state: objects, slot changes, support, pools, timers. rule: m2-slots-and-resources, m2-mines-refineries-pools,
+    /// m2-maintenance. Saved and hashed like everything else.
+    /// </summary>
+    public EconomyState Economy { get; init; } = new();
+
     /// <summary>Copy another state's content into this one (used by Load, which needs ordinal-comparer dictionaries).</summary>
     internal void CopyFrom(GameState other)
     {
@@ -33,6 +40,7 @@ public sealed class GameState
         NextFleetId = other.NextFleetId;
         foreach (var kv in other.SystemOwners) SystemOwners[kv.Key] = kv.Value;
         foreach (var kv in other.Blockades) Blockades[kv.Key] = kv.Value;
+        Economy.CopyFrom(other.Economy);
     }
 }
 
@@ -85,6 +93,9 @@ public sealed class Game
     private long _nextSequence;
 
     public Game(ulong seed) : this(new GameState(), 0, new GameRng(seed), Array.Empty<Order>(), 1) { }
+
+    /// <summary>Start a game on a given generator (tests pass a stub that returns queued draws; the game never makes its own).</summary>
+    public Game(GameRng rng) : this(new GameState(), 0, rng, Array.Empty<Order>(), 1) { }
 
     internal Game(GameState state, int day, GameRng rng, IEnumerable<Order> queue, long nextSequence)
     {
