@@ -3,14 +3,14 @@ config_version=5
 
 [application]
 
-config/name="Rebellion Viewer"
+config/name="Rebellion"
 run/main_scene="res://Main.tscn"
 config/features=PackedStringArray("4.7", "C#", "GL Compatibility")
 
 [display]
 
-window/size/viewport_width=1600
-window/size/viewport_height=900
+window/size/viewport_width=1440
+window/size/viewport_height=810
 window/stretch/mode="canvas_items"
 
 [dotnet]

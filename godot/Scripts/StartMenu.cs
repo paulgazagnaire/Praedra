@@ -24,13 +24,13 @@ public partial class StartMenu : Control
 
     public override void _Ready()
     {
-        SetAnchorsPreset(LayoutPreset.FullRect);
+        SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         var bg = new ColorRect { Color = new Color(0.03f, 0.04f, 0.08f) };
-        bg.SetAnchorsPreset(LayoutPreset.FullRect);
+        bg.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(bg);
 
         var center = new CenterContainer();
-        center.SetAnchorsPreset(LayoutPreset.FullRect);
+        center.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(center);
         var box = new VBoxContainer { CustomMinimumSize = new Vector2(460, 0) };
         box.AddThemeConstantOverride("separation", 10);
@@ -82,7 +82,7 @@ public partial class StartMenu : Control
         {
             var note = new Label
             {
-                Text = "Test build: the start position is a placeholder campaign and the computer opponent is not playing yet.",
+                Text = "Test build: the computer opponent is not playing yet, so the other side sits still.",
                 AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(440, 0),
                 HorizontalAlignment = HorizontalAlignment.Center,
             };

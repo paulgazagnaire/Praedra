@@ -59,7 +59,7 @@ public partial class GameScreen : Control
 
     public override void _Ready()
     {
-        SetAnchorsPreset(LayoutPreset.FullRect);
+        SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         var theme = new Theme { DefaultFontSize = 15 };
         Theme = theme;
         BuildUi();
@@ -73,13 +73,13 @@ public partial class GameScreen : Control
         _view.SystemPicked += OnSystemPicked;
         _view.FleetPicker = _fleets.Pick;
         foreach (var side in new[] { Side.Empire, Side.Alliance })
-            if (G.TryFindSystem(GameBoot.CapitalOf(side), out int hq)) _hqs.Add(hq);
+            if (G.TryFindSystem(GameBoot.CapitalOf(S.Host, side), out int hq)) _hqs.Add(hq);
         _fleets.Player = S.Player;
         _fleets.Bind(S.Game, G);
 
         // Start with the map centred on the player's headquarters.
-        if (G.TryFindSystem(GameBoot.CapitalOf(S.Player), out int home)) { _view.FocusOn(home, 3f); }
-        S.Say($"You lead the {S.NameOf(S.Player)}. Your headquarters is {GameBoot.CapitalOf(S.Player)}. Press Space to start the clock.", MsgKind.Good, GameBoot.CapitalOf(S.Player));
+        if (G.TryFindSystem(GameBoot.CapitalOf(S.Host, S.Player), out int home)) { _view.FocusOn(home, 2.4f); }
+        S.Say($"You lead the {S.NameOf(S.Player)}. Your headquarters is {GameBoot.CapitalOf(S.Host, S.Player)}. Press Space to start the clock.", MsgKind.Good, GameBoot.CapitalOf(S.Host, S.Player));
         foreach (var m in S.Messages) AddLogItem(m);
         RefreshTop();
     }
@@ -98,7 +98,7 @@ public partial class GameScreen : Control
     void BuildUi()
     {
         var vbox = new VBoxContainer();
-        vbox.SetAnchorsPreset(LayoutPreset.FullRect);
+        vbox.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         vbox.AddThemeConstantOverride("separation", 0);
         AddChild(vbox);
 
@@ -187,7 +187,7 @@ public partial class GameScreen : Control
         // right-hand panel
         _panel = new PanelContainer { MouseFilter = MouseFilterEnum.Stop };
         _panel.AddThemeStyleboxOverride("panel", Box(new Color(0.07f, 0.08f, 0.12f, 0.96f), 10, new Color(0.4f, 0.45f, 0.6f)));
-        _panel.SetAnchorsPreset(LayoutPreset.TopRight);
+        _panel.AnchorLeft = 1; _panel.AnchorRight = 1; _panel.AnchorTop = 0; _panel.AnchorBottom = 1;
         _panel.OffsetLeft = -400; _panel.OffsetRight = -10; _panel.OffsetTop = 56; _panel.OffsetBottom = -10;
         _panel.GrowHorizontal = GrowDirection.Begin;
         AddChild(_panel);
@@ -461,7 +461,7 @@ public partial class GameScreen : Control
         t.AddThemeFontSizeOverride("font_size", 48);
         t.AddThemeColorOverride("font_color", won ? new Color(0.5f, 1f, 0.5f) : new Color(1f, 0.45f, 0.4f));
         v.AddChild(t);
-        v.AddChild(new Label { Text = $"The {S.NameOf(winner)} has won the war, on day {S.Game.Day}.", HorizontalAlignment = HorizontalAlignment.Center, AutowrapMode = TextServer.AutowrapMode.WordSmart });
+        v.AddChild(new Label { Text = $"The {S.NameOf(winner)} has won the war, on day {S.Game.Day}. ({GameBoot.WinReason(S.Host)})", HorizontalAlignment = HorizontalAlignment.Center, AutowrapMode = TextServer.AutowrapMode.WordSmart });
         v.AddChild(Btn("Back to the start screen", () => BackToMenu?.Invoke()));
         _victoryPanel.Visible = true;
     }

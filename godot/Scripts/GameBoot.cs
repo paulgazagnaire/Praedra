@@ -40,7 +40,7 @@ public static class GameBoot
 
     /// <summary>True while the start position is the placeholder campaign and the opponent does nothing; the start screen says so.
     /// TODO(lead): set to false once NewGame.Create and SimpleAi are wired in.</summary>
-    public const bool PlaceholderMode = true;
+    public const bool PlaceholderMode = true; // now only: the opponent is idle
 
     static GameData _data;
 
@@ -52,7 +52,7 @@ public static class GameBoot
     {
         if (_data != null) return _data;
         string root = ProjectSettings.GlobalizePath("user://gamedata");
-        foreach (var sub in new[] { "design", "interim" })
+        foreach (var sub in new[] { "design", "design/day-one", "interim" })
         {
             string dir = Path.Combine(root, "data", sub);
             Directory.CreateDirectory(dir);
@@ -64,51 +64,50 @@ public static class GameBoot
                 File.WriteAllText(Path.Combine(dir, file[..^4] + ".csv"), f.GetAsText());
             }
         }
+        _newGameData = NewGameData.Load(root);
         return _data = GameData.Load(root);
     }
 
+    static NewGameData _newGameData;
+
     // ------------------------------------------------------------------ new game / load
 
-    /// <summary>A new game for the player's side. TODO(lead): replace the body with
-    /// <c>return NewGame.Create(data, new NewGameOptions { PlayerSide = player, Preset = preset, Seed = seed });</c></summary>
-    public static GameHost NewGame(GameData data, Side player, Preset preset, ulong seed = DefaultSeed)
+    /// <summary>The core's start preset for a side and difficulty. Easy exists for the Alliance only, so Empire/Easy plays MedE.</summary>
+    public static StartPreset PresetFor(Side player, Preset p) => (player, p) switch
     {
-        // TODO(lead): NewGame.Create(GameData, NewGameOptions) -> GameHost (see core/Setup/NewGame*).
-        // Placeholder: the test campaign's deal (not the real start). It also registers a one-off capture of Denon on day 400 (test script).
-        return TestCampaign.New(seed, null, data).Host;
+        (Side.Alliance, Preset.Easy) => StartPreset.Easy,
+        (Side.Empire, Preset.Easy) => StartPreset.MedE,
+        (Side.Alliance, Preset.Medium) => StartPreset.MedA,
+        (Side.Empire, Preset.Medium) => StartPreset.MedE,
+        (Side.Alliance, _) => StartPreset.HardA,
+        _ => StartPreset.HardE,
+    };
+
+    public static GameHost NewGame(GameData data, Side player, Preset preset, int seed = 1)
+    {
+        LoadData();
+        return Rebellion.Core.Setup.NewGame.Create(data, new NewGameOptions { Seed = seed, Preset = PresetFor(player, preset), Data = data, NewGameData = _newGameData });
     }
 
-    /// <summary>A game from save text. TODO(lead): if NewGame has its own loader (it may need to re-register hooks), call it here.</summary>
-    public static GameHost LoadGame(GameData data, string saveJson)
-    {
-        // TODO(lead): same switch as NewGame. TestCampaign.Load registers the test campaign's day-400 capture hook again.
-        return TestCampaign.Load(saveJson, null, data).Host;
-    }
+    public static GameHost LoadGame(GameData data, string saveJson) => GameHost.Load(saveJson, null, data);
 
     // ------------------------------------------------------------------ opponent
 
-    /// <summary>The computer opponent for <paramref name="aiSide"/>. TODO(lead): replace the body with
-    /// <c>return new SimpleAiAdapter(new SimpleAi(host, aiSide));</c> where the adapter calls <c>ai.PlanDay()</c>
-    /// (or make SimpleAi implement <see cref="IOpponent"/>).</summary>
+    /// <summary>The computer opponent for <paramref name="aiSide"/>. TODO(lead): SimpleAi is not ready; when it is, replace the body with
+    /// <c>var ai = new SimpleAi(host, aiSide); return new DelegateOpponent(ai.PlanDay);</c> and set PlaceholderMode to false.</summary>
     public static IOpponent CreateOpponent(GameHost host, Side aiSide)
     {
         // TODO(lead): var ai = new SimpleAi(host, aiSide); return new DelegateOpponent(ai.PlanDay);
         return new NoOpOpponent();
     }
 
-    // ------------------------------------------------------------------ victory
+    /// <summary>The winning side, or null while the game goes on.</summary>
+    public static Side? WinnerOf(GameHost host) => host.Victory.Winner;
 
-    /// <summary>The winning side, or null while the game goes on. TODO(lead): return <c>host.Victory?.Winner</c> once the core has it.</summary>
-    public static Side? WinnerOf(GameHost host)
-    {
-        // TODO(lead): return host.Victory?.Winner;
-        return null;
-    }
+    public static string WinReason(GameHost host) => host.Victory.Reason;
 
-    // ------------------------------------------------------------------ placeholders for facts the new setup will own
-
-    /// <summary>Each side's headquarters system, drawn with a marker on the map. TODO(lead): read it from the new setup if it records one.</summary>
-    public static string CapitalOf(Side side) => side == Side.Empire ? "Coruscant" : "Sullust";
+    /// <summary>Headquarters system of a side (drawn with a marker): the Rebel HQ from the setup, the Empire's is Coruscant.</summary>
+    public static string CapitalOf(GameHost host, Side side) => side == Side.Empire ? "Coruscant" : (host.HqSystem ?? "Sullust");
 
     // ------------------------------------------------------------------ save files
 

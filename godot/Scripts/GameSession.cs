@@ -187,16 +187,12 @@ public sealed class GameSession
         RejectReason.BadValue => "bad value",
         BattleReject.AiSide => "the computer side cannot set that",
         BombardReject.NotAtSystem => "the fleet is not at that system",
-        BombardReject.OwnSystem => "you cannot bombard your own system",
+        BombardReject.OwnSystem => "you cannot attack your own system",
         BombardReject.EnemyFleetPresent => "an enemy fleet is in the way (win the battle first)",
         BombardReject.NoBombardPower => "this fleet cannot bombard",
-        BombardReject.OrderPending => "that fleet already has a bombardment order",
-        AssaultReject.NotAtSystem => "the fleet is not at that system",
+        BombardReject.OrderPending => "that fleet already has an attack order",
         AssaultReject.NoTroops => "no regiments aboard",
-        AssaultReject.OwnSystem => "you cannot invade your own system",
         AssaultReject.FullyShielded => "the planet's shields are too strong (bombard the shield generators first)",
-        AssaultReject.EnemyFleetPresent => "an enemy fleet is in the way (win the battle first)",
-        AssaultReject.OrderPending => "that fleet already has an invasion order",
         _ => reason,
     };
 

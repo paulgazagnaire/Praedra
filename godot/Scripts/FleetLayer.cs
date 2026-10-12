@@ -35,7 +35,7 @@ public partial class FleetLayer : Control
     public override void _Ready()
     {
         MouseFilter = MouseFilterEnum.Ignore;
-        SetAnchorsPreset(LayoutPreset.FullRect);
+        SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
     }
 
     public override void _Process(double delta) => QueueRedraw(); // markers move with the real-time fraction

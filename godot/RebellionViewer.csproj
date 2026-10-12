@@ -19,9 +19,11 @@
   <Target Name="CopyDesignData" BeforeTargets="BeforeBuild">
     <ItemGroup>
       <DesignCsv Include="$(MSBuildThisFileDirectory)..\data\design\*.csv" />
+      <DayOneCsv Include="$(MSBuildThisFileDirectory)..\data\design\day-one\*.csv" />
       <InterimCsv Include="$(MSBuildThisFileDirectory)..\data\interim\*.csv" />
     </ItemGroup>
     <Copy SourceFiles="@(DesignCsv)" DestinationFiles="@(DesignCsv->'$(MSBuildThisFileDirectory)data\design\%(Filename).txt')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(DayOneCsv)" DestinationFiles="@(DayOneCsv->'$(MSBuildThisFileDirectory)data\design\day-one\%(Filename).txt')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(InterimCsv)" DestinationFiles="@(InterimCsv->'$(MSBuildThisFileDirectory)data\interim\%(Filename).txt')" SkipUnchangedFiles="true" />
   </Target>
 </Project>
