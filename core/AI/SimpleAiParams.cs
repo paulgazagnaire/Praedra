@@ -22,20 +22,29 @@ public sealed record SimpleAiParams
     /// <summary>Maintenance room kept free after every purchase (m2-maintenance: load above capacity makes the autoscrap fire). DEFAULT.</summary>
     public int MaintenanceMargin { get; init; } = 100;
     /// <summary>Shipyards and training facilities the AI wants to own (queued ones count). DEFAULT.</summary>
-    public int DesiredShipyards { get; init; } = 3;
-    public int DesiredTrainingFacilities { get; init; } = 2;
+    public int DesiredShipyards { get; init; } = 5;
+    public int DesiredTrainingFacilities { get; init; } = 4;
+    public int DesiredConstructionYards { get; init; } = 3;
+    /// <summary>Yards of one family stack on one system up to this many (they share one project and finish it faster; m2-construction §Build time). DEFAULT.</summary>
+    public int YardsPerSystem { get; init; } = 3;
     /// <summary>The second and later yards are only ordered when the refined pool holds at least this much. DEFAULT.</summary>
-    public int ExtraYardRefinedReserve { get; init; } = 60;
+    public int ExtraYardRefinedReserve { get; init; } = 40;
 
     // ---- production
     /// <summary>Most regiments in one garrison order. DEFAULT.</summary>
     public int GarrisonBatch { get; init; } = 4;
     /// <summary>Regiments (aboard or waiting at the rally system, or queued for it) the AI keeps ready to invade. DEFAULT.</summary>
-    public int InvasionRegimentTarget { get; init; } = 6;
+    public int InvasionRegimentTarget { get; init; } = 10;
     /// <summary>Troop slots the AI wants on its ships. DEFAULT.</summary>
-    public int TroopCapacityTarget { get; init; } = 8;
+    public int TroopCapacityTarget { get; init; } = 14;
     /// <summary>Most fighters in one order. DEFAULT.</summary>
     public int FightersPerOrder { get; init; } = 4;
+    /// <summary>Most capital ships in one order. DEFAULT.</summary>
+    public int MaxShipsPerOrder { get; init; } = 4;
+    /// <summary>A warship is only ordered when the yards of the shipyard system finish it within this many days (m2-construction §Build time: ceil(cost / yards) x 4). DEFAULT.</summary>
+    public int MaxBuildDays { get; init; } = 130;
+    /// <summary>The enemy force a purchase is measured against (strength per price, FleetModule's CombatStrength). DEFAULT: the other side's typical line.</summary>
+    public IReadOnlyList<string> ReferenceEnemy(Side side) => side == Side.Empire ? new[] { "Mon Calamari Cruiser", "Mon Calamari Cruiser", "Nebulon-B Frigate" } : new[] { "Imperial Star Destroyer", "Imperial Star Destroyer", "Victory Destroyer" };
     /// <summary>A warship above this refined cost is only ordered when the refined pool holds at least twice its cost. DEFAULT.</summary>
     public int HeavyShipCost { get; init; } = 80;
 
@@ -45,7 +54,17 @@ public sealed record SimpleAiParams
     /// <summary>A strike fleet leaves its base only when at least this strong. DEFAULT.</summary>
     public int LaunchStrength { get; init; } = 40;
     /// <summary>Own strength must be this percent of the enemy fleets standing at a target (or a relief target). DEFAULT.</summary>
-    public int AttackOddsPercent { get; init; } = 150;
+    public int AttackOddsPercent { get; init; } = 130;
+    /// <summary>A pile (with the fleets already there) goes to relieve a held system when its power is at least this percent of the enemy fleets on or heading to it. DEFAULT.</summary>
+    public int DefendOddsPercent { get; init; } = 110;
+    /// <summary>A fleet standing with enemy fleets leaves when its power is below this percent of theirs. DEFAULT.</summary>
+    public int RetreatOddsPercent { get; init; } = 80;
+    /// <summary>Enemy fleets are hunted only when at most this many ticks away. DEFAULT.</summary>
+    public int HuntTicks { get; init; } = 60;
+    /// <summary>The system that wins the game (the Rebel HQ for the Empire, Coruscant for the Alliance) is attacked from any distance once a pile is this strong (percent of REF). DEFAULT.</summary>
+    public int WinStrikeStrength { get; init; } = 100;
+    /// <summary>A system lost to the enemy this many days ago or less is worth double as a target. DEFAULT.</summary>
+    public int RetakeDays { get; init; } = 200;
     /// <summary>Attacking regiments wanted per defending regiment, in percent (the duels favour the defender; m3-assault §Resolution). DEFAULT.</summary>
     public int RegimentsPerDefenderPercent { get; init; } = 200;
     /// <summary>Regiments aboard before a fleet leaves for an assault. DEFAULT.</summary>

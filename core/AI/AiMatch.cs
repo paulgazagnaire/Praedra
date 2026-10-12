@@ -22,9 +22,12 @@ public sealed class AiMatch
     private readonly Dictionary<long, string> _kinds = new(); // lookup only
     private int _eventsSeen;
 
-    public AiMatch(GameHost host, SimpleAiParams? empire = null, SimpleAiParams? alliance = null)
+    /// <summary>A side that gives no orders at all (a scripted passive player), or null when both sides play.</summary>
+    public Side? Passive { get; }
+
+    public AiMatch(GameHost host, SimpleAiParams? empire = null, SimpleAiParams? alliance = null, Side? passive = null)
     {
-        Host = host;
+        Host = host; Passive = passive;
         Empire = new SimpleAi(host, Side.Empire, empire);
         Alliance = new SimpleAi(host, Side.Alliance, alliance);
         _eventsSeen = host.Game.Events.Count;
@@ -35,6 +38,7 @@ public sealed class AiMatch
         _kinds.Clear();
         foreach (var ai in new[] { Empire, Alliance })
         {
+            if (ai.Side == Passive) continue;
             ai.PlanDay();
             foreach (var o in ai.Submitted)
             {
