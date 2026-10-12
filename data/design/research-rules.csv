@@ -1,0 +1,9 @@
+key,value,source
+TickArmingDay,0,"DEFAULT: m5-research section Facility income (the original arming moment is Missing; armed at setup, day 0)"
+TickDelayDays,30,"Traced: m5-research section Facility income (GNPRTB 7169, economy/14 section 2.2; unit days Inferred)"
+TickSpanDays,30,"Traced: m5-research section Facility income (GNPRTB 7170, random span rand(0..30), economy/14 section 2.2)"
+PointsPerYard,1,"Traced: m5-research section Facility income (one point per completed yard per tick, Advanced yards the same; economy/14 section 2.2)"
+MissionPointsBase,1,"Traced: m5-research section Mission income (GNPRTB 6171 = 1, economy/14 section 2.3)"
+MissionPointsSpan,6,"Traced: m5-research section Mission income (GNPRTB 6172 = 6, p = 1 + rand(0..6), economy/14 section 2.3)"
+SensorTier2Order,7,"DEFAULT: m5-research section Sensor Station tiers (a facility rung past 6; economy/15 section 3, economy/14 question 8); used only when SensorTier2Research is on"
+SensorTier2BuildCost,20,"Proposal: m5-research section Sensor Station tiers (economy/15 section 3); used only when SensorTier2Research is on"

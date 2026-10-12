@@ -15,7 +15,7 @@ namespace Rebellion.Core.Setup;
 /// moves, one fleet parked on an enemy system to blockade it) and one scripted capture stands in for the M3 assault.
 ///
 /// Everything here is data or a plain table: no random number is drawn by this class (the only draws are the rules' own, and
-/// <see cref="EconomyModule.SetupNewGame"/> arms the two incident timers). The same seed and settings always give the same game.
+/// <see cref="EconomyModule.SetupNewGame"/> arms the two incident timers, <see cref="Research.ResearchModule.SetupNewGame"/> the two research ticks). The same seed and settings always give the same game.
 /// The scripted orders are a function of the day only (<see cref="SubmitScriptFor"/>), so a game saved between two Steps and loaded through
 /// <see cref="Load"/> continues exactly as the uninterrupted game does.
 ///
@@ -189,8 +189,9 @@ public sealed class TestCampaign
         fleets.AddFleet(Side.Alliance, "Thyferra Picket", new[] { "Corellian Corvette", "Corellian Corvette" }, "Thyferra");
         fleets.AddFleet(Side.Alliance, "Relief", new[] { "Nebulon-B Frigate" }, "Sullust");
 
-        host.Construction.GrantResearch(Side.Alliance, "Nebulon-B Frigate"); // research order 1: needs a setup grant (research stub)
-        eco.SetupNewGame(); // stockpile 0/0 (the economy's DEFAULT), then the two incident timers armed (the only draws of setup)
+        host.Construction.GrantResearch(Side.Alliance, "Nebulon-B Frigate"); // research order 1: the script builds one, so the test setup grants it (m5-research §Availability test step 3)
+        eco.SetupNewGame(); // stockpile 0/0 (the economy's DEFAULT), then the two incident timers armed
+        host.Research.SetupNewGame(); // then the two research tick arming draws (m5-research §Random draws (a)); the only draws of setup
     }
 
     private static void AddFacility(GameHost host, string system, FacilityKind kind)

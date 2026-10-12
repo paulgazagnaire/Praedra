@@ -47,6 +47,9 @@ public sealed class GameState
     /// <summary>HQ system, explored flags, victory result. rule: setup-victory/04, 09.</summary>
     public Rebellion.Core.Victory.ScenarioState Scenario { get; init; } = new();
 
+    /// <summary>Research points, levels, exhausted flags and tick timers per side; the two percents. rule: m5-research §State per side.</summary>
+    public Rebellion.Core.Research.ResearchState Research { get; init; } = new();
+
     /// <summary>Copy another state's content into this one (used by Load, which needs ordinal-comparer dictionaries).</summary>
     internal void CopyFrom(GameState other)
     {
@@ -60,6 +63,7 @@ public sealed class GameState
         Control.CopyFrom(other.Control);
         Battle.CopyFrom(other.Battle);
         Scenario.CopyFrom(other.Scenario);
+        Research.CopyFrom(other.Research);
     }
 }
 
@@ -100,7 +104,8 @@ public sealed class Game
         "5.1", // Bombardments (M3)
         "5.2", // Assaults (M3)
         "6.1", "6.2", "6.3", "6.4", "6.5", "6.6", "6.7", "6.8", // Day-end hooks (empty in M1)
-        "6.11", // Victory check: MUST stay the last day-end slot (research 6.9 and characters 6.10 will be added before it). rule: m5-setup-and-victory §Game over
+        "6.9", // Research tick, after strategic repair (6.8). rule: m5-research §Where it runs in the day Step
+        "6.11", // Victory check: MUST stay the last day-end slot (characters 6.10 will be added before it). rule: m5-setup-and-victory §Game over
         "7",   // Day becomes K + 1
     };
 

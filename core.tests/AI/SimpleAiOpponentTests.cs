@@ -147,4 +147,19 @@ public class SimpleAiOpponentTests
         for (int d = 0; d < 30; d++) { m.Empire.PlanDay(); m.Alliance.PlanDay(); }
         Assert.Equal(before, host.Game.Rng.Draws);
     }
+
+    // m5-research §Defaults (the AI uses the same IsResearched through the construction sheet): on the MedA start with the research gate on,
+    // the AI never orders an item its side has not researched, and research moves (the yards' tick unlocks rungs).
+    [Fact]
+    public void AiVsAi_NeverOrdersUnresearchedItems()
+    {
+        var host = NewGame.Create(new NewGameOptions { Seed = 2, Preset = StartPreset.MedA });
+        Assert.True(host.Construction.RespectResearchOrder);
+        var m = new AiMatch(host);
+        while (host.Game.Day < 500 && host.Victory.Winner == null) m.Step();
+        Assert.DoesNotContain(host.Game.Events, e => e is OrderRejected r && r.Reason == RejectReason.NotResearched);
+        Assert.Contains(host.Game.Events, e => e is Rebellion.Core.Research.ResearchLevelReached);
+        _out.WriteLine($"levels after {host.Game.Day} days: " + string.Join("; ", new[] { Side.Alliance, Side.Empire }.Select(s =>
+            $"{s} " + string.Join("/", Rebellion.Core.Research.ResearchModule.Kinds.Select(k => host.Research.Level(s, k))))));
+    }
 }

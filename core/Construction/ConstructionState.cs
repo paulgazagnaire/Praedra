@@ -59,7 +59,7 @@ public sealed class SideConstruction
 {
     /// <summary>Yard object ids waiting for refined, first in first out. rule: m2-mines-refineries-pools §Asking for raw / serving a line.</summary>
     public List<int> RefinedLine { get; set; } = new();
-    /// <summary>Class names the setup granted (research stub, ordinal order). rule: m2-construction §Build order (research gate DEFAULT).</summary>
+    /// <summary>Class names granted by setup or a test whatever the research level (ordinal order). rule: m5-research §Availability test (step 3).</summary>
     public List<string> Granted { get; set; } = new();
 
     internal void CopyFrom(SideConstruction o) { RefinedLine = new List<int>(o.RefinedLine); Granted = new List<string>(o.Granted); }
