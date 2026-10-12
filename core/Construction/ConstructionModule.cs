@@ -36,8 +36,14 @@ public sealed class ConstructionModule
     public LostDestinationRule LostDestination { get; set; } = LostDestinationRule.Pause;
     /// <summary>Ships, squadrons, regiments and special forces may only be ordered to a system the side controls (same rule as facilities). DEFAULT on (m3-troops-and-special-forces; the lead note says a delivery never lands on a foreign system). Off: any reachable system.</summary>
     public bool UnitDestinationMustBeControlled { get; set; } = true;
-    /// <summary>The research gate: an item needs research order 0 or a setup grant. DEFAULT on (m2 stub). Off: every item is researched (the M3 stub AllAvailable).</summary>
-    public bool RespectResearchOrder { get; set; } = true;
+    /// <summary>
+    /// The research stub (ResearchStub): off = AllAvailable, every item of the side counts as researched, NotResearched never fires (DEFAULT since M3,
+    /// Decided by Paul); on = RespectResearchOrder, an item needs research order 0 or a setup grant (the m2 stub, used by the construction tests).
+    /// rule: m3-ships-and-fighters §Sides and availability (Research stub).
+    /// </summary>
+    public bool RespectResearchOrder { get; set; }
+    /// <summary>The Death Star class row can be ordered at a Shipyard. DEFAULT true; off: the order is rejected NotAvailable. rule: m3-ships-and-fighters §Death Star as an ordinary class row (S14).</summary>
+    public bool DeathStarClassBuildable { get; set; } = true;
     /// <summary>Yards stop under the Classic 1998 blockade flag (<see cref="FleetModule.IsBlockadedClassic"/>) instead of the economic blockade. DEFAULT off. rule: m2-construction §Suspension.</summary>
     public bool UseClassicBlockadeFlag { get; set; }
     /// <summary>
@@ -47,7 +53,7 @@ public sealed class ConstructionModule
     public Func<string, bool> IsInUprising { get; set; } = _ => false;
     /// <summary>
     /// Raised when a unit comes to exist for use: completed at the yard's own system (slot 6.6.a) or delivered (step 3 or 4), after it is
-    /// marked completed. M3 creates the spare fleet from here (m3-fleets). Facilities are announced too (category Facility).
+    /// marked completed. GameHost wires it to FleetModule.OnUnitAppeared, which makes the spare fleet (m3-fleets). Facilities are announced too (category Facility).
     /// </summary>
     public event Action<StepContext, EconObject, UnitAppearance>? UnitAppeared;
 
@@ -166,6 +172,7 @@ public sealed class ConstructionModule
         if (Yards.BuiltBy(row.Category) != o.Family) return OrderResult.Reject(RejectReason.WrongFamily);
         // rule: m2-construction §Build order (NotAvailable: the file's side flag; cost 0 is not buildable, m3-troops-and-special-forces §Training Facility production)
         if (!(o.Side == Side.Empire ? row.Empire : row.Alliance) || row.Cost <= 0) return OrderResult.Reject(RejectReason.NotAvailable);
+        if (o.Class == EconomyModule.DeathStarClass && !DeathStarClassBuildable) return OrderResult.Reject(RejectReason.NotAvailable); // rule: m3-ships-and-fighters §Death Star (S14)
         if (!IsResearched(o.Side, o.Class)) return OrderResult.Reject(RejectReason.NotResearched);
         if (o.Count < 1) return OrderResult.Reject(RejectReason.BadCount);
 
@@ -490,8 +497,8 @@ public sealed class ConstructionModule
         var enemies = here.Where(f => f.Side != d.Side).ToList();
         if (enemies.Count == 0) return enemies;
         var obj = E.Objects[d.Object];
-        var self = new Fleet { Side = d.Side };
-        if (_fleets.ShipClasses.TryGetValue(obj.Class, out var sc)) (sc.IsCapital ? self.Ships : self.Squadrons).Add(obj.Class);
+        var self = new List<ShipClass>();
+        if (_fleets.ShipClasses.TryGetValue(obj.Class, out var sc)) self.Add(sc);
         return _fleets.Blockers(self, enemies);
     }
 

@@ -3,10 +3,11 @@ using Rebellion.Core.Clock;
 namespace Rebellion.Core.Fleets;
 
 /// <summary>
-/// A fleet: ships plus the squadrons aboard, a side and a place. Part of the game state and of the save.
-/// rule: m3-fleets §What a fleet is (data model) (only what a fleet IS; creation, merge and transfer orders are M3).
-/// Ships and squadrons are ship-class names (one entry per ship or squadron), kept in ordinal order so the saved and
-/// hashed form is canonical. Systems are named, not numbered, so a save does not depend on the galaxy's index order.
+/// A fleet: capital ships (or, for a squadron-only fleet, flying squadrons), a side and a place. Part of the game state and of the save.
+/// rule: m3-fleets §What a fleet is (data model). Members are object ids of the one registry (<see cref="Economy.EconomyState.Objects"/>),
+/// ascending, so the saved and hashed form is canonical; classes, damage and what rides aboard are read from the registry.
+/// Squadrons and regiments aboard a ship are NOT members: they carry <see cref="Economy.EconObject.AboardShip"/>.
+/// Systems are named, not numbered, so a save does not depend on the galaxy's index order.
 /// </summary>
 public sealed class Fleet
 {
@@ -14,10 +15,12 @@ public sealed class Fleet
     /// <summary>Display only. rule: m3-fleets §Ownership, limits, side effects (fleet names are display only).</summary>
     public string Name { get; set; } = "";
     public Side Side { get; set; }
-    /// <summary>Capital ship classes, one entry per ship, ordinal order.</summary>
-    public List<string> Ships { get; set; } = new();
-    /// <summary>Squadron classes aboard (or, for a squadron-only fleet, flying alone), one entry per squadron, ordinal order.</summary>
-    public List<string> Squadrons { get; set; } = new();
+    /// <summary>Capital ship object ids, ascending. A fleet has ships, or only squadrons, never both. rule: m3-fleets §What a fleet is (4).</summary>
+    public List<int> Ships { get; set; } = new();
+    /// <summary>Squadron object ids, ascending; only for a squadron-only fleet while it flies (it dissolves on landing). rule: m3-fleets §Unescorted squadrons.</summary>
+    public List<int> Squadrons { get; set; } = new();
+    /// <summary>The side's spare fleet at its system: where new ships join. Cleared by an accepted MoveFleet or by a merge. rule: m3-fleets §New ships: the spare fleet.</summary>
+    public bool Spare { get; set; }
     /// <summary>The system the fleet is at; null while it is on a lane.</summary>
     public string? At { get; set; }
     /// <summary>

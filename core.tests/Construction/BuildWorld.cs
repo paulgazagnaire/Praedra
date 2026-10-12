@@ -38,14 +38,15 @@ internal sealed class BuildWorld
     public ConstructionModule Build { get; private set; } = null!;
 
     public SupportModule? Support { get; private set; }
-    private readonly bool _withSupport;
+    private readonly bool _withSupport, _wireFleets;
 
-    public BuildWorld(CostData? costs = null, bool withSupport = false) : this(new StubRng(), costs, withSupport) { }
+    /// <summary><paramref name="wireFleets"/>: finished and delivered ships join the spare fleet, as GameHost wires it (m3-fleets). Off by default so the construction sheet's tests see no fleets appear.</summary>
+    public BuildWorld(CostData? costs = null, bool withSupport = false, bool wireFleets = false) : this(new StubRng(), costs, withSupport, wireFleets) { }
     public BuildWorld(ulong seed, CostData? costs = null) : this(new GameRng(seed), costs) { }
 
-    private BuildWorld(GameRng rng, CostData? costs, bool withSupport = false)
+    private BuildWorld(GameRng rng, CostData? costs, bool withSupport = false, bool wireFleets = false)
     {
-        _withSupport = withSupport;
+        _withSupport = withSupport; _wireFleets = wireFleets;
         Stub = rng as StubRng;
         Game = new Game(rng);
         Attach(costs);
@@ -59,6 +60,9 @@ internal sealed class BuildWorld
         Eco.IncidentsEnabled = false;
         Support = _withSupport ? SupportModule.Attach(Game, TestData.RealGalaxy, Eco, Fleets, SupWorld.Weights.Value) : null;
         Build = ConstructionModule.Attach(Game, Fleets, Eco, support: Support);
+        if (_wireFleets)
+            Build.UnitAppeared += (ctx, o, how) =>
+                Fleets.OnUnitAppeared(ctx, o, how == UnitAppearance.Delivered ? ShipJoinCause.Delivered : ShipJoinCause.Completed);
     }
 
     /// <summary>Save, load and attach the modules again to the loaded game (the save holds state only).</summary>

@@ -50,6 +50,8 @@ public class GameHostTests
         Assert.Equal(con.RespectResearchOrder, s.RespectResearchOrder);
         Assert.Equal(con.UseClassicBlockadeFlag, s.UseClassicBlockadeFlag);
         Assert.Equal(ctl.DebugOrdersEnabled, s.DebugOrdersEnabled);
+        Assert.Equal(fleets.DebugOrdersEnabled, s.DebugOrdersEnabled);
+        Assert.Equal(con.DeathStarClassBuildable, s.DeathStarClassBuildable);
         Assert.Null(s.Economy); Assert.Null(s.Support); Assert.Null(s.Construction);
 
         var h = GameHost.New(1);
@@ -67,7 +69,8 @@ public class GameHostTests
             ForcedStopTrigger = ForcedStopTrigger.AnyArmedFleet, IncidentsEnabled = false, BlockadeStopsMining = false,
             AutoscrapMode = AutoscrapMode.Smart, SlotSource = SlotSource.Rolled, SupportRuleset = GarrisonRuleset.New,
             BlockadeSupportEffect = false, DeliveryForcedStop = false, LostDestination = LostDestinationRule.Refuse,
-            UnitDestinationMustBeControlled = false, RespectResearchOrder = false, UseClassicBlockadeFlag = true, DebugOrdersEnabled = true,
+            UnitDestinationMustBeControlled = false, RespectResearchOrder = true, UseClassicBlockadeFlag = true, DebugOrdersEnabled = true,
+            DeathStarClassBuildable = false,
             Economy = new EconomyParams { ScrapPeriod = 7 }, Support = new SupportParams { ErosionPeriod = 11 },
             Construction = new ConstructionParams { StandardCycleDays = 3 },
         };
@@ -78,8 +81,9 @@ public class GameHostTests
             Assert.Equal(AutoscrapMode.Smart, h.Economy.AutoscrapMode); Assert.Equal(SlotSource.Rolled, h.Economy.SlotSource);
             Assert.Equal(GarrisonRuleset.New, h.Support.Ruleset); Assert.False(h.Support.BlockadeSupportEffect);
             Assert.False(h.Construction.DeliveryForcedStop); Assert.Equal(LostDestinationRule.Refuse, h.Construction.LostDestination);
-            Assert.False(h.Construction.UnitDestinationMustBeControlled); Assert.False(h.Construction.RespectResearchOrder);
+            Assert.False(h.Construction.UnitDestinationMustBeControlled); Assert.True(h.Construction.RespectResearchOrder);
             Assert.True(h.Construction.UseClassicBlockadeFlag); Assert.True(h.Control.DebugOrdersEnabled);
+            Assert.True(h.Fleets.DebugOrdersEnabled); Assert.False(h.Construction.DeathStarClassBuildable);
             Assert.Equal(7, h.Economy.Params.ScrapPeriod); Assert.Equal(11, h.Support.Params.ErosionPeriod); Assert.Equal(3, h.Construction.Params.StandardCycleDays);
         }
         var made = GameHost.New(5, s);

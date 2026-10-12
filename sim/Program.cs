@@ -307,9 +307,9 @@ internal static class SimCli
             AddFleet(fleets, ships, enemySide, $"Picket-{++n}", spec, Canonical(galaxy, at));
 
         var f = game.State.Fleets[mover];
-        Console.WriteLine($"{Describe(f)}: {string.Join(", ", f.Ships.Concat(f.Squadrons).GroupBy(x => x).Select(g => $"{g.Count()} x {g.Key}"))}, speed {fleets.SpeedOf(f)}");
+        Console.WriteLine($"{Describe(f)}: {string.Join(", ", fleets.ClassNamesOf(f).GroupBy(x => x).Select(g => $"{g.Count()} x {g.Key}"))}, speed {fleets.SpeedOf(f)}");
         foreach (var e in game.State.Fleets.Values.Where(x => x.Id != mover))
-            Console.WriteLine($"{Describe(e)} waits at {e.At}: {string.Join(", ", e.Ships.Concat(e.Squadrons).GroupBy(x => x).Select(g => $"{g.Count()} x {g.Key}"))}");
+            Console.WriteLine($"{Describe(e)} waits at {e.At}: {string.Join(", ", fleets.ClassNamesOf(e).GroupBy(x => x).Select(g => $"{g.Count()} x {g.Key}"))}");
         Console.WriteLine($"Trigger: {o.Trigger}. Seed: {o.Seed}.");
         Console.WriteLine();
 

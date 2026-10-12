@@ -14,10 +14,8 @@ public sealed class GameState
 {
     public SortedDictionary<string, int> Markers { get; init; } = new(StringComparer.Ordinal);
 
-    /// <summary>All fleets by id. rule: m3-fleets §What a fleet is; positions and in-transit state live on the fleet.</summary>
+    /// <summary>All fleets by id (ids come from the economy's shared object counter, <see cref="EconomyState.NextObjectId"/>). rule: m3-fleets §What a fleet is; positions and in-transit state live on the fleet.</summary>
     public SortedDictionary<int, Fleet> Fleets { get; init; } = new();
-    /// <summary>The id the next fleet gets. DEFAULT: ids start at 1 (no sheet says).</summary>
-    public int NextFleetId { get; set; } = 1;
     /// <summary>
     /// Owner of each system that has one; a system not listed is neutral (DEFAULT). M1 has no ownership data yet, so
     /// setup and tests set it. rule: m1-forced-stop-and-blockade §Rule (Classic) (system owner).
@@ -48,7 +46,6 @@ public sealed class GameState
     {
         foreach (var kv in other.Markers) Markers[kv.Key] = kv.Value;
         foreach (var kv in other.Fleets) Fleets[kv.Key] = kv.Value;
-        NextFleetId = other.NextFleetId;
         foreach (var kv in other.SystemOwners) SystemOwners[kv.Key] = kv.Value;
         foreach (var kv in other.Blockades) Blockades[kv.Key] = kv.Value;
         Economy.CopyFrom(other.Economy);

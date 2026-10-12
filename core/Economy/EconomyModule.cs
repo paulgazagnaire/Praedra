@@ -95,12 +95,9 @@ public sealed class EconomyModule
 
     private int Add(EconObject o, int? id)
     {
-        int newId = id ?? E.NextObjectId;
-        if (E.Objects.ContainsKey(newId)) throw new ArgumentException($"Object id {newId} is taken.");
-        o.Id = newId;
-        E.NextObjectId = Math.Max(E.NextObjectId, newId + 1);
-        E.Objects[newId] = o;
-        return newId;
+        // rule: m3-ships-and-fighters §The ship object (one registry, one counter; a ship starts at class hull with six zero counters)
+        _fleets.ShipClasses.TryGetValue(o.Class, out var shipClass);
+        return ObjectRegistry.Add(E, o, id, shipClass);
     }
 
     /// <summary>
@@ -109,7 +106,9 @@ public sealed class EconomyModule
     /// </summary>
     public void RemoveObject(int id)
     {
-        if (E.Objects.TryGetValue(id, out var o)) Remove(o);
+        if (!E.Objects.TryGetValue(id, out var o)) return;
+        Remove(o);
+        _fleets.ObjectRemoved(null, 0, o); // silent: a fleet ship leaves its fleet, units aboard land (m3-fleets §Carrying rules)
     }
 
     /// <summary>Setup only: slot values of a system (replaces the file values). rule: m2-slots-and-resources §Slot values.</summary>
@@ -278,11 +277,20 @@ public sealed class EconomyModule
         foreach (var f in _fleets.FleetsAt(system))
         {
             if (f.Side != controller) continue;
-            if (f.Ships.Contains(DeathStarClass)) return 0;
-            ships += f.Ships.Count; fighters += f.Squadrons.Count;
+            // rule: m3-fleets §Carrying rules (aboard units are not "on the system"); only ships count from a fleet.
+            foreach (var id in f.Ships)
+            {
+                if (E.Objects.TryGetValue(id, out var ship) && ship.Class == DeathStarClass) return 0;
+                ships++;
+            }
         }
         foreach (var o in E.Objects.Values)
-            if (o.Category == ObjectCategory.Regiment && o.Completed && o.System == system && o.Side == controller) regiments++;
+        {
+            if (!o.Completed || o.Side != controller || o.System != system || o.AboardShip != 0) continue;
+            // rule: m2-mines-refineries-pools §Diversion: fighter squadrons and regiments of that side ON the system (aboard ones do not count)
+            if (o.Category == ObjectCategory.Regiment) regiments++;
+            else if (o.Category == ObjectCategory.Fighter) fighters++;
+        }
         int mult = controller == Side.Empire && IsDeathStarSector(system) ? Params.DeathStarRegimentMultiplier : 1;
         int v = tier - Params.ShipPresence * ships - Params.FighterPresence * fighters - Params.RegimentPresence * mult * regiments;
         return Math.Clamp(v, 0, 100);
@@ -359,6 +367,7 @@ public sealed class EconomyModule
         E.Pool(side).Refined += refund;
         int id = o.Id; string cls = o.Class;
         ctx.Emit((i, _) => new ObjectScrapped(i, day, id, cls, side, reason, refund));
+        _fleets.ObjectRemoved(ctx, day, o); // rule: m3-fleets §What a fleet is invariant 1; §Carrying rules (scrapping a loaded ship)
         ObjectRemoved?.Invoke(ctx, o, day);
         if (refund > 0) RefinedPoolGrew?.Invoke(ctx, side);
     }

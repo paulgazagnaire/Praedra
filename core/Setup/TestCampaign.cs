@@ -10,7 +10,7 @@ namespace Rebellion.Core.Setup;
 /// <summary>
 /// TEST SCENARIO, NOT THE REAL GAME START (M5 deals the real one). A scripted two-sided campaign on the real galaxy for the soak tests and
 /// the runner: each side holds about 17 systems in its own region, with support values, mines, refineries, yards, regiments as garrison,
-/// "navy" objects for maintenance load and a few fleets; then a fixed, seedless list of orders runs by day (build orders at yards, fleet
+/// a standing reserve fleet per side for maintenance load and a few more fleets; then a fixed, seedless list of orders runs by day (build orders at yards, fleet
 /// moves, one fleet parked on an enemy system to blockade it) and one scripted capture stands in for the M3 assault.
 ///
 /// Everything here is data or a plain table: no random number is drawn by this class (the only draws are the rules' own, and
@@ -33,6 +33,8 @@ public sealed class TestCampaign
     public const string BlockadedSystem = "Kinyen";
     public const int BlockadeFrom = 60;
     public const string InterdictionFleet = "Interdiction";
+    /// <summary>The name of a side's standing reserve fleet (stays at its capital), e.g. "Empire Reserve".</summary>
+    public static string ReserveFleet(Side side) => $"{side} Reserve";
 
     public GameHost Host { get; }
     public Game Game => Host.Game;
@@ -110,8 +112,7 @@ public sealed class TestCampaign
         ("Kinyen", FacilityKind.TrainingFacility), ("Thyferra", FacilityKind.OrbitalShipyard),
     };
 
-    // Standing "navy" as economy objects: they carry maintenance load. They are NOT linked to the fleets below (the fleet and economy
-    // object lists stay separate until M3; see EconObject SEAM), so the fleets are free to move without touching the load.
+    // Standing "navy": the ships of each side's reserve fleet. They carry maintenance load like every fleet ship (one registry, m3-fleets).
     private static readonly (Side Side, string Class, int Count)[] Navy =
     {
         (Side.Empire, "Imperial Star Destroyer", 3), (Side.Empire, "Victory Destroyer", 2), (Side.Empire, "Carrack Light Cruiser", 1),
@@ -152,8 +153,10 @@ public sealed class TestCampaign
         foreach (var s in EmpireRegion) Garrison(Side.Empire, s);
         foreach (var s in AllianceRegion) Garrison(Side.Alliance, s);
 
-        foreach (var (side, cls, count) in Navy)
-            for (int i = 0; i < count; i++) eco.AddObject(side, cls);
+        // The standing navy is one reserve fleet per side at its capital (ships in a fleet, so they pay upkeep like any ship: m3-fleets).
+        foreach (var side in new[] { Side.Empire, Side.Alliance })
+            fleets.AddFleet(side, ReserveFleet(side), Navy.Where(n => n.Side == side).SelectMany(n => Enumerable.Repeat(n.Class, n.Count)),
+                side == Side.Empire ? "Coruscant" : "Sullust");
 
         // Fleets (by name; the script finds them by name).
         fleets.AddFleet(Side.Empire, "Home Fleet", new[] { "Imperial Star Destroyer", "Imperial Star Destroyer" }, "Coruscant");

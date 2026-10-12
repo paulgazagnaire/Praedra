@@ -70,7 +70,8 @@ public sealed class DemoScenario
         // Fleets: an Imperial picket at Kuat, a Rebel picket at Sullust, an Interdictor sent to blockade Bespin and a Rebel
         // transport sent from Hoth to Yavin. Movement draws no random numbers.
         fleets.AddFleet(Side.Empire, "Kuat Picket", new[] { "Imperial Star Destroyer" }, "Kuat");
-        fleets.AddFleet(Side.Alliance, "Sullust Picket", new[] { "Corellian Corvette" }, "Sullust", new[] { "X-wing" });
+        fleets.AddFleet(Side.Alliance, "Sullust Picket", new[] { "Corellian Corvette" }, "Sullust");
+        eco.AddObject(Side.Alliance, "X-wing", "Sullust"); // a squadron based at Sullust (a corvette has no berth)
         int interdictor = fleets.AddFleet(Side.Empire, "Interdiction", new[] { "Interdictor Cruiser" }, "Kinyen");
         int transport = fleets.AddFleet(Side.Alliance, "Supply", new[] { "Medium Transport" }, "Hoth");
         fleets.SubmitMove(Side.Empire, interdictor, "Bespin");

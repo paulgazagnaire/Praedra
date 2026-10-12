@@ -128,21 +128,21 @@ public class MovementTests
         Assert.Null(w.Fleet(f).Transit);
     }
 
-    [Fact] // m1-clock-and-orders §Orders in: the other MoveFleet rejections; m1-travel T8, T20
-    public void Move_order_rejections_unknown_fleet_immobile_already_there_unknown_system_unreachable()
+    // m1-clock-and-orders §Orders in: the other MoveFleet rejections; m1-travel T20. T8 (Immobile) cannot happen to a ship fleet any more: every
+    // capital ship has a rating of 50 or more (m3-fleets §Fleet speed); a lone TIE squadron is refused by MoveSquadrons (FleetTests F14).
+    [Fact]
+    public void Move_order_rejections_unknown_fleet_already_there_unknown_system_unreachable()
     {
         var w = Real();
         int isd = w.Add(Side.Empire, "Red", "Coruscant", Isd);
-        int tie = w.Fleets.AddFleet(Side.Empire, "Ties", Array.Empty<string>(), "Coruscant", new[] { "TIE Fighter" });
         w.Fleets.SubmitMove(Side.Empire, 99, "Corellia");
-        w.Fleets.SubmitMove(Side.Empire, tie, "Corellia");
         w.Fleets.SubmitMove(Side.Empire, isd, "Coruscant");
         w.Fleets.SubmitMove(Side.Empire, isd, "Nowhere");
         w.Fleets.SubmitMove(Side.Empire, isd, "Ilum");
         string before = World.StateJson(w.Game);
         w.Run(1);
         Assert.Equal(
-            new[] { RejectReason.UnknownFleet, RejectReason.Immobile, RejectReason.AlreadyThere, RejectReason.UnknownSystem, RejectReason.Unreachable },
+            new[] { RejectReason.UnknownFleet, RejectReason.AlreadyThere, RejectReason.UnknownSystem, RejectReason.Unreachable },
             w.Events<OrderRejected>().Select(e => e.Reason));
         Assert.Empty(w.Events<OrderAccepted>());
         Assert.Empty(w.Events<FleetDeparted>());

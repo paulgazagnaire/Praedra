@@ -35,7 +35,9 @@ public sealed class BuildDemo
         var (galaxy, ships, blockade, slots, costs) = (d.Galaxy, d.Ships, d.Blockade, d.Slots, d.Costs);
         var game = new Game(seed);
         var fleets = FleetModule.Attach(game, galaxy, ships, blockade);
-        var eco = EconomyModule.Attach(game, galaxy, slots, costs, fleets);
+        // Autoscrap is out of reach: the Rebel picket is a fleet ship and pays upkeep (m3-fleets), but the demo gives the Alliance no mine or
+        // refinery, so its capacity is 0 and the picket would be scrapped on day 10. The demo is about deliveries, not about overdraft.
+        var eco = EconomyModule.Attach(game, galaxy, slots, costs, fleets, new EconomyParams { ScrapPeriod = 1_000_000 });
         eco.IncidentsEnabled = false;
         var build = ConstructionModule.Attach(game, fleets, eco);
 

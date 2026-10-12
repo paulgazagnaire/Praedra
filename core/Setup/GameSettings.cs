@@ -40,7 +40,10 @@ public sealed record GameSettings
     /// <summary>rule: m2-construction §Lead review note, C20.</summary>
     public LostDestinationRule LostDestination { get; init; } = LostDestinationRule.Pause;
     public bool UnitDestinationMustBeControlled { get; init; } = true;
-    public bool RespectResearchOrder { get; init; } = true;
+    /// <summary>Research stub: off = AllAvailable (DEFAULT since M3), on = RespectResearchOrder. rule: m3-ships-and-fighters §Sides and availability.</summary>
+    public bool RespectResearchOrder { get; init; }
+    /// <summary>The Death Star class row can be built. rule: m3-ships-and-fighters §Death Star as an ordinary class row.</summary>
+    public bool DeathStarClassBuildable { get; init; } = true;
     /// <summary>Yards stop under the Classic blockade flag instead of the economic blockade. rule: m2-construction §Suspension.</summary>
     public bool UseClassicBlockadeFlag { get; init; }
     public ConstructionParams? Construction { get; init; }

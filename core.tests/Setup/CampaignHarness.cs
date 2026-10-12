@@ -161,6 +161,28 @@ internal static class CampaignInvariants
             }
         }
 
+        // ---- fleets hold live registry ships, no ship is in two fleets, and the speed rule holds (m3-fleets §Invariants, §Fleet speed)
+        var seenShips = new HashSet<int>(); var seenSquadrons = new HashSet<int>();
+        foreach (var f in state.Fleets.Values)
+        {
+            foreach (var id in f.Ships)
+            {
+                var o = eco.Find(id);
+                Assert.True(o != null, $"{where}: fleet {f.Id} holds ship {id}, which is not in the registry");
+                Assert.True(o!.Category == ObjectCategory.CapitalShip && o.Completed, $"{where}: fleet {f.Id} holds {id} ({o.Class}), not a finished ship");
+                Assert.True(seenShips.Add(id), $"{where}: ship {id} is in two fleets");
+            }
+            foreach (var id in f.Squadrons)
+            {
+                var o = eco.Find(id);
+                Assert.True(o is { Category: ObjectCategory.Fighter }, $"{where}: fleet {f.Id} holds {id}, which is not a squadron in the registry");
+                Assert.True(seenSquadrons.Add(id), $"{where}: squadron {id} is in two fleets");
+                Assert.True(o!.AboardShip == 0, $"{where}: squadron {id} flies in fleet {f.Id} and is also aboard a ship");
+            }
+            if (f.Ships.Count > 0)
+                Assert.Equal(f.Ships.Max(id => host.Fleets.SpeedOfShip(eco.Find(id)!)), host.Fleets.SpeedOf(f)); // the largest rating decides; aboard squadrons never count
+        }
+
         // ---- owners and the Classic blockade flags (m1-forced-stop-and-blockade §Rule (Classic))
         foreach (var (sys, blockader) in state.Blockades)
         {
