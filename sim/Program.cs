@@ -229,6 +229,7 @@ internal static class SimCli
         while (host.Game.Day < days && host.Victory.Winner == null)
         {
             match.Step();
+            if (trace && host.Game.Day % 50 == 0) foreach (var ai in new[] { match.Empire, match.Alliance }) if (ai.Side != passive) Console.WriteLine("  d" + host.Game.Day + " " + ai.Status());
             if (trace) foreach (var ai in new[] { match.Empire, match.Alliance }) foreach (var o in ai.Submitted) Console.WriteLine($"  d{host.Game.Day - 1} {ai.Side} {o.Kind}: {o.Detail}");
             if (host.Game.Day % 365 == 0 && host.Game.Day != days) Summary();
         }
