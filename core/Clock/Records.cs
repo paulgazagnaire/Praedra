@@ -13,6 +13,7 @@ public enum Side { Empire = 0, Alliance = 1 }
 [JsonDerivedType(typeof(SetMarkerOrder), "SetMarker")]
 [JsonDerivedType(typeof(MoveFleetOrder), "MoveFleet")]
 [JsonDerivedType(typeof(ScrapObjectOrder), "ScrapObject")]
+[JsonDerivedType(typeof(DebugSetHolderOrder), "DebugSetHolder")]
 [JsonDerivedType(typeof(BuildOrder), "Build")]
 [JsonDerivedType(typeof(StopBuildOrder), "StopBuild")]
 public abstract record Order(long Sequence, Side Side);
@@ -37,6 +38,11 @@ public sealed record MoveFleetOrder(long Sequence, Side Side, int FleetId, strin
 public sealed record ScrapObjectOrder(long Sequence, Side Side, int ObjectId) : Order(Sequence, Side);
 
 /// <summary>
+/// Debug order: make a side the holder of a system now (a capture with cause Debug). For tests and tools only; the control module
+/// rejects it unless debug orders are enabled. rule: m2-control-and-capture §How control changes (DebugSetHolder).
+/// The handler lives in Rebellion.Core.Control.ControlModule.
+/// </summary>
+public sealed record DebugSetHolderOrder(long Sequence, Side Side, string System, Side NewHolder) : Order(Sequence, Side);
 /// Build facilities, ships, fighters, regiments or special forces at a yard of the given family. Destination null = the yard's
 /// own system (a facility needs one). Checked in step 1. rule: m2-construction §Build order. The handler lives in
 /// Rebellion.Core.Construction.ConstructionModule. Item is a class name of unit-and-facility-costs.csv (DEFAULT: the sheet says (kind, id)).
@@ -63,6 +69,9 @@ public static class RejectReason
     // rule: m2-construction §Scrapping (ScrapObject rejections; the sheet names no codes: DEFAULT names)
     public const string UnknownObject = "UnknownObject";
     public const string NotCompleted = "NotCompleted";
+    // rule: m2-control-and-capture §How control changes (DebugSetHolder; the sheet names no codes: DEFAULT names)
+    public const string DebugDisabled = "DebugDisabled";
+    public const string AlreadyHolder = "AlreadyHolder";
     // rule: m2-construction §Build order (BuildOrder rejections; UnknownItem and NoProject are DEFAULT names the sheet lacks)
     public const string NoYard = "NoYard";
     public const string WrongFamily = "WrongFamily";

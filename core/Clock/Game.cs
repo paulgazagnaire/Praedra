@@ -1,3 +1,4 @@
+using Rebellion.Core.Control;
 using Rebellion.Core.Construction;
 using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
@@ -39,6 +40,9 @@ public sealed class GameState
     /// <summary>Uprising flags, support timers and the Death Star sector flag. rule: m2-popular-support, m2-uprisings-and-garrison.</summary>
     public SupportState Support { get; init; } = new();
 
+    /// <summary>Control settings stored per game (scorched earth). rule: m2-control-and-capture §Scorched earth.</summary>
+    public ControlState Control { get; init; } = new();
+
     /// <summary>Copy another state's content into this one (used by Load, which needs ordinal-comparer dictionaries).</summary>
     internal void CopyFrom(GameState other)
     {
@@ -50,6 +54,7 @@ public sealed class GameState
         Economy.CopyFrom(other.Economy);
         Construction.CopyFrom(other.Construction);
         Support.CopyFrom(other.Support);
+        Control.CopyFrom(other.Control);
     }
 }
 

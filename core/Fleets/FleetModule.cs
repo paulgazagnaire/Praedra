@@ -254,21 +254,28 @@ public sealed class FleetModule
         // every system that has fleets or a raised flag gives the same flags as recomputing only the changed ones.
         var systems = new SortedSet<string>(present.Keys, StringComparer.Ordinal);
         foreach (var k in State.Blockades.Keys) systems.Add(k);
-        foreach (var sys in systems)
+        foreach (var sys in systems) RefreshBlockadeFlag(ctx, sys, day);
+    }
+
+    /// <summary>
+    /// Recompute one system's Classic blockade flag now and raise BlockadeLifted / BlockadeStarted if it changed. Step 5 calls it for
+    /// every system; the capture package calls it when a system changes owner. rule: m1-forced-stop-and-blockade §Rule (Classic);
+    /// m2-control-and-capture §Capture steps (8).
+    /// </summary>
+    public void RefreshBlockadeFlag(StepContext ctx, string sys, int day)
+    {
+        Side? now = ClassicBlockader(sys);
+        bool was = State.Blockades.TryGetValue(sys, out var wasSide);
+        if (was && now == wasSide) return;
+        if (was)
         {
-            Side? now = ClassicBlockader(sys);
-            bool was = State.Blockades.TryGetValue(sys, out var wasSide);
-            if (was && now == wasSide) continue;
-            if (was)
-            {
-                State.Blockades.Remove(sys);
-                ctx.Emit((i, _) => new BlockadeLifted(i, day, sys, wasSide));
-            }
-            if (now is Side s)
-            {
-                State.Blockades[sys] = s;
-                ctx.Emit((i, _) => new BlockadeStarted(i, day, sys, s));
-            }
+            State.Blockades.Remove(sys);
+            ctx.Emit((i, _) => new BlockadeLifted(i, day, sys, wasSide));
+        }
+        if (now is Side s)
+        {
+            State.Blockades[sys] = s;
+            ctx.Emit((i, _) => new BlockadeStarted(i, day, sys, s));
         }
     }
 

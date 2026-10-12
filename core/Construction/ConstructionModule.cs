@@ -249,6 +249,24 @@ public sealed class ConstructionModule
         ctx.Emit((i, _) => new ProjectCancelled(i, day, side, sys, fam, reason, new ValueList<int>(removed)));
     }
 
+    /// <summary>
+    /// For the capture package, called right after a system changed owner: every project standing on the system whose side no longer
+    /// controls it is cancelled now (reason SystemLost, no refund, maintenance freed), the same cancellation slot 6.6 would do, so
+    /// the later 6.6 pass finds nothing left. Deliveries heading for the system are NOT touched here: they follow
+    /// <see cref="LostDestination"/> when they reach it (steps 3 and 4). rule: m2-control-and-capture §What happens at the moment of
+    /// capture (3); m2-construction §Projects and queues.
+    /// </summary>
+    public void CancelProjectsOnCapture(StepContext ctx, string system)
+    {
+        if (!C.Projects.TryGetValue(system, out var by)) return;
+        foreach (var p in by.Values.ToList())
+            if (!Controls(p.System, p.Side)) CancelProject(ctx, ctx.Day + 1, p, "SystemLost");
+    }
+
+    /// <summary>True if the object is a unit of a project or is travelling as a delivery: construction owns it and decides its fate.</summary>
+    public bool OwnsObject(int objectId) =>
+        C.Deliveries.Values.Any(d => d.Object == objectId) || C.AllProjects().Any(p => p.Units.Contains(objectId));
+
     /// <summary>A yard that was scrapped or destroyed leaves the line; if it was the last of its family on the system the project is cancelled. rule: m2-construction §Scrapping.</summary>
     private void OnObjectRemoved(StepContext ctx, EconObject o, int day)
     {
