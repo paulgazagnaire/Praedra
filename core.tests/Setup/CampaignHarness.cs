@@ -1,0 +1,196 @@
+using System.Collections.Concurrent;
+using Rebellion.Core.Clock;
+using Rebellion.Core.Construction;
+using Rebellion.Core.Economy;
+using Rebellion.Core.Fleets;
+using Rebellion.Core.Setup;
+using Rebellion.Core.Support;
+
+namespace Rebellion.Core.Tests.Setup;
+
+/// <summary>What a daily-checked campaign run leaves behind: the finished game plus counters collected on the way.</summary>
+internal sealed class CampaignRun
+{
+    public required TestCampaign Campaign { get; init; }
+    public GameHost Host => Campaign.Host;
+    public int Days { get; init; }
+    /// <summary>Most completed refineries and mines one side held on any one day (the base of the income bounds).</summary>
+    public Dictionary<Side, int> PeakRefineries { get; } = new() { [Side.Empire] = 0, [Side.Alliance] = 0 };
+    public Dictionary<Side, int> PeakMines { get; } = new() { [Side.Empire] = 0, [Side.Alliance] = 0 };
+    public Dictionary<Side, int> DaysWithRefined { get; } = new() { [Side.Empire] = 0, [Side.Alliance] = 0 };
+    public Dictionary<Side, int> StartObjects { get; } = new() { [Side.Empire] = 0, [Side.Alliance] = 0 };
+    public IReadOnlyList<GameEvent> Events => Host.Game.Events;
+}
+
+/// <summary>Runs of the test campaign, cached by (seed, ruleset) so the soak tests share the expensive 1000-day runs.</summary>
+internal static class CampaignHarness
+{
+    public const int Days = 1000;
+    private static readonly ConcurrentDictionary<(ulong, GarrisonRuleset), Lazy<CampaignRun>> Cache = new();
+
+    public static GameSettings Settings(GarrisonRuleset ruleset) => new() { SupportRuleset = ruleset };
+
+    /// <summary>The 1000-day run with every invariant checked after every Step (cached).</summary>
+    public static CampaignRun Checked(ulong seed, GarrisonRuleset ruleset) =>
+        Cache.GetOrAdd((seed, ruleset), k => new Lazy<CampaignRun>(() => Execute(k.Item1, k.Item2, Days, checkInvariants: true))).Value;
+
+    public static CampaignRun Execute(ulong seed, GarrisonRuleset ruleset, int days, bool checkInvariants)
+    {
+        var c = TestCampaign.New(seed, Settings(ruleset));
+        var run = new CampaignRun { Campaign = c, Days = days };
+        foreach (var side in new[] { Side.Empire, Side.Alliance }) run.StartObjects[side] = CountOwned(c.Host, side);
+        if (checkInvariants) CampaignInvariants.Check(c.Host, "day 0");
+        for (int i = 0; i < days; i++)
+        {
+            c.Step();
+            if (!checkInvariants) continue;
+            CampaignInvariants.Check(c.Host, $"day {c.Game.Day}");
+            foreach (var side in new[] { Side.Empire, Side.Alliance })
+            {
+                var s = SideStats.Of(c.Host, side);
+                run.PeakRefineries[side] = Math.Max(run.PeakRefineries[side], s.Refineries);
+                run.PeakMines[side] = Math.Max(run.PeakMines[side], s.Mines);
+                if (s.Refined > 0) run.DaysWithRefined[side]++;
+            }
+        }
+        return run;
+    }
+
+    public static int CountOwned(GameHost host, Side side) => host.Economy.Objects.Count(o => o.Completed && host.Economy.OwnerOf(o) == side);
+}
+
+/// <summary>
+/// Everything that must hold after every Step of a campaign game. Each line names the rule it checks; none of them is a tuning target.
+/// rule: m2-mines-refineries-pools P21; m2-slots-and-resources §Over-capacity destruction; m2-maintenance §Load, §Capacity;
+/// m2-uprisings-and-garrison §Uprising start, keep, end; m2-construction §Projects and queues, §Completion and delivery;
+/// m1-clock-and-orders §Order of work (fleets at a system or on a lane).
+/// </summary>
+internal static class CampaignInvariants
+{
+    private static readonly Side[] Sides = { Side.Empire, Side.Alliance };
+    private static Side Other(Side s) => s == Side.Empire ? Side.Alliance : Side.Empire;
+
+    public static void Check(GameHost host, string where)
+    {
+        var eco = host.Economy; var state = host.Game.State; var galaxy = host.Data.Galaxy;
+
+        // ---- pools never negative (m2-mines-refineries-pools P21)
+        foreach (var side in Sides)
+        {
+            Assert.True(eco.Raw(side) >= 0, $"{where}: {side} raw {eco.Raw(side)}");
+            Assert.True(eco.Refined(side) >= 0, $"{where}: {side} refined {eco.Refined(side)}");
+        }
+
+        // ---- support 0..100 everywhere (m2-popular-support §What it stores)
+        foreach (var (sys, a) in state.Economy.AllianceSupport) Assert.True(a is >= 0 and <= 100, $"{where}: support of {sys} is {a}");
+
+        // ---- installed facilities within the slots (m2-slots-and-resources §Over-capacity destruction)
+        foreach (var g in eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.Completed).GroupBy(o => o.System!))
+        {
+            var slots = eco.SlotsOf(g.Key);
+            Assert.True(g.Count() <= slots.Energy, $"{where}: {g.Key} has {g.Count()} installed facilities for {slots.Energy} energy slots");
+            Assert.True(g.Count(o => o.Class == "Mine") <= eco.EffectiveRaw(g.Key), $"{where}: {g.Key} has too many mines for its raw slots");
+        }
+
+        // ---- maintenance load, capacity and free agree with the objects (m2-maintenance §Load, §Capacity)
+        int owned = 0;
+        foreach (var side in Sides)
+        {
+            int load = 0, mines = 0, refs = 0;
+            foreach (var o in eco.Objects)
+            {
+                if (eco.OwnerOf(o) != side) continue;
+                owned++;
+                load += eco.Costs.Get(o.Class).Maintenance;
+                if (o.Completed && o.Category == ObjectCategory.Facility)
+                {
+                    if (o.Class == "Mine") mines++; else if (o.Class == "Refinery") refs++;
+                }
+            }
+            Assert.True(load == eco.Load(side), $"{where}: {side} load {eco.Load(side)} but objects add up to {load}");
+            Assert.True(eco.Capacity(side) == eco.Params.CapacityPerFacility * Math.Min(mines, refs), $"{where}: {side} capacity {eco.Capacity(side)}");
+            Assert.Equal(eco.Capacity(side) - eco.Load(side), eco.Free(side));
+        }
+        Assert.True(owned == eco.Objects.Count, $"{where}: {eco.Objects.Count - owned} objects belong to nobody");
+
+        // ---- no object in two places (m2-construction §Projects and queues, §Completion and delivery)
+        var c = state.Construction;
+        var inWork = new HashSet<int>();
+        foreach (var p in c.AllProjects())
+            foreach (var id in p.Units)
+                Assert.True(inWork.Add(id), $"{where}: object {id} is in two projects");
+        foreach (var d in c.Deliveries.Values)
+        {
+            Assert.True(inWork.Add(d.Object), $"{where}: object {d.Object} is in a project and a delivery, or in two deliveries");
+            Assert.InRange(d.Index, 0, d.Path.Count - 1);
+            Assert.Equal(d.Path.Count - 1, d.HopTicks.Count);
+            if (d.InFlight) Assert.False(d.Held, $"{where}: delivery {d.Id} is in flight and held");
+        }
+        foreach (var o in eco.Objects)
+        {
+            // A unit that is not finished belongs to exactly one project or delivery; a finished one to neither.
+            Assert.True(o.Completed != inWork.Contains(o.Id), $"{where}: object {o.Id} ({o.Class}) completed={o.Completed} but inWork={inWork.Contains(o.Id)}");
+            if (o.Completed && o.Category == ObjectCategory.Regiment) Assert.True(o.System != null && o.Side != null, $"{where}: regiment {o.Id} has no place or side");
+        }
+        // every waiting refinery or yard is in exactly one line, and every line entry is a waiting, completed object
+        var rawLines = eco.RawLine(Side.Empire).Concat(eco.RawLine(Side.Alliance)).ToList();
+        var refinedLines = c.Empire.RefinedLine.Concat(c.Alliance.RefinedLine).ToList();
+        Assert.Equal(rawLines.Count, rawLines.Distinct().Count());
+        Assert.Equal(refinedLines.Count, refinedLines.Distinct().Count());
+        Assert.Empty(rawLines.Intersect(refinedLines));
+        foreach (var id in rawLines.Concat(refinedLines)) { var o = eco.Find(id); Assert.True(o is { Completed: true, InLine: true }, $"{where}: line entry {id}"); }
+        Assert.Equal(rawLines.Count + refinedLines.Count, eco.Objects.Count(o => o.InLine));
+
+        // ---- every fleet is at a system or on a lane, never both, never neither (m1-clock-and-orders §Order of work)
+        foreach (var f in state.Fleets.Values)
+        {
+            Assert.True(f.Ships.Count + f.Squadrons.Count > 0, $"{where}: fleet {f.Id} is empty");
+            if (f.At != null)
+            {
+                Assert.True(galaxy.TryFindSystem(f.At, out _), $"{where}: fleet {f.Id} at unknown system {f.At}");
+                Assert.True(f.Transit == null, $"{where}: fleet {f.Id} is at {f.At} and still has an order in flight");
+            }
+            else
+            {
+                var t = f.Transit;
+                Assert.True(t != null, $"{where}: fleet {f.Id} is nowhere");
+                Assert.InRange(t!.HopIndex, 0, t.Path.Count - 2);
+                Assert.Equal(t.Path.Count - 1, t.HopTicks.Count);
+                Assert.True(t.DueDay > host.Game.Day, $"{where}: fleet {f.Id} should have landed by day {t.DueDay}");
+                Assert.True(galaxy.FindLane(t.Path[t.HopIndex], t.Path[t.HopIndex + 1]) != null, $"{where}: fleet {f.Id} flies where no lane runs");
+            }
+        }
+
+        // ---- owners and the Classic blockade flags (m1-forced-stop-and-blockade §Rule (Classic))
+        foreach (var (sys, blockader) in state.Blockades)
+        {
+            Assert.True(state.SystemOwners.TryGetValue(sys, out var owner), $"{where}: blockade on neutral {sys}");
+            Assert.Equal(Other(owner), blockader);
+        }
+
+        // ---- uprising flags and timers (m2-uprisings-and-garrison §Uprising start, keep, end; m2-popular-support §Periodic effects)
+        foreach (var (sys, s) in state.Support.Systems)
+        {
+            Assert.False(s.IsIdle, $"{where}: idle support entry for {sys}");
+            Assert.Equal(s.Uprising, s.ErosionDue != 0);                    // timers 0x384 and 0x38d live and die with the flag
+            Assert.Equal(s.Uprising, s.IncidentDue != 0);
+            if (s.Uprising)
+            {
+                Assert.True(state.SystemOwners.TryGetValue(sys, out var holder), $"{where}: uprising on neutral {sys}");
+                Assert.Equal(Other(holder), s.Rebels);                       // the rebels are the other side than the holder
+                Assert.True(s.ErosionDue > host.Game.Day && s.IncidentDue > host.Game.Day, $"{where}: overdue uprising timer on {sys}");
+            }
+            if (s.PresenceDue != 0)
+            {
+                Assert.True(state.Blockades.TryGetValue(sys, out var b) && b == s.PresenceSide, $"{where}: presence timer on {sys} without its blockade");
+                Assert.True(s.PresenceDue > host.Game.Day, $"{where}: overdue presence timer on {sys}");
+            }
+        }
+        if (host.Support.BlockadeSupportEffect)
+            foreach (var sys in state.Blockades.Keys) // the other direction: every blockade has its presence timer by the end of the Step
+                Assert.True(state.Support.Systems.TryGetValue(sys, out var s) && s.PresenceDue != 0, $"{where}: blockade on {sys} but no presence timer");
+
+        // ---- control only moves by capture: the two regions plus the captured system stay owned (no neutral appears from nowhere)
+        Assert.Equal(34, state.SystemOwners.Count);
+    }
+}

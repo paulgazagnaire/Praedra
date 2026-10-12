@@ -31,11 +31,8 @@ public sealed class BuildDemo
 
     public static BuildDemo Create(string repoRoot, ulong seed)
     {
-        var galaxy = GalaxyLoader.LoadFolder(Path.Combine(repoRoot, "data", "design"));
-        var ships = ShipData.LoadAll(Path.Combine(repoRoot, "data", "interim"));
-        var blockade = BlockadeData.Load(Path.Combine(repoRoot, "data", "design", BlockadeData.FileName));
-        var slots = SlotValues.Load(Path.Combine(repoRoot, "data", "design", SlotValues.File), galaxy);
-        var costs = CostData.Load(Path.Combine(repoRoot, "data", "interim", CostData.FileName));
+        var d = Setup.GameData.Load(repoRoot); // the composition root's data loader
+        var (galaxy, ships, blockade, slots, costs) = (d.Galaxy, d.Ships, d.Blockade, d.Slots, d.Costs);
         var game = new Game(seed);
         var fleets = FleetModule.Attach(game, galaxy, ships, blockade);
         var eco = EconomyModule.Attach(game, galaxy, slots, costs, fleets);

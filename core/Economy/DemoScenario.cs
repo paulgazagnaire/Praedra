@@ -33,12 +33,8 @@ public sealed class DemoScenario
 
     public static DemoScenario Create(string repoRoot, ulong seed, bool incidents = true, bool support = false)
     {
-        var galaxy = GalaxyLoader.LoadFolder(Path.Combine(repoRoot, "data", "design"));
-        var ships = ShipData.LoadAll(Path.Combine(repoRoot, "data", "interim"));
-        var blockade = BlockadeData.Load(Path.Combine(repoRoot, "data", "design", BlockadeData.FileName));
-        var slots = SlotValues.Load(Path.Combine(repoRoot, "data", "design", SlotValues.File), galaxy);
-        var costs = CostData.Load(Path.Combine(repoRoot, "data", "interim", CostData.FileName));
-        var weights = GarrisonWeights.Load(Path.Combine(repoRoot, "data", "design", GarrisonWeights.FileName));
+        var d = Setup.GameData.Load(repoRoot); // the composition root's data loader
+        var (galaxy, ships, blockade, slots, costs, weights) = (d.Galaxy, d.Ships, d.Blockade, d.Slots, d.Costs, d.Weights);
         return Create(new Game(seed), galaxy, ships, blockade, slots, costs, incidents, support, weights);
     }
 
