@@ -485,3 +485,6 @@ $RECYCLE.BIN/
 
 # Claude helper worktrees
 .claude/worktrees/
+
+# Godot viewer export output
+/build/

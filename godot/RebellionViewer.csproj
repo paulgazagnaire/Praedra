@@ -1,0 +1,24 @@
+<Project Sdk="Godot.NET.Sdk/4.7.1">
+  <!-- Throwaway debug viewer (P1.3). Standalone: NOT part of Rebellion.sln (CI has no Godot SDK). -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <Nullable>disable</Nullable>
+    <RootNamespace>RebellionViewer</RootNamespace>
+    <AssemblyName>RebellionViewer</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The real rules core: the viewer never re-implements rules. -->
+    <ProjectReference Include="..\core\Rebellion.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Godot imports .csv as translation tables and drops them from exports, so the design
+       tables are copied next to the project as data/*.txt (untracked) before every build. -->
+  <Target Name="CopyDesignData" BeforeTargets="BeforeBuild">
+    <ItemGroup>
+      <DesignCsv Include="$(MSBuildThisFileDirectory)..\data\design\*.csv" />
+    </ItemGroup>
+    <Copy SourceFiles="@(DesignCsv)" DestinationFiles="@(DesignCsv->'$(MSBuildThisFileDirectory)data\%(Filename).txt')" SkipUnchangedFiles="true" />
+  </Target>
+</Project>
