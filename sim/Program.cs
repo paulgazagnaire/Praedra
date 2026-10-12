@@ -27,6 +27,9 @@ internal static class SimCli
           dotnet run --project sim -- support [--days 360] [--seed 1] [--ruleset classic|new] [--reinforce-day 120]
           dotnet run --project sim -- battle --alliance "<Class>:<n>[,...]" --empire "<Class>:<n>[,...]" [--battles 1000] [--seed 1] [--no-rolls] [--ruleset classic|new] [--carry]
           dotnet run --project sim -- campaign [--days 1000] [--seed 1] [--ruleset Classic|New]
+          dotnet run --project sim -- aivai [--days 730] [--seed 1] [--start meda|campaign]
+        aivai plays the simple AI (core/AI) on both sides from the new-game start (MedA, DEFAULT) or the test campaign, printing a yearly summary,
+        battle, assault and capture counts, the winner (if any) and the AI's order and rejection counts. The AIs see everything (no fog yet).
         battle runs N seeded battles (Classic: m4-battle-classic, New: m4-battle-new; --ruleset, DEFAULT classic) at a synthetic system where every retreat has a destination, and prints how often each
         side won or retreated, and the mean survivors. Battle k uses seed (seed + k - 1). --no-rolls turns the subsystem rolls off. --carry (New) puts squadrons aboard their side's carriers instead of basing them.
         campaign runs the scripted two-sided TEST campaign (core/Setup/TestCampaign.cs, built through GameHost) and prints a yearly summary per side,
@@ -55,6 +58,7 @@ internal static class SimCli
             if (args[0] == "support") return Support(args.Skip(1).ToArray());
             if (args[0] == "battle") return Battle(args.Skip(1).ToArray());
             if (args[0] == "campaign") return Campaign(args.Skip(1).ToArray());
+            if (args[0] == "aivai") return AiVsAi(args.Skip(1).ToArray());
             if (args[0] == "newgame") return NewGameCmd(args.Skip(1).ToArray());
             if (args[0] != "move") throw new ArgumentException($"Unknown command '{args[0]}'.");
             return Move(Options.Parse(args.Skip(1).ToArray()));
@@ -190,6 +194,55 @@ internal static class SimCli
         Summary();
         Console.WriteLine(host.Victory.Winner is { } w ? $"Winner: {w} on day {host.Game.Day} ({host.Victory.Reason})." : "No winner yet.");
         Console.WriteLine($"State hash: {host.StateHash()}");
+        return 0;
+    }
+
+    // AI vs AI: the simple AI on both sides. Reads state and events; the AIs draw nothing from the game generator. Runtime is the runner's own clock.
+    private static int AiVsAi(string[] a)
+    {
+        int days = 730; ulong seed = 1; string start = "meda";
+        for (int i = 0; i < a.Length; i++)
+        {
+            string key = a[i];
+            string Next() => ++i < a.Length ? a[i] : throw new ArgumentException($"{key} needs a value.");
+            switch (key)
+            {
+                case "--days": days = int.TryParse(Next(), out var d) && d > 0 ? d : throw new ArgumentException("--days must be a positive integer."); break;
+                case "--seed": seed = ulong.TryParse(Next(), out var s) ? s : throw new ArgumentException("--seed must be a non-negative integer."); break;
+                case "--start": start = Next().ToLowerInvariant(); if (start is not ("meda" or "campaign")) throw new ArgumentException("--start must be meda or campaign."); break;
+                default: throw new ArgumentException($"Unknown option '{key}'.");
+            }
+        }
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var host = start == "meda" ? NewGame.Create(new NewGameOptions { Seed = (int)seed, Preset = StartPreset.MedA }) : TestCampaign.New(seed).Host;
+        var match = new Rebellion.Core.AI.AiMatch(host);
+        if (start == "meda" && host.HqSystem != null) match.Empire.KnownEnemyHq = host.HqSystem; // no fog yet: the Empire knows the Rebel HQ (DEFAULT)
+        Console.WriteLine($"AI vs AI: {days} days, seed {seed}, start {start}. The AIs see everything (no fog of war yet).");
+        void Summary()
+        {
+            Console.WriteLine($"-- day {host.Game.Day}");
+            foreach (var side in new[] { Side.Empire, Side.Alliance }) Console.WriteLine("  " + SideStats.Of(host, side));
+        }
+        Summary();
+        while (host.Game.Day < days && host.Victory.Winner == null)
+        {
+            match.Step();
+            if (host.Game.Day % 365 == 0 && host.Game.Day != days) Summary();
+        }
+        Summary();
+        clock.Stop();
+        var ev = host.Game.Events;
+        Console.WriteLine($"Battles: {ev.OfType<Rebellion.Core.Battle.BattleEnded>().Count()}. Bombardments: {ev.OfType<Rebellion.Core.Defenses.BombardmentResolved>().Count()}. " +
+                          $"Assaults: {ev.OfType<Rebellion.Core.Assault.AssaultResolved>().Count()} (won {ev.OfType<Rebellion.Core.Assault.AssaultResolved>().Count(e => e.Result == "Won")}). " +
+                          $"Captures: {ev.OfType<Rebellion.Core.Control.SystemCaptured>().Count()} (Empire {ev.OfType<Rebellion.Core.Control.SystemCaptured>().Count(e => e.To == Side.Empire)}, Alliance {ev.OfType<Rebellion.Core.Control.SystemCaptured>().Count(e => e.To == Side.Alliance)}).");
+        Console.WriteLine(host.Victory.Winner is Side w ? $"Winner: {w} on day {host.Game.Day}." : $"No winner after {host.Game.Day} days.");
+        Console.WriteLine($"AI orders sent: {match.TotalSent}, rejected: {match.TotalRejected}.");
+        foreach (var kv in match.Rejected) Console.WriteLine($"  rejected {kv.Key}: {kv.Value}");
+        foreach (var kv in match.Sent) Console.WriteLine($"  sent {kv.Key}: {kv.Value}");
+        foreach (var g in ev.OfType<Rebellion.Core.Construction.UnitCompleted>().GroupBy(e => (e.Side, e.Class)).OrderBy(g => g.Key.Side).ThenBy(g => g.Key.Class, StringComparer.Ordinal))
+            Console.WriteLine($"  built {g.Key.Side} {g.Key.Class}: {g.Count()}");
+        Console.WriteLine($"State hash: {host.StateHash()}");
+        Console.WriteLine($"Runtime: {host.Game.Day} days in {clock.Elapsed.TotalMilliseconds:F0} ms.");
         return 0;
     }
 

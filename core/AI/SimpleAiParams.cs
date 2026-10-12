@@ -20,9 +20,9 @@ public sealed record SimpleAiParams
 
     // ---- economy and budget
     /// <summary>Maintenance room kept free after every purchase (m2-maintenance: load above capacity makes the autoscrap fire). DEFAULT.</summary>
-    public int MaintenanceMargin { get; init; } = 40;
+    public int MaintenanceMargin { get; init; } = 100;
     /// <summary>Shipyards and training facilities the AI wants to own (queued ones count). DEFAULT.</summary>
-    public int DesiredShipyards { get; init; } = 2;
+    public int DesiredShipyards { get; init; } = 3;
     public int DesiredTrainingFacilities { get; init; } = 2;
     /// <summary>The second and later yards are only ordered when the refined pool holds at least this much. DEFAULT.</summary>
     public int ExtraYardRefinedReserve { get; init; } = 60;
@@ -65,8 +65,8 @@ public sealed record SimpleAiParams
     public string GarrisonRegiment(Side side) => side == Side.Empire ? "Imperial Army Regiment" : "Alliance Army Regiment";
     public string InvasionRegiment(Side side) => side == Side.Empire ? "Stormtrooper Regiment" : "Alliance Fleet Regiment";
 
-    public IReadOnlyList<string> EmpireWarships { get; init; } = new[] { "Victory Destroyer", "Lancer Frigate", "Carrack Light Cruiser" };
-    public IReadOnlyList<string> AllianceWarships { get; init; } = new[] { "Nebulon-B Frigate", "Corellian Corvette", "Corellian Gunship" };
+    public IReadOnlyList<string> EmpireWarships { get; init; } = new[] { "Lancer Frigate", "Carrack Light Cruiser", "Victory Destroyer" };
+    public IReadOnlyList<string> AllianceWarships { get; init; } = new[] { "Corellian Corvette", "Corellian Gunship", "Nebulon-B Frigate" };
     public IReadOnlyList<string> EmpireHeavy { get; init; } = new[] { "Imperial Star Destroyer" };
     public IReadOnlyList<string> AllianceHeavy { get; init; } = new[] { "Mon Calamari Cruiser" };
 }

@@ -309,7 +309,7 @@ public sealed class SimpleAi
         foreach (var o in eco.Objects)
         {
             if (eco.OwnerOf(o) != _side) continue;
-            if (o.Category == ObjectCategory.CapitalShip && _h.Fleets.ShipClasses.TryGetValue(o.Class, out var sc)) { troopCap += sc.TroopCapacity; berths += sc.FighterCapacity; }
+            if (o.Category == ObjectCategory.CapitalShip && _h.Fleets.ShipClasses.TryGetValue(o.Class, out var sc)) { if (o.Class == _p.Transport(_side)) troopCap += sc.TroopCapacity; berths += sc.FighterCapacity; } // only transports count as troop ships: warships carry a few, but stay with the fleet
             else if (o.Category == ObjectCategory.Fighter) fighters++;
         }
         double home = 0;
@@ -331,21 +331,24 @@ public sealed class SimpleAi
                 int per = Math.Max(1, _h.Fleets.ShipClasses[transport].TroopCapacity);
                 count = Math.Min(2, (_p.TroopCapacityTarget - troopCap + per - 1) / per);
             }
-            else if (berths - fighters >= 2 && Available(_p.Fighter(_side)))
+            else if (berths - fighters >= 2 && fighters * 2 < berths && Available(_p.Fighter(_side)))
             {
                 cls = _p.Fighter(_side);
                 count = Math.Min(berths - fighters, _p.FightersPerOrder);
             }
             else
             {
-                foreach (var c in _p.HeavyWarships(_side).Concat(_p.Warships(_side)))
+                foreach (var c in _p.Warships(_side).Concat(_p.HeavyWarships(_side)))
                 {
                     if (!Available(c)) continue;
                     int cost = eco.Costs.Get(c).Cost;
                     bool heavy = cost > _p.HeavyShipCost;
                     if (heavy && eco.Refined(_side) < cost * 2) continue;
                     if (Budget < Maint(c)) continue;
-                    cls = c; break;
+                    cls = c;
+                    // a full refined pool buys more: up to 3 ships in an order
+                    count = Math.Clamp(eco.Refined(_side) / Math.Max(1, cost * 4), 1, 3);
+                    break;
                 }
             }
             if (cls == null) continue;

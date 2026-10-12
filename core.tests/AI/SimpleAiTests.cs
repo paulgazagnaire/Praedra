@@ -89,4 +89,21 @@ public class SimpleAiTests
         m2.RunTo(260);
         Assert.Equal(c.Host.StateHash(), c2.Host.StateHash());
     }
+
+    [Fact]
+    public void AiVsAi_OnTheNewGameStart_730Days_NoCrash_OrdersMostlyAccepted()
+    {
+        var host = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA });
+        var m = new AiMatch(host);
+        m.Empire.KnownEnemyHq = host.HqSystem;
+        for (int i = 0; i < Days && host.Victory.Winner == null; i++)
+        {
+            m.Step();
+            if (host.Game.Day % 10 == 0) CampaignInvariants.Check(host, $"day {host.Game.Day}", fixedRegions: false);
+        }
+        var ev = host.Game.Events;
+        _out.WriteLine($"MedA: day {host.Game.Day}, winner {host.Victory.Winner}, assaults {ev.OfType<AssaultResolved>().Count()}, captures {ev.OfType<SystemCaptured>().Count()}, orders {m.TotalSent}, rejected {m.TotalRejected}");
+        Assert.True(m.TotalSent > 100);
+        Assert.True(m.TotalRejected * 20 <= m.TotalSent);
+    }
 }
