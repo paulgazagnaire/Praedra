@@ -1,3 +1,4 @@
+using Rebellion.Core.Battle;
 using Rebellion.Core.Clock;
 using Rebellion.Core.Construction;
 using Rebellion.Core.Economy;
@@ -24,7 +25,10 @@ internal static class SimCli
           dotnet run --project sim -- economy [--days 360] [--seed 1] [--no-incidents]
           dotnet run --project sim -- build [--days 150] [--seed 1] [--picket-leaves <day>|never] [--no-forced-stop]
           dotnet run --project sim -- support [--days 360] [--seed 1] [--ruleset classic|new] [--reinforce-day 120]
+          dotnet run --project sim -- battle --alliance "<Class>:<n>[,...]" --empire "<Class>:<n>[,...]" [--battles 1000] [--seed 1] [--no-rolls]
           dotnet run --project sim -- campaign [--days 1000] [--seed 1] [--ruleset Classic|New]
+        battle runs N seeded Classic battles (m4-battle-classic) at a synthetic system where every retreat has a destination, and prints how often each
+        side won or retreated, and the mean survivors. Battle k uses seed (seed + k - 1). --no-rolls turns the subsystem rolls off.
         campaign runs the scripted two-sided TEST campaign (core/Setup/TestCampaign.cs, built through GameHost) and prints a yearly summary per side,
         the final state hash, the random draws and how long the run took.
         support runs the same demo with popular support, garrisons and uprisings on and prints the support events and a table every 30 days.
@@ -49,6 +53,7 @@ internal static class SimCli
             if (args[0] == "economy") return Economy(args.Skip(1).ToArray());
             if (args[0] == "build") return Build(args.Skip(1).ToArray());
             if (args[0] == "support") return Support(args.Skip(1).ToArray());
+            if (args[0] == "battle") return Battle(args.Skip(1).ToArray());
             if (args[0] == "campaign") return Campaign(args.Skip(1).ToArray());
             if (args[0] != "move") throw new ArgumentException($"Unknown command '{args[0]}'.");
             return Move(Options.Parse(args.Skip(1).ToArray()));
@@ -343,6 +348,50 @@ internal static class SimCli
         return fleets.AddFleet(side, name, caps, system, squads);
     }
 
+    // Classic battle batch (engine/04, package P4.1). Runs the core's battle on plain units; draws nothing itself.
+    private static int Battle(string[] a)
+    {
+        int battles = 1000; ulong seed = 1; bool rolls = true;
+        List<(string, int)>? alliance = null, empire = null;
+        for (int i = 0; i < a.Length; i++)
+        {
+            string key = a[i];
+            string Next() => ++i < a.Length ? a[i] : throw new ArgumentException($"{key} needs a value.");
+            switch (key)
+            {
+                case "--alliance": alliance = Options.ParseShipList(Next()); break;
+                case "--empire": empire = Options.ParseShipList(Next()); break;
+                case "--battles": battles = int.TryParse(Next(), out var n) && n > 0 ? n : throw new ArgumentException("--battles must be a positive integer."); break;
+                case "--seed": seed = ulong.TryParse(Next(), out var s) ? s : throw new ArgumentException("--seed must be a non-negative integer."); break;
+                case "--no-rolls": rolls = false; break;
+                default: throw new ArgumentException($"Unknown option '{key}'.");
+            }
+        }
+        if (alliance == null || empire == null) throw new ArgumentException("--alliance and --empire are required.");
+        var ships = GameData.Default.Ships;
+        var al = alliance.Select(x => (ResolveClass(ships, x.Item1), x.Item2)).ToList();
+        var em = empire.Select(x => (ResolveClass(ships, x.Item1), x.Item2)).ToList();
+        var p = new BattleParams { SubsystemRolls = rolls };
+        int aWin = 0, eWin = 0, none = 0, aRet = 0, eRet = 0; long aSurv = 0, eSurv = 0, secs = 0;
+        for (int k = 0; k < battles; k++)
+        {
+            var (r, _) = QuickBattle.Run(p, ships, al, em, seed + (ulong)k);
+            if (r.AllianceOutcome == BattleOutcome.Victorious) aWin++; else if (r.EmpireOutcome == BattleOutcome.Victorious) eWin++; else none++;
+            if (r.AllianceRetreated) aRet++;
+            if (r.EmpireRetreated) eRet++;
+            aSurv += r.AllianceSurvivors; eSurv += r.EmpireSurvivors; secs += r.Seconds;
+        }
+        string Pct(int n) => (100.0 * n / battles).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + "%";
+        string Mean(long n) => ((double)n / battles).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+        Console.WriteLine($"{battles} Classic battles, seeds {seed}..{seed + (ulong)battles - 1}, subsystem rolls {(rolls ? "on" : "off")}");
+        Console.WriteLine($"Alliance ({string.Join(", ", al.Select(x => $"{x.Item2} x {x.Item1}"))})");
+        Console.WriteLine($"Empire   ({string.Join(", ", em.Select(x => $"{x.Item2} x {x.Item1}"))})");
+        Console.WriteLine($"  Alliance wins {aWin} ({Pct(aWin)}), Empire wins {eWin} ({Pct(eWin)}), no winner {none} ({Pct(none)})");
+        Console.WriteLine($"  Alliance retreated {aRet} ({Pct(aRet)}), Empire retreated {eRet} ({Pct(eRet)})");
+        Console.WriteLine($"  mean survivors: Alliance {Mean(aSurv)}, Empire {Mean(eSurv)}; mean length {Mean(secs)} s");
+        return 0;
+    }
+
     private static string ResolveClass(IReadOnlyDictionary<string, ShipClass> ships, string name)
     {
         name = name.Trim();
@@ -450,6 +499,8 @@ internal static class SimCli
 
         private static Side ParseSide(string v) =>
             Enum.TryParse<Side>(v, ignoreCase: true, out var s) && Enum.IsDefined(s) ? s : throw new ArgumentException($"Side must be Alliance or Empire, got '{v}'.");
+
+        public static List<(string, int)> ParseShipList(string v) => ParseShips(v);
 
         private static List<(string, int)> ParseShips(string v)
         {

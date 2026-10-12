@@ -2,6 +2,20 @@ using Rebellion.Core.Data;
 
 namespace Rebellion.Core.Ships;
 
+/// <summary>Laser, ion and turbolaser cannon counts of one arc. rule: m4-battle-classic §4 (counts are read only through f / N).</summary>
+public readonly record struct ArcCounts(int Laser, int Ion, int Turbolaser)
+{
+    public int Total => Laser + Ion + Turbolaser;
+}
+
+/// <summary>The four arcs in the order the battle sheet scans them: fore, aft, port, starboard. rule: m4-battle-classic §4.</summary>
+public sealed record ShipArcs(ArcCounts Fore, ArcCounts Aft, ArcCounts Port, ArcCounts Starboard)
+{
+    public static readonly ShipArcs None = new(default, default, default, default);
+    public ArcCounts this[int i] => i switch { 0 => Fore, 1 => Aft, 2 => Port, _ => Starboard };
+    public const int Count = 4;
+}
+
 [Flags]
 public enum ShipSide { None = 0, Alliance = 1, Empire = 2 }
 
@@ -24,8 +38,16 @@ public sealed record ShipClass(
     int TroopCapacity = 0,
     int Id = 0,
     int ShieldStrength = 0,
-    int Bombardment = 0)
+    int Bombardment = 0,
+    int Maneuverability = 0,
+    int WeaponRechargeRate = 0,
+    int ShieldRechargeRate = 0,
+    int Torpedoes = 0,
+    ShipArcs? Arcs = null)
 {
+    /// <summary>The four gun arcs (a squadron has only the fore arc). Never null: a class built without arcs has none.</summary>
+    public ShipArcs GunArcs => Arcs ?? ShipArcs.None;
+
     /// <summary>
     /// Speed rating (percent of normal time, bigger is slower; 0 = cannot move).
     /// rule: m1-travel §Rule (Classic); DEFAULT: a damaged ship with hyperdrive_if_damaged = 0 uses its normal rating.
@@ -74,6 +96,10 @@ public static class ShipData
         // rule: m3-bombardment §Resolution 1: a capital ship's bombardment_modifier; a squadron's value is the fighters.csv column named bombardment_defense (renamed on import).
         string bombCol = isCapital ? "bombardment_modifier" : "bombardment_defense";
         bool hasBomb = t.HasColumn(bombCol);
+        // rule: m4-battle-classic §4: the combat columns (recharge rates and torpedoes only where the file has them; fighters have no recharge columns)
+        bool hasMan = t.HasColumn("maneuverability"), hasWr = t.HasColumn("weapon_recharge_rate"), hasSr = t.HasColumn("shield_recharge_rate"), hasTorp = t.HasColumn("torpedoes");
+        int Cnt(int r, string col) => t.HasColumn(col) ? t.GetInt(r, col) : 0;
+        ArcCounts Arc(int r, string arc) => new(Cnt(r, "laser_cannon_" + arc), Cnt(r, "ion_cannon_" + arc), Cnt(r, "turbolaser_" + arc));
         var list = new List<ShipClass>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
         for (int r = 0; r < t.RowCount; r++)
@@ -89,7 +115,10 @@ public static class ShipData
                 t.GetInt(r, "refined_material_cost"), HeavyArcs.Any(c => t.GetInt(r, c) > 0),
                 hasHull ? t.GetInt(r, "hull") : 0, hasFc ? t.GetInt(r, "fighter_capacity") : 0, hasTc ? t.GetInt(r, "troop_capacity") : 0,
                 hasId ? t.GetInt(r, "id") : 0, hasShield ? t.GetInt(r, "shield_strength") : 0,
-                hasBomb ? t.GetInt(r, bombCol) : 0));
+                hasBomb ? t.GetInt(r, bombCol) : 0,
+                hasMan ? t.GetInt(r, "maneuverability") : 0, hasWr ? t.GetInt(r, "weapon_recharge_rate") : 0,
+                hasSr ? t.GetInt(r, "shield_recharge_rate") : 0, hasTorp ? t.GetInt(r, "torpedoes") : 0,
+                new ShipArcs(Arc(r, "fore"), Arc(r, "aft"), Arc(r, "port"), Arc(r, "starboard"))));
         }
         return list;
     }

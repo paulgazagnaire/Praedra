@@ -67,4 +67,8 @@ public sealed record GameSettings
     // ---- assault. rule: m3-assault §Defaults for undecided items
     /// <summary>Number table and switches of the assault (die, leadership step, thresholds, collateral mode, landing cap, passes, enemy fleet blocks). Null = the module's defaults.</summary>
     public AssaultParams? Assault { get; init; }
+
+    // ---- battle. rule: m4-battle-classic §Defaults for undecided items; m4-retreat-damage-repair §Defaults
+    /// <summary>Switches and numbers of the Classic battle and the retreat (SubsystemRolls, task forces, tactic, RetreatMode, DeathStarStalemate, AI sides). Null = the module's defaults.</summary>
+    public Rebellion.Core.Battle.BattleParams? Battle { get; init; }
 }

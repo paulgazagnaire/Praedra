@@ -183,6 +183,20 @@ internal static class CampaignInvariants
                 Assert.Equal(f.Ships.Max(id => host.Fleets.SpeedOfShip(eco.Find(id)!)), host.Fleets.SpeedOf(f)); // the largest rating decides; aboard squadrons never count
         }
 
+        // ---- ship damage stays in range: hull 1..class maximum, six counters 0..15 (m4-battle-classic §10; m3-ships-and-fighters §Damaged state)
+        foreach (var o in eco.Objects.Where(o => o.Category == ObjectCategory.CapitalShip && o.Completed))
+        {
+            int max = host.Data.Ships[o.Class].Hull;
+            Assert.True(o.Hull >= 1 && o.Hull <= max, $"{where}: ship {o.Id} ({o.Class}) hull {o.Hull} outside 1..{max}");
+            Assert.True(o.Hits is { Count: ObjectRegistry.HitCounters } && o.Hits.All(h => h is >= 0 and <= ObjectRegistry.MaxHit), $"{where}: ship {o.Id} has bad hit counters");
+        }
+        // ---- a squadron aboard a ship rides a live ship of its own side that is in a fleet (m4-battle-classic §10, DEFAULT: a lost carrier's squadrons are based)
+        foreach (var o in eco.Objects.Where(o => o.Category == ObjectCategory.Fighter && o.AboardShip != 0))
+        {
+            var carrier = eco.Find(o.AboardShip);
+            Assert.True(carrier != null && carrier.Side == o.Side, $"{where}: squadron {o.Id} rides ship {o.AboardShip}, which is gone or of the other side");
+        }
+
         // ---- troops: a regiment is on a system or aboard a ship of a fleet of its side, never both; aboard counts stay within capacity;
         //      special forces are never aboard (m3-troops-and-special-forces §Where regiments live; m3-fleets §Carrying rules)
         var shipFleet = new Dictionary<int, Fleet>(); // lookup only

@@ -48,6 +48,8 @@ public sealed class GameHost
     public BombardmentModule Bombardment { get; }
     /// <summary>The Assault order and slot 5.2. rule: m3-assault.</summary>
     public AssaultModule Assault { get; }
+    /// <summary>The Classic battle, step 5 after the contacts and before slots 5.1 and 5.2. rule: m4-battle-classic.</summary>
+    public Rebellion.Core.Battle.BattleModule Battles { get; }
 
     private GameHost(Game game, GameData data, GameSettings settings)
     {
@@ -90,6 +92,8 @@ public sealed class GameHost
         Defenses = DefenseModule.Attach(Economy, Fleets, data.Defenses, settings.Defense);
         Bombardment = BombardmentModule.Attach(game, Economy, Fleets, Support, Defenses, settings.Bombard);
         Assault = AssaultModule.Attach(game, Economy, Fleets, Troops, Control, Defenses, Bombardment, settings.Assault);
+        // Slot 5: registered after the fleet module's contact hook, so it runs after it, and (slot 5 precedes 5.1 and 5.2) before bombardment and assault.
+        Battles = Rebellion.Core.Battle.BattleModule.Attach(game, data.Galaxy, Fleets, Economy, settings.Battle);
     }
 
     /// <summary>A new, empty game (day 0, no owners, no objects) with every module attached. <paramref name="data"/> null = the repository's data.</summary>
