@@ -223,6 +223,9 @@ public partial class GameScreen
             if (mine) Act($"Stop building at {name} ({FamilyName(fam).ToLowerInvariant()})", () => StopBuild(name, fam));
         }
 
+        // the build menu comes right after the facilities so a new player does not have to scroll for it
+        if (mine) BuildMenu(name);
+
         // troops
         Heading("Regiments on the planet");
         var regs = S.Host.Troops.RegimentsOnSystem(name);
@@ -240,7 +243,7 @@ public partial class GameScreen
             Act($"{(f.Side == Me ? "" : "[enemy] ")}{f.Name}  ({Counts(Fm.ClassNamesOf(f))})", () => SelectFleet(fl.Id, false), "Click to select this fleet");
         }
 
-        if (mine) BuildMenu(name);
+        if (mine) { }
         else if (owner != null && S.Game.State.Fleets.Values.Any(f => f.Side == Me && f.At == name))
             Line("To take this system: bombard it, then invade with troops aboard your fleet (select your fleet).", Dim);
         else Line(owner == null ? "Nobody holds this planet. Send a fleet with regiments aboard, then press Invade. You can only build on systems you own." : "You can only build on systems you own. To take it, send a fleet with regiments aboard and press Invade.", Dim);
@@ -260,7 +263,7 @@ public partial class GameScreen
     }
 
     // Which build sections are open (kept while the panel is rebuilt, and across systems).
-    readonly HashSet<string> _openSections = new() { "Facilities" };
+    readonly HashSet<string> _openSections = new();
 
     static readonly string[] FacilityPriority = { "Mine", "Refinery", "Construction Yard", "Orbital Shipyard", "Training Facility" };
 

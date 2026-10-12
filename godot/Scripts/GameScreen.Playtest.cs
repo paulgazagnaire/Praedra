@@ -104,7 +104,7 @@ public partial class GameScreen
 {
     // Screenshot helpers (command-line options of the exporter, see README).
     public void ShotShowHowTo() => ShowHowTo();
-    public void ShotOpenSection(string name) { _openSections.Add(name); _panelDirty = true; _panelTimer = 0; }
+    public void ShotOpenSection(string name) { if (name.StartsWith("-")) _openSections.Remove(name[1..]); else _openSections.Add(name); _panelDirty = true; _panelTimer = 0; }
     public void ShotMove(string to) { if (_view.SelectedFleet >= 0 && S.Game.State.Fleets.TryGetValue(_view.SelectedFleet, out var f)) { StartMove(f); PickSystem(to); } }
     public void ShotFilter(string name) => SetFilter(name);
 }
