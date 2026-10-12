@@ -1,3 +1,4 @@
+using Rebellion.Core.AI;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -20,6 +21,14 @@ public interface IOpponent
     void PlanDay();
 }
 
+/// <summary>Opponent that runs a callback once per day (the core's SimpleAi).</summary>
+public sealed class DelegateOpponent : IOpponent
+{
+    private readonly System.Action _plan;
+    public DelegateOpponent(System.Action plan) { _plan = plan; }
+    public void PlanDay() => _plan();
+}
+
 /// <summary>Opponent that does nothing (used until the core's SimpleAi exists).</summary>
 public sealed class NoOpOpponent : IOpponent
 {
@@ -40,7 +49,7 @@ public static class GameBoot
 
     /// <summary>True while the start position is the placeholder campaign and the opponent does nothing; the start screen says so.
     /// TODO(lead): set to false once NewGame.Create and SimpleAi are wired in.</summary>
-    public const bool PlaceholderMode = true; // now only: the opponent is idle
+    public const bool PlaceholderMode = false;
 
     static GameData _data;
 
@@ -97,8 +106,10 @@ public static class GameBoot
     /// <c>var ai = new SimpleAi(host, aiSide); return new DelegateOpponent(ai.PlanDay);</c> and set PlaceholderMode to false.</summary>
     public static IOpponent CreateOpponent(GameHost host, Side aiSide)
     {
-        // TODO(lead): var ai = new SimpleAi(host, aiSide); return new DelegateOpponent(ai.PlanDay);
-        return new NoOpOpponent();
+        var ai = new SimpleAi(host, aiSide);
+        // DEFAULT (playable slice): the Empire AI knows where the Rebel HQ is, as in `sim aivai`; fog of war comes with M5 (m5-fog-and-hq).
+        if (aiSide == Side.Empire) ai.KnownEnemyHq = host.HqSystem;
+        return new DelegateOpponent(ai.PlanDay);
     }
 
     /// <summary>The winning side, or null while the game goes on.</summary>
