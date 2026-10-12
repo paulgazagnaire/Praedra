@@ -108,8 +108,13 @@ public sealed class CombatModel
     public NewBattleData Data { get; }
     public NewBattleParams P { get; }
     private readonly Dictionary<long, double> _facing = new(); // lookup only, never iterated
+    private readonly double[]?[] _per;
 
-    public CombatModel(NewBattleData data, NewBattleParams? p = null) { Data = data; P = p ?? new NewBattleParams(); }
+    public CombatModel(NewBattleData data, NewBattleParams? p = null)
+    {
+        Data = data; P = p ?? new NewBattleParams();
+        _per = new double[data.ClassList.Count * data.ClassList.Count * 2][];
+    }
 
     /// <summary>guns_active = floor(guns x (1 - 0.25 x hits[weapons])), four hits = none; a squadron fires one gun per living craft. rule: m4-battle-new §1.</summary>
     public int GunsActive(Battery b, in Combatant a)
@@ -156,18 +161,44 @@ public sealed class CombatModel
     /// </summary>
     public double ArcsDps(in Combatant a, in Combatant t, int arcMask, double pairRange = -1)
     {
+        var per = PerBattery(a.Class, t); // shot value x hit chance / reload of each battery against this kind of target (class and shield state only)
         double sum = 0;
-        foreach (var b in a.Class.Batteries)
+        var batteries = a.Class.Batteries;
+        for (int i = 0; i < batteries.Count; i++)
         {
+            var b = batteries[i];
             if (!a.Class.IsSquadron && (arcMask & (1 << (int)b.Arc)) == 0) continue; // squadrons ignore arcs
             if (pairRange >= 0 && pairRange > b.Range) continue;
+            double v = per[i];
+            if (v <= 0) continue;
             int guns = GunsActive(b, a);
             if (guns <= 0) continue;
-            double v = ShotValue(b.Weapon, b.ShotDamage, a.Class, t);
-            if (v <= 0) continue;
-            sum += guns * v * HitChance(b.Weapon, t.Class) / b.Reload;
+            sum += guns * v;
         }
         return sum;
+    }
+
+    /// <summary>True when some battery of the class can hurt a target of this class and shield state at any range and in any arc (a quick filter; static per class pair).</summary>
+    public bool CanHurt(CombatClass shooter, in Combatant t)
+    {
+        foreach (var v in PerBattery(shooter, t)) if (v > 0) return true;
+        return false;
+    }
+
+    private double[] PerBattery(CombatClass shooter, in Combatant t)
+    {
+        int key = (shooter.Index * Data.ClassList.Count + t.Class.Index) * 2 + (t.ShieldUp ? 1 : 0);
+        var cached = _per[key];
+        if (cached != null) return cached;
+        var arr = new double[shooter.Batteries.Count];
+        for (int i = 0; i < arr.Length; i++)
+        {
+            var b = shooter.Batteries[i];
+            double v = ShotValue(b.Weapon, b.ShotDamage, shooter, t);
+            arr[i] = v <= 0 ? 0 : v * HitChance(b.Weapon, t.Class) / b.Reload;
+        }
+        _per[key] = arr;
+        return arr;
     }
 
     public const int ForeMask = 1 << (int)Arc.Fore, PortMask = 1 << (int)Arc.Port, StarboardMask = 1 << (int)Arc.Starboard, AftMask = 1 << (int)Arc.Aft;

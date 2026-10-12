@@ -87,7 +87,7 @@ public sealed class NewBattle
             var c = data.Class(b.Class.Name);
             var u = new NU { Id = _u.Count, B = b, C = c, Side = b.Side, Capital = b.IsCapital, State = b.IsCapital ? St.Active : St.Hangar };
             u.HullMax = b.HullMax > 0 ? b.HullMax : c.Hull;
-            u.Hull = b.IsCapital ? b.Hull : u.HullMax;
+            u.Hull = b.IsCapital ? b.Hull : (b.Hull > 0 ? Math.Min(b.Hull, u.HullMax) : u.HullMax); // a squadron is whole unless the caller says otherwise
             u.Offset = b.IsCapital ? OffsetOf(c.Size) : 0;
             u.Cooldown = new int[c.Batteries.Count]; // rule: m4-battle-new §3.4 (all batteries ready at t = 0)
             u.Shield = c.ShieldPool * u.HullRatio;   // rule: m4-battle-new §3.4, §9 (shields start at the hull-scaled cap)
@@ -137,7 +137,12 @@ public sealed class NewBattle
     /// <summary>Counts as own strength: not jumping, not riding a leaving carrier. rule: m4-battle-new §12.</summary>
     private static bool OwnStrength(NU u) => u.State == St.Hangar || u.State == St.Active;
     private bool AliveShip(NU u) => u.Capital && (u.State == St.Active || u.State == St.Jumping);
-    private int ShipsLive(Side s) => _u.Count(u => u.Side == s && AliveShip(u));
+    private int ShipsLive(Side s)
+    {
+        int n = 0;
+        foreach (var u in _u) if (u.Side == s && AliveShip(u)) n++;
+        return n;
+    }
 
     private int Craft(NU u) => u.Hull <= 0 ? 0 : (int)Math.Ceiling(u.Hull / _np.CraftHull);
 
@@ -339,6 +344,8 @@ public sealed class NewBattle
     private double DpsRaw(NU u, NU tgt)
     {
         double range = u.Capital ? PairRange(u, tgt) : _np.SquadronRange;
+        if (u.Capital && u.State == St.Active && u.Broadside) // the better side (tie: port, same value): one evaluation per side
+            return Math.Max(_m.ArcsDps(_cmb[u.Id], _cmb[tgt.Id], CombatModel.PortMask, range), _m.ArcsDps(_cmb[u.Id], _cmb[tgt.Id], CombatModel.StarboardMask, range));
         return _m.ArcsDps(_cmb[u.Id], _cmb[tgt.Id], ActiveMask(u, tgt), range);
     }
 
@@ -411,8 +418,10 @@ public sealed class NewBattle
         foreach (var e in _u)
         {
             if (e.Side == u.Side || !Targetable(e)) continue;
-            double dps = DpsRaw(u, e);
             double torp = u.Capital ? 0 : _m.TorpedoExpected(_cmb[u.Id], _cmb[e.Id]);
+            if (u.Capital && PairRange(u, e) > u.C.LongestRange) continue; // quick filter: out of reach of every weapon of the class
+            if (torp <= 0 && !_m.CanHurt(u.C, _cmb[e.Id])) continue; // quick filter: no battery of the class can ever hurt it now
+            double dps = DpsRaw(u, e);
             if (dps <= 0 && torp <= 0) continue; // cannot hurt it now: laser ships ignore shielded capitals and hold fire
             double remaining = e.Hull + e.Shield;
             double expected = dps * _np.ExpectedDamageHorizon + torp;
@@ -426,8 +435,9 @@ public sealed class NewBattle
             // DEFAULT fallback: nothing hurtable in the current facing; look at the better facing so a ship with no fore guns can turn to a target
             foreach (var e in _u)
             {
-                if (e.Side == u.Side || !Targetable(e)) continue;
+                if (e.Side == u.Side || !Targetable(e) || !_m.CanHurt(u.C, _cmb[e.Id])) continue;
                 double range = PairRange(u, e);
+                if (range > u.C.LongestRange) continue;
                 double dps = Math.Max(_m.ArcsDps(_cmb[u.Id], _cmb[e.Id], CombatModel.ForeMask, range),
                     Math.Max(_m.ArcsDps(_cmb[u.Id], _cmb[e.Id], CombatModel.PortMask, range), _m.ArcsDps(_cmb[u.Id], _cmb[e.Id], CombatModel.StarboardMask, range)));
                 if (dps <= 0) continue;
@@ -516,7 +526,7 @@ public sealed class NewBattle
                     {
                         bool laserBlocked = r.Weapon == WeaponKind.LaserCannon && !_np.LaserPenetratesShield;
                         double x = r.Damage * row.VsShield;
-                        if (laserBlocked || x <= v.C.Deflection) { Note("deflect", r.Attacker, v, r.Weapon.ToString()); continue; }
+                        if (laserBlocked || x <= v.C.Deflection) { if (_log != null) Note("deflect", r.Attacker, v, r.Weapon.ToString()); continue; }
                         if (x <= v.Shield) { v.Shield -= x; shieldLost += x; }
                         else
                         {
@@ -541,7 +551,7 @@ public sealed class NewBattle
                     if (dmg > 0) { v.Hull -= dmg; hullLost += dmg; }
                 }
             }
-            foreach (var r in v.Recs) Note("damage", r.Attacker, v, r.Weapon.ToString());
+            if (_log != null) foreach (var r in v.Recs) Note("damage", r.Attacker, v, r.Weapon.ToString());
             v.Recs.Clear();
 
             bool dead = v.Hull <= 0;
