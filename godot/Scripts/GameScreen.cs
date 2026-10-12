@@ -21,6 +21,7 @@ public partial class GameScreen : Control
     public event Action<string> LoadRequested;
 
     static readonly int[] Speeds = { 1, 2, 5, 10 };       // days per second
+    const int DefaultSpeedIndex = 2;                       // 5x when the player presses Play
     const int MaxStepsPerFrame = 30;
     const float PanPixelsPerSecond = 700f;
     const int AutosaveEvery = 30;                          // days
@@ -32,18 +33,25 @@ public partial class GameScreen : Control
 
     GalaxyView _view;
     FleetLayer _fleets;
-    Label _dayLabel, _sideLabel, _econLabel, _ordersLabel, _banner, _hoverLabel, _toast;
+    Label _dayLabel, _sideLabel, _rawLabel, _refinedLabel, _upkeepLabel, _ordersLabel, _banner, _hoverLabel, _toast;
     Button _playButton;
     readonly List<Button> _speedButtons = new();
     ItemList _log;
-    readonly List<Message> _logMessages = new();
-    PanelContainer _panel, _fleetListPanel, _reportPanel, _victoryPanel;
+    readonly List<Message> _allMessages = new();      // everything (capped), oldest first
+    readonly List<Message> _logMessages = new();      // what the list shows under the current filter
+    enum LogFilter { All, Battles, Mine }
+    LogFilter _logFilter = LogFilter.All;
+    readonly List<Button> _filterButtons = new();
+    PanelContainer _panel, _fleetListPanel, _reportPanel, _victoryPanel, _confirmPanel, _howPanel;
     VBoxContainer _pv, _fleetList;
-    Label _reportTitle, _reportBody;
-    readonly HashSet<int> _hqs = new();
+    Label _reportTitle, _reportBody, _confirmTitle, _confirmBody;
+    Button _confirmOk;
+    Action _confirmAction;
+    readonly Dictionary<int, Side> _hqs = new();
+    bool _showHowToOnStart;
 
     bool _playing;
-    int _speedIndex;
+    int _speedIndex = DefaultSpeedIndex;
     double _acc;
     bool _panelDirty = true, _fleetListDirty = true;
     double _panelTimer;
@@ -55,7 +63,8 @@ public partial class GameScreen : Control
     public int ShotFrames = 30;
     int _frame;
 
-    public void Init(GameSession session) { S = session; }
+    /// <param name="newGame">true for a fresh game from the start screen (the very first one shows the How to play overlay).</param>
+    public void Init(GameSession session, bool newGame = false) { S = session; _showHowToOnStart = newGame; }
 
     public override void _Ready()
     {
@@ -66,22 +75,35 @@ public partial class GameScreen : Control
 
         _view.Init(G);
         _view.OwnerOf = i => S.OwnerOf(G.Systems[i].Name);
-        _view.IsHq = i => _hqs.Contains(i);
+        _view.IsHq = i => _hqs.ContainsKey(i);
+        _view.CapitalTag = CapitalTagOf;
         _view.IsUprising = i => S.Host.Support.IsUprising(G.Systems[i].Name);
         _view.IsBlockaded = i => S.Game.State.Blockades.ContainsKey(G.Systems[i].Name);
         _view.StateChanged += OnViewChanged;
         _view.SystemPicked += OnSystemPicked;
         _view.FleetPicker = _fleets.Pick;
         foreach (var side in new[] { Side.Empire, Side.Alliance })
-            if (G.TryFindSystem(GameBoot.CapitalOf(S.Host, side), out int hq)) _hqs.Add(hq);
+            if (G.TryFindSystem(GameBoot.CapitalOf(S.Host, side), out int hq)) _hqs[hq] = side;
         _fleets.Player = S.Player;
+        _fleets.Planned = () => S.PlannedMoves;
         _fleets.Bind(S.Game, G);
 
         // Start with the map centred on the player's headquarters.
-        if (G.TryFindSystem(GameBoot.CapitalOf(S.Host, S.Player), out int home)) { _view.FocusOn(home, 2.4f); }
-        S.Say($"You lead the {S.NameOf(S.Player)}. Your headquarters is {GameBoot.CapitalOf(S.Host, S.Player)}. Press Space to start the clock.", MsgKind.Good, GameBoot.CapitalOf(S.Host, S.Player));
+        string home = GameBoot.CapitalOf(S.Host, S.Player);
+        if (G.TryFindSystem(home, out int homeIdx)) { _view.FocusOn(homeIdx, 2.4f); }
+        S.Say($"You lead the {S.NameOf(S.Player)}. Your headquarters is {home}. Press Play (or Space) to start the clock; the How to play button explains the rest.", MsgKind.Good, home);
         foreach (var m in S.Messages) AddLogItem(m);
+        if (S.Game.Day == 0) _pauseNote = "Press Play (or Space) to start the clock";
         RefreshTop();
+        if (_showHowToOnStart && GameBoot.HowToUnseen()) ShowHowTo();
+    }
+
+    (string Text, Color Color)? CapitalTagOf(int i)
+    {
+        if (!_hqs.TryGetValue(i, out var side)) return null;
+        string name = G.Systems[i].Name;
+        if (side == S.Player) return (side == Side.Empire ? "YOUR CAPITAL" : "YOUR HQ", new Color(1f, 0.95f, 0.5f));
+        return (side == Side.Empire ? "ENEMY CAPITAL - TAKE IT TO WIN" : "REBEL HQ - TAKE IT TO WIN", new Color(1f, 0.45f, 0.4f));
     }
 
     // ================================================================== UI skeleton
@@ -93,6 +115,13 @@ public partial class GameScreen : Control
         if (border is Color b) { st.BorderColor = b; st.SetBorderWidthAll(1); }
         st.SetCornerRadiusAll(3);
         return st;
+    }
+
+    Label Stat(string tip, HBoxContainer row, int minWidth = 0)
+    {
+        var l = new Label { MouseFilter = MouseFilterEnum.Stop, TooltipText = tip, CustomMinimumSize = new Vector2(minWidth, 0) };
+        row.AddChild(l);
+        return l;
     }
 
     void BuildUi()
@@ -110,20 +139,18 @@ public partial class GameScreen : Control
         row.AddThemeConstantOverride("separation", 10);
         bar.AddChild(row);
 
-        _dayLabel = new Label { CustomMinimumSize = new Vector2(84, 0) };
+        _dayLabel = Stat("The game day. The game lasts as long as it takes: capture the enemy capital to win.", row, 84);
         _dayLabel.AddThemeFontSizeOverride("font_size", 20);
-        row.AddChild(_dayLabel);
-        _sideLabel = new Label();
-        row.AddChild(_sideLabel);
+        _sideLabel = Stat("Your side.", row);
         row.AddChild(new VSeparator());
-        _econLabel = new Label();
-        row.AddChild(_econLabel);
-        _ordersLabel = new Label();
+        _rawLabel = Stat("Raw: ore dug by your mines. It waits for your refineries.", row, 70);
+        _refinedLabel = Stat("Refined: the material you spend on building ships, troops and buildings.", row, 100);
+        _upkeepLabel = Stat("Upkeep, used / limit. Everything you own costs upkeep. The limit comes from your mines and refineries (50 for each mine-and-refinery pair). Over the limit, units get scrapped.", row, 100);
+        _ordersLabel = Stat("Orders you gave that start when the next day begins (press Play or +1 day).", row);
         _ordersLabel.AddThemeColorOverride("font_color", new Color(1f, 0.85f, 0.4f));
-        row.AddChild(_ordersLabel);
         row.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
 
-        _playButton = Btn("Play", TogglePlay);
+        _playButton = Btn("Play", TogglePlay, "Start or stop the clock (Space)");
         _playButton.CustomMinimumSize = new Vector2(76, 0);
         row.AddChild(_playButton);
         row.AddChild(Btn("+1 day", StepOne, "Advance one day (N)"));
@@ -131,15 +158,16 @@ public partial class GameScreen : Control
         for (int i = 0; i < Speeds.Length; i++)
         {
             int idx = i;
-            var b = Btn($"{Speeds[i]}x", () => SetSpeed(idx), "Days per second (keys 1-4)");
-            b.ToggleMode = true; b.ButtonGroup = group; b.ButtonPressed = i == 0;
+            var b = Btn($"{Speeds[i]}x", () => SetSpeed(idx), $"{Speeds[i]} days per second (key {i + 1})");
+            b.ToggleMode = true; b.ButtonGroup = group; b.ButtonPressed = i == DefaultSpeedIndex;
             _speedButtons.Add(b);
             row.AddChild(b);
         }
         row.AddChild(new VSeparator());
+        row.AddChild(Btn("How to play", ToggleHowTo, "Short instructions (F1)"));
         row.AddChild(Btn("Save", SaveGame, "Save to the one save slot"));
-        row.AddChild(Btn("Load", () => LoadRequested?.Invoke(GameBoot.SaveSlot), "Load the saved game"));
-        row.AddChild(Btn("Menu", () => BackToMenu?.Invoke(), "Back to the start screen (unsaved progress is lost)"));
+        row.AddChild(Btn("Load", AskLoad, "Load the saved game (asks first)"));
+        row.AddChild(Btn("Menu", AskMenu, "Back to the start screen (asks first)"));
 
         // ---- map and everything floating over it
         _view = new GalaxyView { SizeFlagsVertical = SizeFlags.ExpandFill, SizeFlagsHorizontal = SizeFlags.ExpandFill, FocusMode = FocusModeEnum.None };
@@ -156,11 +184,24 @@ public partial class GameScreen : Control
         AddChild(logBox);
         var lv = new VBoxContainer();
         logBox.AddChild(lv);
-        var lt = new Label { Text = "Messages (click one to go there)" };
+        var lh = new HBoxContainer();
+        lh.AddThemeConstantOverride("separation", 4);
+        lv.AddChild(lh);
+        var lt = new Label { Text = "Messages (click one to go there)", SizeFlagsHorizontal = SizeFlags.ExpandFill };
         lt.Modulate = new Color(1, 1, 1, 0.55f);
         lt.AddThemeFontSizeOverride("font_size", 12);
-        lv.AddChild(lt);
-        _log = new ItemList { SizeFlagsVertical = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(610, 160), AutoHeight = false, FocusMode = FocusModeEnum.None };
+        lh.AddChild(lt);
+        var fgroup = new ButtonGroup();
+        foreach (var (text, f, tip) in new[] { ("All", LogFilter.All, "Show every message"), ("Battles", LogFilter.Battles, "Only fights: battles, bombardments, invasions, captures"), ("My systems", LogFilter.Mine, "Only things that happen at your own systems") })
+        {
+            var ff = f;
+            var fb = Btn(text, () => SetLogFilter(ff), tip);
+            fb.ToggleMode = true; fb.ButtonGroup = fgroup; fb.ButtonPressed = f == _logFilter;
+            fb.AddThemeFontSizeOverride("font_size", 12);
+            _filterButtons.Add(fb);
+            lh.AddChild(fb);
+        }
+        _log = new ItemList { SizeFlagsVertical = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(610, 150), AutoHeight = false, FocusMode = FocusModeEnum.None };
         _log.AddThemeFontSizeOverride("font_size", 13);
         _log.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
         _log.AddThemeColorOverride("guide_color", new Color(0, 0, 0, 0));
@@ -175,11 +216,16 @@ public partial class GameScreen : Control
         AddChild(_fleetListPanel);
         var fv = new VBoxContainer();
         _fleetListPanel.AddChild(fv);
-        var ft = new Label { Text = "Your fleets" };
+        var go = new HBoxContainer();
+        go.AddThemeConstantOverride("separation", 4);
+        fv.AddChild(go);
+        var ft = new Label { Text = "Your fleets", SizeFlagsHorizontal = SizeFlags.ExpandFill };
         ft.Modulate = new Color(1, 1, 1, 0.6f);
-        fv.AddChild(ft);
-        var fs = new ScrollContainer { CustomMinimumSize = new Vector2(230, 0), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
-        fs.CustomMinimumSize = new Vector2(230, 150);
+        go.AddChild(ft);
+        go.AddChild(Btn("My HQ", () => GoToCapital(S.Player), "Centre the map on your headquarters"));
+        go.AddChild(Btn("Enemy HQ", () => GoToCapital(S.Enemy), "Centre the map on the enemy capital: the system you must take to win"));
+        var fs = new ScrollContainer { CustomMinimumSize = new Vector2(300, 0), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        fs.CustomMinimumSize = new Vector2(300, 170);
         fv.AddChild(fs);
         _fleetList = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         fs.AddChild(_fleetList);
@@ -240,6 +286,9 @@ public partial class GameScreen : Control
         rb.CustomMinimumSize = new Vector2(0, 36);
         rv.AddChild(rb);
 
+        BuildHowTo();
+        BuildConfirm();
+
         // victory screen
         _victoryPanel = new PanelContainer { Visible = false };
         _victoryPanel.AddThemeStyleboxOverride("panel", Box(new Color(0.05f, 0.06f, 0.1f, 0.98f), 30, new Color(1f, 0.85f, 0.35f)));
@@ -256,11 +305,118 @@ public partial class GameScreen : Control
         return b;
     }
 
+    // ================================================================== how to play, confirm dialog
+
+    static readonly string[] HowToLines =
+    {
+        "GOAL: Empire - capture the Rebel headquarters system. Alliance - capture Coruscant. (Both are tagged on the map, and the My HQ / Enemy HQ buttons jump there.) You also win if the other side loses every system.",
+        "TIME: press Play (or Space) to run the clock, again to pause. Speed buttons or keys 1-4 (Play starts at 5x). N or +1 day moves one day. It pauses by itself after a battle, a capture or an invasion.",
+        "ORDERS: everything you order starts when the next day begins. After giving orders, press Play or +1 day.",
+        "MOVE A FLEET: click one of your fleets on the map (white outline) or its name in the Your fleets list, press Move..., then click the destination. The white line shows the route and the arrival day.",
+        "INVADE: 1) Select a fleet that is at one of your planets which has regiments, and press Load troops (the fleet needs troop room: transports and some warships have it).",
+        "   2) Move the fleet to the enemy or neutral system. Enemy fleets there must be beaten first (they fight you automatically when you arrive).",
+        "   3) Optional: press a Bombard button to weaken defences and shields. 4) Press Invade. Land more regiments than the defenders have.",
+        "BATTLES happen by themselves when fleets of both sides are at one system. The game pauses and shows a report; click a battle line in Messages to see it again.",
+        "BUILD: click one of your planets. The Build menu has Facilities, Ships, Fighters and Troops (click a heading to open it). Ships need a Shipyard there, troops a Training facility, buildings a Construction yard and a free slot.",
+        "MONEY: Raw is ore from mines. Refineries turn it into Refined, which is what you spend. Upkeep (used / limit) is the running cost of everything you own; over the limit, units get scrapped. More mines and refineries raise the limit.",
+        "ORDER: a planet needs enough regiments to keep the people calm. Too few and it revolts (red ring): yards and mines there stop.",
+        "MAP: wheel or + / - zoom, drag or arrow keys pan, Home resets, Esc cancels. Orange = Alliance, green = Empire, grey = nobody.",
+        "SAVING: Save / Load in the top bar (one slot). The game also saves itself every 30 days; Continue on the start screen loads that.",
+    };
+
+    void BuildHowTo()
+    {
+        _howPanel = new PanelContainer { Visible = false };
+        _howPanel.AddThemeStyleboxOverride("panel", Box(new Color(0.06f, 0.07f, 0.11f, 0.99f), 18, new Color(1f, 0.85f, 0.35f)));
+        _howPanel.SetAnchorsPreset(LayoutPreset.Center);
+        _howPanel.GrowHorizontal = GrowDirection.Both; _howPanel.GrowVertical = GrowDirection.Both;
+        AddChild(_howPanel);
+        var v = new VBoxContainer { CustomMinimumSize = new Vector2(760, 0) };
+        v.AddThemeConstantOverride("separation", 8);
+        _howPanel.AddChild(v);
+        var t = new Label { Text = "How to play" };
+        t.AddThemeFontSizeOverride("font_size", 26);
+        t.AddThemeColorOverride("font_color", new Color(1f, 0.85f, 0.35f));
+        v.AddChild(t);
+        var sc = new ScrollContainer { CustomMinimumSize = new Vector2(760, 440), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        v.AddChild(sc);
+        var lines = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        lines.AddThemeConstantOverride("separation", 6);
+        sc.AddChild(lines);
+        foreach (var line in HowToLines)
+            lines.AddChild(new Label { Text = line, AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(730, 0) });
+        var ok = Btn("Got it - let's play", CloseHowTo);
+        ok.CustomMinimumSize = new Vector2(0, 40);
+        v.AddChild(ok);
+    }
+
+    void ShowHowTo() { _howPanel.Visible = true; _playing = false; RefreshTop(); }
+
+    void CloseHowTo()
+    {
+        _howPanel.Visible = false;
+        if (_showHowToOnStart) { _showHowToOnStart = false; GameBoot.MarkHowToSeen(); }
+    }
+
+    void ToggleHowTo() { if (_howPanel.Visible) CloseHowTo(); else ShowHowTo(); }
+
+    void BuildConfirm()
+    {
+        _confirmPanel = new PanelContainer { Visible = false };
+        _confirmPanel.AddThemeStyleboxOverride("panel", Box(new Color(0.08f, 0.09f, 0.14f, 0.99f), 16, new Color(1f, 0.6f, 0.35f)));
+        _confirmPanel.SetAnchorsPreset(LayoutPreset.Center);
+        _confirmPanel.GrowHorizontal = GrowDirection.Both; _confirmPanel.GrowVertical = GrowDirection.Both;
+        AddChild(_confirmPanel);
+        var v = new VBoxContainer { CustomMinimumSize = new Vector2(440, 0) };
+        v.AddThemeConstantOverride("separation", 10);
+        _confirmPanel.AddChild(v);
+        _confirmTitle = new Label();
+        _confirmTitle.AddThemeFontSizeOverride("font_size", 22);
+        v.AddChild(_confirmTitle);
+        _confirmBody = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(440, 0) };
+        v.AddChild(_confirmBody);
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 8);
+        v.AddChild(row);
+        _confirmOk = Btn("OK", () => { var a = _confirmAction; CloseConfirm(); a?.Invoke(); });
+        _confirmOk.SizeFlagsHorizontal = SizeFlags.ExpandFill; _confirmOk.CustomMinimumSize = new Vector2(0, 38);
+        row.AddChild(_confirmOk);
+        var cancel = Btn("Cancel", CloseConfirm);
+        cancel.SizeFlagsHorizontal = SizeFlags.ExpandFill; cancel.CustomMinimumSize = new Vector2(0, 38);
+        row.AddChild(cancel);
+    }
+
+    void Confirm(string title, string body, string okText, Action ok)
+    {
+        _confirmTitle.Text = title; _confirmBody.Text = body; _confirmOk.Text = okText; _confirmAction = ok;
+        _confirmPanel.Visible = true;
+        _playing = false; RefreshTop();
+    }
+
+    void CloseConfirm() { _confirmPanel.Visible = false; _confirmAction = null; }
+
+    void AskLoad()
+    {
+        if (!GameBoot.SaveExists(GameBoot.SaveSlot)) { Toast("There is no saved game yet. Press Save first."); return; }
+        Confirm("Load the saved game?", $"Your current game (day {S.Game.Day}) will be replaced by the saved one. Anything since your last save is lost.", "Yes, load it", () => LoadRequested?.Invoke(GameBoot.SaveSlot));
+    }
+
+    void AskMenu() =>
+        Confirm("Back to the start screen?", "The current game will be closed. Anything since your last save (or the autosave every 30 days) is lost.", "Yes, leave", () => BackToMenu?.Invoke());
+
+    void GoToCapital(Side side)
+    {
+        if (!G.TryFindSystem(GameBoot.CapitalOf(S.Host, side), out int idx)) return;
+        _view.Centre(idx); _view.Select(idx);
+    }
+
+    bool OverlayOpen => _howPanel.Visible || _confirmPanel.Visible;
+
     // ================================================================== clock, loop
 
     void TogglePlay()
     {
-        if (S.Winner != null) return;
+        if (S.Winner != null || OverlayOpen) return;
         _playing = !_playing;
         if (_playing) { _pauseNote = null; _reportPanel.Visible = false; }
         RefreshTop();
@@ -281,7 +437,7 @@ public partial class GameScreen : Control
 
     public void StepOne()
     {
-        if (S.Winner != null) return;
+        if (S.Winner != null || OverlayOpen) return;
         RunDay();
     }
 
@@ -290,9 +446,11 @@ public partial class GameScreen : Control
     {
         var oc = S.StepDay();
         _retreatPending = null;
+        _pauseNote = null;
         foreach (var m in oc.New) AddLogItem(m);
         if (S.Game.Day % AutosaveEvery == 0) Autosave();
         _panelDirty = true; _fleetListDirty = true;
+        _view.QueueRedraw(); // owners, blockades and uprisings may have changed
         if (oc.Winner is Side w) { ShowVictory(w); Pause(); return false; }
         if (oc.Popup != null) ShowReport(oc.Popup);
         if (oc.PauseReason != null)
@@ -338,11 +496,12 @@ public partial class GameScreen : Control
         _sideLabel.AddThemeColorOverride("font_color", S.Player == Side.Empire ? GalaxyView.EmpireColor : GalaxyView.AllianceColor);
         var eco = S.Host.Economy;
         int load = eco.Load(S.Player), cap = eco.Capacity(S.Player);
-        _econLabel.Text = $"Raw {eco.Raw(S.Player)}   Refined {eco.Refined(S.Player)}   Upkeep {load}/{cap}";
-        _econLabel.AddThemeColorOverride("font_color", load > cap ? new Color(1f, 0.4f, 0.35f) : Colors.White);
-        _econLabel.TooltipText = "Raw: ore waiting for refineries. Refined: what you spend on building. Upkeep: what your ships, troops and buildings cost to keep, against what your planets can support. Over the limit, units get scrapped.";
+        _rawLabel.Text = $"Raw {eco.Raw(S.Player)}";
+        _refinedLabel.Text = $"Refined {eco.Refined(S.Player)}";
+        _upkeepLabel.Text = $"Upkeep {load}/{cap}";
+        _upkeepLabel.AddThemeColorOverride("font_color", load > cap ? new Color(1f, 0.4f, 0.35f) : Colors.White);
         int q = S.QueuedOrders;
-        _ordersLabel.Text = q > 0 ? $"  {q} order(s) will be carried out when the next day starts" : "";
+        _ordersLabel.Text = q > 0 ? $"{q} {(q == 1 ? "order" : "orders")} waiting" : "";
         _playButton.Text = _playing ? "Pause" : "Play";
         string banner = null;
         if (_moveFleet >= 0) banner = _moveBanner;
@@ -367,10 +526,13 @@ public partial class GameScreen : Control
         if (_toast.Visible) { _toastTimer -= delta; if (_toastTimer <= 0) _toast.Visible = false; }
 
         var pan = Vector2.Zero;
-        if (Input.IsKeyPressed(Key.Left)) pan.X -= 1;
-        if (Input.IsKeyPressed(Key.Right)) pan.X += 1;
-        if (Input.IsKeyPressed(Key.Up)) pan.Y -= 1;
-        if (Input.IsKeyPressed(Key.Down)) pan.Y += 1;
+        if (!OverlayOpen)
+        {
+            if (Input.IsKeyPressed(Key.Left)) pan.X -= 1;
+            if (Input.IsKeyPressed(Key.Right)) pan.X += 1;
+            if (Input.IsKeyPressed(Key.Up)) pan.Y -= 1;
+            if (Input.IsKeyPressed(Key.Down)) pan.Y += 1;
+        }
         if (pan != Vector2.Zero) _view.PanPixels(pan * PanPixelsPerSecond * (float)delta);
 
         _panelTimer -= delta;
@@ -389,13 +551,18 @@ public partial class GameScreen : Control
     public override void _UnhandledKeyInput(InputEvent e)
     {
         if (e is not InputEventKey { Pressed: true } k) return;
+        if (_victoryPanel.Visible && k.Keycode != Key.Escape) return;
+        if (OverlayOpen && k.Keycode != Key.Escape && k.Keycode != Key.F1) return;
         switch (k.Keycode)
         {
+            case Key.F1: ToggleHowTo(); break;
             case Key.Space: TogglePlay(); break;
             case Key.N: StepOne(); break;
             case Key.Escape:
                 if (_victoryPanel.Visible) return;
-                if (_reportPanel.Visible) _reportPanel.Visible = false;
+                if (_confirmPanel.Visible) CloseConfirm();
+                else if (_howPanel.Visible) CloseHowTo();
+                else if (_reportPanel.Visible) _reportPanel.Visible = false;
                 else if (_moveFleet >= 0) CancelMove();
                 else { _view.SelectedFleet = -1; _view.Select(-1); }
                 break;
@@ -422,17 +589,43 @@ public partial class GameScreen : Control
         _ => new Color(0.85f, 0.87f, 0.92f),
     };
 
+    bool PassesFilter(Message m) => _logFilter switch
+    {
+        LogFilter.Battles => m.Combat || m.Kind == MsgKind.Battle,
+        LogFilter.Mine => m.System == null || S.OwnerOf(m.System) == S.Player,
+        _ => true,
+    };
+
+    void SetLogFilter(LogFilter f)
+    {
+        _logFilter = f;
+        for (int i = 0; i < _filterButtons.Count; i++) _filterButtons[i].SetPressedNoSignal(i == (int)f);
+        _log.Clear(); _logMessages.Clear();
+        foreach (var m in _allMessages) if (PassesFilter(m)) AppendLogRow(m);
+        ScrollLogToEnd();
+    }
+
     void AddLogItem(Message m)
     {
         if (_log == null) return;
+        _allMessages.Add(m);
+        if (_allMessages.Count > MaxLogItems) _allMessages.RemoveAt(0);
+        if (!PassesFilter(m)) return;
+        AppendLogRow(m);
+        ScrollLogToEnd();
+    }
+
+    void AppendLogRow(Message m)
+    {
         _logMessages.Add(m);
         _log.AddItem($"Day {m.Day}: {m.Text}");
         int idx = _log.ItemCount - 1;
         _log.SetItemCustomFgColor(idx, KindColor(m.Kind));
         _log.SetItemTooltipEnabled(idx, false);
         if (_log.ItemCount > MaxLogItems) { _log.RemoveItem(0); _logMessages.RemoveAt(0); }
-        Callable.From(() => { var sb = _log.GetVScrollBar(); sb.Value = sb.MaxValue; }).CallDeferred();
     }
+
+    void ScrollLogToEnd() => Callable.From(() => { var sb = _log.GetVScrollBar(); sb.Value = sb.MaxValue; }).CallDeferred();
 
     void OnLogClicked(long index, Vector2 pos, long button)
     {
@@ -452,7 +645,7 @@ public partial class GameScreen : Control
 
     void ShowVictory(Side winner)
     {
-        foreach (var c in _victoryPanel.GetChildren()) c.QueueFree();
+        foreach (var c in _victoryPanel.GetChildren()) { _victoryPanel.RemoveChild(c); c.QueueFree(); }
         var v = new VBoxContainer { CustomMinimumSize = new Vector2(420, 0) };
         v.AddThemeConstantOverride("separation", 14);
         _victoryPanel.AddChild(v);
@@ -462,6 +655,7 @@ public partial class GameScreen : Control
         t.AddThemeColorOverride("font_color", won ? new Color(0.5f, 1f, 0.5f) : new Color(1f, 0.45f, 0.4f));
         v.AddChild(t);
         v.AddChild(new Label { Text = $"The {S.NameOf(winner)} has won the war, on day {S.Game.Day}. ({GameBoot.WinReason(S.Host)})", HorizontalAlignment = HorizontalAlignment.Center, AutowrapMode = TextServer.AutowrapMode.WordSmart });
+        v.AddChild(Btn("Look at the map", () => _victoryPanel.Visible = false));
         v.AddChild(Btn("Back to the start screen", () => BackToMenu?.Invoke()));
         _victoryPanel.Visible = true;
     }

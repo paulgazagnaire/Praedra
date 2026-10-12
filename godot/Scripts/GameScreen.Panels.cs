@@ -93,14 +93,17 @@ public partial class GameScreen
     void OnSystemPicked(int idx)
     {
         if (_moveFleet < 0) return;
-        if (!S.Game.State.Fleets.TryGetValue(_moveFleet, out var f)) { CancelMove(); return; }
+        if (!S.Game.State.Fleets.TryGetValue(_moveFleet, out var f) || f.At == null) { CancelMove(); return; }
         string to = G.Systems[idx].Name;
         if (to == f.At) return;
+        var pr = Fm.FindPath(f.At!, to, Fm.SpeedOf(f));
         long seq = Fm.SubmitMove(Me, f.Id, to);
-        S.Track(seq, $"Move {f.Name} to {to}");
+        S.TrackFleet(f.Id, seq, $"Move {f.Name} to {to}");
+        if (pr.Ok) S.PlanMove(f.Id, new GameSession.PlannedMove(to, pr.Systems.Select(i => G.Systems[i].Name).ToList(), pr.TotalTicks, S.Game.Day + pr.TotalTicks));
         S.Say($"Order sent: move {f.Name} to {to}.", MsgKind.Info, to);
         AddLogItem(S.Messages[^1]);
         CancelMove();
+        _fleetListDirty = true;
     }
 
     // ================================================================== small UI helpers
@@ -184,7 +187,7 @@ public partial class GameScreen
         bool mine = owner == Me;
 
         Line(name, null, 22);
-        Line($"{(sys.IsOutsideSectors ? "Outside the sectors" : sys.Sector)}{(_hqs.Contains(idx) ? "   (headquarters)" : "")}", Dim);
+        Line($"{(sys.IsOutsideSectors ? "Outside the sectors" : sys.Sector)}{(_hqs.TryGetValue(idx, out var hqSide) ? (hqSide == Me ? "   (YOUR HEADQUARTERS)" : "   (ENEMY CAPITAL - take it to win)") : "")}", Dim);
         Add(new HSeparator());
         Line(owner == null ? "Owner: nobody (neutral)" : $"Owner: {S.You(owner.Value)}", owner == null ? Dim : (mine ? Good : Bad));
         Line($"Support: Alliance {eco.SupportOf(name, Side.Alliance)}%, Empire {eco.SupportOf(name, Side.Empire)}%");
@@ -253,6 +256,19 @@ public partial class GameScreen
         _panelDirty = true; _panelTimer = 0; RefreshTop();
     }
 
+    // Which build sections are open (kept while the panel is rebuilt, and across systems).
+    readonly HashSet<string> _openSections = new() { "Facilities" };
+
+    static readonly string[] FacilityPriority = { "Mine", "Refinery", "Construction Yard", "Orbital Shipyard", "Training Facility" };
+
+    static string SectionOf(ObjectCategory c) => c switch
+    {
+        ObjectCategory.Facility => "Facilities",
+        ObjectCategory.CapitalShip => "Ships",
+        ObjectCategory.Fighter => "Fighters",
+        _ => "Troops",
+    };
+
     void BuildMenu(string system)
     {
         var eco = S.Host.Economy; var cons = S.Host.Construction;
@@ -260,8 +276,8 @@ public partial class GameScreen
             && FacilityKinds.TryParse(o.Class, out var k) && FacilityKinds.IsYard(k)).ToList();
 
         Heading("Build");
-        if (yards.Count == 0) { Line("No yards here. Build a construction yard, shipyard or training facility first (needs a construction yard somewhere).", Dim); }
-        else
+        Line("Click a heading to open it. Orders start when the next day begins.", Dim, 13);
+        if (yards.Count > 0)
         {
             var row = new HBoxContainer();
             row.AddChild(new Label { Text = "How many: " });
@@ -272,39 +288,46 @@ public partial class GameScreen
         }
 
         var p = cons.Params;
-        foreach (var fam in new[] { YardFamily.Construction, YardFamily.Shipyard, YardFamily.Training })
+        var allRows = eco.Costs.Rows.Where(r => (Me == Side.Empire ? r.Empire : r.Alliance) && r.Cost > 0).ToList();
+        foreach (var section in new[] { "Facilities", "Ships", "Fighters", "Troops" })
         {
+            var rows = allRows.Where(r => SectionOf(r.Category) == section).ToList();
+            if (rows.Count == 0) continue;
+            var fam = Rebellion.Core.Construction.Yards.BuiltBy(rows[0].Category);
             var fy = yards.Where(y => FacilityKinds.TryParse(y.Class, out var k) && Rebellion.Core.Construction.Yards.FamilyOf(k) == fam).ToList();
-            if (fy.Count == 0) continue;
+            bool open = _openSections.Contains(section);
+            string sec = section;
+            var head = new Button { Text = $"{(open ? "v" : ">")}  {section}{(fy.Count == 0 ? $"   (needs a {FamilyName(fam).ToLowerInvariant()} here)" : "")}", Alignment = HorizontalAlignment.Left, FocusMode = FocusModeEnum.None, ToggleMode = false };
+            head.AddThemeColorOverride("font_color", new Color(1f, 0.85f, 0.4f));
+            head.TooltipText = "Click to open or close this list";
+            head.Pressed += () => { if (!_openSections.Remove(sec)) _openSections.Add(sec); _panelDirty = true; _panelTimer = 0; };
+            Add(head);
+            if (!open) continue;
+            if (fy.Count == 0)
+            {
+                Line($"This planet has no {FamilyName(fam).ToLowerInvariant()}. {(fam == YardFamily.Construction ? "Build one from a planet that already has a construction yard." : "Build one under Facilities first.")}", Dim, 13);
+                continue;
+            }
             int adv = fy.Count(y => FacilityKinds.TryParse(y.Class, out var k) && Rebellion.Core.Construction.Yards.IsAdvanced(k));
             int std = fy.Count - adv;
-            Heading($"{FamilyName(fam)} ({fy.Count})");
-            var rows = eco.Costs.Rows.Where(r => Rebellion.Core.Construction.Yards.BuiltBy(r.Category) == fam && (Me == Side.Empire ? r.Empire : r.Alliance) && r.Cost > 0)
-                .OrderBy(r => r.Category).ThenBy(r => r.ResearchOrder).ThenBy(r => r.Name, StringComparer.Ordinal).ToList();
-            ObjectCategory? last = null;
-            foreach (var r in rows)
+            long refined = eco.Refined(Me);
+            // Most useful first: things you can start now, then the cheap ones; mines and refineries lead the facility list.
+            bool Usable(CostRow r) => cons.IsResearched(Me, r.Name) && !(r.Category == ObjectCategory.Facility && FacilityKinds.TryParse(r.Name, out var kk) && eco.CheckPlace(system, kk) != null);
+            int Prio(CostRow r) { int i = Array.IndexOf(FacilityPriority, r.Name); return r.Category == ObjectCategory.Facility ? (i >= 0 ? i : 50) : 0; }
+            foreach (var r in rows.OrderBy(r => Usable(r) ? 0 : 1).ThenBy(Prio).ThenBy(r => r.Cost).ThenBy(r => r.Name, StringComparer.Ordinal))
             {
-                if (r.Category != last)
-                {
-                    last = r.Category;
-                    Line(r.Category switch
-                    {
-                        ObjectCategory.Facility => "Mines, refineries, yards and defences",
-                        ObjectCategory.CapitalShip => "Ships",
-                        ObjectCategory.Fighter => "Fighter squadrons",
-                        ObjectCategory.Regiment => "Regiments",
-                        _ => "Special forces",
-                    }, Dim, 13);
-                }
                 // About how long one unit takes: cost points, each yard adds one point per cycle (rule: m2-construction §Build time).
                 long perDay = (long)std * p.AdvancedCycleDays + (long)adv * p.StandardCycleDays; // scaled by rateStd*rateAdv
                 int days = (int)(((long)r.Cost * p.StandardCycleDays * p.AdvancedCycleDays + perDay - 1) / Math.Max(1, perDay));
                 string hint = "";
                 if (!cons.IsResearched(Me, r.Name)) hint = "  (not researched)";
                 else if (r.Category == ObjectCategory.Facility && FacilityKinds.TryParse(r.Name, out var kind) && eco.CheckPlace(system, kind) != null) hint = "  (no free slot)";
+                else if (r.Cost > refined) hint = "  (waits for refined)";
                 var row = r;
-                Act($"{r.Name}   {r.Cost} refined, upkeep {r.Maintenance}, ~{days} days{hint}", () => SubmitBuild(system, fam, row),
+                var fam2 = Rebellion.Core.Construction.Yards.BuiltBy(r.Category);
+                var btn = Act($"{r.Name}   {r.Cost} refined, upkeep {r.Maintenance}, ~{days} days{hint}", () => SubmitBuild(system, fam2, row),
                     $"Costs {r.Cost} refined material in total and {r.Maintenance} upkeep. Takes about {days} days per unit once the refined material is there.");
+                if (!Usable(r)) btn.Modulate = new Color(1, 1, 1, 0.55f);
             }
         }
     }
@@ -323,15 +346,28 @@ public partial class GameScreen
 
     // ================================================================== fleet panel
 
+    static int ArrivalDay(FleetTransit t)
+    {
+        int finalDay = t.DueDay;
+        for (int h = t.HopIndex + 1; h < t.HopTicks.Count; h++) finalDay += t.HopTicks[h];
+        return finalDay;
+    }
+
     string WhereIs(Fleet f)
     {
         if (f.Transit is { } t && f.At == null)
-        {
-            int finalDay = t.DueDay;
-            for (int h = t.HopIndex + 1; h < t.HopTicks.Count; h++) finalDay += t.HopTicks[h];
-            return $"Travelling {t.Path[t.HopIndex]} -> {t.Path[t.HopIndex + 1]} (next stop day {t.DueDay}). Heading for {t.Path[^1]}, arriving day {finalDay}.";
-        }
+            return $"Travelling {t.Path[t.HopIndex]} -> {t.Path[t.HopIndex + 1]} (next stop day {t.DueDay}). Heading for {t.Path[^1]}, arriving day {ArrivalDay(t)}.";
+        if (S.PlannedMoveOf(f.Id) is { } pm) return $"At {f.At}. Will leave when the next day starts: moving to {pm.To}, arrives day {pm.ArrivalDay}.";
         return $"At {f.At}.";
+    }
+
+    /// <summary>One short line for the fleet list: where it is, where it is going and when it gets there.</summary>
+    string StatusOf(Fleet f)
+    {
+        if (f.Transit is { } t && f.At == null) return $"moving to {t.Path[^1]}, arrives day {ArrivalDay(t)}";
+        if (S.PlannedMoveOf(f.Id) is { } pm) return $"at {f.At}; moving to {pm.To}, arrives day {pm.ArrivalDay}";
+        if (S.PendingOf(f.Id).Any()) return $"at {f.At}; order waiting";
+        return $"at {f.At}";
     }
 
     void FleetPanel(Fleet f)
@@ -342,6 +378,7 @@ public partial class GameScreen
         Line(own ? $"Your fleet ({S.NameOf(f.Side)})" : $"Enemy fleet ({S.NameOf(f.Side)})", own ? Good : Bad);
         Add(new HSeparator());
         Line(WhereIs(f));
+        foreach (var pend in S.PendingOf(f.Id)) Line($"Waiting for the next day: {pend}", new Color(1f, 0.85f, 0.4f));
         Line($"Strength: {Fm.StrengthOf(f):0.0}   Speed rating: {Fm.SpeedOf(f)} (lower is faster)");
         Line($"Ships: {Counts(f.Ships.Select(id => S.Host.Economy.Find(id)?.Class ?? "?"))}");
         var squads = Fm.ClassNamesOf(f).ToList();
@@ -440,25 +477,25 @@ public partial class GameScreen
     void LoadTroops(Fleet f, List<int> ids)
     {
         if (ids.Count == 0) return;
-        S.Track(S.Host.Troops.SubmitLoad(Me, f.Id, ids), $"Load troops onto {f.Name}");
+        S.TrackFleet(f.Id, S.Host.Troops.SubmitLoad(Me, f.Id, ids), $"Load troops onto {f.Name}");
         Sent($"load {ids.Count} regiment(s) onto {f.Name}", f.At);
     }
 
     void UnloadTroops(Fleet f, List<int> ids)
     {
-        S.Track(S.Host.Troops.SubmitUnload(Me, f.Id, ids), $"Unload troops from {f.Name}");
+        S.TrackFleet(f.Id, S.Host.Troops.SubmitUnload(Me, f.Id, ids), $"Unload troops from {f.Name}");
         Sent($"unload {ids.Count} regiment(s) from {f.Name}", f.At);
     }
 
     void Bombard(Fleet f, BombardCategory cat)
     {
-        S.Track(S.Host.Bombardment.SubmitBombard(Me, f.Id, f.At!, cat), $"Bombard {f.At} with {f.Name}");
+        S.TrackFleet(f.Id, S.Host.Bombardment.SubmitBombard(Me, f.Id, f.At!, cat), $"Bombard {f.At} with {f.Name}");
         Sent($"{f.Name} bombards {f.At} ({cat.ToString().ToLowerInvariant()})", f.At);
     }
 
     void Invade(Fleet f)
     {
-        S.Track(S.Host.Assault.SubmitAssault(Me, f.Id, f.At!), $"Invade {f.At} with {f.Name}");
+        S.TrackFleet(f.Id, S.Host.Assault.SubmitAssault(Me, f.Id, f.At!), $"Invade {f.At} with {f.Name}");
         Sent($"{f.Name} invades {f.At}", f.At);
     }
 
@@ -475,14 +512,14 @@ public partial class GameScreen
     {
         var ids = _splitSel.Where(f.Ships.Contains).OrderBy(x => x).ToList();
         if (ids.Count == 0) { Toast("Tick at least one ship first."); return; }
-        S.Track(S.Host.Fleets.SubmitSplitFleet(Me, f.Id, ids), $"Split {f.Name}");
+        S.TrackFleet(f.Id, S.Host.Fleets.SubmitSplitFleet(Me, f.Id, ids), $"Split {f.Name}");
         _splitSel.Clear();
         Sent($"split {ids.Count} ship(s) off {f.Name}", f.At);
     }
 
     void Merge(Fleet f, Fleet into)
     {
-        S.Track(S.Host.Fleets.SubmitMergeFleets(Me, f.Id, into.Id), $"Merge {f.Name} into {into.Name}");
+        S.TrackFleet(f.Id, S.Host.Fleets.SubmitMergeFleets(Me, f.Id, into.Id), $"Merge {f.Name} into {into.Name}");
         Sent($"merge {f.Name} into {into.Name}", f.At);
     }
 
@@ -496,8 +533,7 @@ public partial class GameScreen
         foreach (var f in mine.Take(40))
         {
             var fl = f;
-            string where = f.Transit is { } t && f.At == null ? $"to {t.Path[^1]}" : f.At;
-            var b = new Button { Text = $"{f.Name}  ({where})", Alignment = HorizontalAlignment.Left, FocusMode = FocusModeEnum.None, Flat = true, ClipText = true };
+            var b = new Button { Text = $"{f.Name}\n   {StatusOf(f)}", Alignment = HorizontalAlignment.Left, FocusMode = FocusModeEnum.None, Flat = true, ClipText = true, TooltipText = $"{f.Name}: {StatusOf(f)}. Click to select." };
             b.AddThemeFontSizeOverride("font_size", 13);
             b.Pressed += () => SelectFleet(fl.Id, true);
             _fleetList.AddChild(b);

@@ -20,7 +20,7 @@ namespace RebellionViewer;
 public enum MsgKind { Info, Good, Bad, Warn, Battle }
 
 /// <summary>One line of the message log. <see cref="System"/> is the place the click centres the map on; <see cref="Detail"/> is a longer report.</summary>
-public sealed record Message(int Day, string Text, string System, MsgKind Kind, string Title = null, string Detail = null);
+public sealed record Message(int Day, string Text, string System, MsgKind Kind, string Title = null, string Detail = null, bool Combat = false);
 
 /// <summary>What one day did, for the game loop.</summary>
 public sealed class StepOutcome
@@ -51,6 +51,8 @@ public sealed class GameSession
 
     // What each order the player queued was, by sequence number, so a refusal can be explained in words.
     readonly Dictionary<long, string> _pending = new();
+    readonly Dictionary<long, int> _pendingFleet = new();
+    readonly Dictionary<int, PlannedMove> _plannedMoves = new();
     int _printed;
     // Names as they were before the day ran (a destroyed ship or a dissolved fleet is gone afterwards).
     readonly Dictionary<int, string> _classOf = new();
@@ -100,6 +102,24 @@ public sealed class GameSession
         return sequence;
     }
 
+    /// <summary>Like <see cref="Track"/>, and remember which fleet the order belongs to (shown as "waiting for the next day" on the fleet).</summary>
+    public long TrackFleet(int fleet, long sequence, string what)
+    {
+        _pendingFleet[sequence] = fleet;
+        return Track(sequence, what);
+    }
+
+    /// <summary>Plain-language orders given to this fleet that the core will carry out when the next day starts.</summary>
+    public IEnumerable<string> PendingOf(int fleet) =>
+        _pendingFleet.Where(kv => kv.Value == fleet && _pending.ContainsKey(kv.Key)).OrderBy(kv => kv.Key).Select(kv => _pending[kv.Key]);
+
+    /// <summary>A move order that was given but not yet started (it starts with the next day).</summary>
+    public readonly record struct PlannedMove(string To, IReadOnlyList<string> Path, int Days, int ArrivalDay);
+
+    public void PlanMove(int fleet, PlannedMove m) => _plannedMoves[fleet] = m;
+    public PlannedMove? PlannedMoveOf(int fleet) => _plannedMoves.TryGetValue(fleet, out var m) ? m : null;
+    public IEnumerable<KeyValuePair<int, PlannedMove>> PlannedMoves => _plannedMoves;
+
     public void Say(string text, MsgKind kind = MsgKind.Info, string system = null) =>
         Messages.Add(new Message(Game.Day, text, system, kind));
 
@@ -113,6 +133,8 @@ public sealed class GameSession
         Game.Step();
         var outcome = new StepOutcome();
         ReadEvents(outcome);
+        // Every order given before this day was judged in this Step: nothing is "waiting" any more.
+        _pending.Clear(); _pendingFleet.Clear(); _plannedMoves.Clear();
         Winner = GameBoot.WinnerOf(Host);
         if (Winner is Side w)
         {
@@ -203,8 +225,11 @@ public sealed class GameSession
         var events = Game.Events;
         for (; _printed < events.Count; _printed++)
         {
-            foreach (var m in Describe(events[_printed], o))
+            bool combat = events[_printed] is Contact or ForcedStop or FleetRetreated or BattleEnded or SystemCaptured
+                or BombardmentStarted or BombardmentResolved or BombardCancelled or AssaultStarted or AssaultResolved or AssaultCancelled;
+            foreach (var m0 in Describe(events[_printed], o))
             {
+                var m = combat ? m0 with { Combat = true } : m0;
                 Messages.Add(m);
                 o.New.Add(m);
             }

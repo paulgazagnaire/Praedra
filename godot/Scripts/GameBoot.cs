@@ -123,8 +123,19 @@ public static class GameBoot
     // ------------------------------------------------------------------ save files
 
     public static string SaveFolder => ProjectSettings.GlobalizePath("user://");
-    public const string SaveSlot = "user://save1.json";
-    public const string AutoSaveSlot = "user://autosave.json";
+    // Not const: the headless playtest points them at throw-away files so it never touches a player's saves.
+    public static string SaveSlot = "user://save1.json";
+    public static string AutoSaveSlot = "user://autosave.json";
+    public static string HowToFlag = "user://howto_seen.txt";
+
+    /// <summary>True until the player has closed the "How to play" overlay once.</summary>
+    public static bool HowToUnseen() => !FileAccess.FileExists(HowToFlag);
+
+    public static void MarkHowToSeen()
+    {
+        try { using var f = FileAccess.Open(HowToFlag, FileAccess.ModeFlags.Write); f?.StoreLine("seen"); }
+        catch (Exception e) { GD.PrintErr("Could not remember the how-to flag: " + e.Message); }
+    }
 
     public static bool SaveExists(string path) => FileAccess.FileExists(path);
 

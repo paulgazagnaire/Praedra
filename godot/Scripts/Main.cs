@@ -24,8 +24,9 @@ public partial class Main : Control
     public override void _Ready()
     {
         _args = OS.GetCmdlineUserArgs();
-        bool smoke = _args.Contains("--smoke") || DisplayServer.GetName() == "headless";
+        bool smoke = _args.Contains("--smoke") || (DisplayServer.GetName() == "headless" && !_args.Contains("--playtest"));
         GameBoot.LoadData();
+        if (_args.Contains("--playtest")) { Playtest(); return; }
         if (smoke) { Smoke(); GetTree().Quit(); return; }
 
         string shot = null; int shotFrames = 30;
@@ -58,7 +59,7 @@ public partial class Main : Control
     void ShowMenu(string shot = null, int shotFrames = 30)
     {
         var menu = new StartMenu();
-        menu.NewGameRequested += (side, preset) => StartGame(GameSession.New(GameBoot.LoadData(), side, preset));
+        menu.NewGameRequested += (side, preset) => StartGame(GameSession.New(GameBoot.LoadData(), side, preset), newGame: true);
         menu.LoadRequested += LoadSave;
         menu.QuitRequested += () => GetTree().Quit();
         Swap(menu);
@@ -79,10 +80,10 @@ public partial class Main : Control
         catch (Exception e) { GD.PrintErr("Load failed: " + e.Message); }
     }
 
-    void StartGame(GameSession session, string shot = null, int shotFrames = 30, bool applyArgs = false)
+    void StartGame(GameSession session, string shot = null, int shotFrames = 30, bool applyArgs = false, bool newGame = false)
     {
         var gs = new GameScreen();
-        gs.Init(session);
+        gs.Init(session, newGame);
         gs.BackToMenu += () => ShowMenu();
         gs.LoadRequested += LoadSave;
         Swap(gs);
@@ -112,6 +113,10 @@ public partial class Main : Control
                         gs.SelectSystem(_args[i + 1]);
                     }
                     break;
+                case "--howto": gs.ShotShowHowTo(); break;
+                case "--open" when i + 1 < _args.Length: gs.ShotOpenSection(_args[i + 1]); break;
+                case "--moveto" when i + 1 < _args.Length: gs.ShotMove(_args[i + 1]); break;
+                case "--filter" when i + 1 < _args.Length: gs.ShotFilter(_args[i + 1]); break;
                 case "--fleet" when i + 1 < _args.Length:
                     foreach (var f in gs.S.Game.State.Fleets.Values) if (f.Name == _args[i + 1]) gs.SelectFleet(f.Id, true);
                     break;

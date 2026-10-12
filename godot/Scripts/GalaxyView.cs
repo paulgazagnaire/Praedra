@@ -37,6 +37,8 @@ public partial class GalaxyView : Control
     public Func<int, Side?> OwnerOf;
     /// <summary>True for a headquarters / capital system.</summary>
     public Func<int, bool> IsHq;
+    /// <summary>A tag drawn under a system at any zoom ("YOUR HQ", "ENEMY CAPITAL"), or null.</summary>
+    public Func<int, (string Text, Color Color)?> CapitalTag;
     public Func<int, bool> IsUprising;
     public Func<int, bool> IsBlockaded;
     /// <summary>While true a click on a system raises <see cref="SystemPicked"/> instead of selecting it (used to choose a destination).</summary>
@@ -285,6 +287,21 @@ public partial class GalaxyView : Control
         }
         if (focus >= 0) DrawArc(SystemScreen(focus), radius + 4f, 0, Mathf.Tau, 32, Colors.White, 2f, true);
         if (Hovered >= 0 && Hovered != focus) DrawArc(SystemScreen(Hovered), radius + 3f, 0, Mathf.Tau, 32, new Color(1, 1, 1, 0.6f), 1.5f, true);
+
+        // capital tags: always visible, so the player can find the headquarters at any zoom
+        if (CapitalTag != null)
+            for (int i = 0; i < _pos.Length; i++)
+            {
+                if (CapitalTag(i) is not { } tag) continue;
+                var p = SystemScreen(i);
+                if (!screenRect.HasPoint(p)) continue;
+                int fs = 12;
+                var size = _font.GetStringSize(tag.Text, HorizontalAlignment.Left, -1, fs);
+                var box = new Rect2(p + new Vector2(-size.X / 2f - 4f, radius + 12f), size + new Vector2(8f, 4f));
+                DrawRect(box, new Color(0.03f, 0.04f, 0.07f, 0.9f));
+                DrawRect(box, tag.Color, false, 1.5f);
+                DrawString(_font, box.Position + new Vector2(4f, size.Y - 1f), tag.Text, HorizontalAlignment.Left, -1, fs, tag.Color);
+            }
 
         // system names (zoomed in)
         float nameAlpha = Mathf.Clamp((_zoom - NameZoomFrom) / (NameZoomTo - NameZoomFrom), 0f, 1f);
