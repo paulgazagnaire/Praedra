@@ -21,6 +21,10 @@ public partial class GalaxyView : Control
     public Galaxy Galaxy { get; private set; }
     public int Hovered { get; private set; } = -1;
     public int Selected { get; private set; } = -1;
+    /// <summary>Fleet id of the selected fleet, or -1.</summary>
+    public int SelectedFleet { get; set; } = -1;
+    /// <summary>Set by the owner: returns the fleet id under a screen point, or -1. Fleets win over systems on click.</summary>
+    public Func<Vector2, int> FleetPicker;
 
     public event Action StateChanged;
 
@@ -93,7 +97,7 @@ public partial class GalaxyView : Control
     }
 
     public void SetZoom(float zoom) { _zoom = Mathf.Clamp(zoom, MinZoom, MaxZoom); Changed(); }
-    public void Select(int system) { Selected = system; StateChanged?.Invoke(); QueueRedraw(); }
+    public void Select(int system) { SelectedFleet = -1; Selected = system; StateChanged?.Invoke(); QueueRedraw(); }
 
     // ---- transform ----
     float FitScale()
@@ -130,7 +134,9 @@ public partial class GalaxyView : Control
                 {
                     if (_dragging && !_dragMoved && mb.ButtonIndex == MouseButton.Left)
                     {
-                        int hit = Pick(mb.Position);
+                        int fleet = FleetPicker?.Invoke(mb.Position) ?? -1;
+                        SelectedFleet = fleet;
+                        int hit = fleet >= 0 ? -1 : Pick(mb.Position);
                         Selected = hit; // click on empty space clears the selection
                         StateChanged?.Invoke();
                         QueueRedraw();
