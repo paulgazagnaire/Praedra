@@ -15,6 +15,8 @@ public enum SupportCause
     UprisingErosion, Presence,
     // hooks for later milestones (the function exists; nothing calls it yet)
     Bombardment, Diplomacy, IncitedUprising, Battle, DeathStar, ControlChange, HqMove, Other,
+    /// <summary>A Subdue Uprising success (new cause). rule: m5-missions §6 (Lead notes: add SupportCause.Subdue).</summary>
+    Subdue,
 }
 
 /// <summary>

@@ -491,6 +491,12 @@ public sealed class CharacterModule
         return true;
     }
 
+    /// <summary>
+    /// Raise one skill (m5-missions: a successful research member gains GNPRTB 6158 = 1 in that research skill; the original's character-side check
+    /// before the gain is Missing, so no cap). Not the refused SkillGrowth switch (growth outside research missions). rule: m5-missions §6 Research.
+    /// </summary>
+    public void GainSkill(CharacterRecord c, Skill skill, int amount) => c.Skills[(int)skill] += amount;
+
     // ================================================================== Navigator and fleet hooks (§Navigator, §Riding)
 
     /// <summary>

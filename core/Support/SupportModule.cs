@@ -273,16 +273,41 @@ public sealed class SupportModule
             ctx.Emit((i, _) => new IncidentRolled(i, t, sys, score, c1, c2));
             ApplyEffect(ctx, t, sys, holder, c1);
             ApplyEffect(ctx, t, sys, holder, c2);
+            IncidentFired?.Invoke(ctx, sys, holder);
             st.IncidentDue = t + Params.IncidentIntervalMin + rng.NextInt(0, Params.IncidentIntervalSpread);
         }
     }
 
-    /// <summary>The incident score of a system now for its holder, with the dice given. M5 adds the incite and subdue terms (0 here).</summary>
+    /// <summary>
+    /// The incident score of a system now for its holder, with the dice given, plus <c>incite_term + subdue_term</c> from the missions module (0 when
+    /// no mission module is attached). rule: m2-uprisings-and-garrison §Incident (Score); m5-missions §7.
+    /// </summary>
     public int IncidentScore(string system, Side holder, int d1, int d2)
     {
         var regs = HolderRegiments(system, holder).ToList();
         int stormtroopers = regs.Count(o => o.Class == Params.StormtrooperClass);
-        return IncidentScore(Params, d1, d2, _eco.SupportOf(system, holder), regs.Count, stormtroopers, holder == Side.Empire && IsDeathStarSector(system));
+        return IncidentScore(Params, d1, d2, _eco.SupportOf(system, holder), regs.Count, stormtroopers, holder == Side.Empire && IsDeathStarSector(system))
+            + (AgentIncidentTerm?.Invoke(system) ?? 0);
+    }
+
+    /// <summary><c>incite_term(system) + subdue_term(system)</c> of the incident score; the missions module sets it. Null = 0. rule: m5-missions §7.</summary>
+    public Func<string, int>? AgentIncidentTerm { get; set; }
+
+    /// <summary>
+    /// Called after each incident's effects (slot 6.3) with (ctx, system, holder): the missions module applies the per-incident Incite effect when
+    /// <c>InciteSupportTiming = PerIncident</c>. Null = nothing. rule: m5-missions §6 (Incite Uprising).
+    /// </summary>
+    public Action<StepContext, string, Side>? IncidentFired { get; set; }
+
+    /// <summary>
+    /// End a system's uprising now (flag cleared, erosion and incident timers disarmed; emits UprisingEnded with the reason). Used by a Subdue success
+    /// with <c>SubdueEndsUprising</c> on. No-op without an uprising. rule: m5-missions §6 Subdue Uprising (switch SubdueEndsUprising).
+    /// </summary>
+    public void EndUprisingNow(StepContext ctx, string system, string reason)
+    {
+        var st = StateOf(system);
+        if (st is { Uprising: true }) EndUprising(ctx, ctx.Day + 1, system, st, reason);
+        S.Prune(system);
     }
 
     /// <summary>

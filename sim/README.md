@@ -100,6 +100,30 @@ and no regiments, so an uprising starts on day 1 and erodes support 1 point per 
 Regiments land and the uprising ends the next day. Bespin is blockaded by an Empire fleet (support drifts one point per 30 days).
 Draws no random numbers itself.
 
+## `mission`: N seeded missions against a defended system
+
+```
+dotnet run --project sim -- mission --kind <MissionKind> --agent "<Name>" [--agent ...] [--side Alliance|Empire] [--skills "esp=60,com=50"] \
+    [--sf "<Class>:<n>"] [--ships "<Class>:<n>"] [--troops "<Class>:<n>"] [--officer "<Name>" [--officer-esp <n>]] \
+    [--target-agent "<Name>"] [--facility Mine] [--at Coruscant] [--owner Alliance|Empire|neutral] [--support 50] [--missions 1000] [--seed 1]
+```
+
+Mission k runs in a fresh game with seed (seed + k - 1), incidents off. The team stands at the target, so it lands at once. Agents keep
+their record's base skills unless `--skills` sets them. `--ships` is one enemy fleet at the target (`--officer` its Admiral), `--troops`
+are landed enemy regiments, fighters or special forces. It prints how often the first iteration succeeded, failed or was foiled, and the
+mean detection and success chances the core rolled. The success tables are only the sheet's anchor rows until the importer reads them, so
+the success chances are coarse.
+
+```
+$ dotnet run --project sim -- mission --kind Espionage --agent "Han Solo" --troops "Stormtrooper Regiment:2" --missions 300
+300 Espionage missions by the Alliance at Coruscant (owner Empire, Alliance support 50), seeds 1..300
+  team: Han Solo
+  defenders: 2 x Stormtrooper Regiment
+  first iteration: succeeded 153 (51.0%), failed 2 (0.7%), foiled 145 (48.3%)
+  detection rolls 345, detections 145, mean chance per detection roll 40.0%; success rolls 155, mean success chance 99.0%
+  mission 1: defender 1 x 76 chance 40%; defender 2 x 76 chance 40%; mean end day 12.1
+```
+
 ## `campaign`: the scripted two-sided test campaign, 1000 days
 
 ```

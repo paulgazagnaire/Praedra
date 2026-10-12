@@ -33,3 +33,9 @@ Characters (m5-characters-and-force, m5-setup-and-victory P9), copied 2026-10-12
 - `design/navigator_speed.csv` is the Navigator table of m5-characters-and-force (Han 50 Traced, the rest Proposal); unlisted characters are 100.
 - `design/start-cast.csv` is the fixed start cast of m5-setup-and-victory P9 in placement order (Traced, setup-victory/03), with the two extras rows.
 - `design/victory-rules.csv` is the victory rule table of m5-setup-and-victory (subjects by character id); only the `CharacterCaptured` rows are read so far (standard victory is a switch, off by default).
+
+Missions (m5-missions):
+- `interim/mission-records.csv` holds the 25 `MISSNSD` records (id, kind, which side may send it, timer minimum and spread, hidden, repeats, success table, special-force eligibility mask). Traced, unverified vs original.
+- `interim/mission-tables.csv` holds the foil table `FOILTB` (Traced, full) and the anchor rows of the success tables (`MSTB` family). The full success tables and the decoy tables `FDECOYTB` and `TDECOYTB` are Missing until the importer reads them: lookups step over the anchors, and decoys are refused (RuleMissing).
+- `interim/mission-numbers.csv` holds the sheet's named numbers (die size, detection constant, officer percentages, diplomacy and subdue ranges, incite support, Han's mission speed), each with its source tag.
+- `design/mission-foilable.csv` says which kinds a detection can foil (DEFAULT per the sheet).

@@ -84,6 +84,10 @@ public sealed record GameSettings
     /// <summary>Character switches and numbers (Navigator, ride fleet, death, injury days, escape, Force ranks, start extras...). Null = the sheet's DEFAULTs. Refused values throw at attach.</summary>
     public Rebellion.Core.Characters.CharacterParams? Characters { get; init; }
 
+    // ---- missions. rule: m5-missions §Defaults for undecided items
+    /// <summary>Mission switches (table lookup, success rule, decoys, caps, Incite and Subdue modes, Sabotage skill and target, exposure hooks...). Null = the sheet's DEFAULTs. Refused values throw at attach.</summary>
+    public Rebellion.Core.Missions.MissionParams? Missions { get; init; }
+
     // ---- victory. rule: setup-victory/04-victory-conditions (HQ-Only flavour)
     /// <summary>Victory switches. Null = all on (DEFAULT).</summary>
     public Rebellion.Core.Victory.VictoryRules? Victory { get; init; }

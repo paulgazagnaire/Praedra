@@ -11,7 +11,7 @@ namespace Rebellion.Core.Setup;
 
 /// <summary>
 /// Every data file the game loads, read once and immutable: galaxy, ship classes, costs, blockade numbers, garrison weights, slot
-/// values, the starting-facilities list, the troop and special-force classes, the repair rules, the New battle tables and the research ladders and rules. One place that knows the file names and folders, so a new game, a loaded game, the
+/// values, the starting-facilities list, the troop and special-force classes, the repair rules, the New battle tables, the research ladders and rules, the characters and the mission records and tables. One place that knows the file names and folders, so a new game, a loaded game, the
 /// runner and the tests all read the same things. Data values come from files, never from code. rule: CLAUDE.md "Every number comes
 /// from data or a named constant with its source tag".
 /// </summary>
@@ -28,7 +28,8 @@ public sealed record GameData(
     Repair.RepairRules Repair,
     Battle.NewBattleData NewBattle,
     Research.ResearchData Research,
-    Characters.CharacterData Characters)
+    Characters.CharacterData Characters,
+    Missions.MissionData Missions)
 {
     private static readonly Lazy<GameData> _default = new(() => Load(FindRepoRoot()));
 
@@ -54,7 +55,8 @@ public sealed record GameData(
             Rebellion.Core.Repair.RepairRules.Load(Path.Combine(design, Rebellion.Core.Repair.RepairRules.FileName)),
             Battle.NewBattleData.Load(design),
             Rebellion.Core.Research.ResearchData.Load(interim, design, costs),
-            Rebellion.Core.Characters.CharacterData.Load(interim, design));
+            Rebellion.Core.Characters.CharacterData.Load(interim, design),
+            Rebellion.Core.Missions.MissionData.Load(interim, design));
     }
 
     /// <summary>The folder that holds Rebellion.sln, searching upwards from the program's folder and then the working folder.</summary>
