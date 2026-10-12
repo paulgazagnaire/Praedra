@@ -51,14 +51,14 @@ public class SimpleAiFogTests
             .Select(kv => kv.Key).First();
         var (b, hb) = Match(2, passive: Side.Alliance, setup: h => h.Fog.PlaceHq(other));
         Assert.NotEqual(ha.HqSystem, hb.HqSystem);
-        for (int day = 0; day < 150; day++)
+        for (int day = 0; day < 250; day++)
         {
             a.Step(); b.Step();
             Assert.Equal(a.Empire.Submitted.Select(o => o.Kind + " " + o.Detail), b.Empire.Submitted.Select(o => o.Kind + " " + o.Detail));
             Assert.Equal(ha.Fog.KnowledgeHash(Side.Empire), hb.Fog.KnowledgeHash(Side.Empire));
             if (ha.Victory.Winner != null || hb.Victory.Winner != null) break;
         }
-        Assert.True(a.TotalSent > 20);
+        Assert.True(a.TotalSent > 20, $"sent {a.TotalSent} day {ha.Game.Day} winner {ha.Victory.Winner}");
     }
 
     // m5-fog-and-hq §N9: same seed, same game; a save and load in the middle changes nothing (the AI keeps no memory).

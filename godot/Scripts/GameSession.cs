@@ -299,6 +299,11 @@ public sealed class GameSession
                 yield return BattleReport(be, o);
                 break;
 
+            // ---- research
+            case Rebellion.Core.Research.ResearchLevelReached r when r.Side == Player && r.Classes.Items.Any():
+                yield return new Message(d, $"Research: {r.ResearchKind} level {r.Level} reached. You can now build: {string.Join(", ", r.Classes.Items)}.", null, MsgKind.Good);
+                break;
+
             // ---- control, support
             case SystemCaptured c:
             {
