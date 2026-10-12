@@ -51,6 +51,9 @@ public static class GameBoot
     /// TODO(lead): set to false once NewGame.Create and SimpleAi are wired in.</summary>
     public const bool PlaceholderMode = false;
 
+    /// <summary>DEFAULT false: the Empire AI does not know where the Rebel HQ is. true = it is told (as in `sim aivai`), and strikes it at about day 240.</summary>
+    public const bool EmpireAiKnowsRebelHq = false;
+
     static GameData _data;
 
     /// <summary>
@@ -102,13 +105,13 @@ public static class GameBoot
 
     // ------------------------------------------------------------------ opponent
 
-    /// <summary>The computer opponent for <paramref name="aiSide"/>. TODO(lead): SimpleAi is not ready; when it is, replace the body with
-    /// <c>var ai = new SimpleAi(host, aiSide); return new DelegateOpponent(ai.PlanDay);</c> and set PlaceholderMode to false.</summary>
+    /// <summary>The computer opponent for <paramref name="aiSide"/>: the simple AI (core/AI).</summary>
     public static IOpponent CreateOpponent(GameHost host, Side aiSide)
     {
         var ai = new SimpleAi(host, aiSide);
-        // DEFAULT (playable slice): the Empire AI knows where the Rebel HQ is, as in `sim aivai`; fog of war comes with M5 (m5-fog-and-hq).
-        if (aiSide == Side.Empire) ai.KnownEnemyHq = host.HqSystem;
+        // DEFAULT (playable slice): the Empire AI is NOT told where the Rebel HQ is (economy-ai D4: the AI plays fair with fog of war).
+        // It still conquers systems and wins if it captures the HQ. Searching for the HQ comes with M5 (m5-fog-and-hq).
+        if (aiSide == Side.Empire && EmpireAiKnowsRebelHq) ai.KnownEnemyHq = host.HqSystem;
         return new DelegateOpponent(ai.PlanDay);
     }
 

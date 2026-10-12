@@ -1,3 +1,4 @@
+using Rebellion.Core.Battle;
 using Rebellion.Core.Clock;
 using Rebellion.Core.Construction;
 using Rebellion.Core.Defenses;
@@ -35,6 +36,7 @@ public sealed class SimpleAi
     private readonly Dictionary<string, int> _reservedEnergy = new(StringComparer.Ordinal); // lookup only
     private readonly Dictionary<string, int> _reservedRaw = new(StringComparer.Ordinal);    // lookup only
     private readonly Dictionary<int, double> _strength = new();                              // lookup only
+    private readonly Dictionary<(string, YardFamily), int> _reservedYards = new();           // lookup only
     private string? _capital, _rally; private bool _capitalDone, _rallyDone;
     private int[]? _hops;
     private GameRng _rng = new(0);
@@ -56,13 +58,24 @@ public sealed class SimpleAi
 
     public void PlanDay()
     {
-        _submitted.Clear(); _plannedLoad = 0; _busy.Clear(); _reservedEnergy.Clear(); _reservedRaw.Clear(); _strength.Clear();
-        _capitalDone = _rallyDone = false; _hops = null;
+        _submitted.Clear(); _plannedLoad = 0; _busy.Clear(); _reservedEnergy.Clear(); _reservedRaw.Clear(); _reservedYards.Clear(); _strength.Clear();
+        _capitalDone = _rallyDone = false; _hops = null; _threats = null; _lost = null; _lostBattles = null;
         int day = Today, phase = (int)_side;
         _rng = new GameRng((ulong)day * 2 + (ulong)_side + 0x5A1D, 0xA1);
+        PlanUpkeepCrisis();
         if ((day + phase) % _p.EconomyEvery == 0) PlanEconomy();
         if ((day + phase) % _p.ProductionEvery == 0) PlanProduction();
         if ((day + phase) % _p.MilitaryEvery == 0) PlanMilitary();
+    }
+
+    /// <summary>One line for logs: capital, rally, fleets and what they hold. Reads state only.</summary>
+    public string Status()
+    {
+        var sb = new System.Text.StringBuilder($"{_side}: capital {Capital()}, rally {Rally()}, win target {WinTarget()}; ");
+        foreach (var f in S.Fleets.Values.Where(f => f.Side == _side && f.Ships.Count > 0).OrderBy(f => f.Id))
+            sb.Append($"[{f.Id}@{f.At ?? "->" + f.Transit?.Path[^1]} str {_h.Fleets.StrengthOf(f):F0} ships-only {Str(f):F0} ships {f.Ships.Count} aboard {_h.Troops.RegimentsAboard(f).Count} slots {_h.Fleets.FreeTroopSlots(f)} berths {_h.Fleets.FreeBerths(f)}] ");
+        sb.Append($"spare {string.Join(",", HeldSystems().Select(h => (h, n: SpareRegimentsAt(h))).Where(t => t.n > 0).Select(t => t.h + ":" + t.n))}");
+        return sb.ToString();
     }
 
     private void Note(long seq, string kind, string detail) => _submitted.Add(new SubmittedOrder(seq, kind, detail));
@@ -92,9 +105,31 @@ public sealed class SimpleAi
         return r.Ok ? r.TotalTicks : int.MaxValue;
     }
 
+    /// <summary>
+    /// The capital ships of a fleet as combat units (hull ratio and weapons counter from the objects), WITHOUT the squadrons. The AI does not
+    /// trust squadrons when it weighs a fight: a carrier full of B-wings measured 437 and was annihilated by two Star Destroyers in the same
+    /// build's battles (see SimpleAiParams.FighterTrustPercent).
+    /// </summary>
+    private List<Combatant> ShipUnits(Fleet f)
+    {
+        var list = new List<Combatant>();
+        foreach (var id in f.Ships)
+        {
+            var o = _h.Economy.Find(id); var cls = o == null ? null : _h.Fleets.ClassOf(o);
+            if (o == null || cls == null) continue;
+            double ratio = cls.Hull > 0 ? Math.Min(1.0, (double)o.Hull / cls.Hull) : 1.0;
+            list.Add(_h.Fleets.Strength.Unit(cls, ratio, o.Hits is { Count: > 1 } ? o.Hits[1] : 0));
+        }
+        return list;
+    }
+
+    private List<Combatant>? _refUnits;
+    private List<Combatant> RefUnits() => _refUnits ??= _h.Fleets.Blockade.Reference(_h.Fleets.ShipClasses).Select(c => _h.Fleets.Strength.Unit(c)).ToList();
+
+    /// <summary>A fleet's strength against the reference force REF (3 ISD, m4-battle-new §12), capital ships only; percent-like scale of FleetModule.StrengthOf.</summary>
     private double Str(Fleet f)
     {
-        if (!_strength.TryGetValue(f.Id, out var v)) _strength[f.Id] = v = _h.Fleets.StrengthOf(f);
+        if (!_strength.TryGetValue(f.Id, out var v)) _strength[f.Id] = v = _h.Fleets.Strength.Of(ShipUnits(f), RefUnits());
         return v;
     }
 
@@ -175,19 +210,27 @@ public sealed class SimpleAi
         var eco = _h.Economy;
         var order = new List<FacilityKind>();
         int refined = eco.Refined(_side);
-        int ships = CountYards(YardFamily.Shipyard), train = CountYards(YardFamily.Training);
+        int ships = CountYards(YardFamily.Shipyard), train = CountYards(YardFamily.Training), cons = CountYards(YardFamily.Construction);
         if (ships == 0) order.Add(FacilityKind.OrbitalShipyard);
         if (train == 0) order.Add(FacilityKind.TrainingFacility);
+        // rule: m2-construction §Build time: a yard adds 1 point per cycle, so throughput is the number of yards; refined that floats is turned into yards.
+        if (refined >= _p.ExtraYardRefinedReserve)
+        {
+            // the construction yards build everything else: the first ones come before the other yards
+            if (cons < _p.EarlyConstructionYards) order.Add(FacilityKind.ConstructionYard);
+            var wants = new List<(FacilityKind Kind, int Have, int Want)>
+            {
+                (FacilityKind.OrbitalShipyard, ships, _p.DesiredShipyards),
+                (FacilityKind.TrainingFacility, train, _p.DesiredTrainingFacilities),
+                (FacilityKind.ConstructionYard, cons, _p.DesiredConstructionYards),
+            };
+            foreach (var w in wants.Where(w => w.Have < w.Want).OrderBy(w => w.Have * 100 / w.Want).ThenBy(w => (int)w.Kind)) order.Add(w.Kind);
+        }
         int mines = eco.Objects.Count(o => o.Category == ObjectCategory.Facility && o.Class == "Mine" && eco.OwnerOf(o) == _side);
         int refs = eco.Objects.Count(o => o.Category == ObjectCategory.Facility && o.Class == "Refinery" && eco.OwnerOf(o) == _side);
         // rule: m2-maintenance §Capacity (capacity = 50 x min(mines, refineries)): keep the two balanced.
         if (mines <= refs) { order.Add(FacilityKind.Mine); order.Add(FacilityKind.Refinery); }
         else { order.Add(FacilityKind.Refinery); order.Add(FacilityKind.Mine); }
-        if (refined >= _p.ExtraYardRefinedReserve)
-        {
-            if (ships < _p.DesiredShipyards) order.Add(FacilityKind.OrbitalShipyard);
-            if (train < _p.DesiredTrainingFacilities) order.Add(FacilityKind.TrainingFacility);
-        }
         foreach (var kind in order)
         {
             if (!Available(FacilityKinds.ClassName(kind))) continue;
@@ -199,10 +242,17 @@ public sealed class SimpleAi
         return null;
     }
 
+    private static bool IsYardKind(FacilityKind k) => k is FacilityKind.OrbitalShipyard or FacilityKind.TrainingFacility or FacilityKind.ConstructionYard;
+
+    private static YardFamily FamilyOfKind(FacilityKind k) => Yards.FamilyOf(k);
+
+    /// <summary>Yards of a family standing or queued on a system (the side's).</summary>
+    private int YardsAt(string system, YardFamily fam) => _h.Economy.Objects.Count(o => o.System == system && IsYardClass(o, fam));
+
     private string? PickSite(string from, FacilityKind kind)
     {
         var eco = _h.Economy;
-        bool mine = kind == FacilityKind.Mine;
+        bool mine = kind == FacilityKind.Mine, yard = IsYardKind(kind);
         string? best = null; int bestScore = int.MinValue;
         foreach (var s in HeldSystems())
         {
@@ -213,9 +263,32 @@ public sealed class SimpleAi
             int ticks = Ticks(from, s, UnratedSpeed);
             if (ticks == int.MaxValue) continue;
             int score = slots.Energy * 2 + (mine ? slots.Raw * 3 : 0) + eco.SupportOf(s, _side) / 10 - ticks / 20;
+            if (yard)
+            {
+                // stack on a system that already has yards of the family (they share a project), up to YardsPerSystem; keep yards off the border
+                var fam = FamilyOfKind(kind);
+                int here = YardsAt(s, fam) + _reservedYards.GetValueOrDefault((s, fam));
+                if (here >= _p.YardsPerSystem) continue;
+                if (here > 0) score += 40 * here;
+                score -= BorderDanger(s) * 15;
+            }
+            else score -= YardsAnyAt(s) * 3; // keep room on the yard systems for more yards
             if (score > bestScore) { bestScore = score; best = s; }
         }
+        if (best != null && yard) { var fam = FamilyOfKind(kind); _reservedYards[(best, fam)] = _reservedYards.GetValueOrDefault((best, fam)) + 1; }
         return best;
+    }
+
+    private int YardsAnyAt(string system) => _h.Economy.Objects.Count(o => o.System == system && o.Category == ObjectCategory.Facility && FacilityKinds.TryParse(o.Class, out var k) && FacilityKinds.IsYard(k));
+
+    /// <summary>0 when the system is two or more lanes from every enemy system, 2 when it is next to one (a yard there is a target).</summary>
+    private int BorderDanger(string system)
+    {
+        var g = _h.Data.Galaxy;
+        if (!g.TryFindSystem(system, out var i)) return 0;
+        foreach (var n in g.NeighboursOf(i))
+            if (_h.Fleets.OwnerOf(g.Systems[n.System].Name) == Enemy) return 2;
+        return 0;
     }
 
     // ================================================================== production
@@ -266,6 +339,8 @@ public sealed class SimpleAi
         foreach (var s in HeldSystems())
         {
             int need = _h.Support.RequiredGarrison(s);
+            // the system whose loss ends the game keeps a standing garrison whatever the support says
+            if (s == CriticalSystem()) need = Math.Max(need, _p.CriticalGarrison);
             if (need == 0) continue;
             int deficit = need - _h.Support.RegimentCount(s) - pending.GetValueOrDefault(s);
             if (deficit <= 0) continue;
@@ -282,7 +357,7 @@ public sealed class SimpleAi
         var rally = Rally();
         string cls = _p.InvasionRegiment(_side);
         if (rally == null || !Available(cls)) return;
-        int have = _h.Economy.Objects.Count(o => o.Category == ObjectCategory.Regiment && o.Side == _side && o.AboardShip != 0) +SpareRegimentsAt(rally);
+        int have = _h.Economy.Objects.Count(o => o.Category == ObjectCategory.Regiment && o.Side == _side && o.AboardShip != 0) + HeldSystems().Sum(SpareRegimentsAt);
         have += PendingRegiments().GetValueOrDefault(rally);
         if (have >= _p.InvasionRegimentTarget) return;
         int count = Math.Min(_p.InvasionRegimentTarget - have, _p.GarrisonBatch);
@@ -296,15 +371,71 @@ public sealed class SimpleAi
     {
         var ids = _h.Economy.Objects.Where(o => o.Category == ObjectCategory.Regiment && o.Completed && o.Side == _side && o.System == system && o.AboardShip == 0)
             .Select(o => o.Id).ToList();
-        int keep = Held(system) ? _h.Support.RequiredGarrison(system) : 0;
+        int keep = Held(system) ? Math.Max(_h.Support.RequiredGarrison(system), system == CriticalSystem() ? _p.CriticalGarrison : 0) : 0;
         return ids.Count > keep ? ids.Skip(keep).ToList() : new List<int>();
     }
     private int SpareRegimentsAt(string system) => SpareRegimentIds(system).Count;
 
+    private readonly Dictionary<string, double> _classStrength = new(StringComparer.Ordinal); // lookup only; static data, so it survives days
+
+    /// <summary>Strength of one ship or squadron of the class against the side's reference enemy line (FleetModule's CombatStrength, shields full).</summary>
+    private double ClassStrength(string cls)
+    {
+        if (_classStrength.TryGetValue(cls, out var v)) return v;
+        var ships = _h.Fleets.ShipClasses;
+        var versus = _p.ReferenceEnemy(_side).Where(ships.ContainsKey).Select(n => ships[n]).ToList();
+        v = ships.TryGetValue(cls, out var sc) && versus.Count > 0 ? _h.Fleets.Strength.Of(new[] { sc }, versus) : 0;
+        return _classStrength[cls] = v;
+    }
+
+    private IEnumerable<string> ShipClassNames(ObjectCategory cat) =>
+        _h.Fleets.ShipClasses.Keys.OrderBy(n => n, StringComparer.Ordinal)
+            .Where(n => _h.Economy.Costs.TryGet(n, out var r) && r.Category == cat && Available(n));
+
+    /// <summary>The fighter class with the most strength per refined cost plus upkeep. Null when none.</summary>
+    private string? BestFighter()
+    {
+        string? best = null; double bs = 0;
+        foreach (var n in ShipClassNames(ObjectCategory.Fighter))
+        {
+            var r = _h.Economy.Costs.Get(n);
+            double sc = ClassStrength(n) / (r.Cost + r.Maintenance);
+            if (sc > bs) { bs = sc; best = n; }
+        }
+        return best;
+    }
+
+    private int YardsDoneAt(string system, YardFamily fam) => _h.Economy.Objects.Count(o => o.Completed && o.System == system && IsYardClass(o, fam));
+
+    /// <summary>
+    /// The warship that gives the most strength per price (refined cost plus upkeep), counting each fighter berth as one squadron of the best
+    /// fighter; only classes the yards of the system finish within MaxBuildDays. Null when nothing fits.
+    /// </summary>
+    private string? BestWarship(string yardSystem, string? fighter)
+    {
+        var eco = _h.Economy;
+        int yards = Math.Max(1, YardsDoneAt(yardSystem, YardFamily.Shipyard));
+        double fighterStr = fighter != null ? ClassStrength(fighter) : 0;
+        string? best = null; double bs = 0;
+        foreach (var n in ShipClassNames(ObjectCategory.CapitalShip))
+        {
+            if (n == EconomyModule.DeathStarClass) continue;
+            var sc = _h.Fleets.ShipClasses[n]; var r = eco.Costs.Get(n);
+            // rule: m2-construction §Build time: ceil(cost / yards) x 4 days per unit (standard yards)
+            if ((r.Cost + yards - 1) / yards * 4 > _p.MaxBuildDays) continue;
+            if (Budget < r.Maintenance) continue;
+            double value = ClassStrength(n) + fighterStr * sc.FighterCapacity * _p.FighterTrustPercent / 100;
+            if (value <= 0) continue;
+            double score = value / (r.Cost + _p.UpkeepWeight * r.Maintenance); // upkeep is the lasting limit (m2-maintenance), so it weighs more than the one-time cost
+            if (score > bs + 1e-9) { bs = score; best = n; }
+        }
+        return best;
+    }
+
     private void PlanShips()
     {
         var eco = _h.Economy;
-        var rally = Rally(); var cap = Capital();
+        var rally = Rally(); var cap = GuardSystem();
         int troopCap = 0, berths = 0, fighters = 0;
         foreach (var o in eco.Objects)
         {
@@ -314,44 +445,48 @@ public sealed class SimpleAi
         }
         double home = 0;
         if (cap != null) foreach (var f in _h.Fleets.FleetsAt(cap)) if (f.Side == _side) home += Str(f);
-        bool homeWeak = home * 100 < _p.HomeDefenceStrength;
+        bool homeWeak = home < _p.HomeDefenceStrength;
+        string? fighter = BestFighter();
+        bool transportOrdered = false;
 
         foreach (var y in YardSystems(YardFamily.Shipyard))
         {
             if (!CanOrderAt(y, YardFamily.Shipyard)) continue;
-            string? dest = homeWeak && cap != null ? cap : rally;
+            string? dest = rally;
             if (dest != null && dest != y && Ticks(y, dest, UnratedSpeed) == int.MaxValue) dest = null;
             string? destArg = dest == y ? null : dest;
 
             string? cls = null; int count = 1;
             string transport = _p.Transport(_side);
-            if (troopCap < _p.TroopCapacityTarget && Available(transport))
+            if (troopCap < _p.TroopCapacityTarget && Available(transport) && !transportOrdered)
             {
                 cls = transport;
                 int per = Math.Max(1, _h.Fleets.ShipClasses[transport].TroopCapacity);
                 count = Math.Min(2, (_p.TroopCapacityTarget - troopCap + per - 1) / per);
+                transportOrdered = true;
             }
-            else if (berths - fighters >= 2 && fighters * 2 < berths && Available(_p.Fighter(_side)))
+            else if (fighter != null && fighters * 100 < berths * _p.FighterFillPercent && berths - fighters >= 1)
             {
-                cls = _p.Fighter(_side);
-                count = Math.Min(berths - fighters, _p.FightersPerOrder);
+                cls = fighter;
+                count = Math.Clamp(berths * _p.FighterFillPercent / 100 - fighters, 1, Math.Min(berths - fighters, _p.FightersPerOrder));
             }
             else
             {
-                foreach (var c in _p.Warships(_side).Concat(_p.HeavyWarships(_side)))
+                cls = BestWarship(y, fighter);
+                if (cls != null)
                 {
-                    if (!Available(c)) continue;
-                    int cost = eco.Costs.Get(c).Cost;
-                    bool heavy = cost > _p.HeavyShipCost;
-                    if (heavy && eco.Refined(_side) < cost * 2) continue;
-                    if (Budget < Maint(c)) continue;
-                    cls = c;
-                    // a full refined pool buys more: up to 3 ships in an order
-                    count = Math.Clamp(eco.Refined(_side) / Math.Max(1, cost * 4), 1, 3);
-                    break;
+                    // the home guard is topped up with armed ships (only where it has a shipyard to repair at)
+                    if (homeWeak && cap != null && ClassStrength(cls) > 0 && Ticks(y, cap, UnratedSpeed) != int.MaxValue) { dest = cap; destArg = cap == y ? null : cap; }
+                    int cost = eco.Costs.Get(cls).Cost;
+                    count = Math.Clamp(eco.Refined(_side) / Math.Max(1, cost * 3), 1, _p.MaxShipsPerOrder);
                 }
             }
             if (cls == null) continue;
+            // rule: m2-construction §Build time: an order keeps the yard busy for count x ceil(cost / yards) x 4 days; cap it so the yard can answer news
+            {
+                int yardsHere = Math.Max(1, YardsDoneAt(y, YardFamily.Shipyard)); int unitDays = (eco.Costs.Get(cls).Cost + yardsHere - 1) / yardsHere * 4;
+                count = Math.Max(1, Math.Min(count, _p.MaxOrderDays / Math.Max(1, unitDays)));
+            }
             while (count > 1 && Budget < count * Maint(cls)) count--;
             if (Budget < count * Maint(cls)) continue;
             long seq = _h.Construction.SubmitBuild(_side, y, YardFamily.Shipyard, cls, count, destArg);
@@ -359,11 +494,137 @@ public sealed class SimpleAi
             _busy.Add((y, YardFamily.Shipyard));
             _plannedLoad += count * Maint(cls);
             var cr = eco.Costs.Get(cls);
-            if (cr.Category == ObjectCategory.CapitalShip) troopCap += count * _h.Fleets.ShipClasses[cls].TroopCapacity;
+            if (cr.Category == ObjectCategory.CapitalShip) { troopCap += count * _h.Fleets.ShipClasses[cls].TroopCapacity; berths += count * _h.Fleets.ShipClasses[cls].FighterCapacity; }
+            else if (cr.Category == ObjectCategory.Fighter) fighters += count;
+        }
+    }
+
+    /// <summary>True when an enemy fleet sits on or flies toward the system.</summary>
+    private bool UnderThreat(string? system) => system != null && IncomingEnemyStrength(system) > 0;
+
+    // ================================================================== upkeep crisis
+
+    /// <summary>
+    /// rule: m2-maintenance §Overdraft and autoscrap. When the load is above the capacity (a capture took mines or refineries away) the game
+    /// would scrap one random finished object every 10 days (a yard as likely as a regiment). The AI scraps its least useful items itself,
+    /// right away, enough to be back under the capacity. Yards, mines and refineries are never offered.
+    /// </summary>
+    private void PlanUpkeepCrisis()
+    {
+        int over = -_h.Economy.Free(_side);
+        if (over <= 0) return;
+        var eco = _h.Economy;
+        string? fighter = BestFighter();
+        double fighterStr = fighter != null ? ClassStrength(fighter) : 0;
+        var cands = new List<(double Use, int Id, int Maint)>();
+        foreach (var o in eco.Objects.OrderBy(o => o.Id))
+        {
+            if (!o.Completed || eco.OwnerOf(o) != _side || o.Category == ObjectCategory.Facility || o.Category == ObjectCategory.SpecialForce) continue;
+            int m = Maint(o.Class);
+            if (m <= 0) continue;
+            double use;
+            if (o.Category == ObjectCategory.Regiment)
+            {
+                if (o.AboardShip != 0 || o.System == null || !Held(o.System)) continue;
+                if (!SpareRegimentIds(o.System).Contains(o.Id)) continue; // garrison regiments hold the system
+                use = -1;
+            }
+            else
+            {
+                var f = _h.Fleets.FleetOfShip(o.Id);
+                if (o.Category == ObjectCategory.CapitalShip && (f == null || f.Transit != null || Pending(f))) continue;
+                if (o.Category == ObjectCategory.Fighter && o.AboardShip != 0 && _h.Fleets.FleetOfShip(o.AboardShip) is { Transit: not null }) continue;
+                _h.Fleets.ShipClasses.TryGetValue(o.Class, out var sc);
+                double v = ClassStrength(o.Class) + (sc != null ? 6 * sc.TroopCapacity + fighterStr * sc.FighterCapacity * _p.FighterTrustPercent / 100 : 0);
+                use = v * 1000 / m;
+            }
+            cands.Add((use, o.Id, m));
+        }
+        foreach (var c in cands.OrderBy(c => c.Use).ThenBy(c => c.Id))
+        {
+            if (over <= 0) break;
+            long seq = _h.Game.Submit(sq => new ScrapObjectOrder(sq, _side, c.Id));
+            Note(seq, "Scrap", $"object {c.Id} (upkeep over capacity)");
+            over -= c.Maint;
         }
     }
 
     // ================================================================== military
+
+    private Dictionary<string, List<Fleet>>? _threats;
+    private HashSet<string>? _lost;
+
+    /// <summary>Held systems with enemy fleets standing on them or flying toward them (a stop on their path), by system. Fleets in id order.</summary>
+    private Dictionary<string, List<Fleet>> Threats()
+    {
+        if (_threats != null) return _threats;
+        var d = new Dictionary<string, List<Fleet>>(StringComparer.Ordinal);
+        void Add(string sys, Fleet f) { if (!d.TryGetValue(sys, out var l)) d[sys] = l = new List<Fleet>(); l.Add(f); }
+        foreach (var f in S.Fleets.Values.Where(f => f.Side == Enemy && f.Ships.Count > 0).OrderBy(f => f.Id))
+        {
+            if (f.At != null) { if (Held(f.At)) Add(f.At, f); }
+            else if (f.Transit != null)
+                for (int i = f.Transit.HopIndex + 1; i < f.Transit.Path.Count; i++)
+                    if (Held(f.Transit.Path[i])) Add(f.Transit.Path[i], f);
+        }
+        return _threats = d;
+    }
+
+    private double IncomingEnemyStrength(string system) => Threats().TryGetValue(system, out var l) ? l.Sum(Str) : 0;
+
+    private Dictionary<string, int>? _lostBattles;
+    /// <summary>
+    /// Systems where this side was annihilated in a battle lately, with the day. The measure of strength is only a guess, so a fight that
+    /// went wrong makes the AI ask for much better odds there for a while (never repeat a suicide).
+    /// </summary>
+    private Dictionary<string, int> LostBattles()
+    {
+        if (_lostBattles != null) return _lostBattles;
+        var d = new Dictionary<string, int>(StringComparer.Ordinal);
+        var ev = _h.Game.Events; int since = Today - _p.LossMemoryDays;
+        for (int i = ev.Count - 1; i >= 0 && ev[i].Day >= since; i--)
+            if (ev[i] is BattleEnded b && (_side == Side.Alliance ? b.Result.Alliance : b.Result.Empire) == BattleOutcome.Annihilated && !d.ContainsKey(b.Result.System))
+                d[b.Result.System] = ev[i].Day;
+        return _lostBattles = d;
+    }
+
+    /// <summary>The odds (percent) asked before fighting at a system: the base, times <see cref="SimpleAiParams.LossOddsFactor"/> where the side was annihilated lately.</summary>
+    private double OddsAt(string system, int basePercent) => LostBattles().ContainsKey(system) ? basePercent * _p.LossOddsFactor : basePercent;
+
+    /// <summary>Systems the side lost to the enemy lately (retake targets).</summary>
+    private HashSet<string> LostSystems()
+    {
+        if (_lost != null) return _lost;
+        var set = new HashSet<string>(StringComparer.Ordinal);
+        var ev = _h.Game.Events; int since = Today - _p.RetakeDays;
+        for (int i = ev.Count - 1; i >= 0 && ev[i].Day >= since; i--)
+            if (ev[i] is Rebellion.Core.Control.SystemCaptured c && c.From == _side && c.To == Enemy) set.Add(c.System);
+        return _lost = set;
+    }
+
+    /// <summary>
+    /// Own power as a percent of the other force's: CombatStrength(own, enemy) over CombatStrength(enemy, own), shields full (m4-battle-new §12).
+    /// A huge number when the enemy cannot hurt us, 0 when we cannot hurt it, 100 when nobody can.
+    /// </summary>
+    private double Duel(IEnumerable<Fleet> own, IEnumerable<Fleet> enemy)
+    {
+        var o = own.SelectMany(ShipUnits).ToList();
+        var e = enemy.SelectMany(ShipUnits).ToList();
+        if (e.Count == 0) return 1e9;
+        if (o.Count == 0) return 0;
+        double a = _h.Fleets.Strength.Of(o, e), b = _h.Fleets.Strength.Of(e, o);
+        if (b <= 0) return a > 0 ? 1e9 : 100;
+        return a * 100 / b;
+    }
+
+    private string? CriticalSystem() => _side == Side.Empire ? Rebellion.Core.Control.ControlModule.CapitalSystem : _h.HqSystem; // the system whose loss ends the game for the side
+    /// <summary>
+    /// The home guard stands at the system whose loss ends the game for the side, when the side holds it. New warships are only sent there
+    /// when it has a shipyard (so the guard can be topped up); otherwise the guard is whatever fleet already stands there.
+    /// </summary>
+    private string? GuardSystem() { var c = CriticalSystem(); return c != null && Held(c) ? c : null; }
+    // The Empire only strikes an HQ it has been told about (KnownEnemyHq); no peeking at the true HQ (economy-ai D4: the AI plays fair with fog of war).
+    private string? WinTarget() => _side == Side.Empire ? KnownEnemyHq : Rebellion.Core.Control.ControlModule.CapitalSystem;
 
     private bool Pending(Fleet f) => _h.Bombardment.HasPending(f.Id) || _h.Assault.HasPending(f.Id);
 
@@ -387,7 +648,7 @@ public sealed class SimpleAi
     private void PlanMilitary()
     {
         var idle = S.Fleets.Values.Where(f => f.Side == _side && f.Transit == null && f.At != null && f.Ships.Count > 0 && !Pending(f)).ToList();
-        var cap = Capital();
+        var cap = GuardSystem();
         foreach (var g in idle.GroupBy(f => f.At!, StringComparer.Ordinal).OrderBy(g => g.Key, StringComparer.Ordinal))
         {
             var list = g.OrderBy(f => f.Id).ToList();
@@ -403,7 +664,7 @@ public sealed class SimpleAi
                 double acc = 0; var home = new List<Fleet>(); strike = new List<Fleet>();
                 foreach (var f in list)
                 {
-                    if (acc * 100 < _p.HomeDefenceStrength) { home.Add(f); acc += Str(f); } else strike.Add(f);
+                    if (acc < _p.HomeDefenceStrength && Str(f) > 0) { home.Add(f); acc += Str(f); } else strike.Add(f);
                 }
                 for (int i = 1; i < home.Count; i++) Merge(home[i], home[0]);
             }
@@ -451,6 +712,19 @@ public sealed class SimpleAi
         var f = p.Leader; string at = f.At!;
         var rally = Rally() ?? Capital();
 
+        // enemy fleets on this very system: fight on unless clearly outmatched (m4-retreat-damage-repair: a fleet may leave)
+        if (Threats().TryGetValue(at, out var here) && here.Any(x => x.At == at))
+        {
+            var friends = _h.Fleets.FleetsAt(at).Where(x => x.Side == _side);
+            var enemiesHere = here.Where(x => x.At == at).ToList();
+            if (Duel(friends, enemiesHere) < _p.RetreatOddsPercent)
+            {
+                var safe = YardSystems(YardFamily.Shipyard).Where(sy => sy != at && !Threats().ContainsKey(sy)).OrderBy(sy => Ticks(at, sy, 100)).ThenBy(sy => sy, StringComparer.Ordinal).FirstOrDefault() ?? rally;
+                if (safe != null && safe != at) { foreach (var m in p.Members) Move(m, safe); return; }
+            }
+            return;
+        }
+
         // regiments waiting here above the garrison, and fighters based here
         int aboard = p.Aboard;
         var spare = SpareRegimentIds(at);
@@ -473,19 +747,55 @@ public sealed class SimpleAi
         }
 
         bool damaged = p.HullPct < _p.RepairBelowPercent;
+        // defence first: a threatened system we can relieve beats repairs
+        var relief = PickRelief(p, at);
+        if (relief != null && Move(f, relief)) return;
         if (damaged)
         {
             if (!HasShipyard(at) && rally != null) Move(f, rally); // repair happens at a shipyard
             return;
         }
-        bool strong = p.Strength * 100 >= _p.LaunchStrength;
+        bool strong = p.Strength >= _p.LaunchStrength;
         if (strong)
         {
-            // relief of a held system first, then an attack (which needs regiments)
-            var t = PickTarget(f, p.Strength, aboard, at);
+            var t = PickTarget(p, aboard, at);
             if (t != null && Move(f, t)) return;
+            // short of troops: fetch spare regiments waiting on another held system (the rally system may have moved since they were ordered)
+            if (aboard < _p.MinLaunchRegiments && p.FreeSlots - take > 0)
+            {
+                string? pick = null; long bestPick = 0; int speed = _h.Fleets.SpeedOf(f);
+                foreach (var hs in HeldSystems())
+                {
+                    if (hs == at || Threats().ContainsKey(hs)) continue;
+                    int n = SpareRegimentsAt(hs); if (n == 0) continue;
+                    int tk = Ticks(at, hs, speed); if (tk == int.MaxValue) continue;
+                    long sc = Math.Min(n, p.FreeSlots) * 1000L / (tk + 20); if (sc > bestPick) { bestPick = sc; pick = hs; }
+                }
+                if (pick != null && Move(f, pick)) return;
+            }
         }
         if (rally != null && at != rally) Move(f, rally); // gather (and reload) at the rally system
+    }
+
+    /// <summary>A held system with enemy fleets on it or on the way that the pile (with the fleets already there) beats; the critical system first, then the nearest.</summary>
+    private string? PickRelief(Pile p, string from)
+    {
+        int speed = _h.Fleets.SpeedOf(p.Leader);
+        if (speed <= 0) return null;
+        string? best = null; long bestScore = long.MinValue;
+        string? crit = CriticalSystem();
+        foreach (var kv in Threats().OrderBy(k => k.Key, StringComparer.Ordinal))
+        {
+            string s = kv.Key;
+            if (s == from) continue;
+            int ticks = Ticks(from, s, speed);
+            if (ticks == int.MaxValue) continue;
+            var friends = _h.Fleets.FleetsAt(s).Where(x => x.Side == _side).Concat(p.Members);
+            if (Duel(friends, kv.Value) < OddsAt(s, _p.DefendOddsPercent)) continue;
+            long score = 1_000_000L / (ticks + 10) * (s == crit ? 3 : 1);
+            if (score > bestScore) { bestScore = score; best = s; }
+        }
+        return best;
     }
 
     private int RecentBombardments(string system)
@@ -502,19 +812,19 @@ public sealed class SimpleAi
     {
         string at = f.At!;
         var rally = Rally() ?? Capital();
-        double mine = _h.Fleets.FleetsAt(at).Where(x => x.Side == _side).Sum(Str);
+        var mineHere = _h.Fleets.FleetsAt(at).Where(x => x.Side == _side).ToList();
         var enemies = EnemyFleetsAt(at);
         if (enemies.Count > 0)
         {
-            double e = enemies.Sum(Str);
-            if (e > 0 && mine * 100 < e * _p.AttackOddsPercent && rally != null) Move(f, rally); // too strong for us: leave
+            if (Duel(mineHere, enemies) < _p.RetreatOddsPercent && rally != null) Move(f, rally); // too strong for us: leave
             return; // else the battle takes its course
         }
         int aboard = _h.Troops.RegimentsAboard(f).Count;
         int d = DefendersAt(at);
         if (_h.Defenses.AssaultForbidden(at)) { Leave(f); return; } // rule: m3-planetary-defenses (assault forbidden, 2+ shield generators)
         // rule: m3-assault §Order and preconditions: a fleet has one order at a time, so shell one day and land the next.
-        if (d > 0 && _h.Bombardment.Power(f) > 0 && RecentBombardments(at) < _p.MaxBombardmentsPer30Days)
+        bool win = at == WinTarget();
+        if (d > 0 && _h.Bombardment.Power(f) > 0 && (win || RecentBombardments(at) < _p.MaxBombardmentsPer30Days))
         {
             long seq = _h.Bombardment.SubmitBombard(_side, f.Id, at, BombardCategory.Military);
             Note(seq, "Bombard", $"fleet {f.Id} shells {at}");
@@ -532,8 +842,8 @@ public sealed class SimpleAi
     private void Leave(Fleet f)
     {
         var rally = Rally() ?? Capital();
-        double s = Str(f); int aboard = _h.Troops.RegimentsAboard(f).Count;
-        var t = PickTarget(f, s, aboard, f.At!);
+        var p = MakePile(f, new List<Fleet> { f });
+        var t = PickRelief(p, f.At!) ?? PickTarget(p, p.Aboard, f.At!);
         if (t != null && Move(f, t)) return;
         if (rally != null) Move(f, rally);
     }
@@ -552,43 +862,59 @@ public sealed class SimpleAi
         return _hops = dist;
     }
 
-    /// <summary>Best system to send a fleet to: relief of a held system under enemy fleets, or an enemy or neutral system near the border with a weak defence.</summary>
-    private string? PickTarget(Fleet f, double strength, int aboard, string from)
+    /// <summary>
+    /// Best system to send a pile to: an enemy fleet it beats (fleets first: they are what makes the other targets safe), an enemy or neutral
+    /// system near the border with a weak defence (lost systems score double), or the system that wins the game when the pile is strong enough.
+    /// </summary>
+    private string? PickTarget(Pile pile, int aboard, string from)
     {
+        var f = pile.Leader; double strength = pile.Strength;
         var g = _h.Data.Galaxy; var hops = Hops();
         int speed = _h.Fleets.SpeedOf(f);
         if (speed <= 0) return null;
         bool canBombard = _h.Bombardment.Power(f) > 0;
+        string? win = WinTarget();
+        var lost = LostSystems();
         var scored = new List<(string Sys, long Score)>();
         foreach (var sys in g.Systems)
         {
             string s = sys.Name;
-            if (s == from) continue;
-            var enemies = EnemyFleetsAt(s);
-            double e = enemies.Sum(Str);
-            if (e > 0 && strength * 100 < e * _p.AttackOddsPercent) continue;
+            if (s == from || Held(s)) continue;
+            bool isWin = s == win && strength >= _p.WinStrikeStrength;
+            if (hops[sys.Index] > _p.TargetHops + 1 && !isWin) continue;
             int ticks = Ticks(from, s, speed);
             if (ticks == int.MaxValue) continue;
-            long score;
-            if (Held(s))
+            var enemies = EnemyFleetsAt(s);
+            double e = 0;
+            if (enemies.Count > 0)
             {
-                if (e <= 0) continue;
-                score = 5_000_000L / (ticks + 20); // relief: an enemy fleet sits on our system
+                if (Duel(pile.Members, enemies) < OddsAt(s, _p.AttackOddsPercent)) continue;
+                e = enemies.Sum(Str);
             }
-            else
+            long score = 0;
+            // the fleet itself: hunt it when the system is near the border and the pile is armed enough
+            if (e > 0 && ticks <= _p.HuntTicks && hops[sys.Index] <= _p.TargetHops) score = 3000L * (long)(e * 100 + 20) / (ticks + 20);
+            // the system: needs regiments
+            if (hops[sys.Index] <= _p.TargetHops || isWin)
             {
-                if (hops[sys.Index] > _p.TargetHops) continue;
                 var slots = _h.Economy.SlotsOf(s);
-                if (!slots.Populated) continue;
-                if (_h.Defenses.AssaultForbidden(s)) continue;
-                int d = DefendersAt(s);
-                if (aboard < Need(canBombard ? d / 2 : d) || aboard < 1) continue;
-                long value = 10 + slots.Energy + 2 * slots.Raw;
-                if (_h.Fleets.OwnerOf(s) == Enemy) value += 10 + 2 * _h.Economy.Objects.Count(o => o.Completed && o.Category == ObjectCategory.Facility && o.System == s);
-                if (s == KnownEnemyHq) value += 200;
-                score = value * 1000 / (ticks + 20);
+                bool ok = slots.Populated && !_h.Defenses.AssaultForbidden(s) && aboard >= 1;
+                if (ok)
+                {
+                    int d = DefendersAt(s);
+                    ok = aboard >= Need(canBombard ? d / 2 : d);
+                    if (ok)
+                    {
+                        long value = 10 + slots.Energy + 2 * slots.Raw;
+                        if (_h.Fleets.OwnerOf(s) == Enemy) value += 10 + 2 * _h.Economy.Objects.Count(o => o.Completed && o.Category == ObjectCategory.Facility && o.System == s);
+                        if (lost.Contains(s)) value *= 2;
+                        if (s == KnownEnemyHq) value += 200;
+                        if (isWin) value += 400;
+                        score = Math.Max(score, value * 1000 / (ticks + 20));
+                    }
+                }
             }
-            scored.Add((s, score));
+            if (score > 0) scored.Add((s, score));
         }
         if (scored.Count == 0) return null;
         long best = scored.Max(t => t.Score);
