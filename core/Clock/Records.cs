@@ -10,6 +10,7 @@ public enum Side { Empire = 0, Alliance = 1 }
 /// </summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
 [JsonDerivedType(typeof(SetMarkerOrder), "SetMarker")]
+[JsonDerivedType(typeof(MoveFleetOrder), "MoveFleet")]
 public abstract record Order(long Sequence, Side Side);
 
 /// <summary>
@@ -19,10 +20,27 @@ public abstract record Order(long Sequence, Side Side);
 /// </summary>
 public sealed record SetMarkerOrder(long Sequence, Side Side, string Marker, int Value) : Order(Sequence, Side);
 
+/// <summary>
+/// Send a fleet to a system by the fastest lane path. Checked in step 1 (when processed, not when submitted).
+/// rule: m1-clock-and-orders §Orders in (MoveFleet). The handler lives in Rebellion.Core.Fleets.FleetModule.
+/// </summary>
+public sealed record MoveFleetOrder(long Sequence, Side Side, int FleetId, string Destination) : Order(Sequence, Side);
+
 public static class RejectReason
 {
     public const string NegativeValue = "NegativeValue";
     public const string AlreadyChanged = "AlreadyChanged";
+
+    // rule: m1-clock-and-orders §Orders in (MoveFleet rejections)
+    public const string UnknownFleet = "UnknownFleet";
+    public const string NotYours = "NotYours";
+    public const string InTransit = "InTransit";
+    public const string Immobile = "Immobile";
+    public const string AlreadyThere = "AlreadyThere";
+    public const string UnknownSystem = "UnknownSystem";
+    public const string Unreachable = "Unreachable";
+    /// <summary>No handler is registered for this order type (e.g. a save with fleet orders loaded before the fleet module was attached).</summary>
+    public const string UnknownOrderType = "UnknownOrderType";
 }
 
 /// <summary>
@@ -30,5 +48,12 @@ public static class RejectReason
 /// Events never change state and are not saved. rule: m1-clock-and-orders §Events out
 /// </summary>
 public abstract record GameEvent(int Index, int Day, string Kind);
-public sealed record OrderAccepted(int Index, int Day, long Sequence) : GameEvent(Index, Day, nameof(OrderAccepted));
+
+/// <summary>
+/// Fleet, Path, TotalTicks and ArrivalDay are filled for MoveFleet only.
+/// rule: m1-clock-and-orders §Events out (OrderAccepted: sequence, fleet, path, total ticks, arrival day).
+/// </summary>
+public sealed record OrderAccepted(int Index, int Day, long Sequence, int? Fleet = null, ValueList<string>? Path = null,
+    int TotalTicks = 0, int ArrivalDay = 0) : GameEvent(Index, Day, nameof(OrderAccepted));
+
 public sealed record OrderRejected(int Index, int Day, long Sequence, string Reason) : GameEvent(Index, Day, nameof(OrderRejected));

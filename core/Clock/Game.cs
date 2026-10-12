@@ -1,9 +1,46 @@
+using Rebellion.Core.Fleets;
+
 namespace Rebellion.Core.Clock;
 
-/// <summary>Game state. Placeholder content until fleets and planets arrive; collections are sorted for canonical output.</summary>
+/// <summary>
+/// Game state. Everything is a sorted collection (ordinal for names, ascending for ids) so the saved and hashed form is
+/// canonical. rule: m1-clock-and-orders §Seeded random numbers rule 10.
+/// </summary>
 public sealed class GameState
 {
     public SortedDictionary<string, int> Markers { get; init; } = new(StringComparer.Ordinal);
+
+    /// <summary>All fleets by id. rule: m3-fleets §What a fleet is; positions and in-transit state live on the fleet.</summary>
+    public SortedDictionary<int, Fleet> Fleets { get; init; } = new();
+    /// <summary>The id the next fleet gets. DEFAULT: ids start at 1 (no sheet says).</summary>
+    public int NextFleetId { get; set; } = 1;
+    /// <summary>
+    /// Owner of each system that has one; a system not listed is neutral (DEFAULT). M1 has no ownership data yet, so
+    /// setup and tests set it. rule: m1-forced-stop-and-blockade §Rule (Classic) (system owner).
+    /// </summary>
+    public SortedDictionary<string, Side> SystemOwners { get; init; } = new(StringComparer.Ordinal);
+    /// <summary>
+    /// The Classic blockade flag per system: present = on, value = the side that blockades. Derived from fleets and
+    /// owners, but kept so step 5 can raise BlockadeStarted and BlockadeLifted when it changes.
+    /// </summary>
+    public SortedDictionary<string, Side> Blockades { get; init; } = new(StringComparer.Ordinal);
+
+    /// <summary>Copy another state's content into this one (used by Load, which needs ordinal-comparer dictionaries).</summary>
+    internal void CopyFrom(GameState other)
+    {
+        foreach (var kv in other.Markers) Markers[kv.Key] = kv.Value;
+        foreach (var kv in other.Fleets) Fleets[kv.Key] = kv.Value;
+        NextFleetId = other.NextFleetId;
+        foreach (var kv in other.SystemOwners) SystemOwners[kv.Key] = kv.Value;
+        foreach (var kv in other.Blockades) Blockades[kv.Key] = kv.Value;
+    }
+}
+
+/// <summary>Outcome of validating one order in step 1: a rejection reason, or the event to raise on acceptance.</summary>
+public sealed record OrderResult(string? Reason, Func<int, int, GameEvent>? Accepted)
+{
+    public static OrderResult Reject(string reason) => new(reason, null);
+    public static OrderResult Accept(Func<int, int, GameEvent> accepted) => new(null, accepted);
 }
 
 /// <summary>What a hook may touch during a Step. Only Step() hands this out.</summary>
@@ -15,7 +52,7 @@ public sealed class StepContext
     public int Day { get; }
     public GameState State => _game.State;
     public GameRng Rng => _game.Rng;
-    /// <summary>Append an event; the factory receives (index, day).</summary>
+    /// <summary>Append an event; the factory receives (index, day) where day is K.</summary>
     public void Emit(Func<int, int, GameEvent> make) => _game.EmitEvent(make);
 }
 
@@ -40,6 +77,9 @@ public sealed class Game
     };
 
     private readonly Dictionary<string, List<Action<StepContext>>> _hooks = new();
+    // Looked up by order type, never iterated.
+    private readonly Dictionary<Type, Func<StepContext, Order, OrderResult>> _handlers = new();
+    private readonly HashSet<string> _markersChanged = new(StringComparer.Ordinal); // membership test only, never iterated
     private readonly List<Order> _queue = new();
     private readonly List<GameEvent> _events = new();
     private long _nextSequence;
@@ -49,6 +89,7 @@ public sealed class Game
     internal Game(GameState state, int day, GameRng rng, IEnumerable<Order> queue, long nextSequence)
     {
         State = state; Day = day; Rng = rng; _queue.AddRange(queue); _nextSequence = nextSequence;
+        RegisterOrderHandler<SetMarkerOrder>(HandleSetMarker);
     }
 
     public GameState State { get; }
@@ -68,6 +109,17 @@ public sealed class Game
         list.Add(hook);
     }
 
+    /// <summary>
+    /// Register the step-1 validator and handler for one order type. The handler checks the order against the state at
+    /// that moment and either rejects it (changing nothing) or applies it and returns the event to raise.
+    /// rule: m1-clock-and-orders §Order of work, step 1; §Orders in (rejection never changes any state).
+    /// </summary>
+    public void RegisterOrderHandler<TOrder>(Func<StepContext, TOrder, OrderResult> handler) where TOrder : Order
+    {
+        if (!_handlers.TryAdd(typeof(TOrder), (ctx, o) => handler(ctx, (TOrder)o)))
+            throw new ArgumentException($"A handler for {typeof(TOrder).Name} is already registered");
+    }
+
     /// <summary>Queue an order; the core numbers it. It is validated later, in step 1. rule: §Orders in</summary>
     public long Submit(Func<long, Order> make)
     {
@@ -84,36 +136,40 @@ public sealed class Game
         var ctx = new StepContext(this, Day);
         foreach (var slot in WorkList)
         {
-            if (slot == "1") ProcessOrders();
+            if (slot == "1") ProcessOrders(ctx);
             else if (slot == "7") Day = ctx.Day + 1;
             else if (_hooks.TryGetValue(slot, out var list)) foreach (var h in list) h(ctx);
         }
     }
 
     // rule: m1-clock-and-orders §Order of work, step 1 (sorted by sequence; a rejection never changes state)
-    private void ProcessOrders()
+    private void ProcessOrders(StepContext ctx)
     {
         var batch = _queue.OrderBy(o => o.Sequence).ToList();
         _queue.Clear();
-        var changed = new HashSet<string>(StringComparer.Ordinal); // membership test only, never iterated
+        _markersChanged.Clear();
         foreach (var order in batch)
         {
-            string? reason = order switch
+            var result = _handlers.TryGetValue(order.GetType(), out var handler)
+                ? handler(ctx, order)
+                : OrderResult.Reject(RejectReason.UnknownOrderType);
+            if (result.Reason != null)
             {
-                SetMarkerOrder { Value: < 0 } => RejectReason.NegativeValue,
-                SetMarkerOrder m when changed.Contains(m.Marker) => RejectReason.AlreadyChanged,
-                _ => null,
-            };
-            if (reason != null)
-            {
+                string reason = result.Reason;
                 EmitEvent((i, d) => new OrderRejected(i, d, order.Sequence, reason));
                 continue;
             }
-            var set = (SetMarkerOrder)order;
-            State.Markers[set.Marker] = set.Value;
-            changed.Add(set.Marker);
-            EmitEvent((i, d) => new OrderAccepted(i, d, order.Sequence));
+            EmitEvent(result.Accepted!);
         }
+    }
+
+    private OrderResult HandleSetMarker(StepContext ctx, SetMarkerOrder m)
+    {
+        if (m.Value < 0) return OrderResult.Reject(RejectReason.NegativeValue);
+        if (_markersChanged.Contains(m.Marker)) return OrderResult.Reject(RejectReason.AlreadyChanged);
+        State.Markers[m.Marker] = m.Value;
+        _markersChanged.Add(m.Marker);
+        return OrderResult.Accept((i, d) => new OrderAccepted(i, d, m.Sequence));
     }
 
     // Events carry Day = K, the day at the start of the Step, because Day only changes in step 7.

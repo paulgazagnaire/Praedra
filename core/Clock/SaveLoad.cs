@@ -24,7 +24,7 @@ public static class GameSave
     {
         var d = JsonSerializer.Deserialize<SaveData>(json, Options) ?? throw new InvalidDataException("empty save");
         var state = new GameState();
-        foreach (var kv in d.State.Markers) state.Markers[kv.Key] = kv.Value;
+        state.CopyFrom(d.State);
         return new Game(state, d.Day, GameRng.Import(d.Rng), d.Queue, d.NextSequence);
     }
 
