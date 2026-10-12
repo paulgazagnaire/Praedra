@@ -101,6 +101,97 @@ public sealed record SimpleAiParams
     /// <summary>With fog, the regiments assumed on an enemy-held system whose ground forces the side has never seen (a system its picture shows neutral: none). DEFAULT (AI tuning, no rule).</summary>
     public int FogUnknownDefenders { get; init; } = 2;
 
+    // ---- fog: scouting (m6 fog AI; ai/12 P7, ai/07 §7 "spend scouts where probability / travel time is highest"). All AI tuning, DEFAULT.
+    // A scout is a fleet of exactly one ship of a scout class with nothing aboard; the AI keeps up to ScoutCount of them (fewer when their
+    // upkeep would pass ScoutUpkeepBudget), splitting one off a pile or building one, and sends each to the system whose picture is most
+    // worth refreshing (unexplored, stale, enemy-held, or a likely Rebel HQ for the Empire) per day of travel.
+    /// <summary>Scouts wanted (fog only). DEFAULT.</summary>
+    public int ScoutCount { get; init; } = 4;
+    /// <summary>Most upkeep (maintenance points) all scouts together may cost. DEFAULT.</summary>
+    public int ScoutUpkeepBudget { get; init; } = 60;
+    /// <summary>Scout classes by side, first available wins for builds (cheap upkeep first). DEFAULT.</summary>
+    public IReadOnlyList<string> ScoutClasses(Side side) => side == Side.Empire ? EmpireScouts : AllianceScouts;
+    public IReadOnlyList<string> EmpireScouts { get; init; } = new[] { "Galleon" };
+    public IReadOnlyList<string> AllianceScouts { get; init; } = new[] { "Medium Transport" };
+    /// <summary>Scouts look at systems at most this many lanes from a held system (Empire: HQ candidates at any distance). DEFAULT.</summary>
+    public int ScoutHops { get; init; } = 4;
+    /// <summary>Scouting value of a never-explored system. DEFAULT.</summary>
+    public int ScoutUnexploredValue { get; init; } = 100;
+    /// <summary>A picture this many days old is fully stale (value 100 for scouting; full staleness margin for estimates). DEFAULT.</summary>
+    public int StaleDays { get; init; } = 120;
+    /// <summary>A stale picture of an enemy-held system is worth this many times a neutral one for scouting. DEFAULT.</summary>
+    public int ScoutEnemyFactor { get; init; } = 2;
+    /// <summary>Scouts avoid systems where the picture shows armed enemy ships seen within this many days. DEFAULT.</summary>
+    public int ScoutAvoidFleetDays { get; init; } = 30;
+    /// <summary>Empire: HQ belief adds up to this much scouting value (at the highest belief). DEFAULT.</summary>
+    public int ScoutBeliefValue { get; init; } = 150;
+
+    // ---- fog: estimates from the last-seen picture (ai/02 §5 principle 2: age matters). DEFAULT.
+    /// <summary>Enemy fleets of a picture older than this are forgotten when choosing targets. DEFAULT.</summary>
+    public int FogFleetMemoryDays { get; init; } = 120;
+    /// <summary>A fully stale picture (StaleDays old) asks this much more (percent) of the odds and of the regiments. DEFAULT.</summary>
+    public int FogStaleMarginPercent { get; init; } = 50;
+    /// <summary>Regiments assumed on the enemy's game-winning system (Coruscant for the Alliance, a known HQ) when its ground was never seen. DEFAULT.</summary>
+    public int FogUnknownWinDefenders { get; init; } = 8;
+    /// <summary>Bombardments of the game-winning system in 30 days at most (with fog the AI cannot see the shelling work). DEFAULT.</summary>
+    public int FogWinBombardmentsPer30Days { get; init; } = 8;
+    /// <summary>Regiments killed by own bombardments (the side's own reports) are taken off an unseen garrison guess for this many days. DEFAULT.</summary>
+    public int FogKillMemoryDays { get; init; } = 60;
+    /// <summary>Systems the picture shows enemy-held are targets up to this many lanes from a held system (others: TargetHops). DEFAULT.</summary>
+    public int FogEnemyTargetHops { get; init; } = 4;
+
+    // ---- fog: the Empire's belief map of the Rebel HQ (ai/07 §7 "Empire: belief-map search", ai/12 D1 Decided YES; m5-fog-and-hq §N7 clues).
+    // Weight per system, from the Empire's picture only. A system the picture shows Alliance-held (the HQ stands only on Alliance systems,
+    // §N7 4) or never explored (rim only) can hold the HQ; signs of a capital (fleets, regiments, facilities seen, Alliance sightings) add
+    // weight; a fresh group C look that showed no HQ (Yavin's day-0 copy, captures) wipes it out, and the weight returns as that look ages.
+    /// <summary>Weight of a never-explored, non-Core system. DEFAULT.</summary>
+    public int BeliefUnexplored { get; init; } = 30;
+    /// <summary>Weight of a system the picture shows Alliance-held. DEFAULT.</summary>
+    public int BeliefAllianceHeld { get; init; } = 100;
+    /// <summary>Weight of a system the picture shows neutral or Imperial, once that picture is older than BeliefOwnerTrustDays. DEFAULT.</summary>
+    public int BeliefStaleOther { get; init; } = 10;
+    public int BeliefOwnerTrustDays { get; init; } = 90;
+    /// <summary>A group C look without the HQ clears the system; the weight comes back linearly over this many days. DEFAULT.</summary>
+    public int BeliefClearedDays { get; init; } = 300;
+    /// <summary>Added per Alliance capital ship last seen at the system (picture group E, up to FogFleetMemoryDays old). DEFAULT.</summary>
+    public int BeliefPerShipSeen { get; init; } = 10;
+    /// <summary>Added per facility of the picture (group C). DEFAULT.</summary>
+    public int BeliefPerFacilitySeen { get; init; } = 5;
+    /// <summary>Added per Alliance regiment of the picture (group D). DEFAULT.</summary>
+    public int BeliefPerRegimentSeen { get; init; } = 5;
+    /// <summary>Added per Alliance fleet sighting at the system in the side's log, at most BeliefSightingCap. DEFAULT.</summary>
+    public int BeliefPerSighting { get; init; } = 5;
+    public int BeliefSightingCap { get; init; } = 50;
+    /// <summary>
+    /// Alliance support seen above BeliefSupportFloor adds (support - floor)^2 / BeliefSupportDivisor (setup puts the HQ at support 100,
+    /// setup-victory/09 §2, and the Alliance keeps its capital loyal; the picture's group B shows the value). DEFAULT.
+    /// </summary>
+    public int BeliefSupportFloor { get; init; } = 50;
+    public int BeliefSupportDivisor { get; init; } = 25;
+    /// <summary>Added per other system of the same sector the picture shows Alliance-held (the HQ sits in the Alliance's heartland). DEFAULT.</summary>
+    public int BeliefPerSectorAlly { get; init; } = 5;
+    /// <summary>Weight multiplier for systems of a sector named by an HQ sector clue (only when the clue rule is on). DEFAULT.</summary>
+    public int BeliefSectorClueFactor { get; init; } = 4;
+    /// <summary>Target value added to an Alliance system at the highest belief (strike piles of WinStrikeStrength go at any distance). DEFAULT.</summary>
+    public int SearchValue { get; init; } = 300;
+
+    // ---- fog: the Alliance hides its HQ by risk (ai/07 §7 "Alliance: hide, bait and run"; ai/12 D1 Decided YES).
+    // Risk of a system = Imperial fleet sightings in the side's log of the last ObservedWindowDays, weighted by lanes from it, plus Imperial
+    // systems next to it. The HQ moves (MoveHq) when its risk reaches HqMoveRisk and its last move is HqMoveCooldownDays old, to the held,
+    // non-dead-end system with the least risk and the most room from the Empire.
+    /// <summary>Risk per Imperial fleet sighting at the system itself, one lane away, two lanes away. DEFAULT.</summary>
+    public int HqRiskHere { get; init; } = 100;
+    public int HqRiskNear { get; init; } = 40;
+    public int HqRiskFar { get; init; } = 15;
+    /// <summary>Risk per neighbouring system the picture shows Imperial. DEFAULT.</summary>
+    public int HqRiskEnemyNeighbour { get; init; } = 25;
+    /// <summary>The HQ moves at this risk. DEFAULT.</summary>
+    public int HqMoveRisk { get; init; } = 100;
+    /// <summary>Days between HQ moves at least (each arrival costs 10 support in the sector, m5-fog-and-hq §F6). DEFAULT.</summary>
+    public int HqMoveCooldownDays { get; init; } = 90;
+    /// <summary>A destination needs at least this many lanes (no dead ends: a one-fleet blockade traps the HQ, ai/07 §7). DEFAULT.</summary>
+    public int HqMinLanes { get; init; } = 2;
+
     // ---- what to build, by side (first class that is buildable, researched and affordable wins). Class names of unit-and-facility-costs.csv. DEFAULT.
     public IReadOnlyList<string> Warships(Side side) => side == Side.Empire ? EmpireWarships : AllianceWarships;
     public IReadOnlyList<string> HeavyWarships(Side side) => side == Side.Empire ? EmpireHeavy : AllianceHeavy;

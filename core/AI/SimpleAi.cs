@@ -23,9 +23,11 @@ public sealed record SubmittedOrder(long Sequence, string Kind, string Detail);
 /// <see cref="Rebellion.Core.Fog.KnowledgeView"/> (m5-fog-and-hq §N8, the fairness contract): enemy fleets, garrisons, holders, facilities and slot
 /// values come from the side's own picture (possibly stale), the event feed is the side's filtered one, and the Empire's
 /// <see cref="KnownEnemyHq"/> is set only from the Empire's own picture of the HQ. With it off (DEFAULT for now) the AI still sees everything.
-/// The looks are in one block below ("what the AI may see"), so nothing else reads the other side.
+/// The looks are in one block below ("what the AI may see"), so nothing else reads the other side. With fog the AI also scouts, weighs stale
+/// pictures with a margin, hunts the Rebel HQ with a belief map (Empire) and moves its HQ by risk (Alliance): see SimpleAiFog.cs. None of
+/// that runs with fog off, so the fog-off AI is unchanged.
 /// </summary>
-public sealed class SimpleAi
+public sealed partial class SimpleAi
 {
     private readonly GameHost _h;
     private readonly Side _side;
@@ -68,9 +70,10 @@ public sealed class SimpleAi
         int day = Today, phase = (int)_side;
         _rng = new GameRng((ulong)day * 2 + (ulong)_side + 0x5A1D, 0xA1);
         _view = _p.UseFog ? _h.Fog.ViewFor(_side) : null;
-        _seenForces.Clear();
+        _seenForces.Clear(); ClearFogScratch();
         if (_view != null && _side == Side.Empire) KnownEnemyHq = _view.KnownHq?.System; // only what the Empire's own picture shows
         PlanUpkeepCrisis();
+        if (_view != null && _side == Side.Alliance) PlanHqHide(); // fog: the HQ hides by risk (ai/07 §7), checked daily
         if ((day + phase) % _p.EconomyEvery == 0) PlanEconomy();
         if ((day + phase) % _p.ProductionEvery == 0) PlanProduction();
         if ((day + phase) % _p.MilitaryEvery == 0) PlanMilitary();
@@ -125,9 +128,7 @@ public sealed class SimpleAi
     private int DefendersAt(string system)
     {
         if (_view == null) return _h.Troops.RegimentsOnSystem(system, _side).Count;
-        var g = _view.Picture(system)?.Ground;
-        if (g != null) return g.Value.Where(x => x.Side != _side).Sum(x => x.Total);
-        return IsEnemyHeld(system) ? _p.FogUnknownDefenders : 0;
+        return FogDefendersAt(system); // group D with a staleness margin, less own bombardment kills; a guess when never seen
     }
 
     /// <summary>Systems the other side holds. No fog: sees all. Fog: those its picture shows as enemy-held (ordinal order).</summary>
@@ -367,6 +368,7 @@ public sealed class SimpleAi
 
     private void PlanProduction()
     {
+        if (_view != null) PlanScoutBuild();
         PlanGarrison();
         PlanInvasionRegiments();
         PlanShips();
@@ -730,6 +732,7 @@ public sealed class SimpleAi
     private void PlanMilitary()
     {
         var idle = S.Fleets.Values.Where(f => f.Side == _side && f.Transit == null && f.At != null && f.Ships.Count > 0 && !Pending(f)).ToList();
+        if (_view != null) { var scouts = PlanScouts(idle); idle = idle.Where(f => !scouts.Contains(f.Id)).ToList(); } // fog: scouts go their own way
         var cap = GuardSystem();
         foreach (var g in idle.GroupBy(f => f.At!, StringComparer.Ordinal).OrderBy(g => g.Key, StringComparer.Ordinal))
         {
@@ -907,7 +910,9 @@ public sealed class SimpleAi
         if (_view != null && !SlotsSeen(at).Populated) { Leave(f); return; } // fog: the target was picked unseen; an empty world cannot be assaulted
         // rule: m3-assault §Order and preconditions: a fleet has one order at a time, so shell one day and land the next.
         bool win = at == WinTarget();
-        if (d > 0 && _h.Bombardment.Power(f) > 0 && (win || RecentBombardments(at) < _p.MaxBombardmentsPer30Days))
+        // fog: the shelling cannot be seen to work, so even the winning system is shelled a bounded number of times
+        int maxShell = _view != null && win ? _p.FogWinBombardmentsPer30Days : _p.MaxBombardmentsPer30Days;
+        if (d > 0 && _h.Bombardment.Power(f) > 0 && ((win && _view == null) || RecentBombardments(at) < maxShell))
         {
             long seq = _h.Bombardment.SubmitBombard(_side, f.Id, at, BombardCategory.Military);
             Note(seq, "Bombard", $"fleet {f.Id} shells {at}");
@@ -959,26 +964,32 @@ public sealed class SimpleAi
         string? win = WinTarget();
         var lost = LostSystems();
         var scored = new List<(string Sys, long Score)>();
+        bool search = HqSearchOn && strength >= _p.WinStrikeStrength;
         foreach (var sys in g.Systems)
         {
             string s = sys.Name;
             if (s == from || Held(s)) continue;
             bool isWin = s == win && strength >= _p.WinStrikeStrength;
-            if (hops[sys.Index] > _p.TargetHops + 1 && !isWin) continue;
-            int ticks = Ticks(from, s, speed);
+            // fog: systems the picture shows enemy-held reach farther; the Empire's HQ candidates (belief map) from any distance
+            bool seenEnemy = _view != null && IsEnemyHeld(s);
+            int reach = seenEnemy ? Math.Max(_p.TargetHops, _p.FogEnemyTargetHops) : _p.TargetHops;
+            int belief = search && seenEnemy ? Belief(s) : 0;
+            bool isSearch = belief > 0;
+            if (hops[sys.Index] > reach + 1 && !isWin && !isSearch) continue;
+            int ticks = _view != null ? TicksCached(from, s, speed) : Ticks(from, s, speed);
             if (ticks == int.MaxValue) continue;
-            var enemies = EnemyFleetsAt(s);
+            var enemies = TargetFleetsAt(s);
             double e = 0;
             if (enemies.Count > 0)
             {
-                if (Duel(pile.Members, enemies) < OddsAt(s, _p.AttackOddsPercent)) continue;
+                if (Duel(pile.Members, enemies) < TargetOdds(s)) continue;
                 e = enemies.Sum(Str);
             }
             long score = 0;
             // the fleet itself: hunt it when the system is near the border and the pile is armed enough
             if (e > 0 && ticks <= _p.HuntTicks && hops[sys.Index] <= _p.TargetHops) score = 3000L * (long)(e * 100 + 20) / (ticks + 20);
             // the system: needs regiments
-            if (hops[sys.Index] <= _p.TargetHops || isWin)
+            if (hops[sys.Index] <= reach || isWin || isSearch)
             {
                 var slots = SlotsSeen(s);
                 bool ok = slots.Populated && !AssaultForbiddenSeen(s) && aboard >= 1;
@@ -993,6 +1004,7 @@ public sealed class SimpleAi
                         if (lost.Contains(s)) value *= 2;
                         if (s == KnownEnemyHq) value += 200;
                         if (isWin) value += 400;
+                        if (isSearch) value += _p.SearchValue * belief / Math.Max(1, BeliefMax);
                         score = Math.Max(score, value * 1000 / (ticks + 20));
                     }
                 }
