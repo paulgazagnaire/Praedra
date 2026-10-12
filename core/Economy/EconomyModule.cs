@@ -323,6 +323,17 @@ public sealed class EconomyModule
         E.Alliance.RawLine.Remove(o.Id);
     }
 
+    /// <summary>
+    /// A ship, squadron or regiment destroyed in a battle: leaves the registry at once, no refund, no scrap event (the battle raises UnitDestroyed);
+    /// its fleet drops it (and dissolves if empty) and units aboard land. rule: m4-battle-classic §10.
+    /// </summary>
+    internal void DestroyUnit(StepContext ctx, int day, EconObject o)
+    {
+        Remove(o);
+        _fleets.ObjectRemoved(ctx, day, o);
+        ObjectRemoved?.Invoke(ctx, o, day);
+    }
+
     internal void Destroy(StepContext ctx, int day, EconObject f, DestroyReason reason)
     {
         // rule: m2-slots-and-resources §Over-capacity destruction (frees its maintenance, cancels any cycle, no refund)

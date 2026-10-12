@@ -204,4 +204,18 @@ public class CampaignSoakTests
         asClassic.Step();
         Assert.False(asClassic.Host.Support.IsUprising("Taanab"));
     }
+
+    // m4-battle-classic §1: the relief fleet arriving at Kinyen on day 300 meets the Empire's interdiction fleet and the contact is a real
+    // Classic battle (invariants stay green on every day of the checked run). The Interdictor's gravity well forbids a retreat.
+    [Theory, MemberData(nameof(Rulesets))]
+    public void KinyenContactIsARealClassicBattle(GarrisonRuleset r)
+    {
+        var run = CampaignHarness.Checked(1, r);
+        var started = run.Events.OfType<Rebellion.Core.Battle.BattleStarted>().Where(b => b.System == TestCampaign.BlockadedSystem).ToList();
+        Assert.NotEmpty(started);
+        Assert.InRange(started[0].Day, 300, 330);
+        var end = run.Events.OfType<Rebellion.Core.Battle.BattleEnded>().First(b => b.Result.System == TestCampaign.BlockadedSystem);
+        Assert.Equal(Rebellion.Core.Battle.BattleOutcome.Annihilated, end.Result.Alliance);
+        Assert.Contains(run.Events.OfType<Rebellion.Core.Battle.RetreatRefused>(), x => x.Reason == Rebellion.Core.Battle.RetreatRefusal.GravityWell);
+    }
 }
