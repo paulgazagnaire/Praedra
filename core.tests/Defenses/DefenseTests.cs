@@ -144,6 +144,7 @@ public class DefenseTests
         a.Hold("Corellia", Side.Alliance); a.Yard("Corellia", FacilityKind.ConstructionYard);
         Assert.Equal(RejectReason.NotAvailable, a.TryOrder(Side.Alliance, "Corellia", YardFamily.Construction, "Death Star Shield", 1, "Corellia"));
         var e = new BuildWorld();
+        e.Build.RespectResearchOrder = false; // research gate off = all available (the gate is on by default since m5-research)
         e.Hold("Corellia", Side.Empire); e.Yard("Corellia", FacilityKind.ConstructionYard);
         Assert.Null(e.TryOrder(Side.Empire, "Corellia", YardFamily.Construction, "Death Star Shield", 1, "Corellia")); // research flag off = all available
     }

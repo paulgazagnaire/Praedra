@@ -37,11 +37,17 @@ public sealed class ConstructionModule
     /// <summary>Ships, squadrons, regiments and special forces may only be ordered to a system the side controls (same rule as facilities). DEFAULT on (m3-troops-and-special-forces; the lead note says a delivery never lands on a foreign system). Off: any reachable system.</summary>
     public bool UnitDestinationMustBeControlled { get; set; } = true;
     /// <summary>
-    /// The research stub (ResearchStub): off = AllAvailable, every item of the side counts as researched, NotResearched never fires (DEFAULT since M3,
-    /// Decided by Paul); on = RespectResearchOrder, an item needs research order 0 or a setup grant (the m2 stub, used by the construction tests).
-    /// rule: m3-ships-and-fighters §Sides and availability (Research stub).
+    /// The research gate. Off = AllAvailable, every item of the side counts as researched, NotResearched never fires (the M3 stub); on = an item
+    /// needs its research order at most the side's level in its track (<see cref="ResearchOrderReached"/>), or a setup grant. DEFAULT on once
+    /// research is built (m5-research §Defaults, Paul decides the flip). rule: m5-research §Availability test.
     /// </summary>
-    public bool RespectResearchOrder { get; set; }
+    public bool RespectResearchOrder { get; set; } = true;
+    /// <summary>
+    /// Step 2 of the availability test: is the class's research order at most the side's level in its track? GameHost wires it to
+    /// <see cref="Research.ResearchModule.OrderReached"/>. Unwired (a construction module without research) = order 0 only, which is level 0.
+    /// rule: m5-research §Availability test.
+    /// </summary>
+    public Func<Side, string, bool>? ResearchOrderReached { get; set; }
     /// <summary>The Death Star class row can be ordered at a Shipyard. DEFAULT true; off: the order is rejected NotAvailable. rule: m3-ships-and-fighters §Death Star as an ordinary class row (S14).</summary>
     public bool DeathStarClassBuildable { get; set; } = true;
     /// <summary>Yards stop under the Classic 1998 blockade flag (<see cref="FleetModule.IsBlockadedClassic"/>) instead of the economic blockade. DEFAULT off. rule: m2-construction §Suspension.</summary>
@@ -83,7 +89,7 @@ public sealed class ConstructionModule
 
     // ================================================================== setup and queries (between Steps)
 
-    /// <summary>Setup only: grant a class to a side (the research stub). rule: m2-construction §Build order (research gate DEFAULT).</summary>
+    /// <summary>Setup or tests only: grant a class to a side whatever its level (step 3 of the availability test). rule: m5-research §Availability test; §Defaults (Granted classes stay available).</summary>
     public void GrantResearch(Side side, string className)
     {
         _eco.Costs.Get(className); // throws on an unknown class
@@ -93,10 +99,16 @@ public sealed class ConstructionModule
         list.Sort(StringComparer.Ordinal);
     }
 
+    /// <summary>
+    /// The availability test: (1) gate off = true; (2) research order at most the side's level in its track; (3) granted by setup or a test.
+    /// Read when the order is processed (step 1). Also the build menu's query (the UI dims what this refuses). rule: m5-research §Availability test.
+    /// </summary>
     public bool IsResearched(Side side, string className)
     {
         var row = _eco.Costs.Get(className);
-        return !RespectResearchOrder || row.ResearchOrder == 0 || C.Of(side).Granted.Contains(className);
+        if (!RespectResearchOrder) return true;
+        bool reached = ResearchOrderReached != null ? ResearchOrderReached(side, className) : row.ResearchOrder == 0;
+        return reached || C.Of(side).Granted.Contains(className);
     }
 
     /// <summary>The project of a (system, family), if any.</summary>

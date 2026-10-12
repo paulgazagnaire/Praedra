@@ -24,7 +24,10 @@ namespace Rebellion.Core.Setup;
 ///   5. TroopModule     (step 1 load and unload orders; reads fleets; the construction event also announces regiments and special forces)
 ///   6. ControlModule    (capture; calls support and construction)
 ///   7. DefenseModule, BombardmentModule (defense queries; the Bombard order and slot 5.1; reads fleets, economy and support, calls support's ChangeSupport)
-///   8. AssaultModule (the Assault order and slot 5.2; reads troops, defenses and bombardment, calls control's SetHolder; attached last)
+///   8. AssaultModule (the Assault order and slot 5.2; reads troops, defenses and bombardment, calls control's SetHolder)
+///   9. BattleModule (step 5), RepairModule (slot 6.8)
+///  10. ResearchModule (slot 6.9; reads economy and fleets; construction's research gate reads its levels)
+///  11. VictoryModule (slot 6.11, the last day-end slot; must stay last)
 /// Cross-wiring done inside the Attach calls: support into economy (Death Star flag) and construction (uprising stops yards),
 /// construction into economy (refined line, removed objects) and control (cancel projects on capture).
 ///
@@ -52,6 +55,9 @@ public sealed class GameHost
     public Rebellion.Core.Battle.BattleModule Battles { get; }
     /// <summary>Strategic ship repair, slot 6.8. rule: m4-retreat-damage-repair §5.</summary>
     public Rebellion.Core.Repair.RepairModule Repair { get; }
+
+    /// <summary>Research levels, points and the facility tick, slot 6.9. rule: m5-research.</summary>
+    public Rebellion.Core.Research.ResearchModule Research { get; }
 
     /// <summary>Victory check (slot 6.11, last; runs only in a game made by <see cref="NewGame"/>): <c>Victory.Winner</c> is null while the game runs. rule: setup-victory/04.</summary>
     public Rebellion.Core.Victory.VictoryModule Victory { get; }
@@ -106,8 +112,10 @@ public sealed class GameHost
         Assault = AssaultModule.Attach(game, Economy, Fleets, Troops, Control, Defenses, Bombardment, settings.Assault);
         // Slot 5: registered after the fleet module's contact hook, so it runs after it, and (slot 5 precedes 5.1 and 5.2) before bombardment and assault.
         Battles = Rebellion.Core.Battle.BattleModule.Attach(game, data.Galaxy, Fleets, Economy, settings.Battle, data.NewBattle);
-        Repair = Rebellion.Core.Repair.RepairModule.Attach(game, Economy, Fleets, data.Repair); // slot 6.8, attached last
+        Repair = Rebellion.Core.Repair.RepairModule.Attach(game, Economy, Fleets, data.Repair); // slot 6.8
         Repair.FoughtThisStep = Battles.FoughtThisStep; // no repair on a battle day. rule: m4-retreat-damage-repair §5
+        Research = Rebellion.Core.Research.ResearchModule.Attach(game, Economy, Fleets, data.Research, settings.Research); // slot 6.9, after repair
+        Construction.ResearchOrderReached = Research.OrderReached; // the research gate reads the side's levels. rule: m5-research §Availability test
         Victory = Rebellion.Core.Victory.VictoryModule.Attach(game, settings.Victory); // slot 6.11, the last day-end slot; must stay last
     }
 

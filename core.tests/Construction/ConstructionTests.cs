@@ -683,11 +683,14 @@ public class ConstructionTests
     }
 
     [Fact]
-    public void ResearchStubIsAllAvailableByDefault() // m3-ships-and-fighters §Sides and availability (ResearchStub)
+    public void ResearchGateIsOnByDefaultAndOffIsAllAvailable() // m5-research §Defaults (RespectResearchOrder on); m3-ships-and-fighters §Sides and availability (the stub, off)
     {
         var w = Empire(500, FacilityKind.ConstructionYard);
-        Assert.False(w.Build.RespectResearchOrder);
-        Assert.Null(w.TryOrder(Emp, Home, YardFamily.Construction, "Advanced Shipyard", 1, Home));
+        Assert.True(w.Build.RespectResearchOrder);
+        Assert.Equal(RejectReason.NotResearched, w.TryOrder(Emp, Home, YardFamily.Construction, "Advanced Shipyard", 1, Home));
+        var off = Empire(500, FacilityKind.ConstructionYard);
+        off.Build.RespectResearchOrder = false;
+        Assert.Null(off.TryOrder(Emp, Home, YardFamily.Construction, "Advanced Shipyard", 1, Home));
     }
 
     // m2-mines-refineries-pools §Asking for raw / serving a line (the refined line is first in first out)

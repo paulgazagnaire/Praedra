@@ -11,7 +11,7 @@ namespace Rebellion.Core.Setup;
 
 /// <summary>
 /// Every data file the game loads, read once and immutable: galaxy, ship classes, costs, blockade numbers, garrison weights, slot
-/// values, the starting-facilities list and the troop and special-force classes. One place that knows the file names and folders, so a new game, a loaded game, the
+/// values, the starting-facilities list, the troop and special-force classes, the repair rules, the New battle tables and the research ladders and rules. One place that knows the file names and folders, so a new game, a loaded game, the
 /// runner and the tests all read the same things. Data values come from files, never from code. rule: CLAUDE.md "Every number comes
 /// from data or a named constant with its source tag".
 /// </summary>
@@ -26,7 +26,8 @@ public sealed record GameData(
     TroopData Troops,
     DefenseData Defenses,
     Repair.RepairRules Repair,
-    Battle.NewBattleData NewBattle)
+    Battle.NewBattleData NewBattle,
+    Research.ResearchData Research)
 {
     private static readonly Lazy<GameData> _default = new(() => Load(FindRepoRoot()));
 
@@ -38,18 +39,20 @@ public sealed record GameData(
     {
         string design = Path.Combine(repoRoot, "data", "design"), interim = Path.Combine(repoRoot, "data", "interim");
         var galaxy = GalaxyLoader.LoadFolder(design);
+        var costs = CostData.Load(Path.Combine(interim, CostData.FileName));
         return new GameData(
             galaxy,
             ShipData.LoadAll(interim),
             BlockadeData.Load(Path.Combine(design, BlockadeData.FileName)),
             SlotValues.Load(Path.Combine(design, SlotValues.File), galaxy),
-            CostData.Load(Path.Combine(interim, CostData.FileName)),
+            costs,
             GarrisonWeights.Load(Path.Combine(design, GarrisonWeights.FileName)),
             Construction.StartingFacilities.Load(Path.Combine(design, Construction.StartingFacilities.FileName)),
             TroopData.Load(interim, design),
             DefenseData.Load(interim),
             Rebellion.Core.Repair.RepairRules.Load(Path.Combine(design, Rebellion.Core.Repair.RepairRules.FileName)),
-            Battle.NewBattleData.Load(design));
+            Battle.NewBattleData.Load(design),
+            Rebellion.Core.Research.ResearchData.Load(interim, design, costs));
     }
 
     /// <summary>The folder that holds Rebellion.sln, searching upwards from the program's folder and then the working folder.</summary>
