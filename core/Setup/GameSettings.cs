@@ -80,6 +80,10 @@ public sealed record GameSettings
     /// <summary>Research switches (facility and mission income, cost and mission scaling, one class per rung, Sensor Station tier 2). Null = the module's defaults.</summary>
     public Rebellion.Core.Research.ResearchParams? Research { get; init; }
 
+    // ---- characters. rule: m5-characters-and-force §Defaults for undecided items
+    /// <summary>Character switches and numbers (Navigator, ride fleet, death, injury days, escape, Force ranks, start extras...). Null = the sheet's DEFAULTs. Refused values throw at attach.</summary>
+    public Rebellion.Core.Characters.CharacterParams? Characters { get; init; }
+
     // ---- victory. rule: setup-victory/04-victory-conditions (HQ-Only flavour)
     /// <summary>Victory switches. Null = all on (DEFAULT).</summary>
     public Rebellion.Core.Victory.VictoryRules? Victory { get; init; }

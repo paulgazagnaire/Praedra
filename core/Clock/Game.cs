@@ -51,6 +51,8 @@ public sealed class GameState
     public Rebellion.Core.Fog.FogState Fog { get; init; } = new();
     /// <summary>Research points, levels, exhausted flags and tick timers per side; the two percents. rule: m5-research §State per side.</summary>
     public Rebellion.Core.Research.ResearchState Research { get; init; } = new();
+    /// <summary>Every character (stats, Force, status, post, place, trip) and the system General table. rule: m5-characters-and-force §The character object.</summary>
+    public Rebellion.Core.Characters.CharacterState Characters { get; init; } = new();
 
     /// <summary>Copy another state's content into this one (used by Load, which needs ordinal-comparer dictionaries).</summary>
     internal void CopyFrom(GameState other)
@@ -67,6 +69,7 @@ public sealed class GameState
         Scenario.CopyFrom(other.Scenario);
         Fog.CopyFrom(other.Fog);
         Research.CopyFrom(other.Research);
+        Characters.CopyFrom(other.Characters);
     }
 }
 
@@ -110,7 +113,8 @@ public sealed class Game
         "5.4", // Live refresh of each side's picture (M5 fog; 5.3 is mission resolution, m5-missions). rule: m5-fog-and-hq §F8, Lead notes
         "6.1", "6.2", "6.3", "6.4", "6.5", "6.6", "6.7", "6.8", // Day-end hooks (empty in M1)
         "6.9", // Research tick, after strategic repair (6.8). rule: m5-research §Where it runs in the day Step
-        "6.11", // Victory check: MUST stay the last day-end slot (characters 6.10 will be added before it). rule: m5-setup-and-victory §Game over
+        "6.10", // Character day-end: injuries heal, escape rolls. rule: m5-characters-and-force §Where it runs in the day Step
+        "6.11", // Victory check: MUST stay the last day-end slot. rule: m5-setup-and-victory §Game over
         "7",   // Day becomes K + 1
     };
 

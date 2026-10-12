@@ -35,6 +35,19 @@ public sealed class FleetModule
     /// <summary>DebugSetDamage is accepted only when this is on (same switch as DebugSetHolder). DEFAULT off. rule: m3-ships-and-fighters §Damaged state.</summary>
     public bool DebugOrdersEnabled { get; set; }
 
+    /// <summary>
+    /// Adjusts a fleet's speed rating at the moment a MoveFleet is accepted (given the fleet and its data rating). Null = the data rating
+    /// (Classic). The character module sets it for the New-rule Navigator. rule: m5-characters-and-force §Navigator; m1-travel §Rule (New).
+    /// </summary>
+    public Func<Fleet, int, int>? SpeedAdjust { get; set; }
+    /// <summary>A MoveFleet was accepted (step 1, after the transit is set). The character module listens (OfficersRideFleet). rule: m5-characters-and-force §Riding.</summary>
+    public event Action<StepContext, Fleet>? MoveAccepted;
+    /// <summary>
+    /// A fleet is about to leave the state (ctx null = silent: setup or cancelled work). The int? is the fleet that received its ships (a merge or a
+    /// transfer that emptied it), else null. The character module listens. rule: m5-characters-and-force §Riding (fleet operations).
+    /// </summary>
+    public event Action<StepContext?, int, Fleet, DissolveCause, int?>? FleetRemoving;
+
     private FleetModule(Game game, Galaxy galaxy, IReadOnlyDictionary<string, ShipClass> ships, BlockadeData blockade, ForcedStopTrigger trigger, NewBattleData combat)
     {
         _game = game; Galaxy = galaxy; _ships = ships; Blockade = blockade; Trigger = trigger;
@@ -177,7 +190,7 @@ public sealed class FleetModule
 
     /// <summary>
     /// Speed rating of a fleet (0 = immobile): the largest rating among its ships; squadrons aboard never count; a squadron-only fleet uses
-    /// its squadrons' ratings. rule: m3-fleets §Fleet speed; m1-travel §Rule (Classic); navigators are M5.
+    /// its squadrons' ratings. rule: m3-fleets §Fleet speed; m1-travel §Rule (Classic); the New-rule Navigator is applied through <see cref="SpeedAdjust"/> (m5-characters-and-force).
     /// </summary>
     public int SpeedOf(Fleet f) =>
         TravelFormula.FleetSpeed(f.Ships.Select(id => SpeedOfShip(E.Objects[id])), f.Squadrons.Select(id => SpeedOfShip(E.Objects[id])));
@@ -311,8 +324,9 @@ public sealed class FleetModule
     }
 
     /// <summary>Remove a fleet from the state; the event only when there is a Step to carry it. rule: m3-fleets §What a fleet is invariant 1.</summary>
-    private void RemoveFleet(StepContext? ctx, int day, Fleet f, DissolveCause cause)
+    private void RemoveFleet(StepContext? ctx, int day, Fleet f, DissolveCause cause, int? into = null)
     {
+        FleetRemoving?.Invoke(ctx, day, f, cause, into);
         State.Fleets.Remove(f.Id);
         if (ctx == null) return;
         int id = f.Id;
@@ -320,7 +334,7 @@ public sealed class FleetModule
     }
 
     /// <summary>Take ships out of whatever fleets hold them; fleets left empty are removed (cause Empty). Returns the fleet ids they left, ascending.</summary>
-    private List<int> TakeOut(StepContext? ctx, int day, IEnumerable<EconObject> ships)
+    private List<int> TakeOut(StepContext? ctx, int day, IEnumerable<EconObject> ships, int? into = null)
     {
         var left = new SortedSet<int>();
         foreach (var s in ships)
@@ -331,7 +345,7 @@ public sealed class FleetModule
             left.Add(f.Id);
         }
         foreach (var fid in left)
-            if (State.Fleets.TryGetValue(fid, out var f) && f.Ships.Count == 0 && f.Squadrons.Count == 0) RemoveFleet(ctx, day, f, DissolveCause.Empty);
+            if (State.Fleets.TryGetValue(fid, out var f) && f.Ships.Count == 0 && f.Squadrons.Count == 0) RemoveFleet(ctx, day, f, DissolveCause.Empty, into);
         return left.ToList();
     }
 
@@ -401,7 +415,7 @@ public sealed class FleetModule
     // Move ships (not yet in `to`) into `to`; aboard units stay on their ship (AboardShip is untouched).
     private void MoveShips(StepContext ctx, int day, List<EconObject> ships, Fleet to)
     {
-        var left = TakeOut(ctx, day, ships);
+        var left = TakeOut(ctx, day, ships, to.Id);
         foreach (var s in ships) { AddSorted(to.Ships, s.Id); s.System = null; }
         var ids = new ValueList<int>(ships.Select(s => s.Id).OrderBy(i => i).ToList());
         var from = new ValueList<int>(left);
@@ -426,7 +440,7 @@ public sealed class FleetModule
         var ids = new ValueList<int>(moved);
         var left = new ValueList<int>(new List<int> { from.Id });
         ctx.Emit((i, _) => new ShipsTransferred(i, day, ids, left, into.Id));
-        RemoveFleet(ctx, day, from, DissolveCause.Merged); // the spare flag leaves with the removed fleet (m3-fleets §New ships)
+        RemoveFleet(ctx, day, from, DissolveCause.Merged, into.Id); // the spare flag leaves with the removed fleet (m3-fleets §New ships)
         return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
     }
 
@@ -545,7 +559,9 @@ public sealed class FleetModule
         // An accepted order marks the fleet in transit at once, so a second order in the same Step lands here (K6, K7).
         if (fleet.Transit != null || fleet.At == null) return OrderResult.Reject(RejectReason.InTransit);
 
-        var path = _pathfinder.Find(fleet.At, o.Destination, SpeedOf(fleet));
+        int speed = SpeedOf(fleet);
+        if (SpeedAdjust != null) speed = SpeedAdjust(fleet, speed); // rule: m5-characters-and-force §Navigator (fixed when the order is accepted)
+        var path = _pathfinder.Find(fleet.At, o.Destination, speed);
         if (!path.Ok) return OrderResult.Reject(RejectStatus(path.Status));
 
         var names = path.Names(Galaxy).ToList();
@@ -555,6 +571,7 @@ public sealed class FleetModule
             DueDay = ctx.Day + path.HopTicks[0], // first hop is due on day K + hop ticks
         };
         fleet.Spare = false; // rule: m3-fleets §New ships: the spare fleet (cleared when a MoveFleet is accepted)
+        MoveAccepted?.Invoke(ctx, fleet);
         int arrival = ctx.Day + path.TotalTicks;
         int total = path.TotalTicks;
         int id = fleet.Id;
@@ -785,6 +802,7 @@ public sealed class FleetModule
             var ids = new ValueList<int>(f.Squadrons.ToList());
             var none = new ValueList<int>(f.Squadrons.Select(_ => 0).ToList());
             int fid = f.Id;
+            FleetRemoving?.Invoke(ctx, day, f, DissolveCause.SquadronsArrived, null);
             State.Fleets.Remove(fid);
             ctx.Emit((i, _) => new FleetDissolved(i, day, fid, DissolveCause.SquadronsArrived));
             ctx.Emit((i, _) => new SquadronsBased(i, day, ids, fid, none, sys));

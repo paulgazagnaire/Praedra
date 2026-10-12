@@ -25,3 +25,11 @@ Sources (project folder `rebellion/specs/`): `planets/data/extended-galaxy-v4-*.
 `interim/research-unlocks.csv` is copied unchanged from `rebellion/specs/economy/data/research-unlocks.csv` (the research ladders of m5-research: track, research order and difficulty per class; Traced, unverified vs original). Its row order is the catalogue order of the level check. The loader checks that every class of `unit-and-facility-costs.csv` has one row with the same research order. Copied 2026-10-12.
 
 `design/research-rules.csv` is the data table `ResearchRules` of m5-research (facility tick delay and random span, points per yard, mission point roll, Sensor Station tier 2 rung and cost); each row carries its source tag.
+
+Characters (m5-characters-and-force, m5-setup-and-victory P9), copied 2026-10-12:
+- `interim/characters.csv` is copied unchanged from `rebellion/specs/heroes/data/characters-raw.csv`: the 60 original records of `MJCHARSD` and `MNCHARSD` (ids 576-579, 640-641, 832-857, 896-923; skill base and variance, loyalty, Force probability and level, the admiral, commander, general, unable-to-betray and Jedi-trainer flags). Column meaning follows Open Rebellion's dumper: unverified vs original.
+- `design/added-heroes.csv` holds the 16 heroes Paul added (heroes/added-heroes: 8 Alliance, 4 Empire, 4 Imperial bounty hunters), Proposal stats, ids after each side's minor block (858-865, 924-931). Skills the source leaves blank are 0+0 and loyalty is 100+0 (DEFAULT, as the 60 originals); each row says so.
+- `design/roster.csv` lists every record with `in_game` (Decided, heroes/refined-roster: the game starts right after Yavin with a film-era cast; Thrawn, Pellaeon, Bel Iblis, Daala, Zuggs, Ferrier, Grammel, Griff, Klev, Ma'w'shiye and Kaiya Andrimetrum are 0). 65 characters are in the game.
+- `design/navigator_speed.csv` is the Navigator table of m5-characters-and-force (Han 50 Traced, the rest Proposal); unlisted characters are 100.
+- `design/start-cast.csv` is the fixed start cast of m5-setup-and-victory P9 in placement order (Traced, setup-victory/03), with the two extras rows.
+- `design/victory-rules.csv` is the victory rule table of m5-setup-and-victory (subjects by character id); only the `CharacterCaptured` rows are read so far (standard victory is a switch, off by default).

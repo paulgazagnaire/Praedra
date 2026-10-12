@@ -29,7 +29,9 @@ namespace Rebellion.Core.Setup;
 ///  10. FogModule (MoveHq; slot 2 after the fleet departures, slot 3 HQ arrival after the fleet arrivals and deliveries, 3.1 sightings, 5.4 live
 ///      refresh, 6.8 log pruning after repair; listens to control's HolderChanged; sets the game's event audience). rule: m5-fog-and-hq §F8
 ///  11. ResearchModule (slot 6.9; reads economy and fleets; construction's research gate reads its levels)
-///  12. VictoryModule (slot 6.11, the last day-end slot; must stay last)
+///  12. CharacterModule (orders; slots 2 and 3 after the fleets, 6.10; wires bombardment's AdmiralLeadership, assault's FleetGeneralLeadership and
+///      SystemGeneralLeadership, the fleet Navigator speed and fleet-removal hooks, control's HolderChanged, support's incident codes 3-5). rule: m5-characters-and-force
+///  13. VictoryModule (slot 6.11, the last day-end slot; must stay last; reads the characters' captured and dead states)
 /// Cross-wiring done inside the Attach calls: support into economy (Death Star flag) and construction (uprising stops yards),
 /// construction into economy (refined line, removed objects) and control (cancel projects on capture).
 ///
@@ -63,6 +65,9 @@ public sealed class GameHost
 
     /// <summary>Victory check (slot 6.11, last; runs only in a game made by <see cref="NewGame"/>): <c>Victory.Winner</c> is null while the game runs. rule: setup-victory/04.</summary>
     public Rebellion.Core.Victory.VictoryModule Victory { get; }
+
+    /// <summary>Characters, posts, leadership, capture and death, the Force (slots 2, 3, 6.10). rule: m5-characters-and-force.</summary>
+    public Rebellion.Core.Characters.CharacterModule Characters { get; }
 
     /// <summary>Fog of war (each side's picture, the read API for the AI and UI) and the Rebel HQ. rule: m5-fog-and-hq.</summary>
     public Rebellion.Core.Fog.FogModule Fog { get; }
@@ -121,12 +126,28 @@ public sealed class GameHost
         Fog = Rebellion.Core.Fog.FogModule.Attach(game, data.Galaxy, Fleets, Economy, Support, Control, settings.Fog, settings.Hq); // after repair (shares 6.8)
         Research = Rebellion.Core.Research.ResearchModule.Attach(game, Economy, Fleets, data.Research, settings.Research); // slot 6.9, after repair
         Construction.ResearchOrderReached = Research.OrderReached; // the research gate reads the side's levels. rule: m5-research §Availability test
+        // Characters: slots 2 and 3 after the fleets, 6.10 after research. The three M3 leadership hooks, the Navigator speed, the system General
+        // cleared on a holder change and the uprising incident codes 3 to 5. rule: m5-characters-and-force §Where it runs in the day Step.
+        Characters = Rebellion.Core.Characters.CharacterModule.Attach(game, Fleets, data.Characters, settings.Characters);
+        Bombardment.AdmiralLeadership = Characters.AdmiralLeadership;
+        Assault.FleetGeneralLeadership = Characters.FleetGeneralLeadership;
+        Assault.SystemGeneralLeadership = Characters.SystemGeneralLeadership;
+        Control.HolderChanged += Characters.OnHolderChanged;
+        Support.CharacterIncident = Characters.UprisingIncident;
         Victory = Rebellion.Core.Victory.VictoryModule.Attach(game, settings.Victory); // slot 6.11, the last day-end slot; must stay last
+        Victory.Keys = data.Characters.VictoryKeys;
+        Victory.IsCaptured = Characters.IsCaptured;
+        Victory.IsDead = Characters.IsDead;
+        Characters.DeathRefused = Victory.RefusesDeath;
     }
 
     /// <summary>A new, empty game (day 0, no owners, no objects) with every module attached. <paramref name="data"/> null = the repository's data.</summary>
     public static GameHost New(ulong seed, GameSettings? settings = null, GameData? data = null) =>
         new(new Game(seed), data ?? GameData.Default, settings ?? new GameSettings());
+
+    /// <summary>A new, empty game on a given generator (tests pass a stub that returns queued draws).</summary>
+    public static GameHost New(GameRng rng, GameSettings? settings = null, GameData? data = null) =>
+        new(new Game(rng), data ?? GameData.Default, settings ?? new GameSettings());
 
     /// <summary>A game from a save (<see cref="GameSave.Save"/>), with every module attached again. Settings are not in the save: pass them again.</summary>
     public static GameHost Load(string saveJson, GameSettings? settings = null, GameData? data = null) =>
