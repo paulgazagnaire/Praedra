@@ -426,7 +426,7 @@ public sealed class SimpleAi
             if (Budget < r.Maintenance) continue;
             double value = ClassStrength(n) + fighterStr * sc.FighterCapacity * _p.FighterTrustPercent / 100;
             if (value <= 0) continue;
-            double score = value / (r.Cost + r.Maintenance);
+            double score = value / (r.Cost + _p.UpkeepWeight * r.Maintenance); // upkeep is the lasting limit (m2-maintenance), so it weighs more than the one-time cost
             if (score > bs + 1e-9) { bs = score; best = n; }
         }
         return best;

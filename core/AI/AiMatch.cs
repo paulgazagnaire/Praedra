@@ -57,5 +57,6 @@ public sealed class AiMatch
             }
     }
 
-    public void RunTo(int day) { while (Host.Game.Day < day) Step(); }
+    /// <summary>Steps until the given day, or until the game has a winner (a won game no longer advances).</summary>
+    public void RunTo(int day) { while (Host.Game.Day < day && Host.Victory.Winner == null) Step(); }
 }

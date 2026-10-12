@@ -47,6 +47,8 @@ public sealed record SimpleAiParams
     public int MaxShipsPerOrder { get; init; } = 4;
     /// <summary>A warship is only ordered when the yards of the shipyard system finish it within this many days (m2-construction §Build time: ceil(cost / yards) x 4). DEFAULT.</summary>
     public int MaxBuildDays { get; init; } = 230;
+    /// <summary>A ship's price for the strength-per-price choice is refined cost plus this many times its upkeep. DEFAULT.</summary>
+    public int UpkeepWeight { get; init; } = 3;
     /// <summary>One ship order keeps its yard busy at most this many days (count x build days), but at least one ship. DEFAULT.</summary>
     public int MaxOrderDays { get; init; } = 160;
     /// <summary>The enemy force a purchase is measured against (strength per price, FleetModule's CombatStrength). DEFAULT: the other side's typical line.</summary>
