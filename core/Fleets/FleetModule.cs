@@ -586,6 +586,14 @@ public sealed class FleetModule
                 var carriers = new ValueList<int>(squads.Select(_ => ship).ToList());
                 ctx.Emit((i, _) => new SquadronsBased(i, day, ids, fid, carriers, place));
             }
+            var regs = landed.Where(u => u.Category == ObjectCategory.Regiment).ToList();
+            if (ctx != null && regs.Count > 0 && place != null)
+            {
+                int fid = fleet?.Id ?? 0, ship = o.Id;
+                var ids = new ValueList<int>(regs.Select(u => u.Id).ToList());
+                var carriers = new ValueList<int>(regs.Select(_ => ship).ToList());
+                ctx.Emit((i, _) => new Troops.RegimentsLanded(i, day, ids, fid, carriers, place)); // m3-troops: aboard regiments land on the last-left system (DEFAULT)
+            }
             if (fleet != null)
             {
                 fleet.Ships.Remove(o.Id);

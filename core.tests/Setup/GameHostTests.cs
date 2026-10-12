@@ -52,6 +52,8 @@ public class GameHostTests
         Assert.Equal(ctl.DebugOrdersEnabled, s.DebugOrdersEnabled);
         Assert.Equal(fleets.DebugOrdersEnabled, s.DebugOrdersEnabled);
         Assert.Equal(con.DeathStarClassBuildable, s.DeathStarClassBuildable);
+        var trp = Rebellion.Core.Troops.TroopModule.Attach(g, fleets, data.Troops);
+        Assert.Equal(trp.UnloadOnlyAtHeldSystem, s.UnloadOnlyAtHeldSystem);
         Assert.Null(s.Economy); Assert.Null(s.Support); Assert.Null(s.Construction);
 
         var h = GameHost.New(1);
@@ -70,7 +72,7 @@ public class GameHostTests
             AutoscrapMode = AutoscrapMode.Smart, SlotSource = SlotSource.Rolled, SupportRuleset = GarrisonRuleset.New,
             BlockadeSupportEffect = false, DeliveryForcedStop = false, LostDestination = LostDestinationRule.Refuse,
             UnitDestinationMustBeControlled = false, RespectResearchOrder = true, UseClassicBlockadeFlag = true, DebugOrdersEnabled = true,
-            DeathStarClassBuildable = false,
+            DeathStarClassBuildable = false, UnloadOnlyAtHeldSystem = false,
             Economy = new EconomyParams { ScrapPeriod = 7 }, Support = new SupportParams { ErosionPeriod = 11 },
             Construction = new ConstructionParams { StandardCycleDays = 3 },
         };
@@ -84,6 +86,7 @@ public class GameHostTests
             Assert.False(h.Construction.UnitDestinationMustBeControlled); Assert.True(h.Construction.RespectResearchOrder);
             Assert.True(h.Construction.UseClassicBlockadeFlag); Assert.True(h.Control.DebugOrdersEnabled);
             Assert.True(h.Fleets.DebugOrdersEnabled); Assert.False(h.Construction.DeathStarClassBuildable);
+            Assert.False(h.Troops.UnloadOnlyAtHeldSystem);
             Assert.Equal(7, h.Economy.Params.ScrapPeriod); Assert.Equal(11, h.Support.Params.ErosionPeriod); Assert.Equal(3, h.Construction.Params.StandardCycleDays);
         }
         var made = GameHost.New(5, s);
