@@ -21,8 +21,9 @@ public sealed record FacilityRemoved(int Index, int Day, int Facility, string Cl
     : GameEvent(Index, Day, nameof(FacilityRemoved));
 
 /// <summary>
-/// An unfinished facility, or an old-holder queued unit on the captured system, was cancelled: no refund, maintenance freed.
-/// Owner is the side that held it (null on a neutral system).
+/// An unfinished facility on the captured system that no construction project owns (a setup leftover) was cancelled: no refund,
+/// maintenance freed. Owner is the side that held the system (null if neutral). Projects themselves are cancelled by the construction
+/// module (its own ProjectCancelled, reason SystemLost).
 /// </summary>
-public sealed record ProjectCancelled(int Index, int Day, int Object, string Class, string System, Side? Owner)
-    : GameEvent(Index, Day, nameof(ProjectCancelled));
+public sealed record UnfinishedFacilityCancelled(int Index, int Day, int Object, string Class, string System, Side? Owner)
+    : GameEvent(Index, Day, nameof(UnfinishedFacilityCancelled));

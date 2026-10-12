@@ -1,4 +1,5 @@
 using Rebellion.Core.Clock;
+using Rebellion.Core.Construction;
 using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
 using Rebellion.Core.Map;
@@ -20,8 +21,11 @@ internal static class SimCli
                                            [--trigger PaulRule|AnyArmedFleet|GravityWellShip]   (default PaulRule)
                                            [--days 40] [--seed 1]
           dotnet run --project sim -- economy [--days 360] [--seed 1] [--no-incidents]
+          dotnet run --project sim -- build [--days 150] [--seed 1] [--picket-leaves <day>|never] [--no-forced-stop]
           dotnet run --project sim -- support [--days 360] [--seed 1] [--ruleset classic|new] [--reinforce-day 120]
         support runs the same demo with popular support, garrisons and uprisings on and prints the support events and a table every 30 days.
+        build runs a fixed demo: an Empire yard builds two fighters, a mine and two regiments; the regiments' delivery is held at a Rebel picket
+        until the picket moves away (--picket-leaves <day>, default 100; "never" keeps it there). --no-forced-stop sets DeliveryForcedStop off.
         economy runs a fixed demo setup (four systems per side with mines and refineries) and prints each side's pools every 30 days.
         Ship classes are matched ignoring case; "CR90" and "CR90 Corvette" mean the Corellian Corvette, "ISD" the Imperial Star Destroyer.
         """;
@@ -39,6 +43,7 @@ internal static class SimCli
         {
             if (args.Length == 0 || args[0] is "-h" or "--help" or "help") { Console.WriteLine(Usage); return args.Length == 0 ? 1 : 0; }
             if (args[0] == "economy") return Economy(args.Skip(1).ToArray());
+            if (args[0] == "build") return Build(args.Skip(1).ToArray());
             if (args[0] == "support") return Support(args.Skip(1).ToArray());
             if (args[0] != "move") throw new ArgumentException($"Unknown command '{args[0]}'.");
             return Move(Options.Parse(args.Skip(1).ToArray()));
@@ -164,6 +169,76 @@ internal static class SimCli
         Console.WriteLine($"State hash: {GameSave.StateHash(game)}");
         return 0;
     }
+
+    // Build demo (engine/04, package P2.2). Reads the event list; draws nothing itself.
+    private static int Build(string[] a)
+    {
+        int days = 150; ulong seed = 1; int? leaves = 100; bool forcedStop = true;
+        for (int i = 0; i < a.Length; i++)
+        {
+            string key = a[i];
+            string Next() => ++i < a.Length ? a[i] : throw new ArgumentException($"{key} needs a value.");
+            switch (key)
+            {
+                case "--days": days = int.TryParse(Next(), out var d) && d > 0 ? d : throw new ArgumentException("--days must be a positive integer."); break;
+                case "--seed": seed = ulong.TryParse(Next(), out var s) ? s : throw new ArgumentException("--seed must be a non-negative integer."); break;
+                case "--picket-leaves":
+                    {
+                        var v = Next();
+                        leaves = v == "never" ? null : int.TryParse(v, out var l) && l >= 0 ? l : throw new ArgumentException("--picket-leaves must be a day or 'never'.");
+                        break;
+                    }
+                case "--no-forced-stop": forcedStop = false; break;
+                default: throw new ArgumentException($"Unknown option '{key}'.");
+            }
+        }
+        var demo = BuildDemo.Create(FindRoot(), seed);
+        demo.Construction.DeliveryForcedStop = forcedStop;
+        var game = demo.Game; var eco = demo.Economy;
+        Console.WriteLine($"Build demo: {days} days, seed {seed}, DeliveryForcedStop {(forcedStop ? "on" : "off")}.");
+        Console.WriteLine($"Empire yards at {BuildDemo.HomeSystem}: Orbital Shipyard, Training Facility, 2 Construction Yards; refined 1000 and two mine and refinery pairs.");
+        Console.WriteLine($"Regiments go {string.Join(" -> ", demo.RegimentPath)}; a Rebel picket waits at {demo.PicketAt}{(leaves is int l2 ? $" and moves to {demo.PicketMovesTo} on day {l2}" : " and stays")}.");
+        Console.WriteLine();
+        int printed = 0;
+        for (int day = 0; day < days; day++)
+        {
+            if (leaves == day) demo.Fleets.SubmitMove(Side.Alliance, demo.Picket, demo.PicketMovesTo);
+            game.Step();
+            for (; printed < game.Events.Count; printed++)
+            {
+                var e = game.Events[printed];
+                string? line = e switch
+                {
+                    ProjectStarted p => $"{p.Side} {p.System} {FamilyName(p.Family)} starts {p.Count} x {p.Class} -> {p.Destination} (objects {p.Units})",
+                    ProjectCancelled c => $"project at {c.System} cancelled ({c.Reason}), removed objects {c.Units}",
+                    OrderRejected r => $"order #{r.Sequence} rejected ({r.Reason})",
+                    UnitCompleted u => $"object {u.Object} ({u.Class}) completed at {u.Yard}" + (u.DeliveryId == 0 ? ", appears there" : $", leaves as delivery {u.DeliveryId} to {u.Destination}"),
+                    DeliveryDeparted d => $"delivery {d.Delivery} leaves {d.From}: {string.Join(" -> ", d.Path.Items)}, first hop {d.FirstHopTicks} days, due day {d.DueDay}",
+                    DeliveryPassed p => $"delivery {p.Delivery} passes {p.System}",
+                    DeliveryHeld h => $"delivery {h.Delivery} is HELD at {h.System} ({h.Reason}{(h.Blockers.Items.Count > 0 ? ", enemy fleet " + h.Blockers : "")})",
+                    DeliveryResumed r => $"delivery {r.Delivery} goes on from {r.System}",
+                    DeliveryArrived x => $"delivery {x.Delivery}: {x.Class} (object {x.Object}) arrives at {x.System}",
+                    DeliveryRefused x => $"delivery {x.Delivery}: {x.Class} refused at {x.System}, refund {x.Refund}",
+                    ObjectScrapped s => $"object {s.Object} ({s.Class}) scrapped ({s.Reason}), refund {s.Refund}",
+                    FleetDeparted f => $"Rebel picket leaves {f.From}",
+                    _ => null,
+                };
+                if (line != null) Console.WriteLine($"Day {e.Day}: {line}");
+            }
+            if ((game.Day % 30 == 0 && game.Day > 0) || game.Day == days)
+                Console.WriteLine($"  -- day {game.Day}: Empire refined {eco.Refined(Side.Empire)}, load {eco.Load(Side.Empire)}, capacity {eco.Capacity(Side.Empire)}, projects {game.State.Construction.AllProjects().Count}, deliveries {game.State.Construction.Deliveries.Count}, refined line {demo.Construction.RefinedLine(Side.Empire).Count}");
+        }
+        Console.WriteLine();
+        int built = game.Events.OfType<UnitCompleted>().Count();
+        Console.WriteLine($"Units completed: {built}. Objects: {string.Join(", ", eco.Objects.Where(o => o.Completed).GroupBy(o => o.Class).OrderBy(g => g.Key, StringComparer.Ordinal).Select(g => $"{g.Count()} x {g.Key}"))}. Random numbers drawn: {game.Rng.Draws}.");
+        Console.WriteLine($"State hash: {GameSave.StateHash(game)}");
+        return 0;
+    }
+
+    private static string FamilyName(YardFamily f) => f switch
+    {
+        YardFamily.Construction => "Construction Yard", YardFamily.Shipyard => "Shipyard", _ => "Training Facility",
+    };
 
     private static int Move(Options o)
     {

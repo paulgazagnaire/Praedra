@@ -1,4 +1,5 @@
 using Rebellion.Core.Clock;
+using Rebellion.Core.Construction;
 using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
 using Rebellion.Core.Map;
@@ -25,20 +26,13 @@ public sealed class ControlModule
     private readonly FleetModule _fleets;
     private readonly EconomyModule _eco;
     private readonly SupportModule _support;
+    private readonly ConstructionModule? _construction;
 
     /// <summary>
     /// The DebugSetHolder order is accepted only when this is on. DEFAULT off (the sheet says a debug order exists "for tests"; a player
     /// must never be able to capture by order). Not part of the save: it is configuration.
     /// </summary>
     public bool DebugOrdersEnabled { get; set; }
-
-    /// <summary>
-    /// Step 3 hook (rule: m2-control-and-capture §What happens at the moment of capture, 3): cancel the old holder's queued builds and
-    /// deliveries on the system, with no refund and their reserved maintenance freed. Raised after unfinished facilities and queued
-    /// units known to the economy are cancelled. TODO(m2/construction): the construction package subscribes and cancels its own queue
-    /// and delivery entries for <see cref="CaptureInfo.System"/>; this package builds no construction pieces.
-    /// </summary>
-    public event Action<CaptureInfo>? CancelQueuedWork;
 
     /// <summary>
     /// Step 7 hook (rule: m2-control-and-capture §What happens at the moment of capture, 7; C11): the control-change aftermath is traced
@@ -48,15 +42,16 @@ public sealed class ControlModule
     /// </summary>
     public event Action<CaptureInfo, bool>? ControlChangeAftermath;
 
-    private ControlModule(Game game, Galaxy galaxy, FleetModule fleets, EconomyModule eco, SupportModule support)
+    private ControlModule(Game game, Galaxy galaxy, FleetModule fleets, EconomyModule eco, SupportModule support, ConstructionModule? construction)
     {
-        _game = game; _galaxy = galaxy; _fleets = fleets; _eco = eco; _support = support;
+        _game = game; _galaxy = galaxy; _fleets = fleets; _eco = eco; _support = support; _construction = construction;
     }
 
-    /// <summary>Register the DebugSetHolder handler on <paramref name="game"/>. Attach after the fleet, economy and support modules.</summary>
-    public static ControlModule Attach(Game game, Galaxy galaxy, FleetModule fleets, EconomyModule eco, SupportModule support)
+    /// <summary>Register the DebugSetHolder handler on <paramref name="game"/>. Attach after the fleet, economy, support and (if used) construction modules; the construction module is optional.</summary>
+    public static ControlModule Attach(Game game, Galaxy galaxy, FleetModule fleets, EconomyModule eco, SupportModule support,
+        ConstructionModule? construction = null)
     {
-        var m = new ControlModule(game, galaxy, fleets, eco, support);
+        var m = new ControlModule(game, galaxy, fleets, eco, support, construction);
         game.RegisterOrderHandler<DebugSetHolderOrder>(m.HandleDebugSetHolder);
         return m;
     }
@@ -113,28 +108,22 @@ public sealed class ControlModule
         _fleets.SetOwner(system, newHolder);
         ctx.Emit((i, _) => new SystemCaptured(i, day, system, old, newHolder, cause)); // event 10: SystemCaptured first
 
-        // 1 and 2. Facilities, in id order. Completed: change side with the system unless the class cannot serve the new side. Unfinished:
-        // cancelled, no refund. (Lead, facility-ownership.md; economy/07, economy/01, planets/07; DEFAULT for unfinished.)
-        // 3 (part). Incomplete queued units of the old holder standing on the system: cancelled, no refund (DEFAULT, Open question 3).
-        foreach (var o in _eco.Objects.Where(x => x.System == system).ToList()) // id order
+        // 3. Projects of the old holder at this system (queued builds): cancelled by the construction module, no refund, maintenance
+        // freed; deliveries heading here follow its LostDestination rule when they arrive. Construction owns these effects.
+        _construction?.CancelProjectsOnCapture(ctx, system);
+
+        // 1 and 2. Facilities, in id order. Completed: change side with the system unless the class cannot serve the new side. Unfinished
+        // ones that no project or delivery owns (setup leftovers): cancelled, no refund. (Lead, facility-ownership.md; economy/07, economy/01,
+        // planets/07; DEFAULT for unfinished.) Mines and refineries keep their cycle timers (no reset); a refinery in the raw line
+        // moves to the new holder's line at slot 6.5.
+        foreach (var o in _eco.Objects.Where(x => x.System == system && x.Category == ObjectCategory.Facility).ToList()) // id order
         {
             int id = o.Id; string cls = o.Class;
-            if (o.Category == ObjectCategory.Facility)
-            {
-                if (!o.Completed) { _eco.RemoveObject(id); ctx.Emit((i, _) => new ProjectCancelled(i, day, id, cls, system, old)); continue; }
-                if (!ServesSide(cls, newHolder)) { _eco.RemoveObject(id); ctx.Emit((i, _) => new FacilityRemoved(i, day, id, cls, system)); continue; }
-                ctx.Emit((i, _) => new FacilityTransferred(i, day, id, cls, system, old, newHolder));
-            }
-            else if (!o.Completed && old != null && o.Side == old)
-            {
-                _eco.RemoveObject(id);
-                ctx.Emit((i, _) => new ProjectCancelled(i, day, id, cls, system, old));
-            }
+            if (!o.Completed && _construction?.OwnsObject(id) == true) continue; // a queued unit or a delivery in flight: construction's
+            if (!o.Completed) { _eco.RemoveObject(id); ctx.Emit((i, _) => new UnfinishedFacilityCancelled(i, day, id, cls, system, old)); continue; }
+            if (!ServesSide(cls, newHolder)) { _eco.RemoveObject(id); ctx.Emit((i, _) => new FacilityRemoved(i, day, id, cls, system)); continue; }
+            ctx.Emit((i, _) => new FacilityTransferred(i, day, id, cls, system, old, newHolder));
         }
-
-        // 3. Queued builds and deliveries held by the construction package: its hook (TODO m2/construction). Mines and refineries keep
-        // their cycle timers (no reset); a refinery in the raw line moves to the new holder's line at slot 6.5.
-        CancelQueuedWork?.Invoke(info);
 
         // 4 and 5. Regiments, fleets and characters of the old holder: not touched (DEFAULT; M3 decides, Open question 2).
 

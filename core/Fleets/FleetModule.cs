@@ -89,6 +89,12 @@ public sealed class FleetModule
     public int SpeedOf(Fleet f) =>
         TravelFormula.FleetSpeed(f.Ships.Select(c => _ships[c].Speed(false)), f.Squadrons.Select(c => _ships[c].Speed(false)));
 
+    /// <summary>Capital ship and squadron classes by name (construction reads hyperdrive ratings and combat data from here).</summary>
+    public IReadOnlyDictionary<string, ShipClass> ShipClasses => _ships;
+
+    /// <summary>Fastest lane path for a given speed rating (construction deliveries travel like fleets). rule: m1-travel §Path rule.</summary>
+    public PathResult FindPath(string from, string to, int speed) => _pathfinder.Find(from, to, speed);
+
     public long StrengthOf(Fleet f) => CombatStrength.Of(Classes(f));
 
     private IEnumerable<ShipClass> Classes(Fleet f) => f.Ships.Concat(f.Squadrons).Select(c => _ships[c]);
@@ -208,7 +214,7 @@ public sealed class FleetModule
     /// not be armed; ownership of the system is ignored; the passing fleet's own gravity-well ship does not exempt it
     /// (DEFAULT, Paul has not decided). rule: m1-forced-stop-and-blockade §Update 2026-10-12, §Rule (both rulesets) 3 and 6.
     /// </summary>
-    private List<Fleet> Blockers(Fleet passing, List<Fleet> enemies)
+    internal List<Fleet> Blockers(Fleet passing, List<Fleet> enemies)
     {
         var armed = enemies.Where(e => CombatStrength.IsArmed(Classes(e))).ToList();
         if (armed.Count == 0) return armed;

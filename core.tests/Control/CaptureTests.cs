@@ -1,4 +1,5 @@
 using Rebellion.Core.Clock;
+using Rebellion.Core.Construction;
 using Rebellion.Core.Control;
 using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
@@ -17,18 +18,19 @@ internal sealed class CtlWorld
     public Game Game { get; }
     public EconomyModule Eco { get; }
     public FleetModule Fleets { get; }
+    public ConstructionModule? Build { get; }
     public StubRng Stub => S.Stub;
 
-    public CtlWorld(Game loaded, ControlModule ctl, EconomyModule eco, FleetModule fleets, SupportModule sup)
+    public CtlWorld(Game loaded, ControlModule ctl, EconomyModule eco, FleetModule fleets, ConstructionModule? build)
     {
-        S = null!; Game = loaded; Ctl = ctl; Eco = eco; Fleets = fleets;
-        _ = sup;
+        S = null!; Game = loaded; Ctl = ctl; Eco = eco; Fleets = fleets; Build = build;
     }
 
-    public CtlWorld(bool stub = true, ulong seed = 1)
+    public CtlWorld(bool stub = true, ulong seed = 1, bool construction = false)
     {
         S = new SupWorld(stub: stub, seed: seed);
-        Ctl = ControlModule.Attach(S.Game, TestData.RealGalaxy, S.W.Fleets, S.W.Eco, S.Sup);
+        if (construction) Build = ConstructionModule.Attach(S.Game, S.W.Fleets, S.W.Eco, support: S.Sup);
+        Ctl = ControlModule.Attach(S.Game, TestData.RealGalaxy, S.W.Fleets, S.W.Eco, S.Sup, Build);
         Ctl.DebugOrdersEnabled = true;
         Game = S.Game; Eco = S.W.Eco; Fleets = S.W.Fleets;
     }
@@ -55,7 +57,7 @@ public class CaptureTests
     private const string Emp = "Corellia";  // Empire-held in most tests
     private const string Ally = "Bespin";   // Alliance-held in most tests
 
-    private static readonly Type[] ControlKinds = { typeof(SystemCaptured), typeof(FacilityTransferred), typeof(FacilityRemoved), typeof(ProjectCancelled), typeof(UprisingEnded) };
+    private static readonly Type[] ControlKinds = { typeof(SystemCaptured), typeof(FacilityTransferred), typeof(FacilityRemoved), typeof(UnfinishedFacilityCancelled), typeof(UprisingEnded) };
 
     private static List<GameEvent> CaptureEvents(CtlWorld w) =>
         w.Game.Events.Where(e => ControlKinds.Contains(e.GetType())).ToList();
@@ -145,7 +147,7 @@ public class CaptureTests
         Assert.Equal(13, loadBefore);
         w.Capture(Side.Alliance, Emp);
         w.Run(1);
-        var cancelled = w.Events<ProjectCancelled>().Select(e => e.Object).ToList();
+        var cancelled = w.Events<UnfinishedFacilityCancelled>().Select(e => e.Object).ToList();
         Assert.Equal(new[] { mine, yard }, cancelled);
         Assert.Null(w.Eco.Find(mine)); Assert.Null(w.Eco.Find(yard));
         Assert.Equal(0, w.Eco.Load(Side.Empire));
@@ -155,39 +157,35 @@ public class CaptureTests
         Assert.Empty(w.Events<FacilityTransferred>());
     }
 
-    // C5: capture while an ISD is queued at the old holder's yard: cancelled, no refund; the yard is the new holder's, idle
+    // C5: capture while an ISD is queued at the old holder's yard: the order is cancelled (by the construction module), no refund; the
+    // yard is the new holder's, idle
     [Fact]
     public void C5_QueuedOrderOfOldHolder_Cancelled_YardGoesIdleToNewHolder()
     {
-        var w = new CtlWorld();
+        var w = new CtlWorld(construction: true);
         w.Hold(Emp, Side.Empire, 80);
         int yard = w.Eco.AddFacility(Emp, FacilityKind.OrbitalShipyard);
-        int isd = w.Eco.AddObject(Side.Empire, "Imperial Star Destroyer", Emp, completed: false);
-        int elsewhere = w.Eco.AddObject(Side.Empire, "Imperial Star Destroyer", Ally, completed: false); // another system: untouched
         int army = w.Eco.AddObject(Side.Empire, "Imperial Army Regiment", Emp);                          // completed regiment: untouched (4)
-        w.Eco.SetPools(Side.Empire, 0, 100);
+        w.Eco.SetPools(Side.Empire, 0, 1000);
+        w.Build!.GrantResearch(Side.Empire, "Imperial Star Destroyer");
+        w.Build.SubmitBuild(Side.Empire, Emp, YardFamily.Shipyard, "Imperial Star Destroyer", 1);
+        w.Run(1);
+        var isd = w.Eco.Objects.Single(o => o.Class == "Imperial Star Destroyer").Id;
+        Assert.NotNull(w.Build.ProjectAt(Emp, YardFamily.Shipyard));
+        int refinedBefore = w.Eco.Refined(Side.Empire);
         w.Capture(Side.Alliance, Emp);
         w.Run(1);
         Assert.Null(w.Eco.Find(isd));
-        Assert.NotNull(w.Eco.Find(elsewhere));
+        Assert.Null(w.Build.ProjectAt(Emp, YardFamily.Shipyard));
         Assert.NotNull(w.Eco.Find(army));
-        Assert.Equal(100, w.Eco.Refined(Side.Empire));
+        Assert.True(w.Eco.Refined(Side.Empire) <= refinedBefore); // no refund
         Assert.Equal(Side.Alliance, w.Eco.OwnerOf(w.Eco.Find(yard)!));
         Assert.True(w.Eco.Find(yard)!.Completed);
-        Assert.Equal(isd, Assert.Single(w.Events<ProjectCancelled>()).Object);
-    }
-
-    // m2-control-and-capture step 3 hook: the construction package cancels its own queue here (TODO m2/construction)
-    [Fact]
-    public void QueuedWorkHook_IsRaisedOnceWithTheOldAndNewHolder()
-    {
-        var w = new CtlWorld();
-        w.Hold(Emp, Side.Empire, 80);
-        var seen = new List<(string, Side?, Side, CaptureCause)>();
-        w.Ctl.CancelQueuedWork += c => seen.Add((c.System, c.Old, c.New, c.Cause));
-        w.Capture(Side.Alliance, Emp);
-        w.Run(1);
-        Assert.Equal(new[] { (Emp, (Side?)Side.Empire, Side.Alliance, CaptureCause.Debug) }, seen);
+        Assert.False(w.Eco.Find(yard)!.InLine);
+        Assert.Equal(0, w.Eco.Find(yard)!.Due);
+        var c = Assert.Single(w.Events<Rebellion.Core.Construction.ProjectCancelled>()); // one cancellation: 6.6 found nothing left
+        Assert.Equal(("SystemLost", Emp), (c.Reason, c.System));
+        Assert.Contains(isd, c.Units.Items);
     }
 
     // C6: Empire-held, A = 70 (Empire support 30), no uprising, Alliance captures: A unchanged, N = 0, no uprising
@@ -562,7 +560,7 @@ public class CaptureTests
         return w;
     }
 
-    private static CtlWorld Reattach(Game loaded)
+    private static CtlWorld Reattach(Game loaded, bool construction = false)
     {
         // attach every module to the loaded game, the way a real load does
         var p = new EconomyParams { ScrapPeriod = 1_000_000 };
@@ -570,9 +568,10 @@ public class CaptureTests
         var eco = EconomyModule.Attach(loaded, TestData.RealGalaxy, EcoWorld.Slots.Value, EcoWorld.Costs.Value, fleets, p);
         eco.IncidentsEnabled = false;
         var sup = SupportModule.Attach(loaded, TestData.RealGalaxy, eco, fleets, SupWorld.Weights.Value);
-        var ctl = ControlModule.Attach(loaded, TestData.RealGalaxy, fleets, eco, sup);
+        var build = construction ? ConstructionModule.Attach(loaded, fleets, eco, support: sup) : null;
+        var ctl = ControlModule.Attach(loaded, TestData.RealGalaxy, fleets, eco, sup, build);
         ctl.DebugOrdersEnabled = true;
-        return new CtlWorld(loaded, ctl, eco, fleets, sup);
+        return new CtlWorld(loaded, ctl, eco, fleets, build);
     }
 
     [Fact]
@@ -636,5 +635,90 @@ public class CaptureTests
         loaded.Capture(Side.Empire, Emp);
         loaded.Run(250);
         Assert.Equal(GameSave.StateHash(whole.Game), GameSave.StateHash(loaded.Game));
+    }
+
+    // ---------------------------------------------------------------- integration with construction: a running yard project and an inbound delivery
+
+    private const string Home = "Coruscant", Far = "Corellia";
+
+    private static CtlWorld BuildScenario()
+    {
+        var w = new CtlWorld(stub: false, seed: 21, construction: true);
+        w.Hold(Home, Side.Empire, 100); w.Hold(Far, Side.Empire, 100); // A = 0 at Corellia: a hostile world for an Alliance holder
+        w.Eco.AddFacility(Home, FacilityKind.ConstructionYard);
+        w.Eco.AddFacility(Far, FacilityKind.OrbitalShipyard);
+        w.Eco.SetPools(Side.Empire, 0, 2000);
+        w.Build!.GrantResearch(Side.Empire, "Imperial Star Destroyer");
+        w.Build.SubmitBuild(Side.Empire, Home, YardFamily.Construction, "Mine", 1, Far);                // delivery will fly Coruscant to Corellia
+        w.Build.SubmitBuild(Side.Empire, Far, YardFamily.Shipyard, "Imperial Star Destroyer", 1);        // running yard project at Corellia
+        w.Fleets.AddFleet(Side.Alliance, "Picket", new[] { "Corellian Corvette" }, Far);                  // blockades Corellia
+        return w;
+    }
+
+    [Fact]
+    public void Integration_CaptureWithRunningProjectAndInboundDelivery()
+    {
+        var w = BuildScenario();
+        while (!w.Game.Events.OfType<DeliveryDeparted>().Any()) w.Run(1);
+        var dep = w.Events<DeliveryDeparted>().Single();
+        Assert.Equal(Far, dep.To);
+        Assert.Equal(Side.Alliance, w.Game.State.Blockades[Far]);
+        var isdProject = w.Build!.ProjectAt(Far, YardFamily.Shipyard);
+        Assert.NotNull(isdProject);
+        var isdUnits = isdProject!.Units.ToList();
+        int mineId = dep.Object;
+        Assert.True(w.Game.Day < dep.DueDay, "the delivery is still flying");
+
+        w.Capture(Side.Alliance, Far);
+        w.Run(1);
+
+        // construction: the project is gone with its units, once, no refund; the delivery is still alive
+        var cancelled = Assert.Single(w.Events<Rebellion.Core.Construction.ProjectCancelled>());
+        Assert.Equal(("SystemLost", Far, YardFamily.Shipyard), (cancelled.Reason, cancelled.System, cancelled.Family));
+        Assert.Equal(isdUnits, cancelled.Units.Items.ToList());
+        Assert.Null(w.Build.ProjectAt(Far, YardFamily.Shipyard));
+        Assert.All(isdUnits, id => Assert.Null(w.Eco.Find(id)));
+        Assert.Single(w.Build.Deliveries);
+        Assert.Empty(w.Events<UnfinishedFacilityCancelled>()); // the flying mine is construction's, not a leftover
+        Assert.NotNull(w.Eco.Find(mineId));
+        // economy: the shipyard is the Alliance's and idle
+        var yard = w.Eco.Objects.Single(o => o.System == Far && o.Class == "Orbital Shipyard");
+        Assert.Equal(Side.Alliance, w.Eco.OwnerOf(yard));
+        Assert.Equal(0, yard.Due); Assert.False(yard.InLine);
+        Assert.DoesNotContain(yard.Id, w.Build.RefinedLine(Side.Empire));
+        Assert.DoesNotContain(yard.Id, w.Build.RefinedLine(Side.Alliance));
+        // fleets: owner and blockade flag follow
+        Assert.Equal(Side.Alliance, w.Fleets.OwnerOf(Far));
+        Assert.False(w.Game.State.Blockades.ContainsKey(Far));
+        // support: stored value untouched; the Alliance, holding a world with A = 0 and no garrison, rises at 6.1 of the same Step
+        Assert.Equal(0, w.S.A(Far));
+        Assert.Single(w.Events<UprisingStarted>());
+
+        // the inbound delivery is held when it reaches the lost destination (LostDestination = Pause)
+        w.Run(dep.DueDay - w.Game.Day + 3);
+        Assert.Equal("DestinationLost", w.Events<DeliveryHeld>().Single().Reason);
+        Assert.Empty(w.Events<DeliveryArrived>());
+        Assert.False(w.Eco.Find(mineId)!.Completed);
+        Assert.Single(w.Events<Rebellion.Core.Construction.ProjectCancelled>()); // never cancelled twice
+    }
+
+    [Fact]
+    public void Integration_ConstructionCaptureSaveLoadMidRun_FutureIsTheSame()
+    {
+        CtlWorld RunToCapture(CtlWorld w)
+        {
+            while (!w.Game.Events.OfType<DeliveryDeparted>().Any()) w.Run(1);
+            w.Capture(Side.Alliance, Far);
+            w.Run(2);
+            return w;
+        }
+        var whole = RunToCapture(BuildScenario()); whole.Run(170);
+
+        var first = RunToCapture(BuildScenario());
+        var loaded = Reattach(GameSave.Load(GameSave.Save(first.Game)), construction: true);
+        Assert.Equal(GameSave.StateHash(first.Game), GameSave.StateHash(loaded.Game));
+        loaded.Run(170);
+        Assert.Equal(GameSave.StateHash(whole.Game), GameSave.StateHash(loaded.Game));
+        Assert.Equal(whole.Build!.Deliveries.Count, loaded.Build!.Deliveries.Count);
     }
 }
