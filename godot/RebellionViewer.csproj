@@ -18,6 +18,8 @@
   <Target Name="CopyDesignData" BeforeTargets="BeforeBuild">
     <ItemGroup>
       <DesignCsv Include="$(MSBuildThisFileDirectory)..\data\design\*.csv" />
+      <DesignCsv Include="$(MSBuildThisFileDirectory)..\data\interim\capital-ships.csv" />
+      <DesignCsv Include="$(MSBuildThisFileDirectory)..\data\interim\fighters.csv" />
     </ItemGroup>
     <Copy SourceFiles="@(DesignCsv)" DestinationFiles="@(DesignCsv->'$(MSBuildThisFileDirectory)data\%(Filename).txt')" SkipUnchangedFiles="true" />
   </Target>

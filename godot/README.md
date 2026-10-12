@@ -2,7 +2,7 @@
 
 A plain window that lets you WATCH the galaxy (and later the fleets) while the rules core runs. It is not the game UI. All rules come from `core/` (`Rebellion.Core`); this folder only draws and calls `Game.Step()`.
 
-First pass: the map. Nothing moves yet; the day counter proves the clock loop. Fleets come in a second pass (see `Scripts/FleetLayer.cs`).
+Shows the galaxy map and, on top of it, the fleets the core moves. It starts a small DEMO scenario (`Scripts/DemoScenario.cs`: made-up fleets and system owners, not real game start data) so there is something to watch. Press Play and the days run; fleets travel along the lanes, get stopped by the Interdictor picket at Kinyen, and the blockade flag shows in the log.
 
 ## Run it on the Mac (Apple Silicon or Intel)
 
@@ -25,9 +25,13 @@ First pass: the map. Nothing moves yet; the day counter proves the clock loop. F
 | System details | hover a system; click to pin it, click empty space to unpin |
 | Play / Pause | `Space` |
 | Step one day | `N` |
+| Click a fleet | panel with name, side, ships, speed, location or "in transit A -> B, arrives day N", and final destination |
+| Restart the demo | `R` (back to day 0, same seed) |
 | Speed | buttons 1x / 2x / 5x / 10x days per second (keys `1` to `4`) |
 
 What you see:
+- Fleets: small triangles, green = Empire, orange = Alliance. A fleet at a system sits just above the dot; a fleet in transit sits on its lane (moving smoothly between days while playing) with a faint dashed line for the rest of its route. Names show when zoomed in or when the fleet is selected.
+- Event log (bottom left): the last 12 events, in the same wording as the command-line runner (`sim/`).
 - One dot per system, coloured by sector (same colour every run). Ilum and Csilla have a white ring and no lanes.
 - Lanes: thick gold = route (tier 1), medium blue = official (tier 2), faint thin = generated (tier 3).
 - Zoomed out you see sector names; zoom in and system names appear.
@@ -38,7 +42,7 @@ What you see:
 
 Needs the **Godot 4.7.1 .NET (mono)** editor and the **.NET 8 SDK**. The project is standalone: it is NOT in `Rebellion.sln` (CI has no Godot SDK) and has its own `Directory.Build.props` so the strict core settings do not apply to it. It references `../core/Rebellion.Core.csproj`.
 
-Data: `RebellionViewer.csproj` copies `data/design/*.csv` to `godot/data/*.txt` (git-ignored) before every build, because Godot imports `.csv` as translation tables and drops them from exports. The viewer reads them from `res://data/`.
+Data: `RebellionViewer.csproj` copies `data/design/*.csv` and the two ship tables in `data/interim/` to `godot/data/*.txt` (git-ignored) before every build, because Godot imports `.csv` as translation tables and drops them from exports. The viewer reads them from `res://data/`.
 
 ```
 cd godot
@@ -47,7 +51,7 @@ godot --path .                               # run (or open this folder in the G
 godot --headless --path . -- --smoke         # no window: loads the galaxy, steps 10 days, prints "OK <systems> systems, <lanes> lanes, day 10"
 ```
 
-Command-line options (after `--`): `--screenshot out.png [frames]` saves a frame and quits; `--zoom Z`; `--focus "System Name" [zoom]` (also pins it); `--days N` runs N days first.
+Command-line options (after `--`): `--screenshot out.png [frames]` saves a frame and quits; `--zoom Z`; `--focus "System Name" [zoom]` (also pins it); `--days N` runs N days first; `--fleet "Name"` selects a fleet. The headless smoke steps 40 days and prints where every fleet is, plus the full event list.
 
 Screenshot with the software renderer (cloud machine, no GPU):
 ```
@@ -64,4 +68,4 @@ godot --headless --path . --export-release macOS ../build/mac/RebellionViewer.zi
 
 If `dotnet build` cannot find `Godot.NET.Sdk 4.7.1` (when the NuGet feed does not have it), point the restore at the nupkgs shipped inside the editor download: `-p:RestoreAdditionalProjectSources=<editor folder>/GodotSharp/Tools/nupkgs`.
 
-Files: `Scripts/Main.cs` (top bar, clock loop, info panel, smoke/screenshot flags), `Scripts/GalaxyView.cs` (map drawing, camera, hover/click), `Scripts/FleetLayer.cs` (placeholder for fleets).
+Files: `Scripts/Main.cs` (top bar, clock loop, info panel, smoke/screenshot flags), `Scripts/GalaxyView.cs` (map drawing, camera, hover/click), `Scripts/FleetLayer.cs` (fleet markers, routes, picking), `Scripts/DemoScenario.cs` (the demo fleets).

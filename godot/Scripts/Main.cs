@@ -5,8 +5,12 @@ using System.Linq;
 using System.Text;
 using Godot;
 using Rebellion.Core.Clock;
+using Rebellion.Core.Fleets;
+using Rebellion.Core.Ships;
 using Rebellion.Core.Map;
 using Rebellion.Core.Travel;
+
+using Side = Rebellion.Core.Clock.Side;
 
 namespace RebellionViewer;
 
@@ -24,7 +28,16 @@ public partial class Main : Control
     const float PanPixelsPerSecond = 700f;
 
     Galaxy _galaxy;
+    IReadOnlyDictionary<string, ShipClass> _ships;
+    BlockadeData _blockade;
     Game _game;
+    FleetModule _fm;
+    const int LogLines = 12;
+    readonly List<string> _log = new();
+    int _logPrinted;
+    string _lastContact;
+    Label _logLabel;
+    PanelContainer _logPanel;
     GalaxyView _view;
     FleetLayer _fleets;
     Label _dayLabel, _speedLabel;
@@ -47,13 +60,16 @@ public partial class Main : Control
         var args = OS.GetCmdlineUserArgs();
         bool smoke = args.Contains("--smoke") || DisplayServer.GetName() == "headless";
 
-        _galaxy = LoadGalaxy();
-        _game = new Game(ViewerSeed);
+        LoadData();
+        StartDemo();
 
         if (smoke)
         {
-            for (int i = 0; i < 10; i++) _game.Step();
-            GD.Print($"OK {_galaxy.Systems.Count} systems, {_galaxy.Lanes.Count} lanes, day {_game.Day}");
+            for (int i = 0; i < 40; i++) _game.Step();
+            GD.Print($"OK {_galaxy.Systems.Count} systems, {_galaxy.Lanes.Count} lanes, {_game.State.Fleets.Count} fleets, day {_game.Day}");
+            foreach (var f in _game.State.Fleets.Values)
+                GD.Print($"  {f.Name} ({f.Side}): {Where(f)}");
+            for (; _logPrinted < _game.Events.Count; _logPrinted++) { var l = EventLine(_game.Events[_logPrinted]); if (l != null) GD.Print("  " + l); }
             GetTree().Quit();
             return;
         }
@@ -61,13 +77,26 @@ public partial class Main : Control
         BuildUi();
         _view.Init(_galaxy);
         _view.StateChanged += RefreshPanel;
+        _view.FleetPicker = _fleets.Pick;
+        _fleets.Bind(_game, _galaxy);
         RefreshDay();
         RefreshPanel();
         ApplyArgs(args);
     }
 
-    /// <summary>Reads the design tables shipped as data/*.txt and builds the core's Galaxy.</summary>
-    static Galaxy LoadGalaxy()
+    /// <summary>(Re)creates the game with the fixed seed and the demo fleets. Used at start and by R.</summary>
+    void StartDemo()
+    {
+        _game = new Game(ViewerSeed);
+        _fm = DemoScenario.Build(_game, _galaxy, _ships, _blockade);
+        _log.Clear(); _logPrinted = 0; _lastContact = null;
+        _playing = false; _acc = 0;
+        if (_playButton != null) _playButton.Text = "Play (Space)";
+        if (_fleets != null) { _fleets.Bind(_game, _galaxy); _view.SelectedFleet = -1; RefreshLog(); RefreshDay(); RefreshPanel(); }
+    }
+
+    /// <summary>Reads the data tables shipped as data/*.txt: the galaxy, ship classes and blockade settings.</summary>
+    void LoadData()
     {
         string Read(string csvName)
         {
@@ -76,6 +105,16 @@ public partial class Main : Control
             if (f == null) throw new InvalidOperationException($"Cannot open {path}: {FileAccess.GetOpenError()}");
             return f.GetAsText();
         }
+        _galaxy = LoadGalaxy(Read);
+        var ships = new Dictionary<string, ShipClass>(StringComparer.Ordinal);
+        foreach (var c in ShipData.Parse(Read(ShipData.CapitalShipsFile), ShipData.CapitalShipsFile, true)) ships[c.Name] = c;
+        foreach (var c in ShipData.Parse(Read(ShipData.FightersFile), ShipData.FightersFile, false)) ships[c.Name] = c;
+        _ships = ships;
+        _blockade = BlockadeData.Parse(Read(BlockadeData.FileName), BlockadeData.FileName);
+    }
+
+    static Galaxy LoadGalaxy(Func<string, string> Read)
+    {
         var tiers = LaneTiers.Parse(Read(GalaxyLoader.TiersFile), GalaxyLoader.TiersFile);
         var g = GalaxyLoader.Load(Read(GalaxyLoader.PlanetsFile), Read(GalaxyLoader.LanesFile), tiers);
         ExpectedGalaxyCounts.Parse(Read(GalaxyLoader.CountsFile)).Check(g);
@@ -104,8 +143,12 @@ public partial class Main : Control
                         _view.Select(idx);
                     }
                     break;
+                case "--fleet" when i + 1 < args.Length:
+                    foreach (var f in _game.State.Fleets.Values) if (f.Name == args[i + 1]) _view.SelectedFleet = f.Id;
+                    RefreshPanel();
+                    break;
                 case "--days" when i + 1 < args.Length:
-                    for (int d = int.Parse(args[i + 1]); d > 0; d--) _game.Step();
+                    for (int d = int.Parse(args[i + 1]); d > 0; d--) AfterStep(_game);
                     RefreshDay();
                     break;
             }
@@ -158,7 +201,7 @@ public partial class Main : Control
 
         var spacer = new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         row.AddChild(spacer);
-        var hint = new Label { Text = "wheel/+/-: zoom   drag/arrows: pan   click: pin system" };
+        var hint = new Label { Text = "wheel/+/-: zoom   drag/arrows: pan   click: system or fleet   R: restart" };
         hint.Modulate = new Color(1, 1, 1, 0.6f);
         row.AddChild(hint);
 
@@ -168,6 +211,19 @@ public partial class Main : Control
         vbox.AddChild(_view);
         _fleets = new FleetLayer { Name = "FleetLayer" };
         _view.AddChild(_fleets);
+
+        // event log (bottom left, over the map; ignores the mouse)
+        _logPanel = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
+        _logPanel.SetAnchorsPreset(LayoutPreset.BottomLeft);
+        _logPanel.OffsetLeft = 10; _logPanel.OffsetBottom = -10;
+        _logPanel.GrowVertical = GrowDirection.Begin;
+        var logStyle = new StyleBoxFlat { BgColor = new Color(0.05f, 0.06f, 0.09f, 0.82f) };
+        logStyle.SetContentMarginAll(8);
+        _logPanel.AddThemeStyleboxOverride("panel", logStyle);
+        AddChild(_logPanel);
+        _logLabel = new Label { MouseFilter = MouseFilterEnum.Ignore };
+        _logLabel.AddThemeFontSizeOverride("font_size", 14);
+        _logPanel.AddChild(_logLabel);
 
         // info panel (top right, over the map)
         _panel = new PanelContainer { MouseFilter = MouseFilterEnum.Stop };
@@ -213,11 +269,71 @@ public partial class Main : Control
 
     void StepOne()
     {
-        _game.Step();   // the only thing that advances the game
+        AfterStep(_game);   // the only thing that advances the game is Game.Step()
         RefreshDay();
     }
 
-    void RefreshDay() => _dayLabel.Text = $"Day {_game.Day}";
+    void AfterStep(Game g)
+    {
+        g.Step();
+        for (; _logPrinted < g.Events.Count; _logPrinted++)
+        {
+            var line = EventLine(g.Events[_logPrinted]);
+            if (line != null) _log.Add(line);
+        }
+        if (_logLabel != null) RefreshLog();
+    }
+
+    void RefreshDay()
+    {
+        _dayLabel.Text = $"Day {_game.Day}";
+        if (_view.SelectedFleet >= 0) RefreshPanel();
+    }
+
+    void RefreshLog()
+    {
+        _logLabel.Text = string.Join("\n", _log.Skip(Math.Max(0, _log.Count - LogLines)));
+        _logPanel.Visible = _log.Count > 0;
+    }
+
+    // ---- event log wording: same style as the command-line runner's day log (sim/Program.cs) ----
+
+    string Describe(int id) => _game.State.Fleets.TryGetValue(id, out var f) ? Describe(f) : $"fleet {id}";
+    static string Describe(Fleet f) => $"{(f.Side == Side.Empire ? "Imperial" : "Rebel")} fleet {f.Name}";
+    string Describe(IEnumerable<int> ids) => string.Join(" and ", ids.Select(Describe));
+
+    string EventLine(GameEvent e)
+    {
+        string text = e switch
+        {
+            OrderAccepted { Fleet: int f } a =>
+                $"{Describe(f)} is ordered {a.Path!.Items[0]} -> {a.Path.Items[^1]}; {a.TotalTicks} days, due day {a.ArrivalDay}",
+            OrderAccepted => null,
+            OrderRejected r => $"order #{r.Sequence} rejected ({r.Reason})",
+            FleetDeparted d => $"{Describe(d.Fleet)} leaves {d.From} (first hop {d.FirstHopTicks} days)",
+            FleetPassed p => $"{Describe(p.Fleet)} passes {p.System}",
+            FleetArrived a => $"{Describe(a.Fleet)} arrives at {a.System}",
+            ForcedStop x => $"{Describe(x.Fleet)} is stopped at {x.System} by {Describe(x.Blockers.Items)}",
+            Contact c => ContactLine(c),
+            BlockadeStarted b => $"{b.Blockader} fleet blockades {b.System}",
+            BlockadeLifted b => $"blockade of {b.System} by the {b.Blockader} ends",
+            _ => null,
+        };
+        return text == null ? null : $"Day {e.Day}: {text}";
+    }
+
+    // A Contact is raised every day while both sides are present; the log shows it once until the fleets change.
+    string ContactLine(Contact c)
+    {
+        string key = $"{c.System}|{c.EmpireFleets}|{c.AllianceFleets}";
+        if (key == _lastContact) return null;
+        _lastContact = key;
+        return $"contact at {c.System}: {Describe(c.AllianceFleets.Items)} meets {Describe(c.EmpireFleets.Items)}";
+    }
+
+    string Where(Fleet f) => f.Transit is { } t && f.At == null
+        ? $"in transit {t.Path[t.HopIndex]} -> {t.Path[t.HopIndex + 1]}, next stop day {t.DueDay}, destination {t.Path[^1]}"
+        : $"at {f.At}";
 
     public override void _Process(double delta)
     {
@@ -227,10 +343,12 @@ public partial class Main : Control
         {
             _acc += delta * Speeds[_speedIndex];
             int steps = 0;
-            while (_acc >= 1.0 && steps < MaxStepsPerFrame) { _game.Step(); _acc -= 1.0; steps++; }
+            while (_acc >= 1.0 && steps < MaxStepsPerFrame) { AfterStep(_game); _acc -= 1.0; steps++; }
             if (_acc > MaxStepsPerFrame) _acc = 0; // drop the backlog instead of spiralling
             if (steps > 0) RefreshDay();
         }
+
+        _fleets.DayFraction = _playing ? (float)Math.Min(_acc, 0.999) : 0f;
 
         var pan = Vector2.Zero;
         if (Input.IsKeyPressed(Key.Left)) pan.X -= 1;
@@ -255,6 +373,7 @@ public partial class Main : Control
         {
             case Key.Space: TogglePlay(); break;
             case Key.N: StepOne(); break;
+            case Key.R: StartDemo(); break;
             case Key.Home: _view.ResetView(); break;
             case Key.Equal: case Key.Plus: case Key.KpAdd: _view.ZoomCentre(1.25f); break;
             case Key.Minus: case Key.KpSubtract: _view.ZoomCentre(1f / 1.25f); break;
@@ -269,9 +388,34 @@ public partial class Main : Control
 
     // ---------------------------------------------------------------- info panel
 
+    void ShowFleet(Fleet f)
+    {
+        var sb = new StringBuilder();
+        sb.Append($"{(f.Side == Side.Empire ? "Empire" : "Alliance")} fleet (pinned)\n");
+        var all = f.Ships.Concat(f.Squadrons).GroupBy(x => x).Select(g => $"{g.Count()} x {g.Key}");
+        sb.Append($"Ships: {string.Join(", ", all)}\n");
+        sb.Append($"Speed: {_fm.SpeedOf(f)}\n");
+        if (f.Transit is { } t && f.At == null)
+        {
+            int finalDay = t.DueDay;
+            for (int h = t.HopIndex + 1; h < t.HopTicks.Count; h++) finalDay += t.HopTicks[h];
+            sb.Append($"In transit {t.Path[t.HopIndex]} -> {t.Path[t.HopIndex + 1]}, arrives day {t.DueDay}\n");
+            sb.Append($"Destination: {t.Path[^1]} (day {finalDay})");
+        }
+        else sb.Append($"At {f.At}\nNo destination");
+        _panelTitle.Text = f.Name;
+        _panelBody.Text = sb.ToString();
+        _panelScroll.CustomMinimumSize = new Vector2(310, 130);
+    }
+
     void RefreshPanel()
     {
         if (_panel == null) return;
+        if (_view.SelectedFleet >= 0 && _game.State.Fleets.TryGetValue(_view.SelectedFleet, out var fleet))
+        {
+            ShowFleet(fleet);
+            return;
+        }
         int i = _view.Selected >= 0 ? _view.Selected : _view.Hovered;
         if (i < 0)
         {
@@ -279,7 +423,7 @@ public partial class Main : Control
             _panelBody.Text = $"{_galaxy.Systems.Count} systems, {_galaxy.Sectors.Count} sectors, {_galaxy.Lanes.Count} lanes\n\n" +
                 "Hover a system for details.\nClick to pin it.\n\n" +
                 "Lanes: gold thick = route, blue medium = official, faint thin = generated.";
-            _panelScroll.CustomMinimumSize = new Vector2(310, 190);
+            _panelScroll.CustomMinimumSize = new Vector2(310, 240);
             return;
         }
         var s = _galaxy.Systems[i];
