@@ -1,0 +1,4 @@
+tier,factor_percent,kinds
+1,300,route|route-inferred
+2,150,official
+3,100,generated
