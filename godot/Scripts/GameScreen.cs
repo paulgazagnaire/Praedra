@@ -47,7 +47,8 @@ public partial class GameScreen : Control
     Label _reportTitle, _reportBody, _confirmTitle, _confirmBody;
     Button _confirmOk;
     Action _confirmAction;
-    readonly Dictionary<int, Side> _hqs = new();
+    Button _myHqButton, _enemyHqButton;
+    Label _hqStatusLabel;
     bool _showHowToOnStart;
 
     bool _playing;
@@ -74,22 +75,26 @@ public partial class GameScreen : Control
         BuildUi();
 
         _view.Init(G);
-        _view.OwnerOf = i => S.OwnerOf(G.Systems[i].Name);
-        _view.IsHq = i => _hqs.ContainsKey(i);
+        // Fog of war: owners and states of systems that are not yours come from your side's picture; unexplored systems are dim; uprisings
+        // and blockades show only where you see live. rule: m5-fog-and-hq §F3, §N2, §N8
+        _view.OwnerOf = i => S.KnownOwnerOf(G.Systems[i].Name).Owner;
+        _view.IsUnknown = i => { string n = G.Systems[i].Name; return !S.Explored(n) && S.OwnerOf(n) != S.Player; };
+        _view.IsHq = i => HqSideAt(i) != null;
         _view.CapitalTag = CapitalTagOf;
-        _view.IsUprising = i => S.Host.Support.IsUprising(G.Systems[i].Name);
-        _view.IsBlockaded = i => S.Game.State.Blockades.ContainsKey(G.Systems[i].Name);
+        _view.IsUprising = i => { string n = G.Systems[i].Name; return S.Sees(n) && S.Host.Support.IsUprising(n); };
+        _view.IsBlockaded = i => { string n = G.Systems[i].Name; return S.Sees(n) && S.Game.State.Blockades.ContainsKey(n); };
         _view.StateChanged += OnViewChanged;
         _view.SystemPicked += OnSystemPicked;
         _view.FleetPicker = _fleets.Pick;
-        foreach (var side in new[] { Side.Empire, Side.Alliance })
-            if (G.TryFindSystem(GameBoot.CapitalOf(S.Host, side), out int hq)) _hqs[hq] = side;
+        _view.EnemyMarkerPicker = _fleets.PickEnemySystem;
         _fleets.Player = S.Player;
         _fleets.Planned = () => S.PlannedMoves;
+        _fleets.EnemyFleets = () => S.Fog.VisibleFleets(S.Player);
+        _fleets.HqRoute = () => S.OwnHq is { Status: Rebellion.Core.Fog.HqStatus.InTransit } h ? (h.Path, h.HopIndex, GameSession.HqArrivalDay(h)) : null;
         _fleets.Bind(S.Game, G);
 
         // Start with the map centred on the player's headquarters.
-        string home = GameBoot.CapitalOf(S.Host, S.Player);
+        string home = S.MyHqSystem ?? (S.OwnHq is { Status: Rebellion.Core.Fog.HqStatus.InTransit } th ? th.Path[^1] : GameBoot.EmpireCapital);
         if (G.TryFindSystem(home, out int homeIdx)) { _view.FocusOn(homeIdx, 2.4f); }
         S.Say($"You lead the {S.NameOf(S.Player)}. Your headquarters is {home}. Press Play (or Space) to start the clock; the How to play button explains the rest.", MsgKind.Good, home);
         foreach (var m in S.Messages) AddLogItem(m);
@@ -98,10 +103,18 @@ public partial class GameScreen : Control
         if (_showHowToOnStart && GameBoot.HowToUnseen()) ShowHowTo();
     }
 
+    /// <summary>Whose headquarters the player knows at a system: their own always, the enemy's only when known (the Empire: KnownHq).</summary>
+    Side? HqSideAt(int i)
+    {
+        string name = G.Systems[i].Name;
+        if (name == S.MyHqSystem) return S.Player;
+        if (name == S.EnemyHqSystem) return S.Enemy;
+        return null;
+    }
+
     (string Text, Color Color)? CapitalTagOf(int i)
     {
-        if (!_hqs.TryGetValue(i, out var side)) return null;
-        string name = G.Systems[i].Name;
+        if (HqSideAt(i) is not Side side) return null;
         if (side == S.Player) return (side == Side.Empire ? "YOUR CAPITAL" : "YOUR HQ", new Color(1f, 0.95f, 0.5f));
         return (side == Side.Empire ? "ENEMY CAPITAL" : "REBEL HQ (TARGET)", new Color(1f, 0.45f, 0.4f));
     }
@@ -222,10 +235,16 @@ public partial class GameScreen : Control
         var ft = new Label { Text = "Your fleets", SizeFlagsHorizontal = SizeFlags.ExpandFill };
         ft.Modulate = new Color(1, 1, 1, 0.6f);
         go.AddChild(ft);
-        go.AddChild(Btn("My HQ", () => GoToCapital(S.Player), "Centre the map on your headquarters"));
-        go.AddChild(Btn("Enemy HQ", () => GoToCapital(S.Enemy), "Centre the map on the enemy capital: the system you must take to win"));
+        _myHqButton = Btn("My HQ", () => GoToCapital(S.Player), "Centre the map on your headquarters");
+        go.AddChild(_myHqButton);
+        _enemyHqButton = Btn("Enemy HQ", () => GoToCapital(S.Enemy), "Centre the map on the enemy headquarters: the system you must take to win");
+        go.AddChild(_enemyHqButton);
         var fs = new ScrollContainer { CustomMinimumSize = new Vector2(300, 0), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
         fs.CustomMinimumSize = new Vector2(300, 170);
+        _hqStatusLabel = new Label { Visible = false, AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(300, 0) };
+        _hqStatusLabel.AddThemeFontSizeOverride("font_size", 13);
+        _hqStatusLabel.AddThemeColorOverride("font_color", new Color(1f, 0.95f, 0.5f));
+        fv.AddChild(_hqStatusLabel);
         fv.AddChild(fs);
         _fleetList = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         fs.AddChild(_fleetList);
@@ -309,7 +328,7 @@ public partial class GameScreen : Control
 
     static readonly string[] HowToLines =
     {
-        "GOAL: Empire - capture the Rebel headquarters system. Alliance - capture Coruscant. (Both are tagged on the map, and the My HQ / Enemy HQ buttons jump there.) You also win if the other side loses every system.",
+        "GOAL: Empire - capture the Rebel headquarters system (first you must find it). Alliance - capture Coruscant. (Your HQ, and the enemy HQ once you know where it is, are tagged on the map; the My HQ / Enemy HQ buttons jump there.) You also win if the other side loses every system.",
         "TIME: press Play (or Space) to run the clock, again to pause. Speed buttons or keys 1-4 (Play starts at 5x). N or +1 day moves one day. It pauses by itself after a battle, a capture or an invasion.",
         "ORDERS: everything you order starts when the next day begins. After giving orders, press Play or +1 day.",
         "MOVE A FLEET: click one of your fleets on the map (white outline) or its name in the Your fleets list, press Move..., then click the destination. The white line shows the route and the arrival day.",
@@ -321,6 +340,8 @@ public partial class GameScreen : Control
         "MONEY: Raw is ore from mines. Refineries turn it into Refined, which is what you spend. Upkeep (used / limit) is the running cost of everything you own; over the limit, units get scrapped. More mines and refineries raise the limit.",
         "ORDER: a planet needs enough regiments to keep the people calm. Too few and it revolts (red ring): yards and mines there stop.",
         "MAP: wheel or + / - zoom, drag or arrow keys pan, Home resets, Esc cancels. Orange = Alliance, green = Empire, grey = nobody.",
+        "FOG OF WAR: you see live only systems you hold or have a fleet at. Other systems show what you saw last (the panel says \"last seen day N\"); dim hollow dots are unexplored. Enemy fleets appear only where you can see them. The Empire does not know where the Rebel HQ is until it finds it.",
+        "REBEL HQ (Alliance): click your HQ system and press Move HQ..., then click one of your systems. The HQ travels for some days (it cannot be attacked on the way); a big enemy blockade pins it in place.",
         "SAVING: Save / Load in the top bar (one slot). The game also saves itself every 30 days; Continue on the start screen loads that.",
     };
 
@@ -406,8 +427,40 @@ public partial class GameScreen : Control
 
     void GoToCapital(Side side)
     {
-        if (!G.TryFindSystem(GameBoot.CapitalOf(S.Host, side), out int idx)) return;
+        string sys = side == S.Player ? S.MyHqSystem : S.EnemyHqSystem;
+        if (sys == null)
+        {
+            if (side == S.Player && S.OwnHq is { Status: Rebellion.Core.Fog.HqStatus.InTransit } h)
+            {
+                Toast(HqMovingText(h));
+                if (G.TryFindSystem(h.Path[^1], out int dest)) _view.Centre(dest);
+            }
+            else if (side == S.Player) Toast("You have no headquarters any more.");
+            else Toast(EnemyHqUnknownText);
+            return;
+        }
+        if (!G.TryFindSystem(sys, out int idx)) return;
         _view.Centre(idx); _view.Select(idx);
+    }
+
+    const string EnemyHqUnknownText = "The Rebel HQ location is unknown. Your picture of the galaxy has never shown it: explore Rebel systems to find it.";
+
+    static string HqMovingText(Rebellion.Core.Fog.HqState h) => $"HQ moving to {h.Path[^1]}, arrives day {GameSession.HqArrivalDay(h)}";
+
+    /// <summary>The HQ buttons and the HQ line follow what the player's side knows (rule: m5-fog-and-hq §N5 KnownHq).</summary>
+    void RefreshHq()
+    {
+        if (_enemyHqButton == null) return;
+        bool known = S.EnemyHqSystem != null;
+        _enemyHqButton.Text = known ? "Enemy HQ" : "Enemy HQ: unknown";
+        _enemyHqButton.TooltipText = known ? "Centre the map on the enemy headquarters: the system you must take to win" : EnemyHqUnknownText;
+        var h = S.OwnHq;
+        string line = h == null ? null
+            : h.Status == Rebellion.Core.Fog.HqStatus.InTransit ? HqMovingText(h) + "."
+            : S.PendingHqMove != null ? $"HQ move to {S.PendingHqMove} starts when the next day begins."
+            : null;
+        _hqStatusLabel.Text = line ?? "";
+        _hqStatusLabel.Visible = line != null;
     }
 
     bool OverlayOpen => _howPanel.Visible || _confirmPanel.Visible;
@@ -503,8 +556,9 @@ public partial class GameScreen : Control
         int q = S.QueuedOrders;
         _ordersLabel.Text = q > 0 ? $"{q} {(q == 1 ? "order" : "orders")} waiting" : "";
         _playButton.Text = _playing ? "Pause" : "Play";
+        RefreshHq();
         string banner = null;
-        if (_moveFleet >= 0) banner = _moveBanner;
+        if (_moveFleet >= 0 || _moveHq) banner = _moveBanner;
         else if (!_playing && _pauseNote != null) banner = _pauseNote;
         _banner.Text = banner ?? "";
         _banner.Visible = banner != null;
@@ -563,7 +617,7 @@ public partial class GameScreen : Control
                 if (_confirmPanel.Visible) CloseConfirm();
                 else if (_howPanel.Visible) CloseHowTo();
                 else if (_reportPanel.Visible) _reportPanel.Visible = false;
-                else if (_moveFleet >= 0) CancelMove();
+                else if (_moveFleet >= 0 || _moveHq) CancelMove();
                 else { _view.SelectedFleet = -1; _view.Select(-1); }
                 break;
             case Key.Home: _view.ResetView(); break;
