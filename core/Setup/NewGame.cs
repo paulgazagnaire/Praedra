@@ -76,6 +76,10 @@ public static class NewGame
         foreach (var side in new[] { Side.Empire, Side.Alliance })
             DealSide(host, forces, side);
 
+        // Day-0 pictures: explored-for-all systems (A and B), own holdings (OwnLive), the StartFullCopy list. rule: m5-fog-and-hq §F4
+        host.Fog.SetupNewGame(rows.Where(r => r.ExploredAll).Select(r => r.Name)
+            .Where(n => state.Scenario.Explored.TryGetValue(n, out var m) && m == 3));
+
         host.Construction.GrantResearch(Side.Alliance, "Nebulon-B Frigate"); // research order 1: needs a setup grant (research stub), as TestCampaign
         eco.SetupNewGame(); // stockpile, then the two incident timers (the only draws of setup)
         if (o.Settings?.Economy == null) // DEFAULT starting stockpile of the playable slice (the economy's own default is 0/0)

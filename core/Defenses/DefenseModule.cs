@@ -110,4 +110,17 @@ public sealed class DefenseModule
     /// rule: m3-planetary-defenses §What each class does in M3 (D2, D11); m3-assault check 4 (A10).
     /// </summary>
     public bool AssaultForbidden(string system) => Params.AssaultGateShields > 0 && GateShields(system) >= Params.AssaultGateShields;
+
+    /// <summary>
+    /// The same gate judged from a list of completed facility classes with counts (a side's picture of a system, m5-fog-and-hq group C) instead
+    /// of the truth. rule: m3-planetary-defenses §What each class does in M3 (D2, D11).
+    /// </summary>
+    public bool AssaultForbiddenBy(IReadOnlyDictionary<string, int> completedFacilities)
+    {
+        if (Params.AssaultGateShields <= 0) return false;
+        int n = 0;
+        foreach (var (cls, count) in completedFacilities)
+            if (Data.TryGetClass(cls, out var c) && (c.Job == DefenseJob.ShieldGenerator || (Params.DeathStarShieldCountsForGate && c.Job == DefenseJob.DeathStarShield))) n += count;
+        return n >= Params.AssaultGateShields;
+    }
 }

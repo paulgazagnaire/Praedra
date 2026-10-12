@@ -75,4 +75,10 @@ public sealed record GameSettings
     // ---- victory. rule: setup-victory/04-victory-conditions (HQ-Only flavour)
     /// <summary>Victory switches. Null = all on (DEFAULT).</summary>
     public Rebellion.Core.Victory.VictoryRules? Victory { get; init; }
+
+    // ---- fog of war and the Rebel HQ. rule: m5-fog-and-hq §Defaults for undecided items
+    /// <summary>Fog switches (ruleset, Core reports, passing fleets, recon, presence reveals HQ, sector clue, observed window, start full copy). Null = the sheet's DEFAULTs.</summary>
+    public Rebellion.Core.Fog.FogParams? Fog { get; init; }
+    /// <summary>HQ move and loss switches and numbers (speed, cost, departure refusal, arrival support effect, capture rule). Null = the sheet's DEFAULTs.</summary>
+    public Rebellion.Core.Fog.HqParams? Hq { get; init; }
 }
