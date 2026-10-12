@@ -16,7 +16,9 @@ public sealed record ShipClass(
     int Hyperdrive,
     int HyperdriveIfDamaged,
     int GravityWellProjector,
-    int OverallAttackStrength)
+    int OverallAttackStrength,
+    int RefinedMaterialCost,
+    bool HasHeavyWeapon)
 {
     /// <summary>
     /// Speed rating (percent of normal time, bigger is slower; 0 = cannot move).
@@ -30,6 +32,13 @@ public static class ShipData
 {
     public const string CapitalShipsFile = "capital-ships.csv";
     public const string FightersFile = "fighters.csv";
+
+    // Turbolaser and ion cannon arcs (laser cannons are not heavy weapons). rule: space-combat/07 last section.
+    private static readonly string[] HeavyArcs =
+    {
+        "turbolaser_fore", "turbolaser_aft", "turbolaser_port", "turbolaser_starboard",
+        "ion_cannon_fore", "ion_cannon_aft", "ion_cannon_port", "ion_cannon_starboard",
+    };
 
     public static IReadOnlyList<ShipClass> LoadCapitalShips(string path) =>
         Parse(File.ReadAllText(path), Path.GetFileName(path), isCapital: true);
@@ -50,7 +59,8 @@ public static class ShipData
     public static IReadOnlyList<ShipClass> Parse(string text, string source, bool isCapital)
     {
         var t = CsvTable.Parse(text, source);
-        t.Require("name", "is_alliance", "is_empire", "hyperdrive", "hyperdrive_if_damaged", "overall_attack_strength");
+        t.Require("name", "is_alliance", "is_empire", "hyperdrive", "hyperdrive_if_damaged", "overall_attack_strength", "refined_material_cost");
+        t.Require(HeavyArcs);
         bool hasGw = t.HasColumn("gravity_well_projector"); // fighters.csv has none: 0
         var list = new List<ShipClass>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -63,7 +73,8 @@ public static class ShipData
             int hd = t.GetInt(r, "hyperdrive"), hdd = t.GetInt(r, "hyperdrive_if_damaged");
             if (hd < 0 || hdd < 0) throw new DataLoadException($"{t.Where(r)}: '{name}' has a negative hyperdrive rating.");
             list.Add(new ShipClass(name, isCapital, side, hd, hdd,
-                hasGw ? t.GetInt(r, "gravity_well_projector") : 0, t.GetInt(r, "overall_attack_strength")));
+                hasGw ? t.GetInt(r, "gravity_well_projector") : 0, t.GetInt(r, "overall_attack_strength"),
+                t.GetInt(r, "refined_material_cost"), HeavyArcs.Any(c => t.GetInt(r, c) > 0)));
         }
         return list;
     }
