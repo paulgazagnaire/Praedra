@@ -6,7 +6,7 @@ namespace Rebellion.Core.Ships;
 public enum ShipSide { None = 0, Alliance = 1, Empire = 2 }
 
 /// <summary>
-/// The few ship-class fields M1 needs. NOTE: loaded from data/interim/ (copies of the spec CSVs, ships/data/*.csv);
+/// The ship-class fields the core needs so far (travel, forced stop, ship object, carrying capacity). NOTE: loaded from data/interim/ (copies of the spec CSVs, ships/data/*.csv);
 /// unverified vs original until the importer produces data/original/.
 /// </summary>
 public sealed record ShipClass(
@@ -18,7 +18,12 @@ public sealed record ShipClass(
     int GravityWellProjector,
     int OverallAttackStrength,
     int RefinedMaterialCost,
-    bool HasHeavyWeapon)
+    bool HasHeavyWeapon,
+    int Hull = 0,
+    int FighterCapacity = 0,
+    int TroopCapacity = 0,
+    int Id = 0,
+    int ShieldStrength = 0)
 {
     /// <summary>
     /// Speed rating (percent of normal time, bigger is slower; 0 = cannot move).
@@ -62,6 +67,9 @@ public static class ShipData
         t.Require("name", "is_alliance", "is_empire", "hyperdrive", "hyperdrive_if_damaged", "overall_attack_strength", "refined_material_cost");
         t.Require(HeavyArcs);
         bool hasGw = t.HasColumn("gravity_well_projector"); // fighters.csv has none: 0
+        // rule: m3-ships-and-fighters §Class data: hull, fighter_capacity and troop_capacity are ship columns; fighters have none (0).
+        bool hasHull = t.HasColumn("hull"), hasFc = t.HasColumn("fighter_capacity"), hasTc = t.HasColumn("troop_capacity");
+        bool hasId = t.HasColumn("id"), hasShield = t.HasColumn("shield_strength");
         var list = new List<ShipClass>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
         for (int r = 0; r < t.RowCount; r++)
@@ -74,7 +82,9 @@ public static class ShipData
             if (hd < 0 || hdd < 0) throw new DataLoadException($"{t.Where(r)}: '{name}' has a negative hyperdrive rating.");
             list.Add(new ShipClass(name, isCapital, side, hd, hdd,
                 hasGw ? t.GetInt(r, "gravity_well_projector") : 0, t.GetInt(r, "overall_attack_strength"),
-                t.GetInt(r, "refined_material_cost"), HeavyArcs.Any(c => t.GetInt(r, c) > 0)));
+                t.GetInt(r, "refined_material_cost"), HeavyArcs.Any(c => t.GetInt(r, c) > 0),
+                hasHull ? t.GetInt(r, "hull") : 0, hasFc ? t.GetInt(r, "fighter_capacity") : 0, hasTc ? t.GetInt(r, "troop_capacity") : 0,
+                hasId ? t.GetInt(r, "id") : 0, hasShield ? t.GetInt(r, "shield_strength") : 0));
         }
         return list;
     }

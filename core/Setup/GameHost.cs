@@ -16,7 +16,8 @@ namespace Rebellion.Core.Setup;
 ///   1. FleetModule      (steps 1-5; everyone reads owners and fleets from it)
 ///   2. EconomyModule    (6.4, 6.5, 6.7; reads fleets)
 ///   3. SupportModule    (6.1-6.3; reads economy and fleets; wires <see cref="EconomyModule.IsDeathStarSector"/>)
-///   4. ConstructionModule (3, 4 after the fleets; 6.6; serves the refined line from the economy's event; yards stop in an uprising from support)
+///   4. ConstructionModule (3, 4 after the fleets; 6.6; serves the refined line from the economy's event; yards stop in an uprising from support;
+///      its UnitAppeared event is wired to <see cref="FleetModule.OnUnitAppeared"/>: new ships join the spare fleet)
 ///   5. ControlModule    (capture; calls support and construction)
 /// Cross-wiring done inside the Attach calls: support into economy (Death Star flag) and construction (uprising stops yards),
 /// construction into economy (refined line, removed objects) and control (cancel projects on capture).
@@ -56,10 +57,16 @@ public sealed class GameHost
         Construction.LostDestination = settings.LostDestination;
         Construction.UnitDestinationMustBeControlled = settings.UnitDestinationMustBeControlled;
         Construction.RespectResearchOrder = settings.RespectResearchOrder;
+        Construction.DeathStarClassBuildable = settings.DeathStarClassBuildable;
         Construction.UseClassicBlockadeFlag = settings.UseClassicBlockadeFlag;
+
+        // A finished or delivered ship joins its side's spare fleet at its system (m3-fleets §New ships: the spare fleet).
+        Construction.UnitAppeared += (ctx, obj, how) =>
+            Fleets.OnUnitAppeared(ctx, obj, how == UnitAppearance.Delivered ? ShipJoinCause.Delivered : ShipJoinCause.Completed);
 
         Control = ControlModule.Attach(game, data.Galaxy, Fleets, Economy, Support, Construction);
         Control.DebugOrdersEnabled = settings.DebugOrdersEnabled;
+        Fleets.DebugOrdersEnabled = settings.DebugOrdersEnabled;
     }
 
     /// <summary>A new, empty game (day 0, no owners, no objects) with every module attached. <paramref name="data"/> null = the repository's data.</summary>

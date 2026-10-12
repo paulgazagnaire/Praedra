@@ -16,6 +16,14 @@ public enum Side { Empire = 0, Alliance = 1 }
 [JsonDerivedType(typeof(DebugSetHolderOrder), "DebugSetHolder")]
 [JsonDerivedType(typeof(BuildOrder), "Build")]
 [JsonDerivedType(typeof(StopBuildOrder), "StopBuild")]
+[JsonDerivedType(typeof(CreateFleetOrder), "CreateFleet")]
+[JsonDerivedType(typeof(SplitFleetOrder), "SplitFleet")]
+[JsonDerivedType(typeof(TransferShipsOrder), "TransferShips")]
+[JsonDerivedType(typeof(MergeFleetsOrder), "MergeFleets")]
+[JsonDerivedType(typeof(MoveSquadronsOrder), "MoveSquadrons")]
+[JsonDerivedType(typeof(LoadSquadronsOrder), "LoadSquadrons")]
+[JsonDerivedType(typeof(UnloadSquadronsOrder), "UnloadSquadrons")]
+[JsonDerivedType(typeof(DebugSetDamageOrder), "DebugSetDamage")]
 public abstract record Order(long Sequence, Side Side);
 
 /// <summary>
@@ -53,6 +61,36 @@ public sealed record BuildOrder(long Sequence, Side Side, string System, YardFam
 /// <summary>Cancel the project of one (system, family) without a new order. rule: m2-construction §Projects and queues.</summary>
 public sealed record StopBuildOrder(long Sequence, Side Side, string System, YardFamily Family) : Order(Sequence, Side);
 
+// ---- fleet orders. rule: m3-fleets §Orders (all step 1, immediate, in order sequence; rejection changes nothing).
+// Id lists are plain lists so a queued order saves and loads.
+
+/// <summary>Take the listed ships out of their fleets and form one new fleet at their system. rule: m3-fleets §Orders (CreateFleet).</summary>
+public sealed record CreateFleetOrder(long Sequence, Side Side, List<int> Ships) : Order(Sequence, Side);
+
+/// <summary>Take the listed ships out of one fleet into a new fleet. rule: m3-fleets §Orders (SplitFleet).</summary>
+public sealed record SplitFleetOrder(long Sequence, Side Side, int Fleet, List<int> Ships) : Order(Sequence, Side);
+
+/// <summary>Move the listed ships into an existing fleet at the same system; aboard units go with their ship. rule: m3-fleets §Orders (TransferShips).</summary>
+public sealed record TransferShipsOrder(long Sequence, Side Side, List<int> Ships, int ToFleet) : Order(Sequence, Side);
+
+/// <summary>Transfer every ship of one fleet into another; the first fleet is removed. rule: m3-fleets §Orders (MergeFleets).</summary>
+public sealed record MergeFleetsOrder(long Sequence, Side Side, int From, int Into) : Order(Sequence, Side);
+
+/// <summary>Fly based squadrons (hyperdrive above 0) as a squadron-only fleet. rule: m3-fleets §Unescorted squadrons (DEFAULT).</summary>
+public sealed record MoveSquadronsOrder(long Sequence, Side Side, List<int> Squadrons, string Destination) : Order(Sequence, Side);
+
+/// <summary>Put based squadrons of the fleet's system aboard its ships; all or nothing. rule: m3-fleets §Orders (LoadSquadrons).</summary>
+public sealed record LoadSquadronsOrder(long Sequence, Side Side, int Fleet, List<int> Squadrons) : Order(Sequence, Side);
+
+/// <summary>Squadrons leave their ship and become based at the fleet's system (held by the side). rule: m3-fleets §Orders (UnloadSquadrons).</summary>
+public sealed record UnloadSquadronsOrder(long Sequence, Side Side, int Fleet, List<int> Squadrons) : Order(Sequence, Side);
+
+/// <summary>
+/// Debug order: set a ship's hull and six damage counters. For tests and tools; rejected unless debug orders are enabled
+/// (DEFAULT, the same switch as DebugSetHolder). rule: m3-ships-and-fighters §Damaged state (DebugSetDamage).
+/// </summary>
+public sealed record DebugSetDamageOrder(long Sequence, Side Side, int Ship, int Hull, List<int> Hits) : Order(Sequence, Side);
+
 public static class RejectReason
 {
     public const string NegativeValue = "NegativeValue";
@@ -82,6 +120,27 @@ public static class RejectReason
     public const string NoSlot = "NoSlot";
     public const string UnknownItem = "UnknownItem";
     public const string NoProject = "NoProject";
+    // rule: m3-fleets §Orders (fleet order rejections), m3-ships-and-fighters §Tests S13. DuplicateSquadron and EmptySelection (for
+    // TransferShips) are DEFAULT names the sheets lack; DebugDisabled is shared with DebugSetHolder.
+    public const string UnknownShip = "UnknownShip";
+    public const string UnknownSquadron = "UnknownSquadron";
+    public const string DuplicateShip = "DuplicateShip";
+    public const string DuplicateSquadron = "DuplicateSquadron";
+    public const string NotSameSystem = "NotSameSystem";
+    public const string TooFewShips = "TooFewShips";
+    public const string NoChange = "NoChange";
+    public const string ShipNotInFleet = "ShipNotInFleet";
+    public const string EmptySelection = "EmptySelection";
+    public const string WholeFleet = "WholeFleet";
+    public const string SameFleet = "SameFleet";
+    public const string SquadronFleet = "SquadronFleet";
+    public const string SquadronAboard = "SquadronAboard";
+    public const string SquadronNotBased = "SquadronNotBased";
+    public const string NotAtFleetSystem = "NotAtFleetSystem";
+    public const string NoCapacity = "NoCapacity";
+    public const string NotAboard = "NotAboard";
+    public const string NotYourSystem = "NotYourSystem";
+    public const string BadValue = "BadValue";
     /// <summary>No handler is registered for this order type (e.g. a save with fleet orders loaded before the fleet module was attached).</summary>
     public const string UnknownOrderType = "UnknownOrderType";
 }

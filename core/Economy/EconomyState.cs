@@ -9,8 +9,10 @@ namespace Rebellion.Core.Economy;
 /// <see cref="System"/> (its destination) but is not installed. rule: m2-maintenance §Load (Existing); m2-slots-and-resources
 /// §Occupied slots.
 ///
-/// SEAM: ship and fighter objects here are not linked to the fleets of m3-fleets (fleet ships carry no object id yet), so a
-/// fleet's ships do not count for load and cannot be autoscrapped until construction and fleets share one object list.
+/// This list is the one registry of every ship, squadron, regiment and special force (m3-ships-and-fighters §The ship object): a fleet
+/// holds object ids (<see cref="Fleets.Fleet.Ships"/>), so a fleet's ships count for load and can be autoscrapped like any object.
+/// Place of a non-facility object: a fleet member (capital ship, <see cref="System"/> null); a squadron or regiment on a system
+/// (<see cref="System"/> set, <see cref="AboardShip"/> 0) or aboard a ship (<see cref="AboardShip"/> set, <see cref="System"/> null).
 /// </summary>
 public sealed class EconObject
 {
@@ -23,6 +25,14 @@ public sealed class EconObject
     /// <summary>Facility: the system it stands on or will stand on. Regiments and special forces: where they are.</summary>
     public string? System { get; set; }
     public bool Completed { get; set; }
+    // ---- carrying (m3-fleets §Carrying rules)
+    /// <summary>Squadron or regiment: the id of the capital ship it rides on; 0 = not aboard (it is on <see cref="System"/> or in a squadron-only fleet).</summary>
+    public int AboardShip { get; set; }
+    // ---- ship state (m3-ships-and-fighters §Damaged state). Capital ships only; no M3 rule changes them except DebugSetDamage.
+    /// <summary>Current hull, 0 to the class maximum; starts at the maximum. 0 for everything that is not a capital ship.</summary>
+    public int Hull { get; set; }
+    /// <summary>Six damage counters 0 to 15 (shield generator, weapons, tractor, sub-light, hyperdrive, damage control); null for non-ships.</summary>
+    public List<int>? Hits { get; set; }
     // ---- mine and refinery cycle (m2-mines-refineries-pools)
     /// <summary>True once its first cycle has been started (the first-cycle roll is spent).</summary>
     public bool FirstDone { get; set; }

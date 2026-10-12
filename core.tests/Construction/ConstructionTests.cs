@@ -345,6 +345,7 @@ public class ConstructionTests
     public void C18_AdvancedShipyardNeedsResearch()
     {
         var w = Empire(500, FacilityKind.ConstructionYard);
+        w.Build.RespectResearchOrder = true; // the M3 default is AllAvailable (m3-ships-and-fighters, Contradictions): this sheet's test sets the gate explicitly
         Assert.Equal("NotResearched", w.TryOrder(Emp, Home, YardFamily.Construction, "Advanced Shipyard", 1, Home));
         w.Build.GrantResearch(Emp, "Advanced Shipyard"); // the setup grants it
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Construction, "Advanced Shipyard", 1, Home));
@@ -682,10 +683,10 @@ public class ConstructionTests
     }
 
     [Fact]
-    public void ResearchGateCanBeSwitchedOff()
+    public void ResearchStubIsAllAvailableByDefault() // m3-ships-and-fighters §Sides and availability (ResearchStub)
     {
         var w = Empire(500, FacilityKind.ConstructionYard);
-        w.Build.RespectResearchOrder = false;
+        Assert.False(w.Build.RespectResearchOrder);
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Construction, "Advanced Shipyard", 1, Home));
     }
 

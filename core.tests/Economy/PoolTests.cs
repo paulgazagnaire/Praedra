@@ -10,9 +10,9 @@ public class PoolTests
 {
     private const string Home = "Coruscant";
 
-    private static EcoWorld SetupS1(int support = 100)
+    private static EcoWorld SetupS1(int support = 100, bool freeShips = false)
     {
-        var w = new EcoWorld();
+        var w = new EcoWorld(freeShips: freeShips);
         w.Hold(Home, Side.Empire, support);
         w.Mine(Home, id: 1);
         w.Refinery(Home, id: 2);
@@ -167,7 +167,7 @@ public class PoolTests
 
     private static EcoWorld Smuggle(int support, int regiments = 0, params string[] ships)
     {
-        var w = new EcoWorld();
+        var w = new EcoWorld(freeShips: true); // fleet ships pay upkeep now; these sheet numbers assume only the regiments do
         w.Hold(Home, Side.Empire, support);
         for (int i = 0; i < regiments; i++) w.Eco.AddObject(Side.Empire, "Stormtrooper Regiment", Home);
         if (ships.Length > 0) w.Fleets.AddFleet(Side.Empire, "F", ships, Home);
@@ -244,7 +244,7 @@ public class PoolTests
     public void DiversionCountsFightersOfTheControllerOnly()
     {
         var w = Smuggle(25);
-        w.Fleets.AddFleet(Side.Empire, "F", Array.Empty<string>(), Home, new[] { "TIE Fighter", "TIE Fighter" });
+        for (int i = 0; i < 2; i++) w.Eco.AddObject(Side.Empire, "TIE Fighter", Home); // based squadrons; squadrons aboard are not "on the system"
         w.Fleets.AddFleet(Side.Alliance, "E", new[] { "Corellian Corvette" }, Home);
         Assert.Equal(40, w.Eco.DiversionPercent(Home, Side.Empire)); // 50 - 2 x 5; the enemy corvette does not count
     }
@@ -273,14 +273,14 @@ public class PoolTests
     [Fact]
     public void P18_BlockadeAtCycleStartStopsMiningUnlessSwitchedOff()
     {
-        var w = SetupS1();
+        var w = SetupS1(freeShips: true); // the Interdictor must not be autoscrapped: the sheet's numbers ignore its upkeep
         EnemyInterdictor(w, Side.Alliance, Home);
         Assert.True(w.Fleets.IsEconomicBlockade(Home, Side.Empire));
         w.Run(30);
         Assert.Equal(0, w.E.Objects[1].Due);
         Assert.Empty(w.Events<ResourceProduced>());
 
-        var off = SetupS1();
+        var off = SetupS1(freeShips: true);
         off.Eco.BlockadeStopsMining = false;
         EnemyInterdictor(off, Side.Alliance, Home);
         off.Run(30);
@@ -294,7 +294,7 @@ public class PoolTests
     [Fact]
     public void P19_RunningCycleFinishesThenIdlesUntilTheFlagClears()
     {
-        var w = new EcoWorld();
+        var w = new EcoWorld(freeShips: true);
         w.Hold(Home, Side.Empire, 100);
         w.Mine(Home, id: 1);
         w.Run(1); // cycle started, due 3

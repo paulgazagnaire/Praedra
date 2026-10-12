@@ -32,3 +32,46 @@ public sealed record BlockadeStarted(int Index, int Day, string System, Side Blo
 /// <summary>Step 5. Classic blockade flag turned off. Fields: system, side that blockaded.</summary>
 public sealed record BlockadeLifted(int Index, int Day, string System, Side Blockader)
     : GameEvent(Index, Day, nameof(BlockadeLifted));
+
+// ---- M3 fleet events. rule: m3-fleets §Where it runs and what it draws (event table). Day is K for orders (step 1) and K + 1 for
+// the hooks (steps 3 to 5, slot 6.6.a), like the events above.
+
+/// <summary>Why a spare or other new fleet was made. rule: m3-fleets §Where it runs (FleetCreated).</summary>
+public enum FleetCreateCause { Spare, CreateFleet, SplitFleet, Squadrons }
+
+/// <summary>Why a fleet ceased to exist. rule: m3-fleets §Where it runs (FleetDissolved).</summary>
+public enum DissolveCause { Empty, Merged, SquadronsArrived }
+
+/// <summary>How a new ship reached its system. rule: m3-fleets §Where it runs (ShipJoinedFleet).</summary>
+public enum ShipJoinCause { Completed, Delivered }
+
+/// <summary>Slot 6.6.a (built at the destination) or step 3 (delivery). Fields: ship, class, system, fleet, cause.</summary>
+public sealed record ShipJoinedFleet(int Index, int Day, int Ship, string Class, string System, int Fleet, ShipJoinCause Cause)
+    : GameEvent(Index, Day, nameof(ShipJoinedFleet));
+
+/// <summary>The spare fleet, CreateFleet, SplitFleet or MoveSquadrons. Fields: fleet, system, members (ship ids, or squadron ids for a squadron-only fleet), cause.</summary>
+public sealed record FleetCreated(int Index, int Day, int Fleet, string System, ValueList<int> Members, FleetCreateCause Cause)
+    : GameEvent(Index, Day, nameof(FleetCreated));
+
+/// <summary>TransferShips and MergeFleets. Fields: ships, fleets they left (ids ascending, none for ships that were in no fleet), fleet they joined.</summary>
+public sealed record ShipsTransferred(int Index, int Day, ValueList<int> Ships, ValueList<int> FromFleets, int ToFleet)
+    : GameEvent(Index, Day, nameof(ShipsTransferred));
+
+/// <summary>A fleet became empty, was merged away, or a squadron-only fleet landed. Fields: fleet, cause.</summary>
+public sealed record FleetDissolved(int Index, int Day, int Fleet, DissolveCause Cause)
+    : GameEvent(Index, Day, nameof(FleetDissolved));
+
+/// <summary>LoadSquadrons. Fields: squadrons, fleet, ship each squadron went to (same order as squadrons), system.</summary>
+public sealed record SquadronsLoaded(int Index, int Day, ValueList<int> Squadrons, int Fleet, ValueList<int> Ships, string System)
+    : GameEvent(Index, Day, nameof(SquadronsLoaded));
+
+/// <summary>UnloadSquadrons. Fields: squadrons, fleet, ship each came from (same order as squadrons), system.</summary>
+public sealed record SquadronsUnloaded(int Index, int Day, ValueList<int> Squadrons, int Fleet, ValueList<int> Ships, string System)
+    : GameEvent(Index, Day, nameof(SquadronsUnloaded));
+
+/// <summary>
+/// Squadrons became based at a system: a squadron-only fleet landed (ship 0 for each), or their carrier was scrapped (the carrier's id).
+/// Fields: squadrons, fleet they left, ship each rode (0 = none), system.
+/// </summary>
+public sealed record SquadronsBased(int Index, int Day, ValueList<int> Squadrons, int Fleet, ValueList<int> Ships, string System)
+    : GameEvent(Index, Day, nameof(SquadronsBased));

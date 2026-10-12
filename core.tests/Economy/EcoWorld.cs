@@ -54,17 +54,35 @@ internal sealed class EcoWorld
     public FleetModule Fleets { get; }
     public EconomyModule Eco { get; }
 
-    /// <summary>Stub generator, incidents off (the pool and maintenance sheets' tests do not use incidents).</summary>
-    public EcoWorld(bool incidents = false, EconomyParams? p = null) : this(new StubRng(), incidents, p) { }
+    /// <summary>
+    /// The real costs with the maintenance of every capital ship and fighter set to 0. Fleet ships are registry objects and pay upkeep
+    /// (m3-fleets), so the pool sheet's tests, whose numbers assume the load of the regiments and facilities only (and a ship that is
+    /// not autoscrapped), build their fleets in a world that uses this table.
+    /// </summary>
+    public static readonly Lazy<CostData> FreeShipCosts = new(() =>
+    {
+        var lines = File.ReadAllLines(Path.Combine(TestData.InterimDir, CostData.FileName));
+        var o = new List<string> { lines[0] };
+        foreach (var l in lines.Skip(1).Where(x => x.Length > 0))
+        {
+            var f = l.Split(',');
+            if (f[0] is "capital ship" or "fighter") f[6] = "0"; // maint
+            o.Add(string.Join(",", f));
+        }
+        return CostData.Parse(string.Join("\n", o), "free-ship-costs.csv");
+    });
 
-    public EcoWorld(ulong seed, bool incidents = false, EconomyParams? p = null) : this(new GameRng(seed), incidents, p) { }
+    /// <summary>Stub generator, incidents off (the pool and maintenance sheets' tests do not use incidents). <paramref name="freeShips"/>: ships and fighters cost no upkeep.</summary>
+    public EcoWorld(bool incidents = false, EconomyParams? p = null, bool freeShips = false) : this(new StubRng(), incidents, p, freeShips) { }
 
-    private EcoWorld(GameRng rng, bool incidents, EconomyParams? p)
+    public EcoWorld(ulong seed, bool incidents = false, EconomyParams? p = null) : this(new GameRng(seed), incidents, p, false) { }
+
+    private EcoWorld(GameRng rng, bool incidents, EconomyParams? p, bool freeShips)
     {
         Stub = rng as StubRng;
         Game = new Game(rng);
         Fleets = FleetModule.Attach(Game, TestData.RealGalaxy, World.Ships.Value, World.Blockade);
-        Eco = EconomyModule.Attach(Game, TestData.RealGalaxy, Slots.Value, Costs.Value, Fleets, p);
+        Eco = EconomyModule.Attach(Game, TestData.RealGalaxy, Slots.Value, freeShips ? FreeShipCosts.Value : Costs.Value, Fleets, p);
         Eco.IncidentsEnabled = incidents;
     }
 

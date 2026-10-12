@@ -392,7 +392,7 @@ public partial class Main : Control
     {
         var sb = new StringBuilder();
         sb.Append($"{(f.Side == Side.Empire ? "Empire" : "Alliance")} fleet (pinned)\n");
-        var all = f.Ships.Concat(f.Squadrons).GroupBy(x => x).Select(g => $"{g.Count()} x {g.Key}");
+        var all = _fm.ClassNamesOf(f).GroupBy(x => x).Select(g => $"{g.Count()} x {g.Key}");
         sb.Append($"Ships: {string.Join(", ", all)}\n");
         sb.Append($"Speed: {_fm.SpeedOf(f)}\n");
         if (f.Transit is { } t && f.At == null)

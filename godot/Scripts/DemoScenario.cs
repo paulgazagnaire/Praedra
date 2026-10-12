@@ -40,7 +40,7 @@ public static class DemoScenario
         return fm;
     }
 
-    // Fleets get ids 1, 2, 3 ... in the order they are added; orders go in by id.
+    // Fleets and their ships share one id counter, so fleet ids are not 1, 2, 3; orders go in by the id AddFleet returns.
     static void Go(FleetModule fm, Side side, string name, string[] shipClasses, string from, string to)
     {
         int id = fm.AddFleet(side, name, shipClasses, from);

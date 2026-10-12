@@ -1,4 +1,5 @@
 using Rebellion.Core.Clock;
+using Rebellion.Core.Economy;
 using Rebellion.Core.Map;
 using Rebellion.Core.Ships;
 using Rebellion.Core.Travel;
@@ -6,10 +7,14 @@ using Rebellion.Core.Travel;
 namespace Rebellion.Core.Fleets;
 
 /// <summary>
-/// Fleets moving along lanes: the MoveFleet order (step 1), departures (2), arrivals (3), forced stops (4), contacts and
-/// the Classic blockade flag (5). Registers itself on a <see cref="Game"/>; holds only data and settings, never game
-/// state (that lives in <see cref="GameState"/>). After <see cref="GameSave.Load"/>, attach again to the loaded game.
-/// Movement draws ZERO random numbers. rule: m1-clock-and-orders §Seeded random numbers rule 3.
+/// Fleets: the MoveFleet order and movement along lanes (step 1 to 5), forced stops, contacts and the Classic blockade flag, and, from
+/// M3, fleets made of real registry ships: the spare fleet for new ships, CreateFleet, SplitFleet, TransferShips, MergeFleets,
+/// MoveSquadrons (unescorted squadrons), LoadSquadrons, UnloadSquadrons, DebugSetDamage, the carrying capacity, and the removal of a
+/// scrapped ship from its fleet. Registers itself on a <see cref="Game"/>; holds only data and settings, never game state (that lives
+/// in <see cref="GameState"/>: the fleets and the one object registry in <see cref="GameState.Economy"/>). After
+/// <see cref="GameSave.Load"/>, attach again to the loaded game. Movement and every fleet order draw ZERO random numbers.
+/// rule: m1-clock-and-orders §Seeded random numbers rule 3; m3-fleets §Where it runs and what it draws.
+/// The module needs only the registry state, not the economy module, so it also runs alone (tests, the viewer).
 /// </summary>
 public sealed class FleetModule
 {
@@ -23,6 +28,8 @@ public sealed class FleetModule
     public ForcedStopTrigger Trigger { get; set; }
     /// <summary>E, computed once from ship data. rule: m1-forced-stop-and-blockade §Update 2026-10-12.</summary>
     public long EconomicStrength { get; }
+    /// <summary>DebugSetDamage is accepted only when this is on (same switch as DebugSetHolder). DEFAULT off. rule: m3-ships-and-fighters §Damaged state.</summary>
+    public bool DebugOrdersEnabled { get; set; }
 
     private FleetModule(Game game, Galaxy galaxy, IReadOnlyDictionary<string, ShipClass> ships, BlockadeData blockade, ForcedStopTrigger trigger)
     {
@@ -31,12 +38,20 @@ public sealed class FleetModule
         EconomicStrength = blockade.EconomicStrength(ships);
     }
 
-    /// <summary>Register the MoveFleet handler and the hooks for work-list steps 2 to 5 on <paramref name="game"/>.</summary>
+    /// <summary>Register the fleet order handlers and the hooks for work-list steps 2 to 5 on <paramref name="game"/>.</summary>
     public static FleetModule Attach(Game game, Galaxy galaxy, IReadOnlyDictionary<string, ShipClass> ships, BlockadeData blockade,
         ForcedStopTrigger trigger = ForcedStopTrigger.PaulRule)
     {
         var m = new FleetModule(game, galaxy, ships, blockade, trigger);
         game.RegisterOrderHandler<MoveFleetOrder>(m.HandleMoveFleet);
+        game.RegisterOrderHandler<CreateFleetOrder>(m.HandleCreateFleet);
+        game.RegisterOrderHandler<SplitFleetOrder>(m.HandleSplitFleet);
+        game.RegisterOrderHandler<TransferShipsOrder>(m.HandleTransferShips);
+        game.RegisterOrderHandler<MergeFleetsOrder>(m.HandleMergeFleets);
+        game.RegisterOrderHandler<MoveSquadronsOrder>(m.HandleMoveSquadrons);
+        game.RegisterOrderHandler<LoadSquadronsOrder>(m.HandleLoadSquadrons);
+        game.RegisterOrderHandler<UnloadSquadronsOrder>(m.HandleUnloadSquadrons);
+        game.RegisterOrderHandler<DebugSetDamageOrder>(m.HandleDebugSetDamage);
         game.RegisterHook("2", m.Departures);
         game.RegisterHook("3", m.Arrivals);
         game.RegisterHook("4", m.ForcedStops);
@@ -45,27 +60,73 @@ public sealed class FleetModule
     }
 
     private GameState State => _game.State;
+    private EconomyState E => _game.State.Economy;
 
     // ------------------------------------------------------------------ setup and queries (between Steps)
 
     /// <summary>
-    /// Setup only: place a new fleet at a system (games and tests). Fleet creation as an in-game order is M3
-    /// (m3-fleets); this is not an order and raises no event. Call it between Steps.
+    /// Setup only: place a new fleet of new, completed ships at a system (games and tests; not an order, raises no event). The fleet and its
+    /// ships get ids from the shared object counter (the fleet first, then the ships and the squadrons, each in class-name order), or
+    /// <paramref name="id"/> for the fleet. <paramref name="squadrons"/> are created aboard the fleet's ships, each on the first ship with a
+    /// free berth by ship id, and must fit. Call it between Steps. rule: m3-fleets §What a fleet is; §Carrying rules.
     /// </summary>
-    public int AddFleet(Side side, string name, IEnumerable<string> ships, string system, IEnumerable<string>? squadrons = null)
+    public int AddFleet(Side side, string name, IEnumerable<string> ships, string system, IEnumerable<string>? squadrons = null, int? id = null)
     {
-        var shipList = ships.OrderBy(s => s, StringComparer.Ordinal).ToList();
-        var squadList = (squadrons ?? Array.Empty<string>()).OrderBy(s => s, StringComparer.Ordinal).ToList();
-        // rule: m3-fleets §What a fleet is, invariant 1 (never empty)
-        if (shipList.Count + squadList.Count == 0) throw new ArgumentException("A fleet needs at least one ship or squadron.");
+        // Sorted by class name (ordinal) so the same fleet always gets the same ids whatever the order it was listed in (canonical save and hash).
+        var shipList = ships.OrderBy(c => c, StringComparer.Ordinal).ToList();
+        var squadList = (squadrons ?? Array.Empty<string>()).OrderBy(c => c, StringComparer.Ordinal).ToList();
+        // rule: m3-fleets §What a fleet is, invariants 1 and 4 (never empty; ships, or only squadrons that fly)
+        if (shipList.Count == 0) throw new ArgumentException("A fleet needs at least one capital ship (squadrons ride aboard ships).");
         foreach (var c in shipList)
             if (!_ships.TryGetValue(c, out var k) || !k.IsCapital) throw new ArgumentException($"'{c}' is not a capital ship class.");
         foreach (var c in squadList)
             if (!_ships.TryGetValue(c, out var k) || k.IsCapital) throw new ArgumentException($"'{c}' is not a squadron class.");
         if (!Galaxy.TryFindSystem(system, out _)) throw new ArgumentException($"Unknown system '{system}'.");
-        int id = State.NextFleetId++;
-        State.Fleets[id] = new Fleet { Id = id, Name = name, Side = side, Ships = shipList, Squadrons = squadList, At = system };
-        return id;
+        if (squadList.Count > shipList.Sum(c => _ships[c].FighterCapacity))
+            throw new ArgumentException($"The fleet's ships have {shipList.Sum(c => _ships[c].FighterCapacity)} berths for {squadList.Count} squadrons.");
+
+        int fleetId = id is int x ? ObjectRegistry.Take(E, x) : ObjectRegistry.NextId(E);
+        var shipIds = shipList.Select(c => NewObject(ObjectCategory.CapitalShip, c, side, null)).ToList();
+        var fleet = new Fleet { Id = fleetId, Name = name, Side = side, Ships = shipIds.OrderBy(i => i).ToList(), At = system };
+        State.Fleets[fleetId] = fleet;
+        var free = fleet.Ships.ToDictionary(s => s, s => _ships[E.Objects[s].Class].FighterCapacity);
+        foreach (var c in squadList)
+        {
+            int sq = NewObject(ObjectCategory.Fighter, c, side, null);
+            int carrier = fleet.Ships.First(s => free[s] > 0); // first ship with a free berth, ascending id (m3-fleets DEFAULT)
+            free[carrier]--;
+            E.Objects[sq].AboardShip = carrier;
+        }
+        return fleetId;
+    }
+
+    /// <summary>
+    /// Setup only: put completed ships that are already in the registry (not in any fleet) into a new fleet at a system. Ids as in
+    /// <see cref="AddFleet"/>. Call it between Steps.
+    /// </summary>
+    public int AddFleetOf(Side side, string name, string system, IEnumerable<int> shipIds, int? id = null)
+    {
+        var ids = shipIds.OrderBy(i => i).ToList();
+        if (ids.Count == 0) throw new ArgumentException("A fleet needs at least one ship.");
+        if (ids.Distinct().Count() != ids.Count) throw new ArgumentException("A ship may not be listed twice.");
+        if (!Galaxy.TryFindSystem(system, out _)) throw new ArgumentException($"Unknown system '{system}'.");
+        foreach (var s in ids)
+        {
+            if (!E.Objects.TryGetValue(s, out var o) || o.Category != ObjectCategory.CapitalShip) throw new ArgumentException($"Object {s} is not a ship.");
+            if (o.Side != side) throw new ArgumentException($"Ship {s} is not of side {side}.");
+            if (!o.Completed) throw new ArgumentException($"Ship {s} is not completed.");
+            if (FleetOfShip(s) != null) throw new ArgumentException($"Ship {s} is already in a fleet.");
+        }
+        int fleetId = id is int x ? ObjectRegistry.Take(E, x) : ObjectRegistry.NextId(E);
+        foreach (var s in ids) E.Objects[s].System = null;
+        State.Fleets[fleetId] = new Fleet { Id = fleetId, Name = name, Side = side, Ships = ids, At = system };
+        return fleetId;
+    }
+
+    private int NewObject(ObjectCategory cat, string className, Side side, string? system)
+    {
+        var o = new EconObject { Category = cat, Class = className, Side = side, System = system, Completed = true };
+        return ObjectRegistry.Add(E, o, null, _ships[className]);
     }
 
     /// <summary>Setup only: set a system's owner; null makes it neutral (DEFAULT for every system).</summary>
@@ -81,13 +142,39 @@ public sealed class FleetModule
     public long SubmitMove(Side side, int fleetId, string destination) =>
         _game.Submit(seq => new MoveFleetOrder(seq, side, fleetId, destination));
 
+    public long SubmitCreateFleet(Side side, IEnumerable<int> ships) => _game.Submit(seq => new CreateFleetOrder(seq, side, ships.ToList()));
+    public long SubmitSplitFleet(Side side, int fleet, IEnumerable<int> ships) => _game.Submit(seq => new SplitFleetOrder(seq, side, fleet, ships.ToList()));
+    public long SubmitTransferShips(Side side, IEnumerable<int> ships, int toFleet) => _game.Submit(seq => new TransferShipsOrder(seq, side, ships.ToList(), toFleet));
+    public long SubmitMergeFleets(Side side, int from, int into) => _game.Submit(seq => new MergeFleetsOrder(seq, side, from, into));
+    public long SubmitMoveSquadrons(Side side, IEnumerable<int> squadrons, string destination) =>
+        _game.Submit(seq => new MoveSquadronsOrder(seq, side, squadrons.ToList(), destination));
+    public long SubmitLoadSquadrons(Side side, int fleet, IEnumerable<int> squadrons) =>
+        _game.Submit(seq => new LoadSquadronsOrder(seq, side, fleet, squadrons.ToList()));
+    public long SubmitUnloadSquadrons(Side side, int fleet, IEnumerable<int> squadrons) =>
+        _game.Submit(seq => new UnloadSquadronsOrder(seq, side, fleet, squadrons.ToList()));
+    public long SubmitDebugSetDamage(Side side, int ship, int hull, IEnumerable<int> hits) =>
+        _game.Submit(seq => new DebugSetDamageOrder(seq, side, ship, hull, hits.ToList()));
+
     /// <summary>Fleets placed at a system (not on a lane), by fleet id.</summary>
     public IReadOnlyList<Fleet> FleetsAt(string system) =>
         State.Fleets.Values.Where(f => f.At == system).ToList();
 
-    /// <summary>Speed rating of a fleet (0 = immobile). rule: m1-travel §Rule (Classic); navigators are M5.</summary>
+    /// <summary>The fleet a ship is a member of, or null (a ship that is queued, in delivery or set up outside any fleet).</summary>
+    public Fleet? FleetOfShip(int shipId) => State.Fleets.Values.FirstOrDefault(f => f.Ships.Contains(shipId));
+
+    /// <summary>The class row of a registry object, or null if the class is not a ship or fighter class.</summary>
+    public ShipClass? ClassOf(EconObject o) => _ships.TryGetValue(o.Class, out var c) ? c : null;
+
+    /// <summary>Speed rating of one ship now: its hyperdrive, or hyperdrive_if_damaged when its hyperdrive counter is above 0. rule: m3-ships-and-fighters §Hyperdrive and speed.</summary>
+    public int SpeedOfShip(EconObject ship) =>
+        (ClassOf(ship) ?? throw new InvalidOperationException($"No ship class '{ship.Class}'.")).Speed(ObjectRegistry.IsDamagedForTravel(ship));
+
+    /// <summary>
+    /// Speed rating of a fleet (0 = immobile): the largest rating among its ships; squadrons aboard never count; a squadron-only fleet uses
+    /// its squadrons' ratings. rule: m3-fleets §Fleet speed; m1-travel §Rule (Classic); navigators are M5.
+    /// </summary>
     public int SpeedOf(Fleet f) =>
-        TravelFormula.FleetSpeed(f.Ships.Select(c => _ships[c].Speed(false)), f.Squadrons.Select(c => _ships[c].Speed(false)));
+        TravelFormula.FleetSpeed(f.Ships.Select(id => SpeedOfShip(E.Objects[id])), f.Squadrons.Select(id => SpeedOfShip(E.Objects[id])));
 
     /// <summary>Capital ship and squadron classes by name (construction reads hyperdrive ratings and combat data from here).</summary>
     public IReadOnlyDictionary<string, ShipClass> ShipClasses => _ships;
@@ -97,10 +184,332 @@ public sealed class FleetModule
 
     public long StrengthOf(Fleet f) => CombatStrength.Of(Classes(f));
 
-    private IEnumerable<ShipClass> Classes(Fleet f) => f.Ships.Concat(f.Squadrons).Select(c => _ships[c]);
+    /// <summary>
+    /// The classes of a fleet's members, for the armed test and combat strength: its ships, or its flying squadrons. Squadrons aboard
+    /// are not counted: the carrier arms the fleet (always armed in the data). rule: m3-fleets §Fighters based at a system versus aboard a carrier.
+    /// </summary>
+    public IEnumerable<ShipClass> Classes(Fleet f) => f.Ships.Concat(f.Squadrons).Select(id => ClassOf(E.Objects[id])!);
     private IEnumerable<ShipClass> Classes(IEnumerable<Fleet> fs) => fs.SelectMany(Classes);
 
+    /// <summary>The class names of everything in a fleet and aboard its ships (ships, squadrons aboard or flying), for display. Ships first, ids ascending.</summary>
+    public IEnumerable<string> ClassNamesOf(Fleet f)
+    {
+        foreach (var id in f.Ships) yield return E.Objects[id].Class;
+        foreach (var id in f.Squadrons) yield return E.Objects[id].Class;
+        foreach (var u in E.Objects.Values)
+            if (u.Category == ObjectCategory.Fighter && u.AboardShip != 0 && f.Ships.Contains(u.AboardShip)) yield return u.Class;
+    }
+
+    // ---- carrying (m3-fleets §Carrying rules). The troop side (LoadRegiments, UnloadRegiments, RegimentsLoaded...) is the
+    // troops sheet's package (m3-troops-and-special-forces); it uses these queries and sets EconObject.AboardShip / System itself.
+
+    /// <summary>Units of a category aboard one ship (squadrons: Fighter; regiments: Regiment), by object id.</summary>
+    public IEnumerable<EconObject> UnitsAboard(int shipId, ObjectCategory category) =>
+        E.Objects.Values.Where(u => u.AboardShip == shipId && u.Category == category);
+
+    /// <summary>Free berths per ship id of a fleet (fighter_capacity less squadrons aboard). rule: m3-fleets §Carrying rules.</summary>
+    public SortedDictionary<int, int> FreeBerthsByShip(Fleet f) => FreeByShip(f, ObjectCategory.Fighter, c => c.FighterCapacity);
+
+    /// <summary>Free troop slots per ship id of a fleet (troop_capacity less regiments aboard). The hook for the troops sheet's LoadRegiments. rule: m3-fleets §Carrying rules.</summary>
+    public SortedDictionary<int, int> FreeTroopSlotsByShip(Fleet f) => FreeByShip(f, ObjectCategory.Regiment, c => c.TroopCapacity);
+
+    public int FreeBerths(Fleet f) => FreeBerthsByShip(f).Values.Sum();
+    public int FreeTroopSlots(Fleet f) => FreeTroopSlotsByShip(f).Values.Sum();
+
+    private SortedDictionary<int, int> FreeByShip(Fleet f, ObjectCategory cat, Func<ShipClass, int> capacity)
+    {
+        var free = new SortedDictionary<int, int>();
+        foreach (var id in f.Ships) free[id] = capacity(ClassOf(E.Objects[id])!);
+        foreach (var u in E.Objects.Values)
+            if (u.Category == cat && u.AboardShip != 0 && free.ContainsKey(u.AboardShip)) free[u.AboardShip]--;
+        return free;
+    }
+
+    /// <summary>Completed squadrons of a side based at a system (on it, not aboard, not flying), by id. rule: m3-fleets §Fighters based at a system.</summary>
+    public IEnumerable<EconObject> BasedSquadrons(string system, Side side) =>
+        E.Objects.Values.Where(o => o.Category == ObjectCategory.Fighter && o.Completed && o.Side == side && o.System == system && o.AboardShip == 0);
+
+    // ------------------------------------------------------------------ common order checks
+
+    // A fleet is movable/editable only at a system with no accepted order (an accepted move marks Transit at once). rule: m3-fleets §Orders.
+    private static bool Moving(Fleet f) => f.Transit != null || f.At == null;
+
+    /// <summary>Where a ship is: its fleet's system (null on a lane), or, with no fleet, the system on the object.</summary>
+    private (Fleet? Fleet, string? System, bool Moving) PlaceOfShip(EconObject ship)
+    {
+        var f = FleetOfShip(ship.Id);
+        return f != null ? (f, f.At, Moving(f)) : (null, ship.System, false);
+    }
+
+    // Duplicate, then unknown, then not-yours, in that order. rule: m3-fleets §Orders (common rejections).
+    private string? CheckShipList(Side side, List<int> ids, out List<EconObject> ships)
+    {
+        ships = new List<EconObject>();
+        if (ids.Distinct().Count() != ids.Count) return RejectReason.DuplicateShip;
+        foreach (var id in ids)
+        {
+            if (!E.Objects.TryGetValue(id, out var o) || o.Category != ObjectCategory.CapitalShip) return RejectReason.UnknownShip;
+            ships.Add(o);
+        }
+        if (ships.Any(o => o.Side != side)) return RejectReason.NotYours;
+        return null;
+    }
+
+    private string? CheckSquadronList(Side side, List<int> ids, out List<EconObject> squads)
+    {
+        squads = new List<EconObject>();
+        if (ids.Distinct().Count() != ids.Count) return RejectReason.DuplicateSquadron;
+        foreach (var id in ids)
+        {
+            if (!E.Objects.TryGetValue(id, out var o) || o.Category != ObjectCategory.Fighter) return RejectReason.UnknownSquadron;
+            squads.Add(o);
+        }
+        if (squads.Any(o => o.Side != side)) return RejectReason.NotYours;
+        return null;
+    }
+
+    private static string FleetName(int id) => $"Fleet {id}";
+
+    private Fleet NewFleet(Side side, string system, IEnumerable<int> ships, bool spare = false)
+    {
+        int id = ObjectRegistry.NextId(E);
+        var f = new Fleet { Id = id, Name = spare ? "Spare Fleet" : FleetName(id), Side = side, Ships = ships.OrderBy(i => i).ToList(), At = system, Spare = spare };
+        State.Fleets[id] = f;
+        return f;
+    }
+
+    private static void AddSorted(List<int> list, int id)
+    {
+        int i = list.BinarySearch(id);
+        if (i < 0) list.Insert(~i, id);
+    }
+
+    /// <summary>Remove a fleet from the state; the event only when there is a Step to carry it. rule: m3-fleets §What a fleet is invariant 1.</summary>
+    private void RemoveFleet(StepContext? ctx, int day, Fleet f, DissolveCause cause)
+    {
+        State.Fleets.Remove(f.Id);
+        if (ctx == null) return;
+        int id = f.Id;
+        ctx.Emit((i, _) => new FleetDissolved(i, day, id, cause));
+    }
+
+    /// <summary>Take ships out of whatever fleets hold them; fleets left empty are removed (cause Empty). Returns the fleet ids they left, ascending.</summary>
+    private List<int> TakeOut(StepContext? ctx, int day, IEnumerable<EconObject> ships)
+    {
+        var left = new SortedSet<int>();
+        foreach (var s in ships)
+        {
+            var f = FleetOfShip(s.Id);
+            if (f == null) continue;
+            f.Ships.Remove(s.Id);
+            left.Add(f.Id);
+        }
+        foreach (var fid in left)
+            if (State.Fleets.TryGetValue(fid, out var f) && f.Ships.Count == 0 && f.Squadrons.Count == 0) RemoveFleet(ctx, day, f, DissolveCause.Empty);
+        return left.ToList();
+    }
+
+    // ------------------------------------------------------------------ step 1: fleet orders (m3-fleets §Orders)
+
+    // rule: m3-fleets §Orders (CreateFleet): rejections DuplicateShip, UnknownShip, NotYours, InTransit, NotCompleted, NotSameSystem, TooFewShips, NoChange
+    private OrderResult HandleCreateFleet(StepContext ctx, CreateFleetOrder o)
+    {
+        if (CheckShipList(o.Side, o.Ships, out var ships) is { } bad) return OrderResult.Reject(bad);
+        var places = ships.Select(PlaceOfShip).ToList();
+        if (places.Any(p => p.Moving)) return OrderResult.Reject(RejectReason.InTransit);
+        if (ships.Any(s => !s.Completed)) return OrderResult.Reject(RejectReason.NotCompleted);
+        string? system = places.Count > 0 ? places[0].System : null;
+        if (system == null || places.Any(p => p.System != system)) return OrderResult.Reject(RejectReason.NotSameSystem);
+        if (ships.Count < 2) return OrderResult.Reject(RejectReason.TooFewShips); // Traced: Create Fleet needs more than one entry (FUN_00580db0)
+        var from = places.Select(p => p.Fleet).Distinct().ToList();
+        if (from.Count == 1 && from[0] is { } only && only.Ships.Count == ships.Count) return OrderResult.Reject(RejectReason.NoChange);
+
+        int day = ctx.Day;
+        var left = TakeOut(ctx, day, ships);
+        foreach (var s in ships) s.System = null;
+        var f = NewFleet(o.Side, system, ships.Select(s => s.Id));
+        var members = new ValueList<int>(f.Ships.ToList());
+        ctx.Emit((i, _) => new FleetCreated(i, day, f.Id, system, members, FleetCreateCause.CreateFleet));
+        return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence, f.Id));
+    }
+
+    // rule: m3-fleets §Orders (SplitFleet): UnknownFleet, NotYours, ship checks, InTransit, ShipNotInFleet, EmptySelection, WholeFleet
+    private OrderResult HandleSplitFleet(StepContext ctx, SplitFleetOrder o)
+    {
+        if (!State.Fleets.TryGetValue(o.Fleet, out var fleet)) return OrderResult.Reject(RejectReason.UnknownFleet);
+        if (fleet.Side != o.Side) return OrderResult.Reject(RejectReason.NotYours);
+        if (CheckShipList(o.Side, o.Ships, out var ships) is { } bad) return OrderResult.Reject(bad);
+        if (Moving(fleet)) return OrderResult.Reject(RejectReason.InTransit);
+        if (ships.Any(s => !fleet.Ships.Contains(s.Id))) return OrderResult.Reject(RejectReason.ShipNotInFleet);
+        if (ships.Count == 0) return OrderResult.Reject(RejectReason.EmptySelection);
+        if (ships.Count == fleet.Ships.Count) return OrderResult.Reject(RejectReason.WholeFleet);
+
+        int day = ctx.Day;
+        string system = fleet.At!;
+        foreach (var s in ships) fleet.Ships.Remove(s.Id);
+        var f = NewFleet(o.Side, system, ships.Select(s => s.Id));
+        var members = new ValueList<int>(f.Ships.ToList());
+        ctx.Emit((i, _) => new FleetCreated(i, day, f.Id, system, members, FleetCreateCause.SplitFleet));
+        return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence, f.Id));
+    }
+
+    // rule: m3-fleets §Orders (TransferShips): UnknownFleet, NotYours, ship checks, EmptySelection (DEFAULT name), InTransit, NotCompleted,
+    // NotSameSystem, SameFleet, SquadronFleet
+    private OrderResult HandleTransferShips(StepContext ctx, TransferShipsOrder o)
+    {
+        if (!State.Fleets.TryGetValue(o.ToFleet, out var to)) return OrderResult.Reject(RejectReason.UnknownFleet);
+        if (to.Side != o.Side) return OrderResult.Reject(RejectReason.NotYours);
+        if (CheckShipList(o.Side, o.Ships, out var ships) is { } bad) return OrderResult.Reject(bad);
+        if (ships.Count == 0) return OrderResult.Reject(RejectReason.EmptySelection);
+        var places = ships.Select(PlaceOfShip).ToList();
+        if (Moving(to) || places.Any(p => p.Moving)) return OrderResult.Reject(RejectReason.InTransit);
+        if (ships.Any(s => !s.Completed)) return OrderResult.Reject(RejectReason.NotCompleted);
+        if (places.Any(p => p.System != to.At)) return OrderResult.Reject(RejectReason.NotSameSystem);
+        if (places.All(p => p.Fleet == to)) return OrderResult.Reject(RejectReason.SameFleet);
+        if (to.Ships.Count == 0) return OrderResult.Reject(RejectReason.SquadronFleet);
+
+        MoveShips(ctx, ctx.Day, ships.Where((s, i) => places[i].Fleet != to).ToList(), to);
+        return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
+    }
+
+    // Move ships (not yet in `to`) into `to`; aboard units stay on their ship (AboardShip is untouched).
+    private void MoveShips(StepContext ctx, int day, List<EconObject> ships, Fleet to)
+    {
+        var left = TakeOut(ctx, day, ships);
+        foreach (var s in ships) { AddSorted(to.Ships, s.Id); s.System = null; }
+        var ids = new ValueList<int>(ships.Select(s => s.Id).OrderBy(i => i).ToList());
+        var from = new ValueList<int>(left);
+        ctx.Emit((i, _) => new ShipsTransferred(i, day, ids, from, to.Id));
+    }
+
+    // rule: m3-fleets §Orders (MergeFleets): UnknownFleet, NotYours, SameFleet, InTransit, NotSameSystem, SquadronFleet
+    private OrderResult HandleMergeFleets(StepContext ctx, MergeFleetsOrder o)
+    {
+        if (!State.Fleets.TryGetValue(o.From, out var from) || !State.Fleets.TryGetValue(o.Into, out var into))
+            return OrderResult.Reject(RejectReason.UnknownFleet);
+        if (from.Side != o.Side || into.Side != o.Side) return OrderResult.Reject(RejectReason.NotYours);
+        if (from == into) return OrderResult.Reject(RejectReason.SameFleet);
+        if (Moving(from) || Moving(into)) return OrderResult.Reject(RejectReason.InTransit);
+        if (from.At != into.At) return OrderResult.Reject(RejectReason.NotSameSystem);
+        if (from.Ships.Count == 0 || into.Ships.Count == 0) return OrderResult.Reject(RejectReason.SquadronFleet);
+
+        int day = ctx.Day;
+        var moved = from.Ships.ToList();
+        foreach (var id in moved) { AddSorted(into.Ships, id); }
+        from.Ships.Clear();
+        var ids = new ValueList<int>(moved);
+        var left = new ValueList<int>(new List<int> { from.Id });
+        ctx.Emit((i, _) => new ShipsTransferred(i, day, ids, left, into.Id));
+        RemoveFleet(ctx, day, from, DissolveCause.Merged); // the spare flag leaves with the removed fleet (m3-fleets §New ships)
+        return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
+    }
+
+    // rule: m3-fleets §Orders (MoveSquadrons), §Unescorted squadrons: UnknownSquadron, NotYours, SquadronAboard, NotCompleted, NotSameSystem,
+    // then the MoveFleet reasons (Immobile when any rating is 0). Nothing is created unless the order is accepted (F14).
+    private OrderResult HandleMoveSquadrons(StepContext ctx, MoveSquadronsOrder o)
+    {
+        if (CheckSquadronList(o.Side, o.Squadrons, out var squads) is { } bad) return OrderResult.Reject(bad);
+        if (squads.Count == 0) return OrderResult.Reject(RejectReason.EmptySelection);
+        if (squads.Any(s => s.AboardShip != 0)) return OrderResult.Reject(RejectReason.SquadronAboard);
+        if (squads.Any(s => !s.Completed)) return OrderResult.Reject(RejectReason.NotCompleted);
+        if (squads.Any(s => s.System == null)) return OrderResult.Reject(RejectReason.InTransit); // already flying in a squadron-only fleet
+        string from = squads[0].System!;
+        if (squads.Any(s => s.System != from)) return OrderResult.Reject(RejectReason.NotSameSystem);
+
+        // speed = largest rating among the squadrons (same formula, path and forced stop as MoveFleet); any 0 makes it Immobile
+        int speed = TravelFormula.FleetSpeed(Array.Empty<int>(), squads.Select(SpeedOfShip));
+        var path = _pathfinder.Find(from, o.Destination, speed);
+        if (!path.Ok) return OrderResult.Reject(RejectStatus(path.Status));
+
+        int day = ctx.Day;
+        foreach (var s in squads) s.System = null;
+        int fid = ObjectRegistry.NextId(E);
+        var names = path.Names(Galaxy).ToList();
+        var f = new Fleet
+        {
+            Id = fid, Name = FleetName(fid), Side = o.Side, Squadrons = squads.Select(s => s.Id).OrderBy(i => i).ToList(), At = from,
+            Transit = new FleetTransit { Path = names, HopTicks = path.HopTicks.ToList(), HopIndex = 0, DueDay = day + path.HopTicks[0] },
+        };
+        State.Fleets[fid] = f;
+        var members = new ValueList<int>(f.Squadrons.ToList());
+        ctx.Emit((i, _) => new FleetCreated(i, day, fid, from, members, FleetCreateCause.Squadrons));
+        int arrival = day + path.TotalTicks, total = path.TotalTicks;
+        return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence, fid, new ValueList<string>(names), total, arrival));
+    }
+
+    // rule: m3-fleets §Orders (LoadSquadrons): UnknownFleet, NotYours, squadron checks, InTransit, NotCompleted, SquadronNotBased, NotAtFleetSystem, NoCapacity
+    private OrderResult HandleLoadSquadrons(StepContext ctx, LoadSquadronsOrder o)
+    {
+        if (!State.Fleets.TryGetValue(o.Fleet, out var fleet)) return OrderResult.Reject(RejectReason.UnknownFleet);
+        if (fleet.Side != o.Side) return OrderResult.Reject(RejectReason.NotYours);
+        if (CheckSquadronList(o.Side, o.Squadrons, out var squads) is { } bad) return OrderResult.Reject(bad);
+        if (Moving(fleet)) return OrderResult.Reject(RejectReason.InTransit);
+        if (squads.Any(s => !s.Completed)) return OrderResult.Reject(RejectReason.NotCompleted);
+        if (squads.Any(s => s.AboardShip != 0 || s.System == null)) return OrderResult.Reject(RejectReason.SquadronNotBased);
+        if (squads.Any(s => s.System != fleet.At)) return OrderResult.Reject(RejectReason.NotAtFleetSystem);
+        var free = FreeBerthsByShip(fleet);
+        if (free.Values.Sum() < squads.Count) return OrderResult.Reject(RejectReason.NoCapacity); // all or nothing
+
+        // first free berth by ship id ascending (m3-fleets DEFAULT)
+        int day = ctx.Day;
+        string system = fleet.At!;
+        var carriers = new List<int>();
+        foreach (var s in squads)
+        {
+            int ship = free.First(kv => kv.Value > 0).Key;
+            free[ship]--;
+            s.AboardShip = ship; s.System = null;
+            carriers.Add(ship);
+        }
+        var ids = new ValueList<int>(squads.Select(s => s.Id).ToList());
+        var on = new ValueList<int>(carriers);
+        ctx.Emit((i, _) => new SquadronsLoaded(i, day, ids, fleet.Id, on, system));
+        return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
+    }
+
+    // rule: m3-fleets §Orders (UnloadSquadrons): UnknownFleet, NotYours, squadron checks, InTransit, NotAboard, NotYourSystem
+    private OrderResult HandleUnloadSquadrons(StepContext ctx, UnloadSquadronsOrder o)
+    {
+        if (!State.Fleets.TryGetValue(o.Fleet, out var fleet)) return OrderResult.Reject(RejectReason.UnknownFleet);
+        if (fleet.Side != o.Side) return OrderResult.Reject(RejectReason.NotYours);
+        if (CheckSquadronList(o.Side, o.Squadrons, out var squads) is { } bad) return OrderResult.Reject(bad);
+        if (Moving(fleet)) return OrderResult.Reject(RejectReason.InTransit);
+        if (squads.Any(s => !fleet.Ships.Contains(s.AboardShip))) return OrderResult.Reject(RejectReason.NotAboard);
+        string system = fleet.At!;
+        if (OwnerOf(system) != o.Side) return OrderResult.Reject(RejectReason.NotYourSystem); // DEFAULT: unload only where the side holds the system
+
+        int day = ctx.Day;
+        var carriers = squads.Select(s => s.AboardShip).ToList();
+        foreach (var s in squads) { s.AboardShip = 0; s.System = system; }
+        var ids = new ValueList<int>(squads.Select(s => s.Id).ToList());
+        var from = new ValueList<int>(carriers);
+        ctx.Emit((i, _) => new SquadronsUnloaded(i, day, ids, fleet.Id, from, system));
+        return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
+    }
+
+    // rule: m3-ships-and-fighters §Damaged state (DebugSetDamage; S13 BadValue for a hull above the class maximum)
+    private OrderResult HandleDebugSetDamage(StepContext ctx, DebugSetDamageOrder o)
+    {
+        if (!DebugOrdersEnabled) return OrderResult.Reject(RejectReason.DebugDisabled);
+        if (!E.Objects.TryGetValue(o.Ship, out var ship) || ship.Category != ObjectCategory.CapitalShip) return OrderResult.Reject(RejectReason.UnknownShip);
+        if (ship.Side != o.Side) return OrderResult.Reject(RejectReason.NotYours);
+        var cls = ClassOf(ship);
+        if (cls == null || o.Hull < 0 || o.Hull > cls.Hull || o.Hits.Count != ObjectRegistry.HitCounters
+            || o.Hits.Any(h => h < 0 || h > ObjectRegistry.MaxHit)) return OrderResult.Reject(RejectReason.BadValue);
+        ship.Hull = o.Hull;
+        ship.Hits = new List<int>(o.Hits);
+        return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
+    }
+
     // ------------------------------------------------------------------ step 1: MoveFleet
+
+    private static string RejectStatus(PathStatus s) => s switch
+    {
+        PathStatus.Immobile => RejectReason.Immobile,
+        PathStatus.AlreadyThere => RejectReason.AlreadyThere,
+        PathStatus.UnknownSystem => RejectReason.UnknownSystem,
+        _ => RejectReason.Unreachable,
+    };
 
     // rule: m1-clock-and-orders §Orders in (MoveFleet and its rejections); m1-travel §Path rule, §Orders in transit
     private OrderResult HandleMoveFleet(StepContext ctx, MoveFleetOrder o)
@@ -111,16 +520,7 @@ public sealed class FleetModule
         if (fleet.Transit != null || fleet.At == null) return OrderResult.Reject(RejectReason.InTransit);
 
         var path = _pathfinder.Find(fleet.At, o.Destination, SpeedOf(fleet));
-        if (!path.Ok)
-        {
-            return OrderResult.Reject(path.Status switch
-            {
-                PathStatus.Immobile => RejectReason.Immobile,
-                PathStatus.AlreadyThere => RejectReason.AlreadyThere,
-                PathStatus.UnknownSystem => RejectReason.UnknownSystem,
-                _ => RejectReason.Unreachable,
-            });
-        }
+        if (!path.Ok) return OrderResult.Reject(RejectStatus(path.Status));
 
         var names = path.Names(Galaxy).ToList();
         fleet.Transit = new FleetTransit
@@ -128,10 +528,79 @@ public sealed class FleetModule
             Path = names, HopTicks = path.HopTicks.ToList(), HopIndex = 0,
             DueDay = ctx.Day + path.HopTicks[0], // first hop is due on day K + hop ticks
         };
+        fleet.Spare = false; // rule: m3-fleets §New ships: the spare fleet (cleared when a MoveFleet is accepted)
         int arrival = ctx.Day + path.TotalTicks;
         int total = path.TotalTicks;
         int id = fleet.Id;
         return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence, id, new ValueList<string>(names), total, arrival));
+    }
+
+    // ------------------------------------------------------------------ new ships and removed ships
+
+    /// <summary>
+    /// A unit came to exist for use (completed at its yard's system in slot 6.6.a, or delivered in step 3). A capital ship joins the spare
+    /// fleet of its side at its system, which is created now if there is none; squadrons stay based and regiments stay on the system, in no
+    /// fleet. GameHost wires <c>ConstructionModule.UnitAppeared</c> to this. rule: m3-fleets §New ships: the spare fleet (F1, F2, F22).
+    /// </summary>
+    public void OnUnitAppeared(StepContext ctx, EconObject obj, ShipJoinCause cause)
+    {
+        if (obj.Category != ObjectCategory.CapitalShip || !obj.Completed || obj.Side is not Side side || obj.System is not string sys) return;
+        int day = ctx.Day + 1; // hook time T = K + 1
+        var fleet = State.Fleets.Values.FirstOrDefault(f => f.Spare && f.Side == side && f.At == sys && f.Transit == null);
+        if (fleet == null)
+        {
+            fleet = NewFleet(side, sys, new[] { obj.Id }, spare: true);
+            int fid = fleet.Id;
+            var members = new ValueList<int>(new List<int> { obj.Id });
+            ctx.Emit((i, _) => new FleetCreated(i, day, fid, sys, members, FleetCreateCause.Spare));
+        }
+        else AddSorted(fleet.Ships, obj.Id);
+        obj.System = null; // a fleet member has no place of its own
+        int shipId = obj.Id, flt = fleet.Id; string cls = obj.Class;
+        ctx.Emit((i, _) => new ShipJoinedFleet(i, day, shipId, cls, sys, flt, cause));
+    }
+
+    /// <summary>
+    /// An object left the registry (scrapped, autoscrapped, cancelled; the economy calls this after removing it). A ship leaves its fleet and a
+    /// fleet left empty is removed (<see cref="DissolveCause.Empty"/>); regiments and squadrons aboard land on the fleet's system (a fleet on a
+    /// lane: the system it last left), squadrons becoming based there, in the same removal; a squadron of a squadron-only fleet leaves that
+    /// fleet. <paramref name="ctx"/> null = silent (setup, cancelled work). rule: m3-fleets §What a fleet is invariant 1; §Carrying rules
+    /// (DEFAULT: scrapping a loaded ship puts its units on the system, held or not). The lane case is a DEFAULT the sheet lacks.
+    /// </summary>
+    internal void ObjectRemoved(StepContext? ctx, int day, EconObject o)
+    {
+        if (o.Category == ObjectCategory.CapitalShip)
+        {
+            var fleet = FleetOfShip(o.Id);
+            string? place = fleet?.At ?? fleet?.Transit?.Path[fleet.Transit.HopIndex] ?? o.System;
+            var landed = new List<EconObject>();
+            foreach (var u in E.Objects.Values.Where(u => u.AboardShip == o.Id).ToList())
+            {
+                u.AboardShip = 0; u.System = place; landed.Add(u);
+            }
+            var squads = landed.Where(u => u.Category == ObjectCategory.Fighter).ToList();
+            if (ctx != null && squads.Count > 0 && place != null)
+            {
+                int fid = fleet?.Id ?? 0, ship = o.Id;
+                var ids = new ValueList<int>(squads.Select(u => u.Id).ToList());
+                var carriers = new ValueList<int>(squads.Select(_ => ship).ToList());
+                ctx.Emit((i, _) => new SquadronsBased(i, day, ids, fid, carriers, place));
+            }
+            if (fleet != null)
+            {
+                fleet.Ships.Remove(o.Id);
+                if (fleet.Ships.Count == 0 && fleet.Squadrons.Count == 0) RemoveFleet(ctx, day, fleet, DissolveCause.Empty);
+            }
+        }
+        else if (o.Category == ObjectCategory.Fighter && o.AboardShip == 0 && o.System == null)
+        {
+            var fleet = State.Fleets.Values.FirstOrDefault(f => f.Squadrons.Contains(o.Id));
+            if (fleet != null)
+            {
+                fleet.Squadrons.Remove(o.Id);
+                if (fleet.Ships.Count == 0 && fleet.Squadrons.Count == 0) RemoveFleet(ctx, day, fleet, DissolveCause.Empty);
+            }
+        }
     }
 
     // ------------------------------------------------------------------ step 2: departures
@@ -214,7 +683,10 @@ public sealed class FleetModule
     /// not be armed; ownership of the system is ignored; the passing fleet's own gravity-well ship does not exempt it
     /// (DEFAULT, Paul has not decided). rule: m1-forced-stop-and-blockade §Update 2026-10-12, §Rule (both rulesets) 3 and 6.
     /// </summary>
-    internal List<Fleet> Blockers(Fleet passing, List<Fleet> enemies)
+    internal List<Fleet> Blockers(Fleet passing, List<Fleet> enemies) => Blockers(Classes(passing).ToList(), enemies);
+
+    /// <summary>The same for a passing force given by its classes (a delivery counts as a fleet with only its own unit). rule: m2-construction (same armed test and ForcedStopTrigger as fleets).</summary>
+    internal List<Fleet> Blockers(IReadOnlyList<ShipClass> passing, List<Fleet> enemies)
     {
         var armed = enemies.Where(e => CombatStrength.IsArmed(Classes(e))).ToList();
         if (armed.Count == 0) return armed;
@@ -228,8 +700,8 @@ public sealed class FleetModule
             default: // PaulRule
                 if (gravityFleets.Count > 0) return armed;
                 // M4 re-check: strength is the placeholder (sum of refined_material_cost of armed ships). T is a percent from data.
-                long enemy = CombatStrength.Of(Classes(armed), Classes(passing));
-                long mine = CombatStrength.Of(Classes(passing));
+                long enemy = CombatStrength.Of(Classes(armed), passing);
+                long mine = CombatStrength.Of(passing);
                 return enemy * 100 >= (long)Blockade.ThresholdPercent * mine ? armed : new List<Fleet>();
         }
     }
@@ -238,9 +710,13 @@ public sealed class FleetModule
 
     // rule: m1-clock-and-orders §Order of work, step 5 (sort: system name ordinal). One Contact per system per day while
     // both sides are present (DEFAULT, all fleets of a side are one force); then the Classic blockade flags are recomputed.
+    // First, rule: m3-fleets §Where it runs: a squadron-only fleet that is at a system after step 4 (arrived or stopped) dissolves
+    // into based squadrons, in fleet id order, before the contacts.
     private void ContactsAndBlockades(StepContext ctx)
     {
         int day = ctx.Day + 1;
+        DissolveLandedSquadronFleets(ctx, day);
+
         var present = PresentBySystem();
         foreach (var (sys, here) in present)
         {
@@ -255,6 +731,22 @@ public sealed class FleetModule
         var systems = new SortedSet<string>(present.Keys, StringComparer.Ordinal);
         foreach (var k in State.Blockades.Keys) systems.Add(k);
         foreach (var sys in systems) RefreshBlockadeFlag(ctx, sys, day);
+    }
+
+    // rule: m3-fleets §Unescorted squadrons (squadron-only fleets dissolve after step 4: FleetDissolved cause SquadronsArrived, SquadronsBased)
+    private void DissolveLandedSquadronFleets(StepContext ctx, int day)
+    {
+        foreach (var f in State.Fleets.Values.Where(f => f.Ships.Count == 0 && f.Squadrons.Count > 0 && f.At != null && f.Transit == null).ToList())
+        {
+            string sys = f.At!;
+            foreach (var id in f.Squadrons) E.Objects[id].System = sys;
+            var ids = new ValueList<int>(f.Squadrons.ToList());
+            var none = new ValueList<int>(f.Squadrons.Select(_ => 0).ToList());
+            int fid = f.Id;
+            State.Fleets.Remove(fid);
+            ctx.Emit((i, _) => new FleetDissolved(i, day, fid, DissolveCause.SquadronsArrived));
+            ctx.Emit((i, _) => new SquadronsBased(i, day, ids, fid, none, sys));
+        }
     }
 
     /// <summary>
@@ -280,9 +772,10 @@ public sealed class FleetModule
     }
 
     /// <summary>
-    /// The Classic (1998) blockade flag: true when no battle bit is set (not both sides present), the system is owned by a
-    /// side (neutral systems are never blockaded) and a fleet of the other side is there, armed or not (the original has no
-    /// armed test). rule: m1-forced-stop-and-blockade §Rule (Classic) conditions 1 to 3; Traced ai/data/trace-d 1.1.
+    /// The Classic (1998) blockade flag: true when no battle bit is set (not both sides present, a fleet or a based fighter squadron
+    /// counting as presence), the system is owned by a side (neutral systems are never blockaded) and a fleet of the other side is
+    /// there, armed or not (the original has no armed test). rule: m1-forced-stop-and-blockade §Rule (Classic) conditions 1 to 3;
+    /// m3-fleets §Fighters based at a system (based squadrons count as presence); Traced ai/data/trace-d 1.1.
     /// </summary>
     public bool IsBlockadedClassic(string system) => ClassicBlockader(system) != null;
 
@@ -291,9 +784,9 @@ public sealed class FleetModule
         if (!State.SystemOwners.TryGetValue(system, out var owner)) return null; // neutral
         var here = FleetsAt(system);
         var other = Other(owner);
-        bool hasOwner = here.Any(f => f.Side == owner), hasOther = here.Any(f => f.Side == other);
-        if (hasOwner && hasOther) return null; // battle bit on
-        return hasOther ? other : null;
+        if (!here.Any(f => f.Side == other)) return null; // condition 3: a fleet of the other side
+        bool ownerPresent = here.Any(f => f.Side == owner) || BasedSquadrons(system, owner).Any();
+        return ownerPresent ? null : other; // both sides present: battle bit on
     }
 
     /// <summary>
