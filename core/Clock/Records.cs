@@ -12,6 +12,7 @@ public enum Side { Empire = 0, Alliance = 1 }
 [JsonDerivedType(typeof(SetMarkerOrder), "SetMarker")]
 [JsonDerivedType(typeof(MoveFleetOrder), "MoveFleet")]
 [JsonDerivedType(typeof(ScrapObjectOrder), "ScrapObject")]
+[JsonDerivedType(typeof(DebugSetHolderOrder), "DebugSetHolder")]
 public abstract record Order(long Sequence, Side Side);
 
 /// <summary>
@@ -33,6 +34,13 @@ public sealed record MoveFleetOrder(long Sequence, Side Side, int FleetId, strin
 /// </summary>
 public sealed record ScrapObjectOrder(long Sequence, Side Side, int ObjectId) : Order(Sequence, Side);
 
+/// <summary>
+/// Debug order: make a side the holder of a system now (a capture with cause Debug). For tests and tools only; the control module
+/// rejects it unless debug orders are enabled. rule: m2-control-and-capture §How control changes (DebugSetHolder).
+/// The handler lives in Rebellion.Core.Control.ControlModule.
+/// </summary>
+public sealed record DebugSetHolderOrder(long Sequence, Side Side, string System, Side NewHolder) : Order(Sequence, Side);
+
 public static class RejectReason
 {
     public const string NegativeValue = "NegativeValue";
@@ -49,6 +57,9 @@ public static class RejectReason
     // rule: m2-construction §Scrapping (ScrapObject rejections; the sheet names no codes: DEFAULT names)
     public const string UnknownObject = "UnknownObject";
     public const string NotCompleted = "NotCompleted";
+    // rule: m2-control-and-capture §How control changes (DebugSetHolder; the sheet names no codes: DEFAULT names)
+    public const string DebugDisabled = "DebugDisabled";
+    public const string AlreadyHolder = "AlreadyHolder";
     /// <summary>No handler is registered for this order type (e.g. a save with fleet orders loaded before the fleet module was attached).</summary>
     public const string UnknownOrderType = "UnknownOrderType";
 }
