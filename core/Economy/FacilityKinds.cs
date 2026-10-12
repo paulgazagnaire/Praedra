@@ -64,6 +64,9 @@ public sealed class CostData
 
     public bool TryGet(string className, out CostRow row) => _rows.TryGetValue(className, out row!);
 
+    /// <summary>Every row, by class name (ordinal). Read-only query for the build menu of a UI.</summary>
+    public IEnumerable<CostRow> Rows => _rows.Values;
+
     public static CostData Load(string path) => Parse(File.ReadAllText(path), Path.GetFileName(path));
 
     public static CostData Parse(string text, string source)

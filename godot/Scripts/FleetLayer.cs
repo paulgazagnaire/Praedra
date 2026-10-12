@@ -16,8 +16,10 @@ namespace RebellionViewer;
 /// </summary>
 public partial class FleetLayer : Control
 {
-    public static readonly Color EmpireColor = new(0.62f, 0.95f, 0.55f);
-    public static readonly Color AllianceColor = new(1.0f, 0.5f, 0.18f);
+    public static readonly Color EmpireColor = new(0.45f, 0.95f, 0.45f);
+    public static readonly Color AllianceColor = new(1.0f, 0.62f, 0.25f);
+    /// <summary>The player's side: its fleets get a white outline.</summary>
+    public Side? Player { get; set; }
     const float PickRadiusPx = 13f;
     const float LabelZoom = 2.0f;
 
@@ -119,7 +121,8 @@ public partial class FleetLayer : Control
             var perp = new Vector2(-h.Y, h.X);
             var tri = new[] { p + h * r, p - h * r * 0.7f + perp * r * 0.7f, p - h * r * 0.7f - perp * r * 0.7f };
             DrawColoredPolygon(tri, col);
-            DrawPolyline(new[] { tri[0], tri[1], tri[2], tri[0] }, selected ? Colors.White : new Color(0, 0, 0, 0.85f), selected ? 2f : 1.2f, true);
+            bool own = f.Side == Player;
+            DrawPolyline(new[] { tri[0], tri[1], tri[2], tri[0] }, selected ? Colors.White : own ? new Color(1, 1, 1, 0.9f) : new Color(0, 0, 0, 0.85f), selected ? 2.5f : own ? 1.6f : 1.2f, true);
 
             if (map.Zoom >= LabelZoom || selected)
             {
