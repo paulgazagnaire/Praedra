@@ -85,7 +85,6 @@ public sealed class CostData
             };
             int cost = t.GetInt(r, "cost"), maint = t.GetInt(r, "maint");
             if (cost < 0 || maint < 0) throw new DataLoadException($"{t.Where(r)}: '{name}' has a negative cost or maintenance.");
-            // alliance / empire = the side flags of the file (who may build the class). rule: m2-construction §Build order (NotAvailable)
             if (!rows.TryAdd(name, new CostRow(cat, name, cost, maint, t.GetInt(r, "rorder"), t.GetInt(r, "alliance") != 0, t.GetInt(r, "empire") != 0)))
                 throw new DataLoadException($"{t.Where(r)}: class name '{name}' appears twice.");
         }

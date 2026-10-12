@@ -88,3 +88,14 @@ Day 100: Rebel picket leaves Corellia
 Day 101: delivery 1 goes on from Corellia
 Day 123: delivery 1: Stormtrooper Regiment (object 11) arrives at Hoth
 ```
+## `support`: popular support, garrisons and uprisings
+
+```
+dotnet run --project sim -- support [--days 360] [--seed 1] [--ruleset classic|new] [--reinforce-day 120]
+```
+
+Runs the economy demo with the support module on (economy incidents off) and prints every support change, uprising start and end,
+uprising incident and destroyed regiment or facility, plus a table of five systems every 30 days. Mon Calamari starts with support 25
+and no regiments, so an uprising starts on day 1 and erodes support 1 point per 30 days; on `--reinforce-day` eight Alliance Army
+Regiments land and the uprising ends the next day. Bespin is blockaded by an Empire fleet (support drifts one point per 30 days).
+Draws no random numbers itself.

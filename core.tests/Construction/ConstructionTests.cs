@@ -235,6 +235,27 @@ public class ConstructionTests
         Assert.Equal(99, w.Eco.Refined(Emp));
     }
 
+    // m2-construction C11 with the real support module: an uprising suspends new cycles, the end of it resumes them
+    [Fact]
+    public void C11_RealUprisingSuspendsYardsAndResumesWhenItEnds()
+    {
+        var w = new BuildWorld(withSupport: true);
+        w.Hold(Home, Emp, 10); // Empire support 10 and no garrison: an uprising starts
+        w.Yard(Home, FacilityKind.ConstructionYard);
+        w.Refined(Emp, 100);
+        Assert.Null(w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, Home));
+        w.Run(5);
+        Assert.True(w.Support!.IsUprising(Home));
+        Assert.Equal(100, w.Eco.Refined(Emp)); // no cycle started
+        Assert.Equal(0, w.Build.ProjectAt(Home, YardFamily.Construction)!.Progress);
+        for (int i = 0; i < 40; i++) w.Eco.AddObject(Emp, "Stormtrooper Regiment", Home); // garrison arrives
+        w.Run(3);
+        Assert.False(w.Support.IsUprising(Home));
+        Assert.Contains(w.Events<Rebellion.Core.Support.UprisingEnded>(), _ => true);
+        w.Run(2);
+        Assert.True(w.Eco.Refined(Emp) < 100); // cycles resume
+    }
+
     // ---------------------------------------------------------------- delivery (C12 to C14)
 
     // m2-construction C12

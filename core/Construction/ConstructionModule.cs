@@ -57,9 +57,10 @@ public sealed class ConstructionModule
     }
 
     /// <summary>Register the BuildOrder and StopBuild handlers, the delivery hooks of steps 3 and 4, and slot 6.6.</summary>
-    public static ConstructionModule Attach(Game game, FleetModule fleets, EconomyModule eco, ConstructionParams? p = null)
+    public static ConstructionModule Attach(Game game, FleetModule fleets, EconomyModule eco, ConstructionParams? p = null, Support.SupportModule? support = null)
     {
         var m = new ConstructionModule(game, fleets, eco, p ?? new ConstructionParams());
+        if (support != null) m.IsInUprising = support.IsUprising; // yards stop in an uprising (m2-uprisings-and-garrison)
         game.RegisterOrderHandler<BuildOrder>(m.HandleBuild);
         game.RegisterOrderHandler<StopBuildOrder>(m.HandleStop);
         game.RegisterHook("3", m.DeliveryArrivals);

@@ -2,8 +2,10 @@ using Rebellion.Core.Clock;
 using Rebellion.Core.Construction;
 using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
+using Rebellion.Core.Support;
 using Rebellion.Core.Tests.Economy;
 using Rebellion.Core.Tests.Fleets;
+using Rebellion.Core.Tests.Support;
 
 namespace Rebellion.Core.Tests.Construction;
 
@@ -35,11 +37,15 @@ internal sealed class BuildWorld
     public EconomyModule Eco { get; private set; } = null!;
     public ConstructionModule Build { get; private set; } = null!;
 
-    public BuildWorld(CostData? costs = null) : this(new StubRng(), costs) { }
+    public SupportModule? Support { get; private set; }
+    private readonly bool _withSupport;
+
+    public BuildWorld(CostData? costs = null, bool withSupport = false) : this(new StubRng(), costs, withSupport) { }
     public BuildWorld(ulong seed, CostData? costs = null) : this(new GameRng(seed), costs) { }
 
-    private BuildWorld(GameRng rng, CostData? costs)
+    private BuildWorld(GameRng rng, CostData? costs, bool withSupport = false)
     {
+        _withSupport = withSupport;
         Stub = rng as StubRng;
         Game = new Game(rng);
         Attach(costs);
@@ -51,7 +57,8 @@ internal sealed class BuildWorld
         Eco = EconomyModule.Attach(Game, TestData.RealGalaxy, EcoWorld.Slots.Value, costs ?? RealCosts.Value, Fleets,
             new EconomyParams { ScrapPeriod = 1_000_000 });
         Eco.IncidentsEnabled = false;
-        Build = ConstructionModule.Attach(Game, Fleets, Eco);
+        Support = _withSupport ? SupportModule.Attach(Game, TestData.RealGalaxy, Eco, Fleets, SupWorld.Weights.Value) : null;
+        Build = ConstructionModule.Attach(Game, Fleets, Eco, support: Support);
     }
 
     /// <summary>Save, load and attach the modules again to the loaded game (the save holds state only).</summary>

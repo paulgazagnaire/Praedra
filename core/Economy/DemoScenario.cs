@@ -2,6 +2,7 @@ using Rebellion.Core.Clock;
 using Rebellion.Core.Fleets;
 using Rebellion.Core.Map;
 using Rebellion.Core.Ships;
+using Rebellion.Core.Support;
 
 namespace Rebellion.Core.Economy;
 
@@ -17,6 +18,8 @@ public sealed class DemoScenario
     public required FleetModule Fleets { get; init; }
     public required EconomyModule Economy { get; init; }
     public required Galaxy Galaxy { get; init; }
+    /// <summary>Present when the scenario was made with support on (popular support, garrisons, uprisings).</summary>
+    public SupportModule? Support { get; init; }
 
     // (system, Alliance support, mines, refineries); mines never exceed the system's raw slots.
     private static readonly (string System, int AllianceSupport, int Mines, int Refineries)[] EmpireSystems =
@@ -28,18 +31,19 @@ public sealed class DemoScenario
         ("Sullust", 80, 4, 3), ("Mon Calamari", 25, 3, 2), ("Yavin", 100, 2, 2), ("Bespin", 30, 3, 2),
     };
 
-    public static DemoScenario Create(string repoRoot, ulong seed, bool incidents = true)
+    public static DemoScenario Create(string repoRoot, ulong seed, bool incidents = true, bool support = false)
     {
         var galaxy = GalaxyLoader.LoadFolder(Path.Combine(repoRoot, "data", "design"));
         var ships = ShipData.LoadAll(Path.Combine(repoRoot, "data", "interim"));
         var blockade = BlockadeData.Load(Path.Combine(repoRoot, "data", "design", BlockadeData.FileName));
         var slots = SlotValues.Load(Path.Combine(repoRoot, "data", "design", SlotValues.File), galaxy);
         var costs = CostData.Load(Path.Combine(repoRoot, "data", "interim", CostData.FileName));
-        return Create(new Game(seed), galaxy, ships, blockade, slots, costs, incidents);
+        var weights = GarrisonWeights.Load(Path.Combine(repoRoot, "data", "design", GarrisonWeights.FileName));
+        return Create(new Game(seed), galaxy, ships, blockade, slots, costs, incidents, support, weights);
     }
 
     public static DemoScenario Create(Game game, Galaxy galaxy, IReadOnlyDictionary<string, ShipClass> ships, BlockadeData blockade,
-        SlotValues slots, CostData costs, bool incidents = true)
+        SlotValues slots, CostData costs, bool incidents = true, bool support = false, GarrisonWeights? weights = null)
     {
         var fleets = FleetModule.Attach(game, galaxy, ships, blockade);
         var eco = EconomyModule.Attach(game, galaxy, slots, costs, fleets);
@@ -76,7 +80,19 @@ public sealed class DemoScenario
         fleets.SubmitMove(Side.Empire, interdictor, "Bespin");
         fleets.SubmitMove(Side.Alliance, transport, "Yavin");
 
+        // Support on: garrisons and the support module. Mon Calamari (support 25, no regiments) is the system that rises; Corellia,
+        // Fondor and Bespin are garrisoned. Bespin is blockaded by the Interdictor (the Empire has 70 there, a majority, so
+        // Alliance support there drops 1 per 30 days; see m2-popular-support, presence timer). rule: m2-uprisings-and-garrison, m2-popular-support.
+        SupportModule? sup = null;
+        if (support)
+        {
+            sup = SupportModule.Attach(game, galaxy, eco, fleets, weights);
+            for (int i = 0; i < 3; i++) eco.AddObject(Side.Empire, "Imperial Army Regiment", "Corellia");
+            for (int i = 0; i < 4; i++) eco.AddObject(Side.Empire, "Imperial Army Regiment", "Fondor");
+            for (int i = 0; i < 4; i++) eco.AddObject(Side.Alliance, "Alliance Army Regiment", "Bespin");
+        }
+
         eco.SetupNewGame();
-        return new DemoScenario { Game = game, Fleets = fleets, Economy = eco, Galaxy = galaxy };
+        return new DemoScenario { Game = game, Fleets = fleets, Economy = eco, Galaxy = galaxy, Support = sup };
     }
 }

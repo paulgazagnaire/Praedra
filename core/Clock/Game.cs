@@ -1,6 +1,7 @@
 using Rebellion.Core.Construction;
 using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
+using Rebellion.Core.Support;
 
 namespace Rebellion.Core.Clock;
 
@@ -35,6 +36,8 @@ public sealed class GameState
 
     /// <summary>Construction state: projects, deliveries, refined line, research grants. rule: m2-construction.</summary>
     public ConstructionState Construction { get; init; } = new();
+    /// <summary>Uprising flags, support timers and the Death Star sector flag. rule: m2-popular-support, m2-uprisings-and-garrison.</summary>
+    public SupportState Support { get; init; } = new();
 
     /// <summary>Copy another state's content into this one (used by Load, which needs ordinal-comparer dictionaries).</summary>
     internal void CopyFrom(GameState other)
@@ -46,6 +49,7 @@ public sealed class GameState
         foreach (var kv in other.Blockades) Blockades[kv.Key] = kv.Value;
         Economy.CopyFrom(other.Economy);
         Construction.CopyFrom(other.Construction);
+        Support.CopyFrom(other.Support);
     }
 }
 
