@@ -1,3 +1,4 @@
+using Rebellion.Core.Construction;
 using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
 using Rebellion.Core.Support;
@@ -33,6 +34,8 @@ public sealed class GameState
     /// </summary>
     public EconomyState Economy { get; init; } = new();
 
+    /// <summary>Construction state: projects, deliveries, refined line, research grants. rule: m2-construction.</summary>
+    public ConstructionState Construction { get; init; } = new();
     /// <summary>Uprising flags, support timers and the Death Star sector flag. rule: m2-popular-support, m2-uprisings-and-garrison.</summary>
     public SupportState Support { get; init; } = new();
 
@@ -45,6 +48,7 @@ public sealed class GameState
         foreach (var kv in other.SystemOwners) SystemOwners[kv.Key] = kv.Value;
         foreach (var kv in other.Blockades) Blockades[kv.Key] = kv.Value;
         Economy.CopyFrom(other.Economy);
+        Construction.CopyFrom(other.Construction);
         Support.CopyFrom(other.Support);
     }
 }
