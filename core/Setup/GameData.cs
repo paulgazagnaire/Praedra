@@ -24,7 +24,8 @@ public sealed record GameData(
     GarrisonWeights Weights,
     IReadOnlyList<StartingFacility> StartingFacilities,
     TroopData Troops,
-    DefenseData Defenses)
+    DefenseData Defenses,
+    Repair.RepairRules Repair)
 {
     private static readonly Lazy<GameData> _default = new(() => Load(FindRepoRoot()));
 
@@ -45,7 +46,8 @@ public sealed record GameData(
             GarrisonWeights.Load(Path.Combine(design, GarrisonWeights.FileName)),
             Construction.StartingFacilities.Load(Path.Combine(design, Construction.StartingFacilities.FileName)),
             TroopData.Load(interim, design),
-            DefenseData.Load(interim));
+            DefenseData.Load(interim),
+            Rebellion.Core.Repair.RepairRules.Load(Path.Combine(design, Rebellion.Core.Repair.RepairRules.FileName)));
     }
 
     /// <summary>The folder that holds Rebellion.sln, searching upwards from the program's folder and then the working folder.</summary>
