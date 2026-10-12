@@ -1,3 +1,4 @@
+using Rebellion.Core.Assault;
 using Rebellion.Core.Clock;
 using Rebellion.Core.Construction;
 using Rebellion.Core.Control;
@@ -23,6 +24,7 @@ namespace Rebellion.Core.Setup;
 ///   5. TroopModule     (step 1 load and unload orders; reads fleets; the construction event also announces regiments and special forces)
 ///   6. ControlModule    (capture; calls support and construction)
 ///   7. DefenseModule, BombardmentModule (defense queries; the Bombard order and slot 5.1; reads fleets, economy and support, calls support's ChangeSupport)
+///   8. AssaultModule (the Assault order and slot 5.2; reads troops, defenses and bombardment, calls control's SetHolder; attached last)
 /// Cross-wiring done inside the Attach calls: support into economy (Death Star flag) and construction (uprising stops yards),
 /// construction into economy (refined line, removed objects) and control (cancel projects on capture).
 ///
@@ -44,6 +46,8 @@ public sealed class GameHost
     /// <summary>The defense queries the assault and bombardment call. rule: m3-planetary-defenses §Queries.</summary>
     public DefenseModule Defenses { get; }
     public BombardmentModule Bombardment { get; }
+    /// <summary>The Assault order and slot 5.2. rule: m3-assault.</summary>
+    public AssaultModule Assault { get; }
 
     private GameHost(Game game, GameData data, GameSettings settings)
     {
@@ -85,6 +89,7 @@ public sealed class GameHost
 
         Defenses = DefenseModule.Attach(Economy, Fleets, data.Defenses, settings.Defense);
         Bombardment = BombardmentModule.Attach(game, Economy, Fleets, Support, Defenses, settings.Bombard);
+        Assault = AssaultModule.Attach(game, Economy, Fleets, Troops, Control, Defenses, Bombardment, settings.Assault);
     }
 
     /// <summary>A new, empty game (day 0, no owners, no objects) with every module attached. <paramref name="data"/> null = the repository's data.</summary>

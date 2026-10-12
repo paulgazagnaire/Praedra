@@ -1,3 +1,4 @@
+using Rebellion.Core.Assault;
 using Rebellion.Core.Construction;
 using Rebellion.Core.Defenses;
 using Rebellion.Core.Economy;
@@ -62,4 +63,8 @@ public sealed record GameSettings
     public DefenseParams? Defense { get; init; }
     /// <summary>Number table of the bombardment (admiral step, die, Energy and Raw defense, the -20). Null = the module's defaults.</summary>
     public BombardParams? Bombard { get; init; }
+
+    // ---- assault. rule: m3-assault §Defaults for undecided items
+    /// <summary>Number table and switches of the assault (die, leadership step, thresholds, collateral mode, landing cap, passes, enemy fleet blocks). Null = the module's defaults.</summary>
+    public AssaultParams? Assault { get; init; }
 }
