@@ -65,7 +65,7 @@ public sealed record SimpleAiParams
     public int LossMemoryDays { get; init; } = 150;
     public int LossOddsFactor { get; init; } = 3;
     /// <summary>How much of a squadron's strength counts when buying ships (percent). Fights are weighed on capital ships only. DEFAULT: the measure overrates squadrons.</summary>
-    public int FighterTrustPercent { get; init; } = 10;
+    public int FighterTrustPercent { get; init; } = 0;
     /// <summary>The AI keeps squadrons at no more than this percent of its fighter berths (their upkeep is real, their worth uncertain). DEFAULT.</summary>
     public int FighterFillPercent { get; init; } = 60;
     /// <summary>A pile (with the fleets already there) goes to relieve a held system when its power is at least this percent of the enemy fleets on or heading to it. DEFAULT.</summary>
