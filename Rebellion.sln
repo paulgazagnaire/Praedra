@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rebellion.Core", "core\Rebellion.Core.csproj", "{B4652CB0-57F1-45FD-83A4-C290CC071CC4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rebellion.Sim", "sim\Rebellion.Sim.csproj", "{83F2CCCA-EE7C-4BD5-BD4E-3DC015698737}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rebellion.Core.Tests", "core.tests\Rebellion.Core.Tests.csproj", "{E8E0C8D9-C5CB-4FBE-BC59-18F85820C400}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B4652CB0-57F1-45FD-83A4-C290CC071CC4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B4652CB0-57F1-45FD-83A4-C290CC071CC4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B4652CB0-57F1-45FD-83A4-C290CC071CC4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B4652CB0-57F1-45FD-83A4-C290CC071CC4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{83F2CCCA-EE7C-4BD5-BD4E-3DC015698737}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{83F2CCCA-EE7C-4BD5-BD4E-3DC015698737}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{83F2CCCA-EE7C-4BD5-BD4E-3DC015698737}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{83F2CCCA-EE7C-4BD5-BD4E-3DC015698737}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E8E0C8D9-C5CB-4FBE-BC59-18F85820C400}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E8E0C8D9-C5CB-4FBE-BC59-18F85820C400}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E8E0C8D9-C5CB-4FBE-BC59-18F85820C400}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E8E0C8D9-C5CB-4FBE-BC59-18F85820C400}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

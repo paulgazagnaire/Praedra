@@ -1,0 +1,363 @@
+name,sector,group,canon_region,canon_x,canon_y,map_x,map_y,origin,tier,affiliation,chokepoint,lane_count
+Abregado,Fondor Sector,inner_rim,Core,8.96,13.14,270,537,roster,,,0,5
+Cathar,Dathomir Sector,outer_rim,Outer Rim,11.76,6.64,427,220,roster,,,0,1
+Da Soocha,Toydaria Sector,outer_rim,Mid Rim,16.26,11.04,631,460,roster,,,0,1
+Galpos II,Tatooine Sector,outer_rim,Mid Rim,16.04,15.72,628,649,roster,,,0,2
+Garban,Garban Sector,outer_rim,Outer Rim,16.86,15.66,701,645,roster,,,1,2
+Hefi,Garban Sector,outer_rim,Outer Rim,16.86,15.12,700,628,roster,,,0,2
+Hishyim,Garban Sector,outer_rim,Outer Rim,16.75,15.48,696,637,roster,,,1,3
+Intuci,Garban Sector,outer_rim,Outer Rim,16.32,15.67,684,644,roster,,,1,3
+Tieos,Tatooine Sector,outer_rim,Outer Rim,16.3,15.62,638,646,roster,,,0,2
+Ukio,Tatooine Sector,outer_rim,Outer Rim,16.29,15.3,639,636,roster,,,0,3
+Despayre,Ithor Sector,outer_rim,Outer Rim,9.69,5.31,359,176,roster,,,0,1
+Fedje,Ithor Sector,outer_rim,Outer Rim,9.68,5.31,348,178,roster,,,1,3
+Generis,Ithor Sector,outer_rim,Outer Rim,9.83,5.49,355,185,roster,,,1,3
+Moltok,Bastion Sector,outer_rim,Outer Rim,9.07,5.43,280,171,roster,,,0,2
+Nam'ta,Ithor Sector,outer_rim,Outer Rim,9.4,5.32,338,179,roster,,,0,1
+Spefik,Ithor Sector,outer_rim,Outer Rim,9.82,5.68,351,194,roster,,,1,3
+Tibrin,Dagobah Sector,outer_rim,Mid Rim,9.8,18.99,355,826,roster,,,1,2
+Togoria,Hapes Sector,inner_rim,Mid Rim,13.57,9.1,551,336,roster,,,0,4
+Trammis,Tund Sector,outer_rim,Outer Rim,18.75,8.42,754,308,roster,,,1,2
+Zeffliffl,Ithor Sector,outer_rim,Outer Rim,9.41,5.5,344,188,roster,,,0,2
+Akrit'tar,Tund Sector,outer_rim,Outer Rim,17.81,9.34,720,344,roster,,,0,3
+F'tral,Tund Sector,outer_rim,Outer Rim,17.15,9.39,695,346,roster,,,0,2
+Fwillsving,Kessel Sector,outer_rim,Outer Rim,17.94,10.42,720,445,roster,,,0,2
+Ithor,Ithor Sector,outer_rim,Mid Rim,10.1,6.77,362,221,roster,,,0,3
+Jerijador,Tund Sector,outer_rim,Outer Rim,17.57,9.5,711,350,roster,,,0,3
+Kessel,Kessel Sector,outer_rim,Outer Rim,17.37,10.22,697,433,roster,,,1,4
+Kubindi,Kessel Sector,outer_rim,Outer Rim,17.66,9.71,712,418,roster,,,0,4
+Morvogodine,Kessel Sector,outer_rim,Outer Rim,17.99,9.98,723,426,roster,,,0,2
+Norval II,Kessel Sector,outer_rim,Outer Rim,17.61,9.61,707,409,roster,,,0,2
+Skor II,Dagobah Sector,outer_rim,Outer Rim,10.43,20.73,373,876,roster,,,0,1
+Allyuen,Hoth Sector,outer_rim,Outer Rim,8.55,18.83,283,790,roster,,,0,2
+Anoat,Hoth Sector,outer_rim,Outer Rim,8.49,18.61,275,762,roster,,,1,4
+Bespin,Hoth Sector,outer_rim,Outer Rim,8.02,18.52,265,769,roster,,,1,2
+Deyer,Hoth Sector,outer_rim,Outer Rim,8.49,18.61,280,781,roster,,,1,3
+Gentes,Hoth Sector,outer_rim,Outer Rim,8.49,18.61,274,772,roster,,,0,2
+Hoth,Hoth Sector,outer_rim,Outer Rim,8.05,18.63,267,779,roster,,,0,1
+Lelmra,Lelmra Sector,inner_rim,Mid Rim,13.69,14.47,536,569,roster,,,0,3
+New Cov,Lelmra Sector,inner_rim,Mid Rim,13.02,14.89,518,579,roster,,,0,6
+Storthus,Ando Sector,inner_rim,Mid Rim,13.42,15.19,521,643,roster,,,0,4
+Tokmia,Hoth Sector,outer_rim,Outer Rim,8.5,18.44,285,772,roster,,,1,2
+Commenor,Kuat Sector,core,Colonies,11.32,10.92,464,421,roster,,,0,7
+Corellia,Corellia Sector,core,Core,10.54,11.86,381,489,roster,,,0,7
+Corfai,Corellia Sector,core,Core,10.45,11.89,345,499,roster,,,0,4
+Duros,Corellia Sector,core,Core,10.54,11.86,372,493,roster,,,0,2
+Drall,Corellia Sector,core,Core,10.54,11.86,355,501,roster,,,0,3
+Selonia,Corellia Sector,core,Core,10.54,11.86,362,494,roster,,,0,2
+Talus,Kuat Sector,core,Core,10.54,11.86,421,478,roster,,,0,3
+Tralus,Kuat Sector,core,Core,10.53,11.82,418,469,roster,,,0,3
+Vagran,Kuat Sector,core,Core,10.8,11.67,435,464,roster,,,0,5
+Xyquine,Corellia Sector,core,Core,10.23,11.96,337,504,roster,,,0,2
+Balfron,Chandrila Sector,core,Core,8.48,9.72,251,378,roster,,,0,2
+Caprionril,Bilbringi Sector,core,Core,8.49,9.32,188,374,roster,,,0,4
+Kamparas,Chandrila Sector,core,Core,8.79,9.9,265,385,roster,,,0,2
+Ketaris,Ithor Sector,outer_rim,Outer Rim,9.95,5.89,360,200,roster,,,1,3
+Omwat,Utapau Sector,outer_rim,Outer Rim,11.27,18.99,435,800,roster,,,0,2
+Pantolomin,Chandrila Sector,core,Core,8.65,9.55,259,371,roster,,,0,4
+Phorliss,Chandrila Sector,core,Core,8.79,9.39,264,362,roster,,,0,2
+Sarka,Saleucami Sector,outer_rim,Mid Rim,14.86,8.46,595,350,roster,,,0,2
+Tangrene,Tangrene Sector,outer_rim,Outer Rim,12.49,4.9,499,133,roster,,,1,3
+Wor Tandell,Bilbringi Sector,core,Core,8.6,9.33,204,377,roster,,,0,3
+Algarian,Ando Sector,inner_rim,Mid Rim,14.59,15.49,559,653,roster,,,1,2
+Filve,Tatooine Sector,outer_rim,Mid Rim,15.21,15.68,602,647,roster,,,0,2
+Gamorr,Nal Hutta Sector,outer_rim,Outer Rim,17.4,14.31,705,562,roster,,,1,3
+Klatooine,Kessel Sector,outer_rim,Hutt Space,16.66,9.98,672,426,roster,,,0,1
+Ord Mantell,Ord Mantell Sector,inner_rim,Mid Rim,9.02,7.41,323,265,roster,,,0,6
+Ord Pardon,Toydaria Sector,outer_rim,?,14.19,11.08,576,462,roster,,,0,4
+Ord Trasi,Bastion Sector,outer_rim,Outer Rim,9.13,4.9,282,157,roster,,,1,5
+Toprawa,Dathomir Sector,outer_rim,Outer Rim,13.05,5.54,470,183,roster,,,1,4
+Womrik,Ando Sector,inner_rim,Mid Rim,14.62,15.82,560,664,roster,,,0,1
+Zebitrope IV,Tund Sector,outer_rim,Outer Rim,17.14,8.83,694,325,roster,,,0,3
+Ando,Ando Sector,inner_rim,Mid Rim,14.22,15.95,547,668,roster,,,0,4
+Berchest,Taris Sector,inner_rim,Inner Rim,11.09,8.7,427,349,roster,,,0,3
+Bimmisaari,Saleucami Sector,outer_rim,Mid Rim,15.77,9.11,621,368,roster,,,0,2
+Carida,Coruscant Sector,core,Colonies,10.51,9.4,380,376,roster,,,0,4
+Delaya,Coruscant Sector,core,Core,10.27,10.04,374,395,roster,,,0,1
+Halowan,Chandrila Sector,core,Colonies,8.95,9.48,271,369,roster,,,0,2
+Mrisst,Bilbringi Sector,core,Colonies,8.49,9.28,197,370,roster,,,0,3
+Obroa-skai,Taris Sector,inner_rim,Inner Rim,11.94,8.23,466,325,roster,,,0,2
+Palanhi,Chandrila Sector,core,Colonies,8.34,9.99,246,389,roster,,,0,6
+Ralltiir,Chandrila Sector,core,Core,9.08,9.4,281,364,roster,,,0,3
+Bilbringi,Bilbringi Sector,core,Inner Rim,7.82,8.35,166,337,roster,,,0,4
+Byss,Coruscant Sector,core,Deep Core,8.52,11.8,322,445,roster,,,1,5
+Charmath,Bilbringi Sector,core,Core,8.52,9.52,196,383,roster,,,0,5
+Firro,Bilbringi Sector,core,Core,8.18,9.15,180,368,roster,,,0,2
+Khomm,Fondor Sector,inner_rim,Core,9.39,12.66,277,530,roster,,,1,3
+Kinyen,Thyferra Sector,inner_rim,Expansion Region,9.1,15.89,344,629,roster,,,0,5
+Phraetiss,Bilbringi Sector,core,Core,8.33,9.39,184,383,roster,,,0,3
+Rishi,Tatooine Sector,outer_rim,Outer Rim,16.17,15.19,631,630,roster,,,0,3
+Taanab,Hapes Sector,inner_rim,Inner Rim,12.49,8.87,498,325,roster,,,0,4
+Wistril,Wistril Sector,inner_rim,Outer Rim,8.09,6.06,264,217,roster,,,0,3
+Altarrn,Wistril Sector,inner_rim,Mid Rim,7.57,7.83,247,277,roster,,,0,4
+Arkania,Taris Sector,inner_rim,Inner Rim,10.89,8.15,418,324,roster,,,0,2
+Elrood,Dagobah Sector,outer_rim,Outer Rim,10.51,20.04,375,856,roster,,,1,2
+Fef,Wistril Sector,inner_rim,Mid Rim,7.27,7.69,237,276,roster,,,0,3
+Fornax,Wistril Sector,inner_rim,Mid Rim,7.02,7.36,224,261,roster,,,0,2
+Nentan,Bilbringi Sector,core,Mid Rim,8.14,8.0,179,322,roster,,,0,2
+Sedri,Saleucami Sector,outer_rim,Outer Rim,16.74,8.38,648,348,roster,,,0,1
+Valrar,Wistril Sector,inner_rim,Mid Rim,7.12,7.37,235,260,roster,,,0,3
+Vortex,Wistril Sector,inner_rim,Mid Rim,8.08,7.76,264,275,roster,,,0,3
+Yag'Dhul,Thyferra Sector,inner_rim,Inner Rim,9.83,14.84,360,615,roster,,,0,5
+Azbian,Saleucami Sector,outer_rim,?,15.38,8.7,614,359,roster,,,0,2
+Cardooine,Anaxes Sector,outer_rim,Outer Rim,15.33,7.1,606,241,roster,,,0,1
+Chrondre,Saleucami Sector,outer_rim,?,15.34,8.68,604,358,roster,,,0,3
+Dar'Or,Anaxes Sector,outer_rim,Mid Rim,15.04,7.12,596,242,roster,,,0,1
+Douglas III,Tund Sector,outer_rim,Outer Rim,18.47,8.38,744,307,roster,,,1,3
+Engira,Saleucami Sector,outer_rim,Outer Rim,15.98,7.86,627,333,roster,,,0,2
+Jomark,Anaxes Sector,outer_rim,Outer Rim,15.77,7.3,620,249,roster,,,0,2
+Kiffex,Fondor Sector,inner_rim,Inner Rim,9.28,14.25,277,563,roster,,,0,2
+Trogan,Anaxes Sector,outer_rim,Outer Rim,15.71,7.12,617,240,roster,,,1,3
+Waskiro,Anaxes Sector,outer_rim,Outer Rim,15.57,7.61,613,257,roster,,,0,3
+Culroon III,Utapau Sector,outer_rim,Outer Rim,13.18,20.76,484,845,roster,,,0,1
+Davnar,Lelmra Sector,inner_rim,?,13.72,13.36,537,535,roster,,,0,4
+Derra IV,Thyferra Sector,inner_rim,Expansion Region,11.03,15.13,375,618,roster,,,0,2
+Mindar,Lelmra Sector,inner_rim,?,14.45,13.51,558,539,roster,,,0,4
+Munto Codru,Mon Calamari Sector,outer_rim,Outer Rim,17.9,6.3,719,202,roster,,,1,2
+Nal Hutta,Nal Hutta Sector,outer_rim,Mid Rim,16.26,12.74,674,524,roster,,,1,4
+Smarteel,Nal Hutta Sector,outer_rim,Outer Rim,18.32,14.02,728,554,roster,,,0,1
+Spuma,Sullust Sector,outer_rim,Outer Rim,10.76,18.62,376,733,roster,,,0,1
+Vodran,Kessel Sector,outer_rim,Hutt Space,16.88,9.99,682,426,roster,,,1,3
+Xa Fel,Bilbringi Sector,core,Core,8.47,9.58,190,391,roster,,,0,2
+Anchoron,Sullust Sector,outer_rim,Outer Rim,10.61,18.91,368,750,roster,,,1,2
+Chalcedon,Endor Sector,outer_rim,Mid Rim,6.91,16.35,193,673,roster,,,0,1
+Clak'dor VII,Sullust Sector,outer_rim,Outer Rim,10.54,18.69,366,733,roster,,,1,4
+Cona,Kashyyyk Sector,inner_rim,Inner Rim,12.26,11.15,512,464,roster,,,0,3
+Dantooine,Bastion Sector,outer_rim,Outer Rim,9.96,4.38,304,143,roster,,,0,1
+H'nemthe,Sullust Sector,outer_rim,Outer Rim,10.31,18.68,356,733,roster,,,1,2
+Kabal,Naboo Sector,outer_rim,Outer Rim,11.29,18.46,433,735,roster,,,0,4
+Oetrago,Oetrago Sector,inner_rim,?,11.3,14.14,437,581,roster,,,0,2
+Triton,Sullust Sector,outer_rim,Outer Rim,10.54,18.81,362,742,roster,,,1,4
+Urdur,Korriban Sector,outer_rim,Outer Rim,16.4,4.57,644,120,roster,,,0,2
+Adega,Garban Sector,outer_rim,Outer Rim,17.27,17.46,713,698,roster,,,0,1
+Agrilat,Oetrago Sector,inner_rim,?,11.65,13.57,454,552,roster,,,0,1
+Annaj,Endor Sector,outer_rim,Outer Rim,5.77,16.51,168,677,roster,,,0,2
+Basilisk,Coruscant Sector,core,Core,9.5,9.91,348,393,roster,,,1,2
+Endor,Endor Sector,outer_rim,Outer Rim,5.34,16.05,158,667,roster,,,1,4
+Gandolo IV,Oetrago Sector,inner_rim,?,11.71,13.83,457,565,roster,,,0,1
+Hozrel XI,Tund Sector,outer_rim,Outer Rim,18.85,8.54,760,316,roster,,,0,1
+Khuiumin,Oetrago Sector,inner_rim,?,11.28,13.55,436,551,roster,,,0,4
+Pzob,Garban Sector,outer_rim,Outer Rim,17.69,15.83,727,648,roster,,,0,1
+Vjun,Anaxes Sector,outer_rim,Outer Rim,14.45,6.89,578,234,roster,,,1,2
+Bakura,Endor Sector,outer_rim,Wild Space,4.46,16.7,139,678,roster,,,1,2
+Chazwa,Ord Mantell Sector,inner_rim,Inner Rim,11.0,8.87,386,311,roster,,,1,7
+Daltar,Kuat Sector,core,?,11.33,11.4,465,448,roster,,,0,2
+Joiol,Ord Mantell Sector,inner_rim,Inner Rim,10.27,8.7,362,304,roster,,,0,1
+Lafra,Korriban Sector,outer_rim,Outer Rim,15.31,4.71,604,124,roster,,,1,3
+Kimanan,Ord Mantell Sector,inner_rim,Inner Rim,10.27,8.87,362,314,roster,,,0,2
+Mantessa,Ord Mantell Sector,inner_rim,Inner Rim,10.69,8.87,376,311,roster,,,0,4
+Poderis,Ord Mantell Sector,inner_rim,Inner Rim,10.51,8.51,371,299,roster,,,0,2
+Ryloth,Ryloth Sector,outer_rim,Outer Rim,15.68,17.58,596,765,roster,,,1,2
+Tatooine,Tatooine Sector,outer_rim,Outer Rim,15.33,16.76,606,682,roster,,,0,2
+Amorris,Dathomir Sector,outer_rim,Outer Rim,12.38,6.49,448,215,roster,,,0,2
+Corstris,Yavin Sector,outer_rim,Outer Rim,12.6,6.61,533,203,roster,,,1,3
+Dathomir,Dathomir Sector,outer_rim,Outer Rim,12.11,6.36,439,212,roster,,,1,3
+Kirrek,Coruscant Sector,core,Deep Core,9.19,10.62,341,408,roster,,,1,2
+Pil Diller,Dathomir Sector,outer_rim,Outer Rim,12.04,6.18,435,203,roster,,,0,2
+Rafa,Mon Calamari Sector,outer_rim,Outer Rim,17.99,8.08,726,297,roster,,,0,3
+Selaggis,Tangrene Sector,outer_rim,Outer Rim,12.21,4.4,493,122,roster,,,0,1
+Thrakia,Hapes Sector,inner_rim,Inner Rim,12.5,9.16,498,339,roster,,,0,3
+Varn,Dathomir Sector,outer_rim,Outer Rim,12.98,6.03,468,200,roster,,,0,2
+Vinsoth,Dathomir Sector,outer_rim,Outer Rim,11.79,5.89,428,195,roster,,,1,4
+Averam,Sullust Sector,outer_rim,Outer Rim,10.2,18.69,351,741,roster,,,0,1
+Balmorra,Kuat Sector,core,Colonies,10.9,10.5,442,396,roster,,,0,3
+Bortras,Dagobah Sector,outer_rim,Outer Rim,10.69,18.94,382,822,roster,,,0,1
+Chandrila,Chandrila Sector,core,Core,9.45,9.4,293,364,roster,,,0,2
+Corsin,Taris Sector,inner_rim,Expansion Region,10.88,7.65,417,301,roster,,,1,6
+Coruscant,Coruscant Sector,core,Core,9.97,9.94,366,390,roster,,,1,8
+Ghorman,Fondor Sector,inner_rim,Colonies,9.28,13.96,273,554,roster,,,0,4
+Svivren,Utapau Sector,outer_rim,Outer Rim,12.58,19.39,469,810,roster,,,1,3
+Uvena,Sullust Sector,outer_rim,Outer Rim,10.82,18.85,376,743,roster,,,0,1
+Yaga Minor,Bastion Sector,outer_rim,Outer Rim,8.05,5.19,253,164,roster,,,0,3
+Bothawui,Tatooine Sector,outer_rim,Mid Rim,15.18,14.31,601,602,roster,,,1,4
+Bpfassh,Dagobah Sector,outer_rim,Outer Rim,10.4,19.11,371,826,roster,,,1,2
+Mon Calamari,Mon Calamari Sector,outer_rim,Outer Rim,18.15,6.27,729,201,roster,,,0,1
+Denab,Dagobah Sector,outer_rim,Outer Rim,10.45,19.45,371,840,roster,,,1,2
+Kothlis,Tatooine Sector,outer_rim,Mid Rim,15.24,14.54,604,612,roster,,,0,1
+Orto,Utapau Sector,outer_rim,Outer Rim,10.97,19.65,427,814,roster,,,0,2
+Praesitlyn,Dagobah Sector,outer_rim,Outer Rim,10.2,19.15,363,832,roster,,,1,3
+Sluis Van,Dagobah Sector,outer_rim,Outer Rim,10.61,19.07,380,831,roster,,,1,4
+Sullust,Sullust Sector,outer_rim,Outer Rim,10.54,17.82,365,709,roster,,,0,4
+Umgul,Naboo Sector,outer_rim,Mid Rim,12.0,16.66,448,695,roster,,,0,3
+Alk'lellish III,Taris Sector,inner_rim,Outer Rim,11.25,7.94,434,314,roster,,,0,1
+Boordii,Yavin Sector,outer_rim,Expansion Region,11.88,7.18,503,226,roster,,,0,2
+Flax,Yavin Sector,outer_rim,Expansion Region,12.6,7.68,533,246,roster,,,1,3
+Geedon V,Taris Sector,inner_rim,Outer Rim,11.53,7.29,447,285,roster,,,0,1
+Kashyyyk,Kashyyyk Sector,inner_rim,Mid Rim,13.72,9.87,558,419,roster,,,0,5
+Linuri,Ando Sector,inner_rim,Mid Rim,13.63,15.67,527,659,roster,,,0,4
+Qat Chrystac,Thyferra Sector,inner_rim,Expansion Region,9.57,16.12,353,634,roster,,,0,3
+Tierfon,Yavin Sector,outer_rim,Expansion Region,12.18,7.51,519,239,roster,,,0,2
+Woostri,Thyferra Sector,inner_rim,Expansion Region,10.27,16.12,363,633,roster,,,0,3
+Yavin,Yavin Sector,outer_rim,Outer Rim,13.24,6.78,558,210,roster,,,0,1
+Ambria,Kashyyyk Sector,inner_rim,Inner Rim,12.79,10.37,527,435,roster,,,0,3
+G'rho,Endor Sector,outer_rim,Wild Space,4.42,16.92,137,688,roster,,,0,1
+Kirdo III,Utapau Sector,outer_rim,Outer Rim,11.64,19.34,445,811,roster,,,0,2
+Neelgaimon,Tangrene Sector,outer_rim,Outer Rim,14.1,3.08,535,93,roster,,,0,1
+Norulac,Hapes Sector,inner_rim,Inner Rim,12.83,9.45,514,352,roster,,,0,5
+Ruuria,Korriban Sector,outer_rim,Outer Rim,14.74,3.91,584,96,roster,,,1,4
+Stic,Tangrene Sector,outer_rim,Outer Rim,14.34,3.98,543,114,roster,,,1,2
+Thanta Zilbra,Tangrene Sector,outer_rim,Outer Rim,14.18,3.87,534,109,roster,,,1,2
+Thila,Tangrene Sector,outer_rim,Outer Rim,14.22,4.67,536,131,roster,,,0,2
+Tund,Tund Sector,outer_rim,Outer Rim,18.51,8.58,746,317,roster,,,0,2
+Kuat,Kuat Sector,core,Core,10.86,10.57,436,404,roster,,,0,3
+Fondor,Fondor Sector,inner_rim,Colonies,9.25,13.67,276,544,roster,,,0,2
+Rendili,Kuat Sector,core,Core,10.62,11.39,425,448,roster,,,0,3
+Corulag,Chandrila Sector,core,Core,9.69,9.3,304,359,roster,,,0,3
+Anaxes,Anaxes Sector,outer_rim,Core,14.9,7.6,592,257,roster,,,0,4
+Hosnian Prime,Corellia Sector,core,Core,10.35,12.04,349,510,roster,,,1,8
+Cato Neimoidia,Kuat Sector,core,Colonies,11.15,11.33,455,444,roster,,,0,5
+Thyferra,Thyferra Sector,inner_rim,Inner Rim,9.63,14.43,353,604,roster,,,0,6
+Onderon,Kashyyyk Sector,inner_rim,Inner Rim,12.7,9.81,524,417,roster,,,0,6
+Jakku,Fondor Sector,inner_rim,Expansion Region,6.51,13.65,237,547,roster,,,0,1
+Naboo,Naboo Sector,outer_rim,Mid Rim,12.32,17.06,457,702,roster,,,0,4
+Malastare,Naboo Sector,outer_rim,Mid Rim,11.06,16.82,427,696,roster,,,1,7
+Toydaria,Toydaria Sector,outer_rim,Mid Rim,15.6,12.0,614,485,roster,,,0,2
+Takodana,Thyferra Sector,inner_rim,Mid Rim,7.63,15.17,322,618,roster,,,1,3
+Iridonia,Wistril Sector,inner_rim,Mid Rim,7.85,7.06,256,251,roster,,,0,5
+Ansion,Wistril Sector,inner_rim,Mid Rim,6.94,6.0,224,215,roster,,,0,5
+Cerea,Endor Sector,outer_rim,Mid Rim,6.59,16.59,185,679,roster,,,1,6
+Glee Anselm,Wistril Sector,inner_rim,Mid Rim,7.2,7.59,230,269,roster,,,0,6
+Umbara,Kashyyyk Sector,inner_rim,Expansion Region,13.08,10.16,537,428,roster,,,0,5
+Mimban,Lelmra Sector,inner_rim,Expansion Region,12.73,12.97,509,524,roster,,,0,6
+Dorin,Wistril Sector,inner_rim,Expansion Region,7.58,8.06,246,287,roster,,,0,5
+Shili,Ord Mantell Sector,inner_rim,Expansion Region,9.72,8.12,345,287,roster,,,0,4
+Kiros,Ord Mantell Sector,inner_rim,Expansion Region,9.37,8.33,334,294,roster,,,0,3
+Mygeeto,Bastion Sector,outer_rim,Outer Rim,8.46,5.08,263,160,roster,,,0,4
+Muunilinst,Bastion Sector,outer_rim,Outer Rim,8.14,4.49,255,146,roster,,,0,4
+Raxus,Mon Calamari Sector,outer_rim,Outer Rim,16.63,5.65,677,179,roster,,,0,2
+Ord Ibanna,Naboo Sector,outer_rim,Outer Rim,10.46,17.03,413,701,roster,,,0,1
+Nar Shaddaa,Nal Hutta Sector,outer_rim,Mid Rim,16.380000000000003,12.64,682,518,roster,,,0,1
+Rodia,Tatooine Sector,outer_rim,Outer Rim,15.01,16.59,596,677,roster,,,0,2
+Saleucami,Saleucami Sector,outer_rim,Outer Rim,16.29,8.35,636,347,roster,,,1,2
+Utapau,Utapau Sector,outer_rim,Outer Rim,11.03,19.8,431,823,roster,,,0,2
+Felucia,Anaxes Sector,outer_rim,Outer Rim,15.77,6.19,619,212,roster,,,0,2
+Mandalore,Yavin Sector,outer_rim,Outer Rim,12.64,7.3,534,231,roster,,,0,2
+Lothal,Thyferra Sector,inner_rim,Inner Rim,9.71,14.85,350,614,roster,,,0,2
+Atollon,Mon Calamari Sector,outer_rim,Outer Rim,17.3,7.8,700,253,roster,,,0,2
+Crait,Naboo Sector,outer_rim,Mid Rim,11.7,17.4,442,710,roster,,,0,2
+D'Qar,Naboo Sector,outer_rim,Outer Rim,12.19,17.55,454,714,roster,,,0,2
+Iego,Mon Calamari Sector,outer_rim,Outer Rim,17.25,7.53,698,243,roster,,,0,2
+Taris,Taris Sector,inner_rim,Outer Rim,11.69,7.06,458,275,roster,,,0,3
+Telos IV,Tangrene Sector,outer_rim,Outer Rim,14.04,4.32,534,120,roster,,,0,2
+Christophsis,Ryloth Sector,outer_rim,Outer Rim,14.8,16.82,576,747,roster,,,0,4
+Korriban,Korriban Sector,outer_rim,Outer Rim,15.12,5.37,597,149,roster,,,1,2
+Ziost,Korriban Sector,outer_rim,Outer Rim,15.11,4.8,595,129,roster,,,1,2
+Dromund Kaas,Korriban Sector,outer_rim,Outer Rim,15.18,5.74,599,161,roster,,,1,2
+Mustafar,Dagobah Sector,outer_rim,Outer Rim,9.13,19.8,336,849,roster,,,0,1
+Dagobah,Dagobah Sector,outer_rim,Outer Rim,10.62,19.45,381,841,roster,,,1,2
+Bastion,Bastion Sector,outer_rim,Outer Rim,8.11,3.56,254,121,roster,,,0,2
+Wayland,Taris Sector,inner_rim,Outer Rim,11.67,7.06,448,275,roster,,,0,2
+Honoghr,Kessel Sector,outer_rim,Outer Rim,17.43,10.28,704,440,roster,,,0,1
+Belsavis,Sullust Sector,outer_rim,Outer Rim,9.39,18.17,328,720,roster,,,0,1
+Voss,Mon Calamari Sector,outer_rim,Outer Rim,16.8,6.56,683,211,roster,,,1,3
+Shantipole,Hapes Sector,inner_rim,Mid Rim,13.8,8.7,558,318,wave2,A,Rebel-friendly,0,4
+Concord Dawn,Yavin Sector,outer_rim,Expansion Region,12.9,7.7,545,247,wave2,B,Empire,1,2
+Bandomeer,Yavin Sector,outer_rim,Outer Rim,11.7,6.9,496,214,wave2,B,Empire,0,4
+Borleias,Chandrila Sector,core,Core,9.0,9.3,273,358,wave2,B,Empire,0,6
+Bracca,Hapes Sector,inner_rim,Mid Rim,13.6,9.4,549,350,wave2,B,Empire,0,5
+Vakkar,Bilbringi Sector,core,Core,8.0,8.9,173,359,wave2,B,unknown,0,3
+Bogden,Ord Mantell Sector,inner_rim,Inner Rim,10.3,8.3,363,293,wave2,B,Empire,1,5
+Lantillies,Hapes Sector,inner_rim,Inner Rim,13.5,9.1,541,336,wave2,A,Empire,1,8
+Gazian,Hapes Sector,inner_rim,Inner Rim,13.3,8.5,536,309,wave2,A,neutral,0,1
+Aleen,Ord Mantell Sector,inner_rim,Mid Rim,9.4,7.2,335,258,wave2,B,Empire,0,3
+Skako,Coruscant Sector,core,Core,9.6,9.8,355,385,wave2,B,Empire,0,4
+Ubduria,Taris Sector,inner_rim,Inner Rim,11.9,8.3,461,333,wave2,B,neutral,0,3
+Gallios,Dathomir Sector,outer_rim,Outer Rim,11.2,5.8,408,192,wave2,A,unknown,0,2
+Takobo,Taris Sector,inner_rim,Outer Rim,11.1,6.8,427,263,wave2,B,neutral,0,4
+Montross,Hapes Sector,inner_rim,Inner Rim,12.6,9.0,505,332,wave2,A,Empire,0,5
+Agamar,Ithor Sector,outer_rim,Outer Rim,10.2,5.8,366,192,wave2,B,neutral,0,4
+Akiva,Yavin Sector,outer_rim,Outer Rim,12.4,7.1,524,222,wave2,A,Empire,0,2
+Krownest,Yavin Sector,outer_rim,Expansion Region,12.1,7.5,509,238,wave2,A,neutral,0,2
+Hapes,Hapes Sector,inner_rim,Inner Rim,12.6,9.6,503,359,wave2,B,neutral,0,5
+Loronar,Corellia Sector,core,Core,10.6,12.5,368,544,wave2,B,Rebel-friendly,0,6
+Denon,Oetrago Sector,inner_rim,Core,11.5,13.3,447,539,wave2,B,Empire,1,8
+Byblos,Oetrago Sector,inner_rim,Core,10.8,12.8,412,514,wave2,A,unknown,0,3
+Nubia,Corellia Sector,core,Core,10.5,12.1,361,514,wave2,A,Empire,0,3
+Kooriva,Thyferra Sector,inner_rim,Inner Rim,10.4,14.2,365,603,wave2,A,unknown,0,4
+Quarzite,Oetrago Sector,inner_rim,Inner Rim,10.7,13.8,407,564,wave2,B,neutral,0,5
+Balosar,Corellia Sector,core,Core,10.0,12.5,322,544,wave2,B,Rebel-friendly,0,1
+Fedalle,Coruscant Sector,core,Core,10.1,10.5,368,408,wave2,B,unknown,0,4
+Vardos,Coruscant Sector,core,Core,9.8,10.0,357,396,wave2,A,Empire,0,1
+Tython,Coruscant Sector,core,Core,9.2,10.7,342,418,wave2,A,neutral,1,2
+Ruusan,Kashyyyk Sector,inner_rim,Inner Rim,13.5,11.2,551,463,wave2,A,unknown,0,4
+Bastatha,Kashyyyk Sector,inner_rim,Colonies,11.8,10.8,494,450,wave2,B,criminal,0,3
+Plexis,Fondor Sector,inner_rim,Core,9.4,13.0,283,538,wave2,A,criminal,0,1
+Espirion,Oetrago Sector,inner_rim,Core,11.9,12.8,467,514,wave2,B,Rebel-friendly,0,4
+Birren,Kashyyyk Sector,inner_rim,Inner Rim,12.6,11.0,520,457,wave2,B,Empire,0,6
+Kullgroon,Lelmra Sector,inner_rim,Inner Rim,13.4,12.6,528,514,wave2,B,Empire,0,4
+Hynestia,Fondor Sector,inner_rim,Colonies,8.4,13.7,264,550,wave2,B,Empire,0,2
+Bardotta,Fondor Sector,inner_rim,Core,8.4,13.3,261,541,wave2,B,Empire,1,4
+Bestine IV,Fondor Sector,inner_rim,Inner Rim,9.8,14.0,285,552,wave2,A,Empire,0,3
+Abednedo,Oetrago Sector,inner_rim,Core,10.8,13.0,412,524,wave2,B,Rebel-friendly,0,5
+Gorse,Kashyyyk Sector,inner_rim,Inner Rim,12.2,11.1,504,458,wave2,B,Empire,0,3
+Ferrix,Tangrene Sector,outer_rim,Outer Rim,14.4,4.5,543,124,wave2,A,Empire,0,4
+Bonadan,Korriban Sector,outer_rim,Outer Rim,16.1,4.4,633,114,wave2,B,neutral,0,3
+Murkhana,Anaxes Sector,outer_rim,Outer Rim,16.3,7.2,636,245,wave2,A,Empire,0,2
+Corvus,Anaxes Sector,outer_rim,Outer Rim,16.1,7.0,629,237,wave2,A,Empire,0,3
+Serenno,Dathomir Sector,outer_rim,Outer Rim,12.6,5.7,455,188,wave2,A,Empire,0,2
+Florrum,Korriban Sector,outer_rim,Outer Rim,15.3,5.9,605,169,wave2,B,criminal,0,1
+Gand,Tund Sector,outer_rim,Outer Rim,17.5,8.8,708,324,wave2,B,Empire,0,3
+Zeffo,Ithor Sector,outer_rim,Outer Rim,10.5,3.9,373,141,wave2,A,Empire,0,1
+Malachor,Korriban Sector,outer_rim,Outer Rim,16.1,5.3,633,146,wave2,A,neutral,0,3
+Wobani,Saleucami Sector,outer_rim,Outer Rim,15.2,8.5,605,348,wave2,B,Empire,0,3
+Jelucan,Tangrene Sector,outer_rim,Outer Rim,13.7,4.5,525,125,wave2,A,Empire,0,4
+Cantonica,Korriban Sector,outer_rim,Outer Rim,15.5,4.7,614,125,wave2,B,neutral,0,3
+Mykapo,Mon Calamari Sector,outer_rim,Outer Rim,16.8,7.6,683,246,wave2,B,Empire,0,3
+Toola,Mon Calamari Sector,outer_rim,Outer Rim,16.6,5.9,676,189,wave2,B,neutral,0,2
+Ringo Vinda,Saleucami Sector,outer_rim,Mid Rim,14.4,8.1,582,340,wave2,B,Empire,0,3
+Sesid,Tangrene Sector,outer_rim,Outer Rim,13.2,4.6,515,127,wave2,B,Empire,0,2
+Lorrd,Dathomir Sector,outer_rim,Outer Rim,11.8,4.8,428,158,wave2,A,Empire,1,2
+Sy Myrth,Saleucami Sector,outer_rim,Outer Rim,15.8,8.1,621,341,wave2,B,neutral,1,3
+Eriadu,Sullust Sector,outer_rim,Outer Rim,10.4,18.1,361,718,wave2,A,Empire,0,4
+Lasan,Utapau Sector,outer_rim,Outer Rim,13.2,20.1,484,828,wave2,A,Empire,1,2
+Sevarcos,Utapau Sector,outer_rim,Outer Rim,11.6,19.1,445,801,wave2,A,Empire,0,3
+Allanteen VI,Oetrago Sector,inner_rim,Mid Rim,12.0,14.3,472,589,wave2,A,Empire,1,3
+Pantora,Utapau Sector,outer_rim,Outer Rim,13.3,19.5,486,813,wave2,B,Empire,1,2
+Iktotch,Lelmra Sector,inner_rim,Mid Rim,12.6,14.1,505,556,wave2,B,Empire,0,2
+Kal'Shebbol,Utapau Sector,outer_rim,Outer Rim,11.0,21.1,429,853,wave2,B,Rebel-friendly,0,2
+Vallt,Naboo Sector,outer_rim,Mid Rim,13.2,17.7,478,717,wave2,B,Empire,0,3
+Kerkoidia,Naboo Sector,outer_rim,Mid Rim,12.1,16.0,452,676,wave2,B,Empire,0,3
+Inusagi,Naboo Sector,outer_rim,Mid Rim,12.1,16.5,453,686,wave2,A,Empire,0,4
+Ikkrukk,Ryloth Sector,outer_rim,Mid Rim,13.4,17.4,544,761,wave2,B,Empire,0,2
+Yar Togna,Ryloth Sector,outer_rim,Outer Rim,13.2,18.3,539,781,wave2,A,Empire,0,2
+Kalarba,Ando Sector,inner_rim,Mid Rim,12.7,15.2,498,643,wave2,B,Empire,0,4
+Stobar,Thyferra Sector,inner_rim,Inner Rim,10.4,15.3,366,622,wave2,B,unknown,0,6
+Triffis,Ando Sector,inner_rim,Mid Rim,13.0,15.7,507,660,wave2,B,neutral,0,5
+Aridus,Lelmra Sector,inner_rim,Mid Rim,12.8,14.4,512,563,wave2,B,Empire,0,5
+Zolan,Ando Sector,inner_rim,Mid Rim,13.4,16.4,520,682,wave2,B,unknown,0,5
+Milagro,Lelmra Sector,inner_rim,Mid Rim,12.8,14.6,511,573,wave2,B,neutral,0,5
+Geonosis,Tatooine Sector,outer_rim,Outer Rim,15.5,17.0,612,690,wave2,A,Empire,0,2
+Hypori,Garban Sector,outer_rim,Outer Rim,16.2,16.7,681,675,wave2,A,Empire,1,2
+Narkina,Garban Sector,outer_rim,Outer Rim,16.4,16.1,687,657,wave2,A,Empire,1,2
+Vandor,Lelmra Sector,inner_rim,Mid Rim,13.7,14.3,537,559,wave2,A,Empire,0,4
+Arkanis,Ryloth Sector,outer_rim,Outer Rim,15.1,17.3,583,758,wave2,B,Empire,1,5
+Rothana,Garban Sector,outer_rim,Outer Rim,17.5,15.9,718,652,wave2,A,Empire,1,2
+Socorro,Ryloth Sector,outer_rim,Outer Rim,13.7,17.8,551,770,wave2,B,Empire,0,4
+Wrea,Ryloth Sector,outer_rim,Outer Rim,16.0,18.1,604,777,wave2,A,Rebel-friendly,1,2
+Ubrikkia,Toydaria Sector,outer_rim,Mid Rim,14.5,11.0,586,459,wave2,A,Empire,0,2
+Formos,Kessel Sector,outer_rim,Outer Rim,17.8,10.7,715,453,wave2,A,Empire,0,3
+Sleheyron,Toydaria Sector,outer_rim,Hutt Space,16.1,10.6,626,449,wave2,B,Hutt,1,4
+Falleen,Ando Sector,inner_rim,Mid Rim,13.9,15.7,537,660,wave2,A,criminal,0,2
+Lowick,Kessel Sector,outer_rim,Outer Rim,18.0,10.3,724,436,wave2,B,Rebel-friendly,0,2
+Dotharian,Nal Hutta Sector,outer_rim,Mid Rim,16.4,13.0,681,530,wave2,A,criminal,0,2
+Cyrkon,Nal Hutta Sector,outer_rim,Outer Rim,17.2,13.7,700,547,wave2,B,criminal,0,2
+Yerbana,Ryloth Sector,outer_rim,Outer Rim,14.5,17.3,569,758,wave2,A,unknown,0,3
+Desix,Toydaria Sector,outer_rim,Hutt Space,16.1,10.2,626,439,wave2,A,Empire,0,2
+Kwenn,Toydaria Sector,outer_rim,Mid Rim,15.4,11.1,608,462,wave2,A,unknown,0,4
+Nar Kanji,Toydaria Sector,outer_rim,Mid Rim,15.6,10.3,614,441,wave2,B,Hutt,0,2
+Sorgan,Ryloth Sector,outer_rim,Outer Rim,14.6,17.7,572,768,wave2,A,unknown,0,2
+Pagodon,Ryloth Sector,outer_rim,Outer Rim,15.4,18.5,590,786,wave2,A,unknown,0,1
+Batuu,Endor Sector,outer_rim,Outer Rim,5.5,15.3,162,650,wave2,A,neutral,0,1
+Nevarro,Hoth Sector,outer_rim,Outer Rim,8.5,20.0,279,812,wave2,A,Empire,0,2
+Scipio,Bastion Sector,outer_rim,Outer Rim,8.6,5.3,268,168,wave2,B,Empire,0,2
+Dubrillion,Bastion Sector,outer_rim,Outer Rim,9.0,3.8,278,127,wave2,A,Rebel-friendly,0,4
+Rattatak,Endor Sector,outer_rim,Outer Rim,5.9,15.7,171,659,wave2,A,neutral,1,3
+Korrus,Bastion Sector,outer_rim,Outer Rim,8.7,4.6,270,149,wave2,A,Empire,0,3
+Terminus,Hoth Sector,outer_rim,Outer Rim,8.8,20.7,287,830,wave2,B,unknown,0,3
+Vassek,Endor Sector,outer_rim,Outer Rim,7.2,17.3,199,694,wave2,A,Empire,1,2
+Lotho Minor,Endor Sector,outer_rim,Outer Rim,7.0,17.8,195,705,wave2,A,neutral,0,1
+Trenchenovu,Hoth Sector,outer_rim,Outer Rim,8.0,19.0,265,789,wave2,B,Empire,0,2
+Savareen,Ando Sector,inner_rim,Outer Rim,14.78,16.63,552,733,roster,,,0,4
+Oseon,Tund Sector,outer_rim,The Centrality,17.21,8.55,670,311,roster,,,0,2
+Ilum,none (outside sectors),,Unknown Regions,5.1,7.3,133,271,loner,,,0,0
+Csilla,none (outside sectors),,Unknown Regions,3.2,8.4,46,319,loner,,,0,0
