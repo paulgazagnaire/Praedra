@@ -1,3 +1,4 @@
+using Rebellion.Core.Battle;
 using Rebellion.Core.Data;
 using Rebellion.Core.Ships;
 
@@ -34,22 +35,40 @@ public sealed class BlockadeData
     public string EconomicShipClass { get; }
     /// <summary>How many of that class make E.</summary>
     public int EconomicShipCount { get; }
+    /// <summary>The fixed reference force E is measured against: this ship class ... DEFAULT Imperial Star Destroyer (m4-battle-new §12, open question 3).</summary>
+    public string ReferenceShipClass { get; }
+    /// <summary>... this many of it. DEFAULT 3. rule: m4-battle-new §12.</summary>
+    public int ReferenceShipCount { get; }
 
-    public BlockadeData(int thresholdPercent, string economicShipClass, int economicShipCount)
+    public BlockadeData(int thresholdPercent, string economicShipClass, int economicShipCount,
+        string referenceShipClass = "Imperial Star Destroyer", int referenceShipCount = 3)
     {
         if (thresholdPercent < 0) throw new DataLoadException("blockade: forced_stop_threshold_percent must not be negative.");
         if (economicShipCount < 0) throw new DataLoadException("blockade: economic_blockade_ship_count must not be negative.");
         ThresholdPercent = thresholdPercent;
         EconomicShipClass = economicShipClass;
         EconomicShipCount = economicShipCount;
+        if (referenceShipCount < 1) throw new DataLoadException("blockade: economic_blockade_reference_count must be at least 1.");
+        ReferenceShipClass = referenceShipClass; ReferenceShipCount = referenceShipCount;
     }
 
-    /// <summary>E = count x CombatStrength of one ship of the class, computed from ship data, never typed in.</summary>
-    public long EconomicStrength(IReadOnlyDictionary<string, ShipClass> ships)
+    /// <summary>The reference force REF as classes (from ship data). rule: m4-battle-new §12 (REF = 3 ISD, DEFAULT).</summary>
+    public IReadOnlyList<ShipClass> Reference(IReadOnlyDictionary<string, ShipClass> ships)
+    {
+        if (!ships.TryGetValue(ReferenceShipClass, out var cls))
+            throw new DataLoadException($"{FileName}: economic_blockade_reference_class '{ReferenceShipClass}' is not a ship class in the ship data.");
+        return Enumerable.Repeat(cls, ReferenceShipCount).ToList();
+    }
+
+    /// <summary>
+    /// E = CombatStrength(count x the class, REF), computed from ship data, never typed in. rule: m4-battle-new §12 (E = CS(3 Victory Destroyers, 3 ISD) = 64.8).
+    /// </summary>
+    public double EconomicStrength(IReadOnlyDictionary<string, ShipClass> ships, CombatStrength? strength = null)
     {
         if (!ships.TryGetValue(EconomicShipClass, out var cls))
             throw new DataLoadException($"{FileName}: economic_blockade_ship_class '{EconomicShipClass}' is not a ship class in the ship data.");
-        return EconomicShipCount * CombatStrength.Of(new[] { cls });
+        strength ??= new CombatStrength(NewBattleData.Default);
+        return strength.Of(Enumerable.Repeat(cls, EconomicShipCount), Reference(ships));
     }
 
     public static BlockadeData Load(string path) => Parse(File.ReadAllText(path), Path.GetFileName(path));
@@ -71,6 +90,9 @@ public sealed class BlockadeData
             return int.TryParse(s, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var i)
                 ? i : throw new DataLoadException($"{source}: key '{k}' must be an integer, found '{s}'.");
         }
-        return new BlockadeData(Int("forced_stop_threshold_percent"), Need("economic_blockade_ship_class"), Int("economic_blockade_ship_count"));
+        // the reference force is optional in the file (DEFAULT 3 Imperial Star Destroyers). rule: m4-battle-new §12
+        string refClass = values.TryGetValue("economic_blockade_reference_class", out var rc) ? rc : "Imperial Star Destroyer";
+        int refCount = values.ContainsKey("economic_blockade_reference_count") ? Int("economic_blockade_reference_count") : 3;
+        return new BlockadeData(Int("forced_stop_threshold_percent"), Need("economic_blockade_ship_class"), Int("economic_blockade_ship_count"), refClass, refCount);
     }
 }

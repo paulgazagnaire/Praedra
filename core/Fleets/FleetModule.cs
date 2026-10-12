@@ -1,3 +1,4 @@
+using Rebellion.Core.Battle;
 using Rebellion.Core.Clock;
 using Rebellion.Core.Economy;
 using Rebellion.Core.Map;
@@ -27,22 +28,27 @@ public sealed class FleetModule
     /// <summary>The forced-stop trigger. A game setting; DEFAULT PaulRule. Not part of the save (it is configuration).</summary>
     public ForcedStopTrigger Trigger { get; set; }
     /// <summary>E, computed once from ship data. rule: m1-forced-stop-and-blockade §Update 2026-10-12.</summary>
-    public long EconomicStrength { get; }
+    public double EconomicStrength { get; }
+    /// <summary>The strength measure (m4-battle-new §12) with this game's per-weapon data.</summary>
+    public CombatStrength Strength { get; }
+    private readonly List<ShipClass> _reference;
     /// <summary>DebugSetDamage is accepted only when this is on (same switch as DebugSetHolder). DEFAULT off. rule: m3-ships-and-fighters §Damaged state.</summary>
     public bool DebugOrdersEnabled { get; set; }
 
-    private FleetModule(Game game, Galaxy galaxy, IReadOnlyDictionary<string, ShipClass> ships, BlockadeData blockade, ForcedStopTrigger trigger)
+    private FleetModule(Game game, Galaxy galaxy, IReadOnlyDictionary<string, ShipClass> ships, BlockadeData blockade, ForcedStopTrigger trigger, NewBattleData combat)
     {
         _game = game; Galaxy = galaxy; _ships = ships; Blockade = blockade; Trigger = trigger;
         _pathfinder = new Pathfinder(galaxy);
-        EconomicStrength = blockade.EconomicStrength(ships);
+        Strength = new CombatStrength(combat);
+        _reference = Blockade.Reference(ships).ToList();
+        EconomicStrength = blockade.EconomicStrength(ships, Strength);
     }
 
     /// <summary>Register the fleet order handlers and the hooks for work-list steps 2 to 5 on <paramref name="game"/>.</summary>
     public static FleetModule Attach(Game game, Galaxy galaxy, IReadOnlyDictionary<string, ShipClass> ships, BlockadeData blockade,
-        ForcedStopTrigger trigger = ForcedStopTrigger.PaulRule)
+        ForcedStopTrigger trigger = ForcedStopTrigger.PaulRule, NewBattleData? combat = null)
     {
-        var m = new FleetModule(game, galaxy, ships, blockade, trigger);
+        var m = new FleetModule(game, galaxy, ships, blockade, trigger, combat ?? NewBattleData.Default);
         game.RegisterOrderHandler<MoveFleetOrder>(m.HandleMoveFleet);
         game.RegisterOrderHandler<CreateFleetOrder>(m.HandleCreateFleet);
         game.RegisterOrderHandler<SplitFleetOrder>(m.HandleSplitFleet);
@@ -182,7 +188,27 @@ public sealed class FleetModule
     /// <summary>Fastest lane path for a given speed rating (construction deliveries travel like fleets). rule: m1-travel §Path rule.</summary>
     public PathResult FindPath(string from, string to, int speed) => _pathfinder.Find(from, to, speed);
 
-    public long StrengthOf(Fleet f) => CombatStrength.Of(Classes(f));
+    /// <summary>A fleet's strength against the economic reference force REF (3 ISD): the absolute measure E is compared with. rule: m4-battle-new §12.</summary>
+    public double StrengthOf(Fleet f) => Strength.Of(StrengthUnits(f), _reference.Select(c => Strength.Unit(c)));
+
+    /// <summary>
+    /// The units of a fleet for the strength measure: its ships with their stored hull ratio and weapons counter, and every squadron flying with it or
+    /// aboard its ships (aboard squadrons count as if launched). rule: m4-battle-new §12 (hull ratio and weapons counter come from the strategic ship object).
+    /// </summary>
+    internal List<Combatant> StrengthUnits(Fleet f)
+    {
+        var list = new List<Combatant>();
+        foreach (var id in f.Ships)
+        {
+            var o = E.Objects[id]; var cls = ClassOf(o)!;
+            double ratio = cls.Hull > 0 ? Math.Min(1.0, (double)o.Hull / cls.Hull) : 1.0;
+            list.Add(Strength.Unit(cls, ratio, o.Hits is { Count: > 1 } ? o.Hits[1] : 0));
+        }
+        foreach (var id in f.Squadrons) list.Add(Strength.Unit(ClassOf(E.Objects[id])!));
+        foreach (var o in E.Objects.Values.Where(o => o.Category == ObjectCategory.Fighter && o.AboardShip != 0 && f.Ships.Contains(o.AboardShip)).OrderBy(o => o.Id))
+            list.Add(Strength.Unit(ClassOf(o)!));
+        return list;
+    }
 
     /// <summary>
     /// The classes of a fleet's members, for the armed test and combat strength: its ships, or its flying squadrons. Squadrons aboard
@@ -691,10 +717,13 @@ public sealed class FleetModule
     /// not be armed; ownership of the system is ignored; the passing fleet's own gravity-well ship does not exempt it
     /// (DEFAULT, Paul has not decided). rule: m1-forced-stop-and-blockade §Update 2026-10-12, §Rule (both rulesets) 3 and 6.
     /// </summary>
-    internal List<Fleet> Blockers(Fleet passing, List<Fleet> enemies) => Blockers(Classes(passing).ToList(), enemies);
+    internal List<Fleet> Blockers(Fleet passing, List<Fleet> enemies) => Blockers(StrengthUnits(passing), enemies);
 
-    /// <summary>The same for a passing force given by its classes (a delivery counts as a fleet with only its own unit). rule: m2-construction (same armed test and ForcedStopTrigger as fleets).</summary>
-    internal List<Fleet> Blockers(IReadOnlyList<ShipClass> passing, List<Fleet> enemies)
+    /// <summary>The same for a passing force given by its classes (a delivery counts as a fleet with only its own unit, full health). rule: m2-construction (same armed test and ForcedStopTrigger as fleets).</summary>
+    internal List<Fleet> Blockers(IReadOnlyList<ShipClass> passing, List<Fleet> enemies) =>
+        Blockers(passing.Select(c => Strength.Unit(c)).ToList(), enemies);
+
+    private List<Fleet> Blockers(List<Combatant> passing, List<Fleet> enemies)
     {
         var armed = enemies.Where(e => CombatStrength.IsArmed(Classes(e))).ToList();
         if (armed.Count == 0) return armed;
@@ -707,10 +736,15 @@ public sealed class FleetModule
                 return gravityFleets;
             default: // PaulRule
                 if (gravityFleets.Count > 0) return armed;
-                // M4 re-check: strength is the placeholder (sum of refined_material_cost of armed ships). T is a percent from data.
-                long enemy = CombatStrength.Of(Classes(armed), passing);
-                long mine = CombatStrength.Of(passing);
-                return enemy * 100 >= (long)Blockade.ThresholdPercent * mine ? armed : new List<Fleet>();
+                // rule: m4-battle-new §12 (forced stop by strength): X stops Y if CS(X, Y) > 0 and CS(X, Y) >= T x CS(Y, X). T is a percent from data.
+                // DEFAULT: a delivery that carries no ship (a regiment, a special force, a facility: cargo) has nothing to measure and is stopped by any armed enemy
+                // (as under the placeholder: m1 rule 6, the passing force need not be armed; m2-construction C21)
+                if (passing.Count == 0) return armed;
+                var enemyUnits = armed.SelectMany(StrengthUnits).ToList();
+                double enemy = Strength.Of(enemyUnits, passing);
+                if (enemy <= 0) return new List<Fleet>();
+                double mine = Strength.Of(passing, enemyUnits);
+                return enemy * 100.0 >= Blockade.ThresholdPercent * mine ? armed : new List<Fleet>();
         }
     }
 
@@ -806,7 +840,8 @@ public sealed class FleetModule
         var blockers = FleetsAt(system).Where(f => f.Side == Other(againstSide)).ToList();
         if (!CombatStrength.IsArmed(Classes(blockers))) return false;
         if (Classes(blockers).Any(c => c.GravityWellProjector > 0)) return true;
-        return CombatStrength.Of(Classes(blockers)) >= EconomicStrength; // M4 re-check
+        // rule: m4-battle-new §12 (economic blockade by strength): CS(blockers, REF) >= E, REF = 3 ISD (DEFAULT)
+        return Strength.Of(blockers.SelectMany(StrengthUnits), _reference.Select(c => Strength.Unit(c))) >= EconomicStrength;
     }
 
     private static Side Other(Side s) => s == Side.Empire ? Side.Alliance : Side.Empire;

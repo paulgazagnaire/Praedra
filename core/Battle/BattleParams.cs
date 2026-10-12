@@ -27,6 +27,12 @@ public enum BattleOutcome { Victorious, Annihilated, Retreated, Indecisive }
 /// </summary>
 public sealed record BattleParams
 {
+    // ---- ruleset. rule: m4-battle-new §Rule (New) (second ruleset, selected by a setting)
+    /// <summary>Which engine resolves a battle. DEFAULT Classic. New = the per-gun engine (<see cref="NewBattle"/>).</summary>
+    public BattleRuleset Ruleset { get; init; } = BattleRuleset.Classic;
+    /// <summary>Switches and numbers of the New engine (used only when <see cref="Ruleset"/> is New).</summary>
+    public NewBattleParams New { get; init; } = new();
+
     // ---- switches. rule: m4-battle-classic §Defaults; m4-retreat-damage-repair §3
     /// <summary>Shield-generator and hull rolls on (DEFAULT on). Off skips both rolls and all draws (model-parity tests). rule: m4-battle-classic §7.</summary>
     public bool SubsystemRolls { get; init; } = true;
