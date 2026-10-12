@@ -18,6 +18,7 @@ namespace RebellionViewer;
 public partial class GameScreen
 {
     int _moveFleet = -1;
+    bool _moveHq;
     string _moveBanner;
     bool? _retreatPending;
     int _buildQty = 1;
@@ -32,11 +33,15 @@ public partial class GameScreen
     void OnViewChanged()
     {
         if (_moveFleet >= 0) UpdatePreview();
+        if (_moveHq) UpdateHqPreview();
         int h = _view.Hovered;
-        if (h >= 0 && _moveFleet < 0)
+        if (h >= 0 && _moveFleet < 0 && !_moveHq)
         {
-            var owner = S.OwnerOf(G.Systems[h].Name);
-            _hoverLabel.Text = $"{G.Systems[h].Name}  -  {(owner == null ? "neutral" : S.You(owner.Value))}";
+            string hn = G.Systems[h].Name;
+            var (known, owner) = S.KnownOwnerOf(hn);
+            int? seen = S.LastSeenDay(hn);
+            string age = owner == Me || S.Sees(hn) || seen == null ? "" : $"  (last seen day {seen})";
+            _hoverLabel.Text = $"{hn}  -  {(!S.Explored(hn) && owner != Me ? "unexplored" : !known ? "owner unknown" : owner == null ? "neutral" : S.You(owner.Value))}{age}";
             _hoverLabel.Visible = true;
         }
         else _hoverLabel.Visible = false;
@@ -61,7 +66,7 @@ public partial class GameScreen
 
     void CancelMove()
     {
-        _moveFleet = -1; _view.PickMode = false; _view.PathPreview = null;
+        _moveFleet = -1; _moveHq = false; _view.PickMode = false; _view.PathPreview = null;
         _panelDirty = true; _panelTimer = 0;
         RefreshTop();
     }
@@ -92,6 +97,7 @@ public partial class GameScreen
 
     void OnSystemPicked(int idx)
     {
+        if (_moveHq) { OnHqPicked(idx); return; }
         if (_moveFleet < 0) return;
         if (!S.Game.State.Fleets.TryGetValue(_moveFleet, out var f) || f.At == null) { CancelMove(); return; }
         string to = G.Systems[idx].Name;
@@ -159,7 +165,8 @@ public partial class GameScreen
     void RebuildPanel()
     {
         ClearPanel();
-        if (_view.SelectedFleet >= 0 && S.Game.State.Fleets.TryGetValue(_view.SelectedFleet, out var fleet)) { FleetPanel(fleet); return; }
+        // only own fleets can be selected: enemy fleets are known by what was seen, not by id (rule: m5-fog-and-hq §N8)
+        if (_view.SelectedFleet >= 0 && S.Game.State.Fleets.TryGetValue(_view.SelectedFleet, out var fleet) && fleet.Side == Me) { FleetPanel(fleet); return; }
         if (_view.SelectedFleet >= 0) _view.SelectedFleet = -1;
         if (_view.Selected >= 0) { SystemPanel(_view.Selected); return; }
         HelpPanel();
@@ -173,6 +180,7 @@ public partial class GameScreen
         Line("Click one of your fleets (white-outlined triangles, or the list on the left) to give it orders.");
         Add(new Control { CustomMinimumSize = new Vector2(0, 6) });
         Line("Colours: orange = Alliance, green = Empire, grey = neutral. The thin ring is the sector. A big double ring marks a headquarters, a red ring an uprising, a yellow ring a blockade.", Dim);
+        Line("Fog of war: you see live only the systems you hold or have a fleet at. Others show what you saw last (with the day); dim hollow dots are unexplored. Enemy fleets show only where you can see them.", Dim);
         Add(new Control { CustomMinimumSize = new Vector2(0, 6) });
         Line("Space: play / pause     N: one day     1-4: speed\nWheel or +/-: zoom     drag or arrows: pan\nEsc: cancel / deselect", Dim);
         Add(new Control { CustomMinimumSize = new Vector2(0, 6) });
@@ -186,67 +194,182 @@ public partial class GameScreen
         var sys = G.Systems[idx];
         string name = sys.Name;
         var eco = S.Host.Economy;
-        var owner = S.OwnerOf(name);
-        bool mine = owner == Me;
+        bool mine = S.OwnerOf(name) == Me; // own holdings are the side's own state (truth)
+        var (ownerKnown, owner) = S.KnownOwnerOf(name);
+        var pic = S.Picture(name);
+        bool sees = S.Sees(name);
 
         Line(name, null, 22);
-        Line($"{(sys.IsOutsideSectors ? "Outside the sectors" : sys.Sector)}{(_hqs.TryGetValue(idx, out var hqSide) ? (hqSide == Me ? "   (YOUR HEADQUARTERS)" : "   (ENEMY CAPITAL - take it to win)") : "")}", Dim);
+        string hqNote = name == S.MyHqSystem ? "   (YOUR HEADQUARTERS)"
+            : name == S.EnemyHqSystem ? (Me == Side.Empire ? "   (REBEL HQ - take it to win)" : "   (ENEMY CAPITAL - take it to win)") : "";
+        Line($"{(sys.IsOutsideSectors ? "Outside the sectors" : sys.Sector)}{hqNote}", Dim);
         Add(new HSeparator());
-        Line(owner == null ? "Owner: nobody (neutral)" : $"Owner: {S.You(owner.Value)}", owner == null ? Dim : (mine ? Good : Bad));
-        Line($"Support: Alliance {eco.SupportOf(name, Side.Alliance)}%, Empire {eco.SupportOf(name, Side.Empire)}%");
-        bool uprising = S.Host.Support.IsUprising(name);
-        if (uprising) Line("UPRISING! The people are in revolt here: yards and mines stop until it ends.", Bad);
-        if (S.Game.State.Blockades.TryGetValue(name, out var blockader)) Line($"Blockaded by the {S.NameOf(blockader)}: mines and yards stop.", Bad);
-        if (owner != null)
+
+        // ---- fog of war: anything not yours shows only the side's picture, with its age. rule: m5-fog-and-hq §N2, §N8
+        if (!mine && pic == null)
+        {
+            Line("Unexplored. You know nothing about this system yet: who holds it, what is built there or who is there.", Dim);
+            Line("Send a fleet there to look. Systems you hold or have a fleet at are seen live; the rest show what you saw last.", Dim);
+            FleetsHere(name, sees, null);
+            return;
+        }
+        if (!mine)
+        {
+            int? last = S.LastSeenDay(name);
+            Line(sees ? "Seen live now (you have a fleet here)." : last is int ld ? $"Last seen day {ld} ({S.Game.Day - ld} days ago). It may have changed since." : "Not seen since the start of the war.",
+                sees ? Good : new Color(1f, 0.85f, 0.4f));
+        }
+        Line(!ownerKnown ? "Owner: unknown" : owner == null ? "Owner: nobody (neutral)" : $"Owner: {S.You(owner.Value)}", !ownerKnown || owner == null ? Dim : (mine ? Good : Bad));
+        if (mine) Line($"Support: Alliance {eco.SupportOf(name, Side.Alliance)}%, Empire {eco.SupportOf(name, Side.Empire)}%");
+        else if (pic.Owner is { } po) Line($"Support: Alliance {po.Value.AllianceSupport}% (as last seen)");
+        if (mine || sees)
+        {
+            if (S.Host.Support.IsUprising(name)) Line(mine ? "UPRISING! The people are in revolt here: yards and mines stop until it ends." : "Uprising: the people here are in revolt.", Bad);
+            if (S.Game.State.Blockades.TryGetValue(name, out var blockader)) Line(blockader == Me ? "Blockaded by you: mines and yards here stop." : $"Blockaded by the {S.NameOf(blockader)}: mines and yards stop.", Bad);
+        }
+        if (mine)
         {
             int have = S.Host.Support.RegimentCount(name), need = S.Host.Support.RequiredGarrison(name);
             Line($"Garrison: {have} regiment(s), {need} needed to keep order.", have < need ? Bad : Dim);
+            var slots = eco.SlotsOf(name);
+            Line($"Energy slots: {eco.EnergyUsed(name)} used of {slots.Energy}, {eco.FreeEnergy(name)} free");
+            Line($"Raw material slots (for mines): {eco.RawUsed(name)} used of {eco.EffectiveRaw(name)}, {eco.FreeRaw(name)} free");
         }
-
-        var slots = eco.SlotsOf(name);
-        Line($"Energy slots: {eco.EnergyUsed(name)} used of {slots.Energy}, {eco.FreeEnergy(name)} free");
-        Line($"Raw material slots (for mines): {eco.RawUsed(name)} used of {eco.EffectiveRaw(name)}, {eco.FreeRaw(name)} free");
+        else if (pic.Status is { } st)
+            Line($"Energy slots: {st.Value.Energy}   Raw material slots: {st.Value.Raw}{(st.Value.Populated ? "" : "   (unpopulated)")}", Dim);
 
         // facilities
         Heading("Facilities");
-        var here = eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.System == name).ToList();
-        Line(here.Count(o => o.Completed) == 0 ? "none" : Counts(here.Where(o => o.Completed).Select(o => o.Class)));
-        var building = here.Where(o => !o.Completed).ToList();
-        if (building.Count > 0) Line($"Under construction: {Counts(building.Select(o => o.Class))}", Dim);
-        foreach (var fam in new[] { YardFamily.Construction, YardFamily.Shipyard, YardFamily.Training })
+        if (mine)
         {
-            var p = S.Host.Construction.ProjectAt(name, fam);
-            if (p == null || p.Units.Count == 0) continue;
-            var cur = eco.Find(p.Units[0]);
-            int cost = cur != null && eco.Costs.TryGet(cur.Class, out var cr) ? cr.Cost : 0;
-            Line($"{FamilyName(fam)} is building {Counts(p.Units.Select(u => eco.Find(u)?.Class ?? "?"))}; current one {p.Progress}/{cost}", Good);
-            if (mine) Act($"Stop building at {name} ({FamilyName(fam).ToLowerInvariant()})", () => StopBuild(name, fam));
+            var here = eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.System == name).ToList();
+            Line(here.Count(o => o.Completed) == 0 ? "none" : Counts(here.Where(o => o.Completed).Select(o => o.Class)));
+            var building = here.Where(o => !o.Completed).ToList();
+            if (building.Count > 0) Line($"Under construction: {Counts(building.Select(o => o.Class))}", Dim);
+            foreach (var fam in new[] { YardFamily.Construction, YardFamily.Shipyard, YardFamily.Training })
+            {
+                var p = S.Host.Construction.ProjectAt(name, fam);
+                if (p == null || p.Units.Count == 0) continue;
+                var cur = eco.Find(p.Units[0]);
+                int cost = cur != null && eco.Costs.TryGet(cur.Class, out var cr) ? cr.Cost : 0;
+                Line($"{FamilyName(fam)} is building {Counts(p.Units.Select(u => eco.Find(u)?.Class ?? "?"))}; current one {p.Progress}/{cost}", Good);
+                Act($"Stop building at {name} ({FamilyName(fam).ToLowerInvariant()})", () => StopBuild(name, fam));
+            }
         }
+        else if (pic.Facilities is { } fac)
+            Line((fac.Value.Count == 0 ? "none" : string.Join(", ", fac.Value.OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv => kv.Value == 1 ? kv.Key : $"{kv.Value} x {kv.Key}"))) + $"   (seen day {fac.Stamp})");
+        else Line("unknown (nobody has looked at the ground yet)", Dim);
+
+        // the Rebel HQ: the Alliance can move it (rule: m5-fog-and-hq §F6)
+        if (mine && Me == Side.Alliance && name == S.MyHqSystem) HqSection(name);
 
         // the build menu comes right after the facilities so a new player does not have to scroll for it
         if (mine) BuildMenu(name);
 
         // troops
         Heading("Regiments on the planet");
-        var regs = S.Host.Troops.RegimentsOnSystem(name);
-        if (regs.Count == 0) Line("none", Dim);
-        foreach (var g in regs.GroupBy(r => r.Side).OrderBy(g => g.Key))
-            Line($"{(g.Key == null ? "Neutral" : S.You(g.Key.Value))}: {Counts(g.Select(r => r.Class))}");
-
-        // fleets
-        Heading("Fleets here");
-        var fleetsHere = S.Game.State.Fleets.Values.Where(f => f.At == name).ToList();
-        if (fleetsHere.Count == 0) Line("none", Dim);
-        foreach (var f in fleetsHere)
+        if (mine)
         {
-            var fl = f;
-            Act($"{(f.Side == Me ? "" : "[enemy] ")}{f.Name}  ({Counts(Fm.ClassNamesOf(f))})", () => SelectFleet(fl.Id, false), "Click to select this fleet");
+            var regs = S.Host.Troops.RegimentsOnSystem(name);
+            if (regs.Count == 0) Line("none", Dim);
+            foreach (var g in regs.GroupBy(r => r.Side).OrderBy(g => g.Key))
+                Line($"{(g.Key == null ? "Neutral" : S.You(g.Key.Value))}: {Counts(g.Select(r => r.Class))}");
         }
+        else if (pic.Ground is { } gr)
+        {
+            if (gr.Value.All(x => x.Total == 0)) Line($"none seen (day {gr.Stamp})", Dim);
+            foreach (var g in gr.Value.Where(x => x.Total > 0))
+                Line($"{S.You(g.Side)}: {string.Join(", ", g.Units.Select(kv => kv.Value == 1 ? kv.Key : $"{kv.Value} x {kv.Key}"))}   (seen day {gr.Stamp})");
+        }
+        else Line("unknown", Dim);
+
+        FleetsHere(name, sees || mine, pic);
 
         if (mine) { }
-        else if (owner != null && S.Game.State.Fleets.Values.Any(f => f.Side == Me && f.At == name))
-            Line("To take this system: bombard it, then invade with troops aboard your fleet (select your fleet).", Dim);
-        else Line(owner == null ? "Nobody holds this planet. Send a fleet with regiments aboard, then press Invade. You can only build on systems you own." : "You can only build on systems you own. To take it, send a fleet with regiments aboard and press Invade.", Dim);
+        else if (S.Game.State.Fleets.Values.Any(f => f.Side == Me && f.At == name))
+            Line(owner != null ? "To take this system: bombard it, then invade with troops aboard your fleet (select your fleet)." : "Nobody holds this planet. Press Invade on your fleet with regiments aboard.", Dim);
+        else Line(owner == null && ownerKnown ? "Nobody holds this planet. Send a fleet with regiments aboard, then press Invade. You can only build on systems you own." : "You can only build on systems you own. To take it, send a fleet with regiments aboard and press Invade.", Dim);
+    }
+
+    /// <summary>Own fleets here (clickable), then the enemy fleets the side sees now, or the ones it saw last time it looked.</summary>
+    void FleetsHere(string name, bool live, Rebellion.Core.Fog.SystemPicture pic)
+    {
+        Heading("Fleets here");
+        var ownHere = S.Game.State.Fleets.Values.Where(f => f.At == name && f.Side == Me).ToList();
+        foreach (var f in ownHere)
+        {
+            var fl = f;
+            Act($"{f.Name}  ({Counts(Fm.ClassNamesOf(f))})", () => SelectFleet(fl.Id, false), "Click to select this fleet");
+        }
+        if (live)
+        {
+            var enemy = S.VisibleEnemyFleetsAt(name);
+            foreach (var e in enemy) Line($"[enemy] {S.NameOf(e.Side)} fleet: {e}", Bad);
+            if (ownHere.Count == 0 && enemy.Count == 0) Line("none", Dim);
+        }
+        else
+        {
+            if (ownHere.Count == 0) Line("none of yours", Dim);
+            if (pic?.Fleets is { } seen && seen.Value.Count > 0)
+                foreach (var e in seen.Value) Line($"[enemy, seen day {seen.Stamp}] {S.NameOf(e.Side)} fleet: {e}", Dim);
+            else Line("Enemy fleets: unknown (you have no eyes here).", Dim);
+        }
+    }
+
+    // ================================================================== the Rebel HQ (Alliance)
+
+    void HqSection(string at)
+    {
+        Heading("Headquarters");
+        Line("Your HQ is here. If the Empire takes this system, the HQ is lost and you lose. The Empire does not know where it is unless its spies find it.", Dim, 13);
+        if (S.PendingHqMove is string to) { Line($"Waiting for the next day: move the HQ to {to}.", new Color(1f, 0.85f, 0.4f)); return; }
+        bool pinned = S.Fog.IsPinned(at);
+        Act(_moveHq ? "Cancel HQ move" : "Move HQ...", () => { if (_moveHq) CancelMove(); else StartHqMove(); },
+            "Then click one of your systems. The HQ travels on the lanes (it cannot be attacked on the way) and arrives on the day shown.");
+        if (pinned) Line("A large enemy blockade here pins the HQ: the move will be refused until the blockade is broken.", Bad);
+    }
+
+    void StartHqMove()
+    {
+        _moveHq = true; _moveFleet = -1;
+        _view.PickMode = true;
+        _moveBanner = "Move HQ: click one of your systems (Esc cancels)";
+        _panelDirty = true; _panelTimer = 0;
+        RefreshTop();
+    }
+
+    void UpdateHqPreview()
+    {
+        string at = S.MyHqSystem;
+        if (at == null) { CancelMove(); return; }
+        int h = _view.Hovered;
+        if (h < 0 || G.Systems[h].Name == at) { _view.PathPreview = null; _moveBanner = "Move HQ: click one of your systems (Esc cancels)"; }
+        else
+        {
+            string to = G.Systems[h].Name;
+            var pr = Fm.FindPath(at, to, S.Fog.HqRules.Speed);
+            if (!pr.Ok) { _view.PathPreview = null; _moveBanner = $"No route from {at} to {to} for the HQ."; }
+            else
+            {
+                _view.PathPreview = pr.Systems;
+                _view.PathColor = new Color(1f, 0.95f, 0.5f, 0.9f);
+                bool held = S.OwnerOf(to) == Me;
+                _moveBanner = held ? $"HQ to {to}: {pr.TotalTicks} days, arrives day {S.Game.Day + pr.TotalTicks}. Click to confirm."
+                                   : $"{to} is not yours: the HQ can only move to a system you hold.";
+            }
+        }
+        RefreshTop();
+    }
+
+    void OnHqPicked(int idx)
+    {
+        string at = S.MyHqSystem;
+        string to = G.Systems[idx].Name;
+        if (at == null || to == at) return;
+        S.SubmitMoveHq(to); // the core judges it at the next day: refusals come back in Messages with the reason
+        S.Say($"Order sent: move the HQ to {to}.", MsgKind.Info, to);
+        AddLogItem(S.Messages[^1]);
+        CancelMove();
     }
 
     static string FamilyName(YardFamily f) => f switch { YardFamily.Shipyard => "Shipyard", YardFamily.Training => "Training facility", _ => "Construction yard" };
@@ -558,7 +681,7 @@ public partial class GameScreen
 
     public void SelectFleet(int id, bool centre)
     {
-        if (!S.Game.State.Fleets.TryGetValue(id, out var f)) return;
+        if (!S.Game.State.Fleets.TryGetValue(id, out var f) || f.Side != Me) return;
         _view.SelectedFleet = id;
         string sys = f.At ?? f.Transit?.Path[f.Transit.HopIndex + 1];
         if (centre && sys != null && G.TryFindSystem(sys, out int idx)) _view.Centre(idx);

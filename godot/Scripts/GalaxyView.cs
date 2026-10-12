@@ -33,12 +33,17 @@ public partial class GalaxyView : Control
     public static readonly Color EmpireColor = new(0.35f, 0.85f, 0.35f);
     public static readonly Color AllianceColor = new(1.0f, 0.55f, 0.15f);
     public static readonly Color NeutralColor = new(0.55f, 0.57f, 0.62f);
+    public static readonly Color UnknownColor = new(0.22f, 0.23f, 0.27f, 0.8f);
     /// <summary>Owner of a system by index (null = neutral).</summary>
     public Func<int, Side?> OwnerOf;
     /// <summary>True for a headquarters / capital system.</summary>
     public Func<int, bool> IsHq;
     /// <summary>A tag drawn under a system at any zoom ("YOUR HQ", "ENEMY CAPITAL"), or null.</summary>
     public Func<int, (string Text, Color Color)?> CapitalTag;
+    /// <summary>True for a system the player's side has never explored (fog of war): drawn dimmed, owner unknown.</summary>
+    public Func<int, bool> IsUnknown;
+    /// <summary>Set by the owner: returns the system index of an enemy fleet marker under a screen point, or -1 (clicking it selects that system).</summary>
+    public Func<Vector2, int> EnemyMarkerPicker;
     public Func<int, bool> IsUprising;
     public Func<int, bool> IsBlockaded;
     /// <summary>While true a click on a system raises <see cref="SystemPicked"/> instead of selecting it (used to choose a destination).</summary>
@@ -119,6 +124,8 @@ public partial class GalaxyView : Control
     /// <summary>Centre on a system keeping the zoom (zooms in a little if the map is far out).</summary>
     public void Centre(int system) { _center = _pos[system]; if (_zoom < 2.5f) _zoom = 2.5f; Changed(); }
     public void SetZoom(float zoom) { _zoom = Mathf.Clamp(zoom, MinZoom, MaxZoom); Changed(); }
+    /// <summary>Pretend the mouse is over a system (playtest and screenshots).</summary>
+    public void ShotHover(int system) { Hovered = system; QueueRedraw(); }
     public void Select(int system) { SelectedFleet = -1; Selected = system; StateChanged?.Invoke(); QueueRedraw(); }
 
     // ---- transform ----
@@ -164,6 +171,7 @@ public partial class GalaxyView : Control
                         int fleet = FleetPicker?.Invoke(mb.Position) ?? -1;
                         SelectedFleet = fleet;
                         int hit = fleet >= 0 ? -1 : Pick(mb.Position);
+                        if (fleet < 0 && hit < 0) hit = EnemyMarkerPicker?.Invoke(mb.Position) ?? -1;
                         Selected = hit; // click on empty space clears the selection
                         StateChanged?.Invoke();
                         QueueRedraw();
@@ -272,6 +280,14 @@ public partial class GalaxyView : Control
             var p = SystemScreen(i);
             if (!screenRect.HasPoint(p)) continue;
             var s = Galaxy.Systems[i];
+            if (IsUnknown?.Invoke(i) == true)
+            {
+                // never explored by the player's side: a dim hollow dot, nothing known about owner or state (fog of war)
+                var ring = _color[i]; ring.A = 0.35f;
+                DrawArc(p, radius + 1.2f, 0, Mathf.Tau, 20, ring, 1.5f, true);
+                DrawCircle(p, radius * 0.8f, UnknownColor);
+                continue;
+            }
             var owner = OwnerOf?.Invoke(i);
             var fill = owner == Side.Empire ? EmpireColor : owner == Side.Alliance ? AllianceColor : NeutralColor;
             if (s.IsOutsideSectors) DrawArc(p, radius + 4.5f, 0, Mathf.Tau, 24, new Color(1, 1, 1, 0.8f), 1.5f, true);
@@ -314,8 +330,9 @@ public partial class GalaxyView : Control
                 if (!screenRect.HasPoint(p)) continue;
                 var pos = p + new Vector2(radius + 3f, fs / 3f);
                 string text = Galaxy.Systems[i].Name;
+                float a = IsUnknown?.Invoke(i) == true ? 0.45f : 0.92f; // unexplored names are dimmer
                 DrawStringOutline(_font, pos, text, HorizontalAlignment.Left, -1, fs, 4, new Color(0, 0, 0, 0.85f * nameAlpha));
-                DrawString(_font, pos, text, HorizontalAlignment.Left, -1, fs, new Color(1, 1, 1, 0.92f * nameAlpha));
+                DrawString(_font, pos, text, HorizontalAlignment.Left, -1, fs, new Color(1, 1, 1, a * nameAlpha));
             }
         }
         else if (focus >= 0)

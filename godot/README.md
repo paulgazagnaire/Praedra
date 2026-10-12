@@ -18,7 +18,9 @@ The first time you press **New Game**, a **How to play** page opens. You can ope
 
 ## How to play (short)
 
-- **Goal.** Empire: capture the Rebel headquarters system. Alliance: capture Coruscant. You also win when the other side has no systems left. Your headquarters and the enemy capital carry a tag on the map; the **My HQ** and **Enemy HQ** buttons (top left) jump there.
+- **Goal.** Empire: capture the Rebel headquarters system. Alliance: capture Coruscant. You also win when the other side has no systems left. Your headquarters and the enemy capital carry a tag on the map; the **My HQ** and **Enemy HQ** buttons (top left) jump there. The Empire does not know where the Rebel HQ is: until its picture of the galaxy shows it, there is no tag and the button says **Enemy HQ: unknown**.
+- **Fog of war.** You see live only the systems you hold or have a fleet at. Other systems show what your side saw last (the system panel says "Last seen day N"); dim hollow dots are unexplored. Enemy fleets are drawn only where you can see them (as class counts, without names), and Messages only tell you what your side could know. The computer opponent plays by the same rule.
+- **Move the Rebel HQ (Alliance).** Click your HQ system (or **My HQ**), press **Move HQ...**, then click one of your systems; the gold line shows the route and the arrival day. The HQ travels on the lanes for some days (it cannot be attacked on the way) and the top-left line says "HQ moving to X, arrives day N". The move is refused (with the reason in Messages) if the destination is not yours or a large enemy blockade pins the HQ.
 - **Time.** **Play** (or Space) runs the clock at 5x by default; Space again pauses. Speed buttons or keys 1-4 change it (1x, 2x, 5x, 10x days per second). **+1 day** (or N) moves one day. The clock stops by itself after a battle, when a system changes hands, when an invasion happens, and on victory.
 - **Orders start when the next day starts.** The top bar says how many orders are waiting. If the rules refuse an order, the reason appears in Messages.
 - **Move a fleet.** Click one of your fleets (white outline) or its name in "Your fleets", press **Move...**, then click the destination. The white line shows the route and the arrival day. Once you confirm, the planned route stays drawn and the fleet list says "moving to X, arrives day N".
@@ -45,7 +47,9 @@ Saves live in Godot's user folder (macOS: `~/Library/Application Support/Godot/a
 
 ## For developers
 
-`Scripts/GameBoot.cs` is the one adapter to the core's setup (new game from `NewGame.Create`, the simple AI as opponent, the victory check).
+`Scripts/GameBoot.cs` is the one adapter to the core's setup (new game from `NewGame.Create`, the simple AI as opponent with `AiUsesFog` = true, the victory check).
+
+Fog of war: the screens read other sides only through the core's fog API for the player's side (`host.Fog`: `Picture`, `IsExplored`, `Sees`, `VisibleFleets`, `KnownHq`, `EventsFor`); `GameSession` wraps these (`KnownOwnerOf`, `LastSeenDay`, `MyHqSystem`, `EnemyHqSystem`). Own fleets, systems and the Alliance's own HQ are read from the game as before (they are the side's own).
 
 Files: `Main.cs` (screens, command-line modes, headless smoke test), `Main.Playtest.cs` (the headless playtest), `StartMenu.cs`, `GameScreen.cs` (top bar, loop, log, overlays), `GameScreen.Panels.cs` (system, fleet, build panels, move mode), `GameScreen.Playtest.cs` (click helpers for the playtest and screenshot options), `GameSession.cs` (queued orders tracked, core events turned into plain messages), `GalaxyView.cs`, `FleetLayer.cs`.
 
@@ -58,7 +62,7 @@ godot --headless --path . -- --smoke      # 60 days of a new game with scripted 
 godot --headless --path . -- --playtest   # plays Alliance and Empire games through the real screens (see below); exit code 1 on failure
 ```
 
-**`--playtest`** starts each game from the start screen and then clicks the real buttons (it raises the same `Pressed` signal a mouse click does; the core is only read to decide where to click): How to play, Play/Pause and speed, select a fleet from the list, Move..., Load/Unload troops, Bombard, Invade, battle popup and log click, retreat switch, split and merge, build a ship and a facility, Save, Load with the confirm dialog, Menu, Continue, running to day 400 against the AI, and the victory and defeat screens (forced with the core's debug set-holder order, which is switched on only inside the test). It uses throw-away save files (`playtest_*.json`) so real saves are never touched.
+**`--playtest`** starts each game from the start screen and then clicks the real buttons (it raises the same `Pressed` signal a mouse click does; the core is only read to decide where to click): How to play, Play/Pause and speed, select a fleet from the list, Move..., Load/Unload troops, Bombard, Invade, battle popup and log click, retreat switch, split and merge, build a ship and a facility, Save, Load with the confirm dialog, Menu, Continue, fog of war (an enemy fleet the player cannot see is neither drawn nor listed, unexplored systems are drawn dim, enemy fleets cannot be selected, no message about captures the player could not see), the Empire's **Enemy HQ: unknown** button at the start, the Alliance's **Move HQ...** (a refused move with its reason, then a move that arrives on the announced day), running to day 400 against the AI, and the victory and defeat screens (forced with the core's debug set-holder order, which is switched on only inside the test). It uses throw-away save files (`playtest_*.json`) so real saves are never touched.
 
 Command-line options after `--` for screenshots and quick looks: `--screenshot out.png [frames]`, `--menu`, `--newgame`, `--side Alliance|Empire`, `--preset easy|medium|hard`, `--days N`, `--focus "System" [zoom]`, `--fleet "Name"`, `--moveto "System"` (needs `--fleet`), `--open Ships|Fighters|Troops|Facilities`, `--howto`, `--filter All|Battles|"My systems"`, `--zoom Z`.
 

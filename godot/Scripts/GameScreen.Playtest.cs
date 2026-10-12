@@ -77,6 +77,15 @@ public partial class GameScreen
     internal void Frame(double seconds) => _Process(seconds);
     internal IEnumerable<string> FleetListTexts() => _fleetList.GetChildren().OfType<Button>().Select(b => b.Text);
     internal int LogRows => _log.ItemCount;
+    internal string ToastText => _toast.Visible ? _toast.Text : "";
+    internal string HqStatusText => _hqStatusLabel.Visible ? _hqStatusLabel.Text : "";
+    /// <summary>The tags drawn on the map (system, text), as the map asks for them.</summary>
+    internal IEnumerable<(string System, string Text)> MapTags() =>
+        Enumerable.Range(0, G.Systems.Count).Select(i => (G.Systems[i].Name, CapitalTagOf(i)?.Text)).Where(t => t.Text != null);
+    internal IReadOnlyList<string> EnemyMarkerSystems() => _fleets.EnemyMarkerSystems();
+    internal IReadOnlyList<int> DrawnFleetIds() => _fleets.DrawnFleetIds();
+    internal bool DrawnUnknown(string system) => G.TryFindSystem(system, out int i) && _view.IsUnknown(i);
+    internal string HoverTextFor(string system) { if (!G.TryFindSystem(system, out int i)) return ""; _view.ShotHover(i); OnViewChanged(); return _hoverLabel.Text; }
     internal bool SetCheck(string prefix, bool on)
     {
         foreach (var c in AllNodes(_pv)) if (c is CheckButton cb && cb.Text.StartsWith(prefix, StringComparison.Ordinal)) { cb.ButtonPressed = on; return true; }

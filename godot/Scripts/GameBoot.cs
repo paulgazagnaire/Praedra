@@ -54,6 +54,15 @@ public static class GameBoot
     /// <summary>DEFAULT false: the Empire AI does not know where the Rebel HQ is. true = it is told (as in `sim aivai`), and strikes it at about day 240.</summary>
     public const bool EmpireAiKnowsRebelHq = false;
 
+    /// <summary>
+    /// DEFAULT true: the computer opponent reads the other side only through its own side's fog-of-war view (SimpleAiParams.UseFog).
+    /// rule: economy-ai D4 "AI plays fair with fog of war" (Decided, also m5-fog-and-hq §N8: no difficulty widens the view).
+    /// </summary>
+    public const bool AiUsesFog = true;
+
+    /// <summary>The Empire's capital (the Alliance's goal), the core's own name for it. rule: m2-control-and-capture (capital system).</summary>
+    public const string EmpireCapital = Rebellion.Core.Control.ControlModule.CapitalSystem;
+
     static GameData _data;
 
     /// <summary>
@@ -108,9 +117,9 @@ public static class GameBoot
     /// <summary>The computer opponent for <paramref name="aiSide"/>: the simple AI (core/AI).</summary>
     public static IOpponent CreateOpponent(GameHost host, Side aiSide)
     {
-        var ai = new SimpleAi(host, aiSide);
-        // DEFAULT (playable slice): the Empire AI is NOT told where the Rebel HQ is (economy-ai D4: the AI plays fair with fog of war).
-        // It still conquers systems and wins if it captures the HQ. Searching for the HQ comes with M5 (m5-fog-and-hq).
+        var ai = new SimpleAi(host, aiSide, new SimpleAiParams { UseFog = AiUsesFog });
+        // DEFAULT: the Empire AI is NOT told where the Rebel HQ is (economy-ai D4: the AI plays fair with fog of war). With fog on it reads
+        // the HQ only from its own picture (m5-fog-and-hq §N5 KnownHq). It still conquers systems and wins if it captures the HQ.
         if (aiSide == Side.Empire && EmpireAiKnowsRebelHq) ai.KnownEnemyHq = host.HqSystem;
         return new DelegateOpponent(ai.PlanDay);
     }
@@ -120,8 +129,9 @@ public static class GameBoot
 
     public static string WinReason(GameHost host) => host.Victory.Reason;
 
-    /// <summary>Headquarters system of a side (drawn with a marker): the Rebel HQ from the setup, the Empire's is Coruscant.</summary>
-    public static string CapitalOf(GameHost host, Side side) => side == Side.Empire ? "Coruscant" : (host.HqSystem ?? "Sullust");
+    /// <summary>Headquarters system of a side as the core holds it (truth; the screens use GameSession.MyHqSystem / EnemyHqSystem, which
+    /// respect the fog): Coruscant for the Empire, the Rebel HQ for the Alliance (null while it moves).</summary>
+    public static string CapitalOf(GameHost host, Side side) => side == Side.Empire ? EmpireCapital : host.HqSystem;
 
     // ------------------------------------------------------------------ save files
 
