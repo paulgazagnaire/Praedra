@@ -61,6 +61,7 @@ public partial class GameScreen
 
     internal bool PlayDay() { var r = RunDay(); PlayRefresh(); return r; }
     internal bool HowToVisible => _howPanel.Visible;
+    internal bool CharactersOpen => _charTab;
     internal bool ConfirmVisible => _confirmPanel.Visible;
     internal bool ReportVisible => _reportPanel.Visible;
     internal string ReportText => _reportTitle.Text + "\n" + _reportBody.Text;
@@ -116,4 +117,6 @@ public partial class GameScreen
     public void ShotOpenSection(string name) { if (name.StartsWith("-")) _openSections.Remove(name[1..]); else _openSections.Add(name); _panelDirty = true; _panelTimer = 0; }
     public void ShotMove(string to) { if (_view.SelectedFleet >= 0 && S.Game.State.Fleets.TryGetValue(_view.SelectedFleet, out var f)) { StartMove(f); PickSystem(to); } }
     public void ShotFilter(string name) => SetFilter(name);
+    public void ShotCharacters() { if (!_charTab) ToggleCharacters(); PlayRefresh(); }
+    public void ShotClick(string prefix) { PlayRefresh(); if (!Click(prefix)) GD.PrintErr("no button " + prefix); PlayRefresh(); }
 }

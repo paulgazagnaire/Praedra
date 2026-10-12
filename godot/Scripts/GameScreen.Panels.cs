@@ -34,8 +34,9 @@ public partial class GameScreen
     {
         if (_moveFleet >= 0) UpdatePreview();
         if (_moveHq) UpdateHqPreview();
+        if (_moveChar >= 0) UpdateCharPreview();
         int h = _view.Hovered;
-        if (h >= 0 && _moveFleet < 0 && !_moveHq)
+        if (h >= 0 && _moveFleet < 0 && !_moveHq && _moveChar < 0)
         {
             string hn = G.Systems[h].Name;
             var (known, owner) = S.KnownOwnerOf(hn);
@@ -51,6 +52,7 @@ public partial class GameScreen
             if (_view.SelectedFleet != _lastSelectedFleet) _splitSel.Clear();
             _lastSelectedSystem = _view.Selected; _lastSelectedFleet = _view.SelectedFleet;
             if (_moveFleet >= 0 && _view.SelectedFleet != _moveFleet) CancelMove();
+            if (_charTab && (_view.Selected >= 0 || _view.SelectedFleet >= 0)) { _charTab = false; RefreshCharButton(); } // a map selection closes the Characters list
             _panelDirty = true; _panelTimer = 0;
         }
     }
@@ -66,7 +68,7 @@ public partial class GameScreen
 
     void CancelMove()
     {
-        _moveFleet = -1; _moveHq = false; _view.PickMode = false; _view.PathPreview = null;
+        _moveFleet = -1; _moveHq = false; _moveChar = -1; _view.PickMode = false; _view.PathPreview = null;
         _panelDirty = true; _panelTimer = 0;
         RefreshTop();
     }
@@ -98,6 +100,7 @@ public partial class GameScreen
     void OnSystemPicked(int idx)
     {
         if (_moveHq) { OnHqPicked(idx); return; }
+        if (_moveChar >= 0) { OnCharPicked(idx); return; }
         if (_moveFleet < 0) return;
         if (!S.Game.State.Fleets.TryGetValue(_moveFleet, out var f) || f.At == null) { CancelMove(); return; }
         string to = G.Systems[idx].Name;
@@ -165,6 +168,7 @@ public partial class GameScreen
     void RebuildPanel()
     {
         ClearPanel();
+        if (_charTab) { CharactersPanel(); return; }
         // only own fleets can be selected: enemy fleets are known by what was seen, not by id (rule: m5-fog-and-hq §N8)
         if (_view.SelectedFleet >= 0 && S.Game.State.Fleets.TryGetValue(_view.SelectedFleet, out var fleet) && fleet.Side == Me) { FleetPanel(fleet); return; }
         if (_view.SelectedFleet >= 0) _view.SelectedFleet = -1;
@@ -178,6 +182,7 @@ public partial class GameScreen
         Add(new HSeparator());
         Line("Click a system to see it, and to build there if it is yours.");
         Line("Click one of your fleets (white-outlined triangles, or the list on the left) to give it orders.");
+        Line("Press Characters (or C) to see your leaders. " + LeaderHelp);
         Add(new Control { CustomMinimumSize = new Vector2(0, 6) });
         Line("Colours: orange = Alliance, green = Empire, grey = neutral. The thin ring is the sector. A big double ring marks a headquarters, a red ring an uprising, a yellow ring a blockade.", Dim);
         Line("Fog of war: you see live only the systems you hold or have a fleet at. Others show what you saw last (with the day); dim hollow dots are unexplored. Enemy fleets show only where you can see them.", Dim);
@@ -210,6 +215,7 @@ public partial class GameScreen
         {
             Line("Unexplored. You know nothing about this system yet: who holds it, what is built there or who is there.", Dim);
             Line("Send a fleet there to look. Systems you hold or have a fleet at are seen live; the rest show what you saw last.", Dim);
+            CharactersAtSystem(name, false);
             FleetsHere(name, sees, null);
             return;
         }
@@ -283,6 +289,7 @@ public partial class GameScreen
         }
         else Line("unknown", Dim);
 
+        CharactersAtSystem(name, mine);
         FleetsHere(name, sees || mine, pic);
 
         if (mine) { }
@@ -571,6 +578,8 @@ public partial class GameScreen
                 if (attackPending) Line("A fleet can carry out one attack order at a time. Press +1 day (or Play) so this one starts, then give the next.", Dim);
             }
         }
+
+        OfficersSection(f);
 
         // battle behaviour
         Heading("When an enemy fleet arrives");

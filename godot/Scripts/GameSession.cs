@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Rebellion.Core.Assault;
 using Rebellion.Core.Battle;
+using Rebellion.Core.Characters;
 using Rebellion.Core.Clock;
 using Rebellion.Core.Construction;
 using Rebellion.Core.Control;
@@ -54,6 +55,10 @@ public sealed class GameSession
     readonly Dictionary<long, string> _pending = new();
     readonly Dictionary<long, int> _pendingFleet = new();
     readonly Dictionary<int, PlannedMove> _plannedMoves = new();
+    // Character orders: which character each queued order is about, and the sequences that are character orders (their refusals use WhyCharacter).
+    readonly Dictionary<long, int> _pendingChar = new();
+    readonly HashSet<long> _charOrders = new();
+    readonly Dictionary<int, PlannedMove> _plannedCharMoves = new();
     int _printed; // index into the fog's event feed for the player's side (EventsFor), not the unfiltered list
     // Names as they were before the day ran (a destroyed ship or a dissolved fleet is gone afterwards).
     readonly Dictionary<int, string> _classOf = new();
@@ -210,6 +215,7 @@ public sealed class GameSession
         ReadEvents(outcome);
         // Every order given before this day was judged in this Step: nothing is "waiting" any more.
         _pending.Clear(); _pendingFleet.Clear(); _plannedMoves.Clear(); PendingHqMove = null;
+        _pendingChar.Clear(); _charOrders.Clear(); _plannedCharMoves.Clear();
         Winner = GameBoot.WinnerOf(Host);
         if (Winner is Side w)
         {
@@ -298,6 +304,178 @@ public sealed class GameSession
         _ => reason,
     };
 
+    /// <summary>The words for a refused character order (the shared reasons read differently for a character). rule: m5-characters-and-force §Posts (Orders), §Moving a character alone.</summary>
+    public static string WhyCharacter(string reason) => reason switch
+    {
+        CharacterReject.UnknownCharacter => "that character is not in the game",
+        CharacterReject.NotFree => "the character is not free (injured, captured or dead)",
+        CharacterReject.NotAtSystem => "the character is not at that system (wait until it gets there)",
+        CharacterReject.FleetInTransit => "the fleet is travelling (wait until it arrives)",
+        CharacterReject.AlreadyAttached => "the character is already aboard a fleet (detach it first)",
+        CharacterReject.OnMission => "the character is on a mission",
+        CharacterReject.HoldsSystemPost => "the character is a system General (release that post first)",
+        CharacterReject.NoCapability => "the character cannot hold that post",
+        CharacterReject.PostTaken => "that post is already taken",
+        CharacterReject.NotAttached => "the character is not aboard a fleet",
+        CharacterReject.AlreadyHoldsSystemPost => "the character is already the General of another system",
+        CharacterReject.NoSystemGeneral => "that system has no General",
+        CharacterReject.Attached => "the character is aboard a fleet (detach it first, or move the fleet)",
+        CharacterReject.NoPath => "there is no route there",
+        RejectReason.InTransit => "the character is already travelling",
+        RejectReason.AlreadyThere => "the character is already there",
+        RejectReason.NotYourSystem => "the system must be one of yours",
+        _ => Why(reason),
+    };
+
+    // ------------------------------------------------------------------ characters (the player's own side only: rule m5-fog-and-hq §N8 OwnState)
+
+    public CharacterModule Chars => Host.Characters;
+
+    public string CharName(int id) => Chars.Data.TryGet(id, out var c) ? c.Name : $"character {id}";
+
+    /// <summary>The player's characters in play, by name. Characters of the other side are never listed: the fog API does not say where they are.</summary>
+    public IReadOnlyList<CharacterRecord> MyCharacters =>
+        Chars.InPlay.Where(c => c.Side == Player).OrderBy(c => CharName(c.Id), StringComparer.Ordinal).ThenBy(c => c.Id).ToList();
+
+    /// <summary>The system the character is General of, or null.</summary>
+    public string SystemPostOf(CharacterRecord c) =>
+        Game.State.Characters.SystemGenerals.Where(kv => kv.Value == c.Id).Select(kv => kv.Key).FirstOrDefault();
+
+    /// <summary>Remember a queued character order (and the fleet it concerns, or -1) for the panels and the refusal message.</summary>
+    public long TrackCharacter(int character, int fleet, long sequence, string what)
+    {
+        _pendingChar[sequence] = character;
+        _charOrders.Add(sequence);
+        if (fleet >= 0) _pendingFleet[sequence] = fleet;
+        return Track(sequence, what);
+    }
+
+    public IEnumerable<string> PendingOfCharacter(int character) =>
+        _pendingChar.Where(kv => kv.Value == character && _pending.ContainsKey(kv.Key)).OrderBy(kv => kv.Key).Select(kv => _pending[kv.Key]);
+
+    public void PlanCharacterMove(int character, PlannedMove m) => _plannedCharMoves[character] = m;
+    public PlannedMove? PlannedCharacterMoveOf(int character) => _plannedCharMoves.TryGetValue(character, out var m) ? m : null;
+    public IEnumerable<KeyValuePair<int, PlannedMove>> PlannedCharacterMoves => _plannedCharMoves.OrderBy(kv => kv.Key);
+
+    /// <summary>The last day of a trip (the next stop plus the remaining hops).</summary>
+    public static int ArrivalDay(FleetTransit t)
+    {
+        int day = t.DueDay;
+        for (int h = t.HopIndex + 1; h < t.HopTicks.Count; h++) day += t.HopTicks[h];
+        return day;
+    }
+
+    public static string StatusWords(CharacterRecord c) => c.Status switch
+    {
+        CharacterStatus.Injured => c.InjuredDaysLeft > 0 ? $"injured ({c.InjuredDaysLeft} days to heal)" : "injured",
+        CharacterStatus.Captured => "captured",
+        CharacterStatus.Dead => "dead",
+        _ => "free",
+    };
+
+    /// <summary>Where one of the player's characters is, in words (system, fleet, or travelling with the arrival day).</summary>
+    public string WhereIsCharacter(CharacterRecord c)
+    {
+        if (c.Status == CharacterStatus.Dead) return c.System != null ? $"fell at {c.System}" : "dead";
+        if (c.Status == CharacterStatus.Captured) return $"held prisoner at {c.HeldAt ?? "an unknown place"} by the {(c.Captor is Side cap ? NameOf(cap) : "enemy")}";
+        if (c.AttachedFleet != 0 && Game.State.Fleets.TryGetValue(c.AttachedFleet, out var f))
+        {
+            if (f.Transit is { } ft && f.At == null) return $"aboard fleet {f.Name}, travelling to {ft.Path[^1]}, arrives day {ArrivalDay(ft)}";
+            return $"aboard fleet {f.Name} at {f.At}";
+        }
+        if (c.Transit is { } t && c.System == null) return $"travelling alone to {t.Path[^1]}, arrives day {ArrivalDay(t)}";
+        if (PlannedCharacterMoveOf(c.Id) is { } pm) return $"at {c.System}; leaves when the next day starts for {pm.To}, arrives day {pm.ArrivalDay}";
+        if (c.Transit is { } t2) return $"at {c.System}; leaving for {t2.Path[^1]}, arrives day {ArrivalDay(t2)}";
+        return $"at {c.System}";
+    }
+
+    /// <summary>The system to centre the map on for a character (where it is, or the next stop of its trip), or null.</summary>
+    public string MapPlaceOf(CharacterRecord c)
+    {
+        var at = Chars.LocationOf(c);
+        if (at != null) return at;
+        if (c.AttachedFleet != 0 && Game.State.Fleets.TryGetValue(c.AttachedFleet, out var f) && f.Transit is { } ft) return ft.Path[ft.HopIndex + 1];
+        return c.Transit is { } t ? t.Path[Math.Min(t.HopIndex + 1, t.Path.Count - 1)] : c.System;
+    }
+
+    /// <summary>The character's post in words. rule: m5-characters-and-force §Posts.</summary>
+    public string RoleOf(CharacterRecord c)
+    {
+        if (SystemPostOf(c) is string sys) return $"system General of {sys}";
+        if (c.AttachedFleet != 0)
+        {
+            string fn = FleetName(c.AttachedFleet);
+            return c.Post == CharacterPost.None ? $"passenger on fleet {fn}" : $"fleet {PostWords(c.Post)} of {fn}";
+        }
+        return "no post";
+    }
+
+    /// <summary>The skills the sheet uses (leadership feeds the posts), and the Force rank only when the side knows the character is a Force user. rule: m5-characters-and-force §Posts, §Force (Rank).</summary>
+    public string SkillsOf(CharacterRecord c)
+    {
+        string s = $"Leadership {c.Skill(Skill.Leadership)}, combat {c.Skill(Skill.Combat)}, diplomacy {c.Skill(Skill.Diplomacy)}, espionage {c.Skill(Skill.Espionage)}";
+        if (c.ForceUser && c.ForceDiscovered && Chars.RankOf(c) is ForceRank r) s += $"; Force: {RankWords(r)} ({c.EffectiveForce})";
+        return s;
+    }
+
+    /// <summary>Which posts the character's record allows. rule: m5-characters-and-force §Posts (Capability).</summary>
+    public string CapabilityOf(CharacterRecord c)
+    {
+        var cls = Chars.ClassOf(c);
+        var can = new List<string>();
+        if (cls.CanAdmiral) can.Add("Admiral");
+        if (cls.CanCommander) can.Add("Commander");
+        if (cls.CanGeneral) can.Add("General");
+        return can.Count == 0 ? "Cannot hold a post (may ride a fleet as a passenger)." : "Can be " + string.Join(", ", can) + ".";
+    }
+
+    public static string PostWords(CharacterPost p) => p switch
+    {
+        CharacterPost.Admiral => "Admiral",
+        CharacterPost.Commander => "Commander",
+        CharacterPost.General => "General",
+        _ => "passenger",
+    };
+
+    static string PostKindWords(PostKind p) => p switch
+    {
+        PostKind.Admiral => "a fleet Admiral",
+        PostKind.Commander => "a fleet Commander",
+        PostKind.General => "a fleet General",
+        _ => "a system General",
+    };
+
+    /// <summary>Original text names of the ranks. rule: m5-characters-and-force §Force (Rank).</summary>
+    public static string RankWords(ForceRank r) => r switch
+    {
+        ForceRank.Student => "Jedi Student",
+        ForceRank.Knight => "Jedi Knight",
+        ForceRank.Master => "Jedi Master",
+        _ => "Jedi Trainee",
+    };
+
+    static string At(string system) => system == null ? "" : $" at {system}";
+
+    static string CauseWords(string cause) => cause switch
+    {
+        CharacterCause.Battle => " in battle",
+        CharacterCause.DeathStar => " by the Death Star",
+        CharacterCause.Uprising => " in an uprising",
+        CharacterCause.Assault => " in an invasion",
+        CharacterCause.Mission => " on a mission",
+        CharacterCause.FleetDissolved => " (the fleet is gone)",
+        CharacterCause.FleetMoved => " (the fleet moved off)",
+        CharacterCause.Merged => " (the fleets merged)",
+        CharacterCause.HolderChanged => " (the system changed hands)",
+        CharacterCause.SystemDestroyed => " (the system was destroyed)",
+        CharacterCause.Injured => " (injured)",
+        CharacterCause.Captured => " (captured)",
+        CharacterCause.Killed => " (killed)",
+        _ => "",
+    };
+
+    string FleetSystem(int fleet) => Game.State.Fleets.TryGetValue(fleet, out var f) ? f.At : null;
+
     const string HqOrderPrefix = "Move the HQ";
     static bool IsHqOrder(string what) => what.StartsWith(HqOrderPrefix, StringComparison.Ordinal);
 
@@ -347,9 +525,12 @@ public sealed class GameSession
         switch (e)
         {
             case OrderRejected r when _pending.TryGetValue(r.Sequence, out var what):
+            {
                 _pending.Remove(r.Sequence);
-                yield return new Message(d, $"Order refused: {what}. Reason: {(IsHqOrder(what) ? WhyHq(r.Reason) : Why(r.Reason))}.", null, MsgKind.Bad);
+                string why = _charOrders.Contains(r.Sequence) ? WhyCharacter(r.Reason) : IsHqOrder(what) ? WhyHq(r.Reason) : Why(r.Reason);
+                yield return new Message(d, $"Order refused: {what}. Reason: {why}.", null, MsgKind.Bad);
                 break;
+            }
             case OrderAccepted a when _pending.TryGetValue(a.Sequence, out var what) && IsHqOrder(what) && a.Path != null:
                 _pending.Remove(a.Sequence);
                 yield return new Message(d, $"HQ moving to {a.Path.Items[^1]}, arrives day {a.ArrivalDay} ({a.TotalTicks} days on the lanes).", a.Path.Items[^1], MsgKind.Good);
@@ -417,6 +598,61 @@ public sealed class GameSession
                 break;
             case BattleEnded be:
                 yield return BattleReport(be, o);
+                break;
+
+            // ---- characters: only the feed the player's side may see (rule: m5-fog-and-hq §N8 event audience; m5-characters-and-force §Events)
+            case CharacterCreated c:
+                yield return new Message(d, Mine(c.Side) ? $"{CharName(c.Character)} joined your side{At(c.System)}." : $"A new {NameOf(c.Side)} leader, {CharName(c.Character)}, appeared{At(c.System)}.", c.System, Mine(c.Side) ? MsgKind.Good : MsgKind.Info);
+                break;
+            case CharacterArrived c:
+                yield return new Message(d, Mine(c.Side) ? $"{CharName(c.Character)} arrived at {c.System}." : $"Enemy leader {CharName(c.Character)} arrived at {c.System}.", c.System, Mine(c.Side) ? MsgKind.Info : MsgKind.Warn);
+                break;
+            case CharacterAttached c when Mine(c.Side):
+                yield return new Message(d, c.Cause == CharacterCause.Merged
+                    ? $"{CharName(c.Character)} moved to fleet {FleetName(c.Fleet)} (the fleets merged){(c.Post == CharacterPost.None ? "" : $" as {PostWords(c.Post)}")}."
+                    : c.Post == CharacterPost.None ? $"{CharName(c.Character)} boarded fleet {FleetName(c.Fleet)} as a passenger."
+                    : $"{CharName(c.Character)} joined fleet {FleetName(c.Fleet)} as {PostWords(c.Post)}.", FleetSystem(c.Fleet), MsgKind.Good);
+                break;
+            case CharacterDetached c when Mine(c.Side) && c.Cause is not (CharacterCause.Injured or CharacterCause.Captured or CharacterCause.Killed):
+                yield return new Message(d, $"{CharName(c.Character)} left fleet {FleetName(c.Fleet)}{At(c.System)}{CauseWords(c.Cause)}.", c.System, c.Cause == CharacterCause.Order ? MsgKind.Info : MsgKind.Warn);
+                break;
+            case PostVacated p when Mine(p.Side) && (p.Post == PostKind.SystemGeneral || p.Cause is not (CharacterCause.Order or CharacterCause.Injured or CharacterCause.Captured or CharacterCause.Killed)):
+                // a detach by order, an injury, a capture and a death have their own line; this tells the rest (a release, a merge, a lost system)
+                yield return new Message(d, $"{CharName(p.Character)} is no longer {PostKindWords(p.Post)}{CauseWords(p.Cause)}.", null, p.Cause == CharacterCause.Order ? MsgKind.Info : MsgKind.Warn);
+                break;
+            case SystemGeneralAssigned g when Mine(g.Side):
+                yield return new Message(d, $"{CharName(g.Character)} is now the General of {g.System}: the defenders there fight better in an invasion.", g.System, MsgKind.Good);
+                break;
+            case CharacterInjured c:
+                yield return new Message(d, Mine(c.Side) ? $"{CharName(c.Character)} was injured{At(c.System)}{CauseWords(c.Cause)}." : $"Enemy leader {CharName(c.Character)} was injured{At(c.System)}.", c.System, Mine(c.Side) ? MsgKind.Bad : MsgKind.Good);
+                break;
+            case CharacterHealed c when Mine(c.Side):
+                yield return new Message(d, $"{CharName(c.Character)} has recovered from the injuries.", null, MsgKind.Good);
+                break;
+            case CharacterCaptured c:
+                yield return new Message(d, Mine(c.Side) ? $"{CharName(c.Character)} was captured by the {NameOf(c.Captor)}{At(c.System)}."
+                    : c.Captor == Player ? $"You captured {CharName(c.Character)} of the {NameOf(c.Side)}{At(c.System)}."
+                    : $"{CharName(c.Character)} was captured{At(c.System)}.", c.System, Mine(c.Side) ? MsgKind.Bad : MsgKind.Good);
+                break;
+            case CharacterFreed c:
+                yield return new Message(d, Mine(c.Side) ? $"{CharName(c.Character)} was freed{At(c.System)}." : $"Enemy leader {CharName(c.Character)} was freed{At(c.System)}.", c.System, Mine(c.Side) ? MsgKind.Good : MsgKind.Bad);
+                break;
+            case CharacterEscaped c:
+                yield return new Message(d, Mine(c.Side) ? $"{CharName(c.Character)} escaped from prison{At(c.System)}." : $"Enemy leader {CharName(c.Character)} escaped from your prison{At(c.System)}.", c.System, Mine(c.Side) ? MsgKind.Good : MsgKind.Bad);
+                break;
+            case CharacterKilled c:
+                yield return new Message(d, Mine(c.Side) ? $"{CharName(c.Character)} was killed{At(c.System)}{CauseWords(c.Cause)}." : $"Enemy leader {CharName(c.Character)} was killed{At(c.System)}.", c.System, Mine(c.Side) ? MsgKind.Bad : MsgKind.Good);
+                break;
+            case ForceTrainingResult t when Mine(t.Side):
+                yield return new Message(d, t.Success
+                    ? $"Jedi training: {CharName(t.Student)} grew stronger in the Force under {CharName(t.Trainer)} (Force now {t.NewForce})."
+                    : $"Jedi training: {CharName(t.Student)} made no progress with {CharName(t.Trainer)} this time.", null, t.Success ? MsgKind.Good : MsgKind.Info);
+                break;
+            case ForceRankChanged r when Mine(r.Side) && r.To is ForceRank to:
+                yield return new Message(d, $"{CharName(r.Character)} is now a {RankWords(to)}.", null, MsgKind.Good);
+                break;
+            case ForceDiscovered f:
+                yield return new Message(d, Mine(f.Side) ? $"{CharName(f.Character)} is strong in the Force! Jedi training is now possible." : $"Enemy leader {CharName(f.Character)} is strong in the Force.", null, Mine(f.Side) ? MsgKind.Good : MsgKind.Warn);
                 break;
 
             // ---- research

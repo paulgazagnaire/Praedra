@@ -107,6 +107,7 @@ public partial class Main
         PlaytestFog(gs);
         if (side == Side.Empire) PlaytestEmpireHqUnknown(gs);
         else PlaytestMoveHq(gs);
+        PlaytestCharacters(gs);
 
         // ---------------------------------------------------------------- select the troop fleet, move it to where the regiments are
         var eco = s.Host.Economy; var fm = s.Host.Fleets;

@@ -30,6 +30,8 @@ public partial class FleetLayer : Control
     public Func<IReadOnlyList<(string System, FleetPicture Fleet)>> EnemyFleets { get; set; }
     /// <summary>The player's own HQ while it moves (path, the hop it is on, arrival day), or null.</summary>
     public Func<(IReadOnlyList<string> Path, int HopIndex, int ArrivalDay)?> HqRoute { get; set; }
+    /// <summary>The player's own characters travelling alone (label, path, the hop they are on), including trips that start next day.</summary>
+    public Func<IEnumerable<(string Label, IReadOnlyList<string> Path, int HopIndex)>> CharacterRoutes { get; set; }
     const float PickRadiusPx = 13f;
     const float LabelZoom = 2.0f;
 
@@ -176,6 +178,22 @@ public partial class FleetLayer : Control
             }
             if (from is Vector2 end) DrawDestination(font, end, $"HQ arrives day {hq.ArrivalDay}", gold, true);
         }
+
+        // the player's characters travelling alone: a thin dashed light-blue line, arrival day at the end
+        if (CharacterRoutes != null)
+            foreach (var cr in CharacterRoutes())
+            {
+                var blue = new Color(0.55f, 0.85f, 1f, 0.9f);
+                Vector2? from = null;
+                for (int i = Math.Max(0, cr.HopIndex); i < cr.Path.Count; i++)
+                {
+                    if (!_galaxy.TryFindSystem(cr.Path[i], out int sys)) break;
+                    var to = map.SystemScreen(sys);
+                    if (from is Vector2 f0) DrawDashedLine(f0, to, blue, 1.8f, 4f);
+                    from = to;
+                }
+                if (from is Vector2 end) DrawDestination(font, end, cr.Label, blue, map.Zoom >= LabelZoom);
+            }
 
         // remaining route of each moving fleet: dashed line from the marker through the rest of its path; the selected own fleet's route is bold
         foreach (var (f, p, _) in placed)
