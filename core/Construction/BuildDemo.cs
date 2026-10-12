@@ -1,0 +1,73 @@
+using Rebellion.Core.Clock;
+using Rebellion.Core.Economy;
+using Rebellion.Core.Fleets;
+using Rebellion.Core.Map;
+using Rebellion.Core.Ships;
+
+namespace Rebellion.Core.Construction;
+
+/// <summary>
+/// A small deterministic build scenario on the real galaxy, for the headless runner and the soak test: an Empire home with a
+/// shipyard, a training facility, two construction yards and two mine and refinery pairs builds fighters, a mine and regiments;
+/// the regiments are sent to a far system along a path that passes a Rebel picket, which holds them (D2) until it moves away.
+/// Not a rule and not a starting position. Setup draws no random numbers; the home's four mines and refineries draw their first cycles.
+/// </summary>
+public sealed class BuildDemo
+{
+    public const string HomeSystem = "Coruscant";
+    public const string NearSystem = "Corellia";
+    public const string FarSystem = "Hoth";
+
+    public required Game Game { get; init; }
+    public required FleetModule Fleets { get; init; }
+    public required EconomyModule Economy { get; init; }
+    public required ConstructionModule Construction { get; init; }
+    public required Galaxy Galaxy { get; init; }
+    /// <summary>The Rebel picket (fleet id), the system it sits at, and the system it moves to when released.</summary>
+    public required int Picket { get; init; }
+    public required string PicketAt { get; init; }
+    public required string PicketMovesTo { get; init; }
+    public required IReadOnlyList<string> RegimentPath { get; init; }
+
+    public static BuildDemo Create(string repoRoot, ulong seed)
+    {
+        var galaxy = GalaxyLoader.LoadFolder(Path.Combine(repoRoot, "data", "design"));
+        var ships = ShipData.LoadAll(Path.Combine(repoRoot, "data", "interim"));
+        var blockade = BlockadeData.Load(Path.Combine(repoRoot, "data", "design", BlockadeData.FileName));
+        var slots = SlotValues.Load(Path.Combine(repoRoot, "data", "design", SlotValues.File), galaxy);
+        var costs = CostData.Load(Path.Combine(repoRoot, "data", "interim", CostData.FileName));
+        var game = new Game(seed);
+        var fleets = FleetModule.Attach(game, galaxy, ships, blockade);
+        var eco = EconomyModule.Attach(game, galaxy, slots, costs, fleets);
+        eco.IncidentsEnabled = false;
+        var build = ConstructionModule.Attach(game, fleets, eco);
+
+        foreach (var s in new[] { HomeSystem, NearSystem, FarSystem })
+        {
+            fleets.SetOwner(s, Side.Empire);
+            eco.SetAllianceSupport(s, 0); // Empire support 100
+        }
+        eco.AddFacility(HomeSystem, FacilityKind.OrbitalShipyard);
+        eco.AddFacility(HomeSystem, FacilityKind.TrainingFacility);
+        eco.AddFacility(HomeSystem, FacilityKind.ConstructionYard);
+        eco.AddFacility(HomeSystem, FacilityKind.ConstructionYard);
+        for (int i = 0; i < 2; i++) { eco.AddFacility(HomeSystem, FacilityKind.Mine); eco.AddFacility(HomeSystem, FacilityKind.Refinery); }
+        eco.SetupNewGame();
+        eco.SetPools(Side.Empire, 0, 1000); // after SetupNewGame, which sets the starting stockpile
+
+        var path = fleets.FindPath(HomeSystem, FarSystem, 100).Names(galaxy);
+        string at = path[1];
+        int atIndex = galaxy.Systems.ToList().FindIndex(s => s.Name == at);
+        string away = galaxy.NeighboursOf(atIndex).Select(n => galaxy.Systems[n.System].Name).Where(n => !path.Contains(n)).OrderBy(n => n, StringComparer.Ordinal).First();
+        int picket = fleets.AddFleet(Side.Alliance, "Rebel Picket", new[] { "Corellian Corvette" }, at);
+
+        build.SubmitBuild(Side.Empire, HomeSystem, YardFamily.Shipyard, "TIE Fighter", 2);
+        build.SubmitBuild(Side.Empire, HomeSystem, YardFamily.Training, "Stormtrooper Regiment", 2, FarSystem);
+        build.SubmitBuild(Side.Empire, HomeSystem, YardFamily.Construction, "Mine", 1, NearSystem);
+        return new BuildDemo
+        {
+            Game = game, Fleets = fleets, Economy = eco, Construction = build, Galaxy = galaxy,
+            Picket = picket, PicketAt = at, PicketMovesTo = away, RegimentPath = path,
+        };
+    }
+}

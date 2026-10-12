@@ -1,3 +1,4 @@
+using Rebellion.Core.Construction;
 using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
 
@@ -32,6 +33,9 @@ public sealed class GameState
     /// </summary>
     public EconomyState Economy { get; init; } = new();
 
+    /// <summary>Construction state: projects, deliveries, refined line, research grants. rule: m2-construction.</summary>
+    public ConstructionState Construction { get; init; } = new();
+
     /// <summary>Copy another state's content into this one (used by Load, which needs ordinal-comparer dictionaries).</summary>
     internal void CopyFrom(GameState other)
     {
@@ -41,6 +45,7 @@ public sealed class GameState
         foreach (var kv in other.SystemOwners) SystemOwners[kv.Key] = kv.Value;
         foreach (var kv in other.Blockades) Blockades[kv.Key] = kv.Value;
         Economy.CopyFrom(other.Economy);
+        Construction.CopyFrom(other.Construction);
     }
 }
 

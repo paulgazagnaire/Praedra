@@ -45,7 +45,8 @@ public static class FacilityKinds
 public enum ObjectCategory { Facility = 0, CapitalShip = 1, Fighter = 2, Regiment = 3, SpecialForce = 4 }
 
 /// <summary>One row of unit-and-facility-costs.csv. Unverified vs original (data/interim).</summary>
-public sealed record CostRow(ObjectCategory Category, string Name, int Cost, int Maintenance, int ResearchOrder);
+public sealed record CostRow(ObjectCategory Category, string Name, int Cost, int Maintenance, int ResearchOrder,
+    bool Alliance = true, bool Empire = true);
 
 /// <summary>
 /// Refined cost and maintenance per class, from data/interim/unit-and-facility-costs.csv (Traced, interim copy of the spec
@@ -84,7 +85,8 @@ public sealed class CostData
             };
             int cost = t.GetInt(r, "cost"), maint = t.GetInt(r, "maint");
             if (cost < 0 || maint < 0) throw new DataLoadException($"{t.Where(r)}: '{name}' has a negative cost or maintenance.");
-            if (!rows.TryAdd(name, new CostRow(cat, name, cost, maint, t.GetInt(r, "rorder"))))
+            // alliance / empire = the side flags of the file (who may build the class). rule: m2-construction §Build order (NotAvailable)
+            if (!rows.TryAdd(name, new CostRow(cat, name, cost, maint, t.GetInt(r, "rorder"), t.GetInt(r, "alliance") != 0, t.GetInt(r, "empire") != 0)))
                 throw new DataLoadException($"{t.Where(r)}: class name '{name}' appears twice.");
         }
         return new CostData(rows);

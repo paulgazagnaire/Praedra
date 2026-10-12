@@ -42,6 +42,11 @@ public sealed class EconomyModule
     /// refined line (yards waiting) from here. rule: m2-mines-refineries-pools §Where it runs, step 2.
     /// </summary>
     public event Action<StepContext, Side>? RefinedPoolGrew;
+    /// <summary>
+    /// Raised after an object was scrapped or destroyed (not for setup removals); the int is the event day. The construction package cancels the project of
+    /// a lost yard from here. rule: m2-construction §Scrapping (scrapping the last yard cancels the project).
+    /// </summary>
+    public event Action<StepContext, EconObject, int>? ObjectRemoved;
 
     private EconomyModule(Game game, Galaxy galaxy, SlotValues slots, CostData costs, FleetModule fleets, EconomyParams p)
     {
@@ -197,9 +202,8 @@ public sealed class EconomyModule
         return side == Side.Alliance ? a : 100 - a;
     }
 
-    public Side? OwnerOf(EconObject o) => o.Category == ObjectCategory.Facility
-        ? (o.System == null ? null : _fleets.OwnerOf(o.System))
-        : o.Side;
+    // A facility queued or in delivery carries its ordering side (m2-construction); an installed one has none and follows its system.
+    public Side? OwnerOf(EconObject o) => o.Side ?? (o.Category == ObjectCategory.Facility && o.System != null ? _fleets.OwnerOf(o.System) : null);
 
     /// <summary>
     /// capacity = min(50 x completed mines, 50 x completed refineries), on systems the side controls. Blockade and uprising do
@@ -317,6 +321,7 @@ public sealed class EconomyModule
         Remove(f);
         string sys = f.System!; int id = f.Id;
         ctx.Emit((i, _) => new FacilityDestroyed(i, day, id, sys, reason));
+        ObjectRemoved?.Invoke(ctx, f, day);
     }
 
     private List<EconObject> Installed(string system) =>
@@ -347,13 +352,14 @@ public sealed class EconomyModule
     }
 
     /// <summary>Scrap one completed object: removed at once, side's refined +floor(cost / 2). rule: m2-maintenance §Scrapping and refunds.</summary>
-    private void Scrap(StepContext ctx, int day, EconObject o, Side side, string reason)
+    internal void Scrap(StepContext ctx, int day, EconObject o, Side side, string reason)
     {
         int refund = Costs.Get(o.Class).Cost / Params.RefundDivisor;
         Remove(o);
         E.Pool(side).Refined += refund;
         int id = o.Id; string cls = o.Class;
         ctx.Emit((i, _) => new ObjectScrapped(i, day, id, cls, side, reason, refund));
+        ObjectRemoved?.Invoke(ctx, o, day);
         if (refund > 0) RefinedPoolGrew?.Invoke(ctx, side);
     }
 

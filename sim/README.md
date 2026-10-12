@@ -68,3 +68,23 @@ and troops for load, one blockading Interdictor, varied support so smuggling sho
 pools, capacity, load, free maintenance, mine and refinery counts, units produced and units smuggled away, every 30 days.
 The last lines give the autoscrap, incident and destruction counts, the number of random numbers drawn and the state hash.
 Same seed, same output.
+
+## `build`: a yard building, a delivery held by an enemy fleet
+
+```
+dotnet run --project sim -- build [--days 150] [--seed 1] [--picket-leaves <day>|never] [--no-forced-stop]
+```
+
+Runs `core/Construction/BuildDemo.cs`: an Empire home (Coruscant) with a shipyard, a training facility, two construction yards and
+two mine and refinery pairs builds two TIE Fighters, a mine for Corellia and two Stormtrooper Regiments for Hoth. A Rebel picket sits at
+Corellia, on the regiments' path, so their deliveries are held there (`DeliveryForcedStop`, Paul D2) until the picket moves away on
+`--picket-leaves` (default day 100; `never` keeps it there; `--no-forced-stop` lets deliveries fly through). It prints orders,
+completions and deliveries leaving, passing, held, resumed and arriving, and a status line every 30 days. Excerpt (`--days 130`):
+
+```
+Day 37: delivery 1 leaves Coruscant: Coruscant -> Corellia -> Hosnian Prime -> Kinyen -> Anoat -> Bespin -> Hoth, first hop 6 days, due day 43
+Day 43: delivery 1 is HELD at Corellia (FleetPresent, enemy fleet 1)
+Day 100: Rebel picket leaves Corellia
+Day 101: delivery 1 goes on from Corellia
+Day 123: delivery 1: Stormtrooper Regiment (object 11) arrives at Hoth
+```
