@@ -48,12 +48,28 @@ public static class NewGame
             if (mask != 0) state.Scenario.Explored[r.Name] = mask;
             if (r.IsHq) state.Scenario.HqSystem = r.Name;
         }
+
+        // Fixed owners (Decided) on top of the day-one rows, which ignore them. rule: m5-setup-and-victory §Fixed owners: strong holders,
+        // so Empire support 60..90 (Alliance support 25 here when the row was not already Empire); neutral = 50.
+        foreach (var (sys, owner) in nd.FixedOwners)
+        {
+            if (!galaxy.TryFindSystem(sys, out _)) continue;
+            if (owner is Side fo)
+            {
+                if (fleets.OwnerOf(sys) != fo) { fleets.SetOwner(sys, fo); eco.SetAllianceSupport(sys, fo == Side.Empire ? 25 : 75); }
+            }
+            else { fleets.SetOwner(sys, null); eco.SetAllianceSupport(sys, 50); state.Scenario.Explored.Remove(sys); }
+        }
+        // Support bands that setup fixes (setup-victory/09 §2): Coruscant 0, Yavin and the HQ 100.
+        eco.SetAllianceSupport("Coruscant", 0);
+        eco.SetAllianceSupport("Yavin", 100);
+        if (state.Scenario.HqSystem is { } hq) eco.SetAllianceSupport(hq, 100);
         state.Scenario.Active = true;
 
         foreach (var f in data.StartingFacilities)
         {
             var holder = fleets.OwnerOf(f.System);
-            if (holder == null || (f.Side != null && f.Side != holder) || !galaxy.TryFindSystem(f.System, out _)) continue;
+            if ((f.Side != null && f.Side != holder) || !galaxy.TryFindSystem(f.System, out _)) continue;
             Place(host, f.System, f.Kind);
         }
 

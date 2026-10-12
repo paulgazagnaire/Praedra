@@ -19,3 +19,5 @@ Sources (project folder `rebellion/specs/`): `planets/data/extended-galaxy-v4-*.
 `design/day-one/day-one-<preset>-seed1.csv` (presets easy, med_a, med_e, hard_a, hard_e) are copied unchanged from `rebellion/specs/setup-victory/data/` (setup-victory/09-day-one-state-360, written by `deal_day_one.py`; owners, starting Alliance support, explored flags, the Rebel HQ system; PROPOSAL values, 2026-10-12). Read by `NewGame.Create` (m5). The two rows Ilum and Csilla are not on the 360-system graph and are skipped.
 
 `design/new-game-forces.csv` holds the starting forces of the playable slice (yards, mines and refineries per side, garrison, fleets, stockpile). Every row is DEFAULT (playable slice 2026-10-12): the setup-victory specs give no starting force numbers, so these are choices to tune, not rules from the original.
+
+`design/fixed-owners.csv` is the seven Decided fixed owners of m5-setup-and-victory (planets/07), applied on top of the day-one CSVs, which ignore them (sheet Contradictions 6). Fixed owners are strong holders (Empire support 60 to 90).
