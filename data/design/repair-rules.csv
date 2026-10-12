@@ -1,0 +1,5 @@
+key,value,source
+RepairNeedsYard,true,"DEFAULT: m4-retreat-damage-repair section 5 (repair only at an own completed shipyard; economy/04 Lead)"
+RepairCadenceDays,1,"DEFAULT: m4-retreat-damage-repair section 5 (one repair call per ship per day; cadence of 0x501c50 not traced)"
+RepairHullDivisor,10,"Traced-medium: m4-retreat-damage-repair section 5 (function 0x501c50 heals max_hull / 10 per call)"
+RepairHitsPerCall,1,"DEFAULT: m4-retreat-damage-repair section 5 (each hit counter above 0 falls by 1 per call)"
