@@ -70,7 +70,7 @@ internal static class CampaignInvariants
     private static readonly Side[] Sides = { Side.Empire, Side.Alliance };
     private static Side Other(Side s) => s == Side.Empire ? Side.Alliance : Side.Empire;
 
-    public static void Check(GameHost host, string where)
+    public static void Check(GameHost host, string where, bool fixedRegions = true)
     {
         var eco = host.Economy; var state = host.Game.State; var galaxy = host.Data.Galaxy;
 
@@ -254,6 +254,6 @@ internal static class CampaignInvariants
                 Assert.True(state.Support.Systems.TryGetValue(sys, out var s) && s.PresenceDue != 0, $"{where}: blockade on {sys} but no presence timer");
 
         // ---- control only moves by capture: the two regions plus the captured system stay owned (no neutral appears from nowhere)
-        if (!state.Scenario.Active) Assert.Equal(34, state.SystemOwners.Count); // the test campaign only; a new game (m5) deals 362
+        if (fixedRegions && !state.Scenario.Active) Assert.Equal(34, state.SystemOwners.Count); // the test campaign only; a new game (m5) deals 362, and AI games move owners
     }
 }
