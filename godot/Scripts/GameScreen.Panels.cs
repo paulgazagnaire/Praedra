@@ -131,6 +131,9 @@ public partial class GameScreen
         b.Disabled = disabled;
         b.Alignment = HorizontalAlignment.Left;
         b.ClipText = false;
+        b.AutowrapMode = TextServer.AutowrapMode.WordSmart; // long entries wrap instead of widening the panel over the map
+        b.CustomMinimumSize = new Vector2(0, 30);
+        b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         return Add(b);
     }
 
@@ -240,7 +243,7 @@ public partial class GameScreen
         if (mine) BuildMenu(name);
         else if (owner != null && S.Game.State.Fleets.Values.Any(f => f.Side == Me && f.At == name))
             Line("To take this system: bombard it, then invade with troops aboard your fleet (select your fleet).", Dim);
-        else if (!mine) Line("You can only build on systems you own.", Dim);
+        else Line(owner == null ? "Nobody holds this planet. Send a fleet with regiments aboard, then press Invade. You can only build on systems you own." : "You can only build on systems you own. To take it, send a fleet with regiments aboard and press Invade.", Dim);
     }
 
     static string FamilyName(YardFamily f) => f switch { YardFamily.Shipyard => "Shipyard", YardFamily.Training => "Training facility", _ => "Construction yard" };
@@ -406,9 +409,17 @@ public partial class GameScreen
                 var avail = S.Host.Economy.Objects.Where(o => o.Category == ObjectCategory.Regiment && o.Completed && o.Side == Me && o.System == at && o.AboardShip == 0)
                     .OrderBy(o => o.Id).Select(o => o.Id).ToList();
                 int room = Fm.FreeTroopSlots(f);
-                int n = Math.Min(avail.Count, room);
-                Act($"Load troops from {at} ({avail.Count} here, room for {room})", () => LoadTroops(f, avail.Take(n).ToList()),
-                    "Takes regiments off the planet onto this fleet. Warning: fewer regiments left to keep order on the planet.", n == 0);
+                int nAll = Math.Min(avail.Count, room);
+                int need = S.Host.Support.RequiredGarrison(at!); // rule: m2-support (garrison); taking regiments below it risks a revolt
+                int nSafe = Math.Min(Math.Max(0, avail.Count - need), room);
+                if (nAll == 0)
+                    Act($"Load troops from {at} ({avail.Count} here, room for {room})", () => { }, "Needs regiments on the planet and free troop room on the fleet (transports have it).", true);
+                if (nSafe > 0)
+                    Act($"Load troops: {nSafe} ({avail.Count} here, room for {room}; the garrison stays)", () => LoadTroops(f, avail.Take(nSafe).ToList()),
+                        $"Takes {nSafe} regiment(s) off the planet onto this fleet and leaves enough to keep order.");
+                if (nAll > nSafe)
+                    Act($"Load every regiment: {nAll} (the planet may revolt)", () => LoadTroops(f, avail.Take(nAll).ToList()),
+                        "Takes all the regiments you have room for. Fewer than the garrison the planet needs can make the people rise up (yards and mines stop).");
             }
             if (aboard.Count > 0)
                 Act($"Unload all troops at {at}", () => UnloadTroops(f, aboard.Select(a => a.Regiment.Id).ToList()),
@@ -417,6 +428,7 @@ public partial class GameScreen
             // attack
             if (owner != Me)
             {
+                bool attackPending = S.PendingOf(f.Id).Any(p => p.StartsWith("Bombard", StringComparison.Ordinal) || p.StartsWith("Invade", StringComparison.Ordinal));
                 Heading($"Attack {at}");
                 Line("Bombard weakens defences from orbit. Invade lands the regiments aboard.", Dim);
                 foreach (var (cat, label, tip) in new[]
@@ -427,9 +439,10 @@ public partial class GameScreen
                 })
                 {
                     var c = cat;
-                    Act(label, () => Bombard(f, c), tip);
+                    Act(label, () => Bombard(f, c), tip, attackPending);
                 }
-                Act($"Invade {at} with {aboard.Count} regiment(s)", () => Invade(f), "Lands the regiments aboard to take the planet.", aboard.Count == 0);
+                Act($"Invade {at} with {aboard.Count} regiment(s)", () => Invade(f), "Lands the regiments aboard to take the planet.", aboard.Count == 0 || attackPending);
+                if (attackPending) Line("A fleet can carry out one attack order at a time. Press +1 day (or Play) so this one starts, then give the next.", Dim);
             }
         }
 

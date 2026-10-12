@@ -103,7 +103,7 @@ public partial class GameScreen : Control
         if (!_hqs.TryGetValue(i, out var side)) return null;
         string name = G.Systems[i].Name;
         if (side == S.Player) return (side == Side.Empire ? "YOUR CAPITAL" : "YOUR HQ", new Color(1f, 0.95f, 0.5f));
-        return (side == Side.Empire ? "ENEMY CAPITAL - TAKE IT TO WIN" : "REBEL HQ - TAKE IT TO WIN", new Color(1f, 0.45f, 0.4f));
+        return (side == Side.Empire ? "ENEMY CAPITAL" : "REBEL HQ (TARGET)", new Color(1f, 0.45f, 0.4f));
     }
 
     // ================================================================== UI skeleton

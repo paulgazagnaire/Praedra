@@ -135,14 +135,24 @@ public partial class Main
 
         // ---------------------------------------------------------------- load regiments
         SelectFleetByList(gs, troopFleet);
-        Expect(gs.Enabled("Load troops"), "Load troops is available at " + regSys);
-        gs.Click("Load troops");
+        Expect(gs.Enabled("Load troops:") || gs.Enabled("Load every"), "a Load button is available at " + regSys);
+        if (!gs.Click("Load troops:")) gs.Click("Load every");
         Expect(s.QueuedOrders >= 1, "load order queued");
         gs.PlayDay();
         var aboard = s.Host.Troops.RegimentsAboard(troopFleet);
         Expect(aboard.Count > 0, $"regiments are aboard ({aboard.Count})");
         SelectFleetByList(gs, troopFleet);
         Expect(gs.PanelText().Contains("Regiments aboard: ") && !gs.PanelText().Contains("Regiments aboard: none"), "panel lists the regiments aboard");
+
+        // unload and load again (the Unload button)
+        SelectFleetByList(gs, troopFleet);
+        Expect(gs.Click("Unload all troops"), "click Unload all troops");
+        gs.PlayDay();
+        Expect(s.Host.Troops.RegimentsAboard(troopFleet).Count == 0, "regiments are back on the planet");
+        SelectFleetByList(gs, troopFleet);
+        if (!gs.Click("Load troops:")) gs.Click("Load every");
+        gs.PlayDay();
+        Expect(s.Host.Troops.RegimentsAboard(troopFleet).Count > 0, "loaded again");
 
         // ---------------------------------------------------------------- go to the nearest enemy/neutral system with no enemy fleet; bombard; invade
         string target = s.Game.State.SystemOwners.Where(kv => kv.Value != me).Select(kv => kv.Key)
@@ -162,6 +172,7 @@ public partial class Main
         Expect(gs.Click("Bombard: military"), "click Bombard");
         gs.PlayRefresh();
         Expect(gs.PanelText().Contains("Waiting for the next day"), "pending bombard shown on the fleet");
+        Expect(!gs.Enabled("Invade"), "Invade is greyed out while a bombard order is waiting (the core allows one attack order per fleet)");
         gs.PlayDay();
         Expect(s.Messages.Any(m => m.Text.Contains("ombard") && m.Text.Contains(target)), "bombardment happened or was explained");
         SelectFleetByList(gs, troopFleet);
@@ -187,12 +198,12 @@ public partial class Main
         {
             SelectFleetByList(gs, splitFleet);
             Expect(gs.SetCheck("Retreat", true), "tick 'Retreat instead of fighting'");
-            int n0 = s.Game.State.Fleets.Count; int sid = splitFleet.Id;
+            int n0 = s.Game.State.Fleets.Values.Count(f => f.Side == me); int sid = splitFleet.Id;
             Expect(gs.TickShip(0), "tick a ship to split off");
             Expect(gs.Click("Split the ticked"), "click Split");
             int refusedBefore = s.Messages.Count;
             gs.PlayDay();
-            Expect(s.Game.State.Fleets.Count == n0 + 1, "split made a new fleet");
+            Expect(s.Game.State.Fleets.Values.Count(f => f.Side == me) == n0 + 1, "split made a new fleet");
             Expect(!s.Messages.Skip(refusedBefore).Any(m => m.Text.StartsWith("Order refused: Change the battle", StringComparison.Ordinal)), "retreat switch accepted");
             SelectFleetByList(gs, splitFleet);
             Expect(gs.SetCheck("Retreat", false), "untick retreat");
@@ -201,7 +212,7 @@ public partial class Main
             if (gs.Click("Merge this fleet into"))
             {
                 gs.PlayDay();
-                Expect(s.Game.State.Fleets.Count == n0, "merge folded it back");
+                Expect(s.Game.State.Fleets.Values.Count(f => f.Side == me) == n0, "merge folded it back");
             }
             else Expect(false, "merge button available for the new fleet");
         }
@@ -330,6 +341,11 @@ public partial class Main
         ShowMenu();
         UiTest.Click(_screen, side.ToString()); UiTest.Click(_screen, "New Game");
         PlaytestEnding(Gs, false);
+        ShowMenu();
+        Expect(UiTest.Click(_screen, "Continue"), "Continue (autosave) is enabled on the start screen");
+        Expect(Gs != null && Gs.S.Game.Day > 0 && Gs.S.Player == side && !Gs.HowToVisible, $"Continue loads the autosave (day {Gs?.S.Game.Day})");
+        ShowMenu();
+        Expect(UiTest.Click(_screen, "Load saved game") && Gs != null && Gs.S.Game.Day > 0, "Load saved game from the start screen");
         ShowMenu();
     }
 
