@@ -44,6 +44,9 @@ public sealed class GameState
     /// <summary>OnContact settings and the battle-day list. rule: m4-battle-classic §1.3; m4-retreat-damage-repair §5.</summary>
     public Rebellion.Core.Battle.BattleState Battle { get; init; } = new();
 
+    /// <summary>HQ system, explored flags, victory result. rule: setup-victory/04, 09.</summary>
+    public Rebellion.Core.Victory.ScenarioState Scenario { get; init; } = new();
+
     /// <summary>Copy another state's content into this one (used by Load, which needs ordinal-comparer dictionaries).</summary>
     internal void CopyFrom(GameState other)
     {
@@ -56,6 +59,7 @@ public sealed class GameState
         Support.CopyFrom(other.Support);
         Control.CopyFrom(other.Control);
         Battle.CopyFrom(other.Battle);
+        Scenario.CopyFrom(other.Scenario);
     }
 }
 
