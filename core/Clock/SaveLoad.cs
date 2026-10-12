@@ -29,16 +29,26 @@ public static class GameSave
     }
 
     /// <summary>
-    /// Canonical state hash (lower-case hex SHA-256): state, Day, RNG draw count, queue, next sequence.
-    /// The RNG internal state is left out on purpose, so two seeds that were never drawn from hash alike (sheet K10).
+    /// Canonical state hash (lower-case hex SHA-256) of everything that decides the future of the game: state, Day,
+    /// the full RNG state, the queue and the next sequence number. Two games with equal hashes play out identically.
     /// rule: m1-clock-and-orders §Seeded random numbers rule 10
     /// </summary>
-    public static string StateHash(Game g)
+    public static string StateHash(Game g) => Hash(new
     {
-        var canonical = new
-        {
-            g.State, g.Day, g.Rng.Draws, Queue = g.Queue.OrderBy(o => o.Sequence).ToList(), g.NextSequence,
-        };
+        g.State, g.Day, Rng = g.Rng.Export(), Queue = g.Queue.OrderBy(o => o.Sequence).ToList(), g.NextSequence,
+    });
+
+    /// <summary>
+    /// Hash of the world only (state, Day, queue, next sequence), without the RNG. Used to show that rules which draw
+    /// nothing give the same world whatever the seed (sheet K10).
+    /// </summary>
+    public static string WorldHash(Game g) => Hash(new
+    {
+        g.State, g.Day, Queue = g.Queue.OrderBy(o => o.Sequence).ToList(), g.NextSequence,
+    });
+
+    private static string Hash(object canonical)
+    {
         var bytes = JsonSerializer.SerializeToUtf8Bytes(canonical, Options);
         return Convert.ToHexString(SHA256.HashData(bytes)).ToLower(CultureInfo.InvariantCulture);
     }

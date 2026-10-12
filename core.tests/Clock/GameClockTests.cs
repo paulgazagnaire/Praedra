@@ -36,7 +36,8 @@ public class GameClockTests
         var b = Run(222, 100);
         Assert.Equal(0, a.Rng.Draws);
         Assert.Equal(0, b.Rng.Draws);
-        Assert.Equal(GameSave.StateHash(a), GameSave.StateHash(b));
+        Assert.Equal(GameSave.WorldHash(a), GameSave.WorldHash(b));
+        Assert.NotEqual(GameSave.StateHash(a), GameSave.StateHash(b)); // different seeds will diverge once something draws
     }
 
     [Fact] // m1-clock-and-orders K11
