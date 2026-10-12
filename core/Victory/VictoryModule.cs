@@ -24,7 +24,7 @@ public sealed record VictoryRules
 }
 
 /// <summary>
-/// Checks the victory conditions at the end of every Step (slot 6.8, after the other day-end hooks). Draws no random numbers. Once a winner
+/// Checks the victory conditions at the end of every Step (slot 6.11, last the other day-end hooks). Draws no random numbers. Once a winner
 /// is set it stays and no second GameWon is raised. Tie (both sides satisfied in one check): the Alliance, as in the original
 /// (setup-victory/04 §3 "Tie"). After <see cref="GameSave.Load"/>, attach again.
 /// </summary>
@@ -39,7 +39,8 @@ public sealed class VictoryModule
     public static VictoryModule Attach(Game game, VictoryRules? rules = null)
     {
         var m = new VictoryModule(game, rules ?? new VictoryRules());
-        game.RegisterHook("6.8", m.Check);
+        // Slot 6.11 is the last day-end slot and MUST stay last: research (6.9) and characters (6.10) come before it. rule: m5-setup-and-victory §Game over
+        game.RegisterHook("6.11", m.Check);
         return m;
     }
 

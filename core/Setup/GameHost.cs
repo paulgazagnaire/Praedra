@@ -53,7 +53,7 @@ public sealed class GameHost
     /// <summary>Strategic ship repair, slot 6.8. rule: m4-retreat-damage-repair §5.</summary>
     public Rebellion.Core.Repair.RepairModule Repair { get; }
 
-    /// <summary>Victory check (slot 6.8; runs only in a game made by <see cref="NewGame"/>): <c>Victory.Winner</c> is null while the game runs. rule: setup-victory/04.</summary>
+    /// <summary>Victory check (slot 6.11, last; runs only in a game made by <see cref="NewGame"/>): <c>Victory.Winner</c> is null while the game runs. rule: setup-victory/04.</summary>
     public Rebellion.Core.Victory.VictoryModule Victory { get; }
 
     /// <summary>The Rebel HQ system (saved in the game state), null if none.</summary>
@@ -108,7 +108,7 @@ public sealed class GameHost
         Battles = Rebellion.Core.Battle.BattleModule.Attach(game, data.Galaxy, Fleets, Economy, settings.Battle, data.NewBattle);
         Repair = Rebellion.Core.Repair.RepairModule.Attach(game, Economy, Fleets, data.Repair); // slot 6.8, attached last
         Repair.FoughtThisStep = Battles.FoughtThisStep; // no repair on a battle day. rule: m4-retreat-damage-repair §5
-        Victory = Rebellion.Core.Victory.VictoryModule.Attach(game, settings.Victory); // slot 6.8, registered after repair
+        Victory = Rebellion.Core.Victory.VictoryModule.Attach(game, settings.Victory); // slot 6.11, the last day-end slot; must stay last
     }
 
     /// <summary>A new, empty game (day 0, no owners, no objects) with every module attached. <paramref name="data"/> null = the repository's data.</summary>
