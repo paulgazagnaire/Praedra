@@ -1,6 +1,7 @@
 using Rebellion.Core.Clock;
 using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
+using Rebellion.Core.Support;
 
 namespace Rebellion.Core.Tests.Economy;
 
@@ -114,6 +115,94 @@ public class EconomySoakTests
             return GameSave.WorldHash(w.Game);
         }
         Assert.Equal(Make(1), Make(2));
+    }
+
+    // ---------------------------------------------------------------- support and uprisings on (P2.3)
+
+    private static void CheckSupportInvariants(DemoScenario d)
+    {
+        var sup = d.Support!; var st = d.Game.State.Support;
+        foreach (var sys in d.Galaxy.Systems)
+            Assert.InRange(d.Economy.SupportOf(sys.Name, Side.Alliance), 0, 100);
+        foreach (var (name, s) in st.Systems)
+        {
+            // rule: m2-uprisings-and-garrison: the flag and timers 0x384 and 0x38d live and die together; only held systems rebel
+            Assert.Equal(s.Uprising, s.ErosionDue != 0);
+            Assert.Equal(s.Uprising, s.IncidentDue != 0);
+            if (s.Uprising) Assert.NotNull(d.Fleets.OwnerOf(name));
+            Assert.False(s.IsIdle);
+        }
+    }
+
+    private static string RunSupport(ulong seed, int days, out DemoScenario d, bool incidents = true, bool reinforce = true)
+    {
+        d = DemoScenario.Create(TestData.RepoRoot, seed, incidents, support: true);
+        for (int i = 0; i < days; i++)
+        {
+            if (reinforce && i == 150) // eight regiments land on Mon Calamari: the uprising there can end
+                for (int k = 0; k < 8; k++) d.Economy.AddObject(Side.Alliance, "Alliance Army Regiment", "Mon Calamari");
+            d.Game.Step();
+            CheckInvariants(d); CheckSupportInvariants(d);
+        }
+        return GameSave.StateHash(d.Game);
+    }
+
+    [Fact]
+    public void ThousandDaysSupportOnSameSeedSameHash_SupportInBounds()
+    {
+        string a = RunSupport(1, 1000, out var da), b = RunSupport(1, 1000, out _), c = RunSupport(2, 1000, out _);
+        Assert.Equal(a, b);
+        Assert.NotEqual(a, c);
+        var ev = da.Game.Events;
+        Assert.Contains(ev, e => e is UprisingStarted);
+        Assert.Contains(ev, e => e is UprisingEnded);
+        Assert.Contains(ev, e => e is IncidentRolled);
+        Assert.Contains(ev, e => e is SupportChanged { Cause: SupportCause.UprisingErosion });
+        Assert.Contains(ev, e => e is SupportChanged { Cause: SupportCause.Presence });
+    }
+
+    // the only draws of the support sheets: one per uprising start, two dice + one re-arm per incident, one per facility or regiment hit
+    [Fact]
+    public void ThousandDaysSupportOnDrawOnlyWhatTheSheetsRequire()
+    {
+        RunSupport(3, 1000, out var d, incidents: false);
+        var ev = d.Game.Events;
+        long firstCycles = d.Economy.Objects.Count(o => o.FirstDone);
+        long smuggleRolls = ev.OfType<ResourceProduced>().Count(e => e.SmugglePercent > 0);
+        long picks = ev.OfType<ObjectScrapped>().Count(e => e.Reason == "Autoscrap");
+        long support = ev.OfType<UprisingStarted>().Count() + 3L * ev.OfType<IncidentRolled>().Count()
+                     + ev.OfType<FacilityDestroyed>().Count(e => e.Reason == DestroyReason.UprisingIncident)
+                     + ev.OfType<RegimentDestroyed>().Count();
+        // first-cycle draws can be lost with a destroyed facility, so allow up to the number of mines and refineries ever placed
+        long rest = d.Game.Rng.Draws - smuggleRolls - picks - support;
+        Assert.InRange(rest, 0, d.Economy.Objects.Count(o => o.Class is "Mine" or "Refinery") + ev.OfType<FacilityDestroyed>().Count());
+        Assert.True(ev.OfType<IncidentRolled>().Any());
+    }
+
+    [Fact]
+    public void SupportOnSaveAndLoadMidRunGivesTheSameFuture()
+    {
+        RunSupport(6, 400, out var whole, reinforce: false);
+        var first = DemoScenario.Create(TestData.RepoRoot, 6, true, support: true);
+        for (int i = 0; i < 200; i++) first.Game.Step();
+        Assert.NotEmpty(first.Game.State.Support.Systems);
+        var loaded = GameSave.Load(GameSave.Save(first.Game));
+        var fleets = FleetModule.Attach(loaded, TestData.RealGalaxy, Rebellion.Core.Tests.Fleets.World.Ships.Value, Rebellion.Core.Tests.Fleets.World.Blockade);
+        var eco = EconomyModule.Attach(loaded, TestData.RealGalaxy, EcoWorld.Slots.Value, EcoWorld.Costs.Value, fleets);
+        SupportModule.Attach(loaded, TestData.RealGalaxy, eco, fleets, GarrisonWeights.Load(Path.Combine(TestData.DesignDir, GarrisonWeights.FileName)));
+        Assert.Equal(GameSave.StateHash(first.Game), GameSave.StateHash(loaded));
+        for (int i = 0; i < 200; i++) loaded.Step();
+        Assert.Equal(GameSave.StateHash(whole.Game), GameSave.StateHash(loaded));
+    }
+
+    // the New ruleset runs the whole demo too (weights from the data file)
+    [Fact]
+    public void ThousandDaysNewRulesetRuns()
+    {
+        var d = DemoScenario.Create(TestData.RepoRoot, 8, true, support: true);
+        d.Support!.Ruleset = GarrisonRuleset.New;
+        for (int i = 0; i < 1000; i++) { d.Game.Step(); CheckSupportInvariants(d); }
+        Assert.Contains(d.Game.Events, e => e is UprisingStarted);
     }
 
     [Fact]

@@ -311,7 +311,7 @@ public sealed class EconomyModule
         E.Alliance.RawLine.Remove(o.Id);
     }
 
-    private void Destroy(StepContext ctx, int day, EconObject f, DestroyReason reason)
+    internal void Destroy(StepContext ctx, int day, EconObject f, DestroyReason reason)
     {
         // rule: m2-slots-and-resources §Over-capacity destruction (frees its maintenance, cancels any cycle, no refund)
         Remove(f);

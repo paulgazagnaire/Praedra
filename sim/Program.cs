@@ -3,6 +3,7 @@ using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
 using Rebellion.Core.Map;
 using Rebellion.Core.Ships;
+using Rebellion.Core.Support;
 
 // Command-line runner (engine/04, package P1.4). Reads the core's events and prints them; draws no random numbers itself.
 // rule: m1-clock-and-orders §Events out ("the command-line runner reads this list and nothing else").
@@ -19,6 +20,8 @@ internal static class SimCli
                                            [--trigger PaulRule|AnyArmedFleet|GravityWellShip]   (default PaulRule)
                                            [--days 40] [--seed 1]
           dotnet run --project sim -- economy [--days 360] [--seed 1] [--no-incidents]
+          dotnet run --project sim -- support [--days 360] [--seed 1] [--ruleset classic|new] [--reinforce-day 120]
+        support runs the same demo with popular support, garrisons and uprisings on and prints the support events and a table every 30 days.
         economy runs a fixed demo setup (four systems per side with mines and refineries) and prints each side's pools every 30 days.
         Ship classes are matched ignoring case; "CR90" and "CR90 Corvette" mean the Corellian Corvette, "ISD" the Imperial Star Destroyer.
         """;
@@ -36,6 +39,7 @@ internal static class SimCli
         {
             if (args.Length == 0 || args[0] is "-h" or "--help" or "help") { Console.WriteLine(Usage); return args.Length == 0 ? 1 : 0; }
             if (args[0] == "economy") return Economy(args.Skip(1).ToArray());
+            if (args[0] == "support") return Support(args.Skip(1).ToArray());
             if (args[0] != "move") throw new ArgumentException($"Unknown command '{args[0]}'.");
             return Move(Options.Parse(args.Skip(1).ToArray()));
         }
@@ -91,6 +95,72 @@ internal static class SimCli
         int incidentsSeen = game.Events.OfType<ResourceIncident>().Count(), disasters = game.Events.OfType<Disaster>().Count();
         int destroyed = game.Events.OfType<FacilityDestroyed>().Count();
         Console.WriteLine($"Scrapped by autoscrap: {scrapped}. Resource incidents: {incidentsSeen}. Disasters: {disasters}. Facilities destroyed: {destroyed}. Random numbers drawn: {game.Rng.Draws}.");
+        Console.WriteLine($"State hash: {GameSave.StateHash(game)}");
+        return 0;
+    }
+
+    // Support demo (engine/04, package P2.3). Reads state and events; draws nothing itself. At --reinforce-day eight Alliance
+    // regiments land on Mon Calamari (a setup-time action between Steps, as the construction package will do through orders later).
+    private static int Support(string[] a)
+    {
+        int days = 360, reinforce = 120; ulong seed = 1; var ruleset = GarrisonRuleset.Classic;
+        for (int i = 0; i < a.Length; i++)
+        {
+            string key = a[i];
+            string Next() => ++i < a.Length ? a[i] : throw new ArgumentException($"{key} needs a value.");
+            switch (key)
+            {
+                case "--days": days = int.TryParse(Next(), out var d) && d > 0 ? d : throw new ArgumentException("--days must be a positive integer."); break;
+                case "--seed": seed = ulong.TryParse(Next(), out var s) ? s : throw new ArgumentException("--seed must be a non-negative integer."); break;
+                case "--reinforce-day": reinforce = int.TryParse(Next(), out var r) && r >= 0 ? r : throw new ArgumentException("--reinforce-day must be a non-negative integer."); break;
+                case "--ruleset": ruleset = Next().ToLowerInvariant() switch { "classic" => GarrisonRuleset.Classic, "new" => GarrisonRuleset.New, _ => throw new ArgumentException("--ruleset must be classic or new.") }; break;
+                default: throw new ArgumentException($"Unknown option '{key}'.");
+            }
+        }
+        var demo = DemoScenario.Create(FindRoot(), seed, incidents: false, support: true);
+        var game = demo.Game; var eco = demo.Economy; var sup = demo.Support!; var fleets = demo.Fleets;
+        sup.Ruleset = ruleset;
+        string[] watch = { "Mon Calamari", "Bespin", "Corellia", "Fondor", "Coruscant" };
+        Console.WriteLine($"Support demo: {days} days, seed {seed}, ruleset {ruleset}, reinforcements on day {reinforce}. Economy incidents off.");
+        Console.WriteLine("Support is the Alliance share (0..100); N = required garrison, G = regiments there (tenths in New).");
+        Console.WriteLine();
+        int printed = 0;
+        void Table()
+        {
+            Console.WriteLine($"-- day {game.Day}");
+            Console.WriteLine("   system        holder    Alliance  holder  N   G     uprising");
+            foreach (var sys in watch)
+            {
+                var holder = fleets.OwnerOf(sys)!.Value;
+                int n = sup.RequiredGarrison(sys);
+                string g = ruleset == GarrisonRuleset.New ? $"{sup.Garrison10(sys) / 10}.{sup.Garrison10(sys) % 10}" : $"{sup.RegimentCount(sys)}";
+                Console.WriteLine($"   {sys,-13} {holder,-9} {eco.SupportOf(sys, Side.Alliance),8} {eco.SupportOf(sys, holder),7} {n,2}  {g,-4}  {(sup.IsUprising(sys) ? "ON" : "-")}");
+            }
+        }
+        Table();
+        for (int day = 0; day < days; day++)
+        {
+            if (day == reinforce)
+            {
+                for (int k = 0; k < 8; k++) eco.AddObject(Side.Alliance, "Alliance Army Regiment", "Mon Calamari");
+                Console.WriteLine($"Day {game.Day}: 8 Alliance Army Regiments land on Mon Calamari.");
+            }
+            game.Step();
+            for (; printed < game.Events.Count; printed++)
+                switch (game.Events[printed])
+                {
+                    case SupportChanged e: Console.WriteLine($"Day {e.Day}: support at {e.System} {e.Old} -> {e.New} ({e.Cause})"); break;
+                    case UprisingStarted e: Console.WriteLine($"Day {e.Day}: UPRISING starts at {e.System} (holder {e.Holder})"); break;
+                    case UprisingEnded e: Console.WriteLine($"Day {e.Day}: uprising ends at {e.System} ({e.Reason})"); break;
+                    case IncidentRolled e: Console.WriteLine($"Day {e.Day}: incident at {e.System}, score {e.Score}, codes {e.Code1}/{e.Code2}"); break;
+                    case RegimentDestroyed e: Console.WriteLine($"Day {e.Day}: regiment destroyed at {e.System} ({e.Class})"); break;
+                    case FacilityDestroyed { Reason: DestroyReason.UprisingIncident } e: Console.WriteLine($"Day {e.Day}: a facility is destroyed at {e.System} (uprising incident)"); break;
+                }
+            if (game.Day % 30 == 0) Table();
+        }
+        var ev = game.Events;
+        Console.WriteLine();
+        Console.WriteLine($"Uprisings started: {ev.OfType<UprisingStarted>().Count()}, ended: {ev.OfType<UprisingEnded>().Count()}, incidents: {ev.OfType<IncidentRolled>().Count()}, support changes: {ev.OfType<SupportChanged>().Count()}. Random numbers drawn: {game.Rng.Draws}.");
         Console.WriteLine($"State hash: {GameSave.StateHash(game)}");
         return 0;
     }
