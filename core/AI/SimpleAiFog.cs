@@ -1,0 +1,406 @@
+using Rebellion.Core.Clock;
+using Rebellion.Core.Construction;
+using Rebellion.Core.Defenses;
+using Rebellion.Core.Economy;
+using Rebellion.Core.Fleets;
+using Rebellion.Core.Fog;
+
+namespace Rebellion.Core.AI;
+
+/// <summary>
+/// The parts of the simple AI that exist only behind the fog (<see cref="SimpleAiParams.UseFog"/>): scouting, estimates from the last-seen
+/// picture, the Empire's belief map of the Rebel HQ and the Alliance's risk-based HQ moves. Everything about the other side is read from
+/// the side's <see cref="KnowledgeView"/> (m5-fog-and-hq §N8, the AI plays fair: Decided); own state is read as before. Like the rest of the
+/// AI it keeps no memory between days: belief, risk and scout roles are re-derived every day from the view and the side's own fleets.
+/// Guidance: specs/ai/07 §7 (search and hide), ai/12 P7 and D1 (Decided YES). Every threshold is a <see cref="SimpleAiParams"/> DEFAULT.
+/// </summary>
+public sealed partial class SimpleAi
+{
+    // per-day scratch (cleared in ClearFogScratch, called from PlanDay)
+    private Dictionary<string, int>? _belief; private int _beliefMax;
+    private List<Fleet>? _scouts;
+    private Dictionary<string, int>? _risk;
+    private readonly Dictionary<string, List<Force>> _targetForces = new(StringComparer.Ordinal);   // lookup only
+    private readonly Dictionary<(string, string, int), int> _ticks = new();                          // lookup only
+
+    private void ClearFogScratch()
+    {
+        _belief = null; _beliefMax = 0; _scouts = null; _risk = null; _targetForces.Clear(); _ticks.Clear();
+    }
+
+    /// <summary>Travel ticks, cached for the day (the pathfinder is pure).</summary>
+    private int TicksCached(string a, string b, int speed)
+    {
+        if (_ticks.TryGetValue((a, b, speed), out var t)) return t;
+        return _ticks[(a, b, speed)] = Ticks(a, b, speed);
+    }
+
+    private int AgeOf<T>(Seen<T> s) => s.AgeDays ?? Today - s.Stamp;
+
+    /// <summary>Percent asked on top of an estimate from a picture this old: 100 fresh, 100 + FogStaleMarginPercent at StaleDays and older.</summary>
+    private int StalePercent(int age) => 100 + _p.FogStaleMarginPercent * Math.Clamp(age, 0, _p.StaleDays) / Math.Max(1, _p.StaleDays);
+
+    private bool Armed(FleetPicture fp) => fp.ShipCount > 0 && ForceOf("", fp) is var x && x.Units.Count > 0 && _h.Fleets.Strength.Of(x.Units, RefUnits()) > 0;
+
+    // ================================================================== estimates from the last-seen picture
+
+    /// <summary>
+    /// Enemy fleets the side believes stand at a system, for choosing targets: group E of the picture up to FogFleetMemoryDays old, whatever
+    /// the knowledge level (a stale sighting is the best guess; the odds asked grow with its age, <see cref="TargetOdds"/>). No fog: the truth.
+    /// </summary>
+    private List<Force> TargetFleetsAt(string system)
+    {
+        if (_view == null) return EnemyFleetsAt(system);
+        if (_targetForces.TryGetValue(system, out var cached)) return cached;
+        var list = new List<Force>();
+        if (_view.Picture(system)?.Fleets is { } e && AgeOf(e) <= _p.FogFleetMemoryDays)
+            foreach (var fp in e.Value) if (fp.Side != _side) list.Add(ForceOf(system, fp));
+        return _targetForces[system] = list;
+    }
+
+    /// <summary>The odds asked to attack fleets at a system: <see cref="OddsAt"/>, and with fog raised by the age of the fleet picture.</summary>
+    private double TargetOdds(string system)
+    {
+        double odds = OddsAt(system, _p.AttackOddsPercent);
+        if (_view?.Picture(system)?.Fleets is { } e) odds = odds * StalePercent(AgeOf(e)) / 100;
+        return odds;
+    }
+
+    /// <summary>Regiments killed by bombardments at each system, by day (the side's own bombardment reports in its event feed).</summary>
+    private int KillsSince(string system, int sinceDay)
+    {
+        int n = 0; var ev = Events;
+        for (int i = ev.Count - 1; i >= 0 && ev[i].Day >= sinceDay; i--)
+            if (ev[i] is BombardmentResolved b && b.System == system) n += b.Regiments;
+        return n;
+    }
+
+    /// <summary>
+    /// Fog: regiments of the other side believed on a system. From group D of the picture plus the staleness margin, less the regiments the
+    /// side's own bombardments killed there since that look; never seen: a guess (larger for the system that wins the game), less the
+    /// kills of the last FogKillMemoryDays.
+    /// </summary>
+    private int FogDefendersAt(string system)
+    {
+        var g = _view!.Picture(system)?.Ground;
+        if (g != null)
+        {
+            int d = g.Value.Where(x => x.Side != _side).Sum(x => x.Total);
+            d = (d * StalePercent(AgeOf(g)) + 99) / 100;
+            return Math.Max(0, d - KillsSince(system, g.Stamp + 1));
+        }
+        if (!IsEnemyHeld(system)) return 0;
+        int guess = system == WinTarget() ? _p.FogUnknownWinDefenders : _p.FogUnknownDefenders;
+        return Math.Max(0, guess - KillsSince(system, Today - _p.FogKillMemoryDays));
+    }
+
+    /// <summary>Tests: the regiments the AI would assume on a system today (DefendersAt as PlanDay sees it).</summary>
+    internal int DefendersEstimate(string system)
+    {
+        _view = _p.UseFog ? _h.Fog.ViewFor(_side) : null;
+        ClearFogScratch();
+        return DefendersAt(system);
+    }
+
+    // ================================================================== the Empire's belief map of the Rebel HQ (ai/07 §7)
+
+    private bool HqSearchOn => _view != null && _side == Side.Empire && KnownEnemyHq == null;
+
+    /// <summary>HQ belief weight of a system (0 = cannot hold it as far as the Empire knows). Empire with fog only.</summary>
+    private int Belief(string system) => Beliefs().TryGetValue(system, out var w) ? w : 0;
+    private int BeliefMax { get { Beliefs(); return _beliefMax; } }
+
+    /// <summary>
+    /// The Empire's HQ belief map as it stands (fog only; empty otherwise), highest first, ties by name: for logs and tests. Rebuilt from the
+    /// view on each call; reads nothing else of the other side.
+    /// </summary>
+    public IReadOnlyList<(string System, int Weight)> HqBelief()
+    {
+        _view ??= _p.UseFog ? _h.Fog.ViewFor(_side) : null;
+        _belief = null;
+        return Beliefs().OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).Select(kv => (kv.Key, kv.Value)).ToList();
+    }
+
+    private Dictionary<string, int> Beliefs()
+    {
+        if (_belief != null) return _belief;
+        var d = new Dictionary<string, int>(StringComparer.Ordinal);
+        _belief = d; _beliefMax = 0;
+        if (_view == null || _side != Side.Empire) return d;
+        string core = _h.Fog.Params.CoreGroup;
+        // Alliance fleet sightings by system (the side's own log of the last ObservedWindowDays). rule: m5-fog-and-hq §N7 2
+        var sightings = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var s in _view.Sightings(Today - _view.ObservedWindowDays))
+            if (s.Side == Side.Alliance) sightings[s.System] = sightings.GetValueOrDefault(s.System) + 1;
+        var clues = new HashSet<string>(_view.HqSectorClues.Select(c => c.Sector), StringComparer.Ordinal);
+        var allies = new Dictionary<string, int>(StringComparer.Ordinal); // Alliance-held systems per sector, as the picture shows them
+        foreach (var sys in _h.Data.Galaxy.Systems)
+            if (_view.Picture(sys.Name)?.Owner?.Value.Owner == Side.Alliance) allies[sys.Sector] = allies.GetValueOrDefault(sys.Sector) + 1;
+        foreach (var sys in _h.Data.Galaxy.Systems)
+        {
+            string s = sys.Name;
+            if (Held(s)) continue;
+            var pic = _view.Picture(s);
+            int w;
+            if (pic == null) w = string.Equals(sys.Group, core, StringComparison.OrdinalIgnoreCase) ? 0 : _p.BeliefUnexplored; // §N7 4: only rim starts and Alliance systems
+            else
+            {
+                var owner = pic.Owner;
+                if (owner == null) w = _p.BeliefUnexplored;
+                else if (owner.Value.Owner == Side.Alliance) w = _p.BeliefAllianceHeld;
+                else w = AgeOf(owner) > _p.BeliefOwnerTrustDays ? _p.BeliefStaleOther : 0;
+                if (w > 0)
+                {
+                    if (pic.Fleets is { } e && AgeOf(e) <= _p.FogFleetMemoryDays)
+                        w += _p.BeliefPerShipSeen * e.Value.Where(f => f.Side == Side.Alliance).Sum(f => f.ShipCount);
+                    if (pic.Facilities is { } c) w += _p.BeliefPerFacilitySeen * c.Value.Values.Sum();
+                    if (pic.Ground is { } g) w += _p.BeliefPerRegimentSeen * g.Value.Where(x => x.Side == Side.Alliance).Sum(x => x.Total);
+                    w += Math.Min(_p.BeliefSightingCap, _p.BeliefPerSighting * sightings.GetValueOrDefault(s));
+                    int sup = owner?.Value.AllianceSupport ?? 0;
+                    if (sup > _p.BeliefSupportFloor) w += (sup - _p.BeliefSupportFloor) * (sup - _p.BeliefSupportFloor) / Math.Max(1, _p.BeliefSupportDivisor);
+                    int ally = allies.GetValueOrDefault(sys.Sector) - (owner?.Value.Owner == Side.Alliance ? 1 : 0);
+                    w += _p.BeliefPerSectorAlly * Math.Max(0, ally);
+                    // a group C look that showed no HQ (Yavin's day-0 copy, a captured and lost system) clears it for a while. rule: §N5
+                    if (pic.Facilities is { } cc && !pic.HqHere)
+                        w = (int)((long)w * Math.Clamp(AgeOf(cc), 0, _p.BeliefClearedDays) / Math.Max(1, _p.BeliefClearedDays));
+                }
+            }
+            if (w > 0 && clues.Contains(sys.Sector)) w *= _p.BeliefSectorClueFactor; // §N6 sector clue (only when that rule is on)
+            if (w <= 0) continue;
+            d[s] = w;
+            if (w > _beliefMax) _beliefMax = w;
+        }
+        return d;
+    }
+
+    // ================================================================== scouting
+
+    private bool IsScoutShape(Fleet f)
+    {
+        if (f.Side != _side || f.Ships.Count != 1 || f.Squadrons.Count != 0) return false;
+        var o = _h.Economy.Find(f.Ships[0]);
+        if (o == null || !_p.ScoutClasses(_side).Contains(o.Class)) return false;
+        return !_h.Fleets.UnitsAboard(o.Id, ObjectCategory.Regiment).Any() && !_h.Fleets.UnitsAboard(o.Id, ObjectCategory.Fighter).Any();
+    }
+
+    /// <summary>The side's scouts: scout-shaped fleets, lowest id first, up to ScoutCount and the ScoutUpkeepBudget.</summary>
+    private List<Fleet> Scouts()
+    {
+        if (_scouts != null) return _scouts;
+        var list = new List<Fleet>(); int upkeep = 0;
+        foreach (var f in S.Fleets.Values.Where(IsScoutShape).OrderBy(f => f.Id))
+        {
+            if (list.Count >= _p.ScoutCount) break;
+            int m = Maint(_h.Economy.Find(f.Ships[0])!.Class);
+            if (upkeep + m > _p.ScoutUpkeepBudget) continue;
+            list.Add(f); upkeep += m;
+        }
+        return _scouts = list;
+    }
+
+    private int ScoutUpkeep() => Scouts().Sum(f => Maint(_h.Economy.Find(f.Ships[0])!.Class));
+
+    /// <summary>One more scout of this class fits the count and the budget.</summary>
+    private bool WantsScout(string cls) => Scouts().Count < _p.ScoutCount && ScoutUpkeep() + Maint(cls) <= _p.ScoutUpkeepBudget;
+
+    /// <summary>Scout-class ships with nothing aboard in other fleets of the side at held systems (they can be split off).</summary>
+    private IEnumerable<(Fleet Fleet, int Ship)> SplittableScouts(IEnumerable<Fleet> fleets)
+    {
+        var classes = _p.ScoutClasses(_side);
+        foreach (var f in fleets.OrderBy(f => f.Id))
+        {
+            if (f.Ships.Count < 2 || f.At == null || !Held(f.At) || IsScoutShape(f)) continue;
+            foreach (var id in f.Ships)
+            {
+                var o = _h.Economy.Find(id);
+                if (o == null || !classes.Contains(o.Class)) continue;
+                if (_h.Fleets.UnitsAboard(id, ObjectCategory.Regiment).Any() || _h.Fleets.UnitsAboard(id, ObjectCategory.Fighter).Any()) continue;
+                yield return (f, id);
+                break;
+            }
+        }
+    }
+
+    /// <summary>Production, fog only: order one scout at a free shipyard when the side lacks one and none can be split off a pile.</summary>
+    private void PlanScoutBuild()
+    {
+        if (Scouts().Count >= _p.ScoutCount) return;
+        var classes = _p.ScoutClasses(_side);
+        // scouts already queued (units exist from acceptance: m2-construction §Build order)
+        foreach (var pr in S.Construction.AllProjects())
+            if (pr.Side == _side && pr.Family == YardFamily.Shipyard && pr.Units.Any(id => _h.Economy.Find(id) is { } o && classes.Contains(o.Class))) return;
+        var idle = S.Fleets.Values.Where(f => f.Side == _side && f.Transit == null && f.At != null && !Pending(f));
+        if (SplittableScouts(idle).Any()) return;
+        string? cls = classes.FirstOrDefault(c => Available(c) && WantsScout(c) && Budget >= Maint(c));
+        if (cls == null) return;
+        foreach (var y in YardSystems(YardFamily.Shipyard))
+        {
+            if (!CanOrderAt(y, YardFamily.Shipyard)) continue;
+            long seq = _h.Construction.SubmitBuild(_side, y, YardFamily.Shipyard, cls, 1, null);
+            Note(seq, "Build", $"1 x {cls} at {y} (scout)");
+            _busy.Add((y, YardFamily.Shipyard));
+            _plannedLoad += Maint(cls);
+            return;
+        }
+    }
+
+    /// <summary>
+    /// Military, fog only: split a scout off a pile when one is missing, then send every idle scout to the system most worth a look per day of
+    /// travel. Returns the ids of the scouts (the caller leaves them out of the piles).
+    /// </summary>
+    private HashSet<int> PlanScouts(List<Fleet> idle)
+    {
+        var scouts = Scouts();
+        var ids = new HashSet<int>(scouts.Select(f => f.Id));
+        int extra = 0;
+        foreach (var (f, ship) in SplittableScouts(idle.Where(f => !ids.Contains(f.Id))))
+        {
+            var cls = _h.Economy.Find(ship)!.Class;
+            if (scouts.Count + extra >= _p.ScoutCount || ScoutUpkeep() + (extra + 1) * Maint(cls) > _p.ScoutUpkeepBudget) break;
+            long seq = _h.Fleets.SubmitSplitFleet(_side, f.Id, new[] { ship });
+            Note(seq, "Split", $"ship {ship} off fleet {f.Id} at {f.At} (scout)");
+            extra++;
+        }
+        // targets already covered: where scouts are or are flying to
+        var claimed = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var f in scouts)
+        {
+            if (f.Transit != null) claimed.Add(f.Transit.Path[^1]);
+            else if (f.At != null) claimed.Add(f.At);
+        }
+        foreach (var f in scouts)
+        {
+            if (f.Transit != null || f.At == null || Pending(f)) continue;
+            var t = ScoutTarget(f, claimed);
+            if (t != null && Move(f, t)) { claimed.Add(t); }
+        }
+        return ids;
+    }
+
+    private string? ScoutTarget(Fleet f, HashSet<string> claimed)
+    {
+        int speed = _h.Fleets.SpeedOf(f);
+        if (speed <= 0) return null;
+        var hops = Hops(); var g = _h.Data.Galaxy;
+        string? best = null; long bestScore = 0;
+        foreach (var sys in g.Systems)
+        {
+            string s = sys.Name;
+            if (s == f.At || Held(s) || claimed.Contains(s)) continue;
+            int value = ScoutValue(s, hops[sys.Index]);
+            if (value <= 0) continue;
+            int ticks = TicksCached(f.At!, s, speed);
+            if (ticks == int.MaxValue) continue;
+            long score = value * 1000L / (ticks + 10);
+            if (score > bestScore) { bestScore = score; best = s; }
+        }
+        return best;
+    }
+
+    /// <summary>
+    /// How much a fresh look at a system is worth: never explored = ScoutUnexploredValue; seen = its age as a share of StaleDays (0 while
+    /// Held or Observed), doubled for enemy-held; the Empire adds HQ belief. Systems with armed enemy ships seen lately are avoided, and only
+    /// systems within ScoutHops of the side's holdings count (the Empire also looks at HQ candidates farther away).
+    /// </summary>
+    private int ScoutValue(string s, int hop)
+    {
+        int belief = HqSearchOn ? Belief(s) : 0;
+        if (hop > _p.ScoutHops && belief <= 0) return 0;
+        var pic = _view!.Picture(s);
+        int stale;
+        if (pic == null) stale = 100;
+        else
+        {
+            if (pic.Fleets is { } e && AgeOf(e) <= _p.ScoutAvoidFleetDays && e.Value.Any(fp => fp.Side != _side && Armed(fp))) return 0;
+            if (_view.Level(s) is KnowledgeLevel.Held or KnowledgeLevel.Observed) return 0;
+            int look = pic.LastLookDay ?? pic.Owner?.Stamp ?? 0;
+            stale = Math.Clamp(Today - look, 0, _p.StaleDays) * 100 / Math.Max(1, _p.StaleDays);
+        }
+        int v = pic == null ? _p.ScoutUnexploredValue : stale * (IsEnemyHeld(s) ? _p.ScoutEnemyFactor : 1);
+        if (belief > 0 && BeliefMax > 0) v += (int)((long)_p.ScoutBeliefValue * belief / BeliefMax * stale / 100);
+        return v;
+    }
+
+    // ================================================================== the Alliance hides its HQ (ai/07 §7)
+
+    /// <summary>
+    /// Risk per system from what the Alliance sees: every Imperial fleet sighting in its log of the last ObservedWindowDays (and every Imperial
+    /// fleet it sees standing on its systems) adds HqRiskHere at that system, HqRiskNear one lane away and HqRiskFar two lanes away; every
+    /// neighbour the picture shows Imperial adds HqRiskEnemyNeighbour.
+    /// </summary>
+    private Dictionary<string, int> Risk()
+    {
+        if (_risk != null) return _risk;
+        var d = new Dictionary<string, int>(StringComparer.Ordinal);
+        var g = _h.Data.Galaxy;
+        void Spread(string at)
+        {
+            if (!g.TryFindSystem(at, out var i0)) return;
+            var depth = new Dictionary<int, int> { [i0] = 0 }; var q = new Queue<int>(); q.Enqueue(i0);
+            while (q.Count > 0)
+            {
+                int c = q.Dequeue(); int dc = depth[c];
+                string n = g.Systems[c].Name;
+                d[n] = d.GetValueOrDefault(n) + (dc == 0 ? _p.HqRiskHere : dc == 1 ? _p.HqRiskNear : _p.HqRiskFar);
+                if (dc >= 2) continue;
+                foreach (var nb in g.NeighboursOf(c)) if (!depth.ContainsKey(nb.System)) { depth[nb.System] = dc + 1; q.Enqueue(nb.System); }
+            }
+        }
+        foreach (var s in _view!.Sightings(Today - _view.ObservedWindowDays)) if (s.Side == Enemy) Spread(s.System);
+        foreach (var (sys, fp) in _view.VisibleFleets()) if (fp.Side == Enemy) Spread(sys);
+        foreach (var sys in g.Systems)
+        {
+            int n = g.NeighboursOf(sys.Index).Count(nb => IsEnemyHeld(g.Systems[nb.System].Name));
+            if (n > 0) d[sys.Name] = d.GetValueOrDefault(sys.Name) + n * _p.HqRiskEnemyNeighbour;
+        }
+        return _risk = d;
+    }
+
+    /// <summary>Lanes from each system to the nearest system the picture shows Imperial (int.MaxValue when none is known).</summary>
+    private int[] HopsFromEnemy()
+    {
+        var g = _h.Data.Galaxy; var dist = new int[g.Systems.Count]; Array.Fill(dist, int.MaxValue);
+        var q = new Queue<int>();
+        foreach (var s in g.Systems) if (IsEnemyHeld(s.Name)) { dist[s.Index] = 0; q.Enqueue(s.Index); }
+        while (q.Count > 0)
+        {
+            int c = q.Dequeue();
+            foreach (var n in g.NeighboursOf(c)) if (dist[n.System] == int.MaxValue) { dist[n.System] = dist[c] + 1; q.Enqueue(n.System); }
+        }
+        return dist;
+    }
+
+    /// <summary>
+    /// Daily, Alliance with fog: move the HQ (MoveHq, m5-fog-and-hq §F6) when the risk at its system reaches HqMoveRisk and the last move is at
+    /// least HqMoveCooldownDays old; the destination is a held system with HqMinLanes lanes or more, no enemy fleet seen on it, risk below half
+    /// of HqMoveRisk, as far from the Empire as possible, then the least risk, then the shortest trip.
+    /// </summary>
+    private void PlanHqHide()
+    {
+        var hq = _view!.KnownHq; // the Alliance's own HQ (its own object, §N5)
+        if (hq == null) return;
+        string at = hq.System;
+        var risk = Risk();
+        if (risk.GetValueOrDefault(at) < _p.HqMoveRisk) return;
+        var ev = _view.Events; int since = Today - _p.HqMoveCooldownDays;
+        for (int i = ev.Count - 1; i >= 0 && ev[i].Day >= since; i--)
+            if (ev[i] is HqArrived or HqDeparted) return;
+        if (_h.Fog.IsPinned(at)) return; // its own system: the side sees the blockade there (§F6 departure refusal)
+        var g = _h.Data.Galaxy; var room = HopsFromEnemy();
+        int speed = _h.Fog.HqRules.Speed;
+        string? best = null; long bestScore = long.MinValue;
+        foreach (var s in HeldSystems())
+        {
+            if (s == at || !g.TryFindSystem(s, out var i) || g.NeighboursOf(i).Count < _p.HqMinLanes) continue;
+            int r = risk.GetValueOrDefault(s);
+            if (r * 2 >= _p.HqMoveRisk || Threats().ContainsKey(s) || Suspended(s)) continue;
+            int ticks = TicksCached(at, s, speed);
+            if (ticks == int.MaxValue) continue;
+            long score = Math.Min(room[i], 8) * 1000L - r * 10L - ticks;
+            if (score > bestScore) { bestScore = score; best = s; }
+        }
+        if (best == null) return;
+        long seq = _h.Fog.SubmitMoveHq(_side, best);
+        Note(seq, "MoveHq", $"HQ {at} -> {best} (risk {risk.GetValueOrDefault(at)})");
+    }
+}

@@ -31,7 +31,9 @@ internal static class SimCli
         aivai plays the simple AI (core/AI) on both sides from the new-game start (MedA, DEFAULT) or the test campaign, printing a yearly summary,
         battle, assault and capture counts, the winner (if any) and the AI's order and rejection counts. Without --fog the AIs see everything and
         the Empire is told the Rebel HQ (unless --hq-unknown). --fog turns SimpleAiParams.UseFog on for both AIs: each reads only its side's
-        KnowledgeView (m5-fog-and-hq), and the Empire knows the HQ only once its own picture shows it.
+        KnowledgeView (m5-fog-and-hq), and the Empire knows the HQ only once its own picture shows it. With fog the AIs scout, attack from
+        their last-seen pictures, the Empire hunts the HQ with a belief map and the Alliance moves it when it is at risk. --passive works with
+        --fog (e.g. --fog --passive alliance: the fogged Empire hunts a passive Alliance). --trace with --fog also prints the Empire's HQ belief.
         battle runs N seeded battles (Classic: m4-battle-classic, New: m4-battle-new; --ruleset, DEFAULT classic) at a synthetic system where every retreat has a destination, and prints how often each
         side won or retreated, and the mean survivors. Battle k uses seed (seed + k - 1). --no-rolls turns the subsystem rolls off. --carry (New) puts squadrons aboard their side's carriers instead of basing them.
         campaign runs the scripted two-sided TEST campaign (core/Setup/TestCampaign.cs, built through GameHost) and prints a yearly summary per side,
@@ -259,10 +261,21 @@ internal static class SimCli
             foreach (var side in new[] { Side.Empire, Side.Alliance }) Console.WriteLine("  " + SideStats.Of(host, side));
         }
         Summary();
+        // battles by the holder of the system right after the Step that fought them (the attacker is the other side; neutral = open space)
+        int battlesAtEmpire = 0, battlesAtAlliance = 0, battlesAtNeutral = 0, scanned = host.Game.Events.Count;
         while (host.Game.Day < days && host.Victory.Winner == null)
         {
             match.Step();
+            for (var evs = host.Game.Events; scanned < evs.Count; scanned++)
+                if (evs[scanned] is Rebellion.Core.Battle.BattleEnded be)
+                    switch (host.Fleets.OwnerOf(be.Result.System)) { case Side.Empire: battlesAtEmpire++; break; case Side.Alliance: battlesAtAlliance++; break; default: battlesAtNeutral++; break; }
             if (trace && host.Game.Day % 50 == 0) foreach (var ai in new[] { match.Empire, match.Alliance }) if (ai.Side != passive) Console.WriteLine("  d" + host.Game.Day + " " + ai.Status());
+            if (trace && fog && host.Game.Day % 50 == 0 && passive != Side.Empire)
+            {
+                var b = match.Empire.HqBelief();
+                Console.WriteLine($"  d{host.Game.Day} Empire HQ belief ({b.Count} candidates): " + string.Join(", ", b.Take(8).Select(t => $"{t.System} {t.Weight}")) +
+                                  (host.HqSystem is { } hq ? $"; true HQ {hq} rank {b.ToList().FindIndex(t => t.System == hq) + 1}" : ""));
+            }
             if (trace) foreach (var ai in new[] { match.Empire, match.Alliance }) foreach (var o in ai.Submitted) Console.WriteLine($"  d{host.Game.Day - 1} {ai.Side} {o.Kind}: {o.Detail}");
             if (host.Game.Day % 365 == 0 && host.Game.Day != days) Summary();
         }
@@ -272,6 +285,14 @@ internal static class SimCli
         Console.WriteLine($"Battles: {ev.OfType<Rebellion.Core.Battle.BattleEnded>().Count()}. Bombardments: {ev.OfType<Rebellion.Core.Defenses.BombardmentResolved>().Count()}. " +
                           $"Assaults: {ev.OfType<Rebellion.Core.Assault.AssaultResolved>().Count()} (won {ev.OfType<Rebellion.Core.Assault.AssaultResolved>().Count(e => e.Result == "Won")}). " +
                           $"Captures: {ev.OfType<Rebellion.Core.Control.SystemCaptured>().Count()} (Empire {ev.OfType<Rebellion.Core.Control.SystemCaptured>().Count(e => e.To == Side.Empire)}, Alliance {ev.OfType<Rebellion.Core.Control.SystemCaptured>().Count(e => e.To == Side.Alliance)}).");
+        {
+            var be = ev.OfType<Rebellion.Core.Battle.BattleEnded>().ToList();
+            Console.WriteLine($"Battles by place: at Empire-held systems (Alliance attacking) {battlesAtEmpire}, at Alliance-held (Empire attacking) {battlesAtAlliance}, " +
+                              $"at neutral {battlesAtNeutral}. Ships lost in battle: Empire {be.Sum(b => b.Result.EmpireLosses)}, Alliance {be.Sum(b => b.Result.AllianceLosses)}. " +
+                              $"Alliance systems taken by the Empire {ev.OfType<Rebellion.Core.Control.SystemCaptured>().Count(e => e.From == Side.Alliance && e.To == Side.Empire)}, " +
+                              $"Empire systems taken by the Alliance {ev.OfType<Rebellion.Core.Control.SystemCaptured>().Count(e => e.From == Side.Empire && e.To == Side.Alliance)}. " +
+                              $"HQ moves: {ev.OfType<Rebellion.Core.Fog.HqDeparted>().Count()}.");
+        }
         Console.WriteLine(host.Victory.Winner is Side w ? $"Winner: {w} on day {host.Game.Day} ({host.Victory.Reason})." : $"No winner after {host.Game.Day} days.");
         var known = host.Fog.KnownHq(Side.Empire);
         Console.WriteLine($"Rebel HQ: {host.HqSystem ?? "none"}; Empire's picture of it: {(known == null ? "unknown" : $"{known.System} (seen day {known.Stamp})")}. " +
