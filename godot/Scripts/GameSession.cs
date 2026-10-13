@@ -47,6 +47,8 @@ public sealed partial class GameSession
     public Side Player { get; }
     public Side Enemy => Player == Side.Empire ? Side.Alliance : Side.Empire;
     public IOpponent Opponent { get; }
+    /// <summary>Test only (the headless playtest): the computer side plans nothing, so a test fleet it would scrap or move stays put.</summary>
+    public bool OpponentIdle { get; set; }
     public List<Message> Messages { get; } = new();
     public int Autosaves { get; private set; }
     public Side? Winner { get; private set; }
@@ -213,7 +215,7 @@ public sealed partial class GameSession
     public StepOutcome StepDay()
     {
         Snapshot();
-        Opponent.PlanDay();
+        if (!OpponentIdle) Opponent.PlanDay();
         Game.Step();
         var outcome = new StepOutcome();
         ReadEvents(outcome);
@@ -307,6 +309,11 @@ public sealed partial class GameSession
         HqRejectReason.NoFunds => "not enough refined material to move the headquarters",
         AssaultReject.NoTroops => "no regiments aboard",
         AssaultReject.FullyShielded => "the planet's shields are too strong (bombard the shield generators first)",
+        Rebellion.Core.DeathStar.DeathStarReject.NoDeathStar => "the fleet holds no finished Death Star",
+        Rebellion.Core.DeathStar.DeathStarReject.AlreadyDestroyed => "that system is already destroyed",
+        Rebellion.Core.DeathStar.DeathStarReject.ShieldProtected => "an enemy Death Star Shield protects that system",
+        Rebellion.Core.DeathStar.DeathStarReject.DeathStarLimit => "only one Death Star per system: this system already has one (build it at another shipyard)",
+        "SystemDestroyed" => "that system was destroyed by the Death Star",
         _ => reason,
     };
 
@@ -514,7 +521,8 @@ public sealed partial class GameSession
         for (; _printed < events.Count; _printed++)
         {
             bool combat = events[_printed] is Contact or ForcedStop or FleetRetreated or BattleEnded or SystemCaptured
-                or BombardmentStarted or BombardmentResolved or BombardCancelled or AssaultStarted or AssaultResolved or AssaultCancelled;
+                or BombardmentStarted or BombardmentResolved or BombardCancelled or AssaultStarted or AssaultResolved or AssaultCancelled
+                or Rebellion.Core.DeathStar.SystemDestroyed or Rebellion.Core.DeathStar.FleetDestroyedByDeathStar;
             foreach (var m0 in Describe(events[_printed], o))
             {
                 var m = combat ? m0 with { Combat = true } : m0;
@@ -710,7 +718,7 @@ public sealed partial class GameSession
                 yield return new Message(d, $"Construction started at {p.System}: {p.Count} x {p.Class}.", p.System, MsgKind.Info);
                 break;
             case ProjectCancelled p when p.Side == Player && p.Reason != "Replaced":
-                yield return new Message(d, $"Construction at {p.System} was cancelled ({p.Reason}).", p.System, MsgKind.Warn);
+                yield return new Message(d, $"Construction at {p.System} was cancelled ({(p.Reason == "SystemDestroyed" ? "the system was destroyed" : p.Reason)}).", p.System, MsgKind.Warn);
                 break;
             case UnitCompleted u when u.Side == Player:
                 yield return new Message(d, $"{u.Class} completed at {u.Yard}.", u.Yard, MsgKind.Good);
@@ -775,6 +783,19 @@ public sealed partial class GameSession
                 yield return new Message(d, $"Invasion of {a.System} by {FleetName(a.Fleet)} was cancelled ({Why(a.Reason)}).", a.System, MsgKind.Warn);
                 break;
 
+            // ---- the Death Star (GameSession.DeathStar.cs); the clock pauses on a destroyed system like on a capture
+            case Rebellion.Core.DeathStar.SystemDestroyed:
+                foreach (var m in DescribeDeathStar(e))
+                {
+                    o.PauseReason ??= "destroyed";
+                    o.Popup ??= m with { Title = "System destroyed", Detail = m.Text + " The planet and everything on it are gone for good." };
+                    yield return m;
+                }
+                break;
+            case Rebellion.Core.DeathStar.IDeathStarEvent or Rebellion.Core.DeathStar.DestroySystemCancelled:
+                foreach (var m in DescribeDeathStar(e)) yield return m;
+                break;
+
             // ---- missions (GameSession.Missions.cs)
             default:
                 foreach (var m in DescribeMission(e)) yield return m;
@@ -793,6 +814,7 @@ public sealed partial class GameSession
         DestroyReason.Bombardment => "bombardment",
         DestroyReason.Assault => "invasion",
         DestroyReason.Sabotage => "sabotage by enemy agents",
+        DestroyReason.DeathStar => "Death Star",
         _ => r.ToString(),
     };
 
