@@ -285,7 +285,7 @@ public sealed partial class SimpleAi
         int speed = _h.Fleets.SpeedOf(f);
         if (speed <= 0) return null;
         var hops = Hops(); var g = _h.Data.Galaxy;
-        string? best = null; long bestScore = 0;
+        var cands = new List<(string Sys, long Score)>();
         foreach (var sys in g.Systems)
         {
             string s = sys.Name;
@@ -295,9 +295,34 @@ public sealed partial class SimpleAi
             int ticks = TicksCached(f.At!, s, speed);
             if (ticks == int.MaxValue) continue;
             long score = value * 1000L / (ticks + 10);
-            if (score > bestScore) { bestScore = score; best = s; }
+            cands.Add((s, score));
         }
-        return best;
+        // best first (ties: the first system in galaxy order, as before); a trip that would stop at a system where armed enemy ships were seen
+        // lately, or where an armed fleet of the side had to retreat lately, is skipped (rule: m1-forced-stop-and-blockade: an armed enemy fleet stops
+        // a passing one; the unarmed scout then retreats, and the same trip again only repeats that)
+        int checkedTrips = 0;
+        foreach (var (s, _) in cands.Select((c, k) => (c, k)).OrderByDescending(t => t.c.Score).ThenBy(t => t.k).Select(t => t.c))
+        {
+            if (checkedTrips++ >= _p.ScoutPathChecks) break;
+            if (!_p.AvoidBlockedPaths || ScoutPathClear(f.At!, s, speed)) return s;
+        }
+        return null;
+    }
+
+    /// <summary>No stop of the trip (the target included) has armed enemy ships seen within ScoutAvoidFleetDays or an armed own fleet retreated lately (BouncedOff).</summary>
+    private bool ScoutPathClear(string from, string to, int speed)
+    {
+        var path = _h.Fleets.FindPath(from, to, speed);
+        if (!path.Ok) return false;
+        var g = _h.Data.Galaxy;
+        for (int k = 1; k < path.Systems.Count; k++)
+        {
+            string n = g.Systems[path.Systems[k]].Name;
+            if (BouncedOff(n)) return false;
+            var pic = _view!.Picture(n);
+            if (pic?.Fleets is { } e && AgeOf(e) <= _p.ScoutAvoidFleetDays && e.Value.Any(fp => fp.Side != _side && Armed(fp))) return false;
+        }
+        return true;
     }
 
     /// <summary>

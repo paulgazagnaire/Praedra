@@ -282,6 +282,7 @@ internal static class SimCli
         // battles by the holder of the system right after the Step that fought them (the attacker is the other side; neutral = open space)
         int battlesAtEmpire = 0, battlesAtAlliance = 0, battlesAtNeutral = 0, scanned = host.Game.Events.Count;
         // the Empire's own picture of the HQ, day by day: the first day it showed the HQ, and every later day it showed another (moved) HQ system
+        int traced = host.Game.Events.Count;
         var hqFinds = new List<string>(); string? lastKnown = host.Fog.KnownHq(Side.Empire)?.System;
         while (host.Game.Day < days && host.Victory.Winner == null)
         {
@@ -298,6 +299,10 @@ internal static class SimCli
                 Console.WriteLine($"  d{host.Game.Day} Empire HQ belief ({b.Count} candidates): " + string.Join(", ", b.Take(8).Select(t => $"{t.System} {t.Weight}")) +
                                   (host.HqSystem is { } hq ? $"; true HQ {hq} rank {b.ToList().FindIndex(t => t.System == hq) + 1}" : ""));
             }
+            if (trace) for (int k = traced; k < host.Game.Events.Count; k++)
+                if (host.Game.Events[k] is Rebellion.Core.Battle.BattleEnded tb) Console.WriteLine($"  d{tb.Day} battle at {tb.Result.System}: Alliance {tb.Result.Alliance} (lost {tb.Result.AllianceLosses}), Empire {tb.Result.Empire} (lost {tb.Result.EmpireLosses})");
+                else if (host.Game.Events[k] is Rebellion.Core.Battle.FleetRetreated tr) Console.WriteLine($"  d{tr.Day} fleet {tr.Fleet} retreats {tr.From} -> {tr.To}");
+            traced = host.Game.Events.Count;
             if (trace) foreach (var ai in new[] { match.Empire, match.Alliance }) foreach (var o in ai.Submitted) Console.WriteLine($"  d{host.Game.Day - 1} {ai.Side} {o.Kind}: {o.Detail}");
             if (host.Game.Day % 365 == 0 && host.Game.Day != days) Summary();
         }
@@ -314,6 +319,39 @@ internal static class SimCli
                               $"Alliance systems taken by the Empire {ev.OfType<Rebellion.Core.Control.SystemCaptured>().Count(e => e.From == Side.Alliance && e.To == Side.Empire)}, " +
                               $"Empire systems taken by the Alliance {ev.OfType<Rebellion.Core.Control.SystemCaptured>().Count(e => e.From == Side.Empire && e.To == Side.Alliance)}. " +
                               $"HQ moves: {ev.OfType<Rebellion.Core.Fog.HqDeparted>().Count()}.");
+        }
+        {
+            // retreat-chases: a fleet that retreated from a battle in which neither side lost anything (the morale retreat of m4-battle-classic),
+            // again and again: a run is such retreats of the SAME fleet at most 10 days apart; chase days = first to last retreat of each run of two
+            // or more. Counted by the side whose fleet retreated (the other side did the chasing, or kept bouncing it off a defended system).
+            var lossless = new List<(int Day, int Fleet, Side Side)>(); var pending = new List<Rebellion.Core.Battle.FleetRetreated>();
+            foreach (var e in ev)
+                if (e is Rebellion.Core.Battle.FleetRetreated fr) pending.Add(fr);
+                else if (e is Rebellion.Core.Battle.BattleEnded b2)
+                {
+                    bool noLoss = b2.Result.AllianceLosses == 0 && b2.Result.EmpireLosses == 0;
+                    foreach (var fr2 in pending)
+                    {
+                        var rs = b2.Result.Alliance == Rebellion.Core.Battle.BattleOutcome.Retreated ? Side.Alliance : Side.Empire;
+                        if (noLoss) lossless.Add((b2.Day, fr2.Fleet, rs));
+                    }
+                    pending.Clear();
+                }
+            foreach (var side in new[] { Side.Empire, Side.Alliance })
+            {
+                var mine = lossless.Where(t => t.Side == side).ToList();
+                int chaseDays = 0, longest = 0;
+                foreach (var g in mine.GroupBy(t => t.Fleet).OrderBy(g => g.Key))
+                {
+                    int runStart = -1, prev = -1000;
+                    foreach (var d in g.Select(t => t.Day).Distinct().OrderBy(d => d).Append(int.MaxValue))
+                    {
+                        if (d - prev > 10) { if (runStart >= 0 && prev > runStart) { chaseDays += prev - runStart; longest = Math.Max(longest, prev - runStart); } runStart = d; }
+                        prev = d;
+                    }
+                }
+                Console.WriteLine($"Retreat-chases of {side} fleets: {mine.Count} retreats without a loss on either side; {chaseDays} chase days (longest run {longest}).");
+            }
         }
         Console.WriteLine(host.Victory.Winner is Side w ? $"Winner: {w} on day {host.Game.Day} ({host.Victory.Reason})." : $"No winner after {host.Game.Day} days.");
         var known = host.Fog.KnownHq(Side.Empire);

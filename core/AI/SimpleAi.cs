@@ -66,7 +66,7 @@ public sealed partial class SimpleAi
     public void PlanDay()
     {
         _submitted.Clear(); _plannedLoad = 0; _busy.Clear(); _reservedEnergy.Clear(); _reservedRaw.Clear(); _reservedYards.Clear(); _strength.Clear();
-        _capitalDone = _rallyDone = false; _hops = null; _threats = null; _lost = null; _lostBattles = null;
+        _capitalDone = _rallyDone = false; _hops = null; _threats = null; _lost = null; _lostBattles = null; _runners = null; _bounced = null;
         int day = Today, phase = (int)_side;
         _rng = new GameRng((ulong)day * 2 + (ulong)_side + 0x5A1D, 0xA1);
         _view = _p.UseFog ? _h.Fog.ViewFor(_side) : null;
@@ -717,7 +717,8 @@ public sealed partial class SimpleAi
     private Dictionary<string, int>? _lostBattles;
     /// <summary>
     /// Systems where this side was annihilated in a battle lately, with the day. The measure of strength is only a guess, so a fight that
-    /// went wrong makes the AI ask for much better odds there for a while (never repeat a suicide).
+    /// went wrong makes the AI ask for much better odds there for a while (never repeat a suicide). With RetreatCountsAsLoss a battle its fleets
+    /// left by the morale retreat (m4-battle-classic) counts too: the measure called the fight good and the battle disagreed.
     /// </summary>
     private Dictionary<string, int> LostBattles()
     {
@@ -725,13 +726,88 @@ public sealed partial class SimpleAi
         var d = new Dictionary<string, int>(StringComparer.Ordinal);
         var ev = Events; int since = Today - _p.LossMemoryDays;
         for (int i = ev.Count - 1; i >= 0 && ev[i].Day >= since; i--)
-            if (ev[i] is BattleEnded b && (_side == Side.Alliance ? b.Result.Alliance : b.Result.Empire) == BattleOutcome.Annihilated && !d.ContainsKey(b.Result.System))
-                d[b.Result.System] = ev[i].Day;
+        {
+            if (ev[i] is not BattleEnded b || d.ContainsKey(b.Result.System)) continue;
+            var own = _side == Side.Alliance ? b.Result.Alliance : b.Result.Empire;
+            if (own == BattleOutcome.Annihilated || (_p.RetreatCountsAsLoss && own == BattleOutcome.Retreated && OwnArmedIn(ev, i))) d[b.Result.System] = ev[i].Day;
+        }
         return _lostBattles = d;
     }
 
-    /// <summary>The odds (percent) asked before fighting at a system: the base, times <see cref="SimpleAiParams.LossOddsFactor"/> where the side was annihilated lately.</summary>
+    /// <summary>
+    /// Did this side bring an armed capital ship to the battle that ended at ev[end]? Read from the battle's BattleStarted (same day, same system)
+    /// and the side's OWN units only. An unarmed ship (a scout) always retreats from armed enemies (m4-battle-classic morale), which says nothing
+    /// about the odds of a strike there. True when the start is not in the feed.
+    /// </summary>
+    private bool OwnArmedIn(IReadOnlyList<GameEvent> ev, int end)
+    {
+        var b = (BattleEnded)ev[end];
+        for (int j = end - 1; j >= 0 && ev[j].Day == b.Day; j--)
+        {
+            if (ev[j] is not BattleStarted bs || bs.System != b.Result.System) continue;
+            foreach (var id in (_side == Side.Alliance ? bs.AllianceUnits : bs.EmpireUnits).Items)
+                if (_h.Economy.Find(id) is { } o && o.Category == ObjectCategory.CapitalShip && _h.Fleets.ClassOf(o) is { } c && CombatStrength.IsArmed(c)) return true;
+            return false;
+        }
+        return true;
+    }
+
+    /// <summary>The odds (percent) asked before fighting at a system: the base, times <see cref="SimpleAiParams.LossOddsFactor"/> where the side was annihilated (or bounced, see LostBattles) lately.</summary>
     private double OddsAt(string system, int basePercent) => LostBattles().ContainsKey(system) ? basePercent * _p.LossOddsFactor : basePercent;
+
+    private Dictionary<string, int>? _runners, _bounced;
+
+    /// <summary>
+    /// Battles of the last RunnerMemoryDays where the other side retreated (rule: m4-retreat-damage-repair §1, the morale retreat of
+    /// m4-battle-classic) and this side held the field, counted by system. Read from the side's own event feed (BattleEnded goes to both
+    /// sides, m5-fog-and-hq §N8), so the AI keeps no memory of its own: a fleet that only retreats is remembered for as long as the feed shows it.
+    /// </summary>
+    private Dictionary<string, int> Runners()
+    {
+        if (_runners != null) return _runners;
+        ScanRetreats();
+        return _runners!;
+    }
+
+    /// <summary>Battles of the last RunnerMemoryDays where this side retreated with an armed capital ship, counted by system (own event feed).</summary>
+    private Dictionary<string, int> Bounced()
+    {
+        if (_bounced != null) return _bounced;
+        ScanRetreats();
+        return _bounced!;
+    }
+
+    private void ScanRetreats()
+    {
+        _runners = new Dictionary<string, int>(StringComparer.Ordinal); // lookup only
+        _bounced = new Dictionary<string, int>(StringComparer.Ordinal); // lookup only
+        var ev = Events; int since = Today - _p.RunnerMemoryDays;
+        for (int i = ev.Count - 1; i >= 0 && ev[i].Day >= since; i--)
+        {
+            if (ev[i] is not BattleEnded b) continue;
+            var own = _side == Side.Alliance ? b.Result.Alliance : b.Result.Empire;
+            var other = _side == Side.Alliance ? b.Result.Empire : b.Result.Alliance;
+            string sys = b.Result.System;
+            if (other == BattleOutcome.Retreated && own is not (BattleOutcome.Retreated or BattleOutcome.Annihilated)) _runners[sys] = _runners.GetValueOrDefault(sys) + 1;
+            if (own == BattleOutcome.Retreated && OwnArmedIn(ev, i)) _bounced[sys] = _bounced.GetValueOrDefault(sys) + 1;
+        }
+    }
+
+    /// <summary>
+    /// True when enemy fleets retreated from this side at the system or at a system one lane from it at least RunnerRetreats times lately: a
+    /// retreating fleet jumps to a neighbour (m4-retreat-damage-repair §3), so hunting it there only starts the next jump. Its fleets there
+    /// are not hunted for their own sake (the system itself stays a target for an assault).
+    /// </summary>
+    private bool EnemyRunsNear(string system)
+    {
+        var r = Runners();
+        if (r.Count == 0 || _p.RunnerRetreats <= 0) return false;
+        int n = r.GetValueOrDefault(system);
+        var g = _h.Data.Galaxy;
+        if (g.TryFindSystem(system, out var i))
+            foreach (var nb in g.NeighboursOf(i)) n += r.GetValueOrDefault(g.Systems[nb.System].Name);
+        return n >= _p.RunnerRetreats;
+    }
 
     /// <summary>Systems the side lost to the enemy lately (retake targets).</summary>
     private HashSet<string> LostSystems()
@@ -774,11 +850,40 @@ public sealed partial class SimpleAi
     {
         if (f.At == null || dest == f.At || f.Transit != null) return false;
         int speed = _h.Fleets.SpeedOf(f);
-        if (speed <= 0 || !_h.Fleets.FindPath(f.At, dest, speed).Ok) return false;
+        var path = _h.Fleets.FindPath(f.At, dest, speed);
+        if (speed <= 0 || !path.Ok) return false;
+        if (_p.AvoidBlockedPaths && PathBlockedAt(f, path) != null) return false; // stays: the way would end in a retreat
         long seq = _h.Fleets.SubmitMove(_side, f.Id, dest);
         Note(seq, "Move", $"fleet {f.Id} {f.At} -> {dest}");
         return true;
     }
+
+    /// <summary>
+    /// The first stop of the trip where it would end in a retreat, or null: a stop (the destination included) where this side's fleets retreated
+    /// within RunnerMemoryDays (own event feed), or a stop on the way where enemy fleets the side sees now outmatch the fleets of the side at the
+    /// start (RetreatOddsPercent). rule: m1-forced-stop-and-blockade (an armed enemy fleet stops a passing one; the order is cancelled), then the
+    /// morale retreat of m4-battle-classic sends the fleet back: the same order again only repeats the bounce. The destination's fleets are
+    /// weighed by the caller (PickTarget, PickRelief).
+    /// </summary>
+    private string? PathBlockedAt(Fleet f, Rebellion.Core.Travel.PathResult path)
+    {
+        var g = _h.Data.Galaxy;
+        List<Fleet>? own = null;
+        for (int k = 1; k < path.Systems.Count; k++)
+        {
+            string n = g.Systems[path.Systems[k]].Name;
+            if (BouncedOff(n)) return n;
+            if (k == path.Systems.Count - 1) break;
+            var enemies = EnemyFleetsAt(n);
+            if (enemies.Count == 0) continue;
+            own ??= _h.Fleets.FleetsAt(f.At!).Where(x => x.Side == _side).ToList();
+            if (Duel(own, enemies) < _p.RetreatOddsPercent) return n;
+        }
+        return null;
+    }
+
+    /// <summary>The side's fleets retreated from a battle at the system within RunnerMemoryDays: no trip goes there for now (AvoidBlockedPaths).</summary>
+    private bool BouncedOff(string system) => _p.AvoidBlockedPaths && Bounced().ContainsKey(system);
 
     private sealed class Pile
     {
@@ -901,11 +1006,10 @@ public sealed partial class SimpleAi
         bool strong = p.Strength >= _p.LaunchStrength;
         if (strong)
         {
-            var t = PickTarget(p, aboard, at);
-            if (t != null && Move(f, t)) return;
             // short of troops: fetch spare regiments waiting on another held system (the rally system may have moved since they were ordered)
-            if (aboard < _p.MinLaunchRegiments && p.FreeSlots - take > 0)
+            bool Fetch()
             {
+                if (p.FreeSlots - take <= 0) return false;
                 string? pick = null; long bestPick = 0; int speed = _h.Fleets.SpeedOf(f);
                 foreach (var hs in HeldSystems())
                 {
@@ -914,10 +1018,37 @@ public sealed partial class SimpleAi
                     int tk = Ticks(at, hs, speed); if (tk == int.MaxValue) continue;
                     long sc = Math.Min(n, p.FreeSlots) * 1000L / (tk + 20); if (sc > bestPick) { bestPick = sc; pick = hs; }
                 }
-                if (pick != null && Move(f, pick)) return;
+                return pick != null && Move(f, pick);
             }
+            // the system that wins the game, believed (nearly) undefended and within reach: load the regiments it needs first, then go for it
+            if (aboard < WinTroopsWanted(p, at) && Fetch()) return;
+            var t = PickTarget(p, aboard, at);
+            if (t != null && Move(f, t)) return;
+            if (aboard < _p.MinLaunchRegiments && Fetch()) return;
         }
         if (rally != null && at != rally) Move(f, rally); // gather (and reload) at the rally system
+    }
+
+    /// <summary>
+    /// Regiments the pile should carry before it strikes the system that wins the game, or 0 when no such strike is on: the win target is
+    /// known and not held, the pile is at least WinStrikeStrength, it can reach it, an assault is allowed there as far as the side knows, its
+    /// fleets there (as believed) are beaten at the attack odds, the pile did not bounce off it lately, the regiments believed there are at
+    /// most WinRushDefenders, and the regiments needed fit aboard. (The hunt for fleets that only retreat must not keep an empty strike pile
+    /// off an open capital: m6 chase fix.)
+    /// </summary>
+    private int WinTroopsWanted(Pile p, string from)
+    {
+        string? win = WinTarget();
+        if (win == null || win == from || Held(win) || p.Strength < _p.WinStrikeStrength || BouncedOff(win)) return 0;
+        int speed = _h.Fleets.SpeedOf(p.Leader);
+        if (speed <= 0 || Ticks(from, win, speed) == int.MaxValue) return 0;
+        if (AssaultForbiddenSeen(win) || !SlotsSeen(win).Populated) return 0;
+        var enemies = TargetFleetsAt(win);
+        if (enemies.Count > 0 && Duel(p.Members, enemies) < TargetOdds(win)) return 0;
+        int d = DefendersAt(win);
+        if (d > _p.WinRushDefenders) return 0;
+        int need = Need(_h.Bombardment.Power(p.Leader) > 0 ? d / 2 : d);
+        return need <= p.Aboard + p.FreeSlots ? need : 0;
     }
 
     /// <summary>A held system with enemy fleets on it or on the way that the pile (with the fleets already there) beats; the critical system first, then the nearest.</summary>
@@ -930,7 +1061,7 @@ public sealed partial class SimpleAi
         foreach (var kv in Threats().OrderBy(k => k.Key, StringComparer.Ordinal))
         {
             string s = kv.Key;
-            if (s == from) continue;
+            if (s == from || BouncedOff(s)) continue;
             int ticks = Ticks(from, s, speed);
             if (ticks == int.MaxValue) continue;
             var friends = _h.Fleets.FleetsAt(s).Where(x => x.Side == _side).Concat(p.Members);
@@ -1026,7 +1157,7 @@ public sealed partial class SimpleAi
         foreach (var sys in g.Systems)
         {
             string s = sys.Name;
-            if (s == from || Held(s)) continue;
+            if (s == from || Held(s) || BouncedOff(s)) continue;
             bool isWin = s == win && strength >= _p.WinStrikeStrength;
             // fog: systems the picture shows enemy-held reach farther; the Empire's HQ candidates (belief map) from any distance
             bool seenEnemy = _view != null && IsEnemyHeld(s);
@@ -1044,8 +1175,9 @@ public sealed partial class SimpleAi
                 e = enemies.Sum(Str);
             }
             long score = 0;
-            // the fleet itself: hunt it when the system is near the border and the pile is armed enough
-            if (e > 0 && ticks <= _p.HuntTicks && hops[sys.Index] <= _p.TargetHops) score = 3000L * (long)(e * 100 + 20) / (ticks + 20);
+            // the fleet itself: hunt it when the system is near the border and the pile is armed enough, unless it only runs from us (it
+            // retreated from this side here or next door lately: the chase would go on with no losses on either side)
+            if (e > 0 && ticks <= _p.HuntTicks && hops[sys.Index] <= _p.TargetHops && !EnemyRunsNear(s)) score = 3000L * (long)(e * 100 + 20) / (ticks + 20);
             // the system: needs regiments
             if (hops[sys.Index] <= reach || isWin || isSearch)
             {

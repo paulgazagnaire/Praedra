@@ -88,6 +88,23 @@ public sealed record SimpleAiParams
     public int TargetHops { get; init; } = 2;
     /// <summary>The AI stops shelling a system after this many bombardments in 30 days. DEFAULT.</summary>
     public int MaxBombardmentsPer30Days { get; init; } = 4;
+    /// <summary>
+    /// Fleets that only retreat: when enemy fleets retreated from this side's fleets at least RunnerRetreats times within RunnerMemoryDays at a
+    /// system or next to it (the side's own event feed), enemy fleets there are no longer hunted for their own sake (the morale retreat of
+    /// m4-battle-classic jumps them to a neighbour, so the hunt turns into a chase with no losses). The system stays a target for an assault. DEFAULT.
+    /// </summary>
+    public int RunnerRetreats { get; init; } = 1;
+    public int RunnerMemoryDays { get; init; } = 30;
+    /// <summary>A battle where this side's fleets retreated counts like an annihilation for the odds asked there (LossOddsFactor for LossMemoryDays). DEFAULT.</summary>
+    public bool RetreatCountsAsLoss { get; init; } = true;
+    /// <summary>
+    /// No trip stops (destination included) at a system where the side's fleets retreated within RunnerMemoryDays (it is no target or relief
+    /// meanwhile), nor stops on the way where enemy fleets the side sees now outmatch the fleets leaving (RetreatOddsPercent): the forced stop
+    /// and the morale retreat would only bounce the fleet back. With fog, scouts also skip trips that stop where armed enemy ships were seen lately. DEFAULT.
+    /// </summary>
+    public bool AvoidBlockedPaths { get; init; } = true;
+    /// <summary>A strike pile of WinStrikeStrength fetches the regiments for the game-winning system first when at most this many regiments are believed there (-1 = never). DEFAULT.</summary>
+    public int WinRushDefenders { get; init; } = 2;
     /// <summary>A fleet whose ships average below this hull percent stays (or goes) to a shipyard instead of launching. DEFAULT.</summary>
     public int RepairBelowPercent { get; init; } = 70;
 
@@ -123,6 +140,8 @@ public sealed record SimpleAiParams
     public int ScoutEnemyFactor { get; init; } = 2;
     /// <summary>Scouts avoid systems where the picture shows armed enemy ships seen within this many days. DEFAULT.</summary>
     public int ScoutAvoidFleetDays { get; init; } = 30;
+    /// <summary>A scout tries at most this many of its best targets for a trip that stops nowhere near armed enemy ships or a recent own retreat. DEFAULT.</summary>
+    public int ScoutPathChecks { get; init; } = 8;
     /// <summary>Empire: HQ belief adds up to this much scouting value (at the highest belief). DEFAULT.</summary>
     public int ScoutBeliefValue { get; init; } = 150;
 
