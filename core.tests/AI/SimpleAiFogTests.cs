@@ -42,7 +42,8 @@ public class SimpleAiFogTests
     }
 
     // m5-fog-and-hq FN1 with the AI: two games that differ only in where the (unseen) HQ stands give the Empire AI the same view, so the
-    // same orders, day after day.
+    // same orders, day after day, as long as its knowledge is the same (its spies may find out, SimpleAiParams.UseCharactersAndMissions:
+    // measured, the knowledge parts on day 135 on seed 2, when a look at the HQ candidate Dagobah reports an HQ in one game only).
     [Fact]
     public void FN1_EmpireAiOrdersDoNotDependOnAnUnseenHq()
     {
@@ -51,13 +52,16 @@ public class SimpleAiFogTests
             .Select(kv => kv.Key).First();
         var (b, hb) = Match(2, passive: Side.Alliance, setup: h => h.Fog.PlaceHq(other));
         Assert.NotEqual(ha.HqSystem, hb.HqSystem);
+        int same = 0;
         for (int day = 0; day < 250; day++)
         {
             a.Step(); b.Step();
             Assert.Equal(a.Empire.Submitted.Select(o => o.Kind + " " + o.Detail), b.Empire.Submitted.Select(o => o.Kind + " " + o.Detail));
-            Assert.Equal(ha.Fog.KnowledgeHash(Side.Empire), hb.Fog.KnowledgeHash(Side.Empire));
+            if (ha.Fog.KnowledgeHash(Side.Empire) != hb.Fog.KnowledgeHash(Side.Empire)) break; // the Empire found out: the games may part now
+            same++;
             if (ha.Victory.Winner != null || hb.Victory.Winner != null) break;
         }
+        Assert.True(same >= 100, $"the knowledge parted on day {same}");
         Assert.True(a.TotalSent > 20, $"sent {a.TotalSent} day {ha.Game.Day} winner {ha.Victory.Winner}");
     }
 

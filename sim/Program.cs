@@ -33,13 +33,16 @@ internal static class SimCli
                                               [--officer "<Name>" [--officer-esp <n>]] [--target-agent "<Name>"] [--facility <Kind>[,<Kind>...]]
                                               [--at Coruscant] [--owner Alliance|Empire|neutral] [--support 50] [--missions 1000] [--seed 1]
           dotnet run --project sim -- campaign [--days 1000] [--seed 1] [--ruleset Classic|New]
-          dotnet run --project sim -- aivai [--days 730] [--seed 1] [--start meda|campaign] [--passive empire|alliance] [--trace] [--hq-unknown] [--fog]
+          dotnet run --project sim -- aivai [--days 730] [--seed 1] [--start meda|campaign] [--passive empire|alliance] [--trace] [--hq-unknown] [--fog] [--no-agents]
         aivai plays the simple AI (core/AI) on both sides from the new-game start (MedA, DEFAULT) or the test campaign, printing a yearly summary,
         battle, assault and capture counts, the winner (if any) and the AI's order and rejection counts. Without --fog the AIs see everything and
         the Empire is told the Rebel HQ (unless --hq-unknown). --fog turns SimpleAiParams.UseFog on for both AIs: each reads only its side's
         KnowledgeView (m5-fog-and-hq), and the Empire knows the HQ only once its own picture shows it. With fog the AIs scout, attack from
         their last-seen pictures, the Empire hunts the HQ with a belief map and the Alliance moves it when it is at risk. --passive works with
         --fog (e.g. --fog --passive alliance: the fogged Empire hunts a passive Alliance). --trace with --fog also prints the Empire's HQ belief.
+        The AIs use characters (fleet and system posts) and missions (SimpleAiParams.UseCharactersAndMissions, DEFAULT on); --no-agents turns
+        that off (the AI of before, byte for byte). The report adds missions started and succeeded by side and kind, posts given, and the days
+        the Empire's own picture first showed (and later re-found) the Rebel HQ.
         battle runs N seeded battles (Classic: m4-battle-classic, New: m4-battle-new; --ruleset, DEFAULT classic) at a synthetic system where every retreat has a destination, and prints how often each
         side won or retreated, and the mean survivors. Battle k uses seed (seed + k - 1). --no-rolls turns the subsystem rolls off. --carry (New) puts squadrons aboard their side's carriers instead of basing them.
         mission runs N seeded missions (m5-missions) of one kind against a defended system and prints how often the first iteration succeeded,
@@ -245,7 +248,7 @@ internal static class SimCli
     // AI vs AI: the simple AI on both sides. Reads state and events; the AIs draw nothing from the game generator. Runtime is the runner's own clock.
     private static int AiVsAi(string[] a)
     {
-        int days = 730; ulong seed = 1; string start = "meda"; Side? passive = null; bool trace = false; bool hqKnown = true; bool fog = false;
+        int days = 730; ulong seed = 1; string start = "meda"; Side? passive = null; bool trace = false; bool hqKnown = true; bool fog = false; bool agents = true;
         for (int i = 0; i < a.Length; i++)
         {
             string key = a[i];
@@ -257,6 +260,7 @@ internal static class SimCli
                 case "--trace": trace = true; break;
                 case "--hq-unknown": hqKnown = false; break;
                 case "--fog": fog = true; break;
+                case "--no-agents": agents = false; break;
                 case "--passive": passive = Next().ToLowerInvariant() switch { "empire" => Side.Empire, "alliance" => Side.Alliance, "none" => null, _ => throw new ArgumentException("--passive must be empire, alliance or none.") }; break;
                 case "--start": start = Next().ToLowerInvariant(); if (start is not ("meda" or "campaign")) throw new ArgumentException("--start must be meda or campaign."); break;
                 default: throw new ArgumentException($"Unknown option '{key}'.");
@@ -264,7 +268,7 @@ internal static class SimCli
         }
         var clock = System.Diagnostics.Stopwatch.StartNew();
         var host = start == "meda" ? NewGame.Create(new NewGameOptions { Seed = (int)seed, Preset = StartPreset.MedA }) : TestCampaign.New(seed).Host;
-        var aiParams = fog ? new Rebellion.Core.AI.SimpleAiParams { UseFog = true } : null;
+        var aiParams = fog || !agents ? new Rebellion.Core.AI.SimpleAiParams { UseFog = fog, UseCharactersAndMissions = agents } : null;
         var match = new Rebellion.Core.AI.AiMatch(host, aiParams, aiParams, passive: passive);
         if (!fog && hqKnown && start == "meda" && host.HqSystem != null) match.Empire.KnownEnemyHq = host.HqSystem; // without fog the Empire is told the Rebel HQ (DEFAULT)
         Console.WriteLine($"AI vs AI: {days} days, seed {seed}, start {start}{(passive is Side ps ? $", {ps} passive (gives no orders)" : "")}. " +
@@ -277,9 +281,13 @@ internal static class SimCli
         Summary();
         // battles by the holder of the system right after the Step that fought them (the attacker is the other side; neutral = open space)
         int battlesAtEmpire = 0, battlesAtAlliance = 0, battlesAtNeutral = 0, scanned = host.Game.Events.Count;
+        // the Empire's own picture of the HQ, day by day: the first day it showed the HQ, and every later day it showed another (moved) HQ system
+        var hqFinds = new List<string>(); string? lastKnown = host.Fog.KnownHq(Side.Empire)?.System;
         while (host.Game.Day < days && host.Victory.Winner == null)
         {
             match.Step();
+            if (host.Fog.KnownHq(Side.Empire)?.System is { } kh && kh != lastKnown) hqFinds.Add($"day {host.Game.Day} {kh}{(kh == host.HqSystem ? "" : " (stale)")}");
+            lastKnown = host.Fog.KnownHq(Side.Empire)?.System;
             for (var evs = host.Game.Events; scanned < evs.Count; scanned++)
                 if (evs[scanned] is Rebellion.Core.Battle.BattleEnded be)
                     switch (host.Fleets.OwnerOf(be.Result.System)) { case Side.Empire: battlesAtEmpire++; break; case Side.Alliance: battlesAtAlliance++; break; default: battlesAtNeutral++; break; }
@@ -311,6 +319,24 @@ internal static class SimCli
         var known = host.Fog.KnownHq(Side.Empire);
         Console.WriteLine($"Rebel HQ: {host.HqSystem ?? "none"}; Empire's picture of it: {(known == null ? "unknown" : $"{known.System} (seen day {known.Stamp})")}. " +
                           $"Explored systems: Empire {host.Data.Galaxy.Systems.Count(s => host.Fog.IsExplored(Side.Empire, s.Name))}, Alliance {host.Data.Galaxy.Systems.Count(s => host.Fog.IsExplored(Side.Alliance, s.Name))}.");
+        Console.WriteLine($"Empire learned the HQ: {(hqFinds.Count == 0 ? "never" : string.Join("; ", hqFinds))}.");
+        foreach (var side in new[] { Side.Empire, Side.Alliance })
+        {
+            var parts = ev.OfType<MissionStarted>().Where(e => e.Side == side && e.MissionKind != MissionKind.Move).GroupBy(e => e.MissionKind).OrderBy(g => g.Key).Select(g =>
+            {
+                var ids = g.Select(e => e.Mission).ToHashSet();
+                int succ = ev.OfType<MissionSucceeded>().Count(e => ids.Contains(e.Mission));
+                int foiled = ev.OfType<MissionEnded>().Count(e => ids.Contains(e.Mission) && e.Outcome == MissionOutcome.Foiled);
+                int failed = ev.OfType<MissionEnded>().Count(e => ids.Contains(e.Mission) && e.Outcome == MissionOutcome.Failed);
+                return $"{g.Key} {g.Count()} (successes {succ}, foiled {foiled}, failed {failed})";
+            }).ToList();
+            Console.WriteLine($"Missions {side}: {(parts.Count == 0 ? "none" : string.Join("; ", parts))}.");
+            Console.WriteLine($"Posts {side}: fleet posts given {ev.OfType<CharacterAttached>().Count(e => e.Side == side && e.Post != CharacterPost.None && e.Cause == CharacterCause.Order)}, " +
+                              $"system Generals given {ev.OfType<SystemGeneralAssigned>().Count(e => e.Side == side)}; own characters captured {ev.OfType<CharacterCaptured>().Count(e => e.Side == side)}; " +
+                              $"at the end on fleet posts {host.Characters.InPlay.Count(c => c.Side == side && c.Post != CharacterPost.None)}, " +
+                              $"system Generals {host.Game.State.Characters.SystemGenerals.Values.Count(id => host.Characters.Get(id)?.Side == side)}, " +
+                              $"on missions {host.Characters.InPlay.Count(c => c.Side == side && host.Missions.IsOnMission(c.Id))}.");
+        }
         Console.WriteLine(ResearchLine(host));
         Console.WriteLine($"AI orders sent: {match.TotalSent}, rejected: {match.TotalRejected}.");
         foreach (var kv in match.Rejected) Console.WriteLine($"  rejected {kv.Key}: {kv.Value}");

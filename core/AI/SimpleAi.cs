@@ -74,6 +74,8 @@ public sealed partial class SimpleAi
         if (_view != null && _side == Side.Empire) KnownEnemyHq = _view.KnownHq?.System; // only what the Empire's own picture shows
         PlanUpkeepCrisis();
         if (_view != null && _side == Side.Alliance) PlanHqHide(); // fog: the HQ hides by risk (ai/07 §7), checked daily
+        // characters and missions (SimpleAiAgents.cs); before the military review so an officer boards a fleet before it leaves today
+        if (_p.UseCharactersAndMissions && (day + phase) % Math.Max(1, _p.AgentsEvery) == 0) PlanAgents();
         if ((day + phase) % _p.EconomyEvery == 0) PlanEconomy();
         if ((day + phase) % _p.ProductionEvery == 0) PlanProduction();
         if ((day + phase) % _p.MilitaryEvery == 0) PlanMilitary();
@@ -161,6 +163,62 @@ public sealed partial class SimpleAi
 
     /// <summary>The events the AI reads (its own losses, captures, bombardments). No fog: all. Fog: the side's filtered feed (§N8).</summary>
     private IReadOnlyList<GameEvent> Events => _view == null ? _h.Game.Events : _view.Events;
+
+    // ---- characters and missions (SimpleAiAgents.cs reads the other side only through these)
+
+    /// <summary>One unit a mission would meet on the detection walk (m5-missions §3): its detection and its officer's espionage (0 = none or unknown).</summary>
+    private readonly record struct DefenderSeen(int Detection, int OfficerEspionage);
+
+    /// <summary>
+    /// The units of any other side a mission of this side at the system would meet. No fog: the truth (MissionModule.Defenders, officers
+    /// included). Fog: from the side's picture (<see cref="FogMissionDefenders"/>; officers unknown).
+    /// </summary>
+    private List<DefenderSeen> MissionDefendersAt(string system) => _view == null
+        ? _h.Missions.Defenders(_side, system).Select(d => new DefenderSeen(d.Detection, d.OfficerEspionage)).ToList()
+        : FogMissionDefenders(system);
+
+    /// <summary>The side's support at a system: its own systems (and every system without fog) the truth; fog: group B of the picture (null = never seen).</summary>
+    private int? SupportSeen(string system)
+    {
+        if (_view == null || Held(system)) return _h.Economy.SupportOf(system, _side);
+        var o = _view.Picture(system)?.Owner;
+        if (o == null) return null;
+        return _side == Side.Alliance ? o.Value.AllianceSupport : 100 - o.Value.AllianceSupport;
+    }
+
+    /// <summary>
+    /// The holder of a system and how old that knowledge is (days). Held or no fog: the truth, age 0. Fog: group B of the picture; false
+    /// when the side has never seen the owner.
+    /// </summary>
+    private bool OwnerSeen(string system, out Side? owner, out int age)
+    {
+        owner = null; age = 0;
+        if (_view == null || Held(system)) { owner = _h.Fleets.OwnerOf(system); return true; }
+        var o = _view.Picture(system)?.Owner;
+        if (o == null) return false;
+        owner = o.Value.Owner; age = AgeOf(o);
+        return true;
+    }
+
+    /// <summary>An own system in uprising (the side's own state).</summary>
+    private bool OwnUprising(string system) => Held(system) && _h.Support.IsUprising(system);
+
+    /// <summary>The side's own missions (its own state), id order.</summary>
+    private IEnumerable<Rebellion.Core.Missions.MissionGroup> OwnMissions() => _h.Missions.Missions.Where(m => m.Side == _side);
+
+    /// <summary>
+    /// Enemy characters the side knows to stand at a system, by character id. No fog: every free enemy character located at a system (the
+    /// truth). Fog: from the side's own event feed, only at systems it sees today (<see cref="FogEnemyCharacters"/>).
+    /// </summary>
+    private List<(int Character, string System)> EnemyCharactersSeen()
+    {
+        if (_view != null) return FogEnemyCharacters();
+        var list = new List<(int, string)>();
+        foreach (var c in _h.Characters.InPlay)
+            if (c.Side == Enemy && c.Status == Rebellion.Core.Characters.CharacterStatus.Free && c.Transit == null && _h.Characters.LocationOf(c) is { } at)
+                list.Add((c.Id, at));
+        return list;
+    }
 
     // ================================================================== helpers
 

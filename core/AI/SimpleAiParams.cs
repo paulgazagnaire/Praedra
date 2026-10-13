@@ -192,6 +192,94 @@ public sealed record SimpleAiParams
     /// <summary>A destination needs at least this many lanes (no dead ends: a one-fleet blockade traps the HQ, ai/07 §7). DEFAULT.</summary>
     public int HqMinLanes { get; init; } = 2;
 
+    // ---- characters and missions (m6 AI; ai/05 §4-5 and §7b, ai/12 P8 and P9). All AI tuning, DEFAULT. The rules they act through are
+    // m5-characters-and-force (posts, MoveCharacter) and m5-missions (StartMission, CancelMission); the odds are the core's own tables
+    // (MissionModule.Lookup, FoilChance, DetectionX). With UseFog the AI reads only its side's knowledge for every target and defender count.
+    /// <summary>
+    /// Use characters (fleet and system posts) and missions. DEFAULT true. False = the AI of before characters and missions, byte for byte
+    /// (no character or mission order, nothing else changes).
+    /// </summary>
+    public bool UseCharactersAndMissions { get; init; } = true;
+    /// <summary>Days between character and mission reviews (offset by the side number like the other reviews). DEFAULT.</summary>
+    public int AgentsEvery { get; init; } = 2;
+    /// <summary>Lowest leadership for a fleet or system post (ai/05 §5: the original's commander slots ask 50). DEFAULT.</summary>
+    public int OfficerMinLeadership { get; init; } = 50;
+    /// <summary>A fleet gets officers when its capital ships are at least this strong (percent of REF, as LaunchStrength). DEFAULT.</summary>
+    public int OfficerFleetStrength { get; init; } = 20;
+    /// <summary>At most this many fleets (the strongest) get officers; the rest of the leaders go on missions. DEFAULT.</summary>
+    public int OfficerFleets { get; init; } = 3;
+    /// <summary>Empire with fog: characters kept for the HQ hunt (best espionage first) while the HQ is unknown or due a re-check. DEFAULT.</summary>
+    public int HqSpies { get; init; } = 4;
+    /// <summary>Lowest espionage of an HQ spy (ai/05 §4: the original's floor for espionage kinds is 51). DEFAULT.</summary>
+    public int SpyMinEspionage { get; init; } = 51;
+    /// <summary>HQ search targets: this many systems of the highest search score (belief weighted by room and lanes, see SpyRoomPercent). DEFAULT.</summary>
+    public int HqSearchTargets { get; init; } = 5;
+    /// <summary>
+    /// The Alliance hides its HQ far from the Empire and never in a dead end (ai/07 §7; the Alliance AI's own HqMinLanes): a search target's
+    /// belief is raised SpyRoomPercent x r x r percent, r = lanes from the nearest Imperial system (at most SpyRoomCap), and cut to
+    /// SpyDeadEndPercent with fewer than HqMinLanes lanes; a system where an own look was foiled within SpyFoilMemoryDays is skipped. DEFAULT.
+    /// </summary>
+    public int SpyRoomPercent { get; init; } = 25;
+    public int SpyRoomCap { get; init; } = 8;
+    public int SpyDeadEndPercent { get; init; } = 50;
+    public int SpyFoilMemoryDays { get; init; } = 120;
+    /// <summary>
+    /// A known HQ whose look was foiled is looked at again only after this many days (its garrison must be seen before an assault, and a
+    /// foiled team suffers nothing, m5-missions OnTeamExposed none; but each detected spy warns the Alliance). 0 = at once. DEFAULT.
+    /// </summary>
+    public int HqRecheckFoilDays { get; init; } = 30;
+    /// <summary>For the spies a candidate whose owner the side has never seen weighs at least this (the belief map gives it BeliefUnexplored). DEFAULT.</summary>
+    public int SpyUnexploredBelief { get; init; } = 120;
+    /// <summary>Spies farther than SpyBaseSlackTicks from the held system nearest the SpyBaseTargets best search targets move there first. DEFAULT.</summary>
+    public int SpyBaseTargets { get; init; } = 3;
+    public int SpyBaseSlackTicks { get; init; } = 15;
+    /// <summary>A known HQ is looked at again when the Empire's picture of it is this many days old (it may have moved: m5-fog-and-hq §N5). DEFAULT.</summary>
+    public int HqRecheckDays { get; init; } = 60;
+    /// <summary>Mission values (the planner's units: value x chance / (travel days + MissionTravelBias)). DEFAULT.</summary>
+    public int HqSearchValue { get; init; } = 1000;
+    public int HqRecheckValue { get; init; } = 1000;
+    /// <summary>Espionage counts this percent of Reconnaissance for the same chance (it also shows the ground forces and extra systems). DEFAULT.</summary>
+    public int EspionageOverReconPercent { get; init; } = 125;
+    public int SubdueValue { get; init; } = 900;
+    public int RescueValue { get; init; } = 800;
+    public int AbductionValue { get; init; } = 500;
+    /// <summary>Diplomacy on an own system: DiplomacyValue x (DiplomacyStopSupport - support) / DiplomacyStopSupport; neutral: NeutralDiplomacyPercent of that. DEFAULT.</summary>
+    public int DiplomacyValue { get; init; } = 400;
+    public int NeutralDiplomacyPercent { get; init; } = 60;
+    public int InciteValue { get; init; } = 300;
+    /// <summary>Sabotage: per facility the picture shows at the target. DEFAULT.</summary>
+    public int SabotageValuePerFacility { get; init; } = 60;
+    public int ResearchValue { get; init; } = 250;
+    public int MissionTravelBias { get; init; } = 10;
+    /// <summary>A mission is started only when its estimated chance (not detected x success, percent) is at least this. DEFAULT.</summary>
+    public int MissionMinOddsPercent { get; init; } = 15;
+    /// <summary>Repeating missions (Diplomacy, Incite, Subdue, Research) ask at least this per iteration. DEFAULT.</summary>
+    public int RepeatMinOddsPercent { get; init; } = 10;
+    /// <summary>Own systems below this own support get Diplomacy; a Diplomacy mission is cancelled once its target reaches DiplomacyStopSupport. DEFAULT.</summary>
+    public int DiplomacyOwnBelow { get; init; } = 60;
+    public int DiplomacyStopSupport { get; init; } = 75;
+    /// <summary>Neutral systems at most this many lanes from a held system get Diplomacy (the border). DEFAULT.</summary>
+    public int DiplomacyHops { get; init; } = 1;
+    /// <summary>Most diplomats out at once. DEFAULT.</summary>
+    public int MaxDiplomats { get; init; } = 3;
+    /// <summary>Lowest skill sent per kind (ai/05 §4: the original's floors are diplomacy 69, incite/subdue 49, combat kinds 51, research 10). DEFAULT.</summary>
+    public int DiplomacyMinSkill { get; init; } = 60;
+    public int LeadershipMinSkill { get; init; } = 49;
+    public int CombatMinSkill { get; init; } = 51;
+    public int ResearchMinSkill { get; init; } = 30;
+    /// <summary>Alliance: most Incite and Sabotage missions out at once (only on enemy systems where no defender is believed). DEFAULT.</summary>
+    public int MaxSubversion { get; init; } = 2;
+    /// <summary>A picture's owner is trusted for a mission target (Diplomacy on neutral, Incite) when at most this old. DEFAULT.</summary>
+    public int MissionOwnerTrustDays { get; init; } = 60;
+    /// <summary>An enemy character is an Abduction target only when the side's own feed placed it at a system it sees within this many days. DEFAULT.</summary>
+    public int AbductionInfoDays { get; init; } = 5;
+    /// <summary>
+    /// Key characters (the majors: Luke, Leia, Han, Mon Mothma, Vader, Palpatine) count this percent of their mission value (others are
+    /// preferred) and never go on Rescue, Abduction, Sabotage or Incite (ai/05 §4: the original keeps its leaders off those). With
+    /// m5-characters-and-force MajorsCanDie on (DEFAULT off) they also stay off every mission where any defender is believed. DEFAULT.
+    /// </summary>
+    public int KeyCharacterValuePercent { get; init; } = 50;
+
     // ---- what to build, by side (first class that is buildable, researched and affordable wins). Class names of unit-and-facility-costs.csv. DEFAULT.
     public IReadOnlyList<string> Warships(Side side) => side == Side.Empire ? EmpireWarships : AllianceWarships;
     public IReadOnlyList<string> HeavyWarships(Side side) => side == Side.Empire ? EmpireHeavy : AllianceHeavy;
