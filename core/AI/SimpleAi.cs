@@ -223,6 +223,8 @@ public sealed partial class SimpleAi
     // ================================================================== helpers
 
     private bool Held(string s) => _h.Fleets.OwnerOf(s) == _side;
+    /// <summary>Was the system destroyed by the Death Star? Public to both sides (the galaxy notice "Planet Destroyed"); the AI never targets or counts one. rule: m5-death-star §2 effect 5.</summary>
+    private bool Destroyed(string s) => _h.Game.State.DeathStar.IsDestroyed(s);
     private IEnumerable<string> HeldSystems() => S.SystemOwners.Where(kv => kv.Value == _side).Select(kv => kv.Key); // sorted ordinal
     private int UnratedSpeed => _h.Construction.Params.UnratedDeliverySpeed;
     private int Budget => _h.Economy.Free(_side) - _plannedLoad - _p.MaintenanceMargin;
@@ -1157,7 +1159,7 @@ public sealed partial class SimpleAi
         foreach (var sys in g.Systems)
         {
             string s = sys.Name;
-            if (s == from || Held(s) || BouncedOff(s)) continue;
+            if (s == from || Held(s) || BouncedOff(s) || Destroyed(s)) continue;
             bool isWin = s == win && strength >= _p.WinStrikeStrength;
             // fog: systems the picture shows enemy-held reach farther; the Empire's HQ candidates (belief map) from any distance
             bool seenEnemy = _view != null && IsEnemyHeld(s);

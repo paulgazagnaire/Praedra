@@ -5,8 +5,13 @@ namespace Rebellion.Core.Control;
 // Events of control and capture. Day is the hook time T = K + 1, like the economy and support events.
 // rule: m2-control-and-capture §What happens at the moment of capture (10: event order).
 
-/// <summary>Why a system changed holder. Assault is M3's (slot 5.2); Debug is the M2 test order.</summary>
-public enum CaptureCause { Debug, Assault }
+/// <summary>Why a system changed holder. Assault is M3's (slot 5.2); Debug is the M2 test order; DeathStarRevolt is the Death Star's.</summary>
+public enum CaptureCause
+{
+    Debug, Assault,
+    /// <summary>A neutral system of a sector struck twice by the Death Star turns Alliance. rule: m5-death-star §2 effect 7.</summary>
+    DeathStarRevolt,
+}
 
 /// <summary>From is null for a neutral system. rule: m2-control-and-capture §How control changes (SystemCaptured{system, from, to, cause}).</summary>
 public sealed record SystemCaptured(int Index, int Day, string System, Side? From, Side To, CaptureCause Cause)

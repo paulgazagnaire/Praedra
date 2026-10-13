@@ -7,7 +7,12 @@ namespace Rebellion.Core.Missions;
 public enum MissionPhase { Outbound, Working, ReturnPending, Returning }
 
 /// <summary>How a mission ended. rule: m5-missions §5 (outcomes).</summary>
-public enum MissionOutcome { None, Succeeded, Failed, Foiled, Cancelled, TargetInvalid }
+public enum MissionOutcome
+{
+    None, Succeeded, Failed, Foiled, Cancelled, TargetInvalid,
+    /// <summary>The target system was destroyed by the Death Star. rule: m5-death-star §2 effect 3 (cause TargetDestroyed).</summary>
+    TargetDestroyed,
+}
 
 /// <summary>
 /// One mission group (saved and hashed). Ids are characters (record ids) and special forces (object ids), each list ascending. The group's trip is

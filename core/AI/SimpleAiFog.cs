@@ -142,7 +142,7 @@ public sealed partial class SimpleAi
         foreach (var sys in _h.Data.Galaxy.Systems)
         {
             string s = sys.Name;
-            if (Held(s)) continue;
+            if (Held(s) || Destroyed(s)) continue;
             var pic = _view.Picture(s);
             int w;
             if (pic == null) w = string.Equals(sys.Group, core, StringComparison.OrdinalIgnoreCase) ? 0 : _p.BeliefUnexplored; // §N7 4: only rim starts and Alliance systems
@@ -289,7 +289,7 @@ public sealed partial class SimpleAi
         foreach (var sys in g.Systems)
         {
             string s = sys.Name;
-            if (s == f.At || Held(s) || claimed.Contains(s)) continue;
+            if (s == f.At || Held(s) || claimed.Contains(s) || Destroyed(s)) continue;
             int value = ScoutValue(s, hops[sys.Index]);
             if (value <= 0) continue;
             int ticks = TicksCached(f.At!, s, speed);

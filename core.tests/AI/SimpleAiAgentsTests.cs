@@ -37,7 +37,9 @@ public class SimpleAiAgentsTests
             RunnerRetreats = 0, RetreatCountsAsLoss = false, AvoidBlockedPaths = false, WinRushDefenders = -1 });
         m.RunTo(1000);
         Assert.DoesNotContain(m.Sent.Keys, k => k.Contains("Mission", StringComparison.Ordinal) || k.Contains("Character", StringComparison.Ordinal) || k.Contains("General", StringComparison.Ordinal));
-        Assert.Equal("e8fb3f7545dd177b99cb98ce2a16385ae9799e2b837a01d83182f9f2192bc779", h.StateHash());
+        // The pin moved when the Death Star added saved state (m5-death-star: GameState.DeathStar, SystemKnowledge.Destroyed). The game plays identically:
+        // the old hash e8fb3f75...c779 is recovered exactly by removing those new fields from the hashed JSON (checked when the pin was moved).
+        Assert.Equal("d8659d99bab3a88eaa94bca7a4662085ec3fad4f674ed0074100f63a74944921", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"

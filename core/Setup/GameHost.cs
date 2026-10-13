@@ -24,6 +24,9 @@ namespace Rebellion.Core.Setup;
 ///   5. TroopModule     (step 1 load and unload orders; reads fleets; the construction event also announces regiments and special forces)
 ///   6. ControlModule    (capture; calls support and construction)
 ///   7. DefenseModule, BombardmentModule (defense queries; the Bombard order and slot 5.1; reads fleets, economy and support, calls support's ChangeSupport)
+///   7b. DeathStarModule (the Destroy System order and slot 5.1 after the bombardment's hook, the sector flag at 5.6, the one-per-system build cap, the
+///      DeathStarDeployed notice; reads fleets, economy, support, control, construction and defenses; its character, mission and fog hooks are wired
+///      once those modules exist). rule: m5-death-star
 ///   8. AssaultModule (the Assault order and slot 5.2; reads troops, defenses and bombardment, calls control's SetHolder)
 ///   9. BattleModule (slot 5), RepairModule (slot 6.8)
 ///  10. FogModule (MoveHq; slot 2 after the fleet departures, slot 3 HQ arrival after the fleet arrivals and deliveries, 3.1 sightings, 5.4 live
@@ -55,6 +58,8 @@ public sealed class GameHost
     /// <summary>The defense queries the assault and bombardment call. rule: m3-planetary-defenses §Queries.</summary>
     public DefenseModule Defenses { get; }
     public BombardmentModule Bombardment { get; }
+    /// <summary>The Death Star: Destroy System (slot 5.1), the sector flag (5.6), the build cap. rule: m5-death-star.</summary>
+    public Rebellion.Core.DeathStar.DeathStarModule DeathStar { get; }
     /// <summary>The Assault order and slot 5.2. rule: m3-assault.</summary>
     public AssaultModule Assault { get; }
     /// <summary>The Classic battle, step 5 after the contacts and before slots 5.1 and 5.2. rule: m4-battle-classic.</summary>
@@ -123,6 +128,9 @@ public sealed class GameHost
 
         Defenses = DefenseModule.Attach(Economy, Fleets, data.Defenses, settings.Defense);
         Bombardment = BombardmentModule.Attach(game, Economy, Fleets, Support, Defenses, settings.Bombard);
+        // After the bombardment (its slot 5.1 hook runs first) and before the assault. rule: m5-death-star §2 ("resolved in slot 5.1 after the bombardment hook")
+        DeathStar = Rebellion.Core.DeathStar.DeathStarModule.Attach(game, data.Galaxy, Fleets, Economy, Support, Control, Construction, Defenses, settings.DeathStar);
+        Construction.UnitAppeared += DeathStar.OnUnitAppeared; // after the fleet module's handler (the ship has joined its fleet): DeathStarDeployed
         Assault = AssaultModule.Attach(game, Economy, Fleets, Troops, Control, Defenses, Bombardment, settings.Assault);
         // Slot 5: registered after the fleet module's contact hook, so it runs after it, and (slot 5 precedes 5.1 and 5.2) before bombardment and assault.
         Battles = Rebellion.Core.Battle.BattleModule.Attach(game, data.Galaxy, Fleets, Economy, settings.Battle, data.NewBattle);
@@ -142,6 +150,13 @@ public sealed class GameHost
         // Missions: orders, slots 2 and 3 after the characters, 5.3; wires the characters' IsOnMission and membership end, the fog's AgentsAt and the
         // support module's incident terms. rule: m5-missions §Where it runs in the day Step.
         Missions = Rebellion.Core.Missions.MissionModule.Attach(game, Fleets, Economy, Support, Troops, Research, Characters, Fog, data.Missions, settings.Missions);
+        // The Death Star's hooks into the characters, missions and fog (they attach after it). rule: m5-death-star §2 effects 3, 4, 6; §5
+        DeathStar.MissionsEnded = Missions.OnSystemDestroyed;
+        DeathStar.CharacterRoll = Characters.DeathStarStrike;
+        DeathStar.CharacterRelocate = Characters.DeathStarRelocate;
+        DeathStar.FogNotice = Fog.OnSystemDestroyed;
+        Missions.HasDeathStar = DeathStar.HasDeathStar;
+        Missions.DestroyDeathStar = DeathStar.Destroy;
         Victory = Rebellion.Core.Victory.VictoryModule.Attach(game, settings.Victory); // slot 6.11, the last day-end slot; must stay last
         Victory.Keys = data.Characters.VictoryKeys;
         Victory.IsCaptured = Characters.IsCaptured;

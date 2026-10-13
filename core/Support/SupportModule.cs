@@ -117,14 +117,18 @@ public sealed class SupportModule
     /// <summary>
     /// The one entry point for every change of support. <paramref name="amount"/> is from the point of view of <paramref name="side"/>.
     /// Alliance axis; Death Star damping of rises (truncating); clamp 0..100; <see cref="SupportChanged"/> if the value moved. Returns the
-    /// new Alliance share. rule: m2-popular-support §One entry point for every change (steps 1 to 4).
+    /// new Alliance share. A destroyed system has no support value: nothing changes (rule: m5-death-star §2 effect 5).
+    /// <paramref name="dampen"/> false skips step 2, the Death Star damping: the Death Star's own sector reaction passes false (rule: m5-death-star §2
+    /// effect 7: "The Empire's Death Star damping does not apply to these two changes").
+    /// rule: m2-popular-support §One entry point for every change (steps 1 to 4).
     /// </summary>
-    public int ChangeSupport(StepContext ctx, string system, Side side, int amount, SupportCause cause)
+    public int ChangeSupport(StepContext ctx, string system, Side side, int amount, SupportCause cause, bool dampen = true)
     {
         if (!_galaxy.TryFindSystem(system, out _)) throw new ArgumentException($"Unknown system '{system}'.");
+        if (_eco.IsDestroyed(system)) return 0;
         int old = _eco.SupportOf(system, Side.Alliance);
         int d = side == Side.Alliance ? amount : -amount;                       // 1. Alliance axis
-        if (d > 0 && IsDeathStarSector(system)) d /= Params.DeathStarDampingDivisor; // 2. damping, only rises, toward zero
+        if (dampen && d > 0 && IsDeathStarSector(system)) d /= Params.DeathStarDampingDivisor; // 2. damping, only rises, toward zero
         int now = Math.Clamp(old + d, Params.SupportMin, Params.SupportMax);    // 3. clamp
         if (now == old) return old;
         _game.State.Economy.AllianceSupport[system] = now;
@@ -195,6 +199,32 @@ public sealed class SupportModule
     {
         st.Uprising = false; st.ErosionDue = 0; st.IncidentDue = 0;
         ctx.Emit((i, _) => new UprisingEnded(i, t, sys, reason));
+    }
+
+    /// <summary>
+    /// Start an uprising at a held system at once, whatever the garrison (the Death Star's second strike in a sector, Imperial systems). No-op without
+    /// a holder or with an uprising already on. The timers are armed as in slot 6.1 (one draw for the incident timer); slot 6.1 later judges it by
+    /// the normal garrison rule. rule: m5-death-star §2 effect 7 (Strike 2 or later); m2-uprisings-and-garrison §Uprising start, keep, end.
+    /// </summary>
+    public bool StartUprisingNow(StepContext ctx, string system)
+    {
+        if (_fleets.OwnerOf(system) is not Side holder || IsUprising(system)) return false;
+        StartUprising(ctx, ctx.Day + 1, system, holder);
+        return true;
+    }
+
+    /// <summary>
+    /// A system was destroyed: its uprising ends (UprisingEnded "SystemDestroyed"), its timers are disarmed and it leaves the Death Star sector flag
+    /// table; its support value is dropped. rule: m5-death-star §2 effect 5 (holder none, no support value).
+    /// </summary>
+    public void OnSystemDestroyed(StepContext ctx, string system)
+    {
+        var st = StateOf(system);
+        if (st is { Uprising: true }) EndUprising(ctx, ctx.Day + 1, system, st, "SystemDestroyed");
+        if (st != null) { st.PresenceDue = 0; st.ErosionDue = 0; st.IncidentDue = 0; }
+        S.Prune(system);
+        S.DeathStar.Remove(system);
+        _game.State.Economy.AllianceSupport.Remove(system);
     }
 
     /// <summary>

@@ -47,6 +47,11 @@ public sealed class EconomyModule
     /// cancels the project of a lost yard from here. rule: m2-construction §Scrapping (scrapping the last yard cancels the project).
     /// </summary>
     public event Action<StepContext, EconObject, int>? ObjectRemoved;
+    /// <summary>
+    /// Raised by <see cref="DestroyUnit"/> (a ship, squadron or regiment destroyed in a battle or by the Death Star), before <see cref="ObjectRemoved"/>;
+    /// not for scrapping. The Death Star module listens to report the loss of a Death Star. rule: m5-death-star §4, §5.
+    /// </summary>
+    public event Action<StepContext, EconObject, int>? UnitLost;
 
     private EconomyModule(Game game, Galaxy galaxy, SlotValues slots, CostData costs, FleetModule fleets, EconomyParams p)
     {
@@ -117,6 +122,16 @@ public sealed class EconomyModule
         if (!_galaxy.TryFindSystem(system, out _)) throw new ArgumentException($"Unknown system '{system}'.");
         if (energy < 0 || raw < 0) throw new ArgumentException("Slots cannot be negative.");
         E.Slots[system] = new SlotState { Energy = energy, Raw = raw, Populated = SlotsOf(system).Populated };
+    }
+
+    /// <summary>
+    /// The Death Star destroyed the system: no energy and no raw slots, not populated (the stored slot values are replaced). The facilities and units
+    /// on it are removed by the Death Star module. rule: m5-death-star §2 effect 5 (no energy or raw slots, no production).
+    /// </summary>
+    public void ClearSlotsForDestroyedSystem(string system)
+    {
+        if (!_galaxy.TryFindSystem(system, out _)) throw new ArgumentException($"Unknown system '{system}'.");
+        E.Slots[system] = new SlotState { Energy = 0, Raw = 0, Populated = false };
     }
 
     /// <summary>Setup only: Alliance support of a system, 0..100 (Empire support is 100 minus it). Read-only for the economy afterwards.</summary>
@@ -194,9 +209,13 @@ public sealed class EconomyModule
         return null;
     }
 
-    /// <summary>Support of a side in a system. Alliance share is stored; Empire = 100 - it. rule: m2-popular-support §What it stores.</summary>
+    /// <summary>Has the Death Star destroyed the system? A destroyed system has no slots, no production and no support value. rule: m5-death-star §2 effect 5.</summary>
+    public bool IsDestroyed(string system) => _game.State.DeathStar.IsDestroyed(system);
+
+    /// <summary>Support of a side in a system. Alliance share is stored; Empire = 100 - it. rule: m2-popular-support §What it stores. A destroyed system has no support value: 0 for both sides (rule: m5-death-star §2 effect 5).</summary>
     public int SupportOf(string system, Side side)
     {
+        if (IsDestroyed(system)) return 0;
         int a = E.AllianceSupport.TryGetValue(system, out var v) ? v : Params.DefaultAllianceSupport;
         return side == Side.Alliance ? a : 100 - a;
     }
@@ -330,6 +349,7 @@ public sealed class EconomyModule
     internal void DestroyUnit(StepContext ctx, int day, EconObject o)
     {
         Remove(o);
+        UnitLost?.Invoke(ctx, o, day);
         _fleets.ObjectRemoved(ctx, day, o);
         ObjectRemoved?.Invoke(ctx, o, day);
     }
@@ -416,6 +436,9 @@ public sealed class EconomyModule
         bool hasMine = Installed(sys).Any(o => IsClass(o, FacilityKind.Mine));
         bool hasFacility = Installed(sys).Count > 0;
         int cap = Params.SlotCap;
+        // rule: m5-death-star §2 effect 5 (a destroyed system has no energy or raw slots): the draws are made, nothing changes
+        if (IsDestroyed(sys)) { before = after = 0; }
+        else
         switch (roll / 25) // four equal bands: raw -1, energy -1, raw +1, energy +1
         {
             case 0:

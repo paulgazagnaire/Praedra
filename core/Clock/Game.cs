@@ -55,6 +55,8 @@ public sealed class GameState
     public Rebellion.Core.Characters.CharacterState Characters { get; init; } = new();
     /// <summary>Every running mission group (team, decoys, trip, timer). rule: m5-missions §Orders, §Rule (Classic).</summary>
     public Rebellion.Core.Missions.MissionState Missions { get; init; } = new();
+    /// <summary>Destroyed systems and the strikes per sector. rule: m5-death-star §Interfaces.</summary>
+    public Rebellion.Core.DeathStar.DeathStarState DeathStar { get; init; } = new();
 
     /// <summary>Copy another state's content into this one (used by Load, which needs ordinal-comparer dictionaries).</summary>
     internal void CopyFrom(GameState other)
@@ -73,6 +75,7 @@ public sealed class GameState
         Research.CopyFrom(other.Research);
         Characters.CopyFrom(other.Characters);
         Missions.CopyFrom(other.Missions);
+        DeathStar.CopyFrom(other.DeathStar);
     }
 }
 
@@ -115,6 +118,7 @@ public sealed class Game
         "5.2", // Assaults (M3)
         "5.3", // Mission resolution (M5). rule: m5-missions §Where it runs in the day Step (Lead notes: after assault 5.2, before the fog refresh 5.4)
         "5.4", // Live refresh of each side's picture (M5 fog; 5.3 is mission resolution, m5-missions). rule: m5-fog-and-hq §F8, Lead notes
+        "5.6", // Death Star sector flag, once per day after battles and missions, before support at 6.1. rule: m5-death-star §3
         "6.1", "6.2", "6.3", "6.4", "6.5", "6.6", "6.7", "6.8", // Day-end hooks (empty in M1)
         "6.9", // Research tick, after strategic repair (6.8). rule: m5-research §Where it runs in the day Step
         "6.10", // Character day-end: injuries heal, escape rolls. rule: m5-characters-and-force §Where it runs in the day Step

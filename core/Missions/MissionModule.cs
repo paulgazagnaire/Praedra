@@ -290,6 +290,7 @@ public sealed class MissionModule
             return null;
         }
         if (system == null || !_fleets.Galaxy.TryFindSystem(system, out _)) return MissionReject.BadTarget;
+        if (_eco.IsDestroyed(system)) return RejectReason.SystemDestroyed; // rule: m5-death-star §2 effect 5 (cannot be targeted by missions)
         Side? holder = _fleets.OwnerOf(system);
         switch (k)
         {
@@ -484,6 +485,28 @@ public sealed class MissionModule
         }
     }
 
+    /// <summary>
+    /// The Death Star destroyed <paramref name="system"/>: every group that is working there ends as a failure with cause TargetDestroyed
+    /// (MissionEnded) and leaves the state; a group about to return from there just leaves the state. Their characters stay on the system as free
+    /// characters for the Death Star's roll on characters (their special forces go with the planet). A group still flying out lands later and ends
+    /// the same way (<see cref="Land"/>). rule: m5-death-star §2 effect 3 (running missions end as failures with cause TargetDestroyed, team members
+    /// handled as characters on the planet).
+    /// </summary>
+    public void OnSystemDestroyed(StepContext ctx, string system)
+    {
+        int t = ctx.Day + 1;
+        foreach (var m in S.Missions.Values.Where(m => m.Target == system).ToList()) // mission id order
+        {
+            if (m.Phase == MissionPhase.Working)
+            {
+                int id = m.Id; var side = m.Side; var kind = m.Kind;
+                ctx.Emit((i, _) => new MissionEnded(i, t, id, side, kind, system, MissionOutcome.TargetDestroyed));
+                S.Missions.Remove(m.Id);
+            }
+            else if (m.Phase == MissionPhase.ReturnPending) S.Missions.Remove(m.Id);
+        }
+    }
+
     // rule: §Where it runs, step 2 (after the fleets, mission id): outbound groups leave; ended groups start home (Return record 0x02).
     private void Departures(StepContext ctx)
     {
@@ -569,6 +592,8 @@ public sealed class MissionModule
     // A character target that is no longer there ends the mission TargetInvalid (no draw). DetectionAtLanding runs the walk once.
     private void Land(StepContext ctx, MissionGroup m, int t)
     {
+        // rule: m5-death-star §2 effect 3: a mission whose target was destroyed on the way ends as a failure (cause TargetDestroyed)
+        if (m.Kind != MissionKind.Move && _eco.IsDestroyed(m.Target)) { End(ctx, m, MissionOutcome.TargetDestroyed, t); return; }
         PlaceMembers(m, m.Target);
         if (m.Kind == MissionKind.Move) { Release(ctx, m, m.Target, t); return; }
         if (!m.HasTeam) { End(ctx, m, MissionOutcome.Cancelled, t); return; }
