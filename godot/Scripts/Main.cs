@@ -40,7 +40,8 @@ public partial class Main : Control
         if (_args.Contains("--menu") || (shot == null && !_args.Contains("--newgame"))) { ShowMenu(shot, shotFrames); return; }
         var side = Arg("--side") == "Empire" ? Side.Empire : Side.Alliance;
         var preset = Enum.TryParse(Arg("--preset"), true, out Preset p) ? p : Preset.Medium;
-        StartGame(GameSession.New(GameBoot.LoadData(), side, preset), shot, shotFrames, true);
+        var rules = string.Equals(Arg("--rules"), "new", StringComparison.OrdinalIgnoreCase) ? Rebellion.Core.Battle.BattleRuleset.New : Rebellion.Core.Battle.BattleRuleset.Classic;
+        StartGame(GameSession.New(GameBoot.LoadData(), side, preset, rules), shot, shotFrames, true);
     }
 
     string Arg(string name)
@@ -59,7 +60,7 @@ public partial class Main : Control
     void ShowMenu(string shot = null, int shotFrames = 30)
     {
         var menu = new StartMenu();
-        menu.NewGameRequested += (side, preset) => StartGame(GameSession.New(GameBoot.LoadData(), side, preset), newGame: true);
+        menu.NewGameRequested += (side, preset, rules) => StartGame(GameSession.New(GameBoot.LoadData(), side, preset, rules), newGame: true);
         menu.LoadRequested += LoadSave;
         menu.QuitRequested += () => GetTree().Quit();
         Swap(menu);

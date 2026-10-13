@@ -79,6 +79,9 @@ public partial class Main
         Expect(menu != null, "start screen shows");
         Expect(UiTest.Click(menu, side.ToString()), $"pick {side}");
         Expect(UiTest.Click(menu, "Medium"), "pick Medium");
+        // Space battle rules: Classic is the default; the Empire run picks New (m4-battle-new ruleset switch).
+        var wantRules = side == Side.Empire ? Rebellion.Core.Battle.BattleRuleset.New : Rebellion.Core.Battle.BattleRuleset.Classic;
+        if (wantRules == Rebellion.Core.Battle.BattleRuleset.New) Expect(UiTest.Click(menu, "New (weapons matter)"), "pick the New battle rules");
         Expect(UiTest.Click(menu, "New Game"), "click New Game");
         var gs = Gs;
         Expect(gs != null, "the game screen opened");
@@ -86,6 +89,7 @@ public partial class Main
         var s = gs.S;
         var me = s.Player;
         Expect(me == side, "you play " + side);
+        Expect(s.Rules == wantRules && s.Host.Battles.Params.Ruleset == wantRules, "the chosen battle rules reached the core: " + s.Rules);
 
         // ---------------------------------------------------------------- how to play, speed, play button
         Expect(gs.HowToVisible, "How to play shows at the first new game");
@@ -322,6 +326,7 @@ public partial class Main
         Expect(gs2 != null && gs2 != gs, "a fresh game screen replaced the old one");
         Expect(gs2.S.Game.Day == dayAtSave && gs2.S.Host.StateHash() == hashAtSave && gs2.S.Player == me, $"loaded game is the saved one (day {gs2.S.Game.Day})");
         gs = gs2; s = gs.S;
+        Expect(s.Rules == wantRules, "the battle rules survive Save and Load: " + s.Rules);
         Expect(!gs.HowToVisible, "loading does not show How to play");
         // menu: "Menu" asks first
         Expect(gs.Click("Menu") && gs.ConfirmVisible, "Menu asks first");

@@ -8,12 +8,13 @@ namespace RebellionViewer;
 /// <summary>The start screen: choose a side and a difficulty, start a new game, load a save, quit.</summary>
 public partial class StartMenu : Control
 {
-    public event Action<Side, Preset> NewGameRequested;
+    public event Action<Side, Preset, Rebellion.Core.Battle.BattleRuleset> NewGameRequested;
     public event Action<string> LoadRequested;   // a save path
     public event Action QuitRequested;
 
     Side _side = Side.Alliance;
     Preset _preset = Preset.Medium;
+    Rebellion.Core.Battle.BattleRuleset _rules = Rebellion.Core.Battle.BattleRuleset.Classic; // DEFAULT (m4-battle-new)
     Label _sideHint;
 
     static readonly string[] SideBlurb =
@@ -66,8 +67,19 @@ public partial class StartMenu : Control
         AddToggle(presetRow, presetGroup, "Medium", true, () => _preset = Preset.Medium);
         AddToggle(presetRow, presetGroup, "Hard", false, () => _preset = Preset.Hard);
 
+        box.AddChild(new Label { Text = "Space battle rules" });
+        var rulesRow = new HBoxContainer();
+        rulesRow.AddThemeConstantOverride("separation", 8);
+        box.AddChild(rulesRow);
+        var rulesGroup = new ButtonGroup();
+        AddToggle(rulesRow, rulesGroup, GameBoot.RulesName(Rebellion.Core.Battle.BattleRuleset.Classic), true, () => _rules = Rebellion.Core.Battle.BattleRuleset.Classic);
+        AddToggle(rulesRow, rulesGroup, GameBoot.RulesName(Rebellion.Core.Battle.BattleRuleset.New), false, () => _rules = Rebellion.Core.Battle.BattleRuleset.New);
+        var rulesHint = new Label { Text = "Classic plays as the 1998 game did. New fights gun by gun: the weapons your ships carry decide who wins.", AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(440, 44) };
+        rulesHint.Modulate = new Color(1, 1, 1, 0.7f);
+        box.AddChild(rulesHint);
+
         box.AddChild(new Control { CustomMinimumSize = new Vector2(0, 10) });
-        var start = Big("New Game", () => NewGameRequested?.Invoke(_side, _preset));
+        var start = Big("New Game", () => NewGameRequested?.Invoke(_side, _preset, _rules));
         box.AddChild(start);
 
         var cont = Big("Continue (autosave)", () => LoadRequested?.Invoke(GameBoot.AutoSaveSlot));
