@@ -35,8 +35,9 @@ public partial class GameScreen
         if (_moveFleet >= 0) UpdatePreview();
         if (_moveHq) UpdateHqPreview();
         if (_moveChar >= 0) UpdateCharPreview();
+        if (_pickMission) UpdateMissionPreview();
         int h = _view.Hovered;
-        if (h >= 0 && _moveFleet < 0 && !_moveHq && _moveChar < 0)
+        if (h >= 0 && _moveFleet < 0 && !_moveHq && _moveChar < 0 && !_pickMission)
         {
             string hn = G.Systems[h].Name;
             var (known, owner) = S.KnownOwnerOf(hn);
@@ -53,6 +54,8 @@ public partial class GameScreen
             _lastSelectedSystem = _view.Selected; _lastSelectedFleet = _view.SelectedFleet;
             if (_moveFleet >= 0 && _view.SelectedFleet != _moveFleet) CancelMove();
             if (_charTab && (_view.Selected >= 0 || _view.SelectedFleet >= 0)) { _charTab = false; RefreshCharButton(); } // a map selection closes the Characters list
+            if (_missionTab && (_view.Selected >= 0 || _view.SelectedFleet >= 0)) { _missionTab = false; RefreshMissionButton(); } // and the Missions list
+            if (_plan != null && !_pickMission && (_view.Selected >= 0 || _view.SelectedFleet >= 0)) _plan = null; // and the planner
             _panelDirty = true; _panelTimer = 0;
         }
     }
@@ -68,7 +71,7 @@ public partial class GameScreen
 
     void CancelMove()
     {
-        _moveFleet = -1; _moveHq = false; _moveChar = -1; _view.PickMode = false; _view.PathPreview = null;
+        _moveFleet = -1; _moveHq = false; _moveChar = -1; _pickMission = false; _view.PickMode = false; _view.PathPreview = null;
         _panelDirty = true; _panelTimer = 0;
         RefreshTop();
     }
@@ -101,6 +104,7 @@ public partial class GameScreen
     {
         if (_moveHq) { OnHqPicked(idx); return; }
         if (_moveChar >= 0) { OnCharPicked(idx); return; }
+        if (_pickMission) { OnMissionPicked(idx); return; }
         if (_moveFleet < 0) return;
         if (!S.Game.State.Fleets.TryGetValue(_moveFleet, out var f) || f.At == null) { CancelMove(); return; }
         string to = G.Systems[idx].Name;
@@ -168,6 +172,8 @@ public partial class GameScreen
     void RebuildPanel()
     {
         ClearPanel();
+        if (_plan != null) { MissionPlanner(); return; }
+        if (_missionTab) { MissionsPanel(); return; }
         if (_charTab) { CharactersPanel(); return; }
         // only own fleets can be selected: enemy fleets are known by what was seen, not by id (rule: m5-fog-and-hq §N8)
         if (_view.SelectedFleet >= 0 && S.Game.State.Fleets.TryGetValue(_view.SelectedFleet, out var fleet) && fleet.Side == Me) { FleetPanel(fleet); return; }
@@ -183,11 +189,12 @@ public partial class GameScreen
         Line("Click a system to see it, and to build there if it is yours.");
         Line("Click one of your fleets (white-outlined triangles, or the list on the left) to give it orders.");
         Line("Press Characters (or C) to see your leaders. " + LeaderHelp);
+        Line("Press Missions (or M) for your agents' missions. " + MissionAdvice);
         Add(new Control { CustomMinimumSize = new Vector2(0, 6) });
         Line("Colours: orange = Alliance, green = Empire, grey = neutral. The thin ring is the sector. A big double ring marks a headquarters, a red ring an uprising, a yellow ring a blockade.", Dim);
         Line("Fog of war: you see live only the systems you hold or have a fleet at. Others show what you saw last (with the day); dim hollow dots are unexplored. Enemy fleets show only where you can see them.", Dim);
         Add(new Control { CustomMinimumSize = new Vector2(0, 6) });
-        Line("Space: play / pause     N: one day     1-4: speed\nWheel or +/-: zoom     drag or arrows: pan\nEsc: cancel / deselect", Dim);
+        Line("Space: play / pause     N: one day     1-4: speed     C: characters     M: missions\nWheel or +/-: zoom     drag or arrows: pan\nEsc: cancel / deselect", Dim);
         Add(new Control { CustomMinimumSize = new Vector2(0, 6) });
         Line("Orders are carried out when the next day starts, so press Play (or +1 day) after giving one. If the core refuses an order, the reason appears in the messages.", Dim);
     }
@@ -290,6 +297,8 @@ public partial class GameScreen
         else Line("unknown", Dim);
 
         CharactersAtSystem(name, mine);
+        SpecialForcesAtSystem(name);
+        if (CanSendFrom(name)) Act($"Send a mission from {name}...", () => OpenPlanner(name), "Pick a team standing here (characters and special forces), the kind of mission and the target.");
         FleetsHere(name, sees || mine, pic);
 
         if (mine) { }

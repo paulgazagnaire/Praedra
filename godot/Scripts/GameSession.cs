@@ -39,7 +39,7 @@ public sealed class StepOutcome
 /// The running game as the UI sees it: the core's host, which side the player is, the opponent, the message log and the player's queued orders.
 /// It never decides a rule: it submits orders, calls opponent.PlanDay() and Game.Step(), and turns the core's events into plain text.
 /// </summary>
-public sealed class GameSession
+public sealed partial class GameSession
 {
     public GameHost Host { get; }
     public GameData Data => Host.Data;
@@ -216,6 +216,7 @@ public sealed class GameSession
         // Every order given before this day was judged in this Step: nothing is "waiting" any more.
         _pending.Clear(); _pendingFleet.Clear(); _plannedMoves.Clear(); PendingHqMove = null;
         _pendingChar.Clear(); _charOrders.Clear(); _plannedCharMoves.Clear();
+        _pendingMissions.Clear(); _missionOrders.Clear();
         Winner = GameBoot.WinnerOf(Host);
         if (Winner is Side w)
         {
@@ -229,8 +230,9 @@ public sealed class GameSession
     {
         _classOf.Clear(); _fleetOf.Clear(); _fleetOfUnit.Clear();
         foreach (var o in Host.Economy.Objects)
-            if (o.Category is ObjectCategory.CapitalShip or ObjectCategory.Fighter or ObjectCategory.Regiment or ObjectCategory.SpecialForce)
+            if (o.Category is ObjectCategory.CapitalShip or ObjectCategory.Fighter or ObjectCategory.Regiment or ObjectCategory.SpecialForce or ObjectCategory.Facility)
                 _classOf[o.Id] = o.Class;
+        SnapshotMissions();
         foreach (var f in Game.State.Fleets.Values)
         {
             _fleetOf[f.Id] = (f.Name, f.Side);
@@ -378,6 +380,7 @@ public sealed class GameSession
     {
         if (c.Status == CharacterStatus.Dead) return c.System != null ? $"fell at {c.System}" : "dead";
         if (c.Status == CharacterStatus.Captured) return $"held prisoner at {c.HeldAt ?? "an unknown place"} by the {(c.Captor is Side cap ? NameOf(cap) : "enemy")}";
+        if (MissionOf(c.Id) is { } mg) return MissionWhere(mg);
         if (c.AttachedFleet != 0 && Game.State.Fleets.TryGetValue(c.AttachedFleet, out var f))
         {
             if (f.Transit is { } ft && f.At == null) return $"aboard fleet {f.Name}, travelling to {ft.Path[^1]}, arrives day {ArrivalDay(ft)}";
@@ -394,6 +397,7 @@ public sealed class GameSession
     {
         var at = Chars.LocationOf(c);
         if (at != null) return at;
+        if (MissionOf(c.Id) is { } mg) return MissionMapPlace(mg);
         if (c.AttachedFleet != 0 && Game.State.Fleets.TryGetValue(c.AttachedFleet, out var f) && f.Transit is { } ft) return ft.Path[ft.HopIndex + 1];
         return c.Transit is { } t ? t.Path[Math.Min(t.HopIndex + 1, t.Path.Count - 1)] : c.System;
     }
@@ -527,7 +531,7 @@ public sealed class GameSession
             case OrderRejected r when _pending.TryGetValue(r.Sequence, out var what):
             {
                 _pending.Remove(r.Sequence);
-                string why = _charOrders.Contains(r.Sequence) ? WhyCharacter(r.Reason) : IsHqOrder(what) ? WhyHq(r.Reason) : Why(r.Reason);
+                string why = _missionOrders.Contains(r.Sequence) ? WhyMission(r.Reason) : _charOrders.Contains(r.Sequence) ? WhyCharacter(r.Reason) : IsHqOrder(what) ? WhyHq(r.Reason) : Why(r.Reason);
                 yield return new Message(d, $"Order refused: {what}. Reason: {why}.", null, MsgKind.Bad);
                 break;
             }
@@ -766,6 +770,11 @@ public sealed class GameSession
             case AssaultCancelled a when Mine(FleetSide(a.Fleet)):
                 yield return new Message(d, $"Invasion of {a.System} by {FleetName(a.Fleet)} was cancelled ({Why(a.Reason)}).", a.System, MsgKind.Warn);
                 break;
+
+            // ---- missions (GameSession.Missions.cs)
+            default:
+                foreach (var m in DescribeMission(e)) yield return m;
+                break;
         }
     }
 
@@ -779,6 +788,7 @@ public sealed class GameSession
         DestroyReason.UprisingIncident => "uprising",
         DestroyReason.Bombardment => "bombardment",
         DestroyReason.Assault => "invasion",
+        DestroyReason.Sabotage => "sabotage by enemy agents",
         _ => r.ToString(),
     };
 

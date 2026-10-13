@@ -62,6 +62,16 @@ public partial class GameScreen
     internal bool PlayDay() { var r = RunDay(); PlayRefresh(); return r; }
     internal bool HowToVisible => _howPanel.Visible;
     internal bool CharactersOpen => _charTab;
+    internal bool MissionsOpen => _missionTab;
+    internal bool PlannerOpen => _plan != null;
+    internal (System.Collections.Generic.List<int> Chars, System.Collections.Generic.List<int> Sfs) PlanTeam => (_plan?.Chars.ToList() ?? new(), _plan?.Sfs.ToList() ?? new());
+    /// <summary>Tick or untick a team member in the mission planner (the CheckBox's toggle, as a click would).</summary>
+    internal bool SetTeam(string prefix, bool on)
+    {
+        foreach (var c in AllNodes(_pv)) if (c is CheckBox cb && cb.Text.StartsWith(prefix, StringComparison.Ordinal)) { cb.ButtonPressed = on; return true; }
+        return false;
+    }
+    internal void PressKey(Key k) { var e = new InputEventKey { Keycode = k, Pressed = true }; _UnhandledKeyInput(e); }
     internal bool ConfirmVisible => _confirmPanel.Visible;
     internal bool ReportVisible => _reportPanel.Visible;
     internal string ReportText => _reportTitle.Text + "\n" + _reportBody.Text;
@@ -118,5 +128,6 @@ public partial class GameScreen
     public void ShotMove(string to) { if (_view.SelectedFleet >= 0 && S.Game.State.Fleets.TryGetValue(_view.SelectedFleet, out var f)) { StartMove(f); PickSystem(to); } }
     public void ShotFilter(string name) => SetFilter(name);
     public void ShotCharacters() { if (!_charTab) ToggleCharacters(); PlayRefresh(); }
+    public void ShotMissions() { if (!_missionTab) ToggleMissions(); PlayRefresh(); }
     public void ShotClick(string prefix) { PlayRefresh(); if (!Click(prefix)) GD.PrintErr("no button " + prefix); PlayRefresh(); }
 }

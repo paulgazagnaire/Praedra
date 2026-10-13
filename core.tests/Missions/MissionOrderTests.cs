@@ -503,4 +503,34 @@ public class MissionOrderTests
         Assert.Equal(MissionReject.TooManyMembers, w.Try(s => new StartMissionOrder(s, Side.Alliance, MissionKind.Espionage, new() { Leia, Han }, new(), new(), X)));
         Assert.Null(w.Try(s => new StartMissionOrder(s, Side.Alliance, MissionKind.Espionage, new() { Leia }, new(), new(), X)));
     }
+
+    // m5-missions §Orders (StartMission): the read-only dry run the screens use gives the handler's verdict (same reason, or the route and the
+    // arrival day of MI44 for an accepted order) and changes nothing: no state, no draw, no event.
+    [Fact]
+    public void CheckStartMatchesTheHandlerAndChangesNothing()
+    {
+        var w = new MissionWorld();
+        w.Agent(Leia, H, esp: 50, com: 50);
+        w.Agent(Luke, T, esp: 50);
+        StartMissionOrder Order(MissionKind k, List<int> team, string? target) => new(0, Side.Alliance, k, team, new(), new(), target);
+        string hash = w.Host.StateHash(); int events = w.Game.Events.Count, draws = w.Stub!.Requests.Count;
+
+        var ok = w.M.CheckStart(Order(MissionKind.Sabotage, new() { Leia }, T));
+        Assert.Null(ok.Reason);
+        Assert.Equal((H, T, 3, 3), (ok.Home, ok.Target, ok.Ticks, ok.ArrivalDay));
+        Assert.Equal(H, ok.Path![0]); Assert.Equal(T, ok.Path[^1]);
+        Assert.Equal(MissionReject.NotTogether, w.M.CheckStart(Order(MissionKind.Espionage, new() { Leia, Luke }, X)).Reason);
+        Assert.Equal(MissionReject.RuleMissing, w.M.CheckStart(Order(MissionKind.JediTraining, new() { Luke }, T)).Reason);
+        Assert.Equal(MissionReject.BadTarget, w.M.CheckStart(Order(MissionKind.Espionage, new() { Leia }, null)).Reason);
+        Assert.Equal((hash, events, draws), (w.Host.StateHash(), w.Game.Events.Count, w.Stub.Requests.Count));
+
+        // the handler agrees: the same refusal, then the same trip
+        Assert.Equal(MissionReject.NotTogether, w.Try(s => Order(MissionKind.Espionage, new() { Leia, Luke }, X) with { Sequence = s }));
+        var check = w.M.CheckStart(Order(MissionKind.Sabotage, new() { Leia }, T));
+        w.Stub.Expect(0, 2, 2);
+        Assert.Null(w.Try(s => Order(MissionKind.Sabotage, new() { Leia }, T) with { Sequence = s }));
+        var started = w.Events<MissionStarted>().Single();
+        Assert.Equal((check.Ticks, check.ArrivalDay), (started.TotalTicks, started.ArrivalDay));
+        Assert.Equal(MissionReject.NotFree, w.M.CheckStart(Order(MissionKind.Sabotage, new() { Leia }, T)).Reason);
+    }
 }

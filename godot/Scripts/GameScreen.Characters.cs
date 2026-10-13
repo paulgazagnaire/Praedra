@@ -29,8 +29,10 @@ public partial class GameScreen
 
     void ToggleCharacters()
     {
+        _plan = null; if (_pickMission) CancelMove();
         if (!_charTab)
         {
+            _missionTab = false; RefreshMissionButton();
             // clear the selection first so the selection change does not close the list again
             _view.SelectedFleet = -1; _view.Select(-1);
             _lastSelectedSystem = -1; _lastSelectedFleet = -1;
@@ -77,6 +79,8 @@ public partial class GameScreen
         Line(S.CapabilityOf(c), Dim, 12);
         foreach (var p in S.PendingOfCharacter(id)) Line($"Waiting for the next day: {p}", Pending, 13);
         if (CanMoveAlone(c)) Act($"Move {name}...", () => StartCharMove(id), "Then click a destination system. The route and the arrival day are shown before you confirm.");
+        if (CanJoin(c)) Act($"Send {name} on a mission...", () => OpenPlanner(c.System, id), "Pick the kind of mission, more team members standing at the same system, and the target.");
+        else if (S.PendingMissionOf(id) is { } pm) Line($"Waiting for the next day: {GameSession.KindWords(pm.Kind)} on {pm.Target}", Pending, 13);
     }
 
     /// <summary>What the core's MoveCharacter accepts (free or injured, standing alone, not travelling); the core still judges the order.</summary>
