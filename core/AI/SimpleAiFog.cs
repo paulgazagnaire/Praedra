@@ -1,3 +1,4 @@
+using Rebellion.Core.Characters;
 using Rebellion.Core.Clock;
 using Rebellion.Core.Construction;
 using Rebellion.Core.Defenses;
@@ -23,9 +24,11 @@ public sealed partial class SimpleAi
     private readonly Dictionary<string, List<Force>> _targetForces = new(StringComparer.Ordinal);   // lookup only
     private readonly Dictionary<(string, string, int), int> _ticks = new();                          // lookup only
 
+    private readonly Dictionary<string, List<DefenderSeen>> _missionDefenders = new(StringComparer.Ordinal); // lookup only
+
     private void ClearFogScratch()
     {
-        _belief = null; _beliefMax = 0; _scouts = null; _risk = null; _targetForces.Clear(); _ticks.Clear();
+        _belief = null; _beliefMax = 0; _scouts = null; _risk = null; _targetForces.Clear(); _ticks.Clear(); _missionDefenders.Clear();
     }
 
     /// <summary>Travel ticks, cached for the day (the pathfinder is pure).</summary>
@@ -402,5 +405,72 @@ public sealed partial class SimpleAi
         if (best == null) return;
         long seq = _h.Fog.SubmitMoveHq(_side, best);
         Note(seq, "MoveHq", $"HQ {at} -> {best} (risk {risk.GetValueOrDefault(at)})");
+    }
+
+    // ================================================================== missions behind the fog (m6 AI: ai/05 §7b, missions/08)
+
+    /// <summary>
+    /// Fog: the units a mission at the system would meet (m5-missions §3 Defenders), from the side's picture: every regiment of another side in
+    /// group D (with the staleness margin), every ship and squadron of the other side in group E up to FogFleetMemoryDays old. Ground never
+    /// seen on a system the picture shows enemy-held, or on a system never explored: FogUnknownDefenders regiments of the enemy's garrison
+    /// class. Officers are unknown (espionage 0). Cached for the day.
+    /// </summary>
+    private List<DefenderSeen> FogMissionDefenders(string system)
+    {
+        if (_missionDefenders.TryGetValue(system, out var cached)) return cached;
+        var list = new List<DefenderSeen>();
+        var pic = _view!.Picture(system);
+        if (pic?.Ground is { } g)
+        {
+            int pct = StalePercent(AgeOf(g));
+            foreach (var gp in g.Value)
+            {
+                if (gp.Side == _side) continue;
+                foreach (var (cls, n) in gp.Units) // ordinal class order
+                {
+                    int det = _h.Troops.Data.Regiment(cls)?.Detection ?? 0, k = (n * pct + 99) / 100;
+                    for (int i = 0; i < k; i++) list.Add(new DefenderSeen(det, 0));
+                }
+            }
+        }
+        else if (!Held(system) && (pic == null || IsEnemyHeld(system)))
+        {
+            int det = _h.Troops.Data.Regiment(_p.GarrisonRegiment(Enemy))?.Detection ?? 0;
+            for (int i = 0; i < _p.FogUnknownDefenders; i++) list.Add(new DefenderSeen(det, 0));
+        }
+        if (pic?.Fleets is { } e && AgeOf(e) <= _p.FogFleetMemoryDays)
+            foreach (var fp in e.Value)
+            {
+                if (fp.Side == _side) continue;
+                foreach (var (cls, n) in fp.Ships.Concat(fp.Squadrons))
+                {
+                    int det = _h.Fleets.ShipClasses.TryGetValue(cls, out var c) ? c.Detection : 0;
+                    for (int i = 0; i < n; i++) list.Add(new DefenderSeen(det, 0));
+                }
+            }
+        return _missionDefenders[system] = list;
+    }
+
+    /// <summary>
+    /// Fog: enemy characters the side's own event feed placed at a system within AbductionInfoDays (arrived, detached, made General there,
+    /// freed there; a later departure, capture, injury or death forgets them), kept only where the side sees the system today. By character id.
+    /// </summary>
+    private List<(int Character, string System)> FogEnemyCharacters()
+    {
+        var last = new Dictionary<int, string?>(); // lookup only: the latest word on each character
+        var ev = _view!.Events; int since = Today - _p.AbductionInfoDays;
+        for (int i = ev.Count - 1; i >= 0 && ev[i].Day >= since; i--)
+            switch (ev[i])
+            {
+                case CharacterArrived a when a.Side == Enemy: last.TryAdd(a.Character, a.System); break;
+                case CharacterDetached d when d.Side == Enemy: last.TryAdd(d.Character, d.System); break;
+                case SystemGeneralAssigned s when s.Side == Enemy: last.TryAdd(s.Character, s.System); break;
+                case CharacterFreed f when f.Side == Enemy: last.TryAdd(f.Character, f.System); break;
+                case CharacterDeparted x when x.Side == Enemy: last.TryAdd(x.Character, null); break;
+                case CharacterCaptured x when x.Side == Enemy: last.TryAdd(x.Character, null); break;
+                case CharacterInjured x when x.Side == Enemy: last.TryAdd(x.Character, null); break;
+                case CharacterKilled x when x.Side == Enemy: last.TryAdd(x.Character, null); break;
+            }
+        return last.Where(kv => kv.Value != null && _view.Sees(kv.Value)).Select(kv => (kv.Key, kv.Value!)).OrderBy(t => t.Key).ToList();
     }
 }

@@ -58,7 +58,9 @@ public class SimpleAiOpponentTests
     {
         var (day, c365, total) = PlayPassive(1, Side.Alliance, 1000);
         Assert.True(c365 >= 8, $"only {c365} captures by day 365");
-        Assert.True(day <= 800, $"won only on day {day}");
+        // measured: day 783 without characters and missions, 813 with them (SimpleAiParams.UseCharactersAndMissions, DEFAULT on: the game
+        // takes another course; about 50 days of it a strike pile chases two Imperial ships that retreat between Basilisk and Kirrek)
+        Assert.True(day <= 850, $"won only on day {day}");
     }
 
     [Fact]
