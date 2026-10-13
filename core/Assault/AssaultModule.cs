@@ -122,6 +122,7 @@ public sealed class AssaultModule
         if (f.Side != side) return RejectReason.NotYours;
         if (f.At == null) return RejectReason.InTransit;
         if (f.At != system) return AssaultReject.NotAtSystem;
+        if (_eco.IsDestroyed(system)) return RejectReason.SystemDestroyed;                                       // rule: m5-death-star §2 effect 5 (cannot be assaulted)
         if (_troops.RegimentsAboard(f).Count == 0) return AssaultReject.NoTroops;                                // 2 (special forces never count)
         if (_fleets.OwnerOf(system) == side) return AssaultReject.OwnSystem;                                     // 3 (enemy or neutral allowed)
         if (_def.AssaultForbidden(system)) return AssaultReject.FullyShielded;                                   // 4 (both sides, DEFAULT)

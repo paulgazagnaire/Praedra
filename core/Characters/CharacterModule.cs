@@ -382,21 +382,24 @@ public sealed class CharacterModule
     // ================================================================== other sheets' effects
 
     /// <summary>
-    /// The Death Star's roll on the characters of a destroyed system (called by the Death Star order's resolution at slot 5.1, which is not built
-    /// yet): candidates are minors located there (standing, riding, held), Free, Injured or Captured, both sides with
-    /// <see cref="CharacterParams.DeathStarHitsOwnCharacters"/> (else not the attacker's); in id order draw r = rand(0..99), hit if r &lt; 50:
-    /// Injure then Kill (a captive is killed without the injury). Majors cost no draw. Then the system's General post is cleared.
-    /// rule: §The Death Star's roll on characters; CH19.
+    /// The Death Star's roll on the characters of a destroyed system (called by the Death Star module at slot 5.1): candidates are characters
+    /// located there that ride no fleet (standing, or held as prisoners), Free, Injured or Captured, both sides with
+    /// <see cref="CharacterParams.DeathStarHitsOwnCharacters"/> (else not the attacker's). Riders of a fleet that died with the system are already
+    /// detached and stand there; riders of the attacker's own fleet stay aboard and are not candidates. In id order each MINOR draws
+    /// r = rand(1..100) and is hit if r &lt;= <see cref="CharacterParams.DeathStarHitPercent"/> (50): Injure then Kill (a captive is killed without
+    /// the injury). Majors cost no draw. Then the system's General post is cleared.
+    /// rule: m5-death-star §2 effect 3 (rand(1..100) &lt;= DeathStarMinorKillPct, minors only, draw order by id);
+    /// m5-characters-and-force §The Death Star's roll on characters (CH19: the same chance, there written rand(0..99) &lt; 50).
     /// </summary>
     public void DeathStarStrike(StepContext ctx, string system, Side attacker)
     {
         var cands = S.Characters.Values.Where(c => c.Placed && ClassOf(c).Kind == CharacterKind.Minor
             && c.Status is CharacterStatus.Free or CharacterStatus.Injured or CharacterStatus.Captured
-            && LocationOf(c) == system && (Params.DeathStarHitsOwnCharacters || c.Side != attacker)).ToList();
+            && c.AttachedFleet == 0 && LocationOf(c) == system && (Params.DeathStarHitsOwnCharacters || c.Side != attacker)).ToList();
         foreach (var c in cands)
         {
-            int r = ctx.Rng.NextInt(0, 99);
-            if (r >= Params.DeathStarHitPercent) continue;
+            int r = ctx.Rng.NextInt(DeathStarDieMin, DeathStarDieMax);
+            if (r > Params.DeathStarHitPercent) continue;
             if (c.Status != CharacterStatus.Captured) Injure(ctx, c, CharacterCause.DeathStar);
             Kill(ctx, c, CharacterCause.DeathStar); // reason 10
         }
@@ -406,6 +409,75 @@ public sealed class CharacterModule
             int day = ctx.Day + 1;
             ctx.Emit((i, _) => new PostVacated(i, day, g.Id, g.Side, PostKind.SystemGeneral, CharacterCause.SystemDestroyed));
         }
+    }
+
+    /// <summary>The Death Star's die is rand(1..100), a percent roll. rule: m5-death-star §2 effect 3 (Traced shape, GNPRTB 0x606).</summary>
+    private const int DeathStarDieMin = 1, DeathStarDieMax = 100;
+
+    /// <summary>
+    /// What happens to the characters that survived the Death Star's roll on a destroyed system (called after <see cref="DeathStarStrike"/>): every
+    /// character located there that rides no fleet is moved. A Free or Injured one of the attacker's side boards the attacking fleet
+    /// <paramref name="attackerFleet"/> (a passenger, no post; DEFAULT). Any other goes to the nearest system its side holds (fewest lane steps,
+    /// ties by system index = name order), leaving now and arriving the next day (DEFAULT); with no system left to go to it is captured by the
+    /// attacker (DEFAULT). A prisoner stays a prisoner and is held at the nearest system its captor holds at once, or where it is when the captor
+    /// holds none (our DEFAULT: the sheet names no rule for prisoners). The destroyed system itself never counts as held.
+    /// rule: m5-death-star §2 effect 3 (every character that survives is moved).
+    /// </summary>
+    public void DeathStarRelocate(StepContext ctx, string system, Side attacker, int attackerFleet)
+    {
+        int day = ctx.Day + 1;
+        var movers = S.Characters.Values.Where(c => c.Placed && c.Status is CharacterStatus.Free or CharacterStatus.Injured or CharacterStatus.Captured
+            && c.AttachedFleet == 0 && c.Transit == null && LocationOf(c) == system).ToList(); // id order
+        foreach (var c in movers)
+        {
+            if (c.Status == CharacterStatus.Captured)
+            {
+                if (NearestHeldSystem(system, c.Captor ?? (c.Side == Side.Empire ? Side.Alliance : Side.Empire)) is { } held) { c.HeldAt = held; c.System = held; }
+                continue;
+            }
+            if (c.Side == attacker && State.Fleets.TryGetValue(attackerFleet, out var fleet) && fleet.At == system)
+            {
+                c.AttachedFleet = fleet.Id; c.Post = CharacterPost.None; c.System = system;
+                int fid = fleet.Id; var side = c.Side;
+                ctx.Emit((i, _) => new CharacterAttached(i, day, c.Id, side, fid, CharacterPost.None, CharacterCause.DeathStar));
+                continue;
+            }
+            var dest = NearestHeldSystem(system, c.Side);
+            if (dest == null) { Capture(ctx, c, c.Side == Side.Empire ? Side.Alliance : Side.Empire, system, CharacterCause.DeathStar); continue; }
+            // one hop of one tick: it leaves now (slot 5.1 of Step K) and arrives in step 3 of Step K + 1, "the next day"
+            c.System = null;
+            c.Transit = new FleetTransit { Path = new List<string> { system, dest }, HopTicks = new List<int> { DeathStarFlightTicks }, HopIndex = 0, DueDay = ctx.Day + 1 + DeathStarFlightTicks };
+            string from = system, to = dest; var cs = c.Side;
+            ctx.Emit((i, _) => new CharacterDeparted(i, day, c.Id, cs, from, DeathStarFlightTicks));
+        }
+    }
+
+    /// <summary>Ticks of the relocation flight of a survivor: it arrives the next day. rule: m5-death-star §2 effect 3 (DEFAULT, "arriving the next day").</summary>
+    private const int DeathStarFlightTicks = 1;
+
+    /// <summary>
+    /// The system <paramref name="side"/> holds that is fewest lane steps from <paramref name="from"/> (breadth-first over every lane, through any
+    /// system; ties by system index, which is name order); the start itself never counts. Null if the side holds no reachable system.
+    /// rule: m5-death-star §2 effect 3 (nearest system its side holds, fewest lane steps, ties by system id).
+    /// </summary>
+    private string? NearestHeldSystem(string from, Side side)
+    {
+        var g = _fleets.Galaxy;
+        if (!g.TryFindSystem(from, out int start)) return null;
+        var seen = new bool[g.Systems.Count];
+        var level = new List<int> { start };
+        seen[start] = true;
+        while (level.Count > 0)
+        {
+            var held = level.Where(i => i != start && State.SystemOwners.TryGetValue(g.Systems[i].Name, out var o) && o == side).ToList();
+            if (held.Count > 0) return g.Systems[held.Min()].Name;
+            var next = new List<int>();
+            foreach (var i in level)
+                foreach (var nb in g.NeighboursOf(i))
+                    if (!seen[nb.System]) { seen[nb.System] = true; next.Add(nb.System); }
+            level = next;
+        }
+        return null;
     }
 
     /// <summary>

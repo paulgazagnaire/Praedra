@@ -393,7 +393,8 @@ public class CharacterTests
         w.Add(Drayson, Hoth); w.Add(Borsk, Hoth); var c = w.Add(Tura, Yavin); w.Add(Vader, Hoth);
         w.StepWith("5.1", ctx => w.Ch.Capture(ctx, c, Side.Empire, Hoth, CharacterCause.Debug));
         int before = w.Stub!.Requests.Count, ev = w.Game.Events.Count;
-        w.Stub.Expect(0, 99, 49, 50, 10);
+        // The die is rand(1..100), hit at 50 or less (m5-death-star §2 effect 3); the same chance as the characters sheet's rand(0..99) < 50, shifted by one: 50 hits, 51 misses, 11 hits.
+        w.Stub.Expect(1, 100, 50, 51, 11);
         w.StepWith("5.1", ctx => w.Ch.DeathStarStrike(ctx, Hoth, Side.Empire));
         Assert.Equal(3, w.Stub.Requests.Count - before);
         Assert.Equal(CharacterStatus.Dead, w.C(Drayson).Status);

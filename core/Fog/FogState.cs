@@ -63,6 +63,8 @@ public sealed class SystemKnowledge
     // ---- group A: status (populated, slot values). DEFAULT: energy and raw slot totals are part of the status (see the build notes).
     public int? StampA { get; set; }
     public bool Populated { get; set; }
+    /// <summary>The side has been told the system was destroyed by the Death Star (reveal kind Destroyed, "Planet Destroyed"); permanent. rule: m5-death-star §2 effect 6.</summary>
+    public bool Destroyed { get; set; }
     public int Energy { get; set; }
     public int Raw { get; set; }
 
@@ -95,7 +97,7 @@ public sealed class SystemKnowledge
     internal SystemKnowledge Clone() => new()
     {
         Explored = Explored, LastLookDay = LastLookDay,
-        StampA = StampA, Populated = Populated, Energy = Energy, Raw = Raw,
+        StampA = StampA, Populated = Populated, Destroyed = Destroyed, Energy = Energy, Raw = Raw,
         StampB = StampB, Owner = Owner, AllianceSupport = AllianceSupport,
         StampC = StampC, Facilities = new SortedDictionary<string, int>(Facilities, StringComparer.Ordinal), FacilitiesQueued = FacilitiesQueued, HqHere = HqHere, HqStamp = HqStamp,
         StampD = StampD, Ground = Ground.Select(g => g.Clone()).ToList(),

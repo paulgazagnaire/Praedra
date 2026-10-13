@@ -16,7 +16,9 @@ public class MissionEffectTests
         var w = new MissionWorld();
         w.Hold(T, holder, allianceSupport);
         if (holder is Side h) for (int i = 0; i < regiments; i++) w.Unit(h, h == Side.Alliance ? RebArmy : ImpArmy, T);
-        if (deathStar) w.Host.Support.SetDeathStarSystem(T, true);
+        // The sector flag is recomputed every day at slot 5.6 from the Death Stars in fleets (m5-death-star §3), so a hand-set flag would be cleared:
+        // an Empire Death Star at H (same sector as T) raises it the honest way.
+        if (deathStar) w.Host.Fleets.AddFleet(Side.Empire, "Death Star", new[] { "Death Star" }, H);
         int agent = side == Side.Alliance ? Leia : Piett;
         w.Agent(agent, T, dip: dip);
         w.Stub!.Expect(0, 99, 0).Expect(0, gainMax, gainDraw);

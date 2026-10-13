@@ -82,6 +82,7 @@ public sealed class ControlModule
     {
         if (!DebugOrdersEnabled) return OrderResult.Reject(RejectReason.DebugDisabled);
         if (!_galaxy.TryFindSystem(o.System, out _)) return OrderResult.Reject(RejectReason.UnknownSystem);
+        if (_eco.IsDestroyed(o.System)) return OrderResult.Reject(RejectReason.SystemDestroyed); // rule: m5-death-star §2 effect 5 (cannot be held)
         if (HolderOf(o.System) == o.NewHolder) return OrderResult.Reject(RejectReason.AlreadyHolder);
         SetHolder(ctx, o.System, o.NewHolder, CaptureCause.Debug);
         return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
@@ -104,6 +105,7 @@ public sealed class ControlModule
     public bool SetHolder(StepContext ctx, string system, Side newHolder, CaptureCause cause)
     {
         if (!_galaxy.TryFindSystem(system, out _)) throw new ArgumentException($"Unknown system '{system}'.");
+        if (_eco.IsDestroyed(system)) return false; // rule: m5-death-star §2 effect 5: a destroyed system cannot be held, nothing changes
         Side? old = HolderOf(system);
         if (old == newHolder) return false;
         int day = ctx.Day + 1;

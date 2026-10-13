@@ -377,7 +377,7 @@ public sealed partial class SimpleAi
             foreach (var sys in g.Systems)
             {
                 string s = sys.Name;
-                if (hops[sys.Index] == 0 || hops[sys.Index] > _p.DiplomacyHops || !Free(MissionKind.Diplomacy, s)) continue;
+                if (hops[sys.Index] == 0 || hops[sys.Index] > _p.DiplomacyHops || !Free(MissionKind.Diplomacy, s) || Destroyed(s)) continue;
                 if (!OwnerSeen(s, out var owner, out int age) || owner != null || age > _p.MissionOwnerTrustDays) continue;
                 if (!SlotsSeen(s).Populated || SupportSeen(s) is not int sup || sup >= stop) continue;
                 jobs.Add(new Job(MissionKind.Diplomacy, s, null, _p.DiplomacyValue * (stop - sup) / stop * _p.NeutralDiplomacyPercent / 100, "diplomacy " + s));
@@ -390,7 +390,7 @@ public sealed partial class SimpleAi
             foreach (var sys in _h.Data.Galaxy.Systems)
             {
                 string s = sys.Name;
-                if (hops[sys.Index] == 0 || hops[sys.Index] > _p.TargetHops) continue;
+                if (hops[sys.Index] == 0 || hops[sys.Index] > _p.TargetHops || Destroyed(s)) continue;
                 if (!OwnerSeen(s, out var owner, out int age) || owner != Enemy || age > _p.MissionOwnerTrustDays) continue;
                 if (MissionDefendersAt(s).Count > 0) continue;
                 if (SlotsSeen(s).Populated && Free(MissionKind.InciteUprising, s)) jobs.Add(new Job(MissionKind.InciteUprising, s, null, _p.InciteValue, "subvert " + s));

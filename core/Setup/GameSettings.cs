@@ -68,6 +68,10 @@ public sealed record GameSettings
     /// <summary>Number table of the bombardment (admiral step, die, Energy and Raw defense, the -20). Null = the module's defaults.</summary>
     public BombardParams? Bombard { get; init; }
 
+    // ---- the Death Star. rule: m5-death-star §Interfaces, §2, §4
+    /// <summary>Death Star switches and numbers (cap per system, ShieldBlocksDestroy, TrenchRun, sector penalty). Null = the sheet's DEFAULTs. Refused values throw at attach.</summary>
+    public Rebellion.Core.DeathStar.DeathStarParams? DeathStar { get; init; }
+
     // ---- assault. rule: m3-assault §Defaults for undecided items
     /// <summary>Number table and switches of the assault (die, leadership step, thresholds, collateral mode, landing cap, passes, enemy fleet blocks). Null = the module's defaults.</summary>
     public AssaultParams? Assault { get; init; }

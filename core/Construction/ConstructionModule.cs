@@ -58,6 +58,11 @@ public sealed class ConstructionModule
     /// </summary>
     public Func<string, bool> IsInUprising { get; set; } = _ => false;
     /// <summary>
+    /// An extra build check run after the research gate and the count check (null = none): a rejection reason or null. The Death Star module sets it
+    /// for the one-per-system cap (DeathStarLimit). rule: m5-death-star §1.
+    /// </summary>
+    public Func<BuildOrder, string?>? ExtraBuildCheck { get; set; }
+    /// <summary>
     /// Raised when a unit comes to exist for use: completed at the yard's own system (slot 6.6.a) or delivered (step 3 or 4), after it is
     /// marked completed. GameHost wires it to FleetModule.OnUnitAppeared, which makes the spare fleet (m3-fleets). Facilities are announced too (category Facility).
     /// </summary>
@@ -178,6 +183,7 @@ public sealed class ConstructionModule
     private OrderResult HandleBuild(StepContext ctx, BuildOrder o)
     {
         if (!_galaxy.TryFindSystem(o.System, out _)) return OrderResult.Reject(RejectReason.UnknownSystem);
+        if (_eco.IsDestroyed(o.System) || (o.Destination != null && _eco.IsDestroyed(o.Destination))) return OrderResult.Reject(RejectReason.SystemDestroyed); // rule: m5-death-star §2 effect 5 (no builds)
         if (!_eco.Costs.TryGet(o.Class, out var row)) return OrderResult.Reject(RejectReason.UnknownItem);
         if (_fleets.OwnerOf(o.System) != o.Side) return OrderResult.Reject(RejectReason.NotYours); // also a neutral system (C24)
         if (!YardsOf(o.System, o.Family).Any()) return OrderResult.Reject(RejectReason.NoYard);
@@ -187,6 +193,7 @@ public sealed class ConstructionModule
         if (o.Class == EconomyModule.DeathStarClass && !DeathStarClassBuildable) return OrderResult.Reject(RejectReason.NotAvailable); // rule: m3-ships-and-fighters §Death Star (S14)
         if (!IsResearched(o.Side, o.Class)) return OrderResult.Reject(RejectReason.NotResearched);
         if (o.Count < 1) return OrderResult.Reject(RejectReason.BadCount);
+        if (ExtraBuildCheck?.Invoke(o) is { } extra) return OrderResult.Reject(extra);
 
         bool facility = row.Category == ObjectCategory.Facility;
         string? dest = facility ? o.Destination : o.Destination ?? o.System; // a facility needs a destination
@@ -280,6 +287,23 @@ public sealed class ConstructionModule
         if (!C.Projects.TryGetValue(system, out var by)) return;
         foreach (var p in by.Values.ToList())
             if (!Controls(p.System, p.Side)) CancelProject(ctx, ctx.Day + 1, p, "SystemLost");
+    }
+
+    /// <summary>
+    /// For the Death Star: a system was destroyed. Every project standing on it or heading for it is cancelled (reason SystemDestroyed, no refund,
+    /// maintenance freed), and every facility still travelling to it is removed with its delivery (no refund). Other units heading for it follow
+    /// <see cref="LostDestination"/> on arrival. Call before the planet's own objects are removed. rule: m5-death-star §2 effect 2 ("completed or in a queue", no refund).
+    /// </summary>
+    public void CancelProjectsOnDestroy(StepContext ctx, string system)
+    {
+        foreach (var p in C.AllProjects().Where(p => p.System == system || p.Destination == system).ToList())
+            CancelProject(ctx, ctx.Day + 1, p, "SystemDestroyed");
+        foreach (var d in C.Deliveries.Values.Where(d => d.To == system).ToList()) // delivery id order
+            if (E.Objects.TryGetValue(d.Object, out var obj) && obj.Category == ObjectCategory.Facility)
+            {
+                C.Deliveries.Remove(d.Id);
+                _eco.RemoveObject(obj.Id);
+            }
     }
 
     /// <summary>True if the object is a unit of a project or is travelling as a delivery: construction owns it and decides its fate.</summary>

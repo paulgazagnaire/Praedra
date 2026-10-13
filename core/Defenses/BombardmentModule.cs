@@ -115,10 +115,11 @@ public sealed class BombardmentModule
         if (f.Side != side) return RejectReason.NotYours;
         if (f.At == null) return RejectReason.InTransit;
         if (f.At != system) return BombardReject.NotAtSystem;
+        if (_eco.IsDestroyed(system)) return RejectReason.SystemDestroyed;                                   // rule: m5-death-star §2 effect 5 (cannot be bombarded)
         if (_fleets.OwnerOf(system) == side) return BombardReject.OwnSystem;                                 // 2 (enemy or neutral allowed)
         if (_fleets.FleetsAt(system).Any(x => x.Side != side)) return BombardReject.EnemyFleetPresent;       // 3 (DEFAULT: both sides, any fleet)
         if (Power(f) <= 0) return BombardReject.NoBombardPower;                                              // 4 (DEFAULT)
-        if (category == BombardCategory.DestroySystem) return RejectReason.NotAvailable;                     // 5 (M3: no Death Star spec)
+        if (category == BombardCategory.DestroySystem) return RejectReason.NotAvailable;                     // 5 (Destroy System is its own order, DestroySystemOrder: m5-death-star §2)
         if (atOrder && (_pending.Any(p => p.Fleet == fleetId) || OtherOrderPending(fleetId))) return BombardReject.OrderPending;             // 6 (DEFAULT)
         return null;
     }

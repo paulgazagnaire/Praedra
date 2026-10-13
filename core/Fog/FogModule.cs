@@ -222,6 +222,7 @@ public sealed class FogModule
         }
         var know = F.Of(side);
         var k = know.Touch(sys);
+        if (kind == RevealKind.Destroyed) k.Destroyed = true; // rule: m5-death-star §2 effect 6 (every side's view learns the system is destroyed)
         if (a)
         {
             var slots = _eco.SlotsOf(sys);
@@ -590,6 +591,7 @@ public sealed class FogModule
             case HqDeparted or HqArrived: return All;
             case SupportChanged sc when sc.Cause == SupportCause.HqMove: return All;
             case HqDestroyed or Victory.GameWon: return Both;
+            case DeathStar.IDeathStarEvent: return Both; // galaxy notices: "New Death Star Deployed", "Planet Destroyed", ... (m5-death-star §1, §2 effect 6)
             case SystemExplored x: return Bit(x.Viewer);
             case OwnerChangeSeen x: return Bit(x.Viewer);
             case FleetSighted x: return Bit(x.Viewer);
