@@ -33,7 +33,7 @@ The first time you press **New Game**, a **How to play** page opens. You can ope
 - **Order on planets.** A planet needs enough regiments (garrison) or it revolts (red ring): yards and mines stop.
 - **Messages** (bottom left): filter **All / Battles / My systems**; click a line to jump to its system; battle and invasion lines open a report. A battle report also pops up by itself when a battle is fought.
 - **Save / Load.** **Save** writes the one save slot. **Load** and **Menu** ask before they replace the running game. The game autosaves every 30 days; **Continue** on the start screen loads that.
-- Map colours: orange = Alliance, green = Empire, grey = nobody; thin ring = sector; double ring = headquarters; red ring = uprising; yellow ring = blockade. Fleets are triangles, stacked in a column at a system with one name each.
+- Map colours: orange = Alliance, green = Empire, small grey dot = nobody, hollow ring = never explored. Point at a system to see its sector (outline and name). Names never overlap: the most important ones show first and more appear as you zoom in. Double ring = headquarters; red ring = uprising; yellow ring = blockade. Fleets are triangles, stacked in a column at a system with one name each.
 
 | What | How |
 |---|---|

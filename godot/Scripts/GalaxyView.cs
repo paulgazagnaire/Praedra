@@ -13,9 +13,9 @@ namespace RebellionViewer;
 /// </summary>
 public partial class GalaxyView : Control
 {
-    // Zoom (1 = whole galaxy fits). Names fade in above NameZoom, sector names fade out there.
+    // Zoom (1 = whole galaxy fits). Unexplored systems get names only from NameZoom in.
     const float MinZoom = 0.8f, MaxZoom = 16f;
-    const float NameZoomFrom = 2.0f, NameZoomTo = 3.0f;
+    const float NameZoom = 2.0f;
     const float PickRadiusPx = 11f;
     const float Margin = 40f;
 
@@ -48,6 +48,10 @@ public partial class GalaxyView : Control
     public Func<int, bool> IsDestroyed;
     /// <summary>Is this system drawn as destroyed right now? (what <see cref="_Draw"/> uses; also read by the playtest)</summary>
     public bool DrawsDestroyed(int i) => IsDestroyed?.Invoke(i) == true;
+    /// <summary>The player's side: its systems win the fight for label room.</summary>
+    public Side? Player { get; set; }
+    /// <summary>Screen rectangles the system names must keep clear of (fleet markers and their names), set by the owner.</summary>
+    public Func<IEnumerable<Rect2>> LabelObstacles;
     public Func<int, bool> IsUprising;
     public Func<int, bool> IsBlockaded;
     /// <summary>While true a click on a system raises <see cref="SystemPicked"/> instead of selecting it (used to choose a destination).</summary>
@@ -58,7 +62,7 @@ public partial class GalaxyView : Control
     public Color PathColor { get; set; } = Colors.White;
 
     Vector2[] _pos;                 // world position per system (map_x, map_y)
-    Color[] _color;                 // per system, by sector
+    int[] _weight;                  // per system, lanes weighted by tier (hubs win the fight for label room)
     Vector2 _min, _max;
     Vector2 _center;                // world point at the middle of the control
     float _zoom = 1f;
@@ -66,8 +70,9 @@ public partial class GalaxyView : Control
     Vector2 _pressAt;
     Font _font;
 
-    // Sector label anchors (centroid, colour), sorted by name.
-    readonly List<(string name, Vector2 world, Color color)> _sectorLabels = new();
+    // Sectors (name, member systems), sorted by name; _sectorOf[system] indexes it, -1 outside the sectors.
+    readonly List<(string name, int[] members)> _sectors = new();
+    int[] _sectorOf;
 
     public float Zoom => _zoom;
 
@@ -78,7 +83,9 @@ public partial class GalaxyView : Control
         ClipContents = true;
         int n = galaxy.Systems.Count;
         _pos = new Vector2[n];
-        _color = new Color[n];
+        _weight = new int[n];
+        _sectorOf = new int[n];
+        Array.Fill(_sectorOf, -1);
         _min = new Vector2(float.MaxValue, float.MaxValue);
         _max = new Vector2(float.MinValue, float.MinValue);
         for (int i = 0; i < n; i++)
@@ -88,28 +95,18 @@ public partial class GalaxyView : Control
             _min = new Vector2(Mathf.Min(_min.X, s.MapX), Mathf.Min(_min.Y, s.MapY));
             _max = new Vector2(Mathf.Max(_max.X, s.MapX), Mathf.Max(_max.Y, s.MapY));
         }
-        // Stable colour per sector: sectors are sorted by name, hue steps by the golden ratio.
-        var names = galaxy.Sectors.Select(s => s.Name).OrderBy(x => x, StringComparer.Ordinal).ToList();
-        var byName = new Dictionary<string, Color>(StringComparer.Ordinal);
-        for (int k = 0; k < names.Count; k++)
+        foreach (var lane in galaxy.Lanes)
         {
-            float hue = (k * 0.61803398875f) % 1f;
-            float sat = 0.55f + 0.2f * ((k * 7) % 3) / 2f;
-            float val = 0.85f + 0.1f * ((k * 5) % 2);
-            byName[names[k]] = Color.FromHsv(hue, sat, val);
+            int w = lane.Tier switch { 1 => 3, 2 => 2, _ => 1 };
+            _weight[lane.A] += w; _weight[lane.B] += w;
         }
-        for (int i = 0; i < n; i++)
-            _color[i] = byName.TryGetValue(galaxy.Systems[i].Sector, out var c) ? c : new Color(1, 1, 1);
         foreach (var sec in galaxy.Sectors.OrderBy(s => s.Name, StringComparer.Ordinal))
         {
-            var sum = Vector2.Zero;
-            foreach (int m in sec.Members) sum += _pos[m];
-            _sectorLabels.Add((sec.Name, sum / sec.Members.Count, byName[sec.Name]));
+            foreach (int m in sec.Members) _sectorOf[m] = _sectors.Count;
+            _sectors.Add((sec.Name, sec.Members.ToArray()));
         }
         ResetView();
     }
-
-    public Color ColorOf(int system) => _color[system];
 
     public void ResetView()
     {
@@ -231,44 +228,41 @@ public partial class GalaxyView : Control
     }
 
     // ---- drawing ----
+    // Colours of the map itself. Only the owner of a system gets a strong colour (orange Alliance, green Empire);
+    // everything else (lanes, sectors, unexplored systems) is drawn in quiet greys and blues so ownership reads first.
+    static readonly Color LaneColor = new(0.55f, 0.62f, 0.78f);
+    static readonly Color DotOutline = new(0.03f, 0.04f, 0.07f, 0.95f);
+    static readonly Color SectorColor = new(0.70f, 0.78f, 0.95f);
+
     public override void _Draw()
     {
         if (Galaxy == null) return;
         DrawRect(new Rect2(Vector2.Zero, Size), new Color(0.03f, 0.04f, 0.07f));
         int focus = Selected >= 0 ? Selected : Hovered;
         var screenRect = new Rect2(Vector2.Zero, Size).Grow(40);
+        float radius = Mathf.Clamp(3.2f + _zoom * 1.0f, 3.6f, 10f);
 
-        // lanes: thickness and brightness by tier (1 route, 2 official, 3 generated)
+        // the sector of the system under the mouse (else of the selected one): a faint outline around its systems
+        int hoverSector = Hovered >= 0 ? _sectorOf[Hovered] : Selected >= 0 ? _sectorOf[Selected] : -1;
+        Vector2[] sectorShape = hoverSector >= 0 ? SectorOutline(hoverSector, radius + 10f) : null;
+        if (sectorShape != null)
+        {
+            DrawColoredPolygon(sectorShape, new Color(SectorColor, 0.06f));
+            DrawPolyline(Closed(sectorShape), new Color(SectorColor, 0.35f), 1.2f, true);
+        }
+
+        // lanes: one quiet colour; the tier (1 route, 2 official, 3 generated) only changes thickness and strength
         foreach (var lane in Galaxy.Lanes)
         {
             var a = SystemScreen(lane.A); var b = SystemScreen(lane.B);
             if (!screenRect.HasPoint(a) && !screenRect.HasPoint(b) && !SegmentMayCross(a, b)) continue;
-            var (w, alpha) = lane.Tier switch { 1 => (2.6f, 0.95f), 2 => (1.6f, 0.60f), _ => (1.0f, 0.22f) };
-            var col = lane.Tier == 1 ? new Color(0.95f, 0.85f, 0.45f) : new Color(0.62f, 0.72f, 0.90f);
-            col.A = alpha;
-            DrawLine(a, b, col, w, true);
+            var (w, alpha) = lane.Tier switch { 1 => (1.7f, 0.40f), 2 => (1.2f, 0.26f), _ => (1.0f, 0.13f) };
+            DrawLine(a, b, new Color(LaneColor, alpha), w, true);
         }
         // lanes of the focused system, drawn on top
         if (focus >= 0)
             foreach (var nb in Galaxy.NeighboursOf(focus))
-                DrawLine(SystemScreen(focus), SystemScreen(nb.System), new Color(1f, 1f, 1f, 0.9f), 2.2f, true);
-
-        // sector names (zoomed out)
-        float sectorAlpha = Mathf.Clamp((NameZoomTo - _zoom) / (NameZoomTo - NameZoomFrom + 0.4f), 0f, 1f);
-        if (sectorAlpha > 0.02f)
-        {
-            foreach (var (name, world, color) in _sectorLabels)
-            {
-                var p = WorldToScreen(world);
-                if (!screenRect.HasPoint(p)) continue;
-                string text = name.EndsWith(" Sector", StringComparison.Ordinal) ? name[..^7] : name;
-                int fs = 15;
-                var size = _font.GetStringSize(text, HorizontalAlignment.Left, -1, fs);
-                var pos = p + new Vector2(-size.X / 2f, fs / 3f);
-                DrawStringOutline(_font, pos, text, HorizontalAlignment.Left, -1, fs, 4, new Color(0, 0, 0, 0.85f * sectorAlpha));
-                DrawString(_font, pos, text, HorizontalAlignment.Left, -1, fs, new Color(color, 0.95f * sectorAlpha));
-            }
-        }
+                DrawLine(SystemScreen(focus), SystemScreen(nb.System), new Color(1f, 1f, 1f, 0.7f), 1.8f, true);
 
         // route preview
         if (PathPreview is { Count: > 1 })
@@ -277,19 +271,16 @@ public partial class GalaxyView : Control
                 DrawLine(SystemScreen(PathPreview[k]), SystemScreen(PathPreview[k + 1]), PathColor, 4f, true);
         }
 
-        // systems: fill = owner, thin ring = sector, bigger double ring = headquarters, red ring = uprising
-        float radius = Mathf.Clamp(3.2f + _zoom * 1.0f, 3.6f, 10f);
+        // systems: the whole dot is the owner's colour; neutral = small grey dot; unexplored = faint hollow ring.
+        // Bigger double ring = headquarters, red ring = uprising, yellow ring = blockade.
         for (int i = 0; i < _pos.Length; i++)
         {
             var p = SystemScreen(i);
             if (!screenRect.HasPoint(p)) continue;
-            var s = Galaxy.Systems[i];
             if (DrawsDestroyed(i))
             {
                 // destroyed by the Death Star: a dark grey disc with a red-grey X, no owner, no HQ ring; the lanes through it still work
-                var dark = new Color(0.16f, 0.16f, 0.18f);
-                DrawArc(p, radius + 1.2f, 0, Mathf.Tau, 20, new Color(_color[i], 0.35f), 1.5f, true);
-                DrawCircle(p, radius, dark);
+                DrawCircle(p, radius, new Color(0.16f, 0.16f, 0.18f));
                 DrawArc(p, radius, 0, Mathf.Tau, 20, new Color(0.45f, 0.45f, 0.5f), 1.2f, true);
                 float k = radius * 1.5f;
                 var xc = new Color(0.8f, 0.35f, 0.3f);
@@ -299,16 +290,19 @@ public partial class GalaxyView : Control
             }
             if (IsUnknown?.Invoke(i) == true)
             {
-                // never explored by the player's side: a dim hollow dot, nothing known about owner or state (fog of war)
-                var ring = _color[i]; ring.A = 0.35f;
-                DrawArc(p, radius + 1.2f, 0, Mathf.Tau, 20, ring, 1.5f, true);
-                DrawCircle(p, radius * 0.8f, UnknownColor);
+                // never explored by the player's side: nothing known about owner or state (fog of war)
+                DrawArc(p, radius * 0.7f, 0, Mathf.Tau, 16, new Color(0.45f, 0.48f, 0.55f, 0.55f), 1.2f, true);
                 continue;
             }
             var owner = OwnerOf?.Invoke(i);
-            var fill = owner == Side.Empire ? EmpireColor : owner == Side.Alliance ? AllianceColor : NeutralColor;
-            if (s.IsOutsideSectors) DrawArc(p, radius + 4.5f, 0, Mathf.Tau, 24, new Color(1, 1, 1, 0.8f), 1.5f, true);
-            DrawArc(p, radius + 1.2f, 0, Mathf.Tau, 20, _color[i], 2.2f, true);
+            if (owner == null)
+            {
+                DrawCircle(p, radius * 0.72f + 1f, DotOutline);
+                DrawCircle(p, radius * 0.72f, NeutralColor);
+                continue;
+            }
+            var fill = owner == Side.Empire ? EmpireColor : AllianceColor;
+            DrawCircle(p, radius + 1.2f, DotOutline);
             DrawCircle(p, radius, fill);
             if (IsHq?.Invoke(i) == true)
             {
@@ -322,46 +316,152 @@ public partial class GalaxyView : Control
         if (Hovered >= 0 && Hovered != focus) DrawArc(SystemScreen(Hovered), radius + 3f, 0, Mathf.Tau, 32, new Color(1, 1, 1, 0.6f), 1.5f, true);
 
         // capital tags: always visible, so the player can find the headquarters at any zoom
+        var taken = new LabelSpace();
         if (CapitalTag != null)
             for (int i = 0; i < _pos.Length; i++)
             {
                 if (CapitalTag(i) is not { } tag) continue;
                 var p = SystemScreen(i);
                 if (!screenRect.HasPoint(p)) continue;
+                // the tag carries the system's name too (white), so the name never loses the fight for room next to its own tag
                 int fs = 12;
-                var size = _font.GetStringSize(tag.Text, HorizontalAlignment.Left, -1, fs);
-                var box = new Rect2(p + new Vector2(-size.X / 2f - 4f, radius + 12f), size + new Vector2(8f, 4f));
+                string name = Galaxy.Systems[i].Name + "  ";
+                var nameSize = _font.GetStringSize(name, HorizontalAlignment.Left, -1, fs + 1);
+                var tagSize = _font.GetStringSize(tag.Text, HorizontalAlignment.Left, -1, fs);
+                var size = new Vector2(nameSize.X + tagSize.X, Mathf.Max(nameSize.Y, tagSize.Y));
+                var box = new Rect2(p + new Vector2(-size.X / 2f - 5f, radius + 12f), size + new Vector2(10f, 4f));
                 DrawRect(box, new Color(0.03f, 0.04f, 0.07f, 0.9f));
                 DrawRect(box, tag.Color, false, 1.5f);
-                DrawString(_font, box.Position + new Vector2(4f, size.Y - 1f), tag.Text, HorizontalAlignment.Left, -1, fs, tag.Color);
+                var baseLine = box.Position + new Vector2(5f, 2f + _font.GetAscent(fs + 1));
+                DrawString(_font, baseLine, name, HorizontalAlignment.Left, -1, fs + 1, Colors.White);
+                DrawString(_font, baseLine + new Vector2(nameSize.X, 0), tag.Text, HorizontalAlignment.Left, -1, fs, tag.Color);
+                taken.Add(box);
             }
 
-        // system names (zoomed in)
-        float nameAlpha = Mathf.Clamp((_zoom - NameZoomFrom) / (NameZoomTo - NameZoomFrom), 0f, 1f);
-        if (nameAlpha > 0.02f)
+        // the hovered sector's name, just above its outline
+        if (sectorShape != null)
         {
-            int fs = 13;
-            for (int i = 0; i < _pos.Length; i++)
-            {
-                var p = SystemScreen(i);
-                if (!screenRect.HasPoint(p)) continue;
-                var pos = p + new Vector2(radius + 3f, fs / 3f);
-                string text = Galaxy.Systems[i].Name;
-                float a = IsUnknown?.Invoke(i) == true ? 0.45f : 0.92f; // unexplored names are dimmer
-                DrawStringOutline(_font, pos, text, HorizontalAlignment.Left, -1, fs, 4, new Color(0, 0, 0, 0.85f * nameAlpha));
-                DrawString(_font, pos, text, HorizontalAlignment.Left, -1, fs, new Color(1, 1, 1, a * nameAlpha));
-            }
+            string text = _sectors[hoverSector].name.ToUpperInvariant();
+            const int fs = 13;
+            var size = _font.GetStringSize(text, HorizontalAlignment.Left, -1, fs);
+            float top = sectorShape.Min(v => v.Y), cx = sectorShape.Average(v => v.X);
+            var box = new Rect2(new Vector2(cx - size.X / 2f, top - size.Y - 2f), size);
+            DrawStringOutline(_font, box.Position + new Vector2(0, _font.GetAscent(fs)), text, HorizontalAlignment.Left, -1, fs, 4, new Color(0, 0, 0, 0.9f));
+            DrawString(_font, box.Position + new Vector2(0, _font.GetAscent(fs)), text, HorizontalAlignment.Left, -1, fs, new Color(SectorColor, 0.95f));
+            taken.Add(box);
         }
-        else if (focus >= 0)
+
+        DrawSystemNames(focus, radius, screenRect, taken);
+    }
+
+    // ---- system names ----
+    // Names never sit on each other, on a system dot, on a capital tag or on a fleet. Each name tries eight spots around its dot
+    // and is left out when none is free. Names are placed in order of importance (the focused system, headquarters, your systems,
+    // enemy systems, neutral ones; big lane hubs first), so zoomed out you read the key worlds and more names appear as you zoom in.
+    static readonly Vector2[] Spots =
+    {
+        new(1, 0), new(-1, 0), new(0, 1), new(0, -1), new(0.7f, -0.7f), new(0.7f, 0.7f), new(-0.7f, -0.7f), new(-0.7f, 0.7f),
+    };
+
+    void DrawSystemNames(int focus, float radius, Rect2 screenRect, LabelSpace taken)
+    {
+        var view = new Rect2(Vector2.Zero, Size);
+        var order = new List<(int i, int rank)>();
+        for (int i = 0; i < _pos.Length; i++)
         {
-            // always label the focused system, even when zoomed out
-            var p = SystemScreen(focus);
-            var pos = p + new Vector2(radius + 6f, 5f);
-            string text = Galaxy.Systems[focus].Name;
-            DrawStringOutline(_font, pos, text, HorizontalAlignment.Left, -1, 14, 4, new Color(0, 0, 0, 0.9f));
-            DrawString(_font, pos, text, HorizontalAlignment.Left, -1, 14, Colors.White);
+            var p = SystemScreen(i);
+            if (!screenRect.HasPoint(p)) continue;
+            float r = radius + 1.5f;
+            taken.Add(new Rect2(p - new Vector2(r, r), new Vector2(2 * r, 2 * r)));
+            bool unknown = IsUnknown?.Invoke(i) == true;
+            if (unknown && _zoom < NameZoom && i != focus && i != Hovered) continue;
+            if (CapitalTag?.Invoke(i) != null) continue; // its name is in the tag
+            order.Add((i, LabelRank(i, focus, unknown)));
+        }
+        if (LabelObstacles != null) foreach (var rect in LabelObstacles()) taken.Add(rect);
+        order.Sort((x, y) => x.rank != y.rank ? y.rank.CompareTo(x.rank) : _weight[y.i] != _weight[x.i] ? _weight[y.i].CompareTo(_weight[x.i]) : x.i.CompareTo(y.i));
+
+        foreach (var (i, _) in order)
+        {
+            bool key = i == focus || i == Hovered;
+            int fs = key ? 14 : 13;
+            string text = Galaxy.Systems[i].Name;
+            var size = _font.GetStringSize(text, HorizontalAlignment.Left, -1, fs);
+            var p = SystemScreen(i);
+            float gap = radius + (key ? 6f : 3f);
+            Rect2? spot = null;
+            foreach (var d in Spots)
+            {
+                // the spot's anchor is on a circle around the dot; the text box hangs off it away from the dot
+                var anchor = p + d * gap;
+                var box = new Rect2(anchor + new Vector2(d.X > 0.1f ? 0 : d.X < -0.1f ? -size.X : -size.X / 2f,
+                                                         d.Y > 0.1f ? 0 : d.Y < -0.1f ? -size.Y : -size.Y / 2f), size);
+                if (!view.Encloses(box) || taken.Hits(box)) continue;
+                spot = box; break;
+            }
+            if (spot == null && key) spot = new Rect2(p + new Vector2(gap, -size.Y / 2f), size); // the focused name always shows
+            if (spot is not { } at) continue;
+            taken.Add(at);
+            var baseLine = at.Position + new Vector2(0, _font.GetAscent(fs));
+            bool unknown = IsUnknown?.Invoke(i) == true;
+            float a = key ? 1f : unknown ? 0.45f : OwnerOf?.Invoke(i) == null ? 0.72f : 0.92f;
+            DrawStringOutline(_font, baseLine, text, HorizontalAlignment.Left, -1, fs, 4, new Color(0, 0, 0, 0.85f));
+            DrawString(_font, baseLine, text, HorizontalAlignment.Left, -1, fs, new Color(1, 1, 1, a));
         }
     }
+
+    int LabelRank(int i, int focus, bool unknown)
+    {
+        if (i == focus || i == Hovered) return 100;
+        if (unknown) return 0;
+        var owner = OwnerOf?.Invoke(i);
+        if (owner != null && owner == Player) return 30;
+        if (owner != null) return 20;
+        return 10;
+    }
+
+    /// <summary>Rectangles already used on screen; a coarse grid keeps the overlap test cheap with 360 names.</summary>
+    sealed class LabelSpace
+    {
+        const float Cell = 64f;
+        readonly Dictionary<(int, int), List<Rect2>> _cells = new(); // looked up by key only, never iterated
+        public void Add(Rect2 r)
+        {
+            foreach (var key in Keys(r))
+            {
+                if (!_cells.TryGetValue(key, out var list)) _cells[key] = list = new List<Rect2>();
+                list.Add(r);
+            }
+        }
+        public bool Hits(Rect2 r)
+        {
+            foreach (var key in Keys(r))
+                if (_cells.TryGetValue(key, out var list))
+                    foreach (var o in list) if (o.Intersects(r)) return true;
+            return false;
+        }
+        static IEnumerable<(int, int)> Keys(Rect2 r)
+        {
+            int x0 = Mathf.FloorToInt(r.Position.X / Cell), x1 = Mathf.FloorToInt(r.End.X / Cell);
+            int y0 = Mathf.FloorToInt(r.Position.Y / Cell), y1 = Mathf.FloorToInt(r.End.Y / Cell);
+            for (int x = x0; x <= x1; x++) for (int y = y0; y <= y1; y++) yield return (x, y);
+        }
+    }
+
+    // ---- sector outline (shown on hover) ----
+    /// <summary>A rounded shape around the systems of a sector on screen, padded by <paramref name="pad"/> pixels.</summary>
+    Vector2[] SectorOutline(int sector, float pad)
+    {
+        var pts = _sectors[sector].members.Select(SystemScreen).ToArray();
+        // a small circle around each system, then the hull of all of them: rounded, and never degenerate
+        var cloud = new List<Vector2>(pts.Length * 12);
+        foreach (var p in pts)
+            for (int k = 0; k < 12; k++) cloud.Add(p + Vector2.FromAngle(k * Mathf.Tau / 12f) * pad);
+        var hull = Geometry2D.ConvexHull(cloud.ToArray());
+        return hull.Length >= 3 ? hull[..^1] : null; // ConvexHull repeats the first point at the end
+    }
+
+    static Vector2[] Closed(Vector2[] poly) => poly.Append(poly[0]).ToArray();
 
     // Cheap test so long lanes crossing the screen from two off-screen ends still draw.
     bool SegmentMayCross(Vector2 a, Vector2 b)

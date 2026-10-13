@@ -121,6 +121,37 @@ public partial class FleetLayer : Control
     /// <summary>The fleets drawn now from the core's fleet state (only own fleets with fog on), by id (for the playtest).</summary>
     public IReadOnlyList<int> DrawnFleetIds() => _game == null ? Array.Empty<int>() : Layout().Own.Select(o => o.f.Id).ToList();
 
+    /// <summary>Screen rectangles of the fleet markers and their names, so the map keeps system names off them.</summary>
+    public IEnumerable<Rect2> Obstacles()
+    {
+        if (_game == null) yield break;
+        var map = Map;
+        var font = ThemeDB.FallbackFont;
+        var layout = Layout();
+        foreach (var (f, p, _) in layout.Own)
+        {
+            bool selected = map.SelectedFleet == f.Id;
+            float r = selected ? 10f : 8.5f;
+            yield return new Rect2(p - new Vector2(r, r), new Vector2(2 * r, 2 * r));
+            if (map.Zoom >= LabelZoom || selected) yield return NameBox(font, p, r, f.Name);
+        }
+        foreach (var (_, pic, p) in layout.Enemy)
+        {
+            const float r = 8.5f;
+            yield return new Rect2(p - new Vector2(r, r), new Vector2(2 * r, 2 * r));
+            if (map.Zoom >= LabelZoom) yield return NameBox(font, p, r, EnemyText(pic));
+        }
+    }
+
+    static Rect2 NameBox(Font font, Vector2 p, float r, string text)
+    {
+        var size = font.GetStringSize(text, HorizontalAlignment.Left, -1, 13);
+        var baseLine = p + new Vector2(r + 3f, -r * 0.6f);
+        return new Rect2(baseLine - new Vector2(0, font.GetAscent(13)), size);
+    }
+
+    static string EnemyText(FleetPicture pic) => $"Enemy: {pic.ShipCount} ship(s){(pic.SquadronCount > 0 ? $", {pic.SquadronCount} sq." : "")}";
+
     /// <summary>The system index of the enemy marker under a screen point, or -1.</summary>
     public int PickEnemySystem(Vector2 screen)
     {
@@ -265,7 +296,7 @@ public partial class FleetLayer : Control
             DrawPolyline(new[] { tri[0], tri[1], tri[2], tri[0] }, new Color(0, 0, 0, 0.85f), 1.2f, true);
             if (map.Zoom >= LabelZoom)
             {
-                string text = $"Enemy: {pic.ShipCount} ship(s){(pic.SquadronCount > 0 ? $", {pic.SquadronCount} sq." : "")}";
+                string text = EnemyText(pic);
                 var pos = p + new Vector2(r + 3f, -r * 0.6f);
                 DrawStringOutline(font, pos, text, HorizontalAlignment.Left, -1, 13, 4, new Color(0, 0, 0, 0.9f));
                 DrawString(font, pos, text, HorizontalAlignment.Left, -1, 13, col);
