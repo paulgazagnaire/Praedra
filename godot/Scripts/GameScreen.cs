@@ -375,6 +375,7 @@ public partial class GameScreen : Control
         var lines = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         lines.AddThemeConstantOverride("separation", 6);
         sc.AddChild(lines);
+        lines.AddChild(new Label { Text = "BATTLE RULES (this game): " + GameBoot.RulesName(S.Rules) + (S.Rules == Rebellion.Core.Battle.BattleRuleset.New ? ". Ships fight gun by gun, so the weapons they carry decide the fight." : ". Battles play as in the 1998 game."), AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(730, 0) });
         foreach (var line in HowToLines)
             lines.AddChild(new Label { Text = line, AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(730, 0) });
         var ok = Btn("Got it - let's play", CloseHowTo);
@@ -556,7 +557,8 @@ public partial class GameScreen : Control
     void RefreshTop()
     {
         _dayLabel.Text = $"Day {S.Game.Day}";
-        _sideLabel.Text = $"  {S.NameOf(S.Player)}";
+        _sideLabel.Text = $"  {S.NameOf(S.Player)} - {(S.Rules == Rebellion.Core.Battle.BattleRuleset.New ? "New" : "Classic")} battles";
+        _sideLabel.TooltipText = "Your side. Space battle rules: " + GameBoot.RulesName(S.Rules) + " (chosen at the start of the game).";
         _sideLabel.AddThemeColorOverride("font_color", S.Player == Side.Empire ? GalaxyView.EmpireColor : GalaxyView.AllianceColor);
         var eco = S.Host.Economy;
         int load = eco.Load(S.Player), cap = eco.Capacity(S.Player);
@@ -708,7 +710,7 @@ public partial class GameScreen : Control
     void ShowReport(Message m)
     {
         _reportTitle.Text = m.Title ?? "Report";
-        _reportBody.Text = m.Detail ?? m.Text;
+        _reportBody.Text = m.Detail != null && m.Kind == MsgKind.Battle ? "Battle rules: " + GameBoot.RulesName(S.Rules) + "\n" + m.Detail : m.Detail ?? m.Text;
         _reportPanel.Visible = true;
         if (m.System != null && G.TryFindSystem(m.System, out int idx)) _view.Centre(idx);
     }

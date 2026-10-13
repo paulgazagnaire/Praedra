@@ -157,10 +157,41 @@ public sealed class GameHost
     public static GameHost New(GameRng rng, GameSettings? settings = null, GameData? data = null) =>
         new(new Game(rng), data ?? GameData.Default, settings ?? new GameSettings());
 
-    /// <summary>A game from a save (<see cref="GameSave.Save"/>), with every module attached again. Settings are not in the save: pass them again.</summary>
-    public static GameHost Load(string saveJson, GameSettings? settings = null, GameData? data = null) =>
-        new(GameSave.Load(saveJson), data ?? GameData.Default, settings ?? new GameSettings());
+    /// <summary>
+    /// A game from a save (<see cref="GameSave.Save"/> or <see cref="SaveWithSettings"/>), with every module attached again. Settings are not in the
+    /// plain save: pass them again. A save written by <see cref="SaveWithSettings"/> also carries the battle ruleset; it is applied when
+    /// <paramref name="settings"/> does not already set <see cref="GameSettings.Battle"/>. A save without the header loads as Classic (the DEFAULT).
+    /// rule: m4-battle-new §Rule (New) (ruleset switch, DEFAULT Classic)
+    /// </summary>
+    public static GameHost Load(string saveJson, GameSettings? settings = null, GameData? data = null)
+    {
+        var (ruleset, body) = ReadHeader(saveJson);
+        settings ??= new GameSettings();
+        if (ruleset != null && settings.Battle == null)
+            settings = settings with { Battle = new Rebellion.Core.Battle.BattleParams { Ruleset = ruleset.Value } };
+        return new(GameSave.Load(body), data ?? GameData.Default, settings);
+    }
 
     public string Save() => GameSave.Save(Game);
+
+    private const string HeaderTag = "REBELLION-CORE 1 battle=";
+
+    /// <summary>
+    /// The save plus a first line naming the battle ruleset ("REBELLION-CORE 1 battle=Classic|New"), so a loaded game fights by the same rules.
+    /// The game state itself is unchanged (<see cref="StateHash"/> does not include the header). rule: m4-battle-new §Rule (New)
+    /// </summary>
+    public string SaveWithSettings() =>
+        HeaderTag + (Settings.Battle?.Ruleset ?? Rebellion.Core.Battle.BattleRuleset.Classic) + "\n" + Save();
+
+    private static (Rebellion.Core.Battle.BattleRuleset? Ruleset, string Body) ReadHeader(string text)
+    {
+        if (!text.StartsWith(HeaderTag, StringComparison.Ordinal)) return (null, text);
+        int nl = text.IndexOf('\n');
+        if (nl < 0) throw new InvalidDataException("save header without a body");
+        string name = text[HeaderTag.Length..nl].Trim();
+        if (!Enum.TryParse(name, false, out Rebellion.Core.Battle.BattleRuleset r) || !Enum.IsDefined(r))
+            throw new InvalidDataException("unknown battle ruleset in save: " + name);
+        return (r, text[(nl + 1)..]);
+    }
     public string StateHash() => GameSave.StateHash(Game);
 }

@@ -83,13 +83,17 @@ public sealed partial class GameSession
         Snapshot();
     }
 
-    public static GameSession New(GameData data, Side player, Preset preset) =>
-        new(GameBoot.NewGame(data, player, preset), player);
+    public static GameSession New(GameData data, Side player, Preset preset, Rebellion.Core.Battle.BattleRuleset rules = Rebellion.Core.Battle.BattleRuleset.Classic) =>
+        new(GameBoot.NewGame(data, player, preset, 1, rules), player);
 
     public static GameSession Load(GameData data, Side player, string json) =>
         new(GameBoot.LoadGame(data, json), player);
 
-    public string SaveText() => Host.Save();
+    /// <summary>The core's save plus the battle ruleset header, so Load fights by the same rules.</summary>
+    public string SaveText() => Host.SaveWithSettings();
+
+    /// <summary>The space battle rules of this game.</summary>
+    public Rebellion.Core.Battle.BattleRuleset Rules => Host.Battles.Params.Ruleset;
 
     // ------------------------------------------------------------------ queries the panels use
 
