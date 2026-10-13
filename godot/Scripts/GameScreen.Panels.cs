@@ -43,7 +43,7 @@ public partial class GameScreen
             var (known, owner) = S.KnownOwnerOf(hn);
             int? seen = S.LastSeenDay(hn);
             string age = owner == Me || S.Sees(hn) || seen == null ? "" : $"  (last seen day {seen})";
-            _hoverLabel.Text = $"{hn}  -  {(!S.Explored(hn) && owner != Me ? "unexplored" : !known ? "owner unknown" : owner == null ? "neutral" : S.You(owner.Value))}{age}";
+            _hoverLabel.Text = S.IsDestroyed(hn) ? $"{hn}  -  {S.DestroyedWords(hn).ToLowerInvariant()}" : $"{hn}  -  {(!S.Explored(hn) && owner != Me ? "unexplored" : !known ? "owner unknown" : owner == null ? "neutral" : S.You(owner.Value))}{age}";
             _hoverLabel.Visible = true;
         }
         else _hoverLabel.Visible = false;
@@ -217,6 +217,9 @@ public partial class GameScreen
         Line($"{(sys.IsOutsideSectors ? "Outside the sectors" : sys.Sector)}{hqNote}", Dim);
         Add(new HSeparator());
 
+        // ---- destroyed by the Death Star: nothing is left to see, build, invade or target. rule: m5-death-star §2 effect 5
+        if (S.IsDestroyed(name)) { DestroyedPanel(name); return; }
+
         // ---- fog of war: anything not yours shows only the side's picture, with its age. rule: m5-fog-and-hq §N2, §N8
         if (!mine && pic == null)
         {
@@ -305,6 +308,14 @@ public partial class GameScreen
         else if (S.Game.State.Fleets.Values.Any(f => f.Side == Me && f.At == name))
             Line(owner != null ? "To take this system: bombard it, then invade with troops aboard your fleet (select your fleet)." : "Nobody holds this planet. Press Invade on your fleet with regiments aboard.", Dim);
         else Line(owner == null && ownerKnown ? "Nobody holds this planet. Send a fleet with regiments aboard, then press Invade. You can only build on systems you own." : "You can only build on systems you own. To take it, send a fleet with regiments aboard and press Invade.", Dim);
+    }
+
+    void DestroyedPanel(string name)
+    {
+        Line(S.DestroyedWords(name), Bad, 17);
+        Line("The planet and everything on it are gone for good: no buildings, troops or people. Nobody holds this system and nobody can build on it, invade it, bombard it or send missions there.", Dim);
+        Line("It stays on the map as a field of debris. Fleets can still pass through it and stop there.", Dim);
+        FleetsHere(name, true, S.Picture(name));
     }
 
     /// <summary>Own fleets here (clickable), then the enemy fleets the side sees now, or the ones it saw last time it looked.</summary>
@@ -468,6 +479,7 @@ public partial class GameScreen
                 if (!cons.IsResearched(Me, r.Name)) hint = "  (not researched)";
                 else if (r.Category == ObjectCategory.Facility && FacilityKinds.TryParse(r.Name, out var kind) && eco.CheckPlace(system, kind) != null) hint = "  (no free slot)";
                 else if (r.Cost > refined) hint = "  (waits for refined)";
+                if (r.Name == Rebellion.Core.DeathStar.DeathStarModule.ShipClass && S.HasOwnDeathStarAt(system)) hint = "  (one per system: this system already has one)";
                 var row = r;
                 var fam2 = Rebellion.Core.Construction.Yards.BuiltBy(r.Category);
                 var btn = Act($"{r.Name}   {r.Cost} refined, upkeep {r.Maintenance}, ~{days} days{hint}", () => SubmitBuild(system, fam2, row),
@@ -588,6 +600,8 @@ public partial class GameScreen
             }
         }
 
+        if (atSystem && S.HoldsDeathStar(f)) DeathStarSection(f);
+
         OfficersSection(f);
 
         // battle behaviour
@@ -621,6 +635,39 @@ public partial class GameScreen
                 Act($"Merge this fleet into {o.Name}", () => Merge(f, other), null);
             }
         }
+    }
+
+    // ================================================================== the Death Star (rule: m5-death-star §2)
+
+    void DeathStarSection(Fleet f)
+    {
+        string at = f.At;
+        bool gone = S.IsDestroyed(at);
+        bool pending = S.PendingOf(f.Id).Any(p => p.StartsWith("Destroy System", StringComparison.Ordinal));
+        Heading("Death Star");
+        Line("This fleet holds a Death Star. Destroy System wipes out the system it is at.", Dim, 13);
+        Act("Destroy System...", () => AskDestroySystem(f.Id),
+            "Opens a question first. The strike happens when the next day starts.", gone || pending);
+        if (gone) Line($"{at} is already destroyed.", Dim, 13);
+        else if (pending) Line("The strike is waiting for the next day.", new Color(1f, 0.85f, 0.4f), 13);
+    }
+
+    void AskDestroySystem(int fleetId)
+    {
+        if (!S.Game.State.Fleets.TryGetValue(fleetId, out var f) || f.At == null) return;
+        string at = f.At;
+        Confirm($"Destroy {at}?",
+            $"{at} and everything on it (the planet, buildings, troops, and every enemy or neutral ship there) will be destroyed for good, and about half of the minor characters there will die. " +
+            "The rest of the sector turns against the Empire, and a second strike in the same sector turns the whole sector to the Alliance. It happens when the next day starts and cannot be undone.",
+            "Yes, destroy it", () => DestroySystem(fleetId));
+    }
+
+    void DestroySystem(int fleetId)
+    {
+        if (!S.Game.State.Fleets.TryGetValue(fleetId, out var f) || f.At == null) return;
+        string at = f.At;
+        S.SubmitDestroySystem(f);
+        Sent($"{f.Name} destroys {at}", at); // the core judges it at the next day; a refusal comes back in the messages with its reason
     }
 
     void Sent(string what, string system = null)

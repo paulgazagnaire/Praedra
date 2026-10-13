@@ -73,6 +73,8 @@ public partial class GameScreen
     }
     internal void PressKey(Key k) { var e = new InputEventKey { Keycode = k, Pressed = true }; _UnhandledKeyInput(e); }
     internal bool ConfirmVisible => _confirmPanel.Visible;
+    internal string ConfirmTitle => _confirmTitle.Text;
+    internal string ConfirmText => _confirmBody.Text;
     internal bool ReportVisible => _reportPanel.Visible;
     internal string ReportText => _reportTitle.Text + "\n" + _reportBody.Text;
     internal bool VictoryVisible => _victoryPanel.Visible;
@@ -95,6 +97,7 @@ public partial class GameScreen
         Enumerable.Range(0, G.Systems.Count).Select(i => (G.Systems[i].Name, CapitalTagOf(i)?.Text)).Where(t => t.Text != null);
     internal IReadOnlyList<string> EnemyMarkerSystems() => _fleets.EnemyMarkerSystems();
     internal IReadOnlyList<int> DrawnFleetIds() => _fleets.DrawnFleetIds();
+    internal bool DrawnDestroyed(string system) => G.TryFindSystem(system, out int i) && _view.DrawsDestroyed(i);
     internal bool DrawnUnknown(string system) => G.TryFindSystem(system, out int i) && _view.IsUnknown(i);
     internal string HoverTextFor(string system) { if (!G.TryFindSystem(system, out int i)) return ""; _view.ShotHover(i); OnViewChanged(); return _hoverLabel.Text; }
     internal bool SetCheck(string prefix, bool on)

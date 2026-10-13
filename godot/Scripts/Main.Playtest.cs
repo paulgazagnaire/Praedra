@@ -283,6 +283,8 @@ public partial class Main
             Expect(gs.Has(">  Ships") && gs.Has(">  Fighters") && gs.Has(">  Troops"), "Build menu has collapsible Ships / Fighters / Troops sections");
             Expect(gs.Click(">  Ships"), "open the Ships section");
             gs.PlayRefresh();
+            if (me == Side.Empire) Expect(gs.ButtonTexts().Any(t => t.StartsWith("Death Star   ", StringComparison.Ordinal)), "the Death Star is in the Empire's Ships build list");
+            else Expect(!gs.ButtonTexts().Any(t => t.StartsWith("Death Star   ", StringComparison.Ordinal)), "the Alliance's Ships build list has no Death Star");
             var shipBtn = gs.ButtonTexts().FirstOrDefault(t => t.Contains("refined, upkeep") && !t.Contains("(not researched)") && t.Contains("   ") && !Rebellion.Core.Economy.FacilityKinds.TryParse(t[..t.IndexOf("   ", StringComparison.Ordinal)], out _)); // any researched ship
             Expect(shipBtn != null, "a basic ship can be chosen in the Ships list");
             if (shipBtn != null)
@@ -331,6 +333,8 @@ public partial class Main
         // menu: "Menu" asks first
         Expect(gs.Click("Menu") && gs.ConfirmVisible, "Menu asks first");
         Expect(gs.Click("Cancel"), "cancel leaving");
+
+        PlaytestDeathStar(gs);
 
         // ---------------------------------------------------------------- run to day 400 against the AI
         var sw = System.Diagnostics.Stopwatch.StartNew();

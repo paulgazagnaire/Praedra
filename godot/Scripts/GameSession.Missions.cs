@@ -176,6 +176,7 @@ public sealed partial class GameSession
         MissionOutcome.Foiled => "foiled by the enemy",
         MissionOutcome.Cancelled => "cancelled",
         MissionOutcome.TargetInvalid => "called off: the target is no longer valid",
+        MissionOutcome.TargetDestroyed => "the target system was destroyed",
         _ => "",
     };
 
@@ -232,6 +233,9 @@ public sealed partial class GameSession
                 yield return new Message(d, x.Outcome == MissionOutcome.Cancelled
                     ? $"{KindWords(x.MissionKind)} on {x.Target} cancelled: {TeamOfId(x.Mission)} comes home."
                     : $"{KindWords(x.MissionKind)} on {x.Target} called off: the target is no longer valid. The team comes home.", x.Target, MsgKind.Warn);
+                break;
+            case MissionEnded x when Mine(x.Side) && x.Outcome == MissionOutcome.TargetDestroyed:
+                yield return new Message(d, $"{KindWords(x.MissionKind)} on {x.Target} failed: the system was destroyed by the Death Star.", x.Target, MsgKind.Bad);
                 break;
             case MissionEnded x when Mine(x.Side) && x.Outcome == MissionOutcome.Succeeded:
                 break; // the success line already said it
