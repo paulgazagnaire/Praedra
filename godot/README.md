@@ -78,3 +78,5 @@ Command-line options after `--` for screenshots and quick looks: `--screenshot o
 Screenshot with the software renderer: `xvfb-run -a -s "-screen 0 1440x810x24" godot --path . --rendering-driver opengl3 --resolution 1440x810 -- --screenshot map.png 30 --newgame`.
 
 Export (templates 4.7.1 mono installed): `godot --headless --path . --export-release macOS ../build/mac/Rebellion-mac.zip` and `--export-release Linux ../build/linux/Rebellion.x86_64`. Builds go under `build/` (git-ignored); never commit them.
+
+**Mac signing.** Godot's own ad-hoc signing from Linux makes an app macOS kills at launch on Apple Silicon ("zsh: killed", seen 2026-10-13), so the macOS preset has `codesign/codesign=0` and the app is signed after export with rcodesign (apple-codesign 0.29.0, Paul approved 2026-10-13): unzip the export, `rcodesign sign --entitlements-xml-file mac-entitlements.plist Rebellion.app`, then re-zip with `zip -qry` (keeps permissions). Ad-hoc, no hardened runtime; the entitlements let .NET run its JIT. macOS still asks for **Open Anyway** once per download (no notarization without a paid Apple account).
