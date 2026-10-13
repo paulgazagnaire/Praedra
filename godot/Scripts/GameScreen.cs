@@ -89,6 +89,8 @@ public partial class GameScreen : Control
         _view.FleetPicker = _fleets.Pick;
         _view.EnemyMarkerPicker = _fleets.PickEnemySystem;
         _fleets.Player = S.Player;
+        _view.Player = S.Player;
+        _view.LabelObstacles = MapLabelObstacles;
         _fleets.Planned = () => S.PlannedMoves;
         _fleets.EnemyFleets = () => S.Fog.VisibleFleets(S.Player);
         _fleets.CharacterRoutes = CharacterRoutes;
@@ -112,6 +114,17 @@ public partial class GameScreen : Control
         if (name == S.MyHqSystem) return S.Player;
         if (name == S.EnemyHqSystem) return S.Enemy;
         return null;
+    }
+
+    /// <summary>Where the map must not put system names: fleet markers, and the boxes floating over the map (a name under a box can't be read).</summary>
+    IEnumerable<Rect2> MapLabelObstacles()
+    {
+        foreach (var r in _fleets.Obstacles()) yield return r;
+        var origin = _view.GlobalPosition;
+        var map = _view.GetGlobalRect();
+        foreach (var c in GetChildren())
+            if (c is Control box && box.IsVisibleInTree() && box.GetGlobalRect() is var g && g.Intersects(map) && !g.Encloses(map))
+                yield return new Rect2(g.Position - origin, g.Size);
     }
 
     (string Text, Color Color)? CapitalTagOf(int i)

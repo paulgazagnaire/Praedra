@@ -191,7 +191,7 @@ public partial class GameScreen
         Line("Press Characters (or C) to see your leaders. " + LeaderHelp);
         Line("Press Missions (or M) for your agents' missions. " + MissionAdvice);
         Add(new Control { CustomMinimumSize = new Vector2(0, 6) });
-        Line("Colours: orange = Alliance, green = Empire, grey = neutral. The thin ring is the sector. A big double ring marks a headquarters, a red ring an uprising, a yellow ring a blockade.", Dim);
+        Line("Colours: orange = Alliance, green = Empire, small grey dot = neutral, hollow ring = never explored. Point at a system to see its sector. A big double ring marks a headquarters, a red ring an uprising, a yellow ring a blockade.", Dim);
         Line("Fog of war: you see live only the systems you hold or have a fleet at. Others show what you saw last (with the day); dim hollow dots are unexplored. Enemy fleets show only where you can see them.", Dim);
         Add(new Control { CustomMinimumSize = new Vector2(0, 6) });
         Line("Space: play / pause     N: one day     1-4: speed     C: characters     M: missions\nWheel or +/-: zoom     drag or arrows: pan\nEsc: cancel / deselect", Dim);
