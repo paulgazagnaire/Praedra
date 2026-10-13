@@ -79,6 +79,7 @@ public partial class GameScreen : Control
         // and blockades show only where you see live. rule: m5-fog-and-hq §F3, §N2, §N8
         _view.OwnerOf = i => S.KnownOwnerOf(G.Systems[i].Name).Owner;
         _view.IsUnknown = i => { string n = G.Systems[i].Name; return !S.Explored(n) && S.OwnerOf(n) != S.Player; };
+        _view.IsDestroyed = i => S.IsDestroyed(G.Systems[i].Name); // rule: m5-death-star §2 effect 6 (the side's own picture knows)
         _view.IsHq = i => HqSideAt(i) != null;
         _view.CapitalTag = CapitalTagOf;
         _view.IsUprising = i => { string n = G.Systems[i].Name; return S.Sees(n) && S.Host.Support.IsUprising(n); };
@@ -353,6 +354,8 @@ public partial class GameScreen : Control
         "MISSIONS: press Send NAME on a mission... in the Characters list (or Send a mission from... on a system panel), tick the team (characters and special forces standing together), pick the kind and click the target: the route and arrival day show first. The Missions list (M) shows each team's phase and expected day, and can cancel one.",
         "   Worth it now: Espionage (see what an enemy system holds) and Diplomacy (win a neutral system over before you take it). Sabotage is very hard with the current interim tables: the team is usually caught.",
         "REBEL HQ (Alliance): click your HQ system and press Move HQ..., then click one of your systems. The HQ travels for some days (it cannot be attacked on the way); a big enemy blockade pins it in place.",
+        "DEATH STAR: the Empire can build it like any capital ship at a shipyard (one per system; it is huge and very slow). Select its fleet at a system and press Destroy System: the planet and everything on it are gone for good, enemy ships there die, and the rest of the sector turns against the Empire (a second strike in the same sector turns the whole sector to the Alliance). Destroyed systems stay on the map as dark grey crosses; fleets can still pass through them.",
+        "   To stop it (Alliance): beat its fleet in battle (it is an ordinary ship in the fight), or send a Death Star Sabotage mission to the system where it stands (the Missions planner offers it once an agent with the skills is free). Watch the messages for \"New Death Star deployed\".",
         "SAVING: Save / Load in the top bar (one slot). The game also saves itself every 30 days; Continue on the start screen loads that.",
     };
 
@@ -525,6 +528,7 @@ public partial class GameScreen : Control
                 "battle" => "Paused: a battle was fought",
                 "captured" => "Paused: a system changed hands",
                 "invaded" or "invasion" => "Paused: an invasion is taking place",
+                "destroyed" => "Paused: the Death Star destroyed a system",
                 _ => "Paused",
             });
             return false;
