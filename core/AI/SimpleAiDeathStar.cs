@@ -6,7 +6,7 @@ using Rebellion.Core.Fleets;
 namespace Rebellion.Core.AI;
 
 // The Empire AI and the Death Star. rule: m5-death-star §6 (Computer opponent), switch SimpleAiParams.UseDeathStar (DEFAULT true).
-// 1 build one at a time, with headroom; 2 never scrap it first (PlanUpkeepCrisis); 3 wait for an escort of at least E; 4 go only to the Rebel
+// 1 build one at a time, with headroom, at the system with the most shipyards; 2 never scrap it first (PlanUpkeepCrisis); 3 wait for an escort of at least E; 4 go only to the Rebel
 // HQ the AI knows (KnownEnemyHq: with fog that is the side's own picture) and fire on the day it stands there with no enemy fleet left;
 // if the HQ moves, go to the newly known one; 5 the Alliance never builds one. Everything here is read through the same helpers as the rest
 // of the AI (fog view when UseFog is on), so it never peeks at the true HQ.
@@ -35,9 +35,10 @@ public sealed partial class SimpleAi
         if (eco.Refined(_side) < row.Cost) return;
         // headroom after adding its upkeep stays at least the margin of the capacity
         if (eco.Free(_side) - _plannedLoad - row.Maintenance < eco.Capacity(_side) * _p.DeathStarHeadroomMarginPercent / 100) return;
-        // the yard closest to the capital (fewest lane steps, ties by system name)
+        // DEFAULT (lead, 2026-10-13, build time per m2-construction: ceil(cost / yards) x 4): the system with the most completed shipyards,
+        // ties: fewest lane steps to the capital, then system name
         var capital = Capital();
-        string? best = null; int bestSteps = int.MaxValue;
+        string? best = null; int bestSteps = int.MaxValue, bestYards = -1;
         foreach (var y in YardSystems(YardFamily.Shipyard)) // ordinal order
         {
             if (!CanOrderAt(y, YardFamily.Shipyard) || Destroyed(y)) continue;
@@ -48,7 +49,8 @@ public sealed partial class SimpleAi
                 if (!path.Ok) continue;
                 steps = path.Systems.Count - 1;
             }
-            if (steps < bestSteps) { bestSteps = steps; best = y; }
+            int yards = YardsDoneAt(y, YardFamily.Shipyard);
+            if (yards > bestYards || (yards == bestYards && steps < bestSteps)) { bestYards = yards; bestSteps = steps; best = y; }
         }
         if (best == null) return;
         long seq = _h.Construction.SubmitBuild(_side, best, YardFamily.Shipyard, cls, 1, null);

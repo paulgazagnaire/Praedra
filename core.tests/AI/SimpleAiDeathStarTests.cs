@@ -51,6 +51,22 @@ public class SimpleAiDeathStarTests
         Assert.Empty(h.Economy.Objects.Where(o => o.Class == Ds && h.Economy.OwnerOf(o) == Side.Alliance));
     }
 
+    // m5-death-star §6.1 (yard choice DEFAULT, lead 2026-10-13): the system with the most completed shipyards.
+    [Fact]
+    public void Builds_AtTheSystemWithTheMostShipyards()
+    {
+        var (m, h) = Match(1, Quiet());
+        h.Economy.SetPools(Side.Empire, 0, 2000);
+        var yards = h.Economy.Objects.Where(o => o.Completed && o.Class == "Orbital Shipyard" && h.Economy.OwnerOf(o) == Side.Empire && o.System != null)
+            .GroupBy(o => o.System!).Select(g => (Sys: g.Key, N: g.Count())).ToList();
+        int max = yards.Max(y => y.N);
+        var best = yards.Where(y => y.N == max).Select(y => y.Sys).ToHashSet();
+        Days(m, 12);
+        var ev = h.Game.Events.OfType<ProjectStarted>().Where(e => e.Class == Ds).ToList();
+        Assert.Single(ev);
+        Assert.Contains(ev[0].System, best);
+    }
+
     // m5-death-star §6.1: the headroom after adding 600 must stay at least 10% of the capacity.
     [Fact]
     public void DoesNotBuild_WhenHeadroomIsShort()
