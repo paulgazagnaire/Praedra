@@ -313,51 +313,82 @@ public sealed class MissionModule
 
     // ================================================================== orders (step 1)
 
+    /// <summary>
+    /// The outcome of a StartMission dry run: the rejection reason (null = the order would be accepted now), and for an accepted order the
+    /// home system, the target system, the path, its ticks and the arrival day A if it were judged in the next Step. Read-only.
+    /// </summary>
+    public sealed record StartCheck(string? Reason, string? Home = null, string? Target = null, IReadOnlyList<string>? Path = null, int Ticks = 0, int ArrivalDay = 0);
+
+    /// <summary>
+    /// Judge a StartMission order as step 1 would if the next Step began now, without changing anything (no draw, no id, no event): the same
+    /// checks in the same order as the handler. For the screens (which kinds a team can do, a target's route and arrival day). rule: §Orders (StartMission).
+    /// </summary>
+    public StartCheck CheckStart(StartMissionOrder o)
+    {
+        var (reason, plan) = Validate(o);
+        if (reason != null) return new StartCheck(reason);
+        var p = plan!.Value;
+        int ticks = p.Trip.Ticks;
+        return new StartCheck(null, p.Home, p.Target, p.Trip.Path.ToList(), ticks, ticks == 0 ? _game.Day + 1 : _game.Day + ticks);
+    }
+
+    private readonly record struct StartPlan(string Home, string Target, int? Facility, (List<string> Path, int Ticks) Trip, bool CharTarget,
+        List<int> Chars, List<int> Sfs, List<int> DChars, List<int> DSfs);
+
     // rule: §Orders (StartMission), rejections in the sheet's order. RuleMissing (ours) comes before the target checks: a decoy while the decoy
     // table is Missing, Recruitment while the recruit pick is Missing; Jedi Training right after WrongSide (the two sheets each name the other as owner).
-    private OrderResult HandleStart(StepContext ctx, StartMissionOrder o)
+    // Shared by the handler and CheckStart: reads only.
+    private (string? Reason, StartPlan? Plan) Validate(StartMissionOrder o)
     {
-        if (!Data.TryGet(o.Kind, out var rec)) return OrderResult.Reject(MissionReject.UnknownKind);
-        if (rec.Hidden) return OrderResult.Reject(MissionReject.HiddenKind);
-        if (!rec.AvailableTo(o.Side)) return OrderResult.Reject(MissionReject.WrongSide);
-        if (o.Kind == MissionKind.JediTraining) return OrderResult.Reject(MissionReject.RuleMissing);
+        if (!Data.TryGet(o.Kind, out var rec)) return (MissionReject.UnknownKind, null);
+        if (rec.Hidden) return (MissionReject.HiddenKind, null);
+        if (!rec.AvailableTo(o.Side)) return (MissionReject.WrongSide, null);
+        if (o.Kind == MissionKind.JediTraining) return (MissionReject.RuleMissing, null);
         var chars = o.Characters ?? new List<int>(); var sfs = o.SpecialForces ?? new List<int>();
         var dSfs = o.Decoys ?? new List<int>(); var dChars = o.DecoyCharacters ?? new List<int>();
-        if (CheckMembers(o.Side, chars, sfs, dChars, dSfs, out var home) is { } bad) return OrderResult.Reject(bad);
-        foreach (var id in chars) if (!CanDo(_ch.Get(id)!, o.Kind)) return OrderResult.Reject(MissionReject.NotAbleToDo);
+        if (CheckMembers(o.Side, chars, sfs, dChars, dSfs, out var home) is { } bad) return (bad, null);
+        foreach (var id in chars) if (!CanDo(_ch.Get(id)!, o.Kind)) return (MissionReject.NotAbleToDo, null);
         foreach (var id in sfs)
             if (_troops.Data.SpecialForce(E.Objects[id].Class) is not { } k || (k.MissionBit & rec.SpecialForceMask) == 0)
-                return OrderResult.Reject(MissionReject.NotEligibleSpecialForce);
+                return (MissionReject.NotEligibleSpecialForce, null);
         bool anyDecoy = dSfs.Count + dChars.Count > 0;
-        if (anyDecoy && !rec.Foilable) return OrderResult.Reject(MissionReject.BadDecoy);
-        if (dChars.Count > 0 && Params.DecoysFromSpecialForcesOnly) return OrderResult.Reject(MissionReject.BadDecoy);
+        if (anyDecoy && !rec.Foilable) return (MissionReject.BadDecoy, null);
+        if (dChars.Count > 0 && Params.DecoysFromSpecialForcesOnly) return (MissionReject.BadDecoy, null);
         if ((Params.MaxTeamMembers > 0 && chars.Count + sfs.Count > Params.MaxTeamMembers) || (Params.MaxDecoys > 0 && dSfs.Count + dChars.Count > Params.MaxDecoys))
-            return OrderResult.Reject(MissionReject.TooManyMembers);
-        if (anyDecoy && Data.DecoyTable == null) return OrderResult.Reject(MissionReject.RuleMissing);
-        if (o.Kind == MissionKind.Recruitment && Recruit == null) return OrderResult.Reject(MissionReject.RuleMissing);
+            return (MissionReject.TooManyMembers, null);
+        if (anyDecoy && Data.DecoyTable == null) return (MissionReject.RuleMissing, null);
+        if (o.Kind == MissionKind.Recruitment && Recruit == null) return (MissionReject.RuleMissing, null);
 
         bool charTarget = o.Kind is MissionKind.Rescue or MissionKind.Abduction or MissionKind.Assassination;
-        if (TargetReason(o.Kind, o.Side, o.TargetSystem, o.TargetCharacter, null) is { } tr) return OrderResult.Reject(tr);
+        if (TargetReason(o.Kind, o.Side, o.TargetSystem, o.TargetCharacter, null) is { } tr) return (tr, null);
         string target = charTarget ? _ch.LocationOf(_ch.Get(o.TargetCharacter!.Value)!)! : _fleets.Galaxy.Get(o.TargetSystem!).Name;
         int? facility = null;
         if (o.Kind == MissionKind.Sabotage && Params.SabotageTargetMode == SabotageTargetMode.Chosen)
         {
             if (o.Facility is not int fid || !E.Objects.TryGetValue(fid, out var fo) || fo.Category != ObjectCategory.Facility || !fo.Completed || fo.System != target)
-                return OrderResult.Reject(MissionReject.BadTarget);
+                return (MissionReject.BadTarget, null);
             facility = fid;
         }
         var path = Trip(home!, target, GroupSpeed(chars.Concat(dChars), sfs.Count + dSfs.Count));
-        if (path == null) return OrderResult.Reject(RejectReason.Unreachable);
+        if (path == null) return (RejectReason.Unreachable, null);
+        return (null, new StartPlan(home!, target, facility, path.Value, charTarget, chars, sfs, dChars, dSfs));
+    }
+
+    private OrderResult HandleStart(StepContext ctx, StartMissionOrder o)
+    {
+        var (reason, plan) = Validate(o);
+        if (reason != null) return OrderResult.Reject(reason);
+        var (home, target, facility, path, charTarget, chars, sfs, dChars, dSfs) = plan!.Value;
 
         var m = new MissionGroup
         {
             Id = ObjectRegistry.NextId(E), Kind = o.Kind, Side = o.Side,
             Characters = chars.OrderBy(x => x).ToList(), SpecialForces = sfs.OrderBy(x => x).ToList(),
             DecoyCharacters = dChars.OrderBy(x => x).ToList(), DecoySpecialForces = dSfs.OrderBy(x => x).ToList(),
-            Home = home!, Target = target, TargetCharacter = charTarget ? o.TargetCharacter : null, Facility = facility,
+            Home = home, Target = target, TargetCharacter = charTarget ? o.TargetCharacter : null, Facility = facility,
             Phase = MissionPhase.Outbound,
         };
-        SetTrip(m, path.Value, ctx.Day);
+        SetTrip(m, path, ctx.Day);
         S.Missions[m.Id] = m;
         Started(ctx, m);
         return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
