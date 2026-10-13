@@ -28,12 +28,13 @@ public class SimpleAiAgentsTests
     private static int Sent(AiMatch m, string key) => m.Sent.GetValueOrDefault(key);
 
     // The switch: DEFAULT on; off gives the AI of before byte for byte. The hash is the one main (before this work package) prints for
-    // `sim aivai --fog --seed 1 --days 1000`.
+    // `sim aivai --fog --seed 1 --days 1000`. The chase fix (m6/ai-chase, SimpleAiChaseTests) came later and is switched off here too.
     [Fact]
     public void Switch_DefaultsOn_AndOffIsTheOldAi()
     {
         Assert.True(new SimpleAiParams().UseCharactersAndMissions);
-        var (m, h) = Match(1, new SimpleAiParams { UseFog = true, UseCharactersAndMissions = false });
+        var (m, h) = Match(1, new SimpleAiParams { UseFog = true, UseCharactersAndMissions = false,
+            RunnerRetreats = 0, RetreatCountsAsLoss = false, AvoidBlockedPaths = false, WinRushDefenders = -1 });
         m.RunTo(1000);
         Assert.DoesNotContain(m.Sent.Keys, k => k.Contains("Mission", StringComparison.Ordinal) || k.Contains("Character", StringComparison.Ordinal) || k.Contains("General", StringComparison.Ordinal));
         Assert.Equal("e8fb3f7545dd177b99cb98ce2a16385ae9799e2b837a01d83182f9f2192bc779", h.StateHash());
