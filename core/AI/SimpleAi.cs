@@ -431,6 +431,7 @@ public sealed partial class SimpleAi
         if (_view != null) PlanScoutBuild();
         PlanGarrison();
         PlanInvasionRegiments();
+        PlanDeathStarBuild(); // before the ships: it takes its yard and its budget first (m5-death-star §6.1)
         PlanShips();
     }
 
@@ -655,6 +656,7 @@ public sealed partial class SimpleAi
         {
             if (!o.Completed || eco.OwnerOf(o) != _side || o.Category == ObjectCategory.Facility || o.Category == ObjectCategory.SpecialForce) continue;
             int m = Maint(o.Class);
+            bool keep = _p.UseDeathStar && IsDeathStarShip(o); // rule: m5-death-star §6.2: scrapped last, after everything else
             if (m <= 0) continue;
             double use;
             if (o.Category == ObjectCategory.Regiment)
@@ -671,6 +673,7 @@ public sealed partial class SimpleAi
                 _h.Fleets.ShipClasses.TryGetValue(o.Class, out var sc);
                 double v = ClassStrength(o.Class) + (sc != null ? 6 * sc.TroopCapacity + fighterStr * sc.FighterCapacity * _p.FighterTrustPercent / 100 : 0);
                 use = v * 1000 / m;
+                if (keep) use += 1e12;
             }
             cands.Add((use, o.Id, m));
         }
@@ -899,11 +902,15 @@ public sealed partial class SimpleAi
         var idle = S.Fleets.Values.Where(f => f.Side == _side && f.Transit == null && f.At != null && f.Ships.Count > 0 && !Pending(f)).ToList();
         if (_view != null) { var scouts = PlanScouts(idle); idle = idle.Where(f => !scouts.Contains(f.Id)).ToList(); } // fog: scouts go their own way
         var cap = GuardSystem();
+        var dsFleets = PrepareDeathStar(idle);
         foreach (var g in idle.GroupBy(f => f.At!, StringComparer.Ordinal).OrderBy(g => g.Key, StringComparer.Ordinal))
         {
             var list = g.OrderBy(f => f.Id).ToList();
+            var dsHere = list.Where(f => dsFleets.Contains(f.Id)).ToList();
+            if (dsHere.Count > 0) list = list.Where(f => !dsFleets.Contains(f.Id)).ToList();
             if (!Held(g.Key))
             {
+                foreach (var d in dsHere) DeathStarAway(d);
                 foreach (var f in list) DecideAtTarget(f);
                 continue;
             }
@@ -918,6 +925,8 @@ public sealed partial class SimpleAi
                 }
                 for (int i = 1; i < home.Count; i++) Merge(home[i], home[0]);
             }
+            if (dsHere.Count > 0) { strike = DeathStarHome(dsHere, strike); }
+            else strike = DeathStarCall(g.Key, strike);
             if (strike.Count == 0) continue;
             var leader = strike[0];
             for (int i = 1; i < strike.Count; i++) Merge(strike[i], leader);
