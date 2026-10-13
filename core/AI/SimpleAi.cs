@@ -1106,6 +1106,7 @@ public sealed partial class SimpleAi
         }
         int aboard = _h.Troops.RegimentsAboard(f).Count;
         int d = DefendersAt(at);
+        bool canShell = _h.Bombardment.Power(f) > 0;
         if (AssaultForbiddenSeen(at)) { Leave(f); return; } // rule: m3-planetary-defenses (assault forbidden, 2+ shield generators)
         if (_view != null && !SlotsSeen(at).Populated) { Leave(f); return; } // fog: the target was picked unseen; an empty world cannot be assaulted
         // rule: m3-assault §Order and preconditions: a fleet has one order at a time, so shell one day and land the next.
@@ -1118,7 +1119,11 @@ public sealed partial class SimpleAi
             Note(seq, "Bombard", $"fleet {f.Id} shells {at}");
             return;
         }
-        if (aboard >= 1 && aboard >= Need(d))
+        // rule: ai tuning (m6 stall fix). PickTarget chose this system on Need(d / 2) (the shelling halves the defenders); the landing here asked for
+        // Need(d) again. With fog the believed d never falls without own kills (the garrison seen is a guess or stale; an empty or small garrison
+        // gives none), so the fleet shelled four times, left, and came back again and again, never landing. Shelled and armed: ask what the pick asked.
+        bool shelled = _p.ShelledLandingNeed && canShell && RecentBombardments(at) > 0;
+        if (aboard >= 1 && aboard >= Need(shelled ? d / 2 : d))
         {
             long seq = _h.Assault.SubmitAssault(_side, f.Id, at);
             Note(seq, "Assault", $"fleet {f.Id} lands on {at}");

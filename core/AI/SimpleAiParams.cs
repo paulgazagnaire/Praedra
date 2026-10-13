@@ -105,6 +105,11 @@ public sealed record SimpleAiParams
     public bool AvoidBlockedPaths { get; init; } = true;
     /// <summary>A strike pile of WinStrikeStrength fetches the regiments for the game-winning system first when at most this many regiments are believed there (-1 = never). DEFAULT.</summary>
     public int WinRushDefenders { get; init; } = 2;
+    /// <summary>
+    /// A fleet that has shelled a target lands when it carries what PickTarget asked (Need of half the believed defenders), not the full Need again.
+    /// Off = the AI of before (it shelled and left forever when the believed garrison stayed at the unseen guess). DEFAULT true (m6 stall fix).
+    /// </summary>
+    public bool ShelledLandingNeed { get; init; } = true;
     /// <summary>A fleet whose ships average below this hull percent stays (or goes) to a shipyard instead of launching. DEFAULT.</summary>
     public int RepairBelowPercent { get; init; } = 70;
 
