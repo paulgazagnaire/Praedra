@@ -108,6 +108,7 @@ public partial class Main
         if (side == Side.Empire) PlaytestEmpireHqUnknown(gs);
         else PlaytestMoveHq(gs);
         PlaytestCharacters(gs);
+        PlaytestMissions(gs);
 
         // ---------------------------------------------------------------- select the troop fleet, move it to where the regiments are
         var eco = s.Host.Economy; var fm = s.Host.Fleets;
@@ -264,6 +265,8 @@ public partial class Main
             Expect(gs.LogRows >= 1, "All filter back");
         }
         else Expect(false, "got a battle by sending a fleet onto an enemy fleet");
+
+        FinishMissions();
 
         // ---------------------------------------------------------------- build a ship and a facility
         string yardSys = eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.Completed && o.System != null && o.Class.Contains("Shipyard") && s.OwnerOf(o.System) == me)
