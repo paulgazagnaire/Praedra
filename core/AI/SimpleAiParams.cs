@@ -316,4 +316,18 @@ public sealed record SimpleAiParams
     public IReadOnlyList<string> AllianceWarships { get; init; } = new[] { "Corellian Corvette", "Corellian Gunship", "Nebulon-B Frigate" };
     public IReadOnlyList<string> EmpireHeavy { get; init; } = new[] { "Imperial Star Destroyer" };
     public IReadOnlyList<string> AllianceHeavy { get; init; } = new[] { "Mon Calamari Cruiser" };
+
+    // ---- the Death Star. rule: m5-death-star §6 (Computer opponent)
+    /// <summary>
+    /// The Empire AI builds, keeps, escorts and fires the Death Star at the Rebel HQ it knows. DEFAULT true (m5-death-star §6). False = the AI
+    /// of before: it never builds one and treats a Death Star it happens to own as any ship.
+    /// </summary>
+    public bool UseDeathStar { get; init; } = true;
+    /// <summary>A Death Star is queued only when the maintenance headroom left after adding its upkeep is at least this percent of the capacity. DEFAULT 10 (m5-death-star §6.1).</summary>
+    public int DeathStarHeadroomMarginPercent { get; init; } = 10;
+    /// <summary>
+    /// Strength (FleetModule.StrengthOf scale) of the escort that must stand with the Death Star before it leaves. Null = the economic blockade
+    /// threshold E from the blockade data (3 Victory Star Destroyers). DEFAULT null (m5-death-star §6.3).
+    /// </summary>
+    public double? DeathStarEscortStrength { get; init; }
 }
