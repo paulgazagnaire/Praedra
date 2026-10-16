@@ -10,8 +10,9 @@ namespace Rebellion.Core.Tests.Setup;
 // tests check the day-one CSVs, the DEFAULT forces table and the HQ-Only victory.
 public class NewGameTests
 {
+    // These tests check the fixed day-one CSVs plus fixed-owners.csv, so they run in DealMode.File (the Anchored deal is in AnchoredDealTests).
     private static GameHost Make(StartPreset p, int seed = 1, GameSettings? s = null) =>
-        NewGame.Create(GameData.Default, new NewGameOptions { Seed = seed, Preset = p, Settings = s });
+        NewGame.Create(GameData.Default, new NewGameOptions { Seed = seed, Preset = p, Settings = (s ?? new GameSettings()) with { DealMode = DealMode.File } });
 
     private static int Held(GameHost h, Side s) => h.Game.State.SystemOwners.Count(kv => kv.Value == s);
 

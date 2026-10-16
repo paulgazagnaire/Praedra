@@ -15,6 +15,12 @@ namespace Rebellion.Core.Setup;
 /// </summary>
 public sealed record GameSettings
 {
+    // ---- setup. rule: m5-setup-and-victory §P1 Deal (DealMode)
+    /// <summary>Anchored (DEFAULT, Decided Paul 2026-10-16, m5-setup-and-victory §Mode Anchored) or File (the five fixed day-one CSVs plus fixed-owners.csv, the build before that date).</summary>
+    public DealMode DealMode { get; init; } = DealMode.Anchored;
+    /// <summary>Numbers and switches of the Anchored deal. Null = the sheet's DEFAULTs.</summary>
+    public DealParams? Deal { get; init; }
+
     // ---- fleets. rule: m1-forced-stop-and-blockade §The alternative trigger, as a switch
     public ForcedStopTrigger ForcedStopTrigger { get; init; } = ForcedStopTrigger.PaulRule;
 

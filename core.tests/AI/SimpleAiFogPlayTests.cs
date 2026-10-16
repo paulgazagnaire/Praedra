@@ -20,7 +20,7 @@ public class SimpleAiFogPlayTests
 
     private static (AiMatch M, GameHost H) Match(int seed, Side? passive = null, Action<GameHost>? setup = null)
     {
-        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = OldVictory.Settings });
+        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory });
         setup?.Invoke(h);
         return (new AiMatch(h, Fog, Fog, passive), h);
     }
@@ -139,7 +139,7 @@ public class SimpleAiFogPlayTests
     [Fact]
     public void DefenderEstimate_UsesTheLastSightingWithAStalenessMargin()
     {
-        var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA, Settings = OldVictory.Settings });
+        var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA, Settings = Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory });
         var ai = new SimpleAi(h, Side.Alliance, Fog);
         // an Imperial system the Alliance's picture shows Imperial, ground never seen (a Core system: owner reported, nothing else)
         string other = h.Data.Galaxy.Systems.Select(x => x.Name).First(n => n != "Coruscant" &&

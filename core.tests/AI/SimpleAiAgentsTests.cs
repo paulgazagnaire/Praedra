@@ -21,7 +21,7 @@ public class SimpleAiAgentsTests
 
     private static (AiMatch M, GameHost H) Match(int seed, SimpleAiParams p, Side? passive = null)
     {
-        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = OldVictory.Settings });
+        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory });
         return (new AiMatch(h, p, p, passive), h);
     }
 
