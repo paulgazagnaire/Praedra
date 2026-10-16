@@ -195,6 +195,9 @@ public sealed class EconomyModule
     /// <summary>raw_used: installed mines plus mines in delivery or queued for the system.</summary>
     public int RawUsed(string system) => E.Objects.Values.Count(o => IsClass(o, FacilityKind.Mine) && o.System == system);
 
+    /// <summary>Facilities of <paramref name="kind"/> on the system: finished, queued or in delivery.</summary>
+    public int OfKindAt(string system, FacilityKind kind) => E.Objects.Values.Count(o => IsClass(o, kind) && o.System == system);
+
     public int FreeEnergy(string system) => SlotsOf(system).Energy - EnergyUsed(system);
     public int FreeRaw(string system) => EffectiveRaw(system) - RawUsed(system);
 
@@ -204,6 +207,8 @@ public sealed class EconomyModule
     /// </summary>
     public string? CheckPlace(string system, FacilityKind kind, int count = 1)
     {
+        // rule: m5-fog-and-hq §N4 (economy/15 §2): one per planet; counts finished, queued and in-delivery stations.
+        if (FacilityKinds.OnePerPlanet(kind) && (count > 1 || OfKindAt(system, kind) > 0)) return "OnePerPlanet";
         if (FreeEnergy(system) < count) return "NoSlot";
         if (kind == FacilityKind.Mine && FreeRaw(system) < count) return "NoSlot";
         return null;

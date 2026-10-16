@@ -477,7 +477,7 @@ public partial class GameScreen
                 int days = (int)(((long)r.Cost * p.StandardCycleDays * p.AdvancedCycleDays + perDay - 1) / Math.Max(1, perDay));
                 string hint = "";
                 if (!cons.IsResearched(Me, r.Name)) hint = "  (not researched)";
-                else if (r.Category == ObjectCategory.Facility && FacilityKinds.TryParse(r.Name, out var kind) && eco.CheckPlace(system, kind) != null) hint = "  (no free slot)";
+                else if (r.Category == ObjectCategory.Facility && FacilityKinds.TryParse(r.Name, out var kind) && eco.CheckPlace(system, kind) is { } why) hint = why == "OnePerPlanet" ? "  (one per planet: this planet already has one)" : "  (no free slot)";
                 else if (r.Cost > refined) hint = "  (waits for refined)";
                 if (r.Name == Rebellion.Core.DeathStar.DeathStarModule.ShipClass && S.HasOwnDeathStarAt(system)) hint = "  (one per system: this system already has one)";
                 var row = r;

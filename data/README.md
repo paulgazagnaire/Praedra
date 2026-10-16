@@ -44,3 +44,5 @@ Missions (m5-missions):
 - `interim/mission-numbers.csv` holds the sheet's named numbers (die size, detection constant, officer percentages, diplomacy and subdue ranges, incite support, Han's mission speed), each with its source tag.
 - `design/mission-foilable.csv` says which kinds a detection can foil (DEFAULT per the sheet).
 - `design/assassination-key-targets.csv` lists the key characters (Luke 578, Mon Mothma 576, Vader 641, Palpatine 640) and their success cap in percent for Assassination and Abduction (m5-missions section 6a; Decided Paul 2026-10-16, numbers Proposal). Tune the caps here, no code change.
+
+Sensor Station (m5-fog-and-hq N4, economy/15 §2; designed, not in the 1998 game; Paul 2026-10-16): one row was appended by hand to `interim/unit-and-facility-costs.csv` (`facility,7,Sensor Station,1,1,10,5,0,0`: cost 10, maintenance 5, research order 0), to `interim/research-unlocks.csv` (same class, level 0, start yes/yes) and to `interim/bombardment-defense.csv` (DEFAULT 5, as the other facilities). These three rows are not in the spec CSVs they were copied from: the importer must keep them when it replaces `interim/`.

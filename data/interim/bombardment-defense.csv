@@ -17,3 +17,4 @@ facility,Construction Yard,5,DEFAULT (MANFACSD and PROFACSD field not in the spe
 facility,Advanced Shipyard,5,DEFAULT (MANFACSD and PROFACSD field not in the specs: m3-bombardment Resolution 4)
 facility,Advanced Training Facility,5,DEFAULT (MANFACSD and PROFACSD field not in the specs: m3-bombardment Resolution 4)
 facility,Advanced Construction Yard,5,DEFAULT (MANFACSD and PROFACSD field not in the specs: m3-bombardment Resolution 4)
+facility,Sensor Station,5,DEFAULT (same as the other facilities; the Sensor Station is not in m3-bombardment: added with m5-fog-and-hq N4 2026-10-16)

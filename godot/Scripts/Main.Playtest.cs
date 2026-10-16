@@ -309,6 +309,7 @@ public partial class Main
             gs.SelectSystem(facSys); gs.PlayRefresh();
             if (!gs.Has("Refinery")) { gs.Click("v  Facilities"); gs.Click(">  Facilities"); gs.PlayRefresh(); }
             Expect(gs.Has("Refinery"), "Refinery is offered at " + facSys);
+            Expect(gs.ButtonTexts().Any(t => t.StartsWith("Sensor Station   ", StringComparison.Ordinal)), "the Sensor Station is in the Facilities build list (generated from the facility list)");
             int before = s.Messages.Count;
             Expect(gs.Click("Refinery"), "click Refinery to build it");
             gs.PlayDay();
@@ -338,6 +339,13 @@ public partial class Main
 
         PlaytestDeathStar(gs);
 
+        // Sensor Stations (m5-fog-and-hq N4): finished stations on up to four frontier systems of the player (setup, test only); over the run below
+        // the player must get a plain-words "Sensors:" message for every SensorReport its side was given.
+        var frontier = gs.G.Systems.Where(x => s.OwnerOf(x.Name) == me && s.Host.Economy.FreeEnergy(x.Name) > 0 && gs.G.NeighboursOf(x.Index).Any(nb => s.OwnerOf(gs.G.Systems[nb.System].Name) != me))
+            .Select(x => x.Name).OrderBy(x => x, StringComparer.Ordinal).Take(4).ToList();
+        foreach (var f in frontier) s.Host.Economy.AddFacility(f, Rebellion.Core.Economy.FacilityKind.SensorStation);
+        Expect(frontier.Count > 0, $"{frontier.Count} frontier systems got a Sensor Station for the run");
+
         // ---------------------------------------------------------------- run to day 400 against the AI
         var sw = System.Diagnostics.Stopwatch.StartNew();
         int pauses = 0;
@@ -358,6 +366,11 @@ public partial class Main
         var newMsgs = s.Messages.Skip(msgStart).ToList();
         Expect(!hiddenCaptures.Any(c => newMsgs.Any(m => m.Day == c.Day && m.Text.Contains("captured " + c.System))),
             $"no message about the {hiddenCaptures.Count} captures the player's side could not see");
+        var sensorReports = runEvents.Where(x => x.Ev is Rebellion.Core.Fog.SensorReport r && (x.Aud & myBit) != 0).Select(x => (Rebellion.Core.Fog.SensorReport)x.Ev).ToList();
+        Expect(sensorReports.All(r => r.Viewer == me), "the core gave Sensor reports only to the station owner");
+        Expect(sensorReports.Count > 0, $"the Sensor Stations reported enemy arrivals during the run ({sensorReports.Count})");
+        Expect(sensorReports.All(r => newMsgs.Any(m => m.Day == r.Day && m.Text.StartsWith("Sensors: ", StringComparison.Ordinal) && m.Text.Contains("fleet arrived at " + r.System))),
+            "every Sensor report has a plain-words message: " + newMsgs.FirstOrDefault(m => m.Text.StartsWith("Sensors: ", StringComparison.Ordinal))?.Text);
         GD.Print($"ran to day {s.Game.Day} in {sw.ElapsedMilliseconds} ms, {pauses} auto-pauses, {s.Messages.Count} messages, winner {(s.Winner?.ToString() ?? "none")}");
         Expect(s.Game.Day >= 400 || s.Winner != null, "reached day 400 (or someone won)");
         var owners = s.Game.State.SystemOwners.GroupBy(kv => kv.Value).ToDictionary(g => g.Key, g => g.Count());

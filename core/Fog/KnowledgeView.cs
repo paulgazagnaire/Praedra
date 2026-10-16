@@ -59,6 +59,8 @@ public sealed class KnowledgeView
     public KnownHqInfo? KnownHq => _fog.KnownHq(Side);
     public IReadOnlyList<HqSectorClue> HqSectorClues => _fog.Clues(Side);
     public IReadOnlyList<Sighting> Sightings(int sinceDay = 0) => _fog.Sightings(Side, sinceDay);
+    /// <summary>The side's Sensor Station reports from a day on (its own sighting-log entries of kind SensorArrival). rule: §N4, §N8.</summary>
+    public IReadOnlyList<Sighting> SensorReports(int sinceDay = 0) => _fog.Sightings(Side, sinceDay).Where(s => s.Kind == SightingKind.SensorArrival).ToList();
     /// <summary>The events this side may see (§N8 audience), in order.</summary>
     public IReadOnlyList<GameEvent> Events => _fog.EventsFor(Side);
     public string Hash() => _fog.KnowledgeHash(Side);

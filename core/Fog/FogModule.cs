@@ -69,6 +69,8 @@ public sealed class FogModule
         hq ??= new HqParams();
         if (hq.LostDestination == HqLostDestination.Return)
             throw new NotSupportedException("HqLostDestination.Return is a switch value only; m5-fog-and-hq §F6 says it is not built in the first pass.");
+        if ((p ?? new FogParams()).AdvancedSensorEnabled)
+            throw new NotSupportedException("FogParams.AdvancedSensorEnabled = true is not built (m5-fog-and-hq §N4: the Advanced tier stays off; economy/15 open question 2).");
         if (!hq.IgnoresForcedStop)
             throw new NotSupportedException("HqParams.IgnoresForcedStop = false is not built (m5-fog-and-hq §F6: the HQ is not a fleet).");
         var m = new FogModule(game, galaxy, fleets, eco, support, p ?? new FogParams(), hq);
@@ -428,9 +430,13 @@ public sealed class FogModule
         bool passing = Params.PassingExplores;
         var truth = new Truth(this);
         var placed = new SortedDictionary<string, List<Fleet>>(StringComparer.Ordinal);
+        // Every fleet placed at a system this slot, passing ones too (a sensor sees them whatever PassingFleetsExplore says). rule: §N4 S1.
+        var arrivals = new SortedDictionary<string, List<Fleet>>(StringComparer.Ordinal);
         foreach (var f in State.Fleets.Values) // id order
         {
             if (f.At == null || !_inLane.Contains(f.Id)) continue;
+            if (!arrivals.TryGetValue(f.At, out var al)) arrivals[f.At] = al = new List<Fleet>();
+            al.Add(f);
             if (f.Transit != null && !passing) continue;
             if (!placed.TryGetValue(f.At, out var l)) placed[f.At] = l = new List<Fleet>();
             l.Add(f);
@@ -456,6 +462,71 @@ public sealed class FogModule
                     ctx.Emit((i, _) => new FleetSighted(i, stamp, side, sys, fs, detail));
                 }
             }
+        SensorReports(ctx, stamp, arrivals);
+    }
+
+    // rule: §N4 (S1, S2), §F8 slot 3.1: Sensor Station reports, after the fleet sightings; systems by name, side Empire before Alliance.
+    // A report goes to the owner of a finished station at S for an other-side fleet placed at Y with 1 <= hops(S, Y) <= SensorRangeHops
+    // (never the station's own system: that is live access). Stations of one side that see the same arrival merge into one report per
+    // (side, system, day); the size class is the total of capital ships of that side's fleets placed at Y (a squadron-only fleet counts 1).
+    private void SensorReports(StepContext ctx, int stamp, SortedDictionary<string, List<Fleet>> arrivals)
+    {
+        if (!Params.SensorsWork || arrivals.Count == 0) return;
+        foreach (var owner in Sides)
+        {
+            var reach = SensorReach(owner);
+            if (reach.Count == 0) continue;
+            var know = F.Of(owner);
+            foreach (var (sys, here) in arrivals)
+            {
+                if (!reach.Contains(sys)) continue;
+                foreach (var fleetSide in Sides)
+                {
+                    if (fleetSide == owner) continue; // rule: §N4 (no report about a side's own fleets)
+                    int total = 0;
+                    foreach (var f in here)
+                        if (f.Side == fleetSide) total += f.Ships.Count > 0 ? f.Ships.Count : f.Squadrons.Count > 0 ? 1 : 0;
+                    if (total == 0) continue;
+                    var size = total <= Params.SensorFewMax ? SensorSize.Few : total <= Params.SensorSquadronMax ? SensorSize.Squadron : SensorSize.Large;
+                    know.Sightings.Add(new Sighting { Day = stamp, System = sys, Kind = SightingKind.SensorArrival, Side = fleetSide, Size = size });
+                    ctx.Emit((i, _) => new SensorReport(i, stamp, owner, sys, fleetSide, size));
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// The systems at 1 to SensorRangeHops lanes (breadth-first by lane count; lane length and tier ignored) from any finished Sensor Station
+    /// the side owns, on a system it holds. Lookup only, never iterated. rule: §N4 S1.
+    /// </summary>
+    private HashSet<string> SensorReach(Side owner)
+    {
+        var reach = new HashSet<string>(StringComparer.Ordinal);
+        var stations = new SortedSet<string>(StringComparer.Ordinal);
+        string cls = FacilityKinds.ClassName(FacilityKind.SensorStation);
+        foreach (var o in State.Economy.Objects.Values)
+            if (o.Category == ObjectCategory.Facility && o.Completed && o.Class == cls && o.System != null
+                && _eco.OwnerOf(o) == owner && !_eco.IsDestroyed(o.System)) // blockade and uprising do not matter: sensors are passive (§N4)
+                stations.Add(o.System);
+        foreach (var s in stations)
+        {
+            if (!_galaxy.TryFindSystem(s, out int start)) continue;
+            var depth = new Dictionary<int, int> { [start] = 0 };
+            var q = new Queue<int>();
+            q.Enqueue(start);
+            while (q.Count > 0)
+            {
+                int c = q.Dequeue(); int d = depth[c];
+                if (d >= Params.SensorRangeHops) continue;
+                foreach (var nb in _galaxy.NeighboursOf(c))
+                {
+                    if (depth.ContainsKey(nb.System)) continue;
+                    depth[nb.System] = d + 1; q.Enqueue(nb.System);
+                    reach.Add(_galaxy.Systems[nb.System].Name);
+                }
+            }
+        }
+        return reach;
     }
 
     // ================================================================== slot 5.4: live refresh
@@ -595,6 +666,7 @@ public sealed class FogModule
             case SystemExplored x: return Bit(x.Viewer);
             case OwnerChangeSeen x: return Bit(x.Viewer);
             case FleetSighted x: return Bit(x.Viewer);
+            case SensorReport x: return Bit(x.Viewer); // rule: §N4 S2 (for the station's owner only)
             case HqSectorClueGiven x: return Bit(x.Viewer);
             case AgentDetected x: return Bit(x.Viewer);
             case OrderAccepted or OrderRejected: return order != null ? Bit(order.Side) : Both;

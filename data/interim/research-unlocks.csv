@@ -70,3 +70,4 @@ research_family,kind,dat_id,name,alliance,empire,cost,level,rdiff,start_alliance
 0x2a facility,defense,4,Death Star Shield,0,1,25,3,24,n/a,locked
 0x2a facility,defense,5,LNR Series II,1,1,10,4,40,locked,locked
 0x2a facility,defense,6,GenCore Level II,1,1,20,6,40,locked,locked
+0x2a facility,facility,7,Sensor Station,1,1,10,0,0,yes,yes

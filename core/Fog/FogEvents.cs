@@ -30,6 +30,12 @@ public sealed record OwnerChangeSeen(int Index, int Day, Side Viewer, string Sys
 /// <summary>A side saw one fleet of the other side at a system (class counts, no fleet id). Audience: the viewer. rule: §F8 slot 3.1, §N3.</summary>
 public sealed record FleetSighted(int Index, int Day, Side Viewer, string System, Side FleetSide, string Detail) : GameEvent(Index, Day, nameof(FleetSighted));
 
+/// <summary>
+/// A Sensor Station of the Viewer saw a fleet of FleetSide arrive (or pass, or be stopped) one lane from it: system, side and size class
+/// only, merged per (side, system, day). Audience: the Viewer (the station's owner). rule: §N4 S2, §F8 slot 3.1.
+/// </summary>
+public sealed record SensorReport(int Index, int Day, Side Viewer, string System, Side FleetSide, SensorSize Size) : GameEvent(Index, Day, nameof(SensorReport));
+
 /// <summary>A side received an "HQ is in this sector" clue. Audience: that side. rule: §N6 (SectorSuspicion).</summary>
 public sealed record HqSectorClueGiven(int Index, int Day, Side Viewer, string Sector) : GameEvent(Index, Day, nameof(HqSectorClueGiven));
 

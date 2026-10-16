@@ -18,8 +18,8 @@ public enum SectorSuspicion { Off, OnEspionage }
 /// <summary>
 /// Every switch and number of the fog-of-war and Rebel HQ sheet, each with the sheet's DEFAULT. Configuration, not saved (pass it again on
 /// load through <see cref="Setup.GameSettings.Fog"/>). rule: m5-fog-and-hq §Defaults for undecided items; CLAUDE.md hard rule 7.
-/// Not built (the sheet says so, or the data does not exist yet): informants (InformantsEnabled false), intel noise (off), the Sensor Station
-/// (no facility class in the economy data yet; economy/15), HQ activity leaks and the plausible-HQ list.
+/// Not built (the sheet says so, or the data does not exist yet): informants (InformantsEnabled false), intel noise (off), the Advanced
+/// Sensor Station (AdvancedSensorEnabled false), HQ activity leaks and the plausible-HQ list.
 /// </summary>
 public sealed record FogParams
 {
@@ -59,10 +59,23 @@ public sealed record FogParams
     /// <summary>Other targets: GNPRTB 6177 = 0, 6176 = 1.</summary>
     public int EspionageOtherSpread { get; init; } = 0;
     public int EspionageOtherBase { get; init; } = 1;
+    // ---- Sensor Station. rule: m5-fog-and-hq §N4 (economy/15)
+    /// <summary>Range of a Sensor Station in lane hops. Decided by Paul ("range 1 hop"), economy/15. rule: §N4 S1.</summary>
+    public int SensorRangeHops { get; init; } = 1;
+    /// <summary>The Advanced Sensor Station (range 2). DEFAULT false (economy/15 open question 2); not built: true is refused at attach. rule: §N4.</summary>
+    public bool AdvancedSensorEnabled { get; init; }
+    /// <summary>Largest capital-ship total reported as Few (1 to FewMax). Proposal (mine), §N4 size class.</summary>
+    public int SensorFewMax { get; init; } = 3;
+    /// <summary>Largest total reported as Squadron (FewMax + 1 to SquadronMax); above is Large. Proposal (mine), §N4 size class.</summary>
+    public int SensorSquadronMax { get; init; } = 9;
+
     /// <summary>The capital for the espionage "rich" test (planets file name).</summary>
     public string CapitalSystem { get; init; } = "Coruscant";
 
     /// <summary>True when the passing-fleet rule is on for the ruleset in force.</summary>
+    /// <summary>The Sensor Station effect is on in New and off in Classic. rule: §Rule (New) intro.</summary>
+    public bool SensorsWork => Ruleset == FogRuleset.New;
+
     public bool PassingExplores => Ruleset == FogRuleset.New && PassingFleetsExplore;
 }
 
