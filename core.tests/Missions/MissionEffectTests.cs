@@ -258,7 +258,7 @@ public class MissionEffectTests
         Assert.Single(w.Events<CharacterInjured>());
     }
 
-    // Standard victory needs a capture: an Abduction makes Luke "captured" for the victory module (StandardVictory stays off by default).
+    // Standard victory needs a capture: an Abduction makes Luke "captured" for the victory module (StandardVictory is on by default since 2026-10-16).
     [Fact]
     public void AbductionMakesAKeyCharacterCaptured()
     {
@@ -269,7 +269,7 @@ public class MissionEffectTests
         w.Game.Step();
         w.RunIteration(w.LastMission);
         Assert.True(w.Ch.IsCaptured(Luke));
-        Assert.False(w.Host.Victory.Rules.StandardVictory); // the lead's DEFAULT stays off (decision pending)
+        Assert.True(w.Host.Victory.Rules.StandardVictory); // re-pinned 2026-10-16: standard victory default
     }
 
     // m5-missions MI56: a working Incite team (character leadership 70 + Guerrillas 50): incite_term = 7 + 5 = 12; Subdue the same members: -12; none: 0

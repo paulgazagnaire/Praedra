@@ -24,7 +24,8 @@ namespace Rebellion.Core.Missions;
 public sealed class MissionModule
 {
     // Causes passed to the character and support functions. rule: §6 (Capture(target, S, Abduction), Kill(target, Assassination), Free(prisoner)).
-    public const string CauseAbduction = "Abduction", CauseAssassination = "Assassination", CauseRescue = "Rescue", CauseSubdue = "Subdue";
+    public const string CauseAbduction = "Abduction", CauseAssassination = "Assassination", CauseRescue = "Rescue", CauseSubdue = "Subdue",
+        CauseKidnap = "Kidnap"; // rule: m5-missions §6a.4 (Capture(target, Empire, Kidnap))
 
     private readonly Game _game;
     private readonly FleetModule _fleets;
@@ -310,6 +311,31 @@ public sealed class MissionModule
         }
     }
 
+    /// <summary>Is the character a key target of Assassination or Abduction now (switch on, in the data file)? rule: m5-missions §6a.</summary>
+    public bool IsKeyTarget(MissionKind k, int? targetChar, out int cap)
+    {
+        cap = 0;
+        return k is MissionKind.Assassination or MissionKind.Abduction && Params.KeyTargetRules && targetChar is int id && Data.KeyTargets.TryGetValue(id, out cap);
+    }
+
+    /// <summary>
+    /// rule: m5-missions §6a.1 exposure gate: TargetProtected if the key target rides a fleet, or stands at the Rebel HQ system (HQ at rest there)
+    /// and the Alliance's garrison there covers the required garrison N (m2-uprisings-and-garrison: G10 >= 10 * N, the same check as the uprising refresh).
+    /// Checked at the order and at each iteration start, not at landing.
+    /// </summary>
+    private string? KeyGate(MissionKind k, int? targetChar)
+    {
+        if (!IsKeyTarget(k, targetChar, out _) || _ch.Get(targetChar!.Value) is not { } tc) return null;
+        if (tc.AttachedFleet != 0) return MissionReject.TargetProtected;
+        // rule: m5-missions §6a (Abduction paragraph): the protected capital is the Rebel HQ system for an Alliance target, Coruscant for an Empire target (Lead DEFAULT)
+        var hq = _game.State.Scenario.Hq;
+        string? capital = tc.Side == Side.Alliance ? (hq.Status == HqStatus.AtRest ? hq.System : null) : Victory.VictoryModule.CoruscantName;
+        if (capital != null && _ch.LocationOf(tc) == capital && _fleets.OwnerOf(capital) == tc.Side
+            && _support.Garrison10(capital) >= 10 * _support.RequiredGarrison(capital))
+            return MissionReject.TargetProtected;
+        return null;
+    }
+
     private string? TargetReason(MissionGroup m) => TargetReason(m.Kind, m.Side, m.Target, m.TargetCharacter, m.TargetCharacter != null ? m.Target : null);
 
     // ================================================================== orders (step 1)
@@ -362,6 +388,7 @@ public sealed class MissionModule
 
         bool charTarget = o.Kind is MissionKind.Rescue or MissionKind.Abduction or MissionKind.Assassination;
         if (TargetReason(o.Kind, o.Side, o.TargetSystem, o.TargetCharacter, null) is { } tr) return (tr, null);
+        if (KeyGate(o.Kind, o.TargetCharacter) is { } protectedReason) return (protectedReason, null); // rule: m5-missions §6a.1
         string target = charTarget ? _ch.LocationOf(_ch.Get(o.TargetCharacter!.Value)!)! : _fleets.Galaxy.Get(o.TargetSystem!).Name;
         int? facility = null;
         if (o.Kind == MissionKind.Sabotage && Params.SabotageTargetMode == SabotageTargetMode.Chosen)
@@ -624,8 +651,9 @@ public sealed class MissionModule
         // A team emptied by captures elsewhere (the sheet has no rule; DEFAULT ours, listed): the job is dropped and the rest goes home.
         if (!m.HasTeam) { End(ctx, m, MissionOutcome.Cancelled, t); return; }
         // 0. legality
-        if (TargetReason(m) != null) { End(ctx, m, MissionOutcome.TargetInvalid, t); return; }
+        if (TargetReason(m) != null || KeyGate(m.Kind, m.TargetCharacter) != null) { End(ctx, m, MissionOutcome.TargetInvalid, t); return; } // rule: m5-missions §6a.1
         var rec = Data.Get(m.Kind);
+        bool key = IsKeyTarget(m.Kind, m.TargetCharacter, out int keyCap);
         // 1. decoys and detection
         if (rec.Foilable && Walk(ctx, m, t) is { } d) { Foil(ctx, m, d, t); return; }
 
@@ -634,6 +662,18 @@ public sealed class MissionModule
         var research = ResearchSkill(m.Kind);
         int successes = 0, points = 0;
         if (recon) successes = 1; // automatic success, no draw (DEFAULT, Missing: no table)
+        else if (key)
+        {
+            // rule: m5-missions §6a.3: ONE roll per iteration; input = the best member's (combat minus target combat); chance = min(table, cap_percent).
+            var table = Data.Table(rec.Table!);
+            var best = Team(m).Select(a => (a, x: Input(m, a))).OrderByDescending(p => p.x).First(); // stable: ties keep the first (characters by id, then special forces)
+            int chance = Math.Min(Lookup(table, best.x), keyCap);
+            int r = ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1);
+            bool ok = r < chance;
+            int id = m.Id, member = best.a.Id, input = best.x; var side = m.Side; bool isChar = best.a.IsCharacter;
+            ctx.Emit((i, _) => new MissionMemberRoll(i, t, id, side, member, isChar, input, chance, r, ok));
+            if (ok) successes = 1;
+        }
         else
         {
             var table = rec.Table != null ? Data.Table(rec.Table) : null;
@@ -661,7 +701,7 @@ public sealed class MissionModule
         bool success = successes > 0;
         if (success)
         {
-            int effects = recon || research != null ? 1 : Params.SuccessRule == SuccessRule.EachMember ? successes : 1;
+            int effects = recon || research != null || key ? 1 : Params.SuccessRule == SuccessRule.EachMember ? successes : 1;
             int id = m.Id; var side = m.Side; var kind = m.Kind; string target = m.Target;
             ctx.Emit((i, _) => new MissionSucceeded(i, t, id, side, kind, target, research != null ? successes : effects));
             if (research != null) { if (points > 0) _research.AddMissionPoints(ctx, m.Side, ResearchTrack(m.Kind)!.Value, points); }
@@ -834,7 +874,16 @@ public sealed class MissionModule
                 break;
             case MissionKind.Rescue: if (tc != null) _ch.Free(ctx, tc, CauseRescue); break;
             case MissionKind.Abduction: if (tc != null) _ch.Capture(ctx, tc, side, null, CauseAbduction); break;
-            case MissionKind.Assassination: if (tc != null) _ch.Kill(ctx, tc, CauseAssassination); break;
+            case MissionKind.Assassination:
+                if (tc == null) break;
+                if (!IsKeyTarget(m.Kind, m.TargetCharacter, out _)) { _ch.Kill(ctx, tc, CauseAssassination); break; }
+                // rule: m5-missions §6a.4: a qualified team (one character with combat and espionage both at the minimum) draws k: kidnap or kill
+                // (death allowed for this target whatever MajorsCanDie says); an unqualified team injures the target, no k draw.
+                if (!Team(m).Any(a => a.IsCharacter && a.Combat >= Params.KeyTeamMinCombat && a.Espionage >= Params.KeyTeamMinEspionage))
+                    _ch.Injure(ctx, tc, CauseAssassination);
+                else if (ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1) < Params.KeyKidnapPercent) _ch.Capture(ctx, tc, side, null, CauseKidnap);
+                else _ch.Kill(ctx, tc, CauseAssassination, allowDeath: true);
+                break;
             case MissionKind.DeathStarSabotage: DestroyDeathStar?.Invoke(ctx, target, Other(side)); break;
         }
     }

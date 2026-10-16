@@ -7,6 +7,7 @@ using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
 using Rebellion.Core.Fog;
 using Rebellion.Core.Missions;
+using Rebellion.Core.Setup;
 using Rebellion.Core.Support;
 using Rebellion.Core.Tests.Economy;
 using Rebellion.Core.Tests.Missions;
@@ -206,7 +207,7 @@ public class DeathStarTests
     [Fact]
     public void DS6_DestroyingTheRebelHqWinsTheGameForTheEmpire()
     {
-        var w = new DsWorld();
+        var w = new DsWorld(settings: new GameSettings { IncidentsEnabled = false, DebugOrdersEnabled = true, Economy = new EconomyParams { ScrapPeriod = 1_000_000 }, Victory = OldVictory.Rules }); // HQ-only set explicitly: the test's subject is the HQ's destruction
         w.Hold(A1, Side.Alliance, 80); w.Hold(B1, Side.Alliance, 80); w.Hold(A2, Side.Empire, 20);
         w.Host.Fog.PlaceHq(A1);
         w.Game.State.Scenario.Active = true;

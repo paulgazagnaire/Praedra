@@ -13,7 +13,7 @@ public class SimpleAiStallTests
 {
     private static (int Day, Side? Winner, int Assaults) Play(bool fix, int seed, int days)
     {
-        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA });
+        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = OldVictory.Settings });
         var p = new SimpleAiParams { UseFog = true, ShelledLandingNeed = fix };
         var m = new AiMatch(h, p, p);
         m.RunTo(days);

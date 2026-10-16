@@ -39,3 +39,4 @@ Missions (m5-missions):
 - `interim/mission-tables.csv` holds the foil table `FOILTB` (Traced, full) and the anchor rows of the success tables (`MSTB` family). The full success tables and the decoy tables `FDECOYTB` and `TDECOYTB` are Missing until the importer reads them: lookups step over the anchors, and decoys are refused (RuleMissing).
 - `interim/mission-numbers.csv` holds the sheet's named numbers (die size, detection constant, officer percentages, diplomacy and subdue ranges, incite support, Han's mission speed), each with its source tag.
 - `design/mission-foilable.csv` says which kinds a detection can foil (DEFAULT per the sheet).
+- `design/assassination-key-targets.csv` lists the key characters (Luke 578, Mon Mothma 576, Vader 641, Palpatine 640) and their success cap in percent for Assassination and Abduction (m5-missions section 6a; Decided Paul 2026-10-16, numbers Proposal). Tune the caps here, no code change.

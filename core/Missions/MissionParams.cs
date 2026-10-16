@@ -80,6 +80,15 @@ public sealed record MissionParams
     /// <summary>Call the character sheet's OnTeamExposed for a foiled or failed team. DEFAULT true (a no-op until that sheet defines a rule).</summary>
     public bool ExposureHooks { get; init; } = true;
 
+    /// <summary>Key targets of Assassination (the exposure gate, one capped roll, kidnap or kill). DEFAULT true (Decided Paul 2026-10-16). rule: m5-missions §6a.</summary>
+    public bool KeyTargetRules { get; init; } = true;
+    /// <summary>A key-target team qualifies for kill or kidnap if one character has at least this combat. Proposal, m5-missions §6a, missions/09 §4.</summary>
+    public int KeyTeamMinCombat { get; init; } = 60;
+    /// <summary>... and at least this espionage (the same character). Proposal, m5-missions §6a, missions/09 §4.</summary>
+    public int KeyTeamMinEspionage { get; init; } = 60;
+    /// <summary>Percent of successful qualified attempts that kidnap instead of kill. Decided Paul 2026-10-16 ("very very low"), value 3 Proposal; m5-missions §6a.</summary>
+    public int KeyKidnapPercent { get; init; } = 3;
+
     // ---- switches whose other value has no rule (refused)
     /// <summary>DEFAULT false; true has no rule (refused).</summary>
     public bool FoilDestroysSpecialForces { get; init; }

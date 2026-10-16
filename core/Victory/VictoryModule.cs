@@ -7,8 +7,7 @@ public sealed record GameWon(int Index, int Day, Side Winner, string Reason) : G
 
 /// <summary>
 /// The switches of the simple (HQ-Only flavoured) victory. The four win switches are on by default.
-/// Standard victory (the four key characters captured, setup-victory/04 §3) is behind <see cref="StandardVictory"/>, off until a rule that captures
-/// characters exists (m5-missions); with it off only the HQ-Only conditions run (04 §3 HQ-Only mode).
+/// Standard victory (the four key characters captured, setup-victory/04 §3) is behind <see cref="StandardVictory"/>, on by default; with it off only the HQ-Only conditions run (04 §3 HQ-Only mode).
 /// "Holds no system" is not traced in the original (04 §4 [NOT TRACED]); it is a DEFAULT of the playable slice so a game cannot go on with a side wiped out.
 /// </summary>
 public sealed record VictoryRules
@@ -24,12 +23,12 @@ public sealed record VictoryRules
     /// <summary>
     /// Standard victory (m5-setup-and-victory: HqOnlyVictory = false): the Empire's HQ term also needs Luke Skywalker and Mon Mothma captured, the
     /// Alliance's Coruscant term needs Darth Vader and Emperor Palpatine captured (victory-rules.csv, CharacterCaptured rows). The setup sheet's
-    /// DEFAULT is standard, but no rule that captures a character exists yet (m5-missions is not built), so standard victory would leave both
-    /// sides only the "holds no system" wins: DEFAULT false here until missions land (reported to the lead).
+    /// DEFAULT is standard (on since 2026-10-16): missions that capture characters now exist (Abduction, and the Kidnap of m5-missions §6a).
+    /// HQ-only (this switch false) stays a switch but is not shown on the new-game screen (m5-setup-and-victory §Defaults).
     /// </summary>
-    public bool StandardVictory { get; init; }
-    /// <summary>What a dead key character does to standard victory. DEFAULT None (original: the term can never be met). rule: m5-setup-and-victory §Victory (KeyDeathFallback, Proposal).</summary>
-    public KeyDeathFallback KeyDeathFallback { get; init; } = KeyDeathFallback.None;
+    public bool StandardVictory { get; init; } = true;
+    /// <summary>What a dead key character does to standard victory. DEFAULT WaiveCondition (Decided Paul 2026-10-16; original: None, the term can never be met). rule: m5-setup-and-victory §Defaults for undecided items (KeyDeathFallback).</summary>
+    public KeyDeathFallback KeyDeathFallback { get; init; } = KeyDeathFallback.WaiveCondition;
 }
 
 /// <summary>rule: m5-setup-and-victory §Victory (KeyDeathFallback). None = original; WaiveCondition and Immortal are Proposals (08 P6 a, b).</summary>
