@@ -166,6 +166,19 @@ public class TravelTests
     }
 
     [Fact]
+    public void T22_AvoidingAStopTakesTheNextBestPath() // m1-travel T22 (Proposal, the AI goes around known traps): no stop at P, so via Q
+    {
+        var g = TestData.Synthetic(new[] { ("E", 200, 100), ("P", 100, 200), ("Q", 100, 0), ("S", 0, 100) },
+            new[] { ("P", "E", "route"), ("Q", "E", "route") });
+        var pf = new Pathfinder(g);
+        int Ix(string n) => g.Get(n).Index;
+        AssertPath(pf.FindAvoiding(Ix("S"), Ix("E"), 100, new[] { Ix("P") }), g, new[] { "S", "Q", "E" }, new[] { 28, 9 }, 37);
+        // avoiding both route systems leaves the straight line; the destination and the start are never avoided
+        AssertPath(pf.FindAvoiding(Ix("S"), Ix("E"), 100, new[] { Ix("P"), Ix("Q"), Ix("E"), Ix("S") }), g, new[] { "S", "E" }, new[] { 40 }, 40);
+        AssertPath(pf.Find("S", "E", 100), g, new[] { "S", "P", "E" }, new[] { 28, 9 }, 37); // the cached search is untouched
+    }
+
+    [Fact]
     public void T16_NavigatorOnIsdFleet() // m1-travel T16
     {
         var fleet = SpeedOf("Imperial Star Destroyer");

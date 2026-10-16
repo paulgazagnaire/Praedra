@@ -99,6 +99,22 @@ public sealed class Pathfinder
         return result;
     }
 
+    /// <summary>
+    /// The fastest path that makes no stop at the <paramref name="avoid"/> systems on the way (the start and the destination are never
+    /// avoided). Not cached. Routes mode only; the other modes ignore <paramref name="avoid"/>. Used by the AI to go around known traps
+    /// (movement-redesign-draft §D route planning: the AI uses the same router). Proposal (lead 2026-10-16).
+    /// </summary>
+    public PathResult FindAvoiding(int start, int end, int speed, IReadOnlyCollection<int> avoid)
+    {
+        if (avoid.Count == 0 || Mode != TravelMode.Routes) return Find(start, end, speed);
+        int n = _galaxy.Systems.Count;
+        if (start < 0 || start >= n || end < 0 || end >= n) return PathResult.Rejected(PathStatus.UnknownSystem);
+        if (speed <= 0) return PathResult.Rejected(PathStatus.Immobile);
+        if (start == end) return PathResult.Rejected(PathStatus.AlreadyThere);
+        var skip = new HashSet<int>(avoid); skip.Remove(start); skip.Remove(end); // lookup only
+        return Walk(BuildTree(start, speed, skip), start, end, speed);
+    }
+
     /// <summary>Ticks of an off-route leg: the original formula, max(1, (isqrt / 5) * speed / 100). rule: m1-travel §Per-leg formula (Traced).</summary>
     private int OffRoute(int a, int b, int speed) =>
         TravelFormula.HopTicks(_dist[a, b] / TravelFormula.DistanceDivisor, speed, TravelFormula.PercentDivisor);
@@ -120,10 +136,18 @@ public sealed class Pathfinder
     private Tree TreeFor(int start, int speed)
     {
         if (_trees.TryGetValue((start, speed), out var hit)) return hit;
+        var tree = BuildTree(start, speed, null);
+        _trees[(start, speed)] = tree;
+        return tree;
+    }
+
+    private Tree BuildTree(int start, int speed, HashSet<int>? skip)
+    {
         int n = _galaxy.Systems.Count;
         var ticks = new long[n]; var legs = new int[n]; var prev = new int[n];
         Array.Fill(ticks, long.MaxValue); Array.Fill(prev, -1);
         var nodes = _routeSystems.Contains(start) ? _routeSystems : _routeSystems.Append(start).OrderBy(i => i).ToArray();
+        if (skip != null) nodes = nodes.Where(i => !skip.Contains(i)).ToArray(); // an avoided system is reached only as the destination (below)
         var done = new bool[n];
         ticks[start] = 0;
         bool Better(long t, int l, int u, int v) =>
@@ -153,9 +177,7 @@ public sealed class Pathfinder
                 if (Better(t, legs[u] + 1, u, e)) { ticks[e] = t; legs[e] = legs[u] + 1; prev[e] = u; }
             }
         }
-        var tree = new Tree { Ticks = ticks, Legs = legs, Prev = prev };
-        _trees[(start, speed)] = tree;
-        return tree;
+        return new Tree { Ticks = ticks, Legs = legs, Prev = prev };
     }
 
     private PathResult Walk(Tree tree, int start, int end, int speed)

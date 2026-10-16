@@ -17,7 +17,7 @@ public sealed record DealParams
 {
     /// <summary>The HQ is at least this many map units (straight line) from Coruscant. Proposal, m5-setup-and-victory §P1 HQ pick (HqMinDistance; setup-victory/10 v5 banner, replaces "5 lane hops" and "2 lanes").</summary>
     public int HqMinDistance { get; init; } = 200;
-    /// <summary>The totals table is written for this many systems; totals scale by (systems in sectors) / this, rounded half up. DEFAULT, setup-victory/10 v5 banner (keeps the 1998 share; Medium: Empire 90 -> 137, Alliance 25 -> 38 at 549).</summary>
+    /// <summary>The totals table is written for this many systems; totals scale by (systems in sectors) / this, rounded half up. DEFAULT, setup-victory/10 v5 banner (keeps the 1998 share; Medium: Empire 90 -> 138, Alliance 25 -> 38 at 553 in sectors).</summary>
     public int TotalsBaseSystems { get; init; } = 360;
     /// <summary>A pocket grows only into systems within this many map units of one of its systems. Proposal, m5-setup-and-victory §Mode Anchored step 6 (setup-victory/data/deal_day_one.py v5: 90).</summary>
     public int PocketReach { get; init; } = 90;

@@ -177,7 +177,7 @@ public static class NewGame
 
     /// <summary>
     /// economy_systems scaled to the galaxy's size, rounded half up, like the day-one totals (AnchoredDealer.TotalsBaseSystems): holdings and
-    /// garrisons grew with the 549-system galaxy, so the mines and refineries (the upkeep capacity) grow with them. DEFAULT (2026-10-16, v5):
+    /// garrisons grew with the 555-system v5 galaxy, so the mines and refineries (the upkeep capacity) grow with them. DEFAULT (2026-10-16, v5):
     /// without it the Empire's 166 garrison regiments ate a third of an unchanged capacity of 1400.
     /// </summary>
     private static int ScaledEconomySystems(GameHost host, int perBase)

@@ -13,7 +13,7 @@ public sealed record GalaxyRules
     /// <summary>The only systems allowed outside sectors (Decided, planets/14). They carry no lanes.</summary>
     public IReadOnlyList<string> Outsiders { get; init; } = new[] { "Csilla", "Ilum" };
     /// <summary>"Nearby" for map reading (AI, setup, characters): systems joined by a route link, or within this travel base distance
-    /// (isqrt/5, so 6 = 30 map units). DEFAULT, m1-galaxy-data §Derived fields (Nearby): chosen so the 549-system galaxy forms one
+    /// (isqrt/5, so 6 = 30 map units). DEFAULT, m1-galaxy-data §Derived fields (Nearby): chosen so the v5 galaxy (555 systems) forms one
     /// connected neighbourhood with about 6 neighbours per system (the old lane graph had about 3).</summary>
     public int NearBase { get; init; } = 6;
     /// <summary>Every system has at least this many nearby systems (its closest ones). DEFAULT, same section.</summary>

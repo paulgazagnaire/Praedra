@@ -200,6 +200,8 @@ public sealed class FleetModule
 
     /// <summary>Fastest lane path for a given speed rating (construction deliveries travel like fleets). rule: m1-travel §Path rule.</summary>
     public PathResult FindPath(string from, string to, int speed) => _pathfinder.Find(from, to, speed);
+    /// <summary>The fastest path with no stop at the given systems on the way (see Pathfinder.FindAvoiding).</summary>
+    public PathResult FindPathAvoiding(int from, int to, int speed, IReadOnlyCollection<int> avoid) => _pathfinder.FindAvoiding(from, to, speed, avoid);
 
     /// <summary>A fleet's strength against the economic reference force REF (3 ISD): the absolute measure E is compared with. rule: m4-battle-new §12.</summary>
     public double StrengthOf(Fleet f) => Strength.Of(StrengthUnits(f), _reference.Select(c => Strength.Unit(c)));
