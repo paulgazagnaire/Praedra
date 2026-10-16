@@ -127,6 +127,10 @@ public partial class Main : Control
                 case "--pick" when i + 1 < _args.Length: gs.PickSystem(_args[i + 1]); break;
                 case "--hover" when i + 1 < _args.Length: gs.HoverTextFor(_args[i + 1]); break;
                 case "--missions": gs.ShotMissions(); break;
+                case "--lanes" when i + 1 < _args.Length:
+                    if (Enum.TryParse(_args[i + 1], true, out GalaxyView.LaneMode lm)) gs.View.Lanes = lm;
+                    break;
+                case "--deselect": gs.View.Select(-1); break;
                 case "--fleet" when i + 1 < _args.Length:
                     foreach (var f in gs.S.Game.State.Fleets.Values) if (f.Name == _args[i + 1]) gs.SelectFleet(f.Id, true);
                     break;
