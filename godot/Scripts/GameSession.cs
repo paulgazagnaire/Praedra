@@ -85,8 +85,15 @@ public sealed partial class GameSession
         Snapshot();
     }
 
-    public static GameSession New(GameData data, Side player, Preset preset, Rebellion.Core.Battle.BattleRuleset rules = Rebellion.Core.Battle.BattleRuleset.Classic) =>
-        new(GameBoot.NewGame(data, player, preset, 1, rules), player);
+    /// <summary>
+    /// A new game. <paramref name="seed"/> null = a fresh seed from the wall clock, so every game deals a different map (the core must not read the clock;
+    /// the viewer may). A fixed seed (tests, smoke, playtest, `--seed N`) reproduces a game. rule: m5-setup-and-victory §Mode Anchored (the deal is seeded)
+    /// </summary>
+    public static GameSession New(GameData data, Side player, Preset preset, Rebellion.Core.Battle.BattleRuleset rules = Rebellion.Core.Battle.BattleRuleset.Classic, int? seed = null) =>
+        new(GameBoot.NewGame(data, player, preset, seed ?? FreshSeed(), rules), player);
+
+    /// <summary>A seed for a new game from the wall clock (viewer only).</summary>
+    public static int FreshSeed() => (int)(Godot.Time.GetUnixTimeFromSystem() % int.MaxValue);
 
     public static GameSession Load(GameData data, Side player, string json) =>
         new(GameBoot.LoadGame(data, json), player);

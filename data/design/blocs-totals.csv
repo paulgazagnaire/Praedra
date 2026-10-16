@@ -1,0 +1,6 @@
+preset,alliance_total,empire_total,alliance_strong,alliance_weak,empire_strong,empire_weak,source
+easy,20,60,10,0,10,4,m5-setup-and-victory §Mode Anchored totals table; setup-victory/10 §5
+med_a,25,90,20,0,25,10,m5-setup-and-victory §Mode Anchored totals table; setup-victory/10 §5
+hard_a,25,120,15,0,30,10,m5-setup-and-victory §Mode Anchored totals table; setup-victory/10 §5
+med_e,35,70,35,0,10,10,m5-setup-and-victory §Mode Anchored totals table; setup-victory/10 §5
+hard_e,30,60,40,0,10,5,m5-setup-and-victory §Mode Anchored totals table; setup-victory/10 §5

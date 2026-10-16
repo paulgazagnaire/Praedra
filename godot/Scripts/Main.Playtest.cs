@@ -228,6 +228,8 @@ public partial class Main
         }
 
         // ---------------------------------------------------------------- a battle: send the strongest other fleet onto the nearest enemy fleet
+        // The deal differs per seed, so the opponent's fleets may all be on the move right now: let days pass until one stands at a system.
+        RunUntil(gs, () => s.Game.State.Fleets.Values.Any(f => f.Side != me && f.At != null), 400);
         var enemyFleets = s.Game.State.Fleets.Values.Where(f => f.Side != me && f.At != null).ToList();
         var warFleet = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null && f.Id != troopFleet.Id && f.Ships.Count > 0 && fm.SpeedOf(f) > 0).OrderByDescending(f => fm.StrengthOf(f)).First();
         int battlesBefore = s.Messages.Count(m => m.Kind == MsgKind.Battle);
@@ -495,6 +497,9 @@ public partial class Main
         Side winner = playerWins ? me : s.Enemy;
         string goal = winner == Side.Alliance ? "Coruscant" : s.Host.HqSystem;
         s.Host.Control.SubmitDebugSetHolder(winner, goal, winner);
+        // Standard victory (the default since 2026-10-16) also needs the two enemy leaders captive: test-only, straight through the character module.
+        foreach (var k in s.Host.Victory.Keys.Where(k => k.Standard && k.Side == winner))
+            if (s.Host.Characters.Get(k.Character) is { } c) s.Host.Characters.Capture(null, c, winner, null, "Playtest");
         gs.PlayDay();
         Expect(s.Winner == winner, $"core declares {winner} the winner ({GameBoot.WinReason(s.Host)})");
         Expect(gs.VictoryVisible, "victory screen shows");

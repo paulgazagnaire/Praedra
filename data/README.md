@@ -22,6 +22,10 @@ Sources (project folder `rebellion/specs/`): `planets/data/extended-galaxy-v4-*.
 
 `design/fixed-owners.csv` is the seven Decided fixed owners of m5-setup-and-victory (planets/07), applied on top of the day-one CSVs, which ignore them (sheet Contradictions 6). Fixed owners are strong holders (Empire support 60 to 90).
 
+`design/day-one-anchors.csv` (system, owner, alliance_support, source) is the anchor list of `DealMode = Anchored` (m5-setup-and-victory §Mode Anchored; setup-victory/10): 23 Empire anchors, Hoth, Dantooine and Mon Calamari for the Alliance, and 11 locked-neutral systems that are never dealt. `alliance_support` is blank except Chandrila 57 and Sullust 58 (Empire-held, Rebel sympathy). In Anchored mode it replaces `fixed-owners.csv` (which only `DealMode = File` still applies). Decided by Paul 2026-10-16.
+
+`design/blocs-totals.csv` (preset, alliance_total, empire_total, alliance_strong, alliance_weak, empire_strong, empire_weak, source) holds the five rows of the Anchored totals table (anchors, Coruscant, Yavin and the HQ included) and the strong/weak shares. Read by `AnchoredDealer`. Decided by Paul 2026-10-16; the numbers are setup-victory/10 section 5 proposals to tune with the sim.
+
 `interim/research-unlocks.csv` is copied unchanged from `rebellion/specs/economy/data/research-unlocks.csv` (the research ladders of m5-research: track, research order and difficulty per class; Traced, unverified vs original). Its row order is the catalogue order of the level check. The loader checks that every class of `unit-and-facility-costs.csv` has one row with the same research order. Copied 2026-10-12.
 
 `design/research-rules.csv` is the data table `ResearchRules` of m5-research (facility tick delay and random span, points per yard, mission point roll, Sensor Station tier 2 rung and cost); each row carries its source tag.

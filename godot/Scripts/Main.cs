@@ -41,8 +41,12 @@ public partial class Main : Control
         var side = Arg("--side") == "Empire" ? Side.Empire : Side.Alliance;
         var preset = Enum.TryParse(Arg("--preset"), true, out Preset p) ? p : Preset.Medium;
         var rules = string.Equals(Arg("--rules"), "new", StringComparison.OrdinalIgnoreCase) ? Rebellion.Core.Battle.BattleRuleset.New : Rebellion.Core.Battle.BattleRuleset.Classic;
-        StartGame(GameSession.New(GameBoot.LoadData(), side, preset, rules), shot, shotFrames, true);
+        StartGame(GameSession.New(GameBoot.LoadData(), side, preset, rules, NewGameSeed()), shot, shotFrames, true);
     }
+
+    /// <summary>The seed of a new game: `--seed N` if given, 1 in the automated playtest (it must stay reproducible), else null = a fresh seed per game.</summary>
+    int? NewGameSeed() =>
+        int.TryParse(Arg("--seed"), out int n) ? n : _args.Contains("--playtest") ? 1 : null;
 
     string Arg(string name)
     {
@@ -60,7 +64,7 @@ public partial class Main : Control
     void ShowMenu(string shot = null, int shotFrames = 30)
     {
         var menu = new StartMenu();
-        menu.NewGameRequested += (side, preset, rules) => StartGame(GameSession.New(GameBoot.LoadData(), side, preset, rules), newGame: true);
+        menu.NewGameRequested += (side, preset, rules) => StartGame(GameSession.New(GameBoot.LoadData(), side, preset, rules, NewGameSeed()), newGame: true);
         menu.LoadRequested += LoadSave;
         menu.QuitRequested += () => GetTree().Quit();
         Swap(menu);
@@ -141,7 +145,7 @@ public partial class Main : Control
     void Smoke()
     {
         var data = GameBoot.LoadData();
-        var s = GameSession.New(data, Side.Alliance, Preset.Medium);
+        var s = GameSession.New(data, Side.Alliance, Preset.Medium, seed: 1);
         var me = s.Player;
         Check(data.Galaxy.Systems.Count > 100, "galaxy loaded");
         var mine = s.Game.State.SystemOwners.Where(kv => kv.Value == me).Select(kv => kv.Key).ToList();

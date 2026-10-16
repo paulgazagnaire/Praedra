@@ -28,6 +28,52 @@ public static class StartPresets
 /// <summary>One row of a day-one file (setup-victory/09 §1).</summary>
 public sealed record DayOneRow(string Name, Side? Owner, int AllianceSupport, bool Weak, bool ExploredAll, bool ExploredOwner, bool IsHq);
 
+/// <summary>One row of day-one-anchors.csv: a system with a fixed day-one owner (Neutral = locked neutral, null owner) and an optional fixed Alliance support.</summary>
+public sealed record AnchorRow(string System, Side? Owner, int? AllianceSupport, string Source)
+{
+    public const string FileName = "day-one-anchors.csv";
+
+    public static IReadOnlyList<AnchorRow> Load(string path)
+    {
+        var t = CsvTable.Load(path);
+        t.Require("system", "owner", "alliance_support", "source");
+        var rows = new List<AnchorRow>();
+        for (int r = 0; r < t.RowCount; r++)
+        {
+            Side? owner = t.Get(r, "owner").Trim() switch
+            { "Empire" => Side.Empire, "Alliance" => Side.Alliance, "Neutral" => null, var x => throw new DataLoadException($"{t.Where(r)}: owner '{x}' (Empire, Alliance or Neutral).") };
+            string sup = t.Get(r, "alliance_support").Trim();
+            int? support = sup.Length == 0 ? null : t.GetInt(r, "alliance_support");
+            if (support is < 0 or > 100) throw new DataLoadException($"{t.Where(r)}: alliance_support {support} is outside 0..100.");
+            rows.Add(new AnchorRow(t.Get(r, "system").Trim(), owner, support, t.Get(r, "source").Trim()));
+        }
+        return rows;
+    }
+}
+
+/// <summary>One row of blocs-totals.csv: holdings totals (anchors, Coruscant, Yavin and the HQ included) and the strong/weak shares of a preset.</summary>
+public sealed record BlocsTotals(int AllianceTotal, int EmpireTotal, int AllianceStrong, int AllianceWeak, int EmpireStrong, int EmpireWeak)
+{
+    public const string FileName = "blocs-totals.csv";
+
+    public static IReadOnlyDictionary<StartPreset, BlocsTotals> Load(string path)
+    {
+        var t = CsvTable.Load(path);
+        t.Require("preset", "alliance_total", "empire_total", "alliance_strong", "alliance_weak", "empire_strong", "empire_weak", "source");
+        var d = new Dictionary<StartPreset, BlocsTotals>();
+        for (int r = 0; r < t.RowCount; r++)
+        {
+            var p = StartPresets.Parse(t.Get(r, "preset"));
+            if (d.ContainsKey(p)) throw new DataLoadException($"{t.Where(r)}: preset '{t.Get(r, "preset")}' appears twice.");
+            d[p] = new BlocsTotals(t.GetInt(r, "alliance_total"), t.GetInt(r, "empire_total"), t.GetInt(r, "alliance_strong"), t.GetInt(r, "alliance_weak"),
+                t.GetInt(r, "empire_strong"), t.GetInt(r, "empire_weak"));
+        }
+        foreach (StartPreset p in Enum.GetValues<StartPreset>())
+            if (!d.ContainsKey(p)) throw new DataLoadException($"{path}: no row for preset '{StartPresets.Key(p)}'.");
+        return d;
+    }
+}
+
 /// <summary>One fleet row of new-game-forces.csv: ships and squadrons by class and count, placed at the side's base or second site.</summary>
 public sealed record ForceFleet(Side Side, string Name, bool AtBase, IReadOnlyList<string> Ships, IReadOnlyList<string> Squadrons);
 
@@ -97,8 +143,14 @@ public sealed class NewGameData
     /// <summary>fixed-owners.csv: (system, owner or null = neutral). rule: m5-setup-and-victory §Fixed owners (Decided).</summary>
     public IReadOnlyList<(string System, Side? Owner)> FixedOwners { get; }
 
-    private NewGameData(IReadOnlyDictionary<StartPreset, IReadOnlyList<DayOneRow>> dayOne, ForcesTable forces, IReadOnlyList<(string, Side?)> fixedOwners)
-    { DayOne = dayOne; Forces = forces; FixedOwners = fixedOwners; }
+    /// <summary>day-one-anchors.csv, file order. rule: m5-setup-and-victory §Mode Anchored (step 1).</summary>
+    public IReadOnlyList<AnchorRow> Anchors { get; }
+    /// <summary>blocs-totals.csv by preset. rule: m5-setup-and-victory §Mode Anchored (totals table).</summary>
+    public IReadOnlyDictionary<StartPreset, BlocsTotals> Totals { get; }
+
+    private NewGameData(IReadOnlyDictionary<StartPreset, IReadOnlyList<DayOneRow>> dayOne, ForcesTable forces, IReadOnlyList<(string, Side?)> fixedOwners,
+        IReadOnlyList<AnchorRow> anchors, IReadOnlyDictionary<StartPreset, BlocsTotals> totals)
+    { DayOne = dayOne; Forces = forces; FixedOwners = fixedOwners; Anchors = anchors; Totals = totals; }
 
     private static readonly Lazy<NewGameData> _default = new(() => Load(GameData.FindRepoRoot()));
     public static NewGameData Default => _default.Value;
@@ -115,7 +167,8 @@ public sealed class NewGameData
         for (int r = 0; r < ft.RowCount; r++)
             fixedOwners.Add((ft.Get(r, "system").Trim(), ft.Get(r, "owner").Trim() switch
             { "Empire" => Side.Empire, "Alliance" => Side.Alliance, "Neutral" => null, var x => throw new DataLoadException($"{ft.Where(r)}: owner '{x}'.") }));
-        return new NewGameData(dict, ForcesTable.Load(Path.Combine(design, ForcesTable.FileName)), fixedOwners);
+        return new NewGameData(dict, ForcesTable.Load(Path.Combine(design, ForcesTable.FileName)), fixedOwners,
+            AnchorRow.Load(Path.Combine(design, AnchorRow.FileName)), BlocsTotals.Load(Path.Combine(design, BlocsTotals.FileName)));
     }
 
     private static IReadOnlyList<DayOneRow> LoadDayOne(string path)

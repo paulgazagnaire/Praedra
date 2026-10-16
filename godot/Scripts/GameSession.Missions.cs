@@ -134,6 +134,7 @@ public sealed partial class GameSession
         MissionReject.NoDeathStar => "there is no enemy Death Star there",
         MissionReject.UnknownMission => "that mission is already over",
         MissionReject.RuleMissing => "the rule book does not cover this mission yet",
+        MissionReject.TargetProtected => "that leader is out of reach: aboard a fleet, or at a capital whose garrison is full",
         RejectReason.NotYours => "a team member is not yours",
         RejectReason.NotCompleted => "a special forces unit is still in training",
         RejectReason.Unreachable => "there is no route to the target",

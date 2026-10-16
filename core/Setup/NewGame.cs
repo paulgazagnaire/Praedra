@@ -21,9 +21,10 @@ public sealed record NewGameOptions
 
 /// <summary>
 /// Deals a real day-one position on the 360-system galaxy and returns a <see cref="GameHost"/> ready for <c>Game.Step()</c>.
-/// Owners, Alliance support, explored flags and the Rebel HQ come from the day-one file of the preset (setup-victory/09 §1-5, PROPOSAL values).
+/// Owners, Alliance support, explored flags and the Rebel HQ come from the Anchored dealer (DEFAULT, <see cref="GameSettings.DealMode"/>; draws from the
+/// game's generator, m5-setup-and-victory §Mode Anchored) or, in File mode, from the day-one file of the preset (setup-victory/09 §1-5, PROPOSAL values).
 /// Facilities, garrisons, fleets and stockpile come from <c>new-game-forces.csv</c> and are DEFAULT choices of the playable slice (the
-/// specs give no starting force numbers); placement is a pure function of the data (no random draw: the only draws are the economy's
+/// specs give no starting force numbers); placement is a pure function of the data (no random draw: the only draws are the deal's, then the economy's
 /// incident timers in <see cref="EconomyModule.SetupNewGame"/> and the research tick arming in <see cref="Research.ResearchModule.SetupNewGame"/>), so the same options give the same game.
 /// Victory is switched on (<see cref="ScenarioState.Active"/>). rule: CLAUDE.md "Undecided rules are switches or data values".
 /// </summary>
@@ -34,7 +35,16 @@ public static class NewGame
         var nd = o.NewGameData ?? NewGameData.Default;
         var host = GameHost.New((ulong)(uint)o.Seed, o.Settings, data);
         var fleets = host.Fleets; var eco = host.Economy; var galaxy = data.Galaxy;
-        var rows = nd.DayOne[o.Preset];
+        var settings = o.Settings ?? new GameSettings();
+        // The deal draws first, from the game's one generator, before any later setup draw (characters, economy timers, research).
+        // rule: m5-setup-and-victory §Mode Anchored (draws), §P1 Deal (DealMode)
+        IReadOnlyList<DayOneRow> rows;
+        if (settings.DealMode == DealMode.Anchored)
+        {
+            if (!nd.Totals.TryGetValue(o.Preset, out var totals)) throw new SetupException($"{BlocsTotals.FileName}: no row for preset '{StartPresets.Key(o.Preset)}'.");
+            rows = AnchoredDealer.Deal(galaxy, host.Game.Rng, nd.Anchors, totals, settings.Deal ?? new DealParams()).Rows;
+        }
+        else rows = nd.DayOne[o.Preset];
         var forces = nd.Forces;
         var state = host.Game.State;
 
@@ -51,7 +61,8 @@ public static class NewGame
 
         // Fixed owners (Decided) on top of the day-one rows, which ignore them. rule: m5-setup-and-victory §Fixed owners: strong holders,
         // so Empire support 60..90 (Alliance support 25 here when the row was not already Empire); neutral = 50.
-        foreach (var (sys, owner) in nd.FixedOwners)
+        // File mode only: the anchors file replaces this list in Anchored mode. rule: m5-setup-and-victory §Mode Anchored
+        foreach (var (sys, owner) in settings.DealMode == DealMode.File ? nd.FixedOwners : Array.Empty<(string System, Side? Owner)>())
         {
             if (!galaxy.TryFindSystem(sys, out _)) continue;
             if (owner is Side fo)

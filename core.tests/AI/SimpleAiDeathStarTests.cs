@@ -21,7 +21,7 @@ public class SimpleAiDeathStarTests
 
     private static (AiMatch M, GameHost H) Match(int seed, SimpleAiParams p, bool knowHq = false, Side? passive = Side.Alliance)
     {
-        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = OldVictory.Settings });
+        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory });
         var m = new AiMatch(h, p, p, passive);
         if (knowHq) m.Empire.KnownEnemyHq = h.HqSystem;
         return (m, h);
@@ -242,7 +242,7 @@ public class SimpleAiDeathStarTests
     private static Run Campaign(int seed, int days, bool funded = false)
     {
         var p = new SimpleAiParams { UseFog = true };
-        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = OldVictory.Settings });
+        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory });
         var m = new AiMatch(h, funded ? p with { MaintenanceMargin = 760 } : p, p);
         while (h.Game.Day < days && h.Victory.Winner == null)
         {
