@@ -44,6 +44,7 @@ public partial class GameScreen
             int? seen = S.LastSeenDay(hn);
             string age = owner == Me || S.Sees(hn) || seen == null ? "" : $"  (last seen day {seen})";
             _hoverLabel.Text = S.IsDestroyed(hn) ? $"{hn}  -  {S.DestroyedWords(hn).ToLowerInvariant()}" : $"{hn}  -  {(!S.Explored(hn) && owner != Me ? "unexplored" : !known ? "owner unknown" : owner == null ? "neutral" : S.You(owner.Value))}{age}";
+            _hoverLabel.Text += "\n" + RouteWords(h);
             _hoverLabel.Visible = true;
         }
         else _hoverLabel.Visible = false;
@@ -58,6 +59,29 @@ public partial class GameScreen
             if (_plan != null && !_pickMission && (_view.Selected >= 0 || _view.SelectedFleet >= 0)) _plan = null; // and the planner
             _panelDirty = true; _panelTimer = 0;
         }
+    }
+
+    /// <summary>The hyperspace routes through a system, for the hover line: named major routes, else "minor route", else open space.</summary>
+    string RouteWords(int sys)
+    {
+        var links = G.NeighboursOf(sys);
+        if (links.Count == 0) return "No route here: ships reach it by a free jump through open space";
+        var named = links.SelectMany(nb => nb.Lane.Routes.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Distinct().OrderBy(r => r, StringComparer.Ordinal).ToList();
+        bool minor = links.Any(nb => nb.Lane.Tier != 1);
+        if (named.Count == 0) return "Minor route (1.5x speed)";
+        return $"{string.Join(", ", named)} (major route, 3x speed){(minor ? "; also minor routes (1.5x)" : "")}";
+    }
+
+    /// <summary>How a path travels, for the move banner: legs along a route versus free jumps through open space.</summary>
+    string LegWords(Rebellion.Core.Travel.PathResult pr)
+    {
+        int onRoute = 0;
+        for (int k = 0; k + 1 < pr.Systems.Count; k++) if (G.FindLane(pr.Systems[k], pr.Systems[k + 1]) != null) onRoute++;
+        int free = pr.Hops - onRoute;
+        if (onRoute == 0) return free == 1 ? " (one free jump, no route)" : $" ({free} free jumps, no route)";
+        string r = onRoute == 1 ? "1 stretch on a route" : $"{onRoute} stretches on routes";
+        return free == 0 ? $" ({r})" : $" ({r}, {free} free {(free == 1 ? "jump" : "jumps")})";
     }
 
     void StartMove(Fleet f)
@@ -93,7 +117,7 @@ public partial class GameScreen
             {
                 _view.PathPreview = pr.Systems;
                 _view.PathColor = new Color(1f, 1f, 1f, 0.9f);
-                _moveBanner = $"{f.Name} to {to}: {pr.TotalTicks} days, arrives day {S.Game.Day + pr.TotalTicks}. Click to confirm.";
+                _moveBanner = $"{f.Name} to {to}: {pr.TotalTicks} days, arrives day {S.Game.Day + pr.TotalTicks}{LegWords(pr)}. Click to confirm.";
             }
             else { _view.PathPreview = null; _moveBanner = $"No route from {f.At} to {to} for this fleet."; }
         }

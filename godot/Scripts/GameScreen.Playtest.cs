@@ -129,6 +129,22 @@ public partial class GameScreen
     public void ShotShowHowTo() => ShowHowTo();
     public void ShotOpenSection(string name) { if (name.StartsWith("-")) _openSections.Remove(name[1..]); else _openSections.Add(name); _panelDirty = true; _panelTimer = 0; }
     public void ShotMove(string to) { if (_view.SelectedFleet >= 0 && S.Game.State.Fleets.TryGetValue(_view.SelectedFleet, out var f)) { StartMove(f); PickSystem(to); } }
+    /// <summary>Screenshot helper: the selected fleet's move preview to a system, as if the mouse were over it (underscores stand for spaces).</summary>
+    public void ShotPreview(string to)
+    {
+        if (_view.SelectedFleet < 0 || !S.Game.State.Fleets.TryGetValue(_view.SelectedFleet, out var f) || !G.TryFindSystem(to.Replace('_', ' '), out int i)) return;
+        StartMove(f); _view.ShotHover(i); OnViewChanged();
+    }
+    /// <summary>Playtest: the move banner for a fleet hovering a destination, then the move is cancelled.</summary>
+    internal string PreviewBannerFor(int fleetId, string to)
+    {
+        SelectFleet(fleetId, false);
+        ShotPreview(to);
+        string text = _moveBanner + (_view.PathPreview is { Count: > 1 } ? "" : " [no line drawn]");
+        CancelMove();
+        return text;
+    }
+    internal bool RoutesShown => _view.ShowRoutes;
     public void ShotFilter(string name) => SetFilter(name);
     public void ShotCharacters() { if (!_charTab) ToggleCharacters(); PlayRefresh(); }
     public void ShotMissions() { if (!_missionTab) ToggleMissions(); PlayRefresh(); }

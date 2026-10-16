@@ -121,15 +121,14 @@ public partial class Main : Control
                 case "--howto": gs.ShotShowHowTo(); break;
                 case "--open" when i + 1 < _args.Length: gs.ShotOpenSection(_args[i + 1]); break;
                 case "--moveto" when i + 1 < _args.Length: gs.ShotMove(_args[i + 1]); break;
+                case "--preview" when i + 1 < _args.Length: gs.ShotPreview(_args[i + 1]); break;
                 case "--filter" when i + 1 < _args.Length: gs.ShotFilter(_args[i + 1]); break;
                 case "--characters": gs.ShotCharacters(); break;
                 case "--click" when i + 1 < _args.Length: gs.ShotClick(_args[i + 1]); break;
                 case "--pick" when i + 1 < _args.Length: gs.PickSystem(_args[i + 1]); break;
                 case "--hover" when i + 1 < _args.Length: gs.HoverTextFor(_args[i + 1]); break;
                 case "--missions": gs.ShotMissions(); break;
-                case "--lanes" when i + 1 < _args.Length:
-                    if (Enum.TryParse(_args[i + 1], true, out GalaxyView.LaneMode lm)) gs.View.Lanes = lm;
-                    break;
+                case "--routes" when i + 1 < _args.Length: gs.SetRoutesShown(_args[i + 1] != "off"); break;
                 case "--deselect": gs.View.Select(-1); break;
                 case "--fleet" when i + 1 < _args.Length:
                     foreach (var f in gs.S.Game.State.Fleets.Values) if (f.Name == _args[i + 1]) gs.SelectFleet(f.Id, true);
