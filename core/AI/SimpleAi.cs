@@ -414,13 +414,13 @@ public sealed partial class SimpleAi
 
     private int YardsAnyAt(string system) => _h.Economy.Objects.Count(o => o.System == system && o.Category == ObjectCategory.Facility && FacilityKinds.TryParse(o.Class, out var k) && FacilityKinds.IsYard(k));
 
-    /// <summary>0 when the system is two or more lanes from every enemy system, 2 when it is next to one (a yard there is a target).</summary>
+    /// <summary>0 when no nearby system (m1-galaxy-data Nearby) is enemy-held, 2 when one is (a yard there is a target).</summary>
     private int BorderDanger(string system)
     {
         var g = _h.Data.Galaxy;
         if (!g.TryFindSystem(system, out var i)) return 0;
-        foreach (var n in g.NeighboursOf(i))
-            if (IsEnemyHeld(g.Systems[n.System].Name)) return 2;
+        foreach (var n in g.NearOf(i))
+            if (IsEnemyHeld(g.Systems[n].Name)) return 2;
         return 0;
     }
 
@@ -810,7 +810,7 @@ public sealed partial class SimpleAi
         int n = r.GetValueOrDefault(system);
         var g = _h.Data.Galaxy;
         if (g.TryFindSystem(system, out var i))
-            foreach (var nb in g.NeighboursOf(i)) n += r.GetValueOrDefault(g.Systems[nb.System].Name);
+            foreach (var nb in g.NearOf(i)) n += r.GetValueOrDefault(g.Systems[nb].Name);
         return n >= _p.RunnerRetreats;
     }
 
@@ -1150,7 +1150,7 @@ public sealed partial class SimpleAi
         while (q.Count > 0)
         {
             int c = q.Dequeue();
-            foreach (var n in g.NeighboursOf(c)) if (dist[n.System] == int.MaxValue) { dist[n.System] = dist[c] + 1; q.Enqueue(n.System); }
+            foreach (var n in g.NearOf(c)) if (dist[n] == int.MaxValue) { dist[n] = dist[c] + 1; q.Enqueue(n); }
         }
         return _hops = dist;
     }

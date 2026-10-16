@@ -45,16 +45,18 @@ public class AnchoredDealTests
         Assert.NotEqual(Make(StartPreset.MedA, 1).StateHash(), Make(StartPreset.MedA, 2).StateHash());
     }
 
-    // m5-setup-and-victory AN3: exact totals per preset, Ilum and Csilla neutral
+    // m5-setup-and-victory AN3: exact totals per preset, scaled to the galaxy (549 / 360, rounded half up), Ilum and Csilla neutral
     [Theory, MemberData(nameof(AllPresets))]
     public void AN3_ExactTotals(StartPreset p)
     {
         var t = ND.Totals[p];
+        int Scaled(int x) => (x * 549 * 2 + 360) / 720;
+        Assert.Equal((38, 137), (Scaled(ND.Totals[StartPreset.MedA].AllianceTotal), Scaled(ND.Totals[StartPreset.MedA].EmpireTotal))); // setup-victory/10 banner
         for (int seed = 1; seed <= 6; seed++)
         {
             var h = Make(p, seed);
-            Assert.Equal(t.AllianceTotal, Count(h, Side.Alliance));
-            Assert.Equal(t.EmpireTotal, Count(h, Side.Empire));
+            Assert.Equal(Scaled(t.AllianceTotal), Count(h, Side.Alliance));
+            Assert.Equal(Scaled(t.EmpireTotal), Count(h, Side.Empire));
             Assert.Null(Holder(h, "Ilum")); Assert.Null(Holder(h, "Csilla"));
         }
     }
@@ -88,23 +90,20 @@ public class AnchoredDealTests
         Assert.Equal(Side.Empire, Holder(Make(StartPreset.Easy, 1), "Hosnian Prime"));
     }
 
-    // m5-setup-and-victory AN6: the HQ satisfies the candidate rule (rim, not Yavin, not an anchor, >= 2 lanes, >= 5 hops from Coruscant)
+    // m5-setup-and-victory AN6: the HQ satisfies the candidate rule (rim, not Yavin, not an anchor, at least 200 map units from Coruscant)
     [Theory, MemberData(nameof(AllPresets))]
     public void AN6_HqSatisfiesCandidateRule(StartPreset p)
     {
         var anchors = ND.Anchors.Select(a => a.System).ToHashSet(StringComparer.Ordinal);
-        G.TryFindSystem("Coruscant", out int c);
-        var hops = new Dictionary<int, int> { [c] = 0 }; var q = new Queue<int>(); q.Enqueue(c);
-        while (q.Count > 0) { int u = q.Dequeue(); foreach (var nb in G.NeighboursOf(u)) if (hops.TryAdd(nb.System, hops[u] + 1)) q.Enqueue(nb.System); }
+        var c = G.Get("Coruscant");
         for (int seed = 1; seed <= 12; seed++)
         {
             var hq = Deal(p, seed).Hq;
-            G.TryFindSystem(hq, out int i);
-            Assert.Contains(G.Get(hq).Group, new[] { "inner_rim", "outer_rim" });
+            var s = G.Get(hq);
+            Assert.Contains(s.Group, new[] { "inner_rim", "outer_rim" });
             Assert.NotEqual("Yavin", hq);
             Assert.DoesNotContain(hq, anchors);
-            Assert.True(G.NeighboursOf(i).Count >= 2);
-            Assert.True(hops[i] >= 5);
+            Assert.True(Rebellion.Core.Travel.TravelFormula.MapDistance(s.MapX, s.MapY, c.MapX, c.MapY) >= 200);
         }
     }
 
@@ -153,7 +152,7 @@ public class AnchoredDealTests
         foreach (var (sys, o) in ND.FixedOwners) owners[sys] = o;
         Assert.Equal(owners.Values.Count(v => v == Side.Alliance), Count(h, Side.Alliance));
         Assert.Equal(owners.Values.Count(v => v == Side.Empire), Count(h, Side.Empire));
-        Assert.Equal("Dagobah", h.HqSystem);
+        Assert.Equal("Cyclor", h.HqSystem);
         foreach (var s in new[] { "Kuat", "Fondor", "Corellia", "Rendili" }) Assert.Equal(Side.Empire, Holder(h, s));
         foreach (var s in new[] { "Sullust", "Mon Calamari", "Bilbringi" }) Assert.Null(Holder(h, s));
         Assert.Equal(h.StateHash(), Make(p, 1, DealMode.File).StateHash());
@@ -241,7 +240,7 @@ public class AnchoredDealTests
                 int front = own.Where(kv => kv.Value == Side.Alliance).Count(kv =>
                 {
                     G.TryFindSystem(kv.Key, out int i);
-                    return G.NeighboursOf(i).Any(nb => own[G.Systems[nb.System].Name] == Side.Empire);
+                    return G.NearOf(i).Any(nb => own[G.Systems[nb].Name] == Side.Empire); // nearby (m1-galaxy-data), no lanes since 2026-10-16
                 });
                 _out.WriteLine($"{StartPresets.Key(p),-6} {seed} {a,3} {e,4} {own.Count - a - e,4} {d.Hq,-16} {front}");
                 Assert.True(front > 0, $"{p} seed {seed}: no Alliance system touches an Empire system");

@@ -12,6 +12,12 @@ public sealed record GalaxyRules
     public int MapMax { get; init; } = 1023;
     /// <summary>The only systems allowed outside sectors (Decided, planets/14). They carry no lanes.</summary>
     public IReadOnlyList<string> Outsiders { get; init; } = new[] { "Csilla", "Ilum" };
+    /// <summary>"Nearby" for map reading (AI, setup, characters): systems joined by a route link, or within this travel base distance
+    /// (isqrt/5, so 6 = 30 map units). DEFAULT, m1-galaxy-data §Derived fields (Nearby): chosen so the 549-system galaxy forms one
+    /// connected neighbourhood with about 6 neighbours per system (the old lane graph had about 3).</summary>
+    public int NearBase { get; init; } = 6;
+    /// <summary>Every system has at least this many nearby systems (its closest ones). DEFAULT, same section.</summary>
+    public int NearMin { get; init; } = 2;
 
     public static readonly GalaxyRules Default = new();
 }
@@ -55,8 +61,8 @@ public sealed record ExpectedGalaxyCounts(int Systems, int Sectors, int Lanes, i
 /// <summary>Reads the planets and lanes files into an immutable <see cref="Galaxy"/>. rule: m1-galaxy-data.</summary>
 public static class GalaxyLoader
 {
-    public const string PlanetsFile = "extended-galaxy-v4-planets.csv";
-    public const string LanesFile = "extended-galaxy-v4-lanes.csv";
+    public const string PlanetsFile = "extended-galaxy-v5-planets.csv";
+    public const string LanesFile = "extended-galaxy-v5-lanes.csv";
     public const string TiersFile = "lane-tiers.csv";
     public const string CountsFile = "expected-galaxy-counts.csv";
 
@@ -181,24 +187,14 @@ public static class GalaxyLoader
         for (int i = 0; i < nb.Length; i++)
             neighbours[i] = nb[i].OrderBy(n => n.System).ToArray();
 
-        // check 7 (second half): outsiders have no lanes, others have at least one
+        // check 7 (second half): outsiders have no route links. Other systems may have none: since 2026-10-16 travel is free and
+        // links are only the fast hyperspace routes (Paul; planets/15), so the old "every system has a lane" and "one connected
+        // lane graph" checks are gone. rule: m1-galaxy-data §Validation checks (7), m1-travel §Rule.
         foreach (var s in systems)
         {
             int count = neighbours[s.Index].Length;
             if (s.IsOutsideSectors && count > 0)
-                throw new DataLoadException($"System '{s.Name}' is outside sectors and must have no lanes, but has {count}.");
-            if (!s.IsOutsideSectors && count == 0)
-                throw new DataLoadException($"System '{s.Name}' is inside sector '{s.Sector}' and must have at least one lane.");
-        }
-
-        // check 8: one connected component among in-sector systems
-        var inSector = systems.Where(s => !s.IsOutsideSectors).Select(s => s.Index).ToList();
-        if (inSector.Count > 0)
-        {
-            var reached = Reach(neighbours, systems.Count, inSector[0], -1);
-            var missing = inSector.Where(i => !reached[i]).ToList();
-            if (missing.Count > 0)
-                throw new DataLoadException($"The lane graph is not connected: {missing.Count} system(s) cannot be reached from '{systems[inSector[0]].Name}', e.g. '{systems[missing[0]].Name}'.");
+                throw new DataLoadException($"System '{s.Name}' is outside sectors and must have no route links, but has {count}.");
         }
 
         // check 10: warnings only
@@ -215,7 +211,33 @@ public static class GalaxyLoader
                 warnings.Add($"System '{s.Name}': stored chokepoint {storedCk} differs from recomputed {(chokes[s.Index] ? 1 : 0)}.");
         }
 
-        return new Galaxy(systems, sectors, lanes, neighbours, warnings);
+        return new Galaxy(systems, sectors, lanes, neighbours, Nearby(systems, neighbours, rules), warnings);
+    }
+
+    /// <summary>
+    /// The nearby lists: route-linked systems plus systems within NearBase, at least the NearMin closest, made symmetric, sorted by index.
+    /// Outsiders take part (since 2026-10-16 ships can fly there). rule: m1-galaxy-data §Derived fields (Nearby).
+    /// </summary>
+    private static int[][] Nearby(IReadOnlyList<StarSystem> systems, Neighbour[][] neighbours, GalaxyRules rules)
+    {
+        int n = systems.Count;
+        var sets = new SortedSet<int>[n];
+        for (int i = 0; i < n; i++) sets[i] = new SortedSet<int>(neighbours[i].Select(x => x.System));
+        for (int i = 0; i < n; i++)
+        {
+            var byDist = new List<(int d, int j)>();
+            for (int j = 0; j < n; j++)
+            {
+                if (j == i) continue;
+                int d = Travel.TravelFormula.BaseDistance(systems[i].MapX, systems[i].MapY, systems[j].MapX, systems[j].MapY);
+                if (d <= rules.NearBase) sets[i].Add(j);
+                byDist.Add((d, j));
+            }
+            byDist.Sort();
+            for (int k = 0; k < byDist.Count && sets[i].Count < rules.NearMin; k++) sets[i].Add(byDist[k].j);
+        }
+        for (int i = 0; i < n; i++) foreach (int j in sets[i].ToList()) sets[j].Add(i);
+        return sets.Select(x => x.ToArray()).ToArray();
     }
 
     /// <summary>Integer square root (floor).</summary>
@@ -255,7 +277,9 @@ public static class GalaxyLoader
         var withLanes = Enumerable.Range(0, n).Where(i => nb[i].Length > 0).ToList();
         foreach (var v in withLanes)
         {
-            var rest = withLanes.Where(i => i != v).ToList();
+            // within v's own route network only (the route graph has several separate networks since 2026-10-16)
+            var comp = Reach(nb, n, v, -1);
+            var rest = withLanes.Where(i => i != v && comp[i]).ToList();
             if (rest.Count == 0) continue;
             var reached = Reach(nb, n, rest[0], v);
             result[v] = rest.Any(i => !reached[i]);

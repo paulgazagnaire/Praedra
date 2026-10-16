@@ -26,7 +26,7 @@ internal sealed class BattleWorld
         Game = new Game(seed);
         var rows = "name,sector,group,energy,raw,populated\n" + string.Join("\n", Galaxy.Systems.Select(s => $"{s.Name},{s.Sector},{s.Group},1,1,1"));
         var slots = SlotValues.Parse(rows, Galaxy);
-        Fleets = FleetModule.Attach(Game, Galaxy, World.Ships.Value, World.Blockade);
+        Fleets = FleetModule.Attach(Game, Galaxy, World.Ships.Value, World.Blockade, travel: World.TravelFor(Galaxy));
         Eco = EconomyModule.Attach(Game, Galaxy, slots, EcoWorld.FreeShipCosts.Value, Fleets);
         Eco.IncidentsEnabled = false;
         Battles = BattleModule.Attach(Game, Galaxy, Fleets, Eco, p ?? new BattleParams { SubsystemRolls = false });

@@ -371,14 +371,14 @@ public sealed partial class SimpleAi
                 string n = g.Systems[c].Name;
                 d[n] = d.GetValueOrDefault(n) + (dc == 0 ? _p.HqRiskHere : dc == 1 ? _p.HqRiskNear : _p.HqRiskFar);
                 if (dc >= 2) continue;
-                foreach (var nb in g.NeighboursOf(c)) if (!depth.ContainsKey(nb.System)) { depth[nb.System] = dc + 1; q.Enqueue(nb.System); }
+                foreach (var nb in g.NearOf(c)) if (!depth.ContainsKey(nb)) { depth[nb] = dc + 1; q.Enqueue(nb); }
             }
         }
         foreach (var s in _view!.Sightings(Today - _view.ObservedWindowDays)) if (s.Side == Enemy) Spread(s.System);
         foreach (var (sys, fp) in _view.VisibleFleets()) if (fp.Side == Enemy) Spread(sys);
         foreach (var sys in g.Systems)
         {
-            int n = g.NeighboursOf(sys.Index).Count(nb => IsEnemyHeld(g.Systems[nb.System].Name));
+            int n = g.NearOf(sys.Index).Count(nb => IsEnemyHeld(g.Systems[nb].Name));
             if (n > 0) d[sys.Name] = d.GetValueOrDefault(sys.Name) + n * _p.HqRiskEnemyNeighbour;
         }
         return _risk = d;
@@ -393,7 +393,7 @@ public sealed partial class SimpleAi
         while (q.Count > 0)
         {
             int c = q.Dequeue();
-            foreach (var n in g.NeighboursOf(c)) if (dist[n.System] == int.MaxValue) { dist[n.System] = dist[c] + 1; q.Enqueue(n.System); }
+            foreach (var n in g.NearOf(c)) if (dist[n] == int.MaxValue) { dist[n] = dist[c] + 1; q.Enqueue(n); }
         }
         return dist;
     }
@@ -419,7 +419,7 @@ public sealed partial class SimpleAi
         string? best = null; long bestScore = long.MinValue;
         foreach (var s in HeldSystems())
         {
-            if (s == at || !g.TryFindSystem(s, out var i) || g.NeighboursOf(i).Count < _p.HqMinLanes) continue;
+            if (s == at || !g.TryFindSystem(s, out var i) || g.NearOf(i).Count < _p.HqMinLanes) continue;
             int r = risk.GetValueOrDefault(s);
             if (r * 2 >= _p.HqMoveRisk || Threats().ContainsKey(s) || Suspended(s)) continue;
             int ticks = TicksCached(at, s, speed);

@@ -209,14 +209,14 @@ public class TroopTests
 
     // m3-troops T9
     [Fact]
-    public void T9_DeliveryToCorelliaTakesSixDaysAndAppearsInStep3()
+    public void T9_DeliveryToCorelliaTakesSevenDaysAndAppearsInStep3()
     {
         var w = T(regiments: false);
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Training, Storm, 1, Far));
         w.RunTo(60);
         var dep = w.Events<DeliveryDeparted>().Single();
         var arr = w.Events<DeliveryArrived>().Single();
-        Assert.Equal(6, arr.Day - dep.Day); // 20 * 100 / 300
+        Assert.Equal(7, arr.Day - dep.Day); // route leg: 100 * 100 / (5 * 300) = 6.67, rounded to 7
         var made = w.Events<RegimentCreated>().Single(); // once, on arrival (not at completion)
         Assert.Equal((Far, arr.Day), (made.System, made.Day));
         var o = w.Obj(made.Id);
@@ -232,13 +232,13 @@ public class TroopTests
         Assert.Equal("BadDestination", w.TryOrder(Emp, Home, YardFamily.Training, Storm, 1, "Hoth"));
     }
 
-    // m3-troops T10b
+    // m3-troops T10b, superseded by free travel (movement-redesign-draft §A, Paul 2026-10-16): Ilum, off every route, is reachable.
     [Fact]
-    public void T10b_DestinationInAnotherComponentIsUnreachable()
+    public void T10b_OffRouteDestinationIsReachableByFreeTravel()
     {
         var w = T(regiments: false);
         w.Hold("Ilum", Emp);
-        Assert.Equal("Unreachable", w.TryOrder(Emp, Home, YardFamily.Training, Storm, 1, "Ilum"));
+        Assert.Null(w.TryOrder(Emp, Home, YardFamily.Training, Storm, 1, "Ilum"));
     }
 
     // ---------------------------------------------------------------- loading (T11 to T15, T18)

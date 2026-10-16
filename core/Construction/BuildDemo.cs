@@ -57,7 +57,7 @@ public sealed class BuildDemo
         var path = fleets.FindPath(HomeSystem, FarSystem, 100).Names(galaxy);
         string at = path[1];
         int atIndex = galaxy.Systems.ToList().FindIndex(s => s.Name == at);
-        string away = galaxy.NeighboursOf(atIndex).Select(n => galaxy.Systems[n.System].Name).Where(n => !path.Contains(n)).OrderBy(n => n, StringComparer.Ordinal).First();
+        string away = galaxy.NearOf(atIndex).Select(n => galaxy.Systems[n].Name).Where(n => !path.Contains(n)).OrderBy(n => n, StringComparer.Ordinal).First();
         int picket = fleets.AddFleet(Side.Alliance, "Rebel Picket", new[] { "Corellian Corvette" }, at);
 
         build.SubmitBuild(Side.Empire, HomeSystem, YardFamily.Shipyard, "TIE Fighter", 2);

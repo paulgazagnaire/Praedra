@@ -261,8 +261,8 @@ public sealed class BattleModule
         var set = new SortedDictionary<string, int>(StringComparer.Ordinal);
         if (Params.RetreatMode == RetreatMode.NoRetreat || !_galaxy.TryFindSystem(sys, out int from)) return set;
         var dist = new SortedDictionary<string, int>(StringComparer.Ordinal);
-        if (Params.RetreatMode == RetreatMode.LaneAdjacent)
-            foreach (var nb in _galaxy.NeighboursOf(from)) dist[_galaxy.Systems[nb.System].Name] = nb.Lane.BaseDistance;
+        if (Params.RetreatMode == RetreatMode.LaneAdjacent) // since 2026-10-16: the nearby systems (m1-galaxy-data Nearby), no lanes needed
+            foreach (int nb in _galaxy.NearOf(from)) dist[_galaxy.Systems[nb].Name] = BaseTo(from, nb);
         else
             dist = PathDistances(from);
         var enemy = side == Side.Alliance ? Side.Empire : Side.Alliance;
@@ -276,23 +276,18 @@ public sealed class BattleModule
         return set;
     }
 
-    /// <summary>Shortest lane path distance (sum of lane base distances) from a system to every system. rule: m4-retreat-damage-repair §3 (Nearest).</summary>
+    private int BaseTo(int a, int b)
+    {
+        var sa = _galaxy.Systems[a]; var sb = _galaxy.Systems[b];
+        return Rebellion.Core.Travel.TravelFormula.BaseDistance(sa.MapX, sa.MapY, sb.MapX, sb.MapY);
+    }
+
+    /// <summary>Straight-line base distance from a system to every system (free travel since 2026-10-16). rule: m4-retreat-damage-repair §3 (Nearest).</summary>
     private SortedDictionary<string, int> PathDistances(int from)
     {
         int n = _galaxy.Systems.Count;
-        var best = new long[n]; Array.Fill(best, long.MaxValue);
-        best[from] = 0;
-        var queue = new PriorityQueue<int, (long, int)>();
-        queue.Enqueue(from, (0, from));
-        while (queue.TryDequeue(out var u, out var pri))
-        {
-            if (pri.Item1 != best[u]) continue;
-            foreach (var nb in _galaxy.NeighboursOf(u))
-            {
-                long t = best[u] + nb.Lane.BaseDistance;
-                if (t < best[nb.System]) { best[nb.System] = t; queue.Enqueue(nb.System, (t, nb.System)); }
-            }
-        }
+        var best = new long[n];
+        for (int i = 0; i < n; i++) best[i] = BaseTo(from, i);
         var r = new SortedDictionary<string, int>(StringComparer.Ordinal);
         for (int i = 0; i < n; i++) if (best[i] != long.MaxValue && i != from) r[_galaxy.Systems[i].Name] = (int)Math.Min(best[i], int.MaxValue);
         return r;

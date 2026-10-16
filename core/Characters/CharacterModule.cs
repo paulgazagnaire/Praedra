@@ -474,8 +474,8 @@ public sealed class CharacterModule
             if (held.Count > 0) return g.Systems[held.Min()].Name;
             var next = new List<int>();
             foreach (var i in level)
-                foreach (var nb in g.NeighboursOf(i))
-                    if (!seen[nb.System]) { seen[nb.System] = true; next.Add(nb.System); }
+                foreach (var nb in g.NearOf(i))
+                    if (!seen[nb]) { seen[nb] = true; next.Add(nb); }
             level = next;
         }
         return null;

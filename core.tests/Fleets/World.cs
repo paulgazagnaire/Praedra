@@ -3,6 +3,7 @@ using Rebellion.Core.Clock;
 using Rebellion.Core.Fleets;
 using Rebellion.Core.Map;
 using Rebellion.Core.Ships;
+using Rebellion.Core.Travel;
 
 namespace Rebellion.Core.Tests.Fleets;
 
@@ -21,8 +22,12 @@ internal sealed class World
     public World(Game game, Galaxy galaxy, ForcedStopTrigger trigger = ForcedStopTrigger.PaulRule)
     {
         Game = game;
-        Fleets = FleetModule.Attach(game, galaxy, Ships.Value, Blockade, trigger);
+        Fleets = FleetModule.Attach(game, galaxy, Ships.Value, Blockade, trigger, travel: TravelFor(galaxy));
     }
+
+    /// <summary>The real galaxy flies the game's travel (Routes); the small hand-made maps keep the 2026-10-12 lane travel (TravelMode.Lanes)
+    /// so their checks of passing, stops and contacts at the middle system still have a middle system (m1-travel §Switch).</summary>
+    public static TravelMode TravelFor(Galaxy galaxy) => ReferenceEquals(galaxy, TestData.RealGalaxy) ? TravelMode.Routes : TravelMode.Lanes;
 
     /// <summary>Synthetic map of the forced-stop sheet: A(0,0), B(100,0), C(200,0), tier 3 lanes A-B and B-C; D(100,100) with lane B-D added for B6.</summary>
     public static Galaxy BCMap() => TestData.Synthetic(

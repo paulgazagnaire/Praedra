@@ -269,16 +269,16 @@ public class ConstructionTests
         var dep = w.Events<DeliveryDeparted>().Single();
         Assert.Equal(81, dep.Day);
         Assert.Equal(new[] { Home, Far }, dep.Path.Items);
-        Assert.Equal(6, dep.FirstHopTicks); // 20 * 100 / 300
-        Assert.Equal(87, dep.DueDay);
+        Assert.Equal(7, dep.FirstHopTicks); // route leg: map distance 100 * 100 / (5 * 300) = 6.67, rounded to 7
+        Assert.Equal(88, dep.DueDay);
         var mine = w.Eco.Objects.Single(o => o.Class == "Mine");
         Assert.False(mine.Completed);
-        w.RunTo(86);
+        w.RunTo(87);
         Assert.False(mine.Completed);
-        w.RunTo(87); // placed in Step 86, step 3
+        w.RunTo(88); // placed in Step 87, step 3
         Assert.True(mine.Completed);
-        Assert.Equal(87, w.Events<DeliveryArrived>().Single().Day);
-        Assert.Equal(90, mine.Due); // joined the idle sweep that Step: first cycle at hook 87 (draw 0: d = 6, 0 + 3)
+        Assert.Equal(88, w.Events<DeliveryArrived>().Single().Day);
+        Assert.Equal(91, mine.Due); // joined the idle sweep that Step: first cycle at hook 88 (draw 0: d = 6, 0 + 3)
         Assert.Contains((0, 6), w.Stub!.Requests);
         Assert.Empty(w.Build.Deliveries);
     }
@@ -291,7 +291,7 @@ public class ConstructionTests
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Shipyard, "Imperial Star Destroyer", 1, Far));
         w.RunTo(449);
         var dep = w.Events<DeliveryDeparted>().Single();
-        Assert.Equal(5, dep.FirstHopTicks); // 20 * 80 / 300
+        Assert.Equal(5, dep.FirstHopTicks); // route leg: 100 * 80 / (5 * 300) = 5.33, rounded to 5
         w.RunTo(454);
         Assert.Equal(454, w.Events<DeliveryArrived>().Single().Day);
         Assert.True(w.Eco.Objects.Single(o => o.Class == "Imperial Star Destroyer").Completed);
@@ -304,9 +304,9 @@ public class ConstructionTests
         var w = Empire(100, FacilityKind.OrbitalShipyard);
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Shipyard, "TIE Fighter", 1, Far)); // hyperdrive 0 as a fleet, 100 as a delivery
         w.RunTo(13);
-        Assert.Equal(6, w.Events<DeliveryDeparted>().Single().FirstHopTicks);
-        w.RunTo(19);
-        Assert.Equal(19, w.Events<DeliveryArrived>().Single().Day);
+        Assert.Equal(7, w.Events<DeliveryDeparted>().Single().FirstHopTicks);
+        w.RunTo(20);
+        Assert.Equal(20, w.Events<DeliveryArrived>().Single().Day);
     }
 
     // ---------------------------------------------------------------- rejections (C15 to C19)
@@ -351,13 +351,14 @@ public class ConstructionTests
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Construction, "Advanced Shipyard", 1, Home));
     }
 
-    // m2-construction C19
+    // m2-construction C19, superseded by free travel (movement-redesign-draft §A, Paul 2026-10-16): every system can be reached,
+    // so a delivery to Ilum (off every route) is accepted.
     [Fact]
-    public void C19_DestinationInAnotherComponentUnreachable()
+    public void C19_OffRouteDestinationIsReachableByFreeTravel()
     {
         var w = Empire(100, FacilityKind.ConstructionYard);
         w.Hold("Ilum", Emp);
-        Assert.Equal("Unreachable", w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, "Ilum"));
+        Assert.Null(w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, "Ilum"));
     }
 
     // ---------------------------------------------------------------- lost destination, forced stop (C20 to C22)
@@ -372,9 +373,9 @@ public class ConstructionTests
         w.RunTo(81);
         w.Fleets.SetOwner(Far, Side.Alliance); // captured during the flight
         int before = w.Eco.Refined(Emp);
-        w.RunTo(87);
+        w.RunTo(88);
         var refused = w.Events<DeliveryRefused>().Single();
-        Assert.Equal(87, refused.Day);
+        Assert.Equal(88, refused.Day);
         Assert.Equal(10, refused.Refund);
         Assert.Equal(before + 10, w.Eco.Refined(Emp));
         Assert.DoesNotContain(w.Eco.Objects, o => o.Class == "Mine");
@@ -389,7 +390,7 @@ public class ConstructionTests
         w.Build.LostDestination = LostDestinationRule.Refuse;
         w.TryOrder(Emp, Home, YardFamily.Construction, "LNR Series I", 1, Far);
         Assert.Equal(10 + 7, w.Eco.Load(Emp));
-        w.RunTo(30); // 7 points x 4 days: complete at hook 29, flight 6 days
+        w.RunTo(30); // 7 points x 4 days: complete at hook 29, flight 7 days
         w.Fleets.SetOwner(Far, Side.Alliance);
         w.RunTo(40);
         Assert.Equal(3, w.Events<DeliveryRefused>().Single().Refund); // floor(7 / 2)
@@ -433,7 +434,7 @@ public class ConstructionTests
         w.Fleets.SetOwner(Far, Emp);
         w.Run(1);
         Assert.Single(w.Events<DeliveryResumed>());
-        w.Run(7); // 6 days of flight
+        w.Run(8); // 7 days of flight
         Assert.Single(w.Events<DeliveryArrived>());
     }
 
@@ -456,7 +457,7 @@ public class ConstructionTests
     {
         var (w, path) = RegimentToHoth();
         string mid = path[1];
-        int picket = w.Fleets.AddFleet(Side.Alliance, "Picket", new[] { "Imperial Star Destroyer" }, mid);
+        int picket = w.Fleets.AddFleet(Side.Alliance, "Picket", new[] { "Interdictor Cruiser" }, mid); // only a gravity well stops traffic in flight (DEFAULT GravityWellShip)
         w.RunTo(37); // C 9 x 4 days: complete at hook 37, the delivery leaves
         var dep = w.Events<DeliveryDeparted>().Single();
         w.RunTo(dep.DueDay); // arrives at mid in step 3, step 4 holds it

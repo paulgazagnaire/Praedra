@@ -39,7 +39,8 @@ public sealed class Sector
 }
 
 /// <summary>
-/// An undirected lane. Identity is the pair of names (m1-galaxy-data DEFAULT: no lane id). A is the smaller name (ordinal).
+/// An undirected route link (still called a lane in code): two systems joined by an official hyperspace route, major (tier 1)
+/// or minor (tier 2). Since 2026-10-16 ships fly anywhere; a link only makes the stretch between its two ends faster. Identity is the pair of names (m1-galaxy-data DEFAULT: no lane id). A is the smaller name (ordinal).
 /// </summary>
 public sealed class Lane
 {
@@ -76,6 +77,7 @@ public sealed class Galaxy
 
     private readonly Dictionary<string, int> _byName;
     private readonly Neighbour[][] _neighbours;
+    private readonly int[][] _near;
 
     public IReadOnlyList<StarSystem> Systems { get; }
     public IReadOnlyList<Sector> Sectors { get; }
@@ -84,9 +86,9 @@ public sealed class Galaxy
     public IReadOnlyList<string> Warnings { get; }
 
     internal Galaxy(IReadOnlyList<StarSystem> systems, IReadOnlyList<Sector> sectors, IReadOnlyList<Lane> lanes,
-        Neighbour[][] neighbours, IReadOnlyList<string> warnings)
+        Neighbour[][] neighbours, int[][] near, IReadOnlyList<string> warnings)
     {
-        Systems = systems; Sectors = sectors; Lanes = lanes; _neighbours = neighbours; Warnings = warnings;
+        Systems = systems; Sectors = sectors; Lanes = lanes; _neighbours = neighbours; _near = near; Warnings = warnings;
         _byName = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var s in systems) _byName[s.Name] = s.Index;
     }
@@ -97,6 +99,22 @@ public sealed class Galaxy
 
     /// <summary>Lanes at a system, sorted by neighbour name (ordinal). rule: m1-galaxy-data §Derived fields (Neighbours).</summary>
     public IReadOnlyList<Neighbour> NeighboursOf(int system) => _neighbours[system];
+
+    /// <summary>
+    /// Nearby systems, sorted by name (ordinal): the map-reading neighbourhood used where the rules once counted lane hops (AI reach,
+    /// setup pockets, character moves). One "step" = a route link or a short free jump. rule: m1-galaxy-data §Derived fields (Nearby).
+    /// </summary>
+    public IReadOnlyList<int> NearOf(int system) => _near[system];
+
+    /// <summary>True when the system lies on a hyperspace route (has at least one route link). rule: m1-travel §Rule, m5-fog-and-hq N4 (Sensor Stations).</summary>
+    public bool OnRoute(int system) => _neighbours[system].Length > 0;
+
+    /// <summary>The route link between two systems, or null.</summary>
+    public Lane? FindLane(int a, int b)
+    {
+        foreach (var n in _neighbours[a]) if (n.System == b) return n.Lane;
+        return null;
+    }
 
     public Lane? FindLane(string a, string b)
     {

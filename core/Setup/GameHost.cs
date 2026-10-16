@@ -91,7 +91,7 @@ public sealed class GameHost
     private GameHost(Game game, GameData data, GameSettings settings)
     {
         Game = game; Data = data; Settings = settings;
-        Fleets = FleetModule.Attach(game, data.Galaxy, data.Ships, data.Blockade, settings.ForcedStopTrigger, data.NewBattle);
+        Fleets = FleetModule.Attach(game, data.Galaxy, data.Ships, data.Blockade, settings.ForcedStopTrigger, data.NewBattle, settings.Travel);
 
         Economy = EconomyModule.Attach(game, data.Galaxy, data.Slots, data.Costs, Fleets, settings.Economy);
         Economy.IncidentsEnabled = settings.IncidentsEnabled;

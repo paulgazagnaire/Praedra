@@ -158,7 +158,9 @@ internal static class CampaignInvariants
                 Assert.InRange(t!.HopIndex, 0, t.Path.Count - 2);
                 Assert.Equal(t.Path.Count - 1, t.HopTicks.Count);
                 Assert.True(t.DueDay > host.Game.Day, $"{where}: fleet {f.Id} should have landed by day {t.DueDay}");
-                Assert.True(galaxy.FindLane(t.Path[t.HopIndex], t.Path[t.HopIndex + 1]) != null, $"{where}: fleet {f.Id} flies where no lane runs");
+                // free travel (m1-travel, 2026-10-16): a leg ends at a route system or at the destination, never at an off-route system on the way
+                Assert.True(galaxy.TryFindSystem(t.Path[t.HopIndex + 1], out int next) && (galaxy.OnRoute(next) || t.HopIndex + 1 == t.Path.Count - 1),
+                    $"{where}: fleet {f.Id} stops at an off-route system on the way");
             }
         }
 

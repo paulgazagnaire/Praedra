@@ -25,7 +25,7 @@ public sealed class FleetModule
 
     public Galaxy Galaxy { get; }
     public BlockadeData Blockade { get; }
-    /// <summary>The forced-stop trigger. A game setting; DEFAULT PaulRule. Not part of the save (it is configuration).</summary>
+    /// <summary>The forced-stop trigger. A game setting; DEFAULT GravityWellShip (Paul 2026-10-16). Not part of the save (it is configuration).</summary>
     public ForcedStopTrigger Trigger { get; set; }
     /// <summary>E, computed once from ship data. rule: m1-forced-stop-and-blockade §Update 2026-10-12.</summary>
     public double EconomicStrength { get; }
@@ -48,10 +48,10 @@ public sealed class FleetModule
     /// </summary>
     public event Action<StepContext?, int, Fleet, DissolveCause, int?>? FleetRemoving;
 
-    private FleetModule(Game game, Galaxy galaxy, IReadOnlyDictionary<string, ShipClass> ships, BlockadeData blockade, ForcedStopTrigger trigger, NewBattleData combat)
+    private FleetModule(Game game, Galaxy galaxy, IReadOnlyDictionary<string, ShipClass> ships, BlockadeData blockade, ForcedStopTrigger trigger, NewBattleData combat, TravelMode travel)
     {
         _game = game; Galaxy = galaxy; _ships = ships; Blockade = blockade; Trigger = trigger;
-        _pathfinder = new Pathfinder(galaxy);
+        _pathfinder = new Pathfinder(galaxy, travel);
         Strength = new CombatStrength(combat);
         _reference = Blockade.Reference(ships).ToList();
         EconomicStrength = blockade.EconomicStrength(ships, Strength);
@@ -59,9 +59,9 @@ public sealed class FleetModule
 
     /// <summary>Register the fleet order handlers and the hooks for work-list steps 2 to 5 on <paramref name="game"/>.</summary>
     public static FleetModule Attach(Game game, Galaxy galaxy, IReadOnlyDictionary<string, ShipClass> ships, BlockadeData blockade,
-        ForcedStopTrigger trigger = ForcedStopTrigger.PaulRule, NewBattleData? combat = null)
+        ForcedStopTrigger trigger = ForcedStopTrigger.GravityWellShip, NewBattleData? combat = null, TravelMode travel = TravelMode.Routes)
     {
-        var m = new FleetModule(game, galaxy, ships, blockade, trigger, combat ?? NewBattleData.Default);
+        var m = new FleetModule(game, galaxy, ships, blockade, trigger, combat ?? NewBattleData.Default, travel);
         game.RegisterOrderHandler<MoveFleetOrder>(m.HandleMoveFleet);
         game.RegisterOrderHandler<CreateFleetOrder>(m.HandleCreateFleet);
         game.RegisterOrderHandler<SplitFleetOrder>(m.HandleSplitFleet);

@@ -10,48 +10,45 @@ public class GalaxyDataTests
     private static Galaxy G => TestData.RealGalaxy;
 
     [Fact]
-    public void G1_RealFilesLoadWithExpectedCounts() // m1-galaxy-data G1
+    public void G1_RealFilesLoadWithExpectedCounts() // m1-galaxy-data G1 (v5 data, planets/15)
     {
-        Assert.Equal(362, G.Systems.Count);
-        Assert.Equal(521, G.Lanes.Count);
-        Assert.Equal(37, G.Sectors.Count);
-        Assert.Equal(59, G.Lanes.Count(l => l.Tier == 1));
-        Assert.Equal(84, G.Lanes.Count(l => l.Tier == 2));
-        Assert.Equal(378, G.Lanes.Count(l => l.Tier == 3));
-        Assert.Equal(40, G.Lanes.Count(l => l.Kind == "route"));
-        Assert.Equal(19, G.Lanes.Count(l => l.Kind == "route-inferred"));
+        Assert.Equal(551, G.Systems.Count);
+        Assert.Equal(373, G.Lanes.Count);
+        Assert.Equal(64, G.Sectors.Count);
+        Assert.Equal(114, G.Lanes.Count(l => l.Tier == 1));
+        Assert.Equal(259, G.Lanes.Count(l => l.Tier == 2));
+        Assert.Equal(0, G.Lanes.Count(l => l.Tier == 3));
+        Assert.Equal(90, G.Lanes.Count(l => l.Kind == "route"));
+        Assert.Equal(24, G.Lanes.Count(l => l.Kind == "route-inferred"));
         Assert.Empty(G.Warnings); // check 10: stored lane_count and chokepoint agree with the recomputed values
     }
 
     [Fact]
     public void G2_SectorSizes() // m1-galaxy-data G2
     {
-        Assert.Equal(10, G.Sectors.Max(s => s.Members.Count));
+        Assert.Equal(9, G.Sectors.Max(s => s.Members.Count));
         var hist = G.Sectors.GroupBy(s => s.Members.Count).ToDictionary(x => x.Key, x => x.Count());
-        Assert.Equal(new Dictionary<int, int> { [10] = 31, [9] = 4, [8] = 1, [6] = 1 }, hist);
-        Assert.Equal(360, G.Sectors.Sum(s => s.Members.Count));
+        Assert.Equal(new Dictionary<int, int> { [9] = 37, [8] = 27 }, hist);
+        Assert.Equal(549, G.Sectors.Sum(s => s.Members.Count));
     }
 
     [Fact]
-    public void G3_GraphReachability() // m1-galaxy-data G3
+    public void G3_RouteSystems() // m1-galaxy-data G3: 326 systems on a route, the rest reached by free travel only
     {
-        Assert.Equal(360, G.Systems.Count(s => G.NeighboursOf(s.Index).Count > 0));
+        Assert.Equal(326, G.Systems.Count(s => G.OnRoute(s.Index)));
+        Assert.Equal(326, G.Systems.Count(s => G.NeighboursOf(s.Index).Count > 0));
         Assert.Empty(G.NeighboursOf(G.Get("Ilum").Index));
         Assert.Empty(G.NeighboursOf(G.Get("Csilla").Index));
-        var seen = new HashSet<int> { G.Get("Coruscant").Index };
-        var stack = new Stack<int>(seen);
-        while (stack.Count > 0)
-            foreach (var n in G.NeighboursOf(stack.Pop()))
-                if (seen.Add(n.System)) stack.Push(n.System);
-        Assert.Equal(360, seen.Count);
+        Assert.False(G.OnRoute(G.Get("Yavin").Index));
+        Assert.True(G.OnRoute(G.Get("Coruscant").Index));
     }
 
     [Fact]
-    public void G4_ChokepointsAndLaneCounts() // m1-galaxy-data G4
+    public void G4_ChokepointsAndLaneCounts() // m1-galaxy-data G4 (chokepoints per route network)
     {
         var chokes = GalaxyLoader.Chokepoints(G);
-        Assert.Equal(83, chokes.Count);
-        Assert.Equal(49, G.Systems.Count(s => G.NeighboursOf(s.Index).Count == 1));
+        Assert.Equal(86, chokes.Count);
+        Assert.Equal(40, G.Systems.Count(s => G.NeighboursOf(s.Index).Count == 1));
         foreach (var s in G.Systems)
         {
             Assert.Equal(int.Parse(s.Carried["lane_count"]), G.NeighboursOf(s.Index).Count);
@@ -72,56 +69,65 @@ public class GalaxyDataTests
     [Fact]
     public void G6_OfficialLaneIsTier2() // m1-galaxy-data G6
     {
-        var l = G.FindLane("Corellia", "Nubia")!;
+        var l = G.FindLane("Coruscant", "Corulag")!;
         Assert.Equal("official", l.Kind);
         Assert.Equal(2, l.Tier);
         Assert.Equal(150, l.FactorPercent);
+        Assert.Equal(2, G.FindLane("Mirial", "Jelucan")!.Tier); // bridge: a minor link
     }
 
     [Fact]
-    public void G7_GeneratedLaneIsTier3() // m1-galaxy-data G7
+    public void G7_NoGeneratedLanes() // m1-galaxy-data G7: the v5 data has no generated placeholder lanes
     {
-        var l = G.FindLane("Coruscant", "Skako")!;
-        Assert.Equal("generated", l.Kind);
-        Assert.Equal(3, l.Tier);
-        Assert.Equal(100, l.FactorPercent);
+        Assert.DoesNotContain(G.Lanes, l => l.Kind == "generated");
+        Assert.Null(G.FindLane("Coruscant", "Yavin"));
     }
 
     [Fact]
     public void G8_BaseDistanceCoruscantCorellia() // m1-galaxy-data G8
     {
         var c = G.Get("Coruscant"); var k = G.Get("Corellia");
-        Assert.Equal((366, 390), (c.MapX, c.MapY));
-        Assert.Equal((381, 489), (k.MapX, k.MapY));
-        Assert.Equal(10026, 15 * 15 + 99 * 99);
-        Assert.Equal(100, (int)GalaxyLoader.Isqrt(10026));
+        Assert.Equal((395, 402), (c.MapX, c.MapY));
+        Assert.Equal((440, 492), (k.MapX, k.MapY));
+        Assert.Equal(10125, 45 * 45 + 90 * 90);
+        Assert.Equal(100, (int)GalaxyLoader.Isqrt(10125));
         Assert.Equal(20, G.FindLane("Coruscant", "Corellia")!.BaseDistance);
     }
 
     [Fact]
-    public void G9_BaseDistanceCoruscantSkako() // m1-galaxy-data G9
+    public void G9_NearbyIsSymmetricSortedAndConnected() // m1-galaxy-data §Derived fields (Nearby)
     {
-        Assert.Equal((355, 385), (G.Get("Skako").MapX, G.Get("Skako").MapY));
-        Assert.Equal(12, (int)GalaxyLoader.Isqrt(146));
-        Assert.Equal(2, G.FindLane("Coruscant", "Skako")!.BaseDistance);
+        foreach (var s in G.Systems)
+        {
+            var near = G.NearOf(s.Index);
+            Assert.True(near.Count >= 2);
+            Assert.Equal(near.OrderBy(x => x).ToList(), near.ToList());
+            Assert.DoesNotContain(s.Index, near);
+            foreach (int j in near) Assert.Contains(s.Index, G.NearOf(j));
+            foreach (var nb in G.NeighboursOf(s.Index)) Assert.Contains(nb.System, near); // route links are always nearby
+        }
+        var seen = new HashSet<int> { G.Get("Coruscant").Index };
+        var stack = new Stack<int>(seen);
+        while (stack.Count > 0) foreach (int n in G.NearOf(stack.Pop())) if (seen.Add(n)) stack.Push(n);
+        Assert.Equal(549, seen.Count(i => !G.Systems[i].IsOutsideSectors));
     }
 
     [Fact]
     public void G10_LaneToMissingSystemFails() // m1-galaxy-data G10 (check 2)
     {
         var ex = Assert.Throws<DataLoadException>(() =>
-            GalaxyLoader.Load(TestData.PlanetsText, TestData.LanesText + "Coruscant,Nowhere,generated,\n", TestData.Tiers));
+            GalaxyLoader.Load(TestData.PlanetsText, TestData.LanesText + "Coruscant,Nowhere,generated,,,\n", TestData.Tiers));
         Assert.Contains("Nowhere", ex.Message);
         Assert.Contains("Coruscant", ex.Message);
     }
 
     [Fact]
-    public void G11_EleventhSystemInASectorFails() // m1-galaxy-data G11 (check 6)
+    public void G11_EleventhSystemInASectorFails() // m1-galaxy-data G11 (check 6): a 9-system sector plus two
     {
-        var full = G.Sectors.First(s => s.Members.Count == 10);
-        var row = $"Zzz Extra,{full.Name},{full.Group},,,,10,10,,,,0,0\n";
+        var full = G.Sectors.First(s => s.Members.Count == 9);
+        var rows = $"Zzz Extra,{full.Name},{full.Group},,,,10,10,,,,0,0,0,,\nZzz Extra2,{full.Name},{full.Group},,,,12,12,,,,0,0,0,,\n";
         var ex = Assert.Throws<DataLoadException>(() =>
-            GalaxyLoader.Load(TestData.PlanetsText + row, TestData.LanesText, TestData.Tiers));
+            GalaxyLoader.Load(TestData.PlanetsText + rows, TestData.LanesText, TestData.Tiers));
         Assert.Contains(full.Name, ex.Message);
     }
 
@@ -129,16 +135,16 @@ public class GalaxyDataTests
     public void G12_SamePairTwiceFails() // m1-galaxy-data G12 (check 3)
     {
         var ex = Assert.Throws<DataLoadException>(() =>
-            GalaxyLoader.Load(TestData.PlanetsText, TestData.LanesText + "Arkanis,Ryloth,route,Corellian Run\n", TestData.Tiers));
+            GalaxyLoader.Load(TestData.PlanetsText, TestData.LanesText + "Corellia,Coruscant,route,Corellian Run,,\n", TestData.Tiers));
         Assert.Contains("already has a lane", ex.Message);
     }
 
     [Fact]
     public void G13_NeighboursBothWaysAndSorted() // m1-galaxy-data G13
     {
-        var ryloth = G.Get("Ryloth"); var arkanis = G.Get("Arkanis");
-        Assert.Contains(G.NeighboursOf(ryloth.Index), n => n.System == arkanis.Index);
-        Assert.Contains(G.NeighboursOf(arkanis.Index), n => n.System == ryloth.Index);
+        var a = G.Get("Corellia"); var b = G.Get("Duros");
+        Assert.Contains(G.NeighboursOf(a.Index), n => n.System == b.Index);
+        Assert.Contains(G.NeighboursOf(b.Index), n => n.System == a.Index);
         foreach (var s in G.Systems)
         {
             var names = G.NeighboursOf(s.Index).Select(n => G.Systems[n.System].Name).ToList();
@@ -199,15 +205,14 @@ public class GalaxyDataTests
     }
 
     [Fact]
-    public void Check7_OutsidersHaveNoLanesAndOthersHaveOne()
+    public void Check7_OutsidersHaveNoLanesOthersMayHaveNone() // since 2026-10-16 a system may lie off every route (free travel)
     {
-        // a system inside a sector with no lane
-        var ex = Assert.Throws<DataLoadException>(() => GalaxyLoader.Load(Tiny + "C,S,core,3,3\n", TinyLane, TestData.Tiers));
-        Assert.Contains("at least one lane", ex.Message);
+        var g = GalaxyLoader.Load(Tiny + "C,S,core,3,3\n", TinyLane, TestData.Tiers);
+        Assert.False(g.OnRoute(g.Get("C").Index));
         // Ilum with a lane
         var p = Tiny + $"Ilum,{Galaxy.OutsideSectorsLabel},,9,9\n";
-        ex = Assert.Throws<DataLoadException>(() => GalaxyLoader.Load(p, TinyLane + "A,Ilum,generated,\n", TestData.Tiers));
-        Assert.Contains("no lanes", ex.Message);
+        var ex = Assert.Throws<DataLoadException>(() => GalaxyLoader.Load(p, TinyLane + "A,Ilum,generated,\n", TestData.Tiers));
+        Assert.Contains("no route links", ex.Message);
         // someone else outside sectors
         ex = Assert.Throws<DataLoadException>(() =>
             GalaxyLoader.Load(Tiny + $"Hermit,{Galaxy.OutsideSectorsLabel},,9,9\n", TinyLane, TestData.Tiers));
@@ -215,11 +220,11 @@ public class GalaxyDataTests
     }
 
     [Fact]
-    public void Check8_DisconnectedSectorsFail()
+    public void Check8_SeparateRouteNetworksLoad() // the old "one connected lane graph" check is gone (m1-galaxy-data check 8, retired 2026-10-16)
     {
         var p = Tiny + "C,S,core,3,3\nD,S,core,4,4\n";
-        var ex = Assert.Throws<DataLoadException>(() => GalaxyLoader.Load(p, TinyLane + "C,D,generated,\n", TestData.Tiers));
-        Assert.Contains("not connected", ex.Message);
+        var g = GalaxyLoader.Load(p, TinyLane + "C,D,generated,\n", TestData.Tiers);
+        Assert.Equal(2, g.Lanes.Count);
     }
 
     [Fact]
@@ -228,7 +233,7 @@ public class GalaxyDataTests
         var expected = ExpectedGalaxyCounts.Load(Path.Combine(TestData.DesignDir, GalaxyLoader.CountsFile));
         expected.Check(G); // the real data matches
         var ex = Assert.Throws<DataLoadException>(() => (expected with { Lanes = 520 }).Check(G));
-        Assert.Contains("lanes: expected 520, found 521", ex.Message);
+        Assert.Contains("lanes: expected 520, found 373", ex.Message);
     }
 
     [Fact]
@@ -287,7 +292,7 @@ public class GalaxyDataTests
     public void SlotValuesLoadForEverySystem()
     {
         var sv = SlotValues.Load(Path.Combine(TestData.DesignDir, SlotValues.File), G);
-        Assert.Equal(362, sv.Count);
+        Assert.Equal(551, sv.Count);
         var a = sv.Of(G.Get("Abregado").Index);
         Assert.Equal((12, 9, true), (a.Energy, a.Raw, a.Populated));
     }

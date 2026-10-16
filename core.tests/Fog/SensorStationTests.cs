@@ -170,7 +170,7 @@ public class SensorStationTests
     public void SS8_ForcedStopFleetIsReported()
     {
         var w = World(null, R4);
-        w.Fleet(Side.Alliance, R3, Isd, 3); // three ISDs stand at R3: equal strength stops the passing fleet (m4-battle-new §12)
+        w.Fleet(Side.Alliance, R3, "Interdictor Cruiser", 1); // a gravity well at R3 pulls the passing enemy fleet out (DEFAULT GravityWellShip, movement-redesign-draft §B)
         w.H.Fleets.SubmitMove(Side.Empire, w.E1, R4);
         var r = Assert.Single(RunToReport(w));
         Assert.Equal(R3, r.System);
