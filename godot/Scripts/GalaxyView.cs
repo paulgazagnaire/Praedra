@@ -61,6 +61,12 @@ public partial class GalaxyView : Control
     /// Each leg is a straight segment: solid where it rides a route link, dashed where it is a free jump through open space.</summary>
     public IReadOnlyList<int> PathPreview { get; set; }
     public Color PathColor { get; set; } = Colors.White;
+    /// <summary>Per leg of <see cref="PathPreview"/>: true when it rides a route link (solid), false for a free jump (dashed). Null: worked out from the links.</summary>
+    public IReadOnlyList<bool> PathRouteHop { get; set; }
+    /// <summary>Systems on the preview where the player's picture shows an enemy gravity-well ship (circled in red).</summary>
+    public IReadOnlyList<int> PathTraps { get; set; }
+    /// <summary>Waypoints the player added with shift-click, in order (numbered on the map).</summary>
+    public IReadOnlyList<int> Waypoints { get; set; }
 
     /// <summary>Whether the map draws the hyperspace routes (Paul 2026-10-16: every route link is visible; L toggles).</summary>
     bool _showRoutes = true;
@@ -280,12 +286,33 @@ public partial class GalaxyView : Control
             for (int k = 0; k + 1 < PathPreview.Count; k++)
             {
                 var a = SystemScreen(PathPreview[k]); var b = SystemScreen(PathPreview[k + 1]);
-                if (Galaxy.FindLane(PathPreview[k], PathPreview[k + 1]) != null) DrawLine(a, b, PathColor, 4f, true);
+                bool route = PathRouteHop != null && k < PathRouteHop.Count ? PathRouteHop[k] : Galaxy.FindLane(PathPreview[k], PathPreview[k + 1]) != null;
+                if (route) DrawLine(a, b, PathColor, 4f, true);
                 else DrawDashedLine(a, b, PathColor, 3f, 9f, true, true);
             }
             for (int k = 1; k + 1 < PathPreview.Count; k++) // the stops on the way
                 DrawCircle(SystemScreen(PathPreview[k]), 3.2f, PathColor);
         }
+        // known traps on the way: a red ring with a cross-hair, so the player sees where the fleet can be pulled out of hyperspace
+        if (PathTraps != null)
+            foreach (int t in PathTraps)
+            {
+                var p = SystemScreen(t);
+                var red = new Color(1f, 0.3f, 0.25f);
+                DrawArc(p, radius + 9f, 0, Mathf.Tau, 28, red, 2.5f, true);
+                DrawLine(p + new Vector2(-(radius + 14f), 0), p + new Vector2(-(radius + 5f), 0), red, 2f, true);
+                DrawLine(p + new Vector2(radius + 5f, 0), p + new Vector2(radius + 14f, 0), red, 2f, true);
+                DrawLine(p + new Vector2(0, -(radius + 14f)), p + new Vector2(0, -(radius + 5f)), red, 2f, true);
+                DrawLine(p + new Vector2(0, radius + 5f), p + new Vector2(0, radius + 14f), red, 2f, true);
+            }
+        // waypoints: numbered yellow squares
+        if (Waypoints != null)
+            for (int k = 0; k < Waypoints.Count; k++)
+            {
+                var p = SystemScreen(Waypoints[k]) + new Vector2(radius + 6f, -(radius + 16f));
+                DrawRect(new Rect2(p, new Vector2(15, 15)), new Color(1f, 0.85f, 0.35f));
+                DrawString(_font, p + new Vector2(3.5f, 12.5f), (k + 1).ToString(), HorizontalAlignment.Left, -1, 12, new Color(0.05f, 0.05f, 0.08f));
+            }
 
         // systems: the whole dot is the owner's colour; neutral = small grey dot; unexplored = faint hollow ring.
         // Bigger double ring = headquarters, red ring = uprising, yellow ring = blockade.

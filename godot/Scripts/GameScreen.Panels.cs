@@ -76,9 +76,15 @@ public partial class GameScreen
     /// <summary>How a path travels, for the move banner: legs along a route versus free jumps through open space.</summary>
     string LegWords(Rebellion.Core.Travel.PathResult pr)
     {
-        int onRoute = 0;
-        for (int k = 0; k + 1 < pr.Systems.Count; k++) if (G.FindLane(pr.Systems[k], pr.Systems[k + 1]) != null) onRoute++;
-        int free = pr.Hops - onRoute;
+        var hops = new List<bool>();
+        for (int k = 0; k + 1 < pr.Systems.Count; k++) hops.Add(G.FindLane(pr.Systems[k], pr.Systems[k + 1]) != null);
+        return LegWords(hops);
+    }
+
+    string LegWords(IReadOnlyList<bool> routeHop)
+    {
+        int onRoute = routeHop.Count(r => r);
+        int free = routeHop.Count - onRoute;
         if (onRoute == 0) return free == 1 ? " (one free jump, no route)" : $" ({free} free jumps, no route)";
         string r = onRoute == 1 ? "1 stretch on a route" : $"{onRoute} stretches on routes";
         return free == 0 ? $" ({r})" : $" ({r}, {free} free {(free == 1 ? "jump" : "jumps")})";
@@ -87,6 +93,7 @@ public partial class GameScreen
     void StartMove(Fleet f)
     {
         _moveFleet = f.Id;
+        _waypoints.Clear(); _view.Waypoints = null;
         _view.PickMode = true;
         _moveBanner = "Click a destination system (Esc cancels)";
         _panelDirty = true; _panelTimer = 0;
@@ -96,32 +103,76 @@ public partial class GameScreen
     void CancelMove()
     {
         _moveFleet = -1; _moveHq = false; _moveChar = -1; _pickMission = false; _view.PickMode = false; _view.PathPreview = null;
+        _waypoints.Clear(); _view.Waypoints = null; _view.PathTraps = null; _view.PathRouteHop = null; _moveWarn = false;
         _panelDirty = true; _panelTimer = 0;
         RefreshTop();
     }
 
+    // Waypoints of the fleet move being planned (shift-click adds one, Backspace drops the last). Paul 2026-10-16: the player can force
+    // any path, traps included; the game proposes the fastest and warns in red, it never detours on its own. rule: m1-travel §Path rule (3), (5).
+    readonly List<string> _waypoints = new();
+    bool _moveWarn;
+    static readonly Color TrapRed = new(1f, 0.32f, 0.27f, 0.95f);
+
     void UpdatePreview()
     {
         if (!S.Game.State.Fleets.TryGetValue(_moveFleet, out var f) || f.At == null) { CancelMove(); return; }
+        _view.Waypoints = _waypoints.Count == 0 ? null : _waypoints.Select(w => G.TryFindSystem(w, out int i) ? i : -1).Where(i => i >= 0).ToList();
         int h = _view.Hovered;
-        if (h < 0 || G.Systems[h].Name == f.At)
+        // nothing useful under the mouse: show the path through the waypoints so far, if any
+        string to = h >= 0 && G.Systems[h].Name != f.At ? G.Systems[h].Name : _waypoints.Count > 0 ? _waypoints[^1] : null;
+        var via = h >= 0 && G.Systems[h].Name != f.At ? _waypoints : _waypoints.Take(Math.Max(0, _waypoints.Count - 1)).ToList();
+        string tail = _waypoints.Count == 0 ? "Click to confirm, Shift-click to add a waypoint." : "Click to confirm, Shift-click for another waypoint, Backspace drops the last.";
+        _moveWarn = false; _view.PathTraps = null;
+        if (to == null)
         {
-            _view.PathPreview = null;
+            _view.PathPreview = null; _view.PathRouteHop = null;
             _moveBanner = $"Move {f.Name}: click a destination system (Esc cancels)";
         }
         else
         {
-            string to = G.Systems[h].Name;
-            var pr = Fm.FindPath(f.At, to, Fm.SpeedOf(f));
-            if (pr.Ok)
+            var plan = S.Host.PlanMove(Me, f.Id, to, via);
+            if (plan.Ok)
             {
-                _view.PathPreview = pr.Systems;
-                _view.PathColor = new Color(1f, 1f, 1f, 0.9f);
-                _moveBanner = $"{f.Name} to {to}: {pr.TotalTicks} days, arrives day {S.Game.Day + pr.TotalTicks}{LegWords(pr)}. Click to confirm.";
+                _view.PathPreview = plan.Path.Select(n => G.TryFindSystem(n, out int i) ? i : -1).ToList();
+                _view.PathRouteHop = plan.RouteHop;
+                string trip = $"{plan.HopTicks.Sum()} days, arrives day {plan.ArrivalDay}{LegWords(plan.RouteHop)}";
+                string through = via.Count == 0 ? "" : " via " + string.Join(", ", via);
+                if (plan.Red)
+                {
+                    _moveWarn = true;
+                    _view.PathColor = TrapRed;
+                    _view.PathTraps = plan.Traps.Select(t => G.TryFindSystem(t.System, out int i) ? i : -1).Where(i => i >= 0).ToList();
+                    string where = string.Join(", ", plan.Traps.Select(t => $"{t.System} (seen day {t.SeenDay})"));
+                    _moveBanner = $"TRAP: an enemy interdictor was seen at {where}. It can pull {f.Name} out of hyperspace there.\n"
+                        + $"{f.Name} to {to}{through}: {trip}. Click to go anyway, Shift-click a waypoint to steer around it.";
+                }
+                else
+                {
+                    _view.PathColor = new Color(1f, 1f, 1f, 0.9f);
+                    _moveBanner = $"{f.Name} to {to}{through}: {trip}.\n{tail}";
+                }
             }
-            else { _view.PathPreview = null; _moveBanner = $"No route from {f.At} to {to} for this fleet."; }
+            else { _view.PathPreview = null; _view.PathRouteHop = null; _moveBanner = $"No route from {f.At} to {to} for this fleet."; }
         }
         RefreshTop();
+    }
+
+    /// <summary>Shift-click in move mode: the system becomes the next waypoint (not the fleet's own system, not twice in a row).</summary>
+    void AddWaypoint(int idx)
+    {
+        if (!S.Game.State.Fleets.TryGetValue(_moveFleet, out var f) || f.At == null) return;
+        string w = G.Systems[idx].Name;
+        if (w == f.At || (_waypoints.Count > 0 && _waypoints[^1] == w)) return;
+        _waypoints.Add(w);
+        UpdatePreview();
+    }
+
+    void DropWaypoint()
+    {
+        if (_waypoints.Count == 0) return;
+        _waypoints.RemoveAt(_waypoints.Count - 1);
+        UpdatePreview();
     }
 
     void OnSystemPicked(int idx)
@@ -131,13 +182,17 @@ public partial class GameScreen
         if (_pickMission) { OnMissionPicked(idx); return; }
         if (_moveFleet < 0) return;
         if (!S.Game.State.Fleets.TryGetValue(_moveFleet, out var f) || f.At == null) { CancelMove(); return; }
+        if (Input.IsKeyPressed(Key.Shift)) { AddWaypoint(idx); return; }
         string to = G.Systems[idx].Name;
         if (to == f.At) return;
-        var pr = Fm.FindPath(f.At!, to, Fm.SpeedOf(f));
-        long seq = Fm.SubmitMove(Me, f.Id, to);
+        var via = _waypoints.ToList();
+        var plan = S.Host.PlanMove(Me, f.Id, to, via); // the same path the order will fly
+        long seq = Fm.SubmitMove(Me, f.Id, to, via);
         S.TrackFleet(f.Id, seq, $"Move {f.Name} to {to}");
-        if (pr.Ok) S.PlanMove(f.Id, new GameSession.PlannedMove(to, pr.Systems.Select(i => G.Systems[i].Name).ToList(), pr.TotalTicks, S.Game.Day + pr.TotalTicks));
-        S.Say($"Order sent: move {f.Name} to {to}.", MsgKind.Info, to);
+        if (plan.Ok) S.PlanMove(f.Id, new GameSession.PlannedMove(to, plan.Path.ToList(), plan.HopTicks.Sum(), plan.ArrivalDay));
+        string viaWords = via.Count == 0 ? "" : " via " + string.Join(", ", via);
+        string trapWords = plan.Red ? $" (warned: interdictor seen at {string.Join(", ", plan.Traps.Select(t => t.System))})" : "";
+        S.Say($"Order sent: move {f.Name} to {to}{viaWords}{trapWords}.", plan.Red ? MsgKind.Warn : MsgKind.Info, to);
         AddLogItem(S.Messages[^1]);
         CancelMove();
         _fleetListDirty = true;

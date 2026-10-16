@@ -122,6 +122,9 @@ public partial class Main : Control
                 case "--open" when i + 1 < _args.Length: gs.ShotOpenSection(_args[i + 1]); break;
                 case "--moveto" when i + 1 < _args.Length: gs.ShotMove(_args[i + 1]); break;
                 case "--preview" when i + 1 < _args.Length: gs.ShotPreview(_args[i + 1]); break;
+                case "--trap" when i + 1 < _args.Length: gs.ShotTrap(_args[i + 1]); break;
+                case "--waypoint" when i + 1 < _args.Length: gs.ShotWaypoint(_args[i + 1]); break;
+                case "--lookat" when i + 2 < _args.Length: gs.ShotLookAt(_args[i + 1], float.Parse(_args[i + 2], CultureInfo.InvariantCulture)); break;
                 case "--filter" when i + 1 < _args.Length: gs.ShotFilter(_args[i + 1]); break;
                 case "--characters": gs.ShotCharacters(); break;
                 case "--click" when i + 1 < _args.Length: gs.ShotClick(_args[i + 1]); break;

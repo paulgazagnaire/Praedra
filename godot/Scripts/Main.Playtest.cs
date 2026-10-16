@@ -44,6 +44,9 @@ public partial class Main
             catch (Exception e) { _fails++; GD.PrintErr($"PLAYTEST CRASH ({side}): {e}"); }
         }
         Forget(GameBoot.SaveSlot); Forget(GameBoot.AutoSaveSlot); Forget(GameBoot.HowToFlag);
+        try { PlaytestTrapsAndWaypoints(); }
+        catch (Exception e) { _fails++; GD.PrintErr($"PLAYTEST CRASH (traps): {e}"); }
+        Forget(GameBoot.SaveSlot); Forget(GameBoot.AutoSaveSlot); Forget(GameBoot.HowToFlag);
         GD.Print(_fails == 0 ? $"PLAYTEST PASSED ({_checks} checks)" : $"PLAYTEST FAILED: {_fails} of {_checks} checks");
         GetTree().Quit(_fails == 0 ? 0 : 1);
     }
