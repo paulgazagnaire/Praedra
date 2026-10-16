@@ -21,12 +21,14 @@ public sealed record ResearchParams
     public bool FacilityResearch { get; init; } = true;
     /// <summary>AddMissionPoints adds points. Off: it adds nothing (draws unchanged). DEFAULT on. rule: m5-research §Defaults.</summary>
     public bool MissionResearch { get; init; } = true;
-    /// <summary>DEFAULT None. rule: m5-research §Scaling with galaxy size.</summary>
-    public ResearchScale ResearchCostScale { get; init; } = ResearchScale.None;
+    /// <summary>DEFAULT SystemCount (Decided by Paul 2026-10-16, economy/14: costs scale with systems / 100). rule: m5-research §Scaling with galaxy size.</summary>
+    public ResearchScale ResearchCostScale { get; init; } = ResearchScale.SystemCount;
     /// <summary>The percent used when <see cref="ResearchCostScale"/> is Fixed (the sheet gives no value; 100 = unchanged).</summary>
     public int ResearchCostPercentFixed { get; init; } = 100;
-    /// <summary>DEFAULT None. rule: m5-research §Scaling with galaxy size.</summary>
-    public ResearchScale MissionPointsScale { get; init; } = ResearchScale.None;
+    /// <summary>DEFAULT SystemCount (Decided by Paul 2026-10-16, economy/14: mission points scale like the costs). rule: m5-research §Scaling with galaxy size.</summary>
+    public ResearchScale MissionPointsScale { get; init; } = ResearchScale.SystemCount;
+    /// <summary>A yard on a system under economic blockade against its holder adds no points at the tick. DEFAULT on (Decided by Paul 2026-10-16, economy/14; uprising does not stop it). rule: m5-research §Facility income (Counting).</summary>
+    public bool BlockadeStopsResearch { get; init; } = true;
     /// <summary>The percent used when <see cref="MissionPointsScale"/> is Fixed (the sheet gives no value; 100 = unchanged).</summary>
     public int MissionPointsPercentFixed { get; init; } = 100;
     /// <summary>A startup data check refuses two classes of one side on one rung of one track. DEFAULT on. rule: m5-research §Rule (New) 1.</summary>

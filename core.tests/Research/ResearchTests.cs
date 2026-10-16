@@ -428,6 +428,23 @@ public class ResearchTests
         }
     }
 
+    // m5-research RS32 (Paul 2026-10-16: a blockaded yard adds no research; switch BlockadeStopsResearch)
+    [Fact]
+    public void RS32_ABlockadedYardDoesNotCount()
+    {
+        var w = new ResearchWorld();
+        w.Hold(Yard1, A); w.Hold(Yard2, A);
+        w.Fac(Yard1, FacilityKind.OrbitalShipyard); w.Fac(Yard2, FacilityKind.OrbitalShipyard);
+        Assert.Equal(2, w.Research.CountYards(A)[(int)Ship]);
+        w.Fleets.AddFleet(Side.Empire, "Picket", new List<string> { "Interdictor Cruiser" }, Yard1, new List<string>());
+        Assert.True(w.Fleets.IsEconomicBlockade(Yard1, A));
+        Assert.Equal(1, w.Research.CountYards(A)[(int)Ship]);
+        var off = new ResearchWorld(ResearchWorld.Unscaled with { BlockadeStopsResearch = false });
+        off.Hold(Yard1, A); off.Fac(Yard1, FacilityKind.OrbitalShipyard);
+        off.Fleets.AddFleet(Side.Empire, "Picket", new List<string> { "Interdictor Cruiser" }, Yard1, new List<string>());
+        Assert.Equal(1, off.Research.CountYards(A)[(int)Ship]);
+    }
+
     // m5-research RS28
     [Fact]
     public void RS28_CanResearchNeedsAMatchingYardOnAHeldSystem()
