@@ -115,6 +115,13 @@ public sealed record SimpleAiParams
     /// shipyard world don't sit merged into the guard all game (the Alliance pile parked on its HQ on the v5 map). DEFAULT (lead 2026-10-16).
     /// </summary>
     public bool SplitHomeSurplus { get; init; } = true;
+
+    /// <summary>
+    /// A fleet going around a blocked stop sends one order with waypoints for the whole detour (the router's waypoints, m1-travel §Path rule (3);
+    /// Paul approved the AI adding its own waypoints, 2026-10-16 19:37). Off = one leg at a time, planning again on arrival with what the side sees then. DEFAULT off (lead 2026-10-16): measured on the v5 map,
+    /// on made two play tests miss their win (Alliance vs passive Empire, fogged Empire seed 3), because a committed detour cannot react. The AI trainer may revisit it.
+    /// </summary>
+    public bool DetourWithWaypoints { get; init; } = false;
     /// <summary>A strike pile of WinStrikeStrength fetches the regiments for the game-winning system first when at most this many regiments are believed there (-1 = never). DEFAULT.</summary>
     public int WinRushDefenders { get; init; } = 2;
     /// <summary>

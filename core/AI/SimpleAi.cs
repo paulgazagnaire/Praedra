@@ -873,6 +873,19 @@ public sealed partial class SimpleAi
                 blocked = PathBlockedAt(f, path);
             }
             if (blocked != null) return false;
+            if (_p.DetourWithWaypoints)
+            {
+                // the whole way around in one order: the stops of the avoiding path become waypoints, used only when the order flies exactly
+                // that path (a stretch between two stops could otherwise cut back through an avoided system). rule: m1-travel §Path rule (3).
+                var stops = path.Systems.Skip(1).Take(path.Systems.Count - 2).Select(i => g.Systems[i].Name).ToList();
+                var via = _h.Fleets.PlanPath(f, dest, stops);
+                if (via.Ok && via.Systems.SequenceEqual(path.Systems))
+                {
+                    long ws = _h.Fleets.SubmitMove(_side, f.Id, dest, stops);
+                    Note(ws, "Move", $"fleet {f.Id} {f.At} -> {dest} via {string.Join(", ", stops)}");
+                    return true;
+                }
+            }
             string first = g.Systems[path.Systems[1]].Name;
             if (first != dest)
             {

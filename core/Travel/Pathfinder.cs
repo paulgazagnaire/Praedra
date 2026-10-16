@@ -2,7 +2,8 @@ using Rebellion.Core.Map;
 
 namespace Rebellion.Core.Travel;
 
-public enum PathStatus { Ok, Unreachable, AlreadyThere, Immobile, UnknownSystem }
+/// <summary>InTransit: only from a fleet's move plan (the fleet already flies an order). rule: m1-travel §Orders in transit.</summary>
+public enum PathStatus { Ok, Unreachable, AlreadyThere, Immobile, UnknownSystem, InTransit }
 
 /// <summary>Result of a path request: either a path or a rejection reason. rule: m1-travel §Path rule (6), §Defaults.</summary>
 public sealed class PathResult

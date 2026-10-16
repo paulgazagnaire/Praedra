@@ -88,6 +88,37 @@ public sealed class GameHost
     /// <summary>Is the system explored in the side's picture (dealt at setup, then widened by fleets, holdings and reveals)? rule: m5-fog-and-hq §F1.</summary>
     public bool IsExplored(string system, Rebellion.Core.Clock.Side side) => Fog.IsExplored(side, system);
 
+    /// <summary>
+    /// The move preview for one of the side's fleets: the path, hops, arrival day and the known traps on the way, from the side's own
+    /// picture (never the truth). The MoveFleet order with the same waypoints flies exactly this path. rule: m1-travel §Path rule (3), (5);
+    /// m5-fog-and-hq §N8 (what a side may read). A trap = a system passed on the way whose picture shows an enemy fleet with a gravity-well
+    /// ship, however old the look (the age is given; DEFAULT, the sheet names no cut-off). Strength blockades are not traps: only gravity-well
+    /// ships pull fleets out of hyperspace (m1-forced-stop-and-blockade, Paul 2026-10-16).
+    /// </summary>
+    public MovePlan PlanMove(Rebellion.Core.Clock.Side side, int fleetId, string destination, IReadOnlyList<string>? waypoints = null)
+    {
+        var none = Array.Empty<string>();
+        if (!Game.State.Fleets.TryGetValue(fleetId, out var fleet) || fleet.Side != side)
+            return new MovePlan(Rebellion.Core.Travel.PathStatus.UnknownSystem, none, Array.Empty<int>(), Array.Empty<bool>(), 0, Array.Empty<KnownTrap>());
+        var path = Fleets.PlanPath(fleet, destination, waypoints);
+        if (!path.Ok) return new MovePlan(path.Status, none, Array.Empty<int>(), Array.Empty<bool>(), 0, Array.Empty<KnownTrap>());
+        var names = path.Names(Fleets.Galaxy);
+        var route = new List<bool>();
+        for (int i = 0; i + 1 < names.Count; i++)
+            route.Add(Fleets.Travel != Rebellion.Core.Travel.TravelMode.Straight && Fleets.Galaxy.FindLane(names[i], names[i + 1]) != null);
+        var view = Fog.ViewFor(side);
+        var traps = new List<KnownTrap>();
+        for (int i = 1; i + 1 < names.Count; i++)
+        {
+            var seen = view.Picture(names[i])?.Fleets;
+            if (seen == null) continue;
+            bool gravity = seen.Value.Any(fp => fp.Side != side && fp.Ships.Any(kv => kv.Value > 0
+                && Fleets.ShipClasses.TryGetValue(kv.Key, out var c) && c.GravityWellProjector > 0));
+            if (gravity) traps.Add(new KnownTrap(names[i], seen.Stamp));
+        }
+        return new MovePlan(path.Status, names, path.HopTicks, route, Game.Day + path.TotalTicks, traps);
+    }
+
     private GameHost(Game game, GameData data, GameSettings settings)
     {
         Game = game; Data = data; Settings = settings;
