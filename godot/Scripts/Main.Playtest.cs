@@ -497,6 +497,9 @@ public partial class Main
         Side winner = playerWins ? me : s.Enemy;
         string goal = winner == Side.Alliance ? "Coruscant" : s.Host.HqSystem;
         s.Host.Control.SubmitDebugSetHolder(winner, goal, winner);
+        // Standard victory (the default since 2026-10-16) also needs the two enemy leaders captive: test-only, straight through the character module.
+        foreach (var k in s.Host.Victory.Keys.Where(k => k.Standard && k.Side == winner))
+            if (s.Host.Characters.Get(k.Character) is { } c) s.Host.Characters.Capture(null, c, winner, null, "Playtest");
         gs.PlayDay();
         Expect(s.Winner == winner, $"core declares {winner} the winner ({GameBoot.WinReason(s.Host)})");
         Expect(gs.VictoryVisible, "victory screen shows");
