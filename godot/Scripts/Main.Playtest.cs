@@ -228,6 +228,8 @@ public partial class Main
         }
 
         // ---------------------------------------------------------------- a battle: send the strongest other fleet onto the nearest enemy fleet
+        // The deal differs per seed, so the opponent's fleets may all be on the move right now: let days pass until one stands at a system.
+        RunUntil(gs, () => s.Game.State.Fleets.Values.Any(f => f.Side != me && f.At != null), 400);
         var enemyFleets = s.Game.State.Fleets.Values.Where(f => f.Side != me && f.At != null).ToList();
         var warFleet = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null && f.Id != troopFleet.Id && f.Ships.Count > 0 && fm.SpeedOf(f) > 0).OrderByDescending(f => fm.StrengthOf(f)).First();
         int battlesBefore = s.Messages.Count(m => m.Kind == MsgKind.Battle);
