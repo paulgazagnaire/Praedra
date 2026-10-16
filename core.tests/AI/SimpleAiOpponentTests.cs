@@ -56,12 +56,13 @@ public class SimpleAiOpponentTests
     [Fact]
     public void AllianceAi_AgainstPassiveEmpire_MakesSteadyProgress_AndWinsByTakingCoruscant()
     {
-        var (day, c365, total) = PlayPassive(1, Side.Alliance, 1000);
+        var (day, c365, total) = PlayPassive(1, Side.Alliance, 1300);
         Assert.True(c365 >= 8, $"only {c365} captures by day 365");
         // measured: day 783 without characters and missions, 813 with them (SimpleAiParams.UseCharactersAndMissions, DEFAULT on: the game
         // takes another course; about 50 days of it a strike pile chased two Imperial ships that retreat between Basilisk and Kirrek), 795 since
         // the AI stops hunting fleets that only retreat (SimpleAiParams.RunnerRetreats, SimpleAiChaseTests)
-        Assert.True(day <= 850, $"won only on day {day}");
+        // // v5 re-pin 2026-10-16 (Paul chose re-pin on the map PR; the AI trainer owns restoring the old target): measured day 1062 on v5 (16 captures by day 365), limit 850 -> 1200
+        Assert.True(day <= 1200, $"won only on day {day}");
     }
 
     [Fact]
@@ -136,7 +137,7 @@ public class SimpleAiOpponentTests
         m.RunTo(220);
         var save = host.Save();
         m.RunTo(300);
-        var host2 = GameHost.Load(save);
+        var host2 = GameHost.Load(save, Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory); // the same settings as the game (settings are not in the save)
         var m2 = new AiMatch(host2); m2.Empire.KnownEnemyHq = host2.HqSystem;
         m2.RunTo(300);
         Assert.Equal(host.StateHash(), host2.StateHash());

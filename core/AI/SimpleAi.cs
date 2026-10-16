@@ -864,7 +864,7 @@ public sealed partial class SimpleAi
             // the way would end in a retreat: go around (no stop at a blocked system), one leg at a time; on arrival the next review plans
             // again. Without a way around the fleet stays. Proposal (lead 2026-10-16; the AI uses the router, movement-redesign-draft §D).
             var g = _h.Data.Galaxy; var avoid = new List<int>();
-            for (int tries = 0; tries < 4 && blocked != null; tries++)
+            for (int tries = 0; tries < 16 && blocked != null; tries++)
             {
                 if (blocked == dest || !g.TryFindSystem(blocked, out int bi)) return false;
                 avoid.Add(bi);
@@ -905,6 +905,8 @@ public sealed partial class SimpleAi
             // only the enemy fleets that would pull this fleet out of hyperspace there (the game's forced-stop trigger; DEFAULT GravityWellShip
             // since 2026-10-16: an ordinary fleet does not stop a passing one, so the AI no longer refuses trips past it)
             var enemies = EnemyFleetsAt(n);
+            if (_view != null && _p.FogAvoidEnemyStops && IsEnemyHeld(n) && _view.Level(n) is not (Rebellion.Core.Fog.KnowledgeLevel.Held or Rebellion.Core.Fog.KnowledgeLevel.Observed))
+                return n; // an enemy system whose fleets the side cannot see now: it may hide a gravity well
             if (enemies.Count == 0) continue;
             // pulled out by a gravity well, the fleet then fights every enemy fleet there
             if (_h.Fleets.Trigger == ForcedStopTrigger.GravityWellShip && !enemies.Any(e => e.Gravity)) continue;
@@ -951,7 +953,7 @@ public sealed partial class SimpleAi
                     if (acc < _p.HomeDefenceStrength && Str(f) > 0) { home.Add(f); acc += Str(f); } else strike.Add(f);
                 }
                 for (int i = 1; i < home.Count; i++) Merge(home[i], home[0]);
-                if (home.Count == 1) SplitHomeSurplus(home[0], acc);
+                if (home.Count == 1 && _p.SplitHomeSurplus) SplitHomeSurplus(home[0], acc);
             }
             if (dsHere.Count > 0) { strike = DeathStarHome(dsHere, strike); }
             else strike = DeathStarCall(g.Key, strike);

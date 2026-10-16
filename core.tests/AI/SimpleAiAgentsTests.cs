@@ -34,12 +34,15 @@ public class SimpleAiAgentsTests
     {
         Assert.True(new SimpleAiParams().UseCharactersAndMissions);
         var (m, h) = Match(1, new SimpleAiParams { UseFog = true, UseCharactersAndMissions = false,
-            RunnerRetreats = 0, RetreatCountsAsLoss = false, AvoidBlockedPaths = false, WinRushDefenders = -1, ShelledLandingNeed = false });
+            RunnerRetreats = 0, RetreatCountsAsLoss = false, AvoidBlockedPaths = false, WinRushDefenders = -1, ShelledLandingNeed = false,
+            FogAvoidEnemyStops = false, SplitHomeSurplus = false });
         m.RunTo(1000);
         Assert.DoesNotContain(m.Sent.Keys, k => k.Contains("Mission", StringComparison.Ordinal) || k.Contains("Character", StringComparison.Ordinal) || k.Contains("General", StringComparison.Ordinal));
         // The pin moved when the Death Star added saved state (m5-death-star: GameState.DeathStar, SystemKnowledge.Destroyed). The game plays identically:
         // the old hash e8fb3f75...c779 is recovered exactly by removing those new fields from the hashed JSON (checked when the pin was moved).
-        Assert.Equal("d8659d99bab3a88eaa94bca7a4662085ec3fad4f674ed0074100f63a74944921", h.StateHash());
+        // v5 re-pin 2026-10-16: the v5 galaxy (555 systems, routes) changes every game, so the hash now pins this branch's old AI on the
+        // v5 map; the new v5 AI fixes (FogAvoidEnemyStops, SplitHomeSurplus) are switched off above with the rest.
+        Assert.Equal("a6e15e4af786c28431637720ab418f6fa4b82c7b0f0186db91b6be1d2c5fa3c2", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"
@@ -57,20 +60,23 @@ public class SimpleAiAgentsTests
     // ai/07 §7 (Empire: belief-map search with spies), m5-missions (Espionage writes the ground and HqHere), m5-fog-and-hq §N5. Against an
     // Alliance that gives no orders the fogged Empire sends its spies to the best HQ candidates, its own picture shows the HQ (KnownHq), and
     // it takes it. Measured on seed 1: KnownHq day 299, won day 352; limits 400 and 500.
+    // v5 re-pin 2026-10-16 (Paul chose re-pin on the map PR; the AI trainer owns restoring the old target): on v5 the spies never find the HQ (Cyclor, beside Naboo, ranks low on the belief map: the Alliance would not hide there)
+    // and the Empire takes it by assault on day 1282 (35 looks). The test pins: the spies keep looking, and the HQ falls by day 1400, with
+    // or without a spy report. The old target (KnownHq by day 400, won by 500) is the trainer's.
     [Fact]
-    public void FoggedEmpire_AgainstPassiveAlliance_LearnsTheHqBySpies()
+    public void FoggedEmpire_AgainstPassiveAlliance_SpiesSearchAndTheHqFalls()
     {
         var (m, h) = Match(1, Fog, passive: Side.Alliance);
         int knownDay = -1;
-        while (h.Game.Day < 500 && h.Victory.Winner == null)
+        while (h.Game.Day < 1400 && h.Victory.Winner == null)
         {
             m.Step();
             if (knownDay < 0 && h.Fog.KnownHq(Side.Empire) != null) knownDay = h.Game.Day;
         }
         var looks = h.Game.Events.OfType<MissionStarted>().Count(e => e.Side == Side.Empire && e.MissionKind is MissionKind.Espionage or MissionKind.Reconnaissance);
         _out.WriteLine($"KnownHq day {knownDay}; winner {h.Victory.Winner} day {h.Game.Day}; looks {looks}; orders {m.TotalSent} rejected {m.TotalRejected}");
-        Assert.True(looks > 0);
-        Assert.InRange(knownDay, 1, 400);
+        Assert.True(looks >= 20, $"only {looks} looks");
+        Assert.True(knownDay == -1 || knownDay <= 1400);
         Assert.Equal(Side.Empire, h.Victory.Winner);
         Assert.Contains(h.Game.Events, e => e is HqDestroyed);
         Assert.True(m.TotalRejected * 20 <= m.TotalSent, $"{m.TotalRejected} of {m.TotalSent} orders rejected");
@@ -84,16 +90,17 @@ public class SimpleAiAgentsTests
     [Fact]
     public void FoggedEmpire_RefindsAMovedHq()
     {
+        // v5 re-pin 2026-10-16 (Paul chose re-pin on the map PR; the AI trainer owns restoring the old target): the spies no longer find the
+        // first HQ (see above), so the HQ moves on day 0, before the Empire knows it, and the test asks that the moved HQ is found or taken.
+        // Measured on v5: Cyclor -> Dubrillion on day 0, never spotted, taken on day 910; limit 1100 days.
         var (m, h) = Match(1, Fog, passive: Side.Alliance);
-        while (h.Game.Day < 500 && h.Fog.KnownHq(Side.Empire) == null && h.Victory.Winner == null) m.Step();
-        Assert.NotNull(h.Fog.KnownHq(Side.Empire));
         string from = h.HqSystem!; var g = h.Data.Galaxy;
         string dest = g.Systems.Select(s => s.Name)
             .Where(n => n != from && h.Fleets.OwnerOf(n) == Side.Alliance && g.NearOf(g.Get(n).Index).Count >= Fog.HqMinLanes)
             .Select(n => (n, p: h.Fleets.FindPath(from, n, 100))).Where(t => t.p.Ok)
             .OrderByDescending(t => t.p.TotalTicks).ThenBy(t => t.n, StringComparer.Ordinal).First().n;
         h.Fog.SubmitMoveHq(Side.Alliance, dest);
-        int movedDay = h.Game.Day, limit = movedDay + 1200, refound = -1;
+        int movedDay = h.Game.Day, limit = movedDay + 1100, refound = -1;
         while (h.Game.Day < limit && h.Victory.Winner == null)
         {
             m.Step();
@@ -114,7 +121,9 @@ public class SimpleAiAgentsTests
     {
         var (m, h) = Match(1, Fog);
         var held = new HashSet<Side>();
-        while (h.Game.Day < 200 && h.Victory.Winner == null)
+        // v5 re-pin 2026-10-16 (Paul chose re-pin on the map PR; the AI trainer owns restoring the old target): window 200 -> 700 days. On
+        // the bigger map the Empire's first strike fleet strong enough for an officer (OfficerFleetStrength) forms later than day 200.
+        while (h.Game.Day < 700 && h.Victory.Winner == null)
         {
             m.Step();
             foreach (var id in h.Game.State.Characters.SystemGenerals.Values) if (h.Characters.Get(id) is { } c) held.Add(c.Side);
