@@ -61,8 +61,17 @@ public partial class GalaxyView : Control
     public IReadOnlyList<int> PathPreview { get; set; }
     public Color PathColor { get; set; } = Colors.White;
 
+    /// <summary>Which lanes the map draws. Near (default): lanes close to the selected or hovered system, plus the
+    /// short ones faintly; long lanes only show near the selection. All: every lane, long ones faded. Off: none.</summary>
+    public enum LaneMode { Near, All, Off }
+    LaneMode _lanes = LaneMode.Near;
+    public LaneMode Lanes { get => _lanes; set { _lanes = value; QueueRedraw(); } }
+
     Vector2[] _pos;                 // world position per system (map_x, map_y)
     int[] _weight;                  // per system, lanes weighted by tier (hubs win the fight for label room)
+    float[] _laneLen;               // per lane, length in map units
+    float _longLane;                // a lane longer than this (3x the median lane) is "long": faded, hidden when nothing is near it
+    readonly HashSet<int> _near = new(); // systems within two jumps of the focus, rebuilt each draw
     Vector2 _min, _max;
     Vector2 _center;                // world point at the middle of the control
     float _zoom = 1f;
@@ -100,6 +109,9 @@ public partial class GalaxyView : Control
             int w = lane.Tier switch { 1 => 3, 2 => 2, _ => 1 };
             _weight[lane.A] += w; _weight[lane.B] += w;
         }
+        _laneLen = galaxy.Lanes.Select(l => _pos[l.A].DistanceTo(_pos[l.B])).ToArray();
+        var sorted = _laneLen.OrderBy(x => x).ToArray();
+        _longLane = sorted.Length == 0 ? float.MaxValue : 3f * sorted[sorted.Length / 2];
         foreach (var sec in galaxy.Sectors.OrderBy(s => s.Name, StringComparer.Ordinal))
         {
             foreach (int m in sec.Members) _sectorOf[m] = _sectors.Count;
@@ -251,12 +263,25 @@ public partial class GalaxyView : Control
             DrawPolyline(Closed(sectorShape), new Color(SectorColor, 0.35f), 1.2f, true);
         }
 
-        // lanes: one quiet colour; the tier (1 route, 2 official, 3 generated) only changes thickness and strength
-        foreach (var lane in Galaxy.Lanes)
+        // lanes: one quiet colour; the tier (1 route, 2 official, 3 generated) only changes thickness and strength.
+        // Paul 2026-10-16: "way too many lines". Long lanes cross half the map, so they fade with length and,
+        // in Near mode, only show when they touch the systems around the selection.
+        _near.Clear();
+        if (focus >= 0)
         {
+            _near.Add(focus);
+            foreach (var nb in Galaxy.NeighboursOf(focus)) _near.Add(nb.System);
+        }
+        for (int li = 0; _lanes != LaneMode.Off && li < Galaxy.Lanes.Count; li++)
+        {
+            var lane = Galaxy.Lanes[li];
+            bool near = _near.Contains(lane.A) || _near.Contains(lane.B);
+            bool isLong = _laneLen[li] > _longLane;
+            if (_lanes == LaneMode.Near && isLong && !near) continue;
             var a = SystemScreen(lane.A); var b = SystemScreen(lane.B);
             if (!screenRect.HasPoint(a) && !screenRect.HasPoint(b) && !SegmentMayCross(a, b)) continue;
-            var (w, alpha) = lane.Tier switch { 1 => (1.7f, 0.40f), 2 => (1.2f, 0.26f), _ => (1.0f, 0.13f) };
+            var (w, alpha) = lane.Tier switch { 1 => (1.4f, 0.34f), 2 => (1.1f, 0.24f), _ => (1.0f, 0.13f) };
+            if (isLong) alpha *= Mathf.Max(0.3f, _longLane / _laneLen[li]);
             DrawLine(a, b, new Color(LaneColor, alpha), w, true);
         }
         // lanes of the focused system, drawn on top
