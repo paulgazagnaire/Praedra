@@ -88,16 +88,16 @@ public class CharacterSetupTests
         Assert.Equal(new[] { (0, 2), (0, 2), (0, 2) }, stub.Requests.Select(r => (r.Min, r.Max)));
     }
 
-    // m5-setup-and-victory §Victory: the character terms, behind StandardVictory (DEFAULT off here, see VictoryRules)
+    // m5-setup-and-victory §Victory: the character terms, behind StandardVictory (DEFAULT on since 2026-10-16, see VictoryRules)
     [Fact]
     public void Victory_StandardNeedsTheKeyCharactersCaptured()
     {
-        var off = Make(2);
+        var off = Make(2, OldVictory.Settings); // HQ-only set explicitly: standard victory is the default now
         off.Fleets.SetOwner(Coruscant, Side.Alliance);
         off.Game.Step();
-        Assert.Equal(Side.Alliance, off.Victory.Winner); // HQ-only flavour (current default)
+        Assert.Equal(Side.Alliance, off.Victory.Winner); // HQ-only flavour (explicit)
 
-        var h = Make(2, new GameSettings { Victory = new VictoryRules { StandardVictory = true } });
+        var h = Make(2); // the default: standard victory
         h.Fleets.SetOwner(Coruscant, Side.Alliance);
         h.Game.Step();
         Assert.Null(h.Victory.Winner); // Vader and Palpatine are free

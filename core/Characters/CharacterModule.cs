@@ -336,13 +336,14 @@ public sealed class CharacterModule
 
     /// <summary>
     /// Not if already Dead. A major with <see cref="CharacterParams.MajorsCanDie"/> off (DEFAULT), a minor with <see cref="CharacterParams.MinorsCanDie"/>
-    /// off, or a death refused by <see cref="DeathRefused"/>: the call becomes <see cref="Injure"/>. Else status Dead (never removed), posts end,
+    /// off (unless <paramref name="allowDeath"/>), or a death refused by <see cref="DeathRefused"/>: the call becomes <see cref="Injure"/>. Else status Dead (never removed), posts end,
     /// detached, a trip ends, mission membership ends, captor cleared. Event CharacterKilled. rule: §Capture, injury, death, freeing 3; CH20.
     /// </summary>
-    public bool Kill(StepContext? ctx, CharacterRecord c, string cause)
+    public bool Kill(StepContext? ctx, CharacterRecord c, string cause, bool allowDeath = false)
     {
         if (!c.Placed || c.Status == CharacterStatus.Dead) return false;
-        bool canDie = ClassOf(c).Kind == CharacterKind.Major ? Params.MajorsCanDie : Params.MinorsCanDie;
+        // allowDeath: this call may kill whatever the class switches say (m5-missions §6a key targets); DeathRefused (Immortal) still applies.
+        bool canDie = allowDeath || (ClassOf(c).Kind == CharacterKind.Major ? Params.MajorsCanDie : Params.MinorsCanDie);
         if (!canDie || DeathRefused?.Invoke(c) == true) return Injure(ctx, c, cause);
         int day = (ctx?.Day ?? _game.Day) + 1;
         string? at = StandingPlace(c);

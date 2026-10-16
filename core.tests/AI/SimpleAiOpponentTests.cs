@@ -20,7 +20,7 @@ public class SimpleAiOpponentTests
 
     private static (AiMatch Match, GameHost Host) NewMatch(int seed, Side? passive)
     {
-        var host = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA });
+        var host = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = OldVictory.Settings });
         var m = new AiMatch(host, passive: passive);
         m.Empire.KnownEnemyHq = host.HqSystem; // no fog yet: the Empire knows the Rebel HQ
         return (m, host);
@@ -156,7 +156,7 @@ public class SimpleAiOpponentTests
     [Fact]
     public void AiVsAi_NeverOrdersUnresearchedItems()
     {
-        var host = NewGame.Create(new NewGameOptions { Seed = 2, Preset = StartPreset.MedA });
+        var host = NewGame.Create(new NewGameOptions { Seed = 2, Preset = StartPreset.MedA, Settings = OldVictory.Settings });
         Assert.True(host.Construction.RespectResearchOrder);
         var m = new AiMatch(host);
         while (host.Game.Day < 500 && host.Victory.Winner == null) m.Step();

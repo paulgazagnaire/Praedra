@@ -268,7 +268,7 @@ public class HqTests
     [Fact]
     public void CaptureOfTheHqSystemWinsTheGameForTheEmpire()
     {
-        var h = NewGame.Create(new NewGameOptions { Seed = 1, Settings = new GameSettings { DebugOrdersEnabled = true } });
+        var h = NewGame.Create(new NewGameOptions { Seed = 1, Settings = new GameSettings { DebugOrdersEnabled = true, Victory = OldVictory.Rules } });
         string hq = h.HqSystem!;
         h.Control.SubmitDebugSetHolder(Side.Empire, hq, Side.Empire);
         h.Game.Step();

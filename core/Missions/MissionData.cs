@@ -64,19 +64,26 @@ public sealed record MissionNumbers(
 /// </summary>
 public sealed class MissionData
 {
-    public const string RecordsFile = "mission-records.csv", TablesFile = "mission-tables.csv", FoilableFile = "mission-foilable.csv";
+    public const string RecordsFile = "mission-records.csv", TablesFile = "mission-tables.csv", FoilableFile = "mission-foilable.csv",
+        KeyTargetsFile = "assassination-key-targets.csv";
     public const string FoilTable = "FOILTB";
 
     private readonly SortedDictionary<MissionKind, MissionRecord> _records;
     private readonly SortedDictionary<string, IReadOnlyList<TableRow>> _tables;
 
     public MissionNumbers Numbers { get; }
+    /// <summary>
+    /// Key targets of Assassination: character roster id to cap percent (data/design/assassination-key-targets.csv). Empty = none. Lookup only, never iterated.
+    /// rule: m5-missions §6a (Decided Paul 2026-10-16; numbers Proposal, missions/09 §4).
+    /// </summary>
+    public IReadOnlyDictionary<int, int> KeyTargets { get; }
     /// <summary>The decoy table (FDECOYTB and TDECOYTB are byte-identical: one table). Null = Missing: decoys are refused RuleMissing.</summary>
     public IReadOnlyList<TableRow>? DecoyTable { get; }
 
     public MissionData(IEnumerable<MissionRecord> records, IReadOnlyDictionary<string, IReadOnlyList<TableRow>> tables, MissionNumbers numbers,
-        IReadOnlyList<TableRow>? decoyTable = null)
+        IReadOnlyList<TableRow>? decoyTable = null, IReadOnlyDictionary<int, int>? keyTargets = null)
     {
+        KeyTargets = keyTargets ?? new Dictionary<int, int>();
         _records = new SortedDictionary<MissionKind, MissionRecord>();
         foreach (var r in records)
             if (!_records.TryAdd(r.Kind, r)) throw new DataLoadException($"missions: kind {r.Kind} appears twice.");
@@ -104,13 +111,32 @@ public sealed class MissionData
     public IReadOnlyList<TableRow> Foil => _tables[FoilTable];
 
     /// <summary>The same data with a decoy table (tests; or once the importer reads FDECOYTB).</summary>
-    public MissionData WithDecoyTable(IReadOnlyList<TableRow>? decoy) => new(_records.Values, _tables, Numbers, decoy);
+    public MissionData WithDecoyTable(IReadOnlyList<TableRow>? decoy) => new(_records.Values, _tables, Numbers, decoy, KeyTargets);
+
+    /// <summary>The same data with other key targets (tests).</summary>
+    public MissionData WithKeyTargets(IReadOnlyDictionary<int, int> keyTargets) => new(_records.Values, _tables, Numbers, DecoyTable, keyTargets);
 
     public static MissionData Load(string interim, string design) => Parse(
         File.ReadAllText(Path.Combine(interim, RecordsFile)), File.ReadAllText(Path.Combine(interim, TablesFile)),
-        File.ReadAllText(Path.Combine(interim, MissionNumbers.FileName)), File.ReadAllText(Path.Combine(design, FoilableFile)));
+        File.ReadAllText(Path.Combine(interim, MissionNumbers.FileName)), File.ReadAllText(Path.Combine(design, FoilableFile)),
+        File.ReadAllText(Path.Combine(design, KeyTargetsFile)));
 
-    public static MissionData Parse(string recordsCsv, string tablesCsv, string numbersCsv, string foilableCsv)
+    /// <summary>rule: m5-missions §6a (assassination-key-targets.csv: character, name, cap_percent, source).</summary>
+    public static IReadOnlyDictionary<int, int> ParseKeyTargets(string csv)
+    {
+        var k = CsvTable.Parse(csv, KeyTargetsFile);
+        k.Require("character", "name", "cap_percent", "source");
+        var d = new Dictionary<int, int>(); // lookup only
+        for (int r = 0; r < k.RowCount; r++)
+        {
+            int cap = k.GetInt(r, "cap_percent");
+            if (cap < 0 || cap > 100) throw new DataLoadException($"{k.Where(r)}: cap_percent {cap} is not a percent.");
+            if (!d.TryAdd(k.GetInt(r, "character"), cap)) throw new DataLoadException($"{k.Where(r)}: duplicate character.");
+        }
+        return d;
+    }
+
+    public static MissionData Parse(string recordsCsv, string tablesCsv, string numbersCsv, string foilableCsv, string? keyTargetsCsv = null)
     {
         var f = CsvTable.Parse(foilableCsv, FoilableFile);
         f.Require("kind", "foilable");
@@ -144,7 +170,7 @@ public sealed class MissionData
             list.Add(new TableRow(tt.GetInt(r, "threshold"), v));
         }
         return new MissionData(recs, tables.ToDictionary(kv => kv.Key, kv => (IReadOnlyList<TableRow>)kv.Value, StringComparer.Ordinal),
-            MissionNumbers.Parse(numbersCsv));
+            MissionNumbers.Parse(numbersCsv), null, keyTargetsCsv == null ? null : ParseKeyTargets(keyTargetsCsv));
     }
 
     private static MissionKind ParseKind(CsvTable t, int r) =>

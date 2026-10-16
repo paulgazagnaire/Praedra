@@ -312,6 +312,9 @@ public sealed partial class SimpleAi
             if (j.Kind == MissionKind.Diplomacy && diplomats >= _p.MaxDiplomats) continue;
             if (j.Kind is MissionKind.InciteUprising or MissionKind.Sabotage && subversion >= _p.MaxSubversion) continue;
             var job = j; var ch = c;
+            // A key target behind the exposure gate (m5-missions §6a.1, TargetProtected) is skipped today instead of ordered again every day.
+            if (job.TargetCharacter != null && _h.Missions.CheckStart(new StartMissionOrder(0, _side, job.Kind, new List<int> { ch.Id }, new List<int>(), new List<int>(),
+                    null, job.TargetCharacter)).Reason == MissionReject.TargetProtected) continue;
             long seq = _h.Game.Submit(sq => new StartMissionOrder(sq, _side, job.Kind, new List<int> { ch.Id }, new List<int>(), new List<int>(),
                 job.TargetCharacter == null ? job.System : null, job.TargetCharacter));
             Note(seq, "Mission" + j.Kind, $"{_h.Characters.ClassOf(c).Name} from {c.System} to {j.System}{(j.TargetCharacter is int t ? $" (character {t})" : "")} ev {ev}");

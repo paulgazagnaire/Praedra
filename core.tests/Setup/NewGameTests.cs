@@ -72,7 +72,7 @@ public class NewGameTests
     [Fact]
     public void GameOverFreezesStepAndRejectsOrders()
     {
-        var h = Make(StartPreset.MedA);
+        var h = Make(StartPreset.MedA, 1, OldVictory.Settings);
         CaptureOnNextStep(h, "Dagobah", Side.Empire);
         h.Game.Step();
         Assert.True(h.Game.IsOver);
@@ -121,7 +121,7 @@ public class NewGameTests
     [Fact]
     public void EmpireWinsWhenHqCaptured()
     {
-        var h = Make(StartPreset.MedA);
+        var h = Make(StartPreset.MedA, 1, OldVictory.Settings);
         h.Game.Step(); Assert.Null(h.Victory.Winner);
         CaptureOnNextStep(h, "Dagobah", Side.Empire);
         h.Game.Step();
@@ -135,7 +135,7 @@ public class NewGameTests
     [Fact]
     public void AllianceWinsWhenCoruscantCaptured()
     {
-        var h = Make(StartPreset.MedE);
+        var h = Make(StartPreset.MedE, 1, OldVictory.Settings);
         CaptureOnNextStep(h, "Coruscant", Side.Alliance);
         h.Game.Step();
         Assert.Equal(Side.Alliance, h.Victory.Winner);
@@ -172,7 +172,7 @@ public class NewGameTests
     [Fact]
     public void SaveLoadKeepsHqExploredAndWinner()
     {
-        var h = Make(StartPreset.MedA);
+        var h = Make(StartPreset.MedA, 1, OldVictory.Settings);
         CaptureOnNextStep(h, "Dagobah", Side.Empire);
         h.Game.Step();
         string save = h.Save();
