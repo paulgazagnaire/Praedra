@@ -17,6 +17,8 @@ public class NewBattleTests
     internal static IReadOnlyDictionary<string, ShipClass> Ships => World.Ships.Value;
     internal static readonly BattleParams New = new() { Ruleset = BattleRuleset.New };
     internal static readonly BattleParams NewNoRolls = new() { Ruleset = BattleRuleset.New, SubsystemRolls = false };
+    /// <summary>New with tractor beams off (m4-retreat-damage-repair §6): for the sheet's base retreat tests, where an ISD would hold one corvette.</summary>
+    internal static readonly BattleParams NewNoTractors = new() { Ruleset = BattleRuleset.New, New = new NewBattleParams { TractorBeamsHoldRetreat = false } };
     private const string Corvette = "Corellian Corvette", Isd = "Imperial Star Destroyer", MonCal = "Mon Calamari Cruiser", Lancer = "Lancer Frigate",
         Interdictor = "Interdictor Cruiser", Bomber = "TIE Bomber";
 
@@ -45,12 +47,13 @@ public class NewBattleTests
     // ---------------------------------------------------------------- the headline: laser boats against an ISD
 
     // m4-battle-new N2 (and the plan's M4 proof for New): 30 Corvettes v 1 ISD, corvettes can retreat: they leave in five seconds, the ISD is untouched
+    // (tractors off: with them the ISD holds one corvette and the battle runs until it dies, m4-retreat-damage-repair TB1)
     [Fact]
     public void N2_ThirtyCorvettesVsOneIsd_CorvettesRetreatAndTheIsdIsUntouched()
     {
         for (ulong seed = 1; seed <= 20; seed++)
         {
-            var (r, u) = Fight(New, new[] { (Corvette, 30) }, new[] { (Isd, 1) }, seed);
+            var (r, u) = Fight(NewNoTractors, new[] { (Corvette, 30) }, new[] { (Isd, 1) }, seed);
             Assert.True(r.AllianceRetreated, $"seed {seed}");
             Assert.Equal(BattleOutcome.Retreated, r.AllianceOutcome);
             Assert.Equal(BattleOutcome.Victorious, r.EmpireOutcome);
@@ -248,7 +251,7 @@ public class NewBattleTests
     [Fact]
     public void SquadronsUnderSixCraftAreLostAtTheEndAndWholeOnesStay()
     {
-        var (r, u) = Fight(New, new[] { (Corvette, 4) }, new[] { (Isd, 1), ("TIE Fighter", 2) }, 1, carry: true,
+        var (r, u) = Fight(NewNoTractors, new[] { (Corvette, 4) }, new[] { (Isd, 1), ("TIE Fighter", 2) }, 1, carry: true, // tractors off: a held corvette would shoot the TIEs
             prepare: x => x.Where(q => q.Class.Name == "TIE Fighter").Last().Hull = 40); // ceil(40 / 8) = 5 craft
         var sq = u.Where(x => x.Class.Name == "TIE Fighter").OrderBy(x => x.ObjectId).ToList();
         Assert.False(sq[0].Destroyed);

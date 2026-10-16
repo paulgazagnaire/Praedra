@@ -45,6 +45,7 @@ public sealed class NewBattle
         public List<Rec> Recs = new();
         public double Assigned;      // saturation scratch
         public double Threat;
+        public NU? HeldBy;           // capital ship of a retreating side held by this enemy tractor ship (stays on the field). rule: m4-retreat-damage-repair §6
         public double HullRatio => HullMax <= 0 ? 0 : Math.Max(0.0, Math.Min(1.0, Hull / HullMax));
         public bool OnField => State == St.Active || State == St.Jumping;
     }
@@ -164,6 +165,50 @@ public sealed class NewBattle
         if (!able) return RetreatRefusal.NoHyperdrive;
         if (!_hasDestination[I(side)]) return RetreatRefusal.NoDestination;
         return null;
+    }
+
+    // ---------------------------------------------------------------- tractor beams hold retreat (New only). rule: m4-retreat-damage-repair §6
+
+    /// <summary>A capital ship with tractor_beam_power &gt; 0 whose tractor counter is clear. The power is not used beyond &gt; 0 (DEFAULT). rule: m4-retreat-damage-repair §6.</summary>
+    private static bool TractorWorks(NU h) => h.Capital && h.B.Class.TractorBeamPower > 0 && h.B.Hits[ObjectRegistry.TractorCounter] == 0;
+
+    /// <summary>The hold lasts while the holder is alive (on the field or jumping) with a working tractor. rule: m4-retreat-damage-repair §6.</summary>
+    private bool HoldValid(NU held) => held.HeldBy is { } h && AliveShip(h) && TractorWorks(h);
+
+    /// <summary>
+    /// The holder of a ship that tries to jump: the first enemy capital ship by unit id that is on the field (not jumping), has a working tractor, a
+    /// larger max hull, and holds no other ship still on the field. No draw. DEFAULT (Proposal: smaller = lower max hull). rule: m4-retreat-damage-repair §6.
+    /// </summary>
+    private NU? FindHolder(NU ship)
+    {
+        if (!_np.TractorBeamsHoldRetreat || !ship.Capital) return null;
+        foreach (var h in _u)
+        {
+            if (h.Side == ship.Side || h.State != St.Active || !TractorWorks(h) || !(h.HullMax > ship.HullMax)) continue;
+            bool busy = false;
+            foreach (var x in _u) if (x != ship && x.HeldBy == h && x.State == St.Active) { busy = true; break; } // one ship at a time
+            if (!busy) return h;
+        }
+        return null;
+    }
+
+    /// <summary>Try to hold a ship that is about to jump; true = it stays on the field (a <see cref="TractorHeldStep"/> and a log line). rule: m4-retreat-damage-repair §6.</summary>
+    private bool TryHold(NU ship)
+    {
+        var h = FindHolder(ship);
+        if (h == null) return false;
+        ship.HeldBy = h;
+        _steps.Add(new TractorHeldStep(ship.B, h.B, _t));
+        Note("held", ship, h, "tractor");
+        return true;
+    }
+
+    /// <summary>Ship u of a side that already retreated jumps now: hittable for the jump seconds, its squadrons in the hangar or flying go with it. rule: m4-battle-new §11.3.</summary>
+    private void StartJump(NU u, string detail)
+    {
+        u.State = St.Jumping; u.JumpEnd = _t + _np.JumpSeconds; Note("jump", u, null, detail);
+        foreach (var q in _u)
+            if (!q.Capital && q.Carrier == u && (q.State == St.Hangar || q.State == St.Active)) q.State = St.Leaving;
     }
 
     private double PairRange(NU a, NU b)
@@ -731,6 +776,17 @@ public sealed class NewBattle
                 if (carrierLeft || (u.State == St.Jumping && t >= u.JumpEnd)) Leave(u);
             }
 
+        // a held ship whose hold has ended (holder dead or gone, tractor hit) tries again: another free tractor ship may hold it, else it jumps;
+        // with its hyperdrive knocked out meanwhile it is destroyed like any non-jumping ship of a retreating side. rule: m4-retreat-damage-repair §6, §2 (1)
+        foreach (var u in _u)
+        {
+            if (u.HeldBy == null || u.State != St.Active || HoldValid(u)) continue;
+            u.HeldBy = null;
+            if (!HyperdriveOk(u)) { Kill(u, UnitLossReason.NoHyperdrive); continue; }
+            if (TryHold(u)) continue;
+            StartJump(u, "released");
+        }
+
         double[] str = new double[2];
         foreach (var s in Sides) str[I(s)] = Strength(s);
 
@@ -792,8 +848,9 @@ public sealed class NewBattle
         foreach (var u in _u)
         {
             if (u.Side != side || !u.Capital || u.State != St.Active) continue;
-            if (HyperdriveOk(u)) { u.State = St.Jumping; u.JumpEnd = _t + _np.JumpSeconds; leaving.Add(u); Note("jump", u, null, ""); }
-            else Kill(u, UnitLossReason.NoHyperdrive); // left behind (DEFAULT, open question 8)
+            if (!HyperdriveOk(u)) { Kill(u, UnitLossReason.NoHyperdrive); continue; } // left behind (DEFAULT, open question 8)
+            if (TryHold(u)) continue; // held by an enemy tractor: stays on the field and fights on. rule: m4-retreat-damage-repair §6
+            u.State = St.Jumping; u.JumpEnd = _t + _np.JumpSeconds; leaving.Add(u); Note("jump", u, null, "");
         }
         var free = new Dictionary<int, int>(); // lookup only; read through `leaving`
         foreach (var c in leaving)
@@ -802,6 +859,7 @@ public sealed class NewBattle
         {
             if (q.Side != side || q.Capital || !(q.State == St.Hangar || q.State == St.Active)) continue;
             if (q.Carrier != null && q.Carrier.State == St.Jumping) { q.State = St.Leaving; continue; } // keeps its own berth
+            if (q.Carrier != null && q.Carrier.HeldBy != null) continue; // stays with its held carrier (DEFAULT). rule: m4-retreat-damage-repair §6
             if (q.C.Hyperdrive > 0)
             {
                 q.State = St.Jumping; q.JumpEnd = _t + _np.JumpSeconds; q.B.JumpedAlone = true; q.B.Carrier = 0; q.Carrier = null; Note("jump", q, null, "alone");
