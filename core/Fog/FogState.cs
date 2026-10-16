@@ -133,6 +133,9 @@ public sealed class FleetPicture
 /// <summary>Kinds of sighting. rule: m5-fog-and-hq §N3.</summary>
 public enum SightingKind { Fleet, SensorArrival, AgentDetected }
 
+/// <summary>How big an arrival a Sensor Station reports: all it says about the fleet. rule: m5-fog-and-hq §N4 (size class).</summary>
+public enum SensorSize { Few, Squadron, Large }
+
 /// <summary>One sighting-log entry: {Day, System, Kind, Side, Detail}. A fleet sighting holds class counts, never a fleet id. rule: §N3.</summary>
 public sealed class Sighting
 {
@@ -143,7 +146,10 @@ public sealed class Sighting
     public Side Side { get; set; }
     /// <summary>Kind Fleet only: what the fleet held. Null for the other kinds.</summary>
     public FleetPicture? Detail { get; set; }
-    internal Sighting Clone() => new() { Day = Day, System = System, Kind = Kind, Side = Side, Detail = Detail?.Clone() };
+    /// <summary>Kind SensorArrival only: the size class. Null for the other kinds (left out of the saved form, so other logs are unchanged). rule: §N4 S2.</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public SensorSize? Size { get; set; }
+    internal Sighting Clone() => new() { Day = Day, System = System, Kind = Kind, Side = Side, Detail = Detail?.Clone(), Size = Size };
 }
 
 /// <summary>"The HQ is in this sector", given by an espionage success when <see cref="FogParams.SectorSuspicion"/> is on. rule: §N6.</summary>

@@ -141,6 +141,8 @@ public static class RejectReason
     public const string BadCount = "BadCount";
     public const string BadDestination = "BadDestination";
     public const string NoSlot = "NoSlot";
+    /// <summary>A second Sensor Station on one planet. The sheet names no code: DEFAULT name. rule: m5-fog-and-hq §N4 (one per planet).</summary>
+    public const string OnePerPlanet = "OnePerPlanet";
     public const string UnknownItem = "UnknownItem";
     public const string NoProject = "NoProject";
     // rule: m3-fleets §Orders (fleet order rejections), m3-ships-and-fighters §Tests S13. DuplicateSquadron and EmptySelection (for

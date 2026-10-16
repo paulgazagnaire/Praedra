@@ -285,6 +285,7 @@ public sealed partial class GameSession
         RejectReason.BadCount => "bad amount",
         RejectReason.BadDestination => "bad destination (it must be one of your systems)",
         RejectReason.NoSlot => "no free slot on the planet for it",
+        RejectReason.OnePerPlanet => "a planet can hold only one Sensor Station",
         RejectReason.UnknownItem => "unknown item",
         RejectReason.NoProject => "nothing is being built there",
         RejectReason.UnknownObject => "unknown object",
@@ -476,6 +477,13 @@ public sealed partial class GameSession
         _ => "Jedi Trainee",
     };
 
+    static string SensorSizeWords(SensorSize s) => s switch
+    {
+        SensorSize.Few => "a small",
+        SensorSize.Squadron => "a squadron-sized",
+        _ => "a large",
+    };
+
     static string At(string system) => system == null ? "" : $" at {system}";
 
     static string CauseWords(string cause) => cause switch
@@ -573,6 +581,9 @@ public sealed partial class GameSession
                 break;
             case FleetSighted x when OwnerOf(x.System) != Player: // at your own systems FleetArrived already says it
                 yield return new Message(d, $"Enemy fleet sighted at {x.System}: {x.Detail}.", x.System, MsgKind.Warn);
+                break;
+            case SensorReport x: // the core sends it to the station's owner only (rule: m5-fog-and-hq §N4 S2)
+                yield return new Message(d, $"Sensors: {SensorSizeWords(x.Size)} {(x.FleetSide == Side.Empire ? "Imperial" : "Rebel")} fleet arrived at {x.System}.", x.System, MsgKind.Warn);
                 break;
             case OwnerChangeSeen x:
                 yield return new Message(d, $"News from {x.System}: now held by {(x.Now is Side n ? "the " + NameOf(n) : "nobody")} (was {(x.Was is Side was ? "the " + NameOf(was) : "nobody")}).", x.System, MsgKind.Info);

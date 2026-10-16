@@ -214,6 +214,13 @@ public sealed class ConstructionModule
                     energyFree++;
                     if (u.Class == FacilityKinds.ClassName(FacilityKind.Mine)) rawFree++;
                 }
+            // rule: m5-fog-and-hq §N4 (economy/15 §2): one Sensor Station per planet; the replaced project's own reservation counts as free.
+            if (FacilityKinds.TryParse(o.Class, out var placeKind) && FacilityKinds.OnePerPlanet(placeKind))
+            {
+                int already = _eco.OfKindAt(dest, placeKind);
+                if (old != null) foreach (var id in old.Units) if (E.Objects[id].System == dest && E.Objects[id].Class == o.Class) already--;
+                if (o.Count > 1 || already > 0) return OrderResult.Reject(RejectReason.OnePerPlanet);
+            }
             bool isMine = o.Class == FacilityKinds.ClassName(FacilityKind.Mine);
             if (energyFree < o.Count || (isMine && rawFree < o.Count)) return OrderResult.Reject(RejectReason.NoSlot);
         }

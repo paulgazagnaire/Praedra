@@ -12,6 +12,8 @@ public enum FacilityKind
     OrbitalShipyard, TrainingFacility, ConstructionYard,
     AdvancedShipyard, AdvancedTrainingFacility, AdvancedConstructionYard,
     Kdy150, LnrSeriesI, GenCoreLevelI, DeathStarShield, LnrSeriesII, GenCoreLevelII,
+    /// <summary>Designed, not in the 1998 game: 1 energy slot, 10 refined, maintenance 5, one per planet. rule: m5-fog-and-hq §N4; economy/15 §2 (Paul 2026-10-16).</summary>
+    SensorStation,
 }
 
 public static class FacilityKinds
@@ -23,6 +25,7 @@ public static class FacilityKinds
         "Orbital Shipyard", "Training Facility", "Construction Yard",
         "Advanced Shipyard", "Advanced Training Facility", "Advanced Construction Yard",
         "KDY-150", "LNR Series I", "GenCore Level I", "Death Star Shield", "LNR Series II", "GenCore Level II",
+        "Sensor Station",
     };
 
     /// <summary>The class name (as in the costs file) of a facility kind.</summary>
@@ -34,6 +37,9 @@ public static class FacilityKinds
         kind = i < 0 ? default : (FacilityKind)i;
         return i >= 0;
     }
+
+    /// <summary>Facilities of which a planet may hold only one. rule: m5-fog-and-hq §N4 (economy/15 §2 "one per planet").</summary>
+    public static bool OnePerPlanet(FacilityKind k) => k == FacilityKind.SensorStation;
 
     public static IEnumerable<FacilityKind> All => Enum.GetValues<FacilityKind>();
 
