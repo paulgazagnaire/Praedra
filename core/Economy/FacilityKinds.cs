@@ -40,6 +40,8 @@ public static class FacilityKinds
 
     /// <summary>Facilities of which a planet may hold only one. rule: m5-fog-and-hq §N4 (economy/15 §2 "one per planet").</summary>
     public static bool OnePerPlanet(FacilityKind k) => k == FacilityKind.SensorStation;
+    /// <summary>Can be placed only on a system that lies on a hyperspace route. rule: m5-fog-and-hq §N4 (Decided, Paul 2026-10-16).</summary>
+    public static bool RouteOnly(FacilityKind k) => k == FacilityKind.SensorStation;
 
     public static IEnumerable<FacilityKind> All => Enum.GetValues<FacilityKind>();
 

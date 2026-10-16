@@ -582,8 +582,8 @@ public sealed partial class GameSession
             case FleetSighted x when OwnerOf(x.System) != Player: // at your own systems FleetArrived already says it
                 yield return new Message(d, $"Enemy fleet sighted at {x.System}: {x.Detail}.", x.System, MsgKind.Warn);
                 break;
-            case SensorReport x: // the core sends it to the station's owner only (rule: m5-fog-and-hq §N4 S2)
-                yield return new Message(d, $"Sensors: {SensorSizeWords(x.Size)} {(x.FleetSide == Side.Empire ? "Imperial" : "Rebel")} fleet arrived at {x.System}.", x.System, MsgKind.Warn);
+            case SensorReport x: // the core sends it to the station's owner only (rule: m5-fog-and-hq §N4)
+                yield return new Message(d, $"Sensors: {SensorSizeWords(x.Size)} {(x.FleetSide == Side.Empire ? "Imperial" : "Rebel")} fleet heading for {x.System}, expected on day {x.ReachDay}.", x.System, MsgKind.Warn);
                 break;
             case OwnerChangeSeen x:
                 yield return new Message(d, $"News from {x.System}: now held by {(x.Now is Side n ? "the " + NameOf(n) : "nobody")} (was {(x.Was is Side was ? "the " + NameOf(was) : "nobody")}).", x.System, MsgKind.Info);
