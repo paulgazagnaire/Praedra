@@ -25,6 +25,8 @@ internal sealed class ResearchWorld
     public ConstructionModule Build { get; private set; } = null!;
     public ResearchModule Research { get; private set; } = null!;
     private readonly ResearchParams? _p;
+    /// <summary>The module defaults with no galaxy-size scaling (this test world is tiny; m5-research §Scaling defaults to SystemCount since 2026-10-16).</summary>
+    public static ResearchParams Unscaled => new() { ResearchCostScale = ResearchScale.None, MissionPointsScale = ResearchScale.None };
     private readonly ResearchData? _data;
 
     public ResearchWorld(ResearchParams? p = null, ResearchData? data = null) : this(new StubRng(), p, data) { }
@@ -32,7 +34,7 @@ internal sealed class ResearchWorld
 
     private ResearchWorld(GameRng rng, ResearchParams? p, ResearchData? data)
     {
-        Stub = rng as StubRng; _p = p; _data = data;
+        Stub = rng as StubRng; _p = p ?? Unscaled; _data = data;
         Game = new Game(rng);
         Attach();
     }

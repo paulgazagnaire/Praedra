@@ -185,6 +185,7 @@ public sealed class ResearchModule
             if (o.Category != ObjectCategory.Facility || !o.Completed || o.System == null) continue;
             if (!FacilityKinds.TryParse(o.Class, out var k) || !FacilityKinds.IsYard(k)) continue;
             if (_fleets.OwnerOf(o.System) != side) continue;
+            if (Params.BlockadeStopsResearch && _fleets.IsEconomicBlockade(o.System, side)) continue; // rule: m5-research §Facility income (Counting), Paul 2026-10-16
             counts[(int)TrackOf(Yards.FamilyOf(k))]++;
         }
         return counts;
