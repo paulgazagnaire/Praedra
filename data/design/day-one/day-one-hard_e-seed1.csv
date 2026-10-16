@@ -15,7 +15,7 @@ Generis,neutral,50,0,0,0,0,Agamar Sector,outer_rim,0
 Moltok,neutral,50,0,0,0,0,Numidian Prime Sector,outer_rim,0
 Nam'ta,Alliance,68,0,0,1,0,Borosk Sector,outer_rim,0
 Spefik,neutral,50,0,0,0,0,Agamar Sector,outer_rim,0
-Tibrin,neutral,50,0,0,0,0,Sluis Van Sector,outer_rim,0
+Tibrin,neutral,50,0,0,0,0,Sluis Van Sector,outer_rim,1
 Togoria,neutral,50,0,0,0,0,Contruum Sector,inner_rim,0
 Trammis,neutral,50,0,0,0,0,Tund Sector,outer_rim,0
 Zeffliffl,Alliance,85,0,0,1,0,Numidian Prime Sector,outer_rim,0
@@ -30,7 +30,7 @@ Morvogodine,Alliance,80,0,0,1,0,Kessel Sector,outer_rim,0
 Norval II,neutral,50,0,0,0,0,Tund Sector,outer_rim,0
 Skor II,Alliance,83,0,0,1,0,Dagobah Sector,outer_rim,0
 Allyuen,neutral,50,0,0,0,0,Allyuen Sector,outer_rim,0
-Anoat,Alliance,87,0,0,1,0,Anoat Sector,outer_rim,1
+Anoat,Empire,13,0,0,1,0,Anoat Sector,outer_rim,1
 Bespin,neutral,50,0,0,0,0,Hoth Sector,outer_rim,0
 Deyer,neutral,50,0,0,0,0,Anoat Sector,outer_rim,0
 Gentes,Alliance,75,0,0,1,0,Allyuen Sector,outer_rim,0
@@ -61,20 +61,20 @@ Tangrene,neutral,50,0,0,0,0,Jelucan Sector,outer_rim,1
 Wor Tandell,neutral,50,0,1,0,0,Borleias Sector,core,0
 Algarian,neutral,50,0,0,0,0,Ando Sector,inner_rim,0
 Filve,neutral,50,0,0,0,0,Garban Sector,outer_rim,0
-Gamorr,Empire,10,0,0,1,0,Rishi Sector,outer_rim,1
+Gamorr,neutral,50,0,0,0,0,Rishi Sector,outer_rim,1
 Klatooine,neutral,50,0,0,0,0,Af'El Sector,outer_rim,0
 Ord Mantell,neutral,50,0,0,0,0,Numidian Prime Sector,outer_rim,1
 Ord Pardon,neutral,50,0,0,0,0,Daalang Sector,inner_rim,0
 Ord Trasi,neutral,50,0,0,0,0,Borosk Sector,outer_rim,1
 Toprawa,neutral,50,0,0,0,0,Jelucan Sector,outer_rim,1
-Womrik,Empire,27,0,0,1,0,Ando Sector,inner_rim,0
+Womrik,Empire,10,0,0,1,0,Ando Sector,inner_rim,0
 Zebitrope IV,neutral,50,0,0,0,0,Saleucami Sector,outer_rim,0
-Ando,Empire,32,0,0,1,0,Ando Sector,inner_rim,1
+Ando,Empire,27,0,0,1,0,Ando Sector,inner_rim,1
 Berchest,neutral,50,0,0,0,0,Alk'lellish III Sector,inner_rim,0
-Bimmisaari,Alliance,90,0,0,1,0,Azbian Sector,inner_rim,1
-Carida,Empire,24,0,0,1,0,Kuat Sector,inner_rim,0
-Delaya,Empire,31,0,0,1,0,Kuat Sector,inner_rim,0
-Halowan,Empire,17,0,1,1,0,Chandrila Sector,core,0
+Bimmisaari,Alliance,68,0,0,1,0,Azbian Sector,inner_rim,1
+Carida,Empire,10,0,0,1,0,Kuat Sector,inner_rim,0
+Delaya,Empire,24,0,0,1,0,Kuat Sector,inner_rim,0
+Halowan,Empire,31,0,1,1,0,Chandrila Sector,core,0
 Mrisst,neutral,54,0,1,0,0,Borleias Sector,core,0
 Obroa-skai,neutral,50,0,0,0,0,Alk'lellish III Sector,inner_rim,1
 Palanhi,neutral,49,0,1,0,0,Salliche Sector,core,1
@@ -94,26 +94,26 @@ Arkania,neutral,50,0,0,0,0,Alk'lellish III Sector,inner_rim,0
 Elrood,Alliance,62,0,0,1,0,Dagobah Sector,outer_rim,1
 Fef,neutral,50,0,0,0,0,Bilbringi Sector,inner_rim,0
 Fornax,neutral,50,0,0,0,0,Ansion Sector,outer_rim,0
-Nentan,Alliance,62,0,0,1,0,Bilbringi Sector,inner_rim,0
+Nentan,neutral,50,0,0,0,0,Bilbringi Sector,inner_rim,0
 Sedri,neutral,50,0,0,0,0,Saleucami Sector,outer_rim,0
 Valrar,neutral,50,0,0,0,0,Ansion Sector,outer_rim,0
 Vortex,neutral,50,0,0,0,0,Bilbringi Sector,inner_rim,0
 Yag'Dhul,neutral,50,0,0,0,0,Thyferra Sector,inner_rim,1
-Azbian,Empire,36,0,0,1,0,Azbian Sector,inner_rim,0
+Azbian,Empire,38,0,0,1,0,Azbian Sector,inner_rim,0
 Cardooine,neutral,50,0,0,0,0,Lianna Sector,outer_rim,0
-Chrondre,Empire,74,1,0,1,0,Chrondre Sector,outer_rim,0
-Dar'Or,Empire,10,0,0,1,0,Anaxes Sector,outer_rim,0
-Douglas III,Empire,36,0,0,1,0,Tund Sector,outer_rim,0
+Chrondre,Empire,76,1,0,1,0,Chrondre Sector,outer_rim,0
+Dar'Or,Empire,34,0,0,1,0,Anaxes Sector,outer_rim,0
+Douglas III,Empire,10,0,0,1,0,Tund Sector,outer_rim,0
 Engira,neutral,50,0,0,0,0,Chrondre Sector,outer_rim,0
 Jomark,neutral,50,0,0,0,0,Lianna Sector,outer_rim,0
 Kiffex,neutral,50,0,0,0,0,Fondor Sector,inner_rim,0
 Trogan,neutral,50,0,0,0,0,Lianna Sector,outer_rim,0
 Waskiro,neutral,50,0,0,0,0,Lianna Sector,outer_rim,0
 Culroon III,neutral,50,0,0,0,0,Culroon III Sector,outer_rim,0
-Davnar,Empire,73,1,0,1,0,Dressel Sector,inner_rim,0
+Davnar,Empire,76,1,0,1,0,Dressel Sector,inner_rim,0
 Derra IV,neutral,50,0,0,0,0,Cymoon Sector,inner_rim,0
 Mindar,neutral,50,0,0,0,0,Dressel Sector,inner_rim,0
-Munto Codru,Alliance,83,0,0,1,0,Mon Calamari Sector,outer_rim,0
+Munto Codru,Alliance,67,0,0,1,0,Mon Calamari Sector,outer_rim,0
 Nal Hutta,neutral,50,0,0,0,0,Nal Hutta Sector,outer_rim,1
 Smarteel,neutral,50,0,0,0,0,Rishi Sector,outer_rim,0
 Spuma,neutral,50,0,0,0,0,Belsavis Sector,outer_rim,0
@@ -161,32 +161,32 @@ Varn,neutral,50,0,0,0,0,Anaxes Sector,outer_rim,0
 Vinsoth,neutral,50,0,0,0,0,Agamar Sector,outer_rim,1
 Averam,neutral,50,0,0,0,0,Belsavis Sector,outer_rim,0
 Balmorra,Empire,14,0,0,1,0,Kuat Sector,inner_rim,0
-Bortras,neutral,50,0,0,0,0,Sluis Van Sector,outer_rim,0
+Bortras,Alliance,60,0,0,1,0,Sluis Van Sector,outer_rim,0
 Chandrila,Empire,57,0,1,1,0,Chandrila Sector,core,0
 Corsin,neutral,50,0,0,0,0,Alk'lellish III Sector,inner_rim,1
 Coruscant,Empire,0,0,1,1,0,Coruscant Sector,core,1
-Ghorman,Empire,40,0,0,1,0,Fondor Sector,inner_rim,1
+Ghorman,Empire,38,0,0,1,0,Fondor Sector,inner_rim,1
 Svivren,neutral,50,0,0,0,0,Culroon III Sector,outer_rim,1
 Uvena,neutral,50,0,0,0,0,Sluis Van Sector,outer_rim,0
 Yaga Minor,neutral,50,0,0,0,0,Borosk Sector,outer_rim,1
-Bothawui,Empire,38,0,0,1,0,Dressel Sector,inner_rim,1
+Bothawui,Empire,27,0,0,1,0,Dressel Sector,inner_rim,1
 Bpfassh,neutral,50,0,0,0,0,Sluis Van Sector,outer_rim,0
-Mon Calamari,Alliance,73,0,0,1,0,Mon Calamari Sector,outer_rim,0
+Mon Calamari,Alliance,79,0,0,1,0,Mon Calamari Sector,outer_rim,0
 Denab,neutral,50,0,0,0,0,Dagobah Sector,outer_rim,0
-Kothlis,Empire,61,1,0,1,0,Dressel Sector,inner_rim,0
+Kothlis,Empire,50,1,0,1,0,Dressel Sector,inner_rim,0
 Orto,neutral,50,0,0,0,0,Dagobah Sector,outer_rim,0
 Praesitlyn,neutral,50,0,0,0,0,Sluis Van Sector,outer_rim,0
 Sluis Van,neutral,50,0,0,0,0,Sluis Van Sector,outer_rim,1
 Sullust,Empire,58,0,0,1,0,Najan-Rovi Sector,outer_rim,1
-Umgul,Alliance,90,0,0,1,0,Bromlarch Sector,inner_rim,0
+Umgul,Alliance,61,0,0,1,0,Bromlarch Sector,inner_rim,0
 Alk'lellish III,neutral,50,0,0,0,0,Alk'lellish III Sector,inner_rim,0
 Boordii,neutral,50,0,0,0,0,Akiva Sector,outer_rim,0
-Flax,Empire,39,0,0,1,0,Mandalore Sector,outer_rim,0
+Flax,Empire,23,0,0,1,0,Mandalore Sector,outer_rim,0
 Geedon V,neutral,50,0,0,0,0,Ithor Sector,outer_rim,0
 Kashyyyk,neutral,50,0,0,0,0,Kashyyyk Sector,inner_rim,1
 Linuri,neutral,50,0,0,0,0,Ando Sector,inner_rim,0
 Qat Chrystac,neutral,50,0,0,0,0,Cymoon Sector,inner_rim,0
-Tierfon,Empire,23,0,0,1,0,Alk'lellish III Sector,inner_rim,0
+Tierfon,Empire,34,0,0,1,0,Alk'lellish III Sector,inner_rim,0
 Woostri,neutral,50,0,0,0,0,Cymoon Sector,inner_rim,1
 Yavin,Alliance,100,0,1,1,0,Anaxes Sector,outer_rim,0
 Ambria,neutral,50,0,0,0,0,Kashyyyk Sector,inner_rim,0
@@ -197,19 +197,19 @@ Norulac,neutral,50,0,0,0,0,Kashyyyk Sector,inner_rim,0
 Ruuria,neutral,50,0,0,0,0,Telos IV Sector,outer_rim,1
 Stic,neutral,50,0,0,0,0,Telos IV Sector,outer_rim,0
 Thanta Zilbra,neutral,50,0,0,0,0,Telos IV Sector,outer_rim,0
-Thila,Empire,34,0,0,1,0,Telos IV Sector,outer_rim,0
+Thila,Empire,23,0,0,1,0,Telos IV Sector,outer_rim,0
 Tund,neutral,50,0,0,0,0,Tund Sector,outer_rim,0
-Kuat,Empire,23,0,0,1,0,Kuat Sector,inner_rim,1
-Fondor,Empire,27,0,0,1,0,Fondor Sector,inner_rim,1
-Rendili,Empire,29,0,1,1,0,Corellia Sector,core,0
-Corulag,Empire,39,0,1,1,0,Coruscant Sector,core,1
-Anaxes,Empire,10,0,0,1,0,Anaxes Sector,outer_rim,1
-Hosnian Prime,Empire,20,0,1,1,0,Nubia Sector,core,1
-Cato Neimoidia,Empire,51,1,0,1,0,Cato Neimoidia Sector,inner_rim,1
+Kuat,Empire,27,0,0,1,0,Kuat Sector,inner_rim,1
+Fondor,Empire,29,0,0,1,0,Fondor Sector,inner_rim,1
+Rendili,Empire,39,0,1,1,0,Corellia Sector,core,0
+Corulag,Empire,10,0,1,1,0,Coruscant Sector,core,1
+Anaxes,Empire,20,0,0,1,0,Anaxes Sector,outer_rim,1
+Hosnian Prime,Empire,11,0,1,1,0,Nubia Sector,core,1
+Cato Neimoidia,Empire,77,1,0,1,0,Cato Neimoidia Sector,inner_rim,1
 Thyferra,neutral,50,0,0,0,0,Thyferra Sector,inner_rim,1
 Onderon,neutral,50,0,0,0,0,Kashyyyk Sector,inner_rim,1
 Jakku,neutral,50,0,0,0,0,Fondor Sector,inner_rim,0
-Naboo,Empire,37,0,0,1,0,Naboo Sector,outer_rim,1
+Naboo,Empire,17,0,0,1,0,Naboo Sector,outer_rim,1
 Malastare,neutral,50,0,0,0,0,Bromlarch Sector,inner_rim,1
 Toydaria,neutral,50,0,0,0,0,Nal Hutta Sector,outer_rim,0
 Takodana,neutral,50,0,0,0,0,Fondor Sector,inner_rim,1
@@ -219,10 +219,10 @@ Cerea,neutral,50,0,0,0,0,Cerea Sector,inner_rim,1
 Glee Anselm,neutral,50,0,0,0,0,Bilbringi Sector,inner_rim,1
 Umbara,neutral,50,0,0,0,0,Kashyyyk Sector,inner_rim,1
 Mimban,neutral,50,0,0,0,0,Lelmra Sector,inner_rim,1
-Dorin,Empire,17,0,0,1,0,Bilbringi Sector,inner_rim,1
+Dorin,Empire,23,0,0,1,0,Bilbringi Sector,inner_rim,1
 Shili,neutral,50,0,0,0,0,Bogden Sector,inner_rim,0
-Kiros,neutral,58,0,1,0,0,Borleias Sector,core,0
-Mygeeto,Alliance,81,0,0,1,0,Borosk Sector,outer_rim,1
+Kiros,neutral,54,0,1,0,0,Borleias Sector,core,0
+Mygeeto,Alliance,86,0,0,1,0,Borosk Sector,outer_rim,1
 Muunilinst,neutral,50,0,0,0,0,Bastion Sector,outer_rim,1
 Raxus,neutral,50,0,0,0,0,Felucia Sector,outer_rim,0
 Ord Ibanna,neutral,50,0,0,0,0,Najan-Rovi Sector,outer_rim,0
@@ -231,93 +231,93 @@ Rodia,neutral,50,0,0,0,0,Rodia Sector,outer_rim,0
 Saleucami,neutral,50,0,0,0,0,Saleucami Sector,outer_rim,0
 Utapau,neutral,50,0,0,0,0,Dagobah Sector,outer_rim,0
 Felucia,neutral,50,0,0,0,0,Felucia Sector,outer_rim,1
-Mandalore,Empire,27,0,0,1,0,Mandalore Sector,outer_rim,1
+Mandalore,Empire,19,0,0,1,0,Mandalore Sector,outer_rim,0
 Lothal,neutral,50,0,0,0,0,Cymoon Sector,inner_rim,0
 Atollon,neutral,50,0,0,0,0,Mon Calamari Sector,outer_rim,0
-Crait,Alliance,86,0,0,1,0,Bromlarch Sector,inner_rim,0
-D'Qar,Alliance,81,0,0,1,0,Naboo Sector,outer_rim,0
+Crait,Alliance,83,0,0,1,0,Bromlarch Sector,inner_rim,0
+D'Qar,Alliance,63,0,0,1,0,Naboo Sector,outer_rim,0
 Iego,neutral,50,0,0,0,0,Mon Calamari Sector,outer_rim,0
 Taris,neutral,50,0,0,0,0,Akiva Sector,outer_rim,1
-Telos IV,Empire,17,0,0,1,0,Telos IV Sector,outer_rim,1
-Christophsis,neutral,50,0,0,0,0,Rodia Sector,outer_rim,1
+Telos IV,Empire,32,0,0,1,0,Telos IV Sector,outer_rim,1
+Christophsis,Alliance,81,0,0,1,0,Rodia Sector,outer_rim,1
 Korriban,neutral,50,0,0,0,0,Felucia Sector,outer_rim,0
 Ziost,neutral,50,0,0,0,0,Etti Sector,outer_rim,0
 Dromund Kaas,neutral,50,0,0,0,0,Felucia Sector,outer_rim,0
 Mustafar,neutral,50,0,0,0,0,Allyuen Sector,outer_rim,0
-Dagobah,neutral,50,0,0,0,0,Dagobah Sector,outer_rim,0
+Dagobah,neutral,50,0,0,0,0,Dagobah Sector,outer_rim,1
 Bastion,neutral,50,0,0,0,0,Bastion Sector,outer_rim,1
 Wayland,neutral,50,0,0,0,0,Ithor Sector,outer_rim,0
 Honoghr,neutral,50,0,0,0,0,Kessel Sector,outer_rim,0
-Belsavis,neutral,50,0,0,0,0,Belsavis Sector,outer_rim,0
-Voss,Alliance,63,0,0,1,0,Mon Calamari Sector,outer_rim,0
+Belsavis,neutral,50,0,0,0,0,Belsavis Sector,outer_rim,1
+Voss,Alliance,68,0,0,1,0,Mon Calamari Sector,outer_rim,0
 Shantipole,neutral,50,0,0,0,0,Chrondre Sector,outer_rim,1
-Concord Dawn,Empire,32,0,0,1,0,Anaxes Sector,outer_rim,0
+Concord Dawn,Empire,35,0,0,1,0,Anaxes Sector,outer_rim,0
 Bandomeer,neutral,50,0,0,0,0,Ithor Sector,outer_rim,1
-Borleias,Empire,19,0,1,1,0,Borleias Sector,core,1
+Borleias,Empire,25,0,1,1,0,Borleias Sector,core,1
 Bracca,neutral,50,0,0,0,0,Kashyyyk Sector,inner_rim,1
 Vakkar,neutral,50,0,0,0,0,Bilbringi Sector,inner_rim,1
 Bogden,neutral,50,0,0,0,0,Bogden Sector,inner_rim,1
 Lantillies,neutral,50,0,0,0,0,Contruum Sector,inner_rim,1
 Gazian,neutral,50,0,0,0,0,Contruum Sector,inner_rim,0
 Aleen,neutral,50,0,0,0,0,Numidian Prime Sector,outer_rim,1
-Skako,Empire,32,0,1,1,0,Chandrila Sector,core,1
+Skako,Empire,15,0,1,1,0,Chandrila Sector,core,1
 Ubduria,neutral,50,0,0,0,0,Alk'lellish III Sector,inner_rim,1
 Gallios,neutral,50,0,0,0,0,Agamar Sector,outer_rim,1
 Takobo,neutral,50,0,0,0,0,Ithor Sector,outer_rim,1
 Montross,neutral,50,0,0,0,0,Contruum Sector,inner_rim,1
 Agamar,neutral,50,0,0,0,0,Agamar Sector,outer_rim,1
-Akiva,Empire,35,0,0,1,0,Akiva Sector,outer_rim,0
+Akiva,Empire,15,0,0,1,0,Akiva Sector,outer_rim,0
 Krownest,neutral,50,0,0,0,0,Akiva Sector,outer_rim,0
 Hapes,neutral,50,0,0,0,0,Kashyyyk Sector,inner_rim,0
-Loronar,neutral,56,0,1,0,0,Nubia Sector,core,1
+Loronar,neutral,42,0,1,0,0,Nubia Sector,core,1
 Denon,Empire,15,0,0,1,0,Oetrago Sector,inner_rim,1
-Byblos,neutral,42,0,1,0,0,Nubia Sector,core,1
-Nubia,Empire,15,0,1,1,0,Nubia Sector,core,1
+Byblos,neutral,47,0,1,0,0,Nubia Sector,core,1
+Nubia,Empire,19,0,1,1,0,Nubia Sector,core,1
 Kooriva,neutral,50,0,0,0,0,Thyferra Sector,inner_rim,0
 Quarzite,neutral,50,0,0,0,0,Thyferra Sector,inner_rim,0
-Balosar,neutral,47,0,1,0,0,Nubia Sector,core,0
-Fedalle,neutral,43,0,1,0,0,Coruscant Sector,core,1
-Vardos,Empire,13,0,1,1,0,Coruscant Sector,core,0
-Tython,neutral,53,0,1,0,0,Byss Sector,core,0
+Balosar,neutral,43,0,1,0,0,Nubia Sector,core,0
+Fedalle,neutral,53,0,1,0,0,Coruscant Sector,core,1
+Vardos,Empire,37,0,1,1,0,Coruscant Sector,core,0
+Tython,neutral,55,0,1,0,0,Byss Sector,core,0
 Ruusan,neutral,50,0,0,0,0,Bastatha Sector,inner_rim,0
-Bastatha,Empire,37,0,0,1,0,Bastatha Sector,inner_rim,1
-Plexis,neutral,55,0,1,0,0,Byss Sector,core,0
+Bastatha,Empire,31,0,0,1,0,Bastatha Sector,inner_rim,1
+Plexis,neutral,57,0,1,0,0,Byss Sector,core,0
 Espirion,neutral,50,0,0,0,0,Bastatha Sector,inner_rim,0
 Birren,neutral,50,0,0,0,0,Bastatha Sector,inner_rim,1
 Kullgroon,neutral,50,0,0,0,0,Bastatha Sector,inner_rim,0
 Hynestia,neutral,50,0,0,0,0,Fondor Sector,inner_rim,0
-Bardotta,Empire,31,0,0,1,0,Fondor Sector,inner_rim,1
-Bestine IV,Empire,19,0,0,1,0,Thyferra Sector,inner_rim,1
+Bardotta,Empire,25,0,0,1,0,Fondor Sector,inner_rim,1
+Bestine IV,Empire,12,0,0,1,0,Thyferra Sector,inner_rim,1
 Abednedo,neutral,50,0,0,0,0,Thyferra Sector,inner_rim,1
-Gorse,Empire,64,1,0,1,0,Bastatha Sector,inner_rim,1
-Ferrix,Empire,25,0,0,1,0,Telos IV Sector,outer_rim,1
+Gorse,neutral,50,0,0,0,0,Bastatha Sector,inner_rim,1
+Ferrix,Empire,28,0,0,1,0,Telos IV Sector,outer_rim,1
 Bonadan,neutral,50,0,0,0,0,Etti Sector,outer_rim,1
 Murkhana,neutral,50,0,0,0,0,Mon Calamari Sector,outer_rim,0
 Corvus,neutral,50,0,0,0,0,Mon Calamari Sector,outer_rim,0
 Serenno,neutral,50,0,0,0,0,Mandalore Sector,outer_rim,0
 Florrum,neutral,50,0,0,0,0,Felucia Sector,outer_rim,0
 Gand,neutral,50,0,0,0,0,Tund Sector,outer_rim,0
-Zeffo,Empire,12,0,0,1,0,Alpinn Sector,outer_rim,0
+Zeffo,Empire,37,0,0,1,0,Alpinn Sector,outer_rim,0
 Malachor,neutral,50,0,0,0,0,Etti Sector,outer_rim,0
-Wobani,Empire,28,0,0,1,0,Chrondre Sector,outer_rim,0
-Jelucan,Empire,37,0,0,1,0,Jelucan Sector,outer_rim,1
+Wobani,Empire,21,0,0,1,0,Chrondre Sector,outer_rim,0
+Jelucan,Empire,53,1,0,1,0,Jelucan Sector,outer_rim,1
 Cantonica,neutral,50,0,0,0,0,Etti Sector,outer_rim,0
 Mykapo,neutral,50,0,0,0,0,Mon Calamari Sector,outer_rim,0
-Toola,Alliance,79,0,0,1,0,Felucia Sector,outer_rim,1
-Ringo Vinda,Empire,13,0,0,1,0,Chrondre Sector,outer_rim,1
+Toola,Alliance,75,0,0,1,0,Felucia Sector,outer_rim,1
+Ringo Vinda,Empire,37,0,0,1,0,Chrondre Sector,outer_rim,1
 Sesid,neutral,50,0,0,0,0,Jelucan Sector,outer_rim,0
 Lorrd,neutral,50,0,0,0,0,Alpinn Sector,outer_rim,0
 Sy Myrth,neutral,50,0,0,0,0,Chrondre Sector,outer_rim,1
-Eriadu,Empire,25,0,0,1,0,Belsavis Sector,outer_rim,1
+Eriadu,Empire,36,0,0,1,0,Belsavis Sector,outer_rim,1
 Lasan,neutral,50,0,0,0,0,Culroon III Sector,outer_rim,0
 Sevarcos,neutral,50,0,0,0,0,Culroon III Sector,outer_rim,1
 Allanteen VI,neutral,50,0,0,0,0,Oetrago Sector,inner_rim,1
 Pantora,neutral,50,0,0,0,0,Culroon III Sector,outer_rim,0
 Iktotch,neutral,50,0,0,0,0,Lelmra Sector,inner_rim,0
-Kal'Shebbol,Alliance,63,0,0,1,0,Dagobah Sector,outer_rim,1
+Kal'Shebbol,Alliance,72,0,0,1,0,Dagobah Sector,outer_rim,1
 Vallt,neutral,50,0,0,0,0,Naboo Sector,outer_rim,1
 Kerkoidia,neutral,50,0,0,0,0,Naboo Sector,outer_rim,0
-Inusagi,Empire,36,0,0,1,0,Naboo Sector,outer_rim,1
+Inusagi,Empire,21,0,0,1,0,Naboo Sector,outer_rim,1
 Ikkrukk,neutral,50,0,0,0,0,Naboo Sector,outer_rim,0
 Yar Togna,neutral,50,0,0,0,0,Bajic Sector,outer_rim,1
 Kalarba,neutral,50,0,0,0,0,Lelmra Sector,inner_rim,1
@@ -326,22 +326,22 @@ Triffis,neutral,50,0,0,0,0,Naboo Sector,outer_rim,1
 Aridus,neutral,50,0,0,0,0,Lelmra Sector,inner_rim,1
 Zolan,neutral,50,0,0,0,0,Naboo Sector,outer_rim,0
 Milagro,neutral,50,0,0,0,0,Lelmra Sector,inner_rim,1
-Geonosis,Empire,28,0,0,1,0,Tatooine Sector,outer_rim,1
+Geonosis,Empire,12,0,0,1,0,Tatooine Sector,outer_rim,1
 Hypori,neutral,50,0,0,0,0,Tatooine Sector,outer_rim,0
 Narkina,neutral,50,0,0,0,0,Garban Sector,outer_rim,0
 Vandor,neutral,50,0,0,0,0,Dressel Sector,inner_rim,0
-Arkanis,Empire,21,0,0,1,0,Rodia Sector,outer_rim,1
-Rothana,Empire,12,0,0,1,0,Garban Sector,outer_rim,0
+Arkanis,Empire,18,0,0,1,0,Rodia Sector,outer_rim,1
+Rothana,neutral,50,0,0,0,0,Garban Sector,outer_rim,0
 Socorro,neutral,50,0,0,0,0,Rodia Sector,outer_rim,1
 Wrea,neutral,50,0,0,0,0,Tatooine Sector,outer_rim,1
 Ubrikkia,neutral,50,0,0,0,0,Daalang Sector,inner_rim,1
-Formos,Alliance,82,0,0,1,0,Kessel Sector,outer_rim,1
+Formos,Alliance,66,0,0,1,0,Kessel Sector,outer_rim,1
 Sleheyron,neutral,50,0,0,0,0,Af'El Sector,outer_rim,1
-Falleen,Empire,34,0,0,1,0,Ando Sector,inner_rim,0
-Lowick,Alliance,65,0,0,1,0,Kessel Sector,outer_rim,0
+Falleen,Empire,35,0,0,1,0,Ando Sector,inner_rim,0
+Lowick,Alliance,76,0,0,1,0,Kessel Sector,outer_rim,0
 Dotharian,neutral,50,0,0,0,0,Nal Hutta Sector,outer_rim,1
 Cyrkon,neutral,50,0,0,0,0,Rishi Sector,outer_rim,1
-Yerbana,neutral,50,0,0,0,0,Rodia Sector,outer_rim,1
+Yerbana,Alliance,68,0,0,1,0,Rodia Sector,outer_rim,1
 Desix,neutral,50,0,0,0,0,Af'El Sector,outer_rim,0
 Kwenn,neutral,50,0,0,0,0,Daalang Sector,inner_rim,1
 Nar Kanji,neutral,50,0,0,0,0,Azbian Sector,inner_rim,0
@@ -349,36 +349,36 @@ Sorgan,neutral,50,0,0,0,0,Rodia Sector,outer_rim,0
 Pagodon,neutral,50,0,0,0,0,Tatooine Sector,outer_rim,0
 Batuu,neutral,50,0,0,0,0,Endor Sector,outer_rim,1
 Nevarro,neutral,50,0,0,0,0,Allyuen Sector,outer_rim,1
-Scipio,Alliance,76,0,0,1,0,Borosk Sector,outer_rim,0
-Dubrillion,Alliance,68,0,0,1,0,Bastion Sector,outer_rim,1
+Scipio,Alliance,73,0,0,1,0,Borosk Sector,outer_rim,0
+Dubrillion,Alliance,83,0,0,1,0,Bastion Sector,outer_rim,1
 Rattatak,neutral,50,0,0,0,0,Endor Sector,outer_rim,1
-Korrus,Alliance,73,0,0,1,0,Bastion Sector,outer_rim,1
-Terminus,Alliance,83,0,0,1,0,Allyuen Sector,outer_rim,1
+Korrus,Alliance,88,0,0,1,0,Bastion Sector,outer_rim,1
+Terminus,Alliance,89,0,0,1,0,Allyuen Sector,outer_rim,1
 Vassek,neutral,50,0,0,0,0,Eiram Sector,outer_rim,0
 Lotho Minor,neutral,50,0,0,0,0,Eiram Sector,outer_rim,1
-Trenchenovu,Alliance,88,0,0,1,0,Hoth Sector,outer_rim,1
+Trenchenovu,Alliance,77,0,0,1,0,Hoth Sector,outer_rim,1
 Savareen,neutral,50,0,0,0,0,Rodia Sector,outer_rim,1
-Oseon,Empire,51,1,0,1,0,Saleucami Sector,outer_rim,1
+Oseon,neutral,50,0,0,0,0,Saleucami Sector,outer_rim,1
 Bajic,neutral,50,0,0,0,0,Bajic Sector,outer_rim,1
-Salliche,neutral,58,0,1,0,0,Salliche Sector,core,1
+Salliche,neutral,50,0,1,0,0,Salliche Sector,core,1
 Jaminere,neutral,50,0,0,0,0,Mon Calamari Sector,outer_rim,1
 Llanic,neutral,50,0,0,0,0,Rodia Sector,outer_rim,1
 Lespectus,neutral,50,0,0,0,0,Kuat Sector,inner_rim,1
 Molavar,neutral,50,0,0,0,0,Garban Sector,outer_rim,1
-Neimoidia,Empire,31,0,0,1,0,Cato Neimoidia Sector,inner_rim,1
+Neimoidia,Empire,13,0,0,1,0,Cato Neimoidia Sector,inner_rim,1
 Imynusoph,neutral,50,0,0,0,0,Allyuen Sector,outer_rim,1
 Zeltros,neutral,50,0,0,0,0,Bastatha Sector,inner_rim,1
-Gigor,Empire,13,0,0,1,0,Telos IV Sector,outer_rim,1
+Gigor,Empire,25,0,0,1,0,Telos IV Sector,outer_rim,1
 Vorzyd,neutral,50,0,0,0,0,Anaxes Sector,outer_rim,1
 Chalacta,neutral,50,0,0,0,0,Azbian Sector,inner_rim,1
-Rhinnal,Empire,25,0,1,1,0,Coruscant Sector,core,1
+Rhinnal,Empire,60,1,1,1,0,Coruscant Sector,core,1
 Candovant,neutral,50,0,0,0,0,Cato Neimoidia Sector,inner_rim,1
 Quence,neutral,50,0,0,0,0,Culroon III Sector,outer_rim,1
 Exodeen,neutral,58,0,1,0,0,Nubia Sector,core,1
 Lianna,neutral,50,0,0,0,0,Lianna Sector,outer_rim,1
 Halais,Empire,11,0,0,1,0,Kuat Sector,inner_rim,1
-Marleyvane,Alliance,66,0,0,1,0,Saleucami Sector,outer_rim,1
-Najan-Rovi,Empire,15,0,0,1,0,Najan-Rovi Sector,outer_rim,1
+Marleyvane,neutral,50,0,0,0,0,Saleucami Sector,outer_rim,1
+Najan-Rovi,Empire,34,0,0,1,0,Najan-Rovi Sector,outer_rim,1
 Metagos,neutral,50,0,0,0,0,Saleucami Sector,outer_rim,1
 Lannik,neutral,50,0,0,0,0,Dressel Sector,inner_rim,1
 Chyron,neutral,50,0,0,0,0,Cerea Sector,inner_rim,1
@@ -386,25 +386,25 @@ Gizer,neutral,50,0,0,0,0,Contruum Sector,inner_rim,1
 Kegan,neutral,50,0,0,0,0,Af'El Sector,outer_rim,1
 Chardaan,neutral,50,0,0,0,0,Oetrago Sector,inner_rim,1
 Lorta,neutral,50,0,0,0,0,Anoat Sector,outer_rim,1
-Kennerla,Alliance,84,0,0,1,0,Dagobah Sector,outer_rim,1
+Kennerla,Alliance,85,0,0,1,0,Dagobah Sector,outer_rim,1
 Nixus,neutral,50,0,0,0,0,Bajic Sector,outer_rim,1
 Tiferep Major,neutral,50,0,0,0,0,Najan-Rovi Sector,outer_rim,1
 Farstine,neutral,50,0,0,0,0,Naboo Sector,outer_rim,1
 Dressel,neutral,50,0,0,0,0,Dressel Sector,inner_rim,1
 Zardossa Stix,neutral,51,0,1,0,0,Byss Sector,core,1
-Orish,Empire,53,1,0,1,0,Bromlarch Sector,inner_rim,1
+Orish,Empire,13,0,0,1,0,Bromlarch Sector,inner_rim,1
 Guat'a,neutral,50,0,0,0,0,Rodia Sector,outer_rim,1
-Jabiim,neutral,50,0,0,0,0,Saleucami Sector,outer_rim,1
+Jabiim,Empire,25,0,0,1,0,Saleucami Sector,outer_rim,1
 Chanceuxi,neutral,50,0,0,0,0,Alpinn Sector,outer_rim,1
 Pamarthe,neutral,50,0,0,0,0,Belsavis Sector,outer_rim,1
-Phindar,Empire,25,0,0,1,0,Mandalore Sector,outer_rim,1
+Phindar,Empire,37,0,0,1,0,Mandalore Sector,outer_rim,1
 Begamor,neutral,50,0,0,0,0,Ithor Sector,outer_rim,1
-Champala,Alliance,63,0,0,1,0,Bogden Sector,inner_rim,1
+Champala,neutral,50,0,0,0,0,Bogden Sector,inner_rim,1
 Wroona,neutral,50,0,0,0,0,Cymoon Sector,inner_rim,1
 Vondarc,neutral,50,0,0,0,0,Najan-Rovi Sector,outer_rim,1
 Wynkahthu,neutral,50,0,0,0,0,Ithor Sector,outer_rim,1
 Baroonda,neutral,50,0,0,0,0,Kessel Sector,outer_rim,1
-Mon Gazza,Empire,40,0,0,1,0,Ando Sector,inner_rim,1
+Mon Gazza,Empire,80,1,0,1,0,Ando Sector,inner_rim,1
 Leritor,neutral,50,0,0,0,0,Ando Sector,inner_rim,1
 Enthenium,neutral,50,0,0,0,0,Allyuen Sector,outer_rim,1
 Rajtiri,neutral,50,0,0,0,0,Kashyyyk Sector,inner_rim,1
@@ -435,69 +435,69 @@ Tawl,neutral,50,0,0,0,0,Anoat Sector,outer_rim,1
 Eiram,neutral,50,0,0,0,0,Eiram Sector,outer_rim,1
 Korbori,neutral,50,0,0,0,0,Cato Neimoidia Sector,inner_rim,1
 Regis Kor,neutral,50,0,0,0,0,Hoth Sector,outer_rim,1
-Lafete,neutral,50,0,0,0,0,Eiram Sector,outer_rim,1
+Lafete,Alliance,61,0,0,1,0,Eiram Sector,outer_rim,1
 Quell,neutral,50,0,0,0,0,Anaxes Sector,outer_rim,1
 Gerenthum,neutral,50,0,0,0,0,Hoth Sector,outer_rim,1
 Riflor,neutral,50,0,0,0,0,Cerea Sector,inner_rim,1
 Valboraan,neutral,50,0,0,0,0,Daalang Sector,inner_rim,1
-Raydonia,Empire,39,0,0,1,0,Mandalore Sector,outer_rim,1
-Celanon,Alliance,77,0,0,1,0,Mandalore Sector,outer_rim,1
+Raydonia,Empire,23,0,0,1,0,Mandalore Sector,outer_rim,1
+Celanon,Alliance,80,0,0,1,0,Mandalore Sector,outer_rim,1
 Manpha,neutral,50,0,0,0,0,Allyuen Sector,outer_rim,1
-Brentaal IV,Empire,20,0,1,1,0,Coruscant Sector,core,1
+Brentaal IV,Empire,26,0,1,1,0,Coruscant Sector,core,1
 Lipsec,neutral,50,0,0,0,0,Eiram Sector,outer_rim,1
-Belladoon,Alliance,74,0,0,1,0,Bastion Sector,outer_rim,1
+Belladoon,Alliance,69,0,0,1,0,Bastion Sector,outer_rim,1
 Rorak,neutral,50,0,0,0,0,Nal Hutta Sector,outer_rim,1
 Mokivj,neutral,50,0,0,0,0,Endor Sector,outer_rim,1
 Karfeddion,neutral,50,0,0,0,0,Najan-Rovi Sector,outer_rim,1
-Mina-Rau,Alliance,69,0,0,1,0,Mandalore Sector,outer_rim,1
+Mina-Rau,Alliance,84,0,0,1,0,Mandalore Sector,outer_rim,1
 Alpinn,neutral,50,0,0,0,0,Alpinn Sector,outer_rim,1
 Ord Cestus,neutral,50,0,0,0,0,Akiva Sector,outer_rim,1
 Zygerria,neutral,50,0,0,0,0,Etti Sector,outer_rim,1
 Seatos,neutral,50,0,0,0,0,Sluis Van Sector,outer_rim,1
 Garqi,neutral,50,0,0,0,0,Numidian Prime Sector,outer_rim,1
 Epikonia,neutral,50,0,0,0,0,Alk'lellish III Sector,inner_rim,1
-Coto-Xana,Empire,16,0,1,1,0,Borleias Sector,core,1
+Coto-Xana,Empire,12,0,1,1,0,Borleias Sector,core,1
 Jaemus,neutral,50,0,0,0,0,Bastion Sector,outer_rim,1
 Targyon,neutral,50,0,0,0,0,Jelucan Sector,outer_rim,1
-Nag Ubdur,Alliance,88,0,0,1,0,Anaxes Sector,outer_rim,1
+Nag Ubdur,Alliance,86,0,0,1,0,Anaxes Sector,outer_rim,1
 Charros,neutral,50,0,0,0,0,Azbian Sector,inner_rim,1
 Syvris,neutral,50,0,0,0,0,Rishi Sector,outer_rim,1
-Tarabba,Alliance,86,0,0,1,0,Dagobah Sector,outer_rim,1
+Tarabba,Alliance,63,0,0,1,0,Dagobah Sector,outer_rim,1
 Xagobah,neutral,50,0,0,0,0,Bajic Sector,outer_rim,1
-Isde Naha,Alliance,63,0,0,1,0,Anoat Sector,outer_rim,1
-Botajef,Empire,33,0,0,1,0,Akiva Sector,outer_rim,1
-Empress Teta,neutral,57,0,1,0,0,Byss Sector,core,1
+Isde Naha,Alliance,67,0,0,1,0,Anoat Sector,outer_rim,1
+Botajef,Empire,24,0,0,1,0,Akiva Sector,outer_rim,1
+Empress Teta,neutral,49,0,1,0,0,Byss Sector,core,1
 Valo,neutral,50,0,0,0,0,Culroon III Sector,outer_rim,1
 Mirial,neutral,50,0,0,0,0,Jelucan Sector,outer_rim,1
 Vandelhelm,neutral,50,0,0,0,0,Cymoon Sector,inner_rim,1
 Zhadalene,neutral,50,0,0,0,0,Alpinn Sector,outer_rim,1
-Kol Iben,Empire,72,1,0,1,0,Tatooine Sector,outer_rim,1
+Kol Iben,Empire,32,0,0,1,0,Tatooine Sector,outer_rim,1
 Randon,neutral,50,0,0,0,0,Azbian Sector,inner_rim,1
 Aldhani,neutral,50,0,0,0,0,Ithor Sector,outer_rim,1
-Florn,Alliance,68,0,0,1,0,Felucia Sector,outer_rim,1
+Florn,Alliance,82,0,0,1,0,Felucia Sector,outer_rim,1
 Grange,neutral,50,0,0,0,0,Daalang Sector,inner_rim,1
 Kartoosh,neutral,50,0,0,0,0,Cerea Sector,inner_rim,1
 Dolla,neutral,50,0,0,0,0,Belsavis Sector,outer_rim,1
 Tah'Nuhna,neutral,50,0,0,0,0,Dressel Sector,inner_rim,1
-Castell,Empire,18,0,0,1,0,Kuat Sector,inner_rim,1
+Castell,Empire,33,0,0,1,0,Kuat Sector,inner_rim,1
 Bescane,neutral,50,0,0,0,0,Bastion Sector,outer_rim,1
 Nexus Ortai,neutral,50,0,0,0,0,Dressel Sector,inner_rim,1
-Gatalenta,Empire,33,0,1,1,0,Corellia Sector,core,1
+Gatalenta,Empire,67,1,1,1,0,Corellia Sector,core,1
 Borosk,neutral,50,0,0,0,0,Borosk Sector,outer_rim,1
 Zastiga,neutral,50,0,0,0,0,Allyuen Sector,outer_rim,1
 Naraka,neutral,50,0,0,0,0,Saleucami Sector,outer_rim,1
 Carlac,neutral,50,0,0,0,0,Ansion Sector,outer_rim,1
 Tirahnn,neutral,50,0,0,0,0,Kuat Sector,inner_rim,1
 Nantoon,neutral,50,0,0,0,0,Thyferra Sector,inner_rim,1
-N'zoth,neutral,54,0,1,0,0,Salliche Sector,core,1
+N'zoth,neutral,45,0,1,0,0,Salliche Sector,core,1
 Kitel Phard,neutral,45,0,1,0,0,Byss Sector,core,1
 Cymoon,neutral,50,0,0,0,0,Cymoon Sector,inner_rim,1
 Rekelos,neutral,50,0,0,0,0,Cerea Sector,inner_rim,1
 Sump,neutral,50,0,0,0,0,Eiram Sector,outer_rim,1
-Botor,neutral,45,0,1,0,0,Byss Sector,core,1
+Botor,neutral,49,0,1,0,0,Byss Sector,core,1
 Barton IV,neutral,50,0,0,0,0,Felucia Sector,outer_rim,1
 Pax,neutral,50,0,0,0,0,Bromlarch Sector,inner_rim,1
-Bromlarch,Alliance,68,0,0,1,0,Bromlarch Sector,inner_rim,1
+Bromlarch,Alliance,66,0,0,1,0,Bromlarch Sector,inner_rim,1
 Lutrillia,neutral,50,0,0,0,0,Hoth Sector,outer_rim,1
 Contruum,neutral,50,0,0,0,0,Contruum Sector,inner_rim,1
 Giju,neutral,50,0,0,0,0,Fondor Sector,inner_rim,1
@@ -505,22 +505,22 @@ Danzik,neutral,50,0,0,0,0,Alpinn Sector,outer_rim,1
 Daalang,neutral,50,0,0,0,0,Daalang Sector,inner_rim,1
 D'Assem,neutral,50,0,0,0,0,Bogden Sector,inner_rim,1
 Uyter,neutral,50,0,0,0,0,Azbian Sector,inner_rim,1
-Foless,neutral,50,0,0,0,0,Thyferra Sector,inner_rim,1
-Caraad,Empire,34,0,1,1,0,Borleias Sector,core,1
-Ponemah,Empire,27,0,0,1,0,Endor Sector,outer_rim,1
-Uveron,neutral,58,0,1,0,0,Coruscant Sector,core,1
+Foless,Empire,27,0,0,1,0,Thyferra Sector,inner_rim,1
+Caraad,Empire,23,0,1,1,0,Borleias Sector,core,1
+Ponemah,neutral,50,0,0,0,0,Endor Sector,outer_rim,1
+Uveron,neutral,42,0,1,0,0,Coruscant Sector,core,1
 Five Points,neutral,50,0,0,0,0,Lianna Sector,outer_rim,1
 Idaflor,neutral,50,0,0,0,0,Bajic Sector,outer_rim,1
 Kira,neutral,50,0,0,0,0,Bromlarch Sector,inner_rim,1
 Gyndine,neutral,50,0,0,0,0,Bastatha Sector,inner_rim,1
 Axxila,neutral,50,0,0,0,0,Agamar Sector,outer_rim,1
 Barab I,neutral,50,0,0,0,0,Nal Hutta Sector,outer_rim,1
-Raithal,Empire,20,0,0,1,0,Kuat Sector,inner_rim,1
+Raithal,Empire,23,0,0,1,0,Kuat Sector,inner_rim,1
 Quermia,neutral,50,0,0,0,0,Felucia Sector,outer_rim,1
 Trillia,neutral,50,0,0,0,0,Lelmra Sector,inner_rim,1
 Etti,neutral,50,0,0,0,0,Etti Sector,outer_rim,1
 Rior,neutral,50,0,0,0,0,Bajic Sector,outer_rim,1
-Tepasi,Empire,21,0,1,1,0,Coruscant Sector,core,1
+Tepasi,Empire,14,0,1,1,0,Coruscant Sector,core,1
 Circumtore,neutral,50,0,0,0,0,Nal Hutta Sector,outer_rim,1
 Numidian Prime,neutral,50,0,0,0,0,Numidian Prime Sector,outer_rim,1
 Antar 4,neutral,50,0,0,0,0,Cato Neimoidia Sector,inner_rim,1
@@ -531,7 +531,7 @@ Karthon,neutral,50,0,0,0,0,Endor Sector,outer_rim,1
 Beltire,neutral,50,0,0,0,0,Hoth Sector,outer_rim,1
 Couronne,neutral,50,0,0,0,0,Azbian Sector,inner_rim,1
 Ab Dalis,neutral,50,0,0,0,0,Tatooine Sector,outer_rim,1
-Blutopia,neutral,50,0,0,0,0,Cerea Sector,inner_rim,1
+Blutopia,Empire,21,0,0,1,0,Cerea Sector,inner_rim,1
 Ciutric,neutral,50,0,0,0,0,Agamar Sector,outer_rim,1
 Af'El,neutral,50,0,0,0,0,Af'El Sector,outer_rim,1
 Entralla,neutral,50,0,0,0,0,Borosk Sector,outer_rim,1
@@ -544,9 +544,13 @@ Ardennia,neutral,50,0,0,0,0,Ansion Sector,outer_rim,1
 Solarine,neutral,50,0,0,0,0,Azbian Sector,inner_rim,1
 Nanth'ri,neutral,50,0,0,0,0,Daalang Sector,inner_rim,1
 Listehol,neutral,50,0,0,0,0,Jelucan Sector,outer_rim,1
-Parwa,Empire,12,0,0,1,0,Belsavis Sector,outer_rim,1
+Parwa,Empire,24,0,0,1,0,Belsavis Sector,outer_rim,1
 Sernpidal,neutral,50,0,0,0,0,Bastion Sector,outer_rim,1
 Kriselist,neutral,50,0,0,0,0,Cerea Sector,inner_rim,1
 Tholoth,neutral,50,0,0,0,0,Cato Neimoidia Sector,inner_rim,1
+Manda,neutral,50,0,0,0,0,Rishi Sector,outer_rim,1
+Eiattu,neutral,50,0,0,0,0,Najan-Rovi Sector,outer_rim,1
+Mardona,Empire,36,0,0,1,0,Oetrago Sector,inner_rim,1
+Scarif,neutral,50,0,0,0,0,Garban Sector,outer_rim,1
 Ilum,neutral,50,0,0,0,0,none (outside sectors),none,0
 Csilla,neutral,50,0,0,0,0,none (outside sectors),none,0

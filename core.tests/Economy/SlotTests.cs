@@ -11,10 +11,10 @@ public class SlotTests
 
     // m2-slots-and-resources S1
     [Fact]
-    public void S1_SlotFileLoads551RowsWithPinnedTotals()
+    public void S1_SlotFileLoads555RowsWithPinnedTotals()
     {
         var slots = EcoWorld.Slots.Value;
-        Assert.Equal(551, slots.Count);
+        Assert.Equal(555, slots.Count);
         int energy = 0, raw = 0;
         for (int i = 0; i < slots.Count; i++)
         {
@@ -23,8 +23,8 @@ public class SlotTests
             Assert.True(s.Raw <= s.Energy, s.Name);
             Assert.True(s.Populated, s.Name);
         }
-        Assert.Equal(4293, energy);
-        Assert.Equal(2895, raw);
+        Assert.Equal(4323, energy);
+        Assert.Equal(2914, raw);
     }
 
     // m2-slots-and-resources S2
@@ -103,7 +103,7 @@ public class SlotTests
     private static EcoWorld IncidentWorld(string system, int band, int nextInterval, out int due)
     {
         var w = new EcoWorld(incidents: true);
-        w.Stub!.Expect(0, 550, EcoWorld.IndexOf(system)).Expect(0, 99, band).Expect(0, 499, nextInterval);
+        w.Stub!.Expect(0, 554, EcoWorld.IndexOf(system)).Expect(0, 99, band).Expect(0, 499, nextInterval);
         w.E.ResourceDue = 1; // due at hook time 1: fires in Step 0
         due = 1;
         return w;
@@ -119,7 +119,7 @@ public class SlotTests
         var e = Assert.Single(w.Events<ResourceIncident>());
         Assert.Equal((SlotChange.RawPlus, 4, 5), (e.Change, e.Before, e.After));
         Assert.Equal(1 + 100, w.E.ResourceDue); // T + 100
-        Assert.Equal(new[] { (0, 550), (0, 99), (0, 499) }, w.Stub!.Requests.ToArray());
+        Assert.Equal(new[] { (0, 554), (0, 99), (0, 499) }, w.Stub!.Requests.ToArray());
     }
 
     // m2-slots-and-resources S8
@@ -178,7 +178,7 @@ public class SlotTests
     public void S11_DisasterDestroysFacilitiesBelowTenPercentAndKeepsSlots()
     {
         var w = new EcoWorld(incidents: true);
-        w.Stub!.Expect(0, 550, EcoWorld.IndexOf("Kessel")).Queue();
+        w.Stub!.Expect(0, 554, EcoWorld.IndexOf("Kessel")).Queue();
         w.Mine("Kessel", id: 3); w.Refinery("Kessel", id: 4); w.Eco.AddFacility("Kessel", FacilityKind.Kdy150, id: 9);
         // per-facility rolls are (0,99): 5, 50, 9
         w.Stub.Expect(0, 99, 5, 50, 9);
@@ -205,7 +205,7 @@ public class SlotTests
         w.Stub!.Queue(EcoWorld.IndexOf("Coruscant"), 62, 10, EcoWorld.IndexOf("Hoth"), 50, 10);
         w.E.ResourceDue = 1; w.E.DisasterDue = 1;
         w.Run(1);
-        Assert.Equal(new[] { (0, 550), (0, 99), (0, 499), (0, 550), (0, 99), (0, 399) }, w.Stub.Requests.ToArray());
+        Assert.Equal(new[] { (0, 554), (0, 99), (0, 499), (0, 554), (0, 99), (0, 399) }, w.Stub.Requests.ToArray());
         var order = w.Game.Events.Where(e => e is ResourceIncident or Disaster).Select(e => e.Kind).ToArray();
         Assert.Equal(new[] { "ResourceIncident", "Disaster" }, order);
     }
@@ -266,7 +266,7 @@ public class SlotTests
     {
         EcoWorld Make() { var w = new EcoWorld(seed: 3) { }; w.Eco.SlotSource = SlotSource.Rolled; w.Eco.SetupNewGame(); return w; }
         var a = Make(); var b = Make();
-        Assert.Equal(551, a.E.Slots.Count);
+        Assert.Equal(555, a.E.Slots.Count);
         Assert.Equal(GameSave.StateHash(a.Game), GameSave.StateHash(b.Game));
         Assert.All(a.E.Slots.Values, s => Assert.True(s.Raw <= s.Energy && s.Energy is >= 1 and <= 15));
     }

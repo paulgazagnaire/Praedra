@@ -45,13 +45,13 @@ public class AnchoredDealTests
         Assert.NotEqual(Make(StartPreset.MedA, 1).StateHash(), Make(StartPreset.MedA, 2).StateHash());
     }
 
-    // m5-setup-and-victory AN3: exact totals per preset, scaled to the galaxy (549 / 360, rounded half up), Ilum and Csilla neutral
+    // m5-setup-and-victory AN3: exact totals per preset, scaled to the galaxy (systems in sectors / 360, rounded half up), Ilum and Csilla neutral
     [Theory, MemberData(nameof(AllPresets))]
     public void AN3_ExactTotals(StartPreset p)
     {
         var t = ND.Totals[p];
-        int Scaled(int x) => (x * 549 * 2 + 360) / 720;
-        Assert.Equal((38, 137), (Scaled(ND.Totals[StartPreset.MedA].AllianceTotal), Scaled(ND.Totals[StartPreset.MedA].EmpireTotal))); // setup-victory/10 banner
+        int inSectors = TestData.RealGalaxy.Systems.Count(s => !s.IsOutsideSectors); int Scaled(int x) => (x * inSectors * 2 + 360) / 720;
+        Assert.Equal((38, 138), (Scaled(ND.Totals[StartPreset.MedA].AllianceTotal), Scaled(ND.Totals[StartPreset.MedA].EmpireTotal))); // setup-victory/10 banner
         for (int seed = 1; seed <= 6; seed++)
         {
             var h = Make(p, seed);

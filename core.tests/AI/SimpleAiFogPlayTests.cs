@@ -127,7 +127,7 @@ public class SimpleAiFogPlayTests
         Assert.Equal(hq, dep[0].From);
         string dest = dep[0].Path.Items[^1];
         Assert.Equal(Side.Alliance, h.Fleets.OwnerOf(dest));
-        Assert.True(h.Data.Galaxy.NeighboursOf(h.Data.Galaxy.Get(dest).Index).Count >= Fog.HqMinLanes);
+        Assert.True(h.Data.Galaxy.NearOf(h.Data.Galaxy.Get(dest).Index).Count >= Fog.HqMinLanes);
         Assert.NotEqual(Side.Empire, h.Victory.Winner);
         m.RunTo(Fog.HqMoveCooldownDays - 5);
         Assert.Single(h.Game.Events.OfType<HqDeparted>()); // no second move inside the cool-down

@@ -129,14 +129,12 @@ Gatalenta,Exodeen,official-inferred,,minor,150
 Neimoidia,Kuat,route,Hydian Way,major,300
 Skako,Brentaal IV,route-inferred,Hydian Way,major,300
 Skako,Fedalle,route-inferred,Hydian Way,major,300
-Brentaal IV,Anaxes,route-inferred,Perlemian Trade Route,major,300
 Brentaal IV,Coto-Xana,route,Hydian Way;Perlemian Trade Route,major,300
 Fedalle,Lespectus,route,Hydian Way,major,300
 Gorse,Birren,official,,minor,150
 Exodeen,Tholoth,official,,minor,150
 Kuat,Lespectus,route,Hydian Way,major,300
-Anaxes,Lianna,official,,minor,150
-Anaxes,Coruscant,route-inferred,Perlemian Trade Route,major,300
+Anaxes,Lianna,route,Perlemian Trade Route,major,300
 Coto-Xana,Rhinnal,route,Perlemian Trade Route,major,300
 Coto-Xana,Champala,route-inferred,Hydian Way,major,300
 Numidian Prime,Ord Mantell,official,,minor,150
@@ -181,7 +179,6 @@ Coruscant,Corulag,official,,minor,150
 Coruscant,Nacon,official,,minor,150
 Coruscant,Rhinnal,official,,minor,150
 Desevro,Quermia,route,Perlemian Trade Route,major,300
-Felucia,Ringo Vinda,route-inferred,Perlemian Trade Route,major,300
 Pantolomin,Borleias,official,,minor,150
 Nacon,Empress Teta,official,,minor,150
 Rhinnal,Uveron,route,Perlemian Trade Route,major,300
@@ -193,10 +190,7 @@ Uveron,Castell,route,Perlemian Trade Route,major,300
 Toola,Florn,official-inferred,,minor,150
 Ringo Vinda,Shantipole,route-inferred,Perlemian Trade Route,major,300
 Ando,Leritor,official,,minor,150
-Leritor,Mandalore,official,,minor,150
 Leritor,Nexus Ortai,official,,minor,150
-Mandalore,Novka,official,,minor,150
-Mandalore,Rishi,official,,minor,150
 Nexus Ortai,Bothawui,official,,minor,150
 Nexus Ortai,Dressel,official,,minor,150
 Nexus Ortai,Tah'Nuhna,official,,minor,150
@@ -251,8 +245,7 @@ Triton,Sluis Van,route,Rimma Trade Route,major,300
 Triton,Xagobah,official,,minor,150
 Gad,Karfeddion,official,,minor,150
 Imynusoph,Nevarro,route-inferred,Hydian Way,major,300
-Sluis Van,Kal'Shebbol,route-inferred,Rimma Trade Route,major,300
-Sluis Van,Seatos,official,,minor,150
+Sluis Van,Seatos,route,Rimma Trade Route,major,300
 Xagobah,Pamarthe,official,,minor,150
 Karfeddion,Tiferep Major,official,,minor,150
 Ord Cestus,Mina-Rau,official,,minor,150
@@ -358,11 +351,11 @@ Woostri,Vandelhelm,route-inferred,Rimma Trade Route,major,300
 Cal-Seti,N'zoth,official,,minor,150
 Cal-Seti,Salliche,official,,minor,150
 Valboraan,Kwenn,official,,minor,150
-Kal'Shebbol,Kennerla,official-inferred,,minor,150
+Kal'Shebbol,Kennerla,route-inferred,Rimma Trade Route,major,300
 Seatos,Tarabba,official,,minor,150
 Pamarthe,Kabal,official,,minor,150
 Tarabba,Elrood,official,,minor,150
-Tarabba,Kennerla,official,,minor,150
+Tarabba,Kennerla,route,Rimma Trade Route,major,300
 Kabal,Sevarcos,official,,minor,150
 Kabal,Rior,official,,minor,150
 Valo,Kirdo III,official,,minor,150
@@ -372,3 +365,14 @@ Elrood,Kennerla,official,,minor,150
 Sy Myrth,Madurs,official,,minor,150
 Veelo,Vorzyd,official,,minor,150
 Vorzyd,Quell,official,,minor,150
+Manda,Rishi,official,,minor,150
+Manda,Novka,official,,minor,150
+Manda,Leritor,official,,minor,150
+Belsavis,Karfeddion,official,,minor,150
+Eiattu,Najan-Rovi,official,,minor,150
+Eiattu,Tibrin,official,,minor,150
+Candovant,Mardona,official,,minor,150
+Molavar,Scarif,official,,minor,150
+Seatos,Dagobah,route,Rimma Trade Route,major,300
+Dagobah,Tarabba,route,Rimma Trade Route,major,300
+Ringo Vinda,Anaxes,route-inferred,Perlemian Trade Route,major,300

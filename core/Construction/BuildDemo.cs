@@ -34,7 +34,9 @@ public sealed class BuildDemo
         var d = Setup.GameData.Load(repoRoot); // the composition root's data loader
         var (galaxy, ships, blockade, slots, costs) = (d.Galaxy, d.Ships, d.Blockade, d.Slots, d.Costs);
         var game = new Game(seed);
-        var fleets = FleetModule.Attach(game, galaxy, ships, blockade);
+        // The demo shows a delivery held by an enemy fleet on its path. The Alliance has no gravity-well ship, so the demo keeps the retired
+        // AnyArmedFleet trigger (m1-forced-stop-and-blockade; the game's DEFAULT is GravityWellShip since 2026-10-16).
+        var fleets = FleetModule.Attach(game, galaxy, ships, blockade, ForcedStopTrigger.AnyArmedFleet);
         // Autoscrap is out of reach: the Rebel picket is a fleet ship and pays upkeep (m3-fleets), but the demo gives the Alliance no mine or
         // refinery, so its capacity is 0 and the picket would be scrapped on day 10. The demo is about deliveries, not about overdraft.
         var eco = EconomyModule.Attach(game, galaxy, slots, costs, fleets, new EconomyParams { ScrapPeriod = 1_000_000 });

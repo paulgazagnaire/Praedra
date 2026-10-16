@@ -89,7 +89,7 @@ public class SimpleAiAgentsTests
         Assert.NotNull(h.Fog.KnownHq(Side.Empire));
         string from = h.HqSystem!; var g = h.Data.Galaxy;
         string dest = g.Systems.Select(s => s.Name)
-            .Where(n => n != from && h.Fleets.OwnerOf(n) == Side.Alliance && g.NeighboursOf(g.Get(n).Index).Count >= Fog.HqMinLanes)
+            .Where(n => n != from && h.Fleets.OwnerOf(n) == Side.Alliance && g.NearOf(g.Get(n).Index).Count >= Fog.HqMinLanes)
             .Select(n => (n, p: h.Fleets.FindPath(from, n, 100))).Where(t => t.p.Ok)
             .OrderByDescending(t => t.p.TotalTicks).ThenBy(t => t.n, StringComparer.Ordinal).First().n;
         h.Fog.SubmitMoveHq(Side.Alliance, dest);

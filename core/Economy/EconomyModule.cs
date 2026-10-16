@@ -433,7 +433,7 @@ public sealed class EconomyModule
     private void FireResource(StepContext ctx, int t)
     {
         var rng = ctx.Rng;
-        string sys = _galaxy.Systems[rng.NextInt(0, _galaxy.Systems.Count - 1)].Name; // ordinal name order (DEFAULT: all 551)
+        string sys = _galaxy.Systems[rng.NextInt(0, _galaxy.Systems.Count - 1)].Name; // ordinal name order (DEFAULT: every system)
         int roll = rng.NextInt(0, 99);
         var s = SlotsOf(sys);
         var change = SlotChange.None;

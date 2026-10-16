@@ -12,31 +12,31 @@ public class GalaxyDataTests
     [Fact]
     public void G1_RealFilesLoadWithExpectedCounts() // m1-galaxy-data G1 (v5 data, planets/15)
     {
-        Assert.Equal(551, G.Systems.Count);
-        Assert.Equal(373, G.Lanes.Count);
+        Assert.Equal(555, G.Systems.Count);
+        Assert.Equal(377, G.Lanes.Count);
         Assert.Equal(64, G.Sectors.Count);
-        Assert.Equal(114, G.Lanes.Count(l => l.Tier == 1));
-        Assert.Equal(259, G.Lanes.Count(l => l.Tier == 2));
+        Assert.Equal(117, G.Lanes.Count(l => l.Tier == 1));
+        Assert.Equal(260, G.Lanes.Count(l => l.Tier == 2));
         Assert.Equal(0, G.Lanes.Count(l => l.Tier == 3));
-        Assert.Equal(90, G.Lanes.Count(l => l.Kind == "route"));
-        Assert.Equal(24, G.Lanes.Count(l => l.Kind == "route-inferred"));
+        Assert.Equal(95, G.Lanes.Count(l => l.Kind == "route"));
+        Assert.Equal(22, G.Lanes.Count(l => l.Kind == "route-inferred"));
         Assert.Empty(G.Warnings); // check 10: stored lane_count and chokepoint agree with the recomputed values
     }
 
     [Fact]
     public void G2_SectorSizes() // m1-galaxy-data G2
     {
-        Assert.Equal(9, G.Sectors.Max(s => s.Members.Count));
+        Assert.Equal(10, G.Sectors.Max(s => s.Members.Count)); // capped at 10 (Paul 2026-10-16)
         var hist = G.Sectors.GroupBy(s => s.Members.Count).ToDictionary(x => x.Key, x => x.Count());
-        Assert.Equal(new Dictionary<int, int> { [9] = 37, [8] = 27 }, hist);
-        Assert.Equal(549, G.Sectors.Sum(s => s.Members.Count));
+        Assert.Equal(new Dictionary<int, int> { [10] = 2, [9] = 37, [8] = 25 }, hist);
+        Assert.Equal(553, G.Sectors.Sum(s => s.Members.Count));
     }
 
     [Fact]
-    public void G3_RouteSystems() // m1-galaxy-data G3: 326 systems on a route, the rest reached by free travel only
+    public void G3_RouteSystems() // m1-galaxy-data G3: 332 systems on a route, the rest reached by free travel only
     {
-        Assert.Equal(326, G.Systems.Count(s => G.OnRoute(s.Index)));
-        Assert.Equal(326, G.Systems.Count(s => G.NeighboursOf(s.Index).Count > 0));
+        Assert.Equal(332, G.Systems.Count(s => G.OnRoute(s.Index)));
+        Assert.Equal(332, G.Systems.Count(s => G.NeighboursOf(s.Index).Count > 0));
         Assert.Empty(G.NeighboursOf(G.Get("Ilum").Index));
         Assert.Empty(G.NeighboursOf(G.Get("Csilla").Index));
         Assert.False(G.OnRoute(G.Get("Yavin").Index));
@@ -47,8 +47,8 @@ public class GalaxyDataTests
     public void G4_ChokepointsAndLaneCounts() // m1-galaxy-data G4 (chokepoints per route network)
     {
         var chokes = GalaxyLoader.Chokepoints(G);
-        Assert.Equal(86, chokes.Count);
-        Assert.Equal(40, G.Systems.Count(s => G.NeighboursOf(s.Index).Count == 1));
+        Assert.Equal(98, chokes.Count);
+        Assert.Equal(45, G.Systems.Count(s => G.NeighboursOf(s.Index).Count == 1));
         foreach (var s in G.Systems)
         {
             Assert.Equal(int.Parse(s.Carried["lane_count"]), G.NeighboursOf(s.Index).Count);
@@ -109,7 +109,7 @@ public class GalaxyDataTests
         var seen = new HashSet<int> { G.Get("Coruscant").Index };
         var stack = new Stack<int>(seen);
         while (stack.Count > 0) foreach (int n in G.NearOf(stack.Pop())) if (seen.Add(n)) stack.Push(n);
-        Assert.Equal(549, seen.Count(i => !G.Systems[i].IsOutsideSectors));
+        Assert.Equal(553, seen.Count(i => !G.Systems[i].IsOutsideSectors));
     }
 
     [Fact]
@@ -233,7 +233,7 @@ public class GalaxyDataTests
         var expected = ExpectedGalaxyCounts.Load(Path.Combine(TestData.DesignDir, GalaxyLoader.CountsFile));
         expected.Check(G); // the real data matches
         var ex = Assert.Throws<DataLoadException>(() => (expected with { Lanes = 520 }).Check(G));
-        Assert.Contains("lanes: expected 520, found 373", ex.Message);
+        Assert.Contains("lanes: expected 520, found 377", ex.Message);
     }
 
     [Fact]
@@ -292,7 +292,7 @@ public class GalaxyDataTests
     public void SlotValuesLoadForEverySystem()
     {
         var sv = SlotValues.Load(Path.Combine(TestData.DesignDir, SlotValues.File), G);
-        Assert.Equal(551, sv.Count);
+        Assert.Equal(555, sv.Count);
         var a = sv.Of(G.Get("Abregado").Index);
         Assert.Equal((12, 9, true), (a.Energy, a.Raw, a.Populated));
     }

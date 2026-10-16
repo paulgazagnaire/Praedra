@@ -15,7 +15,7 @@ public class GameHostTests
     public void GameDataLoadsEveryFile()
     {
         var d = GameData.Default;
-        Assert.Equal(551, d.Galaxy.Systems.Count);
+        Assert.Equal(555, d.Galaxy.Systems.Count);
         Assert.Equal(7, d.StartingFacilities.Count);
         Assert.Equal(d.Galaxy.Systems.Count, d.Slots.Count);
         Assert.True(d.Ships.ContainsKey(d.Blockade.EconomicShipClass));

@@ -17,7 +17,7 @@ public class SimpleAiDeathStarTests
     public SimpleAiDeathStarTests(ITestOutputHelper o) { _out = o; }
 
     private const string Ds = EconomyModule.DeathStarClass, Isd = "Imperial Star Destroyer";
-    private const int Margin = 140; // 10% of the MedA Empire capacity (1400)
+    private static int Margin(GameHost h) => h.Economy.Capacity(Side.Empire) / 10; // 10% of the Empire capacity (MedA: 2100 since the v5 economy scaling)
 
     private static (AiMatch M, GameHost H) Match(int seed, SimpleAiParams p, bool knowHq = false, Side? passive = Side.Alliance)
     {
@@ -44,7 +44,7 @@ public class SimpleAiDeathStarTests
     {
         var (m, h) = Match(1, Quiet());
         h.Economy.SetPools(Side.Empire, 0, 2000);
-        Assert.True(h.Economy.Free(Side.Empire) - h.Economy.Costs.Get(Ds).Maintenance >= Margin, "the start has no headroom for the test");
+        Assert.True(h.Economy.Free(Side.Empire) - h.Economy.Costs.Get(Ds).Maintenance >= Margin(h), "the start has no headroom for the test");
         Days(m, 12);
         Assert.Single(DeathStars(h));
         Assert.Contains(m.Sent.Keys, k => k == "Empire Build");

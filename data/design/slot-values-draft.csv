@@ -154,6 +154,7 @@ Dromund Kaas,Felucia Sector,outer_rim,Outer Rim,6,4,1,formula,
 Druckenwell,Ando Sector,inner_rim,Mid Rim,10,5,1,keyword,billions of people; agricultural
 Dubrillion,Bastion Sector,outer_rim,Outer Rim,6,4,1,formula,
 Duros,Corellia Sector,core,Core,12,4,1,lore,"orbital shipyards, spacer culture"
+Eiattu,Najan-Rovi Sector,outer_rim,Mid Rim,8,5,1,region,Not in lore sheet; region default
 Eiram,Eiram Sector,outer_rim,Outer Rim,6,4,1,region,
 Elrood,Dagobah Sector,outer_rim,Outer Rim,6,4,1,formula,
 Empress Teta,Byss Sector,core,Deep Core,15,11,1,keyword,billions of people; mining; city world
@@ -304,9 +305,11 @@ Lutrillia,Hoth Sector,outer_rim,Outer Rim,6,4,1,region,
 Madurs,Chrondre Sector,outer_rim,unknown,4,1,1,keyword,gas giant
 Malachor,Etti Sector,outer_rim,Outer Rim,6,4,1,formula,
 Malastare,Bromlarch Sector,inner_rim,Mid Rim,8,5,1,lore,fuel and podracing
+Manda,Rishi Sector,outer_rim,unknown,6,4,1,region,Not in lore sheet; region default
 Mandalore,Mandalore Sector,outer_rim,Outer Rim,6,4,1,formula,
 Manpha,Allyuen Sector,outer_rim,Outer Rim,6,4,1,region,
 Mantessa,Bogden Sector,inner_rim,Inner Rim,10,7,1,formula,
+Mardona,Oetrago Sector,inner_rim,unknown,10,7,1,region,Not in lore sheet; region default
 Marleyvane,Saleucami Sector,outer_rim,Outer Rim,7,5,1,keyword,yards/academy
 Merokia,Hoth Sector,outer_rim,Outer Rim,5,3,1,keyword,harsh climate
 Merson,Kashyyyk Sector,inner_rim,Inner Rim,10,7,1,region,
@@ -421,6 +424,7 @@ Salliche,Salliche Sector,core,Core Worlds,12,7,1,keyword,agricultural
 Sarka,Chrondre Sector,outer_rim,Mid Rim,8,5,1,formula,
 Sason,Numidian Prime Sector,outer_rim,Outer Rim,4,1,1,keyword,gas giant
 Savareen,Rodia Sector,outer_rim,Outer Rim,6,4,1,formula,
+Scarif,Garban Sector,outer_rim,unknown,6,3,1,lore,"Tropical vault world, Imperial security complex; few mines, no lore sheet row (own knowledge, unchecked)"
 Scipio,Borosk Sector,outer_rim,Outer Rim,6,4,1,formula,
 Seatos,Sluis Van Sector,outer_rim,Outer Rim,6,4,1,region,
 Sedri,Saleucami Sector,outer_rim,Outer Rim,6,4,1,formula,
