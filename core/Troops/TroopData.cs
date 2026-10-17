@@ -7,7 +7,7 @@ namespace Rebellion.Core.Troops;
 /// <summary>
 /// One regiment class (a TROOPSD row). Every column is loaded; the M3 troop rules use side, cost, maintenance and research (through the
 /// construction module's cost file) and, from the ground-war sheets, attack, defense and bombardment_defense. Detection is M5;
-/// uprising_defense has no consumer. A regiment has no strength: it survives or dies. rule: m3-troops-and-special-forces §Regiment classes as data.
+/// uprising_defense is the loss value of a destroyed regiment (record word 12; m5-characters-and-force §Loyalty, B2c §3). A regiment has no strength: it survives or dies. rule: m3-troops-and-special-forces §Regiment classes as data.
 /// </summary>
 public sealed record RegimentClass(
     int Id, string Name, Side Side, int ProductionFamily, int Cost, int Maintenance, int ResearchOrder, int ResearchDifficulty,

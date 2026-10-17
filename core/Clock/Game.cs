@@ -57,6 +57,8 @@ public sealed class GameState
     public Rebellion.Core.Missions.MissionState Missions { get; init; } = new();
     /// <summary>Destroyed systems and the strikes per sector. rule: m5-death-star §Interfaces.</summary>
     public Rebellion.Core.DeathStar.DeathStarState DeathStar { get; init; } = new();
+    /// <summary>Per-system loss tallies of the loyalty triggers (B2c). rule: m5-characters-and-force §Loyalty and betrayal.</summary>
+    public Rebellion.Core.Characters.LoyaltyState Loyalty { get; init; } = new();
 
     /// <summary>Copy another state's content into this one (used by Load, which needs ordinal-comparer dictionaries).</summary>
     internal void CopyFrom(GameState other)
@@ -76,6 +78,7 @@ public sealed class GameState
         Characters.CopyFrom(other.Characters);
         Missions.CopyFrom(other.Missions);
         DeathStar.CopyFrom(other.DeathStar);
+        if (other.Loyalty != null) Loyalty.CopyFrom(other.Loyalty);
     }
 }
 
@@ -96,7 +99,7 @@ public sealed class StepContext
     public GameState State => _game.State;
     public GameRng Rng => _game.Rng;
     /// <summary>Append an event; the factory receives (index, day) where day is K.</summary>
-    public void Emit(Func<int, int, GameEvent> make) => _game.EmitEvent(make);
+    public void Emit(Func<int, int, GameEvent> make) => _game.EmitEvent(make, this);
 }
 
 /// <summary>
@@ -164,6 +167,15 @@ public sealed class Game
     /// rule: m5-fog-and-hq §N8 (event audience: "every event gets an audience when it is raised").
     /// </summary>
     public Func<GameEvent, Order?, int>? AudienceResolver { get; set; }
+
+    private readonly List<Action<StepContext, GameEvent>> _observers = new(); // called in registration order (attach order: deterministic)
+
+    /// <summary>
+    /// Register a rule that reacts to an event at the moment it is emitted inside a Step (same Step, same place in the draw order). Events
+    /// emitted outside a Step (setup) reach no observer. The observer may change state, draw and emit; its own events are observed too.
+    /// rule: m5-characters-and-force §Loyalty (B2c: the original's rule events 0x31b, 0x300, 0x305 and the battle end call their handlers at once).
+    /// </summary>
+    public void ObserveEvents(Action<StepContext, GameEvent> observer) => _observers.Add(observer);
 
     /// <summary>The audience mask of event <paramref name="index"/> (3 = both sides). Not part of a save, like the events.</summary>
     public int AudienceOf(int index) => _audience[index];
@@ -252,10 +264,11 @@ public sealed class Game
     }
 
     // Events carry Day = K, the day at the start of the Step, because Day only changes in step 7.
-    internal void EmitEvent(Func<int, int, GameEvent> make)
+    internal void EmitEvent(Func<int, int, GameEvent> make, StepContext? ctx = null)
     {
         var e = make(_events.Count, Day);
         _events.Add(e);
         _audience.Add(AudienceResolver?.Invoke(e, _currentOrder) ?? 3);
+        if (ctx != null) foreach (var o in _observers) o(ctx, e);
     }
 }
