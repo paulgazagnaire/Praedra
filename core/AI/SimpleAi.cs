@@ -431,6 +431,7 @@ public sealed partial class SimpleAi
     private void PlanProduction()
     {
         if (_view != null) PlanScoutBuild();
+        if (_view != null && _side == Side.Empire) PlanDroidBuild();
         PlanGarrison();
         PlanInvasionRegiments();
         PlanDeathStarBuild(); // before the ships: it takes its yard and its budget first (m5-death-star §6.1)
@@ -494,7 +495,9 @@ public sealed partial class SimpleAi
         var rally = Rally();
         string cls = _p.InvasionRegiment(_side);
         if (rally == null || !Available(cls)) return;
-        int have = _h.Economy.Objects.Count(o => o.Category == ObjectCategory.Regiment && o.Side == _side && o.AboardShip != 0) + HeldSystems().Sum(SpareRegimentsAt);
+        // InvasionBatchesOnly: a lone spare regiment on a far system is not an invasion force (a strike pile does not fly across the map for one)
+        int have = _h.Economy.Objects.Count(o => o.Category == ObjectCategory.Regiment && o.Side == _side && o.AboardShip != 0)
+                   + HeldSystems().Select(SpareRegimentsAt).Where(n => !_p.InvasionBatchesOnly || n >= _p.MinLaunchRegiments).Sum();
         have += PendingRegiments().GetValueOrDefault(rally);
         if (have >= _p.InvasionRegimentTarget) return;
         int count = Math.Min(_p.InvasionRegimentTarget - have, _p.GarrisonBatch);
@@ -904,6 +907,7 @@ public sealed partial class SimpleAi
                 }
             }
             string first = g.Systems[path.Systems[1]].Name;
+            if (first != dest && !Held(first) && _p.DetourToHeldStop && DetourLeg(f, path, speed) is { } leg2) first = leg2;
             if (first != dest)
             {
                 var leg = _h.Fleets.FindPath(f.At, first, speed);
@@ -914,6 +918,28 @@ public sealed partial class SimpleAi
         long seq = _h.Fleets.SubmitMove(_side, f.Id, dest);
         Note(seq, "Move", $"fleet {f.Id} {f.At} -> {dest}");
         return true;
+    }
+
+    /// <summary>
+    /// DetourToHeldStop: the leg of a detour that keeps the fleet's purpose. The AI keeps no memory between days, so a fleet that stops at a
+    /// system it does not hold plans there as at a target (DecideAtTarget): with no business there it leaves for the rally system and the
+    /// trip it was on is lost. Measured on the v5 map (Alliance vs passive Empire, seed 1): a strike pile fetching troops went around a blocked
+    /// stop to an Imperial system, turned back to the rally, and did that again for 200 days with its troop holds empty. So the leg ends at
+    /// the first stop of the way around that the side holds (there DecideOwn plans the rest of the trip again), when the direct trip there is
+    /// clear. Null (no such stop) = keep the first stop, as the AI of before.
+    /// </summary>
+    private string? DetourLeg(Fleet f, Rebellion.Core.Travel.PathResult around, int speed)
+    {
+        var g = _h.Data.Galaxy;
+        string dest = g.Systems[around.Systems[^1]].Name;
+        for (int k = 2; k < around.Systems.Count - 1; k++)
+        {
+            string n = g.Systems[around.Systems[k]].Name;
+            if (!Held(n)) continue;
+            var leg = _h.Fleets.FindPath(f.At!, n, speed);
+            if (leg.Ok && PathBlockedAt(f, leg) == null) return n;
+        }
+        return null;
     }
 
     /// <summary>

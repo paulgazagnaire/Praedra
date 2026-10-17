@@ -33,7 +33,7 @@ internal static class SimCli
                                               [--officer "<Name>" [--officer-esp <n>]] [--target-agent "<Name>"] [--facility <Kind>[,<Kind>...]]
                                               [--at Coruscant] [--owner Alliance|Empire|neutral] [--support 50] [--missions 1000] [--seed 1]
           dotnet run --project sim -- campaign [--days 1000] [--seed 1] [--ruleset Classic|New]
-          dotnet run --project sim -- aivai [--days 730] [--seed 1] [--start meda|campaign] [--passive empire|alliance] [--trace] [--hq-unknown] [--fog] [--no-agents] [--empire-level L] [--alliance-level L] [--hunt-log]
+          dotnet run --project sim -- aivai [--days 730] [--seed 1] [--start meda|campaign] [--passive empire|alliance] [--trace] [--hq-unknown] [--fog] [--no-agents] [--empire-level L] [--alliance-level L] [--empire-params K=V,..] [--alliance-params K=V,..] [--hunt-log]
         aivai plays the simple AI (core/AI) on both sides from the new-game start (MedA, DEFAULT) or the test campaign, printing a yearly summary,
         battle, assault and capture counts, the winner (if any) and the AI's order and rejection counts. Without --fog the AIs see everything and
         the Empire is told the Rebel HQ (unless --hq-unknown). --fog turns SimpleAiParams.UseFog on for both AIs: each reads only its side's
@@ -42,7 +42,7 @@ internal static class SimCli
         --fog (e.g. --fog --passive alliance: the fogged Empire hunts a passive Alliance). --trace with --fog also prints the Empire's HQ belief.
         The AIs use characters (fleet and system posts) and missions (SimpleAiParams.UseCharactersAndMissions, DEFAULT on); --no-agents turns
         that off (the AI of before, byte for byte). --empire-level / --alliance-level (easy, medium, hard; core/AI/AiLevel.cs) play that side at a
-        difficulty level, fog on (AiLevels.For). --hunt-log prints every Espionage and Reconnaissance the Empire starts and how it ends, next to the
+        difficulty level, fog on (AiLevels.For); --empire-params / --alliance-params set SimpleAiParams values on top (as in tourney; they turn --fog on). --hunt-log prints every Espionage and Reconnaissance the Empire starts and how it ends, next to the
         true Rebel HQ of that day (a trainer's log; the AI never reads the truth). The report adds missions started and succeeded by side and kind, posts given, and the days
         the Empire's own picture first showed (and later re-found) the Rebel HQ.
         battle runs N seeded battles (Classic: m4-battle-classic, New: m4-battle-new; --ruleset, DEFAULT classic) at a synthetic system where every retreat has a destination, and prints how often each
@@ -252,7 +252,7 @@ internal static class SimCli
     private static int AiVsAi(string[] a)
     {
         int days = 730; ulong seed = 1; string start = "meda"; Side? passive = null; bool trace = false; bool hqKnown = true; bool fog = false; bool agents = true;
-        Rebellion.Core.AI.AiLevel? empLevel = null, allLevel = null; bool huntLog = false; int hunted = 0;
+        Rebellion.Core.AI.AiLevel? empLevel = null, allLevel = null; bool huntLog = false; int hunted = 0; string? empParams = null, allParams = null;
         for (int i = 0; i < a.Length; i++)
         {
             string key = a[i];
@@ -263,6 +263,8 @@ internal static class SimCli
                 case "--seed": seed = ulong.TryParse(Next(), out var s) ? s : throw new ArgumentException("--seed must be a non-negative integer."); break;
                 case "--trace": trace = true; break;
                 case "--hunt-log": huntLog = true; break;
+                case "--empire-params": empParams = Next(); fog = true; break;
+                case "--alliance-params": allParams = Next(); fog = true; break;
                 case "--hq-unknown": hqKnown = false; break;
                 case "--fog": fog = true; break;
                 case "--no-agents": agents = false; break;
@@ -277,7 +279,8 @@ internal static class SimCli
         var host = start == "meda" ? NewGame.Create(new NewGameOptions { Seed = (int)seed, Preset = StartPreset.MedA }) : TestCampaign.New(seed).Host;
         var aiParams = fog || !agents ? new Rebellion.Core.AI.SimpleAiParams { UseFog = fog, UseCharactersAndMissions = agents } : null;
         Rebellion.Core.AI.SimpleAiParams? Level(Rebellion.Core.AI.AiLevel? l) => l is { } v ? Rebellion.Core.AI.AiLevels.For(v, aiParams) : aiParams;
-        var match = new Rebellion.Core.AI.AiMatch(host, Level(empLevel), Level(allLevel), passive: passive);
+        var match = new Rebellion.Core.AI.AiMatch(host, Tourney.WithOverrides(Level(empLevel) ?? new() { UseFog = fog, UseCharactersAndMissions = agents }, empParams),
+                                                  Tourney.WithOverrides(Level(allLevel) ?? new() { UseFog = fog, UseCharactersAndMissions = agents }, allParams), passive: passive);
         if (!fog && hqKnown && start == "meda" && host.HqSystem != null) match.Empire.KnownEnemyHq = host.HqSystem; // without fog the Empire is told the Rebel HQ (DEFAULT)
         Console.WriteLine($"AI vs AI: {days} days, seed {seed}, start {start}{(passive is Side ps ? $", {ps} passive (gives no orders)" : "")}. " +
                           (fog ? "Fog of war: each AI reads only its side's knowledge." : "The AIs see everything (fog off)."));
@@ -305,7 +308,7 @@ internal static class SimCli
             {
                 var b = match.Empire.HqBelief();
                 Console.WriteLine($"  d{host.Game.Day} Empire HQ belief ({b.Count} candidates): " + string.Join(", ", b.Take(8).Select(t => $"{t.System} {t.Weight}")) +
-                                  (host.HqSystem is { } hq ? $"; true HQ {hq} rank {b.ToList().FindIndex(t => t.System == hq) + 1}" : ""));
+                                  (host.HqSystem is { } hq ? $"; true HQ {hq} rank {b.ToList().FindIndex(t => t.System == hq) + 1}, search rank {match.Empire.HqSearchRank(hq)}" : ""));
             }
             if (trace) for (int k = traced; k < host.Game.Events.Count; k++)
                 if (host.Game.Events[k] is Rebellion.Core.Battle.BattleEnded tb) Console.WriteLine($"  d{tb.Day} battle at {tb.Result.System}: Alliance {tb.Result.Alliance} (lost {tb.Result.AllianceLosses}), Empire {tb.Result.Empire} (lost {tb.Result.EmpireLosses})");

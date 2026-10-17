@@ -1,5 +1,7 @@
 using Rebellion.Core.Characters;
 using Rebellion.Core.Clock;
+using Rebellion.Core.Construction;
+using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
 using Rebellion.Core.Missions;
 using Rebellion.Core.Research;
@@ -35,7 +37,7 @@ public sealed partial class SimpleAi
 
     private void PlanAgents()
     {
-        _spyTargets = null; _foiledLooks = null;
+        _spyTargets = null; _foiledLooks = null; _looksToday.Clear();
         var mine = _h.Characters.InPlay.Where(c => c.Side == _side).ToList(); // own characters, id order
         var busy = new HashSet<int>();
         PlanMissionCancels();
@@ -44,6 +46,7 @@ public sealed partial class SimpleAi
         PlanSystemGeneral(mine, busy, spies);
         PlanFleetOfficers(mine, busy, spies);
         PlanMissions(mine, busy);
+        if (_p.HuntDroids > 0) PlanDroidLooks();
     }
 
     /// <summary>Free to take an order today: placed, Free, not attached, no system post, not on a mission, standing on a system (m5-characters §Availability).</summary>
@@ -122,6 +125,7 @@ public sealed partial class SimpleAi
     }
 
     private List<(string System, long Score)>? _spyTargets; // per review (reset in PlanAgents)
+    private readonly HashSet<string> _looksToday = new(StringComparer.Ordinal); // per review: Espionage / Reconnaissance targets ordered today (lookup only)
     private Dictionary<string, int>? _foiledLooks; // per review (reset in PlanAgents)
 
     /// <summary>The Empire's HQ search targets as they stand (fog only; empty otherwise), best first: for logs and tests. Rebuilt on each call.</summary>
@@ -133,6 +137,14 @@ public sealed partial class SimpleAi
         return SpyTargets();
     }
 
+    /// <summary>Rank (1 = best) of a system in the Empire's full HQ search list as it stands, 0 when not listed: for logs (sim --trace).</summary>
+    public int HqSearchRank(string system)
+    {
+        HqSearchTargets();
+        var all = SearchTargets(int.MaxValue);
+        return all.FindIndex(t => t.System == system) + 1;
+    }
+
     /// <summary>
     /// Empire with fog: where to look for the Rebel HQ. The belief map (SimpleAiFog) weighted by how the Alliance hides it (ai/07 §7: far from
     /// the Empire, never in a dead end): with r = min(lanes from the nearest held system, SpyRoomCap), score = belief x (100 + SpyRoomPercent
@@ -140,11 +152,12 @@ public sealed partial class SimpleAi
     /// SpyFoilMemoryDays is left out (it is defended: the next look would very likely be foiled too). A known HQ due a re-check is the only
     /// target. Best first, at most HqSearchTargets.
     /// </summary>
-    private List<(string System, long Score)> SpyTargets()
+    private List<(string System, long Score)> SpyTargets() => _spyTargets ??= SearchTargets(_p.HqSearchTargets);
+
+    private List<(string System, long Score)> SearchTargets(int take)
     {
-        if (_spyTargets != null) return _spyTargets;
         var list = new List<(string, long)>();
-        if (KnownEnemyHq != null) { if (HqRecheckDue && !FoiledWithin(KnownEnemyHq, _p.HqRecheckFoilDays)) list.Add((KnownEnemyHq, 1)); return _spyTargets = list; }
+        if (KnownEnemyHq != null) { if (HqRecheckDue && !FoiledWithin(KnownEnemyHq, _p.HqRecheckFoilDays)) list.Add((KnownEnemyHq, 1)); return list; }
         var g = _h.Data.Galaxy; var hops = Hops();
         foreach (var (s, w) in HqBelief())
         {
@@ -156,7 +169,7 @@ public sealed partial class SimpleAi
             if (g.NearOf(i).Count < _p.HqMinLanes) sc = sc * _p.SpyDeadEndPercent / 100;
             if (sc > 0) list.Add((s, sc));
         }
-        return _spyTargets = list.OrderByDescending(t => t.Item2).ThenBy(t => t.Item1, StringComparer.Ordinal).Take(_p.HqSearchTargets).ToList();
+        return list.OrderByDescending(t => t.Item2).ThenBy(t => t.Item1, StringComparer.Ordinal).Take(take).ToList();
     }
 
     /// <summary>
@@ -319,6 +332,7 @@ public sealed partial class SimpleAi
                 job.TargetCharacter == null ? job.System : null, job.TargetCharacter));
             Note(seq, "Mission" + j.Kind, $"{_h.Characters.ClassOf(c).Name} from {c.System} to {j.System}{(j.TargetCharacter is int t ? $" (character {t})" : "")} ev {ev}");
             usedChar.Add(c.Id); usedGroup.Add(j.Group);
+            if (j.Kind is MissionKind.Espionage or MissionKind.Reconnaissance) _looksToday.Add(j.System);
             if (j.Kind == MissionKind.Diplomacy) diplomats++;
             if (j.Kind is MissionKind.InciteUprising or MissionKind.Sabotage) subversion++;
         }
@@ -503,5 +517,65 @@ public sealed partial class SimpleAi
         if (ticks == int.MaxValue) return null;
         long value = j.Value * (key ? _p.KeyCharacterValuePercent : 100) / 100;
         return value * chance * 100 / (ticks + _p.MissionTravelBias);
+    }
+
+    // ================================================================== probe droids on the HQ hunt (HuntDroids)
+
+    /// <summary>The side's completed droids of HuntDroidClass, standing landed on a held system and not in a mission (object id order).</summary>
+    private List<EconObject> FreeDroids() => _h.Economy.Objects
+        .Where(o => o.Category == ObjectCategory.SpecialForce && o.Side == _side && o.Completed && o.Class == _p.HuntDroidClass && o.AboardShip == 0
+                    && o.System != null && Held(o.System) && !_h.Missions.IsSpecialForceBusy(o.Id))
+        .OrderBy(o => o.Id).ToList();
+
+    private bool DroidHuntOn => HqHuntOn && KnownEnemyHq == null && KindUsable(MissionKind.Reconnaissance) && _h.Fog.Params.ReconRevealsFacilities;
+
+    /// <summary>
+    /// Every free droid goes alone on a Reconnaissance (m5-missions §Orders StartMission: a special force whose bit is in the record's mask is a
+    /// team on its own) of an HQ search target of the deeper list (DroidSearchTargets) that no own Espionage or Reconnaissance works yet: best
+    /// search score per day of travel first. Targets the characters were sent to today are taken (their orders come first in the queue).
+    /// </summary>
+    private void PlanDroidLooks()
+    {
+        if (!DroidHuntOn) return;
+        var droids = FreeDroids();
+        if (droids.Count == 0) return;
+        var taken = new HashSet<string>(OwnMissions().Where(m => m.Kind is MissionKind.Espionage or MissionKind.Reconnaissance).Select(m => m.Target), StringComparer.Ordinal);
+        taken.UnionWith(_looksToday);
+        var targets = SearchTargets(_p.DroidSearchTargets);
+        int speed = _h.Missions.Data.Numbers.GroupSpeed;
+        foreach (var d in droids)
+        {
+            string? best = null; long bestScore = 0;
+            foreach (var (s, sc) in targets)
+            {
+                if (taken.Contains(s)) continue;
+                int ticks = TicksCached(d.System!, s, speed);
+                if (ticks == int.MaxValue) continue;
+                long score = sc * 1000 / (ticks + _p.MissionTravelBias);
+                if (score > bestScore) { bestScore = score; best = s; }
+            }
+            if (best == null) return;
+            var target = best; var id = d.Id;
+            long seq = _h.Game.Submit(sq => new StartMissionOrder(sq, _side, MissionKind.Reconnaissance, new List<int>(), new List<int> { id }, new List<int>(), target));
+            Note(seq, "MissionReconnaissance", $"droid {id} from {d.System} to {target} ev {bestScore}");
+            taken.Add(target);
+        }
+    }
+
+    /// <summary>Production: keep HuntDroids droids (built or queued) while the droid hunt is on, built at the training yard nearest the spy base.</summary>
+    private void PlanDroidBuild()
+    {
+        if (_p.HuntDroids <= 0 || !DroidHuntOn || !Available(_p.HuntDroidClass)) return;
+        int have = _h.Economy.Objects.Count(o => o.Category == ObjectCategory.SpecialForce && o.Side == _side && o.Class == _p.HuntDroidClass);
+        int want = _p.HuntDroids - have;
+        if (want <= 0 || Budget < want * Maint(_p.HuntDroidClass)) return;
+        string dest = SpyBase() ?? Capital() ?? "";
+        if (dest == "") return;
+        var yard = TrainingYardNear(dest);
+        if (yard == null) return;
+        long seq = _h.Construction.SubmitBuild(_side, yard, YardFamily.Training, _p.HuntDroidClass, want, dest == yard ? null : dest);
+        Note(seq, "Build", $"{want} x {_p.HuntDroidClass} at {yard} for {dest} (HQ hunt)");
+        _busy.Add((yard, YardFamily.Training));
+        _plannedLoad += want * Maint(_p.HuntDroidClass);
     }
 }

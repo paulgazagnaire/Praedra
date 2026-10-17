@@ -33,7 +33,11 @@ public static class AiLevels
                 MilitaryEvery = 6, ProductionEvery = 8, EconomyEvery = 10, AgentsEvery = 4,
                 PickNoisePercent = 30, MaxOffensives = 1, ScoutCount = 2, HqSpies = 2,
             },
-            AiLevel.Hard => p with { },
+            // AI trainer 2026-10-17 (sim tourney, 16 seeds x both sides, Medium against Medium plus one change; a placebo change scored 55%, so
+            // only a gap well above that counts): a military review every day (Medium every 3) took 63% of the systems, the one clear win of 15
+            // tried. Probe droids on the HQ hunt found the Rebel HQ in 13 of 16 games against 8 for Medium without costing systems (51%); kept
+            // because against a player the Empire wins by finding the HQ, not by holding every system.
+            AiLevel.Hard => p with { MilitaryEvery = 1, HuntDroids = 8 },
             _ => p,
         };
     }
