@@ -50,7 +50,7 @@ public class OriginalTablesTests
         w.Agent(Leia, T, esp: 50);
         int inf = w.Unit(Side.Alliance, Infiltrators, T);
         w.Unit(Side.Empire, ImpFleet, T);
-        w.Stub!.Expect(0, 99, 89, 99);
+        w.Stub!.Expect(0, 99, Bt(2, 89, 99)); // B2b: two betrayal draws (Leia, the decoy) first
         var seq = w.Start(Side.Alliance, MissionKind.Espionage, new[] { Leia }, T, decoys: new[] { inf });
         w.Game.Step();
         Assert.Null(w.Reason(seq));

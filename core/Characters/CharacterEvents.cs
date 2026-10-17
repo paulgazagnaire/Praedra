@@ -72,3 +72,8 @@ public sealed record ForceTrainingResult(int Index, int Day, int Trainer, int St
 /// <summary>Rank null = not a Force user.</summary>
 public sealed record ForceRankChanged(int Index, int Day, int Character, Side Side, ForceRank? From, ForceRank? To) : GameEvent(Index, Day, nameof(ForceRankChanged));
 public sealed record ForceDiscovered(int Index, int Day, int Character, Side Side, string Cause) : GameEvent(Index, Day, nameof(ForceDiscovered));
+/// <summary>
+/// A character's loyalty moved (ShiftLoyalty; the setter 0x5341a0 tells both sides, so the event has no Side field and goes to both).
+/// rule: m5-characters-and-force §Loyalty.
+/// </summary>
+public sealed record LoyaltyChanged(int Index, int Day, int Character, Side CharacterSide, int From, int To) : GameEvent(Index, Day, nameof(LoyaltyChanged));

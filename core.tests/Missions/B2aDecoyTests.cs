@@ -24,13 +24,13 @@ public class B2aDecoyTests
         w.Agent(Leia, T, esp: 50);
         int d1 = w.Unit(Side.Alliance, Infiltrators, T), d2 = w.Unit(Side.Alliance, Bothan, T);
         w.Unit(Side.Empire, ImpFleet, T);
-        w.Stub!.Expect(0, 99, 50, 99);
+        w.Stub!.Expect(0, 99, Bt(3, 50, 99)); // B2b: three betrayal draws (Leia and the two decoys) open the check
         w.Start(Side.Alliance, MissionKind.Espionage, new[] { Leia }, T, decoys: new[] { d1, d2 });
         w.Game.Step();
         int from = w.Stub.Requests.Count;
         w.RunIteration(w.LastMission);
         var req = w.RequestsSince(from);
-        Assert.Equal(new[] { (0, 1), (0, 99) }, req.Take(2));
+        Assert.Equal(new[] { (0, 1), (0, 99) }, req.Skip(3).Take(2));
         var roll = Assert.Single(w.Events<MissionDecoyRoll>());
         Assert.Equal((50, 50, false), (roll.Chance, roll.Roll, roll.Decoyed));
         Assert.Single(w.Events<MissionDetectionRoll>()); // the failed decoy has no effect: the defender is walked
@@ -69,7 +69,7 @@ public class B2aDecoyTests
         w.Agent(Leia, T, esp: 50);
         int inf = w.Unit(Side.Alliance, Infiltrators, T);
         w.Unit(Side.Empire, ImpFleet, T); w.Unit(Side.Empire, ImpArmy, T); w.Unit(Side.Empire, Storm, T);
-        w.Stub!.Expect(0, 99, 99, 99, 99, 0);
+        w.Stub!.Expect(0, 99, Bt(2, 99, 99, 99, 0)); // B2b: two betrayal draws (Leia, the decoy) open the check
         w.Start(Side.Alliance, MissionKind.Espionage, new[] { Leia }, T, decoys: new[] { inf });
         w.Game.Step();
         int from = w.Stub.Requests.Count;
@@ -79,8 +79,9 @@ public class B2aDecoyTests
         Assert.All(rolls, r => Assert.Equal((inf, 100, true), (r.Decoy, r.Chance, r.Decoyed)));
         Assert.Empty(w.Events<MissionDetectionRoll>());
         var req = w.RequestsSince(from);
-        Assert.Equal(new[] { (0, 99), (0, 99), (0, 99) }, req.Take(3));
-        Assert.Single(w.Events<MissionMemberRoll>()); // the fourth draw is Leia's success roll, not a detection
+        Assert.Equal(new[] { (0, 99), (0, 99), (0, 99) }, req.Skip(2).Take(3));
+        Assert.Equal(6, req.Count(r => r == (0, 99))); // two betrayal, three decoy, one success roll: the walk makes no draw
+        Assert.Single(w.Events<MissionMemberRoll>()); // the last draw is Leia's success roll, not a detection
     }
 
     // B2a-4: a working mission whose non-decoy members are all gone (the team's Bothan Spies removed by the test), decoys left, defenders present:
