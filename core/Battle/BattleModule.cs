@@ -64,8 +64,8 @@ public sealed class BattleModule
     private GameState State => _game.State;
     private EconomyState E => _game.State.Economy;
 
-    /// <summary>The side's standing answer to the Battle Alert (the AI side is always Simulate). rule: m4-battle-classic §1.3.</summary>
-    public OnContactMode OnContactOf(Side side) => IsAi(side) ? OnContactMode.Simulate : B.OnContact(side);
+    /// <summary>The side's standing answer to the Battle Alert (the AI side always fights, with its own threshold). rule: m4-battle-classic §1.3.</summary>
+    public OnContactMode OnContactOf(Side side) => IsAi(side) ? OnContactMode.Fight : B.OnContact(side);
 
     private bool IsAi(Side s) => s == Side.Empire ? Params.EmpireIsAi : Params.AllianceIsAi;
 
@@ -78,7 +78,7 @@ public sealed class BattleModule
     /// </summary>
     public bool FoughtThisStep(int objectId) => B.FoughtDay == _game.Day && B.Fought.BinarySearch(objectId) >= 0;
 
-    // rule: m4-battle-classic §1.3 (SetOnContact {side, mode}); the AI side stays Simulate
+    // rule: m4-battle-classic §1.3 (SetOnContact {side, mode}); the AI side stays Fight
     private OrderResult HandleSetOnContact(StepContext ctx, SetOnContactOrder o)
     {
         if (!Enum.IsDefined(o.Mode)) return OrderResult.Reject(RejectReason.BadValue);
@@ -114,12 +114,14 @@ public sealed class BattleModule
         var systems = names.Where(s => Present(s, Side.Alliance) && Present(s, Side.Empire)).ToList();
         if (systems.Count == 0) return;
 
-        // rule: m4-battle-classic §1.4 (one draw per battle, in system-name order, also when none is needed). Forces are fixed now, so a fleet
-        // that retreats into another battle's system this Step is not in that battle (it meets the enemy next Step).
+        // rule: m4-battle-classic §1.4: Classic with ClassicBattleRng = Original (DEFAULT) makes no game draw (each battle restarts its own fixed
+        // generator); Game and the New ruleset take one draw per battle, in system-name order, also when none is needed. Forces are fixed now, so a
+        // fleet that retreats into another battle's system this Step is not in that battle (it meets the enemy next Step).
+        bool seedDraw = Params.Ruleset == BattleRuleset.New || Params.BattleRng == ClassicBattleRng.Game;
         var forces = new List<Force>();
         foreach (var sys in systems)
         {
-            uint seed = unchecked((uint)ctx.Rng.NextInt(int.MinValue, int.MaxValue)); // exactly one native draw
+            uint seed = seedDraw ? unchecked((uint)ctx.Rng.NextInt(int.MinValue, int.MaxValue)) : 0; // exactly one native draw
             forces.Add(BuildForce(sys, seed));
         }
 
@@ -147,7 +149,9 @@ public sealed class BattleModule
         return force;
     }
 
-    // rule: m4-battle-classic §2 (start state: hull and counters as stored; shield = cap; squadron whole)
+    private bool Classic => Params.Ruleset == BattleRuleset.Classic;
+
+    // rule: m4-battle-classic §5 (start state: hull and counters as stored; shields full, set by the battle). New: as its sheet (squadrons whole).
     private BattleUnit MakeUnit(int index, EconObject o, Side side, bool capital)
     {
         var cls = _fleets.ClassOf(o) ?? throw new InvalidOperationException($"No ship class '{o.Class}'.");
@@ -156,15 +160,48 @@ public sealed class BattleModule
         {
             u.HullMax = cls.Hull; u.Hull = Math.Min(o.Hull, cls.Hull);
             if (o.Hits != null) for (int i = 0; i < u.Hits.Length && i < o.Hits.Count; i++) u.Hits[i] = o.Hits[i];
-            u.Shield = ClassicRates.ShieldCap(cls, u.HullRatio);
+            u.Shield = cls.ShieldStrength * u.HullRatio;
+            if (Classic)
+            {
+                // rule: m4-battle-classic §5: battle hyperdrive hits = primary (hits[4]) + backup (hits[5])
+                u.Hits[ObjectRegistry.HyperdriveCounter] += u.Hits[BackupHyperdriveCounter];
+                u.Hits[BackupHyperdriveCounter] = 0;
+                // rule: m4-battle-classic §5 (target value): each special-forces unit aboard adds 1 (characters ride fleets, not ships: none aboard a ship)
+                u.Passengers = E.Objects.Values.Count(x => x.Category == ObjectCategory.SpecialForce && x.AboardShip == o.Id);
+            }
         }
         else
         {
             u.HullMax = u.Hull = Params.SquadronHull;
             u.Shield = cls.ShieldStrength;
             u.Carrier = o.AboardShip;
+            if (Classic)
+            {
+                // rule: m4-battle-classic §5: craft = squadron_size - craft lost; hull = craft x 8
+                int size = ClassicRates.SquadronSize(Params, cls);
+                u.HullMax = ClassicRates.SquadronHullMax(Params, cls);
+                u.Hull = Math.Max(1, size - o.CraftLost) * Params.SquadronCraftHull;
+            }
         }
         return u;
+    }
+
+    /// <summary>Index of the backup hyperdrive counter in the stored six (Classic). rule: m4-battle-classic §10 (B3 §14: hits[5] is the backup hyperdrive).</summary>
+    public const int BackupHyperdriveCounter = 5;
+
+    /// <summary>
+    /// Classic write-back of the counters (absolute values): the four plain ones capped at 4 (GNPRTB 2048), the battle hyperdrive hits split into primary
+    /// min(n, hyperdrive != 0) then backup min(rest, hyperdrive_if_damaged != 0). Shield is not stored. rule: m4-battle-classic §10.
+    /// </summary>
+    public static List<int> StoredHits(BattleParams p, ShipClass cls, int[] battleHits)
+    {
+        var h = new List<int>(new int[ObjectRegistry.HitCounters]);
+        for (int i = 0; i < ObjectRegistry.HyperdriveCounter; i++) h[i] = Math.Min(battleHits[i], p.SubsystemCap);
+        int n = battleHits[ObjectRegistry.HyperdriveCounter];
+        int primary = Math.Min(n, cls.Hyperdrive != 0 ? 1 : 0);
+        h[ObjectRegistry.HyperdriveCounter] = primary;
+        h[BackupHyperdriveCounter] = Math.Min(n - primary, cls.HyperdriveIfDamaged != 0 ? 1 : 0);
+        return h;
     }
 
     // ================================================================== one battle
@@ -194,15 +231,35 @@ public sealed class BattleModule
         if (Params.Ruleset == BattleRuleset.New)
             result = new NewBattle(Params, _newData ?? NewBattleData.Default, force.Units, new GameRng(force.Seed), has, alert).Run();
         else
-            result = new ClassicBattle(Params, force.Units, new GameRng(force.Seed), has, alert).Run();
+        {
+            var ai = new bool[2];
+            foreach (var s in new[] { Side.Alliance, Side.Empire }) ai[(int)s] = IsAi(s);
+            result = new ClassicBattle(Params, force.Units, Params.BattleRng == ClassicBattleRng.Game ? new GameRng(force.Seed) : null, has, alert, ai).Run();
+        }
 
-        // damage written back to every surviving ship. rule: m4-battle-classic §10 (stored hull = max(1, round half up); counters as they stand)
         foreach (var u in force.Units)
         {
-            if (!u.IsCapital || u.Destroyed) continue;
+            if (u.Destroyed) continue;
             var o = E.Objects[u.ObjectId];
-            o.Hull = (int)Math.Min(u.HullMax, Math.Max(1.0, Math.Floor(u.Hull + 0.5)));
-            o.Hits = new List<int>(u.Hits);
+            if (!Classic)
+            {
+                // New: stored hull = max(1, round half up); counters as they stand. rule: m4-battle-new (shared write-back)
+                if (u.IsCapital) { o.Hull = (int)Math.Min(u.HullMax, Math.Max(1.0, Math.Floor(u.Hull + 0.5))); o.Hits = new List<int>(u.Hits); }
+                continue;
+            }
+            if (u.IsCapital)
+            {
+                // rule: m4-battle-classic §10: survivors store trunc(max(1, hull)); counters as absolute values with the stored caps
+                o.Hull = (int)Math.Min(u.HullMax, Math.Truncate(Math.Max(1.0, u.Hull)));
+                o.Hits = StoredHits(Params, u.Class, u.Hits);
+            }
+            else
+            {
+                // rule: m4-battle-classic §10: a surviving squadron keeps max(1, trunc(hull / 8)) craft; the loss is kept as craft lost
+                int size = ClassicRates.SquadronSize(Params, u.Class);
+                int craft = Math.Max(1, (int)Math.Truncate(u.Hull / Params.SquadronCraftHull));
+                o.CraftLost = Math.Max(0, size - craft);
+            }
         }
 
         var left = new Dictionary<Side, bool> { [Side.Alliance] = false, [Side.Empire] = false };
@@ -330,6 +387,8 @@ public sealed class BattleModule
             if (!E.Objects.TryGetValue(u.ObjectId, out var o)) continue;
             if (u.NewCarrier != 0) { o.AboardShip = u.NewCarrier; o.System = null; continue; }
             if (!u.JumpedAlone) continue;
+            // rule: m4-battle-classic §10 (B3 §14): a squadron goes back into its recorded carrier when that ship is on its side (it jumped too)
+            if (Classic && o.AboardShip != 0 && force.Units.Any(c => c.IsCapital && c.Left && c.ObjectId == o.AboardShip)) continue;
             string to = Pick(set, null);
             o.AboardShip = 0; o.System = to;
             if (!alone.TryGetValue(to, out var l)) alone[to] = l = new List<int>();

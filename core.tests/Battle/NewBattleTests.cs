@@ -265,7 +265,7 @@ public class NewBattleTests
     {
         // Alliance: an Escort Carrier with 6 berths and 8 TIE-less... use Empire squadrons: ISD (6 berths) carries 6, two more are based
         var (r, u) = Fight(New, new[] { (Isd, 1), ("TIE Fighter", 8) }, new[] { (MonCal, 1), (Isd, 3) }, 1, carry: true,
-            prepare: x => { }, alert: new[] { OnContactMode.Simulate, OnContactMode.Retreat }); // indexed by (int)Side: Empire, Alliance
+            prepare: x => { }, alert: new[] { OnContactMode.Fight, OnContactMode.Retreat }); // indexed by (int)Side: Empire, Alliance
         Assert.True(r.AllianceRetreated);
         var sq = u.Where(x => x.Side == Side.Alliance && x.Class.Name == "TIE Fighter").OrderBy(x => x.ObjectId).ToList();
         Assert.Equal(6, sq.Count(x => x.Left)); // the six riding the ISD

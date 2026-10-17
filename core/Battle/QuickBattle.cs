@@ -25,7 +25,7 @@ public static class QuickBattle
                 {
                     var u = new BattleUnit { Index = indexOffset + list.Count, ObjectId = firstId++, Side = side, Class = cls, IsCapital = capital };
                     if (capital) { u.HullMax = u.Hull = cls.Hull; u.Shield = cls.ShieldStrength; }
-                    else { u.HullMax = u.Hull = p.SquadronHull; u.Shield = cls.ShieldStrength; }
+                    else { u.HullMax = u.Hull = ClassicRates.SquadronHullMax(p, cls); u.Shield = cls.ShieldStrength; } // whole squadron: squadron_size x 8 (96)
                     list.Add(u);
                 }
             }
@@ -33,14 +33,15 @@ public static class QuickBattle
     }
 
     /// <summary>
-    /// Run one battle. Alliance units come first. The battle generator is seeded with <paramref name="seed"/>. <see cref="BattleParams.Ruleset"/> picks the
+    /// Run one battle. Alliance units come first. With ClassicBattleRng = Game the battle generator is seeded with <paramref name="seed"/> (Original ignores it).
+    /// <paramref name="alert"/> null = sides without a controller (threshold <see cref="BattleParams.RetreatThreshold"/>); <paramref name="ai"/> marks AI sides. <see cref="BattleParams.Ruleset"/> picks the
     /// engine; for New, unit ids are interleaved between the sides (neither is processed first, m4-battle-new §3.2), <paramref name="carry"/> puts each side's
     /// squadrons aboard its carriers in id order (else they are based), and <paramref name="prepare"/> may change the units (hull, counters) before the start.
     /// </summary>
     public static (ClassicBattleResult Result, IReadOnlyList<BattleUnit> Units) Run(BattleParams p, IReadOnlyDictionary<string, ShipClass> classes,
         IEnumerable<(string Class, int Count)> alliance, IEnumerable<(string Class, int Count)> empire, ulong seed,
         bool allianceCanLand = true, bool empireCanLand = true, OnContactMode[]? alert = null,
-        NewBattleData? data = null, bool carry = false, Action<IReadOnlyList<BattleUnit>>? prepare = null)
+        NewBattleData? data = null, bool carry = false, Action<IReadOnlyList<BattleUnit>>? prepare = null, bool[]? ai = null)
     {
         if (p.Ruleset == BattleRuleset.New)
         {
@@ -53,8 +54,9 @@ public static class QuickBattle
         var all = a.Concat(e).ToList();
         var hasDest = new bool[2];
         hasDest[(int)Side.Alliance] = allianceCanLand; hasDest[(int)Side.Empire] = empireCanLand;
+        if (carry) { Carry(a); Carry(e); }
         prepare?.Invoke(all);
-        var battle = new ClassicBattle(p, all, new GameRng(seed), hasDest, alert);
+        var battle = new ClassicBattle(p, all, new GameRng(seed), hasDest, alert, ai);
         return (battle.Run(), all);
     }
 

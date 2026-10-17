@@ -166,7 +166,7 @@ public sealed class GameHost
         // Slot 5: registered after the fleet module's contact hook, so it runs after it, and (slot 5 precedes 5.1 and 5.2) before bombardment and assault.
         Battles = Rebellion.Core.Battle.BattleModule.Attach(game, data.Galaxy, Fleets, Economy, settings.Battle, data.NewBattle);
         Repair = Rebellion.Core.Repair.RepairModule.Attach(game, Economy, Fleets, data.Repair); // slot 6.8
-        Repair.FoughtThisStep = Battles.FoughtThisStep; // no repair on a battle day. rule: m4-retreat-damage-repair §5
+        Repair.YardSuspended = Construction.IsSuspendedAt; // a blockade or an uprising drops FastRepair. rule: m4-retreat-damage-repair §5
         Fog = Rebellion.Core.Fog.FogModule.Attach(game, data.Galaxy, Fleets, Economy, Support, Control, settings.Fog, settings.Hq); // after repair (shares 6.8)
         Research = Rebellion.Core.Research.ResearchModule.Attach(game, Economy, Fleets, data.Research, settings.Research); // slot 6.9, after repair
         Construction.ResearchOrderReached = Research.OrderReached; // the research gate reads the side's levels. rule: m5-research §Availability test
