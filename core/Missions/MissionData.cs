@@ -19,7 +19,7 @@ public enum MissionKind
 }
 
 /// <summary>
-/// One MISSNSD row (data/interim/mission-records.csv, Traced unless its source says otherwise) plus its Foilable flag (data/design/mission-foilable.csv,
+/// One MISSNSD row (data/original/mission-records.csv, read from the 1998 file by importer/) plus its Foilable flag (data/design/mission-foilable.csv,
 /// the sheet's DEFAULT fall-back table). Timer = <c>TimerMin + rand(0..TimerSpread)</c> days. rule: m5-missions §Mission records (data), §3 (Foilable).
 /// </summary>
 public sealed record MissionRecord(MissionKind Kind, bool Alliance, bool Empire, int TimerMin, int TimerSpread, bool Hidden, bool Repeats,
@@ -32,41 +32,46 @@ public sealed record MissionRecord(MissionKind Kind, bool Alliance, bool Empire,
 public readonly record struct TableRow(int Threshold, int Value);
 
 /// <summary>
-/// The numbers of the mission sheet that are data (data/interim/mission-numbers.csv, key,value,source; each row carries its tag).
+/// The numbers of the mission sheet that are data (key,value,source; each row carries its tag): the GNPRTB rows of data/original/mission-numbers.csv
+/// merged with data/design/mission-numbers.csv (numbers that are not one file value).
 /// rule: m5-missions §Numbers; CLAUDE.md hard rule 6.
 /// </summary>
 public sealed record MissionNumbers(
-    int RollDie, int FoilBelowFirstRow, int DetectionConstant, int DecoyOfficerPercent, int DetectionOfficerPercent,
+    int RollDie, int DetectionConstant, int DecoyOfficerPercent, int DetectionOfficerPercent,
     int DiplomacyOwnLow, int DiplomacyOwnHigh, int DiplomacyNeutralLow, int DiplomacyNeutralHigh, int SubdueLow, int SubdueHigh,
     int InciteSupport, int AgentLeadershipDivisor, int ResearchSkillGain, int GroupSpeed, int HanMissionSpeed, int HanCharacterId)
 {
     public const string FileName = "mission-numbers.csv";
 
-    public static MissionNumbers Parse(string text, string source = FileName)
+    public static MissionNumbers Parse(string text, string source = FileName) => Parse(CsvTable.Parse(text, source));
+
+    public static MissionNumbers Parse(CsvTable t)
     {
-        var t = CsvTable.Parse(text, source);
+        string source = t.Source;
         t.Require("key", "value");
         var v = new Dictionary<string, int>(StringComparer.Ordinal); // lookup only
         for (int r = 0; r < t.RowCount; r++)
             if (!v.TryAdd(t.Get(r, "key").Trim(), t.GetInt(r, "value"))) throw new DataLoadException($"{t.Where(r)}: duplicate key.");
         int I(string k) => v.TryGetValue(k, out var x) ? x : throw new DataLoadException($"{source}: missing key '{k}'.");
-        return new MissionNumbers(I("RollDie"), I("FoilBelowFirstRow"), I("DetectionConstant"), I("DecoyOfficerPercent"), I("DetectionOfficerPercent"),
+        return new MissionNumbers(I("RollDie"), I("DetectionConstant"), I("DecoyOfficerPercent"), I("DetectionOfficerPercent"),
             I("DiplomacyOwnLow"), I("DiplomacyOwnHigh"), I("DiplomacyNeutralLow"), I("DiplomacyNeutralHigh"), I("SubdueLow"), I("SubdueHigh"),
             I("InciteSupport"), I("AgentLeadershipDivisor"), I("ResearchSkillGain"), I("GroupSpeed"), I("HanMissionSpeed"), I("HanCharacterId"));
     }
 }
 
 /// <summary>
-/// Every mission data file, read once and immutable: the MISSNSD records, the Foilable fall-back, the *MSTB tables (anchors only until the importer
-/// reads the DAT files: Missing 1), FOILTB (Traced, complete), the numbers, and the decoy table. The decoy tables FDECOYTB / TDECOYTB are Missing
-/// (no values are written anywhere in the specs: Missing 2), so <see cref="DecoyTable"/> is null in the shipped data and a decoy is refused
-/// <c>RuleMissing</c>; tests pass a synthetic table. rule: m5-missions §Mission records, §Mission tables, §3, §Missing rules 1 and 2.
+/// Every mission data file, read once and immutable: the MISSNSD records, the Foilable fall-back, the ten *MSTB tables and FOILTB (every row, read
+/// from the 1998 files by importer/), the numbers, and the decoy table (FDECOYTB; the importer checks that TDECOYTB is identical). Data without a
+/// decoy table (<see cref="DecoyTable"/> null) refuses a decoy <c>RuleMissing</c>. rule: m5-missions §Mission records, §Mission tables, §3;
+/// B1-own-importer §Work 4 (Missing rules 1 and 2 are filled by the importer).
 /// </summary>
 public sealed class MissionData
 {
     public const string RecordsFile = "mission-records.csv", TablesFile = "mission-tables.csv", FoilableFile = "mission-foilable.csv",
         KeyTargetsFile = "assassination-key-targets.csv";
     public const string FoilTable = "FOILTB";
+    /// <summary>The decoy table's name in mission-tables.csv (FDECOYTB and TDECOYTB are byte-identical: one table). rule: B1-own-importer §Work 1, 4.</summary>
+    public const string DecoyTableName = "FDECOYTB";
 
     private readonly SortedDictionary<MissionKind, MissionRecord> _records;
     private readonly SortedDictionary<string, IReadOnlyList<TableRow>> _tables;
@@ -110,15 +115,16 @@ public sealed class MissionData
     public IReadOnlyList<TableRow> Table(string name) => _tables.TryGetValue(name, out var t) ? t : throw new KeyNotFoundException($"No mission table {name}.");
     public IReadOnlyList<TableRow> Foil => _tables[FoilTable];
 
-    /// <summary>The same data with a decoy table (tests; or once the importer reads FDECOYTB).</summary>
+    /// <summary>The same data with another decoy table, or none (tests).</summary>
     public MissionData WithDecoyTable(IReadOnlyList<TableRow>? decoy) => new(_records.Values, _tables, Numbers, decoy, KeyTargets);
 
     /// <summary>The same data with other key targets (tests).</summary>
     public MissionData WithKeyTargets(IReadOnlyDictionary<int, int> keyTargets) => new(_records.Values, _tables, Numbers, DecoyTable, keyTargets);
 
-    public static MissionData Load(string interim, string design) => Parse(
-        File.ReadAllText(Path.Combine(interim, RecordsFile)), File.ReadAllText(Path.Combine(interim, TablesFile)),
-        File.ReadAllText(Path.Combine(interim, MissionNumbers.FileName)), File.ReadAllText(Path.Combine(design, FoilableFile)),
+    /// <summary>Records and tables from data/original; numbers from data/original merged with data/design; the rest from data/design. rule: B1-own-importer §Work 3, 4.</summary>
+    public static MissionData Load(string original, string design) => Parse(
+        CsvTable.Load(Path.Combine(original, RecordsFile)), CsvTable.Load(Path.Combine(original, TablesFile)),
+        CsvTable.LoadMerged(original, design, MissionNumbers.FileName), CsvTable.Load(Path.Combine(design, FoilableFile)),
         File.ReadAllText(Path.Combine(design, KeyTargetsFile)));
 
     /// <summary>rule: m5-missions §6a (assassination-key-targets.csv: character, name, cap_percent, source).</summary>
@@ -136,14 +142,20 @@ public sealed class MissionData
         return d;
     }
 
-    public static MissionData Parse(string recordsCsv, string tablesCsv, string numbersCsv, string foilableCsv, string? keyTargetsCsv = null)
+    public static MissionData Parse(string recordsCsv, string tablesCsv, string numbersCsv, string foilableCsv, string? keyTargetsCsv = null) =>
+        Parse(CsvTable.Parse(recordsCsv, RecordsFile), CsvTable.Parse(tablesCsv, TablesFile), CsvTable.Parse(numbersCsv, MissionNumbers.FileName),
+            CsvTable.Parse(foilableCsv, FoilableFile), keyTargetsCsv);
+
+    /// <summary>
+    /// The table named <see cref="DecoyTableName"/> in the tables file becomes <see cref="DecoyTable"/> (not a lookup table of a kind); without
+    /// it the data has no decoy table. rule: m5-missions §3 decoy phase; B1-own-importer §Work 4.
+    /// </summary>
+    public static MissionData Parse(CsvTable t, CsvTable tt, CsvTable numbers, CsvTable f, string? keyTargetsCsv = null)
     {
-        var f = CsvTable.Parse(foilableCsv, FoilableFile);
         f.Require("kind", "foilable");
         var foil = new Dictionary<MissionKind, bool>(); // lookup only
         for (int r = 0; r < f.RowCount; r++) foil[ParseKind(f, r)] = f.GetInt(r, "foilable") == 1;
 
-        var t = CsvTable.Parse(recordsCsv, RecordsFile);
         t.Require("dat_id", "kind", "alliance", "empire", "timer_min", "timer_spread", "hidden", "repeats", "table", "special_force_mask");
         var recs = new List<MissionRecord>();
         for (int r = 0; r < t.RowCount; r++)
@@ -158,7 +170,6 @@ public sealed class MissionData
                 t.GetInt(r, "hidden") == 1, t.GetInt(r, "repeats") == 1, table.Length == 0 ? null : table, Hex(t, r, "special_force_mask"), fo));
         }
 
-        var tt = CsvTable.Parse(tablesCsv, TablesFile);
         tt.Require("table", "threshold", "value");
         var tables = new SortedDictionary<string, List<TableRow>>(StringComparer.Ordinal);
         for (int r = 0; r < tt.RowCount; r++)
@@ -169,8 +180,10 @@ public sealed class MissionData
             if (!tables.TryGetValue(name, out var list)) tables[name] = list = new List<TableRow>();
             list.Add(new TableRow(tt.GetInt(r, "threshold"), v));
         }
+        IReadOnlyList<TableRow>? decoy = null;
+        if (tables.TryGetValue(DecoyTableName, out var d)) { decoy = d; tables.Remove(DecoyTableName); }
         return new MissionData(recs, tables.ToDictionary(kv => kv.Key, kv => (IReadOnlyList<TableRow>)kv.Value, StringComparer.Ordinal),
-            MissionNumbers.Parse(numbersCsv), null, keyTargetsCsv == null ? null : ParseKeyTargets(keyTargetsCsv));
+            MissionNumbers.Parse(numbers), decoy, keyTargetsCsv == null ? null : ParseKeyTargets(keyTargetsCsv));
     }
 
     private static MissionKind ParseKind(CsvTable t, int r) =>

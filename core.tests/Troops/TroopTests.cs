@@ -114,8 +114,8 @@ public class TroopTests
     [Fact]
     public void NamesTableRejectsAnUnknownClass()
     {
-        string regs = File.ReadAllText(Path.Combine(TestData.InterimDir, TroopData.RegimentsFile));
-        string sfs = File.ReadAllText(Path.Combine(TestData.InterimDir, TroopData.SpecialForcesFile));
+        string regs = File.ReadAllText(Path.Combine(TestData.OriginalDir, TroopData.RegimentsFile));
+        string sfs = File.ReadAllText(Path.Combine(TestData.OriginalDir, TroopData.SpecialForcesFile));
         Assert.ThrowsAny<Exception>(() => TroopData.Parse(regs, sfs, "kind,id,data_name,display_name\nspecial_force,8,Wrong Name,X\n"));
     }
 

@@ -16,8 +16,8 @@ public sealed record DefenseClass(int Id, string Name, int Family, int Cost, int
 
 /// <summary>
 /// The defense classes and every bombardment defense value that is data: <c>defense-facilities.csv</c> (the six classes) and
-/// <c>bombardment-defense.csv</c> (regiments, and the manufacturing and production facilities). NOTE: loaded from data/interim/
-/// (unverified vs original) until the importer produces data/original/.
+/// <c>bombardment-defense.csv</c> (regiments from data/original/, read from TROOPSD by importer/; the manufacturing and production facilities
+/// are DEFAULT 5 rows of data/design/bombardment-defense.csv, merged: MANFACSD/PROFACSD words 12 and 13 are not named yet, B2).
 /// rule: m3-planetary-defenses §The six classes ("Load these from the importer as a data file keyed by class id"); m3-bombardment §Resolution 4.
 /// </summary>
 public sealed class DefenseData
@@ -51,12 +51,15 @@ public sealed class DefenseData
         return _facilities.TryGetValue(className, out var d) ? d : throw new ArgumentException($"No bombardment defense for facility class '{className}'.");
     }
 
-    public static DefenseData Load(string dir) =>
-        Parse(File.ReadAllText(Path.Combine(dir, DefensesFile)), DefensesFile, File.ReadAllText(Path.Combine(dir, BombardmentFile)), BombardmentFile);
+    /// <summary>defense-facilities.csv from data/original; bombardment-defense.csv from data/original merged with data/design. rule: B1-own-importer §Work 3, 5.</summary>
+    public static DefenseData Load(string originalDir, string designDir) =>
+        Parse(CsvTable.Load(Path.Combine(originalDir, DefensesFile)), CsvTable.LoadMerged(originalDir, designDir, BombardmentFile));
 
-    public static DefenseData Parse(string defensesText, string defensesSource, string bombardText, string bombardSource)
+    public static DefenseData Parse(string defensesText, string defensesSource, string bombardText, string bombardSource) =>
+        Parse(CsvTable.Parse(defensesText, defensesSource), CsvTable.Parse(bombardText, bombardSource));
+
+    public static DefenseData Parse(CsvTable t, CsvTable b)
     {
-        var t = CsvTable.Parse(defensesText, defensesSource);
         t.Require("id", "name", "family", "cost", "maint", "research_order", "research_difficulty", "attack", "shield", "bombard_defense", "side", "kind");
         var byName = new SortedDictionary<string, DefenseClass>(StringComparer.Ordinal);
         for (int r = 0; r < t.RowCount; r++)
@@ -82,7 +85,6 @@ public sealed class DefenseData
             if (!byName.TryAdd(name, row)) throw new DataLoadException($"{t.Where(r)}: defense class '{name}' appears twice.");
         }
 
-        var b = CsvTable.Parse(bombardText, bombardSource);
         b.Require("kind", "name", "bombard_defense");
         var regiments = new SortedDictionary<string, int>(StringComparer.Ordinal);
         var facilities = new SortedDictionary<string, int>(StringComparer.Ordinal);

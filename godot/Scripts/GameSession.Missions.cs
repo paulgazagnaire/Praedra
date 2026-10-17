@@ -88,7 +88,7 @@ public sealed partial class GameSession
         MissionKind.Diplomacy => "Raises support for you at a neutral system or one of yours (not in revolt). Keeps trying until you cancel it. Skill: diplomacy.",
         MissionKind.Espionage => "Any system: on success you see its facilities, troops and fleets (and maybe more of its side's systems). Skill: espionage.",
         MissionKind.Reconnaissance => "Any system: a look at it. Succeeds by itself unless the team is caught. Skill: espionage.",
-        MissionKind.Sabotage => "An enemy or neutral system: destroys one facility. Very hard with the current interim tables (the team is usually caught). Skill: combat and espionage.",
+        MissionKind.Sabotage => "An enemy or neutral system: destroys one facility. Very hard: the team is usually caught. Skill: combat and espionage.",
         MissionKind.InciteUprising => "An enemy system: stirs up unrest against its holder. Keeps working until you cancel it. Skill: leadership.",
         MissionKind.SubdueUprising => "One of your systems in revolt: calms the people and raises your support. Skill: leadership.",
         MissionKind.ShipResearch or MissionKind.FacilityResearch or MissionKind.TroopResearch =>

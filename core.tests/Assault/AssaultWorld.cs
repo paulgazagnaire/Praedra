@@ -21,7 +21,7 @@ internal sealed class AssaultWorld
     public const string Reb = "Alliance Army Regiment", Imp = "Imperial Army Regiment";
     public const string Isd = "Imperial Star Destroyer", Neb = "Nebulon-B Frigate";
 
-    public static readonly Lazy<TroopData> Troops = new(() => TroopData.Load(TestData.InterimDir, TestData.DesignDir));
+    public static readonly Lazy<TroopData> Troops = new(() => TroopData.Load(TestData.OriginalDir, TestData.DesignDir));
 
     public BombWorld B { get; }
     public TroopModule Troop { get; }

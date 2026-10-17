@@ -207,6 +207,7 @@ public sealed class GameHost
     /// A game from a save (<see cref="GameSave.Save"/> or <see cref="SaveWithSettings"/>), with every module attached again. Settings are not in the
     /// plain save: pass them again. A save written by <see cref="SaveWithSettings"/> also carries the battle ruleset; it is applied when
     /// <paramref name="settings"/> does not already set <see cref="GameSettings.Battle"/>. A save without the header loads as Classic (the DEFAULT).
+    /// It may also carry the AI memory line (<see cref="AiMemoryFor"/>); a save without it loads with an empty memory.
     /// rule: m4-battle-new §Rule (New) (ruleset switch, DEFAULT Classic)
     /// </summary>
     public static GameHost Load(string saveJson, GameSettings? settings = null, GameData? data = null)
@@ -215,7 +216,52 @@ public sealed class GameHost
         settings ??= new GameSettings();
         if (ruleset != null && settings.Battle == null)
             settings = settings with { Battle = new Rebellion.Core.Battle.BattleParams { Ruleset = ruleset.Value } };
-        return new(GameSave.Load(body), data ?? GameData.Default, settings);
+        var (memories, core) = ReadAiMemory(body);
+        var host = new GameHost(GameSave.Load(core), data ?? GameData.Default, settings);
+        host._aiMemory.AddRange(memories);
+        return host;
+    }
+
+    // ------------------------------------------------------------------ the AI's memory (QA-1)
+
+    private readonly List<Rebellion.Core.AI.AiMemory> _aiMemory = new(); // one per (side, fog), found by search, saved sorted
+
+    /// <summary>
+    /// The simple AI's memory of its side's event feed for this game (one per side and fog setting; made on first use). It lives with the game,
+    /// not with an AI object, so a new AI on this game, or on a game loaded from <see cref="SaveWithSettings"/>, reads the same notes.
+    /// </summary>
+    public Rebellion.Core.AI.AiMemory AiMemoryFor(Side side, bool fog)
+    {
+        foreach (var m in _aiMemory) if (m.Side == side && m.Fog == fog) return m;
+        var made = new Rebellion.Core.AI.AiMemory { Side = side, Fog = fog };
+        _aiMemory.Add(made);
+        return made;
+    }
+
+    private const string AiMemoryTag = "AI-MEMORY ";
+    private static readonly System.Text.Json.JsonSerializerOptions AiMemoryJson = new()
+    {
+        WriteIndented = false, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault,
+    };
+
+    // The AI memory line: "AI-MEMORY [json]" between the header and the core save, only when an AI has played this game. A save without it
+    // (older saves, games without an AI) loads with an empty memory.
+    private string AiMemoryLine()
+    {
+        if (_aiMemory.Count == 0) return "";
+        foreach (var m in _aiMemory) m.CatchUp?.Invoke(); // the last Step's events, not yet noted by the AI (AiMemory.CatchUp)
+        var list = _aiMemory.OrderBy(m => m.Side).ThenBy(m => m.Fog).Select(m => m.ForSave(Game.Day, Fog.GroundStamp)).ToList();
+        return AiMemoryTag + System.Text.Json.JsonSerializer.Serialize(list, AiMemoryJson) + "\n";
+    }
+
+    private static (List<Rebellion.Core.AI.AiMemory> Memories, string Core) ReadAiMemory(string body)
+    {
+        if (!body.StartsWith(AiMemoryTag, StringComparison.Ordinal)) return (new(), body);
+        int nl = body.IndexOf('\n');
+        if (nl < 0) throw new InvalidDataException("AI memory line without a game");
+        var list = System.Text.Json.JsonSerializer.Deserialize<List<Rebellion.Core.AI.AiMemory>>(body[AiMemoryTag.Length..nl], AiMemoryJson)
+            ?? throw new InvalidDataException("empty AI memory");
+        return (list, body[(nl + 1)..]);
     }
 
     public string Save() => GameSave.Save(Game);
@@ -223,11 +269,12 @@ public sealed class GameHost
     private const string HeaderTag = "REBELLION-CORE 1 battle=";
 
     /// <summary>
-    /// The save plus a first line naming the battle ruleset ("REBELLION-CORE 1 battle=Classic|New"), so a loaded game fights by the same rules.
-    /// The game state itself is unchanged (<see cref="StateHash"/> does not include the header). rule: m4-battle-new §Rule (New)
+    /// The save plus a first line naming the battle ruleset ("REBELLION-CORE 1 battle=Classic|New"), so a loaded game fights by the same rules,
+    /// then, when an AI has played this game, a line with the AI's memory ("AI-MEMORY [json]"), so a loaded game's AI plans as before (QA-1).
+    /// The game state itself is unchanged (<see cref="StateHash"/> includes neither line). rule: m4-battle-new §Rule (New)
     /// </summary>
     public string SaveWithSettings() =>
-        HeaderTag + (Settings.Battle?.Ruleset ?? Rebellion.Core.Battle.BattleRuleset.Classic) + "\n" + Save();
+        HeaderTag + (Settings.Battle?.Ruleset ?? Rebellion.Core.Battle.BattleRuleset.Classic) + "\n" + AiMemoryLine() + Save();
 
     private static (Rebellion.Core.Battle.BattleRuleset? Ruleset, string Body) ReadHeader(string text)
     {

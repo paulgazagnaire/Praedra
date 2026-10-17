@@ -316,7 +316,7 @@ public class GalaxyDataTests
     [Fact]
     public void ShipDataLoads()
     {
-        var all = ShipData.LoadAll(TestData.InterimDir);
+        var all = ShipData.LoadAll(TestData.OriginalDir);
         Assert.Equal(30 + 8, all.Count);
         var isd = all["Imperial Star Destroyer"];
         Assert.True(isd.IsCapital);

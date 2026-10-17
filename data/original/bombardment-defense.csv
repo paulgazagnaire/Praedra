@@ -1,0 +1,11 @@
+kind,name,bombard_defense,tag
+troop,Alliance Fleet Regiment,5,original: TROOPSD bombardment_defense (importer); m3-bombardment B7
+troop,Alliance Army Regiment,5,original: TROOPSD bombardment_defense (importer); m3-bombardment B7
+troop,Sullustan Regiment,2,original: TROOPSD bombardment_defense (importer); m3-bombardment B7
+troop,Wookiee Regiment,4,original: TROOPSD bombardment_defense (importer); m3-bombardment B7
+troop,Mon Calamari Regiment,9,original: TROOPSD bombardment_defense (importer); m3-bombardment B7
+troop,Stormtrooper Regiment,6,original: TROOPSD bombardment_defense (importer); m3-bombardment B7
+troop,Imperial Fleet Regiment,2,original: TROOPSD bombardment_defense (importer); m3-bombardment B7
+troop,Imperial Army Regiment,5,original: TROOPSD bombardment_defense (importer); m3-bombardment B7
+troop,War Droid Regiment,2,original: TROOPSD bombardment_defense (importer); m3-bombardment B7
+troop,Dark Trooper Regiment,6,original: TROOPSD bombardment_defense (importer); m3-bombardment B7

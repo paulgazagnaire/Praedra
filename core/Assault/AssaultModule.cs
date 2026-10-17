@@ -26,9 +26,9 @@ public sealed record AssaultParams
     public int DieMax { get; init; } = 10;
     /// <summary>Each full this-many points of General leadership add one to the duel (GNPRTB 0x201 and 0x202). Traced.</summary>
     public int LeadershipStep { get; init; } = 30;
-    /// <summary>x at or above this destroys the defender (GNPRTB 0x203). Traced.</summary>
+    /// <summary>x at or above this destroys the defender (GNPRTB 0x204). Traced.</summary>
     public int DefenderDiesAtLeast { get; init; } = 6;
-    /// <summary>x at or below this destroys the attacker (GNPRTB 0x204). Traced.</summary>
+    /// <summary>x at or below this destroys the attacker (GNPRTB 0x203). Traced.</summary>
     public int AttackerDiesAtMost { get; init; } = 4;
     /// <summary>Collateral rounds = duels * this / 100 (GNPRTB 0x205). Traced.</summary>
     public int CollateralPercent { get; init; } = 8;

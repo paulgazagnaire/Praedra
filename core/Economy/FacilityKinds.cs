@@ -18,7 +18,7 @@ public enum FacilityKind
 
 public static class FacilityKinds
 {
-    // Names exactly as in data/interim/unit-and-facility-costs.csv (rows of kind facility and defense).
+    // Names exactly as in unit-and-facility-costs.csv (data/original, plus the Sensor Station of data/design) (rows of kind facility and defense).
     private static readonly string[] Names =
     {
         "Mine", "Refinery",
@@ -52,13 +52,14 @@ public static class FacilityKinds
 /// <summary>The kind of thing an economy object is. rule: m2-maintenance §Load (the object families).</summary>
 public enum ObjectCategory { Facility = 0, CapitalShip = 1, Fighter = 2, Regiment = 3, SpecialForce = 4 }
 
-/// <summary>One row of unit-and-facility-costs.csv. Unverified vs original (data/interim).</summary>
+/// <summary>One row of unit-and-facility-costs.csv (data/original, read from the 1998 files by importer/; the Sensor Station row is data/design).</summary>
 public sealed record CostRow(ObjectCategory Category, string Name, int Cost, int Maintenance, int ResearchOrder,
     bool Alliance = true, bool Empire = true);
 
 /// <summary>
-/// Refined cost and maintenance per class, from data/interim/unit-and-facility-costs.csv (Traced, interim copy of the spec
-/// file). Looked up by class name; names are unique across the file.
+/// Refined cost and maintenance per class, from data/original/unit-and-facility-costs.csv (the importer's copy of the 1998 files) merged with
+/// data/design/unit-and-facility-costs.csv (classes not in the game, each row with its tag). Looked up by class name; names are unique.
+/// rule: B1-own-importer §Work 3.
 /// </summary>
 public sealed class CostData
 {
@@ -77,9 +78,13 @@ public sealed class CostData
 
     public static CostData Load(string path) => Parse(File.ReadAllText(path), Path.GetFileName(path));
 
-    public static CostData Parse(string text, string source)
+    /// <summary>The original file merged with the design file of the same name. rule: B1-own-importer §Work 3.</summary>
+    public static CostData Load(string originalDir, string designDir) => Parse(CsvTable.LoadMerged(originalDir, designDir, FileName));
+
+    public static CostData Parse(string text, string source) => Parse(CsvTable.Parse(text, source));
+
+    public static CostData Parse(CsvTable t)
     {
-        var t = CsvTable.Parse(text, source);
         t.Require("kind", "id", "name", "cost", "maint", "rorder");
         var rows = new SortedDictionary<string, CostRow>(StringComparer.Ordinal);
         for (int r = 0; r < t.RowCount; r++)

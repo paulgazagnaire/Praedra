@@ -35,7 +35,7 @@ public partial class GameScreen
         public int? TargetChar;
     }
 
-    const string MissionAdvice = "Worth it now: Espionage (see what an enemy system holds) and Diplomacy (win a neutral system's support before you take it). Sabotage is very hard with the current interim tables: the team is usually caught.";
+    const string MissionAdvice = "Worth it now: Espionage (see what an enemy system holds) and Diplomacy (win a neutral system's support before you take it). Sabotage is very hard: the team is usually caught.";
 
     /// <summary>The kinds the screens offer, in this order; story and travel records are never offered (rule: m5-missions §Mission records: hidden).</summary>
     static readonly MissionKind[] OfferedKinds =

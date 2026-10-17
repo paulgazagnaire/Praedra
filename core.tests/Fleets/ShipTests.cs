@@ -16,9 +16,9 @@ public class ShipTests
     private const string Home = "Coruscant", Far = "Corellia";
     private const string Isd = "Imperial Star Destroyer";
 
-    private static IReadOnlyList<ShipClass> Capitals() => ShipData.LoadCapitalShips(Path.Combine(TestData.InterimDir, ShipData.CapitalShipsFile));
-    private static IReadOnlyList<ShipClass> Fighters() => ShipData.LoadFighters(Path.Combine(TestData.InterimDir, ShipData.FightersFile));
-    private static CsvTable Csv(string file) => CsvTable.Parse(File.ReadAllText(Path.Combine(TestData.InterimDir, file)), file);
+    private static IReadOnlyList<ShipClass> Capitals() => ShipData.LoadCapitalShips(Path.Combine(TestData.OriginalDir, ShipData.CapitalShipsFile));
+    private static IReadOnlyList<ShipClass> Fighters() => ShipData.LoadFighters(Path.Combine(TestData.OriginalDir, ShipData.FightersFile));
+    private static CsvTable Csv(string file) => CsvTable.Parse(File.ReadAllText(Path.Combine(TestData.OriginalDir, file)), file);
 
     // ---------------------------------------------------------------- the class tables (S1 to S5)
 
@@ -93,7 +93,7 @@ public class ShipTests
     [Fact]
     public void Ship_classes_and_cost_rows_agree_by_name()
     {
-        var ships = ShipData.LoadAll(TestData.InterimDir);
+        var ships = ShipData.LoadAll(TestData.OriginalDir);
         foreach (var c in ships.Values)
         {
             Assert.True(EcoWorld.Costs.Value.TryGet(c.Name, out var row), $"no cost row for {c.Name}");
@@ -141,7 +141,7 @@ public class ShipTests
     {
         var w = new BuildWorld();
         w.Build.RespectResearchOrder = true;
-        var ships = ShipData.LoadAll(TestData.InterimDir).Values;
+        var ships = ShipData.LoadAll(TestData.OriginalDir).Values;
         List<string> At(ShipSide side, bool capital) =>
             ships.Where(c => c.IsCapital == capital && c.Side == side && w.Build.IsResearched(side == ShipSide.Alliance ? Side.Alliance : Side.Empire, c.Name))
                  .Select(c => c.Name).OrderBy(n => n, StringComparer.Ordinal).ToList();
@@ -309,7 +309,7 @@ public class ShipTests
     public void S17_LoadingTablesAndRunningTheTestsDrawsNothing()
     {
         var w = new BuildWorld(7); // a real generator: any draw would be counted
-        Capitals(); Fighters(); ShipData.LoadAll(TestData.InterimDir);
+        Capitals(); Fighters(); ShipData.LoadAll(TestData.OriginalDir);
         w.Fleets.DebugOrdersEnabled = true;
         int f = w.Fleets.AddFleet(Side.Empire, "F", new[] { Isd, "Medium Transport" }, Home, new[] { "TIE Fighter" });
         int ship = w.State.Fleets[f].Ships[0];

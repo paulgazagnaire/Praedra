@@ -47,7 +47,7 @@ internal sealed class StubRng : GameRng
 internal sealed class EcoWorld
 {
     public static readonly Lazy<SlotValues> Slots = new(() => SlotValues.Load(Path.Combine(TestData.DesignDir, SlotValues.File), TestData.RealGalaxy));
-    public static readonly Lazy<CostData> Costs = new(() => CostData.Load(Path.Combine(TestData.InterimDir, CostData.FileName)));
+    public static readonly Lazy<CostData> Costs = new(() => CostData.Load(TestData.OriginalDir, TestData.DesignDir));
 
     public StubRng? Stub { get; }
     public Game Game { get; }
@@ -61,7 +61,7 @@ internal sealed class EcoWorld
     /// </summary>
     public static readonly Lazy<CostData> FreeShipCosts = new(() =>
     {
-        var lines = File.ReadAllLines(Path.Combine(TestData.InterimDir, CostData.FileName));
+        var lines = TestData.MergedText(CostData.FileName).Split('\n');
         var o = new List<string> { lines[0] };
         foreach (var l in lines.Skip(1).Where(x => x.Length > 0))
         {
