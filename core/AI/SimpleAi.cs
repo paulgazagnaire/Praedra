@@ -66,7 +66,7 @@ public sealed partial class SimpleAi
     public void PlanDay()
     {
         _submitted.Clear(); _plannedLoad = 0; _busy.Clear(); _reservedEnergy.Clear(); _reservedRaw.Clear(); _reservedYards.Clear(); _strength.Clear();
-        _capitalDone = _rallyDone = false; _hops = null; _threats = null; _lost = null; _lostBattles = null; _runners = null; _bounced = null;
+        _capitalDone = _rallyDone = false; _hops = null; _threats = null; _offensives = -1; _lost = null; _lostBattles = null; _runners = null; _bounced = null;
         int day = Today, phase = (int)_side;
         _rng = new GameRng((ulong)day * 2 + (ulong)_side + 0x5A1D, 0xA1);
         _view = _p.UseFog ? _h.Fog.ViewFor(_side) : null;
@@ -853,6 +853,23 @@ public sealed partial class SimpleAi
 
     private bool Pending(Fleet f) => _h.Bombardment.HasPending(f.Id) || _h.Assault.HasPending(f.Id);
 
+    private int _offensives = -1;
+    /// <summary>
+    /// Offensives under way (MaxOffensives): armed own fleets flying to, or standing on, a system the side does not hold; counted once per day,
+    /// plus the strikes launched today. Own state only.
+    /// </summary>
+    private int Offensives()
+    {
+        if (_offensives >= 0) return _offensives;
+        int n = 0;
+        foreach (var f in S.Fleets.Values.Where(f => f.Side == _side && f.Ships.Count > 0).OrderBy(f => f.Id))
+        {
+            string? dest = f.At ?? (f.Transit is { } t ? t.Path[^1] : null);
+            if (dest != null && !Held(dest) && Str(f) > 0) n++;
+        }
+        return _offensives = n;
+    }
+
     private bool Move(Fleet f, string dest)
     {
         if (f.At == null || dest == f.At || f.Transit != null) return false;
@@ -1102,8 +1119,9 @@ public sealed partial class SimpleAi
             }
             // the system that wins the game, believed (nearly) undefended and within reach: load the regiments it needs first, then go for it
             if (aboard < WinTroopsWanted(p, at) && Fetch()) return;
-            var t = PickTarget(p, aboard, at);
-            if (t != null && Move(f, t)) return;
+            bool limited = _p.MaxOffensives != int.MaxValue;
+            var t = !limited || Offensives() < _p.MaxOffensives ? PickTarget(p, aboard, at) : null;
+            if (t != null && Move(f, t)) { if (limited) _offensives++; return; }
             if (aboard < _p.MinLaunchRegiments && Fetch()) return;
         }
         if (rally != null && at != rally) Move(f, rally); // gather (and reload) at the rally system
@@ -1287,6 +1305,12 @@ public sealed partial class SimpleAi
             if (score > 0) scored.Add((s, score));
         }
         if (scored.Count == 0) return null;
+        // difficulty: pick noise (ai/09 §6), a random one of the three best targets
+        if (_p.PickNoisePercent > 0 && _rng.NextInt(1, 100) <= _p.PickNoisePercent)
+        {
+            var top3 = scored.OrderByDescending(t => t.Score).ThenBy(t => t.Sys, StringComparer.Ordinal).Take(3).ToList();
+            return top3[_rng.NextInt(0, top3.Count - 1)].Sys;
+        }
         long best = scored.Max(t => t.Score);
         // tie-break (private generator): any target within 5% of the best
         var top = scored.Where(t => t.Score * 100 >= best * 95).OrderBy(t => t.Sys, StringComparer.Ordinal).ToList();

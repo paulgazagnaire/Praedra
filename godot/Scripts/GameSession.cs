@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Rebellion.Core.AI;
 using Rebellion.Core.Assault;
 using Rebellion.Core.Battle;
 using Rebellion.Core.Characters;
@@ -45,6 +46,8 @@ public sealed partial class GameSession
     public GameData Data => Host.Data;
     public Game Game => Host.Game;
     public Side Player { get; }
+    /// <summary>How well the computer opponent plays (kept in the save's first line).</summary>
+    public AiLevel Level { get; }
     public Side Enemy => Player == Side.Empire ? Side.Alliance : Side.Empire;
     public IOpponent Opponent { get; }
     /// <summary>Test only (the headless playtest): the computer side plans nothing, so a test fleet it would scrap or move stays put.</summary>
@@ -77,10 +80,10 @@ public sealed partial class GameSession
         public List<string> Retreats = new();
     }
 
-    public GameSession(GameHost host, Side player)
+    public GameSession(GameHost host, Side player, AiLevel level = AiLevel.Medium)
     {
-        Host = host; Player = player;
-        Opponent = GameBoot.CreateOpponent(host, player == Side.Empire ? Side.Alliance : Side.Empire);
+        Host = host; Player = player; Level = level;
+        Opponent = GameBoot.CreateOpponent(host, player == Side.Empire ? Side.Alliance : Side.Empire, level);
         _printed = host.Fog.EventsFor(player).Count;
         Snapshot();
     }
@@ -90,13 +93,13 @@ public sealed partial class GameSession
     /// the viewer may). A fixed seed (tests, smoke, playtest, `--seed N`) reproduces a game. rule: m5-setup-and-victory §Mode Anchored (the deal is seeded)
     /// </summary>
     public static GameSession New(GameData data, Side player, Preset preset, Rebellion.Core.Battle.BattleRuleset rules = Rebellion.Core.Battle.BattleRuleset.Classic, int? seed = null) =>
-        new(GameBoot.NewGame(data, player, preset, seed ?? FreshSeed(), rules), player);
+        new(GameBoot.NewGame(data, player, preset, seed ?? FreshSeed(), rules), player, GameBoot.AiLevelFor(preset));
 
     /// <summary>A seed for a new game from the wall clock (viewer only).</summary>
     public static int FreshSeed() => (int)(Godot.Time.GetUnixTimeFromSystem() % int.MaxValue);
 
-    public static GameSession Load(GameData data, Side player, string json) =>
-        new(GameBoot.LoadGame(data, json), player);
+    public static GameSession Load(GameData data, Side player, string json, AiLevel level = AiLevel.Medium) =>
+        new(GameBoot.LoadGame(data, json), player, level);
 
     /// <summary>The core's save plus the battle ruleset header, so Load fights by the same rules.</summary>
     public string SaveText() => Host.SaveWithSettings();
