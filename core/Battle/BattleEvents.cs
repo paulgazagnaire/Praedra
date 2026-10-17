@@ -3,7 +3,7 @@ using Rebellion.Core.Clock;
 namespace Rebellion.Core.Battle;
 
 // Events of the battle (step 5, before slots 5.1 and 5.2). Day is K + 1 like the other step 3 to 5 events.
-// Order for one battle: BattleStarted, BattleChoice (Alliance, Empire), then per destroyed unit UnitDestroyed / RetreatRefused / FleetRetreated /
+// Order for one battle: BattleStarted, BattleChoice (Alliance, Empire), then per destroyed unit UnitDestroyed / RetreatRefused / RetreatHeldByTractor / FleetRetreated /
 // SquadronsRelocated in the order they happen, then BattleEnded. rule: m4-battle-classic §10; m4-retreat-damage-repair §Where it runs.
 
 /// <summary>SetOnContact: a side's standing answer to the Battle Alert. Order (step 1). rule: m4-battle-classic §1.3.</summary>
@@ -30,6 +30,10 @@ public sealed record UnitDestroyed(int Index, int Day, string System, int Unit, 
 /// <summary>First refused retreat of the battle.</summary>
 public sealed record RetreatRefused(int Index, int Day, string System, Side Side, RetreatRefusal Reason)
     : GameEvent(Index, Day, nameof(RetreatRefused));
+
+/// <summary>New rules: an enemy tractor beam held a ship that tried to retreat; it stays in the battle. Fields: ship, holder, battle second. rule: m4-retreat-damage-repair §6.</summary>
+public sealed record RetreatHeldByTractor(int Index, int Day, string System, int Ship, int Holder, int Second)
+    : GameEvent(Index, Day, nameof(RetreatHeldByTractor));
 
 /// <summary>A fleet jumped to a neighbouring system. Fields: fleet, from, to, ships and squadrons now in it (aboard ones included).</summary>
 public sealed record FleetRetreated(int Index, int Day, int Fleet, string From, string To, ValueList<int> Ships, ValueList<int> Squadrons)
