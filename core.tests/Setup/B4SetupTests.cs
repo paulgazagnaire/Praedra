@@ -116,7 +116,8 @@ public class B4SetupTests
                     int s = h.Economy.SupportOf(sys, side);
                     int want = s < 60 ? (60 - s + 9) / 10 : 0;
                     if (want > 0) below++;
-                    int extra = baseSameClass && sys == baseSys ? forces.Int(side, "base_regiments") : 0;
+                    int extra = (baseSameClass && sys == baseSys ? forces.Int(side, "base_regiments") : 0)
+                        + (sys == h.HqSystem ? forces.HqUnits.Where(u => u.Side == side && u.Class == gClass).Sum(u => u.Count) : 0); // the fixed HQ forces (§P7)
                     Assert.True(want + extra == Standing(h, side, gClass, sys), $"seed {seed}: {sys} ({side} support {s})");
                 }
             }
@@ -124,7 +125,7 @@ public class B4SetupTests
             // the fixed worlds: none of the garrison class beyond the base regiments
             Assert.Equal(0, Standing(h, Side.Empire, "Imperial Army Regiment", "Coruscant"));
             Assert.Equal(forces.Int(Side.Alliance, "base_regiments"), Standing(h, Side.Alliance, "Alliance Army Regiment", "Yavin"));
-            Assert.Equal(0, Standing(h, Side.Alliance, "Alliance Army Regiment", h.HqSystem!));
+            Assert.Equal(2, Standing(h, Side.Alliance, "Alliance Army Regiment", h.HqSystem!)); // the fixed HQ forces only, no garrison
             // the batch's anchors: Chandrila (Alliance 57) and Sullust (58), Empire-held at Empire support 43 and 42, get 2 regiments each
             foreach (var sys in new[] { "Chandrila", "Sullust" })
                 if (h.Control.HolderOf(sys) == Side.Empire && h.Economy.SupportOf(sys, Side.Alliance) is 57 or 58)
@@ -149,6 +150,26 @@ public class B4SetupTests
             Assert.Empty(outside);
         }
         Assert.True(games > 0, "no seed in 1..12 gives every Alliance holding support 60 or more");
+    }
+
+    // B4-4 (the HQ troops it names): the Rebel HQ system starts with the fixed CMUNHQTB forces standing on it, not in a fleet: 2 Alliance Army
+    // Regiments, 1 Alliance Fleet Regiment, 4 X-wing, 2 Y-wing. rule: m5-setup-and-victory §P7 ([EXE-own] 0x51ad90; B4 §7 step 2)
+    [Fact]
+    public void B4_4_TheHqStartsWithItsFixedForces()
+    {
+        foreach (var seed in Seeds)
+        {
+            var h = Make(seed);
+            string hq = h.HqSystem!;
+            var there = h.Economy.Objects.Where(o => o.Side == Side.Alliance && o.System == hq && o.AboardShip == 0 && o.Category != ObjectCategory.Facility)
+                .GroupBy(o => o.Class).ToDictionary(g => g.Key, g => g.Count());
+            Assert.Equal(new Dictionary<string, int> { ["Alliance Army Regiment"] = 2, ["Alliance Fleet Regiment"] = 1, ["X-wing"] = 4, ["Y-wing"] = 2 }
+                .OrderBy(kv => kv.Key, StringComparer.Ordinal), there.OrderBy(kv => kv.Key, StringComparer.Ordinal));
+            Assert.All(h.Economy.Objects.Where(o => o.System == hq && o.Category != ObjectCategory.Facility), o => Assert.True(o.Completed));
+        }
+        // File mode too (the HQ is Cyclor in the day-one files)
+        var f = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA, Settings = new GameSettings { DealMode = DealMode.File } });
+        Assert.Equal(2, Standing(f, Side.Alliance, "Alliance Army Regiment", f.HqSystem!));
     }
 
     // B4-5: the first fleet of each side is "Fleet 1", fleets count per side in id order; two Corellian Corvettes of one side are "... 1" and

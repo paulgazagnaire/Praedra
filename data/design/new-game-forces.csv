@@ -40,3 +40,7 @@ fleet,Alliance,Rebel Fleet@base,Nebulon-B Frigate*2;Corellian Corvette*2 / X-win
 fleet,Alliance,Cruiser Group@site,Mon Calamari Cruiser;Corellian Corvette,DEFAULT (playable slice 2026-10-12)
 fleet,Alliance,Raiders@base,Corellian Corvette*2,DEFAULT (playable slice 2026-10-12)
 param,*,fleet_name,Fleet,"[DAT-own] FLEETSD id 4 name, text 11523; setup names fleets ""Fleet n"" per side (B4 §12)"
+hq_unit,Alliance,Alliance Army Regiment,2,"Classic 1998 fixed HQ forces: CMUNHQTB keys 1..1, placed on the HQ system, not in a fleet (B4 §7 step 2, [EXE-own] 0x51ad90 via 0x51be90; contents [DAT-own])"
+hq_unit,Alliance,Alliance Fleet Regiment,1,"Classic 1998 fixed HQ forces: CMUNHQTB keys 1..1, placed on the HQ system, not in a fleet (B4 §7 step 2, [EXE-own] 0x51ad90 via 0x51be90; contents [DAT-own])"
+hq_unit,Alliance,X-wing,4,"Classic 1998 fixed HQ forces: CMUNHQTB keys 1..1, placed on the HQ system, not in a fleet (B4 §7 step 2, [EXE-own] 0x51ad90 via 0x51be90; contents [DAT-own])"
+hq_unit,Alliance,Y-wing,2,"Classic 1998 fixed HQ forces: CMUNHQTB keys 1..1, placed on the HQ system, not in a fleet (B4 §7 step 2, [EXE-own] 0x51ad90 via 0x51be90; contents [DAT-own])"

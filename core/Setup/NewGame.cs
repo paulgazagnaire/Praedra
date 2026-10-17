@@ -87,6 +87,12 @@ public static class NewGame
         foreach (var side in new[] { Side.Empire, Side.Alliance })
             DealSide(host, forces, side);
 
+        // P7 step 2: the fixed HQ forces (CMUNHQTB), completed, standing on the Rebel HQ system (the table's first item is empty, so nothing is a
+        // carrier); no capacity check, no draw. With min_garrison 0 they are the HQ's only troops. rule: m5-setup-and-victory §P7 ([EXE-own] 0x51ad90; B4 §7)
+        if (state.Scenario.HqSystem is { } hqSys)
+            foreach (var (side, cls, count) in forces.HqUnits)
+                for (int i = 0; i < count; i++) eco.AddObject(side, cls, hqSys);
+
         // P9 starting characters, after the forces and before the economy timers and the research arming (P10): the roster's creation draws,
         // then Palpatine at Coruscant, Vader and the officers at random Empire locations, the Empire extras, Mon Mothma at the HQ, the Yavin six,
         // the Alliance extras. rule: m5-setup-and-victory §P9; m5-characters-and-force §Rolling the stats.

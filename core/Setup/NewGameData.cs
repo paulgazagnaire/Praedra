@@ -85,6 +85,8 @@ public sealed class ForcesTable
     public List<(Side Side, string Kind, int Count)> BaseFacilities { get; } = new();
     public List<(Side Side, string Kind, int Count)> SiteFacilities { get; } = new();
     public List<ForceFleet> Fleets { get; } = new();
+    /// <summary>The fixed forces of the Rebel HQ system (kind <c>hq_unit</c>): regiments and squadrons placed on the system, not in a fleet. rule: m5-setup-and-victory §P7 (B4 §7 step 2).</summary>
+    public List<(Side Side, string Class, int Count)> HqUnits { get; } = new();
 
     public string Str(Side s, string key) => _params.TryGetValue((s, key), out var v) ? v : throw new DataLoadException($"{FileName}: missing param '{key}' for {s}.");
     public int Int(Side s, string key) => int.Parse(Str(s, key), System.Globalization.CultureInfo.InvariantCulture);
@@ -108,6 +110,7 @@ public sealed class ForcesTable
                     case "param": f._params[(side, key)] = value; break;
                     case "base_facility": f.BaseFacilities.Add((side, key, int.Parse(value))); break;
                     case "site_facility": f.SiteFacilities.Add((side, key, int.Parse(value))); break;
+                    case "hq_unit": f.HqUnits.Add((side, key, int.Parse(value))); break;
                     case "fleet":
                         {
                             var at = key.Split('@');
