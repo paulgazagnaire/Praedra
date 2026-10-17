@@ -95,7 +95,7 @@ public class KeyTargetTests
     public void KT5_CapApplies(int target, int roll, bool success, int cap)
     {
         var w = Assassin(target);
-        w.Stub!.Expect(0, 99, roll, 50);
+        w.Stub!.Expect(0, 99, Bt(1, roll, 50)); // B2b: the betrayal draws come first
         Assert.Null(StartReason(w, MissionKind.Assassination, Vader, target));
         w.RunIteration(w.LastMission);
         var r = w.Events<MissionMemberRoll>().Single();
@@ -110,14 +110,14 @@ public class KeyTargetTests
         var w = Assassin(Luke);
         w.Agent(Piett, T, com: 20);
         w.Agent(Veers, T, com: 40, esp: 10);
-        w.Stub!.Expect(0, 99, 50);
+        w.Stub!.Expect(0, 99, Bt(3, 50)); // B2b: the betrayal draws come first
         long s = w.Start(Side.Empire, MissionKind.Assassination, new[] { Vader, Piett, Veers }, null, targetChar: Luke);
         w.Game.Step();
         Assert.Null(w.Reason(s));
         w.RunIteration(w.LastMission);
         var r = w.Events<MissionMemberRoll>().Single();
         Assert.Equal((Vader, 100), (r.Member, r.Input));
-        Assert.Equal(1, w.Stub.Count(0, 99));
+        Assert.Equal(4, w.Stub.Count(0, 99)); // three betrayal draws (B2b) and the one roll
     }
 
     // m5-missions KT7: a qualified team draws k: k < 3 kidnaps (Capture by the Empire, cause Kidnap), else kills (Dead although MajorsCanDie is off)
@@ -128,7 +128,7 @@ public class KeyTargetTests
     {
         var w = Assassin(Luke);
         Assert.False(w.Ch.Params.MajorsCanDie);
-        w.Stub!.Expect(0, 99, 0, k);
+        w.Stub!.Expect(0, 99, Bt(1, 0, k)); // B2b: the betrayal draws come first
         Assert.Null(StartReason(w, MissionKind.Assassination, Vader, Luke));
         w.RunIteration(w.LastMission);
         var luke = w.Ch.Get(Luke)!;
@@ -144,7 +144,7 @@ public class KeyTargetTests
             Assert.Equal(MissionModule.CauseAssassination, w.Events<CharacterKilled>().Single().Cause);
             Assert.Empty(w.Events<CharacterCaptured>());
         }
-        Assert.Equal(2, w.Stub.Count(0, 99));
+        Assert.Equal(3, w.Stub.Count(0, 99)); // betrayal (B2b), roll, k
     }
 
     // m5-missions KT8: no member with combat >= 60 and espionage >= 60 (the same character): the target is injured and no k is drawn
@@ -154,11 +154,11 @@ public class KeyTargetTests
     public void KT8_UnqualifiedTeamInjures(int combat, int esp)
     {
         var w = Assassin(Luke, vaderCombat: combat, vaderEsp: esp);
-        w.Stub!.Expect(0, 99, 0, 0);
+        w.Stub!.Expect(0, 99, Bt(1, 0, 0)); // B2b: the betrayal draws come first
         Assert.Null(StartReason(w, MissionKind.Assassination, Vader, Luke));
         w.RunIteration(w.LastMission);
         Assert.Single(w.Events<CharacterInjured>()); // InjuryDays is 0 in the default parameters: he is healed in the same Step
-        Assert.Equal(1, w.Stub.Count(0, 99));
+        Assert.Equal(2, w.Stub.Count(0, 99)); // betrayal (B2b), roll; no k
         Assert.Empty(w.Events<CharacterKilled>());
     }
 
@@ -168,13 +168,13 @@ public class KeyTargetTests
     {
         var w = Assassin(Luke, vaderCombat: 100, vaderEsp: 0);
         w.Agent(Piett, T, esp: 100, com: 1);
-        w.Stub!.Expect(0, 99, 0);
+        w.Stub!.Expect(0, 99, Bt(2, 0)); // B2b: the betrayal draws come first
         long s = w.Start(Side.Empire, MissionKind.Assassination, new[] { Vader, Piett }, null, targetChar: Luke);
         w.Game.Step();
         Assert.Null(w.Reason(s));
         w.RunIteration(w.LastMission);
         Assert.Single(w.Events<CharacterInjured>());
-        Assert.Equal(1, w.Stub.Count(0, 99));
+        Assert.Equal(3, w.Stub.Count(0, 99)); // two betrayal draws (B2b), roll
     }
 
     // m5-missions KT10: a key kill waives the Empire's Luke term (KeyDeathFallback default WaiveCondition); the Empire wins when Mon Mothma is
@@ -187,7 +187,7 @@ public class KeyTargetTests
         w.Hold(T, Side.Empire, 20);     // T fell: the HQ at rest on a system the Alliance no longer holds
         w.Host.Fog.PlaceHq(T);
         w.Game.State.Scenario.Active = true;
-        w.Stub!.Expect(0, 99, 0, 50);
+        w.Stub!.Expect(0, 99, Bt(1, 0, 50)); // B2b: the betrayal draws come first
         // the team is Empire, Luke is an Alliance character on a system now held by the Empire: still a legal target (free, there, no fleet, HQ not Alliance-held)
         Assert.Null(StartReason(w, MissionKind.Assassination, Vader, Luke));
         w.Game.Step();
@@ -210,7 +210,7 @@ public class KeyTargetTests
         w.Agent(Vader, T, com: 100);
         w.Agent(Piett, T, com: 100);
         w.Agent(Wedge, T);
-        w.Stub!.Expect(0, 99, 54, 99);
+        w.Stub!.Expect(0, 99, Bt(2, 54, 99)); // B2b: the betrayal draws come first
         long s = w.Start(Side.Empire, MissionKind.Assassination, new[] { Vader, Piett }, null, targetChar: Wedge);
         w.Game.Step();
         Assert.Null(w.Reason(s));
@@ -245,13 +245,13 @@ public class KeyTargetTests
         w.Hold(T, Side.Empire, 20);
         w.Agent(Han, T, com: 100);
         w.Agent(target, T);
-        w.Stub!.Expect(0, 99, roll, 50);
+        w.Stub!.Expect(0, 99, Bt(1, roll, 50)); // B2b: the betrayal draws come first (Han has no Force: no sensing draw)
         Assert.Null(StartReason(w, MissionKind.Abduction, Han, target, Side.Alliance));
         w.RunIteration(w.LastMission);
         var r = w.Events<MissionMemberRoll>().Single();
         Assert.Equal((target == Vader ? 4 : 2, success), (r.Chance, r.Success));
         Assert.Equal(success, w.Ch.IsCaptured(target));
-        Assert.Equal(1, w.Stub.Count(0, 99));
+        Assert.Equal(2, w.Stub.Count(0, 99)); // betrayal (B2b), roll
         if (success) Assert.Equal(MissionModule.CauseAbduction, w.Events<CharacterCaptured>().Single().Cause);
     }
 
@@ -265,11 +265,14 @@ public class KeyTargetTests
         w.Agent(Leia, T, com: 50);
         w.Agent(Wedge, T, com: 50);
         w.Agent(Vader, T);
-        w.Stub!.Expect(0, 99, 50);
+        // B2b: Vader (Force 120) at the target senses Leia and Wedge (Force 10 each, both Force users as created here): one pick draw (0..1) = 0
+        // takes Leia, p = 30, draw 99 misses; then Wedge, 99 misses; then three betrayal draws, then the roll
+        w.Stub!.Expect(0, 99, 99, 99, 99, 99, 99, 50);
         w.Start(Side.Alliance, MissionKind.Abduction, new[] { Han, Leia, Wedge }, null, targetChar: Vader);
         w.Game.Step();
         w.RunIteration(w.LastMission);
         Assert.Single(w.Events<MissionMemberRoll>());
+        Assert.Equal(new[] { (Leia, Vader, 30, false), (Wedge, Vader, 30, false) }, w.Events<MissionForceSenseRoll>().Select(e => (e.Member, e.Senser, e.Chance, e.Sensed)));
 
         var g = Assassin(Luke);
         RideFleet(g, Luke, Side.Alliance);

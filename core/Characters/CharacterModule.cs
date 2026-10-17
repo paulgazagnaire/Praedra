@@ -568,6 +568,36 @@ public sealed class CharacterModule
     /// Raise one skill (m5-missions: a successful research member gains GNPRTB 6158 = 1 in that research skill; the original's character-side check
     /// before the gain is Missing, so no cap). Not the refused SkillGrowth switch (growth outside research missions). rule: m5-missions §6 Research.
     /// </summary>
+    /// <summary>The original's side numbers (1 = Alliance, 2 = Empire, 3 = neutral). rule: m5-characters-and-force §Loyalty (B2b §4).</summary>
+    public const int SideNumberAlliance = 1, SideNumberEmpire = 2;
+    /// <summary>Loyalty bounds (0x53e0d0 with 0x661a84 = 0 and 0x661a88 = 100). Traced B2b.</summary>
+    public const int LoyaltyMin = 0, LoyaltyMax = 100;
+
+    /// <summary>
+    /// <c>ShiftLoyalty(side, amount)</c> (0x561910): nothing when the amount is 0 or the side number is not 1 or 2. Otherwise every character
+    /// (pool included, id order; no draws) whose record is not "unable to betray" (word 35) gains the amount if it serves that side and loses it
+    /// otherwise, clamped to 0..100. Event LoyaltyChanged when the value moves. No caller yet (B2c). rule: m5-characters-and-force §Loyalty (Traced B2b).
+    /// </summary>
+    public void ShiftLoyalty(StepContext? ctx, int sideNumber, int amount)
+    {
+        if (amount == 0) return;
+        Side side;
+        if (sideNumber == SideNumberAlliance) side = Side.Alliance;
+        else if (sideNumber == SideNumberEmpire) side = Side.Empire;
+        else return;
+        int day = ctx?.Day ?? _game.Day;
+        foreach (var c in S.Characters.Values)
+        {
+            if (!Data.TryGet(c.Id, out var cls) || cls.UnableToBetray) continue;
+            int from = c.Loyalty;
+            int to = Math.Clamp(c.Side == side ? from + amount : from - amount, LoyaltyMin, LoyaltyMax);
+            if (to == from) continue;
+            c.Loyalty = to;
+            int id = c.Id; var cs = c.Side;
+            Emit(ctx, (i, _) => new LoyaltyChanged(i, day, id, cs, from, to));
+        }
+    }
+
     public void GainSkill(CharacterRecord c, Skill skill, int amount) => c.Skills[(int)skill] += amount;
 
     // ================================================================== Navigator and fleet hooks (§Navigator, §Riding)

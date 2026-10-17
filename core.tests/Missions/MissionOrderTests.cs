@@ -243,7 +243,7 @@ public class MissionOrderTests
         var w = new MissionWorld();
         w.Hold(H, Side.Alliance, 100); w.Hold(Alderaan, Side.Alliance, 100); w.Hold(Bespin, Side.Alliance, 100);
         w.Agent(Leia, H, esp: 50, com: 50);
-        w.Stub!.Expect(0, 99, 99);
+        w.Stub!.Expect(0, 99, Bt(1, 99)); // B2b: Leia's betrayal draw first
         w.Start(Side.Alliance, MissionKind.Sabotage, new[] { Leia }, T);
         w.Game.Step();
         w.Host.Fleets.SetOwner(H, Side.Empire);

@@ -17,7 +17,8 @@ public class MissionRollTests
         var w = new MissionWorld(p, decoys);
         w.Hold(T, Side.Empire, 0);
         setup(w);
-        w.Stub!.Expect(0, 99, rolls);
+        // B2b: the check opens with one betrayal draw per member
+        w.Stub!.Expect(0, 99, Bt((chars?.Length ?? 1) + (sfs?.Length ?? 0) + (decoyIds?.Length ?? 0), rolls));
         var seq = w.Start(Side.Alliance, MissionKind.Espionage, chars ?? new[] { Leia }, T, sfs, decoyIds);
         w.Game.Step();
         Assert.Null(w.Reason(seq));
@@ -57,7 +58,7 @@ public class MissionRollTests
         w.Agent(Leia, T, esp: 50);
         int bothan = w.Unit(Side.Alliance, Bothan, T);
         w.Unit(Side.Empire, ImpArmy, T);
-        w.Stub!.Expect(0, 99, draw, 99, 99);
+        w.Stub!.Expect(0, 99, Bt(2, draw, 99, 99)); // B2b: two betrayal draws first
         w.Start(Side.Alliance, MissionKind.Espionage, new[] { Leia }, T, new[] { bothan });
         w.Game.Step();
         w.RunIteration(w.LastMission);
@@ -102,7 +103,7 @@ public class MissionRollTests
         w.Hold(T, Side.Empire, 0);
         int a = w.Unit(Side.Alliance, Bothan, T), b = w.Unit(Side.Alliance, Bothan, T);
         w.Unit(Side.Empire, ImpFleet, T);
-        w.Stub!.Expect(0, 99, 99, 99, 99);
+        w.Stub!.Expect(0, 99, Bt(2, 99, 99, 99)); // B2b: two betrayal draws first
         w.Start(Side.Alliance, MissionKind.Espionage, Array.Empty<int>(), T, new[] { a, b });
         w.Game.Step();
         w.RunIteration(w.LastMission);
@@ -120,17 +121,17 @@ public class MissionRollTests
         Assert.Equal((101, 25, detected), (roll.X, roll.Chance, roll.Detected));
     }
 
-    // m5-missions MI8: x below -20: the first row, p = 99 (B2a: was 100), the draw is still made (one draw consumed); draw 98 detects
+    // m5-missions MI8: x below -20: the first row, p = 99 (B2a: was 100), the draw is still made (one draw consumed, after Leia's betrayal draw, B2b); draw 98 detects
     [Fact]
     public void MI8_NoRowStillDraws()
     {
         var (w, _) = EspionageAtT(w => { w.Agent(Leia, T, esp: 1); w.Unit(Side.Empire, DarkTrooper, T); }, new[] { 98 });
         var roll = w.Events<MissionDetectionRoll>().Single();
         Assert.Equal((-28, 99, 98, true), (roll.X, roll.Chance, roll.Roll, roll.Detected));
-        Assert.Equal(1, Rolls(w));
+        Assert.Equal(2, Rolls(w)); // B2b: betrayal, detection
     }
 
-    // m5-missions MI9: no defenders at the target: no decoy or detection draw; the first draw of the iteration is the member's success roll
+    // m5-missions MI9: no defenders at the target: no decoy or detection draw; after the betrayal draw (B2b) the next draw is the member's success roll
     [Fact]
     public void MI9_NoDefendersNoDetectionDraw()
     {
@@ -142,7 +143,8 @@ public class MissionRollTests
         int from = w.Stub!.Requests.Count;
         w.RunIteration(w.LastMission);
         var req = w.RequestsSince(from);
-        Assert.Equal((0, 99), req[0]);
+        Assert.Equal(new[] { (0, 99), (0, 99) }, req.Take(2));
+        Assert.Single(w.Events<MissionBetrayalRoll>());
         Assert.Empty(w.Events<MissionDetectionRoll>());
         Assert.Single(w.Events<MissionMemberRoll>());
     }
@@ -157,7 +159,7 @@ public class MissionRollTests
         w.Hold(T, Side.Alliance, 100);
         w.Agent(Piett, T, esp: 60);
         int a = w.Unit(Side.Alliance, RebArmy, T), b = w.Unit(Side.Alliance, RebArmy, T);
-        w.Stub!.Expect(0, 99, draws);
+        w.Stub!.Expect(0, 99, Bt(1, draws)); // B2b: Piett's betrayal draw first
         w.Start(Side.Empire, MissionKind.Espionage, new[] { Piett }, T);
         w.Game.Step();
         w.RunIteration(w.LastMission);
@@ -165,7 +167,7 @@ public class MissionRollTests
         Assert.Equal(expectedDraws, rolls.Count);
         Assert.All(rolls, r => Assert.Equal((51, 50), (r.X, r.Chance)));
         Assert.Equal(new[] { a, b }[detector], w.Events<MissionFoiled>().Single().Defender);
-        Assert.Equal(expectedDraws, Rolls(w));
+        Assert.Equal(expectedDraws + 1, Rolls(w)); // and the betrayal draw
         var seen = Assert.Single(w.Events<Rebellion.Core.Fog.AgentDetected>()); // the fog's MissionDetected (m5-fog-and-hq HR11)
         Assert.Equal((Side.Alliance, T, Side.Empire), (seen.Viewer, seen.System, seen.AgentSide));
     }
@@ -179,7 +181,7 @@ public class MissionRollTests
         w.Agent(Leia, T, esp: 50);
         int inf = w.Unit(Side.Alliance, Infiltrators, T);
         w.Unit(Side.Empire, ImpFleet, T);
-        w.Stub!.Expect(0, 99, 49, 99);
+        w.Stub!.Expect(0, 99, Bt(2, 49, 99)); // B2b: betrayal draws for Leia and the decoy first
         w.Start(Side.Alliance, MissionKind.Espionage, new[] { Leia }, T, decoys: new[] { inf });
         w.Game.Step();
         w.RunIteration(w.LastMission);
@@ -187,7 +189,7 @@ public class MissionRollTests
         Assert.Equal((40, 50, 49, true), (d.X, d.Chance, d.Roll, d.Decoyed));
         Assert.Empty(w.Events<MissionDetectionRoll>());
         Assert.Single(w.Events<MissionMemberRoll>()); // the iteration went on to the success rolls
-        Assert.Equal(2, Rolls(w));
+        Assert.Equal(4, Rolls(w)); // two betrayal draws, the decoy roll, Leia's success roll
     }
 
     // m5-missions MI12: two defenders, one decoy; decoy draws 49 (A), 50 (B); then a detection draw for B only
@@ -199,7 +201,7 @@ public class MissionRollTests
         w.Agent(Leia, T, esp: 50);
         int inf = w.Unit(Side.Alliance, Infiltrators, T);
         int a = w.Unit(Side.Empire, ImpFleet, T), b = w.Unit(Side.Empire, ImpFleet, T);
-        w.Stub!.Expect(0, 99, 49, 50, 99, 99);
+        w.Stub!.Expect(0, 99, Bt(2, 49, 50, 99, 99)); // B2b: two betrayal draws first
         w.Start(Side.Alliance, MissionKind.Espionage, new[] { Leia }, T, decoys: new[] { inf });
         w.Game.Step();
         w.RunIteration(w.LastMission);
@@ -218,7 +220,7 @@ public class MissionRollTests
         int d1 = w.Unit(Side.Alliance, Infiltrators, T), d2 = w.Unit(Side.Alliance, Guerrillas, T);
         w.Unit(Side.Empire, ImpFleet, T);
         w.Stub!.Expect(0, 1, 1);
-        w.Stub!.Expect(0, 99, 10, 99);
+        w.Stub!.Expect(0, 99, Bt(3, 10, 99)); // B2b: three betrayal draws first
         w.Start(Side.Alliance, MissionKind.Espionage, new[] { Leia }, T, decoys: new[] { d2, d1 });
         w.Game.Step();
         w.RunIteration(w.LastMission);
@@ -249,7 +251,7 @@ public class MissionRollTests
         var w = new MissionWorld();
         w.Agent(Vader, T, com: 70);
         w.Agent(Wedge, T, com: 70);
-        w.Stub!.Expect(0, 99, draw);
+        w.Stub!.Expect(0, 99, Bt(1, draw)); // B2b: Vader's betrayal draw first
         w.Start(Side.Empire, MissionKind.Assassination, new[] { Vader }, null, targetChar: Wedge);
         w.Game.Step();
         w.RunIteration(w.LastMission);
@@ -286,7 +288,7 @@ public class MissionRollTests
             var w = new MissionWorld(new MissionParams { MstbBelowFirstRow = mode });
             w.Hold(T, null, 0);
             w.Agent(Leia, T, dip: 40);
-            w.Stub!.Expect(0, 99, draw);
+            w.Stub!.Expect(0, 99, Bt(1, draw)); // B2b: Leia's betrayal draw first
             w.Start(Side.Alliance, MissionKind.Diplomacy, new[] { Leia }, T);
             w.Game.Step();
             w.RunIteration(w.LastMission);
@@ -317,7 +319,7 @@ public class MissionRollTests
         var w = new MissionWorld();
         w.Hold(T, null, support); // neutral: no garrison check
         w.Agent(Leia, T, dip: dip);
-        w.Stub!.Expect(0, 99, draw);
+        w.Stub!.Expect(0, 99, Bt(1, draw)); // B2b: Leia's betrayal draw first
         w.Start(Side.Alliance, MissionKind.Diplomacy, new[] { Leia }, T);
         w.Game.Step();
         w.RunIteration(w.LastMission);
@@ -351,7 +353,7 @@ public class MissionRollTests
         var w = new MissionWorld(new MissionParams { InciteInputMode = mode });
         w.Hold(T, Side.Empire, 50);
         w.Agent(Leia, T, lead: 30);
-        w.Stub!.Expect(0, 99, draw);
+        w.Stub!.Expect(0, 99, Bt(1, draw)); // B2b: Leia's betrayal draw first
         w.Start(Side.Alliance, MissionKind.InciteUprising, new[] { Leia }, T);
         w.Game.Step();
         w.RunIteration(w.LastMission);
@@ -375,7 +377,7 @@ public class MissionRollTests
     public void MI24_ResearchRoll(int draw, bool ok)
     {
         var w = ResearchWorld((Leia, 40));
-        w.Stub!.Expect(0, 99, draw);
+        w.Stub!.Expect(0, 99, Bt(1, draw)); // B2b: Leia's betrayal draw first
         w.Start(Side.Alliance, MissionKind.ShipResearch, new[] { Leia }, T);
         w.Game.Step();
         w.RunIteration(w.LastMission);
@@ -384,22 +386,23 @@ public class MissionRollTests
         Assert.Equal(MissionPhase.Working, w.M.Get(w.LastMission)!.Phase); // research repeats
     }
 
-    // m5-missions MI25 (and m5-research RS29): A (40) succeeds, RollMissionPoints draw 3 gives 4 points and +1 skill; B fails; AddMissionPoints 4; draw order 10, 3, 70
+    // m5-missions MI25 (and m5-research RS29): A (40) succeeds, RollMissionPoints draw 3 gives 4 points and +1 skill; B fails; AddMissionPoints 4;
+    // draw order (after the two betrayal draws, B2b) 10, 3, 70
     [Fact]
     public void MI25_ResearchDrawOrderAndPoints()
     {
         var w = ResearchWorld((Leia, 40), (Han, 40));
-        w.Stub!.Expect(0, 99, 10, 70).Expect(0, 6, 3);
+        w.Stub!.Expect(0, 99, Bt(2, 10, 70)).Expect(0, 6, 3);
         w.Start(Side.Alliance, MissionKind.ShipResearch, new[] { Han, Leia }, T);
         w.Game.Step();
         w.RunIteration(w.LastMission);
-        Assert.Equal(new[] { (0, 99), (0, 6), (0, 99) }, w.Stub.Requests.Where(r => r is (0, 99) or (0, 6)));
+        Assert.Equal(new[] { (0, 99), (0, 99), (0, 99), (0, 6), (0, 99) }, w.Stub.Requests.Where(r => r is (0, 99) or (0, 6)));
         Assert.Equal(41, w.Ch.Get(Leia)!.Skill(Rebellion.Core.Characters.Skill.ShipDesign));
         Assert.Equal(40, w.Ch.Get(Han)!.Skill(Rebellion.Core.Characters.Skill.ShipDesign));
         Assert.Equal(4, w.Host.Research.Points(Side.Alliance, Rebellion.Core.Research.ResearchKind.Ship));
     }
 
-    // m5-missions MI26: Reconnaissance on an undefended target: automatic success, no draw at all; SystemRevealed
+    // m5-missions MI26: Reconnaissance on an undefended target: automatic success, no success draw (only the betrayal draw, B2b); SystemRevealed
     [Fact]
     public void MI26_ReconIsAutomatic()
     {
@@ -410,7 +413,8 @@ public class MissionRollTests
         w.Game.Step();
         int from = w.Stub!.Requests.Count;
         w.RunIteration(w.LastMission);
-        Assert.Empty(w.RequestsSince(from));
+        Assert.Equal(new[] { (0, 99) }, w.RequestsSince(from));
+        Assert.Single(w.Events<MissionBetrayalRoll>());
         Assert.Equal((Side.Alliance, T, MissionKind.Reconnaissance), (w.Events<SystemRevealed>().Single().Side, w.Events<SystemRevealed>().Single().Target, w.Events<SystemRevealed>().Single().Source));
         Assert.True(w.Host.IsExplored(T, Side.Alliance)); // the fog's Recon reveal
     }
@@ -428,13 +432,15 @@ public class MissionRollTests
         var sfs = infiltratorMember ? new[] { w.Unit(Side.Alliance, Infiltrators, T) } : Array.Empty<int>();
         var exposed = new List<int>();
         w.M.OnTeamExposed = (ctx, c, side, cause) => { Assert.Equal(Side.Empire, side); exposed.Add(c.Id * 10 + (int)cause); };
-        w.Stub!.Expect(0, 99, rolls).Expect(0, 2, 0, 2); // the Sabotage timer (0..2) draws 0, then the facility pick draws 2
+        // B2b: one betrayal draw per member first; the Sabotage timer (0..2) draws 0, then the facility pick draws 2
+        w.Stub!.Expect(0, 99, Bt(2 + decoys.Length + sfs.Length, rolls)).Expect(0, 2, 0, 2);
         w.Start(Side.Alliance, MissionKind.Sabotage, new[] { Han, Leia }, T, sfs, decoys);
         w.Game.Step();
         return (w, exposed);
     }
 
-    // m5-missions MI39: the full draw log: 50 (decoy fails), 70 (x = 31, p = 70: not detected), 49 (Leia succeeds), 99 (Han fails), 2 (pick)
+    // m5-missions MI39: the full draw log: three betrayal draws (Han, Leia, the decoy; B2b), 50 (decoy fails), 70 (x = 31, p = 70: not detected),
+    // 49 (Leia succeeds), 99 (Han fails), 2 (pick)
     [Fact]
     public void MI39_FullDrawLog()
     {
@@ -442,7 +448,7 @@ public class MissionRollTests
         var facilities = w.Host.Economy.Objects.Where(o => o.Category == ObjectCategory.Facility).Select(o => o.Id).ToList();
         int from = w.Stub!.Requests.Count;
         w.RunIteration(w.LastMission);
-        Assert.Equal(new[] { (0, 99), (0, 99), (0, 99), (0, 99), (0, 2) }, w.RequestsSince(from));
+        Assert.Equal(new[] { (0, 99), (0, 99), (0, 99), (0, 99), (0, 99), (0, 99), (0, 99), (0, 2) }, w.RequestsSince(from));
         Assert.False(w.Events<MissionDecoyRoll>().Single().Decoyed);
         Assert.Equal((31, 70, false), (w.Events<MissionDetectionRoll>().Single().X, w.Events<MissionDetectionRoll>().Single().Chance, w.Events<MissionDetectionRoll>().Single().Detected));
         Assert.Equal(new[] { (Leia, 50, true), (Han, 50, false) }, w.Events<MissionMemberRoll>().Select(r => (r.Member, r.Chance, r.Success)));
@@ -453,14 +459,15 @@ public class MissionRollTests
         Assert.Empty(exposed);
     }
 
-    // m5-missions MI40: as MI39 with detection draw 69: MissionFoiled, no success draws, OnTeamExposed(Foiled) for Leia then Han; two draws
+    // m5-missions MI40: as MI39 with detection draw 69: MissionFoiled, no success draws, OnTeamExposed(Foiled) for Leia then Han; five draws
+    // (three betrayal draws, B2b, then the decoy and the detection)
     [Fact]
     public void MI40_FoiledCallsTheExposureHook()
     {
         var (w, exposed) = SabotageWorld(new[] { 50, 69 }, decoy: true);
         int from = w.Stub!.Requests.Count;
         w.RunIteration(w.LastMission);
-        Assert.Equal(2, w.RequestsSince(from).Count);
+        Assert.Equal(5, w.RequestsSince(from).Count);
         Assert.Single(w.Events<MissionFoiled>());
         Assert.Empty(w.Events<MissionMemberRoll>());
         Assert.Equal(new[] { Leia * 10 + (int)ExposureCause.Foiled, Han * 10 + (int)ExposureCause.Foiled }, exposed);
@@ -500,7 +507,7 @@ public class MissionRollTests
         w.Agent(Leia, T, dip: 100);
         int calls = 0;
         w.M.OnTeamExposed = (_, _, _, _) => calls++;
-        w.Stub!.Expect(0, 99, 99);
+        w.Stub!.Expect(0, 99, Bt(1, 99)); // B2b: Leia's betrayal draw first
         w.Start(Side.Alliance, MissionKind.Diplomacy, new[] { Leia }, T);
         w.Game.Step();
         int timers = w.Stub.Count(0, 10);

@@ -144,13 +144,17 @@ public sealed class MissionModule
     // ================================================================== members and defenders
 
     /// <summary>A team or decoy unit with the three skills the rules read (a special force uses its class columns). rule: §Special forces.</summary>
-    private readonly record struct Agent(bool IsCharacter, int Id, int Espionage, int Combat, int Leadership, CharacterRecord? C);
+    /// <remarks>
+    /// Force is the current Force (+0x8c, our EffectiveForce), 0 for a character who is not a Force user and for a special force; Loyalty is the
+    /// character's loyalty, or the special-force class's (SPECFCSD word 26, 100, variance 0). rule: §3 Force sensing, Betrayal (Traced B2b).
+    /// </remarks>
+    private readonly record struct Agent(bool IsCharacter, int Id, int Espionage, int Combat, int Leadership, CharacterRecord? C, int Force = 0, int Loyalty = 0);
 
     private Agent? CharAgent(int id) => _ch.Get(id) is { } c
-        ? new Agent(true, id, c.Skill(Skill.Espionage), c.Skill(Skill.Combat), c.Skill(Skill.Leadership), c) : null;
+        ? new Agent(true, id, c.Skill(Skill.Espionage), c.Skill(Skill.Combat), c.Skill(Skill.Leadership), c, c.ForceUser ? c.EffectiveForce : 0, c.Loyalty) : null;
 
     private Agent? SfAgent(int id) => E.Objects.TryGetValue(id, out var o) && _troops.Data.SpecialForce(o.Class) is { } k
-        ? new Agent(false, id, k.Espionage, k.Combat, k.Leadership, null) : null;
+        ? new Agent(false, id, k.Espionage, k.Combat, k.Leadership, null, 0, k.LoyaltyBase) : null;
 
     /// <summary>Non-decoy members: characters in ascending id, then special forces in ascending object id. rule: §2 step 2.</summary>
     private List<Agent> Team(MissionGroup m) =>
@@ -652,8 +656,11 @@ public sealed class MissionModule
         if (TargetReason(m) != null || KeyGate(m.Kind, m.TargetCharacter) != null) { End(ctx, m, MissionOutcome.TargetInvalid, t); return; } // rule: m5-missions §6a.1
         var rec = Data.Get(m.Kind);
         bool key = IsKeyTarget(m.Kind, m.TargetCharacter, out int keyCap);
-        // 1. decoys and detection
-        if (rec.Foilable && Walk(ctx, m, t) is { } d) { Foil(ctx, m, d, t); return; }
+        // 1. Force sensing, betrayal, then (not foiled) decoys and detection. rule: m5-missions §3 order of the checks (Traced B2b: 0x589970)
+        var foil = Sense(ctx, m, t);
+        if (foil == null && BetrayalRuns(rec)) foil = Betray(ctx, m, t);
+        if (foil == null && rec.Foilable && Walk(ctx, m, t) is { } d) foil = new FoilBy(MissionFoilCause.Detected, d, 0);
+        if (foil != null) { Foil(ctx, m, foil, t); return; }
 
         // 2. success rolls, one draw per non-decoy member (characters by id, then special forces by id); Research draws its points right after a success
         bool recon = m.Kind == MissionKind.Reconnaissance;
@@ -796,12 +803,151 @@ public sealed class MissionModule
         return null;
     }
 
-    // rule: §4 Foiled: MissionFoiled, the fog's MissionDetected (AgentDetected sighting for the defender), the exposure hooks, then the end.
-    private void Foil(StepContext ctx, MissionGroup m, Defender d, int t)
+    /// <summary>What foiled the mission: the detecting defender (Detected), or the senser or traitor (Character).</summary>
+    private sealed record FoilBy(MissionFoilCause Cause, Defender? Defender, int Character);
+
+    // ================================================================== Force sensing (B2b)
+
+    /// <summary>
+    /// <c>p = Force(member) + Force(senser) + GNPRTB 3587</c>, 0 when either Force is 0. A draw is made only when p &gt; 0. rule: §3 Force sensing
+    /// step 3 (Traced B2b: 0x55e4d0).
+    /// </summary>
+    public int SenseChance(int memberForce, int senserForce) =>
+        memberForce == 0 || senserForce == 0 ? 0 : memberForce + senserForce + Params.SenseConstant;
+
+    /// <summary>
+    /// The sensers of a mission at its target: characters of the other side, placed and not captured or dead, with Force at least GNPRTB 3586,
+    /// standing at the target system (on the planet or aboard a fleet there, per ForceSenseScope), by id. rule: §3 Force sensing, Sensers
+    /// (Traced B2b: 0x588840; scope DEFAULT Both).
+    /// </summary>
+    public List<CharacterRecord> Sensers(MissionGroup m) =>
+        _ch.InPlay.Where(c => c.Side != m.Side && c.Status is not (CharacterStatus.Captured or CharacterStatus.Dead)
+            && (c.ForceUser ? c.EffectiveForce : 0) >= Params.SenserMinForce && _ch.LocationOf(c) == m.Target
+            && Params.ForceSenseScope switch { ForceSenseScope.Planet => c.AttachedFleet == 0, ForceSenseScope.Fleets => c.AttachedFleet != 0, _ => true })
+        .ToList();
+
+    // Luke first, then Vader, then the rest one at a time, each picked k = rand(0..n-1) among those left (no draw when one is left). Lazy: a pick
+    // is drawn only when the next one is taken. rule: §3 Force sensing steps 1 and 2 (Traced B2b: 0x58a9e0, 0x58ac50, 0x58aca0).
+    private IEnumerable<T> SenseOrder<T>(StepContext ctx, List<T> items, Func<T, int> id)
     {
-        int id = m.Id, def = d.Unit.Id; var side = m.Side; string target = m.Target, cls = d.Unit.Class;
-        ctx.Emit((i, _) => new MissionFoiled(i, t, id, side, target, def, cls));
-        _fog.OnMissionDetected(ctx, d.Unit.Side ?? Other(m.Side), m.Target);
+        var rest = new List<T>(items);
+        foreach (int first in new[] { Params.SenseFirstCharacter, Params.SenseSecondCharacter })
+        {
+            int at = rest.FindIndex(x => id(x) == first);
+            if (at < 0) continue;
+            var x = rest[at]; rest.RemoveAt(at);
+            yield return x;
+        }
+        while (rest.Count > 0)
+        {
+            int k = rest.Count == 1 ? 0 : ctx.Rng.NextInt(0, rest.Count - 1);
+            var x = rest[k]; rest.RemoveAt(k);
+            yield return x;
+        }
+    }
+
+    /// <summary>
+    /// Force sensing (0x589e40): for each senser in order, the group's Force users (team and decoys, Force at least GNPRTB 3585) in order, one draw
+    /// per pair with p &gt; 0. A hit on a team member foils the mission (a sensed decoy foils nothing); every hit gives the discovered-Force-user
+    /// notice. A senser takes members until his own discovered Force user is set, so he stops at his first hit, and one who already has one gets a
+    /// single try per check. Every senser is processed; sensing never stops at a foil. Returns the first foiling hit, or null. rule: §3 Force sensing
+    /// (Traced B2b).
+    /// </summary>
+    private FoilBy? Sense(StepContext ctx, MissionGroup m, int t)
+    {
+        if (!Params.ForceSensing) return null;
+        var members = Team(m).Select(a => (a, decoy: false)).Concat(Decoys(m).Select(a => (a, decoy: true)))
+            .Where(x => x.a.IsCharacter && x.a.Force >= Params.SensedMinForce && x.a.C!.Status != CharacterStatus.Captured).ToList();
+        if (members.Count == 0) return null;
+        var sensers = Sensers(m);
+        FoilBy? foil = null;
+        int id = m.Id; var side = m.Side; string target = m.Target;
+        foreach (var s in SenseOrder(ctx, sensers, c => c.Id))
+        {
+            foreach (var (a, decoy) in SenseOrder(ctx, members, x => x.a.Id))
+            {
+                int p = SenseChance(a.Force, s.ForceUser ? s.EffectiveForce : 0);
+                if (p > 0)
+                {
+                    int r = ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1);
+                    bool hit = r < p;
+                    int mid = a.Id, sid = s.Id;
+                    ctx.Emit((i, _) => new MissionForceSenseRoll(i, t, id, side, target, mid, sid, p, r, hit));
+                    if (hit)
+                    {
+                        bool foils = !decoy;
+                        if (foils && foil == null) foil = new FoilBy(MissionFoilCause.ForceSensed, null, s.Id);
+                        ctx.Emit((i, _) => new MissionForceSensed(i, t, id, side, target, mid, decoy, sid, foils));
+                        DiscoverEachOther(ctx, m, a.C!, s, t);
+                    }
+                }
+                if (s.DiscoveredForceUser != 0) break; // rule: §3 Force sensing step 5 (0x58a370)
+            }
+        }
+        return foil;
+    }
+
+    // rule: §3 Force sensing step 4 (0x55ff60 -> 0x4ee500): unless both already have a discovered Force user, each records the other and both
+    // sides are told.
+    private static void DiscoverEachOther(StepContext ctx, MissionGroup m, CharacterRecord member, CharacterRecord senser, int t)
+    {
+        if (member.DiscoveredForceUser != 0 && senser.DiscoveredForceUser != 0) return;
+        member.DiscoveredForceUser = senser.Id; senser.DiscoveredForceUser = member.Id;
+        int id = m.Id, mid = member.Id, sid = senser.Id; var ms = member.Side; var ss = senser.Side;
+        ctx.Emit((i, _) => new ForceUserDiscovered(i, t, id, mid, ms, sid, ss));
+    }
+
+    // ================================================================== betrayal (B2b)
+
+    // rule: §3 Betrayal (the mission's own test, vtable +0x1c8, not read: BetrayalKinds DEFAULT Foilable).
+    private bool BetrayalRuns(MissionRecord rec) => Params.Betrayal && (Params.BetrayalKinds == BetrayalKinds.All || rec.Foilable);
+
+    /// <summary>
+    /// Betrayal (0x589f10): every member, team then decoys (B2a's order), draws once even at chance 0: betrays if rand(0..99) &lt; 100 - loyalty; the
+    /// walk stops at the first traitor, who foils the mission. Then every other member draws once even at Force 0: identifies the traitor if
+    /// rand(0..99) &lt; his Force; that walk stops at the first identification. rule: §3 Betrayal (Traced B2b: 0x55e520, 0x55e550, 0x4ee5c0).
+    /// </summary>
+    private FoilBy? Betray(StepContext ctx, MissionGroup m, int t)
+    {
+        var all = Team(m).Concat(Decoys(m)).ToList();
+        int id = m.Id; var side = m.Side; string target = m.Target;
+        Agent? traitor = null;
+        foreach (var a in all)
+        {
+            int p = Data.Numbers.RollDie - a.Loyalty, r = ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1);
+            bool betrays = r < p;
+            int mid = a.Id; bool isChar = a.IsCharacter;
+            ctx.Emit((i, _) => new MissionBetrayalRoll(i, t, id, side, target, mid, isChar, p, r, betrays));
+            if (betrays) { traitor = a; break; }
+        }
+        if (traitor is not { } tr) return null;
+        {
+            int mid = tr.Id; bool isChar = tr.IsCharacter;
+            ctx.Emit((i, _) => new MissionBetrayed(i, t, id, side, target, mid, isChar));
+        }
+        foreach (var o in all)
+        {
+            if (o.IsCharacter == tr.IsCharacter && o.Id == tr.Id) continue;
+            int r = ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1);
+            if (r >= o.Force) continue;
+            if (o.C != null && tr.IsCharacter) o.C.IdentifiedTraitor = tr.Id;
+            int oid = o.Id, tid = tr.Id; bool tc = tr.IsCharacter;
+            ctx.Emit((i, _) => new TraitorIdentified(i, t, id, oid, tid, tc, side));
+            break;
+        }
+        return new FoilBy(MissionFoilCause.Betrayed, null, tr.Id);
+    }
+
+    // rule: §4 Foiled: MissionFoiled (with its cause), the fog's MissionDetected (AgentDetected sighting for the defender; the other side for a
+    // sensing or a betrayal, DEFAULT: 0x58a1c0, the foiled handling shared by every cause, is B2c), the exposure hooks, then the end.
+    private void Foil(StepContext ctx, MissionGroup m, Defender d, int t) => Foil(ctx, m, new FoilBy(MissionFoilCause.Detected, d, 0), t);
+
+    private void Foil(StepContext ctx, MissionGroup m, FoilBy f, int t)
+    {
+        int id = m.Id, def = f.Defender?.Unit.Id ?? 0, who = f.Character; var side = m.Side; string target = m.Target, cls = f.Defender?.Unit.Class ?? "";
+        var cause = f.Cause;
+        ctx.Emit((i, _) => new MissionFoiled(i, t, id, side, target, def, cls, cause, who));
+        _fog.OnMissionDetected(ctx, f.Defender?.Unit.Side ?? Other(m.Side), m.Target);
         Expose(ctx, m, ExposureCause.Foiled);
         End(ctx, m, MissionOutcome.Foiled, t);
     }

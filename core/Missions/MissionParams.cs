@@ -47,6 +47,26 @@ public enum SabotageSkill { Average, Combat }
 /// <summary>Which facility a Sabotage destroys. rule: m5-missions §6 (Sabotage).</summary>
 public enum SabotageTargetMode { RandomFacility, Chosen }
 
+/// <summary>Where the Force sensers of a mission check stand. rule: m5-missions §3 Force sensing (B2b §2 "Where"; the scope per kind and phase is B2c).</summary>
+public enum ForceSenseScope
+{
+    /// <summary>DEFAULT: every qualified character at the target system, on the planet or aboard any fleet there.</summary>
+    Both,
+    /// <summary>Only characters on the planet (riding no fleet).</summary>
+    Planet,
+    /// <summary>Only characters aboard fleets at the system.</summary>
+    Fleets,
+}
+
+/// <summary>Which mission kinds run the betrayal check (the original's test, mission vtable +0x1c8, was not read). rule: m5-missions §3 Betrayal.</summary>
+public enum BetrayalKinds
+{
+    /// <summary>DEFAULT: the kinds with Foilable = true.</summary>
+    Foilable,
+    /// <summary>Every kind that iterates.</summary>
+    All,
+}
+
 /// <summary>
 /// Every switch and number of m5-missions §Defaults for undecided items, with the sheet's DEFAULT. Settings, not saved (pass them again on load
 /// through <see cref="Setup.GameSettings.Missions"/>). A switch whose other value has no rule in the sheet ("no rule exists") is refused at attach
@@ -88,6 +108,26 @@ public sealed record MissionParams
     public int KeyTeamMinEspionage { get; init; } = 60;
     /// <summary>Percent of successful qualified attempts that kidnap instead of kill. Decided Paul 2026-10-16 ("very very low"), value 3 Proposal; m5-missions §6a.</summary>
     public int KeyKidnapPercent { get; init; } = 3;
+
+    // ---- Force sensing and betrayal (B2b). rule: m5-missions §3 Force sensing, Betrayal.
+    /// <summary>Enemy Force users at the target can sense the group (0x589e40). DEFAULT true (Traced B2b).</summary>
+    public bool ForceSensing { get; init; } = true;
+    /// <summary>Every member may betray on each check (0x589f10). DEFAULT true (Traced B2b).</summary>
+    public bool Betrayal { get; init; } = true;
+    /// <summary>DEFAULT Both (the planet and fleet scopes of 0x589a40 are B2c).</summary>
+    public ForceSenseScope ForceSenseScope { get; init; } = ForceSenseScope.Both;
+    /// <summary>DEFAULT Foilable.</summary>
+    public BetrayalKinds BetrayalKinds { get; init; } = BetrayalKinds.Foilable;
+    /// <summary>Lowest Force of a group member who can be sensed. GNPRTB 3585 = 1 (Traced B2b, 0x5888a0).</summary>
+    public int SensedMinForce { get; init; } = 1;
+    /// <summary>Lowest Force of a senser. GNPRTB 3586 = 60 (Traced B2b, 0x588840).</summary>
+    public int SenserMinForce { get; init; } = 60;
+    /// <summary>Sensing chance constant: p = Force(member) + Force(senser) + this. GNPRTB 3587 = -100 (Traced B2b, 0x55e4d0).</summary>
+    public int SenseConstant { get; init; } = -100;
+    /// <summary>Luke Skywalker, taken first among sensers and among group Force users (key 0x32000242: record 0x242 = 578). Traced B2b, 0x58a9e0.</summary>
+    public int SenseFirstCharacter { get; init; } = 578;
+    /// <summary>Darth Vader, taken second (key 0x35000281: record 0x281 = 641). Traced B2b, 0x58ac50.</summary>
+    public int SenseSecondCharacter { get; init; } = 641;
 
     // ---- switches whose other value has no rule (refused)
     /// <summary>DEFAULT false; true has no rule (refused).</summary>

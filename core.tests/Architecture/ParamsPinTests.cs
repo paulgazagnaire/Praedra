@@ -115,6 +115,11 @@ public class ParamsPinTests
         yield return ("DealParams.BandSpread (0x1e03)", deal.BandSpread, S, 0x1e03, 1);
         yield return ("DealParams.WeakBase", deal.WeakBase, S, 0x1e04, 1);
         yield return ("DealParams.BandSpread (0x1e05)", deal.BandSpread, S, 0x1e05, 1);
+        // m5-missions §3 Force sensing (B2b)
+        var mis = new Rebellion.Core.Missions.MissionParams();
+        yield return ("MissionParams.SensedMinForce", mis.SensedMinForce, G, 3585, 1);
+        yield return ("MissionParams.SenserMinForce", mis.SenserMinForce, G, 3586, 1);
+        yield return ("MissionParams.SenseConstant", mis.SenseConstant, G, 3587, 1);
     }
 
     // B1-own-importer Tests (pin): each named constant equals its GNPRTB / SDPRTB value, table named; flat across every column
