@@ -60,9 +60,10 @@ public class ParamsPinTests
         yield return ("EconomyParams.RimPopulatedPercent", eco.RimPopulatedPercent, G, 7731, 1);
         yield return ("EconomyParams.CoreEnergyBase", eco.CoreEnergyBase, G, 7721, 1);
         yield return ("EconomyParams.CoreEnergySpread", eco.CoreEnergySpread, G, 7722, 1);
-        // NOT PINNED, key mismatch (reported to the RE lead, neither side changed): CoreRawBase = 5 cites 7724 (file 9) and CoreRawSpread = 9
-        // cites 7723 (file 5); RimRawBase = 1 cites 7729 (file 14) and RimRawSpread = 14 cites 7728 (file 1). The values equal the file with
-        // the two keys of each pair swapped; m2-slots-and-resources lists them as "(7723, 7724)" and "(7728, 7729)" without saying which is which.
+        yield return ("EconomyParams.CoreRawBase", eco.CoreRawBase, G, 7723, 1);
+        yield return ("EconomyParams.CoreRawSpread", eco.CoreRawSpread, G, 7724, 1);
+        yield return ("EconomyParams.RimRawBase", eco.RimRawBase, G, 7728, 1);
+        yield return ("EconomyParams.RimRawSpread", eco.RimRawSpread, G, 7729, 1);
         yield return ("EconomyParams.RimEnergyBase", eco.RimEnergyBase, G, 7725, 1);
         yield return ("EconomyParams.RimEnergySpreadA", eco.RimEnergySpreadA, G, 7726, 1);
         yield return ("EconomyParams.RimEnergySpreadB", eco.RimEnergySpreadB, G, 7727, 1);
@@ -87,8 +88,8 @@ public class ParamsPinTests
         yield return ("SupportParams.DieSpread", sup.DieSpread, G, 7708, 1);
         // m3 assault, defenses, bombardment
         yield return ("AssaultParams.LeadershipStep", asl.LeadershipStep, G, 0x201, 1);
-        // NOT PINNED, key mismatch (reported to the RE lead, neither side changed): DefenderDiesAtLeast = 6 cites 0x203 (file 4) and
-        // AttackerDiesAtMost = 4 cites 0x204 (file 6). m3-assault says "which id holds which is not recorded in units/02".
+        yield return ("AssaultParams.AttackerDiesAtMost", asl.AttackerDiesAtMost, G, 0x203, 1);
+        yield return ("AssaultParams.DefenderDiesAtLeast", asl.DefenderDiesAtLeast, G, 0x204, 1);
         yield return ("AssaultParams.CollateralPercent", asl.CollateralPercent, G, 0x205, 1);
         yield return ("DefenseParams.ShotChanceDivisor", def.ShotChanceDivisor, G, 0x200, 1);
         yield return ("BombardParams.CivilianSupportChange", bomb.CivilianSupportChange, G, 7705, 1);

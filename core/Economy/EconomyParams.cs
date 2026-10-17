@@ -69,13 +69,13 @@ public sealed record EconomyParams
     public int RimPopulatedPercent { get; init; } = 31;     // GNPRTB 7731
     public int CoreEnergyBase { get; init; } = 10;          // 7721
     public int CoreEnergySpread { get; init; } = 4;         // 7722
-    public int CoreRawBase { get; init; } = 5;              // 7724
-    public int CoreRawSpread { get; init; } = 9;            // 7723
+    public int CoreRawBase { get; init; } = 5;              // 7723
+    public int CoreRawSpread { get; init; } = 9;            // 7724
     public int RimEnergyBase { get; init; } = 1;            // 7725
     public int RimEnergySpreadA { get; init; } = 4;         // 7726
     public int RimEnergySpreadB { get; init; } = 9;         // 7727
-    public int RimRawBase { get; init; } = 1;               // 7729
-    public int RimRawSpread { get; init; } = 14;            // 7728
+    public int RimRawBase { get; init; } = 1;               // 7728
+    public int RimRawSpread { get; init; } = 14;            // 7729
 
     // ---- maintenance sheet
     /// <summary>Autoscrap period in days (GNPRTB 7168). Lead.</summary>
