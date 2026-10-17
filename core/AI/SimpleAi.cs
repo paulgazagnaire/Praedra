@@ -926,7 +926,7 @@ public sealed partial class SimpleAi
     /// trip it was on is lost. Measured on the v5 map (Alliance vs passive Empire, seed 1): a strike pile fetching troops went around a blocked
     /// stop to an Imperial system, turned back to the rally, and did that again for 200 days with its troop holds empty. So the leg ends at
     /// the first stop of the way around that the side holds (there DecideOwn plans the rest of the trip again), when the direct trip there is
-    /// clear; with no such stop, the whole way around goes as one order with waypoints (m1-travel §Path rule (3)). Null = keep the first stop.
+    /// clear. Null (no such stop) = keep the first stop, as the AI of before.
     /// </summary>
     private string? DetourLeg(Fleet f, Rebellion.Core.Travel.PathResult around, int speed)
     {

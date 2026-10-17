@@ -42,7 +42,7 @@ internal static class SimCli
         --fog (e.g. --fog --passive alliance: the fogged Empire hunts a passive Alliance). --trace with --fog also prints the Empire's HQ belief.
         The AIs use characters (fleet and system posts) and missions (SimpleAiParams.UseCharactersAndMissions, DEFAULT on); --no-agents turns
         that off (the AI of before, byte for byte). --empire-level / --alliance-level (easy, medium, hard; core/AI/AiLevel.cs) play that side at a
-        difficulty level, fog on (AiLevels.For); --empire-params / --alliance-params set SimpleAiParams values on top (as in tourney). --hunt-log prints every Espionage and Reconnaissance the Empire starts and how it ends, next to the
+        difficulty level, fog on (AiLevels.For); --empire-params / --alliance-params set SimpleAiParams values on top (as in tourney; they turn --fog on). --hunt-log prints every Espionage and Reconnaissance the Empire starts and how it ends, next to the
         true Rebel HQ of that day (a trainer's log; the AI never reads the truth). The report adds missions started and succeeded by side and kind, posts given, and the days
         the Empire's own picture first showed (and later re-found) the Rebel HQ.
         battle runs N seeded battles (Classic: m4-battle-classic, New: m4-battle-new; --ruleset, DEFAULT classic) at a synthetic system where every retreat has a destination, and prints how often each
