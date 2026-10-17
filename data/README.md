@@ -44,7 +44,7 @@ Characters (m5-characters-and-force, m5-setup-and-victory P9), copied 2026-10-12
 Missions (m5-missions):
 - `original/mission-records.csv` holds the 25 `MISSNSD` records (kind and success table names are ours, missions/01).
 - `original/mission-tables.csv` holds every row of `FOILTB`, the ten `*MSTB` success tables and the decoy table (written as `FDECOYTB`; the importer checks that `TDECOYTB` is identical). Decoys are accepted. The lookup mode stays `Step` (DEFAULT) until B2.
-- `mission-numbers.csv`: the rows that are one GNPRTB value are in `original/` (detection constant, officer percentages, incite support, leadership divisor, research skill gain, group speed, Han's mission speed); the rest (die size, foil below the first row, diplomacy and subdue ranges, Han's record id) are in `design/mission-numbers.csv`. Each row keeps its source tag.
+- `mission-numbers.csv`: the rows that are one GNPRTB value are in `original/` (detection constant, officer percentages, incite support, leadership divisor, research skill gain, group speed, Han's mission speed); the rest (die size, diplomacy and subdue ranges, Han's record id; FOILTB below its first row uses the common lookup since B2a) are in `design/mission-numbers.csv`. Each row keeps its source tag.
 - `design/mission-foilable.csv` says which kinds a detection can foil (DEFAULT per the sheet).
 - `design/assassination-key-targets.csv` lists the key characters (Luke 578, Mon Mothma 576, Vader 641, Palpatine 640) and their success cap in percent for Assassination and Abduction (m5-missions section 6a; Decided Paul 2026-10-16, numbers Proposal). Tune the caps here, no code change.
 

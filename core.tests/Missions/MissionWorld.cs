@@ -49,10 +49,10 @@ internal sealed class MissionWorld
     private readonly GameSettings _settings;
     private readonly GameData _gd;
 
-    public MissionWorld(MissionParams? p = null, bool decoys = false, ulong? seed = null)
+    public MissionWorld(MissionParams? p = null, bool decoys = false, ulong? seed = null, IReadOnlyList<TableRow>? decoyTable = null)
     {
         _settings = new GameSettings { IncidentsEnabled = false, DebugOrdersEnabled = true, Economy = new EconomyParams { ScrapPeriod = 1_000_000 }, Missions = p };
-        _gd = decoys ? DecoyData : Data;
+        _gd = decoyTable != null ? Data with { Missions = Data.Missions.WithDecoyTable(decoyTable) } : decoys ? DecoyData : Data;
         if (seed is ulong s) Host = GameHost.New(s, _settings, _gd);
         else { Stub = new StubRng(); Host = GameHost.New(Stub, _settings, _gd); }
     }

@@ -5,13 +5,13 @@ namespace Rebellion.Core.Missions;
 /// <summary>How a *MSTB (and the decoy) table is read between rows. rule: m5-missions §Mission tables (MstbLookup).</summary>
 public enum MstbLookupMode
 {
-    /// <summary>DEFAULT: the last row whose threshold is at or below x (how FOILTB was traced; MSTB not checked, Lead).</summary>
+    /// <summary>DEFAULT, the original: the last row whose threshold is at or below x, for every table (Traced B2a: 0x55bed0 -> 0x58b7e0 -> 0x595090).</summary>
     Step,
     /// <summary>Piecewise linear between rows, truncating toward zero (Open Rebellion's wording, unverified vs original).</summary>
     Linear,
 }
 
-/// <summary>Below the first row of a *MSTB table. rule: m5-missions §Mission tables (MstbBelowFirstRow).</summary>
+/// <summary>Below the first row of a table. FirstRowValue (DEFAULT) is the original (Traced B2a: 0x595090; 0x53e340 always finds a row). rule: m5-missions §Mission tables (MstbBelowFirstRow).</summary>
 public enum MstbBelowFirstRow { FirstRowValue, Zero, Always }
 
 /// <summary>How the members' rolls combine. rule: m5-missions §2 step 3 (SuccessRule).</summary>

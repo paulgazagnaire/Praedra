@@ -28,7 +28,7 @@ public class MissionRollTests
 
     // m5-missions MI1
     [Theory]
-    [InlineData(-21, 100)] [InlineData(-20, 99)] [InlineData(-19, 98)] [InlineData(-10, 98)] [InlineData(-9, 96)] [InlineData(0, 96)]
+    [InlineData(-21, 99)] [InlineData(-20, 99)] [InlineData(-19, 98)] [InlineData(-10, 98)] [InlineData(-9, 96)] [InlineData(0, 96)]
     [InlineData(1, 94)] [InlineData(10, 94)] [InlineData(11, 90)] [InlineData(100, 30)] [InlineData(101, 25)] [InlineData(500, 25)]
     public void MI1_FoilTable(int x, int p) => Assert.Equal(p, new MissionWorld().M.FoilChance(x));
 
@@ -71,7 +71,7 @@ public class MissionRollTests
     [InlineData(60, 10, 0, 31, 41, 60)]   // MI5: 31 * 35 / 100 = 10 (truncated; 11 would give 70)
     [InlineData(70, 20, 2, 0, 49, 60)]    // MI6: two non-decoy special forces
     [InlineData(100, 0, 0, 0, 101, 25)]   // MI7
-    [InlineData(40, 70, 0, 0, -29, 100)]  // MI8: no row
+    [InlineData(40, 70, 0, 0, -29, 99)]   // MI8: below the first row, the first row (B2a: was 100)
     public void MI4_to_MI8_DetectionInput(int avg, int det, int sfs, int officer, int x, int p)
     {
         var m = new MissionWorld().M;
@@ -120,13 +120,13 @@ public class MissionRollTests
         Assert.Equal((101, 25, detected), (roll.X, roll.Chance, roll.Detected));
     }
 
-    // m5-missions MI8: x below -20 has no row: p = 100, the draw is still made (one draw consumed), detected
+    // m5-missions MI8: x below -20: the first row, p = 99 (B2a: was 100), the draw is still made (one draw consumed); draw 98 detects
     [Fact]
     public void MI8_NoRowStillDraws()
     {
-        var (w, _) = EspionageAtT(w => { w.Agent(Leia, T, esp: 1); w.Unit(Side.Empire, DarkTrooper, T); }, new[] { 99 });
+        var (w, _) = EspionageAtT(w => { w.Agent(Leia, T, esp: 1); w.Unit(Side.Empire, DarkTrooper, T); }, new[] { 98 });
         var roll = w.Events<MissionDetectionRoll>().Single();
-        Assert.Equal((-28, 100, 99, true), (roll.X, roll.Chance, roll.Roll, roll.Detected));
+        Assert.Equal((-28, 99, 98, true), (roll.X, roll.Chance, roll.Roll, roll.Detected));
         Assert.Equal(1, Rolls(w));
     }
 
@@ -207,7 +207,8 @@ public class MissionRollTests
         Assert.Equal(b, w.Events<MissionDetectionRoll>().Single().Defender);
     }
 
-    // m5-missions MI13: one defender, two decoys (60 and 55); draws 50 (decoy 1 fails), 10 (decoy 2 succeeds): decoyed after two draws
+    // m5-missions MI13 (B2a): one defender, two decoys (60 and 55): one pick k = rand(0..1) = 1 (the second decoy, Guerrillas), then one roll 10:
+    // decoyed after two draws (pick, roll). Before B2a every decoy was tried in turn.
     [Fact]
     public void MI13_SecondDecoySucceeds()
     {
@@ -216,11 +217,13 @@ public class MissionRollTests
         w.Agent(Leia, T, esp: 50);
         int d1 = w.Unit(Side.Alliance, Infiltrators, T), d2 = w.Unit(Side.Alliance, Guerrillas, T);
         w.Unit(Side.Empire, ImpFleet, T);
-        w.Stub!.Expect(0, 99, 50, 10, 99);
+        w.Stub!.Expect(0, 1, 1);
+        w.Stub!.Expect(0, 99, 10, 99);
         w.Start(Side.Alliance, MissionKind.Espionage, new[] { Leia }, T, decoys: new[] { d2, d1 });
         w.Game.Step();
         w.RunIteration(w.LastMission);
-        Assert.Equal(new[] { (d1, 40, false), (d2, 35, true) }, w.Events<MissionDecoyRoll>().Select(r => (r.Decoy, r.X, r.Decoyed)));
+        Assert.Equal(new[] { (d2, 35, true) }, w.Events<MissionDecoyRoll>().Select(r => (r.Decoy, r.X, r.Decoyed)));
+        Assert.Equal(1, w.Stub.Count(0, 1));
         Assert.Empty(w.Events<MissionDetectionRoll>());
     }
 
