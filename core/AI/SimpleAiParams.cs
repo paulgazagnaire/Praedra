@@ -124,16 +124,19 @@ public sealed record SimpleAiParams
     public bool DetourWithWaypoints { get; init; } = false;
     /// <summary>
     /// A detour whose first stop is a system the side does not hold ends instead at the first held stop of the way around (SimpleAi.DetourLeg),
-    /// so the fleet does not forget its trip at a stranger's system and turn back. DEFAULT true (AI trainer 2026-10-17: a strike pile bounced
-    /// between its rally system and an Imperial stop for 200 days on the v5 map). False = the AI of before.
+    /// so the fleet does not forget its trip at a stranger's system and turn back (AI trainer 2026-10-17: a strike pile bounced between its
+    /// rally system and an Imperial stop for 200 days on the v5 map). DEFAULT off: with this and InvasionBatchesOnly on, Medium against
+    /// Medium without them took 54% of the systems over 16 seeds x both sides, inside the 55% a placebo change scored, and the single-seed
+    /// play tests took other courses (fogged Empire seed 3 had no winner by day 1900). Off = the AI of before.
     /// </summary>
-    public bool DetourToHeldStop { get; init; } = true;
+    public bool DetourToHeldStop { get; init; } = false;
     /// <summary>
     /// The invasion regiments the AI counts as ready (InvasionRegimentTarget) are those aboard and the spares standing at least
-    /// MinLaunchRegiments together; a lone spare on a far system is not counted. DEFAULT true (AI trainer 2026-10-17: thirty lone starting
-    /// regiments on Alliance worlds stopped every invasion build on the v5 map). False = the AI of before (every spare counts).
+    /// MinLaunchRegiments together; a lone spare on a far system is not counted (AI trainer 2026-10-17: thirty lone starting regiments on
+    /// Alliance worlds stopped every invasion build on the v5 map). DEFAULT off, measured with DetourToHeldStop (see there); alone it took the
+    /// passive Alliance's HQ on day 748 instead of 1282 but ended the AI-vs-AI seed 5 game on day 214 with no battle. Off = every spare counts.
     /// </summary>
-    public bool InvasionBatchesOnly { get; init; } = true;
+    public bool InvasionBatchesOnly { get; init; } = false;
     /// <summary>A strike pile of WinStrikeStrength fetches the regiments for the game-winning system first when at most this many regiments are believed there (-1 = never). DEFAULT.</summary>
     public int WinRushDefenders { get; init; } = 2;
     /// <summary>
