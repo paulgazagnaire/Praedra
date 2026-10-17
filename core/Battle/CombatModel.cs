@@ -15,6 +15,12 @@ public sealed record NewBattleParams
     public bool TorpedoesVsShields { get; init; }
     /// <summary>A laser shot can break through a shield by the arithmetic test (6 x 0.167 = 1.002 against deflection 1.0). DEFAULT off: lasers never penetrate a capital's shield. rule: m4-battle-new Lead update 3.</summary>
     public bool LaserPenetratesShield { get; init; }
+    /// <summary>
+    /// Tractor beams hold retreat: a ship with tractor_beam_power &gt; 0 and its tractor counter at 0 holds one smaller enemy ship (lower max hull) that
+    /// tries to jump out of the battle, so it stays on the field. New rules only (the Classic engine never reads it; in the 1998 game tractors do not
+    /// block retreat). Decided Paul 2026-10-16 (battle only); DEFAULT on. rule: m4-retreat-damage-repair §6.
+    /// </summary>
+    public bool TractorBeamsHoldRetreat { get; init; } = true;
 
     // ---- distances and movement. rule: m4-battle-new §3, §5 (Proposal value, tune), Lead update 2
     /// <summary>The start distance is the longest weapon range present + this. Lead.</summary>

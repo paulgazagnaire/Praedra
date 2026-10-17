@@ -49,6 +49,8 @@ public abstract record BattleStep;
 public sealed record UnitDestroyedStep(BattleUnit Unit, int Second, UnitLossReason Reason) : BattleStep;
 /// <summary>The first refusal of a retreat in this battle. rule: m4-retreat-damage-repair §1.</summary>
 public sealed record RetreatRefusedStep(Side Side, RetreatRefusal Reason) : BattleStep;
+/// <summary>New rules: a ship of a retreating side was held by an enemy tractor beam and stays on the field. rule: m4-retreat-damage-repair §6.</summary>
+public sealed record TractorHeldStep(BattleUnit Ship, BattleUnit Holder, int Second) : BattleStep;
 /// <summary>A side retreated (its units are marked <see cref="BattleUnit.Left"/>). rule: m4-retreat-damage-repair §2.</summary>
 public sealed record SideRetreatedStep(Side Side, int Second) : BattleStep;
 

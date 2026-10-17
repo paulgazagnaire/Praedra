@@ -36,8 +36,8 @@ public sealed record BlockadeLifted(int Index, int Day, string System, Side Bloc
 // ---- M3 fleet events. rule: m3-fleets §Where it runs and what it draws (event table). Day is K for orders (step 1) and K + 1 for
 // the hooks (steps 3 to 5, slot 6.6.a), like the events above.
 
-/// <summary>Why a spare or other new fleet was made. rule: m3-fleets §Where it runs (FleetCreated).</summary>
-public enum FleetCreateCause { Spare, CreateFleet, SplitFleet, Squadrons }
+/// <summary>Why a spare or other new fleet was made. rule: m3-fleets §Where it runs (FleetCreated); TractorHeld: m4-retreat-damage-repair §6.</summary>
+public enum FleetCreateCause { Spare, CreateFleet, SplitFleet, Squadrons, TractorHeld }
 
 /// <summary>Why a fleet ceased to exist. rule: m3-fleets §Where it runs (FleetDissolved).</summary>
 public enum DissolveCause { Empty, Merged, SquadronsArrived }

@@ -47,10 +47,11 @@ public abstract record Order(long Sequence, Side Side);
 public sealed record SetMarkerOrder(long Sequence, Side Side, string Marker, int Value) : Order(Sequence, Side);
 
 /// <summary>
-/// Send a fleet to a system by the fastest lane path. Checked in step 1 (when processed, not when submitted).
-/// rule: m1-clock-and-orders §Orders in (MoveFleet). The handler lives in Rebellion.Core.Fleets.FleetModule.
+/// Send a fleet to a system by the fastest path, through the waypoints in order when there are any (null or empty = none).
+/// Checked in step 1 (when processed, not when submitted). rule: m1-clock-and-orders §Orders in (MoveFleet); m1-travel §Path rule (3) (waypoints).
+/// The handler lives in Rebellion.Core.Fleets.FleetModule.
 /// </summary>
-public sealed record MoveFleetOrder(long Sequence, Side Side, int FleetId, string Destination) : Order(Sequence, Side);
+public sealed record MoveFleetOrder(long Sequence, Side Side, int FleetId, string Destination, ValueList<string>? Waypoints = null) : Order(Sequence, Side);
 
 /// <summary>
 /// Scrap one completed object of the side at once (step 1). rule: m2-construction §Scrapping, m2-maintenance §Scrapping and

@@ -24,6 +24,8 @@ public sealed class FleetModule
     private readonly Pathfinder _pathfinder;
 
     public Galaxy Galaxy { get; }
+    /// <summary>How ships travel in this game (configuration, not saved). rule: m1-travel §Switch.</summary>
+    public TravelMode Travel { get; }
     public BlockadeData Blockade { get; }
     /// <summary>The forced-stop trigger. A game setting; DEFAULT GravityWellShip (Paul 2026-10-16). Not part of the save (it is configuration).</summary>
     public ForcedStopTrigger Trigger { get; set; }
@@ -50,7 +52,7 @@ public sealed class FleetModule
 
     private FleetModule(Game game, Galaxy galaxy, IReadOnlyDictionary<string, ShipClass> ships, BlockadeData blockade, ForcedStopTrigger trigger, NewBattleData combat, TravelMode travel)
     {
-        _game = game; Galaxy = galaxy; _ships = ships; Blockade = blockade; Trigger = trigger;
+        _game = game; Galaxy = galaxy; _ships = ships; Blockade = blockade; Trigger = trigger; Travel = travel;
         _pathfinder = new Pathfinder(galaxy, travel);
         Strength = new CombatStrength(combat);
         _reference = Blockade.Reference(ships).ToList();
@@ -158,8 +160,8 @@ public sealed class FleetModule
     public Side? OwnerOf(string system) => State.SystemOwners.TryGetValue(system, out var s) ? s : null;
 
     /// <summary>Queue a MoveFleet order (validated in the next Step). Returns its sequence number.</summary>
-    public long SubmitMove(Side side, int fleetId, string destination) =>
-        _game.Submit(seq => new MoveFleetOrder(seq, side, fleetId, destination));
+    public long SubmitMove(Side side, int fleetId, string destination, IReadOnlyList<string>? waypoints = null) =>
+        _game.Submit(seq => new MoveFleetOrder(seq, side, fleetId, destination, waypoints is { Count: > 0 } ? new ValueList<string>(waypoints.ToList()) : null));
 
     public long SubmitCreateFleet(Side side, IEnumerable<int> ships) => _game.Submit(seq => new CreateFleetOrder(seq, side, ships.ToList()));
     public long SubmitSplitFleet(Side side, int fleet, IEnumerable<int> ships) => _game.Submit(seq => new SplitFleetOrder(seq, side, fleet, ships.ToList()));
@@ -200,6 +202,47 @@ public sealed class FleetModule
 
     /// <summary>Fastest lane path for a given speed rating (construction deliveries travel like fleets). rule: m1-travel §Path rule.</summary>
     public PathResult FindPath(string from, string to, int speed) => _pathfinder.Find(from, to, speed);
+    /// <summary>
+    /// The path a MoveFleet order for this fleet would fly if accepted now: the fleet's speed (navigator included), from where it stands,
+    /// through the waypoints in order, then to the destination; the fastest path on each stretch. Rejected like the order would be
+    /// (in transit, immobile, unknown system, unreachable, already there). The order handler uses this same function, so the preview is
+    /// the path flown. rule: m1-travel §Path rule (3) (waypoints) and (5) (preview).
+    /// </summary>
+    public PathResult PlanPath(Fleet fleet, string destination, IReadOnlyList<string>? waypoints = null)
+    {
+        if (fleet.Transit != null || fleet.At == null) return PathResult.Rejected(PathStatus.InTransit);
+        int speed = SpeedOf(fleet);
+        if (SpeedAdjust != null) speed = SpeedAdjust(fleet, speed); // rule: m5-characters-and-force §Navigator (fixed when the order is accepted)
+        return FindVia(fleet.At, waypoints, destination, speed);
+    }
+
+    /// <summary>
+    /// Fastest path through stops in order. A waypoint equal to where the path already is (the start, or the stop before it) is skipped;
+    /// a waypoint equal to the destination is skipped; any stretch that fails fails the whole. rule: m1-travel §Path rule (3) (waypoints;
+    /// DEFAULT for repeats, the sheet names none).
+    /// </summary>
+    public PathResult FindVia(string from, IReadOnlyList<string>? waypoints, string to, int speed)
+    {
+        if (waypoints is not { Count: > 0 }) return _pathfinder.Find(from, to, speed);
+        var systems = new List<int>(); var ticks = new List<int>();
+        string at = from;
+        var stops = waypoints.Append(to).ToList();
+        for (int k = 0; k < stops.Count; k++)
+        {
+            string w = stops[k];
+            if (!Galaxy.TryFindSystem(w, out _)) return PathResult.Rejected(PathStatus.UnknownSystem);
+            if (w == at || (k < stops.Count - 1 && w == to)) continue;
+            var leg = _pathfinder.Find(at, w, speed);
+            if (!leg.Ok) return leg;
+            if (systems.Count == 0) systems.Add(leg.Systems[0]);
+            for (int i = 1; i < leg.Systems.Count; i++) systems.Add(leg.Systems[i]);
+            ticks.AddRange(leg.HopTicks);
+            at = w;
+        }
+        if (ticks.Count == 0) return _pathfinder.Find(from, to, speed); // every stop was the start: the plain answer (AlreadyThere, Immobile)
+        return PathResult.Found(systems.ToArray(), ticks.ToArray());
+    }
+
     /// <summary>The fastest path with no stop at the given systems on the way (see Pathfinder.FindAvoiding).</summary>
     public PathResult FindPathAvoiding(int from, int to, int speed, IReadOnlyCollection<int> avoid) => _pathfinder.FindAvoiding(from, to, speed, avoid);
 
@@ -307,6 +350,21 @@ public sealed class FleetModule
         }
         if (squads.Any(o => o.Side != side)) return RejectReason.NotYours;
         return null;
+    }
+
+    /// <summary>
+    /// Battle write-back (New rules): ships of a retreating fleet that a tractor beam kept in the battle stay at the fleet's system in a new fleet;
+    /// the rest of the fleet relocates. Not for the whole fleet (that fleet simply stays). Emits FleetCreated (cause TractorHeld). Returns the new fleet id.
+    /// rule: m4-retreat-damage-repair §6.
+    /// </summary>
+    internal int SplitOffHeld(StepContext ctx, int day, Fleet fleet, IReadOnlyCollection<int> ships)
+    {
+        string system = fleet.At!;
+        foreach (var s in ships) fleet.Ships.Remove(s);
+        var f = NewFleet(fleet.Side, system, ships);
+        var members = new ValueList<int>(f.Ships.ToList());
+        ctx.Emit((i, _) => new FleetCreated(i, day, f.Id, system, members, FleetCreateCause.TractorHeld));
+        return f.Id;
     }
 
     private static string FleetName(int id) => $"Fleet {id}";
@@ -550,6 +608,7 @@ public sealed class FleetModule
         PathStatus.Immobile => RejectReason.Immobile,
         PathStatus.AlreadyThere => RejectReason.AlreadyThere,
         PathStatus.UnknownSystem => RejectReason.UnknownSystem,
+        PathStatus.InTransit => RejectReason.InTransit,
         _ => RejectReason.Unreachable,
     };
 
@@ -561,9 +620,7 @@ public sealed class FleetModule
         // An accepted order marks the fleet in transit at once, so a second order in the same Step lands here (K6, K7).
         if (fleet.Transit != null || fleet.At == null) return OrderResult.Reject(RejectReason.InTransit);
 
-        int speed = SpeedOf(fleet);
-        if (SpeedAdjust != null) speed = SpeedAdjust(fleet, speed); // rule: m5-characters-and-force §Navigator (fixed when the order is accepted)
-        var path = _pathfinder.Find(fleet.At, o.Destination, speed);
+        var path = PlanPath(fleet, o.Destination, o.Waypoints?.Items); // rule: m1-travel §Path rule (3), (5): the same function as the preview
         if (!path.Ok) return OrderResult.Reject(RejectStatus(path.Status));
 
         var names = path.Names(Galaxy).ToList();

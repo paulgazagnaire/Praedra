@@ -44,7 +44,8 @@ public sealed record ShipClass(
     int ShieldRechargeRate = 0,
     int Torpedoes = 0,
     ShipArcs? Arcs = null,
-    int Detection = 0)
+    int Detection = 0,
+    int TractorBeamPower = 0)
 {
     /// <summary>The four gun arcs (a squadron has only the fore arc). Never null: a class built without arcs has none.</summary>
     public ShipArcs GunArcs => Arcs ?? ShipArcs.None;
@@ -98,6 +99,7 @@ public static class ShipData
         string bombCol = isCapital ? "bombardment_modifier" : "bombardment_defense";
         bool hasBomb = t.HasColumn(bombCol);
         // rule: m4-battle-classic §4: the combat columns (recharge rates and torpedoes only where the file has them; fighters have no recharge columns)
+        bool hasTractor = t.HasColumn("tractor_beam_power"); // rule: m4-retreat-damage-repair §6 (capital-ships.csv; fighters have none: 0)
         bool hasDet = t.HasColumn("detection"); // rule: m5-missions §3 Defenders (CAPSHPSD and FIGHTSD carry detection)
         bool hasMan = t.HasColumn("maneuverability"), hasWr = t.HasColumn("weapon_recharge_rate"), hasSr = t.HasColumn("shield_recharge_rate"), hasTorp = t.HasColumn("torpedoes");
         int Cnt(int r, string col) => t.HasColumn(col) ? t.GetInt(r, col) : 0;
@@ -121,7 +123,8 @@ public static class ShipData
                 hasMan ? t.GetInt(r, "maneuverability") : 0, hasWr ? t.GetInt(r, "weapon_recharge_rate") : 0,
                 hasSr ? t.GetInt(r, "shield_recharge_rate") : 0, hasTorp ? t.GetInt(r, "torpedoes") : 0,
                 new ShipArcs(Arc(r, "fore"), Arc(r, "aft"), Arc(r, "port"), Arc(r, "starboard")),
-                hasDet ? t.GetInt(r, "detection") : 0));
+                hasDet ? t.GetInt(r, "detection") : 0,
+                hasTractor ? t.GetInt(r, "tractor_beam_power") : 0));
         }
         return list;
     }
