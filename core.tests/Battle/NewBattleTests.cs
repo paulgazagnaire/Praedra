@@ -239,10 +239,10 @@ public class NewBattleTests
         var r = nb.Run();
         var carrier = First(units, Side.Alliance, Isd); var sq = First(units, Side.Alliance, Bomber);
         Assert.True(carrier.Destroyed);
-        Assert.Equal(3, carrier.LostAt); // the enemy ISD's first volley (D = 60 closing 6 per second against a range of 50)
+        Assert.Equal(2, carrier.LostAt); // the enemy ISD's first volley (D = 60 closing 7.5 per second, ISD sublight 5, against a range of 50)
         Assert.True(sq.Destroyed);
         Assert.Equal(UnitLossReason.NoBerth, sq.Loss);
-        Assert.Equal(3, sq.LostAt);
+        Assert.Equal(2, sq.LostAt);
         Assert.DoesNotContain(nb.Log!, e => e.Unit == sq.ObjectId && (e.Kind == "hit" || e.Kind == "miss" || e.Kind == "launch"));
         Assert.Equal(BattleOutcome.Annihilated, r.AllianceOutcome);
     }

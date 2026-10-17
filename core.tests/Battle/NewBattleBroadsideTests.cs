@@ -13,7 +13,7 @@ public class NewBattleBroadsideTests
     private readonly ITestOutputHelper _out;
     public NewBattleBroadsideTests(ITestOutputHelper output) { _out = output; }
 
-    private const string Dauntless = "Dauntless Cruiser", ImperialII = "Imperial II Star Destroyer", Isd = "Imperial Star Destroyer", Strike = "Strike Cruiser",
+    private const string Dauntless = "Dauntless Cruiser", ImperialII = "Imperial II Star Destroyer", Isd = "Imperial Star Destroyer", Strike = "Strike Cruiser", BulkCruiser = "Bulk Cruiser", Carrack = "Carrack Light Cruiser",
         Bulwark = "Bulwark Battlecruiser", Cc9600 = "CC-9600 Frigate", VictoryDestroyer = "Victory Destroyer", Corvette = "Corellian Corvette",
         EscortCarrier = "Imperial Escort Carrier", Nebulon = "Nebulon-B Frigate";
 
@@ -140,17 +140,21 @@ public class NewBattleBroadsideTests
         Assert.Equal(21, nb.Distance);
     }
 
-    // space-combat/11 §4 (4) first half: kiting needs a speed edge AND the larger reach. Strike Cruiser (sublight 4, reach about 48) v Bulwark (sublight 3, reach about 28): kite.
-    // Equal speed (Dauntless 4 v Strike 4) with the larger reach on the Strike: no kite. A speed edge with the smaller reach (CC-9600, 6, v Victory Destroyer, 3): no kite.
+    // space-combat/11 §4 (4) first half: kiting needs a speed edge AND the larger reach. Carrack Light Cruiser (sublight 6, reach 50) v Bulk Cruiser (sublight 3, reach 35): kite.
+    // Equal speed (Bulk Cruiser 3 v Strike 3) with the larger reach on the Strike: no kite. (Pairs re-picked 2026-10-17 after the lore sublight values; the rule is unchanged.) A speed edge with the smaller reach (CC-9600, 6, v Victory Destroyer, 3): no kite.
     [Fact]
     public void Section4_4_KiteOnlyWithSpeedEdgeAndLargerReach()
     {
-        var kite = Run(new NewBattleParams(), 1, new[] { (Bulwark, 1) }, new[] { (Strike, 1) }, canRetreat: false).B;
-        Assert.True(kite.KiteSeconds > 0, "Strike v Bulwark should kite");
-        Assert.True(kite.LastReach(Side.Empire) > kite.LastReach(Side.Alliance));
+        double kre = -1, kra = -1;
+        var kite = Run(new NewBattleParams(), 1, new[] { (BulkCruiser, 1) }, new[] { (Carrack, 1) }, canRetreat: false,
+            hook: nb0 => nb0.AfterTick = t => { if (t == 1) { kre = nb0.LastReach(Side.Empire); kra = nb0.LastReach(Side.Alliance); } }).B;
+        Assert.True(Sublight(Carrack) >= Sublight(BulkCruiser) + 1);
+        Assert.True(kite.KiteSeconds > 0, "Carrack v Bulk Cruiser should kite");
+        Assert.True(kre > kra, $"reach at t = 1: {kre} v {kra}"); // read at the start: the kiter may be gone by the end
 
-        var equalSpeed = Run(new NewBattleParams(), 1, new[] { (Dauntless, 1) }, new[] { (Strike, 1) }, canRetreat: false).B;
-        Assert.Equal(Sublight(Dauntless), Sublight(Strike));
+        var equalSpeed = Run(new NewBattleParams(), 1, new[] { (BulkCruiser, 1) }, new[] { (Strike, 1) }, canRetreat: false).B;
+        Assert.Equal(Sublight(BulkCruiser), Sublight(Strike));
+        Assert.True(equalSpeed.LastReach(Side.Empire) > equalSpeed.LastReach(Side.Alliance));
         Assert.Equal(0, equalSpeed.KiteSeconds);
 
         var fastShort = Run(new NewBattleParams(), 1, new[] { (Cc9600, 1) }, new[] { (VictoryDestroyer, 1) }, canRetreat: false).B;
@@ -158,19 +162,19 @@ public class NewBattleBroadsideTests
         Assert.True(fastShort.LastReach(Side.Alliance) < fastShort.LastReach(Side.Empire));
         Assert.Equal(0, fastShort.KiteSeconds);
 
-        // the speed edge is a tunable: with an edge of 2 points Strike (4) v Bulwark (3) no longer kites
-        var noEdge = Run(new NewBattleParams { KiteSpeedEdge = 2 }, 1, new[] { (Bulwark, 1) }, new[] { (Strike, 1) }, canRetreat: false).B;
+        // the speed edge is a tunable: with an edge of 4 points Carrack (6) v Bulk Cruiser (3) no longer kites
+        var noEdge = Run(new NewBattleParams { KiteSpeedEdge = 4 }, 1, new[] { (BulkCruiser, 1) }, new[] { (Carrack, 1) }, canRetreat: false).B;
         Assert.Equal(0, noEdge.KiteSeconds);
     }
 
-    // space-combat/11 §4 (4) second half: the slower chaser closes at HALF speed, so the kite ends. Strike v Bulwark: the Bulwark (sublight 3, 4.5 units/s) closes at 2.25 units/s
-    // inside the Strike's reach, until D = its own reach; the kiter fires alone meanwhile.
+    // space-combat/11 §4 (4) second half: the slower chaser closes at HALF speed, so the kite ends. Carrack v Bulk Cruiser: the Bulk Cruiser (sublight 3, 4.5 units/s) closes at 2.25 units/s
+    // inside the Carrack's reach, until D = its own reach; the kiter fires alone meanwhile.
     [Fact]
     public void Section4_4_TheChaserClosesAtHalfSpeedAndTheKiteEnds()
     {
         var deltas = new List<(int T, double D, double Dist)>();
         double prev = 0; double reachFast = 0, reachSlow = 0;
-        var (nb, _) = Run(new NewBattleParams(), 1, new[] { (Bulwark, 1) }, new[] { (Strike, 1) }, canRetreat: false, hook: nb0 =>
+        var (nb, _) = Run(new NewBattleParams(), 1, new[] { (BulkCruiser, 1) }, new[] { (Carrack, 1) }, canRetreat: false, hook: nb0 =>
         {
             prev = -1;
             nb0.AfterTick = t =>
@@ -180,7 +184,7 @@ public class NewBattleBroadsideTests
                 prev = nb0.Distance;
             };
         });
-        double full = 1.5 * Sublight(Bulwark), half = full / 2;
+        double full = 1.5 * Sublight(BulkCruiser), half = full / 2;
         Assert.True(reachFast > reachSlow + 2 * half, $"the kite window should last several seconds ({reachFast} v {reachSlow})");
         var inKite = deltas.Where(x => x.Dist + x.D <= reachFast + 1e-9 && x.Dist > reachSlow + 1e-9 && x.D > 0).ToList();
         Assert.NotEmpty(inKite);
@@ -191,7 +195,7 @@ public class NewBattleBroadsideTests
     }
 
     // space-combat/11 §4 (5): closing speed = slowest sublight of the closing fleet x 1.5 per point. The side with the smaller reach closes. A fleet of Dauntless (4)
-    // and Nebulon-B (3) against one Imperial II: whichever side closes moves D by 1.5 x its slowest sublight each second.
+    // and Nebulon-B (4) against one Imperial II (5): whichever side closes moves D by 1.5 x its slowest sublight each second.
     [Fact]
     public void Section4_5_ClosingSpeedIsTheSlowestSublightOfTheClosingFleetTimes1Point5()
     {
@@ -209,8 +213,8 @@ public class NewBattleBroadsideTests
             });
         Assert.NotEmpty(steps);
         double slowestAlliance = Math.Min(Sublight(Dauntless), Sublight(Nebulon)) * 1.5, empire = Sublight(ImperialII) * 1.5;
-        Assert.Equal(3 * 1.5, slowestAlliance);
-        Assert.Equal(4 * 1.5, empire);
+        Assert.Equal(4 * 1.5, slowestAlliance);
+        Assert.Equal(5 * 1.5, empire);
         // every full-size step is exactly the closing side's slowest sublight x 1.5 (the last step is cut at the target)
         for (int i = 0; i < steps.Count - 1; i++) Assert.Equal(closer[i] == Side.Alliance ? slowestAlliance : empire, steps[i], 9);
         // the tunable: k = 3.0 doubles the first step (the side with the smaller reach closes)
@@ -222,7 +226,7 @@ public class NewBattleBroadsideTests
                 first = nb0.StartDistance - nb0.Distance;
                 firstCloser = nb0.LastReach(Side.Alliance) < nb0.LastReach(Side.Empire) ? Side.Alliance : Side.Empire;
             });
-        Assert.Equal(firstCloser == Side.Alliance ? 3 * 3.0 : 4 * 3.0, first, 9);
+        Assert.Equal(firstCloser == Side.Alliance ? 4 * 3.0 : 5 * 3.0, first, 9);
     }
 
     // space-combat/11 §4 (6): if nobody has a target in range for 20 s, both close at full speed to D = 15. Corellian Corvette (lasers only) v Imperial Escort Carrier
