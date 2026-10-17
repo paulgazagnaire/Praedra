@@ -347,7 +347,8 @@ public class DeathStarTests
         int dsShip = w.Game.State.Fleets[fleet].Ships.First(id => w.Host.Economy.Find(id)!.Class == DeathStarClass);
         int isdShip = w.Game.State.Fleets[fleet].Ships.First(id => id != dsShip);
         w.Agent(MissionWorld.Luke, MissionWorld.T, esp: 100, com: 100);
-        w.Stub!.Expect(0, 99, 99, 99); // the Death Star and the destroyer are defenders with a detection roll each: 99 is not detected
+        // Luke's betrayal draw (B2b), then the Death Star and the destroyer are defenders with a detection roll each: 99 is not detected
+        w.Stub!.Expect(0, 99, MissionWorld.Bt(1, 99, 99));
         w.Start(Side.Alliance, MissionKind.DeathStarSabotage, new[] { MissionWorld.Luke }, MissionWorld.T);
         w.Game.Step();
         w.RunIteration(w.LastMission);

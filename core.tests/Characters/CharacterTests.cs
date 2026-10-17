@@ -637,15 +637,16 @@ public class CharacterTests
             Assert.Equal(rule, Assert.Throws<RuleMissingException>(() => GameHost.New(1, new GameSettings { Characters = p })).Rule);
     }
 
-    // m5-characters-and-force CH31 (with all off, play leaves loyalty untouched and no betrayal exists)
+    // m5-characters-and-force CH31 (play leaves loyalty untouched: ShiftLoyalty has no caller yet, so nobody betrays). B2b: betrayal exists now
+    // (the rolls run at chance 0), so the old "no betrayal type" check is gone; B2b QA Q16.
     [Fact]
     public void CH31_LoyaltyNeverMoves()
     {
         var h = NewGame.Create(new NewGameOptions { Seed = 31 });
         for (int i = 0; i < 3000 && h.Victory.Winner == null; i++) h.Game.Step();
         Assert.All(h.Characters.All, c => Assert.Equal(100, c.Loyalty));
-        Assert.DoesNotContain(h.Game.Events, e => e.Kind.Contains("Betray"));
-        Assert.Null(typeof(CharacterModule).Assembly.GetTypes().FirstOrDefault(t => t.Name.Contains("Betray")));
+        Assert.Empty(h.Game.Events.OfType<Rebellion.Core.Missions.MissionBetrayed>());
+        Assert.Empty(h.Game.Events.OfType<LoyaltyChanged>());
     }
 
     // m5-characters-and-force CH32

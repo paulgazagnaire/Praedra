@@ -35,6 +35,15 @@ public sealed class CharacterRecord
     public int ForceAcquired { get; set; }
     public bool ForceUser { get; set; }
     public bool ForceDiscovered { get; set; }
+    /// <summary>
+    /// The enemy Force user this character sensed or was sensed by (record id; 0 = none). Traced +0x9c "ForceUserDiscoveredKey" (B2b, 0x4ee500).
+    /// Never cleared (no reset found, inferred). Omitted from the save while 0, so older saves and hashes are unchanged. rule: m5-missions §3 Force sensing.
+    /// </summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public int DiscoveredForceUser { get; set; }
+    /// <summary>The traitor this character identified (record id; 0 = none). Traced +0xa0 "TraitorDiscoveredKey" (B2b, 0x4ee5c0). Omitted while 0. rule: m5-missions §3 Betrayal.</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public int IdentifiedTraitor { get; set; }
     public CharacterStatus Status { get; set; }
     /// <summary>Where a standing (not attached, not travelling) character is; for an attached one the system it was attached at (not read).</summary>
     public string? System { get; set; }
@@ -54,7 +63,7 @@ public sealed class CharacterRecord
     internal CharacterRecord Clone() => new()
     {
         Id = Id, Side = Side, Placed = Placed, Skills = new List<int>(Skills), Loyalty = Loyalty, ForceBase = ForceBase, ForceAcquired = ForceAcquired,
-        ForceUser = ForceUser, ForceDiscovered = ForceDiscovered, Status = Status, System = System, AttachedFleet = AttachedFleet, Post = Post,
+        ForceUser = ForceUser, ForceDiscovered = ForceDiscovered, DiscoveredForceUser = DiscoveredForceUser, IdentifiedTraitor = IdentifiedTraitor, Status = Status, System = System, AttachedFleet = AttachedFleet, Post = Post,
         Captor = Captor, HeldAt = HeldAt, InjuredDaysLeft = InjuredDaysLeft,
         Transit = Transit == null ? null : new FleetTransit
         { Path = new List<string>(Transit.Path), HopTicks = new List<int>(Transit.HopTicks), HopIndex = Transit.HopIndex, DueDay = Transit.DueDay },

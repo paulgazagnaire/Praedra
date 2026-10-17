@@ -25,6 +25,13 @@ internal sealed class MissionWorld
     public const string Bothan = "Bothan Spies", Infiltrators = "Infiltrators", Guerrillas = "Guerrillas", Longprobe = "Longprobe Y-wing Recon Team",
         Probe = "Imperial Probe Droid", Commandos = "Imperial Commandos", Noghri = "Noghri Death Commandos", Hunters = "Bounty Hunters";
 
+    /// <summary>
+    /// B2b: every check of a Foilable kind opens with one betrayal draw per member (team, then decoys), made even at chance 0 (loyalty 100). The
+    /// value does not matter at loyalty 100; 99 is used. Returns <paramref name="members"/> such draws followed by <paramref name="rolls"/>.
+    /// rule: m5-missions §3 Betrayal.
+    /// </summary>
+    public static int[] Bt(int members, params int[] rolls) => Enumerable.Repeat(99, members).Concat(rolls).ToArray();
+
     /// <summary>The synthetic decoy table of the sheet's tests: one row 0: 50.</summary>
     public static readonly TableRow[] DT = { new(0, 50) };
 
