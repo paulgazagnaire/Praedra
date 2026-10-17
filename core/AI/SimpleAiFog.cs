@@ -80,12 +80,14 @@ public sealed partial class SimpleAi
 
     /// <summary>
     /// Fog: regiments of the other side believed on a system. From group D of the picture plus the staleness margin, less the regiments the
-    /// side's own bombardments killed there since that look; never seen: a guess (larger for the system that wins the game), less the
-    /// kills of the last FogKillMemoryDays.
+    /// side's own bombardments killed there since that look; never seen, or an enemy-held system seen more than FogGroundForgetDays ago: a
+    /// guess (larger for the system that wins the game), less the kills of the last FogKillMemoryDays.
     /// </summary>
     private int FogDefendersAt(string system)
     {
         var g = _view!.Picture(system)?.Ground;
+        // QA-5: a ground count older than FogGroundForgetDays is no better than a guess (the garrison seen years ago may be long gone)
+        if (g != null && _p.FogGroundForgetDays > 0 && AgeOf(g) > _p.FogGroundForgetDays && IsEnemyHeld(system)) g = null;
         if (g != null)
         {
             int d = g.Value.Where(x => x.Side != _side).Sum(x => x.Total);
