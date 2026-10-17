@@ -57,21 +57,24 @@ public partial class GalaxyView : Control
     /// <summary>While true a click on a system raises <see cref="SystemPicked"/> instead of selecting it (used to choose a destination).</summary>
     public bool PickMode { get; set; }
     public event Action<int> SystemPicked;
-    /// <summary>A route to draw on top of the lanes (system indices), e.g. the preview of a move order.</summary>
+    /// <summary>A route to draw on top of the hyperspace routes (system indices), e.g. the preview of a move order.
+    /// Each leg is a straight segment: solid where it rides a route link, dashed where it is a free jump through open space.</summary>
     public IReadOnlyList<int> PathPreview { get; set; }
     public Color PathColor { get; set; } = Colors.White;
+    /// <summary>Per leg of <see cref="PathPreview"/>: true when it rides a route link (solid), false for a free jump (dashed). Null: worked out from the links.</summary>
+    public IReadOnlyList<bool> PathRouteHop { get; set; }
+    /// <summary>Systems on the preview where the player's picture shows an enemy gravity-well ship (circled in red).</summary>
+    public IReadOnlyList<int> PathTraps { get; set; }
+    /// <summary>Waypoints the player added with shift-click, in order (numbered on the map).</summary>
+    public IReadOnlyList<int> Waypoints { get; set; }
 
-    /// <summary>Which lanes the map draws. Near (default): lanes close to the selected or hovered system, plus the
-    /// short ones faintly; long lanes only show near the selection. All: every lane, long ones faded. Off: none.</summary>
-    public enum LaneMode { Near, All, Off }
-    LaneMode _lanes = LaneMode.Near;
-    public LaneMode Lanes { get => _lanes; set { _lanes = value; QueueRedraw(); } }
+    /// <summary>Whether the map draws the hyperspace routes (Paul 2026-10-16: every route link is visible; L toggles).</summary>
+    bool _showRoutes = true;
+    public bool ShowRoutes { get => _showRoutes; set { _showRoutes = value; QueueRedraw(); } }
 
     Vector2[] _pos;                 // world position per system (map_x, map_y)
-    int[] _weight;                  // per system, lanes weighted by tier (hubs win the fight for label room)
-    float[] _laneLen;               // per lane, length in map units
-    float _longLane;                // a lane longer than this (3x the median lane) is "long": faded, hidden when nothing is near it
-    readonly HashSet<int> _near = new(); // systems within two jumps of the focus, rebuilt each draw
+    int[] _weight;                  // per system, route links weighted by tier (hubs win the fight for label room)
+    int[] _drawOrder;               // route links, minor first so the major routes draw on top
     Vector2 _min, _max;
     Vector2 _center;                // world point at the middle of the control
     float _zoom = 1f;
@@ -109,9 +112,7 @@ public partial class GalaxyView : Control
             int w = lane.Tier switch { 1 => 3, 2 => 2, _ => 1 };
             _weight[lane.A] += w; _weight[lane.B] += w;
         }
-        _laneLen = galaxy.Lanes.Select(l => _pos[l.A].DistanceTo(_pos[l.B])).ToArray();
-        var sorted = _laneLen.OrderBy(x => x).ToArray();
-        _longLane = sorted.Length == 0 ? float.MaxValue : 3f * sorted[sorted.Length / 2];
+        _drawOrder = Enumerable.Range(0, galaxy.Lanes.Count).OrderByDescending(i => galaxy.Lanes[i].Tier).ThenBy(i => i).ToArray();
         foreach (var sec in galaxy.Sectors.OrderBy(s => s.Name, StringComparer.Ordinal))
         {
             foreach (int m in sec.Members) _sectorOf[m] = _sectors.Count;
@@ -243,6 +244,7 @@ public partial class GalaxyView : Control
     // Colours of the map itself. Only the owner of a system gets a strong colour (orange Alliance, green Empire);
     // everything else (lanes, sectors, unexplored systems) is drawn in quiet greys and blues so ownership reads first.
     static readonly Color LaneColor = new(0.55f, 0.62f, 0.78f);
+    static readonly Color MajorRouteColor = new(0.62f, 0.80f, 1.0f);
     static readonly Color DotOutline = new(0.03f, 0.04f, 0.07f, 0.95f);
     static readonly Color SectorColor = new(0.70f, 0.78f, 0.95f);
 
@@ -263,38 +265,54 @@ public partial class GalaxyView : Control
             DrawPolyline(Closed(sectorShape), new Color(SectorColor, 0.35f), 1.2f, true);
         }
 
-        // lanes: one quiet colour; the tier (1 route, 2 official, 3 generated) only changes thickness and strength.
-        // Paul 2026-10-16: "way too many lines". Long lanes cross half the map, so they fade with length and,
-        // in Near mode, only show when they touch the systems around the selection.
-        _near.Clear();
-        if (focus >= 0)
+        // hyperspace routes (planets/15, Paul 2026-10-16): ships fly anywhere, the drawn links are the fast stretches.
+        // Major routes (3x) are brighter and thicker than minor routes (1.5x); nothing else is drawn between systems.
+        for (int k = 0; _showRoutes && k < _drawOrder.Length; k++)
         {
-            _near.Add(focus);
-            foreach (var nb in Galaxy.NeighboursOf(focus)) _near.Add(nb.System);
-        }
-        for (int li = 0; _lanes != LaneMode.Off && li < Galaxy.Lanes.Count; li++)
-        {
-            var lane = Galaxy.Lanes[li];
-            bool near = _near.Contains(lane.A) || _near.Contains(lane.B);
-            bool isLong = _laneLen[li] > _longLane;
-            if (_lanes == LaneMode.Near && isLong && !near) continue;
+            var lane = Galaxy.Lanes[_drawOrder[k]];
             var a = SystemScreen(lane.A); var b = SystemScreen(lane.B);
             if (!screenRect.HasPoint(a) && !screenRect.HasPoint(b) && !SegmentMayCross(a, b)) continue;
-            var (w, alpha) = lane.Tier switch { 1 => (1.4f, 0.34f), 2 => (1.1f, 0.24f), _ => (1.0f, 0.13f) };
-            if (isLong) alpha *= Mathf.Max(0.3f, _longLane / _laneLen[li]);
-            DrawLine(a, b, new Color(LaneColor, alpha), w, true);
+            if (lane.Tier == 1) DrawLine(a, b, new Color(MajorRouteColor, 0.55f), 2.4f, true);
+            else DrawLine(a, b, new Color(LaneColor, 0.30f), 1.1f, true);
         }
-        // lanes of the focused system, drawn on top
-        if (focus >= 0)
+        // route links of the focused system, drawn on top
+        if (_showRoutes && focus >= 0)
             foreach (var nb in Galaxy.NeighboursOf(focus))
-                DrawLine(SystemScreen(focus), SystemScreen(nb.System), new Color(1f, 1f, 1f, 0.7f), 1.8f, true);
+                DrawLine(SystemScreen(focus), SystemScreen(nb.System), new Color(1f, 1f, 1f, 0.7f), nb.Lane.Tier == 1 ? 2.6f : 1.8f, true);
 
-        // route preview
+        // route preview: solid along a route link, dashed for a free jump through open space
         if (PathPreview is { Count: > 1 })
         {
             for (int k = 0; k + 1 < PathPreview.Count; k++)
-                DrawLine(SystemScreen(PathPreview[k]), SystemScreen(PathPreview[k + 1]), PathColor, 4f, true);
+            {
+                var a = SystemScreen(PathPreview[k]); var b = SystemScreen(PathPreview[k + 1]);
+                bool route = PathRouteHop != null && k < PathRouteHop.Count ? PathRouteHop[k] : Galaxy.FindLane(PathPreview[k], PathPreview[k + 1]) != null;
+                if (route) DrawLine(a, b, PathColor, 4f, true);
+                else DrawDashedLine(a, b, PathColor, 3f, 9f, true, true);
+            }
+            for (int k = 1; k + 1 < PathPreview.Count; k++) // the stops on the way
+                DrawCircle(SystemScreen(PathPreview[k]), 3.2f, PathColor);
         }
+        // known traps on the way: a red ring with a cross-hair, so the player sees where the fleet can be pulled out of hyperspace
+        if (PathTraps != null)
+            foreach (int t in PathTraps)
+            {
+                var p = SystemScreen(t);
+                var red = new Color(1f, 0.3f, 0.25f);
+                DrawArc(p, radius + 9f, 0, Mathf.Tau, 28, red, 2.5f, true);
+                DrawLine(p + new Vector2(-(radius + 14f), 0), p + new Vector2(-(radius + 5f), 0), red, 2f, true);
+                DrawLine(p + new Vector2(radius + 5f, 0), p + new Vector2(radius + 14f, 0), red, 2f, true);
+                DrawLine(p + new Vector2(0, -(radius + 14f)), p + new Vector2(0, -(radius + 5f)), red, 2f, true);
+                DrawLine(p + new Vector2(0, radius + 5f), p + new Vector2(0, radius + 14f), red, 2f, true);
+            }
+        // waypoints: numbered yellow squares
+        if (Waypoints != null)
+            for (int k = 0; k < Waypoints.Count; k++)
+            {
+                var p = SystemScreen(Waypoints[k]) + new Vector2(radius + 6f, -(radius + 16f));
+                DrawRect(new Rect2(p, new Vector2(15, 15)), new Color(1f, 0.85f, 0.35f));
+                DrawString(_font, p + new Vector2(3.5f, 12.5f), (k + 1).ToString(), HorizontalAlignment.Left, -1, 12, new Color(0.05f, 0.05f, 0.08f));
+            }
 
         // systems: the whole dot is the owner's colour; neutral = small grey dot; unexplored = faint hollow ring.
         // Bigger double ring = headquarters, red ring = uprising, yellow ring = blockade.

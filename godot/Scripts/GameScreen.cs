@@ -199,7 +199,7 @@ public partial class GameScreen : Control
         _missionButton = Btn("Missions", ToggleMissions, "Your missions: team, target, phase and expected day; cancel one (M)");
         _missionButton.ToggleMode = true;
         row.AddChild(_missionButton);
-        _lanesButton = Btn("Lanes: near", CycleLanes, "Hyperspace lanes on the map: near your selection, all, or none (L)");
+        _lanesButton = Btn("Routes: on", CycleLanes, "Show or hide the hyperspace routes on the map (L)");
         row.AddChild(_lanesButton);
         row.AddChild(Btn("How to play", ToggleHowTo, "Short instructions (F1)"));
         row.AddChild(Btn("Save", SaveGame, "Save to the one save slot"));
@@ -363,7 +363,7 @@ public partial class GameScreen : Control
         "BUILD: click one of your planets. The Build menu has Facilities, Ships, Fighters and Troops (click a heading to open it). Ships need a Shipyard there, troops a Training facility, buildings a Construction yard and a free slot.",
         "MONEY: Raw is ore from mines. Refineries turn it into Refined, which is what you spend. Upkeep (used / limit) is the running cost of everything you own; over the limit, units get scrapped. More mines and refineries raise the limit.",
         "ORDER: a planet needs enough regiments to keep the people calm. Too few and it revolts (red ring): yards and mines there stop.",
-        "MAP: wheel or + / - zoom, drag or arrow keys pan, Home resets, Esc cancels. Orange = Alliance, green = Empire, grey = nobody. Lanes (L): by default the map shows the lanes around the system you select or point at; Lanes: all shows every lane, Lanes: off hides them.",
+        "MAP: wheel or + / - zoom, drag or arrow keys pan, Home resets, Esc cancels. Orange = Alliance, green = Empire, grey = nobody. Ships can jump anywhere, but the drawn hyperspace routes are faster: bright thick lines are major routes (3x speed), thin lines minor routes (1.5x). Routes (L) shows or hides them. When you move a fleet the preview is solid where it rides a route and dashed where it jumps through open space. It turns red when it passes a system where you saw an enemy interdictor, which can pull the fleet out of hyperspace there: the game never detours on its own, so Shift-click systems to add waypoints and steer around (or through) it; Backspace drops the last waypoint.",
         "FOG OF WAR: you see live only systems you hold or have a fleet at. Other systems show what you saw last (the panel says \"last seen day N\"); dim hollow dots are unexplored. Enemy fleets appear only where you can see them. The Empire does not know where the Rebel HQ is until it finds it.",
         "CHARACTERS: press Characters (or C) for your leaders: where they are, their post, status and skills. Leaders give bonuses: a fleet's Admiral boosts its bombardment, a fleet's General its regiments in an invasion, a system's General the defenders there.",
         "   Select a fleet to attach a character standing at the same system (as Admiral, Commander, General or passenger) or to detach one; select one of your systems to name or release its General. Move <name>... sends a character alone: the route and arrival day show before you confirm.",
@@ -410,10 +410,12 @@ public partial class GameScreen : Control
         if (_showHowToOnStart) { _showHowToOnStart = false; GameBoot.MarkHowToSeen(); }
     }
 
-    void CycleLanes()
+    void CycleLanes() => SetRoutesShown(!_view.ShowRoutes);
+
+    internal void SetRoutesShown(bool on)
     {
-        _view.Lanes = _view.Lanes switch { GalaxyView.LaneMode.Near => GalaxyView.LaneMode.All, GalaxyView.LaneMode.All => GalaxyView.LaneMode.Off, _ => GalaxyView.LaneMode.Near };
-        _lanesButton.Text = "Lanes: " + _view.Lanes.ToString().ToLowerInvariant();
+        _view.ShowRoutes = on;
+        _lanesButton.Text = on ? "Routes: on" : "Routes: off";
     }
 
     void ToggleHowTo() { if (_howPanel.Visible) CloseHowTo(); else ShowHowTo(); }
@@ -601,6 +603,7 @@ public partial class GameScreen : Control
         else if (!_playing && _pauseNote != null) banner = _pauseNote;
         _banner.Text = banner ?? "";
         _banner.Visible = banner != null;
+        _banner.AddThemeColorOverride("font_color", _moveFleet >= 0 && _moveWarn ? new Color(1f, 0.55f, 0.5f) : Colors.White);
     }
 
     public override void _Process(double delta)
@@ -654,6 +657,7 @@ public partial class GameScreen : Control
             case Key.C: ToggleCharacters(); break;
             case Key.M: ToggleMissions(); break;
             case Key.L: CycleLanes(); break;
+            case Key.Backspace when _moveFleet >= 0: DropWaypoint(); break;
             case Key.Escape:
                 if (_victoryPanel.Visible) return;
                 if (_confirmPanel.Visible) CloseConfirm();

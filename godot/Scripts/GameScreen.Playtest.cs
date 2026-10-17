@@ -129,6 +129,76 @@ public partial class GameScreen
     public void ShotShowHowTo() => ShowHowTo();
     public void ShotOpenSection(string name) { if (name.StartsWith("-")) _openSections.Remove(name[1..]); else _openSections.Add(name); _panelDirty = true; _panelTimer = 0; }
     public void ShotMove(string to) { if (_view.SelectedFleet >= 0 && S.Game.State.Fleets.TryGetValue(_view.SelectedFleet, out var f)) { StartMove(f); PickSystem(to); } }
+    /// <summary>Screenshot helper: the selected fleet's move preview to a system, as if the mouse were over it (underscores stand for spaces).</summary>
+    public void ShotPreview(string to)
+    {
+        if (_view.SelectedFleet < 0 || !S.Game.State.Fleets.TryGetValue(_view.SelectedFleet, out var f) || !G.TryFindSystem(to.Replace('_', ' '), out int i)) return;
+        StartMove(f); _view.ShotHover(i); OnViewChanged();
+    }
+    /// <summary>Playtest: the move banner for a fleet hovering a destination, then the move is cancelled.</summary>
+    internal string PreviewBannerFor(int fleetId, string to)
+    {
+        SelectFleet(fleetId, false);
+        ShotPreview(to);
+        string text = _moveBanner + (_view.PathPreview is { Count: > 1 } ? "" : " [no line drawn]");
+        CancelMove();
+        return text;
+    }
+    internal bool RoutesShown => _view.ShowRoutes;
+
+    /// <summary>Playtest: plan a fleet move with shift-click waypoints, hover the destination, and report the banner and what the map draws.
+    /// With <paramref name="confirm"/> the plain click sends the order; otherwise the move is cancelled.</summary>
+    internal (string Banner, bool Red, IReadOnlyList<string> Traps, IReadOnlyList<string> Path) PlanWithWaypoints(int fleetId, IReadOnlyList<string> waypoints, string to, bool confirm)
+    {
+        SelectFleet(fleetId, false);
+        if (!S.Game.State.Fleets.TryGetValue(fleetId, out var f)) return ("", false, Array.Empty<string>(), Array.Empty<string>());
+        StartMove(f);
+        foreach (var w in waypoints) if (G.TryFindSystem(w, out int wi)) AddWaypoint(wi);
+        if (!G.TryFindSystem(to, out int ti)) { CancelMove(); return ("", false, Array.Empty<string>(), Array.Empty<string>()); }
+        _view.ShotHover(ti); OnViewChanged();
+        var result = (_moveBanner, _moveWarn,
+            (IReadOnlyList<string>)(_view.PathTraps?.Select(i => G.Systems[i].Name).ToList() ?? new List<string>()),
+            (IReadOnlyList<string>)(_view.PathPreview?.Select(i => G.Systems[i].Name).ToList() ?? new List<string>()));
+        if (confirm) OnSystemPicked(ti); else CancelMove();
+        return result;
+    }
+
+    /// <summary>Screenshot helper: plant a seen enemy interdictor on the selected fleet's path to a system (the system is handed to the player so the
+    /// picture is live), then show the preview. Underscores stand for spaces.</summary>
+    public void ShotTrap(string to)
+    {
+        to = to.Replace('_', ' ');
+        if (_view.SelectedFleet < 0 || !S.Game.State.Fleets.TryGetValue(_view.SelectedFleet, out var f)) return;
+        var plan = S.Host.PlanMove(Me, f.Id, to);
+        if (!plan.Ok || plan.Path.Count < 3) return;
+        string trap = plan.Path[plan.Path.Count / 2];
+        S.OpponentIdle = true; // keep the planted ship where it is
+        Fm.SetOwner(trap, Me);
+        Fm.AddFleet(Me == Rebellion.Core.Clock.Side.Empire ? Rebellion.Core.Clock.Side.Alliance : Rebellion.Core.Clock.Side.Empire, "Net", new[] { "Interdictor Cruiser" }, trap);
+        StepOne(); // the side's picture is taken in the day step
+        ShotPreview(to);
+    }
+
+    /// <summary>Screenshot helper: shift-click a waypoint in the move being planned (underscores stand for spaces).</summary>
+    /// <summary>"auto" picks the system nearest the first known trap that steers the hovered move around every trap.</summary>
+    public void ShotWaypoint(string name)
+    {
+        if (name == "auto")
+        {
+            if (_view.PathTraps is not { Count: > 0 } traps || _view.Hovered < 0 || !S.Game.State.Fleets.TryGetValue(_moveFleet, out var f)) return;
+            string to = G.Systems[_view.Hovered].Name;
+            var tp = new Vector2(G.Systems[traps[0]].MapX, G.Systems[traps[0]].MapY);
+            var pick = G.Systems.Where(x => x.Name != f.At && x.Name != to)
+                .OrderBy(x => tp.DistanceSquaredTo(new Vector2(x.MapX, x.MapY))).ThenBy(x => x.Name, StringComparer.Ordinal)
+                .FirstOrDefault(x => S.Host.PlanMove(Me, f.Id, to, _waypoints.Append(x.Name).ToList()) is { Ok: true, Red: false });
+            if (pick != null) AddWaypoint(pick.Index);
+            return;
+        }
+        if (G.TryFindSystem(name.Replace('_', ' '), out int i)) AddWaypoint(i);
+    }
+
+    /// <summary>Screenshot helper: centre and zoom the map on a system without selecting it (underscores stand for spaces).</summary>
+    public void ShotLookAt(string name, float zoom) { if (G.TryFindSystem(name.Replace('_', ' '), out int i)) _view.FocusOn(i, zoom); }
     public void ShotFilter(string name) => SetFilter(name);
     public void ShotCharacters() { if (!_charTab) ToggleCharacters(); PlayRefresh(); }
     public void ShotMissions() { if (!_missionTab) ToggleMissions(); PlayRefresh(); }

@@ -180,7 +180,10 @@ public partial class Main
         if (s.Messages.Any(x => x.Text.StartsWith($"Espionage on {target} succeeded", StringComparison.Ordinal)))
         {
             gs.SelectSystem(target); gs.PlayRefresh();
-            Expect(gs.PanelText().Contains("(seen day"), "after the success the system panel shows what was seen: " + gs.PanelText().Replace("\n", " / "));
+            // the scripted invasion can take the spied system before the result comes back; then the panel is the live view of our own system
+            bool ours = s.OwnerOf(target) == s.Player;
+            Expect(ours ? gs.PanelText().Contains("(you)") : gs.PanelText().Contains("(seen day"),
+                "after the success the system panel shows what was seen (or the live view if we took it meanwhile): " + gs.PanelText().Replace("\n", " / "));
         }
         RunUntil(gs, () => mm.Get(id) == null, 120);
         Expect(mm.Get(id) == null && s.Messages.Any(x => x.Text.Contains("back at") && x.Text.Contains("free for new orders")), "the team came home (message)");
