@@ -66,7 +66,7 @@ public sealed partial class SimpleAi
     public void PlanDay()
     {
         _submitted.Clear(); _plannedLoad = 0; _busy.Clear(); _reservedEnergy.Clear(); _reservedRaw.Clear(); _reservedYards.Clear(); _strength.Clear();
-        _capitalDone = _rallyDone = false; _hops = null; _threats = null; _offensives = -1; _lost = null; _lostBattles = null; _runners = null; _bounced = null;
+        _capitalDone = _rallyDone = false; _hops = null; _finishing = null; _threats = null; _offensives = -1; _lost = null; _lostBattles = null; _runners = null; _bounced = null;
         int day = Today, phase = (int)_side;
         _rng = new GameRng((ulong)day * 2 + (ulong)_side + 0x5A1D, 0xA1);
         _view = _p.UseFog ? _h.Fog.ViewFor(_side) : null;
@@ -1254,6 +1254,16 @@ public sealed partial class SimpleAi
         if (rally != null) Move(f, rally);
     }
 
+    /// <summary>FinishWhenAheadRatio: the side holds at least that many times the systems it knows the enemy to hold (cached per day).</summary>
+    private bool Finishing()
+    {
+        if (_p.FinishWhenAheadRatio <= 0) return false;
+        if (_finishing is bool b) return b;
+        int enemy = EnemySystems().Count();
+        return (bool)(_finishing = enemy > 0 && HeldSystems().Count() >= _p.FinishWhenAheadRatio * enemy);
+    }
+    private bool? _finishing;
+
     private int[] Hops()
     {
         if (_hops != null) return _hops;
@@ -1283,6 +1293,7 @@ public sealed partial class SimpleAi
         var lost = LostSystems();
         var scored = new List<(string Sys, long Score)>();
         bool search = HqSearchOn && strength >= _p.WinStrikeStrength;
+        bool finishing = Finishing();
         foreach (var sys in g.Systems)
         {
             string s = sys.Name;
@@ -1320,6 +1331,7 @@ public sealed partial class SimpleAi
                     {
                         long value = 10 + slots.Energy + 2 * slots.Raw;
                         if (IsEnemyHeld(s)) value += 10 + 2 * FacilitiesAt(s);
+                        if (finishing && IsEnemyHeld(s)) value = value * _p.FinishValuePercent / 100;
                         if (lost.Contains(s)) value *= 2;
                         if (s == KnownEnemyHq) value += 200;
                         if (isWin) value += 400;

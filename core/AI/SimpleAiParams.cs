@@ -216,6 +216,14 @@ public sealed record SimpleAiParams
     public int FogKillMemoryDays { get; init; } = 60;
     /// <summary>Systems the picture shows enemy-held are targets up to this many lanes from a held system (others: TargetHops). DEFAULT.</summary>
     public int FogEnemyTargetHops { get; init; } = 4;
+    /// <summary>
+    /// Finishing the war: when the side holds at least this many times the systems it knows the enemy to hold, an enemy-held target is worth
+    /// FinishValuePercent of its value (neutral systems near home otherwise win on value per day of travel, and the beaten side lives on in
+    /// its last systems). AI trainer 2026-10-17 (QA-2): in seed 3 the Empire held 355 systems against 20 Alliance systems it knew, with 0 or 1
+    /// regiment each, and kept taking neutrals for 800 days. 0 = off (the AI of before).
+    /// </summary>
+    public int FinishWhenAheadRatio { get; init; }
+    public int FinishValuePercent { get; init; } = 400;
 
     // ---- fog: the Empire's belief map of the Rebel HQ (ai/07 §7 "Empire: belief-map search", ai/12 D1 Decided YES; m5-fog-and-hq §N7 clues).
     // Weight per system, from the Empire's picture only. A system the picture shows Alliance-held (the HQ stands only on Alliance systems,
