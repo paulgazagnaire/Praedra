@@ -186,14 +186,17 @@ public sealed partial class SimpleAi
         return !_h.Fleets.UnitsAboard(o.Id, ObjectCategory.Regiment).Any() && !_h.Fleets.UnitsAboard(o.Id, ObjectCategory.Fighter).Any();
     }
 
-    /// <summary>The side's scouts: scout-shaped fleets, lowest id first, up to ScoutCount and the ScoutUpkeepBudget.</summary>
+    /// <summary>Scouts kept: ScoutCount plus the ExplorerScouts on top.</summary>
+    private int ScoutsWanted => _p.ScoutCount + _p.ExplorerScouts;
+
+    /// <summary>The side's scouts: scout-shaped fleets, lowest id first, up to ScoutsWanted and the ScoutUpkeepBudget.</summary>
     private List<Fleet> Scouts()
     {
         if (_scouts != null) return _scouts;
         var list = new List<Fleet>(); int upkeep = 0;
         foreach (var f in S.Fleets.Values.Where(IsScoutShape).OrderBy(f => f.Id))
         {
-            if (list.Count >= _p.ScoutCount) break;
+            if (list.Count >= ScoutsWanted) break;
             int m = Maint(_h.Economy.Find(f.Ships[0])!.Class);
             if (upkeep + m > _p.ScoutUpkeepBudget) continue;
             list.Add(f); upkeep += m;
@@ -204,7 +207,7 @@ public sealed partial class SimpleAi
     private int ScoutUpkeep() => Scouts().Sum(f => Maint(_h.Economy.Find(f.Ships[0])!.Class));
 
     /// <summary>One more scout of this class fits the count and the budget.</summary>
-    private bool WantsScout(string cls) => Scouts().Count < _p.ScoutCount && ScoutUpkeep() + Maint(cls) <= _p.ScoutUpkeepBudget;
+    private bool WantsScout(string cls) => Scouts().Count < ScoutsWanted && ScoutUpkeep() + Maint(cls) <= _p.ScoutUpkeepBudget;
 
     /// <summary>Scout-class ships with nothing aboard in other fleets of the side at held systems (they can be split off).</summary>
     private IEnumerable<(Fleet Fleet, int Ship)> SplittableScouts(IEnumerable<Fleet> fleets)
@@ -227,7 +230,7 @@ public sealed partial class SimpleAi
     /// <summary>Production, fog only: order one scout at a free shipyard when the side lacks one and none can be split off a pile.</summary>
     private void PlanScoutBuild()
     {
-        if (Scouts().Count >= _p.ScoutCount) return;
+        if (Scouts().Count >= ScoutsWanted) return;
         var classes = _p.ScoutClasses(_side);
         // scouts already queued (units exist from acceptance: m2-construction §Build order)
         foreach (var pr in S.Construction.AllProjects())
@@ -259,7 +262,7 @@ public sealed partial class SimpleAi
         foreach (var (f, ship) in SplittableScouts(idle.Where(f => !ids.Contains(f.Id))))
         {
             var cls = _h.Economy.Find(ship)!.Class;
-            if (scouts.Count + extra >= _p.ScoutCount || ScoutUpkeep() + (extra + 1) * Maint(cls) > _p.ScoutUpkeepBudget) break;
+            if (scouts.Count + extra >= ScoutsWanted || ScoutUpkeep() + (extra + 1) * Maint(cls) > _p.ScoutUpkeepBudget) break;
             long seq = _h.Fleets.SubmitSplitFleet(_side, f.Id, new[] { ship });
             Note(seq, "Split", $"ship {ship} off fleet {f.Id} at {f.At} (scout)");
             extra++;

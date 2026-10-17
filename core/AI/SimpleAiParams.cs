@@ -196,12 +196,13 @@ public sealed record SimpleAiParams
     /// <summary>Empire: HQ belief adds up to this much scouting value (at the highest belief). DEFAULT.</summary>
     public int ScoutBeliefValue { get; init; } = 150;
     /// <summary>
-    /// Of the scouts, this many (lowest fleet id first) are explorers: each goes to the nearest system the side has never explored, at any
+    /// Scouts kept on top of ScoutCount as explorers (the lowest fleet ids): each goes to the nearest system the side has never explored, at any
     /// distance (no ScoutHops limit), over a trip that ScoutPathClear allows; with none left they scout as the others. AI trainer 2026-10-17
     /// (QA-2): the value per day of travel always picked a stale system near home, so in seed 3 the Empire never explored six systems in
-    /// 3000 days, the Rebel HQ (Munto Codru) among them, and the game stalled with the Alliance holding 9 systems and no forces. 0 = none.
+    /// 3000 days, the Rebel HQ (Munto Codru) among them, and the game stalled with the Alliance holding 9 systems and no forces. DEFAULT 1 at
+    /// every level (lead 2026-10-17: an AI that never finds the HQ is a bug, not a difficulty). 0 = none (the AI of before).
     /// </summary>
-    public int ExplorerScouts { get; init; }
+    public int ExplorerScouts { get; init; } = 1;
 
     // ---- fog: estimates from the last-seen picture (ai/02 §5 principle 2: age matters). DEFAULT.
     /// <summary>Enemy fleets of a picture older than this are forgotten when choosing targets. DEFAULT.</summary>

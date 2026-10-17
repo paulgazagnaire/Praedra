@@ -41,17 +41,15 @@ public class AiLevelTests
     }
 
     // ai/12 D3 (Paul 2026-10-12: Hard is smarter, never a cheat): Hard changes only judgment, a military review every day, probe droids on the
-    // HQ hunt (bought at the normal price), an explorer scout and finishing the war when far ahead; every other parameter, the view included, is Medium's.
+    // HQ hunt (bought at the normal price) and finishing the war when far ahead; every other parameter, the view included, is Medium's.
     [Fact]
     public void Hard_IsSmarterNotRicher()
     {
         var m = AiLevels.For(AiLevel.Medium); var h = AiLevels.For(AiLevel.Hard);
         Assert.True(h.MilitaryEvery < m.MilitaryEvery);
         Assert.True(h.HuntDroids > 0 && m.HuntDroids == 0);
-        Assert.True(h.ExplorerScouts > 0 && m.ExplorerScouts == 0);
         Assert.True(h.FinishWhenAheadRatio > 0 && m.FinishWhenAheadRatio == 0);
-        var changed = new HashSet<string> { nameof(SimpleAiParams.MilitaryEvery), nameof(SimpleAiParams.HuntDroids), nameof(SimpleAiParams.ExplorerScouts),
-                                            nameof(SimpleAiParams.FinishWhenAheadRatio) };
+        var changed = new HashSet<string> { nameof(SimpleAiParams.MilitaryEvery), nameof(SimpleAiParams.HuntDroids), nameof(SimpleAiParams.FinishWhenAheadRatio) };
         foreach (var prop in typeof(SimpleAiParams).GetProperties().Where(p => !changed.Contains(p.Name) && (p.PropertyType.IsValueType || p.PropertyType == typeof(string))))
             Assert.True(Equals(prop.GetValue(m), prop.GetValue(h)), $"{prop.Name}: Medium {prop.GetValue(m)}, Hard {prop.GetValue(h)}");
     }
