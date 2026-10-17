@@ -10,11 +10,12 @@ using Rebellion.Core.Setup;
 internal static class Tourney
 {
     public const string Usage = """
-          dotnet run --project sim -- tourney [--a hard] [--b medium] [--seeds 1-16] [--days 3000] [--jobs 4] [--csv out.csv] [--verbose]
+          dotnet run --project sim -- tourney [--a hard] [--b medium] [--seeds 1-16] [--days 3000] [--jobs 4] [--csv out.csv] [--verbose] [--a-params K=V,...] [--b-params K=V,...]
         tourney plays the simple AI at level A against level B (easy, medium, hard; core/AI/AiLevel.cs), fog on for both, from the MedA start:
         every seed once with A as the Empire and once with A as the Alliance. It prints, per level and side, the wins, the median win day, the day
         the Empire's own picture first showed the true Rebel HQ, and each level's mean share of the systems the two sides hold at the end (a win
-        counts 100%, a loss 0%). --seeds takes a range (1-16), a list (1,4,9) or a count (16 = 1-16). --jobs plays that many games at once.
+        counts 100%, a loss 0%). --a-params / --b-params set SimpleAiParams values on top of a level (e.g. "MilitaryEvery=1,ScoutCount=8"; ints and
+        bools), to try a knob before it becomes part of a level. --seeds takes a range (1-16), a list (1,4,9) or a count (16 = 1-16). --jobs plays that many games at once.
         """;
 
     private sealed record GameResult(int Seed, bool AIsEmpire, AiLevel EmpireLevel, AiLevel AllianceLevel, Side? Winner, int Day, int EmpireSystems,
@@ -27,7 +28,7 @@ internal static class Tourney
 
     public static int Run(string[] a)
     {
-        AiLevel la = AiLevel.Hard, lb = AiLevel.Medium; int days = 3000, jobs = Environment.ProcessorCount; string? csv = null; bool verbose = false;
+        AiLevel la = AiLevel.Hard, lb = AiLevel.Medium; string? pa = null, pb = null; int days = 3000, jobs = Environment.ProcessorCount; string? csv = null; bool verbose = false;
         var seeds = Enumerable.Range(1, 16).ToList();
         for (int i = 0; i < a.Length; i++)
         {
@@ -41,18 +42,21 @@ internal static class Tourney
                 case "--jobs": jobs = int.TryParse(Next(), out var j) && j > 0 ? j : throw new ArgumentException("--jobs must be a positive integer."); break;
                 case "--seeds": seeds = ParseSeeds(Next()); break;
                 case "--csv": csv = Next(); break;
+                case "--a-params": pa = Next(); break;
+                case "--b-params": pb = Next(); break;
                 case "--verbose": verbose = true; break;
                 default: throw new ArgumentException($"Unknown option '{key}'.");
             }
         }
         var clock = System.Diagnostics.Stopwatch.StartNew();
-        Console.WriteLine($"Tournament: {la} (A) against {lb} (B), seeds {string.Join(",", seeds)}, up to {days} days, fog on, {jobs} at once.");
+        var paramsA = WithOverrides(AiLevels.For(la), pa); var paramsB = WithOverrides(AiLevels.For(lb), pb);
+        Console.WriteLine($"Tournament: {la}{(pa != null ? " [" + pa + "]" : "")} (A) against {lb}{(pb != null ? " [" + pb + "]" : "")} (B), seeds {string.Join(",", seeds)}, up to {days} days, fog on, {jobs} at once.");
         NewGame.Create(new NewGameOptions { Seed = seeds[0], Preset = StartPreset.MedA }); // loads the shared data once before the parallel games
         var games = seeds.SelectMany(s => new[] { (Seed: s, AEmp: true), (Seed: s, AEmp: false) }).ToList();
         var results = new ConcurrentBag<GameResult>();
         Parallel.ForEach(games, new ParallelOptions { MaxDegreeOfParallelism = jobs }, g =>
         {
-            var r = Play(g.Seed, g.AEmp, g.AEmp ? la : lb, g.AEmp ? lb : la, days);
+            var r = Play(g.Seed, g.AEmp, g.AEmp ? la : lb, g.AEmp ? lb : la, g.AEmp ? paramsA : paramsB, g.AEmp ? paramsB : paramsA, days);
             results.Add(r);
             if (verbose) lock (results) Console.WriteLine("  " + Line(r));
         });
@@ -83,10 +87,10 @@ internal static class Tourney
         return 0;
     }
 
-    private static GameResult Play(int seed, bool aIsEmpire, AiLevel empire, AiLevel alliance, int days)
+    private static GameResult Play(int seed, bool aIsEmpire, AiLevel empire, AiLevel alliance, SimpleAiParams pe, SimpleAiParams pa, int days)
     {
         var host = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA });
-        var match = new AiMatch(host, AiLevels.For(empire), AiLevels.For(alliance));
+        var match = new AiMatch(host, pe, pa);
         int? found = null;
         while (host.Game.Day < days && host.Victory.Winner == null)
         {
@@ -97,6 +101,23 @@ internal static class Tourney
         int Held(Side s) => host.Game.State.SystemOwners.Count(kv => kv.Value == s);
         return new GameResult(seed, aIsEmpire, empire, alliance, host.Victory.Winner, host.Game.Day, Held(Side.Empire), Held(Side.Alliance), found,
                               caps.Count(c => c.To == Side.Empire), caps.Count(c => c.To == Side.Alliance));
+    }
+
+    /// <summary>A copy of the parameters with "Name=value" pairs set (int and bool properties of SimpleAiParams).</summary>
+    internal static SimpleAiParams WithOverrides(SimpleAiParams p, string? spec)
+    {
+        if (string.IsNullOrWhiteSpace(spec)) return p;
+        var copy = p with { };
+        foreach (var pair in spec.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var kv = pair.Split('=', 2);
+            var prop = typeof(SimpleAiParams).GetProperty(kv[0]) ?? throw new ArgumentException($"SimpleAiParams has no {kv[0]}.");
+            object v = prop.PropertyType == typeof(int) ? int.Parse(kv[1], CultureInfo.InvariantCulture)
+                     : prop.PropertyType == typeof(bool) ? bool.Parse(kv[1])
+                     : throw new ArgumentException($"{kv[0]} is not an int or a bool.");
+            prop.SetValue(copy, v);
+        }
+        return copy;
     }
 
     private static string Line(GameResult r) =>
