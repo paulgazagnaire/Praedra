@@ -10,7 +10,7 @@ public enum Skill { Diplomacy = 0, Espionage = 1, ShipDesign = 2, TroopTraining 
 
 /// <summary>
 /// One character record (data, never changes): identity, skill bases and variances, loyalty, Force odds and level, the capability flags and the
-/// navigator speed. rule: m5-characters-and-force §The character object. Originals come from MJCHARSD / MNCHARSD (data/interim/characters.csv,
+/// navigator speed. rule: m5-characters-and-force §The character object. Originals come from MJCHARSD / MNCHARSD (data/original/characters.csv,
 /// column meaning unverified vs original); added heroes from data/design/added-heroes.csv (Proposal stats).
 /// </summary>
 public sealed record CharacterClass(
@@ -69,7 +69,7 @@ public sealed class CharacterData
     public bool TryGet(int id, out CharacterClass c) => _byId.TryGetValue(id, out c!);
     public CharacterClass? ByName(string name) => All.FirstOrDefault(c => c.Name == name);
 
-    public static CharacterData Load(string interim, string design)
+    public static CharacterData Load(string original, string design)
     {
         var nav = new Dictionary<int, int>();
         var nt = CsvTable.Load(Path.Combine(design, NavigatorFile));
@@ -82,7 +82,7 @@ public sealed class CharacterData
         for (int r = 0; r < rt.RowCount; r++) inGame[rt.GetInt(r, "id")] = rt.GetInt(r, "in_game") == 1;
 
         var all = new List<CharacterClass>();
-        all.AddRange(Rows(CsvTable.Load(Path.Combine(interim, OriginalFile)), false, nav, inGame));
+        all.AddRange(Rows(CsvTable.Load(Path.Combine(original, OriginalFile)), false, nav, inGame));
         all.AddRange(Rows(CsvTable.Load(Path.Combine(design, AddedFile)), true, nav, inGame));
         if (all.Select(c => c.Id).Distinct().Count() != all.Count) throw new DataLoadException("characters: a character id appears twice.");
         foreach (var id in nav.Keys.Concat(inGame.Keys))

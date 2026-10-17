@@ -1,0 +1,72 @@
+research_family,kind,dat_id,name,alliance,empire,cost,level,rdiff,start_alliance,start_empire
+0x28 ship,capital ship,64,Mon Calamari Cruiser,1,0,92,2,24,locked,n/a
+0x28 ship,capital ship,65,Bulk Cruiser,1,0,30,0,0,yes,n/a
+0x28 ship,capital ship,66,Assault Frigate,1,0,60,7,60,locked,n/a
+0x28 ship,capital ship,67,Nebulon-B Frigate,1,0,34,1,12,locked,n/a
+0x28 ship,capital ship,68,Alliance Escort Carrier,1,0,32,0,0,yes,n/a
+0x28 ship,capital ship,69,Corellian Corvette,1,0,14,0,0,yes,n/a
+0x28 ship,capital ship,70,Medium Transport,1,0,10,0,0,yes,n/a
+0x28 ship,capital ship,71,Bulk Transport,1,0,24,0,0,yes,n/a
+0x28 ship,capital ship,72,Corellian Gunship,1,0,10,4,48,locked,n/a
+0x28 ship,capital ship,73,Alliance Dreadnaught,1,0,44,0,0,yes,n/a
+0x28 ship,capital ship,74,CC-7700 Frigate,1,0,42,6,70,locked,n/a
+0x28 ship,capital ship,75,Bulwark Battlecruiser,1,0,248,11,100,locked,n/a
+0x28 ship,capital ship,76,Liberator Cruiser,1,0,66,8,80,locked,n/a
+0x28 ship,capital ship,77,CC-9600 Frigate,1,0,58,9,80,locked,n/a
+0x28 ship,capital ship,78,Dauntless Cruiser,1,0,136,10,100,locked,n/a
+0x28 ship,capital ship,128,Strike Cruiser,0,1,70,9,80,n/a,locked
+0x28 ship,capital ship,129,Lancer Frigate,0,1,14,2,28,n/a,locked
+0x28 ship,capital ship,130,Interdictor Cruiser,0,1,40,6,70,n/a,locked
+0x28 ship,capital ship,131,Carrack Light Cruiser,0,1,26,0,0,n/a,yes
+0x28 ship,capital ship,132,Victory Destroyer,0,1,68,0,0,n/a,yes
+0x28 ship,capital ship,133,Imperial Star Destroyer,0,1,112,0,0,n/a,yes
+0x28 ship,capital ship,134,Super Star Destroyer,0,1,282,11,100,n/a,locked
+0x28 ship,capital ship,135,Assault Transport,0,1,12,5,40,n/a,locked
+0x28 ship,capital ship,136,Death Star,0,1,584,0,0,n/a,yes
+0x28 ship,capital ship,137,Galleon,0,1,10,0,0,n/a,yes
+0x28 ship,capital ship,138,Victory II Star Destroyer,0,1,72,7,80,n/a,locked
+0x28 ship,capital ship,139,Imperial II Star Destroyer,0,1,158,10,100,n/a,locked
+0x28 ship,capital ship,140,Star Galleon,0,1,15,4,24,n/a,locked
+0x28 ship,capital ship,141,Imperial Escort Carrier,0,1,34,0,0,n/a,yes
+0x28 ship,capital ship,142,Imperial Dreadnaught,0,1,44,0,0,n/a,yes
+0x28 ship,fighter,1,A-wing,1,0,5,3,24,locked,n/a
+0x28 ship,fighter,2,B-wing,1,0,7,5,50,locked,n/a
+0x28 ship,fighter,3,X-wing,1,0,5,0,0,yes,n/a
+0x28 ship,fighter,4,Y-wing,1,0,5,0,0,yes,n/a
+0x28 ship,fighter,5,TIE Fighter,0,1,3,0,0,n/a,yes
+0x28 ship,fighter,6,TIE Interceptor,0,1,3,3,24,n/a,locked
+0x28 ship,fighter,7,TIE Bomber,0,1,3,1,8,n/a,locked
+0x28 ship,fighter,8,TIE Defender,0,1,5,8,50,n/a,locked
+0x29 troop,troop,1,Alliance Fleet Regiment,1,0,8,0,0,yes,n/a
+0x29 troop,troop,2,Alliance Army Regiment,1,0,6,0,0,yes,n/a
+0x29 troop,troop,3,Sullustan Regiment,1,0,3,1,12,locked,n/a
+0x29 troop,troop,4,Wookiee Regiment,1,0,10,3,60,locked,n/a
+0x29 troop,troop,5,Mon Calamari Regiment,1,0,6,2,40,locked,n/a
+0x29 troop,troop,6,Stormtrooper Regiment,0,1,9,0,0,n/a,yes
+0x29 troop,troop,7,Imperial Fleet Regiment,0,1,7,0,0,n/a,yes
+0x29 troop,troop,8,Imperial Army Regiment,0,1,6,0,0,n/a,yes
+0x29 troop,troop,9,War Droid Regiment,0,1,9,1,46,n/a,locked
+0x29 troop,troop,10,Dark Trooper Regiment,0,1,12,2,66,n/a,locked
+0x29 troop,special force,1,Guerrillas,1,0,1,0,0,yes,n/a
+0x29 troop,special force,2,Infiltrators,1,0,2,0,0,yes,n/a
+0x29 troop,special force,3,Longprobe Y-wing Recon Team,1,0,2,0,0,yes,n/a
+0x29 troop,special force,4,Bothan Spies,1,0,1,0,0,yes,n/a
+0x29 troop,special force,5,Imperial Probe Droid,0,1,1,0,0,n/a,yes
+0x29 troop,special force,6,Imperial Espionage Droid,0,1,1,0,0,n/a,yes
+0x29 troop,special force,7,Imperial Commandos,0,1,2,0,0,n/a,yes
+0x29 troop,special force,8,Noghri Death Commandos,0,1,2,0,0,n/a,yes
+0x29 troop,special force,9,Bounty Hunters,0,1,0,0,0,n/a,n/a
+0x2a facility,facility,1,Orbital Shipyard,1,1,20,0,0,yes,yes
+0x2a facility,facility,2,Training Facility,1,1,10,0,0,yes,yes
+0x2a facility,facility,3,Construction Yard,1,1,10,0,0,yes,yes
+0x2a facility,facility,4,Advanced Shipyard,1,1,20,5,60,locked,locked
+0x2a facility,facility,5,Advanced Training Facility,1,1,10,1,24,locked,locked
+0x2a facility,facility,6,Advanced Construction Yard,1,1,10,2,40,locked,locked
+0x2a facility,facility,1,Mine,1,1,20,0,0,yes,yes
+0x2a facility,facility,2,Refinery,1,1,20,0,0,yes,yes
+0x2a facility,defense,1,KDY-150,1,1,4,0,0,yes,yes
+0x2a facility,defense,2,LNR Series I,1,1,7,0,0,yes,yes
+0x2a facility,defense,3,GenCore Level I,1,1,12,0,0,yes,yes
+0x2a facility,defense,4,Death Star Shield,0,1,25,3,24,n/a,locked
+0x2a facility,defense,5,LNR Series II,1,1,10,4,40,locked,locked
+0x2a facility,defense,6,GenCore Level II,1,1,20,6,40,locked,locked

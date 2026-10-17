@@ -297,9 +297,10 @@ public class MissionRollTests
     public void LinearLookupBetweenRows()
     {
         var t = new MissionWorld().M.Data.Table("ESPIMSTB");
-        Assert.Equal(30, MissionModule.Lookup(t, 30, MstbLookupMode.Linear, MstbBelowFirstRow.FirstRowValue)); // 10 + 20 * 40 / 40
-        Assert.Equal(10, MissionModule.Lookup(t, 30, MstbLookupMode.Step, MstbBelowFirstRow.FirstRowValue));
-        Assert.Equal(74, MissionModule.Lookup(t, 75, MstbLookupMode.Linear, MstbBelowFirstRow.FirstRowValue)); // 50 + 25 * 49 / 50 = 74
+        // full ESPIMSTB since B1 (rows every 10 from 0 to 90, then 100 -> 99): the anchors-only table gave 30 / 10 / 74 / 50
+        Assert.Equal(35, MissionModule.Lookup(t, 35, MstbLookupMode.Linear, MstbBelowFirstRow.FirstRowValue)); // 30 + 10 * 5 / 10
+        Assert.Equal(30, MissionModule.Lookup(t, 35, MstbLookupMode.Step, MstbBelowFirstRow.FirstRowValue));
+        Assert.Equal(94, MissionModule.Lookup(t, 95, MstbLookupMode.Linear, MstbBelowFirstRow.FirstRowValue)); // 90 + 9 * 5 / 10 = 94
         Assert.Equal(50, MissionModule.Lookup(t, 50, MstbLookupMode.Linear, MstbBelowFirstRow.FirstRowValue));
     }
 

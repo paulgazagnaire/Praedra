@@ -36,27 +36,28 @@ public sealed record GameData(
     /// <summary>The repository's own data (found by walking up from the program folder to Rebellion.sln), loaded once and shared.</summary>
     public static GameData Default => _default.Value;
 
-    /// <summary>Read the data folders under <paramref name="repoRoot"/>: <c>data/design</c> and <c>data/interim</c>.</summary>
+    /// <summary>Read the data folders under <paramref name="repoRoot"/>: <c>data/design</c> and <c>data/original</c> (written by importer/; some
+    /// original files are merged with the design file of the same name). rule: B1-own-importer §Work 3, 4.</summary>
     public static GameData Load(string repoRoot)
     {
-        string design = Path.Combine(repoRoot, "data", "design"), interim = Path.Combine(repoRoot, "data", "interim");
+        string design = Path.Combine(repoRoot, "data", "design"), original = Path.Combine(repoRoot, "data", "original");
         var galaxy = GalaxyLoader.LoadFolder(design);
-        var costs = CostData.Load(Path.Combine(interim, CostData.FileName));
+        var costs = CostData.Load(original, design);
         return new GameData(
             galaxy,
-            ShipData.LoadAll(interim),
+            ShipData.LoadAll(original),
             BlockadeData.Load(Path.Combine(design, BlockadeData.FileName)),
             SlotValues.Load(Path.Combine(design, SlotValues.File), galaxy),
             costs,
             GarrisonWeights.Load(Path.Combine(design, GarrisonWeights.FileName)),
             Construction.StartingFacilities.Load(Path.Combine(design, Construction.StartingFacilities.FileName)),
-            TroopData.Load(interim, design),
-            DefenseData.Load(interim),
+            TroopData.Load(original, design),
+            DefenseData.Load(original, design),
             Rebellion.Core.Repair.RepairRules.Load(Path.Combine(design, Rebellion.Core.Repair.RepairRules.FileName)),
             Battle.NewBattleData.Load(design),
-            Rebellion.Core.Research.ResearchData.Load(interim, design, costs),
-            Rebellion.Core.Characters.CharacterData.Load(interim, design),
-            Rebellion.Core.Missions.MissionData.Load(interim, design));
+            Rebellion.Core.Research.ResearchData.Load(original, design, costs),
+            Rebellion.Core.Characters.CharacterData.Load(original, design),
+            Rebellion.Core.Missions.MissionData.Load(original, design));
     }
 
     /// <summary>The folder that holds Rebellion.sln, searching upwards from the program's folder and then the working folder.</summary>

@@ -8,7 +8,7 @@ namespace Rebellion.Core.Tests.Travel;
 public class TravelTests
 {
     private static Galaxy G => TestData.RealGalaxy;
-    private static readonly Lazy<IReadOnlyDictionary<string, ShipClass>> Ships = new(() => ShipData.LoadAll(TestData.InterimDir));
+    private static readonly Lazy<IReadOnlyDictionary<string, ShipClass>> Ships = new(() => ShipData.LoadAll(TestData.OriginalDir));
 
     private static int SpeedOf(params string[] classes) =>
         TravelFormula.FleetSpeed(

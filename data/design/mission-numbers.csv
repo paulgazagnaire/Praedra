@@ -1,0 +1,10 @@
+key,value,source
+RollDie,100,"Traced: m5-missions section Mission tables (roll rand(0..99) < p, N = 100; missions/08 0x661a88)"
+FoilBelowFirstRow,100,"Traced: m5-missions section 3 (FOILTB has no row below -20: detected 100 percent; missions/08 0x53e340)"
+DiplomacyOwnLow,1,"Traced read (GNPRTB 6183-6190, economy/05), mapping Lead: own-held +1..+20"
+DiplomacyOwnHigh,20,"Traced read (GNPRTB 6183-6190, economy/05), mapping Lead: own-held +1..+20"
+DiplomacyNeutralLow,1,"Traced read (GNPRTB 6183-6190, economy/05), mapping Lead: neutral +1..+10"
+DiplomacyNeutralHigh,10,"Traced read (GNPRTB 6183-6190, economy/05), mapping Lead: neutral +1..+10"
+SubdueLow,1,"Traced read (as Diplomacy own-held, economy/05), mapping Lead"
+SubdueHigh,20,"Traced read (as Diplomacy own-held, economy/05), mapping Lead"
+HanCharacterId,579,"Traced: Han Solo's record id (data/original/characters.csv, MJCHARSD)"

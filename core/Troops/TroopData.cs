@@ -22,7 +22,7 @@ public sealed record SpecialForceClass(
     int EspionageVariance, int CombatVariance, int LeadershipVariance, int LoyaltyBase, int MissionBit, int ResearchOrder);
 
 /// <summary>
-/// The troop and special-force class tables, loaded from <c>data/interim/troop-regiments.csv</c> and <c>special-forces.csv</c> (values copied
+/// The troop and special-force class tables, loaded from <c>data/original/troop-regiments.csv</c> and <c>special-forces.csv</c> (values copied
 /// from units/01 until the importer produces data/original/; unverified vs original), plus the names table <c>data/design/unit-names.csv</c>
 /// (the renames: names only, ids and stats keep the original). Classes are keyed by the class name used in the registry
 /// (<see cref="Economy.EconObject.Class"/>), ordinal, and also listed by id. rule: m3-troops-and-special-forces §Special force classes as data (Renames).
@@ -57,8 +57,8 @@ public sealed class TroopData
     /// <summary>The name shown for a special-force class: id 8 "Emperor's Hands", id 6 "ISB Agents" (Decided, Paul 2026-10-12). Stats and ids are unchanged.</summary>
     public string SpecialForceDisplayName(SpecialForceClass c) => _display.TryGetValue(("special_force", c.Id), out var n) ? n : c.Name;
 
-    public static TroopData Load(string interimDir, string designDir) =>
-        Parse(File.ReadAllText(Path.Combine(interimDir, RegimentsFile)), File.ReadAllText(Path.Combine(interimDir, SpecialForcesFile)),
+    public static TroopData Load(string originalDir, string designDir) =>
+        Parse(File.ReadAllText(Path.Combine(originalDir, RegimentsFile)), File.ReadAllText(Path.Combine(originalDir, SpecialForcesFile)),
             File.ReadAllText(Path.Combine(designDir, NamesFile)));
 
     public static TroopData Parse(string regimentsCsv, string specialForcesCsv, string namesCsv)

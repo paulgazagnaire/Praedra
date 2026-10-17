@@ -9,6 +9,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rebellion.Sim", "sim\Rebell
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rebellion.Core.Tests", "core.tests\Rebellion.Core.Tests.csproj", "{E8E0C8D9-C5CB-4FBE-BC59-18F85820C400}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rebellion.Importer", "importer\Rebellion.Importer.csproj", "{B4A55D9A-2700-4ED9-BEF1-CAF7670D8872}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rebellion.Importer.Tests", "importer.tests\Rebellion.Importer.Tests.csproj", "{CDC61283-49C7-4FB2-B385-A6B8B0365833}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +34,13 @@ Global
 		{E8E0C8D9-C5CB-4FBE-BC59-18F85820C400}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E8E0C8D9-C5CB-4FBE-BC59-18F85820C400}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E8E0C8D9-C5CB-4FBE-BC59-18F85820C400}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B4A55D9A-2700-4ED9-BEF1-CAF7670D8872}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B4A55D9A-2700-4ED9-BEF1-CAF7670D8872}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B4A55D9A-2700-4ED9-BEF1-CAF7670D8872}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B4A55D9A-2700-4ED9-BEF1-CAF7670D8872}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CDC61283-49C7-4FB2-B385-A6B8B0365833}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CDC61283-49C7-4FB2-B385-A6B8B0365833}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CDC61283-49C7-4FB2-B385-A6B8B0365833}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CDC61283-49C7-4FB2-B385-A6B8B0365833}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

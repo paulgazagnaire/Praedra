@@ -13,7 +13,7 @@ dotnet run --project sim -- move --fleet <name> --side <Alliance|Empire> --ships
 ```
 
 `--enemy` places a stationary fleet of the other side (named Picket-1, Picket-2, ...). `--owner` sets who owns a system
-(default: every system neutral). Ship classes are the names in `data/interim/capital-ships.csv` and `fighters.csv`, matched
+(default: every system neutral). Ship classes are the names in `data/original/capital-ships.csv` and `fighters.csv`, matched
 ignoring case; `CR90` and `CR90 Corvette` are accepted for the Corellian Corvette and `ISD` for the Imperial Star Destroyer.
 The run ends when the fleet is no longer in transit (arrived, stopped or order rejected) or after `--days`.
 

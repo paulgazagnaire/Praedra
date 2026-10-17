@@ -10,7 +10,7 @@ namespace Rebellion.Core.Tests.Fleets;
 /// <summary>A game with the fleet module attached, plus short helpers for the fleet tests.</summary>
 internal sealed class World
 {
-    public static readonly Lazy<IReadOnlyDictionary<string, ShipClass>> Ships = new(() => ShipData.LoadAll(TestData.InterimDir));
+    public static readonly Lazy<IReadOnlyDictionary<string, ShipClass>> Ships = new(() => ShipData.LoadAll(TestData.OriginalDir));
     public static BlockadeData Blockade => BlockadeData.Load(Path.Combine(TestData.DesignDir, BlockadeData.FileName));
 
     public Game Game { get; }

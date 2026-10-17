@@ -1,0 +1,1349 @@
+id,text
+4864,Yes
+4865,No
+4866,MAX
+5376,Game Controls
+5377,System Finder
+5378,Fleet Finder
+5379,Personnel Finder
+5380,Troop Finder
+5381,Encyclopedia
+5382,Galactic Information Display
+5383,C-3PO
+5384,R2-D2
+5385,Sector Selection
+5392,Raw Materials Monitor
+5393,Refined Materials Monitor
+5394,Maintenance Monitor
+5395,Game Speed Control
+5632,Loyalty
+5633,Fleets
+5634,Personnel
+5635, on Worlds
+5636, on Ships
+5637,Resources
+5638,Available Energy
+5639,Available Raw Material
+5640,Mines
+5641,Refineries
+5642,Manufacturing
+5643,Manufacturing
+5644,Shipyards
+5645,Training Facilities
+5646,Construction Yards
+5647,Defense
+5648,Troopers
+5649,Fighter Squadrons
+5650,Death Star Shields
+5651,Planetary Shield Generators
+5652,Display Off
+5653,Popular Support
+5654,Uprisings
+5655,Idle Fleets
+5656,Fleets Enroute
+5657,Planetary Defense Batteries
+5658,Idle Construction Yards
+5659,Idle Training Facilities
+5660,Idle Shipyards
+5661,Idle Personnel
+5662,Active Personnel
+5663,Systems Loyal to the Alliance
+5664,Systems Loyal to the Empire
+5665,Systems Under Military Control
+5666,Yavin
+5667,Alliance Headquarters
+5668,Coruscant
+5669,Mon Mothma
+5670,Luke Skywalker
+5671,Emperor Palpatine
+5672,Darth Vader
+5673,Unexplored Systems
+5674,All Defenses
+5712,Empire
+5713,Alliance
+5714,Neutral
+5715,Unexplored
+5716,Popular Support
+5717,Loyalty to the Alliance
+5718,Loyalty to the Empire
+5719,Loyal
+5720,Obedient
+5721,Disloyal
+5722,Worlds in Uprising
+5723,Currently in Uprising
+5724,Not in Uprising
+5728,Hostile
+5729,Fleets
+5730,3+ fleets
+5731,2  fleets
+5732,1  fleet
+5733,No fleets
+5734,Units Enroute
+5735,Units are Enroute
+5736,No Units Enroute
+5737,Personnel on Worlds
+5738,Idle Fleets
+5739,Fleets Enroute
+5744,Personnel are on Worlds
+5745,No Personnel on Worlds
+5746,Personnel on Ships
+5747,Personnel are on Ships
+5748,No Personnel on Ships
+5749,Available Energy
+5750,6+  Points Available
+5751,3-5 Points Available
+5752,1-2 Points Available
+5753,0   Points Available
+5754,Idle Personnel
+5755,Idle
+5756,None
+5757,Active Personnel
+5758,Active
+5759,None
+5760,Available Raw Materials
+5761,3+ Points Available
+5762,2  Points Available
+5763,1  Points Available
+5764,0  Points Available
+5765,Mines
+5766,6+  Mines
+5767,3-5 Mines
+5768,1-2 Mines
+5769,No  Mines
+5776,Refineries
+5777,6+  Refineries
+5778,3-5 Refineries
+5779,1-2 Refineries
+5780,No  Refineries
+5781,Manufacturing
+5782,Active
+5783,InActive
+5784,Shipyards
+5785,5+  Shipyards
+5786,Idle Shipyards
+5889,2-4 Shipyards
+5890,1   Shipyards
+5891,No  Shipyards
+5892,Training Facilities
+5893,5+  Training Facilities
+5894,2-4 Training Facilities
+5895,1   Training Facilities
+5896,No  Training Facilities
+5897,Construction Yards
+5898,Idle Construction Yards
+5899,Idle Training Facilities
+5904,5+  Construction Yards
+5905,2-4 Construction Yards
+5906,1   Construction Yards
+5907,No  Construction Yards
+5908,Trooper Regiments
+5909,6+  Trooper Regiments
+5910,3-5 Trooper Regiments
+5911,1-2 Trooper Regiments
+5912,No  Trooper Regiments
+5913,Fighter Squadrons
+5920,6+  Fighter Squadrons
+5921,3-5 Fighter Squadrons
+5922,1-2 Fighter Squadrons
+5923,No  Fighter Squadrons
+5924,Death Star Shields
+5925,Death Star Shield
+5926,No Death Star Shield
+5927,Shield Generators
+5928,6+  Generators
+5929,3-5 Generators
+5936,1-2 Generators
+5937,No  Generators
+5938,Defense Batteries
+5939,6+  Batteries
+5940,3-5 Batteries
+5941,1-2 Batteries
+5942,No  Batteries
+5946,Alliance Headquarters
+5947,"
+Sector"
+5948,Legend
+5952,Planetary Batteries
+5953,Planetary Shields
+5954,Fighter Squadrons
+5955,Trooper Regiments
+5956,Personnel
+6165,Characters in System
+6166,Manufacturing and Production
+6167,System Defenses
+6168,Fleets in System
+6169,Units Enroute to System
+6176,Characters on Fleets in System
+6177,Popular Support
+6178,Energy Consumption
+6179,Raw Materials
+6180, 
+6181,/
+6182,Mines
+6183,Refineries
+6184,Shipyards
+6185,Ship Construction
+6192,Training Facilities
+6193,Troops in Training
+6194,Construction Yards
+6195,Facilities Under Construction
+6196,Energy
+6197,Manufacturing
+6198,No Ships are being built
+6199,No Troops in training
+6200,No Facilities are being built
+6201,Destination: 
+6208,Training: 
+6209,Building: 
+6210,Galactic Encyclopedia
+6211,Topic
+6224,All Databases
+6225,Missions Database
+6226,Facilities Database
+6227,Personnel Database
+6228,Ship Database
+6229,System Database
+6230,Troop Database
+6231,Next Topic
+6232,Previous Topic
+6233,Index
+6240,Display Topic
+6245,Planetary System Finder
+6246,System Name
+6247,All Systems
+6248,Rebel Systems
+6249,Imperial Systems
+6256,Neutral Systems
+6257,Unexplored Systems
+6272,Fleet Finder
+6273,Fleet Name
+6274,All Fleets
+6275,Alliance Fleets
+6276,Imperial Fleets
+6277,Ship Finder
+6278,Ship Name
+6279,All Ships
+6280,Alliance Ships
+6281,Imperial Ships
+6288,Personnel Finder
+6289,Name
+6290,All Personnel
+6291,Alliance Personnel
+6292,Imperial Personnel
+6293,Location Unknown
+6294, Mission
+6295, - 
+6296,SpecForces
+6297,Characters
+6400,Troop Finder
+6401,Troop Location
+6402,All Troops
+6403,Close
+6404,Minimize
+6405,Go Back
+6406,Items to Build
+6407,Increase
+6408,Decrease
+6409,Done
+6410,Cancel
+6411,Encyclopedia
+6412,Edit Number
+6413,Resume
+6414,Return To Shuttle Cockpit
+6433,Conflict at 
+6434,Battle Summary
+6435,Alliance Forces
+6436,Imperial Forces
+6437,System Assets
+6438,Simulate Results
+6439,Take Command
+6440,Capital Ships
+6441,Fighter Squadrons
+6448,Trooper Regiments
+6449,Personnel
+6450,Operational
+6451,Destroyed
+6452,Survivors
+6453,Captured
+6454,Killed
+6455,Alliance Forces
+6456,Imperial Forces
+6457,Display
+6464,No Survivors
+6465,No Casualties
+6466,Fleet
+6467,System Forces
+6468,Summary
+6469,Goto System
+6470,Defense Facilities
+6471,Garrison Requirement: 
+6474,Retreat
+6480,Alliance Troops
+6481,Imperial Troops
+6482,Filters
+6483,Display
+6484,Close
+8193,Mine
+8194,Refinery
+8448,Orbital Shipyard
+8449,Training Facility
+8450,Construction Yard
+8451,Advanced Shipyard
+8452,Advanced Training Facility
+8453,Advanced Construction Yard
+8704,KDY-150
+8705,LNR Series I
+8706,GenCore Level I
+8707,LNR Series II
+8708,GenCore Level II
+8832,Death Star Shield
+9024,Alliance Headquarters
+9280,Alliance Fleet Regiment
+9281,Alliance Army Regiment
+9282,Sullustan Regiment
+9283,Wookiee Regiment
+9284,Mon Calamari Regiment
+9344,Stormtrooper Regiment
+9345,Imperial Fleet Regiment
+9346,Imperial Army Regiment
+9347,War Droid Regiment
+9348,Dark Trooper Regiment
+9536,Guerrillas
+9537,Infiltrators
+9538,Longprobe Y-wing Recon Team
+9539,Bothan Spies
+9600,Imperial Probe Droid
+9601,Imperial Espionage Droid
+9602,Imperial Commandos
+9603,Noghri Death Commandos
+9604,Bounty Hunters
+9792,A-wing
+9793,B-wing
+9794,X-wing
+9795,Y-wing
+9856,TIE Fighter
+9857,TIE Interceptor
+9858,TIE Bomber
+9859,TIE Defender
+10048,Mon Calamari Cruiser
+10049,Bulk Cruiser
+10050,Assault Frigate
+10051,Nebulon-B Frigate
+10052,Alliance Escort Carrier
+10053,Corellian Corvette
+10054,Medium Transport
+10055,Bulk Transport
+10056,Corellian Gunship
+10057,Alliance Dreadnaught
+10058,CC-7700 Frigate
+10059,Bulwark Battlecruiser
+10060,Liberator Cruiser
+10061,CC-9600 Frigate
+10062,Dauntless Cruiser
+10112,Strike Cruiser
+10113,Lancer Frigate
+10114,Interdictor Cruiser
+10115,Carrack Light Cruiser
+10116,Victory Destroyer
+10117,Imperial Star Destroyer
+10118,Super Star Destroyer
+10119,Assault Transport
+10120,Death Star
+10121,Galleon
+10122,Victory II Star Destroyer
+10123,Imperial II Star Destroyer
+10124,Star Galleon
+10125,Imperial Escort Carrier
+10126,Imperial Dreadnaught
+10304,Mon Mothma
+10305,Leia Organa
+10306,Luke Skywalker
+10307,Han Solo
+10368,Emperor Palpatine
+10369,Darth Vader
+10816,Ackbar
+10817,Wedge Antilles
+10818,Lando Calrissian
+10819,Chewbacca
+10820,Jan Dodonna
+10821,Crix Madine
+10822,Carlist Rieekan
+10823,Afyon
+10824,Drayson
+10825,Borsk Fey'lya
+10826,Tura Raftican
+10827,Bren Derlin
+10828,Garm Bel Iblis
+10829,Talon Karrde
+10830,Narra
+10831,Huoba Neva
+10832,Page
+10833,Syub Snunb
+10834,Adar Tallon
+10835,Sarin Virgilio
+10836,Vanden Willard
+10837,Roget Jiriss
+10838,Kaiya Andrimetrum
+10839,Mazer Rackus
+10840,Orrimaarko
+10841,Ma'w'shiye
+10880,Jerjerrod
+10881,Ozzel
+10882,Piett
+10883,Veers
+10884,Brandei
+10885,Covell
+10886,Dorja
+10887,Bin Essada
+10888,Niles Ferrier
+10889,Grammel
+10890,Griff
+10891,Klev
+10892,Needa
+10893,Bane Nothos
+10894,Orlok
+10895,Pellaeon
+10896,Screed
+10897,Thrawn
+10898,Zuggs
+10899,Daala
+10900,Pter Thanas
+10901,Bevel Lemelisk
+10902,Shenir Rix
+10903,Noval Garaint
+10904,Garindan
+10905,Menndo
+10906,Labansat
+10907,Villar
+11265,Move
+11266,Return
+11267,Autorouting
+11268,Adrift
+11280,Diplomacy
+11281,Rescue
+11282,Sabotage
+11283,Espionage
+11284,Research and Development
+11285,Reconnaissance
+11286,Recruitment
+11287,Abduction
+11296,Ship Design Research
+11297,Facility Design Research
+11298,Troop Training Research
+11328,Incite Uprising
+11329,Death Star Sabotage
+11330,Jedi Training
+11331,Dagobah
+11332,Palace
+11333,Vacation
+11334,Sabbatical
+11392,Subdue Uprising
+11393,Assassination
+11394,Pickup
+11395,Bounty
+11520,Galaxy
+11521,Unknown Parent
+11522,Side
+11523,Fleet
+11524,Construction
+11525,Shipyard
+11526,Training
+11527,Mission Mgr
+11528,System Mgr
+11529,Character Mgr
+11552,Alliance
+11553,Alliance Fleet
+11584,Empire
+11585,Imperial Fleet
+11600,Alliance Jail
+11601,Dagobah
+11602,Hermitage
+11616,Empire Jail
+11617,Jabba's Palace
+11648,Abrion
+11649,Atrivis
+11650,Churba
+11651,Corellian
+11652,Calaron
+11653,Dolomar
+11654,Dufilvan
+11655,Fakir
+11656,Farfin
+11657,Glythe
+11658,Jospro
+11659,Kanchen
+11660,Mayagil
+11661,Moddell
+11662,Orus
+11663,Quelli
+11664,Sesswenna
+11665,Sluis
+11666,Sumitra
+11667,Xappyh
+11776,Abregado
+11777,Cathar
+11778,Da Soocha
+11779,Galpos II
+11780,Garban
+11781,Hefi
+11782,Hishyim
+11783,Intuci
+11784,Tieos
+11785,Ukio
+11792,Despayre
+11793,Fedje
+11794,Generis
+11795,Moltok
+11796,Nam'ta
+11797,Spefik
+11798,Tibrin
+11799,Togoria
+11800,Trammis
+11801,Zeffliffl
+11808,Akrit'tar
+11809,F'tral
+11810,Fwillsving
+11811,Ithor
+11812,Jerijador
+11813,Kessel
+11814,Kubindi
+11815,Morvogodine
+11816,Norval II
+11817,Skor II
+11824,Allyuen
+11825,Anoat
+11826,Bespin
+11827,Deyer
+11828,Gentes
+11829,Hoth
+11830,Lelmra
+11831,New Cov
+11832,Storthus
+11833,Tokmia
+11840,Commenor
+11841,Corellia
+11842,Corfai
+11843,Duros
+11844,Drall
+11845,Selonia
+11846,Talus
+11847,Tralus
+11848,Vagran
+11849,Xyquine
+11856,Balfron
+11857,Caprionril
+11858,Kamparas
+11859,Ketaris
+11860,Omwat
+11861,Pantolomin
+11862,Phorliss
+11863,Sarka
+11864,Tangrene
+11865,Wor Tandell
+11872,Algarian
+11873,Filve
+11874,Gamorr
+11875,Klatooine
+11876,Ord Mantell
+11877,Ord Pardon
+11878,Ord Trasi
+11879,Toprawa
+11880,Womrik
+11881,Zebitrope IV
+11888,Ando
+11889,Berchest
+11890,Bimmisaari
+11891,Carida
+11892,Delaya
+11893,Halowan
+11894,Mrisst
+11895,Obroa-skai
+11896,Palanhi
+11897,Ralltiir
+11904,Bilbringi
+11905,Byss
+11906,Charmath
+11907,Firro
+11908,Khomm
+11909,Kinyen
+11910,Phraetiss
+11911,Rishi
+11912,Taanab
+11913,Wistril
+11920,Altarrn
+11921,Arkania
+11922,Elrood
+11923,Fef
+11924,Fornax
+11925,Nentan
+11926,Sedri
+11927,Valrar
+11928,Vortex
+11929,Yag'Dhul
+12032,Azbian
+12033,Cardooine
+12034,Chrondre
+12035,Dar'Or
+12036,Douglas III
+12037,Engira
+12038,Jomark
+12039,Kiffex
+12040,Trogan
+12041,Waskiro
+12048,Culroon III
+12049,Davnar
+12050,Derra IV
+12051,Mindar
+12052,Munto Codru
+12053,Nal Hutta
+12054,Smarteel
+12055,Spuma
+12056,Vodran
+12057,Xa Fel
+12064,Anchoron
+12065,Chalcedon
+12066,Clak'dor VII
+12067,Cona
+12068,Dantooine
+12069,H'nemthe
+12070,Kabal
+12071,Oetrago
+12072,Triton
+12073,Urdur
+12080,Adega
+12081,Agrilat
+12082,Annaj
+12083,Basilisk
+12084,Endor
+12085,Gandolo IV
+12086,Hozrel XI
+12087,Khuiumin
+12088,Pzob
+12089,Vjun
+12096,Bakura
+12097,Chazwa
+12098,Daltar
+12099,Joiol
+12100,Lafra
+12101,Kimanan
+12102,Mantessa
+12103,Poderis
+12104,Ryloth
+12105,Tatooine
+12112,Amorris
+12113,Corstris
+12114,Dathomir
+12115,Kirrek
+12116,Pil Diller
+12117,Rafa
+12118,Selaggis
+12119,Thrakia
+12120,Varn
+12121,Vinsoth
+12128,Averam
+12129,Balmorra
+12130,Bortras
+12131,Chandrila
+12132,Corsin
+12133,Coruscant
+12134,Ghorman
+12135,Svivren
+12136,Uvena
+12137,Yaga Minor
+12144,Bothawui
+12145,Bpfassh
+12146,Mon Calamari
+12147,Denab
+12148,Kothlis
+12149,Orto
+12150,Praesitlyn
+12151,Sluis Van
+12152,Sullust
+12153,Umgul
+12160,Alk'lellish III
+12161,Boordii
+12162,Flax
+12163,Geedon V
+12164,Kashyyyk
+12165,Linuri
+12166,Qat Chrystac
+12167,Tierfon
+12168,Woostri
+12169,Yavin
+12176,Ambria
+12177,G'rho
+12178,Kirdo III
+12179,Neelgaimon
+12180,Norulac
+12181,Ruuria
+12182,Stic
+12183,Thanta Zilbra
+12184,Thila
+12185,Tund
+12288,Build
+12289,Stop
+12290,Destination
+12291,Rename
+12292,Encyclopedia
+12293,Status
+12294,Reserved
+12295,Scrap
+12311,Confirmed Move
+12312,Move
+12313,Planetary Bombardment
+12314,Target Military Facilities
+12315,Target Civilian Facilities
+12316,General Bombardment
+12317,Destroy System
+12318,Planetary Assault
+12319,Create Fleet
+12320,Mission
+12336,Retire
+12352,Command
+12354,None
+12356,Commander
+12358,Admiral
+12360,General
+12362,Abort
+12364,Continue
+12560,Build Ships
+12561,Build Troops
+12562,Build Facilities
+12563,Galaxy Overview
+12564,Objectives
+12565,Manage Garrisons
+12566,Manage Production
+12567,Manage Maintenance
+12568,Not An Operation
+12569,Deactivate
+12570,Reactivate
+12571,Translate Counterpart
+12572,Messages
+12573,Message Alerts
+12574,Agent Advice
+12576,Loyalty
+12577,Fleets
+12578,Mission
+12579,Resources
+12580,Manufacturing
+12581,Defense
+12582,Conflict
+12583,Chat
+12584,Advice
+14352,Build Selection
+14353,Number to build:
+14354,Best Time To Completion:
+14355,Best Time To Deployment:
+14356,Day 
+14357, Days
+14358,n/a
+14368,Fighter Squadrons
+14369,Troop Regiments
+14370,Personnel
+14371,Ships
+19792,Alliance
+19793,Empire
+19808,Rebel Alliance
+19809,Galactic Empire
+19824,Alliance
+19825,Imperial
+20481,Tactical After Action Report
+20482,Tactical Pre Battle Message
+20483,Uprising Message
+20484,System Control Message
+20485,Research Report
+20486,Repair Message
+20487,Blockade Message
+20488,Confirmation Message
+20489,Smuggling Message
+20490,Chat Message
+20491,Garrison Warning
+20492,Maintenance Shortfall
+20493,Unit Arrival
+20494,Unit Deployment
+20495,Operation Reports
+20496,Deployment Failed
+20497,Unit Rerouted
+20499,Evacuation Losses
+20500,Personnel Arrive
+20501,Planet Destroyed
+20502,Mission Report
+20503,Mission Failed
+20504,Informant Report
+20505,Character Captured
+20506,Character Health
+20507,Bounty Hunters
+20508,Force User Discovered
+20509,Force Skill Improvement
+20510,Coruscant Captured
+20511,Rebel HQ Destroyed
+20512,System Resources Messages
+20513,Construction Complete
+20514,Unit Sabotaged
+20515,Death Star Sabotaged
+20516,Encounter Messages
+20517,Dagobah Messages
+20518,Emperor at Coruscant
+20519,Traitor Discovered
+20520,Rescue Attempt
+20736,Hydra
+20737,Medusa
+20738,Gorgon
+20739,Manticore
+20740,Griffin
+20741,Dragon
+20742,Lion
+20743,Tiger
+20744,Bear
+20745,Goblin
+20746,Serpent
+20747,Cronos
+20748,Rhea
+20749,Oceanus
+20750,Hyperion
+20751,Iapetus
+20752,Ophion
+20753,Themis
+20754,Mnemosyne
+20755,Eurynome
+20756,Cerberus
+20757,Hades
+20758,Eurystheus
+20759,Eurytion
+20760,Atlas
+20761,Antaeus
+20762,Cacus
+20763,Nessus
+20764,Periphetes
+20765,Procrustes
+20766,Jaguar
+20767,Puma
+20768,Lynx
+20769,Pan
+20770,Triton
+20771,Prometheus
+20772,Chiron
+20773,Viper
+20774,Adder
+20832,Master
+20833,Tyrant
+20834,Dictator
+20835,Inquisitor
+20836,Despot
+20837,Ruler
+20838,Oppressor
+20839,Magnate
+20840,Lord
+20841,Overlord
+20842,Taskmaster
+20843,Absolute
+20844,Supreme
+20845,Paramount
+20846,Preeminent
+20847,Prevail
+20848,Ascendancy
+20849,Dominator
+20850,Domineer
+20851,Regnant
+20852,Harbinger
+20853,Herald
+20854,Subjugator
+20855,Order
+20856,Decree
+20857,Edict
+20858,Ordinance
+20859,Act
+20860,Warrant
+20861,Mandate
+20862,Battle
+20863,Contest
+20864,Strife
+20865,Confrontation
+20928,Judicator
+20929,Punisher
+20930,Devastator
+20931,Exterminator
+20932,Raze
+20933,Plunderer
+20934,Eradicator
+20935,Liquidator
+20936,Suppressor
+20937,Annihilator
+20938,Ravisher
+20939,Obliterator
+20940,Abolisher
+20941,Extinguisher
+20942,Wrecker
+20943,Dismantler
+20944,Mutilator
+20945,Trampler
+20946,Marender
+20947,Neutralizer
+20948,Eraser
+20949,Terminator
+20950,Destroyer
+20951,Destructor
+20952,Ravenger
+20953,Triumphant
+20954,Victorious
+20955,Destiny
+20956,Empire
+20957,Avenger
+20958,Chimaera
+20959,Executor
+20992,Swift
+20993,Quick
+20994,Arrow
+20995,Haste
+20996,Nimble
+20997,Agile
+20998,Race
+20999,Eagle
+21000,Hawk
+21001,Falcon
+21002,Comet
+21003,Shooting Star
+21004,Sparrow
+21005,Nova
+21006,Boreas
+21007,Zephyrus
+21008,Notus
+21009,Eurus
+21010,Wind
+21011,Lightning
+21088,Deliverance
+21089,Emancipation
+21090,Enfranchise
+21091,Rescue
+21092,Salvation
+21093,Reliant
+21094,Brave
+21095,Fearless
+21096,Daring
+21097,Courageous
+21098,Valiant
+21099,Intrepid
+21100,Confident
+21101,Valor
+21102,Hero
+21103,Bold
+21104,Gallant
+21105,Defiant
+21106,Stalwart
+21107,Lion Heart
+21108,Resolute
+21109,Endurance
+21110,Constant
+21111,Ceaseless
+21112,Persistance
+21113,Sword
+21114,Guard
+21115,Protector
+21116,Sentry
+21117,Shield
+21118,Perseverence
+21119,Rebel Star
+21120,Larkhess
+21121,Antares
+21122,Quenfis
+21184,Liberty
+21185,Freedom
+21186,Independence
+21187,Sovereignty
+21188,Autonomy
+21189,Democracy
+21190,Endeavor
+21191,Enterprise
+21192,Alliance
+21193,Indomitable
+21194,Indefatigable
+21195,Invincible
+21196,Unconquerable
+21197,Tireless
+21198,Unfailing
+21199,Relentless
+32768,Post All Messages as Urgent
+32769,Post All Messages Silently
+32770,Post All Messages with Alert
+32771,Block All Messages
+32772,Post All Selected Messages as Urgent
+32773,Post Messages Silently
+32774,Post Messages with Alert
+32775,Block All Selected Messages
+32776,Select All
+32777,Delete Selected Messages
+32784,All Messages
+32785,Popular Support Messages
+32786,Resource Messages
+32787,Manufacturing Messages
+32788,Mission Messages
+32789,Chat Messages
+32790,Defense Messages
+32791,Fleet Messages
+32792,Conflict Messages
+32793,Message Index
+32800,Display Message
+32801,Notification Options
+32802,Compose Chat Message
+32803,Global Settings
+32804,Popular Support Message Settings
+32805,System Message Settings
+32806,Manufacturing Message Settings
+32807,Mission Message Settings
+32808,Personnel Message Settings
+32809,Chat Message Settings
+32816,Display
+32817,Encylopedia
+32818,Advice Messages
+34048,Agents
+34049,Decoys
+34050,Begin Mission
+34051,Cancel
+34052,Target
+34053,Use Selected Agents as Decoys
+34054,Use Selected Decoys as Agents
+34055,Create Mission
+34064,Missions
+34080,Selected Mission
+34081,Target:
+34082,Personnel:
+34083,Agents
+34084,Decoys
+34085,Mission at 
+34086,None
+34087,Target Unknown
+34096, Regiments
+34304,Pause
+34305,Very Slow
+34306,Slow
+34307,Medium
+34308,Fast
+34384,Fighter Squadron Status
+34385,Maintenance Cost:
+34386,Squadron Size:
+34387,Hyperdrive Rating:
+34388,Maximum Shield Strength:
+34389,Sub-Light Engine Rating:
+34390,Maneuverability:
+34391,Detection Rating:
+34392,Bombardment Value:
+34393,Weapons Rating:
+34400, Laser Rating:
+34401, Ion Cannon:
+34402, Torpedoes:
+34403,Defense Facility Status
+34404,Location:
+34405,Trooper Regiment Status
+34406,Status:
+34407,Attack Strength:
+34408,Defense Strength:
+34409,Bombardment Defense Strength:
+34416,Spec Forces Status
+34417,Detection Value:
+34418,Diplomacy Rating:
+34419,Espionage Rating:
+34420,Combat Rating:
+34421,Leadership Rating:
+34422,Mission Status
+34423,Target:
+34424,Team Size:
+34425,Decoys:
+34432,System Status
+34433,General:
+34434,Commander:
+34435,Admiral:
+34436,Loyalty to Alliance:
+34437,Loyalty To Empire:
+34438,Energy Consumption:
+34439,Raw Material Consumption:
+34440,Facilities:
+34441,Mines:
+34448,Refineries:
+34449,Shipyards:
+34450,Training Facilities:
+34451,Construction Yards:
+34452,Planetary Shields:
+34453,Defensive Batteries:
+34454,Death Star Shields:
+34455,Defense
+34456,Regiments:
+34457,Fighter Squadrons:
+34560,Manufacturing Status
+34561,Standard Processing Rate:
+34562,Capital Ship Status
+34563,Fleet:
+34564,Capacity:
+34565,Trooper Regiments:
+34566,Embarked:
+34567,Personnel:
+34568,Ship Damaged:
+34569,Hyperdrive Rating:
+34576,Hull Value:
+34577,Damage Control Rating:
+34578,Shield Recharge Rate:
+34579,Tractor Beam Power:
+34580,Sub-Light Engine Rating:
+34581,Weapon Recharge Rate:
+34582,Bombardment Modifier:
+34583,Forward Weapons Arc Rating:
+34584,Turbo Laser:
+34585,Laser Cannon:
+34592,Aft Weapons Arc Rating:
+34593,Starboard Weapons Arc Rating:
+34594,Port Weapons Arc Rating:
+34595,Character Status
+34596,Commanding:
+34597,Force Ranking:
+34598,Diplomacy Rating:
+34599,Espionage Rating:
+34600,Combat Rating:
+34601,Leadership Rating:
+34608,R&&D Capabilities
+34609, Ship Design
+34610, Troop Training
+34611, Facility Design
+34615,Possible Command Ranks
+34616,Fleet Status
+34624,Number Of Ships
+34625,Damaged Ships:
+34626,Hyperdrive Capable
+34627,Shield Strength
+34628,Enroute
+34629,On Mission
+34630,Captured
+34631,Injured
+34632,Awaiting Orders
+34633,Novice
+34640,Trainee
+34641,Jedi Student
+34642,Jedi Knight
+34643,Jedi Master
+34644,None
+34645,No
+34646,Yes
+34647,Under Construction
+34648,Alliance
+34649,Empire
+34657,Neutral
+34658,Not Assigned
+34659,Active
+34660,Time to Destination:
+34661,Estimated Day of Completion:
+34662,ETA Destination:
+34663, Status
+34664,Items to Build:
+34665,Idle
+34672,Building
+34673,Training
+34674,No Facilities
+34675,Reserved
+34688,Defend Coruscant
+34689,Control Coruscant
+34690,Coruscant Taken
+34691,Coruscant Lost
+34692,Defend Headquarters
+34693,Destroy Rebel HQ
+34694,Rebel HQ Destroyed
+34695,Headquarters Lost
+34696,Defend the Emperor
+34697,Capture Palpatine
+34698,Emperor Captive
+34699,Emperor Captured
+34700,Defend Vader
+34701,Capture Vader
+34702,Vader Captive
+34703,Vader Captured
+34704,Defend Mon Mothma
+34705,Capture Mothma
+34706,Mon Mothma Captive
+34707,Mon Mothma Captured
+34708,Defend Luke
+34709,Capture Skywalker
+34710,Skywalker Captive
+34711,Luke Captured
+34712,Killed
+34713,Retired
+34816,General
+34817,Admiral
+34818,Commander
+34819,Class:
+36928,Commander Mothma
+36929,Commander Organa
+36930,Commander Skywalker
+36931,Commander Solo
+36992,Commander Palpatine
+36993,Commander Vader
+37440,Commander Ackbar
+37441,Commander Antilles
+37442,Commander Calrissian
+37443,Commander Chewbacca
+37444,Commander Dodonna
+37445,Commander Madine
+37446,Commander Rieekan
+37447,Commander Afyon
+37448,Commander Drayson
+37449,Commander Fey'lya
+37450,Commander Raftican
+37451,Commander Derlin
+37452,Commander Bel Iblis
+37453,Commander Karrde
+37454,Commander Narra
+37455,Commander Neva
+37456,Commander Page
+37457,Commander Snunb
+37458,Commander Tallon
+37459,Commander Virgilio
+37460,Commander Willard
+37461,Commander Jiriss
+37462,Commander Andrimetrum
+37463,Commander Rackus
+37464,Commander Orrimaarko
+37465,Commander Ma'e'shiye
+37504,Commander Jerjerrod
+37505,Commander Ozzel
+37506,Commander Piett
+37507,Commander Veers
+37508,Commander Brandei
+37509,Commander Covell
+37510,Commander Dorja
+37511,Commander Essada
+37512,Commander Ferrier
+37513,Commander Grammel
+37514,Commander Griff
+37515,Commander Klev
+37516,Commander Needa
+37517,Commander Nothos
+37518,Commander Orlok
+37519,Commander Pellaeon
+37520,Commander Screed
+37521,Commander Thrawn
+37522,Commander Zuggs
+37523,Commander Daala
+37524,Commander Thanas
+37525,Commander Lemelisk
+37526,Commander Rix
+37527,Commander Garaint
+37528,Commander Indi
+37529,Commander Menndo
+37530,Commander Labansat
+37531,Commander Villar
+37952,Admiral Mothma
+37953,Admiral Organa
+37954,Admiral Skywalker
+37955,Admiral Solo
+38016,Admiral Palpatine
+38017,Admiral Vader
+38464,Admiral Ackbar
+38465,Admiral Antilles
+38466,Admiral Calrissian
+38467,Admiral Chewbacca
+38468,Admiral Dodonna
+38469,Admiral Madine
+38470,Admiral Rieekan
+38471,Admiral Afyon
+38472,Admiral Drayson
+38473,Admiral Fey'lya
+38474,Admiral Raftican
+38475,Admiral Derlin
+38476,Admiral Bel Iblis
+38477,Admiral Karrde
+38478,Admiral Narra
+38479,Admiral Neva
+38480,Admiral Page
+38481,Admiral Snunb
+38482,Admiral Tallon
+38483,Admiral Virgilio
+38484,Admiral Willard
+38485,Admiral Jiriss
+38486,Admiral Andrimetrum
+38487,Admiral Rackus
+38488,Admiral Orrimaarko
+38489,Admiral Ma'e'shiye
+38528,Admiral Jerjerrod
+38529,Admiral Ozzel
+38530,Admiral Piett
+38531,Admiral Veers
+38532,Admiral Brandei
+38533,Admiral Covell
+38534,Admiral Dorja
+38535,Admiral Essada
+38536,Admiral Ferrier
+38537,Admiral Grammel
+38538,Admiral Griff
+38539,Admiral Klev
+38540,Admiral Needa
+38541,Admiral Nothos
+38542,Admiral Orlok
+38543,Admiral Pellaeon
+38544,Admiral Screed
+38545,Admiral Thrawn
+38546,Admiral Zuggs
+38547,Admiral Daala
+38548,Admiral Thanas
+38549,Admiral Lemelisk
+38550,Admiral Rix
+38551,Admiral Garaint
+38552,Admiral Indi
+38553,Admiral Menndo
+38554,Admiral Labansat
+38555,Admiral Villar
+38976,General Mothma
+38977,General Organa
+38978,General Skywalker
+38979,General Solo
+39040,General Palpatine
+39041,General Vader
+39488,General Ackbar
+39489,General Antilles
+39490,General Calrissian
+39491,General Chewbacca
+39492,General Dodonna
+39493,General Madine
+39494,General Rieekan
+39495,General Afyon
+39496,General Drayson
+39497,General Fey'lya
+39498,General Raftican
+39499,General Derlin
+39500,General Bel Iblis
+39501,General Karrde
+39502,General Narra
+39503,General Neva
+39504,General Page
+39505,General Snunb
+39506,General Tallon
+39507,General Virgilio
+39508,General Willard
+39509,General Jiriss
+39510,General Andrimetrum
+39511,General Rackus
+39512,General Orrimaarko
+39513,General Ma'e'shiye
+39552,General Jerjerrod
+39553,General Ozzel
+39554,General Piett
+39555,General Veers
+39556,General Brandei
+39557,General Covell
+39558,General Dorja
+39559,General Essada
+39560,General Ferrier
+39561,General Grammel
+39562,General Griff
+39563,General Klev
+39564,General Needa
+39565,General Nothos
+39566,General Orlok
+39567,General Pellaeon
+39568,General Screed
+39569,General Thrawn
+39570,General Zuggs
+39571,General Daala
+39572,General Thanas
+39573,General Lemelisk
+39574,General Rix
+39575,General Garaint
+39576,General Indi
+39577,General Menndo
+39578,General Labansat
+39579,General Villar

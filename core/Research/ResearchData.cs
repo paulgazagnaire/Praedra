@@ -8,8 +8,8 @@ namespace Rebellion.Core.Research;
 public enum ResearchKind { Ship = 0, Troop = 1, Facility = 2 }
 
 /// <summary>
-/// One row of the research ladders (data/interim/research-unlocks.csv, a copy of economy/data/research-unlocks.csv; Traced, unverified vs
-/// original). <see cref="Catalogue"/> is the row's position in the file: the catalogue order of m5-research §The level check step 4 (DEFAULT).
+/// One row of the research ladders (data/original/research-unlocks.csv, read from the 1998 files by importer/, then the rows of
+/// data/design/research-unlocks.csv). <see cref="Catalogue"/> is the row's position in the file: the catalogue order of m5-research §The level check step 4 (DEFAULT).
 /// rule: m5-research §Which track an item belongs to, §Ladders.
 /// </summary>
 public sealed record ResearchRow(int Catalogue, ResearchKind Kind, string Name, bool Alliance, bool Empire, int Cost, int Order, int Difficulty);
@@ -64,17 +64,20 @@ public sealed class ResearchData
 
     public ResearchData(IReadOnlyList<ResearchRow> rows, ResearchRules rules) { Rows = rows; Rules = rules; }
 
-    public static ResearchData Load(string interim, string design, CostData costs) =>
-        new(ParseLadder(File.ReadAllText(Path.Combine(interim, LadderFileName)), LadderFileName, costs),
+    /// <summary>The original ladder merged with the design rows (rule: B1-own-importer §Work 3), and the rules.</summary>
+    public static ResearchData Load(string original, string design, CostData costs) =>
+        new(ParseLadder(CsvTable.LoadMerged(original, design, LadderFileName), costs),
             ResearchRules.Load(Path.Combine(design, ResearchRules.FileName)));
 
     /// <summary>
     /// Parse the ladder file. research_family 0x28 = Ship, 0x29 = Troop, 0x2a = Facility (economy/14 §2.5). With <paramref name="costs"/>
     /// given, every row must name a costs class with the same research order, and every costs class must have a row.
     /// </summary>
-    public static List<ResearchRow> ParseLadder(string text, string source, CostData? costs)
+    public static List<ResearchRow> ParseLadder(string text, string source, CostData? costs) => ParseLadder(CsvTable.Parse(text, source), costs);
+
+    public static List<ResearchRow> ParseLadder(CsvTable t, CostData? costs)
     {
-        var t = CsvTable.Parse(text, source);
+        string source = t.Source;
         t.Require("research_family", "name", "alliance", "empire", "cost", "level", "rdiff");
         var rows = new List<ResearchRow>();
         var seen = new SortedSet<string>(StringComparer.Ordinal);
