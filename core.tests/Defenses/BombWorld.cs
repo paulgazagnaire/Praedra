@@ -19,7 +19,7 @@ internal sealed class BombWorld
     public const string Other = "Bespin";
     public const string Imp = "Coruscant";
 
-    public static readonly Lazy<DefenseData> RealData = new(() => DefenseData.Load(TestData.InterimDir));
+    public static readonly Lazy<DefenseData> RealData = new(() => DefenseData.Load(TestData.OriginalDir, TestData.DesignDir));
 
     public SupWorld S { get; }
     public DefenseModule Def { get; }
@@ -39,9 +39,9 @@ internal sealed class BombWorld
     /// <summary>The real defense data with one text edit applied to the bombardment-defense file (e.g. another regiment defense).</summary>
     public static DefenseData DataWith(Func<string, string> editBombardFile)
     {
-        string dir = TestData.InterimDir;
+        string dir = TestData.OriginalDir;
         return DefenseData.Parse(File.ReadAllText(Path.Combine(dir, DefenseData.DefensesFile)), DefenseData.DefensesFile,
-            editBombardFile(File.ReadAllText(Path.Combine(dir, DefenseData.BombardmentFile))), "test-bombardment-defense.csv");
+            editBombardFile(TestData.MergedText(DefenseData.BombardmentFile)), "test-bombardment-defense.csv");
     }
 
     /// <summary>Data where every Army regiment (both sides) has bombardment defense <paramref name="d"/>.</summary>

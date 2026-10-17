@@ -615,6 +615,12 @@ public sealed class FogModule
         return null;
     }
 
+    /// <summary>
+    /// The stamp of the side's last group D (ground) write at a system, explored or not; null when never written. Stamps only grow (every write
+    /// is stamped with the day it is made). Read by the AI memory's save (QA-1) to know which old bombardments a look-back can still reach.
+    /// </summary>
+    public int? GroundStamp(Side side, string system) => F.Of(side).Systems.TryGetValue(system, out var k) ? k.StampD : null;
+
     /// <summary>The side's sighting log from a day on. rule: §N3.</summary>
     public IReadOnlyList<Sighting> Sightings(Side side, int sinceDay = 0) => F.Of(side).Sightings.Where(s => s.Day >= sinceDay).ToList();
 

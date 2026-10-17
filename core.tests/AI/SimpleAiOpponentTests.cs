@@ -135,7 +135,10 @@ public class SimpleAiOpponentTests
     {
         var (m, host) = NewMatch(6, null);
         m.RunTo(220);
-        var save = host.Save();
+        // The save with its AI memory line (QA-1): the fresh AIs read their look-backs from that memory. The plain core save (host.Save()) has no
+        // AI memory by design (m1-clock-and-orders DEFAULT: events are not saved), so with it the fresh AIs plan from an empty memory and the
+        // games may part (seed 6 does on day 262 with the full 1998 mission tables).
+        var save = host.SaveWithSettings();
         m.RunTo(300);
         var host2 = GameHost.Load(save, Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory); // the same settings as the game (settings are not in the save)
         var m2 = new AiMatch(host2); m2.Empire.KnownEnemyHq = host2.HqSystem;

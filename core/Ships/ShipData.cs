@@ -20,8 +20,8 @@ public sealed record ShipArcs(ArcCounts Fore, ArcCounts Aft, ArcCounts Port, Arc
 public enum ShipSide { None = 0, Alliance = 1, Empire = 2 }
 
 /// <summary>
-/// The ship-class fields the core needs so far (travel, forced stop, ship object, carrying capacity, bombardment power: <c>Bombardment</c> is a capital ship's bombardment_modifier or a squadron's bombardment value). NOTE: loaded from data/interim/ (copies of the spec CSVs, ships/data/*.csv);
-/// unverified vs original until the importer produces data/original/.
+/// The ship-class fields the core needs so far (travel, forced stop, ship object, carrying capacity, bombardment power: <c>Bombardment</c> is a capital ship's bombardment_modifier or a squadron's bombardment value). Loaded from data/original/ (CAPSHPSD and FIGHTSD, read by
+/// importer/). rule: B1-own-importer §Work 3.
 /// </summary>
 public sealed record ShipClass(
     string Name,
@@ -63,7 +63,7 @@ public sealed record ShipClass(
     public int Speed(bool damaged) => damaged && HyperdriveIfDamaged > 0 ? HyperdriveIfDamaged : Hyperdrive;
 }
 
-/// <summary>Loader for the interim capital-ships.csv and fighters.csv (unverified vs original).</summary>
+/// <summary>Loader for data/original/capital-ships.csv and fighters.csv (written by importer/ from the 1998 files).</summary>
 public static class ShipData
 {
     public const string CapitalShipsFile = "capital-ships.csv";
@@ -83,11 +83,11 @@ public static class ShipData
         Parse(File.ReadAllText(path), Path.GetFileName(path), isCapital: false);
 
     /// <summary>Capital ships and squadrons together, sorted by ordinal name.</summary>
-    public static IReadOnlyDictionary<string, ShipClass> LoadAll(string interimDir)
+    public static IReadOnlyDictionary<string, ShipClass> LoadAll(string originalDir)
     {
         var all = new SortedDictionary<string, ShipClass>(StringComparer.Ordinal);
-        foreach (var s in LoadCapitalShips(Path.Combine(interimDir, CapitalShipsFile))
-                     .Concat(LoadFighters(Path.Combine(interimDir, FightersFile))))
+        foreach (var s in LoadCapitalShips(Path.Combine(originalDir, CapitalShipsFile))
+                     .Concat(LoadFighters(Path.Combine(originalDir, FightersFile))))
             if (!all.TryAdd(s.Name, s)) throw new DataLoadException($"Ship class '{s.Name}' appears in both ship files.");
         return all;
     }

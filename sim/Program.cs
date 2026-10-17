@@ -550,7 +550,7 @@ internal static class SimCli
     {
         string root = FindRoot();
         var galaxy = GalaxyLoader.LoadFolder(Path.Combine(root, "data", "design"));
-        var ships = ShipData.LoadAll(Path.Combine(root, "data", "interim"));
+        var ships = ShipData.LoadAll(Path.Combine(root, "data", "original"));
         var blockade = BlockadeData.Load(Path.Combine(root, "data", "design", BlockadeData.FileName));
 
         var game = new Game(o.Seed);

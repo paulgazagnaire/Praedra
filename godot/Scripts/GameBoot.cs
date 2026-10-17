@@ -69,14 +69,14 @@ public static class GameBoot
     static GameData _data;
 
     /// <summary>
-    /// Loads the game data once. The exported game keeps the tables inside its package as data/design/*.txt and data/interim/*.txt
+    /// Loads the game data once. The exported game keeps the tables inside its package as data/design/*.txt and data/original/*.txt
     /// (Godot drops .csv from exports); the core wants real files, so they are copied to the user folder as .csv first.
     /// </summary>
     public static GameData LoadData()
     {
         if (_data != null) return _data;
         string root = ProjectSettings.GlobalizePath("user://gamedata");
-        foreach (var sub in new[] { "design", "design/day-one", "interim" })
+        foreach (var sub in new[] { "design", "design/day-one", "original" })
         {
             string dir = Path.Combine(root, "data", sub);
             Directory.CreateDirectory(dir);

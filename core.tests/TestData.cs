@@ -7,7 +7,19 @@ internal static class TestData
 {
     public static readonly string RepoRoot = FindRoot();
     public static readonly string DesignDir = Path.Combine(RepoRoot, "data", "design");
-    public static readonly string InterimDir = Path.Combine(RepoRoot, "data", "interim");
+    public static readonly string OriginalDir = Path.Combine(RepoRoot, "data", "original");
+
+    /// <summary>
+    /// CSV text of data/original/<paramref name="file"/> merged with data/design/<paramref name="file"/> (the loaders' view, rule: B1-own-importer
+    /// §Work 3), under the original header, for tests that edit the real file as text.
+    /// </summary>
+    public static string MergedText(string file)
+    {
+        var t = Rebellion.Core.Data.CsvTable.LoadMerged(OriginalDir, DesignDir, file);
+        static string Q(string v) => v.IndexOfAny(new[] { ',', '"', '\n' }) < 0 ? v : "\"" + v.Replace("\"", "\"\"") + "\"";
+        return string.Join("\n", new[] { string.Join(",", t.Header) }
+            .Concat(Enumerable.Range(0, t.RowCount).Select(r => string.Join(",", t.Header.Select(h => Q(t.Get(r, h))))))) + "\n";
+    }
 
     private static readonly Lazy<Galaxy> _real = new(() => GalaxyLoader.LoadFolder(DesignDir));
     public static Galaxy RealGalaxy => _real.Value;

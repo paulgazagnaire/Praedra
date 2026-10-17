@@ -17,9 +17,9 @@ namespace Rebellion.Core.Tests.Missions;
 internal sealed class MissionWorld
 {
     public const string H = "H", T = "T", X = "X", Alderaan = "Alderaan", Bespin = "Bespin";
-    // character record ids (data/interim/characters.csv)
+    // character record ids (data/original/characters.csv)
     public const int MonMothma = 576, Leia = 577, Luke = 578, Han = 579, Palpatine = 640, Vader = 641, Wedge = 833, Lando = 834, Piett = 898, Veers = 899;
-    // regiment classes and their detection (data/interim/troop-regiments.csv)
+    // regiment classes and their detection (data/original/troop-regiments.csv)
     public const string ImpArmy = "Imperial Army Regiment" /*15*/, ImpFleet = "Imperial Fleet Regiment" /*20*/, Storm = "Stormtrooper Regiment" /*25*/,
         DarkTrooper = "Dark Trooper Regiment" /*30*/, WarDroid = "War Droid Regiment" /*5*/, RebArmy = "Alliance Army Regiment" /*10*/;
     public const string Bothan = "Bothan Spies", Infiltrators = "Infiltrators", Guerrillas = "Guerrillas", Longprobe = "Longprobe Y-wing Recon Team",
@@ -49,10 +49,10 @@ internal sealed class MissionWorld
     private readonly GameSettings _settings;
     private readonly GameData _gd;
 
-    public MissionWorld(MissionParams? p = null, bool decoys = false, ulong? seed = null)
+    public MissionWorld(MissionParams? p = null, bool decoys = false, ulong? seed = null, IReadOnlyList<TableRow>? decoyTable = null)
     {
         _settings = new GameSettings { IncidentsEnabled = false, DebugOrdersEnabled = true, Economy = new EconomyParams { ScrapPeriod = 1_000_000 }, Missions = p };
-        _gd = decoys ? DecoyData : Data;
+        _gd = decoyTable != null ? Data with { Missions = Data.Missions.WithDecoyTable(decoyTable) } : decoys ? DecoyData : Data;
         if (seed is ulong s) Host = GameHost.New(s, _settings, _gd);
         else { Stub = new StubRng(); Host = GameHost.New(Stub, _settings, _gd); }
     }

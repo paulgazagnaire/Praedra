@@ -364,10 +364,17 @@ public class MissionOrderTests
         w.Agent(Leia, T, esp: 50, lead: 80);
         w.Agent(Luke, T, esp: 50);
         int bothan = w.Unit(Side.Alliance, Bothan, T);
-        Assert.Equal(MissionReject.RuleMissing, w.Try(s => new StartMissionOrder(s, Side.Alliance, MissionKind.Espionage, new() { Leia }, new(), new() { bothan }, X)));
+        // B1: the shipped data has the decoy table (FDECOYTB), so a decoy is accepted; RuleMissing only for data without one
+        var w0 = new MissionWorld();
+        w0.Hold(T, Side.Alliance, 100);
+        w0.Agent(Leia, T, esp: 50);
+        int bothan0 = w0.Unit(Side.Alliance, Bothan, T);
+        Assert.NotNull(w0.M.Data.DecoyTable);
+        Assert.Null(w0.Try(s => new StartMissionOrder(s, Side.Alliance, MissionKind.Espionage, new() { Leia }, new(), new() { bothan0 }, X)));
+        _ = bothan;
         Assert.Equal(MissionReject.RuleMissing, w.Try(s => new StartMissionOrder(s, Side.Alliance, MissionKind.Recruitment, new() { Leia }, new(), new(), T)));
         Assert.Equal(MissionReject.RuleMissing, w.Try(s => new StartMissionOrder(s, Side.Alliance, MissionKind.JediTraining, new() { Luke }, new(), new(), T)));
-        // with a recruit hook the mission runs (MI21: leadership 80 gives RCRTMSTB(80) = 10 on the step lookup over the anchors)
+        // with a recruit hook the mission runs (MI21: leadership 80 gives RCRTMSTB(80) = 60 on the full table, step lookup)
         CharacterRecord? recruited = null;
         w.M.Recruit = (ctx, side, sys) => { var c = w.Ch.Get(Wedge) ?? w.Ch.Create(w.Ch.Data.Get(Wedge), new Rebellion.Core.Tests.Economy.StubRng()); w.Ch.Place(c.Id, sys, ctx); recruited = c; return c; };
         w.Stub!.Expect(0, 99, 0);
@@ -414,7 +421,7 @@ public class MissionOrderTests
             (p.InciteInputMode, p.InciteSupportTiming, p.SubdueEndsUprising, p.SabotageSkill, p.SabotageTargetMode, p.ExposureHooks));
         var d = GameData.Default.Missions;
         Assert.Equal(25, d.Records.Count);
-        Assert.Null(d.DecoyTable);
+        Assert.Equal(14, d.DecoyTable!.Count); // B1: FDECOYTB read from the 1998 files (was null: decoys refused)
         Assert.Equal(14, d.Foil.Count);
         Assert.Equal((5, 10, true, "DIPLMSTB"), (d.Get(MissionKind.Diplomacy).TimerMin, d.Get(MissionKind.Diplomacy).TimerSpread, d.Get(MissionKind.Diplomacy).Repeats, d.Get(MissionKind.Diplomacy).Table));
         Assert.Equal(0x802, d.Get(MissionKind.Rescue).SpecialForceMask);

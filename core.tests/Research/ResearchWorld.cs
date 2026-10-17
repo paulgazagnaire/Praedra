@@ -16,7 +16,7 @@ namespace Rebellion.Core.Tests.Research;
 internal sealed class ResearchWorld
 {
     public static readonly Lazy<ResearchData> RealResearch =
-        new(() => ResearchData.Load(TestData.InterimDir, TestData.DesignDir, BuildWorld.RealCosts.Value));
+        new(() => ResearchData.Load(TestData.OriginalDir, TestData.DesignDir, BuildWorld.RealCosts.Value));
 
     public StubRng? Stub { get; }
     public Game Game { get; private set; }

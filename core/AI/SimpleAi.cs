@@ -14,7 +14,9 @@ public sealed record SubmittedOrder(long Sequence, string Kind, string Detail);
 /// <summary>
 /// A simple computer opponent: a decent economy bot with a thin military (Classic-style). Call <see cref="PlanDay"/> once per day BEFORE
 /// <c>Game.Step()</c>; it queues orders through the modules' Submit methods, exactly the orders a player can give. It never changes
-/// state itself, and it keeps no memory between days: everything is re-derived from the game state, so a save needs nothing extra.
+/// state itself, and it keeps no plans between days: everything is re-derived from the game state and from the recent events of its side's
+/// feed. Those events are copied into the side's <see cref="AiMemory"/>, which the host keeps and <see cref="GameHost.SaveWithSettings"/>
+/// saves (a save holds no events), so a loaded game plays on exactly as the uninterrupted one (QA-1).
 ///
 /// Randomness: the AI never draws from the game's generator (that would change the game's random stream). Its few tie-breaks use a
 /// private <see cref="GameRng"/> seeded from (game day, side), so the same game state gives the same orders.
@@ -70,6 +72,7 @@ public sealed partial class SimpleAi
         int day = Today, phase = (int)_side;
         _rng = new GameRng((ulong)day * 2 + (ulong)_side + 0x5A1D, 0xA1);
         _view = _p.UseFog ? _h.Fog.ViewFor(_side) : null;
+        Remember();
         _seenForces.Clear(); ClearFogScratch();
         if (_view != null && _side == Side.Empire) KnownEnemyHq = _view.KnownHq?.System; // only what the Empire's own picture shows
         PlanUpkeepCrisis();
@@ -165,6 +168,35 @@ public sealed partial class SimpleAi
 
     /// <summary>The events the AI reads (its own losses, captures, bombardments). No fog: all. Fog: the side's filtered feed (§N8).</summary>
     private IReadOnlyList<GameEvent> Events => _view == null ? _h.Game.Events : _view.Events;
+
+    private AiMemory _mem = new();
+
+    /// <summary>
+    /// Copy today's new feed events into the side's <see cref="AiMemory"/> (kept by the host and carried by a save, QA-1). Every look-back
+    /// below reads the notes instead of the feed, with the same windows, so a loaded game decides as the uninterrupted one.
+    /// </summary>
+    private void Remember()
+    {
+        _mem = _h.AiMemoryFor(_side, _p.UseFog);
+        _mem.KeepAtLeast(
+            battle: Math.Max(_p.LossMemoryDays, _p.RunnerMemoryDays), systemLost: _p.RetakeDays,
+            bombardment: _p.UseFog ? Math.Max(RecentBombardmentDays, _p.FogKillMemoryDays) : RecentBombardmentDays, // and with fog back to the last ground look (AiMemory.ForSave)
+            lookFoiled: Math.Max(_p.SpyFoilMemoryDays, _p.HqRecheckFoilDays), hqMoved: _p.HqMoveCooldownDays, character: _p.AbductionInfoDays);
+        _mem.Ingest(Events, IsArmedCapital);
+        var mem = _mem;
+        mem.CatchUp = () => mem.Ingest(_p.UseFog ? _h.Fog.ViewFor(_side).Events : _h.Game.Events, IsArmedCapital); // a save between Steps (AiMemory.CatchUp)
+    }
+
+    /// <summary>The newest notes of a kind first, while a look-back from <paramref name="sinceDay"/> still reaches them (see <see cref="AiNote.Floor"/>).</summary>
+    private IEnumerable<AiNote> NotesSince(AiNoteKind kind, int sinceDay)
+    {
+        var notes = _mem.Notes;
+        for (int i = notes.Count - 1; i >= 0 && notes[i].Floor >= sinceDay; i--)
+            if (notes[i].Kind == kind) yield return notes[i];
+    }
+
+    private bool IsArmedCapital(int id) =>
+        _h.Economy.Find(id) is { } o && o.Category == ObjectCategory.CapitalShip && _h.Fleets.ClassOf(o) is { } c && CombatStrength.IsArmed(c);
 
     // ---- characters and missions (SimpleAiAgents.cs reads the other side only through these)
 
@@ -734,12 +766,10 @@ public sealed partial class SimpleAi
     {
         if (_lostBattles != null) return _lostBattles;
         var d = new Dictionary<string, int>(StringComparer.Ordinal);
-        var ev = Events; int since = Today - _p.LossMemoryDays;
-        for (int i = ev.Count - 1; i >= 0 && ev[i].Day >= since; i--)
+        foreach (var b in NotesSince(AiNoteKind.Battle, Today - _p.LossMemoryDays))
         {
-            if (ev[i] is not BattleEnded b || d.ContainsKey(b.Result.System)) continue;
-            var own = _side == Side.Alliance ? b.Result.Alliance : b.Result.Empire;
-            if (own == BattleOutcome.Annihilated || (_p.RetreatCountsAsLoss && own == BattleOutcome.Retreated && OwnArmedIn(ev, i))) d[b.Result.System] = ev[i].Day;
+            if (d.ContainsKey(b.System!)) continue;
+            if (b.Own == BattleOutcome.Annihilated || (_p.RetreatCountsAsLoss && b.Own == BattleOutcome.Retreated && OwnArmedIn(b))) d[b.System!] = b.Day;
         }
         return _lostBattles = d;
     }
@@ -749,18 +779,7 @@ public sealed partial class SimpleAi
     /// and the side's OWN units only. An unarmed ship (a scout) always retreats from armed enemies (m4-battle-classic morale), which says nothing
     /// about the odds of a strike there. True when the start is not in the feed.
     /// </summary>
-    private bool OwnArmedIn(IReadOnlyList<GameEvent> ev, int end)
-    {
-        var b = (BattleEnded)ev[end];
-        for (int j = end - 1; j >= 0 && ev[j].Day == b.Day; j--)
-        {
-            if (ev[j] is not BattleStarted bs || bs.System != b.Result.System) continue;
-            foreach (var id in (_side == Side.Alliance ? bs.AllianceUnits : bs.EmpireUnits).Items)
-                if (_h.Economy.Find(id) is { } o && o.Category == ObjectCategory.CapitalShip && _h.Fleets.ClassOf(o) is { } c && CombatStrength.IsArmed(c)) return true;
-            return false;
-        }
-        return true;
-    }
+    private bool OwnArmedIn(AiNote battle) => battle.Armed == null || battle.Armed.Any(IsArmedCapital); // noted: units armed then; a ship lost since no longer counts
 
     /// <summary>The odds (percent) asked before fighting at a system: the base, times <see cref="SimpleAiParams.LossOddsFactor"/> where the side was annihilated (or bounced, see LostBattles) lately.</summary>
     private double OddsAt(string system, int basePercent) => LostBattles().ContainsKey(system) ? basePercent * _p.LossOddsFactor : basePercent;
@@ -770,7 +789,7 @@ public sealed partial class SimpleAi
     /// <summary>
     /// Battles of the last RunnerMemoryDays where the other side retreated (rule: m4-retreat-damage-repair §1, the morale retreat of
     /// m4-battle-classic) and this side held the field, counted by system. Read from the side's own event feed (BattleEnded goes to both
-    /// sides, m5-fog-and-hq §N8), so the AI keeps no memory of its own: a fleet that only retreats is remembered for as long as the feed shows it.
+    /// sides, m5-fog-and-hq §N8; read through the AI memory, which a save carries): a fleet that only retreats is remembered for RunnerMemoryDays.
     /// </summary>
     private Dictionary<string, int> Runners()
     {
@@ -791,15 +810,11 @@ public sealed partial class SimpleAi
     {
         _runners = new Dictionary<string, int>(StringComparer.Ordinal); // lookup only
         _bounced = new Dictionary<string, int>(StringComparer.Ordinal); // lookup only
-        var ev = Events; int since = Today - _p.RunnerMemoryDays;
-        for (int i = ev.Count - 1; i >= 0 && ev[i].Day >= since; i--)
+        foreach (var b in NotesSince(AiNoteKind.Battle, Today - _p.RunnerMemoryDays))
         {
-            if (ev[i] is not BattleEnded b) continue;
-            var own = _side == Side.Alliance ? b.Result.Alliance : b.Result.Empire;
-            var other = _side == Side.Alliance ? b.Result.Empire : b.Result.Alliance;
-            string sys = b.Result.System;
-            if (other == BattleOutcome.Retreated && own is not (BattleOutcome.Retreated or BattleOutcome.Annihilated)) _runners[sys] = _runners.GetValueOrDefault(sys) + 1;
-            if (own == BattleOutcome.Retreated && OwnArmedIn(ev, i)) _bounced[sys] = _bounced.GetValueOrDefault(sys) + 1;
+            string sys = b.System!;
+            if (b.Other == BattleOutcome.Retreated && b.Own is not (BattleOutcome.Retreated or BattleOutcome.Annihilated)) _runners[sys] = _runners.GetValueOrDefault(sys) + 1;
+            if (b.Own == BattleOutcome.Retreated && OwnArmedIn(b)) _bounced[sys] = _bounced.GetValueOrDefault(sys) + 1;
         }
     }
 
@@ -824,9 +839,7 @@ public sealed partial class SimpleAi
     {
         if (_lost != null) return _lost;
         var set = new HashSet<string>(StringComparer.Ordinal);
-        var ev = Events; int since = Today - _p.RetakeDays;
-        for (int i = ev.Count - 1; i >= 0 && ev[i].Day >= since; i--)
-            if (ev[i] is Rebellion.Core.Control.SystemCaptured c && c.From == _side && c.To == Enemy) set.Add(c.System);
+        foreach (var c in NotesSince(AiNoteKind.SystemLost, Today - _p.RetakeDays)) set.Add(c.System!);
         return _lost = set;
     }
 
@@ -873,6 +886,9 @@ public sealed partial class SimpleAi
         return _offensives = n;
     }
 
+    /// <summary>Marks a Move note whose order is the first leg of a way around; the trip's goal follows it.</summary>
+    public const string OnTheWayTo = "on the way to ";
+
     private bool Move(Fleet f, string dest)
     {
         if (f.At == null || dest == f.At || f.Transit != null) return false;
@@ -912,7 +928,11 @@ public sealed partial class SimpleAi
             {
                 var leg = _h.Fleets.FindPath(f.At, first, speed);
                 if (!leg.Ok || PathBlockedAt(f, leg) != null) return false;
-                dest = first;
+                // the order is only the first leg of the way around: the note names the trip's goal, so a reader of the orders (a trace, a
+                // test counting offensives) tells a stop on the way (a relief of a held system may stop on a neutral one) from a target
+                long legSeq = _h.Fleets.SubmitMove(_side, f.Id, first);
+                Note(legSeq, "Move", $"fleet {f.Id} {f.At} -> {first} {OnTheWayTo}{dest}");
+                return true;
             }
         }
         long seq = _h.Fleets.SubmitMove(_side, f.Id, dest);
@@ -1196,14 +1216,10 @@ public sealed partial class SimpleAi
         return best;
     }
 
-    private int RecentBombardments(string system)
-    {
-        int n = 0, since = Today - 30;
-        var ev = Events;
-        for (int i = ev.Count - 1; i >= 0 && ev[i].Day >= since; i--)
-            if (ev[i] is BombardmentResolved b && b.System == system) n++;
-        return n;
-    }
+    /// <summary>Days RecentBombardments looks back (the AI's own tuning since the bombardment AI was written, not a rule of the game).</summary>
+    private const int RecentBombardmentDays = 30;
+
+    private int RecentBombardments(string system) => NotesSince(AiNoteKind.Bombardment, Today - RecentBombardmentDays).Count(b => b.System == system);
 
     // A fleet at a system it does not hold: fight on, bombard, assault, or go elsewhere.
     private void DecideAtTarget(Fleet f)

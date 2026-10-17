@@ -19,7 +19,7 @@ public class DefenseTests
     [Fact]
     public void D1_SixRowsAsTheTable()
     {
-        var d = DefenseData.Load(TestData.InterimDir);
+        var d = DefenseData.Load(TestData.OriginalDir, TestData.DesignDir);
         var rows = d.Classes.ToList();
         Assert.Equal(new[] { 1, 2, 3, 4, 5, 6 }, rows.Select(r => r.Id));
         var expect = new (string Name, int Family, int Cost, int Maint, int Ro, int Rd, int Attack, int Shield, int Bd, DefenseJob Job)[]
@@ -284,8 +284,8 @@ public class DefenseTests
     [Fact]
     public void BadDefenseDataIsRefused()
     {
-        string good = File.ReadAllText(Path.Combine(TestData.InterimDir, DefenseData.DefensesFile));
-        string bomb = File.ReadAllText(Path.Combine(TestData.InterimDir, DefenseData.BombardmentFile));
+        string good = File.ReadAllText(Path.Combine(TestData.OriginalDir, DefenseData.DefensesFile));
+        string bomb = TestData.MergedText(DefenseData.BombardmentFile);
         Assert.Throws<Rebellion.Core.Data.DataLoadException>(() => DefenseData.Parse(good.Replace("KDY-150", "Mystery Gun"), "d.csv", bomb, "b.csv"));
         Assert.Throws<Rebellion.Core.Data.DataLoadException>(() => DefenseData.Parse(good.Replace(",battery", ",flak"), "d.csv", bomb, "b.csv"));
         Assert.Throws<Rebellion.Core.Data.DataLoadException>(() => DefenseData.Parse(good, "d.csv", bomb.Replace("troop,Sullustan Regiment", "troop,Alliance Army Regiment"), "b.csv"));

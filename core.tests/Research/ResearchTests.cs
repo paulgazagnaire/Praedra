@@ -605,7 +605,7 @@ public class ResearchTests
 
     private static ResearchData Modified(Func<string, string> edit)
     {
-        var lines = File.ReadAllLines(Path.Combine(TestData.InterimDir, ResearchData.LadderFileName)).Select(edit);
+        var lines = TestData.MergedText(ResearchData.LadderFileName).Split('\n').Select(edit);
         return new ResearchData(ResearchData.ParseLadder(string.Join("\n", lines), "modified.csv", null), ResearchWorld.RealResearch.Value.Rules);
     }
 
@@ -637,7 +637,7 @@ public class ResearchTests
     [Fact]
     public void LadderMustMatchTheCostsFile()
     {
-        var text = File.ReadAllText(Path.Combine(TestData.InterimDir, ResearchData.LadderFileName))
+        var text = TestData.MergedText(ResearchData.LadderFileName)
             .Replace("0x28 ship,capital ship,67,Nebulon-B Frigate,1,0,34,1,12", "0x28 ship,capital ship,67,Nebulon-B Frigate,1,0,34,2,12");
         var ex = Assert.Throws<DataLoadException>(() => ResearchData.ParseLadder(text, "bad.csv", BuildWorld.RealCosts.Value));
         Assert.Contains("Nebulon-B Frigate", ex.Message);

@@ -1,0 +1,9 @@
+key,value,source
+DetectionConstant,-1,"original: GNPRTB 3584 (importer); Traced: subtracted, so +1; missions/08"
+DecoyOfficerPercent,35,original: GNPRTB 3588 (importer); Traced: missions/08
+DetectionOfficerPercent,35,original: GNPRTB 3589 (importer); Traced: missions/08
+InciteSupport,-2,"original: GNPRTB 6145 (importer); Lead: economy/05, reading unverified"
+AgentLeadershipDivisor,10,original: GNPRTB 6144 (importer); Lead: incident score incite and subdue terms
+ResearchSkillGain,1,"original: GNPRTB 6158 (importer); Traced: economy/14, m5-research"
+GroupSpeed,100,original: GNPRTB 1 (importer); Traced: characters and mission groups use 100; m1-travel
+HanMissionSpeed,50,"original: GNPRTB 3083 (importer); Traced: planets/11, heroes/mission-speed"

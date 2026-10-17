@@ -16,12 +16,12 @@ namespace Rebellion.Core.Tests.Construction;
 /// </summary>
 internal sealed class BuildWorld
 {
-    public static readonly Lazy<CostData> RealCosts = new(() => CostData.Load(Path.Combine(TestData.InterimDir, CostData.FileName)));
+    public static readonly Lazy<CostData> RealCosts = new(() => CostData.Load(TestData.OriginalDir, TestData.DesignDir));
 
     /// <summary>The real costs file with every maintenance set to 0 (for tests whose numbers assume load 0, like the pool sheet's P1 fixture).</summary>
     public static CostData ZeroMaintenance()
     {
-        var lines = File.ReadAllLines(Path.Combine(TestData.InterimDir, CostData.FileName));
+        var lines = TestData.MergedText(CostData.FileName).Split('\n');
         var o = new List<string> { lines[0] };
         foreach (var l in lines.Skip(1).Where(x => x.Length > 0))
         {
@@ -38,7 +38,7 @@ internal sealed class BuildWorld
     public EconomyModule Eco { get; private set; } = null!;
     public ConstructionModule Build { get; private set; } = null!;
     public TroopModule Troops { get; private set; } = null!;
-    public static readonly Lazy<TroopData> RealTroops = new(() => TroopData.Load(TestData.InterimDir, TestData.DesignDir));
+    public static readonly Lazy<TroopData> RealTroops = new(() => TroopData.Load(TestData.OriginalDir, TestData.DesignDir));
 
     public SupportModule? Support { get; private set; }
     private readonly bool _withSupport, _wireFleets;

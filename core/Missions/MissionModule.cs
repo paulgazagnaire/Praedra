@@ -124,13 +124,11 @@ public sealed class MissionModule
         return a.Value + (x - a.Threshold) * (b.Value - a.Value) / (b.Threshold - a.Threshold); // C# division truncates toward zero
     }
 
-    /// <summary>FOILTB: step lookup, "the previous row"; below the first row there is no row: 100. rule: §3 (Traced, 0x595090, 0x53e340).</summary>
-    public int FoilChance(int x)
-    {
-        var rows = Data.Foil;
-        if (x < rows[0].Threshold) return Data.Numbers.FoilBelowFirstRow;
-        return Lookup(rows, x, MstbLookupMode.Step, MstbBelowFirstRow.FirstRowValue);
-    }
+    /// <summary>
+    /// FOILTB through the common lookup: the last row at or below x, the first row below it (99 below -20). rule: §3, §Mission tables (Traced B2a:
+    /// 0x595090; 0x53e340 always finds a row).
+    /// </summary>
+    public int FoilChance(int x) => Lookup(Data.Foil, x, MstbLookupMode.Step, MstbBelowFirstRow.FirstRowValue);
 
     /// <summary>
     /// The detection input: avg - detection - (team special forces) - officer * 35 / 100 - (-1); integer division truncating toward zero.
@@ -753,10 +751,13 @@ public sealed class MissionModule
     }
 
     /// <summary>
-    /// The decoy phase then the detection walk; returns the defender that detected the team, or null. Draws: one per (defender, decoy) tried, then
-    /// one per defender walked up to and including the first detection. No defenders: no draw. rule: §3 (Traced shape, missions/08).
+    /// The decoy pass then the detection walk; returns the defender that detected the team, or null. rule: §3 (Traced, B2a: 0x58a020, 0x58a130).
+    /// Decoy pass, per defender in id order: pick one decoy k = rand(0..n-1) over the group's decoys (no draw when n = 1; no decoy, no draw), then one
+    /// roll against the decoy table; a decoy that distracted a guard stays in the pick (inferred, 0x587b30); a failed decoy has no effect (the officer
+    /// contest 0x5888f0 is B2b). Walk: one draw per non-distracted defender up to and including the first detection; no walk at all (no draw) when the
+    /// team has no non-decoy member left (0x5896e0). No defenders: no draw.
     /// </summary>
-    private Defender? Walk(StepContext ctx, MissionGroup m, int t)
+    internal Defender? Walk(StepContext ctx, MissionGroup m, int t) // internal: B2a-4 calls it on a group whose team is gone (Iterate prunes first)
     {
         var defenders = Defenders(m.Side, m.Target);
         if (defenders.Count == 0) return null;
@@ -767,19 +768,21 @@ public sealed class MissionModule
         foreach (var d in defenders)
         {
             bool decoyed = false;
-            foreach (var dc in decoys)
+            if (decoys.Count > 0)
             {
+                // rule: §3 decoy pass step 1 (0x5f5700 returns 0 without a draw for a bound <= 1)
+                var dc = decoys.Count == 1 ? decoys[0] : decoys[ctx.Rng.NextInt(0, decoys.Count - 1)];
                 int x = DecoyX(dc.Espionage, d.Detection, d.OfficerEspionage), p = Lookup(Data.DecoyTable!, x);
                 int r = ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1);
-                bool ok = r < p;
-                int def = d.Unit.Id, did = dc.Id;
+                decoyed = r < p;
+                bool ok = decoyed; int def = d.Unit.Id, did = dc.Id;
                 ctx.Emit((i, _) => new MissionDecoyRoll(i, t, id, side, def, did, x, p, r, ok));
-                if (ok) { decoyed = true; break; }
             }
             if (!decoyed) walked.Add(d);
         }
         var team = Team(m);
-        int avg = team.Count == 0 ? 0 : team.Sum(a => a.Espionage) / team.Count;
+        if (team.Count == 0) return null; // rule: §3 detection walk (0x5896e0: count 0 skips the walk; Traced B2a)
+        int avg = team.Sum(a => a.Espionage) / team.Count; // C integer division (0x5887a0 idiv; Traced B2a)
         int sfs = team.Count(a => !a.IsCharacter);
         foreach (var d in walked)
         {

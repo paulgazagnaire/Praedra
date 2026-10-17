@@ -13,7 +13,7 @@ internal sealed class CharWorld
 {
     public const string Yavin = "Yavin", Hoth = "Hoth", Coruscant = "Coruscant";
     public const string Corvette = "Corellian Corvette", Isd = "Imperial Star Destroyer", MonCal = "Mon Calamari Cruiser";
-    // record ids (data/interim/characters.csv)
+    // record ids (data/original/characters.csv)
     public const int MonMothma = 576, Leia = 577, Luke = 578, Han = 579, Palpatine = 640, Vader = 641;
     public const int Ackbar = 832, Wedge = 833, Lando = 834, Chewbacca = 835, Dodonna = 836, Madine = 837, Afyon = 839, Drayson = 840, Borsk = 841, Tura = 842;
     public const int Piett = 898, Veers = 899;
