@@ -6,18 +6,19 @@ namespace Rebellion.Core.Fleets;
 
 /// <summary>
 /// Which enemy forces stop a passing fleet. A game setting, not code.
-/// rule: m1-forced-stop-and-blockade §The alternative trigger, as a switch; §Update 2026-10-12 (PaulRule is the default).
+/// rule: m1-forced-stop-and-blockade §Pull-out (Decided Paul 2026-10-16: GravityWellShip is the default; the other two values are the
+/// retired 2026-10-12 rules, kept as switches for comparison).
 /// </summary>
 public enum ForcedStopTrigger
 {
     /// <summary>
-    /// DEFAULT (Paul 2026-10-12). Stop if the enemy side at the system has a live gravity-well ship, or its combat strength
+    /// Retired 2026-10-16 (was the default from 2026-10-12). Stop if the enemy side at the system has a live gravity-well ship, or its combat strength
     /// there is at least T times the passing fleet's combat strength.
     /// </summary>
     PaulRule = 0,
     /// <summary>Any armed enemy fleet at the system stops the passing fleet. Earlier default (planets/10 round 2).</summary>
     AnyArmedFleet = 1,
-    /// <summary>Only an enemy fleet with a ship that has gravity_well_projector above 0 stops the passing fleet.</summary>
+    /// <summary>DEFAULT (Paul 2026-10-16). Only an enemy fleet with a ship that has gravity_well_projector above 0 pulls the passing fleet out of hyperspace.</summary>
     GravityWellShip = 2,
 }
 

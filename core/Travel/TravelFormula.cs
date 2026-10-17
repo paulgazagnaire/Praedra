@@ -34,6 +34,26 @@ public static class TravelFormula
     public static int HopTicks(Lane lane, int speed) => HopTicks(lane.BaseDistance, speed, lane.FactorPercent);
 
     /// <summary>
+    /// A route leg: max(1, mapDistance * speed / (5 * F)) rounded half up, one division (mapDistance = isqrt(dx^2 + dy^2)).
+    /// Rounded, not floored: a route trip has many short legs, and flooring each one would make long chains much faster than the
+    /// route factor says. Proposal, m1-travel §Per-leg formula (route legs).
+    /// </summary>
+    public static int RouteLegTicks(int mapDistance, int speed, int factorPercent)
+    {
+        if (factorPercent <= 0) throw new ArgumentOutOfRangeException(nameof(factorPercent));
+        long den = (long)DistanceDivisor * factorPercent;
+        long t = ((long)mapDistance * speed * 2 + den) / (2 * den);
+        return (int)Math.Max(MinHopTicks, t);
+    }
+
+    /// <summary>isqrt(dx^2 + dy^2), the map distance (floor).</summary>
+    public static int MapDistance(int ax, int ay, int bx, int by)
+    {
+        long dx = ax - bx, dy = ay - by;
+        return (int)GalaxyLoader.Isqrt(dx * dx + dy * dy);
+    }
+
+    /// <summary>
     /// Fleet speed from speed ratings (bigger is slower; 0 = immobile). Capital ships decide: the largest rating, and any
     /// capital with rating 0 makes the fleet immobile. Squadrons carried aboard are ignored. A fleet with no capital ships
     /// uses the squadron ratings the same way. A fleet with neither uses <see cref="DefaultSpeed"/>.

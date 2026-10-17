@@ -78,9 +78,11 @@ public class SimpleAiFogPlayTests
     [Fact]
     public void FoggedEmpire_AgainstPassiveAlliance_FindsAndTakesTheHq()
     {
+        // // v5 re-pin 2026-10-16 (Paul chose re-pin on the map PR; the AI trainer owns restoring the old target): measured day 1282 on v5 (the HQ, Cyclor, starts beside Naboo, where the Alliance would not hide it, so the belief map
+        // looks there late), limit 500 -> 1400
         var (m, h) = Match(1, passive: Side.Alliance);
         int explored0 = Explored(h, Side.Empire), explored200 = -1;
-        while (h.Game.Day < 500 && h.Victory.Winner == null)
+        while (h.Game.Day < 1400 && h.Victory.Winner == null)
         {
             m.Step();
             if (h.Game.Day == 200) explored200 = Explored(h, Side.Empire);
@@ -89,7 +91,7 @@ public class SimpleAiFogPlayTests
                        $"orders {m.TotalSent} rejected {m.TotalRejected}; scouts built/split {m.Sent.Where(kv => kv.Key is "Empire Split").Sum(kv => kv.Value)}");
         Assert.Equal(Side.Empire, h.Victory.Winner);
         Assert.Contains(h.Game.Events, e => e is HqDestroyed);
-        Assert.True(h.Game.Day <= 500, $"won only on day {h.Game.Day}");
+        Assert.True(h.Game.Day <= 1400, $"won only on day {h.Game.Day}");
         // scouting: by day 200 the Empire has looked at many more systems than it knew at the start (measured 63 -> 123)
         Assert.True(explored200 - explored0 >= 45, $"explored {explored0} -> {explored200}");
         Assert.True(m.TotalRejected * 20 <= m.TotalSent, $"{m.TotalRejected} of {m.TotalSent} orders rejected");
@@ -98,14 +100,15 @@ public class SimpleAiFogPlayTests
     // The fogged Alliance against an Empire that gives no orders takes Coruscant (known to all: a Core system), estimating its garrison
     // from what it has seen. Measured: day 702 (seeds 1 to 5: 702 to 705); limit 850.
     [Fact]
-    public void FoggedAlliance_AgainstPassiveEmpire_TakesCoruscant()
+    public void FoggedAlliance_AgainstPassiveEmpire_KeepsCapturing()
     {
         var (m, h) = Match(1, passive: Side.Empire);
         m.RunTo(850);
         int captures = h.Game.Events.OfType<SystemCaptured>().Count(e => e.To == Side.Alliance);
         _out.WriteLine($"winner {h.Victory.Winner} day {h.Game.Day} ({h.Victory.Reason}); Alliance captures {captures}; orders {m.TotalSent} rejected {m.TotalRejected}");
-        Assert.Equal(Side.Alliance, h.Victory.Winner);
-        Assert.True(h.Game.Day <= 850, $"won only on day {h.Game.Day}");
+        // // v5 re-pin 2026-10-16 (Paul chose re-pin on the map PR; the AI trainer owns restoring the old target): on v5 the fogged Alliance does not take Coruscant (measured: 8 captures by day 850, 20 by day 3000, no winner). The test
+        // now pins that it keeps capturing; the old target (wins by day 850) is the trainer's.
+        Assert.True(captures >= 6, $"only {captures} Alliance captures by day 850");
         Assert.True(m.TotalRejected * 20 <= m.TotalSent, $"{m.TotalRejected} of {m.TotalSent} orders rejected");
     }
 
@@ -127,7 +130,7 @@ public class SimpleAiFogPlayTests
         Assert.Equal(hq, dep[0].From);
         string dest = dep[0].Path.Items[^1];
         Assert.Equal(Side.Alliance, h.Fleets.OwnerOf(dest));
-        Assert.True(h.Data.Galaxy.NeighboursOf(h.Data.Galaxy.Get(dest).Index).Count >= Fog.HqMinLanes);
+        Assert.True(h.Data.Galaxy.NearOf(h.Data.Galaxy.Get(dest).Index).Count >= Fog.HqMinLanes);
         Assert.NotEqual(Side.Empire, h.Victory.Winner);
         m.RunTo(Fog.HqMoveCooldownDays - 5);
         Assert.Single(h.Game.Events.OfType<HqDeparted>()); // no second move inside the cool-down

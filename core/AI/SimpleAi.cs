@@ -102,16 +102,18 @@ public sealed partial class SimpleAi
     /// One enemy fleet as the AI weighs it: its capital ships as combat units. Without fog: the real fleet (FleetId set, hull and damage read).
     /// With fog: a fleet of the side's picture (class counts at full hull, FleetId null). At = the system it stands at, null on a lane.
     /// </summary>
-    private sealed record Force(int? FleetId, string? At, List<Combatant> Units);
+    /// Gravity: a ship of the fleet has a gravity-well projector (it can pull passing fleets out of hyperspace).
+    private sealed record Force(int? FleetId, string? At, List<Combatant> Units, bool Gravity = false);
 
-    private Force ForceOf(Fleet f) => new(f.Id, f.At, ShipUnits(f));
+    private Force ForceOf(Fleet f) => new(f.Id, f.At, ShipUnits(f),
+        f.Ships.Any(id => _h.Economy.Find(id) is { } o && _h.Fleets.ShipClasses.TryGetValue(o.Class, out var c) && c.GravityWellProjector > 0));
 
     private Force ForceOf(string at, Rebellion.Core.Fog.FleetPicture p)
     {
-        var units = new List<Combatant>();
+        var units = new List<Combatant>(); bool gravity = false;
         foreach (var (cls, n) in p.Ships) // ordinal class order
-            if (_h.Fleets.ShipClasses.TryGetValue(cls, out var c)) for (int i = 0; i < n; i++) units.Add(_h.Fleets.Strength.Unit(c));
-        return new Force(null, at, units);
+            if (_h.Fleets.ShipClasses.TryGetValue(cls, out var c)) { for (int i = 0; i < n; i++) units.Add(_h.Fleets.Strength.Unit(c)); gravity |= n > 0 && c.GravityWellProjector > 0; }
+        return new Force(null, at, units, gravity);
     }
 
     /// <summary>Enemy fleets standing at a system. No fog: sees all. Fog: group E of the side's picture, unless the look is only Charted (too old).</summary>
@@ -414,13 +416,13 @@ public sealed partial class SimpleAi
 
     private int YardsAnyAt(string system) => _h.Economy.Objects.Count(o => o.System == system && o.Category == ObjectCategory.Facility && FacilityKinds.TryParse(o.Class, out var k) && FacilityKinds.IsYard(k));
 
-    /// <summary>0 when the system is two or more lanes from every enemy system, 2 when it is next to one (a yard there is a target).</summary>
+    /// <summary>0 when no nearby system (m1-galaxy-data Nearby) is enemy-held, 2 when one is (a yard there is a target).</summary>
     private int BorderDanger(string system)
     {
         var g = _h.Data.Galaxy;
         if (!g.TryFindSystem(system, out var i)) return 0;
-        foreach (var n in g.NeighboursOf(i))
-            if (IsEnemyHeld(g.Systems[n.System].Name)) return 2;
+        foreach (var n in g.NearOf(i))
+            if (IsEnemyHeld(g.Systems[n].Name)) return 2;
         return 0;
     }
 
@@ -810,7 +812,7 @@ public sealed partial class SimpleAi
         int n = r.GetValueOrDefault(system);
         var g = _h.Data.Galaxy;
         if (g.TryFindSystem(system, out var i))
-            foreach (var nb in g.NeighboursOf(i)) n += r.GetValueOrDefault(g.Systems[nb.System].Name);
+            foreach (var nb in g.NearOf(i)) n += r.GetValueOrDefault(g.Systems[nb].Name);
         return n >= _p.RunnerRetreats;
     }
 
@@ -857,7 +859,28 @@ public sealed partial class SimpleAi
         int speed = _h.Fleets.SpeedOf(f);
         var path = _h.Fleets.FindPath(f.At, dest, speed);
         if (speed <= 0 || !path.Ok) return false;
-        if (_p.AvoidBlockedPaths && PathBlockedAt(f, path) != null) return false; // stays: the way would end in a retreat
+        if (_p.AvoidBlockedPaths && PathBlockedAt(f, path) is { } blocked)
+        {
+            // the way would end in a retreat: go around (no stop at a blocked system), one leg at a time; on arrival the next review plans
+            // again. Without a way around the fleet stays. Proposal (lead 2026-10-16; the AI uses the router, movement-redesign-draft §D).
+            var g = _h.Data.Galaxy; var avoid = new List<int>();
+            for (int tries = 0; tries < 16 && blocked != null; tries++)
+            {
+                if (blocked == dest || !g.TryFindSystem(blocked, out int bi)) return false;
+                avoid.Add(bi);
+                path = _h.Fleets.FindPathAvoiding(g.Get(f.At).Index, g.Get(dest).Index, speed, avoid);
+                if (!path.Ok) return false;
+                blocked = PathBlockedAt(f, path);
+            }
+            if (blocked != null) return false;
+            string first = g.Systems[path.Systems[1]].Name;
+            if (first != dest)
+            {
+                var leg = _h.Fleets.FindPath(f.At, first, speed);
+                if (!leg.Ok || PathBlockedAt(f, leg) != null) return false;
+                dest = first;
+            }
+        }
         long seq = _h.Fleets.SubmitMove(_side, f.Id, dest);
         Note(seq, "Move", $"fleet {f.Id} {f.At} -> {dest}");
         return true;
@@ -866,7 +889,7 @@ public sealed partial class SimpleAi
     /// <summary>
     /// The first stop of the trip where it would end in a retreat, or null: a stop (the destination included) where this side's fleets retreated
     /// within RunnerMemoryDays (own event feed), or a stop on the way where enemy fleets the side sees now outmatch the fleets of the side at the
-    /// start (RetreatOddsPercent). rule: m1-forced-stop-and-blockade (an armed enemy fleet stops a passing one; the order is cancelled), then the
+    /// start (RetreatOddsPercent). rule: m1-forced-stop-and-blockade (an enemy fleet that triggers a forced stop halts a passing one; the order is cancelled), then the
     /// morale retreat of m4-battle-classic sends the fleet back: the same order again only repeats the bounce. The destination's fleets are
     /// weighed by the caller (PickTarget, PickRelief).
     /// </summary>
@@ -879,8 +902,14 @@ public sealed partial class SimpleAi
             string n = g.Systems[path.Systems[k]].Name;
             if (BouncedOff(n)) return n;
             if (k == path.Systems.Count - 1) break;
+            // only the enemy fleets that would pull this fleet out of hyperspace there (the game's forced-stop trigger; DEFAULT GravityWellShip
+            // since 2026-10-16: an ordinary fleet does not stop a passing one, so the AI no longer refuses trips past it)
             var enemies = EnemyFleetsAt(n);
+            if (_view != null && _p.FogAvoidEnemyStops && IsEnemyHeld(n) && _view.Level(n) is not (Rebellion.Core.Fog.KnowledgeLevel.Held or Rebellion.Core.Fog.KnowledgeLevel.Observed))
+                return n; // an enemy system whose fleets the side cannot see now: it may hide a gravity well
             if (enemies.Count == 0) continue;
+            // pulled out by a gravity well, the fleet then fights every enemy fleet there
+            if (_h.Fleets.Trigger == ForcedStopTrigger.GravityWellShip && !enemies.Any(e => e.Gravity)) continue;
             own ??= _h.Fleets.FleetsAt(f.At!).Where(x => x.Side == _side).ToList();
             if (Duel(own, enemies) < _p.RetreatOddsPercent) return n;
         }
@@ -924,6 +953,7 @@ public sealed partial class SimpleAi
                     if (acc < _p.HomeDefenceStrength && Str(f) > 0) { home.Add(f); acc += Str(f); } else strike.Add(f);
                 }
                 for (int i = 1; i < home.Count; i++) Merge(home[i], home[0]);
+                if (home.Count == 1 && _p.SplitHomeSurplus) SplitHomeSurplus(home[0], acc);
             }
             if (dsHere.Count > 0) { strike = DeathStarHome(dsHere, strike); }
             else strike = DeathStarCall(g.Key, strike);
@@ -932,6 +962,32 @@ public sealed partial class SimpleAi
             for (int i = 1; i < strike.Count; i++) Merge(strike[i], leader);
             DecideOwn(MakePile(leader, strike));
         }
+    }
+
+    /// <summary>
+    /// The home guard is whole fleets, so new warships delivered to it while it was weak stay there for good once it is strong (seen on the
+    /// v5 galaxy: an Alliance HQ guard of strength 119 sat still for 300 days while the strike pile never reached LaunchStrength). When one
+    /// guard fleet is at least LaunchStrength above HomeDefenceStrength, its newest armed ships are split off (one order) while the guard keeps
+    /// HomeDefenceStrength; the split fleet is a strike fleet from the next review. A ship's share of the fleet strength is in proportion to its
+    /// class strength. DEFAULT (lead 2026-10-16, a bug fix of the home-defence rule above).
+    /// </summary>
+    private void SplitHomeSurplus(Fleet guard, double strength)
+    {
+        if (strength - _p.HomeDefenceStrength < _p.LaunchStrength || guard.Ships.Count < 2) return;
+        var cls = guard.Ships.Select(id => (Id: id, S: ClassStrength(_h.Economy.Find(id)!.Class))).ToList();
+        double total = cls.Sum(c => c.S);
+        if (total <= 0) return;
+        var off = new List<int>(); double left = strength;
+        foreach (var (id, cs) in cls.Where(c => c.S > 0).OrderByDescending(c => c.Id))
+        {
+            double share = strength * cs / total;
+            if (left - share < _p.HomeDefenceStrength) continue;
+            off.Add(id); left -= share;
+        }
+        if (off.Count == 0 || off.Count == guard.Ships.Count || strength - left < _p.LaunchStrength) return;
+        off.Sort();
+        long seq = _h.Fleets.SubmitSplitFleet(_side, guard.Id, off);
+        Note(seq, "Split", $"{off.Count} ships off the home guard {guard.Id} at {guard.At}");
     }
 
     private void Merge(Fleet from, Fleet into)
@@ -1150,7 +1206,7 @@ public sealed partial class SimpleAi
         while (q.Count > 0)
         {
             int c = q.Dequeue();
-            foreach (var n in g.NeighboursOf(c)) if (dist[n.System] == int.MaxValue) { dist[n.System] = dist[c] + 1; q.Enqueue(n.System); }
+            foreach (var n in g.NearOf(c)) if (dist[n] == int.MaxValue) { dist[n] = dist[c] + 1; q.Enqueue(n); }
         }
         return _hops = dist;
     }

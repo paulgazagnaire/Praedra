@@ -4,54 +4,62 @@ using Rebellion.Core.Travel;
 
 namespace Rebellion.Core.Tests.Travel;
 
-// rules: m1-travel tests T1-T18, T20, T21 (T19 needs the clock and fleets; not in this package).
+// rules: m1-travel tests T1-T18, T20, T21 (T19 needs the clock and fleets; not in this package). Rewritten 2026-10-16 for free travel and routes.
 public class TravelTests
 {
     private static Galaxy G => TestData.RealGalaxy;
     private static readonly Lazy<IReadOnlyDictionary<string, ShipClass>> Ships = new(() => ShipData.LoadAll(TestData.InterimDir));
-
-    private static int Hop(string a, string b, int speed) => TravelFormula.HopTicks(G.FindLane(a, b)!, speed);
 
     private static int SpeedOf(params string[] classes) =>
         TravelFormula.FleetSpeed(
             classes.Select(c => Ships.Value[c]).Where(s => s.IsCapital).Select(s => s.Speed(false)),
             classes.Select(c => Ships.Value[c]).Where(s => !s.IsCapital).Select(s => s.Speed(false)));
 
+    private static int Leg(string a, string b, int speed) => TravelFormula.RouteLegTicks(MapDist(G, a, b), speed, G.FindLane(a, b)!.FactorPercent);
+    private static int MapDist(Galaxy g, string a, string b) { var x = g.Get(a); var y = g.Get(b); return TravelFormula.MapDistance(x.MapX, x.MapY, y.MapX, y.MapY); }
+    private static int OffRoute(string a, string b, int speed) => TravelFormula.HopTicks(MapDist(G, a, b) / 5, speed, 100);
+
     [Fact]
-    public void T1_CoruscantCorelliaTier1() // m1-travel T1
+    public void T1_CoruscantCorelliaMajorRoute() // m1-travel T1: map distance 100, factor 300: 100 * speed / 1500, rounded half up
     {
-        Assert.Equal(20, G.FindLane("Coruscant", "Corellia")!.BaseDistance);
-        Assert.Equal(new[] { 6, 5, 4, 3 }, new[] { 100, 80, 60, 50 }.Select(s => Hop("Coruscant", "Corellia", s)));
+        Assert.Equal(100, MapDist(G, "Coruscant", "Corellia"));
+        Assert.Equal(new[] { 7, 5, 4, 3 }, new[] { 100, 80, 60, 50 }.Select(s => Leg("Coruscant", "Corellia", s))); // 6.67, 5.33, 4, 3.33
     }
 
     [Fact]
-    public void T2_CoruscantSkakoTier3() // m1-travel T2
+    public void T2_CoruscantYavinOffRouteIsTheOriginalFormula() // m1-travel T2: (isqrt / 5) * speed / 100, both divisions floored (Traced)
     {
-        Assert.Equal(2, G.FindLane("Coruscant", "Skako")!.BaseDistance);
-        Assert.Equal(new[] { 2, 1, 1 }, new[] { 100, 80, 50 }.Select(s => Hop("Coruscant", "Skako", s)));
+        Assert.Equal(48, MapDist(G, "Coruscant", "Yavin") / 5);
+        Assert.Equal(new[] { 48, 38, 24 }, new[] { 100, 80, 50 }.Select(s => OffRoute("Coruscant", "Yavin", s)));
+        Assert.Null(G.FindLane("Coruscant", "Yavin"));
     }
 
     [Fact]
-    public void T3_CorelliaHosnianPrimeTier1() // m1-travel T3
+    public void T3_CorelliaDurosShortMajorLeg() // m1-travel T3
     {
-        Assert.Equal(7, G.FindLane("Corellia", "Hosnian Prime")!.BaseDistance);
-        Assert.Equal(1, G.FindLane("Corellia", "Hosnian Prime")!.Tier);
-        Assert.Equal(new[] { 2, 1, 1 }, new[] { 100, 80, 50 }.Select(s => Hop("Corellia", "Hosnian Prime", s)));
+        Assert.Equal(1, G.FindLane("Corellia", "Duros")!.Tier);
+        Assert.Equal(24, MapDist(G, "Corellia", "Duros"));
+        Assert.Equal(new[] { 2, 1, 1 }, new[] { 100, 80, 50 }.Select(s => Leg("Corellia", "Duros", s))); // 1.6, 1.28, 0.8 raised to 1
     }
 
     [Fact]
-    public void T4_CorelliaNubiaTier2() // m1-travel T4
+    public void T4_CoruscantCorulagMinorRoute() // m1-travel T4: factor 150
     {
-        Assert.Equal(6, G.FindLane("Corellia", "Nubia")!.BaseDistance);
-        Assert.Equal(new[] { 4, 3 }, new[] { 100, 80 }.Select(s => Hop("Corellia", "Nubia", s)));
+        int d = MapDist(G, "Coruscant", "Corulag");
+        Assert.Equal(150, G.FindLane("Coruscant", "Corulag")!.FactorPercent);
+        Assert.Equal((d * 100 * 2 + 750) / 1500, Leg("Coruscant", "Corulag", 100));
+        Assert.Equal(Math.Max(1, (d * 80 * 2 + 750) / 1500), Leg("Coruscant", "Corulag", 80));
     }
 
     [Theory]
-    [InlineData(100)] [InlineData(80)] [InlineData(50)] [InlineData(1000)]
+    [InlineData(50)]
+    [InlineData(80)]
+    [InlineData(100)]
     public void T5_ShortHopCostsOneDay(int speed) // m1-travel T5
     {
         Assert.Equal(0, TravelFormula.BaseDistance(10, 10, 14, 10)); // 4 units apart
         Assert.Equal(1, TravelFormula.HopTicks(0, speed, 300));
+        Assert.Equal(1, TravelFormula.RouteLegTicks(4, speed, 300));
     }
 
     [Fact]
@@ -65,7 +73,7 @@ public class TravelTests
     [Fact]
     public void T8_TieFighterAloneIsImmobile() // m1-travel T8
     {
-        var speed = SpeedOf("TIE Fighter");
+        int speed = SpeedOf("TIE Fighter");
         Assert.Equal(0, speed);
         var r = new Pathfinder(G).Find("Coruscant", "Corellia", speed);
         Assert.Equal(PathStatus.Immobile, r.Status);
@@ -80,91 +88,94 @@ public class TravelTests
         Assert.Equal(100, TravelFormula.FleetSpeed(Array.Empty<int>(), Array.Empty<int>())); // unrated: default 100
     }
 
-    private static void AssertPath(PathResult r, string[] names, int[] hops, int total, int? hopCount = null)
+    private static void AssertPath(PathResult r, Galaxy g, string[] names, int[] hops, int total)
     {
         Assert.True(r.Ok, r.Status.ToString());
-        if (names.Length > 0) Assert.Equal(names, r.Names(G));
-        if (hops.Length > 0) Assert.Equal(hops, r.HopTicks);
+        Assert.Equal(names, r.Names(g));
+        Assert.Equal(hops, r.HopTicks);
         Assert.Equal(total, r.TotalTicks);
         Assert.Equal(r.HopTicks.Sum(), r.TotalTicks);
-        if (hopCount is int h) Assert.Equal(h, r.Hops);
-    }
-
-    private static readonly string[] CoruscantHoth =
-        { "Coruscant", "Corellia", "Hosnian Prime", "Kinyen", "Anoat", "Bespin", "Hoth" };
-
-    [Fact]
-    public void T9_CoruscantToHothAtSpeed80() // m1-travel T9
-        => AssertPath(new Pathfinder(G).Find("Coruscant", "Hoth", 80), CoruscantHoth, new[] { 5, 1, 6, 7, 1, 1 }, 21);
-
-    [Fact]
-    public void T10_CoruscantToHothAtSpeed100And50() // m1-travel T10
-    {
-        var pf = new Pathfinder(G);
-        AssertPath(pf.Find("Coruscant", "Hoth", 100), CoruscantHoth, new[] { 6, 2, 7, 9, 2, 2 }, 28);
-        AssertPath(pf.Find("Coruscant", "Hoth", 50), CoruscantHoth, new[] { 3, 1, 3, 4, 1, 1 }, 13);
     }
 
     [Fact]
-    public void T11_CorelliaToBespinAtSpeed80() // m1-travel T11
-        => AssertPath(new Pathfinder(G).Find("Corellia", "Bespin", 80),
-            new[] { "Corellia", "Hosnian Prime", "Kinyen", "Anoat", "Bespin" }, Array.Empty<int>(), 15, 4);
-
-    [Fact]
-    public void T12_GleeAnselmToFlaxPathDependsOnSpeed() // m1-travel T12
+    public void T9_CoruscantToHothRidesTheRoutes() // m1-travel T9 (real data, speed 80)
     {
-        var pf = new Pathfinder(G);
-        var p50 = pf.Find("Glee Anselm", "Flax", 50);
-        var p80 = pf.Find("Glee Anselm", "Flax", 80);
-        var p100 = pf.Find("Glee Anselm", "Flax", 100);
-        AssertPath(p50, Array.Empty<string>(), Array.Empty<int>(), 20, 13);
-        AssertPath(p80, Array.Empty<string>(), Array.Empty<int>(), 30, 13);
-        AssertPath(p100, Array.Empty<string>(), Array.Empty<int>(), 45, 13);
-        Assert.Contains("Dorin", p50.Names(G));
-        Assert.DoesNotContain("Fef", p50.Names(G));
-        Assert.Contains("Fef", p80.Names(G));
-        Assert.DoesNotContain("Dorin", p80.Names(G));
-        Assert.Contains("Fef", p100.Names(G));
-        Assert.DoesNotContain("Dorin", p100.Names(G));
+        var r = new Pathfinder(G).Find("Coruscant", "Hoth", 80);
+        Assert.True(r.Ok);
+        Assert.Equal(32, r.TotalTicks);
+        var names = r.Names(G);
+        Assert.Equal(new[] { "Coruscant", "Corellia", "Duros" }, names.Take(3));
+        Assert.Equal("Hoth", names[^1]);
+        foreach (var mid in r.Systems.Skip(1).SkipLast(1)) Assert.True(G.OnRoute(mid)); // never stops at an off-route system on the way
+        Assert.False(G.OnRoute(G.Get("Hoth").Index)); // Hoth is off every route: the last leg is off-route
     }
 
     [Fact]
-    public void T13_SerennoToFelucia() // m1-travel T13
+    public void T10_ClassicStraightLineIsOneLeg() // m1-travel T10 (TravelMode.Straight, the 1998 rule)
     {
-        var pf = new Pathfinder(G);
-        var p100 = pf.Find("Serenno", "Felucia", 100);
-        AssertPath(p100, Array.Empty<string>(), Array.Empty<int>(), 35, 10);
-        foreach (var n in new[] { "Ubduria", "Obroa-skai", "Montross" }) Assert.Contains(n, p100.Names(G));
-        var p80 = pf.Find("Serenno", "Felucia", 80);
-        AssertPath(p80, Array.Empty<string>(), Array.Empty<int>(), 27, 8);
-        foreach (var n in new[] { "Chazwa", "Taanab", "Lantillies" }) Assert.Contains(n, p80.Names(G));
+        var pf = new Pathfinder(G, TravelMode.Straight);
+        var r = pf.Find("Coruscant", "Hoth", 80);
+        AssertPath(r, G, new[] { "Coruscant", "Hoth" }, new[] { OffRoute("Coruscant", "Hoth", 80) }, OffRoute("Coruscant", "Hoth", 80));
+        Assert.Equal(74, r.TotalTicks);
+    }
+
+    // S(0,0) and E(500,0) off-route; R1(100,0) - R2(400,0) a major route link; X(250,10) off-route, between them.
+    private static Galaxy RouteLine() => TestData.Synthetic(
+        new[] { ("E", 500, 0), ("R1", 100, 0), ("R2", 400, 0), ("S", 0, 0), ("X", 250, 10) },
+        new[] { ("R1", "R2", "route") });
+
+    [Fact]
+    public void T11_MixedPathFliesToTheRouteRidesItAndFliesOff() // m1-travel T11, speed 100
+    {
+        var g = RouteLine();
+        // straight: 500 / 5 = 100 days. Mixed: S-R1 20 (off), R1-R2 300 * 100 / 1500 = 20 (route), R2-E 20 (off) = 60.
+        AssertPath(new Pathfinder(g).Find("S", "E", 100), g, new[] { "S", "R1", "R2", "E" }, new[] { 20, 20, 20 }, 60);
+        AssertPath(new Pathfinder(g, TravelMode.Straight).Find("S", "E", 100), g, new[] { "S", "E" }, new[] { 100 }, 100);
     }
 
     [Fact]
-    public void T14_TieOnTicksFewestHopsWins() // m1-travel T14
+    public void T12_NoStopAtAnOffRouteSystemOnTheWay() // m1-travel T12: X lies on the way but is never a waypoint
     {
-        var g = TestData.Synthetic(new[] { ("A", 0, 0), ("B", 5, 0), ("D", 10, 0) },
-            new[] { ("A", "B"), ("B", "D"), ("A", "D") });
-        var r = new Pathfinder(g).Find("A", "D", 100);
-        Assert.Equal(1, g.FindLane("A", "B")!.BaseDistance);
-        Assert.Equal(new[] { 1, 1 }, new[] { Hop(g, "A", "B"), Hop(g, "B", "D") });
-        Assert.Equal(2, Hop(g, "A", "D"));
-        Assert.Equal(new[] { "A", "D" }, r.Names(g));
-        Assert.Equal(2, r.TotalTicks);
+        var g = RouteLine();
+        var pf = new Pathfinder(g);
+        foreach (var (a, b) in new[] { ("S", "E"), ("E", "S"), ("S", "R2"), ("R1", "E") })
+            Assert.DoesNotContain("X", pf.Find(a, b, 100).Names(g));
+        Assert.Equal(new[] { "S", "X" }, pf.Find("S", "X", 100).Names(g)); // 250 / 5 = 50 off-route beats S-R1-X (20 + 30)
     }
 
-    private static int Hop(Galaxy g, string a, string b) => TravelFormula.HopTicks(g.FindLane(a, b)!, 100);
+    [Fact]
+    public void T13_RouteNotWorthItFliesStraight() // m1-travel T13: a route far off the line is ignored
+    {
+        var g = TestData.Synthetic(new[] { ("E", 100, 0), ("R1", 0, 300), ("R2", 100, 300), ("S", 0, 0) }, new[] { ("R1", "R2", "route") });
+        AssertPath(new Pathfinder(g).Find("S", "E", 100), g, new[] { "S", "E" }, new[] { 20 }, 20);
+    }
 
     [Fact]
-    public void T15_TieOnTicksAndHopsTakesFirstNameHopByHop() // m1-travel T15
+    public void T14_TieOnTicksFewestLegsWins() // m1-travel T14: S-R1-E (10 + 10) ties S-E (20): one leg wins
     {
-        // The sheet's coordinates have C at y=-50, which the loader refuses (0..1023); every y is shifted by +50.
-        var g = TestData.Synthetic(new[] { ("A", 0, 50), ("B", 50, 100), ("C", 50, 0), ("D", 100, 50) },
-            new[] { ("A", "B"), ("A", "C"), ("B", "D"), ("C", "D") });
-        Assert.Equal(new[] { 14, 14, 14, 14 }, g.Lanes.Select(l => TravelFormula.HopTicks(l, 100)));
-        var r = new Pathfinder(g).Find("A", "D", 100);
-        Assert.Equal(new[] { "A", "B", "D" }, r.Names(g));
-        Assert.Equal(28, r.TotalTicks);
+        var g = TestData.Synthetic(new[] { ("E", 100, 0), ("R1", 50, 0), ("S", 0, 0) }, new[] { ("R1", "E", "generated") });
+        AssertPath(new Pathfinder(g).Find("S", "E", 100), g, new[] { "S", "E" }, new[] { 20 }, 20);
+    }
+
+    [Fact]
+    public void T15_TieOnTicksAndLegsTakesTheSmallerPredecessor() // m1-travel T15: via P or Q both 28 + 9 = 37 in 2 legs: P (smaller name)
+    {
+        var g = TestData.Synthetic(new[] { ("E", 200, 100), ("P", 100, 200), ("Q", 100, 0), ("S", 0, 100) },
+            new[] { ("P", "E", "route"), ("Q", "E", "route") });
+        AssertPath(new Pathfinder(g).Find("S", "E", 100), g, new[] { "S", "P", "E" }, new[] { 28, 9 }, 37);
+    }
+
+    [Fact]
+    public void T22_AvoidingAStopTakesTheNextBestPath() // m1-travel T22 (Proposal, the AI goes around known traps): no stop at P, so via Q
+    {
+        var g = TestData.Synthetic(new[] { ("E", 200, 100), ("P", 100, 200), ("Q", 100, 0), ("S", 0, 100) },
+            new[] { ("P", "E", "route"), ("Q", "E", "route") });
+        var pf = new Pathfinder(g);
+        int Ix(string n) => g.Get(n).Index;
+        AssertPath(pf.FindAvoiding(Ix("S"), Ix("E"), 100, new[] { Ix("P") }), g, new[] { "S", "Q", "E" }, new[] { 28, 9 }, 37);
+        // avoiding both route systems leaves the straight line; the destination and the start are never avoided
+        AssertPath(pf.FindAvoiding(Ix("S"), Ix("E"), 100, new[] { Ix("P"), Ix("Q"), Ix("E"), Ix("S") }), g, new[] { "S", "E" }, new[] { 40 }, 40);
+        AssertPath(pf.Find("S", "E", 100), g, new[] { "S", "P", "E" }, new[] { 28, 9 }, 37); // the cached search is untouched
     }
 
     [Fact]
@@ -174,7 +185,7 @@ public class TravelTests
         Assert.Equal(80, fleet);
         var nav = TravelFormula.NavigatorSpeed(fleet, 80);
         Assert.Equal(64, nav);
-        Assert.Equal(4, Hop("Coruscant", "Corellia", nav)); // 20 * 64 / 300
+        Assert.Equal(4, Leg("Coruscant", "Corellia", nav)); // 100 * 64 / 1500 = 4.27
     }
 
     [Fact]
@@ -186,14 +197,16 @@ public class TravelTests
 
     [Fact]
     public void T18_HanMissionGroupSpeed50() // m1-travel T18
-        => Assert.Equal(3, Hop("Coruscant", "Corellia", 50));
+        => Assert.Equal(3, Leg("Coruscant", "Corellia", 50));
 
     [Fact]
-    public void T20_OrderToIlumIsUnreachable() // m1-travel T20
+    public void T20_IlumAndCsillaAreReachable() // m1-travel T20: free travel reaches the two systems outside sectors (no lanes needed)
     {
         var pf = new Pathfinder(G);
-        Assert.Equal(PathStatus.Unreachable, pf.Find("Coruscant", "Ilum", 80).Status);
-        Assert.Equal(PathStatus.Unreachable, pf.Find("Csilla", "Coruscant", 80).Status);
+        var r = pf.Find("Coruscant", "Ilum", 80);
+        Assert.True(r.Ok);
+        Assert.Equal("Ilum", r.Names(G)[^1]);
+        Assert.True(pf.Find("Csilla", "Coruscant", 80).Ok);
     }
 
     [Fact]
@@ -204,7 +217,6 @@ public class TravelTests
         Assert.Equal(PathStatus.UnknownSystem, pf.Find("Coruscant", "Nowhere", 80).Status);
         Assert.Equal(PathStatus.UnknownSystem, pf.Find("Nowhere", "Coruscant", 80).Status);
         Assert.Equal(PathStatus.Immobile, pf.Find("Coruscant", "Corellia", 0).Status);
-        Assert.Empty(pf.Find("Coruscant", "Ilum", 80).Systems);
     }
 
     [Fact]
@@ -229,9 +241,9 @@ public class TravelTests
     public void PathsAreCachedPerStartEndAndSpeed() // m1-travel §Path rule 4
     {
         var pf = new Pathfinder(G);
-        var a = pf.Find("Glee Anselm", "Flax", 50);
-        Assert.Same(a, pf.Find("Glee Anselm", "Flax", 50));
-        var b = pf.Find("Glee Anselm", "Flax", 80);
+        var a = pf.Find("Coruscant", "Hoth", 50);
+        Assert.Same(a, pf.Find("Coruscant", "Hoth", 50));
+        var b = pf.Find("Coruscant", "Hoth", 80);
         Assert.NotSame(a, b);
         Assert.Equal(2, pf.CachedCount);
     }

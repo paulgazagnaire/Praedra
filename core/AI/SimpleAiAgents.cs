@@ -153,7 +153,7 @@ public sealed partial class SimpleAi
             // a system whose owner the side has never seen counts at least SpyUnexploredBelief (deep Alliance space is where nobody looked)
             long bw = _view!.Picture(s)?.Owner == null ? Math.Max(w, _p.SpyUnexploredBelief) : w;
             long sc = bw * (100 + _p.SpyRoomPercent * r * r) / 100;
-            if (g.NeighboursOf(i).Count < _p.HqMinLanes) sc = sc * _p.SpyDeadEndPercent / 100;
+            if (g.NearOf(i).Count < _p.HqMinLanes) sc = sc * _p.SpyDeadEndPercent / 100;
             if (sc > 0) list.Add((s, sc));
         }
         return _spyTargets = list.OrderByDescending(t => t.Item2).ThenBy(t => t.Item1, StringComparer.Ordinal).Take(_p.HqSearchTargets).ToList();

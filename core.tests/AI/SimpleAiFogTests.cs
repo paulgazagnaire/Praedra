@@ -65,7 +65,11 @@ public class SimpleAiFogTests
         Assert.True(a.TotalSent > 20, $"sent {a.TotalSent} day {ha.Game.Day} winner {ha.Victory.Winner}");
     }
 
-    // m5-fog-and-hq §N9: same seed, same game; a save and load in the middle changes nothing (the AI keeps no memory).
+    // m5-fog-and-hq §N9: same seed, same game; a game loaded in the middle continues the same way every time.
+    // v5 re-pin 2026-10-16 (Paul chose re-pin on the map PR; the AI trainer owns the fix): the AI is NOT memoryless. It reads the recent event
+    // log (bombardments of the last 30 days, retreats, lost battles, foiled looks), and a save keeps no events, so after a load the AI
+    // forgets them. On v5 seed 3 a pile that shelled Desevro before day 100 lands on day 102 in the uninterrupted game and shells again in
+    // the loaded one. The test now pins that two loads of the same save play the same; "loaded = uninterrupted" is the trainer's target.
     [Fact]
     public void FogGamesAreDeterministicAndSurviveSaveLoad()
     {
@@ -73,10 +77,13 @@ public class SimpleAiFogTests
         a.RunTo(200);
         var (b, hb) = Match(3);
         b.RunTo(100);
-        var loaded = GameHost.Load(hb.Save());
+        string save = hb.Save();
+        var loaded = GameHost.Load(save);
         var c = new AiMatch(loaded, Fog, Fog);
         c.RunTo(200);
-        Assert.Equal(ha.StateHash(), loaded.StateHash());
+        var loaded2 = GameHost.Load(save);
+        new AiMatch(loaded2, Fog, Fog).RunTo(200);
+        Assert.Equal(loaded.StateHash(), loaded2.StateHash());
         var (d, hd) = Match(3);
         d.RunTo(200);
         Assert.Equal(ha.StateHash(), hd.StateHash());

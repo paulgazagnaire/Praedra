@@ -21,8 +21,12 @@ public sealed record GameSettings
     /// <summary>Numbers and switches of the Anchored deal. Null = the sheet's DEFAULTs.</summary>
     public DealParams? Deal { get; init; }
 
-    // ---- fleets. rule: m1-forced-stop-and-blockade §The alternative trigger, as a switch
-    public ForcedStopTrigger ForcedStopTrigger { get; init; } = ForcedStopTrigger.PaulRule;
+    // ---- travel. rule: m1-travel §Rule (Decided Paul 2026-10-16)
+    /// <summary>Routes (DEFAULT, New: free travel plus faster hyperspace routes) or Straight (Classic yardstick: the 1998 straight line, no routes).</summary>
+    public Rebellion.Core.Travel.TravelMode Travel { get; init; } = Rebellion.Core.Travel.TravelMode.Routes;
+
+    // ---- fleets. rule: m1-forced-stop-and-blockade §Pull-out (Decided Paul 2026-10-16: only gravity-well ships stop fleets in flight)
+    public ForcedStopTrigger ForcedStopTrigger { get; init; } = ForcedStopTrigger.GravityWellShip;
 
     // ---- economy. rule: m2-slots-and-resources, m2-mines-refineries-pools, m2-maintenance
     /// <summary>Both incident timers run. rule: m2-slots-and-resources §Do incidents run on pinned values.</summary>

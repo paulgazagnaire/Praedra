@@ -23,11 +23,12 @@ public class SimpleAiStallTests
     [Fact]
     public void ShelledLandingNeedIsOnByDefault() => Assert.True(new SimpleAiParams().ShelledLandingNeed);
 
-    // seed 3: with the fix the Empire takes the Rebel HQ (day 913 measured); without it nobody wins by day 1500.
+    // seed 3: with the fix the Empire takes the Rebel HQ (day 913 measured on the 360-system map; day 1747 on v5); without it nobody wins
+    // by day 3000. // v5 re-pin 2026-10-16 (Paul chose re-pin on the map PR; the AI trainer owns restoring the old target): limit 1100 -> 1900.
     [Fact]
     public void FoggedEmpireLandsAfterShellingAndWinsSeed3()
     {
-        var on = Play(true, 3, 1100);
+        var on = Play(true, 3, 1900);
         Assert.Equal(Side.Empire, on.Winner);
         var off = Play(false, 3, on.Day);
         Assert.Null(off.Winner);

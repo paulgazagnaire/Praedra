@@ -125,9 +125,12 @@ public static class NewGame
         foreach (var (s, kind, count) in forces.BaseFacilities)
             if (s == side) for (int i = 0; i < count; i++) PlaceNear(host, held, baseSys, kind);
         var sites = new List<string>();
+        // DEFAULT (2026-10-16, v5 galaxy): never the Rebel HQ. The second fleet starts at the first site, and a fleet parked on the HQ both
+        // gives the HQ away and gets kept there as home defence by the AI (the v5 deal put the richest Alliance system on the HQ).
+        string? hqSys = host.Game.State.Scenario.HqSystem;
         for (int n = 0, extra = forces.Int(side, "extra_yard_sites"); n < extra; n++)
         {
-            var siteOrNull = BestEnergy(host, held.Where(h => h != baseSys && !sites.Contains(h)).ToList(), null);
+            var siteOrNull = BestEnergy(host, held.Where(h => h != baseSys && h != hqSys && !sites.Contains(h)).ToList(), null);
             if (siteOrNull is not { } site) break;
             sites.Add(site);
             foreach (var (s, kind, count) in forces.SiteFacilities)
@@ -137,7 +140,7 @@ public static class NewGame
         // economy: mines and refineries on the systems richest in raw slots
         int mines = forces.Int(side, "mines_per_system"), refs = forces.Int(side, "refineries_per_system");
         foreach (var sys in held.Where(h => eco.EffectiveRaw(h) > 0).OrderByDescending(h => eco.EffectiveRaw(h)).ThenBy(h => h, StringComparer.Ordinal)
-                     .Take(forces.Int(side, "economy_systems")).ToList())
+                     .Take(ScaledEconomySystems(host, forces.Int(side, "economy_systems"))).ToList())
         {
             for (int i = 0; i < mines; i++) if (eco.CheckPlace(sys, FacilityKind.Mine) == null) eco.AddFacility(sys, FacilityKind.Mine);
             for (int i = 0; i < refs; i++) if (eco.CheckPlace(sys, FacilityKind.Refinery) == null) eco.AddFacility(sys, FacilityKind.Refinery);
@@ -167,6 +170,20 @@ public static class NewGame
             load += shipCost + squads.Sum(c => eco.Costs.Get(c).Maintenance);
             host.Fleets.AddFleet(side, f.Name, f.Ships, f.AtBase ? baseSys : siteSys, squads);
         }
+    }
+
+    /// <summary>The forces table's economy_systems is written for this many systems in sectors (the 360-system galaxy of 2026-10-12). DEFAULT.</summary>
+    public const int EconomyBaseSystems = 360;
+
+    /// <summary>
+    /// economy_systems scaled to the galaxy's size, rounded half up, like the day-one totals (AnchoredDealer.TotalsBaseSystems): holdings and
+    /// garrisons grew with the 555-system v5 galaxy, so the mines and refineries (the upkeep capacity) grow with them. DEFAULT (2026-10-16, v5):
+    /// without it the Empire's 166 garrison regiments ate a third of an unchanged capacity of 1400.
+    /// </summary>
+    private static int ScaledEconomySystems(GameHost host, int perBase)
+    {
+        int inSectors = host.Data.Galaxy.Systems.Count(x => !x.IsOutsideSectors);
+        return (int)(((long)perBase * inSectors * 2 + EconomyBaseSystems) / (2L * EconomyBaseSystems));
     }
 
     private static int CountOf(EconomyModule eco, string system, string kindName) =>

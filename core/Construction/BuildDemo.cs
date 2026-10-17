@@ -34,7 +34,9 @@ public sealed class BuildDemo
         var d = Setup.GameData.Load(repoRoot); // the composition root's data loader
         var (galaxy, ships, blockade, slots, costs) = (d.Galaxy, d.Ships, d.Blockade, d.Slots, d.Costs);
         var game = new Game(seed);
-        var fleets = FleetModule.Attach(game, galaxy, ships, blockade);
+        // The demo shows a delivery held by an enemy fleet on its path. The Alliance has no gravity-well ship, so the demo keeps the retired
+        // AnyArmedFleet trigger (m1-forced-stop-and-blockade; the game's DEFAULT is GravityWellShip since 2026-10-16).
+        var fleets = FleetModule.Attach(game, galaxy, ships, blockade, ForcedStopTrigger.AnyArmedFleet);
         // Autoscrap is out of reach: the Rebel picket is a fleet ship and pays upkeep (m3-fleets), but the demo gives the Alliance no mine or
         // refinery, so its capacity is 0 and the picket would be scrapped on day 10. The demo is about deliveries, not about overdraft.
         var eco = EconomyModule.Attach(game, galaxy, slots, costs, fleets, new EconomyParams { ScrapPeriod = 1_000_000 });
@@ -57,7 +59,7 @@ public sealed class BuildDemo
         var path = fleets.FindPath(HomeSystem, FarSystem, 100).Names(galaxy);
         string at = path[1];
         int atIndex = galaxy.Systems.ToList().FindIndex(s => s.Name == at);
-        string away = galaxy.NeighboursOf(atIndex).Select(n => galaxy.Systems[n.System].Name).Where(n => !path.Contains(n)).OrderBy(n => n, StringComparer.Ordinal).First();
+        string away = galaxy.NearOf(atIndex).Select(n => galaxy.Systems[n].Name).Where(n => !path.Contains(n)).OrderBy(n => n, StringComparer.Ordinal).First();
         int picket = fleets.AddFleet(Side.Alliance, "Rebel Picket", new[] { "Corellian Corvette" }, at);
 
         build.SubmitBuild(Side.Empire, HomeSystem, YardFamily.Shipyard, "TIE Fighter", 2);

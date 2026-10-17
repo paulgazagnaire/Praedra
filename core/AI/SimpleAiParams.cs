@@ -103,6 +103,18 @@ public sealed record SimpleAiParams
     /// and the morale retreat would only bounce the fleet back. With fog, scouts also skip trips that stop where armed enemy ships were seen lately. DEFAULT.
     /// </summary>
     public bool AvoidBlockedPaths { get; init; } = true;
+    /// <summary>
+    /// With fog, a stop on the way at a system the picture shows enemy-held counts as blocked unless its fleets are seen there now: the side
+    /// cannot see a gravity well it has not looked at, and the enemy's capital always has one at the start (a fogged strike pile flew
+    /// through Coruscant and was pulled out and destroyed on the v5 map). The router then goes around (free travel). DEFAULT (lead 2026-10-16).
+    /// </summary>
+    public bool FogAvoidEnemyStops { get; init; } = true;
+
+    /// <summary>
+    /// A lone home guard stronger than HomeDefenceStrength splits off its newest armed ships as a strike group, so new ships built at a
+    /// shipyard world don't sit merged into the guard all game (the Alliance pile parked on its HQ on the v5 map). DEFAULT (lead 2026-10-16).
+    /// </summary>
+    public bool SplitHomeSurplus { get; init; } = true;
     /// <summary>A strike pile of WinStrikeStrength fetches the regiments for the game-winning system first when at most this many regiments are believed there (-1 = never). DEFAULT.</summary>
     public int WinRushDefenders { get; init; } = 2;
     /// <summary>

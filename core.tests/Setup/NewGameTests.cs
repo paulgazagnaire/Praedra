@@ -32,11 +32,11 @@ public class NewGameTests
         Assert.Equal(alliance, Held(h, Side.Alliance));
         Assert.Equal(empire, Held(h, Side.Empire));
         Assert.Equal(Side.Empire, h.Control.HolderOf("Coruscant"));
-        Assert.Equal("Dagobah", h.HqSystem);
-        Assert.Equal(Side.Alliance, h.Control.HolderOf("Dagobah"));
+        Assert.Equal("Cyclor", h.HqSystem);
+        Assert.Equal(Side.Alliance, h.Control.HolderOf("Cyclor"));
         Assert.Equal(100, h.Economy.SupportOf("Yavin", Side.Alliance));
         Assert.True(h.IsExplored("Coruscant", Side.Alliance) && h.IsExplored("Coruscant", Side.Empire));
-        Assert.True(h.IsExplored("Dagobah", Side.Alliance) && !h.IsExplored("Dagobah", Side.Empire));
+        Assert.True(h.IsExplored("Cyclor", Side.Alliance) && !h.IsExplored("Cyclor", Side.Empire));
         Assert.Null(h.Victory.Winner);
     }
 
@@ -64,7 +64,7 @@ public class NewGameTests
         foreach (var s in new[] { "Kuat", "Fondor", "Corellia", "Rendili" }) Assert.Equal(Side.Empire, h.Control.HolderOf(s));
         foreach (var s in new[] { "Sullust", "Mon Calamari", "Bilbringi" }) Assert.Null(h.Control.HolderOf(s));
         Assert.Equal(0, h.Economy.SupportOf("Coruscant", Side.Alliance));
-        Assert.Equal(100, h.Economy.SupportOf("Dagobah", Side.Alliance));
+        Assert.Equal(100, h.Economy.SupportOf("Cyclor", Side.Alliance));
         Assert.Equal(100, h.Economy.SupportOf("Yavin", Side.Alliance));
         Assert.Contains(h.Economy.Objects, o => o.Category == ObjectCategory.Regiment && o.System == "Rendili" && o.Side == Side.Empire);
         Assert.Contains(h.Economy.Objects, o => o.Class == "Orbital Shipyard" && o.System == "Kuat");
@@ -74,7 +74,7 @@ public class NewGameTests
     public void GameOverFreezesStepAndRejectsOrders()
     {
         var h = Make(StartPreset.MedA, 1, OldVictory.Settings);
-        CaptureOnNextStep(h, "Dagobah", Side.Empire);
+        CaptureOnNextStep(h, "Cyclor", Side.Empire);
         h.Game.Step();
         Assert.True(h.Game.IsOver);
         int day = h.Game.Day, events = h.Game.Events.Count;
@@ -124,7 +124,7 @@ public class NewGameTests
     {
         var h = Make(StartPreset.MedA, 1, OldVictory.Settings);
         h.Game.Step(); Assert.Null(h.Victory.Winner);
-        CaptureOnNextStep(h, "Dagobah", Side.Empire);
+        CaptureOnNextStep(h, "Cyclor", Side.Empire);
         h.Game.Step();
         Assert.Equal(Side.Empire, h.Victory.Winner);
         var won = h.Game.Events.OfType<GameWon>().Single();
@@ -147,7 +147,7 @@ public class NewGameTests
     public void SwitchesTurnConditionsOff()
     {
         var h = Make(StartPreset.MedA, 1, new GameSettings { Victory = new VictoryRules { EmpireWinsOnHqLost = false } });
-        CaptureOnNextStep(h, "Dagobah", Side.Empire);
+        CaptureOnNextStep(h, "Cyclor", Side.Empire);
         h.Game.Step();
         Assert.Null(h.Victory.Winner);
     }
@@ -174,13 +174,13 @@ public class NewGameTests
     public void SaveLoadKeepsHqExploredAndWinner()
     {
         var h = Make(StartPreset.MedA, 1, OldVictory.Settings);
-        CaptureOnNextStep(h, "Dagobah", Side.Empire);
+        CaptureOnNextStep(h, "Cyclor", Side.Empire);
         h.Game.Step();
         string save = h.Save();
         var l = GameHost.Load(save);
-        Assert.Equal("Dagobah", l.HqSystem);
+        Assert.Equal("Cyclor", l.HqSystem);
         Assert.Equal(Side.Empire, l.Victory.Winner);
-        Assert.True(l.IsExplored("Dagobah", Side.Alliance));
+        Assert.True(l.IsExplored("Cyclor", Side.Alliance));
         Assert.Equal(h.StateHash(), l.StateHash());
         Assert.Equal(save, l.Save());
     }

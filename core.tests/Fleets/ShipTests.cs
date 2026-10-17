@@ -204,17 +204,17 @@ public class ShipTests
     public void S9_AnUndamagedIsdTakesFiveDays()
     {
         var (w, f, _) = Fleet(Isd);
-        Assert.Equal(5, DaysTo(w, f, Far)); // 20 * 80 / 300
+        Assert.Equal(5, DaysTo(w, f, Far)); // route leg: 100 * 80 / (5 * 300) = 5.33, rounded to 5
     }
 
     // m3-ships-and-fighters S10
     [Fact]
-    public void S10_AHyperdriveHitMakesItTakeSixDays()
+    public void S10_AHyperdriveHitMakesItTakeSevenDays()
     {
         var (w, f, ship) = Fleet(Isd);
         Damage(w, ship, 2750, 0, 0, 0, 0, 1, 0);
         Assert.Equal(100, w.Fleets.SpeedOf(w.State.Fleets[f]));
-        Assert.Equal(6, DaysTo(w, f, Far)); // 20 * 100 / 300
+        Assert.Equal(7, DaysTo(w, f, Far)); // route leg: 100 * 100 / (5 * 300) = 6.67, rounded to 7
     }
 
     // m3-ships-and-fighters S11
@@ -232,10 +232,10 @@ public class ShipTests
     public void S12_ADamagedMediumTransportKeepsItsRating()
     {
         var (w, f, ship) = Fleet("Medium Transport");
-        Assert.Equal(6, DaysTo(w, f, Far)); // 20 * 100 / 300, undamaged
+        Assert.Equal(7, DaysTo(w, f, Far)); // 100 * 100 / (5 * 300) rounded, undamaged
         var (w2, f2, ship2) = Fleet("Medium Transport");
         Damage(w2, ship2, 360, 0, 0, 0, 0, 5, 0); // hyperdrive_if_damaged is 0: use the normal rating
-        Assert.Equal(6, DaysTo(w2, f2, Far));
+        Assert.Equal(7, DaysTo(w2, f2, Far));
     }
 
     // m3-ships-and-fighters S13

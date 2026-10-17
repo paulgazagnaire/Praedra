@@ -15,10 +15,14 @@ public enum DealMode { Anchored, File }
 /// </summary>
 public sealed record DealParams
 {
-    /// <summary>The HQ needs at least this many lanes. Proposal, m5-setup-and-victory §P1 HQ pick (HqMinLanes).</summary>
-    public int HqMinLanes { get; init; } = 2;
-    /// <summary>The HQ is at least this many lane hops from Coruscant. Proposal, m5-setup-and-victory §P1 HQ pick (HqMinHops).</summary>
-    public int HqMinHops { get; init; } = 5;
+    /// <summary>The HQ is at least this many map units (straight line) from Coruscant. Proposal, m5-setup-and-victory §P1 HQ pick (HqMinDistance; setup-victory/10 v5 banner, replaces "5 lane hops" and "2 lanes").</summary>
+    public int HqMinDistance { get; init; } = 200;
+    /// <summary>The totals table is written for this many systems; totals scale by (systems in sectors) / this, rounded half up. DEFAULT, setup-victory/10 v5 banner (keeps the 1998 share; Medium: Empire 90 -> 138, Alliance 25 -> 38 at 553 in sectors).</summary>
+    public int TotalsBaseSystems { get; init; } = 360;
+    /// <summary>A pocket grows only into systems within this many map units of one of its systems. Proposal, m5-setup-and-victory §Mode Anchored step 6 (setup-victory/data/deal_day_one.py v5: 90).</summary>
+    public int PocketReach { get; init; } = 90;
+    /// <summary>Pocket growth prefers systems far from the Empire: key = distance to the pocket x 100 - this x distance to the Empire. Proposal, deal_day_one.py v5 (0.15).</summary>
+    public int PocketAwayPercent { get; init; } = 15;
     /// <summary>Score bias of a system whose planets-file affiliation is Empire. Proposal, m5-setup-and-victory §Mode Blocs step 2 (EmpireAffiliationBias).</summary>
     public int EmpireAffiliationBias { get; init; } = -15;
     /// <summary>Score bias of a Rebel-friendly system. Proposal, m5-setup-and-victory §Mode Blocs step 2 (RebelFriendlyBias).</summary>
@@ -35,7 +39,7 @@ public sealed record DealParams
     public int EmpireJitterMax { get; init; } = 299;
     /// <summary>Alliance seed jitter J = rand(0..99). Proposal, m5-setup-and-victory §Mode Anchored step 5.</summary>
     public int AllianceJitterMax { get; init; } = 99;
-    /// <summary>Lane time = max(1, isqrt(dx*dx + dy*dy) / this). Proposal, m5-setup-and-victory §Mode Anchored (the prototype's measure).</summary>
+    /// <summary>Distance measure for the bloc scores = isqrt(dx*dx + dy*dy) / this (the travel formula's base, no lanes since 2026-10-16). Proposal, m5-setup-and-victory §Mode Anchored.</summary>
     public int LaneTimeDivisor { get; init; } = 5;
     /// <summary>Strong holder: Alliance support 60 + rand(0..30). Traced, m5-setup-and-victory §P2 (SDPRTB 0x1e02-0x1e05).</summary>
     public int StrongBase { get; init; } = 60;
@@ -71,7 +75,6 @@ public static class AnchoredDealer
 {
     private const string Core = "core", InnerRim = "inner_rim", OuterRim = "outer_rim"; // group names, m1-galaxy-data
     private const string Yavin = "Yavin", Coruscant = "Coruscant"; // fixed by the original, m5-setup-and-victory §P1 (Traced: both looked up by id)
-    private const int Unreachable = 1_000_000; // lane time of a system no lane reaches (never dealt as Empire pool or seed)
 
     /// <summary>The checks of the anchors file against the galaxy: every anchor exists, no duplicates, none is Coruscant or Yavin. rule: m5-setup-and-victory §Mode Anchored step 1</summary>
     public static void Validate(Galaxy g, IReadOnlyList<AnchorRow> anchors)
@@ -94,7 +97,7 @@ public static class AnchoredDealer
         string GroupOf(int i) => g.Systems[i].Group;
         bool IsRim(int i) => GroupOf(i) is InnerRim or OuterRim;
         string Affiliation(int i) => g.Systems[i].Carried.TryGetValue("affiliation", out var a) ? a.Trim() : "";
-        int lanes(int i) => g.NeighboursOf(i).Count;
+        bool InSectors(int i) => !g.Systems[i].IsOutsideSectors; // Ilum and Csilla are never dealt
 
         // ---- step 1: fixed
         g.TryFindSystem(Coruscant, out int coruscant);
@@ -114,29 +117,30 @@ public static class AnchoredDealer
             else locked[i] = true; // locked neutral: never dealt, never scattered
         }
 
-        // ---- step 2: HQ (1 draw). Candidates: rim, not Yavin, not an anchor of any kind, enough lanes, far enough from Coruscant by hops.
-        var hops = HopsFrom(g, coruscant);
+        // ---- step 2: HQ (1 draw). Candidates: rim, not Yavin, not an anchor of any kind, far enough from Coruscant (straight line).
         var candidates = new List<int>();
         for (int i = 0; i < n; i++)
-            if (IsRim(i) && i != yavin && !anchor[i] && lanes(i) >= p.HqMinLanes && hops[i] >= p.HqMinHops) candidates.Add(i);
-        if (candidates.Count == 0) throw new SetupException("No system satisfies the HQ candidate rule (rim, not an anchor, enough lanes and hops from Coruscant).");
+            if (IsRim(i) && i != yavin && !anchor[i] && MapDistance(g, i, coruscant) >= p.HqMinDistance) candidates.Add(i);
+        if (candidates.Count == 0) throw new SetupException("No system satisfies the HQ candidate rule (rim, not an anchor, far enough from Coruscant).");
         candidates.Sort((a, b) => string.CompareOrdinal(Name(a), Name(b)));
         int hq = candidates[rng.NextInt(0, candidates.Count - 1)];
         owner[hq] = Side.Alliance;
 
-        // ---- step 3: counts
-        int needE = Math.Max(0, totals.EmpireTotal - 1 - empireAnchors.Count);
-        int needA = Math.Max(0, totals.AllianceTotal - 2 - allianceAnchors.Count);
+        // ---- step 3: counts (totals scaled to the galaxy's size)
+        int inSectors = Enumerable.Range(0, n).Count(InSectors);
+        int Scale(int total) => (int)(((long)total * inSectors * 2 + p.TotalsBaseSystems) / (2L * p.TotalsBaseSystems));
+        int needE = Math.Max(0, Scale(totals.EmpireTotal) - 1 - empireAnchors.Count);
+        int needA = Math.Max(0, Scale(totals.AllianceTotal) - 2 - allianceAnchors.Count);
         int scatterE = needE / p.EmpireScatterDivisor, scatterA = needA / p.AllianceScatterDivisor;
         needE -= scatterE; needA -= scatterA;
 
-        bool Open(int i) => owner[i] == null && !locked[i];
+        bool Open(int i) => owner[i] == null && !locked[i] && InSectors(i);
 
         // ---- step 4: Empire bloc
         var seedsE = new List<int> { coruscant }; seedsE.AddRange(empireAnchors);
         var dEA = LaneTimes(g, seedsE, p.LaneTimeDivisor);
         var pool = new List<int>();
-        for (int i = 0; i < n; i++) if (Open(i) && dEA[i] < Unreachable) pool.Add(i);
+        for (int i = 0; i < n; i++) if (Open(i)) pool.Add(i);
         var score = new long[n];
         foreach (int i in pool) // name order, one draw each
         {
@@ -153,6 +157,7 @@ public static class AnchoredDealer
         var allEmpire = new List<int>();
         for (int i = 0; i < n; i++) if (owner[i] == Side.Empire) allEmpire.Add(i);
         var dE = LaneTimes(g, allEmpire, p.LaneTimeDivisor);
+        var dEmap = LaneTimes(g, allEmpire, 1);
         var free = new List<int>();
         for (int i = 0; i < n; i++) if (Open(i) && IsRim(i)) free.Add(i);
         var jitter = new int[n];
@@ -183,17 +188,17 @@ public static class AnchoredDealer
             bool progressed = false;
             for (int si = 0; si < seeds.Count && placed < needA; si++)
             {
-                int best = -1; bool bestDead = false;
-                foreach (int u in pockets[si])
-                    foreach (var nb in g.NeighboursOf(u))
-                    {
-                        int v = nb.System;
-                        if (!Open(v) || (!p.AlliancePocketsMayEnterCore && GroupOf(v) == Core)) continue;
-                        bool dead = lanes(v) < 2;
-                        // minimise: dead end (0 before 1), then dE descending, then ordinal name
-                        bool better = best < 0 || (dead != bestDead ? !dead : dE[v] != dE[best] ? dE[v] > dE[best] : v < best);
-                        if (better) { best = v; bestDead = dead; }
-                    }
+                int best = -1; long bestKey = 0;
+                for (int v = 0; v < n; v++)
+                {
+                    if (!Open(v) || (!p.AlliancePocketsMayEnterCore && GroupOf(v) == Core)) continue;
+                    int near = int.MaxValue;
+                    foreach (int u in pockets[si]) near = Math.Min(near, MapDistance(g, u, v));
+                    if (near > p.PocketReach) continue;
+                    // minimise: distance to the pocket x 100 - PocketAwayPercent x distance to the Empire, then ordinal name
+                    long key = (long)near * 100 - (long)p.PocketAwayPercent * dEmap[v];
+                    if (best < 0 || key < bestKey) { best = v; bestKey = key; }
+                }
                 if (best < 0) continue;
                 owner[best] = Side.Alliance; pockets[si].Add(best); placed++; progressed = true;
             }
@@ -203,7 +208,7 @@ public static class AnchoredDealer
 
         // ---- step 7: scatter (Empire outposts anywhere, then Alliance rim cells, continuing in the shuffled order)
         var loose = new List<int>();
-        for (int i = 0; i < n; i++) if (Open(i) && lanes(i) > 0) loose.Add(i);
+        for (int i = 0; i < n; i++) if (Open(i)) loose.Add(i);
         Shuffle(loose, rng);
         int ePlaced = Math.Min(scatterE, loose.Count);
         for (int k = 0; k < ePlaced; k++) owner[loose[k]] = Side.Empire;
@@ -261,46 +266,28 @@ public static class AnchoredDealer
         }
     }
 
-    /// <summary>Breadth-first lane hops, ignoring lane length; unreachable = Unreachable. rule: m5-setup-and-victory §P1 HQ pick</summary>
-    private static int[] HopsFrom(Galaxy g, int source)
+    /// <summary>Straight-line map distance (floor). rule: m5-setup-and-victory §P1 HQ pick (HqMinDistance)</summary>
+    private static int MapDistance(Galaxy g, int a, int b)
     {
-        var d = Enumerable.Repeat(Unreachable, g.Systems.Count).ToArray();
-        var q = new Queue<int>(); d[source] = 0; q.Enqueue(source);
-        while (q.Count > 0)
-        {
-            int u = q.Dequeue();
-            foreach (var nb in g.NeighboursOf(u)) // sorted by neighbour name: ties by ordinal name
-                if (d[nb.System] == Unreachable) { d[nb.System] = d[u] + 1; q.Enqueue(nb.System); }
-        }
-        return d;
+        long dx = g.Systems[a].MapX - g.Systems[b].MapX, dy = g.Systems[a].MapY - g.Systems[b].MapY;
+        return ISqrt(dx * dx + dy * dy);
     }
 
-    /// <summary>Shortest lane time from a set of systems, w(a,b) = max(1, isqrt(dx*dx + dy*dy) / divisor) on the map position. rule: m5-setup-and-victory §Mode Anchored</summary>
+    /// <summary>Distance to the nearest of a set of systems, isqrt(dx*dx + dy*dy) / divisor (free hyperspace: the straight line). rule: m5-setup-and-victory §Mode Anchored</summary>
     private static int[] LaneTimes(Galaxy g, IEnumerable<int> sources, int divisor)
     {
         int n = g.Systems.Count;
-        var d = Enumerable.Repeat(Unreachable, n).ToArray();
-        var pq = new PriorityQueue<int, (int Time, int Index)>();
-        foreach (int s in sources) if (d[s] != 0) { d[s] = 0; pq.Enqueue(s, (0, s)); }
-        while (pq.TryDequeue(out int u, out var key))
+        var src = sources.ToList();
+        var d = new int[n];
+        for (int v = 0; v < n; v++)
         {
-            if (key.Time > d[u]) continue;
-            foreach (var nb in g.NeighboursOf(u))
-            {
-                int v = nb.System;
-                long dx = g.Systems[u].MapX - g.Systems[v].MapX, dy = g.Systems[u].MapY - g.Systems[v].MapY;
-                int w = Math.Max(1, ISqrt(dx * dx + dy * dy) / divisor);
-                if (d[u] + w < d[v]) { d[v] = d[u] + w; pq.Enqueue(v, (d[v], v)); }
-            }
+            int best = int.MaxValue;
+            foreach (int s in src) best = Math.Min(best, MapDistance(g, s, v) / divisor);
+            d[v] = best;
         }
         return d;
     }
 
     /// <summary>Integer square root (floor).</summary>
-    private static int ISqrt(long v)
-    {
-        long r = 0;
-        while ((r + 1) * (r + 1) <= v) r++;
-        return (int)r;
-    }
+    private static int ISqrt(long v) => (int)GalaxyLoader.Isqrt(v);
 }

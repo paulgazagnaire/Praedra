@@ -359,7 +359,7 @@ public class FleetOrderTests
     public void F16_ASquadronFleetStoppedAtAnIntermediateSystemLandsThere()
     {
         var w = F();
-        w.Fleets.AddFleet(Emp, "Picket", new[] { Isd }, Far); // armed enemy on the way to Hoth
+        w.Fleets.AddFleet(Emp, "Picket", new[] { "Interdictor Cruiser" }, Far); // gravity-well ship on the route to Hoth (Paul 2026-10-16: only these pull fleets out)
         long seq = w.Fleets.SubmitMoveSquadrons(Reb, new[] { 310, 311 }, "Hoth");
         w.Run(1);
         Assert.Null(w.RejectionOf(seq));
@@ -388,13 +388,12 @@ public class FleetOrderTests
             w.Fleets.SubmitMoveSquadrons(Emp, new[] { 301 }, Far),           // aboard
             w.Fleets.SubmitMoveSquadrons(Reb, new[] { 310 }, "Nowhere"),
             w.Fleets.SubmitMoveSquadrons(Reb, new[] { 310 }, Home),          // already there
-            w.Fleets.SubmitMoveSquadrons(Reb, new[] { 310 }, "Ilum"),        // unreachable
             w.Fleets.SubmitMoveSquadrons(Reb, Array.Empty<int>(), Far),
         };
         w.Run(1);
         Assert.Equal(
             new[] { RejectReason.DuplicateSquadron, RejectReason.UnknownSquadron, RejectReason.NotYours, RejectReason.SquadronAboard,
-                    RejectReason.UnknownSystem, RejectReason.AlreadyThere, RejectReason.Unreachable, RejectReason.EmptySelection },
+                    RejectReason.UnknownSystem, RejectReason.AlreadyThere, RejectReason.EmptySelection }, // no Unreachable: free travel reaches Ilum
             seqs.Select(w.RejectionOf));
         Assert.Equal(before, Snap(w));
     }
