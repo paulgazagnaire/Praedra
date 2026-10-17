@@ -37,7 +37,10 @@ public static class AiLevels
             // only a gap well above that counts): a military review every day (Medium every 3) took 63% of the systems, the one clear win of 15
             // tried. Probe droids on the HQ hunt found the Rebel HQ in 13 of 16 games against 8 for Medium without costing systems (51%); kept
             // because against a player the Empire wins by finding the HQ, not by holding every system.
-            AiLevel.Hard => p with { MilitaryEvery = 1, HuntDroids = 8 },
+            // AI trainer 2026-10-17 (QA-2): Hard also goes after the enemy's last systems before neutral ones once five times bigger than the
+            // enemy it knows (alone it did not move the 16-seed tournament past the noise; seed 3 ended on day 2992 instead of no winner): a
+            // winning Hard AI closes the game out.
+            AiLevel.Hard => p with { MilitaryEvery = 1, HuntDroids = 8, FinishWhenAheadRatio = 5 },
             _ => p,
         };
     }
