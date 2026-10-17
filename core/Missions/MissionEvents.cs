@@ -64,8 +64,17 @@ public enum MissionFoilCause { Detected, ForceSensed, Betrayed }
 /// ForceSensed: Character is the first senser whose hit foiled it; Betrayed: Character is the traitor (Defender 0, DefenderClass ""). rule: §4.
 /// </summary>
 public sealed record MissionFoiled(int Index, int Day, int Mission, Side Side, string System, int Defender, string DefenderClass,
-    MissionFoilCause Cause = MissionFoilCause.Detected, int Character = 0)
+    MissionFoilCause Cause = MissionFoilCause.Detected, int Character = 0, int EndCode = 4)
     : GameEvent(Index, Day, nameof(MissionFoiled));
+
+/// <summary>
+/// The escape duel of one spotted member (a failed decoy, or a team member of a foiled check) against one guard: x = member combat - combat of the
+/// guard's commander, p = RLEVADTB(x), escaped if Roll &lt; p; else a character is captured and a special force destroyed. System is the place of
+/// the check. rule: m5-missions §4 (Traced B2d §5: 0x5888f0).
+/// </summary>
+public sealed record MissionDuel(int Index, int Day, int Mission, Side Side, string System, int Member, bool IsCharacter, bool Decoy, int Guard,
+    int X, int Chance, int Roll, bool Escaped)
+    : GameEvent(Index, Day, nameof(MissionDuel));
 
 /// <summary>One Force sensing draw: group Force user Member against enemy Senser, chance p = Force + Force - 100 (only drawn when p > 0). rule: §3 Force sensing.</summary>
 public sealed record MissionForceSenseRoll(int Index, int Day, int Mission, Side Side, string Target, int Member, int Senser, int Chance, int Roll, bool Sensed)
