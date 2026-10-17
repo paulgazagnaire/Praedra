@@ -35,7 +35,7 @@ public class SimpleAiAgentsTests
         Assert.True(new SimpleAiParams().UseCharactersAndMissions);
         var (m, h) = Match(1, new SimpleAiParams { UseFog = true, UseCharactersAndMissions = false,
             RunnerRetreats = 0, RetreatCountsAsLoss = false, AvoidBlockedPaths = false, WinRushDefenders = -1, ShelledLandingNeed = false,
-            FogAvoidEnemyStops = false, SplitHomeSurplus = false, DetourToHeldStop = false, InvasionBatchesOnly = false, ExplorerScouts = 0 });
+            FogAvoidEnemyStops = false, SplitHomeSurplus = false, DetourToHeldStop = false, InvasionBatchesOnly = false, ExplorerScouts = 0, FogGroundForgetDays = 0 });
         m.RunTo(1000);
         Assert.DoesNotContain(m.Sent.Keys, k => k.Contains("Mission", StringComparison.Ordinal) || k.Contains("Character", StringComparison.Ordinal) || k.Contains("General", StringComparison.Ordinal));
         // The pin moved when the Death Star added saved state (m5-death-star: GameState.DeathStar, SystemKnowledge.Destroyed). The game plays identically:
@@ -43,9 +43,11 @@ public class SimpleAiAgentsTests
         // v5 re-pin 2026-10-16: the v5 galaxy (555 systems, routes) changes every game, so the hash now pins this branch's old AI on the
         // v5 map; the new v5 AI fixes (FogAvoidEnemyStops, SplitHomeSurplus) and the AI trainer's fixes (DetourToHeldStop,
         // InvasionBatchesOnly, ExplorerScouts) are switched off above with the rest.
+        // B2c re-pin 2026-10-17: the loyalty triggers add saved state (GameState.Loyalty, the per-system loss tallies) and one draw per capture
+        // (the new owner's loyalty shift), so this game takes another course from its first capture. Unchanged after merging main (#57, #58).
         // B3 re-pin 2026-10-17: the Classic battle now follows the traced original (m4-battle-classic, batch B3), which changes every battle
         // and so the game; the old AI is still the one played (all switches above unchanged).
-        Assert.Equal("939ab1afe231b7b757b5f6477fc4c4df68b205d8f461d0fc3ed53be64e582c1c", h.StateHash());
+        Assert.Equal("e19f682eefe1fb0fa78b8b91245957e6e381d6c2893348399c97c53b53f3b212", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"

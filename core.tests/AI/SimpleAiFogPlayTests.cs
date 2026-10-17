@@ -160,6 +160,27 @@ public class SimpleAiFogPlayTests
         Assert.Equal((seen * (100 + Fog.FogStaleMarginPercent) + 99) / 100, ai.DefendersEstimate("Coruscant"));
     }
 
+    // QA-5 (SimpleAiParams.FogGroundForgetDays): a garrison seen longer ago than FogGroundForgetDays is forgotten and the never-seen guess comes
+    // back, so an endgame strike is not refused forever on a years-old count. Here the switch is 30 days so the test stays short.
+    [Fact]
+    public void DefenderEstimate_ForgetsAGarrisonSeenTooLongAgo()
+    {
+        var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA, Settings = Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory });
+        var p = Fog with { FogGroundForgetDays = 30 };
+        var ai = new SimpleAi(h, Side.Alliance, p);
+        bool done = false;
+        h.Game.RegisterHook("6.8", ctx => { if (!done) { done = true; h.Fog.EspionageSuccess(ctx, Side.Alliance, "Coruscant"); } });
+        h.Game.Step();
+        int seen = h.Fog.Picture(Side.Alliance, "Coruscant")!.Ground!.Value.Where(g => g.Side == Side.Empire).Sum(g => g.Total);
+        Assert.NotEqual(p.FogUnknownWinDefenders, seen);
+        while (h.Game.Day < 1 + 30) h.Game.Step();
+        Assert.Equal((seen * StalePercent(p, 30) + 99) / 100, ai.DefendersEstimate("Coruscant")); // 30 days old: still believed
+        h.Game.Step();
+        Assert.Equal(p.FogUnknownWinDefenders, ai.DefendersEstimate("Coruscant"));               // 31 days old: forgotten
+    }
+
+    private static int StalePercent(SimpleAiParams p, int age) => 100 + p.FogStaleMarginPercent * Math.Clamp(age, 0, p.StaleDays) / p.StaleDays;
+
     // With fog both AIs fight each other: by day 600 each side has attacked the other (battles fought, and each side has taken at least one
     // system from the other). Measured on seed 1: see the report; the asserts are the floor.
     [Fact]

@@ -75,6 +75,8 @@ public sealed class GameHost
 
     /// <summary>Characters, posts, leadership, capture and death, the Force (slots 2, 3, 6.10). rule: m5-characters-and-force.</summary>
     public Rebellion.Core.Characters.CharacterModule Characters { get; }
+    /// <summary>What moves loyalty (B2c).</summary>
+    public Rebellion.Core.Characters.LoyaltyModule Loyalty { get; }
 
     /// <summary>Agent missions: teams, decoys, detection, success rolls and effects (slots 2, 3, 5.3). rule: m5-missions.</summary>
     public Rebellion.Core.Missions.MissionModule Missions { get; }
@@ -178,6 +180,8 @@ public sealed class GameHost
         Assault.SystemGeneralLeadership = Characters.SystemGeneralLeadership;
         Control.HolderChanged += Characters.OnHolderChanged;
         Support.CharacterIncident = Characters.UprisingIncident;
+        // What moves loyalty: the four triggers react to their events as they are emitted. rule: m5-characters-and-force §Loyalty and betrayal (B2c)
+        Loyalty = Rebellion.Core.Characters.LoyaltyModule.Attach(game, Characters, Fleets, Economy, data.Troops);
         // Missions: orders, slots 2 and 3 after the characters, 5.3; wires the characters' IsOnMission and membership end, the fog's AgentsAt and the
         // support module's incident terms. rule: m5-missions §Where it runs in the day Step.
         Missions = Rebellion.Core.Missions.MissionModule.Attach(game, Fleets, Economy, Support, Troops, Research, Characters, Fog, data.Missions, settings.Missions);
