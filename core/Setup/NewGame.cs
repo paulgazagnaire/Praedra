@@ -92,6 +92,9 @@ public static class NewGame
         // the Alliance extras. rule: m5-setup-and-victory §P9; m5-characters-and-force §Rolling the stats.
         host.Characters.SetupNewGame(state.Scenario.HqSystem);
 
+        // Stage 0x17: fleets and capital ships get their numbered names, after the characters and before the day-0 pictures. rule: m5-setup-and-victory §P7 Names (B4 §12)
+        NameAtSetup(host, forces);
+
         // Day-0 pictures: explored-for-all systems (A and B), own holdings (OwnLive), the StartFullCopy list. rule: m5-fog-and-hq §F4
         host.Fog.SetupNewGame(rows.Where(r => r.ExploredAll).Select(r => r.Name)
             .Where(n => state.Scenario.Explored.TryGetValue(n, out var m) && m == 3));
@@ -146,8 +149,9 @@ public static class NewGame
             for (int i = 0; i < refs; i++) if (eco.CheckPlace(sys, FacilityKind.Refinery) == null) eco.AddFacility(sys, FacilityKind.Refinery);
         }
 
-        // garrison: the sheet's required N for the holder's support, at least min_garrison; extra regiments at the base to load and send
-        // rule: m2-uprisings-and-garrison §Required garrison N (no system starts in uprising)
+        // garrison: the sheet's required N for the holder's support (N = ceil((60 - s) / 10) below 60, else 0), at least min_garrison (0 in Classic,
+        // B4 §6: worlds at 60 or more, Coruscant, Yavin and the HQ get none); extra regiments at the base to load and send
+        // rule: m5-setup-and-victory §P6 ([EXE-own] 0x51ab20); m2-uprisings-and-garrison §Required garrison N (no system starts in uprising)
         string gClass = forces.Str(side, "garrison_class"); int minG = forces.Int(side, "min_garrison");
         foreach (var sys in held)
         {
@@ -169,6 +173,29 @@ public static class NewGame
             if (load + shipCost + squads.Sum(c => eco.Costs.Get(c).Maintenance) > budget) squads.Clear();
             load += shipCost + squads.Sum(c => eco.Costs.Get(c).Maintenance);
             host.Fleets.AddFleet(side, f.Name, f.Ships, f.AtBase ? baseSys : siteSys, squads);
+        }
+    }
+
+    /// <summary>
+    /// Names every fleet "&lt;fleet_name&gt; n" (n counting per side from 1, fleet id order) and every capital ship "&lt;class&gt; n" (n counting per
+    /// side and class from 1, object id order). The base names are data: <c>fleet_name</c> of new-game-forces.csv ("Fleet", FLEETSD id 4) and
+    /// the class name of the ship data. Display only; no draw. rule: m5-setup-and-victory §P7 Names (B4 §12, [EXE-own] 0x51b7f0, 0x517760).
+    /// </summary>
+    internal static void NameAtSetup(GameHost host, ForcesTable forces)
+    {
+        var state = host.Game.State;
+        var fleetCount = new SortedDictionary<Side, int>();
+        foreach (var f in state.Fleets.Values.OrderBy(f => f.Id))
+        {
+            int n = fleetCount[f.Side] = fleetCount.GetValueOrDefault(f.Side) + 1;
+            f.Name = $"{forces.Str(f.Side, "fleet_name")} {n}";
+        }
+        var shipCount = new SortedDictionary<(Side, string), int>();
+        foreach (var o in state.Economy.Objects.Values.OrderBy(o => o.Id))
+        {
+            if (o.Category != ObjectCategory.CapitalShip || o.Side is not Side side) continue;
+            int n = shipCount[(side, o.Class)] = shipCount.GetValueOrDefault((side, o.Class)) + 1;
+            o.Name = $"{o.Class} {n}";
         }
     }
 

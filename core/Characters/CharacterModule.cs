@@ -246,20 +246,21 @@ public sealed class CharacterModule
     }
 
     /// <summary>
-    /// Traced 0x562710: S = systems held by the side (ordinal), F = its fleets with at least one capital ship (fleet id); r = rand(0..F+S-1); a
-    /// system, or a fleet and then j = rand(0..ships-1) for the ship aboard (drawn so the sequence matches; only the fleet is stored).
-    /// rule: m5-setup-and-victory §P9 (RandomLocation).
+    /// Traced 0x562710: S = systems held by the side (ordinal), F = its Usable fleets (fleet id): at a system, not en route, holding at least one
+    /// completed capital ship (B4 §9); r = rand(0..F+S-1); a system, or a fleet and then j = rand(0..c-1) over its completed capital ships for the
+    /// ship aboard (drawn so the sequence matches; only the fleet is stored). rule: m5-setup-and-victory §P9 (RandomLocation).
     /// </summary>
     public (string? System, int Fleet) RandomLocation(Side side, GameRng rng)
     {
         var systems = State.SystemOwners.Where(kv => kv.Value == side).Select(kv => kv.Key).ToList(); // SortedDictionary: ordinal
-        var fleets = State.Fleets.Values.Where(f => f.Side == side && f.Ships.Count > 0).ToList(); // fleet id order
+        int Usable(Fleet f) => f.Ships.Count(id => State.Economy.Objects.TryGetValue(id, out var o) && o.Completed);
+        var fleets = State.Fleets.Values.Where(f => f.Side == side && f.At != null && f.Transit == null && Usable(f) > 0).ToList(); // fleet id order
         int n = systems.Count + fleets.Count;
         if (n == 0) throw new InvalidOperationException($"Setup: {side} holds no system and no fleet for RandomLocation.");
         int r = rng.NextInt(0, n - 1);
         if (r < systems.Count) return (systems[r], 0);
         var f = fleets[r - systems.Count];
-        rng.NextInt(0, f.Ships.Count - 1);
+        rng.NextInt(0, Usable(f) - 1);
         return (null, f.Id);
     }
 

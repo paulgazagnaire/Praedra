@@ -74,7 +74,7 @@ public sealed record BlocsTotals(int AllianceTotal, int EmpireTotal, int Allianc
     }
 }
 
-/// <summary>One fleet row of new-game-forces.csv: ships and squadrons by class and count, placed at the side's base or second site.</summary>
+/// <summary>One fleet row of new-game-forces.csv: ships and squadrons by class and count, placed at the side's base or second site. <see cref="Name"/> labels the row only: setup renames every fleet "Fleet n" (B4 §12).</summary>
 public sealed record ForceFleet(Side Side, string Name, bool AtBase, IReadOnlyList<string> Ships, IReadOnlyList<string> Squadrons);
 
 /// <summary>The starting-forces table <c>new-game-forces.csv</c> (all DEFAULT, playable slice 2026-10-12): numbers per side.</summary>

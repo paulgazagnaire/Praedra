@@ -5,7 +5,7 @@ param,Empire,economy_systems,14,DEFAULT (playable slice 2026-10-12)
 param,Empire,mines_per_system,2,DEFAULT (playable slice 2026-10-12)
 param,Empire,refineries_per_system,2,DEFAULT (playable slice 2026-10-12)
 param,Empire,extra_yard_sites,1,DEFAULT (playable slice 2026-10-12)
-param,Empire,min_garrison,1,DEFAULT (playable slice 2026-10-12)
+param,Empire,min_garrison,0,"Classic 1998: no minimum, N by the holder's support only (B4 §6, [EXE-own] 0x51ab20; was 1, a playable-slice DEFAULT)"
 param,Empire,base_regiments,6,DEFAULT (playable slice 2026-10-12)
 param,Empire,fill_percent,90,DEFAULT (playable slice 2026-10-12)
 param,Empire,start_raw,0,DEFAULT (playable slice 2026-10-12)
@@ -14,7 +14,7 @@ param,Alliance,economy_systems,14,DEFAULT (playable slice 2026-10-12)
 param,Alliance,mines_per_system,2,DEFAULT (playable slice 2026-10-12)
 param,Alliance,refineries_per_system,2,DEFAULT (playable slice 2026-10-12)
 param,Alliance,extra_yard_sites,1,DEFAULT (playable slice 2026-10-12)
-param,Alliance,min_garrison,1,DEFAULT (playable slice 2026-10-12)
+param,Alliance,min_garrison,0,"Classic 1998: no minimum, N by the holder's support only (B4 §6, [EXE-own] 0x51ab20; was 1, a playable-slice DEFAULT)"
 param,Alliance,base_regiments,6,DEFAULT (playable slice 2026-10-12)
 param,Alliance,fill_percent,90,DEFAULT (playable slice 2026-10-12)
 param,Alliance,start_raw,0,DEFAULT (playable slice 2026-10-12)
@@ -39,3 +39,4 @@ fleet,Empire,Interdiction@base,Interdictor Cruiser;Carrack Light Cruiser,DEFAULT
 fleet,Alliance,Rebel Fleet@base,Nebulon-B Frigate*2;Corellian Corvette*2 / X-wing*3,DEFAULT (playable slice 2026-10-12)
 fleet,Alliance,Cruiser Group@site,Mon Calamari Cruiser;Corellian Corvette,DEFAULT (playable slice 2026-10-12)
 fleet,Alliance,Raiders@base,Corellian Corvette*2,DEFAULT (playable slice 2026-10-12)
+param,*,fleet_name,Fleet,"[DAT-own] FLEETSD id 4 name, text 11523; setup names fleets ""Fleet n"" per side (B4 §12)"

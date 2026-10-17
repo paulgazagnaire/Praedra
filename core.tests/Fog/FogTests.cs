@@ -20,7 +20,10 @@ public class FogTests
         var c0 = w.Pic(Side.Alliance, C0)!;
         Assert.Equal(Side.Empire, c0.Owner!.Value.Owner);
         Assert.Equal(0, c0.Owner.Stamp);
-        Assert.Null(c0.Facilities);
+        // B4 2026-10-17: the Setup reveal now writes group C (facilities) for start_explored_all systems, never D or E (m5-fog-and-hq §F4 1,
+        // B4 §11); before B4 this asserted that C was not written.
+        Assert.Equal(0, c0.Facilities!.Stamp);
+        Assert.Null(c0.Ground); Assert.Null(c0.Fleets);
         Assert.Null(w.Know(Side.Alliance, C0)!.LastLookDay);
         Assert.Equal(KnowledgeLevel.Unknown, w.Fog.Level(Side.Alliance, R1));
         Assert.Null(w.Pic(Side.Alliance, R1)); // the picture exposes nothing (owner not available)
