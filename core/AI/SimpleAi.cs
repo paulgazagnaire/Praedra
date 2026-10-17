@@ -886,6 +886,9 @@ public sealed partial class SimpleAi
         return _offensives = n;
     }
 
+    /// <summary>Marks a Move note whose order is the first leg of a way around; the trip's goal follows it.</summary>
+    public const string OnTheWayTo = "on the way to ";
+
     private bool Move(Fleet f, string dest)
     {
         if (f.At == null || dest == f.At || f.Transit != null) return false;
@@ -925,7 +928,11 @@ public sealed partial class SimpleAi
             {
                 var leg = _h.Fleets.FindPath(f.At, first, speed);
                 if (!leg.Ok || PathBlockedAt(f, leg) != null) return false;
-                dest = first;
+                // the order is only the first leg of the way around: the note names the trip's goal, so a reader of the orders (a trace, a
+                // test counting offensives) tells a stop on the way (a relief of a held system may stop on a neutral one) from a target
+                long legSeq = _h.Fleets.SubmitMove(_side, f.Id, first);
+                Note(legSeq, "Move", $"fleet {f.Id} {f.At} -> {first} {OnTheWayTo}{dest}");
+                return true;
             }
         }
         long seq = _h.Fleets.SubmitMove(_side, f.Id, dest);
