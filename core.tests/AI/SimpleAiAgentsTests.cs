@@ -43,7 +43,9 @@ public class SimpleAiAgentsTests
         // v5 re-pin 2026-10-16: the v5 galaxy (555 systems, routes) changes every game, so the hash now pins this branch's old AI on the
         // v5 map; the new v5 AI fixes (FogAvoidEnemyStops, SplitHomeSurplus) and the AI trainer's fixes (DetourToHeldStop,
         // InvasionBatchesOnly, ExplorerScouts) are switched off above with the rest.
-        Assert.Equal("a6e15e4af786c28431637720ab418f6fa4b82c7b0f0186db91b6be1d2c5fa3c2", h.StateHash());
+        // B2c re-pin 2026-10-17: the loyalty triggers add saved state (GameState.Loyalty, the per-system loss tallies) and one draw per capture
+        // (the new owner's loyalty shift), so this game takes another course from its first capture. Unchanged after merging main (#57, #58).
+        Assert.Equal("5f017ce70b78255be68d5700e5a6f283303586ac31e4558e0a320034589d23e7", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"
