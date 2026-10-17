@@ -12,7 +12,8 @@ namespace Rebellion.Core.AI;
 /// The parts of the simple AI that exist only behind the fog (<see cref="SimpleAiParams.UseFog"/>): scouting, estimates from the last-seen
 /// picture, the Empire's belief map of the Rebel HQ and the Alliance's risk-based HQ moves. Everything about the other side is read from
 /// the side's <see cref="KnowledgeView"/> (m5-fog-and-hq §N8, the AI plays fair: Decided); own state is read as before. Like the rest of the
-/// AI it keeps no memory between days: belief, risk and scout roles are re-derived every day from the view and the side's own fleets.
+/// AI it keeps no plans between days: belief, risk and scout roles are re-derived every day from the view and the side's own fleets (the few
+/// events it reads back come from the side's <see cref="AiMemory"/>, which a save carries).
 /// Guidance: specs/ai/07 §7 (search and hide), ai/12 P7 and D1 (Decided YES). Every threshold is a <see cref="SimpleAiParams"/> DEFAULT.
 /// </summary>
 public sealed partial class SimpleAi
@@ -72,9 +73,8 @@ public sealed partial class SimpleAi
     /// <summary>Regiments killed by bombardments at each system, by day (the side's own bombardment reports in its event feed).</summary>
     private int KillsSince(string system, int sinceDay)
     {
-        int n = 0; var ev = Events;
-        for (int i = ev.Count - 1; i >= 0 && ev[i].Day >= sinceDay; i--)
-            if (ev[i] is BombardmentResolved b && b.System == system) n += b.Regiments;
+        int n = 0;
+        foreach (var b in NotesSince(AiNoteKind.Bombardment, sinceDay)) if (b.System == system) n += b.Value;
         return n;
     }
 
@@ -410,9 +410,7 @@ public sealed partial class SimpleAi
         string at = hq.System;
         var risk = Risk();
         if (risk.GetValueOrDefault(at) < _p.HqMoveRisk) return;
-        var ev = _view.Events; int since = Today - _p.HqMoveCooldownDays;
-        for (int i = ev.Count - 1; i >= 0 && ev[i].Day >= since; i--)
-            if (ev[i] is HqArrived or HqDeparted) return;
+        if (NotesSince(AiNoteKind.HqMoved, Today - _p.HqMoveCooldownDays).Any()) return; // the HQ moved lately (own feed, kept in the AI memory)
         if (_h.Fog.IsPinned(at)) return; // its own system: the side sees the blockade there (§F6 departure refusal)
         var g = _h.Data.Galaxy; var room = HopsFromEnemy();
         int speed = _h.Fog.HqRules.Speed;
@@ -483,19 +481,13 @@ public sealed partial class SimpleAi
     private List<(int Character, string System)> FogEnemyCharacters()
     {
         var last = new Dictionary<int, string?>(); // lookup only: the latest word on each character
-        var ev = _view!.Events; int since = Today - _p.AbductionInfoDays;
-        for (int i = ev.Count - 1; i >= 0 && ev[i].Day >= since; i--)
-            switch (ev[i])
+        var notes = _mem.Notes; int since = Today - _p.AbductionInfoDays;
+        for (int i = notes.Count - 1; i >= 0 && notes[i].Floor >= since; i--)
+            switch (notes[i].Kind)
             {
-                case CharacterArrived a when a.Side == Enemy: last.TryAdd(a.Character, a.System); break;
-                case CharacterDetached d when d.Side == Enemy: last.TryAdd(d.Character, d.System); break;
-                case SystemGeneralAssigned s when s.Side == Enemy: last.TryAdd(s.Character, s.System); break;
-                case CharacterFreed f when f.Side == Enemy: last.TryAdd(f.Character, f.System); break;
-                case CharacterDeparted x when x.Side == Enemy: last.TryAdd(x.Character, null); break;
-                case CharacterCaptured x when x.Side == Enemy: last.TryAdd(x.Character, null); break;
-                case CharacterInjured x when x.Side == Enemy: last.TryAdd(x.Character, null); break;
-                case CharacterKilled x when x.Side == Enemy: last.TryAdd(x.Character, null); break;
+                case AiNoteKind.EnemyCharacterAt: last.TryAdd(notes[i].Value, notes[i].System); break; // arrived, detached, made General or freed there
+                case AiNoteKind.EnemyCharacterGone: last.TryAdd(notes[i].Value, null); break;           // departed, captured, injured or killed
             }
-        return last.Where(kv => kv.Value != null && _view.Sees(kv.Value)).Select(kv => (kv.Key, kv.Value!)).OrderBy(t => t.Key).ToList();
+        return last.Where(kv => kv.Value != null && _view!.Sees(kv.Value)).Select(kv => (kv.Key, kv.Value!)).OrderBy(t => t.Key).ToList();
     }
 }

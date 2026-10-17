@@ -182,10 +182,8 @@ public sealed partial class SimpleAi
         if (_foiledLooks == null)
         {
             _foiledLooks = new Dictionary<string, int>(StringComparer.Ordinal);
-            var ev = Events; int since = Today - Math.Max(_p.SpyFoilMemoryDays, _p.HqRecheckFoilDays);
-            for (int k = ev.Count - 1; k >= 0 && ev[k].Day >= since; k--)
-                if (ev[k] is MissionEnded me && me.Side == _side && me.Outcome == MissionOutcome.Foiled && me.MissionKind is MissionKind.Espionage or MissionKind.Reconnaissance)
-                    _foiledLooks.TryAdd(me.Target, me.Day); // newest first: the first seen is the last foiled day
+            foreach (var me in NotesSince(AiNoteKind.LookFoiled, Today - Math.Max(_p.SpyFoilMemoryDays, _p.HqRecheckFoilDays)))
+                _foiledLooks.TryAdd(me.System!, me.Day); // newest first: the first seen is the last foiled day
         }
         return days > 0 && _foiledLooks.TryGetValue(system, out int d) && d >= Today - days;
     }
