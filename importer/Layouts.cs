@@ -60,7 +60,8 @@ public static class Layouts
         {
             "id", "f1", "production_family", "next_production_family", "family", "word5", "is_alliance", "is_empire",
             "special_force_mask", "f9", "timer_min", "timer_spread", "repeats", "hidden",
-            "f14", "f15", "f16", "f17", "f18", "f19", "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
+            // word 14: the check runs at all (0x520b80); word 15: a member may resign, = Foilable and the end-on-foil gate (0x520b90, 0x5346b0). B2d §2, §5, §6.
+            "guard_checks", "can_resign", "f16", "f17", "f18", "f19", "f20", "f21", "f22", "f23", "f24", "f25", "f26", "f27",
         },
     };
 

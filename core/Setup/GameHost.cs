@@ -185,6 +185,7 @@ public sealed class GameHost
         // Missions: orders, slots 2 and 3 after the characters, 5.3; wires the characters' IsOnMission and membership end, the fog's AgentsAt and the
         // support module's incident terms. rule: m5-missions §Where it runs in the day Step.
         Missions = Rebellion.Core.Missions.MissionModule.Attach(game, Fleets, Economy, Support, Troops, Research, Characters, Fog, data.Missions, settings.Missions);
+        Missions.FacilityFamily = cls => data.Defenses.TryGetClass(cls, out var dc) ? dc.Family : 0; // rule: m5-missions §3 (B2d: the KDY-150 test)
         // The Death Star's hooks into the characters, missions and fog (they attach after it). rule: m5-death-star §2 effects 3, 4, 6; §5
         DeathStar.MissionsEnded = Missions.OnSystemDestroyed;
         DeathStar.CharacterRoll = Characters.DeathStarStrike;

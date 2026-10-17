@@ -1,4 +1,4 @@
-id,f1,production_family,next_production_family,family,word5,is_alliance,is_empire,special_force_mask,f9,timer_min,timer_spread,repeats,hidden,f14,f15,f16,f17,f18,f19,f20,f21,f22,f23,f24,f25,f26,f27
+id,f1,production_family,next_production_family,family,word5,is_alliance,is_empire,special_force_mask,f9,timer_min,timer_spread,repeats,hidden,guard_checks,can_resign,f16,f17,f18,f19,f20,f21,f22,f23,f24,f25,f26,f27
 1,1,0,0,65,142337,1,1,3855,65536,0,0,0,1,1,0,0,1,1,0,1,1,0,0,0,0,0,0
 2,1,0,0,66,142338,1,1,7951,65536,0,0,0,1,1,0,0,1,1,0,1,1,0,0,0,0,0,0
 3,1,0,0,67,142339,1,1,3855,65536,0,0,0,1,1,0,0,1,1,0,1,1,0,0,0,0,0,0

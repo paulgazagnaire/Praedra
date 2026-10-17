@@ -16,7 +16,8 @@ public enum RetreatMode { LaneAdjacent = 0, Nearest = 1, NoRetreat = 2 }
 public enum RetreatRefusal { GravityWell, NoHyperdrive, NoDestination }
 
 /// <summary>Why a unit left the game in a battle. rule: m4-battle-classic §10, m4-retreat-damage-repair §Where it runs.</summary>
-public enum UnitLossReason { Combat, NoHyperdrive, NoBerth, Stalemate, ShipLost }
+/// <remarks>MissionDuel: a special force lost the escape duel of a mission check (B2d §5; the original's DestroyedReason 9).</remarks>
+public enum UnitLossReason { Combat, NoHyperdrive, NoBerth, Stalemate, ShipLost, MissionDuel }
 
 /// <summary>Result of a battle for one side. rule: m4-battle-classic §8 (Outcome record).</summary>
 public enum BattleOutcome { Victorious, Annihilated, Retreated, Indecisive }
