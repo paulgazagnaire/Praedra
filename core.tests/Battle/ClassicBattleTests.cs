@@ -382,7 +382,7 @@ public class ClassicBattleTests
         var (r3, _) = Run(P, new[] { ("Galleon", 1) }, new[] { ("Bulk Transport", 1) }, alert: Alert(Fight, Fight));
         Assert.Equal(1, r3.Seconds);
         Assert.True(r3.AllianceRetreated && r3.EmpireRetreated);
-        Assert.Equal(1, r3.Draws); // the zero hit still rolls the generator (1 percent minimum)
+        Assert.Equal(1, r3.Draws); // the Bulk Transport's (Empire, fires first) zero hit on the Galleon still rolls the generator (1 percent minimum); B3-20 as corrected in m4-battle-classic
     }
 
     // B3-21
