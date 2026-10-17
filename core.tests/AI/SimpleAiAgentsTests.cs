@@ -43,7 +43,9 @@ public class SimpleAiAgentsTests
         // v5 re-pin 2026-10-16: the v5 galaxy (555 systems, routes) changes every game, so the hash now pins this branch's old AI on the
         // v5 map; the new v5 AI fixes (FogAvoidEnemyStops, SplitHomeSurplus) and the AI trainer's fixes (DetourToHeldStop,
         // InvasionBatchesOnly, ExplorerScouts) are switched off above with the rest.
-        Assert.Equal("a6e15e4af786c28431637720ab418f6fa4b82c7b0f0186db91b6be1d2c5fa3c2", h.StateHash());
+        // B3 re-pin 2026-10-17: the Classic battle now follows the traced original (m4-battle-classic, batch B3), which changes every battle
+        // and so the game; the old AI is still the one played (all switches above unchanged).
+        Assert.Equal("939ab1afe231b7b757b5f6477fc4c4df68b205d8f461d0fc3ed53be64e582c1c", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"
