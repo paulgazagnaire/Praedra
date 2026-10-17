@@ -15,7 +15,7 @@ public class B2bForceAndBetrayalTests
     private static CharacterRecord Force(MissionWorld w, int id, int force)
     {
         var c = w.Ch.Get(id)!;
-        c.ForceUser = force > 0; c.ForceBase = force; c.ForceAcquired = 0;
+        c.ForceUser = force > 0; c.ForceExperience = force; c.ForceTraining = 0;
         return c;
     }
 
@@ -92,17 +92,23 @@ public class B2bForceAndBetrayalTests
     {
         var w = World(decoys: true, p: new MissionParams { DecoysFromSpecialForcesOnly = false }, agents: new[] { (Leia, 0), (Lando, 80), (Vader, 120) });
         int guard = w.Unit(Side.Empire, Probe, T); // B2d: a special force on the enemy-held planet guards a planet target
-        w.Stub!.Expect(0, 99, 0, 99, 99, 99, 99, 99, 99); // sensed (0 < 100), two betrayal draws, decoy roll fails, its duel (B2d), walk misses, success roll fails
+        // B2e moved: the mutual discovery makes Lando meet Vader in the decoy pre-step (B2e §4) instead of rolling against the guard. Draws:
+        // sensed (0 < 100), two betrayal draws, Lando's duel against Vader (x = 0: 0 escapes, he leaves the group), his Hurt roll (combat 0: p = 100,
+        // 99 hits; sizes 0 and 0), his death draw 99 (lives), Vader's HurtBy (p = 1: 99 misses), walk misses, success roll fails
+        w.Stub!.Expect(0, 99, 0, 99, 99, 0, 99, 99, 99, 99, 99);
         int id = StartEspionage(w, new[] { Leia }, decoyChars: new[] { Lando });
         w.RunIteration(id);
         var sensed = w.Events<MissionForceSensed>().Single();
         Assert.Equal((Lando, true, Vader, false), (sensed.Member, sensed.Decoy, sensed.Senser, sensed.Foiled));
         Assert.Equal(2, w.Events<MissionBetrayalRoll>().Count);
-        Assert.Equal(guard, w.Events<MissionDecoyRoll>().Single().Defender);
+        Assert.Empty(w.Events<MissionDecoyRoll>()); // Lando left the group after his encounter
+        var enc = w.Events<Rebellion.Core.Characters.ForceEncounterResolved>().Single();
+        Assert.Equal((Lando, Vader, true), (enc.Member, enc.Other, enc.MemberEscaped));
         Assert.Single(w.Events<MissionDetectionRoll>());
         Assert.Empty(w.Events<MissionFoiled>());
-        Assert.Equal((Lando, Vader), (w.Ch.Get(Vader)!.DiscoveredForceUser, w.Ch.Get(Lando)!.DiscoveredForceUser));
+        Assert.Equal((0, 0), (w.Ch.Get(Vader)!.DiscoveredForceUser, w.Ch.Get(Lando)!.DiscoveredForceUser)); // cleared by the encounter
         Assert.Single(w.Events<ForceUserDiscovered>());
+        Assert.True(guard > 0);
     }
 
     // B2b-5: a team member sensed (p = 100): foiled, cause ForceSensed; no betrayal, decoy or detection draw in that check
@@ -115,7 +121,9 @@ public class B2bForceAndBetrayalTests
         int id = StartEspionage(w, new[] { Leia }, decoys: new[] { inf });
         int from = w.Stub!.Requests.Count;
         w.RunIteration(id);
-        Assert.Equal(new[] { (0, 99), (0, 99) }, w.RequestsSince(from)); // the sensing roll, then (B2d) Leia's escape duel against the one guard
+        // the sensing roll, then Leia's escape duel: B2e moved, against Vader (the mutual discovery meets in an encounter, B2e §4), not the guard
+        Assert.Equal(new[] { (0, 99), (0, 99) }, w.RequestsSince(from).Take(2));
+        Assert.Equal((Leia, Vader), w.Events<Rebellion.Core.Characters.ForceEncounterResolved>().Select(e => (e.Member, e.Other)).Single());
         var f = w.Events<MissionFoiled>().Single();
         Assert.Equal((MissionFoilCause.ForceSensed, Vader, 0), (f.Cause, f.Character, f.Defender));
         Assert.Empty(w.Events<MissionBetrayalRoll>());
@@ -137,11 +145,15 @@ public class B2bForceAndBetrayalTests
         int id = StartEspionage(w, new[] { Luke, Wedge, Lando });
         int from = w.Stub.Requests.Count;
         w.RunIteration(id);
-        Assert.Equal(new[] { (0, 99), (0, 1), (0, 99), (0, 1), (0, 99), (0, 99), (0, 1), (0, 99), (0, 99) }, w.RequestsSince(from));
+        // the sensing draws; B2e: the two mutual discoveries then meet in Force encounters (B2e §4), whose draws follow
+        Assert.Equal(new[] { (0, 99), (0, 1), (0, 99), (0, 1), (0, 99), (0, 99), (0, 1), (0, 99), (0, 99) }, w.RequestsSince(from).Take(9));
         Assert.Equal(new[] { (Luke, Vader, 70, false), (Lando, Vader, 65, true), (Luke, Piett, 20, true), (Luke, Veers, 30, false), (Lando, Veers, 25, false), (Wedge, Veers, 20, false) },
             w.Events<MissionForceSenseRoll>().Select(e => (e.Member, e.Senser, e.Chance, e.Sensed)));
         Assert.Equal((MissionFoilCause.ForceSensed, Vader), (w.Events<MissionFoiled>().Single().Cause, w.Events<MissionFoiled>().Single().Character));
-        Assert.Equal((Lando, Vader, Luke, Piett), (w.Ch.Get(Vader)!.DiscoveredForceUser, w.Ch.Get(Lando)!.DiscoveredForceUser,
+        Assert.Equal(new[] { (Lando, Vader), (Luke, Piett) }, w.Events<ForceUserDiscovered>().Select(e => (e.Member, e.Senser)));
+        // B2e: Luke meets Piett (team order: Luke first, then Lando meets Vader); the encounters clear the keys
+        Assert.Equal(new[] { (Luke, Piett), (Lando, Vader) }, w.Events<Rebellion.Core.Characters.ForceEncounterResolved>().Select(e => (e.Member, e.Other)));
+        Assert.Equal((0, 0, 0, 0), (w.Ch.Get(Vader)!.DiscoveredForceUser, w.Ch.Get(Lando)!.DiscoveredForceUser,
             w.Ch.Get(Piett)!.DiscoveredForceUser, w.Ch.Get(Luke)!.DiscoveredForceUser));
         Assert.Empty(w.Events<MissionBetrayalRoll>());
     }

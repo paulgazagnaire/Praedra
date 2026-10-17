@@ -22,8 +22,10 @@ public class CharacterTests
         var c = w.Ch.Create(w.Ch.Data.Get(Ackbar), stub);
         Assert.Equal(new[] { 12, 49, 100, 0, 0, 0, 100 }, c.Skills);
         Assert.True(c.ForceUser);
-        Assert.Equal(43, c.EffectiveForce);
-        Assert.Equal(new[] { (0, 30), (0, 50), (0, 60), (0, 50), (0, 10), (0, 99), (0, 40) }, stub.Requests.Select(r => (r.Min, r.Max)));
+        // B2e moved: the Force is rolled only once he is aware (B2e §5), so a hidden user has Force 0 and the level draw is not made at creation
+        Assert.False(c.ForceDiscovered);
+        Assert.Equal(0, c.EffectiveForce);
+        Assert.Equal(new[] { (0, 30), (0, 50), (0, 60), (0, 50), (0, 10), (0, 99) }, stub.Requests.Select(r => (r.Min, r.Max)));
 
         var stub2 = new StubRng().Queue(12, 49, 60, 0, 10, 10);
         var c2 = w.Ch.Create(w.Ch.Data.Get(Ackbar), stub2);
@@ -44,7 +46,7 @@ public class CharacterTests
         Assert.Empty(stub.Requests);
         Assert.Equal(0, han.EffectiveForce); Assert.False(han.ForceUser);
         Assert.Equal(50, luke.EffectiveForce); Assert.True(luke.ForceDiscovered);
-        Assert.Equal(10, leia.EffectiveForce); Assert.True(leia.ForceUser); Assert.False(leia.ForceDiscovered);
+        Assert.Equal(0, leia.EffectiveForce); Assert.True(leia.ForceUser); Assert.False(leia.ForceDiscovered); // B2e moved: Force 0 until aware
     }
 
     // ------------------------------------------------------------------ Force (§Force)
@@ -52,8 +54,8 @@ public class CharacterTests
     private static (CharWorld W, CharacterRecord T, CharacterRecord S) Training(int trainerId, int trainerForce, int studentId, int studentForce)
     {
         var w = new CharWorld();
-        var t = w.Add(trainerId, Yavin); t.ForceUser = true; t.ForceBase = trainerForce;
-        var s = w.Add(studentId, Yavin); s.ForceUser = true; s.ForceBase = studentForce; s.ForceAcquired = 0;
+        var t = w.Add(trainerId, Yavin); t.ForceUser = true; t.ForceExperience = trainerForce;
+        var s = w.Add(studentId, Yavin); s.ForceUser = true; s.ForceExperience = studentForce; s.ForceTraining = 0;
         return (w, t, s);
     }
 
@@ -66,7 +68,7 @@ public class CharacterTests
         w.StepWith("6.10", ctx => w.Ch.ForceTrainingRound(ctx, vader, new[] { s }));
         var e = Assert.Single(w.Events<ForceTrainingResult>());
         Assert.Equal((100, 99, true, 37, 57), (e.Gap, e.R, e.Success, e.Gain, e.NewForce));
-        Assert.Equal(37, s.ForceAcquired);
+        Assert.Equal(37, s.ForceTraining);
         Assert.Equal(57, s.EffectiveForce);
     }
 
@@ -93,11 +95,11 @@ public class CharacterTests
     {
         var (w, t, s) = Training(Luke, 50, Leia, 50);
         w.StepWith("6.10", ctx => w.Ch.ForceTrainingRound(ctx, t, new[] { s }));
-        s.ForceBase = 60;
+        s.ForceExperience = 60;
         w.StepWith("6.10", ctx => w.Ch.ForceTrainingRound(ctx, t, new[] { s }));
         Assert.All(w.Events<ForceTrainingResult>(), e => Assert.False(e.Success));
         Assert.Equal(new[] { (0, 99), (0, 99) }, w.Stub!.Requests.Select(r => (r.Min, r.Max)));
-        s.ForceBase = 49;
+        s.ForceExperience = 49;
         w.Stub.Expect(0, 99, 0);
         w.StepWith("6.10", ctx => w.Ch.ForceTrainingRound(ctx, t, new[] { s }));
         var e3 = w.Events<ForceTrainingResult>().Last();
@@ -112,6 +114,7 @@ public class CharacterTests
         var w = new CharWorld(seed: 6);
         var t = w.Add(Luke, Yavin);
         var s = w.Add(Leia, Yavin);
+        s.ForceDiscovered = true; s.ForceExperience = 10; // B2e: her Force is rolled once she is aware (level 10, variance 0)
         Assert.Equal((50, 10), (t.EffectiveForce, s.EffectiveForce));
         w.StepWith("6.10", ctx =>
         {
@@ -153,12 +156,16 @@ public class CharacterTests
         Assert.Equal(3, bomb.AdmiralMultiplier(100));
         Assert.Equal(b * 3, bomb.Power(fleet));
 
+        // B2e moved: Injure is the Hurt roll (combat 0: p = 100, the stub's 0 hits) and then the minor's death draw, answered 99 so he lives;
+        // an injured character loses his post but keeps riding the fleet (B2e §2, the Injury notifier 0x4f1720 touches only the post)
+        w.Stub!.Expect(0, 99, 0, 99);
         w.StepWith("5.1", ctx => w.Ch.Injure(ctx, ack, CharacterCause.Debug));
+        Assert.Equal(CharacterStatus.Injured, ack.Status);
         Assert.Equal(0, bomb.AdmiralLeadership(fleet));
         Assert.Equal(b, bomb.Power(fleet));
         var pv = Assert.Single(w.Events<PostVacated>());
         Assert.Equal((Ackbar, PostKind.Admiral), (pv.Character, pv.Post));
-        Assert.Equal(0, ack.AttachedFleet);
+        Assert.Equal((f, CharacterPost.None), (ack.AttachedFleet, ack.Post));
         Assert.Equal(Yavin, w.Ch.LocationOf(ack));
     }
 
@@ -396,7 +403,9 @@ public class CharacterTests
         // The die is rand(1..100), hit at 50 or less (m5-death-star §2 effect 3); the same chance as the characters sheet's rand(0..99) < 50, shifted by one: 50 hits, 51 misses, 11 hits.
         w.Stub.Expect(1, 100, 50, 51, 11);
         w.StepWith("5.1", ctx => w.Ch.DeathStarStrike(ctx, Hoth, Side.Empire));
-        Assert.Equal(3, w.Stub.Requests.Count - before);
+        // B2e moved: the hit on a free minor is the Hurt roll (unqueued draws answer 0: hit, sizes 0 and 0, then the minor's death draw 0 < 25),
+        // so Drayson dies of the injury and the kill is not needed; the prisoner Tura is killed without it. 3 + 4 draws.
+        Assert.Equal(7, w.Stub.Requests.Count - before);
         Assert.Equal(CharacterStatus.Dead, w.C(Drayson).Status);
         Assert.Equal(CharacterStatus.Free, w.C(Borsk).Status);
         Assert.Equal(CharacterStatus.Dead, w.C(Tura).Status);
@@ -421,7 +430,9 @@ public class CharacterTests
         {
             Assert.Single(w.Events<CharacterInjured>());
             Assert.Empty(w.Events<CharacterKilled>());
-            Assert.Equal(CharacterStatus.Free, luke.Status); // healed at 6.10 (InjuryDays 0)
+            // B2e moved: the Kill becomes the Hurt roll (p = 1 for Luke's effective combat 135; the stub's 0 hits, size 0 + 0 + 1); Yavin is
+            // nobody's, so he does not heal
+            Assert.Equal((CharacterStatus.Injured, 1), (luke.Status, luke.Injury));
             w.StepWith("5.2", ctx => w.Ch.Capture(ctx, luke, Side.Empire, null, CharacterCause.Mission));
             Assert.True(w.Ch.IsCaptured(Luke)); // the victory term stays reachable
         }
@@ -457,61 +468,65 @@ public class CharacterTests
         Assert.Equal(CharacterStatus.Free, leia.Status);
     }
 
-    // m5-characters-and-force CH22
+    // m5-characters-and-force CH22 (B2e moved: Injure is the Hurt roll on a Free or Injured character; never a captured or dead one)
     [Fact]
-    public void CH22_InjureOnlyAFreeCharacter()
+    public void CH22_InjureNotACapturedOrDeadCharacter()
     {
-        var w = new CharWorld(new CharacterParams { InjuryDays = 5 });
+        var w = new CharWorld();
         var luke = w.Add(Luke, Yavin); var han = w.Add(Han, Yavin);
         w.StepWith("5.2", ctx => { w.Ch.Capture(ctx, luke, Side.Empire, null, CharacterCause.Debug); w.Ch.Injure(ctx, han, CharacterCause.Debug); });
-        int ev = w.Game.Events.Count;
-        bool a = true, b = true;
+        Assert.Equal(CharacterStatus.Injured, han.Status);
+        int ev = w.Game.Events.Count, pts = han.Injury;
+        bool a = true, b = false;
         w.StepWith("5.2", ctx => { a = w.Ch.Injure(ctx, luke, CharacterCause.Debug); b = w.Ch.Injure(ctx, han, CharacterCause.Debug); });
-        Assert.False(a); Assert.False(b);
-        Assert.Empty(w.Game.Events.Skip(ev).OfType<CharacterInjured>());
+        Assert.False(a); Assert.True(b);
+        Assert.True(han.Injury > pts);
+        Assert.Equal(han.Id, Assert.Single(w.Game.Events.Skip(ev).OfType<CharacterInjured>()).Character);
     }
 
-    // m5-characters-and-force CH23
-    [Theory]
-    [InlineData(0, 1)]
-    [InlineData(3, 3)]
-    public void CH23_InjuryHealsAtSlot610(int injuryDays, int healStep)
+    // m5-characters-and-force CH23 (B2e moved: an injury lasts until its points heal, 1 a day on a planet his side holds)
+    [Fact]
+    public void CH23_InjuryHealsAtSlot610()
     {
-        var w = new CharWorld(new CharacterParams { InjuryDays = injuryDays });
+        var w = new CharWorld();
+        w.Hold(Yavin, Side.Alliance);
         var han = w.Add(Han, Yavin);
-        CharacterStatus during = CharacterStatus.Free;
-        w.Game.RegisterHook("6.9", _ => { if (w.Game.Day == 0) during = han.Status; });
-        w.StepWith("5.2", ctx => w.Ch.Injure(ctx, han, CharacterCause.Debug));
-        Assert.Equal(CharacterStatus.Injured, during);
+        w.StepWith("5.2", ctx => w.Ch.AddInjury(ctx, han, 3, CharacterCause.Debug));
+        Assert.Equal(CharacterStatus.Injured, han.Status);
         int step = 1;
         while (han.Status != CharacterStatus.Free) { w.Game.Step(); step++; }
-        Assert.Equal(healStep, step);
+        Assert.Equal(4, step); // healing starts the day after it turned on: 3, 2, 1, 0
         Assert.Single(w.Events<CharacterHealed>());
     }
 
-    // m5-characters-and-force CH24
+    // m5-characters-and-force CH24 (B2e moved: CaptiveEscape is on by default; off makes no timer and no draw)
     [Fact]
-    public void CH24_NoEscapeRollsWhenOff_OnWithoutInputRefused()
+    public void CH24_NoEscapeDrawsWhenOff_OneDelayDrawWhenOn()
     {
-        var w = new CharWorld();
+        var w = new CharWorld(new CharacterParams { CaptiveEscape = false });
         var luke = w.Add(Luke, Yavin);
-        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, luke, Side.Empire, null, CharacterCause.Debug));
         int before = w.Stub!.Requests.Count;
+        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, luke, Side.Empire, null, CharacterCause.Debug));
         w.Run(200);
         Assert.Equal(before, w.Stub.Requests.Count);
-        var ex = Assert.Throws<RuleMissingException>(() => new CharWorld(new CharacterParams { CaptiveEscape = true }));
-        Assert.Equal("EscapeInput", ex.Rule);
+        Assert.Equal(0, luke.NextEscapeDay);
+        var on = new CharWorld();
+        var l2 = on.Add(Luke, Yavin);
+        on.Stub!.Expect(0, 1000, 400);
+        on.StepWith("5.2", ctx => on.Ch.Capture(ctx, l2, Side.Empire, null, CharacterCause.Debug));
+        Assert.Equal(0 + 100 + 400, l2.NextEscapeDay);
     }
 
-    // m5-characters-and-force CH25
+    // m5-characters-and-force CH25 (B2e moved: the input is Traced; a test table (-50, 1), (50, 30); Luke alone: x = 135 + 75 = 210)
     [Theory]
-    [InlineData(-50, 0, true), InlineData(-50, 1, false), InlineData(50, 29, true), InlineData(50, 30, false)]
-    public void CH25_EscapeWithATestHook(int input, int r, bool freed)
+    [InlineData(29, true), InlineData(30, false)]
+    public void CH25_EscapeWithATestTable(int r, bool freed)
     {
-        var p = new CharacterParams { CaptiveEscape = true, EscapeInput = _ => input, EscapeTable = new[] { (-50, 1), (50, 30) } };
-        var w = new CharWorld(p);
+        var w = new CharWorld(new CharacterParams { EscapeTable = new[] { (-50, 1), (50, 30) } });
+        Assert.Equal((1, 1, 1, 30, 30), (w.Ch.EscapePercent(-80), w.Ch.EscapePercent(-50), w.Ch.EscapePercent(49), w.Ch.EscapePercent(50), w.Ch.EscapePercent(210)));
         var luke = w.Add(Luke, Yavin);
-        w.StepWith("6.10", ctx => w.Ch.Capture(ctx, luke, Side.Empire, null, CharacterCause.Debug)); // after this Step's escape rolls
+        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, luke, Side.Empire, null, CharacterCause.Debug));
+        luke.NextEscapeDay = w.Game.Day; // the attempt is due at this Step's slot 6.10
         w.Stub!.Expect(0, 99, r);
         int ev = w.Game.Events.Count;
         w.Game.Step();
@@ -536,8 +551,10 @@ public class CharacterTests
         Assert.NotNull(w.Host.Support.CharacterIncident);
         int before = w.Stub!.Requests.Count;
         w.Stub.Expect(0, 2, 1);
+        w.Stub.Expect(0, 99, 0, 99); // B2e moved: Injure is the Hurt roll (0 hits), then the minor's death draw (99: he lives)
         w.StepWith("6.3", ctx => w.Host.Support.CharacterIncident!(ctx, ctx.Day + 1, Hoth, Side.Alliance, 3));
-        Assert.Equal(new[] { (0, 2) }, w.Stub.Requests.Skip(before).Select(x => (x.Min, x.Max)));
+        Assert.Equal(new[] { (0, 2), (0, 99) }, w.Stub.Requests.Skip(before).Take(2).Select(x => (x.Min, x.Max)));
+        Assert.Equal(CharacterStatus.Injured, w.C(Chewbacca).Status);
         Assert.Equal(Chewbacca, Assert.Single(w.Events<CharacterInjured>()).Character);
 
         var w2 = new CharWorld();
@@ -628,9 +645,8 @@ public class CharacterTests
     {
         foreach (var (p, rule) in new (CharacterParams, string)[]
                  {
-                     (new() { SeatOfPower = true }, "SeatOfPower"),
                      (new() { ForceDiscovery = ForceDiscoveryMode.Detection }, "ForceDiscovery=Detection"), (new() { ForceGrowth = true }, "ForceGrowth"),
-                     (new() { SkillGrowth = true }, "SkillGrowth"), (new() { ForceHealBonus = true }, "ForceHealBonus"),
+                     (new() { SkillGrowth = true }, "SkillGrowth"),
                      (new() { BlockadeEscapeRisk = true }, "BlockadeEscapeRisk"), (new() { AssaultHarmsCharacters = true }, "AssaultHarmsCharacters"),
                      (new() { CharactersLostWithFleet = true }, "CharactersLostWithFleet"), (new() { CharactersStoppedInTransit = true }, "CharactersStoppedInTransit"),
                  })
@@ -753,10 +769,10 @@ public class CharacterTests
         Assert.Equal(new CharacterParams(), p);
         Assert.True(p.OfficersRideFleet); Assert.False(p.CharactersLostWithFleet); Assert.False(p.CharactersStoppedInTransit);
         Assert.False(p.BlockadeEscapeRisk); Assert.False(p.AssaultHarmsCharacters);
-        Assert.False(p.MajorsCanDie); Assert.True(p.MinorsCanDie); Assert.Equal(0, p.InjuryDays); Assert.False(p.ForceHealBonus);
-        Assert.True(p.DeathStarHitsOwnCharacters); Assert.False(p.CaptiveEscape);
-        Assert.True(p.LoyaltyTriggers); Assert.False(p.SeatOfPower);
-        Assert.Equal(ForceDiscoveryMode.Story, p.ForceDiscovery); Assert.False(p.ForceGrowth); Assert.False(p.SkillGrowth);
+        Assert.False(p.MajorsCanDie); Assert.True(p.MinorsCanDie);
+        Assert.True(p.DeathStarHitsOwnCharacters); Assert.True(p.CaptiveEscape); // B2e: escape is Traced, DEFAULT on
+        Assert.True(p.LoyaltyTriggers); Assert.True(p.SeatOfPower); // B2e: Seat of Power Traced, DEFAULT on
+        Assert.Equal(ForceDiscoveryMode.Trainer, p.ForceDiscovery); Assert.False(p.ForceGrowth); Assert.False(p.SkillGrowth); // B2e: trainers awaken Force users
         Assert.False(p.TrainerNeedsKnight); Assert.Equal(1, p.ForceStudentMin); Assert.Equal(80, p.ForceKnightMin); Assert.Equal(100, p.ForceMasterMin);
         Assert.False(p.NavigatorBonus); Assert.Equal(25, p.NavigatorFloor); Assert.Equal(50, p.DeathStarHitPercent); Assert.Equal(50, p.TrainingGainPercent);
         Assert.Equal(100, p.CharacterSpeed); Assert.Equal(4, p.StartExtrasPerSide); Assert.Equal(StartCastOfficers.Original, p.StartCastOfficers);

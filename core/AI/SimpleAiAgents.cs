@@ -52,7 +52,7 @@ public sealed partial class SimpleAi
     /// <summary>Free to take an order today: placed, Free, not attached, no system post, not on a mission, standing on a system (m5-characters §Availability).</summary>
     private bool Standing(CharacterRecord c) => _h.Characters.IsAvailable(c) && c.Transit == null && c.System != null;
     private bool IsKey(CharacterRecord c) => _h.Characters.ClassOf(c).Kind == CharacterKind.Major;
-    private int Skill(CharacterRecord c, Skill s) => c.Skill(s);
+    private int Skill(CharacterRecord c, Skill s) => c.EffectiveSkill(s); // m5-characters-and-force §Force (B2e §1: every reader takes the effective skill)
 
     private int CharTicks(string from, string to) => TicksCached(from, to, _h.Characters.Params.CharacterSpeed);
 

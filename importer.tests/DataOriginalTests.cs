@@ -86,7 +86,7 @@ public class DataOriginalTests
         var expect = new Dictionary<string, int>
         {
             ["DIPLMSTB"] = 10, ["ESPIMSTB"] = 12, ["SBTGMSTB"] = 12, ["RESCMSTB"] = 12, ["DSSBMSTB"] = 12, ["RCRTMSTB"] = 11, ["ABDCMSTB"] = 12,
-            ["ASSNMSTB"] = 12, ["INCTMSTB"] = 13, ["SUBDMSTB"] = 13, ["FOILTB"] = 14, ["FDECOYTB"] = 14, ["RLEVADTB"] = 14, // B2d: the escape duel table
+            ["ASSNMSTB"] = 12, ["INCTMSTB"] = 13, ["SUBDMSTB"] = 13, ["FOILTB"] = 14, ["FDECOYTB"] = 14, ["RLEVADTB"] = 14, ["ESCAPETB"] = 9, // B2d: the escape duel table; B2e: the prisoner escape table
         };
         foreach (var kv in expect) Assert.Equal((kv.Key, kv.Value), (kv.Key, counts[kv.Key]));
         Assert.Equal(expect.Count, counts.Count);
