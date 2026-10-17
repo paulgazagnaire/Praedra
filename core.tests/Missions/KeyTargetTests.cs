@@ -261,9 +261,9 @@ public class KeyTargetTests
     {
         var w = new MissionWorld();
         w.Hold(T, Side.Empire, 20);
-        w.Agent(Han, T, com: 100);
-        w.Agent(Leia, T, com: 50);
-        w.Agent(Wedge, T, com: 50);
+        w.Agent(Han, H, com: 100); // B2d: the team flies in from H (a team leaving T would meet Vader's sensing at the leaving check too)
+        w.Agent(Leia, H, com: 50);
+        w.Agent(Wedge, H, com: 50);
         w.Agent(Vader, T);
         // B2b: Vader (Force 120) at the target senses Leia and Wedge (Force 10 each, both Force users as created here): one pick draw (0..1) = 0
         // takes Leia, p = 30, draw 99 misses; then Wedge, 99 misses; then three betrayal draws, then the roll

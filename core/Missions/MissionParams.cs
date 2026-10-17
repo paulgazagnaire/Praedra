@@ -47,10 +47,15 @@ public enum SabotageSkill { Average, Combat }
 /// <summary>Which facility a Sabotage destroys. rule: m5-missions §6 (Sabotage).</summary>
 public enum SabotageTargetMode { RandomFacility, Chosen }
 
-/// <summary>Where the Force sensers of a mission check stand. rule: m5-missions §3 Force sensing (B2b §2 "Where"; the scope per kind and phase is B2c).</summary>
+/// <summary>Where the Force sensers of a mission check stand. rule: m5-missions §3 Force sensing (B2b §2 "Where"; the scopes per kind and phase: B2d §3).</summary>
 public enum ForceSenseScope
 {
-    /// <summary>DEFAULT: every qualified character at the target system, on the planet or aboard any fleet there.</summary>
+    /// <summary>
+    /// DEFAULT: the check's own scopes (B2b §2 "Where" read with B2d §3): characters on the planet when the check guards the planet, aboard fleets at
+    /// the place when it guards the orbit.
+    /// </summary>
+    CheckScope,
+    /// <summary>Every qualified character at the place of the check, on the planet or aboard any fleet there (B2b's interim DEFAULT).</summary>
     Both,
     /// <summary>Only characters on the planet (riding no fleet).</summary>
     Planet,
@@ -77,15 +82,23 @@ public sealed record MissionParams
     public MstbLookupMode MstbLookup { get; init; } = MstbLookupMode.Step;
     public MstbBelowFirstRow MstbBelowFirstRow { get; init; } = MstbBelowFirstRow.FirstRowValue;
     public SuccessRule SuccessRule { get; init; } = SuccessRule.AnyMember;
-    /// <summary>Run the detection walk once at landing too. DEFAULT false (Missing: the original phases are an Open Rebellion lead).</summary>
-    public bool DetectionAtLanding { get; init; }
+    /// <summary>
+    /// The mission check runs at all four points (leaving: planet then orbit; arriving: orbit; each job: next to the target). DEFAULT true (Traced
+    /// B2d §1, §2). False: only the job check, for comparison runs. rule: m5-missions §1.
+    /// </summary>
+    public bool MissionGuardChecks { get; init; } = true;
+    /// <summary>
+    /// The guard lists carry no side filter, so own units in scope guard too (Traced B2d §3 at code level, not seen in play). DEFAULT true; false = enemy
+    /// units only. rule: m5-missions §3 Guards.
+    /// </summary>
+    public bool GuardsAnySide { get; init; } = true;
     /// <summary>Only special forces may be decoys. DEFAULT true (Traced for the AI path only).</summary>
     public bool DecoysFromSpecialForcesOnly { get; init; } = true;
     /// <summary>Team size cap, 0 = none. DEFAULT 0 (Missing).</summary>
     public int MaxTeamMembers { get; init; }
     /// <summary>Decoy cap, 0 = none. DEFAULT 0 (Missing; the original probably caps at (field + 2) / 2, field not identified).</summary>
     public int MaxDecoys { get; init; }
-    /// <summary>Regiments aboard ships at the target are defenders. DEFAULT true; false = landed regiments only.</summary>
+    /// <summary>Regiments aboard guarding ships are guards (Traced B2d §3: flag +0x2c of the orbit scope). DEFAULT true; false = ships only.</summary>
     public bool CountAboardUnits { get; init; } = true;
     /// <summary>Diplomacy needs the uprising flag off. DEFAULT true ("calm" is Missing).</summary>
     public bool DiplomacyNeedsCalm { get; init; } = true;
@@ -97,7 +110,7 @@ public sealed record MissionParams
     public bool SubdueEndsUprising { get; init; }
     public SabotageSkill SabotageSkill { get; init; } = SabotageSkill.Average;
     public SabotageTargetMode SabotageTargetMode { get; init; } = SabotageTargetMode.RandomFacility;
-    /// <summary>Call the character sheet's OnTeamExposed for a foiled or failed team. DEFAULT true (a no-op until that sheet defines a rule).</summary>
+    /// <summary>Call the character sheet's OnTeamExposed for a failed team (a foiled team duels instead, B2d §6). DEFAULT true (a no-op until that sheet defines a rule).</summary>
     public bool ExposureHooks { get; init; } = true;
 
     /// <summary>Key targets of Assassination (the exposure gate, one capped roll, kidnap or kill). DEFAULT true (Decided Paul 2026-10-16). rule: m5-missions §6a.</summary>
@@ -114,8 +127,8 @@ public sealed record MissionParams
     public bool ForceSensing { get; init; } = true;
     /// <summary>Every member may betray on each check (0x589f10). DEFAULT true (Traced B2b).</summary>
     public bool Betrayal { get; init; } = true;
-    /// <summary>DEFAULT Both (the planet and fleet scopes of 0x589a40 are B2c).</summary>
-    public ForceSenseScope ForceSenseScope { get; init; } = ForceSenseScope.Both;
+    /// <summary>DEFAULT CheckScope (the planet and fleet scopes of 0x589a40, B2d §3).</summary>
+    public ForceSenseScope ForceSenseScope { get; init; } = ForceSenseScope.CheckScope;
     /// <summary>DEFAULT Foilable.</summary>
     public BetrayalKinds BetrayalKinds { get; init; } = BetrayalKinds.Foilable;
     /// <summary>Lowest Force of a group member who can be sensed. GNPRTB 3585 = 1 (Traced B2b, 0x5888a0).</summary>
@@ -130,12 +143,8 @@ public sealed record MissionParams
     public int SenseSecondCharacter { get; init; } = 641;
 
     // ---- switches whose other value has no rule (refused)
-    /// <summary>DEFAULT false; true has no rule (refused).</summary>
-    public bool FoilDestroysSpecialForces { get; init; }
     /// <summary>DEFAULT true; false has no rule (refused).</summary>
     public bool MissionsIgnoreForcedStop { get; init; } = true;
-    /// <summary>DEFAULT false; true has no rule (refused).</summary>
-    public bool BlockadeInterceptsMissions { get; init; }
     /// <summary>DEFAULT false; true has no rule (refused).</summary>
     public bool UprisingFailsMissions { get; init; }
     /// <summary>DEFAULT false; true has no rule (refused).</summary>
@@ -149,9 +158,7 @@ public sealed record MissionParams
     public void Validate()
     {
         const string sheet = "m5-missions";
-        if (FoilDestroysSpecialForces) throw new RuleMissingException("FoilDestroysSpecialForces", sheet);
         if (!MissionsIgnoreForcedStop) throw new RuleMissingException("MissionsIgnoreForcedStop=false", sheet);
-        if (BlockadeInterceptsMissions) throw new RuleMissingException("BlockadeInterceptsMissions", sheet);
         if (UprisingFailsMissions) throw new RuleMissingException("UprisingFailsMissions", sheet);
         if (InformantIncident) throw new RuleMissingException("InformantIncident", sheet);
         if (StoryMissions) throw new RuleMissingException("StoryMissions", sheet);

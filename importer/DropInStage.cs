@@ -20,6 +20,8 @@ public static class DropInStage
     /// <summary>The decoy table: FDECOYTB and TDECOYTB must be identical (the rule book treats them as one), written under the first name. rule: B1-own-importer §Work 1.</summary>
     public const string DecoyTable = "FDECOYTB", DecoyTwin = "TDECOYTB";
     public const string FoilTable = "FOILTB";
+    /// <summary>The escape-duel table (B2d §5: chance that a spotted member escapes, x = member combat - commander combat). rule: m5-missions §4.</summary>
+    public const string EvadeTable = "RLEVADTB";
 
     /// <summary>The success tables in the interim's order. rule: m5-missions §Mission tables.</summary>
     public static readonly string[] SuccessTables =
@@ -218,25 +220,25 @@ public static class DropInStage
     private static string MissionRecords(Raw raw)
     {
         var t = raw["MISSNSD"];
-        return Csv.Write(new[] { "dat_id", "kind", "alliance", "empire", "timer_min", "timer_spread", "hidden", "repeats", "table", "special_force_mask", "source" },
+        return Csv.Write(new[] { "dat_id", "kind", "alliance", "empire", "timer_min", "timer_spread", "hidden", "repeats", "table", "special_force_mask", "guard_checks", "can_resign", "source" },
             Rows(t, r =>
             {
                 int id = t.Int(r, "id");
                 if (!MissionKinds.TryGetValue(id, out var k)) throw new ImportException($"MISSNSD row {r + 1}: record id {id} has no mission kind.");
                 return new[] { $"0x{id:X2}", k.Kind, S(t, r, "is_alliance"), S(t, r, "is_empire"), S(t, r, "timer_min"), S(t, r, "timer_spread"), S(t, r, "hidden"),
-                    S(t, r, "repeats"), k.Table, "0x" + t.Long(r, "special_force_mask").ToString("X4", CultureInfo.InvariantCulture),
+                    S(t, r, "repeats"), k.Table, "0x" + t.Long(r, "special_force_mask").ToString("X4", CultureInfo.InvariantCulture), S(t, r, "guard_checks"), S(t, r, "can_resign"),
                     $"original: MISSNSD record {id} (importer); kind and table: missions/01" };
             }));
     }
 
-    /// <summary>mission-tables.csv: every row of FOILTB, the ten success tables and the decoy table. rule: m5-missions §Mission tables.</summary>
+    /// <summary>mission-tables.csv: every row of FOILTB, the ten success tables, the decoy table and RLEVADTB (B2d). rule: m5-missions §Mission tables.</summary>
     private static string MissionTables(Raw raw)
     {
         var f = raw[DecoyTable]; var twin = raw[DecoyTwin];
         if (f.Rows.Count != twin.Rows.Count || f.Rows.Zip(twin.Rows).Any(p => !p.First.SequenceEqual(p.Second)))
             throw new ImportException($"{DecoyTable} and {DecoyTwin} differ: the rule book treats them as one table.");
         var rows = new List<IEnumerable<string>>();
-        foreach (var name in new[] { FoilTable }.Concat(SuccessTables).Append(DecoyTable))
+        foreach (var name in new[] { FoilTable }.Concat(SuccessTables).Append(DecoyTable).Append(EvadeTable))
         {
             var t = raw[name];
             rows.AddRange(Rows(t, r => new[] { name, S(t, r, "threshold"), S(t, r, "value"), $"original: {name}.DAT entry {S(t, r, "index")} (importer)" }));

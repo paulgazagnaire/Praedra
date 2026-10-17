@@ -6,7 +6,8 @@ using static Rebellion.Core.Tests.Missions.MissionWorld;
 namespace Rebellion.Core.Tests.Missions;
 
 // B2b-force-sensing-and-betrayal tests B2b-1 to B2b-11. rule: m5-missions §3 Force sensing, Betrayal; m5-characters-and-force §Loyalty.
-// An Alliance Espionage team at T (Empire-held) with no defenders unless a test adds one: each check is sensing, betrayal, then the success rolls.
+// An Alliance Espionage team flies from H to T (Empire-held) with no guards unless a test adds one: the job check at T is sensing, betrayal, then
+// the success rolls. B2d: the team starts at H so the leaving and arriving checks have no sensers (sensers stand in the check's scopes).
 public class B2bForceAndBetrayalTests
 {
     private const int Crix = 837, Rieekan = 838; // Alliance characters who can betray (nobetray 0)
@@ -18,12 +19,12 @@ public class B2bForceAndBetrayalTests
         return c;
     }
 
-    // Agents at T with the given Force (every skill 0 except espionage 50).
+    // Agents with the given Force (every skill 0 except espionage 50): Alliance characters at H, the others at T.
     private static MissionWorld World(bool decoys = false, MissionParams? p = null, params (int Id, int Force)[] agents)
     {
         var w = new MissionWorld(p, decoys);
         w.Hold(T, Side.Empire, 0);
-        foreach (var (id, f) in agents) { w.Agent(id, T, esp: 50); Force(w, id, f); }
+        foreach (var (id, f) in agents) { var c = w.Agent(id, T, esp: 50); if (c.Side == Side.Alliance) w.Ch.Place(id, H); Force(w, id, f); }
         return w;
     }
 
@@ -32,6 +33,7 @@ public class B2bForceAndBetrayalTests
         long seq = w.Start(Side.Alliance, MissionKind.Espionage, team, T, sfs, decoys, decoyChars: decoyChars);
         w.Game.Step();
         Assert.Null(w.Reason(seq));
+        w.RunUntilWorking(w.LastMission); // B2d: the team flies in from H; landing (and its timer draw) comes before the job check
         return w.LastMission;
     }
 
@@ -89,8 +91,8 @@ public class B2bForceAndBetrayalTests
     public void B2b4_SensedDecoyFoilsNothing()
     {
         var w = World(decoys: true, p: new MissionParams { DecoysFromSpecialForcesOnly = false }, agents: new[] { (Leia, 0), (Lando, 80), (Vader, 120) });
-        int guard = w.Unit(Side.Empire, ImpFleet, T);
-        w.Stub!.Expect(0, 99, 0, 99, 99, 99, 99, 99); // sensed (0 < 100), two betrayal draws, decoy roll fails, walk misses, success roll fails
+        int guard = w.Unit(Side.Empire, Probe, T); // B2d: a special force on the enemy-held planet guards a planet target
+        w.Stub!.Expect(0, 99, 0, 99, 99, 99, 99, 99, 99); // sensed (0 < 100), two betrayal draws, decoy roll fails, its duel (B2d), walk misses, success roll fails
         int id = StartEspionage(w, new[] { Leia }, decoyChars: new[] { Lando });
         w.RunIteration(id);
         var sensed = w.Events<MissionForceSensed>().Single();
@@ -108,12 +110,12 @@ public class B2bForceAndBetrayalTests
     public void B2b5_SensedTeamMemberFoils()
     {
         var w = World(decoys: true, agents: new[] { (Leia, 80), (Vader, 120) });
-        w.Unit(Side.Empire, ImpFleet, T);
-        int inf = w.Unit(Side.Alliance, Infiltrators, T);
+        w.Unit(Side.Empire, Probe, T);
+        int inf = w.Unit(Side.Alliance, Infiltrators, H);
         int id = StartEspionage(w, new[] { Leia }, decoys: new[] { inf });
         int from = w.Stub!.Requests.Count;
         w.RunIteration(id);
-        Assert.Equal(new[] { (0, 99) }, w.RequestsSince(from)); // the sensing roll only
+        Assert.Equal(new[] { (0, 99), (0, 99) }, w.RequestsSince(from)); // the sensing roll, then (B2d) Leia's escape duel against the one guard
         var f = w.Events<MissionFoiled>().Single();
         Assert.Equal((MissionFoilCause.ForceSensed, Vader, 0), (f.Cause, f.Character, f.Defender));
         Assert.Empty(w.Events<MissionBetrayalRoll>());
