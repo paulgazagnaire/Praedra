@@ -81,7 +81,7 @@ public partial class Main : Control
     {
         var save = GameBoot.ReadSave(path);
         if (save == null) { GD.PrintErr("No usable save at " + path); return; }
-        try { StartGame(GameSession.Load(GameBoot.LoadData(), save.Value.player, save.Value.json)); }
+        try { StartGame(GameSession.Load(GameBoot.LoadData(), save.Value.player, save.Value.json, save.Value.level)); }
         catch (Exception e) { GD.PrintErr("Load failed: " + e.Message); }
     }
 

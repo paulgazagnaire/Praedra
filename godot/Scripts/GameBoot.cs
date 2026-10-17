@@ -12,7 +12,10 @@ using FileAccess = Godot.FileAccess;
 
 namespace RebellionViewer;
 
-/// <summary>How hard the computer opponent plays. Only a label until the core's NewGameOptions takes it.</summary>
+/// <summary>
+/// How hard the game is: the 1998 head start (StartPreset, setup-victory/02) and how well the computer opponent plays (the core's AiLevel,
+/// ai/09 §6). One choice drives both.
+/// </summary>
 public enum Preset { Easy, Medium, Hard }
 
 /// <summary>What the computer opponent does once per day, before the core's Step.</summary>
@@ -124,10 +127,13 @@ public static class GameBoot
 
     // ------------------------------------------------------------------ opponent
 
-    /// <summary>The computer opponent for <paramref name="aiSide"/>: the simple AI (core/AI).</summary>
-    public static IOpponent CreateOpponent(GameHost host, Side aiSide)
+    /// <summary>The computer opponent's level for a difficulty (ai/09 §6: Hard is smarter, never a cheat; every level plays with fog).</summary>
+    public static AiLevel AiLevelFor(Preset p) => p switch { Preset.Easy => AiLevel.Easy, Preset.Hard => AiLevel.Hard, _ => AiLevel.Medium };
+
+    /// <summary>The computer opponent for <paramref name="aiSide"/>: the simple AI (core/AI) at <paramref name="level"/>.</summary>
+    public static IOpponent CreateOpponent(GameHost host, Side aiSide, AiLevel level = AiLevel.Medium)
     {
-        var ai = new SimpleAi(host, aiSide, new SimpleAiParams { UseFog = AiUsesFog });
+        var ai = new SimpleAi(host, aiSide, AiLevels.For(level, new SimpleAiParams { UseFog = AiUsesFog }));
         // DEFAULT: the Empire AI is NOT told where the Rebel HQ is (economy-ai D4: the AI plays fair with fog of war). With fog on it reads
         // the HQ only from its own picture (m5-fog-and-hq §N5 KnownHq). It still conquers systems and wins if it captures the HQ.
         if (aiSide == Side.Empire && EmpireAiKnowsRebelHq) ai.KnownEnemyHq = host.HqSystem;
@@ -162,16 +168,17 @@ public static class GameBoot
 
     public static bool SaveExists(string path) => FileAccess.FileExists(path);
 
-    public static void WriteSave(string path, string json, Side player)
+    public static void WriteSave(string path, string json, Side player, AiLevel level = AiLevel.Medium)
     {
         using var f = FileAccess.Open(path, FileAccess.ModeFlags.Write);
         if (f == null) throw new IOException($"Cannot write {path}: {FileAccess.GetOpenError()}");
-        // First line: who the player is (the core's save holds the game only). Second line: the core's save.
-        f.StoreLine($"REBELLION-SAVE 1 {player}");
+        // First line: who the player is and the opponent's level (the core's save holds the game only). Second line: the core's save.
+        f.StoreLine($"REBELLION-SAVE 1 {player} {level}");
         f.StoreString(json);
     }
 
-    public static (Side player, string json)? ReadSave(string path)
+    /// <summary>A save's player, core save and opponent level (older saves without a level: Medium).</summary>
+    public static (Side player, string json, AiLevel level)? ReadSave(string path)
     {
         if (!FileAccess.FileExists(path)) return null;
         using var f = FileAccess.Open(path, FileAccess.ModeFlags.Read);
@@ -180,7 +187,8 @@ public static class GameBoot
         int nl = all.IndexOf('\n');
         if (nl < 0) return null;
         var parts = all[..nl].Trim().Split(' ');
-        if (parts.Length != 3 || parts[0] != "REBELLION-SAVE" || !Enum.TryParse(parts[2], out Side side)) return null;
-        return (side, all[(nl + 1)..]);
+        if (parts.Length is not (3 or 4) || parts[0] != "REBELLION-SAVE" || !Enum.TryParse(parts[2], out Side side)) return null;
+        var level = parts.Length == 4 && Enum.TryParse(parts[3], out AiLevel l) ? l : AiLevel.Medium;
+        return (side, all[(nl + 1)..], level);
     }
 }

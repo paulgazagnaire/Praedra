@@ -563,7 +563,7 @@ public partial class GameScreen : Control
 
     void Autosave()
     {
-        try { GameBoot.WriteSave(GameBoot.AutoSaveSlot, S.SaveText(), S.Player); }
+        try { GameBoot.WriteSave(GameBoot.AutoSaveSlot, S.SaveText(), S.Player, S.Level); }
         catch (Exception e) { GD.PrintErr("Autosave failed: " + e.Message); }
     }
 
@@ -571,7 +571,7 @@ public partial class GameScreen : Control
     {
         try
         {
-            GameBoot.WriteSave(GameBoot.SaveSlot, S.SaveText(), S.Player);
+            GameBoot.WriteSave(GameBoot.SaveSlot, S.SaveText(), S.Player, S.Level);
             Toast($"Game saved (day {S.Game.Day}).");
         }
         catch (Exception e) { Toast("Save failed: " + e.Message); }
