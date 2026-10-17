@@ -209,6 +209,15 @@ public sealed record SimpleAiParams
     public int FogFleetMemoryDays { get; init; } = 120;
     /// <summary>A fully stale picture (StaleDays old) asks this much more (percent) of the odds and of the regiments. DEFAULT.</summary>
     public int FogStaleMarginPercent { get; init; } = 50;
+    /// <summary>
+    /// The ground forces (group D) of an enemy-held system last seen more than this many days ago are forgotten: the AI assumes
+    /// FogUnknownDefenders (FogUnknownWinDefenders on the winning system) as if never seen. Only espionage, an assault or holding the system
+    /// shows group D (m5-fog-and-hq §F1), so an old count is never refreshed by a fleet passing by, and with the staleness margin it only grew.
+    /// An assault on a wrong guess shows the true garrison, so a bad guess corrects itself. AI trainer 2026-10-17 (QA-5): in seed 8 Hard the
+    /// Empire, holding 375-449 systems, never took Lannik and Toprawa (0 regiments each from day 2400) because it still believed the 6
+    /// regiments it saw there around day 1250 (9 with the margin, so 18 regiments asked aboard). 0 = never forget (the AI of before).
+    /// </summary>
+    public int FogGroundForgetDays { get; init; } = 365;
     /// <summary>Regiments assumed on the enemy's game-winning system (Coruscant for the Alliance, a known HQ) when its ground was never seen. DEFAULT.</summary>
     public int FogUnknownWinDefenders { get; init; } = 8;
     /// <summary>Bombardments of the game-winning system in 30 days at most (with fog the AI cannot see the shelling work). DEFAULT.</summary>

@@ -628,7 +628,7 @@ public class CharacterTests
     {
         foreach (var (p, rule) in new (CharacterParams, string)[]
                  {
-                     (new() { LoyaltyEnabled = true }, "loyalty"), (new() { SeatOfPower = true }, "SeatOfPower"),
+                     (new() { SeatOfPower = true }, "SeatOfPower"),
                      (new() { ForceDiscovery = ForceDiscoveryMode.Detection }, "ForceDiscovery=Detection"), (new() { ForceGrowth = true }, "ForceGrowth"),
                      (new() { SkillGrowth = true }, "SkillGrowth"), (new() { ForceHealBonus = true }, "ForceHealBonus"),
                      (new() { BlockadeEscapeRisk = true }, "BlockadeEscapeRisk"), (new() { AssaultHarmsCharacters = true }, "AssaultHarmsCharacters"),
@@ -755,7 +755,7 @@ public class CharacterTests
         Assert.False(p.BlockadeEscapeRisk); Assert.False(p.AssaultHarmsCharacters);
         Assert.False(p.MajorsCanDie); Assert.True(p.MinorsCanDie); Assert.Equal(0, p.InjuryDays); Assert.False(p.ForceHealBonus);
         Assert.True(p.DeathStarHitsOwnCharacters); Assert.False(p.CaptiveEscape);
-        Assert.False(p.LoyaltyEnabled); Assert.False(p.SeatOfPower);
+        Assert.True(p.LoyaltyTriggers); Assert.False(p.SeatOfPower);
         Assert.Equal(ForceDiscoveryMode.Story, p.ForceDiscovery); Assert.False(p.ForceGrowth); Assert.False(p.SkillGrowth);
         Assert.False(p.TrainerNeedsKnight); Assert.Equal(1, p.ForceStudentMin); Assert.Equal(80, p.ForceKnightMin); Assert.Equal(100, p.ForceMasterMin);
         Assert.False(p.NavigatorBonus); Assert.Equal(25, p.NavigatorFloor); Assert.Equal(50, p.DeathStarHitPercent); Assert.Equal(50, p.TrainingGainPercent);

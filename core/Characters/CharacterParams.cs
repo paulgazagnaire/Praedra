@@ -82,8 +82,21 @@ public sealed record CharacterParams
     public Func<CharacterRecord, int>? EscapeInput { get; init; }
     /// <summary>ESCAPETB points (input, percent), ascending input; loaded by the importer (not yet). rule: §Escape, missions/01.</summary>
     public IReadOnlyList<(int Input, int Percent)>? EscapeTable { get; init; }
-    /// <summary>Loyalty changes and betrayal (Missing). DEFAULT false; on refused.</summary>
-    public bool LoyaltyEnabled { get; init; }
+    /// <summary>
+    /// The four loyalty triggers (a system changes hands, the Alliance HQ destroyed, a battle won, a blockade ended). DEFAULT true (Traced, B2c);
+    /// false turns all four off together (comparison runs). Was <c>LoyaltyEnabled</c> (refused) before B2c. rule: §Loyalty and betrayal.
+    /// </summary>
+    public bool LoyaltyTriggers { get; init; } = true;
+    /// <summary>Divisor of the loss shift <c>(enemy - own) / d + enemy / d</c>. SDPRTB 2560 = 50 (both side columns). Traced B2c, 0x53ec10.</summary>
+    public int LossShiftDivisor { get; init; } = 50;
+    /// <summary>Capture shift <c>rand(0..spread) + base</c> for the new owner. SDPRTB 2561 = 5. Traced B2c, 0x53ec90.</summary>
+    public int CaptureShiftSpread { get; init; } = 5;
+    /// <summary>SDPRTB 2562 = 0. Traced B2c, 0x53ec90.</summary>
+    public int CaptureShiftBase { get; init; }
+    /// <summary>Alliance HQ destroyed: <c>k = rand(bound) + base</c>; a negative bound draws 0..|bound| and negates (0x53e290). GNPRTB 2592 = -5. Traced B2c, 0x561780.</summary>
+    public int HqShiftBound { get; init; } = -5;
+    /// <summary>GNPRTB 2593 = 0. Traced B2c, 0x561780.</summary>
+    public int HqShiftBase { get; init; }
     /// <summary>The Imperial Seat of Power leadership bonus (no number). DEFAULT false; on refused.</summary>
     public bool SeatOfPower { get; init; }
     /// <summary>DEFAULT Story; Detection refused (routine not decoded).</summary>
@@ -106,7 +119,6 @@ public sealed record CharacterParams
     /// <summary>Throw <see cref="RuleMissingException"/> for every switch value the sheet refuses. rule: §Defaults for undecided items, CH24, CH31.</summary>
     public void Validate()
     {
-        if (LoyaltyEnabled) throw new RuleMissingException("loyalty");
         if (SeatOfPower) throw new RuleMissingException("SeatOfPower");
         if (ForceDiscovery == ForceDiscoveryMode.Detection) throw new RuleMissingException("ForceDiscovery=Detection");
         if (ForceGrowth) throw new RuleMissingException("ForceGrowth");

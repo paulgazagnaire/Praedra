@@ -120,6 +120,12 @@ public class ParamsPinTests
         yield return ("MissionParams.SensedMinForce", mis.SensedMinForce, G, 3585, 1);
         yield return ("MissionParams.SenserMinForce", mis.SenserMinForce, G, 3586, 1);
         yield return ("MissionParams.SenseConstant", mis.SenseConstant, G, 3587, 1);
+        // m5-characters-and-force §Loyalty and betrayal (B2c)
+        yield return ("CharacterParams.LossShiftDivisor", ch.LossShiftDivisor, S, 2560, 1);
+        yield return ("CharacterParams.CaptureShiftSpread", ch.CaptureShiftSpread, S, 2561, 1);
+        yield return ("CharacterParams.CaptureShiftBase", ch.CaptureShiftBase, S, 2562, 1);
+        yield return ("CharacterParams.HqShiftBound", ch.HqShiftBound, G, 2592, 1);
+        yield return ("CharacterParams.HqShiftBase", ch.HqShiftBase, G, 2593, 1);
     }
 
     // B1-own-importer Tests (pin): each named constant equals its GNPRTB / SDPRTB value, table named; flat across every column
