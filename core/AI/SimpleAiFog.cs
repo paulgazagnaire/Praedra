@@ -271,13 +271,37 @@ public sealed partial class SimpleAi
             if (f.Transit != null) claimed.Add(f.Transit.Path[^1]);
             else if (f.At != null) claimed.Add(f.At);
         }
-        foreach (var f in scouts)
+        int explorers = _p.ExplorerScouts;
+        foreach (var f in scouts.OrderBy(f => f.Id))
         {
+            bool explorer = explorers-- > 0;
             if (f.Transit != null || f.At == null || Pending(f)) continue;
-            var t = ScoutTarget(f, claimed);
+            var t = (explorer ? ExploreTarget(f, claimed) : null) ?? ScoutTarget(f, claimed);
             if (t != null && Move(f, t)) { claimed.Add(t); }
         }
         return ids;
+    }
+
+    /// <summary>ExplorerScouts: the nearest never-explored system (no picture) by travel, not claimed, over a clear trip; null when none.</summary>
+    private string? ExploreTarget(Fleet f, HashSet<string> claimed)
+    {
+        int speed = _h.Fleets.SpeedOf(f);
+        if (speed <= 0) return null;
+        var cands = new List<(string Sys, int Ticks)>();
+        foreach (var sys in _h.Data.Galaxy.Systems)
+        {
+            string s = sys.Name;
+            if (s == f.At || claimed.Contains(s) || Destroyed(s) || _view!.Picture(s) != null) continue;
+            int ticks = TicksCached(f.At!, s, speed);
+            if (ticks != int.MaxValue) cands.Add((s, ticks));
+        }
+        int checkedTrips = 0;
+        foreach (var (s, _) in cands.OrderBy(c => c.Ticks).ThenBy(c => c.Sys, StringComparer.Ordinal))
+        {
+            if (checkedTrips++ >= _p.ScoutPathChecks) break;
+            if (!_p.AvoidBlockedPaths || ScoutPathClear(f.At!, s, speed)) return s;
+        }
+        return null;
     }
 
     private string? ScoutTarget(Fleet f, HashSet<string> claimed)
