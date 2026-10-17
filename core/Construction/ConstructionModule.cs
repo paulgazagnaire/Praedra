@@ -214,6 +214,10 @@ public sealed class ConstructionModule
                     energyFree++;
                     if (u.Class == FacilityKinds.ClassName(FacilityKind.Mine)) rawFree++;
                 }
+            // rule: m5-fog-and-hq §N4 (Decided, Paul 2026-10-16): a Sensor Station only on a system on a hyperspace route.
+            if (FacilityKinds.TryParse(o.Class, out var routeKind) && FacilityKinds.RouteOnly(routeKind)
+                && !(_galaxy.TryFindSystem(dest, out int destAt) && _galaxy.OnRoute(destAt)))
+                return OrderResult.Reject(RejectReason.NotOnRoute);
             // rule: m5-fog-and-hq §N4 (economy/15 §2): one Sensor Station per planet; the replaced project's own reservation counts as free.
             if (FacilityKinds.TryParse(o.Class, out var placeKind) && FacilityKinds.OnePerPlanet(placeKind))
             {

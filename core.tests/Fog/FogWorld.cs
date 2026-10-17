@@ -35,9 +35,9 @@ internal sealed class FogWorld
     public int E1 { get; }
 
     public FogWorld(GameSettings? settings = null, string? hq = R2, bool r3Neutral = false, bool r4Neutral = false, ulong seed = 1,
-        Action<FogWorld>? beforeSetup = null)
+        Action<FogWorld>? beforeSetup = null, Rebellion.Core.Travel.TravelMode travel = Rebellion.Core.Travel.TravelMode.Lanes)
     {
-        var s = (settings ?? new GameSettings()) with { DebugOrdersEnabled = true, Travel = Rebellion.Core.Travel.TravelMode.Lanes }; // Map M is a hand-made lane map: keep its hop-by-hop paths
+        var s = (settings ?? new GameSettings()) with { DebugOrdersEnabled = true, Travel = travel }; // Map M is a hand-made lane map: keep its hop-by-hop paths (Lanes) unless a test asks for another mode
         // No mines or refineries on Map M: keep the autoscrap (m2-maintenance) from scrapping the test fleets.
         if (s.Economy == null) s = s with { Economy = new Rebellion.Core.Economy.EconomyParams { ScrapPeriod = 1_000_000 } };
         H = GameHost.New(seed, s, Data);

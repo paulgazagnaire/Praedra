@@ -33,6 +33,14 @@ public sealed class SideKnowledge
     public List<Sighting> Sightings { get; set; } = new();
     /// <summary>HQ sector clues (only with <see cref="FogParams.SectorSuspicion"/> on), in the order given. rule: m5-fog-and-hq §N6.</summary>
     public List<HqSectorClue> Clues { get; set; } = new();
+    /// <summary>
+    /// The Sensor Station warnings already given whose reach day is still ahead: one per (fleet, station system, reach day), so a trip is
+    /// warned once. Sorted by reach day, system, fleet id; dropped at slot 3.1 once the reach day has come. Saved and hashed; never shown
+    /// (no read API exposes it: the fleet id stays hidden). Null when empty, and then left out of the saved form, so games without a
+    /// warning in flight save and hash exactly as before. rule: m5-fog-and-hq §N4, §N9.
+    /// </summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public List<SensorWarning>? SensorWarnings { get; set; }
 
     internal SystemKnowledge Touch(string system)
     {
@@ -45,7 +53,17 @@ public sealed class SideKnowledge
         foreach (var kv in o.Systems) Systems[kv.Key] = kv.Value.Clone();
         Sightings = o.Sightings.Select(s => s.Clone()).ToList();
         Clues = o.Clues.ToList();
+        SensorWarnings = o.SensorWarnings is { Count: > 0 } sw
+            ? sw.Select(w => new SensorWarning { FleetId = w.FleetId, System = w.System, ReachDay = w.ReachDay }).ToList() : null;
     }
+}
+
+/// <summary>A Sensor Station warning already given: the fleet, the station system and the day the fleet reaches it. rule: m5-fog-and-hq §N4.</summary>
+public sealed class SensorWarning
+{
+    public int FleetId { get; set; }
+    public string System { get; set; } = "";
+    public int ReachDay { get; set; }
 }
 
 /// <summary>
@@ -130,10 +148,11 @@ public sealed class FleetPicture
         string.Join(", ", Ships.Select(kv => $"{kv.Value} {kv.Key}").Concat(Squadrons.Select(kv => $"{kv.Value} {kv.Key}")));
 }
 
-/// <summary>Kinds of sighting. rule: m5-fog-and-hq §N3.</summary>
+/// <summary>Kinds of sighting. SensorArrival (name kept so saves stay readable) is a Sensor Station warning of a fleet heading for the
+/// station's system. rule: m5-fog-and-hq §N3, §N4.</summary>
 public enum SightingKind { Fleet, SensorArrival, AgentDetected }
 
-/// <summary>How big an arrival a Sensor Station reports: all it says about the fleet. rule: m5-fog-and-hq §N4 (size class).</summary>
+/// <summary>How big a fleet a Sensor Station warns of: all it says about the fleet. rule: m5-fog-and-hq §N4 (size class).</summary>
 public enum SensorSize { Few, Squadron, Large }
 
 /// <summary>One sighting-log entry: {Day, System, Kind, Side, Detail}. A fleet sighting holds class counts, never a fleet id. rule: §N3.</summary>
@@ -149,7 +168,10 @@ public sealed class Sighting
     /// <summary>Kind SensorArrival only: the size class. Null for the other kinds (left out of the saved form, so other logs are unchanged). rule: §N4 S2.</summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public SensorSize? Size { get; set; }
-    internal Sighting Clone() => new() { Day = Day, System = System, Kind = Kind, Side = Side, Detail = Detail?.Clone(), Size = Size };
+    /// <summary>Kind SensorArrival only: the day the fleet is expected to reach <see cref="System"/> (the station's system). Null for the other kinds. rule: §N4.</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public int? ReachDay { get; set; }
+    internal Sighting Clone() => new() { Day = Day, System = System, Kind = Kind, Side = Side, Detail = Detail?.Clone(), Size = Size, ReachDay = ReachDay };
 }
 
 /// <summary>"The HQ is in this sector", given by an espionage success when <see cref="FogParams.SectorSuspicion"/> is on. rule: §N6.</summary>

@@ -69,8 +69,6 @@ public sealed class FogModule
         hq ??= new HqParams();
         if (hq.LostDestination == HqLostDestination.Return)
             throw new NotSupportedException("HqLostDestination.Return is a switch value only; m5-fog-and-hq §F6 says it is not built in the first pass.");
-        if ((p ?? new FogParams()).AdvancedSensorEnabled)
-            throw new NotSupportedException("FogParams.AdvancedSensorEnabled = true is not built (m5-fog-and-hq §N4: the Advanced tier stays off; economy/15 open question 2).");
         if (!hq.IgnoresForcedStop)
             throw new NotSupportedException("HqParams.IgnoresForcedStop = false is not built (m5-fog-and-hq §F6: the HQ is not a fleet).");
         var m = new FogModule(game, galaxy, fleets, eco, support, p ?? new FogParams(), hq);
@@ -430,13 +428,9 @@ public sealed class FogModule
         bool passing = Params.PassingExplores;
         var truth = new Truth(this);
         var placed = new SortedDictionary<string, List<Fleet>>(StringComparer.Ordinal);
-        // Every fleet placed at a system this slot, passing ones too (a sensor sees them whatever PassingFleetsExplore says). rule: §N4 S1.
-        var arrivals = new SortedDictionary<string, List<Fleet>>(StringComparer.Ordinal);
         foreach (var f in State.Fleets.Values) // id order
         {
             if (f.At == null || !_inLane.Contains(f.Id)) continue;
-            if (!arrivals.TryGetValue(f.At, out var al)) arrivals[f.At] = al = new List<Fleet>();
-            al.Add(f);
             if (f.Transit != null && !passing) continue;
             if (!placed.TryGetValue(f.At, out var l)) placed[f.At] = l = new List<Fleet>();
             l.Add(f);
@@ -462,71 +456,78 @@ public sealed class FogModule
                     ctx.Emit((i, _) => new FleetSighted(i, stamp, side, sys, fs, detail));
                 }
             }
-        SensorReports(ctx, stamp, arrivals);
+        SensorReports(ctx, stamp);
     }
 
-    // rule: §N4 (S1, S2), §F8 slot 3.1: Sensor Station reports, after the fleet sightings; systems by name, side Empire before Alliance.
-    // A report goes to the owner of a finished station at S for an other-side fleet placed at Y with 1 <= hops(S, Y) <= SensorRangeHops
-    // (never the station's own system: that is live access). Stations of one side that see the same arrival merge into one report per
-    // (side, system, day); the size class is the total of capital ships of that side's fleets placed at Y (a squadron-only fleet counts 1).
-    private void SensorReports(StepContext ctx, int stamp, SortedDictionary<string, List<Fleet>> arrivals)
+    // rule: m5-fog-and-hq §N4 (route-only, N-day warning; movement-redesign-draft §C), §F8 slot 3.1: Sensor Station warnings, after the
+    // fleet sightings; sides Empire before Alliance, then other-side fleets by id, then the station systems in path order.
+    // A warning goes to the owner of a finished station at S for an other-side fleet in transit whose remaining path (the systems after
+    // its current position, the destination included) contains S, when 0 < (day it reaches S) - today <= SensorWarningDays. One warning
+    // per (fleet, station system, reach day): the side remembers the warnings it got until the reach day is over.
+    private void SensorReports(StepContext ctx, int stamp)
     {
-        if (!Params.SensorsWork || arrivals.Count == 0) return;
+        if (!Params.SensorsWork) return;
         foreach (var owner in Sides)
         {
-            var reach = SensorReach(owner);
-            if (reach.Count == 0) continue;
             var know = F.Of(owner);
-            foreach (var (sys, here) in arrivals)
+            // rule: §N4 (warning memory): a remembered warning is dropped once its reach day has come (the fleet can no longer be ahead of it).
+            var memory = know.SensorWarnings ?? new List<SensorWarning>();
+            memory.RemoveAll(x => x.ReachDay <= stamp);
+            var stations = SensorStations(owner);
+            foreach (var f in State.Fleets.Values) // SortedDictionary: fleet id order
             {
-                if (!reach.Contains(sys)) continue;
-                foreach (var fleetSide in Sides)
+                if (stations.Count == 0) break;
+                if (f.Side == owner || f.Transit is not { } t) continue; // rule: §N4 (no report about a side's own fleets)
+                // At slot 3.1 a fleet in flight is between Path[HopIndex] and Path[HopIndex + 1] and reaches the latter on DueDay; a fleet placed
+                // this Step (passing, Transit still set) stands at Path[HopIndex + 1]. Either way the next system after Path[HopIndex + 1] is reached
+                // HopTicks[HopIndex + 1] days after DueDay, and so on: the same sums the fleet module uses (steps 3 and 4).
+                // rule: m1-clock-and-orders §Order of work steps 3 and 4.
+                int first = f.At == null ? t.HopIndex + 1 : t.HopIndex + 2;
+                int reach = t.DueDay;
+                for (int j = t.HopIndex + 1; j < t.Path.Count; j++)
                 {
-                    if (fleetSide == owner) continue; // rule: §N4 (no report about a side's own fleets)
-                    int total = 0;
-                    foreach (var f in here)
-                        if (f.Side == fleetSide) total += f.Ships.Count > 0 ? f.Ships.Count : f.Squadrons.Count > 0 ? 1 : 0;
+                    if (j > t.HopIndex + 1) reach += t.HopTicks[j - 1];
+                    if (j < first) continue;
+                    string sys = t.Path[j];
+                    if (!stations.Contains(sys)) continue;
+                    int ahead = reach - stamp;
+                    if (ahead <= 0 || ahead > Params.SensorWarningDays) continue; // rule: §N4 (SensorWarningDays, Decided 10)
+                    // rule: §N4 (SensorSeesOffRouteArrivals, Proposal DEFAULT true): a trip that ENDS at S after an off-route jump into S.
+                    // A fleet that passes S always uses S as a route stop and is seen.
+                    bool last = j == t.Path.Count - 1;
+                    if (last && !Params.SensorSeesOffRouteArrivals && _galaxy.FindLane(t.Path[j - 1], sys) == null) continue;
+                    int fid = f.Id, rd = reach;
+                    if (memory.Any(x => x.FleetId == fid && x.System == sys && x.ReachDay == rd)) continue; // one warning per trip
+                    memory.Add(new SensorWarning { FleetId = fid, System = sys, ReachDay = rd });
+                    // rule: §N4 size class: capital ships of THAT fleet; a squadron-only fleet counts 1.
+                    int total = f.Ships.Count > 0 ? f.Ships.Count : f.Squadrons.Count > 0 ? 1 : 0;
                     if (total == 0) continue;
                     var size = total <= Params.SensorFewMax ? SensorSize.Few : total <= Params.SensorSquadronMax ? SensorSize.Squadron : SensorSize.Large;
-                    know.Sightings.Add(new Sighting { Day = stamp, System = sys, Kind = SightingKind.SensorArrival, Side = fleetSide, Size = size });
-                    ctx.Emit((i, _) => new SensorReport(i, stamp, owner, sys, fleetSide, size));
+                    var fleetSide = f.Side;
+                    know.Sightings.Add(new Sighting { Day = stamp, System = sys, Kind = SightingKind.SensorArrival, Side = fleetSide, Size = size, ReachDay = rd });
+                    ctx.Emit((i, _) => new SensorReport(i, stamp, owner, sys, fleetSide, size, rd));
                 }
             }
+            // rule: §N9: the saved memory is kept in one canonical order; empty = null (left out of the saved form).
+            memory.Sort((a, b) => a.ReachDay != b.ReachDay ? a.ReachDay.CompareTo(b.ReachDay)
+                : string.CompareOrdinal(a.System, b.System) != 0 ? string.CompareOrdinal(a.System, b.System) : a.FleetId.CompareTo(b.FleetId));
+            know.SensorWarnings = memory.Count > 0 ? memory : null;
         }
     }
 
     /// <summary>
-    /// The systems at 1 to SensorRangeHops lanes (breadth-first by lane count; lane length and tier ignored) from any finished Sensor Station
-    /// the side owns, on a system it holds. Lookup only, never iterated. rule: §N4 S1.
+    /// The systems of the finished Sensor Stations the side owns, on systems not destroyed (blockade and uprising do not matter: sensors
+    /// are passive). Lookup only, never iterated. rule: §N4.
     /// </summary>
-    private HashSet<string> SensorReach(Side owner)
+    private HashSet<string> SensorStations(Side owner)
     {
-        var reach = new HashSet<string>(StringComparer.Ordinal);
-        var stations = new SortedSet<string>(StringComparer.Ordinal);
+        var stations = new HashSet<string>(StringComparer.Ordinal);
         string cls = FacilityKinds.ClassName(FacilityKind.SensorStation);
         foreach (var o in State.Economy.Objects.Values)
             if (o.Category == ObjectCategory.Facility && o.Completed && o.Class == cls && o.System != null
-                && _eco.OwnerOf(o) == owner && !_eco.IsDestroyed(o.System)) // blockade and uprising do not matter: sensors are passive (§N4)
+                && _eco.OwnerOf(o) == owner && !_eco.IsDestroyed(o.System))
                 stations.Add(o.System);
-        foreach (var s in stations)
-        {
-            if (!_galaxy.TryFindSystem(s, out int start)) continue;
-            var depth = new Dictionary<int, int> { [start] = 0 };
-            var q = new Queue<int>();
-            q.Enqueue(start);
-            while (q.Count > 0)
-            {
-                int c = q.Dequeue(); int d = depth[c];
-                if (d >= Params.SensorRangeHops) continue;
-                foreach (var nb in _galaxy.NeighboursOf(c))
-                {
-                    if (depth.ContainsKey(nb.System)) continue;
-                    depth[nb.System] = d + 1; q.Enqueue(nb.System);
-                    reach.Add(_galaxy.Systems[nb.System].Name);
-                }
-            }
-        }
-        return reach;
+        return stations;
     }
 
     // ================================================================== slot 5.4: live refresh
