@@ -14,7 +14,7 @@ public class SimpleAiStallTests
     private static (int Day, Side? Winner, int Assaults) Play(bool fix, int seed, int days)
     {
         var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory });
-        var p = new SimpleAiParams { UseFog = true, ShelledLandingNeed = fix, ExplorerScouts = 0 };
+        var p = new SimpleAiParams { UseFog = true, ShelledLandingNeed = fix, ExplorerScouts = 0, FogGroundForgetDays = 0 };
         var m = new AiMatch(h, p, p);
         m.RunTo(days);
         return (h.Game.Day, h.Victory.Winner, m.Sent.GetValueOrDefault("Empire Assault"));
@@ -34,6 +34,8 @@ public class SimpleAiStallTests
     // B2b re-pin 2026-10-17 (needs Paul's or the AI trainer's sign-off): the betrayal draws (one per member per mission check) shift the game
     // generator, and on seed 3 the Alliance now wins on day 816. With the fix the fogged Empire wins on seeds 1 (day 1744) and 5 (day 1705);
     // seeds 2, 4 and 6 have no winner by day 1900. Seed 1 lands less with the fix than without (63 against 70), so seed 5.
+    // QA-5 2026-10-17 (AI trainer): FogGroundForgetDays off above too, for the same reason as ExplorerScouts (the game measures this one switch).
+    // With old ground counts forgotten, seed 5 takes another course and has no winner by day 1900 (fix on).
     // B2e re-pin 2026-10-17 (needs Paul's or the AI trainer's sign-off): effective skills (the Force raises combat and espionage), the Hurt
     // rolls after mission duels, prisoner escape timers and the Seat of Power (Imperial leadership x 1.5) change every game from the first
     // mission duel. Seeds 1-8 with the fix, to day 1900: Alliance wins on 1 (819), 3 (1749), 5 (1017), 6 (879), 7 (462); seed 4 no winner;
