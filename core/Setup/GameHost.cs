@@ -249,6 +249,7 @@ public sealed class GameHost
     private string AiMemoryLine()
     {
         if (_aiMemory.Count == 0) return "";
+        foreach (var m in _aiMemory) m.CatchUp?.Invoke(); // the last Step's events, not yet noted by the AI (AiMemory.CatchUp)
         var list = _aiMemory.OrderBy(m => m.Side).ThenBy(m => m.Fog).Select(m => m.ForSave(Game.Day, Fog.GroundStamp)).ToList();
         return AiMemoryTag + System.Text.Json.JsonSerializer.Serialize(list, AiMemoryJson) + "\n";
     }

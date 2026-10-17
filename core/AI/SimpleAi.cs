@@ -183,6 +183,8 @@ public sealed partial class SimpleAi
             bombardment: _p.UseFog ? Math.Max(RecentBombardmentDays, _p.FogKillMemoryDays) : RecentBombardmentDays, // and with fog back to the last ground look (AiMemory.ForSave)
             lookFoiled: Math.Max(_p.SpyFoilMemoryDays, _p.HqRecheckFoilDays), hqMoved: _p.HqMoveCooldownDays, character: _p.AbductionInfoDays);
         _mem.Ingest(Events, IsArmedCapital);
+        var mem = _mem;
+        mem.CatchUp = () => mem.Ingest(_p.UseFog ? _h.Fog.ViewFor(_side).Events : _h.Game.Events, IsArmedCapital); // a save between Steps (AiMemory.CatchUp)
     }
 
     /// <summary>The newest notes of a kind first, while a look-back from <paramref name="sinceDay"/> still reaches them (see <see cref="AiNote.Floor"/>).</summary>

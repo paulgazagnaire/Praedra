@@ -80,6 +80,14 @@ public sealed class AiMemory
     // not saved: how far into the feed the notes go (a loaded game's feed starts empty), and the BattleStarted events of the current run of
     // same-day events by system (a battle starts and ends in one Step, and a save is made between Steps).
     private int _feedSeen;
+
+    /// <summary>
+    /// Not saved: copies the feed's events not yet noted (set by the AI that reads this memory). The AI notes new events at the start of its
+    /// next PlanDay, but a save comes between a Step and that PlanDay, so the save calls this first: otherwise the events of the last Step before
+    /// the save (a bombardment on the save day, say) would be missing after a load. Ingesting them at save time gives the same notes the
+    /// uninterrupted game makes at its next PlanDay (same events, same state, one batch). rule: m1-clock-and-orders K12 (QA-1).
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore] internal Action? CatchUp { get; set; }
     private int _runDay = int.MinValue;
     private readonly Dictionary<string, BattleStarted> _runStarts = new(StringComparer.Ordinal); // lookup only
 
