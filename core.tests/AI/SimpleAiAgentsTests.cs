@@ -68,66 +68,77 @@ public class SimpleAiAgentsTests
     }
 
     // ai/07 §7 (Empire: belief-map search with spies), m5-missions (Espionage writes the ground and HqHere), m5-fog-and-hq §N5. Against an
-    // Alliance that gives no orders the fogged Empire sends its spies to the best HQ candidates, its own picture shows the HQ (KnownHq), and
-    // it takes it. Measured on seed 1: KnownHq day 299, won day 352; limits 400 and 500.
-    // v5 re-pin 2026-10-16 (Paul chose re-pin on the map PR; the AI trainer owns restoring the old target): on v5 the spies never find the HQ (Cyclor, beside Naboo, ranks low on the belief map: the Alliance would not hide there)
-    // and the Empire takes it by assault on day 1282 (35 looks). The test pins: the spies keep looking, and the HQ falls by day 1400, with
-    // or without a spy report. The old target (KnownHq by day 400, won by 500) is the trainer's.
-    // Tightened 2026-10-17 (AI trainer, explorer scouts on at every level, SimpleAiParams.ExplorerScouts): the HQ falls on day 505 (15 looks).
-    // Limit 1400 -> 700. The look floor keeps the old minimum rate (20 looks in at most 1400 days = one per 70 days) now that the game is shorter.
-    // B2e re-pin 2026-10-17 (needs Paul's or the AI trainer's sign-off): effective skills, the Hurt rolls after mission duels, escape timers and
-    // the Seat of Power change the game; the spies still never find the HQ (22 looks) and it falls by assault on day 727. Limit 700 -> 800.
+    // Alliance that gives no orders the fogged Empire sends its spies to the best HQ candidates and takes the HQ. Measured on the 360-system
+    // map (seed 1): KnownHq day 299, won day 352. On v5 the spies never find the HQ (Cyclor, beside Naboo, ranks low on the belief map: the
+    // Alliance would not hide there), on any of seeds 1 to 8, and the HQ falls to conquest; the old target (KnownHq by day 400) stays the
+    // trainer's.
+    // Over seeds 1 to 8 (MultiSeed), the day the HQ falls:
+    //   8a378a8 (pre-B2e): 508, 634, 811, 514, 514, 616, 796, 787   (looks 15 to 36)
+    //   9ec544f (B2e):     757, 475, 637, 745, 718, 814, 538, 643   (looks 17 to 31)
+    // Floor: the HQ falls by day 1000 on at least 7 of 8. On every seed the spies keep looking (at least one look per 70 days, the old rate
+    // of 20 looks in 1400 days) and at most 1 order in 20 is rejected.
+    // Replaces (AI trainer, 2026-10-18, the Dev lead's ask) the seed-1 limit (1400, 700, then 800 on B2e), which moved with every new draw.
     [Fact]
     public void FoggedEmpire_AgainstPassiveAlliance_SpiesSearchAndTheHqFalls()
     {
-        var (m, h) = Match(1, Fog, passive: Side.Alliance);
-        int knownDay = -1;
-        while (h.Game.Day < 800 && h.Victory.Winner == null)
+        var games = MultiSeed.Play(MultiSeed.OneToEight, seed =>
         {
-            m.Step();
-            if (knownDay < 0 && h.Fog.KnownHq(Side.Empire) != null) knownDay = h.Game.Day;
+            var (m, h) = Match(seed, Fog, passive: Side.Alliance);
+            while (h.Game.Day < 1000 && h.Victory.Winner == null) m.Step();
+            var looks = h.Game.Events.OfType<MissionStarted>().Count(e => e.Side == Side.Empire && e.MissionKind is MissionKind.Espionage or MissionKind.Reconnaissance);
+            bool fell = h.Victory.Winner == Side.Empire && h.Game.Events.Any(e => e is HqDestroyed);
+            return (Seed: seed, Fell: fell, h.Game.Day, Looks: looks, m.TotalSent, m.TotalRejected);
+        });
+        foreach (var g in games) _out.WriteLine($"seed {g.Seed}: HQ fell {g.Fell} day {g.Day}; looks {g.Looks}; orders {g.TotalSent} rejected {g.TotalRejected}");
+        Assert.True(games.Count(g => g.Fell) >= 7, $"the HQ fell by day 1000 on only {games.Count(g => g.Fell)} of 8 seeds");
+        foreach (var g in games)
+        {
+            Assert.True(g.Looks * 70 >= g.Day, $"seed {g.Seed}: only {g.Looks} looks in {g.Day} days");
+            Assert.True(g.TotalRejected * 20 <= g.TotalSent, $"seed {g.Seed}: {g.TotalRejected} of {g.TotalSent} orders rejected");
         }
-        var looks = h.Game.Events.OfType<MissionStarted>().Count(e => e.Side == Side.Empire && e.MissionKind is MissionKind.Espionage or MissionKind.Reconnaissance);
-        _out.WriteLine($"KnownHq day {knownDay}; winner {h.Victory.Winner} day {h.Game.Day}; looks {looks}; orders {m.TotalSent} rejected {m.TotalRejected}");
-        Assert.True(looks * 70 >= h.Game.Day, $"only {looks} looks in {h.Game.Day} days");
-        Assert.True(knownDay == -1 || knownDay <= 800);
-        Assert.Equal(Side.Empire, h.Victory.Winner);
-        Assert.Contains(h.Game.Events, e => e is HqDestroyed);
-        Assert.True(m.TotalRejected * 20 <= m.TotalSent, $"{m.TotalRejected} of {m.TotalSent} orders rejected");
     }
 
-    // A moved HQ is found again (ai/07 §7; m5-fog-and-hq §F6 MoveHq, §N5). Against a passive Alliance, once the Empire knows the HQ the test
-    // moves it (a MoveHq order for the Alliance) to the held system with HqMinLanes lanes or more that is farthest by travel; the Empire's
-    // picture must later show the HQ at its new system (or the Empire takes it there). The search is slow (three spies, about 40 days a look,
-    // dozens of unexplored rim systems of equal belief). Measured on seed 1: known day 139, moved to Lowick that day; the stale Dagobah is
-    // re-checked and dropped on day 297, Lowick re-found on day 1026 (887 days after the move), HQ taken day 1216. Limit 1200 days.
+    // A moved HQ is found again (ai/07 §7; m5-fog-and-hq §F6 MoveHq, §N5). Against a passive Alliance the test moves the HQ on day 0 (a
+    // MoveHq order for the Alliance) to the held system with HqMinLanes lanes or more that is farthest by travel; the Empire's picture must
+    // later show the HQ at its new system, or the Empire takes it there. On the 360-system map the Empire knew the HQ first (seed 1: known
+    // day 139, Lowick re-found 887 days after the move); on v5 the spies never find the first HQ (above), so the HQ moves before the
+    // Empire knows it.
+    // Over seeds 1 to 8 (MultiSeed; Cyclor -> Dubrillion on every seed), the day the moved HQ is re-found or taken:
+    //   8a378a8 (pre-B2e): taken 838, 781, 1480, 1006, 985, 982, 640, 724   (never re-found by a look)
+    //   9ec544f (B2e):     taken 637, 886, 724, 682, re-found 1136, re-found 1237, taken 1063, 730
+    // Floor: re-found or taken within 1300 days on at least 6 of 8. The spies seldom re-find it: what this pins is that the Empire gets
+    // the moved HQ in the end, mostly by conquest.
+    // Replaces (AI trainer, 2026-10-18, the Dev lead's ask) the seed-1 limit (1100, then 1200).
     [Fact]
     public void FoggedEmpire_RefindsAMovedHq()
     {
-        // v5 re-pin 2026-10-16 (Paul chose re-pin on the map PR; the AI trainer owns restoring the old target): the spies no longer find the
-        // first HQ (see above), so the HQ moves on day 0, before the Empire knows it, and the test asks that the moved HQ is found or taken.
-        // Measured on v5: Cyclor -> Dubrillion on day 0, never spotted, taken on day 910; limit 1100 days.
-        // Re-pin 2026-10-17 (AI trainer, explorer scouts on at every level; the Dev lead approved): taken on day 1105; limit 1100 -> 1200. In both
-        // versions the spies never re-find the moved HQ and it falls to conquest (both first see Dubrillion on day 245); the 195 days are the
-        // game taking another course, not a slower search.
-        var (m, h) = Match(1, Fog, passive: Side.Alliance);
-        string from = h.HqSystem!; var g = h.Data.Galaxy;
-        string dest = g.Systems.Select(s => s.Name)
-            .Where(n => n != from && h.Fleets.OwnerOf(n) == Side.Alliance && g.NearOf(g.Get(n).Index).Count >= Fog.HqMinLanes)
-            .Select(n => (n, p: h.Fleets.FindPath(from, n, 100))).Where(t => t.p.Ok)
-            .OrderByDescending(t => t.p.TotalTicks).ThenBy(t => t.n, StringComparer.Ordinal).First().n;
-        h.Fog.SubmitMoveHq(Side.Alliance, dest);
-        int movedDay = h.Game.Day, limit = movedDay + 1200, refound = -1;
-        while (h.Game.Day < limit && h.Victory.Winner == null)
+        var games = MultiSeed.Play(MultiSeed.OneToEight, seed =>
         {
-            m.Step();
-            if (refound < 0 && h.HqSystem == dest && h.Fog.KnownHq(Side.Empire)?.System == dest) refound = h.Game.Day;
+            var (m, h) = Match(seed, Fog, passive: Side.Alliance);
+            string from = h.HqSystem!; var g = h.Data.Galaxy;
+            string dest = g.Systems.Select(s => s.Name)
+                .Where(n => n != from && h.Fleets.OwnerOf(n) == Side.Alliance && g.NearOf(g.Get(n).Index).Count >= Fog.HqMinLanes)
+                .Select(n => (n, p: h.Fleets.FindPath(from, n, 100))).Where(t => t.p.Ok)
+                .OrderByDescending(t => t.p.TotalTicks).ThenBy(t => t.n, StringComparer.Ordinal).First().n;
+            h.Fog.SubmitMoveHq(Side.Alliance, dest);
+            int limit = h.Game.Day + 1300, refound = -1;
+            while (h.Game.Day < limit && h.Victory.Winner == null)
+            {
+                m.Step();
+                if (refound < 0 && h.HqSystem == dest && h.Fog.KnownHq(Side.Empire)?.System == dest) refound = h.Game.Day;
+            }
+            bool tookIt = h.Victory.Winner == Side.Empire && h.Game.Events.OfType<HqDestroyed>().Any();
+            bool departed = h.Game.Events.Any(e => e is HqDeparted d && d.From == from);
+            return (Seed: seed, From: from, Dest: dest, Departed: departed, Refound: refound, TookIt: tookIt, h.Game.Day, m.TotalSent, m.TotalRejected);
+        });
+        foreach (var g in games) _out.WriteLine($"seed {g.Seed}: HQ {g.From} -> {g.Dest}; re-found day {g.Refound}; taken {g.TookIt} day {g.Day}; orders {g.TotalSent} rejected {g.TotalRejected}");
+        int got = games.Count(g => g.Refound > 0 || g.TookIt);
+        Assert.True(got >= 6, $"the moved HQ was re-found or taken within 1300 days on only {got} of 8 seeds");
+        foreach (var g in games)
+        {
+            Assert.True(g.Departed, $"seed {g.Seed}: the HQ did not leave {g.From}");
+            Assert.True(g.TotalRejected * 20 <= g.TotalSent, $"seed {g.Seed}: {g.TotalRejected} of {g.TotalSent} orders rejected");
         }
-        bool tookIt = h.Victory.Winner == Side.Empire && h.Game.Events.OfType<HqDestroyed>().Any();
-        _out.WriteLine($"HQ {from} -> {dest} on day {movedDay}; re-found day {refound}; winner {h.Victory.Winner} day {h.Game.Day}; orders {m.TotalSent} rejected {m.TotalRejected}");
-        Assert.Contains(h.Game.Events, e => e is HqDeparted d && d.From == from);
-        Assert.True(refound > 0 || tookIt, $"the moved HQ ({dest}) was not found again by day {limit}");
-        Assert.True(m.TotalRejected * 20 <= m.TotalSent, $"{m.TotalRejected} of {m.TotalSent} orders rejected");
     }
 
     // ai/05 (characters): both AIs put their best leaders on posts: fleet Admirals or Generals on strike fleets (AttachCharacter) and a

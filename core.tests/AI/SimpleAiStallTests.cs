@@ -11,46 +11,36 @@ namespace Rebellion.Core.Tests.AI;
 // rule: ai tuning, SimpleAiParams.ShelledLandingNeed (DEFAULT true).
 public class SimpleAiStallTests
 {
-    private static (int Day, Side? Winner, int Assaults) Play(bool fix, int seed, int days)
+    // The Empire's landings by the given day (the switch on or off on both sides; the game measures this one switch, see below).
+    private static int Landings(bool fix, int seed, int days)
     {
         var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory });
         var p = new SimpleAiParams { UseFog = true, ShelledLandingNeed = fix, ExplorerScouts = 0, FogGroundForgetDays = 0 };
         var m = new AiMatch(h, p, p);
         m.RunTo(days);
-        return (h.Game.Day, h.Victory.Winner, m.Sent.GetValueOrDefault("Empire Assault"));
+        return m.Sent.GetValueOrDefault("Empire Assault");
     }
 
     [Fact]
     public void ShelledLandingNeedIsOnByDefault() => Assert.True(new SimpleAiParams().ShelledLandingNeed);
 
-    // seed 3: with the fix the Empire takes the Rebel HQ (day 913 measured on the 360-system map; day 1747 on v5); without it nobody wins
-    // by day 3000. // v5 re-pin 2026-10-16 (Paul chose re-pin on the map PR; the AI trainer owns restoring the old target): limit 1100 -> 1900.
-    // Re-pin 2026-10-17 (merge of main #57 into m0/importer): ExplorerScouts off above, so the game measures the one switch as before. With an
-    // explorer on each side the games are identical to day 161; on day 162 the Alliance's Medium Transport (fleet 471, the explorer) goes to
-    // never-explored Rekelos instead of Cymoon and the war takes another course: on day 729 the Alliance strike fleet 427 (13 ships, strength
-    // 82) beats the Coruscant guard (fleet 277, strength 112) in a simulated battle, the guard retreats to Delaya and moves on to Anaxes, the
-    // fleet shells the 8 regiments on day 732 and lands on day 735: "Alliance captured Coruscant" (old victory rules). Without explorers on
-    // this branch the Empire takes the Rebel HQ on day 1393. A legal outcome of the rules on one seed, unrelated to the landing fix.
-    // B2b re-pin 2026-10-17 (needs Paul's or the AI trainer's sign-off): the betrayal draws (one per member per mission check) shift the game
-    // generator, and on seed 3 the Alliance now wins on day 816. With the fix the fogged Empire wins on seeds 1 (day 1744) and 5 (day 1705);
-    // seeds 2, 4 and 6 have no winner by day 1900. Seed 1 lands less with the fix than without (63 against 70), so seed 5.
-    // QA-5 2026-10-17 (AI trainer): FogGroundForgetDays off above too, for the same reason as ExplorerScouts (the game measures this one switch).
-    // With old ground counts forgotten, seed 5 takes another course and has no winner by day 1900 (fix on).
-    // B2e re-pin 2026-10-17 (needs Paul's or the AI trainer's sign-off): effective skills (the Force raises combat and espionage), the Hurt
-    // rolls after mission duels, prisoner escape timers and the Seat of Power (Imperial leadership x 1.5) change every game from the first
-    // mission duel. Seeds 1-8 with the fix, to day 1900: Alliance wins on 1 (819), 3 (1749), 5 (1017), 6 (879), 7 (462); seed 4 no winner;
-    // Empire wins on 2 (1156, but without the fix the Empire wins sooner, day 541) and 8 (day 1693; without the fix no winner by then,
-    // landings 160 against 77). So seed 8; what the test checks is unchanged.
-    // B3 + B6a 2026-10-18: seed 8 still passes (fix on: Empire day 829, landings 28; off: no winner, 14). Seeds 1-8 with the fix (winner day landings /
-    // off: winner landings): - 1900 94/- 118, - 1900 107/- 80, E 1219 53/- 43, - 1900 72/E 41, - 1900 134/- 74, E 1548 91/- 59, E 1621 89/- 50,
-    // E 829 28/- 14: the test's conditions hold on seeds 3, 6, 7 and 8 (main 9ec544f and c55f662: seed 8 only).
+    // The fix lands more, over seeds 1 to 8 (MultiSeed). Empire landings by day 500, fix on / off:
+    //   8a378a8 (pre-B2e): 8/8, 13/4, 11/2, 13/3, 8/5, 11/2, 10/2, 16/6   (more on 7 of 8; 90 against 32)
+    //   9ec544f (B2e):     7/7, 12/4, 8/3, 8/6, 8/4, 12/5, 8/4, 12/7     (more on 7 of 8; 75 against 40)
+    // Floor: more on at least 5 of 8, and at least 1.5 times as many in all. Day 500, because later the games part (a war won or lost
+    // ends the count) and the gap says less: by day 700 the fix leads on 7 and 4 seeds, by day 1900 on 5 and 3.
+    // Replaces (AI trainer, 2026-10-18, the Dev lead's ask) the one-seed "the fogged Empire wins with the fix and nobody wins without it",
+    // re-pinned six times (seeds 3, 5, 8; limits 1100 to 1900) because every new draw in the game generator sends one game another way.
+    // The win was never the fix's to give: with the fix the fogged Empire wins by day 1900 on 4 of 8 seeds before B2e (2 without it), and on
+    // 2 of 8 on B2e (3 without it), where the Alliance takes Coruscant on 5 of 8 with the fix (0 without it).
+    // ExplorerScouts and FogGroundForgetDays are off above so the games measure this one switch.
     [Fact]
-    public void FoggedEmpireLandsAfterShellingAndWins()
+    public void FoggedEmpireLandsAfterShelling_OnMostSeeds()
     {
-        var on = Play(true, 8, 1900);
-        Assert.Equal(Side.Empire, on.Winner);
-        var off = Play(false, 8, on.Day);
-        Assert.Null(off.Winner);
-        Assert.True(on.Assaults > off.Assaults, $"landings with the fix {on.Assaults}, without {off.Assaults}");
+        var on = MultiSeed.Play(MultiSeed.OneToEight, s => Landings(true, s, 500));
+        var off = MultiSeed.Play(MultiSeed.OneToEight, s => Landings(false, s, 500));
+        string seen = string.Join(", ", on.Zip(off, (a, b) => $"{a}/{b}"));
+        Assert.True(on.Zip(off).Count(t => t.First > t.Second) >= 5, $"the fix lands more on fewer than 5 of 8 seeds (on/off: {seen})");
+        Assert.True(on.Sum() * 2 >= off.Sum() * 3, $"landings with the fix {on.Sum()}, without {off.Sum()} (on/off: {seen})");
     }
 }
