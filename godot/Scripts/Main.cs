@@ -40,7 +40,7 @@ public partial class Main : Control
         if (_args.Contains("--menu") || (shot == null && !_args.Contains("--newgame"))) { ShowMenu(shot, shotFrames); return; }
         var side = Arg("--side") == "Empire" ? Side.Empire : Side.Alliance;
         var preset = Enum.TryParse(Arg("--preset"), true, out Preset p) ? p : Preset.Medium;
-        var rules = string.Equals(Arg("--rules"), "new", StringComparison.OrdinalIgnoreCase) ? Rebellion.Core.Battle.BattleRuleset.New : Rebellion.Core.Battle.BattleRuleset.Classic;
+        var rules = string.Equals(Arg("--rules"), "classic", StringComparison.OrdinalIgnoreCase) ? Rebellion.Core.Battle.BattleRuleset.Classic : Rebellion.Core.Battle.BattleRuleset.New; // DEFAULT New (m4-battle-new; Paul 2026-10-18)
         StartGame(GameSession.New(GameBoot.LoadData(), side, preset, rules, NewGameSeed()), shot, shotFrames, true);
     }
 

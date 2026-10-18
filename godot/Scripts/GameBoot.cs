@@ -112,12 +112,12 @@ public static class GameBoot
 
     /// <summary>
     /// The core settings for the chosen space battle rules: only BattleParams.Ruleset is set, every other battle value keeps its default.
-    /// Classic = null (the module's defaults). rule: m4-battle-new §Rule (New) (ruleset switch, DEFAULT Classic)
+    /// rule: m4-battle-new §Rule (New) (ruleset switch, DEFAULT New, Paul 2026-10-18)
     /// </summary>
     public static GameSettings SettingsFor(Rebellion.Core.Battle.BattleRuleset r) =>
         new() { Battle = new Rebellion.Core.Battle.BattleParams { Ruleset = r } };
 
-    public static GameHost NewGame(GameData data, Side player, Preset preset, int seed = 1, Rebellion.Core.Battle.BattleRuleset rules = Rebellion.Core.Battle.BattleRuleset.Classic)
+    public static GameHost NewGame(GameData data, Side player, Preset preset, int seed = 1, Rebellion.Core.Battle.BattleRuleset rules = Rebellion.Core.Battle.BattleRuleset.New)
     {
         LoadData();
         return Rebellion.Core.Setup.NewGame.Create(data, new NewGameOptions { Seed = seed, Preset = PresetFor(player, preset), Data = data, NewGameData = _newGameData, Settings = SettingsFor(rules) });

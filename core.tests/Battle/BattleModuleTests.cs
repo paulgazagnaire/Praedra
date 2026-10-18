@@ -6,6 +6,7 @@ using Rebellion.Core.Fleets;
 namespace Rebellion.Core.Tests.Battle;
 
 // Tests of m4-battle-classic §1 and §10 and m4-retreat-damage-repair §1 to §4 inside the day Step (synthetic map A-B-C, B-D).
+// Every BattleParams here sets Ruleset = Classic explicitly: these are Classic-battle tests and the DEFAULT became New (Paul, 2026-10-18).
 public class BattleModuleTests
 {
     private const string Corvette = "Corellian Corvette", Isd = "Imperial Star Destroyer", Interdictor = "Interdictor Cruiser";
@@ -99,7 +100,7 @@ public class BattleModuleTests
     [Fact]
     public void RT15_NoRetreatModeActsLikeRT3()
     {
-        var w = new BattleWorld(new BattleParams { SubsystemRolls = false, RetreatMode = RetreatMode.NoRetreat });
+        var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.Classic, SubsystemRolls = false, RetreatMode = RetreatMode.NoRetreat });
         w.Fleets.SetOwner("A", Side.Alliance);
         int rebel = w.Fleet(Side.Alliance, "B", Corvette, 4);
         w.Fleet(Side.Empire, "B", Isd, 1);
@@ -114,7 +115,7 @@ public class BattleModuleTests
     {
         var g = TestData.Synthetic(new[] { ("A", 0, 0), ("B", 100, 0), ("C", 200, 0), ("D", 100, 60), ("E", 300, 0) },
             new[] { ("A", "B"), ("B", "C"), ("B", "D"), ("C", "E") });
-        var w = new BattleWorld(new BattleParams { SubsystemRolls = false, RetreatMode = RetreatMode.Nearest }, galaxy: g);
+        var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.Classic, SubsystemRolls = false, RetreatMode = RetreatMode.Nearest }, galaxy: g);
         w.Fleets.SetOwner("A", Side.Empire); w.Fleets.SetOwner("C", Side.Empire); w.Fleets.SetOwner("D", Side.Empire);
         w.Fleets.SetOwner("E", Side.Alliance);
         int rebel = w.Fleet(Side.Alliance, "B", Corvette, 4);
@@ -127,7 +128,7 @@ public class BattleModuleTests
     [Fact]
     public void RT17_BothRetreatToTheSameNeutralAndMeetNextStep()
     {
-        var w = new BattleWorld(new BattleParams { SubsystemRolls = false });
+        var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.Classic, SubsystemRolls = false });
         w.Fleets.SetOwner("A", Side.Alliance);
         w.Fleets.SetOwner("C", Side.Empire);
         // unarmed fleets: both flagged at t = 1, both can leave; D (shortest lane, neutral) is the choice of both
@@ -148,7 +149,7 @@ public class BattleModuleTests
     [InlineData(ClassicBattleRng.Game, 2)]
     public void BC16_SeedDrawsPerBattleInNameOrder(ClassicBattleRng rng, int draws)
     {
-        var w = new BattleWorld(new BattleParams { BattleRng = rng });
+        var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.Classic, BattleRng = rng });
         w.Fleet(Side.Alliance, "C", Corvette, 12); w.Fleet(Side.Empire, "C", Isd, 1);
         w.Fleet(Side.Alliance, "B", Corvette, 12); w.Fleet(Side.Empire, "B", Isd, 1);
         long before = w.Game.Rng.Draws;
@@ -163,7 +164,7 @@ public class BattleModuleTests
     {
         (string, long) Play()
         {
-            var w = new BattleWorld(new BattleParams());
+            var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.Classic });
             w.Fleet(Side.Alliance, "B", Corvette, 12); w.Fleet(Side.Empire, "B", Isd, 1);
             long before = w.Game.Rng.Draws;
             w.Run();
@@ -179,7 +180,7 @@ public class BattleModuleTests
     [Fact]
     public void BC18_SetOnContactRetreatLeavesInSecondOne()
     {
-        var w = new BattleWorld(new BattleParams { SubsystemRolls = false, EmpireIsAi = true });
+        var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.Classic, SubsystemRolls = false, EmpireIsAi = true });
         w.Fleets.SetOwner("A", Side.Alliance);
         int rebel = w.Fleet(Side.Alliance, "B", Corvette, 12);
         w.Fleet(Side.Empire, "B", Isd, 1);
@@ -238,9 +239,9 @@ public class BattleModuleTests
         w.Obj(w.F(imp).Ships[0]).Hull = 1350;
         var units = new List<BattleUnit>();
         int id = 1;
-        units.AddRange(QuickBattle.Units(new BattleParams(), Fleets.World.Ships.Value, Side.Empire, new[] { (Isd, 1) }, ref id));
+        units.AddRange(QuickBattle.Units(new BattleParams { Ruleset = BattleRuleset.Classic }, Fleets.World.Ships.Value, Side.Empire, new[] { (Isd, 1) }, ref id));
         units[0].Hull = 1350;
-        _ = new ClassicBattle(new BattleParams(), units, null, new[] { true, true });
+        _ = new ClassicBattle(new BattleParams { Ruleset = BattleRuleset.Classic }, units, null, new[] { true, true });
         Assert.Equal(300.0, units[0].Shield);
         Assert.Equal(300.0, units[0].ShieldMax);
     }
@@ -249,7 +250,7 @@ public class BattleModuleTests
     [Fact]
     public void B3_23_WriteBack()
     {
-        var p = new BattleParams();
+        var p = new BattleParams { Ruleset = BattleRuleset.Classic };
         var ships = Fleets.World.Ships.Value;
         var w = new BattleWorld(p);
         w.Fleets.SetOwner("A", Side.Alliance); w.Fleets.SetOwner("C", Side.Empire); w.Fleets.SetOwner("D", Side.Empire);
@@ -266,7 +267,7 @@ public class BattleModuleTests
     [Fact]
     public void SquadronCraftLostPersistsAndShortSquadronsFightShort()
     {
-        var w = new BattleWorld(new BattleParams());
+        var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.Classic });
         w.Fleets.SetOwner("A", Side.Alliance);
         int sq = w.Eco.AddObject(Side.Alliance, "X-wing", "B");
         w.Obj(sq).CraftLost = 4;
@@ -321,7 +322,7 @@ public class BattleModuleTests
     [Fact]
     public void DestroyedShipTakesRegimentsAndFleetDissolves()
     {
-        var w = new BattleWorld(new BattleParams { SubsystemRolls = false, RetreatMode = RetreatMode.NoRetreat });
+        var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.Classic, SubsystemRolls = false, RetreatMode = RetreatMode.NoRetreat });
         int rebel = w.Fleet(Side.Alliance, "B", Corvette, 2);
         int reg = w.Eco.AddObject(Side.Alliance, "Alliance Army Regiment", null);
         w.Obj(reg).AboardShip = w.F(rebel).Ships[0];
@@ -352,7 +353,7 @@ public class BattleModuleTests
     {
         string Play()
         {
-            var w = new BattleWorld(new BattleParams(), seed: 11);
+            var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.Classic }, seed: 11);
             w.Fleets.SetOwner("A", Side.Alliance);
             w.Fleet(Side.Alliance, "B", Corvette, 8); w.Fleet(Side.Empire, "B", Isd, 1);
             w.Run(3);

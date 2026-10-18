@@ -82,9 +82,9 @@ public partial class Main
         Expect(menu != null, "start screen shows");
         Expect(UiTest.Click(menu, side.ToString()), $"pick {side}");
         Expect(UiTest.Click(menu, "Medium"), "pick Medium");
-        // Space battle rules: Classic is the default; the Empire run picks New (m4-battle-new ruleset switch).
+        // Space battle rules: New is the default (Paul 2026-10-18); the Alliance run picks Classic (m4-battle-new ruleset switch).
         var wantRules = side == Side.Empire ? Rebellion.Core.Battle.BattleRuleset.New : Rebellion.Core.Battle.BattleRuleset.Classic;
-        if (wantRules == Rebellion.Core.Battle.BattleRuleset.New) Expect(UiTest.Click(menu, "New (weapons matter)"), "pick the New battle rules");
+        if (wantRules == Rebellion.Core.Battle.BattleRuleset.Classic) Expect(UiTest.Click(menu, "Classic (1998)"), "pick the Classic battle rules");
         Expect(UiTest.Click(menu, "New Game"), "click New Game");
         var gs = Gs;
         Expect(gs != null, "the game screen opened");

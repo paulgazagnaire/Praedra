@@ -106,8 +106,8 @@ public class TractorBeamTests
     [Fact]
     public void TB5_ClassicIsUnaffected()
     {
-        var on = new BattleParams { New = new NewBattleParams { TractorBeamsHoldRetreat = true } };
-        var off = new BattleParams { New = new NewBattleParams { TractorBeamsHoldRetreat = false } };
+        var on = new BattleParams { Ruleset = BattleRuleset.Classic, New = new NewBattleParams { TractorBeamsHoldRetreat = true } };
+        var off = new BattleParams { Ruleset = BattleRuleset.Classic, New = new NewBattleParams { TractorBeamsHoldRetreat = false } };
         for (ulong seed = 1; seed <= 5; seed++)
         {
             var (r1, u1) = QuickBattle.Run(on, Ships, new[] { (Corvette, 4) }, new[] { (Isd, 1) }, seed);

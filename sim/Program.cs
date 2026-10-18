@@ -45,7 +45,7 @@ internal static class SimCli
         difficulty level, fog on (AiLevels.For); --empire-params / --alliance-params set SimpleAiParams values on top (as in tourney; they turn --fog on). --hunt-log prints every Espionage and Reconnaissance the Empire starts and how it ends, next to the
         true Rebel HQ of that day (a trainer's log; the AI never reads the truth). The report adds missions started and succeeded by side and kind, posts given, and the days
         the Empire's own picture first showed (and later re-found) the Rebel HQ.
-        battle runs N seeded battles (Classic: m4-battle-classic, New: m4-battle-new; --ruleset, DEFAULT classic) at a synthetic system where every retreat has a destination, and prints how often each
+        battle runs N seeded battles (Classic: m4-battle-classic, New: m4-battle-new; --ruleset, DEFAULT new, Paul 2026-10-18) at a synthetic system where every retreat has a destination, and prints how often each
         side won or retreated, and the mean survivors. Battle k uses seed (seed + k - 1). --no-rolls turns the subsystem rolls off. --carry (New) puts squadrons aboard their side's carriers instead of basing them.
         mission runs N seeded missions (m5-missions) of one kind against a defended system and prints how often the first iteration succeeded,
         failed or was foiled, with the detection and success chances the core rolled. Mission k uses seed (seed + k - 1) on the full galaxy, with
@@ -604,7 +604,7 @@ internal static class SimCli
     // Classic battle batch (engine/04, package P4.1). Runs the core's battle on plain units; draws nothing itself.
     private static int Battle(string[] a)
     {
-        int battles = 1000; ulong seed = 1; bool rolls = true, carry = false; var ruleset = BattleRuleset.Classic;
+        int battles = 1000; ulong seed = 1; bool rolls = true, carry = false; var ruleset = new BattleParams().Ruleset; // DEFAULT New (m4-battle-new; Paul 2026-10-18)
         List<(string, int)>? alliance = null, empire = null;
         for (int i = 0; i < a.Length; i++)
         {

@@ -5,7 +5,7 @@ using Rebellion.Core.Setup;
 
 namespace Rebellion.Core.Tests.Setup;
 
-// The player picks the space battle rules at the start screen: Classic (DEFAULT) or New. rule: m4-battle-new §Rule (New) (ruleset switch, DEFAULT Classic)
+// The player picks the space battle rules at the start screen: New (DEFAULT, Paul 2026-10-18) or Classic. rule: m4-battle-new §Rule (New) (ruleset switch, DEFAULT New)
 public class BattleRulesChoiceTests
 {
     private static GameSettings With(BattleRuleset r) => new() { Battle = new BattleParams { Ruleset = r } };
@@ -13,10 +13,10 @@ public class BattleRulesChoiceTests
     private static GameHost NewGameWith(BattleRuleset? r) =>
         NewGame.Create(new NewGameOptions { Seed = 7, Settings = r is { } x ? With(x) : null });
 
-    // m4-battle-new ruleset switch: DEFAULT Classic
+    // m4-battle-new ruleset switch: DEFAULT New (Paul, 2026-10-18 decision card; was Classic)
     [Fact]
-    public void DefaultNewGameIsClassic() =>
-        Assert.Equal(BattleRuleset.Classic, NewGameWith(null).Battles.Params.Ruleset);
+    public void DefaultNewGameIsNew() =>
+        Assert.Equal(BattleRuleset.New, NewGameWith(null).Battles.Params.Ruleset);
 
     // m4-battle-new ruleset switch: the save carries the ruleset
     [Theory]
@@ -31,13 +31,13 @@ public class BattleRulesChoiceTests
         Assert.Equal(host.StateHash(), loaded.StateHash());
     }
 
-    // m4-battle-new ruleset switch: an old save (plain JSON, no header) loads as Classic
+    // m4-battle-new ruleset switch: a plain save (no header) loads with the DEFAULT ruleset (New since 2026-10-18; was Classic)
     [Fact]
-    public void OldSaveWithoutHeaderLoadsAsClassic()
+    public void OldSaveWithoutHeaderLoadsAsTheDefault()
     {
-        var host = NewGameWith(BattleRuleset.New);
+        var host = NewGameWith(BattleRuleset.Classic);
         var loaded = GameHost.Load(host.Save());
-        Assert.Equal(BattleRuleset.Classic, loaded.Battles.Params.Ruleset);
+        Assert.Equal(BattleRuleset.New, loaded.Battles.Params.Ruleset);
     }
 
     // settings passed to Load win over the header

@@ -29,7 +29,7 @@ internal sealed class BattleWorld
         Fleets = FleetModule.Attach(Game, Galaxy, World.Ships.Value, World.Blockade, travel: World.TravelFor(Galaxy));
         Eco = EconomyModule.Attach(Game, Galaxy, slots, EcoWorld.FreeShipCosts.Value, Fleets);
         Eco.IncidentsEnabled = false;
-        Battles = BattleModule.Attach(Game, Galaxy, Fleets, Eco, p ?? new BattleParams { SubsystemRolls = false });
+        Battles = BattleModule.Attach(Game, Galaxy, Fleets, Eco, p ?? new BattleParams { Ruleset = BattleRuleset.Classic, SubsystemRolls = false }); // no params = the Classic battle tests (m4-battle-classic); set explicitly since the DEFAULT became New (2026-10-18)
     }
 
     public static Galaxy Synthetic() => TestData.Synthetic(

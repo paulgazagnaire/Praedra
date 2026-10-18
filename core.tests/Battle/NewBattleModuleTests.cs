@@ -164,7 +164,7 @@ public class NewBattleModuleTests
         Assert.Equal(BattleOutcome.Retreated, w.Events<BattleEnded>().Single().Result.Alliance);
     }
 
-    // the Classic ruleset is still the DEFAULT
+    // the New ruleset is the DEFAULT (Paul, 2026-10-18 decision card; was Classic)
     [Fact]
-    public void ClassicIsTheDefaultRuleset() => Assert.Equal(BattleRuleset.Classic, new BattleParams().Ruleset);
+    public void NewIsTheDefaultRuleset() => Assert.Equal(BattleRuleset.New, new BattleParams().Ruleset);
 }

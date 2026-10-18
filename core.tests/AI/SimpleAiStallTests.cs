@@ -11,36 +11,66 @@ namespace Rebellion.Core.Tests.AI;
 // rule: ai tuning, SimpleAiParams.ShelledLandingNeed (DEFAULT true).
 public class SimpleAiStallTests
 {
-    // The Empire's landings by the given day (the switch on or off on both sides; the game measures this one switch, see below).
-    private static int Landings(bool fix, int seed, int days)
+    // The Empire by the given day (the switch on or off on both sides; the game measures this one switch, see below): its landings, its
+    // shellings, and the times one of its fleets shelled a system and then left it without landing there (from its own order log: a Move
+    // from a system the fleet shelled since it last landed there).
+    private static (int Landings, int Shellings, int ShelledLeaves) Empire(bool fix, int seed, int days)
     {
         var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory });
         var p = new SimpleAiParams { UseFog = true, ShelledLandingNeed = fix, ExplorerScouts = 0, FogGroundForgetDays = 0 };
         var m = new AiMatch(h, p, p);
-        m.RunTo(days);
-        return m.Sent.GetValueOrDefault("Empire Assault");
+        var shelled = new Dictionary<string, string>(StringComparer.Ordinal); // fleet id -> the system it shelled; lookup only
+        int leaves = 0;
+        while (h.Game.Day < days && h.Victory.Winner == null)
+        {
+            m.Step();
+            foreach (var o in m.Empire.Submitted)
+            {
+                var w = o.Detail.Split(' ');
+                if (w.Length < 3 || w[0] != "fleet") continue;
+                string fleet = w[1];
+                if (o.Kind == "Bombard") shelled[fleet] = o.Detail[(o.Detail.IndexOf(" shells ") + 8)..];
+                else if (o.Kind == "Assault") shelled.Remove(fleet);
+                else if (o.Kind == "Move" && shelled.TryGetValue(fleet, out var at) && o.Detail.StartsWith($"fleet {fleet} {at} -> ", StringComparison.Ordinal))
+                { leaves++; shelled.Remove(fleet); }
+            }
+        }
+        return (m.Sent.GetValueOrDefault("Empire Assault"), m.Sent.GetValueOrDefault("Empire Bombard"), leaves);
     }
 
     [Fact]
     public void ShelledLandingNeedIsOnByDefault() => Assert.True(new SimpleAiParams().ShelledLandingNeed);
 
-    // The fix lands more, over seeds 1 to 8 (MultiSeed). Empire landings by day 500, fix on / off:
-    //   8a378a8 (pre-B2e): 8/8, 13/4, 11/2, 13/3, 8/5, 11/2, 10/2, 16/6   (more on 7 of 8; 90 against 32)
-    //   9ec544f (B2e):     7/7, 12/4, 8/3, 8/6, 8/4, 12/5, 8/4, 12/7     (more on 7 of 8; 75 against 40)
-    // Floor: more on at least 5 of 8, and at least 1.5 times as many in all. Day 500, because later the games part (a war won or lost
-    // ends the count) and the gap says less: by day 700 the fix leads on 7 and 4 seeds, by day 1900 on 5 and 3.
+    // The fix lands instead of shelling again and leaving, over seeds 1 to 8 (MultiSeed), by day 500 (later the games part: a war won or lost
+    // ends the count). Two measures, both with the fix on / off on both sides:
+    //  (a) the landing share of the Empire's land-or-shell orders: landings / (landings + shellings);
+    //  (b) the times an Empire fleet shelled a system and left it without landing (the stall itself: 77 in 700 days on seed 3 before the fix).
+    // Measured 2026-10-18 on m4/new-battle-default 9434440:
+    //   New battle (DEFAULT):  share 7/17, 9/19, 3/8, 11/24, 8/21, 7/32, 6/16, 7/29 against 10/27, 5/29, 2/26, 4/21, 6/34, 2/34, 4/24, 9/47
+    //                          (more on 8 of 8; 35% against 17%, 2.0 times); shelled and left 1 against 27
+    //   Classic battle:        share 8/26, 9/32, 10/26, 8/10, 10/19, 14/22, 10/28, 13/21 against 3/8, 6/9, 7/33, 3/29, 2/16, 7/36, 5/20, 7/24
+    //                          (more on 6 of 8; 31% against 19%, 1.66 times); shelled and left 3 against 23
+    // Floor: (a) more on at least 6 of 8 and at least 1.5 times overall; (b) with the fix at most half the times without it.
+    // Why not landings any more (the floor until 2026-10-18 was "more landings on 5 of 8 and 1.5 times as many": Classic 75 against 40 and
+    // 90 against 32): the count measured the mirror. With the switch on the Empire only, it landed 45 against 40 (Classic) and 45 against 42
+    // (New); the extra landings were mostly retakes of what the Alliance's own fix took, and how much of that churn there is depends on the
+    // battle engine (New: 58 against 42, the Empire's strike launches 100 against 127 under Classic as its losses rose from 17 ships to 57).
+    // The share and the shelled-and-left count measure what the switch does at a target, whatever the battles. Dev lead OK 2026-10-18.
     // Replaces (AI trainer, 2026-10-18, the Dev lead's ask) the one-seed "the fogged Empire wins with the fix and nobody wins without it",
     // re-pinned six times (seeds 3, 5, 8; limits 1100 to 1900) because every new draw in the game generator sends one game another way.
-    // The win was never the fix's to give: with the fix the fogged Empire wins by day 1900 on 4 of 8 seeds before B2e (2 without it), and on
-    // 2 of 8 on B2e (3 without it), where the Alliance takes Coruscant on 5 of 8 with the fix (0 without it).
     // ExplorerScouts and FogGroundForgetDays are off above so the games measure this one switch.
     [Fact]
     public void FoggedEmpireLandsAfterShelling_OnMostSeeds()
     {
-        var on = MultiSeed.Play(MultiSeed.OneToEight, s => Landings(true, s, 500));
-        var off = MultiSeed.Play(MultiSeed.OneToEight, s => Landings(false, s, 500));
-        string seen = string.Join(", ", on.Zip(off, (a, b) => $"{a}/{b}"));
-        Assert.True(on.Zip(off).Count(t => t.First > t.Second) >= 5, $"the fix lands more on fewer than 5 of 8 seeds (on/off: {seen})");
-        Assert.True(on.Sum() * 2 >= off.Sum() * 3, $"landings with the fix {on.Sum()}, without {off.Sum()} (on/off: {seen})");
+        var on = MultiSeed.Play(MultiSeed.OneToEight, s => Empire(true, s, 500));
+        var off = MultiSeed.Play(MultiSeed.OneToEight, s => Empire(false, s, 500));
+        string seen = string.Join(", ", on.Zip(off, (a, b) => $"{a.Landings}/{a.Landings + a.Shellings} vs {b.Landings}/{b.Landings + b.Shellings}"));
+        // a / (a + s) > b / (b + t), in integers
+        int better = on.Zip(off).Count(t => (long)t.First.Landings * (t.Second.Landings + t.Second.Shellings) > (long)t.Second.Landings * (t.First.Landings + t.First.Shellings));
+        Assert.True(better >= 6, $"the fix has the higher landing share on {better} of 8 seeds, needs 6 ({seen})");
+        long la = on.Sum(r => r.Landings), na = on.Sum(r => r.Landings + r.Shellings), lb = off.Sum(r => r.Landings), nb = off.Sum(r => r.Landings + r.Shellings);
+        Assert.True(la * nb * 2 >= lb * na * 3, $"landing share with the fix {la}/{na}, without {lb}/{nb}: needs 1.5 times ({seen})");
+        int leavesOn = on.Sum(r => r.ShelledLeaves), leavesOff = off.Sum(r => r.ShelledLeaves);
+        Assert.True(leavesOn * 2 <= leavesOff, $"shelled and left without landing: {leavesOn} with the fix, {leavesOff} without (needs at most half)");
     }
 }
