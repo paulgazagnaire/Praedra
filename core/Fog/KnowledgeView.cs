@@ -31,6 +31,9 @@ public sealed class SystemPicture
     public bool Destroyed => _k.Destroyed;
     /// <summary>Group D: ground forces by side and class.</summary>
     public Seen<IReadOnlyList<GroundPicture>>? Ground => G<IReadOnlyList<GroundPicture>>(_k.StampD, _k.Ground);
+    /// <summary>Group D: the characters present (either side, id order), same stamp as <see cref="Ground"/>. rule: m5-fog-and-hq §F1 group D.</summary>
+    public Seen<IReadOnlyList<CharacterPicture>>? Characters =>
+        G<IReadOnlyList<CharacterPicture>>(_k.StampD, _k.Characters ?? (IReadOnlyList<CharacterPicture>)Array.Empty<CharacterPicture>());
     /// <summary>Group E: the other side's fleets at the last look (class counts only).</summary>
     public Seen<IReadOnlyList<FleetPicture>>? Fleets => G<IReadOnlyList<FleetPicture>>(_k.StampE, _k.Fleets);
 }
@@ -57,6 +60,8 @@ public sealed class KnowledgeView
     public SystemPicture? Picture(string system) => _fog.Picture(Side, system);
     public IReadOnlyList<(string System, FleetPicture Fleet)> VisibleFleets() => _fog.VisibleFleets(Side);
     public KnownHqInfo? KnownHq => _fog.KnownHq(Side);
+    /// <summary>Every character the side's pictures show in group D (system ordinal, then id), with the stamp; stale entries included. rule: §F1 group D, §N8.</summary>
+    public IReadOnlyList<(string System, CharacterPicture Character, int Stamp)> CharactersSeen() => _fog.CharactersSeen(Side);
     public IReadOnlyList<HqSectorClue> HqSectorClues => _fog.Clues(Side);
     public IReadOnlyList<Sighting> Sightings(int sinceDay = 0) => _fog.Sightings(Side, sinceDay);
     /// <summary>The side's Sensor Station warnings from a day on (its own sighting-log entries of kind SensorArrival: system, side, size, ReachDay). rule: §N4, §N8.</summary>

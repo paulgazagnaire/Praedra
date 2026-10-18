@@ -271,6 +271,9 @@ public sealed class FogModule
                 g.Units[o.Class] = g.Units.GetValueOrDefault(o.Class) + 1;
             }
             k.Ground = bySide.Values.ToList(); k.StampD = stamp;
+            // rule: m5-fog-and-hq §F1 group D: "characters present", written with the regiments (same reveals, same stamp); id order
+            var chars = truth.CharactersAt(sys);
+            k.Characters = chars.Count > 0 ? chars.Select(c => c.Clone()).ToList() : null;
         }
         if (e)
         {
@@ -601,6 +604,19 @@ public sealed class FogModule
         F.Of(side).Systems.TryGetValue(system, out var k) && k.Explored ? new SystemPicture(system, k, _game.Day, Params.Ruleset == FogRuleset.New) : null;
 
     /// <summary>
+    /// Every character in the group D of the side's explored pictures, with the D stamp: systems in ordinal order, then id order. Stale entries
+    /// stay (the picture keeps the last list). rule: m5-fog-and-hq §F1 group D, §N8 Systems.
+    /// </summary>
+    public IReadOnlyList<(string System, CharacterPicture Character, int Stamp)> CharactersSeen(Side side)
+    {
+        var list = new List<(string, CharacterPicture, int)>();
+        foreach (var kv in F.Of(side).Systems)
+            if (kv.Value.Explored && kv.Value.StampD is int st && kv.Value.Characters is { } cs)
+                foreach (var c in cs) list.Add((kv.Key, c, st));
+        return list;
+    }
+
+    /// <summary>
     /// The other side's fleets the side sees now: group E of every system it has live access to (class counts, no fleet ids), systems in
     /// ordinal order. rule: §F3, §N8 (no enemy fleet ids).
     /// </summary>
@@ -761,6 +777,42 @@ public sealed class FogModule
                     if (o.System != null && o.AboardShip == 0) { if (!_objects.TryGetValue(o.System, out var l)) _objects[o.System] = l = new(); l.Add(o); }
             }
             return _objects.TryGetValue(sys, out var r) ? r : (IReadOnlyList<EconObject>)Array.Empty<EconObject>();
+        }
+
+        private Dictionary<string, List<CharacterPicture>>? _chars;
+
+        /// <summary>
+        /// The characters on a system for group D, id order: free or injured ones standing there (not riding a fleet, not travelling, not on a
+        /// mission: a mission team is hidden, m5-missions detection), and prisoners held on the planet (not aboard a ship). Dead ones are not
+        /// present. rule: m5-fog-and-hq §F1 group D.
+        /// </summary>
+        public IReadOnlyList<CharacterPicture> CharactersAt(string sys)
+        {
+            if (_chars == null)
+            {
+                _chars = new Dictionary<string, List<CharacterPicture>>(StringComparer.Ordinal);
+                var onMission = new HashSet<int>(); // membership test only, never iterated
+                foreach (var m in _m.State.Missions.Missions.Values)
+                {
+                    foreach (var id in m.AllCharacters) onMission.Add(id);
+                    if (m.Captives != null) foreach (var id in m.Captives) onMission.Add(id);
+                }
+                foreach (var c in _m.State.Characters.Characters.Values) // id order
+                {
+                    if (!c.Placed) continue;
+                    string? at = c.Status switch
+                    {
+                        Rebellion.Core.Characters.CharacterStatus.Captured => c.HeldAboard == 0 ? c.HeldAt : null,
+                        Rebellion.Core.Characters.CharacterStatus.Free or Rebellion.Core.Characters.CharacterStatus.Injured
+                            => c.AttachedFleet == 0 && c.Transit == null && !onMission.Contains(c.Id) ? c.System : null,
+                        _ => null,
+                    };
+                    if (at == null) continue;
+                    if (!_chars.TryGetValue(at, out var l)) _chars[at] = l = new();
+                    l.Add(new CharacterPicture { Id = c.Id, Side = c.Side, Status = c.Status });
+                }
+            }
+            return _chars.TryGetValue(sys, out var r) ? r : (IReadOnlyList<CharacterPicture>)Array.Empty<CharacterPicture>();
         }
 
         public FleetPicture Picture(Fleet f)

@@ -242,7 +242,7 @@ public sealed partial class SimpleAi
 
     /// <summary>
     /// Enemy characters the side knows to stand at a system, by character id. No fog: every free enemy character located at a system (the
-    /// truth). Fog: from the side's own event feed, only at systems it sees today (<see cref="FogEnemyCharacters"/>).
+    /// truth). Fog: from the side's own event feed (only at systems it sees today) and its pictures' group D characters (<see cref="FogEnemyCharacters"/>).
     /// </summary>
     private List<(int Character, string System)> EnemyCharactersSeen()
     {
