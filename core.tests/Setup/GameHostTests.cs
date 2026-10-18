@@ -5,6 +5,7 @@ using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
 using Rebellion.Core.Setup;
 using Rebellion.Core.Support;
+using Rebellion.Core.Tests.Control;
 
 namespace Rebellion.Core.Tests.Setup;
 
@@ -126,7 +127,7 @@ public class GameHostTests
     private static string? RunDebugCapture(GameHost h)
     {
         h.Fleets.SetOwner("Kuat", Side.Alliance);
-        long seq = h.Control.SubmitDebugSetHolder(Side.Empire, "Kuat", Side.Empire);
+        long seq = h.Control.SubmitCapture(Side.Empire, "Kuat") /* (B5a, 2026-10-17) Derived control: troops take the world */;
         h.Game.Step();
         return h.Game.Events.OfType<OrderRejected>().FirstOrDefault(e => e.Sequence == seq)?.Reason;
     }
@@ -143,7 +144,7 @@ public class GameHostTests
         long build = h.Construction.SubmitBuild(Side.Alliance, "Sullust", YardFamily.Training, "Alliance Army Regiment", 2);
         h.Game.Step();
         Assert.NotNull(h.Construction.ProjectAt("Sullust", YardFamily.Training));
-        h.Control.SubmitDebugSetHolder(Side.Empire, "Sullust", Side.Empire);
+        h.Control.SubmitCapture(Side.Empire, "Sullust") /* (B5a, 2026-10-17) Derived control: troops take the world */;
         h.Game.Step();
         Assert.Null(h.Construction.ProjectAt("Sullust", YardFamily.Training));
         Assert.Contains(h.Game.Events, e => e is ProjectCancelled { Reason: "SystemLost" });

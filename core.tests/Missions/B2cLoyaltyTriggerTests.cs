@@ -6,6 +6,7 @@ using Rebellion.Core.Fleets;
 using Rebellion.Core.Fog;
 using Rebellion.Core.Support;
 using static Rebellion.Core.Tests.Missions.MissionWorld;
+using Rebellion.Core.Tests.Control;
 
 namespace Rebellion.Core.Tests.Missions;
 
@@ -52,7 +53,7 @@ public class B2cLoyaltyTriggerTests
         w.Hold(T, Side.Alliance, 60);
         w.Stub!.Expect(0, 5, 3);
         int before = w.Stub.Count(0, 5);
-        w.Host.Control.SubmitDebugSetHolder(Side.Empire, T, Side.Empire);
+        w.Host.Control.SubmitCapture(Side.Empire, T) /* (B5a, 2026-10-17) Derived control: troops take the world */;
         w.Game.Step();
         Assert.Single(w.Events<SystemCaptured>());
         Assert.Equal(1, w.Stub.Count(0, 5) - before);
@@ -64,6 +65,8 @@ public class B2cLoyaltyTriggerTests
 
     // B2c-2: our core has no event for a system turning neutral (SystemCaptured.To cannot be neutral; the Death Star clears the owner
     // without one), so the original's "nothing" holds by construction: a holder cleared to neutral draws nothing and moves nothing.
+    // (B5a, 2026-10-17) a flip to neutral now has its events (SystemCaptured and HolderChangeAftermath with To = null); the loyalty trigger
+    // still reacts only to a side, so the expectation stands. This test clears the owner by hand, without a flip.
     [Fact]
     public void B2c2_ToNeutral_NoDrawNoChange()
     {
@@ -206,7 +209,7 @@ public class B2cLoyaltyTriggerTests
         w.Hold(T, Side.Alliance, 60);
         w.Game.Step();
         int before = w.Stub!.Count(0, 5);
-        w.Host.Control.SubmitDebugSetHolder(Side.Empire, T, Side.Empire);
+        w.Host.Control.SubmitCapture(Side.Empire, T) /* (B5a, 2026-10-17) Derived control: troops take the world */;
         w.Game.Step();
         Assert.Single(w.Events<SystemCaptured>());
         Emit(w, (i, d) => new HqDestroyed(i, d, "Test", H));

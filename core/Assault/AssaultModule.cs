@@ -32,7 +32,11 @@ public sealed record AssaultParams
     public int AttackerDiesAtMost { get; init; } = 4;
     /// <summary>Collateral rounds = duels * this / 100 (GNPRTB 0x205). Traced.</summary>
     public int CollateralPercent { get; init; } = 8;
-    /// <summary>At most this many attackers land on a win, lowest id first. Lead (Open question 1), DEFAULT 6.</summary>
+    /// <summary>
+    /// At most this many attackers land on a win: 6 = the garrison formula at support 0, ceil((GNPRTB 7761 - 0) / -GNPRTB 7762) = ceil(60 / 10)
+    /// (<c>0x559fe0(side, 0)</c> -> <c>0x55a050(0)</c>, [EXE-own], B5a section 3; closes Open question 1). Lowest id first stands in for the
+    /// 1998 child order (fleets, ships, regiments), DEFAULT (B5a decision 2).
+    /// </summary>
     public int LandingCap { get; init; } = 6;
     /// <summary>Passes over the attackers. DEFAULT 1; 0 = repeat passes until one side is empty (the alternative reading). Open question 2.</summary>
     public int Passes { get; init; } = 1;
@@ -171,9 +175,11 @@ public sealed class AssaultModule
 
     private void Fight(StepContext ctx, int day, string system, Side side, List<Fleet> fleets)
     {
-        // 0. Setup: attackers = regiments aboard the pending fleets by id; defenders = landed regiments of every other side by id.
+        // 0. Setup: attackers = regiments aboard the pending fleets by id; defenders = the Usable regiments on the system of the holder's side only
+        // (0x58bbd0 -> 0x504cc0(system, 1, system side), B5a section 3); a neutral system has none.
         var attackers = fleets.SelectMany(f => _troops.RegimentsAboard(f)).OrderBy(a => a.Regiment.Id).Select(a => new Att { R = a }).ToList();
-        var defenders = _troops.RegimentsOnSystem(system, side);
+        var holder = _fleets.OwnerOf(system);
+        var defenders = holder is Side hs ? _troops.RegimentsOnSystem(system).Where(r => r.Side == hs).ToList() : new List<EconObject>();
         int a0 = attackers.Count, d0 = defenders.Count;
         int lDef = SystemGeneralLeadership(system);
         var lAtt = new Dictionary<int, int>(); // fleet id -> leadership (lookup only)
@@ -247,7 +253,9 @@ public sealed class AssaultModule
             ctx.Emit((i, _) => new AssaultLanded(i, day, system, side, new ValueList<int>(landing.Select(x => x.R.Regiment.Id).ToList())));
         }
         ctx.Emit((i, _) => new AssaultResolved(i, day, system, side, won ? "Won" : "Failed", a0, aLeft, d0, dLeft, duels, rounds));
-        if (won) _control.SetHolder(ctx, system, side, CaptureCause.Assault); // rule: m3-assault §What a win does
+        // rule: m3-assault §What a win does. The world changes hands because they landed: the recompute finds the attacker's regiments and no
+        // defender's (B5a section 3: no separate capture call). Under ControlRule.AssaultOnly the old capture call.
+        if (won && !_control.RecomputeControl(ctx, system)) _control.SetHolder(ctx, system, side, CaptureCause.Assault);
     }
 
     // rule: m3-assault §Resolution 4: the completed facilities by id, then Energy, then Raw; k = rand(0..n-1).

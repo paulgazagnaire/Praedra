@@ -12,7 +12,7 @@ namespace Rebellion.Core.Characters;
 /// <summary>
 /// What moves loyalty (B2c): the four game events that call <see cref="CharacterModule.ShiftLoyalty"/>, reacting to the event at the moment it is
 /// emitted (<see cref="Game.ObserveEvents"/>), and the per-system loss tallies they read (<see cref="LoyaltyState"/>, saved and hashed).
-/// 1. SystemCaptured to Alliance or Empire: one draw k = rand(0..SDPRTB 2561) + 2562, ShiftLoyalty(new owner, k); to neutral: nothing.
+/// 1. A holder change to Alliance or Empire (HolderChangeAftermath, the queued 0x31b; B5a): one draw k = rand(0..SDPRTB 2561) + 2562, ShiftLoyalty(new owner, k); to neutral: nothing.
 /// 2. HqDestroyed (the Alliance HQ, any cause): one draw, ShiftLoyalty(Alliance, -k), k in 0..5.
 /// 3. BattleEnded with exactly one side's fleets or regiments left at the system: ShiftLoyalty(winner, loss shift of the battle tallies).
 /// 4. BlockadeLifted: ShiftLoyalty(gaining side, loss shift of the assault and bombardment tallies).
@@ -81,11 +81,12 @@ public sealed class LoyaltyModule
         if (!P.LoyaltyTriggers) return;
         switch (e)
         {
-            // rule: B2c §1 (0x5616a0): the new owner's shift, one draw; the old side's amount is 0 (no draw); neutral: nothing
-            case SystemCaptured c when c.To is Side.Alliance or Side.Empire:
+            // rule: B2c §1 (0x5616a0): the new owner's shift, one draw; the old side's amount is 0 (no draw); neutral: nothing. It runs in the
+            // handler of the queued event 0x31b, after the flip's own draws (B5a section 7), so it reacts to HolderChangeAftermath.
+            case HolderChangeAftermath c when c.To is Side.Alliance or Side.Empire:
                 {
                     int k = ctx.Rng.NextInt(0, P.CaptureShiftSpread) + P.CaptureShiftBase;
-                    _ch.ShiftLoyalty(ctx, SideNumber(c.To), k);
+                    _ch.ShiftLoyalty(ctx, SideNumber(c.To.Value), k);
                     break;
                 }
             // rule: B2c §2 (0x561780): the Alliance HQ stops existing; a negative bound draws 0..|bound| and negates (0x53e290)

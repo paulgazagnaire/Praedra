@@ -35,6 +35,15 @@ public sealed record SimpleAiParams
     // ---- production
     /// <summary>Regiments kept on the system whose loss ends the game (Coruscant for the Empire, the Rebel HQ for the Alliance), at least. DEFAULT.</summary>
     public int CriticalGarrison { get; init; } = 8;
+    /// <summary>
+    /// The 1998 AI's garrison floor (B6b §3): on every own world below 70 support it wants min((79 - s) / 10, 6) regiments (doubled in an uprising),
+    /// and 9 on its special world (the Rebel HQ for the Alliance, Coruscant for the Empire); it builds toward that and never moves a regiment that
+    /// would leave a world below it. Replaces the B5a last-regiment guard (a weaker form: 1 below 60). It belongs to derived control
+    /// (GameSettings.ControlRule = Derived), so it is DEFAULT off with it (Dev lead 2026-10-18: Derived is DEFAULT off until the AI copes; with it,
+    /// QA's 16-seed Medium mirror gave 0/16 Empire wins); turn both on together. Off = the rule's need, <see cref="CriticalGarrison"/> on the
+    /// critical world, and the B5a guard.
+    /// </summary>
+    public bool OriginalGarrisonFloor { get; init; }
     /// <summary>Most regiments in one garrison order. DEFAULT.</summary>
     public int GarrisonBatch { get; init; } = 4;
     /// <summary>Regiments (aboard or waiting at the rally system, or queued for it) the AI keeps ready to invade. DEFAULT.</summary>

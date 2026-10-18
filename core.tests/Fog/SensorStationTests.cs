@@ -6,6 +6,7 @@ using Rebellion.Core.Fog;
 using Rebellion.Core.Setup;
 using Rebellion.Core.Travel;
 using static Rebellion.Core.Tests.Fog.FogWorld;
+using Rebellion.Core.Tests.Control;
 
 namespace Rebellion.Core.Tests.Fog;
 
@@ -299,7 +300,7 @@ public class SensorStationTests
     public void SS12_CapturedStationWarnsTheNewHolder()
     {
         var w = World(null, R3);
-        w.H.Control.SubmitDebugSetHolder(Side.Empire, R3, Side.Empire);
+        w.H.Control.SubmitCapture(Side.Empire, R3) /* (B5a, 2026-10-17) Derived control: troops take the world */;
         w.Step();
         Assert.Equal(Side.Empire, w.H.Fleets.OwnerOf(R3));
         Send(w, Side.Alliance, R4, R2, 1); // passes R3
