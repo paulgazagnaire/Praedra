@@ -429,7 +429,7 @@ public sealed record SimpleAiParams
     public IReadOnlyList<string> EmpireAgentForces { get; init; } = new[] { "Imperial Espionage Droid", "Noghri Death Commandos", "Imperial Commandos" };
     /// <summary>A picture's owner is trusted for a mission target (Diplomacy on neutral, Incite) when at most this old. DEFAULT.</summary>
     public int MissionOwnerTrustDays { get; init; } = 60;
-    /// <summary>An enemy character is an Abduction target only when the side's own feed placed it at a system it sees within this many days. DEFAULT.</summary>
+    /// <summary>An enemy character is an Abduction target only when the side's own feed placed it at a system it sees, or its picture's group D showed it, within this many days. DEFAULT.</summary>
     public int AbductionInfoDays { get; init; } = 5;
     /// <summary>
     /// Key characters (the majors: Luke, Leia, Han, Mon Mothma, Vader, Palpatine) count this percent of their mission value (others are

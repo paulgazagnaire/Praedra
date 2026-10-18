@@ -504,19 +504,34 @@ public sealed partial class SimpleAi
     }
 
     /// <summary>
-    /// Fog: enemy characters the side's own event feed placed at a system within AbductionInfoDays (arrived, detached, made General there,
-    /// freed there; a later departure, capture, injury or death forgets them), kept only where the side sees the system today. By character id.
+    /// Fog: enemy characters the side knows to stand at a system, by character id, from two of its own sources within AbductionInfoDays: its
+    /// event feed (arrived, detached, made General there, freed there; a later departure, capture, injury or death forgets them; kept only where
+    /// the side sees the system today) and the group D characters of its pictures (free ones, stamp in the window; m5-fog-and-hq §F1 group D).
+    /// The newest word on each character wins; on the same day the feed wins.
     /// </summary>
     private List<(int Character, string System)> FogEnemyCharacters()
     {
-        var last = new Dictionary<int, string?>(); // lookup only: the latest word on each character
+        var last = new Dictionary<int, (string? System, int Day)>(); // lookup only: the latest word on each character
         var notes = _mem.Notes; int since = Today - _p.AbductionInfoDays;
         for (int i = notes.Count - 1; i >= 0 && notes[i].Floor >= since; i--)
             switch (notes[i].Kind)
             {
-                case AiNoteKind.EnemyCharacterAt: last.TryAdd(notes[i].Value, notes[i].System); break; // arrived, detached, made General or freed there
-                case AiNoteKind.EnemyCharacterGone: last.TryAdd(notes[i].Value, null); break;           // departed, captured, injured or killed
+                case AiNoteKind.EnemyCharacterAt: last.TryAdd(notes[i].Value, (notes[i].System, notes[i].Day)); break; // arrived, detached, made General or freed there
+                case AiNoteKind.EnemyCharacterGone: last.TryAdd(notes[i].Value, (null, notes[i].Day)); break;           // departed, captured, injured or killed
             }
-        return last.Where(kv => kv.Value != null && _view!.Sees(kv.Value)).Select(kv => (kv.Key, kv.Value!)).OrderBy(t => t.Key).ToList();
+        var result = new SortedDictionary<int, string>();
+        foreach (var (id, w) in last) if (w.System != null && _view!.Sees(w.System)) result[id] = w.System; // keyed by id: order cannot matter
+        // rule: m5-fog-and-hq §F1 group D (characters present): the side's own pictures, systems in ordinal order; the newest stamp per character
+        var fromPicture = new SortedDictionary<int, (string System, int Stamp)>();
+        foreach (var (sys, c, stamp) in _view!.CharactersSeen())
+            if (c.Side == Enemy && c.Status == Rebellion.Core.Characters.CharacterStatus.Free && stamp >= since
+                && (!fromPicture.TryGetValue(c.Id, out var had) || stamp > had.Stamp))
+                fromPicture[c.Id] = (sys, stamp);
+        foreach (var (id, p) in fromPicture)
+        {
+            if (last.TryGetValue(id, out var w) && w.Day >= p.Stamp) continue; // the feed's word is as new or newer
+            result[id] = p.System;
+        }
+        return result.Select(kv => (kv.Key, kv.Value)).ToList();
     }
 }
