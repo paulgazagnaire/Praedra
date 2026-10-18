@@ -226,15 +226,17 @@ public sealed class GameHost
 
     /// <summary>
     /// A game from a save (<see cref="GameSave.Save"/> or <see cref="SaveWithSettings"/>), with every module attached again. Settings are not in the
-    /// plain save: pass them again. A save written by <see cref="SaveWithSettings"/> also carries the battle ruleset; it is applied when
+    /// plain save: pass them again. A save written by <see cref="SaveWithSettings"/> carries every game setting (QA-17); they are used when
+    /// <paramref name="settings"/> is null, and passed settings replace them whole. It also carries the battle ruleset; it is applied when
     /// <paramref name="settings"/> does not already set <see cref="GameSettings.Battle"/>. A save without the header loads with the DEFAULT ruleset (New since 2026-10-18).
     /// It may also carry the AI memory line (<see cref="AiMemoryFor"/>); a save without it loads with an empty memory.
     /// rule: m4-battle-new §Rule (New) (ruleset switch, DEFAULT New, Paul 2026-10-18)
     /// </summary>
     public static GameHost Load(string saveJson, GameSettings? settings = null, GameData? data = null)
     {
-        var (ruleset, body) = ReadHeader(saveJson);
-        settings ??= new GameSettings();
+        var (ruleset, afterHeader) = ReadHeader(saveJson);
+        var (saved, body) = ReadSettings(afterHeader);
+        settings ??= saved ?? new GameSettings();
         if (ruleset != null && settings.Battle == null)
             settings = settings with { Battle = new Rebellion.Core.Battle.BattleParams { Ruleset = ruleset.Value } };
         var (memories, core) = ReadAiMemory(body);
@@ -291,11 +293,69 @@ public sealed class GameHost
 
     /// <summary>
     /// The save plus a first line naming the battle ruleset ("REBELLION-CORE 1 battle=Classic|New"), so a loaded game fights by the same rules,
-    /// then, when an AI has played this game, a line with the AI's memory ("AI-MEMORY [json]"), so a loaded game's AI plans as before (QA-1).
-    /// The game state itself is unchanged (<see cref="StateHash"/> includes neither line). rule: m4-battle-new §Rule (New)
+    /// then a line with every game setting ("SETTINGS {json}", QA-17), then, when an AI has played this game, a line with the AI's memory
+    /// ("AI-MEMORY [json]"), so a loaded game's AI plans as before (QA-1). The game state itself is unchanged (<see cref="StateHash"/> includes
+    /// none of these lines). rule: m4-battle-new §Rule (New); m1-clock-and-orders K12, K16 (a loaded game continues as the original)
     /// </summary>
     public string SaveWithSettings() =>
-        HeaderTag + (Settings.Battle ?? new Rebellion.Core.Battle.BattleParams()).Ruleset + "\n" + AiMemoryLine() + Save();
+        HeaderTag + (Settings.Battle ?? new Rebellion.Core.Battle.BattleParams()).Ruleset + "\n"
+        + SettingsTag + System.Text.Json.JsonSerializer.Serialize(Pinned(Settings), SettingsJson) + "\n" + AiMemoryLine() + Save();
+
+    // ------------------------------------------------------------------ the settings line (QA-17)
+
+    private const string SettingsTag = "SETTINGS ";
+
+    // Enums by name (a reordered enum cannot change an old save's meaning); value tuples need fields; the delegates the host wires at
+    // attach (leadership queries, victory lookups) are not settings and are left out.
+    private static readonly System.Text.Json.JsonSerializerOptions SettingsJson = new()
+    {
+        WriteIndented = false, IncludeFields = true,
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
+        TypeInfoResolver = new System.Text.Json.Serialization.Metadata.DefaultJsonTypeInfoResolver
+        {
+            Modifiers =
+            {
+                ti =>
+                {
+                    for (int i = ti.Properties.Count - 1; i >= 0; i--)
+                        if (typeof(Delegate).IsAssignableFrom(ti.Properties[i].PropertyType)) ti.Properties.RemoveAt(i);
+                },
+            },
+        },
+    };
+
+    /// <summary>
+    /// The settings with every null number table replaced by the module's own default (what attach does with a null), so the save holds the
+    /// values this game was played with: a DEFAULT changed after the save does not change the loaded game.
+    /// </summary>
+    internal static GameSettings Pinned(GameSettings s) => s with
+    {
+        Deal = s.Deal ?? new DealParams(),
+        Economy = s.Economy ?? new EconomyParams(),
+        Support = s.Support ?? new SupportParams(),
+        Construction = s.Construction ?? new ConstructionParams(),
+        Defense = s.Defense ?? new DefenseParams(),
+        Bombard = s.Bombard ?? new BombardParams(),
+        DeathStar = s.DeathStar ?? new Rebellion.Core.DeathStar.DeathStarParams(),
+        Assault = s.Assault ?? new AssaultParams(),
+        Battle = s.Battle ?? new Rebellion.Core.Battle.BattleParams(),
+        Research = s.Research ?? new Rebellion.Core.Research.ResearchParams(),
+        Characters = s.Characters ?? new Rebellion.Core.Characters.CharacterParams(),
+        Missions = s.Missions ?? new Rebellion.Core.Missions.MissionParams(),
+        Victory = s.Victory ?? new Rebellion.Core.Victory.VictoryRules(),
+        Fog = s.Fog ?? new Rebellion.Core.Fog.FogParams(),
+        Hq = s.Hq ?? new Rebellion.Core.Fog.HqParams(),
+    };
+
+    private static (GameSettings? Settings, string Body) ReadSettings(string body)
+    {
+        if (!body.StartsWith(SettingsTag, StringComparison.Ordinal)) return (null, body); // saves made before QA-17: the caller's or the DEFAULT settings
+        int nl = body.IndexOf('\n');
+        if (nl < 0) throw new InvalidDataException("settings line without a game");
+        var s = System.Text.Json.JsonSerializer.Deserialize<GameSettings>(body[SettingsTag.Length..nl], SettingsJson)
+            ?? throw new InvalidDataException("empty settings line");
+        return (s, body[(nl + 1)..]);
+    }
 
     private static (Rebellion.Core.Battle.BattleRuleset? Ruleset, string Body) ReadHeader(string text)
     {

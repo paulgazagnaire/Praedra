@@ -45,13 +45,53 @@ public class SimpleAiSaveLoadTests
         var host = NewGame.Create(new NewGameOptions { Seed = 3, Preset = StartPreset.MedA });
         new AiMatch(host, Fog(), Fog()).RunTo(120);
         string save = host.SaveWithSettings();
-        string[] lines = save.Split('\n', 3);
+        string[] lines = save.Split('\n', 4);
         Assert.StartsWith("REBELLION-CORE 1 battle=", lines[0]);
-        Assert.StartsWith("AI-MEMORY ", lines[1]);
-        Assert.Equal(host.Save(), lines[2]);
+        Assert.StartsWith("SETTINGS ", lines[1]);
+        Assert.StartsWith("AI-MEMORY ", lines[2]);
+        Assert.Equal(host.Save(), lines[3]);
 
-        var old = GameHost.Load(lines[0] + "\n" + lines[2]); // an older save: header and core only
+        var old = GameHost.Load(lines[0] + "\n" + lines[3]); // an older save: header and core only
         Assert.Equal(host.StateHash(), old.StateHash());
         Assert.Empty(old.AiMemoryFor(Side.Empire, true).Notes);
+    }
+
+    // m1-clock-and-orders K16: QA-17 repro. The save kept only the battle ruleset; every other setting fell back to the code DEFAULT on load.
+    // Seed 12 under ControlRule Derived (AssaultOnly is the code DEFAULT today), fog AIs to day 400: the loaded copy came back AssaultOnly and
+    // split on day 448 (Begamor changed hands only in the original).
+    [Fact]
+    public void K16_SaveKeepsEveryGameSetting()
+    {
+        var settings = new GameSettings
+        {
+            ControlRule = Rebellion.Core.Control.ControlRule.Derived,
+            Characters = new Rebellion.Core.Characters.CharacterParams { TalentedSkipStrong = false },
+        };
+        var host = NewGame.Create(new NewGameOptions { Seed = 12, Preset = StartPreset.MedA, Settings = settings });
+        new AiMatch(host, Fog(), Fog()).RunTo(400);
+
+        string save = host.SaveWithSettings();
+        var loaded = GameHost.Load(save);
+        Assert.Equal(Rebellion.Core.Control.ControlRule.Derived, loaded.Settings.ControlRule);
+        Assert.False(loaded.Settings.Characters!.TalentedSkipStrong);
+        Assert.Equal(save, loaded.SaveWithSettings()); // every setting comes back, the number tables included
+
+        var a = new AiMatch(host, Fog(), Fog());
+        var b = new AiMatch(loaded, Fog(), Fog());
+        for (int i = 0; i < 60; i++)
+        {
+            a.Step(); b.Step();
+            Assert.True(host.StateHash() == loaded.StateHash(), $"diverged on day {host.Game.Day}");
+        }
+    }
+
+    // m1-clock-and-orders K16: settings passed to Load still replace the saved ones (tests and tools load a save under other rules).
+    [Fact]
+    public void K16_PassedSettingsReplaceTheSavedOnes()
+    {
+        var host = NewGame.Create(new NewGameOptions { Seed = 3, Preset = StartPreset.MedA,
+            Settings = new GameSettings { ControlRule = Rebellion.Core.Control.ControlRule.Derived } });
+        var loaded = GameHost.Load(host.SaveWithSettings(), new GameSettings { ControlRule = Rebellion.Core.Control.ControlRule.AssaultOnly });
+        Assert.Equal(Rebellion.Core.Control.ControlRule.AssaultOnly, loaded.Settings.ControlRule);
     }
 }
