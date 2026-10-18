@@ -392,6 +392,24 @@ public sealed record SimpleAiParams
     public int ResearchMinSkill { get; init; } = 30;
     /// <summary>Alliance: most Incite and Sabotage missions out at once (only on enemy systems where no defender is believed). DEFAULT.</summary>
     public int MaxSubversion { get; init; } = 2;
+    /// <summary>
+    /// Special forces as mission agents (QA-6; B6c §7: the 1998 AI's Sabotage, Recon, espionage-team and Abduction/Assassination filters admit
+    /// special forces, inferred from the mask; B6b §9: it keeps at least 8 of them). On: the AI keeps SpecialForcesWanted special forces of its
+    /// AgentForceClasses and sends each free one alone on any planned mission whose record's mask holds its class bit (m5-missions §Special
+    /// forces), scored like a character with its class columns as skills. A character goes first on a tie. Off = the AI of before. DEFAULT off
+    /// (2026-10-18, the Dev lead's call): on, both arms of the stall test land more and its 1.5x floor fails (85 against 58).
+    /// </summary>
+    public bool SpecialForceAgents { get; init; }
+    /// <summary>Special forces of the agent classes kept, built or queued (B6b §9: "at least 8"). DEFAULT 8.</summary>
+    public int SpecialForcesWanted { get; init; } = 8;
+    /// <summary>
+    /// The agent classes built, fewest first (list order on a tie): one per kind of job the AI plans (m5-missions §Special forces masks).
+    /// Alliance: Infiltrators (Sabotage, Rescue, Abduction), Guerrillas (Incite, Subdue). Empire: ISB Agents (Espionage on the HQ hunt), Emperor's
+    /// Hands (Rescue, Abduction), Imperial Commandos (Subdue). The Bothan Spies are left out: the Alliance plans no Espionage. DEFAULT.
+    /// </summary>
+    public IReadOnlyList<string> AgentForceClasses(Side side) => side == Side.Empire ? EmpireAgentForces : AllianceAgentForces;
+    public IReadOnlyList<string> AllianceAgentForces { get; init; } = new[] { "Infiltrators", "Guerrillas" };
+    public IReadOnlyList<string> EmpireAgentForces { get; init; } = new[] { "Imperial Espionage Droid", "Noghri Death Commandos", "Imperial Commandos" };
     /// <summary>A picture's owner is trusted for a mission target (Diplomacy on neutral, Incite) when at most this old. DEFAULT.</summary>
     public int MissionOwnerTrustDays { get; init; } = 60;
     /// <summary>An enemy character is an Abduction target only when the side's own feed placed it at a system it sees within this many days. DEFAULT.</summary>

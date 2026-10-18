@@ -466,6 +466,7 @@ public sealed partial class SimpleAi
         if (_view != null && _side == Side.Empire) PlanDroidBuild();
         PlanGarrison();
         PlanInvasionRegiments();
+        PlanAgentForceBuild(); // after the regiments: a training yard goes to the garrisons first
         PlanDeathStarBuild(); // before the ships: it takes its yard and its budget first (m5-death-star §6.1)
         PlanShips();
     }
