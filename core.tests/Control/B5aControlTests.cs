@@ -549,7 +549,7 @@ public class B5aControlTests
     public void B6b_AiGarrisonFloor_WishBaseAndNoMoveBelowIt()
     {
         var w = new DerivedWorld();
-        var ai = new SimpleAi(w.H, Side.Alliance);
+        var ai = new SimpleAi(w.H, Side.Alliance, new SimpleAiParams { OriginalGarrisonFloor = true }); // the floor is DEFAULT off with Derived (2026-10-18): on explicitly
         int Target(string sys, int support, bool uprising = false)
         {
             w.Hold(sys, Side.Alliance, support);

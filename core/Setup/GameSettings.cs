@@ -92,10 +92,11 @@ public sealed record GameSettings
 
     // ---- control. rule: m2-control-and-capture
     /// <summary>
-    /// How control is decided: Derived (1998: troops on the planet, else support 60 or more; DEFAULT in Classic and New, Dev lead 2026-10-17) or
-    /// AssaultOnly (the rule before B5a: support never changes control). rule: m2-control-and-capture §How control changes (B5a decision 1).
+    /// How control is decided: Derived (1998: troops on the planet, else support 60 or more) or AssaultOnly (the rule before B5a: support never
+    /// changes control). DEFAULT AssaultOnly until the AI copes with Derived (Dev lead 2026-10-18: QA's 16-seed Medium mirror gave 0/16 Empire
+    /// wins under Derived); 1998 is Derived. rule: m2-control-and-capture §How control changes (B5a decision 1).
     /// </summary>
-    public Rebellion.Core.Control.ControlRule ControlRule { get; init; } = Rebellion.Core.Control.ControlRule.Derived;
+    public Rebellion.Core.Control.ControlRule ControlRule { get; init; } = Rebellion.Core.Control.ControlRule.AssaultOnly;
     /// <summary>The debug orders (DebugSetHolder under AssaultOnly, DebugSetSupport, DebugSetTroops, DebugSetDamage) are accepted only when this is on.</summary>
     public bool DebugOrdersEnabled { get; init; }
 

@@ -244,11 +244,13 @@ public class DeathStarTests
         Assert.Equal(Side.Empire, Assert.Single(w.Events<Rebellion.Core.Victory.GameWon>()).Winner);
     }
 
-    // m5-death-star DS7
-    [Fact]
-    public void DS7_FirstStrikeInASectorOfSix()
+    // m5-death-star DS7. (B5a, 2026-10-18) Run under both control rules: AssaultOnly (the DEFAULT until the AI copes) and Derived (1998).
+    [Theory]
+    [InlineData(ControlRule.AssaultOnly)]
+    [InlineData(ControlRule.Derived)]
+    public void DS7_FirstStrikeInASectorOfSix(ControlRule rule)
     {
-        var w = new DsWorld();
+        var w = new DsWorld(rule: rule);
         w.Hold(A1, Side.Empire, 40);
         w.Hold(A2, Side.Empire, 40); w.Hold(A3, null, 50); w.Hold(A4, Side.Alliance, 95); w.Hold(A5, Side.Empire, 0); w.Hold(A6, Side.Alliance, 70);
         w.Hold(B1, Side.Empire, 33); w.Hold(B2, Side.Alliance, 77); w.Hold(B3, null, 5);
@@ -260,22 +262,28 @@ public class DeathStarTests
         Assert.Equal(new[] { 33, 77, 5 }, new[] { B1, B2, B3 }.Select(w.Alliance).ToArray()); // nothing outside the sector changes
         var changes = w.Events<SupportChanged>().Where(e => e.Cause == SupportCause.DeathStar).ToList();
         Assert.Equal(new[] { A2, A3, A4, A5, A6 }, changes.Select(e => e.System).ToArray());
-        // (B5a, 2026-10-17) under derived control (DEFAULT) a world the +10 carries across a band changes holder: A2 (Empire, unguarded) 40 -> 50 goes
-        // neutral, A3 (neutral) 50 -> 60 joins the Alliance; their sector steps (+1) are halved to 0 in the Death Star sector
-        Assert.Equal(new (string, Side?, Side?)[] { (A2, Side.Empire, null), (A3, null, Side.Alliance) },
-            w.Events<SystemCaptured>().Select(e => (e.System, e.From, e.To)).ToArray());
-        Assert.All(w.Events<SystemCaptured>(), e => Assert.Equal(CaptureCause.Support, e.Cause));
+        // (B5a, 2026-10-17) under derived control a world the +10 carries across a band changes holder: A2 (Empire, unguarded) 40 -> 50 goes
+        // neutral, A3 (neutral) 50 -> 60 joins the Alliance; their sector steps (+1) are halved to 0 in the Death Star sector. AssaultOnly: none.
+        if (rule == ControlRule.AssaultOnly) Assert.Empty(w.Events<SystemCaptured>());
+        else
+        {
+            Assert.Equal(new (string, Side?, Side?)[] { (A2, Side.Empire, null), (A3, null, Side.Alliance) },
+                w.Events<SystemCaptured>().Select(e => (e.System, e.From, e.To)).ToArray());
+            Assert.All(w.Events<SystemCaptured>(), e => Assert.Equal(CaptureCause.Support, e.Cause));
+        }
         Assert.Equal(1, w.Ds.StrikesIn(Sa));
         Assert.Equal(0, w.Ds.StrikesIn(Sb));
         var sector = Assert.Single(w.Events<SectorStruck>());
         Assert.Equal((Sa, 1, 5), (sector.Sector, sector.Strike, sector.Systems.Items.Count));
     }
 
-    // m5-death-star DS8
-    [Fact]
-    public void DS8_SecondStrikeInTheSameSector()
+    // m5-death-star DS8. (B5a, 2026-10-18) Run under both control rules: AssaultOnly (the DEFAULT until the AI copes) and Derived (1998).
+    [Theory]
+    [InlineData(ControlRule.AssaultOnly)]
+    [InlineData(ControlRule.Derived)]
+    public void DS8_SecondStrikeInTheSameSector(ControlRule rule)
     {
-        var w = new DsWorld();
+        var w = new DsWorld(rule: rule);
         w.Hold(A1, Side.Empire, 40); w.Hold(A2, Side.Empire, 40);
         w.Hold(A3, null, 50);                 // neutral: becomes Alliance-held at 100
         w.Hold(A4, Side.Empire, 30);          // Imperial with a garrison of 5 regiments (the strike-2 requirement is 6: 12 in an uprising, halved in a Death Star sector): stays Imperial, at 100, uprising at once
@@ -296,7 +304,7 @@ public class DeathStarTests
         Assert.Equal(Side.Alliance, w.Host.Fleets.OwnerOf(A6));
         // (B5a, 2026-10-17) under derived control the support change to 100 makes the neutral worlds Alliance (cause Support); DeathStarRevolt is the
         // AssaultOnly cause (m5-death-star §2, the B5a note)
-        Assert.Equal(CaptureCause.Support, w.Events<SystemCaptured>().First(e => e.System == A3).Cause);
+        Assert.Equal(rule == ControlRule.Derived ? CaptureCause.Support : CaptureCause.DeathStarRevolt, w.Events<SystemCaptured>().First(e => e.System == A3).Cause);
         Assert.Equal(Side.Empire, w.Host.Fleets.OwnerOf(A4));
         Assert.True(w.Host.Support.IsUprising(A4));
         Assert.Equal(A4, Assert.Single(w.Events<UprisingStarted>().Where(e => e.System != B1)).System); // B1 (Alliance, support 12, no garrison) rises on day 1 by itself

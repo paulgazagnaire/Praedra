@@ -11,9 +11,10 @@ namespace Rebellion.Core.Tests.Missions;
 public class MissionEffectTests
 {
     // A Diplomacy team at T; the success roll draws 0; the gain draws as given. Returns the world after the first iteration.
-    private static MissionWorld Diplomacy(Side side, Side? holder, int allianceSupport, int gainDraw, int gainMax, int dip = 120, int regiments = 0, bool deathStar = false)
+    private static MissionWorld Diplomacy(Side side, Side? holder, int allianceSupport, int gainDraw, int gainMax, int dip = 120, int regiments = 0, bool deathStar = false,
+        Rebellion.Core.Control.ControlRule rule = Rebellion.Core.Control.ControlRule.AssaultOnly)
     {
-        var w = new MissionWorld();
+        var w = new MissionWorld(rule: rule);
         w.Hold(T, holder, allianceSupport);
         if (holder is Side h) for (int i = 0; i < regiments; i++) w.Unit(h, h == Side.Alliance ? RebArmy : ImpArmy, T);
         // The sector flag is recomputed every day at slot 5.6 from the Death Stars in fleets (m5-death-star §3), so a hand-set flag would be cleared:
@@ -40,12 +41,16 @@ public class MissionEffectTests
         Assert.Equal((40, 47), (sc.Old, sc.New));
     }
 
-    // m5-missions MI28: Alliance on a neutral system, A = 50, rand(0..9) = 9: g = 10, A = 60.
-    // (B5a, 2026-10-17) at 60 the world joins the Alliance (Derived control) and the sector step from neutral (+1, the world included) makes it 61.
+    // m5-missions MI28: Alliance on a neutral system, A = 50, rand(0..9) = 9: g = 10, A = 60 (AssaultOnly, the DEFAULT until the AI copes, 2026-10-18).
     [Fact]
-    public void MI28_DiplomacyNeutral()
+    public void MI28_DiplomacyNeutral() => Assert.Equal(60, A(Diplomacy(Side.Alliance, null, 50, 9, 9)));
+
+    // (B5a, 2026-10-17) MI28 under Derived control (set explicitly): at 60 the world joins the Alliance and the sector step from neutral (+1, the
+    // world included) makes it 61.
+    [Fact]
+    public void MI28_DiplomacyNeutral_Derived()
     {
-        var w = Diplomacy(Side.Alliance, null, 50, 9, 9);
+        var w = Diplomacy(Side.Alliance, null, 50, 9, 9, rule: Rebellion.Core.Control.ControlRule.Derived);
         Assert.Equal(61, A(w));
         Assert.Equal((50, 60), w.Events<SupportChanged>().Where(e => e.Cause == SupportCause.Diplomacy).Select(e => (e.Old, e.New)).Single());
         Assert.Equal(Side.Alliance, w.Host.Control.HolderOf(T));

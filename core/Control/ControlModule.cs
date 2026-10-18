@@ -55,8 +55,8 @@ public sealed class ControlModule
     private readonly SupportModule _support;
     private readonly ConstructionModule? _construction;
 
-    /// <summary>The control rule. DEFAULT Derived (1998) in both rulesets. Not part of the save: it is configuration.</summary>
-    public ControlRule Rule { get; set; } = ControlRule.Derived;
+    /// <summary>The control rule (GameSettings.ControlRule). DEFAULT AssaultOnly until the AI copes (2026-10-18); 1998 is Derived. Not part of the save: it is configuration.</summary>
+    public ControlRule Rule { get; set; } = ControlRule.AssaultOnly;
 
     /// <summary>
     /// The debug orders (DebugSetHolder under AssaultOnly; DebugSetSupport and DebugSetTroops under both) are accepted only when this is on.
