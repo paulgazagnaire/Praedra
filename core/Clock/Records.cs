@@ -140,6 +140,8 @@ public static class RejectReason
     public const string NotAvailable = "NotAvailable";
     public const string NotResearched = "NotResearched";
     public const string BadCount = "BadCount";
+    /// <summary>The order's upkeep (maintenance x count) does not fit in the side's free capacity: refused whole (1998 error 0xf3). rule: m2-maintenance §Overdraft (B5b §7).</summary>
+    public const string NoUpkeep = "NoUpkeep";
     public const string BadDestination = "BadDestination";
     public const string NoSlot = "NoSlot";
     /// <summary>A second Sensor Station on one planet. The sheet names no code: DEFAULT name. rule: m5-fog-and-hq §N4 (one per planet).</summary>

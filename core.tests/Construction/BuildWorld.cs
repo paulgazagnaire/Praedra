@@ -63,6 +63,9 @@ internal sealed class BuildWorld
         Eco.IncidentsEnabled = false;
         Support = _withSupport ? SupportModule.Attach(Game, TestData.RealGalaxy, Eco, Fleets, SupWorld.Weights.Value) : null;
         Build = ConstructionModule.Attach(Game, Fleets, Eco, support: Support);
+        // B5b 2026-10-18: the 1998 upkeep refusal (NoUpkeep) is off here for the same reason the autoscrap is out of reach: these worlds have no
+        // mines or refineries, and the construction sheet's tests are not about upkeep. B5b-1 tests the refusal with it on.
+        Build.RefuseOverdrawOrders = false;
         Troops = TroopModule.Attach(Game, Fleets, RealTroops.Value);
         Build.UnitAppeared += (ctx, o, how) =>
         {

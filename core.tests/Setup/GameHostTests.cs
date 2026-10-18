@@ -134,6 +134,7 @@ public class GameHostTests
         h.Fleets.SetOwner("Sullust", Side.Alliance);
         h.Economy.AddFacility("Sullust", FacilityKind.TrainingFacility);
         h.Economy.SetPools(Side.Alliance, 0, 50);
+        h.Construction.RefuseOverdrawOrders = false; // B5b 2026-10-18: no mines here (capacity 0); the upkeep refusal is not what this checks
         long build = h.Construction.SubmitBuild(Side.Alliance, "Sullust", YardFamily.Training, "Alliance Army Regiment", 2);
         h.Game.Step();
         Assert.NotNull(h.Construction.ProjectAt("Sullust", YardFamily.Training));

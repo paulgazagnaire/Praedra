@@ -496,7 +496,10 @@ public sealed partial class SimpleAi
         var d = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var pr in S.Construction.AllProjects())
             if (pr.Side == _side && pr.Family == YardFamily.Training)
+            {
                 d[pr.Destination] = d.GetValueOrDefault(pr.Destination) + pr.Units.Count;
+                foreach (var q in pr.Next ?? new List<QueuedOrder>()) d[q.Destination] = d.GetValueOrDefault(q.Destination) + q.Units.Count; // orders queued behind (B5b)
+            }
         return d;
     }
 

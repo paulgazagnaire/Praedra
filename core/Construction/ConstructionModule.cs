@@ -53,6 +53,17 @@ public sealed class ConstructionModule
     /// <summary>Yards stop under the Classic 1998 blockade flag (<see cref="FleetModule.IsBlockadedClassic"/>) instead of the economic blockade. DEFAULT off. rule: m2-construction §Suspension.</summary>
     public bool UseClassicBlockadeFlag { get; set; }
     /// <summary>
+    /// An order whose upkeep (maintenance x count) does not fit in the side's free capacity is refused whole (NoUpkeep). 1998 = refused (B5b §7,
+    /// [EXE-own] 0x52e970); DEFAULT refused in both rulesets (Dev lead 2026-10-18). False = accepted (the rule before B5b: the autoscrap sorts it out).
+    /// rule: m2-maintenance §Overdraft; m2-construction §Build order.
+    /// </summary>
+    public bool RefuseOverdrawOrders { get; set; } = true;
+    /// <summary>
+    /// A new order for a (system, family) that has a project cancels it first (the rule before B5b, manual p.84). DEFAULT false: the 1998 build
+    /// command never cancels (B5b §7, inferred: the new units queue behind). rule: m2-construction §Projects and queues.
+    /// </summary>
+    public bool NewOrderReplacesProject { get; set; }
+    /// <summary>
     /// Is the system in uprising (its yards start no new cycle)? The flag belongs to the uprising sheet (m2-uprisings-and-garrison); this package
     /// sets nothing, so the default answers no. rule: m2-construction §Suspension.
     /// </summary>
@@ -209,7 +220,7 @@ public sealed class ConstructionModule
         {
             // The order replaces the old project, so its reservations count as free. rule: m2-construction §Projects and queues
             int energyFree = _eco.FreeEnergy(dest), rawFree = _eco.FreeRaw(dest);
-            if (old != null)
+            if (old != null && NewOrderReplacesProject)
                 foreach (var id in old.Units)
                 {
                     var u = E.Objects[id];
@@ -225,7 +236,7 @@ public sealed class ConstructionModule
             if (FacilityKinds.TryParse(o.Class, out var placeKind) && FacilityKinds.OnePerPlanet(placeKind))
             {
                 int already = _eco.OfKindAt(dest, placeKind);
-                if (old != null) foreach (var id in old.Units) if (E.Objects[id].System == dest && E.Objects[id].Class == o.Class) already--;
+                if (old != null && NewOrderReplacesProject) foreach (var id in old.Units) if (E.Objects[id].System == dest && E.Objects[id].Class == o.Class) already--;
                 if (o.Count > 1 || already > 0) return OrderResult.Reject(RejectReason.OnePerPlanet);
             }
             bool isMine = o.Class == FacilityKinds.ClassName(FacilityKind.Mine);
@@ -238,8 +249,15 @@ public sealed class ConstructionModule
             if (!_fleets.FindPath(o.System, dest, speed).Ok) return OrderResult.Reject(RejectReason.Unreachable);
         }
 
+        // rule: m2-maintenance §Overdraft (B5b §7, 0x52e970): maintenance x count above capacity - dealt load (at most the capacity) is refused, whole
+        if (RefuseOverdrawOrders)
+        {
+            int cap = _eco.Capacity(o.Side), dealt = Math.Min(_eco.Load(o.Side), cap);
+            if ((long)row.Maintenance * o.Count > cap - dealt) return OrderResult.Reject(RejectReason.NoUpkeep);
+        }
+
         // ---- accepted
-        if (old != null) CancelProject(ctx, ctx.Day, old, "Replaced");
+        if (old != null && NewOrderReplacesProject) { CancelProject(ctx, ctx.Day, old, "Replaced"); old = null; }
         var ids = new List<int>();
         for (int n = 0; n < o.Count; n++) // every unit exists now, queued: its maintenance counts at once (DEFAULT, Lead)
         {
@@ -252,7 +270,13 @@ public sealed class ConstructionModule
             else id = _eco.AddObject(o.Side, o.Class, null, completed: false);
             ids.Add(id);
         }
-        C.Set(new Project { Side = o.Side, System = o.System, Family = o.Family, Destination = dest, Units = new List<int>(ids), Progress = 0 });
+        // rule: m2-construction §Projects and queues (B5b §7): the new units join the queue behind the current order
+        if (old != null)
+        {
+            if (old.Next == null && old.Destination == dest) old.Units.AddRange(ids);
+            else (old.Next ??= new List<QueuedOrder>()).Add(new QueuedOrder { Destination = dest, Units = new List<int>(ids) });
+        }
+        else C.Set(new Project { Side = o.Side, System = o.System, Family = o.Family, Destination = dest, Units = new List<int>(ids), Progress = 0 });
         int day = ctx.Day;
         ctx.Emit((i, _) => new ProjectStarted(i, day, o.Side, o.System, o.Family, o.Class, o.Count, dest, new ValueList<int>(ids)));
         return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
@@ -282,7 +306,7 @@ public sealed class ConstructionModule
             C.Of(p.Side).RefinedLine.Remove(y.Id);
             C.Empire.RefinedLine.Remove(y.Id); C.Alliance.RefinedLine.Remove(y.Id);
         }
-        var removed = p.Units.ToList();
+        var removed = p.AllUnits().ToList(); // unfinished units only: finished ones have left the project (no refund is due, B5b §8)
         foreach (var id in removed) _eco.RemoveObject(id);
         C.Remove(p);
         var side = p.Side; string sys = p.System; var fam = p.Family;
@@ -310,7 +334,7 @@ public sealed class ConstructionModule
     /// </summary>
     public void CancelProjectsOnDestroy(StepContext ctx, string system)
     {
-        foreach (var p in C.AllProjects().Where(p => p.System == system || p.Destination == system).ToList())
+        foreach (var p in C.AllProjects().Where(p => p.System == system || p.Destination == system || (p.Next?.Any(q => q.Destination == system) ?? false)).ToList())
             CancelProject(ctx, ctx.Day + 1, p, "SystemDestroyed");
         foreach (var d in C.Deliveries.Values.Where(d => d.To == system).ToList()) // delivery id order
             if (E.Objects.TryGetValue(d.Object, out var obj) && obj.Category == ObjectCategory.Facility)
@@ -322,7 +346,7 @@ public sealed class ConstructionModule
 
     /// <summary>True if the object is a unit of a project or is travelling as a delivery: construction owns it and decides its fate.</summary>
     public bool OwnsObject(int objectId) =>
-        C.Deliveries.Values.Any(d => d.Object == objectId) || C.AllProjects().Any(p => p.Units.Contains(objectId));
+        C.Deliveries.Values.Any(d => d.Object == objectId) || C.AllProjects().Any(p => p.AllUnits().Contains(objectId));
 
     /// <summary>A yard that was scrapped or destroyed leaves the line; if it was the last of its family on the system the project is cancelled. rule: m2-construction §Scrapping.</summary>
     private void OnObjectRemoved(StepContext ctx, EconObject o, int day)
@@ -346,6 +370,14 @@ public sealed class ConstructionModule
         {
             if (!Controls(p.System, p.Side)) CancelProject(ctx, t, p, "SystemLost");
             else if (!YardsOf(p.System, p.Family).Any()) CancelProject(ctx, t, p, "YardLost");
+        }
+
+        // A blockade or an uprising stops a yard at once: its running cycle is abandoned (the refined spent is lost) and it leaves the refined line;
+        // it asks again when it is no longer suspended. rule: m2-construction §Suspension (B5b §3: yards are in the same families, 0x50bbb0)
+        foreach (var y in YardObjects().Where(o => (o.Due != 0 || o.InLine) && IsSuspended(o)).ToList())
+        {
+            y.Due = 0;
+            if (y.InLine) { C.Empire.RefinedLine.Remove(y.Id); C.Alliance.RefinedLine.Remove(y.Id); y.InLine = false; }
         }
 
         // 6.6.a: cycles due now add their point; a unit that reaches its cost completes.
@@ -424,11 +456,16 @@ public sealed class ConstructionModule
         int id = p.Units[0];
         p.Units.RemoveAt(0);
         p.Progress = 0;
-        if (p.Units.Count == 0) C.Remove(p);
-        var obj = E.Objects[id];
         string dest = p.Destination;
+        if (p.Units.Count == 0)
+        {
+            // the next queued order becomes the current one (B5b §7); none left: the project ends
+            if (p.Next is { Count: > 0 } next) { p.Units = next[0].Units; p.Destination = next[0].Destination; next.RemoveAt(0); if (next.Count == 0) p.Next = null; }
+            else C.Remove(p);
+        }
+        var obj = E.Objects[id];
         int deliveryId = 0;
-        if (dest != p.System) deliveryId = Depart(ctx, t, p, obj);
+        if (dest != p.System) deliveryId = Depart(ctx, t, p, obj, dest); // the finished unit's own destination (the next queued order may have another)
         else Appear(ctx, obj, p.System, UnitAppearance.Completed);
         string cls = obj.Class, yard = p.System; var side = p.Side;
         ctx.Emit((i, _) => new UnitCompleted(i, t, id, cls, side, yard, dest, deliveryId));
@@ -447,14 +484,14 @@ public sealed class ConstructionModule
 
     // ================================================================== deliveries
 
-    private int Depart(StepContext ctx, int t, Project p, EconObject obj)
+    private int Depart(StepContext ctx, int t, Project p, EconObject obj, string dest)
     {
         var row = _eco.Costs.Get(obj.Class);
-        var path = _fleets.FindPath(p.System, p.Destination, DeliverySpeed(row));
-        if (!path.Ok) throw new InvalidOperationException($"No path {p.System} to {p.Destination} for a delivery that was accepted."); // the lane graph does not change
+        var path = _fleets.FindPath(p.System, dest, DeliverySpeed(row));
+        if (!path.Ok) throw new InvalidOperationException($"No path {p.System} to {dest} for a delivery that was accepted."); // the lane graph does not change
         var d = new Delivery
         {
-            Id = C.NextDeliveryId++, Side = p.Side, Object = obj.Id, From = p.System, To = p.Destination,
+            Id = C.NextDeliveryId++, Side = p.Side, Object = obj.Id, From = p.System, To = dest,
             Path = path.Names(_galaxy).ToList(), HopTicks = path.HopTicks.ToList(),
             Index = 0, InFlight = true, DueDay = t + path.HopTicks[0], // leaves at hook time T; first hop due T + ticks
         };

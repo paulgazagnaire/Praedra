@@ -83,10 +83,11 @@ public class PoolTests
         w.Hold(Home, Side.Empire, 50);
         w.Mine(Home, id: 1);
         for (int i = 0; i < 9; i++) w.Eco.AddObject(Side.Empire, "Stormtrooper Regiment"); // load 54: share min(50, 54) = 50
-        Assert.Equal(50, w.Eco.ShareOf(1));
         Assert.Equal(20, EconomyModule.CycleDays(new EconomyParams(), 50, 50));
         w.Stub!.Expect(0, 20, draw);
         w.Run(1);
+        // B5b 2026-10-18: shares are dealt incrementally at the 6.5 hook (B5b §4), so they are read after the first day.
+        Assert.Equal(50, w.Eco.ShareOf(1));
         Assert.Equal(due, w.E.Objects[1].Due);
         Assert.Single(w.Stub.Requests, (0, 20));
     }
@@ -126,6 +127,7 @@ public class PoolTests
         var w = Block(7, 7);
         for (int i = 0; i < 5; i++) w.Eco.AddObject(Side.Alliance, "Nebulon-B Frigate"); // 5 x 35 = 175
         Assert.Equal(175, w.Eco.Load(Side.Alliance));
+        w.Run(1); // B5b 2026-10-18: shares are dealt incrementally at the 6.5 hook (B5b §4), so they are read after the first day.
         foreach (var o in w.Eco.Objects.Where(o => o.Class is "Mine" or "Refinery"))
             Assert.Equal(25, w.Eco.ShareOf(o.Id));
         Assert.Equal(8, EconomyModule.CycleDays(new EconomyParams(), 100, 25));
@@ -145,6 +147,7 @@ public class PoolTests
             for (int i = 0; i < 5; i++) w.Eco.AddObject(Side.Alliance, "X-wing"); // 20
         }
         Assert.Equal(load, w.Eco.Load(Side.Alliance));
+        w.Run(1); // B5b 2026-10-18: shares are dealt incrementally at the 6.5 hook (B5b §4), so they are read after the first day.
         Assert.All(w.Eco.Objects.Where(o => o.Class == "Mine"), o => Assert.Equal(50, w.Eco.ShareOf(o.Id)));
     }
 
@@ -154,6 +157,7 @@ public class PoolTests
     {
         var w = Block(3, 0);
         for (int i = 0; i < 10; i++) w.Eco.AddObject(Side.Alliance, "Guerrillas"); // maintenance 1 each
+        w.Run(1); // B5b 2026-10-18: shares are dealt incrementally at the 6.5 hook (B5b §4), so they are read after the first day.
         Assert.Equal(new[] { 4, 3, 3 }, w.Eco.Objects.Where(o => o.Class == "Mine").Select(o => w.Eco.ShareOf(o.Id)).ToArray());
     }
 
@@ -291,24 +295,26 @@ public class PoolTests
     }
 
     // m2-mines-refineries-pools P19
+    // B5b 2026-10-18: B5b §3 (1998 [EXE-own] 0x50bbb0) replaces "the running cycle finishes": a blockade abandons the
+    // running cycle with no point, and the restart when the flag clears is a startup cycle (B5b §2).
     [Fact]
-    public void P19_RunningCycleFinishesThenIdlesUntilTheFlagClears()
+    public void P19_BlockadeAbandonsTheRunningCycleThenRestartsOnAStartupCycle()
     {
         var w = new EcoWorld(freeShips: true);
         w.Hold(Home, Side.Empire, 100);
         w.Mine(Home, id: 1);
         w.Run(1); // cycle started, due 3
         int blocker = EnemyInterdictor(w, Side.Alliance, Home);
-        w.Run(2); // hook time 3: the cycle finishes and pays
-        Assert.Equal(1, w.Eco.Raw(Side.Empire));
+        w.Run(2); // hook time 2: suspended, the cycle is abandoned with no point
+        Assert.Equal(0, w.Eco.Raw(Side.Empire));
         Assert.Equal(0, w.E.Objects[1].Due);
         w.Run(20); // Day 23: still blockaded, no new cycle
         Assert.Equal(0, w.E.Objects[1].Due);
-        Assert.Single(w.Events<ResourceProduced>());
+        Assert.Empty(w.Events<ResourceProduced>());
         w.State.Fleets.Remove(blocker); // flag clears before the next Step
-        w.Run(1); // hook time 24: restart, normal length (no first-cycle draw)
-        Assert.Equal(24 + 5, w.E.Objects[1].Due);
-        Assert.Single(w.Stub!.Requests); // only the very first cycle drew
+        w.Run(1); // hook time 24: restart on a startup cycle, d = 5: rand(0..5) + 2 with the stub at 0
+        Assert.Equal(24 + 2, w.E.Objects[1].Due);
+        Assert.Equal(new[] { (0, 5), (0, 5) }, w.Stub!.Requests.ToArray()); // the first start and the restart each drew once
     }
 
     // m2-mines-refineries-pools P20
@@ -361,8 +367,10 @@ public class PoolTests
     }
 
     // m2-mines-refineries-pools P22
+    // B5b 2026-10-18: B5b §3 side change (1998 [EXE-own] 0x52d0e0 -> 0x55b010) replaces "keeps its due day": the running
+    // cycle is lost, no point for anyone, and the mine restarts for the new holder on a startup cycle.
     [Fact]
-    public void P22_MineChangingSideMidCycleKeepsItsDueDay()
+    public void P22_MineChangingSideMidCycleRestartsOnAStartupCycle()
     {
         var w = new EcoWorld();
         w.Hold(Home, Side.Empire, 100);
@@ -372,10 +380,10 @@ public class PoolTests
         w.Fleets.SetOwner(Home, Side.Alliance); // capture
         w.Eco.SetAllianceSupport(Home, 50);
         w.Run(1); // hook time 3
-        Assert.Equal(1, w.Eco.Raw(Side.Alliance));
+        Assert.Equal(0, w.Eco.Raw(Side.Alliance));
         Assert.Equal(0, w.Eco.Raw(Side.Empire));
-        Assert.Equal(3 + 10, w.E.Objects[1].Due); // next cycle normal: 5 x 200 / 100 = 10, no first-cycle roll
-        Assert.Single(w.Stub!.Requests); // the mine's first cycle only: no new first-cycle draw after the capture
+        Assert.Equal(3 + 5, w.E.Objects[1].Due); // d = 5 x 200 / 100 = 10, startup rand(0..10) + 5 with the stub at 0
+        Assert.Equal(new[] { (0, 5), (0, 10) }, w.Stub!.Requests.ToArray()); // the first start, then the new holder's startup draw
     }
 
     // m2-mines-refineries-pools §Side change: a waiting refinery goes to the end of the new holder's line
