@@ -55,6 +55,32 @@ public class CharacterSetupTests
         Assert.Empty(h.Game.Events); // setup raises no per-object events
     }
 
+    // m5-characters-and-force CH39 (Rule New 4, Paul 2026-10-18): TrainerPick Random (DEFAULT) draws 3 talented placed characters per side, each an
+    // aware Force user with Force 80..120 (or his own if higher), and only they can train; Fixed (1998) draws nothing and Luke and Vader train
+    [Fact]
+    public void CH39_RandomTalentedTrainers()
+    {
+        foreach (int seed in new[] { 1, 2, 3 })
+        {
+            var h = Make(seed);
+            var ch = h.Characters;
+            foreach (var side in new[] { Side.Alliance, Side.Empire })
+            {
+                var t = ch.InPlay.Where(c => c.Side == side && c.Talented).ToList();
+                Assert.Equal(3, t.Count);
+                Assert.All(t, c => Assert.True(c.ForceUser && c.ForceDiscovered && c.EffectiveForce >= 80 && ch.IsTrainer(c)));
+            }
+            Assert.All(ch.All.Where(c => !c.Talented), c => Assert.False(ch.IsTrainer(c)));
+            if (ch.Get(Vader)!.Talented) Assert.True(ch.Get(Vader)!.EffectiveForce >= 120); // a drawn Vader keeps his own 120 if higher (Q16)
+        }
+        var picks = new[] { 1, 2, 3, 4 }.Select(seed => string.Join(",", Make(seed).Characters.All.Where(c => c.Talented).Select(c => c.Id))).Distinct().Count();
+        Assert.True(picks > 1); // the pick changes with the seed
+
+        var classic = Make(1, new GameSettings { Characters = new CharacterParams { TrainerPick = TrainerPick.Fixed } }).Characters;
+        Assert.DoesNotContain(classic.All, c => c.Talented);
+        Assert.Equal(new[] { Luke, Vader }.OrderBy(x => x), classic.All.Where(classic.IsTrainer).Select(c => c.Id).OrderBy(x => x));
+    }
+
     // m5-setup-and-victory SV44: same seed same cast; the character draws come before the economy and research arming
     [Fact]
     public void P9_Deterministic()

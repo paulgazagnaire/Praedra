@@ -362,7 +362,7 @@ public class B2eCharacterTests
     [Fact]
     public void B2e17_Awakening()
     {
-        var w = new CharWorld();
+        var w = new CharWorld(new CharacterParams { TrainerPick = TrainerPick.Fixed }); // the 1998 trainer flag (Luke, Vader); Random is CH39
         w.Hold(Yavin, Side.Alliance); w.Hold(Coruscant, Side.Empire);
         Force(w.Add(Vader, Coruscant), 120);
         var piett = w.Add(Piett, Coruscant); piett.ForceUser = true; // an unaware Force user
@@ -409,7 +409,7 @@ public class B2eCharacterTests
     [Fact]
     public void B2e19_SpreadZeroTimersDrawNothing()
     {
-        var w = new CharWorld();
+        var w = new CharWorld(new CharacterParams { TrainerPick = TrainerPick.Fixed }); // the 1998 trainer flag (Luke, Vader); Random is CH39
         w.Hold(Coruscant, Side.Empire);
         Force(w.Add(Vader, Coruscant), 120);
         w.Run(30);

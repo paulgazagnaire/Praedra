@@ -200,11 +200,17 @@ public sealed class CharacterModule
     /// </summary>
     public bool CanTrain(CharacterRecord trainer, CharacterRecord student)
     {
-        if (!ClassOf(trainer).JediTrainer || !IsAvailable(trainer)) return false;
+        if (!IsTrainer(trainer) || !IsAvailable(trainer)) return false;
         if (Params.TrainerNeedsKnight && trainer.EffectiveForce < Params.ForceKnightMin) return false;
         return student.Id != trainer.Id && student.Placed && student.ForceUser && student.ForceDiscovered && student.Status == CharacterStatus.Free
             && student.Side == trainer.Side && LocationOf(student) != null && LocationOf(student) == LocationOf(trainer);
     }
+
+    /// <summary>
+    /// Can train and awaken: the data flag <c>jedi_trainer</c> under <see cref="TrainerPick.Fixed"/> (1998), the setup draw under Random (New).
+    /// rule: §Force (Eligibility); §Rule (New) 4.
+    /// </summary>
+    public bool IsTrainer(CharacterRecord c) => Params.TrainerPick == TrainerPick.Random ? c.Talented : ClassOf(c).JediTrainer;
 
     // ================================================================== creation and setup (outside a Step)
 
@@ -306,7 +312,29 @@ public sealed class CharacterModule
                     break;
             }
         }
+        if (Params.TrainerPick == TrainerPick.Random) PickTalented(rng);
         RefreshSeatOfPower(); // rule: §Seat of Power (B2e §6), the Emperor's start place
+    }
+
+    /// <summary>
+    /// Random trainers (New, Paul 2026-10-18), after the start cast: for the Alliance then the Empire (DEFAULT order), up to TalentedPerSide draws
+    /// k = rand(0..n-1) over that side's placed characters in id order, without replacement; each drawn one is Talented, a Force user and aware,
+    /// with Force = rand(TalentedForceMin..TalentedForceMax) unless his own is higher (Q16 DEFAULT): one more draw each. rule: §Rule (New) 4.
+    /// </summary>
+    private void PickTalented(GameRng rng)
+    {
+        foreach (var side in new[] { Side.Alliance, Side.Empire })
+        {
+            var pool = S.Characters.Values.Where(c => c.Placed && c.Side == side).ToList(); // id order
+            for (int k = 0; k < Params.TalentedPerSide && pool.Count > 0; k++)
+            {
+                var c = pool[rng.NextInt(0, pool.Count - 1)];
+                pool.Remove(c);
+                int f = Params.TalentedForceMin + (Params.TalentedForceMax > Params.TalentedForceMin ? rng.NextInt(0, Params.TalentedForceMax - Params.TalentedForceMin) : 0);
+                c.Talented = true; c.ForceUser = true; c.ForceDiscovered = true;
+                c.ForceExperience = Math.Max(c.ForceExperience, f - c.ForceTraining);
+            }
+        }
     }
 
     private void PlaceAt(int id, (string? System, int Fleet) loc)
@@ -1268,7 +1296,7 @@ public sealed class CharacterModule
     /// </summary>
     private void AwakenTick(StepContext ctx, CharacterRecord t, int k)
     {
-        bool on = ClassOf(t).JediTrainer && t.EffectiveForce >= Params.TrainerMinForce && !IsOnMission(t.Id)
+        bool on = IsTrainer(t) && t.EffectiveForce >= Params.TrainerMinForce && !IsOnMission(t.Id)
             && t.Status is CharacterStatus.Free or CharacterStatus.Injured;
         if (!on) { t.NextAwakenDay = 0; return; }
         int Delay() => Params.AwakenPeriod + (Params.AwakenSpread > 0 ? ctx.Rng.NextInt(0, Params.AwakenSpread) : 0);

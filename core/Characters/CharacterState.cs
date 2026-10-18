@@ -41,6 +41,9 @@ public sealed class CharacterRecord
     public bool ForceUser { get; set; }
     /// <summary>ForceAware (+0xac bit 0x10): the character knows he has the Force (trainable, Force rolled). rule: §Force (Force discovery; B2e §5).</summary>
     public bool ForceDiscovered { get; set; }
+    /// <summary>Drawn talented at setup: can train and awaken under <see cref="TrainerPick.Random"/>. rule: §Rule (New) 4.</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Talented { get; set; }
     /// <summary>
     /// Injury points (+0x94, 0..32767): they come off effective combat and heal 1 a day (2 with Force 80+) while Healing. Injured status = points
     /// above 0 while not captured or dead. Replaces <c>injured_days_left</c>. rule: §Capture, injury, death, freeing (Traced B2e §2).
@@ -150,7 +153,7 @@ public sealed class CharacterRecord
     internal CharacterRecord Clone() => new()
     {
         Id = Id, Side = Side, Placed = Placed, Skills = new List<int>(Skills), Loyalty = Loyalty, ForceExperience = ForceExperience, ForceTraining = ForceTraining,
-        ForceUser = ForceUser, ForceDiscovered = ForceDiscovered, DiscoveredForceUser = DiscoveredForceUser, IdentifiedTraitor = IdentifiedTraitor, Status = Status, System = System, AttachedFleet = AttachedFleet, Post = Post,
+        ForceUser = ForceUser, ForceDiscovered = ForceDiscovered, Talented = Talented, DiscoveredForceUser = DiscoveredForceUser, IdentifiedTraitor = IdentifiedTraitor, Status = Status, System = System, AttachedFleet = AttachedFleet, Post = Post,
         Captor = Captor, HeldAt = HeldAt, HeldAboard = HeldAboard, HeldAboardShip = HeldAboardShip, ReturnPlace = ReturnPlace, AutoroutePending = AutoroutePending, JoinFleet = JoinFleet, Injury = Injury, LeadershipAdjustment = LeadershipAdjustment, PairId = PairId, KnowsHeritage = KnowsHeritage,
         AwakenedBy = AwakenedBy, NextEscapeDay = NextEscapeDay, NextHealDay = NextHealDay, NextAwakenDay = NextAwakenDay,
         Transit = Transit == null ? null : new FleetTransit
