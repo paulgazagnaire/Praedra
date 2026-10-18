@@ -260,7 +260,7 @@ public class SimpleAiAgentsTests
 
     // QA-6: B6c §7 (the 1998 AI's Sabotage, Recon, espionage-team and Abduction/Assassination filters admit special forces, inferred from the
     // mask), B6b §9 (it keeps at least 8 special forces), m5-missions §Special forces (a special force is a team member only of the kinds whose
-    // record mask holds its class bit). With SimpleAiParams.SpecialForceAgents (DEFAULT on) each side keeps SpecialForcesWanted special forces
+    // record mask holds its class bit). With SimpleAiParams.SpecialForceAgents (DEFAULT off) on, each side keeps SpecialForcesWanted special forces
     // of its agent classes and sends them alone on planned missions; off, no special force goes on a mission (the HQ-hunt droids are Hard's).
     // Measured on 146027a + this change, seeds 1 to 4, fog, 1000 days (special-force missions Empire / Alliance): 12/2, 0/1, 18/3, 16/3;
     // kinds Subdue (most), Espionage, Abduction. Floor: both sides send one on at least 3 of 4 seeds; only agent classes go; at most 1
@@ -268,8 +268,8 @@ public class SimpleAiAgentsTests
     [Fact]
     public void SpecialForceAgents_AreBuiltAndGoOnMissionsTheirMaskAllows()
     {
-        Assert.True(new SimpleAiParams().SpecialForceAgents);
-        var p = Fog;
+        Assert.False(new SimpleAiParams().SpecialForceAgents);
+        var p = Fog with { SpecialForceAgents = true };
         var games = MultiSeed.Play(new[] { 1, 2, 3, 4 }, seed =>
         {
             var (m, h) = Match(seed, p);

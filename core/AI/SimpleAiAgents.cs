@@ -23,7 +23,7 @@ namespace Rebellion.Core.AI;
 /// believes are there. Kinds: Empire HQ hunt (Espionage or Reconnaissance on the highest HQ-belief systems, then a re-check of a known HQ),
 /// Subdue on own systems in uprising, Rescue of own prisoners, Abduction of enemy characters the side has seen, Diplomacy on own low-support
 /// systems and neutral border systems, Alliance Incite and Sabotage on enemy systems where no defender is believed, and Research. With
-/// SpecialForceAgents (DEFAULT on, QA-6) its free special forces go alone on the same jobs where their class bit is in the kind's mask.</item>
+/// SpecialForceAgents (DEFAULT off, QA-6) its free special forces go alone on the same jobs where their class bit is in the kind's mask.</item>
 /// </list>
 /// It reads the other side only through the "what the AI may see" block of SimpleAi.cs (MissionDefendersAt, SupportSeen, OwnerSeen,
 /// EnemyCharactersSeen, the belief map and the picture), so with UseFog it reads only its side's knowledge (m5-fog-and-hq §N8). Own characters,

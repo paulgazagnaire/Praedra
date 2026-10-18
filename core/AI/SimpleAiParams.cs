@@ -389,9 +389,10 @@ public sealed record SimpleAiParams
     /// Special forces as mission agents (QA-6; B6c §7: the 1998 AI's Sabotage, Recon, espionage-team and Abduction/Assassination filters admit
     /// special forces, inferred from the mask; B6b §9: it keeps at least 8 of them). On: the AI keeps SpecialForcesWanted special forces of its
     /// AgentForceClasses and sends each free one alone on any planned mission whose record's mask holds its class bit (m5-missions §Special
-    /// forces), scored like a character with its class columns as skills. A character goes first on a tie. Off = the AI of before. DEFAULT on.
+    /// forces), scored like a character with its class columns as skills. A character goes first on a tie. Off = the AI of before. DEFAULT off
+    /// (2026-10-18, the Dev lead's call): on, both arms of the stall test land more and its 1.5x floor fails (85 against 58).
     /// </summary>
-    public bool SpecialForceAgents { get; init; } = true;
+    public bool SpecialForceAgents { get; init; }
     /// <summary>Special forces of the agent classes kept, built or queued (B6b §9: "at least 8"). DEFAULT 8.</summary>
     public int SpecialForcesWanted { get; init; } = 8;
     /// <summary>
