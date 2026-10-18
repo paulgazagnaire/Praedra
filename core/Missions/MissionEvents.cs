@@ -76,6 +76,14 @@ public sealed record MissionDuel(int Index, int Day, int Mission, Side Side, str
     int X, int Chance, int Roll, bool Escaped)
     : GameEvent(Index, Day, nameof(MissionDuel));
 
+/// <summary>
+/// The cap roll of a key character who lost the escape duel under <see cref="KeyDuelCapture.Capped"/>: captured if Roll &lt; Cap (his cap_percent
+/// in the key-target file), else not captured (he keeps the duel's Hurt). rule: m5-missions §4, §6a (KeyDuelCapture, 2026-10-18).
+/// </summary>
+public sealed record MissionKeyDuelCaptureRoll(int Index, int Day, int Mission, Side Side, string System, int Member, Side Captor, int Cap, int Roll,
+    bool Captured)
+    : GameEvent(Index, Day, nameof(MissionKeyDuelCaptureRoll));
+
 /// <summary>One Force sensing draw: group Force user Member against enemy Senser, chance p = Force + Force - 100 (only drawn when p > 0). rule: §3 Force sensing.</summary>
 public sealed record MissionForceSenseRoll(int Index, int Day, int Mission, Side Side, string Target, int Member, int Senser, int Chance, int Roll, bool Sensed)
     : GameEvent(Index, Day, nameof(MissionForceSenseRoll));

@@ -73,6 +73,38 @@ public enum BetrayalKinds
 }
 
 /// <summary>
+/// A key character (one in the key-target file) who loses the escape duel. rule: m5-missions §4, §6a (KeyDuelCapture, 2026-10-18; Paul's caps
+/// apply to duel captures).
+/// </summary>
+public enum KeyDuelCapture
+{
+    /// <summary>
+    /// DEFAULT, Paul's rule (Decided 2026-10-16 "Close it"; 1998 rules never override a decided feature, 2026-10-18): the loser's Hurt roll as
+    /// usual, then, if he is alive and the capture would happen, one extra roll <c>rand(0..99) &lt; cap_percent</c> (his cap in the key-target
+    /// file): captured if it passes, else not captured (he keeps the duel's Hurt and leaves the group as a loser who is not captured does).
+    /// </summary>
+    Capped,
+    /// <summary>The 1998 duel (Traced B2d §5, B2e §2): a loser who survives his Hurt roll is captured outright.</summary>
+    Original,
+}
+
+/// <summary>
+/// The guards of the job check of a key-target mission (Assassination or Abduction of a character in the key-target file, KeyTargetRules on).
+/// rule: m5-missions §3, §6a (Key-target protections, 2026-10-18).
+/// </summary>
+public enum KeyTargetGuards
+{
+    /// <summary>
+    /// DEFAULT, the guard set Paul's key-target decision (2026-10-16) was weighed against: the B2d guards of the job check, plus every completed
+    /// capital ship of a fleet at the target, fighter squadron (aboard those ships, in a fleet there, or based there) and regiment (landed, or
+    /// aboard with CountAboardUnits) not of the mission's side, by object id (the walk before B2d, PR #61).
+    /// </summary>
+    Full,
+    /// <summary>The B2d guards only (Traced B2d §3), as for every other mission.</summary>
+    Original,
+}
+
+/// <summary>
 /// Every switch and number of m5-missions §Defaults for undecided items, with the sheet's DEFAULT. Settings, not saved (pass them again on load
 /// through <see cref="Setup.GameSettings.Missions"/>). A switch whose other value has no rule in the sheet ("no rule exists") is refused at attach
 /// with <see cref="RuleMissingException"/>. rule: m5-missions §Defaults for undecided items; CLAUDE.md hard rule 7.
@@ -123,6 +155,22 @@ public sealed record MissionParams
     public int KeyTeamMinEspionage { get; init; } = 60;
     /// <summary>Percent of successful qualified attempts that kidnap instead of kill. Decided Paul 2026-10-16 ("very very low"), value 3 Proposal; m5-missions §6a.</summary>
     public int KeyKidnapPercent { get; init; } = 3;
+    /// <summary>
+    /// A key character who loses the escape duel (guard or Force-user encounter). DEFAULT <see cref="Missions.KeyDuelCapture.Capped"/>; applies only
+    /// while <see cref="KeyTargetRules"/> is on. rule: m5-missions §4, §6a (KeyDuelCapture, 2026-10-18; Paul's caps apply to duel captures).
+    /// </summary>
+    public KeyDuelCapture KeyDuelCapture { get; init; } = KeyDuelCapture.Capped;
+    /// <summary>
+    /// The job check's guards of a key-target mission. DEFAULT <see cref="Missions.KeyTargetGuards.Full"/>; applies only while
+    /// <see cref="KeyTargetRules"/> is on. rule: m5-missions §3, §6a (Key-target protections, 2026-10-18).
+    /// </summary>
+    public KeyTargetGuards KeyTargetGuards { get; init; } = KeyTargetGuards.Full;
+    /// <summary>
+    /// A key-target mission reads its characters' skills without the Force term (espionage <c>B</c>, combat <c>max(0, B - Injury)</c>) in the
+    /// step-4 qualification and in the decoy pass and detection walk of its checks. DEFAULT true; false = the 1998 effective skills (B2e §1).
+    /// Applies only while <see cref="KeyTargetRules"/> is on. rule: m5-missions §3, §6a (Key-target protections, 2026-10-18).
+    /// </summary>
+    public bool KeyTargetBaseSkills { get; init; } = true;
 
     // ---- Force sensing and betrayal (B2b). rule: m5-missions §3 Force sensing, Betrayal.
     /// <summary>Enemy Force users at the target can sense the group (0x589e40). DEFAULT true (Traced B2b).</summary>
