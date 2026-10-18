@@ -46,6 +46,7 @@ internal sealed class ResearchWorld
             new EconomyParams { ScrapPeriod = 1_000_000 });
         Eco.IncidentsEnabled = false;
         Build = ConstructionModule.Attach(Game, Fleets, Eco);
+        Build.RefuseOverdrawOrders = false; // B5b 2026-10-18: these worlds have no mines (capacity 0), autoscrap is out of reach for the same reason; the research gate is the subject
         Research = ResearchModule.Attach(Game, Eco, Fleets, _data ?? RealResearch.Value, _p);
         Build.ResearchOrderReached = Research.OrderReached;
     }

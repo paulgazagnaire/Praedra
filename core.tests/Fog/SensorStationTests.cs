@@ -57,6 +57,7 @@ public class SensorStationTests
         var w = new FogWorld();
         w.H.Economy.AddFacility(R1, FacilityKind.ConstructionYard);
         w.H.Economy.SetPools(Side.Empire, 0, 500);
+        w.H.Construction.RefuseOverdrawOrders = false; // B5b 2026-10-18: Map M has no mines (capacity 0); the upkeep refusal is not what this checks
         int energyBefore = w.H.Economy.FreeEnergy(R1), rawBefore = w.H.Economy.FreeRaw(R1);
         Assert.Null(w.H.Economy.CheckPlace(R1, FacilityKind.SensorStation));
         w.H.Construction.SubmitBuild(Side.Empire, R1, YardFamily.Construction, Cls, 1, R1);
@@ -415,6 +416,7 @@ public class SensorStationTests
         w.H.Fleets.SetOwner(Ilum, Side.Empire);
         w.H.Economy.AddFacility(R1, FacilityKind.ConstructionYard);
         w.H.Economy.SetPools(Side.Empire, 0, 500);
+        w.H.Construction.RefuseOverdrawOrders = false; // B5b 2026-10-18: Map M has no mines (capacity 0); the upkeep refusal is not what this checks
         Assert.False(w.H.Data.Galaxy.OnRoute(w.H.Data.Galaxy.Get(Ilum).Index));
         Assert.Equal("NotOnRoute", w.H.Economy.CheckPlace(Ilum, FacilityKind.SensorStation));
         Assert.Null(w.H.Economy.CheckPlace(Ilum, FacilityKind.Mine));

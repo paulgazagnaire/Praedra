@@ -166,6 +166,8 @@ public class ConstructionTests
     public void C8_NewOrderCancelsTheProjectWithoutRefund()
     {
         var w = ShipyardWithLoad100();
+        // B5b 2026-10-18: the 1998 build command never cancels (B5b §7); this checks the NewOrderReplacesProject switch (DEFAULT off).
+        w.Build.NewOrderReplacesProject = true;
         w.TryOrder(Emp, Home, YardFamily.Shipyard, "Imperial Star Destroyer", 3);
         w.RunTo(100);
         Assert.Equal(975, w.Eco.Refined(Emp)); // 25 cycles taken (hooks 1, 5, ..., 97)
@@ -199,8 +201,10 @@ public class ConstructionTests
     // ---------------------------------------------------------------- suspension (C10, C11)
 
     // m2-construction C10
+    // B5b 2026-10-18: B5b §3 ([EXE-own] 0x50bbb0): yards stop like mines; the running cycle is abandoned with no point
+    // (was: it finishes). The yard startup draw is not settled (B5b §12), so the restart is a normal cycle.
     [Fact]
-    public void C10_BlockadeStopsNewCyclesRunningCycleFinishes()
+    public void C10_BlockadeAbandonsTheRunningCycleAndStopsNewOnes()
     {
         var w = Empire(100, FacilityKind.ConstructionYard);
         w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, Home);
@@ -209,11 +213,11 @@ public class ConstructionTests
         Assert.True(w.Fleets.IsEconomicBlockade(Home, Emp));
         w.RunTo(9);
         var yard = w.Eco.Objects.Single(o => o.Class == "Construction Yard");
-        Assert.Equal(2, w.Build.ProjectAt(Home, YardFamily.Construction)!.Progress); // the running cycle finished and added its point
+        Assert.Equal(1, w.Build.ProjectAt(Home, YardFamily.Construction)!.Progress); // the running cycle was abandoned: no point
         Assert.Equal(0, yard.Due);
         w.RunTo(18);
-        Assert.Equal(2, w.Build.ProjectAt(Home, YardFamily.Construction)!.Progress);
-        Assert.Equal(0, yard.Due); // no new cycle for 10 days
+        Assert.Equal(1, w.Build.ProjectAt(Home, YardFamily.Construction)!.Progress);
+        Assert.Equal(0, yard.Due); // no new cycle while blockaded
         w.State.Fleets.Remove(blocker); // lifted
         w.Run(1); // hook 19, the first hook after the flag clears
         Assert.Equal(23, yard.Due);
@@ -644,6 +648,7 @@ public class ConstructionTests
     public void ReplacingOrderFreesItsOwnReservations()
     {
         var w = Empire(500, FacilityKind.ConstructionYard);
+        w.Build.NewOrderReplacesProject = true; // B5b 2026-10-18: replacing is now a switch (DEFAULT off, B5b §7)
         w.Hold("Kessel", Emp);
         w.Eco.SetSlots("Kessel", 6, 6);
         for (int i = 0; i < 3; i++) w.Eco.AddFacility("Kessel", FacilityKind.Mine);
@@ -716,9 +721,11 @@ public class ConstructionTests
         Assert.Empty(w.Build.RefinedLine(Emp));
     }
 
-    // m2-construction §Suspension: a suspended yard keeps its place in the line and is skipped
+    // m2-construction §Suspension
+    // B5b 2026-10-18: B5b §1 and §3: a suspended yard is IDLE, so it leaves the refined line (was: keeps its place and is
+    // skipped) and asks again when the flag clears.
     [Fact]
-    public void SuspendedYardKeepsItsPlaceInTheLine()
+    public void SuspendedYardLeavesTheLineAndAsksAgainOnRestart()
     {
         var w = new BuildWorld();
         w.Hold(Home, Emp); w.Hold("Kuat", Emp);
@@ -730,9 +737,9 @@ public class ConstructionTests
         w.Eco.SetPools(Emp, 0, 1);
         w.Run(1);
         var yards = w.Eco.Objects.Where(o => o.Class == "Orbital Shipyard").OrderBy(o => o.System, StringComparer.Ordinal).ToList();
-        Assert.Equal(0, yards[0].Due); // Coruscant is blockaded: skipped, still waiting
+        Assert.Equal(0, yards[0].Due); // Coruscant is blockaded: stopped
         Assert.NotEqual(0, yards[1].Due);
-        Assert.Equal(new[] { yards[0].Id }, w.Build.RefinedLine(Emp));
+        Assert.Empty(w.Build.RefinedLine(Emp)); // its line place is gone
         w.State.Fleets.Remove(blocker);
         w.Eco.SetPools(Emp, 0, 1);
         w.Run(1);
@@ -776,6 +783,7 @@ public class ConstructionTests
         var w = Empire(100, FacilityKind.OrbitalShipyard);
         var seen = new List<(string cls, UnitAppearance how)>();
         w.Build.UnitAppeared += (_, o, how) => seen.Add((o.Class, how));
+        w.Build.NewOrderReplacesProject = true; // B5b 2026-10-18: keeps the replace path this test relies on (switch, DEFAULT off)
         w.TryOrder(Emp, Home, YardFamily.Shipyard, "TIE Fighter", 1);
         w.Order(Emp, Home, YardFamily.Shipyard, "TIE Fighter", 1, Far); // replaces: only the second is built
         w.Run(40);

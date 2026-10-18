@@ -55,6 +55,23 @@ public sealed class EconObject
     public int Due { get; set; }
     /// <summary>A refinery waiting in its side's raw line.</summary>
     public bool InLine { get; set; }
+    // ---- the 1998 processing state (B5b §1-3). Omitted from the save while default.
+    /// <summary>
+    /// Mine or refinery: the side it is working for (WAITING or PROCESSING); null = IDLE (stopped: not completed, neutral system, or suspended by
+    /// a blockade or an uprising). A change of this value is a stop (cycle abandoned, no point) and, when active again, a restart on a startup
+    /// cycle. rule: m2-mines-refineries-pools §Blockade and uprising, §Side change (B5b §1, §3).
+    /// </summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public Side? WorkSide { get; set; }
+    /// <summary>The next cycle is a startup cycle (rand(0..d) + d / 2); set on every restart from IDLE, cleared when a cycle pays. rule: §First cycle (B5b §2).</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Startup { get; set; }
+    /// <summary>Mine or refinery: its dealt share of the side's load (0 to 50), dealt incrementally. rule: m2-mines-refineries-pools §Load share dealing (B5b §3).</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public int Share { get; set; }
+    /// <summary>Picked by the autoscrap while in transit: scrapped when it arrives. rule: m2-maintenance §Overdraft and autoscrap step 3 (B5b §6).</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool ScrapPending { get; set; }
     /// <summary>
     /// Display name of a capital ship ("Corellian Corvette 1"), given at setup; null = none (shown by class). Display only, never read by a rule.
     /// Omitted from the save while null, so saves and hashes of games that name nothing are unchanged. rule: m5-setup-and-victory §P7 Names (B4 §12).
@@ -76,7 +93,7 @@ public sealed class SidePool
 {
     public int Raw { get; set; }
     public int Refined { get; set; }
-    /// <summary>Hook time of the next autoscrap firing; 0 = not yet armed (first due at the scrap period).</summary>
+    /// <summary>Hook time of the next autoscrap firing; 0 = not armed (Armed timer: armed when an overdraft starts, B5b §6; FreeRunning: first due at the scrap period).</summary>
     public int ScrapDue { get; set; }
     /// <summary>Refineries waiting for raw, first in first out (facility ids).</summary>
     public List<int> RawLine { get; set; } = new();

@@ -9,6 +9,15 @@ public enum AutoscrapMode
     Smart = 1,
 }
 
+/// <summary>How the autoscrap timer runs. rule: m2-maintenance §Overdraft and autoscrap (B5b §6).</summary>
+public enum AutoscrapTimer
+{
+    /// <summary>DEFAULT, 1998 ([EXE-own] 0x5329f0): armed when an overdraft starts, first firing 10 days later, then every 10 days while over; dropped when it ends.</summary>
+    Armed = 0,
+    /// <summary>The rule before B5b: fires every 10 days from day 10 whatever happens.</summary>
+    FreeRunning = 1,
+}
+
 /// <summary>Where a new game's slot values come from. rule: m2-slots-and-resources §Rule (New) SlotSource.</summary>
 public enum SlotSource
 {

@@ -29,6 +29,22 @@ public sealed class Project
     public List<int> Units { get; set; } = new();
     /// <summary>Points of the current unit (one per finished yard cycle).</summary>
     public int Progress { get; set; }
+    /// <summary>
+    /// Later orders queued behind this one (a new order joins the queue instead of cancelling, B5b §7), first in first out; null = none. Omitted
+    /// from the save while null. rule: m2-construction §Projects and queues.
+    /// </summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public List<QueuedOrder>? Next { get; set; }
+
+    /// <summary>Every unfinished unit of the project: the current order's, then the queued orders'.</summary>
+    public IEnumerable<int> AllUnits() => Next == null ? Units : Units.Concat(Next.SelectMany(q => q.Units));
+}
+
+/// <summary>An order waiting behind a project's current one: its destination and units (object ids, in build order). rule: m2-construction §Projects and queues (B5b §7).</summary>
+public sealed class QueuedOrder
+{
+    public string Destination { get; set; } = "";
+    public List<int> Units { get; set; } = new();
 }
 
 /// <summary>

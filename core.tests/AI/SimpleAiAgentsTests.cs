@@ -54,7 +54,11 @@ public class SimpleAiAgentsTests
         // of B6a §2, which changes every battle and so the game; the old AI is still the one played (all switches above unchanged).
         // Reveal re-pin 2026-10-18 (AI trainer, Dev lead's ask): FogParams.SetupRevealsFacilities is now DEFAULT on (1998), so the day-0
         // pictures hold the core systems' facilities. With the reveal off the hash is exactly B3's 12fcdbf1...334b (checked when re-pinned).
-        Assert.Equal("64841358c8291a9634ca859582b9d34079ffa60956271d827feb849ae5c48bc9", h.StateHash());
+        // B5b re-pin 2026-10-18: production and upkeep follow the 1998 rules (batch B5b): build orders over the free upkeep are refused
+        // (NoUpkeep), blockades and uprisings stop mines and refineries and take them out of capacity, every restart draws a startup
+        // cycle, captured mines reset, shares are dealt incrementally (new saved fields WorkSide, Share, Startup), the autoscrap timer is
+        // armed at the overdraft and new orders queue behind. These are core rules the old AI cannot switch off, so the game takes another course.
+        Assert.Equal("edab04cbb63ef43f166c4d74dd573b202ad5b53f21897db879d60451b9dec500", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"
