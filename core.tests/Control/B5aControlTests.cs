@@ -52,6 +52,7 @@ internal sealed class DerivedWorld
     public DerivedWorld(ulong seed = 1, GameSettings? settings = null)
     {
         H = GameHost.New(seed, settings ?? Settings());
+        H.Construction.RefuseOverdrawOrders = false; // B5b 2026-10-18 (as CtlWorld): these worlds have no mines (capacity 0); control, not upkeep, is the subject
     }
 
     public static GameSettings Settings(ControlRule rule = ControlRule.Derived, DeathStarParams? ds = null) => new()
