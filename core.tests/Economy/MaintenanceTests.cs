@@ -66,6 +66,8 @@ public class MaintenanceTests
     [Fact]
     public void M7_QueuedShipsCountAtOnceButAreNotAutoscrappable()
     {
+        // B5b 2026-10-18: the autoscrap timer is armed when the overdraft is first seen (B5b §6, [EXE-own] 0x5329f0).
+        // These worlds are over from Day 0; the 6.7 hook first sees it at T = 1, so the first firing is T = 11 (was 10).
         var w = new EcoWorld();
         w.Hold(Home, Side.Empire);
         int a = w.Eco.AddObject(Side.Empire, "Imperial Star Destroyer"); // 71
@@ -73,7 +75,7 @@ public class MaintenanceTests
         Assert.Equal(100, w.Eco.Load(Side.Empire));
         for (int i = 0; i < 3; i++) w.Eco.AddObject(Side.Empire, "Imperial Star Destroyer", completed: false);
         Assert.Equal(313, w.Eco.Load(Side.Empire));
-        w.Run(10); // capacity 0: autoscrap fires at hook time 10 over the two completed objects only
+        w.Run(11); // capacity 0: autoscrap fires at hook time 11 over the two completed objects only
         var s = Assert.Single(Scraps(w));
         Assert.Contains(s.Object, new[] { a, b });
         Assert.Single(w.Stub!.Requests.Where(r => r.Max == 1));
@@ -113,24 +115,28 @@ public class MaintenanceTests
 
     // m2-maintenance M11
     [Fact]
-    public void M11_TimerFirstDueAtHookTimeTen()
+    public void M11_TimerFirstDueTenDaysAfterTheOverdraftIsSeen()
     {
+        // B5b 2026-10-18: the autoscrap timer is armed when the overdraft is first seen (B5b §6, [EXE-own] 0x5329f0).
+        // These worlds are over from Day 0; the 6.7 hook first sees it at T = 1, so the first firing is T = 11 (was 10).
         var w = FixtureE();
-        w.Run(9); // Steps 0 to 8
+        w.Run(10); // Steps 0 to 9
         Assert.Empty(Scraps(w));
         Assert.Equal(0, w.Stub!.Count(0, 14));
-        w.Run(1); // Step 9: K + 1 = 10
+        w.Run(1); // Step 10: K + 1 = 11
         Assert.Single(Scraps(w));
-        Assert.Equal(10, Scraps(w)[0].Day);
+        Assert.Equal(11, Scraps(w)[0].Day);
     }
 
     // m2-maintenance M12
     [Fact]
     public void M12_ClassicDrawZeroScrapsTheShipyard()
     {
+        // B5b 2026-10-18: the autoscrap timer is armed when the overdraft is first seen (B5b §6, [EXE-own] 0x5329f0).
+        // These worlds are over from Day 0; the 6.7 hook first sees it at T = 1, so the first firing is T = 11 (was 10).
         var w = FixtureE();
         w.Stub!.Expect(0, 14, 0);
-        w.Run(10);
+        w.Run(11);
         var s = Assert.Single(Scraps(w));
         Assert.Equal((100, 10, "Autoscrap"), (s.Object, s.Refund, s.Reason));
         Assert.Equal(344, w.Eco.Load(Side.Empire));
@@ -142,24 +148,28 @@ public class MaintenanceTests
     [Fact]
     public void M13_ClassicDrawFourteenScrapsTheLastRegimentAndTheTimerFiresAgain()
     {
+        // B5b 2026-10-18: the autoscrap timer is armed when the overdraft is first seen (B5b §6, [EXE-own] 0x5329f0).
+        // These worlds are over from Day 0; the 6.7 hook first sees it at T = 1, so the first firing is T = 11 (was 10).
         var w = FixtureE();
         w.Stub!.Expect(0, 14, 14);
-        w.Run(10);
+        w.Run(11);
         var s = Assert.Single(Scraps(w));
         Assert.Equal((114, 4), (s.Object, s.Refund));
         Assert.Equal(351, w.Eco.Load(Side.Empire)); // still over capacity 350 by 1
-        w.Run(10); // Step 19 (K + 1 = 20)
+        w.Run(10); // Step 20 (K + 1 = 21)
         Assert.Equal(2, Scraps(w).Count);
-        Assert.Equal(20, Scraps(w)[1].Day);
+        Assert.Equal(21, Scraps(w)[1].Day);
     }
 
     // m2-maintenance M14
     [Fact]
     public void M14_SmartScrapsRegimentsFirstCheapestLowestIdWithNoDraws()
     {
+        // B5b 2026-10-18: the autoscrap timer is armed when the overdraft is first seen (B5b §6, [EXE-own] 0x5329f0).
+        // These worlds are over from Day 0; the 6.7 hook first sees it at T = 1, so the first firing is T = 11 (was 10).
         var w = FixtureE();
         w.Eco.AutoscrapMode = AutoscrapMode.Smart;
-        w.Run(10);
+        w.Run(11);
         Assert.Equal(105, Assert.Single(Scraps(w)).Object);
         Assert.Equal(4, Scraps(w)[0].Refund);
         Assert.Equal(351, w.Eco.Load(Side.Empire));
@@ -173,6 +183,8 @@ public class MaintenanceTests
     [Fact]
     public void M15_SmartWithOnlyYardsWarnsThenScrapsTheCheapestYard()
     {
+        // B5b 2026-10-18: the autoscrap timer is armed when the overdraft is first seen (B5b §6, [EXE-own] 0x5329f0).
+        // These worlds are over from Day 0; the 6.7 hook first sees it at T = 1, so the first firing is T = 11 (was 10).
         var w = new EcoWorld();
         w.Hold(Home, Side.Empire);
         w.Mine(Home); w.Refinery(Home); // capacity 50
@@ -181,7 +193,7 @@ public class MaintenanceTests
         w.Eco.AddFacility(Home, FacilityKind.AdvancedShipyard, id: 12);
         w.Eco.AddFacility(Home, FacilityKind.ConstructionYard, id: 13); // load 13 + 13 + 20 + 10 = 56
         w.Eco.AutoscrapMode = AutoscrapMode.Smart;
-        w.Run(10);
+        w.Run(11);
         var kinds = w.Game.Events.Where(e => e is AutoscrapWarning or ObjectScrapped).Select(e => e.Kind).ToArray();
         Assert.Equal(new[] { "AutoscrapWarning", "ObjectScrapped" }, kinds);
         Assert.Equal(13, Scraps(w)[0].Object); // cost 10 beats cost 20
@@ -257,11 +269,13 @@ public class MaintenanceTests
     [Fact]
     public void M20_AllianceFiresBeforeEmpireOnTheSameDay()
     {
+        // B5b 2026-10-18: the autoscrap timer is armed when the overdraft is first seen (B5b §6, [EXE-own] 0x5329f0).
+        // These worlds are over from Day 0; the 6.7 hook first sees it at T = 1, so the first firing is T = 11 (was 10).
         var w = FixtureE();
         w.Hold("Sullust", Side.Alliance);
         w.Mine("Sullust"); w.Refinery("Sullust");
         for (int i = 0; i < 3; i++) w.Eco.AddObject(Side.Alliance, "Mon Calamari Cruiser"); // 210 over capacity 50
-        w.Run(10);
+        w.Run(11);
         Assert.Equal(new[] { Side.Alliance, Side.Empire }, Scraps(w).Select(s => s.Side).ToArray());
         int a = w.Stub!.Requests.IndexOf((0, 2)), e = w.Stub.Requests.IndexOf((0, 14));
         Assert.True(a >= 0 && e > a);
@@ -271,11 +285,13 @@ public class MaintenanceTests
     [Fact]
     public void M21_OnlyCompletedObjectsAreEligible()
     {
+        // B5b 2026-10-18: the autoscrap timer is armed when the overdraft is first seen (B5b §6, [EXE-own] 0x5329f0).
+        // These worlds are over from Day 0; the 6.7 hook first sees it at T = 1, so the first firing is T = 11 (was 10).
         var w = new EcoWorld();
         w.Hold(Home, Side.Empire);
         int done = w.Eco.AddObject(Side.Empire, "Stormtrooper Regiment");
         w.Eco.AddObject(Side.Empire, "Stormtrooper Regiment", completed: false);
-        w.Run(10);
+        w.Run(11);
         Assert.Equal(done, Assert.Single(Scraps(w)).Object);
         Assert.Equal(1, w.Stub!.Count(0, 0)); // list of one
     }

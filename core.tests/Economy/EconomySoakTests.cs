@@ -61,9 +61,13 @@ public class EconomySoakTests
         Run(3, false, 1000, out var d);
         var ev = d.Game.Events;
         long firstCycles = d.Economy.Objects.Count(o => o.FirstDone);
+        // B5b 2026-10-18: every restart from IDLE is a startup cycle with one draw (B5b §2), not only the first one; the StartupCycle
+        // events count them (first starts included).
+        long startups = ev.OfType<StartupCycle>().Count();
+        Assert.True(startups >= firstCycles);
         long smuggleRolls = ev.OfType<ResourceProduced>().Count(e => e.SmugglePercent > 0);
         long picks = ev.OfType<ObjectScrapped>().Count(e => e.Reason == "Autoscrap");
-        Assert.Equal(firstCycles + smuggleRolls + picks, d.Game.Rng.Draws);
+        Assert.Equal(startups + smuggleRolls + picks, d.Game.Rng.Draws);
         Assert.True(smuggleRolls > 0, "the demo has low-support systems, so smuggling rolls happen");
         Assert.True(picks > 0, "the Empire starts over capacity");
         Assert.Contains(ev, e => e is FleetArrived);

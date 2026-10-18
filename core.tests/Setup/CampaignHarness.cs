@@ -102,7 +102,8 @@ internal static class CampaignInvariants
                 if (eco.OwnerOf(o) != side) continue;
                 owned++;
                 load += eco.Costs.Get(o.Class).Maintenance;
-                if (o.Completed && o.Category == ObjectCategory.Facility)
+                // B5b 2026-10-18: a suspended mine or refinery (blockade, uprising) leaves the capacity sums (m2-maintenance §Capacity, SuspendedLeaveCapacity on)
+                if (o.Completed && o.Category == ObjectCategory.Facility && !(eco.SuspendedLeaveCapacity && eco.IsSuspended(o)))
                 {
                     if (o.Class == "Mine") mines++; else if (o.Class == "Refinery") refs++;
                 }

@@ -18,6 +18,16 @@ public sealed record ResourceProduced(int Index, int Day, int Facility, string S
 public sealed record RefineryWaiting(int Index, int Day, int Facility, string System, Side Side)
     : GameEvent(Index, Day, nameof(RefineryWaiting));
 
+/// <summary>Slot 6.5. A mine or refinery stopped (IDLE): its running cycle, if any, was abandoned with no point. Reason is "Suspended"
+/// (blockade or uprising on its system) or "Released" (its system changed hands or has no holder). rule: B5b §3 (0x50bbb0, 0x55b010).</summary>
+public sealed record FacilityStopped(int Index, int Day, int Facility, string System, Side Side, string Reason)
+    : GameEvent(Index, Day, nameof(FacilityStopped));
+
+/// <summary>Slot 6.5. A mine or refinery started a startup cycle (first start or restart from IDLE) of Days days; one draw each.
+/// rule: B5b §2 (0x53b1d0).</summary>
+public sealed record StartupCycle(int Index, int Day, int Facility, string System, Side Side, int Days)
+    : GameEvent(Index, Day, nameof(StartupCycle));
+
 /// <summary>rule: m2-slots-and-resources §Over-capacity destruction. Fields: facility, system, reason.</summary>
 public sealed record FacilityDestroyed(int Index, int Day, int Facility, string System, DestroyReason Reason)
     : GameEvent(Index, Day, nameof(FacilityDestroyed));
