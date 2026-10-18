@@ -28,7 +28,7 @@ public class SimpleAiOpponentTests
 
     private static int Captures(GameHost h, Side to) => h.Game.Events.OfType<SystemCaptured>().Count(e => e.To == to);
 
-    private (int Day, int Captures365, int Captures) PlayPassive(int seed, Side ai, int maxDays)
+    private static (int Seed, Side? Winner, int Day, int Captures365, int Captures, int Sent, int Rejected) PlayPassive(int seed, Side ai, int maxDays)
     {
         var (m, host) = NewMatch(seed, ai == Side.Empire ? Side.Alliance : Side.Empire);
         int at365 = -1;
@@ -38,34 +38,44 @@ public class SimpleAiOpponentTests
             if (host.Game.Day == 365) at365 = Captures(host, ai);
         }
         if (at365 < 0) at365 = Captures(host, ai); // the game ended before day 365
-        int total = Captures(host, ai);
-        _out.WriteLine($"{ai} AI vs passive: winner {host.Victory.Winner} on day {host.Game.Day}; captures by day 365 {at365}, total {total}; reason {host.Victory.Reason}; orders {m.TotalSent}, rejected {m.TotalRejected}");
-        Assert.True(m.TotalRejected * 20 <= m.TotalSent, $"{m.TotalRejected} of {m.TotalSent} orders rejected");
-        Assert.Equal(ai, host.Victory.Winner);
-        return (host.Game.Day, at365, total);
+        return (seed, host.Victory.Winner, host.Game.Day, at365, Captures(host, ai), m.TotalSent, m.TotalRejected);
     }
 
+    private void Report(Side ai, IEnumerable<(int Seed, Side? Winner, int Day, int Captures365, int Captures, int Sent, int Rejected)> games)
+    {
+        foreach (var g in games)
+        {
+            _out.WriteLine($"seed {g.Seed}: {ai} AI vs passive: winner {g.Winner} on day {g.Day}; captures by day 365 {g.Captures365}, total {g.Captures}; orders {g.Sent}, rejected {g.Rejected}");
+            Assert.True(g.Rejected * 20 <= g.Sent, $"seed {g.Seed}: {g.Rejected} of {g.Sent} orders rejected");
+        }
+    }
+
+    // Over seeds 1 to 8 (MultiSeed), the day the Empire AI takes the Rebel HQ (no fog: it knows where the HQ is):
+    //   8a378a8 (pre-B2e): 271, 262, 256, 271, 271, 235, 235, 235;  9ec544f (B2e): 262, 271, 256, 256, 262, 271, 262, 262
+    // Floor: the Empire wins by day 400 on at least 7 of 8. Replaces (AI trainer, 2026-10-18, the Dev lead's ask) the seed-1 limit of 700.
     [Fact]
     public void EmpireAi_AgainstPassiveAlliance_WinsByTakingTheRebelHq()
     {
-        var (day, c365, total) = PlayPassive(1, Side.Empire, 1000);
-        Assert.True(day <= 700, $"won only on day {day}");
-        Assert.True(total >= 1);
+        var games = MultiSeed.Play(MultiSeed.OneToEight, s => PlayPassive(s, Side.Empire, 400));
+        Report(Side.Empire, games);
+        Assert.True(games.Count(g => g.Winner == Side.Empire) >= 7, $"the Empire won by day 400 on only {games.Count(g => g.Winner == Side.Empire)} of 8 seeds");
     }
 
+    // Over seeds 1 to 8 (MultiSeed), the day the Alliance AI takes Coruscant, and its captures by day 365:
+    //   8a378a8 (pre-B2e): 1323, 1098, 1320, 1101, 1749, 1503, 1050, 1422;  captures 16 to 20
+    //   9ec544f (B2e):     1191, 1056, 1530, 1320,  528,  972,  639,  966;  captures 16 to 18
+    // Floor: the Alliance wins by day 1600 on at least 6 of 8 (7 and 8 measured), with at least 12 captures by day 365 on at least 7 of 8
+    // (8 and 8 measured). Replaces (AI trainer, 2026-10-18, the Dev lead's ask) the seed-1 limit, re-pinned from 850 to 1350 in four
+    // steps (v5, B2b, B2d) as each batch sent the one game another way. Earlier measurements on seed 1: day 783 without characters and
+    // missions, 813 with them (SimpleAiParams.UseCharactersAndMissions), 795 since the AI stops hunting fleets that only retreat
+    // (SimpleAiParams.RunnerRetreats, SimpleAiChaseTests), all on the 360-system map.
     [Fact]
     public void AllianceAi_AgainstPassiveEmpire_MakesSteadyProgress_AndWinsByTakingCoruscant()
     {
-        var (day, c365, total) = PlayPassive(1, Side.Alliance, 1350);
-        Assert.True(c365 >= 8, $"only {c365} captures by day 365");
-        // measured: day 783 without characters and missions, 813 with them (SimpleAiParams.UseCharactersAndMissions, DEFAULT on: the game
-        // takes another course; about 50 days of it a strike pile chased two Imperial ships that retreat between Basilisk and Kirrek), 795 since
-        // the AI stops hunting fleets that only retreat (SimpleAiParams.RunnerRetreats, SimpleAiChaseTests)
-        // // v5 re-pin 2026-10-16 (Paul chose re-pin on the map PR; the AI trainer owns restoring the old target): measured day 1062 on v5 (16 captures by day 365), limit 850 -> 1200
-        // B2b re-pin 2026-10-17 (needs Paul's or the AI trainer's sign-off): the betrayal draws shift the game generator; measured day 1287. Limit 1200 -> 1300.
-        // B2d re-pin 2026-10-17 (needs Paul's or the AI trainer's sign-off): the guard checks at the four points and the escape duels; measured day 1323
-        // (16 captures by day 365). Limit 1300 -> 1350.
-        Assert.True(day <= 1350, $"won only on day {day}");
+        var games = MultiSeed.Play(MultiSeed.OneToEight, s => PlayPassive(s, Side.Alliance, 1600));
+        Report(Side.Alliance, games);
+        Assert.True(games.Count(g => g.Winner == Side.Alliance) >= 6, $"the Alliance won by day 1600 on only {games.Count(g => g.Winner == Side.Alliance)} of 8 seeds");
+        Assert.True(games.Count(g => g.Captures365 >= 12) >= 7, $"12 captures by day 365 on only {games.Count(g => g.Captures365 >= 12)} of 8 seeds");
     }
 
     [Fact]
@@ -77,27 +87,36 @@ public class SimpleAiOpponentTests
         Assert.Contains(m.Sent.Keys, k => k.StartsWith("Alliance ", StringComparison.Ordinal));
     }
 
+    // Over seeds 1 to 8 (MultiSeed), battles by day 700 (the Empire knows the Rebel HQ, so most games end by day 250 to 560):
+    //   8a378a8 (pre-B2e): 1, 5, 1, 4, 2, 3, 4, 3 (23);  9ec544f (B2e): 8, 4, 4, 4, 2, 2, 3, 3 (30)
+    // Floor: at least 16 battles in all, and at least 2 on at least 5 of 8 seeds (6 and 8 measured). On every seed, at most 60 side-days
+    // over the upkeep capacity (0 measured everywhere: the AI keeps clear of the autoscrap by scrapping its own least useful items) and at
+    // most 1 order in 20 rejected. Replaces (AI trainer, 2026-10-18, the Dev lead's ask) the one-seed floor of 3 battles (seed 5, then 1,
+    // then 2 as B2b and B2d moved the games).
     [Fact]
     public void AiVsAi_FleetsFight_AndNeitherSideGoesOverCapacityForLong()
     {
-        // seed 5 was the game where the fleets meet most; the AI keeps clear of the autoscrap by scrapping its own least useful items.
-        // B2b re-pin 2026-10-17 (needs Paul's or the AI trainer's sign-off): the betrayal draws shift the game generator; battles by day 700 on
-        // seeds 1 to 8 are now 5, 4, 4, 5, 2, 4, 3, 2, so seed 1 (the first with the most).
-        // B2d re-pin 2026-10-17 (needs Paul's or the AI trainer's sign-off): battles by day 700 on seeds 1 to 8 now 1, 5, 1, 4, 2, 3, 4, 3, so seed 2.
-        var (m, host) = NewMatch(2, null);
-        int overDays = 0;
-        while (host.Game.Day < 700 && host.Victory.Winner == null)
+        var games = MultiSeed.Play(MultiSeed.OneToEight, seed =>
         {
-            m.Step();
-            foreach (var s in new[] { Side.Empire, Side.Alliance }) if (host.Economy.Free(s) < 0) overDays++;
+            var (m, host) = NewMatch(seed, null);
+            int overDays = 0;
+            while (host.Game.Day < 700 && host.Victory.Winner == null)
+            {
+                m.Step();
+                foreach (var s in new[] { Side.Empire, Side.Alliance }) if (host.Economy.Free(s) < 0) overDays++;
+            }
+            var ev = host.Game.Events;
+            int autoscrap = ev.OfType<ObjectScrapped>().Count(e => e.Reason == "Autoscrap");
+            return (Seed: seed, host.Game.Day, Battles: ev.OfType<BattleEnded>().Count(), Autoscrap: autoscrap, OverDays: overDays, m.TotalSent, m.TotalRejected);
+        });
+        foreach (var g in games) _out.WriteLine($"seed {g.Seed}: day {g.Day}, battles {g.Battles}, autoscraps {g.Autoscrap}, days over capacity {g.OverDays}, rejected {g.TotalRejected} of {g.TotalSent}");
+        Assert.True(games.Sum(g => g.Battles) >= 16, $"only {games.Sum(g => g.Battles)} battles over 8 seeds");
+        Assert.True(games.Count(g => g.Battles >= 2) >= 5, $"2 battles or more on only {games.Count(g => g.Battles >= 2)} of 8 seeds");
+        foreach (var g in games)
+        {
+            Assert.True(g.OverDays <= 60, $"seed {g.Seed}: {g.OverDays} side-days over the upkeep capacity");
+            Assert.True(g.TotalRejected * 20 <= g.TotalSent, $"seed {g.Seed}: {g.TotalRejected} of {g.TotalSent} orders rejected");
         }
-        var ev = host.Game.Events;
-        int battles = ev.OfType<BattleEnded>().Count();
-        int autoscrap = ev.OfType<ObjectScrapped>().Count(e => e.Reason == "Autoscrap");
-        _out.WriteLine($"day {host.Game.Day}, battles {battles}, autoscraps {autoscrap}, days over capacity {overDays}, rejected {m.TotalRejected} of {m.TotalSent}");
-        Assert.True(battles >= 3, $"only {battles} battles");
-        Assert.True(overDays <= 60, $"{overDays} side-days over the upkeep capacity");
-        Assert.True(m.TotalRejected * 20 <= m.TotalSent);
     }
 
     [Fact]
