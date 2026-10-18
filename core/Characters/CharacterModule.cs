@@ -728,25 +728,7 @@ public sealed class CharacterModule
     /// system; ties by system index, which is name order); the start itself never counts. Null if the side holds no reachable system.
     /// rule: m5-death-star §2 effect 3 (nearest system its side holds, fewest lane steps, ties by system id).
     /// </summary>
-    private string? NearestHeldSystem(string from, Side side)
-    {
-        var g = _fleets.Galaxy;
-        if (!g.TryFindSystem(from, out int start)) return null;
-        var seen = new bool[g.Systems.Count];
-        var level = new List<int> { start };
-        seen[start] = true;
-        while (level.Count > 0)
-        {
-            var held = level.Where(i => i != start && State.SystemOwners.TryGetValue(g.Systems[i].Name, out var o) && o == side).ToList();
-            if (held.Count > 0) return g.Systems[held.Min()].Name;
-            var next = new List<int>();
-            foreach (var i in level)
-                foreach (var nb in g.NearOf(i))
-                    if (!seen[nb]) { seen[nb] = true; next.Add(nb); }
-            level = next;
-        }
-        return null;
-    }
+    private string? NearestHeldSystem(string from, Side side) => _fleets.NearestHeldSystem(from, side);
 
     /// <summary>
     /// Uprising incident effects (m2-uprisings-and-garrison, slot 6.3): code 3 = Injure one of the holder's Free characters located at the system
@@ -804,6 +786,22 @@ public sealed class CharacterModule
         foreach (var c in S.Characters.Values.Where(c => c.Status == CharacterStatus.Captured && c.HeldAt == system && c.Captor != owner
             && !IsOnMission(c.Id)).ToList())
             Free(ctx, c, CharacterCause.Liberation);
+    }
+
+    /// <summary>
+    /// The characters at a world that changed hands, inside the flip (B5a section 5, handler <c>0x4ef260</c>, in id order as the stand-in for child
+    /// order): every prisoner held there, not on a mission, whose captor is not the new holder is freed (<see cref="Liberate"/>, cause Liberation);
+    /// then every character standing there (not riding a fleet, not travelling, not dead, not on a mission) who is not of the new holder leaves,
+    /// never captured and never harmed, by <see cref="Autoroute"/> (B2e §3's seven steps, QA-9; a freed prisoner is already autorouted by Free).
+    /// The old General's post is cleared afterwards by <see cref="OnHolderChanged"/> (whose own
+    /// Liberate call then finds nobody left to free).
+    /// ControlModule.CharactersAtCapture calls it. rule: m2-control-and-capture §What happens at the moment of capture (B5a, 2026-10-17).
+    /// </summary>
+    public void OnCapture(StepContext ctx, string system, Side? old, Side? holder)
+    {
+        Liberate(ctx, system); // B2e's liberation, at the flip (the world's holder is already the new one; also when it went neutral)
+        var leaving = S.Characters.Values.Where(c => c.Placed && c.Side != holder && c.System == system).ToList(); // id order
+        foreach (var c in leaving) Autoroute(ctx, c); // B2e §3 / QA-9: Autoroute keeps its own tests (free or injured, no fleet, not travelling, no mission)
     }
 
     // ================================================================== Force (§Force)

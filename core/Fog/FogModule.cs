@@ -28,6 +28,10 @@ public sealed record KnownHqInfo(string System, int Stamp);
 public sealed class FogModule
 {
     public const string CauseCaptured = "Captured";
+    /// <summary>The HQ world turned from the Alliance on support alone, no troops there (B5a; QA-11, 2026-10-18).</summary>
+    public const string CauseLostSupport = "LostSupport";
+    /// <summary>The HQ world's last Alliance regiment left or died and support handed the world over (B5a; QA-11, 2026-10-18).</summary>
+    public const string CauseTroopsLeft = "TroopsLeft";
     public const string CauseDestinationLost = "DestinationLost";
     public const string CauseSystemDestroyed = "SystemDestroyed";
 
@@ -410,7 +414,7 @@ public sealed class FogModule
     private void OnHolderChanged(CaptureInfo info)
     {
         if (info.Old is Side loser) Write(info.Ctx, new Truth(this), loser, info.System, RevealKind.LossNotice, info.Ctx.Day + 1);
-        if (HqAt(info.System) && info.New != Side.Alliance)
+        if (HqAt(info.System) && info.New != Side.Alliance) // the Empire took it, or it went neutral (B5a section 5: the HQ cannot serve side 3)
         {
             bool lost = HqRules.LostOnHolderChange switch
             {
@@ -418,7 +422,9 @@ public sealed class FogModule
                 HqLostOnHolderChange.AssaultOnly => info.Cause == CaptureCause.Assault,
                 _ => false,
             };
-            if (lost) DestroyHq(info.Ctx, CauseCaptured, info.System);
+            // the cause names how the world was lost (QA-11): by support alone, by its last troops leaving, else captured (assault, debug, Death Star revolt)
+            string cause = info.Cause switch { CaptureCause.Support => CauseLostSupport, CaptureCause.TroopsLeft => CauseTroopsLeft, _ => CauseCaptured };
+            if (lost) DestroyHq(info.Ctx, cause, info.System);
         }
     }
 
@@ -681,7 +687,7 @@ public sealed class FogModule
             case HqSectorClueGiven x: return Bit(x.Viewer);
             case AgentDetected x: return Bit(x.Viewer);
             case OrderAccepted or OrderRejected: return order != null ? Bit(order.Side) : Both;
-            case SystemCaptured c: return (c.From is Side f ? Bit(f) : 0) | Bit(c.To) | LiveMask(c.System);
+            case SystemCaptured c: return (c.From is Side f ? Bit(f) : 0) | (c.To is Side t ? Bit(t) : 0) | LiveMask(c.System);
             case BattleEnded: return Both; // a battle needs both sides there: both took part
         }
         var acc = Accessors.Get(e.GetType());

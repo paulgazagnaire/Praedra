@@ -36,7 +36,7 @@ public class SimpleAiAgentsTests
         Assert.True(new SimpleAiParams().UseCharactersAndMissions);
         var (m, h) = Match(1, new SimpleAiParams { UseFog = true, UseCharactersAndMissions = false,
             RunnerRetreats = 0, RetreatCountsAsLoss = false, AvoidBlockedPaths = false, WinRushDefenders = -1, ShelledLandingNeed = false,
-            FogAvoidEnemyStops = false, SplitHomeSurplus = false, DetourToHeldStop = false, InvasionBatchesOnly = false, ExplorerScouts = 0, FogGroundForgetDays = 0, LeaderMarks = false });
+            FogAvoidEnemyStops = false, SplitHomeSurplus = false, DetourToHeldStop = false, InvasionBatchesOnly = false, ExplorerScouts = 0, FogGroundForgetDays = 0, LeaderMarks = false, OriginalGarrisonFloor = false });
         m.RunTo(1000);
         Assert.DoesNotContain(m.Sent.Keys, k => k.Contains("Mission", StringComparison.Ordinal) || k.Contains("Character", StringComparison.Ordinal) || k.Contains("General", StringComparison.Ordinal));
         // The pin moved when the Death Star added saved state (m5-death-star: GameState.DeathStar, SystemKnowledge.Destroyed). The game plays identically:
@@ -59,7 +59,16 @@ public class SimpleAiAgentsTests
         // (NoUpkeep), blockades and uprisings stop mines and refineries and take them out of capacity, every restart draws a startup
         // cycle, captured mines reset, shares are dealt incrementally (new saved fields WorkSide, Share, Startup), the autoscrap timer is
         // armed at the overdraft and new orders queue behind. These are core rules the old AI cannot switch off, so the game takes another course.
-        Assert.Equal("edab04cbb63ef43f166c4d74dd573b202ad5b53f21897db879d60451b9dec500", h.StateHash());
+        // B5a re-pin 2026-10-17: derived control (ControlRule.Derived, the DEFAULT; the old AI cannot switch it off) recomputes every holder after
+        // setup, lets worlds go neutral or join a side by support, hands a world over when its last regiment leaves, runs the sector steps, frees
+        // and sends away characters at each flip, and adds saved state (ControlState.Contested, EverHeld): the game takes another course from
+        // setup. Seed 1, 1000 days, as before (no seed change); re-measured on top of B3. The B6b garrison floor (OriginalGarrisonFloor) is off above
+        // with the other AI switches; its off path keeps the B5a last-regiment guard (the hash is unchanged by that switch and by the squadrons
+        // leaving a flipped world, checked 2026-10-18). Re-measured on top of B5b (main 682cd31), 2026-10-18.
+        // AssaultOnly re-pin 2026-10-18 (Dev lead): ControlRule is DEFAULT AssaultOnly until the AI copes with Derived (QA 16-seed: 0/16 Empire
+        // wins), so this game no longer runs derived control (the Derived hash was 78d21c94...d3ec). It still differs from main's edab04cb...c500
+        // (the branch adds saved state, ControlState, and changes that run under both rules; not separated). Seed 1, 1000 days, on main 5437780 merged.
+        Assert.Equal("1e675764e86b4e0a3fcd7021da3d63e7765042e4ed8f9ffbca4c573c0f04ba62", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"

@@ -94,6 +94,11 @@ public static class NewGame
             foreach (var (side, cls, count) in forces.HqUnits)
                 for (int i = 0; i < count; i++) eco.AddObject(side, cls, hqSys);
 
+        // The full control refresh at the end of the deal (1998 setup stage 0x17): every holder is worked out from its regiments and support. The
+        // garrisons above keep every held world held, and neutral support stays between 41 and 59, so nothing changes (B5a-14).
+        // rule: m2-control-and-capture §How control changes (B5a section 9, Setup)
+        host.Control.SetupNewGame();
+
         // P9 starting characters, after the forces and before the economy timers and the research arming (P10): the roster's creation draws,
         // then Palpatine at Coruscant, Vader and the officers at random Empire locations, the Empire extras, Mon Mothma at the HQ, the Yavin six,
         // the Alliance extras. rule: m5-setup-and-victory §P9; m5-characters-and-force §Rolling the stats.

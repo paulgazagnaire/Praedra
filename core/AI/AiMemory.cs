@@ -108,7 +108,7 @@ public sealed class AiMemory
             {
                 BattleStarted bs => Remember(bs),
                 BattleEnded be => BattleNote(be, armedCapital),
-                SystemCaptured c when c.From == Side && c.To == enemy => new AiNote { Kind = AiNoteKind.SystemLost, System = c.System },
+                SystemCaptured c when c.From == Side && c.To != Side => new AiNote { Kind = AiNoteKind.SystemLost, System = c.System }, // to the enemy or to neutral (B5a)
                 BombardmentResolved b => new AiNote { Kind = AiNoteKind.Bombardment, System = b.System, Value = b.Regiments },
                 MissionEnded me when me.Side == Side && me.Outcome == MissionOutcome.Foiled && me.MissionKind is MissionKind.Espionage or MissionKind.Reconnaissance
                     => new AiNote { Kind = AiNoteKind.LookFoiled, System = me.Target },

@@ -454,12 +454,15 @@ public sealed class EconomyModule
         if (refund > 0) RefinedPoolGrew?.Invoke(ctx, side);
     }
 
-    // rule: m2-construction §Scrapping (ScrapObject, step 1): any completed installed object of the side
+    // rule: m2-construction §Scrapping (ScrapObject, step 1): any completed installed object of the side, except the ones 1998 answers code 23
+    // ("cannot be scrapped": the Rebel HQ, characters and special forces; the HQ and characters are not registry objects here, so they are
+    // UnknownObject). No check reads blockade, uprising or who holds the system (B5a section 8, handler 0x579860).
     private OrderResult HandleScrap(StepContext ctx, ScrapObjectOrder o)
     {
         if (!E.Objects.TryGetValue(o.ObjectId, out var obj)) return OrderResult.Reject(RejectReason.UnknownObject);
         if (OwnerOf(obj) != o.Side) return OrderResult.Reject(RejectReason.NotYours);
         if (!obj.Completed) return OrderResult.Reject(RejectReason.NotCompleted);
+        if (obj.Category == ObjectCategory.SpecialForce) return OrderResult.Reject(RejectReason.CannotScrap); // B5a decision 3: refused in both rulesets
         Scrap(ctx, ctx.Day, obj, o.Side, "Order");
         return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
     }

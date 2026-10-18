@@ -165,6 +165,9 @@ public class B2eCharacterTests
     {
         var w = new CharWorld();
         w.Hold(Hoth, Side.Empire);
+        // (B5a, 2026-10-17) under derived control an unguarded world at Alliance support 50 is neutral: the first support change there (day 31)
+        // would turn Hoth neutral and free Han (Liberation). At Alliance support 0 the Empire holds it by support for the whole test.
+        w.Host.Economy.SetAllianceSupport(Hoth, 0);
         var han = Skills(w.Add(Han, Hoth), esp: 0, com: 0);
         w.Stub!.Expect(0, 1000, 400);
         int d = w.Game.Day;

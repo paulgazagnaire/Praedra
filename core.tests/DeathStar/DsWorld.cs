@@ -41,11 +41,12 @@ internal sealed class DsWorld
     public Rebellion.Core.DeathStar.DeathStarModule Ds => Host.DeathStar;
     private readonly GameSettings _settings;
 
-    public DsWorld(DeathStarParams? ds = null, CharacterParams? ch = null, ulong? seed = null, GameSettings? settings = null)
+    public DsWorld(DeathStarParams? ds = null, CharacterParams? ch = null, ulong? seed = null, GameSettings? settings = null, Rebellion.Core.Control.ControlRule? rule = null)
     {
         // B5b 2026-10-18: RefuseOverdrawOrders off for the same reason autoscrap is out of reach: the small map has no mines (capacity 0).
         _settings = (settings ?? new GameSettings { IncidentsEnabled = false, DebugOrdersEnabled = true, Economy = new EconomyParams { ScrapPeriod = 1_000_000 }, RefuseOverdrawOrders = false })
             with { DeathStar = ds, Characters = ch };
+        if (rule is { } r) _settings = _settings with { ControlRule = r }; // B5a tests set Derived explicitly (DEFAULT AssaultOnly, 2026-10-18)
         if (seed is ulong s) Host = GameHost.New(s, _settings, Data);
         else { Stub = new StubRng(); Host = GameHost.New(Stub, _settings, Data); }
     }

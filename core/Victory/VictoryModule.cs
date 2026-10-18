@@ -99,7 +99,13 @@ public sealed class VictoryModule
         var hq = S.Hq;
         if (!keysE) { }
         else if (Rules.EmpireWinsOnHqLost && hq.Status == Fog.HqStatus.Destroyed)
-            empireReason = hq.DestroyedCause == Fog.FogModule.CauseCaptured ? $"Empire captured the Rebel HQ at {hq.System}" : $"The Rebel HQ was destroyed at {hq.System} ({hq.DestroyedCause})";
+            empireReason = hq.DestroyedCause switch
+            {
+                Fog.FogModule.CauseCaptured => $"Empire captured the Rebel HQ at {hq.System}",
+                Fog.FogModule.CauseLostSupport => $"The Rebel HQ fell at {hq.System}: the people turned from the Alliance", // QA-11 (B5a)
+                Fog.FogModule.CauseTroopsLeft => $"The Rebel HQ fell at {hq.System}: its last Alliance troops were gone", // QA-11 (B5a)
+                _ => $"The Rebel HQ was destroyed at {hq.System} ({hq.DestroyedCause})",
+            };
         else if (Rules.EmpireWinsOnHqLost && hq.Status == Fog.HqStatus.AtRest && hq.System != null && !Holds(hq.System, Side.Alliance))
             empireReason = $"Empire captured the Rebel HQ at {hq.System}";
         if (empireReason == null && Rules.EmpireWinsWhenAllianceHasNoSystems && !owners.Values.Any(v => v == Side.Alliance)) empireReason = "Alliance holds no system";

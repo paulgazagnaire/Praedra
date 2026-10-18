@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Rebellion.Core.Clock;
 using Rebellion.Core.Construction;
+using Rebellion.Core.Control;
 using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
 using Rebellion.Core.Setup;
@@ -258,6 +259,33 @@ internal static class CampaignInvariants
                 Assert.True(state.Support.Systems.TryGetValue(sys, out var s) && s.PresenceDue != 0, $"{where}: blockade on {sys} but no presence timer");
 
         // ---- control only moves by capture: the two regions plus the captured system stay owned (no neutral appears from nowhere)
-        if (fixedRegions && !state.Scenario.Active) Assert.Equal(34, state.SystemOwners.Count); // the test campaign only; a new game (m5) deals 362, and AI games move owners
+        if (host.Control.Rule == ControlRule.AssaultOnly)
+        {
+            if (fixedRegions && !state.Scenario.Active) Assert.Equal(34, state.SystemOwners.Count); // the test campaign only; a new game (m5) deals 362, and AI games move owners
+        }
+        else
+        {
+            // (B5a, 2026-10-17) under derived control (the DEFAULT) a world does go neutral without a capture (its last regiment dies and its support
+            // is 41..59), so the count above encodes the old rule. In its place, in every game: at the end of each Step every world's holder is the
+            // one the derivation gives. One side's standing regiments only: that side; none: the support band (Alliance at 60 and over, Empire at 40
+            // and under, else neutral; unpopulated: neutral); both: one of the two (the previous military side). rule: m2-control-and-capture
+            // §Who holds a system (B5a section 1)
+            var standing = new Dictionary<string, (bool A, bool E)>(StringComparer.Ordinal);
+            foreach (var o in eco.Objects)
+                if (o.Category == ObjectCategory.Regiment && o.Completed && o.AboardShip == 0 && o.System is { } at && o.Side is Side rs)
+                {
+                    var was = standing.GetValueOrDefault(at);
+                    standing[at] = rs == Side.Alliance ? (true, was.E) : (was.A, true);
+                }
+            foreach (var star in galaxy.Systems)
+            {
+                if (eco.IsDestroyed(star.Name)) continue;
+                var (a, e) = standing.GetValueOrDefault(star.Name);
+                Side? holder = host.Control.HolderOf(star.Name);
+                Side? want = a && e ? holder : a ? Side.Alliance : e ? Side.Empire : host.Control.SupportSide(star.Name);
+                Assert.True(want == holder, $"{where}: {star.Name} held by {holder?.ToString() ?? "nobody"}, derived {want?.ToString() ?? "nobody"}");
+                if (a && e) Assert.NotNull(holder);
+            }
+        }
     }
 }

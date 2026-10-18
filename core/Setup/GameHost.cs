@@ -22,18 +22,19 @@ namespace Rebellion.Core.Setup;
 ///   4. ConstructionModule (3, 4 after the fleets; 6.6; serves the refined line from the economy's event; yards stop in an uprising from support;
 ///      its UnitAppeared event is wired to <see cref="FleetModule.OnUnitAppeared"/>: new ships join the spare fleet)
 ///   5. TroopModule     (step 1 load and unload orders; reads fleets; the construction event also announces regiments and special forces)
-///   6. ControlModule    (capture; calls support and construction)
+///   6. ControlModule    (derived control: recomputed after every support change and every change in the regiments standing on a system; the flip
+///      and its sector step; calls support and construction; B5a)
 ///   7. DefenseModule, BombardmentModule (defense queries; the Bombard order and slot 5.1; reads fleets, economy and support, calls support's ChangeSupport)
 ///   7b. DeathStarModule (the Destroy System order and slot 5.1 after the bombardment's hook, the sector flag at 5.6, the one-per-system build cap, the
 ///      DeathStarDeployed notice; reads fleets, economy, support, control, construction and defenses; its character, mission and fog hooks are wired
 ///      once those modules exist). rule: m5-death-star
-///   8. AssaultModule (the Assault order and slot 5.2; reads troops, defenses and bombardment, calls control's SetHolder)
+///   8. AssaultModule (the Assault order and slot 5.2; reads troops, defenses and bombardment; the landing makes control's recompute flip the world)
 ///   9. BattleModule (slot 5), RepairModule (slot 6.8)
 ///  10. FogModule (MoveHq; slot 2 after the fleet departures, slot 3 HQ arrival after the fleet arrivals and deliveries, 3.1 sightings, 5.4 live
 ///      refresh, 6.8 log pruning after repair; listens to control's HolderChanged; sets the game's event audience). rule: m5-fog-and-hq §F8
 ///  11. ResearchModule (slot 6.9; reads economy and fleets; construction's research gate reads its levels)
 ///  12. CharacterModule (orders; slots 2 and 3 after the fleets, 6.10; wires bombardment's AdmiralLeadership, assault's FleetGeneralLeadership and
-///      SystemGeneralLeadership, the fleet Navigator speed and fleet-removal hooks, control's HolderChanged, support's incident codes 3-5). rule: m5-characters-and-force
+///      SystemGeneralLeadership, the fleet Navigator speed and fleet-removal hooks, control's HolderChanged and CharactersAtCapture, support's incident codes 3-5). rule: m5-characters-and-force
 ///  13. MissionModule (orders; slots 2 and 3 after the characters, 5.3 after assault and before the fog refresh; wires the characters' IsOnMission and
 ///      MissionMembershipEnded, the fog's AgentsAt, support's incident terms and per-incident hook). rule: m5-missions
 ///  14. VictoryModule (slot 6.11, the last day-end slot; must stay last; reads the characters' captured and dead states)
@@ -162,6 +163,7 @@ public sealed class GameHost
         };
 
         Control = ControlModule.Attach(game, data.Galaxy, Fleets, Economy, Support, Construction);
+        Control.Rule = settings.ControlRule;
         Control.DebugOrdersEnabled = settings.DebugOrdersEnabled;
         Fleets.DebugOrdersEnabled = settings.DebugOrdersEnabled;
 
@@ -185,6 +187,7 @@ public sealed class GameHost
         Assault.FleetGeneralLeadership = Characters.FleetGeneralLeadership;
         Assault.SystemGeneralLeadership = Characters.SystemGeneralLeadership;
         Control.HolderChanged += Characters.OnHolderChanged;
+        Control.CharactersAtCapture = Characters.OnCapture; // prisoners freed, characters leave (B5a section 5)
         Support.CharacterIncident = Characters.UprisingIncident;
         // What moves loyalty: the four triggers react to their events as they are emitted. rule: m5-characters-and-force §Loyalty and betrayal (B2c)
         Loyalty = Rebellion.Core.Characters.LoyaltyModule.Attach(game, Characters, Fleets, Economy, data.Troops);

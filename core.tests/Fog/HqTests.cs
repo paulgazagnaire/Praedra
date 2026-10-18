@@ -5,6 +5,7 @@ using Rebellion.Core.Fog;
 using Rebellion.Core.Setup;
 using Rebellion.Core.Support;
 using static Rebellion.Core.Tests.Fog.FogWorld;
+using Rebellion.Core.Tests.Control;
 
 namespace Rebellion.Core.Tests.Fog;
 
@@ -121,7 +122,7 @@ public class HqTests
     public void HQ18_CaptureDestroysTheHq()
     {
         var w = new FogWorld();
-        w.H.Control.SubmitDebugSetHolder(Side.Empire, R2, Side.Empire);
+        w.H.Control.SubmitCapture(Side.Empire, R2) /* (B5a, 2026-10-17) Derived control: troops take the world */;
         w.Step();
         var d = Assert.Single(w.Events<HqDestroyed>());
         Assert.Equal((FogModule.CauseCaptured, R2, 1), (d.Cause, d.System, d.Day));
@@ -138,7 +139,7 @@ public class HqTests
         var w = new FogWorld();
         w.Fog.SubmitMoveHq(Side.Alliance, R3);
         w.StepTo(10);
-        w.H.Control.SubmitDebugSetHolder(Side.Empire, R2, Side.Empire);
+        w.H.Control.SubmitCapture(Side.Empire, R2) /* (B5a, 2026-10-17) Derived control: troops take the world */;
         w.StepTo(20);
         Assert.Empty(w.Events<HqDestroyed>());
         Assert.Equal(R3, w.H.HqSystem);
@@ -152,7 +153,7 @@ public class HqTests
         var w = new FogWorld();
         w.Fog.SubmitMoveHq(Side.Alliance, R3);
         w.StepTo(10);
-        w.H.Control.SubmitDebugSetHolder(Side.Empire, R3, Side.Empire);
+        w.H.Control.SubmitCapture(Side.Empire, R3) /* (B5a, 2026-10-17) Derived control: troops take the world */;
         w.StepTo(20);
         var d = Assert.Single(w.Events<HqDestroyed>());
         Assert.Equal((FogModule.CauseDestinationLost, R3, 20), (d.Cause, d.System, d.Day));
@@ -184,7 +185,7 @@ public class HqTests
     public void HQ22_NeverLeavesTheHqOnAnEmpireWorld()
     {
         var w = new FogWorld(new GameSettings { Hq = new HqParams { LostOnHolderChange = HqLostOnHolderChange.Never } });
-        w.H.Control.SubmitDebugSetHolder(Side.Empire, R2, Side.Empire);
+        w.H.Control.SubmitCapture(Side.Empire, R2) /* (B5a, 2026-10-17) Derived control: troops take the world */;
         w.Step();
         Assert.Empty(w.Events<HqDestroyed>());
         Assert.Equal(HqStatus.AtRest, w.Hq.Status);
@@ -248,6 +249,9 @@ public class HqTests
         (List<string>, string, long) Run()
         {
             var w = new FogWorld();
+            // (B5a, 2026-10-17) under derived control the two moves' support losses (70 -> 50 at R2) would turn the unguarded Alliance worlds
+            // neutral and destroy the HQ (a capture draw); a regiment on each keeps them the Alliance's, so the test still sees only the HQ's own draws
+            foreach (var sys in new[] { R2, R3, R4 }) w.H.Economy.AddObject(Side.Alliance, "Alliance Army Regiment", sys);
             // draws made in slots 1 to 3 (orders, departures, arrivals: the HQ's slots; nothing else there draws on Map M)
             long before = 0, hqDraws = 0;
             w.Game.RegisterHook("3", ctx => hqDraws += ctx.Rng.Draws - before);
@@ -270,7 +274,7 @@ public class HqTests
     {
         var h = NewGame.Create(new NewGameOptions { Seed = 1, Settings = new GameSettings { DebugOrdersEnabled = true, Victory = OldVictory.Rules } });
         string hq = h.HqSystem!;
-        h.Control.SubmitDebugSetHolder(Side.Empire, hq, Side.Empire);
+        h.Control.SubmitCapture(Side.Empire, hq) /* (B5a, 2026-10-17) Derived control: troops take the world */;
         h.Game.Step();
         Assert.Equal(HqStatus.Destroyed, h.Game.State.Scenario.Hq.Status);
         Assert.Equal(Side.Empire, h.Victory.Winner);

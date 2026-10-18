@@ -134,8 +134,15 @@ public sealed class SupportModule
         _game.State.Economy.AllianceSupport[system] = now;
         int day = ctx.Day + 1;
         ctx.Emit((i, _) => new SupportChanged(i, day, system, old, now, cause));  // 4. event
+        AfterSupportChange?.Invoke(ctx, system); // every change runs the control recompute at once (B5a section 2; B5c section 3)
         return now;
     }
+
+    /// <summary>
+    /// Called inside <see cref="ChangeSupport"/> after the value moved, with (ctx, system): the control module recomputes the holder at once (the
+    /// 1998 Loyalty notifier <c>0x5109f0</c>, called by the support setter). Null = nothing. rule: m2-control-and-capture §When the rule runs (B5a section 2).
+    /// </summary>
+    public Action<StepContext, string>? AfterSupportChange { get; set; }
 
     // ================================================================== 6.1 garrison and uprising refresh
 
@@ -214,6 +221,20 @@ public sealed class SupportModule
     }
 
     /// <summary>
+    /// For the capture package, right after the uprising was cleared: the garrison need for the new holder is recomputed and, if the surplus is below
+    /// 0, the uprising starts at once (its one draw for the incident timer). No-op for a neutral system or one already in uprising. Returns true if one
+    /// started. rule: m2-control-and-capture §What happens at the moment of capture (B5a section 4 step 2.7, <c>0x50b5a0</c> then <c>0x50b800</c>).
+    /// </summary>
+    public bool CheckUprisingNow(StepContext ctx, string system)
+    {
+        if (_fleets.OwnerOf(system) is not Side holder || IsUprising(system)) return false;
+        int n = RequiredGarrison(Params, _eco.SupportOf(system, holder), false, holder == Side.Empire && IsDeathStarSector(system));
+        if (Garrison10(system) - 10 * n >= 0) return false;
+        StartUprising(ctx, ctx.Day + 1, system, holder);
+        return true;
+    }
+
+    /// <summary>
     /// A system was destroyed: its uprising ends (UprisingEnded "SystemDestroyed"), its timers are disarmed and it leaves the Death Star sector flag
     /// table; its support value is dropped. rule: m5-death-star §2 effect 5 (holder none, no support value).
     /// </summary>
@@ -235,6 +256,18 @@ public sealed class SupportModule
     {
         var st = StateOf(system);
         if (st is { Uprising: true }) EndUprising(ctx, ctx.Day + 1, system, st, "Captured");
+        S.Prune(system);
+    }
+
+    /// <summary>
+    /// For the capture package: the system's blockade flag was just recomputed, so arm or disarm its presence timer now (as slot 6.1 does), for the
+    /// holder it has now; a neutral system has none. rule: m2-popular-support §Periodic effects (arm when the blockade flag is on, disarm when off);
+    /// m2-control-and-capture §What happens at the moment of capture (B5a, 2026-10-17: 2.9 blockade recomputed).
+    /// </summary>
+    public void RefreshPresenceNow(StepContext ctx, string system)
+    {
+        if (_fleets.OwnerOf(system) is Side h) RefreshPresence(ctx.Day + 1, system, h);
+        else DisarmPresence(system);
         S.Prune(system);
     }
 
