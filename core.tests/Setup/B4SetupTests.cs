@@ -20,7 +20,7 @@ public class B4SetupTests
     private static readonly GameSettings Classic = new() { MinGarrison = 0, HqFixedForces = true };
     private static GameHost MakeClassic(int seed = 1) => NewGame.Create(new NewGameOptions { Seed = seed, Settings = Classic });
     private static IEnumerable<GameHost> Games() => Seeds.Select(Make);
-    /// <summary>The 1998 day-one reveal: SetupRevealsFacilities on (DEFAULT off until the AI trainer adapts the fogged AI, Dev lead 2026-10-18).</summary>
+    /// <summary>The 1998 day-one reveal: SetupRevealsFacilities on (DEFAULT on since 2026-10-18; explicit here so the test pins the rule).</summary>
     private static GameHost MakeReveal(int seed) => NewGame.Create(new NewGameOptions { Seed = seed, Settings = new GameSettings { Fog = new Rebellion.Core.Fog.FogParams { SetupRevealsFacilities = true } } });
 
     private static int Standing(GameHost h, Side side, string cls, string sys) =>
@@ -31,8 +31,10 @@ public class B4SetupTests
     [Fact]
     public void B4_1_DayOneCorePictureHoldsFacilitiesOnly()
     {
-        Assert.False(new Rebellion.Core.Fog.FogParams().SetupRevealsFacilities);
-        Assert.Null(Make(1).Fog.Picture(Side.Alliance, "Coruscant")!.Facilities); // DEFAULT off: no C
+        // DEFAULT on (1998) since 2026-10-18 (AI trainer: the AI floors pass with it); with the switch off there is no C.
+        Assert.True(new Rebellion.Core.Fog.FogParams().SetupRevealsFacilities);
+        var off = NewGame.Create(new NewGameOptions { Seed = 1, Settings = new GameSettings { Fog = new Rebellion.Core.Fog.FogParams { SetupRevealsFacilities = false } } });
+        Assert.Null(off.Fog.Picture(Side.Alliance, "Coruscant")!.Facilities);
         foreach (var h in Seeds.Select(MakeReveal))
         {
             var fog = h.Game.State.Fog;
