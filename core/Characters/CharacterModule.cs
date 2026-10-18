@@ -319,13 +319,16 @@ public sealed class CharacterModule
     /// <summary>
     /// Random trainers (New, Paul 2026-10-18), after the start cast: for the Alliance then the Empire (DEFAULT order), up to TalentedPerSide draws
     /// k = rand(0..n-1) over that side's placed characters in id order, without replacement; each drawn one is Talented, a Force user and aware,
-    /// with Force = rand(TalentedForceMin..TalentedForceMax) unless his own is higher (Q16 DEFAULT): one more draw each. rule: §Rule (New) 4.
+    /// with Force = rand(TalentedForceMin..TalentedForceMax) unless his own is higher (Q16 DEFAULT): one more draw each. The pool leaves out the already
+    /// strong (own Force at TalentedForceMin or more) and the never_talented characters (Q17, Paul 2026-10-18). rule: §Rule (New) 4.
     /// </summary>
     private void PickTalented(GameRng rng)
     {
         foreach (var side in new[] { Side.Alliance, Side.Empire })
         {
-            var pool = S.Characters.Values.Where(c => c.Placed && c.Side == side).ToList(); // id order
+            var pool = S.Characters.Values.Where(c => c.Placed && c.Side == side
+                && !(Params.TalentedSkipStrong && c.EffectiveForce >= Params.TalentedForceMin)   // Q17 (Paul 2026-10-18): never the already strong
+                && !(Params.TalentedSkipFlagged && ClassOf(c).NeverTalented)).ToList();          // Q17 (Paul 2026-10-18): never the bounty hunters; id order
             for (int k = 0; k < Params.TalentedPerSide && pool.Count > 0; k++)
             {
                 var c = pool[rng.NextInt(0, pool.Count - 1)];

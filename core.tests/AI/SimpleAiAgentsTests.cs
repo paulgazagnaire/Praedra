@@ -76,7 +76,10 @@ public class SimpleAiAgentsTests
         // Talented re-pin 2026-10-18 (Dev lead; Paul's random trainers, m5-characters-and-force Rule New 4): TrainerPick is DEFAULT Random, so setup
         // draws 3 talented per side and their Force (more draws, saved Talented, higher skills). With TrainerPick = Fixed the hash is exactly the
         // previous pin 55805ed7...c838 (checked when re-pinned, main 4691273).
-        Assert.Equal("999219a69b702fa1a5c88950d535edcb80ddeec6cd78e0e0bdb9d3850fbefd00", h.StateHash());
+        // Q17 re-pin 2026-10-18 (Dev lead; Paul's cards "Skip the strong" and "Leave out hunters"): the talented draw leaves out the already strong
+        // and the never_talented hunters, so other characters are drawn. With TalentedSkipStrong and TalentedSkipFlagged off the hash is exactly
+        // the previous pin 999219a6...fd00 (checked when re-pinned, main 71cc7b7).
+        Assert.Equal("00e02e8cf1cc1ef22ba36fd562ea4fd5b619bd4d72415278e37250bc2af6701c", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"

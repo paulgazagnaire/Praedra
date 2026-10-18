@@ -71,7 +71,6 @@ public class CharacterSetupTests
                 Assert.All(t, c => Assert.True(c.ForceUser && c.ForceDiscovered && c.EffectiveForce >= 80 && ch.IsTrainer(c)));
             }
             Assert.All(ch.All.Where(c => !c.Talented), c => Assert.False(ch.IsTrainer(c)));
-            if (ch.Get(Vader)!.Talented) Assert.True(ch.Get(Vader)!.EffectiveForce >= 120); // a drawn Vader keeps his own 120 if higher (Q16)
         }
         var picks = new[] { 1, 2, 3, 4 }.Select(seed => string.Join(",", Make(seed).Characters.All.Where(c => c.Talented).Select(c => c.Id))).Distinct().Count();
         Assert.True(picks > 1); // the pick changes with the seed
@@ -79,6 +78,29 @@ public class CharacterSetupTests
         var classic = Make(1, new GameSettings { Characters = new CharacterParams { TrainerPick = TrainerPick.Fixed } }).Characters;
         Assert.DoesNotContain(classic.All, c => c.Talented);
         Assert.Equal(new[] { Luke, Vader }.OrderBy(x => x), classic.All.Where(classic.IsTrainer).Select(c => c.Id).OrderBy(x => x));
+    }
+
+    // m5-characters-and-force CH40 (Q17, Paul 2026-10-18 cards "Skip the strong" and "Leave out hunters"): the draw never takes anyone already at
+    // Force 80+ (the Emperor and Vader keep their Force but never train) nor a character flagged never_talented (the bounty hunters); Leia and
+    // Chewbacca stay in the pool. With both switches off the strong can be drawn again.
+    [Fact]
+    public void CH40_TalentedDrawSkipsTheStrongAndTheHunters()
+    {
+        var hunters = new[] { 928, 929, 930, 931 }; // Boba Fett, Bossk, Dengar, Black Krrsantan (roster.csv never_talented = 1)
+        var first = Make(1).Characters;
+        Assert.All(hunters, id => Assert.True(first.Data.Get(id).NeverTalented));
+        Assert.False(first.Data.Get(577).NeverTalented); // Leia
+        foreach (int seed in Enumerable.Range(1, 12))
+        {
+            var ch = Make(seed).Characters;
+            Assert.All(ch.All.Where(c => c.Talented), c => Assert.DoesNotContain(c.Id, hunters.Append(Palpatine).Append(Vader)));
+            Assert.Equal(3, ch.InPlay.Count(c => c.Side == Side.Empire && c.Talented));
+            Assert.True(ch.Get(Vader)!.EffectiveForce >= 80);
+            Assert.False(ch.IsTrainer(ch.Get(Vader)!));
+        }
+        var open = new CharacterParams { TalentedSkipStrong = false, TalentedSkipFlagged = false };
+        Assert.Contains(Enumerable.Range(1, 30), seed =>
+            Make(seed, new GameSettings { Characters = open }).Characters.All.Any(c => c.Talented && (c.Id == Vader || c.Id == Palpatine)));
     }
 
     // m5-setup-and-victory SV44: same seed same cast; the character draws come before the economy and research arming
