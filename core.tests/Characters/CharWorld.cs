@@ -18,6 +18,14 @@ internal sealed class CharWorld
     public const int Ackbar = 832, Wedge = 833, Lando = 834, Chewbacca = 835, Dodonna = 836, Madine = 837, Afyon = 839, Drayson = 840, Borsk = 841, Tura = 842;
     public const int Piett = 898, Veers = 899;
 
+    /// <summary>The 1998 Force values (Classic): ForceSkillPercent 100, ForceTrainingChancePercent 100, ForceTrainingGainPercent 50 (GNPRTB 6173).
+    /// rule: m5-characters-and-force §Force (Classic (1998) = 100 / 100 / 50).</summary>
+    public static CharacterParams Classic1998Force(CharacterParams? p = null) => (p ?? new CharacterParams()) with
+    {
+        ForceSkillPercent = CharacterParams.ClassicForceSkillPercent, ForceTrainingChancePercent = CharacterParams.ClassicTrainingChancePercent,
+        ForceTrainingGainPercent = CharacterParams.ClassicTrainingGainPercent,
+    };
+
     public StubRng? Stub { get; }
     public GameHost Host { get; private set; }
     public Game Game => Host.Game;

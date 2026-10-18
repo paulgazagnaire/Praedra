@@ -22,6 +22,9 @@ public class B2eCharacterTests
         return c;
     }
 
+    /// <summary>B2e tests the 1998 effective skills: ForceSkillPercent 100 set explicitly. rule: m5-characters-and-force §Force (1998 = 100).</summary>
+    private const int Classic = CharacterParams.ClassicForceSkillPercent;
+
     private static CharacterRecord Force(CharacterRecord c, int f)
     {
         c.ForceUser = f > 0; c.ForceDiscovered = f > 0; c.ForceExperience = f; c.ForceTraining = 0;
@@ -34,11 +37,11 @@ public class B2eCharacterTests
     {
         var w = new CharWorld();
         var luke = Force(Skills(w.Add(Luke, Yavin), dip: 50, esp: 50, com: 90, ship: 0), 50);
-        Assert.Equal((75, 75, 135, 0), (CharacterModule.EffectiveSkill(luke, Skill.Diplomacy), luke.EffectiveSkill(Skill.Espionage),
-            luke.EffectiveSkill(Skill.Combat), luke.EffectiveSkill(Skill.ShipDesign)));
+        Assert.Equal((75, 75, 135, 0), (luke.EffectiveSkill(Skill.Diplomacy, Classic), luke.EffectiveSkill(Skill.Espionage, Classic),
+            luke.EffectiveSkill(Skill.Combat, Classic), luke.EffectiveSkill(Skill.ShipDesign, Classic)));
         luke.Injury = 40;
-        Assert.Equal(95, luke.EffectiveSkill(Skill.Combat));
-        Assert.Equal(75, luke.EffectiveSkill(Skill.Diplomacy)); // the injury comes off combat only
+        Assert.Equal(95, luke.EffectiveSkill(Skill.Combat, Classic));
+        Assert.Equal(75, luke.EffectiveSkill(Skill.Diplomacy, Classic)); // the injury comes off combat only
     }
 
     // B2e-2: Vader Force 120, base combat 100: 220; a character with Force 0 keeps his base skills
@@ -47,10 +50,10 @@ public class B2eCharacterTests
     {
         var w = new CharWorld();
         var vader = Force(Skills(w.Add(Vader, Coruscant), com: 100, esp: 50), 120);
-        Assert.Equal((220, 110), (vader.EffectiveSkill(Skill.Combat), vader.EffectiveSkill(Skill.Espionage)));
+        Assert.Equal((220, 110), (vader.EffectiveSkill(Skill.Combat, Classic), vader.EffectiveSkill(Skill.Espionage, Classic)));
         var han = Skills(w.Add(Han, Yavin), dip: 30, esp: 70, com: 100, lead: 90, ship: 10);
         Assert.Equal(0, han.EffectiveForce);
-        foreach (Skill s in Enum.GetValues<Skill>()) Assert.Equal(han.BaseSkill(s), han.EffectiveSkill(s));
+        foreach (Skill s in Enum.GetValues<Skill>()) Assert.Equal(han.BaseSkill(s), han.EffectiveSkill(s, Classic));
     }
 
     // B2e-3: Hurt(50) with draws 49, 10, 5: n = 16; with first draw 50: no injury and one draw only
@@ -206,7 +209,7 @@ public class B2eCharacterTests
     [Fact]
     public void B2e9_EscapeChanceWithGuards()
     {
-        var w = new CharWorld();
+        var w = new CharWorld(CharWorld.Classic1998Force()); // the 1998 Force (m5-characters-and-force §Force CH37)
         w.Hold(Hoth, Side.Empire);
         Force(Skills(w.Add(Vader, Hoth), com: 100), 120);
         w.Host.Economy.AddObject(Side.Empire, ImperialCommandos, Hoth, true);
@@ -283,7 +286,7 @@ public class B2eCharacterTests
     [Fact]
     public void B2e13_LukeMeetsVader()
     {
-        var w = new MissionWorld();
+        var w = new MissionWorld(characters: CharWorld.Classic1998Force()); // the 1998 Force (m5-characters-and-force §Force CH37)
         w.Hold(MissionWorld.T, Side.Empire, 0);
         var luke = w.Agent(Luke, MissionWorld.H, esp: 50, com: 90);
         var vader = w.Agent(Vader, MissionWorld.T, com: 100);

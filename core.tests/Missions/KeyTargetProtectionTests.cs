@@ -109,7 +109,7 @@ public class KeyTargetProtectionTests
     // Vader on Assassination of a target standing at Alliance T with one landed Alliance Army regiment.
     private static MissionWorld KeyJob(int target, MissionParams? p, int vaderEsp = 60, int regiments = 1)
     {
-        var w = new MissionWorld(p);
+        var w = new MissionWorld(p, characters: Rebellion.Core.Tests.Characters.CharWorld.Classic1998Force()); // the 1998 Force (100 / 100 / 50): m5-characters-and-force §Force CH37
         w.Hold(T, Side.Alliance, 30);
         for (int i = 0; i < regiments; i++) w.Unit(Side.Alliance, RebArmy, T);
         w.Agent(Vader, T, esp: vaderEsp, com: 100);

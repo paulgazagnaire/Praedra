@@ -196,7 +196,7 @@ public sealed class MissionModule
     private readonly record struct Agent(bool IsCharacter, int Id, int Espionage, int Combat, int Leadership, CharacterRecord? C, int Force = 0, int Loyalty = 0);
 
     private Agent? CharAgent(int id) => _ch.Get(id) is { } c
-        ? new Agent(true, id, c.EffectiveSkill(Skill.Espionage), c.EffectiveSkill(Skill.Combat), c.EffectiveSkill(Skill.Leadership), c, c.EffectiveForce, c.Loyalty) : null; // B2e §1: effective skills
+        ? new Agent(true, id, _ch.EffectiveSkill(c, Skill.Espionage), _ch.EffectiveSkill(c, Skill.Combat), _ch.EffectiveSkill(c, Skill.Leadership), c, c.EffectiveForce, c.Loyalty) : null; // B2e §1: effective skills
 
     private Agent? SfAgent(int id) => E.Objects.TryGetValue(id, out var o) && _troops.Data.SpecialForce(o.Class) is { } k
         ? new Agent(false, id, k.Espionage, k.Combat, k.Leadership, null, 0, k.LoyaltyBase) : null;
@@ -378,8 +378,8 @@ public sealed class MissionModule
 
     private int ShipDetection(EconObject o) => _fleets.ClassOf(o)?.Detection ?? 0;
     private static CharacterRecord? Officer(CharacterRecord? c) => c is { Status: CharacterStatus.Free } ? c : null;
-    private static int Esp(CharacterRecord? c) => c is { Status: CharacterStatus.Free } ? c.EffectiveSkill(Skill.Espionage) : 0;
-    private static int Com(CharacterRecord? c) => c is { Status: CharacterStatus.Free } ? c.EffectiveSkill(Skill.Combat) : 0;
+    private int Esp(CharacterRecord? c) => c is { Status: CharacterStatus.Free } ? _ch.EffectiveSkill(c, Skill.Espionage) : 0;
+    private int Com(CharacterRecord? c) => c is { Status: CharacterStatus.Free } ? _ch.EffectiveSkill(c, Skill.Combat) : 0;
 
     // ================================================================== who can go (§Who can go)
 
@@ -401,13 +401,13 @@ public sealed class MissionModule
     /// </summary>
     public bool CanDo(CharacterRecord c, MissionKind k) => k switch
     {
-        MissionKind.Diplomacy => c.EffectiveSkill(Skill.Diplomacy) > 0,
-        MissionKind.Rescue or MissionKind.Abduction or MissionKind.Assassination => c.EffectiveSkill(Skill.Combat) > 0,
-        MissionKind.Sabotage => SabotageSkillOf(c.EffectiveSkill(Skill.Combat), c.EffectiveSkill(Skill.Espionage)) > 0,
-        MissionKind.DeathStarSabotage => (c.EffectiveSkill(Skill.Combat) + c.EffectiveSkill(Skill.Espionage)) / 2 > 0,
-        MissionKind.Espionage or MissionKind.Reconnaissance => c.EffectiveSkill(Skill.Espionage) > 0,
-        MissionKind.Recruitment or MissionKind.InciteUprising or MissionKind.SubdueUprising => c.EffectiveSkill(Skill.Leadership) > 0,
-        MissionKind.ShipResearch or MissionKind.FacilityResearch or MissionKind.TroopResearch => c.EffectiveSkill(ResearchSkill(k)!.Value) > 0,
+        MissionKind.Diplomacy => _ch.EffectiveSkill(c, Skill.Diplomacy) > 0,
+        MissionKind.Rescue or MissionKind.Abduction or MissionKind.Assassination => _ch.EffectiveSkill(c, Skill.Combat) > 0,
+        MissionKind.Sabotage => SabotageSkillOf(_ch.EffectiveSkill(c, Skill.Combat), _ch.EffectiveSkill(c, Skill.Espionage)) > 0,
+        MissionKind.DeathStarSabotage => (_ch.EffectiveSkill(c, Skill.Combat) + _ch.EffectiveSkill(c, Skill.Espionage)) / 2 > 0,
+        MissionKind.Espionage or MissionKind.Reconnaissance => _ch.EffectiveSkill(c, Skill.Espionage) > 0,
+        MissionKind.Recruitment or MissionKind.InciteUprising or MissionKind.SubdueUprising => _ch.EffectiveSkill(c, Skill.Leadership) > 0,
+        MissionKind.ShipResearch or MissionKind.FacilityResearch or MissionKind.TroopResearch => _ch.EffectiveSkill(c, ResearchSkill(k)!.Value) > 0,
         _ => true,
     };
 
@@ -868,7 +868,7 @@ public sealed class MissionModule
             var table = rec.Table != null ? Data.Table(rec.Table) : null;
             foreach (var a in Team(m))
             {
-                int input = research is Skill rs ? (a.C?.EffectiveSkill(rs) ?? 0) : Input(m, a);
+                int input = research is Skill rs ? (a.C is { } ac ? _ch.EffectiveSkill(ac, rs) : 0) : Input(m, a);
                 int chance = research != null ? input : Lookup(table!, input);
                 int r = ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1);
                 bool ok = r < chance;
@@ -923,10 +923,10 @@ public sealed class MissionModule
     private int Input(MissionGroup m, Agent a)
     {
         int Support() => _eco.SupportOf(m.Target, m.Side);
-        int TargetCombat() => m.TargetCharacter is int tid && _ch.Get(tid) is { } tc ? tc.EffectiveSkill(Skill.Combat) : 0;
+        int TargetCombat() => m.TargetCharacter is int tid && _ch.Get(tid) is { } tc ? _ch.EffectiveSkill(tc, Skill.Combat) : 0;
         switch (m.Kind)
         {
-            case MissionKind.Diplomacy: { int s = Support(); return (s - (100 - s)) + (a.C?.EffectiveSkill(Skill.Diplomacy) ?? 0); }
+            case MissionKind.Diplomacy: { int s = Support(); return (s - (100 - s)) + (a.C is { } ac ? _ch.EffectiveSkill(ac, Skill.Diplomacy) : 0); }
             case MissionKind.Rescue: return a.Combat;
             case MissionKind.Sabotage: return SabotageSkillOf(a.Combat, a.Espionage);
             case MissionKind.Espionage: return a.Espionage;
@@ -1111,7 +1111,7 @@ public sealed class MissionModule
         if (!a.IsCharacter || !_ch.MutualDiscovery(a.C!, out var x) || x == null) return false;
         int xm = MissionOf(x.Id); // QA-7: the captor is X himself: his fleet, else where he stands; his mission takes the prisoner as a captive
         var unit = new CaptorUnit(x.AttachedFleet, _ch.LocationOf(x), xm, MissionInvolved: true);
-        var (escaped, hurt) = DuelWith(ctx, m, t, a, x.EffectiveSkill(Skill.Combat), x.Id, x.Side, place, rec, decoy, unit);
+        var (escaped, hurt) = DuelWith(ctx, m, t, a, _ch.EffectiveSkill(x, Skill.Combat), x.Id, x.Side, place, rec, decoy, unit);
         _ch.ForceEncounter(ctx, t, m.Id, a.C!, x, hurt, escaped);
         return true;
     }

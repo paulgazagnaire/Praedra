@@ -150,10 +150,11 @@ public sealed class CharacterModule
     // ---- leadership hooks. rule: §Posts (the three hooks, exact): the effective leadership of the post's Free holder, or 0; no draws.
 
     /// <summary>Effective leadership <c>B + B * LeadershipAdjustment / 100</c> (the Seat of Power). rule: §Posts (the three hooks); B2e §1, §6.</summary>
-    public int EffectiveLeadership(CharacterRecord c) => c.EffectiveSkill(Skill.Leadership);
+    public int EffectiveLeadership(CharacterRecord c) => EffectiveSkill(c, Skill.Leadership);
 
     /// <summary>The one reader of a skill for every rule (missions, duels, B2b, the AI). rule: §Force (effects; Traced B2e §1).</summary>
-    public static int EffectiveSkill(CharacterRecord c, Skill s) => c.EffectiveSkill(s);
+    // rule: m5-characters-and-force §Force (New, Paul 2026-10-18; 1998 = 100): the Force share is <see cref="CharacterParams.ForceSkillPercent"/>.
+    public int EffectiveSkill(CharacterRecord c, Skill s) => c.EffectiveSkill(s, Params.ForceSkillPercent);
 
     private CharacterRecord? PostHolder(int fleetId, CharacterPost post) =>
         S.Characters.Values.FirstOrDefault(c => c.AttachedFleet == fleetId && c.Post == post && post != CharacterPost.None);
@@ -447,7 +448,7 @@ public sealed class CharacterModule
     public int Hurt(StepContext? ctx, CharacterRecord c, string cause)
     {
         if (!c.Placed || c.Status == CharacterStatus.Dead) return 0;
-        int n = HurtRoll(ctx?.Rng ?? _game.Rng, c.EffectiveSkill(Skill.Combat));
+        int n = HurtRoll(ctx?.Rng ?? _game.Rng, EffectiveSkill(c, Skill.Combat));
         return AddInjury(ctx, c, n, cause) ? n : 0;
     }
 
@@ -808,7 +809,8 @@ public sealed class CharacterModule
 
     /// <summary>
     /// One Jedi Training round (the mission calls it at the end of its timer): for each student in id order, gap = trainer - student (effective);
-    /// draw r = rand(0..99) always; success if gap &gt; 0 and r &lt; min(gap, 100); on success draw g = rand(0..gap * 50 / 100) and add it to the
+    /// draw r = rand(0..99) always; success if gap &gt; 0 and r &lt; min(gap, 100) * ForceTrainingChancePercent / 100; on success draw
+    /// g = rand(0..gap * ForceTrainingGainPercent / 100) (New DEFAULTs 50 and 25; 1998 100 and 50) and add it to the
     /// student's acquired Force. Events ForceTrainingResult, then ForceRankChanged if the rank changed. No student reaches the trainer.
     /// rule: §Force (Jedi Training: the roll), Traced 0x55c7c0, 0x53e2f0, 0x55ca20 (chance reading [inferred]); CH3 to CH6.
     /// </summary>
@@ -820,11 +822,13 @@ public sealed class CharacterModule
             var before = RankOf(s);
             int gap = trainer.EffectiveForce - s.EffectiveForce;
             int r = ctx.Rng.NextInt(0, 99);
-            bool success = gap > 0 && r < Math.Min(gap, Params.TrainingChanceCap);
+            // rule: m5-characters-and-force §Force (Jedi Training: the roll; New, Paul 2026-10-18; 1998 = 100 / 50)
+            int chance = Math.Min(gap, Params.TrainingChanceCap) * Params.ForceTrainingChancePercent / CharacterRecord.PercentDivisor;
+            bool success = gap > 0 && r < chance;
             int gain = 0;
             if (success)
             {
-                gain = ctx.Rng.NextInt(0, gap * Params.TrainingGainPercent / 100);
+                gain = ctx.Rng.NextInt(0, gap * Params.ForceTrainingGainPercent / CharacterRecord.PercentDivisor);
                 s.ForceTraining += gain;
             }
             int sid = s.Id, tid = trainer.Id, nf = s.EffectiveForce, g2 = gain; var side = s.Side;
@@ -881,7 +885,7 @@ public sealed class CharacterModule
     /// </summary>
     public void ForceEncounter(StepContext ctx, int day, int mission, CharacterRecord m, CharacterRecord x, bool mHurtInDuel, bool mEscaped)
     {
-        int mc = m.EffectiveSkill(Skill.Combat), xc = x.EffectiveSkill(Skill.Combat); // step 2
+        int mc = EffectiveSkill(m, Skill.Combat), xc = EffectiveSkill(x, Skill.Combat); // step 2
         bool mHurt = mHurtInDuel, xHurt;
         if (!mHurtInDuel) mHurt = AddInjury(ctx, m, HurtByRoll(ctx.Rng, mc, xc), CharacterCause.ForceEncounter); // step 3
         xHurt = AddInjury(ctx, x, HurtByRoll(ctx.Rng, xc, mc), CharacterCause.ForceEncounter); // step 4
@@ -1219,9 +1223,9 @@ public sealed class CharacterModule
         // QA-7 DEFAULT (B2e Work 12): held aboard, avg and sf count the captor's characters and special forces attached to that fleet
         var guards = S.Characters.Values.Where(g => g.Placed && g.Side == captor && g.Status is CharacterStatus.Free or CharacterStatus.Injured
             && !IsOnMission(g.Id) && (fleet != 0 ? g.AttachedFleet == fleet : g.AttachedFleet == 0 && g.Transit == null && g.System == place)).ToList();
-        int avg = guards.Count == 0 ? 0 : guards.Sum(g => g.EffectiveSkill(Skill.Combat)) / guards.Count;
+        int avg = guards.Count == 0 ? 0 : guards.Sum(g => EffectiveSkill(g, Skill.Combat)) / guards.Count;
         int sf = fleet != 0 ? SpecialForcesInFleet(captor, fleet) : SpecialForcesOnPlanet(captor, place);
-        int x = c.EffectiveSkill(Skill.Combat) + c.EffectiveSkill(Skill.Espionage) - avg - sf;
+        int x = EffectiveSkill(c, Skill.Combat) + EffectiveSkill(c, Skill.Espionage) - avg - sf;
         int p = EscapePercent(x);
         int r = ctx.Rng.NextInt(0, PercentDieMax);
         bool ok = r < p;

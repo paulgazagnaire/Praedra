@@ -118,17 +118,21 @@ public sealed class CharacterRecord
     public int BaseSkill(Skill s) => Skills[(int)s];
 
     /// <summary>
-    /// The effective skill every rule reads (B2b, B2d, mission odds, the AI): diplomacy and espionage <c>B + B * F / 100</c>; the three research
-    /// skills <c>B</c>; combat <c>max(0, B + B * F / 100 - Injury)</c>; leadership <c>B + B * LeadershipAdjustment / 100</c>. Integer division.
+    /// The effective skill every rule reads (B2b, B2d, mission odds, the AI): diplomacy and espionage <c>B + B * F * pct / 10000</c>; the three
+    /// research skills <c>B</c>; combat <c>max(0, B + B * F * pct / 10000 - Injury)</c>; leadership <c>B + B * LeadershipAdjustment / 100</c>.
+    /// Integer division; <paramref name="forceSkillPercent"/> is <see cref="CharacterParams.ForceSkillPercent"/> (100 = 1998, bit-identical to
+    /// <c>B + B * F / 100</c>). Callers go through <see cref="CharacterModule.EffectiveSkill"/>.
     /// rule: m5-characters-and-force §Force (effects; Traced B2e §1: 0x4eecb0, 0x4eecf0, 0x4eed30..0x4eed70, 0x4eed90, 0x4eede0).
     /// </summary>
-    public int EffectiveSkill(Skill s)
+    public int EffectiveSkill(Skill s, int forceSkillPercent)
     {
         int b = Skills[(int)s], f = EffectiveForce;
+        // rule: m5-characters-and-force §Force (New, Paul 2026-10-18; 1998 = 100)
+        int force = b * f * forceSkillPercent / (PercentDivisor * PercentDivisor);
         return s switch
         {
-            Skill.Diplomacy or Skill.Espionage => b + b * f / PercentDivisor,
-            Skill.Combat => Math.Max(0, b + b * f / PercentDivisor - Injury),
+            Skill.Diplomacy or Skill.Espionage => b + force,
+            Skill.Combat => Math.Max(0, b + force - Injury),
             Skill.Leadership => b + b * LeadershipAdjustment / PercentDivisor,
             _ => b,
         };

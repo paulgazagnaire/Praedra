@@ -95,7 +95,7 @@ public class ParamsPinTests
         yield return ("BombardParams.CivilianSupportChange", bomb.CivilianSupportChange, G, 7705, 1);
         // m5 characters
         yield return ("CharacterParams.DeathStarHitPercent", ch.DeathStarHitPercent, G, 0x606, 1);
-        yield return ("CharacterParams.TrainingGainPercent", ch.TrainingGainPercent, G, 6173, 1);
+        yield return ("CharacterParams.ClassicTrainingGainPercent", CharacterParams.ClassicTrainingGainPercent, G, 6173, 1); // the New DEFAULT ForceTrainingGainPercent is 25 (Paul 2026-10-18)
         yield return ("CharacterParams.ForceKnightMin (2560)", ch.ForceKnightMin, G, 2560, 1);
         yield return ("CharacterParams.ForceKnightMin (2580)", ch.ForceKnightMin, G, 2580, 1);
         yield return ("CharacterParams.ForceMasterMin", ch.ForceMasterMin, G, 2581, 1);

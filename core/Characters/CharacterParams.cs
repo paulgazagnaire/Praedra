@@ -47,10 +47,27 @@ public sealed record CharacterParams
     public int CharacterSpeed { get; init; } = Travel.TravelFormula.DefaultSpeed;
     /// <summary>Death Star hit chance on a minor, percent (GNPRTB 0x606 = 50). Traced, Decided (Paul).</summary>
     public int DeathStarHitPercent { get; init; } = 50;
-    /// <summary>Jedi Training gain cap, percent of the gap (GNPRTB 6173 = 50). Traced.</summary>
-    public int TrainingGainPercent { get; init; } = 50;
+    /// <summary>
+    /// Jedi Training gain cap, percent of the gap: <c>g = rand(0..gap * this / 100)</c>. DEFAULT 25 (New, Paul 2026-10-18: five or six trainers, so
+    /// training is slower); <see cref="ClassicTrainingGainPercent"/> 50 = 1998 (GNPRTB 6173). rule: m5-characters-and-force §Force (Jedi Training: the roll).
+    /// </summary>
+    public int ForceTrainingGainPercent { get; init; } = 25;
+    /// <summary>The 1998 training gain percent (GNPRTB 6173 = 50). Traced, 0x55ca20. rule: m5-characters-and-force §Numbers.</summary>
+    public const int ClassicTrainingGainPercent = 50;
     /// <summary>Training chance cap, percent (min(gap, 100)). Traced code, reading [inferred].</summary>
     public int TrainingChanceCap { get; init; } = 100;
+    /// <summary>
+    /// Jedi Training chance scale: <c>chance = min(gap, 100) * this / 100</c>. DEFAULT 50 (New, Paul 2026-10-18); 100 = 1998 (Traced, reading [inferred]).
+    /// rule: m5-characters-and-force §Force (Jedi Training: the roll; New, Paul 2026-10-18; 1998 = 100).
+    /// </summary>
+    public int ForceTrainingChancePercent { get; init; } = 50;
+    /// <summary>
+    /// Share of the Force that multiplies diplomacy, espionage and combat: <c>B + B * F * this / 10000</c>. DEFAULT 40 (New, Paul 2026-10-18: a master
+    /// at 120 gives +48% instead of +120%); 100 = 1998 (Traced B2e §1). rule: m5-characters-and-force §Force (New, Paul 2026-10-18; 1998 = 100).
+    /// </summary>
+    public int ForceSkillPercent { get; init; } = 40;
+    /// <summary>The 1998 values of the three Force tone-down switches (Classic). rule: m5-characters-and-force §Force (Classic (1998) = 100 / 100 / 50).</summary>
+    public const int ClassicForceSkillPercent = 100, ClassicTrainingChancePercent = 100;
     /// <summary>Lowest effective Force of a Jedi Student. DEFAULT 1 (no number known; Open question 15).</summary>
     public int ForceStudentMin { get; init; } = 1;
     /// <summary>Lowest effective Force of a Jedi Knight (GNPRTB 2560/2580 = 80). Traced number, mapping DEFAULT.</summary>
