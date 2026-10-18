@@ -8,6 +8,7 @@ using Rebellion.Core.Fleets;
 using Rebellion.Core.Fog;
 using Rebellion.Core.Missions;
 using Rebellion.Core.Setup;
+using Rebellion.Core.Victory;
 using Rebellion.Core.Support;
 using Rebellion.Core.Tests.Economy;
 using Rebellion.Core.Tests.Missions;
@@ -238,6 +239,23 @@ public class DeathStarTests
         Assert.Equal(Side.Empire, w.Host.Victory.Winner); // the victory step of the same day (slot 6.11)
         Assert.Equal(1, w.Game.Day);
         Assert.Equal(Side.Empire, Assert.Single(w.Events<Rebellion.Core.Victory.GameWon>()).Winner);
+    }
+
+    // m5-setup-and-victory SV52 (B4 §15): a destroyed Coruscant meets the Alliance's place term; in a standard game the key captures are still needed
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public void SV52_DestroyedCoruscantMeetsTheAlliancePlaceTerm(bool standard, bool allianceWins)
+    {
+        var rules = standard ? new VictoryRules { KeyDeathFallback = KeyDeathFallback.None } : OldVictory.Rules;
+        var w = new DsWorld(settings: new GameSettings { IncidentsEnabled = false, DebugOrdersEnabled = true, Economy = new EconomyParams { ScrapPeriod = 1_000_000 }, Victory = rules });
+        w.Hold(A1, Side.Alliance, 80); w.Hold(A2, Side.Empire, 20);
+        w.Host.Fog.PlaceHq(A1);
+        w.Game.State.Scenario.Active = true;
+        w.Game.State.DeathStar.Destroyed.Add(VictoryModule.CoruscantName);
+        w.Game.Step();
+        Assert.Equal(allianceWins ? Side.Alliance : null, w.Host.Victory.Winner);
+        if (allianceWins) Assert.Equal("Coruscant is destroyed", w.Host.Victory.Reason);
     }
 
     // m5-death-star DS7
