@@ -36,12 +36,17 @@ public class SimpleAiStallTests
     // seeds 2, 4 and 6 have no winner by day 1900. Seed 1 lands less with the fix than without (63 against 70), so seed 5.
     // QA-5 2026-10-17 (AI trainer): FogGroundForgetDays off above too, for the same reason as ExplorerScouts (the game measures this one switch).
     // With old ground counts forgotten, seed 5 takes another course and has no winner by day 1900 (fix on).
+    // B3 re-seed 2026-10-18 (Dev lead's rule: same pass rate as main, dated, with the table): the Classic battle follows the traced original and AI sides
+    // now answer the alert with the AI threshold 0.9, so every game takes another course. Seeds 1 to 8 (fix on: winner day landings / fix off: winner landings):
+    // main 9d313cd: A 600 12/- 11, A 504 8/- 9, E 1807 75/E 74, E 1396 47/- 37, E 1672 74/- 68, - 1900 72/- 61, A 669 14/- 10, - 1900 110/- 73 (passes: 4, 5);
+    // B3: A 960 32/- 33, E 1600 72/- 61, E 847 32/- 19, A 636 13/- 17, A 732 9/- 14, E 1627 97/E 29, - 1900 70/- 67, - 1900 92/- 82 (passes: 2, 3).
+    // The Empire wins 3 of 8 with the fix on both. Seed 3.
     [Fact]
     public void FoggedEmpireLandsAfterShellingAndWins()
     {
-        var on = Play(true, 5, 1900);
+        var on = Play(true, 3, 1900);
         Assert.Equal(Side.Empire, on.Winner);
-        var off = Play(false, 5, on.Day);
+        var off = Play(false, 3, on.Day);
         Assert.Null(off.Winner);
         Assert.True(on.Assaults > off.Assaults, $"landings with the fix {on.Assaults}, without {off.Assaults}");
     }

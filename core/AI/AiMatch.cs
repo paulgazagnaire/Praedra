@@ -31,6 +31,9 @@ public sealed class AiMatch
         Empire = new SimpleAi(host, Side.Empire, empire);
         Alliance = new SimpleAi(host, Side.Alliance, alliance);
         _eventsSeen = host.Game.Events.Count;
+        // rule: m4-battle-classic §1.3: each side this match plays is AI-controlled (the passive side is a scripted player that gives no orders)
+        foreach (var s in new[] { Side.Alliance, Side.Empire })
+            if (s != passive && !host.Battles.IsAi(s)) host.Battles.SubmitSetAiControl(s);
     }
 
     public void Step()

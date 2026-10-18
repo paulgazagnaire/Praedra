@@ -14,6 +14,12 @@ public sealed class BattleState
 {
     public int EmpireOnContact { get; set; }
     public int AllianceOnContact { get; set; }
+    /// <summary>A computer player controls the Empire (set by <see cref="SetAiControlOrder"/>). rule: m4-battle-classic §1.3.</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool EmpireAi { get; set; }
+    /// <summary>A computer player controls the Alliance.</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool AllianceAi { get; set; }
     /// <summary>The Step (K) whose battles fill <see cref="Fought"/>; -1 = none yet.</summary>
     public int FoughtDay { get; set; } = -1;
     /// <summary>Object ids (ships and squadrons) that took part in a battle in Step <see cref="FoughtDay"/>, ascending. Stale after that Step: the query checks the day.</summary>
@@ -24,6 +30,7 @@ public sealed class BattleState
     internal void CopyFrom(BattleState o)
     {
         EmpireOnContact = o.EmpireOnContact; AllianceOnContact = o.AllianceOnContact;
+        EmpireAi = o.EmpireAi; AllianceAi = o.AllianceAi;
         FoughtDay = o.FoughtDay; Fought = new List<int>(o.Fought);
     }
 }
@@ -56,6 +63,7 @@ public sealed class BattleModule
     {
         var m = new BattleModule(game, galaxy, fleets, eco, p ?? new BattleParams(), newData);
         game.RegisterOrderHandler<SetOnContactOrder>(m.HandleSetOnContact);
+        game.RegisterOrderHandler<SetAiControlOrder>(m.HandleSetAiControl);
         game.RegisterHook("5", m.Resolve);
         return m;
     }
@@ -67,9 +75,20 @@ public sealed class BattleModule
     /// <summary>The side's standing answer to the Battle Alert (the AI side always fights, with its own threshold). rule: m4-battle-classic §1.3.</summary>
     public OnContactMode OnContactOf(Side side) => IsAi(side) ? OnContactMode.Fight : B.OnContact(side);
 
-    private bool IsAi(Side s) => s == Side.Empire ? Params.EmpireIsAi : Params.AllianceIsAi;
+    /// <summary>True when a computer player controls the side (saved flag) or the settings say so. rule: m4-battle-classic §1.3.</summary>
+    public bool IsAi(Side s) => s == Side.Empire ? Params.EmpireIsAi || B.EmpireAi : Params.AllianceIsAi || B.AllianceAi;
 
     public long SubmitSetOnContact(Side side, OnContactMode mode) => _game.Submit(seq => new SetOnContactOrder(seq, side, mode));
+
+    /// <summary>Queue <see cref="SetAiControlOrder"/>: call once when a computer player takes the side.</summary>
+    public long SubmitSetAiControl(Side side, bool ai = true) => _game.Submit(seq => new SetAiControlOrder(seq, side, ai));
+
+    // rule: m4-battle-classic §1.3: the side's controller (AI or human) decides its alert answer
+    private OrderResult HandleSetAiControl(StepContext ctx, SetAiControlOrder o)
+    {
+        if (o.Side == Side.Empire) B.EmpireAi = o.Ai; else B.AllianceAi = o.Ai;
+        return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
+    }
 
     /// <summary>
     /// True when this ship or squadron took part in a battle in the Step being run (the repair slot 6.8 reads it: no repair on a battle day).

@@ -134,6 +134,7 @@ public static class GameBoot
     public static IOpponent CreateOpponent(GameHost host, Side aiSide, AiLevel level = AiLevel.Medium)
     {
         var ai = new SimpleAi(host, aiSide, AiLevels.For(level, new SimpleAiParams { UseFog = AiUsesFog }));
+        if (!host.Battles.IsAi(aiSide)) host.Battles.SubmitSetAiControl(aiSide); // rule: m4-battle-classic §1.3 (the AI side's alert answer)
         // DEFAULT: the Empire AI is NOT told where the Rebel HQ is (economy-ai D4: the AI plays fair with fog of war). With fog on it reads
         // the HQ only from its own picture (m5-fog-and-hq §N5 KnownHq). It still conquers systems and wins if it captures the HQ.
         if (aiSide == Side.Empire && EmpireAiKnowsRebelHq) ai.KnownEnemyHq = host.HqSystem;
