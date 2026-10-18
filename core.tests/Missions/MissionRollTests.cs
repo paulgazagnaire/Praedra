@@ -142,7 +142,7 @@ public class MissionRollTests
         w.Run(5);
         var roll = w.Events<MissionDetectionRoll>().Single();
         Assert.Equal((-28, 99, 98, true), (roll.X, roll.Chance, roll.Roll, roll.Detected));
-        Assert.Equal(2, Rolls(w)); // detection, duel
+        Assert.Equal(3, Rolls(w)); // detection, duel, and (B2e moved) Leia's Hurt roll after the duel (combat 0: p = 100, a hit; a major: no death draw)
         Assert.Equal(MissionFoiledAtArrival, w.Events<MissionFoiled>().Single().EndCode);
     }
 
@@ -185,7 +185,8 @@ public class MissionRollTests
         Assert.Equal(expectedDraws, rolls.Count);
         Assert.All(rolls, r => Assert.Equal((61, 45), (r.X, r.Chance)));
         Assert.Equal(new[] { a, b }[detector], w.Events<MissionFoiled>().Single().Defender);
-        Assert.Equal(expectedDraws + 2, Rolls(w)); // and the betrayal draw and Piett's duel (B2d)
+        // and the betrayal draw and Piett's duel (B2d); B2e moved: his Hurt roll (combat 0: p = 100, a hit) and the minor's death draw
+        Assert.Equal(expectedDraws + 4, Rolls(w));
         Assert.Equal(1, w.Stub.Count(0, 1)); // the duel's guard pick among the two guards
         var seen = Assert.Single(w.Events<Rebellion.Core.Fog.AgentDetected>()); // the fog's MissionDetected (m5-fog-and-hq HR11)
         Assert.Equal((Side.Alliance, T, Side.Empire), (seen.Viewer, seen.System, seen.AgentSide));
@@ -269,7 +270,7 @@ public class MissionRollTests
     public void MI15_AssassinationTable(int draw, bool ok)
     {
         var w = new MissionWorld();
-        w.Agent(Vader, T, com: 70);
+        w.Agent(Vader, T, com: 70).ForceExperience = 0; // B2e: without his Force, so 70 is his effective combat
         w.Agent(Wedge, T, com: 70);
         w.Stub!.Expect(0, 99, Bt(1, draw)); // B2b: Vader's betrayal draw first
         w.Start(Side.Empire, MissionKind.Assassination, new[] { Vader }, null, targetChar: Wedge);
@@ -417,8 +418,8 @@ public class MissionRollTests
         w.Game.Step();
         w.RunIteration(w.LastMission);
         Assert.Equal(new[] { (0, 99), (0, 99), (0, 99), (0, 6), (0, 99) }, w.Stub.Requests.Where(r => r is (0, 99) or (0, 6)));
-        Assert.Equal(41, w.Ch.Get(Leia)!.Skill(Rebellion.Core.Characters.Skill.ShipDesign));
-        Assert.Equal(40, w.Ch.Get(Han)!.Skill(Rebellion.Core.Characters.Skill.ShipDesign));
+        Assert.Equal(41, w.Ch.Get(Leia)!.BaseSkill(Rebellion.Core.Characters.Skill.ShipDesign));
+        Assert.Equal(40, w.Ch.Get(Han)!.BaseSkill(Rebellion.Core.Characters.Skill.ShipDesign));
         Assert.Equal(4, w.Host.Research.Points(Side.Alliance, Rebellion.Core.Research.ResearchKind.Ship));
     }
 
@@ -489,11 +490,12 @@ public class MissionRollTests
     [Fact]
     public void MI40_FoiledTeamDuels()
     {
-        var (w, exposed) = SabotageWorld(new[] { 50, 99, 49, 87, 88 }, decoy: true);
+        // B2e moved: each character's duel is followed by his Hurt roll (combat 50: p = 50); 99 misses both times; Han's capture draws his escape delay.
+        var (w, exposed) = SabotageWorld(new[] { 50, 99, 49, 87, 99, 88, 99 }, decoy: true);
         w.RunUntilWorking(w.LastMission);
         int from = w.Stub!.Requests.Count;
         w.RunIteration(w.LastMission);
-        Assert.Equal(8, w.RequestsSince(from).Count);
+        Assert.Equal(11, w.RequestsSince(from).Count); // B2e: and the escape timer of Han's capture, rand(0..1000)
         Assert.Equal(MissionModule.FoilCodeAtTarget, w.Events<MissionFoiled>().Single().EndCode);
         Assert.Empty(w.Events<MissionMemberRoll>());
         Assert.Empty(exposed);

@@ -45,7 +45,10 @@ public class SimpleAiAgentsTests
         // InvasionBatchesOnly, ExplorerScouts) are switched off above with the rest.
         // B2c re-pin 2026-10-17: the loyalty triggers add saved state (GameState.Loyalty, the per-system loss tallies) and one draw per capture
         // (the new owner's loyalty shift), so this game takes another course from its first capture. Unchanged after merging main (#57, #58).
-        Assert.Equal("5f017ce70b78255be68d5700e5a6f283303586ac31e4558e0a320034589d23e7", h.StateHash());
+        // B2e re-pin 2026-10-17: new saved character fields (injury points, leadership_adjustment 50 under the Seat of Power, the escape and
+        // heal timers) and new rules this old AI cannot switch off (the Seat of Power raises Imperial Admirals' and Generals' leadership, escape
+        // delay draws at each capture, the Hurt roll on injuries) change the state and the game's course.
+        Assert.Equal("5e54e22f931b292d7d677e8beada9bb792bdd16f780488e03130d89e879ce007", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"
@@ -68,12 +71,14 @@ public class SimpleAiAgentsTests
     // or without a spy report. The old target (KnownHq by day 400, won by 500) is the trainer's.
     // Tightened 2026-10-17 (AI trainer, explorer scouts on at every level, SimpleAiParams.ExplorerScouts): the HQ falls on day 505 (15 looks).
     // Limit 1400 -> 700. The look floor keeps the old minimum rate (20 looks in at most 1400 days = one per 70 days) now that the game is shorter.
+    // B2e re-pin 2026-10-17 (needs Paul's or the AI trainer's sign-off): effective skills, the Hurt rolls after mission duels, escape timers and
+    // the Seat of Power change the game; the spies still never find the HQ (22 looks) and it falls by assault on day 727. Limit 700 -> 800.
     [Fact]
     public void FoggedEmpire_AgainstPassiveAlliance_SpiesSearchAndTheHqFalls()
     {
         var (m, h) = Match(1, Fog, passive: Side.Alliance);
         int knownDay = -1;
-        while (h.Game.Day < 700 && h.Victory.Winner == null)
+        while (h.Game.Day < 800 && h.Victory.Winner == null)
         {
             m.Step();
             if (knownDay < 0 && h.Fog.KnownHq(Side.Empire) != null) knownDay = h.Game.Day;
@@ -81,7 +86,7 @@ public class SimpleAiAgentsTests
         var looks = h.Game.Events.OfType<MissionStarted>().Count(e => e.Side == Side.Empire && e.MissionKind is MissionKind.Espionage or MissionKind.Reconnaissance);
         _out.WriteLine($"KnownHq day {knownDay}; winner {h.Victory.Winner} day {h.Game.Day}; looks {looks}; orders {m.TotalSent} rejected {m.TotalRejected}");
         Assert.True(looks * 70 >= h.Game.Day, $"only {looks} looks in {h.Game.Day} days");
-        Assert.True(knownDay == -1 || knownDay <= 700);
+        Assert.True(knownDay == -1 || knownDay <= 800);
         Assert.Equal(Side.Empire, h.Victory.Winner);
         Assert.Contains(h.Game.Events, e => e is HqDestroyed);
         Assert.True(m.TotalRejected * 20 <= m.TotalSent, $"{m.TotalRejected} of {m.TotalSent} orders rejected");

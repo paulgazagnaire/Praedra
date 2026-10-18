@@ -126,35 +126,53 @@ public class DeathStarTests
         Assert.Equal((0, 0), (w.Alliance(A3), w.Host.Economy.SupportOf(A3, Side.Empire)));
     }
 
-    /// <summary>The first seed whose first <paramref name="draws"/> rolls of rand(1..100) give exactly <paramref name="hits"/> at 50 or less (so the test sees both outcomes).</summary>
-    private static ulong FindSeed(int draws, int hits)
+    /// <summary>The first seed whose Death Star rolls on minors of these combats give exactly <paramref name="hits"/> hits (so the test sees both outcomes).</summary>
+    private static ulong FindSeed(int[] combats, int hits)
     {
         for (ulong seed = 1; ; seed++)
-        {
-            var rng = new GameRng(seed);
-            if (Enumerable.Range(0, draws).Count(_ => rng.NextInt(1, 100) <= 50) == hits) return seed;
-        }
+            if (Simulate(new GameRng(seed), combats).Count(k => k) == hits) return seed;
     }
+
+    /// <summary>
+    /// The draws of the Death Star's roll on free minors, in id order: rand(1..100) &lt;= 50 hits; a hit makes the Hurt roll on the minor's combat
+    /// (B2e: rand(0..99) &lt; max(1, 100 - combat), then rand(0..p), rand(0..29) and the death draw rand(0..99)), then the kill. Every hit dies.
+    /// </summary>
+    private static List<bool> Simulate(GameRng rng, int[] combats)
+    {
+        var kills = new List<bool>();
+        foreach (int com in combats)
+        {
+            bool hit = rng.NextInt(1, 100) <= 50;
+            kills.Add(hit);
+            if (!hit) continue;
+            int p = Math.Max(1, 100 - com);
+            if (rng.NextInt(0, 99) < p) { rng.NextInt(0, p); rng.NextInt(0, 29); rng.NextInt(0, 99); }
+        }
+        return kills;
+    }
+
+    private static int[] MinorCombats(int[] minors) =>
+        minors.Select(id => GameData.Default.Characters.Get(id).SkillBase[(int)Skill.Combat]).ToArray();
 
     // m5-death-star DS5
     [Fact]
     public void DS5_CharactersOnTheDestroyedPlanet()
     {
-        ulong seed = FindSeed(draws: 4, hits: 2);
-        var w = new DsWorld(seed: seed);
         var minors = new[] { Drayson, Borsk, Tura, Derlin };
+        ulong seed = FindSeed(MinorCombats(minors), hits: 2);
+        var w = new DsWorld(seed: seed);
         w.Hold(A1, Side.Alliance, 80); w.Hold(B3, Side.Alliance, 80); w.Hold(A6, Side.Alliance, 80);
         foreach (var m in minors) w.Person(m, A1);
         w.Person(Luke, A1);
         int attacker = w.DeathStar(Side.Empire, A1);
         var replica = new GameRng(seed);
-        var kills = minors.Select(_ => replica.NextInt(1, 100) <= 50).ToList(); // id order, p = 50
+        var kills = Simulate(replica, MinorCombats(minors)); // id order, p = 50; B2e: a hit adds the Hurt draws
 
         Assert.Null(w.Destroy(Side.Empire, attacker));
 
         for (int i = 0; i < minors.Length; i++)
             Assert.Equal(kills[i] ? CharacterStatus.Dead : CharacterStatus.Free, w.C(minors[i]).Status);
-        Assert.Equal(replica.Export(), w.Game.Rng.Export()); // exactly four draws: the major cost none
+        Assert.Equal(replica.Export(), w.Game.Rng.Export()); // four rolls plus the Hurt draws of the hits: the major cost none
         Assert.Equal(CharacterStatus.Free, w.C(Luke).Status);
         // every survivor, the major included, leaves for the nearest system its side holds (B3 is three steps away, A6 five), arriving the next day
         var survivors = minors.Where((_, i) => !kills[i]).Append(Luke).ToList();
@@ -173,9 +191,9 @@ public class DeathStarTests
     [Fact]
     public void DS5_NoHeldSystemLeftMeansCaptured()
     {
-        ulong seed = FindSeed(draws: 4, hits: 2);
-        var w = new DsWorld(seed: seed);
         var minors = new[] { Drayson, Borsk, Tura, Derlin };
+        ulong seed = FindSeed(MinorCombats(minors), hits: 2);
+        var w = new DsWorld(seed: seed);
         w.Hold(A1, Side.Alliance, 80);
         foreach (var m in minors) w.Person(m, A1);
         w.Person(Luke, A1);

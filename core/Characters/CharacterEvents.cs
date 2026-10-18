@@ -44,6 +44,8 @@ public static class CharacterCause
 {
     public const string Mission = "Mission", Battle = "Battle", DeathStar = "DeathStar", Uprising = "Uprising", Assault = "Assault",
         Blockade = "Blockade", Story = "Story", Debug = "Debug", Escape = "Escape";
+    /// <summary>B2e: a prisoner freed because his place changed side; the Force-user encounter; a trainer's awakening.</summary>
+    public const string Liberation = "Liberation", ForceEncounter = "ForceEncounter", Awakened = "Awakened";
     // causes of a post ending or a detachment (§Posts end)
     public const string Order = "Order", Injured = "Injured", Captured = "Captured", Killed = "Killed", FleetDissolved = "FleetDissolved",
         FleetMoved = "FleetMoved", Merged = "Merged", HolderChanged = "HolderChanged", SystemDestroyed = "SystemDestroyed";
@@ -60,7 +62,8 @@ public sealed record CharacterAttached(int Index, int Day, int Character, Side S
 public sealed record CharacterDetached(int Index, int Day, int Character, Side Side, int Fleet, string? System, string Cause) : GameEvent(Index, Day, nameof(CharacterDetached));
 public sealed record PostVacated(int Index, int Day, int Character, Side Side, PostKind Post, string Cause) : GameEvent(Index, Day, nameof(PostVacated));
 public sealed record SystemGeneralAssigned(int Index, int Day, int Character, Side Side, string System) : GameEvent(Index, Day, nameof(SystemGeneralAssigned));
-public sealed record CharacterInjured(int Index, int Day, int Character, Side Side, string? System, string Cause) : GameEvent(Index, Day, nameof(CharacterInjured));
+/// <summary>Injury points added (Points) and the total now (Injury). rule: §Capture, injury, death, freeing (B2e §2).</summary>
+public sealed record CharacterInjured(int Index, int Day, int Character, Side Side, string? System, string Cause, int Points = 0, int Injury = 0) : GameEvent(Index, Day, nameof(CharacterInjured));
 public sealed record CharacterHealed(int Index, int Day, int Character, Side Side) : GameEvent(Index, Day, nameof(CharacterHealed));
 public sealed record CharacterCaptured(int Index, int Day, int Character, Side Side, Side Captor, string? System, string Cause) : GameEvent(Index, Day, nameof(CharacterCaptured));
 public sealed record CharacterFreed(int Index, int Day, int Character, Side Side, string? System, string Cause) : GameEvent(Index, Day, nameof(CharacterFreed));
@@ -77,3 +80,15 @@ public sealed record ForceDiscovered(int Index, int Day, int Character, Side Sid
 /// rule: m5-characters-and-force §Loyalty.
 /// </summary>
 public sealed record LoyaltyChanged(int Index, int Day, int Character, Side CharacterSide, int From, int To) : GameEvent(Index, Day, nameof(LoyaltyChanged));
+/// <summary>A prisoner's escape attempt (ESCAPETB). rule: §Escape (Traced B2e §3).</summary>
+public sealed record EscapeAttempted(int Index, int Day, int Character, Side Side, string System, int CaptorAverageCombat, int CaptorSpecialForces, int X, int Chance, int Roll, bool Escaped)
+    : GameEvent(Index, Day, nameof(EscapeAttempted));
+/// <summary>
+/// A Force-user encounter was resolved (0x560200; both sides get the message, so no Side field). rule: m5-characters-and-force §Force (Traced B2e §4).
+/// </summary>
+public sealed record ForceEncounterResolved(int Index, int Day, int Mission, int Member, Side MemberSide, int Other, Side OtherSide, bool MemberEscaped,
+    bool MemberHurt, bool OtherHurt) : GameEvent(Index, Day, nameof(ForceEncounterResolved));
+/// <summary>A character's Force experience grew (the encounter). rule: §Force (B2e §4 step 7).</summary>
+public sealed record ForceGained(int Index, int Day, int Character, Side Side, int Gain, int NewForce, string Cause) : GameEvent(Index, Day, nameof(ForceGained));
+/// <summary>Luke (or Leia) learned his heritage. rule: §Force (B2e §4, §5).</summary>
+public sealed record HeritageLearned(int Index, int Day, int Character, Side Side) : GameEvent(Index, Day, nameof(HeritageLearned));

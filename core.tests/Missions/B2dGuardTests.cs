@@ -147,7 +147,7 @@ public class B2dGuardTests
         w.Agent(Han, H, esp: 50, com: 100);
         int fleet = Fleet(w, Side.Empire, T, Isd);
         w.Agent(Piett, T, com: 85); w.Ch.SetPost(Piett, fleet, CharacterPost.Admiral);
-        w.Stub!.Expect(0, 99, 0, draw); // arrival walk detects, then Han's duel
+        w.Stub!.Expect(0, 99, 0, draw, 99); // arrival walk detects, then Han's duel, then (B2e moved) his Hurt roll (p = 1: 99 misses)
         w.Start(Side.Alliance, MissionKind.Espionage, new[] { Han }, T);
         w.Run(5);
         var d = w.Events<MissionDuel>().Single();
@@ -183,7 +183,9 @@ public class B2dGuardTests
         w.Agent(Leia, H, esp: 50); w.Agent(Han, H, esp: 50);
         if (leaving) { w.Hold(H, Side.Alliance, 100); Fleet(w, Side.Empire, H, Isd); }
         else Fleet(w, Side.Empire, T, Isd);
-        w.Stub!.Expect(0, 99, 0, 99, 99); // the walk detects, two duels lost
+        // the walk detects, two duels lost; B2e moved: each duel is followed by the member's Hurt roll (combat 0: p = 100, always a hit; majors
+        // make no death draw), then the capture
+        w.Stub!.Expect(0, 99, 0, 99, 99, 99, 99);
         w.Start(Side.Alliance, MissionKind.Espionage, new[] { Leia, Han }, T);
         w.Run(5);
         Assert.Equal(leaving ? MissionModule.FoilCodeAtOrigin : MissionModule.FoilCodeAtTarget, w.Events<MissionFoiled>().Single().EndCode);
