@@ -1,77 +1,77 @@
-id,name,in_game,source
-576,Mon Mothma,1,Decided (Paul): heroes/refined-roster KEEP
-577,Leia Organa,1,Decided (Paul): heroes/refined-roster KEEP
-578,Luke Skywalker,1,Decided (Paul): heroes/refined-roster KEEP
-579,Han Solo,1,Decided (Paul): heroes/refined-roster KEEP
-640,Emperor Palpatine,1,Decided (Paul): heroes/refined-roster KEEP
-641,Darth Vader,1,Decided (Paul): heroes/refined-roster KEEP
-832,Ackbar,1,Decided (Paul): heroes/refined-roster KEEP
-833,Wedge Antilles,1,Decided (Paul): heroes/refined-roster KEEP
-834,Lando Calrissian,1,Decided (Paul): heroes/refined-roster KEEP
-835,Chewbacca,1,Decided (Paul): heroes/refined-roster KEEP
-836,Jan Dodonna,1,Decided (Paul): heroes/refined-roster KEEP
-837,Crix Madine,1,Decided (Paul): heroes/refined-roster KEEP
-838,Carlist Rieekan,1,Decided (Paul): heroes/refined-roster KEEP
-839,Afyon,1,Decided (Paul): heroes/refined-roster KEEP
-840,Drayson,1,Decided (Paul): heroes/refined-roster KEEP
-841,Borsk Fey'lya,1,Decided (Paul): heroes/refined-roster KEEP
-842,Tura Raftican,1,Decided (Paul): heroes/refined-roster KEEP
-843,Bren Derlin,1,Decided (Paul): heroes/refined-roster KEEP
-844,Garm Bel Iblis,0,Decided (Paul): heroes/refined-roster CUT
-845,Talon Karrde,1,Decided (Paul): heroes/refined-roster KEEP
-846,Narra,1,Decided (Paul): heroes/refined-roster KEEP
-847,Huoba Neva,1,Decided (Paul): heroes/refined-roster KEEP
-848,Page,1,Decided (Paul): heroes/refined-roster KEEP
-849,Syub Snunb,1,Decided (Paul): heroes/refined-roster KEEP
-850,Adar Tallon,1,Decided (Paul): heroes/refined-roster KEEP
-851,Sarin Virgilio,1,Decided (Paul): heroes/refined-roster KEEP
-852,Vanden Willard,1,Decided (Paul): heroes/refined-roster KEEP
-853,Roget Jiriss,1,Decided (Paul): heroes/refined-roster KEEP
-854,Kaiya Andrimetrum,0,Decided (Paul): heroes/refined-roster CUT
-855,Mazer Rackus,1,Decided (Paul): heroes/refined-roster KEEP
-856,Orrimaarko,1,Decided (Paul): heroes/refined-roster KEEP
-857,Ma'w'shiye,0,Decided (Paul): heroes/refined-roster CUT
-858,Airen Cracken,1,Decided (Paul): heroes/added-heroes pick (stats Proposal)
-859,Nien Nunb,1,Decided (Paul): heroes/added-heroes pick (stats Proposal)
-860,Hera Syndulla,1,Decided (Paul): heroes/added-heroes pick (stats Proposal)
-861,Shara Bey,1,Decided (Paul): heroes/added-heroes pick (stats Proposal)
-862,Tycho Celchu,1,Decided (Paul): heroes/added-heroes pick (stats Proposal)
-863,Winter Celchu,1,Decided (Paul): heroes/added-heroes pick (stats Proposal)
-864,Kyle Katarn,1,Decided (Paul): heroes/added-heroes pick (stats Proposal)
-865,Quarrie,1,Decided (Paul): heroes/added-heroes pick (stats Proposal)
-896,Jerjerrod,1,Decided (Paul): heroes/refined-roster KEEP
-897,Ozzel,1,Decided (Paul): heroes/refined-roster KEEP
-898,Piett,1,Decided (Paul): heroes/refined-roster KEEP
-899,Veers,1,Decided (Paul): heroes/refined-roster KEEP
-900,Brandei,1,Decided (Paul): heroes/refined-roster KEEP
-901,Covell,1,Decided (Paul): heroes/refined-roster KEEP
-902,Dorja,1,Decided (Paul): heroes/refined-roster KEEP
-903,Bin Essada,1,Decided (Paul): heroes/refined-roster KEEP
-904,Niles Ferrier,0,Decided (Paul): heroes/refined-roster CUT
-905,Grammel,0,Decided (Paul): heroes/refined-roster CUT
-906,Griff,0,Decided (Paul): heroes/refined-roster CUT
-907,Klev,0,Decided (Paul): heroes/refined-roster CUT
-908,Needa,1,Decided (Paul): heroes/refined-roster KEEP
-909,Bane Nothos,1,Decided (Paul): heroes/refined-roster KEEP
-910,Orlok,1,Decided (Paul): heroes/refined-roster KEEP
-911,Pellaeon,0,Decided (Paul): heroes/refined-roster CUT
-912,Screed,1,Decided (Paul): heroes/refined-roster KEEP
-913,Thrawn,0,Decided (Paul): heroes/refined-roster CUT
-914,Zuggs,0,Decided (Paul): heroes/refined-roster CUT
-915,Daala,0,Decided (Paul): heroes/refined-roster CUT
-916,Pter Thanas,1,Decided (Paul): heroes/refined-roster KEEP
-917,Bevel Lemelisk,1,Decided (Paul): heroes/refined-roster KEEP
-918,Shenir Rix,1,Decided (Paul): heroes/refined-roster KEEP
-919,Noval Garaint,1,Decided (Paul): heroes/refined-roster KEEP
-920,Garindan,1,Decided (Paul): heroes/refined-roster KEEP
-921,Menndo,1,Decided (Paul): heroes/refined-roster KEEP
-922,Labansat,1,Decided (Paul): heroes/refined-roster KEEP
-923,Villar,1,Decided (Paul): heroes/refined-roster KEEP
-924,Garrick Versio,1,Decided (Paul): heroes/added-heroes pick (stats Proposal)
-925,Mara Jade,1,Decided (Paul): heroes/added-heroes pick (stats Proposal)
-926,Ysanne Isard,1,Decided (Paul): heroes/added-heroes pick (stats Proposal)
-927,Rae Sloane,1,Decided (Paul): heroes/added-heroes pick (stats Proposal)
-928,Boba Fett,1,Decided (Paul): heroes/added-heroes pick (stats Proposal)
-929,Bossk,1,Decided (Paul): heroes/added-heroes pick (stats Proposal)
-930,Dengar,1,Decided (Paul): heroes/added-heroes pick (stats Proposal)
-931,Black Krrsantan,1,Decided (Paul): heroes/added-heroes pick (stats Proposal)
+id,name,in_game,never_talented,source
+576,Mon Mothma,1,0,Decided (Paul): heroes/refined-roster KEEP
+577,Leia Organa,1,0,Decided (Paul): heroes/refined-roster KEEP
+578,Luke Skywalker,1,0,Decided (Paul): heroes/refined-roster KEEP
+579,Han Solo,1,0,Decided (Paul): heroes/refined-roster KEEP
+640,Emperor Palpatine,1,0,Decided (Paul): heroes/refined-roster KEEP
+641,Darth Vader,1,0,Decided (Paul): heroes/refined-roster KEEP
+832,Ackbar,1,0,Decided (Paul): heroes/refined-roster KEEP
+833,Wedge Antilles,1,0,Decided (Paul): heroes/refined-roster KEEP
+834,Lando Calrissian,1,0,Decided (Paul): heroes/refined-roster KEEP
+835,Chewbacca,1,0,Decided (Paul): heroes/refined-roster KEEP
+836,Jan Dodonna,1,0,Decided (Paul): heroes/refined-roster KEEP
+837,Crix Madine,1,0,Decided (Paul): heroes/refined-roster KEEP
+838,Carlist Rieekan,1,0,Decided (Paul): heroes/refined-roster KEEP
+839,Afyon,1,0,Decided (Paul): heroes/refined-roster KEEP
+840,Drayson,1,0,Decided (Paul): heroes/refined-roster KEEP
+841,Borsk Fey'lya,1,0,Decided (Paul): heroes/refined-roster KEEP
+842,Tura Raftican,1,0,Decided (Paul): heroes/refined-roster KEEP
+843,Bren Derlin,1,0,Decided (Paul): heroes/refined-roster KEEP
+844,Garm Bel Iblis,0,0,Decided (Paul): heroes/refined-roster CUT
+845,Talon Karrde,1,0,Decided (Paul): heroes/refined-roster KEEP
+846,Narra,1,0,Decided (Paul): heroes/refined-roster KEEP
+847,Huoba Neva,1,0,Decided (Paul): heroes/refined-roster KEEP
+848,Page,1,0,Decided (Paul): heroes/refined-roster KEEP
+849,Syub Snunb,1,0,Decided (Paul): heroes/refined-roster KEEP
+850,Adar Tallon,1,0,Decided (Paul): heroes/refined-roster KEEP
+851,Sarin Virgilio,1,0,Decided (Paul): heroes/refined-roster KEEP
+852,Vanden Willard,1,0,Decided (Paul): heroes/refined-roster KEEP
+853,Roget Jiriss,1,0,Decided (Paul): heroes/refined-roster KEEP
+854,Kaiya Andrimetrum,0,0,Decided (Paul): heroes/refined-roster CUT
+855,Mazer Rackus,1,0,Decided (Paul): heroes/refined-roster KEEP
+856,Orrimaarko,1,0,Decided (Paul): heroes/refined-roster KEEP
+857,Ma'w'shiye,0,0,Decided (Paul): heroes/refined-roster CUT
+858,Airen Cracken,1,0,Decided (Paul): heroes/added-heroes pick (stats Proposal)
+859,Nien Nunb,1,0,Decided (Paul): heroes/added-heroes pick (stats Proposal)
+860,Hera Syndulla,1,0,Decided (Paul): heroes/added-heroes pick (stats Proposal)
+861,Shara Bey,1,0,Decided (Paul): heroes/added-heroes pick (stats Proposal)
+862,Tycho Celchu,1,0,Decided (Paul): heroes/added-heroes pick (stats Proposal)
+863,Winter Celchu,1,0,Decided (Paul): heroes/added-heroes pick (stats Proposal)
+864,Kyle Katarn,1,0,Decided (Paul): heroes/added-heroes pick (stats Proposal)
+865,Quarrie,1,0,Decided (Paul): heroes/added-heroes pick (stats Proposal)
+896,Jerjerrod,1,0,Decided (Paul): heroes/refined-roster KEEP
+897,Ozzel,1,0,Decided (Paul): heroes/refined-roster KEEP
+898,Piett,1,0,Decided (Paul): heroes/refined-roster KEEP
+899,Veers,1,0,Decided (Paul): heroes/refined-roster KEEP
+900,Brandei,1,0,Decided (Paul): heroes/refined-roster KEEP
+901,Covell,1,0,Decided (Paul): heroes/refined-roster KEEP
+902,Dorja,1,0,Decided (Paul): heroes/refined-roster KEEP
+903,Bin Essada,1,0,Decided (Paul): heroes/refined-roster KEEP
+904,Niles Ferrier,0,0,Decided (Paul): heroes/refined-roster CUT
+905,Grammel,0,0,Decided (Paul): heroes/refined-roster CUT
+906,Griff,0,0,Decided (Paul): heroes/refined-roster CUT
+907,Klev,0,0,Decided (Paul): heroes/refined-roster CUT
+908,Needa,1,0,Decided (Paul): heroes/refined-roster KEEP
+909,Bane Nothos,1,0,Decided (Paul): heroes/refined-roster KEEP
+910,Orlok,1,0,Decided (Paul): heroes/refined-roster KEEP
+911,Pellaeon,0,0,Decided (Paul): heroes/refined-roster CUT
+912,Screed,1,0,Decided (Paul): heroes/refined-roster KEEP
+913,Thrawn,0,0,Decided (Paul): heroes/refined-roster CUT
+914,Zuggs,0,0,Decided (Paul): heroes/refined-roster CUT
+915,Daala,0,0,Decided (Paul): heroes/refined-roster CUT
+916,Pter Thanas,1,0,Decided (Paul): heroes/refined-roster KEEP
+917,Bevel Lemelisk,1,0,Decided (Paul): heroes/refined-roster KEEP
+918,Shenir Rix,1,0,Decided (Paul): heroes/refined-roster KEEP
+919,Noval Garaint,1,0,Decided (Paul): heroes/refined-roster KEEP
+920,Garindan,1,0,Decided (Paul): heroes/refined-roster KEEP
+921,Menndo,1,0,Decided (Paul): heroes/refined-roster KEEP
+922,Labansat,1,0,Decided (Paul): heroes/refined-roster KEEP
+923,Villar,1,0,Decided (Paul): heroes/refined-roster KEEP
+924,Garrick Versio,1,0,Decided (Paul): heroes/added-heroes pick (stats Proposal)
+925,Mara Jade,1,0,Decided (Paul): heroes/added-heroes pick (stats Proposal)
+926,Ysanne Isard,1,0,Decided (Paul): heroes/added-heroes pick (stats Proposal)
+927,Rae Sloane,1,0,Decided (Paul): heroes/added-heroes pick (stats Proposal)
+928,Boba Fett,1,1,Decided (Paul): heroes/added-heroes pick (stats Proposal)
+929,Bossk,1,1,Decided (Paul): heroes/added-heroes pick (stats Proposal)
+930,Dengar,1,1,Decided (Paul): heroes/added-heroes pick (stats Proposal)
+931,Black Krrsantan,1,1,Decided (Paul): heroes/added-heroes pick (stats Proposal)

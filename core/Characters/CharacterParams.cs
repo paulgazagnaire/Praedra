@@ -143,6 +143,13 @@ public sealed record CharacterParams
     public int TalentedForceMin { get; init; } = 80;
     /// <summary>See <see cref="TalentedForceMin"/>.</summary>
     public int TalentedForceMax { get; init; } = 120;
+    /// <summary>
+    /// Leave out of the talented draw anyone whose own Force is already at <see cref="TalentedForceMin"/> or above: they keep their Force but are
+    /// not talented, so they never train or awaken anyone; the drawn are always new faces. Paul 2026-10-18 (card "Skip the strong"). rule: §Rule (New) 4, Q17.
+    /// </summary>
+    public bool TalentedSkipStrong { get; init; } = true;
+    /// <summary>Leave out of the talented draw the characters flagged never_talented in roster.csv (the bounty hunters). Paul 2026-10-18 (card "Leave out hunters"). rule: §Rule (New) 4, Q17.</summary>
+    public bool TalentedSkipFlagged { get; init; } = true;
     /// <summary>Lowest Force of an awakening trainer (DiscoveringForceUser). GNPRTB 2580 = 80 (0x4ef070).</summary>
     public int TrainerMinForce { get; init; } = 80;
     /// <summary>Awakening timer: GNPRTB 2582 = 1 day, spread 2583 = 0 (no draw).</summary>
