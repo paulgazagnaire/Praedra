@@ -205,7 +205,7 @@ public class MissionEffectTests
     [Fact]
     public void MI37_DeathStarSabotage()
     {
-        var w = new MissionWorld();
+        var w = new MissionWorld(characters: Rebellion.Core.Tests.Characters.CharWorld.Classic1998Force()); // the 1998 Force (m5-characters-and-force §Force CH37)
         w.Hold(T, Side.Empire, 0);
         w.Agent(Luke, T, esp: 100, com: 100);
         var calls = new List<(string, Side)>();

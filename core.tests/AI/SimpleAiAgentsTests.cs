@@ -344,7 +344,7 @@ public class SimpleAiAgentsTests
             foreach (var e in fresh.OfType<MissionStarted>().Where(e => e.MissionKind == MissionKind.Recruitment))
             {
                 running[e.Mission] = e.Side;
-                if (e.Characters.Items.Any(id => h.Characters.Get(id)!.EffectiveSkill(Skill.Leadership) < p.RecruitMinLeadership)) weak++;
+                if (e.Characters.Items.Any(id => h.Characters.EffectiveSkill(h.Characters.Get(id)!, Skill.Leadership) < p.RecruitMinLeadership)) weak++;
                 if ((e.Side == Side.Empire ? emptyE : emptyA) != null) afterEmpty++;
             }
             foreach (var e in fresh.OfType<MissionEnded>()) running.Remove(e.Mission);

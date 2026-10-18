@@ -51,19 +51,19 @@ public class CharacterTests
 
     // ------------------------------------------------------------------ Force (§Force)
 
-    private static (CharWorld W, CharacterRecord T, CharacterRecord S) Training(int trainerId, int trainerForce, int studentId, int studentForce)
+    private static (CharWorld W, CharacterRecord T, CharacterRecord S) Training(int trainerId, int trainerForce, int studentId, int studentForce, CharacterParams? p = null)
     {
-        var w = new CharWorld();
+        var w = new CharWorld(p);
         var t = w.Add(trainerId, Yavin); t.ForceUser = true; t.ForceExperience = trainerForce;
         var s = w.Add(studentId, Yavin); s.ForceUser = true; s.ForceExperience = studentForce; s.ForceTraining = 0;
         return (w, t, s);
     }
 
-    // m5-characters-and-force CH3
+    // m5-characters-and-force CH3 (the 1998 roll: Classic values set explicitly, CH37)
     [Fact]
     public void CH3_VaderTrainsAStudentOfTwenty()
     {
-        var (w, vader, s) = Training(Vader, 120, Tura, 20);
+        var (w, vader, s) = Training(Vader, 120, Tura, 20, Classic1998Force());
         w.Stub!.Expect(0, 99, 99).Expect(0, 50, 37);
         w.StepWith("6.10", ctx => w.Ch.ForceTrainingRound(ctx, vader, new[] { s }));
         var e = Assert.Single(w.Events<ForceTrainingResult>());
@@ -72,11 +72,11 @@ public class CharacterTests
         Assert.Equal(57, s.EffectiveForce);
     }
 
-    // m5-characters-and-force CH4
+    // m5-characters-and-force CH4 (the 1998 roll: Classic values set explicitly, CH37)
     [Fact]
     public void CH4_LukeTrainsLeia()
     {
-        var (w, luke, leia) = Training(Luke, 50, Leia, 10);
+        var (w, luke, leia) = Training(Luke, 50, Leia, 10, Classic1998Force());
         w.Stub!.Expect(0, 99, 39).Expect(0, 20, 20);
         w.StepWith("6.10", ctx => w.Ch.ForceTrainingRound(ctx, luke, new[] { leia }));
         Assert.Equal(30, leia.EffectiveForce);
@@ -89,11 +89,11 @@ public class CharacterTests
         Assert.Equal(new[] { (0, 99) }, w.Stub.Requests.Skip(before).Select(r => (r.Min, r.Max)));
     }
 
-    // m5-characters-and-force CH5
+    // m5-characters-and-force CH5 (the 1998 roll: Classic values set explicitly; under New a gap of 1 has chance 1 * 50 / 100 = 0)
     [Fact]
     public void CH5_EqualOrHigherStudentsNeverSucceed_GapOneGainsZero()
     {
-        var (w, t, s) = Training(Luke, 50, Leia, 50);
+        var (w, t, s) = Training(Luke, 50, Leia, 50, Classic1998Force());
         w.StepWith("6.10", ctx => w.Ch.ForceTrainingRound(ctx, t, new[] { s }));
         s.ForceExperience = 60;
         w.StepWith("6.10", ctx => w.Ch.ForceTrainingRound(ctx, t, new[] { s }));
@@ -125,6 +125,76 @@ public class CharacterTests
             }
         });
         Assert.True(s.EffectiveForce > 10);
+    }
+
+    // m5-characters-and-force CH35: New ForceSkillPercent 40 (DEFAULT): base 100, Force 120 gives 148; Luke (Force 50) diplomacy 50 → 60,
+    // espionage 50 → 60, combat 90 → 108, with 40 injury 68; research skills and leadership unchanged
+    [Fact]
+    public void CH35_NewForceSkillPercentForty()
+    {
+        var w = new CharWorld();
+        Assert.Equal(40, w.Ch.Params.ForceSkillPercent);
+        var vader = w.Add(Vader, Coruscant); vader.ForceUser = true; vader.ForceExperience = 120; vader.ForceTraining = 0;
+        vader.Skills[(int)Skill.Combat] = 100; vader.Skills[(int)Skill.Espionage] = 100; vader.Skills[(int)Skill.Diplomacy] = 100;
+        vader.Skills[(int)Skill.Leadership] = 70; vader.Skills[(int)Skill.ShipDesign] = 30; vader.Injury = 0; vader.LeadershipAdjustment = 0;
+        Assert.Equal((148, 148, 148), (w.Ch.EffectiveSkill(vader, Skill.Combat), w.Ch.EffectiveSkill(vader, Skill.Espionage), w.Ch.EffectiveSkill(vader, Skill.Diplomacy)));
+        Assert.Equal((70, 30), (w.Ch.EffectiveSkill(vader, Skill.Leadership), w.Ch.EffectiveSkill(vader, Skill.ShipDesign)));
+        var luke = w.Add(Luke, Yavin); luke.ForceUser = true; luke.ForceExperience = 50; luke.ForceTraining = 0; luke.Injury = 0;
+        luke.Skills[(int)Skill.Diplomacy] = 50; luke.Skills[(int)Skill.Espionage] = 50; luke.Skills[(int)Skill.Combat] = 90;
+        Assert.Equal((60, 60, 108), (w.Ch.EffectiveSkill(luke, Skill.Diplomacy), w.Ch.EffectiveSkill(luke, Skill.Espionage), w.Ch.EffectiveSkill(luke, Skill.Combat)));
+        luke.Injury = 40;
+        Assert.Equal(68, w.Ch.EffectiveSkill(luke, Skill.Combat));
+    }
+
+    // m5-characters-and-force CH36: New training (chance percent 50, gain percent 25, DEFAULT): Vader 120, student 20 (gap 100): chance 50,
+    // r = 49 succeeds, g = rand(0..25), g = 25 → 45; r = 50 fails with no g draw. Luke 50, Leia 10 (gap 40): chance 20, r = 19 succeeds, max gain 10
+    [Fact]
+    public void CH36_NewTrainingChanceAndGain()
+    {
+        var (w, vader, s) = Training(Vader, 120, Tura, 20);
+        w.Stub!.Expect(0, 99, 49).Expect(0, 25, 25);
+        w.StepWith("6.10", ctx => w.Ch.ForceTrainingRound(ctx, vader, new[] { s }));
+        var e = Assert.Single(w.Events<ForceTrainingResult>());
+        Assert.Equal((100, 49, true, 25, 45), (e.Gap, e.R, e.Success, e.Gain, e.NewForce));
+        s.ForceTraining = 0;
+        int before = w.Stub.Requests.Count;
+        w.Stub.Expect(0, 99, 50);
+        w.StepWith("6.10", ctx => w.Ch.ForceTrainingRound(ctx, vader, new[] { s }));
+        Assert.False(w.Events<ForceTrainingResult>().Last().Success);
+        Assert.Equal(20, s.EffectiveForce);
+        Assert.Equal(new[] { (0, 99) }, w.Stub.Requests.Skip(before).Select(r => (r.Min, r.Max)));
+
+        var (w2, luke, leia) = Training(Luke, 50, Leia, 10);
+        w2.Stub!.Expect(0, 99, 19).Expect(0, 10, 10);
+        w2.StepWith("6.10", ctx => w2.Ch.ForceTrainingRound(ctx, luke, new[] { leia }));
+        Assert.Equal(20, leia.EffectiveForce);
+        w2.Stub.Expect(0, 99, 10); // gap 30 now: chance 15, r = 10 succeeds, max gain 30 * 25 / 100 = 7
+        w2.Stub.Expect(0, 7, 7);
+        w2.StepWith("6.10", ctx => w2.Ch.ForceTrainingRound(ctx, luke, new[] { leia }));
+        Assert.Equal(27, leia.EffectiveForce);
+        w2.Stub.Expect(0, 99, 11); // gap 23: chance 11, r = 11 fails
+        w2.StepWith("6.10", ctx => w2.Ch.ForceTrainingRound(ctx, luke, new[] { leia }));
+        Assert.False(w2.Events<ForceTrainingResult>().Last().Success);
+    }
+
+    // m5-characters-and-force CH37: the 1998 values (100 / 100 / 50) reproduce CH3 and CH4 (those tests run with them) and B2e-1/B2e-2, and the
+    // skill formula with percent 100 equals B + B * F / 100 for every base 0..120 and Force 0..200 (bit-identical Classic)
+    [Fact]
+    public void CH37_ClassicValuesReproduceThe1998Force()
+    {
+        var w = new CharWorld(Classic1998Force());
+        var luke = w.Add(Luke, Yavin); luke.ForceUser = true; luke.ForceExperience = 50; luke.ForceTraining = 0; luke.Injury = 0;
+        luke.Skills[(int)Skill.Diplomacy] = 50; luke.Skills[(int)Skill.Espionage] = 50; luke.Skills[(int)Skill.Combat] = 90;
+        Assert.Equal((75, 75, 135), (w.Ch.EffectiveSkill(luke, Skill.Diplomacy), w.Ch.EffectiveSkill(luke, Skill.Espionage), w.Ch.EffectiveSkill(luke, Skill.Combat)));
+        var c = new CharacterRecord { Skills = new List<int>(new int[7]) };
+        for (int b = 0; b <= 120; b++)
+            for (int f = 0; f <= 200; f++)
+            {
+                c.Skills[(int)Skill.Espionage] = b; c.ForceExperience = f;
+                Assert.Equal(b + b * f / 100, c.EffectiveSkill(Skill.Espionage, CharacterParams.ClassicForceSkillPercent));
+            }
+        CH3_VaderTrainsAStudentOfTwenty();
+        CH4_LukeTrainsLeia();
     }
 
     // m5-characters-and-force CH7
@@ -784,7 +854,8 @@ public class CharacterTests
         Assert.True(p.LoyaltyTriggers); Assert.True(p.SeatOfPower); // B2e: Seat of Power Traced, DEFAULT on
         Assert.Equal(ForceDiscoveryMode.Trainer, p.ForceDiscovery); Assert.False(p.ForceGrowth); Assert.False(p.SkillGrowth); // B2e: trainers awaken Force users
         Assert.False(p.TrainerNeedsKnight); Assert.Equal(1, p.ForceStudentMin); Assert.Equal(80, p.ForceKnightMin); Assert.Equal(100, p.ForceMasterMin);
-        Assert.False(p.NavigatorBonus); Assert.Equal(25, p.NavigatorFloor); Assert.Equal(50, p.DeathStarHitPercent); Assert.Equal(50, p.TrainingGainPercent);
+        Assert.False(p.NavigatorBonus); Assert.Equal(25, p.NavigatorFloor); Assert.Equal(50, p.DeathStarHitPercent); Assert.Equal(25, p.ForceTrainingGainPercent);
+        Assert.Equal(40, p.ForceSkillPercent); Assert.Equal(50, p.ForceTrainingChancePercent); // m5-characters-and-force §Force (New, Paul 2026-10-18)
         Assert.Equal(100, p.CharacterSpeed); Assert.Equal(4, p.StartExtrasPerSide); Assert.Equal(StartCastOfficers.Original, p.StartCastOfficers);
     }
 
