@@ -19,7 +19,9 @@ public sealed record RefineryWaiting(int Index, int Day, int Facility, string Sy
     : GameEvent(Index, Day, nameof(RefineryWaiting));
 
 /// <summary>Slot 6.5. A mine or refinery stopped (IDLE): its running cycle, if any, was abandoned with no point. Reason is "Suspended"
-/// (blockade or uprising on its system) or "Released" (its system changed hands or has no holder). rule: B5b §3 (0x50bbb0, 0x55b010).</summary>
+/// (blockade or uprising on its system) or "Released" (its system changed hands or has no holder). rule: B5b §3 (0x50bbb0, 0x55b010).
+/// A "Suspended" stop under MineStopMode Pause (DEFAULT) keeps the running cycle frozen instead. rule: m2-mines-refineries-pools §Blockade and
+/// uprising (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch).</summary>
 public sealed record FacilityStopped(int Index, int Day, int Facility, string System, Side Side, string Reason)
     : GameEvent(Index, Day, nameof(FacilityStopped));
 

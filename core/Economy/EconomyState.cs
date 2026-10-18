@@ -58,11 +58,18 @@ public sealed class EconObject
     // ---- the 1998 processing state (B5b §1-3). Omitted from the save while default.
     /// <summary>
     /// Mine or refinery: the side it is working for (WAITING or PROCESSING); null = IDLE (stopped: not completed, neutral system, or suspended by
-    /// a blockade or an uprising). A change of this value is a stop (cycle abandoned, no point) and, when active again, a restart on a startup
+    /// a blockade or an uprising). A change of this value is a stop (cycle abandoned, no point; paused instead under MineStopMode Pause, see PausedFor) and, when active again, a restart on a startup
     /// cycle. rule: m2-mines-refineries-pools §Blockade and uprising, §Side change (B5b §1, §3).
     /// </summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public Side? WorkSide { get; set; }
+    /// <summary>
+    /// Mine or refinery, IDLE because suspended: the side whose running cycle is paused (its <see cref="Due"/> moves on one day per suspended day);
+    /// null = none. Resumed when the facility works for that side again, dropped otherwise. Omitted from the save while null.
+    /// rule: m2-mines-refineries-pools §Blockade and uprising (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch).
+    /// </summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public Side? PausedFor { get; set; }
     /// <summary>The next cycle is a startup cycle (rand(0..d) + d / 2); set on every restart from IDLE, cleared when a cycle pays. rule: §First cycle (B5b §2).</summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public bool Startup { get; set; }

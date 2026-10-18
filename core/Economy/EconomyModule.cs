@@ -30,8 +30,17 @@ public sealed class EconomyModule
     public bool BlockadeStopsMining { get; set; } = true;
     /// <summary>An uprising stops mines and refineries exactly like a blockade. 1998 = on (B5b §3, [EXE-own] 0x50bbb0); DEFAULT on (Dev lead 2026-10-18). rule: m2-mines-refineries-pools §Blockade and uprising.</summary>
     public bool UprisingStopsMining { get; set; } = true;
-    /// <summary>Suspended mines and refineries leave the capacity sums. 1998 = on (B5b §3, [EXE-own] 0x52fff0); DEFAULT on. rule: m2-maintenance §Capacity.</summary>
-    public bool SuspendedLeaveCapacity { get; set; } = true;
+    /// <summary>
+    /// Suspended mines and refineries leave the capacity sums. 1998 = on (B5b §3, [EXE-own] 0x52fff0); DEFAULT off: a blockaded or rebelling mine
+    /// or refinery keeps counting, so a blockade cannot set off the autoscrap. rule: m2-maintenance §Capacity (Blockade pause, 2026-10-18; Paul's
+    /// economy/02 blockade rule is the DEFAULT, 1998 is the switch).
+    /// </summary>
+    public bool SuspendedLeaveCapacity { get; set; }
+    /// <summary>
+    /// A suspended mine's or refinery's running cycle: Pause (DEFAULT) keeps it and resumes it for the same side, Abandon (1998, B5b §3) loses it.
+    /// rule: m2-mines-refineries-pools §Blockade and uprising (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch).
+    /// </summary>
+    public StopMode MineStopMode { get; set; } = StopMode.Pause;
     /// <summary>Armed (DEFAULT, 1998) or FreeRunning autoscrap timer. rule: m2-maintenance §Overdraft and autoscrap (B5b §6).</summary>
     public AutoscrapTimer AutoscrapTimer { get; set; } = AutoscrapTimer.Armed;
     /// <summary>
@@ -545,12 +554,21 @@ public sealed class EconomyModule
         // 1. Stops and restarts (mines, then refineries, id order): a facility that is no longer active for the side it worked for stops at once,
         //    its running cycle abandoned with no point (a refinery's raw already taken is lost), share 0, out of the raw line; an active IDLE one
         //    goes to WAITING on a startup cycle (first start, end of a blockade or uprising, side change). rule: B5b §1, §2, §3 (0x50bbb0, 0x55b010, 0x53b1d0)
+        //    With MineStopMode Pause (DEFAULT) a suspended facility keeps its running cycle (PausedFor): frozen while suspended, resumed with no
+        //    startup cycle when it is active again for the same side; any other change drops it. rule: m2-mines-refineries-pools §Blockade and
+        //    uprising (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch)
         var starting = new List<EconObject>();
         foreach (var kind in new[] { FacilityKind.Mine, FacilityKind.Refinery })
             foreach (var f in Cyclers(kind).ToList())
             {
                 var want = WantedSide(f);
                 if (f.WorkSide != null && f.WorkSide != want) Stop(ctx, t, f);
+                if (f.PausedFor is Side held)
+                {
+                    if (want == held) { f.WorkSide = held; f.PausedFor = null; continue; } // resumes where it left off
+                    if (want == null && f.Completed && OwnerOf(f) == held) { f.Due++; continue; } // still suspended: frozen one more day
+                    f.PausedFor = null; f.Due = 0; // the system changed hands or the facility is gone from use: the paused cycle is lost
+                }
                 if (f.WorkSide == null && want is Side w)
                 {
                     f.WorkSide = w;
@@ -571,14 +589,20 @@ public sealed class EconomyModule
             if (IsClass(f, FacilityKind.Mine)) StartCycle(ctx, t, f); else AskForRaw(ctx, t, f);
     }
 
-    /// <summary>IDLE: the running cycle is abandoned (no point), the share drops to 0, the facility leaves its raw line. rule: B5b §3.</summary>
+    /// <summary>
+    /// IDLE: the running cycle is abandoned (no point), the share drops to 0, the facility leaves its raw line. rule: B5b §3. A suspended one under
+    /// <see cref="MineStopMode"/> Pause keeps its running cycle instead (frozen, PausedFor = its side). rule: m2-mines-refineries-pools §Blockade and
+    /// uprising (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch).
+    /// </summary>
     private void Stop(StepContext ctx, int t, EconObject f)
     {
         var side = f.WorkSide!.Value;
         int id = f.Id; string sys = f.System!;
         string reason = f.Completed && OwnerOf(f) == side ? "Suspended" : "Released";
         ctx.Emit((i, _) => new FacilityStopped(i, t, id, sys, side, reason));
-        f.Due = 0; f.Share = 0; f.WorkSide = null; f.Startup = false;
+        if (reason == "Suspended" && MineStopMode == StopMode.Pause && f.Due != 0) f.PausedFor = side; // frozen from today (the caller moves Due on)
+        else { f.Due = 0; f.Startup = false; }
+        f.Share = 0; f.WorkSide = null;
         if (f.InLine) { E.Empire.RawLine.Remove(f.Id); E.Alliance.RawLine.Remove(f.Id); f.InLine = false; }
     }
 

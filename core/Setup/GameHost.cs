@@ -133,6 +133,7 @@ public sealed class GameHost
         Economy.AutoscrapMode = settings.AutoscrapMode;
         Economy.UprisingStopsMining = settings.UprisingStopsMining;
         Economy.SuspendedLeaveCapacity = settings.SuspendedLeaveCapacity;
+        Economy.MineStopMode = settings.MineStopMode;
         Economy.AutoscrapTimer = settings.AutoscrapTimer;
         Economy.SlotSource = settings.SlotSource;
 
@@ -148,6 +149,7 @@ public sealed class GameHost
         Construction.RespectResearchOrder = settings.RespectResearchOrder;
         Construction.DeathStarClassBuildable = settings.DeathStarClassBuildable;
         Construction.UseClassicBlockadeFlag = settings.UseClassicBlockadeFlag;
+        Construction.YardStopMode = settings.YardStopMode;
         Construction.RefuseOverdrawOrders = settings.RefuseOverdrawOrders;
         Construction.NewOrderReplacesProject = settings.NewOrderReplacesProject;
 

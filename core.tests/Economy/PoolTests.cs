@@ -302,6 +302,7 @@ public class PoolTests
     {
         var w = new EcoWorld(freeShips: true);
         w.Hold(Home, Side.Empire, 100);
+        w.Eco.MineStopMode = StopMode.Abandon; // Blockade pause, 2026-10-18: this checks the 1998 loss (Original switch); the DEFAULT pauses (P19b)
         w.Mine(Home, id: 1);
         w.Run(1); // cycle started, due 3
         int blocker = EnemyInterdictor(w, Side.Alliance, Home);
@@ -315,6 +316,52 @@ public class PoolTests
         w.Run(1); // hook time 24: restart on a startup cycle, d = 5: rand(0..5) + 2 with the stub at 0
         Assert.Equal(24 + 2, w.E.Objects[1].Due);
         Assert.Equal(new[] { (0, 5), (0, 5) }, w.Stub!.Requests.ToArray()); // the first start and the restart each drew once
+    }
+
+    // P19b (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch): MineStopMode Pause (DEFAULT) freezes
+    // the running cycle while blockaded; it resumes with the day it had left, no startup cycle, no extra draw, and pays its point.
+    // rule: m2-mines-refineries-pools §Blockade and uprising
+    [Fact]
+    public void P19b_BlockadePausesTheRunningCycleAndResumesIt()
+    {
+        var w = new EcoWorld(freeShips: true);
+        Assert.Equal(StopMode.Pause, w.Eco.MineStopMode);
+        w.Hold(Home, Side.Empire, 100);
+        w.Mine(Home, id: 1);
+        w.Run(1); // cycle started, due 3
+        int blocker = EnemyInterdictor(w, Side.Alliance, Home);
+        w.Run(22); // hooks 2 to 23 suspended: the due day moved on 22 days
+        Assert.Equal(3 + 22, w.E.Objects[1].Due);
+        Assert.Equal(Side.Empire, w.E.Objects[1].PausedFor);
+        Assert.Empty(w.Events<ResourceProduced>());
+        w.State.Fleets.Remove(blocker);
+        w.Run(1); // hook 24: resumed, one day still to run
+        Assert.Null(w.E.Objects[1].PausedFor);
+        Assert.Equal(25, w.E.Objects[1].Due);
+        Assert.Empty(w.Events<StartupCycle>().Where(e => e.Day == 24));
+        w.Run(1); // hook 25: the paused cycle pays
+        Assert.Equal(1, w.Eco.Raw(Side.Empire));
+        Assert.Equal(new[] { (0, 5) }, w.Stub!.Requests.ToArray()); // only the first start drew; the resume drew nothing
+    }
+
+    // P19c (Blockade pause, 2026-10-18): a paused cycle belongs to its side. The system changes hands while blockaded: the paused cycle is lost,
+    // and the new holder starts on a startup cycle. rule: m2-mines-refineries-pools §Blockade and uprising, §Side change
+    [Fact]
+    public void P19c_APausedCycleIsLostWhenTheSystemChangesHands()
+    {
+        var w = new EcoWorld(freeShips: true);
+        w.Hold(Home, Side.Empire, 100);
+        w.Mine(Home, id: 1);
+        w.Run(1);
+        int blocker = EnemyInterdictor(w, Side.Alliance, Home);
+        w.Run(3);
+        Assert.Equal(Side.Empire, w.E.Objects[1].PausedFor);
+        w.State.Fleets.Remove(blocker);
+        w.Hold(Home, Side.Alliance, 100);
+        w.Run(1);
+        Assert.Null(w.E.Objects[1].PausedFor);
+        Assert.Equal(Side.Alliance, w.E.Objects[1].WorkSide);
+        Assert.Single(w.Events<StartupCycle>().Where(e => e.Day == 5 && e.Facility == 1));
     }
 
     // m2-mines-refineries-pools P20
