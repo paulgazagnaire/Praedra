@@ -39,9 +39,9 @@ public sealed record SimpleAiParams
     /// The 1998 AI's garrison floor (B6b §3): on every own world below 70 support it wants min((79 - s) / 10, 6) regiments (doubled in an uprising),
     /// and 9 on its special world (the Rebel HQ for the Alliance, Coruscant for the Empire); it builds toward that and never moves a regiment that
     /// would leave a world below it. Replaces the B5a last-regiment guard (a weaker form: 1 below 60). It belongs to derived control
-    /// (GameSettings.ControlRule = Derived), so it is DEFAULT off with it (Dev lead 2026-10-18: Derived is DEFAULT off until the AI copes; with it,
-    /// QA's 16-seed Medium mirror gave 0/16 Empire wins); turn both on together. Off = the rule's need, <see cref="CriticalGarrison"/> on the
-    /// critical world, and the B5a guard.
+    /// (GameSettings.ControlRule = Derived) but stays DEFAULT off under it: with it on, 14 of 32 Hard mirror games had no winner by day 3000 against
+    /// 8 with it off, and the Medium mirror failed the games-end floor (AI trainer, 2026-10-18). Off = the rule's need, <see cref="CriticalGarrison"/>
+    /// on the critical world, and the B5a guard.
     /// </summary>
     public bool OriginalGarrisonFloor { get; init; }
     /// <summary>Most regiments in one garrison order. DEFAULT.</summary>
@@ -258,9 +258,12 @@ public sealed record SimpleAiParams
     /// Finishing the war: when the side holds at least this many times the systems it knows the enemy to hold, an enemy-held target is worth
     /// FinishValuePercent of its value (neutral systems near home otherwise win on value per day of travel, and the beaten side lives on in
     /// its last systems). AI trainer 2026-10-17 (QA-2): in seed 3 the Empire held 355 systems against 20 Alliance systems it knew, with 0 or 1
-    /// regiment each, and kept taking neutrals for 800 days. 0 = off (the AI of before).
+    /// regiment each, and kept taking neutrals for 800 days. 0 = off (the AI of before). DEFAULT 5 at every level since the derived-control
+    /// default (AI trainer 2026-10-18, Hard only before): under Derived the side far ahead kept taking empty neutral worlds (need 1 regiment)
+    /// over enemy worlds it guessed at 2 defenders (need 4), and the Medium mirror on seeds 1-8 had 4 games with no winner by day 3000; with
+    /// it, 1. Hard still beats Medium (64.8% of the systems over 32 games).
     /// </summary>
-    public int FinishWhenAheadRatio { get; init; }
+    public int FinishWhenAheadRatio { get; init; } = 5;
     public int FinishValuePercent { get; init; } = 400;
 
     // ---- fog: the Empire's belief map of the Rebel HQ (ai/07 §7 "Empire: belief-map search", ai/12 D1 Decided YES; m5-fog-and-hq §N7 clues).
