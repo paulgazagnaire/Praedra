@@ -276,12 +276,13 @@ public class SimpleAiAgentsTests
     // of its agent classes and sends them alone on planned missions; off, no special force goes on a mission (the HQ-hunt droids are Hard's).
     // Measured on 146027a + this change, seeds 1 to 4, fog, 1000 days (special-force missions Empire / Alliance): 12/2, 0/1, 18/3, 16/3;
     // kinds Subdue (most), Espionage, Abduction. Floor: both sides send one on at least 3 of 4 seeds; only agent classes go; at most 1
-    // order in 20 rejected. Off: none on seed 1.
+    // order in 20 rejected. Off: none on seed 1. AI Recruitment (QA-12, MaxRecruiters 2) is off here: with it on, the recruited minors take
+    // most jobs and the special forces go 0/0, 6/0, 1/0, 4/1 by day 1000 (1c3c353), so this test measures the special forces without it.
     [Fact]
     public void SpecialForceAgents_AreBuiltAndGoOnMissionsTheirMaskAllows()
     {
         Assert.False(new SimpleAiParams().SpecialForceAgents);
-        var p = Fog with { SpecialForceAgents = true };
+        var p = Fog with { SpecialForceAgents = true, MaxRecruiters = 0 }; // recruits take the jobs first (QA-12 numbers below)
         var games = MultiSeed.Play(new[] { 1, 2, 3, 4 }, seed =>
         {
             var (m, h) = Match(seed, p);
@@ -303,6 +304,48 @@ public class SimpleAiAgentsTests
         var (mo, ho) = Match(1, p with { SpecialForceAgents = false });
         mo.RunTo(1000);
         Assert.DoesNotContain(ho.Game.Events.OfType<MissionStarted>(), e => e.SpecialForces.Items.Count > 0);
+    }
+
+    // QA-12, B6c §7 list item 1 (Recruitment: up to 2 running while the side has anyone left to recruit, leadership at least 80) and the Emperor-
+    // home planner's start test (ctrl+0xa4 == 0: nobody left to recruit). m5-missions §6 Recruitment places the recruit at the target system.
+    // Seed 1, fog, leader marks on, by day 700: the Empire's pool (19) empties on day 280, the Alliance's (24) on day 357; at most 2 running per
+    // side; the Seat of Power is on 360 of the 360 days from 60 days after the Empire's pool empties.
+    // Checked: never more than MaxRecruiters Recruitments running per side; each recruiter has leadership at least RecruitMinLeadership when
+    // sent; both pools empty by day 700; no Recruitment is sent once a side's pool is empty; after the Empire's pool empties the Seat of Power is on.
+    [Fact]
+    public void Recruitment_TwoAtATime_UntilThePoolIsEmpty_ThenTheEmperorGoesHome()
+    {
+        var p = new SimpleAiParams();
+        Assert.Equal((2, 80, true), (p.MaxRecruiters, p.RecruitMinLeadership, p.EmperorHomeAfterRecruiting));
+        var (m, h) = Match(1, Fog with { LeaderMarks = true }); // the Emperor-home planner is a leader-marks rule (DEFAULT off)
+        var running = new Dictionary<int, Side>(); // mission id -> side (lookup only)
+        int maxE = 0, maxA = 0, weak = 0, afterEmpty = 0, seatDays = 0, seatOn = 0;
+        int? emptyE = null, emptyA = null;
+        int seen = 0;
+        while (h.Game.Day < 700 && h.Victory.Winner == null)
+        {
+            m.Step();
+            int today = h.Game.Day;
+            var fresh = h.Game.Events.Skip(seen).ToList(); seen += fresh.Count;
+            foreach (var e in fresh.OfType<MissionStarted>().Where(e => e.MissionKind == MissionKind.Recruitment))
+            {
+                running[e.Mission] = e.Side;
+                if (e.Characters.Items.Any(id => h.Characters.Get(id)!.EffectiveSkill(Skill.Leadership) < p.RecruitMinLeadership)) weak++;
+                if ((e.Side == Side.Empire ? emptyE : emptyA) != null) afterEmpty++;
+            }
+            foreach (var e in fresh.OfType<MissionEnded>()) running.Remove(e.Mission);
+            maxE = Math.Max(maxE, running.Values.Count(s => s == Side.Empire));
+            maxA = Math.Max(maxA, running.Values.Count(s => s == Side.Alliance));
+            if (emptyE == null && h.Characters.RecruitPoolOf(Side.Empire).Count == 0) emptyE = today;
+            if (emptyA == null && h.Characters.RecruitPoolOf(Side.Alliance).Count == 0) emptyA = today;
+            if (emptyE is int d0 && today > d0 + 60) { seatDays++; if (h.Characters.SeatOfPowerOn) seatOn++; }
+        }
+        _out.WriteLine($"pools empty: Empire day {emptyE}, Alliance day {emptyA}; most running {maxE}/{maxA}; weak recruiters {weak}; sent after empty {afterEmpty}; Seat of Power on {seatOn} of {seatDays} days");
+        Assert.True(maxE <= p.MaxRecruiters && maxA <= p.MaxRecruiters, $"{maxE}/{maxA} Recruitments running at once");
+        Assert.Equal(0, weak);
+        Assert.Equal(0, afterEmpty);
+        Assert.True(emptyE != null && emptyA != null, $"pools not empty by day 700: Empire {emptyE}, Alliance {emptyA}");
+        Assert.True(seatDays > 0 && seatOn * 20 >= seatDays * 19, $"Seat of Power on {seatOn} of {seatDays} days after the Empire's pool emptied");
     }
 }
 

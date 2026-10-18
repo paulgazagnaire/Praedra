@@ -29,7 +29,7 @@ namespace Rebellion.Core.AI;
 /// EnemyCharactersSeen, the belief map and the picture), so with UseFog it reads only its side's knowledge (m5-fog-and-hq §N8). Own characters,
 /// own missions and own systems are the side's own state. Like the rest of the AI it keeps no memory between days and draws no random number.
 /// Not used (refused by the core with RuleMissing, or impossible today): decoys (the 1998 AI's, B6c §7: the decoy table is Missing), Jedi Training,
-/// Death Star Sabotage; not planned: Recruitment (the core runs it since 2026-10-18; this AI sends none); and Assassination (a kill of a major
+/// Death Star Sabotage; not planned: Assassination (a kill of a major
 /// becomes an injury; the AI prefers Abduction).
 /// </summary>
 public sealed partial class SimpleAi
@@ -104,14 +104,16 @@ public sealed partial class SimpleAi
     /// <summary>
     /// Emperor home (B6c §7, planner kind 6, Empire only): while the Empire holds the Seat of Power system (Coruscant, which is in its own
     /// sector, so the "holds a system in Coruscant's sector" start test holds too), the Emperor is taken off every other job, brought there and
-    /// kept there; the Seat of Power (m5-characters-and-force §Seat of Power) stays on. The 1998 planner also waits for the recruitment count
-    /// to reach 0; this AI never recruits (it plans no Recruitment mission), so that count is taken as 0. QA-8 measured the Emperor on
-    /// Coruscant on 1-7% of days without it, and captured on missions.
+    /// kept there; the Seat of Power (m5-characters-and-force §Seat of Power) stays on. With EmperorHomeAfterRecruiting the planner, as in 1998,
+    /// starts only once the side has nobody left to recruit (the recruitment count ctrl+0xa4 is 0: the pool-empty flag, or an empty pool), so
+    /// until then the Emperor recruits and subdues like any leader (QA-12). QA-8 measured the Emperor on Coruscant on 1-7% of days without the
+    /// planner, and captured on missions.
     /// </summary>
     private void EmperorHome(List<CharacterRecord> mine, HashSet<int> busy)
     {
         var cp = _h.Characters.Params;
         if (!_p.LeaderMarks || _side != Side.Empire || !Held(cp.SeatOfPowerSystem)) return;
+        if (_p.EmperorHomeAfterRecruiting && !NobodyToRecruit) return; // B6c §7: starts when ctrl+0xa4 == 0
         var e = mine.FirstOrDefault(c => c.Id == cp.Emperor);
         if (e == null) return;
         busy.Add(e.Id);
@@ -123,6 +125,9 @@ public sealed partial class SimpleAi
         }
         if (Standing(e)) MoveCharacter(e, cp.SeatOfPowerSystem);
     }
+
+    /// <summary>The side has nobody left to recruit: its pool-empty flag is set, or its Recruitment pool is empty (m5-missions §6 Recruitment).</summary>
+    private bool NobodyToRecruit => _h.Characters.PoolEmpty(_side) || _h.Characters.RecruitPoolOf(_side).Count == 0;
 
     /// <summary>The Empire hunts the HQ (fog only) while it is unknown, or known with a picture older than HqRecheckDays.</summary>
     private bool HqHuntOn => _view != null && _side == Side.Empire && (KnownEnemyHq == null || HqRecheckDue);
@@ -419,20 +424,27 @@ public sealed partial class SimpleAi
                 if (recon && !(s == KnownEnemyHq && HqGroundDue) && KindUsable(MissionKind.Reconnaissance)) jobs.Add(new Job(MissionKind.Reconnaissance, s, null, v, "look " + s));
             }
         }
-        // 2. Subdue own systems in uprising
+        // 2. Recruitment (B6c §7 list item 1): while the side has anyone left to recruit, up to MaxRecruiters running (never more than the pool
+        // holds), at the capital (the 1998 gathering system is not read: B6c §12 item 5; DEFAULT the capital, where the recruit appears)
+        if (_p.MaxRecruiters > 0 && KindUsable(MissionKind.Recruitment) && _h.Missions.Recruit != null && Capital() is { } cap && Held(cap))
+        {
+            int want = Math.Min(_p.MaxRecruiters, _h.Characters.RecruitPoolOf(_side).Count) - own.Count(m => m.Kind == MissionKind.Recruitment);
+            for (int i = 0; i < want; i++) jobs.Add(new Job(MissionKind.Recruitment, cap, null, _p.RecruitValue, "recruit " + i));
+        }
+        // 3. Subdue own systems in uprising
         foreach (var s in HeldSystems())
             if (OwnUprising(s) && Free(MissionKind.SubdueUprising, s)) jobs.Add(new Job(MissionKind.SubdueUprising, s, null, _p.SubdueValue, "subdue " + s));
-        // 3. Rescue own prisoners (own characters: the side knows where they are held). A prisoner held aboard his captor's fleet (QA-7) is
+        // 4. Rescue own prisoners (own characters: the side knows where they are held). A prisoner held aboard his captor's fleet (QA-7) is
         // located where that fleet stands, and can be rescued only while it stands at a system (m5-missions TargetReason: LocationOf).
         foreach (var c in _h.Characters.InPlay)
             if (c.Side == _side && c.Status == CharacterStatus.Captured && _h.Characters.LocationOf(c) is { } held && !takenChar.Contains(c.Id) && KindUsable(MissionKind.Rescue))
                 jobs.Add(new Job(MissionKind.Rescue, held, c.Id, _p.RescueValue * (IsKey(c) ? 2 : 1), "char " + c.Id));
-        // 4. Abduction of enemy characters the side has seen
+        // 5. Abduction of enemy characters the side has seen
         if (KindUsable(MissionKind.Abduction))
             foreach (var (id, s) in EnemyCharactersSeen())
                 if (!takenChar.Contains(id))
                     jobs.Add(new Job(MissionKind.Abduction, s, id, _p.AbductionValue * (_h.Characters.Data.Get(id).Kind == CharacterKind.Major ? 2 : 1), "char " + id));
-        // 5. Diplomacy: own systems of low support, neutral systems on the border (picture's owner fresh enough)
+        // 6. Diplomacy: own systems of low support, neutral systems on the border (picture's owner fresh enough)
         if (KindUsable(MissionKind.Diplomacy))
         {
             var hops = Hops(); var g = _h.Data.Galaxy;
@@ -449,7 +461,7 @@ public sealed partial class SimpleAi
                 jobs.Add(new Job(MissionKind.Diplomacy, s, null, _p.DiplomacyValue * (stop - sup) / stop * _p.NeutralDiplomacyPercent / 100, "diplomacy " + s));
             }
         }
-        // 6. Alliance subversion: Incite and Sabotage on enemy systems near the border where no defender is believed
+        // 7. Alliance subversion: Incite and Sabotage on enemy systems near the border where no defender is believed
         if (_side == Side.Alliance)
         {
             var hops = Hops();
@@ -464,7 +476,7 @@ public sealed partial class SimpleAi
                 if (fac > 0 && Free(MissionKind.Sabotage, s)) jobs.Add(new Job(MissionKind.Sabotage, s, null, _p.SabotageValuePerFacility * fac, "subvert " + s));
             }
         }
-        // 7. Research: one mission per track, at a held system with a yard of the track's family (m5-research CanResearch)
+        // 8. Research: one mission per track, at a held system with a yard of the track's family (m5-research CanResearch)
         foreach (var (kind, track) in new[] { (MissionKind.ShipResearch, ResearchKind.Ship), (MissionKind.TroopResearch, ResearchKind.Troop), (MissionKind.FacilityResearch, ResearchKind.Facility) })
         {
             if (!KindUsable(kind) || own.Any(m => m.Kind == kind)) continue;
@@ -495,6 +507,7 @@ public sealed partial class SimpleAi
         switch (j.Kind)
         {
             case MissionKind.Reconnaissance: case MissionKind.InciteUprising: return 100;
+            case MissionKind.Recruitment: return Table(sk(Characters.Skill.Leadership) - mi.Params.RecruitSystemTerm);
             case MissionKind.Espionage: return Table(sk(Characters.Skill.Espionage));
             case MissionKind.Diplomacy: return Table(sup - (100 - sup) + sk(Characters.Skill.Diplomacy));
             case MissionKind.SubdueUprising: return Table((100 - sup) - sup + sk(Characters.Skill.Leadership));
@@ -537,6 +550,7 @@ public sealed partial class SimpleAi
     {
         MissionKind.Diplomacy => (_p.DiplomacyMinSkill, sk(Characters.Skill.Diplomacy)),
         MissionKind.SubdueUprising or MissionKind.InciteUprising => (_p.LeadershipMinSkill, sk(Characters.Skill.Leadership)),
+        MissionKind.Recruitment => (_p.RecruitMinLeadership, sk(Characters.Skill.Leadership)),
         MissionKind.Rescue or MissionKind.Abduction or MissionKind.Sabotage => (_p.CombatMinSkill, sk(Characters.Skill.Combat)),
         MissionKind.Espionage or MissionKind.Reconnaissance => (_p.SpyMinEspionage, sk(Characters.Skill.Espionage)),
         _ => (_p.ResearchMinSkill, ResearchSkillOf(k) is Skill rs ? sk(rs) : 0),

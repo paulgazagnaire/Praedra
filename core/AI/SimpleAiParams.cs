@@ -235,11 +235,17 @@ public sealed record SimpleAiParams
     /// character (NoKeyKinds). QA-8 (2026-10-18): without it the Emperor stood on Coruscant 1-7% of days, so the Seat of Power was off ~95%
     /// of the game, and he was captured on missions. DEFAULT false (2026-10-18, the Dev lead's audit under Paul's 07:43 rule: 1998 AI behaviour
     /// belongs to the Classic AI yardstick, not the default AI; QA-12: on, Medium mirror Empire wins fell from 13/16 to 5/16 and 11 of 16 games
-    /// had no winner). The Classic AI mode may turn it on.
+    /// had no winner). No Classic AI level exists yet; until one does, turn it on with `sim tourney --a-params LeaderMarks=true` or in code (QA-15).
     /// </summary>
     public bool LeaderMarks { get; init; }
     /// <summary>Mon Mothma's character id, one of the B6c §7 leaders: MJCHARSD 576 (data/design/roster.csv).</summary>
     public int MonMothmaId { get; init; } = 576;
+    /// <summary>
+    /// B6c §7 Emperor home: the planner starts only once the side has nobody left to recruit (ctrl+0xa4 == 0), so the Emperor recruits and
+    /// subdues until then (QA-12: kept home from day one he no longer put down uprisings, and Empire wins fell from 13/16 to 5/16). DEFAULT on
+    /// (1998). Off = home from day one (#68).
+    /// </summary>
+    public bool EmperorHomeAfterRecruiting { get; init; } = true;
     /// <summary>Regiments assumed on the enemy's game-winning system (Coruscant for the Alliance, a known HQ) when its ground was never seen. DEFAULT.</summary>
     public int FogUnknownWinDefenders { get; init; } = 8;
     /// <summary>Bombardments of the game-winning system in 30 days at most (with fog the AI cannot see the shelling work). DEFAULT.</summary>
@@ -366,6 +372,14 @@ public sealed record SimpleAiParams
     public int HqRecheckValue { get; init; } = 1000;
     /// <summary>Espionage counts this percent of Reconnaissance for the same chance (it also shows the ground forces and extra systems). DEFAULT.</summary>
     public int EspionageOverReconPercent { get; init; } = 125;
+    /// <summary>
+    /// Recruitment (B6c §7 list item 1): at most this many running while the side has anyone left to recruit (1998: 2), each by a character of
+    /// leadership at least RecruitMinLeadership (1998: 80; leaders allowed, so the Emperor, Vader and Mon Mothma recruit), worth RecruitValue
+    /// (DEFAULT: above every other job, as the 1998 list checks it first). 0 = no Recruitment (the AI before QA-12).
+    /// </summary>
+    public int MaxRecruiters { get; init; } = 2;
+    public int RecruitMinLeadership { get; init; } = 80;
+    public int RecruitValue { get; init; } = 1000;
     public int SubdueValue { get; init; } = 900;
     public int RescueValue { get; init; } = 800;
     public int AbductionValue { get; init; } = 500;
