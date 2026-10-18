@@ -105,7 +105,6 @@ internal static class Tourney
                               caps.Count(c => c.To == Side.Empire), caps.Count(c => c.To == Side.Alliance));
     }
 
-    /// <summary>A copy of the parameters with "Name=value" pairs set (int and bool properties of SimpleAiParams).</summary>
     /// <summary>Game settings for every game (--settings K=V,...: int, bool or enum properties of GameSettings); null = the defaults.</summary>
     internal static GameSettings? SettingsWith(string? spec)
     {
@@ -125,6 +124,7 @@ internal static class Tourney
         return copy;
     }
 
+    /// <summary>A copy of the parameters with "Name=value" pairs set (int and bool properties of SimpleAiParams).</summary>
     internal static SimpleAiParams WithOverrides(SimpleAiParams p, string? spec)
     {
         if (string.IsNullOrWhiteSpace(spec)) return p;
