@@ -68,7 +68,10 @@ public class SimpleAiAgentsTests
         // AssaultOnly re-pin 2026-10-18 (Dev lead): ControlRule is DEFAULT AssaultOnly until the AI copes with Derived (QA 16-seed: 0/16 Empire
         // wins), so this game no longer runs derived control (the Derived hash was 78d21c94...d3ec). It still differs from main's edab04cb...c500
         // (the branch adds saved state, ControlState, and changes that run under both rules; not separated). Seed 1, 1000 days, on main 5437780 merged.
-        Assert.Equal("1e675764e86b4e0a3fcd7021da3d63e7765042e4ed8f9ffbca4c573c0f04ba62", h.StateHash());
+        // Blockade pause re-pin 2026-10-18 (Dev lead; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch): SuspendedLeaveCapacity is
+        // now DEFAULT off and MineStopMode / YardStopMode DEFAULT Pause, core rules this old AI cannot switch off. With the three 1998 switches set
+        // (SuspendedLeaveCapacity on, both modes Abandon) the hash is exactly the AssaultOnly pin 1e675764...ba62 (checked when re-pinned, main eb722bd merged).
+        Assert.Equal("d05f61cafffd09feae65ac5db465cfbe84f40de9bd33d6900e5612335df980c3", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"
