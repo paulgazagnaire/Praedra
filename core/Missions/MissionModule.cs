@@ -289,6 +289,62 @@ public sealed class MissionModule
     }
 
     /// <summary>
+    /// The guards of one check pass of <paramref name="m"/>: <see cref="Guards"/>, and for the job check of a key-target mission under
+    /// <see cref="KeyTargetGuards.Full"/> (DEFAULT) also every unit of <see cref="FullGuards"/> not already there, by object id. rule: m5-missions
+    /// §3, §6a (Key-target protections, 2026-10-18).
+    /// </summary>
+    private List<Defender> CheckGuards(MissionGroup m, CheckKind kind, string place, Scope sc)
+    {
+        var list = Guards(m.Side, place, sc, m);
+        if (kind != CheckKind.NextToTarget || Params.KeyTargetGuards != KeyTargetGuards.Full || !IsKeyTarget(m.Kind, m.TargetCharacter, out _)) return list;
+        var have = new HashSet<int>(list.Select(d => d.Unit.Id)); // membership only, never iterated
+        list.AddRange(FullGuards(m.Side, place).Where(d => have.Add(d.Unit.Id)));
+        return list.OrderBy(d => d.Unit.Id).ToList();
+    }
+
+    /// <summary>
+    /// The guard set before B2d (PR #61): every completed capital ship of a fleet at <paramref name="place"/>, fighter squadron (aboard those ships,
+    /// in a fleet there, or based there) and regiment (landed, or aboard ships there with CountAboardUnits) not of <paramref name="side"/>, by object
+    /// id. Officer: the Free Admiral of the unit's fleet (ships, squadrons), the Free General of the fleet (regiments aboard) or of the system
+    /// (landed regiments); a based squadron has none. Captor unit: that fleet, else the planet. rule: m5-missions §3, §6a (Key-target protections,
+    /// 2026-10-18; the walk of 8a378a8^).
+    /// </summary>
+    private List<Defender> FullGuards(Side side, string place)
+    {
+        var shipFleet = new Dictionary<int, Fleet>(); // lookup only, never iterated
+        var sqFleet = new Dictionary<int, Fleet>();   // lookup only
+        foreach (var f in _game.State.Fleets.Values)
+        {
+            if (f.At != place) continue;
+            foreach (var sh in f.Ships) shipFleet[sh] = f;
+            foreach (var q in f.Squadrons) sqFleet[q] = f;
+        }
+        Defender Of(EconObject o, int det, CharacterRecord? officer, int fleet) { var c = Officer(officer); return new Defender(o, det, Esp(c), Com(c), fleet); }
+        var list = new List<Defender>();
+        foreach (var o in E.Objects.Values) // SortedDictionary: id order
+        {
+            if (!o.Completed || o.Side == side) continue;
+            switch (o.Category)
+            {
+                case ObjectCategory.CapitalShip when shipFleet.TryGetValue(o.Id, out var f):
+                    list.Add(Of(o, ShipDetection(o), _ch.HolderOf(f.Id, CharacterPost.Admiral), f.Id));
+                    break;
+                case ObjectCategory.Fighter:
+                    if (o.AboardShip != 0 && shipFleet.TryGetValue(o.AboardShip, out var cf)) list.Add(Of(o, ShipDetection(o), _ch.HolderOf(cf.Id, CharacterPost.Admiral), cf.Id));
+                    else if (sqFleet.TryGetValue(o.Id, out var sf)) list.Add(Of(o, ShipDetection(o), _ch.HolderOf(sf.Id, CharacterPost.Admiral), sf.Id));
+                    else if (o.AboardShip == 0 && o.System == place) list.Add(Of(o, ShipDetection(o), null, 0));
+                    break;
+                case ObjectCategory.Regiment:
+                    int det = _troops.Data.Regiment(o.Class)?.Detection ?? 0;
+                    if (o.AboardShip != 0) { if (Params.CountAboardUnits && shipFleet.TryGetValue(o.AboardShip, out var rf)) list.Add(Of(o, det, _ch.HolderOf(rf.Id, CharacterPost.General), rf.Id)); }
+                    else if (o.System == place) list.Add(Of(o, det, _ch.SystemGeneralOf(place), 0));
+                    break;
+            }
+        }
+        return list;
+    }
+
+    /// <summary>
     /// The usable special forces of <paramref name="side"/> directly on <paramref name="system"/>: completed, not aboard a ship, not in a mission
     /// group (0x504cc0). The character module's escape attempt reads it. rule: m5-characters-and-force §Escape (Traced B2e §3 step 3).
     /// </summary>
@@ -433,6 +489,13 @@ public sealed class MissionModule
         cap = 0;
         return k is MissionKind.Assassination or MissionKind.Abduction && Params.KeyTargetRules && targetChar is int id && Data.KeyTargets.TryGetValue(id, out cap);
     }
+
+    // rule: m5-missions §3, §6a (Key-target protections, 2026-10-18): with KeyTargetBaseSkills (DEFAULT on) a key-target mission reads its
+    // characters' espionage and combat without the Force term of B2e §1 (espionage B, combat max(0, B - Injury)); special forces, other missions
+    // and the switch off read the Agent's effective skills.
+    private bool KeyBase(MissionGroup m, Agent a) => a.IsCharacter && Params.KeyTargetBaseSkills && IsKeyTarget(m.Kind, m.TargetCharacter, out _);
+    private int KeyEsp(MissionGroup m, Agent a) => KeyBase(m, a) ? a.C!.BaseSkill(Skill.Espionage) : a.Espionage;
+    private int KeyCom(MissionGroup m, Agent a) => KeyBase(m, a) ? Math.Max(0, a.C!.BaseSkill(Skill.Combat) - a.C!.Injury) : a.Combat;
 
     /// <summary>
     /// rule: m5-missions §6a.1 exposure gate: TargetProtected if the key target rides a fleet, or stands at the Rebel HQ system (HQ at rest there)
@@ -902,7 +965,7 @@ public sealed class MissionModule
     private bool CheckPass(StepContext ctx, MissionGroup m, int t, CheckPoint point, CheckKind kind, string place, bool atOrigin, MissionRecord rec)
     {
         var sc = ScopeOf(m, kind, place);
-        var guards = Guards(m.Side, place, sc, m);
+        var guards = CheckGuards(m, kind, place, sc); // rule: §6a (Key-target protections, 2026-10-18: KeyTargetGuards)
         var foil = Sense(ctx, m, t, place, sc);
         if (foil == null && point == CheckPoint.Job && BetrayalRuns(rec)) foil = Betray(ctx, m, t);
         var decoyed = new HashSet<int>(); // guard ids; lookup only, never iterated
@@ -943,7 +1006,7 @@ public sealed class MissionModule
             if (decoys.Count == 0) break;
             // rule: §3 decoy pass step 1 (0x5f5700 returns 0 without a draw for a bound <= 1)
             var dc = decoys.Count == 1 ? decoys[0] : decoys[ctx.Rng.NextInt(0, decoys.Count - 1)];
-            int x = DecoyX(dc.Espionage, d.Detection, d.OfficerEspionage), p = Lookup(Data.DecoyTable!, x);
+            int x = DecoyX(KeyEsp(m, dc), d.Detection, d.OfficerEspionage), p = Lookup(Data.DecoyTable!, x);
             int r = ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1);
             bool ok = r < p; int def = d.Unit.Id, did = dc.Id;
             ctx.Emit((i, _) => new MissionDecoyRoll(i, t, id, side, def, did, x, p, r, ok));
@@ -953,7 +1016,7 @@ public sealed class MissionModule
         }
         var team = Team(m).Where(a => Counts(a, atOrigin, sc)).ToList();
         if (team.Count == 0) return null; // rule: §3 detection walk (0x5896e0: count 0 skips the walk; Traced B2a)
-        int avg = team.Sum(a => a.Espionage) / team.Count; // C integer division (0x5887a0 idiv; Traced B2a)
+        int avg = team.Sum(a => KeyEsp(m, a)) / team.Count; // C integer division (0x5887a0 idiv; Traced B2a); §6a KeyTargetBaseSkills
         int sfs = team.Count(a => !a.IsCharacter);
         foreach (var d in guards)
         {
@@ -982,7 +1045,8 @@ public sealed class MissionModule
     /// The duel against a captor of combat <paramref name="captorCombat"/> (a guard's commander, or the enemy Force user of an encounter). Escaped:
     /// the member leaves the group if its record lets it resign (MISSNSD word 15), then a character rolls Hurt (0x4ef450). Caught: a character rolls
     /// Hurt and, if he did not die of it, is captured by <paramref name="captor"/> at the place of the check (0x4ef480; Capture refuses an own-side
-    /// captor: the member just leaves); a special force is destroyed (UnitDestroyed, reason MissionDuel), no Hurt. A member removed leaves the
+    /// captor: the member just leaves; a key character under KeyDuelCapture.Capped is captured only if his cap roll passes, see
+    /// <see cref="KeyDuelCaptureRoll"/>); a special force is destroyed (UnitDestroyed, reason MissionDuel), no Hurt. A member removed leaves the
     /// group. Returns (escaped, the member's injury went up). rule: §4 (Traced B2d §5; B2e §2 "Who calls Hurt", §8).
     /// </summary>
     private (bool Escaped, bool Hurt) DuelWith(StepContext ctx, MissionGroup m, int t, Agent a, int captorCombat, int guard, Side captor, string place,
@@ -1005,7 +1069,8 @@ public sealed class MissionModule
         if (isChar)
         {
             hurt = _ch.Hurt(ctx, a.C!, CauseMissionDuel) > 0; // rule: B2e §2 (0x4ef480: Hurt, then captured if alive)
-            removed = a.C!.Status == CharacterStatus.Dead || _ch.Capture(ctx, a.C!, captor, place, CauseMissionDuel, unit: unit); // QA-7: moved to the captor
+            removed = a.C!.Status == CharacterStatus.Dead
+                || (KeyDuelCaptureRoll(ctx, m, t, a.C!, captor, place) && _ch.Capture(ctx, a.C!, captor, place, CauseMissionDuel, unit: unit)); // QA-7: moved to the captor
         }
         else if (E.Objects.TryGetValue(a.Id, out var o))
         {
@@ -1015,6 +1080,25 @@ public sealed class MissionModule
         }
         if (removed || rec.Foilable) Leave(m, a, place, removed);
         return (false, hurt);
+    }
+
+    /// <summary>
+    /// A duel loser who survived his Hurt roll: may the capture go ahead? Under <see cref="KeyDuelCapture.Capped"/> (DEFAULT) with
+    /// <see cref="MissionParams.KeyTargetRules"/> on, a character listed in the key-target file whom the capture would take (Free or Injured, the
+    /// captor of the other side) makes one extra roll <c>rand(0..99) &lt; cap_percent</c>: captured only if it passes; otherwise he is not captured
+    /// and goes on as a loser whom Capture refuses (he keeps the duel's Hurt, no second injury; he leaves the group if word 15 lets him). Every
+    /// other character, and <see cref="KeyDuelCapture.Original"/>, keep the 1998 duel (no draw). rule: m5-missions §4, §6a (KeyDuelCapture,
+    /// 2026-10-18; Paul's caps apply to duel captures).
+    /// </summary>
+    private bool KeyDuelCaptureRoll(StepContext ctx, MissionGroup m, int t, CharacterRecord c, Side captor, string place)
+    {
+        if (Params.KeyDuelCapture != KeyDuelCapture.Capped || !Params.KeyTargetRules || !Data.KeyTargets.TryGetValue(c.Id, out int cap)) return true;
+        if (!c.Placed || c.Status is not (CharacterStatus.Free or CharacterStatus.Injured) || captor == c.Side) return true; // Capture refuses: no draw
+        int r = ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1);
+        bool ok = r < cap;
+        int id = m.Id, member = c.Id; var side = m.Side;
+        ctx.Emit((i, _) => new MissionKeyDuelCaptureRoll(i, t, id, side, place, member, captor, cap, r, ok));
+        return ok;
     }
 
     /// <summary>
@@ -1104,7 +1188,7 @@ public sealed class MissionModule
     internal Defender? Walk(StepContext ctx, MissionGroup m, int t)
     {
         var sc = ScopeOf(m, CheckKind.NextToTarget, m.Target);
-        return DecoyAndWalk(ctx, m, t, Guards(m.Side, m.Target, sc, m), sc, false, new HashSet<int>(), m.Target, Data.Get(m.Kind));
+        return DecoyAndWalk(ctx, m, t, CheckGuards(m, CheckKind.NextToTarget, m.Target, sc), sc, false, new HashSet<int>(), m.Target, Data.Get(m.Kind));
     }
     /// <summary>What foiled the mission: the detecting defender (Detected), or the senser or traitor (Character).</summary>
     private sealed record FoilBy(MissionFoilCause Cause, Defender? Defender, int Character);
@@ -1328,7 +1412,8 @@ public sealed class MissionModule
                 if (!IsKeyTarget(m.Kind, m.TargetCharacter, out _)) { _ch.Kill(ctx, tc, CauseAssassination); break; }
                 // rule: m5-missions §6a.4: a qualified team (one character with combat and espionage both at the minimum) draws k: kidnap or kill
                 // (death allowed for this target whatever MajorsCanDie says); an unqualified team injures the target, no k draw.
-                if (!Team(m).Any(a => a.IsCharacter && a.Combat >= Params.KeyTeamMinCombat && a.Espionage >= Params.KeyTeamMinEspionage))
+                // (Key-target protections, 2026-10-18: KeyTargetBaseSkills reads the skills without the Force term)
+                if (!Team(m).Any(a => a.IsCharacter && KeyCom(m, a) >= Params.KeyTeamMinCombat && KeyEsp(m, a) >= Params.KeyTeamMinEspionage))
                     _ch.Injure(ctx, tc, CauseAssassination);
                 else if (ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1) < Params.KeyKidnapPercent) _ch.Capture(ctx, tc, side, null, CauseKidnap, unit: TeamCaptor(m));
                 else _ch.Kill(ctx, tc, CauseAssassination, allowDeath: true);

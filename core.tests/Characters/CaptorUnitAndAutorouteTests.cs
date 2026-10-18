@@ -26,7 +26,9 @@ public class CaptorUnitAndAutorouteTests
     [Fact]
     public void B2e20_DuelPrisonerIsHeldAboardTheCaptorFleet()
     {
-        var w = new MissionWorld();
+        // KeyDuelCapture, 2026-10-18: the Emperor is a key character, so the DEFAULT (Capped) would add his cap roll; this test checks where a duel
+        // prisoner is held, not whether he is taken, so it runs the 1998 duel explicitly (the cap roll is covered by m5-missions MI66 to MI70).
+        var w = new MissionWorld(new MissionParams { KeyDuelCapture = KeyDuelCapture.Original });
         w.Hold(H, Side.Empire, 0); w.Hold(T, Side.Empire, 0);
         w.Agent(Palpatine, H, dip: 50);
         int fleet = Fleet(w, Side.Alliance, T, Corvette);
