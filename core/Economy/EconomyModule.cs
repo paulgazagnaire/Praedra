@@ -6,7 +6,7 @@ namespace Rebellion.Core.Economy;
 
 /// <summary>
 /// The economy base: per-system slots and facilities, the side-wide raw and refined pools, the mine and refinery cycle
-/// (slot 6.5), resource and disaster incidents (6.4), maintenance and autoscrap (6.7). Registers itself on a
+/// (slot 6.5), resource and disaster incidents (6.4), maintenance and autoscrap (6.7), the 1998 way (B5b). Registers itself on a
 /// <see cref="Game"/> like <see cref="FleetModule"/>; holds data and settings only, never game state (that lives in
 /// <see cref="GameState.Economy"/>). After <see cref="GameSave.Load"/>, attach again to the loaded game.
 /// rule: m2-slots-and-resources, m2-mines-refineries-pools, m2-maintenance.
@@ -28,6 +28,17 @@ public sealed class EconomyModule
 
     /// <summary>Blockade stops mines and refineries. Decided yes (Paul 2026-10-12), default on. rule: m2-mines-refineries-pools §Blockade and uprising.</summary>
     public bool BlockadeStopsMining { get; set; } = true;
+    /// <summary>An uprising stops mines and refineries exactly like a blockade. 1998 = on (B5b §3, [EXE-own] 0x50bbb0); DEFAULT on (Dev lead 2026-10-18). rule: m2-mines-refineries-pools §Blockade and uprising.</summary>
+    public bool UprisingStopsMining { get; set; } = true;
+    /// <summary>Suspended mines and refineries leave the capacity sums. 1998 = on (B5b §3, [EXE-own] 0x52fff0); DEFAULT on. rule: m2-maintenance §Capacity.</summary>
+    public bool SuspendedLeaveCapacity { get; set; } = true;
+    /// <summary>Armed (DEFAULT, 1998) or FreeRunning autoscrap timer. rule: m2-maintenance §Overdraft and autoscrap (B5b §6).</summary>
+    public AutoscrapTimer AutoscrapTimer { get; set; } = AutoscrapTimer.Armed;
+    /// <summary>
+    /// Is the system in uprising? The flag belongs to the uprising sheet; GameHost wires it to <c>SupportModule.IsUprising</c>. Unwired = no.
+    /// rule: m2-mines-refineries-pools §Blockade and uprising (B5b §3).
+    /// </summary>
+    public Func<string, bool> IsInUprising { get; set; } = _ => false;
     /// <summary>Both incident timers run. DEFAULT on. Off: neither is armed, no draws. rule: m2-slots-and-resources §Do incidents run on pinned values.</summary>
     public bool IncidentsEnabled { get; set; } = true;
     public AutoscrapMode AutoscrapMode { get; set; } = AutoscrapMode.Classic;
@@ -231,16 +242,21 @@ public sealed class EconomyModule
     public Side? OwnerOf(EconObject o) => o.Side ?? (o.Category == ObjectCategory.Facility && o.System != null ? _fleets.OwnerOf(o.System) : null);
 
     /// <summary>
-    /// capacity = min(50 x completed mines, 50 x completed refineries), on systems the side controls. Blockade and uprising do
-    /// not change it (DEFAULT). rule: m2-maintenance §Capacity.
+    /// capacity = min(50 x mines, 50 x refineries) over the completed ones on systems the side controls that are not suspended (a blockade, or an
+    /// uprising with <see cref="UprisingStopsMining"/>): with <see cref="SuspendedLeaveCapacity"/> on (1998) they leave the sums at once.
+    /// rule: m2-maintenance §Capacity (B5b §3, [EXE-own] 0x52fff0).
     /// </summary>
     public int Capacity(Side side)
     {
         int mines = 0, refs = 0;
+        var memo = new Dictionary<string, bool>(StringComparer.Ordinal); // lookup only
         foreach (var o in E.Objects.Values)
         {
             if (!o.Completed || OwnerOf(o) != side) continue;
-            if (IsClass(o, FacilityKind.Mine)) mines++; else if (IsClass(o, FacilityKind.Refinery)) refs++;
+            bool mine = IsClass(o, FacilityKind.Mine);
+            if (!mine && !IsClass(o, FacilityKind.Refinery)) continue;
+            if (SuspendedLeaveCapacity && SuspendedAt(o.System!, side, memo)) continue;
+            if (mine) mines++; else refs++;
         }
         return Params.CapacityPerFacility * Math.Min(mines, refs);
     }
@@ -258,24 +274,42 @@ public sealed class EconomyModule
     public int Free(Side side) => Capacity(side) - Load(side);
 
     /// <summary>
-    /// This facility's slice of its side's maintenance load. The load is dealt to mines and to refineries separately, unit by
-    /// unit over the completed facilities of the class in id order, at most 50 each: share of position i =
-    /// min(50, L / n + (1 if i &lt; L mod n)). rule: m2-mines-refineries-pools §Load share dealing (Lead, DEFAULT numbers).
+    /// This facility's dealt slice of its side's maintenance load (0 for a stopped one). Dealt incrementally per class at slot 6.5
+    /// (<see cref="DealShares"/>). rule: m2-mines-refineries-pools §Load share dealing (B5b §3).
     /// </summary>
-    public int ShareOf(int facilityId)
+    public int ShareOf(int facilityId) => E.Objects[facilityId].Share;
+
+    /// <summary>
+    /// Incremental dealing ([EXE-own] 0x52f6b0 mines, 0x52f8f0 refineries): per side and class, only the difference between the target
+    /// min(load, 50 x working facilities) and what is already dealt is handed out or taken back, one unit at a time; existing shares are kept,
+    /// so a facility that starts while the load does not change keeps share 0. A unit goes to the working facility with the lowest share (ties:
+    /// lowest id), capped at 50; one is taken back from the highest share (ties: highest id). The exact pass order of 1998 ("about its
+    /// proportional part plus one") is read as this (DEFAULT, B5b §3; it gives the batch's B5b-6 numbers). Each class carries the whole load.
+    /// </summary>
+    public void DealShares()
     {
-        var f = E.Objects[facilityId];
-        var side = OwnerOf(f) ?? throw new InvalidOperationException("A facility on a neutral system carries no share.");
-        int n = 0, index = -1;
-        foreach (var o in E.Objects.Values)
+        foreach (var side in new[] { Side.Empire, Side.Alliance })
         {
-            if (o.Class != f.Class || !o.Completed || OwnerOf(o) != side) continue;
-            if (o.Id == f.Id) index = n;
-            n++;
+            int load = Load(side);
+            foreach (var kind in new[] { FacilityKind.Mine, FacilityKind.Refinery })
+            {
+                var working = Cyclers(kind).Where(o => o.WorkSide == side).ToList(); // id order
+                int cap = Params.CapacityPerFacility;
+                int target = Math.Min(load, cap * working.Count), dealt = working.Sum(o => o.Share);
+                while (dealt < target)
+                {
+                    EconObject? pick = null;
+                    foreach (var o in working) if (o.Share < cap && (pick == null || o.Share < pick.Share)) pick = o;
+                    pick!.Share++; dealt++;
+                }
+                while (dealt > target)
+                {
+                    EconObject? pick = null;
+                    foreach (var o in working) if (o.Share > 0 && (pick == null || o.Share >= pick.Share)) pick = o;
+                    pick!.Share--; dealt--;
+                }
+            }
         }
-        if (index < 0) throw new InvalidOperationException("Only a completed facility carries a share.");
-        int load = Load(side);
-        return Math.Min(Params.CapacityPerFacility, load / n + (index < load % n ? 1 : 0));
     }
 
     /// <summary>
@@ -322,14 +356,24 @@ public sealed class EconomyModule
         return Math.Clamp(v, 0, 100);
     }
 
-    /// <summary>Is a mine or refinery's system under the blockade that stops it? rule: m2-mines-refineries-pools §Blockade and uprising.</summary>
-    public bool IsSuspended(EconObject f)
+    /// <summary>
+    /// Is a mine or refinery suspended: its system under the blockade that stops it, or in uprising (with <see cref="UprisingStopsMining"/>)?
+    /// rule: m2-mines-refineries-pools §Blockade and uprising (B5b §3, [EXE-own] 0x50bbb0).
+    /// </summary>
+    public bool IsSuspended(EconObject f) => IsSuspended(f, new Dictionary<string, bool>(StringComparer.Ordinal));
+
+    /// <summary>The same with a per-hook memo (slot 6.5 clears it each Step). Lookup only, never iterated.</summary>
+    private bool IsSuspended(EconObject f, Dictionary<string, bool> memo)
     {
-        if (!BlockadeStopsMining || f.System == null) return false;
-        var owner = _fleets.OwnerOf(f.System);
-        if (owner is not Side side) return false;
-        if (!_blockCache.TryGetValue(f.System, out var b))
-            _blockCache[f.System] = b = _fleets.IsEconomicBlockade(f.System, side);
+        if (f.System == null || _fleets.OwnerOf(f.System) is not Side side) return false;
+        return SuspendedAt(f.System, side, memo);
+    }
+
+    private bool SuspendedAt(string system, Side holder, Dictionary<string, bool> memo)
+    {
+        if (memo.TryGetValue(system, out var b)) return b;
+        b = (BlockadeStopsMining && _fleets.IsEconomicBlockade(system, holder)) || (UprisingStopsMining && IsInUprising(system));
+        memo[system] = b;
         return b;
     }
 
@@ -484,63 +528,80 @@ public sealed class EconomyModule
 
     // ================================================================== 6.5 mines, then refineries
 
-    private bool IsActive(EconObject f) => f.Completed && OwnerOf(f) != null;
+    /// <summary>The side a mine or refinery should work for now: completed, on a held system, not suspended; else null (IDLE). rule: B5b §1 (Active, 0x55aa80).</summary>
+    private Side? WantedSide(EconObject f) => f.Completed && OwnerOf(f) is Side s && !IsSuspended(f, _blockCache) ? s : null;
 
     private IEnumerable<EconObject> Cyclers(FacilityKind kind) =>
         E.Objects.Values.Where(o => IsClass(o, kind)); // id ascending
 
-    // rule: m2-mines-refineries-pools §Where it runs, slot 6.5 (global facility id inside each class)
+    // rule: m2-mines-refineries-pools §Where it runs, slot 6.5 (global facility id inside each class). The 1998 game runs these in one timer queue;
+    // the slots are kept (DEFAULT, B5b §9).
     private void MinesAndRefineries(StepContext ctx)
     {
         int t = ctx.Day + 1;
         _blockCache.Clear();
         NormalizeLines();
 
-        // 1. Mines due
+        // 1. Stops and restarts (mines, then refineries, id order): a facility that is no longer active for the side it worked for stops at once,
+        //    its running cycle abandoned with no point (a refinery's raw already taken is lost), share 0, out of the raw line; an active IDLE one
+        //    goes to WAITING on a startup cycle (first start, end of a blockade or uprising, side change). rule: B5b §1, §2, §3 (0x50bbb0, 0x55b010, 0x53b1d0)
+        var starting = new List<EconObject>();
+        foreach (var kind in new[] { FacilityKind.Mine, FacilityKind.Refinery })
+            foreach (var f in Cyclers(kind).ToList())
+            {
+                var want = WantedSide(f);
+                if (f.WorkSide != null && f.WorkSide != want) Stop(ctx, t, f);
+                if (f.WorkSide == null && want is Side w)
+                {
+                    f.WorkSide = w;
+                    if (f.Due != 0 || f.InLine) continue; // already running (a setup or a save from before B5b): adopted as it is
+                    f.Startup = true;
+                    starting.Add(f);
+                }
+            }
+        // 2. The load is dealt to the working facilities. rule: B5b §3
+        DealShares();
+        // 3. Mines due, 4. refineries due
         foreach (var m in Cyclers(FacilityKind.Mine).Where(o => o.Due == t).ToList())
             FinishCycle(ctx, t, m, raw: true);
-        // 2. Refineries due
         foreach (var r in Cyclers(FacilityKind.Refinery).Where(o => o.Due == t).ToList())
             FinishCycle(ctx, t, r, raw: false);
-        // 3. Idle sweep: mines, then refineries, in id order
-        foreach (var m in Cyclers(FacilityKind.Mine).ToList())
-            if (IsActive(m) && m.Due == 0 && !IsSuspended(m)) StartCycle(ctx, t, m);
-        foreach (var r in Cyclers(FacilityKind.Refinery).ToList())
-        {
-            if (!IsActive(r)) continue;
-            if (r.InLine) { ServeRawLine(ctx, t, OwnerOf(r)!.Value); continue; } // unsuspended again with raw in stock (DEFAULT, sheet silent)
-            if (r.Due == 0 && !IsSuspended(r)) AskForRaw(ctx, t, r);
-        }
+        // 5. The restarted ones go to WAITING: a mine starts at once, a refinery asks for raw (mines first, id order).
+        foreach (var f in starting)
+            if (IsClass(f, FacilityKind.Mine)) StartCycle(ctx, t, f); else AskForRaw(ctx, t, f);
     }
 
-    /// <summary>
-    /// A refinery whose side changed moves to the end of the new holder's line; entries that are gone, not completed or on a
-    /// neutral system leave the line. rule: m2-mines-refineries-pools §Side change.
-    /// </summary>
+    /// <summary>IDLE: the running cycle is abandoned (no point), the share drops to 0, the facility leaves its raw line. rule: B5b §3.</summary>
+    private void Stop(StepContext ctx, int t, EconObject f)
+    {
+        var side = f.WorkSide!.Value;
+        int id = f.Id; string sys = f.System!;
+        string reason = f.Completed && OwnerOf(f) == side ? "Suspended" : "Released";
+        ctx.Emit((i, _) => new FacilityStopped(i, t, id, sys, side, reason));
+        f.Due = 0; f.Share = 0; f.WorkSide = null; f.Startup = false;
+        if (f.InLine) { E.Empire.RawLine.Remove(f.Id); E.Alliance.RawLine.Remove(f.Id); f.InLine = false; }
+    }
+
+    /// <summary>Entries that are gone, not completed, or no longer working for the line's side leave the line. rule: m2-mines-refineries-pools §Side change (B5b §3: the old place is lost).</summary>
     private void NormalizeLines()
     {
-        var moved = new List<EconObject>();
         foreach (var side in new[] { Side.Alliance, Side.Empire })
         {
             var line = E.Pool(side).RawLine;
             for (int i = 0; i < line.Count;)
             {
                 E.Objects.TryGetValue(line[i], out var f);
-                var owner = f == null ? null : OwnerOf(f);
-                if (f == null || !f.Completed || owner == null) { if (f != null) f.InLine = false; line.RemoveAt(i); continue; }
-                if (owner != side) { moved.Add(f); line.RemoveAt(i); continue; }
+                if (f == null || !f.Completed || OwnerOf(f) != side) { if (f != null) f.InLine = false; line.RemoveAt(i); continue; }
                 i++;
             }
         }
-        foreach (var f in moved) E.Pool(OwnerOf(f)!.Value).RawLine.Add(f.Id);
     }
 
-    // rule: m2-mines-refineries-pools §Where it runs, 6.5 steps 1 and 2; §Diversion; §Side change (deposits use the side now)
+    // rule: m2-mines-refineries-pools §Where it runs, 6.5 steps 1 and 2; §Diversion (B5b §4: one draw when v > 0, none at 0)
     private void FinishCycle(StepContext ctx, int t, EconObject f, bool raw)
     {
         f.Due = 0;
-        var owner = OwnerOf(f);
-        if (owner is not Side ctl || !f.Completed) return; // neutral systems have no cycles (DEFAULT: the cycle ends with no output)
+        if (f.WorkSide is not Side ctl || !f.Completed) return; // a stopped facility has no cycle
 
         var pool = ctl;
         bool diverted = false;
@@ -550,57 +611,59 @@ public sealed class EconomyModule
         if (raw) E.Pool(pool).Raw++; else E.Pool(pool).Refined++;
         int id = f.Id; string sys = f.System!;
         ctx.Emit((i, _) => new ResourceProduced(i, t, id, sys, raw ? "Raw" : "Refined", ctl, pool, diverted, v));
+        f.Startup = false; // DONE -> WAITING clears the startup flag (B5b §2)
 
         if (raw)
         {
             ServeRawLine(ctx, t, pool);
-            if (!IsSuspended(f)) StartCycle(ctx, t, f);
+            StartCycle(ctx, t, f);
         }
         else
         {
             RefinedPoolGrew?.Invoke(ctx, pool);
-            if (!IsSuspended(f)) AskForRaw(ctx, t, f);
+            AskForRaw(ctx, t, f);
         }
     }
 
-    // rule: m2-mines-refineries-pools §Cycle length, First cycle
+    // rule: m2-mines-refineries-pools §Cycle length, First cycle (B5b §2: a startup cycle on every restart; one draw when it starts, DEFAULT)
     private void StartCycle(StepContext ctx, int t, EconObject f)
     {
-        var owner = OwnerOf(f)!.Value;
+        var owner = f.WorkSide!.Value;
         int support = Math.Clamp(SupportOf(f.System!, owner), Params.SupportFloor, Params.SupportCeiling); // read when the cycle starts
-        int d = CycleDays(Params, support, ShareOf(f.Id));
-        if (!f.FirstDone)
+        int d = CycleDays(Params, support, f.Share);
+        if (f.Startup)
         {
-            d = ctx.Rng.NextInt(0, d) + d / 2; // first cycle: rand(0..d) + d / 2
-            f.FirstDone = true;
+            d = ctx.Rng.NextInt(0, d) + d / 2; // startup cycle: rand(0..d) + d / 2
+            int id = f.Id, days = d; string sys = f.System!;
+            ctx.Emit((i, _) => new StartupCycle(i, t, id, sys, owner, days));
         }
+        f.FirstDone = true;
         f.Due = t + d;
     }
 
-    // rule: m2-mines-refineries-pools §Asking for raw / serving a line (first in first out)
+    // rule: m2-mines-refineries-pools §Asking for raw / serving a line (B5b §1: a refinery entering WAITING takes raw at once if raw > 0, even if
+    // others wait; otherwise it joins the first-in first-out line)
     private void AskForRaw(StepContext ctx, int t, EconObject r)
     {
-        var side = OwnerOf(r)!.Value;
-        E.Pool(side).RawLine.Add(r.Id);
+        var side = r.WorkSide!.Value;
+        var pool = E.Pool(side);
+        if (pool.Raw > 0) { pool.Raw--; StartCycle(ctx, t, r); return; }
+        pool.RawLine.Add(r.Id);
         r.InLine = true;
-        ServeRawLine(ctx, t, side);
-        if (r.InLine)
-        {
-            int id = r.Id; string sys = r.System!;
-            ctx.Emit((i, _) => new RefineryWaiting(i, t, id, sys, side));
-        }
+        int id = r.Id; string sys = r.System!;
+        ctx.Emit((i, _) => new RefineryWaiting(i, t, id, sys, side));
     }
 
-    // rule: m2-mines-refineries-pools §Asking for raw / serving a line (a suspended refinery keeps its place and is skipped)
+    // rule: m2-mines-refineries-pools §Asking for raw / serving a line (served whenever raw rises above 0; a stopped refinery has left the line)
     private void ServeRawLine(StepContext ctx, int t, Side side)
     {
         var pool = E.Pool(side);
-        for (int i = 0; i < pool.RawLine.Count && pool.Raw > 0;)
+        while (pool.RawLine.Count > 0 && pool.Raw > 0)
         {
-            var f = E.Objects[pool.RawLine[i]];
-            if (IsSuspended(f)) { i++; continue; }
-            pool.RawLine.RemoveAt(i);
+            var f = E.Objects[pool.RawLine[0]];
+            pool.RawLine.RemoveAt(0);
             f.InLine = false;
+            if (f.WorkSide != side) continue;
             pool.Raw--;
             StartCycle(ctx, t, f);
         }
@@ -608,24 +671,48 @@ public sealed class EconomyModule
 
     // ================================================================== 6.7 autoscrap
 
-    // rule: m2-maintenance §Overdraft and autoscrap; §Where it runs (6.7.a Alliance, 6.7.b Empire; re-arm at T + 10)
+    // rule: m2-maintenance §Overdraft and autoscrap; §Where it runs (6.7.a Alliance, 6.7.b Empire). Armed timer (1998, B5b §6, 0x5329f0): armed when
+    // the overdraft starts, first firing 10 days later, then every 10 days while over; dropped when it ends.
     private void Autoscrap(StepContext ctx)
     {
         int t = ctx.Day + 1;
         foreach (var side in new[] { Side.Alliance, Side.Empire })
         {
+            // A victim picked while in transit is scrapped once it has arrived (B5b §6, 0x4fb310).
+            foreach (var o in E.Objects.Values.Where(o => o.ScrapPending && OwnerOf(o) == side).ToList())
+                if (!InTransit(o)) Scrap(ctx, t, o, side, "Autoscrap");
             var pool = E.Pool(side);
-            if (pool.ScrapDue == 0) pool.ScrapDue = Params.ScrapPeriod; // free-running, first due at hook time 10 (DEFAULT)
+            if (AutoscrapTimer == AutoscrapTimer.FreeRunning)
+            {
+                if (pool.ScrapDue == 0) pool.ScrapDue = Params.ScrapPeriod; // free-running, first due at hook time 10 (the rule before B5b)
+                if (pool.ScrapDue != t) continue;
+                AutoscrapFiring(ctx, t, side);
+                pool.ScrapDue = t + Params.ScrapPeriod;
+                continue;
+            }
+            bool over = Load(side) > Capacity(side);
+            if (!over) { pool.ScrapDue = 0; continue; }                          // the pending firing is dropped
+            if (pool.ScrapDue == 0) { pool.ScrapDue = t + Params.ScrapPeriod; continue; } // the overdraft starts: armed
             if (pool.ScrapDue != t) continue;
             AutoscrapFiring(ctx, t, side);
             pool.ScrapDue = t + Params.ScrapPeriod;
         }
     }
 
+    /// <summary>A capital ship or squadron whose fleet is on a lane (Completed and en route). rule: m2-maintenance §Overdraft step 2 (B5b §6).</summary>
+    private bool InTransit(EconObject o)
+    {
+        if (o.Category == ObjectCategory.CapitalShip) return _fleets.FleetOfShip(o.Id) is { At: null };
+        if (o.Category != ObjectCategory.Fighter) return false;
+        if (o.AboardShip != 0) return _fleets.FleetOfShip(o.AboardShip) is { At: null };
+        return _game.State.Fleets.Values.Any(f => f.At == null && f.Squadrons.Contains(o.Id));
+    }
+
     private void AutoscrapFiring(StepContext ctx, int t, Side side)
     {
         if (Load(side) <= Capacity(side)) return; // nothing happens, no draw
-        // eligible: completed, maintenance not 0, never a mine or refinery, sorted by object id (Objects is id-sorted)
+        // eligible: completed (in transit included), maintenance not 0, never a mine or refinery, sorted by object id (Objects is id-sorted).
+        // A victim already pending can be picked again (a wasted firing, B5b §6).
         var eligible = E.Objects.Values
             .Where(o => o.Completed && OwnerOf(o) == side && Costs.Get(o.Class).Maintenance != 0
                         && !IsClass(o, FacilityKind.Mine) && !IsClass(o, FacilityKind.Refinery))
@@ -647,6 +734,8 @@ public sealed class EconomyModule
             pick = cands.OrderBy(o => yardsOnly ? 0 : SmartGroup(o)).ThenBy(o => Costs.Get(o.Class).Cost).ThenBy(o => o.Id).First();
             if (yardsOnly) { int id = pick.Id; ctx.Emit((i, _) => new AutoscrapWarning(i, t, side, id)); }
         }
+        // rule: B5b §6: destroyed at once only if usable; a victim in transit is marked and scrapped on arrival (with the FreeRunning rule: at once, as before)
+        if (AutoscrapTimer == AutoscrapTimer.Armed && InTransit(pick)) { pick.ScrapPending = true; return; }
         Scrap(ctx, t, pick, side, "Autoscrap");
     }
 

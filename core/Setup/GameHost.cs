@@ -131,11 +131,15 @@ public sealed class GameHost
         Economy.IncidentsEnabled = settings.IncidentsEnabled;
         Economy.BlockadeStopsMining = settings.BlockadeStopsMining;
         Economy.AutoscrapMode = settings.AutoscrapMode;
+        Economy.UprisingStopsMining = settings.UprisingStopsMining;
+        Economy.SuspendedLeaveCapacity = settings.SuspendedLeaveCapacity;
+        Economy.AutoscrapTimer = settings.AutoscrapTimer;
         Economy.SlotSource = settings.SlotSource;
 
         Support = SupportModule.Attach(game, data.Galaxy, Economy, Fleets, data.Weights, settings.Support);
         Support.Ruleset = settings.SupportRuleset;
         Support.BlockadeSupportEffect = settings.BlockadeSupportEffect;
+        Economy.IsInUprising = Support.IsUprising; // an uprising stops mines and refineries (B5b §3)
 
         Construction = ConstructionModule.Attach(game, Fleets, Economy, settings.Construction, Support);
         Construction.DeliveryForcedStop = settings.DeliveryForcedStop;
@@ -144,6 +148,8 @@ public sealed class GameHost
         Construction.RespectResearchOrder = settings.RespectResearchOrder;
         Construction.DeathStarClassBuildable = settings.DeathStarClassBuildable;
         Construction.UseClassicBlockadeFlag = settings.UseClassicBlockadeFlag;
+        Construction.RefuseOverdrawOrders = settings.RefuseOverdrawOrders;
+        Construction.NewOrderReplacesProject = settings.NewOrderReplacesProject;
 
         Troops = TroopModule.Attach(game, Fleets, data.Troops);
         Troops.UnloadOnlyAtHeldSystem = settings.UnloadOnlyAtHeldSystem;

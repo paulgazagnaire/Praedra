@@ -236,7 +236,7 @@ public sealed partial class SimpleAi
         var classes = _p.ScoutClasses(_side);
         // scouts already queued (units exist from acceptance: m2-construction §Build order)
         foreach (var pr in S.Construction.AllProjects())
-            if (pr.Side == _side && pr.Family == YardFamily.Shipyard && pr.Units.Any(id => _h.Economy.Find(id) is { } o && classes.Contains(o.Class))) return;
+            if (pr.Side == _side && pr.Family == YardFamily.Shipyard && pr.AllUnits().Any(id => _h.Economy.Find(id) is { } o && classes.Contains(o.Class))) return;
         var idle = S.Fleets.Values.Where(f => f.Side == _side && f.Transit == null && f.At != null && !Pending(f));
         if (SplittableScouts(idle).Any()) return;
         string? cls = classes.FirstOrDefault(c => Available(c) && WantsScout(c) && Budget >= Maint(c));

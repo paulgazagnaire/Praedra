@@ -54,13 +54,17 @@ public class SimpleAiAgentsTests
         // of B6a §2, which changes every battle and so the game; the old AI is still the one played (all switches above unchanged).
         // Reveal re-pin 2026-10-18 (AI trainer, Dev lead's ask): FogParams.SetupRevealsFacilities is now DEFAULT on (1998), so the day-0
         // pictures hold the core systems' facilities. With the reveal off the hash is exactly B3's 12fcdbf1...334b (checked when re-pinned).
+        // B5b re-pin 2026-10-18: production and upkeep follow the 1998 rules (batch B5b): build orders over the free upkeep are refused
+        // (NoUpkeep), blockades and uprisings stop mines and refineries and take them out of capacity, every restart draws a startup
+        // cycle, captured mines reset, shares are dealt incrementally (new saved fields WorkSide, Share, Startup), the autoscrap timer is
+        // armed at the overdraft and new orders queue behind. These are core rules the old AI cannot switch off, so the game takes another course.
         // B5a re-pin 2026-10-17: derived control (ControlRule.Derived, the DEFAULT; the old AI cannot switch it off) recomputes every holder after
         // setup, lets worlds go neutral or join a side by support, hands a world over when its last regiment leaves, runs the sector steps, frees
         // and sends away characters at each flip, and adds saved state (ControlState.Contested, EverHeld): the game takes another course from
         // setup. Seed 1, 1000 days, as before (no seed change); re-measured on top of B3. The B6b garrison floor (OriginalGarrisonFloor) is off above
         // with the other AI switches; its off path keeps the B5a last-regiment guard (the hash is unchanged by that switch and by the squadrons
-        // leaving a flipped world, checked 2026-10-18). Re-measured 2026-10-18 after merging main c160ff8 (#68, reveal on): 2fee2265...47eb.
-        Assert.Equal("2fee2265c9bc2a751f224af226d1b39bf20ff919aca884856b4be7a066e547eb", h.StateHash());
+        // leaving a flipped world, checked 2026-10-18). Re-measured on top of B5b (main 682cd31), 2026-10-18.
+        Assert.Equal("78d21c94877105189c030e37c6b7fa0f74c6d1d2ec512c25ffd653b100c0d3ec", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"

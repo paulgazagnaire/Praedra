@@ -45,6 +45,14 @@ public sealed record GameSettings
     public bool IncidentsEnabled { get; init; } = true;
     /// <summary>rule: m2-mines-refineries-pools §Blockade and uprising.</summary>
     public bool BlockadeStopsMining { get; init; } = true;
+    /// <summary>An uprising stops mines and refineries like a blockade. 1998 = on; DEFAULT on (B5b §3, decision 2, Dev lead 2026-10-18). rule: m2-mines-refineries-pools §Blockade and uprising.</summary>
+    public bool UprisingStopsMining { get; init; } = true;
+    /// <summary>Suspended mines and refineries leave the capacity sums. 1998 = on; DEFAULT on (B5b §3, decision 3). rule: m2-maintenance §Capacity.</summary>
+    public bool SuspendedLeaveCapacity { get; init; } = true;
+    /// <summary>Build orders over the free upkeep are refused whole. 1998 = refused; DEFAULT refused (B5b §7, decision 1, Dev lead 2026-10-18). rule: m2-maintenance §Overdraft.</summary>
+    public bool RefuseOverdrawOrders { get; init; } = true;
+    /// <summary>Armed (DEFAULT, 1998) or FreeRunning autoscrap timer (B5b §6). rule: m2-maintenance §Overdraft and autoscrap.</summary>
+    public AutoscrapTimer AutoscrapTimer { get; init; } = AutoscrapTimer.Armed;
     /// <summary>rule: m2-maintenance §Rule (New) AutoscrapMode.</summary>
     public AutoscrapMode AutoscrapMode { get; init; } = AutoscrapMode.Classic;
     /// <summary>rule: m2-slots-and-resources §Rule (New) SlotSource.</summary>
@@ -64,6 +72,8 @@ public sealed record GameSettings
     /// <summary>rule: m2-construction §Lead review note, C20.</summary>
     public LostDestinationRule LostDestination { get; init; } = LostDestinationRule.Pause;
     public bool UnitDestinationMustBeControlled { get; init; } = true;
+    /// <summary>A new order cancels the project in progress (the rule before B5b). DEFAULT false: it queues behind (B5b §7, inferred). rule: m2-construction §Projects and queues.</summary>
+    public bool NewOrderReplacesProject { get; init; }
     /// <summary>
     /// The research gate: on = an item needs its research order at most the side's level in its track (or a setup grant); off = AllAvailable
     /// (the M3 stub). DEFAULT on once research is built (m5-research §Defaults; Paul decides the flip, question 1).

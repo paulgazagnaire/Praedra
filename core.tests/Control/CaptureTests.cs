@@ -33,6 +33,7 @@ internal sealed class CtlWorld
     {
         S = new SupWorld(stub: stub, seed: seed);
         if (construction) Build = ConstructionModule.Attach(S.Game, S.W.Fleets, S.W.Eco, support: S.Sup);
+        if (Build != null) Build.RefuseOverdrawOrders = false; // B5b 2026-10-18: these worlds have no mines (capacity 0); capture, not upkeep, is the subject
         Ctl = ControlModule.Attach(S.Game, TestData.RealGalaxy, S.W.Fleets, S.W.Eco, S.Sup, Build);
         Ctl.Rule = rule;
         Ctl.DebugOrdersEnabled = true;
