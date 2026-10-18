@@ -102,8 +102,10 @@ public sealed record MissionParams
     public bool CountAboardUnits { get; init; } = true;
     /// <summary>Diplomacy needs the uprising flag off. DEFAULT true ("calm" is Missing).</summary>
     public bool DiplomacyNeedsCalm { get; init; } = true;
-    /// <summary>Subtracted from leadership in the Recruitment input. DEFAULT 0 (Missing).</summary>
-    public int RecruitSystemTerm { get; init; }
+    /// <summary>The target-system term of the Recruitment success input, not read yet. rule: m5-missions §Defaults (RecruitSystemTerm), Missing rules 10.</summary>
+    public const int RecruitSystemTermDefault = 0;
+    /// <summary>Subtracted from leadership in the Recruitment input. DEFAULT <see cref="RecruitSystemTermDefault"/> (Missing).</summary>
+    public int RecruitSystemTerm { get; init; } = RecruitSystemTermDefault;
     public InciteInputMode InciteInputMode { get; init; } = InciteInputMode.LeadershipMinusControllerSupport;
     public InciteSupportTiming InciteSupportTiming { get; init; } = InciteSupportTiming.PerIteration;
     /// <summary>A Subdue success clears the uprising flag at once. DEFAULT false.</summary>

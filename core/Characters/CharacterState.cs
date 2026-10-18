@@ -157,10 +157,19 @@ public sealed class CharacterState
     /// <summary>The last pair id handed out (the game-wide counter of 0x55ff60); 0 = none yet. rule: m5-characters-and-force §Force (B2e §4).</summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public int NextPairId { get; set; }
+    /// <summary>
+    /// The side's pool-empty flags: set when a Recruitment success took the last member of the side's recruit pool (m = 1). Omitted from the save
+    /// while false. rule: m5-missions §6 Recruitment (Recruitment pick, 2026-10-18; [EXE-own] 0x56b9a0, 0x55fc80).
+    /// </summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool AlliancePoolEmpty { get; set; }
+    /// <summary>See <see cref="AlliancePoolEmpty"/>.</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool EmpirePoolEmpty { get; set; }
 
     internal void CopyFrom(CharacterState o)
     {
-        NextPairId = o.NextPairId;
+        NextPairId = o.NextPairId; AlliancePoolEmpty = o.AlliancePoolEmpty; EmpirePoolEmpty = o.EmpirePoolEmpty;
         foreach (var kv in o.Characters) Characters[kv.Key] = kv.Value.Clone();
         foreach (var kv in o.SystemGenerals) SystemGenerals[kv.Key] = kv.Value;
     }

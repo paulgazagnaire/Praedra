@@ -26,8 +26,8 @@ namespace Rebellion.Core.AI;
 /// It reads the other side only through the "what the AI may see" block of SimpleAi.cs (MissionDefendersAt, SupportSeen, OwnerSeen,
 /// EnemyCharactersSeen, the belief map and the picture), so with UseFog it reads only its side's knowledge (m5-fog-and-hq §N8). Own characters,
 /// own missions and own systems are the side's own state. Like the rest of the AI it keeps no memory between days and draws no random number.
-/// Not used (refused by the core with RuleMissing, or impossible today): decoys, Recruitment, Jedi Training, Death Star Sabotage; and
-/// Assassination (a kill of a major becomes an injury; the AI prefers Abduction).
+/// Not used (refused by the core with RuleMissing, or impossible today): decoys, Jedi Training, Death Star Sabotage; not planned: Recruitment
+/// (the core runs it since 2026-10-18; this AI sends none); and Assassination (a kill of a major becomes an injury; the AI prefers Abduction).
 /// </summary>
 public sealed partial class SimpleAi
 {
@@ -102,7 +102,7 @@ public sealed partial class SimpleAi
     /// Emperor home (B6c §7, planner kind 6, Empire only): while the Empire holds the Seat of Power system (Coruscant, which is in its own
     /// sector, so the "holds a system in Coruscant's sector" start test holds too), the Emperor is taken off every other job, brought there and
     /// kept there; the Seat of Power (m5-characters-and-force §Seat of Power) stays on. The 1998 planner also waits for the recruitment count
-    /// to reach 0; this AI never recruits (Recruitment is refused by the core today), so that count is taken as 0. QA-8 measured the Emperor on
+    /// to reach 0; this AI never recruits (it plans no Recruitment mission), so that count is taken as 0. QA-8 measured the Emperor on
     /// Coruscant on 1-7% of days without it, and captured on missions.
     /// </summary>
     private void EmperorHome(List<CharacterRecord> mine, HashSet<int> busy)
