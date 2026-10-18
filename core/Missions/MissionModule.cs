@@ -95,6 +95,9 @@ public sealed class MissionModule
         characters.IsOnMission = m.IsOnMission;
         characters.MissionMembershipEnded = m.OnMembershipEnded;
         characters.InjuredResign = m.OnInjured;
+        characters.JoinAsCaptive = m.JoinAsCaptive;
+        characters.MissionReturnPlace = id => m.S.Missions.Values.FirstOrDefault(g => g.Characters.Contains(id) || g.DecoyCharacters.Contains(id))?.Home;
+        characters.SpecialForcesInFleet = m.SpecialForcesInFleet;
         fog.AgentsAt = m.AgentsAt;
         support.AgentIncidentTerm = m.IncidentTerm;
         support.IncidentFired = m.OnIncident;
@@ -111,7 +114,36 @@ public sealed class MissionModule
     public MissionGroup? Get(int id) => S.Missions.TryGetValue(id, out var m) ? m : null;
 
     /// <summary>Is the character in a mission group (team or decoy, from acceptance until the group is back)? rule: §Who can go ("leaves its place").</summary>
-    public bool IsOnMission(int character) => S.Missions.Values.Any(m => m.Characters.Contains(character) || m.DecoyCharacters.Contains(character));
+    public bool IsOnMission(int character) => S.Missions.Values.Any(m => m.Characters.Contains(character) || m.DecoyCharacters.Contains(character)
+        || m.Captives?.Contains(character) == true); // QA-7: a team's captive is in the mission too (the liberation check skips him)
+
+    /// <summary>The mission whose team or decoys hold <paramref name="character"/> (0 = none).</summary>
+    public int MissionOf(int character) => S.Missions.Values.FirstOrDefault(m => m.Characters.Contains(character) || m.DecoyCharacters.Contains(character))?.Id ?? 0;
+
+    /// <summary>
+    /// The character module's <c>JoinAsCaptive</c>: a new prisoner taken by a member of mission <paramref name="mission"/> joins its captured list,
+    /// unless he already stands on ground of the captor's side and is not the target of an Abduction (0x546370 step 4, 0x534390). rule: §6 (B2e
+    /// §3 "Where a new prisoner is held"; QA-7).
+    /// </summary>
+    public bool JoinAsCaptive(StepContext? ctx, CharacterRecord c, int mission)
+    {
+        if (!S.Missions.TryGetValue(mission, out var m)) return false;
+        bool onCaptorGround = c.HeldAboard == 0 && c.HeldAt is { } at && _fleets.OwnerOf(at) == m.Side;
+        if (onCaptorGround && !(m.Kind == MissionKind.Abduction && m.TargetCharacter == c.Id)) return false;
+        (m.Captives ??= new()).Add(c.Id);
+        return true;
+    }
+
+    /// <summary>
+    /// The group leaves the state: its captives are held where it ends (<paramref name="at"/>; inferred, B2e §3) and get the liberation test there.
+    /// rule: §5 (QA-7).
+    /// </summary>
+    private void RemoveGroup(StepContext? ctx, MissionGroup m, string? at)
+    {
+        S.Missions.Remove(m.Id);
+        if (m.Captives == null) return;
+        foreach (var id in m.Captives.OrderBy(x => x)) if (_ch.Get(id) is { } c) _ch.HoldCaptive(ctx, c, at);
+    }
 
     /// <summary>Is the special force in a mission group?</summary>
     public bool IsSpecialForceBusy(int obj) => S.Missions.Values.Any(m => m.SpecialForces.Contains(obj) || m.DecoySpecialForces.Contains(obj));
@@ -177,7 +209,7 @@ public sealed class MissionModule
         m.DecoyCharacters.Select(CharAgent).Concat(m.DecoySpecialForces.Select(SfAgent)).Where(a => a != null).Select(a => a!.Value).ToList();
 
     /// <summary>One guard: the unit, its class detection, and its commander's espionage and combat (0 when none). rule: §3 Guards, Officer.</summary>
-    public sealed record Defender(EconObject Unit, int Detection, int OfficerEspionage, int OfficerCombat = 0);
+    public sealed record Defender(EconObject Unit, int Detection, int OfficerEspionage, int OfficerCombat = 0, int Fleet = 0);
 
     /// <summary>The check points of a mission: phases 2 and 3 (leaving, at the origin), 7 (arriving) and 9 (each job). rule: §1 (Traced B2d §1).</summary>
     public enum CheckPoint { LeavePlanet = 0, LeaveOrbit = 1, Arrive = 2, Job = 3 }
@@ -245,12 +277,12 @@ public sealed class MissionModule
             else if (sc.OrbitGuards && o.Category == ObjectCategory.CapitalShip && shipFleet.TryGetValue(o.Id, out var f))
             {
                 var adm = Officer(_ch.HolderOf(f.Id, CharacterPost.Admiral));
-                list.Add(new Defender(o, ShipDetection(o), Esp(adm), Com(adm)));
+                list.Add(new Defender(o, ShipDetection(o), Esp(adm), Com(adm), f.Id));
             }
             else if (sc.OrbitGuards && Params.CountAboardUnits && o.Category == ObjectCategory.Regiment && o.AboardShip != 0 && shipFleet.TryGetValue(o.AboardShip, out var rf))
             {
                 var gen = Officer(_ch.HolderOf(rf.Id, CharacterPost.General));
-                list.Add(new Defender(o, _troops.Data.Regiment(o.Class)?.Detection ?? 0, Esp(gen), Com(gen)));
+                list.Add(new Defender(o, _troops.Data.Regiment(o.Class)?.Detection ?? 0, Esp(gen), Com(gen), rf.Id));
             }
         }
         return list;
@@ -263,6 +295,18 @@ public sealed class MissionModule
     public int SpecialForcesOnPlanet(Side side, string system) =>
         E.Objects.Values.Count(o => o.Completed && o.Side == side && o.Category == ObjectCategory.SpecialForce && o.AboardShip == 0 && o.System == system
             && !IsSpecialForceBusy(o.Id));
+
+    /// <summary>
+    /// The usable special forces of <paramref name="side"/> aboard the ships of fleet <paramref name="fleet"/>: completed, not in a mission group.
+    /// The escape attempt of a prisoner held aboard reads it. rule: m5-characters-and-force §Escape (QA-7 DEFAULT, B2e Work 12).
+    /// </summary>
+    public int SpecialForcesInFleet(Side side, int fleet)
+    {
+        if (!_game.State.Fleets.TryGetValue(fleet, out var f)) return 0;
+        var ships = new HashSet<int>(f.Ships); // membership only, never iterated
+        return E.Objects.Values.Count(o => o.Completed && o.Side == side && o.Category == ObjectCategory.SpecialForce && o.AboardShip != 0
+            && ships.Contains(o.AboardShip) && !IsSpecialForceBusy(o.Id));
+    }
 
     /// <summary>
     /// The guards a planet-target mission of <paramref name="side"/> meets at <paramref name="system"/>: those of the arriving check (orbit) and of the
@@ -356,7 +400,7 @@ public sealed class MissionModule
         {
             if (tc is not { Placed: true }) return MissionReject.BadTarget;
             bool ok = k == MissionKind.Rescue
-                ? tc.Side == side && tc.Status == CharacterStatus.Captured && tc.Captor == Other(side) && tc.HeldAt != null
+                ? tc.Side == side && tc.Status == CharacterStatus.Captured && tc.Captor == Other(side) && _ch.LocationOf(tc) != null // QA-7: aboard, only while his fleet stands at a system
                 : tc.Side == Other(side) && tc.Status == CharacterStatus.Free && tc.Transit == null && _ch.LocationOf(tc) != null;
             if (!ok) return MissionReject.BadTarget;
             if (missionSystem != null && _ch.LocationOf(tc) != missionSystem) return MissionReject.BadTarget;
@@ -581,6 +625,7 @@ public sealed class MissionModule
         {
             m.Characters.Remove(c.Id);
             m.DecoyCharacters.Remove(c.Id);
+            m.Captives?.Remove(c.Id);
         }
     }
 
@@ -600,9 +645,9 @@ public sealed class MissionModule
             {
                 int id = m.Id; var side = m.Side; var kind = m.Kind;
                 ctx.Emit((i, _) => new MissionEnded(i, t, id, side, kind, system, MissionOutcome.TargetDestroyed));
-                S.Missions.Remove(m.Id);
+                RemoveGroup(ctx, m, system);
             }
-            else if (m.Phase == MissionPhase.ReturnPending) S.Missions.Remove(m.Id);
+            else if (m.Phase == MissionPhase.ReturnPending) RemoveGroup(ctx, m, system);
         }
     }
 
@@ -627,7 +672,7 @@ public sealed class MissionModule
             }
             else if (m.Phase == MissionPhase.ReturnPending)
             {
-                if (Empty(m)) { S.Missions.Remove(m.Id); continue; }
+                if (Empty(m)) { RemoveGroup(ctx, m, m.Target); continue; }
                 int speed = GroupSpeed(m.AllCharacters, m.AllSpecialForces.Count());
                 var trip = ReturnTrip(m, speed);
                 if (trip == null) // the side holds no reachable system: the group stays where it is, free (DEFAULT)
@@ -670,7 +715,7 @@ public sealed class MissionModule
     private void Release(StepContext ctx, MissionGroup m, string at, int day)
     {
         PlaceMembers(m, at);
-        S.Missions.Remove(m.Id);
+        RemoveGroup(ctx, m, at);
         int id = m.Id; var side = m.Side;
         if (m.Kind == MissionKind.Move) ctx.Emit((i, _) => new MissionGroupArrived(i, day, id, side, at));
         else ctx.Emit((i, _) => new MissionReturned(i, day, id, side, at));
@@ -686,7 +731,7 @@ public sealed class MissionModule
             Prune(m);
             if (m.Phase == MissionPhase.Returning)
             {
-                if (Empty(m)) { S.Missions.Remove(m.Id); continue; }
+                if (Empty(m)) { RemoveGroup(ctx, m, m.Path[^1]); continue; }
                 Release(ctx, m, m.Path[^1], t);
             }
             else if (m.Phase == MissionPhase.Outbound) Land(ctx, m, t);
@@ -927,8 +972,11 @@ public sealed class MissionModule
     /// The escape duel (0x5888f0): x = member combat - combat of the guard's commander (0 when none); one draw, escaped if rand(0..99) &lt; RLEVADTB(x)
     /// (the common step lookup, the first row below it). See <see cref="DuelWith"/> for what follows. rule: §4 (Traced B2d §5).
     /// </summary>
+    // The captor unit of a guard duel is the guard's commander, else the guard itself (B2d §5 step 4, corrected 2026-10-18): a ship's Admiral rides
+    // its fleet and a regiment's General the fleet it is aboard, so both put the prisoner aboard that fleet; a special force on the planet keeps
+    // him on the planet. rule: §4 (QA-7).
     private void Duel(StepContext ctx, MissionGroup m, int t, Agent a, Defender g, string place, MissionRecord rec, bool decoy) =>
-        DuelWith(ctx, m, t, a, g.OfficerCombat, g.Unit.Id, g.Unit.Side ?? Other(m.Side), place, rec, decoy);
+        DuelWith(ctx, m, t, a, g.OfficerCombat, g.Unit.Id, g.Unit.Side ?? Other(m.Side), place, rec, decoy, new CaptorUnit(g.Fleet, place, 0, MissionInvolved: true));
 
     /// <summary>
     /// The duel against a captor of combat <paramref name="captorCombat"/> (a guard's commander, or the enemy Force user of an encounter). Escaped:
@@ -938,7 +986,7 @@ public sealed class MissionModule
     /// group. Returns (escaped, the member's injury went up). rule: §4 (Traced B2d §5; B2e §2 "Who calls Hurt", §8).
     /// </summary>
     private (bool Escaped, bool Hurt) DuelWith(StepContext ctx, MissionGroup m, int t, Agent a, int captorCombat, int guard, Side captor, string place,
-        MissionRecord rec, bool decoy)
+        MissionRecord rec, bool decoy, CaptorUnit unit)
     {
         var table = Data.Evade ?? throw new RuleMissingException(MissionData.EvadeTable, "m5-missions");
         int x = a.Combat - captorCombat;
@@ -957,7 +1005,7 @@ public sealed class MissionModule
         if (isChar)
         {
             hurt = _ch.Hurt(ctx, a.C!, CauseMissionDuel) > 0; // rule: B2e §2 (0x4ef480: Hurt, then captured if alive)
-            removed = a.C!.Status == CharacterStatus.Dead || _ch.Capture(ctx, a.C!, captor, place, CauseMissionDuel);
+            removed = a.C!.Status == CharacterStatus.Dead || _ch.Capture(ctx, a.C!, captor, place, CauseMissionDuel, unit: unit); // QA-7: moved to the captor
         }
         else if (E.Objects.TryGetValue(a.Id, out var o))
         {
@@ -977,7 +1025,9 @@ public sealed class MissionModule
     private bool Encounter(StepContext ctx, MissionGroup m, int t, Agent a, string place, MissionRecord rec, bool decoy)
     {
         if (!a.IsCharacter || !_ch.MutualDiscovery(a.C!, out var x) || x == null) return false;
-        var (escaped, hurt) = DuelWith(ctx, m, t, a, x.EffectiveSkill(Skill.Combat), x.Id, x.Side, place, rec, decoy);
+        int xm = MissionOf(x.Id); // QA-7: the captor is X himself: his fleet, else where he stands; his mission takes the prisoner as a captive
+        var unit = new CaptorUnit(x.AttachedFleet, _ch.LocationOf(x), xm, MissionInvolved: true);
+        var (escaped, hurt) = DuelWith(ctx, m, t, a, x.EffectiveSkill(Skill.Combat), x.Id, x.Side, place, rec, decoy, unit);
         _ch.ForceEncounter(ctx, t, m.Id, a.C!, x, hurt, escaped);
         return true;
     }
@@ -1046,7 +1096,7 @@ public sealed class MissionModule
         int id = m.Id; var side = m.Side; var kind = m.Kind; string target = m.Target;
         ctx.Emit((i, _) => new MissionEnded(i, t, id, side, kind, target, MissionOutcome.Foiled));
         Prune(m);
-        if (Empty(m)) S.Missions.Remove(m.Id);
+        if (Empty(m)) RemoveGroup(ctx, m, m.Home);
         else Release(ctx, m, m.Home, t);
     }
 
@@ -1216,7 +1266,7 @@ public sealed class MissionModule
         int id = m.Id; var side = m.Side; var kind = m.Kind; string target = m.Target;
         ctx.Emit((i, _) => new MissionEnded(i, day, id, side, kind, target, outcome));
         Prune(m);
-        if (Empty(m)) S.Missions.Remove(m.Id);
+        if (Empty(m)) RemoveGroup(ctx, m, m.Target);
     }
 
     // ================================================================== effects (§6), applied in slot 5.3
@@ -1271,7 +1321,7 @@ public sealed class MissionModule
                 if (Recruit?.Invoke(ctx, side, target) is { } rc) { int cid = rc.Id; ctx.Emit((i, _) => new CharacterRecruited(i, t, id, side, cid, target)); }
                 break;
             case MissionKind.Rescue: if (tc != null) _ch.Free(ctx, tc, CauseRescue); break;
-            case MissionKind.Abduction: if (tc != null) _ch.Capture(ctx, tc, side, null, CauseAbduction); break;
+            case MissionKind.Abduction: if (tc != null) _ch.Capture(ctx, tc, side, null, CauseAbduction, unit: TeamCaptor(m)); break; // QA-7: the team's captive
             case MissionKind.Assassination:
                 if (tc == null) break;
                 if (!IsKeyTarget(m.Kind, m.TargetCharacter, out _)) { _ch.Kill(ctx, tc, CauseAssassination); break; }
@@ -1279,12 +1329,15 @@ public sealed class MissionModule
                 // (death allowed for this target whatever MajorsCanDie says); an unqualified team injures the target, no k draw.
                 if (!Team(m).Any(a => a.IsCharacter && a.Combat >= Params.KeyTeamMinCombat && a.Espionage >= Params.KeyTeamMinEspionage))
                     _ch.Injure(ctx, tc, CauseAssassination);
-                else if (ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1) < Params.KeyKidnapPercent) _ch.Capture(ctx, tc, side, null, CauseKidnap);
+                else if (ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1) < Params.KeyKidnapPercent) _ch.Capture(ctx, tc, side, null, CauseKidnap, unit: TeamCaptor(m));
                 else _ch.Kill(ctx, tc, CauseAssassination, allowDeath: true);
                 break;
             case MissionKind.DeathStarSabotage: DestroyDeathStar?.Invoke(ctx, target, Other(side)); break;
         }
     }
+
+    // The team as captor (Abduction, the kidnap): a member on this mission at the target. rule: §6 (B2e §3 step 4, B2e-22; QA-7).
+    private static CaptorUnit TeamCaptor(MissionGroup m) => new(0, m.Target, m.Id, true);
 
     // ================================================================== uprisings (§7) and per-incident Incite (§6)
 

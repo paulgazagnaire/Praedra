@@ -218,7 +218,10 @@ public class MissionEffectTests
         w.Game.Step();
         w.RunIteration(w.LastMission);
         var vader = w.Ch.Get(Vader)!;
-        Assert.Equal((CharacterStatus.Captured, Side.Alliance, T), (vader.Status, vader.Captor!.Value, vader.HeldAt));
+        // QA-7 moved (B2e §3 step 4, B2e-22): the captor is a team member, so Vader is the team's captive (no planet yet), not held at T
+        Assert.Equal((CharacterStatus.Captured, Side.Alliance, (string?)null), (vader.Status, vader.Captor!.Value, vader.HeldAt));
+        Assert.Contains(Vader, w.M.Get(w.LastMission)!.Captives!);
+        Assert.True(w.M.IsOnMission(Vader));
         Assert.Equal(MissionModule.CauseAbduction, w.Events<CharacterCaptured>().Single().Cause);
 
         // Rescue: Leia held by the Empire at T; Han frees her
@@ -229,7 +232,8 @@ public class MissionEffectTests
         w.Start(Side.Alliance, MissionKind.Rescue, new[] { Han }, null, targetChar: Leia);
         w.Game.Step();
         w.RunIteration(w.LastMission);
-        Assert.Equal((CharacterStatus.Free, T), (leia.Status, leia.System));
+        // QA-9 moved (B2e §3 Autoroute): freed on T (no holder), she sets off at once for the nearest neutral world (step 6; the Alliance holds none)
+        Assert.Equal((CharacterStatus.Free, T), (leia.Status, leia.Transit!.Path[0]));
         Assert.Equal(MissionModule.CauseRescue, w.Events<CharacterFreed>().Single().Cause);
         Assert.False(w.M.IsOnMission(Leia)); // not travelling with the team
 

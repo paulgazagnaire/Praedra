@@ -154,7 +154,9 @@ public class B2dGuardTests
         Assert.Equal((Han, 15, 70, escaped), (d.Member, d.X, d.Chance, d.Escaped));
         Assert.Equal(escaped ? CharacterStatus.Free : CharacterStatus.Captured, w.Ch.Get(Han)!.Status);
         if (!escaped) Assert.Equal(MissionModule.CauseMissionDuel, w.Events<CharacterCaptured>().Single().Cause);
-        Assert.Equal(T, w.Ch.Get(Han)!.System);
+        // QA-7 moved (B2d §5 step 4, corrected 2026-10-18): a captured Han is held aboard the Admiral's fleet, located at T
+        if (escaped) Assert.Equal(T, w.Ch.Get(Han)!.System);
+        else Assert.Equal((fleet, (string?)null, T), (w.Ch.Get(Han)!.HeldAboard, w.Ch.Get(Han)!.HeldAt, w.Ch.LocationOf(w.Ch.Get(Han)!)));
     }
 
     // B2d-8: a special force with combat 0 (Bothan Spies) against a guard without a commander: x = 0, p = 40: draw 40 destroys it (MissionDuel)
@@ -181,8 +183,8 @@ public class B2dGuardTests
     {
         var w = World();
         w.Agent(Leia, H, esp: 50); w.Agent(Han, H, esp: 50);
-        if (leaving) { w.Hold(H, Side.Alliance, 100); Fleet(w, Side.Empire, H, Isd); }
-        else Fleet(w, Side.Empire, T, Isd);
+        if (leaving) w.Hold(H, Side.Alliance, 100);
+        int isd = leaving ? Fleet(w, Side.Empire, H, Isd) : Fleet(w, Side.Empire, T, Isd);
         // the walk detects, two duels lost; B2e moved: each duel is followed by the member's Hurt roll (combat 0: p = 100, always a hit; majors
         // make no death draw), then the capture
         w.Stub!.Expect(0, 99, 0, 99, 99, 99, 99);
@@ -194,7 +196,8 @@ public class B2dGuardTests
         Assert.Equal(MissionOutcome.Foiled, w.Events<MissionEnded>().Single().Outcome);
         Assert.Equal(leaving ? 0 : 1, w.Events<MissionDeparted>().Count);
         Assert.All(new[] { Leia, Han }, c => Assert.Equal(CharacterStatus.Captured, w.Ch.Get(c)!.Status));
-        Assert.All(new[] { Leia, Han }, c => Assert.Equal(leaving ? H : T, w.Ch.Get(c)!.HeldAt));
+        // QA-7 moved (B2d §5 step 4, corrected 2026-10-18): the ship itself is the captor (no Admiral), so both are held aboard its fleet
+        Assert.All(new[] { Leia, Han }, c => Assert.Equal((isd, leaving ? H : T), (w.Ch.Get(c)!.HeldAboard, w.Ch.LocationOf(w.Ch.Get(c)!))));
     }
 
     // B2d-10: a failed decoy duels right after its roll and leaves the group whatever the result; the next guard cannot pick it
