@@ -85,11 +85,12 @@ public static class NewGame
         }
 
         foreach (var side in new[] { Side.Empire, Side.Alliance })
-            DealSide(host, forces, side);
+            DealSide(host, forces, side, settings.MinGarrison);
 
         // P7 step 2: the fixed HQ forces (CMUNHQTB), completed, standing on the Rebel HQ system (the table's first item is empty, so nothing is a
         // carrier); no capacity check, no draw. With min_garrison 0 they are the HQ's only troops. rule: m5-setup-and-victory §P7 ([EXE-own] 0x51ad90; B4 §7)
-        if (state.Scenario.HqSystem is { } hqSys)
+        // Behind HqFixedForces (DEFAULT off until the Classic setup, part B, turns it on together with MinGarrison 0).
+        if (settings.HqFixedForces && state.Scenario.HqSystem is { } hqSys)
             foreach (var (side, cls, count) in forces.HqUnits)
                 for (int i = 0; i < count; i++) eco.AddObject(side, cls, hqSys);
 
@@ -122,7 +123,7 @@ public static class NewGame
     private static List<string> Held(GameHost host, Side side) =>
         host.Game.State.SystemOwners.Where(kv => kv.Value == side).Select(kv => kv.Key).OrderBy(n => n, StringComparer.Ordinal).ToList();
 
-    private static void DealSide(GameHost host, ForcesTable forces, Side side)
+    private static void DealSide(GameHost host, ForcesTable forces, Side side, int? minGarrison)
     {
         var eco = host.Economy;
         var held = Held(host, side);
@@ -155,10 +156,10 @@ public static class NewGame
             for (int i = 0; i < refs; i++) if (eco.CheckPlace(sys, FacilityKind.Refinery) == null) eco.AddFacility(sys, FacilityKind.Refinery);
         }
 
-        // garrison: the sheet's required N for the holder's support (N = ceil((60 - s) / 10) below 60, else 0), at least min_garrison (0 in Classic,
-        // B4 §6: worlds at 60 or more, Coruscant, Yavin and the HQ get none); extra regiments at the base to load and send
+        // garrison: the sheet's required N for the holder's support (N = ceil((60 - s) / 10) below 60, else 0), at least min_garrison (1998 = 0,
+        // B4 §6: worlds at 60 or more, Coruscant, Yavin and the HQ get none; 0 only with the Classic setup, part B, so 1 until then); extra regiments at the base to load and send
         // rule: m5-setup-and-victory §P6 ([EXE-own] 0x51ab20); m2-uprisings-and-garrison §Required garrison N (no system starts in uprising)
-        string gClass = forces.Str(side, "garrison_class"); int minG = forces.Int(side, "min_garrison");
+        string gClass = forces.Str(side, "garrison_class"); int minG = minGarrison ?? forces.Int(side, "min_garrison");
         foreach (var sys in held)
         {
             int n = Math.Max(minG, SupportModule.RequiredGarrison(host.Support.Params, eco.SupportOf(sys, side), false, false));

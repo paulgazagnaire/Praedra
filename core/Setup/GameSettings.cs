@@ -20,6 +20,18 @@ public sealed record GameSettings
     public DealMode DealMode { get; init; } = DealMode.Anchored;
     /// <summary>Numbers and switches of the Anchored deal. Null = the sheet's DEFAULTs.</summary>
     public DealParams? Deal { get; init; }
+    /// <summary>
+    /// Place the 1998 fixed Rebel HQ forces (<c>hq_unit</c> rows of new-game-forces.csv: 2 Alliance Army, 1 Alliance Fleet Regiment, 4 X-wing,
+    /// 2 Y-wing, standing on the HQ system) at setup. DEFAULT off: the Classic setup (part B of batch B4) turns it on together with
+    /// <see cref="MinGarrison"/> 0; on the hand-made forces table alone the 1998 garrison rule only makes the Empire richer.
+    /// rule: m5-setup-and-victory §P6, §P7 ([EXE-own] 0x51ad90; B4 §7 step 2).
+    /// </summary>
+    public bool HqFixedForces { get; init; }
+    /// <summary>
+    /// Minimum garrison per held system at setup; null = <c>min_garrison</c> of new-game-forces.csv (1 until the Classic setup). 1998 = 0
+    /// (B4 §6, [EXE-own] 0x51ab20): the Classic setup (part B) sets 0 together with <see cref="HqFixedForces"/>. rule: m5-setup-and-victory §P6.
+    /// </summary>
+    public int? MinGarrison { get; init; }
 
     // ---- travel. rule: m1-travel §Rule (Decided Paul 2026-10-16)
     /// <summary>Routes (DEFAULT, New: free travel plus faster hyperspace routes) or Straight (Classic yardstick: the 1998 straight line, no routes).</summary>

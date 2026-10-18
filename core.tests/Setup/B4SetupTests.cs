@@ -16,6 +16,9 @@ public class B4SetupTests
 {
     private static readonly int[] Seeds = { 1, 2, 3, 7 };
     private static GameHost Make(int seed = 1) => NewGame.Create(new NewGameOptions { Seed = seed });
+    /// <summary>The Classic garrisons and HQ forces: MinGarrison 0 with HqFixedForces on (what the Classic setup, part B, will switch on).</summary>
+    private static readonly GameSettings Classic = new() { MinGarrison = 0, HqFixedForces = true };
+    private static GameHost MakeClassic(int seed = 1) => NewGame.Create(new NewGameOptions { Seed = seed, Settings = Classic });
     private static IEnumerable<GameHost> Games() => Seeds.Select(Make);
 
     private static int Standing(GameHost h, Side side, string cls, string sys) =>
@@ -101,11 +104,13 @@ public class B4SetupTests
         Assert.Equal(0, SupportModule.RequiredGarrison(p, 60, false, false));
         Assert.Equal(1, SupportModule.RequiredGarrison(p, 59, false, false));
         var forces = NewGameData.Default.Forces;
-        foreach (var side in new[] { Side.Empire, Side.Alliance }) Assert.Equal(0, forces.Int(side, "min_garrison"));
+        // the data keeps 1 until the Classic setup (part B); the switches give the 1998 rule
+        foreach (var side in new[] { Side.Empire, Side.Alliance }) Assert.Equal(1, forces.Int(side, "min_garrison"));
+        Assert.Null(new GameSettings().MinGarrison); Assert.False(new GameSettings().HqFixedForces);
 
         foreach (var seed in Seeds)
         {
-            var h = Make(seed);
+            var h = MakeClassic(seed);
             int below = 0;
             foreach (var side in new[] { Side.Empire, Side.Alliance })
             {
@@ -141,7 +146,7 @@ public class B4SetupTests
         int games = 0;
         foreach (var seed in Enumerable.Range(1, 12))
         {
-            var h = Make(seed);
+            var h = MakeClassic(seed);
             var held = h.Game.State.SystemOwners.Where(kv => kv.Value == Side.Alliance).Select(kv => kv.Key).ToList();
             if (held.Any(s => h.Economy.SupportOf(s, Side.Alliance) < 60)) continue; // the batch's condition
             games++;
@@ -152,14 +157,15 @@ public class B4SetupTests
         Assert.True(games > 0, "no seed in 1..12 gives every Alliance holding support 60 or more");
     }
 
-    // B4-4 (the HQ troops it names): the Rebel HQ system starts with the fixed CMUNHQTB forces standing on it, not in a fleet: 2 Alliance Army
-    // Regiments, 1 Alliance Fleet Regiment, 4 X-wing, 2 Y-wing. rule: m5-setup-and-victory §P7 ([EXE-own] 0x51ad90; B4 §7 step 2)
+    // B4-4 (the HQ troops it names): with HqFixedForces on, the Rebel HQ system starts with the fixed CMUNHQTB forces standing on it, not in a
+    // fleet: 2 Alliance Army Regiments, 1 Alliance Fleet Regiment, 4 X-wing, 2 Y-wing. Off (DEFAULT until the Classic setup) it gets none of
+    // them. rule: m5-setup-and-victory §P7 ([EXE-own] 0x51ad90; B4 §7 step 2)
     [Fact]
     public void B4_4_TheHqStartsWithItsFixedForces()
     {
         foreach (var seed in Seeds)
         {
-            var h = Make(seed);
+            var h = MakeClassic(seed);
             string hq = h.HqSystem!;
             var there = h.Economy.Objects.Where(o => o.Side == Side.Alliance && o.System == hq && o.AboardShip == 0 && o.Category != ObjectCategory.Facility)
                 .GroupBy(o => o.Class).ToDictionary(g => g.Key, g => g.Count());
@@ -168,8 +174,12 @@ public class B4SetupTests
             Assert.All(h.Economy.Objects.Where(o => o.System == hq && o.Category != ObjectCategory.Facility), o => Assert.True(o.Completed));
         }
         // File mode too (the HQ is Cyclor in the day-one files)
-        var f = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA, Settings = new GameSettings { DealMode = DealMode.File } });
+        var f = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA, Settings = Classic with { DealMode = DealMode.File } });
         Assert.Equal(2, Standing(f, Side.Alliance, "Alliance Army Regiment", f.HqSystem!));
+        // switch off (DEFAULT): only the garrison stands there (min_garrison 1 of the data), no Fleet regiment, no squadron
+        var off = Make(1);
+        Assert.Equal(1, Standing(off, Side.Alliance, "Alliance Army Regiment", off.HqSystem!));
+        Assert.DoesNotContain(off.Economy.Objects, o => o.System == off.HqSystem && o.Side == Side.Alliance && o.Class is "Alliance Fleet Regiment" or "X-wing" or "Y-wing");
     }
 
     // B4-5: the first fleet of each side is "Fleet 1", fleets count per side in id order; two Corellian Corvettes of one side are "... 1" and

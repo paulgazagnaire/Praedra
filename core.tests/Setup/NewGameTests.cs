@@ -66,10 +66,7 @@ public class NewGameTests
         Assert.Equal(0, h.Economy.SupportOf("Coruscant", Side.Alliance));
         Assert.Equal(100, h.Economy.SupportOf("Cyclor", Side.Alliance));
         Assert.Equal(100, h.Economy.SupportOf("Yavin", Side.Alliance));
-        // B4 2026-10-17: the garrison is exactly the P6 N for the holder's support, with no minimum (min_garrison 0 in Classic, B4 §6); before B4
-        // every held system got at least one regiment, so this asserted "some regiment on Rendili".
-        int rendiliN = Rebellion.Core.Support.SupportModule.RequiredGarrison(h.Support.Params, h.Economy.SupportOf("Rendili", Side.Empire), false, false);
-        Assert.Equal(rendiliN, h.Economy.Objects.Count(o => o.Category == ObjectCategory.Regiment && o.System == "Rendili" && o.Side == Side.Empire));
+        Assert.Contains(h.Economy.Objects, o => o.Category == ObjectCategory.Regiment && o.System == "Rendili" && o.Side == Side.Empire);
         Assert.Contains(h.Economy.Objects, o => o.Class == "Orbital Shipyard" && o.System == "Kuat");
     }
 
