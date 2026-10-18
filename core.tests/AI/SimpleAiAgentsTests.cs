@@ -36,7 +36,8 @@ public class SimpleAiAgentsTests
         Assert.True(new SimpleAiParams().UseCharactersAndMissions);
         var (m, h) = Match(1, new SimpleAiParams { UseFog = true, UseCharactersAndMissions = false,
             RunnerRetreats = 0, RetreatCountsAsLoss = false, AvoidBlockedPaths = false, WinRushDefenders = -1, ShelledLandingNeed = false,
-            FogAvoidEnemyStops = false, SplitHomeSurplus = false, DetourToHeldStop = false, InvasionBatchesOnly = false, ExplorerScouts = 0, FogGroundForgetDays = 0, LeaderMarks = false, OriginalGarrisonFloor = false });
+            FogAvoidEnemyStops = false, SplitHomeSurplus = false, DetourToHeldStop = false, InvasionBatchesOnly = false, ExplorerScouts = 0, FogGroundForgetDays = 0, LeaderMarks = false, OriginalGarrisonFloor = false,
+            FinishWhenAheadRatio = 0 });
         m.RunTo(1000);
         Assert.DoesNotContain(m.Sent.Keys, k => k.Contains("Mission", StringComparison.Ordinal) || k.Contains("Character", StringComparison.Ordinal) || k.Contains("General", StringComparison.Ordinal));
         // The pin moved when the Death Star added saved state (m5-death-star: GameState.DeathStar, SystemKnowledge.Destroyed). The game plays identically:
@@ -79,7 +80,10 @@ public class SimpleAiAgentsTests
         // Q17 re-pin 2026-10-18 (Dev lead; Paul's cards "Skip the strong" and "Leave out hunters"): the talented draw leaves out the already strong
         // and the never_talented hunters, so other characters are drawn. With TalentedSkipStrong and TalentedSkipFlagged off the hash is exactly
         // the previous pin 999219a6...fd00 (checked when re-pinned, main 71cc7b7).
-        Assert.Equal("00e02e8cf1cc1ef22ba36fd562ea4fd5b619bd4d72415278e37250bc2af6701c", h.StateHash());
+        // Derived re-pin 2026-10-18 (AI trainer; Paul's card "1998 rule"): ControlRule is DEFAULT Derived again, a core rule this old AI cannot
+        // switch off. FinishWhenAheadRatio (now DEFAULT 5) is switched off above with the other AI fixes. With ControlRule = AssaultOnly the hash
+        // is exactly the previous pin 00e02e8c...701c (checked when re-pinned, main 2a9d16d).
+        Assert.Equal("ca568ccfc34b65af86a8aad11742f528a031b56cd8a07390a0253f2c192e8252", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"
