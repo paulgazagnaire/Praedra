@@ -1,5 +1,7 @@
 key,value,source
-RepairNeedsYard,true,"DEFAULT: m4-retreat-damage-repair section 5 (repair only at an own completed shipyard; economy/04 Lead)"
-RepairCadenceDays,1,"DEFAULT: m4-retreat-damage-repair section 5 (one repair call per ship per day; cadence of 0x501c50 not traced)"
-RepairHullDivisor,10,"Traced-medium: m4-retreat-damage-repair section 5 (function 0x501c50 heals max_hull / 10 per call)"
-RepairHitsPerCall,1,"DEFAULT: m4-retreat-damage-repair section 5 (each hit counter above 0 falls by 1 per call)"
+RepairNeedsYard,false,"Traced: m4-retreat-damage-repair section 5 (B3 section 15: a unit that is not moving repairs anywhere; a usable own shipyard only shortens the period)"
+RepairPeriodDays,30,"Traced: GNPRTB 2053 (capital ship repair period; B3 section 15)"
+FastRepairPeriodDays,2,"Traced: GNPRTB 2052 (capital ship repair period with CombatUnitFastRepair; B3 section 15)"
+SquadronRepairPeriodDays,30,"Traced: GNPRTB 4609 (squadron repair period; B3 section 15)"
+SquadronFastRepairPeriodDays,2,"Traced: GNPRTB 4608 (squadron repair period with CombatUnitFastRepair; B3 section 15)"
+RepairHullDivisor,10,"Traced: m4-retreat-damage-repair section 5 (0x501c50 takes trunc(class hull / 10) off the hull damage per turn)"

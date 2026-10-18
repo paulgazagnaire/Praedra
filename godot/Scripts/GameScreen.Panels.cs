@@ -785,7 +785,7 @@ public partial class GameScreen
     void SetRetreat(bool on)
     {
         _retreatPending = on;
-        S.Track(S.Host.Battles.SubmitSetOnContact(Me, on ? OnContactMode.Retreat : OnContactMode.Simulate), "Change the battle behaviour");
+        S.Track(S.Host.Battles.SubmitSetOnContact(Me, on ? OnContactMode.Retreat : OnContactMode.Fight), "Change the battle behaviour");
         S.Say(on ? "Order sent: your fleets will retreat when an enemy arrives." : "Order sent: your fleets will fight when an enemy arrives.");
         AddLogItem(S.Messages[^1]);
         RefreshTop();

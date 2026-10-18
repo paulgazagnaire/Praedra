@@ -50,11 +50,13 @@ public class SimpleAiAgentsTests
         // delay draws at each capture, the Hurt roll on injuries) change the state and the game's course.
         // B4 re-pin 2026-10-18: setup now names fleets "Fleet n" and capital ships "<class> n" (B4 §12, display only; the ship name is saved
         // state). The game plays identically: with the naming step removed the hash is exactly B2e's 5e54e22f...e007 (checked when re-pinned).
+        // B3 re-pin 2026-10-18: the Classic battle now follows the traced original (m4-battle-classic, batch B3) and AI sides use the AI threshold
+        // of B6a §2, which changes every battle and so the game; the old AI is still the one played (all switches above unchanged).
         // B5a re-pin 2026-10-17: derived control (ControlRule.Derived, the DEFAULT; the old AI cannot switch it off) recomputes every holder after
         // setup, lets worlds go neutral or join a side by support, hands a world over when its last regiment leaves, runs the sector steps, frees
         // and sends away characters at each flip, and adds saved state (ControlState.Contested, EverHeld): the game takes another course from
-        // setup. Seed 1, 1000 days, as before (no seed change).
-        Assert.Equal("2f1f5d7928a6f4a351f4b2f8f7aa08b0cda33a67e4494ea04c865b4c5c2b829a", h.StateHash());
+        // setup. Seed 1, 1000 days, as before (no seed change); re-measured on top of B3.
+        Assert.Equal("3e315d0c6d17e7cb024b763f810d7963f23f4611e18041a8ca83fefa5dcc62d3", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"

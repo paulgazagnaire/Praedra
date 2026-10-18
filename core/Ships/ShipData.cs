@@ -46,6 +46,12 @@ public sealed record ShipClass(
     ShipArcs? Arcs = null,
     int Detection = 0,
     int TractorBeamPower = 0,
+    int SubLight = 0,
+    int DamageControl = 0,
+    int SquadronSize = 0,
+    int LaserRange = 0,
+    int IonRange = 0,
+    int TurbolaserRange = 0,
     int UprisingDefense = 0)
 {
     /// <summary>The loss value a destroyed unit adds to its side's tally at the system: record word 12 (uprising_defense). rule: m5-characters-and-force §Loyalty (B2c §3, 0x520b60).</summary>
@@ -105,6 +111,8 @@ public static class ShipData
         // rule: m4-battle-classic §4: the combat columns (recharge rates and torpedoes only where the file has them; fighters have no recharge columns)
         bool hasTractor = t.HasColumn("tractor_beam_power"); // rule: m4-retreat-damage-repair §6 (capital-ships.csv; fighters have none: 0)
         bool hasDet = t.HasColumn("detection"); // rule: m5-missions §3 Defenders (CAPSHPSD and FIGHTSD carry detection)
+        // rule: m4-battle-classic §2, §5 (B3: sub-light speed, gun ranges, squadron size); m4-retreat-damage-repair §5 (damage_control)
+        bool hasSub = t.HasColumn("sub_light_engine"), hasDc = t.HasColumn("damage_control"), hasSize = t.HasColumn("squadron_size");
         bool hasUd = t.HasColumn("uprising_defense"); // rule: m5-characters-and-force §Loyalty (B2c §3: the loss value, record word 12)
         bool hasMan = t.HasColumn("maneuverability"), hasWr = t.HasColumn("weapon_recharge_rate"), hasSr = t.HasColumn("shield_recharge_rate"), hasTorp = t.HasColumn("torpedoes");
         int Cnt(int r, string col) => t.HasColumn(col) ? t.GetInt(r, col) : 0;
@@ -130,6 +138,8 @@ public static class ShipData
                 new ShipArcs(Arc(r, "fore"), Arc(r, "aft"), Arc(r, "port"), Arc(r, "starboard")),
                 hasDet ? t.GetInt(r, "detection") : 0,
                 hasTractor ? t.GetInt(r, "tractor_beam_power") : 0,
+                hasSub ? t.GetInt(r, "sub_light_engine") : 0, hasDc ? t.GetInt(r, "damage_control") : 0, hasSize ? t.GetInt(r, "squadron_size") : 0,
+                Cnt(r, "laser_cannon_range"), Cnt(r, "ion_cannon_range"), Cnt(r, "turbolaser_range"),
                 hasUd ? t.GetInt(r, "uprising_defense") : 0));
         }
         return list;
