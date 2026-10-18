@@ -104,9 +104,16 @@ public sealed class SystemKnowledge
     /// <summary>The day HqHere was last written (by a group C reveal or a Presence with PresenceRevealsHq). KnownHq reports it.</summary>
     public int? HqStamp { get; set; }
 
-    // ---- group D: ground forces (regiments and special forces standing on the system), per side and class. Characters are M5 missions'.
+    // ---- group D: ground forces (regiments and special forces standing on the system), per side and class, and the characters present.
     public int? StampD { get; set; }
     public List<GroundPicture> Ground { get; set; } = new();
+    /// <summary>
+    /// Group D characters: the characters (either side) on the system when D was last written, sorted by id; written with the rest of D (same
+    /// reveals, same <see cref="StampD"/>), so they go stale with it. Null when none, and then left out of the saved form, so pictures without
+    /// characters save and hash as before. rule: m5-fog-and-hq §F1 group D ("characters present", Manual p.69, p.121).
+    /// </summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public List<CharacterPicture>? Characters { get; set; }
 
     // ---- group E: the other side's fleets present when last looked
     public int? StampE { get; set; }
@@ -118,7 +125,7 @@ public sealed class SystemKnowledge
         StampA = StampA, Populated = Populated, Destroyed = Destroyed, Energy = Energy, Raw = Raw,
         StampB = StampB, Owner = Owner, AllianceSupport = AllianceSupport,
         StampC = StampC, Facilities = new SortedDictionary<string, int>(Facilities, StringComparer.Ordinal), FacilitiesQueued = FacilitiesQueued, HqHere = HqHere, HqStamp = HqStamp,
-        StampD = StampD, Ground = Ground.Select(g => g.Clone()).ToList(),
+        StampD = StampD, Ground = Ground.Select(g => g.Clone()).ToList(), Characters = Characters?.Select(c => c.Clone()).ToList(),
         StampE = StampE, Fleets = Fleets.Select(f => f.Clone()).ToList(),
     };
 }
@@ -130,6 +137,18 @@ public sealed class GroundPicture
     public SortedDictionary<string, int> Units { get; set; } = new(StringComparer.Ordinal);
     public int Total => Units.Values.Sum();
     internal GroundPicture Clone() => new() { Side = Side, Units = new SortedDictionary<string, int>(Units, StringComparer.Ordinal) };
+}
+
+/// <summary>
+/// One character as seen in group D: id, side and status (Free, Injured, or Captured when held prisoner on the system). rule: m5-fog-and-hq
+/// §F1 group D.
+/// </summary>
+public sealed class CharacterPicture
+{
+    public int Id { get; set; }
+    public Side Side { get; set; }
+    public Rebellion.Core.Characters.CharacterStatus Status { get; set; }
+    internal CharacterPicture Clone() => new() { Id = Id, Side = Side, Status = Status };
 }
 
 /// <summary>One fleet as seen: side, ship class counts and fighter squadron class counts (flying or aboard). No fleet id. rule: §F1 group E.</summary>
