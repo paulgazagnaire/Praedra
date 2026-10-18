@@ -120,12 +120,13 @@ public class SimpleAiAgentsTests
     }
 
     // QA-7 follow-up (2026-10-18): since #69 a duel prisoner is held aboard the captor's fleet. The AI's Rescue planner looked only at held_at
-    // (a planet), so such a prisoner was never rescued; it now targets him where that fleet stands (m5-missions TargetReason: LocationOf, the
-    // prisoner can be rescued only while his fleet stands at a system). An Empire character (Vader on seed 1) is captured aboard an Alliance fleet on day 31.
-    [Fact]
-    public void Rescue_TargetsAPrisonerHeldAboardTheCaptorFleet()
+    // (a planet), so such a prisoner was never rescued; with RescueAboardFleets it targets him where that fleet stands (m5-missions TargetReason:
+    // LocationOf, the prisoner can be rescued only while his fleet stands at a system). An Empire character is captured aboard an Alliance
+    // fleet (Crait on seed 1) on day 31. QA-13: such tries practically never succeed (8 Medium mirrors: 458 tries, 3 rescues; only at fleets
+    // parked on a captor-held world: 205 tries, 0), so the switch is DEFAULT off and the default AI sends none.
+    private static int RescuesAboard(SimpleAiParams p, out int prisonerId, out string? at)
     {
-        var (m, h) = Match(1, new SimpleAiParams(), passive: Side.Alliance); // a passive Alliance: its fleets stay put
+        var (m, h) = Match(1, p, passive: Side.Alliance); // a passive Alliance: its fleets stay put
         m.RunTo(30);
         var cp = h.Characters.Params;
         // the smallest Alliance fleet standing away from the HQ (Crait on seed 1; at the HQ the odds stay below the AI's floor)
@@ -148,7 +149,18 @@ public class SimpleAiAgentsTests
             m.Step();
             rescues += m.Empire.Submitted.Count(o => o.Kind == "MissionRescue" && o.Detail.Contains($"to {fleet.At} (character {prisoner.Id})", StringComparison.Ordinal));
         }
-        Assert.True(rescues > 0, $"no Rescue of {prisoner.Id} held aboard fleet {fleet.Id} at {fleet.At}");
+        prisonerId = prisoner.Id; at = fleet.At;
+        return rescues;
+    }
+
+    [Fact]
+    public void Rescue_TargetsAPrisonerHeldAboardTheCaptorFleet_OnlyWithTheSwitch()
+    {
+        Assert.False(new SimpleAiParams().RescueAboardFleets);
+        int with = RescuesAboard(new SimpleAiParams { RescueAboardFleets = true }, out int id, out var at);
+        Assert.True(with > 0, $"RescueAboardFleets on: no Rescue of {id} held aboard a fleet at {at}");
+        int without = RescuesAboard(new SimpleAiParams(), out id, out at);
+        Assert.True(without == 0, $"DEFAULT (off): {without} Rescue of {id} held aboard a fleet at {at}");
     }
 
     // ai/07 §7 (Empire: belief-map search with spies), m5-missions (Espionage writes the ground and HqHere), m5-fog-and-hq §N5. Against an

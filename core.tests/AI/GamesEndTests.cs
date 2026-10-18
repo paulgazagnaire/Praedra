@@ -15,6 +15,8 @@ namespace Rebellion.Core.Tests.AI;
 //   fe1a848 (#68 leader marks on, no AI Recruitment):       5 of 8 (seeds 2, 3, 4, 5, 8)
 //   1c3c353 (#75 leader marks off, no AI Recruitment):      1 of 8 (seed 1)
 //   + AI Recruitment (QA-12, MaxRecruiters 2):               1 of 8 (seed 6)
+//   f932dfe (#79 group D characters, #80 New battle DEFAULT): 1 of 8 (seed 8)
+//   + no Rescue at prisoners aboard fleets (QA-13):          2 of 8 (seeds 2, 8)
 // Floor: at most 3 of 8 games with no winner by day 3000.
 public class GamesEndTests
 {

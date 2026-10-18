@@ -435,9 +435,11 @@ public sealed partial class SimpleAi
         foreach (var s in HeldSystems())
             if (OwnUprising(s) && Free(MissionKind.SubdueUprising, s)) jobs.Add(new Job(MissionKind.SubdueUprising, s, null, _p.SubdueValue, "subdue " + s));
         // 4. Rescue own prisoners (own characters: the side knows where they are held). A prisoner held aboard his captor's fleet (QA-7) is
-        // located where that fleet stands, and can be rescued only while it stands at a system (m5-missions TargetReason: LocationOf).
+        // located where that fleet stands, and can be rescued only while it stands at a system (m5-missions TargetReason: LocationOf); the AI
+        // leaves him there unless RescueAboardFleets (DEFAULT off, QA-13: such tries practically never succeed).
         foreach (var c in _h.Characters.InPlay)
-            if (c.Side == _side && c.Status == CharacterStatus.Captured && _h.Characters.LocationOf(c) is { } held && !takenChar.Contains(c.Id) && KindUsable(MissionKind.Rescue))
+            if (c.Side == _side && c.Status == CharacterStatus.Captured && _h.Characters.LocationOf(c) is { } held && !takenChar.Contains(c.Id) && KindUsable(MissionKind.Rescue)
+                && (c.HeldAboard == 0 || _p.RescueAboardFleets))
                 jobs.Add(new Job(MissionKind.Rescue, held, c.Id, _p.RescueValue * (IsKey(c) ? 2 : 1), "char " + c.Id));
         // 5. Abduction of enemy characters the side has seen
         if (KindUsable(MissionKind.Abduction))
