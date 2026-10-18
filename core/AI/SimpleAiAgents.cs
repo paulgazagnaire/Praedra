@@ -5,6 +5,7 @@ using Rebellion.Core.Economy;
 using Rebellion.Core.Fleets;
 using Rebellion.Core.Missions;
 using Rebellion.Core.Research;
+using Rebellion.Core.Troops;
 
 namespace Rebellion.Core.AI;
 
@@ -21,12 +22,13 @@ namespace Rebellion.Core.AI;
 /// from the core's own tables (MissionModule.FoilChance, DetectionX, Lookup: m5-missions §3, §Mission tables) against the defenders the side
 /// believes are there. Kinds: Empire HQ hunt (Espionage or Reconnaissance on the highest HQ-belief systems, then a re-check of a known HQ),
 /// Subdue on own systems in uprising, Rescue of own prisoners, Abduction of enemy characters the side has seen, Diplomacy on own low-support
-/// systems and neutral border systems, Alliance Incite and Sabotage on enemy systems where no defender is believed, and Research.</item>
+/// systems and neutral border systems, Alliance Incite and Sabotage on enemy systems where no defender is believed, and Research. With
+/// SpecialForceAgents (DEFAULT off, QA-6) its free special forces go alone on the same jobs where their class bit is in the kind's mask.</item>
 /// </list>
 /// It reads the other side only through the "what the AI may see" block of SimpleAi.cs (MissionDefendersAt, SupportSeen, OwnerSeen,
 /// EnemyCharactersSeen, the belief map and the picture), so with UseFog it reads only its side's knowledge (m5-fog-and-hq §N8). Own characters,
 /// own missions and own systems are the side's own state. Like the rest of the AI it keeps no memory between days and draws no random number.
-/// Not used (refused by the core with RuleMissing, or impossible today): decoys, Recruitment, Jedi Training, Death Star Sabotage; and
+/// Not used (refused by the core with RuleMissing, or impossible today): decoys (the 1998 AI's, B6c §7: the decoy table is Missing), Recruitment, Jedi Training, Death Star Sabotage; and
 /// Assassination (a kill of a major becomes an injury; the AI prefers Abduction).
 /// </summary>
 public sealed partial class SimpleAi
@@ -342,31 +344,41 @@ public sealed partial class SimpleAi
     private void PlanMissions(List<CharacterRecord> mine, HashSet<int> busy)
     {
         var pool = mine.Where(c => Standing(c) && !busy.Contains(c.Id)).ToList();
-        if (pool.Count == 0) return;
+        var forces = _p.SpecialForceAgents ? FreeAgentForces() : new List<(EconObject O, SpecialForceClass K)>();
+        if (pool.Count == 0 && forces.Count == 0) return;
         var own = OwnMissions().ToList();
         var jobs = Jobs(own);
         if (jobs.Count == 0) return;
-        var pairs = new List<(long Ev, CharacterRecord C, Job J)>();
+        var pairs = new List<(long Ev, CharacterRecord? C, EconObject? F, Job J)>();
         foreach (var c in pool)
             foreach (var j in jobs)
-                if (Expected(c, j) is long ev && ev > 0) pairs.Add((ev, c, j));
-        // greedy: best expected value first; one mission per character, per job group (a target or a cap), within the caps
-        var usedChar = new HashSet<int>(); var usedGroup = new HashSet<string>(StringComparer.Ordinal);
+                if (Expected(c, j) is long ev && ev > 0) pairs.Add((ev, c, null, j));
+        foreach (var (o, k) in forces)
+            foreach (var j in jobs)
+                if (ExpectedSf(o, k, j) is long ev && ev > 0) pairs.Add((ev, null, o, j));
+        // greedy: best expected value first (a character before a special force on a tie); one mission per member, per job group (a target or a
+        // cap), within the caps
+        var usedChar = new HashSet<int>(); var usedSf = new HashSet<int>(); var usedGroup = new HashSet<string>(StringComparer.Ordinal);
         int diplomats = own.Count(m => m.Kind == MissionKind.Diplomacy);
         int subversion = own.Count(m => m.Kind is MissionKind.InciteUprising or MissionKind.Sabotage);
-        foreach (var (ev, c, j) in pairs.OrderByDescending(p => p.Ev).ThenBy(p => p.C.Id).ThenBy(p => p.J.Kind).ThenBy(p => p.J.System, StringComparer.Ordinal))
+        foreach (var (ev, c, f, j) in pairs.OrderByDescending(p => p.Ev).ThenBy(p => p.C == null ? 1 : 0).ThenBy(p => p.C?.Id ?? p.F!.Id)
+                     .ThenBy(p => p.J.Kind).ThenBy(p => p.J.System, StringComparer.Ordinal))
         {
-            if (usedChar.Contains(c.Id) || usedGroup.Contains(j.Group)) continue;
+            if ((c != null ? usedChar.Contains(c.Id) : usedSf.Contains(f!.Id)) || usedGroup.Contains(j.Group)) continue;
             if (j.Kind == MissionKind.Diplomacy && diplomats >= _p.MaxDiplomats) continue;
             if (j.Kind is MissionKind.InciteUprising or MissionKind.Sabotage && subversion >= _p.MaxSubversion) continue;
-            var job = j; var ch = c;
+            var job = j;
+            var chars = c != null ? new List<int> { c.Id } : new List<int>();
+            var sfs = f != null ? new List<int> { f.Id } : new List<int>();
             // A key target behind the exposure gate (m5-missions §6a.1, TargetProtected) is skipped today instead of ordered again every day.
-            if (job.TargetCharacter != null && _h.Missions.CheckStart(new StartMissionOrder(0, _side, job.Kind, new List<int> { ch.Id }, new List<int>(), new List<int>(),
+            if (job.TargetCharacter != null && _h.Missions.CheckStart(new StartMissionOrder(0, _side, job.Kind, chars, sfs, new List<int>(),
                     null, job.TargetCharacter)).Reason == MissionReject.TargetProtected) continue;
-            long seq = _h.Game.Submit(sq => new StartMissionOrder(sq, _side, job.Kind, new List<int> { ch.Id }, new List<int>(), new List<int>(),
+            long seq = _h.Game.Submit(sq => new StartMissionOrder(sq, _side, job.Kind, chars, sfs, new List<int>(),
                 job.TargetCharacter == null ? job.System : null, job.TargetCharacter));
-            Note(seq, "Mission" + j.Kind, $"{_h.Characters.ClassOf(c).Name} from {c.System} to {j.System}{(j.TargetCharacter is int t ? $" (character {t})" : "")} ev {ev}");
-            usedChar.Add(c.Id); usedGroup.Add(j.Group);
+            string who = c != null ? $"{_h.Characters.ClassOf(c).Name} from {c.System}" : $"{f!.Class} {f.Id} from {f.System}";
+            Note(seq, "Mission" + j.Kind, $"{who} to {j.System}{(j.TargetCharacter is int t ? $" (character {t})" : "")} ev {ev}");
+            if (c != null) usedChar.Add(c.Id); else usedSf.Add(f!.Id);
+            usedGroup.Add(j.Group);
             if (j.Kind is MissionKind.Espionage or MissionKind.Reconnaissance) _looksToday.Add(j.System);
             if (j.Kind == MissionKind.Diplomacy) diplomats++;
             if (j.Kind is MissionKind.InciteUprising or MissionKind.Sabotage) subversion++;
@@ -471,10 +483,10 @@ public sealed partial class SimpleAi
     };
 
     /// <summary>
-    /// The success chance (percent) of one member, from the core's table for the kind (m5-missions §Mission records: the table input). Recon
+    /// The success chance (percent) of one member (its skills read through sk), from the core's table for the kind (m5-missions §Mission records: the table input). Recon
     /// succeeds by itself; Incite counts as a success while it works (its incident term, m5-missions §7, needs no roll); Research is the skill.
     /// </summary>
-    private int SuccessPercent(CharacterRecord c, Job j)
+    private int SuccessPercent(Func<Skill, int> sk, Job j)
     {
         var mi = _h.Missions; var rec = mi.Data.Get(j.Kind);
         int Table(int x) => rec.Table == null ? 0 : mi.Lookup(mi.Data.Table(rec.Table), x);
@@ -482,13 +494,13 @@ public sealed partial class SimpleAi
         switch (j.Kind)
         {
             case MissionKind.Reconnaissance: case MissionKind.InciteUprising: return 100;
-            case MissionKind.Espionage: return Table(Skill(c, Characters.Skill.Espionage));
-            case MissionKind.Diplomacy: return Table(sup - (100 - sup) + Skill(c, Characters.Skill.Diplomacy));
-            case MissionKind.SubdueUprising: return Table((100 - sup) - sup + Skill(c, Characters.Skill.Leadership));
-            case MissionKind.Rescue: return Table(Skill(c, Characters.Skill.Combat));
+            case MissionKind.Espionage: return Table(sk(Characters.Skill.Espionage));
+            case MissionKind.Diplomacy: return Table(sup - (100 - sup) + sk(Characters.Skill.Diplomacy));
+            case MissionKind.SubdueUprising: return Table((100 - sup) - sup + sk(Characters.Skill.Leadership));
+            case MissionKind.Rescue: return Table(sk(Characters.Skill.Combat));
             case MissionKind.Sabotage:
                 {
-                    int com = Skill(c, Characters.Skill.Combat), esp = Skill(c, Characters.Skill.Espionage);
+                    int com = sk(Characters.Skill.Combat), esp = sk(Characters.Skill.Espionage);
                     return Table(mi.Params.SabotageSkill == SabotageSkill.Combat ? com : (com + esp) / 2);
                 }
             case MissionKind.Abduction:
@@ -496,63 +508,84 @@ public sealed partial class SimpleAi
                     // the target's combat is not known: its record's base plus half its variance (static character data)
                     var k = _h.Characters.Data.Get(j.TargetCharacter!.Value);
                     int est = k.SkillBase[(int)Characters.Skill.Combat] + k.SkillVariance[(int)Characters.Skill.Combat] / 2;
-                    return Table(Skill(c, Characters.Skill.Combat) - est);
+                    return Table(sk(Characters.Skill.Combat) - est);
                 }
-            default: return ResearchSkillOf(j.Kind) is Skill rs ? Math.Min(100, Skill(c, rs)) : 0;
+            default: return ResearchSkillOf(j.Kind) is Skill rs ? Math.Min(100, sk(rs)) : 0;
         }
     }
 
     /// <summary>
     /// P(not detected) in basis points (10000 = sure) for a one-member team of this espionage against the defenders the side believes are at
-    /// the system: the product over the defenders of (100 - FOILTB(x)) / 100, x = DetectionX (m5-missions §3; no decoys, no special forces).
+    /// the system: the product over the defenders of (100 - FOILTB(x)) / 100, x = DetectionX with the team's special forces (0 or 1) (m5-missions
+    /// §3; no decoys).
     /// </summary>
-    private int UnseenBasisPoints(int espionage, string system)
+    private int UnseenBasisPoints(int espionage, string system, int specialForces = 0)
     {
         long p = 10000;
         foreach (var d in MissionDefendersAt(system))
         {
-            int chance = _h.Missions.FoilChance(_h.Missions.DetectionX(espionage, d.Detection, 0, d.OfficerEspionage));
+            int chance = _h.Missions.FoilChance(_h.Missions.DetectionX(espionage, d.Detection, specialForces, d.OfficerEspionage));
             p = p * Math.Max(0, 100 - chance) / 100;
             if (p == 0) break;
         }
         return (int)p;
     }
 
+    /// <summary>The planner's floor for the kind (B6c §7 character filters, inclusive) and the skill it reads, through sk.</summary>
+    private (int Floor, int Skill) FloorAndSkill(Func<Skill, int> sk, MissionKind k) => k switch
+    {
+        MissionKind.Diplomacy => (_p.DiplomacyMinSkill, sk(Characters.Skill.Diplomacy)),
+        MissionKind.SubdueUprising or MissionKind.InciteUprising => (_p.LeadershipMinSkill, sk(Characters.Skill.Leadership)),
+        MissionKind.Rescue or MissionKind.Abduction or MissionKind.Sabotage => (_p.CombatMinSkill, sk(Characters.Skill.Combat)),
+        MissionKind.Espionage or MissionKind.Reconnaissance => (_p.SpyMinEspionage, sk(Characters.Skill.Espionage)),
+        _ => (_p.ResearchMinSkill, ResearchSkillOf(k) is Skill rs ? sk(rs) : 0),
+    };
+
     /// <summary>The planner's expected value of sending the character on the job (null = not allowed or too poor a chance).</summary>
     private long? Expected(CharacterRecord c, Job j)
     {
         var mi = _h.Missions;
         if (!mi.CanDo(c, j.Kind)) return null;
-        int floor = j.Kind switch
-        {
-            MissionKind.Diplomacy => _p.DiplomacyMinSkill,
-            MissionKind.SubdueUprising or MissionKind.InciteUprising => _p.LeadershipMinSkill,
-            MissionKind.Rescue or MissionKind.Abduction or MissionKind.Sabotage => _p.CombatMinSkill,
-            MissionKind.Espionage or MissionKind.Reconnaissance => _p.SpyMinEspionage,
-            _ => _p.ResearchMinSkill,
-        };
-        int skill = j.Kind switch
-        {
-            MissionKind.Diplomacy => Skill(c, Characters.Skill.Diplomacy),
-            MissionKind.SubdueUprising or MissionKind.InciteUprising => Skill(c, Characters.Skill.Leadership),
-            MissionKind.Rescue or MissionKind.Abduction or MissionKind.Sabotage => Skill(c, Characters.Skill.Combat),
-            MissionKind.Espionage or MissionKind.Reconnaissance => Skill(c, Characters.Skill.Espionage),
-            _ => ResearchSkillOf(j.Kind) is Skill rs ? Skill(c, rs) : 0,
-        };
+        Func<Skill, int> sk = s => Skill(c, s);
+        var (floor, skill) = FloorAndSkill(sk, j.Kind);
         if (skill < floor) return null;
         bool key = IsKey(c);
         var rec = mi.Data.Get(j.Kind);
         int defenders = rec.Foilable ? MissionDefendersAt(j.System).Count : 0;
         if (key && (NoKeyKinds.Contains(j.Kind) || (_h.Characters.Params.MajorsCanDie && defenders > 0))) return null;
         if (_p.LeaderMarks && j.Kind == MissionKind.Diplomacy && c.Id == _h.Characters.Params.Emperor) return null; // B6c §7: the Emperor is never a diplomat
-        int unseen = rec.Foilable ? UnseenBasisPoints(Skill(c, Characters.Skill.Espionage), j.System) : 10000;
-        int chance = (int)((long)unseen * SuccessPercent(c, j) / 10000); // percent
-        if (chance < (Repeats(j.Kind) ? _p.RepeatMinOddsPercent : _p.MissionMinOddsPercent)) return null;
         var n = mi.Data.Numbers;
         int speed = c.Id == n.HanCharacterId ? n.HanMissionSpeed : n.GroupSpeed; // m5-missions §1 group speed (a lone Han flies at 50)
-        int ticks = TicksCached(c.System!, j.System, speed);
+        return Score(j, sk, c.System!, speed, 0, key ? _p.KeyCharacterValuePercent : 100);
+    }
+
+    /// <summary>
+    /// The planner's expected value of sending the special force alone on the job (null = its class mission bit is not in the record's mask, a
+    /// floor is missed or too poor a chance). It uses its class columns as skills (m5-missions §Special forces) and flies at the group speed.
+    /// </summary>
+    private long? ExpectedSf(EconObject o, SpecialForceClass k, Job j)
+    {
+        var mi = _h.Missions;
+        if ((k.MissionBit & mi.Data.Get(j.Kind).SpecialForceMask) == 0) return null;
+        Func<Skill, int> sk = s => s switch
+        {
+            Characters.Skill.Espionage => k.Espionage, Characters.Skill.Combat => k.Combat, Characters.Skill.Leadership => k.Leadership, _ => 0,
+        };
+        var (floor, skill) = FloorAndSkill(sk, j.Kind);
+        if (skill < floor) return null;
+        return Score(j, sk, o.System!, mi.Data.Numbers.GroupSpeed, 1, 100);
+    }
+
+    /// <summary>value x chance / (travel ticks + MissionTravelBias) for a one-member team standing at <paramref name="at"/>.</summary>
+    private long? Score(Job j, Func<Skill, int> sk, string at, int speed, int specialForces, int valuePercent)
+    {
+        var rec = _h.Missions.Data.Get(j.Kind);
+        int unseen = rec.Foilable ? UnseenBasisPoints(sk(Characters.Skill.Espionage), j.System, specialForces) : 10000;
+        int chance = (int)((long)unseen * SuccessPercent(sk, j) / 10000); // percent
+        if (chance < (Repeats(j.Kind) ? _p.RepeatMinOddsPercent : _p.MissionMinOddsPercent)) return null;
+        int ticks = TicksCached(at, j.System, speed);
         if (ticks == int.MaxValue) return null;
-        long value = j.Value * (key ? _p.KeyCharacterValuePercent : 100) / 100;
+        long value = j.Value * valuePercent / 100;
         return value * chance * 100 / (ticks + _p.MissionTravelBias);
     }
 
@@ -614,5 +647,48 @@ public sealed partial class SimpleAi
         Note(seq, "Build", $"{want} x {_p.HuntDroidClass} at {yard} for {dest} (HQ hunt)");
         _busy.Add((yard, YardFamily.Training));
         _plannedLoad += want * Maint(_p.HuntDroidClass);
+    }
+
+    // ================================================================== special forces as mission agents (SpecialForceAgents, QA-6)
+
+    /// <summary>
+    /// The side's completed special forces free to go alone on a mission: landed on a held system, not in a mission, of a class with a mission
+    /// bit; the HQ-hunt droids (HuntDroidClass, while HuntDroids is on) are the droid planner's. Object id order.
+    /// </summary>
+    private List<(EconObject O, SpecialForceClass K)> FreeAgentForces()
+    {
+        var list = new List<(EconObject, SpecialForceClass)>();
+        foreach (var o in _h.Economy.Objects.Where(o => o.Category == ObjectCategory.SpecialForce && o.Side == _side && o.Completed && o.AboardShip == 0
+                     && o.System != null && Held(o.System) && !_h.Missions.IsSpecialForceBusy(o.Id)).OrderBy(o => o.Id))
+        {
+            if (_p.HuntDroids > 0 && o.Class == _p.HuntDroidClass) continue;
+            if (_h.Troops.Data.SpecialForce(o.Class) is { MissionBit: > 0 } k) list.Add((o, k));
+        }
+        return list;
+    }
+
+    /// <summary>
+    /// Production (B6b §9, module 5): while the side has fewer than SpecialForcesWanted special forces of its agent classes (built or queued),
+    /// one more of the class it has fewest of (list order on a tie), at the training yard nearest the capital. One order per production review.
+    /// </summary>
+    private void PlanAgentForceBuild()
+    {
+        if (!_p.UseCharactersAndMissions || !_p.SpecialForceAgents || _p.SpecialForcesWanted <= 0) return;
+        var classes = _p.AgentForceClasses(_side).Where(Available).ToList();
+        if (classes.Count == 0) return;
+        var have = classes.ToDictionary(c => c, c => 0, StringComparer.Ordinal);
+        foreach (var o in _h.Economy.Objects)
+            if (o.Category == ObjectCategory.SpecialForce && o.Side == _side && have.ContainsKey(o.Class)) have[o.Class]++;
+        if (have.Values.Sum() >= _p.SpecialForcesWanted) return;
+        string cls = classes.OrderBy(c => have[c]).First(); // OrderBy is stable: list order on a tie
+        if (Budget < Maint(cls)) return;
+        string dest = Capital() ?? "";
+        if (dest == "") return;
+        var yard = TrainingYardNear(dest);
+        if (yard == null) return;
+        long seq = _h.Construction.SubmitBuild(_side, yard, YardFamily.Training, cls, 1, null);
+        Note(seq, "Build", $"1 x {cls} at {yard} (mission agent)");
+        _busy.Add((yard, YardFamily.Training));
+        _plannedLoad += Maint(cls);
     }
 }
