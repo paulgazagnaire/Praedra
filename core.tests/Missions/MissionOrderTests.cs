@@ -354,8 +354,8 @@ public class MissionOrderTests
         Assert.Equal(H, w.Ch.Get(Vader)!.System);
     }
 
-    // Rules with no data or no owner are refused, never invented: decoys while the decoy table is Missing, Recruitment while the recruit pick is
-    // Missing, Jedi Training (each sheet names the other as owner).
+    // Rules with no data or no owner are refused, never invented: decoys while the decoy table is Missing, Recruitment while no recruit hook is
+    // wired (GameHost wires the pick since 2026-10-18), Jedi Training (each sheet names the other as owner).
     [Fact]
     public void RuleMissingRefusals()
     {
@@ -372,6 +372,8 @@ public class MissionOrderTests
         Assert.NotNull(w0.M.Data.DecoyTable);
         Assert.Null(w0.Try(s => new StartMissionOrder(s, Side.Alliance, MissionKind.Espionage, new() { Leia }, new(), new() { bothan0 }, X)));
         _ = bothan;
+        Assert.NotNull(w.M.Recruit); // m5-missions §6 Recruitment (2026-10-18): the host wires the pick
+        w.M.Recruit = null;
         Assert.Equal(MissionReject.RuleMissing, w.Try(s => new StartMissionOrder(s, Side.Alliance, MissionKind.Recruitment, new() { Leia }, new(), new(), T)));
         Assert.Equal(MissionReject.RuleMissing, w.Try(s => new StartMissionOrder(s, Side.Alliance, MissionKind.JediTraining, new() { Luke }, new(), new(), T)));
         // with a recruit hook the mission runs (MI21: leadership 80 gives RCRTMSTB(80) = 60 on the full table, step lookup)

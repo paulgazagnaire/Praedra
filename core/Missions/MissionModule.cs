@@ -17,7 +17,7 @@ namespace Rebellion.Core.Missions;
 /// attach again. Every loop is in mission id order (m1-clock rule 5). rule: m5-missions (whole sheet); slot 5.3 (Lead notes).
 ///
 /// Not invented (refused or a no-op hook, listed in the sheet's Missing rules): the decoy table values (decoys refused RuleMissing while
-/// <see cref="MissionData.DecoyTable"/> is null), the recruit pick (Recruitment refused RuleMissing while <see cref="Recruit"/> is null), the capture
+/// <see cref="MissionData.DecoyTable"/> is null), the recruit pick (Recruitment refused RuleMissing while <see cref="Recruit"/> is null; GameHost wires it), the capture
 /// rule for an exposed team (<see cref="OnTeamExposed"/>, null = no-op as the sheet says), the Death Star (<see cref="HasDeathStar"/> false until it
 /// exists), Jedi Training (each sheet says the other owns it: refused RuleMissing), story missions (hidden).
 /// </summary>
@@ -57,8 +57,8 @@ public sealed class MissionModule
     /// <summary>The DEFFACSD family of a facility class (0 = not a defense facility); the host wires it from the defense data. Null = no ion cannon anywhere. rule: B2d §3 (ownIon).</summary>
     public Func<string, int>? FacilityFamily { get; set; }
     /// <summary>
-    /// The character sheet's <c>Recruit(side, system)</c>: take one pool member and make him or her a free character at the system. The pick is
-    /// the character sheet's and it defines none, so this is null and a Recruitment order is refused RuleMissing. rule: §6 Recruitment.
+    /// The character sheet's <c>Recruit(side, system)</c>: take one pool member and make him or her a free character at the system. GameHost wires
+    /// <see cref="CharacterModule.Recruit"/> (the setup extras pick, 2026-10-18); while null a Recruitment order is refused RuleMissing. rule: §6 Recruitment.
     /// </summary>
     public Func<StepContext, Side, string, CharacterRecord?>? Recruit { get; set; }
     /// <summary>
@@ -1318,7 +1318,8 @@ public sealed class MissionModule
                 ctx.Emit((i, _) => new SystemRevealed(i, t, id, side, target, MissionKind.Reconnaissance));
                 break;
             case MissionKind.Recruitment:
-                if (Recruit?.Invoke(ctx, side, target) is { } rc) { int cid = rc.Id; ctx.Emit((i, _) => new CharacterRecruited(i, t, id, side, cid, target)); }
+                // rule: §6 Recruitment (Recruitment pick, 2026-10-18): the pick is the setup extras pick at the target system; the recruit is recorded on the mission
+                if (Recruit?.Invoke(ctx, side, target) is { } rc) { int cid = rc.Id; m.RecruitedCharacterKey = cid; ctx.Emit((i, _) => new CharacterRecruited(i, t, id, side, cid, target)); }
                 break;
             case MissionKind.Rescue: if (tc != null) _ch.Free(ctx, tc, CauseRescue); break;
             case MissionKind.Abduction: if (tc != null) _ch.Capture(ctx, tc, side, null, CauseAbduction, unit: TeamCaptor(m)); break; // QA-7: the team's captive

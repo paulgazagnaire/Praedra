@@ -52,13 +52,16 @@ public sealed class MissionGroup
     /// </summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public List<int>? Captives { get; set; }
+    /// <summary>The character a Recruitment success brought into play (RecruitedCharacterKey); null = none. rule: m5-missions §6 Recruitment (2026-10-18).</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public int? RecruitedCharacterKey { get; set; }
 
     internal MissionGroup Clone() => new()
     {
         Id = Id, Kind = Kind, Side = Side, Characters = new(Characters), SpecialForces = new(SpecialForces), DecoyCharacters = new(DecoyCharacters),
         DecoySpecialForces = new(DecoySpecialForces), Home = Home, Target = Target, TargetCharacter = TargetCharacter, Facility = Facility, Phase = Phase,
         Departed = Departed, Path = new(Path), TotalTicks = TotalTicks, ArrivalDay = ArrivalDay, Due = Due, Iterations = Iterations, Outcome = Outcome,
-        Captives = Captives == null ? null : new(Captives),
+        Captives = Captives == null ? null : new(Captives), RecruitedCharacterKey = RecruitedCharacterKey,
     };
 
     /// <summary>Every unit in the group: team and decoys.</summary>
