@@ -92,12 +92,79 @@ public class B5bEconomyTests
     public void B5b_2_BlockadeMidCycleAbandonsTheCyclesAndDropsCapacityAtOnce()
     {
         var w = TwoMiningWorlds();
+        // Blockade pause, 2026-10-18: this checks the 1998 rule, so it sets the Original switches (SuspendedLeaveCapacity on, MineStopMode Abandon).
+        w.Eco.SuspendedLeaveCapacity = true; w.Eco.MineStopMode = StopMode.Abandon;
         w.Run(1);
         Assert.Equal(350, w.Eco.Capacity(Side.Empire));
         Interdictor(w, Side.Alliance, Home);
         Assert.True(w.Fleets.IsEconomicBlockade(Home, Side.Empire));
         Assert.Equal(250, w.Eco.Capacity(Side.Empire)); // the same day the blockade stands
         AssertHomeStopsMidCycle(w, "Suspended");
+    }
+
+    // B5b-2b (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch): with the DEFAULTs
+    // (SuspendedLeaveCapacity off, MineStopMode Pause) the same blockade leaves capacity at 350, and Home's mines and refineries keep their
+    // running cycles frozen; lifted, the mines pay the points they were working on. rule: m2-maintenance §Capacity; m2-mines-refineries-pools §Blockade and uprising
+    [Fact]
+    public void B5b_2b_BlockadeKeepsCapacityAndPausesTheCycles()
+    {
+        var w = TwoMiningWorlds();
+        Assert.False(w.Eco.SuspendedLeaveCapacity);
+        w.Run(1);
+        var mines = AtHome(w, "Mine");
+        Assert.All(mines, id => Assert.Equal(1 + 2, w.E.Objects[id].Due));
+        int blocker = Interdictor(w, Side.Alliance, Home);
+        Assert.Equal(350, w.Eco.Capacity(Side.Empire)); // still counted
+        w.Run(10); // hooks 2 to 11 suspended
+        Assert.Equal(350, w.Eco.Capacity(Side.Empire));
+        Assert.All(mines, id => Assert.Equal(3 + 10, w.E.Objects[id].Due));
+        Assert.All(mines, id => Assert.Equal(Side.Empire, w.E.Objects[id].PausedFor));
+        Assert.DoesNotContain(w.Events<ResourceProduced>(), e => mines.Contains(e.Facility));
+        w.State.Fleets.Remove(blocker);
+        w.Run(2); // hook 12 resumes (one day left), hook 13 pays
+        Assert.Equal(mines.OrderBy(i => i).ToArray(),
+            w.Events<ResourceProduced>().Where(e => e.Day == 13 && mines.Contains(e.Facility)).Select(e => e.Facility).OrderBy(i => i).ToArray());
+        Assert.Empty(w.Events<StartupCycle>().Where(e => e.Day >= 12 && mines.Contains(e.Facility))); // resumed, not restarted
+    }
+
+    // B5b-2c (Blockade pause, 2026-10-18): a refinery whose cycle is running keeps the raw it took; frozen while blockaded, it pays its
+    // refined unit after the blockade. Abandon (1998): the raw is lost and nothing is paid. rule: m2-mines-refineries-pools §Blockade and uprising
+    [Theory]
+    [InlineData(StopMode.Pause, 1)]
+    [InlineData(StopMode.Abandon, 0)]
+    public void B5b_2c_ARefineryCycleIsPausedOrLost(StopMode mode, int refined)
+    {
+        var w = new EcoWorld(freeShips: true);
+        w.Eco.MineStopMode = mode;
+        w.Hold(Home, Side.Empire, 100);
+        int r = w.Refinery(Home);
+        w.Eco.SetPools(Side.Empire, 1, 0);
+        w.Run(1); // the refinery takes the raw and starts
+        Assert.Equal(0, w.Eco.Raw(Side.Empire));
+        Assert.NotEqual(0, w.E.Objects[r].Due);
+        int blocker = Interdictor(w, Side.Alliance, Home);
+        w.Run(20);
+        Assert.Equal(0, w.Eco.Refined(Side.Empire));
+        w.State.Fleets.Remove(blocker);
+        w.Run(20);
+        Assert.Equal(refined, w.Eco.Refined(Side.Empire));
+        Assert.Equal(0, w.Eco.Raw(Side.Empire));
+    }
+
+    // Blockade pause, 2026-10-18: SuspendedLeaveCapacity on is the 1998 rule (Original switch): the same blockade takes Home's pair out at once.
+    // rule: m2-maintenance §Capacity
+    [Theory]
+    [InlineData(false, 350)]
+    [InlineData(true, 250)]
+    public void B5b_2d_SuspendedLeaveCapacityBothSettings(bool leave, int capacity)
+    {
+        var w = TwoMiningWorlds();
+        w.Eco.SuspendedLeaveCapacity = leave;
+        w.Run(1);
+        Interdictor(w, Side.Alliance, Home);
+        Assert.Equal(capacity, w.Eco.Capacity(Side.Empire));
+        w.Run(5);
+        Assert.Equal(capacity, w.Eco.Capacity(Side.Empire));
     }
 
     // B5b-3: an uprising does the same with UprisingStopsMining on (DEFAULT, Dev lead 2026-10-18); off, nothing stops.
@@ -107,6 +174,8 @@ public class B5bEconomyTests
     {
         var w = TwoMiningWorlds();
         Assert.True(w.Eco.UprisingStopsMining);
+        // Blockade pause, 2026-10-18: this checks the 1998 rule, so it sets the Original switches (SuspendedLeaveCapacity on, MineStopMode Abandon).
+        w.Eco.SuspendedLeaveCapacity = true; w.Eco.MineStopMode = StopMode.Abandon;
         bool uprising = false;
         w.Eco.IsInUprising = s => uprising && s == Home;
         w.Run(1);
@@ -132,6 +201,7 @@ public class B5bEconomyTests
         w.Hold(Home, Side.Empire, 50); // d = 5 x 200 / 100 = 10 at share 0
         int a = w.Mine(Home), b = w.Mine(Home);
         Assert.Equal(10, EconomyModule.CycleDays(new EconomyParams(), 50, 0));
+        w.Eco.MineStopMode = StopMode.Abandon; // Blockade pause, 2026-10-18: the 1998 restart after an abandoned cycle (Original switch); Pause resumes instead
         w.Run(1);
         int blocker = Interdictor(w, Side.Alliance, Home);
         w.Run(5); // stopped at hook 2, still blockaded at hook 6

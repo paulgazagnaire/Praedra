@@ -40,6 +40,9 @@ public class GameHostTests
         Assert.Equal(fleets.Trigger, s.ForcedStopTrigger);
         Assert.Equal(eco.IncidentsEnabled, s.IncidentsEnabled);
         Assert.Equal(eco.BlockadeStopsMining, s.BlockadeStopsMining);
+        Assert.Equal(eco.SuspendedLeaveCapacity, s.SuspendedLeaveCapacity); Assert.False(s.SuspendedLeaveCapacity); // Blockade pause, 2026-10-18
+        Assert.Equal(eco.MineStopMode, s.MineStopMode); Assert.Equal(StopMode.Pause, s.MineStopMode);
+        Assert.Equal(con.YardStopMode, s.YardStopMode); Assert.Equal(StopMode.Pause, s.YardStopMode);
         Assert.Equal(eco.AutoscrapMode, s.AutoscrapMode);
         Assert.Equal(eco.SlotSource, s.SlotSource);
         Assert.Equal(sup.Ruleset, s.SupportRuleset);
@@ -77,6 +80,7 @@ public class GameHostTests
             BlockadeSupportEffect = false, DeliveryForcedStop = false, LostDestination = LostDestinationRule.Refuse,
             UnitDestinationMustBeControlled = false, RespectResearchOrder = false, UseClassicBlockadeFlag = true, DebugOrdersEnabled = true,
             DeathStarClassBuildable = false, UnloadOnlyAtHeldSystem = false,
+            SuspendedLeaveCapacity = true, MineStopMode = StopMode.Abandon, YardStopMode = StopMode.Abandon,
             Economy = new EconomyParams { ScrapPeriod = 7 }, Support = new SupportParams { ErosionPeriod = 11 },
             Construction = new ConstructionParams { StandardCycleDays = 3 },
             Research = new Rebellion.Core.Research.ResearchParams { FacilityResearch = false, ResearchCostScale = Rebellion.Core.Research.ResearchScale.Fixed },
@@ -93,6 +97,7 @@ public class GameHostTests
             Assert.True(h.Construction.UseClassicBlockadeFlag); Assert.True(h.Control.DebugOrdersEnabled);
             Assert.True(h.Fleets.DebugOrdersEnabled); Assert.False(h.Construction.DeathStarClassBuildable);
             Assert.False(h.Troops.UnloadOnlyAtHeldSystem);
+            Assert.True(h.Economy.SuspendedLeaveCapacity); Assert.Equal(StopMode.Abandon, h.Economy.MineStopMode); Assert.Equal(StopMode.Abandon, h.Construction.YardStopMode);
             Assert.Equal(7, h.Economy.Params.ScrapPeriod); Assert.Equal(11, h.Support.Params.ErosionPeriod); Assert.Equal(3, h.Construction.Params.StandardCycleDays);
         }
         var made = GameHost.New(5, s);

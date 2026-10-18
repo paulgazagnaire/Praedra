@@ -207,6 +207,7 @@ public class ConstructionTests
     public void C10_BlockadeAbandonsTheRunningCycleAndStopsNewOnes()
     {
         var w = Empire(100, FacilityKind.ConstructionYard);
+        w.Build.YardStopMode = StopMode.Abandon; // Blockade pause, 2026-10-18: this checks the 1998 loss (Original switch); the DEFAULT pauses (C10b)
         w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, Home);
         w.RunTo(6); // cycle 2 runs from hook 5 to 9
         int blocker = w.Fleets.AddFleet(Side.Alliance, "Blockade", new[] { "Interdictor Cruiser" }, Home); // gravity well: economic blockade
@@ -221,6 +222,27 @@ public class ConstructionTests
         w.State.Fleets.Remove(blocker); // lifted
         w.Run(1); // hook 19, the first hook after the flag clears
         Assert.Equal(23, yard.Due);
+    }
+
+    // m2-construction C10b (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch): YardStopMode Pause
+    // (DEFAULT) freezes the running cycle while blockaded; it resumes where it left off (2 days still to run) and pays its point. No refined lost.
+    [Fact]
+    public void C10b_BlockadePausesTheRunningCycleAndResumesIt()
+    {
+        var w = Empire(100, FacilityKind.ConstructionYard);
+        Assert.Equal(StopMode.Pause, w.Build.YardStopMode);
+        w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, Home);
+        w.RunTo(6); // cycle 2 runs from hook 5 to 9
+        int refined = w.Eco.Refined(Emp);
+        int blocker = w.Fleets.AddFleet(Side.Alliance, "Blockade", new[] { "Interdictor Cruiser" }, Home);
+        w.RunTo(18); // hooks 7 to 18 suspended: the due day moved on 12 days
+        var yard = w.Eco.Objects.Single(o => o.Class == "Construction Yard");
+        Assert.Equal(1, w.Build.ProjectAt(Home, YardFamily.Construction)!.Progress);
+        Assert.Equal(9 + 12, yard.Due);
+        Assert.Equal(refined, w.Eco.Refined(Emp)); // nothing new taken, nothing lost
+        w.State.Fleets.Remove(blocker);
+        w.RunTo(21);
+        Assert.Equal(2, w.Build.ProjectAt(Home, YardFamily.Construction)!.Progress); // the paused cycle paid its point
     }
 
     // m2-construction C11

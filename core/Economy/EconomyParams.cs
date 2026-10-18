@@ -18,6 +18,19 @@ public enum AutoscrapTimer
     FreeRunning = 1,
 }
 
+/// <summary>
+/// What a blockade or an uprising does to a running mine, refinery or yard cycle. rule: m2-mines-refineries-pools §Blockade and uprising;
+/// m2-construction §Suspension (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch).
+/// </summary>
+public enum StopMode
+{
+    /// <summary>DEFAULT (Paul, economy/02 "Blockade and uprising": shipyards pause, a blockade costs exactly that planet's output): the running cycle
+    /// is frozen while suspended (its due day moves on one day per day) and resumes where it left off when the suspension ends.</summary>
+    Pause = 0,
+    /// <summary>1998 (B5b §3, [EXE-own] 0x50bbb0): the running cycle is abandoned with no point (the raw or refined it took is lost).</summary>
+    Abandon = 1,
+}
+
 /// <summary>Where a new game's slot values come from. rule: m2-slots-and-resources §Rule (New) SlotSource.</summary>
 public enum SlotSource
 {

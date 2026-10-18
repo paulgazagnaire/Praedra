@@ -47,8 +47,10 @@ public sealed record GameSettings
     public bool BlockadeStopsMining { get; init; } = true;
     /// <summary>An uprising stops mines and refineries like a blockade. 1998 = on; DEFAULT on (B5b §3, decision 2, Dev lead 2026-10-18). rule: m2-mines-refineries-pools §Blockade and uprising.</summary>
     public bool UprisingStopsMining { get; init; } = true;
-    /// <summary>Suspended mines and refineries leave the capacity sums. 1998 = on; DEFAULT on (B5b §3, decision 3). rule: m2-maintenance §Capacity.</summary>
-    public bool SuspendedLeaveCapacity { get; init; } = true;
+    /// <summary>Suspended mines and refineries leave the capacity sums. 1998 = on (B5b §3); DEFAULT off (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch). rule: m2-maintenance §Capacity.</summary>
+    public bool SuspendedLeaveCapacity { get; init; }
+    /// <summary>A suspended mine's or refinery's running cycle: Pause (DEFAULT) or Abandon (1998, B5b §3). rule: m2-mines-refineries-pools §Blockade and uprising (Blockade pause, 2026-10-18).</summary>
+    public StopMode MineStopMode { get; init; } = StopMode.Pause;
     /// <summary>Build orders over the free upkeep are refused whole. 1998 = refused; DEFAULT refused (B5b §7, decision 1, Dev lead 2026-10-18). rule: m2-maintenance §Overdraft.</summary>
     public bool RefuseOverdrawOrders { get; init; } = true;
     /// <summary>Armed (DEFAULT, 1998) or FreeRunning autoscrap timer (B5b §6). rule: m2-maintenance §Overdraft and autoscrap.</summary>
@@ -84,6 +86,8 @@ public sealed record GameSettings
     public bool DeathStarClassBuildable { get; init; } = true;
     /// <summary>Yards stop under the Classic blockade flag instead of the economic blockade. rule: m2-construction §Suspension.</summary>
     public bool UseClassicBlockadeFlag { get; init; }
+    /// <summary>A suspended yard's running cycle: Pause (DEFAULT, Paul economy/02 "shipyards are paused") or Abandon (1998, B5b §3). rule: m2-construction §Suspension (Blockade pause, 2026-10-18).</summary>
+    public StopMode YardStopMode { get; init; } = StopMode.Pause;
     public ConstructionParams? Construction { get; init; }
 
     // ---- troops. rule: m3-troops-and-special-forces §Defaults
