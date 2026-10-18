@@ -22,6 +22,8 @@ public static class DropInStage
     public const string FoilTable = "FOILTB";
     /// <summary>The escape-duel table (B2d §5: chance that a spotted member escapes, x = member combat - commander combat). rule: m5-missions §4.</summary>
     public const string EvadeTable = "RLEVADTB";
+    /// <summary>The prisoner escape table (B2e §3, x = combat + espionage - captors' average combat - captors' special forces). rule: m5-characters-and-force §Escape.</summary>
+    public const string EscapeTable = "ESCAPETB";
 
     /// <summary>The success tables in the interim's order. rule: m5-missions §Mission tables.</summary>
     public static readonly string[] SuccessTables =
@@ -231,14 +233,14 @@ public static class DropInStage
             }));
     }
 
-    /// <summary>mission-tables.csv: every row of FOILTB, the ten success tables, the decoy table and RLEVADTB (B2d). rule: m5-missions §Mission tables.</summary>
+    /// <summary>mission-tables.csv: every row of FOILTB, the ten success tables, the decoy table, RLEVADTB (B2d) and ESCAPETB (B2e). rule: m5-missions §Mission tables.</summary>
     private static string MissionTables(Raw raw)
     {
         var f = raw[DecoyTable]; var twin = raw[DecoyTwin];
         if (f.Rows.Count != twin.Rows.Count || f.Rows.Zip(twin.Rows).Any(p => !p.First.SequenceEqual(p.Second)))
             throw new ImportException($"{DecoyTable} and {DecoyTwin} differ: the rule book treats them as one table.");
         var rows = new List<IEnumerable<string>>();
-        foreach (var name in new[] { FoilTable }.Concat(SuccessTables).Append(DecoyTable).Append(EvadeTable))
+        foreach (var name in new[] { FoilTable }.Concat(SuccessTables).Append(DecoyTable).Append(EvadeTable).Append(EscapeTable))
         {
             var t = raw[name];
             rows.AddRange(Rows(t, r => new[] { name, S(t, r, "threshold"), S(t, r, "value"), $"original: {name}.DAT entry {S(t, r, "index")} (importer)" }));

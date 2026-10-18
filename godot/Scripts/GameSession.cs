@@ -391,7 +391,7 @@ public sealed partial class GameSession
 
     public static string StatusWords(CharacterRecord c) => c.Status switch
     {
-        CharacterStatus.Injured => c.InjuredDaysLeft > 0 ? $"injured ({c.InjuredDaysLeft} days to heal)" : "injured",
+        CharacterStatus.Injured => c.Injury > 0 ? $"injured ({c.Injury} injury points)" : "injured",
         CharacterStatus.Captured => "captured",
         CharacterStatus.Dead => "dead",
         _ => "free",
@@ -439,7 +439,7 @@ public sealed partial class GameSession
     /// <summary>The skills the sheet uses (leadership feeds the posts), and the Force rank only when the side knows the character is a Force user. rule: m5-characters-and-force §Posts, §Force (Rank).</summary>
     public string SkillsOf(CharacterRecord c)
     {
-        string s = $"Leadership {c.Skill(Skill.Leadership)}, combat {c.Skill(Skill.Combat)}, diplomacy {c.Skill(Skill.Diplomacy)}, espionage {c.Skill(Skill.Espionage)}";
+        string s = $"Leadership {c.EffectiveSkill(Skill.Leadership)}, combat {c.EffectiveSkill(Skill.Combat)}, diplomacy {c.EffectiveSkill(Skill.Diplomacy)}, espionage {c.EffectiveSkill(Skill.Espionage)}";
         if (c.ForceUser && c.ForceDiscovered && Chars.RankOf(c) is ForceRank r) s += $"; Force: {RankWords(r)} ({c.EffectiveForce})";
         return s;
     }

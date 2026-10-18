@@ -77,6 +77,8 @@ public sealed class MissionData
     public const string FoilTable = "FOILTB";
     /// <summary>The escape-duel table (B2d §5). rule: m5-missions §4.</summary>
     public const string EvadeTable = "RLEVADTB";
+    /// <summary>ESCAPETB, the prisoner's escape chance (B2e §3 step 5). rule: m5-characters-and-force §Escape.</summary>
+    public const string EscapeTableName = "ESCAPETB";
     /// <summary>The decoy table's name in mission-tables.csv (FDECOYTB and TDECOYTB are byte-identical: one table). rule: B1-own-importer §Work 1, 4.</summary>
     public const string DecoyTableName = "FDECOYTB";
 
@@ -119,6 +121,8 @@ public sealed class MissionData
     public IReadOnlyCollection<MissionRecord> Records => _records.Values;
     /// <summary>RLEVADTB, the escape duel's table; null when the data has none (the duel is then refused RuleMissing). rule: m5-missions §4 (B2d §5).</summary>
     public IReadOnlyList<TableRow>? Evade => _tables.TryGetValue(EvadeTable, out var t) ? t : null;
+    /// <summary>ESCAPETB (B2e §3); null when the data has none (an escape attempt is then refused RuleMissing). rule: m5-characters-and-force §Escape.</summary>
+    public IReadOnlyList<TableRow>? Escape => _tables.TryGetValue(EscapeTableName, out var t) ? t : null;
     public bool TryGet(MissionKind kind, out MissionRecord record) => _records.TryGetValue(kind, out record!);
     public MissionRecord Get(MissionKind kind) => _records.TryGetValue(kind, out var r) ? r : throw new KeyNotFoundException($"No mission record {kind}.");
     public IReadOnlyList<TableRow> Table(string name) => _tables.TryGetValue(name, out var t) ? t : throw new KeyNotFoundException($"No mission table {name}.");
