@@ -43,7 +43,7 @@ public class SimpleAiStallTests
     // landings 160 against 77). So seed 8; what the test checks is unchanged.
     // B3 + B6a 2026-10-18: seed 8 still passes (fix on: Empire day 829, landings 28; off: no winner, 14). Seeds 1-8 with the fix (winner day landings /
     // off: winner landings): - 1900 94/- 118, - 1900 107/- 80, E 1219 53/- 43, - 1900 72/E 41, - 1900 134/- 74, E 1548 91/- 59, E 1621 89/- 50,
-    // E 829 28/- 14: the test's conditions hold on seeds 3, 6, 7 and 8 (main 9ec544f: seed 8 only).
+    // E 829 28/- 14: the test's conditions hold on seeds 3, 6, 7 and 8 (main 9ec544f and c55f662: seed 8 only).
     [Fact]
     public void FoggedEmpireLandsAfterShellingAndWins()
     {

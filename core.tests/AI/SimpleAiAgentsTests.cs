@@ -52,7 +52,7 @@ public class SimpleAiAgentsTests
         // state). The game plays identically: with the naming step removed the hash is exactly B2e's 5e54e22f...e007 (checked when re-pinned).
         // B3 re-pin 2026-10-18: the Classic battle now follows the traced original (m4-battle-classic, batch B3) and AI sides use the AI threshold
         // of B6a §2, which changes every battle and so the game; the old AI is still the one played (all switches above unchanged).
-        Assert.Fail("HASH " + h.StateHash());
+        Assert.Equal("12fcdbf1f424e40f9a4e4fe6fac8a0fad56c7d0ac374a751f61ad5be4a31334b", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"
