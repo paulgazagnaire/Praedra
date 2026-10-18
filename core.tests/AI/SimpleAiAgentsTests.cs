@@ -73,7 +73,10 @@ public class SimpleAiAgentsTests
         // (SuspendedLeaveCapacity on, both modes Abandon) the hash is exactly the AssaultOnly pin 1e675764...ba62 (checked when re-pinned, main eb722bd merged).
         // re-pinned 2026-10-18: battle default New (m4-battle-new) on top of fog group D storing characters (m5-fog-and-hq, was 9188df4d...05ff).
         // With Battle.Ruleset = Classic the battle part matched the previous pin exactly (checked when re-pinned on the battle branch).
-        Assert.Equal("55805ed7e407c7ba00a02b0af92e70300f99445c00b09c0c4dc69e927650c838", h.StateHash());
+        // Talented re-pin 2026-10-18 (Dev lead; Paul's random trainers, m5-characters-and-force Rule New 4): TrainerPick is DEFAULT Random, so setup
+        // draws 3 talented per side and their Force (more draws, saved Talented, higher skills). With TrainerPick = Fixed the hash is exactly the
+        // previous pin 55805ed7...c838 (checked when re-pinned, main 4691273).
+        Assert.Equal("999219a69b702fa1a5c88950d535edcb80ddeec6cd78e0e0bdb9d3850fbefd00", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"

@@ -872,7 +872,7 @@ public class CharacterTests
     [Fact]
     public void TrainingEligibility_AndStoryDiscovery()
     {
-        var w = new CharWorld();
+        var w = new CharWorld(new CharacterParams { TrainerPick = TrainerPick.Fixed }); // the 1998 trainer flag (Luke, Vader); Random is CH39
         var luke = w.Add(Luke, Yavin); var leia = w.Add(Leia, Yavin);
         Assert.False(w.Ch.CanTrain(luke, leia)); // Leia's Force is hidden
         w.StepWith("5.2", ctx => Assert.True(w.Ch.DiscoverForce(ctx, leia, CharacterCause.Story)));

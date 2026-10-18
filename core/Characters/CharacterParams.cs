@@ -1,5 +1,16 @@
 namespace Rebellion.Core.Characters;
 
+/// <summary>
+/// Who can train and awaken the Force. rule: m5-characters-and-force §Rule (New) 4 (Paul 2026-10-18).
+/// </summary>
+public enum TrainerPick
+{
+    /// <summary>The 1998 data flag <c>jedi_trainer</c> (Luke, Vader). Classic.</summary>
+    Fixed,
+    /// <summary>DEFAULT (New): <see cref="CharacterParams.TalentedPerSide"/> characters per side drawn at every game start.</summary>
+    Random,
+}
+
 /// <summary>Force discovery mode. rule: m5-characters-and-force §Force (Force discovery).</summary>
 public enum ForceDiscoveryMode
 {
@@ -121,6 +132,17 @@ public sealed record CharacterParams
     public int EscapeDelaySpread { get; init; } = 1000;
 
     // ---- Force (Traced B2e §4, §5). rule: §Force
+    /// <summary>Who trains and awakens: DEFAULT Random (New, Paul 2026-10-18); Fixed = the 1998 data flag. rule: §Rule (New) 4.</summary>
+    public TrainerPick TrainerPick { get; init; } = TrainerPick.Random;
+    /// <summary>Talented characters drawn per side at setup (Art Director proposal, 2026-10-18: 3 per side, 6 in all). rule: §Rule (New) 4.</summary>
+    public int TalentedPerSide { get; init; } = 3;
+    /// <summary>
+    /// The Force a drawn talented character gets: rand(min..max), kept if his own is higher (Q16 DEFAULT). PROPOSAL (Dev lead 2026-10-18): 80 =
+    /// <see cref="TrainerMinForce"/> so he can awaken; 120 = Vader's 1998 value. rule: §Rule (New) 4.
+    /// </summary>
+    public int TalentedForceMin { get; init; } = 80;
+    /// <summary>See <see cref="TalentedForceMin"/>.</summary>
+    public int TalentedForceMax { get; init; } = 120;
     /// <summary>Lowest Force of an awakening trainer (DiscoveringForceUser). GNPRTB 2580 = 80 (0x4ef070).</summary>
     public int TrainerMinForce { get; init; } = 80;
     /// <summary>Awakening timer: GNPRTB 2582 = 1 day, spread 2583 = 0 (no draw).</summary>
