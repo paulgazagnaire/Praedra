@@ -48,8 +48,8 @@ public enum BattleOutcome { Victorious, Annihilated, Retreated, Indecisive }
 public sealed record BattleParams
 {
     // ---- ruleset. rule: m4-battle-new §Rule (New) (second ruleset, selected by a setting)
-    /// <summary>Which engine resolves a battle. DEFAULT Classic. New = the per-gun engine (<see cref="NewBattle"/>).</summary>
-    public BattleRuleset Ruleset { get; init; } = BattleRuleset.Classic;
+    /// <summary>Which engine resolves a battle. New = the per-gun engine (<see cref="NewBattle"/>). DEFAULT New (Paul, 2026-10-18 decision card; under his 07:43 rule Classic 1998 rules are opt-in when they collide with our changes). Classic = the 1998 battle.</summary>
+    public BattleRuleset Ruleset { get; init; } = BattleRuleset.New;
     /// <summary>Switches and numbers of the New engine (used only when <see cref="Ruleset"/> is New).</summary>
     public NewBattleParams New { get; init; } = new();
 

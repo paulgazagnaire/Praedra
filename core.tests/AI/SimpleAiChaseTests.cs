@@ -27,7 +27,8 @@ public class SimpleAiChaseTests
     /// </summary>
     private List<int> Chase(SimpleAiParams? alliance, int days)
     {
-        var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA });
+        // Classic battle set explicitly: the scenario is the Classic morale retreat (battle DEFAULT New since 2026-10-18).
+        var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA, Settings = new GameSettings { Battle = new BattleParams { Ruleset = BattleRuleset.Classic } } });
         var g = h.Data.Galaxy; var owners = h.Game.State.SystemOwners;
         string? a = null, b = null;
         foreach (var sys in g.Systems.OrderBy(s => s.Name, StringComparer.Ordinal))

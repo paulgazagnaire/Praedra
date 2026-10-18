@@ -227,9 +227,9 @@ public sealed class GameHost
     /// <summary>
     /// A game from a save (<see cref="GameSave.Save"/> or <see cref="SaveWithSettings"/>), with every module attached again. Settings are not in the
     /// plain save: pass them again. A save written by <see cref="SaveWithSettings"/> also carries the battle ruleset; it is applied when
-    /// <paramref name="settings"/> does not already set <see cref="GameSettings.Battle"/>. A save without the header loads as Classic (the DEFAULT).
+    /// <paramref name="settings"/> does not already set <see cref="GameSettings.Battle"/>. A save without the header loads with the DEFAULT ruleset (New since 2026-10-18).
     /// It may also carry the AI memory line (<see cref="AiMemoryFor"/>); a save without it loads with an empty memory.
-    /// rule: m4-battle-new §Rule (New) (ruleset switch, DEFAULT Classic)
+    /// rule: m4-battle-new §Rule (New) (ruleset switch, DEFAULT New, Paul 2026-10-18)
     /// </summary>
     public static GameHost Load(string saveJson, GameSettings? settings = null, GameData? data = null)
     {
@@ -295,7 +295,7 @@ public sealed class GameHost
     /// The game state itself is unchanged (<see cref="StateHash"/> includes neither line). rule: m4-battle-new §Rule (New)
     /// </summary>
     public string SaveWithSettings() =>
-        HeaderTag + (Settings.Battle?.Ruleset ?? Rebellion.Core.Battle.BattleRuleset.Classic) + "\n" + AiMemoryLine() + Save();
+        HeaderTag + (Settings.Battle ?? new Rebellion.Core.Battle.BattleParams()).Ruleset + "\n" + AiMemoryLine() + Save();
 
     private static (Rebellion.Core.Battle.BattleRuleset? Ruleset, string Body) ReadHeader(string text)
     {

@@ -205,7 +205,12 @@ public class CharacterTests
     [Fact]
     public void CH11_AttachRejections_ChewbaccaAsPassenger()
     {
-        var w = new CharWorld();
+        // The Empire ISD at Yavin starts a battle on the Step. Ruleset = Classic set explicitly (battle DEFAULT New since 2026-10-18): in Classic
+        // both corvettes retreat together; in New the ISD's tractor beam holds fleet f's corvette and destroys it (m4-retreat-damage-repair
+        // TractorBeamsHoldRetreat), which dissolves the fleet and detaches Chewbacca. This test checks the attach rules, not the battle.
+        var w = new CharWorld(settings: new GameSettings { IncidentsEnabled = false, DebugOrdersEnabled = true,
+            Economy = new Rebellion.Core.Economy.EconomyParams { ScrapPeriod = 1_000_000 },
+            Battle = new Rebellion.Core.Battle.BattleParams { Ruleset = Rebellion.Core.Battle.BattleRuleset.Classic } });
         int f = w.Fleet(Side.Alliance, Yavin);
         int moving = w.Fleet(Side.Alliance, Yavin);
         int imp = w.Fleet(Side.Empire, Yavin, Isd);

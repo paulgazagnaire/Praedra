@@ -1,6 +1,6 @@
 namespace Rebellion.Core.Battle;
 
-/// <summary>Which battle engine runs when two sides meet. DEFAULT Classic. rule: m4-battle-new §Rule (New) (second ruleset).</summary>
+/// <summary>Which battle engine runs when two sides meet. DEFAULT New (Paul, 2026-10-18; Classic = the 1998 battle, opt-in). rule: m4-battle-new §Rule (New) (second ruleset).</summary>
 public enum BattleRuleset { Classic = 0, New = 1 }
 
 /// <summary>

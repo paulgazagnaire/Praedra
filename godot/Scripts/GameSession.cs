@@ -92,7 +92,7 @@ public sealed partial class GameSession
     /// A new game. <paramref name="seed"/> null = a fresh seed from the wall clock, so every game deals a different map (the core must not read the clock;
     /// the viewer may). A fixed seed (tests, smoke, playtest, `--seed N`) reproduces a game. rule: m5-setup-and-victory §Mode Anchored (the deal is seeded)
     /// </summary>
-    public static GameSession New(GameData data, Side player, Preset preset, Rebellion.Core.Battle.BattleRuleset rules = Rebellion.Core.Battle.BattleRuleset.Classic, int? seed = null) =>
+    public static GameSession New(GameData data, Side player, Preset preset, Rebellion.Core.Battle.BattleRuleset rules = Rebellion.Core.Battle.BattleRuleset.New, int? seed = null) =>
         new(GameBoot.NewGame(data, player, preset, seed ?? FreshSeed(), rules), player, GameBoot.AiLevelFor(preset));
 
     /// <summary>A seed for a new game from the wall clock (viewer only).</summary>

@@ -14,7 +14,7 @@ public partial class StartMenu : Control
 
     Side _side = Side.Alliance;
     Preset _preset = Preset.Medium;
-    Rebellion.Core.Battle.BattleRuleset _rules = Rebellion.Core.Battle.BattleRuleset.Classic; // DEFAULT (m4-battle-new)
+    Rebellion.Core.Battle.BattleRuleset _rules = Rebellion.Core.Battle.BattleRuleset.New; // DEFAULT New (m4-battle-new; Paul 2026-10-18)
     Label _sideHint;
 
     static readonly string[] SideBlurb =
@@ -72,8 +72,8 @@ public partial class StartMenu : Control
         rulesRow.AddThemeConstantOverride("separation", 8);
         box.AddChild(rulesRow);
         var rulesGroup = new ButtonGroup();
-        AddToggle(rulesRow, rulesGroup, GameBoot.RulesName(Rebellion.Core.Battle.BattleRuleset.Classic), true, () => _rules = Rebellion.Core.Battle.BattleRuleset.Classic);
-        AddToggle(rulesRow, rulesGroup, GameBoot.RulesName(Rebellion.Core.Battle.BattleRuleset.New), false, () => _rules = Rebellion.Core.Battle.BattleRuleset.New);
+        AddToggle(rulesRow, rulesGroup, GameBoot.RulesName(Rebellion.Core.Battle.BattleRuleset.Classic), false, () => _rules = Rebellion.Core.Battle.BattleRuleset.Classic);
+        AddToggle(rulesRow, rulesGroup, GameBoot.RulesName(Rebellion.Core.Battle.BattleRuleset.New), true, () => _rules = Rebellion.Core.Battle.BattleRuleset.New);
         var rulesHint = new Label { Text = "Classic plays as the 1998 game did. New fights gun by gun: the weapons your ships carry decide who wins.", AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(440, 44) };
         rulesHint.Modulate = new Color(1, 1, 1, 0.7f);
         box.AddChild(rulesHint);

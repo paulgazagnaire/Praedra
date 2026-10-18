@@ -5,6 +5,7 @@ using Rebellion.Core.Tests.Fleets;
 namespace Rebellion.Core.Tests.Battle;
 
 // B6a §1 to §3 (reverse batch B6a, 2026-10-18): which side is the AI, its battle threshold computed at the alert, and its firepower number.
+// The battles here are Classic (B6a is the 1998 AI threshold): Ruleset = Classic is set explicitly since the DEFAULT became New (2026-10-18).
 public class AiThresholdTests
 {
     private const string Victory = "Victory Destroyer", MonCal = "Mon Calamari Cruiser", Isd = "Imperial Star Destroyer";
@@ -12,7 +13,7 @@ public class AiThresholdTests
     // B6a-1 set-up: Empire AI at its own non-HQ world B; its fleet 1 Victory; enemy 2 Mon Cal carrying 1 completed X-wing squadron each
     private static BattleWorld World1(bool owned = true, bool planetSquadron = true, BattleParams? p = null)
     {
-        var w = new BattleWorld(p ?? new BattleParams { SubsystemRolls = false, EmpireIsAi = true });
+        var w = new BattleWorld(p ?? new BattleParams { Ruleset = BattleRuleset.Classic, SubsystemRolls = false, EmpireIsAi = true });
         if (owned) w.Fleets.SetOwner("B", Side.Empire);
         if (planetSquadron) w.Eco.AddObject(Side.Empire, "TIE Fighter", "B");
         w.Fleet(Side.Empire, "B", Victory, 1);
@@ -73,7 +74,7 @@ public class AiThresholdTests
     [Fact]
     public void B6a_4_CoruscantFightsToTheEnd()
     {
-        var w = World1(p: new BattleParams { SubsystemRolls = false, EmpireIsAi = true, CoruscantSystem = "B" });
+        var w = World1(p: new BattleParams { Ruleset = BattleRuleset.Classic, SubsystemRolls = false, EmpireIsAi = true, CoruscantSystem = "B" });
         Assert.Equal(0.0, w.Battles.AiThreshold("B", Side.Empire));
         w.Run();
         Assert.NotEqual(1, w.Events<BattleEnded>().Single().Result.Seconds);
@@ -83,7 +84,7 @@ public class AiThresholdTests
     [Fact]
     public void B6a_5_6_CappedAt09()
     {
-        var w = new BattleWorld(new BattleParams { SubsystemRolls = false, EmpireIsAi = true });
+        var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.Classic, SubsystemRolls = false, EmpireIsAi = true });
         w.Fleets.SetOwner("B", Side.Empire);
         w.Eco.AddObject(Side.Empire, "TIE Fighter", "B");
         w.Fleet(Side.Empire, "B", Isd, 2);
@@ -101,7 +102,7 @@ public class AiThresholdTests
         Assert.Equal(OnContactMode.Fight, w.Battles.OnContactOf(Side.Alliance));
         w.Run();
         Assert.NotEqual(BattleOutcome.Retreated, w.Events<BattleEnded>().Single().Result.Alliance); // Fight 0.0: the Rebels stay
-        var v = World1(p: new BattleParams { SubsystemRolls = false, AiRetreat = AiRetreatRule.Fixed });
+        var v = World1(p: new BattleParams { Ruleset = BattleRuleset.Classic, SubsystemRolls = false, AiRetreat = AiRetreatRule.Fixed });
         v.Battles.SetControllers(empireAi: true, allianceAi: true);
         Assert.True(v.Battles.IsAi(Side.Alliance) && v.Battles.IsAi(Side.Empire));
         Assert.Equal(0.9, v.Battles.AiThreshold("B", Side.Empire));

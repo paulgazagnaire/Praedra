@@ -80,10 +80,12 @@ public class SimpleAiTests
     [Fact]
     public void LoadedGameContinuesLikeTheUninterruptedOne()
     {
-        // Stateless across days: a save loaded mid-game with fresh AIs plays on exactly as the original (campaign hook re-registered by TestCampaign.Load).
+        // A save loaded mid-game with fresh AIs plays on exactly as the original (campaign hook re-registered by TestCampaign.Load). The AI's only
+        // memory across days is the game's AiMemory (QA-1), carried by SaveWithSettings, not by the plain Save: with the New battle (DEFAULT since
+        // 2026-10-18) the plain save diverged on day 202 (the memory of a retreat changed a move order); under Classic it happened not to matter.
         var c = TestCampaign.New(5); var m = new AiMatch(c.Host);
         m.RunTo(200);
-        var save = c.Host.Save();
+        var save = c.Host.SaveWithSettings();
         m.RunTo(260);
         var c2 = TestCampaign.Load(save); var m2 = new AiMatch(c2.Host);
         m2.RunTo(260);

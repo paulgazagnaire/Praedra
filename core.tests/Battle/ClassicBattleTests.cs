@@ -7,11 +7,12 @@ namespace Rebellion.Core.Tests.Battle;
 
 // Tests of m4-battle-classic (BC ids as in the sheet's table, B3 ids from batch B3) and the pure parts of m4-retreat-damage-repair, on plain units
 // (no game around). [Model] values come from specs/reverse/tools/b3_simulate.py.
+// Every BattleParams here sets Ruleset = Classic explicitly: these are Classic-battle tests and the DEFAULT became New (Paul, 2026-10-18).
 public class ClassicBattleTests
 {
     internal static IReadOnlyDictionary<string, ShipClass> Ships => World.Ships.Value;
-    internal static readonly BattleParams NoRolls = new() { SubsystemRolls = false };
-    private static readonly BattleParams P = new();
+    internal static readonly BattleParams NoRolls = new() { Ruleset = BattleRuleset.Classic, SubsystemRolls = false }; // Classic set explicitly (battle DEFAULT New since 2026-10-18)
+    private static readonly BattleParams P = new() { Ruleset = BattleRuleset.Classic };
     private const string Corvette = "Corellian Corvette", Isd = "Imperial Star Destroyer", Cc7700 = "CC-7700 Frigate", Interdictor = "Interdictor Cruiser";
     private const OnContactMode Fight = OnContactMode.Fight, Retreat = OnContactMode.Retreat;
 
@@ -271,7 +272,7 @@ public class ClassicBattleTests
 
     private static (ClassicBattle B, List<BattleUnit> A, List<ClassicTaskForce> Tfs) TwoGunners(int corvettes, params int[] rates)
     {
-        var p = new BattleParams { TaskForces = ClassicTaskForces.PerUnit };
+        var p = new BattleParams { Ruleset = BattleRuleset.Classic, TaskForces = ClassicTaskForces.PerUnit };
         var (b, a, _) = Make(p, new[] { (Corvette, corvettes), ("Galleon", 1) }, rates.Select(_ => (Isd, 1)).ToArray(),
             prepare: (_, e) => { for (int i = 0; i < e.Count; i++) e[i].Class = Ships[Isd] with { WeaponRechargeRate = rates[i] }; });
         return (b, a, b.TaskForcesOf(Side.Empire).ToList());
@@ -303,7 +304,7 @@ public class ClassicBattleTests
     [Fact]
     public void B3_16_StrengthLeavesOutOutShotShips()
     {
-        var (b, a, _) = Make(new BattleParams { TaskForces = ClassicTaskForces.PerUnit }, new[] { (Corvette, 2), ("X-wing", 1) }, new[] { (Isd, 1) });
+        var (b, a, _) = Make(new BattleParams { Ruleset = BattleRuleset.Classic, TaskForces = ClassicTaskForces.PerUnit }, new[] { (Corvette, 2), ("X-wing", 1) }, new[] { (Isd, 1) });
         b.TaskForcesOf(Side.Empire)[0].Target = a[0]; // rate 20 >= its recharge 10
         Assert.Equal(3.336, b.Strength(Side.Alliance), 1e-2); // 1.336 + 2.0045
     }
@@ -737,7 +738,7 @@ public class ClassicBattleTests
     [Fact]
     public void RT14_DeathStarStalemateSwitch()
     {
-        Assert.True(new BattleParams().DeathStarStalemate);
+        Assert.True(new BattleParams { Ruleset = BattleRuleset.Classic }.DeathStarStalemate);
         // no Death Star in the battle: the switch changes nothing
         var (r, _) = Run(NoRolls, new[] { ("Strike Cruiser", 1) }, new[] { ("Victory II Star Destroyer", 1) }, alert: Alert(Fight, Fight));
         Assert.Equal(1201, r.Seconds);
@@ -763,7 +764,7 @@ public class ClassicBattleTests
     [Fact]
     public void GameDiceDependOnTheSeed()
     {
-        var p = new BattleParams { BattleRng = ClassicBattleRng.Game };
+        var p = new BattleParams { Ruleset = BattleRuleset.Classic, BattleRng = ClassicBattleRng.Game };
         var (a, _) = Run(p, new[] { (Corvette, 12) }, new[] { (Isd, 1) }, 3, alert: Alert(Fight, Fight));
         var (b, _) = Run(p, new[] { (Corvette, 12) }, new[] { (Isd, 1) }, 3, alert: Alert(Fight, Fight));
         Assert.Equal((a.Seconds, a.Draws), (b.Seconds, b.Draws));
@@ -777,7 +778,7 @@ public class ClassicBattleTests
     [InlineData(BattleTactic.StandOff, ClassicTaskForces.PerUnit, ClassicFireOrder.Simultaneous)]
     public void SwitchesRunToAnEnd(BattleTactic t, ClassicTaskForces f, ClassicFireOrder o)
     {
-        var p = new BattleParams { Tactic = t, TaskForces = f, FireOrder = o };
+        var p = new BattleParams { Ruleset = BattleRuleset.Classic, Tactic = t, TaskForces = f, FireOrder = o };
         var (r, _) = Run(p, new[] { (Corvette, 12) }, new[] { (Isd, 1) }, 9, alert: Alert(Fight, Fight));
         Assert.True(r.Seconds > 0);
         Assert.True(r.AllianceRetreated || r.EmpireRetreated || r.AllianceLosses + r.EmpireLosses > 0);
@@ -795,7 +796,7 @@ public class ClassicBattleTests
     internal static (int AllianceWins, int EmpireWins, int Draws, int AllianceRetreats, int EmpireRetreats, int Survivors) Rates(int corvettes, int battles)
     {
         int aw = 0, ew = 0, dr = 0, ar = 0, er = 0, surv = 0;
-        var p = new BattleParams { BattleRng = ClassicBattleRng.Game };
+        var p = new BattleParams { Ruleset = BattleRuleset.Classic, BattleRng = ClassicBattleRng.Game };
         for (int s = 1; s <= battles; s++)
         {
             var (r, _) = QuickBattle.Run(p, Ships, new[] { (Corvette, corvettes) }, new[] { (Isd, 1) }, (ulong)s, alert: Alert(Fight, Fight));

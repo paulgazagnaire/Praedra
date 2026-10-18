@@ -71,7 +71,9 @@ public class SimpleAiAgentsTests
         // Blockade pause re-pin 2026-10-18 (Dev lead; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch): SuspendedLeaveCapacity is
         // now DEFAULT off and MineStopMode / YardStopMode DEFAULT Pause, core rules this old AI cannot switch off. With the three 1998 switches set
         // (SuspendedLeaveCapacity on, both modes Abandon) the hash is exactly the AssaultOnly pin 1e675764...ba62 (checked when re-pinned, main eb722bd merged).
-        Assert.Equal("d05f61cafffd09feae65ac5db465cfbe84f40de9bd33d6900e5612335df980c3", h.StateHash());
+        // re-pinned 2026-10-18: battle default New (m4-battle-new). With Battle.Ruleset = Classic set on the settings the hash is exactly the
+        // previous pin d05f61ca...80c3 (checked when re-pinned).
+        Assert.Equal("7df3b05ced5e50cb29424f7a66dc56f9c3b29079f141f27393cfa68d27fa85bd", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"
