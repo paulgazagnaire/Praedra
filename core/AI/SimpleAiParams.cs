@@ -382,6 +382,14 @@ public sealed record SimpleAiParams
     public int RecruitValue { get; init; } = 1000;
     public int SubdueValue { get; init; } = 900;
     public int RescueValue { get; init; } = 800;
+    /// <summary>
+    /// QA-13: whether the AI sends Rescue at a prisoner held aboard an enemy fleet (our QA-7 rule; the prisoner stays aboard until the fleet
+    /// leaves the state, then he is freed where it stood). Such a team lands only if the fleet is still at that system on arrival and on every
+    /// iteration, and a fleet that stays has ships that foil it. Measured on 8 Medium mirrors (seeds 1-8, 3000 days): 458 tries, 3 rescues;
+    /// aiming only at fleets parked on a world the captor holds: 205 tries, 0 rescues (most fleets had moved on). DEFAULT false: the AI waits
+    /// for that fleet to go, and its characters stay free for other jobs. A prisoner held on a planet is unaffected. New AI rule (no sheet).
+    /// </summary>
+    public bool RescueAboardFleets { get; init; }
     public int AbductionValue { get; init; } = 500;
     /// <summary>Diplomacy on an own system: DiplomacyValue x (DiplomacyStopSupport - support) / DiplomacyStopSupport; neutral: NeutralDiplomacyPercent of that. DEFAULT.</summary>
     public int DiplomacyValue { get; init; } = 400;
