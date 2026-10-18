@@ -663,6 +663,32 @@ public sealed class CharacterModule
             Free(ctx, c, CharacterCause.Liberation);
     }
 
+    /// <summary>
+    /// The characters at a world that changed hands, inside the flip (B5a section 5, handler <c>0x4ef260</c>, in id order as the stand-in for child
+    /// order): every prisoner held there, not on a mission, whose captor is not the new holder is freed (<see cref="Liberate"/>, cause Liberation);
+    /// then every character standing there (not riding a fleet, not travelling, not dead, not on a mission) who is not of the new holder leaves,
+    /// never captured and never harmed. Where it goes was not found (Autorouting): DEFAULT the nearest system its side holds, arriving the next day,
+    /// as the Death Star's relocation; with none it stays. The old General's post is cleared afterwards by <see cref="OnHolderChanged"/> (whose own
+    /// Liberate call then finds nobody left to free).
+    /// ControlModule.CharactersAtCapture calls it. rule: m2-control-and-capture §What happens at the moment of capture (B5a, 2026-10-17).
+    /// </summary>
+    public void OnCapture(StepContext ctx, string system, Side? old, Side? holder)
+    {
+        int day = ctx.Day + 1;
+        Liberate(ctx, system); // B2e's liberation, at the flip (the world's holder is already the new one; also when it went neutral)
+        var leaving = S.Characters.Values.Where(c => c.Placed && c.Side != holder && c.Status is CharacterStatus.Free or CharacterStatus.Injured
+            && c.AttachedFleet == 0 && c.Transit == null && c.System == system && !IsOnMission(c.Id)).ToList(); // id order
+        foreach (var c in leaving)
+        {
+            var dest = NearestHeldSystem(system, c.Side);
+            if (dest == null) continue;
+            c.System = null;
+            c.Transit = new FleetTransit { Path = new List<string> { system, dest }, HopTicks = new List<int> { DeathStarFlightTicks }, HopIndex = 0, DueDay = ctx.Day + 1 + DeathStarFlightTicks };
+            string from = system; var cs = c.Side;
+            ctx.Emit((i, _) => new CharacterDeparted(i, day, c.Id, cs, from, DeathStarFlightTicks));
+        }
+    }
+
     // ================================================================== Force (§Force)
 
     /// <summary>

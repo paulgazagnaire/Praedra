@@ -9,7 +9,10 @@ using Rebellion.Core.Tests.Support;
 
 namespace Rebellion.Core.Tests.Control;
 
-/// <summary>A <see cref="SupWorld"/> with the control module attached and debug orders on.</summary>
+/// <summary>
+/// A <see cref="SupWorld"/> with the control module attached and debug orders on. The C tests run under <see cref="ControlRule.AssaultOnly"/> (the rule
+/// before B5a, kept behind the switch), where the capture is the DebugSetHolder order; the B5a tests (B5aControlTests) pass Derived, the DEFAULT.
+/// </summary>
 internal sealed class CtlWorld
 {
     /// <summary>The support world; null for a world wrapped around a loaded game (only Game, Ctl, Eco, Fleets, Run, Capture and Events work then).</summary>
@@ -26,11 +29,12 @@ internal sealed class CtlWorld
         S = null!; Game = loaded; Ctl = ctl; Eco = eco; Fleets = fleets; Build = build;
     }
 
-    public CtlWorld(bool stub = true, ulong seed = 1, bool construction = false)
+    public CtlWorld(bool stub = true, ulong seed = 1, bool construction = false, ControlRule rule = ControlRule.AssaultOnly)
     {
         S = new SupWorld(stub: stub, seed: seed);
         if (construction) Build = ConstructionModule.Attach(S.Game, S.W.Fleets, S.W.Eco, support: S.Sup);
         Ctl = ControlModule.Attach(S.Game, TestData.RealGalaxy, S.W.Fleets, S.W.Eco, S.Sup, Build);
+        Ctl.Rule = rule;
         Ctl.DebugOrdersEnabled = true;
         Game = S.Game; Eco = S.W.Eco; Fleets = S.W.Fleets;
     }
@@ -106,10 +110,10 @@ public class CaptureTests
     [Fact]
     public void ShieldServesOnlyTheEmpire()
     {
-        Assert.True(ControlModule.ServesSide("Death Star Shield", Side.Empire));
-        Assert.False(ControlModule.ServesSide("Death Star Shield", Side.Alliance));
-        Assert.True(ControlModule.ServesSide("Mine", Side.Alliance));
         var w = new CtlWorld();
+        Assert.True(w.Ctl.ServesSide("Death Star Shield", Side.Empire));
+        Assert.False(w.Ctl.ServesSide("Death Star Shield", Side.Alliance));
+        Assert.True(w.Ctl.ServesSide("Mine", Side.Alliance));
         w.Fleets.SetOwner(Emp, null);
         int shield = w.Eco.AddFacility(Emp, FacilityKind.DeathStarShield);
         w.Capture(Side.Empire, Emp);
@@ -158,14 +162,14 @@ public class CaptureTests
     }
 
     // C5: capture while an ISD is queued at the old holder's yard: the order is cancelled (by the construction module), no refund; the
-    // yard is the new holder's, idle
+    // yard is the new holder's, idle. B5a, 2026-10-17: the old holder's finished regiment on the world is destroyed (section 5; it was untouched).
     [Fact]
     public void C5_QueuedOrderOfOldHolder_Cancelled_YardGoesIdleToNewHolder()
     {
         var w = new CtlWorld(construction: true);
         w.Hold(Emp, Side.Empire, 80);
         int yard = w.Eco.AddFacility(Emp, FacilityKind.OrbitalShipyard);
-        int army = w.Eco.AddObject(Side.Empire, "Imperial Army Regiment", Emp);                          // completed regiment: untouched (4)
+        int army = w.Eco.AddObject(Side.Empire, "Imperial Army Regiment", Emp);                          // completed regiment of the old holder: destroyed (B5a)
         w.Eco.SetPools(Side.Empire, 0, 1000);
         w.Build!.GrantResearch(Side.Empire, "Imperial Star Destroyer");
         w.Build.SubmitBuild(Side.Empire, Emp, YardFamily.Shipyard, "Imperial Star Destroyer", 1);
@@ -177,7 +181,8 @@ public class CaptureTests
         w.Run(1);
         Assert.Null(w.Eco.Find(isd));
         Assert.Null(w.Build.ProjectAt(Emp, YardFamily.Shipyard));
-        Assert.NotNull(w.Eco.Find(army));
+        Assert.Null(w.Eco.Find(army));
+        Assert.Equal(army, Assert.Single(w.Events<UnitLostAtCapture>()).Object);
         Assert.True(w.Eco.Refined(Side.Empire) <= refinedBefore); // no refund
         Assert.Equal(Side.Alliance, w.Eco.OwnerOf(w.Eco.Find(yard)!));
         Assert.True(w.Eco.Find(yard)!.Completed);
@@ -205,10 +210,10 @@ public class CaptureTests
         Assert.Empty(w.Events<SupportChanged>());
     }
 
-    // C7: Empire-held, A = 20; Alliance captures with 0 regiments: N = 4, UprisingStarted at slot 6.1 of the same Step, arm draw rand(0..70).
-    // Captured in slot 5.2, the way M3's assault will call it.
+    // C7: Empire-held, A = 20; Alliance captures with 0 regiments: N = 4, UprisingStarted at once, inside the capture (B5a, 2026-10-17: was slot 6.1
+    // of the same Step; section 4 step 2.7), arm draw rand(0..70). Captured in slot 5.2, the way M3's assault calls it.
     [Fact]
-    public void C7_FreshlyCapturedHostileWorld_UprisingAtSlot61SameStep()
+    public void C7_FreshlyCapturedHostileWorld_UprisingAtOnce()
     {
         var w = new CtlWorld();
         w.Hold(Emp, Side.Empire, 80); // A = 20
@@ -221,7 +226,7 @@ public class CaptureTests
             drawsInCapture = w.Stub.Requests.Count - before;
         });
         w.Run(1);
-        Assert.Equal(0, drawsInCapture);
+        Assert.Equal(1, drawsInCapture); // the uprising's arm draw is made by the capture (B5a section 7)
         Assert.Equal(20, w.A(Emp));
         Assert.Equal(4, SupportModule.RequiredGarrison(w.S.Sup.Params, 20, false, false)); // N before the uprising doubles it
         Assert.Equal(8, w.S.Sup.RequiredGarrison(Emp));
@@ -456,11 +461,11 @@ public class CaptureTests
         w.Capture(Side.Empire, Emp);
         w.Run(1);
         var caps = w.Events<SystemCaptured>();
-        Assert.Equal(new[] { (Side.Empire, Side.Alliance), (Side.Alliance, Side.Empire) }, caps.Select(c => (c.From!.Value, c.To)).ToArray());
+        Assert.Equal(new[] { (Side.Empire, Side.Alliance), (Side.Alliance, Side.Empire) }, caps.Select(c => (c.From!.Value, c.To!.Value)).ToArray());
         Assert.Equal(new[] { 0, 1 }, caps.Select(c => c.Day - 1).ToArray());
         var moved = w.Events<FacilityTransferred>();
         Assert.Equal(new[] { mine, yard, mine, yard }, moved.Select(m => m.Facility).ToArray());
-        Assert.Equal(new[] { Side.Alliance, Side.Alliance, Side.Empire, Side.Empire }, moved.Select(m => m.To).ToArray());
+        Assert.Equal(new Side?[] { Side.Alliance, Side.Alliance, Side.Empire, Side.Empire }, moved.Select(m => m.To).ToArray());
         Assert.Equal(Side.Empire, w.Eco.OwnerOf(w.Eco.Find(mine)!));
         // per capture: SystemCaptured first, then its facility events; the Alliance held a hostile world with no garrison (A = 20), so its
         // uprising (slot 6.1) is ended by the second capture, last
@@ -468,7 +473,8 @@ public class CaptureTests
             CtlWorld.Names(CaptureEvents(w)));
     }
 
-    // C19: captures with the same inputs run twice: identical event lists; no random draw from the capture
+    // C19: captures with the same inputs run twice: identical event lists. B5a, 2026-10-17: the capture does draw (section 7, "No random draws are
+    // made by capture" is wrong): both captured worlds are hostile with no garrison, so each uprising starts at once with its arm draw.
     [Fact]
     public void C19_SameInputsTwice_IdenticalEvents_NoDraws()
     {
@@ -494,7 +500,7 @@ public class CaptureTests
             return w.Game.Events.ToList();
         }
         var a = Play(out int da); var b = Play(out int db);
-        Assert.Equal(0, da); Assert.Equal(0, db);
+        Assert.Equal(1, da); Assert.Equal(1, db);
         Assert.Equal(a, b);
         Assert.Contains(a, e => e is FacilityRemoved);
     }
@@ -570,6 +576,7 @@ public class CaptureTests
         var sup = SupportModule.Attach(loaded, TestData.RealGalaxy, eco, fleets, SupWorld.Weights.Value);
         var build = construction ? ConstructionModule.Attach(loaded, fleets, eco, support: sup) : null;
         var ctl = ControlModule.Attach(loaded, TestData.RealGalaxy, fleets, eco, sup, build);
+        ctl.Rule = ControlRule.AssaultOnly; // as Scenario()
         ctl.DebugOrdersEnabled = true;
         return new CtlWorld(loaded, ctl, eco, fleets, build);
     }

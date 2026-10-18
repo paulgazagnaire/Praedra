@@ -4,6 +4,7 @@ using Rebellion.Core.Fleets;
 using Rebellion.Core.Fog;
 using Rebellion.Core.Setup;
 using static Rebellion.Core.Tests.Fog.FogWorld;
+using Rebellion.Core.Tests.Control;
 
 namespace Rebellion.Core.Tests.Fog;
 
@@ -106,7 +107,7 @@ public class FogTests
         var (w, _) = Fw3();
         w.StepTo(20);
         int from = w.Game.Events.Count;
-        w.H.Control.SubmitDebugSetHolder(Side.Empire, R3, Side.Empire);
+        w.H.Control.SubmitCapture(Side.Empire, R3) /* (B5a, 2026-10-17) Derived control: troops take the world */;
         w.Step(); // Step 20, day 21
         Assert.Equal(Side.Empire, w.H.Fleets.OwnerOf(R3));
         var b = w.Pic(Side.Alliance, R3)!.Owner!;
@@ -121,7 +122,7 @@ public class FogTests
     {
         var w = new FogWorld();
         w.StepTo(4);
-        w.H.Control.SubmitDebugSetHolder(Side.Alliance, C0, Side.Alliance);
+        w.H.Control.SubmitCapture(Side.Alliance, C0) /* (B5a, 2026-10-17) Derived control: troops take the world */;
         w.Step(); // Step 4, day 5
         foreach (var side in new[] { Side.Empire, Side.Alliance })
         {
@@ -137,7 +138,7 @@ public class FogTests
     {
         var w = new FogWorld();
         w.StepTo(9);
-        w.H.Control.SubmitDebugSetHolder(Side.Empire, R2, Side.Empire);
+        w.H.Control.SubmitCapture(Side.Empire, R2) /* (B5a, 2026-10-17) Derived control: troops take the world */;
         w.Step(); // Step 9, day 10
         var b = w.Pic(Side.Alliance, R2)!.Owner!;
         Assert.Equal(Side.Empire, b.Value.Owner);

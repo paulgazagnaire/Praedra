@@ -30,6 +30,13 @@ public sealed class TestCampaign
     public const int CaptureDay = 400;
     /// <summary>The Alliance system the Empire captures on <see cref="CaptureDay"/>.</summary>
     public const string CaptureSystem = "Denon";
+    /// <summary>The regiment class the scripted capture places on <see cref="CaptureSystem"/> under derived control (B5a).</summary>
+    public const string CaptureRegiment = "Imperial Army Regiment";
+    /// <summary>
+    /// How many: 6, the most an assault lands (m3-assault §Landing, the cap 6 [EXE-own], B5a section 3). Under derived control the world stays the
+    /// Empire's only while its regiments stand there, so the stand-in lands what a real assault would.
+    /// </summary>
+    public const int CaptureRegiments = 6;
     /// <summary>The Alliance system the Empire's interdiction fleet parks at, from day <see cref="BlockadeFrom"/>.</summary>
     public const string BlockadedSystem = "Kinyen";
     public const int BlockadeFrom = 60;
@@ -59,7 +66,10 @@ public sealed class TestCampaign
         // Slot 5.2 (assaults, M3): the one scripted capture. A hook is not saved, so every path that makes a campaign registers it.
         host.Game.RegisterHook("5.2", ctx =>
         {
-            if (ctx.Day == CaptureDay) host.Control.SetHolder(ctx, CaptureSystem, Side.Empire, CaptureCause.Debug);
+            // Under derived control (B5a, DEFAULT) the capture is scripted as troops: the system's regiments become six Imperial regiments.
+            if (ctx.Day != CaptureDay) return;
+            if (host.Control.Rule == ControlRule.Derived) host.Control.DebugApplyTroops(ctx, CaptureSystem, Side.Empire, CaptureRegiment, CaptureRegiments);
+            else host.Control.SetHolder(ctx, CaptureSystem, Side.Empire, CaptureCause.Debug);
         });
     }
 
@@ -192,6 +202,8 @@ public sealed class TestCampaign
         host.Construction.GrantResearch(Side.Alliance, "Nebulon-B Frigate"); // research order 1: the script builds one, so the test setup grants it (m5-research §Availability test step 3)
         eco.SetupNewGame(); // stockpile 0/0 (the economy's DEFAULT), then the two incident timers armed
         host.Research.SetupNewGame(); // then the two research tick arming draws (m5-research §Random draws (a)); the only draws of setup
+        // (B5a, 2026-10-17) control is derived once after setup, as a new game does (no draw). rule: m2-control-and-capture §Who holds a system (B5a §Rebuild 2)
+        host.Control.SetupNewGame();
     }
 
     private static void AddFacility(GameHost host, string system, FacilityKind kind)

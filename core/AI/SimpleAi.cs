@@ -544,6 +544,9 @@ public sealed partial class SimpleAi
         var ids = _h.Economy.Objects.Where(o => o.Category == ObjectCategory.Regiment && o.Completed && o.Side == _side && o.System == system && o.AboardShip == 0)
             .Select(o => o.Id).ToList();
         int keep = Held(system) ? Math.Max(_h.Support.RequiredGarrison(system), system == CriticalSystem() ? _p.CriticalGarrison : 0) : 0;
+        // Never the last regiment off a held world below 60 support: under derived control it is lost the moment the regiment leaves (B5a section 9;
+        // the Empire's halved need in a Death Star sector can be 0 at support 50-59). Dev lead 2026-10-17.
+        if (Held(system) && _h.Economy.SupportOf(system, _side) < Rebellion.Core.Control.ControlModule.JoinSupport) keep = Math.Max(keep, 1);
         return ids.Count > keep ? ids.Skip(keep).ToList() : new List<int>();
     }
     private int SpareRegimentsAt(string system) => SpareRegimentIds(system).Count;

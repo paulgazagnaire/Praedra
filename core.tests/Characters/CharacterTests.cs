@@ -593,16 +593,21 @@ public class CharacterTests
     {
         var w = new CharWorld();
         w.Hold(Hoth, Side.Empire);
+        w.Hold(Coruscant, Side.Empire); // (B5a, 2026-10-17) somewhere for the old side's officer to go
         w.Add(Piett, Hoth);
         Assert.Null(w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Empire, Piett, Hoth)));
-        w.StepWith("5.2", ctx => w.Host.Control.SetHolder(ctx, Hoth, Side.Alliance, CaptureCause.Assault));
+        // (B5a, 2026-10-17) under ControlRule = Derived the holder follows the regiments: an Alliance regiment lands on the empty world (B5a section 1)
+        w.StepWith("5.2", ctx => w.Host.Control.DebugApplyTroops(ctx, Hoth, Side.Alliance, "Alliance Army Regiment", 1));
+        Assert.Equal(Side.Alliance, w.Host.Control.HolderOf(Hoth));
         var pv = Assert.Single(w.Events<PostVacated>());
         Assert.Equal((Piett, PostKind.SystemGeneral, CharacterCause.HolderChanged), (pv.Character, pv.Post, pv.Cause));
         Assert.Null(w.Ch.SystemGeneralOf(Hoth));
-        Assert.Equal((CharacterStatus.Free, Hoth), (w.C(Piett).Status, w.Ch.LocationOf(w.C(Piett))));
+        // (B5a, 2026-10-17) the old side's character is not captured or hurt; he leaves (B5a section 4, 0x4ef260 Autorouting; DEFAULT destination: nearest held system)
+        Assert.Equal(CharacterStatus.Free, w.C(Piett).Status);
+        Assert.Equal(Hoth, Assert.Single(w.Events<CharacterDeparted>(), e => e.Character == Piett).From);
         Assert.Equal(0, w.Host.Assault.SystemGeneralLeadership(Hoth));
-        // the old holder's officer may not be General there now
-        Assert.Equal(RejectReason.NotYourSystem, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Empire, Piett, Hoth)));
+        // the old holder's officer may not be General there now ((B5a, 2026-10-17) he has left, so the first refusal is NotAtSystem)
+        Assert.Equal(CharacterReject.NotAtSystem, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Empire, Piett, Hoth)));
     }
 
     // m5-characters-and-force CH29

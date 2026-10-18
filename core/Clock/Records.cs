@@ -14,6 +14,8 @@ public enum Side { Empire = 0, Alliance = 1 }
 [JsonDerivedType(typeof(MoveFleetOrder), "MoveFleet")]
 [JsonDerivedType(typeof(ScrapObjectOrder), "ScrapObject")]
 [JsonDerivedType(typeof(DebugSetHolderOrder), "DebugSetHolder")]
+[JsonDerivedType(typeof(DebugSetSupportOrder), "DebugSetSupport")]
+[JsonDerivedType(typeof(DebugSetTroopsOrder), "DebugSetTroops")]
 [JsonDerivedType(typeof(BuildOrder), "Build")]
 [JsonDerivedType(typeof(StopBuildOrder), "StopBuild")]
 [JsonDerivedType(typeof(CreateFleetOrder), "CreateFleet")]
@@ -61,10 +63,23 @@ public sealed record ScrapObjectOrder(long Sequence, Side Side, int ObjectId) : 
 
 /// <summary>
 /// Debug order: make a side the holder of a system now (a capture with cause Debug). For tests and tools only; the control module
-/// rejects it unless debug orders are enabled. rule: m2-control-and-capture §How control changes (DebugSetHolder).
+/// rejects it unless debug orders are enabled, and under the derived control rule (B5a: 1998 has no "set holder"; use
+/// <see cref="DebugSetSupportOrder"/> or <see cref="DebugSetTroopsOrder"/>). rule: m2-control-and-capture §How control changes (DebugSetHolder).
 /// The handler lives in Rebellion.Core.Control.ControlModule.
 /// </summary>
 public sealed record DebugSetHolderOrder(long Sequence, Side Side, string System, Side NewHolder) : Order(Sequence, Side);
+
+/// <summary>
+/// Debug order: set a system's Alliance support (0..100) through ChangeSupport, undamped; control follows (B5a section 9). For tests and tools only;
+/// rejected unless debug orders are enabled. The handler lives in Rebellion.Core.Control.ControlModule.
+/// </summary>
+public sealed record DebugSetSupportOrder(long Sequence, Side Side, string System, int AllianceSupport) : Order(Sequence, Side);
+
+/// <summary>
+/// Debug order: the regiments standing on a system become <paramref name="Count"/> finished regiments of <paramref name="RegimentClass"/> for
+/// <paramref name="TroopSide"/> (every other one there is removed); control follows (B5a section 9). For tests and tools only.
+/// </summary>
+public sealed record DebugSetTroopsOrder(long Sequence, Side Side, string System, Side TroopSide, string RegimentClass, int Count) : Order(Sequence, Side);
 /// Build facilities, ships, fighters, regiments or special forces at a yard of the given family. Destination null = the yard's
 /// own system (a facility needs one). Checked in step 1. rule: m2-construction §Build order. The handler lives in
 /// Rebellion.Core.Construction.ConstructionModule. Item is a class name of unit-and-facility-costs.csv (DEFAULT: the sheet says (kind, id)).
@@ -134,6 +149,10 @@ public static class RejectReason
     // rule: m2-control-and-capture §How control changes (DebugSetHolder; the sheet names no codes: DEFAULT names)
     public const string DebugDisabled = "DebugDisabled";
     public const string AlreadyHolder = "AlreadyHolder";
+    /// <summary>DebugSetHolder under the derived control rule: 1998 has no "set holder" (B5a section 9). DEFAULT name.</summary>
+    public const string NotUnderDerivedControl = "NotUnderDerivedControl";
+    /// <summary>ScrapObject on a special force (1998 code 23, "cannot be scrapped"; B5a section 8). DEFAULT name.</summary>
+    public const string CannotScrap = "CannotScrap";
     // rule: m2-construction §Build order (BuildOrder rejections; UnknownItem and NoProject are DEFAULT names the sheet lacks)
     public const string NoYard = "NoYard";
     public const string WrongFamily = "WrongFamily";

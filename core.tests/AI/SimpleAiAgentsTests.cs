@@ -50,7 +50,11 @@ public class SimpleAiAgentsTests
         // delay draws at each capture, the Hurt roll on injuries) change the state and the game's course.
         // B4 re-pin 2026-10-18: setup now names fleets "Fleet n" and capital ships "<class> n" (B4 §12, display only; the ship name is saved
         // state). The game plays identically: with the naming step removed the hash is exactly B2e's 5e54e22f...e007 (checked when re-pinned).
-        Assert.Equal("1d327617ce47e645355e70769436fcc50654dcffc2b16942b2cbafc448db0b03", h.StateHash());
+        // B5a re-pin 2026-10-17: derived control (ControlRule.Derived, the DEFAULT; the old AI cannot switch it off) recomputes every holder after
+        // setup, lets worlds go neutral or join a side by support, hands a world over when its last regiment leaves, runs the sector steps, frees
+        // and sends away characters at each flip, and adds saved state (ControlState.Contested, EverHeld): the game takes another course from
+        // setup. Seed 1, 1000 days, as before (no seed change).
+        Assert.Equal("2f1f5d7928a6f4a351f4b2f8f7aa08b0cda33a67e4494ea04c865b4c5c2b829a", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"

@@ -557,7 +557,8 @@ public class TroopTests
         Assert.True(w.Support.IsUprising("Bespin")); // as for 0 regiments
     }
 
-    // m3-troops T21
+    // m3-troops T21 (B5a, 2026-10-17: the sheet's expectation changed): special forces cannot be scrapped (1998 code 23, B5a section 7);
+    // both orders are refused with CannotScrap and nothing changes. The test keeps its name so the id stays findable.
     [Fact]
     public void T21_ScrapRefundsHalfOfCostRoundedDown()
     {
@@ -568,15 +569,15 @@ public class TroopTests
         int load = w.Eco.Load(Reb), refined = w.Eco.Refined(Reb);
         w.Scrap(Reb, inf);
         w.Run(1);
-        Assert.Equal((refined + 1, load - 1), (w.Eco.Refined(Reb), w.Eco.Load(Reb))); // cost 2: refund 1
-        refined = w.Eco.Refined(Reb); load = w.Eco.Load(Reb);
         w.Scrap(Reb, gue);
         w.Run(1);
-        Assert.Equal((refined, load - 1), (w.Eco.Refined(Reb), w.Eco.Load(Reb))); // cost 1: refund 0
-        Assert.Empty(w.Eco.Objects);
+        Assert.Equal(new[] { RejectReason.CannotScrap, RejectReason.CannotScrap }, w.Events<OrderRejected>().Select(r => r.Reason).ToArray());
+        Assert.Equal((refined, load), (w.Eco.Refined(Reb), w.Eco.Load(Reb)));
+        Assert.Equal(new[] { inf, gue }, w.Eco.Objects.Select(o => o.Id).OrderBy(i => i).ToArray());
     }
 
-    // m3-troops §What special forces do in M3: a special force on a system that changes hands is untouched
+    // m3-troops §What special forces do in M3: a bare owner change (no capture: this world has no control module) leaves a special force alone.
+    // (B5a, 2026-10-17) A real capture destroys an old-side special force not on a mission: B5aControlTests B5a-11.
     [Fact]
     public void ASpecialForceOnACapturedSystemIsUntouched()
     {

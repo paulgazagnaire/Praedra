@@ -292,6 +292,7 @@ public sealed class DeathStarModule
     // A system outside every sector has no sector: no strike is counted and nothing reacts (DEFAULT, the sheet names no such case).
     private void SectorReaction(StepContext ctx, int day, string system)
     {
+        if (Params.Fallout == DeathStarFallout.Classic) { ClassicFallout(ctx, system); return; }
         var star = _galaxy.Get(system);
         if (star.IsOutsideSectors) return;
         int strike = StrikesIn(star.Sector) + 1;
@@ -309,14 +310,31 @@ public sealed class DeathStarModule
                 continue;
             }
             _support.ChangeSupport(ctx, name, Side.Alliance, Params.RevoltAllianceSupport, SupportCause.DeathStar, dampen: false); // clamped to the scale: 100
-            switch (_fleets.OwnerOf(name))
-            {
-                case null: _control.SetHolder(ctx, name, Side.Alliance, CaptureCause.DeathStarRevolt); break;
-                case Side.Empire: _support.StartUprisingNow(ctx, name); break;
-            }
+            // Under derived control (B5a section 9) the support change alone turns a neutral world, and an Imperial world with no regiment, Alliance;
+            // an Imperial world still held (by its garrison) riots. Under AssaultOnly the old explicit capture of a neutral world.
+            if (_control.Rule == ControlRule.AssaultOnly && _fleets.OwnerOf(name) == null) _control.SetHolder(ctx, name, Side.Alliance, CaptureCause.DeathStarRevolt);
+            if (_fleets.OwnerOf(name) == Side.Empire) _support.StartUprisingNow(ctx, name);
         }
         string sec = star.Sector; var list = new ValueList<string>(changed);
         ctx.Emit((i, _) => new SectorStruck(i, day, sec, strike, list));
+    }
+
+    // Classic (1998) fallout: every populated, ever-held world of the galaxy (name order), core worlds -10 for the destroyer always, rim worlds -2
+    // where the destroyer's support is below 90, through ChangeSupport with the normal damping (every event effect goes through it). The destroyed
+    // world itself has no support value. No strike count, no revolt. rule: m5-death-star §2 effect 7 (DeathStarFallout = Classic; B5c section 3).
+    private void ClassicFallout(StepContext ctx, string destroyed)
+    {
+        const Side destroyer = Side.Empire; // only the Empire has a Death Star; the losing side is the destroyer (inferred, B5c)
+        foreach (var star in _galaxy.Systems)
+        {
+            string name = star.Name;
+            if (name == destroyed || S.IsDestroyed(name) || !_eco.SlotsOf(name).Populated || !_control.EverHeld(name)) continue;
+            bool core = star.Group == "core";
+            int loss = core ? Params.ClassicCoreLoss : Params.ClassicRimLoss;
+            int threshold = core ? Params.ClassicCoreThreshold : Params.ClassicRimThreshold;
+            if (_eco.SupportOf(name, destroyer) >= threshold) continue;
+            _support.ChangeSupport(ctx, name, destroyer, -loss, SupportCause.DeathStar);
+        }
     }
 
     // ================================================================== the sector flag (§3, slot 5.6)

@@ -700,7 +700,8 @@ public sealed partial class GameSession
             // ---- control, support
             case SystemCaptured c:
             {
-                string who = c.To == Player ? "You captured" : (c.From == Player ? "You lost" : $"The {NameOf(c.To)} captured");
+                // (B5a) a world can now go neutral (To = null) or join a side by support
+                string who = c.To == Player ? "You captured" : (c.From == Player ? "You lost" : c.To is Side to ? $"The {NameOf(to)} captured" : "Neutral now:");
                 var kind = c.To == Player ? MsgKind.Good : (c.From == Player ? MsgKind.Bad : MsgKind.Info);
                 var m = new Message(d, $"{who} {c.System}.", c.System, kind);
                 if (c.To == Player || c.From == Player) { o.PauseReason ??= "captured"; o.Popup ??= m with { Title = "System captured", Detail = m.Text }; }

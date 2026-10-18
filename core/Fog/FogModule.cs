@@ -410,7 +410,7 @@ public sealed class FogModule
     private void OnHolderChanged(CaptureInfo info)
     {
         if (info.Old is Side loser) Write(info.Ctx, new Truth(this), loser, info.System, RevealKind.LossNotice, info.Ctx.Day + 1);
-        if (HqAt(info.System) && info.New != Side.Alliance)
+        if (HqAt(info.System) && info.New != Side.Alliance) // the Empire took it, or it went neutral (B5a section 5: the HQ cannot serve side 3)
         {
             bool lost = HqRules.LostOnHolderChange switch
             {
@@ -681,7 +681,7 @@ public sealed class FogModule
             case HqSectorClueGiven x: return Bit(x.Viewer);
             case AgentDetected x: return Bit(x.Viewer);
             case OrderAccepted or OrderRejected: return order != null ? Bit(order.Side) : Both;
-            case SystemCaptured c: return (c.From is Side f ? Bit(f) : 0) | Bit(c.To) | LiveMask(c.System);
+            case SystemCaptured c: return (c.From is Side f ? Bit(f) : 0) | (c.To is Side t ? Bit(t) : 0) | LiveMask(c.System);
             case BattleEnded: return Both; // a battle needs both sides there: both took part
         }
         var acc = Accessors.Get(e.GetType());

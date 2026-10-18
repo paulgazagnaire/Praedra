@@ -40,9 +40,16 @@ public class MissionEffectTests
         Assert.Equal((40, 47), (sc.Old, sc.New));
     }
 
-    // m5-missions MI28: Alliance on a neutral system, A = 50, rand(0..9) = 9: g = 10, A = 60
+    // m5-missions MI28: Alliance on a neutral system, A = 50, rand(0..9) = 9: g = 10, A = 60.
+    // (B5a, 2026-10-17) at 60 the world joins the Alliance (Derived control) and the sector step from neutral (+1, the world included) makes it 61.
     [Fact]
-    public void MI28_DiplomacyNeutral() => Assert.Equal(60, A(Diplomacy(Side.Alliance, null, 50, 9, 9)));
+    public void MI28_DiplomacyNeutral()
+    {
+        var w = Diplomacy(Side.Alliance, null, 50, 9, 9);
+        Assert.Equal(61, A(w));
+        Assert.Equal((50, 60), w.Events<SupportChanged>().Where(e => e.Cause == SupportCause.Diplomacy).Select(e => (e.Old, e.New)).Single());
+        Assert.Equal(Side.Alliance, w.Host.Control.HolderOf(T));
+    }
 
     // m5-missions MI29: Empire on an Empire system, A = 40 (Empire 60), rand(0..19) = 4: Empire 65, A = 35
     [Fact]

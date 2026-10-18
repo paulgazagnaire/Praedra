@@ -3,6 +3,7 @@ using Rebellion.Core.Control;
 using Rebellion.Core.Economy;
 using Rebellion.Core.Setup;
 using Rebellion.Core.Victory;
+using Rebellion.Core.Tests.Control;
 
 namespace Rebellion.Core.Tests.Setup;
 
@@ -116,7 +117,7 @@ public class NewGameTests
     private static void CaptureOnNextStep(GameHost h, string system, Side side)
     {
         int day = h.Game.Day;
-        h.Game.RegisterHook("5.2", ctx => { if (ctx.Day == day) h.Control.SetHolder(ctx, system, side, CaptureCause.Debug); });
+        h.Game.RegisterHook("5.2", ctx => { if (ctx.Day == day) h.Control.CaptureNow(ctx, system, side) /* (B5a, 2026-10-17) Derived control: troops take the world */; });
     }
 
     [Fact]
@@ -157,7 +158,7 @@ public class NewGameTests
     {
         var h = Make(StartPreset.Easy, 1, new GameSettings { Victory = new VictoryRules { EmpireWinsOnHqLost = false } });
         var held = h.Game.State.SystemOwners.Where(kv => kv.Value == Side.Alliance).Select(kv => kv.Key).ToList();
-        h.Game.RegisterHook("5.2", ctx => { foreach (var s in held) h.Control.SetHolder(ctx, s, Side.Empire, CaptureCause.Debug); });
+        h.Game.RegisterHook("5.2", ctx => { foreach (var s in held) h.Control.CaptureNow(ctx, s, Side.Empire) /* (B5a, 2026-10-17) Derived control */; });
         h.Game.Step();
         Assert.Equal(Side.Empire, h.Victory.Winner);
     }

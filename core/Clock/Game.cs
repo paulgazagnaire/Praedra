@@ -218,17 +218,53 @@ public sealed class Game
 
     public long Submit(Side side, string marker, int value) => Submit(seq => new SetMarkerOrder(seq, side, marker, value));
 
+    private readonly List<Action<StepContext>> _stepBegin = new(); // registration order
+    private readonly List<Action<StepContext>> _settle = new();    // registration order
+
+    /// <summary>
+    /// Register a pair of callbacks for work that the original queues as a rule event and runs later the same day: <paramref name="begin"/> runs at
+    /// the start of every Step (before the orders), <paramref name="settle"/> after the orders of step 1 and after every slot that has hooks.
+    /// The control module uses it to see changes in the regiments standing on each system. rule: m2-control-and-capture §When the rule runs
+    /// (B5a section 2: the regiment hook's recompute is queued, same day).
+    /// </summary>
+    public void RegisterSettle(Action<StepContext> begin, Action<StepContext> settle)
+    {
+        _stepBegin.Add(begin);
+        _settle.Add(settle);
+    }
+
+    private readonly List<Action<StepContext>> _tickStart = new(); // registration order
+
+    /// <summary>
+    /// Register a callback for the start of each rule "tick" of the original: before each player order is resolved, and once at the start of the
+    /// day's rule pass (after the orders of step 1 and their settle). The control module resets its per-tick limiter there. Nothing is saved: a save
+    /// is made between Steps, and every Step starts a fresh tick. rule: m2-control-and-capture §After the flip (B5a section 6, the limiter
+    /// <c>0x518040</c>, RE lead correction 2026-10-17: per tick, not per day).
+    /// </summary>
+    public void RegisterTickStart(Action<StepContext> start) => _tickStart.Add(start);
+
+    private void TickStart(StepContext ctx)
+    {
+        foreach (var t in _tickStart) t(ctx);
+    }
+
     /// <summary>Advance exactly one day. rule: §The clock</summary>
     public void Step()
     {
         if (IsOver) return; // rule: m5-setup-and-victory §Game over: no slot runs, Day does not change, no event
         var ctx = new StepContext(this, Day);
+        foreach (var b in _stepBegin) b(ctx);
         foreach (var slot in WorkList)
         {
-            if (slot == "1") ProcessOrders(ctx);
+            if (slot == "1") { ProcessOrders(ctx); Settle(ctx); TickStart(ctx); }
             else if (slot == "7") Day = ctx.Day + 1;
-            else if (_hooks.TryGetValue(slot, out var list)) foreach (var h in list) h(ctx);
+            else if (_hooks.TryGetValue(slot, out var list)) { foreach (var h in list) h(ctx); Settle(ctx); }
         }
+    }
+
+    private void Settle(StepContext ctx)
+    {
+        foreach (var s in _settle) s(ctx);
     }
 
     // rule: m1-clock-and-orders §Order of work, step 1 (sorted by sequence; a rejection never changes state)
@@ -239,6 +275,7 @@ public sealed class Game
         _markersChanged.Clear();
         foreach (var order in batch)
         {
+            TickStart(ctx);
             _currentOrder = order;
             var result = _handlers.TryGetValue(order.GetType(), out var handler)
                 ? handler(ctx, order)
