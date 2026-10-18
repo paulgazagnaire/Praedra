@@ -318,8 +318,10 @@ public sealed class ClassicBattle
     /// <param name="rng">The battle's GameRng, used only with ClassicBattleRng = Game.</param>
     /// <param name="hasDestination">Per side (indexed by <c>(int)Side</c>): does a valid retreat system exist? rule: m4-retreat-damage-repair §1 (5).</param>
     /// <param name="alert">Per side: Fight or Retreat (the human controller's threshold). Null = no controller: <see cref="BattleParams.RetreatThreshold"/>.</param>
-    /// <param name="ai">Per side: the AI controls it (threshold <see cref="BattleParams.AiRetreatThreshold"/>).</param>
-    public ClassicBattle(BattleParams p, IReadOnlyList<BattleUnit> units, GameRng? rng, bool[] hasDestination, OnContactMode[]? alert = null, bool[]? ai = null)
+    /// <param name="ai">Per side: the AI controls it.</param>
+    /// <param name="aiThreshold">Per side: the AI's threshold computed at the alert (B6a §2); null = <see cref="BattleParams.AiRetreatCap"/>.</param>
+    public ClassicBattle(BattleParams p, IReadOnlyList<BattleUnit> units, GameRng? rng, bool[] hasDestination, OnContactMode[]? alert = null, bool[]? ai = null,
+        double[]? aiThreshold = null)
     {
         _p = p; _units = units.ToList();
         for (int i = 0; i < _units.Count; i++)
@@ -331,7 +333,7 @@ public sealed class ClassicBattle
             : new GameBattleDice(rng ?? throw new ArgumentNullException(nameof(rng), "ClassicBattleRng.Game needs the battle's GameRng."));
         // rule: m4-battle-classic §1.3 (B3 §10): the threshold is set per side by its controller before the battle
         foreach (var s in Order)
-            _threshold[I(s)] = ai != null && ai[I(s)] ? p.AiRetreatThreshold
+            _threshold[I(s)] = ai != null && ai[I(s)] ? (aiThreshold?[I(s)] ?? p.AiRetreatCap)
                 : alert == null ? p.RetreatThreshold
                 : alert[I(s)] == OnContactMode.Retreat ? p.RetreatAlertThreshold : p.FightThreshold;
 

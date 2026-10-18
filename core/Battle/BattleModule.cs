@@ -14,12 +14,6 @@ public sealed class BattleState
 {
     public int EmpireOnContact { get; set; }
     public int AllianceOnContact { get; set; }
-    /// <summary>A computer player controls the Empire (set by <see cref="SetAiControlOrder"/>). rule: m4-battle-classic §1.3.</summary>
-    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
-    public bool EmpireAi { get; set; }
-    /// <summary>A computer player controls the Alliance.</summary>
-    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
-    public bool AllianceAi { get; set; }
     /// <summary>The Step (K) whose battles fill <see cref="Fought"/>; -1 = none yet.</summary>
     public int FoughtDay { get; set; } = -1;
     /// <summary>Object ids (ships and squadrons) that took part in a battle in Step <see cref="FoughtDay"/>, ascending. Stale after that Step: the query checks the day.</summary>
@@ -30,7 +24,6 @@ public sealed class BattleState
     internal void CopyFrom(BattleState o)
     {
         EmpireOnContact = o.EmpireOnContact; AllianceOnContact = o.AllianceOnContact;
-        EmpireAi = o.EmpireAi; AllianceAi = o.AllianceAi;
         FoughtDay = o.FoughtDay; Fought = new List<int>(o.Fought);
     }
 }
@@ -51,7 +44,7 @@ public sealed class BattleModule
 
     private readonly NewBattleData? _newData;
 
-    public BattleParams Params { get; }
+    public BattleParams Params { get; private set; }
 
     private BattleModule(Game game, Galaxy galaxy, FleetModule fleets, EconomyModule eco, BattleParams p, NewBattleData? newData)
     {
@@ -63,7 +56,6 @@ public sealed class BattleModule
     {
         var m = new BattleModule(game, galaxy, fleets, eco, p ?? new BattleParams(), newData);
         game.RegisterOrderHandler<SetOnContactOrder>(m.HandleSetOnContact);
-        game.RegisterOrderHandler<SetAiControlOrder>(m.HandleSetAiControl);
         game.RegisterHook("5", m.Resolve);
         return m;
     }
@@ -75,20 +67,63 @@ public sealed class BattleModule
     /// <summary>The side's standing answer to the Battle Alert (the AI side always fights, with its own threshold). rule: m4-battle-classic §1.3.</summary>
     public OnContactMode OnContactOf(Side side) => IsAi(side) ? OnContactMode.Fight : B.OnContact(side);
 
-    /// <summary>True when a computer player controls the side (saved flag) or the settings say so. rule: m4-battle-classic §1.3.</summary>
-    public bool IsAi(Side s) => s == Side.Empire ? Params.EmpireIsAi || B.EmpireAi : Params.AllianceIsAi || B.AllianceAi;
+    /// <summary>True when no human plays the side (its controller is the computer). rule: B6a §1.</summary>
+    public bool IsAi(Side s) => s == Side.Empire ? Params.EmpireIsAi : Params.AllianceIsAi;
+
+    /// <summary>
+    /// Set the side controllers (fixed at game start; not game state): AiMatch sets both, the Godot opponent its own side. The battle reads them at the
+    /// alert. rule: B6a §1 (a side is AI when no human plays it).
+    /// </summary>
+    public void SetControllers(bool empireAi, bool allianceAi) => Params = Params with { EmpireIsAi = empireAi, AllianceIsAi = allianceAi };
+
+    /// <summary>
+    /// The AI side's threshold at the Battle Alert, from its own view of the system (B6a §2): 0.9 unless it holds the system with a usable planet squadron;
+    /// then 0 at Coruscant or an HQ world, else min(A / B, 0.9) with A, B the firepower of its fleets and of the other fleets there (B = 0: r = A).
+    /// DEFAULT: the AI has a record of every fleet in the battle (they are at its system); the save-only flag +0x418 and "no posture yet" are not modelled.
+    /// rule: B6a §2.
+    /// </summary>
+    public double AiThreshold(string system, Side side)
+    {
+        double cap = Params.AiRetreatCap;
+        if (Params.AiRetreat == AiRetreatRule.Fixed) return cap;
+        if (_fleets.OwnerOf(system) != side) return cap;                       // record +0x30 bit 1
+        if (!_fleets.BasedSquadrons(system, side).Any()) return cap;           // planetSquadrons(P) <= 0 (Usable = completed, on the planet)
+        if (system == Params.CoruscantSystem || system == State.Scenario.HqSystem) return 0.0; // +0x28 bit 31
+        long a = 0, b = 0;
+        foreach (var f in State.Fleets.Values) // sums: order does not matter
+        {
+            if (f.At != system || f.Transit != null) continue;
+            long fp = FleetFirepower(f);
+            if (f.Side == side) a += fp; else b += fp;
+        }
+        double r = b > 0 ? (double)a / b : a;
+        return r <= cap ? r : cap;
+    }
+
+    /// <summary>A fleet's firepower: its ships (B6a §3) plus each completed squadron they carry, by alive craft. rule: B6a §3.</summary>
+    public long FleetFirepower(Fleets.Fleet f)
+    {
+        long sum = 0;
+        foreach (var id in f.Ships)
+        {
+            if (!E.Objects.TryGetValue(id, out var o)) continue;
+            var cls = _fleets.ClassOf(o);
+            if (cls == null) continue;
+            int hits = o.Hits != null && o.Hits.Count > AiFirepower.WeaponsCounter ? o.Hits[AiFirepower.WeaponsCounter] : 0;
+            sum += AiFirepower.Ship(cls, hits, o.Completed);
+            foreach (var q in E.Objects.Values)
+            {
+                if (q.Category != ObjectCategory.Fighter || q.AboardShip != id) continue;
+                var qc = _fleets.ClassOf(q);
+                if (qc == null) continue;
+                int size = ClassicRates.SquadronSize(Params, qc);
+                sum += AiFirepower.Squadron(qc, size, size - q.CraftLost, q.Completed);
+            }
+        }
+        return sum;
+    }
 
     public long SubmitSetOnContact(Side side, OnContactMode mode) => _game.Submit(seq => new SetOnContactOrder(seq, side, mode));
-
-    /// <summary>Queue <see cref="SetAiControlOrder"/>: call once when a computer player takes the side.</summary>
-    public long SubmitSetAiControl(Side side, bool ai = true) => _game.Submit(seq => new SetAiControlOrder(seq, side, ai));
-
-    // rule: m4-battle-classic §1.3: the side's controller (AI or human) decides its alert answer
-    private OrderResult HandleSetAiControl(StepContext ctx, SetAiControlOrder o)
-    {
-        if (o.Side == Side.Empire) B.EmpireAi = o.Ai; else B.AllianceAi = o.Ai;
-        return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
-    }
 
     /// <summary>
     /// True when this ship or squadron took part in a battle in the Step being run (the repair slot 6.8 reads it: no repair on a battle day).
@@ -252,8 +287,13 @@ public sealed class BattleModule
         else
         {
             var ai = new bool[2];
-            foreach (var s in new[] { Side.Alliance, Side.Empire }) ai[(int)s] = IsAi(s);
-            result = new ClassicBattle(Params, force.Units, Params.BattleRng == ClassicBattleRng.Game ? new GameRng(force.Seed) : null, has, alert, ai).Run();
+            var aiThreshold = new double[2];
+            foreach (var s in new[] { Side.Alliance, Side.Empire })
+            {
+                ai[(int)s] = IsAi(s);
+                if (ai[(int)s]) aiThreshold[(int)s] = AiThreshold(sys, s); // rule: B6a §2: once per battle, at the alert
+            }
+            result = new ClassicBattle(Params, force.Units, Params.BattleRng == ClassicBattleRng.Game ? new GameRng(force.Seed) : null, has, alert, ai, aiThreshold).Run();
         }
 
         foreach (var u in force.Units)

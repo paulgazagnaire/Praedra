@@ -197,30 +197,6 @@ public class BattleModuleTests
         Assert.Equal(OnContactMode.Fight, choices.Single(c => c.Side == Side.Empire).Mode);
     }
 
-    // m4-battle-classic §1.3 (B3 §10, B3-17): a side a computer player controls (SetAiControl, saved and hashed) answers the alert with the AI threshold
-    // 0.9: 12 Corvettes (strength 11 x 1.336 = 14.7 once the ISD out-shoots one, against 20) leave in second 1; a human side on Fight stays (BC5: t = 379)
-    [Fact]
-    public void AiControlledSideUsesTheAiThreshold()
-    {
-        var w = new BattleWorld(new BattleParams { SubsystemRolls = false });
-        w.Fleets.SetOwner("A", Side.Alliance);
-        int rebel = w.Fleet(Side.Alliance, "B", Corvette, 12);
-        w.Fleet(Side.Empire, "B", Isd, 1);
-        string h0 = GameSave.StateHash(w.Game);
-        w.Battles.SubmitSetAiControl(Side.Alliance);
-        long s = w.Battles.SubmitSetOnContact(Side.Alliance, OnContactMode.Retreat);
-        w.Run();
-        Assert.True(w.Battles.IsAi(Side.Alliance));
-        Assert.False(w.Battles.IsAi(Side.Empire));
-        Assert.Equal("AiSide", w.Events<OrderRejected>().Single(r => r.Sequence == s).Reason);
-        Assert.Equal(1, w.Events<BattleEnded>().Single().Result.Seconds);
-        Assert.NotEqual("B", w.F(rebel).At);
-        Assert.NotEqual(h0, GameSave.StateHash(w.Game));
-        var g = GameSave.Load(GameSave.Save(w.Game));
-        Assert.True(g.State.Battle.AllianceAi);
-        Assert.Equal(GameSave.StateHash(w.Game), GameSave.StateHash(g));
-    }
-
     // m4-battle-classic §1.3: OnContact is saved and hashed
     [Fact]
     public void OnContactIsSavedAndHashed()

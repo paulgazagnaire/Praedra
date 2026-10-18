@@ -2,10 +2,13 @@ namespace Rebellion.Core.Battle;
 
 /// <summary>
 /// A side's answer to the Battle Alert: Fight (retreat threshold 0.0) or Retreat (threshold 10000.0). Both run the normal battle loop; the threshold
-/// decides when the side leaves. The AI side is fixed to Fight and uses <see cref="BattleParams.AiRetreatThreshold"/>. No Play mode before M8.
+/// decides when the side leaves. The AI side is fixed to Fight and uses the AI threshold of B6a §2 (<see cref="BattleParams.AiRetreat"/>). No Play mode before M8.
 /// rule: m4-battle-classic §1.3 (Traced, B3 §10: buttons 101 and 103 of the alert dialog).
 /// </summary>
 public enum OnContactMode { Fight = 0, Retreat = 1 }
+
+/// <summary>How an AI side's battle threshold is set. rule: B6a §7 (AiRetreatRule DEFAULT Classic).</summary>
+public enum AiRetreatRule { Classic = 0, Fixed = 1 }
 
 /// <summary>
 /// How task forces form. Original (DEFAULT, Traced B3 §2): fighter groups by class (up to 4), then up to 8 capital task forces of about √N ships from
@@ -68,7 +71,10 @@ public sealed record BattleParams
     /// DEFAULT on (Traced, B3 §12). rule: m4-retreat-damage-repair §2.
     /// </summary>
     public bool DeathStarStalemate { get; init; } = true;
-    /// <summary>The Empire side is the AI: it always fights (Simulate) and retreats below <see cref="AiRetreatThreshold"/> (Traced, B3 §10). DEFAULT false (M5 sets the sides). rule: m4-battle-classic §1.3.</summary>
+    /// <summary>
+    /// The Empire side is the AI (no human plays it): it always fights (Simulate) and its threshold is the AI's (B6a §2). Filled from the game's side
+    /// controllers (AiMatch sets both, the Godot opponent its side; <see cref="BattleModule.SetControllers"/>). DEFAULT false. rule: B6a §1, m4-battle-classic §1.3.
+    /// </summary>
     public bool EmpireIsAi { get; init; }
     /// <summary>Same for the Alliance. DEFAULT false.</summary>
     public bool AllianceIsAi { get; init; }
@@ -167,8 +173,12 @@ public sealed record BattleParams
     public double FightThreshold { get; init; } = 0.0;
     /// <summary>Threshold of a human side that answered Retreat (button 103, 0x461c4000). Traced.</summary>
     public double RetreatAlertThreshold { get; init; } = 10000.0;
-    /// <summary>Threshold of an AI side: 0.9 (0x3f666666) by default; how the AI lowers it is batch B6. DEFAULT 0.9 until B6.</summary>
-    public double AiRetreatThreshold { get; init; } = 0.9;
+    /// <summary>How an AI side's threshold is set: Classic = B6a §2 (computed at the alert from its view of the system), Fixed = <see cref="AiRetreatCap"/> (tests). DEFAULT Classic.</summary>
+    public AiRetreatRule AiRetreat { get; init; } = AiRetreatRule.Classic;
+    /// <summary>The AI's threshold cap and default, 0.9 (float 0x3f666666, seven copies 0x65c8e4..0x65ca04). [EXE-own] rule: B6a §2.</summary>
+    public double AiRetreatCap { get; init; } = 0.9;
+    /// <summary>The system where an AI side holding it with a planet squadron fights to the end (system id 0x109, B5). [EXE-own] rule: B6a §2.</summary>
+    public string CoruscantSystem { get; init; } = "Coruscant";
     /// <summary>Seconds without a new low of strength, for both sides, that make a stalemate (0x66c3e0). Traced.</summary>
     public int StalemateSeconds { get; init; } = 1200;
     /// <summary>Engineering guard (not in the original): a battle that reaches this second is treated as a stalemate. DEFAULT.</summary>

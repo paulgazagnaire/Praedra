@@ -9,13 +9,6 @@ namespace Rebellion.Core.Battle;
 /// <summary>SetOnContact: a side's standing answer to the Battle Alert. Order (step 1). rule: m4-battle-classic §1.3.</summary>
 public sealed record SetOnContactOrder(long Sequence, Side Side, OnContactMode Mode) : Order(Sequence, Side);
 
-/// <summary>
-/// SetAiControl: a computer player takes (or gives back) control of a side. Sent once by whatever drives an AI side (AiMatch, the Godot opponent,
-/// the runner). Order (step 1). The battle then gives that side the original AI's alert answer, threshold <see cref="BattleParams.AiRetreatThreshold"/>.
-/// rule: m4-battle-classic §1.3 (Traced, B3 §10: an AI side uses its own threshold); the flag is DEFAULT until B6 traces the AI's record.
-/// </summary>
-public sealed record SetAiControlOrder(long Sequence, Side Side, bool Ai) : Order(Sequence, Side);
-
 /// <summary>Reject codes of SetOnContact. rule: m4-battle-classic §1.3 (the AI side is fixed to Simulate; the codes are DEFAULT names).</summary>
 public static class BattleReject
 {
