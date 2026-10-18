@@ -17,7 +17,7 @@ public class TractorBeamTests
         Interdictor = "Interdictor Cruiser", Bulwark = "Bulwark Battlecruiser";
 
     // alert indexed by (int)Side: Empire, Alliance. The Alliance answers Retreat: its ships try to jump at second 0.
-    private static readonly OnContactMode[] AllianceRetreats = { OnContactMode.Simulate, OnContactMode.Retreat };
+    private static readonly OnContactMode[] AllianceRetreats = { OnContactMode.Fight, OnContactMode.Retreat };
 
     private static (ClassicBattleResult R, IReadOnlyList<BattleUnit> U, IReadOnlyList<BattleLogEntry> Log) Fight(BattleParams p, (string, int)[] alliance,
         (string, int)[] empire, ulong seed = 1, bool eCan = true, OnContactMode[]? alert = null, Action<IReadOnlyList<BattleUnit>>? prepare = null)

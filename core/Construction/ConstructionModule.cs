@@ -170,11 +170,14 @@ public sealed class ConstructionModule
         row.Category == ObjectCategory.CapitalShip && _fleets.ShipClasses.TryGetValue(row.Name, out var sc) ? sc.Speed(false) : Params.UnratedDeliverySpeed;
 
     /// <summary>A yard starts no new cycle under blockade or uprising (a neutral or unowned yard never works). rule: m2-construction §Suspension.</summary>
-    private bool IsSuspended(EconObject yard)
+    private bool IsSuspended(EconObject yard) => yard.System == null || IsSuspendedAt(yard.System);
+
+    /// <summary>The yards of a system are suspended: no owner, an uprising, or a blockade. Also read by repair (FastRepair). rule: m2-construction §Suspension; m4-retreat-damage-repair §5.</summary>
+    public bool IsSuspendedAt(string system)
     {
-        if (yard.System == null || _fleets.OwnerOf(yard.System) is not Side owner) return true;
-        if (IsInUprising(yard.System)) return true;
-        return UseClassicBlockadeFlag ? _fleets.IsBlockadedClassic(yard.System) : _fleets.IsEconomicBlockade(yard.System, owner);
+        if (_fleets.OwnerOf(system) is not Side owner) return true;
+        if (IsInUprising(system)) return true;
+        return UseClassicBlockadeFlag ? _fleets.IsBlockadedClassic(system) : _fleets.IsEconomicBlockade(system, owner);
     }
 
     // ================================================================== step 1: BuildOrder, StopBuild

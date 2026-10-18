@@ -4,10 +4,17 @@ using Rebellion.Core.Data;
 namespace Rebellion.Core.Repair;
 
 /// <summary>
-/// The data table <c>RepairRules</c> (file data/design/repair-rules.csv, key,value,source): where, how often and how much a ship is repaired
-/// in slot 6.8. Values come from the file, never from code. rule: m4-retreat-damage-repair §5 Strategic repair (Data values).
+/// The data table <c>RepairRules</c> (file data/design/repair-rules.csv, key,value,source): where, how often and how much a unit is repaired
+/// in slot 6.8. Values come from the file, never from code. rule: m4-retreat-damage-repair §5 Strategic repair (Data values; Traced, B3 §15).
 /// </summary>
-public sealed record RepairRules(bool RepairNeedsYard, int RepairCadenceDays, int RepairHullDivisor, int RepairHitsPerCall)
+/// <param name="RepairNeedsYard">Repair only with FastRepair (own usable shipyard). Traced: false (repair works anywhere).</param>
+/// <param name="RepairPeriodDays">Days between repair turns of a capital ship (GNPRTB 2053).</param>
+/// <param name="FastRepairPeriodDays">The same with FastRepair (GNPRTB 2052).</param>
+/// <param name="SquadronRepairPeriodDays">Days between repair turns of a squadron (GNPRTB 4609).</param>
+/// <param name="SquadronFastRepairPeriodDays">The same with FastRepair (GNPRTB 4608).</param>
+/// <param name="RepairHullDivisor">A turn takes trunc(class hull / this) off the hull damage.</param>
+public sealed record RepairRules(bool RepairNeedsYard, int RepairPeriodDays, int FastRepairPeriodDays, int SquadronRepairPeriodDays,
+    int SquadronFastRepairPeriodDays, int RepairHullDivisor)
 {
     public const string FileName = "repair-rules.csv";
 
@@ -39,6 +46,7 @@ public sealed record RepairRules(bool RepairNeedsYard, int RepairCadenceDays, in
             if (s.Equals("false", StringComparison.OrdinalIgnoreCase)) return false;
             throw new DataLoadException($"{source}: key '{k}' must be true or false, found '{s}'.");
         }
-        return new RepairRules(Bool("RepairNeedsYard"), Int("RepairCadenceDays", 1), Int("RepairHullDivisor", 1), Int("RepairHitsPerCall", 0));
+        return new RepairRules(Bool("RepairNeedsYard"), Int("RepairPeriodDays", 1), Int("FastRepairPeriodDays", 1),
+            Int("SquadronRepairPeriodDays", 1), Int("SquadronFastRepairPeriodDays", 1), Int("RepairHullDivisor", 1));
     }
 }

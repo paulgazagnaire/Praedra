@@ -33,6 +33,21 @@ public sealed class EconObject
     public int Hull { get; set; }
     /// <summary>Six damage counters 0 to 15 (shield generator, weapons, tractor, sub-light, hyperdrive, damage control); null for non-ships.</summary>
     public List<int>? Hits { get; set; }
+    /// <summary>
+    /// Squadron: craft lost in Classic battles and not yet repaired (it fights with squadron_size - this, at least 1). Saved and hashed; left out of
+    /// the saved form while 0. rule: m4-battle-classic §10; m4-retreat-damage-repair §4, §5.
+    /// </summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public int CraftLost { get; set; }
+    /// <summary>
+    /// Strategic repair timer: 0 = not running; 1 = running at the 30-day period, 2 = at the FastRepair period. Saved and hashed (left out while 0).
+    /// rule: m4-retreat-damage-repair §5.
+    /// </summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public int RepairMode { get; set; }
+    /// <summary>Hook time of the next repair turn while <see cref="RepairMode"/> is not 0. rule: m4-retreat-damage-repair §5.</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public int RepairDue { get; set; }
     // ---- mine and refinery cycle (m2-mines-refineries-pools)
     /// <summary>True once its first cycle has been started (the first-cycle roll is spent).</summary>
     public bool FirstDone { get; set; }

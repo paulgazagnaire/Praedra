@@ -31,6 +31,7 @@ public sealed class AiMatch
         Empire = new SimpleAi(host, Side.Empire, empire);
         Alliance = new SimpleAi(host, Side.Alliance, alliance);
         _eventsSeen = host.Game.Events.Count;
+        host.Battles.SetControllers(empireAi: true, allianceAi: true); // rule: B6a §1: the AI match plays both sides
     }
 
     public void Step()
