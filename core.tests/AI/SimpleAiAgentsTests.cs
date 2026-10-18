@@ -86,17 +86,17 @@ public class SimpleAiAgentsTests
             Assert.False(src.Contains(bad, StringComparison.Ordinal), $"SimpleAiAgents.cs mentions {bad}");
     }
 
-    // QA-8, B6c-15 in play (SimpleAiParams.LeaderMarks, DEFAULT on): while the Empire holds Coruscant the Emperor is kept there (Emperor home),
+    // QA-8, B6c-15 in play (SimpleAiParams.LeaderMarks, DEFAULT off since 2026-10-18, QA-12; on here): while the Empire holds Coruscant the Emperor is kept there (Emperor home),
     // so the Seat of Power stays on (m5-characters-and-force §Seat of Power); the six story characters are never commanders and the Emperor
     // is never a diplomat (B6c-14). Fogged Medium mirror, seeds 1 to 8, 1500 days: on 1500 of 1500 days on every seed with the
     // switch; 15 to 103 days without it, and the Emperor held by the Alliance on seeds 3, 4 and 6 (56, 203 and 84 days).
     [Fact]
     public void LeaderMarks_EmperorHome_TheSeatOfPowerStaysOn()
     {
-        Assert.True(new SimpleAiParams().LeaderMarks);
+        Assert.False(new SimpleAiParams().LeaderMarks);
         var games = MultiSeed.Play(new[] { 1, 2, 3, 4 }, seed =>
         {
-            var (m, h) = Match(seed, Fog);
+            var (m, h) = Match(seed, Fog with { LeaderMarks = true });
             int on = 0, days = 0;
             while (h.Game.Day < 700 && h.Victory.Winner == null) { m.Step(); days++; if (h.Characters.SeatOfPowerOn) on++; }
             // B6c-14 in play: the six story characters are never made commanders, the Emperor is never a diplomat

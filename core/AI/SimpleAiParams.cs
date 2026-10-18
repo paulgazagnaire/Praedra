@@ -233,10 +233,11 @@ public sealed record SimpleAiParams
     /// commanders, the Emperor is never a diplomat, and the Empire keeps the Emperor at the Seat of Power while it holds it (Emperor home;
     /// SimpleAiAgents.EmperorHome). The leaders' ban from Incite, Rescue, Sabotage and Abduction is already this AI's rule for every major
     /// character (NoKeyKinds). QA-8 (2026-10-18): without it the Emperor stood on Coruscant 1-7% of days, so the Seat of Power was off ~95%
-    /// of the game, and he was captured on missions. DEFAULT true (B6c §7 Work 7; the 1998 new-game choice that turns the marks off is not
-    /// identified).
+    /// of the game, and he was captured on missions. DEFAULT false (2026-10-18, the Dev lead's audit under Paul's 07:43 rule: 1998 AI behaviour
+    /// belongs to the Classic AI yardstick, not the default AI; QA-12: on, Medium mirror Empire wins fell from 13/16 to 5/16 and 11 of 16 games
+    /// had no winner). The Classic AI mode may turn it on.
     /// </summary>
-    public bool LeaderMarks { get; init; } = true;
+    public bool LeaderMarks { get; init; }
     /// <summary>Mon Mothma's character id, one of the B6c §7 leaders: MJCHARSD 576 (data/design/roster.csv).</summary>
     public int MonMothmaId { get; init; } = 576;
     /// <summary>Regiments assumed on the enemy's game-winning system (Coruscant for the Alliance, a known HQ) when its ground was never seen. DEFAULT.</summary>
