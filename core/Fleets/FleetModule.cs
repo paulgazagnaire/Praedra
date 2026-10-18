@@ -309,6 +309,64 @@ public sealed class FleetModule
         return free;
     }
 
+    /// <summary>
+    /// The system <paramref name="side"/> holds that is fewest lane steps from <paramref name="from"/> (breadth-first over every lane, through any
+    /// system; ties by system index, which is name order); the start itself never counts. Null if the side holds no reachable system.
+    /// rule: m5-death-star §2 effect 3 (nearest system its side holds, fewest lane steps, ties by system id); used also by the capture (B5a).
+    /// </summary>
+    public string? NearestHeldSystem(string from, Side side)
+    {
+        var g = Galaxy;
+        if (!g.TryFindSystem(from, out int start)) return null;
+        var seen = new bool[g.Systems.Count];
+        var level = new List<int> { start };
+        seen[start] = true;
+        while (level.Count > 0)
+        {
+            var held = level.Where(i => i != start && State.SystemOwners.TryGetValue(g.Systems[i].Name, out var o) && o == side).ToList();
+            if (held.Count > 0) return g.Systems[held.Min()].Name;
+            var next = new List<int>();
+            foreach (var i in level)
+                foreach (var nb in g.NearOf(i))
+                    if (!seen[nb]) { seen[nb] = true; next.Add(nb); }
+            level = next;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// For the capture: the squadrons of every side but the new holder based at a world that just changed hands (completed, on it, not aboard, not
+    /// flying) leave for the nearest system their side holds (Autorouting, B5a section 5: where they go was not found; DEFAULT the characters' rule).
+    /// One squadron-only fleet per side, flying as a MoveSquadrons order would (same speed, path and events). Unfinished squadrons and squadrons in
+    /// transit stay; with no held system, no path or speed 0 they stay. rule: m2-control-and-capture §What happens at the moment of capture (B5a, 2026-10-18).
+    /// </summary>
+    public void SendBasedSquadronsAway(StepContext ctx, string system, Side? holder)
+    {
+        foreach (var side in new[] { Side.Alliance, Side.Empire })
+        {
+            if (side == holder) continue;
+            var squads = BasedSquadrons(system, side).OrderBy(o => o.Id).ToList();
+            if (squads.Count == 0) continue;
+            var dest = NearestHeldSystem(system, side);
+            if (dest == null) continue;
+            int speed = TravelFormula.FleetSpeed(Array.Empty<int>(), squads.Select(SpeedOfShip));
+            var path = _pathfinder.Find(system, dest, speed);
+            if (!path.Ok) continue;
+            int day = ctx.Day;
+            foreach (var q in squads) q.System = null;
+            int fid = ObjectRegistry.NextId(E);
+            var f = new Fleet
+            {
+                Id = fid, Name = FleetName(fid), Side = side, Squadrons = squads.Select(q => q.Id).ToList(), At = system,
+                Transit = new FleetTransit { Path = path.Names(Galaxy).ToList(), HopTicks = path.HopTicks.ToList(), HopIndex = 0, DueDay = day + path.HopTicks[0] },
+            };
+            State.Fleets[fid] = f;
+            var members = new ValueList<int>(f.Squadrons.ToList());
+            string from = system;
+            ctx.Emit((i, _) => new FleetCreated(i, day, fid, from, members, FleetCreateCause.Squadrons));
+        }
+    }
+
     /// <summary>Completed squadrons of a side based at a system (on it, not aboard, not flying), by id. rule: m3-fleets §Fighters based at a system.</summary>
     public IEnumerable<EconObject> BasedSquadrons(string system, Side side) =>
         E.Objects.Values.Where(o => o.Category == ObjectCategory.Fighter && o.Completed && o.Side == side && o.System == system && o.AboardShip == 0);

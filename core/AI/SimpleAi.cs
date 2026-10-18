@@ -508,9 +508,7 @@ public sealed partial class SimpleAi
         var pending = PendingRegiments();
         foreach (var s in HeldSystems())
         {
-            int need = _h.Support.RequiredGarrison(s);
-            // the system whose loss ends the game keeps a standing garrison whatever the support says
-            if (s == CriticalSystem()) need = Math.Max(need, _p.CriticalGarrison);
+            int need = GarrisonTarget(s);
             if (need == 0) continue;
             int deficit = need - _h.Support.RegimentCount(s) - pending.GetValueOrDefault(s);
             if (deficit <= 0) continue;
@@ -539,15 +537,38 @@ public sealed partial class SimpleAi
     }
 
     /// <summary>Landed regiments of the side on a system above what its garrison needs.</summary>
-    private List<int> SpareRegimentIds(string system)
+    internal List<int> SpareRegimentIds(string system)
     {
         var ids = _h.Economy.Objects.Where(o => o.Category == ObjectCategory.Regiment && o.Completed && o.Side == _side && o.System == system && o.AboardShip == 0)
             .Select(o => o.Id).ToList();
-        int keep = Held(system) ? Math.Max(_h.Support.RequiredGarrison(system), system == CriticalSystem() ? _p.CriticalGarrison : 0) : 0;
-        // Never the last regiment off a held world below 60 support: under derived control it is lost the moment the regiment leaves (B5a section 9;
-        // the Empire's halved need in a Death Star sector can be 0 at support 50-59). Dev lead 2026-10-17.
-        if (Held(system) && _h.Economy.SupportOf(system, _side) < Rebellion.Core.Control.ControlModule.JoinSupport) keep = Math.Max(keep, 1);
+        int keep = Held(system) ? GarrisonTarget(system) : 0;
         return ids.Count > keep ? ids.Skip(keep).ToList() : new List<int>();
+    }
+
+    // The 1998 AI's garrison wish (B6b §3, EXE-own 0x434e4d..0x43507c): below 70 support min((79 - s) / 10, 6), doubled in an uprising (after the cap);
+    // the special world's base is 9 (the claimed-world base 3 and the base drift are the Classic AI's, not built here).
+    private const int WishBelowSupport = 70, WishTop = 79, WishStep = 10, WishCap = 6, SpecialBase = 9, UprisingFactor = 2;
+
+    /// <summary>
+    /// Regiments the AI wants standing on a held world: built toward (PlanGarrison) and never moved off (SpareRegimentIds). With
+    /// <see cref="SimpleAiParams.OriginalGarrisonFloor"/> (DEFAULT): max(the rule's need, the 1998 wish, 9 on the special world). Off: the rule's need,
+    /// <see cref="SimpleAiParams.CriticalGarrison"/> on the critical world, and never the last regiment below 60 support (the B5a guard, Dev lead
+    /// 2026-10-17). rule: ai tuning, B6b §3 and §11 (Dev lead 2026-10-18).
+    /// </summary>
+    internal int GarrisonTarget(string system)
+    {
+        int need = _h.Support.RequiredGarrison(system);
+        int s = _h.Economy.SupportOf(system, _side); // its own world: the AI sees it
+        if (!_p.OriginalGarrisonFloor)
+        {
+            if (system == CriticalSystem()) need = Math.Max(need, _p.CriticalGarrison);
+            if (s < Rebellion.Core.Control.ControlModule.JoinSupport) need = Math.Max(need, 1);
+            return need;
+        }
+        int wish = s < WishBelowSupport ? Math.Min((WishTop - s) / WishStep, WishCap) : 0;
+        if (_h.Support.IsUprising(system)) wish *= UprisingFactor;
+        int @base = system == CriticalSystem() ? SpecialBase : 0;
+        return Math.Max(need, Math.Max(wish, @base));
     }
     private int SpareRegimentsAt(string system) => SpareRegimentIds(system).Count;
 

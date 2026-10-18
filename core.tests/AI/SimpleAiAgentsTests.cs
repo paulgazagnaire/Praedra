@@ -35,7 +35,7 @@ public class SimpleAiAgentsTests
         Assert.True(new SimpleAiParams().UseCharactersAndMissions);
         var (m, h) = Match(1, new SimpleAiParams { UseFog = true, UseCharactersAndMissions = false,
             RunnerRetreats = 0, RetreatCountsAsLoss = false, AvoidBlockedPaths = false, WinRushDefenders = -1, ShelledLandingNeed = false,
-            FogAvoidEnemyStops = false, SplitHomeSurplus = false, DetourToHeldStop = false, InvasionBatchesOnly = false, ExplorerScouts = 0, FogGroundForgetDays = 0 });
+            FogAvoidEnemyStops = false, SplitHomeSurplus = false, DetourToHeldStop = false, InvasionBatchesOnly = false, ExplorerScouts = 0, FogGroundForgetDays = 0, OriginalGarrisonFloor = false });
         m.RunTo(1000);
         Assert.DoesNotContain(m.Sent.Keys, k => k.Contains("Mission", StringComparison.Ordinal) || k.Contains("Character", StringComparison.Ordinal) || k.Contains("General", StringComparison.Ordinal));
         // The pin moved when the Death Star added saved state (m5-death-star: GameState.DeathStar, SystemKnowledge.Destroyed). The game plays identically:
@@ -55,7 +55,9 @@ public class SimpleAiAgentsTests
         // B5a re-pin 2026-10-17: derived control (ControlRule.Derived, the DEFAULT; the old AI cannot switch it off) recomputes every holder after
         // setup, lets worlds go neutral or join a side by support, hands a world over when its last regiment leaves, runs the sector steps, frees
         // and sends away characters at each flip, and adds saved state (ControlState.Contested, EverHeld): the game takes another course from
-        // setup. Seed 1, 1000 days, as before (no seed change); re-measured on top of B3.
+        // setup. Seed 1, 1000 days, as before (no seed change); re-measured on top of B3. The B6b garrison floor (OriginalGarrisonFloor) is off above
+        // with the other AI switches; its off path keeps the B5a last-regiment guard (the hash is unchanged by that switch and by the squadrons
+        // leaving a flipped world, checked 2026-10-18).
         Assert.Equal("3e315d0c6d17e7cb024b763f810d7963f23f4611e18041a8ca83fefa5dcc62d3", h.StateHash());
     }
 

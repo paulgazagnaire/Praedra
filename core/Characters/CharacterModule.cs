@@ -585,25 +585,7 @@ public sealed class CharacterModule
     /// system; ties by system index, which is name order); the start itself never counts. Null if the side holds no reachable system.
     /// rule: m5-death-star §2 effect 3 (nearest system its side holds, fewest lane steps, ties by system id).
     /// </summary>
-    private string? NearestHeldSystem(string from, Side side)
-    {
-        var g = _fleets.Galaxy;
-        if (!g.TryFindSystem(from, out int start)) return null;
-        var seen = new bool[g.Systems.Count];
-        var level = new List<int> { start };
-        seen[start] = true;
-        while (level.Count > 0)
-        {
-            var held = level.Where(i => i != start && State.SystemOwners.TryGetValue(g.Systems[i].Name, out var o) && o == side).ToList();
-            if (held.Count > 0) return g.Systems[held.Min()].Name;
-            var next = new List<int>();
-            foreach (var i in level)
-                foreach (var nb in g.NearOf(i))
-                    if (!seen[nb]) { seen[nb] = true; next.Add(nb); }
-            level = next;
-        }
-        return null;
-    }
+    private string? NearestHeldSystem(string from, Side side) => _fleets.NearestHeldSystem(from, side);
 
     /// <summary>
     /// Uprising incident effects (m2-uprisings-and-garrison, slot 6.3): code 3 = Injure one of the holder's Free characters located at the system

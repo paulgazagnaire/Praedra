@@ -307,8 +307,8 @@ public sealed class ControlModule
 
         // 2.1 Finished regiments standing on the planet (0x4f8680) and special forces there (0x503d90) that cannot serve the new holder are destroyed
         // (reason 3). Their classes serve one side only, so every one not of the new holder dies; a special force away on a mission is skipped. Under
-        // derived control an old-side regiment is rarely still there. Squadrons based there get Autorouting (where they go was not found: DEFAULT,
-        // they stay). Fleets in orbit are not touched.
+        // derived control an old-side regiment is rarely still there. Squadrons based there get Autorouting (0x503510; where they go was not found:
+        // DEFAULT, the old side's leave for its nearest held system, as the characters do; Dev lead 2026-10-18). Fleets in orbit are not touched.
         var onMission = SpecialForcesOnMission();
         foreach (var o in _eco.Objects.Where(x => x.System == system && x.AboardShip == 0 && x.Completed && x.Side != holder
                      && (x.Category == ObjectCategory.Regiment || (x.Category == ObjectCategory.SpecialForce && !onMission.Contains(x.Id)))).ToList()) // id order
@@ -317,6 +317,8 @@ public sealed class ControlModule
             _eco.RemoveObject(id);
             ctx.Emit((i, _) => new UnitLostAtCapture(i, day, id, cls, system, owner));
         }
+
+        _fleets.SendBasedSquadronsAway(ctx, system, holder);
 
         // 2.1 Characters (0x4ef260): prisoners freed, characters not of the new holder leave; never captured, never harmed.
         CharactersAtCapture?.Invoke(ctx, system, old, holder);

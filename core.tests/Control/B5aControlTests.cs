@@ -1,9 +1,11 @@
+using Rebellion.Core.AI;
 using Rebellion.Core.Characters;
 using Rebellion.Core.Clock;
 using Rebellion.Core.Construction;
 using Rebellion.Core.Control;
 using Rebellion.Core.DeathStar;
 using Rebellion.Core.Economy;
+using Rebellion.Core.Fleets;
 using Rebellion.Core.Fog;
 using Rebellion.Core.Missions;
 using Rebellion.Core.Setup;
@@ -492,5 +494,79 @@ public class B5aControlTests
         Assert.Equal(22, w.A(rimLow));
         Assert.Equal(50, w.A(never));
         Assert.Empty(w.Events<SectorStruck>());
+    }
+
+    // B5c-11 (corrected 2026-10-18): in the Death Star's own sector the Classic fallout is halved by the damping (an Empire loss raises the Alliance
+    // share): a core world -5 instead of -10, a rim world at Empire support 80 goes to 79 instead of 78; full elsewhere.
+    [Fact]
+    public void B5c11_DeathStarFalloutClassic_HalvedInTheDeathStarSector()
+    {
+        var w = new DerivedWorld(settings: DerivedWorld.Settings(ds: new DeathStarParams { Fallout = DeathStarFallout.Classic }));
+        const string rimInSector = "Hoth", rimElsewhere = "Bespin", coreElsewhere = "Coruscant";
+        w.Hold(D, Side.Empire, 10); w.Regiments(D, Side.Empire, 1);           // core, in the flagged sector
+        w.Hold(coreElsewhere, Side.Empire, 10); w.Regiments(coreElsewhere, Side.Empire, 1);
+        w.Hold(rimInSector, Side.Empire, 20); w.Hold(rimElsewhere, Side.Empire, 20);
+        w.InSlot("5.1", ctx =>
+        {
+            w.H.Support.SetDeathStarSystem(D, true); w.H.Support.SetDeathStarSystem(rimInSector, true); // the Death Star's sector (flags per system)
+            w.H.DeathStar.GetType().GetMethod("SectorReaction", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                .Invoke(w.H.DeathStar, new object[] { ctx, ctx.Day + 1, DerivedWorld.Vagran });
+        });
+        w.Step();
+        Assert.Equal((15, 20), (w.A(D), w.A(coreElsewhere)));
+        Assert.Equal((21, 22), (w.A(rimInSector), w.A(rimElsewhere)));
+    }
+
+    // B5a section 5 (Dev lead 2026-10-18): the old side's squadrons based at a world that changes hands leave for the nearest system their side holds
+    // (one squadron-only fleet, flying as MoveSquadrons would); an unfinished squadron stays.
+    [Fact]
+    public void B5a_OldSideSquadronsLeave_UnfinishedStay()
+    {
+        var w = new DerivedWorld();
+        w.Hold(C, Side.Alliance, 50); w.Regiments(C, Side.Alliance, 1);
+        w.Hold(T, Side.Alliance, 80);
+        int based = w.H.Economy.AddObject(Side.Alliance, "X-wing", C);
+        int unfinished = w.H.Economy.AddObject(Side.Alliance, "X-wing", C, completed: false);
+        w.InSlot("5.2", ctx => w.Ctl.DebugApplyTroops(ctx, C, Side.Empire, DerivedWorld.ImpArmy, 6));
+        w.Step();
+        Assert.Equal(Side.Empire, w.Ctl.HolderOf(C));
+        var created = Assert.Single(w.Events<FleetCreated>(), e => e.Cause == FleetCreateCause.Squadrons);
+        var fleet = w.Game.State.Fleets[created.Fleet];
+        Assert.Equal((Side.Alliance, C, T), (fleet.Side, created.System, fleet.Transit!.Path[^1]));
+        Assert.Equal(new[] { based }, fleet.Squadrons.ToArray());
+        Assert.Null(w.H.Economy.Find(based)!.System);
+        Assert.Equal(C, w.H.Economy.Find(unfinished)!.System);
+    }
+
+    // B6b §3 (Dev lead 2026-10-18): the AI's garrison floor. Wish below 70 support: min((79 - s) / 10, 6), doubled in an uprising; 9 on the special
+    // world; the target is the largest of the wish, the base and the rule's need. B6b-3, B6b-5 and B6b-7.
+    [Fact]
+    public void B6b_AiGarrisonFloor_WishBaseAndNoMoveBelowIt()
+    {
+        var w = new DerivedWorld();
+        var ai = new SimpleAi(w.H, Side.Alliance);
+        int Target(string sys, int support, bool uprising = false)
+        {
+            w.Hold(sys, Side.Alliance, support);
+            if (uprising) w.H.Support.StartUprisingNow(new StepContext(w.Game, w.Game.Day), sys);
+            return ai.GarrisonTarget(sys);
+        }
+        Assert.Equal(0, Target(C, 75));
+        Assert.Equal(1, Target(D, 65));
+        Assert.Equal(2, Target(T, 55));
+        Assert.Equal(4, Target(V, 30));
+        Assert.Equal(8, Target(DerivedWorld.Selonia, 30, uprising: true));
+        Assert.Equal(12, Target("Corfai", 5, uprising: true)); // B6b-4: min(7, 6) x 2
+        var hq = w.H.HqSystem ?? "Yavin";
+        if (w.H.HqSystem == null) w.H.Game.State.Scenario.HqSystem = hq;
+        Assert.Equal(9, Target(hq, 90));                       // B6b-5: the special world
+        // B6b-7: a world at support 55 with 2 regiments and target 2: none is spare; a third is
+        w.Regiments(T, Side.Alliance, 2);
+        Assert.Empty(ai.SpareRegimentIds(T));
+        w.Regiments(T, Side.Alliance, 1);
+        Assert.Single(ai.SpareRegimentIds(T));
+        // off: the rule's need and the B5a guard (1 below 60)
+        var old = new SimpleAi(w.H, Side.Alliance, new SimpleAiParams { OriginalGarrisonFloor = false });
+        Assert.Equal((0, 1), (old.GarrisonTarget(D), old.GarrisonTarget(T)));
     }
 }
