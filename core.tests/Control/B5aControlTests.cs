@@ -382,8 +382,11 @@ public class B5aControlTests
         Assert.Equal(CharacterStatus.Free, piett.Status);
         Assert.Contains(w.Events<CharacterFreed>(), e => e.Character == DerivedWorld.Piett);
         Assert.Equal(C, w.H.Characters.LocationOf(piett)); // of the new holder's side: stays
-        w.Step();
-        Assert.Equal(T, lando.System); // arrived the next day at the nearest Alliance world
+        // (B5a, 2026-10-18, Dev lead) the leaving character now uses Autoroute (QA-9, #69): step 3, the nearest Alliance world, at character
+        // travel speed, so he arrives when his trip ends instead of "the next day".
+        Assert.Equal(T, lando.Transit!.Path[^1]);
+        for (int d = 0; d < 400 && lando.Transit != null; d++) w.Step();
+        Assert.Equal(T, lando.System);
     }
 
     // B5a-12 (section 6, as reworded after the RE lead's correction 2026-10-17: the limiter resets per tick, not per day). Two Alliance worlds of
