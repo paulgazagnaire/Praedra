@@ -294,7 +294,8 @@ public class B5aControlTests
             w.Step();
             Assert.Equal(neutral ? null : Side.Empire, w.Ctl.HolderOf(C));
             var d = Assert.Single(w.Events<HqDestroyed>());
-            Assert.Equal((FogModule.CauseCaptured, C), (d.Cause, d.System));
+            // QA-11 (2026-10-18): the cause says how the world was lost; troops landing is a capture, support alone is LostSupport
+            Assert.Equal((neutral ? FogModule.CauseLostSupport : FogModule.CauseCaptured, C), (d.Cause, d.System));
             Assert.Equal(HqStatus.Destroyed, w.Game.State.Scenario.Hq.Status);
         }
     }
@@ -560,6 +561,11 @@ public class B5aControlTests
         var hq = w.H.HqSystem ?? "Yavin";
         if (w.H.HqSystem == null) w.H.Game.State.Scenario.HqSystem = hq;
         Assert.Equal(9, Target(hq, 90));                       // B6b-5: the special world
+        // QA-10: while the HQ is on the way, the special base is at its destination (regiments are ordered there before it arrives)
+        var state = w.Game.State.Scenario.Hq;
+        state.Status = HqStatus.InTransit; state.From = hq; state.System = null; state.Path = new List<string> { hq, C };
+        Assert.Equal(9, Target(C, 90));
+        state.Place(hq);
         // B6b-7: a world at support 55 with 2 regiments and target 2: none is spare; a third is
         w.Regiments(T, Side.Alliance, 2);
         Assert.Empty(ai.SpareRegimentIds(T));

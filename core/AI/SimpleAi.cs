@@ -555,6 +555,18 @@ public sealed partial class SimpleAi
     /// <see cref="SimpleAiParams.CriticalGarrison"/> on the critical world, and never the last regiment below 60 support (the B5a guard, Dev lead
     /// 2026-10-17). rule: ai tuning, B6b §3 and §11 (Dev lead 2026-10-18).
     /// </summary>
+    /// <summary>
+    /// The world the 1998 AI's special base (9) applies to: Coruscant for the Empire; for the Alliance the Rebel HQ's world, or while the HQ is on
+    /// the way, its destination (its own HQ: the side knows where it goes), so regiments are ordered there when the move starts and the HQ does
+    /// not arrive on an unguarded world (QA-10, Dev lead 2026-10-18). rule: ai tuning, B6b §3 ("special" system).
+    /// </summary>
+    private string? SpecialSystem()
+    {
+        if (CriticalSystem() is { } c) return c;
+        var hq = _h.Game.State.Scenario.Hq;
+        return _side == Side.Alliance && hq.Status == Rebellion.Core.Fog.HqStatus.InTransit && hq.Path.Count > 0 ? hq.Path[^1] : null;
+    }
+
     internal int GarrisonTarget(string system)
     {
         int need = _h.Support.RequiredGarrison(system);
@@ -567,7 +579,7 @@ public sealed partial class SimpleAi
         }
         int wish = s < WishBelowSupport ? Math.Min((WishTop - s) / WishStep, WishCap) : 0;
         if (_h.Support.IsUprising(system)) wish *= UprisingFactor;
-        int @base = system == CriticalSystem() ? SpecialBase : 0;
+        int @base = system == SpecialSystem() ? SpecialBase : 0;
         return Math.Max(need, Math.Max(wish, @base));
     }
     private int SpareRegimentsAt(string system) => SpareRegimentIds(system).Count;

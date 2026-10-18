@@ -35,7 +35,7 @@ public class SimpleAiAgentsTests
         Assert.True(new SimpleAiParams().UseCharactersAndMissions);
         var (m, h) = Match(1, new SimpleAiParams { UseFog = true, UseCharactersAndMissions = false,
             RunnerRetreats = 0, RetreatCountsAsLoss = false, AvoidBlockedPaths = false, WinRushDefenders = -1, ShelledLandingNeed = false,
-            FogAvoidEnemyStops = false, SplitHomeSurplus = false, DetourToHeldStop = false, InvasionBatchesOnly = false, ExplorerScouts = 0, FogGroundForgetDays = 0, OriginalGarrisonFloor = false });
+            FogAvoidEnemyStops = false, SplitHomeSurplus = false, DetourToHeldStop = false, InvasionBatchesOnly = false, ExplorerScouts = 0, FogGroundForgetDays = 0, LeaderMarks = false, OriginalGarrisonFloor = false });
         m.RunTo(1000);
         Assert.DoesNotContain(m.Sent.Keys, k => k.Contains("Mission", StringComparison.Ordinal) || k.Contains("Character", StringComparison.Ordinal) || k.Contains("General", StringComparison.Ordinal));
         // The pin moved when the Death Star added saved state (m5-death-star: GameState.DeathStar, SystemKnowledge.Destroyed). The game plays identically:
@@ -52,13 +52,15 @@ public class SimpleAiAgentsTests
         // state). The game plays identically: with the naming step removed the hash is exactly B2e's 5e54e22f...e007 (checked when re-pinned).
         // B3 re-pin 2026-10-18: the Classic battle now follows the traced original (m4-battle-classic, batch B3) and AI sides use the AI threshold
         // of B6a §2, which changes every battle and so the game; the old AI is still the one played (all switches above unchanged).
+        // Reveal re-pin 2026-10-18 (AI trainer, Dev lead's ask): FogParams.SetupRevealsFacilities is now DEFAULT on (1998), so the day-0
+        // pictures hold the core systems' facilities. With the reveal off the hash is exactly B3's 12fcdbf1...334b (checked when re-pinned).
         // B5a re-pin 2026-10-17: derived control (ControlRule.Derived, the DEFAULT; the old AI cannot switch it off) recomputes every holder after
         // setup, lets worlds go neutral or join a side by support, hands a world over when its last regiment leaves, runs the sector steps, frees
         // and sends away characters at each flip, and adds saved state (ControlState.Contested, EverHeld): the game takes another course from
         // setup. Seed 1, 1000 days, as before (no seed change); re-measured on top of B3. The B6b garrison floor (OriginalGarrisonFloor) is off above
         // with the other AI switches; its off path keeps the B5a last-regiment guard (the hash is unchanged by that switch and by the squadrons
-        // leaving a flipped world, checked 2026-10-18).
-        Assert.Equal("3e315d0c6d17e7cb024b763f810d7963f23f4611e18041a8ca83fefa5dcc62d3", h.StateHash());
+        // leaving a flipped world, checked 2026-10-18). Re-measured 2026-10-18 after merging main c160ff8 (#68, reveal on): 2fee2265...47eb.
+        Assert.Equal("2fee2265c9bc2a751f224af226d1b39bf20ff919aca884856b4be7a066e547eb", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"
@@ -71,6 +73,37 @@ public class SimpleAiAgentsTests
         foreach (var bad in new[] { "HqSystem", "Game.Events", "SystemOwners", "TruthView", "Truth(", "RegimentsOnSystem", "Fleets.FleetsAt(", ".Hq.", "GameRng", "Rng.",
                                      "Missions.Defenders", "Missions.Missions", "SupportOf(", "IsUprising(", "Fog.Picture(" })
             Assert.False(src.Contains(bad, StringComparison.Ordinal), $"SimpleAiAgents.cs mentions {bad}");
+    }
+
+    // QA-8, B6c-15 in play (SimpleAiParams.LeaderMarks, DEFAULT on): while the Empire holds Coruscant the Emperor is kept there (Emperor home),
+    // so the Seat of Power stays on (m5-characters-and-force §Seat of Power); the six story characters are never commanders and the Emperor
+    // is never a diplomat (B6c-14). Fogged Medium mirror, seeds 1 to 8, 1500 days: on 1500 of 1500 days on every seed with the
+    // switch; 15 to 103 days without it, and the Emperor held by the Alliance on seeds 3, 4 and 6 (56, 203 and 84 days).
+    [Fact]
+    public void LeaderMarks_EmperorHome_TheSeatOfPowerStaysOn()
+    {
+        Assert.True(new SimpleAiParams().LeaderMarks);
+        var games = MultiSeed.Play(new[] { 1, 2, 3, 4 }, seed =>
+        {
+            var (m, h) = Match(seed, Fog);
+            int on = 0, days = 0;
+            while (h.Game.Day < 700 && h.Victory.Winner == null) { m.Step(); days++; if (h.Characters.SeatOfPowerOn) on++; }
+            // B6c-14 in play: the six story characters are never made commanders, the Emperor is never a diplomat
+            var cp = h.Characters.Params;
+            var story = new HashSet<int> { cp.Luke, cp.Leia, cp.Vader, cp.Emperor, new SimpleAiParams().MonMothmaId, h.Missions.Data.Numbers.HanCharacterId };
+            var ev = h.Game.Events;
+            int commands = ev.OfType<CharacterAttached>().Count(e => e.Day > 0 && e.Post != CharacterPost.None && story.Contains(e.Character))
+                         + ev.OfType<SystemGeneralAssigned>().Count(e => story.Contains(e.Character));
+            int emperorDiplomacy = ev.OfType<MissionStarted>().Count(e => e.MissionKind == MissionKind.Diplomacy && e.Characters.Items.Contains(cp.Emperor));
+            return (Seed: seed, On: on, Days: days, Commands: commands, EmperorDiplomacy: emperorDiplomacy);
+        });
+        foreach (var g in games)
+        {
+            _out.WriteLine($"seed {g.Seed}: Seat of Power on {g.On} of {g.Days} days; story commanders {g.Commands}; Emperor diplomacy {g.EmperorDiplomacy}");
+            Assert.True(g.On * 20 >= g.Days * 19, $"seed {g.Seed}: Seat of Power on only {g.On} of {g.Days} days");
+            Assert.Equal(0, g.Commands);
+            Assert.Equal(0, g.EmperorDiplomacy);
+        }
     }
 
     // ai/07 §7 (Empire: belief-map search with spies), m5-missions (Espionage writes the ground and HqHere), m5-fog-and-hq §N5. Against an

@@ -225,6 +225,18 @@ public sealed record SimpleAiParams
     /// regiments it saw there around day 1250 (9 with the margin, so 18 regiments asked aboard). 0 = never forget (the AI of before).
     /// </summary>
     public int FogGroundForgetDays { get; init; } = 365;
+
+    /// <summary>
+    /// The 1998 AI's leader marks (B6c §7): the six story characters (Luke, Mon Mothma, the Emperor, Vader, Leia, Han) are never fleet or army
+    /// commanders, the Emperor is never a diplomat, and the Empire keeps the Emperor at the Seat of Power while it holds it (Emperor home;
+    /// SimpleAiAgents.EmperorHome). The leaders' ban from Incite, Rescue, Sabotage and Abduction is already this AI's rule for every major
+    /// character (NoKeyKinds). QA-8 (2026-10-18): without it the Emperor stood on Coruscant 1-7% of days, so the Seat of Power was off ~95%
+    /// of the game, and he was captured on missions. DEFAULT true (B6c §7 Work 7; the 1998 new-game choice that turns the marks off is not
+    /// identified).
+    /// </summary>
+    public bool LeaderMarks { get; init; } = true;
+    /// <summary>Mon Mothma's character id, one of the B6c §7 leaders: MJCHARSD 576 (data/design/roster.csv).</summary>
+    public int MonMothmaId { get; init; } = 576;
     /// <summary>Regiments assumed on the enemy's game-winning system (Coruscant for the Alliance, a known HQ) when its ground was never seen. DEFAULT.</summary>
     public int FogUnknownWinDefenders { get; init; } = 8;
     /// <summary>Bombardments of the game-winning system in 30 days at most (with fog the AI cannot see the shelling work). DEFAULT.</summary>

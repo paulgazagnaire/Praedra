@@ -16,7 +16,7 @@ public class FogTests
     [Fact]
     public void FW1_Day0Pictures()
     {
-        // B4 2026-10-18: with SetupRevealsFacilities on (1998); DEFAULT off until the AI trainer adapts the fogged AI (Dev lead 2026-10-18).
+        // B4 2026-10-18: with SetupRevealsFacilities on (1998; DEFAULT on since 2026-10-18, explicit here).
         var w = new FogWorld(new GameSettings { Fog = new FogParams { SetupRevealsFacilities = true } });
         Assert.Equal(KnowledgeLevel.Charted, w.Fog.Level(Side.Alliance, C0));
         var c0 = w.Pic(Side.Alliance, C0)!;
@@ -26,7 +26,7 @@ public class FogTests
         // B4 §11); before B4 this asserted that C was not written.
         Assert.Equal(0, c0.Facilities!.Stamp);
         Assert.Null(c0.Ground); Assert.Null(c0.Fleets);
-        Assert.Null(new FogWorld().Pic(Side.Alliance, C0)!.Facilities); // switch off (DEFAULT): no C, as before B4
+        Assert.Null(new FogWorld(new GameSettings { Fog = new FogParams { SetupRevealsFacilities = false } }).Pic(Side.Alliance, C0)!.Facilities); // switch off: no C, as before B4
         Assert.Null(w.Know(Side.Alliance, C0)!.LastLookDay);
         Assert.Equal(KnowledgeLevel.Unknown, w.Fog.Level(Side.Alliance, R1));
         Assert.Null(w.Pic(Side.Alliance, R1)); // the picture exposes nothing (owner not available)
