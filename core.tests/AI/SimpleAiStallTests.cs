@@ -15,7 +15,7 @@ public class SimpleAiStallTests
     private static int Landings(bool fix, int seed, int days)
     {
         var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory });
-        var p = new SimpleAiParams { UseFog = true, ShelledLandingNeed = fix, ExplorerScouts = 0, FogGroundForgetDays = 0 };
+        var p = new SimpleAiParams { UseFog = true, ShelledLandingNeed = fix, ExplorerScouts = 0, FogGroundForgetDays = 0, SpecialForceAgents = false };
         var m = new AiMatch(h, p, p);
         m.RunTo(days);
         return m.Sent.GetValueOrDefault("Empire Assault");
@@ -33,7 +33,9 @@ public class SimpleAiStallTests
     // re-pinned six times (seeds 3, 5, 8; limits 1100 to 1900) because every new draw in the game generator sends one game another way.
     // The win was never the fix's to give: with the fix the fogged Empire wins by day 1900 on 4 of 8 seeds before B2e (2 without it), and on
     // 2 of 8 on B2e (3 without it), where the Alliance takes Coruscant on 5 of 8 with the fix (0 without it).
-    // ExplorerScouts and FogGroundForgetDays are off above so the games measure this one switch.
+    // ExplorerScouts, FogGroundForgetDays and SpecialForceAgents are off above so the games measure this one switch. With SpecialForceAgents
+    // on (QA-6, 2026-10-18) both arms land more and the gap narrows: 10/6, 12/11, 11/6, 5/3, 10/7, 11/10, 11/9, 15/6 (more on 8 of 8; 85
+    // against 58, 1.47 times).
     [Fact]
     public void FoggedEmpireLandsAfterShelling_OnMostSeeds()
     {
