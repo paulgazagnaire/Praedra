@@ -671,6 +671,10 @@ public sealed partial class GameSession
                     : c.Captor == Player ? $"You captured {CharName(c.Character)} of the {NameOf(c.Side)}{At(c.System)}."
                     : $"{CharName(c.Character)} was captured{At(c.System)}.", c.System, Mine(c.Side) ? MsgKind.Bad : MsgKind.Good);
                 break;
+            case PrisonerLanded c when Mine(c.Side) || c.Captor == Player:
+                yield return new Message(d, Mine(c.Side) ? $"{CharName(c.Character)}, a prisoner, was taken off a ship and is now held on {c.System}."
+                    : $"Your fleet put the prisoner {CharName(c.Character)} ashore on {c.System}.", c.System, Mine(c.Side) ? MsgKind.Info : MsgKind.Good);
+                break;
             case CharacterFreed c:
                 yield return new Message(d, Mine(c.Side) ? $"{CharName(c.Character)} was freed{At(c.System)}." : $"Enemy leader {CharName(c.Character)} was freed{At(c.System)}.", c.System, Mine(c.Side) ? MsgKind.Good : MsgKind.Bad);
                 break;

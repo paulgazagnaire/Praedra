@@ -98,6 +98,7 @@ public sealed class MissionModule
         characters.JoinAsCaptive = m.JoinAsCaptive;
         characters.MissionReturnPlace = id => m.S.Missions.Values.FirstOrDefault(g => g.Characters.Contains(id) || g.DecoyCharacters.Contains(id))?.Home;
         characters.SpecialForcesInFleet = m.SpecialForcesInFleet;
+        characters.SpecialForcesOnShip = m.SpecialForcesOnShip;
         fog.AgentsAt = m.AgentsAt;
         support.AgentIncidentTerm = m.IncidentTerm;
         support.IncidentFired = m.OnIncident;
@@ -208,8 +209,12 @@ public sealed class MissionModule
     private List<Agent> Decoys(MissionGroup m) =>
         m.DecoyCharacters.Select(CharAgent).Concat(m.DecoySpecialForces.Select(SfAgent)).Where(a => a != null).Select(a => a!.Value).ToList();
 
-    /// <summary>One guard: the unit, its class detection, and its commander's espionage and combat (0 when none). rule: §3 Guards, Officer.</summary>
-    public sealed record Defender(EconObject Unit, int Detection, int OfficerEspionage, int OfficerCombat = 0, int Fleet = 0);
+    /// <summary>
+    /// One guard: the unit, its class detection, and its commander's espionage and combat (0 when none). <see cref="Ship"/>: the ship a prisoner it
+    /// catches is held aboard when it has no commander (the capital ship itself, or the ship a unit is aboard; 0 = none). rule: §3 Guards, Officer;
+    /// m5-characters-and-force §Escape (B2e §3, Q73).
+    /// </summary>
+    public sealed record Defender(EconObject Unit, int Detection, int OfficerEspionage, int OfficerCombat = 0, int Fleet = 0, int Ship = 0);
 
     /// <summary>The check points of a mission: phases 2 and 3 (leaving, at the origin), 7 (arriving) and 9 (each job). rule: §1 (Traced B2d §1).</summary>
     public enum CheckPoint { LeavePlanet = 0, LeaveOrbit = 1, Arrive = 2, Job = 3 }
@@ -277,12 +282,12 @@ public sealed class MissionModule
             else if (sc.OrbitGuards && o.Category == ObjectCategory.CapitalShip && shipFleet.TryGetValue(o.Id, out var f))
             {
                 var adm = Officer(_ch.HolderOf(f.Id, CharacterPost.Admiral));
-                list.Add(new Defender(o, ShipDetection(o), Esp(adm), Com(adm), f.Id));
+                list.Add(new Defender(o, ShipDetection(o), Esp(adm), Com(adm), f.Id, adm == null ? o.Id : 0));
             }
             else if (sc.OrbitGuards && Params.CountAboardUnits && o.Category == ObjectCategory.Regiment && o.AboardShip != 0 && shipFleet.TryGetValue(o.AboardShip, out var rf))
             {
                 var gen = Officer(_ch.HolderOf(rf.Id, CharacterPost.General));
-                list.Add(new Defender(o, _troops.Data.Regiment(o.Class)?.Detection ?? 0, Esp(gen), Com(gen), rf.Id));
+                list.Add(new Defender(o, _troops.Data.Regiment(o.Class)?.Detection ?? 0, Esp(gen), Com(gen), rf.Id, gen == null ? o.AboardShip : 0));
             }
         }
         return list;
@@ -319,7 +324,12 @@ public sealed class MissionModule
             foreach (var sh in f.Ships) shipFleet[sh] = f;
             foreach (var q in f.Squadrons) sqFleet[q] = f;
         }
-        Defender Of(EconObject o, int det, CharacterRecord? officer, int fleet) { var c = Officer(officer); return new Defender(o, det, Esp(c), Com(c), fleet); }
+        Defender Of(EconObject o, int det, CharacterRecord? officer, int fleet)
+        {
+            var c = Officer(officer);
+            int ship = c != null || fleet == 0 ? 0 : o.Category == ObjectCategory.CapitalShip ? o.Id : o.AboardShip; // Q73: no commander, the ship holds him
+            return new Defender(o, det, Esp(c), Com(c), fleet, ship);
+        }
         var list = new List<Defender>();
         foreach (var o in E.Objects.Values) // SortedDictionary: id order
         {
@@ -363,6 +373,13 @@ public sealed class MissionModule
         return E.Objects.Values.Count(o => o.Completed && o.Side == side && o.Category == ObjectCategory.SpecialForce && o.AboardShip != 0
             && ships.Contains(o.AboardShip) && !IsSpecialForceBusy(o.Id));
     }
+
+    /// <summary>
+    /// The usable special forces of <paramref name="side"/> directly aboard ship <paramref name="ship"/>: completed, not in a mission group (0x504cc0
+    /// on the ship). The escape attempt of a prisoner a ship caught with no commander reads it. rule: m5-characters-and-force §Escape (B2e §3, Q73).
+    /// </summary>
+    public int SpecialForcesOnShip(Side side, int ship) =>
+        E.Objects.Values.Count(o => o.Completed && o.Side == side && o.Category == ObjectCategory.SpecialForce && o.AboardShip == ship && !IsSpecialForceBusy(o.Id));
 
     /// <summary>
     /// The guards a planet-target mission of <paramref name="side"/> meets at <paramref name="system"/>: those of the arriving check (orbit) and of the
@@ -1039,7 +1056,7 @@ public sealed class MissionModule
     // its fleet and a regiment's General the fleet it is aboard, so both put the prisoner aboard that fleet; a special force on the planet keeps
     // him on the planet. rule: §4 (QA-7).
     private void Duel(StepContext ctx, MissionGroup m, int t, Agent a, Defender g, string place, MissionRecord rec, bool decoy) =>
-        DuelWith(ctx, m, t, a, g.OfficerCombat, g.Unit.Id, g.Unit.Side ?? Other(m.Side), place, rec, decoy, new CaptorUnit(g.Fleet, place, 0, MissionInvolved: true));
+        DuelWith(ctx, m, t, a, g.OfficerCombat, g.Unit.Id, g.Unit.Side ?? Other(m.Side), place, rec, decoy, new CaptorUnit(g.Fleet, place, 0, MissionInvolved: true, Ship: g.Ship));
 
     /// <summary>
     /// The duel against a captor of combat <paramref name="captorCombat"/> (a guard's commander, or the enemy Force user of an encounter). Escaped:

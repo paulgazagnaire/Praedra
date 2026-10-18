@@ -20,9 +20,9 @@ public class SimpleAiAgentsTests
 
     private static readonly SimpleAiParams Fog = new() { UseFog = true };
 
-    private static (AiMatch M, GameHost H) Match(int seed, SimpleAiParams p, Side? passive = null)
+    private static (AiMatch M, GameHost H) Match(int seed, SimpleAiParams p, Side? passive = null, GameSettings? settings = null)
     {
-        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory });
+        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = settings ?? Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory });
         return (new AiMatch(h, p, p, passive), h);
     }
 
@@ -126,7 +126,8 @@ public class SimpleAiAgentsTests
     // parked on a captor-held world: 205 tries, 0), so the switch is DEFAULT off and the default AI sends none.
     private static int RescuesAboard(SimpleAiParams p, out int prisonerId, out string? at)
     {
-        var (m, h) = Match(1, p, passive: Side.Alliance); // a passive Alliance: its fleets stay put
+        // a passive Alliance: its fleets stay put; LandPrisoners off, else New puts the prisoner ashore at the Alliance-held system (CH38)
+        var (m, h) = Match(1, p, passive: Side.Alliance, settings: Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory with { Characters = new CharacterParams { LandPrisoners = false } });
         m.RunTo(30);
         var cp = h.Characters.Params;
         // the smallest Alliance fleet standing away from the HQ (Crait on seed 1; at the HQ the odds stay below the AI's floor)

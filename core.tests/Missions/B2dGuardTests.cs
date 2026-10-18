@@ -14,9 +14,9 @@ public class B2dGuardTests
 {
     private const string Isd = "Imperial Star Destroyer";
 
-    private static MissionWorld World(MissionParams? p = null, bool decoys = false)
+    private static MissionWorld World(MissionParams? p = null, bool decoys = false, CharacterParams? characters = null)
     {
-        var w = new MissionWorld(p, decoys);
+        var w = new MissionWorld(p, decoys, characters: characters);
         w.Hold(T, Side.Empire, 0);
         return w;
     }
@@ -143,7 +143,8 @@ public class B2dGuardTests
     [InlineData(70, false)]
     public void B2d7_DuelAgainstACommander(int draw, bool escaped)
     {
-        var w = World();
+        // checks where the capture puts him; LandPrisoners off, else New lands him at Imperial T the same day end (CH38)
+        var w = World(characters: new CharacterParams { LandPrisoners = false });
         w.Agent(Han, H, esp: 50, com: 100);
         int fleet = Fleet(w, Side.Empire, T, Isd);
         w.Agent(Piett, T, com: 85); w.Ch.SetPost(Piett, fleet, CharacterPost.Admiral);
@@ -181,7 +182,7 @@ public class B2dGuardTests
     [InlineData(false)]
     public void B2d9_EndCodesAndOneDuelEach(bool leaving)
     {
-        var w = World();
+        var w = World(characters: new CharacterParams { LandPrisoners = false }); // as B2d-7: where the capture puts them (CH38 lands them)
         w.Agent(Leia, H, esp: 50); w.Agent(Han, H, esp: 50);
         if (leaving) w.Hold(H, Side.Alliance, 100);
         int isd = leaving ? Fleet(w, Side.Empire, H, Isd) : Fleet(w, Side.Empire, T, Isd);

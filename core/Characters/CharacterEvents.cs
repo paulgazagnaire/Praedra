@@ -71,6 +71,8 @@ public sealed record CharacterInjured(int Index, int Day, int Character, Side Si
 public sealed record CharacterHealed(int Index, int Day, int Character, Side Side) : GameEvent(Index, Day, nameof(CharacterHealed));
 /// <summary>A capture; HeldAboard = the fleet he is held aboard (0 = on the planet System, or with the captor's mission team when Mission is set). QA-7.</summary>
 public sealed record CharacterCaptured(int Index, int Day, int Character, Side Side, Side Captor, string? System, string Cause, int HeldAboard = 0, int Mission = 0) : GameEvent(Index, Day, nameof(CharacterCaptured));
+/// <summary>A prisoner held aboard <paramref name="Fleet"/> was put ashore at <paramref name="System"/>, a system his captor holds (LandPrisoners, New).</summary>
+public sealed record PrisonerLanded(int Index, int Day, int Character, Side Side, Side Captor, string System, int Fleet) : GameEvent(Index, Day, nameof(PrisonerLanded));
 public sealed record CharacterFreed(int Index, int Day, int Character, Side Side, string? System, string Cause) : GameEvent(Index, Day, nameof(CharacterFreed));
 public sealed record CharacterEscaped(int Index, int Day, int Character, Side Side, string? System) : GameEvent(Index, Day, nameof(CharacterEscaped));
 public sealed record CharacterKilled(int Index, int Day, int Character, Side Side, string? System, string Cause) : GameEvent(Index, Day, nameof(CharacterKilled));
