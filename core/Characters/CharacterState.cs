@@ -100,6 +100,12 @@ public sealed class CharacterRecord
     /// </summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public int HeldAboard { get; set; }
+    /// <summary>
+    /// The ship that caught him with no commander aboard (0 = held by the fleet). His escape place is that ship while it stays in his fleet.
+    /// rule: m5-characters-and-force §Escape (B2e §3 "A prisoner held aboard stays aboard"; Q73).
+    /// </summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public int HeldAboardShip { get; set; }
     /// <summary>Where the last mission a capture ended was to return (Autoroute step 2; ParentAtMissionCompletion +0x70). QA-9, B2e Work 13.</summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public string? ReturnPlace { get; set; }
@@ -145,7 +151,7 @@ public sealed class CharacterRecord
     {
         Id = Id, Side = Side, Placed = Placed, Skills = new List<int>(Skills), Loyalty = Loyalty, ForceExperience = ForceExperience, ForceTraining = ForceTraining,
         ForceUser = ForceUser, ForceDiscovered = ForceDiscovered, DiscoveredForceUser = DiscoveredForceUser, IdentifiedTraitor = IdentifiedTraitor, Status = Status, System = System, AttachedFleet = AttachedFleet, Post = Post,
-        Captor = Captor, HeldAt = HeldAt, HeldAboard = HeldAboard, ReturnPlace = ReturnPlace, AutoroutePending = AutoroutePending, JoinFleet = JoinFleet, Injury = Injury, LeadershipAdjustment = LeadershipAdjustment, PairId = PairId, KnowsHeritage = KnowsHeritage,
+        Captor = Captor, HeldAt = HeldAt, HeldAboard = HeldAboard, HeldAboardShip = HeldAboardShip, ReturnPlace = ReturnPlace, AutoroutePending = AutoroutePending, JoinFleet = JoinFleet, Injury = Injury, LeadershipAdjustment = LeadershipAdjustment, PairId = PairId, KnowsHeritage = KnowsHeritage,
         AwakenedBy = AwakenedBy, NextEscapeDay = NextEscapeDay, NextHealDay = NextHealDay, NextAwakenDay = NextAwakenDay,
         Transit = Transit == null ? null : new FleetTransit
         { Path = new List<string>(Transit.Path), HopTicks = new List<int>(Transit.HopTicks), HopIndex = Transit.HopIndex, DueDay = Transit.DueDay },

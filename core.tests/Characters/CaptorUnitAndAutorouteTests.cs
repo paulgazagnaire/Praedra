@@ -52,6 +52,67 @@ public class CaptorUnitAndAutorouteTests
         Assert.Equal((CharacterStatus.Captured, fleet), (emp.Status, emp.HeldAboard));
     }
 
+    // Q73 (B2e §3 "A prisoner held aboard stays aboard"): caught by a ship with no commander, his escape place is that ship, so avg = 0 even after
+    // an officer joins the fleet; caught by the fleet's Admiral, his place is the fleet and avg counts its characters
+    [Theory]
+    [InlineData(false, 0)]
+    [InlineData(true, 80)]
+    public void Q73_ShipCaptorWithNoCommanderGivesNoGuardAverage(bool admiralAtCapture, int avg)
+    {
+        var w = new MissionWorld(new MissionParams { KeyDuelCapture = KeyDuelCapture.Original });
+        w.Hold(H, Side.Empire, 0); w.Hold(T, Side.Empire, 0);
+        w.Agent(Palpatine, H, dip: 50);
+        int fleet = Fleet(w, Side.Alliance, T, Corvette);
+        w.Agent(Wedge, T, com: 80);
+        if (admiralAtCapture) w.Ch.SetPost(Wedge, fleet, CharacterPost.Admiral);
+        w.Stub!.Expect(0, 99, 0, 99, 99); // the arrival walk detects, the duel is lost (99), the Hurt roll misses
+        w.Start(Side.Empire, MissionKind.Diplomacy, new[] { Palpatine }, T);
+        w.Run(5);
+        var emp = w.Ch.Get(Palpatine)!;
+        Assert.Equal((CharacterStatus.Captured, fleet), (emp.Status, emp.HeldAboard));
+        Assert.Equal(admiralAtCapture ? 0 : w.Game.State.Fleets[fleet].Ships.Single(), emp.HeldAboardShip);
+        if (!admiralAtCapture) w.Ch.SetPost(Wedge, fleet, CharacterPost.Admiral); // joins after the capture
+        emp.NextEscapeDay = w.Game.Day;
+        w.Stub.Expect(0, 99, 99);
+        w.Game.Step();
+        Assert.Equal((avg, 0), w.Events<EscapeAttempted>().Select(e => (e.CaptorAverageCombat, e.CaptorSpecialForces)).Single());
+    }
+
+    // CH38 (Prisoners land, New, Paul 2026-10-18): the Emperor, caught aboard an Alliance fleet at Imperial T, stays aboard there; the fleet reaches
+    // Alliance X and puts him ashore at day end (PrisonerLanded), where he is a prisoner on the planet. With LandPrisoners off (1998) he stays aboard.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void CH38_HoldingFleetLandsPrisonersAtAnOwnSystem(bool land)
+    {
+        var w = new MissionWorld(new MissionParams { KeyDuelCapture = KeyDuelCapture.Original }, characters: new CharacterParams { LandPrisoners = land });
+        w.Hold(H, Side.Empire, 0); w.Hold(T, Side.Empire, 0); w.Hold(X, Side.Alliance, 100);
+        w.Agent(Palpatine, H, dip: 50);
+        int fleet = Fleet(w, Side.Alliance, T, Corvette);
+        w.Agent(Wedge, T, com: 80); w.Ch.SetPost(Wedge, fleet, CharacterPost.Admiral);
+        w.Stub!.Expect(0, 99, 0, 99, 99); // the arrival walk detects, the duel is lost (99), the Hurt roll misses
+        w.Start(Side.Empire, MissionKind.Diplomacy, new[] { Palpatine }, T);
+        w.Run(5);
+        var emp = w.Ch.Get(Palpatine)!;
+        Assert.Equal((CharacterStatus.Captured, fleet), (emp.Status, emp.HeldAboard)); // T is not the captor's: no landing
+        Assert.Empty(w.Events<PrisonerLanded>());
+        Assert.Null(w.Try(seq => new MoveFleetOrder(seq, Side.Alliance, fleet, X)));
+        w.Run(30);
+        Assert.Equal(X, w.Ch.LocationOf(emp));
+        if (land)
+        {
+            Assert.Equal((0, X), (emp.HeldAboard, emp.HeldAt));
+            var e = w.Events<PrisonerLanded>().Single();
+            Assert.Equal((Palpatine, Side.Alliance, X, fleet), (e.Character, e.Captor, e.System, e.Fleet));
+            Assert.Equal(CharacterStatus.Captured, emp.Status);
+        }
+        else
+        {
+            Assert.Equal((fleet, (string?)null), (emp.HeldAboard, emp.HeldAt));
+            Assert.Empty(w.Events<PrisonerLanded>());
+        }
+    }
+
     // B2e-21: a capture whose captor (not on a mission) stands on a planet the captor's side does not hold: captured, then freed the same step there
     // (cause Liberation), no draw but the escape timer's; then he sets off for his side's world (Autoroute step 3)
     [Fact]
@@ -185,11 +246,11 @@ public class CaptorUnitAndAutorouteTests
         var han = w.Agent(Han, T);
         han.Skills[(int)Rebellion.Core.Characters.Skill.Combat] = 0;
         StepWith(w, "5.2", ctx => w.Ch.Capture(ctx, han, Side.Empire, null, CharacterCause.Debug));
-        han.HeldAboard = fleet; han.HeldAt = null; han.ReturnPlace = X; han.AutoroutePending = true; han.JoinFleet = 7;
+        han.HeldAboard = fleet; han.HeldAboardShip = 5; han.HeldAt = null; han.ReturnPlace = X; han.AutoroutePending = true; han.JoinFleet = 7;
         string hash = w.Host.StateHash();
         w.Reload();
         var h2 = w.Ch.Get(Han)!;
-        Assert.Equal((fleet, X, true, 7), (h2.HeldAboard, h2.ReturnPlace, h2.AutoroutePending, h2.JoinFleet));
+        Assert.Equal((fleet, 5, X, true, 7), (h2.HeldAboard, h2.HeldAboardShip, h2.ReturnPlace, h2.AutoroutePending, h2.JoinFleet));
         Assert.Equal(hash, w.Host.StateHash());
     }
 }

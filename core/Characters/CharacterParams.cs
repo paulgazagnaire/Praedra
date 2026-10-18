@@ -52,6 +52,12 @@ public sealed record CharacterParams
     /// training is slower); <see cref="ClassicTrainingGainPercent"/> 50 = 1998 (GNPRTB 6173). rule: m5-characters-and-force §Force (Jedi Training: the roll).
     /// </summary>
     public int ForceTrainingGainPercent { get; init; } = 25;
+    /// <summary>
+    /// Prisoners land (New, Paul 2026-10-18 decision card "Land them"): at day end a fleet standing at a system its own side holds, not blockaded,
+    /// puts the prisoners it holds aboard ashore there, where an ordinary Rescue can reach them. DEFAULT true; false = 1998 (a prisoner aboard stays
+    /// aboard until he escapes; B2e §3 "A prisoner held aboard stays aboard"). rule: m5-characters-and-force §Capture, injury, death, freeing.
+    /// </summary>
+    public bool LandPrisoners { get; init; } = true;
     /// <summary>The 1998 training gain percent (GNPRTB 6173 = 50). Traced, 0x55ca20. rule: m5-characters-and-force §Numbers.</summary>
     public const int ClassicTrainingGainPercent = 50;
     /// <summary>Training chance cap, percent (min(gap, 100)). Traced code, reading [inferred].</summary>
