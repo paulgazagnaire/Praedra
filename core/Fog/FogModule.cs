@@ -91,8 +91,9 @@ public sealed class FogModule
     // ================================================================== setup
 
     /// <summary>
-    /// Setup, day 0 (outside a Step; raises nothing): systems with <c>start_explored_all</c> give both sides Explored and groups A, B and C (the
-    /// facilities; never D or E, LastLookDay null; B4 §11, [EXE-own] 0x51b990); each side gets OwnLive of the systems it holds; the StartFullCopy lists give a FullCopy (Yavin to the Empire,
+    /// Setup, day 0 (outside a Step; raises nothing): systems with <c>start_explored_all</c> give both sides Explored and groups A and B, and C
+    /// (the facilities) with <see cref="FogParams.SetupRevealsFacilities"/> (1998 = on, B4 §11; DEFAULT off); never D or E, LastLookDay null;
+    /// each side gets OwnLive of the systems it holds; the StartFullCopy lists give a FullCopy (Yavin to the Empire,
     /// only if the galaxy has it). Nothing reveals the HQ system. Call after owners, facilities and fleets are dealt. rule: m5-fog-and-hq §F4.
     /// </summary>
     public void SetupNewGame(IEnumerable<string> startExploredAll)
@@ -211,8 +212,9 @@ public sealed class FogModule
         bool a, b, c, d, e;
         switch (kind)
         {
-            // rule: m5-fog-and-hq §F2 Setup: A, B and C (facilities), never D or E (B4 §11: stage 0x18 gives core systems their facilities, 0x539ac0)
-            case RevealKind.Setup: a = b = c = true; d = e = false; break;
+            // rule: m5-fog-and-hq §F2 Setup: A and B, plus C (facilities) with SetupRevealsFacilities (1998 = on, DEFAULT off), never D or E
+            // (B4 §11: stage 0x18 gives core systems their facilities, 0x539ac0)
+            case RevealKind.Setup: a = b = true; c = Params.SetupRevealsFacilities; d = e = false; break;
             case RevealKind.FullCopy: case RevealKind.OwnLive: a = b = c = d = e = true; break;
             case RevealKind.Presence: a = b = e = true; c = d = false; break;
             case RevealKind.Recon: a = b = e = true; c = Params.ReconRevealsFacilities; d = false; break;

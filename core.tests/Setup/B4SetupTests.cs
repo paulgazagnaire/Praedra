@@ -20,16 +20,20 @@ public class B4SetupTests
     private static readonly GameSettings Classic = new() { MinGarrison = 0, HqFixedForces = true };
     private static GameHost MakeClassic(int seed = 1) => NewGame.Create(new NewGameOptions { Seed = seed, Settings = Classic });
     private static IEnumerable<GameHost> Games() => Seeds.Select(Make);
+    /// <summary>The 1998 day-one reveal: SetupRevealsFacilities on (DEFAULT off until the AI trainer adapts the fogged AI, Dev lead 2026-10-18).</summary>
+    private static GameHost MakeReveal(int seed) => NewGame.Create(new NewGameOptions { Seed = seed, Settings = new GameSettings { Fog = new Rebellion.Core.Fog.FogParams { SetupRevealsFacilities = true } } });
 
     private static int Standing(GameHost h, Side side, string cls, string sys) =>
         h.Economy.Objects.Count(o => o.Category == ObjectCategory.Regiment && o.Side == side && o.Class == cls && o.System == sys && o.AboardShip == 0);
 
     // B4-1: on day 0 the Alliance's picture of a core Empire system lists its facilities (group C) and has no regiments, squadrons, fleets or
-    // characters (D, E never written). rule: m5-fog-and-hq §F2 Setup, §F4 1 (B4 §11)
+    // characters (D, E never written). With SetupRevealsFacilities on (1998). rule: m5-fog-and-hq §F2 Setup, §F4 1 (B4 §11)
     [Fact]
     public void B4_1_DayOneCorePictureHoldsFacilitiesOnly()
     {
-        foreach (var h in Games())
+        Assert.False(new Rebellion.Core.Fog.FogParams().SetupRevealsFacilities);
+        Assert.Null(Make(1).Fog.Picture(Side.Alliance, "Coruscant")!.Facilities); // DEFAULT off: no C
+        foreach (var h in Seeds.Select(MakeReveal))
         {
             var fog = h.Game.State.Fog;
             int checkedSystems = 0;

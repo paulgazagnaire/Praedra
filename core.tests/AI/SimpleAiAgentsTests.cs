@@ -45,7 +45,9 @@ public class SimpleAiAgentsTests
         // InvasionBatchesOnly, ExplorerScouts) are switched off above with the rest.
         // B2c re-pin 2026-10-17: the loyalty triggers add saved state (GameState.Loyalty, the per-system loss tallies) and one draw per capture
         // (the new owner's loyalty shift), so this game takes another course from its first capture. Unchanged after merging main (#57, #58).
-        Assert.Equal("5f017ce70b78255be68d5700e5a6f283303586ac31e4558e0a320034589d23e7", h.StateHash());
+        // B4 re-pin 2026-10-18: setup now names fleets "Fleet n" and capital ships "<class> n" (B4 §12, display only; the ship name is saved
+        // state). The game plays identically: with the naming step removed the hash is exactly the old 5f017ce7...23e7 (checked when re-pinned).
+        Assert.Equal("d4ef3b15deeaafa8642f500d8d5f661f0da8291f468d86bff83e9b4793c6dacb", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"
