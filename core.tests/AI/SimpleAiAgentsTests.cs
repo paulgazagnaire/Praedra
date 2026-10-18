@@ -110,6 +110,38 @@ public class SimpleAiAgentsTests
         }
     }
 
+    // QA-7 follow-up (2026-10-18): since #69 a duel prisoner is held aboard the captor's fleet. The AI's Rescue planner looked only at held_at
+    // (a planet), so such a prisoner was never rescued; it now targets him where that fleet stands (m5-missions TargetReason: LocationOf, the
+    // prisoner can be rescued only while his fleet stands at a system). An Empire character (Vader on seed 1) is captured aboard an Alliance fleet on day 31.
+    [Fact]
+    public void Rescue_TargetsAPrisonerHeldAboardTheCaptorFleet()
+    {
+        var (m, h) = Match(1, new SimpleAiParams(), passive: Side.Alliance); // a passive Alliance: its fleets stay put
+        m.RunTo(30);
+        var cp = h.Characters.Params;
+        // the smallest Alliance fleet standing away from the HQ (Crait on seed 1; at the HQ the odds stay below the AI's floor)
+        var fleet = h.Game.State.Fleets.Values.Where(f => f.Side == Side.Alliance && f.At != null && f.At != h.HqSystem && f.Ships.Count > 0)
+            .OrderBy(f => f.Ships.Count).ThenBy(f => f.Id).First();
+        var prisoner = h.Characters.InPlay.Where(c => c.Side == Side.Empire && c.Status == CharacterStatus.Free && c.Transit == null && c.Id != cp.Emperor
+                                                      && !h.Missions.IsOnMission(c.Id))
+            .OrderBy(c => c.Id).First();
+        bool done = false;
+        h.Game.RegisterHook("5.2", ctx =>
+        {
+            if (done) return; done = true;
+            h.Characters.Capture(ctx, prisoner, Side.Alliance, null, "test", canEscape: false, unit: new CaptorUnit(fleet.Id, fleet.At, MissionInvolved: true));
+        });
+        m.Step();
+        Assert.Equal((CharacterStatus.Captured, fleet.Id, (string?)null), (prisoner.Status, prisoner.HeldAboard, prisoner.HeldAt));
+        int rescues = 0;
+        for (int d = 0; d < 150 && rescues == 0; d++)
+        {
+            m.Step();
+            rescues += m.Empire.Submitted.Count(o => o.Kind == "MissionRescue" && o.Detail.Contains($"to {fleet.At} (character {prisoner.Id})", StringComparison.Ordinal));
+        }
+        Assert.True(rescues > 0, $"no Rescue of {prisoner.Id} held aboard fleet {fleet.Id} at {fleet.At}");
+    }
+
     // ai/07 §7 (Empire: belief-map search with spies), m5-missions (Espionage writes the ground and HqHere), m5-fog-and-hq §N5. Against an
     // Alliance that gives no orders the fogged Empire sends its spies to the best HQ candidates and takes the HQ. Measured on the 360-system
     // map (seed 1): KnownHq day 299, won day 352. On v5 the spies never find the HQ (Cyclor, beside Naboo, ranks low on the belief map: the
