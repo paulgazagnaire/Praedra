@@ -37,6 +37,16 @@ public sealed class CharacterModule
     /// </summary>
     public Action<StepContext?, CharacterRecord>? InjuredResign { get; set; }
     /// <summary>
+    /// A new prisoner whose captor is a character on mission <c>id</c> joins that mission as a captive (its captured list, 0x534390) unless he
+    /// already stands on ground of the captor's side and is not the target of an Abduction (0x546370 step 4). Returns true when he joined.
+    /// m5-missions sets it; null = never. rule: §Capture (B2e §3 "Where a new prisoner is held" step 4; QA-7).
+    /// </summary>
+    public Func<StepContext?, CharacterRecord, int, bool>? JoinAsCaptive { get; set; }
+    /// <summary>The captor's usable special forces aboard the ships of a fleet (QA-7 DEFAULT for an escape from aboard). GameHost sets it. 0 when unset.</summary>
+    public Func<Side, int, int> SpecialForcesInFleet { get; set; } = (_, _) => 0;
+    /// <summary>Where the mission holding the character was to end (its return place, 0x534390); null when he is on none. m5-missions sets it. QA-9.</summary>
+    public Func<int, string?>? MissionReturnPlace { get; set; }
+    /// <summary>
     /// The ESCAPETB points (input, percent), ascending: <see cref="CharacterParams.EscapeTable"/> if given, else the game data's table (GameHost
     /// sets it from mission-tables.csv). Null: an escape attempt is refused RuleMissing. rule: §Escape (B2e §3 step 5).
     /// </summary>
@@ -97,7 +107,8 @@ public sealed class CharacterModule
     /// </summary>
     public string? LocationOf(CharacterRecord c)
     {
-        if (c.Status == CharacterStatus.Captured) return c.HeldAt;
+        if (c.Status == CharacterStatus.Captured)
+            return c.HeldAboard != 0 ? (State.Fleets.TryGetValue(c.HeldAboard, out var hf) ? hf.At : null) : c.HeldAt; // QA-7: aboard = where his fleet is
         if (c.AttachedFleet != 0) return State.Fleets.TryGetValue(c.AttachedFleet, out var f) ? f.At : null;
         return c.System;
     }
@@ -324,7 +335,8 @@ public sealed class CharacterModule
     /// <summary>Where the character stands now for the state functions (a rider in transit: the system its fleet last left; a lone traveller: the system it last left).</summary>
     private string? StandingPlace(CharacterRecord c)
     {
-        if (c.Status == CharacterStatus.Captured) return c.HeldAt;
+        if (c.Status == CharacterStatus.Captured)
+            return c.HeldAboard != 0 ? (State.Fleets.TryGetValue(c.HeldAboard, out var hf) ? PlaceOfFleet(hf) : null) : c.HeldAt;
         if (c.AttachedFleet != 0 && State.Fleets.TryGetValue(c.AttachedFleet, out var f)) return PlaceOfFleet(f);
         return c.System ?? (c.Transit is { } t ? t.Path[t.HopIndex] : null);
     }
@@ -427,21 +439,44 @@ public sealed class CharacterModule
     /// detached, a trip ends, mission membership ends; the injury points stay. A capture that lets him escape (<paramref name="canEscape"/>; story
     /// captures pass false) sets the escape timer <c>100 + rand(0..1000)</c> days (one draw; none with <see cref="CharacterParams.CaptiveEscape"/>
     /// off). Event CharacterCaptured. rule: §Capture, injury, death, freeing 2; §Escape (B2e §3); CH21.
+    /// With a captor <paramref name="unit"/> (QA-7, B2e §3 "Where a new prisoner is held", 0x546370), in the same step: when he or the captor is on
+    /// a mission he is moved to the captor's place (aboard the captor's fleet, else onto its planet; placed there at once, DEFAULT), his own
+    /// mission membership ends, a captor on a mission takes him into its team as a captive (<see cref="JoinAsCaptive"/>), and then, unless he is
+    /// such a captive, the liberation test runs on him at once: on a planet not held by the captor's side he is freed there, no draw. A capture
+    /// without a unit (the Death Star's fallback, story and test captures) keeps him where he stood and makes no liberation test (DEFAULT).
     /// </summary>
-    public bool Capture(StepContext? ctx, CharacterRecord c, Side captor, string? heldAt, string cause, bool? canEscape = null)
+    public bool Capture(StepContext? ctx, CharacterRecord c, Side captor, string? heldAt, string cause, bool? canEscape = null, CaptorUnit? unit = null)
     {
         if (!c.Placed || c.Status is not (CharacterStatus.Free or CharacterStatus.Injured) || captor == c.Side) return false;
         int day = (ctx?.Day ?? _game.Day) + 1;
+        bool wasOnMission = IsOnMission(c.Id);
+        // QA-9 (B2e Work 13): the return place of the mission this capture ends is saved for a later Autoroute (step 2)
+        if (wasOnMission && MissionReturnPlace?.Invoke(c.Id) is { } rp) c.ReturnPlace = rp;
+        c.AutoroutePending = false; c.JoinFleet = 0;
         string? at = heldAt ?? StandingPlace(c);
         VacateAll(ctx, day, c, CharacterCause.Captured);
         c.Transit = null;
-        c.Status = CharacterStatus.Captured; c.Captor = captor; c.HeldAt = at; c.System = at; c.NextHealDay = 0;
-        MissionMembershipEnded?.Invoke(ctx, c);
-        Emit(ctx, (i, _) => new CharacterCaptured(i, day, c.Id, c.Side, captor, at, cause));
-        // rule: §Escape (B2e §3 "Can escape", "When attempts happen"): Jabba's Palace passes 0 (0x54b040), so a story capture never tries
+        c.Status = CharacterStatus.Captured; c.Captor = captor; c.HeldAt = at; c.HeldAboard = 0; c.System = at; c.NextHealDay = 0;
+        // rule: §Escape (B2e §3 "Can escape", "When attempts happen"): the timer is set as the State changes, before the state-change rule moves
+        // him; Jabba's Palace passes 0 (0x54b040), so a story capture never tries
         bool escapes = canEscape ?? cause != CharacterCause.Story;
         c.NextEscapeDay = escapes && Params.CaptiveEscape ? (ctx?.Day ?? _game.Day) + EscapeDelay(ctx?.Rng ?? _game.Rng) : 0;
+        // rule: §Capture 2 (B2e §3 "Where a new prisoner is held" steps 1-2; QA-7): to the captor's place when he or the captor is on a mission
+        if (unit is CaptorUnit u && (wasOnMission || u.MissionInvolved))
+        {
+            if (u.Fleet != 0 && State.Fleets.TryGetValue(u.Fleet, out var hf)) { c.HeldAboard = hf.Id; c.HeldAt = null; c.System = null; }
+            else if (u.System != null) { c.HeldAt = u.System; c.System = u.System; }
+        }
+        MissionMembershipEnded?.Invoke(ctx, c); // step 3: out of his own mission
+        bool captive = unit is CaptorUnit cu && cu.Mission != 0 && JoinAsCaptive?.Invoke(ctx, c, cu.Mission) == true; // step 4
+        if (captive) { c.HeldAt = null; c.HeldAboard = 0; c.System = null; }
+        string? shown = captive ? at : LocationOf(c) ?? StandingPlace(c);
+        int aboard = c.HeldAboard, mission = captive ? unit!.Value.Mission : 0;
+        Emit(ctx, (i, _) => new CharacterCaptured(i, day, c.Id, c.Side, captor, shown, cause, aboard, mission));
         RefreshSeatOfPower();
+        // step 5: the liberation test on him at once (the check skips a captive of a mission; aboard, his place is the captor's fleet)
+        if (unit != null && !captive && c.HeldAboard == 0 && c.HeldAt is { } held && _fleets.OwnerOf(held) != captor)
+            Free(ctx, c, CharacterCause.Liberation);
         return true;
     }
 
@@ -463,7 +498,7 @@ public sealed class CharacterModule
         string? at = StandingPlace(c);
         VacateAll(ctx, day, c, CharacterCause.Killed);
         c.Transit = null;
-        c.Status = CharacterStatus.Dead; c.Captor = null; c.HeldAt = null; c.System = at; c.NextEscapeDay = 0; c.NextHealDay = 0; c.NextAwakenDay = 0;
+        c.Status = CharacterStatus.Dead; c.Captor = null; c.HeldAt = null; c.HeldAboard = 0; c.System = at; c.NextEscapeDay = 0; c.NextHealDay = 0; c.NextAwakenDay = 0;
         MissionMembershipEnded?.Invoke(ctx, c);
         Emit(ctx, (i, _) => new CharacterKilled(i, day, c.Id, c.Side, at, cause));
         RefreshSeatOfPower();
@@ -473,17 +508,97 @@ public sealed class CharacterModule
     /// <summary>
     /// A prisoner freed (Rescue, an uprising, liberation, escape): status Free (Injured while he has injury points) at held_at, captor and escape
     /// timer cleared. Event CharacterFreed (CharacterEscaped for cause Escape). rule: §Capture, injury, death, freeing 4, 6; B2e §3.
+    /// A prisoner held aboard is freed at the system his fleet stands at (in transit: the one it last left; QA-7 DEFAULT). Then, standing on a
+    /// system that is not his side's (or destroyed), he sets off at once (<see cref="Autoroute"/>; QA-9).
     /// </summary>
     public bool Free(StepContext? ctx, CharacterRecord c, string cause)
     {
         if (c.Status != CharacterStatus.Captured) return false;
         int day = (ctx?.Day ?? _game.Day) + 1;
-        string? at = c.HeldAt;
-        c.Status = c.Injury > 0 ? CharacterStatus.Injured : CharacterStatus.Free; c.Captor = null; c.System = at; c.HeldAt = null; c.NextEscapeDay = 0;
+        string? at = StandingPlace(c);
+        c.Status = c.Injury > 0 ? CharacterStatus.Injured : CharacterStatus.Free; c.Captor = null; c.System = at; c.HeldAt = null; c.HeldAboard = 0; c.NextEscapeDay = 0;
         if (cause == CharacterCause.Escape) Emit(ctx, (i, _) => new CharacterEscaped(i, day, c.Id, c.Side, at)); // Original text "has escaped from imprisonment at"
         else Emit(ctx, (i, _) => new CharacterFreed(i, day, c.Id, c.Side, at, cause));
         RefreshSeatOfPower();
+        Autoroute(ctx, c); // QA-9: a freed or escaped character on ground not of his side sets off the same step (B2e §3)
         return true;
+    }
+
+    /// <summary>
+    /// Autorouting (B2e §3 "Where a freed, escaped or displaced character goes", Work 13; QA-9, 2026-10-18; rule event 0x307 -> 0x549230), run in
+    /// the same step: only a placed character who is not captured or dead, stands on a system (riding no fleet, not travelling, not on a mission)
+    /// that is destroyed or not of his side, moves. On his own side's ground he stays. While a battle is pending at his system he waits and is
+    /// re-checked at slot 6.10 of each later day (DEFAULT timing). The destination is the first step that yields a place:
+    /// 1. where he is (acceptable only when his side's and not destroyed); 2. his last mission's return place (<see cref="CharacterRecord.ReturnPlace"/>,
+    /// same test); 3. the nearest system his side holds, not blockaded; 4. the nearest system with a fleet of his side (he joins it on arrival if it
+    /// is still there); 5. the nearest system his side holds, blockaded; 6. the nearest neutral system; 7. the nearest enemy system. "Nearest" = the
+    /// fewest ticks by the m1-travel path at character speed from his system, ties by system index (DEFAULT for the game's precomputed order); a
+    /// destroyed system never counts. He leaves now (CharacterDeparted) at normal character travel; with no place found he stays. No draw.
+    /// Returns true when a trip was set. rule: m5-characters-and-force §Capture, injury, death, freeing (Autoroute; QA-9).
+    /// </summary>
+    public bool Autoroute(StepContext? ctx, CharacterRecord c)
+    {
+        c.AutoroutePending = false;
+        if (!c.Placed || c.Status is not (CharacterStatus.Free or CharacterStatus.Injured) || c.AttachedFleet != 0 || c.Transit != null
+            || c.System is not { } sys || IsOnMission(c.Id)) return false;
+        bool Destroyed(string n) => State.DeathStar.IsDestroyed(n);
+        bool Acceptable(string? n) => n != null && _fleets.OwnerOf(n) == c.Side && !Destroyed(n);
+        if (Acceptable(sys)) return false; // step 1 (0x54c7d0: on his own side's ground he just stays)
+        if (BattlePending(sys)) { c.AutoroutePending = true; return false; } // flag 0x1000 (BattlePending, inferred)
+        string? dest = null; int join = 0;
+        if (c.ReturnPlace is { } rp && rp != sys && Acceptable(rp)) dest = rp; // step 2
+        dest ??= Nearest(sys, n => _fleets.OwnerOf(n) == c.Side && !State.Blockades.ContainsKey(n)); // step 3
+        if (dest == null)
+        {
+            var fleetSystems = State.Fleets.Values.Where(f => f.Side == c.Side && f.At != null).Select(f => f.At!).ToHashSet(StringComparer.Ordinal);
+            dest = Nearest(sys, fleetSystems.Contains); // step 4
+            if (dest != null) join = State.Fleets.Values.Where(f => f.Side == c.Side && f.At == dest).Min(f => f.Id); // lowest fleet id there (DEFAULT)
+        }
+        dest ??= Nearest(sys, n => _fleets.OwnerOf(n) == c.Side && State.Blockades.ContainsKey(n)); // step 5
+        dest ??= Nearest(sys, n => _fleets.OwnerOf(n) == null); // step 6
+        dest ??= Nearest(sys, n => _fleets.OwnerOf(n) is Side o && o != c.Side); // step 7
+        if (dest == null) return false;
+        var path = _fleets.FindPath(sys, dest, Params.CharacterSpeed);
+        if (!path.Ok) return false;
+        int k = ctx?.Day ?? _game.Day, first = path.HopTicks[0], day = k + 1;
+        c.System = null; c.JoinFleet = join;
+        c.Transit = new FleetTransit { Path = path.Names(_fleets.Galaxy).ToList(), HopTicks = path.HopTicks.ToList(), HopIndex = 0, DueDay = k + 1 + first };
+        string from = sys; var side = c.Side;
+        Emit(ctx, (i, _) => new CharacterDeparted(i, day, c.Id, side, from, first));
+        return true;
+    }
+
+    /// <summary>The system matching <paramref name="ok"/> fewest ticks away by the character travel path (ties by system index); never the start or a destroyed system.</summary>
+    private string? Nearest(string from, Func<string, bool> ok)
+    {
+        string? best = null; int bestTicks = int.MaxValue;
+        foreach (var sys in _fleets.Galaxy.Systems) // system index order: the first of equal ticks wins
+        {
+            if (sys.Name == from || State.DeathStar.IsDestroyed(sys.Name) || !ok(sys.Name)) continue;
+            var p = _fleets.FindPath(from, sys.Name, Params.CharacterSpeed);
+            if (p.Ok && p.TotalTicks < bestTicks) { best = sys.Name; bestTicks = p.TotalTicks; }
+        }
+        return best;
+    }
+
+    /// <summary>A battle is pending at a system (flag 0x1000, read as BattlePending, inferred): fleets of both sides there (DEFAULT). QA-9.</summary>
+    private bool BattlePending(string system)
+    {
+        bool a = false, e = false;
+        foreach (var f in State.Fleets.Values)
+            if (f.At == system && f.Ships.Count + f.Squadrons.Count > 0) { if (f.Side == Side.Alliance) a = true; else if (f.Side == Side.Empire) e = true; }
+        return a && e;
+    }
+
+    /// <summary>
+    /// A mission team's captive is put down where the group ends (m5-missions calls it as the group leaves the state; inferred, B2e §3 step 4): held
+    /// on that planet, then the liberation test (not the captor side's: freed there, no draw). rule: §Capture (B2e §3; QA-7).
+    /// </summary>
+    public void HoldCaptive(StepContext? ctx, CharacterRecord c, string? at)
+    {
+        if (c.Status != CharacterStatus.Captured) return;
+        c.HeldAt = at; c.HeldAboard = 0; c.System = at;
+        if (at != null && _fleets.OwnerOf(at) != c.Captor && !IsOnMission(c.Id)) Free(ctx, c, CharacterCause.Liberation);
     }
 
     /// <summary>Escape = Free with cause Escape. rule: §Capture, injury, death, freeing 6.</summary>
@@ -552,7 +667,7 @@ public sealed class CharacterModule
     {
         int day = ctx.Day + 1;
         var movers = S.Characters.Values.Where(c => c.Placed && c.Status is CharacterStatus.Free or CharacterStatus.Injured or CharacterStatus.Captured
-            && c.AttachedFleet == 0 && c.Transit == null && LocationOf(c) == system).ToList(); // id order
+            && c.AttachedFleet == 0 && c.HeldAboard == 0 && c.Transit == null && LocationOf(c) == system).ToList(); // id order (a prisoner aboard stays with his fleet, QA-7)
         foreach (var c in movers)
         {
             if (c.Status == CharacterStatus.Captured)
@@ -867,6 +982,13 @@ public sealed class CharacterModule
     // holder becomes a None rider). Any other cause: detached, free at the fleet's system (CharactersLostWithFleet off). rule: §Riding; CH29, CH30.
     private void OnFleetRemoving(StepContext? ctx, int day, Fleet f, DissolveCause cause, int? into)
     {
+        // QA-7 DEFAULTs (B2e Work 12): prisoners aboard follow a merge or transfer into the receiving fleet; a holding fleet that leaves the state any
+        // other way frees them as the free characters aboard are released (CharactersLostWithFleet off): at the fleet's system. Never put ashore.
+        foreach (var c in S.Characters.Values.Where(c => c.Status == CharacterStatus.Captured && c.HeldAboard == f.Id).ToList())
+        {
+            if (into is int dest && State.Fleets.ContainsKey(dest)) c.HeldAboard = dest;
+            else { c.HeldAboard = 0; c.HeldAt = PlaceOfFleet(f); c.System = c.HeldAt; Free(ctx, c, CharacterCause.HoldingFleetLost); }
+        }
         var riders = S.Characters.Values.Where(c => c.AttachedFleet == f.Id).ToList();
         if (riders.Count == 0) return;
         if (into is int to && State.Fleets.TryGetValue(to, out var target))
@@ -1003,6 +1125,14 @@ public sealed class CharacterModule
             {
                 c.Transit = null; c.System = sys;
                 ctx.Emit((i, _) => new CharacterArrived(i, day, c.Id, c.Side, sys));
+                // QA-9 (B2e §3 Autoroute step 4): he joins the fleet he set off for if it is still there (a rider, no post)
+                if (c.JoinFleet is int jf and not 0 && State.Fleets.TryGetValue(jf, out var jfl) && jfl.At == sys && jfl.Side == c.Side
+                    && c.Status is CharacterStatus.Free or CharacterStatus.Injured)
+                {
+                    c.AttachedFleet = jf; c.Post = CharacterPost.None;
+                    ctx.Emit((i, _) => new CharacterAttached(i, day, c.Id, c.Side, jf, CharacterPost.None, CharacterCause.Autoroute));
+                }
+                c.JoinFleet = 0;
                 continue;
             }
             t.HopIndex++;
@@ -1029,6 +1159,8 @@ public sealed class CharacterModule
             }
         if (Params.ForceDiscovery == ForceDiscoveryMode.Trainer)
             foreach (var t in S.Characters.Values.Where(c => c.Placed).ToList()) AwakenTick(ctx, t, k);
+        // QA-9 (B2e §3): a character who waited for a pending battle is routed again (DEFAULT: at slot 6.10 of each later day)
+        foreach (var c in S.Characters.Values.Where(c => c.AutoroutePending).ToList()) Autoroute(ctx, c);
         RefreshSeatOfPower();
     }
 
@@ -1064,11 +1196,13 @@ public sealed class CharacterModule
     /// </summary>
     private void EscapeAttempt(StepContext ctx, CharacterRecord c)
     {
-        if (c.HeldAt is not { } place || c.Captor is not Side captor) return;
+        if (c.Captor is not Side captor || StandingPlace(c) is not { } place || (c.HeldAt == null && c.HeldAboard == 0)) return; // a team captive has no place
+        int fleet = c.HeldAboard;
+        // QA-7 DEFAULT (B2e Work 12): held aboard, avg and sf count the captor's characters and special forces attached to that fleet
         var guards = S.Characters.Values.Where(g => g.Placed && g.Side == captor && g.Status is CharacterStatus.Free or CharacterStatus.Injured
-            && g.AttachedFleet == 0 && g.Transit == null && g.System == place && !IsOnMission(g.Id)).ToList();
+            && !IsOnMission(g.Id) && (fleet != 0 ? g.AttachedFleet == fleet : g.AttachedFleet == 0 && g.Transit == null && g.System == place)).ToList();
         int avg = guards.Count == 0 ? 0 : guards.Sum(g => g.EffectiveSkill(Skill.Combat)) / guards.Count;
-        int sf = SpecialForcesOnPlanet(captor, place);
+        int sf = fleet != 0 ? SpecialForcesInFleet(captor, fleet) : SpecialForcesOnPlanet(captor, place);
         int x = c.EffectiveSkill(Skill.Combat) + c.EffectiveSkill(Skill.Espionage) - avg - sf;
         int p = EscapePercent(x);
         int r = ctx.Rng.NextInt(0, PercentDieMax);
@@ -1145,3 +1279,11 @@ public sealed class CharacterModule
         return pct;
     }
 }
+
+/// <summary>
+/// The captor unit of a capture (B2e §3 "Where a new prisoner is held", 0x546370; QA-7): the fleet it is in (a capital ship's fleet, or the fleet a
+/// captor character, squadron or regiment rides or is aboard; 0 = none), else the planet it stands on; <see cref="Mission"/> = the mission a captor
+/// character is on (0 = none); <see cref="MissionInvolved"/> = the prisoner or the captor is on a mission (a duel prisoner always was a team member,
+/// even when his Hurt roll already made him resign; B2e §3 step 2).
+/// </summary>
+public readonly record struct CaptorUnit(int Fleet, string? System, int Mission = 0, bool MissionInvolved = false);

@@ -46,6 +46,10 @@ public static class CharacterCause
         Blockade = "Blockade", Story = "Story", Debug = "Debug", Escape = "Escape";
     /// <summary>B2e: a prisoner freed because his place changed side; the Force-user encounter; a trainer's awakening.</summary>
     public const string Liberation = "Liberation", ForceEncounter = "ForceEncounter", Awakened = "Awakened";
+    /// <summary>QA-7: the fleet holding a prisoner left the state (he is treated as a free character aboard it).</summary>
+    public const string HoldingFleetLost = "HoldingFleetLost";
+    /// <summary>QA-9: Autorouting (a freed, escaped or displaced character joins the fleet he set off for).</summary>
+    public const string Autoroute = "Autoroute";
     // causes of a post ending or a detachment (§Posts end)
     public const string Order = "Order", Injured = "Injured", Captured = "Captured", Killed = "Killed", FleetDissolved = "FleetDissolved",
         FleetMoved = "FleetMoved", Merged = "Merged", HolderChanged = "HolderChanged", SystemDestroyed = "SystemDestroyed";
@@ -65,7 +69,8 @@ public sealed record SystemGeneralAssigned(int Index, int Day, int Character, Si
 /// <summary>Injury points added (Points) and the total now (Injury). rule: §Capture, injury, death, freeing (B2e §2).</summary>
 public sealed record CharacterInjured(int Index, int Day, int Character, Side Side, string? System, string Cause, int Points = 0, int Injury = 0) : GameEvent(Index, Day, nameof(CharacterInjured));
 public sealed record CharacterHealed(int Index, int Day, int Character, Side Side) : GameEvent(Index, Day, nameof(CharacterHealed));
-public sealed record CharacterCaptured(int Index, int Day, int Character, Side Side, Side Captor, string? System, string Cause) : GameEvent(Index, Day, nameof(CharacterCaptured));
+/// <summary>A capture; HeldAboard = the fleet he is held aboard (0 = on the planet System, or with the captor's mission team when Mission is set). QA-7.</summary>
+public sealed record CharacterCaptured(int Index, int Day, int Character, Side Side, Side Captor, string? System, string Cause, int HeldAboard = 0, int Mission = 0) : GameEvent(Index, Day, nameof(CharacterCaptured));
 public sealed record CharacterFreed(int Index, int Day, int Character, Side Side, string? System, string Cause) : GameEvent(Index, Day, nameof(CharacterFreed));
 public sealed record CharacterEscaped(int Index, int Day, int Character, Side Side, string? System) : GameEvent(Index, Day, nameof(CharacterEscaped));
 public sealed record CharacterKilled(int Index, int Day, int Character, Side Side, string? System, string Cause) : GameEvent(Index, Day, nameof(CharacterKilled));

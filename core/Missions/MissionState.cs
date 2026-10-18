@@ -46,12 +46,19 @@ public sealed class MissionGroup
     public int Due { get; set; }
     public int Iterations { get; set; }
     public MissionOutcome Outcome { get; set; }
+    /// <summary>
+    /// Prisoners the team holds (the captured list +0x1cc): taken by a member of this group (Abduction, the kidnap of Assassination, a member as
+    /// captor). They travel with the group and are held where it ends. rule: m5-missions §6 (B2e §3 "Where a new prisoner is held" step 4; QA-7).
+    /// </summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public List<int>? Captives { get; set; }
 
     internal MissionGroup Clone() => new()
     {
         Id = Id, Kind = Kind, Side = Side, Characters = new(Characters), SpecialForces = new(SpecialForces), DecoyCharacters = new(DecoyCharacters),
         DecoySpecialForces = new(DecoySpecialForces), Home = Home, Target = Target, TargetCharacter = TargetCharacter, Facility = Facility, Phase = Phase,
         Departed = Departed, Path = new(Path), TotalTicks = TotalTicks, ArrivalDay = ArrivalDay, Due = Due, Iterations = Iterations, Outcome = Outcome,
+        Captives = Captives == null ? null : new(Captives),
     };
 
     /// <summary>Every unit in the group: team and decoys.</summary>

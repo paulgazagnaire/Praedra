@@ -94,6 +94,21 @@ public sealed class CharacterRecord
     public CharacterPost Post { get; set; }
     public Side? Captor { get; set; }
     public string? HeldAt { get; set; }
+    /// <summary>
+    /// The fleet a prisoner is held aboard (0 = on the planet <see cref="HeldAt"/>, or with a mission team). A prisoner aboard has no HeldAt: he is
+    /// located where his fleet is and travels with it. rule: m5-characters-and-force §Capture (B2e §3 "Where a new prisoner is held", Work 12; QA-7).
+    /// </summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public int HeldAboard { get; set; }
+    /// <summary>Where the last mission a capture ended was to return (Autoroute step 2; ParentAtMissionCompletion +0x70). QA-9, B2e Work 13.</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? ReturnPlace { get; set; }
+    /// <summary>Autorouting waits for a pending battle at his system (re-checked at slot 6.10). QA-9.</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool AutoroutePending { get; set; }
+    /// <summary>The fleet an autorouted character joins on arrival (Autoroute step 4; 0 = none). QA-9.</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public int JoinFleet { get; set; }
     /// <summary>A lone character's trip, exactly as a fleet's. rule: m5-characters-and-force §Moving a character alone.</summary>
     public FleetTransit? Transit { get; set; }
 
@@ -126,7 +141,7 @@ public sealed class CharacterRecord
     {
         Id = Id, Side = Side, Placed = Placed, Skills = new List<int>(Skills), Loyalty = Loyalty, ForceExperience = ForceExperience, ForceTraining = ForceTraining,
         ForceUser = ForceUser, ForceDiscovered = ForceDiscovered, DiscoveredForceUser = DiscoveredForceUser, IdentifiedTraitor = IdentifiedTraitor, Status = Status, System = System, AttachedFleet = AttachedFleet, Post = Post,
-        Captor = Captor, HeldAt = HeldAt, Injury = Injury, LeadershipAdjustment = LeadershipAdjustment, PairId = PairId, KnowsHeritage = KnowsHeritage,
+        Captor = Captor, HeldAt = HeldAt, HeldAboard = HeldAboard, ReturnPlace = ReturnPlace, AutoroutePending = AutoroutePending, JoinFleet = JoinFleet, Injury = Injury, LeadershipAdjustment = LeadershipAdjustment, PairId = PairId, KnowsHeritage = KnowsHeritage,
         AwakenedBy = AwakenedBy, NextEscapeDay = NextEscapeDay, NextHealDay = NextHealDay, NextAwakenDay = NextAwakenDay,
         Transit = Transit == null ? null : new FleetTransit
         { Path = new List<string>(Transit.Path), HopTicks = new List<int>(Transit.HopTicks), HopIndex = Transit.HopIndex, DueDay = Transit.DueDay },
