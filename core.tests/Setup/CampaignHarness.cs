@@ -210,7 +210,8 @@ internal static class CampaignInvariants
         {
             if (o.Category == ObjectCategory.SpecialForce)
             {
-                Assert.True(o.AboardShip == 0 && (o.System != null || !o.Completed), $"{where}: special force {o.Id} aboard={o.AboardShip} system={o.System}");
+                // a member of a mission group in flight is on no system (m5-missions §1: the group's members leave their place while it travels)
+                Assert.True(o.AboardShip == 0 && (o.System != null || !o.Completed || host.Missions.IsSpecialForceBusy(o.Id)), $"{where}: special force {o.Id} aboard={o.AboardShip} system={o.System}");
                 continue;
             }
             if (o.AboardShip == 0) { Assert.True(o.System != null || !o.Completed, $"{where}: regiment {o.Id} is on no system and aboard nothing"); continue; }

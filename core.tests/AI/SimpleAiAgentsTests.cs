@@ -1,6 +1,7 @@
 using Rebellion.Core.AI;
 using Rebellion.Core.Characters;
 using Rebellion.Core.Clock;
+using Rebellion.Core.Construction;
 using Rebellion.Core.Fog;
 using Rebellion.Core.Missions;
 using Rebellion.Core.Setup;
@@ -256,4 +257,40 @@ public class SimpleAiAgentsTests
         Assert.True(eMissions > 0 && aMissions > 0);
         Assert.True(m.TotalRejected * 20 <= m.TotalSent, $"{m.TotalRejected} of {m.TotalSent} orders rejected");
     }
+
+    // QA-6: B6c §7 (the 1998 AI's Sabotage, Recon, espionage-team and Abduction/Assassination filters admit special forces, inferred from the
+    // mask), B6b §9 (it keeps at least 8 special forces), m5-missions §Special forces (a special force is a team member only of the kinds whose
+    // record mask holds its class bit). With SimpleAiParams.SpecialForceAgents (DEFAULT off) on, each side keeps SpecialForcesWanted special forces
+    // of its agent classes and sends them alone on planned missions; off, no special force goes on a mission (the HQ-hunt droids are Hard's).
+    // Measured on 146027a + this change, seeds 1 to 4, fog, 1000 days (special-force missions Empire / Alliance): 12/2, 0/1, 18/3, 16/3;
+    // kinds Subdue (most), Espionage, Abduction. Floor: both sides send one on at least 3 of 4 seeds; only agent classes go; at most 1
+    // order in 20 rejected. Off: none on seed 1.
+    [Fact]
+    public void SpecialForceAgents_AreBuiltAndGoOnMissionsTheirMaskAllows()
+    {
+        Assert.False(new SimpleAiParams().SpecialForceAgents);
+        var p = Fog with { SpecialForceAgents = true };
+        var games = MultiSeed.Play(new[] { 1, 2, 3, 4 }, seed =>
+        {
+            var (m, h) = Match(seed, p);
+            m.RunTo(1000);
+            var sf = h.Game.Events.OfType<MissionStarted>().Where(e => e.SpecialForces.Items.Count > 0).ToList();
+            var built = h.Game.Events.OfType<UnitCompleted>().ToDictionary(e => e.Object, e => e.Class); // a special force on a mission was built in play
+            var classes = sf.SelectMany(e => e.SpecialForces.Items).Select(id => built.GetValueOrDefault(id, "start force")).Distinct().OrderBy(c => c, StringComparer.Ordinal).ToList();
+            bool agentClassesOnly = sf.All(e => e.SpecialForces.Items.All(id => built.TryGetValue(id, out var c) && p.AgentForceClasses(e.Side).Contains(c)));
+            return (Seed: seed, Empire: sf.Count(e => e.Side == Side.Empire), Alliance: sf.Count(e => e.Side == Side.Alliance),
+                Kinds: string.Join(",", sf.Select(e => e.MissionKind).Distinct().OrderBy(k => k)), Classes: string.Join(",", classes),
+                AgentOnly: agentClassesOnly, m.TotalSent, m.TotalRejected);
+        });
+        foreach (var g in games)
+            _out.WriteLine($"seed {g.Seed}: special-force missions Empire {g.Empire} Alliance {g.Alliance}; kinds {g.Kinds}; classes {g.Classes}; orders {g.TotalSent} rejected {g.TotalRejected}");
+        Assert.All(games, g => Assert.True(g.AgentOnly, $"seed {g.Seed}: a special force outside the agent classes went on a mission"));
+        Assert.All(games, g => Assert.True(g.TotalRejected * 20 <= g.TotalSent, $"seed {g.Seed}: {g.TotalRejected} of {g.TotalSent} orders rejected"));
+        Assert.True(games.Count(g => g.Empire > 0 && g.Alliance > 0) >= 3, "both sides send special forces on at least 3 of 4 seeds");
+
+        var (mo, ho) = Match(1, p with { SpecialForceAgents = false });
+        mo.RunTo(1000);
+        Assert.DoesNotContain(ho.Game.Events.OfType<MissionStarted>(), e => e.SpecialForces.Items.Count > 0);
+    }
 }
+
