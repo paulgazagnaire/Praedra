@@ -105,7 +105,8 @@ internal static class Tourney
                               caps.Count(c => c.To == Side.Empire), caps.Count(c => c.To == Side.Alliance));
     }
 
-    /// <summary>Game settings for every game (--settings K=V,...: int, bool or enum properties of GameSettings); null = the defaults.</summary>
+    /// <summary>Game settings for every game (--settings K=V,...: int, bool or enum properties of GameSettings, nullable ones too, "null" for
+    /// the default; dotted keys reach the nested tables, e.g. Characters.TalentedSkipStrong=false or Battle.Ruleset=Classic); null = the defaults.</summary>
     internal static GameSettings? SettingsWith(string? spec)
     {
         if (string.IsNullOrWhiteSpace(spec)) return null;
@@ -113,15 +114,33 @@ internal static class Tourney
         foreach (var pair in spec.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             var kv = pair.Split('=', 2);
-            var prop = typeof(GameSettings).GetProperty(kv[0]) ?? throw new ArgumentException($"GameSettings has no {kv[0]}.");
-            var t = prop.PropertyType;
-            object v = t == typeof(int) ? int.Parse(kv[1], CultureInfo.InvariantCulture)
-                     : t == typeof(bool) ? bool.Parse(kv[1])
-                     : t.IsEnum ? Enum.Parse(t, kv[1], ignoreCase: true)
-                     : throw new ArgumentException($"{kv[0]} is not an int, a bool or an enum.");
-            prop.SetValue(copy, v);
+            if (kv.Length != 2) throw new ArgumentException($"{pair} is not K=V.");
+            var path = kv[0].Split('.');
+            object target = copy;
+            for (int i = 0; i < path.Length - 1; i++)
+            {
+                // A nested table: a fresh copy (the defaults when null), so a shared default instance is never changed.
+                var nested = Prop(target, path[i]);
+                var current = nested.GetValue(target);
+                var fresh = current == null ? Activator.CreateInstance(nested.PropertyType)
+                          : current.GetType().GetMethod("<Clone>$")?.Invoke(current, null) ?? throw new ArgumentException($"{path[i]} cannot be copied.");
+                nested.SetValue(target, fresh);
+                target = fresh!;
+            }
+            var prop = Prop(target, path[^1]);
+            var t = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
+            bool nullable = !prop.PropertyType.IsValueType || prop.PropertyType != t;
+            object? v = nullable && kv[1].Equals("null", StringComparison.OrdinalIgnoreCase) ? null
+                      : t == typeof(int) ? int.Parse(kv[1], CultureInfo.InvariantCulture)
+                      : t == typeof(bool) ? bool.Parse(kv[1])
+                      : t.IsEnum ? Enum.Parse(t, kv[1], ignoreCase: true)
+                      : throw new ArgumentException($"{kv[0]} is not an int, a bool or an enum.");
+            prop.SetValue(target, v);
         }
         return copy;
+
+        static System.Reflection.PropertyInfo Prop(object o, string name) =>
+            o.GetType().GetProperty(name) ?? throw new ArgumentException($"{o.GetType().Name} has no {name}.");
     }
 
     /// <summary>A copy of the parameters with "Name=value" pairs set (int and bool properties of SimpleAiParams).</summary>
