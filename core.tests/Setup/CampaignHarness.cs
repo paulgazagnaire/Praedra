@@ -29,7 +29,10 @@ internal static class CampaignHarness
     public const int Days = 1000;
     private static readonly ConcurrentDictionary<(ulong, GarrisonRuleset), Lazy<CampaignRun>> Cache = new();
 
-    public static GameSettings Settings(GarrisonRuleset ruleset) => new() { SupportRuleset = ruleset };
+    // The scripted campaign (TestCampaign) was written for planets that change hands only by invasion: under Derived control the day-201
+    // bombardment empties Kinyen, it goes neutral, the day-251 assault wins and the day-300 relief battle never happens as scripted (AI trainer,
+    // 2026-10-18). So the script pins ControlRule AssaultOnly, whatever the game DEFAULT is (m2-control-and-capture; Paul chose Derived 2026-10-18).
+    public static GameSettings Settings(GarrisonRuleset ruleset) => new() { SupportRuleset = ruleset, ControlRule = Rebellion.Core.Control.ControlRule.AssaultOnly };
 
     /// <summary>The 1000-day run with every invariant checked after every Step (cached).</summary>
     public static CampaignRun Checked(ulong seed, GarrisonRuleset ruleset) =>
