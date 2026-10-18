@@ -48,9 +48,9 @@ public sealed record FogParams
     public IReadOnlyList<string> StartFullCopyAlliance { get; init; } = Array.Empty<string>();
     /// <summary>
     /// The Setup reveal also writes group C (facilities) for the start_explored_all systems (never D or E). 1998 = on (B4 §11, [EXE-own]
-    /// 0x51b990, 0x539ac0). DEFAULT off until the AI trainer adapts the fogged AI (Dev lead 2026-10-18). rule: m5-fog-and-hq §F2 Setup, §F4 1.
+    /// 0x51b990, 0x539ac0). DEFAULT on (1998); AI measured 2026-10-18: floors pass, Medium mirror 12/16 either way. rule: m5-fog-and-hq §F2 Setup, §F4 1.
     /// </summary>
-    public bool SetupRevealsFacilities { get; init; }
+    public bool SetupRevealsFacilities { get; init; } = true;
     /// <summary>The galaxy group whose systems report instantly (planets file group label). rule: §F2 CoreReport ("Group is Core"), Contradictions 9.</summary>
     public string CoreGroup { get; init; } = "core";
 

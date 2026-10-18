@@ -42,6 +42,7 @@ public sealed partial class SimpleAi
         var busy = new HashSet<int>();
         PlanMissionCancels();
         DetachRiders(busy);
+        EmperorHome(mine, busy);
         var spies = ReserveSpies(mine, busy);
         PlanSystemGeneral(mine, busy, spies);
         PlanFleetOfficers(mine, busy, spies);
@@ -82,6 +83,42 @@ public sealed partial class SimpleAi
                 Note(seq, "DetachCharacter", $"{_h.Characters.ClassOf(c).Name} off fleet {f.Id} at {f.At}");
                 busy.Add(c.Id);
             }
+    }
+
+    // ================================================================== the leaders and the Emperor (LeaderMarks; B6c §7)
+
+    /// <summary>B6c §7 leaders (0x4024d0): Luke, Mon Mothma, the Emperor and Vader.</summary>
+    private bool IsLeader(CharacterRecord c)
+    {
+        var cp = _h.Characters.Params;
+        return c.Id == cp.Luke || c.Id == _p.MonMothmaId || c.Id == cp.Emperor || c.Id == cp.Vader;
+    }
+
+    /// <summary>B6c §7 story characters (0x4025f0): the four leaders plus Leia and Han. With LeaderMarks the AI never makes them fleet or army commanders.</summary>
+    private bool NeverCommands(CharacterRecord c) =>
+        _p.LeaderMarks && (IsLeader(c) || c.Id == _h.Characters.Params.Leia || c.Id == _h.Missions.Data.Numbers.HanCharacterId);
+
+    /// <summary>
+    /// Emperor home (B6c §7, planner kind 6, Empire only): while the Empire holds the Seat of Power system (Coruscant, which is in its own
+    /// sector, so the "holds a system in Coruscant's sector" start test holds too), the Emperor is taken off every other job, brought there and
+    /// kept there; the Seat of Power (m5-characters-and-force §Seat of Power) stays on. The 1998 planner also waits for the recruitment count
+    /// to reach 0; this AI never recruits (Recruitment is refused by the core today), so that count is taken as 0. QA-8 measured the Emperor on
+    /// Coruscant on 1-7% of days without it, and captured on missions.
+    /// </summary>
+    private void EmperorHome(List<CharacterRecord> mine, HashSet<int> busy)
+    {
+        var cp = _h.Characters.Params;
+        if (!_p.LeaderMarks || _side != Side.Empire || !Held(cp.SeatOfPowerSystem)) return;
+        var e = mine.FirstOrDefault(c => c.Id == cp.Emperor);
+        if (e == null) return;
+        busy.Add(e.Id);
+        if (e.AttachedFleet != 0 && e.Post != CharacterPost.None && e.Transit == null)
+        {
+            long seq = _h.Game.Submit(sq => new DetachCharacterOrder(sq, _side, e.Id));
+            Note(seq, "DetachCharacter", $"{_h.Characters.ClassOf(e).Name} off fleet {e.AttachedFleet} (Emperor home)");
+            return;
+        }
+        if (Standing(e)) MoveCharacter(e, cp.SeatOfPowerSystem);
     }
 
     /// <summary>The Empire hunts the HQ (fog only) while it is unknown, or known with a picture older than HqRecheckDays.</summary>
@@ -227,7 +264,7 @@ public sealed partial class SimpleAi
     {
         string? crit = GuardSystem();
         if (crit == null || _h.Characters.SystemGeneralOf(crit) != null) return;
-        bool CanGen(CharacterRecord c) => _h.Characters.ClassOf(c).CanGeneral && Skill(c, Characters.Skill.Leadership) >= _p.OfficerMinLeadership;
+        bool CanGen(CharacterRecord c) => _h.Characters.ClassOf(c).CanGeneral && Skill(c, Characters.Skill.Leadership) >= _p.OfficerMinLeadership && !NeverCommands(c);
         foreach (var s in HeldSystems())
             if (s != crit && _h.Characters.SystemGeneralOf(s) is { } g && g.Side == _side)
             {
@@ -273,7 +310,7 @@ public sealed partial class SimpleAi
                 open.Add((f, CharacterPost.General));
         }
         if (open.Count == 0) return;
-        bool Fits(CharacterRecord c, CharacterPost p) => _h.Characters.ClassOf(c).Can(p);
+        bool Fits(CharacterRecord c, CharacterPost p) => _h.Characters.ClassOf(c).Can(p) && !NeverCommands(c);
         int demand = open.Count;
         if (rally != null) demand -= mine.Count(c => c.Transit is { } t && t.Path[^1] == rally && c.Status == CharacterStatus.Free
                                                      && open.Any(o => Fits(c, o.Post)) && Skill(c, Characters.Skill.Leadership) >= _p.OfficerMinLeadership);
@@ -506,6 +543,7 @@ public sealed partial class SimpleAi
         var rec = mi.Data.Get(j.Kind);
         int defenders = rec.Foilable ? MissionDefendersAt(j.System).Count : 0;
         if (key && (NoKeyKinds.Contains(j.Kind) || (_h.Characters.Params.MajorsCanDie && defenders > 0))) return null;
+        if (_p.LeaderMarks && j.Kind == MissionKind.Diplomacy && c.Id == _h.Characters.Params.Emperor) return null; // B6c §7: the Emperor is never a diplomat
         int unseen = rec.Foilable ? UnseenBasisPoints(Skill(c, Characters.Skill.Espionage), j.System) : 10000;
         int chance = (int)((long)unseen * SuccessPercent(c, j) / 10000); // percent
         if (chance < (Repeats(j.Kind) ? _p.RepeatMinOddsPercent : _p.MissionMinOddsPercent)) return null;
