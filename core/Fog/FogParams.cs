@@ -46,6 +46,11 @@ public sealed record FogParams
     /// <summary>Systems each side gets a FullCopy of at setup (matched by name, skipped when not in the galaxy). Traced: Yavin to the Empire. rule: §F4 3.</summary>
     public IReadOnlyList<string> StartFullCopyEmpire { get; init; } = new[] { "Yavin" };
     public IReadOnlyList<string> StartFullCopyAlliance { get; init; } = Array.Empty<string>();
+    /// <summary>
+    /// The Setup reveal also writes group C (facilities) for the start_explored_all systems (never D or E). 1998 = on (B4 §11, [EXE-own]
+    /// 0x51b990, 0x539ac0). DEFAULT off until the AI trainer adapts the fogged AI (Dev lead 2026-10-18). rule: m5-fog-and-hq §F2 Setup, §F4 1.
+    /// </summary>
+    public bool SetupRevealsFacilities { get; init; }
     /// <summary>The galaxy group whose systems report instantly (planets file group label). rule: §F2 CoreReport ("Group is Core"), Contradictions 9.</summary>
     public string CoreGroup { get; init; } = "core";
 

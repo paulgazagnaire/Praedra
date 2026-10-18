@@ -15,12 +15,17 @@ public class FogTests
     [Fact]
     public void FW1_Day0Pictures()
     {
-        var w = new FogWorld();
+        // B4 2026-10-18: with SetupRevealsFacilities on (1998); DEFAULT off until the AI trainer adapts the fogged AI (Dev lead 2026-10-18).
+        var w = new FogWorld(new GameSettings { Fog = new FogParams { SetupRevealsFacilities = true } });
         Assert.Equal(KnowledgeLevel.Charted, w.Fog.Level(Side.Alliance, C0));
         var c0 = w.Pic(Side.Alliance, C0)!;
         Assert.Equal(Side.Empire, c0.Owner!.Value.Owner);
         Assert.Equal(0, c0.Owner.Stamp);
-        Assert.Null(c0.Facilities);
+        // B4 2026-10-17: the Setup reveal now writes group C (facilities) for start_explored_all systems, never D or E (m5-fog-and-hq §F4 1,
+        // B4 §11); before B4 this asserted that C was not written.
+        Assert.Equal(0, c0.Facilities!.Stamp);
+        Assert.Null(c0.Ground); Assert.Null(c0.Fleets);
+        Assert.Null(new FogWorld().Pic(Side.Alliance, C0)!.Facilities); // switch off (DEFAULT): no C, as before B4
         Assert.Null(w.Know(Side.Alliance, C0)!.LastLookDay);
         Assert.Equal(KnowledgeLevel.Unknown, w.Fog.Level(Side.Alliance, R1));
         Assert.Null(w.Pic(Side.Alliance, R1)); // the picture exposes nothing (owner not available)

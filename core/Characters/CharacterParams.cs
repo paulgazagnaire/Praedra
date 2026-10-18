@@ -188,7 +188,7 @@ public sealed record CharacterParams
     public bool NavigatorBonus { get; init; }
 
     // ---- setup switches owned by m5-setup-and-victory P9 (kept here because they only steer the character placement)
-    /// <summary>Extra random characters per side at the start. DEFAULT 4 (largest original value; Open question 6 of the setup sheet).</summary>
+    /// <summary>Extra random characters per side at the start. DEFAULT 4 = SDPRTB 0x1402, size tier 3 (the biggest 1998 galaxy; SizeTier DEFAULT 3, B4 §14.1). rule: m5-setup-and-victory §P9.</summary>
     public int StartExtrasPerSide { get; init; } = 4;
     /// <summary>DEFAULT Original. rule: m5-setup-and-victory §P9 item 2.</summary>
     public StartCastOfficers StartCastOfficers { get; init; } = StartCastOfficers.Original;
