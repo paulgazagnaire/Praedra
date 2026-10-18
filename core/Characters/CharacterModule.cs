@@ -93,6 +93,34 @@ public sealed class CharacterModule
     public IEnumerable<CharacterRecord> InPlay => S.Characters.Values.Where(c => c.Placed);
     /// <summary>The side's recruitment pool: roster characters not placed, by id. rule: m5-setup-and-victory §P9 (an extra), Open question 13.</summary>
     public IReadOnlyList<CharacterRecord> PoolOf(Side side) => S.Characters.Values.Where(c => !c.Placed && c.Side == side).ToList();
+    /// <summary>
+    /// The side's Recruitment pool: its minor characters not yet placed, counting only in-game roster rows, in id order. Majors are never
+    /// recruited. rule: m5-missions §6 Recruitment (Recruitment pick, 2026-10-18; [EXE-own] 0x56b9a0, 0x55fc80).
+    /// </summary>
+    public IReadOnlyList<CharacterRecord> RecruitPoolOf(Side side) => S.Characters.Values
+        .Where(c => !c.Placed && c.Side == side && Data.TryGet(c.Id, out var cls) && cls.InGame && cls.Kind == CharacterKind.Minor).ToList(); // SortedDictionary: id order
+
+    /// <summary>The side's pool-empty flag: set when a Recruitment took the last member of its pool. rule: m5-missions §6 Recruitment (2026-10-18).</summary>
+    public bool PoolEmpty(Side side) => side == Side.Alliance ? S.AlliancePoolEmpty : S.EmpirePoolEmpty;
+
+    /// <summary>
+    /// The character sheet's <c>Recruit(side, system)</c>, the setup extras pick (m5-setup-and-victory §P9 "An extra") with the place given:
+    /// the mission's own target system (it must be a system). <c>m</c> = <see cref="RecruitPoolOf"/> size; <c>m = 0</c>: nobody, no draw.
+    /// Else one draw <c>r = rand(0..m-1)</c> and pool member <c>r</c> is placed free at the system, his skills and Force as the extras have them
+    /// (rolled by the creation rule, m5-characters-and-force §Rolling the stats). If <c>m</c> was 1 the side's pool-empty flag is set.
+    /// rule: m5-missions §6 Recruitment (Recruitment pick, 2026-10-18; [EXE-own] 0x56b9a0, 0x55fc80).
+    /// </summary>
+    public CharacterRecord? Recruit(StepContext ctx, Side side, string system)
+    {
+        if (!_fleets.Galaxy.TryFindSystem(system, out _)) return null; // rule: the place must be a system
+        var pool = RecruitPoolOf(side);
+        int m = pool.Count;
+        if (m == 0) return null; // nobody is recruited and no draw
+        var c = pool[ctx.Rng.NextInt(0, m - 1)];
+        Place(c.Id, system, ctx);
+        if (m == 1) { if (side == Side.Alliance) S.AlliancePoolEmpty = true; else S.EmpirePoolEmpty = true; }
+        return c;
+    }
 
     /// <summary>Victory reads "is captured" (status Captured; the captor is always the other side). rule: m5-setup-and-victory §Victory.</summary>
     public bool IsCaptured(int id) => Get(id) is { Status: CharacterStatus.Captured };

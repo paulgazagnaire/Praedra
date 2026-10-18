@@ -199,6 +199,7 @@ public sealed class GameHost
         // rule: m5-characters-and-force §Escape (B2e §3)
         if (Characters.EscapeTable == null && data.Missions.Escape is { } esc) Characters.EscapeTable = esc.Select(r => (r.Threshold, r.Value)).ToList();
         Characters.SpecialForcesOnPlanet = Missions.SpecialForcesOnPlanet;
+        Missions.Recruit = Characters.Recruit; // rule: m5-missions §6 Recruitment (Recruitment pick, 2026-10-18)
         // The Death Star's hooks into the characters, missions and fog (they attach after it). rule: m5-death-star §2 effects 3, 4, 6; §5
         DeathStar.MissionsEnded = Missions.OnSystemDestroyed;
         DeathStar.CharacterRoll = Characters.DeathStarStrike;

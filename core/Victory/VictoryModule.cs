@@ -8,17 +8,19 @@ public sealed record GameWon(int Index, int Day, Side Winner, string Reason) : G
 /// <summary>
 /// The switches of the simple (HQ-Only flavoured) victory. The four win switches are on by default.
 /// Standard victory (the four key characters captured, setup-victory/04 §3) is behind <see cref="StandardVictory"/>, on by default; with it off only the HQ-Only conditions run (04 §3 HQ-Only mode).
-/// "Holds no system" is not traced in the original (04 §4 [NOT TRACED]); it is a DEFAULT of the playable slice so a game cannot go on with a side wiped out.
+/// "Holds no system" is a New rule: the 1998 victory check (0x5180e0, the only writer of the game-over bit) has no branch for a wiped-out side,
+/// a galaxy share or a time limit [EXE-own, B4 §15]. It stays on (DEFAULT New, Decided extension of the playable slice 2026-10-12) so a game
+/// cannot go on with a side wiped out; off is the 1998 behaviour.
 /// </summary>
 public sealed record VictoryRules
 {
     /// <summary>Empire wins when the Alliance no longer holds the Rebel HQ system. rule: setup-victory/04 §3 (hqGone), HQ-Only mode.</summary>
     public bool EmpireWinsOnHqLost { get; init; } = true;
-    /// <summary>Alliance wins when it holds Coruscant. rule: setup-victory/04 §3 (cor), HQ-Only mode.</summary>
+    /// <summary>Alliance wins when it holds Coruscant or Coruscant is destroyed. rule: setup-victory/04 §3 (cor, destroyed bit 0x200), HQ-Only mode; B4 §15 [EXE-own] (bit 3 of +0x50).</summary>
     public bool AllianceWinsOnCoruscant { get; init; } = true;
-    /// <summary>Empire wins when the Alliance holds no system. DEFAULT (playable slice 2026-10-12).</summary>
+    /// <summary>Empire wins when the Alliance holds no system. New rule, not 1998 (B4 §15 [EXE-own]); DEFAULT New on (Decided extension, playable slice 2026-10-12).</summary>
     public bool EmpireWinsWhenAllianceHasNoSystems { get; init; } = true;
-    /// <summary>Alliance wins when the Empire holds no system. DEFAULT (playable slice 2026-10-12).</summary>
+    /// <summary>Alliance wins when the Empire holds no system. New rule, not 1998 (B4 §15 [EXE-own]); DEFAULT New on (Decided extension, playable slice 2026-10-12).</summary>
     public bool AllianceWinsWhenEmpireHasNoSystems { get; init; } = true;
     /// <summary>
     /// Standard victory (m5-setup-and-victory: HqOnlyVictory = false): the Empire's HQ term also needs Luke Skywalker and Mon Mothma captured, the
@@ -85,7 +87,12 @@ public sealed class VictoryModule
 
         string? allianceReason = null, empireReason = null;
         bool keysA = !Rules.StandardVictory || KeysCaptured(Side.Alliance), keysE = !Rules.StandardVictory || KeysCaptured(Side.Empire);
-        if (Rules.AllianceWinsOnCoruscant && keysA && Holds(CoruscantName, Side.Alliance)) allianceReason = Rules.StandardVictory ? "Alliance holds Coruscant with Vader and Palpatine captured" : "Alliance captured Coruscant";
+        // rule: m5-setup-and-victory §Victory: Coruscant held by the Alliance OR destroyed (B4 §15 [EXE-own], bit 3 of +0x50)
+        bool corDestroyed = ctx.State.DeathStar.IsDestroyed(CoruscantName);
+        if (Rules.AllianceWinsOnCoruscant && keysA && (Holds(CoruscantName, Side.Alliance) || corDestroyed))
+            allianceReason = corDestroyed
+                ? (Rules.StandardVictory ? "Coruscant is destroyed with Vader and Palpatine captured" : "Coruscant is destroyed")
+                : (Rules.StandardVictory ? "Alliance holds Coruscant with Vader and Palpatine captured" : "Alliance captured Coruscant");
         if (allianceReason == null && Rules.AllianceWinsWhenEmpireHasNoSystems && !owners.Values.Any(v => v == Side.Empire)) allianceReason = "Empire holds no system";
         // rule: setup-victory/04 §3 (the destroyed bit; a missing HQ counts as destroyed); m5-fog-and-hq §F7 (capture destroys it, DEFAULT AnyCause).
         // An at-rest HQ on a system the Alliance no longer holds also counts (HqLostOnHolderChange = Never leaves it standing there).
