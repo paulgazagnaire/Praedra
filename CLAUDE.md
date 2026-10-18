@@ -17,7 +17,7 @@ A rebuild of Star Wars: Rebellion (1998). Godot 4 draws the screen; all game rul
 
 ## Hard rules (tests enforce several of them)
 1. The core never references Godot.
-2. One seeded random generator owned by the core (`GameRng`). No `System.Random`, no wall-clock time, no `Guid.NewGuid`, no Stopwatch in the core.
+2. One seeded random generator owned by the core (`GameRng`). No `System.Random`, no wall-clock time, no `Guid.NewGuid`, no Stopwatch in the core. Exception: the Classic battle's Original dice (`ClassicBattleRng.Original`) are a second deterministic generator seeded inside the core per battle, as the 1998 game did; switch `Game` uses `GameRng`.
 3. Never let dictionary or hash-set iteration order affect game state or random draws. Sort by id or ordinal name first.
 4. Orders in, events out. Only the core's day `Step()` changes game state.
 5. Integer arithmetic for rules unless a sheet says otherwise.
