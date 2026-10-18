@@ -22,8 +22,13 @@ public enum MissionKind
 /// One MISSNSD row (data/original/mission-records.csv, read from the 1998 file by importer/) plus its Foilable flag (data/design/mission-foilable.csv,
 /// the sheet's DEFAULT fall-back table). Timer = <c>TimerMin + rand(0..TimerSpread)</c> days. rule: m5-missions §Mission records (data), §3 (Foilable).
 /// </summary>
+/// <remarks>
+/// B2d: <see cref="GuardChecks"/> is MISSNSD word 14 (0 = the mission check never runs, only Bounty; 0x520b80) and <see cref="Foilable"/> is word 15
+/// <c>can_resign</c> (0x520b90: the mission ends when foiled; 0x5346b0: a member may leave after a duel), read from the records file when it has the
+/// column; the design fall-back table is used otherwise. rule: m5-missions §1, §3 Foilable, §4 (Traced B2d).
+/// </remarks>
 public sealed record MissionRecord(MissionKind Kind, bool Alliance, bool Empire, int TimerMin, int TimerSpread, bool Hidden, bool Repeats,
-    string? Table, int SpecialForceMask, bool Foilable)
+    string? Table, int SpecialForceMask, bool Foilable, bool GuardChecks = true)
 {
     public bool AvailableTo(Side side) => side == Side.Alliance ? Alliance : Empire;
 }
@@ -70,6 +75,10 @@ public sealed class MissionData
     public const string RecordsFile = "mission-records.csv", TablesFile = "mission-tables.csv", FoilableFile = "mission-foilable.csv",
         KeyTargetsFile = "assassination-key-targets.csv";
     public const string FoilTable = "FOILTB";
+    /// <summary>The escape-duel table (B2d §5). rule: m5-missions §4.</summary>
+    public const string EvadeTable = "RLEVADTB";
+    /// <summary>ESCAPETB, the prisoner's escape chance (B2e §3 step 5). rule: m5-characters-and-force §Escape.</summary>
+    public const string EscapeTableName = "ESCAPETB";
     /// <summary>The decoy table's name in mission-tables.csv (FDECOYTB and TDECOYTB are byte-identical: one table). rule: B1-own-importer §Work 1, 4.</summary>
     public const string DecoyTableName = "FDECOYTB";
 
@@ -110,6 +119,10 @@ public sealed class MissionData
     }
 
     public IReadOnlyCollection<MissionRecord> Records => _records.Values;
+    /// <summary>RLEVADTB, the escape duel's table; null when the data has none (the duel is then refused RuleMissing). rule: m5-missions §4 (B2d §5).</summary>
+    public IReadOnlyList<TableRow>? Evade => _tables.TryGetValue(EvadeTable, out var t) ? t : null;
+    /// <summary>ESCAPETB (B2e §3); null when the data has none (an escape attempt is then refused RuleMissing). rule: m5-characters-and-force §Escape.</summary>
+    public IReadOnlyList<TableRow>? Escape => _tables.TryGetValue(EscapeTableName, out var t) ? t : null;
     public bool TryGet(MissionKind kind, out MissionRecord record) => _records.TryGetValue(kind, out record!);
     public MissionRecord Get(MissionKind kind) => _records.TryGetValue(kind, out var r) ? r : throw new KeyNotFoundException($"No mission record {kind}.");
     public IReadOnlyList<TableRow> Table(string name) => _tables.TryGetValue(name, out var t) ? t : throw new KeyNotFoundException($"No mission table {name}.");
@@ -162,12 +175,15 @@ public sealed class MissionData
         {
             var kind = ParseKind(t, r);
             if (Hex(t, r, "dat_id") != (int)kind) throw new DataLoadException($"{t.Where(r)}: dat_id does not match kind {kind}.");
-            if (!foil.TryGetValue(kind, out var fo)) throw new DataLoadException($"{FoilableFile}: no row for kind {kind}.");
+            bool fo;
+            if (t.HasColumn("can_resign")) fo = t.GetInt(r, "can_resign") != 0; // rule: B2d §6 (MISSNSD word 15)
+            else if (!foil.TryGetValue(kind, out fo)) throw new DataLoadException($"{FoilableFile}: no row for kind {kind}.");
+            bool guards = !t.HasColumn("guard_checks") || t.GetInt(r, "guard_checks") != 0; // rule: B2d §2 (MISSNSD word 14)
             string table = t.Get(r, "table").Trim();
             int min = t.GetInt(r, "timer_min"), spread = t.GetInt(r, "timer_spread");
             if (min < 0 || spread < 0) throw new DataLoadException($"{t.Where(r)}: negative timer.");
             recs.Add(new MissionRecord(kind, t.GetInt(r, "alliance") == 1, t.GetInt(r, "empire") == 1, min, spread,
-                t.GetInt(r, "hidden") == 1, t.GetInt(r, "repeats") == 1, table.Length == 0 ? null : table, Hex(t, r, "special_force_mask"), fo));
+                t.GetInt(r, "hidden") == 1, t.GetInt(r, "repeats") == 1, table.Length == 0 ? null : table, Hex(t, r, "special_force_mask"), fo, guards));
         }
 
         tt.Require("table", "threshold", "value");

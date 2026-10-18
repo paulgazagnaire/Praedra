@@ -116,7 +116,7 @@ public class KeyTargetTests
         Assert.Null(w.Reason(s));
         w.RunIteration(w.LastMission);
         var r = w.Events<MissionMemberRoll>().Single();
-        Assert.Equal((Vader, 100), (r.Member, r.Input));
+        Assert.Equal((Vader, 220), (r.Member, r.Input)); // B2e moved: Vader's effective combat 100 + 100 * 120 / 100
         Assert.Equal(4, w.Stub.Count(0, 99)); // three betrayal draws (B2b) and the one roll
     }
 
@@ -154,11 +154,13 @@ public class KeyTargetTests
     public void KT8_UnqualifiedTeamInjures(int combat, int esp)
     {
         var w = Assassin(Luke, vaderCombat: combat, vaderEsp: esp);
+        w.Ch.Get(Vader)!.ForceExperience = 0; // B2e: without his Force so the skills given are the effective ones
         w.Stub!.Expect(0, 99, Bt(1, 0, 0)); // B2b: the betrayal draws come first
         Assert.Null(StartReason(w, MissionKind.Assassination, Vader, Luke));
         w.RunIteration(w.LastMission);
-        Assert.Single(w.Events<CharacterInjured>()); // InjuryDays is 0 in the default parameters: he is healed in the same Step
-        Assert.Equal(2, w.Stub.Count(0, 99)); // betrayal (B2b), roll; no k
+        Assert.Single(w.Events<CharacterInjured>());
+        // B2e moved: the injury is the Hurt roll on Luke's own combat (0, so p = 100: the third draw 0 hits); betrayal (B2b), roll, Hurt; no k
+        Assert.Equal(3, w.Stub.Count(0, 99));
         Assert.Empty(w.Events<CharacterKilled>());
     }
 
@@ -174,7 +176,7 @@ public class KeyTargetTests
         Assert.Null(w.Reason(s));
         w.RunIteration(w.LastMission);
         Assert.Single(w.Events<CharacterInjured>());
-        Assert.Equal(3, w.Stub.Count(0, 99)); // two betrayal draws (B2b), roll
+        Assert.Equal(4, w.Stub.Count(0, 99)); // two betrayal draws (B2b), roll, and (B2e moved) the Hurt roll of the injury
     }
 
     // m5-missions KT10: a key kill waives the Empire's Luke term (KeyDeathFallback default WaiveCondition); the Empire wins when Mon Mothma is
@@ -261,18 +263,18 @@ public class KeyTargetTests
     {
         var w = new MissionWorld();
         w.Hold(T, Side.Empire, 20);
-        w.Agent(Han, T, com: 100);
-        w.Agent(Leia, T, com: 50);
-        w.Agent(Wedge, T, com: 50);
+        w.Agent(Han, H, com: 100); // B2d: the team flies in from H (a team leaving T would meet Vader's sensing at the leaving check too)
+        w.Agent(Leia, H, com: 50);
+        w.Agent(Wedge, H, com: 50);
         w.Agent(Vader, T);
-        // B2b: Vader (Force 120) at the target senses Leia and Wedge (Force 10 each, both Force users as created here): one pick draw (0..1) = 0
-        // takes Leia, p = 30, draw 99 misses; then Wedge, 99 misses; then three betrayal draws, then the roll
-        w.Stub!.Expect(0, 99, 99, 99, 99, 99, 99, 50);
+        // B2e moved: Leia and Wedge are Force users who are not aware, so their Force is 0 and Vader senses nobody (was two sense rolls); three
+        // betrayal draws, then the roll
+        w.Stub!.Expect(0, 99, 99, 99, 99, 50);
         w.Start(Side.Alliance, MissionKind.Abduction, new[] { Han, Leia, Wedge }, null, targetChar: Vader);
         w.Game.Step();
         w.RunIteration(w.LastMission);
         Assert.Single(w.Events<MissionMemberRoll>());
-        Assert.Equal(new[] { (Leia, Vader, 30, false), (Wedge, Vader, 30, false) }, w.Events<MissionForceSenseRoll>().Select(e => (e.Member, e.Senser, e.Chance, e.Sensed)));
+        Assert.Empty(w.Events<MissionForceSenseRoll>());
 
         var g = Assassin(Luke);
         RideFleet(g, Luke, Side.Alliance);

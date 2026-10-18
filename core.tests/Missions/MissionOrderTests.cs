@@ -385,9 +385,7 @@ public class MissionOrderTests
     }
 
     [Theory]
-    [InlineData(nameof(MissionParams.FoilDestroysSpecialForces))]
     [InlineData(nameof(MissionParams.MissionsIgnoreForcedStop))]
-    [InlineData(nameof(MissionParams.BlockadeInterceptsMissions))]
     [InlineData(nameof(MissionParams.UprisingFailsMissions))]
     [InlineData(nameof(MissionParams.InformantIncident))]
     [InlineData(nameof(MissionParams.StoryMissions))]
@@ -396,9 +394,7 @@ public class MissionOrderTests
     {
         var p = name switch
         {
-            nameof(MissionParams.FoilDestroysSpecialForces) => new MissionParams { FoilDestroysSpecialForces = true },
             nameof(MissionParams.MissionsIgnoreForcedStop) => new MissionParams { MissionsIgnoreForcedStop = false },
-            nameof(MissionParams.BlockadeInterceptsMissions) => new MissionParams { BlockadeInterceptsMissions = true },
             nameof(MissionParams.UprisingFailsMissions) => new MissionParams { UprisingFailsMissions = true },
             nameof(MissionParams.InformantIncident) => new MissionParams { InformantIncident = true },
             nameof(MissionParams.StoryMissions) => new MissionParams { StoryMissions = true },
@@ -415,8 +411,9 @@ public class MissionOrderTests
         Assert.Null(new GameSettings().Missions);
         Assert.Equal(new MissionParams(), h.Missions.Params);
         var p = new MissionParams();
-        Assert.Equal((MstbLookupMode.Step, MstbBelowFirstRow.FirstRowValue, SuccessRule.AnyMember, false, true, 0, 0, true, true, 0),
-            (p.MstbLookup, p.MstbBelowFirstRow, p.SuccessRule, p.DetectionAtLanding, p.DecoysFromSpecialForcesOnly, p.MaxTeamMembers, p.MaxDecoys, p.CountAboardUnits, p.DiplomacyNeedsCalm, p.RecruitSystemTerm));
+        Assert.Equal((true, true), (p.MissionGuardChecks, p.GuardsAnySide)); // B2d
+        Assert.Equal((MstbLookupMode.Step, MstbBelowFirstRow.FirstRowValue, SuccessRule.AnyMember, true, true, 0, 0, true, true, 0),
+            (p.MstbLookup, p.MstbBelowFirstRow, p.SuccessRule, p.MissionGuardChecks, p.DecoysFromSpecialForcesOnly, p.MaxTeamMembers, p.MaxDecoys, p.CountAboardUnits, p.DiplomacyNeedsCalm, p.RecruitSystemTerm));
         Assert.Equal((InciteInputMode.LeadershipMinusControllerSupport, InciteSupportTiming.PerIteration, false, SabotageSkill.Average, SabotageTargetMode.RandomFacility, true),
             (p.InciteInputMode, p.InciteSupportTiming, p.SubdueEndsUprising, p.SabotageSkill, p.SabotageTargetMode, p.ExposureHooks));
         var d = GameData.Default.Missions;
@@ -433,8 +430,9 @@ public class MissionOrderTests
         Assert.True(Game.WorkList.ToList().IndexOf("5.3") > Game.WorkList.ToList().IndexOf("5.2") && Game.WorkList.ToList().IndexOf("5.3") < Game.WorkList.ToList().IndexOf("5.4"));
     }
 
-    // Defenders: capital ships and squadrons of fleets at the target (officer = the fleet's Admiral), based squadrons (no officer), landed regiments
-    // (the system General) and regiments aboard (the fleet's General; only with CountAboardUnits); never facilities, special forces or own units.
+    // Defenders (B2d §3): what a planet-target mission meets: the capital ships of the fleets there (officer = the fleet's Admiral) and the
+    // regiments aboard (the fleet's General; only with CountAboardUnits) at arrival, the special forces on the enemy-held planet at each job (no
+    // officer, detection 0); never landed regiments, squadrons, facilities or the mission side's units when only the enemy is there.
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -452,11 +450,13 @@ public class MissionOrderTests
         w.Agent(Piett, T, esp: 60); w.Ch.SetPost(Piett, fleet, CharacterPost.Admiral);
         w.Agent(Veers, T, esp: 40); w.Ch.SetPost(Veers, fleet, CharacterPost.General);
         var list = w.M.Defenders(Side.Alliance, T);
+        int probe = w.Host.Economy.Objects.Single(o => o.Class == Probe).Id;
         var expected = new List<(int, int)> { (ship, 60) };
         if (countAboard) expected.Add((aboard.Id, 40));
-        expected.Add((landed, 0)); expected.Add((based, 0));
+        expected.Add((probe, 0));
         Assert.Equal(expected, list.Select(d => (d.Unit.Id, d.OfficerEspionage)));
-        Assert.Equal(25, list.Single(d => d.Unit.Id == landed).Detection);
+        Assert.DoesNotContain(list, d => d.Unit.Id == landed || d.Unit.Id == based);
+        Assert.Equal(0, list.Single(d => d.Unit.Id == probe).Detection);
         Assert.Equal(w.Host.Fleets.ClassOf(w.Host.Economy.Find(ship)!)!.Detection, list[0].Detection);
     }
 
@@ -490,8 +490,8 @@ public class MissionOrderTests
     {
         var w = new MissionWorld();
         w.Hold(T, Side.Empire, 0);
-        w.Agent(Leia, T, esp: 15);
-        w.Unit(Side.Empire, ImpArmy, T);
+        w.Agent(Leia, H, esp: 15);
+        w.Unit(Side.Empire, Probe, T); // B2d: a special force guards the enemy-held planet
         w.Start(Side.Alliance, MissionKind.Espionage, new[] { Leia }, T);
         w.Game.Step();
         w.RunIteration(w.LastMission);

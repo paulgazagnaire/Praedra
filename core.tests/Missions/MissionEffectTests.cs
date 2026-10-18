@@ -202,7 +202,7 @@ public class MissionEffectTests
         w.Start(Side.Alliance, MissionKind.DeathStarSabotage, new[] { Luke }, T);
         w.Game.Step();
         w.RunIteration(w.LastMission);
-        Assert.Equal((100, 99), (w.Events<MissionMemberRoll>().Single().Input, w.Events<MissionMemberRoll>().Single().Chance));
+        Assert.Equal((150, 99), (w.Events<MissionMemberRoll>().Single().Input, w.Events<MissionMemberRoll>().Single().Chance)); // B2e moved: Luke's Force 50 raises both skills to 150
         Assert.Equal(new[] { (T, Side.Empire) }, calls);
     }
 

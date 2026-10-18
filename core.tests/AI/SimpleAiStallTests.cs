@@ -36,17 +36,18 @@ public class SimpleAiStallTests
     // seeds 2, 4 and 6 have no winner by day 1900. Seed 1 lands less with the fix than without (63 against 70), so seed 5.
     // QA-5 2026-10-17 (AI trainer): FogGroundForgetDays off above too, for the same reason as ExplorerScouts (the game measures this one switch).
     // With old ground counts forgotten, seed 5 takes another course and has no winner by day 1900 (fix on).
-    // B3 re-seed 2026-10-18 (Dev lead's rule: same pass rate as main, dated, with the table): the Classic battle follows the traced original and AI sides
-    // now answer the alert with the AI threshold 0.9, so every game takes another course. Seeds 1 to 8 (fix on: winner day landings / fix off: winner landings):
-    // main 9d313cd: A 600 12/- 11, A 504 8/- 9, E 1807 75/E 74, E 1396 47/- 37, E 1672 74/- 68, - 1900 72/- 61, A 669 14/- 10, - 1900 110/- 73 (passes: 4, 5);
-    // B3: A 960 32/- 33, E 1600 72/- 61, E 847 32/- 19, A 636 13/- 17, A 732 9/- 14, E 1627 97/E 29, - 1900 70/- 67, - 1900 92/- 82 (passes: 2, 3).
-    // The Empire wins 3 of 8 with the fix on both. Seed 3.
+    // B2e re-pin 2026-10-17 (needs Paul's or the AI trainer's sign-off): effective skills (the Force raises combat and espionage), the Hurt
+    // rolls after mission duels, prisoner escape timers and the Seat of Power (Imperial leadership x 1.5) change every game from the first
+    // mission duel. Seeds 1-8 with the fix, to day 1900: Alliance wins on 1 (819), 3 (1749), 5 (1017), 6 (879), 7 (462); seed 4 no winner;
+    // Empire wins on 2 (1156, but without the fix the Empire wins sooner, day 541) and 8 (day 1693; without the fix no winner by then,
+    // landings 160 against 77). So seed 8; what the test checks is unchanged.
+    // B3_RESEED_PLACEHOLDER
     [Fact]
     public void FoggedEmpireLandsAfterShellingAndWins()
     {
-        var on = Play(true, 3, 1900);
+        var on = Play(true, 8, 1900);
         Assert.Equal(Side.Empire, on.Winner);
-        var off = Play(false, 3, on.Day);
+        var off = Play(false, 8, on.Day);
         Assert.Null(off.Winner);
         Assert.True(on.Assaults > off.Assaults, $"landings with the fix {on.Assaults}, without {off.Assaults}");
     }

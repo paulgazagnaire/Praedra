@@ -25,7 +25,17 @@ public sealed class MissionModule
 {
     // Causes passed to the character and support functions. rule: §6 (Capture(target, S, Abduction), Kill(target, Assassination), Free(prisoner)).
     public const string CauseAbduction = "Abduction", CauseAssassination = "Assassination", CauseRescue = "Rescue", CauseSubdue = "Subdue",
-        CauseKidnap = "Kidnap"; // rule: m5-missions §6a.4 (Capture(target, Empire, Kidnap))
+        CauseKidnap = "Kidnap", // rule: m5-missions §6a.4 (Capture(target, Empire, Kidnap))
+        CauseMissionDuel = "MissionDuel"; // rule: m5-missions §4 (B2d §5: Capture(c, captor side, held at the check's place, MissionDuel))
+
+    /// <summary>
+    /// The kind word of a mission (data block +0x34, reader 0x520e50): one nibble per check point, phase 2 (bits 0-3), 3, 7, 9 (bits 12-15). Every
+    /// mission's init writes 0x4112 (0x593a80 -> 0x5236e0), Adrift 0x4103 (0x576960 -> 0x576a20), Move is created with 0 (0x547480). rule: m5-missions
+    /// §1 (Traced B2d §2).
+    /// </summary>
+    public const int KindWordMission = 0x4112, KindWordAdrift = 0x4103, KindWordMove = 0;
+    /// <summary>DEFFACSD family of the KDY-150 ion cannon: an own one at the place stops the orbit guards of a leaving or arriving check (0x5275d0, range [0x22, 0x23)). rule: B2d §3.</summary>
+    public const int IonCannonFamily = 0x22;
 
     private readonly Game _game;
     private readonly FleetModule _fleets;
@@ -40,10 +50,12 @@ public sealed class MissionModule
     public MissionParams Params { get; }
 
     /// <summary>
-    /// The character sheet's <c>OnTeamExposed(c, capturingSide, cause)</c>: capture, injury, death and escape of a foiled or failed team and their
-    /// draws. That sheet defines no rule yet, so this is null and the call is a no-op (m5-missions §4). rule: §4, §Interfaces.
+    /// The character sheet's <c>OnTeamExposed(c, capturingSide, cause)</c> for a failed team (a foiled team fights the escape duel instead, B2d §6).
+    /// That sheet defines no rule yet, so this is null and the call is a no-op (m5-missions §4). rule: §4, §Interfaces.
     /// </summary>
     public Action<StepContext, CharacterRecord, Side, ExposureCause>? OnTeamExposed { get; set; }
+    /// <summary>The DEFFACSD family of a facility class (0 = not a defense facility); the host wires it from the defense data. Null = no ion cannon anywhere. rule: B2d §3 (ownIon).</summary>
+    public Func<string, int>? FacilityFamily { get; set; }
     /// <summary>
     /// The character sheet's <c>Recruit(side, system)</c>: take one pool member and make him or her a free character at the system. The pick is
     /// the character sheet's and it defines none, so this is null and a Recruitment order is refused RuleMissing. rule: §6 Recruitment.
@@ -82,6 +94,7 @@ public sealed class MissionModule
         game.RegisterHook("5.3", m.Resolve);
         characters.IsOnMission = m.IsOnMission;
         characters.MissionMembershipEnded = m.OnMembershipEnded;
+        characters.InjuredResign = m.OnInjured;
         fog.AgentsAt = m.AgentsAt;
         support.AgentIncidentTerm = m.IncidentTerm;
         support.IncidentFired = m.OnIncident;
@@ -151,7 +164,7 @@ public sealed class MissionModule
     private readonly record struct Agent(bool IsCharacter, int Id, int Espionage, int Combat, int Leadership, CharacterRecord? C, int Force = 0, int Loyalty = 0);
 
     private Agent? CharAgent(int id) => _ch.Get(id) is { } c
-        ? new Agent(true, id, c.Skill(Skill.Espionage), c.Skill(Skill.Combat), c.Skill(Skill.Leadership), c, c.ForceUser ? c.EffectiveForce : 0, c.Loyalty) : null;
+        ? new Agent(true, id, c.EffectiveSkill(Skill.Espionage), c.EffectiveSkill(Skill.Combat), c.EffectiveSkill(Skill.Leadership), c, c.EffectiveForce, c.Loyalty) : null; // B2e §1: effective skills
 
     private Agent? SfAgent(int id) => E.Objects.TryGetValue(id, out var o) && _troops.Data.SpecialForce(o.Class) is { } k
         ? new Agent(false, id, k.Espionage, k.Combat, k.Leadership, null, 0, k.LoyaltyBase) : null;
@@ -163,53 +176,110 @@ public sealed class MissionModule
     private List<Agent> Decoys(MissionGroup m) =>
         m.DecoyCharacters.Select(CharAgent).Concat(m.DecoySpecialForces.Select(SfAgent)).Where(a => a != null).Select(a => a!.Value).ToList();
 
-    /// <summary>One defender: the unit, its class detection and its officer's espionage (0 when none). rule: §3 Defenders, Officer.</summary>
-    public sealed record Defender(EconObject Unit, int Detection, int OfficerEspionage);
+    /// <summary>One guard: the unit, its class detection, and its commander's espionage and combat (0 when none). rule: §3 Guards, Officer.</summary>
+    public sealed record Defender(EconObject Unit, int Detection, int OfficerEspionage, int OfficerCombat = 0);
+
+    /// <summary>The check points of a mission: phases 2 and 3 (leaving, at the origin), 7 (arriving) and 9 (each job). rule: §1 (Traced B2d §1).</summary>
+    public enum CheckPoint { LeavePlanet = 0, LeaveOrbit = 1, Arrive = 2, Job = 3 }
+
+    /// <summary>The kind of a check (one nibble of the kind word): 1 orbit, 2 planet, 3 orbit then planet in pass 2, 4 next to the target. rule: §1 (B2d §2).</summary>
+    public enum CheckKind { None = 0, Orbit = 1, Planet = 2, OrbitThenPlanet = 3, NextToTarget = 4 }
+
+    /// <summary>Which members count and which guards stand, for one check pass. rule: §3 (Traced B2d §3: 0x589a40, 0x5883b0).</summary>
+    public readonly record struct Scope(bool PlanetMembers, bool OrbitMembers, bool PlanetGuards, bool OrbitGuards);
+
+    public static int KindWord(MissionKind k) => k switch { MissionKind.Move => KindWordMove, MissionKind.Adrift => KindWordAdrift, _ => KindWordMission };
+    public static CheckKind KindAt(int word, CheckPoint p) => (CheckKind)((word >> (4 * (int)p)) & 0xF);
 
     /// <summary>
-    /// Every completed capital ship (of fleets at the system), fighter squadron (aboard those ships, in a squadron fleet there, or based there) and
-    /// regiment (landed, or aboard ships there with CountAboardUnits) whose side is not <paramref name="side"/>, by object id. The officer is the
-    /// Free Admiral of the unit's fleet (ships and squadrons), the Free General of the fleet (regiments aboard) or of the system (landed regiments);
-    /// a based squadron has none. rule: §3 Defenders, Officer (DEFAULT).
+    /// Kind 4's target position (0x521160, 0x4f6b50): in orbit for Death Star Sabotage and for a target character riding a fleet; else on the planet
+    /// (the system itself, a facility, a character on the surface). rule: §3 (Traced B2d §3).
     /// </summary>
-    public List<Defender> Defenders(Side side, string system)
+    private bool TargetInOrbit(MissionGroup m) =>
+        m.Kind == MissionKind.DeathStarSabotage || (m.TargetCharacter is int tid && _ch.Get(tid) is { AttachedFleet: not 0 });
+
+    /// <summary>
+    /// The scopes of one check pass at <paramref name="place"/> (B2d §3): planet (kind 2): members on the planet; guards = the special forces on the
+    /// planet if the other side holds it. Orbit (kind 1): members aboard, plus those on the planet when the mission travels; guards = the capital
+    /// ships of every fleet there (and the regiments aboard) if the other side has a fleet there and the mission side has no KDY-150 there. Next to the
+    /// target (kind 4): every member; guards as planet (target on the planet) or as orbit without the ion test (target in orbit).
+    /// </summary>
+    public Scope ScopeOf(MissionGroup m, CheckKind kind, string place)
+    {
+        Side s = m.Side, e = Other(s);
+        bool enemyHeld = _fleets.OwnerOf(place) == e;
+        bool enemyFleets = _game.State.Fleets.Values.Any(f => f.At == place && f.Side == e && f.Ships.Count + f.Squadrons.Count > 0);
+        bool ownIon = FacilityFamily != null && E.Objects.Values.Any(o => o.Category == ObjectCategory.Facility && o.Completed && o.Side == s
+            && o.System == place && FacilityFamily(o.Class) == IonCannonFamily);
+        bool travels = m.Home != m.Target;
+        return kind switch
+        {
+            CheckKind.Planet => new Scope(true, false, enemyHeld, false),
+            CheckKind.Orbit => new Scope(travels, true, false, enemyFleets && !ownIon),
+            CheckKind.NextToTarget => TargetInOrbit(m) ? new Scope(true, true, false, enemyFleets) : new Scope(true, true, enemyHeld, false),
+            _ => default,
+        };
+    }
+
+    /// <summary>
+    /// The guards of a check pass, by object id (our DEFAULT order): with the planet scope, the completed special forces on the planet; with the orbit
+    /// scope, the completed capital ships of the fleets at the place and the regiments aboard them (CountAboardUnits). Of any side with GuardsAnySide
+    /// (DEFAULT), else not of <paramref name="side"/>; never the mission's own members. Planetary regiments, fighter squadrons, special forces aboard
+    /// ships, facilities and characters never guard. Officer: the Admiral of the fleet for a ship, its General for a regiment aboard, none (0) for a
+    /// special force on the planet (DEFAULT, the slot is not read). A special force has no detection column (DEFAULT 0). rule: §3 Guards (Traced B2d §3:
+    /// iterator 0x587640, flags +0x28, +0x2c, +0x30).
+    /// </summary>
+    public List<Defender> Guards(Side side, string place, Scope sc, MissionGroup? m = null)
     {
         var shipFleet = new Dictionary<int, Fleet>(); // lookup only, never iterated
-        var sqFleet = new Dictionary<int, Fleet>();   // lookup only
         foreach (var f in _game.State.Fleets.Values)
-        {
-            if (f.At != system) continue;
-            foreach (var s in f.Ships) shipFleet[s] = f;
-            foreach (var q in f.Squadrons) sqFleet[q] = f;
-        }
-        int Admiral(Fleet f) => Esp(_ch.HolderOf(f.Id, CharacterPost.Admiral));
-        int General(Fleet f) => Esp(_ch.HolderOf(f.Id, CharacterPost.General));
+            if (f.At == place) foreach (var sh in f.Ships) shipFleet[sh] = f;
+        bool Ok(EconObject o) => Params.GuardsAnySide || o.Side != side;
         var list = new List<Defender>();
         foreach (var o in E.Objects.Values) // SortedDictionary: id order
         {
-            if (!o.Completed || o.Category == ObjectCategory.Facility || o.Category == ObjectCategory.SpecialForce || o.Side == side) continue;
-            switch (o.Category)
+            if (!o.Completed || !Ok(o)) continue;
+            if (sc.PlanetGuards && o.Category == ObjectCategory.SpecialForce && o.AboardShip == 0 && o.System == place
+                && !(m != null && (m.SpecialForces.Contains(o.Id) || m.DecoySpecialForces.Contains(o.Id))))
+                list.Add(new Defender(o, 0, 0, 0));
+            else if (sc.OrbitGuards && o.Category == ObjectCategory.CapitalShip && shipFleet.TryGetValue(o.Id, out var f))
             {
-                case ObjectCategory.CapitalShip when shipFleet.TryGetValue(o.Id, out var f):
-                    list.Add(new Defender(o, ShipDetection(o), Admiral(f)));
-                    break;
-                case ObjectCategory.Fighter:
-                    if (o.AboardShip != 0 && shipFleet.TryGetValue(o.AboardShip, out var cf)) list.Add(new Defender(o, ShipDetection(o), Admiral(cf)));
-                    else if (sqFleet.TryGetValue(o.Id, out var sf)) list.Add(new Defender(o, ShipDetection(o), Admiral(sf)));
-                    else if (o.AboardShip == 0 && o.System == system) list.Add(new Defender(o, ShipDetection(o), 0));
-                    break;
-                case ObjectCategory.Regiment:
-                    int det = _troops.Data.Regiment(o.Class)?.Detection ?? 0;
-                    if (o.AboardShip != 0) { if (Params.CountAboardUnits && shipFleet.TryGetValue(o.AboardShip, out var rf)) list.Add(new Defender(o, det, General(rf))); }
-                    else if (o.System == system) list.Add(new Defender(o, det, Esp(_ch.SystemGeneralOf(system))));
-                    break;
+                var adm = Officer(_ch.HolderOf(f.Id, CharacterPost.Admiral));
+                list.Add(new Defender(o, ShipDetection(o), Esp(adm), Com(adm)));
+            }
+            else if (sc.OrbitGuards && Params.CountAboardUnits && o.Category == ObjectCategory.Regiment && o.AboardShip != 0 && shipFleet.TryGetValue(o.AboardShip, out var rf))
+            {
+                var gen = Officer(_ch.HolderOf(rf.Id, CharacterPost.General));
+                list.Add(new Defender(o, _troops.Data.Regiment(o.Class)?.Detection ?? 0, Esp(gen), Com(gen)));
             }
         }
         return list;
     }
 
+    /// <summary>
+    /// The usable special forces of <paramref name="side"/> directly on <paramref name="system"/>: completed, not aboard a ship, not in a mission
+    /// group (0x504cc0). The character module's escape attempt reads it. rule: m5-characters-and-force §Escape (Traced B2e §3 step 3).
+    /// </summary>
+    public int SpecialForcesOnPlanet(Side side, string system) =>
+        E.Objects.Values.Count(o => o.Completed && o.Side == side && o.Category == ObjectCategory.SpecialForce && o.AboardShip == 0 && o.System == system
+            && !IsSpecialForceBusy(o.Id));
+
+    /// <summary>
+    /// The guards a planet-target mission of <paramref name="side"/> meets at <paramref name="system"/>: those of the arriving check (orbit) and of the
+    /// job check, by object id. For the AI's risk estimate. rule: §3 Guards.
+    /// </summary>
+    public List<Defender> Defenders(Side side, string system)
+    {
+        var probe = new MissionGroup { Side = side, Kind = MissionKind.Espionage, Home = "", Target = system };
+        return Guards(side, system, ScopeOf(probe, CheckKind.Orbit, system), probe)
+            .Concat(Guards(side, system, ScopeOf(probe, CheckKind.NextToTarget, system), probe))
+            .GroupBy(d => d.Unit.Id).Select(g => g.First()).OrderBy(d => d.Unit.Id).ToList();
+    }
+
     private int ShipDetection(EconObject o) => _fleets.ClassOf(o)?.Detection ?? 0;
-    private static int Esp(CharacterRecord? c) => c is { Status: CharacterStatus.Free } ? c.Skill(Skill.Espionage) : 0;
+    private static CharacterRecord? Officer(CharacterRecord? c) => c is { Status: CharacterStatus.Free } ? c : null;
+    private static int Esp(CharacterRecord? c) => c is { Status: CharacterStatus.Free } ? c.EffectiveSkill(Skill.Espionage) : 0;
+    private static int Com(CharacterRecord? c) => c is { Status: CharacterStatus.Free } ? c.EffectiveSkill(Skill.Combat) : 0;
 
     // ================================================================== who can go (§Who can go)
 
@@ -231,13 +301,13 @@ public sealed class MissionModule
     /// </summary>
     public bool CanDo(CharacterRecord c, MissionKind k) => k switch
     {
-        MissionKind.Diplomacy => c.Skill(Skill.Diplomacy) > 0,
-        MissionKind.Rescue or MissionKind.Abduction or MissionKind.Assassination => c.Skill(Skill.Combat) > 0,
-        MissionKind.Sabotage => SabotageSkillOf(c.Skill(Skill.Combat), c.Skill(Skill.Espionage)) > 0,
-        MissionKind.DeathStarSabotage => (c.Skill(Skill.Combat) + c.Skill(Skill.Espionage)) / 2 > 0,
-        MissionKind.Espionage or MissionKind.Reconnaissance => c.Skill(Skill.Espionage) > 0,
-        MissionKind.Recruitment or MissionKind.InciteUprising or MissionKind.SubdueUprising => c.Skill(Skill.Leadership) > 0,
-        MissionKind.ShipResearch or MissionKind.FacilityResearch or MissionKind.TroopResearch => c.Skill(ResearchSkill(k)!.Value) > 0,
+        MissionKind.Diplomacy => c.EffectiveSkill(Skill.Diplomacy) > 0,
+        MissionKind.Rescue or MissionKind.Abduction or MissionKind.Assassination => c.EffectiveSkill(Skill.Combat) > 0,
+        MissionKind.Sabotage => SabotageSkillOf(c.EffectiveSkill(Skill.Combat), c.EffectiveSkill(Skill.Espionage)) > 0,
+        MissionKind.DeathStarSabotage => (c.EffectiveSkill(Skill.Combat) + c.EffectiveSkill(Skill.Espionage)) / 2 > 0,
+        MissionKind.Espionage or MissionKind.Reconnaissance => c.EffectiveSkill(Skill.Espionage) > 0,
+        MissionKind.Recruitment or MissionKind.InciteUprising or MissionKind.SubdueUprising => c.EffectiveSkill(Skill.Leadership) > 0,
+        MissionKind.ShipResearch or MissionKind.FacilityResearch or MissionKind.TroopResearch => c.EffectiveSkill(ResearchSkill(k)!.Value) > 0,
         _ => true,
     };
 
@@ -545,6 +615,12 @@ public sealed class MissionModule
             Prune(m);
             if (m.Phase == MissionPhase.Outbound && !m.Departed)
             {
+                // rule: §1 (Traced B2d §1): phases 2 and 3 check the team at the origin, before it leaves (planet, then orbit)
+                if (Params.MissionGuardChecks && m.Kind != MissionKind.Move)
+                {
+                    var rec = Data.Get(m.Kind);
+                    if (RunCheck(ctx, m, k + 1, CheckPoint.LeavePlanet, rec) || RunCheck(ctx, m, k + 1, CheckPoint.LeaveOrbit, rec)) continue;
+                }
                 m.Departed = true;
                 if (m.TotalTicks > 0) PlaceMembers(m, null);
                 Departed(ctx, m, false);
@@ -618,7 +694,8 @@ public sealed class MissionModule
     }
 
     // rule: §1 Step 3: the group lands, draws the first timer T = min + rand(0..spread) (no draw for a zero spread), due = A + T, MissionLanded.
-    // A character target that is no longer there ends the mission TargetInvalid (no draw). DetectionAtLanding runs the walk once.
+    // A character target that is no longer there ends the mission TargetInvalid (no draw). The arriving check (phase 7, orbit) runs before the
+    // timer (phase 8). rule: §1 (Traced B2d §1).
     private void Land(StepContext ctx, MissionGroup m, int t)
     {
         // rule: m5-death-star §2 effect 3: a mission whose target was destroyed on the way ends as a failure (cause TargetDestroyed)
@@ -628,11 +705,11 @@ public sealed class MissionModule
         if (!m.HasTeam) { End(ctx, m, MissionOutcome.Cancelled, t); return; }
         if (m.TargetCharacter != null && TargetReason(m) != null) { End(ctx, m, MissionOutcome.TargetInvalid, t); return; }
         var rec = Data.Get(m.Kind);
+        if (Params.MissionGuardChecks && RunCheck(ctx, m, t, CheckPoint.Arrive, rec)) return;
         m.Due = t + Timer(ctx, rec);
         m.Phase = MissionPhase.Working;
         int id = m.Id, due = m.Due; var side = m.Side; string target = m.Target;
         ctx.Emit((i, _) => new MissionLanded(i, t, id, side, target, due));
-        if (Params.DetectionAtLanding && rec.Foilable && Walk(ctx, m, t) is { } d) Foil(ctx, m, d, t);
     }
 
     private static int Timer(StepContext ctx, MissionRecord rec) => rec.TimerMin + (rec.TimerSpread > 0 ? ctx.Rng.NextInt(0, rec.TimerSpread) : 0);
@@ -656,11 +733,10 @@ public sealed class MissionModule
         if (TargetReason(m) != null || KeyGate(m.Kind, m.TargetCharacter) != null) { End(ctx, m, MissionOutcome.TargetInvalid, t); return; } // rule: m5-missions §6a.1
         var rec = Data.Get(m.Kind);
         bool key = IsKeyTarget(m.Kind, m.TargetCharacter, out int keyCap);
-        // 1. Force sensing, betrayal, then (not foiled) decoys and detection. rule: m5-missions §3 order of the checks (Traced B2b: 0x589970)
-        var foil = Sense(ctx, m, t);
-        if (foil == null && BetrayalRuns(rec)) foil = Betray(ctx, m, t);
-        if (foil == null && rec.Foilable && Walk(ctx, m, t) is { } d) foil = new FoilBy(MissionFoilCause.Detected, d, 0);
-        if (foil != null) { Foil(ctx, m, foil, t); return; }
+        // 1. the job check (phase 9, next to the target): Force sensing, betrayal, decoys, detection, foiled handling. rule: m5-missions §1, §3
+        // (Traced B2b: 0x589970; B2d §1, §2)
+        if (RunCheck(ctx, m, t, CheckPoint.Job, rec)) return;
+        if (!m.HasTeam) { End(ctx, m, MissionOutcome.Cancelled, t); return; }
 
         // 2. success rolls, one draw per non-decoy member (characters by id, then special forces by id); Research draws its points right after a success
         bool recon = m.Kind == MissionKind.Reconnaissance;
@@ -684,7 +760,7 @@ public sealed class MissionModule
             var table = rec.Table != null ? Data.Table(rec.Table) : null;
             foreach (var a in Team(m))
             {
-                int input = research is Skill rs ? (a.C?.Skill(rs) ?? 0) : Input(m, a);
+                int input = research is Skill rs ? (a.C?.EffectiveSkill(rs) ?? 0) : Input(m, a);
                 int chance = research != null ? input : Lookup(table!, input);
                 int r = ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1);
                 bool ok = r < chance;
@@ -696,7 +772,7 @@ public sealed class MissionModule
                 {
                     points += _research.RollMissionPoints(ctx);
                     _ch.GainSkill(c, skill, Data.Numbers.ResearchSkillGain);
-                    int nv = c.Skill(skill);
+                    int nv = c.BaseSkill(skill);
                     ctx.Emit((i, _) => new MissionSkillGained(i, t, id, side, member, skill, nv));
                 }
             }
@@ -739,10 +815,10 @@ public sealed class MissionModule
     private int Input(MissionGroup m, Agent a)
     {
         int Support() => _eco.SupportOf(m.Target, m.Side);
-        int TargetCombat() => m.TargetCharacter is int tid && _ch.Get(tid) is { } tc ? tc.Skill(Skill.Combat) : 0;
+        int TargetCombat() => m.TargetCharacter is int tid && _ch.Get(tid) is { } tc ? tc.EffectiveSkill(Skill.Combat) : 0;
         switch (m.Kind)
         {
-            case MissionKind.Diplomacy: { int s = Support(); return (s - (100 - s)) + (a.C?.Skill(Skill.Diplomacy) ?? 0); }
+            case MissionKind.Diplomacy: { int s = Support(); return (s - (100 - s)) + (a.C?.EffectiveSkill(Skill.Diplomacy) ?? 0); }
             case MissionKind.Rescue: return a.Combat;
             case MissionKind.Sabotage: return SabotageSkillOf(a.Combat, a.Espionage);
             case MissionKind.Espionage: return a.Espionage;
@@ -758,41 +834,85 @@ public sealed class MissionModule
     }
 
     /// <summary>
-    /// The decoy pass then the detection walk; returns the defender that detected the team, or null. rule: §3 (Traced, B2a: 0x58a020, 0x58a130).
-    /// Decoy pass, per defender in id order: pick one decoy k = rand(0..n-1) over the group's decoys (no draw when n = 1; no decoy, no draw), then one
-    /// roll against the decoy table; a decoy that distracted a guard stays in the pick (inferred, 0x587b30); a failed decoy has no effect (the officer
-    /// contest 0x5888f0 is B2b). Walk: one draw per non-distracted defender up to and including the first detection; no walk at all (no draw) when the
-    /// team has no non-decoy member left (0x5896e0). No defenders: no draw.
+    /// One mission check at a check point (0x5898f0): skipped when MISSNSD word 14 is 0 or the point's kind is 0; run at the origin for phases 2 and 3,
+    /// at the target for 7 and 9 (0x520ad0). Kinds 1, 2 and 4 act in pass 1 only; kind 3 is orbit in pass 1 and planet in pass 2. Returns true when the
+    /// check ended the mission. rule: m5-missions §1 (Traced B2d §1, §2).
     /// </summary>
-    internal Defender? Walk(StepContext ctx, MissionGroup m, int t) // internal: B2a-4 calls it on a group whose team is gone (Iterate prunes first)
+    private bool RunCheck(StepContext ctx, MissionGroup m, int t, CheckPoint point, MissionRecord rec)
     {
-        var defenders = Defenders(m.Side, m.Target);
-        if (defenders.Count == 0) return null;
-        var decoys = Decoys(m);
+        if (!rec.GuardChecks) return false;
+        var kind = KindAt(KindWord(m.Kind), point);
+        if (kind == CheckKind.None) return false;
+        bool atOrigin = point <= CheckPoint.LeaveOrbit;
+        string place = atOrigin ? m.Home : m.Target;
+        foreach (var k in kind == CheckKind.OrbitThenPlanet ? new[] { CheckKind.Orbit, CheckKind.Planet } : new[] { kind })
+            if (CheckPass(ctx, m, t, point, k, place, atOrigin, rec)) return true;
+        return false;
+    }
+
+    /// <summary>
+    /// One pass (0x589970): scopes, Force sensing, betrayal (the job check only: 0x592500), then if not foiled the decoy pass and the detection walk
+    /// over the guards in scope, then the foiled handling. rule: §3, §3a, §4 (Traced B2b, B2d).
+    /// </summary>
+    private bool CheckPass(StepContext ctx, MissionGroup m, int t, CheckPoint point, CheckKind kind, string place, bool atOrigin, MissionRecord rec)
+    {
+        var sc = ScopeOf(m, kind, place);
+        var guards = Guards(m.Side, place, sc, m);
+        var foil = Sense(ctx, m, t, place, sc);
+        if (foil == null && point == CheckPoint.Job && BetrayalRuns(rec)) foil = Betray(ctx, m, t);
+        var decoyed = new HashSet<int>(); // guard ids; lookup only, never iterated
+        if (foil == null && DecoyAndWalk(ctx, m, t, guards, sc, atOrigin, decoyed, place, rec) is { } d) foil = new FoilBy(MissionFoilCause.Detected, d, 0);
+        if (foil == null) return false;
+        return Foiled(ctx, m, t, foil, point, guards, decoyed, sc, atOrigin, place, rec);
+    }
+
+    /// <summary>
+    /// The member counts for a check (0x5883b0): a member standing on the planet counts when the planet-members flag is on, one aboard (or, at the
+    /// target, belonging to the mission) when the orbit-members flag is on. Our groups have no aboard state: at the origin a character attached to a
+    /// fleet or a special force aboard a ship is "orbit", the others "planet"; at the target every member is "orbit". rule: §3 (B2d §3, Work 3).
+    /// </summary>
+    private bool Counts(Agent a, bool atOrigin, Scope sc)
+    {
+        bool orbit = !atOrigin || (a.IsCharacter ? a.C!.AttachedFleet != 0 : E.Objects.TryGetValue(a.Id, out var o) && o.AboardShip != 0);
+        return orbit ? sc.OrbitMembers : sc.PlanetMembers;
+    }
+
+    /// <summary>
+    /// The decoy pass then the detection walk; returns the guard that detected the team, or null. rule: §3 (Traced, B2a: 0x58a020, 0x58a130; B2d §6).
+    /// Decoy pass, per guard in order: pick one counted decoy k = rand(0..n-1) (no draw when n = 1; none left, no draw), one roll against the decoy
+    /// table; a decoy that distracted a guard stays in the pick (0x587b30); a failed decoy fights the escape duel against that guard right after its
+    /// roll and leaves the group whatever the result (0x588b90 -> 0x5888f0), so the next guard cannot pick it. Walk: one draw per guard not
+    /// decoyed, up to and including the first detection; no walk (no draw) when no counted non-decoy member is left (0x5896e0). No guards: no draw.
+    /// </summary>
+    private Defender? DecoyAndWalk(StepContext ctx, MissionGroup m, int t, List<Defender> guards, Scope sc, bool atOrigin, HashSet<int> decoyed,
+        string place, MissionRecord rec)
+    {
+        // rule: B2e §4 (0x587fa0 -> 0x5892a0): before the decoy pass, each decoy with a mutual Force discovery meets that Force user
+        foreach (var a in Decoys(m).Where(a => Counts(a, atOrigin, sc)).ToList()) Encounter(ctx, m, t, a, place, rec, decoy: true);
+        if (guards.Count == 0) return null;
+        var decoys = Decoys(m).Where(a => Counts(a, atOrigin, sc)).ToList();
         if (decoys.Count > 0 && Data.DecoyTable == null) throw new RuleMissingException("DecoyTable", "m5-missions");
         int id = m.Id; var side = m.Side;
-        var walked = new List<Defender>();
-        foreach (var d in defenders)
+        foreach (var d in guards)
         {
-            bool decoyed = false;
-            if (decoys.Count > 0)
-            {
-                // rule: §3 decoy pass step 1 (0x5f5700 returns 0 without a draw for a bound <= 1)
-                var dc = decoys.Count == 1 ? decoys[0] : decoys[ctx.Rng.NextInt(0, decoys.Count - 1)];
-                int x = DecoyX(dc.Espionage, d.Detection, d.OfficerEspionage), p = Lookup(Data.DecoyTable!, x);
-                int r = ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1);
-                decoyed = r < p;
-                bool ok = decoyed; int def = d.Unit.Id, did = dc.Id;
-                ctx.Emit((i, _) => new MissionDecoyRoll(i, t, id, side, def, did, x, p, r, ok));
-            }
-            if (!decoyed) walked.Add(d);
+            if (decoys.Count == 0) break;
+            // rule: §3 decoy pass step 1 (0x5f5700 returns 0 without a draw for a bound <= 1)
+            var dc = decoys.Count == 1 ? decoys[0] : decoys[ctx.Rng.NextInt(0, decoys.Count - 1)];
+            int x = DecoyX(dc.Espionage, d.Detection, d.OfficerEspionage), p = Lookup(Data.DecoyTable!, x);
+            int r = ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1);
+            bool ok = r < p; int def = d.Unit.Id, did = dc.Id;
+            ctx.Emit((i, _) => new MissionDecoyRoll(i, t, id, side, def, did, x, p, r, ok));
+            if (ok) { decoyed.Add(d.Unit.Id); continue; }
+            Duel(ctx, m, t, dc, d, place, rec, decoy: true); // rule: B2d §6 (failed decoy)
+            decoys.Remove(dc);
         }
-        var team = Team(m);
+        var team = Team(m).Where(a => Counts(a, atOrigin, sc)).ToList();
         if (team.Count == 0) return null; // rule: §3 detection walk (0x5896e0: count 0 skips the walk; Traced B2a)
         int avg = team.Sum(a => a.Espionage) / team.Count; // C integer division (0x5887a0 idiv; Traced B2a)
         int sfs = team.Count(a => !a.IsCharacter);
-        foreach (var d in walked)
+        foreach (var d in guards)
         {
+            if (decoyed.Contains(d.Unit.Id)) continue;
             int x = DetectionX(avg, d.Detection, sfs, d.OfficerEspionage), p = FoilChance(x);
             int r = ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1);
             bool hit = r < p;
@@ -803,6 +923,139 @@ public sealed class MissionModule
         return null;
     }
 
+    /// <summary>
+    /// The escape duel (0x5888f0): x = member combat - combat of the guard's commander (0 when none); one draw, escaped if rand(0..99) &lt; RLEVADTB(x)
+    /// (the common step lookup, the first row below it). See <see cref="DuelWith"/> for what follows. rule: §4 (Traced B2d §5).
+    /// </summary>
+    private void Duel(StepContext ctx, MissionGroup m, int t, Agent a, Defender g, string place, MissionRecord rec, bool decoy) =>
+        DuelWith(ctx, m, t, a, g.OfficerCombat, g.Unit.Id, g.Unit.Side ?? Other(m.Side), place, rec, decoy);
+
+    /// <summary>
+    /// The duel against a captor of combat <paramref name="captorCombat"/> (a guard's commander, or the enemy Force user of an encounter). Escaped:
+    /// the member leaves the group if its record lets it resign (MISSNSD word 15), then a character rolls Hurt (0x4ef450). Caught: a character rolls
+    /// Hurt and, if he did not die of it, is captured by <paramref name="captor"/> at the place of the check (0x4ef480; Capture refuses an own-side
+    /// captor: the member just leaves); a special force is destroyed (UnitDestroyed, reason MissionDuel), no Hurt. A member removed leaves the
+    /// group. Returns (escaped, the member's injury went up). rule: §4 (Traced B2d §5; B2e §2 "Who calls Hurt", §8).
+    /// </summary>
+    private (bool Escaped, bool Hurt) DuelWith(StepContext ctx, MissionGroup m, int t, Agent a, int captorCombat, int guard, Side captor, string place,
+        MissionRecord rec, bool decoy)
+    {
+        var table = Data.Evade ?? throw new RuleMissingException(MissionData.EvadeTable, "m5-missions");
+        int x = a.Combat - captorCombat;
+        int p = Lookup(table, x, MstbLookupMode.Step, MstbBelowFirstRow.FirstRowValue);
+        int r = ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1);
+        bool escaped = r < p;
+        int id = m.Id, member = a.Id; var side = m.Side; bool isChar = a.IsCharacter;
+        ctx.Emit((i, _) => new MissionDuel(i, t, id, side, place, member, isChar, decoy, guard, x, p, r, escaped));
+        bool removed = false, hurt = false;
+        if (escaped)
+        {
+            if (rec.Foilable) Leave(m, a, place, false); // rule: B2d §5 step 5 (resign when word 15 is set)
+            if (isChar) hurt = _ch.Hurt(ctx, a.C!, CauseMissionDuel) > 0; // rule: B2e §2 (0x4ef450: resign, then Hurt)
+            return (true, hurt);
+        }
+        if (isChar)
+        {
+            hurt = _ch.Hurt(ctx, a.C!, CauseMissionDuel) > 0; // rule: B2e §2 (0x4ef480: Hurt, then captured if alive)
+            removed = a.C!.Status == CharacterStatus.Dead || _ch.Capture(ctx, a.C!, captor, place, CauseMissionDuel);
+        }
+        else if (E.Objects.TryGetValue(a.Id, out var o))
+        {
+            ctx.Emit((i, _) => new Battle.UnitDestroyed(i, t, place, member, 0, Battle.UnitLossReason.MissionDuel));
+            _eco.DestroyUnit(ctx, t, o);
+            removed = true;
+        }
+        if (removed || rec.Foilable) Leave(m, a, place, removed);
+        return (false, hurt);
+    }
+
+    /// <summary>
+    /// The Force-user encounter in place of a guard duel (0x5892a0 -> 0x588d30 -> 0x560200): a character member whose discovered Force user names
+    /// him back with the same pair id duels that character (his location is not checked) and the character module does the rest (hurt rolls,
+    /// combat gain, keys cleared, Jedi effects). Returns false, with no draw, when the precondition fails. rule: §4 (Traced B2e §4).
+    /// </summary>
+    private bool Encounter(StepContext ctx, MissionGroup m, int t, Agent a, string place, MissionRecord rec, bool decoy)
+    {
+        if (!a.IsCharacter || !_ch.MutualDiscovery(a.C!, out var x) || x == null) return false;
+        var (escaped, hurt) = DuelWith(ctx, m, t, a, x.EffectiveSkill(Skill.Combat), x.Id, x.Side, place, rec, decoy);
+        _ch.ForceEncounter(ctx, t, m.Id, a.C!, x, hurt, escaped);
+        return true;
+    }
+
+    /// <summary>
+    /// A member's injury went up (the character module's InjuredResign): if his mission's record lets him resign (MISSNSD word 15), he leaves the
+    /// group and stands where it is (MissionResignRequest, 0x534640). rule: m5-missions §4 (Traced B2e §2).
+    /// </summary>
+    public void OnInjured(StepContext? ctx, CharacterRecord c)
+    {
+        foreach (var m in S.Missions.Values)
+        {
+            if (!m.Characters.Contains(c.Id) && !m.DecoyCharacters.Contains(c.Id)) continue;
+            if (!Data.Get(m.Kind).Foilable) return;
+            m.Characters.Remove(c.Id); m.DecoyCharacters.Remove(c.Id);
+            c.System ??= m.Phase == MissionPhase.Outbound && !m.Departed ? m.Home : m.Target;
+            return;
+        }
+    }
+
+    // The member leaves the group and, unless captured or destroyed, stands free at the place of the check.
+    private void Leave(MissionGroup m, Agent a, string place, bool removed)
+    {
+        if (a.IsCharacter) { m.Characters.Remove(a.Id); m.DecoyCharacters.Remove(a.Id); if (!removed && a.C != null) a.C.System = place; }
+        else { m.SpecialForces.Remove(a.Id); m.DecoySpecialForces.Remove(a.Id); if (!removed && E.Objects.TryGetValue(a.Id, out var o)) o.System = place; }
+    }
+
+    /// <summary>
+    /// The foiled handling (0x58a1c0): if the record's word 15 is set the mission ends with code 3 (caught at the origin) or 4 (at the target), event
+    /// MissionFoiled; then each counted non-decoy member, characters first, then special forces, picks one guard among those in scope and not decoyed
+    /// (k = rand(0..n-1), no draw when n = 1; no guard left, no duel) and fights the escape duel. With word 15 = 0 the mission goes on. A member
+    /// with a mutual Force discovery meets that Force user instead (no guard pick; B2e §4). rule: §4 (Traced B2d §6, B2e §4).
+    /// </summary>
+    private bool Foiled(StepContext ctx, MissionGroup m, int t, FoilBy f, CheckPoint point, List<Defender> guards, HashSet<int> decoyed, Scope sc,
+        bool atOrigin, string place, MissionRecord rec)
+    {
+        int code = point <= CheckPoint.LeaveOrbit ? FoilCodeAtOrigin : FoilCodeAtTarget;
+        if (rec.Foilable)
+        {
+            int id = m.Id, def = f.Defender?.Unit.Id ?? 0, who = f.Character; var side = m.Side; string cls = f.Defender?.Unit.Class ?? "";
+            var cause = f.Cause;
+            ctx.Emit((i, _) => new MissionFoiled(i, t, id, side, place, def, cls, cause, who, code));
+            _fog.OnMissionDetected(ctx, f.Defender?.Unit.Side ?? Other(m.Side), place);
+        }
+        var pool = guards.Where(g => !decoyed.Contains(g.Unit.Id)).ToList();
+        foreach (var a in Team(m).Where(a => Counts(a, atOrigin, sc)).ToList())
+        {
+            if (Encounter(ctx, m, t, a, place, rec, decoy: false)) continue; // rule: B2e §4 (0x589360: a mutual discovery meets his Force user)
+            if (pool.Count == 0) continue;
+            var g = pool.Count == 1 ? pool[0] : pool[ctx.Rng.NextInt(0, pool.Count - 1)]; // 0x588650
+            Duel(ctx, m, t, a, g, place, rec, decoy: false);
+        }
+        if (!rec.Foilable) return false;
+        if (atOrigin) EndAtOrigin(ctx, m, t);
+        else End(ctx, m, MissionOutcome.Foiled, t);
+        return true;
+    }
+
+    /// <summary>The end codes of a foiled mission: 3 + (furthest phase &gt; 4). rule: §4 (Traced B2d §6, 0x58a1c0).</summary>
+    public const int FoilCodeAtOrigin = 3, FoilCodeAtTarget = 4;
+
+    // A mission foiled before it left: MissionEnded, then whoever is left of the group stands free at home (no trip). rule: §5 (B2d: code 3).
+    private void EndAtOrigin(StepContext ctx, MissionGroup m, int t)
+    {
+        m.Outcome = MissionOutcome.Foiled;
+        int id = m.Id; var side = m.Side; var kind = m.Kind; string target = m.Target;
+        ctx.Emit((i, _) => new MissionEnded(i, t, id, side, kind, target, MissionOutcome.Foiled));
+        Prune(m);
+        if (Empty(m)) S.Missions.Remove(m.Id);
+        else Release(ctx, m, m.Home, t);
+    }
+
+    /// <summary>The job check's decoy pass and walk on a group as it stands (tests: B2a-4 hands it a group whose team is gone).</summary>
+    internal Defender? Walk(StepContext ctx, MissionGroup m, int t)
+    {
+        var sc = ScopeOf(m, CheckKind.NextToTarget, m.Target);
+        return DecoyAndWalk(ctx, m, t, Guards(m.Side, m.Target, sc, m), sc, false, new HashSet<int>(), m.Target, Data.Get(m.Kind));
+    }
     /// <summary>What foiled the mission: the detecting defender (Detected), or the senser or traitor (Character).</summary>
     private sealed record FoilBy(MissionFoilCause Cause, Defender? Defender, int Character);
 
@@ -816,15 +1069,23 @@ public sealed class MissionModule
         memberForce == 0 || senserForce == 0 ? 0 : memberForce + senserForce + Params.SenseConstant;
 
     /// <summary>
-    /// The sensers of a mission at its target: characters of the other side, placed and not captured or dead, with Force at least GNPRTB 3586,
-    /// standing at the target system (on the planet or aboard a fleet there, per ForceSenseScope), by id. rule: §3 Force sensing, Sensers
-    /// (Traced B2b: 0x588840; scope DEFAULT Both).
+    /// The sensers of a check: characters of the other side, placed and not captured or dead, with Force at least GNPRTB 3586, standing at the place
+    /// of the check, by id. ForceSenseScope CheckScope (DEFAULT): on the planet when the pass guards the planet, aboard a fleet there when it guards
+    /// the orbit (B2b §2 "Where" with the scopes of B2d §3); Both, Planet, Fleets ignore the pass's scopes. rule: §3 Force sensing, Sensers
+    /// (Traced B2b: 0x588840).
     /// </summary>
-    public List<CharacterRecord> Sensers(MissionGroup m) =>
+    public List<CharacterRecord> Sensers(MissionGroup m, string place, Scope sc) =>
         _ch.InPlay.Where(c => c.Side != m.Side && c.Status is not (CharacterStatus.Captured or CharacterStatus.Dead)
-            && (c.ForceUser ? c.EffectiveForce : 0) >= Params.SenserMinForce && _ch.LocationOf(c) == m.Target
-            && Params.ForceSenseScope switch { ForceSenseScope.Planet => c.AttachedFleet == 0, ForceSenseScope.Fleets => c.AttachedFleet != 0, _ => true })
+            && (c.ForceUser ? c.EffectiveForce : 0) >= Params.SenserMinForce && _ch.LocationOf(c) == place
+            && Params.ForceSenseScope switch
+            {
+                ForceSenseScope.CheckScope => c.AttachedFleet == 0 ? sc.PlanetGuards : sc.OrbitGuards,
+                ForceSenseScope.Planet => c.AttachedFleet == 0, ForceSenseScope.Fleets => c.AttachedFleet != 0, _ => true,
+            })
         .ToList();
+
+    /// <summary>The sensers of the job check at the mission's target. rule: §3 Force sensing.</summary>
+    public List<CharacterRecord> Sensers(MissionGroup m) => Sensers(m, m.Target, ScopeOf(m, CheckKind.NextToTarget, m.Target));
 
     // Luke first, then Vader, then the rest one at a time, each picked k = rand(0..n-1) among those left (no draw when one is left). Lazy: a pick
     // is drawn only when the next one is taken. rule: §3 Force sensing steps 1 and 2 (Traced B2b: 0x58a9e0, 0x58ac50, 0x58aca0).
@@ -853,13 +1114,13 @@ public sealed class MissionModule
     /// single try per check. Every senser is processed; sensing never stops at a foil. Returns the first foiling hit, or null. rule: §3 Force sensing
     /// (Traced B2b).
     /// </summary>
-    private FoilBy? Sense(StepContext ctx, MissionGroup m, int t)
+    private FoilBy? Sense(StepContext ctx, MissionGroup m, int t, string place, Scope sc)
     {
         if (!Params.ForceSensing) return null;
         var members = Team(m).Select(a => (a, decoy: false)).Concat(Decoys(m).Select(a => (a, decoy: true)))
             .Where(x => x.a.IsCharacter && x.a.Force >= Params.SensedMinForce && x.a.C!.Status != CharacterStatus.Captured).ToList();
         if (members.Count == 0) return null;
-        var sensers = Sensers(m);
+        var sensers = Sensers(m, place, sc);
         FoilBy? foil = null;
         int id = m.Id; var side = m.Side; string target = m.Target;
         foreach (var s in SenseOrder(ctx, sensers, c => c.Id))
@@ -887,12 +1148,13 @@ public sealed class MissionModule
         return foil;
     }
 
-    // rule: §3 Force sensing step 4 (0x55ff60 -> 0x4ee500): unless both already have a discovered Force user, each records the other and both
-    // sides are told.
-    private static void DiscoverEachOther(StepContext ctx, MissionGroup m, CharacterRecord member, CharacterRecord senser, int t)
+    // rule: §3 Force sensing step 4 (0x55ff60 -> 0x4ee500): only if neither already has a discovered Force user (B2e §8 corrects B2b's "unless
+    // both"), each records the other, both get the same new pair id (the game-wide counter, B2e §4) and both sides are told.
+    private void DiscoverEachOther(StepContext ctx, MissionGroup m, CharacterRecord member, CharacterRecord senser, int t)
     {
-        if (member.DiscoveredForceUser != 0 && senser.DiscoveredForceUser != 0) return;
+        if (member.DiscoveredForceUser != 0 || senser.DiscoveredForceUser != 0) return;
         member.DiscoveredForceUser = senser.Id; senser.DiscoveredForceUser = member.Id;
+        member.PairId = senser.PairId = _ch.NewPairId();
         int id = m.Id, mid = member.Id, sid = senser.Id; var ms = member.Side; var ss = senser.Side;
         ctx.Emit((i, _) => new ForceUserDiscovered(i, t, id, mid, ms, sid, ss));
     }
@@ -938,21 +1200,8 @@ public sealed class MissionModule
         return new FoilBy(MissionFoilCause.Betrayed, null, tr.Id);
     }
 
-    // rule: §4 Foiled: MissionFoiled (with its cause), the fog's MissionDetected (AgentDetected sighting for the defender; the other side for a
-    // sensing or a betrayal, DEFAULT: 0x58a1c0, the foiled handling shared by every cause, is B2c), the exposure hooks, then the end.
-    private void Foil(StepContext ctx, MissionGroup m, Defender d, int t) => Foil(ctx, m, new FoilBy(MissionFoilCause.Detected, d, 0), t);
-
-    private void Foil(StepContext ctx, MissionGroup m, FoilBy f, int t)
-    {
-        int id = m.Id, def = f.Defender?.Unit.Id ?? 0, who = f.Character; var side = m.Side; string target = m.Target, cls = f.Defender?.Unit.Class ?? "";
-        var cause = f.Cause;
-        ctx.Emit((i, _) => new MissionFoiled(i, t, id, side, target, def, cls, cause, who));
-        _fog.OnMissionDetected(ctx, f.Defender?.Unit.Side ?? Other(m.Side), m.Target);
-        Expose(ctx, m, ExposureCause.Foiled);
-        End(ctx, m, MissionOutcome.Foiled, t);
-    }
-
-    // rule: §4: OnTeamExposed(member, otherSide, cause) for every character team member in ascending id (switch ExposureHooks; decoys never).
+    // rule: §4: OnTeamExposed(member, otherSide, Failed) for every character team member in ascending id (switch ExposureHooks; decoys never). A
+    // foiled team fights the escape duel instead (B2d §6).
     private void Expose(StepContext ctx, MissionGroup m, ExposureCause cause)
     {
         if (!Params.ExposureHooks || OnTeamExposed == null) return;

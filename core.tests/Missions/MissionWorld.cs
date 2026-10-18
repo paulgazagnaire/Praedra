@@ -104,6 +104,12 @@ internal sealed class MissionWorld
     public void Run(int steps) { for (int i = 0; i < steps; i++) Game.Step(); }
     public List<T> Events<T>() where T : GameEvent => Game.Events.OfType<T>().ToList();
 
+    /// <summary>Step until the mission is Working (landed; at most 50 Steps). B2d: a team flying in lands a few Steps after its order.</summary>
+    public void RunUntilWorking(int mission)
+    {
+        for (int i = 0; i < 50 && M.Get(mission) is { Phase: MissionPhase.Outbound }; i++) Game.Step();
+    }
+
     /// <summary>Step until the mission has made one more iteration or has left the Working phase (at most 200 Steps).</summary>
     public void RunIteration(int mission)
     {

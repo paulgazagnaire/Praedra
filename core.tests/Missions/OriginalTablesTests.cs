@@ -40,22 +40,23 @@ public class OriginalTablesTests
     }
 
     // B1-own-importer Q6: with the shipped data a mission with one decoy is accepted and its MissionDecoyRoll uses the decoy table
-    // (Infiltrators espionage 60 against one Imperial Fleet Regiment, detection 20: x = 40, chance 90)
+    // (Infiltrators espionage 60 against one Imperial Probe Droid on the planet, detection 0 (B2d: special forces guard a planet target): x = 60,
+    // chance 94)
     [Fact]
     public void Q6_OneDecoyIsAcceptedWithTheShippedData()
     {
         var w = new MissionWorld();
         Assert.NotNull(w.Host.Data.Missions.DecoyTable);
         w.Hold(T, Side.Empire, 0);
-        w.Agent(Leia, T, esp: 50);
-        int inf = w.Unit(Side.Alliance, Infiltrators, T);
-        w.Unit(Side.Empire, ImpFleet, T);
-        w.Stub!.Expect(0, 99, Bt(2, 89, 99)); // B2b: two betrayal draws (Leia, the decoy) first
+        w.Agent(Leia, H, esp: 50);
+        int inf = w.Unit(Side.Alliance, Infiltrators, H);
+        w.Unit(Side.Empire, Probe, T);
+        w.Stub!.Expect(0, 99, Bt(2, 93, 99)); // B2b: two betrayal draws (Leia, the decoy) first
         var seq = w.Start(Side.Alliance, MissionKind.Espionage, new[] { Leia }, T, decoys: new[] { inf });
         w.Game.Step();
         Assert.Null(w.Reason(seq));
         w.RunIteration(w.LastMission);
         var d = Assert.Single(w.Events<MissionDecoyRoll>());
-        Assert.Equal((40, 90, 89, true), (d.X, d.Chance, d.Roll, d.Decoyed));
+        Assert.Equal((60, 94, 93, true), (d.X, d.Chance, d.Roll, d.Decoyed));
     }
 }

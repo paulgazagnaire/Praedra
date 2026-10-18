@@ -93,7 +93,7 @@ public partial class Main
         else
         {
             // ---------------------------------------------------------------- Empire: Darth Vader (or any free spy) on Espionage
-            var spy = s.MyCharacters.Where(c => Free(c) && mm.CanDo(c, MissionKind.Espionage)).OrderBy(c => c.Id == 641 ? 0 : 1).ThenByDescending(c => c.Skill(Skill.Espionage)).FirstOrDefault();
+            var spy = s.MyCharacters.Where(c => Free(c) && mm.CanDo(c, MissionKind.Espionage)).OrderBy(c => c.Id == 641 ? 0 : 1).ThenByDescending(c => c.EffectiveSkill(Skill.Espionage)).FirstOrDefault();
             Expect(spy != null, "a free Imperial character can spy");
             if (spy == null) return;
             string name = s.CharName(spy.Id);
