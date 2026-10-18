@@ -55,6 +55,12 @@ public sealed class EconObject
     public int Due { get; set; }
     /// <summary>A refinery waiting in its side's raw line.</summary>
     public bool InLine { get; set; }
+    /// <summary>
+    /// Display name of a capital ship ("Corellian Corvette 1"), given at setup; null = none (shown by class). Display only, never read by a rule.
+    /// Omitted from the save while null, so saves and hashes of games that name nothing are unchanged. rule: m5-setup-and-victory §P7 Names (B4 §12).
+    /// </summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? Name { get; set; }
 }
 
 /// <summary>A system's slot values when they differ from the data file (incidents, rolled starts, test setups).</summary>

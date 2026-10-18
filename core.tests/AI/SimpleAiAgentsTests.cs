@@ -48,9 +48,11 @@ public class SimpleAiAgentsTests
         // B2e re-pin 2026-10-17: new saved character fields (injury points, leadership_adjustment 50 under the Seat of Power, the escape and
         // heal timers) and new rules this old AI cannot switch off (the Seat of Power raises Imperial Admirals' and Generals' leadership, escape
         // delay draws at each capture, the Hurt roll on injuries) change the state and the game's course.
+        // B4 re-pin 2026-10-18: setup now names fleets "Fleet n" and capital ships "<class> n" (B4 §12, display only; the ship name is saved
+        // state). The game plays identically: with the naming step removed the hash is exactly B2e's 5e54e22f...e007 (checked when re-pinned).
         // B3 re-pin 2026-10-18: the Classic battle now follows the traced original (m4-battle-classic, batch B3) and AI sides use the AI threshold
         // of B6a §2, which changes every battle and so the game; the old AI is still the one played (all switches above unchanged).
-        Assert.Equal("f04baf8d2350b9b88ebf5073edda360f337897cfd4df26d578296cb8a6606059", h.StateHash());
+        Assert.Fail("HASH " + h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"
