@@ -543,6 +543,32 @@ public class B5aControlTests
         Assert.Equal(C, w.H.Economy.Find(unfinished)!.System);
     }
 
+    // B5a section 5 (Dev lead 2026-10-18, AI trainer crash): the squadron fleet takes off at the capture (on the lane, PreviousSystem set, a
+    // FleetDeparted) and arrives at its held system; a capture between step 2 and step 4 no longer crashes the forced-stop step.
+    [Theory]
+    [InlineData("3.1")]
+    [InlineData("5.2")]
+    [InlineData("6.2")]
+    public void B5a_SquadronFleetDepartsAtCapture_AndArrives(string slot)
+    {
+        var w = new DerivedWorld();
+        w.Hold(C, Side.Alliance, 50); w.Regiments(C, Side.Alliance, 1);
+        w.Hold(T, Side.Alliance, 80);
+        int based = w.H.Economy.AddObject(Side.Alliance, "X-wing", C);
+        w.InSlot(slot, ctx => { if (w.Ctl.HolderOf(C) == Side.Alliance) w.Ctl.DebugApplyTroops(ctx, C, Side.Empire, DerivedWorld.ImpArmy, 6); });
+        w.Step();
+        var created = Assert.Single(w.Events<FleetCreated>(), e => e.Cause == FleetCreateCause.Squadrons);
+        var fleet = w.Game.State.Fleets[created.Fleet];
+        Assert.Null(fleet.At);
+        Assert.Equal(C, fleet.PreviousSystem);
+        Assert.Single(w.Events<FleetDeparted>(), e => e.Fleet == created.Fleet && e.From == C);
+        Assert.True(fleet.Transit!.DueDay > w.Game.Day - 1); // due on a later Step's step 3, never in the past
+        for (int i = 0; i < 400 && fleet.Transit != null; i++) w.Step();
+        Assert.Null(fleet.Transit);
+        Assert.Equal(T, fleet.At);
+        Assert.Contains(based, fleet.Squadrons);
+    }
+
     // B6b §3 (Dev lead 2026-10-18): the AI's garrison floor. Wish below 70 support: min((79 - s) / 10, 6), doubled in an uprising; 9 on the special
     // world; the target is the largest of the wish, the base and the rule's need. B6b-3, B6b-5 and B6b-7.
     [Fact]
