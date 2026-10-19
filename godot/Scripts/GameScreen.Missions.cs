@@ -220,7 +220,7 @@ public partial class GameScreen
         foreach (var c in here)
         {
             string n = S.CharName(c.Id);
-            string skills = $"diplomacy {c.EffectiveSkill(Skill.Diplomacy)}, espionage {c.EffectiveSkill(Skill.Espionage)}, combat {c.EffectiveSkill(Skill.Combat)}, leadership {c.EffectiveSkill(Skill.Leadership)}";
+            string skills = $"diplomacy {Cm.EffectiveSkill(c, Skill.Diplomacy)}, espionage {Cm.EffectiveSkill(c, Skill.Espionage)}, combat {Cm.EffectiveSkill(c, Skill.Combat)}, leadership {Cm.EffectiveSkill(c, Skill.Leadership)}";
             if (CanJoin(c)) TeamBox($"{n}  ({skills})", p.Chars, c.Id);
             else Line($"{n} cannot go: {NotJoinReason(c)}", Dim, 13);
         }
