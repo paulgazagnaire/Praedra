@@ -329,7 +329,7 @@ public sealed class ClassicBattle
         _hasDestination[0] = hasDestination[0]; _hasDestination[1] = hasDestination[1];
         // rule: m4-battle-classic §1.4 (ClassicBattleRng): Classic = the fixed per-battle Lehmer generator; Game = the seeded GameRng
         _dice = p.BattleRng == ClassicBattleRng.Classic
-            ? new LehmerBattleRng(p.OriginalRngSeed, p.OriginalRngWarmup)
+            ? new LehmerBattleRng(p.ClassicRngSeed, p.ClassicRngWarmup)
             : new GameBattleDice(rng ?? throw new ArgumentNullException(nameof(rng), "ClassicBattleRng.Game needs the battle's GameRng."));
         // rule: m4-battle-classic §1.3 (B3 §10): the threshold is set per side by its controller before the battle
         foreach (var s in Order)
