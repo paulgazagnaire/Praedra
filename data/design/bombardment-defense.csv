@@ -1,10 +1,2 @@
 kind,name,bombard_defense,tag
-facility,Mine,5,DEFAULT (MANFACSD and PROFACSD field not in the specs: m3-bombardment Resolution 4)
-facility,Refinery,5,DEFAULT (MANFACSD and PROFACSD field not in the specs: m3-bombardment Resolution 4)
-facility,Orbital Shipyard,5,DEFAULT (MANFACSD and PROFACSD field not in the specs: m3-bombardment Resolution 4)
-facility,Training Facility,5,DEFAULT (MANFACSD and PROFACSD field not in the specs: m3-bombardment Resolution 4)
-facility,Construction Yard,5,DEFAULT (MANFACSD and PROFACSD field not in the specs: m3-bombardment Resolution 4)
-facility,Advanced Shipyard,5,DEFAULT (MANFACSD and PROFACSD field not in the specs: m3-bombardment Resolution 4)
-facility,Advanced Training Facility,5,DEFAULT (MANFACSD and PROFACSD field not in the specs: m3-bombardment Resolution 4)
-facility,Advanced Construction Yard,5,DEFAULT (MANFACSD and PROFACSD field not in the specs: m3-bombardment Resolution 4)
-facility,Sensor Station,5,DEFAULT (same as the other facilities; the Sensor Station is not in m3-bombardment: added with m5-fog-and-hq N4 2026-10-16)
+facility,Sensor Station,5,DEFAULT (same value the other facilities had before B7; the Sensor Station is not in m3-bombardment or the 1998 game: added with m5-fog-and-hq N4 2026-10-16)

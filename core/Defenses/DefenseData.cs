@@ -16,9 +16,10 @@ public sealed record DefenseClass(int Id, string Name, int Family, int Cost, int
 
 /// <summary>
 /// The defense classes and every bombardment defense value that is data: <c>defense-facilities.csv</c> (the six classes) and
-/// <c>bombardment-defense.csv</c> (regiments from data/original/, read from TROOPSD by importer/; the manufacturing and production facilities
-/// are DEFAULT 5 rows of data/design/bombardment-defense.csv, merged: MANFACSD/PROFACSD words 12 and 13 are not named yet, B2).
-/// rule: m3-planetary-defenses §The six classes ("Load these from the importer as a data file keyed by class id"); m3-bombardment §Resolution 4.
+/// <c>bombardment-defense.csv</c> (from data/original/, read by importer/: regiments from TROOPSD, the manufacturing and production facilities
+/// from MANFACSD/PROFACSD word 12, the Rebel HQ from ALLFACSD word 12; the Sensor Station, not a 1998 class, is a DEFAULT row of
+/// data/design/bombardment-defense.csv, merged). rule: m3-planetary-defenses §The six classes ("Load these from the importer as a data file
+/// keyed by class id"); m3-bombardment §Resolution 4; B7-bombardment §7 (C8).
 /// </summary>
 public sealed class DefenseData
 {
@@ -28,9 +29,16 @@ public sealed class DefenseData
     private readonly SortedDictionary<string, DefenseClass> _byName;
     private readonly SortedDictionary<string, int> _regiments;
     private readonly SortedDictionary<string, int> _facilities;
+    private readonly int? _hq;
 
-    private DefenseData(SortedDictionary<string, DefenseClass> byName, SortedDictionary<string, int> regiments, SortedDictionary<string, int> facilities)
-    { _byName = byName; _regiments = regiments; _facilities = facilities; }
+    private DefenseData(SortedDictionary<string, DefenseClass> byName, SortedDictionary<string, int> regiments, SortedDictionary<string, int> facilities, int? hq)
+    { _byName = byName; _regiments = regiments; _facilities = facilities; _hq = hq; }
+
+    /// <summary>
+    /// Bombardment defence of the Rebel HQ (ALLFACSD word 12 = 9), the row of kind <c>hq</c>. Read only when <see cref="BombardParams.HqBombardable"/>
+    /// is on. rule: B7-bombardment §3, §7 (C9).
+    /// </summary>
+    public int HqDefense => _hq ?? throw new InvalidOperationException("bombardment-defense.csv has no row of kind 'hq' (the Rebel HQ, ALLFACSD word 12).");
 
     /// <summary>The six classes in id order.</summary>
     public IEnumerable<DefenseClass> Classes => _byName.Values.OrderBy(c => c.Id);
@@ -88,11 +96,18 @@ public sealed class DefenseData
         b.Require("kind", "name", "bombard_defense");
         var regiments = new SortedDictionary<string, int>(StringComparer.Ordinal);
         var facilities = new SortedDictionary<string, int>(StringComparer.Ordinal);
+        int? hq = null;
         for (int r = 0; r < b.RowCount; r++)
         {
             string kind = b.Get(r, "kind").Trim(), name = b.Get(r, "name").Trim();
             int d = b.GetInt(r, "bombard_defense");
             if (d < 0) throw new DataLoadException($"{b.Where(r)}: '{name}' has a negative bombardment defense.");
+            if (kind == "hq") // rule: B7-bombardment §3 (the Rebel HQ, families 0x20-0x21: one record)
+            {
+                if (hq != null) throw new DataLoadException($"{b.Where(r)}: a second row of kind 'hq'.");
+                hq = d;
+                continue;
+            }
             var target = kind switch
             {
                 "troop" => regiments, "facility" => facilities,
@@ -100,6 +115,6 @@ public sealed class DefenseData
             };
             if (!target.TryAdd(name, d)) throw new DataLoadException($"{b.Where(r)}: '{name}' appears twice.");
         }
-        return new DefenseData(byName, regiments, facilities);
+        return new DefenseData(byName, regiments, facilities, hq);
     }
 }

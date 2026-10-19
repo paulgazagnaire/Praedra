@@ -186,6 +186,10 @@ public sealed class GameHost
         // cleared on a holder change and the uprising incident codes 3 to 5. rule: m5-characters-and-force §Where it runs in the day Step.
         Characters = Rebellion.Core.Characters.CharacterModule.Attach(game, Fleets, data.Characters, settings.Characters);
         Bombardment.AdmiralLeadership = Characters.AdmiralLeadership;
+        // rule: B7-bombardment §4.3: the holder's General standing on the system multiplies the batteries' return fire (the system General post is
+        // cleared on a holder change, so its holder is the system's)
+        Bombardment.BatteryGeneralLeadership = Characters.SystemGeneralLeadership;
+        Bombardment.IsRebelHq = s => s == HqSystem; // read only with HqBombardable (B7 C9, DEFAULT off)
         Assault.FleetGeneralLeadership = Characters.FleetGeneralLeadership;
         Assault.SystemGeneralLeadership = Characters.SystemGeneralLeadership;
         Control.HolderChanged += Characters.OnHolderChanged;

@@ -9,3 +9,12 @@ troop,Imperial Fleet Regiment,2,original: TROOPSD bombardment_defense (importer)
 troop,Imperial Army Regiment,5,original: TROOPSD bombardment_defense (importer); m3-bombardment B7
 troop,War Droid Regiment,2,original: TROOPSD bombardment_defense (importer); m3-bombardment B7
 troop,Dark Trooper Regiment,6,original: TROOPSD bombardment_defense (importer); m3-bombardment B7
+facility,Orbital Shipyard,2,original: MANFACSD word 12 (importer); B7-bombardment §7
+facility,Training Facility,3,original: MANFACSD word 12 (importer); B7-bombardment §7
+facility,Construction Yard,3,original: MANFACSD word 12 (importer); B7-bombardment §7
+facility,Advanced Shipyard,2,original: MANFACSD word 12 (importer); B7-bombardment §7
+facility,Advanced Training Facility,4,original: MANFACSD word 12 (importer); B7-bombardment §7
+facility,Advanced Construction Yard,4,original: MANFACSD word 12 (importer); B7-bombardment §7
+facility,Mine,5,original: PROFACSD word 12 (importer); B7-bombardment §7
+facility,Refinery,2,original: PROFACSD word 12 (importer); B7-bombardment §7
+hq,Alliance Headquarters,9,original: ALLFACSD word 12 (importer); B7-bombardment §3 and §7 (read only with HqBombardable)

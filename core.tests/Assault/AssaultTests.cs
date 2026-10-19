@@ -321,6 +321,7 @@ public class AssaultTests
         int g = v.Fleet(All, "Victory Destroyer");
         v.Aboard(g, Reb, 2);
         long bomb = v.B.Bombard(All, g, Sys, BombardCategory.Military);
+        v.B.Stub.Expect(1, 10, 1); // B7-bombardment §5.3: the Military strike with hits and no target draws the collateral die
         long ass = v.Submit(All, g);
         v.Run(1);
         Assert.Null(v.B.RejectionOf(bomb));

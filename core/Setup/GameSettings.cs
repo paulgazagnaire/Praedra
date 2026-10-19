@@ -107,7 +107,11 @@ public sealed record GameSettings
     // ---- defenses and bombardment. rule: m3-planetary-defenses §Defaults for undecided items; m3-bombardment §Defaults for undecided items
     /// <summary>Number tables and switches of the defense queries (assault gate, Death Star Shield counts for the gate). Null = the module's defaults.</summary>
     public DefenseParams? Defense { get; init; }
-    /// <summary>Number table of the bombardment (admiral step, die, Energy and Raw defense, the -20). Null = the module's defaults.</summary>
+    /// <summary>
+    /// Numbers and switches of the bombardment (admiral and General steps, die, Energy and Raw defence, the -20, the critical roll; the B7 switches
+    /// BombardWastedHits, BatteryReturnFire, BombardFleetsTogether, BombardDamageScales, MilitaryCollateral on and HqBombardable off, the same in
+    /// Classic and New, Dev lead 2026-10-19). Null = the module's defaults. rule: B7-bombardment §Collisions.
+    /// </summary>
     public BombardParams? Bombard { get; init; }
 
     // ---- the Death Star. rule: m5-death-star §Interfaces, §2, §4

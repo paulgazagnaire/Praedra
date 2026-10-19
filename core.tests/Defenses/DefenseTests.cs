@@ -171,6 +171,7 @@ public class DefenseTests
         w.Facility(Gen1); w.Facility(Gen1);
         Assert.True(w.Def.AssaultForbidden(BombWorld.Sys));
         w.Fleet(Side.Empire, BombWorld.Sys, "Death Star", 6); // P = 90, S = 80, 10 hits
+        w.Stub.Expect(0, 2, 1); // B7-bombardment §5.3: the military collateral x = rand(0..m0 = 2) comes first: 1, no collateral
         w.Dice((0, 10), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1)); // the first shield falls, the second survives nine rolls
         int fleet = w.Game.State.Fleets.Keys.Single();
         Assert.Null(w.TryBombard(Side.Empire, fleet, BombWorld.Sys, BombardCategory.Military));
@@ -217,7 +218,9 @@ public class DefenseTests
     [Fact]
     public void D14_BombardingABatteryWorldListsBothBatteriesAndChangesNoShip()
     {
-        var w = new BombWorld();
+        // The m3 hook, kept as the BatteryReturnFire-off path (B7 switches off). With the B7 DEFAULTs the batteries do damage ships:
+        // B7-bombardment §4, tested in B7BombardmentTests.
+        var w = new BombWorld(bp: BombWorld.M3Rule);
         w.Hold(Side.Alliance);
         int l = w.Facility(Lnr1), k = w.Facility(Kdy);
         int fleet = w.Fleet(Side.Empire, BombWorld.Sys, "Victory Destroyer", 2); // P = 8

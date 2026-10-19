@@ -76,7 +76,10 @@ public class SimpleAiAgentsTests
         // Talented re-pin 2026-10-18 (Dev lead; Paul's random trainers, m5-characters-and-force Rule New 4): TrainerPick is DEFAULT Random, so setup
         // draws 3 talented per side and their Force (more draws, saved Talented, higher skills). With TrainerPick = Fixed the hash is exactly the
         // previous pin 55805ed7...c838 (checked when re-pinned, main 4691273).
-        Assert.Equal("999219a69b702fa1a5c88950d535edcb80ddeec6cd78e0e0bdb9d3850fbefd00", h.StateHash());
+        // B7 re-pin 2026-10-19 (Dev lead; the 1998 bombardment, B7-bombardment): BombardWastedHits, BatteryReturnFire, BombardFleetsTogether,
+        // BombardDamageScales and MilitaryCollateral are DEFAULT on, core rules this old AI cannot switch off. With those five switches off the hash
+        // is exactly the previous pin 999219a6...fd00 (checked when re-pinned; the gap fills C5, C7 and the C8 data do not touch this game).
+        Assert.Equal("672016cc626f98c492a674fcfffe862425cd7b9d98e13b9df53cd2bc1725763b", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"
