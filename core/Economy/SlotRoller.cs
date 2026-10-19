@@ -1,11 +1,11 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Economy;
+namespace Praedra.Core.Economy;
 
 /// <summary>
-/// The 1998 start rolls for a system's slots, kept behind <see cref="SlotSource.Rolled"/>. Draw order (DEFAULT, the original's
+/// The Classic start rolls for a system's slots, kept behind <see cref="SlotSource.Rolled"/>. Draw order (DEFAULT, Classic's
 /// internal order is not traced): populated roll, energy rolls, raw rolls, then raw is clamped to energy.
-/// rule: m2-slots-and-resources §Rule (New) SlotSource; §Numbers (Original start rolls, Traced economy/01).
+/// rule: m2-slots-and-resources §Rule (New) SlotSource; §Numbers (Classic start rolls, Traced economy/01).
 /// </summary>
 public static class SlotRoller
 {

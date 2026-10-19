@@ -1,13 +1,13 @@
-using Rebellion.Core.AI;
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Fog;
-using Rebellion.Core.Missions;
-using Rebellion.Core.Setup;
+using Praedra.Core.AI;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Fog;
+using Praedra.Core.Missions;
+using Praedra.Core.Setup;
 using Xunit.Abstractions;
 
-namespace Rebellion.Core.Tests.AI;
+namespace Praedra.Core.Tests.AI;
 
 // The AI's characters and missions (SimpleAiParams.UseCharactersAndMissions, DEFAULT true; ai/05 characters, ai/07 §7 HQ search). Rules
 // checked through the AI's own orders: m5-missions (StartMission, the Espionage and Reconnaissance successes that write HqHere), m5-fog-and-hq
@@ -22,7 +22,7 @@ public class SimpleAiAgentsTests
 
     private static (AiMatch M, GameHost H) Match(int seed, SimpleAiParams p, Side? passive = null, GameSettings? settings = null)
     {
-        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = settings ?? Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory });
+        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = settings ?? Praedra.Core.Tests.Setup.DealSettings.FileOldVictory });
         return (new AiMatch(h, p, p, passive), h);
     }
 
@@ -36,7 +36,7 @@ public class SimpleAiAgentsTests
         Assert.True(new SimpleAiParams().UseCharactersAndMissions);
         var (m, h) = Match(1, new SimpleAiParams { UseFog = true, UseCharactersAndMissions = false,
             RunnerRetreats = 0, RetreatCountsAsLoss = false, AvoidBlockedPaths = false, WinRushDefenders = -1, ShelledLandingNeed = false,
-            FogAvoidEnemyStops = false, SplitHomeSurplus = false, DetourToHeldStop = false, InvasionBatchesOnly = false, ExplorerScouts = 0, FogGroundForgetDays = 0, LeaderMarks = false, OriginalGarrisonFloor = false,
+            FogAvoidEnemyStops = false, SplitHomeSurplus = false, DetourToHeldStop = false, InvasionBatchesOnly = false, ExplorerScouts = 0, FogGroundForgetDays = 0, LeaderMarks = false, ClassicGarrisonFloor = false,
             FinishWhenAheadRatio = 0, KeyHunt = false, TaskForces = false });
         m.RunTo(1000);
         Assert.DoesNotContain(m.Sent.Keys, k => k.Contains("Mission", StringComparison.Ordinal) || k.Contains("Character", StringComparison.Ordinal) || k.Contains("General", StringComparison.Ordinal));
@@ -54,23 +54,23 @@ public class SimpleAiAgentsTests
         // state). The game plays identically: with the naming step removed the hash is exactly B2e's 5e54e22f...e007 (checked when re-pinned).
         // B3 re-pin 2026-10-18: the Classic battle now follows the traced original (m4-battle-classic, batch B3) and AI sides use the AI threshold
         // of B6a §2, which changes every battle and so the game; the old AI is still the one played (all switches above unchanged).
-        // Reveal re-pin 2026-10-18 (AI trainer, Dev lead's ask): FogParams.SetupRevealsFacilities is now DEFAULT on (1998), so the day-0
+        // Reveal re-pin 2026-10-18 (AI trainer, Dev lead's ask): FogParams.SetupRevealsFacilities is now DEFAULT on (Classic), so the day-0
         // pictures hold the core systems' facilities. With the reveal off the hash is exactly B3's 12fcdbf1...334b (checked when re-pinned).
-        // B5b re-pin 2026-10-18: production and upkeep follow the 1998 rules (batch B5b): build orders over the free upkeep are refused
+        // B5b re-pin 2026-10-18: production and upkeep follow the Classic rules (batch B5b): build orders over the free upkeep are refused
         // (NoUpkeep), blockades and uprisings stop mines and refineries and take them out of capacity, every restart draws a startup
         // cycle, captured mines reset, shares are dealt incrementally (new saved fields WorkSide, Share, Startup), the autoscrap timer is
         // armed at the overdraft and new orders queue behind. These are core rules the old AI cannot switch off, so the game takes another course.
         // B5a re-pin 2026-10-17: derived control (ControlRule.Derived, the DEFAULT; the old AI cannot switch it off) recomputes every holder after
         // setup, lets worlds go neutral or join a side by support, hands a world over when its last regiment leaves, runs the sector steps, frees
         // and sends away characters at each flip, and adds saved state (ControlState.Contested, EverHeld): the game takes another course from
-        // setup. Seed 1, 1000 days, as before (no seed change); re-measured on top of B3. The B6b garrison floor (OriginalGarrisonFloor) is off above
+        // setup. Seed 1, 1000 days, as before (no seed change); re-measured on top of B3. The B6b garrison floor (ClassicGarrisonFloor) is off above
         // with the other AI switches; its off path keeps the B5a last-regiment guard (the hash is unchanged by that switch and by the squadrons
         // leaving a flipped world, checked 2026-10-18). Re-measured on top of B5b (main 682cd31), 2026-10-18.
         // AssaultOnly re-pin 2026-10-18 (Dev lead): ControlRule is DEFAULT AssaultOnly until the AI copes with Derived (QA 16-seed: 0/16 Empire
         // wins), so this game no longer runs derived control (the Derived hash was 78d21c94...d3ec). It still differs from main's edab04cb...c500
         // (the branch adds saved state, ControlState, and changes that run under both rules; not separated). Seed 1, 1000 days, on main 5437780 merged.
-        // Blockade pause re-pin 2026-10-18 (Dev lead; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch): SuspendedLeaveCapacity is
-        // now DEFAULT off and MineStopMode / YardStopMode DEFAULT Pause, core rules this old AI cannot switch off. With the three 1998 switches set
+        // Blockade pause re-pin 2026-10-18 (Dev lead; Paul's economy/02 blockade rule is the DEFAULT, Classic is the switch): SuspendedLeaveCapacity is
+        // now DEFAULT off and MineStopMode / YardStopMode DEFAULT Pause, core rules this old AI cannot switch off. With the three Classic switches set
         // (SuspendedLeaveCapacity on, both modes Abandon) the hash is exactly the AssaultOnly pin 1e675764...ba62 (checked when re-pinned, main eb722bd merged).
         // re-pinned 2026-10-18: battle default New (m4-battle-new) on top of fog group D storing characters (m5-fog-and-hq, was 9188df4d...05ff).
         // With Battle.Ruleset = Classic the battle part matched the previous pin exactly (checked when re-pinned on the battle branch).
@@ -80,10 +80,10 @@ public class SimpleAiAgentsTests
         // Q17 re-pin 2026-10-18 (Dev lead; Paul's cards "Skip the strong" and "Leave out hunters"): the talented draw leaves out the already strong
         // and the never_talented hunters, so other characters are drawn. With TalentedSkipStrong and TalentedSkipFlagged off the hash is exactly
         // the previous pin 999219a6...fd00 (checked when re-pinned, main 71cc7b7).
-        // Derived re-pin 2026-10-18 (AI trainer; Paul's card "1998 rule"): ControlRule is DEFAULT Derived again, a core rule this old AI cannot
+        // Derived re-pin 2026-10-18 (AI trainer; Paul's card "Classic rule"): ControlRule is DEFAULT Derived again, a core rule this old AI cannot
         // switch off. FinishWhenAheadRatio (now DEFAULT 5) is switched off above with the other AI fixes. With ControlRule = AssaultOnly the hash
         // is exactly the previous pin 00e02e8c...701c (checked when re-pinned, main 2a9d16d).
-        // B7 re-pin 2026-10-19 (Dev lead; the 1998 bombardment, B7-bombardment): BombardWastedHits, BatteryReturnFire, BombardFleetsTogether,
+        // B7 re-pin 2026-10-19 (Dev lead; the Classic bombardment, B7-bombardment): BombardWastedHits, BatteryReturnFire, BombardFleetsTogether,
         // BombardDamageScales and MilitaryCollateral are DEFAULT on, core rules this old AI cannot switch off. With those five switches off the hash
         // is exactly the previous pin ca568ccf...8252 (checked when re-pinned, main 07ff5e9; the gap fills C5, C7 and the C8 data do not touch this game).
         Assert.Equal("d5798f1633cdcfc63dd84692cabfad3f7e0b814918f6558bd7fa7c4d14c23f02", h.StateHash());
@@ -140,7 +140,7 @@ public class SimpleAiAgentsTests
     private static int RescuesAboard(SimpleAiParams p, out int prisonerId, out string? at)
     {
         // a passive Alliance: its fleets stay put; LandPrisoners off, else New puts the prisoner ashore at the Alliance-held system (CH38)
-        var (m, h) = Match(1, p, passive: Side.Alliance, settings: Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory with { Characters = new CharacterParams { LandPrisoners = false } });
+        var (m, h) = Match(1, p, passive: Side.Alliance, settings: Praedra.Core.Tests.Setup.DealSettings.FileOldVictory with { Characters = new CharacterParams { LandPrisoners = false } });
         m.RunTo(30);
         var cp = h.Characters.Params;
         // the smallest Alliance fleet standing away from the HQ (Crait on seed 1; at the HQ the odds stay below the AI's floor)
@@ -298,7 +298,7 @@ public class SimpleAiAgentsTests
         Assert.True(m.TotalRejected * 20 <= m.TotalSent, $"{m.TotalRejected} of {m.TotalSent} orders rejected");
     }
 
-    // QA-6: B6c §7 (the 1998 AI's Sabotage, Recon, espionage-team and Abduction/Assassination filters admit special forces, inferred from the
+    // QA-6: B6c §7 (the Classic AI's Sabotage, Recon, espionage-team and Abduction/Assassination filters admit special forces, inferred from the
     // mask), B6b §9 (it keeps at least 8 special forces), m5-missions §Special forces (a special force is a team member only of the kinds whose
     // record mask holds its class bit). With SimpleAiParams.SpecialForceAgents (DEFAULT off) on, each side keeps SpecialForcesWanted special forces
     // of its agent classes and sends them alone on planned missions; off, no special force goes on a mission (the HQ-hunt droids are Hard's).

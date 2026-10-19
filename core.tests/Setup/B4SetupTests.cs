@@ -1,16 +1,16 @@
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Support;
-using static Rebellion.Core.Tests.Characters.CharWorld;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Setup;
+using Praedra.Core.Support;
+using static Praedra.Core.Tests.Characters.CharWorld;
 
-namespace Rebellion.Core.Tests.Setup;
+namespace Praedra.Core.Tests.Setup;
 
 /// <summary>
 /// Reverse-engineering batch B4 (new-game setup), part A: the code on main today (NewGame with the Anchored deal and new-game-forces.csv).
 /// Day-one knowledge (m5-fog-and-hq §F2 Setup, §F4; B4 §11), garrisons (m5-setup-and-victory §P6; B4 §6), names (§P7 Names; B4 §12) and the
-/// Yavin order of the starting characters (§P9; B4 §9). The Classic setup tests B4-6 to B4-13 wait for DealMode Original (part B).
+/// Yavin order of the starting characters (§P9; B4 §9). The Classic setup tests B4-6 to B4-13 wait for DealMode Classic (part B).
 /// </summary>
 public class B4SetupTests
 {
@@ -20,20 +20,20 @@ public class B4SetupTests
     private static readonly GameSettings Classic = new() { MinGarrison = 0, HqFixedForces = true };
     private static GameHost MakeClassic(int seed = 1) => NewGame.Create(new NewGameOptions { Seed = seed, Settings = Classic });
     private static IEnumerable<GameHost> Games() => Seeds.Select(Make);
-    /// <summary>The 1998 day-one reveal: SetupRevealsFacilities on (DEFAULT on since 2026-10-18; explicit here so the test pins the rule).</summary>
-    private static GameHost MakeReveal(int seed) => NewGame.Create(new NewGameOptions { Seed = seed, Settings = new GameSettings { Fog = new Rebellion.Core.Fog.FogParams { SetupRevealsFacilities = true } } });
+    /// <summary>The Classic day-one reveal: SetupRevealsFacilities on (DEFAULT on since 2026-10-18; explicit here so the test pins the rule).</summary>
+    private static GameHost MakeReveal(int seed) => NewGame.Create(new NewGameOptions { Seed = seed, Settings = new GameSettings { Fog = new Praedra.Core.Fog.FogParams { SetupRevealsFacilities = true } } });
 
     private static int Standing(GameHost h, Side side, string cls, string sys) =>
         h.Economy.Objects.Count(o => o.Category == ObjectCategory.Regiment && o.Side == side && o.Class == cls && o.System == sys && o.AboardShip == 0);
 
     // B4-1: on day 0 the Alliance's picture of a core Empire system lists its facilities (group C) and has no regiments, squadrons, fleets or
-    // characters (D, E never written). With SetupRevealsFacilities on (1998). rule: m5-fog-and-hq §F2 Setup, §F4 1 (B4 §11)
+    // characters (D, E never written). With SetupRevealsFacilities on (Classic). rule: m5-fog-and-hq §F2 Setup, §F4 1 (B4 §11)
     [Fact]
     public void B4_1_DayOneCorePictureHoldsFacilitiesOnly()
     {
-        // DEFAULT on (1998) since 2026-10-18 (AI trainer: the AI floors pass with it); with the switch off there is no C.
-        Assert.True(new Rebellion.Core.Fog.FogParams().SetupRevealsFacilities);
-        var off = NewGame.Create(new NewGameOptions { Seed = 1, Settings = new GameSettings { Fog = new Rebellion.Core.Fog.FogParams { SetupRevealsFacilities = false } } });
+        // DEFAULT on (Classic) since 2026-10-18 (AI trainer: the AI floors pass with it); with the switch off there is no C.
+        Assert.True(new Praedra.Core.Fog.FogParams().SetupRevealsFacilities);
+        var off = NewGame.Create(new NewGameOptions { Seed = 1, Settings = new GameSettings { Fog = new Praedra.Core.Fog.FogParams { SetupRevealsFacilities = false } } });
         Assert.Null(off.Fog.Picture(Side.Alliance, "Coruscant")!.Facilities);
         foreach (var h in Seeds.Select(MakeReveal))
         {
@@ -110,7 +110,7 @@ public class B4SetupTests
         Assert.Equal(0, SupportModule.RequiredGarrison(p, 60, false, false));
         Assert.Equal(1, SupportModule.RequiredGarrison(p, 59, false, false));
         var forces = NewGameData.Default.Forces;
-        // the data keeps 1 until the Classic setup (part B); the switches give the 1998 rule
+        // the data keeps 1 until the Classic setup (part B); the switches give the Classic rule
         foreach (var side in new[] { Side.Empire, Side.Alliance }) Assert.Equal(1, forces.Int(side, "min_garrison"));
         Assert.Null(new GameSettings().MinGarrison); Assert.False(new GameSettings().HqFixedForces);
 
@@ -145,7 +145,7 @@ public class B4SetupTests
     }
 
     // B4-4: with every Alliance system at support 60 or more, the Alliance has no garrison regiment on day 0 outside the fixed Yavin (base) and
-    // HQ troops. rule: m5-setup-and-victory §P6 (B4 §6: in 1998 only the Empire starts with garrisons)
+    // HQ troops. rule: m5-setup-and-victory §P6 (B4 §6: in Classic only the Empire starts with garrisons)
     [Fact]
     public void B4_4_AllianceAtSixtyOrMoreHasNoGarrison()
     {

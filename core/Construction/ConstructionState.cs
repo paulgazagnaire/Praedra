@@ -1,8 +1,8 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Construction;
+namespace Praedra.Core.Construction;
 
-/// <summary>The three yard families (the 1998 family ids). rule: m2-construction §Yard families.</summary>
+/// <summary>The three yard families (the Classic family ids). rule: m2-construction §Yard families.</summary>
 public enum YardFamily
 {
     /// <summary>0x28 Orbital Shipyard: capital ships and fighters.</summary>

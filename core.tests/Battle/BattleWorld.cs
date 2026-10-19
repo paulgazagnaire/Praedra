@@ -1,12 +1,12 @@
-using Rebellion.Core.Battle;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Map;
-using Rebellion.Core.Tests.Economy;
-using Rebellion.Core.Tests.Fleets;
+using Praedra.Core.Battle;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Map;
+using Praedra.Core.Tests.Economy;
+using Praedra.Core.Tests.Fleets;
 
-namespace Rebellion.Core.Tests.Battle;
+namespace Praedra.Core.Tests.Battle;
 
 /// <summary>
 /// Fleets, economy and the battle module on the synthetic map of the retreat sheet: A(0,0), B(100,0), C(200,0), D(100,60); lanes A-B, B-C, B-D

@@ -1,13 +1,13 @@
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Fog;
-using Rebellion.Core.Research;
-using Rebellion.Core.Support;
-using Rebellion.Core.Troops;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Fog;
+using Praedra.Core.Research;
+using Praedra.Core.Support;
+using Praedra.Core.Troops;
 
-namespace Rebellion.Core.Missions;
+namespace Praedra.Core.Missions;
 
 /// <summary>
 /// Agent missions: teams of characters and special forces with decoys, the StartMission / MoveGroup / CancelMission orders, travel as a group,
@@ -777,7 +777,7 @@ public sealed class MissionModule
 
     /// <summary>
     /// Home if the side still holds it; else the nearest system the side holds (fewest ticks by m1-travel, ties by name ordinal); null if none
-    /// (the group stays). rule: §5 (DEFAULT; the original's Return and Adrift targets are Missing).
+    /// (the group stays). rule: §5 (DEFAULT; Classic's Return and Adrift targets are Missing).
     /// </summary>
     private (List<string> Path, int Ticks)? ReturnTrip(MissionGroup m, int speed)
     {
@@ -1104,7 +1104,7 @@ public sealed class MissionModule
     /// <see cref="MissionParams.KeyTargetRules"/> on, a character listed in the key-target file whom the capture would take (Free or Injured, the
     /// captor of the other side) makes one extra roll <c>rand(0..99) &lt; cap_percent</c>: captured only if it passes; otherwise he is not captured
     /// and goes on as a loser whom Capture refuses (he keeps the duel's Hurt, no second injury; he leaves the group if word 15 lets him). Every
-    /// other character, and <see cref="KeyDuelCapture.Original"/>, keep the 1998 duel (no draw). rule: m5-missions §4, §6a (KeyDuelCapture,
+    /// other character, and <see cref="KeyDuelCapture.Classic"/>, keep the Classic duel (no draw). rule: m5-missions §4, §6a (KeyDuelCapture,
     /// 2026-10-18; Paul's caps apply to duel captures).
     /// </summary>
     private bool KeyDuelCaptureRoll(StepContext ctx, MissionGroup m, int t, CharacterRecord c, Side captor, string place)

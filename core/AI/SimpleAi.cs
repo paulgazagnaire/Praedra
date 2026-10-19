@@ -1,12 +1,12 @@
-using Rebellion.Core.Battle;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Defenses;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Setup;
+using Praedra.Core.Battle;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Defenses;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Setup;
 
-namespace Rebellion.Core.AI;
+namespace Praedra.Core.AI;
 
 /// <summary>One order the AI queued today (for logs and tests).</summary>
 public sealed record SubmittedOrder(long Sequence, string Kind, string Detail);
@@ -22,7 +22,7 @@ public sealed record SubmittedOrder(long Sequence, string Kind, string Detail);
 /// private <see cref="GameRng"/> seeded from (game day, side), so the same game state gives the same orders.
 ///
 /// VISIBILITY: with <see cref="SimpleAiParams.UseFog"/> on, every look at the other side goes through the side's
-/// <see cref="Rebellion.Core.Fog.KnowledgeView"/> (m5-fog-and-hq §N8, the fairness contract): enemy fleets, garrisons, holders, facilities and slot
+/// <see cref="Praedra.Core.Fog.KnowledgeView"/> (m5-fog-and-hq §N8, the fairness contract): enemy fleets, garrisons, holders, facilities and slot
 /// values come from the side's own picture (possibly stale), the event feed is the side's filtered one, and the Empire's
 /// <see cref="KnownEnemyHq"/> is set only from the Empire's own picture of the HQ. With it off (DEFAULT for now) the AI still sees everything.
 /// The looks are in one block below ("what the AI may see"), so nothing else reads the other side. With fog the AI also scouts, weighs stale
@@ -99,7 +99,7 @@ public sealed partial class SimpleAi
 
     // ================================================================== what the AI may see (fog goes here)
 
-    private Rebellion.Core.Fog.KnowledgeView? _view;
+    private Praedra.Core.Fog.KnowledgeView? _view;
     private readonly Dictionary<string, List<Force>> _seenForces = new(StringComparer.Ordinal); // lookup only
 
     /// <summary>
@@ -112,7 +112,7 @@ public sealed partial class SimpleAi
     private Force ForceOf(Fleet f) => new(f.Id, f.At, ShipUnits(f),
         f.Ships.Any(id => _h.Economy.Find(id) is { } o && _h.Fleets.ShipClasses.TryGetValue(o.Class, out var c) && c.GravityWellProjector > 0));
 
-    private Force ForceOf(string at, Rebellion.Core.Fog.FleetPicture p)
+    private Force ForceOf(string at, Praedra.Core.Fog.FleetPicture p)
     {
         var units = new List<Combatant>(); bool gravity = false;
         foreach (var (cls, n) in p.Ships) // ordinal class order
@@ -127,7 +127,7 @@ public sealed partial class SimpleAi
         if (_seenForces.TryGetValue(system, out var cached)) return cached;
         var list = new List<Force>();
         var pic = _view.Picture(system);
-        if (pic?.Fleets is { } e && _view.Level(system) is Rebellion.Core.Fog.KnowledgeLevel.Held or Rebellion.Core.Fog.KnowledgeLevel.Observed)
+        if (pic?.Fleets is { } e && _view.Level(system) is Praedra.Core.Fog.KnowledgeLevel.Held or Praedra.Core.Fog.KnowledgeLevel.Observed)
             foreach (var fp in e.Value) if (fp.Side != _side) list.Add(ForceOf(system, fp));
         return _seenForces[system] = list;
     }
@@ -239,7 +239,7 @@ public sealed partial class SimpleAi
     private bool OwnUprising(string system) => Held(system) && _h.Support.IsUprising(system);
 
     /// <summary>The side's own missions (its own state), id order.</summary>
-    private IEnumerable<Rebellion.Core.Missions.MissionGroup> OwnMissions() => _h.Missions.Missions.Where(m => m.Side == _side);
+    private IEnumerable<Praedra.Core.Missions.MissionGroup> OwnMissions() => _h.Missions.Missions.Where(m => m.Side == _side);
 
     /// <summary>
     /// Enemy characters the side knows to stand at a system, by character id. No fog: every free enemy character located at a system (the
@@ -250,7 +250,7 @@ public sealed partial class SimpleAi
         if (_view != null) return FogEnemyCharacters();
         var list = new List<(int, string)>();
         foreach (var c in _h.Characters.InPlay)
-            if (c.Side == Enemy && c.Status == Rebellion.Core.Characters.CharacterStatus.Free && c.Transit == null && _h.Characters.LocationOf(c) is { } at)
+            if (c.Side == Enemy && c.Status == Praedra.Core.Characters.CharacterStatus.Free && c.Transit == null && _h.Characters.LocationOf(c) is { } at)
                 list.Add((c.Id, at));
         return list;
     }
@@ -325,7 +325,7 @@ public sealed partial class SimpleAi
     {
         if (_capitalDone) return _capital;
         _capitalDone = true;
-        if (_side == Side.Empire && Held(Rebellion.Core.Control.ControlModule.CapitalSystem)) return _capital = Rebellion.Core.Control.ControlModule.CapitalSystem;
+        if (_side == Side.Empire && Held(Praedra.Core.Control.ControlModule.CapitalSystem)) return _capital = Praedra.Core.Control.ControlModule.CapitalSystem;
         // No HQ in the core yet: the held system with the most finished facilities (DEFAULT).
         _capital = HeldSystems().Select(s => (s, n: _h.Economy.Objects.Count(o => o.Completed && o.Category == ObjectCategory.Facility && o.System == s)))
             .Where(t => t.n > 0).OrderByDescending(t => t.n).ThenBy(t => t.s, StringComparer.Ordinal).Select(t => t.s).FirstOrDefault();
@@ -576,18 +576,18 @@ public sealed partial class SimpleAi
         return ids.Count > keep ? ids.Skip(keep).ToList() : new List<int>();
     }
 
-    // The 1998 AI's garrison wish (B6b §3, EXE-own 0x434e4d..0x43507c): below 70 support min((79 - s) / 10, 6), doubled in an uprising (after the cap);
+    // The Classic AI's garrison wish (B6b §3, EXE-own 0x434e4d..0x43507c): below 70 support min((79 - s) / 10, 6), doubled in an uprising (after the cap);
     // the special world's base is 9 (the claimed-world base 3 and the base drift are the Classic AI's, not built here).
     private const int WishBelowSupport = 70, WishTop = 79, WishStep = 10, WishCap = 6, SpecialBase = 9, UprisingFactor = 2;
 
     /// <summary>
     /// Regiments the AI wants standing on a held world: built toward (PlanGarrison) and never moved off (SpareRegimentIds). With
-    /// <see cref="SimpleAiParams.OriginalGarrisonFloor"/> (DEFAULT): max(the rule's need, the 1998 wish, 9 on the special world). Off: the rule's need,
+    /// <see cref="SimpleAiParams.ClassicGarrisonFloor"/> (DEFAULT): max(the rule's need, the Classic wish, 9 on the special world). Off: the rule's need,
     /// <see cref="SimpleAiParams.CriticalGarrison"/> on the critical world, and never the last regiment below 60 support (the B5a guard, Dev lead
     /// 2026-10-17). rule: ai tuning, B6b §3 and §11 (Dev lead 2026-10-18).
     /// </summary>
     /// <summary>
-    /// The world the 1998 AI's special base (9) applies to: Coruscant for the Empire; for the Alliance the Rebel HQ's world, or while the HQ is on
+    /// The world the Classic AI's special base (9) applies to: Coruscant for the Empire; for the Alliance the Rebel HQ's world, or while the HQ is on
     /// the way, its destination (its own HQ: the side knows where it goes), so regiments are ordered there when the move starts and the HQ does
     /// not arrive on an unguarded world (QA-10, Dev lead 2026-10-18). rule: ai tuning, B6b §3 ("special" system).
     /// </summary>
@@ -595,17 +595,17 @@ public sealed partial class SimpleAi
     {
         if (CriticalSystem() is { } c) return c;
         var hq = _h.Game.State.Scenario.Hq;
-        return _side == Side.Alliance && hq.Status == Rebellion.Core.Fog.HqStatus.InTransit && hq.Path.Count > 0 ? hq.Path[^1] : null;
+        return _side == Side.Alliance && hq.Status == Praedra.Core.Fog.HqStatus.InTransit && hq.Path.Count > 0 ? hq.Path[^1] : null;
     }
 
     internal int GarrisonTarget(string system)
     {
         int need = _h.Support.RequiredGarrison(system);
         int s = _h.Economy.SupportOf(system, _side); // its own world: the AI sees it
-        if (!_p.OriginalGarrisonFloor)
+        if (!_p.ClassicGarrisonFloor)
         {
             if (system == CriticalSystem()) need = Math.Max(need, _p.CriticalGarrison);
-            if (s < Rebellion.Core.Control.ControlModule.JoinSupport) need = Math.Max(need, 1);
+            if (s < Praedra.Core.Control.ControlModule.JoinSupport) need = Math.Max(need, 1);
             return need;
         }
         int wish = s < WishBelowSupport ? Math.Min((WishTop - s) / WishStep, WishCap) : 0;
@@ -926,14 +926,14 @@ public sealed partial class SimpleAi
         return a * 100 / b;
     }
 
-    private string? CriticalSystem() => _side == Side.Empire ? Rebellion.Core.Control.ControlModule.CapitalSystem : _h.HqSystem; // the system whose loss ends the game for the side
+    private string? CriticalSystem() => _side == Side.Empire ? Praedra.Core.Control.ControlModule.CapitalSystem : _h.HqSystem; // the system whose loss ends the game for the side
     /// <summary>
     /// The home guard stands at the system whose loss ends the game for the side, when the side holds it. New warships are only sent there
     /// when it has a shipyard (so the guard can be topped up); otherwise the guard is whatever fleet already stands there.
     /// </summary>
     private string? GuardSystem() { var c = CriticalSystem(); return c != null && Held(c) ? c : null; }
     // The Empire only strikes an HQ it has been told about (KnownEnemyHq); no peeking at the true HQ (economy-ai D4: the AI plays fair with fog of war).
-    private string? WinTarget() => _side == Side.Empire ? KnownEnemyHq : Rebellion.Core.Control.ControlModule.CapitalSystem;
+    private string? WinTarget() => _side == Side.Empire ? KnownEnemyHq : Praedra.Core.Control.ControlModule.CapitalSystem;
 
     private bool Pending(Fleet f) => _h.Bombardment.HasPending(f.Id) || _h.Assault.HasPending(f.Id);
 
@@ -1016,7 +1016,7 @@ public sealed partial class SimpleAi
     /// the first stop of the way around that the side holds (there DecideOwn plans the rest of the trip again), when the direct trip there is
     /// clear. Null (no such stop) = keep the first stop, as the AI of before.
     /// </summary>
-    private string? DetourLeg(Fleet f, Rebellion.Core.Travel.PathResult around, int speed)
+    private string? DetourLeg(Fleet f, Praedra.Core.Travel.PathResult around, int speed)
     {
         var g = _h.Data.Galaxy;
         string dest = g.Systems[around.Systems[^1]].Name;
@@ -1037,7 +1037,7 @@ public sealed partial class SimpleAi
     /// morale retreat of m4-battle-classic sends the fleet back: the same order again only repeats the bounce. The destination's fleets are
     /// weighed by the caller (PickTarget, PickRelief).
     /// </summary>
-    private string? PathBlockedAt(Fleet f, Rebellion.Core.Travel.PathResult path)
+    private string? PathBlockedAt(Fleet f, Praedra.Core.Travel.PathResult path)
     {
         var g = _h.Data.Galaxy;
         List<Fleet>? own = null;
@@ -1049,7 +1049,7 @@ public sealed partial class SimpleAi
             // only the enemy fleets that would pull this fleet out of hyperspace there (the game's forced-stop trigger; DEFAULT GravityWellShip
             // since 2026-10-16: an ordinary fleet does not stop a passing one, so the AI no longer refuses trips past it)
             var enemies = EnemyFleetsAt(n);
-            if (_view != null && _p.FogAvoidEnemyStops && IsEnemyHeld(n) && _view.Level(n) is not (Rebellion.Core.Fog.KnowledgeLevel.Held or Rebellion.Core.Fog.KnowledgeLevel.Observed))
+            if (_view != null && _p.FogAvoidEnemyStops && IsEnemyHeld(n) && _view.Level(n) is not (Praedra.Core.Fog.KnowledgeLevel.Held or Praedra.Core.Fog.KnowledgeLevel.Observed))
                 return n; // an enemy system whose fleets the side cannot see now: it may hide a gravity well
             if (enemies.Count == 0) continue;
             // pulled out by a gravity well, the fleet then fights every enemy fleet there

@@ -1,9 +1,9 @@
-using Rebellion.Core.AI;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Control;
-using Rebellion.Core.Setup;
+using Praedra.Core.AI;
+using Praedra.Core.Clock;
+using Praedra.Core.Control;
+using Praedra.Core.Setup;
 
-namespace Rebellion.Core.Tests.AI;
+namespace Praedra.Core.Tests.AI;
 
 // QA-19 (QA round 31): the Empire AI stopped attacking once its picture showed no Rebel system. Seed 15 Medium mirror: the last Rebel system,
 // empty and one lane from Imperial space, was last seen on day 1790, its picture said neutral, and the Empire sat for 500+ days with no winner.
@@ -26,7 +26,7 @@ public class SimpleAiBlindHuntTests
         var view = h.Fog.ViewFor(Side.Empire);
         var g = h.Data.Galaxy;
         var rebel = h.Game.State.SystemOwners.Where(kv => kv.Value == Side.Alliance).Select(kv => kv.Key).OrderBy(s => s, StringComparer.Ordinal).ToList();
-        Assert.True(g.TryFindSystem(Rebellion.Core.Victory.VictoryModule.CoruscantName, out int ci));
+        Assert.True(g.TryFindSystem(Praedra.Core.Victory.VictoryModule.CoruscantName, out int ci));
         long Far(string s) { g.TryFindSystem(s, out int i); long dx = g.Systems[i].MapX - g.Systems[ci].MapX, dy = g.Systems[i].MapY - g.Systems[ci].MapY; return dx * dx + dy * dy; }
         string x = rebel.Where(s => s != h.HqSystem && view.Picture(s)?.Owner?.Value.Owner != Side.Alliance)
             .OrderByDescending(Far).ThenBy(s => s, StringComparer.Ordinal).First();

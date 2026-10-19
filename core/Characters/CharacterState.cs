@@ -1,7 +1,7 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Fleets;
+using Praedra.Core.Clock;
+using Praedra.Core.Fleets;
 
-namespace Rebellion.Core.Characters;
+namespace Praedra.Core.Characters;
 
 /// <summary>Traced: captured is +0xac bit 0, destroyed is +0x50 bit 3; injured and captured bar posts and missions. rule: m5-characters-and-force §The character object.</summary>
 public enum CharacterStatus { Free, Injured, Captured, Dead }
@@ -129,14 +129,14 @@ public sealed class CharacterRecord
     /// <summary>
     /// The effective skill every rule reads (B2b, B2d, mission odds, the AI): diplomacy and espionage <c>B + B * F * pct / 10000</c>; the three
     /// research skills <c>B</c>; combat <c>max(0, B + B * F * pct / 10000 - Injury)</c>; leadership <c>B + B * LeadershipAdjustment / 100</c>.
-    /// Integer division; <paramref name="forceSkillPercent"/> is <see cref="CharacterParams.ForceSkillPercent"/> (100 = 1998, bit-identical to
+    /// Integer division; <paramref name="forceSkillPercent"/> is <see cref="CharacterParams.ForceSkillPercent"/> (100 = Classic, bit-identical to
     /// <c>B + B * F / 100</c>). Callers go through <see cref="CharacterModule.EffectiveSkill"/>.
     /// rule: m5-characters-and-force §Force (effects; Traced B2e §1: 0x4eecb0, 0x4eecf0, 0x4eed30..0x4eed70, 0x4eed90, 0x4eede0).
     /// </summary>
     public int EffectiveSkill(Skill s, int forceSkillPercent)
     {
         int b = Skills[(int)s], f = EffectiveForce;
-        // rule: m5-characters-and-force §Force (New, Paul 2026-10-18; 1998 = 100)
+        // rule: m5-characters-and-force §Force (New, Paul 2026-10-18; Classic = 100)
         int force = b * f * forceSkillPercent / (PercentDivisor * PercentDivisor);
         return s switch
         {

@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
-using Rebellion.Core.Construction;
+using Praedra.Core.Construction;
 
-namespace Rebellion.Core.Clock;
+namespace Praedra.Core.Clock;
 
 public enum Side { Empire = 0, Alliance = 1 }
 
@@ -26,19 +26,19 @@ public enum Side { Empire = 0, Alliance = 1 }
 [JsonDerivedType(typeof(LoadSquadronsOrder), "LoadSquadrons")]
 [JsonDerivedType(typeof(UnloadSquadronsOrder), "UnloadSquadrons")]
 [JsonDerivedType(typeof(DebugSetDamageOrder), "DebugSetDamage")]
-[JsonDerivedType(typeof(Rebellion.Core.Defenses.BombardOrder), "Bombard")]
-[JsonDerivedType(typeof(Rebellion.Core.Assault.AssaultOrder), "Assault")]
-[JsonDerivedType(typeof(Rebellion.Core.Battle.SetOnContactOrder), "SetOnContact")]
-[JsonDerivedType(typeof(Rebellion.Core.Fog.MoveHqOrder), "MoveHq")]
-[JsonDerivedType(typeof(Rebellion.Core.Characters.AttachCharacterOrder), "AttachCharacter")]
-[JsonDerivedType(typeof(Rebellion.Core.Characters.DetachCharacterOrder), "DetachCharacter")]
-[JsonDerivedType(typeof(Rebellion.Core.Characters.AssignSystemGeneralOrder), "AssignSystemGeneral")]
-[JsonDerivedType(typeof(Rebellion.Core.Characters.ReleaseSystemGeneralOrder), "ReleaseSystemGeneral")]
-[JsonDerivedType(typeof(Rebellion.Core.Characters.MoveCharacterOrder), "MoveCharacter")]
-[JsonDerivedType(typeof(Rebellion.Core.Missions.StartMissionOrder), "StartMission")]
-[JsonDerivedType(typeof(Rebellion.Core.Missions.MoveGroupOrder), "MoveGroup")]
-[JsonDerivedType(typeof(Rebellion.Core.Missions.CancelMissionOrder), "CancelMission")]
-[JsonDerivedType(typeof(Rebellion.Core.DeathStar.DestroySystemOrder), "DestroySystem")]
+[JsonDerivedType(typeof(Praedra.Core.Defenses.BombardOrder), "Bombard")]
+[JsonDerivedType(typeof(Praedra.Core.Assault.AssaultOrder), "Assault")]
+[JsonDerivedType(typeof(Praedra.Core.Battle.SetOnContactOrder), "SetOnContact")]
+[JsonDerivedType(typeof(Praedra.Core.Fog.MoveHqOrder), "MoveHq")]
+[JsonDerivedType(typeof(Praedra.Core.Characters.AttachCharacterOrder), "AttachCharacter")]
+[JsonDerivedType(typeof(Praedra.Core.Characters.DetachCharacterOrder), "DetachCharacter")]
+[JsonDerivedType(typeof(Praedra.Core.Characters.AssignSystemGeneralOrder), "AssignSystemGeneral")]
+[JsonDerivedType(typeof(Praedra.Core.Characters.ReleaseSystemGeneralOrder), "ReleaseSystemGeneral")]
+[JsonDerivedType(typeof(Praedra.Core.Characters.MoveCharacterOrder), "MoveCharacter")]
+[JsonDerivedType(typeof(Praedra.Core.Missions.StartMissionOrder), "StartMission")]
+[JsonDerivedType(typeof(Praedra.Core.Missions.MoveGroupOrder), "MoveGroup")]
+[JsonDerivedType(typeof(Praedra.Core.Missions.CancelMissionOrder), "CancelMission")]
+[JsonDerivedType(typeof(Praedra.Core.DeathStar.DestroySystemOrder), "DestroySystem")]
 public abstract record Order(long Sequence, Side Side);
 
 /// <summary>
@@ -51,27 +51,27 @@ public sealed record SetMarkerOrder(long Sequence, Side Side, string Marker, int
 /// <summary>
 /// Send a fleet to a system by the fastest path, through the waypoints in order when there are any (null or empty = none).
 /// Checked in step 1 (when processed, not when submitted). rule: m1-clock-and-orders §Orders in (MoveFleet); m1-travel §Path rule (3) (waypoints).
-/// The handler lives in Rebellion.Core.Fleets.FleetModule.
+/// The handler lives in Praedra.Core.Fleets.FleetModule.
 /// </summary>
 public sealed record MoveFleetOrder(long Sequence, Side Side, int FleetId, string Destination, ValueList<string>? Waypoints = null) : Order(Sequence, Side);
 
 /// <summary>
 /// Scrap one completed object of the side at once (step 1). rule: m2-construction §Scrapping, m2-maintenance §Scrapping and
-/// refunds. The handler lives in Rebellion.Core.Economy.EconomyModule (the construction package may take it over).
+/// refunds. The handler lives in Praedra.Core.Economy.EconomyModule (the construction package may take it over).
 /// </summary>
 public sealed record ScrapObjectOrder(long Sequence, Side Side, int ObjectId) : Order(Sequence, Side);
 
 /// <summary>
 /// Debug order: make a side the holder of a system now (a capture with cause Debug). For tests and tools only; the control module
-/// rejects it unless debug orders are enabled, and under the derived control rule (B5a: 1998 has no "set holder"; use
+/// rejects it unless debug orders are enabled, and under the derived control rule (B5a: Classic has no "set holder"; use
 /// <see cref="DebugSetSupportOrder"/> or <see cref="DebugSetTroopsOrder"/>). rule: m2-control-and-capture §How control changes (DebugSetHolder).
-/// The handler lives in Rebellion.Core.Control.ControlModule.
+/// The handler lives in Praedra.Core.Control.ControlModule.
 /// </summary>
 public sealed record DebugSetHolderOrder(long Sequence, Side Side, string System, Side NewHolder) : Order(Sequence, Side);
 
 /// <summary>
 /// Debug order: set a system's Alliance support (0..100) through ChangeSupport, undamped; control follows (B5a section 9). For tests and tools only;
-/// rejected unless debug orders are enabled. The handler lives in Rebellion.Core.Control.ControlModule.
+/// rejected unless debug orders are enabled. The handler lives in Praedra.Core.Control.ControlModule.
 /// </summary>
 public sealed record DebugSetSupportOrder(long Sequence, Side Side, string System, int AllianceSupport) : Order(Sequence, Side);
 
@@ -82,7 +82,7 @@ public sealed record DebugSetSupportOrder(long Sequence, Side Side, string Syste
 public sealed record DebugSetTroopsOrder(long Sequence, Side Side, string System, Side TroopSide, string RegimentClass, int Count) : Order(Sequence, Side);
 /// Build facilities, ships, fighters, regiments or special forces at a yard of the given family. Destination null = the yard's
 /// own system (a facility needs one). Checked in step 1. rule: m2-construction §Build order. The handler lives in
-/// Rebellion.Core.Construction.ConstructionModule. Item is a class name of unit-and-facility-costs.csv (DEFAULT: the sheet says (kind, id)).
+/// Praedra.Core.Construction.ConstructionModule. Item is a class name of unit-and-facility-costs.csv (DEFAULT: the sheet says (kind, id)).
 /// </summary>
 public sealed record BuildOrder(long Sequence, Side Side, string System, YardFamily Family, string Class, int Count, string? Destination)
     : Order(Sequence, Side);
@@ -149,9 +149,9 @@ public static class RejectReason
     // rule: m2-control-and-capture §How control changes (DebugSetHolder; the sheet names no codes: DEFAULT names)
     public const string DebugDisabled = "DebugDisabled";
     public const string AlreadyHolder = "AlreadyHolder";
-    /// <summary>DebugSetHolder under the derived control rule: 1998 has no "set holder" (B5a section 9). DEFAULT name.</summary>
+    /// <summary>DebugSetHolder under the derived control rule: Classic has no "set holder" (B5a section 9). DEFAULT name.</summary>
     public const string NotUnderDerivedControl = "NotUnderDerivedControl";
-    /// <summary>ScrapObject on a special force (1998 code 23, "cannot be scrapped"; B5a section 8). DEFAULT name.</summary>
+    /// <summary>ScrapObject on a special force (Classic code 23, "cannot be scrapped"; B5a section 8). DEFAULT name.</summary>
     public const string CannotScrap = "CannotScrap";
     // rule: m2-construction §Build order (BuildOrder rejections; UnknownItem and NoProject are DEFAULT names the sheet lacks)
     public const string NoYard = "NoYard";
@@ -159,7 +159,7 @@ public static class RejectReason
     public const string NotAvailable = "NotAvailable";
     public const string NotResearched = "NotResearched";
     public const string BadCount = "BadCount";
-    /// <summary>The order's upkeep (maintenance x count) does not fit in the side's free capacity: refused whole (1998 error 0xf3). rule: m2-maintenance §Overdraft (B5b §7).</summary>
+    /// <summary>The order's upkeep (maintenance x count) does not fit in the side's free capacity: refused whole (Classic error 0xf3). rule: m2-maintenance §Overdraft (B5b §7).</summary>
     public const string NoUpkeep = "NoUpkeep";
     public const string BadDestination = "BadDestination";
     public const string NoSlot = "NoSlot";

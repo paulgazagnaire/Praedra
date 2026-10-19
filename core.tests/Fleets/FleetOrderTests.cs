@@ -1,12 +1,12 @@
 using System.Text.Json;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Tests.Construction;
-using Rebellion.Core.Tests.Economy;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Tests.Construction;
+using Praedra.Core.Tests.Economy;
 
-namespace Rebellion.Core.Tests.Fleets;
+namespace Praedra.Core.Tests.Fleets;
 
 // Tests of m3-fleets (ids F1 to F22 as in the sheet's table, then extra tests named after the rule they check).
 // Fixture F: Empire holds Coruscant; spare fleet 200 holds ISD 201, ISD 202, Carrack 203 (completed, at Coruscant); TIE Fighter squadrons

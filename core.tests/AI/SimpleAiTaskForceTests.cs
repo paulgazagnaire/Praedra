@@ -1,8 +1,8 @@
-using Rebellion.Core.AI;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Setup;
+using Praedra.Core.AI;
+using Praedra.Core.Clock;
+using Praedra.Core.Setup;
 
-namespace Rebellion.Core.Tests.AI;
+namespace Praedra.Core.Tests.AI;
 
 // QA-2 (QA round 31, Dev lead 2026-10-19): the games left without a winner by day 3000 were mostly slow wins, not stalemates. Every strike
 // fleet idle on a held system merged into one pile that took one target at a time: Medium mirror seed 3 ended with the Empire at 70 ships
@@ -17,10 +17,10 @@ public class SimpleAiTaskForceTests
     // splits): the day it wins, or 0 by the day limit, and the task-force splits it ordered.
     private static (int End, int Splits) Play(int seed, bool taskForces, int days)
     {
-        // B7 bombardment pinned off (Dev lead 2026-10-19): with the 1998 bombardment (B7-bombardment) even the TaskForces-off Empire beats the
+        // B7 bombardment pinned off (Dev lead 2026-10-19): with the Classic bombardment (B7-bombardment) even the TaskForces-off Empire beats the
         // passive Alliance by day 1250 on all four seeds (on 1078, 1081, 1231, 1006; off 1174, 1111, 1231, 1210: 82 days sooner on average), so
         // the floors below no longer separate the switch. They were measured on the pre-B7 bombardment, kept here; the AI tourneys measure B7.
-        var preB7 = new Rebellion.Core.Defenses.BombardParams { BombardWastedHits = false, BatteryReturnFire = false, BombardFleetsTogether = false,
+        var preB7 = new Praedra.Core.Defenses.BombardParams { BombardWastedHits = false, BatteryReturnFire = false, BombardFleetsTogether = false,
             BombardDamageScales = false, MilitaryCollateral = false };
         var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = new GameSettings { Bombard = preB7 } });
         // GarrisonsFirst pinned off (Dev lead 2026-10-19): the passive Alliance makes the Empire "far ahead" from the start, and this test

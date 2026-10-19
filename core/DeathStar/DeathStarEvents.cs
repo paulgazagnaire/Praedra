@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.DeathStar;
+namespace Praedra.Core.DeathStar;
 
 // Events of the Death Star. Day is K + 1 (slot 5.1 and the construction hooks take effect when Day becomes K + 1). Every event that implements
 // IDeathStarEvent is a galaxy notice both sides see (fog does not hide it). rule: m5-death-star §1 (DeathStarDeployed), §2 (SystemDestroyed), §5.

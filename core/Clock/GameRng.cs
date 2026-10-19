@@ -1,4 +1,4 @@
-namespace Rebellion.Core.Clock;
+namespace Praedra.Core.Clock;
 
 /// <summary>Exported generator state for saves. Draws is bookkeeping only; it does not affect the sequence.</summary>
 public readonly record struct RngState(ulong State, ulong Increment, long Draws);

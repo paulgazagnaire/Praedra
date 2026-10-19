@@ -1,13 +1,13 @@
-using Rebellion.Core.Characters;
+using Praedra.Core.Characters;
 
-namespace Rebellion.Core.Missions;
+namespace Praedra.Core.Missions;
 
 /// <summary>How a *MSTB (and the decoy) table is read between rows. rule: m5-missions §Mission tables (MstbLookup).</summary>
 public enum MstbLookupMode
 {
-    /// <summary>DEFAULT, the original: the last row whose threshold is at or below x, for every table (Traced B2a: 0x55bed0 -> 0x58b7e0 -> 0x595090).</summary>
+    /// <summary>DEFAULT, the classic: the last row whose threshold is at or below x, for every table (Traced B2a: 0x55bed0 -> 0x58b7e0 -> 0x595090).</summary>
     Step,
-    /// <summary>Piecewise linear between rows, truncating toward zero (Open Rebellion's wording, unverified vs original).</summary>
+    /// <summary>Piecewise linear between rows, truncating toward zero (wording unverified vs Classic).</summary>
     Linear,
 }
 
@@ -63,7 +63,7 @@ public enum ForceSenseScope
     Fleets,
 }
 
-/// <summary>Which mission kinds run the betrayal check (the original's test, mission vtable +0x1c8, was not read). rule: m5-missions §3 Betrayal.</summary>
+/// <summary>Which mission kinds run the betrayal check (Classic's test, mission vtable +0x1c8, was not read). rule: m5-missions §3 Betrayal.</summary>
 public enum BetrayalKinds
 {
     /// <summary>DEFAULT: the kinds with Foilable = true.</summary>
@@ -79,13 +79,13 @@ public enum BetrayalKinds
 public enum KeyDuelCapture
 {
     /// <summary>
-    /// DEFAULT, Paul's rule (Decided 2026-10-16 "Close it"; 1998 rules never override a decided feature, 2026-10-18): the loser's Hurt roll as
+    /// DEFAULT, Paul's rule (Decided 2026-10-16 "Close it"; Classic rules never override a decided feature, 2026-10-18): the loser's Hurt roll as
     /// usual, then, if he is alive and the capture would happen, one extra roll <c>rand(0..99) &lt; cap_percent</c> (his cap in the key-target
     /// file): captured if it passes, else not captured (he keeps the duel's Hurt and leaves the group as a loser who is not captured does).
     /// </summary>
     Capped,
-    /// <summary>The 1998 duel (Traced B2d §5, B2e §2): a loser who survives his Hurt roll is captured outright.</summary>
-    Original,
+    /// <summary>The Classic duel (Traced B2d §5, B2e §2): a loser who survives his Hurt roll is captured outright.</summary>
+    Classic,
 }
 
 /// <summary>
@@ -101,7 +101,7 @@ public enum KeyTargetGuards
     /// </summary>
     Full,
     /// <summary>The B2d guards only (Traced B2d §3), as for every other mission.</summary>
-    Original,
+    Classic,
 }
 
 /// <summary>
@@ -167,7 +167,7 @@ public sealed record MissionParams
     public KeyTargetGuards KeyTargetGuards { get; init; } = KeyTargetGuards.Full;
     /// <summary>
     /// A key-target mission reads its characters' skills without the Force term (espionage <c>B</c>, combat <c>max(0, B - Injury)</c>) in the
-    /// step-4 qualification and in the decoy pass and detection walk of its checks. DEFAULT true; false = the 1998 effective skills (B2e §1).
+    /// step-4 qualification and in the decoy pass and detection walk of its checks. DEFAULT true; false = the Classic effective skills (B2e §1).
     /// Applies only while <see cref="KeyTargetRules"/> is on. rule: m5-missions §3, §6a (Key-target protections, 2026-10-18).
     /// </summary>
     public bool KeyTargetBaseSkills { get; init; } = true;

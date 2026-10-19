@@ -1,11 +1,11 @@
-using Rebellion.Core.Assault;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Defenses;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Support;
+using Praedra.Core.Assault;
+using Praedra.Core.Construction;
+using Praedra.Core.Defenses;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Support;
 
-namespace Rebellion.Core.Setup;
+namespace Praedra.Core.Setup;
 
 /// <summary>
 /// Every switch of the rule sheets that is a game setting, with the sheet's DEFAULT as the default value (a test checks each one against
@@ -21,21 +21,21 @@ public sealed record GameSettings
     /// <summary>Numbers and switches of the Anchored deal. Null = the sheet's DEFAULTs.</summary>
     public DealParams? Deal { get; init; }
     /// <summary>
-    /// Place the 1998 fixed Rebel HQ forces (<c>hq_unit</c> rows of new-game-forces.csv: 2 Alliance Army, 1 Alliance Fleet Regiment, 4 X-wing,
+    /// Place the Classic fixed Rebel HQ forces (<c>hq_unit</c> rows of new-game-forces.csv: 2 Alliance Army, 1 Alliance Fleet Regiment, 4 X-wing,
     /// 2 Y-wing, standing on the HQ system) at setup. DEFAULT off: the Classic setup (part B of batch B4) turns it on together with
-    /// <see cref="MinGarrison"/> 0; on the hand-made forces table alone the 1998 garrison rule only makes the Empire richer.
+    /// <see cref="MinGarrison"/> 0; on the hand-made forces table alone the Classic garrison rule only makes the Empire richer.
     /// rule: m5-setup-and-victory §P6, §P7 ([EXE-own] 0x51ad90; B4 §7 step 2).
     /// </summary>
     public bool HqFixedForces { get; init; }
     /// <summary>
-    /// Minimum garrison per held system at setup; null = <c>min_garrison</c> of new-game-forces.csv (1 until the Classic setup). 1998 = 0
+    /// Minimum garrison per held system at setup; null = <c>min_garrison</c> of new-game-forces.csv (1 until the Classic setup). Classic = 0
     /// (B4 §6, [EXE-own] 0x51ab20): the Classic setup (part B) sets 0 together with <see cref="HqFixedForces"/>. rule: m5-setup-and-victory §P6.
     /// </summary>
     public int? MinGarrison { get; init; }
 
     // ---- travel. rule: m1-travel §Rule (Decided Paul 2026-10-16)
-    /// <summary>Routes (DEFAULT, New: free travel plus faster hyperspace routes) or Straight (Classic yardstick: the 1998 straight line, no routes).</summary>
-    public Rebellion.Core.Travel.TravelMode Travel { get; init; } = Rebellion.Core.Travel.TravelMode.Routes;
+    /// <summary>Routes (DEFAULT, New: free travel plus faster hyperspace routes) or Straight (Classic yardstick: the Classic straight line, no routes).</summary>
+    public Praedra.Core.Travel.TravelMode Travel { get; init; } = Praedra.Core.Travel.TravelMode.Routes;
 
     // ---- fleets. rule: m1-forced-stop-and-blockade §Pull-out (Decided Paul 2026-10-16: only gravity-well ships stop fleets in flight)
     public ForcedStopTrigger ForcedStopTrigger { get; init; } = ForcedStopTrigger.GravityWellShip;
@@ -45,15 +45,15 @@ public sealed record GameSettings
     public bool IncidentsEnabled { get; init; } = true;
     /// <summary>rule: m2-mines-refineries-pools §Blockade and uprising.</summary>
     public bool BlockadeStopsMining { get; init; } = true;
-    /// <summary>An uprising stops mines and refineries like a blockade. 1998 = on; DEFAULT on (B5b §3, decision 2, Dev lead 2026-10-18). rule: m2-mines-refineries-pools §Blockade and uprising.</summary>
+    /// <summary>An uprising stops mines and refineries like a blockade. Classic = on; DEFAULT on (B5b §3, decision 2, Dev lead 2026-10-18). rule: m2-mines-refineries-pools §Blockade and uprising.</summary>
     public bool UprisingStopsMining { get; init; } = true;
-    /// <summary>Suspended mines and refineries leave the capacity sums. 1998 = on (B5b §3); DEFAULT off (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch). rule: m2-maintenance §Capacity.</summary>
+    /// <summary>Suspended mines and refineries leave the capacity sums. Classic = on (B5b §3); DEFAULT off (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, Classic is the switch). rule: m2-maintenance §Capacity.</summary>
     public bool SuspendedLeaveCapacity { get; init; }
-    /// <summary>A suspended mine's or refinery's running cycle: Pause (DEFAULT) or Abandon (1998, B5b §3). rule: m2-mines-refineries-pools §Blockade and uprising (Blockade pause, 2026-10-18).</summary>
+    /// <summary>A suspended mine's or refinery's running cycle: Pause (DEFAULT) or Abandon (Classic, B5b §3). rule: m2-mines-refineries-pools §Blockade and uprising (Blockade pause, 2026-10-18).</summary>
     public StopMode MineStopMode { get; init; } = StopMode.Pause;
-    /// <summary>Build orders over the free upkeep are refused whole. 1998 = refused; DEFAULT refused (B5b §7, decision 1, Dev lead 2026-10-18). rule: m2-maintenance §Overdraft.</summary>
+    /// <summary>Build orders over the free upkeep are refused whole. Classic = refused; DEFAULT refused (B5b §7, decision 1, Dev lead 2026-10-18). rule: m2-maintenance §Overdraft.</summary>
     public bool RefuseOverdrawOrders { get; init; } = true;
-    /// <summary>Armed (DEFAULT, 1998) or FreeRunning autoscrap timer (B5b §6). rule: m2-maintenance §Overdraft and autoscrap.</summary>
+    /// <summary>Armed (DEFAULT, Classic) or FreeRunning autoscrap timer (B5b §6). rule: m2-maintenance §Overdraft and autoscrap.</summary>
     public AutoscrapTimer AutoscrapTimer { get; init; } = AutoscrapTimer.Armed;
     /// <summary>rule: m2-maintenance §Rule (New) AutoscrapMode.</summary>
     public AutoscrapMode AutoscrapMode { get; init; } = AutoscrapMode.Classic;
@@ -86,7 +86,7 @@ public sealed record GameSettings
     public bool DeathStarClassBuildable { get; init; } = true;
     /// <summary>Yards stop under the Classic blockade flag instead of the economic blockade. rule: m2-construction §Suspension.</summary>
     public bool UseClassicBlockadeFlag { get; init; }
-    /// <summary>A suspended yard's running cycle: Pause (DEFAULT, Paul economy/02 "shipyards are paused") or Abandon (1998, B5b §3). rule: m2-construction §Suspension (Blockade pause, 2026-10-18).</summary>
+    /// <summary>A suspended yard's running cycle: Pause (DEFAULT, Paul economy/02 "shipyards are paused") or Abandon (Classic, B5b §3). rule: m2-construction §Suspension (Blockade pause, 2026-10-18).</summary>
     public StopMode YardStopMode { get; init; } = StopMode.Pause;
     public ConstructionParams? Construction { get; init; }
 
@@ -96,12 +96,12 @@ public sealed record GameSettings
 
     // ---- control. rule: m2-control-and-capture
     /// <summary>
-    /// How control is decided: Derived (1998: troops on the planet, else support 60 or more) or AssaultOnly (the rule before B5a: support never
+    /// How control is decided: Derived (Classic: troops on the planet, else support 60 or more) or AssaultOnly (the rule before B5a: support never
     /// changes control). DEFAULT Derived (Paul's card 2026-10-18 20:42: the only change that made the Rebel AI hard to kill), with the AI's
-    /// 1998 garrison floor off (<see cref="Rebellion.Core.AI.SimpleAiParams.OriginalGarrisonFloor"/>); AssaultOnly is the new-game option.
+    /// Classic garrison floor off (<see cref="Praedra.Core.AI.SimpleAiParams.ClassicGarrisonFloor"/>); AssaultOnly is the new-game option.
     /// rule: m2-control-and-capture §How control changes (B5a decision 1).
     /// </summary>
-    public Rebellion.Core.Control.ControlRule ControlRule { get; init; } = Rebellion.Core.Control.ControlRule.Derived;
+    public Praedra.Core.Control.ControlRule ControlRule { get; init; } = Praedra.Core.Control.ControlRule.Derived;
     /// <summary>The debug orders (DebugSetHolder under AssaultOnly, DebugSetSupport, DebugSetTroops, DebugSetDamage) are accepted only when this is on.</summary>
     public bool DebugOrdersEnabled { get; init; }
 
@@ -117,7 +117,7 @@ public sealed record GameSettings
 
     // ---- the Death Star. rule: m5-death-star §Interfaces, §2, §4
     /// <summary>Death Star switches and numbers (cap per system, ShieldBlocksDestroy, TrenchRun, sector penalty). Null = the sheet's DEFAULTs. Refused values throw at attach.</summary>
-    public Rebellion.Core.DeathStar.DeathStarParams? DeathStar { get; init; }
+    public Praedra.Core.DeathStar.DeathStarParams? DeathStar { get; init; }
 
     // ---- assault. rule: m3-assault §Defaults for undecided items
     /// <summary>Number table and switches of the assault (die, leadership step, thresholds, collateral mode, landing cap, passes, enemy fleet blocks). Null = the module's defaults.</summary>
@@ -125,27 +125,27 @@ public sealed record GameSettings
 
     // ---- battle. rule: m4-battle-classic §Defaults for undecided items; m4-retreat-damage-repair §Defaults
     /// <summary>Switches and numbers of the Classic battle and the retreat (SubsystemRolls, task forces, tactic, RetreatMode, DeathStarStalemate, AI sides). Null = the module's defaults.</summary>
-    public Rebellion.Core.Battle.BattleParams? Battle { get; init; }
+    public Praedra.Core.Battle.BattleParams? Battle { get; init; }
 
     // ---- research. rule: m5-research §Defaults for undecided items
     /// <summary>Research switches (facility and mission income, cost and mission scaling, one class per rung, Sensor Station tier 2). Null = the module's defaults.</summary>
-    public Rebellion.Core.Research.ResearchParams? Research { get; init; }
+    public Praedra.Core.Research.ResearchParams? Research { get; init; }
 
     // ---- characters. rule: m5-characters-and-force §Defaults for undecided items
     /// <summary>Character switches and numbers (Navigator, ride fleet, death, injury days, escape, Force ranks, start extras...). Null = the sheet's DEFAULTs. Refused values throw at attach.</summary>
-    public Rebellion.Core.Characters.CharacterParams? Characters { get; init; }
+    public Praedra.Core.Characters.CharacterParams? Characters { get; init; }
 
     // ---- missions. rule: m5-missions §Defaults for undecided items
     /// <summary>Mission switches (table lookup, success rule, decoys, caps, Incite and Subdue modes, Sabotage skill and target, exposure hooks...). Null = the sheet's DEFAULTs. Refused values throw at attach.</summary>
-    public Rebellion.Core.Missions.MissionParams? Missions { get; init; }
+    public Praedra.Core.Missions.MissionParams? Missions { get; init; }
 
     // ---- victory. rule: setup-victory/04-victory-conditions (HQ-Only flavour)
     /// <summary>Victory switches. Null = all on (DEFAULT).</summary>
-    public Rebellion.Core.Victory.VictoryRules? Victory { get; init; }
+    public Praedra.Core.Victory.VictoryRules? Victory { get; init; }
 
     // ---- fog of war and the Rebel HQ. rule: m5-fog-and-hq §Defaults for undecided items
     /// <summary>Fog switches (ruleset, Core reports, passing fleets, recon, presence reveals HQ, sector clue, observed window, start full copy). Null = the sheet's DEFAULTs.</summary>
-    public Rebellion.Core.Fog.FogParams? Fog { get; init; }
+    public Praedra.Core.Fog.FogParams? Fog { get; init; }
     /// <summary>HQ move and loss switches and numbers (speed, cost, departure refusal, arrival support effect, capture rule). Null = the sheet's DEFAULTs.</summary>
-    public Rebellion.Core.Fog.HqParams? Hq { get; init; }
+    public Praedra.Core.Fog.HqParams? Hq { get; init; }
 }

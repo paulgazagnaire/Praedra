@@ -1,6 +1,6 @@
-using static Rebellion.Importer.Tests.Bytes;
+using static Praedra.Importer.Tests.Bytes;
 
-namespace Rebellion.Importer.Tests;
+namespace Praedra.Importer.Tests;
 
 /// <summary>The SD and TB readers on synthetic bytes: each entry kind and each failure. rule: B1-own-importer §Tests; 02-gdata-formats §1, §2.</summary>
 public class GDataTests

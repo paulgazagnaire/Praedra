@@ -1,9 +1,9 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Support;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Economy;
+using Praedra.Core.Support;
 
-namespace Rebellion.Core.Setup;
+namespace Praedra.Core.Setup;
 
 /// <summary>One side's numbers on one day, read from the game state and the event list (nothing is changed, nothing drawn).</summary>
 public sealed record SideStats(

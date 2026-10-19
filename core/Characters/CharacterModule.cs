@@ -1,8 +1,8 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Control;
-using Rebellion.Core.Fleets;
+using Praedra.Core.Clock;
+using Praedra.Core.Control;
+using Praedra.Core.Fleets;
 
-namespace Rebellion.Core.Characters;
+namespace Praedra.Core.Characters;
 
 /// <summary>
 /// Characters: the roster rolled at creation, posts (fleet Admiral, Commander, General; system General) and the three leadership hooks, riding a
@@ -155,7 +155,7 @@ public sealed class CharacterModule
     public int EffectiveLeadership(CharacterRecord c) => EffectiveSkill(c, Skill.Leadership);
 
     /// <summary>The one reader of a skill for every rule (missions, duels, B2b, the AI). rule: §Force (effects; Traced B2e §1).</summary>
-    // rule: m5-characters-and-force §Force (New, Paul 2026-10-18; 1998 = 100): the Force share is <see cref="CharacterParams.ForceSkillPercent"/>.
+    // rule: m5-characters-and-force §Force (New, Paul 2026-10-18; Classic = 100): the Force share is <see cref="CharacterParams.ForceSkillPercent"/>.
     public int EffectiveSkill(CharacterRecord c, Skill s) => c.EffectiveSkill(s, Params.ForceSkillPercent);
 
     private CharacterRecord? PostHolder(int fleetId, CharacterPost post) =>
@@ -207,7 +207,7 @@ public sealed class CharacterModule
     }
 
     /// <summary>
-    /// Can train and awaken: the data flag <c>jedi_trainer</c> under <see cref="TrainerPick.Fixed"/> (1998), the setup draw under Random (New).
+    /// Can train and awaken: the data flag <c>jedi_trainer</c> under <see cref="TrainerPick.Fixed"/> (Classic), the setup draw under Random (New).
     /// rule: §Force (Eligibility); §Rule (New) 4.
     /// </summary>
     public bool IsTrainer(CharacterRecord c) => Params.TrainerPick == TrainerPick.Random ? c.Talented : ClassOf(c).JediTrainer;
@@ -231,7 +231,7 @@ public sealed class CharacterModule
         else if (cls.ForceProbability >= 100) user = true;
         else user = rng.NextInt(0, 99) < cls.ForceProbability; // flagging roll's form [inferred]
         c.ForceUser = user;
-        c.ForceDiscovered = cls.KnownJedi; // Original text: Luke, Vader and the Emperor are public Force users
+        c.ForceDiscovered = cls.KnownJedi; // Classic text: Luke, Vader and the Emperor are public Force users
         c.ForceExperience = 0; c.ForceTraining = 0;
         if (c.ForceUser && c.ForceDiscovered) RollForceExperience(c, rng); // B2e §5: only once aware (known Jedi: at creation, inferred)
         S.Characters[c.Id] = c;
@@ -487,7 +487,7 @@ public sealed class CharacterModule
 
     /// <summary>
     /// A caller that passes no amount (uprising code 3, the Death Star's hit, a major's Kill fallback, a key target's injury): only a Free or Injured
-    /// character; the Hurt roll on his own combat (DEFAULT: the original's system routines call that slot, not read), then AddInjury. Returns true
+    /// character; the Hurt roll on his own combat (DEFAULT: Classic's system routines call that slot, not read), then AddInjury. Returns true
     /// when points were added. rule: §Capture, injury, death, freeing 1 (B2e Work 2); CH22.
     /// </summary>
     public bool Injure(StepContext? ctx, CharacterRecord c, string cause)
@@ -579,7 +579,7 @@ public sealed class CharacterModule
         int day = (ctx?.Day ?? _game.Day) + 1;
         string? at = StandingPlace(c);
         c.Status = c.Injury > 0 ? CharacterStatus.Injured : CharacterStatus.Free; c.Captor = null; c.System = at; c.HeldAt = null; c.HeldAboard = 0; c.HeldAboardShip = 0; c.NextEscapeDay = 0;
-        if (cause == CharacterCause.Escape) Emit(ctx, (i, _) => new CharacterEscaped(i, day, c.Id, c.Side, at)); // Original text "has escaped from imprisonment at"
+        if (cause == CharacterCause.Escape) Emit(ctx, (i, _) => new CharacterEscaped(i, day, c.Id, c.Side, at)); // Classic text "has escaped from imprisonment at"
         else Emit(ctx, (i, _) => new CharacterFreed(i, day, c.Id, c.Side, at, cause));
         RefreshSeatOfPower();
         Autoroute(ctx, c); // QA-9: a freed or escaped character on ground not of his side sets off the same step (B2e §3)
@@ -667,7 +667,7 @@ public sealed class CharacterModule
     public bool Escape(StepContext? ctx, CharacterRecord c) => Free(ctx, c, CharacterCause.Escape);
 
     /// <summary>
-    /// The injury points reach 0 (healing, or a test): Injury 0 and an Injured character becomes Free. Event CharacterHealed (Original text "has
+    /// The injury points reach 0 (healing, or a test): Injury 0 and an Injured character becomes Free. Event CharacterHealed (Classic text "has
     /// been healed of all injuries"). rule: §Capture, injury, death, freeing 5 (B2e §2).
     /// </summary>
     public bool Heal(StepContext? ctx, CharacterRecord c)
@@ -843,7 +843,7 @@ public sealed class CharacterModule
     /// <summary>
     /// One Jedi Training round (the mission calls it at the end of its timer): for each student in id order, gap = trainer - student (effective);
     /// draw r = rand(0..99) always; success if gap &gt; 0 and r &lt; min(gap, 100) * ForceTrainingChancePercent / 100; on success draw
-    /// g = rand(0..gap * ForceTrainingGainPercent / 100) (New DEFAULTs 50 and 25; 1998 100 and 50) and add it to the
+    /// g = rand(0..gap * ForceTrainingGainPercent / 100) (New DEFAULTs 50 and 25; Classic 100 and 50) and add it to the
     /// student's acquired Force. Events ForceTrainingResult, then ForceRankChanged if the rank changed. No student reaches the trainer.
     /// rule: §Force (Jedi Training: the roll), Traced 0x55c7c0, 0x53e2f0, 0x55ca20 (chance reading [inferred]); CH3 to CH6.
     /// </summary>
@@ -855,7 +855,7 @@ public sealed class CharacterModule
             var before = RankOf(s);
             int gap = trainer.EffectiveForce - s.EffectiveForce;
             int r = ctx.Rng.NextInt(0, 99);
-            // rule: m5-characters-and-force §Force (Jedi Training: the roll; New, Paul 2026-10-18; 1998 = 100 / 50)
+            // rule: m5-characters-and-force §Force (Jedi Training: the roll; New, Paul 2026-10-18; Classic = 100 / 50)
             int chance = Math.Min(gap, Params.TrainingChanceCap) * Params.ForceTrainingChancePercent / CharacterRecord.PercentDivisor;
             bool success = gap > 0 && r < chance;
             int gain = 0;
@@ -975,7 +975,7 @@ public sealed class CharacterModule
     }
 
     /// <summary>
-    /// Raise one skill (m5-missions: a successful research member gains GNPRTB 6158 = 1 in that research skill; the original's character-side check
+    /// Raise one skill (m5-missions: a successful research member gains GNPRTB 6158 = 1 in that research skill; Classic's character-side check
     /// before the gain is Missing, so no cap). Not the refused SkillGrowth switch (growth outside research missions). rule: m5-missions §6 Research.
     /// </summary>
     /// <summary>The original's side numbers (1 = Alliance, 2 = Empire, 3 = neutral). rule: m5-characters-and-force §Loyalty (B2b §4).</summary>
@@ -1224,7 +1224,7 @@ public sealed class CharacterModule
     /// <summary>
     /// Prisoners land (New, Paul 2026-10-18): a prisoner held aboard a fleet that stands at a system (not travelling) held by his captor's side and not
     /// blockaded goes ashore there: held on that planet, no draw, escape timer unchanged, event PrisonerLanded. Runs at slot 6.10 before the escape
-    /// attempts, in character id order (DEFAULT timing). Off (1998): never. rule: m5-characters-and-force §Capture, injury, death, freeing 7.
+    /// attempts, in character id order (DEFAULT timing). Off (Classic): never. rule: m5-characters-and-force §Capture, injury, death, freeing 7.
     /// </summary>
     private void LandTick(StepContext ctx, CharacterRecord c)
     {

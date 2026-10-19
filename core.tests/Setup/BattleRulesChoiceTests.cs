@@ -1,9 +1,9 @@
-using Rebellion.Core.AI;
-using Rebellion.Core.Battle;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Setup;
+using Praedra.Core.AI;
+using Praedra.Core.Battle;
+using Praedra.Core.Clock;
+using Praedra.Core.Setup;
 
-namespace Rebellion.Core.Tests.Setup;
+namespace Praedra.Core.Tests.Setup;
 
 // The player picks the space battle rules at the start screen: New (DEFAULT, Paul 2026-10-18) or Classic. rule: m4-battle-new §Rule (New) (ruleset switch, DEFAULT New)
 public class BattleRulesChoiceTests

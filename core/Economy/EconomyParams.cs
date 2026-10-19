@@ -1,9 +1,9 @@
-namespace Rebellion.Core.Economy;
+namespace Praedra.Core.Economy;
 
 /// <summary>Autoscrap pick. rule: m2-maintenance §Rule (New) AutoscrapMode.</summary>
 public enum AutoscrapMode
 {
-    /// <summary>DEFAULT. 1998 behaviour: one uniform draw over the eligible objects.</summary>
+    /// <summary>DEFAULT. Classic behaviour: one uniform draw over the eligible objects.</summary>
     Classic = 0,
     /// <summary>Proposal (economy/09 P4): junk first, yards last, no random draw.</summary>
     Smart = 1,
@@ -12,7 +12,7 @@ public enum AutoscrapMode
 /// <summary>How the autoscrap timer runs. rule: m2-maintenance §Overdraft and autoscrap (B5b §6).</summary>
 public enum AutoscrapTimer
 {
-    /// <summary>DEFAULT, 1998 ([EXE-own] 0x5329f0): armed when an overdraft starts, first firing 10 days later, then every 10 days while over; dropped when it ends.</summary>
+    /// <summary>DEFAULT, Classic ([EXE-own] 0x5329f0): armed when an overdraft starts, first firing 10 days later, then every 10 days while over; dropped when it ends.</summary>
     Armed = 0,
     /// <summary>The rule before B5b: fires every 10 days from day 10 whatever happens.</summary>
     FreeRunning = 1,
@@ -20,14 +20,14 @@ public enum AutoscrapTimer
 
 /// <summary>
 /// What a blockade or an uprising does to a running mine, refinery or yard cycle. rule: m2-mines-refineries-pools §Blockade and uprising;
-/// m2-construction §Suspension (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch).
+/// m2-construction §Suspension (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, Classic is the switch).
 /// </summary>
 public enum StopMode
 {
     /// <summary>DEFAULT (Paul, economy/02 "Blockade and uprising": shipyards pause, a blockade costs exactly that planet's output): the running cycle
     /// is frozen while suspended (its due day moves on one day per day) and resumes where it left off when the suspension ends.</summary>
     Pause = 0,
-    /// <summary>1998 (B5b §3, [EXE-own] 0x50bbb0): the running cycle is abandoned with no point (the raw or refined it took is lost).</summary>
+    /// <summary>Classic (B5b §3, [EXE-own] 0x50bbb0): the running cycle is abandoned with no point (the raw or refined it took is lost).</summary>
     Abandon = 1,
 }
 
@@ -36,13 +36,13 @@ public enum SlotSource
 {
     /// <summary>DEFAULT (Decided): read slot-values-draft.csv.</summary>
     Pinned = 0,
-    /// <summary>The 1998 start rolls, kept for comparison with the real game.</summary>
+    /// <summary>The Classic start rolls, kept for comparison with the real game.</summary>
     Rolled = 1,
 }
 
 /// <summary>
 /// Every number of the economy sheets, with its tag. These are data values, not code: tests and later setups may
-/// override them. Tags: Traced = read in the 1998 binary or data; Lead = unverified vs original; DEFAULT = the sheet's choice.
+/// override them. Tags: Traced = read in the Classic binary or data; Lead = unverified vs Classic; DEFAULT = the sheet's choice.
 /// rule: m2-slots-and-resources §Numbers; m2-mines-refineries-pools §Numbers; m2-maintenance §Numbers.
 /// </summary>
 public sealed record EconomyParams

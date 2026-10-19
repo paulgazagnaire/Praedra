@@ -1,8 +1,8 @@
-using Rebellion.Core.Data;
-using Rebellion.Core.Map;
-using Rebellion.Core.Ships;
+using Praedra.Core.Data;
+using Praedra.Core.Map;
+using Praedra.Core.Ships;
 
-namespace Rebellion.Core.Tests.Map;
+namespace Praedra.Core.Tests.Map;
 
 // rules: m1-galaxy-data (tests G1-G13 and validation checks 1-10), on the real CSV files.
 public class GalaxyDataTests
@@ -316,7 +316,7 @@ public class GalaxyDataTests
     [Fact]
     public void ShipDataLoads()
     {
-        var all = ShipData.LoadAll(TestData.OriginalDir);
+        var all = ShipData.LoadAll(TestData.ClassicDir);
         Assert.Equal(30 + 8, all.Count);
         var isd = all["Imperial Star Destroyer"];
         Assert.True(isd.IsCapital);

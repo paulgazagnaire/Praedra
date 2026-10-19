@@ -1,8 +1,8 @@
-using Rebellion.Core.AI;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Setup;
+using Praedra.Core.AI;
+using Praedra.Core.Clock;
+using Praedra.Core.Setup;
 
-namespace Rebellion.Core.Tests.AI;
+namespace Praedra.Core.Tests.AI;
 
 // A loaded game continues the same game, the AI included (QA-1). Rule checked: m1-clock-and-orders K12 (save, load, continue: same state
 // hash as the uninterrupted run), with the fogged simple AI giving the orders on both sides. The AI reads its side's event feed (m5-fog-and-hq
@@ -46,7 +46,7 @@ public class SimpleAiSaveLoadTests
         new AiMatch(host, Fog(), Fog()).RunTo(120);
         string save = host.SaveWithSettings();
         string[] lines = save.Split('\n', 4);
-        Assert.StartsWith("REBELLION-CORE 1 battle=", lines[0]);
+        Assert.StartsWith("PRAEDRA-CORE 1 battle=", lines[0]);
         Assert.StartsWith("SETTINGS ", lines[1]);
         Assert.StartsWith("AI-MEMORY ", lines[2]);
         Assert.Equal(host.Save(), lines[3]);
@@ -58,21 +58,21 @@ public class SimpleAiSaveLoadTests
 
     // m1-clock-and-orders K16: QA-17 repro. The save kept only the battle ruleset; every other setting fell back to the code DEFAULT on load.
     // Seed 12 under ControlRule Derived (AssaultOnly is the code DEFAULT today), fog AIs to day 400: the loaded copy came back AssaultOnly and
-    // split on day 448 (Begamor changed hands only in the original).
+    // split on day 448 (Begamor changed hands only in Classic).
     [Fact]
     public void K16_SaveKeepsEveryGameSetting()
     {
         var settings = new GameSettings
         {
-            ControlRule = Rebellion.Core.Control.ControlRule.Derived,
-            Characters = new Rebellion.Core.Characters.CharacterParams { TalentedSkipStrong = false },
+            ControlRule = Praedra.Core.Control.ControlRule.Derived,
+            Characters = new Praedra.Core.Characters.CharacterParams { TalentedSkipStrong = false },
         };
         var host = NewGame.Create(new NewGameOptions { Seed = 12, Preset = StartPreset.MedA, Settings = settings });
         new AiMatch(host, Fog(), Fog()).RunTo(400);
 
         string save = host.SaveWithSettings();
         var loaded = GameHost.Load(save);
-        Assert.Equal(Rebellion.Core.Control.ControlRule.Derived, loaded.Settings.ControlRule);
+        Assert.Equal(Praedra.Core.Control.ControlRule.Derived, loaded.Settings.ControlRule);
         Assert.False(loaded.Settings.Characters!.TalentedSkipStrong);
         Assert.Equal(save, loaded.SaveWithSettings()); // every setting comes back, the number tables included
 
@@ -90,8 +90,8 @@ public class SimpleAiSaveLoadTests
     public void K16_PassedSettingsReplaceTheSavedOnes()
     {
         var host = NewGame.Create(new NewGameOptions { Seed = 3, Preset = StartPreset.MedA,
-            Settings = new GameSettings { ControlRule = Rebellion.Core.Control.ControlRule.Derived } });
-        var loaded = GameHost.Load(host.SaveWithSettings(), new GameSettings { ControlRule = Rebellion.Core.Control.ControlRule.AssaultOnly });
-        Assert.Equal(Rebellion.Core.Control.ControlRule.AssaultOnly, loaded.Settings.ControlRule);
+            Settings = new GameSettings { ControlRule = Praedra.Core.Control.ControlRule.Derived } });
+        var loaded = GameHost.Load(host.SaveWithSettings(), new GameSettings { ControlRule = Praedra.Core.Control.ControlRule.AssaultOnly });
+        Assert.Equal(Praedra.Core.Control.ControlRule.AssaultOnly, loaded.Settings.ControlRule);
     }
 }

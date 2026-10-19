@@ -1,6 +1,6 @@
-using Rebellion.Core.Ships;
+using Praedra.Core.Ships;
 
-namespace Rebellion.Core.Economy;
+namespace Praedra.Core.Economy;
 
 /// <summary>
 /// The shared object id counter and the creation of registry objects, used by <see cref="EconomyModule"/> and by

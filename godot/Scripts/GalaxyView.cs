@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
-using Rebellion.Core.Map;
-using Side = Rebellion.Core.Clock.Side;
+using Praedra.Core.Map;
+using Side = Praedra.Core.Clock.Side;
 
-namespace RebellionViewer;
+namespace PraedraViewer;
 
 /// <summary>
 /// The 2D galaxy map. Draws every system and lane from the core's Galaxy, handles zoom, pan,

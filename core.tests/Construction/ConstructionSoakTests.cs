@@ -1,8 +1,8 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Economy;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Economy;
 
-namespace Rebellion.Core.Tests.Construction;
+namespace Praedra.Core.Tests.Construction;
 
 // 2000-day headless runs of the build demo (core/Construction/BuildDemo): no crash, the bookkeeping stays consistent after every Step,
 // identical StateHash on two runs, and no random number drawn by construction itself.

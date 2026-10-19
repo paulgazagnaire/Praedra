@@ -1,7 +1,7 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
 
-namespace Rebellion.Core.Tests.Economy;
+namespace Praedra.Core.Tests.Economy;
 
 // Tests of m2-slots-and-resources (ids S1 to S15). Draws are stubbed; "draw v" means the stub returns v.
 // Step K runs hook time T = K + 1; events carry Day = T.

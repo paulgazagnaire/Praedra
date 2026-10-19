@@ -1,7 +1,7 @@
 using System.Globalization;
-using Rebellion.Core.Data;
+using Praedra.Core.Data;
 
-namespace Rebellion.Core.Map;
+namespace Praedra.Core.Map;
 
 /// <summary>Loader limits. rule: m1-galaxy-data §Validation checks (5, 6, 7). Data values, not buried constants.</summary>
 public sealed record GalaxyRules

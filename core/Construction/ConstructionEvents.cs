@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Construction;
+namespace Praedra.Core.Construction;
 
 // Events of construction. rule: m1-clock-and-orders §Events out. Day is K for step-1 events, and the hook time T = K + 1 for slot 6.6
 // and for the delivery events of steps 3 and 4 (the day the change takes effect). The sheet names DeliveryRefused only; the rest are additions.

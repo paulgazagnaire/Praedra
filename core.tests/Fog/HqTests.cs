@@ -1,13 +1,13 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Fog;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Support;
-using static Rebellion.Core.Tests.Fog.FogWorld;
-using Rebellion.Core.Tests.Control;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Fog;
+using Praedra.Core.Setup;
+using Praedra.Core.Support;
+using static Praedra.Core.Tests.Fog.FogWorld;
+using Praedra.Core.Tests.Control;
 
-namespace Rebellion.Core.Tests.Fog;
+namespace Praedra.Core.Tests.Fog;
 
 // The Rebel HQ, tests HQ1 to HQ28 of m5-fog-and-hq §Tests, on Map M (HQ at R2). The HQ has speed 100: one hop of 100 map units = 20 days.
 public class HqTests

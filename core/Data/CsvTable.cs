@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace Rebellion.Core.Data;
+namespace Praedra.Core.Data;
 
 /// <summary>
 /// Plain CSV reader: header row, quoted fields ("" escapes a quote, quotes may hold commas and line breaks),
@@ -119,7 +119,7 @@ public sealed class CsvTable
     /// <summary>
     /// The rows of <paramref name="first"/> then those of <paramref name="second"/>, under the header of <paramref name="first"/>. The second
     /// table must have every column of the first; its other columns (a row's own source tag) are dropped. Used to merge a data/design file
-    /// into the data/original file of the same name (rows the 1998 files do not hold, each keeping its tag in its own file).
+    /// into the data/classic file of the same name (rows the Classic files do not hold, each keeping its tag in its own file).
     /// rule: B1-own-importer §Work 3 ("move to data/design/ files that the loaders merge").
     /// </summary>
     public static CsvTable Merge(CsvTable first, CsvTable second)
@@ -139,7 +139,7 @@ public sealed class CsvTable
     }
 
     /// <summary>
-    /// <c>original/name</c> merged with <c>design/name</c> when the design folder holds a file of that name, else the original file alone.
+    /// <c>classic/name</c> merged with <c>design/name</c> when the design folder holds a file of that name, else the classic file alone.
     /// rule: B1-own-importer §Work 3.
     /// </summary>
     public static CsvTable LoadMerged(string originalDir, string designDir, string fileName)

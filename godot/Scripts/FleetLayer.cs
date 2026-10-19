@@ -2,14 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Fog;
-using Rebellion.Core.Map;
+using Praedra.Core.Clock;
+using Praedra.Core.Fleets;
+using Praedra.Core.Fog;
+using Praedra.Core.Map;
 
-using Side = Rebellion.Core.Clock.Side;
+using Side = Praedra.Core.Clock.Side;
 
-namespace RebellionViewer;
+namespace PraedraViewer;
 
 /// <summary>
 /// Draws fleets on top of the galaxy map, using the parent GalaxyView's transform. Read-only: it looks at the core's

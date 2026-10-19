@@ -1,9 +1,9 @@
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Tests.Economy;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Setup;
+using Praedra.Core.Tests.Economy;
 
-namespace Rebellion.Core.Tests.Characters;
+namespace Praedra.Core.Tests.Characters;
 
 /// <summary>
 /// A full <see cref="GameHost"/> (every module, real data unless given) on a stub generator, empty galaxy state (no owners), with helpers to
@@ -13,14 +13,14 @@ internal sealed class CharWorld
 {
     public const string Yavin = "Yavin", Hoth = "Hoth", Coruscant = "Coruscant";
     public const string Corvette = "Corellian Corvette", Isd = "Imperial Star Destroyer", MonCal = "Mon Calamari Cruiser";
-    // record ids (data/original/characters.csv)
+    // record ids (data/classic/characters.csv)
     public const int MonMothma = 576, Leia = 577, Luke = 578, Han = 579, Palpatine = 640, Vader = 641;
     public const int Ackbar = 832, Wedge = 833, Lando = 834, Chewbacca = 835, Dodonna = 836, Madine = 837, Afyon = 839, Drayson = 840, Borsk = 841, Tura = 842;
     public const int Piett = 898, Veers = 899;
 
-    /// <summary>The 1998 Force values (Classic): ForceSkillPercent 100, ForceTrainingChancePercent 100, ForceTrainingGainPercent 50 (GNPRTB 6173).
-    /// rule: m5-characters-and-force §Force (Classic (1998) = 100 / 100 / 50).</summary>
-    public static CharacterParams Classic1998Force(CharacterParams? p = null) => (p ?? new CharacterParams()) with
+    /// <summary>The Classic Force values (Classic): ForceSkillPercent 100, ForceTrainingChancePercent 100, ForceTrainingGainPercent 50 (GNPRTB 6173).
+    /// rule: m5-characters-and-force §Force (Classic = 100 / 100 / 50).</summary>
+    public static CharacterParams ClassicForce(CharacterParams? p = null) => (p ?? new CharacterParams()) with
     {
         ForceSkillPercent = CharacterParams.ClassicForceSkillPercent, ForceTrainingChancePercent = CharacterParams.ClassicTrainingChancePercent,
         ForceTrainingGainPercent = CharacterParams.ClassicTrainingGainPercent,
@@ -36,7 +36,7 @@ internal sealed class CharWorld
     public CharWorld(CharacterParams? p = null, GameData? data = null, ulong? seed = null, GameSettings? settings = null)
     {
         // Incidents off and autoscrap out of reach (an empty galaxy has no capacity, so every ship would be scrapped).
-        _settings = (settings ?? new GameSettings { IncidentsEnabled = false, DebugOrdersEnabled = true, Economy = new Rebellion.Core.Economy.EconomyParams { ScrapPeriod = 1_000_000 } }) with { Characters = p };
+        _settings = (settings ?? new GameSettings { IncidentsEnabled = false, DebugOrdersEnabled = true, Economy = new Praedra.Core.Economy.EconomyParams { ScrapPeriod = 1_000_000 } }) with { Characters = p };
         _data = data;
         if (seed is ulong s) Host = GameHost.New(s, _settings, data);
         else { Stub = new StubRng(); Host = GameHost.New(Stub, _settings, data); }

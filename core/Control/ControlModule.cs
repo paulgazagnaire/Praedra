@@ -1,17 +1,17 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Map;
-using Rebellion.Core.Support;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Map;
+using Praedra.Core.Support;
 
-namespace Rebellion.Core.Control;
+namespace Praedra.Core.Control;
 
 /// <summary>What a capture hook is told. Old and New are null for neutral.</summary>
 public sealed record CaptureInfo(StepContext Ctx, string System, Side? Old, Side? New, CaptureCause Cause);
 
 /// <summary>
-/// How control of a system is decided. Derived (1998, DEFAULT in Classic and New, Dev lead 2026-10-17): the holder is worked out from the regiments
+/// How control of a system is decided. Derived (Classic, DEFAULT in Classic and New, Dev lead 2026-10-17): the holder is worked out from the regiments
 /// standing on the planet and, when nobody's stand there, from support (60 or more joins a side). AssaultOnly (the rebuild before B5a): support
 /// never changes control, only a won assault, the Death Star's revolt and the debug order do. rule: m2-control-and-capture §How control changes
 /// (B5a section 10, decision 1).
@@ -55,7 +55,7 @@ public sealed class ControlModule
     private readonly SupportModule _support;
     private readonly ConstructionModule? _construction;
 
-    /// <summary>The control rule (GameSettings.ControlRule). DEFAULT Derived, the 1998 rule (Paul's card 2026-10-18 20:42); AssaultOnly is the option. Set from the game settings, which a save made with SaveWithSettings keeps (QA-17, #90): a loaded game keeps its rule.</summary>
+    /// <summary>The control rule (GameSettings.ControlRule). DEFAULT Derived, the Classic rule (Paul's card 2026-10-18 20:42); AssaultOnly is the option. Set from the game settings, which a save made with SaveWithSettings keeps (QA-17, #90): a loaded game keeps its rule.</summary>
     public ControlRule Rule { get; set; } = ControlRule.Derived;
 
     /// <summary>
@@ -72,7 +72,7 @@ public sealed class ControlModule
     public event Action<CaptureInfo, bool>? ControlChangeAftermath;
 
     /// <summary>
-    /// Raised inside every flip, after the uprising check and the blockade (the queued object events of the 1998 flip). The fog module listens: the
+    /// Raised inside every flip, after the uprising check and the blockade (the queued object events of the Classic flip). The fog module listens: the
     /// loser's LossNotice and the Rebel HQ, destroyed when its world goes to the Empire or neutral. rule: m5-fog-and-hq §F2, §F7; B5a section 5.
     /// </summary>
     public event Action<CaptureInfo>? HolderChanged;
@@ -183,7 +183,7 @@ public sealed class ControlModule
         if (Rule == ControlRule.Derived) _presence = PresenceAll();
     }
 
-    // After the orders and after every slot: every system whose standing regiments changed is recomputed, in system name order (the 1998 game
+    // After the orders and after every slot: every system whose standing regiments changed is recomputed, in system name order (Classic
     // queues the recompute from the regiment hook 0x508660 and runs it the same day; B5a section 2, inferred same day).
     private void Settle(StepContext ctx)
     {
@@ -244,7 +244,7 @@ public sealed class ControlModule
     // ================================================================== setup (B5a section 9)
 
     /// <summary>
-    /// The 1998 full refresh at the end of setup (stage 0x17, <c>0x508250</c>): every system's holder is worked out from its regiments and support.
+    /// The Classic full refresh at the end of setup (stage 0x17, <c>0x508250</c>): every system's holder is worked out from its regiments and support.
     /// Returns the systems whose holder it changed (none for a correct deal: B5a-14), in name order, after applying them silently (setup raises no
     /// events). Does nothing under AssaultOnly. rule: m2-control-and-capture §How control changes (B5a section 2 "full refresh").
     /// </summary>
@@ -410,7 +410,7 @@ public sealed class ControlModule
     /// <summary>
     /// Under <see cref="ControlRule.AssaultOnly"/> only: make <paramref name="newHolder"/> the holder now and run the flip with the given cause.
     /// Returns false and changes nothing if the side already holds the system, the system is destroyed, or the rule is Derived (there is no
-    /// "set holder" in 1998: B5a section 1). rule: m2-control-and-capture §How control changes (the rule before B5a, kept behind the switch).
+    /// "set holder" in Classic: B5a section 1). rule: m2-control-and-capture §How control changes (the rule before B5a, kept behind the switch).
     /// </summary>
     public bool SetHolder(StepContext ctx, string system, Side newHolder, CaptureCause cause)
     {

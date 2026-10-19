@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Victory;
+namespace Praedra.Core.Victory;
 
 /// <summary>The game ended. Raised once. Day is the hook time T = K + 1 like the economy events. rule: setup-victory/04-victory-conditions §3.</summary>
 public sealed record GameWon(int Index, int Day, Side Winner, string Reason) : GameEvent(Index, Day, nameof(GameWon));
@@ -8,9 +8,9 @@ public sealed record GameWon(int Index, int Day, Side Winner, string Reason) : G
 /// <summary>
 /// The switches of the simple (HQ-Only flavoured) victory. The four win switches are on by default.
 /// Standard victory (the four key characters captured, setup-victory/04 §3) is behind <see cref="StandardVictory"/>, on by default; with it off only the HQ-Only conditions run (04 §3 HQ-Only mode).
-/// "Holds no system" is a New rule: the 1998 victory check (0x5180e0, the only writer of the game-over bit) has no branch for a wiped-out side,
+/// "Holds no system" is a New rule: the Classic victory check (0x5180e0, the only writer of the game-over bit) has no branch for a wiped-out side,
 /// a galaxy share or a time limit [EXE-own, B4 §15]. It stays on (DEFAULT New, Decided extension of the playable slice 2026-10-12) so a game
-/// cannot go on with a side wiped out; off is the 1998 behaviour.
+/// cannot go on with a side wiped out; off is the Classic behaviour.
 /// </summary>
 public sealed record VictoryRules
 {
@@ -18,9 +18,9 @@ public sealed record VictoryRules
     public bool EmpireWinsOnHqLost { get; init; } = true;
     /// <summary>Alliance wins when it holds Coruscant or Coruscant is destroyed. rule: setup-victory/04 §3 (cor, destroyed bit 0x200), HQ-Only mode; B4 §15 [EXE-own] (bit 3 of +0x50).</summary>
     public bool AllianceWinsOnCoruscant { get; init; } = true;
-    /// <summary>Empire wins when the Alliance holds no system. New rule, not 1998 (B4 §15 [EXE-own]); DEFAULT New on (Decided extension, playable slice 2026-10-12).</summary>
+    /// <summary>Empire wins when the Alliance holds no system. New rule, not Classic (B4 §15 [EXE-own]); DEFAULT New on (Decided extension, playable slice 2026-10-12).</summary>
     public bool EmpireWinsWhenAllianceHasNoSystems { get; init; } = true;
-    /// <summary>Alliance wins when the Empire holds no system. New rule, not 1998 (B4 §15 [EXE-own]); DEFAULT New on (Decided extension, playable slice 2026-10-12).</summary>
+    /// <summary>Alliance wins when the Empire holds no system. New rule, not Classic (B4 §15 [EXE-own]); DEFAULT New on (Decided extension, playable slice 2026-10-12).</summary>
     public bool AllianceWinsWhenEmpireHasNoSystems { get; init; } = true;
     /// <summary>
     /// Standard victory (m5-setup-and-victory: HqOnlyVictory = false): the Empire's HQ term also needs Luke Skywalker and Mon Mothma captured, the
@@ -29,7 +29,7 @@ public sealed record VictoryRules
     /// HQ-only (this switch false) stays a switch but is not shown on the new-game screen (m5-setup-and-victory §Defaults).
     /// </summary>
     public bool StandardVictory { get; init; } = true;
-    /// <summary>What a dead key character does to standard victory. DEFAULT WaiveCondition (Decided Paul 2026-10-16; original: None, the term can never be met). rule: m5-setup-and-victory §Defaults for undecided items (KeyDeathFallback).</summary>
+    /// <summary>What a dead key character does to standard victory. DEFAULT WaiveCondition (Decided Paul 2026-10-16; classic: None, the term can never be met). rule: m5-setup-and-victory §Defaults for undecided items (KeyDeathFallback).</summary>
     public KeyDeathFallback KeyDeathFallback { get; init; } = KeyDeathFallback.WaiveCondition;
 }
 

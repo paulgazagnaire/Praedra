@@ -1,14 +1,14 @@
-using Rebellion.Core.Assault;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Control;
-using Rebellion.Core.Defenses;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Tests.Defenses;
-using Rebellion.Core.Tests.Economy;
-using Rebellion.Core.Troops;
+using Praedra.Core.Assault;
+using Praedra.Core.Clock;
+using Praedra.Core.Control;
+using Praedra.Core.Defenses;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Tests.Defenses;
+using Praedra.Core.Tests.Economy;
+using Praedra.Core.Troops;
 
-namespace Rebellion.Core.Tests.Assault;
+namespace Praedra.Core.Tests.Assault;
 
 /// <summary>
 /// A <see cref="BombWorld"/> (fleets, economy, support, defenses, bombardment, real files) with the troop, control and assault modules
@@ -21,7 +21,7 @@ internal sealed class AssaultWorld
     public const string Reb = "Alliance Army Regiment", Imp = "Imperial Army Regiment";
     public const string Isd = "Imperial Star Destroyer", Neb = "Nebulon-B Frigate";
 
-    public static readonly Lazy<TroopData> Troops = new(() => TroopData.Load(TestData.OriginalDir, TestData.DesignDir));
+    public static readonly Lazy<TroopData> Troops = new(() => TroopData.Load(TestData.ClassicDir, TestData.DesignDir));
 
     public BombWorld B { get; }
     public TroopModule Troop { get; }

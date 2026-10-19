@@ -1,14 +1,14 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Defenses;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Support;
-using Rebellion.Core.Tests.Economy;
+using Praedra.Core.Clock;
+using Praedra.Core.Defenses;
+using Praedra.Core.Economy;
+using Praedra.Core.Support;
+using Praedra.Core.Tests.Economy;
 
-namespace Rebellion.Core.Tests.Defenses;
+namespace Praedra.Core.Tests.Defenses;
 
 // m3-bombardment, tests B1 to B22 (B23 is an M6 test, recorded in the sheet), then extra tests named after the rule they check.
 // Dice are injected with the stub generator: per hit t, then r (Dice(t, r)); statistical tests are in BombardmentStatTests.
-// Since B7 (B7-bombardment, Dev lead 2026-10-19) the module runs the 1998 rules by default: a Military strike with hits first draws the collateral
+// Since B7 (B7-bombardment, Dev lead 2026-10-19) the module runs the Classic rules by default: a Military strike with hits first draws the collateral
 // x = rand(0..m0) (Expect(0, m0, ...)), and a pick over one target draws nothing (rand(0..0), B7 §Rules). Tests of the m3 mechanics that B7 replaced
 // run with the switches off (BombWorld.M3Rule or one switch); the B7 rules themselves are tested in B7BombardmentTests.
 public class BombardmentTests
@@ -628,7 +628,7 @@ public class BombardmentTests
     [Fact]
     public void ShipAndFighterValuesComeFromTheData()
     {
-        var d = Rebellion.Core.Setup.GameData.Default.Ships;
+        var d = Praedra.Core.Setup.GameData.Default.Ships;
         Assert.Equal(new[] { 15, 4, 5, 2, 1, 0, 0 }, new[] { "Death Star", "Bulwark Battlecruiser", "Victory II Star Destroyer", "Imperial Star Destroyer",
             "Corellian Corvette", "Medium Transport", "Imperial Escort Carrier" }.Select(n => d[n].Bombardment));
         Assert.Equal(new[] { 2, 2, 2, 1, 1, 0 }, new[] { "Y-wing", "B-wing", "TIE Bomber", "X-wing", "TIE Defender", "A-wing" }.Select(n => d[n].Bombardment));

@@ -1,9 +1,9 @@
-using Rebellion.Core.Battle;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Ships;
-using Rebellion.Core.Tests.Fleets;
+using Praedra.Core.Battle;
+using Praedra.Core.Clock;
+using Praedra.Core.Ships;
+using Praedra.Core.Tests.Fleets;
 
-namespace Rebellion.Core.Tests.Battle;
+namespace Praedra.Core.Tests.Battle;
 
 // Tests of m4-battle-classic (BC ids as in the sheet's table, B3 ids from batch B3) and the pure parts of m4-retreat-damage-repair, on plain units
 // (no game around). [Model] values come from specs/reverse/tools/b3_simulate.py.
@@ -339,7 +339,7 @@ public class ClassicBattleTests
         Assert.Equal(0.3300000131, d.ThresholdOf(Side.Alliance));
     }
 
-    // ================================================================== whole battles (Original dice)
+    // ================================================================== whole battles (Classic dice)
 
     // B3-18
     [Fact]
@@ -599,7 +599,7 @@ public class ClassicBattleTests
         Assert.Equal(BattleOutcome.Annihilated, r.EmpireOutcome);
     }
 
-    // m4-battle-classic BC15 (B3: with the Original dice the seed is not used at all)
+    // m4-battle-classic BC15 (B3: with the Classic dice the seed is not used at all)
     [Fact]
     public void BC15_SameBattleSameResult()
     {
@@ -610,14 +610,14 @@ public class ClassicBattleTests
         Assert.True(a.Draws > 0);
     }
 
-    // m4-battle-classic BC9 (moved by B3: informational; with the Original dice every battle of the same fleets is the same, so the 400 seeds give one result)
+    // m4-battle-classic BC9 (moved by B3: informational; with the Classic dice every battle of the same fleets is the same, so the 400 seeds give one result)
     [Fact]
     public void BC9_TwelveCorvettesVsIsdRollsOn()
     {
         var (r, u) = Run(P, new[] { (Corvette, 12) }, new[] { (Isd, 1) });
         var (r2, _) = Run(P, new[] { (Corvette, 12) }, new[] { (Isd, 1) }, 400);
         Assert.Equal((r.Seconds, r.Draws), (r2.Seconds, r2.Draws));
-        Console.WriteLine($"BC9 12 CR90 vs ISD, rolls on, Original dice: t = {r.Seconds}, draws {r.Draws}, Alliance {r.AllianceOutcome} (lost {r.AllianceLosses}), Empire {r.EmpireOutcome}, ISD hull {u.Single(x => x.Side == Side.Empire).Hull:0.0}");
+        Console.WriteLine($"BC9 12 CR90 vs ISD, rolls on, Classic dice: t = {r.Seconds}, draws {r.Draws}, Alliance {r.AllianceOutcome} (lost {r.AllianceLosses}), Empire {r.EmpireOutcome}, ISD hull {u.Single(x => x.Side == Side.Empire).Hull:0.0}");
     }
 
     // m4-battle-classic BC17 (moved by B3: the Empire's step comes first; the Bulk Transport's zero hit draws nothing with rolls off; both leave in second 1)
@@ -773,7 +773,7 @@ public class ClassicBattleTests
 
     // m4-battle-classic §2, §3, §6: the switches run to an end
     [Theory]
-    [InlineData(BattleTactic.Surround, ClassicTaskForces.Original, ClassicFireOrder.EmpireFirst)]
+    [InlineData(BattleTactic.Surround, ClassicTaskForces.Classic, ClassicFireOrder.EmpireFirst)]
     [InlineData(BattleTactic.StandOff, ClassicTaskForces.PerSide, ClassicFireOrder.EmpireFirst)]
     [InlineData(BattleTactic.StandOff, ClassicTaskForces.PerUnit, ClassicFireOrder.Simultaneous)]
     public void SwitchesRunToAnEnd(BattleTactic t, ClassicTaskForces f, ClassicFireOrder o)

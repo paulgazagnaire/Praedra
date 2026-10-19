@@ -1,9 +1,9 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Support;
-using Rebellion.Core.Tests.Economy;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Support;
+using Praedra.Core.Tests.Economy;
 
-namespace Rebellion.Core.Tests.Support;
+namespace Praedra.Core.Tests.Support;
 
 // m2-popular-support, tests S1 to S17 (A = Alliance support). Test ids are named in the comments.
 public class SupportTests
@@ -379,7 +379,7 @@ public class SupportTests
         var first = Make(); first.Run(100);
         Assert.NotEmpty(first.Game.State.Support.Systems);
         var loaded = GameSave.Load(GameSave.Save(first.Game));
-        var fleets = Rebellion.Core.Fleets.FleetModule.Attach(loaded, TestData.RealGalaxy, Rebellion.Core.Tests.Fleets.World.Ships.Value, Rebellion.Core.Tests.Fleets.World.Blockade);
+        var fleets = Praedra.Core.Fleets.FleetModule.Attach(loaded, TestData.RealGalaxy, Praedra.Core.Tests.Fleets.World.Ships.Value, Praedra.Core.Tests.Fleets.World.Blockade);
         var eco = EconomyModule.Attach(loaded, TestData.RealGalaxy, EcoWorld.Slots.Value, EcoWorld.Costs.Value, fleets);
         eco.IncidentsEnabled = false;
         var sup = SupportModule.Attach(loaded, TestData.RealGalaxy, eco, fleets, SupWorld.Weights.Value);

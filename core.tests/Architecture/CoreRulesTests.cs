@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Text.RegularExpressions;
 
-namespace Rebellion.Core.Tests.Architecture;
+namespace Praedra.Core.Tests.Architecture;
 
 // engine/03 "Rules every helper follows": the core has no Godot references and no randomness or time source
 // other than the seeded game generator.
@@ -40,9 +40,9 @@ public class CoreRulesTests
     private static string FindCoreDir()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "Rebellion.sln")))
+        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "Praedra.sln")))
             dir = dir.Parent;
-        if (dir == null) throw new InvalidOperationException("Rebellion.sln not found above the test output folder.");
+        if (dir == null) throw new InvalidOperationException("Praedra.sln not found above the test output folder.");
         return Path.Combine(dir.FullName, "core");
     }
 }

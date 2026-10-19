@@ -1,12 +1,12 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Data;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Research;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Tests.Construction;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Data;
+using Praedra.Core.Economy;
+using Praedra.Core.Research;
+using Praedra.Core.Setup;
+using Praedra.Core.Tests.Construction;
 
-namespace Rebellion.Core.Tests.Research;
+namespace Praedra.Core.Tests.Research;
 
 // Rule sheet: m5-research (research and tech unlocks). Each test names its test id (RS1..RS36).
 public class ResearchTests

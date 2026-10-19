@@ -1,9 +1,9 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Map;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Map;
 
-namespace Rebellion.Core.Support;
+namespace Praedra.Core.Support;
 
 /// <summary>
 /// Popular support, its two timers, the garrison requirement, uprisings and their incidents. Registers hooks 6.1 (garrison and
@@ -140,7 +140,7 @@ public sealed class SupportModule
 
     /// <summary>
     /// Called inside <see cref="ChangeSupport"/> after the value moved, with (ctx, system): the control module recomputes the holder at once (the
-    /// 1998 Loyalty notifier <c>0x5109f0</c>, called by the support setter). Null = nothing. rule: m2-control-and-capture §When the rule runs (B5a section 2).
+    /// Classic Loyalty notifier <c>0x5109f0</c>, called by the support setter). Null = nothing. rule: m2-control-and-capture §When the rule runs (B5a section 2).
     /// </summary>
     public Action<StepContext, string>? AfterSupportChange { get; set; }
 

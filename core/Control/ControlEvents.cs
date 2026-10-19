@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Control;
+namespace Praedra.Core.Control;
 
 // Events of control and capture. Day is the hook time T = K + 1, like the economy and support events.
 // rule: m2-control-and-capture §What happens at the moment of capture (10: event order).
@@ -31,7 +31,7 @@ public sealed record SystemCaptured(int Index, int Day, string System, Side? Fro
     : GameEvent(Index, Day, nameof(SystemCaptured));
 
 /// <summary>
-/// The queued aftermath of a holder change (1998 rule event 0x31b, handler <c>0x515c00</c>): raised after the flip and the events it queued, before
+/// The queued aftermath of a holder change (Classic rule event 0x31b, handler <c>0x515c00</c>): raised after the flip and the events it queued, before
 /// the sector step. The character loyalty draw (B2c) reacts to it. rule: m2-control-and-capture §After the flip (B5a section 6).
 /// </summary>
 public sealed record HolderChangeAftermath(int Index, int Day, string System, Side? From, Side? To, CaptureCause Cause)

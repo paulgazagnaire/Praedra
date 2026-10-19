@@ -1,8 +1,8 @@
-using Rebellion.Core.Assault;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
+using Praedra.Core.Assault;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
 
-namespace Rebellion.Core.Tests.Assault;
+namespace Praedra.Core.Tests.Assault;
 
 // m3-assault A4, A13 to A16: statistical tests with the seeded game generator through the real module (one Step per assault).
 public class AssaultStatTests

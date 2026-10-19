@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fog;
-using Rebellion.Core.Missions;
-using Rebellion.Core.Support;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Fog;
+using Praedra.Core.Missions;
+using Praedra.Core.Support;
 
-using Side = Rebellion.Core.Clock.Side;
+using Side = Praedra.Core.Clock.Side;
 
-namespace RebellionViewer;
+namespace PraedraViewer;
 
 /// <summary>
 /// Missions as the screens see them (rule: m5-missions): the player's own mission groups (own state), the words for the kinds, phases and

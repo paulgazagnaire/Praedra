@@ -1,10 +1,10 @@
-using Rebellion.Core.Control;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Support;
+using Praedra.Core.Control;
+using Praedra.Core.Construction;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Support;
 
-namespace Rebellion.Core.Clock;
+namespace Praedra.Core.Clock;
 
 /// <summary>
 /// Game state. Everything is a sorted collection (ordinal for names, ascending for ids) so the saved and hashed form is
@@ -42,23 +42,23 @@ public sealed class GameState
     public ControlState Control { get; init; } = new();
 
     /// <summary>OnContact settings and the battle-day list. rule: m4-battle-classic §1.3; m4-retreat-damage-repair §5.</summary>
-    public Rebellion.Core.Battle.BattleState Battle { get; init; } = new();
+    public Praedra.Core.Battle.BattleState Battle { get; init; } = new();
 
     /// <summary>HQ system, explored flags, victory result. rule: setup-victory/04, 09.</summary>
-    public Rebellion.Core.Victory.ScenarioState Scenario { get; init; } = new();
+    public Praedra.Core.Victory.ScenarioState Scenario { get; init; } = new();
 
     /// <summary>Each side's picture of the galaxy, sighting logs and clues. rule: m5-fog-and-hq §F1, §N9.</summary>
-    public Rebellion.Core.Fog.FogState Fog { get; init; } = new();
+    public Praedra.Core.Fog.FogState Fog { get; init; } = new();
     /// <summary>Research points, levels, exhausted flags and tick timers per side; the two percents. rule: m5-research §State per side.</summary>
-    public Rebellion.Core.Research.ResearchState Research { get; init; } = new();
+    public Praedra.Core.Research.ResearchState Research { get; init; } = new();
     /// <summary>Every character (stats, Force, status, post, place, trip) and the system General table. rule: m5-characters-and-force §The character object.</summary>
-    public Rebellion.Core.Characters.CharacterState Characters { get; init; } = new();
+    public Praedra.Core.Characters.CharacterState Characters { get; init; } = new();
     /// <summary>Every running mission group (team, decoys, trip, timer). rule: m5-missions §Orders, §Rule (Classic).</summary>
-    public Rebellion.Core.Missions.MissionState Missions { get; init; } = new();
+    public Praedra.Core.Missions.MissionState Missions { get; init; } = new();
     /// <summary>Destroyed systems and the strikes per sector. rule: m5-death-star §Interfaces.</summary>
-    public Rebellion.Core.DeathStar.DeathStarState DeathStar { get; init; } = new();
+    public Praedra.Core.DeathStar.DeathStarState DeathStar { get; init; } = new();
     /// <summary>Per-system loss tallies of the loyalty triggers (B2c). rule: m5-characters-and-force §Loyalty and betrayal.</summary>
-    public Rebellion.Core.Characters.LoyaltyState Loyalty { get; init; } = new();
+    public Praedra.Core.Characters.LoyaltyState Loyalty { get; init; } = new();
 
     /// <summary>Copy another state's content into this one (used by Load, which needs ordinal-comparer dictionaries).</summary>
     internal void CopyFrom(GameState other)
@@ -173,7 +173,7 @@ public sealed class Game
     /// <summary>
     /// Register a rule that reacts to an event at the moment it is emitted inside a Step (same Step, same place in the draw order). Events
     /// emitted outside a Step (setup) reach no observer. The observer may change state, draw and emit; its own events are observed too.
-    /// rule: m5-characters-and-force §Loyalty (B2c: the original's rule events 0x31b, 0x300, 0x305 and the battle end call their handlers at once).
+    /// rule: m5-characters-and-force §Loyalty (B2c: Classic's rule events 0x31b, 0x300, 0x305 and the battle end call their handlers at once).
     /// </summary>
     public void ObserveEvents(Action<StepContext, GameEvent> observer) => _observers.Add(observer);
 
@@ -236,7 +236,7 @@ public sealed class Game
     private readonly List<Action<StepContext>> _tickStart = new(); // registration order
 
     /// <summary>
-    /// Register a callback for the start of each rule "tick" of the original: before each player order is resolved, and once at the start of the
+    /// Register a callback for the start of each rule "tick" of the classic: before each player order is resolved, and once at the start of the
     /// day's rule pass (after the orders of step 1 and their settle). The control module resets its per-tick limiter there. Nothing is saved: a save
     /// is made between Steps, and every Step starts a fresh tick. rule: m2-control-and-capture §After the flip (B5a section 6, the limiter
     /// <c>0x518040</c>, RE lead correction 2026-10-17: per tick, not per day).

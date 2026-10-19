@@ -1,4 +1,4 @@
-namespace Rebellion.Core.Missions;
+namespace Praedra.Core.Missions;
 
 /// <summary>
 /// The life of a mission: Outbound (accepted, flying to the target), Working (landed, a loop of iterations), ReturnPending (ended; the group leaves in

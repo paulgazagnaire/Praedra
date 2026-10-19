@@ -1,10 +1,10 @@
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Missions;
-using Rebellion.Core.Tests.Economy;
-using static Rebellion.Core.Tests.Missions.MissionWorld;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Missions;
+using Praedra.Core.Tests.Economy;
+using static Praedra.Core.Tests.Missions.MissionWorld;
 
-namespace Rebellion.Core.Tests.Missions;
+namespace Praedra.Core.Tests.Missions;
 
 // m5-missions §Tests MI61 to MI65: the Recruitment success pick (Recruitment pick, 2026-10-18; [EXE-own] 0x56b9a0, 0x55fc80). The pick is the
 // setup extras pick (m5-setup-and-victory §P9 "An extra") at the mission's target system: pool = the side's unplaced in-game minors by id,

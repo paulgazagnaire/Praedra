@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Economy;
+namespace Praedra.Core.Economy;
 
 /// <summary>
 /// An economy object: a facility, ship, fighter squadron, regiment or special force that counts for maintenance and can be
@@ -55,7 +55,7 @@ public sealed class EconObject
     public int Due { get; set; }
     /// <summary>A refinery waiting in its side's raw line.</summary>
     public bool InLine { get; set; }
-    // ---- the 1998 processing state (B5b §1-3). Omitted from the save while default.
+    // ---- the Classic processing state (B5b §1-3). Omitted from the save while default.
     /// <summary>
     /// Mine or refinery: the side it is working for (WAITING or PROCESSING); null = IDLE (stopped: not completed, neutral system, or suspended by
     /// a blockade or an uprising). A change of this value is a stop (cycle abandoned, no point; paused instead under MineStopMode Pause, see PausedFor) and, when active again, a restart on a startup
@@ -66,7 +66,7 @@ public sealed class EconObject
     /// <summary>
     /// Mine or refinery, IDLE because suspended: the side whose running cycle is paused (its <see cref="Due"/> moves on one day per suspended day);
     /// null = none. Resumed when the facility works for that side again, dropped otherwise. Omitted from the save while null.
-    /// rule: m2-mines-refineries-pools §Blockade and uprising (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch).
+    /// rule: m2-mines-refineries-pools §Blockade and uprising (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, Classic is the switch).
     /// </summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public Side? PausedFor { get; set; }

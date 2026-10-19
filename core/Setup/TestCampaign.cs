@@ -1,12 +1,12 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Control;
-using Rebellion.Core.Defenses;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Support;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Control;
+using Praedra.Core.Defenses;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Support;
 
-namespace Rebellion.Core.Setup;
+namespace Praedra.Core.Setup;
 
 /// <summary>
 /// TEST SCENARIO, NOT THE REAL GAME START (M5 deals the real one). A scripted two-sided campaign on the real galaxy for the soak tests and

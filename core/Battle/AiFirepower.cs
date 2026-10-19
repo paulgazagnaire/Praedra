@@ -1,9 +1,9 @@
-using Rebellion.Core.Ships;
+using Praedra.Core.Ships;
 
-namespace Rebellion.Core.Battle;
+namespace Praedra.Core.Battle;
 
 /// <summary>
-/// The 1998 AI's strength number ("firepower", class value 0x4739b0, ship stat 14 at 0x484630): 100 times the B3 battle strength against capital ships,
+/// The Classic AI's strength number ("firepower", class value 0x4739b0, ship stat 14 at 0x484630): 100 times the B3 battle strength against capital ships,
 /// in integer steps. Hull damage, shields, planet defences and planet squadrons are not in it. rule: B6a §3 [EXE-own].
 /// </summary>
 public static class AiFirepower

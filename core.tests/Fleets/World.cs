@@ -1,16 +1,16 @@
 using System.Text.Json;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Map;
-using Rebellion.Core.Ships;
-using Rebellion.Core.Travel;
+using Praedra.Core.Clock;
+using Praedra.Core.Fleets;
+using Praedra.Core.Map;
+using Praedra.Core.Ships;
+using Praedra.Core.Travel;
 
-namespace Rebellion.Core.Tests.Fleets;
+namespace Praedra.Core.Tests.Fleets;
 
 /// <summary>A game with the fleet module attached, plus short helpers for the fleet tests.</summary>
 internal sealed class World
 {
-    public static readonly Lazy<IReadOnlyDictionary<string, ShipClass>> Ships = new(() => ShipData.LoadAll(TestData.OriginalDir));
+    public static readonly Lazy<IReadOnlyDictionary<string, ShipClass>> Ships = new(() => ShipData.LoadAll(TestData.ClassicDir));
     public static BlockadeData Blockade => BlockadeData.Load(Path.Combine(TestData.DesignDir, BlockadeData.FileName));
 
     public Game Game { get; }

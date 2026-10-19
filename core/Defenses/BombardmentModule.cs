@@ -1,11 +1,11 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Support;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Support;
 
-namespace Rebellion.Core.Defenses;
+namespace Praedra.Core.Defenses;
 
-/// <summary>What the player chose to shell. Original order names: "Target Military Facilities", "Target Civilian Facilities", "General Bombardment", "Destroy System"
+/// <summary>What the player chose to shell. Classic order names: "Target Military Facilities", "Target Civilian Facilities", "General Bombardment", "Destroy System"
 /// (codes 0x220, 0x221, 0x222, 0x223, Traced). rule: m3-bombardment §Order and preconditions.</summary>
 public enum BombardCategory { Military = 0, Civilian = 1, General = 2, DestroySystem = 3 }
 
@@ -71,7 +71,7 @@ public sealed record BombardParams
     /// </summary>
     public bool BombardDamageScales { get; init; } = true;
     /// <summary>
-    /// C6: a military strike with hits has one chance in (targets + 1) to roll on the first civilian facility (the 1998 pick bug reproduced). Off = no
+    /// C6: a military strike with hits has one chance in (targets + 1) to roll on the first civilian facility (the Classic pick bug reproduced). Off = no
     /// collateral. DEFAULT on in both modes. rule: B7-bombardment §5.3.
     /// </summary>
     public bool MilitaryCollateral { get; init; } = true;
@@ -365,7 +365,7 @@ public sealed class BombardmentModule
         public bool Civilian;
     }
 
-    /// <summary>rand(0..b): no draw when b &lt;= 0 (the 1998 helper 0x53e290). rule: B7-bombardment §Rules (shared helpers).</summary>
+    /// <summary>rand(0..b): no draw when b &lt;= 0 (the Classic helper 0x53e290). rule: B7-bombardment §Rules (shared helpers).</summary>
     private static int Rand(StepContext ctx, int b) => b <= 0 ? 0 : ctx.Rng.NextInt(0, b);
 
     // rule: B7-bombardment §5.4.4 (0x58d020): destroy one hit target
@@ -403,7 +403,7 @@ public sealed class BombardmentModule
 
     /// <summary>
     /// The military-only collateral: x = rand(0..m0); on 0, the first civilian facility of the holder takes a roll (a pick rand(0..k - 1) is drawn
-    /// and ignored: the 1998 bug), and rand(1..10) is drawn even when there is none. No hit is used up. rule: B7-bombardment §5.3 (C6).
+    /// and ignored: the Classic bug), and rand(1..10) is drawn even when there is none. No hit is used up. rule: B7-bombardment §5.3 (C6).
     /// </summary>
     private void Collateral(StepContext ctx, int day, string system, int m0, Tally tally)
     {
@@ -413,7 +413,7 @@ public sealed class BombardmentModule
         if (civilian.Count > 0)
         {
             Rand(ctx, civilian.Count - 1);
-            // 1998 BUG, reproduced on purpose (MilitaryCollateral): the loop at 0x58d0f8 counts up to the pick without advancing, so the pick above
+            // Classic BUG, reproduced on purpose (MilitaryCollateral): the loop at 0x58d0f8 counts up to the pick without advancing, so the pick above
             // is ignored and the FIRST civilian facility is always the one rolled against. rule: B7-bombardment §5.3.
             target = civilian[0];
         }
@@ -518,7 +518,7 @@ public sealed class BombardmentModule
     // ================================================================== the targets (B7-bombardment §3)
 
     /// <summary>
-    /// The targets of a category still standing, in the 1998 walk order. Only the holder's completed objects standing directly on the system:
+    /// The targets of a category still standing, in the Classic walk order. Only the holder's completed objects standing directly on the system:
     /// Military = regiments (id order), then defence facilities (id order), then the Rebel HQ (only with <see cref="BombardParams.HqBombardable"/>);
     /// Civilian = the non-defence facilities (id order); General = Military, then Civilian, then Energy (while above 0), then Raw (while above 0).
     /// Energy and Raw are never Civilian targets (C5, gap fill). Special forces, characters, fighters and ships are never targets.

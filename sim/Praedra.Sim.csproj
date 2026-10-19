@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\core\Rebellion.Core.csproj" />
+    <ProjectReference Include="..\core\Praedra.Core.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

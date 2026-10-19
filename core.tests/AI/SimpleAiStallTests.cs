@@ -1,8 +1,8 @@
-using Rebellion.Core.AI;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Setup;
+using Praedra.Core.AI;
+using Praedra.Core.Clock;
+using Praedra.Core.Setup;
 
-namespace Rebellion.Core.Tests.AI;
+namespace Praedra.Core.Tests.AI;
 
 // m6 stall fix: a fogged strike fleet shelled a target four times and left without landing, over and over (PickTarget asked Need(d / 2) for
 // the pick, the landing asked Need(d), and with fog the believed garrison stays at the unseen guess of FogUnknownDefenders while the real
@@ -16,7 +16,7 @@ public class SimpleAiStallTests
     // from a system the fleet shelled since it last landed there).
     private static (int Landings, int Shellings, int ShelledLeaves) Empire(bool fix, int seed, int days)
     {
-        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory });
+        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = Praedra.Core.Tests.Setup.DealSettings.FileOldVictory });
         var p = new SimpleAiParams { UseFog = true, ShelledLandingNeed = fix, ExplorerScouts = 0, FogGroundForgetDays = 0 };
         var m = new AiMatch(h, p, p);
         var shelled = new Dictionary<string, string>(StringComparer.Ordinal); // fleet id -> the system it shelled; lookup only

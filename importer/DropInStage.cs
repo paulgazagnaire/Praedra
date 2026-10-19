@@ -1,9 +1,9 @@
 using System.Globalization;
 
-namespace Rebellion.Importer;
+namespace Praedra.Importer;
 
 /// <summary>
-/// Stage 2: the raw CSVs to the drop-in tables of <c>data/original/</c>, with the same file names and columns the core read from data/interim,
+/// Stage 2: the raw CSVs to the drop-in tables of <c>data/classic/</c>, with the same file names and columns the core read from data/interim,
 /// so the loaders only change folder. Every number comes from a record word (sheet section 5 maps each column); the text columns the files
 /// do not have (side, kind, research_family, start_*, source) follow the interim's derivation rules, written here. Rows that are not in the
 /// game files live in data/design/ (never written by the importer). rule: B1-own-importer §Work 3.
@@ -229,7 +229,7 @@ public static class DropInStage
                 if (!MissionKinds.TryGetValue(id, out var k)) throw new ImportException($"MISSNSD row {r + 1}: record id {id} has no mission kind.");
                 return new[] { $"0x{id:X2}", k.Kind, S(t, r, "is_alliance"), S(t, r, "is_empire"), S(t, r, "timer_min"), S(t, r, "timer_spread"), S(t, r, "hidden"),
                     S(t, r, "repeats"), k.Table, "0x" + t.Long(r, "special_force_mask").ToString("X4", CultureInfo.InvariantCulture), S(t, r, "guard_checks"), S(t, r, "can_resign"),
-                    $"original: MISSNSD record {id} (importer); kind and table: missions/01" };
+                    $"classic: MISSNSD record {id} (importer); kind and table: missions/01" };
             }));
     }
 
@@ -243,7 +243,7 @@ public static class DropInStage
         foreach (var name in new[] { FoilTable }.Concat(SuccessTables).Append(DecoyTable).Append(EvadeTable).Append(EscapeTable))
         {
             var t = raw[name];
-            rows.AddRange(Rows(t, r => new[] { name, S(t, r, "threshold"), S(t, r, "value"), $"original: {name}.DAT entry {S(t, r, "index")} (importer)" }));
+            rows.AddRange(Rows(t, r => new[] { name, S(t, r, "threshold"), S(t, r, "value"), $"classic: {name}.DAT entry {S(t, r, "index")} (importer)" }));
         }
         return Csv.Write(new[] { "table", "threshold", "value", "source" }, rows);
     }
@@ -252,26 +252,26 @@ public static class DropInStage
     {
         var g = raw.Params("GNPRTB");
         return Csv.Write(new[] { "key", "value", "source" },
-            MissionNumberKeys.Select(k => new[] { k.Key, g(k.Gnprtb), $"original: GNPRTB {k.Gnprtb} (importer); {k.Reading}" }));
+            MissionNumberKeys.Select(k => new[] { k.Key, g(k.Gnprtb), $"classic: GNPRTB {k.Gnprtb} (importer); {k.Reading}" }));
     }
 
     /// <summary>
     /// bombardment-defense.csv: the regiment rows (TROOPSD bombardment_defense), then the manufacturing and production facilities (MANFACSD and
-    /// PROFACSD word 12, raw column f12) and the Rebel HQ (ALLFACSD word 12), read as the bombardment defence by the 1998 strike (class word 12,
-    /// vtable +0x1c0). Only the Sensor Station (not a 1998 class) stays in data/design. rule: m3-bombardment B7; B7-bombardment §3, §7 (C8).
+    /// PROFACSD word 12, raw column f12) and the Rebel HQ (ALLFACSD word 12), read as the bombardment defence by the Classic strike (class word 12,
+    /// vtable +0x1c0). Only the Sensor Station (not a Classic class) stays in data/design. rule: m3-bombardment B7; B7-bombardment §3, §7 (C8).
     /// </summary>
     private static string Bombardment(Raw raw)
     {
         var t = raw["TROOPSD"];
         var rows = new List<IEnumerable<string>>(
-            Rows(t, r => new[] { "troop", raw.Name(t, r), S(t, r, "bombardment_defense"), "original: TROOPSD bombardment_defense (importer); m3-bombardment B7" }));
+            Rows(t, r => new[] { "troop", raw.Name(t, r), S(t, r, "bombardment_defense"), "classic: TROOPSD bombardment_defense (importer); m3-bombardment B7" }));
         foreach (var file in new[] { "MANFACSD", "PROFACSD" })
         {
             var f = raw[file];
-            rows.AddRange(Rows(f, r => new[] { "facility", raw.Name(f, r), S(f, r, "f12"), $"original: {file} word 12 (importer); B7-bombardment §7" }));
+            rows.AddRange(Rows(f, r => new[] { "facility", raw.Name(f, r), S(f, r, "f12"), $"classic: {file} word 12 (importer); B7-bombardment §7" }));
         }
         var hq = raw["ALLFACSD"];
-        rows.AddRange(Rows(hq, r => new[] { "hq", raw.Name(hq, r), S(hq, r, "f12"), "original: ALLFACSD word 12 (importer); B7-bombardment §3 and §7 (read only with HqBombardable)" }));
+        rows.AddRange(Rows(hq, r => new[] { "hq", raw.Name(hq, r), S(hq, r, "f12"), "classic: ALLFACSD word 12 (importer); B7-bombardment §3 and §7 (read only with HqBombardable)" }));
         return Csv.Write(new[] { "kind", "name", "bombard_defense", "tag" }, rows);
     }
 

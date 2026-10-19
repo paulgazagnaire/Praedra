@@ -1,8 +1,8 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Ships;
+using Praedra.Core.Clock;
+using Praedra.Core.Fleets;
+using Praedra.Core.Ships;
 
-namespace Rebellion.Core.Tests.Fleets;
+namespace Praedra.Core.Tests.Fleets;
 
 // rule: m1-forced-stop-and-blockade §Tests B1-B17 on the synthetic map A(0,0) B(100,0) C(200,0): tier 3 lanes, a speed-80
 // fleet needs 16 days per hop. F = an Alliance Corellian Corvette (the "CR90"; strength 0 (laser-only), speed 80) ordered A to C on day 0.
@@ -559,16 +559,16 @@ public class ForcedStopTests
         var s = World.Ships.Value;
         Assert.False(CombatStrength.IsArmed(new[] { s["Galleon"], s["Bulk Transport"] }));
         Assert.True(CombatStrength.IsArmed(new[] { s["Galleon"], s["TIE Fighter"] })); // a squadron arms a fleet
-        Assert.Equal(0, new CombatStrength(Rebellion.Core.Battle.NewBattleData.Default).Of(Array.Empty<ShipClass>(), new[] { s[Isd] }));
+        Assert.Equal(0, new CombatStrength(Praedra.Core.Battle.NewBattleData.Default).Of(Array.Empty<ShipClass>(), new[] { s[Isd] }));
     }
 
     [Fact]
     public void BlockadeData_rejects_bad_files()
     {
-        Assert.Throws<Rebellion.Core.Data.DataLoadException>(() => BlockadeData.Parse("key,value\nforced_stop_threshold_percent,50\n"));
-        Assert.Throws<Rebellion.Core.Data.DataLoadException>(() => BlockadeData.Parse(
+        Assert.Throws<Praedra.Core.Data.DataLoadException>(() => BlockadeData.Parse("key,value\nforced_stop_threshold_percent,50\n"));
+        Assert.Throws<Praedra.Core.Data.DataLoadException>(() => BlockadeData.Parse(
             "key,value\nforced_stop_threshold_percent,half\neconomic_blockade_ship_class,Galleon\neconomic_blockade_ship_count,3\n"));
         var d = BlockadeData.Parse("key,value\nforced_stop_threshold_percent,50\neconomic_blockade_ship_class,No Such Ship\neconomic_blockade_ship_count,3\n");
-        Assert.Throws<Rebellion.Core.Data.DataLoadException>(() => d.EconomicStrength(World.Ships.Value));
+        Assert.Throws<Praedra.Core.Data.DataLoadException>(() => d.EconomicStrength(World.Ships.Value));
     }
 }

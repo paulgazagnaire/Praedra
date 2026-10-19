@@ -1,10 +1,10 @@
-using Rebellion.Core.Battle;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Ships;
+using Praedra.Core.Battle;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Ships;
 
-namespace Rebellion.Core.Tests.Battle;
+namespace Praedra.Core.Tests.Battle;
 
 // m4-retreat-damage-repair §6 (tractor beams hold retreat, New rules only; TB ids as in the sheet's table). Plain units with the real CSVs,
 // plus one game-level test of the write-back (the held ship stays at the battle system in a fleet of its own).

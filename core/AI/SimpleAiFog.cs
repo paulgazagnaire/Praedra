@@ -1,12 +1,12 @@
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Defenses;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Fog;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Defenses;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Fog;
 
-namespace Rebellion.Core.AI;
+namespace Praedra.Core.AI;
 
 /// <summary>
 /// The parts of the simple AI that exist only behind the fog (<see cref="SimpleAiParams.UseFog"/>): scouting, estimates from the last-seen
@@ -526,7 +526,7 @@ public sealed partial class SimpleAi
         // rule: m5-fog-and-hq §F1 group D (characters present): the side's own pictures, systems in ordinal order; the newest stamp per character
         var fromPicture = new SortedDictionary<int, (string System, int Stamp)>();
         foreach (var (sys, c, stamp) in _view!.CharactersSeen())
-            if (c.Side == Enemy && c.Status == Rebellion.Core.Characters.CharacterStatus.Free && stamp >= since
+            if (c.Side == Enemy && c.Status == Praedra.Core.Characters.CharacterStatus.Free && stamp >= since
                 && (!fromPicture.TryGetValue(c.Id, out var had) || stamp > had.Stamp))
                 fromPicture[c.Id] = (sys, stamp);
         foreach (var (id, p) in fromPicture)
@@ -552,7 +552,7 @@ public sealed partial class SimpleAi
     /// <summary>The side is ahead for its victory keys: Finishing, or for the Alliance its place term (Coruscant held or destroyed).</summary>
     private bool KeyAhead()
     {
-        string cor = Rebellion.Core.Victory.VictoryModule.CoruscantName;
+        string cor = Praedra.Core.Victory.VictoryModule.CoruscantName;
         return Finishing() || (_side == Side.Alliance && (Held(cor) || Destroyed(cor)));
     }
 

@@ -1,11 +1,11 @@
-using Rebellion.Core.AI;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Control;
-using Rebellion.Core.Fog;
-using Rebellion.Core.Setup;
+using Praedra.Core.AI;
+using Praedra.Core.Clock;
+using Praedra.Core.Control;
+using Praedra.Core.Fog;
+using Praedra.Core.Setup;
 using Xunit.Abstractions;
 
-namespace Rebellion.Core.Tests.AI;
+namespace Praedra.Core.Tests.AI;
 
 // The fogged AI as an opponent (SimpleAiParams.UseFog = true): it scouts, attacks from its last-seen picture, the Empire hunts the Rebel HQ
 // with a belief map and the Alliance moves its HQ when it is at risk. Rules checked: m5-fog-and-hq §N8 (the AI reads only its side's
@@ -20,7 +20,7 @@ public class SimpleAiFogPlayTests
 
     private static (AiMatch M, GameHost H) Match(int seed, Side? passive = null, Action<GameHost>? setup = null)
     {
-        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory });
+        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = Praedra.Core.Tests.Setup.DealSettings.FileOldVictory });
         setup?.Invoke(h);
         return (new AiMatch(h, Fog, Fog, passive), h);
     }
@@ -142,7 +142,7 @@ public class SimpleAiFogPlayTests
     [Fact]
     public void DefenderEstimate_UsesTheLastSightingWithAStalenessMargin()
     {
-        var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA, Settings = Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory });
+        var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA, Settings = Praedra.Core.Tests.Setup.DealSettings.FileOldVictory });
         var ai = new SimpleAi(h, Side.Alliance, Fog);
         // an Imperial system the Alliance's picture shows Imperial, ground never seen (a Core system: owner reported, nothing else)
         string other = h.Data.Galaxy.Systems.Select(x => x.Name).First(n => n != "Coruscant" &&
@@ -165,7 +165,7 @@ public class SimpleAiFogPlayTests
     [Fact]
     public void DefenderEstimate_ForgetsAGarrisonSeenTooLongAgo()
     {
-        var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA, Settings = Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory });
+        var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA, Settings = Praedra.Core.Tests.Setup.DealSettings.FileOldVictory });
         var p = Fog with { FogGroundForgetDays = 30 };
         var ai = new SimpleAi(h, Side.Alliance, p);
         bool done = false;
@@ -189,7 +189,7 @@ public class SimpleAiFogPlayTests
         var (m, h) = Match(1);
         m.RunTo(600);
         var ev = h.Game.Events;
-        int battles = ev.OfType<Rebellion.Core.Battle.BattleEnded>().Count();
+        int battles = ev.OfType<Praedra.Core.Battle.BattleEnded>().Count();
         int eTook = ev.OfType<SystemCaptured>().Count(e => e.From == Side.Alliance && e.To == Side.Empire);
         int aTook = ev.OfType<SystemCaptured>().Count(e => e.From == Side.Empire && e.To == Side.Alliance);
         _out.WriteLine($"day {h.Game.Day} winner {h.Victory.Winner}; battles {battles}; Empire took {eTook} Alliance systems, Alliance took {aTook} Imperial; HQ moves {ev.OfType<HqDeparted>().Count()}");

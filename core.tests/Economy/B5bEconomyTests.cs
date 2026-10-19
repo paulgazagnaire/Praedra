@@ -1,13 +1,13 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Tests.Construction;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Setup;
+using Praedra.Core.Tests.Construction;
 
-namespace Rebellion.Core.Tests.Economy;
+namespace Praedra.Core.Tests.Economy;
 
-// Tests of reverse-engineering batch B5b (mines, refineries, upkeep and build orders the 1998 way), ids B5b-1 to B5b-11.
+// Tests of reverse-engineering batch B5b (mines, refineries, upkeep and build orders the Classic way), ids B5b-1 to B5b-11.
 // Sheets: m2-mines-refineries-pools, m2-maintenance, m2-construction (B5b corrections, 2026-10-18). Hook time T = K + 1.
 public class B5bEconomyTests
 {
@@ -92,7 +92,7 @@ public class B5bEconomyTests
     public void B5b_2_BlockadeMidCycleAbandonsTheCyclesAndDropsCapacityAtOnce()
     {
         var w = TwoMiningWorlds();
-        // Blockade pause, 2026-10-18: this checks the 1998 rule, so it sets the Original switches (SuspendedLeaveCapacity on, MineStopMode Abandon).
+        // Blockade pause, 2026-10-18: this checks the Classic rule, so it sets the Classic switches (SuspendedLeaveCapacity on, MineStopMode Abandon).
         w.Eco.SuspendedLeaveCapacity = true; w.Eco.MineStopMode = StopMode.Abandon;
         w.Run(1);
         Assert.Equal(350, w.Eco.Capacity(Side.Empire));
@@ -102,7 +102,7 @@ public class B5bEconomyTests
         AssertHomeStopsMidCycle(w, "Suspended");
     }
 
-    // B5b-2b (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch): with the DEFAULTs
+    // B5b-2b (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, Classic is the switch): with the DEFAULTs
     // (SuspendedLeaveCapacity off, MineStopMode Pause) the same blockade leaves capacity at 350, and Home's mines and refineries keep their
     // running cycles frozen; lifted, the mines pay the points they were working on. rule: m2-maintenance §Capacity; m2-mines-refineries-pools §Blockade and uprising
     [Fact]
@@ -128,7 +128,7 @@ public class B5bEconomyTests
     }
 
     // B5b-2c (Blockade pause, 2026-10-18): a refinery whose cycle is running keeps the raw it took; frozen while blockaded, it pays its
-    // refined unit after the blockade. Abandon (1998): the raw is lost and nothing is paid. rule: m2-mines-refineries-pools §Blockade and uprising
+    // refined unit after the blockade. Abandon (Classic): the raw is lost and nothing is paid. rule: m2-mines-refineries-pools §Blockade and uprising
     [Theory]
     [InlineData(StopMode.Pause, 1)]
     [InlineData(StopMode.Abandon, 0)]
@@ -151,7 +151,7 @@ public class B5bEconomyTests
         Assert.Equal(0, w.Eco.Raw(Side.Empire));
     }
 
-    // Blockade pause, 2026-10-18: SuspendedLeaveCapacity on is the 1998 rule (Original switch): the same blockade takes Home's pair out at once.
+    // Blockade pause, 2026-10-18: SuspendedLeaveCapacity on is the Classic rule (Classic switch): the same blockade takes Home's pair out at once.
     // rule: m2-maintenance §Capacity
     [Theory]
     [InlineData(false, 350)]
@@ -174,7 +174,7 @@ public class B5bEconomyTests
     {
         var w = TwoMiningWorlds();
         Assert.True(w.Eco.UprisingStopsMining);
-        // Blockade pause, 2026-10-18: this checks the 1998 rule, so it sets the Original switches (SuspendedLeaveCapacity on, MineStopMode Abandon).
+        // Blockade pause, 2026-10-18: this checks the Classic rule, so it sets the Classic switches (SuspendedLeaveCapacity on, MineStopMode Abandon).
         w.Eco.SuspendedLeaveCapacity = true; w.Eco.MineStopMode = StopMode.Abandon;
         bool uprising = false;
         w.Eco.IsInUprising = s => uprising && s == Home;
@@ -201,7 +201,7 @@ public class B5bEconomyTests
         w.Hold(Home, Side.Empire, 50); // d = 5 x 200 / 100 = 10 at share 0
         int a = w.Mine(Home), b = w.Mine(Home);
         Assert.Equal(10, EconomyModule.CycleDays(new EconomyParams(), 50, 0));
-        w.Eco.MineStopMode = StopMode.Abandon; // Blockade pause, 2026-10-18: the 1998 restart after an abandoned cycle (Original switch); Pause resumes instead
+        w.Eco.MineStopMode = StopMode.Abandon; // Blockade pause, 2026-10-18: the Classic restart after an abandoned cycle (Classic switch); Pause resumes instead
         w.Run(1);
         int blocker = Interdictor(w, Side.Alliance, Home);
         w.Run(5); // stopped at hook 2, still blockaded at hook 6

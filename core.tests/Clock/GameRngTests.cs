@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Tests.Clock;
+namespace Praedra.Core.Tests.Clock;
 
 // rule: m1-clock-and-orders §Seeded random numbers (rules 1, 2; Open question 3: PCG32 chosen and frozen)
 public class GameRngTests

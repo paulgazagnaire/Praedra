@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Fog;
+namespace Praedra.Core.Fog;
 
 /// <summary>A group value with its stamp and age (age null in Classic). rule: m5-fog-and-hq §N2.</summary>
 public sealed record Seen<T>(T Value, int Stamp, int? AgeDays);

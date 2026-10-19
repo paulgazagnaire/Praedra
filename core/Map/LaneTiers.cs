@@ -1,7 +1,7 @@
 using System.Globalization;
-using Rebellion.Core.Data;
+using Praedra.Core.Data;
 
-namespace Rebellion.Core.Map;
+namespace Praedra.Core.Map;
 
 /// <summary>
 /// Lane tier table: which lane kinds belong to which tier, and the tier's speed factor in percent.

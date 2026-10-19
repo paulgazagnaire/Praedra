@@ -1,8 +1,8 @@
 using System.Globalization;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Data;
+using Praedra.Core.Clock;
+using Praedra.Core.Data;
 
-namespace Rebellion.Core.Troops;
+namespace Praedra.Core.Troops;
 
 /// <summary>
 /// One regiment class (a TROOPSD row). Every column is loaded; the M3 troop rules use side, cost, maintenance and research (through the
@@ -22,8 +22,8 @@ public sealed record SpecialForceClass(
     int EspionageVariance, int CombatVariance, int LeadershipVariance, int LoyaltyBase, int MissionBit, int ResearchOrder);
 
 /// <summary>
-/// The troop and special-force class tables, loaded from <c>data/original/troop-regiments.csv</c> and <c>special-forces.csv</c> (values copied
-/// from units/01 until the importer produces data/original/; unverified vs original), plus the names table <c>data/design/unit-names.csv</c>
+/// The troop and special-force class tables, loaded from <c>data/classic/troop-regiments.csv</c> and <c>special-forces.csv</c> (values copied
+/// from units/01 until the importer produces data/classic/; unverified vs Classic), plus the names table <c>data/design/unit-names.csv</c>
 /// (the renames: names only, ids and stats keep the original). Classes are keyed by the class name used in the registry
 /// (<see cref="Economy.EconObject.Class"/>), ordinal, and also listed by id. rule: m3-troops-and-special-forces §Special force classes as data (Renames).
 /// </summary>

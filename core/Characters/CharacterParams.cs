@@ -1,11 +1,11 @@
-namespace Rebellion.Core.Characters;
+namespace Praedra.Core.Characters;
 
 /// <summary>
 /// Who can train and awaken the Force. rule: m5-characters-and-force §Rule (New) 4 (Paul 2026-10-18).
 /// </summary>
 public enum TrainerPick
 {
-    /// <summary>The 1998 data flag <c>jedi_trainer</c> (Luke, Vader). Classic.</summary>
+    /// <summary>The Classic data flag <c>jedi_trainer</c> (Luke, Vader). Classic.</summary>
     Fixed,
     /// <summary>DEFAULT (New): <see cref="CharacterParams.TalentedPerSide"/> characters per side drawn at every game start.</summary>
     Random,
@@ -29,7 +29,7 @@ public enum ForceDiscoveryMode
 public enum StartCastOfficers
 {
     /// <summary>DEFAULT: Vader and the five officers (Jerjerrod, Ozzel, Piett, Veers, Needa).</summary>
-    Original,
+    Classic,
     /// <summary>Vader only; the five officers stay in the Empire pool.</summary>
     None,
 }
@@ -60,30 +60,30 @@ public sealed record CharacterParams
     public int DeathStarHitPercent { get; init; } = 50;
     /// <summary>
     /// Jedi Training gain cap, percent of the gap: <c>g = rand(0..gap * this / 100)</c>. DEFAULT 25 (New, Paul 2026-10-18: five or six trainers, so
-    /// training is slower); <see cref="ClassicTrainingGainPercent"/> 50 = 1998 (GNPRTB 6173). rule: m5-characters-and-force §Force (Jedi Training: the roll).
+    /// training is slower); <see cref="ClassicTrainingGainPercent"/> 50 = Classic (GNPRTB 6173). rule: m5-characters-and-force §Force (Jedi Training: the roll).
     /// </summary>
     public int ForceTrainingGainPercent { get; init; } = 25;
     /// <summary>
     /// Prisoners land (New, Paul 2026-10-18 decision card "Land them"): at day end a fleet standing at a system its own side holds, not blockaded,
-    /// puts the prisoners it holds aboard ashore there, where an ordinary Rescue can reach them. DEFAULT true; false = 1998 (a prisoner aboard stays
+    /// puts the prisoners it holds aboard ashore there, where an ordinary Rescue can reach them. DEFAULT true; false = Classic (a prisoner aboard stays
     /// aboard until he escapes; B2e §3 "A prisoner held aboard stays aboard"). rule: m5-characters-and-force §Capture, injury, death, freeing.
     /// </summary>
     public bool LandPrisoners { get; init; } = true;
-    /// <summary>The 1998 training gain percent (GNPRTB 6173 = 50). Traced, 0x55ca20. rule: m5-characters-and-force §Numbers.</summary>
+    /// <summary>The Classic training gain percent (GNPRTB 6173 = 50). Traced, 0x55ca20. rule: m5-characters-and-force §Numbers.</summary>
     public const int ClassicTrainingGainPercent = 50;
     /// <summary>Training chance cap, percent (min(gap, 100)). Traced code, reading [inferred].</summary>
     public int TrainingChanceCap { get; init; } = 100;
     /// <summary>
-    /// Jedi Training chance scale: <c>chance = min(gap, 100) * this / 100</c>. DEFAULT 50 (New, Paul 2026-10-18); 100 = 1998 (Traced, reading [inferred]).
-    /// rule: m5-characters-and-force §Force (Jedi Training: the roll; New, Paul 2026-10-18; 1998 = 100).
+    /// Jedi Training chance scale: <c>chance = min(gap, 100) * this / 100</c>. DEFAULT 50 (New, Paul 2026-10-18); 100 = Classic (Traced, reading [inferred]).
+    /// rule: m5-characters-and-force §Force (Jedi Training: the roll; New, Paul 2026-10-18; Classic = 100).
     /// </summary>
     public int ForceTrainingChancePercent { get; init; } = 50;
     /// <summary>
     /// Share of the Force that multiplies diplomacy, espionage and combat: <c>B + B * F * this / 10000</c>. DEFAULT 40 (New, Paul 2026-10-18: a master
-    /// at 120 gives +48% instead of +120%); 100 = 1998 (Traced B2e §1). rule: m5-characters-and-force §Force (New, Paul 2026-10-18; 1998 = 100).
+    /// at 120 gives +48% instead of +120%); 100 = Classic (Traced B2e §1). rule: m5-characters-and-force §Force (New, Paul 2026-10-18; Classic = 100).
     /// </summary>
     public int ForceSkillPercent { get; init; } = 40;
-    /// <summary>The 1998 values of the three Force tone-down switches (Classic). rule: m5-characters-and-force §Force (Classic (1998) = 100 / 100 / 50).</summary>
+    /// <summary>The Classic values of the three Force tone-down switches (Classic). rule: m5-characters-and-force §Force (Classic = 100 / 100 / 50).</summary>
     public const int ClassicForceSkillPercent = 100, ClassicTrainingChancePercent = 100;
     /// <summary>Lowest effective Force of a Jedi Student. DEFAULT 1 (no number known; Open question 15).</summary>
     public int ForceStudentMin { get; init; } = 1;
@@ -132,13 +132,13 @@ public sealed record CharacterParams
     public int EscapeDelaySpread { get; init; } = 1000;
 
     // ---- Force (Traced B2e §4, §5). rule: §Force
-    /// <summary>Who trains and awakens: DEFAULT Random (New, Paul 2026-10-18); Fixed = the 1998 data flag. rule: §Rule (New) 4.</summary>
+    /// <summary>Who trains and awakens: DEFAULT Random (New, Paul 2026-10-18); Fixed = the Classic data flag. rule: §Rule (New) 4.</summary>
     public TrainerPick TrainerPick { get; init; } = TrainerPick.Random;
     /// <summary>Talented characters drawn per side at setup (Art Director proposal, 2026-10-18: 3 per side, 6 in all). rule: §Rule (New) 4.</summary>
     public int TalentedPerSide { get; init; } = 3;
     /// <summary>
     /// The Force a drawn talented character gets: rand(min..max), kept if his own is higher (Q16 DEFAULT). PROPOSAL (Dev lead 2026-10-18): 80 =
-    /// <see cref="TrainerMinForce"/> so he can awaken; 120 = Vader's 1998 value. rule: §Rule (New) 4.
+    /// <see cref="TrainerMinForce"/> so he can awaken; 120 = Vader's Classic value. rule: §Rule (New) 4.
     /// </summary>
     public int TalentedForceMin { get; init; } = 80;
     /// <summary>See <see cref="TalentedForceMin"/>.</summary>
@@ -191,7 +191,7 @@ public sealed record CharacterParams
     public bool CharactersLostWithFleet { get; init; }
     /// <summary>An enemy fleet stops or captures a lone character in transit. DEFAULT false; on has no rule: refused.</summary>
     public bool CharactersStoppedInTransit { get; init; }
-    /// <summary>Personnel leaving a blockaded system risk capture (Original text, no rule). DEFAULT false; on refused.</summary>
+    /// <summary>Personnel leaving a blockaded system risk capture (Classic text, no rule). DEFAULT false; on refused.</summary>
     public bool BlockadeEscapeRisk { get; init; }
     /// <summary>Assaults capture or kill officers (Missing). DEFAULT false; on refused.</summary>
     public bool AssaultHarmsCharacters { get; init; }
@@ -240,10 +240,10 @@ public sealed record CharacterParams
     public bool NavigatorBonus { get; init; }
 
     // ---- setup switches owned by m5-setup-and-victory P9 (kept here because they only steer the character placement)
-    /// <summary>Extra random characters per side at the start. DEFAULT 4 = SDPRTB 0x1402, size tier 3 (the biggest 1998 galaxy; SizeTier DEFAULT 3, B4 §14.1). rule: m5-setup-and-victory §P9.</summary>
+    /// <summary>Extra random characters per side at the start. DEFAULT 4 = SDPRTB 0x1402, size tier 3 (the biggest Classic galaxy; SizeTier DEFAULT 3, B4 §14.1). rule: m5-setup-and-victory §P9.</summary>
     public int StartExtrasPerSide { get; init; } = 4;
-    /// <summary>DEFAULT Original. rule: m5-setup-and-victory §P9 item 2.</summary>
-    public StartCastOfficers StartCastOfficers { get; init; } = StartCastOfficers.Original;
+    /// <summary>DEFAULT Classic. rule: m5-setup-and-victory §P9 item 2.</summary>
+    public StartCastOfficers StartCastOfficers { get; init; } = StartCastOfficers.Classic;
 
     /// <summary>Throw <see cref="RuleMissingException"/> for every switch value the sheet refuses. rule: §Defaults for undecided items, CH31.</summary>
     public void Validate()

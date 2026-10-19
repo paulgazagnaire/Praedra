@@ -1,10 +1,10 @@
-using Rebellion.Core.AI;
-using Rebellion.Core.Battle;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Setup;
+using Praedra.Core.AI;
+using Praedra.Core.Battle;
+using Praedra.Core.Clock;
+using Praedra.Core.Setup;
 using Xunit.Abstractions;
 
-namespace Rebellion.Core.Tests.AI;
+namespace Praedra.Core.Tests.AI;
 
 // Regression: a strike pile chased a small enemy fleet that kept retreating between two systems (the morale retreat of m4-battle-classic,
 // to a lane neighbour by m4-retreat-damage-repair §3), with no losses on either side, for 50 days and more (sim aivai --passive empire

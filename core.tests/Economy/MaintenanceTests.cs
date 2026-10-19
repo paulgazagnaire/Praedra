@@ -1,7 +1,7 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
 
-namespace Rebellion.Core.Tests.Economy;
+namespace Praedra.Core.Tests.Economy;
 
 // Tests of m2-maintenance (ids M1 to M22) on the real costs file. Hook time T = K + 1; events carry Day = T.
 // Empire fixture E: 7 mines and 7 refineries (capacity 350); Orbital Shipyard id 100; 4 ISD ids 101 to 104;

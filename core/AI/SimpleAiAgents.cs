@@ -1,13 +1,13 @@
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Missions;
-using Rebellion.Core.Research;
-using Rebellion.Core.Troops;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Missions;
+using Praedra.Core.Research;
+using Praedra.Core.Troops;
 
-namespace Rebellion.Core.AI;
+namespace Praedra.Core.AI;
 
 /// <summary>
 /// The simple AI's characters and missions (<see cref="SimpleAiParams.UseCharactersAndMissions"/>, DEFAULT on; off = the AI of before, byte for
@@ -30,7 +30,7 @@ namespace Rebellion.Core.AI;
 /// It reads the other side only through the "what the AI may see" block of SimpleAi.cs (MissionDefendersAt, SupportSeen, OwnerSeen,
 /// EnemyCharactersSeen, the belief map and the picture), so with UseFog it reads only its side's knowledge (m5-fog-and-hq §N8). Own characters,
 /// own missions and own systems are the side's own state. Like the rest of the AI it keeps no memory between days and draws no random number.
-/// Not used (refused by the core with RuleMissing, or impossible today): decoys (the 1998 AI's, B6c §7: the decoy table is Missing), Jedi Training,
+/// Not used (refused by the core with RuleMissing, or impossible today): decoys (the Classic AI's, B6c §7: the decoy table is Missing), Jedi Training,
 /// Death Star Sabotage; not planned: Assassination (a kill of a major
 /// becomes an injury; the AI prefers Abduction).
 /// </summary>
@@ -106,7 +106,7 @@ public sealed partial class SimpleAi
     /// <summary>
     /// Emperor home (B6c §7, planner kind 6, Empire only): while the Empire holds the Seat of Power system (Coruscant, which is in its own
     /// sector, so the "holds a system in Coruscant's sector" start test holds too), the Emperor is taken off every other job, brought there and
-    /// kept there; the Seat of Power (m5-characters-and-force §Seat of Power) stays on. With EmperorHomeAfterRecruiting the planner, as in 1998,
+    /// kept there; the Seat of Power (m5-characters-and-force §Seat of Power) stays on. With EmperorHomeAfterRecruiting the planner, as in Classic,
     /// starts only once the side has nobody left to recruit (the recruitment count ctrl+0xa4 is 0: the pool-empty flag, or an empty pool), so
     /// until then the Emperor recruits and subdues like any leader (QA-12). QA-8 measured the Emperor on Coruscant on 1-7% of days without the
     /// planner, and captured on missions.
@@ -427,7 +427,7 @@ public sealed partial class SimpleAi
             }
         }
         // 2. Recruitment (B6c §7 list item 1): while the side has anyone left to recruit, up to MaxRecruiters running (never more than the pool
-        // holds), at the capital (the 1998 gathering system is not read: B6c §12 item 5; DEFAULT the capital, where the recruit appears)
+        // holds), at the capital (the Classic gathering system is not read: B6c §12 item 5; DEFAULT the capital, where the recruit appears)
         if (_p.MaxRecruiters > 0 && KindUsable(MissionKind.Recruitment) && _h.Missions.Recruit != null && Capital() is { } cap && Held(cap))
         {
             int want = Math.Min(_p.MaxRecruiters, _h.Characters.RecruitPoolOf(_side).Count) - own.Count(m => m.Kind == MissionKind.Recruitment);

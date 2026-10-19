@@ -48,7 +48,7 @@ The first time you press **New Game**, a **How to play** page opens. You can ope
 | Missions list | `M` |
 | How to play | `F1` |
 
-Saves live in Godot's user folder (macOS: `~/Library/Application Support/Godot/app_userdata/Praedra/`, Linux: `~/.local/share/godot/app_userdata/Praedra/`): `save1.json` and `autosave.json`. Delete `howto_seen.txt` there to see the first-time How to play page again. Builds made before the rename to Praedra (2026-10-19) saved under `app_userdata/Rebellion/`; the new builds do not see those saves.
+Saves live in Godot's user folder (macOS: `~/Library/Application Support/Godot/app_userdata/Praedra/`, Linux: `~/.local/share/godot/app_userdata/Praedra/`): `save1.json` and `autosave.json`. Delete `howto_seen.txt` there to see the first-time How to play page again.
 
 ## For developers
 
@@ -62,11 +62,11 @@ Missions: the screens list only the player's own mission groups (`host.Missions.
 
 Files: `Main.cs` (screens, command-line modes, headless smoke test), `Main.Playtest.cs` (the headless playtest), `StartMenu.cs`, `GameScreen.cs` (top bar, loop, log, overlays), `GameScreen.Panels.cs` (system, fleet, build panels, move mode), `GameScreen.Characters.cs` (Characters list, fleet officers, system General, moving a character alone), `GameScreen.Missions.cs` (the mission planner, the Missions list, special forces on the system panel), `GameSession.Missions.cs` (mission words, refusals and messages), `Main.PlaytestCharacters.cs` and `Main.PlaytestMissions.cs` (the character and mission parts of the playtest), `GameScreen.Playtest.cs` (click helpers for the playtest and screenshot options), `GameSession.cs` (queued orders tracked, core events turned into plain messages), `GalaxyView.cs`, `FleetLayer.cs`.
 
-Needs the **Godot 4.7.1 .NET (mono)** editor and the **.NET 8 SDK**. The project is NOT in `Rebellion.sln` (CI has no Godot SDK). Data: the csproj copies `data/design/**.csv` and `data/original/*.csv` to `godot/data/**.txt` (git-ignored) before every build, because Godot drops `.csv` from exports; at start the game copies them to the user folder as `.csv` for the core's `GameData.Load`.
+Needs the **Godot 4.7.1 .NET (mono)** editor and the **.NET 8 SDK**. The project is NOT in `Praedra.sln` (CI has no Godot SDK). Data: the csproj copies `data/design/**.csv` and `data/classic/*.csv` to `godot/data/**.txt` (git-ignored) before every build, because Godot drops `.csv` from exports; at start the game copies them to the user folder as `.csv` for the core's `GameData.Load`.
 
 ```
 cd godot
-dotnet build RebellionViewer.csproj -p:RestoreAdditionalProjectSources=/tmp/godot/nupkgs   # or the nupkgs folder of the editor download
+dotnet build PraedraViewer.csproj -p:RestoreAdditionalProjectSources=/tmp/godot/nupkgs   # or the nupkgs folder of the editor download
 godot --headless --path . -- --smoke      # 60 days of a new game with scripted orders, plus a save/load round trip
 godot --headless --path . -- --playtest   # plays Alliance and Empire games through the real screens (see below); exit code 1 on failure
 ```

@@ -1,9 +1,9 @@
-using Rebellion.Core.Battle;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Ships;
+using Praedra.Core.Battle;
+using Praedra.Core.Clock;
+using Praedra.Core.Fleets;
+using Praedra.Core.Ships;
 
-namespace Rebellion.Core.Tests.Fleets;
+namespace Praedra.Core.Tests.Fleets;
 
 // Tests of m4-battle-new §12 (CombatStrength, the engine's own strength measure) and the strategic rules that use it: forced stop and economic
 // blockade (m1-forced-stop-and-blockade, 2026-10-12 update). Ids N8 to N12 as in m4-battle-new. All with the real CSVs.

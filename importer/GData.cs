@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.Text;
 
-namespace Rebellion.Importer;
+namespace Praedra.Importer;
 
 /// <summary>The four fixed-size entry kinds and the variable one of the table files. rule: 02-gdata-formats §2.</summary>
 public static class EntryKinds

@@ -1,8 +1,8 @@
-using Rebellion.Core.AI;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Setup;
+using Praedra.Core.AI;
+using Praedra.Core.Clock;
+using Praedra.Core.Setup;
 
-namespace Rebellion.Core.Tests.AI;
+namespace Praedra.Core.Tests.AI;
 
 // QA-20 (QA round 34): task forces read the enemy fleets of the side's picture, and a later look at a system replaces its entry, so a big fleet
 // that left a system was forgotten the day the side looked there again (seed 10 Hard Empire vs Medium Alliance: known 43 against a true 227 on

@@ -1,13 +1,13 @@
 using System.Reflection;
-using Rebellion.Core.Battle;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Control;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Map;
-using Rebellion.Core.Support;
+using Praedra.Core.Battle;
+using Praedra.Core.Clock;
+using Praedra.Core.Control;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Map;
+using Praedra.Core.Support;
 
-namespace Rebellion.Core.Fog;
+namespace Praedra.Core.Fog;
 
 /// <summary>What a side knows about a system, derived on demand, never stored. rule: m5-fog-and-hq §N1.</summary>
 public enum KnowledgeLevel { Unknown, Charted, Observed, Held }
@@ -96,7 +96,7 @@ public sealed class FogModule
 
     /// <summary>
     /// Setup, day 0 (outside a Step; raises nothing): systems with <c>start_explored_all</c> give both sides Explored and groups A and B, and C
-    /// (the facilities) with <see cref="FogParams.SetupRevealsFacilities"/> (1998 = on, B4 §11; DEFAULT off); never D or E, LastLookDay null;
+    /// (the facilities) with <see cref="FogParams.SetupRevealsFacilities"/> (Classic = on, B4 §11; DEFAULT off); never D or E, LastLookDay null;
     /// each side gets OwnLive of the systems it holds; the StartFullCopy lists give a FullCopy (Yavin to the Empire,
     /// only if the galaxy has it). Nothing reveals the HQ system. Call after owners, facilities and fleets are dealt. rule: m5-fog-and-hq §F4.
     /// </summary>
@@ -216,7 +216,7 @@ public sealed class FogModule
         bool a, b, c, d, e;
         switch (kind)
         {
-            // rule: m5-fog-and-hq §F2 Setup: A and B, plus C (facilities) with SetupRevealsFacilities (1998 = on, DEFAULT off), never D or E
+            // rule: m5-fog-and-hq §F2 Setup: A and B, plus C (facilities) with SetupRevealsFacilities (Classic = on, DEFAULT off), never D or E
             // (B4 §11: stage 0x18 gives core systems their facilities, 0x539ac0)
             case RevealKind.Setup: a = b = true; c = Params.SetupRevealsFacilities; d = e = false; break;
             case RevealKind.FullCopy: case RevealKind.OwnLive: a = b = c = d = e = true; break;
@@ -802,8 +802,8 @@ public sealed class FogModule
                     if (!c.Placed) continue;
                     string? at = c.Status switch
                     {
-                        Rebellion.Core.Characters.CharacterStatus.Captured => c.HeldAboard == 0 ? c.HeldAt : null,
-                        Rebellion.Core.Characters.CharacterStatus.Free or Rebellion.Core.Characters.CharacterStatus.Injured
+                        Praedra.Core.Characters.CharacterStatus.Captured => c.HeldAboard == 0 ? c.HeldAt : null,
+                        Praedra.Core.Characters.CharacterStatus.Free or Praedra.Core.Characters.CharacterStatus.Injured
                             => c.AttachedFleet == 0 && c.Transit == null && !onMission.Contains(c.Id) ? c.System : null,
                         _ => null,
                     };

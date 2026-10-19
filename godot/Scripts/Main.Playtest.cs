@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
 
-using Side = Rebellion.Core.Clock.Side;
+using Side = Praedra.Core.Clock.Side;
 
-namespace RebellionViewer;
+namespace PraedraViewer;
 
 /// <summary>
 /// Headless playtest (<c>--playtest</c>): plays whole games through the real screens. Every action is a click on the real button (the same
@@ -83,8 +83,8 @@ public partial class Main
         Expect(UiTest.Click(menu, side.ToString()), $"pick {side}");
         Expect(UiTest.Click(menu, "Medium"), "pick Medium");
         // Space battle rules: New is the default (Paul 2026-10-18); the Alliance run picks Classic (m4-battle-new ruleset switch).
-        var wantRules = side == Side.Empire ? Rebellion.Core.Battle.BattleRuleset.New : Rebellion.Core.Battle.BattleRuleset.Classic;
-        if (wantRules == Rebellion.Core.Battle.BattleRuleset.Classic) Expect(UiTest.Click(menu, "Classic (1998)"), "pick the Classic battle rules");
+        var wantRules = side == Side.Empire ? Praedra.Core.Battle.BattleRuleset.New : Praedra.Core.Battle.BattleRuleset.Classic;
+        if (wantRules == Praedra.Core.Battle.BattleRuleset.Classic) Expect(UiTest.Click(menu, "Classic"), "pick the Classic battle rules");
         Expect(UiTest.Click(menu, "New Game"), "click New Game");
         var gs = Gs;
         Expect(gs != null, "the game screen opened");
@@ -290,7 +290,7 @@ public partial class Main
             gs.PlayRefresh();
             if (me == Side.Empire) Expect(gs.ButtonTexts().Any(t => t.StartsWith("Death Star   ", StringComparison.Ordinal)), "the Death Star is in the Empire's Ships build list");
             else Expect(!gs.ButtonTexts().Any(t => t.StartsWith("Death Star   ", StringComparison.Ordinal)), "the Alliance's Ships build list has no Death Star");
-            var shipBtn = gs.ButtonTexts().FirstOrDefault(t => t.Contains("refined, upkeep") && !t.Contains("(not researched)") && t.Contains("   ") && !Rebellion.Core.Economy.FacilityKinds.TryParse(t[..t.IndexOf("   ", StringComparison.Ordinal)], out _)); // any researched ship
+            var shipBtn = gs.ButtonTexts().FirstOrDefault(t => t.Contains("refined, upkeep") && !t.Contains("(not researched)") && t.Contains("   ") && !Praedra.Core.Economy.FacilityKinds.TryParse(t[..t.IndexOf("   ", StringComparison.Ordinal)], out _)); // any researched ship
             Expect(shipBtn != null, "a basic ship can be chosen in the Ships list");
             if (shipBtn != null)
             {
@@ -346,7 +346,7 @@ public partial class Main
         // the player must get a plain-words "Sensors:" message for every SensorReport its side was given.
         var frontier = gs.G.Systems.Where(x => s.OwnerOf(x.Name) == me && s.Host.Economy.FreeEnergy(x.Name) > 0 && gs.G.OnRoute(x.Index) && gs.G.NearOf(x.Index).Any(nb => s.OwnerOf(gs.G.Systems[nb].Name) != me))
             .Select(x => x.Name).OrderBy(x => x, StringComparer.Ordinal).Take(4).ToList();
-        foreach (var f in frontier) s.Host.Economy.AddFacility(f, Rebellion.Core.Economy.FacilityKind.SensorStation);
+        foreach (var f in frontier) s.Host.Economy.AddFacility(f, Praedra.Core.Economy.FacilityKind.SensorStation);
         Expect(frontier.Count > 0, $"{frontier.Count} frontier systems got a Sensor Station for the run");
 
         // ---------------------------------------------------------------- run to day 400 against the AI
@@ -361,15 +361,15 @@ public partial class Main
         // The core's unfiltered event list is read here only to check the screens: the AI acted, and the player was told only what its
         // side may know (rule: m5-fog-and-hq §N8 event audience).
         var runEvents = Enumerable.Range(evStart, s.Game.Events.Count - evStart).Select(i => (Ev: s.Game.Events[i], Aud: s.Game.AudienceOf(i))).ToList();
-        int enemyActs = runEvents.Count(x => x.Ev is Rebellion.Core.Control.SystemCaptured c && c.To == s.Enemy
+        int enemyActs = runEvents.Count(x => x.Ev is Praedra.Core.Control.SystemCaptured c && c.To == s.Enemy
                                           || x.Ev is FleetDeparted fd && s.Game.State.Fleets.TryGetValue(fd.Fleet, out var ef) && ef.Side == s.Enemy);
         Expect(enemyActs > 0, $"the AI opponent did things ({enemyActs} enemy fleet departures and captures)");
-        int myBit = Rebellion.Core.Victory.ScenarioState.Bit(me);
-        var hiddenCaptures = runEvents.Where(x => x.Ev is Rebellion.Core.Control.SystemCaptured && (x.Aud & myBit) == 0).Select(x => (Rebellion.Core.Control.SystemCaptured)x.Ev).ToList();
+        int myBit = Praedra.Core.Victory.ScenarioState.Bit(me);
+        var hiddenCaptures = runEvents.Where(x => x.Ev is Praedra.Core.Control.SystemCaptured && (x.Aud & myBit) == 0).Select(x => (Praedra.Core.Control.SystemCaptured)x.Ev).ToList();
         var newMsgs = s.Messages.Skip(msgStart).ToList();
         Expect(!hiddenCaptures.Any(c => newMsgs.Any(m => m.Day == c.Day && m.Text.Contains("captured " + c.System))),
             $"no message about the {hiddenCaptures.Count} captures the player's side could not see");
-        var sensorReports = runEvents.Where(x => x.Ev is Rebellion.Core.Fog.SensorReport r && (x.Aud & myBit) != 0).Select(x => (Rebellion.Core.Fog.SensorReport)x.Ev).ToList();
+        var sensorReports = runEvents.Where(x => x.Ev is Praedra.Core.Fog.SensorReport r && (x.Aud & myBit) != 0).Select(x => (Praedra.Core.Fog.SensorReport)x.Ev).ToList();
         Expect(sensorReports.All(r => r.Viewer == me), "the core gave Sensor reports only to the station owner");
         Expect(sensorReports.Count > 0, $"the Sensor Stations warned of enemy fleets during the run ({sensorReports.Count})");
         Expect(sensorReports.All(r => newMsgs.Any(m => m.Day == r.Day && m.Text.StartsWith("Sensors: ", StringComparison.Ordinal) && m.Text.Contains("fleet heading for " + r.System))),
@@ -500,9 +500,9 @@ public partial class Main
         Expect(gs.HqStatusText.Contains(dest), "HQ line says the move is waiting: " + gs.HqStatusText);
         gs.PlayDay();
         var h = s.OwnHq;
-        Expect(h.Status == Rebellion.Core.Fog.HqStatus.InTransit || s.MyHqSystem == dest, $"the HQ left {hq} (status {h.Status})");
+        Expect(h.Status == Praedra.Core.Fog.HqStatus.InTransit || s.MyHqSystem == dest, $"the HQ left {hq} (status {h.Status})");
         Expect(s.Messages.Skip(before).Any(m => m.Text.StartsWith("HQ moving to " + dest + ", arrives day", StringComparison.Ordinal)), "message 'HQ moving to X, arrives day N': " + string.Join(" | ", s.Messages.Skip(before).Select(m => m.Text)));
-        if (h.Status == Rebellion.Core.Fog.HqStatus.InTransit)
+        if (h.Status == Praedra.Core.Fog.HqStatus.InTransit)
         {
             int arrive = GameSession.HqArrivalDay(h);
             Expect(gs.HqStatusText == $"HQ moving to {dest}, arrives day {arrive}.", "HQ line: " + gs.HqStatusText);

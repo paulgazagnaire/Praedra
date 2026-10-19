@@ -1,7 +1,7 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Fleets;
+using Praedra.Core.Clock;
+using Praedra.Core.Fleets;
 
-namespace Rebellion.Core.Tests.Fleets;
+namespace Praedra.Core.Tests.Fleets;
 
 // rule: m1-clock-and-orders §Order of work, §Orders in, §Events out; m1-travel §Orders in transit.
 // Tests K2-K9, K12, K13, K15 plus T19 (rejection while in transit) and the lane invariant. K10 and K11 are here too

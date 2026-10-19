@@ -1,11 +1,11 @@
 using System.Diagnostics;
-using Rebellion.Core.Battle;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Ships;
-using Rebellion.Core.Tests.Fleets;
+using Praedra.Core.Battle;
+using Praedra.Core.Clock;
+using Praedra.Core.Ships;
+using Praedra.Core.Tests.Fleets;
 using Xunit.Abstractions;
 
-namespace Rebellion.Core.Tests.Battle;
+namespace Praedra.Core.Tests.Battle;
 
 // Tests of m4-battle-new (N ids as in the sheet's table) and of its Lead update 2026-10-12, on plain units (no game around), with the real CSVs.
 // The sheet's "model" counts were made with a Mersenne generator, so counts here are our own seeded results, asserted as rates or invariants.

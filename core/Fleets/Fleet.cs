@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Fleets;
+namespace Praedra.Core.Fleets;
 
 /// <summary>
 /// A fleet: capital ships (or, for a squadron-only fleet, flying squadrons), a side and a place. Part of the game state and of the save.

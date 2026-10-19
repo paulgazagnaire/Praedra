@@ -1,7 +1,7 @@
 using System.Globalization;
-using Rebellion.Core.Data;
+using Praedra.Core.Data;
 
-namespace Rebellion.Core.Repair;
+namespace Praedra.Core.Repair;
 
 /// <summary>
 /// The data table <c>RepairRules</c> (file data/design/repair-rules.csv, key,value,source): where, how often and how much a unit is repaired

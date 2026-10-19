@@ -1,10 +1,10 @@
 using System.Collections.Generic;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Map;
-using Rebellion.Core.Ships;
+using Praedra.Core.Clock;
+using Praedra.Core.Fleets;
+using Praedra.Core.Map;
+using Praedra.Core.Ships;
 
-namespace RebellionViewer;
+namespace PraedraViewer;
 
 /// <summary>
 /// DEMO ONLY. A made-up scenario so the viewer has something to show: not a rules source, not the real start of a game.

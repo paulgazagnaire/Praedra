@@ -1,10 +1,10 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Map;
-using Rebellion.Core.Tests.Fleets;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Map;
+using Praedra.Core.Tests.Fleets;
 
-namespace Rebellion.Core.Tests.Economy;
+namespace Praedra.Core.Tests.Economy;
 
 /// <summary>
 /// A test generator that returns queued values (the rule sheets' "stub draws"). Every request is recorded as (min, max).
@@ -47,7 +47,7 @@ internal sealed class StubRng : GameRng
 internal sealed class EcoWorld
 {
     public static readonly Lazy<SlotValues> Slots = new(() => SlotValues.Load(Path.Combine(TestData.DesignDir, SlotValues.File), TestData.RealGalaxy));
-    public static readonly Lazy<CostData> Costs = new(() => CostData.Load(TestData.OriginalDir, TestData.DesignDir));
+    public static readonly Lazy<CostData> Costs = new(() => CostData.Load(TestData.ClassicDir, TestData.DesignDir));
 
     public StubRng? Stub { get; }
     public Game Game { get; }

@@ -1,8 +1,8 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Defenses;
-using Rebellion.Core.Economy;
+using Praedra.Core.Clock;
+using Praedra.Core.Defenses;
+using Praedra.Core.Economy;
 
-namespace Rebellion.Core.Tests.Defenses;
+namespace Praedra.Core.Tests.Defenses;
 
 // m3-bombardment B8, B9, B10: statistical tests with the seeded game generator and the real module (one Step per bombardment).
 public class BombardmentStatTests

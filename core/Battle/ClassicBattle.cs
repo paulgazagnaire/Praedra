@@ -1,8 +1,8 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Ships;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Ships;
 
-namespace Rebellion.Core.Battle;
+namespace Praedra.Core.Battle;
 
 /// <summary>
 /// One unit of a battle: a capital ship or a squadron, a plain copy of the registry object's battle state. The battle never touches
@@ -288,7 +288,7 @@ public sealed class ClassicTaskForce
 }
 
 /// <summary>
-/// The Classic space battle (the traced 1998 Simulate, batch B3), one second at a time, on plain units and its own dice. Nothing moves; the retreat
+/// The Classic space battle (the traced Classic Simulate, batch B3), one second at a time, on plain units and its own dice. Nothing moves; the retreat
 /// destination is decided by the caller (it only says whether each side has one). rule: m4-battle-classic (the whole sheet); m4-retreat-damage-repair §1, §2.
 /// </summary>
 public sealed class ClassicBattle
@@ -327,8 +327,8 @@ public sealed class ClassicBattle
         for (int i = 0; i < _units.Count; i++)
             if (_units[i].Index != i) throw new ArgumentException("Unit.Index must equal the unit's position.");
         _hasDestination[0] = hasDestination[0]; _hasDestination[1] = hasDestination[1];
-        // rule: m4-battle-classic §1.4 (ClassicBattleRng): Original = the fixed per-battle Lehmer generator; Game = the seeded GameRng
-        _dice = p.BattleRng == ClassicBattleRng.Original
+        // rule: m4-battle-classic §1.4 (ClassicBattleRng): Classic = the fixed per-battle Lehmer generator; Game = the seeded GameRng
+        _dice = p.BattleRng == ClassicBattleRng.Classic
             ? new LehmerBattleRng(p.OriginalRngSeed, p.OriginalRngWarmup)
             : new GameBattleDice(rng ?? throw new ArgumentNullException(nameof(rng), "ClassicBattleRng.Game needs the battle's GameRng."));
         // rule: m4-battle-classic §1.3 (B3 §10): the threshold is set per side by its controller before the battle

@@ -1,7 +1,7 @@
-using Rebellion.Core.Setup;
-using Rebellion.Core.Victory;
+using Praedra.Core.Setup;
+using Praedra.Core.Victory;
 
-namespace Rebellion.Core.Tests;
+namespace Praedra.Core.Tests;
 
 /// <summary>
 /// The victory rules of before 2026-10-16 (HQ-only flavour, a dead key character never counts). Tests whose subject is not victory, but which

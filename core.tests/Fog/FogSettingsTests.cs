@@ -1,8 +1,8 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Fog;
-using Rebellion.Core.Setup;
+using Praedra.Core.Clock;
+using Praedra.Core.Fog;
+using Praedra.Core.Setup;
 
-namespace Rebellion.Core.Tests.Fog;
+namespace Praedra.Core.Tests.Fog;
 
 // m5-fog-and-hq §Defaults for undecided items: every switch has the sheet's DEFAULT, and the settings reach the module on New and on Load.
 public class FogSettingsTests

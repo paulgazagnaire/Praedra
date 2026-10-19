@@ -1,4 +1,4 @@
-namespace Rebellion.Importer;
+namespace Praedra.Importer;
 
 /// <summary>
 /// Field names of the raw CSVs: sheet section 5 for the static-data files it lists, the entry layouts of section 2 for the table files, and

@@ -1,18 +1,18 @@
-using Rebellion.Core.AI;
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Control;
-using Rebellion.Core.DeathStar;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Fog;
-using Rebellion.Core.Missions;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Support;
-using Rebellion.Core.Tests.Economy;
+using Praedra.Core.AI;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Control;
+using Praedra.Core.DeathStar;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Fog;
+using Praedra.Core.Missions;
+using Praedra.Core.Setup;
+using Praedra.Core.Support;
+using Praedra.Core.Tests.Economy;
 
-namespace Rebellion.Core.Tests.Control;
+namespace Praedra.Core.Tests.Control;
 
 /// <summary>
 /// (B5a, 2026-10-17) Under <c>ControlRule = Derived</c> a world is taken by putting regiments on it, not by DebugSetHolder (refused). These helpers
@@ -214,7 +214,7 @@ public class B5aControlTests
         var (fleet, regs) = Transports(w, Side.Alliance, C, 9);
         w.H.Assault.SubmitAssault(Side.Alliance, fleet, C);
         w.Step();
-        var landed = Assert.Single(w.Events<Rebellion.Core.Assault.AssaultLanded>());
+        var landed = Assert.Single(w.Events<Praedra.Core.Assault.AssaultLanded>());
         Assert.Equal(regs.Take(6), landed.Regiments.Items);
         Assert.All(regs.Skip(6), id => Assert.NotEqual(0, w.H.Economy.Find(id)!.AboardShip));
         Assert.Equal(Side.Alliance, w.Ctl.HolderOf(C));
@@ -232,7 +232,7 @@ public class B5aControlTests
         var (fleet, _) = Transports(w, Side.Alliance, C, 1);
         w.H.Assault.SubmitAssault(Side.Alliance, fleet, C);
         w.Step();
-        var res = Assert.Single(w.Events<Rebellion.Core.Assault.AssaultResolved>());
+        var res = Assert.Single(w.Events<Praedra.Core.Assault.AssaultResolved>());
         Assert.Equal(("Won", 0, 0), (res.Result, res.D0, res.Duels));
         Assert.Equal(Side.Alliance, w.Ctl.HolderOf(C));
         Assert.Empty(w.SectorSteps());
@@ -248,7 +248,7 @@ public class B5aControlTests
         var (fleet, _) = Transports(w, Side.Alliance, C, 3);
         w.H.Assault.SubmitAssault(Side.Alliance, fleet, C);
         w.Step();
-        Assert.Equal(2, Assert.Single(w.Events<Rebellion.Core.Assault.AssaultStarted>()).D0);
+        Assert.Equal(2, Assert.Single(w.Events<Praedra.Core.Assault.AssaultStarted>()).D0);
     }
 
     // B5a-7 (section 1): both sides' regiments on an Empire-held world: the holder is unchanged (and stays so through a save and load, QA Q46);
@@ -481,7 +481,7 @@ public class B5aControlTests
         Assert.True(w.H.Support.IsUprising(T));
     }
 
-    // DeathStarFallout = Classic (1998; B5c-11's case): a planet destroyed by the Empire costs the Empire 10 on every core world of the galaxy, 2 on a
+    // DeathStarFallout = Classic (; B5c-11's case): a planet destroyed by the Empire costs the Empire 10 on every core world of the galaxy, 2 on a
     // rim world where its support is below 90 (a rim world at 95 is unchanged, at 80 it goes to 78); never-held worlds are unchanged.
     [Fact]
     public void B5a_DeathStarFalloutClassic_GalaxyWide()
@@ -575,7 +575,7 @@ public class B5aControlTests
     public void B6b_AiGarrisonFloor_WishBaseAndNoMoveBelowIt()
     {
         var w = new DerivedWorld();
-        var ai = new SimpleAi(w.H, Side.Alliance, new SimpleAiParams { OriginalGarrisonFloor = true }); // the floor is DEFAULT off with Derived (2026-10-18): on explicitly
+        var ai = new SimpleAi(w.H, Side.Alliance, new SimpleAiParams { ClassicGarrisonFloor = true }); // the floor is DEFAULT off with Derived (2026-10-18): on explicitly
         int Target(string sys, int support, bool uprising = false)
         {
             w.Hold(sys, Side.Alliance, support);
@@ -602,7 +602,7 @@ public class B5aControlTests
         w.Regiments(T, Side.Alliance, 1);
         Assert.Single(ai.SpareRegimentIds(T));
         // off: the rule's need and the B5a guard (1 below 60)
-        var old = new SimpleAi(w.H, Side.Alliance, new SimpleAiParams { OriginalGarrisonFloor = false });
+        var old = new SimpleAi(w.H, Side.Alliance, new SimpleAiParams { ClassicGarrisonFloor = false });
         Assert.Equal((0, 1), (old.GarrisonTarget(D), old.GarrisonTarget(T)));
     }
 }

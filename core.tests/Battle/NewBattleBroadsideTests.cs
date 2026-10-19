@@ -1,9 +1,9 @@
-using Rebellion.Core.Battle;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Ships;
+using Praedra.Core.Battle;
+using Praedra.Core.Clock;
+using Praedra.Core.Ships;
 using Xunit.Abstractions;
 
-namespace Rebellion.Core.Tests.Battle;
+namespace Praedra.Core.Tests.Battle;
 
 // Tests of space-combat/11 section 4 (closing range, which supersedes m4-battle-new section 5) and of m4-battle-new section 6 (facing), on ships whose
 // strongest guns are on the broadside (Dauntless Cruiser). Finding of the "4 Dauntless v 2 Imperial II" bug hunt: facing, arc mapping and data copy were

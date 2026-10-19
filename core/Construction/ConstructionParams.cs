@@ -1,9 +1,9 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Data;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Travel;
+using Praedra.Core.Clock;
+using Praedra.Core.Data;
+using Praedra.Core.Economy;
+using Praedra.Core.Travel;
 
-namespace Rebellion.Core.Construction;
+namespace Praedra.Core.Construction;
 
 /// <summary>What happens to a delivery whose destination is no longer controlled by the ordering side. rule: m2-construction §Lead review note, C20.</summary>
 public enum LostDestinationRule
@@ -16,7 +16,7 @@ public enum LostDestinationRule
 
 /// <summary>
 /// Every number of the construction sheet, with its tag. Data values, not code. rule: m2-construction §Numbers.
-/// Tags: Traced = read in the 1998 binary or data; DEFAULT = the sheet's choice.
+/// Tags: Traced = read in the Classic binary or data; DEFAULT = the sheet's choice.
 /// </summary>
 public sealed record ConstructionParams
 {

@@ -1,8 +1,8 @@
-using Rebellion.Core.Battle;
-using Rebellion.Core.Data;
-using Rebellion.Core.Ships;
+using Praedra.Core.Battle;
+using Praedra.Core.Data;
+using Praedra.Core.Ships;
 
-namespace Rebellion.Core.Fleets;
+namespace Praedra.Core.Fleets;
 
 /// <summary>
 /// Which enemy forces stop a passing fleet. A game setting, not code.

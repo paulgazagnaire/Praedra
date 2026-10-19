@@ -1,8 +1,8 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Support;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Support;
 
-namespace Rebellion.Core.Tests.Support;
+namespace Praedra.Core.Tests.Support;
 
 // m2-uprisings-and-garrison, tests G1 to G25.
 public class GarrisonTests

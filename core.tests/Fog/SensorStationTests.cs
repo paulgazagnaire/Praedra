@@ -1,14 +1,14 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Fog;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Travel;
-using static Rebellion.Core.Tests.Fog.FogWorld;
-using Rebellion.Core.Tests.Control;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Fog;
+using Praedra.Core.Setup;
+using Praedra.Core.Travel;
+using static Praedra.Core.Tests.Fog.FogWorld;
+using Praedra.Core.Tests.Control;
 
-namespace Rebellion.Core.Tests.Fog;
+namespace Praedra.Core.Tests.Fog;
 
 // Sensor Station tests SS1 to SS22 of m5-fog-and-hq §N4 (route-only, N-day warning: movement-redesign-draft §C; window 10 days Decided by
 // Paul 2026-10-16), on Map M (FogWorld: chain C0 - R1 - R2 - R3 - R4, every one a route system; Ilum on no route; Empire holds C0 and R1,

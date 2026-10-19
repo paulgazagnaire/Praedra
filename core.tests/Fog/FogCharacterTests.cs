@@ -1,11 +1,11 @@
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Fog;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Tests.Economy;
-using static Rebellion.Core.Tests.Fog.FogWorld;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Fog;
+using Praedra.Core.Setup;
+using Praedra.Core.Tests.Economy;
+using static Praedra.Core.Tests.Fog.FogWorld;
 
-namespace Rebellion.Core.Tests.Fog;
+namespace Praedra.Core.Tests.Fog;
 
 // Characters in group D, FD1 to FD5 of m5-fog-and-hq §Tests (Map M). Group D holds "characters present" (§F1, Manual p.69, p.121).
 public class FogCharacterTests

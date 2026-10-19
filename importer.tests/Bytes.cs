@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Rebellion.Importer.Tests;
+namespace Praedra.Importer.Tests;
 
 /// <summary>Builders of synthetic game files (little-endian 32-bit words), for the importer's unit tests.</summary>
 internal static class Bytes

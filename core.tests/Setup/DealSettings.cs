@@ -1,6 +1,6 @@
-using Rebellion.Core.Setup;
+using Praedra.Core.Setup;
 
-namespace Rebellion.Core.Tests.Setup;
+namespace Praedra.Core.Tests.Setup;
 
 /// <summary>
 /// Settings for tests whose subject is not the day-one deal and whose expectations were tuned on the fixed day-one files:
@@ -12,5 +12,5 @@ internal static class DealSettings
     /// <summary>The fixed deal plus the victory and research rules of before 2026-10-16 (<see cref="OldVictory"/>): AI tests tuned on both.</summary>
     public static GameSettings FileOldVictory => new() { DealMode = DealMode.File, Victory = OldVictory.Rules, Research = OldResearch };
     /// <summary>Research as before 2026-10-16: no galaxy-size scaling, blockade does not stop yards (m5-research §Defaults).</summary>
-    public static Rebellion.Core.Research.ResearchParams OldResearch => new() { ResearchCostScale = Rebellion.Core.Research.ResearchScale.None, MissionPointsScale = Rebellion.Core.Research.ResearchScale.None, BlockadeStopsResearch = false };
+    public static Praedra.Core.Research.ResearchParams OldResearch => new() { ResearchCostScale = Praedra.Core.Research.ResearchScale.None, MissionPointsScale = Praedra.Core.Research.ResearchScale.None, BlockadeStopsResearch = false };
 }

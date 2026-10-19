@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Research;
+namespace Praedra.Core.Research;
 
 /// <summary>
 /// A side reached a research level ("Research complete", original messages 0x125 ship, 0x126 troop, 0x127 facility; the name is ours).

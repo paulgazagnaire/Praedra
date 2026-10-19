@@ -1,10 +1,10 @@
-using Rebellion.Core.Assault;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Tests.Setup;
+using Praedra.Core.Assault;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Setup;
+using Praedra.Core.Tests.Setup;
 
-namespace Rebellion.Core.Tests.Assault;
+namespace Praedra.Core.Tests.Assault;
 
 // m3-assault wiring: GameHost settings and save/load, determinism (A20) and the scripted assault of the test campaign.
 public class AssaultHostTests
@@ -85,7 +85,7 @@ public class AssaultHostTests
     [Fact]
     public void CampaignScriptedAssaultResolvesOnItsDay()
     {
-        var run = CampaignHarness.Checked(1, Rebellion.Core.Support.GarrisonRuleset.Classic);
+        var run = CampaignHarness.Checked(1, Praedra.Core.Support.GarrisonRuleset.Classic);
         var started = Assert.Single(run.Events.OfType<AssaultStarted>());
         Assert.Equal(TestCampaign.AssaultDay + 1, started.Day);
         Assert.Equal((TestCampaign.BlockadedSystem, Side.Empire, TestCampaign.AssaultRegiments), (started.System, started.Side, started.A0));
@@ -93,6 +93,6 @@ public class AssaultHostTests
         Assert.Equal(started.System, res.System);
         Assert.Empty(run.Events.OfType<AssaultCancelled>());
         Assert.DoesNotContain(run.Events.OfType<OrderRejected>(), e => e.Reason is AssaultReject.NoTroops or AssaultReject.OwnSystem or AssaultReject.EnemyFleetPresent or AssaultReject.FullyShielded);
-        Assert.Equal(res.Result == "Won", run.Events.OfType<Rebellion.Core.Control.SystemCaptured>().Any(c => c.Cause == Rebellion.Core.Control.CaptureCause.Assault));
+        Assert.Equal(res.Result == "Won", run.Events.OfType<Praedra.Core.Control.SystemCaptured>().Any(c => c.Cause == Praedra.Core.Control.CaptureCause.Assault));
     }
 }

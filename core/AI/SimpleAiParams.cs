@@ -1,12 +1,12 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.AI;
+namespace Praedra.Core.AI;
 
 /// <summary>
 /// Every number of the simple computer opponent. These are tuning values of the AI, not rules of the game: no rule sheet fixes them
-/// (the Classic AI notes in specs/ai/ describe the 1998 behaviour only in outline), so each is a DEFAULT chosen here and is
+/// (the Classic AI notes in specs/ai/ describe the Classic behaviour only in outline), so each is a DEFAULT chosen here and is
 /// overridable per side. Strength numbers are percent of the reference force REF (3 Imperial Star Destroyers, m4-battle-new §12),
-/// the scale of <see cref="Rebellion.Core.Fleets.FleetModule.StrengthOf"/>: 100 = as strong as REF.
+/// the scale of <see cref="Praedra.Core.Fleets.FleetModule.StrengthOf"/>: 100 = as strong as REF.
 /// </summary>
 public sealed record SimpleAiParams
 {
@@ -36,14 +36,14 @@ public sealed record SimpleAiParams
     /// <summary>Regiments kept on the system whose loss ends the game (Coruscant for the Empire, the Rebel HQ for the Alliance), at least. DEFAULT.</summary>
     public int CriticalGarrison { get; init; } = 8;
     /// <summary>
-    /// The 1998 AI's garrison floor (B6b §3): on every own world below 70 support it wants min((79 - s) / 10, 6) regiments (doubled in an uprising),
+    /// The Classic AI's garrison floor (B6b §3): on every own world below 70 support it wants min((79 - s) / 10, 6) regiments (doubled in an uprising),
     /// and 9 on its special world (the Rebel HQ for the Alliance, Coruscant for the Empire); it builds toward that and never moves a regiment that
     /// would leave a world below it. Replaces the B5a last-regiment guard (a weaker form: 1 below 60). It belongs to derived control
     /// (GameSettings.ControlRule = Derived) but stays DEFAULT off under it: with it on, 14 of 32 Hard mirror games had no winner by day 3000 against
     /// 8 with it off, and the Medium mirror failed the games-end floor (AI trainer, 2026-10-18). Off = the rule's need, <see cref="CriticalGarrison"/>
     /// on the critical world, and the B5a guard.
     /// </summary>
-    public bool OriginalGarrisonFloor { get; init; }
+    public bool ClassicGarrisonFloor { get; init; }
     /// <summary>Most regiments in one garrison order. DEFAULT.</summary>
     public int GarrisonBatch { get; init; } = 4;
     /// <summary>
@@ -244,11 +244,11 @@ public sealed record SimpleAiParams
     public int FogGroundForgetDays { get; init; } = 365;
 
     /// <summary>
-    /// The 1998 AI's leader marks (B6c §7): the six story characters (Luke, Mon Mothma, the Emperor, Vader, Leia, Han) are never fleet or army
+    /// The Classic AI's leader marks (B6c §7): the six story characters (Luke, Mon Mothma, the Emperor, Vader, Leia, Han) are never fleet or army
     /// commanders, the Emperor is never a diplomat, and the Empire keeps the Emperor at the Seat of Power while it holds it (Emperor home;
     /// SimpleAiAgents.EmperorHome). The leaders' ban from Incite, Rescue, Sabotage and Abduction is already this AI's rule for every major
     /// character (NoKeyKinds). QA-8 (2026-10-18): without it the Emperor stood on Coruscant 1-7% of days, so the Seat of Power was off ~95%
-    /// of the game, and he was captured on missions. DEFAULT false (2026-10-18, the Dev lead's audit under Paul's 07:43 rule: 1998 AI behaviour
+    /// of the game, and he was captured on missions. DEFAULT false (2026-10-18, the Dev lead's audit under Paul's 07:43 rule: Classic AI behaviour
     /// belongs to the Classic AI yardstick, not the default AI; QA-12: on, Medium mirror Empire wins fell from 13/16 to 5/16 and 11 of 16 games
     /// had no winner). No Classic AI level exists yet; until one does, turn it on with `sim tourney --a-params LeaderMarks=true` or in code (QA-15).
     /// </summary>
@@ -258,7 +258,7 @@ public sealed record SimpleAiParams
     /// <summary>
     /// B6c §7 Emperor home: the planner starts only once the side has nobody left to recruit (ctrl+0xa4 == 0), so the Emperor recruits and
     /// subdues until then (QA-12: kept home from day one he no longer put down uprisings, and Empire wins fell from 13/16 to 5/16). DEFAULT on
-    /// (1998). Off = home from day one (#68).
+    /// (Classic). Off = home from day one (#68).
     /// </summary>
     public bool EmperorHomeAfterRecruiting { get; init; } = true;
     /// <summary>Regiments assumed on the enemy's game-winning system (Coruscant for the Alliance, a known HQ) when its ground was never seen. DEFAULT.</summary>
@@ -343,7 +343,7 @@ public sealed record SimpleAiParams
     public bool UseCharactersAndMissions { get; init; } = true;
     /// <summary>Days between character and mission reviews (offset by the side number like the other reviews). DEFAULT.</summary>
     public int AgentsEvery { get; init; } = 2;
-    /// <summary>Lowest leadership for a fleet or system post (ai/05 §5: the original's commander slots ask 50). DEFAULT.</summary>
+    /// <summary>Lowest leadership for a fleet or system post (ai/05 §5: Classic's commander slots ask 50). DEFAULT.</summary>
     public int OfficerMinLeadership { get; init; } = 50;
     /// <summary>A fleet gets officers when its capital ships are at least this strong (percent of REF, as LaunchStrength). DEFAULT.</summary>
     public int OfficerFleetStrength { get; init; } = 20;
@@ -351,7 +351,7 @@ public sealed record SimpleAiParams
     public int OfficerFleets { get; init; } = 3;
     /// <summary>Empire with fog: characters kept for the HQ hunt (best espionage first) while the HQ is unknown or due a re-check. DEFAULT.</summary>
     public int HqSpies { get; init; } = 4;
-    /// <summary>Lowest espionage of an HQ spy (ai/05 §4: the original's floor for espionage kinds is 51). DEFAULT.</summary>
+    /// <summary>Lowest espionage of an HQ spy (ai/05 §4: Classic's floor for espionage kinds is 51). DEFAULT.</summary>
     public int SpyMinEspionage { get; init; } = 51;
     /// <summary>HQ search targets: this many systems of the highest search score (belief weighted by room and lanes, see SpyRoomPercent). DEFAULT.</summary>
     public int HqSearchTargets { get; init; } = 5;
@@ -391,9 +391,9 @@ public sealed record SimpleAiParams
     /// <summary>Espionage counts this percent of Reconnaissance for the same chance (it also shows the ground forces and extra systems). DEFAULT.</summary>
     public int EspionageOverReconPercent { get; init; } = 125;
     /// <summary>
-    /// Recruitment (B6c §7 list item 1): at most this many running while the side has anyone left to recruit (1998: 2), each by a character of
-    /// leadership at least RecruitMinLeadership (1998: 80; leaders allowed, so the Emperor, Vader and Mon Mothma recruit), worth RecruitValue
-    /// (DEFAULT: above every other job, as the 1998 list checks it first). 0 = no Recruitment (the AI before QA-12).
+    /// Recruitment (B6c §7 list item 1): at most this many running while the side has anyone left to recruit (Classic: 2), each by a character of
+    /// leadership at least RecruitMinLeadership (Classic: 80; leaders allowed, so the Emperor, Vader and Mon Mothma recruit), worth RecruitValue
+    /// (DEFAULT: above every other job, as the Classic list checks it first). 0 = no Recruitment (the AI before QA-12).
     /// </summary>
     public int MaxRecruiters { get; init; } = 2;
     public int RecruitMinLeadership { get; init; } = 80;
@@ -428,7 +428,7 @@ public sealed record SimpleAiParams
     public int DiplomacyHops { get; init; } = 1;
     /// <summary>Most diplomats out at once. DEFAULT.</summary>
     public int MaxDiplomats { get; init; } = 3;
-    /// <summary>Lowest skill sent per kind (ai/05 §4: the original's floors are diplomacy 69, incite/subdue 49, combat kinds 51, research 10). DEFAULT.</summary>
+    /// <summary>Lowest skill sent per kind (ai/05 §4: Classic's floors are diplomacy 69, incite/subdue 49, combat kinds 51, research 10). DEFAULT.</summary>
     public int DiplomacyMinSkill { get; init; } = 60;
     public int LeadershipMinSkill { get; init; } = 49;
     public int CombatMinSkill { get; init; } = 51;
@@ -436,7 +436,7 @@ public sealed record SimpleAiParams
     /// <summary>Alliance: most Incite and Sabotage missions out at once (only on enemy systems where no defender is believed). DEFAULT.</summary>
     public int MaxSubversion { get; init; } = 2;
     /// <summary>
-    /// Special forces as mission agents (QA-6; B6c §7: the 1998 AI's Sabotage, Recon, espionage-team and Abduction/Assassination filters admit
+    /// Special forces as mission agents (QA-6; B6c §7: the Classic AI's Sabotage, Recon, espionage-team and Abduction/Assassination filters admit
     /// special forces, inferred from the mask; B6b §9: it keeps at least 8 of them). On: the AI keeps SpecialForcesWanted special forces of its
     /// AgentForceClasses and sends each free one alone on any planned mission whose record's mask holds its class bit (m5-missions §Special
     /// forces), scored like a character with its class columns as skills. A character goes first on a tie. Off = the AI of before. DEFAULT off

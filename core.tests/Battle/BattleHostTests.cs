@@ -1,9 +1,9 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Repair;
-using Rebellion.Core.Setup;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Repair;
+using Praedra.Core.Setup;
 
-namespace Rebellion.Core.Tests.Battle;
+namespace Praedra.Core.Tests.Battle;
 
 // The battle module wired into GameHost (slot 5 before 5.1 and 5.2; repair at slot 6.8).
 public class BattleHostTests
@@ -24,11 +24,11 @@ public class BattleHostTests
         h.Fleets.AddFleet(Side.Alliance, "Raiders", new[] { "Corellian Corvette", "Corellian Corvette" }, yard);
 
         h.Game.Step(); // the battle day (hook time 1): the timer starts, nothing repaired yet
-        Assert.Single(h.Game.Events.OfType<Rebellion.Core.Battle.BattleEnded>());
+        Assert.Single(h.Game.Events.OfType<Praedra.Core.Battle.BattleEnded>());
         Assert.Empty(h.Game.Events.OfType<ShipRepaired>());
         int afterBattle = isd.Hull;
         h.Game.Step(); // hook time 2: the first turn
-        Assert.Single(h.Game.Events.OfType<Rebellion.Core.Battle.BattleEnded>());
+        Assert.Single(h.Game.Events.OfType<Praedra.Core.Battle.BattleEnded>());
         Assert.Equal(2, h.Game.Events.OfType<ShipRepaired>().Single().Day);
         Assert.True(isd.Hull > afterBattle);
     }
@@ -39,10 +39,10 @@ public class BattleHostTests
     {
         var h = GameHost.New(1);
         Assert.NotNull(h.Battles);
-        h.Battles.SubmitSetOnContact(Side.Alliance, Rebellion.Core.Battle.OnContactMode.Retreat);
+        h.Battles.SubmitSetOnContact(Side.Alliance, Praedra.Core.Battle.OnContactMode.Retreat);
         h.Game.Step();
         var loaded = GameHost.Load(h.Save());
-        Assert.Equal(Rebellion.Core.Battle.OnContactMode.Retreat, loaded.Battles.OnContactOf(Side.Alliance));
+        Assert.Equal(Praedra.Core.Battle.OnContactMode.Retreat, loaded.Battles.OnContactOf(Side.Alliance));
         Assert.Equal(h.StateHash(), loaded.StateHash());
     }
 }

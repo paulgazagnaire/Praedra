@@ -1,14 +1,14 @@
-using Rebellion.Core.AI;
-using Rebellion.Core.Assault;
-using Rebellion.Core.Battle;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Control;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Tests.Setup;
+using Praedra.Core.AI;
+using Praedra.Core.Assault;
+using Praedra.Core.Battle;
+using Praedra.Core.Clock;
+using Praedra.Core.Control;
+using Praedra.Core.Economy;
+using Praedra.Core.Setup;
+using Praedra.Core.Tests.Setup;
 using Xunit.Abstractions;
 
-namespace Rebellion.Core.Tests.AI;
+namespace Praedra.Core.Tests.AI;
 
 // The simple AI as an opponent for a human: one side is a scripted passive player (it gives no orders), the AI plays the other side on the
 // new-game MedA start. The passive side stands for a human who has not started yet.
@@ -20,7 +20,7 @@ public class SimpleAiOpponentTests
 
     private static (AiMatch Match, GameHost Host) NewMatch(int seed, Side? passive)
     {
-        var host = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory });
+        var host = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = Praedra.Core.Tests.Setup.DealSettings.FileOldVictory });
         var m = new AiMatch(host, passive: passive);
         m.Empire.KnownEnemyHq = host.HqSystem; // no fog yet: the Empire knows the Rebel HQ
         return (m, host);
@@ -162,10 +162,10 @@ public class SimpleAiOpponentTests
         m.RunTo(220);
         // The save with its AI memory line (QA-1): the fresh AIs read their look-backs from that memory. The plain core save (host.Save()) has no
         // AI memory by design (m1-clock-and-orders DEFAULT: events are not saved), so with it the fresh AIs plan from an empty memory and the
-        // games may part (seed 6 does on day 262 with the full 1998 mission tables).
+        // games may part (seed 6 does on day 262 with the full Classic mission tables).
         var save = host.SaveWithSettings();
         m.RunTo(300);
-        var host2 = GameHost.Load(save, Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory); // the same settings as the game (settings are not in the save)
+        var host2 = GameHost.Load(save, Praedra.Core.Tests.Setup.DealSettings.FileOldVictory); // the same settings as the game (settings are not in the save)
         var m2 = new AiMatch(host2); m2.Empire.KnownEnemyHq = host2.HqSystem;
         m2.RunTo(300);
         Assert.Equal(host.StateHash(), host2.StateHash());
@@ -185,13 +185,13 @@ public class SimpleAiOpponentTests
     [Fact]
     public void AiVsAi_NeverOrdersUnresearchedItems()
     {
-        var host = NewGame.Create(new NewGameOptions { Seed = 2, Preset = StartPreset.MedA, Settings = Rebellion.Core.Tests.Setup.DealSettings.FileOldVictory });
+        var host = NewGame.Create(new NewGameOptions { Seed = 2, Preset = StartPreset.MedA, Settings = Praedra.Core.Tests.Setup.DealSettings.FileOldVictory });
         Assert.True(host.Construction.RespectResearchOrder);
         var m = new AiMatch(host);
         while (host.Game.Day < 500 && host.Victory.Winner == null) m.Step();
         Assert.DoesNotContain(host.Game.Events, e => e is OrderRejected r && r.Reason == RejectReason.NotResearched);
-        Assert.Contains(host.Game.Events, e => e is Rebellion.Core.Research.ResearchLevelReached);
+        Assert.Contains(host.Game.Events, e => e is Praedra.Core.Research.ResearchLevelReached);
         _out.WriteLine($"levels after {host.Game.Day} days: " + string.Join("; ", new[] { Side.Alliance, Side.Empire }.Select(s =>
-            $"{s} " + string.Join("/", Rebellion.Core.Research.ResearchModule.Kinds.Select(k => host.Research.Level(s, k))))));
+            $"{s} " + string.Join("/", Praedra.Core.Research.ResearchModule.Kinds.Select(k => host.Research.Level(s, k))))));
     }
 }

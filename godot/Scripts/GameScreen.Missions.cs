@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
-using Rebellion.Core.Characters;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Missions;
+using Praedra.Core.Characters;
+using Praedra.Core.Economy;
+using Praedra.Core.Missions;
 
-using Side = Rebellion.Core.Clock.Side;
+using Side = Praedra.Core.Clock.Side;
 
-namespace RebellionViewer;
+namespace PraedraViewer;
 
 /// <summary>
 /// Missions on the screen (rule: m5-missions): "Send on a mission..." (pick the team at one system, the kind, the target with its route and
@@ -165,8 +165,8 @@ public partial class GameScreen
         new(0, Me, kind, _plan.Chars.ToList(), _plan.Sfs.ToList(), new List<int>(), targetChar == null ? target : null, targetChar);
 
     // Target-stage reasons: everything before the target passed, so the team can do this kind somewhere.
-    static bool TargetStage(string reason) => reason is null or MissionReject.BadTarget or MissionReject.NoDeathStar or Rebellion.Core.Clock.RejectReason.Unreachable
-        or Rebellion.Core.Clock.RejectReason.NoMatchingYard or Rebellion.Core.Clock.RejectReason.NothingToResearch;
+    static bool TargetStage(string reason) => reason is null or MissionReject.BadTarget or MissionReject.NoDeathStar or Praedra.Core.Clock.RejectReason.Unreachable
+        or Praedra.Core.Clock.RejectReason.NoMatchingYard or Praedra.Core.Clock.RejectReason.NothingToResearch;
 
     /// <summary>Why this team cannot do the kind (plain words, naming the member), or null when it can (the target is picked next).</summary>
     string KindRefusal(MissionKind k)

@@ -1,12 +1,12 @@
-using Rebellion.Core.Battle;
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Control;
-using Rebellion.Core.Defenses;
-using Rebellion.Core.Fog;
-using Rebellion.Core.Missions;
+using Praedra.Core.Battle;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Control;
+using Praedra.Core.Defenses;
+using Praedra.Core.Fog;
+using Praedra.Core.Missions;
 
-namespace Rebellion.Core.AI;
+namespace Praedra.Core.AI;
 
 /// <summary>What one <see cref="AiNote"/> remembers.</summary>
 public enum AiNoteKind

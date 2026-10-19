@@ -1,13 +1,13 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Control;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Support;
-using Rebellion.Core.Tests.Economy;
-using Rebellion.Core.Tests.Support;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Control;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Support;
+using Praedra.Core.Tests.Economy;
+using Praedra.Core.Tests.Support;
 
-namespace Rebellion.Core.Tests.Control;
+namespace Praedra.Core.Tests.Control;
 
 /// <summary>
 /// A <see cref="SupWorld"/> with the control module attached and debug orders on. The C tests run under <see cref="ControlRule.AssaultOnly"/> (the rule
@@ -189,7 +189,7 @@ public class CaptureTests
         Assert.True(w.Eco.Find(yard)!.Completed);
         Assert.False(w.Eco.Find(yard)!.InLine);
         Assert.Equal(0, w.Eco.Find(yard)!.Due);
-        var c = Assert.Single(w.Events<Rebellion.Core.Construction.ProjectCancelled>()); // one cancellation: 6.6 found nothing left
+        var c = Assert.Single(w.Events<Praedra.Core.Construction.ProjectCancelled>()); // one cancellation: 6.6 found nothing left
         Assert.Equal(("SystemLost", Emp), (c.Reason, c.System));
         Assert.Contains(isd, c.Units.Items);
     }
@@ -571,7 +571,7 @@ public class CaptureTests
     {
         // attach every module to the loaded game, the way a real load does
         var p = new EconomyParams { ScrapPeriod = 1_000_000 };
-        var fleets = FleetModule.Attach(loaded, TestData.RealGalaxy, Rebellion.Core.Tests.Fleets.World.Ships.Value, Rebellion.Core.Tests.Fleets.World.Blockade);
+        var fleets = FleetModule.Attach(loaded, TestData.RealGalaxy, Praedra.Core.Tests.Fleets.World.Ships.Value, Praedra.Core.Tests.Fleets.World.Blockade);
         var eco = EconomyModule.Attach(loaded, TestData.RealGalaxy, EcoWorld.Slots.Value, EcoWorld.Costs.Value, fleets, p);
         eco.IncidentsEnabled = false;
         var sup = SupportModule.Attach(loaded, TestData.RealGalaxy, eco, fleets, SupWorld.Weights.Value);
@@ -681,7 +681,7 @@ public class CaptureTests
         w.Run(1);
 
         // construction: the project is gone with its units, once, no refund; the delivery is still alive
-        var cancelled = Assert.Single(w.Events<Rebellion.Core.Construction.ProjectCancelled>());
+        var cancelled = Assert.Single(w.Events<Praedra.Core.Construction.ProjectCancelled>());
         Assert.Equal(("SystemLost", Far, YardFamily.Shipyard), (cancelled.Reason, cancelled.System, cancelled.Family));
         Assert.Equal(isdUnits, cancelled.Units.Items.ToList());
         Assert.Null(w.Build.ProjectAt(Far, YardFamily.Shipyard));
@@ -707,7 +707,7 @@ public class CaptureTests
         Assert.Equal("DestinationLost", w.Events<DeliveryHeld>().Single().Reason);
         Assert.Empty(w.Events<DeliveryArrived>());
         Assert.False(w.Eco.Find(mineId)!.Completed);
-        Assert.Single(w.Events<Rebellion.Core.Construction.ProjectCancelled>()); // never cancelled twice
+        Assert.Single(w.Events<Praedra.Core.Construction.ProjectCancelled>()); // never cancelled twice
     }
 
     [Fact]

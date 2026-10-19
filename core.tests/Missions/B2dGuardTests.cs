@@ -1,12 +1,12 @@
-using Rebellion.Core.Battle;
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Missions;
-using Rebellion.Core.Setup;
-using static Rebellion.Core.Tests.Missions.MissionWorld;
+using Praedra.Core.Battle;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Missions;
+using Praedra.Core.Setup;
+using static Praedra.Core.Tests.Missions.MissionWorld;
 
-namespace Rebellion.Core.Tests.Missions;
+namespace Praedra.Core.Tests.Missions;
 
 // B2d-who-guards-and-the-escape-duel tests B2d-1 to B2d-13. rule: m5-missions §1 (check points), §3 (guards), §4 (foiled, duel).
 // Unless a test says otherwise, an Alliance team flies from H (neutral) to T (Empire-held): the leaving checks at H meet nobody.

@@ -1,4 +1,4 @@
-namespace Rebellion.Core.Battle;
+namespace Praedra.Core.Battle;
 
 /// <summary>
 /// A side's answer to the Battle Alert: Fight (retreat threshold 0.0) or Retreat (threshold 10000.0). Both run the normal battle loop; the threshold
@@ -11,19 +11,19 @@ public enum OnContactMode { Fight = 0, Retreat = 1 }
 public enum AiRetreatRule { Classic = 0, Fixed = 1 }
 
 /// <summary>
-/// How task forces form. Original (DEFAULT, Traced B3 §2): fighter groups by class (up to 4), then up to 8 capital task forces of about √N ships from
+/// How task forces form. Classic (DEFAULT, Traced B3 §2): fighter groups by class (up to 4), then up to 8 capital task forces of about √N ships from
 /// three pools. PerUnit: one per ship or squadron. PerSide: one per side. rule: m4-battle-classic §2 (ClassicTaskForces).
 /// </summary>
-public enum ClassicTaskForces { PerUnit = 0, PerSide = 1, Original = 2 }
+public enum ClassicTaskForces { PerUnit = 0, PerSide = 1, Classic = 2 }
 
 /// <summary>Who fires first in a second. EmpireFirst (DEFAULT, Traced B3 §3): the Empire's whole step, then the Alliance's. Simultaneous: both from the same state. rule: m4-battle-classic §3.</summary>
 public enum ClassicFireOrder { EmpireFirst = 0, Simultaneous = 1 }
 
 /// <summary>
-/// The battle dice. Original (DEFAULT, Traced B3 §13): a Lehmer generator inside the battle, seed 12345678, made fresh for every battle; the battle
+/// The battle dice. Classic (DEFAULT, Traced B3 §13): a Lehmer generator inside the battle, seed 12345678, made fresh for every battle; the battle
 /// makes no draw from the game generator. Game: one game draw seeds a <see cref="Clock.GameRng"/> for the battle. rule: m4-battle-classic §1.4, §11.
 /// </summary>
-public enum ClassicBattleRng { Original = 0, Game = 1 }
+public enum ClassicBattleRng { Classic = 0, Game = 1 }
 
 /// <summary>How task forces pick targets. rule: m4-battle-classic §6 (Tactic; Stand Off is the traced default; Surround is never used in Simulate, B3 §16).</summary>
 public enum BattleTactic { StandOff = 0, Surround = 1 }
@@ -35,7 +35,7 @@ public enum RetreatMode { LaneAdjacent = 0, Nearest = 1, NoRetreat = 2 }
 public enum RetreatRefusal { GravityWell, NoHyperdrive, NoDestination }
 
 /// <summary>Why a unit left the game in a battle. rule: m4-battle-classic §10, m4-retreat-damage-repair §Where it runs.</summary>
-/// <remarks>MissionDuel: a special force lost the escape duel of a mission check (B2d §5; the original's DestroyedReason 9).</remarks>
+/// <remarks>MissionDuel: a special force lost the escape duel of a mission check (B2d §5; Classic's DestroyedReason 9).</remarks>
 public enum UnitLossReason { Combat, NoHyperdrive, NoBerth, Stalemate, ShipLost, MissionDuel }
 
 /// <summary>Result of a battle for one side. rule: m4-battle-classic §8 (Outcome record).</summary>
@@ -48,7 +48,7 @@ public enum BattleOutcome { Victorious, Annihilated, Retreated, Indecisive }
 public sealed record BattleParams
 {
     // ---- ruleset. rule: m4-battle-new §Rule (New) (second ruleset, selected by a setting)
-    /// <summary>Which engine resolves a battle. New = the per-gun engine (<see cref="NewBattle"/>). DEFAULT New (Paul, 2026-10-18 decision card; under his 07:43 rule Classic 1998 rules are opt-in when they collide with our changes). Classic = the 1998 battle.</summary>
+    /// <summary>Which engine resolves a battle. New = the per-gun engine (<see cref="NewBattle"/>). DEFAULT New (Paul, 2026-10-18 decision card; under his 07:43 rule Classic rules are opt-in when they collide with our changes). Classic = the Classic battle.</summary>
     public BattleRuleset Ruleset { get; init; } = BattleRuleset.New;
     /// <summary>Switches and numbers of the New engine (used only when <see cref="Ruleset"/> is New).</summary>
     public NewBattleParams New { get; init; } = new();
@@ -56,12 +56,12 @@ public sealed record BattleParams
     // ---- switches. rule: m4-battle-classic §Defaults; m4-retreat-damage-repair §3
     /// <summary>Shield-generator and hull rolls on (DEFAULT on, Traced). Off skips both rolls and all draws (model-parity tests). rule: m4-battle-classic §6.</summary>
     public bool SubsystemRolls { get; init; } = true;
-    /// <summary>DEFAULT Original (Traced, B3 §2). rule: m4-battle-classic §2.</summary>
-    public ClassicTaskForces TaskForces { get; init; } = ClassicTaskForces.Original;
+    /// <summary>DEFAULT Classic (Traced, B3 §2). rule: m4-battle-classic §2.</summary>
+    public ClassicTaskForces TaskForces { get; init; } = ClassicTaskForces.Classic;
     /// <summary>DEFAULT EmpireFirst (Traced, B3 §3). rule: m4-battle-classic §3.</summary>
     public ClassicFireOrder FireOrder { get; init; } = ClassicFireOrder.EmpireFirst;
-    /// <summary>DEFAULT Original (Traced, B3 §13). rule: m4-battle-classic §1.4.</summary>
-    public ClassicBattleRng BattleRng { get; init; } = ClassicBattleRng.Original;
+    /// <summary>DEFAULT Classic (Traced, B3 §13). rule: m4-battle-classic §1.4.</summary>
+    public ClassicBattleRng BattleRng { get; init; } = ClassicBattleRng.Classic;
     /// <summary>DEFAULT Stand Off, for both sides. rule: m4-battle-classic §6.</summary>
     public BattleTactic Tactic { get; init; } = BattleTactic.StandOff;
     /// <summary>DEFAULT LaneAdjacent. rule: m4-retreat-damage-repair §3.</summary>
@@ -79,8 +79,8 @@ public sealed record BattleParams
     /// <summary>Same for the Alliance. DEFAULT false.</summary>
     public bool AllianceIsAi { get; init; }
 
-    // ---- the original's battle generator. rule: m4-battle-classic §1.4 (Traced, B3 §13)
-    /// <summary>Seed of the Original battle generator (0xbc614e). Traced.</summary>
+    // ---- Classic's battle generator. rule: m4-battle-classic §1.4 (Traced, B3 §13)
+    /// <summary>Seed of the Classic battle generator (0xbc614e). Traced.</summary>
     public int OriginalRngSeed { get; init; } = 12345678;
     /// <summary>Steps made right after seeding. Traced.</summary>
     public int OriginalRngWarmup { get; init; } = 16;
@@ -155,7 +155,7 @@ public sealed record BattleParams
     // ---- hits and subsystems. rule: m4-battle-classic §6, §7 (Traced, B3 §6)
     /// <summary>Minimum percent chance of a shield-generator hit. Traced.</summary>
     public double ShieldGeneratorMinPercent { get; init; } = 1;
-    /// <summary>Both rolls are rand(0..this), inclusive (the original's 0x5f5700). Traced.</summary>
+    /// <summary>Both rolls are rand(0..this), inclusive (Classic's 0x5f5700). Traced.</summary>
     public int RollSides { get; init; } = 100;
     /// <summary>A hull-roll score at or below this hits nothing; then the cut-offs below pick which. Traced.</summary>
     public int SubsystemScoreAbove { get; init; } = 50;
@@ -181,7 +181,7 @@ public sealed record BattleParams
     public string CoruscantSystem { get; init; } = "Coruscant";
     /// <summary>Seconds without a new low of strength, for both sides, that make a stalemate (0x66c3e0). Traced.</summary>
     public int StalemateSeconds { get; init; } = 1200;
-    /// <summary>Engineering guard (not in the original): a battle that reaches this second is treated as a stalemate. DEFAULT.</summary>
+    /// <summary>Engineering guard (not in Classic): a battle that reaches this second is treated as a stalemate. DEFAULT.</summary>
     public int SafetyGuardSeconds { get; init; } = 20000;
     /// <summary>Ship class id of the Death Star (the retreat-ability exception and the stalemate switch). Traced (data id).</summary>
     public int DeathStarClassId { get; init; } = 136;

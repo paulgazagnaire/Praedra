@@ -1,9 +1,9 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
 
-namespace Rebellion.Core.Tests.Construction;
+namespace Praedra.Core.Tests.Construction;
 
 // Tests of m2-construction (ids C1 to C25 as in the sheet's table, then extra tests named after the rule they check).
 // Hook time T = K + 1; events of slot 6.6 and of steps 3 and 4 carry Day = T. Real costs file unless a test says otherwise.
@@ -166,7 +166,7 @@ public class ConstructionTests
     public void C8_NewOrderCancelsTheProjectWithoutRefund()
     {
         var w = ShipyardWithLoad100();
-        // B5b 2026-10-18: the 1998 build command never cancels (B5b §7); this checks the NewOrderReplacesProject switch (DEFAULT off).
+        // B5b 2026-10-18: the Classic build command never cancels (B5b §7); this checks the NewOrderReplacesProject switch (DEFAULT off).
         w.Build.NewOrderReplacesProject = true;
         w.TryOrder(Emp, Home, YardFamily.Shipyard, "Imperial Star Destroyer", 3);
         w.RunTo(100);
@@ -207,7 +207,7 @@ public class ConstructionTests
     public void C10_BlockadeAbandonsTheRunningCycleAndStopsNewOnes()
     {
         var w = Empire(100, FacilityKind.ConstructionYard);
-        w.Build.YardStopMode = StopMode.Abandon; // Blockade pause, 2026-10-18: this checks the 1998 loss (Original switch); the DEFAULT pauses (C10b)
+        w.Build.YardStopMode = StopMode.Abandon; // Blockade pause, 2026-10-18: this checks the Classic loss (Classic switch); the DEFAULT pauses (C10b)
         w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, Home);
         w.RunTo(6); // cycle 2 runs from hook 5 to 9
         int blocker = w.Fleets.AddFleet(Side.Alliance, "Blockade", new[] { "Interdictor Cruiser" }, Home); // gravity well: economic blockade
@@ -224,7 +224,7 @@ public class ConstructionTests
         Assert.Equal(23, yard.Due);
     }
 
-    // m2-construction C10b (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch): YardStopMode Pause
+    // m2-construction C10b (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, Classic is the switch): YardStopMode Pause
     // (DEFAULT) freezes the running cycle while blockaded; it resumes where it left off (2 days still to run) and pays its point. No refined lost.
     [Fact]
     public void C10b_BlockadePausesTheRunningCycleAndResumesIt()
@@ -277,7 +277,7 @@ public class ConstructionTests
         for (int i = 0; i < 40; i++) w.Eco.AddObject(Emp, "Stormtrooper Regiment", Home); // garrison arrives
         w.Run(3);
         Assert.False(w.Support.IsUprising(Home));
-        Assert.Contains(w.Events<Rebellion.Core.Support.UprisingEnded>(), _ => true);
+        Assert.Contains(w.Events<Praedra.Core.Support.UprisingEnded>(), _ => true);
         w.Run(2);
         Assert.True(w.Eco.Refined(Emp) < 100); // cycles resume
     }

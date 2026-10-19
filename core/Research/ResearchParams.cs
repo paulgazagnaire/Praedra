@@ -1,11 +1,11 @@
-namespace Rebellion.Core.Research;
+namespace Praedra.Core.Research;
 
 /// <summary>How a research percent is set at setup. rule: m5-research §Scaling with galaxy size.</summary>
 public enum ResearchScale
 {
     /// <summary>Percent 100 (no scaling). DEFAULT for both settings.</summary>
     None,
-    /// <summary>Percent = the number of systems in play at setup, taken once (the original's reading, Inferred, unverified vs original).</summary>
+    /// <summary>Percent = the number of systems in play at setup, taken once (Classic's reading, Inferred, unverified vs Classic).</summary>
     SystemCount,
     /// <summary>Percent = the matching Fixed value.</summary>
     Fixed,

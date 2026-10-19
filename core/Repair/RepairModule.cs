@@ -1,12 +1,12 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
 
-namespace Rebellion.Core.Repair;
+namespace Praedra.Core.Repair;
 
 /// <summary>
-/// Strategic repair, day slot 6.8 (after autoscrap 6.7): the original's per-unit repair timer (rule event 0x380, capital ship 0x501c50, squadron
+/// Strategic repair, day slot 6.8 (after autoscrap 6.7): Classic's per-unit repair timer (rule event 0x380, capital ship 0x501c50, squadron
 /// 0x503530). A damaged unit that is not moving has a repair turn every 30 days, every 2 days with FastRepair (at a system of its side with a usable
 /// own shipyard that is not suspended by a blockade or an uprising). Holds data and hooks only; the timer lives on the economy objects
 /// (<see cref="EconObject.RepairMode"/>, <see cref="EconObject.RepairDue"/>). Free. The damage-control rolls use the game generator.

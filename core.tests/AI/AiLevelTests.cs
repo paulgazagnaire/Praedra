@@ -1,9 +1,9 @@
-using Rebellion.Core.AI;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Setup;
+using Praedra.Core.AI;
+using Praedra.Core.Clock;
+using Praedra.Core.Setup;
 using Xunit.Abstractions;
 
-namespace Rebellion.Core.Tests.AI;
+namespace Praedra.Core.Tests.AI;
 
 // Difficulty levels of the computer opponent (core/AI/AiLevel.cs). The rules: ai/09 §6 (difficulty is an AI parameter set, not a head start),
 // ai/12 D3 and economy-ai D4 (Paul 2026-10-12: Hard is smarter, never a cheat; the AI plays fair with fog of war at every level).
@@ -107,6 +107,6 @@ public class AiLevelTests
         Assert.True(launches > 0);
     }
 
-    private static bool IsScout(GameHost h, Rebellion.Core.Fleets.Fleet f) =>
+    private static bool IsScout(GameHost h, Praedra.Core.Fleets.Fleet f) =>
         f.Ships.Count == 1 && h.Economy.Find(f.Ships[0]) is { } o && o.Class is "Galleon" or "Medium Transport";
 }

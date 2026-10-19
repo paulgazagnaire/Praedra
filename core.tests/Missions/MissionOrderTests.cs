@@ -1,11 +1,11 @@
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Missions;
-using Rebellion.Core.Setup;
-using static Rebellion.Core.Tests.Missions.MissionWorld;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Missions;
+using Praedra.Core.Setup;
+using static Praedra.Core.Tests.Missions.MissionWorld;
 
-namespace Rebellion.Core.Tests.Missions;
+namespace Praedra.Core.Tests.Missions;
 
 // m5-missions §Tests MI44 to MI55, MI58, MI59: orders, travel, timers, legality, cancel, return; plus the switches, the RuleMissing refusals and
 // the hooks into the character, fog and support modules.
@@ -378,7 +378,7 @@ public class MissionOrderTests
         Assert.Equal(MissionReject.RuleMissing, w.Try(s => new StartMissionOrder(s, Side.Alliance, MissionKind.JediTraining, new() { Luke }, new(), new(), T)));
         // with a recruit hook the mission runs (MI21: leadership 80 gives RCRTMSTB(80) = 60 on the full table, step lookup)
         CharacterRecord? recruited = null;
-        w.M.Recruit = (ctx, side, sys) => { var c = w.Ch.Get(Wedge) ?? w.Ch.Create(w.Ch.Data.Get(Wedge), new Rebellion.Core.Tests.Economy.StubRng()); w.Ch.Place(c.Id, sys, ctx); recruited = c; return c; };
+        w.M.Recruit = (ctx, side, sys) => { var c = w.Ch.Get(Wedge) ?? w.Ch.Create(w.Ch.Data.Get(Wedge), new Praedra.Core.Tests.Economy.StubRng()); w.Ch.Place(c.Id, sys, ctx); recruited = c; return c; };
         w.Stub!.Expect(0, 99, 0);
         Assert.Null(w.Try(s => new StartMissionOrder(s, Side.Alliance, MissionKind.Recruitment, new() { Leia }, new(), new(), T)));
         w.RunIteration(w.LastMission);
@@ -420,7 +420,7 @@ public class MissionOrderTests
             (p.InciteInputMode, p.InciteSupportTiming, p.SubdueEndsUprising, p.SabotageSkill, p.SabotageTargetMode, p.ExposureHooks));
         var d = GameData.Default.Missions;
         Assert.Equal(25, d.Records.Count);
-        Assert.Equal(14, d.DecoyTable!.Count); // B1: FDECOYTB read from the 1998 files (was null: decoys refused)
+        Assert.Equal(14, d.DecoyTable!.Count); // B1: FDECOYTB read from the Classic files (was null: decoys refused)
         Assert.Equal(14, d.Foil.Count);
         Assert.Equal((5, 10, true, "DIPLMSTB"), (d.Get(MissionKind.Diplomacy).TimerMin, d.Get(MissionKind.Diplomacy).TimerSpread, d.Get(MissionKind.Diplomacy).Repeats, d.Get(MissionKind.Diplomacy).Table));
         Assert.Equal(0x802, d.Get(MissionKind.Rescue).SpecialForceMask);

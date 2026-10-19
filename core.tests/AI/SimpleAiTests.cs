@@ -1,14 +1,14 @@
-using Rebellion.Core.AI;
-using Rebellion.Core.Assault;
-using Rebellion.Core.Battle;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Control;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Tests.Setup;
+using Praedra.Core.AI;
+using Praedra.Core.Assault;
+using Praedra.Core.Battle;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Control;
+using Praedra.Core.Setup;
+using Praedra.Core.Tests.Setup;
 using Xunit.Abstractions;
 
-namespace Rebellion.Core.Tests.AI;
+namespace Praedra.Core.Tests.AI;
 
 // AI vs AI on the test campaign start (core/Setup/TestCampaign.cs). The campaign's scripted orders are NOT used (the AIs play instead);
 // its one scripted capture of Denon on day 400 still fires (a hook inside TestCampaign), so captures are counted by cause.
@@ -80,7 +80,7 @@ public class SimpleAiTests
     [Fact]
     public void LoadedGameContinuesLikeTheUninterruptedOne()
     {
-        // A save loaded mid-game with fresh AIs plays on exactly as the original (campaign hook re-registered by TestCampaign.Load). The AI's only
+        // A save loaded mid-game with fresh AIs plays on exactly as before (campaign hook re-registered by TestCampaign.Load). The AI's only
         // memory across days is the game's AiMemory (QA-1), carried by SaveWithSettings, not by the plain Save: with the New battle (DEFAULT since
         // 2026-10-18) the plain save diverged on day 202 (the memory of a retreat changed a move order); under Classic it happened not to matter.
         var c = TestCampaign.New(5); var m = new AiMatch(c.Host);

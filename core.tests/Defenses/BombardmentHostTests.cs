@@ -1,11 +1,11 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Defenses;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Support;
-using Rebellion.Core.Tests.Setup;
+using Praedra.Core.Clock;
+using Praedra.Core.Defenses;
+using Praedra.Core.Economy;
+using Praedra.Core.Setup;
+using Praedra.Core.Support;
+using Praedra.Core.Tests.Setup;
 
-namespace Rebellion.Core.Tests.Defenses;
+namespace Praedra.Core.Tests.Defenses;
 
 // P3.4 wiring: GameHost settings and save/load, and the scripted bombardment of the test campaign (m3-bombardment).
 public class BombardmentHostTests

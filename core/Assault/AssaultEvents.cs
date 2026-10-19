@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Assault;
+namespace Praedra.Core.Assault;
 
 // Events of the assault. Day is K + 1 (slot 5.2 events carry day = K + 1 like arrivals). Order of emission for one resolution:
 // AssaultStarted, then step 1 BatteryHit (+ RegimentDestroyed), step 2 DuelResolved (+ RegimentDestroyed), step 4 CollateralDamage
