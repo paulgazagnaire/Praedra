@@ -53,7 +53,7 @@ public sealed record SimpleAiParams
     /// GarrisonShortPerTrainingFacility regiments short (up to MaxTrainingFacilities). Without it a winning side spent its upkeep on warships it
     /// did not need (seed 10 Empire, day 2500: 4239 of about 5700 upkeep on capital ships against 8 Rebel systems) and trained about 45
     /// regiments per 250 days at 4 facilities, while uprisings killed 45-80 and the worlds left with none went to the Alliance by support.
-    /// Measured (seeds 1-16, Medium mirror and Medium against Hard both ways): no-winner games 9 of 48 (10 off), seed 10 an Empire win.
+    /// Measured (seeds 1-16, Medium mirror and Medium against Hard both ways): no-winner games 8 of 48 (10 off), seed 10 an Empire win.
     /// rule: ai tuning (New AI rule, no sheet); m2-uprisings-and-garrison §Required garrison N. DEFAULT.
     /// </summary>
     public bool GarrisonsFirst { get; init; } = true;
@@ -540,6 +540,14 @@ public sealed record SimpleAiParams
     /// 10 with sightings forgotten after 120 days (the #95 rule); Medium mirror seed 12 ends at 25 and 5, not when forgotten.
     /// </summary>
     public int TaskForceFadePercent { get; init; } = 25;
+    /// <summary>
+    /// Task forces (QA-20, QA round 34): with fog, the side also remembers the strongest enemy fleet it has seen in its AI memory (carried by a
+    /// save), fading by TaskForceFadePercent, so a later look that finds that system empty does not make the task force forget it. DEFAULT off:
+    /// measured (seeds 1-16, Medium mirror and Medium against Hard both ways, against GarrisonsFirst main): no-winner games 11 of 48 against 8
+    /// off (Medium Empire against Hard Alliance 7 against 3), Hard Empire wins against Medium Alliance 14 against 13, share 67.0% both; a
+    /// memory fading 50% per 100 days: 15, 13, 64.1%; 100%: 11, 14, 61.8%.
+    /// </summary>
+    public bool FleetMemory { get; init; }
     /// <summary>
     /// Key characters (the majors: Luke, Leia, Han, Mon Mothma, Vader, Palpatine) count this percent of their mission value (others are
     /// preferred) and never go on Rescue, Abduction, Sabotage or Incite (ai/05 §4: the original keeps its leaders off those). With

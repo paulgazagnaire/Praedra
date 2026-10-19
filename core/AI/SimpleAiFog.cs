@@ -656,7 +656,19 @@ public sealed partial class SimpleAi
     private double StrongestEnemyFleet()
     {
         if (_view == null) return S.Fleets.Values.Where(f => f.Side == Enemy && f.Ships.Count > 0).Select(Str).DefaultIfEmpty(0).Max();
+        double best = PictureStrongestEnemyFleet();
+        if (_p.FleetMemory && _mem.FleetSeen > 0) best = Math.Max(best, RememberedFleet());
+        return best;
+    }
+
+    /// <summary>FleetMemory: the remembered strongest enemy fleet, faded by its age today (0 = none).</summary>
+    internal double RememberedFleet() => _mem.FleetSeen * FadedPercent(Today - _mem.FleetSeenDay, _p.FogFleetMemoryDays, _p.TaskForceFadePercent) / 100;
+
+    /// <summary>With fog: the strongest enemy fleet of the side's picture now, each sighting faded by its age (0 when none).</summary>
+    internal double PictureStrongestEnemyFleet()
+    {
         double best = 0;
+        if (_view == null) return best;
         foreach (var sys in _h.Data.Galaxy.Systems)
         {
             var e = _view.Picture(sys.Name)?.Fleets;
@@ -666,5 +678,31 @@ public sealed partial class SimpleAi
             foreach (var fp in e.Value) if (fp.Side == Enemy) best = Math.Max(best, Str(ForceOf(sys.Name, fp)) * pct / 100);
         }
         return best;
+    }
+
+    /// <summary>
+    /// FleetMemory (QA-20, QA round 34): with fog, keep in the side's <see cref="AiMemory"/> the enemy fleet sighting of its picture worth the most
+    /// today after the TaskForceFadePercent fade, so a later look that finds the system empty does not wipe it. Only real sightings (the picture,
+    /// at their stamp day) go in. Systems in galaxy order; a tie keeps the stored one. Called once a day before the plans.
+    /// rule: ai tuning, SimpleAiParams.FleetMemory (New AI rule, no sheet).
+    /// </summary>
+    private void RememberStrongestFleet()
+    {
+        if (!_p.FleetMemory || _view == null) return;
+        double kept = RememberedFleet();
+        foreach (var sys in _h.Data.Galaxy.Systems)
+        {
+            var e = _view.Picture(sys.Name)?.Fleets;
+            if (e == null) continue;
+            int age = AgeOf(e), pct = FadedPercent(age, _p.FogFleetMemoryDays, _p.TaskForceFadePercent);
+            if (pct <= 0) continue;
+            foreach (var fp in e.Value)
+            {
+                if (fp.Side != Enemy) continue;
+                double s = Str(ForceOf(sys.Name, fp));
+                if (s * pct / 100 <= kept) continue;
+                _mem.FleetSeen = s; _mem.FleetSeenDay = Today - age; kept = s * pct / 100;
+            }
+        }
     }
 }
