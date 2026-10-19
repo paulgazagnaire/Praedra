@@ -99,6 +99,37 @@ public sealed partial class SimpleAi
         return Math.Max(0, guess - KillsSince(system, Today - _p.FogKillMemoryDays));
     }
 
+    /// <summary>
+    /// NoBlindStrikes (QA-22): does the side see a military target on the system (m3-bombardment §Targets: regiments, defence facilities)? No fog:
+    /// the truth. Fog: group C of the picture shows a defence facility, or group D shows enemy regiments (not older than FogGroundForgetDays on an
+    /// enemy-held system, as FogDefendersAt) that the side's own strikes since that look have not all killed, and no strike there since that
+    /// look killed nothing (a strike with nothing to hit kills nothing). Never seen (or forgotten) = no target seen, unless BlindProbeStrikes
+    /// allows a probe there.
+    /// </summary>
+    internal bool MilitaryTargetSeen(string system)
+    {
+        if (_view == null) return DefendersAt(system) > 0 || _h.Defenses.DefensesOf(system).Any();
+        var pic = _view.Picture(system);
+        if (pic?.Facilities is { } fac && fac.Value.Keys.Any(_h.Defenses.Data.IsDefense)) return true;
+        var g = pic?.Ground;
+        if (g == null || (_p.FogGroundForgetDays > 0 && AgeOf(g) > _p.FogGroundForgetDays && IsEnemyHeld(system)))
+        {
+            // BlindProbeStrikes: a garrison never seen (or forgotten) may be probed with one strike; one that killed nothing there lately ends it
+            if (!_p.BlindProbeStrikes || !IsEnemyHeld(system)) return false;
+            foreach (var b in NotesSince(AiNoteKind.Bombardment, Today - _p.FogKillMemoryDays))
+                if (b.System == system && b.Day >= Today - _p.FogKillMemoryDays && b.Value == 0) return false;
+            return true;
+        }
+        int seen = g.Value.Where(x => x.Side != _side).Sum(x => x.Total), killed = 0;
+        foreach (var b in NotesSince(AiNoteKind.Bombardment, g.Stamp + 1))
+        {
+            if (b.System != system || b.Day <= g.Stamp) continue;
+            if (b.Value == 0) return false;
+            killed += b.Value;
+        }
+        return seen > killed;
+    }
+
     /// <summary>Tests: the regiments the AI would assume on a system today (DefendersAt as PlanDay sees it).</summary>
     internal int DefendersEstimate(string system)
     {
