@@ -544,9 +544,18 @@ public sealed partial class SimpleAi
     private bool KeyHuntOn()
     {
         if (!_p.KeyHunt || _view == null || _side != Side.Alliance || HuntedKeys().Count == 0) return false;
-        string cor = Rebellion.Core.Victory.VictoryModule.CoruscantName;
-        return Finishing() || Held(cor) || Destroyed(cor);
+        return KeyAhead();
     }
+
+    /// <summary>The side is ahead for its victory keys: Finishing, or for the Alliance its place term (Coruscant held or destroyed).</summary>
+    private bool KeyAhead()
+    {
+        string cor = Rebellion.Core.Victory.VictoryModule.CoruscantName;
+        return Finishing() || (_side == Side.Alliance && (Held(cor) || Destroyed(cor)));
+    }
+
+    /// <summary>Is the character one of the side's standard victory keys (the characters it must capture to win)?</summary>
+    private bool IsVictoryKey(int id) => _h.Victory.Keys.Any(k => k.Standard && k.Side == _side && k.Character == id);
 
     /// <summary>The side's standard victory keys that are not its own prisoners, by id.</summary>
     private List<int> HuntedKeys() => _h.Victory.Keys.Where(k => k.Standard && k.Side == _side).Select(k => k.Character).Distinct().OrderBy(id => id)

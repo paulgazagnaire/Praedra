@@ -446,7 +446,7 @@ public sealed partial class SimpleAi
         if (KindUsable(MissionKind.Abduction))
             foreach (var (id, s) in EnemyCharactersSeen())
                 if (!takenChar.Contains(id))
-                    jobs.Add(new Job(MissionKind.Abduction, s, id, _p.AbductionValue * (_h.Characters.Data.Get(id).Kind == CharacterKind.Major ? 2 : 1), "char " + id));
+                    jobs.Add(new Job(MissionKind.Abduction, s, id, AbductionJobValue(id), "char " + id));
         // 5b. Key hunt (KeyHunt): ahead, spies look for the enemy keys the side must still capture; a look that finds one makes him a target of 5
         if (KeyHuntOn() && KindUsable(MissionKind.Espionage))
         {
@@ -501,6 +501,16 @@ public sealed partial class SimpleAi
         return jobs;
     }
 
+    /// <summary>
+    /// An Abduction's value: a major character is worth twice AbductionValue; one of the side's standard victory keys is worth VictoryKeyValue
+    /// once the side is ahead (KeyAhead), when that is set.
+    /// </summary>
+    private int AbductionJobValue(int id)
+    {
+        if (_p.VictoryKeyValue > 0 && IsVictoryKey(id) && KeyAhead()) return _p.VictoryKeyValue;
+        return _p.AbductionValue * (_h.Characters.Data.Get(id).Kind == CharacterKind.Major ? 2 : 1);
+    }
+
     private static bool Repeats(MissionKind k) => k is MissionKind.Diplomacy or MissionKind.SubdueUprising or MissionKind.InciteUprising
         or MissionKind.ShipResearch or MissionKind.TroopResearch or MissionKind.FacilityResearch;
 
@@ -514,6 +524,10 @@ public sealed partial class SimpleAi
     /// The success chance (percent) of one member (its skills read through sk), from the core's table for the kind (m5-missions §Mission records: the table input). Recon
     /// succeeds by itself; Incite counts as a success while it works (its incident term, m5-missions §7, needs no roll); Research is the skill.
     /// </summary>
+    /// <summary>Tests: the Abduction chance (percent) the planner reads for the character against the target at the system.</summary>
+    internal int AbductionPercentEstimate(CharacterRecord c, int target, string system) =>
+        SuccessPercent(s => Skill(c, s), new Job(MissionKind.Abduction, system, target, 0, "test"));
+
     private int SuccessPercent(Func<Skill, int> sk, Job j)
     {
         var mi = _h.Missions; var rec = mi.Data.Get(j.Kind);
@@ -537,7 +551,10 @@ public sealed partial class SimpleAi
                     // the target's combat is not known: its record's base plus half its variance (static character data)
                     var k = _h.Characters.Data.Get(j.TargetCharacter!.Value);
                     int est = k.SkillBase[(int)Characters.Skill.Combat] + k.SkillVariance[(int)Characters.Skill.Combat] / 2;
-                    return Table(sk(Characters.Skill.Combat) - est);
+                    int pct = Table(sk(Characters.Skill.Combat) - est);
+                    // rule: m5-missions §6a.3: a key target's chance is min(table, cap_percent), a published rule (the key-target file), not hidden
+                    // information; without it the AI believed 95% at the Emperor where the real chance is 2% (PR #92 probe, seed 9: 20 tries, 0 captures)
+                    return _p.AbductionKeyCap && mi.IsKeyTarget(j.Kind, j.TargetCharacter, out int cap) ? Math.Min(pct, cap) : pct;
                 }
             default: return ResearchSkillOf(j.Kind) is Skill rs ? Math.Min(100, sk(rs)) : 0;
         }
@@ -611,11 +628,15 @@ public sealed partial class SimpleAi
     {
         var rec = _h.Missions.Data.Get(j.Kind);
         int unseen = rec.Foilable ? UnseenBasisPoints(sk(Characters.Skill.Espionage), j.System, specialForces) : 10000;
-        int chance = (int)((long)unseen * SuccessPercent(sk, j) / 10000); // percent
-        if (chance < (Repeats(j.Kind) ? _p.RepeatMinOddsPercent : _p.MissionMinOddsPercent)) return null;
+        int pct = SuccessPercent(sk, j);
+        int chance = (int)((long)unseen * pct / 10000); // percent
+        // a victory key (VictoryKeysSkipOddsFloor): no odds floor; it competes on value x honest chance, in basis points (a 2% cap rounds to 0 in percent)
+        bool key = _p.VictoryKeysSkipOddsFloor && j.Kind == MissionKind.Abduction && j.TargetCharacter is int t && IsVictoryKey(t);
+        if (!key && chance < (Repeats(j.Kind) ? _p.RepeatMinOddsPercent : _p.MissionMinOddsPercent)) return null;
         int ticks = TicksCached(at, j.System, speed);
         if (ticks == int.MaxValue) return null;
         long value = j.Value * valuePercent / 100;
+        if (key) { long bp = (long)unseen * pct / 100; return bp > 0 ? value * bp / (ticks + _p.MissionTravelBias) : null; }
         return value * chance * 100 / (ticks + _p.MissionTravelBias);
     }
 

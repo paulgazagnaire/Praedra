@@ -443,6 +443,24 @@ public sealed record SimpleAiParams
     /// <summary>An enemy character is an Abduction target only when the side's own feed placed it at a system it sees, or its picture's group D showed it, within this many days. DEFAULT.</summary>
     public int AbductionInfoDays { get; init; } = 5;
     /// <summary>
+    /// The planner reads a key target's Abduction chance as the core rolls it, min(table, cap_percent) (m5-missions §6a.3; the caps are the
+    /// key-target file: Emperor 2, Vader 4, Luke 4, Mon Mothma 2), so it values those jobs honestly and the odds floor (MissionMinOddsPercent)
+    /// applies. false = the AI before (the table alone: 95% believed where 2% is real). DEFAULT true (Dev lead, 2026-10-19).
+    /// </summary>
+    public bool AbductionKeyCap { get; init; } = true;
+    /// <summary>
+    /// The side's standard victory keys (the characters it must capture to win) are exempt from MissionMinOddsPercent: with honest capped odds
+    /// (AbductionKeyCap) the floor turned them into "never try", while repeated 2-4% tries were the only route to the capture term (Dev lead
+    /// 2026-10-19, #93). They compete on value x honest chance like any job. false = the floor applies. DEFAULT true.
+    /// </summary>
+    public bool VictoryKeysSkipOddsFloor { get; init; } = true;
+    /// <summary>
+    /// Value of an Abduction of one of the side's victory keys once it is ahead (FinishWhenAheadRatio, or for the Alliance Coruscant held or
+    /// destroyed), so a key outranks routine jobs then; before that, the ordinary major value (AbductionValue x 2). 0 = always the ordinary
+    /// value. DEFAULT (AI tuning, no rule).
+    /// </summary>
+    public int VictoryKeyValue { get; init; } = 20000;
+    /// <summary>
     /// Key hunt (QA round 29, 2026-10-18), the Alliance only: with fog, while it is ahead (FinishWhenAheadRatio, or holding or having destroyed
     /// Coruscant, its place term) and still needs the Emperor or Vader captured to win (its standard victory keys), it sends spies (Espionage)
     /// to look for them: first where its pictures last showed one (within KeyInfoDays), then across the systems its picture shows Imperial-held,

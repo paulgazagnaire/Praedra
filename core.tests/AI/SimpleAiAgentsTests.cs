@@ -422,4 +422,26 @@ public class SimpleAiAgentsTests
         }
         return (seed, looks, offTarget, keySeen, abductions);
     }
+
+    // rule: m5-missions §6a.3 (a key target's chance is min(table, cap_percent)): with AbductionKeyCap (DEFAULT on) the planner reads the
+    // Emperor's and Vader's Abduction chance as the core rolls it, so the odds floor (MissionMinOddsPercent) applies; off, the table alone.
+    // Seed 1, the Alliance's best fighter at day 0 against the Emperor: 95 off, 2 on (the key-target file: Emperor 2, Vader 4).
+    [Fact]
+    public void AbductionOdds_OfAKeyTarget_ReadTheCap()
+    {
+        Assert.True(new SimpleAiParams().AbductionKeyCap);
+        var (_, h) = Match(1, Fog);
+        var cp = h.Characters.Params;
+        var best = h.Characters.InPlay.Where(c => c.Side == Side.Alliance).OrderByDescending(c => h.Characters.EffectiveSkill(c, Skill.Combat)).ThenBy(c => c.Id).First();
+        var on = new SimpleAi(h, Side.Alliance, Fog); var off = new SimpleAi(h, Side.Alliance, Fog with { AbductionKeyCap = false });
+        Assert.True(h.Missions.IsKeyTarget(MissionKind.Abduction, cp.Emperor, out int capE));
+        Assert.True(h.Missions.IsKeyTarget(MissionKind.Abduction, cp.Vader, out int capV));
+        int e1 = on.AbductionPercentEstimate(best, cp.Emperor, "Coruscant"), e0 = off.AbductionPercentEstimate(best, cp.Emperor, "Coruscant");
+        int v1 = on.AbductionPercentEstimate(best, cp.Vader, "Coruscant"), v0 = off.AbductionPercentEstimate(best, cp.Vader, "Coruscant");
+        _out.WriteLine($"Emperor {e0} -> {e1} (cap {capE}); Vader {v0} -> {v1} (cap {capV})");
+        Assert.Equal(Math.Min(e0, capE), e1);
+        Assert.Equal(Math.Min(v0, capV), v1);
+        Assert.True(e0 > capE && e1 < new SimpleAiParams().MissionMinOddsPercent, $"Emperor {e0} -> {e1}");
+    }
 }
+
