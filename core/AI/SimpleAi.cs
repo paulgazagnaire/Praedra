@@ -1387,7 +1387,9 @@ public sealed partial class SimpleAi
         bool win = at == WinTarget();
         // fog: the shelling cannot be seen to work, so even the winning system is shelled a bounded number of times
         int maxShell = _view != null && win ? _p.FogWinBombardmentsPer30Days : _p.MaxBombardmentsPer30Days;
-        if (d > 0 && _h.Bombardment.Power(f) > 0 && ((win && _view == null) || RecentBombardments(at) < maxShell))
+        // NoBlindStrikes (QA-22): a Military strike with nothing to hit wastes every hit and still rolls collateral against the bomber (B7 §5.3)
+        bool targetSeen = !_p.NoBlindStrikes || MilitaryTargetSeen(at);
+        if (d > 0 && _h.Bombardment.Power(f) > 0 && targetSeen && ((win && _view == null) || RecentBombardments(at) < maxShell))
         {
             long seq = _h.Bombardment.SubmitBombard(_side, f.Id, at, BombardCategory.Military);
             Note(seq, "Bombard", $"fleet {f.Id} shells {at}");
@@ -1396,7 +1398,8 @@ public sealed partial class SimpleAi
         // rule: ai tuning (m6 stall fix). PickTarget chose this system on Need(d / 2) (the shelling halves the defenders); the landing here asked for
         // Need(d) again. With fog the believed d never falls without own kills (the garrison seen is a guess or stale; an empty or small garrison
         // gives none), so the fleet shelled four times, left, and came back again and again, never landing. Shelled and armed: ask what the pick asked.
-        bool shelled = _p.ShelledLandingNeed && canShell && RecentBombardments(at) > 0;
+        // NoBlindStrikes: no target seen to shell, so land on what PickTarget asked, as after a shelling
+        bool shelled = _p.ShelledLandingNeed && canShell && (RecentBombardments(at) > 0 || !targetSeen);
         if (aboard >= 1 && aboard >= Need(shelled ? d / 2 : d))
         {
             long seq = _h.Assault.SubmitAssault(_side, f.Id, at);

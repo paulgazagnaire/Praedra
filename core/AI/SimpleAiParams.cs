@@ -168,6 +168,22 @@ public sealed record SimpleAiParams
     /// Off = the AI of before (it shelled and left forever when the believed garrison stayed at the unseen guess). DEFAULT true (m6 stall fix).
     /// </summary>
     public bool ShelledLandingNeed { get; init; } = true;
+    /// <summary>
+    /// QA-22 (QA round 38): the AI shelled worlds where it saw nothing to hit (Medium mirror seed 3: 401 of 461 strikes had no military target,
+    /// one every 3 days on the same world while the fleet waited for regiments it did not carry). Under B7 an empty Military strike always rolls
+    /// collateral on a civilian facility (m0 = 0 gives a 1-in-1 chance) and the bomber's support falls by 20 when it hits. With it the AI orders
+    /// a Military strike only when it sees a military target there (regiments or defence facilities on its picture, not shown empty by a strike
+    /// since); otherwise it lands on what PickTarget asked, as after a shelling, or moves on. Fog-honest. New AI rule (no sheet). Off = the AI
+    /// before. DEFAULT off: measured on B7 main e12b3da (seeds 1-16, Medium mirror and Medium against Hard both ways): no-winner games 14 of 48
+    /// on, 14 off; Hard Empire wins against Medium Alliance 7 on, 8 off; Hard's share against Medium 52.2% on, 64.6% off (the mirror ends more
+    /// often, 2 against 4, and the Empire wins sooner there, median day 2017 against 2215). With BlindProbeStrikes: 15, 6, 53.9%.
+    /// </summary>
+    public bool NoBlindStrikes { get; init; }
+    /// <summary>
+    /// NoBlindStrikes: an enemy-held world whose garrison the side has never seen (or has forgotten) may still be shelled, until a strike there
+    /// in the last FogKillMemoryDays killed nothing. Off = such a world is never shelled. DEFAULT off (measured, see NoBlindStrikes).
+    /// </summary>
+    public bool BlindProbeStrikes { get; init; }
     /// <summary>A fleet whose ships average below this hull percent stays (or goes) to a shipyard instead of launching. DEFAULT.</summary>
     public int RepairBelowPercent { get; init; } = 70;
 
