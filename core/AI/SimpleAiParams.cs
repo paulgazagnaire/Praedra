@@ -514,10 +514,17 @@ public sealed record SimpleAiParams
     /// <summary>Task forces: most piles formed on one system in a review. DEFAULT.</summary>
     public int TaskForceMax { get; init; } = 4;
     /// <summary>
-    /// Task forces: a task force is at least this percent of the strongest enemy fleet the side knows of (its picture within FogFleetMemoryDays;
-    /// all enemy fleets without fog), and at least LaunchStrength. DEFAULT.
+    /// Task forces: a task force is at least this percent of the strongest enemy fleet the side knows of (its picture, older sightings fading by
+    /// TaskForceFadePercent; all enemy fleets without fog), and at least LaunchStrength. DEFAULT.
     /// </summary>
     public int TaskForceMarginPercent { get; init; } = 150;
+    /// <summary>
+    /// Task forces (QA-20): with fog, an enemy fleet the side last saw more than FogFleetMemoryDays ago still counts for the task-force size,
+    /// fading by this percent of its strength per 100 days beyond that (0 = never fades). DEFAULT 25: a sighting counts whole for 120 days and
+    /// is gone after 520. Measured (seeds 1-16, Medium mirror and Medium against Hard both ways): no-winner games 10 of 48 at 25, 12 at 5 and
+    /// 10 with sightings forgotten after 120 days (the #95 rule); Medium mirror seed 12 ends at 25 and 5, not when forgotten.
+    /// </summary>
+    public int TaskForceFadePercent { get; init; } = 25;
     /// <summary>
     /// Key characters (the majors: Luke, Leia, Han, Mon Mothma, Vader, Palpatine) count this percent of their mission value (others are
     /// preferred) and never go on Rescue, Abduction, Sabotage or Incite (ai/05 §4: the original keeps its leaders off those). With

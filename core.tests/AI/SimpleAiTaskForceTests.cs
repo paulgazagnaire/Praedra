@@ -44,4 +44,23 @@ public class SimpleAiTaskForceTests
         double on = res.Average(r => r.On.End), off = res.Average(r => r.Off.End == 0 ? limit : r.Off.End);
         Assert.True(off - on >= 100, $"TaskForces on ends {off - on:F0} days sooner on average (on {on:F0}, off {off:F0})");
     }
+
+    // QA-20 (QA round 33): sized on the fleets seen within FogFleetMemoryDays only, the task force fell to LaunchStrength once the big enemy fleet
+    // was unseen for 120 days, and the side split into piles that each lost to it (seed 12 Medium mirror: known 32 against a true 350 on day
+    // 2000; 15 Empire fleets wiped out against 6 without task forces). A sighting now counts whole for FogFleetMemoryDays and then fades.
+    [Theory]
+    [InlineData(0, 120, 5, 100)]
+    [InlineData(120, 120, 5, 100)]
+    [InlineData(220, 120, 5, 95)]
+    [InlineData(1120, 120, 5, 50)]
+    [InlineData(2120, 120, 5, 0)]
+    [InlineData(5000, 120, 5, 0)]
+    [InlineData(320, 120, 25, 50)]
+    [InlineData(520, 120, 25, 0)]
+    [InlineData(5000, 120, 0, 100)]
+    public void TaskForceSizing_AnOldSightingFadesSlowly(int age, int memory, int fade, int expected) =>
+        Assert.Equal(expected, SimpleAi.FadedPercent(age, memory, fade));
+
+    [Fact]
+    public void TaskForceSizing_ASightingFadesByAQuarterPer100DaysByDefault() => Assert.Equal(25, new SimpleAiParams().TaskForceFadePercent);
 }
