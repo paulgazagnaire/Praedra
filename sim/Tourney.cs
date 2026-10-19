@@ -10,7 +10,7 @@ using Rebellion.Core.Setup;
 internal static class Tourney
 {
     public const string Usage = """
-          dotnet run --project sim -- tourney [--a hard] [--b medium] [--seeds 1-16] [--days 3000] [--jobs 4] [--csv out.csv] [--verbose] [--a-params K=V,...] [--b-params K=V,...]
+          dotnet run --project sim -- tourney [--a hard] [--b medium] [--seeds 1-16] [--days 3000] [--jobs 4] [--csv out.csv] [--verbose] [--a-params K=V,...] [--b-params K=V,...] [--settings K=V,...]
         tourney plays the simple AI at level A against level B (easy, medium, hard; core/AI/AiLevel.cs), fog on for both, from the MedA start:
         every seed once with A as the Empire and once with A as the Alliance. It prints, per level and side, the wins, the median win day, the day
         the Empire's own picture first showed the true Rebel HQ, and each level's mean share of the systems the two sides hold at the end (a win
@@ -28,7 +28,7 @@ internal static class Tourney
 
     public static int Run(string[] a)
     {
-        AiLevel la = AiLevel.Hard, lb = AiLevel.Medium; string? pa = null, pb = null; int days = 3000, jobs = Environment.ProcessorCount; string? csv = null; bool verbose = false;
+        AiLevel la = AiLevel.Hard, lb = AiLevel.Medium; string? pa = null, pb = null, ps = null; int days = 3000, jobs = Environment.ProcessorCount; string? csv = null; bool verbose = false;
         var seeds = Enumerable.Range(1, 16).ToList();
         for (int i = 0; i < a.Length; i++)
         {
@@ -44,19 +44,21 @@ internal static class Tourney
                 case "--csv": csv = Next(); break;
                 case "--a-params": pa = Next(); break;
                 case "--b-params": pb = Next(); break;
+                case "--settings": ps = Next(); break;
                 case "--verbose": verbose = true; break;
                 default: throw new ArgumentException($"Unknown option '{key}'.");
             }
         }
         var clock = System.Diagnostics.Stopwatch.StartNew();
         var paramsA = WithOverrides(AiLevels.For(la), pa); var paramsB = WithOverrides(AiLevels.For(lb), pb);
-        Console.WriteLine($"Tournament: {la}{(pa != null ? " [" + pa + "]" : "")} (A) against {lb}{(pb != null ? " [" + pb + "]" : "")} (B), seeds {string.Join(",", seeds)}, up to {days} days, fog on, {jobs} at once.");
+        var settings = SettingsWith(ps);
+        Console.WriteLine($"Tournament: {la}{(pa != null ? " [" + pa + "]" : "")} (A) against {lb}{(pb != null ? " [" + pb + "]" : "")} (B), seeds {string.Join(",", seeds)}, up to {days} days, fog on, {jobs} at once{(ps != null ? ", settings " + ps : "")}.");
         NewGame.Create(new NewGameOptions { Seed = seeds[0], Preset = StartPreset.MedA }); // loads the shared data once before the parallel games
         var games = seeds.SelectMany(s => new[] { (Seed: s, AEmp: true), (Seed: s, AEmp: false) }).ToList();
         var results = new ConcurrentBag<GameResult>();
         Parallel.ForEach(games, new ParallelOptions { MaxDegreeOfParallelism = jobs }, g =>
         {
-            var r = Play(g.Seed, g.AEmp, g.AEmp ? la : lb, g.AEmp ? lb : la, g.AEmp ? paramsA : paramsB, g.AEmp ? paramsB : paramsA, days);
+            var r = Play(g.Seed, g.AEmp, g.AEmp ? la : lb, g.AEmp ? lb : la, g.AEmp ? paramsA : paramsB, g.AEmp ? paramsB : paramsA, days, settings);
             results.Add(r);
             if (verbose) lock (results) Console.WriteLine("  " + Line(r));
         });
@@ -87,9 +89,9 @@ internal static class Tourney
         return 0;
     }
 
-    private static GameResult Play(int seed, bool aIsEmpire, AiLevel empire, AiLevel alliance, SimpleAiParams pe, SimpleAiParams pa, int days)
+    private static GameResult Play(int seed, bool aIsEmpire, AiLevel empire, AiLevel alliance, SimpleAiParams pe, SimpleAiParams pa, int days, GameSettings? settings)
     {
-        var host = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA });
+        var host = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = settings });
         var match = new AiMatch(host, pe, pa);
         int? found = null;
         while (host.Game.Day < days && host.Victory.Winner == null)
@@ -101,6 +103,44 @@ internal static class Tourney
         int Held(Side s) => host.Game.State.SystemOwners.Count(kv => kv.Value == s);
         return new GameResult(seed, aIsEmpire, empire, alliance, host.Victory.Winner, host.Game.Day, Held(Side.Empire), Held(Side.Alliance), found,
                               caps.Count(c => c.To == Side.Empire), caps.Count(c => c.To == Side.Alliance));
+    }
+
+    /// <summary>Game settings for every game (--settings K=V,...: int, bool or enum properties of GameSettings, nullable ones too, "null" for
+    /// the default; dotted keys reach the nested tables, e.g. Characters.TalentedSkipStrong=false or Battle.Ruleset=Classic); null = the defaults.</summary>
+    internal static GameSettings? SettingsWith(string? spec)
+    {
+        if (string.IsNullOrWhiteSpace(spec)) return null;
+        var copy = new GameSettings();
+        foreach (var pair in spec.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var kv = pair.Split('=', 2);
+            if (kv.Length != 2) throw new ArgumentException($"{pair} is not K=V.");
+            var path = kv[0].Split('.');
+            object target = copy;
+            for (int i = 0; i < path.Length - 1; i++)
+            {
+                // A nested table: a fresh copy (the defaults when null), so a shared default instance is never changed.
+                var nested = Prop(target, path[i]);
+                var current = nested.GetValue(target);
+                var fresh = current == null ? Activator.CreateInstance(nested.PropertyType)
+                          : current.GetType().GetMethod("<Clone>$")?.Invoke(current, null) ?? throw new ArgumentException($"{path[i]} cannot be copied.");
+                nested.SetValue(target, fresh);
+                target = fresh!;
+            }
+            var prop = Prop(target, path[^1]);
+            var t = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
+            bool nullable = !prop.PropertyType.IsValueType || prop.PropertyType != t;
+            object? v = nullable && kv[1].Equals("null", StringComparison.OrdinalIgnoreCase) ? null
+                      : t == typeof(int) ? int.Parse(kv[1], CultureInfo.InvariantCulture)
+                      : t == typeof(bool) ? bool.Parse(kv[1])
+                      : t.IsEnum ? Enum.Parse(t, kv[1], ignoreCase: true)
+                      : throw new ArgumentException($"{kv[0]} is not an int, a bool or an enum.");
+            prop.SetValue(target, v);
+        }
+        return copy;
+
+        static System.Reflection.PropertyInfo Prop(object o, string name) =>
+            o.GetType().GetProperty(name) ?? throw new ArgumentException($"{o.GetType().Name} has no {name}.");
     }
 
     /// <summary>A copy of the parameters with "Name=value" pairs set (int and bool properties of SimpleAiParams).</summary>

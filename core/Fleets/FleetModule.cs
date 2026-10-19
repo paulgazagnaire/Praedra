@@ -352,18 +352,23 @@ public sealed class FleetModule
             int speed = TravelFormula.FleetSpeed(Array.Empty<int>(), squads.Select(SpeedOfShip));
             var path = _pathfinder.Find(system, dest, speed);
             if (!path.Ok) continue;
-            int day = ctx.Day;
+            int day = ctx.Day, first = path.HopTicks[0];
             foreach (var q in squads) q.System = null;
             int fid = ObjectRegistry.NextId(E);
+            // A capture runs after step 2 (assaults, missions, support at day end), so no step 2 will depart this fleet in time: it takes off at
+            // once (on the lane, PreviousSystem set, as step 2 leaves a fleet) and its first hop counts from the next day, as the characters leaving
+            // at capture do. Left "at" the system with a trip set, step 4 took it for a passing fleet (index past the path: QA/AI trainer crash,
+            // 2026-10-18) or step 3 never matched its due day. rule: m1-clock-and-orders §Order of work, step 2.
             var f = new Fleet
             {
-                Id = fid, Name = FleetName(fid), Side = side, Squadrons = squads.Select(q => q.Id).ToList(), At = system,
-                Transit = new FleetTransit { Path = path.Names(Galaxy).ToList(), HopTicks = path.HopTicks.ToList(), HopIndex = 0, DueDay = day + path.HopTicks[0] },
+                Id = fid, Name = FleetName(fid), Side = side, Squadrons = squads.Select(q => q.Id).ToList(), At = null, PreviousSystem = system,
+                Transit = new FleetTransit { Path = path.Names(Galaxy).ToList(), HopTicks = path.HopTicks.ToList(), HopIndex = 0, DueDay = day + 1 + first },
             };
             State.Fleets[fid] = f;
             var members = new ValueList<int>(f.Squadrons.ToList());
             string from = system;
             ctx.Emit((i, _) => new FleetCreated(i, day, fid, from, members, FleetCreateCause.Squadrons));
+            ctx.Emit((i, d) => new FleetDeparted(i, d, fid, from, first));
         }
     }
 

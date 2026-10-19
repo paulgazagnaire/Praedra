@@ -371,7 +371,9 @@ public sealed partial class SimpleAi
             if (pic.Fleets is { } e && AgeOf(e) <= _p.ScoutAvoidFleetDays && e.Value.Any(fp => fp.Side != _side && Armed(fp))) return 0;
             if (_view.Level(s) is KnowledgeLevel.Held or KnowledgeLevel.Observed) return 0;
             int look = pic.LastLookDay ?? pic.Owner?.Stamp ?? 0;
-            stale = Math.Clamp(Today - look, 0, _p.StaleDays) * 100 / Math.Max(1, _p.StaleDays);
+            // blind hunt (QA-19): no StaleDays ceiling, so the oldest look goes first (nearest first among equals)
+            int cap = BlindOn() ? int.MaxValue / 1000 : _p.StaleDays;
+            stale = Math.Clamp(Today - look, 0, cap) * 100 / Math.Max(1, _p.StaleDays);
         }
         int v = pic == null ? _p.ScoutUnexploredValue : stale * (IsEnemyHeld(s) ? _p.ScoutEnemyFactor : 1);
         if (belief > 0 && BeliefMax > 0) v += (int)((long)_p.ScoutBeliefValue * belief / BeliefMax * stale / 100);
@@ -533,5 +535,174 @@ public sealed partial class SimpleAi
             result[id] = p.System;
         }
         return result.Select(kv => (kv.Key, kv.Value)).ToList();
+    }
+
+    // ================================================================== the key hunt (KeyHunt)
+
+    /// <summary>
+    /// KeyHunt: fog on, the Alliance, ahead (Finishing, or its place term: Coruscant held or destroyed), and a key of its standard victory set
+    /// not yet its own prisoner (own state). A dead key is not known here and still hunted: the looks then find nobody.
+    /// </summary>
+    private bool KeyHuntOn()
+    {
+        if (!_p.KeyHunt || _view == null || _side != Side.Alliance || HuntedKeys().Count == 0) return false;
+        return KeyAhead();
+    }
+
+    /// <summary>The side is ahead for its victory keys: Finishing, or for the Alliance its place term (Coruscant held or destroyed).</summary>
+    private bool KeyAhead()
+    {
+        string cor = Rebellion.Core.Victory.VictoryModule.CoruscantName;
+        return Finishing() || (_side == Side.Alliance && (Held(cor) || Destroyed(cor)));
+    }
+
+    /// <summary>Is the character one of the side's standard victory keys (the characters it must capture to win)?</summary>
+    private bool IsVictoryKey(int id) => _h.Victory.Keys.Any(k => k.Standard && k.Side == _side && k.Character == id);
+
+    /// <summary>The side's standard victory keys that are not its own prisoners, by id.</summary>
+    private List<int> HuntedKeys() => _h.Victory.Keys.Where(k => k.Standard && k.Side == _side).Select(k => k.Character).Distinct().OrderBy(id => id)
+        .Where(id => _h.Characters.Get(id) is not { Status: CharacterStatus.Captured } c || c.Captor != _side).ToList();
+
+    /// <summary>
+    /// Key hunt: the systems to look at, best first. First where the side's pictures last showed a hunted key, free, within KeyInfoDays but
+    /// older than AbductionInfoDays (a fresher one is already an Abduction target); then every system the picture shows enemy-held whose ground
+    /// was not seen within KeyLookDays and where no look was foiled within SpyFoilMemoryDays, by hops from the side's systems, then ordinal name.
+    /// Reads the side's pictures only (m5-fog-and-hq §N8; group D carries the characters, §F1).
+    /// </summary>
+    private List<(string System, bool LastSeen)> KeyHuntTargets()
+    {
+        var keys = HuntedKeys();
+        var list = new List<(string, bool)>(); var have = new HashSet<string>(StringComparer.Ordinal); // membership only
+        var last = new SortedDictionary<int, (string System, int Stamp)>();
+        foreach (var (sys, c, stamp) in _view!.CharactersSeen()) // systems in ordinal order; the newest stamp per key
+            if (keys.Contains(c.Id) && c.Status == CharacterStatus.Free && (!last.TryGetValue(c.Id, out var had) || stamp > had.Stamp))
+                last[c.Id] = (sys, stamp);
+        foreach (var (_, (sys, stamp)) in last)
+            if (stamp >= Today - _p.KeyInfoDays && stamp < Today - _p.AbductionInfoDays && !Held(sys) && !Destroyed(sys) && have.Add(sys)) list.Add((sys, true));
+        var hops = Hops(); var g = _h.Data.Galaxy;
+        var sweep = new List<(int Hops, string System)>();
+        foreach (var s in EnemySystems())
+        {
+            if (have.Contains(s) || Destroyed(s) || !g.TryFindSystem(s, out int i)) continue;
+            var ground = _view.Picture(s)?.Ground;
+            if (ground != null && AgeOf(ground) <= _p.KeyLookDays) continue;
+            if (FoiledWithin(s, _p.SpyFoilMemoryDays)) continue;
+            sweep.Add((hops[i], s));
+        }
+        foreach (var (_, s) in sweep.OrderBy(x => x.Hops).ThenBy(x => x.System, StringComparer.Ordinal)) list.Add((s, false));
+        return list;
+    }
+
+    // ================================================================== the blind hunt (BlindHunt, QA-19)
+
+    /// <summary>BlindHunt: fog on and the side's picture shows no system held by the other side (cached per day).</summary>
+    private bool BlindOn() => _blind ??= _p.BlindHunt && _view != null && !EnemySystems().Any();
+    private bool? _blind;
+
+    /// <summary>Days since the side last looked at the system (the picture's last look, else its owner stamp); never looked = Today + 1.</summary>
+    private int LookAge(string s)
+    {
+        var pic = _view!.Picture(s);
+        int? look = pic?.LastLookDay ?? pic?.Owner?.Stamp;
+        return look is int d ? Today - d : Today + 1;
+    }
+
+    /// <summary>
+    /// Blind hunt: pile target value of a system the side last looked at more than BlindStaleDays ago, within ScoutHops of its systems: up to
+    /// BlindValue by the age of the look (all of it from BlindAgeDays); 0 otherwise. Reads the side's picture only.
+    /// </summary>
+    private int BlindTargetValue(string s, int hop)
+    {
+        if (hop > _p.ScoutHops) return 0;
+        int age = LookAge(s);
+        if (age <= _p.BlindStaleDays) return 0;
+        return (int)((long)_p.BlindValue * Math.Min(age, _p.BlindAgeDays) / Math.Max(1, _p.BlindAgeDays));
+    }
+
+    /// <summary>
+    /// Blind hunt: where to send spies, best first: systems not held or destroyed, populated as the picture shows them, last looked at more than
+    /// BlindStaleDays ago, and no look foiled there within SpyFoilMemoryDays; oldest look first, then by hops from the side's systems, then
+    /// ordinal name.
+    /// </summary>
+    private List<string> BlindLookTargets()
+    {
+        var hops = Hops(); var list = new List<(int Age, int Hops, string System)>();
+        foreach (var sys in _h.Data.Galaxy.Systems)
+        {
+            string s = sys.Name;
+            if (Held(s) || Destroyed(s) || !SlotsSeen(s).Populated) continue;
+            int age = LookAge(s);
+            if (age <= _p.BlindStaleDays || FoiledWithin(s, _p.SpyFoilMemoryDays)) continue;
+            list.Add((age, hops[sys.Index], s));
+        }
+        return list.OrderByDescending(x => x.Age).ThenBy(x => x.Hops).ThenBy(x => x.System, StringComparer.Ordinal).Select(x => x.System).ToList();
+    }
+
+    // ================================================================== task forces (TaskForces, QA-2)
+
+    /// <summary>Task forces: the percent of a fleet sighting's strength that still counts at that age (100 within memoryDays, then fadePercent less per 100 days, never below 0).</summary>
+    internal static int FadedPercent(int ageDays, int memoryDays, int fadePercent)
+    {
+        int beyond = ageDays - memoryDays;
+        return beyond <= 0 ? 100 : 100 - (int)Math.Min(100L, (long)Math.Max(0, fadePercent) * beyond / 100);
+    }
+
+    /// <summary>
+    /// The strength of the strongest enemy fleet the side knows of: without fog every enemy fleet; with fog the fleets of its picture (as
+    /// <see cref="Str(Force)"/>), each at its whole strength when seen within FogFleetMemoryDays and older ones fading by TaskForceFadePercent
+    /// per 100 days beyond that (QA-20: a fleet out of sight is not a fleet gone; the picture keeps a fleet's last sighting until that system
+    /// is looked at again). 0 when none.
+    /// </summary>
+    private double StrongestEnemyFleet()
+    {
+        if (_view == null) return S.Fleets.Values.Where(f => f.Side == Enemy && f.Ships.Count > 0).Select(Str).DefaultIfEmpty(0).Max();
+        double best = PictureStrongestEnemyFleet();
+        if (_p.FleetMemory && _mem.FleetSeen > 0) best = Math.Max(best, RememberedFleet());
+        return best;
+    }
+
+    /// <summary>FleetMemory: the remembered strongest enemy fleet, faded by its age today (0 = none).</summary>
+    internal double RememberedFleet() => _mem.FleetSeen * FadedPercent(Today - _mem.FleetSeenDay, _p.FogFleetMemoryDays, _p.TaskForceFadePercent) / 100;
+
+    /// <summary>With fog: the strongest enemy fleet of the side's picture now, each sighting faded by its age (0 when none).</summary>
+    internal double PictureStrongestEnemyFleet()
+    {
+        double best = 0;
+        if (_view == null) return best;
+        foreach (var sys in _h.Data.Galaxy.Systems)
+        {
+            var e = _view.Picture(sys.Name)?.Fleets;
+            if (e == null) continue;
+            int pct = FadedPercent(AgeOf(e), _p.FogFleetMemoryDays, _p.TaskForceFadePercent);
+            if (pct <= 0) continue;
+            foreach (var fp in e.Value) if (fp.Side == Enemy) best = Math.Max(best, Str(ForceOf(sys.Name, fp)) * pct / 100);
+        }
+        return best;
+    }
+
+    /// <summary>
+    /// FleetMemory (QA-20, QA round 34): with fog, keep in the side's <see cref="AiMemory"/> the enemy fleet sighting of its picture worth the most
+    /// today after the TaskForceFadePercent fade, so a later look that finds the system empty does not wipe it. Only real sightings (the picture,
+    /// at their stamp day) go in. Systems in galaxy order; a tie keeps the stored one. Called once a day before the plans.
+    /// rule: ai tuning, SimpleAiParams.FleetMemory (New AI rule, no sheet).
+    /// </summary>
+    private void RememberStrongestFleet()
+    {
+        if (!_p.FleetMemory || _view == null) return;
+        double kept = RememberedFleet();
+        foreach (var sys in _h.Data.Galaxy.Systems)
+        {
+            var e = _view.Picture(sys.Name)?.Fleets;
+            if (e == null) continue;
+            int age = AgeOf(e), pct = FadedPercent(age, _p.FogFleetMemoryDays, _p.TaskForceFadePercent);
+            if (pct <= 0) continue;
+            foreach (var fp in e.Value)
+            {
+                if (fp.Side != Enemy) continue;
+                double s = Str(ForceOf(sys.Name, fp));
+                if (s * pct / 100 <= kept) continue;
+                _mem.FleetSeen = s; _mem.FleetSeenDay = Today - age; kept = s * pct / 100;
+            }
+        }
     }
 }

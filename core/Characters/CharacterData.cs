@@ -19,7 +19,7 @@ public sealed record CharacterClass(
     int LoyaltyBase, int LoyaltyVariance,
     int ForceProbability, bool KnownJedi, int ForceLevelBase, int ForceLevelVariance,
     bool CanAdmiral, bool CanCommander, bool CanGeneral, bool UnableToBetray, bool JediTrainer,
-    int NavigatorSpeed, bool Added, bool InGame)
+    int NavigatorSpeed, bool Added, bool InGame, bool NeverTalented = false)
 {
     public const int SkillCount = 7;
     public bool Can(CharacterPost post) => post switch
@@ -77,13 +77,19 @@ public sealed class CharacterData
         for (int r = 0; r < nt.RowCount; r++) nav[nt.GetInt(r, "id")] = nt.GetInt(r, "speed");
 
         var inGame = new Dictionary<int, bool>();
+        var neverTalented = new HashSet<int>(); // membership test only
         var rt = CsvTable.Load(Path.Combine(design, RosterFile));
         rt.Require("id", "in_game");
-        for (int r = 0; r < rt.RowCount; r++) inGame[rt.GetInt(r, "id")] = rt.GetInt(r, "in_game") == 1;
+        bool hasNever = rt.HasColumn("never_talented"); // m5-characters-and-force Q17 (Paul 2026-10-18): 1 = never in the talented draw (the bounty hunters)
+        for (int r = 0; r < rt.RowCount; r++)
+        {
+            inGame[rt.GetInt(r, "id")] = rt.GetInt(r, "in_game") == 1;
+            if (hasNever && rt.Get(r, "never_talented").Trim() == "1") neverTalented.Add(rt.GetInt(r, "id"));
+        }
 
         var all = new List<CharacterClass>();
-        all.AddRange(Rows(CsvTable.Load(Path.Combine(original, OriginalFile)), false, nav, inGame));
-        all.AddRange(Rows(CsvTable.Load(Path.Combine(design, AddedFile)), true, nav, inGame));
+        all.AddRange(Rows(CsvTable.Load(Path.Combine(original, OriginalFile)), false, nav, inGame, neverTalented));
+        all.AddRange(Rows(CsvTable.Load(Path.Combine(design, AddedFile)), true, nav, inGame, neverTalented));
         if (all.Select(c => c.Id).Distinct().Count() != all.Count) throw new DataLoadException("characters: a character id appears twice.");
         foreach (var id in nav.Keys.Concat(inGame.Keys))
             if (!all.Any(c => c.Id == id)) throw new DataLoadException($"characters: id {id} in {RosterFile} or {NavigatorFile} has no record.");
@@ -119,7 +125,7 @@ public sealed class CharacterData
 
     private static readonly string[] SkillColumns = { "dip", "esp", "ship", "troop", "fac", "com", "lead" };
 
-    private static IEnumerable<CharacterClass> Rows(CsvTable t, bool added, Dictionary<int, int> nav, Dictionary<int, bool> inGame)
+    private static IEnumerable<CharacterClass> Rows(CsvTable t, bool added, Dictionary<int, int> nav, Dictionary<int, bool> inGame, HashSet<int> neverTalented)
     {
         t.Require("kind", "name", "id", "alliance", "empire", "loy", "loyv", "jprob", "knownjedi", "jlvl", "jlvlv", "admiral", "commander", "general", "nobetray", "trainer");
         for (int r = 0; r < t.RowCount; r++)
@@ -137,7 +143,7 @@ public sealed class CharacterData
                 t.GetInt(r, "jprob"), t.GetInt(r, "knownjedi") == 1, t.GetInt(r, "jlvl"), t.GetInt(r, "jlvlv"),
                 t.GetInt(r, "admiral") == 1, t.GetInt(r, "commander") == 1, t.GetInt(r, "general") == 1, t.GetInt(r, "nobetray") == 1, t.GetInt(r, "trainer") == 1,
                 nav.TryGetValue(id, out var s) ? s : Travel.TravelFormula.DefaultSpeed, // 100 unless listed (Proposal)
-                added, inGame.TryGetValue(id, out var g) && g);
+                added, inGame.TryGetValue(id, out var g) && g, neverTalented.Contains(id));
         }
     }
 

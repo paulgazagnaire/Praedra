@@ -68,12 +68,13 @@ public sealed partial class SimpleAi
     public void PlanDay()
     {
         _submitted.Clear(); _plannedLoad = 0; _busy.Clear(); _reservedEnergy.Clear(); _reservedRaw.Clear(); _reservedYards.Clear(); _strength.Clear();
-        _capitalDone = _rallyDone = false; _hops = null; _finishing = null; _threats = null; _offensives = -1; _lost = null; _lostBattles = null; _runners = null; _bounced = null;
+        _capitalDone = _rallyDone = false; _hops = null; _finishing = null; _blind = null; _tfStrength = null; _threats = null; _offensives = -1; _lost = null; _lostBattles = null; _runners = null; _bounced = null;
         int day = Today, phase = (int)_side;
         _rng = new GameRng((ulong)day * 2 + (ulong)_side + 0x5A1D, 0xA1);
         _view = _p.UseFog ? _h.Fog.ViewFor(_side) : null;
         Remember();
         _seenForces.Clear(); ClearFogScratch();
+        RememberStrongestFleet();
         if (_view != null && _side == Side.Empire) KnownEnemyHq = _view.KnownHq?.System; // only what the Empire's own picture shows
         PlanUpkeepCrisis();
         if (_view != null && _side == Side.Alliance) PlanHqHide(); // fog: the HQ hides by risk (ai/07 §7), checked daily
@@ -388,7 +389,7 @@ public sealed partial class SimpleAi
             var wants = new List<(FacilityKind Kind, int Have, int Want)>
             {
                 (FacilityKind.OrbitalShipyard, ships, _p.DesiredShipyards),
-                (FacilityKind.TrainingFacility, train, _p.DesiredTrainingFacilities),
+                (FacilityKind.TrainingFacility, train, TrainingFacilitiesWanted()),
                 (FacilityKind.ConstructionYard, cons, _p.DesiredConstructionYards),
             };
             foreach (var w in wants.Where(w => w.Have < w.Want).OrderBy(w => w.Have * 100 / w.Want).ThenBy(w => (int)w.Kind)) order.Add(w.Kind);
@@ -507,21 +508,47 @@ public sealed partial class SimpleAi
     // rule: m2-uprisings-and-garrison §Required garrison N: keep N regiments on every system where the support is low.
     private void PlanGarrison()
     {
+        _garrisonReserve = 0;
         string cls = _p.GarrisonRegiment(_side);
         if (!Available(cls)) return;
         var pending = PendingRegiments();
-        foreach (var s in HeldSystems())
+        var held = HeldSystems();
+        bool first = _p.GarrisonsFirst && Finishing(); // far ahead, the side needs its garrisons more than new warships
+        // GarrisonsFirst: the worlds in uprising, then the fewest regiments, get the upkeep first (ties: ordinal name)
+        if (first) held = held.OrderByDescending(_h.Support.IsUprising).ThenBy(_h.Support.RegimentCount).ThenBy(s => s, StringComparer.Ordinal).ToList();
+        foreach (var s in held)
         {
             int need = GarrisonTarget(s);
             if (need == 0) continue;
             int deficit = need - _h.Support.RegimentCount(s) - pending.GetValueOrDefault(s);
             if (deficit <= 0) continue;
             int count = Math.Min(deficit, _p.GarrisonBatch);
-            if (Budget < count * Maint(cls)) continue;
-            var yard = TrainingYardNear(s);
-            if (yard == null) return;
+            if (first) while (count > 1 && Budget < count * Maint(cls)) count--;
+            var yard = Budget < count * Maint(cls) ? null : TrainingYardNear(s);
+            if (yard == null)
+            {
+                if (!first) { if (Budget < count * Maint(cls)) continue; return; } // every training yard is busy
+                _garrisonReserve += deficit * Maint(cls); // GarrisonsFirst: unpaid or waiting for a yard, its upkeep is still kept from the ships
+                continue;
+            }
             OrderRegiments(yard, cls, count, s);
+            if (first) _garrisonReserve += (deficit - count) * Maint(cls);
         }
+    }
+
+    /// <summary>GarrisonsFirst: upkeep the garrisons still short of their need would take, kept from new ships (set by PlanGarrison).</summary>
+    private int _garrisonReserve;
+    /// <summary>
+    /// Training facilities wanted: DesiredTrainingFacilities, and with GarrisonsFirst while far ahead one more per GarrisonShortPerTrainingFacility
+    /// regiments the garrisons are short (queued ones count), up to MaxTrainingFacilities (one facility trains about 10 regiments in 250 days:
+    /// m2-construction §Build time).
+    /// </summary>
+    private int TrainingFacilitiesWanted()
+    {
+        if (!_p.GarrisonsFirst || !Finishing()) return _p.DesiredTrainingFacilities;
+        var pending = PendingRegiments();
+        int shortBy = HeldSystems().Sum(s => Math.Max(0, GarrisonTarget(s) - _h.Support.RegimentCount(s) - pending.GetValueOrDefault(s)));
+        return Math.Min(Math.Max(_p.DesiredTrainingFacilities, _p.MaxTrainingFacilities), _p.DesiredTrainingFacilities + shortBy / Math.Max(1, _p.GarrisonShortPerTrainingFacility));
     }
 
     private void PlanInvasionRegiments()
@@ -699,8 +726,9 @@ public sealed partial class SimpleAi
                 int yardsHere = Math.Max(1, YardsDoneAt(y, YardFamily.Shipyard)); int unitDays = (eco.Costs.Get(cls).Cost + yardsHere - 1) / yardsHere * 4;
                 count = Math.Max(1, Math.Min(count, _p.MaxOrderDays / Math.Max(1, unitDays)));
             }
-            while (count > 1 && Budget < count * Maint(cls)) count--;
-            if (Budget < count * Maint(cls)) continue;
+            int budget = Budget - _garrisonReserve; // GarrisonsFirst: the garrisons are paid first
+            while (count > 1 && budget < count * Maint(cls)) count--;
+            if (budget < count * Maint(cls)) continue;
             long seq = _h.Construction.SubmitBuild(_side, y, YardFamily.Shipyard, cls, count, destArg);
             Note(seq, "Build", $"{count} x {cls} at {y} for {dest ?? y}");
             _busy.Add((y, YardFamily.Shipyard));
@@ -1074,11 +1102,88 @@ public sealed partial class SimpleAi
             if (dsHere.Count > 0) { strike = DeathStarHome(dsHere, strike); }
             else strike = DeathStarCall(g.Key, strike);
             if (strike.Count == 0) continue;
-            var leader = strike[0];
-            for (int i = 1; i < strike.Count; i++) Merge(strike[i], leader);
-            DecideOwn(MakePile(leader, strike));
+            var forces = TaskForces(strike);
+            _tfClaims = forces.Count > 1 ? Claims() : null;
+            foreach (var tf in forces)
+            {
+                var leader = tf[0];
+                for (int i = 1; i < tf.Count; i++) Merge(tf[i], leader);
+                DecideOwn(MakePile(leader, tf));
+            }
+            _tfClaims = null;
         }
     }
+
+    /// <summary>Task forces: systems other piles of one group may not pick (lookup only); null when the group formed one pile.</summary>
+    private HashSet<string>? _tfClaims;
+
+    /// <summary>Task forces: the systems not held that own armed fleets are flying to (another task force already took them on).</summary>
+    private HashSet<string> Claims()
+    {
+        var c = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var f in S.Fleets.Values.Where(f => f.Side == _side && f.Transit != null && f.Ships.Count > 0))
+            if (!Held(f.Transit!.Path[^1]) && Str(f) > 0) c.Add(f.Transit.Path[^1]);
+        return c;
+    }
+
+    /// <summary>
+    /// TaskForces: the strike fleets idle on one held system as piles (fleet id order within each). One pile (all of them, as before) unless the
+    /// switch is on and their strength holds at least two task forces (TaskForceStrength). Then, armed fleets strongest first (ties by id), each
+    /// pile takes fleets until it reaches TaskForceStrength and the next starts, up to TaskForceMax; a pile left short joins the weakest full one;
+    /// unarmed fleets join the pile with the fewest regiments aboard. A fleet that alone holds two task forces splits off ships worth one (its
+    /// highest ship ids, keeping the rest at least one task force): the new fleet is a pile of its own from the next review.
+    /// </summary>
+    private List<List<Fleet>> TaskForces(List<Fleet> strike)
+    {
+        var one = new List<List<Fleet>> { strike };
+        if (!_p.TaskForces || _p.TaskForceMax < 2) return one;
+        double tfs = TaskForceStrength();
+        if (tfs <= 0 || strike.Sum(Str) < 2 * tfs) return one;
+        var big = strike.Where(f => Str(f) >= 2 * tfs && f.Ships.Count >= 2).OrderByDescending(Str).ThenBy(f => f.Id).FirstOrDefault();
+        if (big != null) SplitTaskForce(big, tfs);
+        var piles = new List<List<Fleet>>(); var cur = new List<Fleet>(); double acc = 0;
+        foreach (var f in strike.Where(f => Str(f) > 0).OrderByDescending(Str).ThenBy(f => f.Id))
+        {
+            cur.Add(f); acc += Str(f);
+            if (acc >= tfs && piles.Count < _p.TaskForceMax - 1) { piles.Add(cur); cur = new List<Fleet>(); acc = 0; }
+        }
+        if (cur.Count > 0)
+        {
+            if (piles.Count == 0 || acc >= tfs) piles.Add(cur);
+            else piles.OrderBy(pl => pl.Sum(Str)).First().AddRange(cur);
+        }
+        if (piles.Count < 2) return one;
+        foreach (var f in strike.Where(f => Str(f) <= 0).OrderBy(f => f.Id))
+            piles.Select((pl, k) => (pl, k)).OrderBy(t => t.pl.Sum(x => _h.Troops.RegimentsAboard(x).Count)).ThenBy(t => t.k).First().pl.Add(f);
+        return piles.Select(pl => pl.OrderBy(f => f.Id).ToList()).ToList();
+    }
+
+    /// <summary>Task forces: split ships worth at least one task force off a fleet that holds two (highest ship ids first).</summary>
+    private void SplitTaskForce(Fleet f, double tfs)
+    {
+        var cls = f.Ships.Select(id => (Id: id, S: ClassStrength(_h.Economy.Find(id)!.Class))).ToList();
+        double total = cls.Sum(c => c.S), strength = Str(f);
+        if (total <= 0) return;
+        var off = new List<int>(); double got = 0;
+        foreach (var (id, cs) in cls.Where(c => c.S > 0).OrderByDescending(c => c.Id))
+        {
+            if (got >= tfs) break;
+            double share = strength * cs / total;
+            if (strength - got - share < tfs) continue;
+            off.Add(id); got += share;
+        }
+        if (got < tfs || off.Count == 0 || off.Count == f.Ships.Count) return;
+        off.Sort();
+        long seq = _h.Fleets.SubmitSplitFleet(_side, f.Id, off);
+        Note(seq, "Split", $"{off.Count} ships off fleet {f.Id} at {f.At} (task force)");
+    }
+
+    /// <summary>
+    /// Task forces: the least strength of one task force, TaskForceMarginPercent of the strongest enemy fleet the side knows of (the picture's
+    /// fleets with fog, older sightings fading by TaskForceFadePercent; every enemy fleet without), and at least LaunchStrength (cached per day).
+    /// </summary>
+    private double TaskForceStrength() => _tfStrength ??= Math.Max(_p.LaunchStrength, StrongestEnemyFleet() * _p.TaskForceMarginPercent / 100.0);
+    private double? _tfStrength;
 
     /// <summary>
     /// The home guard is whole fleets, so new warships delivered to it while it was weak stay there for good once it is strong (seen on the
@@ -1336,7 +1441,8 @@ public sealed partial class SimpleAi
 
     /// <summary>
     /// Best system to send a pile to: an enemy fleet it beats (fleets first: they are what makes the other targets safe), an enemy or neutral
-    /// system near the border with a weak defence (lost systems score double), or the system that wins the game when the pile is strong enough.
+    /// system near the border with a weak defence (lost systems score double), or the system that wins the game when the pile is strong enough;
+    /// with fog and no enemy system on the picture (BlindHunt, QA-19), also a system the side has not looked at for long.
     /// </summary>
     private string? PickTarget(Pile pile, int aboard, string from)
     {
@@ -1350,17 +1456,22 @@ public sealed partial class SimpleAi
         var scored = new List<(string Sys, long Score)>();
         bool search = HqSearchOn && strength >= _p.WinStrikeStrength;
         bool finishing = Finishing();
+        bool blind = BlindOn();
         foreach (var sys in g.Systems)
         {
             string s = sys.Name;
             if (s == from || Held(s) || BouncedOff(s) || Destroyed(s)) continue;
             bool isWin = s == win && strength >= _p.WinStrikeStrength;
+            if (_tfClaims != null && !isWin && _tfClaims.Contains(s)) continue; // task forces: another pile of the group took it on
+            // fog, blind hunt (QA-19): the picture shows no enemy system, so a system not looked at for long is worth a visit
+            int blindValue = blind ? BlindTargetValue(s, hops[sys.Index]) : 0;
+            bool isBlind = blindValue > 0;
             // fog: systems the picture shows enemy-held reach farther; the Empire's HQ candidates (belief map) from any distance
             bool seenEnemy = _view != null && IsEnemyHeld(s);
             int reach = seenEnemy ? Math.Max(_p.TargetHops, _p.FogEnemyTargetHops) : _p.TargetHops;
             int belief = search && seenEnemy ? Belief(s) : 0;
             bool isSearch = belief > 0;
-            if (hops[sys.Index] > reach + 1 && !isWin && !isSearch) continue;
+            if (hops[sys.Index] > reach + 1 && !isWin && !isSearch && !isBlind) continue;
             int ticks = _view != null ? TicksCached(from, s, speed) : Ticks(from, s, speed);
             if (ticks == int.MaxValue) continue;
             var enemies = TargetFleetsAt(s);
@@ -1375,7 +1486,7 @@ public sealed partial class SimpleAi
             // retreated from this side here or next door lately: the chase would go on with no losses on either side)
             if (e > 0 && ticks <= _p.HuntTicks && hops[sys.Index] <= _p.TargetHops && !EnemyRunsNear(s)) score = 3000L * (long)(e * 100 + 20) / (ticks + 20);
             // the system: needs regiments
-            if (hops[sys.Index] <= reach || isWin || isSearch)
+            if (hops[sys.Index] <= reach || isWin || isSearch || isBlind)
             {
                 var slots = SlotsSeen(s);
                 bool ok = slots.Populated && !AssaultForbiddenSeen(s) && aboard >= 1;
@@ -1392,6 +1503,7 @@ public sealed partial class SimpleAi
                         if (s == KnownEnemyHq) value += 200;
                         if (isWin) value += 400;
                         if (isSearch) value += _p.SearchValue * belief / Math.Max(1, BeliefMax);
+                        value += blindValue;
                         score = Math.Max(score, value * 1000 / (ticks + 20));
                     }
                 }
@@ -1399,15 +1511,21 @@ public sealed partial class SimpleAi
             if (score > 0) scored.Add((s, score));
         }
         if (scored.Count == 0) return null;
+        string pick;
         // difficulty: pick noise (ai/09 §6), a random one of the three best targets
         if (_p.PickNoisePercent > 0 && _rng.NextInt(1, 100) <= _p.PickNoisePercent)
         {
             var top3 = scored.OrderByDescending(t => t.Score).ThenBy(t => t.Sys, StringComparer.Ordinal).Take(3).ToList();
-            return top3[_rng.NextInt(0, top3.Count - 1)].Sys;
+            pick = top3[_rng.NextInt(0, top3.Count - 1)].Sys;
         }
-        long best = scored.Max(t => t.Score);
-        // tie-break (private generator): any target within 5% of the best
-        var top = scored.Where(t => t.Score * 100 >= best * 95).OrderBy(t => t.Sys, StringComparer.Ordinal).ToList();
-        return top[_rng.NextInt(0, top.Count - 1)].Sys;
+        else
+        {
+            long best = scored.Max(t => t.Score);
+            // tie-break (private generator): any target within 5% of the best
+            var top = scored.Where(t => t.Score * 100 >= best * 95).OrderBy(t => t.Sys, StringComparer.Ordinal).ToList();
+            pick = top[_rng.NextInt(0, top.Count - 1)].Sys;
+        }
+        _tfClaims?.Add(pick);
+        return pick;
     }
 }

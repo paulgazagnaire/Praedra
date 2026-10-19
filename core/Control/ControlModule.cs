@@ -55,8 +55,8 @@ public sealed class ControlModule
     private readonly SupportModule _support;
     private readonly ConstructionModule? _construction;
 
-    /// <summary>The control rule (GameSettings.ControlRule). DEFAULT AssaultOnly until the AI copes (2026-10-18); 1998 is Derived. Not part of the save: it is configuration.</summary>
-    public ControlRule Rule { get; set; } = ControlRule.AssaultOnly;
+    /// <summary>The control rule (GameSettings.ControlRule). DEFAULT Derived, the 1998 rule (Paul's card 2026-10-18 20:42); AssaultOnly is the option. Set from the game settings, which a save made with SaveWithSettings keeps (QA-17, #90): a loaded game keeps its rule.</summary>
+    public ControlRule Rule { get; set; } = ControlRule.Derived;
 
     /// <summary>
     /// The debug orders (DebugSetHolder under AssaultOnly; DebugSetSupport and DebugSetTroops under both) are accepted only when this is on.

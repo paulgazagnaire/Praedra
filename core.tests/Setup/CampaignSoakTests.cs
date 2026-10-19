@@ -230,4 +230,20 @@ public class CampaignSoakTests
             Assert.Contains(run.Events.OfType<Rebellion.Core.Battle.UnitDestroyed>(), x => x.System == TestCampaign.BlockadedSystem && x.Reason == Rebellion.Core.Battle.UnitLossReason.NoHyperdrive);
         }
     }
+
+    // m4-battle-classic §1 (the gravity-well half of the test above, New ruleset): with the five B7 bombardment switches off the day-200 bombardment
+    // draws as before B7, so the day-313 Kinyen battle is the one this test was written for: the Interdictor's gravity well refuses the Alliance's
+    // retreat and it is Annihilated. Keeps that check on the New ruleset after B7 re-routed the seeded game (Dev lead, 2026-10-19).
+    [Fact]
+    public void KinyenContactNewRulesetGravityWellWithPreB7Bombardment()
+    {
+        var off = new Rebellion.Core.Defenses.BombardParams { BombardWastedHits = false, BatteryReturnFire = false, BombardFleetsTogether = false,
+            BombardDamageScales = false, MilitaryCollateral = false };
+        var c = TestCampaign.New(1, CampaignHarness.Settings(GarrisonRuleset.New) with { Bombard = off });
+        while (c.Game.Day < 330) c.Step();
+        var events = c.Host.Game.Events;
+        var end = events.OfType<Rebellion.Core.Battle.BattleEnded>().First(b => b.Result.System == TestCampaign.BlockadedSystem);
+        Assert.Equal(Rebellion.Core.Battle.BattleOutcome.Annihilated, end.Result.Alliance);
+        Assert.Contains(events.OfType<Rebellion.Core.Battle.RetreatRefused>(), x => x.Reason == Rebellion.Core.Battle.RetreatRefusal.GravityWell);
+    }
 }

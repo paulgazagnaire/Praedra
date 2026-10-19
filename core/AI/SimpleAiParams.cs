@@ -39,13 +39,28 @@ public sealed record SimpleAiParams
     /// The 1998 AI's garrison floor (B6b §3): on every own world below 70 support it wants min((79 - s) / 10, 6) regiments (doubled in an uprising),
     /// and 9 on its special world (the Rebel HQ for the Alliance, Coruscant for the Empire); it builds toward that and never moves a regiment that
     /// would leave a world below it. Replaces the B5a last-regiment guard (a weaker form: 1 below 60). It belongs to derived control
-    /// (GameSettings.ControlRule = Derived), so it is DEFAULT off with it (Dev lead 2026-10-18: Derived is DEFAULT off until the AI copes; with it,
-    /// QA's 16-seed Medium mirror gave 0/16 Empire wins); turn both on together. Off = the rule's need, <see cref="CriticalGarrison"/> on the
-    /// critical world, and the B5a guard.
+    /// (GameSettings.ControlRule = Derived) but stays DEFAULT off under it: with it on, 14 of 32 Hard mirror games had no winner by day 3000 against
+    /// 8 with it off, and the Medium mirror failed the games-end floor (AI trainer, 2026-10-18). Off = the rule's need, <see cref="CriticalGarrison"/>
+    /// on the critical world, and the B5a guard.
     /// </summary>
     public bool OriginalGarrisonFloor { get; init; }
     /// <summary>Most regiments in one garrison order. DEFAULT.</summary>
     public int GarrisonBatch { get; init; } = 4;
+    /// <summary>
+    /// Garrisons first (Medium mirror seed 10, Dev lead 2026-10-19): while the side is far ahead (FinishWhenAheadRatio), its garrison orders go
+    /// to the worlds in uprising first and then to the worlds with the fewest regiments, shrink to what the upkeep pays for, the upkeep every
+    /// garrison still short of its need would take is kept from new ships, and it wants one more training facility per
+    /// GarrisonShortPerTrainingFacility regiments short (up to MaxTrainingFacilities). Without it a winning side spent its upkeep on warships it
+    /// did not need (seed 10 Empire, day 2500: 4239 of about 5700 upkeep on capital ships against 8 Rebel systems) and trained about 45
+    /// regiments per 250 days at 4 facilities, while uprisings killed 45-80 and the worlds left with none went to the Alliance by support.
+    /// Measured (seeds 1-16, Medium mirror and Medium against Hard both ways): no-winner games 8 of 48 (10 off), seed 10 an Empire win.
+    /// rule: ai tuning (New AI rule, no sheet); m2-uprisings-and-garrison §Required garrison N. DEFAULT.
+    /// </summary>
+    public bool GarrisonsFirst { get; init; } = true;
+    /// <summary>GarrisonsFirst: one more training facility wanted per this many regiments the garrisons are short. DEFAULT.</summary>
+    public int GarrisonShortPerTrainingFacility { get; init; } = 20;
+    /// <summary>GarrisonsFirst: most training facilities the side wants. DEFAULT.</summary>
+    public int MaxTrainingFacilities { get; init; } = 12;
     /// <summary>Regiments (aboard or waiting at the rally system, or queued for it) the AI keeps ready to invade. DEFAULT.</summary>
     public int InvasionRegimentTarget { get; init; } = 10;
     /// <summary>Troop slots the AI wants on its ships. DEFAULT.</summary>
@@ -258,9 +273,12 @@ public sealed record SimpleAiParams
     /// Finishing the war: when the side holds at least this many times the systems it knows the enemy to hold, an enemy-held target is worth
     /// FinishValuePercent of its value (neutral systems near home otherwise win on value per day of travel, and the beaten side lives on in
     /// its last systems). AI trainer 2026-10-17 (QA-2): in seed 3 the Empire held 355 systems against 20 Alliance systems it knew, with 0 or 1
-    /// regiment each, and kept taking neutrals for 800 days. 0 = off (the AI of before).
+    /// regiment each, and kept taking neutrals for 800 days. 0 = off (the AI of before). DEFAULT 5 at every level since the derived-control
+    /// default (AI trainer 2026-10-18, Hard only before): under Derived the side far ahead kept taking empty neutral worlds (need 1 regiment)
+    /// over enemy worlds it guessed at 2 defenders (need 4), and the Medium mirror on seeds 1-8 had 4 games with no winner by day 3000; with
+    /// it, 1. Hard still beats Medium (64.8% of the systems over 32 games).
     /// </summary>
-    public int FinishWhenAheadRatio { get; init; }
+    public int FinishWhenAheadRatio { get; init; } = 5;
     public int FinishValuePercent { get; init; } = 400;
 
     // ---- fog: the Empire's belief map of the Rebel HQ (ai/07 §7 "Empire: belief-map search", ai/12 D1 Decided YES; m5-fog-and-hq §N7 clues).
@@ -439,6 +457,97 @@ public sealed record SimpleAiParams
     public int MissionOwnerTrustDays { get; init; } = 60;
     /// <summary>An enemy character is an Abduction target only when the side's own feed placed it at a system it sees, or its picture's group D showed it, within this many days. DEFAULT.</summary>
     public int AbductionInfoDays { get; init; } = 5;
+    /// <summary>
+    /// The planner reads a key target's Abduction chance as the core rolls it, min(table, cap_percent) (m5-missions §6a.3; the caps are the
+    /// key-target file: Emperor 2, Vader 4, Luke 4, Mon Mothma 2), so it values those jobs honestly and the odds floor (MissionMinOddsPercent)
+    /// applies. false = the AI before (the table alone: 95% believed where 2% is real). DEFAULT true (Dev lead, 2026-10-19).
+    /// </summary>
+    public bool AbductionKeyCap { get; init; } = true;
+    /// <summary>
+    /// The side's standard victory keys (the characters it must capture to win) are exempt from MissionMinOddsPercent: with honest capped odds
+    /// (AbductionKeyCap) the floor turned them into "never try", while repeated 2-4% tries were the only route to the capture term (Dev lead
+    /// 2026-10-19, #93). They compete on value x honest chance like any job. false = the floor applies. DEFAULT true.
+    /// </summary>
+    public bool VictoryKeysSkipOddsFloor { get; init; } = true;
+    /// <summary>
+    /// Value of an Abduction of one of the side's victory keys once it is ahead (FinishWhenAheadRatio, or for the Alliance Coruscant held or
+    /// destroyed), so a key outranks routine jobs then; before that, the ordinary major value (AbductionValue x 2). 0 = always the ordinary
+    /// value. DEFAULT (AI tuning, no rule).
+    /// </summary>
+    public int VictoryKeyValue { get; init; } = 20000;
+    /// <summary>
+    /// Key hunt (QA round 29, 2026-10-18), the Alliance only: with fog, while it is ahead (FinishWhenAheadRatio, or holding or having destroyed
+    /// Coruscant, its place term) and still needs the Emperor or Vader captured to win (its standard victory keys), it sends spies (Espionage)
+    /// to look for them: first where its pictures last showed one (within KeyInfoDays), then across the systems its picture shows Imperial-held,
+    /// nearest first, skipping one whose ground it saw within KeyLookDays or where a look was foiled within SpyFoilMemoryDays. A look that
+    /// finds a key makes him an Abduction target as before. The spies only look: the AI never reads where a key truly is. Without it the
+    /// Alliance AI saw the Emperor and Vader on almost no day of 3000 (QA seeds 9 and 13 Medium mirror, 2 and 5 Medium Empire vs Hard Alliance:
+    /// Coruscant held from day 1250-2250, no key seen after, no capture). With it the keys are found and abducted at, but not captured: the
+    /// key-target caps (2% Emperor, 4% Vader; m5-missions §6a) and the fleet gate (Vader riding a fleet) hold. On the Empire side it cost the
+    /// Medium mirror its floor (seeds 1-8: 4 games without a winner instead of 1), so the Empire is left out. New AI rule (no sheet).
+    /// false = the AI before. DEFAULT true.
+    /// </summary>
+    public bool KeyHunt { get; init; } = true;
+    /// <summary>Key hunt: most Espionage missions the side runs at once while hunting (all its Espionage missions count). DEFAULT.</summary>
+    public int KeyHuntLooks { get; init; } = 4;
+    /// <summary>Key hunt: a system whose ground (group D, which shows the characters there) the side saw within this many days is not looked at again. DEFAULT.</summary>
+    public int KeyLookDays { get; init; } = 90;
+    /// <summary>Key hunt: a key's last picture sighting guides the first look when at most this many days old. DEFAULT.</summary>
+    public int KeyInfoDays { get; init; } = 120;
+    /// <summary>Key hunt: value of one look (doubled where a key was last seen). DEFAULT.</summary>
+    public int KeyHuntValue { get; init; } = 900;
+    /// <summary>
+    /// Blind hunt (QA-19, 2026-10-19), both sides: with fog, when the side's picture shows no system held by the other side while the game goes
+    /// on, the side hunts for what it has lost sight of. Its scouts rank the systems by how long ago it last looked (no StaleDays ceiling: a look
+    /// 1200 days old outranks one 200 days old), nearest first among equals; its piles take any system it has not looked at for BlindStaleDays
+    /// (within ScoutHops) as a target worth up to BlindValue more, by the age of that look; and its spies (Espionage, up to BlindLooks at once) go
+    /// to the oldest looks first. It reads only the side's own picture: a fleet or spy that arrives sees what is there, and the usual rules then
+    /// take it. Without it the AI ran out of targets with the other side still in play (QA round 31, seed 15 Medium mirror: the last Rebel
+    /// system, empty and one lane from Imperial space, last seen on day 1790; the Empire sat for 500+ days with no winner). New AI rule (no
+    /// sheet). false = the AI before. DEFAULT true.
+    /// </summary>
+    public bool BlindHunt { get; init; } = true;
+    /// <summary>Blind hunt: a system the side last looked at more than this many days ago is a pile target (and a spy target). DEFAULT.</summary>
+    public int BlindStaleDays { get; init; } = 180;
+    /// <summary>Blind hunt: a look this many days old or older earns the whole BlindValue; younger ones a share by age. DEFAULT.</summary>
+    public int BlindAgeDays { get; init; } = 720;
+    /// <summary>Blind hunt: most value a stale system adds as a pile target (KnownEnemyHq adds 200, the win target 400). DEFAULT.</summary>
+    public int BlindValue { get; init; } = 400;
+    /// <summary>Blind hunt: most Espionage missions the side runs at once while blind (all its Espionage missions count). DEFAULT.</summary>
+    public int BlindLooks { get; init; } = 3;
+    /// <summary>Blind hunt: value of one spy look. DEFAULT.</summary>
+    public int BlindLookValue { get; init; } = 900;
+    /// <summary>
+    /// Task forces (QA-2, 2026-10-19), both sides: the strike fleets idle on one held system used to merge into one pile that takes one target at
+    /// a time, so a side far ahead won slowly or not at all (QA seeds: an Empire of 70 ships against 3 took 12-22 systems per 250 days, empty
+    /// ones mostly, and day 3000 came first). With it the fleets there form up to TaskForceMax piles, each at least TaskForceStrength (see
+    /// below), and a fleet that alone is at least twice that splits off ships worth TaskForceStrength (one split a review). Piles of one group
+    /// pick different targets (the system that wins the game excepted). A side that is not much stronger than the enemy's strongest fleet it
+    /// knows of keeps one pile, as before. New AI rule (no sheet). false = the AI before. DEFAULT true.
+    /// </summary>
+    public bool TaskForces { get; init; } = true;
+    /// <summary>Task forces: most piles formed on one system in a review. DEFAULT.</summary>
+    public int TaskForceMax { get; init; } = 4;
+    /// <summary>
+    /// Task forces: a task force is at least this percent of the strongest enemy fleet the side knows of (its picture, older sightings fading by
+    /// TaskForceFadePercent; all enemy fleets without fog), and at least LaunchStrength. DEFAULT.
+    /// </summary>
+    public int TaskForceMarginPercent { get; init; } = 150;
+    /// <summary>
+    /// Task forces (QA-20): with fog, an enemy fleet the side last saw more than FogFleetMemoryDays ago still counts for the task-force size,
+    /// fading by this percent of its strength per 100 days beyond that (0 = never fades). DEFAULT 25: a sighting counts whole for 120 days and
+    /// is gone after 520. Measured (seeds 1-16, Medium mirror and Medium against Hard both ways): no-winner games 10 of 48 at 25, 12 at 5 and
+    /// 10 with sightings forgotten after 120 days (the #95 rule); Medium mirror seed 12 ends at 25 and 5, not when forgotten.
+    /// </summary>
+    public int TaskForceFadePercent { get; init; } = 25;
+    /// <summary>
+    /// Task forces (QA-20, QA round 34): with fog, the side also remembers the strongest enemy fleet it has seen in its AI memory (carried by a
+    /// save), fading by TaskForceFadePercent, so a later look that finds that system empty does not make the task force forget it. DEFAULT off:
+    /// measured (seeds 1-16, Medium mirror and Medium against Hard both ways, against GarrisonsFirst main): no-winner games 11 of 48 against 8
+    /// off (Medium Empire against Hard Alliance 7 against 3), Hard Empire wins against Medium Alliance 14 against 13, share 67.0% both; a
+    /// memory fading 50% per 100 days: 15, 13, 64.1%; 100%: 11, 14, 61.8%.
+    /// </summary>
+    public bool FleetMemory { get; init; }
     /// <summary>
     /// Key characters (the majors: Luke, Leia, Han, Mon Mothma, Vader, Palpatine) count this percent of their mission value (others are
     /// preferred) and never go on Rescue, Abduction, Sabotage or Incite (ai/05 §4: the original keeps its leaders off those). With

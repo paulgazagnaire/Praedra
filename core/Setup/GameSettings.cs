@@ -97,10 +97,11 @@ public sealed record GameSettings
     // ---- control. rule: m2-control-and-capture
     /// <summary>
     /// How control is decided: Derived (1998: troops on the planet, else support 60 or more) or AssaultOnly (the rule before B5a: support never
-    /// changes control). DEFAULT AssaultOnly until the AI copes with Derived (Dev lead 2026-10-18: QA's 16-seed Medium mirror gave 0/16 Empire
-    /// wins under Derived); 1998 is Derived. rule: m2-control-and-capture §How control changes (B5a decision 1).
+    /// changes control). DEFAULT Derived (Paul's card 2026-10-18 20:42: the only change that made the Rebel AI hard to kill), with the AI's
+    /// 1998 garrison floor off (<see cref="Rebellion.Core.AI.SimpleAiParams.OriginalGarrisonFloor"/>); AssaultOnly is the new-game option.
+    /// rule: m2-control-and-capture §How control changes (B5a decision 1).
     /// </summary>
-    public Rebellion.Core.Control.ControlRule ControlRule { get; init; } = Rebellion.Core.Control.ControlRule.AssaultOnly;
+    public Rebellion.Core.Control.ControlRule ControlRule { get; init; } = Rebellion.Core.Control.ControlRule.Derived;
     /// <summary>The debug orders (DebugSetHolder under AssaultOnly, DebugSetSupport, DebugSetTroops, DebugSetDamage) are accepted only when this is on.</summary>
     public bool DebugOrdersEnabled { get; init; }
 

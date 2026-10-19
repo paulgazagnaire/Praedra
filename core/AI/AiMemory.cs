@@ -76,6 +76,12 @@ public sealed class AiMemory
     public bool Fog { get; set; }
     public List<AiNote> Notes { get; set; } = new();
     public AiKeepDays Keep { get; set; } = new();
+    /// <summary>
+    /// FleetMemory (QA-20, QA round 34): the strongest enemy fleet the side has seen, as the AI measured it from its picture, and the day of that
+    /// sighting; 0 = none. A later look at that system replaces the picture's entry, not this. Saved after Keep; an older save loads with none.
+    /// </summary>
+    public double FleetSeen { get; set; }
+    public int FleetSeenDay { get; set; }
 
     // not saved: how far into the feed the notes go (a loaded game's feed starts empty), and the BattleStarted events of the current run of
     // same-day events by system (a battle starts and ends in one Step, and a save is made between Steps).
@@ -171,7 +177,7 @@ public sealed class AiMemory
     /// </summary>
     internal AiMemory ForSave(int today, Func<Side, string, int?> groundStamp) => new()
     {
-        Side = Side, Fog = Fog, Keep = Keep,
+        Side = Side, Fog = Fog, Keep = Keep, FleetSeen = FleetSeen, FleetSeenDay = FleetSeenDay,
         Notes = Notes.Where(n => (long)n.Floor >= (long)today - Keep.For(n.Kind)
             || (Fog && n.Kind == AiNoteKind.Bombardment && groundStamp(Side, n.System!) is int s && n.Floor >= s + 1)).ToList(),
     };

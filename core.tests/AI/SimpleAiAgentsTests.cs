@@ -36,7 +36,8 @@ public class SimpleAiAgentsTests
         Assert.True(new SimpleAiParams().UseCharactersAndMissions);
         var (m, h) = Match(1, new SimpleAiParams { UseFog = true, UseCharactersAndMissions = false,
             RunnerRetreats = 0, RetreatCountsAsLoss = false, AvoidBlockedPaths = false, WinRushDefenders = -1, ShelledLandingNeed = false,
-            FogAvoidEnemyStops = false, SplitHomeSurplus = false, DetourToHeldStop = false, InvasionBatchesOnly = false, ExplorerScouts = 0, FogGroundForgetDays = 0, LeaderMarks = false, OriginalGarrisonFloor = false });
+            FogAvoidEnemyStops = false, SplitHomeSurplus = false, DetourToHeldStop = false, InvasionBatchesOnly = false, ExplorerScouts = 0, FogGroundForgetDays = 0, LeaderMarks = false, OriginalGarrisonFloor = false,
+            FinishWhenAheadRatio = 0, KeyHunt = false, TaskForces = false });
         m.RunTo(1000);
         Assert.DoesNotContain(m.Sent.Keys, k => k.Contains("Mission", StringComparison.Ordinal) || k.Contains("Character", StringComparison.Ordinal) || k.Contains("General", StringComparison.Ordinal));
         // The pin moved when the Death Star added saved state (m5-death-star: GameState.DeathStar, SystemKnowledge.Destroyed). The game plays identically:
@@ -76,10 +77,16 @@ public class SimpleAiAgentsTests
         // Talented re-pin 2026-10-18 (Dev lead; Paul's random trainers, m5-characters-and-force Rule New 4): TrainerPick is DEFAULT Random, so setup
         // draws 3 talented per side and their Force (more draws, saved Talented, higher skills). With TrainerPick = Fixed the hash is exactly the
         // previous pin 55805ed7...c838 (checked when re-pinned, main 4691273).
+        // Q17 re-pin 2026-10-18 (Dev lead; Paul's cards "Skip the strong" and "Leave out hunters"): the talented draw leaves out the already strong
+        // and the never_talented hunters, so other characters are drawn. With TalentedSkipStrong and TalentedSkipFlagged off the hash is exactly
+        // the previous pin 999219a6...fd00 (checked when re-pinned, main 71cc7b7).
+        // Derived re-pin 2026-10-18 (AI trainer; Paul's card "1998 rule"): ControlRule is DEFAULT Derived again, a core rule this old AI cannot
+        // switch off. FinishWhenAheadRatio (now DEFAULT 5) is switched off above with the other AI fixes. With ControlRule = AssaultOnly the hash
+        // is exactly the previous pin 00e02e8c...701c (checked when re-pinned, main 2a9d16d).
         // B7 re-pin 2026-10-19 (Dev lead; the 1998 bombardment, B7-bombardment): BombardWastedHits, BatteryReturnFire, BombardFleetsTogether,
         // BombardDamageScales and MilitaryCollateral are DEFAULT on, core rules this old AI cannot switch off. With those five switches off the hash
-        // is exactly the previous pin 999219a6...fd00 (checked when re-pinned; the gap fills C5, C7 and the C8 data do not touch this game).
-        Assert.Equal("672016cc626f98c492a674fcfffe862425cd7b9d98e13b9df53cd2bc1725763b", h.StateHash());
+        // is exactly the previous pin ca568ccf...8252 (checked when re-pinned, main 07ff5e9; the gap fills C5, C7 and the C8 data do not touch this game).
+        Assert.Equal("d5798f1633cdcfc63dd84692cabfad3f7e0b814918f6558bd7fa7c4d14c23f02", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"
@@ -367,6 +374,77 @@ public class SimpleAiAgentsTests
         Assert.Equal(0, afterEmpty);
         Assert.True(emptyE != null && emptyA != null, $"pools not empty by day 700: Empire {emptyE}, Alliance {emptyA}");
         Assert.True(seatDays > 0 && seatOn * 20 >= seatDays * 19, $"Seat of Power on {seatOn} of {seatDays} days after the Empire's pool emptied");
+    }
+
+    // Key hunt (SimpleAiParams.KeyHunt, DEFAULT on; QA round 29). Fog, the Empire passive, seeds 1 to 4 (MultiSeed). On day 1 a test hook
+    // hands Coruscant to the Alliance (DebugApplyTroops: its place term; standard victory, the default settings), so the Alliance is ahead and
+    // still needs the Emperor and Vader captured. With the hunt its spies look at systems its own picture shows Imperial-held (or where its
+    // picture last showed a key); the Alliance plans no other Espionage, so without the hunt it sends none. rule: m5-fog-and-hq §N8 (the AI
+    // reads only its side's knowledge), §F1 group D (an Espionage success writes the characters present).
+    // Measured by day 800 (looks / first day a picture showed a key / Abductions at keys), AI trainer 2026-10-18 on main 4774ff7 plus the hunt:
+    //   seed 1: 58 / never / 0;  seed 2: 68 / 642 / 5;  seed 3: 53 / 276 / 4;  seed 4: 40 / never / 0.  Off: 0 looks.
+    // The Empire keeps all its ~140 systems here, so the sweep is slow; in a real endgame it holds far fewer.
+    // Floor: at least 20 looks on every seed, none at a system the picture did not show Imperial (or a key at); a key seen on at least 1 of 4.
+    [Fact]
+    public void KeyHunt_AheadTheAllianceLooksForTheEmperorAndVader_WhereItsPictureSays()
+    {
+        Assert.True(new SimpleAiParams().KeyHunt);
+        var on = MultiSeed.Play(new[] { 1, 2, 3, 4 }, seed => Hunt(seed, Fog));
+        foreach (var g in on) _out.WriteLine($"hunt on, seed {g.Seed}: {g.Looks} looks, {g.OffTarget} off target, a key first seen day {g.KeySeenDay}, {g.Abductions} Abductions at keys");
+        foreach (var g in on)
+        {
+            Assert.True(g.Looks >= 20, $"seed {g.Seed}: only {g.Looks} looks");
+            Assert.Equal(0, g.OffTarget);
+        }
+        Assert.True(on.Count(g => g.KeySeenDay != null) >= 1, $"a key seen on only {on.Count(g => g.KeySeenDay != null)} of 4 seeds");
+        var off = Hunt(1, Fog with { KeyHunt = false });
+        _out.WriteLine($"hunt off, seed 1: {off.Looks} looks");
+        Assert.Equal(0, off.Looks);
+    }
+
+    private static (int Seed, int Looks, int OffTarget, int? KeySeenDay, int Abductions) Hunt(int seed, SimpleAiParams p)
+    {
+        var (m, h) = Match(seed, p, passive: Side.Empire, settings: new GameSettings()); // standard victory: Coruscant alone does not win
+        var cp = h.Characters.Params; var keys = new[] { cp.Emperor, cp.Vader };
+        bool done = false;
+        h.Game.RegisterHook("5.2", ctx => { if (!done) { done = true; h.Control.DebugApplyTroops(ctx, "Coruscant", Side.Alliance, "Alliance Army Regiment", 10); } });
+        int looks = 0, offTarget = 0, abductions = 0, seen = 0; int? keySeen = null;
+        while (h.Game.Day < 800 && h.Victory.Winner == null)
+        {
+            var view = h.Fog.ViewFor(Side.Alliance);
+            var pictured = view.CharactersSeen().Where(x => keys.Contains(x.Character.Id)).Select(x => x.System).ToHashSet(StringComparer.Ordinal); // lookup only
+            var imperial = h.Data.Galaxy.Systems.Select(x => x.Name).Where(n => view.Picture(n)?.Owner?.Value.Owner == Side.Empire).ToHashSet(StringComparer.Ordinal); // lookup only
+            m.Step();
+            var fresh = h.Game.Events.Skip(seen).ToList(); seen += fresh.Count;
+            foreach (var e in fresh.OfType<MissionStarted>().Where(e => e.Side == Side.Alliance))
+            {
+                if (e.MissionKind == MissionKind.Espionage) { looks++; if (!imperial.Contains(e.Target) && !pictured.Contains(e.Target)) offTarget++; }
+                if (e.MissionKind == MissionKind.Abduction && e.TargetCharacter is int t && keys.Contains(t)) abductions++;
+            }
+            if (keySeen == null && h.Fog.ViewFor(Side.Alliance).CharactersSeen().Any(x => keys.Contains(x.Character.Id))) keySeen = h.Game.Day;
+        }
+        return (seed, looks, offTarget, keySeen, abductions);
+    }
+
+    // rule: m5-missions §6a.3 (a key target's chance is min(table, cap_percent)): with AbductionKeyCap (DEFAULT on) the planner reads the
+    // Emperor's and Vader's Abduction chance as the core rolls it, so the odds floor (MissionMinOddsPercent) applies; off, the table alone.
+    // Seed 1, the Alliance's best fighter at day 0 against the Emperor: 95 off, 2 on (the key-target file: Emperor 2, Vader 4).
+    [Fact]
+    public void AbductionOdds_OfAKeyTarget_ReadTheCap()
+    {
+        Assert.True(new SimpleAiParams().AbductionKeyCap);
+        var (_, h) = Match(1, Fog);
+        var cp = h.Characters.Params;
+        var best = h.Characters.InPlay.Where(c => c.Side == Side.Alliance).OrderByDescending(c => h.Characters.EffectiveSkill(c, Skill.Combat)).ThenBy(c => c.Id).First();
+        var on = new SimpleAi(h, Side.Alliance, Fog); var off = new SimpleAi(h, Side.Alliance, Fog with { AbductionKeyCap = false });
+        Assert.True(h.Missions.IsKeyTarget(MissionKind.Abduction, cp.Emperor, out int capE));
+        Assert.True(h.Missions.IsKeyTarget(MissionKind.Abduction, cp.Vader, out int capV));
+        int e1 = on.AbductionPercentEstimate(best, cp.Emperor, "Coruscant"), e0 = off.AbductionPercentEstimate(best, cp.Emperor, "Coruscant");
+        int v1 = on.AbductionPercentEstimate(best, cp.Vader, "Coruscant"), v0 = off.AbductionPercentEstimate(best, cp.Vader, "Coruscant");
+        _out.WriteLine($"Emperor {e0} -> {e1} (cap {capE}); Vader {v0} -> {v1} (cap {capV})");
+        Assert.Equal(Math.Min(e0, capE), e1);
+        Assert.Equal(Math.Min(v0, capV), v1);
+        Assert.True(e0 > capE && e1 < new SimpleAiParams().MissionMinOddsPercent, $"Emperor {e0} -> {e1}");
     }
 }
 

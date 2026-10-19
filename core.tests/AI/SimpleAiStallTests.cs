@@ -32,7 +32,12 @@ public class SimpleAiStallTests
                 if (o.Kind == "Bombard") shelled[fleet] = o.Detail[(o.Detail.IndexOf(" shells ") + 8)..];
                 else if (o.Kind == "Assault") shelled.Remove(fleet);
                 else if (o.Kind == "Move" && shelled.TryGetValue(fleet, out var at) && o.Detail.StartsWith($"fleet {fleet} {at} -> ", StringComparison.Ordinal))
-                { leaves++; shelled.Remove(fleet); }
+                {
+                    // A world the Empire holds when the fleet leaves needs no landing (under derived control the shelling killed its last
+                    // regiment and it joined the Empire by support, or another fleet landed): that is a win, not the stall. See the floor below.
+                    if (h.Fleets.OwnerOf(at) != Side.Empire) leaves++;
+                    shelled.Remove(fleet);
+                }
             }
         }
         return (m.Sent.GetValueOrDefault("Empire Assault"), m.Sent.GetValueOrDefault("Empire Bombard"), leaves);
@@ -51,6 +56,9 @@ public class SimpleAiStallTests
     //   Classic battle:        share 8/26, 9/32, 10/26, 8/10, 10/19, 14/22, 10/28, 13/21 against 3/8, 6/9, 7/33, 3/29, 2/16, 7/36, 5/20, 7/24
     //                          (more on 6 of 8; 31% against 19%, 1.66 times); shelled and left 3 against 23
     // Floor: (a) more on at least 6 of 8 and at least 1.5 times overall; (b) with the fix at most half the times without it.
+    // (b) counts a leave only when the system is not Empire-held at that moment (AI trainer 2026-10-18, Dev lead OK, with ControlRule DEFAULT
+    // Derived): counting every leave gave 19 with the fix against 36 without, but 16 of the 19 (10 of the 36) were from worlds already
+    // Imperial, won when the shelling killed the last regiment; the real stalls are 3 against 26 (seeds 1-8, day 500).
     // Why not landings any more (the floor until 2026-10-18 was "more landings on 5 of 8 and 1.5 times as many": Classic 75 against 40 and
     // 90 against 32): the count measured the mirror. With the switch on the Empire only, it landed 45 against 40 (Classic) and 45 against 42
     // (New); the extra landings were mostly retakes of what the Alliance's own fix took, and how much of that churn there is depends on the
