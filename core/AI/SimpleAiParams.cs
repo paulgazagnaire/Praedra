@@ -46,6 +46,21 @@ public sealed record SimpleAiParams
     public bool OriginalGarrisonFloor { get; init; }
     /// <summary>Most regiments in one garrison order. DEFAULT.</summary>
     public int GarrisonBatch { get; init; } = 4;
+    /// <summary>
+    /// Garrisons first (Medium mirror seed 10, Dev lead 2026-10-19): while the side is far ahead (FinishWhenAheadRatio), its garrison orders go
+    /// to the worlds in uprising first and then to the worlds with the fewest regiments, shrink to what the upkeep pays for, the upkeep every
+    /// garrison still short of its need would take is kept from new ships, and it wants one more training facility per
+    /// GarrisonShortPerTrainingFacility regiments short (up to MaxTrainingFacilities). Without it a winning side spent its upkeep on warships it
+    /// did not need (seed 10 Empire, day 2500: 4239 of about 5700 upkeep on capital ships against 8 Rebel systems) and trained about 45
+    /// regiments per 250 days at 4 facilities, while uprisings killed 45-80 and the worlds left with none went to the Alliance by support.
+    /// Measured (seeds 1-16, Medium mirror and Medium against Hard both ways): no-winner games 9 of 48 (10 off), seed 10 an Empire win.
+    /// rule: ai tuning (New AI rule, no sheet); m2-uprisings-and-garrison §Required garrison N. DEFAULT.
+    /// </summary>
+    public bool GarrisonsFirst { get; init; } = true;
+    /// <summary>GarrisonsFirst: one more training facility wanted per this many regiments the garrisons are short. DEFAULT.</summary>
+    public int GarrisonShortPerTrainingFacility { get; init; } = 20;
+    /// <summary>GarrisonsFirst: most training facilities the side wants. DEFAULT.</summary>
+    public int MaxTrainingFacilities { get; init; } = 12;
     /// <summary>Regiments (aboard or waiting at the rally system, or queued for it) the AI keeps ready to invade. DEFAULT.</summary>
     public int InvasionRegimentTarget { get; init; } = 10;
     /// <summary>Troop slots the AI wants on its ships. DEFAULT.</summary>

@@ -18,7 +18,10 @@ public class SimpleAiTaskForceTests
     private static (int End, int Splits) Play(int seed, bool taskForces, int days)
     {
         var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA });
-        var m = new AiMatch(h, AiLevels.For(AiLevel.Medium) with { TaskForces = taskForces }, AiLevels.For(AiLevel.Medium), passive: Side.Alliance);
+        // GarrisonsFirst pinned off (Dev lead 2026-10-19): the passive Alliance makes the Empire "far ahead" from the start, and this test
+        // measures task forces; SimpleAiGarrisonsFirstTests measures that switch.
+        var m = new AiMatch(h, AiLevels.For(AiLevel.Medium) with { TaskForces = taskForces, GarrisonsFirst = false },
+            AiLevels.For(AiLevel.Medium) with { GarrisonsFirst = false }, passive: Side.Alliance);
         int splits = 0;
         while (h.Game.Day < days && h.Victory.Winner == null)
         {
