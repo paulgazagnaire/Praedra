@@ -482,6 +482,27 @@ public sealed record SimpleAiParams
     /// <summary>Key hunt: value of one look (doubled where a key was last seen). DEFAULT.</summary>
     public int KeyHuntValue { get; init; } = 900;
     /// <summary>
+    /// Blind hunt (QA-19, 2026-10-19), both sides: with fog, when the side's picture shows no system held by the other side while the game goes
+    /// on, the side hunts for what it has lost sight of. Its scouts rank the systems by how long ago it last looked (no StaleDays ceiling: a look
+    /// 1200 days old outranks one 200 days old), nearest first among equals; its piles take any system it has not looked at for BlindStaleDays
+    /// (within ScoutHops) as a target worth up to BlindValue more, by the age of that look; and its spies (Espionage, up to BlindLooks at once) go
+    /// to the oldest looks first. It reads only the side's own picture: a fleet or spy that arrives sees what is there, and the usual rules then
+    /// take it. Without it the AI ran out of targets with the other side still in play (QA round 31, seed 15 Medium mirror: the last Rebel
+    /// system, empty and one lane from Imperial space, last seen on day 1790; the Empire sat for 500+ days with no winner). New AI rule (no
+    /// sheet). false = the AI before. DEFAULT true.
+    /// </summary>
+    public bool BlindHunt { get; init; } = true;
+    /// <summary>Blind hunt: a system the side last looked at more than this many days ago is a pile target (and a spy target). DEFAULT.</summary>
+    public int BlindStaleDays { get; init; } = 180;
+    /// <summary>Blind hunt: a look this many days old or older earns the whole BlindValue; younger ones a share by age. DEFAULT.</summary>
+    public int BlindAgeDays { get; init; } = 720;
+    /// <summary>Blind hunt: most value a stale system adds as a pile target (KnownEnemyHq adds 200, the win target 400). DEFAULT.</summary>
+    public int BlindValue { get; init; } = 400;
+    /// <summary>Blind hunt: most Espionage missions the side runs at once while blind (all its Espionage missions count). DEFAULT.</summary>
+    public int BlindLooks { get; init; } = 3;
+    /// <summary>Blind hunt: value of one spy look. DEFAULT.</summary>
+    public int BlindLookValue { get; init; } = 900;
+    /// <summary>
     /// Key characters (the majors: Luke, Leia, Han, Mon Mothma, Vader, Palpatine) count this percent of their mission value (others are
     /// preferred) and never go on Rescue, Abduction, Sabotage or Incite (ai/05 §4: the original keeps its leaders off those). With
     /// m5-characters-and-force MajorsCanDie on (DEFAULT off) they also stay off every mission where any defender is believed. DEFAULT.

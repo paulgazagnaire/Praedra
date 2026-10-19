@@ -22,6 +22,7 @@ namespace Rebellion.Core.AI;
 /// from the core's own tables (MissionModule.FoilChance, DetectionX, Lookup: m5-missions §3, §Mission tables) against the defenders the side
 /// believes are there. Kinds: Empire HQ hunt (Espionage or Reconnaissance on the highest HQ-belief systems, then a re-check of a known HQ),
 /// the Alliance's key hunt (Espionage for the Emperor and Vader while it is ahead, KeyHunt),
+/// the blind hunt (Espionage at the oldest looks while the picture shows no enemy system, BlindHunt),
 /// Subdue on own systems in uprising, Rescue of own prisoners, Abduction of enemy characters the side has seen, Diplomacy on own low-support
 /// systems and neutral border systems, Alliance Incite and Sabotage on enemy systems where no defender is believed, and Research. With
 /// SpecialForceAgents (DEFAULT off, QA-6) its free special forces go alone on the same jobs where their class bit is in the kind's mask.</item>
@@ -459,6 +460,18 @@ public sealed partial class SimpleAi
                 want--;
             }
         }
+        // 5c. blind hunt (QA-19): the picture shows no enemy system while the game goes on, so spies look where the side looked longest ago
+        if (BlindOn() && KindUsable(MissionKind.Espionage))
+        {
+            int want = _p.BlindLooks - own.Count(m => m.Kind == MissionKind.Espionage);
+            foreach (var s in BlindLookTargets())
+            {
+                if (want <= 0) break;
+                if (taken.Contains((MissionKind.Espionage, s)) || jobs.Any(j => j.Kind == MissionKind.Espionage && j.System == s)) continue;
+                jobs.Add(new Job(MissionKind.Espionage, s, null, _p.BlindLookValue, "look " + s));
+                want--;
+            }
+        }
         // 6. Diplomacy: own systems of low support, neutral systems on the border (picture's owner fresh enough)
         if (KindUsable(MissionKind.Diplomacy))
         {
@@ -520,14 +533,14 @@ public sealed partial class SimpleAi
         MissionKind.TroopResearch => Characters.Skill.TroopTraining, _ => null,
     };
 
-    /// <summary>
-    /// The success chance (percent) of one member (its skills read through sk), from the core's table for the kind (m5-missions §Mission records: the table input). Recon
-    /// succeeds by itself; Incite counts as a success while it works (its incident term, m5-missions §7, needs no roll); Research is the skill.
-    /// </summary>
     /// <summary>Tests: the Abduction chance (percent) the planner reads for the character against the target at the system.</summary>
     internal int AbductionPercentEstimate(CharacterRecord c, int target, string system) =>
         SuccessPercent(s => Skill(c, s), new Job(MissionKind.Abduction, system, target, 0, "test"));
 
+    /// <summary>
+    /// The success chance (percent) of one member (its skills read through sk), from the core's table for the kind (m5-missions §Mission records: the table input). Recon
+    /// succeeds by itself; Incite counts as a success while it works (its incident term, m5-missions §7, needs no roll); Research is the skill.
+    /// </summary>
     private int SuccessPercent(Func<Skill, int> sk, Job j)
     {
         var mi = _h.Missions; var rec = mi.Data.Get(j.Kind);
