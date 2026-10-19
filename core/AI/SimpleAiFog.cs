@@ -371,7 +371,9 @@ public sealed partial class SimpleAi
             if (pic.Fleets is { } e && AgeOf(e) <= _p.ScoutAvoidFleetDays && e.Value.Any(fp => fp.Side != _side && Armed(fp))) return 0;
             if (_view.Level(s) is KnowledgeLevel.Held or KnowledgeLevel.Observed) return 0;
             int look = pic.LastLookDay ?? pic.Owner?.Stamp ?? 0;
-            stale = Math.Clamp(Today - look, 0, _p.StaleDays) * 100 / Math.Max(1, _p.StaleDays);
+            // blind hunt (QA-19): no StaleDays ceiling, so the oldest look goes first (nearest first among equals)
+            int cap = BlindOn() ? int.MaxValue / 1000 : _p.StaleDays;
+            stale = Math.Clamp(Today - look, 0, cap) * 100 / Math.Max(1, _p.StaleDays);
         }
         int v = pic == null ? _p.ScoutUnexploredValue : stale * (IsEnemyHeld(s) ? _p.ScoutEnemyFactor : 1);
         if (belief > 0 && BeliefMax > 0) v += (int)((long)_p.ScoutBeliefValue * belief / BeliefMax * stale / 100);
@@ -589,5 +591,50 @@ public sealed partial class SimpleAi
         }
         foreach (var (_, s) in sweep.OrderBy(x => x.Hops).ThenBy(x => x.System, StringComparer.Ordinal)) list.Add((s, false));
         return list;
+    }
+
+    // ================================================================== the blind hunt (BlindHunt, QA-19)
+
+    /// <summary>BlindHunt: fog on and the side's picture shows no system held by the other side (cached per day).</summary>
+    private bool BlindOn() => _blind ??= _p.BlindHunt && _view != null && !EnemySystems().Any();
+    private bool? _blind;
+
+    /// <summary>Days since the side last looked at the system (the picture's last look, else its owner stamp); never looked = Today + 1.</summary>
+    private int LookAge(string s)
+    {
+        var pic = _view!.Picture(s);
+        int? look = pic?.LastLookDay ?? pic?.Owner?.Stamp;
+        return look is int d ? Today - d : Today + 1;
+    }
+
+    /// <summary>
+    /// Blind hunt: pile target value of a system the side last looked at more than BlindStaleDays ago, within ScoutHops of its systems: up to
+    /// BlindValue by the age of the look (all of it from BlindAgeDays); 0 otherwise. Reads the side's picture only.
+    /// </summary>
+    private int BlindTargetValue(string s, int hop)
+    {
+        if (hop > _p.ScoutHops) return 0;
+        int age = LookAge(s);
+        if (age <= _p.BlindStaleDays) return 0;
+        return (int)((long)_p.BlindValue * Math.Min(age, _p.BlindAgeDays) / Math.Max(1, _p.BlindAgeDays));
+    }
+
+    /// <summary>
+    /// Blind hunt: where to send spies, best first: systems not held or destroyed, populated as the picture shows them, last looked at more than
+    /// BlindStaleDays ago, and no look foiled there within SpyFoilMemoryDays; oldest look first, then by hops from the side's systems, then
+    /// ordinal name.
+    /// </summary>
+    private List<string> BlindLookTargets()
+    {
+        var hops = Hops(); var list = new List<(int Age, int Hops, string System)>();
+        foreach (var sys in _h.Data.Galaxy.Systems)
+        {
+            string s = sys.Name;
+            if (Held(s) || Destroyed(s) || !SlotsSeen(s).Populated) continue;
+            int age = LookAge(s);
+            if (age <= _p.BlindStaleDays || FoiledWithin(s, _p.SpyFoilMemoryDays)) continue;
+            list.Add((age, hops[sys.Index], s));
+        }
+        return list.OrderByDescending(x => x.Age).ThenBy(x => x.Hops).ThenBy(x => x.System, StringComparer.Ordinal).Select(x => x.System).ToList();
     }
 }

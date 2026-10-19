@@ -68,7 +68,7 @@ public sealed partial class SimpleAi
     public void PlanDay()
     {
         _submitted.Clear(); _plannedLoad = 0; _busy.Clear(); _reservedEnergy.Clear(); _reservedRaw.Clear(); _reservedYards.Clear(); _strength.Clear();
-        _capitalDone = _rallyDone = false; _hops = null; _finishing = null; _threats = null; _offensives = -1; _lost = null; _lostBattles = null; _runners = null; _bounced = null;
+        _capitalDone = _rallyDone = false; _hops = null; _finishing = null; _blind = null; _threats = null; _offensives = -1; _lost = null; _lostBattles = null; _runners = null; _bounced = null;
         int day = Today, phase = (int)_side;
         _rng = new GameRng((ulong)day * 2 + (ulong)_side + 0x5A1D, 0xA1);
         _view = _p.UseFog ? _h.Fog.ViewFor(_side) : null;
@@ -1336,7 +1336,8 @@ public sealed partial class SimpleAi
 
     /// <summary>
     /// Best system to send a pile to: an enemy fleet it beats (fleets first: they are what makes the other targets safe), an enemy or neutral
-    /// system near the border with a weak defence (lost systems score double), or the system that wins the game when the pile is strong enough.
+    /// system near the border with a weak defence (lost systems score double), or the system that wins the game when the pile is strong enough;
+    /// with fog and no enemy system on the picture (BlindHunt, QA-19), also a system the side has not looked at for long.
     /// </summary>
     private string? PickTarget(Pile pile, int aboard, string from)
     {
@@ -1350,17 +1351,21 @@ public sealed partial class SimpleAi
         var scored = new List<(string Sys, long Score)>();
         bool search = HqSearchOn && strength >= _p.WinStrikeStrength;
         bool finishing = Finishing();
+        bool blind = BlindOn();
         foreach (var sys in g.Systems)
         {
             string s = sys.Name;
             if (s == from || Held(s) || BouncedOff(s) || Destroyed(s)) continue;
             bool isWin = s == win && strength >= _p.WinStrikeStrength;
+            // fog, blind hunt (QA-19): the picture shows no enemy system, so a system not looked at for long is worth a visit
+            int blindValue = blind ? BlindTargetValue(s, hops[sys.Index]) : 0;
+            bool isBlind = blindValue > 0;
             // fog: systems the picture shows enemy-held reach farther; the Empire's HQ candidates (belief map) from any distance
             bool seenEnemy = _view != null && IsEnemyHeld(s);
             int reach = seenEnemy ? Math.Max(_p.TargetHops, _p.FogEnemyTargetHops) : _p.TargetHops;
             int belief = search && seenEnemy ? Belief(s) : 0;
             bool isSearch = belief > 0;
-            if (hops[sys.Index] > reach + 1 && !isWin && !isSearch) continue;
+            if (hops[sys.Index] > reach + 1 && !isWin && !isSearch && !isBlind) continue;
             int ticks = _view != null ? TicksCached(from, s, speed) : Ticks(from, s, speed);
             if (ticks == int.MaxValue) continue;
             var enemies = TargetFleetsAt(s);
@@ -1375,7 +1380,7 @@ public sealed partial class SimpleAi
             // retreated from this side here or next door lately: the chase would go on with no losses on either side)
             if (e > 0 && ticks <= _p.HuntTicks && hops[sys.Index] <= _p.TargetHops && !EnemyRunsNear(s)) score = 3000L * (long)(e * 100 + 20) / (ticks + 20);
             // the system: needs regiments
-            if (hops[sys.Index] <= reach || isWin || isSearch)
+            if (hops[sys.Index] <= reach || isWin || isSearch || isBlind)
             {
                 var slots = SlotsSeen(s);
                 bool ok = slots.Populated && !AssaultForbiddenSeen(s) && aboard >= 1;
@@ -1392,6 +1397,7 @@ public sealed partial class SimpleAi
                         if (s == KnownEnemyHq) value += 200;
                         if (isWin) value += 400;
                         if (isSearch) value += _p.SearchValue * belief / Math.Max(1, BeliefMax);
+                        value += blindValue;
                         score = Math.Max(score, value * 1000 / (ticks + 20));
                     }
                 }
