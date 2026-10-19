@@ -388,7 +388,7 @@ public sealed partial class SimpleAi
             var wants = new List<(FacilityKind Kind, int Have, int Want)>
             {
                 (FacilityKind.OrbitalShipyard, ships, _p.DesiredShipyards),
-                (FacilityKind.TrainingFacility, train, _p.DesiredTrainingFacilities),
+                (FacilityKind.TrainingFacility, train, TrainingFacilitiesWanted()),
                 (FacilityKind.ConstructionYard, cons, _p.DesiredConstructionYards),
             };
             foreach (var w in wants.Where(w => w.Have < w.Want).OrderBy(w => w.Have * 100 / w.Want).ThenBy(w => (int)w.Kind)) order.Add(w.Kind);
@@ -507,21 +507,47 @@ public sealed partial class SimpleAi
     // rule: m2-uprisings-and-garrison §Required garrison N: keep N regiments on every system where the support is low.
     private void PlanGarrison()
     {
+        _garrisonReserve = 0;
         string cls = _p.GarrisonRegiment(_side);
         if (!Available(cls)) return;
         var pending = PendingRegiments();
-        foreach (var s in HeldSystems())
+        var held = HeldSystems();
+        bool first = _p.GarrisonsFirst && Finishing(); // far ahead, the side needs its garrisons more than new warships
+        // GarrisonsFirst: the worlds in uprising, then the fewest regiments, get the upkeep first (ties: ordinal name)
+        if (first) held = held.OrderByDescending(_h.Support.IsUprising).ThenBy(_h.Support.RegimentCount).ThenBy(s => s, StringComparer.Ordinal).ToList();
+        foreach (var s in held)
         {
             int need = GarrisonTarget(s);
             if (need == 0) continue;
             int deficit = need - _h.Support.RegimentCount(s) - pending.GetValueOrDefault(s);
             if (deficit <= 0) continue;
             int count = Math.Min(deficit, _p.GarrisonBatch);
-            if (Budget < count * Maint(cls)) continue;
-            var yard = TrainingYardNear(s);
-            if (yard == null) return;
+            if (first) while (count > 1 && Budget < count * Maint(cls)) count--;
+            var yard = Budget < count * Maint(cls) ? null : TrainingYardNear(s);
+            if (yard == null)
+            {
+                if (!first) { if (Budget < count * Maint(cls)) continue; return; } // every training yard is busy
+                _garrisonReserve += deficit * Maint(cls); // GarrisonsFirst: unpaid or waiting for a yard, its upkeep is still kept from the ships
+                continue;
+            }
             OrderRegiments(yard, cls, count, s);
+            if (first) _garrisonReserve += (deficit - count) * Maint(cls);
         }
+    }
+
+    /// <summary>GarrisonsFirst: upkeep the garrisons still short of their need would take, kept from new ships (set by PlanGarrison).</summary>
+    private int _garrisonReserve;
+    /// <summary>
+    /// Training facilities wanted: DesiredTrainingFacilities, and with GarrisonsFirst while far ahead one more per GarrisonShortPerTrainingFacility
+    /// regiments the garrisons are short (queued ones count), up to MaxTrainingFacilities (one facility trains about 10 regiments in 250 days:
+    /// m2-construction §Build time).
+    /// </summary>
+    private int TrainingFacilitiesWanted()
+    {
+        if (!_p.GarrisonsFirst || !Finishing()) return _p.DesiredTrainingFacilities;
+        var pending = PendingRegiments();
+        int shortBy = HeldSystems().Sum(s => Math.Max(0, GarrisonTarget(s) - _h.Support.RegimentCount(s) - pending.GetValueOrDefault(s)));
+        return Math.Min(Math.Max(_p.DesiredTrainingFacilities, _p.MaxTrainingFacilities), _p.DesiredTrainingFacilities + shortBy / Math.Max(1, _p.GarrisonShortPerTrainingFacility));
     }
 
     private void PlanInvasionRegiments()
@@ -699,8 +725,9 @@ public sealed partial class SimpleAi
                 int yardsHere = Math.Max(1, YardsDoneAt(y, YardFamily.Shipyard)); int unitDays = (eco.Costs.Get(cls).Cost + yardsHere - 1) / yardsHere * 4;
                 count = Math.Max(1, Math.Min(count, _p.MaxOrderDays / Math.Max(1, unitDays)));
             }
-            while (count > 1 && Budget < count * Maint(cls)) count--;
-            if (Budget < count * Maint(cls)) continue;
+            int budget = Budget - _garrisonReserve; // GarrisonsFirst: the garrisons are paid first
+            while (count > 1 && budget < count * Maint(cls)) count--;
+            if (budget < count * Maint(cls)) continue;
             long seq = _h.Construction.SubmitBuild(_side, y, YardFamily.Shipyard, cls, count, destArg);
             Note(seq, "Build", $"{count} x {cls} at {y} for {dest ?? y}");
             _busy.Add((y, YardFamily.Shipyard));
