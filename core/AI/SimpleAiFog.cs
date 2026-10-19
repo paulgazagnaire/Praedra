@@ -637,4 +637,23 @@ public sealed partial class SimpleAi
         }
         return list.OrderByDescending(x => x.Age).ThenBy(x => x.Hops).ThenBy(x => x.System, StringComparer.Ordinal).Select(x => x.System).ToList();
     }
+
+    // ================================================================== task forces (TaskForces, QA-2)
+
+    /// <summary>
+    /// The strength of the strongest enemy fleet the side knows of: without fog every enemy fleet; with fog the fleets of its picture seen within
+    /// FogFleetMemoryDays (as <see cref="Str(Force)"/>). 0 when none.
+    /// </summary>
+    private double StrongestEnemyFleet()
+    {
+        if (_view == null) return S.Fleets.Values.Where(f => f.Side == Enemy && f.Ships.Count > 0).Select(Str).DefaultIfEmpty(0).Max();
+        double best = 0;
+        foreach (var sys in _h.Data.Galaxy.Systems)
+        {
+            var e = _view.Picture(sys.Name)?.Fleets;
+            if (e == null || AgeOf(e) > _p.FogFleetMemoryDays) continue;
+            foreach (var fp in e.Value) if (fp.Side == Enemy) best = Math.Max(best, Str(ForceOf(sys.Name, fp)));
+        }
+        return best;
+    }
 }
