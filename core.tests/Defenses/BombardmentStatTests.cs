@@ -53,14 +53,20 @@ public class BombardmentStatTests
         Assert.True(Math.Abs(observed - 34.39) <= 1.0, $"observed {observed:F2} percent, exact 34.39");
     }
 
-    // m3-bombardment B10: reference means over 20,000 runs (tolerance 0.05); depends on "targets removed on destruction" and "hits discarded when empty"
+    // m3-bombardment B10: reference means over 20,000 runs (tolerance 0.05). With BombardWastedHits on (B7 C1, DEFAULT) the means are B7-bombardment §9's
+    // 2.92, 4.63 and 5.12 (were 3.93, 5.00 and 5.99 under the m3 live-pool rule, kept here as the switch-off rows). Return fire is off in this test:
+    // the LNR I would damage the Victory Destroyers and lower P (B7 §4), and B10 measures the hits only
     [Theory]
-    [InlineData(2, false, 3.93)]   // 8 hits on 4 Army regiments plus an LNR I (pool Military): 3.93 of 5
-    [InlineData(6, false, 5.00)]   // 24 hits: 5.00
-    [InlineData(15, true, 5.99)]   // 20 hits (P = 60, GenCore I absorbs 40) on 4 Army + LNR I + GenCore I: 5.99 of 6
-    public void B10_ReferenceMeans(int victoryDestroyers, bool withShield, double mean)
+    [InlineData(2, false, true, 2.92)]    // 8 hits on 4 Army regiments plus an LNR I (pool Military): 2.92 of 5 (m3 rule 3.93)
+    [InlineData(6, false, true, 4.63)]    // 24 hits: 4.63 (m3 rule 5.00)
+    [InlineData(15, true, true, 5.12)]    // 20 hits (P = 60, GenCore I absorbs 40) on 4 Army + LNR I + GenCore I: 5.12 of 6 (m3 rule 5.99)
+    [InlineData(2, false, false, 3.93)]   // the m3 rule (C1 off)
+    [InlineData(6, false, false, 5.00)]
+    [InlineData(15, true, false, 5.99)]
+    public void B10_ReferenceMeans(int victoryDestroyers, bool withShield, bool wastedHits, double mean)
     {
-        var w = new BombWorld(stub: false, seed: (ulong)(1000 + victoryDestroyers));
+        var w = new BombWorld(stub: false, seed: (ulong)(1000 + victoryDestroyers),
+            bp: new BombardParams { BombardWastedHits = wastedHits, BatteryReturnFire = false });
         w.Hold(All);
         int fleet = w.Fleet(Emp, Sys, "Victory Destroyer", victoryDestroyers); // 4 each: P = 8, 24, 60
         long total = 0;

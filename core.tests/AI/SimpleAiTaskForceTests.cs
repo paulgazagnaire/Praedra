@@ -17,7 +17,12 @@ public class SimpleAiTaskForceTests
     // splits): the day it wins, or 0 by the day limit, and the task-force splits it ordered.
     private static (int End, int Splits) Play(int seed, bool taskForces, int days)
     {
-        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA });
+        // B7 bombardment pinned off (Dev lead 2026-10-19): with the 1998 bombardment (B7-bombardment) even the TaskForces-off Empire beats the
+        // passive Alliance by day 1250 on all four seeds (on 1078, 1081, 1231, 1006; off 1174, 1111, 1231, 1210: 82 days sooner on average), so
+        // the floors below no longer separate the switch. They were measured on the pre-B7 bombardment, kept here; the AI tourneys measure B7.
+        var preB7 = new Rebellion.Core.Defenses.BombardParams { BombardWastedHits = false, BatteryReturnFire = false, BombardFleetsTogether = false,
+            BombardDamageScales = false, MilitaryCollateral = false };
+        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = new GameSettings { Bombard = preB7 } });
         // GarrisonsFirst pinned off (Dev lead 2026-10-19): the passive Alliance makes the Empire "far ahead" from the start, and this test
         // measures task forces; SimpleAiGarrisonsFirstTests measures that switch.
         var m = new AiMatch(h, AiLevels.For(AiLevel.Medium) with { TaskForces = taskForces, GarrisonsFirst = false },

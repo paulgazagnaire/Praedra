@@ -83,7 +83,10 @@ public class SimpleAiAgentsTests
         // Derived re-pin 2026-10-18 (AI trainer; Paul's card "1998 rule"): ControlRule is DEFAULT Derived again, a core rule this old AI cannot
         // switch off. FinishWhenAheadRatio (now DEFAULT 5) is switched off above with the other AI fixes. With ControlRule = AssaultOnly the hash
         // is exactly the previous pin 00e02e8c...701c (checked when re-pinned, main 2a9d16d).
-        Assert.Equal("ca568ccfc34b65af86a8aad11742f528a031b56cd8a07390a0253f2c192e8252", h.StateHash());
+        // B7 re-pin 2026-10-19 (Dev lead; the 1998 bombardment, B7-bombardment): BombardWastedHits, BatteryReturnFire, BombardFleetsTogether,
+        // BombardDamageScales and MilitaryCollateral are DEFAULT on, core rules this old AI cannot switch off. With those five switches off the hash
+        // is exactly the previous pin ca568ccf...8252 (checked when re-pinned, main 07ff5e9; the gap fills C5, C7 and the C8 data do not touch this game).
+        Assert.Equal("d5798f1633cdcfc63dd84692cabfad3f7e0b814918f6558bd7fa7c4d14c23f02", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"

@@ -255,12 +255,24 @@ public static class DropInStage
             MissionNumberKeys.Select(k => new[] { k.Key, g(k.Gnprtb), $"original: GNPRTB {k.Gnprtb} (importer); {k.Reading}" }));
     }
 
-    /// <summary>bombardment-defense.csv: the regiment rows (TROOPSD bombardment_defense). The facility rows are DEFAULT 5 in data/design. rule: m3-bombardment B7.</summary>
+    /// <summary>
+    /// bombardment-defense.csv: the regiment rows (TROOPSD bombardment_defense), then the manufacturing and production facilities (MANFACSD and
+    /// PROFACSD word 12, raw column f12) and the Rebel HQ (ALLFACSD word 12), read as the bombardment defence by the 1998 strike (class word 12,
+    /// vtable +0x1c0). Only the Sensor Station (not a 1998 class) stays in data/design. rule: m3-bombardment B7; B7-bombardment §3, §7 (C8).
+    /// </summary>
     private static string Bombardment(Raw raw)
     {
         var t = raw["TROOPSD"];
-        return Csv.Write(new[] { "kind", "name", "bombard_defense", "tag" },
+        var rows = new List<IEnumerable<string>>(
             Rows(t, r => new[] { "troop", raw.Name(t, r), S(t, r, "bombardment_defense"), "original: TROOPSD bombardment_defense (importer); m3-bombardment B7" }));
+        foreach (var file in new[] { "MANFACSD", "PROFACSD" })
+        {
+            var f = raw[file];
+            rows.AddRange(Rows(f, r => new[] { "facility", raw.Name(f, r), S(f, r, "f12"), $"original: {file} word 12 (importer); B7-bombardment §7" }));
+        }
+        var hq = raw["ALLFACSD"];
+        rows.AddRange(Rows(hq, r => new[] { "hq", raw.Name(hq, r), S(hq, r, "f12"), "original: ALLFACSD word 12 (importer); B7-bombardment §3 and §7 (read only with HqBombardable)" }));
+        return Csv.Write(new[] { "kind", "name", "bombard_defense", "tag" }, rows);
     }
 
     /// <summary>gnprtb.csv (key, v0..v7) and sdprtb.csv (key, v0..v15): every entry, file order. rule: 02-gdata-formats §2.</summary>

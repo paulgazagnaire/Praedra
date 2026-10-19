@@ -11,7 +11,7 @@ Sources (project folder `rebellion/specs/`): `economy/data/slot-values-draft.csv
 
 `design/extended-galaxy-v5-planets.csv` and `design/extended-galaxy-v5-lanes.csv` are copied from `planets/data/` (planets/15, route network rebuild, 2026-10-16; they replace the v4 files). 555 systems; the lanes file holds the 377 official hyperspace route links (117 major, factor 300; 260 minor, factor 150; no generated lanes); 332 systems lie on a route. Ships fly anywhere; a link only makes travel along it faster (m1-galaxy-data, m1-travel). `design/lane-tiers.csv` maps each link kind to its tier and factor (tier 2 now also covers `official-inferred` and `bridge`), and `design/expected-galaxy-counts.csv` holds the v5 counts the loader checks. `design/slot-values-draft.csv` and the five `design/day-one/` files were replaced with their 555-system versions at the same time.
 
-`original/defense-facilities.csv` (the six `DEFFACSD` classes, m3-planetary-defenses) and `original/bombardment-defense.csv` (regiment bombardment defense from `TROOPSD`, m3-bombardment B7) come from the importer. The facility bombardment defenses stay DEFAULT 5 in `design/bombardment-defense.csv` (MANFACSD and PROFACSD words 12 and 13 are unnamed until B2).
+`original/defense-facilities.csv` (the six `DEFFACSD` classes, m3-planetary-defenses) and `original/bombardment-defense.csv` (regiment bombardment defense from `TROOPSD`, m3-bombardment B7; since batch B7 also the manufacturing and production facilities from `MANFACSD`/`PROFACSD` word 12 and the Rebel HQ from `ALLFACSD` word 12, row kind `hq`, B7-bombardment §7) come from the importer. Only the Sensor Station row stays in `design/bombardment-defense.csv`.
 
 `design/repair-rules.csv` is the data table `RepairRules` of m4-retreat-damage-repair section 5 (strategic repair, slot 6.8: yard needed, cadence, hull divisor, hits per call).
 
@@ -48,7 +48,7 @@ Missions (m5-missions):
 - `design/mission-foilable.csv` says which kinds a detection can foil (DEFAULT per the sheet).
 - `design/assassination-key-targets.csv` lists the key characters (Luke 578, Mon Mothma 576, Vader 641, Palpatine 640) and their success cap in percent for Assassination and Abduction (m5-missions section 6a; Decided Paul 2026-10-16, numbers Proposal). Tune the caps here, no code change.
 
-Sensor Station (m5-fog-and-hq N4, economy/15 §2; designed, not in the 1998 game; Paul 2026-10-16): its rows are in `design/unit-and-facility-costs.csv` (cost 10, maintenance 5, research order 0), `design/research-unlocks.csv` (level 0, start yes/yes) and `design/bombardment-defense.csv` (DEFAULT 5, as the other facilities), each with its tag.
+Sensor Station (m5-fog-and-hq N4, economy/15 §2; designed, not in the 1998 game; Paul 2026-10-16): its rows are in `design/unit-and-facility-costs.csv` (cost 10, maintenance 5, research order 0), `design/research-unlocks.csv` (level 0, start yes/yes) and `design/bombardment-defense.csv` (DEFAULT 5, the value every facility had before B7), each with its tag.
 
 ## Original data (B1, our own importer)
 

@@ -66,19 +66,27 @@ public class BombardmentHostTests
         Assert.True(whole.Game.Events.SequenceEqual(loaded.Game.Events));
     }
 
-    // the test campaign's one scripted bombardment (day 200, the interdiction fleet shells Kinyen), with every daily invariant green
+    // the test campaign's one scripted bombardment (day 200, the interdiction fleet shells Kinyen), with every daily invariant green. Since B7 the
+    // Kinyen battery (a KDY-150) fires back first (B7-bombardment §4, C2 DEFAULT on): on seed 1 its shot falls on the Victory Destroyer, whose
+    // shields cannot hold 2000 ion, so the ship is grounded and the fleet (Interdictor 0 + Victory Destroyer 4) strikes with P = 0, no hits.
+    // Before B7 the strike was P = 4, 4 hits, 4 TargetHit events.
     [Fact]
     public void CampaignScriptedBombardmentResolvesOnItsDay()
     {
         var run = CampaignHarness.Checked(1, GarrisonRuleset.Classic);
         var started = Assert.Single(run.Events.OfType<BombardmentStarted>());
         Assert.Equal(TestCampaign.BombardDay + 1, started.Day);
-        Assert.Equal((TestCampaign.BlockadedSystem, Side.Empire, BombardCategory.General, 4, 0, 4), (started.System, started.Side, started.Category, started.P, started.S, started.Hits));
-        var resolved = Assert.Single(run.Events.OfType<BombardmentResolved>());
-        Assert.Equal(started.System, resolved.System);
-        Assert.Equal(started.Hits, run.Events.OfType<TargetHit>().Count()); // the pool (regiments, a battery, mines, yards, Energy, Raw) never runs dry in 4 hits
         var fire = Assert.Single(run.Events.OfType<BatteryReturnFire>());
         Assert.Single(fire.Facilities.Items);
+        var shot = Assert.Single(run.Events.OfType<BatteryShot>());
+        Assert.True(shot.Ion);
+        var dmg = Assert.Single(run.Events.OfType<BombardShipDamaged>());
+        Assert.Equal((shot.Ship, true, 0), (dmg.Ship, dmg.Grounded, dmg.HullLost));
+        Assert.Equal("Victory Destroyer", run.Host.Economy.Find(shot.Ship)?.Class);
+        Assert.Equal((TestCampaign.BlockadedSystem, Side.Empire, BombardCategory.General, 0, 0, 0), (started.System, started.Side, started.Category, started.P, started.S, started.Hits));
+        var resolved = Assert.Single(run.Events.OfType<BombardmentResolved>());
+        Assert.Equal(started.System, resolved.System);
+        Assert.Empty(run.Events.OfType<TargetHit>());
         Assert.Empty(run.Events.OfType<BombardCancelled>());
         Assert.DoesNotContain(run.Events.OfType<OrderRejected>(), e => e.Reason is BombardReject.OwnSystem or BombardReject.EnemyFleetPresent or BombardReject.NoBombardPower);
     }

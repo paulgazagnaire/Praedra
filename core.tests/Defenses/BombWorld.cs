@@ -29,12 +29,21 @@ internal sealed class BombWorld
     public FleetModule Fleets => S.W.Fleets;
     public StubRng Stub => S.Stub;
 
-    public BombWorld(bool stub = true, ulong seed = 1, DefenseData? data = null, DefenseParams? dp = null)
+    public BombWorld(bool stub = true, ulong seed = 1, DefenseData? data = null, DefenseParams? dp = null, BombardParams? bp = null)
     {
         S = new SupWorld(GarrisonRuleset.Classic, stub, seed);
         Def = DefenseModule.Attach(Eco, Fleets, data ?? RealData.Value, dp);
-        Bomb = BombardmentModule.Attach(Game, Eco, Fleets, S.Sup, Def);
+        Bomb = BombardmentModule.Attach(Game, Eco, Fleets, S.Sup, Def, bp);
     }
+
+    /// <summary>
+    /// The m3 rule before B7: every B7 switch off (live-pool picks, no return fire, one strike per fleet, full values, no collateral, no HQ).
+    /// The gap fills C5 and C7 and the data C8 have no switch and stay. rule: B7-bombardment §Collisions.
+    /// </summary>
+    public static readonly BombardParams M3Rule = new()
+    {
+        BombardWastedHits = false, BatteryReturnFire = false, BombardFleetsTogether = false, BombardDamageScales = false, MilitaryCollateral = false,
+    };
 
     /// <summary>The real defense data with one text edit applied to the bombardment-defense file (e.g. another regiment defense).</summary>
     public static DefenseData DataWith(Func<string, string> editBombardFile)

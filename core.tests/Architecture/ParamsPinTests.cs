@@ -93,6 +93,17 @@ public class ParamsPinTests
         yield return ("AssaultParams.CollateralPercent", asl.CollateralPercent, G, 0x205, 1);
         yield return ("DefenseParams.ShotChanceDivisor", def.ShotChanceDivisor, G, 0x200, 1);
         yield return ("BombardParams.CivilianSupportChange", bomb.CivilianSupportChange, G, 7705, 1);
+        // B7-bombardment §7 (the strike's numbers)
+        yield return ("BombardParams.GeneralStep", bomb.GeneralStep, G, 1536, 1);
+        yield return ("BombardParams.AdmiralStep", bomb.AdmiralStep, G, 1537, 1);
+        yield return ("BombardParams.DieMin", bomb.DieMin, G, 1538, 1);
+        yield return ("BombardParams.DieMax", bomb.DieMax, G, 1539, 1);
+        yield return ("BombardParams.EnergyDefense", bomb.EnergyDefense, G, 1540, 1);
+        yield return ("BombardParams.RawDefense", bomb.RawDefense, G, 1541, 1);
+        yield return ("BombardParams.CriticalCap", bomb.CriticalCap, G, 2048, 1);
+        yield return ("BombardParams.CriticalRollMax", bomb.CriticalRollMax, G, 2049, 1);
+        yield return ("BombardParams.CriticalAt", bomb.CriticalAt, G, 2050, 1);
+        yield return ("BombardParams.CriticalTableMax", bomb.CriticalTableMax, G, 2051, 1);
         // m5 characters
         yield return ("CharacterParams.DeathStarHitPercent", ch.DeathStarHitPercent, G, 0x606, 1);
         yield return ("CharacterParams.ClassicTrainingGainPercent", CharacterParams.ClassicTrainingGainPercent, G, 6173, 1); // the New DEFAULT ForceTrainingGainPercent is 25 (Paul 2026-10-18)
