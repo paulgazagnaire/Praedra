@@ -68,7 +68,7 @@ public sealed partial class SimpleAi
     public void PlanDay()
     {
         _submitted.Clear(); _plannedLoad = 0; _busy.Clear(); _reservedEnergy.Clear(); _reservedRaw.Clear(); _reservedYards.Clear(); _strength.Clear();
-        _capitalDone = _rallyDone = false; _hops = null; _finishing = null; _blind = null; _threats = null; _offensives = -1; _lost = null; _lostBattles = null; _runners = null; _bounced = null;
+        _capitalDone = _rallyDone = false; _hops = null; _finishing = null; _blind = null; _tfStrength = null; _threats = null; _offensives = -1; _lost = null; _lostBattles = null; _runners = null; _bounced = null;
         int day = Today, phase = (int)_side;
         _rng = new GameRng((ulong)day * 2 + (ulong)_side + 0x5A1D, 0xA1);
         _view = _p.UseFog ? _h.Fog.ViewFor(_side) : null;
@@ -1074,11 +1074,88 @@ public sealed partial class SimpleAi
             if (dsHere.Count > 0) { strike = DeathStarHome(dsHere, strike); }
             else strike = DeathStarCall(g.Key, strike);
             if (strike.Count == 0) continue;
-            var leader = strike[0];
-            for (int i = 1; i < strike.Count; i++) Merge(strike[i], leader);
-            DecideOwn(MakePile(leader, strike));
+            var forces = TaskForces(strike);
+            _tfClaims = forces.Count > 1 ? Claims() : null;
+            foreach (var tf in forces)
+            {
+                var leader = tf[0];
+                for (int i = 1; i < tf.Count; i++) Merge(tf[i], leader);
+                DecideOwn(MakePile(leader, tf));
+            }
+            _tfClaims = null;
         }
     }
+
+    /// <summary>Task forces: systems other piles of one group may not pick (lookup only); null when the group formed one pile.</summary>
+    private HashSet<string>? _tfClaims;
+
+    /// <summary>Task forces: the systems not held that own armed fleets are flying to (another task force already took them on).</summary>
+    private HashSet<string> Claims()
+    {
+        var c = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var f in S.Fleets.Values.Where(f => f.Side == _side && f.Transit != null && f.Ships.Count > 0))
+            if (!Held(f.Transit!.Path[^1]) && Str(f) > 0) c.Add(f.Transit.Path[^1]);
+        return c;
+    }
+
+    /// <summary>
+    /// TaskForces: the strike fleets idle on one held system as piles (fleet id order within each). One pile (all of them, as before) unless the
+    /// switch is on and their strength holds at least two task forces (TaskForceStrength). Then, armed fleets strongest first (ties by id), each
+    /// pile takes fleets until it reaches TaskForceStrength and the next starts, up to TaskForceMax; a pile left short joins the weakest full one;
+    /// unarmed fleets join the pile with the fewest regiments aboard. A fleet that alone holds two task forces splits off ships worth one (its
+    /// highest ship ids, keeping the rest at least one task force): the new fleet is a pile of its own from the next review.
+    /// </summary>
+    private List<List<Fleet>> TaskForces(List<Fleet> strike)
+    {
+        var one = new List<List<Fleet>> { strike };
+        if (!_p.TaskForces || _p.TaskForceMax < 2) return one;
+        double tfs = TaskForceStrength();
+        if (tfs <= 0 || strike.Sum(Str) < 2 * tfs) return one;
+        var big = strike.Where(f => Str(f) >= 2 * tfs && f.Ships.Count >= 2).OrderByDescending(Str).ThenBy(f => f.Id).FirstOrDefault();
+        if (big != null) SplitTaskForce(big, tfs);
+        var piles = new List<List<Fleet>>(); var cur = new List<Fleet>(); double acc = 0;
+        foreach (var f in strike.Where(f => Str(f) > 0).OrderByDescending(Str).ThenBy(f => f.Id))
+        {
+            cur.Add(f); acc += Str(f);
+            if (acc >= tfs && piles.Count < _p.TaskForceMax - 1) { piles.Add(cur); cur = new List<Fleet>(); acc = 0; }
+        }
+        if (cur.Count > 0)
+        {
+            if (piles.Count == 0 || acc >= tfs) piles.Add(cur);
+            else piles.OrderBy(pl => pl.Sum(Str)).First().AddRange(cur);
+        }
+        if (piles.Count < 2) return one;
+        foreach (var f in strike.Where(f => Str(f) <= 0).OrderBy(f => f.Id))
+            piles.Select((pl, k) => (pl, k)).OrderBy(t => t.pl.Sum(x => _h.Troops.RegimentsAboard(x).Count)).ThenBy(t => t.k).First().pl.Add(f);
+        return piles.Select(pl => pl.OrderBy(f => f.Id).ToList()).ToList();
+    }
+
+    /// <summary>Task forces: split ships worth at least one task force off a fleet that holds two (highest ship ids first).</summary>
+    private void SplitTaskForce(Fleet f, double tfs)
+    {
+        var cls = f.Ships.Select(id => (Id: id, S: ClassStrength(_h.Economy.Find(id)!.Class))).ToList();
+        double total = cls.Sum(c => c.S), strength = Str(f);
+        if (total <= 0) return;
+        var off = new List<int>(); double got = 0;
+        foreach (var (id, cs) in cls.Where(c => c.S > 0).OrderByDescending(c => c.Id))
+        {
+            if (got >= tfs) break;
+            double share = strength * cs / total;
+            if (strength - got - share < tfs) continue;
+            off.Add(id); got += share;
+        }
+        if (got < tfs || off.Count == 0 || off.Count == f.Ships.Count) return;
+        off.Sort();
+        long seq = _h.Fleets.SubmitSplitFleet(_side, f.Id, off);
+        Note(seq, "Split", $"{off.Count} ships off fleet {f.Id} at {f.At} (task force)");
+    }
+
+    /// <summary>
+    /// Task forces: the least strength of one task force, TaskForceMarginPercent of the strongest enemy fleet the side knows of (the picture's
+    /// fleets within FogFleetMemoryDays with fog, every enemy fleet without), and at least LaunchStrength (cached per day).
+    /// </summary>
+    private double TaskForceStrength() => _tfStrength ??= Math.Max(_p.LaunchStrength, StrongestEnemyFleet() * _p.TaskForceMarginPercent / 100.0);
+    private double? _tfStrength;
 
     /// <summary>
     /// The home guard is whole fleets, so new warships delivered to it while it was weak stay there for good once it is strong (seen on the
@@ -1357,6 +1434,7 @@ public sealed partial class SimpleAi
             string s = sys.Name;
             if (s == from || Held(s) || BouncedOff(s) || Destroyed(s)) continue;
             bool isWin = s == win && strength >= _p.WinStrikeStrength;
+            if (_tfClaims != null && !isWin && _tfClaims.Contains(s)) continue; // task forces: another pile of the group took it on
             // fog, blind hunt (QA-19): the picture shows no enemy system, so a system not looked at for long is worth a visit
             int blindValue = blind ? BlindTargetValue(s, hops[sys.Index]) : 0;
             bool isBlind = blindValue > 0;
@@ -1405,15 +1483,21 @@ public sealed partial class SimpleAi
             if (score > 0) scored.Add((s, score));
         }
         if (scored.Count == 0) return null;
+        string pick;
         // difficulty: pick noise (ai/09 §6), a random one of the three best targets
         if (_p.PickNoisePercent > 0 && _rng.NextInt(1, 100) <= _p.PickNoisePercent)
         {
             var top3 = scored.OrderByDescending(t => t.Score).ThenBy(t => t.Sys, StringComparer.Ordinal).Take(3).ToList();
-            return top3[_rng.NextInt(0, top3.Count - 1)].Sys;
+            pick = top3[_rng.NextInt(0, top3.Count - 1)].Sys;
         }
-        long best = scored.Max(t => t.Score);
-        // tie-break (private generator): any target within 5% of the best
-        var top = scored.Where(t => t.Score * 100 >= best * 95).OrderBy(t => t.Sys, StringComparer.Ordinal).ToList();
-        return top[_rng.NextInt(0, top.Count - 1)].Sys;
+        else
+        {
+            long best = scored.Max(t => t.Score);
+            // tie-break (private generator): any target within 5% of the best
+            var top = scored.Where(t => t.Score * 100 >= best * 95).OrderBy(t => t.Sys, StringComparer.Ordinal).ToList();
+            pick = top[_rng.NextInt(0, top.Count - 1)].Sys;
+        }
+        _tfClaims?.Add(pick);
+        return pick;
     }
 }

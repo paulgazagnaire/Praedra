@@ -503,6 +503,22 @@ public sealed record SimpleAiParams
     /// <summary>Blind hunt: value of one spy look. DEFAULT.</summary>
     public int BlindLookValue { get; init; } = 900;
     /// <summary>
+    /// Task forces (QA-2, 2026-10-19), both sides: the strike fleets idle on one held system used to merge into one pile that takes one target at
+    /// a time, so a side far ahead won slowly or not at all (QA seeds: an Empire of 70 ships against 3 took 12-22 systems per 250 days, empty
+    /// ones mostly, and day 3000 came first). With it the fleets there form up to TaskForceMax piles, each at least TaskForceStrength (see
+    /// below), and a fleet that alone is at least twice that splits off ships worth TaskForceStrength (one split a review). Piles of one group
+    /// pick different targets (the system that wins the game excepted). A side that is not much stronger than the enemy's strongest fleet it
+    /// knows of keeps one pile, as before. New AI rule (no sheet). false = the AI before. DEFAULT true.
+    /// </summary>
+    public bool TaskForces { get; init; } = true;
+    /// <summary>Task forces: most piles formed on one system in a review. DEFAULT.</summary>
+    public int TaskForceMax { get; init; } = 4;
+    /// <summary>
+    /// Task forces: a task force is at least this percent of the strongest enemy fleet the side knows of (its picture within FogFleetMemoryDays;
+    /// all enemy fleets without fog), and at least LaunchStrength. DEFAULT.
+    /// </summary>
+    public int TaskForceMarginPercent { get; init; } = 150;
+    /// <summary>
     /// Key characters (the majors: Luke, Leia, Han, Mon Mothma, Vader, Palpatine) count this percent of their mission value (others are
     /// preferred) and never go on Rescue, Abduction, Sabotage or Incite (ai/05 §4: the original keeps its leaders off those). With
     /// m5-characters-and-force MajorsCanDie on (DEFAULT off) they also stay off every mission where any defender is believed. DEFAULT.
