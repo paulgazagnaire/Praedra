@@ -514,6 +514,10 @@ public sealed partial class SimpleAi
     /// The success chance (percent) of one member (its skills read through sk), from the core's table for the kind (m5-missions §Mission records: the table input). Recon
     /// succeeds by itself; Incite counts as a success while it works (its incident term, m5-missions §7, needs no roll); Research is the skill.
     /// </summary>
+    /// <summary>Tests: the Abduction chance (percent) the planner reads for the character against the target at the system.</summary>
+    internal int AbductionPercentEstimate(CharacterRecord c, int target, string system) =>
+        SuccessPercent(s => Skill(c, s), new Job(MissionKind.Abduction, system, target, 0, "test"));
+
     private int SuccessPercent(Func<Skill, int> sk, Job j)
     {
         var mi = _h.Missions; var rec = mi.Data.Get(j.Kind);
@@ -537,7 +541,10 @@ public sealed partial class SimpleAi
                     // the target's combat is not known: its record's base plus half its variance (static character data)
                     var k = _h.Characters.Data.Get(j.TargetCharacter!.Value);
                     int est = k.SkillBase[(int)Characters.Skill.Combat] + k.SkillVariance[(int)Characters.Skill.Combat] / 2;
-                    return Table(sk(Characters.Skill.Combat) - est);
+                    int pct = Table(sk(Characters.Skill.Combat) - est);
+                    // rule: m5-missions §6a.3: a key target's chance is min(table, cap_percent), a published rule (the key-target file), not hidden
+                    // information; without it the AI believed 95% at the Emperor where the real chance is 2% (PR #92 probe, seed 9: 20 tries, 0 captures)
+                    return _p.AbductionKeyCap && mi.IsKeyTarget(j.Kind, j.TargetCharacter, out int cap) ? Math.Min(pct, cap) : pct;
                 }
             default: return ResearchSkillOf(j.Kind) is Skill rs ? Math.Min(100, sk(rs)) : 0;
         }

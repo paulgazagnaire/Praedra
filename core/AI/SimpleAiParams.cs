@@ -443,6 +443,12 @@ public sealed record SimpleAiParams
     /// <summary>An enemy character is an Abduction target only when the side's own feed placed it at a system it sees, or its picture's group D showed it, within this many days. DEFAULT.</summary>
     public int AbductionInfoDays { get; init; } = 5;
     /// <summary>
+    /// The planner reads a key target's Abduction chance as the core rolls it, min(table, cap_percent) (m5-missions §6a.3; the caps are the
+    /// key-target file: Emperor 2, Vader 4, Luke 4, Mon Mothma 2), so it values those jobs honestly and the odds floor (MissionMinOddsPercent)
+    /// applies. false = the AI before (the table alone: 95% believed where 2% is real). DEFAULT true (Dev lead, 2026-10-19).
+    /// </summary>
+    public bool AbductionKeyCap { get; init; } = true;
+    /// <summary>
     /// Key hunt (QA round 29, 2026-10-18), the Alliance only: with fog, while it is ahead (FinishWhenAheadRatio, or holding or having destroyed
     /// Coruscant, its place term) and still needs the Emperor or Vader captured to win (its standard victory keys), it sends spies (Espionage)
     /// to look for them: first where its pictures last showed one (within KeyInfoDays), then across the systems its picture shows Imperial-held,
