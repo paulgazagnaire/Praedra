@@ -1,6 +1,6 @@
-# Rebellion: rules for anyone writing code here
+# Praedra: rules for anyone writing code here
 
-A rebuild of Star Wars: Rebellion (1998). Godot 4 draws the screen; all game rules live in a plain C# core.
+Praedra (the game's title; code names still say Rebellion) is a rebuild of Star Wars: Rebellion (1998). Godot 4 draws the screen; all game rules live in a plain C# core.
 
 ## Where the rules come from
 - The rule book is in the project folder: `/mnt/project-files/rebellion/specs/engine/rules/` (index `README.md`). Code implements those sheets. Do not invent rules. If a sheet is unclear or wrong, stop and report it; do not guess.

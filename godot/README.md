@@ -1,18 +1,18 @@
-# Rebellion (playable prototype)
+# Praedra (playable prototype)
 
 A rough but playable front end for the rules core in `core/`. Pick a side, press Play, give orders to fleets and build on your planets. All rules live in `core/`; this folder only draws the screen, submits orders and calls the day step. The computer plays the other side (the core's simple AI). New games use the core's 360-system start.
 
 ## Launch it on the Mac (Apple Silicon or Intel)
 
-1. Download `Rebellion-mac.zip` and double-click it to unzip. You get **Rebellion.app**. Drag it to Applications (or leave it in Downloads).
+1. Download `Praedra-mac.zip` and double-click it to unzip. You get **Praedra.app**. Drag it to Applications (or leave it in Downloads).
 2. The app is not signed by an Apple developer account, so macOS blocks it the first time. Pick one way:
    - **Terminal:** open Terminal and paste (change the path if the app is elsewhere):
      ```
-     xattr -dr com.apple.quarantine ~/Downloads/Rebellion.app
+     xattr -dr com.apple.quarantine ~/Downloads/Praedra.app
      ```
      then double-click the app.
    - **No Terminal:** double-click the app once, close the warning, open **System Settings > Privacy & Security**, scroll down and click **Open Anyway**, then confirm.
-3. Linux / Steam Deck: unzip `Rebellion-linux.zip`, run `linux/Rebellion.x86_64` (keep the `.pck` and the `data_...` folder next to it).
+3. Linux / Steam Deck: unzip `Praedra-linux.zip`, run `linux/Praedra.x86_64` (keep the `.pck` and the `data_...` folder next to it).
 
 The first time you press **New Game**, a **How to play** page opens. You can open it again any time with the **How to play** button (top bar) or **F1**.
 
@@ -48,7 +48,7 @@ The first time you press **New Game**, a **How to play** page opens. You can ope
 | Missions list | `M` |
 | How to play | `F1` |
 
-Saves live in Godot's user folder (macOS: `~/Library/Application Support/Godot/app_userdata/Rebellion/`, Linux: `~/.local/share/godot/app_userdata/Rebellion/`): `save1.json` and `autosave.json`. Delete `howto_seen.txt` there to see the first-time How to play page again.
+Saves live in Godot's user folder (macOS: `~/Library/Application Support/Godot/app_userdata/Praedra/`, Linux: `~/.local/share/godot/app_userdata/Praedra/`): `save1.json` and `autosave.json`. Delete `howto_seen.txt` there to see the first-time How to play page again. Builds made before the rename to Praedra (2026-10-19) saved under `app_userdata/Rebellion/`; the new builds do not see those saves.
 
 ## For developers
 
@@ -77,6 +77,6 @@ Command-line options after `--` for screenshots and quick looks: `--screenshot o
 
 Screenshot with the software renderer: `xvfb-run -a -s "-screen 0 1440x810x24" godot --path . --rendering-driver opengl3 --resolution 1440x810 -- --screenshot map.png 30 --newgame`.
 
-Export (templates 4.7.1 mono installed): `godot --headless --path . --export-release macOS ../build/mac/Rebellion-mac.zip` and `--export-release Linux ../build/linux/Rebellion.x86_64`. Builds go under `build/` (git-ignored); never commit them.
+Export (templates 4.7.1 mono installed): `godot --headless --path . --export-release macOS ../build/mac/Praedra-mac.zip` and `--export-release Linux ../build/linux/Praedra.x86_64`. Builds go under `build/` (git-ignored); never commit them.
 
-**Mac signing.** Godot's own ad-hoc signing from Linux makes an app macOS kills at launch on Apple Silicon ("zsh: killed", seen 2026-10-13), so the macOS preset has `codesign/codesign=0` and **every Mac build must come from `godot/build-mac.sh`** (a plain Godot export is unsigned and will not start on Apple Silicon). The script signs after export with rcodesign (apple-codesign 0.29.0, Paul approved 2026-10-13): unzip the export, `rcodesign sign --entitlements-xml-file mac-entitlements.plist Rebellion.app`, then re-zip with `zip -qry` (keeps permissions). Ad-hoc, no hardened runtime; the entitlements let .NET run its JIT. macOS still asks for **Open Anyway** once per download (no notarization without a paid Apple account).
+**Mac signing.** Godot's own ad-hoc signing from Linux makes an app macOS kills at launch on Apple Silicon ("zsh: killed", seen 2026-10-13), so the macOS preset has `codesign/codesign=0` and **every Mac build must come from `godot/build-mac.sh`** (a plain Godot export is unsigned and will not start on Apple Silicon). The script signs after export with rcodesign (apple-codesign 0.29.0, Paul approved 2026-10-13): unzip the export, `rcodesign sign --entitlements-xml-file mac-entitlements.plist Praedra.app`, then re-zip with `zip -qry` (keeps permissions). Ad-hoc, no hardened runtime; the entitlements let .NET run its JIT. macOS still asks for **Open Anyway** once per download (no notarization without a paid Apple account).

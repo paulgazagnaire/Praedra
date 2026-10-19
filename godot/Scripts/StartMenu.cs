@@ -37,7 +37,7 @@ public partial class StartMenu : Control
         box.AddThemeConstantOverride("separation", 10);
         center.AddChild(box);
 
-        var title = new Label { Text = "REBELLION", HorizontalAlignment = HorizontalAlignment.Center };
+        var title = new Label { Text = "PRAEDRA", HorizontalAlignment = HorizontalAlignment.Center };
         title.AddThemeFontSizeOverride("font_size", 56);
         title.AddThemeColorOverride("font_color", new Color(1f, 0.85f, 0.35f));
         box.AddChild(title);

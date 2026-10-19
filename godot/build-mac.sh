@@ -5,7 +5,7 @@
 # rcodesign (apple-codesign 0.29.0, approved by Paul 2026-10-13) is downloaded once to ~/.cache/rcodesign if RCODESIGN is not set.
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
-out="$(realpath -m "${1:-$here/../build/mac/Rebellion-mac.zip}")"
+out="$(realpath -m "${1:-$here/../build/mac/Praedra-mac.zip}")"
 GODOT="${GODOT:-/tmp/godot/ed/Godot_v4.7.1-stable_mono_linux_x86_64/Godot_v4.7.1-stable_mono_linux.x86_64}"
 RCV=0.29.0
 if [ -z "${RCODESIGN:-}" ]; then
@@ -23,8 +23,8 @@ mkdir -p "$(dirname "$out")"
   && "$GODOT" --headless --path . --import >/dev/null 2>&1 \
   && "$GODOT" --headless --path . --export-release macOS "$work/unsigned.zip" >/dev/null 2>&1)
 (cd "$work" && unzip -q unsigned.zip)
-"$RCODESIGN" sign --entitlements-xml-file "$here/mac-entitlements.plist" "$work/Rebellion.app" >/dev/null
+"$RCODESIGN" sign --entitlements-xml-file "$here/mac-entitlements.plist" "$work/Praedra.app" >/dev/null
 rm -f "$out"
-(cd "$work" && zip -qry "$out.tmp" Rebellion.app)
+(cd "$work" && zip -qry "$out.tmp" Praedra.app)
 mv "$out.tmp" "$out"
 echo "signed Mac build: $out"
