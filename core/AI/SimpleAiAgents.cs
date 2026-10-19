@@ -21,6 +21,7 @@ namespace Rebellion.Core.AI;
 /// <item>sends one-member missions by expected value: value x chance / (travel days + MissionTravelBias), chance = P(not detected) x P(success)
 /// from the core's own tables (MissionModule.FoilChance, DetectionX, Lookup: m5-missions §3, §Mission tables) against the defenders the side
 /// believes are there. Kinds: Empire HQ hunt (Espionage or Reconnaissance on the highest HQ-belief systems, then a re-check of a known HQ),
+/// the Alliance's key hunt (Espionage for the Emperor and Vader while it is ahead, KeyHunt),
 /// Subdue on own systems in uprising, Rescue of own prisoners, Abduction of enemy characters the side has seen, Diplomacy on own low-support
 /// systems and neutral border systems, Alliance Incite and Sabotage on enemy systems where no defender is believed, and Research. With
 /// SpecialForceAgents (DEFAULT off, QA-6) its free special forces go alone on the same jobs where their class bit is in the kind's mask.</item>
@@ -446,6 +447,18 @@ public sealed partial class SimpleAi
             foreach (var (id, s) in EnemyCharactersSeen())
                 if (!takenChar.Contains(id))
                     jobs.Add(new Job(MissionKind.Abduction, s, id, _p.AbductionValue * (_h.Characters.Data.Get(id).Kind == CharacterKind.Major ? 2 : 1), "char " + id));
+        // 5b. Key hunt (KeyHunt): ahead, spies look for the enemy keys the side must still capture; a look that finds one makes him a target of 5
+        if (KeyHuntOn() && KindUsable(MissionKind.Espionage))
+        {
+            int want = _p.KeyHuntLooks - own.Count(m => m.Kind == MissionKind.Espionage);
+            foreach (var (s, lastSeen) in KeyHuntTargets())
+            {
+                if (want <= 0) break;
+                if (taken.Contains((MissionKind.Espionage, s))) continue;
+                jobs.Add(new Job(MissionKind.Espionage, s, null, _p.KeyHuntValue * (lastSeen ? 2 : 1), "look " + s));
+                want--;
+            }
+        }
         // 6. Diplomacy: own systems of low support, neutral systems on the border (picture's owner fresh enough)
         if (KindUsable(MissionKind.Diplomacy))
         {

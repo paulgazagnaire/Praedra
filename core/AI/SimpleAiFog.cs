@@ -534,4 +534,51 @@ public sealed partial class SimpleAi
         }
         return result.Select(kv => (kv.Key, kv.Value)).ToList();
     }
+
+    // ================================================================== the key hunt (KeyHunt)
+
+    /// <summary>
+    /// KeyHunt: fog on, the Alliance, ahead (Finishing, or its place term: Coruscant held or destroyed), and a key of its standard victory set
+    /// not yet its own prisoner (own state). A dead key is not known here and still hunted: the looks then find nobody.
+    /// </summary>
+    private bool KeyHuntOn()
+    {
+        if (!_p.KeyHunt || _view == null || _side != Side.Alliance || HuntedKeys().Count == 0) return false;
+        string cor = Rebellion.Core.Victory.VictoryModule.CoruscantName;
+        return Finishing() || Held(cor) || Destroyed(cor);
+    }
+
+    /// <summary>The side's standard victory keys that are not its own prisoners, by id.</summary>
+    private List<int> HuntedKeys() => _h.Victory.Keys.Where(k => k.Standard && k.Side == _side).Select(k => k.Character).Distinct().OrderBy(id => id)
+        .Where(id => _h.Characters.Get(id) is not { Status: CharacterStatus.Captured } c || c.Captor != _side).ToList();
+
+    /// <summary>
+    /// Key hunt: the systems to look at, best first. First where the side's pictures last showed a hunted key, free, within KeyInfoDays but
+    /// older than AbductionInfoDays (a fresher one is already an Abduction target); then every system the picture shows enemy-held whose ground
+    /// was not seen within KeyLookDays and where no look was foiled within SpyFoilMemoryDays, by hops from the side's systems, then ordinal name.
+    /// Reads the side's pictures only (m5-fog-and-hq §N8; group D carries the characters, §F1).
+    /// </summary>
+    private List<(string System, bool LastSeen)> KeyHuntTargets()
+    {
+        var keys = HuntedKeys();
+        var list = new List<(string, bool)>(); var have = new HashSet<string>(StringComparer.Ordinal); // membership only
+        var last = new SortedDictionary<int, (string System, int Stamp)>();
+        foreach (var (sys, c, stamp) in _view!.CharactersSeen()) // systems in ordinal order; the newest stamp per key
+            if (keys.Contains(c.Id) && c.Status == CharacterStatus.Free && (!last.TryGetValue(c.Id, out var had) || stamp > had.Stamp))
+                last[c.Id] = (sys, stamp);
+        foreach (var (_, (sys, stamp)) in last)
+            if (stamp >= Today - _p.KeyInfoDays && stamp < Today - _p.AbductionInfoDays && !Held(sys) && !Destroyed(sys) && have.Add(sys)) list.Add((sys, true));
+        var hops = Hops(); var g = _h.Data.Galaxy;
+        var sweep = new List<(int Hops, string System)>();
+        foreach (var s in EnemySystems())
+        {
+            if (have.Contains(s) || Destroyed(s) || !g.TryFindSystem(s, out int i)) continue;
+            var ground = _view.Picture(s)?.Ground;
+            if (ground != null && AgeOf(ground) <= _p.KeyLookDays) continue;
+            if (FoiledWithin(s, _p.SpyFoilMemoryDays)) continue;
+            sweep.Add((hops[i], s));
+        }
+        foreach (var (_, s) in sweep.OrderBy(x => x.Hops).ThenBy(x => x.System, StringComparer.Ordinal)) list.Add((s, false));
+        return list;
+    }
 }

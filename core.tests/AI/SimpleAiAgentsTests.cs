@@ -37,7 +37,7 @@ public class SimpleAiAgentsTests
         var (m, h) = Match(1, new SimpleAiParams { UseFog = true, UseCharactersAndMissions = false,
             RunnerRetreats = 0, RetreatCountsAsLoss = false, AvoidBlockedPaths = false, WinRushDefenders = -1, ShelledLandingNeed = false,
             FogAvoidEnemyStops = false, SplitHomeSurplus = false, DetourToHeldStop = false, InvasionBatchesOnly = false, ExplorerScouts = 0, FogGroundForgetDays = 0, LeaderMarks = false, OriginalGarrisonFloor = false,
-            FinishWhenAheadRatio = 0 });
+            FinishWhenAheadRatio = 0, KeyHunt = false });
         m.RunTo(1000);
         Assert.DoesNotContain(m.Sent.Keys, k => k.Contains("Mission", StringComparison.Ordinal) || k.Contains("Character", StringComparison.Ordinal) || k.Contains("General", StringComparison.Ordinal));
         // The pin moved when the Death Star added saved state (m5-death-star: GameState.DeathStar, SystemKnowledge.Destroyed). The game plays identically:
@@ -372,5 +372,54 @@ public class SimpleAiAgentsTests
         Assert.True(emptyE != null && emptyA != null, $"pools not empty by day 700: Empire {emptyE}, Alliance {emptyA}");
         Assert.True(seatDays > 0 && seatOn * 20 >= seatDays * 19, $"Seat of Power on {seatOn} of {seatDays} days after the Empire's pool emptied");
     }
-}
 
+    // Key hunt (SimpleAiParams.KeyHunt, DEFAULT on; QA round 29). Fog, the Empire passive, seeds 1 to 4 (MultiSeed). On day 1 a test hook
+    // hands Coruscant to the Alliance (DebugApplyTroops: its place term; standard victory, the default settings), so the Alliance is ahead and
+    // still needs the Emperor and Vader captured. With the hunt its spies look at systems its own picture shows Imperial-held (or where its
+    // picture last showed a key); the Alliance plans no other Espionage, so without the hunt it sends none. rule: m5-fog-and-hq §N8 (the AI
+    // reads only its side's knowledge), §F1 group D (an Espionage success writes the characters present).
+    // Measured by day 800 (looks / first day a picture showed a key / Abductions at keys), AI trainer 2026-10-18 on main 4774ff7 plus the hunt:
+    //   seed 1: 58 / never / 0;  seed 2: 68 / 642 / 5;  seed 3: 53 / 276 / 4;  seed 4: 40 / never / 0.  Off: 0 looks.
+    // The Empire keeps all its ~140 systems here, so the sweep is slow; in a real endgame it holds far fewer.
+    // Floor: at least 20 looks on every seed, none at a system the picture did not show Imperial (or a key at); a key seen on at least 1 of 4.
+    [Fact]
+    public void KeyHunt_AheadTheAllianceLooksForTheEmperorAndVader_WhereItsPictureSays()
+    {
+        Assert.True(new SimpleAiParams().KeyHunt);
+        var on = MultiSeed.Play(new[] { 1, 2, 3, 4 }, seed => Hunt(seed, Fog));
+        foreach (var g in on) _out.WriteLine($"hunt on, seed {g.Seed}: {g.Looks} looks, {g.OffTarget} off target, a key first seen day {g.KeySeenDay}, {g.Abductions} Abductions at keys");
+        foreach (var g in on)
+        {
+            Assert.True(g.Looks >= 20, $"seed {g.Seed}: only {g.Looks} looks");
+            Assert.Equal(0, g.OffTarget);
+        }
+        Assert.True(on.Count(g => g.KeySeenDay != null) >= 1, $"a key seen on only {on.Count(g => g.KeySeenDay != null)} of 4 seeds");
+        var off = Hunt(1, Fog with { KeyHunt = false });
+        _out.WriteLine($"hunt off, seed 1: {off.Looks} looks");
+        Assert.Equal(0, off.Looks);
+    }
+
+    private static (int Seed, int Looks, int OffTarget, int? KeySeenDay, int Abductions) Hunt(int seed, SimpleAiParams p)
+    {
+        var (m, h) = Match(seed, p, passive: Side.Empire, settings: new GameSettings()); // standard victory: Coruscant alone does not win
+        var cp = h.Characters.Params; var keys = new[] { cp.Emperor, cp.Vader };
+        bool done = false;
+        h.Game.RegisterHook("5.2", ctx => { if (!done) { done = true; h.Control.DebugApplyTroops(ctx, "Coruscant", Side.Alliance, "Alliance Army Regiment", 10); } });
+        int looks = 0, offTarget = 0, abductions = 0, seen = 0; int? keySeen = null;
+        while (h.Game.Day < 800 && h.Victory.Winner == null)
+        {
+            var view = h.Fog.ViewFor(Side.Alliance);
+            var pictured = view.CharactersSeen().Where(x => keys.Contains(x.Character.Id)).Select(x => x.System).ToHashSet(StringComparer.Ordinal); // lookup only
+            var imperial = h.Data.Galaxy.Systems.Select(x => x.Name).Where(n => view.Picture(n)?.Owner?.Value.Owner == Side.Empire).ToHashSet(StringComparer.Ordinal); // lookup only
+            m.Step();
+            var fresh = h.Game.Events.Skip(seen).ToList(); seen += fresh.Count;
+            foreach (var e in fresh.OfType<MissionStarted>().Where(e => e.Side == Side.Alliance))
+            {
+                if (e.MissionKind == MissionKind.Espionage) { looks++; if (!imperial.Contains(e.Target) && !pictured.Contains(e.Target)) offTarget++; }
+                if (e.MissionKind == MissionKind.Abduction && e.TargetCharacter is int t && keys.Contains(t)) abductions++;
+            }
+            if (keySeen == null && h.Fog.ViewFor(Side.Alliance).CharactersSeen().Any(x => keys.Contains(x.Character.Id))) keySeen = h.Game.Day;
+        }
+        return (seed, looks, offTarget, keySeen, abductions);
+    }
+}

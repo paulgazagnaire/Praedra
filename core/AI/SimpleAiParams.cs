@@ -443,6 +443,27 @@ public sealed record SimpleAiParams
     /// <summary>An enemy character is an Abduction target only when the side's own feed placed it at a system it sees, or its picture's group D showed it, within this many days. DEFAULT.</summary>
     public int AbductionInfoDays { get; init; } = 5;
     /// <summary>
+    /// Key hunt (QA round 29, 2026-10-18), the Alliance only: with fog, while it is ahead (FinishWhenAheadRatio, or holding or having destroyed
+    /// Coruscant, its place term) and still needs the Emperor or Vader captured to win (its standard victory keys), it sends spies (Espionage)
+    /// to look for them: first where its pictures last showed one (within KeyInfoDays), then across the systems its picture shows Imperial-held,
+    /// nearest first, skipping one whose ground it saw within KeyLookDays or where a look was foiled within SpyFoilMemoryDays. A look that
+    /// finds a key makes him an Abduction target as before. The spies only look: the AI never reads where a key truly is. Without it the
+    /// Alliance AI saw the Emperor and Vader on almost no day of 3000 (QA seeds 9 and 13 Medium mirror, 2 and 5 Medium Empire vs Hard Alliance:
+    /// Coruscant held from day 1250-2250, no key seen after, no capture). With it the keys are found and abducted at, but not captured: the
+    /// key-target caps (2% Emperor, 4% Vader; m5-missions §6a) and the fleet gate (Vader riding a fleet) hold. On the Empire side it cost the
+    /// Medium mirror its floor (seeds 1-8: 4 games without a winner instead of 1), so the Empire is left out. New AI rule (no sheet).
+    /// false = the AI before. DEFAULT true.
+    /// </summary>
+    public bool KeyHunt { get; init; } = true;
+    /// <summary>Key hunt: most Espionage missions the side runs at once while hunting (all its Espionage missions count). DEFAULT.</summary>
+    public int KeyHuntLooks { get; init; } = 4;
+    /// <summary>Key hunt: a system whose ground (group D, which shows the characters there) the side saw within this many days is not looked at again. DEFAULT.</summary>
+    public int KeyLookDays { get; init; } = 90;
+    /// <summary>Key hunt: a key's last picture sighting guides the first look when at most this many days old. DEFAULT.</summary>
+    public int KeyInfoDays { get; init; } = 120;
+    /// <summary>Key hunt: value of one look (doubled where a key was last seen). DEFAULT.</summary>
+    public int KeyHuntValue { get; init; } = 900;
+    /// <summary>
     /// Key characters (the majors: Luke, Leia, Han, Mon Mothma, Vader, Palpatine) count this percent of their mission value (others are
     /// preferred) and never go on Rescue, Abduction, Sabotage or Incite (ai/05 §4: the original keeps its leaders off those). With
     /// m5-characters-and-force MajorsCanDie on (DEFAULT off) they also stay off every mission where any defender is believed. DEFAULT.
