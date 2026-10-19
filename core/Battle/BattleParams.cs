@@ -81,9 +81,9 @@ public sealed record BattleParams
 
     // ---- Classic's battle generator. rule: m4-battle-classic §1.4 (Traced, B3 §13)
     /// <summary>Seed of the Classic battle generator (0xbc614e). Traced.</summary>
-    public int OriginalRngSeed { get; init; } = 12345678;
+    public int ClassicRngSeed { get; init; } = 12345678;
     /// <summary>Steps made right after seeding. Traced.</summary>
-    public int OriginalRngWarmup { get; init; } = 16;
+    public int ClassicRngWarmup { get; init; } = 16;
 
     // ---- rates. rule: m4-battle-classic §4 (Traced, B3 §4)
     /// <summary>K, the family coefficient (0x3e888889). Traced.</summary>

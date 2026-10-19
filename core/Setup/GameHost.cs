@@ -357,9 +357,28 @@ public sealed class GameHost
         if (!body.StartsWith(SettingsTag, StringComparison.Ordinal)) return (null, body); // saves made before QA-17: the caller's or the DEFAULT settings
         int nl = body.IndexOf('\n');
         if (nl < 0) throw new InvalidDataException("settings line without a game");
-        var s = System.Text.Json.JsonSerializer.Deserialize<GameSettings>(body[SettingsTag.Length..nl], SettingsJson)
+        var s = System.Text.Json.JsonSerializer.Deserialize<GameSettings>(UpgradeSettingsJson(body[SettingsTag.Length..nl]), SettingsJson)
             ?? throw new InvalidDataException("empty settings line");
         return (s, body[(nl + 1)..]);
+    }
+
+    // Saves written before the Praedra rename (2026-10-19, QA-24) name the Classic values "Original": map them to today's names. The JSON is
+    // compact (WriteIndented false), so each old token is exact.
+    private static readonly (string Old, string New)[] RenamedSettings =
+    {
+        ("\"BattleRng\":\"Original\"", "\"BattleRng\":\"Classic\""),
+        ("\"TaskForces\":\"Original\"", "\"TaskForces\":\"Classic\""),
+        ("\"StartCastOfficers\":\"Original\"", "\"StartCastOfficers\":\"Classic\""),
+        ("\"KeyDuelCapture\":\"Original\"", "\"KeyDuelCapture\":\"Classic\""),
+        ("\"KeyTargetGuards\":\"Original\"", "\"KeyTargetGuards\":\"Classic\""),
+        ("\"OriginalRngSeed\":", "\"ClassicRngSeed\":"),
+        ("\"OriginalRngWarmup\":", "\"ClassicRngWarmup\":"),
+    };
+
+    private static string UpgradeSettingsJson(string json)
+    {
+        foreach (var (o, n) in RenamedSettings) json = json.Replace(o, n, StringComparison.Ordinal);
+        return json;
     }
 
     private static (Praedra.Core.Battle.BattleRuleset? Ruleset, string Body) ReadHeader(string text)

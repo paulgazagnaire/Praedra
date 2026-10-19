@@ -33,7 +33,7 @@ public static class QuickBattle
     }
 
     /// <summary>
-    /// Run one battle. Alliance units come first. With ClassicBattleRng = Game the battle generator is seeded with <paramref name="seed"/> (Original ignores it).
+    /// Run one battle. Alliance units come first. With ClassicBattleRng = Game the battle generator is seeded with <paramref name="seed"/> (Classic ignores it).
     /// <paramref name="alert"/> null = sides without a controller (threshold <see cref="BattleParams.RetreatThreshold"/>); <paramref name="ai"/> marks AI sides. <see cref="BattleParams.Ruleset"/> picks the
     /// engine; for New, unit ids are interleaved between the sides (neither is processed first, m4-battle-new §3.2), <paramref name="carry"/> puts each side's
     /// squadrons aboard its carriers in id order (else they are based), and <paramref name="prepare"/> may change the units (hull, counters) before the start.
