@@ -95,7 +95,7 @@ public partial class GameScreen
     }
 
     string LeaderLine(CharacterRecord c) =>
-        c == null ? "none" : $"{S.CharName(c.Id)} (leadership {c.EffectiveSkill(Skill.Leadership)}){(c.Status == CharacterStatus.Free ? "" : " - " + GameSession.StatusWords(c) + ", gives no bonus")}";
+        c == null ? "none" : $"{S.CharName(c.Id)} (leadership {Cm.EffectiveSkill(c, Skill.Leadership)}){(c.Status == CharacterStatus.Free ? "" : " - " + GameSession.StatusWords(c) + ", gives no bonus")}";
 
     // ================================================================== a fleet's officers
 
@@ -139,7 +139,7 @@ public partial class GameScreen
                 var holder = post == CharacterPost.None ? null : Cm.HolderOf(f.Id, post);
                 string label = post == CharacterPost.None ? $"Attach {name} as a passenger" : $"Attach {name} as {GameSession.PostWords(post)}";
                 Act(label, () => Attach(rc, f, pp),
-                    holder != null ? $"{S.CharName(holder.Id)} already holds this post." : $"Leadership {c.EffectiveSkill(Skill.Leadership)}. Starts when the next day begins.", holder != null);
+                    holder != null ? $"{S.CharName(holder.Id)} already holds this post." : $"Leadership {Cm.EffectiveSkill(c, Skill.Leadership)}. Starts when the next day begins.", holder != null);
             }
         }
     }
@@ -187,7 +187,7 @@ public partial class GameScreen
             var rc = c;
             string cname = S.CharName(c.Id);
             string where = c.Status == CharacterStatus.Captured ? "prisoner of the enemy" : c.AttachedFleet != 0 ? S.RoleOf(c) : S.RoleOf(c) == "no post" ? "standing here" : S.RoleOf(c);
-            Line($"{cname} - {GameSession.StatusWords(c)}, {where}. Leadership {c.EffectiveSkill(Skill.Leadership)}.", c.Status == CharacterStatus.Free ? null : Bad, 13);
+            Line($"{cname} - {GameSession.StatusWords(c)}, {where}. Leadership {Cm.EffectiveSkill(c, Skill.Leadership)}.", c.Status == CharacterStatus.Free ? null : Bad, 13);
             if (c.Id != gen?.Id) foreach (var p in S.PendingOfCharacter(c.Id)) Line($"Waiting for the next day: {p}", Pending, 13);
             bool standing = c.Status == CharacterStatus.Free && c.AttachedFleet == 0 && c.Transit == null;
             if (mine && gen == null && standing && Cm.ClassOf(c).CanGeneral && S.SystemPostOf(c) == null)

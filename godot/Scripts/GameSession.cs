@@ -439,7 +439,7 @@ public sealed partial class GameSession
     /// <summary>The skills the sheet uses (leadership feeds the posts), and the Force rank only when the side knows the character is a Force user. rule: m5-characters-and-force §Posts, §Force (Rank).</summary>
     public string SkillsOf(CharacterRecord c)
     {
-        string s = $"Leadership {c.EffectiveSkill(Skill.Leadership)}, combat {c.EffectiveSkill(Skill.Combat)}, diplomacy {c.EffectiveSkill(Skill.Diplomacy)}, espionage {c.EffectiveSkill(Skill.Espionage)}";
+        string s = $"Leadership {Chars.EffectiveSkill(c, Skill.Leadership)}, combat {Chars.EffectiveSkill(c, Skill.Combat)}, diplomacy {Chars.EffectiveSkill(c, Skill.Diplomacy)}, espionage {Chars.EffectiveSkill(c, Skill.Espionage)}";
         if (c.ForceUser && c.ForceDiscovered && Chars.RankOf(c) is ForceRank r) s += $"; Force: {RankWords(r)} ({c.EffectiveForce})";
         return s;
     }
