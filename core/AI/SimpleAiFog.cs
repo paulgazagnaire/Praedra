@@ -640,9 +640,18 @@ public sealed partial class SimpleAi
 
     // ================================================================== task forces (TaskForces, QA-2)
 
+    /// <summary>Task forces: the percent of a fleet sighting's strength that still counts at that age (100 within memoryDays, then fadePercent less per 100 days, never below 0).</summary>
+    internal static int FadedPercent(int ageDays, int memoryDays, int fadePercent)
+    {
+        int beyond = ageDays - memoryDays;
+        return beyond <= 0 ? 100 : 100 - (int)Math.Min(100L, (long)Math.Max(0, fadePercent) * beyond / 100);
+    }
+
     /// <summary>
-    /// The strength of the strongest enemy fleet the side knows of: without fog every enemy fleet; with fog the fleets of its picture seen within
-    /// FogFleetMemoryDays (as <see cref="Str(Force)"/>). 0 when none.
+    /// The strength of the strongest enemy fleet the side knows of: without fog every enemy fleet; with fog the fleets of its picture (as
+    /// <see cref="Str(Force)"/>), each at its whole strength when seen within FogFleetMemoryDays and older ones fading by TaskForceFadePercent
+    /// per 100 days beyond that (QA-20: a fleet out of sight is not a fleet gone; the picture keeps a fleet's last sighting until that system
+    /// is looked at again). 0 when none.
     /// </summary>
     private double StrongestEnemyFleet()
     {
@@ -651,8 +660,10 @@ public sealed partial class SimpleAi
         foreach (var sys in _h.Data.Galaxy.Systems)
         {
             var e = _view.Picture(sys.Name)?.Fleets;
-            if (e == null || AgeOf(e) > _p.FogFleetMemoryDays) continue;
-            foreach (var fp in e.Value) if (fp.Side == Enemy) best = Math.Max(best, Str(ForceOf(sys.Name, fp)));
+            if (e == null) continue;
+            int pct = FadedPercent(AgeOf(e), _p.FogFleetMemoryDays, _p.TaskForceFadePercent);
+            if (pct <= 0) continue;
+            foreach (var fp in e.Value) if (fp.Side == Enemy) best = Math.Max(best, Str(ForceOf(sys.Name, fp)) * pct / 100);
         }
         return best;
     }

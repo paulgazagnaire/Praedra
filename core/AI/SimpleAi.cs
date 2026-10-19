@@ -1152,7 +1152,7 @@ public sealed partial class SimpleAi
 
     /// <summary>
     /// Task forces: the least strength of one task force, TaskForceMarginPercent of the strongest enemy fleet the side knows of (the picture's
-    /// fleets within FogFleetMemoryDays with fog, every enemy fleet without), and at least LaunchStrength (cached per day).
+    /// fleets with fog, older sightings fading by TaskForceFadePercent; every enemy fleet without), and at least LaunchStrength (cached per day).
     /// </summary>
     private double TaskForceStrength() => _tfStrength ??= Math.Max(_p.LaunchStrength, StrongestEnemyFleet() * _p.TaskForceMarginPercent / 100.0);
     private double? _tfStrength;
