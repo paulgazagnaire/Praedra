@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Defenses;
+namespace Praedra.Core.Defenses;
 
 // Events of the bombardment. Day is K + 1 (slot 5.1 events carry day = K + 1 like arrivals). Order of emission for one strike, in the phases
 // of B7-bombardment §1 (counts, return fire, hits, aftermath):

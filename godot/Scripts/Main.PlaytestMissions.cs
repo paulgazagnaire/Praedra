@@ -1,12 +1,12 @@
 using System;
 using System.Linq;
 using Godot;
-using Rebellion.Core.Characters;
-using Rebellion.Core.Missions;
+using Praedra.Core.Characters;
+using Praedra.Core.Missions;
 
-using Side = Rebellion.Core.Clock.Side;
+using Side = Praedra.Core.Clock.Side;
 
-namespace RebellionViewer;
+namespace PraedraViewer;
 
 /// <summary>
 /// Playtest of the mission screens (rule: m5-missions): the Missions list (button and key M), a kind refused with a plain reason, Diplomacy on a
@@ -116,7 +116,7 @@ public partial class Main
     void PlaytestSpecialForces(GameScreen gs, string cls)
     {
         var s = gs.S; var me = s.Player; var eco = s.Host.Economy;
-        string yard = eco.Objects.Where(o => o.Category == Rebellion.Core.Economy.ObjectCategory.Facility && o.Completed && o.System != null && o.Class.Contains("Training") && s.OwnerOf(o.System) == me)
+        string yard = eco.Objects.Where(o => o.Category == Praedra.Core.Economy.ObjectCategory.Facility && o.Completed && o.System != null && o.Class.Contains("Training") && s.OwnerOf(o.System) == me)
             .Select(o => o.System).OrderBy(x => x, StringComparer.Ordinal).FirstOrDefault();
         Expect(yard != null, "you hold a system with a Training Facility");
         if (yard == null) return;
@@ -125,10 +125,10 @@ public partial class Main
         Expect(gs.Click(cls), $"click {cls} in the Troops build list at {yard}");
         gs.PlayRefresh();
         if (gs.Has("v  Troops")) gs.Click("v  Troops"); // leave the build list folded as it was
-        bool Ready() => eco.Objects.Any(o => o.Category == Rebellion.Core.Economy.ObjectCategory.SpecialForce && o.Side == me && o.Class == cls && o.Completed && o.System == yard);
+        bool Ready() => eco.Objects.Any(o => o.Category == Praedra.Core.Economy.ObjectCategory.SpecialForce && o.Side == me && o.Class == cls && o.Completed && o.System == yard);
         Expect(RunUntil(gs, Ready, 120), $"{cls} trained at {yard} (day {s.Game.Day})");
         if (!Ready()) return;
-        var unit = eco.Objects.First(o => o.Category == Rebellion.Core.Economy.ObjectCategory.SpecialForce && o.Side == me && o.Class == cls && o.Completed && o.System == yard);
+        var unit = eco.Objects.First(o => o.Category == Praedra.Core.Economy.ObjectCategory.SpecialForce && o.Side == me && o.Class == cls && o.Completed && o.System == yard);
         string uname = s.SpecialForceName(unit.Id);
         gs.SelectSystem(yard); gs.PlayRefresh();
         Expect(gs.PanelText().Contains("Special forces") && gs.PanelText().Contains($"{uname} - ready"), $"the system panel lists {uname} under Special forces");

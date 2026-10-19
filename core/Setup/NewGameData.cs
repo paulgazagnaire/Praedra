@@ -1,7 +1,7 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Data;
+using Praedra.Core.Clock;
+using Praedra.Core.Data;
 
-namespace Rebellion.Core.Setup;
+namespace Praedra.Core.Setup;
 
 /// <summary>The five day-one start presets (setup-victory/09 §3 totals). Suffix a = player is the Alliance, e = player is the Empire.</summary>
 public enum StartPreset { Easy, MedA, MedE, HardA, HardE }

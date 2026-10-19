@@ -1,6 +1,6 @@
-using Rebellion.Core.Data;
+using Praedra.Core.Data;
 
-namespace Rebellion.Core.Support;
+namespace Praedra.Core.Support;
 
 /// <summary>
 /// Regiment weights in tenths for the New garrison rule, from data/design/garrison-weights.csv (placeholder numbers: defense / 5,

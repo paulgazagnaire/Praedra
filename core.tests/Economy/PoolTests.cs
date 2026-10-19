@@ -1,7 +1,7 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
 
-namespace Rebellion.Core.Tests.Economy;
+namespace Praedra.Core.Tests.Economy;
 
 // Tests of m2-mines-refineries-pools (ids P1 to P22). Hook time T = K + 1; events carry Day = T.
 // Setup "S1": Empire, one system at support 100, one mine (id 1) and one refinery (id 2), both completed and idle at Day 0,
@@ -295,14 +295,14 @@ public class PoolTests
     }
 
     // m2-mines-refineries-pools P19
-    // B5b 2026-10-18: B5b §3 (1998 [EXE-own] 0x50bbb0) replaces "the running cycle finishes": a blockade abandons the
+    // B5b 2026-10-18: B5b §3 (Classic [EXE-own] 0x50bbb0) replaces "the running cycle finishes": a blockade abandons the
     // running cycle with no point, and the restart when the flag clears is a startup cycle (B5b §2).
     [Fact]
     public void P19_BlockadeAbandonsTheRunningCycleThenRestartsOnAStartupCycle()
     {
         var w = new EcoWorld(freeShips: true);
         w.Hold(Home, Side.Empire, 100);
-        w.Eco.MineStopMode = StopMode.Abandon; // Blockade pause, 2026-10-18: this checks the 1998 loss (Original switch); the DEFAULT pauses (P19b)
+        w.Eco.MineStopMode = StopMode.Abandon; // Blockade pause, 2026-10-18: this checks the Classic loss (Classic switch); the DEFAULT pauses (P19b)
         w.Mine(Home, id: 1);
         w.Run(1); // cycle started, due 3
         int blocker = EnemyInterdictor(w, Side.Alliance, Home);
@@ -318,7 +318,7 @@ public class PoolTests
         Assert.Equal(new[] { (0, 5), (0, 5) }, w.Stub!.Requests.ToArray()); // the first start and the restart each drew once
     }
 
-    // P19b (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch): MineStopMode Pause (DEFAULT) freezes
+    // P19b (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, Classic is the switch): MineStopMode Pause (DEFAULT) freezes
     // the running cycle while blockaded; it resumes with the day it had left, no startup cycle, no extra draw, and pays its point.
     // rule: m2-mines-refineries-pools §Blockade and uprising
     [Fact]
@@ -414,7 +414,7 @@ public class PoolTests
     }
 
     // m2-mines-refineries-pools P22
-    // B5b 2026-10-18: B5b §3 side change (1998 [EXE-own] 0x52d0e0 -> 0x55b010) replaces "keeps its due day": the running
+    // B5b 2026-10-18: B5b §3 side change (Classic [EXE-own] 0x52d0e0 -> 0x55b010) replaces "keeps its due day": the running
     // cycle is lost, no point for anyone, and the mine restarts for the new holder on a startup cycle.
     [Fact]
     public void P22_MineChangingSideMidCycleRestartsOnAStartupCycle()

@@ -1,7 +1,7 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Data;
+using Praedra.Core.Clock;
+using Praedra.Core.Data;
 
-namespace Rebellion.Core.Characters;
+namespace Praedra.Core.Characters;
 
 public enum CharacterKind { Major, Minor }
 
@@ -10,8 +10,8 @@ public enum Skill { Diplomacy = 0, Espionage = 1, ShipDesign = 2, TroopTraining 
 
 /// <summary>
 /// One character record (data, never changes): identity, skill bases and variances, loyalty, Force odds and level, the capability flags and the
-/// navigator speed. rule: m5-characters-and-force §The character object. Originals come from MJCHARSD / MNCHARSD (data/original/characters.csv,
-/// column meaning unverified vs original); added heroes from data/design/added-heroes.csv (Proposal stats).
+/// navigator speed. rule: m5-characters-and-force §The character object. Classic values come from MJCHARSD / MNCHARSD (data/classic/characters.csv,
+/// column meaning unverified vs Classic); added heroes from data/design/added-heroes.csv (Proposal stats).
 /// </summary>
 public sealed record CharacterClass(
     int Id, string Name, Side Side, CharacterKind Kind,

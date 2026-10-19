@@ -1,13 +1,13 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Control;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Support;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Control;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Setup;
+using Praedra.Core.Support;
 using Xunit.Abstractions;
 
-namespace Rebellion.Core.Tests.Setup;
+namespace Praedra.Core.Tests.Setup;
 
 // P2.5, the M2 exit test: 1000 days of the scripted two-sided test campaign (core/Setup/TestCampaign), both support rulesets.
 // Plan M2 exit: "a 1000-day headless run doesn't crash or drift to nonsense". Sheet tests used: m2-mines-refineries-pools P21
@@ -36,9 +36,9 @@ public class CampaignSoakTests
     public void TheScriptLoadsAndUnloadsRegiments(GarrisonRuleset ruleset)
     {
         var ev = CampaignHarness.Checked(1, ruleset).Events;
-        Assert.True(ev.OfType<Rebellion.Core.Troops.RegimentsLoaded>().Count() >= 6);
-        Assert.True(ev.OfType<Rebellion.Core.Troops.RegimentsUnloaded>().Count() >= 6);
-        Assert.True(ev.OfType<Rebellion.Core.Troops.RegimentCreated>().Any());
+        Assert.True(ev.OfType<Praedra.Core.Troops.RegimentsLoaded>().Count() >= 6);
+        Assert.True(ev.OfType<Praedra.Core.Troops.RegimentsUnloaded>().Count() >= 6);
+        Assert.True(ev.OfType<Praedra.Core.Troops.RegimentCreated>().Any());
     }
 
     // ---------------------------------------------------------------- determinism and saves
@@ -211,23 +211,23 @@ public class CampaignSoakTests
     public void KinyenContactIsARealClassicBattle(GarrisonRuleset r)
     {
         var run = CampaignHarness.Checked(1, r);
-        var started = run.Events.OfType<Rebellion.Core.Battle.BattleStarted>().Where(b => b.System == TestCampaign.BlockadedSystem).ToList();
+        var started = run.Events.OfType<Praedra.Core.Battle.BattleStarted>().Where(b => b.System == TestCampaign.BlockadedSystem).ToList();
         Assert.NotEmpty(started);
         Assert.InRange(started[0].Day, 300, 330);
-        var end = run.Events.OfType<Rebellion.Core.Battle.BattleEnded>().First(b => b.Result.System == TestCampaign.BlockadedSystem);
+        var end = run.Events.OfType<Praedra.Core.Battle.BattleEnded>().First(b => b.Result.System == TestCampaign.BlockadedSystem);
         if (r == GarrisonRuleset.Classic)
         {
-            Assert.Equal(Rebellion.Core.Battle.BattleOutcome.Annihilated, end.Result.Alliance);
-            Assert.Contains(run.Events.OfType<Rebellion.Core.Battle.RetreatRefused>(), x => x.Reason == Rebellion.Core.Battle.RetreatRefusal.GravityWell);
+            Assert.Equal(Praedra.Core.Battle.BattleOutcome.Annihilated, end.Result.Alliance);
+            Assert.Contains(run.Events.OfType<Praedra.Core.Battle.RetreatRefused>(), x => x.Reason == Praedra.Core.Battle.RetreatRefusal.GravityWell);
         }
         else
         {
-            // B7 re-expectation 2026-10-19: the day-200 scripted bombardment now draws the 1998 way (B7-bombardment §8: one return-fire pick instead of
+            // B7 re-expectation 2026-10-19: the day-200 scripted bombardment now draws the Classic way (B7-bombardment §8: one return-fire pick instead of
             // four hits' picks and dice), so on this ruleset the game generator reaches the day-313 battle in another state and the same forces fight
             // another battle: the Empire retreats (its Victory Destroyer is lost to NoHyperdrive) and the Alliance holds the field. Before B7 the
             // Alliance was Annihilated after a GravityWell refusal, as in the Classic row above (which still shows the gravity well).
-            Assert.Equal((Rebellion.Core.Battle.BattleOutcome.Victorious, Rebellion.Core.Battle.BattleOutcome.Retreated), (end.Result.Alliance, end.Result.Empire));
-            Assert.Contains(run.Events.OfType<Rebellion.Core.Battle.UnitDestroyed>(), x => x.System == TestCampaign.BlockadedSystem && x.Reason == Rebellion.Core.Battle.UnitLossReason.NoHyperdrive);
+            Assert.Equal((Praedra.Core.Battle.BattleOutcome.Victorious, Praedra.Core.Battle.BattleOutcome.Retreated), (end.Result.Alliance, end.Result.Empire));
+            Assert.Contains(run.Events.OfType<Praedra.Core.Battle.UnitDestroyed>(), x => x.System == TestCampaign.BlockadedSystem && x.Reason == Praedra.Core.Battle.UnitLossReason.NoHyperdrive);
         }
     }
 
@@ -237,13 +237,13 @@ public class CampaignSoakTests
     [Fact]
     public void KinyenContactNewRulesetGravityWellWithPreB7Bombardment()
     {
-        var off = new Rebellion.Core.Defenses.BombardParams { BombardWastedHits = false, BatteryReturnFire = false, BombardFleetsTogether = false,
+        var off = new Praedra.Core.Defenses.BombardParams { BombardWastedHits = false, BatteryReturnFire = false, BombardFleetsTogether = false,
             BombardDamageScales = false, MilitaryCollateral = false };
         var c = TestCampaign.New(1, CampaignHarness.Settings(GarrisonRuleset.New) with { Bombard = off });
         while (c.Game.Day < 330) c.Step();
         var events = c.Host.Game.Events;
-        var end = events.OfType<Rebellion.Core.Battle.BattleEnded>().First(b => b.Result.System == TestCampaign.BlockadedSystem);
-        Assert.Equal(Rebellion.Core.Battle.BattleOutcome.Annihilated, end.Result.Alliance);
-        Assert.Contains(events.OfType<Rebellion.Core.Battle.RetreatRefused>(), x => x.Reason == Rebellion.Core.Battle.RetreatRefusal.GravityWell);
+        var end = events.OfType<Praedra.Core.Battle.BattleEnded>().First(b => b.Result.System == TestCampaign.BlockadedSystem);
+        Assert.Equal(Praedra.Core.Battle.BattleOutcome.Annihilated, end.Result.Alliance);
+        Assert.Contains(events.OfType<Praedra.Core.Battle.RetreatRefused>(), x => x.Reason == Praedra.Core.Battle.RetreatRefusal.GravityWell);
     }
 }

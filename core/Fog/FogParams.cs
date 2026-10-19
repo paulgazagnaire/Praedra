@@ -1,6 +1,6 @@
-namespace Rebellion.Core.Fog;
+namespace Praedra.Core.Fog;
 
-/// <summary>Classic = the 1998 rule; New = Classic plus ages, the Observed level and passing fleets that explore. rule: m5-fog-and-hq §Rule (New).</summary>
+/// <summary>Classic = the Classic rule; New = Classic plus ages, the Observed level and passing fleets that explore. rule: m5-fog-and-hq §Rule (New).</summary>
 public enum FogRuleset { Classic, New }
 
 /// <summary>Which units count in the HQ departure refusal. rule: m5-fog-and-hq §F6 (HqDepartureOperands), Contradictions 2.</summary>
@@ -47,8 +47,8 @@ public sealed record FogParams
     public IReadOnlyList<string> StartFullCopyEmpire { get; init; } = new[] { "Yavin" };
     public IReadOnlyList<string> StartFullCopyAlliance { get; init; } = Array.Empty<string>();
     /// <summary>
-    /// The Setup reveal also writes group C (facilities) for the start_explored_all systems (never D or E). 1998 = on (B4 §11, [EXE-own]
-    /// 0x51b990, 0x539ac0). DEFAULT on (1998); AI measured 2026-10-18: floors pass, Medium mirror 12/16 either way. rule: m5-fog-and-hq §F2 Setup, §F4 1.
+    /// The Setup reveal also writes group C (facilities) for the start_explored_all systems (never D or E). Classic = on (B4 §11, [EXE-own]
+    /// 0x51b990, 0x539ac0). DEFAULT on (Classic); AI measured 2026-10-18: floors pass, Medium mirror 12/16 either way. rule: m5-fog-and-hq §F2 Setup, §F4 1.
     /// </summary>
     public bool SetupRevealsFacilities { get; init; } = true;
     /// <summary>The galaxy group whose systems report instantly (planets file group label). rule: §F2 CoreReport ("Group is Core"), Contradictions 9.</summary>

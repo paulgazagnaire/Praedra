@@ -1,13 +1,13 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Research;
-using Rebellion.Core.Tests.Construction;
-using Rebellion.Core.Tests.Economy;
-using Rebellion.Core.Tests.Fleets;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Research;
+using Praedra.Core.Tests.Construction;
+using Praedra.Core.Tests.Economy;
+using Praedra.Core.Tests.Fleets;
 
-namespace Rebellion.Core.Tests.Research;
+namespace Praedra.Core.Tests.Research;
 
 /// <summary>
 /// A game on the real galaxy with fleets, economy, construction and research attached (GameHost's order and wiring for these four), incidents
@@ -16,7 +16,7 @@ namespace Rebellion.Core.Tests.Research;
 internal sealed class ResearchWorld
 {
     public static readonly Lazy<ResearchData> RealResearch =
-        new(() => ResearchData.Load(TestData.OriginalDir, TestData.DesignDir, BuildWorld.RealCosts.Value));
+        new(() => ResearchData.Load(TestData.ClassicDir, TestData.DesignDir, BuildWorld.RealCosts.Value));
 
     public StubRng? Stub { get; }
     public Game Game { get; private set; }

@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Support;
+namespace Praedra.Core.Support;
 
 // Events of the support package. Day is the hook time T = K + 1, like the economy events.
 // rule: m2-popular-support §One entry point (SupportChanged); m2-uprisings-and-garrison §Uprising start, keep, end; §Incident.

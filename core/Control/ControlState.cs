@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Control;
+namespace Praedra.Core.Control;
 
 /// <summary>
 /// Per-game control state that is saved and hashed: the scorched-earth switch per side (rule: m2-control-and-capture §Scorched earth; value on,
@@ -16,7 +16,7 @@ public sealed class ControlState
 
     /// <summary>
     /// Systems where both sides have regiments standing on the planet, with the military side they had before the second side arrived
-    /// (0 = none, 1 = Alliance, 2 = Empire: the 1998 numbering). The 1998 control word keeps the previous military side in that case
+    /// (0 = none, 1 = Alliance, 2 = Empire: the Classic numbering). The Classic control word keeps the previous military side in that case
     /// (system +0x84 bits 4-5, <c>0x50b610</c>). Everywhere else the military side is derived from the regiments standing there, so only this
     /// case needs a memory. rule: m2-control-and-capture §How control changes (B5a section 1).
     /// </summary>

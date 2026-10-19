@@ -1,12 +1,12 @@
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Map;
-using Rebellion.Core.Missions;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Tests.Economy;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Map;
+using Praedra.Core.Missions;
+using Praedra.Core.Setup;
+using Praedra.Core.Tests.Economy;
 
-namespace Rebellion.Core.Tests.Missions;
+namespace Praedra.Core.Tests.Missions;
 
 /// <summary>
 /// A full <see cref="GameHost"/> on a small map for the mission tests (m5-missions §Tests): H (0,20), T (15,20), X (50,20), Alderaan (15,40),
@@ -17,9 +17,9 @@ namespace Rebellion.Core.Tests.Missions;
 internal sealed class MissionWorld
 {
     public const string H = "H", T = "T", X = "X", Alderaan = "Alderaan", Bespin = "Bespin";
-    // character record ids (data/original/characters.csv)
+    // character record ids (data/classic/characters.csv)
     public const int MonMothma = 576, Leia = 577, Luke = 578, Han = 579, Palpatine = 640, Vader = 641, Wedge = 833, Lando = 834, Piett = 898, Veers = 899;
-    // regiment classes and their detection (data/original/troop-regiments.csv)
+    // regiment classes and their detection (data/classic/troop-regiments.csv)
     public const string ImpArmy = "Imperial Army Regiment" /*15*/, ImpFleet = "Imperial Fleet Regiment" /*20*/, Storm = "Stormtrooper Regiment" /*25*/,
         DarkTrooper = "Dark Trooper Regiment" /*30*/, WarDroid = "War Droid Regiment" /*5*/, RebArmy = "Alliance Army Regiment" /*10*/;
     public const string Bothan = "Bothan Spies", Infiltrators = "Infiltrators", Guerrillas = "Guerrillas", Longprobe = "Longprobe Y-wing Recon Team",
@@ -57,7 +57,7 @@ internal sealed class MissionWorld
     private readonly GameData _gd;
 
     public MissionWorld(MissionParams? p = null, bool decoys = false, ulong? seed = null, IReadOnlyList<TableRow>? decoyTable = null,
-        CharacterParams? characters = null, Rebellion.Core.Control.ControlRule rule = Rebellion.Core.Control.ControlRule.AssaultOnly)
+        CharacterParams? characters = null, Praedra.Core.Control.ControlRule rule = Praedra.Core.Control.ControlRule.AssaultOnly)
     {
         _settings = new GameSettings { IncidentsEnabled = false, DebugOrdersEnabled = true, Economy = new EconomyParams { ScrapPeriod = 1_000_000 }, Missions = p,
             Characters = characters, ControlRule = rule }; // rule: B5a tests set Derived explicitly (DEFAULT AssaultOnly, 2026-10-18)

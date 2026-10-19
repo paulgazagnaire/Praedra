@@ -1,13 +1,13 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Control;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Support;
-using Rebellion.Core.Tests.Control;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Control;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Setup;
+using Praedra.Core.Support;
+using Praedra.Core.Tests.Control;
 
-namespace Rebellion.Core.Tests.Setup;
+namespace Praedra.Core.Tests.Setup;
 
 // P2.5: the composition root. engine/03 (modules attach to one Game); each module's own switches keep their DEFAULT through GameSettings.
 public class GameHostTests
@@ -56,7 +56,7 @@ public class GameHostTests
         Assert.Equal(ctl.DebugOrdersEnabled, s.DebugOrdersEnabled);
         Assert.Equal(fleets.DebugOrdersEnabled, s.DebugOrdersEnabled);
         Assert.Equal(con.DeathStarClassBuildable, s.DeathStarClassBuildable);
-        var trp = Rebellion.Core.Troops.TroopModule.Attach(g, fleets, data.Troops);
+        var trp = Praedra.Core.Troops.TroopModule.Attach(g, fleets, data.Troops);
         Assert.Equal(trp.UnloadOnlyAtHeldSystem, s.UnloadOnlyAtHeldSystem);
         Assert.Null(s.Economy); Assert.Null(s.Support); Assert.Null(s.Construction);
 
@@ -67,7 +67,7 @@ public class GameHostTests
         Assert.Equal(con.Params, h.Construction.Params);
         // research: null = the module's defaults (m5-research §Defaults); the gate is on
         Assert.Null(s.Research);
-        Assert.Equal(new Rebellion.Core.Research.ResearchParams(), h.Research.Params);
+        Assert.Equal(new Praedra.Core.Research.ResearchParams(), h.Research.Params);
         Assert.True(s.RespectResearchOrder);
     }
 
@@ -84,7 +84,7 @@ public class GameHostTests
             SuspendedLeaveCapacity = true, MineStopMode = StopMode.Abandon, YardStopMode = StopMode.Abandon,
             Economy = new EconomyParams { ScrapPeriod = 7 }, Support = new SupportParams { ErosionPeriod = 11 },
             Construction = new ConstructionParams { StandardCycleDays = 3 },
-            Research = new Rebellion.Core.Research.ResearchParams { FacilityResearch = false, ResearchCostScale = Rebellion.Core.Research.ResearchScale.Fixed },
+            Research = new Praedra.Core.Research.ResearchParams { FacilityResearch = false, ResearchCostScale = Praedra.Core.Research.ResearchScale.Fixed },
         };
         void Check(GameHost h)
         {
@@ -94,7 +94,7 @@ public class GameHostTests
             Assert.Equal(GarrisonRuleset.New, h.Support.Ruleset); Assert.False(h.Support.BlockadeSupportEffect);
             Assert.False(h.Construction.DeliveryForcedStop); Assert.Equal(LostDestinationRule.Refuse, h.Construction.LostDestination);
             Assert.False(h.Construction.UnitDestinationMustBeControlled); Assert.False(h.Construction.RespectResearchOrder);
-            Assert.False(h.Research.Params.FacilityResearch); Assert.Equal(Rebellion.Core.Research.ResearchScale.Fixed, h.Research.Params.ResearchCostScale);
+            Assert.False(h.Research.Params.FacilityResearch); Assert.Equal(Praedra.Core.Research.ResearchScale.Fixed, h.Research.Params.ResearchCostScale);
             Assert.True(h.Construction.UseClassicBlockadeFlag); Assert.True(h.Control.DebugOrdersEnabled);
             Assert.True(h.Fleets.DebugOrdersEnabled); Assert.False(h.Construction.DeathStarClassBuildable);
             Assert.False(h.Troops.UnloadOnlyAtHeldSystem);

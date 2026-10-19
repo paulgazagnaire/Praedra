@@ -1,12 +1,12 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Missions;
-using Rebellion.Core.Setup;
-using static Rebellion.Core.Tests.Missions.MissionWorld;
+using Praedra.Core.Clock;
+using Praedra.Core.Missions;
+using Praedra.Core.Setup;
+using static Praedra.Core.Tests.Missions.MissionWorld;
 
-namespace Rebellion.Core.Tests.Missions;
+namespace Praedra.Core.Tests.Missions;
 
-// B1-own-importer QA Q4 to Q7: the full mission tables and the decoy table read from the 1998 files (data/original/mission-tables.csv).
-public class OriginalTablesTests
+// B1-own-importer QA Q4 to Q7: the full mission tables and the decoy table read from the Classic files (data/classic/mission-tables.csv).
+public class ClassicTablesTests
 {
     private static int Step(string table, int x) =>
         MissionModule.Lookup(GameData.Default.Missions.Table(table), x, MstbLookupMode.Step, MstbBelowFirstRow.FirstRowValue);

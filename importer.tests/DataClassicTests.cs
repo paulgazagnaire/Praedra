@@ -1,9 +1,9 @@
-namespace Rebellion.Importer.Tests;
+namespace Praedra.Importer.Tests;
 
-/// <summary>Runs only when REBELLION_GAME_DIR names a game folder (GData/*.DAT and TEXTSTRA.DLL; the files are never committed).</summary>
+/// <summary>Runs only when PRAEDRA_GAME_DIR names a game folder (GData/*.DAT and TEXTSTRA.DLL; the files are never committed).</summary>
 public sealed class GameDirFactAttribute : FactAttribute
 {
-    public const string Variable = "REBELLION_GAME_DIR";
+    public const string Variable = "PRAEDRA_GAME_DIR";
 
     public GameDirFactAttribute()
     {
@@ -11,23 +11,23 @@ public sealed class GameDirFactAttribute : FactAttribute
     }
 }
 
-/// <summary>The committed data/original against the importer. rule: B1-own-importer §Tests (golden test), §Work 2, 3.</summary>
-public class DataOriginalTests
+/// <summary>The committed data/classic against the importer. rule: B1-own-importer §Tests (golden test), §Work 2, 3.</summary>
+public class DataClassicTests
 {
     private static readonly string Root = FindRoot();
-    private static readonly string Original = Path.Combine(Root, "data", "original");
+    private static readonly string ClassicDir = Path.Combine(Root, "data", "classic");
 
-    // B1-own-importer Tests (golden): the importer on the game files gives exactly the committed data/original (raw and drop-in files)
+    // B1-own-importer Tests (golden): the importer on the game files gives exactly the committed data/classic (raw and drop-in files)
     [GameDirFact]
-    public void GoldenGameFilesGiveTheCommittedDataOriginal()
+    public void GoldenGameFilesGiveTheCommittedDataClassic()
     {
         string game = Environment.GetEnvironmentVariable(GameDirFactAttribute.Variable)!;
-        string tmp = Path.Combine(Path.GetTempPath(), "rebellion-importer-golden-" + Environment.ProcessId);
+        string tmp = Path.Combine(Path.GetTempPath(), "praedra-importer-golden-" + Environment.ProcessId);
         try
         {
             Importer.FromGame(game, tmp);
-            AssertSameFolder(Original, tmp);
-            AssertSameFolder(Path.Combine(Original, Importer.RawFolder), Path.Combine(tmp, Importer.RawFolder));
+            AssertSameFolder(ClassicDir, tmp);
+            AssertSameFolder(Path.Combine(ClassicDir, Importer.RawFolder), Path.Combine(tmp, Importer.RawFolder));
         }
         finally { if (Directory.Exists(tmp)) Directory.Delete(tmp, recursive: true); }
     }
@@ -36,21 +36,21 @@ public class DataOriginalTests
     [Fact]
     public void DropInFilesAreRegeneratedFromRaw()
     {
-        foreach (var (file, text) in DropInStage.Build(Path.Combine(Original, Importer.RawFolder)))
-            Assert.True(text == File.ReadAllText(Path.Combine(Original, file)), $"data/original/{file} differs from the importer's stage 2 output: re-run the importer.");
+        foreach (var (file, text) in DropInStage.Build(Path.Combine(ClassicDir, Importer.RawFolder)))
+            Assert.True(text == File.ReadAllText(Path.Combine(ClassicDir, file)), $"data/classic/{file} differs from the importer's stage 2 output: re-run the importer.");
         Assert.Equal(DropInStage.Outputs.OrderBy(f => f, StringComparer.Ordinal),
-            Directory.GetFiles(Original, "*.csv").Select(Path.GetFileName).OrderBy(f => f, StringComparer.Ordinal));
+            Directory.GetFiles(ClassicDir, "*.csv").Select(Path.GetFileName).OrderBy(f => f, StringComparer.Ordinal));
     }
 
     // B1-own-importer Work 2: one raw file per .DAT (51 in the reference copy) plus the strings, each with a header row
     [Fact]
     public void RawFolderHasEveryFile()
     {
-        var raw = Directory.GetFiles(Path.Combine(Original, Importer.RawFolder), "*.csv").Select(Path.GetFileNameWithoutExtension).ToList();
+        var raw = Directory.GetFiles(Path.Combine(ClassicDir, Importer.RawFolder), "*.csv").Select(Path.GetFileNameWithoutExtension).ToList();
         foreach (var f in Layouts.Sd.Keys.Concat(Layouts.TableKinds.Keys).Append(RawStage.StringsCsv)) Assert.Contains(f, raw);
         foreach (var f in raw)
         {
-            var t = Csv.Load(Path.Combine(Original, Importer.RawFolder, f + ".csv"));
+            var t = Csv.Load(Path.Combine(ClassicDir, Importer.RawFolder, f + ".csv"));
             Assert.True(t.Rows.Count > 0, f);
         }
     }
@@ -59,11 +59,11 @@ public class DataOriginalTests
     [Fact]
     public void DecoyTablesThatDifferFail()
     {
-        string tmp = Path.Combine(Path.GetTempPath(), "rebellion-importer-decoy-" + Environment.ProcessId);
+        string tmp = Path.Combine(Path.GetTempPath(), "praedra-importer-decoy-" + Environment.ProcessId);
         try
         {
             Directory.CreateDirectory(tmp);
-            foreach (var f in Directory.GetFiles(Path.Combine(Original, Importer.RawFolder))) File.Copy(f, Path.Combine(tmp, Path.GetFileName(f)));
+            foreach (var f in Directory.GetFiles(Path.Combine(ClassicDir, Importer.RawFolder))) File.Copy(f, Path.Combine(tmp, Path.GetFileName(f)));
             string t = Path.Combine(tmp, "TDECOYTB.csv");
             File.WriteAllText(t, File.ReadAllText(t).Replace("1,1,-20,10", "1,1,-20,11"));
             var ex = Assert.Throws<ImportException>(() => DropInStage.Build(tmp));
@@ -76,12 +76,12 @@ public class DataOriginalTests
     [Fact]
     public void RixGaraintAndTableRowCounts()
     {
-        var c = Csv.Load(Path.Combine(Original, "characters.csv"));
+        var c = Csv.Load(Path.Combine(ClassicDir, "characters.csv"));
         int Row(string name) => Enumerable.Range(0, c.Rows.Count).Single(r => c.Get(r, "name") == name);
         Assert.Equal((918, 10, 40), (c.Int(Row("Shenir Rix"), "id"), c.Int(Row("Shenir Rix"), "jlvl"), c.Int(Row("Shenir Rix"), "jlvlv")));
         Assert.Equal((919, 30, 20), (c.Int(Row("Noval Garaint"), "id"), c.Int(Row("Noval Garaint"), "jlvl"), c.Int(Row("Noval Garaint"), "jlvlv")));
 
-        var t = Csv.Load(Path.Combine(Original, "mission-tables.csv"));
+        var t = Csv.Load(Path.Combine(ClassicDir, "mission-tables.csv"));
         var counts = t.Rows.GroupBy(r => r[0]).ToDictionary(g => g.Key, g => g.Count());
         var expect = new Dictionary<string, int>
         {
@@ -104,7 +104,7 @@ public class DataOriginalTests
     private static string FindRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "Rebellion.sln"))) dir = dir.Parent;
-        return dir?.FullName ?? throw new InvalidOperationException("Rebellion.sln not found above the test output folder.");
+        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "Praedra.sln"))) dir = dir.Parent;
+        return dir?.FullName ?? throw new InvalidOperationException("Praedra.sln not found above the test output folder.");
     }
 }

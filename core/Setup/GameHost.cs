@@ -1,14 +1,14 @@
-using Rebellion.Core.Assault;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Control;
-using Rebellion.Core.Defenses;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Support;
-using Rebellion.Core.Troops;
+using Praedra.Core.Assault;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Control;
+using Praedra.Core.Defenses;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Support;
+using Praedra.Core.Troops;
 
-namespace Rebellion.Core.Setup;
+namespace Praedra.Core.Setup;
 
 /// <summary>
 /// The composition root: the one place that loads the data, creates the <see cref="Game"/> and attaches every module in the right order
@@ -60,36 +60,36 @@ public sealed class GameHost
     public DefenseModule Defenses { get; }
     public BombardmentModule Bombardment { get; }
     /// <summary>The Death Star: Destroy System (slot 5.1), the sector flag (5.6), the build cap. rule: m5-death-star.</summary>
-    public Rebellion.Core.DeathStar.DeathStarModule DeathStar { get; }
+    public Praedra.Core.DeathStar.DeathStarModule DeathStar { get; }
     /// <summary>The Assault order and slot 5.2. rule: m3-assault.</summary>
     public AssaultModule Assault { get; }
     /// <summary>The Classic battle, step 5 after the contacts and before slots 5.1 and 5.2. rule: m4-battle-classic.</summary>
-    public Rebellion.Core.Battle.BattleModule Battles { get; }
+    public Praedra.Core.Battle.BattleModule Battles { get; }
     /// <summary>Strategic ship repair, slot 6.8. rule: m4-retreat-damage-repair §5.</summary>
-    public Rebellion.Core.Repair.RepairModule Repair { get; }
+    public Praedra.Core.Repair.RepairModule Repair { get; }
 
     /// <summary>Research levels, points and the facility tick, slot 6.9. rule: m5-research.</summary>
-    public Rebellion.Core.Research.ResearchModule Research { get; }
+    public Praedra.Core.Research.ResearchModule Research { get; }
 
     /// <summary>Victory check (slot 6.11, last; runs only in a game made by <see cref="NewGame"/>): <c>Victory.Winner</c> is null while the game runs. rule: setup-victory/04.</summary>
-    public Rebellion.Core.Victory.VictoryModule Victory { get; }
+    public Praedra.Core.Victory.VictoryModule Victory { get; }
 
     /// <summary>Characters, posts, leadership, capture and death, the Force (slots 2, 3, 6.10). rule: m5-characters-and-force.</summary>
-    public Rebellion.Core.Characters.CharacterModule Characters { get; }
+    public Praedra.Core.Characters.CharacterModule Characters { get; }
     /// <summary>What moves loyalty (B2c).</summary>
-    public Rebellion.Core.Characters.LoyaltyModule Loyalty { get; }
+    public Praedra.Core.Characters.LoyaltyModule Loyalty { get; }
 
     /// <summary>Agent missions: teams, decoys, detection, success rolls and effects (slots 2, 3, 5.3). rule: m5-missions.</summary>
-    public Rebellion.Core.Missions.MissionModule Missions { get; }
+    public Praedra.Core.Missions.MissionModule Missions { get; }
 
     /// <summary>Fog of war (each side's picture, the read API for the AI and UI) and the Rebel HQ. rule: m5-fog-and-hq.</summary>
-    public Rebellion.Core.Fog.FogModule Fog { get; }
+    public Praedra.Core.Fog.FogModule Fog { get; }
 
     /// <summary>The Rebel HQ system (where it stands, or stood when destroyed), null in transit or if none. rule: m5-fog-and-hq §F5.</summary>
     public string? HqSystem => Game.State.Scenario.HqSystem;
 
     /// <summary>Is the system explored in the side's picture (dealt at setup, then widened by fleets, holdings and reveals)? rule: m5-fog-and-hq §F1.</summary>
-    public bool IsExplored(string system, Rebellion.Core.Clock.Side side) => Fog.IsExplored(side, system);
+    public bool IsExplored(string system, Praedra.Core.Clock.Side side) => Fog.IsExplored(side, system);
 
     /// <summary>
     /// The move preview for one of the side's fleets: the path, hops, arrival day and the known traps on the way, from the side's own
@@ -98,17 +98,17 @@ public sealed class GameHost
     /// ship, however old the look (the age is given; DEFAULT, the sheet names no cut-off). Strength blockades are not traps: only gravity-well
     /// ships pull fleets out of hyperspace (m1-forced-stop-and-blockade, Paul 2026-10-16).
     /// </summary>
-    public MovePlan PlanMove(Rebellion.Core.Clock.Side side, int fleetId, string destination, IReadOnlyList<string>? waypoints = null)
+    public MovePlan PlanMove(Praedra.Core.Clock.Side side, int fleetId, string destination, IReadOnlyList<string>? waypoints = null)
     {
         var none = Array.Empty<string>();
         if (!Game.State.Fleets.TryGetValue(fleetId, out var fleet) || fleet.Side != side)
-            return new MovePlan(Rebellion.Core.Travel.PathStatus.UnknownSystem, none, Array.Empty<int>(), Array.Empty<bool>(), 0, Array.Empty<KnownTrap>());
+            return new MovePlan(Praedra.Core.Travel.PathStatus.UnknownSystem, none, Array.Empty<int>(), Array.Empty<bool>(), 0, Array.Empty<KnownTrap>());
         var path = Fleets.PlanPath(fleet, destination, waypoints);
         if (!path.Ok) return new MovePlan(path.Status, none, Array.Empty<int>(), Array.Empty<bool>(), 0, Array.Empty<KnownTrap>());
         var names = path.Names(Fleets.Galaxy);
         var route = new List<bool>();
         for (int i = 0; i + 1 < names.Count; i++)
-            route.Add(Fleets.Travel != Rebellion.Core.Travel.TravelMode.Straight && Fleets.Galaxy.FindLane(names[i], names[i + 1]) != null);
+            route.Add(Fleets.Travel != Praedra.Core.Travel.TravelMode.Straight && Fleets.Galaxy.FindLane(names[i], names[i + 1]) != null);
         var view = Fog.ViewFor(side);
         var traps = new List<KnownTrap>();
         for (int i = 1; i + 1 < names.Count; i++)
@@ -172,19 +172,19 @@ public sealed class GameHost
         Defenses = DefenseModule.Attach(Economy, Fleets, data.Defenses, settings.Defense);
         Bombardment = BombardmentModule.Attach(game, Economy, Fleets, Support, Defenses, settings.Bombard);
         // After the bombardment (its slot 5.1 hook runs first) and before the assault. rule: m5-death-star §2 ("resolved in slot 5.1 after the bombardment hook")
-        DeathStar = Rebellion.Core.DeathStar.DeathStarModule.Attach(game, data.Galaxy, Fleets, Economy, Support, Control, Construction, Defenses, settings.DeathStar);
+        DeathStar = Praedra.Core.DeathStar.DeathStarModule.Attach(game, data.Galaxy, Fleets, Economy, Support, Control, Construction, Defenses, settings.DeathStar);
         Construction.UnitAppeared += DeathStar.OnUnitAppeared; // after the fleet module's handler (the ship has joined its fleet): DeathStarDeployed
         Assault = AssaultModule.Attach(game, Economy, Fleets, Troops, Control, Defenses, Bombardment, settings.Assault);
         // Slot 5: registered after the fleet module's contact hook, so it runs after it, and (slot 5 precedes 5.1 and 5.2) before bombardment and assault.
-        Battles = Rebellion.Core.Battle.BattleModule.Attach(game, data.Galaxy, Fleets, Economy, settings.Battle, data.NewBattle);
-        Repair = Rebellion.Core.Repair.RepairModule.Attach(game, Economy, Fleets, data.Repair); // slot 6.8
+        Battles = Praedra.Core.Battle.BattleModule.Attach(game, data.Galaxy, Fleets, Economy, settings.Battle, data.NewBattle);
+        Repair = Praedra.Core.Repair.RepairModule.Attach(game, Economy, Fleets, data.Repair); // slot 6.8
         Repair.YardSuspended = Construction.IsSuspendedAt; // a blockade or an uprising drops FastRepair. rule: m4-retreat-damage-repair §5
-        Fog = Rebellion.Core.Fog.FogModule.Attach(game, data.Galaxy, Fleets, Economy, Support, Control, settings.Fog, settings.Hq); // after repair (shares 6.8)
-        Research = Rebellion.Core.Research.ResearchModule.Attach(game, Economy, Fleets, data.Research, settings.Research); // slot 6.9, after repair
+        Fog = Praedra.Core.Fog.FogModule.Attach(game, data.Galaxy, Fleets, Economy, Support, Control, settings.Fog, settings.Hq); // after repair (shares 6.8)
+        Research = Praedra.Core.Research.ResearchModule.Attach(game, Economy, Fleets, data.Research, settings.Research); // slot 6.9, after repair
         Construction.ResearchOrderReached = Research.OrderReached; // the research gate reads the side's levels. rule: m5-research §Availability test
         // Characters: slots 2 and 3 after the fleets, 6.10 after research. The three M3 leadership hooks, the Navigator speed, the system General
         // cleared on a holder change and the uprising incident codes 3 to 5. rule: m5-characters-and-force §Where it runs in the day Step.
-        Characters = Rebellion.Core.Characters.CharacterModule.Attach(game, Fleets, data.Characters, settings.Characters);
+        Characters = Praedra.Core.Characters.CharacterModule.Attach(game, Fleets, data.Characters, settings.Characters);
         Bombardment.AdmiralLeadership = Characters.AdmiralLeadership;
         // rule: B7-bombardment §4.3: the holder's General standing on the system multiplies the batteries' return fire (the system General post is
         // cleared on a holder change, so its holder is the system's)
@@ -196,10 +196,10 @@ public sealed class GameHost
         Control.CharactersAtCapture = Characters.OnCapture; // prisoners freed, characters leave (B5a section 5)
         Support.CharacterIncident = Characters.UprisingIncident;
         // What moves loyalty: the four triggers react to their events as they are emitted. rule: m5-characters-and-force §Loyalty and betrayal (B2c)
-        Loyalty = Rebellion.Core.Characters.LoyaltyModule.Attach(game, Characters, Fleets, Economy, data.Troops);
+        Loyalty = Praedra.Core.Characters.LoyaltyModule.Attach(game, Characters, Fleets, Economy, data.Troops);
         // Missions: orders, slots 2 and 3 after the characters, 5.3; wires the characters' IsOnMission and membership end, the fog's AgentsAt and the
         // support module's incident terms. rule: m5-missions §Where it runs in the day Step.
-        Missions = Rebellion.Core.Missions.MissionModule.Attach(game, Fleets, Economy, Support, Troops, Research, Characters, Fog, data.Missions, settings.Missions);
+        Missions = Praedra.Core.Missions.MissionModule.Attach(game, Fleets, Economy, Support, Troops, Research, Characters, Fog, data.Missions, settings.Missions);
         Missions.FacilityFamily = cls => data.Defenses.TryGetClass(cls, out var dc) ? dc.Family : 0; // rule: m5-missions §3 (B2d: the KDY-150 test)
         // The escape attempt's inputs: ESCAPETB from mission-tables.csv (unless the settings give one) and the captor's special forces on the planet.
         // rule: m5-characters-and-force §Escape (B2e §3)
@@ -213,7 +213,7 @@ public sealed class GameHost
         DeathStar.FogNotice = Fog.OnSystemDestroyed;
         Missions.HasDeathStar = DeathStar.HasDeathStar;
         Missions.DestroyDeathStar = DeathStar.Destroy;
-        Victory = Rebellion.Core.Victory.VictoryModule.Attach(game, settings.Victory); // slot 6.11, the last day-end slot; must stay last
+        Victory = Praedra.Core.Victory.VictoryModule.Attach(game, settings.Victory); // slot 6.11, the last day-end slot; must stay last
         Victory.Keys = data.Characters.VictoryKeys;
         Victory.IsCaptured = Characters.IsCaptured;
         Victory.IsDead = Characters.IsDead;
@@ -242,7 +242,7 @@ public sealed class GameHost
         var (saved, body) = ReadSettings(afterHeader);
         settings ??= saved ?? new GameSettings();
         if (ruleset != null && settings.Battle == null)
-            settings = settings with { Battle = new Rebellion.Core.Battle.BattleParams { Ruleset = ruleset.Value } };
+            settings = settings with { Battle = new Praedra.Core.Battle.BattleParams { Ruleset = ruleset.Value } };
         var (memories, core) = ReadAiMemory(body);
         var host = new GameHost(GameSave.Load(core), data ?? GameData.Default, settings);
         host._aiMemory.AddRange(memories);
@@ -251,16 +251,16 @@ public sealed class GameHost
 
     // ------------------------------------------------------------------ the AI's memory (QA-1)
 
-    private readonly List<Rebellion.Core.AI.AiMemory> _aiMemory = new(); // one per (side, fog), found by search, saved sorted
+    private readonly List<Praedra.Core.AI.AiMemory> _aiMemory = new(); // one per (side, fog), found by search, saved sorted
 
     /// <summary>
     /// The simple AI's memory of its side's event feed for this game (one per side and fog setting; made on first use). It lives with the game,
     /// not with an AI object, so a new AI on this game, or on a game loaded from <see cref="SaveWithSettings"/>, reads the same notes.
     /// </summary>
-    public Rebellion.Core.AI.AiMemory AiMemoryFor(Side side, bool fog)
+    public Praedra.Core.AI.AiMemory AiMemoryFor(Side side, bool fog)
     {
         foreach (var m in _aiMemory) if (m.Side == side && m.Fog == fog) return m;
-        var made = new Rebellion.Core.AI.AiMemory { Side = side, Fog = fog };
+        var made = new Praedra.Core.AI.AiMemory { Side = side, Fog = fog };
         _aiMemory.Add(made);
         return made;
     }
@@ -281,28 +281,29 @@ public sealed class GameHost
         return AiMemoryTag + System.Text.Json.JsonSerializer.Serialize(list, AiMemoryJson) + "\n";
     }
 
-    private static (List<Rebellion.Core.AI.AiMemory> Memories, string Core) ReadAiMemory(string body)
+    private static (List<Praedra.Core.AI.AiMemory> Memories, string Core) ReadAiMemory(string body)
     {
         if (!body.StartsWith(AiMemoryTag, StringComparison.Ordinal)) return (new(), body);
         int nl = body.IndexOf('\n');
         if (nl < 0) throw new InvalidDataException("AI memory line without a game");
-        var list = System.Text.Json.JsonSerializer.Deserialize<List<Rebellion.Core.AI.AiMemory>>(body[AiMemoryTag.Length..nl], AiMemoryJson)
+        var list = System.Text.Json.JsonSerializer.Deserialize<List<Praedra.Core.AI.AiMemory>>(body[AiMemoryTag.Length..nl], AiMemoryJson)
             ?? throw new InvalidDataException("empty AI memory");
         return (list, body[(nl + 1)..]);
     }
 
     public string Save() => GameSave.Save(Game);
 
-    private const string HeaderTag = "REBELLION-CORE 1 battle=";
+    private const string HeaderTag = "PRAEDRA-CORE 1 battle=";
+    private const string OldHeaderTag = "REBELLION-CORE 1 battle="; // saves written before the Praedra rename (2026-10-19) still load
 
     /// <summary>
-    /// The save plus a first line naming the battle ruleset ("REBELLION-CORE 1 battle=Classic|New"), so a loaded game fights by the same rules,
+    /// The save plus a first line naming the battle ruleset ("PRAEDRA-CORE 1 battle=Classic|New"), so a loaded game fights by the same rules,
     /// then a line with every game setting ("SETTINGS {json}", QA-17), then, when an AI has played this game, a line with the AI's memory
     /// ("AI-MEMORY [json]"), so a loaded game's AI plans as before (QA-1). The game state itself is unchanged (<see cref="StateHash"/> includes
-    /// none of these lines). rule: m4-battle-new §Rule (New); m1-clock-and-orders K12, K16 (a loaded game continues as the original)
+    /// none of these lines). rule: m4-battle-new §Rule (New); m1-clock-and-orders K12, K16 (a loaded game continues as before)
     /// </summary>
     public string SaveWithSettings() =>
-        HeaderTag + (Settings.Battle ?? new Rebellion.Core.Battle.BattleParams()).Ruleset + "\n"
+        HeaderTag + (Settings.Battle ?? new Praedra.Core.Battle.BattleParams()).Ruleset + "\n"
         + SettingsTag + System.Text.Json.JsonSerializer.Serialize(Pinned(Settings), SettingsJson) + "\n" + AiMemoryLine() + Save();
 
     // ------------------------------------------------------------------ the settings line (QA-17)
@@ -340,15 +341,15 @@ public sealed class GameHost
         Construction = s.Construction ?? new ConstructionParams(),
         Defense = s.Defense ?? new DefenseParams(),
         Bombard = s.Bombard ?? new BombardParams(),
-        DeathStar = s.DeathStar ?? new Rebellion.Core.DeathStar.DeathStarParams(),
+        DeathStar = s.DeathStar ?? new Praedra.Core.DeathStar.DeathStarParams(),
         Assault = s.Assault ?? new AssaultParams(),
-        Battle = s.Battle ?? new Rebellion.Core.Battle.BattleParams(),
-        Research = s.Research ?? new Rebellion.Core.Research.ResearchParams(),
-        Characters = s.Characters ?? new Rebellion.Core.Characters.CharacterParams(),
-        Missions = s.Missions ?? new Rebellion.Core.Missions.MissionParams(),
-        Victory = s.Victory ?? new Rebellion.Core.Victory.VictoryRules(),
-        Fog = s.Fog ?? new Rebellion.Core.Fog.FogParams(),
-        Hq = s.Hq ?? new Rebellion.Core.Fog.HqParams(),
+        Battle = s.Battle ?? new Praedra.Core.Battle.BattleParams(),
+        Research = s.Research ?? new Praedra.Core.Research.ResearchParams(),
+        Characters = s.Characters ?? new Praedra.Core.Characters.CharacterParams(),
+        Missions = s.Missions ?? new Praedra.Core.Missions.MissionParams(),
+        Victory = s.Victory ?? new Praedra.Core.Victory.VictoryRules(),
+        Fog = s.Fog ?? new Praedra.Core.Fog.FogParams(),
+        Hq = s.Hq ?? new Praedra.Core.Fog.HqParams(),
     };
 
     private static (GameSettings? Settings, string Body) ReadSettings(string body)
@@ -361,13 +362,15 @@ public sealed class GameHost
         return (s, body[(nl + 1)..]);
     }
 
-    private static (Rebellion.Core.Battle.BattleRuleset? Ruleset, string Body) ReadHeader(string text)
+    private static (Praedra.Core.Battle.BattleRuleset? Ruleset, string Body) ReadHeader(string text)
     {
-        if (!text.StartsWith(HeaderTag, StringComparison.Ordinal)) return (null, text);
+        string? tag = text.StartsWith(HeaderTag, StringComparison.Ordinal) ? HeaderTag
+            : text.StartsWith(OldHeaderTag, StringComparison.Ordinal) ? OldHeaderTag : null;
+        if (tag == null) return (null, text);
         int nl = text.IndexOf('\n');
         if (nl < 0) throw new InvalidDataException("save header without a body");
-        string name = text[HeaderTag.Length..nl].Trim();
-        if (!Enum.TryParse(name, false, out Rebellion.Core.Battle.BattleRuleset r) || !Enum.IsDefined(r))
+        string name = text[tag.Length..nl].Trim();
+        if (!Enum.TryParse(name, false, out Praedra.Core.Battle.BattleRuleset r) || !Enum.IsDefined(r))
             throw new InvalidDataException("unknown battle ruleset in save: " + name);
         return (r, text[(nl + 1)..]);
     }

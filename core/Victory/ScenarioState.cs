@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Victory;
+namespace Praedra.Core.Victory;
 
 /// <summary>
 /// Per-game scenario state, saved and hashed: whether victory is checked, the Rebel HQ system, the explored flags dealt at setup and the

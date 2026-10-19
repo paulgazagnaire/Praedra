@@ -1,13 +1,13 @@
 using System.Text.Json;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Support;
-using Rebellion.Core.Tests.Construction;
-using Rebellion.Core.Troops;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Support;
+using Praedra.Core.Tests.Construction;
+using Praedra.Core.Troops;
 
-namespace Rebellion.Core.Tests.Troops;
+namespace Praedra.Core.Tests.Troops;
 
 // Tests of m3-troops-and-special-forces (ids T1 to T23 as in the sheet's table, then extra tests named after the rule they check).
 // Fixture T: Empire holds Coruscant with one standard Training Facility (id 500) and refined 1000; ISD 201 (3 slots), fleet 200 at
@@ -114,8 +114,8 @@ public class TroopTests
     [Fact]
     public void NamesTableRejectsAnUnknownClass()
     {
-        string regs = File.ReadAllText(Path.Combine(TestData.OriginalDir, TroopData.RegimentsFile));
-        string sfs = File.ReadAllText(Path.Combine(TestData.OriginalDir, TroopData.SpecialForcesFile));
+        string regs = File.ReadAllText(Path.Combine(TestData.ClassicDir, TroopData.RegimentsFile));
+        string sfs = File.ReadAllText(Path.Combine(TestData.ClassicDir, TroopData.SpecialForcesFile));
         Assert.ThrowsAny<Exception>(() => TroopData.Parse(regs, sfs, "kind,id,data_name,display_name\nspecial_force,8,Wrong Name,X\n"));
     }
 
@@ -557,7 +557,7 @@ public class TroopTests
         Assert.True(w.Support.IsUprising("Bespin")); // as for 0 regiments
     }
 
-    // m3-troops T21 (B5a, 2026-10-17: the sheet's expectation changed): special forces cannot be scrapped (1998 code 23, B5a section 7);
+    // m3-troops T21 (B5a, 2026-10-17: the sheet's expectation changed): special forces cannot be scrapped (Classic code 23, B5a section 7);
     // both orders are refused with CannotScrap and nothing changes. The test keeps its name so the id stays findable.
     [Fact]
     public void T21_ScrapRefundsHalfOfCostRoundedDown()

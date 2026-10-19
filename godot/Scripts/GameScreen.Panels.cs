@@ -2,17 +2,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
-using Rebellion.Core.Battle;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Defenses;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Troops;
+using Praedra.Core.Battle;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Defenses;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Troops;
 
-using Side = Rebellion.Core.Clock.Side;
+using Side = Praedra.Core.Clock.Side;
 
-namespace RebellionViewer;
+namespace PraedraViewer;
 
 /// <summary>The right-hand panel (system, fleet), the fleet list, and the move-order mode.</summary>
 public partial class GameScreen
@@ -74,7 +74,7 @@ public partial class GameScreen
     }
 
     /// <summary>How a path travels, for the move banner: legs along a route versus free jumps through open space.</summary>
-    string LegWords(Rebellion.Core.Travel.PathResult pr)
+    string LegWords(Praedra.Core.Travel.PathResult pr)
     {
         var hops = new List<bool>();
         for (int k = 0; k + 1 < pr.Systems.Count; k++) hops.Add(G.FindLane(pr.Systems[k], pr.Systems[k + 1]) != null);
@@ -398,7 +398,7 @@ public partial class GameScreen
     }
 
     /// <summary>Own fleets here (clickable), then the enemy fleets the side sees now, or the ones it saw last time it looked.</summary>
-    void FleetsHere(string name, bool live, Rebellion.Core.Fog.SystemPicture pic)
+    void FleetsHere(string name, bool live, Praedra.Core.Fog.SystemPicture pic)
     {
         Heading("Fleets here");
         var ownHere = S.Game.State.Fleets.Values.Where(f => f.At == name && f.Side == Me).ToList();
@@ -528,8 +528,8 @@ public partial class GameScreen
         {
             var rows = allRows.Where(r => SectionOf(r.Category) == section).ToList();
             if (rows.Count == 0) continue;
-            var fam = Rebellion.Core.Construction.Yards.BuiltBy(rows[0].Category);
-            var fy = yards.Where(y => FacilityKinds.TryParse(y.Class, out var k) && Rebellion.Core.Construction.Yards.FamilyOf(k) == fam).ToList();
+            var fam = Praedra.Core.Construction.Yards.BuiltBy(rows[0].Category);
+            var fy = yards.Where(y => FacilityKinds.TryParse(y.Class, out var k) && Praedra.Core.Construction.Yards.FamilyOf(k) == fam).ToList();
             bool open = _openSections.Contains(section);
             string sec = section;
             var head = new Button { Text = $"{(open ? "v" : ">")}  {section}{(fy.Count == 0 ? $"   (needs a {FamilyName(fam).ToLowerInvariant()} here)" : "")}", Alignment = HorizontalAlignment.Left, FocusMode = FocusModeEnum.None, ToggleMode = false };
@@ -543,7 +543,7 @@ public partial class GameScreen
                 Line($"This planet has no {FamilyName(fam).ToLowerInvariant()}. {(fam == YardFamily.Construction ? "Build one from a planet that already has a construction yard." : "Build one under Facilities first.")}", Dim, 13);
                 continue;
             }
-            int adv = fy.Count(y => FacilityKinds.TryParse(y.Class, out var k) && Rebellion.Core.Construction.Yards.IsAdvanced(k));
+            int adv = fy.Count(y => FacilityKinds.TryParse(y.Class, out var k) && Praedra.Core.Construction.Yards.IsAdvanced(k));
             int std = fy.Count - adv;
             long refined = eco.Refined(Me);
             // Most useful first: things you can start now, then the cheap ones; mines and refineries lead the facility list.
@@ -558,9 +558,9 @@ public partial class GameScreen
                 if (!cons.IsResearched(Me, r.Name)) hint = "  (not researched)";
                 else if (r.Category == ObjectCategory.Facility && FacilityKinds.TryParse(r.Name, out var kind) && eco.CheckPlace(system, kind) is { } why) hint = why == "OnePerPlanet" ? "  (one per planet: this planet already has one)" : "  (no free slot)";
                 else if (r.Cost > refined) hint = "  (waits for refined)";
-                if (r.Name == Rebellion.Core.DeathStar.DeathStarModule.ShipClass && S.HasOwnDeathStarAt(system)) hint = "  (one per system: this system already has one)";
+                if (r.Name == Praedra.Core.DeathStar.DeathStarModule.ShipClass && S.HasOwnDeathStarAt(system)) hint = "  (one per system: this system already has one)";
                 var row = r;
-                var fam2 = Rebellion.Core.Construction.Yards.BuiltBy(r.Category);
+                var fam2 = Praedra.Core.Construction.Yards.BuiltBy(r.Category);
                 var btn = Act($"{r.Name}   {r.Cost} refined, upkeep {r.Maintenance}, ~{days} days{hint}", () => SubmitBuild(system, fam2, row),
                     $"Costs {r.Cost} refined material in total and {r.Maintenance} upkeep. Takes about {days} days per unit once the refined material is there.");
                 if (!Usable(r)) btn.Modulate = new Color(1, 1, 1, 0.55f);

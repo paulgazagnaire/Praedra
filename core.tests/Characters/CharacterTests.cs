@@ -1,12 +1,12 @@
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Control;
-using Rebellion.Core.Map;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Tests.Economy;
-using static Rebellion.Core.Tests.Characters.CharWorld;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Control;
+using Praedra.Core.Map;
+using Praedra.Core.Setup;
+using Praedra.Core.Tests.Economy;
+using static Praedra.Core.Tests.Characters.CharWorld;
 
-namespace Rebellion.Core.Tests.Characters;
+namespace Praedra.Core.Tests.Characters;
 
 /// <summary>The tests of m5-characters-and-force §Tests (CH1 to CH34), plus the switch defaults.</summary>
 public class CharacterTests
@@ -59,11 +59,11 @@ public class CharacterTests
         return (w, t, s);
     }
 
-    // m5-characters-and-force CH3 (the 1998 roll: Classic values set explicitly, CH37)
+    // m5-characters-and-force CH3 (the Classic roll: Classic values set explicitly, CH37)
     [Fact]
     public void CH3_VaderTrainsAStudentOfTwenty()
     {
-        var (w, vader, s) = Training(Vader, 120, Tura, 20, Classic1998Force());
+        var (w, vader, s) = Training(Vader, 120, Tura, 20, ClassicForce());
         w.Stub!.Expect(0, 99, 99).Expect(0, 50, 37);
         w.StepWith("6.10", ctx => w.Ch.ForceTrainingRound(ctx, vader, new[] { s }));
         var e = Assert.Single(w.Events<ForceTrainingResult>());
@@ -72,11 +72,11 @@ public class CharacterTests
         Assert.Equal(57, s.EffectiveForce);
     }
 
-    // m5-characters-and-force CH4 (the 1998 roll: Classic values set explicitly, CH37)
+    // m5-characters-and-force CH4 (the Classic roll: Classic values set explicitly, CH37)
     [Fact]
     public void CH4_LukeTrainsLeia()
     {
-        var (w, luke, leia) = Training(Luke, 50, Leia, 10, Classic1998Force());
+        var (w, luke, leia) = Training(Luke, 50, Leia, 10, ClassicForce());
         w.Stub!.Expect(0, 99, 39).Expect(0, 20, 20);
         w.StepWith("6.10", ctx => w.Ch.ForceTrainingRound(ctx, luke, new[] { leia }));
         Assert.Equal(30, leia.EffectiveForce);
@@ -89,11 +89,11 @@ public class CharacterTests
         Assert.Equal(new[] { (0, 99) }, w.Stub.Requests.Skip(before).Select(r => (r.Min, r.Max)));
     }
 
-    // m5-characters-and-force CH5 (the 1998 roll: Classic values set explicitly; under New a gap of 1 has chance 1 * 50 / 100 = 0)
+    // m5-characters-and-force CH5 (the Classic roll: Classic values set explicitly; under New a gap of 1 has chance 1 * 50 / 100 = 0)
     [Fact]
     public void CH5_EqualOrHigherStudentsNeverSucceed_GapOneGainsZero()
     {
-        var (w, t, s) = Training(Luke, 50, Leia, 50, Classic1998Force());
+        var (w, t, s) = Training(Luke, 50, Leia, 50, ClassicForce());
         w.StepWith("6.10", ctx => w.Ch.ForceTrainingRound(ctx, t, new[] { s }));
         s.ForceExperience = 60;
         w.StepWith("6.10", ctx => w.Ch.ForceTrainingRound(ctx, t, new[] { s }));
@@ -177,12 +177,12 @@ public class CharacterTests
         Assert.False(w2.Events<ForceTrainingResult>().Last().Success);
     }
 
-    // m5-characters-and-force CH37: the 1998 values (100 / 100 / 50) reproduce CH3 and CH4 (those tests run with them) and B2e-1/B2e-2, and the
+    // m5-characters-and-force CH37: the Classic values (100 / 100 / 50) reproduce CH3 and CH4 (those tests run with them) and B2e-1/B2e-2, and the
     // skill formula with percent 100 equals B + B * F / 100 for every base 0..120 and Force 0..200 (bit-identical Classic)
     [Fact]
-    public void CH37_ClassicValuesReproduceThe1998Force()
+    public void CH37_ClassicValuesReproduceTheClassicForce()
     {
-        var w = new CharWorld(Classic1998Force());
+        var w = new CharWorld(ClassicForce());
         var luke = w.Add(Luke, Yavin); luke.ForceUser = true; luke.ForceExperience = 50; luke.ForceTraining = 0; luke.Injury = 0;
         luke.Skills[(int)Skill.Diplomacy] = 50; luke.Skills[(int)Skill.Espionage] = 50; luke.Skills[(int)Skill.Combat] = 90;
         Assert.Equal((75, 75, 135), (w.Ch.EffectiveSkill(luke, Skill.Diplomacy), w.Ch.EffectiveSkill(luke, Skill.Espionage), w.Ch.EffectiveSkill(luke, Skill.Combat)));
@@ -279,8 +279,8 @@ public class CharacterTests
         // both corvettes retreat together; in New the ISD's tractor beam holds fleet f's corvette and destroys it (m4-retreat-damage-repair
         // TractorBeamsHoldRetreat), which dissolves the fleet and detaches Chewbacca. This test checks the attach rules, not the battle.
         var w = new CharWorld(settings: new GameSettings { IncidentsEnabled = false, DebugOrdersEnabled = true,
-            Economy = new Rebellion.Core.Economy.EconomyParams { ScrapPeriod = 1_000_000 },
-            Battle = new Rebellion.Core.Battle.BattleParams { Ruleset = Rebellion.Core.Battle.BattleRuleset.Classic } });
+            Economy = new Praedra.Core.Economy.EconomyParams { ScrapPeriod = 1_000_000 },
+            Battle = new Praedra.Core.Battle.BattleParams { Ruleset = Praedra.Core.Battle.BattleRuleset.Classic } });
         int f = w.Fleet(Side.Alliance, Yavin);
         int moving = w.Fleet(Side.Alliance, Yavin);
         int imp = w.Fleet(Side.Empire, Yavin, Isd);
@@ -414,7 +414,7 @@ public class CharacterTests
 
     // ------------------------------------------------------------------ Navigator (§Navigator)
 
-    private static (CharWorld W, Rebellion.Core.Fleets.Fleet F) Nav(bool on, params int[] riders)
+    private static (CharWorld W, Praedra.Core.Fleets.Fleet F) Nav(bool on, params int[] riders)
     {
         var w = new CharWorld(new CharacterParams { NavigatorBonus = on });
         int f = w.Fleet(Side.Alliance, Yavin);
@@ -741,7 +741,7 @@ public class CharacterTests
         var h = NewGame.Create(new NewGameOptions { Seed = 31 });
         for (int i = 0; i < 3000 && h.Victory.Winner == null; i++) h.Game.Step();
         Assert.All(h.Characters.All, c => Assert.Equal(100, c.Loyalty));
-        Assert.Empty(h.Game.Events.OfType<Rebellion.Core.Missions.MissionBetrayed>());
+        Assert.Empty(h.Game.Events.OfType<Praedra.Core.Missions.MissionBetrayed>());
         Assert.Empty(h.Game.Events.OfType<LoyaltyChanged>());
     }
 
@@ -856,7 +856,7 @@ public class CharacterTests
         Assert.False(p.TrainerNeedsKnight); Assert.Equal(1, p.ForceStudentMin); Assert.Equal(80, p.ForceKnightMin); Assert.Equal(100, p.ForceMasterMin);
         Assert.False(p.NavigatorBonus); Assert.Equal(25, p.NavigatorFloor); Assert.Equal(50, p.DeathStarHitPercent); Assert.Equal(25, p.ForceTrainingGainPercent);
         Assert.Equal(40, p.ForceSkillPercent); Assert.Equal(50, p.ForceTrainingChancePercent); // m5-characters-and-force §Force (New, Paul 2026-10-18)
-        Assert.Equal(100, p.CharacterSpeed); Assert.Equal(4, p.StartExtrasPerSide); Assert.Equal(StartCastOfficers.Original, p.StartCastOfficers);
+        Assert.Equal(100, p.CharacterSpeed); Assert.Equal(4, p.StartExtrasPerSide); Assert.Equal(StartCastOfficers.Classic, p.StartCastOfficers);
     }
 
     // m5-characters-and-force §Where it runs: slot 6.10 sits after research (6.9) and before victory (6.11)
@@ -872,7 +872,7 @@ public class CharacterTests
     [Fact]
     public void TrainingEligibility_AndStoryDiscovery()
     {
-        var w = new CharWorld(new CharacterParams { TrainerPick = TrainerPick.Fixed }); // the 1998 trainer flag (Luke, Vader); Random is CH39
+        var w = new CharWorld(new CharacterParams { TrainerPick = TrainerPick.Fixed }); // the Classic trainer flag (Luke, Vader); Random is CH39
         var luke = w.Add(Luke, Yavin); var leia = w.Add(Leia, Yavin);
         Assert.False(w.Ch.CanTrain(luke, leia)); // Leia's Force is hidden
         w.StepWith("5.2", ctx => Assert.True(w.Ch.DiscoverForce(ctx, leia, CharacterCause.Story)));

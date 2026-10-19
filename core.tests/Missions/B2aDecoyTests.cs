@@ -1,8 +1,8 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Missions;
-using static Rebellion.Core.Tests.Missions.MissionWorld;
+using Praedra.Core.Clock;
+using Praedra.Core.Missions;
+using static Praedra.Core.Tests.Missions.MissionWorld;
 
-namespace Rebellion.Core.Tests.Missions;
+namespace Praedra.Core.Tests.Missions;
 
 // B2a-decoys-and-detection tests B2a-1 to B2a-4 (B2a-5: the existing detection tests MI2 to MI10 run unchanged except MI8's below-row value).
 // B2d: the team flies in from H and the guards are Imperial Probe Droids on the planet (special forces guard a planet target; detection 0).

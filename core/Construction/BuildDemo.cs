@@ -1,10 +1,10 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Map;
-using Rebellion.Core.Ships;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Map;
+using Praedra.Core.Ships;
 
-namespace Rebellion.Core.Construction;
+namespace Praedra.Core.Construction;
 
 /// <summary>
 /// A small deterministic build scenario on the real galaxy, for the headless runner and the soak test: an Empire home with a

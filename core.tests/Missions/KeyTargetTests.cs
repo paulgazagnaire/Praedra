@@ -1,13 +1,13 @@
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fog;
-using Rebellion.Core.Missions;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Victory;
-using static Rebellion.Core.Tests.Missions.MissionWorld;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Fog;
+using Praedra.Core.Missions;
+using Praedra.Core.Setup;
+using Praedra.Core.Victory;
+using static Praedra.Core.Tests.Missions.MissionWorld;
 
-namespace Rebellion.Core.Tests.Missions;
+namespace Praedra.Core.Tests.Missions;
 
 // m5-missions §6a (key targets of Assassination, and Abduction of the four key characters), tests KT1 to KT14.
 public class KeyTargetTests
@@ -17,7 +17,7 @@ public class KeyTargetTests
     // Vader qualified for a kill or kidnap: combat 100 and espionage 60. Luke or Mon stands at T (Alliance), HQ placed at T when asked.
     private static MissionWorld Assassin(int target, int vaderCombat = 100, int vaderEsp = 60, int regiments = -1, bool hq = false)
     {
-        var w = new MissionWorld(characters: Rebellion.Core.Tests.Characters.CharWorld.Classic1998Force()); // the 1998 Force (100 / 100 / 50): m5-characters-and-force §Force CH37
+        var w = new MissionWorld(characters: Praedra.Core.Tests.Characters.CharWorld.ClassicForce()); // the Classic Force (100 / 100 / 50): m5-characters-and-force §Force CH37
         w.Hold(T, Side.Alliance, 30); // N = ceil(30 / 10) = 3 regiments
         for (int i = 0; i < Math.Max(regiments, 0); i++) w.Unit(Side.Alliance, RebArmy, T);
         w.Agent(Vader, T, esp: vaderEsp, com: vaderCombat);

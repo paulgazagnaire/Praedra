@@ -1,8 +1,8 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Ships;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Ships;
 
-namespace Rebellion.Core.Battle;
+namespace Praedra.Core.Battle;
 
 /// <summary>One line of the optional event log of a New battle (shots, hits, deflections, kills, retreats). rule: m4-battle-new §4 step 8, §13.</summary>
 public sealed record BattleLogEntry(int T, string Kind, int Unit, int Other, string Detail);

@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Troops;
+namespace Praedra.Core.Troops;
 
 // Events of the troops package. Day is K for orders (step 1) and K + 1 for the hooks (step 3, slot 6.6.a), like the fleet events.
 // rule: m3-troops-and-special-forces §Where it runs and what it draws (events).

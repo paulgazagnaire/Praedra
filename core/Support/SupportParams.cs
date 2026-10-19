@@ -1,4 +1,4 @@
-namespace Rebellion.Core.Support;
+namespace Praedra.Core.Support;
 
 /// <summary>Garrison rule of the check "G >= N". rule: m2-uprisings-and-garrison §Garrison G and the check.</summary>
 public enum GarrisonRuleset
@@ -21,7 +21,7 @@ public enum SupportCause
 
 /// <summary>
 /// Every number of the two support sheets, with its tag. Data values, not code: tests and later setups may override them.
-/// Tags: Traced = read in the 1998 binary or data; DEFAULT = the sheet's choice. GNPRTB ids in the comments.
+/// Tags: Traced = read in the Classic binary or data; DEFAULT = the sheet's choice. GNPRTB ids in the comments.
 /// rule: m2-popular-support §Numbers; m2-uprisings-and-garrison §Numbers.
 /// </summary>
 public sealed record SupportParams

@@ -1,18 +1,18 @@
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Missions;
-using Rebellion.Core.Support;
-using static Rebellion.Core.Tests.Missions.MissionWorld;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Missions;
+using Praedra.Core.Support;
+using static Praedra.Core.Tests.Missions.MissionWorld;
 
-namespace Rebellion.Core.Tests.Missions;
+namespace Praedra.Core.Tests.Missions;
 
 // m5-missions §Tests MI27 to MI38 and MI56: the effects of a successful iteration and the incident-score terms.
 public class MissionEffectTests
 {
     // A Diplomacy team at T; the success roll draws 0; the gain draws as given. Returns the world after the first iteration.
     private static MissionWorld Diplomacy(Side side, Side? holder, int allianceSupport, int gainDraw, int gainMax, int dip = 120, int regiments = 0, bool deathStar = false,
-        Rebellion.Core.Control.ControlRule rule = Rebellion.Core.Control.ControlRule.AssaultOnly)
+        Praedra.Core.Control.ControlRule rule = Praedra.Core.Control.ControlRule.AssaultOnly)
     {
         var w = new MissionWorld(rule: rule);
         w.Hold(T, holder, allianceSupport);
@@ -50,7 +50,7 @@ public class MissionEffectTests
     [Fact]
     public void MI28_DiplomacyNeutral_Derived()
     {
-        var w = Diplomacy(Side.Alliance, null, 50, 9, 9, rule: Rebellion.Core.Control.ControlRule.Derived);
+        var w = Diplomacy(Side.Alliance, null, 50, 9, 9, rule: Praedra.Core.Control.ControlRule.Derived);
         Assert.Equal(61, A(w));
         Assert.Equal((50, 60), w.Events<SupportChanged>().Where(e => e.Cause == SupportCause.Diplomacy).Select(e => (e.Old, e.New)).Single());
         Assert.Equal(Side.Alliance, w.Host.Control.HolderOf(T));
@@ -205,7 +205,7 @@ public class MissionEffectTests
     [Fact]
     public void MI37_DeathStarSabotage()
     {
-        var w = new MissionWorld(characters: Rebellion.Core.Tests.Characters.CharWorld.Classic1998Force()); // the 1998 Force (m5-characters-and-force §Force CH37)
+        var w = new MissionWorld(characters: Praedra.Core.Tests.Characters.CharWorld.ClassicForce()); // the Classic Force (m5-characters-and-force §Force CH37)
         w.Hold(T, Side.Empire, 0);
         w.Agent(Luke, T, esp: 100, com: 100);
         var calls = new List<(string, Side)>();

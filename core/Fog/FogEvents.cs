@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Fog;
+namespace Praedra.Core.Fog;
 
 // Events of the fog of war and the Rebel HQ. Day is the hook time T = K + 1 (the day the Step produces), except HqDeparted (step 2, Day K,
 // like FleetDeparted). rule: m5-fog-and-hq §F8 (slots), §N8 (audience).

@@ -1,6 +1,6 @@
-using Rebellion.Core.Data;
+using Praedra.Core.Data;
 
-namespace Rebellion.Core.Ships;
+namespace Praedra.Core.Ships;
 
 /// <summary>Laser, ion and turbolaser cannon counts of one arc. rule: m4-battle-classic §4 (counts are read only through f / N).</summary>
 public readonly record struct ArcCounts(int Laser, int Ion, int Turbolaser)
@@ -20,7 +20,7 @@ public sealed record ShipArcs(ArcCounts Fore, ArcCounts Aft, ArcCounts Port, Arc
 public enum ShipSide { None = 0, Alliance = 1, Empire = 2 }
 
 /// <summary>
-/// The ship-class fields the core needs so far (travel, forced stop, ship object, carrying capacity, bombardment power: <c>Bombardment</c> is a capital ship's bombardment_modifier or a squadron's bombardment value). Loaded from data/original/ (CAPSHPSD and FIGHTSD, read by
+/// The ship-class fields the core needs so far (travel, forced stop, ship object, carrying capacity, bombardment power: <c>Bombardment</c> is a capital ship's bombardment_modifier or a squadron's bombardment value). Loaded from data/classic/ (CAPSHPSD and FIGHTSD, read by
 /// importer/). rule: B1-own-importer §Work 3.
 /// </summary>
 public sealed record ShipClass(
@@ -67,7 +67,7 @@ public sealed record ShipClass(
     public int Speed(bool damaged) => damaged && HyperdriveIfDamaged > 0 ? HyperdriveIfDamaged : Hyperdrive;
 }
 
-/// <summary>Loader for data/original/capital-ships.csv and fighters.csv (written by importer/ from the 1998 files).</summary>
+/// <summary>Loader for data/classic/capital-ships.csv and fighters.csv (written by importer/ from the Classic files).</summary>
 public static class ShipData
 {
     public const string CapitalShipsFile = "capital-ships.csv";

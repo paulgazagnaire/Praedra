@@ -1,13 +1,13 @@
-using Rebellion.Importer;
+using Praedra.Importer;
 
 // rule: B1-own-importer §Work 1. Usage:
-//   dotnet run --project importer -- <game folder> [<out folder>, default data/original]      stage 1 then stage 2
-//   dotnet run --project importer -- --from-raw <raw folder> [<out folder>, default data/original]   stage 2 only
-//   dotnet run --project importer -- --from-golden <golden folder> [<out folder>, default data/original]
+//   dotnet run --project importer -- <game folder> [<out folder>, default data/classic]      stage 1 then stage 2
+//   dotnet run --project importer -- --from-raw <raw folder> [<out folder>, default data/classic]   stage 2 only
+//   dotnet run --project importer -- --from-golden <golden folder> [<out folder>, default data/classic]
 //        the reference reader's headerless CSVs (specs/reverse/golden) plus our headers as raw/, then stage 2
-const string Usage = "usage: Rebellion.Importer <game folder> [<out folder>]\n" +
-                     "       Rebellion.Importer --from-raw <raw folder> [<out folder>]\n" +
-                     "       Rebellion.Importer --from-golden <golden folder> [<out folder>]";
+const string Usage = "usage: Praedra.Importer <game folder> [<out folder>]\n" +
+                     "       Praedra.Importer --from-raw <raw folder> [<out folder>]\n" +
+                     "       Praedra.Importer --from-golden <golden folder> [<out folder>]";
 try
 {
     if (args.Length == 0 || args[0] is "-h" or "--help") { Console.WriteLine(Usage); return args.Length == 0 ? 2 : 0; }

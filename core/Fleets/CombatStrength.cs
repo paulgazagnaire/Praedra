@@ -1,7 +1,7 @@
-using Rebellion.Core.Battle;
-using Rebellion.Core.Ships;
+using Praedra.Core.Battle;
+using Praedra.Core.Ships;
 
-namespace Rebellion.Core.Fleets;
+namespace Praedra.Core.Fleets;
 
 /// <summary>
 /// The one place that measures combat strength and decides "armed". Strength is the engine's own measure (m4-battle-new §12): the cost-weighted,

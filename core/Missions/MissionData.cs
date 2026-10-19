@@ -1,8 +1,8 @@
 using System.Globalization;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Data;
+using Praedra.Core.Clock;
+using Praedra.Core.Data;
 
-namespace Rebellion.Core.Missions;
+namespace Praedra.Core.Missions;
 
 /// <summary>
 /// The mission kinds, numbered by their MISSNSD record id (Traced, missions/01). Only the agent missions, Reconnaissance, the three Research
@@ -19,7 +19,7 @@ public enum MissionKind
 }
 
 /// <summary>
-/// One MISSNSD row (data/original/mission-records.csv, read from the 1998 file by importer/) plus its Foilable flag (data/design/mission-foilable.csv,
+/// One MISSNSD row (data/classic/mission-records.csv, read from the Classic file by importer/) plus its Foilable flag (data/design/mission-foilable.csv,
 /// the sheet's DEFAULT fall-back table). Timer = <c>TimerMin + rand(0..TimerSpread)</c> days. rule: m5-missions §Mission records (data), §3 (Foilable).
 /// </summary>
 /// <remarks>
@@ -37,7 +37,7 @@ public sealed record MissionRecord(MissionKind Kind, bool Alliance, bool Empire,
 public readonly record struct TableRow(int Threshold, int Value);
 
 /// <summary>
-/// The numbers of the mission sheet that are data (key,value,source; each row carries its tag): the GNPRTB rows of data/original/mission-numbers.csv
+/// The numbers of the mission sheet that are data (key,value,source; each row carries its tag): the GNPRTB rows of data/classic/mission-numbers.csv
 /// merged with data/design/mission-numbers.csv (numbers that are not one file value).
 /// rule: m5-missions §Numbers; CLAUDE.md hard rule 6.
 /// </summary>
@@ -66,7 +66,7 @@ public sealed record MissionNumbers(
 
 /// <summary>
 /// Every mission data file, read once and immutable: the MISSNSD records, the Foilable fall-back, the ten *MSTB tables and FOILTB (every row, read
-/// from the 1998 files by importer/), the numbers, and the decoy table (FDECOYTB; the importer checks that TDECOYTB is identical). Data without a
+/// from the Classic files by importer/), the numbers, and the decoy table (FDECOYTB; the importer checks that TDECOYTB is identical). Data without a
 /// decoy table (<see cref="DecoyTable"/> null) refuses a decoy <c>RuleMissing</c>. rule: m5-missions §Mission records, §Mission tables, §3;
 /// B1-own-importer §Work 4 (Missing rules 1 and 2 are filled by the importer).
 /// </summary>
@@ -134,7 +134,7 @@ public sealed class MissionData
     /// <summary>The same data with other key targets (tests).</summary>
     public MissionData WithKeyTargets(IReadOnlyDictionary<int, int> keyTargets) => new(_records.Values, _tables, Numbers, DecoyTable, keyTargets);
 
-    /// <summary>Records and tables from data/original; numbers from data/original merged with data/design; the rest from data/design. rule: B1-own-importer §Work 3, 4.</summary>
+    /// <summary>Records and tables from data/classic; numbers from data/classic merged with data/design; the rest from data/design. rule: B1-own-importer §Work 3, 4.</summary>
     public static MissionData Load(string original, string design) => Parse(
         CsvTable.Load(Path.Combine(original, RecordsFile)), CsvTable.Load(Path.Combine(original, TablesFile)),
         CsvTable.LoadMerged(original, design, MissionNumbers.FileName), CsvTable.Load(Path.Combine(design, FoilableFile)),

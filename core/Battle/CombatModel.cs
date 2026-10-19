@@ -1,6 +1,6 @@
-namespace Rebellion.Core.Battle;
+namespace Praedra.Core.Battle;
 
-/// <summary>Which battle engine runs when two sides meet. DEFAULT New (Paul, 2026-10-18; Classic = the 1998 battle, opt-in). rule: m4-battle-new §Rule (New) (second ruleset).</summary>
+/// <summary>Which battle engine runs when two sides meet. DEFAULT New (Paul, 2026-10-18; Classic = the Classic battle, opt-in). rule: m4-battle-new §Rule (New) (second ruleset).</summary>
 public enum BattleRuleset { Classic = 0, New = 1 }
 
 /// <summary>
@@ -17,7 +17,7 @@ public sealed record NewBattleParams
     public bool LaserPenetratesShield { get; init; }
     /// <summary>
     /// Tractor beams hold retreat: a ship with tractor_beam_power &gt; 0 and its tractor counter at 0 holds one smaller enemy ship (lower max hull) that
-    /// tries to jump out of the battle, so it stays on the field. New rules only (the Classic engine never reads it; in the 1998 game tractors do not
+    /// tries to jump out of the battle, so it stays on the field. New rules only (the Classic engine never reads it; in Classic tractors do not
     /// block retreat). Decided Paul 2026-10-16 (battle only); DEFAULT on. rule: m4-retreat-damage-repair §6.
     /// </summary>
     public bool TractorBeamsHoldRetreat { get; init; } = true;

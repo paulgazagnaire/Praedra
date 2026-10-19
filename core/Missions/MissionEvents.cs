@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Missions;
+namespace Praedra.Core.Missions;
 
 // ---- orders. rule: m5-missions §Orders (all step 1, in order sequence; a rejection changes nothing; the same entry point for player and AI).
 // Id lists are plain lists so a queued order saves and loads.

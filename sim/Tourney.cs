@@ -1,9 +1,9 @@
 using System.Collections.Concurrent;
 using System.Globalization;
-using Rebellion.Core.AI;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Control;
-using Rebellion.Core.Setup;
+using Praedra.Core.AI;
+using Praedra.Core.Clock;
+using Praedra.Core.Control;
+using Praedra.Core.Setup;
 
 // AI tournament (m6 AI trainer, ai/12 P11 "headless AI-vs-AI harness"). Plays every seed twice, A as the Empire against B as the Alliance and
 // then the other way round, so the side a level plays cancels out. Reads state and events only; draws no random numbers itself.

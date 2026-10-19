@@ -1,8 +1,8 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Ships;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Ships;
 
-namespace Rebellion.Core.Battle;
+namespace Praedra.Core.Battle;
 
 /// <summary>
 /// A Classic battle between two compositions of ship classes with no game around it (synthetic system: every retreat has a destination unless

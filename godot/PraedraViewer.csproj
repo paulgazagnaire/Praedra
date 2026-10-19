@@ -1,29 +1,29 @@
 <Project Sdk="Godot.NET.Sdk/4.7.1">
-  <!-- Throwaway debug viewer (P1.3). Standalone: NOT part of Rebellion.sln (CI has no Godot SDK). -->
+  <!-- Throwaway debug viewer (P1.3). Standalone: NOT part of Praedra.sln (CI has no Godot SDK). -->
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <Nullable>disable</Nullable>
-    <RootNamespace>RebellionViewer</RootNamespace>
-    <AssemblyName>RebellionViewer</AssemblyName>
+    <RootNamespace>PraedraViewer</RootNamespace>
+    <AssemblyName>PraedraViewer</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- The real rules core: the viewer never re-implements rules. -->
-    <ProjectReference Include="..\core\Rebellion.Core.csproj" />
+    <ProjectReference Include="..\core\Praedra.Core.csproj" />
   </ItemGroup>
 
   <!-- Godot imports .csv as translation tables and drops them from exports, so the data tables are copied next to the
-       project as data/design/*.txt and data/original/*.txt (untracked; not original/raw, which the game never reads) before every build. At start the game copies them
+       project as data/design/*.txt and data/classic/*.txt (untracked; not classic/raw, which the game never reads) before every build. At start the game copies them
        to the user folder as .csv and loads them with the core's GameData.Load (it needs real files). -->
   <Target Name="CopyDesignData" BeforeTargets="BeforeBuild">
     <ItemGroup>
       <DesignCsv Include="$(MSBuildThisFileDirectory)..\data\design\*.csv" />
       <DayOneCsv Include="$(MSBuildThisFileDirectory)..\data\design\day-one\*.csv" />
-      <OriginalCsv Include="$(MSBuildThisFileDirectory)..\data\original\*.csv" />
+      <ClassicCsv Include="$(MSBuildThisFileDirectory)..\data\classic\*.csv" />
     </ItemGroup>
     <Copy SourceFiles="@(DesignCsv)" DestinationFiles="@(DesignCsv->'$(MSBuildThisFileDirectory)data\design\%(Filename).txt')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(DayOneCsv)" DestinationFiles="@(DayOneCsv->'$(MSBuildThisFileDirectory)data\design\day-one\%(Filename).txt')" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="@(OriginalCsv)" DestinationFiles="@(OriginalCsv->'$(MSBuildThisFileDirectory)data\original\%(Filename).txt')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(ClassicCsv)" DestinationFiles="@(ClassicCsv->'$(MSBuildThisFileDirectory)data\classic\%(Filename).txt')" SkipUnchangedFiles="true" />
   </Target>
 </Project>

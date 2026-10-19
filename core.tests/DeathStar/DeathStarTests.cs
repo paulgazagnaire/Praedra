@@ -1,21 +1,21 @@
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Control;
-using Rebellion.Core.DeathStar;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Fog;
-using Rebellion.Core.Missions;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Victory;
-using Rebellion.Core.Support;
-using Rebellion.Core.Tests.Economy;
-using Rebellion.Core.Tests.Missions;
-using static Rebellion.Core.Tests.DeathStar.DsWorld;
-using Rebellion.Core.Tests.Control;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Control;
+using Praedra.Core.DeathStar;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Fog;
+using Praedra.Core.Missions;
+using Praedra.Core.Setup;
+using Praedra.Core.Victory;
+using Praedra.Core.Support;
+using Praedra.Core.Tests.Economy;
+using Praedra.Core.Tests.Missions;
+using static Praedra.Core.Tests.DeathStar.DsWorld;
+using Praedra.Core.Tests.Control;
 
-namespace Rebellion.Core.Tests.DeathStar;
+namespace Praedra.Core.Tests.DeathStar;
 
 /// <summary>The tests of m5-death-star §Tests (DS1 to DS14), plus the switch defaults and a few cases the table leaves implicit.</summary>
 public class DeathStarTests
@@ -242,7 +242,7 @@ public class DeathStarTests
         Assert.Equal(3, w.Game.AudienceOf(hqEvent.Index));
         Assert.Equal(Side.Empire, w.Host.Victory.Winner); // the victory step of the same day (slot 6.11)
         Assert.Equal(1, w.Game.Day);
-        Assert.Equal(Side.Empire, Assert.Single(w.Events<Rebellion.Core.Victory.GameWon>()).Winner);
+        Assert.Equal(Side.Empire, Assert.Single(w.Events<Praedra.Core.Victory.GameWon>()).Winner);
     }
 
     // m5-setup-and-victory SV52 (B4 §15): a destroyed Coruscant meets the Alliance's place term; in a standard game the key captures are still needed
@@ -262,7 +262,7 @@ public class DeathStarTests
         if (allianceWins) Assert.Equal("Coruscant is destroyed", w.Host.Victory.Reason);
     }
 
-    // m5-death-star DS7. (B5a, 2026-10-18) Run under both control rules: AssaultOnly (the DEFAULT until the AI copes) and Derived (1998).
+    // m5-death-star DS7. (B5a, 2026-10-18) Run under both control rules: AssaultOnly (the DEFAULT until the AI copes) and Derived (Classic).
     [Theory]
     [InlineData(ControlRule.AssaultOnly)]
     [InlineData(ControlRule.Derived)]
@@ -295,7 +295,7 @@ public class DeathStarTests
         Assert.Equal((Sa, 1, 5), (sector.Sector, sector.Strike, sector.Systems.Items.Count));
     }
 
-    // m5-death-star DS8. (B5a, 2026-10-18) Run under both control rules: AssaultOnly (the DEFAULT until the AI copes) and Derived (1998).
+    // m5-death-star DS8. (B5a, 2026-10-18) Run under both control rules: AssaultOnly (the DEFAULT until the AI copes) and Derived (Classic).
     [Theory]
     [InlineData(ControlRule.AssaultOnly)]
     [InlineData(ControlRule.Derived)]
@@ -357,7 +357,7 @@ public class DeathStarTests
         w.Host.Economy.AddFacility(A3, FacilityKind.OrbitalShipyard); // even a yard put there by hand cannot build: the order is refused first
         long build = w.Host.Construction.SubmitBuild(Side.Empire, A3, YardFamily.Shipyard, Corvette, 1);
         long assault = w.Host.Assault.SubmitAssault(Side.Empire, stops, A3);
-        long bombard = w.Host.Bombardment.SubmitBombard(Side.Empire, stops, A3, Rebellion.Core.Defenses.BombardCategory.General);
+        long bombard = w.Host.Bombardment.SubmitBombard(Side.Empire, stops, A3, Praedra.Core.Defenses.BombardCategory.General);
         long capture = w.Host.Control.SubmitCapture(Side.Empire, A3); // (B5a, 2026-10-17) under derived control a capture is troops landing
         var agent = w.Person(Luke, A2);
         agent.Skills[(int)Skill.Espionage] = 60;

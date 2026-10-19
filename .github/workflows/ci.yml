@@ -13,8 +13,8 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-      - run: dotnet restore Rebellion.sln
-      - run: dotnet build Rebellion.sln --no-restore -c Release
-      - run: dotnet test Rebellion.sln --no-build -c Release --logger "console;verbosity=normal"
-      # The Godot front end is not in Rebellion.sln; build it too so a core API change can't silently break the playable game (QA-23).
-      - run: dotnet build godot/RebellionViewer.csproj -c Release
+      - run: dotnet restore Praedra.sln
+      - run: dotnet build Praedra.sln --no-restore -c Release
+      - run: dotnet test Praedra.sln --no-build -c Release --logger "console;verbosity=normal"
+      # The Godot front end is not in Praedra.sln; build it too so a core API change can't silently break the playable game (QA-23).
+      - run: dotnet build godot/PraedraViewer.csproj -c Release

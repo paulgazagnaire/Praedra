@@ -1,14 +1,14 @@
-using Rebellion.Core.Assault;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Control;
-using Rebellion.Core.Defenses;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Support;
-using Rebellion.Core.Tests.Defenses;
-using Rebellion.Core.Troops;
+using Praedra.Core.Assault;
+using Praedra.Core.Clock;
+using Praedra.Core.Control;
+using Praedra.Core.Defenses;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Support;
+using Praedra.Core.Tests.Defenses;
+using Praedra.Core.Troops;
 
-namespace Rebellion.Core.Tests.Assault;
+namespace Praedra.Core.Tests.Assault;
 
 // m3-assault, tests A1 to A21 (A13 to A16 are in AssaultStatTests), then extra tests named after the rule they check.
 // Real data files. Stub generator unless a test says seeded. Events of slot 5.2 carry day = K + 1.

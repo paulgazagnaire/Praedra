@@ -1,10 +1,10 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Support;
-using Rebellion.Core.Victory;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Economy;
+using Praedra.Core.Support;
+using Praedra.Core.Victory;
 
-namespace Rebellion.Core.Setup;
+namespace Praedra.Core.Setup;
 
 /// <summary>What a new game needs: a seed, one of the five day-one presets, optional setting overrides and data.</summary>
 public sealed record NewGameOptions
@@ -94,7 +94,7 @@ public static class NewGame
             foreach (var (side, cls, count) in forces.HqUnits)
                 for (int i = 0; i < count; i++) eco.AddObject(side, cls, hqSys);
 
-        // The full control refresh at the end of the deal (1998 setup stage 0x17): every holder is worked out from its regiments and support. The
+        // The full control refresh at the end of the deal (Classic setup stage 0x17): every holder is worked out from its regiments and support. The
         // garrisons above keep every held world held, and neutral support stays between 41 and 59, so nothing changes (B5a-14).
         // rule: m2-control-and-capture §How control changes (B5a section 9, Setup)
         host.Control.SetupNewGame();
@@ -161,7 +161,7 @@ public static class NewGame
             for (int i = 0; i < refs; i++) if (eco.CheckPlace(sys, FacilityKind.Refinery) == null) eco.AddFacility(sys, FacilityKind.Refinery);
         }
 
-        // garrison: the sheet's required N for the holder's support (N = ceil((60 - s) / 10) below 60, else 0), at least min_garrison (1998 = 0,
+        // garrison: the sheet's required N for the holder's support (N = ceil((60 - s) / 10) below 60, else 0), at least min_garrison (Classic = 0,
         // B4 §6: worlds at 60 or more, Coruscant, Yavin and the HQ get none; 0 only with the Classic setup, part B, so 1 until then); extra regiments at the base to load and send
         // rule: m5-setup-and-victory §P6 ([EXE-own] 0x51ab20); m2-uprisings-and-garrison §Required garrison N (no system starts in uprising)
         string gClass = forces.Str(side, "garrison_class"); int minG = minGarrison ?? forces.Int(side, "min_garrison");

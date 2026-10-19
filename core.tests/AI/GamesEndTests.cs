@@ -1,15 +1,15 @@
-using Rebellion.Core.AI;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Setup;
+using Praedra.Core.AI;
+using Praedra.Core.Clock;
+using Praedra.Core.Setup;
 using Xunit.Abstractions;
 
-namespace Rebellion.Core.Tests.AI;
+namespace Praedra.Core.Tests.AI;
 
 // QA-12: the Medium AI against itself must finish its games. The 8-seed floors passed #68 while 11 of 16 Medium mirrors stopped ending (its
 // leader marks kept the Emperor home from day one, so he no longer put down uprisings, and the Empire never finished the last Rebel worlds;
 // the marks are DEFAULT off since #75). Same set-up as
 // `sim tourney --a medium --b medium` (MedA start, default settings, fog on both sides). The games end through the playable slice's
-// "the other side holds no system" rule (VictoryRules, DEFAULT; the 1998 game has no such ending, B6c / RE lead 2026-10-18) or the
+// "the other side holds no system" rule (VictoryRules, DEFAULT; Classic has no such ending, B6c / RE lead 2026-10-18) or the
 // standard terms.
 // Over seeds 1 to 8, the games with no winner by day 3000:
 //   fe1a848 (#68 leader marks on, no AI Recruitment):       5 of 8 (seeds 2, 3, 4, 5, 8)

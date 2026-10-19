@@ -1,12 +1,12 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Data;
-using Rebellion.Core.Defenses;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Support;
+using Praedra.Core.Clock;
+using Praedra.Core.Data;
+using Praedra.Core.Defenses;
+using Praedra.Core.Economy;
+using Praedra.Core.Support;
 
-namespace Rebellion.Core.Tests.Defenses;
+namespace Praedra.Core.Tests.Defenses;
 
-// B7-bombardment (the 1998 bombardment): QA checks Q74 to Q83, then the switches C1 to C9 and the rules of sections 3 to 8 by name.
+// B7-bombardment (the Classic bombardment): QA checks Q74 to Q83, then the switches C1 to C9 and the rules of sections 3 to 8 by name.
 // Stub dice are given by range (Expect) where draws of several kinds interleave; statistical tests use the seeded game generator. The return-fire
 // tests order Civilian on a world with no civilian facility, so no hit draws anything and only the return fire is seen.
 public class B7BombardmentTests
@@ -219,7 +219,7 @@ public class B7BombardmentTests
         Assert.Equal(lost, penalties);            // -20 exactly when the mine fell
     }
 
-    // B7-bombardment Q80 (exact) and §5.3: x = 0, the pick over two civilian facilities is drawn and ignored (the 1998 bug: the first one is rolled),
+    // B7-bombardment Q80 (exact) and §5.3: x = 0, the pick over two civilian facilities is drawn and ignored (the Classic bug: the first one is rolled),
     // the roll uses up no hit, and the -20 applies
     [Fact]
     public void Q80_CollateralAlwaysRollsTheFirstCivilianFacility()
@@ -340,7 +340,7 @@ public class B7BombardmentTests
         Assert.Equal(destroyedOfTen, destroyed);
     }
 
-    // B7-bombardment §7 (C8): the building defences come from the original files (MANFACSD and PROFACSD word 12), the Rebel HQ is 9 (ALLFACSD)
+    // B7-bombardment §7 (C8): the building defences come from the Classic data files (MANFACSD and PROFACSD word 12), the Rebel HQ is 9 (ALLFACSD)
     [Fact]
     public void BuildingDefencesAreData()
     {
@@ -350,7 +350,7 @@ public class B7BombardmentTests
         Assert.Equal(new[] { 5, 4, 2, 1, 3, 3 }, new[] { "KDY-150", "LNR Series I", "GenCore Level I", "Death Star Shield", "LNR Series II", "GenCore Level II" }
             .Select(d.FacilityDefense));
         Assert.Equal(9, d.HqDefense);
-        var original = CsvTable.Load(Path.Combine(TestData.OriginalDir, DefenseData.BombardmentFile));
+        var original = CsvTable.Load(Path.Combine(TestData.ClassicDir, DefenseData.BombardmentFile));
         Assert.Equal(8, Enumerable.Range(0, original.RowCount).Count(r => original.Get(r, "kind") == "facility"));
     }
 
@@ -361,14 +361,14 @@ public class B7BombardmentTests
         var p = new BombardParams();
         Assert.Equal((true, true, true, true, true, false),
             (p.BombardWastedHits, p.BatteryReturnFire, p.BombardFleetsTogether, p.BombardDamageScales, p.MilitaryCollateral, p.HqBombardable));
-        Assert.Equal(p, Rebellion.Core.Setup.GameHost.New(1).Bombardment.Params);
+        Assert.Equal(p, Praedra.Core.Setup.GameHost.New(1).Bombardment.Params);
     }
 
     // B7-bombardment §4.4.5: CSCRHTTB (the critical-hit table) has the thresholds the module uses: 0, 16, 31, 41, 46 over rand(0..50)
     [Fact]
     public void CriticalTableIsTheOriginalFile()
     {
-        var t = CsvTable.Load(Path.Combine(TestData.OriginalDir, "raw", "CSCRHTTB.csv"));
+        var t = CsvTable.Load(Path.Combine(TestData.ClassicDir, "raw", "CSCRHTTB.csv"));
         var p = new BombardParams();
         Assert.Equal(new[] { 0, p.CriticalShieldUpTo + 1, p.CriticalWeaponsUpTo + 1, p.CriticalTractorUpTo + 1, p.CriticalSpeedUpTo + 1 },
             Enumerable.Range(0, t.RowCount).Select(r => t.GetInt(r, "threshold")));

@@ -1,12 +1,12 @@
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.DeathStar;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Map;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Tests.Economy;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.DeathStar;
+using Praedra.Core.Economy;
+using Praedra.Core.Map;
+using Praedra.Core.Setup;
+using Praedra.Core.Tests.Economy;
 
-namespace Rebellion.Core.Tests.DeathStar;
+namespace Praedra.Core.Tests.DeathStar;
 
 /// <summary>
 /// A full <see cref="GameHost"/> on a small map for the Death Star tests (m5-death-star §Tests). Sector SA has six systems on a line, A1 to A6
@@ -17,7 +17,7 @@ internal sealed class DsWorld
 {
     public const string A1 = "A1", A2 = "A2", A3 = "A3", A4 = "A4", A5 = "A5", A6 = "A6", B1 = "B1", B2 = "B2", B3 = "B3";
     public const string DeathStarClass = "Death Star", Isd = "Imperial Star Destroyer", Corvette = "Corellian Corvette";
-    // character record ids (data/original/characters.csv): four Alliance minors and two majors
+    // character record ids (data/classic/characters.csv): four Alliance minors and two majors
     public const int Luke = 578, Vader = 641, Drayson = 840, Borsk = 841, Tura = 842, Derlin = 843;
     public const string Sa = "SA", Sb = "SB";
 
@@ -38,10 +38,10 @@ internal sealed class DsWorld
     public StubRng? Stub { get; }
     public GameHost Host { get; private set; }
     public Game Game => Host.Game;
-    public Rebellion.Core.DeathStar.DeathStarModule Ds => Host.DeathStar;
+    public Praedra.Core.DeathStar.DeathStarModule Ds => Host.DeathStar;
     private readonly GameSettings _settings;
 
-    public DsWorld(DeathStarParams? ds = null, CharacterParams? ch = null, ulong? seed = null, GameSettings? settings = null, Rebellion.Core.Control.ControlRule? rule = null)
+    public DsWorld(DeathStarParams? ds = null, CharacterParams? ch = null, ulong? seed = null, GameSettings? settings = null, Praedra.Core.Control.ControlRule? rule = null)
     {
         // B5b 2026-10-18: RefuseOverdrawOrders off for the same reason autoscrap is out of reach: the small map has no mines (capacity 0).
         _settings = (settings ?? new GameSettings { IncidentsEnabled = false, DebugOrdersEnabled = true, Economy = new EconomyParams { ScrapPeriod = 1_000_000 }, RefuseOverdrawOrders = false })

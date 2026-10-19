@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Tests.Clock;
+namespace Praedra.Core.Tests.Clock;
 
 // rule: m1-clock-and-orders §The clock, §Order of work inside one Step, §Orders in, §Events out.
 // The sheet's tests K1-K15 mostly need fleets; these are the ones that apply to the bare loop,

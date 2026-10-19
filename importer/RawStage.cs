@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Rebellion.Importer;
+namespace Praedra.Importer;
 
 /// <summary>
 /// Stage 1: the game files to <c>raw/&lt;FILE&gt;.csv</c>, one per .DAT (header row, then every word in file order, word 5 kept packed) and

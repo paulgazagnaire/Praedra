@@ -1,10 +1,10 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Data;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Data;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
 
-namespace Rebellion.Core.Research;
+namespace Praedra.Core.Research;
 
 /// <summary>
 /// Research and tech unlocks: three tracks per side (Ship, Troop, Facility), a level and a stock of points each. An item is researched when its

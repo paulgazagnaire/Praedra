@@ -1,12 +1,12 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Control;
-using Rebellion.Core.Defenses;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Support;
-using Rebellion.Core.Troops;
+using Praedra.Core.Clock;
+using Praedra.Core.Control;
+using Praedra.Core.Defenses;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Support;
+using Praedra.Core.Troops;
 
-namespace Rebellion.Core.Assault;
+namespace Praedra.Core.Assault;
 
 /// <summary>
 /// Planetary assault: fleet <paramref name="Fleet"/> lands its regiments on <paramref name="System"/>. Checked in step 1 (rejection) and
@@ -35,7 +35,7 @@ public sealed record AssaultParams
     /// <summary>
     /// At most this many attackers land on a win: 6 = the garrison formula at support 0, ceil((GNPRTB 7761 - 0) / -GNPRTB 7762) = ceil(60 / 10)
     /// (<c>0x559fe0(side, 0)</c> -> <c>0x55a050(0)</c>, [EXE-own], B5a section 3; closes Open question 1). Lowest id first stands in for the
-    /// 1998 child order (fleets, ships, regiments), DEFAULT (B5a decision 2).
+    /// Classic child order (fleets, ships, regiments), DEFAULT (B5a decision 2).
     /// </summary>
     public int LandingCap { get; init; } = 6;
     /// <summary>Passes over the attackers. DEFAULT 1; 0 = repeat passes until one side is empty (the alternative reading). Open question 2.</summary>

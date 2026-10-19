@@ -1,6 +1,6 @@
-using Rebellion.Core.Travel;
+using Praedra.Core.Travel;
 
-namespace Rebellion.Core.Fleets;
+namespace Praedra.Core.Fleets;
 
 /// <summary>A system on a planned path where the planning side's picture shows an enemy gravity-well ship, and the day that picture was taken. rule: m1-travel §Path rule (3).</summary>
 public sealed record KnownTrap(string System, int SeenDay);

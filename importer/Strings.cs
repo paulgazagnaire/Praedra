@@ -2,7 +2,7 @@ using System.Buffers.Binary;
 using System.Reflection.PortableExecutable;
 using System.Text;
 
-namespace Rebellion.Importer;
+namespace Praedra.Importer;
 
 /// <summary>
 /// The RT_STRING table of a Windows resource DLL (TEXTSTRA.DLL): blocks of 16 counted UTF-16 strings, string id = (block id - 1) * 16 + position.

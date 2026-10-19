@@ -1,6 +1,6 @@
-using Rebellion.Core.Map;
+using Praedra.Core.Map;
 
-namespace Rebellion.Core.Travel;
+namespace Praedra.Core.Travel;
 
 /// <summary>InTransit: only from a fleet's move plan (the fleet already flies an order). rule: m1-travel §Orders in transit.</summary>
 public enum PathStatus { Ok, Unreachable, AlreadyThere, Immobile, UnknownSystem, InTransit }
@@ -31,7 +31,7 @@ public sealed class PathResult
 /// <summary>
 /// How ships travel. rule: m1-travel §Rule (Decided, Paul 2026-10-16).
 /// Routes (New): free straight-line travel anywhere, plus the hyperspace route links, which are faster on the stretch between their two ends.
-/// Straight (Classic): the 1998 straight line, start to destination in one leg (Traced: the original has no lanes, planets/11).
+/// Straight (Classic): the Classic straight line, start to destination in one leg (Traced: the original has no lanes, planets/11).
 /// </summary>
 public enum TravelMode
 {

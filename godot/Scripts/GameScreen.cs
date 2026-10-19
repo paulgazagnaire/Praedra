@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Godot;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Map;
+using Praedra.Core.Clock;
+using Praedra.Core.Fleets;
+using Praedra.Core.Map;
 
-using Side = Rebellion.Core.Clock.Side;
+using Side = Praedra.Core.Clock.Side;
 
-namespace RebellionViewer;
+namespace PraedraViewer;
 
 /// <summary>
 /// The game screen: top bar, galaxy map, system and fleet panels, message log. All rules live in the core; this reads the state through the
@@ -95,11 +95,11 @@ public partial class GameScreen : Control
         _fleets.Planned = () => S.PlannedMoves;
         _fleets.EnemyFleets = () => S.Fog.VisibleFleets(S.Player);
         _fleets.CharacterRoutes = CharacterRoutes;
-        _fleets.HqRoute = () => S.OwnHq is { Status: Rebellion.Core.Fog.HqStatus.InTransit } h ? (h.Path, h.HopIndex, GameSession.HqArrivalDay(h)) : null;
+        _fleets.HqRoute = () => S.OwnHq is { Status: Praedra.Core.Fog.HqStatus.InTransit } h ? (h.Path, h.HopIndex, GameSession.HqArrivalDay(h)) : null;
         _fleets.Bind(S.Game, G);
 
         // Start with the map centred on the player's headquarters.
-        string home = S.MyHqSystem ?? (S.OwnHq is { Status: Rebellion.Core.Fog.HqStatus.InTransit } th ? th.Path[^1] : GameBoot.EmpireCapital);
+        string home = S.MyHqSystem ?? (S.OwnHq is { Status: Praedra.Core.Fog.HqStatus.InTransit } th ? th.Path[^1] : GameBoot.EmpireCapital);
         if (G.TryFindSystem(home, out int homeIdx)) { _view.FocusOn(homeIdx, 2.4f); }
         S.Say($"You lead the {S.NameOf(S.Player)}. Your headquarters is {home}. Press Play (or Space) to start the clock; the How to play button explains the rest.", MsgKind.Good, home);
         foreach (var m in S.Messages) AddLogItem(m);
@@ -394,7 +394,7 @@ public partial class GameScreen : Control
         var lines = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         lines.AddThemeConstantOverride("separation", 6);
         sc.AddChild(lines);
-        lines.AddChild(new Label { Text = "BATTLE RULES (this game): " + GameBoot.RulesName(S.Rules) + (S.Rules == Rebellion.Core.Battle.BattleRuleset.New ? ". Ships fight gun by gun, so the weapons they carry decide the fight." : ". Battles play as in the 1998 game."), AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(730, 0) });
+        lines.AddChild(new Label { Text = "BATTLE RULES (this game): " + GameBoot.RulesName(S.Rules) + (S.Rules == Praedra.Core.Battle.BattleRuleset.New ? ". Ships fight gun by gun, so the weapons they carry decide the fight." : ". Battles play as in Classic."), AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(730, 0) });
         foreach (var line in HowToLines)
             lines.AddChild(new Label { Text = line, AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(730, 0) });
         var ok = Btn("Got it - let's play", CloseHowTo);
@@ -469,7 +469,7 @@ public partial class GameScreen : Control
         string sys = side == S.Player ? S.MyHqSystem : S.EnemyHqSystem;
         if (sys == null)
         {
-            if (side == S.Player && S.OwnHq is { Status: Rebellion.Core.Fog.HqStatus.InTransit } h)
+            if (side == S.Player && S.OwnHq is { Status: Praedra.Core.Fog.HqStatus.InTransit } h)
             {
                 Toast(HqMovingText(h));
                 if (G.TryFindSystem(h.Path[^1], out int dest)) _view.Centre(dest);
@@ -484,7 +484,7 @@ public partial class GameScreen : Control
 
     const string EnemyHqUnknownText = "The Rebel HQ location is unknown. Your picture of the galaxy has never shown it: explore Rebel systems to find it.";
 
-    static string HqMovingText(Rebellion.Core.Fog.HqState h) => $"HQ moving to {h.Path[^1]}, arrives day {GameSession.HqArrivalDay(h)}";
+    static string HqMovingText(Praedra.Core.Fog.HqState h) => $"HQ moving to {h.Path[^1]}, arrives day {GameSession.HqArrivalDay(h)}";
 
     /// <summary>The HQ buttons and the HQ line follow what the player's side knows (rule: m5-fog-and-hq §N5 KnownHq).</summary>
     void RefreshHq()
@@ -495,7 +495,7 @@ public partial class GameScreen : Control
         _enemyHqButton.TooltipText = known ? "Centre the map on the enemy headquarters: the system you must take to win" : EnemyHqUnknownText;
         var h = S.OwnHq;
         string line = h == null ? null
-            : h.Status == Rebellion.Core.Fog.HqStatus.InTransit ? HqMovingText(h) + "."
+            : h.Status == Praedra.Core.Fog.HqStatus.InTransit ? HqMovingText(h) + "."
             : S.PendingHqMove != null ? $"HQ move to {S.PendingHqMove} starts when the next day begins."
             : null;
         _hqStatusLabel.Text = line ?? "";
@@ -585,7 +585,7 @@ public partial class GameScreen : Control
     void RefreshTop()
     {
         _dayLabel.Text = $"Day {S.Game.Day}";
-        _sideLabel.Text = $"  {S.NameOf(S.Player)} - {(S.Rules == Rebellion.Core.Battle.BattleRuleset.New ? "New" : "Classic")} battles";
+        _sideLabel.Text = $"  {S.NameOf(S.Player)} - {(S.Rules == Praedra.Core.Battle.BattleRuleset.New ? "New" : "Classic")} battles";
         _sideLabel.TooltipText = "Your side. Space battle rules: " + GameBoot.RulesName(S.Rules) + " (chosen at the start of the game).";
         _sideLabel.AddThemeColorOverride("font_color", S.Player == Side.Empire ? GalaxyView.EmpireColor : GalaxyView.AllianceColor);
         var eco = S.Host.Economy;

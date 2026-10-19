@@ -1,6 +1,6 @@
-using Rebellion.Core.Data;
+using Praedra.Core.Data;
 
-namespace Rebellion.Core.Map;
+namespace Praedra.Core.Map;
 
 /// <summary>Energy, raw material and populated flag for one system. Source: data/design/slot-values-draft.csv (economy spec, draft).</summary>
 public readonly record struct SystemSlots(string Name, int Energy, int Raw, bool Populated);

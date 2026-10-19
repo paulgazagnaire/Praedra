@@ -1,21 +1,21 @@
-using Rebellion.Core.Map;
+using Praedra.Core.Map;
 
-namespace Rebellion.Core.Tests;
+namespace Praedra.Core.Tests;
 
 /// <summary>Finds the repo's data folders and builds small synthetic galaxies for tests.</summary>
 internal static class TestData
 {
     public static readonly string RepoRoot = FindRoot();
     public static readonly string DesignDir = Path.Combine(RepoRoot, "data", "design");
-    public static readonly string OriginalDir = Path.Combine(RepoRoot, "data", "original");
+    public static readonly string ClassicDir = Path.Combine(RepoRoot, "data", "classic");
 
     /// <summary>
-    /// CSV text of data/original/<paramref name="file"/> merged with data/design/<paramref name="file"/> (the loaders' view, rule: B1-own-importer
+    /// CSV text of data/classic/<paramref name="file"/> merged with data/design/<paramref name="file"/> (the loaders' view, rule: B1-own-importer
     /// §Work 3), under the original header, for tests that edit the real file as text.
     /// </summary>
     public static string MergedText(string file)
     {
-        var t = Rebellion.Core.Data.CsvTable.LoadMerged(OriginalDir, DesignDir, file);
+        var t = Praedra.Core.Data.CsvTable.LoadMerged(ClassicDir, DesignDir, file);
         static string Q(string v) => v.IndexOfAny(new[] { ',', '"', '\n' }) < 0 ? v : "\"" + v.Replace("\"", "\"\"") + "\"";
         return string.Join("\n", new[] { string.Join(",", t.Header) }
             .Concat(Enumerable.Range(0, t.RowCount).Select(r => string.Join(",", t.Header.Select(h => Q(t.Get(r, h))))))) + "\n";
@@ -47,7 +47,7 @@ internal static class TestData
     private static string FindRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "Rebellion.sln"))) dir = dir.Parent;
-        return dir?.FullName ?? throw new InvalidOperationException("Rebellion.sln not found above the test output folder.");
+        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "Praedra.sln"))) dir = dir.Parent;
+        return dir?.FullName ?? throw new InvalidOperationException("Praedra.sln not found above the test output folder.");
     }
 }

@@ -1,13 +1,13 @@
-using Rebellion.Core.Battle;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Control;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Fog;
-using Rebellion.Core.Support;
-using Rebellion.Core.Troops;
+using Praedra.Core.Battle;
+using Praedra.Core.Clock;
+using Praedra.Core.Control;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Fog;
+using Praedra.Core.Support;
+using Praedra.Core.Troops;
 
-namespace Rebellion.Core.Characters;
+namespace Praedra.Core.Characters;
 
 /// <summary>
 /// What moves loyalty (B2c): the four game events that call <see cref="CharacterModule.ShiftLoyalty"/>, reacting to the event at the moment it is

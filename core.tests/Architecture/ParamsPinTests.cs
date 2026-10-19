@@ -1,25 +1,25 @@
-using Rebellion.Core.Assault;
-using Rebellion.Core.Characters;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Data;
-using Rebellion.Core.Defenses;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fog;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Support;
-using Rebellion.Core.Travel;
+using Praedra.Core.Assault;
+using Praedra.Core.Characters;
+using Praedra.Core.Construction;
+using Praedra.Core.Data;
+using Praedra.Core.Defenses;
+using Praedra.Core.Economy;
+using Praedra.Core.Fog;
+using Praedra.Core.Setup;
+using Praedra.Core.Support;
+using Praedra.Core.Travel;
 
-namespace Rebellion.Core.Tests.Architecture;
+namespace Praedra.Core.Tests.Architecture;
 
 /// <summary>
-/// Every named GNPRTB / SDPRTB constant in core pinned to the 1998 file (data/original/gnprtb.csv, sdprtb.csv, written by importer/).
+/// Every named GNPRTB / SDPRTB constant in core pinned to the Classic file (data/classic/gnprtb.csv, sdprtb.csv, written by importer/).
 /// rule: B1-own-importer §Tests ("Pin every GNPRTB / SDPRTB number in core to the file"); CLAUDE.md hard rule 6.
 /// </summary>
 public class ParamsPinTests
 {
     private static SortedDictionary<int, int[]> Table(string file)
     {
-        var t = CsvTable.Load(Path.Combine(TestData.OriginalDir, file));
+        var t = CsvTable.Load(Path.Combine(TestData.ClassicDir, file));
         var vs = t.Header.Where(h => h.StartsWith('v')).ToList();
         var d = new SortedDictionary<int, int[]>();
         for (int r = 0; r < t.RowCount; r++) d[t.GetInt(r, "key")] = vs.Select(v => t.GetInt(r, v)).ToArray();
@@ -127,7 +127,7 @@ public class ParamsPinTests
         yield return ("DealParams.WeakBase", deal.WeakBase, S, 0x1e04, 1);
         yield return ("DealParams.BandSpread (0x1e05)", deal.BandSpread, S, 0x1e05, 1);
         // m5-missions §3 Force sensing (B2b)
-        var mis = new Rebellion.Core.Missions.MissionParams();
+        var mis = new Praedra.Core.Missions.MissionParams();
         yield return ("MissionParams.SensedMinForce", mis.SensedMinForce, G, 3585, 1);
         yield return ("MissionParams.SenserMinForce", mis.SenserMinForce, G, 3586, 1);
         yield return ("MissionParams.SenseConstant", mis.SenseConstant, G, 3587, 1);

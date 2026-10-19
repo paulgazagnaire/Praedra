@@ -1,12 +1,12 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Defenses;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Support;
-using Rebellion.Core.Tests.Economy;
-using Rebellion.Core.Tests.Support;
+using Praedra.Core.Clock;
+using Praedra.Core.Defenses;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Support;
+using Praedra.Core.Tests.Economy;
+using Praedra.Core.Tests.Support;
 
-namespace Rebellion.Core.Tests.Defenses;
+namespace Praedra.Core.Tests.Defenses;
 
 /// <summary>
 /// A support world (fleets, economy, support, real files) with the defense and bombardment modules attached. Autoscrap is out of reach
@@ -19,7 +19,7 @@ internal sealed class BombWorld
     public const string Other = "Bespin";
     public const string Imp = "Coruscant";
 
-    public static readonly Lazy<DefenseData> RealData = new(() => DefenseData.Load(TestData.OriginalDir, TestData.DesignDir));
+    public static readonly Lazy<DefenseData> RealData = new(() => DefenseData.Load(TestData.ClassicDir, TestData.DesignDir));
 
     public SupWorld S { get; }
     public DefenseModule Def { get; }
@@ -48,7 +48,7 @@ internal sealed class BombWorld
     /// <summary>The real defense data with one text edit applied to the bombardment-defense file (e.g. another regiment defense).</summary>
     public static DefenseData DataWith(Func<string, string> editBombardFile)
     {
-        string dir = TestData.OriginalDir;
+        string dir = TestData.ClassicDir;
         return DefenseData.Parse(File.ReadAllText(Path.Combine(dir, DefenseData.DefensesFile)), DefenseData.DefensesFile,
             editBombardFile(TestData.MergedText(DefenseData.BombardmentFile)), "test-bombardment-defense.csv");
     }

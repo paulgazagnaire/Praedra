@@ -1,12 +1,12 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Control;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Fog;
-using Rebellion.Core.Setup;
-using static Rebellion.Core.Tests.Fog.FogWorld;
-using Rebellion.Core.Tests.Control;
+using Praedra.Core.Clock;
+using Praedra.Core.Control;
+using Praedra.Core.Fleets;
+using Praedra.Core.Fog;
+using Praedra.Core.Setup;
+using static Praedra.Core.Tests.Fog.FogWorld;
+using Praedra.Core.Tests.Control;
 
-namespace Rebellion.Core.Tests.Fog;
+namespace Praedra.Core.Tests.Fog;
 
 // Fog of war tests FW1 to FW15 of m5-fog-and-hq §Tests, on Map M (FogWorld). Fleet F = one Corellian Corvette (speed 80): a hop of 100
 // map units on a tier 3 lane takes 16 days.
@@ -16,7 +16,7 @@ public class FogTests
     [Fact]
     public void FW1_Day0Pictures()
     {
-        // B4 2026-10-18: with SetupRevealsFacilities on (1998; DEFAULT on since 2026-10-18, explicit here).
+        // B4 2026-10-18: with SetupRevealsFacilities on (Classic; DEFAULT on since 2026-10-18, explicit here).
         var w = new FogWorld(new GameSettings { Fog = new FogParams { SetupRevealsFacilities = true } });
         Assert.Equal(KnowledgeLevel.Charted, w.Fog.Level(Side.Alliance, C0));
         var c0 = w.Pic(Side.Alliance, C0)!;

@@ -1,10 +1,10 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Repair;
-using Rebellion.Core.Setup;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Repair;
+using Praedra.Core.Setup;
 
-namespace Rebellion.Core.Tests.Repair;
+namespace Praedra.Core.Tests.Repair;
 
 // Strategic repair, slot 6.8. rule sheet: m4-retreat-damage-repair section 5 (Traced, batch B3 section 15); tests B3-24 to B3-26 and the
 // sheet's RT tests that still apply.
@@ -225,10 +225,10 @@ public class RepairTests
         var r = GameHost.New(1).Data.Repair;
         Assert.Equal(new RepairRules(false, 30, 2, 30, 2, 10), r);
         Assert.Equal(r, RepairRules.Load(Path.Combine(TestData.DesignDir, RepairRules.FileName)));
-        Assert.Throws<Rebellion.Core.Data.DataLoadException>(() => RepairRules.Parse("key,value,source\nRepairNeedsYard,true,x\n"));
+        Assert.Throws<Praedra.Core.Data.DataLoadException>(() => RepairRules.Parse("key,value,source\nRepairNeedsYard,true,x\n"));
         const string ok = "RepairPeriodDays,30,x\nFastRepairPeriodDays,2,x\nSquadronRepairPeriodDays,30,x\nSquadronFastRepairPeriodDays,2,x\n";
-        Assert.Throws<Rebellion.Core.Data.DataLoadException>(() => RepairRules.Parse("key,value,source\nRepairNeedsYard,maybe,x\n" + ok + "RepairHullDivisor,10,x\n"));
-        Assert.Throws<Rebellion.Core.Data.DataLoadException>(() => RepairRules.Parse("key,value,source\nRepairNeedsYard,true,x\n" + ok + "RepairHullDivisor,0,x\n"));
+        Assert.Throws<Praedra.Core.Data.DataLoadException>(() => RepairRules.Parse("key,value,source\nRepairNeedsYard,maybe,x\n" + ok + "RepairHullDivisor,10,x\n"));
+        Assert.Throws<Praedra.Core.Data.DataLoadException>(() => RepairRules.Parse("key,value,source\nRepairNeedsYard,true,x\n" + ok + "RepairHullDivisor,0,x\n"));
     }
 
     // m4-retreat-damage-repair section 5 (the values are data, not code): RepairNeedsYard on stops repair away from a yard

@@ -1,4 +1,4 @@
-namespace Rebellion.Core.DeathStar;
+namespace Praedra.Core.DeathStar;
 
 /// <summary>
 /// The Death Star's saved state: the systems that were destroyed (forever) and the strikes counted per sector over the whole game. Sorted

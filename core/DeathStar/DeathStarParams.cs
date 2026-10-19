@@ -1,9 +1,9 @@
-using Rebellion.Core.Characters;
+using Praedra.Core.Characters;
 
-namespace Rebellion.Core.DeathStar;
+namespace Praedra.Core.DeathStar;
 
 /// <summary>
-/// What a destroyed planet does to support elsewhere. Classic = 1998: galaxy-wide, the destroyer loses 10 on every core world (GNPRTB 5123/5124,
+/// What a destroyed planet does to support elsewhere. Classic: galaxy-wide, the destroyer loses 10 on every core world (GNPRTB 5123/5124,
 /// threshold 101) and 2 on rim worlds where its support is below 90 (5121/5122), skipping unpopulated and never-held worlds, through the normal
 /// damping (B5c section 3 and decision 1). New = Paul's rule (m5-death-star §2 effect 7: 10 in the sector at the first strike, the second strike
 /// in a sector turns the rest of it). DEFAULT New (Paul's decision stands as the game's rule; Dev lead 2026-10-17).
@@ -27,7 +27,7 @@ public sealed record DeathStarParams
     /// <summary>Trench run in auto-resolved battles. DEFAULT off; on has no rule (Missing: ships/12 asks for a design), so it is refused. rule: m5-death-star §4.</summary>
     public bool TrenchRun { get; init; }
 
-    /// <summary>Support change for every other system of a sector at its first strike, in Alliance points: DeathStarSectorPenalty = 10 (the original's already halved value; Paul replaced the galaxy-wide drop and the -20 on the target). Traced; Paul. rule: m5-death-star §2 effect 7.</summary>
+    /// <summary>Support change for every other system of a sector at its first strike, in Alliance points: DeathStarSectorPenalty = 10 (Classic's already halved value; Paul replaced the galaxy-wide drop and the -20 on the target). Traced; Paul. rule: m5-death-star §2 effect 7.</summary>
     public int SectorPenalty { get; init; } = 10;
 
     /// <summary>The strike in a sector (counted for the whole game) from which every remaining system turns fully Alliance: the second. Paul. rule: m5-death-star §2 effect 7.</summary>
@@ -36,7 +36,7 @@ public sealed record DeathStarParams
     /// <summary>Alliance support the revolt sets (the maximum of the support scale). Paul ("full Alliance support"). rule: m5-death-star §2 effect 7.</summary>
     public int RevoltAllianceSupport { get; init; } = 100;
 
-    /// <summary>The fallout of a destroyed planet: Classic (1998, galaxy-wide) or New (Paul's sector rule). DEFAULT New. rule: m5-death-star §2 effect 7 (B5a, 2026-10-17).</summary>
+    /// <summary>The fallout of a destroyed planet: Classic (, galaxy-wide) or New (Paul's sector rule). DEFAULT New. rule: m5-death-star §2 effect 7 (B5a, 2026-10-17).</summary>
     public DeathStarFallout Fallout { get; init; } = DeathStarFallout.New;
 
     /// <summary>Classic fallout on a core world: the destroyer loses this much (GNPRTB 5123 = 10), threshold 5124 = 101 (always). [DAT-own] via B5c section 3.</summary>

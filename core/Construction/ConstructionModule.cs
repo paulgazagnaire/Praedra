@@ -1,10 +1,10 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Map;
-using Rebellion.Core.Ships;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Map;
+using Praedra.Core.Ships;
 
-namespace Rebellion.Core.Construction;
+namespace Praedra.Core.Construction;
 
 /// <summary>How a finished unit came to stand where it stands (see <see cref="ConstructionModule.UnitAppeared"/>).</summary>
 public enum UnitAppearance { Completed, Delivered }
@@ -50,22 +50,22 @@ public sealed class ConstructionModule
     public Func<Side, string, bool>? ResearchOrderReached { get; set; }
     /// <summary>The Death Star class row can be ordered at a Shipyard. DEFAULT true; off: the order is rejected NotAvailable. rule: m3-ships-and-fighters §Death Star as an ordinary class row (S14).</summary>
     public bool DeathStarClassBuildable { get; set; } = true;
-    /// <summary>Yards stop under the Classic 1998 blockade flag (<see cref="FleetModule.IsBlockadedClassic"/>) instead of the economic blockade. DEFAULT off. rule: m2-construction §Suspension.</summary>
+    /// <summary>Yards stop under the Classic blockade flag (<see cref="FleetModule.IsBlockadedClassic"/>) instead of the economic blockade. DEFAULT off. rule: m2-construction §Suspension.</summary>
     public bool UseClassicBlockadeFlag { get; set; }
     /// <summary>
     /// A suspended yard's running cycle: Pause (DEFAULT, Paul economy/02: "shipyards are paused") keeps it frozen and resumes it where it left off;
-    /// Abandon (1998, B5b §3) loses it and the refined it took. Either way a waiting yard leaves the refined line. rule: m2-construction §Suspension
-    /// (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch).
+    /// Abandon (Classic, B5b §3) loses it and the refined it took. Either way a waiting yard leaves the refined line. rule: m2-construction §Suspension
+    /// (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, Classic is the switch).
     /// </summary>
     public StopMode YardStopMode { get; set; } = StopMode.Pause;
     /// <summary>
-    /// An order whose upkeep (maintenance x count) does not fit in the side's free capacity is refused whole (NoUpkeep). 1998 = refused (B5b §7,
+    /// An order whose upkeep (maintenance x count) does not fit in the side's free capacity is refused whole (NoUpkeep). Classic = refused (B5b §7,
     /// [EXE-own] 0x52e970); DEFAULT refused in both rulesets (Dev lead 2026-10-18). False = accepted (the rule before B5b: the autoscrap sorts it out).
     /// rule: m2-maintenance §Overdraft; m2-construction §Build order.
     /// </summary>
     public bool RefuseOverdrawOrders { get; set; } = true;
     /// <summary>
-    /// A new order for a (system, family) that has a project cancels it first (the rule before B5b, manual p.84). DEFAULT false: the 1998 build
+    /// A new order for a (system, family) that has a project cancels it first (the rule before B5b, manual p.84). DEFAULT false: the Classic build
     /// command never cancels (B5b §7, inferred: the new units queue behind). rule: m2-construction §Projects and queues.
     /// </summary>
     public bool NewOrderReplacesProject { get; set; }
@@ -381,7 +381,7 @@ public sealed class ConstructionModule
         // A blockade or an uprising stops a yard at once: its running cycle is abandoned (the refined spent is lost) and it leaves the refined line;
         // it asks again when it is no longer suspended. rule: m2-construction §Suspension (B5b §3: yards are in the same families, 0x50bbb0)
         // YardStopMode Pause (DEFAULT): the running cycle is frozen instead, its due day moving on one day per suspended day, so it resumes where
-        // it left off. rule: m2-construction §Suspension (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch)
+        // it left off. rule: m2-construction §Suspension (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, Classic is the switch)
         foreach (var y in YardObjects().Where(o => (o.Due != 0 || o.InLine) && IsSuspended(o)).ToList())
         {
             if (y.Due != 0) y.Due = YardStopMode == StopMode.Pause ? y.Due + 1 : 0;

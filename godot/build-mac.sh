@@ -19,7 +19,7 @@ fi
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 mkdir -p "$(dirname "$out")"
-(cd "$here" && dotnet build -v q RebellionViewer.csproj -p:RestoreAdditionalProjectSources=/tmp/godot/nupkgs >/dev/null \
+(cd "$here" && dotnet build -v q PraedraViewer.csproj -p:RestoreAdditionalProjectSources=/tmp/godot/nupkgs >/dev/null \
   && "$GODOT" --headless --path . --import >/dev/null 2>&1 \
   && "$GODOT" --headless --path . --export-release macOS "$work/unsigned.zip" >/dev/null 2>&1)
 (cd "$work" && unzip -q unsigned.zip)

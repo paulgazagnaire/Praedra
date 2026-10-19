@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Fog;
+namespace Praedra.Core.Fog;
 
 /// <summary>
 /// The fog-of-war state: each side's picture of the galaxy, its sighting log and its clues, plus the systems dealt "explored for all" at
@@ -147,7 +147,7 @@ public sealed class CharacterPicture
 {
     public int Id { get; set; }
     public Side Side { get; set; }
-    public Rebellion.Core.Characters.CharacterStatus Status { get; set; }
+    public Praedra.Core.Characters.CharacterStatus Status { get; set; }
     internal CharacterPicture Clone() => new() { Id = Id, Side = Side, Status = Status };
 }
 

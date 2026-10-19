@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
 
-namespace Rebellion.Core.Clock;
+namespace Praedra.Core.Clock;
 
 /// <summary>
 /// Save file content. A save is made between Steps and holds state, Day, RNG state, the order queue and the next

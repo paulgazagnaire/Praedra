@@ -1,9 +1,9 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
 
-namespace Rebellion.Core.AI;
+namespace Praedra.Core.AI;
 
 // The Empire AI and the Death Star. rule: m5-death-star §6 (Computer opponent), switch SimpleAiParams.UseDeathStar (DEFAULT true).
 // 1 build one at a time, with headroom, at the system with the most shipyards; 2 never scrap it first (PlanUpkeepCrisis); 3 wait for an escort of at least E; 4 go only to the Rebel
@@ -62,7 +62,7 @@ public sealed partial class SimpleAi
     // ---- 3. escort strength: the fleet's ships other than Death Stars, against REF (the scale of FleetModule.StrengthOf)
     private double EscortStr(Fleet f)
     {
-        var units = new List<Rebellion.Core.Battle.Combatant>();
+        var units = new List<Praedra.Core.Battle.Combatant>();
         foreach (var id in f.Ships)
         {
             var o = _h.Economy.Find(id); var c = o == null ? null : _h.Fleets.ClassOf(o);

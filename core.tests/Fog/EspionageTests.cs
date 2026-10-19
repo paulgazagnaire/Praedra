@@ -1,10 +1,10 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Fog;
-using Rebellion.Core.Map;
-using Rebellion.Core.Setup;
-using static Rebellion.Core.Tests.Fog.FogWorld;
+using Praedra.Core.Clock;
+using Praedra.Core.Fog;
+using Praedra.Core.Map;
+using Praedra.Core.Setup;
+using static Praedra.Core.Tests.Fog.FogWorld;
 
-namespace Rebellion.Core.Tests.Fog;
+namespace Praedra.Core.Tests.Fog;
 
 // Espionage and recon reveals FE1 to FE7 of m5-fog-and-hq §Tests. The success itself is m5-missions'; these call the sheet's Reveal directly.
 public class EspionageTests

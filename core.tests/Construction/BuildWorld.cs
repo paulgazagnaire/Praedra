@@ -1,14 +1,14 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Support;
-using Rebellion.Core.Troops;
-using Rebellion.Core.Tests.Economy;
-using Rebellion.Core.Tests.Fleets;
-using Rebellion.Core.Tests.Support;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Support;
+using Praedra.Core.Troops;
+using Praedra.Core.Tests.Economy;
+using Praedra.Core.Tests.Fleets;
+using Praedra.Core.Tests.Support;
 
-namespace Rebellion.Core.Tests.Construction;
+namespace Praedra.Core.Tests.Construction;
 
 /// <summary>
 /// A game on the real galaxy with fleets, economy and construction attached. Autoscrap is pushed out of reach (a huge scrap period)
@@ -16,7 +16,7 @@ namespace Rebellion.Core.Tests.Construction;
 /// </summary>
 internal sealed class BuildWorld
 {
-    public static readonly Lazy<CostData> RealCosts = new(() => CostData.Load(TestData.OriginalDir, TestData.DesignDir));
+    public static readonly Lazy<CostData> RealCosts = new(() => CostData.Load(TestData.ClassicDir, TestData.DesignDir));
 
     /// <summary>The real costs file with every maintenance set to 0 (for tests whose numbers assume load 0, like the pool sheet's P1 fixture).</summary>
     public static CostData ZeroMaintenance()
@@ -38,7 +38,7 @@ internal sealed class BuildWorld
     public EconomyModule Eco { get; private set; } = null!;
     public ConstructionModule Build { get; private set; } = null!;
     public TroopModule Troops { get; private set; } = null!;
-    public static readonly Lazy<TroopData> RealTroops = new(() => TroopData.Load(TestData.OriginalDir, TestData.DesignDir));
+    public static readonly Lazy<TroopData> RealTroops = new(() => TroopData.Load(TestData.ClassicDir, TestData.DesignDir));
 
     public SupportModule? Support { get; private set; }
     private readonly bool _withSupport, _wireFleets;
@@ -63,7 +63,7 @@ internal sealed class BuildWorld
         Eco.IncidentsEnabled = false;
         Support = _withSupport ? SupportModule.Attach(Game, TestData.RealGalaxy, Eco, Fleets, SupWorld.Weights.Value) : null;
         Build = ConstructionModule.Attach(Game, Fleets, Eco, support: Support);
-        // B5b 2026-10-18: the 1998 upkeep refusal (NoUpkeep) is off here for the same reason the autoscrap is out of reach: these worlds have no
+        // B5b 2026-10-18: the Classic upkeep refusal (NoUpkeep) is off here for the same reason the autoscrap is out of reach: these worlds have no
         // mines or refineries, and the construction sheet's tests are not about upkeep. B5b-1 tests the refusal with it on.
         Build.RefuseOverdrawOrders = false;
         Troops = TroopModule.Attach(Game, Fleets, RealTroops.Value);

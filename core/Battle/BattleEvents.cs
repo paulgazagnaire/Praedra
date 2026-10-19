@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Battle;
+namespace Praedra.Core.Battle;
 
 // Events of the battle (step 5, before slots 5.1 and 5.2). Day is K + 1 like the other step 3 to 5 events.
 // Order for one battle: BattleStarted, BattleChoice (Alliance, Empire), then per destroyed unit UnitDestroyed / RetreatRefused / RetreatHeldByTractor / FleetRetreated /

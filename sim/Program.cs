@@ -1,14 +1,14 @@
-using Rebellion.Core.Battle;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Map;
-using Rebellion.Core.Missions;
-using Rebellion.Core.Characters;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Ships;
-using Rebellion.Core.Support;
+using Praedra.Core.Battle;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Map;
+using Praedra.Core.Missions;
+using Praedra.Core.Characters;
+using Praedra.Core.Setup;
+using Praedra.Core.Ships;
+using Praedra.Core.Support;
 
 // Command-line runner (engine/04, package P1.4). Reads the core's events and prints them; draws no random numbers itself.
 // rule: m1-clock-and-orders §Events out ("the command-line runner reads this list and nothing else").
@@ -87,7 +87,7 @@ internal static class SimCli
             if (args[0] != "move") throw new ArgumentException($"Unknown command '{args[0]}'.");
             return Move(Options.Parse(args.Skip(1).ToArray()));
         }
-        catch (Exception e) when (e is ArgumentException or Rebellion.Core.Data.DataLoadException or FileNotFoundException or DirectoryNotFoundException)
+        catch (Exception e) when (e is ArgumentException or Praedra.Core.Data.DataLoadException or FileNotFoundException or DirectoryNotFoundException)
         {
             Console.Error.WriteLine($"Error: {e.Message}");
             Console.Error.WriteLine();
@@ -179,7 +179,7 @@ internal static class SimCli
         clock.Stop();
         var ev = host.Game.Events;
         Console.WriteLine($"Events: {ev.Count}. Uprisings started: {ev.OfType<UprisingStarted>().Count()}. Items built: {ev.OfType<UnitCompleted>().Count()}, delivered: {ev.OfType<DeliveryArrived>().Count()}. " +
-                          $"Captures: {ev.OfType<Rebellion.Core.Control.SystemCaptured>().Count()}. Blockades started: {ev.OfType<BlockadeStarted>().Count()}.");
+                          $"Captures: {ev.OfType<Praedra.Core.Control.SystemCaptured>().Count()}. Blockades started: {ev.OfType<BlockadeStarted>().Count()}.");
         Console.WriteLine($"State hash: {host.StateHash()}");
         Console.WriteLine($"Random numbers drawn: {host.Game.Rng.Draws}");
         Console.WriteLine($"Runtime: {days} days in {clock.Elapsed.TotalMilliseconds:F0} ms.");
@@ -243,16 +243,16 @@ internal static class SimCli
     private static string ResearchLine(GameHost host)
     {
         var r = host.Research;
-        string Of(Side s) => $"{s} " + string.Join(", ", Rebellion.Core.Research.ResearchModule.Kinds.Select(k =>
+        string Of(Side s) => $"{s} " + string.Join(", ", Praedra.Core.Research.ResearchModule.Kinds.Select(k =>
             $"{k} {r.Level(s, k)}{(r.Exhausted(s, k) ? " (done)" : "")} +{r.Points(s, k)}"));
-        return $"Research (level +points): {Of(Side.Alliance)}; {Of(Side.Empire)}. Unlocks: {host.Game.Events.OfType<Rebellion.Core.Research.ResearchLevelReached>().Count()}.";
+        return $"Research (level +points): {Of(Side.Alliance)}; {Of(Side.Empire)}. Unlocks: {host.Game.Events.OfType<Praedra.Core.Research.ResearchLevelReached>().Count()}.";
     }
 
     // AI vs AI: the simple AI on both sides. Reads state and events; the AIs draw nothing from the game generator. Runtime is the runner's own clock.
     private static int AiVsAi(string[] a)
     {
         int days = 730; ulong seed = 1; string start = "meda"; Side? passive = null; bool trace = false; bool hqKnown = true; bool fog = false; bool agents = true;
-        Rebellion.Core.AI.AiLevel? empLevel = null, allLevel = null; bool huntLog = false; int hunted = 0; string? empParams = null, allParams = null;
+        Praedra.Core.AI.AiLevel? empLevel = null, allLevel = null; bool huntLog = false; int hunted = 0; string? empParams = null, allParams = null;
         for (int i = 0; i < a.Length; i++)
         {
             string key = a[i];
@@ -268,8 +268,8 @@ internal static class SimCli
                 case "--hq-unknown": hqKnown = false; break;
                 case "--fog": fog = true; break;
                 case "--no-agents": agents = false; break;
-                case "--empire-level": empLevel = Rebellion.Core.AI.AiLevels.Parse(Next()) ?? throw new ArgumentException("--empire-level must be easy, medium or hard."); fog = true; break;
-                case "--alliance-level": allLevel = Rebellion.Core.AI.AiLevels.Parse(Next()) ?? throw new ArgumentException("--alliance-level must be easy, medium or hard."); fog = true; break;
+                case "--empire-level": empLevel = Praedra.Core.AI.AiLevels.Parse(Next()) ?? throw new ArgumentException("--empire-level must be easy, medium or hard."); fog = true; break;
+                case "--alliance-level": allLevel = Praedra.Core.AI.AiLevels.Parse(Next()) ?? throw new ArgumentException("--alliance-level must be easy, medium or hard."); fog = true; break;
                 case "--passive": passive = Next().ToLowerInvariant() switch { "empire" => Side.Empire, "alliance" => Side.Alliance, "none" => null, _ => throw new ArgumentException("--passive must be empire, alliance or none.") }; break;
                 case "--start": start = Next().ToLowerInvariant(); if (start is not ("meda" or "campaign")) throw new ArgumentException("--start must be meda or campaign."); break;
                 default: throw new ArgumentException($"Unknown option '{key}'.");
@@ -277,9 +277,9 @@ internal static class SimCli
         }
         var clock = System.Diagnostics.Stopwatch.StartNew();
         var host = start == "meda" ? NewGame.Create(new NewGameOptions { Seed = (int)seed, Preset = StartPreset.MedA }) : TestCampaign.New(seed).Host;
-        var aiParams = fog || !agents ? new Rebellion.Core.AI.SimpleAiParams { UseFog = fog, UseCharactersAndMissions = agents } : null;
-        Rebellion.Core.AI.SimpleAiParams? Level(Rebellion.Core.AI.AiLevel? l) => l is { } v ? Rebellion.Core.AI.AiLevels.For(v, aiParams) : aiParams;
-        var match = new Rebellion.Core.AI.AiMatch(host, Tourney.WithOverrides(Level(empLevel) ?? new() { UseFog = fog, UseCharactersAndMissions = agents }, empParams),
+        var aiParams = fog || !agents ? new Praedra.Core.AI.SimpleAiParams { UseFog = fog, UseCharactersAndMissions = agents } : null;
+        Praedra.Core.AI.SimpleAiParams? Level(Praedra.Core.AI.AiLevel? l) => l is { } v ? Praedra.Core.AI.AiLevels.For(v, aiParams) : aiParams;
+        var match = new Praedra.Core.AI.AiMatch(host, Tourney.WithOverrides(Level(empLevel) ?? new() { UseFog = fog, UseCharactersAndMissions = agents }, empParams),
                                                   Tourney.WithOverrides(Level(allLevel) ?? new() { UseFog = fog, UseCharactersAndMissions = agents }, allParams), passive: passive);
         if (!fog && hqKnown && start == "meda" && host.HqSystem != null) match.Empire.KnownEnemyHq = host.HqSystem; // without fog the Empire is told the Rebel HQ (DEFAULT)
         Console.WriteLine($"AI vs AI: {days} days, seed {seed}, start {start}{(passive is Side ps ? $", {ps} passive (gives no orders)" : "")}. " +
@@ -301,7 +301,7 @@ internal static class SimCli
             if (host.Fog.KnownHq(Side.Empire)?.System is { } kh && kh != lastKnown) hqFinds.Add($"day {host.Game.Day} {kh}{(kh == host.HqSystem ? "" : " (stale)")}");
             lastKnown = host.Fog.KnownHq(Side.Empire)?.System;
             for (var evs = host.Game.Events; scanned < evs.Count; scanned++)
-                if (evs[scanned] is Rebellion.Core.Battle.BattleEnded be)
+                if (evs[scanned] is Praedra.Core.Battle.BattleEnded be)
                     switch (host.Fleets.OwnerOf(be.Result.System)) { case Side.Empire: battlesAtEmpire++; break; case Side.Alliance: battlesAtAlliance++; break; default: battlesAtNeutral++; break; }
             if (trace && host.Game.Day % 50 == 0) foreach (var ai in new[] { match.Empire, match.Alliance }) if (ai.Side != passive) Console.WriteLine("  d" + host.Game.Day + " " + ai.Status());
             if (trace && fog && host.Game.Day % 50 == 0 && passive != Side.Empire)
@@ -311,8 +311,8 @@ internal static class SimCli
                                   (host.HqSystem is { } hq ? $"; true HQ {hq} rank {b.ToList().FindIndex(t => t.System == hq) + 1}, search rank {match.Empire.HqSearchRank(hq)}" : ""));
             }
             if (trace) for (int k = traced; k < host.Game.Events.Count; k++)
-                if (host.Game.Events[k] is Rebellion.Core.Battle.BattleEnded tb) Console.WriteLine($"  d{tb.Day} battle at {tb.Result.System}: Alliance {tb.Result.Alliance} (lost {tb.Result.AllianceLosses}), Empire {tb.Result.Empire} (lost {tb.Result.EmpireLosses})");
-                else if (host.Game.Events[k] is Rebellion.Core.Battle.FleetRetreated tr) Console.WriteLine($"  d{tr.Day} fleet {tr.Fleet} retreats {tr.From} -> {tr.To}");
+                if (host.Game.Events[k] is Praedra.Core.Battle.BattleEnded tb) Console.WriteLine($"  d{tb.Day} battle at {tb.Result.System}: Alliance {tb.Result.Alliance} (lost {tb.Result.AllianceLosses}), Empire {tb.Result.Empire} (lost {tb.Result.EmpireLosses})");
+                else if (host.Game.Events[k] is Praedra.Core.Battle.FleetRetreated tr) Console.WriteLine($"  d{tr.Day} fleet {tr.Fleet} retreats {tr.From} -> {tr.To}");
             traced = host.Game.Events.Count;
             if (trace) foreach (var ai in new[] { match.Empire, match.Alliance }) foreach (var o in ai.Submitted) Console.WriteLine($"  d{host.Game.Day - 1} {ai.Side} {o.Kind}: {o.Detail}");
             if (huntLog)
@@ -321,11 +321,11 @@ internal static class SimCli
                 for (var evs = host.Game.Events; hunted < evs.Count; hunted++)
                 {
                     string hq = host.HqSystem ?? "(moving)";
-                    if (evs[hunted] is Rebellion.Core.Missions.MissionStarted ms && ms.Side == Side.Empire && ms.MissionKind is Rebellion.Core.Missions.MissionKind.Espionage or Rebellion.Core.Missions.MissionKind.Reconnaissance)
+                    if (evs[hunted] is Praedra.Core.Missions.MissionStarted ms && ms.Side == Side.Empire && ms.MissionKind is Praedra.Core.Missions.MissionKind.Espionage or Praedra.Core.Missions.MissionKind.Reconnaissance)
                         Console.WriteLine($"  hunt d{ms.Day} start {ms.MissionKind} {ms.Home} -> {ms.Target} (arrives d{ms.ArrivalDay}; {ms.Characters.Items.Count} characters, {ms.SpecialForces.Items.Count} special forces); true HQ {hq}{(ms.Target == hq ? " <== HQ" : "")}");
-                    else if (evs[hunted] is Rebellion.Core.Missions.MissionEnded me && me.Side == Side.Empire && me.MissionKind is Rebellion.Core.Missions.MissionKind.Espionage or Rebellion.Core.Missions.MissionKind.Reconnaissance)
+                    else if (evs[hunted] is Praedra.Core.Missions.MissionEnded me && me.Side == Side.Empire && me.MissionKind is Praedra.Core.Missions.MissionKind.Espionage or Praedra.Core.Missions.MissionKind.Reconnaissance)
                         Console.WriteLine($"  hunt d{me.Day} end {me.MissionKind} at {me.Target}: {me.Outcome}; true HQ {hq}{(me.Target == hq ? " <== HQ" : "")}; regiments there {host.Troops.RegimentsOnSystem(me.Target).Count}");
-                    else if (evs[hunted] is Rebellion.Core.Fog.HqDeparted hd) Console.WriteLine($"  hunt d{hd.Day} HQ leaves {hd.From} for {hd.Path.Items[^1]}");
+                    else if (evs[hunted] is Praedra.Core.Fog.HqDeparted hd) Console.WriteLine($"  hunt d{hd.Day} HQ leaves {hd.From} for {hd.Path.Items[^1]}");
                 }
             }
             if (host.Game.Day % 365 == 0 && host.Game.Day != days) Summary();
@@ -333,30 +333,30 @@ internal static class SimCli
         Summary();
         clock.Stop();
         var ev = host.Game.Events;
-        Console.WriteLine($"Battles: {ev.OfType<Rebellion.Core.Battle.BattleEnded>().Count()}. Bombardments: {ev.OfType<Rebellion.Core.Defenses.BombardmentResolved>().Count()}. " +
-                          $"Assaults: {ev.OfType<Rebellion.Core.Assault.AssaultResolved>().Count()} (won {ev.OfType<Rebellion.Core.Assault.AssaultResolved>().Count(e => e.Result == "Won")}). " +
-                          $"Captures: {ev.OfType<Rebellion.Core.Control.SystemCaptured>().Count()} (Empire {ev.OfType<Rebellion.Core.Control.SystemCaptured>().Count(e => e.To == Side.Empire)}, Alliance {ev.OfType<Rebellion.Core.Control.SystemCaptured>().Count(e => e.To == Side.Alliance)}).");
+        Console.WriteLine($"Battles: {ev.OfType<Praedra.Core.Battle.BattleEnded>().Count()}. Bombardments: {ev.OfType<Praedra.Core.Defenses.BombardmentResolved>().Count()}. " +
+                          $"Assaults: {ev.OfType<Praedra.Core.Assault.AssaultResolved>().Count()} (won {ev.OfType<Praedra.Core.Assault.AssaultResolved>().Count(e => e.Result == "Won")}). " +
+                          $"Captures: {ev.OfType<Praedra.Core.Control.SystemCaptured>().Count()} (Empire {ev.OfType<Praedra.Core.Control.SystemCaptured>().Count(e => e.To == Side.Empire)}, Alliance {ev.OfType<Praedra.Core.Control.SystemCaptured>().Count(e => e.To == Side.Alliance)}).");
         {
-            var be = ev.OfType<Rebellion.Core.Battle.BattleEnded>().ToList();
+            var be = ev.OfType<Praedra.Core.Battle.BattleEnded>().ToList();
             Console.WriteLine($"Battles by place: at Empire-held systems (Alliance attacking) {battlesAtEmpire}, at Alliance-held (Empire attacking) {battlesAtAlliance}, " +
                               $"at neutral {battlesAtNeutral}. Ships lost in battle: Empire {be.Sum(b => b.Result.EmpireLosses)}, Alliance {be.Sum(b => b.Result.AllianceLosses)}. " +
-                              $"Alliance systems taken by the Empire {ev.OfType<Rebellion.Core.Control.SystemCaptured>().Count(e => e.From == Side.Alliance && e.To == Side.Empire)}, " +
-                              $"Empire systems taken by the Alliance {ev.OfType<Rebellion.Core.Control.SystemCaptured>().Count(e => e.From == Side.Empire && e.To == Side.Alliance)}. " +
-                              $"HQ moves: {ev.OfType<Rebellion.Core.Fog.HqDeparted>().Count()}.");
+                              $"Alliance systems taken by the Empire {ev.OfType<Praedra.Core.Control.SystemCaptured>().Count(e => e.From == Side.Alliance && e.To == Side.Empire)}, " +
+                              $"Empire systems taken by the Alliance {ev.OfType<Praedra.Core.Control.SystemCaptured>().Count(e => e.From == Side.Empire && e.To == Side.Alliance)}. " +
+                              $"HQ moves: {ev.OfType<Praedra.Core.Fog.HqDeparted>().Count()}.");
         }
         {
             // retreat-chases: a fleet that retreated from a battle in which neither side lost anything (the morale retreat of m4-battle-classic),
             // again and again: a run is such retreats of the SAME fleet at most 10 days apart; chase days = first to last retreat of each run of two
             // or more. Counted by the side whose fleet retreated (the other side did the chasing, or kept bouncing it off a defended system).
-            var lossless = new List<(int Day, int Fleet, Side Side)>(); var pending = new List<Rebellion.Core.Battle.FleetRetreated>();
+            var lossless = new List<(int Day, int Fleet, Side Side)>(); var pending = new List<Praedra.Core.Battle.FleetRetreated>();
             foreach (var e in ev)
-                if (e is Rebellion.Core.Battle.FleetRetreated fr) pending.Add(fr);
-                else if (e is Rebellion.Core.Battle.BattleEnded b2)
+                if (e is Praedra.Core.Battle.FleetRetreated fr) pending.Add(fr);
+                else if (e is Praedra.Core.Battle.BattleEnded b2)
                 {
                     bool noLoss = b2.Result.AllianceLosses == 0 && b2.Result.EmpireLosses == 0;
                     foreach (var fr2 in pending)
                     {
-                        var rs = b2.Result.Alliance == Rebellion.Core.Battle.BattleOutcome.Retreated ? Side.Alliance : Side.Empire;
+                        var rs = b2.Result.Alliance == Praedra.Core.Battle.BattleOutcome.Retreated ? Side.Alliance : Side.Empire;
                         if (noLoss) lossless.Add((b2.Day, fr2.Fleet, rs));
                     }
                     pending.Clear();
@@ -403,7 +403,7 @@ internal static class SimCli
         Console.WriteLine($"AI orders sent: {match.TotalSent}, rejected: {match.TotalRejected}.");
         foreach (var kv in match.Rejected) Console.WriteLine($"  rejected {kv.Key}: {kv.Value}");
         foreach (var kv in match.Sent) Console.WriteLine($"  sent {kv.Key}: {kv.Value}");
-        foreach (var g in ev.OfType<Rebellion.Core.Construction.UnitCompleted>().GroupBy(e => (e.Side, e.Class)).OrderBy(g => g.Key.Side).ThenBy(g => g.Key.Class, StringComparer.Ordinal))
+        foreach (var g in ev.OfType<Praedra.Core.Construction.UnitCompleted>().GroupBy(e => (e.Side, e.Class)).OrderBy(g => g.Key.Side).ThenBy(g => g.Key.Class, StringComparer.Ordinal))
             Console.WriteLine($"  built {g.Key.Side} {g.Key.Class}: {g.Count()}");
         Console.WriteLine($"State hash: {host.StateHash()}");
         Console.WriteLine($"Runtime: {host.Game.Day} days in {clock.Elapsed.TotalMilliseconds:F0} ms.");
@@ -550,7 +550,7 @@ internal static class SimCli
     {
         string root = FindRoot();
         var galaxy = GalaxyLoader.LoadFolder(Path.Combine(root, "data", "design"));
-        var ships = ShipData.LoadAll(Path.Combine(root, "data", "original"));
+        var ships = ShipData.LoadAll(Path.Combine(root, "data", "classic"));
         var blockade = BlockadeData.Load(Path.Combine(root, "data", "design", BlockadeData.FileName));
 
         var game = new Game(o.Seed);

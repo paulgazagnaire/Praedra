@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Rebellion.Importer;
+namespace Praedra.Importer;
 
 /// <summary>A CSV file in memory: a header row and data rows. Raw table rows may be shorter than the header (seed family entries vary).</summary>
 public sealed class CsvFile

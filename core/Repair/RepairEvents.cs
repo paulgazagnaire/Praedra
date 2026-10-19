@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Repair;
+namespace Praedra.Core.Repair;
 
 /// <summary>
 /// Slot 6.8. A ship had a repair turn this day: Hull is the new hull, HitsRemaining the sum of its six hit counters after the turn.

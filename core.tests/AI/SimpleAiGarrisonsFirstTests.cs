@@ -1,9 +1,9 @@
-using Rebellion.Core.AI;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Setup;
+using Praedra.Core.AI;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Setup;
 
-namespace Rebellion.Core.Tests.AI;
+namespace Praedra.Core.Tests.AI;
 
 // Medium mirror seed 10 (Dev lead 2026-10-19): far ahead (about 255 systems against 10-25), the Empire AI spent its upkeep on warships (4239 of
 // about 5700 on capital ships on day 2500) and trained regiments at 4 training facilities only (about 45 per 250 days), while uprisings killed

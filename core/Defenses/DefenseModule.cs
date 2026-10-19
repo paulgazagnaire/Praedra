@@ -1,8 +1,8 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
 
-namespace Rebellion.Core.Defenses;
+namespace Praedra.Core.Defenses;
 
 /// <summary>
 /// Numbers and switches of the planetary-defenses sheet, with their tags. Data values: tests and setups may override them.
@@ -13,7 +13,7 @@ public sealed record DefenseParams
     /// <summary>A facility's shot chance is attack / this, in percent (GNPRTB 0x200 = 5). Traced.</summary>
     public int ShotChanceDivisor { get; init; } = 5;
     /// <summary>
-    /// Completed shield generators that forbid an assault (2 or more). Original text; enforcement not traced. 0 switches the gate off
+    /// Completed shield generators that forbid an assault (2 or more). Classic text; enforcement not traced. 0 switches the gate off
     /// (nothing is ever forbidden). rule: m3-planetary-defenses §What each class does in M3; m3-assault check 4.
     /// </summary>
     public int AssaultGateShields { get; init; } = 2;

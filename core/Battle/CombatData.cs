@@ -1,8 +1,8 @@
 using System.Globalization;
-using Rebellion.Core.Data;
-using Rebellion.Core.Ships;
+using Praedra.Core.Data;
+using Praedra.Core.Ships;
 
-namespace Rebellion.Core.Battle;
+namespace Praedra.Core.Battle;
 
 /// <summary>The four firing arcs, in the order of <c>weapons.csv</c>. rule: m4-battle-new §1.</summary>
 public enum Arc { Fore = 0, Aft = 1, Port = 2, Starboard = 3 }
@@ -80,7 +80,7 @@ public sealed class WeaponRow
 
 /// <summary>
 /// The per-weapon data of the New battle and of CombatStrength: classes (with batteries) and the weapon table, loaded by column name.
-/// Source: ships/11 (<c>weapons.csv</c>, <c>combat-ship-stats.csv</c>), m4-battle-new §2. Proposal values, unverified vs original.
+/// Source: ships/11 (<c>weapons.csv</c>, <c>combat-ship-stats.csv</c>), m4-battle-new §2. Proposal values, unverified vs Classic.
 /// </summary>
 public sealed class NewBattleData
 {

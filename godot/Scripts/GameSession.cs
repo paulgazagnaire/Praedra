@@ -1,24 +1,24 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Rebellion.Core.AI;
-using Rebellion.Core.Assault;
-using Rebellion.Core.Battle;
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Control;
-using Rebellion.Core.Defenses;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Fog;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Support;
-using Rebellion.Core.Troops;
+using Praedra.Core.AI;
+using Praedra.Core.Assault;
+using Praedra.Core.Battle;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Control;
+using Praedra.Core.Defenses;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Fog;
+using Praedra.Core.Setup;
+using Praedra.Core.Support;
+using Praedra.Core.Troops;
 
-using Side = Rebellion.Core.Clock.Side;
+using Side = Praedra.Core.Clock.Side;
 
-namespace RebellionViewer;
+namespace PraedraViewer;
 
 public enum MsgKind { Info, Good, Bad, Warn, Battle }
 
@@ -92,7 +92,7 @@ public sealed partial class GameSession
     /// A new game. <paramref name="seed"/> null = a fresh seed from the wall clock, so every game deals a different map (the core must not read the clock;
     /// the viewer may). A fixed seed (tests, smoke, playtest, `--seed N`) reproduces a game. rule: m5-setup-and-victory §Mode Anchored (the deal is seeded)
     /// </summary>
-    public static GameSession New(GameData data, Side player, Preset preset, Rebellion.Core.Battle.BattleRuleset rules = Rebellion.Core.Battle.BattleRuleset.New, int? seed = null) =>
+    public static GameSession New(GameData data, Side player, Preset preset, Praedra.Core.Battle.BattleRuleset rules = Praedra.Core.Battle.BattleRuleset.New, int? seed = null) =>
         new(GameBoot.NewGame(data, player, preset, seed ?? FreshSeed(), rules), player, GameBoot.AiLevelFor(preset));
 
     /// <summary>A seed for a new game from the wall clock (viewer only).</summary>
@@ -105,7 +105,7 @@ public sealed partial class GameSession
     public string SaveText() => Host.SaveWithSettings();
 
     /// <summary>The space battle rules of this game.</summary>
-    public Rebellion.Core.Battle.BattleRuleset Rules => Host.Battles.Params.Ruleset;
+    public Praedra.Core.Battle.BattleRuleset Rules => Host.Battles.Params.Ruleset;
 
     // ------------------------------------------------------------------ queries the panels use
 
@@ -320,10 +320,10 @@ public sealed partial class GameSession
         HqRejectReason.NoFunds => "not enough refined material to move the headquarters",
         AssaultReject.NoTroops => "no regiments aboard",
         AssaultReject.FullyShielded => "the planet's shields are too strong (bombard the shield generators first)",
-        Rebellion.Core.DeathStar.DeathStarReject.NoDeathStar => "the fleet holds no finished Death Star",
-        Rebellion.Core.DeathStar.DeathStarReject.AlreadyDestroyed => "that system is already destroyed",
-        Rebellion.Core.DeathStar.DeathStarReject.ShieldProtected => "an enemy Death Star Shield protects that system",
-        Rebellion.Core.DeathStar.DeathStarReject.DeathStarLimit => "only one Death Star per system: this system already has one (build it at another shipyard)",
+        Praedra.Core.DeathStar.DeathStarReject.NoDeathStar => "the fleet holds no finished Death Star",
+        Praedra.Core.DeathStar.DeathStarReject.AlreadyDestroyed => "that system is already destroyed",
+        Praedra.Core.DeathStar.DeathStarReject.ShieldProtected => "an enemy Death Star Shield protects that system",
+        Praedra.Core.DeathStar.DeathStarReject.DeathStarLimit => "only one Death Star per system: this system already has one (build it at another shipyard)",
         "SystemDestroyed" => "that system was destroyed by the Death Star",
         _ => reason,
     };
@@ -471,7 +471,7 @@ public sealed partial class GameSession
         _ => "a system General",
     };
 
-    /// <summary>Original text names of the ranks. rule: m5-characters-and-force §Force (Rank).</summary>
+    /// <summary>Classic text names of the ranks. rule: m5-characters-and-force §Force (Rank).</summary>
     public static string RankWords(ForceRank r) => r switch
     {
         ForceRank.Student => "Jedi Student",
@@ -540,7 +540,7 @@ public sealed partial class GameSession
         {
             bool combat = events[_printed] is Contact or ForcedStop or FleetRetreated or BattleEnded or SystemCaptured
                 or BombardmentStarted or BombardmentResolved or BombardCancelled or AssaultStarted or AssaultResolved or AssaultCancelled
-                or Rebellion.Core.DeathStar.SystemDestroyed or Rebellion.Core.DeathStar.FleetDestroyedByDeathStar;
+                or Praedra.Core.DeathStar.SystemDestroyed or Praedra.Core.DeathStar.FleetDestroyedByDeathStar;
             foreach (var m0 in Describe(events[_printed], o))
             {
                 var m = combat ? m0 with { Combat = true } : m0;
@@ -697,7 +697,7 @@ public sealed partial class GameSession
                 break;
 
             // ---- research
-            case Rebellion.Core.Research.ResearchLevelReached r when r.Side == Player && r.Classes.Items.Any():
+            case Praedra.Core.Research.ResearchLevelReached r when r.Side == Player && r.Classes.Items.Any():
                 yield return new Message(d, $"Research: {r.ResearchKind} level {r.Level} reached. You can now build: {string.Join(", ", r.Classes.Items)}.", null, MsgKind.Good);
                 break;
 
@@ -810,7 +810,7 @@ public sealed partial class GameSession
                 break;
 
             // ---- the Death Star (GameSession.DeathStar.cs); the clock pauses on a destroyed system like on a capture
-            case Rebellion.Core.DeathStar.SystemDestroyed:
+            case Praedra.Core.DeathStar.SystemDestroyed:
                 foreach (var m in DescribeDeathStar(e))
                 {
                     o.PauseReason ??= "destroyed";
@@ -818,7 +818,7 @@ public sealed partial class GameSession
                     yield return m;
                 }
                 break;
-            case Rebellion.Core.DeathStar.IDeathStarEvent or Rebellion.Core.DeathStar.DestroySystemCancelled:
+            case Praedra.Core.DeathStar.IDeathStarEvent or Praedra.Core.DeathStar.DestroySystemCancelled:
                 foreach (var m in DescribeDeathStar(e)) yield return m;
                 break;
 

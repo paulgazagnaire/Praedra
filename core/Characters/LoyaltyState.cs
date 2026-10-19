@@ -1,4 +1,4 @@
-namespace Rebellion.Core.Characters;
+namespace Praedra.Core.Characters;
 
 /// <summary>
 /// One system's running loss tallies, per side number (index 0 Alliance, 1 Empire, 2 neutral): battle (system data +0x64), assault (+0x44) and

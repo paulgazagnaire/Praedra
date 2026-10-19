@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Fleets;
+namespace Praedra.Core.Fleets;
 
 // rule: m1-clock-and-orders §Events out. Day is the day the event takes effect: K for departures, K + 1 for the
 // arrival, stop, contact and blockade events of steps 3 to 5.

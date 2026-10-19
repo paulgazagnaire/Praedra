@@ -1,7 +1,7 @@
-# Rebellion.Sim: command-line runner
+# Praedra.Sim: command-line runner
 
 Runs the core headless and prints what happened, day by day. It reads the core's event list and nothing else, and draws no
-random numbers. It finds the repository's `data/` folder by walking up to `Rebellion.sln`, so run it from inside the repo.
+random numbers. It finds the repository's `data/` folder by walking up to `Praedra.sln`, so run it from inside the repo.
 
 ## `move`: send one fleet and watch the days
 
@@ -13,7 +13,7 @@ dotnet run --project sim -- move --fleet <name> --side <Alliance|Empire> --ships
 ```
 
 `--enemy` places a stationary fleet of the other side (named Picket-1, Picket-2, ...). `--owner` sets who owns a system
-(default: every system neutral). Ship classes are the names in `data/original/capital-ships.csv` and `fighters.csv`, matched
+(default: every system neutral). Ship classes are the names in `data/classic/capital-ships.csv` and `fighters.csv`, matched
 ignoring case; `CR90` and `CR90 Corvette` are accepted for the Corellian Corvette and `ISD` for the Imperial Star Destroyer.
 The run ends when the fleet is no longer in transit (arrived, stopped or order rejected) or after `--days`.
 

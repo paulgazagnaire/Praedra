@@ -1,11 +1,11 @@
-using Rebellion.Core.Battle;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Tests.Fleets;
+using Praedra.Core.Battle;
+using Praedra.Core.Clock;
+using Praedra.Core.Tests.Fleets;
 
-namespace Rebellion.Core.Tests.Battle;
+namespace Praedra.Core.Tests.Battle;
 
 // B6a §1 to §3 (reverse batch B6a, 2026-10-18): which side is the AI, its battle threshold computed at the alert, and its firepower number.
-// The battles here are Classic (B6a is the 1998 AI threshold): Ruleset = Classic is set explicitly since the DEFAULT became New (2026-10-18).
+// The battles here are Classic (B6a is the Classic AI threshold): Ruleset = Classic is set explicitly since the DEFAULT became New (2026-10-18).
 public class AiThresholdTests
 {
     private const string Victory = "Victory Destroyer", MonCal = "Mon Calamari Cruiser", Isd = "Imperial Star Destroyer";

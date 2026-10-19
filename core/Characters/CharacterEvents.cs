@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Characters;
+namespace Praedra.Core.Characters;
 
 // ---- orders. rule: m5-characters-and-force §Posts (Orders), §Moving a character alone. All step 1, immediate, in order sequence; a rejected
 // order changes nothing; the order's side must be the character's side.

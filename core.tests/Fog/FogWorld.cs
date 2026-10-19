@@ -1,9 +1,9 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Fog;
-using Rebellion.Core.Map;
-using Rebellion.Core.Setup;
+using Praedra.Core.Clock;
+using Praedra.Core.Fog;
+using Praedra.Core.Map;
+using Praedra.Core.Setup;
 
-namespace Rebellion.Core.Tests.Fog;
+namespace Praedra.Core.Tests.Fog;
 
 /// <summary>
 /// Map M of the fog sheet (m5-fog-and-hq §Tests): C0 (0,0) group core, sector SC; R1 (100,0), R2 (200,0), R3 (300,0), R4 (400,0) group
@@ -35,11 +35,11 @@ internal sealed class FogWorld
     public int E1 { get; }
 
     public FogWorld(GameSettings? settings = null, string? hq = R2, bool r3Neutral = false, bool r4Neutral = false, ulong seed = 1,
-        Action<FogWorld>? beforeSetup = null, Rebellion.Core.Travel.TravelMode travel = Rebellion.Core.Travel.TravelMode.Lanes)
+        Action<FogWorld>? beforeSetup = null, Praedra.Core.Travel.TravelMode travel = Praedra.Core.Travel.TravelMode.Lanes)
     {
         var s = (settings ?? new GameSettings()) with { DebugOrdersEnabled = true, Travel = travel }; // Map M is a hand-made lane map: keep its hop-by-hop paths (Lanes) unless a test asks for another mode
         // No mines or refineries on Map M: keep the autoscrap (m2-maintenance) from scrapping the test fleets.
-        if (s.Economy == null) s = s with { Economy = new Rebellion.Core.Economy.EconomyParams { ScrapPeriod = 1_000_000 } };
+        if (s.Economy == null) s = s with { Economy = new Praedra.Core.Economy.EconomyParams { ScrapPeriod = 1_000_000 } };
         H = GameHost.New(seed, s, Data);
         Hold(C0, Side.Empire); Hold(R1, Side.Empire);
         Hold(R2, Side.Alliance);

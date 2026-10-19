@@ -1,12 +1,12 @@
 using System.Reflection;
 using System.Text.Json;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Fog;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Support;
-using static Rebellion.Core.Tests.Fog.FogWorld;
+using Praedra.Core.Clock;
+using Praedra.Core.Fog;
+using Praedra.Core.Setup;
+using Praedra.Core.Support;
+using static Praedra.Core.Tests.Fog.FogWorld;
 
-namespace Rebellion.Core.Tests.Fog;
+namespace Praedra.Core.Tests.Fog;
 
 // What reveals the HQ (HR1 to HR11) and fairness (FN1, FN3 to FN5) of m5-fog-and-hq §Tests, on Map M (HQ at R2).
 public class HqRevealTests

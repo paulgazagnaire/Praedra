@@ -1,9 +1,9 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Support;
-using Rebellion.Core.Tests.Economy;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Support;
+using Praedra.Core.Tests.Economy;
 
-namespace Rebellion.Core.Tests.Support;
+namespace Praedra.Core.Tests.Support;
 
 /// <summary>An <see cref="EcoWorld"/> with the support module attached (real garrison weights file), plus short helpers.</summary>
 internal sealed class SupWorld

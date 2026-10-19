@@ -1,12 +1,12 @@
 using System;
 using System.Linq;
 using Godot;
-using Rebellion.Core.Characters;
-using Rebellion.Core.Fleets;
+using Praedra.Core.Characters;
+using Praedra.Core.Fleets;
 
-using Side = Rebellion.Core.Clock.Side;
+using Side = Praedra.Core.Clock.Side;
 
-namespace RebellionViewer;
+namespace PraedraViewer;
 
 /// <summary>
 /// Playtest of the character screens (rule: m5-characters-and-force): the Characters list, moving a character alone, attaching it to a fleet,

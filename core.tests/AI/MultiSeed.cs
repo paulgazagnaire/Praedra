@@ -1,4 +1,4 @@
-namespace Rebellion.Core.Tests.AI;
+namespace Praedra.Core.Tests.AI;
 
 // Multi-seed play tests. One seeded AI game is chaotic: any new draw in the game generator (a new original-game rule, a new AI switch)
 // sends it another way, so a day limit on one game breaks on legal changes and says little. The AI play tests instead ask for a floor

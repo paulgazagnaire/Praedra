@@ -1,9 +1,9 @@
-using Rebellion.Core.Battle;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
+using Praedra.Core.Battle;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
 
-namespace Rebellion.Core.Tests.Battle;
+namespace Praedra.Core.Tests.Battle;
 
 // The New battle inside the day Step (m4-battle-new §Rule (New); the shared plumbing is m4-battle-classic §1, §10 and m4-retreat-damage-repair §1 to §4):
 // contact detection, OnContact, retreat destinations, write-back, FoughtThisStep and events work as for Classic, with BattleParams.Ruleset = New.

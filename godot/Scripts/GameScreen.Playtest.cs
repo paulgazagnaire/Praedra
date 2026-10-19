@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
-namespace RebellionViewer;
+namespace PraedraViewer;
 
 /// <summary>Finds and clicks real buttons in a node tree (used by the headless --playtest mode).</summary>
 public static class UiTest
@@ -174,7 +174,7 @@ public partial class GameScreen
         string trap = plan.Path[plan.Path.Count / 2];
         S.OpponentIdle = true; // keep the planted ship where it is
         Fm.SetOwner(trap, Me);
-        Fm.AddFleet(Me == Rebellion.Core.Clock.Side.Empire ? Rebellion.Core.Clock.Side.Alliance : Rebellion.Core.Clock.Side.Empire, "Net", new[] { "Interdictor Cruiser" }, trap);
+        Fm.AddFleet(Me == Praedra.Core.Clock.Side.Empire ? Praedra.Core.Clock.Side.Alliance : Praedra.Core.Clock.Side.Empire, "Net", new[] { "Interdictor Cruiser" }, trap);
         StepOne(); // the side's picture is taken in the day step
         ShotPreview(to);
     }

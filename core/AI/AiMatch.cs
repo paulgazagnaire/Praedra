@@ -1,7 +1,7 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Setup;
+using Praedra.Core.Clock;
+using Praedra.Core.Setup;
 
-namespace Rebellion.Core.AI;
+namespace Praedra.Core.AI;
 
 /// <summary>
 /// Drives one game with a <see cref="SimpleAi"/> on each side: every day both plan, then the game steps. Also counts the orders sent and

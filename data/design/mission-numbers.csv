@@ -6,4 +6,4 @@ DiplomacyNeutralLow,1,"Traced read (GNPRTB 6183-6190, economy/05), mapping Lead:
 DiplomacyNeutralHigh,10,"Traced read (GNPRTB 6183-6190, economy/05), mapping Lead: neutral +1..+10"
 SubdueLow,1,"Traced read (as Diplomacy own-held, economy/05), mapping Lead"
 SubdueHigh,20,"Traced read (as Diplomacy own-held, economy/05), mapping Lead"
-HanCharacterId,579,"Traced: Han Solo's record id (data/original/characters.csv, MJCHARSD)"
+HanCharacterId,579,"Traced: Han Solo's record id (data/classic/characters.csv, MJCHARSD)"

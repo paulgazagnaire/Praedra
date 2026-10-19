@@ -1,6 +1,6 @@
-namespace Rebellion.Importer;
+namespace Praedra.Importer;
 
-/// <summary>The importer's three entry points. Stage 2 always reads the raw CSVs from disk, so data/original/*.csv depend on raw/ only. rule: B1-own-importer §Work 1-3.</summary>
+/// <summary>The importer's three entry points. Stage 2 always reads the raw CSVs from disk, so data/classic/*.csv depend on raw/ only. rule: B1-own-importer §Work 1-3.</summary>
 public static class Importer
 {
     public const string RawFolder = "raw";
@@ -44,11 +44,11 @@ public static class Importer
                 foreach (var f in Directory.GetFiles(d, "*.csv")) File.Delete(f);
     }
 
-    /// <summary>data/original under the folder holding Rebellion.sln (searched upwards from the working folder).</summary>
+    /// <summary>data/classic under the folder holding Praedra.sln (searched upwards from the working folder).</summary>
     public static string DefaultOutDir()
     {
         for (var dir = new DirectoryInfo(Directory.GetCurrentDirectory()); dir != null; dir = dir.Parent)
-            if (File.Exists(Path.Combine(dir.FullName, "Rebellion.sln"))) return Path.Combine(dir.FullName, "data", "original");
-        throw new ImportException("Rebellion.sln not found above the working folder; pass the out folder.");
+            if (File.Exists(Path.Combine(dir.FullName, "Praedra.sln"))) return Path.Combine(dir.FullName, "data", "classic");
+        throw new ImportException("Praedra.sln not found above the working folder; pass the out folder.");
     }
 }

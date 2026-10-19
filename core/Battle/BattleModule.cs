@@ -1,10 +1,10 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Map;
-using Rebellion.Core.Ships;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Map;
+using Praedra.Core.Ships;
 
-namespace Rebellion.Core.Battle;
+namespace Praedra.Core.Battle;
 
 /// <summary>
 /// Battle state kept in the game state (saved and hashed): each side's standing OnContact answer, and the objects that took part in a battle
@@ -168,7 +168,7 @@ public sealed class BattleModule
         var systems = names.Where(s => Present(s, Side.Alliance) && Present(s, Side.Empire)).ToList();
         if (systems.Count == 0) return;
 
-        // rule: m4-battle-classic §1.4: Classic with ClassicBattleRng = Original (DEFAULT) makes no game draw (each battle restarts its own fixed
+        // rule: m4-battle-classic §1.4: Classic with ClassicBattleRng = Classic (DEFAULT) makes no game draw (each battle restarts its own fixed
         // generator); Game and the New ruleset take one draw per battle, in system-name order, also when none is needed. Forces are fixed now, so a
         // fleet that retreats into another battle's system this Step is not in that battle (it meets the enemy next Step).
         bool seedDraw = Params.Ruleset == BattleRuleset.New || Params.BattleRng == ClassicBattleRng.Game;
@@ -396,7 +396,7 @@ public sealed class BattleModule
     private int BaseTo(int a, int b)
     {
         var sa = _galaxy.Systems[a]; var sb = _galaxy.Systems[b];
-        return Rebellion.Core.Travel.TravelFormula.BaseDistance(sa.MapX, sa.MapY, sb.MapX, sb.MapY);
+        return Praedra.Core.Travel.TravelFormula.BaseDistance(sa.MapX, sa.MapY, sb.MapX, sb.MapY);
     }
 
     /// <summary>Straight-line base distance from a system to every system (free travel since 2026-10-16). rule: m4-retreat-damage-repair §3 (Nearest).</summary>

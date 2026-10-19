@@ -2,19 +2,19 @@ using System;
 using System.Globalization;
 using System.Linq;
 using Godot;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Defenses;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Setup;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Defenses;
+using Praedra.Core.Fleets;
+using Praedra.Core.Setup;
 
-using Side = Rebellion.Core.Clock.Side;
+using Side = Praedra.Core.Clock.Side;
 
-namespace RebellionViewer;
+namespace PraedraViewer;
 
 /// <summary>
 /// Root: shows the start screen or the game screen, and runs the command-line modes (--smoke, --screenshot).
-/// All rules live in Rebellion.Core; the screens only draw, submit orders and call the session's StepDay.
+/// All rules live in Praedra.Core; the screens only draw, submit orders and call the session's StepDay.
 /// </summary>
 public partial class Main : Control
 {
@@ -40,7 +40,7 @@ public partial class Main : Control
         if (_args.Contains("--menu") || (shot == null && !_args.Contains("--newgame"))) { ShowMenu(shot, shotFrames); return; }
         var side = Arg("--side") == "Empire" ? Side.Empire : Side.Alliance;
         var preset = Enum.TryParse(Arg("--preset"), true, out Preset p) ? p : Preset.Medium;
-        var rules = string.Equals(Arg("--rules"), "classic", StringComparison.OrdinalIgnoreCase) ? Rebellion.Core.Battle.BattleRuleset.Classic : Rebellion.Core.Battle.BattleRuleset.New; // DEFAULT New (m4-battle-new; Paul 2026-10-18)
+        var rules = string.Equals(Arg("--rules"), "classic", StringComparison.OrdinalIgnoreCase) ? Praedra.Core.Battle.BattleRuleset.Classic : Praedra.Core.Battle.BattleRuleset.New; // DEFAULT New (m4-battle-new; Paul 2026-10-18)
         StartGame(GameSession.New(GameBoot.LoadData(), side, preset, rules, NewGameSeed()), shot, shotFrames, true);
     }
 
@@ -161,7 +161,7 @@ public partial class Main : Control
         var fleet = s.Game.State.Fleets.Values.First(f => f.Side == me && f.At != null && s.Host.Fleets.SpeedOf(f) > 0);
         string dest = mine.First(m => m != fleet.At && s.Host.Fleets.FindPath(fleet.At!, m, s.Host.Fleets.SpeedOf(fleet)).Ok);
         s.Track(s.Host.Fleets.SubmitMove(me, fleet.Id, dest), $"Move {fleet.Name} to {dest}");
-        var yard = s.Host.Economy.Objects.FirstOrDefault(o => o.Category == Rebellion.Core.Economy.ObjectCategory.Facility && o.Completed && o.Side == null
+        var yard = s.Host.Economy.Objects.FirstOrDefault(o => o.Category == Praedra.Core.Economy.ObjectCategory.Facility && o.Completed && o.Side == null
             && o.Class == "Orbital Shipyard" && s.OwnerOf(o.System!) == me);
         if (yard != null) s.Track(s.Host.Construction.SubmitBuild(me, yard.System!, YardFamily.Shipyard, "Corellian Corvette", 1), "Build a corvette");
         s.Track(s.Host.Bombardment.SubmitBombard(me, fleet.Id, fleet.At!, BombardCategory.General), "Bombard own system (expected refusal)");

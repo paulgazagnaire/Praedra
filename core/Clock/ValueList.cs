@@ -1,4 +1,4 @@
-namespace Rebellion.Core.Clock;
+namespace Praedra.Core.Clock;
 
 /// <summary>
 /// A read-only list with value equality, so event records that carry lists (paths, fleet ids) compare equal when their

@@ -1,13 +1,13 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Data;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Ships;
-using Rebellion.Core.Tests.Construction;
-using Rebellion.Core.Tests.Economy;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Data;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Ships;
+using Praedra.Core.Tests.Construction;
+using Praedra.Core.Tests.Economy;
 
-namespace Rebellion.Core.Tests.Fleets;
+namespace Praedra.Core.Tests.Fleets;
 
 // Tests of m3-ships-and-fighters (ids S1 to S17 as in the sheet's table, then extra tests named after the rule they check).
 // The real CSV files are used. Hop Coruscant to Corellia is tier 1, base 20.
@@ -16,9 +16,9 @@ public class ShipTests
     private const string Home = "Coruscant", Far = "Corellia";
     private const string Isd = "Imperial Star Destroyer";
 
-    private static IReadOnlyList<ShipClass> Capitals() => ShipData.LoadCapitalShips(Path.Combine(TestData.OriginalDir, ShipData.CapitalShipsFile));
-    private static IReadOnlyList<ShipClass> Fighters() => ShipData.LoadFighters(Path.Combine(TestData.OriginalDir, ShipData.FightersFile));
-    private static CsvTable Csv(string file) => CsvTable.Parse(File.ReadAllText(Path.Combine(TestData.OriginalDir, file)), file);
+    private static IReadOnlyList<ShipClass> Capitals() => ShipData.LoadCapitalShips(Path.Combine(TestData.ClassicDir, ShipData.CapitalShipsFile));
+    private static IReadOnlyList<ShipClass> Fighters() => ShipData.LoadFighters(Path.Combine(TestData.ClassicDir, ShipData.FightersFile));
+    private static CsvTable Csv(string file) => CsvTable.Parse(File.ReadAllText(Path.Combine(TestData.ClassicDir, file)), file);
 
     // ---------------------------------------------------------------- the class tables (S1 to S5)
 
@@ -93,7 +93,7 @@ public class ShipTests
     [Fact]
     public void Ship_classes_and_cost_rows_agree_by_name()
     {
-        var ships = ShipData.LoadAll(TestData.OriginalDir);
+        var ships = ShipData.LoadAll(TestData.ClassicDir);
         foreach (var c in ships.Values)
         {
             Assert.True(EcoWorld.Costs.Value.TryGet(c.Name, out var row), $"no cost row for {c.Name}");
@@ -141,7 +141,7 @@ public class ShipTests
     {
         var w = new BuildWorld();
         w.Build.RespectResearchOrder = true;
-        var ships = ShipData.LoadAll(TestData.OriginalDir).Values;
+        var ships = ShipData.LoadAll(TestData.ClassicDir).Values;
         List<string> At(ShipSide side, bool capital) =>
             ships.Where(c => c.IsCapital == capital && c.Side == side && w.Build.IsResearched(side == ShipSide.Alliance ? Side.Alliance : Side.Empire, c.Name))
                  .Select(c => c.Name).OrderBy(n => n, StringComparer.Ordinal).ToList();
@@ -309,7 +309,7 @@ public class ShipTests
     public void S17_LoadingTablesAndRunningTheTestsDrawsNothing()
     {
         var w = new BuildWorld(7); // a real generator: any draw would be counted
-        Capitals(); Fighters(); ShipData.LoadAll(TestData.OriginalDir);
+        Capitals(); Fighters(); ShipData.LoadAll(TestData.ClassicDir);
         w.Fleets.DebugOrdersEnabled = true;
         int f = w.Fleets.AddFleet(Side.Empire, "F", new[] { Isd, "Medium Transport" }, Home, new[] { "TIE Fighter" });
         int ship = w.State.Fleets[f].Ships[0];

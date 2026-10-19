@@ -1,10 +1,10 @@
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Victory;
-using static Rebellion.Core.Tests.Characters.CharWorld;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Setup;
+using Praedra.Core.Victory;
+using static Praedra.Core.Tests.Characters.CharWorld;
 
-namespace Rebellion.Core.Tests.Characters;
+namespace Praedra.Core.Tests.Characters;
 
 /// <summary>The starting characters (m5-setup-and-victory P9), the roster data, and the character terms of victory.</summary>
 public class CharacterSetupTests
@@ -56,7 +56,7 @@ public class CharacterSetupTests
     }
 
     // m5-characters-and-force CH39 (Rule New 4, Paul 2026-10-18): TrainerPick Random (DEFAULT) draws 3 talented placed characters per side, each an
-    // aware Force user with Force 80..120 (or his own if higher), and only they can train; Fixed (1998) draws nothing and Luke and Vader train
+    // aware Force user with Force 80..120 (or his own if higher), and only they can train; Fixed (Classic) draws nothing and Luke and Vader train
     [Fact]
     public void CH39_RandomTalentedTrainers()
     {
@@ -130,7 +130,7 @@ public class CharacterSetupTests
         var w = new CharWorld();
         w.Hold(Hoth, Side.Empire); w.Hold(Yavin, Side.Empire);
         int f = w.Fleet(Side.Empire, Coruscant, Isd, 3);
-        var stub = new Rebellion.Core.Tests.Economy.StubRng().Queue(1, 2, 1);
+        var stub = new Praedra.Core.Tests.Economy.StubRng().Queue(1, 2, 1);
         Assert.Equal((Yavin, 0), w.Ch.RandomLocation(Side.Empire, stub));
         Assert.Equal(((string?)null, f), w.Ch.RandomLocation(Side.Empire, stub));
         Assert.Equal(new[] { (0, 2), (0, 2), (0, 2) }, stub.Requests.Select(r => (r.Min, r.Max)));
@@ -196,7 +196,7 @@ public class CharacterSetupTests
     public void Ai_RunsWithCharacters()
     {
         var h = Make(4);
-        var ai = new Rebellion.Core.AI.AiMatch(h);
+        var ai = new Praedra.Core.AI.AiMatch(h);
         ai.RunTo(120);
         Assert.All(h.Characters.InPlay, c => Assert.NotEqual(CharacterStatus.Dead, c.Status));
     }

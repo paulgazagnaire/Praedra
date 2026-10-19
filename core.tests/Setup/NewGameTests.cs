@@ -1,11 +1,11 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Control;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Victory;
-using Rebellion.Core.Tests.Control;
+using Praedra.Core.Clock;
+using Praedra.Core.Control;
+using Praedra.Core.Economy;
+using Praedra.Core.Setup;
+using Praedra.Core.Victory;
+using Praedra.Core.Tests.Control;
 
-namespace Rebellion.Core.Tests.Setup;
+namespace Praedra.Core.Tests.Setup;
 
 // m5 new game (setup-victory/09 day-one files, setup-victory/04 victory). Rule sheet m5-setup-and-victory not yet in the project folder; these
 // tests check the day-one CSVs, the DEFAULT forces table and the HQ-Only victory.

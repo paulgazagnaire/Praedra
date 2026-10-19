@@ -1,12 +1,12 @@
 using System;
 using System.Linq;
 using Godot;
-using Rebellion.Core.Characters;
-using Rebellion.Core.Missions;
+using Praedra.Core.Characters;
+using Praedra.Core.Missions;
 
-using Side = Rebellion.Core.Clock.Side;
+using Side = Praedra.Core.Clock.Side;
 
-namespace RebellionViewer;
+namespace PraedraViewer;
 
 /// <summary>
 /// Playtest of the Death Star screens (rule: m5-death-star). The core's setup helper puts a Death Star fleet at a system (test only: a real game
@@ -38,7 +38,7 @@ public partial class Main
         var star = gs.G.Get(target);
         GD.Print($"  Death Star fleet at {target} (sector {star.Sector})");
 
-        int dsFleet = fm.AddFleet(Side.Empire, "DS Strike", new[] { Rebellion.Core.DeathStar.DeathStarModule.ShipClass }, target);
+        int dsFleet = fm.AddFleet(Side.Empire, "DS Strike", new[] { Praedra.Core.DeathStar.DeathStarModule.ShipClass }, target);
         var fleet = s.Game.State.Fleets[dsFleet];
         Expect(s.HoldsDeathStar(fleet) && ds.HasDeathStar(Side.Empire, target), $"the core says the Empire has a Death Star at {target}");
 
@@ -114,11 +114,11 @@ public partial class Main
             Expect(s.Messages.Skip(b2).Any(m => m.Text.StartsWith("Order refused: Destroy System", StringComparison.Ordinal) && m.Text.Contains("already destroyed")),
                 "a second strike is refused in plain words: " + string.Join(" | ", s.Messages.Skip(b2).Select(m => m.Text)));
             // the build menu at a yard: the Death Star is offered, and a second one at a system that has one is explained
-            string yard = s.Host.Economy.Objects.Where(o => o.Category == Rebellion.Core.Economy.ObjectCategory.Facility && o.Completed && o.System != null && o.Class.Contains("Shipyard") && s.OwnerOf(o.System) == me)
+            string yard = s.Host.Economy.Objects.Where(o => o.Category == Praedra.Core.Economy.ObjectCategory.Facility && o.Completed && o.System != null && o.Class.Contains("Shipyard") && s.OwnerOf(o.System) == me)
                 .Select(o => o.System).OrderBy(x => x, StringComparer.Ordinal).FirstOrDefault();
             if (yard != null)
             {
-                fm.AddFleet(Side.Empire, "DS Guard", new[] { Rebellion.Core.DeathStar.DeathStarModule.ShipClass }, yard);
+                fm.AddFleet(Side.Empire, "DS Guard", new[] { Praedra.Core.DeathStar.DeathStarModule.ShipClass }, yard);
                 gs.SelectSystem(yard); gs.PlayRefresh();
                 gs.Click(">  Ships"); gs.PlayRefresh();
                 string row = gs.ButtonTexts().FirstOrDefault(t => t.StartsWith("Death Star   ", StringComparison.Ordinal));

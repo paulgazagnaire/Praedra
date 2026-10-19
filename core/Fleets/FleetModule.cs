@@ -1,11 +1,11 @@
-using Rebellion.Core.Battle;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Map;
-using Rebellion.Core.Ships;
-using Rebellion.Core.Travel;
+using Praedra.Core.Battle;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Map;
+using Praedra.Core.Ships;
+using Praedra.Core.Travel;
 
-namespace Rebellion.Core.Fleets;
+namespace Praedra.Core.Fleets;
 
 /// <summary>
 /// Fleets: the MoveFleet order and movement along lanes (step 1 to 5), forced stops, contacts and the Classic blockade flag, and, from
@@ -954,7 +954,7 @@ public sealed class FleetModule
     }
 
     /// <summary>
-    /// The Classic (1998) blockade flag: true when no battle bit is set (not both sides present, a fleet or a based fighter squadron
+    /// The Classic blockade flag: true when no battle bit is set (not both sides present, a fleet or a based fighter squadron
     /// counting as presence), the system is owned by a side (neutral systems are never blockaded) and a fleet of the other side is
     /// there, armed or not (the original has no armed test). rule: m1-forced-stop-and-blockade §Rule (Classic) conditions 1 to 3;
     /// m3-fleets §Fighters based at a system (based squadrons count as presence); Traced ai/data/trace-d 1.1.

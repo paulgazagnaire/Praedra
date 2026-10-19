@@ -1,9 +1,9 @@
-using Rebellion.Core.Battle;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
+using Praedra.Core.Battle;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
 
-namespace Rebellion.Core.Tests.Battle;
+namespace Praedra.Core.Tests.Battle;
 
 // Tests of m4-battle-classic §1 and §10 and m4-retreat-damage-repair §1 to §4 inside the day Step (synthetic map A-B-C, B-D).
 // Every BattleParams here sets Ruleset = Classic explicitly: these are Classic-battle tests and the DEFAULT became New (Paul, 2026-10-18).
@@ -143,9 +143,9 @@ public class BattleModuleTests
         Assert.Equal(2, w.Events<BattleEnded>().Count);
     }
 
-    // m4-battle-classic BC16 (moved by B3: with ClassicBattleRng = Original the battles draw nothing from the game generator; with Game, one seed each, in name order)
+    // m4-battle-classic BC16 (moved by B3: with ClassicBattleRng = Classic the battles draw nothing from the game generator; with Game, one seed each, in name order)
     [Theory]
-    [InlineData(ClassicBattleRng.Original, 0)]
+    [InlineData(ClassicBattleRng.Classic, 0)]
     [InlineData(ClassicBattleRng.Game, 2)]
     public void BC16_SeedDrawsPerBattleInNameOrder(ClassicBattleRng rng, int draws)
     {
@@ -176,7 +176,7 @@ public class BattleModuleTests
     }
 
     // m4-battle-classic BC18 and §1.3 (moved by B3: Retreat is a threshold of 10000 inside the loop; the Corvettes take the AI Empire's volley and leave in
-    // second 1; no game draw at all with the Original dice)
+    // second 1; no game draw at all with the Classic dice)
     [Fact]
     public void BC18_SetOnContactRetreatLeavesInSecondOne()
     {
@@ -192,7 +192,7 @@ public class BattleModuleTests
         Assert.Contains(w.Events<OrderAccepted>(), a => a.Sequence == s1);
         Assert.Equal(1, w.Events<BattleEnded>().Single().Result.Seconds);
         Assert.Equal("D", w.F(rebel).At);
-        Assert.Equal(draws, w.Game.Rng.Draws); // the Original dice are the battle's own
+        Assert.Equal(draws, w.Game.Rng.Draws); // the Classic dice are the battle's own
         var choices = w.Events<BattleChoice>();
         Assert.Equal(OnContactMode.Retreat, choices.Single(c => c.Side == Side.Alliance).Mode);
         Assert.Equal(OnContactMode.Fight, choices.Single(c => c.Side == Side.Empire).Mode);

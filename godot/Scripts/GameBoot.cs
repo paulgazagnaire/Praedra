@@ -1,19 +1,19 @@
-using Rebellion.Core.AI;
+using Praedra.Core.AI;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Godot;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Setup;
+using Praedra.Core.Clock;
+using Praedra.Core.Setup;
 
-using Side = Rebellion.Core.Clock.Side;
+using Side = Praedra.Core.Clock.Side;
 using FileAccess = Godot.FileAccess;
 
-namespace RebellionViewer;
+namespace PraedraViewer;
 
 /// <summary>
-/// How hard the game is: the 1998 head start (StartPreset, setup-victory/02) and how well the computer opponent plays (the core's AiLevel,
+/// How hard the game is: the Classic head start (StartPreset, setup-victory/02) and how well the computer opponent plays (the core's AiLevel,
 /// ai/09 §6). One choice drives both.
 /// </summary>
 public enum Preset { Easy, Medium, Hard }
@@ -64,19 +64,19 @@ public static class GameBoot
     public const bool AiUsesFog = true;
 
     /// <summary>The Empire's capital (the Alliance's goal), the core's own name for it. rule: m2-control-and-capture (capital system).</summary>
-    public const string EmpireCapital = Rebellion.Core.Control.ControlModule.CapitalSystem;
+    public const string EmpireCapital = Praedra.Core.Control.ControlModule.CapitalSystem;
 
     static GameData _data;
 
     /// <summary>
-    /// Loads the game data once. The exported game keeps the tables inside its package as data/design/*.txt and data/original/*.txt
+    /// Loads the game data once. The exported game keeps the tables inside its package as data/design/*.txt and data/classic/*.txt
     /// (Godot drops .csv from exports); the core wants real files, so they are copied to the user folder as .csv first.
     /// </summary>
     public static GameData LoadData()
     {
         if (_data != null) return _data;
         string root = ProjectSettings.GlobalizePath("user://gamedata");
-        foreach (var sub in new[] { "design", "design/day-one", "original" })
+        foreach (var sub in new[] { "design", "design/day-one", "classic" })
         {
             string dir = Path.Combine(root, "data", sub);
             Directory.CreateDirectory(dir);
@@ -108,19 +108,19 @@ public static class GameBoot
     };
 
     /// <summary>Display name of a space battle ruleset (start screen, top bar, How to play, battle report).</summary>
-    public static string RulesName(Rebellion.Core.Battle.BattleRuleset r) => r == Rebellion.Core.Battle.BattleRuleset.New ? "New (weapons matter)" : "Classic (1998)";
+    public static string RulesName(Praedra.Core.Battle.BattleRuleset r) => r == Praedra.Core.Battle.BattleRuleset.New ? "New (weapons matter)" : "Classic";
 
     /// <summary>
     /// The core settings for the chosen space battle rules: only BattleParams.Ruleset is set, every other battle value keeps its default.
     /// rule: m4-battle-new §Rule (New) (ruleset switch, DEFAULT New, Paul 2026-10-18)
     /// </summary>
-    public static GameSettings SettingsFor(Rebellion.Core.Battle.BattleRuleset r) =>
-        new() { Battle = new Rebellion.Core.Battle.BattleParams { Ruleset = r } };
+    public static GameSettings SettingsFor(Praedra.Core.Battle.BattleRuleset r) =>
+        new() { Battle = new Praedra.Core.Battle.BattleParams { Ruleset = r } };
 
-    public static GameHost NewGame(GameData data, Side player, Preset preset, int seed = 1, Rebellion.Core.Battle.BattleRuleset rules = Rebellion.Core.Battle.BattleRuleset.New)
+    public static GameHost NewGame(GameData data, Side player, Preset preset, int seed = 1, Praedra.Core.Battle.BattleRuleset rules = Praedra.Core.Battle.BattleRuleset.New)
     {
         LoadData();
-        return Rebellion.Core.Setup.NewGame.Create(data, new NewGameOptions { Seed = seed, Preset = PresetFor(player, preset), Data = data, NewGameData = _newGameData, Settings = SettingsFor(rules) });
+        return Praedra.Core.Setup.NewGame.Create(data, new NewGameOptions { Seed = seed, Preset = PresetFor(player, preset), Data = data, NewGameData = _newGameData, Settings = SettingsFor(rules) });
     }
 
     public static GameHost LoadGame(GameData data, string saveJson) => GameHost.Load(saveJson, null, data);
@@ -174,7 +174,7 @@ public static class GameBoot
         using var f = FileAccess.Open(path, FileAccess.ModeFlags.Write);
         if (f == null) throw new IOException($"Cannot write {path}: {FileAccess.GetOpenError()}");
         // First line: who the player is and the opponent's level (the core's save holds the game only). Second line: the core's save.
-        f.StoreLine($"REBELLION-SAVE 1 {player} {level}");
+        f.StoreLine($"PRAEDRA-SAVE 1 {player} {level}");
         f.StoreString(json);
     }
 
@@ -188,7 +188,7 @@ public static class GameBoot
         int nl = all.IndexOf('\n');
         if (nl < 0) return null;
         var parts = all[..nl].Trim().Split(' ');
-        if (parts.Length is not (3 or 4) || parts[0] != "REBELLION-SAVE" || !Enum.TryParse(parts[2], out Side side)) return null;
+        if (parts.Length is not (3 or 4) || parts[0] is not ("PRAEDRA-SAVE" or "REBELLION-SAVE") || !Enum.TryParse(parts[2], out Side side)) return null;
         var level = parts.Length == 4 && Enum.TryParse(parts[3], out AiLevel l) ? l : AiLevel.Medium;
         return (side, all[(nl + 1)..], level);
     }

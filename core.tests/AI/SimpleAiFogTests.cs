@@ -1,10 +1,10 @@
-using Rebellion.Core.AI;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Fog;
-using Rebellion.Core.Setup;
+using Praedra.Core.AI;
+using Praedra.Core.Clock;
+using Praedra.Core.Fog;
+using Praedra.Core.Setup;
 using Xunit.Abstractions;
 
-namespace Rebellion.Core.Tests.AI;
+namespace Praedra.Core.Tests.AI;
 
 // The simple AI behind the fog (SimpleAiParams.UseFog): it reads only its side's KnowledgeView. rule: m5-fog-and-hq §N8 (the AI plays fair,
 // Decided), §N5 (KnownHq). With UseFog off (DEFAULT for now) the AI is unchanged (the other AI tests).

@@ -1,10 +1,10 @@
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Missions;
-using static Rebellion.Core.Tests.Missions.MissionWorld;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Missions;
+using static Praedra.Core.Tests.Missions.MissionWorld;
 
-namespace Rebellion.Core.Tests.Missions;
+namespace Praedra.Core.Tests.Missions;
 
 // m5-missions §Tests MI1 to MI26 and MI39 to MI43, MI57, MI60: the detection walk, the decoy phase, the success tables and the draw order.
 public class MissionRollTests
@@ -188,7 +188,7 @@ public class MissionRollTests
         // and the betrayal draw and Piett's duel (B2d); B2e moved: his Hurt roll (combat 0: p = 100, a hit) and the minor's death draw
         Assert.Equal(expectedDraws + 4, Rolls(w));
         Assert.Equal(1, w.Stub.Count(0, 1)); // the duel's guard pick among the two guards
-        var seen = Assert.Single(w.Events<Rebellion.Core.Fog.AgentDetected>()); // the fog's MissionDetected (m5-fog-and-hq HR11)
+        var seen = Assert.Single(w.Events<Praedra.Core.Fog.AgentDetected>()); // the fog's MissionDetected (m5-fog-and-hq HR11)
         Assert.Equal((Side.Alliance, T, Side.Empire), (seen.Viewer, seen.System, seen.AgentSide));
     }
 
@@ -418,9 +418,9 @@ public class MissionRollTests
         w.Game.Step();
         w.RunIteration(w.LastMission);
         Assert.Equal(new[] { (0, 99), (0, 99), (0, 99), (0, 6), (0, 99) }, w.Stub.Requests.Where(r => r is (0, 99) or (0, 6)));
-        Assert.Equal(41, w.Ch.Get(Leia)!.BaseSkill(Rebellion.Core.Characters.Skill.ShipDesign));
-        Assert.Equal(40, w.Ch.Get(Han)!.BaseSkill(Rebellion.Core.Characters.Skill.ShipDesign));
-        Assert.Equal(4, w.Host.Research.Points(Side.Alliance, Rebellion.Core.Research.ResearchKind.Ship));
+        Assert.Equal(41, w.Ch.Get(Leia)!.BaseSkill(Praedra.Core.Characters.Skill.ShipDesign));
+        Assert.Equal(40, w.Ch.Get(Han)!.BaseSkill(Praedra.Core.Characters.Skill.ShipDesign));
+        Assert.Equal(4, w.Host.Research.Points(Side.Alliance, Praedra.Core.Research.ResearchKind.Ship));
     }
 
     // m5-missions MI26: Reconnaissance on an undefended target: automatic success, no success draw (only the betrayal draw, B2b); SystemRevealed

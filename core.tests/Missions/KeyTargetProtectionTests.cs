@@ -1,11 +1,11 @@
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Missions;
-using static Rebellion.Core.Tests.Missions.MissionWorld;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Missions;
+using static Praedra.Core.Tests.Missions.MissionWorld;
 
-namespace Rebellion.Core.Tests.Missions;
+namespace Praedra.Core.Tests.Missions;
 
-// m5-missions §4, §6a, tests MI66 to MI72: Paul's key-target protections with the 1998 behaviour behind switches (KeyDuelCapture, 2026-10-18;
+// m5-missions §4, §6a, tests MI66 to MI72: Paul's key-target protections with the Classic behaviour behind switches (KeyDuelCapture, 2026-10-18;
 // Key-target protections, 2026-10-18): the cap roll on a key character's duel capture, the full guard set at a key target, base skills.
 public class KeyTargetProtectionTests
 {
@@ -43,7 +43,7 @@ public class KeyTargetProtectionTests
         if (!captured) { Assert.Equal(0, emp.Injury); Assert.Equal(T, w.Ch.LocationOf(emp)); }
     }
 
-    // m5-missions MI67: a character not in the key-target file keeps the 1998 duel under Capped: captured, no cap roll
+    // m5-missions MI67: a character not in the key-target file keeps the Classic duel under Capped: captured, no cap roll
     [Fact]
     public void MI67_NonKeyCharacterUnaffected()
     {
@@ -52,26 +52,26 @@ public class KeyTargetProtectionTests
         Assert.Equal(CharacterStatus.Captured, w.Ch.Get(Piett)!.Status);
     }
 
-    // m5-missions MI68: Original keeps the 1998 duel for the Emperor: captured outright, no cap roll (the queued 2 that would fail it is not drawn
+    // m5-missions MI68: Classic keeps the Classic duel for the Emperor: captured outright, no cap roll (the queued 2 that would fail it is not drawn
     // as one); KeyTargetRules off behaves the same
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
     public void MI68_OriginalCapturesOutright(bool original)
     {
-        var p = original ? new MissionParams { KeyDuelCapture = KeyDuelCapture.Original } : new MissionParams { KeyTargetRules = false };
+        var p = original ? new MissionParams { KeyDuelCapture = KeyDuelCapture.Classic } : new MissionParams { KeyTargetRules = false };
         var w = DuelWorld(Palpatine, p, 2);
         Assert.Empty(w.Events<MissionKeyDuelCaptureRoll>());
         Assert.Equal(CharacterStatus.Captured, w.Ch.Get(Palpatine)!.Status);
         Assert.Equal(MissionModule.CauseMissionDuel, w.Events<CharacterCaptured>().Single().Cause);
     }
 
-    // m5-missions MI69: the Force-user encounter is a duel too: Luke loses to Vader (draw 99); under Capped his cap roll (4) decides; Original
+    // m5-missions MI69: the Force-user encounter is a duel too: Luke loses to Vader (draw 99); under Capped his cap roll (4) decides; Classic
     // captures him outright
     [Theory]
     [InlineData(KeyDuelCapture.Capped, 3, true)]
     [InlineData(KeyDuelCapture.Capped, 4, false)]
-    [InlineData(KeyDuelCapture.Original, -1, true)]
+    [InlineData(KeyDuelCapture.Classic, -1, true)]
     public void MI69_ForceEncounterDuel(KeyDuelCapture mode, int roll, bool captured)
     {
         var w = new MissionWorld(new MissionParams { KeyDuelCapture = mode });
@@ -109,7 +109,7 @@ public class KeyTargetProtectionTests
     // Vader on Assassination of a target standing at Alliance T with one landed Alliance Army regiment.
     private static MissionWorld KeyJob(int target, MissionParams? p, int vaderEsp = 60, int regiments = 1)
     {
-        var w = new MissionWorld(p, characters: Rebellion.Core.Tests.Characters.CharWorld.Classic1998Force()); // the 1998 Force (100 / 100 / 50): m5-characters-and-force §Force CH37
+        var w = new MissionWorld(p, characters: Praedra.Core.Tests.Characters.CharWorld.ClassicForce()); // the Classic Force (100 / 100 / 50): m5-characters-and-force §Force CH37
         w.Hold(T, Side.Alliance, 30);
         for (int i = 0; i < regiments; i++) w.Unit(Side.Alliance, RebArmy, T);
         w.Agent(Vader, T, esp: vaderEsp, com: 100);
@@ -118,10 +118,10 @@ public class KeyTargetProtectionTests
     }
 
     // m5-missions MI71: KeyTargetGuards: at the job check of a key-target mission, Full (DEFAULT) adds the landed regiment (the walk before B2d);
-    // Original keeps the B2d planet guards (special forces only: no detection draw); a non-key target (Han) never gets it
+    // Classic keeps the B2d planet guards (special forces only: no detection draw); a non-key target (Han) never gets it
     [Theory]
     [InlineData(KeyTargetGuards.Full, Luke, true)]
-    [InlineData(KeyTargetGuards.Original, Luke, false)]
+    [InlineData(KeyTargetGuards.Classic, Luke, false)]
     [InlineData(KeyTargetGuards.Full, Han, false)]
     public void MI71_KeyTargetGuards(KeyTargetGuards mode, int target, bool walked)
     {
@@ -137,7 +137,7 @@ public class KeyTargetProtectionTests
     }
 
     // m5-missions MI72: KeyTargetBaseSkills: Vader (espionage 50, Force 120: effective 110). On (DEFAULT): the detection walk reads 50, and he does
-    // not qualify for a kill (espionage below 60): the target is injured, no k draw. Off (1998 Force boost): the walk reads 110 (x 60 higher) and a
+    // not qualify for a kill (espionage below 60): the target is injured, no k draw. Off (Classic Force boost): the walk reads 110 (x 60 higher) and a
     // qualified success draws k (50: kill)
     [Theory]
     [InlineData(true)]

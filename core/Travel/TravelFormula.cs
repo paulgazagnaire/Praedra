@@ -1,6 +1,6 @@
-using Rebellion.Core.Map;
+using Praedra.Core.Map;
 
-namespace Rebellion.Core.Travel;
+namespace Praedra.Core.Travel;
 
 /// <summary>Pure travel arithmetic. rule: m1-travel §Per-hop formula used by the engine, §Rule (Classic), §Rule (New).</summary>
 public static class TravelFormula

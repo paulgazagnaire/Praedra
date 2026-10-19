@@ -1,9 +1,9 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Support;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Support;
 
-namespace Rebellion.Core.Tests.Economy;
+namespace Praedra.Core.Tests.Economy;
 
 // 1000-day headless runs on the real galaxy with the demo setup (core/Economy/DemoScenario): no crash, nothing negative where
 // the sheets forbid it, identical StateHash on two runs, and only the random numbers the sheets require.
@@ -98,7 +98,7 @@ public class EconomySoakTests
         for (int i = 0; i < 200; i++) first.Game.Step();
         string json = GameSave.Save(first.Game);
         var loaded = GameSave.Load(json);
-        var fleets = FleetModule.Attach(loaded, TestData.RealGalaxy, Rebellion.Core.Tests.Fleets.World.Ships.Value, Rebellion.Core.Tests.Fleets.World.Blockade);
+        var fleets = FleetModule.Attach(loaded, TestData.RealGalaxy, Praedra.Core.Tests.Fleets.World.Ships.Value, Praedra.Core.Tests.Fleets.World.Blockade);
         var eco = EconomyModule.Attach(loaded, TestData.RealGalaxy, EcoWorld.Slots.Value, EcoWorld.Costs.Value, fleets);
         Assert.Equal(GameSave.StateHash(first.Game), GameSave.StateHash(loaded));
         for (int i = 0; i < 200; i++) loaded.Step();
@@ -191,7 +191,7 @@ public class EconomySoakTests
         for (int i = 0; i < 200; i++) first.Game.Step();
         Assert.NotEmpty(first.Game.State.Support.Systems);
         var loaded = GameSave.Load(GameSave.Save(first.Game));
-        var fleets = FleetModule.Attach(loaded, TestData.RealGalaxy, Rebellion.Core.Tests.Fleets.World.Ships.Value, Rebellion.Core.Tests.Fleets.World.Blockade);
+        var fleets = FleetModule.Attach(loaded, TestData.RealGalaxy, Praedra.Core.Tests.Fleets.World.Ships.Value, Praedra.Core.Tests.Fleets.World.Blockade);
         var eco = EconomyModule.Attach(loaded, TestData.RealGalaxy, EcoWorld.Slots.Value, EcoWorld.Costs.Value, fleets);
         SupportModule.Attach(loaded, TestData.RealGalaxy, eco, fleets, GarrisonWeights.Load(Path.Combine(TestData.DesignDir, GarrisonWeights.FileName)));
         Assert.Equal(GameSave.StateHash(first.Game), GameSave.StateHash(loaded));

@@ -1,12 +1,12 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Map;
+using Praedra.Core.Clock;
+using Praedra.Core.Map;
 
-namespace Rebellion.Core.Setup;
+namespace Praedra.Core.Setup;
 
 /// <summary>
 /// How a new game's day-one owners are dealt. rule: m5-setup-and-victory §P1 Deal (DealMode).
 /// Anchored is built from the anchors file and the game's own generator; File keeps the five fixed day-one CSVs plus fixed-owners.csv (the build before 2026-10-16).
-/// The sheet also specifies Original, Blocs and Scenario; they are not built.
+/// The sheet also specifies Classic, Blocs and Scenario; they are not built.
 /// </summary>
 public enum DealMode { Anchored, File }
 
@@ -17,7 +17,7 @@ public sealed record DealParams
 {
     /// <summary>The HQ is at least this many map units (straight line) from Coruscant. Proposal, m5-setup-and-victory §P1 HQ pick (HqMinDistance; setup-victory/10 v5 banner, replaces "5 lane hops" and "2 lanes").</summary>
     public int HqMinDistance { get; init; } = 200;
-    /// <summary>The totals table is written for this many systems; totals scale by (systems in sectors) / this, rounded half up. DEFAULT, setup-victory/10 v5 banner (keeps the 1998 share; Medium: Empire 90 -> 138, Alliance 25 -> 38 at 553 in sectors).</summary>
+    /// <summary>The totals table is written for this many systems; totals scale by (systems in sectors) / this, rounded half up. DEFAULT, setup-victory/10 v5 banner (keeps the Classic share; Medium: Empire 90 -> 138, Alliance 25 -> 38 at 553 in sectors).</summary>
     public int TotalsBaseSystems { get; init; } = 360;
     /// <summary>A pocket grows only into systems within this many map units of one of its systems. Proposal, m5-setup-and-victory §Mode Anchored step 6 (setup-victory/data/deal_day_one.py v5: 90).</summary>
     public int PocketReach { get; init; } = 90;

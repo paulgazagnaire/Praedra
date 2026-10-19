@@ -1,13 +1,13 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Control;
-using Rebellion.Core.Defenses;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Map;
-using Rebellion.Core.Support;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Control;
+using Praedra.Core.Defenses;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
+using Praedra.Core.Map;
+using Praedra.Core.Support;
 
-namespace Rebellion.Core.DeathStar;
+namespace Praedra.Core.DeathStar;
 
 /// <summary>
 /// The Death Star: the one-per-system build cap, the Destroy System order and its resolution at work-list slot 5.1 (after the bombardment's hook),
@@ -319,7 +319,7 @@ public sealed class DeathStarModule
         ctx.Emit((i, _) => new SectorStruck(i, day, sec, strike, list));
     }
 
-    // Classic (1998) fallout: every populated, ever-held world of the galaxy (name order), core worlds -10 for the destroyer always, rim worlds -2
+    // Classic fallout: every populated, ever-held world of the galaxy (name order), core worlds -10 for the destroyer always, rim worlds -2
     // where the destroyer's support is below 90, through ChangeSupport with the normal damping (every event effect goes through it). The destroyed
     // world itself has no support value. No strike count, no revolt. rule: m5-death-star §2 effect 7 (DeathStarFallout = Classic; B5c section 3).
     private void ClassicFallout(StepContext ctx, string destroyed)

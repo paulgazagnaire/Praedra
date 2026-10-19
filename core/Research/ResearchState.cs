@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Research;
+namespace Praedra.Core.Research;
 
 /// <summary>
 /// One side's research: points, level and the exhausted flag per track (lists of three, fixed order Ship, Troop, Facility), and the day of

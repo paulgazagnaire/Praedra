@@ -1,14 +1,14 @@
-using Rebellion.Core.Battle;
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Control;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Fog;
-using Rebellion.Core.Support;
-using static Rebellion.Core.Tests.Missions.MissionWorld;
-using Rebellion.Core.Tests.Control;
+using Praedra.Core.Battle;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Control;
+using Praedra.Core.Fleets;
+using Praedra.Core.Fog;
+using Praedra.Core.Support;
+using static Praedra.Core.Tests.Missions.MissionWorld;
+using Praedra.Core.Tests.Control;
 
-namespace Rebellion.Core.Tests.Missions;
+namespace Praedra.Core.Tests.Missions;
 
 /// <summary>
 /// B2c: the four triggers that move loyalty and the per-system loss tallies they read. Lando is the Alliance minor, Piett the Imperial minor,
@@ -64,7 +64,7 @@ public class B2cLoyaltyTriggerTests
     }
 
     // B2c-2: our core has no event for a system turning neutral (SystemCaptured.To cannot be neutral; the Death Star clears the owner
-    // without one), so the original's "nothing" holds by construction: a holder cleared to neutral draws nothing and moves nothing.
+    // without one), so Classic's "nothing" holds by construction: a holder cleared to neutral draws nothing and moves nothing.
     // (B5a, 2026-10-17) a flip to neutral now has its events (SystemCaptured and HolderChangeAftermath with To = null); the loyalty trigger
     // still reacts only to a side, so the expectation stands. This test clears the owner by hand, without a flip.
     [Fact]

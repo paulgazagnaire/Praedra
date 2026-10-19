@@ -1,18 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Rebellion.Core.Clock;
-using Rebellion.Core.DeathStar;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Missions;
+using Praedra.Core.Clock;
+using Praedra.Core.DeathStar;
+using Praedra.Core.Fleets;
+using Praedra.Core.Missions;
 
-using Side = Rebellion.Core.Clock.Side;
+using Side = Praedra.Core.Clock.Side;
 
-namespace RebellionViewer;
+namespace PraedraViewer;
 
 /// <summary>
 /// The Death Star as the screens see it (rule: m5-death-star): reading the core, queueing its order, and turning its events into plain lines.
-/// No rule lives here; every decision is the core's (<see cref="Rebellion.Core.DeathStar.DeathStarModule"/>).
+/// No rule lives here; every decision is the core's (<see cref="Praedra.Core.DeathStar.DeathStarModule"/>).
 /// </summary>
 public sealed partial class GameSession
 {

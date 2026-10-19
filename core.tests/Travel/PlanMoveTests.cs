@@ -1,8 +1,8 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Travel;
+using Praedra.Core.Clock;
+using Praedra.Core.Setup;
+using Praedra.Core.Travel;
 
-namespace Rebellion.Core.Tests.Travel;
+namespace Praedra.Core.Tests.Travel;
 
 // m1-travel §Path rule (3) waypoints and known traps, (5) the preview is the path flown. On the v5 galaxy with GameHost.
 public class PlanMoveTests

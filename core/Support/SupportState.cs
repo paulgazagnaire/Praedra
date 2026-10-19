@@ -1,6 +1,6 @@
-using Rebellion.Core.Clock;
+using Praedra.Core.Clock;
 
-namespace Rebellion.Core.Support;
+namespace Praedra.Core.Support;
 
 /// <summary>
 /// One system's uprising flag and timers. Hook times: a timer armed in Step K with period P is due at (K + 1) + P and fires in the

@@ -1,0 +1,20 @@
+kind,name,bombard_defense,tag
+troop,Alliance Fleet Regiment,5,classic: TROOPSD bombardment_defense (importer); m3-bombardment B7
+troop,Alliance Army Regiment,5,classic: TROOPSD bombardment_defense (importer); m3-bombardment B7
+troop,Sullustan Regiment,2,classic: TROOPSD bombardment_defense (importer); m3-bombardment B7
+troop,Wookiee Regiment,4,classic: TROOPSD bombardment_defense (importer); m3-bombardment B7
+troop,Mon Calamari Regiment,9,classic: TROOPSD bombardment_defense (importer); m3-bombardment B7
+troop,Stormtrooper Regiment,6,classic: TROOPSD bombardment_defense (importer); m3-bombardment B7
+troop,Imperial Fleet Regiment,2,classic: TROOPSD bombardment_defense (importer); m3-bombardment B7
+troop,Imperial Army Regiment,5,classic: TROOPSD bombardment_defense (importer); m3-bombardment B7
+troop,War Droid Regiment,2,classic: TROOPSD bombardment_defense (importer); m3-bombardment B7
+troop,Dark Trooper Regiment,6,classic: TROOPSD bombardment_defense (importer); m3-bombardment B7
+facility,Orbital Shipyard,2,classic: MANFACSD word 12 (importer); B7-bombardment §7
+facility,Training Facility,3,classic: MANFACSD word 12 (importer); B7-bombardment §7
+facility,Construction Yard,3,classic: MANFACSD word 12 (importer); B7-bombardment §7
+facility,Advanced Shipyard,2,classic: MANFACSD word 12 (importer); B7-bombardment §7
+facility,Advanced Training Facility,4,classic: MANFACSD word 12 (importer); B7-bombardment §7
+facility,Advanced Construction Yard,4,classic: MANFACSD word 12 (importer); B7-bombardment §7
+facility,Mine,5,classic: PROFACSD word 12 (importer); B7-bombardment §7
+facility,Refinery,2,classic: PROFACSD word 12 (importer); B7-bombardment §7
+hq,Alliance Headquarters,9,classic: ALLFACSD word 12 (importer); B7-bombardment §3 and §7 (read only with HqBombardable)

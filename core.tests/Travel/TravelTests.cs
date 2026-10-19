@@ -1,14 +1,14 @@
-using Rebellion.Core.Map;
-using Rebellion.Core.Ships;
-using Rebellion.Core.Travel;
+using Praedra.Core.Map;
+using Praedra.Core.Ships;
+using Praedra.Core.Travel;
 
-namespace Rebellion.Core.Tests.Travel;
+namespace Praedra.Core.Tests.Travel;
 
 // rules: m1-travel tests T1-T18, T20, T21 (T19 needs the clock and fleets; not in this package). Rewritten 2026-10-16 for free travel and routes.
 public class TravelTests
 {
     private static Galaxy G => TestData.RealGalaxy;
-    private static readonly Lazy<IReadOnlyDictionary<string, ShipClass>> Ships = new(() => ShipData.LoadAll(TestData.OriginalDir));
+    private static readonly Lazy<IReadOnlyDictionary<string, ShipClass>> Ships = new(() => ShipData.LoadAll(TestData.ClassicDir));
 
     private static int SpeedOf(params string[] classes) =>
         TravelFormula.FleetSpeed(
@@ -111,7 +111,7 @@ public class TravelTests
     }
 
     [Fact]
-    public void T10_ClassicStraightLineIsOneLeg() // m1-travel T10 (TravelMode.Straight, the 1998 rule)
+    public void T10_ClassicStraightLineIsOneLeg() // m1-travel T10 (TravelMode.Straight, the Classic rule)
     {
         var pf = new Pathfinder(G, TravelMode.Straight);
         var r = pf.Find("Coruscant", "Hoth", 80);

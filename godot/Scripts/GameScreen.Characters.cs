@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
-using Rebellion.Core.Characters;
-using Rebellion.Core.Fleets;
+using Praedra.Core.Characters;
+using Praedra.Core.Fleets;
 
-namespace RebellionViewer;
+namespace PraedraViewer;
 
 /// <summary>
 /// Characters on the screen: the Characters list, the officers of a fleet, the General of a system, and moving a character alone. The rules are

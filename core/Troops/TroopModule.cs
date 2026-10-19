@@ -1,8 +1,8 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Fleets;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
 
-namespace Rebellion.Core.Troops;
+namespace Praedra.Core.Troops;
 
 /// <summary>A regiment aboard a ship of a fleet that stands at a system: what the assault sheet needs. Sorted by regiment id.</summary>
 public sealed record AboardRegiment(EconObject Regiment, int Ship, Fleet Fleet);

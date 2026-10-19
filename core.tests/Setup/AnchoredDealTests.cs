@@ -1,10 +1,10 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Map;
-using Rebellion.Core.Setup;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Map;
+using Praedra.Core.Setup;
 using Xunit.Abstractions;
 
-namespace Rebellion.Core.Tests.Setup;
+namespace Praedra.Core.Tests.Setup;
 
 // m5-setup-and-victory §Mode Anchored (DealMode, DEFAULT since 2026-10-16). Test ids AN1..AN16.
 public class AnchoredDealTests
@@ -103,7 +103,7 @@ public class AnchoredDealTests
             Assert.Contains(s.Group, new[] { "inner_rim", "outer_rim" });
             Assert.NotEqual("Yavin", hq);
             Assert.DoesNotContain(hq, anchors);
-            Assert.True(Rebellion.Core.Travel.TravelFormula.MapDistance(s.MapX, s.MapY, c.MapX, c.MapY) >= 200);
+            Assert.True(Praedra.Core.Travel.TravelFormula.MapDistance(s.MapX, s.MapY, c.MapX, c.MapY) >= 200);
         }
     }
 

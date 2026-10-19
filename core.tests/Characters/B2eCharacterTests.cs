@@ -1,13 +1,13 @@
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Control;
-using Rebellion.Core.Missions;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Tests.Economy;
-using Rebellion.Core.Tests.Missions;
-using static Rebellion.Core.Tests.Characters.CharWorld;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Control;
+using Praedra.Core.Missions;
+using Praedra.Core.Setup;
+using Praedra.Core.Tests.Economy;
+using Praedra.Core.Tests.Missions;
+using static Praedra.Core.Tests.Characters.CharWorld;
 
-namespace Rebellion.Core.Tests.Characters;
+namespace Praedra.Core.Tests.Characters;
 
 // B2e-escape-injury-and-the-force tests B2e-1 to B2e-19. rule: m5-characters-and-force §Capture, injury, death, freeing; §Escape; §Force;
 // §Seat of Power; m5-missions §4 (the Force-user encounter).
@@ -22,7 +22,7 @@ public class B2eCharacterTests
         return c;
     }
 
-    /// <summary>B2e tests the 1998 effective skills: ForceSkillPercent 100 set explicitly. rule: m5-characters-and-force §Force (1998 = 100).</summary>
+    /// <summary>B2e tests the Classic effective skills: ForceSkillPercent 100 set explicitly. rule: m5-characters-and-force §Force (Classic = 100).</summary>
     private const int Classic = CharacterParams.ClassicForceSkillPercent;
 
     private static CharacterRecord Force(CharacterRecord c, int f)
@@ -209,7 +209,7 @@ public class B2eCharacterTests
     [Fact]
     public void B2e9_EscapeChanceWithGuards()
     {
-        var w = new CharWorld(CharWorld.Classic1998Force()); // the 1998 Force (m5-characters-and-force §Force CH37)
+        var w = new CharWorld(CharWorld.ClassicForce()); // the Classic Force (m5-characters-and-force §Force CH37)
         w.Hold(Hoth, Side.Empire);
         Force(Skills(w.Add(Vader, Hoth), com: 100), 120);
         w.Host.Economy.AddObject(Side.Empire, ImperialCommandos, Hoth, true);
@@ -277,7 +277,7 @@ public class B2eCharacterTests
         Assert.Equal(freed ? CharacterStatus.Free : CharacterStatus.Captured, han.Status);
         if (freed) Assert.Equal(CharacterCause.Liberation, w.Events<CharacterFreed>().Single().Cause);
         // the only draw is the support incident timer an Alliance-held planet starts (GNPRTB 7702, m2-popular-support), never a character draw
-        int spread = new Rebellion.Core.Support.SupportParams().IncidentIntervalSpread;
+        int spread = new Praedra.Core.Support.SupportParams().IncidentIntervalSpread;
         Assert.Empty(w.Stub.Requests.Skip(before).Where(r => r != (0, spread)));
     }
 
@@ -286,7 +286,7 @@ public class B2eCharacterTests
     [Fact]
     public void B2e13_LukeMeetsVader()
     {
-        var w = new MissionWorld(characters: CharWorld.Classic1998Force()); // the 1998 Force (m5-characters-and-force §Force CH37)
+        var w = new MissionWorld(characters: CharWorld.ClassicForce()); // the Classic Force (m5-characters-and-force §Force CH37)
         w.Hold(MissionWorld.T, Side.Empire, 0);
         var luke = w.Agent(Luke, MissionWorld.H, esp: 50, com: 90);
         var vader = w.Agent(Vader, MissionWorld.T, com: 100);
@@ -362,7 +362,7 @@ public class B2eCharacterTests
     [Fact]
     public void B2e17_Awakening()
     {
-        var w = new CharWorld(new CharacterParams { TrainerPick = TrainerPick.Fixed }); // the 1998 trainer flag (Luke, Vader); Random is CH39
+        var w = new CharWorld(new CharacterParams { TrainerPick = TrainerPick.Fixed }); // the Classic trainer flag (Luke, Vader); Random is CH39
         w.Hold(Yavin, Side.Alliance); w.Hold(Coruscant, Side.Empire);
         Force(w.Add(Vader, Coruscant), 120);
         var piett = w.Add(Piett, Coruscant); piett.ForceUser = true; // an unaware Force user
@@ -409,7 +409,7 @@ public class B2eCharacterTests
     [Fact]
     public void B2e19_SpreadZeroTimersDrawNothing()
     {
-        var w = new CharWorld(new CharacterParams { TrainerPick = TrainerPick.Fixed }); // the 1998 trainer flag (Luke, Vader); Random is CH39
+        var w = new CharWorld(new CharacterParams { TrainerPick = TrainerPick.Fixed }); // the Classic trainer flag (Luke, Vader); Random is CH39
         w.Hold(Coruscant, Side.Empire);
         Force(w.Add(Vader, Coruscant), 120);
         w.Run(30);

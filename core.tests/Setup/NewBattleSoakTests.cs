@@ -1,9 +1,9 @@
-using Rebellion.Core.Battle;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Setup;
-using Rebellion.Core.Support;
+using Praedra.Core.Battle;
+using Praedra.Core.Clock;
+using Praedra.Core.Setup;
+using Praedra.Core.Support;
 
-namespace Rebellion.Core.Tests.Setup;
+namespace Praedra.Core.Tests.Setup;
 
 // P4.3: the 1000-day scripted test campaign with BattleParams.Ruleset = New (m4-battle-new, shared plumbing m4-battle-classic §1, §10).
 // Every daily invariant of CampaignInvariants must stay green; the scripted fights happen, and the run is deterministic.

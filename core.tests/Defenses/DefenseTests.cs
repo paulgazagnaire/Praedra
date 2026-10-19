@@ -1,13 +1,13 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Construction;
-using Rebellion.Core.Control;
-using Rebellion.Core.Defenses;
-using Rebellion.Core.Economy;
-using Rebellion.Core.Tests.Construction;
-using Rebellion.Core.Tests.Control;
-using Rebellion.Core.Tests.Economy;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
+using Praedra.Core.Control;
+using Praedra.Core.Defenses;
+using Praedra.Core.Economy;
+using Praedra.Core.Tests.Construction;
+using Praedra.Core.Tests.Control;
+using Praedra.Core.Tests.Economy;
 
-namespace Rebellion.Core.Tests.Defenses;
+namespace Praedra.Core.Tests.Defenses;
 
 // m3-planetary-defenses, tests D1 to D15, then extra tests named after the rule they check. Real data files.
 public class DefenseTests
@@ -19,7 +19,7 @@ public class DefenseTests
     [Fact]
     public void D1_SixRowsAsTheTable()
     {
-        var d = DefenseData.Load(TestData.OriginalDir, TestData.DesignDir);
+        var d = DefenseData.Load(TestData.ClassicDir, TestData.DesignDir);
         var rows = d.Classes.ToList();
         Assert.Equal(new[] { 1, 2, 3, 4, 5, 6 }, rows.Select(r => r.Id));
         var expect = new (string Name, int Family, int Cost, int Maint, int Ro, int Rd, int Attack, int Shield, int Bd, DefenseJob Job)[]
@@ -287,11 +287,11 @@ public class DefenseTests
     [Fact]
     public void BadDefenseDataIsRefused()
     {
-        string good = File.ReadAllText(Path.Combine(TestData.OriginalDir, DefenseData.DefensesFile));
+        string good = File.ReadAllText(Path.Combine(TestData.ClassicDir, DefenseData.DefensesFile));
         string bomb = TestData.MergedText(DefenseData.BombardmentFile);
-        Assert.Throws<Rebellion.Core.Data.DataLoadException>(() => DefenseData.Parse(good.Replace("KDY-150", "Mystery Gun"), "d.csv", bomb, "b.csv"));
-        Assert.Throws<Rebellion.Core.Data.DataLoadException>(() => DefenseData.Parse(good.Replace(",battery", ",flak"), "d.csv", bomb, "b.csv"));
-        Assert.Throws<Rebellion.Core.Data.DataLoadException>(() => DefenseData.Parse(good, "d.csv", bomb.Replace("troop,Sullustan Regiment", "troop,Alliance Army Regiment"), "b.csv"));
+        Assert.Throws<Praedra.Core.Data.DataLoadException>(() => DefenseData.Parse(good.Replace("KDY-150", "Mystery Gun"), "d.csv", bomb, "b.csv"));
+        Assert.Throws<Praedra.Core.Data.DataLoadException>(() => DefenseData.Parse(good.Replace(",battery", ",flak"), "d.csv", bomb, "b.csv"));
+        Assert.Throws<Praedra.Core.Data.DataLoadException>(() => DefenseData.Parse(good, "d.csv", bomb.Replace("troop,Sullustan Regiment", "troop,Alliance Army Regiment"), "b.csv"));
     }
 
     // m3-bombardment §Resolution 4: every regiment class and every facility class has a bombardment defense

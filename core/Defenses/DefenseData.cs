@@ -1,13 +1,13 @@
-using Rebellion.Core.Data;
-using Rebellion.Core.Economy;
+using Praedra.Core.Data;
+using Praedra.Core.Economy;
 
-namespace Rebellion.Core.Defenses;
+namespace Praedra.Core.Defenses;
 
 /// <summary>What a defense class does. rule: m3-planetary-defenses §The six classes (Kind column).</summary>
 public enum DefenseJob { Battery, ShieldGenerator, DeathStarShield }
 
 /// <summary>
-/// One row of <c>DEFFACSD</c>. Family 34 = KDY, 35 = LNR, 36 = GenCore, 37 = Death Star Shield. Attack is the 1998 attack strength; Shield
+/// One row of <c>DEFFACSD</c>. Family 34 = KDY, 35 = LNR, 36 = GenCore, 37 = Death Star Shield. Attack is the Classic attack strength; Shield
 /// is the strength subtracted from a bombardment; BombardDefense is the target's defense in a bombardment.
 /// rule: m3-planetary-defenses §The six classes (Traced, matches [MANUAL] chart pp.132-133).
 /// </summary>
@@ -16,8 +16,8 @@ public sealed record DefenseClass(int Id, string Name, int Family, int Cost, int
 
 /// <summary>
 /// The defense classes and every bombardment defense value that is data: <c>defense-facilities.csv</c> (the six classes) and
-/// <c>bombardment-defense.csv</c> (from data/original/, read by importer/: regiments from TROOPSD, the manufacturing and production facilities
-/// from MANFACSD/PROFACSD word 12, the Rebel HQ from ALLFACSD word 12; the Sensor Station, not a 1998 class, is a DEFAULT row of
+/// <c>bombardment-defense.csv</c> (from data/classic/, read by importer/: regiments from TROOPSD, the manufacturing and production facilities
+/// from MANFACSD/PROFACSD word 12, the Rebel HQ from ALLFACSD word 12; the Sensor Station, not a Classic class, is a DEFAULT row of
 /// data/design/bombardment-defense.csv, merged). rule: m3-planetary-defenses §The six classes ("Load these from the importer as a data file
 /// keyed by class id"); m3-bombardment §Resolution 4; B7-bombardment §7 (C8).
 /// </summary>
@@ -59,7 +59,7 @@ public sealed class DefenseData
         return _facilities.TryGetValue(className, out var d) ? d : throw new ArgumentException($"No bombardment defense for facility class '{className}'.");
     }
 
-    /// <summary>defense-facilities.csv from data/original; bombardment-defense.csv from data/original merged with data/design. rule: B1-own-importer §Work 3, 5.</summary>
+    /// <summary>defense-facilities.csv from data/classic; bombardment-defense.csv from data/classic merged with data/design. rule: B1-own-importer §Work 3, 5.</summary>
     public static DefenseData Load(string originalDir, string designDir) =>
         Parse(CsvTable.Load(Path.Combine(originalDir, DefensesFile)), CsvTable.LoadMerged(originalDir, designDir, BombardmentFile));
 

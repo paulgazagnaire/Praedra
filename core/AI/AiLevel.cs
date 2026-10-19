@@ -1,8 +1,8 @@
-namespace Rebellion.Core.AI;
+namespace Praedra.Core.AI;
 
 /// <summary>
 /// How well the computer opponent plays. Every level sees only its side's fog-of-war view and gets no hidden bonus (ai/12 D3, Paul
-/// 2026-10-12: Hard is smarter, never a cheat; economy-ai D4). The 1998 head start (more systems and forces at setup, setup-victory/02) is a
+/// 2026-10-12: Hard is smarter, never a cheat; economy-ai D4). The Classic head start (more systems and forces at setup, setup-victory/02) is a
 /// separate setup choice (StartPreset), so a player can mix the two. rule: ai/09 §6 (difficulty is an AI parameter set, not a head start).
 /// </summary>
 public enum AiLevel

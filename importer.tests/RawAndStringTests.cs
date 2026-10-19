@@ -1,6 +1,6 @@
-using static Rebellion.Importer.Tests.Bytes;
+using static Praedra.Importer.Tests.Bytes;
 
-namespace Rebellion.Importer.Tests;
+namespace Praedra.Importer.Tests;
 
 /// <summary>The TEXTSTRA string table, the raw CSV headers and the CSV text. rule: B1-own-importer §Work 1, 2; 02-gdata-formats §3, §5.</summary>
 public class RawAndStringTests

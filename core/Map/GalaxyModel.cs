@@ -1,4 +1,4 @@
-namespace Rebellion.Core.Map;
+namespace Praedra.Core.Map;
 
 /// <summary>One system (a place you can own, fly to and fight over). rule: m1-galaxy-data §What the loader reads.</summary>
 public sealed class StarSystem

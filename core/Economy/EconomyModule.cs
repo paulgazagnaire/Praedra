@@ -1,12 +1,12 @@
-using Rebellion.Core.Clock;
-using Rebellion.Core.Fleets;
-using Rebellion.Core.Map;
+using Praedra.Core.Clock;
+using Praedra.Core.Fleets;
+using Praedra.Core.Map;
 
-namespace Rebellion.Core.Economy;
+namespace Praedra.Core.Economy;
 
 /// <summary>
 /// The economy base: per-system slots and facilities, the side-wide raw and refined pools, the mine and refinery cycle
-/// (slot 6.5), resource and disaster incidents (6.4), maintenance and autoscrap (6.7), the 1998 way (B5b). Registers itself on a
+/// (slot 6.5), resource and disaster incidents (6.4), maintenance and autoscrap (6.7), the Classic way (B5b). Registers itself on a
 /// <see cref="Game"/> like <see cref="FleetModule"/>; holds data and settings only, never game state (that lives in
 /// <see cref="GameState.Economy"/>). After <see cref="GameSave.Load"/>, attach again to the loaded game.
 /// rule: m2-slots-and-resources, m2-mines-refineries-pools, m2-maintenance.
@@ -28,20 +28,20 @@ public sealed class EconomyModule
 
     /// <summary>Blockade stops mines and refineries. Decided yes (Paul 2026-10-12), default on. rule: m2-mines-refineries-pools §Blockade and uprising.</summary>
     public bool BlockadeStopsMining { get; set; } = true;
-    /// <summary>An uprising stops mines and refineries exactly like a blockade. 1998 = on (B5b §3, [EXE-own] 0x50bbb0); DEFAULT on (Dev lead 2026-10-18). rule: m2-mines-refineries-pools §Blockade and uprising.</summary>
+    /// <summary>An uprising stops mines and refineries exactly like a blockade. Classic = on (B5b §3, [EXE-own] 0x50bbb0); DEFAULT on (Dev lead 2026-10-18). rule: m2-mines-refineries-pools §Blockade and uprising.</summary>
     public bool UprisingStopsMining { get; set; } = true;
     /// <summary>
-    /// Suspended mines and refineries leave the capacity sums. 1998 = on (B5b §3, [EXE-own] 0x52fff0); DEFAULT off: a blockaded or rebelling mine
+    /// Suspended mines and refineries leave the capacity sums. Classic = on (B5b §3, [EXE-own] 0x52fff0); DEFAULT off: a blockaded or rebelling mine
     /// or refinery keeps counting, so a blockade cannot set off the autoscrap. rule: m2-maintenance §Capacity (Blockade pause, 2026-10-18; Paul's
-    /// economy/02 blockade rule is the DEFAULT, 1998 is the switch).
+    /// economy/02 blockade rule is the DEFAULT, Classic is the switch).
     /// </summary>
     public bool SuspendedLeaveCapacity { get; set; }
     /// <summary>
-    /// A suspended mine's or refinery's running cycle: Pause (DEFAULT) keeps it and resumes it for the same side, Abandon (1998, B5b §3) loses it.
-    /// rule: m2-mines-refineries-pools §Blockade and uprising (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch).
+    /// A suspended mine's or refinery's running cycle: Pause (DEFAULT) keeps it and resumes it for the same side, Abandon (Classic, B5b §3) loses it.
+    /// rule: m2-mines-refineries-pools §Blockade and uprising (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, Classic is the switch).
     /// </summary>
     public StopMode MineStopMode { get; set; } = StopMode.Pause;
-    /// <summary>Armed (DEFAULT, 1998) or FreeRunning autoscrap timer. rule: m2-maintenance §Overdraft and autoscrap (B5b §6).</summary>
+    /// <summary>Armed (DEFAULT, Classic) or FreeRunning autoscrap timer. rule: m2-maintenance §Overdraft and autoscrap (B5b §6).</summary>
     public AutoscrapTimer AutoscrapTimer { get; set; } = AutoscrapTimer.Armed;
     /// <summary>
     /// Is the system in uprising? The flag belongs to the uprising sheet; GameHost wires it to <c>SupportModule.IsUprising</c>. Unwired = no.
@@ -252,7 +252,7 @@ public sealed class EconomyModule
 
     /// <summary>
     /// capacity = min(50 x mines, 50 x refineries) over the completed ones on systems the side controls that are not suspended (a blockade, or an
-    /// uprising with <see cref="UprisingStopsMining"/>): with <see cref="SuspendedLeaveCapacity"/> on (1998) they leave the sums at once.
+    /// uprising with <see cref="UprisingStopsMining"/>): with <see cref="SuspendedLeaveCapacity"/> on (Classic) they leave the sums at once.
     /// rule: m2-maintenance §Capacity (B5b §3, [EXE-own] 0x52fff0).
     /// </summary>
     public int Capacity(Side side)
@@ -292,7 +292,7 @@ public sealed class EconomyModule
     /// Incremental dealing ([EXE-own] 0x52f6b0 mines, 0x52f8f0 refineries): per side and class, only the difference between the target
     /// min(load, 50 x working facilities) and what is already dealt is handed out or taken back, one unit at a time; existing shares are kept,
     /// so a facility that starts while the load does not change keeps share 0. A unit goes to the working facility with the lowest share (ties:
-    /// lowest id), capped at 50; one is taken back from the highest share (ties: highest id). The exact pass order of 1998 ("about its
+    /// lowest id), capped at 50; one is taken back from the highest share (ties: highest id). The exact pass order of Classic ("about its
     /// proportional part plus one") is read as this (DEFAULT, B5b §3; it gives the batch's B5b-6 numbers). Each class carries the whole load.
     /// </summary>
     public void DealShares()
@@ -463,7 +463,7 @@ public sealed class EconomyModule
         if (refund > 0) RefinedPoolGrew?.Invoke(ctx, side);
     }
 
-    // rule: m2-construction §Scrapping (ScrapObject, step 1): any completed installed object of the side, except the ones 1998 answers code 23
+    // rule: m2-construction §Scrapping (ScrapObject, step 1): any completed installed object of the side, except the ones Classic answers code 23
     // ("cannot be scrapped": the Rebel HQ, characters and special forces; the HQ and characters are not registry objects here, so they are
     // UnknownObject). No check reads blockade, uprising or who holds the system (B5a section 8, handler 0x579860).
     private OrderResult HandleScrap(StepContext ctx, ScrapObjectOrder o)
@@ -543,7 +543,7 @@ public sealed class EconomyModule
     private IEnumerable<EconObject> Cyclers(FacilityKind kind) =>
         E.Objects.Values.Where(o => IsClass(o, kind)); // id ascending
 
-    // rule: m2-mines-refineries-pools §Where it runs, slot 6.5 (global facility id inside each class). The 1998 game runs these in one timer queue;
+    // rule: m2-mines-refineries-pools §Where it runs, slot 6.5 (global facility id inside each class). The Classic game runs these in one timer queue;
     // the slots are kept (DEFAULT, B5b §9).
     private void MinesAndRefineries(StepContext ctx)
     {
@@ -556,7 +556,7 @@ public sealed class EconomyModule
         //    goes to WAITING on a startup cycle (first start, end of a blockade or uprising, side change). rule: B5b §1, §2, §3 (0x50bbb0, 0x55b010, 0x53b1d0)
         //    With MineStopMode Pause (DEFAULT) a suspended facility keeps its running cycle (PausedFor): frozen while suspended, resumed with no
         //    startup cycle when it is active again for the same side; any other change drops it. rule: m2-mines-refineries-pools §Blockade and
-        //    uprising (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch)
+        //    uprising (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, Classic is the switch)
         var starting = new List<EconObject>();
         foreach (var kind in new[] { FacilityKind.Mine, FacilityKind.Refinery })
             foreach (var f in Cyclers(kind).ToList())
@@ -592,7 +592,7 @@ public sealed class EconomyModule
     /// <summary>
     /// IDLE: the running cycle is abandoned (no point), the share drops to 0, the facility leaves its raw line. rule: B5b §3. A suspended one under
     /// <see cref="MineStopMode"/> Pause keeps its running cycle instead (frozen, PausedFor = its side). rule: m2-mines-refineries-pools §Blockade and
-    /// uprising (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, 1998 is the switch).
+    /// uprising (Blockade pause, 2026-10-18; Paul's economy/02 blockade rule is the DEFAULT, Classic is the switch).
     /// </summary>
     private void Stop(StepContext ctx, int t, EconObject f)
     {
@@ -695,7 +695,7 @@ public sealed class EconomyModule
 
     // ================================================================== 6.7 autoscrap
 
-    // rule: m2-maintenance §Overdraft and autoscrap; §Where it runs (6.7.a Alliance, 6.7.b Empire). Armed timer (1998, B5b §6, 0x5329f0): armed when
+    // rule: m2-maintenance §Overdraft and autoscrap; §Where it runs (6.7.a Alliance, 6.7.b Empire). Armed timer (Classic, B5b §6, 0x5329f0): armed when
     // the overdraft starts, first firing 10 days later, then every 10 days while over; dropped when it ends.
     private void Autoscrap(StepContext ctx)
     {

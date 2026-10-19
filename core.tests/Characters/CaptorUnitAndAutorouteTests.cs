@@ -1,10 +1,10 @@
-using Rebellion.Core.Characters;
-using Rebellion.Core.Clock;
-using Rebellion.Core.Missions;
-using Rebellion.Core.Tests.Missions;
-using static Rebellion.Core.Tests.Missions.MissionWorld;
+using Praedra.Core.Characters;
+using Praedra.Core.Clock;
+using Praedra.Core.Missions;
+using Praedra.Core.Tests.Missions;
+using static Praedra.Core.Tests.Missions.MissionWorld;
 
-namespace Rebellion.Core.Tests.Characters;
+namespace Praedra.Core.Tests.Characters;
 
 // QA-7 (where a new prisoner is held) and QA-9 (where a freed, escaped or displaced character goes), 2026-10-18.
 // rule: m5-characters-and-force §Capture, injury, death, freeing (B2e §3 "Where a new prisoner is held", "Where a freed, escaped or displaced
@@ -27,8 +27,8 @@ public class CaptorUnitAndAutorouteTests
     public void B2e20_DuelPrisonerIsHeldAboardTheCaptorFleet()
     {
         // KeyDuelCapture, 2026-10-18: the Emperor is a key character, so the DEFAULT (Capped) would add his cap roll; this test checks where a duel
-        // prisoner is held, not whether he is taken, so it runs the 1998 duel explicitly (the cap roll is covered by m5-missions MI66 to MI70).
-        var w = new MissionWorld(new MissionParams { KeyDuelCapture = KeyDuelCapture.Original });
+        // prisoner is held, not whether he is taken, so it runs the Classic duel explicitly (the cap roll is covered by m5-missions MI66 to MI70).
+        var w = new MissionWorld(new MissionParams { KeyDuelCapture = KeyDuelCapture.Classic });
         w.Hold(H, Side.Empire, 0); w.Hold(T, Side.Empire, 0);
         w.Agent(Palpatine, H, dip: 50);
         int fleet = Fleet(w, Side.Alliance, T, Corvette);
@@ -59,7 +59,7 @@ public class CaptorUnitAndAutorouteTests
     [InlineData(true, 80)]
     public void Q73_ShipCaptorWithNoCommanderGivesNoGuardAverage(bool admiralAtCapture, int avg)
     {
-        var w = new MissionWorld(new MissionParams { KeyDuelCapture = KeyDuelCapture.Original });
+        var w = new MissionWorld(new MissionParams { KeyDuelCapture = KeyDuelCapture.Classic });
         w.Hold(H, Side.Empire, 0); w.Hold(T, Side.Empire, 0);
         w.Agent(Palpatine, H, dip: 50);
         int fleet = Fleet(w, Side.Alliance, T, Corvette);
@@ -79,13 +79,13 @@ public class CaptorUnitAndAutorouteTests
     }
 
     // CH38 (Prisoners land, New, Paul 2026-10-18): the Emperor, caught aboard an Alliance fleet at Imperial T, stays aboard there; the fleet reaches
-    // Alliance X and puts him ashore at day end (PrisonerLanded), where he is a prisoner on the planet. With LandPrisoners off (1998) he stays aboard.
+    // Alliance X and puts him ashore at day end (PrisonerLanded), where he is a prisoner on the planet. With LandPrisoners off (Classic) he stays aboard.
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
     public void CH38_HoldingFleetLandsPrisonersAtAnOwnSystem(bool land)
     {
-        var w = new MissionWorld(new MissionParams { KeyDuelCapture = KeyDuelCapture.Original }, characters: new CharacterParams { LandPrisoners = land });
+        var w = new MissionWorld(new MissionParams { KeyDuelCapture = KeyDuelCapture.Classic }, characters: new CharacterParams { LandPrisoners = land });
         w.Hold(H, Side.Empire, 0); w.Hold(T, Side.Empire, 0); w.Hold(X, Side.Alliance, 100);
         w.Agent(Palpatine, H, dip: 50);
         int fleet = Fleet(w, Side.Alliance, T, Corvette);
@@ -244,7 +244,7 @@ public class CaptorUnitAndAutorouteTests
         w.Hold(T, Side.Empire, 0);
         int fleet = Fleet(w, Side.Empire, T, Isd);
         var han = w.Agent(Han, T);
-        han.Skills[(int)Rebellion.Core.Characters.Skill.Combat] = 0;
+        han.Skills[(int)Praedra.Core.Characters.Skill.Combat] = 0;
         StepWith(w, "5.2", ctx => w.Ch.Capture(ctx, han, Side.Empire, null, CharacterCause.Debug));
         han.HeldAboard = fleet; han.HeldAboardShip = 5; han.HeldAt = null; han.ReturnPlace = X; han.AutoroutePending = true; han.JoinFleet = 7;
         string hash = w.Host.StateHash();
