@@ -74,6 +74,7 @@ public sealed partial class SimpleAi
         _view = _p.UseFog ? _h.Fog.ViewFor(_side) : null;
         Remember();
         _seenForces.Clear(); ClearFogScratch();
+        RememberStrongestFleet();
         if (_view != null && _side == Side.Empire) KnownEnemyHq = _view.KnownHq?.System; // only what the Empire's own picture shows
         PlanUpkeepCrisis();
         if (_view != null && _side == Side.Alliance) PlanHqHide(); // fog: the HQ hides by risk (ai/07 §7), checked daily
