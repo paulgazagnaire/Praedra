@@ -868,7 +868,7 @@ function rebuildMoons() {
   const r = rng(hashStr('moon' + P.seed));
   moons = [];
   const start = Math.max(1.55, P.ring.on ? P.ring.inner + P.ring.width + 0.3 : 1.55);
-  for (let i = 0; i < Math.round(P.moons); i++) {
+  for (let i = 0, n = Math.min(5, Math.max(0, Math.round(P.moons) || 0)); i < n; i++) {
     const tone = 0.45 + r() * 0.4, warm = r();
     const base = mixHex('#8d8a85', '#a9876a', warm * 0.6);
     moons.push({ ro: start + i * (0.3 + r() * 0.14) + r() * 0.1, size: 0.07 + r() * 0.16, ph: r() * 6.283, inc: (r() - 0.5) * 0.5, col: darken(base, 1 - tone), dir: 1 });
@@ -937,6 +937,7 @@ function draw(w, h, tmul) {
     return { wp, m };
   }).sort((p, q) => p.wp[2] - q.wp[2]);
   const mv = new Float32Array(20), mc = new Float32Array(15);
+  ms.length = Math.min(ms.length, 5);
   ms.forEach((o, i) => { mv.set([...o.wp, o.m.size], i * 4); mc.set(hex2rgb(o.m.col), i * 3); });
   gl.uniform1i(loc.uMoonN, ms.length);
   gl.uniform4fv(loc['uMoon'], mv); gl.uniform3fv(loc['uMoonCol'], mc);
@@ -953,7 +954,9 @@ function fit() {
 let last = performance.now();
 function loop(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
-  if (glOK && !frozen) { fit(); if (!paused) frame(dt); draw(cv.width, cv.height); }
+  // a bad value must never stop the animation: report it once and keep drawing
+  try { if (glOK && !frozen) { fit(); if (!paused) frame(dt); draw(cv.width, cv.height); } }
+  catch (e) { if (!loop.warned) { loop.warned = true; console.error(e); } }
   requestAnimationFrame(loop);
 }
 
@@ -985,7 +988,7 @@ function surprise() {
 }
 
 /* ---------- systems ---------- */
-const WORD_NUM = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12 };
+const WORD_NUM = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20, thirty: 30, many: 5, dozens: 5 };
 const COLW = { white: '#e9eef2', grey: '#8b9096', gray: '#8b9096', black: '#1d1e22', blue: '#2f67b5', green: '#4b8a45', gold: '#d1a846', golden: '#d1a846', yellow: '#d9c04e', brown: '#86603a', tan: '#c2a070', rust: '#a24f2b', red: '#a8372c', orange: '#d9792b', amber: '#d39a38', cream: '#eadfc2', violet: '#6b4a9c', purple: '#6b4a9c', pink: '#d68aa5', silver: '#b6bec6', slate: '#59636e', turquoise: '#2fb0a8', teal: '#2a8c8c', ochre: '#b8892f', mustard: '#c2a02a', copper: '#b06a40', bronze: '#94703a', crimson: '#9a2b34', scarlet: '#b3382c', indigo: '#3c3f8f', lilac: '#a48ac8', beige: '#d3c19b', sand: '#d6bf8a', ivory: '#efe9d6', rose: '#d58a98', lime: '#9cc24a', olive: '#6b7a3a', maroon: '#6c2a2d', khaki: '#aaa070', salt: '#eef0f0', steel: '#6e7f90' };
 const COLRE = /\b(pale|dark|deep|bright|brilliant|dull|light|rust|olive|blood|dusty|flat|blinding|faint|burnt|soft|muted)?[ -]?(white|grey|gray|black|blue|green|golden|gold|yellow|brown|tan|rust|red|orange|amber|cream|violet|purple|pink|silver|slate|turquoise|teal|ochre|mustard|copper|bronze|crimson|scarlet|indigo|lilac|beige|sand|ivory|rose|lime|olive|maroon|khaki|salt|steel)\b/g;
 function extractColors(text) {
@@ -1070,7 +1073,7 @@ function derive(s) {
     if (/scar|mine|mining|quarr|pit\b|slag|rust|gash/.test(sp + ' ' + wo)) P2.scars = /slag/.test(sp + wo) ? 0.9 : 0.7;
   }
   // moons and rings
-  let nm = 0; const nmw = mo.match(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|\d+)\b/);
+  let nm = 0; const nmw = mo.match(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|many|dozens|\d+)\b/);
   if (/^none/.test(mo)) nm = 0; else if (nmw) nm = WORD_NUM[nmw[1]] || parseInt(nmw[1], 10) || 1; else if (/several|hundreds|moonlets/.test(mo)) nm = 4; else if (/moon/.test(mo)) nm = 1;
   P2.moons = Math.min(5, nm);
   const ringTxt = mo + ' ' + sp;
@@ -1103,11 +1106,37 @@ const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 /* ---------- presets: library, code, files ---------- */
 const slug = (t) => (t || 'planet').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48) || 'planet';
 const toCode = () => JSON.stringify({ format: 'praedra-planet', v: 1, name: P.name, params: P });
+// pasted presets are untrusted: clamp every number to its slider range, check colours, fill gaps from the defaults
+const PARAM_RANGE = {
+  sea: [0, 1], wet: [-1, 1], mount: [0, 1], scale: [0.5, 2.5], ice: [0, 1], clouds: [0, 1], haze: [0, 1.3], cities: [0, 1], lava: [0, 1], craters: [0, 1], scars: [0, 1],
+  bands: [3, 20, 1], turb: [0, 1.4], storms: [0, 6, 1], stormSize: [0.2, 1.6], spin: [-1, 1], cloudSpeed: [-1, 1], flow: [0, 1.5], moonSpeed: [0, 2],
+  tilt: [6, 85], roll: [-90, 90], sun: [-180, 180], sunH: [-60, 60], zoom: [0.5, 1.8], moons: [0, 5, 1],
+};
+const RING_RANGE = { inner: [1.1, 2.4], width: [0.1, 1.4], op: [0.1, 1], gaps: [0, 1], spin: [-1, 1] };
+const isHex = (c) => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
+const clampNum = (v, r, dflt) => { v = typeof v === 'string' ? parseFloat(v) : v; if (typeof v !== 'number' || !isFinite(v)) return dflt; v = Math.min(r[1], Math.max(r[0], v)); return r[2] ? Math.round(v) : v; };
+function sanitize(p, d) {
+  const out = JSON.parse(JSON.stringify(d));
+  for (const k in PARAM_RANGE) if (p[k] !== undefined) out[k] = clampNum(p[k], PARAM_RANGE[k], d[k]);
+  const sd = typeof p.seed === 'string' ? parseFloat(p.seed) : p.seed;
+  if (typeof sd === 'number' && isFinite(sd)) out.seed = Math.min(99999, Math.max(0, Math.round(sd)));
+  const pr = p.ring || {};
+  out.ring.on = !!pr.on;
+  for (const k in RING_RANGE) if (pr[k] !== undefined) out.ring[k] = clampNum(pr[k], RING_RANGE[k], d.ring[k]);
+  for (const k of ['c1', 'c2']) if (isHex(pr[k])) out.ring[k] = pr[k];
+  const pal = Array.isArray(p.pal) ? p.pal : [];
+  out.pal = d.pal.map((c, i) => isHex(pal[i]) ? pal[i] : c);
+  if (isHex(p.hazeCol)) out.hazeCol = p.hazeCol;
+  out.name = typeof p.name === 'string' ? p.name.slice(0, 60) : '';
+  return out;
+}
 function fromCode(txt) {
   const o = JSON.parse(txt); const p = o.params || o;
-  if (!p || !p.kind || !p.pal) throw new Error('not a planet preset');
-  const d = makeDefaults(KINDS.some(k => k.id === p.kind) ? p.kind : 'terran', p.seed || 1);
-  P = Object.assign(d, p, { ring: Object.assign(d.ring, p.ring || {}), pal: (p.pal || d.pal).slice(0, 5) });
+  if (!p || typeof p !== 'object' || !p.kind || !Array.isArray(p.pal)) throw new Error('not a planet preset');
+  const d = makeDefaults(KINDS.some(k => k.id === p.kind) ? p.kind : 'terran', 1);
+  const q = sanitize(p, d);
+  if (typeof o.name === 'string' && !q.name) q.name = o.name.slice(0, 60);
+  P = q;
   syncControls();
 }
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2400); }
