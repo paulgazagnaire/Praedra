@@ -4,7 +4,7 @@ rows = []
 for line in open(src, encoding='utf8'):
     if not line.startswith('| ') or '**World:**' not in line: continue
     cells = [c.strip() for c in line.strip().strip('|').split(' | ')]
-    # cells: original, **new**, lore, description
+    # cells: Classic, **new**, lore, description
     m = re.match(r'\*\*(.+?)\*\*', cells[1])
     if not m: continue
     d = cells[3]

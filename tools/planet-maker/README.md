@@ -33,6 +33,8 @@ Edit `planet-maker.src.html` (the shader and the page), never `index.html`. `par
 ```
 Speeds: rotation = `spin * 0.5` radians per second (0.25 is one turn in about 50 s).
 
+Pasted presets and library entries are checked on load: numbers are clamped to their slider range (moons 0 to 5), bad colours are replaced, and a short palette is filled from the world type's defaults.
+
 ## Using it in Godot later
 The shader is GLSL ES 3.00 with no tricks. Porting to a Godot `.gdshader` is a mechanical rename (`uniform` blocks stay, `fragColor` becomes `COLOR`). The preset values map one-to-one onto the shader uniforms, so the game can draw the same planet from the same JSON.
 
