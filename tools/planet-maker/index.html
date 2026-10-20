@@ -1,0 +1,1215 @@
+<title>Planet Maker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one big live planet on the left, one plain control column on the right; stacks on a phone. */
+:root {
+  --bg: #090b10;
+  --panel: #10131a;
+  --panel-2: #171b24;
+  --line: #262c38;
+  --fg: #dde2ec;
+  --dim: #8b94a6;
+  --accent: #ff8f6b;
+  --accent-ink: #1a0d08;
+  --ok: #7fd1a0;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 14px/1.45 var(--font-body);
+  padding-left: max(0px, env(safe-area-inset-left, 0px));
+  padding-right: max(0px, env(safe-area-inset-right, 0px));
+}
+#app { display: grid; grid-template-columns: minmax(0, 1fr) 360px; height: 100%; min-height: 0; }
+.stage { position: relative; min-width: 0; min-height: 0; background: radial-gradient(ellipse at 50% 40%, #0d1019, #06070a 70%); }
+#cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+#cv.drag { cursor: grabbing; }
+.tag { position: absolute; left: 16px; top: 14px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); pointer-events: none; }
+.tag b { display: block; font-family: var(--font-body); font-size: 20px; letter-spacing: 0; text-transform: none; color: var(--fg); font-weight: 600; }
+.hint { position: absolute; left: 16px; bottom: 14px; font-size: 12px; color: var(--dim); pointer-events: none; }
+.stagebtns { position: absolute; right: 14px; top: 12px; display: flex; gap: 8px; }
+.panel { background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; min-height: 0; padding-bottom: max(16px, env(safe-area-inset-bottom, 0px)); }
+.sec { border-bottom: 1px solid var(--line); padding: 14px 16px; }
+.sec h2, summary { margin: 0 0 10px; font: 500 11px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+details.sec > summary { cursor: pointer; margin: 0; list-style: none; display: flex; justify-content: space-between; align-items: center; padding: 2px 0; }
+details.sec > summary::-webkit-details-marker { display: none; }
+details.sec > summary::after { content: "+"; font-size: 16px; color: var(--dim); }
+details.sec[open] > summary::after { content: "–"; }
+details.sec[open] > summary { margin-bottom: 12px; }
+.chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+button, .btn {
+  font: 500 13px/1 var(--font-body); color: var(--fg); background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 6px; padding: 9px 10px; cursor: pointer; text-align: left;
+}
+button:hover { border-color: #3a4354; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.chip small { display: block; font-weight: 400; opacity: .7; margin-top: 3px; font-size: 11px; }
+.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); text-align: center; }
+.row2 { display: flex; gap: 8px; }
+.row2 > * { flex: 1; min-width: 0; }
+.stagebtns button { background: rgba(16,19,26,.85); text-align: center; }
+.ctl { display: grid; grid-template-columns: 112px minmax(0, 1fr) 54px; align-items: center; gap: 8px; margin: 9px 0; }
+.ctl label { color: var(--fg); font-size: 13px; }
+.ctl output { font: 12px var(--font-mono); color: var(--dim); text-align: right; white-space: nowrap; }
+input[type=range] { width: 100%; accent-color: var(--accent); margin: 0; }
+.sw-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 12px; }
+.sw { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: var(--dim); width: 58px; text-align: center; }
+.sw input { width: 44px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 5px; background: none; cursor: pointer; }
+.chk { display: flex; align-items: center; gap: 8px; margin: 6px 0 10px; font-size: 13px; }
+input[type=text], select, textarea {
+  width: 100%; font: 13px var(--font-body); color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px;
+}
+textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
+.note { color: var(--dim); font-size: 12px; margin: 8px 0 0; }
+.sysinfo { font-size: 12px; color: var(--dim); margin: 8px 0 0; }
+.sysinfo b { color: var(--fg); font-weight: 500; }
+.lib { list-style: none; margin: 10px 0 0; padding: 0; }
+.lib li { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-top: 1px solid var(--line); }
+.lib li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lib button { padding: 6px 9px; }
+.toast { position: fixed; left: 50%; bottom: max(18px, env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 9px 14px; border-radius: 6px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 20; max-width: 90vw; }
+.toast.on { opacity: 1; }
+#snap { position: fixed; inset: 0; z-index: 30; background: rgba(5,6,9,.92); display: none; align-items: center; justify-content: center; flex-direction: column; gap: 12px; padding: 16px; }
+#snap.on { display: flex; }
+#snap img { max-width: 100%; max-height: 78%; border: 1px solid var(--line); }
+@media (max-width: 820px) {
+  html, body { height: auto; }
+  #app { display: block; height: auto; }
+  .stage { height: 62vh; }
+  .panel { border-left: 0; border-top: 1px solid var(--line); overflow: visible; }
+  .sec { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .ctl { grid-template-columns: 100px minmax(0, 1fr) 48px; }
+}
+@media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+</style>
+
+<div id="app">
+  <main class="stage">
+    <canvas id="cv" aria-label="Planet preview"></canvas>
+    <div class="tag"><span id="tagKind">Planet</span><b id="tagName">Unnamed</b></div>
+    <div class="stagebtns">
+      <button id="btnQ" type="button" title="Switch to Fast if the animation stutters">Detail: High</button>
+      <button id="btnPause" type="button">Pause</button>
+      <button id="btnSnap" type="button">Save image</button>
+    </div>
+    <div class="hint">Drag the planet to turn it.</div>
+  </main>
+
+  <aside class="panel">
+    <section class="sec">
+      <h2>1. Pick a kind of world</h2>
+      <div class="chips" id="chips"></div>
+      <div class="row2" style="margin-top:8px">
+        <button id="btnSeed" type="button">New shape</button>
+        <button id="btnSurprise" type="button" class="primary">Surprise me</button>
+      </div>
+    </section>
+
+    <section class="sec">
+      <h2>Or load one of the 555 systems</h2>
+      <input id="sysIn" type="text" list="sysList" placeholder="Type a system name, e.g. Scoria" autocomplete="off" spellcheck="false">
+      <datalist id="sysList"></datalist>
+      <div class="row2" style="margin-top:8px">
+        <button id="btnPrev" type="button">◀ Previous</button>
+        <button id="btnNext" type="button">Next ▶</button>
+      </div>
+      <p class="sysinfo" id="sysInfo">Each system gets a first guess built from its description (colours, moons, rings). Tweak it, then save it.</p>
+    </section>
+
+    <details class="sec" open>
+      <summary>Look</summary>
+      <div class="sw-row" id="swatches"></div>
+      <div id="ctlLook"></div>
+    </details>
+
+    <details class="sec" open>
+      <summary>Sky</summary>
+      <div id="ctlSky"></div>
+      <div class="sw-row" id="swHaze"></div>
+    </details>
+
+    <details class="sec" open>
+      <summary>Motion</summary>
+      <div id="ctlMotion"></div>
+    </details>
+
+    <details class="sec">
+      <summary>Camera and sun</summary>
+      <div id="ctlCam"></div>
+    </details>
+
+    <details class="sec">
+      <summary>Rings</summary>
+      <label class="chk"><input type="checkbox" id="ringOn"> This planet has rings</label>
+      <div id="ctlRing"></div>
+      <div class="sw-row" id="swRing"></div>
+    </details>
+
+    <details class="sec">
+      <summary>Moons</summary>
+      <div id="ctlMoon"></div>
+    </details>
+
+    <section class="sec">
+      <h2>Save</h2>
+      <input id="pName" type="text" placeholder="Name this planet" maxlength="60">
+      <div class="row2" style="margin-top:8px">
+        <button id="btnSave" type="button" class="primary">Save to my library</button>
+        <button id="btnExport" type="button">Save preset file</button>
+      </div>
+      <ul class="lib" id="lib"></ul>
+      <p class="note" id="libNote"></p>
+      <details style="margin-top:12px">
+        <summary style="margin-bottom:8px">Copy / paste a preset</summary>
+        <textarea id="code" spellcheck="false" placeholder="Preset code appears here. Paste a code and press Load."></textarea>
+        <div class="row2" style="margin-top:8px">
+          <button id="btnCopy" type="button">Copy code</button>
+          <button id="btnLoad" type="button">Load code</button>
+        </div>
+      </details>
+    </section>
+  </aside>
+</div>
+
+<div id="snap"><img id="snapImg" alt="Planet snapshot"><div class="row2" style="max-width:420px"><button id="snapSave" type="button" class="primary">Save PNG</button><button id="snapClose" type="button">Close</button></div><p class="note">If Save does nothing, right-click (or long-press) the image and choose Save.</p></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script id="fs" type="x-shader/x-fragment">#version 300 es
+precision highp float;
+out vec4 fragColor;
+uniform vec2 uRes;
+uniform float uZoom;
+uniform int uType;            // 0 rocky, 1 gas giant, 2 tidally locked
+uniform vec3 uPal[5];
+uniform vec3 uHazeCol;
+uniform float uSeed, uSea, uMount, uScale, uIce, uClouds, uHaze, uCities, uLava, uCraters, uScars, uWet, uBiome, uQ;
+uniform float uBands, uTurb, uStorms, uStormSize;
+uniform float uSpin, uCloudAng, uFlowT, uRingAng, uTime;
+uniform vec3 uAxis, uU, uW, uL;
+uniform float uRingOn, uRingIn, uRingOut, uRingOp, uRingGaps;
+uniform vec3 uRingCol, uRingCol2;
+uniform int uMoonN;
+uniform vec4 uMoon[5];
+uniform vec3 uMoonCol[5];
+
+const float PI = 3.14159265;
+const mat3 M3 = mat3(0.00, 0.80, 0.60, -0.80, 0.36, -0.48, -0.60, -0.48, 0.64);
+
+// Integer hash: gives the same numbers on every GPU (sin-based hashes do not).
+uvec3 pcg3d(uvec3 v) {
+  v = v * 1664525u + 1013904223u;
+  v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+  v ^= v >> 16u;
+  v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+  return v;
+}
+vec3 hash33(vec3 p) { return vec3(pcg3d(floatBitsToUint(p))) * (1.0 / 4294967296.0); }
+vec3 ig(ivec3 i) { return vec3(pcg3d(uvec3(i))) * (2.0 / 4294967296.0) - 1.0; }
+
+// Gradient (Perlin-style) noise, about -0.5..0.5
+float gnoise(vec3 p) {
+  ivec3 i = ivec3(floor(p)); vec3 f = fract(p);
+  vec3 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+  float a = dot(ig(i), f);
+  float b = dot(ig(i + ivec3(1, 0, 0)), f - vec3(1, 0, 0));
+  float c = dot(ig(i + ivec3(0, 1, 0)), f - vec3(0, 1, 0));
+  float d = dot(ig(i + ivec3(1, 1, 0)), f - vec3(1, 1, 0));
+  float e = dot(ig(i + ivec3(0, 0, 1)), f - vec3(0, 0, 1));
+  float g = dot(ig(i + ivec3(1, 0, 1)), f - vec3(1, 0, 1));
+  float h = dot(ig(i + ivec3(0, 1, 1)), f - vec3(0, 1, 1));
+  float k = dot(ig(i + ivec3(1, 1, 1)), f - vec3(1, 1, 1));
+  return mix(mix(mix(a, b, u.x), mix(c, d, u.x), u.y), mix(mix(e, g, u.x), mix(h, k, u.x), u.y), u.z);
+}
+float noise(vec3 p) { return clamp(0.5 + 0.95 * gnoise(p), 0.0, 1.0); }
+float fbm(vec3 p, int oct) {
+  float a = 0.5, s = 0.0, n = 0.0;
+  for (int i = 0; i < 8; i++) {
+    if (i >= oct) break;
+    s += a * noise(p); n += a;
+    p = M3 * p * 2.02 + vec3(1.7, 9.2, 3.1); a *= 0.5;
+  }
+  return s / n;
+}
+int OCT(int n) { return (uQ > 0.5) ? n : max(n - 2, 2); }
+vec3 rotY(vec3 v, float a) { float c = cos(a), s = sin(a); return vec3(c * v.x + s * v.z, v.y, -s * v.x + c * v.z); }
+
+vec3 sOff() { return vec3(uSeed * 1.37, uSeed * 2.11 + 4.0, uSeed * 0.73 + 9.0); }
+
+// Craters: bowl with a flat floor, raised rim, ejecta apron and a central peak on big ones.
+// Three sizes; each point only looks at the 8 nearest grid cells.
+float craters(vec3 p, float density) {
+  float acc = 0.0;
+  for (int s = 0; s < 3; s++) {
+    if (s == 2 && uQ < 0.5) break;
+    float sc = (s == 0) ? 2.6 : ((s == 1) ? 6.5 : 15.0);
+    float depth = (s == 0) ? 1.0 : ((s == 1) ? 0.6 : 0.3);
+    vec3 x = p * sc, ip = floor(x), fp = fract(x);
+    vec3 sd = step(0.5, fp);
+    for (int k = 0; k < 2; k++) for (int j = 0; j < 2; j++) for (int i = 0; i < 2; i++) {
+      vec3 g = vec3(float(i), float(j), float(k)) - 1.0 + sd;
+      vec3 key = ip + g + float(s) * 31.7;
+      vec3 q2 = hash33(key + 57.0);
+      if (q2.x > density) continue;
+      vec3 o = hash33(key);
+      float r = 0.20 + 0.25 * q2.y;
+      float d = length(g + 0.28 + 0.44 * o - fp) / r;
+      if (d > 2.4) continue;
+      float v = -smoothstep(1.0, 0.55, d) * 0.85;
+      v += exp(-pow((d - 1.0) / 0.11, 2.0)) * 0.55;
+      v += step(1.0, d) * exp(-(d - 1.0) * 3.5) * 0.12;
+      v += step(0.34, r) * exp(-pow(d / 0.15, 2.0)) * 0.30;
+      acc += v * depth;
+    }
+  }
+  return acc;
+}
+
+// Terrain: big warped continents, fine detail on top, mountain ridges inland.
+float heightAt(vec3 q, int oct) {
+  vec3 s = q * uScale * 1.5 + sOff();
+  vec3 w = vec3(gnoise(s * 0.8 + 3.1), gnoise(s * 0.8 + 17.7), gnoise(s * 0.8 + 41.3));
+  s += w * 0.75;
+  float cont = fbm(s * 0.55, 3);
+  float det = fbm(s * 1.8 + 5.0, max(oct - 1, 2));
+  float r = 1.0 - abs(2.0 * fbm(s * 1.3 + 9.0, max(oct - 2, 2)) - 1.0);
+  r *= r;
+  float h = cont * 0.62 + det * 0.38;
+  h = mix(h, h * 0.7 + r * 0.5 * smoothstep(0.38, 0.62, cont), uMount * 0.9);
+  return (h - 0.5) * 1.5 + 0.5;
+}
+
+vec3 ramp4(float t) {
+  t = clamp(t, 0.0, 1.0) * 3.0;
+  if (t < 1.0) return mix(uPal[0], uPal[1], t);
+  if (t < 2.0) return mix(uPal[1], uPal[2], t - 1.0);
+  return mix(uPal[2], uPal[3], t - 2.0);
+}
+
+float ringDens(float rr, float ang) {
+  float u = (rr - uRingIn) / (uRingOut - uRingIn);
+  if (u < 0.0 || u > 1.0) return 0.0;
+  vec3 so = sOff();
+  float f = fbm(vec3(rr * 38.0, so.x, 0.7), 4);
+  float fine = noise(vec3(rr * 230.0, so.y, 1.3));
+  float d = mix(0.45, 1.0, f) * (0.72 + 0.28 * fine);
+  float gap = smoothstep(0.58, 0.74, noise(vec3(rr * 9.0, so.z, 3.0))) * uRingGaps;
+  d *= 1.0 - gap;
+  d *= smoothstep(0.0, 0.06, u) * smoothstep(1.0, 0.9, u);
+  float cl = fbm(vec3(cos(ang + uRingAng) * 2.5 + so.x, sin(ang + uRingAng) * 2.5, rr * 6.0), 3);
+  d *= 0.78 + 0.44 * cl;
+  return clamp(d, 0.0, 1.0);
+}
+
+// --- gas giant -------------------------------------------------------------
+vec3 gasBands(vec3 q, float shift) {
+  vec3 s = rotY(q, shift);
+  vec3 so = sOff();
+  float w = fbm(s * vec3(2.5, 4.5, 2.5) + so, 4) - 0.5;
+  float t = 0.5 + 0.5 * sin(s.y * uBands * PI + w * uTurb * 7.0 + uSeed);
+  t = smoothstep(0.12, 0.88, t);
+  t += (fbm(s * vec3(7.0, 38.0, 7.0) + so, 4) - 0.5) * 0.4 * uTurb;
+  return ramp4(t);
+}
+float bandVel(float y) { return 0.55 * sin(y * uBands * 1.9 + uSeed * 2.0) + 0.35 * sin(y * 3.0 + uSeed); }
+
+vec3 gasAlbedo(vec3 q) {
+  const float PER = 8.0;
+  float v = bandVel(q.y);
+  float ph = uFlowT / PER;
+  float t1 = fract(ph), t2 = fract(ph + 0.5);
+  float wA = 1.0 - abs(2.0 * t1 - 1.0);
+  vec3 col = mix(gasBands(q, v * t2 * PER), gasBands(q, v * t1 * PER), wA);
+  int n = int(uStorms + 0.5);
+  for (int i = 0; i < 6; i++) {
+    if (i >= n) break;
+    vec3 hs = hash33(vec3(float(i) * 3.7 + uSeed, 2.3, 5.1));
+    float yc = (hs.x * 2.0 - 1.0) * 0.55;
+    float size = uStormSize * ((i == 0) ? 0.30 : 0.12) * (0.7 + 0.6 * hs.z);
+    vec3 s = rotY(q, bandVel(yc) * uFlowT);
+    float lon = atan(s.z, s.x);
+    float dl = lon - hs.y * 6.2831853;
+    dl = atan(sin(dl), cos(dl)) * sqrt(max(1.0 - yc * yc, 0.05));
+    vec2 d2 = vec2(dl / (size * 1.9), (q.y - yc) / size);
+    float d = length(d2);
+    if (d < 1.4) {
+      float a = (1.0 - min(d, 1.0)) * 4.0 * (yc > 0.0 ? 1.0 : -1.0);
+      vec2 r2 = vec2(cos(a) * d2.x - sin(a) * d2.y, sin(a) * d2.x + cos(a) * d2.y);
+      float sp = fbm(vec3(r2 * 2.6, uSeed + float(i)), 4);
+      vec3 sc = mix(uPal[4] * 0.75, uPal[4] * 1.25 + 0.1, sp);
+      float m = 1.0 - smoothstep(0.62, 1.0, d);
+      float collar = smoothstep(0.9, 1.0, d) * (1.0 - smoothstep(1.0, 1.35, d));
+      col = mix(col, col * 0.78, collar * 0.7);
+      col = mix(col, sc, m);
+    }
+  }
+  return col;
+}
+
+// --- clouds ----------------------------------------------------------------
+float cloudAt(vec3 q, float extra, int oct) {
+  vec3 c = rotY(q, uCloudAng);
+  vec3 so = sOff();
+  vec3 w = c * vec3(2.0, 2.9, 2.0) + so + 5.0;
+  w += vec3(gnoise(w * 1.3), gnoise(w * 1.3 + 7.0), gnoise(w * 1.3 + 13.0)) * 0.9;
+  float cl = fbm(w * 1.5, oct);
+  float thr = mix(0.80, 0.42, clamp(uClouds + extra, 0.0, 1.0));
+  return smoothstep(thr, thr + 0.2, cl);
+}
+
+// --- big cities: planned corridors and hubs ---------------------------------
+// Highways are great circles across the planet; hubs sit where two highways cross and carry
+// concentric rings; a finer grid of avenues shows up inside urban districts.
+vec3 gcNormal(int i, float salt) { return normalize(hash33(vec3(float(i) * 1.37 + uSeed * 0.31, salt, 2.2)) - 0.5 + vec3(0.001)); }
+
+float cityNet(vec3 q, out float glow, out float urbanOut) {
+  // hubs at highway crossings
+  float cn = clamp((uCities - 0.1) / 0.9, 0.0, 1.0);
+  float gl = 0.0;
+  float bestD = 9.0; float rank = 0.0; vec3 bestP = vec3(0.0); vec3 bestN = vec3(0.0); float bestK = 0.0;
+  for (int i = 0; i < 7; i++) {
+    vec3 ni = gcNormal(i, 7.7);
+    for (int j = 0; j < 7; j++) {
+      if (j <= i) continue;
+      vec3 h = hash33(vec3(float(i) * 3.1 + uSeed, float(j) * 5.3, 9.1));
+      if (h.x > mix(0.30, 0.62, cn)) continue;
+      vec3 p = cross(ni, gcNormal(j, 7.7));
+      float l = length(p);
+      if (l < 0.2) continue;
+      p /= l;
+      float d1 = length(q - p), d2 = length(q + p);
+      float d = min(d1, d2);
+      gl = max(gl, exp(-d / 0.30) * (0.35 + 0.65 * h.y));
+      if (d < bestD) { bestD = d; rank = h.y; bestK = h.z; bestP = (d1 < d2) ? p : -p; bestN = ni; }
+    }
+  }
+  float uf = fbm(q * 2.4 + sOff() * 0.5 + 71.0, 4);
+  glow = gl;
+  float R = mix(0.10, 0.30, rank * rank) * mix(0.55, 1.0, cn);
+  float light = 0.0;
+  if (bestD < 8.0) {
+    vec3 w = q - bestP; w -= bestP * dot(w, bestP);
+    vec3 t1 = normalize(cross(bestP, bestN)); vec3 t2 = cross(bestP, t1);
+    float ang = atan(dot(w, t2), dot(w, t1));
+    // squares or pentagons, never circles; rotated to follow the first highway
+    float sides = (bestK < 0.5) ? 4.0 : 5.0;
+    float sec = 6.2831853 / sides;
+    float a2 = mod(ang, sec) - 0.5 * sec;
+    float rp = length(w) * cos(a2) / cos(0.5 * sec);
+    float u = rp / R;
+    if (u < 1.0) {
+      float nR = floor(2.0 + 4.0 * rank);
+      float ri = floor(u * nR);
+      float band = abs(fract(u * nR) - 0.5) * 2.0;
+      float seg = step(0.2, noise(vec3(ang * 2.0, ri * 1.7, rank * 40.0)));
+      light += smoothstep(0.70, 0.92, band) * seg * (1.0 - u * 0.35) * 1.15;
+      light += smoothstep(0.20, 0.0, u) * 1.4;
+    }
+  }
+  float urban = clamp(smoothstep(mix(0.76, 0.54, cn), mix(0.88, 0.70, cn), uf) + glow * 1.3, 0.0, 1.0);
+  urbanOut = urban;
+  // highways, dimmer outside districts
+  for (int i = 0; i < 7; i++) {
+    float d = abs(dot(q, gcNormal(i, 7.7)));
+    light += smoothstep(0.008, 0.0020, d) * (0.10 * cn * cn + 0.90 * urban) * mix(0.35, 0.65, cn);
+  }
+  // avenues, only inside districts
+  int nm = (uQ > 0.5) ? 16 : 8;
+  for (int i = 0; i < 16; i++) {
+    if (i >= nm) break;
+    float d = abs(dot(q, gcNormal(i, 31.4)));
+    light += smoothstep(0.0045, 0.0010, d) * urban * urban * urban * 0.4;
+  }
+  return light;
+}
+
+// --- planet ----------------------------------------------------------------
+vec3 shadePlanet(vec3 p, out float shine) {
+  shine = 0.0;
+  vec3 q0 = vec3(dot(p, uU), dot(p, uAxis), dot(p, uW));
+  float cs = cos(uSpin), sn = sin(uSpin);
+  vec3 q = vec3(cs * q0.x + sn * q0.z, q0.y, -sn * q0.x + cs * q0.z);
+  vec3 lq0 = vec3(dot(uL, uU), dot(uL, uAxis), dot(uL, uW));
+  vec3 lq = vec3(cs * lq0.x + sn * lq0.z, lq0.y, -sn * lq0.x + cs * lq0.z);
+  float ndl = dot(p, uL);
+  float nz = p.z;
+  vec3 albedo; vec3 n = p; vec3 emis = vec3(0.0);
+  float cloudD = 0.0; float landMask = 1.0; float night = smoothstep(0.10, -0.14, ndl);
+
+  if (uType == 1) {
+    albedo = gasAlbedo(q) * (0.62 + 0.38 * nz);
+  } else {
+    float t = mix(0.28, 0.62, uSea);
+    float h0 = heightAt(q, OCT(6));
+    if (uCraters > 0.0) h0 += craters(q, 0.5) * uCraters * 0.10;
+    // relief from two nearby samples
+    float e = 0.009;
+    vec3 ax = (abs(q.y) < 0.9) ? vec3(0, 1, 0) : vec3(1, 0, 0);
+    vec3 t1 = normalize(cross(q, ax)); vec3 t2 = cross(q, t1);
+    vec3 qa = normalize(q + e * t1), qb = normalize(q + e * t2);
+    float hx = heightAt(qa, OCT(4)), hy = heightAt(qb, OCT(4));
+    if (uCraters > 0.0) { hx += craters(qa, 0.5) * uCraters * 0.10; hy += craters(qb, 0.5) * uCraters * 0.10; }
+    vec3 g = ((hx - h0) / e) * t1 + ((hy - h0) / e) * t2;
+    g = vec3(cs * g.x - sn * g.z, g.y, sn * g.x + cs * g.z);
+    vec3 gw = uU * g.x + uAxis * g.y + uW * g.z;
+
+    float landv = h0 - t;
+    float so = smoothstep(-0.004, 0.004, landv);
+    float sea = (uSea > 0.02) ? 1.0 - so : 0.0;
+    landMask = 1.0 - sea;
+    float lh = (uSea > 0.02) ? clamp(landv / (1.0 - t), 0.0, 1.0) : clamp(h0 * 1.15 - 0.1, 0.0, 1.0);
+
+    vec3 land; float snow = 0.0;
+    if (uBiome > 0.5) {
+      // climate: warm at the equator, cold at the poles and on peaks; wet near coasts
+      float L = abs(q.y);
+      float tn = fbm(q * 2.0 + sOff() + 50.0, 2) - 0.5;
+      float temp = 1.0 - pow(L, 1.6) * 1.25 + tn * 0.25 - lh * 0.45;
+      float coast = (uSea > 0.02) ? exp(-max(landv, 0.0) * 16.0) : 0.0;
+      float moist = clamp(fbm(q * 2.6 + sOff() + 33.0, 3) + uWet * 0.5 + coast * 0.22, 0.0, 1.0);
+      land = mix(uPal[2], uPal[1], smoothstep(0.34, 0.64, moist));
+      land = mix(land, mix(uPal[3], uPal[4], 0.35), smoothstep(0.40, 0.12, temp));
+      land = mix(land, uPal[3], smoothstep(0.45, 0.85, lh));
+      float iceThr = mix(-0.2, 0.45, uIce);
+      snow = smoothstep(iceThr + 0.05, iceThr - 0.05, temp + (fbm(q * 9.0 + sOff(), 3) - 0.5) * 0.12);
+      snow *= step(0.001, uIce);
+    } else {
+      float moist = fbm(q * 3.0 + sOff() + 9.0, 3);
+      float lh2 = clamp(lh * 0.8 + (moist - 0.5) * 0.7 + 0.1, 0.0, 1.0);
+      land = mix(uPal[1], uPal[2], smoothstep(0.1, 0.55, lh2));
+      land = mix(land, uPal[3], smoothstep(0.5, 0.95, lh + 0.25 * (moist - 0.5)));
+    }
+    land *= 0.84 + 0.32 * fbm(q * 14.0 + sOff(), 3);
+    if (uQ > 0.5) land *= 0.92 + 0.16 * noise(q * 70.0 + sOff());
+
+    float depth = clamp((t - h0) / 0.25, 0.0, 1.0);
+    vec3 seaC = mix(uPal[0] * 1.7 + vec3(0.03, 0.12, 0.12), uPal[0] * 0.55, smoothstep(0.0, 0.35, depth));
+    float cth = ndl;
+
+    if (uType == 2) {
+      float hot = smoothstep(0.30, 0.85, cth), cold = smoothstep(-0.02, -0.55, cth);
+      land = mix(land, uPal[2] * (0.75 + 0.5 * lh), hot);
+      land = mix(land, mix(uPal[3], uPal[4], 0.5 + 0.5 * lh), cold);
+      seaC = mix(seaC, uPal[4] * 0.92, cold);
+      seaC = mix(seaC, uPal[2] * 0.7, hot * 0.8);
+    }
+
+    land = mix(land, uPal[4] * (0.9 + 0.1 * noise(q * 30.0)), snow);
+    seaC = mix(seaC, uPal[4] * 0.95, snow * 0.9);
+    albedo = mix(land, seaC, sea);
+    if (sea > 0.5) {
+      shine = 1.0 - snow;
+      vec3 wv = vec3(gnoise(q * 70.0 + uTime * 0.15), gnoise(q * 70.0 + 7.0 - uTime * 0.1), gnoise(q * 70.0 + 13.0));
+      n = normalize(p + 0.05 * wv);
+    } else {
+      n = normalize(p - 0.07 * gw * (1.0 + uMount) * (1.0 - 0.6 * snow));
+    }
+    albedo = mix(albedo, albedo + 0.18, (1.0 - smoothstep(0.0, 0.014, abs(landv))) * step(0.02, uSea) * (1.0 - snow) * 0.7);
+
+    if (uScars > 0.0) {
+      float sc = smoothstep(0.50, 0.58, fbm(q * 4.5 + 11.0, 4)) * smoothstep(0.30, 0.75, fbm(q * 26.0 + 3.0, 3));
+      albedo = mix(albedo, vec3(0.20, 0.09, 0.06), clamp(sc * uScars, 0.0, 1.0) * landMask * 0.9);
+    }
+    if (uLava > 0.0) {
+      float lv = 1.0 - abs(2.0 * fbm(q * 3.4 + sOff() + 5.0, 5) - 1.0);
+      float cr = smoothstep(0.90, 0.99, lv) * uLava;
+      float pulse = 0.82 + 0.18 * sin(uTime * 0.9 + h0 * 25.0);
+      emis += uPal[4] * cr * 1.6 * pulse * landMask;
+      albedo = mix(albedo, albedo * 0.45, smoothstep(0.82, 0.97, lv) * uLava);
+    }
+    if (uCities > 0.0) {
+      // every inhabited world gets the same planned network; uCities sets how much of the land is built up
+      float netL = 0.0, netG = 0.0, urban = 0.0;
+      netL = cityNet(q, netG, urban);
+      float dots = step(0.52, noise(q * 160.0)) * urban * urban;
+      float ground = landMask * (1.0 - snow);
+      emis += vec3(1.0, 0.78, 0.45) * dots * 0.45 * ground * night;
+      vec3 netC = mix(vec3(1.0, 0.68, 0.36), vec3(1.0, 0.88, 0.62), clamp(netL * 0.5, 0.0, 1.0));
+      emis += netC * netL * 1.15 * night * ground;
+      emis += vec3(1.0, 0.55, 0.25) * (netG * 0.35 + urban * 0.07) * night * ground;
+      // daylight: districts are paved over (grey, flat, blocky), streets and hub rings read as dark lines
+      float ub = clamp(urban, 0.0, 1.0) * ground;
+      float blocks = 0.80 + 0.40 * noise(q * 120.0) * (0.6 + 0.4 * step(0.5, noise(q * 300.0)));
+      vec3 paved = (mix(vec3(0.34, 0.34, 0.36), vec3(0.50, 0.46, 0.40), noise(q * 22.0 + 3.0)) + albedo * 0.18) * blocks;
+      albedo = mix(albedo, paved, smoothstep(0.08, 0.7, ub) * 0.92);
+      albedo = mix(albedo, vec3(0.07, 0.07, 0.08), clamp(netL * 0.9, 0.0, 0.85) * ub * ub);
+      n = normalize(mix(n, p, ub * 0.8));
+    }
+    float extra = (uType == 2) ? 0.35 * smoothstep(0.2, 0.9, cth) - 0.35 * smoothstep(0.0, -0.5, cth) : 0.0;
+    if (uClouds > 0.01) {
+      cloudD = cloudAt(q, extra, OCT(6));
+      if (uQ > 0.5) {
+        float shd = cloudAt(normalize(q + lq * 0.04), extra, 4);
+        albedo *= 1.0 - 0.45 * shd * (1.0 - cloudD);
+      }
+    }
+  }
+
+  float diffS = max(dot(n, uL), 0.0);
+  float diffC = max(ndl, 0.0);
+  float sh = 1.0;
+  if (uRingOn > 0.5 && abs(dot(uAxis, uL)) > 0.02) {
+    float tt = -dot(uAxis, p) / dot(uAxis, uL);
+    if (tt > 0.0) {
+      vec3 pt = p + tt * uL;
+      float rr = length(pt);
+      float dd = ringDens(rr, atan(dot(pt, uW), dot(pt, uU)));
+      sh = 1.0 - dd * uRingOp * 0.9;
+    }
+  }
+  float ls = (uType == 1) ? pow(diffS, 0.85) : diffS;
+  vec3 surf = albedo * (ls * 1.12 * sh + 0.018 + (uType == 2 ? 0.05 * (1.0 - smoothstep(-0.3, 0.1, ndl)) : 0.0));
+  if (shine > 0.0) {
+    vec3 hv = normalize(uL + vec3(0.0, 0.0, 1.0));
+    surf += vec3(1.0, 0.95, 0.85) * pow(max(dot(n, hv), 0.0), 150.0) * 0.5 * shine * sh;
+  }
+  vec3 cloudC = vec3(0.96, 0.97, 1.0) * (diffC * 1.15 * sh + 0.025);
+  cloudC = mix(cloudC, cloudC * vec3(1.0, 0.82, 0.72), smoothstep(0.25, 0.0, ndl) * 0.5);
+  vec3 col = mix(surf, cloudC, cloudD * 0.94);
+  col += emis * (1.0 - cloudD * 0.85);
+  // atmosphere: blue edge on the lit side, red band along the day-night line
+  float rim = pow(1.0 - nz, 3.0);
+  float dayF = smoothstep(-0.25, 0.55, ndl);
+  col = mix(col, uHazeCol * (0.25 + 0.9 * dayF), clamp(rim * uHaze * 0.5, 0.0, 0.85));
+  col += uHazeCol * pow(1.0 - nz, 2.2) * uHaze * 0.35 * dayF;
+  col += vec3(1.0, 0.42, 0.16) * exp(-pow(ndl / 0.09, 2.0)) * pow(1.0 - nz, 2.0) * uHaze * 0.45;
+  return col;
+}
+
+// --- moons -----------------------------------------------------------------
+void drawMoon(int i, vec2 uv, float px, inout vec3 col) {
+  vec4 m = uMoon[i];
+  vec2 d = uv - m.xy;
+  float r = length(d) / m.w;
+  float cov = clamp((1.0 - r) * m.w / px + 0.5, 0.0, 1.0);
+  if (cov <= 0.0) return;
+  r = min(r, 0.9999);
+  vec3 n = vec3(d / m.w, sqrt(1.0 - r * r));
+  vec3 pos = m.xyz + n * m.w;
+  vec3 bc = uMoonCol[i];
+  float fi = float(i) * 4.7 + uSeed;
+  vec3 sp = n * 3.0 + fi;
+  float tex = 0.72 + 0.5 * fbm(sp * 1.7, 4);
+  float cr = craters(n * 0.9 + fi, 0.5);
+  float lit = max(dot(n, uL), 0.0);
+  float b = dot(pos, uL), c = dot(pos, pos) - 1.0, disc = b * b - c;
+  float shd = 1.0;
+  if (disc > 0.0 && (-b + sqrt(disc)) > 0.0 && c > 0.0) shd = 0.0;
+  vec3 mc = bc * tex * (1.0 + cr * 0.35) * (lit * 1.15 * shd + 0.02);
+  col = mix(col, mc, cov);
+}
+
+vec3 stars(vec2 fc) {
+  vec3 c = vec3(0.0);
+  for (int l = 0; l < 2; l++) {
+    float cell = (l == 0) ? 46.0 : 21.0;
+    vec2 g = floor(fc / cell), f = fract(fc / cell);
+    vec3 h = hash33(vec3(g, float(l) * 7.0 + 1.0));
+    if (h.x > 0.93) {
+      float d = length(f - h.yz);
+      float tw = 0.75 + 0.25 * sin(uTime * (0.6 + h.x * 3.0) + h.y * 60.0);
+      vec3 tint = mix(vec3(0.75, 0.85, 1.0), vec3(1.0, 0.88, 0.7), h.z);
+      c += tint * smoothstep(0.07 + 0.05 * h.x, 0.0, d) * (0.25 + 0.75 * h.y) * tw * ((l == 0) ? 1.0 : 0.6);
+    }
+  }
+  return c;
+}
+
+void main() {
+  vec2 fc = gl_FragCoord.xy;
+  vec2 uv = (fc - 0.5 * uRes) / (0.5 * uRes.y) / uZoom;
+  float px = 2.0 / (uRes.y * uZoom);
+  vec3 col = vec3(0.012, 0.014, 0.022) + stars(fc);
+
+  for (int i = 0; i < 5; i++) { if (i >= uMoonN) break; if (uMoon[i].z < 0.0) drawMoon(i, uv, px, col); }
+
+  float r = length(uv);
+  float zp = (r < 1.0) ? sqrt(1.0 - r * r) : -1.0;
+
+  float ringA = 0.0; vec3 ringC = vec3(0.0); float zr = -99.0;
+  if (uRingOn > 0.5) {
+    float den = uAxis.z;
+    float tHit = (uAxis.x * uv.x + uAxis.y * uv.y + uAxis.z * 5.0) / den;
+    vec3 hp = vec3(uv, 5.0 - tHit);
+    float rr = length(hp);
+    float dd = ringDens(rr, atan(dot(hp, uW), dot(hp, uU)));
+    if (dd > 0.0) {
+      zr = hp.z;
+      float f = fbm(vec3(rr * 20.0, uSeed, 2.0), 3);
+      vec3 rc = mix(uRingCol2, uRingCol, f);
+      float lit = 0.3 + 0.7 * smoothstep(0.0, 0.3, abs(dot(uAxis, uL)));
+      float b = dot(hp, uL), c = dot(hp, hp) - 1.0, disc = b * b - c;
+      float shd = (disc > 0.0 && (-b + sqrt(disc)) > 0.0 && c > 0.0) ? 0.1 : 1.0;
+      ringC = rc * lit * shd;
+      ringA = clamp(dd * uRingOp, 0.0, 1.0);
+    }
+  }
+  bool ringFront = (r < 1.0) && (zr >= zp);
+  if (ringA > 0.0 && !ringFront) col = mix(col, ringC, ringA);
+
+  // atmosphere glow outside the limb: blue by day, red where the sun is setting
+  if (uHaze > 0.0 && r >= 1.0) {
+    float g = exp(-(r - 1.0) / (0.015 + 0.035 * uHaze)) * uHaze;
+    float lit = dot(normalize(vec3(uv, 0.0)), uL);
+    vec3 gc = mix(vec3(1.0, 0.42, 0.16), uHazeCol, smoothstep(-0.02, 0.4, lit));
+    col += gc * g * smoothstep(-0.3, 0.2, lit) * 0.85;
+  }
+  if (r < 1.0 + px) {
+    float cov = clamp((1.0 - r) / px + 0.5, 0.0, 1.0);
+    vec3 p = vec3(uv / max(r, 1.0), 0.0);
+    p.z = sqrt(max(1.0 - dot(p.xy, p.xy), 0.0));
+    float shine;
+    vec3 pc = shadePlanet(p, shine);
+    col = mix(col, pc, cov);
+  }
+  if (ringA > 0.0 && ringFront) col = mix(col, ringC, ringA);
+
+  for (int i = 0; i < 5; i++) { if (i >= uMoonN) break; if (uMoon[i].z >= 0.0) drawMoon(i, uv, px, col); }
+
+  col = col / (1.0 + col * 0.08);
+  fragColor = vec4(pow(clamp(col, 0.0, 1.0), vec3(0.96)), 1.0);
+}
+</script>
+
+<script id="vs" type="x-shader/x-vertex">#version 300 es
+in vec2 a; void main() { gl_Position = vec4(a, 0.0, 1.0); }
+</script>
+
+<script>
+const SYSTEMS = [{"n":"Rio Lodo","sec":"Amargura","w":"warm swamp world, river deltas and peat bogs","s":"olive-green marsh under constant haze","m":"none","r":"peat fuel, river rice, smuggled goods"},{"n":"Mercado Alto","sec":"Salus","w":"warm dry world, red mesas","s":"red-orange with green river valleys","m":"one moon","r":"trade, fuel, spices"},{"n":"Feldspar","sec":"Incus","w":"dry temperate world, flat basalt plateaus","s":"pale tan and grey, circled by orbital toll gates","m":"none","r":"tolls, freight, warehousing"},{"n":"Solheim","sec":"Amargura","w":"temperate rocky world, wind-cut cliffs","s":"pale gold with lilac quartz scars","m":"one small moon","r":"resonant quartz, building stone"},{"n":"Shirakaba","sec":"Vrijhaven","w":"cool forest world, long mild summers","s":"pale silver-green, white birch bark visible along the river valleys","m":"one small moon","r":"timber, birch sap, paper"},{"n":"Sunscald","sec":"Sunscald","w":"rocky world with no ozone layer","s":"bleached white and pale brown","m":"none","r":"heavy metals, radiation-hardened alloy"},{"n":"Isfjell","sec":"Isfjell","w":"cold rocky world","s":"grey stone and white frost","m":"none","r":"grain, wool, stone"},{"n":"Marl","sec":"Lesnaya","w":"warm, wet farm world, flat plains","s":"neat squares of green and gold","m":"one moon","r":"food"},{"n":"Bauxite IV","sec":"Bauxite IV","w":"hot jungle world","s":"red soil and green jungle","m":"one moon","r":"crops, timber"},{"n":"Hundred Lakes","sec":"Fallout","w":"cool world of mountains, lakes and plateaus","s":"blue lakes scattered over grey-green highland","m":"none","r":"fish, fresh water, timber"},{"n":"Cairnfell","sec":"Mata Alta","w":"temperate highlands, grassy uplands and deep valleys","s":"green-brown highlands under fast white cloud","m":"two small moons","r":"wool, meat, hides"},{"n":"Mesa Roja","sec":"Thousand Mouths","w":"dry rocky world, mesas and desert plains","s":"rust red with ochre plains","m":"one moon","r":"chromium, building stone"},{"n":"Semeion","sec":"Halite","w":"cold dry rocky world, thin air","s":"pale blue-white, ringed by the glow of cooling vents","m":"one small grey moon","r":"data storage, forecast computing"},{"n":"Caza Real","sec":"Caza Real","w":"hot jungle and ocean world","s":"dark green islands in a blue-black sea","m":"two moons","r":"hunting leases, game meat, hides"},{"n":"Ninegates","sec":"Lesnaya","w":"sprawling city-world with a few inland seas","s":"grey-brown, dark inland seas, a crowded halo of stations","m":"none","r":"manufacturing, trade, labour"},{"n":"Hard Winter","sec":"Hard Winter","w":"frozen world of ice and rock","s":"white and black","m":"none","r":"chromite, ice"},{"n":"Ilanga","sec":"Ilanga","w":"warm dry plateau world, bright sun","s":"red-brown plateaus glinting with solar fields","m":"none","r":"power cells, solar glass, cattle"},{"n":"Vinculum","sec":"Ferraria","w":"cold forest world","s":"dark green, few clearings","m":"none","r":"timber, prison labour"},{"n":"Paydirt","sec":"Longtide","w":"barren desert world","s":"dusty orange with white salt pans","m":"four small moons","r":"ore, minerals"},{"n":"Shelter","sec":"Bauxite IV","w":"temperate world","s":"green and grey","m":"none","r":"food"},{"n":"Fusoria","sec":"Fusoria","w":"temperate world of canyons, caverns and forested valleys","s":"green valleys cut by deep red canyons","m":"one moon","r":"cast hull frames, steel, ship parts"},{"n":"Skylark","sec":"Kranholm","w":"temperate world, airfields","s":"green and tan airfields","m":"none","r":"pilot training"},{"n":"Halite","sec":"Halite","w":"ocean world shrinking into salt flats, warm and humid","s":"deep blue seas edged with blinding white salt pans","m":"two moons, one rust-red","r":"salt, sea metals, brine chemicals, farmed fish"},{"n":"Ferrymoor","sec":"Fyrholm","w":"temperate world of lakes, swamps and forests in dense fog","s":"grey fog over dark green and silver water","m":"none","r":"fish, peat, timber"},{"n":"Rustwell","sec":"Rustwell","w":"toxic industrial world, polluted air","s":"brown smog over dark rust","m":"one moon","r":"scrap, machine parts, cheap industrial goods"},{"n":"Ulaan Tal","sec":"Ulaan Tal","w":"grassy plains, hills and plateaus","s":"green-gold with dark hills","m":"two moons","r":"food, textiles, knives"},{"n":"Uzun Su","sec":"Mechane","w":"temperate steppe world with long rivers","s":"green-gold steppe with blue river lines","m":"one moon","r":"horses, grain, leather"},{"n":"Sankt Odile","sec":"Ulaan Tal","w":"temperate world","s":"green hills and white towns","m":"one moon","r":"medicine, care"},{"n":"Ashfall","sec":"Kamenitsa","w":"hot desert world with lava fields","s":"tan desert, black lava fields, red glowing pits","m":"none","r":"smelted metals, sulphur"},{"n":"Isbrand","sec":"Caza Real","w":"cold world of icy tundra and deep caverns","s":"white with blue crevasse lines","m":"none","r":"diamonds, industrial gems"},{"n":"Signum","sec":"Sendero","w":"rainy temperate world","s":"grey-blue under permanent cloud","m":"two moons","r":"soldiers, barracks"},{"n":"Dry Reef","sec":"Moorings","w":"arid world, fossil reefs and caverns","s":"white coral ridges on yellow sand","m":"one moon","r":"listening posts, salvage"},{"n":"Three Lamps","sec":"Varmdal","w":"temperate coastal world","s":"blue sea and white coasts","m":"three moons","r":"tourism, fishing"},{"n":"Highfall","sec":"Isfjell","w":"rocky world of sheer cliffs","s":"bands of red and black rock","m":"three moons","r":"iron ore, copper"},{"n":"Kaolin","sec":"Kaolin","w":"temperate world of grassy plains and hills","s":"yellow-brown plains with green river valleys","m":"one moon","r":"grain, fodder"},{"n":"Halvmark","sec":"Halvmark","w":"temperate world, scrub hills around a big port","s":"tan and green, one bright port city","m":"one small moon","r":"trade, refits, contraband"},{"n":"Hollenvale","sec":"Fyrholm","w":"temperate world of forests, valleys and small seas","s":"green valleys and blue rivers","m":"two moons","r":"spirits, fruit, strategic metals"},{"n":"Tarrow","sec":"Las Mieses","w":"temperate farm world","s":"patchwork green and gold","m":"none","r":"grain, wool, cider"},{"n":"Tormentum","sec":"Navalia","w":"rocky mountain world","s":"grey mountains with orange furnace glow","m":"one moon","r":"weapons, ship guns, steel"},{"n":"Lowmarket","sec":"Ommata","w":"industrial world of factories","s":"grey with yellow smog","m":"none","r":"bootleg pills, chemicals, cheap goods"},{"n":"Salitre","sec":"Mata Alta","w":"temperate world of mountains, shallow seas, rocky plains and deserts","s":"tan and ochre plains, blue inland seas","m":"none","r":"nitrates, copper, minerals"},{"n":"Scaldwell","sec":"Vrijhaven","w":"irradiated world of lava plains and steaming seas, near-constant rain","s":"sullen red glow under a grey steam haze","m":"none","r":"guards for hire, heavy ore, hardy fruit"},{"n":"Quieta","sec":"Incus","w":"cold world of mountains, highlands and ice caps","s":"white peaks over dark blue-green highlands","m":"one moon","r":"broadcasts, music, art"},{"n":"Lunaria","sec":"Lantern","w":"warm world of rainforests, swamps, oceans and volcanoes","s":"green and blue with wild white surf","m":"eighteen moons","r":"fish, timber, gambling"},{"n":"Permit Hill","sec":"Greenfever","w":"frigid mountain world","s":"white peaks over grey valleys","m":"none","r":"shelter, little else"},{"n":"Scoria","sec":"Lenitas","w":"barren world under ash","s":"grey and black, with dull red streaks","m":"none","r":"slag, recovered metals"},{"n":"Tessera","sec":"Tessera","w":"cold grey steppe","s":"slate grey and pale green, a grid of lit depots on the night side","m":"none","r":"Tranche regiments, munitions"},{"n":"Oldwatch","sec":"Oldwatch","w":"temperate world of green hills","s":"green hills with white stone towns","m":"one moon","r":"military supplies, small arms"},{"n":"Los Pozos","sec":"Fyrholm","w":"temperate world of forests, mountains and sinkholes","s":"green with dark round sinkholes","m":"two moons","r":"charts, fuel, water"},{"n":"Port Isolde","sec":"Mata Alta","w":"temperate ocean world with crowded coasts","s":"blue sea laced with bright coastal cities","m":"one large grey moon","r":"shipping, fish, consumer goods, finance"},{"n":"Nowhere","sec":"Oldwatch","w":"temperate world, scattered camps","s":"pale green and grey, almost no lights","m":"none","r":"food, salvage, explosives"},{"n":"Varmdal","sec":"Varmdal","w":"glacier world with warm volcanic rift valleys","s":"white ice cut by green rifts","m":"three moons","r":"vine-coffee, vine-silk"},{"n":"Grimwall","sec":"Thaw","w":"cold rocky world, one big walled town","s":"dull grey with one bright city","m":"one moon","r":"cells, lodging, weapons"},{"n":"Cristalina","sec":"Caza Real","w":"temperate world, glass beaches, forested mountains","s":"blue and green with glittering white coastlines","m":"one moon","r":"glass art, high technology, warehousing, tourism"},{"n":"Grimsholt","sec":"Oldwatch","w":"cool city world","s":"dark grey sprawl under brown smog","m":"none","r":"heavy metals, fuel, chemicals, manufactured goods"},{"n":"Drift Harbour","sec":"Thaw","w":"gas giant","s":"amber and cream bands with a pale ring","m":"two moons, both settled","r":"fuel gas, scoop tethers"},{"n":"Delicia","sec":"Salus","w":"mild world of cliffs, hills and island spires","s":"blue sea studded with white spires and green hilltops","m":"two moons","r":"leisure, executive retreats"},{"n":"Ferraria","sec":"Ferraria","w":"asteroid field around a small rocky world","s":"grey rocks lit by yellow yard lamps","m":"none; a dense asteroid belt","r":"warships, hull plate, asteroid ore"},{"n":"Vinograd","sec":"Kaolin","w":"temperate world of forests and vineyard plains","s":"green and violet terraces","m":"two moons","r":"wine, luxury goods"},{"n":"Port Sorrel","sec":"Tessera","w":"dry temperate rocky world","s":"brown and green, ringed by docking lights","m":"two moonlets","r":"fuel, repairs, trade"},{"n":"Amoena","sec":"Bosque Alto","w":"warm temperate island world","s":"turquoise sea dotted with bright green islands","m":"none","r":"broadcasting, film studios, tourism"},{"n":"Steeplewater","sec":"Steeplewater","w":"warm swamp world, rising water","s":"brown-green marsh under heavy mist","m":"three moons, one cracked in half","r":"peat, methane, a toll beacon on the main lane"},{"n":"Murkhaven","sec":"Clearholm","w":"polluted world of eroded wastes and industrial cities","s":"brown and grey under thick yellow smog","m":"two moons","r":"industrial goods, minerals, black-market trade"},{"n":"Junkhold","sec":"Sunscald","w":"barren desert world","s":"dull tan scattered with rusting hulls","m":"none","r":"scrap, ship parts"},{"n":"Side Gate","sec":"Bauxite IV","w":"rocky world","s":"brown","m":"none","r":"contraband"},{"n":"Excubia","sec":"Excubia","w":"hot rain forest world","s":"dark green under constant storms","m":"one black moon used as a prison","r":"garrison training, timber"},{"n":"Shingle","sec":"Shingle","w":"asteroid belt around a red dwarf","s":"a dull red star wrapped in a grey band of rubble","m":"none; the belt is the system","r":"metals, hidden fuel caches"},{"n":"Las Presas","sec":"Kranholm","w":"tropical valley world","s":"green valleys and blue lakes","m":"none","r":"fruit, grain"},{"n":"Partus","sec":"Bauxite IV","w":"temperate clinic world","s":"cream-white cities","m":"none","r":"births, medicine"},{"n":"Akousma","sec":"Groenveld","w":"temperate world of plains, forests and cities","s":"green and grey, studded with white relay domes","m":"one moon covered in antenna fields","r":"intelligence, signal relays, data"},{"n":"Alumen","sec":"Mirabel","w":"warm rocky world","s":"brick red and pale tan","m":"none","r":"bauxite, alum, aluminium"},{"n":"Gemelos","sec":"Kranholm","w":"double planet of barren desert","s":"twin tan-gold worlds","m":"four small moons","r":"metals, ore"},{"n":"Hulkfield","sec":"Longtide","w":"temperate world of plains and scrapyards","s":"grey-brown, littered with glinting wrecks","m":"one moon","r":"scrap metal, salvaged parts, rebuilt ships"},{"n":"Cambium","sec":"Charter","w":"rocky world at the crossing of two trade lanes","s":"grey-brown, crusted with trading towers and docks","m":"one large moon","r":"financial services, debt trading, tolls"},{"n":"Commonhold","sec":"Commonhold","w":"temperate world, plains and old mining scars","s":"tan and green with grey prefab towns","m":"none","r":"prefab building, food, repairs"},{"n":"Grauburg","sec":"Ommata","w":"cool city-world","s":"grey cities under thin cloud","m":"none","r":"military hardware, high technology"},{"n":"Mirabel","sec":"Mirabel","w":"temperate world of cities, canyons and lake plateaus","s":"blue lakes and tan canyons between silver cities","m":"five moons","r":"manufactured goods, services, culture"},{"n":"Isvik","sec":"Tabularium","w":"cold world of icy tundra and caverns","s":"white and blue-grey, with a short brown summer","m":"none","r":"furs, ice fish, lichen spirits"},{"n":"Rosvik","sec":"Las Mieses","w":"cold ocean world with rocky coasts","s":"slate-grey seas, white coasts","m":"none","r":"fish, kelp, fish oil"},{"n":"Gypsum Minor","sec":"Mechane","w":"dry rocky world","s":"chalk-white with grey ridges","m":"one moon and a big toll station","r":"lane tolls, fuel, water"},{"n":"Wadi Sabr","sec":"Clearholm","w":"hot desert world, mountains and oases","s":"sand gold with dark mountain spines","m":"two moons","r":"water, dates, salt"},{"n":"Serra Alta","sec":"Excubia","w":"cool highland world, deep gorges","s":"grey-green plateaus cut by black ravines","m":"two moons","r":"wool, cheese, mountain herbs"},{"n":"Malleus","sec":"Excubia","w":"cold mountain world","s":"black peaks streaked with orange furnace light","m":"none","r":"hull plate, steel, forgings"},{"n":"Marga","sec":"Dunmere","w":"temperate world of fields and managed forest","s":"patchwork of green and pale yellow","m":"one small moon","r":"grain, oilseed, timber"},{"n":"Custodia","sec":"Navalia","w":"cold mountain world, thin air","s":"dark grey and white, snow on every peak","m":"two moons, one used as a live-fire range","r":"soldiers, military equipment, training"},{"n":"Bluesand","sec":"Ulaan Tal","w":"cold world of blue sand, forests and snow","s":"blue deserts and white plains","m":"none","r":"blue glass, timber"},{"n":"Limonite III","sec":"Navalia","w":"urban smelter world, hot and smoky","s":"rust-brown under yellow haze","m":"none","r":"steel, refined ore"},{"n":"Umoya","sec":"Bauxite IV","w":"temperate savannah world","s":"brown-gold savannah with rough uplands","m":"one moon","r":"power, cattle"},{"n":"Mechane","sec":"Mechane","w":"world of acidic oceans, canyons and grassland","s":"yellow-green seas and grey plateaus","m":"two moons","r":"combat robots, drones, technology"},{"n":"Bread Street","sec":"Cohors","w":"temperate world of plains, forests and sprawl","s":"green and gold with grey urban sprawl","m":"none","r":"food, freight, depots"},{"n":"Bosque Alto","sec":"Bosque Alto","w":"temperate forest world, cool and green","s":"deep green with silver lakes","m":"one pale moon","r":"timber, mushrooms, fruit, medicinal herbs"},{"n":"Sierra Seca","sec":"Kaolin","w":"dry world of jagged mountains and dusty valleys","s":"tan and ochre with dark ridges","m":"two moons","r":"goats, minerals, water rights"},{"n":"Warmwell","sec":"Bosque Alto","w":"volcanic rocky world, steam and thermal pools","s":"charcoal grey dotted with turquoise and orange pools","m":"none","r":"geothermal power, mineral salts, bathing"},{"n":"Nacar","sec":"Steeplewater","w":"warm ocean world with scattered islands","s":"bright blue with pale reef shallows","m":"three moons","r":"pearls, lacquer, shell goods, luxury goods"},{"n":"Belle Rive","sec":"Ilanga","w":"warm temperate world, long rivers","s":"green and purple vineyard slopes along silver rivers","m":"one moon","r":"wine, small boats, river trade"},{"n":"Lenitas","sec":"Lenitas","w":"temperate world of rolling hills","s":"soft green under thin clouds","m":"three moons","r":"food, advertising, broadcast sets"},{"n":"Natalis","sec":"Lesnaya","w":"mild temperate world, gentle hills","s":"soft blue-green under cream cloud","m":"one moon","r":"births, medicine, Birth Debt contracts"},{"n":"Sevenwells","sec":"Las Mieses","w":"dry steppe world","s":"beige and ochre with scattered green oases","m":"none","r":"water, livestock, textiles"},{"n":"Tinplate","sec":"Kaolin","w":"rocky world, temperate, industrial valleys","s":"grey-green with smoky valley towns","m":"one moon","r":"machine repair, simple robots, spare parts"},{"n":"Nueva Pradera","sec":"Caza Real","w":"temperate plains world","s":"pale green and brown checkerboard","m":"one moon","r":"grain, information, mid technology"},{"n":"Meridian","sec":"Sendero","w":"rocky world of glittering quartz plains","s":"sparkling white and pale blue","m":"one moon","r":"trade, quartz, glass"},{"n":"Thesauros","sec":"Thesauros","w":"frozen glacier world, thin air","s":"blinding white with faint blue seams","m":"none","r":"data, the regional debt backup"},{"n":"Penhallow","sec":"Bosque Alto","w":"cold rocky world, thin air","s":"slate blue with ice-grey highlands","m":"none","r":"fuel, repairs, warehousing"},{"n":"Spindle","sec":"Vrijhaven","w":"artificial hollow planetoid, spun for gravity","s":"a long dull-gold cylinder flashing as it turns","m":"none","r":"manufacturing, habitat repair, legal arguments"},{"n":"Old Bench","sec":"Isfjell","w":"temperate rocky world","s":"blue-grey with pale clouds","m":"one moon","r":"records, legal archives"},{"n":"Opsis","sec":"Varmdal","w":"mountain jungle and swamp world","s":"green jungle on dark mountains","m":"none","r":"neural links, medicine, technicians"},{"n":"Porphyry","sec":"Mechane","w":"mixed world of cities, mountains, oceans and deserts","s":"purple-red rock, blue sea, bright cities","m":"two moons","r":"freight trading, lane tolls, finance"},{"n":"Sedova","sec":"Tessera","w":"hot desert world, salt flats","s":"ochre sand and bright white salt pans","m":"one pale moon","r":"chemicals, metals, salts"},{"n":"Benigna","sec":"Fusoria","w":"warm world of plains, forests and tidy jungle gardens","s":"green and gold with white resort coasts","m":"three pale moons","r":"leisure, fine food, executive loyalty"},{"n":"Puerto Hierro","sec":"Puerto Hierro","w":"tropical world of mountains, oceans and farmland","s":"green mountains, deep blue sea, rust-red mine scars","m":"two moons","r":"iron, minerals, ore haulers, ships"},{"n":"Classis","sec":"Classis","w":"temperate world of forests and industrial coasts","s":"blue and green, its coasts lined with yellow-lit docks","m":"three moons","r":"starships, capital hulls, shipyards"},{"n":"Magnetite III","sec":"Classis","w":"dry iron-rich world","s":"dark red and black","m":"none","r":"iron ore, feedstock"},{"n":"Waymeet","sec":"Caza Real","w":"temperate rocky world with built-up valleys","s":"grey-brown with lit dock towns on the nightside","m":"two moons","r":"ship repair, crew services, spare parts"},{"n":"Deadfall","sec":"Cohors","w":"temperate forest world","s":"dark green","m":"none","r":"timber, game"},{"n":"Tutela","sec":"Charter","w":"temperate world of parkland and bamboo forest","s":"green and blue, neatly divided by white roads","m":"three moons","r":"education, private security, luxury foods"},{"n":"Charter","sec":"Charter","w":"city-world covering the whole surface, climate engineered","s":"solid gold-and-white grid of lights, no dark side","m":"four small moons, one hollowed into an archive","r":"administration, debt records, the Board's courts"},{"n":"Riftwood","sec":"Moorings","w":"temperate world of forests and cracked crust","s":"green forests split by black rifts","m":"one moon","r":"ore, raw materials"},{"n":"Pyrite","sec":"Excubia","w":"dry rocky world","s":"rust-orange, ringed by toll stations","m":"none","r":"tolls, fuel, freight services"},{"n":"Bellwether","sec":"Kaolin","w":"cool upland pasture world","s":"pale green with drifting cloud","m":"none","r":"wool, lane weather forecasts"},{"n":"Saltgreen","sec":"Commonhold","w":"temperate world of brine seas, salt flats and canyons","s":"white salt plains edged with new green marsh","m":"none","r":"salt, minerals, salt-marsh crops"},{"n":"Frostholm","sec":"Outside any sector","w":"cold ice-locked world, buried cities","s":"flat dull white with faint city warmth at the poles","m":"three moons","r":"information, archives; imports food and technology"},{"n":"Krasny Yar","sec":"Krasny Yar","w":"temperate rocky world, red river bluffs","s":"brick-red bluffs along wide brown rivers","m":"two small moons","r":"arms trade, river farms"},{"n":"Cutbank","sec":"Commonhold","w":"rocky asteroid world, low gravity, no air","s":"black and grey, scarred with pit lights","m":"none","r":"iron, nickel, cobalt"},{"n":"Altofen","sec":"Altofen","w":"industrial temperate world, heavy smog","s":"brown-grey under yellow smog, a dark factory moon","m":"one moon covered by an abandoned arms factory","r":"steel, old weapons stock"},{"n":"Rauchtal","sec":"Pulau Hijau","w":"toxic world, unbreathable yellow air","s":"mustard-yellow haze with dark valley scars","m":"none","r":"chemicals, filters"},{"n":"Ashgrove","sec":"Steeplewater","w":"cool dry forest world, frequent fires","s":"grey-green with smoke smudges","m":"one moon","r":"timber, potash, fertiliser"},{"n":"Kanon","sec":"Solacia","w":"jungle world under heavy rain","s":"deep green with silver server roofs","m":"two moons","r":"data storage, forecasts"},{"n":"Seven Keys","sec":"Vrijhaven","w":"ocean world, warm, scattered small islands","s":"deep blue with white reef rings around the islands","m":"five small moons","r":"fish, reef pearls, salt"},{"n":"Kaukomaa","sec":"Kaukomaa","w":"wet world of floodplains and lakes","s":"grey-blue with drifting city lights","m":"two moons","r":"fish, rice, floating cities"},{"n":"Eldingar","sec":"Eldingar","w":"hot storm world, flooded basalt plains under endless lightning","s":"slate grey cloud lit by constant white flashes","m":"one moon, honeycombed with caves","r":"none worth taking"},{"n":"Dongyu","sec":"Kaukomaa","w":"rainy city-world","s":"grey-blue under constant cloud, neon at night","m":"one moon","r":"black market, information, trade"},{"n":"Oionos","sec":"Mechane","w":"cool forest world","s":"dark blue-green with white steam over the vents","m":"one moon","r":"data storage, forecasting"},{"n":"Fallow","sec":"Ilanga","w":"temperate world of grasslands, lakes and hills","s":"green and gold with large blue lakes","m":"two moons","r":"food, medicine, schools"},{"n":"Lignite","sec":"Ilanga","w":"warm swamp world","s":"dark olive with black flooded pits","m":"none","r":"lignite, peat, methane"},{"n":"Vexillum","sec":"Fusoria","w":"humid subtropical forest world","s":"dark green, steaming, cloud-wrapped","m":"none","r":"trained regiments, garrison stores"},{"n":"Redfen","sec":"Bauxite IV","w":"temperate world of swamp and forest","s":"rust-red swamp and dark forest","m":"four moons","r":"ore"},{"n":"Morrowfield","sec":"Groenveld","w":"temperate plains, wheat belts","s":"gold and green bands","m":"one moon","r":"grain, livestock"},{"n":"Tranquilla","sec":"Navalia","w":"temperate world of forests and big oceans","s":"blue with green coastlines","m":"none","r":"births, medicine, clinic services"},{"n":"Havdal","sec":"Eldingar","w":"temperate ocean world, scattered islands","s":"deep blue with white island chains","m":"one pale moon","r":"fish, kelp, salt"},{"n":"Fiducia","sec":"Lesnaya","w":"city-world, one continuous city","s":"grey and gold by day, a solid web of light on the night side","m":"none","r":"tolls, trade, finance, services"},{"n":"Ribeira","sec":"Altofen","w":"temperate river world, wet lowlands","s":"green-brown laced with silver rivers","m":"none","r":"rice, fish, river trade"},{"n":"Graustadt","sec":"Dunmere","w":"subarctic world of tundra, swamps and decaying cities","s":"grey-white with dark city scars","m":"one moon","r":"consumer goods, cheap labour"},{"n":"Las Eras","sec":"Sunscald","w":"dry world of farm basins and rocky desert","s":"tan desert with bright green basins","m":"three moons","r":"grain, fruit, water rights"},{"n":"Undergrowth","sec":"Shingle","w":"hot jungle world, rivers and shallow seas","s":"deep green, braided with brown rivers and steaming cloud","m":"one small grey moon","r":"salvaged steel, fighter hulls, river ore"},{"n":"Weirholm","sec":"Rustwell","w":"cool swamp and shallow-water world","s":"grey-green water and reed islands","m":"none","r":"fish, water reed, smoked goods"},{"n":"Uhrwald","sec":"Varmdal","w":"temperate forested world","s":"green forest and red roofs","m":"none","r":"hand-made goods, timber, clocks"},{"n":"Natron","sec":"Ferraria","w":"cold gas-rich world, unbreathable air","s":"pale orange haze","m":"one moon","r":"helium, rare gases"},{"n":"Muster Rock","sec":"Vrijhaven","w":"cold rocky world, thin air","s":"dull brown with pale dust plains","m":"none","r":"fuel, moorings, convoy escort"},{"n":"Brannock","sec":"Fallout","w":"temperate world with two large continents","s":"two green-brown continents in a blue sea","m":"none","r":"ore in the north, grain in the south"},{"n":"Beryl","sec":"Ommata","w":"temperate world of forests and inland seas","s":"green land around bright inland seas","m":"none","r":"gemstones, jewellery, medicines"},{"n":"Groenveld","sec":"Groenveld","w":"temperate grassland, hills and forests","s":"soft green and brown under wide cloud bands","m":"none","r":"grain, livestock, timber"},{"n":"Stormfen","sec":"Greenfever","w":"wet storm world of swamp, jungle and sea","s":"purple-grey cloud lit by constant flashes","m":"two moons","r":"stored power, batteries"},{"n":"Kovarna","sec":"Halite","w":"temperate city world, wetlands and old parkland","s":"grey-brown sprawl with dark green wetlands and lit coasts","m":"none","r":"weapons, machine parts, manufactured goods"},{"n":"The Rafts","sec":"Oldwatch","w":"ocean world, no land","s":"deep blue with a scatter of grey floating towns","m":"one moon","r":"fish, salvage, smuggling"},{"n":"Hiberna","sec":"Classis","w":"poisoned world, toxic air, deep mine galleries","s":"brown and grey, scored with launch rails","m":"none","r":"starship parts, engines"},{"n":"Placida","sec":"Mica","w":"mild lake world, gentle hills","s":"vivid blue lakes on soft green","m":"one pale moon","r":"leisure, executive births, imported luxuries"},{"n":"Fathom","sec":"Fathom","w":"ocean world","s":"deep blue with green kelp swirls","m":"one moon","r":"kelp, fish"},{"n":"Lockout","sec":"Eldingar","w":"temperate plains world, foundry cities","s":"orange city glow over flat tan plains","m":"two moons","r":"refined metals, alloys, small ships"},{"n":"Bastide","sec":"Mirabel","w":"cold city-world of forests and mountains","s":"silver city grid with dark forests","m":"one moon","r":"cold storage, preserved goods"},{"n":"Fyrholm","sec":"Fyrholm","w":"temperate world of savannas, forests and mountains","s":"golden savanna and dark forest under thin cloud","m":"none","r":"navigation, food, medicinal herbs"},{"n":"Bluefathom","sec":"Thesauros","w":"gas giant, violent storms","s":"deep indigo with white storm spots","m":"many small moons","r":"fuel gas, pilots"},{"n":"Hardwood","sec":"Hard Winter","w":"jungle world","s":"dark green jungle","m":"three moons","r":"hardwood, resin"},{"n":"Ain Tamra","sec":"Shingle","w":"warm dry world, breathable air","s":"sand-gold with dark green oasis spots","m":"one moon","r":"water, salt, dates"},{"n":"Ellerbeck","sec":"Caza Real","w":"temperate forests, grasslands, garden cities","s":"green with pale city patches","m":"one moon","r":"birth registry, crafts, timber"},{"n":"Cunabula","sec":"Varmdal","w":"temperate world of jungle and mountains","s":"green and white, clinic towers on every coast","m":"one moon","r":"births, medicine, titanium ore"},{"n":"Agua Mansa","sec":"Tessera","w":"warm ocean world, many islands","s":"deep blue with green island chains","m":"one small moon","r":"fish, kelp, sea salt"},{"n":"Clearholm","sec":"Clearholm","w":"temperate forest world","s":"deep green with private lakes","m":"none","r":"timber, luxury goods"},{"n":"Tourmaline","sec":"Ommata","w":"temperate world of docks and plains","s":"green and grey, crowded with cargo stations","m":"none","r":"freight, warehousing, tolls"},{"n":"Sweetsea","sec":"Sunscald","w":"volcanic island world, freshwater oceans, sulphur haze","s":"deep blue sea with smoking black islands","m":"none","r":"fresh water, sulphur, fish"},{"n":"Suavis","sec":"Halite","w":"warm jungle and mountain world, gentle rains","s":"rich green with mist-filled valleys","m":"none","r":"rest and leisure, luxury herbs"},{"n":"Flarewater","sec":"Solacia","w":"methane sea world","s":"blue-green with bright flares","m":"none","r":"fuel"},{"n":"Vigilia","sec":"Charter","w":"dry rocky world, cold nights","s":"tan and dusty grey, lit by a ring of docking stations","m":"none","r":"fuel, ship inspection, garrison supply"},{"n":"The Stumps","sec":"Shingle","w":"temperate forest world, regrowing","s":"patchy green over pale stumpfields","m":"none","r":"timber, seedlings, medicinal bark"},{"n":"Birchholm","sec":"Ferraria","w":"cool forest world","s":"pale green and white birch forests","m":"none","r":"paper, timber, honey"},{"n":"Greenfever","sec":"Greenfever","w":"hot, humid world of jungle and swamp","s":"dark green with yellow swamp haze","m":"eight small moons","r":"fever-root, medicinal crops, ore"},{"n":"Officina","sec":"Tabularium","w":"cold world of mesas and scrap fields","s":"rust-brown under thin cloud, glittering with scrap","m":"one moon","r":"scrap steel, salvaged parts"},{"n":"Ostwerk","sec":"Truce Moor","w":"desert world with sprawling factory cities","s":"beige desert with dense grey city grids","m":"none","r":"robots, machine tools"},{"n":"Bela Voda","sec":"Excubia","w":"cool world of long rivers and pine","s":"dark green with silver threads of river","m":"none","r":"fish, timber, river transport"},{"n":"Hollow Fork","sec":"Dunmere","w":"small airless rocky world","s":"dark grey, pitted, lit by a ring of docking lights","m":"none","r":"fuel, repairs, rumours"},{"n":"Opifex","sec":"Cohors","w":"dry world of deserts, mountains and oceans","s":"tan and blue with dark mountain chains","m":"none","r":"ship designs, engineering"},{"n":"The Wall","sec":"Greenfever","w":"warm world of jungles and oceans","s":"green continents in deep blue sea","m":"none","r":"food, timber, recruits"},{"n":"Brimstone","sec":"Greenfever","w":"hot dry desert, sulphur geysers","s":"mustard yellow and grey","m":"one moon","r":"sulphur, minerals"},{"n":"Buyback","sec":"Salus","w":"temperate forests and mountains","s":"dark green with grey mountain spines","m":"two moons","r":"timber, manufactured goods, labour"},{"n":"Incus","sec":"Incus","w":"dry temperate world, desert and city sprawl","s":"dust-brown and grey under a hazy ring of orbital yards lit hazard yellow","m":"one moon, quarried for hull steel","r":"capital ships, hull steel, machine parts"},{"n":"First Morning","sec":"Lantern","w":"temperate coastal world, mild climate","s":"soft blue sea and green shore","m":"one moon","r":"care, rest, recruits"},{"n":"Bare Acre","sec":"Ulaan Tal","w":"barren rock, thin air","s":"dull brown","m":"none","r":"nothing anyone can find"},{"n":"Holdfast","sec":"Lantern","w":"cold rocky world","s":"dark grey, circled by a ring of parked hulls","m":"a ring of stolen haulers","r":"ore, pilots, hull parts"},{"n":"Ironbeach","sec":"Fathom","w":"rocky world with long iron-sand beaches","s":"grey-black beaches along a dull sea","m":"none","r":"iron sand"},{"n":"Severitas","sec":"Mica","w":"cold rocky world, bare plateaus","s":"dull brown with white prison grids","m":"none","r":"prison labour, quarried stone, uniform cloth"},{"n":"Aozora","sec":"Isfjell","w":"temperate rain world","s":"blue sky and green hills, light cloud","m":"none","r":"fruit, herbs, medicine"},{"n":"Second Spring","sec":"Truce Moor","w":"temperate world, regrowing forest on old mine pits","s":"patchy green over rust-orange pits","m":"none","r":"food, medicine plants, seed"},{"n":"Clanmoor","sec":"Pulau Hijau","w":"temperate world of forests and croplands","s":"dark green forest with pale farmland squares","m":"two moons","r":"contract labour, timber, crops"},{"n":"Bellglass","sec":"Fallout","w":"rocky world, toxic ammonia atmosphere","s":"pale yellow haze over dark rock, glittering domes","m":"none","r":"chemicals, ammonia, dome glass"},{"n":"Ferrite IV","sec":"Lesnaya","w":"barren rocky world, no water","s":"dull rust-brown pocked with vast pits","m":"none","r":"iron, nickel"},{"n":"Truce Moor","sec":"Truce Moor","w":"cool world of high moors and deep valleys","s":"grey-green moorland, silver lakes","m":"none","r":"wool, pilgrims"},{"n":"Cafetal","sec":"Thousand Mouths","w":"temperate world of plains, rainforests and oceans","s":"green and blue with brown terraces","m":"one moon","r":"coffee, timber"},{"n":"Quies","sec":"Classis","w":"warm hill world","s":"green terraces, soft white cloud","m":"none","r":"tea, rest houses, perfume"},{"n":"Morelle","sec":"Puerto Hierro","w":"damp, warm fungal forests","s":"grey-white and mauve, misty","m":"none","r":"fungal compounds, medicine feedstock"},{"n":"Ostrog","sec":"Mata Alta","w":"cold rocky world, thinning air","s":"pale blue-grey under a thin haze, one dark valley","m":"none","r":"lichen farms, water ice"},{"n":"Longgrass","sec":"Isfjell","w":"hot world of grassland, jungle and mountains","s":"yellow-green with dark mountain spines","m":"none","r":"grain, cattle"},{"n":"Mudlark","sec":"Hard Winter","w":"swamp world","s":"brown and green wetland","m":"one moon","r":"swamp crops, peat"},{"n":"Ergon","sec":"Amargura","w":"hot dry world of mesas and dust plains","s":"ochre plains stitched with white foundry blocks","m":"fifteen captured moonlets, three hollowed into data vaults","r":"war robots, Gleaner drones, servo parts"},{"n":"Waymark","sec":"Rustwell","w":"temperate world, market towns","s":"green and brown, with a busy orbit","m":"none","r":"trade, provisions"},{"n":"Seven Gates","sec":"Thaw","w":"temperate city-world","s":"grey-gold city lights over every continent","m":"none","r":"labour contracts, tech goods"},{"n":"Cidermoor","sec":"Thaw","w":"temperate world, rolling orchards","s":"bright blue skies over green and pink","m":"none","r":"fruit, cider, cloth"},{"n":"Mollis","sec":"Incus","w":"temperate world of mountains, valleys and forests","s":"green valleys under white cloud","m":"one moon","r":"fine fabrics, silk-moth farms"},{"n":"Perpetua","sec":"Tabularium","w":"frigid mountain world, caves and hot springs","s":"white snowfields cut by steaming dark valleys","m":"none","r":"penal labour, ore, minerals"},{"n":"Techne","sec":"Incus","w":"cool world of islands, marshes and glaciers","s":"grey-green marsh, white glacier tongues, dark sea","m":"none","r":"Gleaner drones, electronics"},{"n":"Pennygate","sec":"Puerto Hierro","w":"dry rocky world","s":"yellow-grey under thin haze","m":"one moon","r":"lane services, ale"},{"n":"Mwezi","sec":"Ferraria","w":"warm jungle and ocean world","s":"emerald islands on deep blue","m":"one moon","r":"fish, medicine, fresh water"},{"n":"Stannum","sec":"Tessera","w":"hot rocky world, smog belts","s":"yellow-grey haze lit orange by refinery fires","m":"one large moon, pitted with mine shafts","r":"refined crystal ore"},{"n":"Steading","sec":"Kaukomaa","w":"temperate farmland world","s":"green and brown patchwork","m":"one moon","r":"food, wool"},{"n":"Old Lens","sec":"Sendero","w":"barren world, breathable air","s":"bleached grey","m":"none","r":"observations, star charts"},{"n":"Velika Ravan","sec":"Tessera","w":"temperate plains and farmland","s":"green and gold patchwork with blue inland seas","m":"one grey moon","r":"grain, textiles, machine parts"},{"n":"Kairos","sec":"Varmdal","w":"forest world, wildly changing weather","s":"green forest under shifting storms","m":"three moons","r":"forecast research, weather data"},{"n":"Subsidia","sec":"Navalia","w":"cold airless world","s":"grey-blue, crowded orbit of dark hulls","m":"three small moons","r":"laid-up warships, spare parts"},{"n":"Arithmos","sec":"Lenitas","w":"barren desert and mountains","s":"pale sand with white factory grids","m":"two moons","r":"robot repair, Proxies, electronics"},{"n":"Seldwyn","sec":"Longtide","w":"temperate world of forests, mountains and small cities","s":"green valleys between snowy ranges","m":"seven moons","r":"horses, wool, leather"},{"n":"Westerholm","sec":"Pulau Hijau","w":"temperate world, several continents of varied climate","s":"blue seas and patchwork green-gold continents","m":"none","r":"grain, livestock, wool"},{"n":"Erg Lahmar","sec":"Pulau Hijau","w":"hot desert world of salt pans","s":"blinding white flats edged with tan dunes","m":"none","r":"salt, minerals"},{"n":"Barewood","sec":"Lantern","w":"temperate world, dead forest turned to desert plains","s":"pale tan with grey ghost-forests","m":"three moons","r":"dead timber, a lawsuit"},{"n":"Fiscus","sec":"Ommata","w":"city-world, mild climate","s":"grey and white city grid","m":"one moon","r":"accounts, tax collection, administration"},{"n":"The Thaw","sec":"Thaw","w":"frozen world of ice plains and glaciers, one thawing valley","s":"white with one dark green-blue valley","m":"three moons","r":"greenhouse food, fresh water"},{"n":"Farrow","sec":"Fallout","w":"cold rocky world, thin air","s":"dull blue-grey","m":"none","r":"an old relay station, scrap"},{"n":"Archeion","sec":"Incus","w":"cold tundra world, deep cave systems","s":"white and grey-blue tundra pocked with dark cave mouths","m":"two moons","r":"data storage, forecast archives"},{"n":"Probatio","sec":"Amargura","w":"temperate rainy world, rocky uplands, small seas","s":"slate-blue seas under grey rain bands","m":"none","r":"test ranges, salvage from wrecked robots"},{"n":"Unlisted","sec":"Halvmark","w":"temperate world, regrown fields and young forest","s":"green and gold, patchy","m":"one moon","r":"new soil, seed crops, timber"},{"n":"Rubble Sky","sec":"Moorings","w":"hot world of canyons, spires and desert","s":"red canyons under a glittering ring","m":"hundreds of moonlets in a wide ring","r":"salvage, canyon resin"},{"n":"Skalna","sec":"Solacia","w":"mountain world","s":"grey peaks with green high pastures","m":"none","r":"climbers, herding"},{"n":"Pedregal","sec":"Kamenitsa","w":"dry barren world, gravel deserts","s":"pale grey-brown, no seas, no cloud","m":"none","r":"ore, minerals, deep water"},{"n":"Glasswood","sec":"Outside any sector","w":"frigid ice world, glaciers over frozen forest","s":"brilliant white with blue glacier seams","m":"none; a faint ring of debris","r":"frozen ancient timber"},{"n":"Nadezhda","sec":"Hard Winter","w":"cold world with one valley town","s":"dark blue-grey with one bright valley","m":"none","r":"dry houses, medicine"},{"n":"Highmere","sec":"Truce Moor","w":"temperate world of oceans, forests, mountains and plains","s":"deep blue seas, green lands, white peaks","m":"none","r":"fish, timber, fruit"},{"n":"Feriae","sec":"Solacia","w":"temperate world of hills and oceans","s":"blue seas and soft green hills","m":"none","r":"leisure, rest"},{"n":"Deep Wells","sec":"Ulaan Tal","w":"arid world, deep aquifers","s":"tan and ochre, cloudless","m":"two moons","r":"water, textiles, glass"},{"n":"Standstill","sec":"Rustwell","w":"temperate industrial world, many cities","s":"grey cities with green between them","m":"one moon","r":"factories, labour, organisers"},{"n":"Mata Alta","sec":"Mata Alta","w":"warm jungle world, humid and wet","s":"deep green with drifting white rain bands","m":"six small grey moons","r":"medicinal plants, foodstuffs, dyes, rare botanicals"},{"n":"Mokra","sec":"Ciénaga","w":"rainy world of plains, rock and caves","s":"grey-green under heavy cloud","m":"one barren moon","r":"ore, forged identities"},{"n":"Stepwell","sec":"Oldwatch","w":"hot dry world, deep wells","s":"pale ochre dotted with dark green wells","m":"none","r":"water, vegetables, cotton"},{"n":"Kalium II","sec":"Incus","w":"arid desert, hot days and freezing nights","s":"pale yellow-white, almost no cloud","m":"two small moons","r":"rare gases, potash, osmiridium"},{"n":"Sonnfeld","sec":"Moorings","w":"urban world, temperate","s":"grey-gold city lights over green belts","m":"none","r":"trade, finance, goods"},{"n":"Felsite III","sec":"Felsite III","w":"cold world of mountains and plateaus","s":"grey-white plateaus laced with fog","m":"none","r":"decorative stone, slate"},{"n":"Awlbridge","sec":"Fallout","w":"temperate world of low continents","s":"green and brown landmasses, grey seas","m":"one small moon","r":"boot kits, leather, cheap goods"},{"n":"Wrenfield","sec":"Steeplewater","w":"temperate rolling farmland, mild","s":"patchwork green and gold under thin cloud","m":"one small grey moon","r":"grain, dairy, timber"},{"n":"Skerrholm","sec":"Dunmere","w":"temperate ocean world of scattered islands","s":"deep blue scattered with green and white islands","m":"three moons, one with a thin ring","r":"fish, seaweed, boats"},{"n":"Ilhas Fundas","sec":"Halvmark","w":"temperate ocean world, large forested islands","s":"deep blue with dark green islands","m":"one moon","r":"timber, fish, resin"},{"n":"Regrowth","sec":"Eldingar","w":"moist temperate world, open plains regrowing","s":"patchy green over bare brown earth","m":"none","r":"food, seed stock, medicine plants"},{"n":"Tidewall","sec":"Kamenitsa","w":"mountainous world with narrow seas","s":"deep blue seas between brown mountain chains","m":"two moons","r":"fish, stone, tidal power"},{"n":"Timberline","sec":"Thousand Mouths","w":"temperate world of forests and mountains","s":"deep green with snowy peaks","m":"three moons","r":"hardwood, rare minerals"},{"n":"Valle Hondo","sec":"Lenitas","w":"warm world of deep valleys and hills","s":"green folds and grassy uplands","m":"none","r":"timber, coffee, fruit"},{"n":"Montefosco","sec":"Mica","w":"temperate hill world, old stone cities","s":"green hills and walled cities","m":"none","r":"banking, wine, legal services"},{"n":"Landfall","sec":"Fyrholm","w":"temperate rocky world, breathable air","s":"grey-green with deep river valleys","m":"none","r":"farmland, salvage"},{"n":"Lowmoor","sec":"Bosque Alto","w":"cool wet moorland world","s":"olive and brown under constant grey cloud","m":"none","r":"peat, wool, potatoes"},{"n":"Longtide","sec":"Longtide","w":"temperate world of shallow seas, tidal flats and low mountains","s":"silver tidal flats and pale blue sea","m":"three moons, which drive the great tides","r":"electronic components, quartz, fish"},{"n":"Supper Hill","sec":"Sunscald","w":"temperate world of countryside and plateaus","s":"soft green and gold","m":"none","r":"food, nothing for sale"},{"n":"Sinkwater","sec":"Eldingar","w":"warm swamp world, fog and black water","s":"murky green under thick fog","m":"one small moon","r":"smuggled goods, swamp fuel"},{"n":"Mbuga","sec":"Solacia","w":"savanna world","s":"tawny grass with dark watering holes","m":"three moons","r":"cattle, hides"},{"n":"Rietmoor","sec":"Mica","w":"warm swamp world, reed marshes","s":"bright green reed beds and brown channels","m":"none","r":"reed sugar, molasses, thatch"},{"n":"The Lantern","sec":"Lantern","w":"hot humid world, barren north, lush south","s":"grey-brown north, green south, one bright point of light","m":"three moons","r":"fuel, ship repairs, hidden cargo, pilots"},{"n":"Seafold","sec":"Isfjell","w":"ocean world, shallow seas","s":"pale aqua with sandbars","m":"none","r":"fish, salt, hidden moorings"},{"n":"Horasis","sec":"Mirabel","w":"ocean world, cold deep seas","s":"dark navy blue, almost no land","m":"none","r":"data vaults, cooling, fish"},{"n":"Agmen","sec":"Lesnaya","w":"cool dry world of steppe and parade grounds","s":"khaki with grey barrack grids","m":"two moons, one used as a gunnery range","r":"Pacifier regiments, munitions"},{"n":"Retentio","sec":"Incus","w":"cold scrubland, iron-red soil","s":"brick red under grey cloud","m":"one small moon","r":"prison labour, quarried stone"},{"n":"Consolatio","sec":"Charter","w":"warm city-world, mild seas","s":"pearl-white cities on a pale blue sea","m":"one small grey moon","r":"broadcasts, advertising, recorded music"},{"n":"Tierra Larga","sec":"Bosque Alto","w":"temperate farm world, fields, forests and mountains","s":"golden plains with dark green forest belts","m":"none","r":"grain, livestock, timber"},{"n":"Kestrel Downs","sec":"Commonhold","w":"temperate world, hills and farmland","s":"green and ochre with dark hilltop forts","m":"none","r":"grain, horses, wool"},{"n":"Barro Rojo","sec":"Krasny Yar","w":"hot arid world, desert hills, red mud plains and caves","s":"rust-red flats streaked with dried riverbeds","m":"none","r":"people sold as contract labour, clay, cave salts"},{"n":"Hundred Falls","sec":"Excubia","w":"temperate world of deep river valleys","s":"green with white spray along the valleys","m":"one moon","r":"hydro power, fruit, fresh water"},{"n":"Stonebrake","sec":"Lenitas","w":"dry rocky world, thin soil","s":"brown and grey, crossed by fine lines of wall","m":"none","r":"stone, hardy grain, goats"},{"n":"Thornveld","sec":"Mirabel","w":"warm dry world of dense brush","s":"olive and khaki scrub","m":"none","r":"hides, thorn resin, guides"},{"n":"Khamsin","sec":"Sunscald","w":"hot desert world","s":"pale sand with dark rock ridges","m":"one moon","r":"guiding, salt, glass"},{"n":"Naphtha","sec":"Amargura","w":"gas giant, banded and stormy","s":"tan and umber bands with a dark storm spot","m":"one moon carrying the refinery","r":"hyperspace fuel gases, refined fuel"},{"n":"Ilha Verde","sec":"Salus","w":"tropical rainforest and warm seas","s":"deep green and turquoise","m":"none","r":"copied medicines, timber, fish"},{"n":"Lastwell","sec":"Mechane","w":"dry world, desert and scrub","s":"yellow-brown with a few green oases","m":"none","r":"water, fuel, supplies"},{"n":"Breakyard","sec":"Greenfever","w":"hot, barren mountain world, salt flats","s":"white salt flats between dark mountains","m":"seven small moons","r":"scrap metal, ship parts"},{"n":"Plainsong","sec":"Oldwatch","w":"cold rocky world, thin forests","s":"grey-green with small stone villages","m":"none","r":"grain, wool, faith"},{"n":"Statio","sec":"Groenveld","w":"cool, moist ocean world with tropical islands","s":"grey-blue ocean, white storm bands, green island chains","m":"three moons","r":"ship repair, refits, technology"},{"n":"Nordhaven","sec":"Bosque Alto","w":"cool city world","s":"grey urban sprawl along dark northern seas","m":"none","r":"shipping, warehousing, finance"},{"n":"Vinterby","sec":"Bauxite IV","w":"frigid world of forests and mountains","s":"white and dark green","m":"none","r":"furs, timber"},{"n":"Navalia","sec":"Navalia","w":"temperate world of plains and forests, built-up","s":"green and gold, a bright line of slipways running out to its moons","m":"two moons, with a line of slipways strung between them and the planet","r":"capital ships, steel, luxury goods"},{"n":"Stewpot","sec":"Lantern","w":"searing world of swamps, rainforests and bogs","s":"steaming green with brown rivers","m":"three moons","r":"food, rations, fungus"},{"n":"Highrime","sec":"Tessera","w":"frigid mountain world, breathable","s":"white peaks with dark blue valley shadows","m":"none","r":"wool, ice, medicinal moss"},{"n":"Stepstone","sec":"Kaukomaa","w":"temperate archipelago world","s":"blue sea with countless green islands","m":"three moons","r":"fish, shelter, hidden docks"},{"n":"The Kiln","sec":"Fathom","w":"desert world","s":"orange desert with black refinery stacks","m":"two moons","r":"refined metals"},{"n":"Alvorada","sec":"Clearholm","w":"varied world: forests, grasslands, deserts","s":"patchwork of green, tan and blue","m":"one moon","r":"food, timber, textiles"},{"n":"Two Crowns","sec":"Groenveld","w":"rocky desert at the equator, forested highlands at both poles","s":"a rust-red belt between two dark green caps","m":"none","r":"timber, hides, mountain metals"},{"n":"Neuwerft","sec":"Puerto Hierro","w":"city-world, temperate","s":"grey and amber city sprawl, yard lights in orbit","m":"one moon, ringed with dock frames","r":"freighters, starships, trade goods"},{"n":"Loomhollow","sec":"Krasny Yar","w":"cool rocky world, cave-riddled highlands","s":"dusky violet with pale dust storms","m":"one small moon","r":"tapestries, rugs, dyes"},{"n":"Kamenitsa","sec":"Kamenitsa","w":"cold mountain world","s":"grey peaks, dark valleys, thin white cloud","m":"one small moon","r":"stone, copper"},{"n":"Tres Rios","sec":"Halite","w":"temperate rainy world, oceans, plains and rivers","s":"blue and green, streaked with brown river deltas","m":"none","r":"grain, rice, river fish"},{"n":"Limes","sec":"Navalia","w":"cold rocky world","s":"dark grey with a lattice of orbital forts","m":"one moon","r":"customs, picket fleet, fuel"},{"n":"Dunmere","sec":"Dunmere","w":"temperate dry world, sprawling cities on plains","s":"tan plains crusted with city lights","m":"one moon","r":"freighters, ship parts, engineers"},{"n":"Kaskela","sec":"Halite","w":"temperate world, rolling green valleys","s":"green and soft brown under scattered cloud","m":"one small moon","r":"fruit, cider, timber"},{"n":"Vaultrock","sec":"Fathom","w":"airless rock with a pressurised quay","s":"dark rock lit by a string of dock lamps","m":"none","r":"burials, refits, fuel"},{"n":"Icetap","sec":"Felsite III","w":"small icy rock","s":"dull white with a single dock light","m":"none","r":"water ice, fuel"},{"n":"Dormilona","sec":"Sendero","w":"warm world of flower fields","s":"pale violet fields under thin cloud","m":"none","r":"pill flowers"},{"n":"Vallum","sec":"Ommata","w":"cool industrial world","s":"steel grey with orange furnace dots","m":"one white moon, half shot away","r":"deflector shields, generators"},{"n":"Kaltwasser","sec":"Ilanga","w":"cold world of snow, ice and dry desert","s":"white and tan, patched with shining greenhouse towns","m":"one large moon","r":"fruit, gemstones"},{"n":"Campo Alto","sec":"Rustwell","w":"temperate upland farm world","s":"golden fields under clear skies","m":"none","r":"grain, flour"},{"n":"Llano Grande","sec":"Altofen","w":"temperate prairie and savannah, rock spires, marshes","s":"gold-green plains with grey rock formations","m":"two moons","r":"small starships, metals, food"},{"n":"Midden","sec":"Fathom","w":"hot junk world under acid rain","s":"rust-brown and black with smoking scrap mountains","m":"none","r":"salvage, ship parts"},{"n":"The Flats","sec":"Lantern","w":"world of mountains, rainforests and salt marshes","s":"white salt flats between green mountains and dark sea","m":"none","r":"salt, fish, pilgrims"},{"n":"Ochre Wells","sec":"Thaw","w":"hot barren plains with scattered oases","s":"red-ochre plains dotted with green","m":"none","r":"pigment dust, dates, caravans"},{"n":"Terracotta","sec":"Thesauros","w":"warm dry world of red clay hills","s":"rust red and ochre","m":"one moon","r":"art, pigments, advertising"},{"n":"Ghostlight","sec":"Clearholm","w":"barren rocky world, caverns","s":"dark grey under a pale green glow","m":"two moons, one faintly glowing","r":"old mine salvage, rare metals"},{"n":"Wellhead","sec":"Commonhold","w":"temperate world of forests and rocky plains","s":"green and brown, its refinery fields lit orange at night","m":"two moons, one scarred by old mining","r":"fuel, refined chemicals"},{"n":"Stillwater","sec":"Pulau Hijau","w":"cold forested world, still lakes","s":"dark green and black, frozen lakes like mirrors","m":"none","r":"furs, timber"},{"n":"Cohors","sec":"Cohors","w":"hot storm world, scoured plains","s":"grey-brown with swirling dust storms","m":"two moons","r":"troops, barracks, munitions"},{"n":"Gumwater","sec":"Hard Winter","w":"humid swamp world","s":"yellow-green swamp","m":"none","r":"high-grade plastics"},{"n":"Dulcia","sec":"Steeplewater","w":"hot jungle world, heavy afternoon rain","s":"deep emerald with white rain bands","m":"two moons, one with a faint ring of dust","r":"luxury hospitality, rare hardwoods"},{"n":"Fabrica","sec":"Lesnaya","w":"hot dry world, foundry belts","s":"dark grey with glowing orange river lines","m":"one moon","r":"crew fittings, hatches, bunks"},{"n":"Seedbank","sec":"Ciénaga","w":"temperate farming world, recovering soil","s":"brown fields slowly turning green","m":"one moon","r":"blight-proof grain, seed stock"},{"n":"Hardpan","sec":"Thaw","w":"dry world of deserts and mountains","s":"tan deserts and grey peaks","m":"none","r":"ore, mountain shafts, pilots"},{"n":"Selvagem","sec":"Longtide","w":"hot jungle world, huge rivers","s":"deep green with brown river veins","m":"none","r":"timber, rubber, medicinal plants"},{"n":"Vidrio","sec":"Ciénaga","w":"hot desert world with glass plains","s":"dazzling white-gold, mirror flashes in daylight","m":"three moons","r":"lenses, glass, optics"},{"n":"Halfwinter","sec":"Steeplewater","w":"tilted world: equatorial jungle, icy poles","s":"green belt with white caps that swell and shrink","m":"none","r":"timber, fruit, ice water for passing freighters"},{"n":"Clinker","sec":"Kamenitsa","w":"cold slag-covered world, thin air","s":"charcoal grey with small green terraced patches","m":"none","r":"reclaimed metals, slow-grown food"},{"n":"Blackmire","sec":"Kamenitsa","w":"hot humid swamp, mud flats and rainforest","s":"murky green-brown under constant cloud","m":"one moon, a single vast open pit","r":"rare crystal ore, peat, timber"},{"n":"Plenty","sec":"Cohors","w":"temperate world of fields, hills and lakes","s":"golden fields and blue lakes","m":"none","r":"grain"},{"n":"Four Lamps","sec":"Groenveld","w":"mild grassland plains","s":"pale green and straw under streaks of cloud","m":"four moons, each a different colour","r":"livestock, hides, grain"},{"n":"Greysand","sec":"Felsite III","w":"cold dry desert world","s":"pale grey-gold dunes with frost at the poles","m":"none","r":"glasshouse crops, minerals"},{"n":"Halfsky","sec":"Fyrholm","w":"desert and forest world under a crowded sky","s":"tan deserts and dark forests with glowing debris trails","m":"five moons and a debris belt","r":"rare metals, salvage"},{"n":"Tierra Seca","sec":"Truce Moor","w":"desert world, hot days, freezing nights","s":"ochre and red desert, dark mountain ridges","m":"none","r":"minerals, hides"},{"n":"Ashgarden","sec":"Thousand Mouths","w":"warm rainforest world, active volcanoes","s":"emerald green with grey ash plumes","m":"none","r":"medicinal bark, volcanic minerals"},{"n":"The Moorings","sec":"Moorings","w":"ocean world of reefs and islands, temperate","s":"deep blue with turquoise lagoons","m":"one large moon","r":"warship refits, fish, harbour yards"},{"n":"Laetitia","sec":"Halite","w":"rocky mountain world, cool, its old cities in decay","s":"ochre and grey with dark smog in the valleys","m":"three small moons","r":"the happiness pill, pharmaceuticals"},{"n":"Highbarrow","sec":"Puerto Hierro","w":"cool upland world of hills and mounds","s":"dull green dotted with round hills","m":"two moons","r":"sheep, iron (unmined)"},{"n":"Long Strike","sec":"Lantern","w":"varied temperate world","s":"blue and green with grey abandoned mine scars","m":"none","r":"food, machine parts, organisers"},{"n":"Ardlinn","sec":"Excubia","w":"temperate world of jungled mountains","s":"green highlands under heavy cloud","m":"none","r":"education, archives, scholarship"},{"n":"Towline","sec":"Rustwell","w":"temperate rocky world","s":"brown and green with ferry lights","m":"none","r":"ferry services, tow tugs"},{"n":"The Notch","sec":"Moorings","w":"temperate world of mountains and forests","s":"dark green with grey ridges","m":"one moon","r":"fighters, timber"},{"n":"Plage Blanche","sec":"Moorings","w":"warm ocean world, white beaches","s":"sapphire seas and white sand","m":"none","r":"fish, salt, tourism"},{"n":"Blackglass","sec":"Hard Winter","w":"hot ash world, glassed plains and volcanoes","s":"black with orange cracks and grey storms","m":"one moon","r":"metals, gold, raw ore"},{"n":"Zlatna","sec":"Oldwatch","w":"temperate world of plains, forests and hills","s":"green with grey metal towns and bright river lines","m":"two moons","r":"metals, coinage, smelting"},{"n":"Rimeglass","sec":"Shingle","w":"frozen world, crystal ice fields","s":"glittering white with blue fractures","m":"two moons","r":"timing crystal, ice"},{"n":"Oranjeveld","sec":"Moorings","w":"warm dusty farming world","s":"orange plains under thin cloud","m":"none","r":"grain, vegetables"},{"n":"Tamarisk","sec":"Las Mieses","w":"arid desert world","s":"pale tan and white salt flats","m":"three small moons","r":"salt, scrap, almost nothing"},{"n":"Solacia","sec":"Solacia","w":"temperate world of hills, plains and clinic cities","s":"soft green and white, clinic cities glinting","m":"three moons","r":"births, medicine, broadcasts"},{"n":"Sourwater","sec":"Lenitas","w":"cold gas-shrouded world, ammonia air","s":"pale yellow with brown bands","m":"none","r":"fuel, ammonia, black market goods"},{"n":"Wolfram II","sec":"Fusoria","w":"dry rocky world, thin dusty air","s":"dull brown with grey pit scars","m":"none","r":"tungsten, heavy ore"},{"n":"Mica","sec":"Mica","w":"gas giant with an orbital toll ring","s":"gold-yellow bands behind a ring of station lights","m":"none; the toll ring is the only habitation","r":"tolls, fuel, customs seizures"},{"n":"Vrijhaven","sec":"Vrijhaven","w":"hot, humid swamp world under steady rain","s":"olive and brown, wrapped in thick white cloud","m":"none (its twin Hoogstad orbits nearby)","r":"contraband, ship registries, river trade"},{"n":"The Ladle","sec":"Shingle","w":"gas giant, violent storm belts","s":"deep indigo with white storm bands","m":"eleven icy moonlets and a faint dark ring","r":"fuel gas, hydrogen"},{"n":"Mill Hollow","sec":"Ulaan Tal","w":"temperate river world","s":"green valleys and blue rivers","m":"none","r":"flour, grain, mills"},{"n":"Lowenna","sec":"Kaukomaa","w":"warm temperate world with hills and beaches","s":"golden coasts and green hills","m":"one moon","r":"tourism, festivals, music"},{"n":"Old Amber","sec":"Salus","w":"gas giant","s":"amber and cream bands with one dark storm","m":"eleven small moons; the crews live on the largest","r":"fuel gas"},{"n":"Hartsease","sec":"Kaolin","w":"mild world of low hills and meadows","s":"soft green with violet flowering patches","m":"none","r":"herbal medicine, withdrawal remedies"},{"n":"Hoogstad","sec":"Vrijhaven","w":"city-world, stacked towers, breathable air","s":"a blaze of amber city light on the night side, grey towers by day","m":"none","r":"markets, forged identities, ship refits, everything stolen"},{"n":"Stonecrop","sec":"Ciénaga","w":"cool rocky world, thin soil","s":"grey and pale green","m":"none","r":"hardy grain, stone"},{"n":"Grandmother","sec":"Truce Moor","w":"gas giant with five inhabited moons","s":"banded cream and soft orange, swirling storms","m":"five inhabited moons and a faint dust ring","r":"fuel gas, ice"},{"n":"Ardlow","sec":"Tabularium","w":"cool grassland world, low hills","s":"green-grey with long cloud bands","m":"none","r":"wool, mutton, stone"},{"n":"Medela","sec":"Mechane","w":"humid world of rainforest, fields and desert","s":"green and tan with brown desert belts","m":"one moon","r":"medicine, botanicals, food"},{"n":"Alabaster","sec":"Ferraria","w":"barren dusty world","s":"bone white with grey patches","m":"none","r":"gypsum, plaster, building stone"},{"n":"Cendrine","sec":"Hard Winter","w":"volcanic world with ash farms","s":"grey ash and green farms","m":"none","r":"ash-grown crops, sulphur"},{"n":"Verdemar","sec":"Kamenitsa","w":"hot jungle world","s":"dense dark green under white rain clouds","m":"none","r":"medical compounds, resins"},{"n":"Kruispunt","sec":"Groenveld","w":"rocky dry world, thin air","s":"dark grey under a violet dusk haze","m":"one small moon used as a fuel depot","r":"fuel, black-market trade"},{"n":"Whitecairn","sec":"Halvmark","w":"frigid world of glaciers","s":"brilliant white with blue crevasse lines","m":"none","r":"water ice, starship salvage"},{"n":"Sawtooth","sec":"Longtide","w":"cold mountain world","s":"jagged grey with snowy ridges","m":"one moon","r":"mountain passes, metals, protection money"},{"n":"Duskwater","sec":"Fallout","w":"temperate rocky world with brown lakes","s":"brown and green with dark lakes","m":"two small moons","r":"fish, grain, livestock"},{"n":"Chert","sec":"Pulau Hijau","w":"cool rocky world, breathable air","s":"pinkish-grey rock with white station lights","m":"none","r":"tolls, confiscated cargo"},{"n":"Ommata","sec":"Ommata","w":"temperate city-world","s":"bright white cities on dark ground","m":"one moon","r":"drone lenses, Gleaners, sensors"},{"n":"Thousand Mouths","sec":"Thousand Mouths","w":"warm world of jungles, rivers, swamps and seas","s":"brown-green delta fanning into blue sea","m":"none","r":"trade, timber, fish"},{"n":"Black Teeth","sec":"Lantern","w":"rocky world of jutting obsidian crags","s":"glossy black with grey dust plains","m":"one small moon","r":"obsidian, blades, money-changing"},{"n":"Whitmark","sec":"Caza Real","w":"cold dry world, frozen desert and mountains","s":"white and pale grey, almost featureless","m":"none","r":"archives, records, mid technology"},{"n":"Lesnaya","sec":"Lesnaya","w":"temperate forest world","s":"deep green with silver rivers","m":"none","r":"resins, mushrooms, uncut timber"},{"n":"Kilele","sec":"Krasny Yar","w":"warm grassland world, savannas and high mountains","s":"tawny gold plains broken by dark mountain spines","m":"one small grey moon","r":"cattle, hides, grain"},{"n":"Kronholm","sec":"Longtide","w":"temperate jungle world with old cities","s":"dark green with white stone cities","m":"four moons","r":"art, timber, tribute"},{"n":"Stopped Line","sec":"Bauxite IV","w":"arid dusty world","s":"dusty tan","m":"two moons","r":"robot parts, fungus"},{"n":"Last Platform","sec":"Mica","w":"gas giant with permanent storms","s":"deep cobalt with white lightning flecks","m":"two moons, both bare rock","r":"residual fuel gas, platform salvage"},{"n":"Fairhaven","sec":"Thousand Mouths","w":"temperate world of mountains, mesas, plains and islands","s":"blue and green with brown mesas","m":"fifteen moons, one large","r":"manufactured goods, machine tools"},{"n":"Stopgap","sec":"Kaukomaa","w":"airless asteroid, cold","s":"dull grey rock with a few lit hatches","m":"none","r":"shelter, repairs, staging"},{"n":"Pale Ridge","sec":"Shingle","w":"cool, arid mountain world, thin air","s":"pale tan and white, with sharp grey ridges","m":"two small moons","r":"ship repair, hull plating, docks"},{"n":"Vysoka","sec":"Thousand Mouths","w":"mountain world, cold clear air","s":"grey-white peaks over blue valleys","m":"one moon","r":"archives, courier services"},{"n":"Cinnabar","sec":"Commonhold","w":"airless rocky world with a station in orbit","s":"deep red under the station's lights","m":"none","r":"toll collection, freight inspection, fuel"},{"n":"Hlubina","sec":"Eldingar","w":"cold rocky world, frozen pits and tundra","s":"pale grey-white with dark mine scars","m":"one small moon","r":"heavy metals, radioactive fuel; imports food"},{"n":"Rockclaim","sec":"Ciénaga","w":"asteroid belt, no main world","s":"glittering grey rocks around an orange star","m":"none","r":"repairs, fuel, salvage"},{"n":"Bilokray","sec":"Amargura","w":"frigid world of frozen seas and tundra","s":"white and pale blue, almost featureless","m":"two moons","r":"seal oil, furs, ice-fish"},{"n":"Puerto Ceniza","sec":"Las Mieses","w":"volcanic island world, small seas","s":"black islands on a dark blue sea, plumes of grey ash","m":"none","r":"port services, sulphur, salvage"},{"n":"Campus","sec":"Varmdal","w":"temperate world, training grounds","s":"grey and green with grid camps","m":"none","r":"training, garrison troops"},{"n":"Belmare","sec":"Lenitas","w":"hot tropical world, reefs and jungle islands","s":"bright turquoise and emerald","m":"three moons","r":"luxury tourism, seafood"},{"n":"Veenhoven","sec":"Krasny Yar","w":"wet temperate marsh world, peat bogs and reed plains","s":"dull brown and olive under low cloud","m":"two moons","r":"peat fuel, reeds, fish"},{"n":"Haematite","sec":"Varmdal","w":"dry rocky world","s":"red-grey with container fields","m":"none","r":"freight sorting, warehousing"},{"n":"Kreuzweg","sec":"Commonhold","w":"temperate world, crowded market towns","s":"blue and green, its orbit thick with freighter traffic","m":"one small moon","r":"trade, warehousing, repairs"},{"n":"Organon","sec":"Cohors","w":"tropical world, cleared rainforest","s":"green with white factory grids","m":"none","r":"Speculator probes, sensors, electronics"},{"n":"Stibium","sec":"Excubia","w":"hot rocky world, acid rain","s":"mustard yellow under a haze","m":"none","r":"antimony, smelted metals"},{"n":"Horsemarch","sec":"Las Mieses","w":"temperate grassland world","s":"gold and pale green, almost no clouds","m":"none","r":"horses, hides, grain"},{"n":"Last Tank","sec":"Isfjell","w":"cold rocky world, no air","s":"brown and black","m":"none","r":"fuel stores"},{"n":"Stabilis","sec":"Mirabel","w":"dry plains world","s":"dusty brown with long rows of barracks","m":"none","r":"regiments, garrison supplies"},{"n":"Altamesa","sec":"Steeplewater","w":"temperate world of sea and sheer-sided mesas","s":"turquoise sea dotted with tan stone islands","m":"none","r":"fish, cable-ferry trade; imports food and medicine"},{"n":"Wadi Noor","sec":"Fyrholm","w":"hot desert world","s":"bright yellow sand with dark glassworks","m":"none","r":"glass"},{"n":"Longwire","sec":"Kranholm","w":"forest, desert and mesa world","s":"green and gold mesas","m":"none","r":"signal relay"},{"n":"Fernhollow","sec":"Truce Moor","w":"temperate forest world","s":"deep green forest under white cloud","m":"none","r":"hardwood, resin"},{"n":"Glassfield","sec":"Altofen","w":"searing volcanic world, radioactive lava seas, suits required","s":"black glass plateaus between glowing orange seas","m":"none","r":"volcanic glass, radioactive ores"},{"n":"Lowlight","sec":"Salus","w":"cool world, crushing upper air, breathable crystal caverns","s":"opaque pale violet haze","m":"none","r":"crystals, cave water"},{"n":"Stochos","sec":"Fusoria","w":"cold dry rocky world","s":"pale grey with blue-white cooling lakes","m":"none","r":"forecasts, intelligence, data"},{"n":"Portelle","sec":"Krasny Yar","w":"mild rocky world, one great harbour city","s":"blue-grey seas, a single bright coastal sprawl","m":"one small moon","r":"trade, warehousing, repairs"},{"n":"Hortensia","sec":"Greenfever","w":"temperate garden world","s":"bright green and flower-bright","m":"none","r":"seeds, plants, medicine"},{"n":"Snowmouth","sec":"Fallout","w":"ice world, bitter cold","s":"brilliant white with blue crevasses","m":"one small moon","r":"water ice, frozen goods"},{"n":"Constantia","sec":"Navalia","w":"frozen world of ice oceans, plains and canyons","s":"pure white with blue ice canyons","m":"none","r":"ice, coolant water, prison labour"},{"n":"Sunderby","sec":"Longtide","w":"temperate world split by a rift valley","s":"green on both sides of a dark scar","m":"one moon","r":"timber, minerals, information"},{"n":"Disciplina","sec":"Lenitas","w":"temperate world of marshes and mountains","s":"green and blue, circled by grey moons","m":"twenty-eight small moons, all prisons","r":"basalt, prison labour, security"},{"n":"Galeholm","sec":"Kaolin","w":"cool windy ocean world with long islands","s":"grey-blue sea streaked with white","m":"one moon","r":"wind power, fish, sailcloth"},{"n":"Zubets","sec":"Fyrholm","w":"rugged mountain world","s":"grey-brown peaks with white snowcaps","m":"one moon","r":"mercenaries, weapons trade"},{"n":"Slate Hill","sec":"Greenfever","w":"temperate world of forests, hills, plains and seas","s":"green and blue with long coasts","m":"none","r":"food, timber"},{"n":"Requies","sec":"Cohors","w":"temperate forest world","s":"soft green and pale blue","m":"two moons","r":"rest, luxury"},{"n":"Stonebarrow","sec":"Thaw","w":"cool rocky world of quarried hills","s":"grey and white, terraced quarries","m":"none","r":"granite, building stone"},{"n":"Kalinov","sec":"Bosque Alto","w":"temperate world, rolling hills","s":"green and tan with long white cloud bands","m":"none","r":"farm goods, wool, textiles"},{"n":"Castra","sec":"Classis","w":"city-world of yards and barracks","s":"grey grid, hazard-yellow docks at the poles","m":"none","r":"warships, hull modules, crews"},{"n":"Remedium","sec":"Charter","w":"cold snowy world, long winters","s":"white with streaks of pale blue ice","m":"two moons","r":"healing gel, pharmaceuticals, medical staff"},{"n":"Fuego Alto","sec":"Bosque Alto","w":"volcanic world, hot and ash-heavy","s":"black rock veined with glowing orange rivers","m":"none","r":"fuel isotopes, heavy metals, construction materials, smuggled goods"},{"n":"Teloneum","sec":"Thesauros","w":"airless rocky world inside a huge toll ring","s":"grey rock circled by a bright ring of docks","m":"none","r":"tolls, fuel, freight records"},{"n":"Mudhaven","sec":"Halvmark","w":"temperate ocean and mudflat world","s":"brown mudflats and grey sea, shifting daily","m":"one large close moon","r":"shellfish, tidal power"},{"n":"Pulau Hijau","sec":"Pulau Hijau","w":"tropical world of jungle islands, mountains and swamp","s":"emerald islands in a turquoise sea, brown silt plumes along the coasts","m":"one moon","r":"rare earths, timber, fish"},{"n":"Sendero","sec":"Sendero","w":"hot, humid world of jungles, swamps and oceans","s":"deep green and murky brown seas","m":"four small moons","r":"trackers, weapons, swamp herbs"},{"n":"Brushfield","sec":"Altofen","w":"dry dusty grassland","s":"dun and pale green","m":"one moon","r":"ship refits, new registries"},{"n":"Waypost","sec":"Vrijhaven","w":"airless rocky moonlet with a pressurised dock","s":"dark grey speck with a ring of dock lights","m":"none","r":"fuel, repairs, rumour"},{"n":"Kvitberg","sec":"Truce Moor","w":"arctic world of ice cliffs and cold seas","s":"brilliant white with blue-black seas","m":"none","r":"fish, ice, cliff-carved stone"},{"n":"Rosenbach","sec":"Tabularium","w":"temperate world of rivers and meadows","s":"green land laced with pink rivers","m":"none","r":"dyes, textiles, river crops"},{"n":"Ninefold","sec":"Tessera","w":"dry canyonland with caves, lakes and rivers","s":"tan rock cut by dark river canyons and small blue lakes","m":"three small moons","r":"hand-mined ore, cave water"},{"n":"Laterite","sec":"Amargura","w":"hot humid world of jungle mesas and volcanic valleys","s":"brick-red and deep green, smoke plumes over the volcanoes","m":"three moons, one used as Lode's grain silo","r":"stim-leaf, hardwood, rare earths from the valley floors"},{"n":"Ciénaga","sec":"Ciénaga","w":"arid world of deserts, caves, swamps and volcanoes","s":"sand and rust with green swamp patches","m":"three moons","r":"medicinal plants, tools, fine goods"},{"n":"Las Mieses","sec":"Las Mieses","w":"warm farm world, wide plains","s":"golden plains with green river margins","m":"none","r":"grain, feed, fruit"},{"n":"Corundum","sec":"Thesauros","w":"warm jungle world of caves, rivers and waterfalls","s":"rich green with white waterfall mists","m":"none","r":"gemstones, corundum, abrasives"},{"n":"Goldcloud","sec":"Thousand Mouths","w":"gas giant","s":"pale gold with amber bands","m":"four moons","r":"fuel gas, helium"},{"n":"Long Strand","sec":"Sendero","w":"desert coast and ocean","s":"yellow sand meeting blue-grey ocean","m":"none","r":"salvage, fuel, brandy"},{"n":"Hagelfeld","sec":"Truce Moor","w":"rocky world under constant meteor showers","s":"grey-blue world under a broken glittering ring","m":"a broken ring of rock debris","r":"meteorite iron"},{"n":"Dry House","sec":"Shingle","w":"frigid world of hills and mountains","s":"white with grey-brown hills","m":"none","r":"shelter, medicine, little else"},{"n":"Holmvik","sec":"Kranholm","w":"forest and ocean world","s":"green forests and blue seas","m":"none","r":"timber, fish"},{"n":"Pescadora","sec":"Ciénaga","w":"warm world of shallow seas and coral reefs","s":"turquoise shallows with pale reef rings","m":"one small moon","r":"fresh water, fish"},{"n":"Groza","sec":"Ilanga","w":"gas giant in constant storm","s":"bruised purple and grey bands lit by lightning","m":"several moons and a heavy debris ring","r":"fuel gas"},{"n":"Marmor","sec":"Classis","w":"ocean world of small islands","s":"deep blue scattered with white islands","m":"none","r":"marble, stone, fish"},{"n":"Ebbeholm","sec":"Cohors","w":"temperate world of forests, plains and savannah","s":"green and gold","m":"two moons","r":"grain, timber, goods"},{"n":"Mar Seco","sec":"Oldwatch","w":"hot desert world, ravines and shrinking seas","s":"orange-tan with a few shallow blue seas","m":"two moons","r":"metals, salt"},{"n":"Motu Ahi","sec":"Felsite III","w":"tropical world of islands, jungles and volcanoes","s":"turquoise sea with black and green islands","m":"none","r":"fish, fruit, volcanic glass"},{"n":"Quebrada Honda","sec":"Krasny Yar","w":"dry canyon world, wind-cut gorges","s":"ochre and burnt orange, veined with dark ravines","m":"none","r":"pilots, wind power, canyon salts"},{"n":"Needlepeak","sec":"Thesauros","w":"violent stormy world of mountain spires, unbreathable","s":"purple-black clouds lit by constant lightning","m":"one small moon","r":"rare gases"},{"n":"Saffron Downs","sec":"Steeplewater","w":"temperate grassland world, long seasons","s":"bands of yellow, red and violet grass","m":"five small moons","r":"grain, wool, livestock"},{"n":"Gnomon","sec":"Lenitas","w":"high-pressure methane world","s":"murky olive green, no surface visible","m":"two moons","r":"forecasts, data processing, computing"},{"n":"Make Do","sec":"Eldingar","w":"temperate rocky world, scrapfields on every plain","s":"patchwork of grey wreck fields and green hills","m":"a ring of dumped hulls in low orbit","r":"salvage, refitted ships, tractor gear, scrap metal"},{"n":"Emberhold","sec":"Sunscald","w":"volcanic city-world, hot and smoky","s":"black and red with glowing city grids","m":"none","r":"refined fuel, weapons, crime"},{"n":"Kranholm","sec":"Kranholm","w":"rocky industrial world","s":"grey with dock lights","m":"none","r":"ship repair, refits"},{"n":"Mirrorfield","sec":"Pulau Hijau","w":"hot desert world","s":"tan sand with vast flashing mirror fields","m":"none","r":"power, glass"},{"n":"Coldwell","sec":"Sendero","w":"desert world with deep frozen aquifers","s":"pale tan with frost rings at the shafts","m":"none","r":"water, ice"},{"n":"Long Noon","sec":"Kaolin","w":"slow-turning rocky world, ninety-day days","s":"one face blazing white, the other dark, a slow bright terminator","m":"none","r":"solar power, glass, salt"},{"n":"Willowmere","sec":"Sendero","w":"temperate world of forests, meadows and wetlands","s":"green with silver wetlands","m":"two moons","r":"fish, reeds, ale"},{"n":"Whetstone","sec":"Isfjell","w":"barren rock, thin air","s":"dark grey with a glitter of wreck fields","m":"none","r":"salvage, scrap metal"},{"n":"Viridia","sec":"Varmdal","w":"rainforest world with mountains and prairies","s":"lush green and white clouds","m":"none","r":"medicinal plants, patents"},{"n":"Cinco Lunas","sec":"Sunscald","w":"desert world, hot and dry","s":"sandy orange under five moons","m":"five moons","r":"gems, minerals"},{"n":"Theorema","sec":"Tabularium","w":"hot rocky world, cratered","s":"burnt orange pocked with white crater domes","m":"none","r":"forecast models, scientists"},{"n":"Halfpenny","sec":"Altofen","w":"cool rocky world, grassy uplands","s":"blue-grey and green","m":"one moon","r":"docking fees, customs"},{"n":"Hardscrabble","sec":"Kamenitsa","w":"dry rocky world, thin air","s":"dark grey and ochre","m":"none","r":"copper, tin, gravel"},{"n":"Caminus","sec":"Mica","w":"hot volcanic world, lava plains and ash","s":"black and glowing orange, yard lights across the night side","m":"two moons, one ringed with dry docks","r":"starfighters, assault shuttles, hull plate"},{"n":"Blackfen","sec":"Fathom","w":"toxic marsh world with sprawling city","s":"black water and grey city sprawl","m":"none","r":"chemicals, cheap labour"},{"n":"Kesari","sec":"Halvmark","w":"warm savanna world","s":"orange flower plains in spring, tawny the rest of the year","m":"two moons","r":"cattle, dye flowers, hides"},{"n":"Hoshimachi","sec":"Krasny Yar","w":"temperate mountain world, terraced valleys and dense cities","s":"green terraces and silver city lights in every valley","m":"one large white moon","r":"computers, robots, precision machinery; imports food and medicine"},{"n":"Belavista","sec":"Thesauros","w":"temperate world, warm coasts and terraced hills","s":"blue and green with white terraced cities","m":"two moons","r":"finance, wine, luxury goods"},{"n":"San Teodor","sec":"Pulau Hijau","w":"temperate world of rolling hills","s":"green and blue under light cloud","m":"none","r":"fruit, wine, medicines"},{"n":"Granero","sec":"Puerto Hierro","w":"mild farm world","s":"green and amber farmland under clear skies","m":"one large moon","r":"food, grain, preserved goods"},{"n":"Glasshold","sec":"Groenveld","w":"cold ice world","s":"blinding white with blue crevasse lines","m":"none","r":"water ice, deep heat"},{"n":"Weitfeld","sec":"Mata Alta","w":"temperate plains world, long dry summers","s":"gold and pale green squares to the horizon","m":"one small white moon","r":"grain, fodder, livestock"},{"n":"Lagoa Funda","sec":"Incus","w":"hot humid lake and forest world","s":"dark green dotted with hundreds of bright lakes","m":"none","r":"fish, timber, fish oil"},{"n":"Bina Minor","sec":"Ommata","w":"temperate world of plains and mud flats","s":"brown and green, its twin looming close","m":"a twin planet, Bina Major, and several small moons","r":"food, metals, minerals"},{"n":"Kloof","sec":"Felsite III","w":"mountain and canyon world","s":"red canyons cut into dark mountains","m":"none","r":"stone, livestock, old garrison salvage"},{"n":"Blind Eye","sec":"Eldingar","w":"dry windswept world, high plateaus","s":"pale tan with long dust streaks","m":"two small moons","r":"grain, when it grows"},{"n":"Kizil Dala","sec":"Felsite III","w":"temperate grassland world","s":"red-brown steppe under white cloud","m":"four moons","r":"livestock, leather, horses"},{"n":"Ivyholm","sec":"Bauxite IV","w":"urban world overgrown with vines","s":"grey towers wrapped in green","m":"four moons","r":"ale, luxury goods"},{"n":"Amargura","sec":"Amargura","w":"hot salt flats and red canyons, shallow brine seas","s":"blinding white pans veined with rust-red canyons","m":"three moons","r":"salt, brine chemicals, potash"},{"n":"Old Salvage","sec":"Rustwell","w":"rocky world inside a wreck belt","s":"grey world under a glittering belt","m":"none; a wreck belt","r":"salvage, ship parts"},{"n":"Tabularium","sec":"Tabularium","w":"temperate world of coasts, canyons, forests and hills","s":"blue and green, its cities bright along the beaches","m":"none","r":"debt registry, legal offices, food, tourism"},{"n":"Skopia","sec":"Charter","w":"temperate forest world","s":"deep green almost to the poles, few cities","m":"none","r":"data processing, server cooling, timber"},{"n":"Endline","sec":"Hard Winter","w":"city-world","s":"grey with patched city lights","m":"none","r":"refits, smuggled goods"},{"n":"Backwater","sec":"Felsite III","w":"dry rocky world, scrub plains","s":"dusty brown with a few grey patches","m":"none","r":"fuel, hidden cargo storage"},{"n":"Silica Minor","sec":"Tabularium","w":"hot desert world, dry","s":"pale gold dunes under a hard blue sky","m":"two small moons","r":"silica sand, glass"},{"n":"Nascentia","sec":"Tabularium","w":"mountain and jungle world, mild","s":"deep green with white clinic terraces on the peaks","m":"one moon","r":"births, medicine, Birth Debt registration"},{"n":"Codicil","sec":"Mechane","w":"temperate world","s":"pale green with white vault domes","m":"none","r":"contract registration, legal services"},{"n":"Kalmoor","sec":"Puerto Hierro","w":"cool moorland world","s":"brown and purple moors under low cloud","m":"one moon","r":"spirits, peat, wool"},{"n":"Salus","sec":"Salus","w":"tropical jungle world, cave networks","s":"bright green under blue-white cloud","m":"two moons","r":"healing gel, medicines"},{"n":"Rigwater","sec":"Kranholm","w":"ocean world, deep seas","s":"deep blue dotted with rig lights","m":"one moon","r":"oil, fuel, fish"},{"n":"Shiree","sec":"Truce Moor","w":"grassland world, cool dry winds","s":"tawny-red grass plains under clear skies","m":"none","r":"meat, hides, wool"},{"n":"Specula","sec":"Caza Real","w":"rocky world of deep gorges and cliffs","s":"red-brown with black shadowed gorges","m":"one small moon","r":"signals intelligence, garrison"},{"n":"Mittelfeld","sec":"Mica","w":"temperate world of wide plains and shallow seas","s":"golden grassland with blue inland seas","m":"two moons","r":"grain, cattle, leather"},{"n":"Nueve Lunas","sec":"Navalia","w":"warm world of plains, forests and mountains","s":"green and gold with nine moons visible from orbit","m":"nine moons","r":"fruit, luxury goods, agricultural goods"},{"n":"Redveld","sec":"Puerto Hierro","w":"warm savannah world with canyons and swamps","s":"rust-red and olive with dark canyon cracks","m":"two moons","r":"cattle, blades, leather"},{"n":"Tyomny Les","sec":"Rustwell","w":"frigid world of pine forest and snowfields","s":"white with dark red-brown forest","m":"none","r":"pine resin, amber, furs"},{"n":"Long Winter","sec":"Greenfever","w":"frigid tundra world","s":"white with grey ice shelves","m":"none","r":"food, furs, ice"},{"n":"Hutan Raya","sec":"Felsite III","w":"warm forest world, heavy rain","s":"deep emerald under thick cloud","m":"two moons","r":"hardwood, medicinal plants"},{"n":"Nebbia","sec":"Vrijhaven","w":"temperate world of forested mountains and foggy swamps","s":"a smear of grey-white fog over dark green","m":"three small moons","r":"timber, hired labour, smoked goods"},{"n":"Bina Major","sec":"Classis","w":"temperate world of forests and lakes","s":"green and gold, its twin hanging close","m":"a twin planet, Bina Minor","r":"golden timber, furniture"},{"n":"Ventstown","sec":"Fallout","w":"hot world of lava vents and rocky scrub","s":"black and rust with glowing orange seams","m":"none","r":"geothermal power, sulphur"},{"n":"Brokengate","sec":"Thaw","w":"temperate rocky world, scrub and mesas","s":"dusty green, a glittering wreck field in orbit","m":"one moon","r":"free passage, gate salvage"},{"n":"Fallen Keel","sec":"Solacia","w":"cold rocky world","s":"grey with a long dark crash scar","m":"none","r":"salvage, crops"},{"n":"Pinehallow","sec":"Kamenitsa","w":"temperate hills and orchards","s":"green and blossom-white, blue lakes","m":"one moon","r":"fruit, cider, wood"},{"n":"Dar Sukun","sec":"Kranholm","w":"desert world","s":"pale gold desert","m":"three moons","r":"nothing for sale"},{"n":"Meseta","sec":"Dunmere","w":"temperate world, a vast plateau above hot lowlands","s":"brown plateau ringed by green haze","m":"three small moons","r":"wind power, wool, barley"},{"n":"Fallout","sec":"Fallout","w":"radioactive wasteland, once jungle","s":"dull grey-brown with dead river scars","m":"none","r":"salvage, a place to hide"},{"n":"Prognosis","sec":"Lesnaya","w":"frigid world of lakes, forests and cold seas","s":"dark green forest broken by white frozen lakes","m":"none","r":"forecasts, behavioural data"},{"n":"Old Cairn","sec":"Mirabel","w":"temperate world of forest and grassland","s":"green and blue, no city lights","m":"two moons","r":"nothing mined; pilgrim traffic"},{"n":"Imani Falls","sec":"Caza Real","w":"wet temperate highlands, great waterfalls","s":"green highlands veined with white water","m":"one moon","r":"hydro power, fish, wool"},{"n":"Kolokol","sec":"Kaukomaa","w":"temperate world with old cities","s":"blue-green with grey cities","m":"one moon","r":"bells, metalwork, trade"},{"n":"Broadacre","sec":"Pulau Hijau","w":"temperate world of endless plains","s":"gold and green bands under thin cloud","m":"one moon","r":"grain, meat, oil seed"},{"n":"Overgrowth","sec":"Longtide","w":"moist world of overgrown plains and ruined cities","s":"dark green with rusty ruin patches","m":"two moons","r":"food, medicine, hidden bases"},{"n":"Voluptas","sec":"Commonhold","w":"cool mountain world","s":"snow-white peaks over valleys lit gold by casino towns","m":"none","r":"gambling, tourism, luxury services"},{"n":"Nordlys","sec":"Clearholm","w":"frozen world of snow and ice","s":"white with green auroras over the night side","m":"none","r":"water ice"},{"n":"Saltreach","sec":"Eldingar","w":"warm dry world, salt flats and grassy plains","s":"blinding white flats ringed with yellow grass","m":"nine small moons","r":"salts, chemicals, ore"},{"n":"Mossgarden","sec":"Kranholm","w":"forest and jungle world","s":"deep green moss and forest","m":"none","r":"moss soil, forest produce, medicine"},{"n":"Hartwell","sec":"Charter","w":"temperate world, rolling downs and walled market towns","s":"soft green and fawn, with long white cloud bands","m":"none","r":"trade goods, wool, warehousing"},{"n":"Haverland","sec":"Kaolin","w":"temperate world of endless fields","s":"golden-brown with green strips","m":"one moon","r":"grain, food"},{"n":"Loess","sec":"Classis","w":"temperate farm world of forests and plains","s":"yellow-brown plains, green hills","m":"none","r":"food, lumber, manufactured goods"},{"n":"Praesidium","sec":"Ferraria","w":"cold rocky world","s":"dark grey with ice caps","m":"one moon","r":"garrison supplies, fortifications"},{"n":"Hammada","sec":"Kaukomaa","w":"dry rocky desert world","s":"grey-brown with glinting glasshouse fields","m":"none","r":"vegetables under glass, solar power"},{"n":"Yukihama","sec":"Solacia","w":"snow world, cold seas","s":"white with grey-blue seas","m":"one moon","r":"ice-fish, furs"},{"n":"Metsola","sec":"Krasny Yar","w":"hot forest world, mountains and resin woods","s":"deep green with amber-streaked slopes","m":"none","r":"resin, timber, sealant"},{"n":"Treaty Wood","sec":"Ulaan Tal","w":"rainforest world, wet and warm","s":"dark green under heavy cloud","m":"none","r":"timber, resin"},{"n":"Hollowstone","sec":"Altofen","w":"temperate world of mountains, deserts and cities","s":"tan and grey, crowded by thirteen moons","m":"thirteen moons, all mined","r":"alloys, ore, carved stone"},{"n":"Kaldvik","sec":"Groenveld","w":"frigid world of mountains and fast rivers","s":"white with dark river lines and blue glacier lakes","m":"two moons","r":"hydropower, ship storage, furs"},{"n":"Sigillum","sec":"Charter","w":"mountainous world with cold oceans and stacked cities","s":"dark blue seas, white peaks, cities like grey lichen","m":"none","r":"certificates, legal records, seal-stamps"},{"n":"Longshore","sec":"Fusoria","w":"temperate world of oceans and coastal forest","s":"blue oceans, green coasts, one scarred grey moon","m":"one moon covered in old wrecks","r":"salvage metal, fish, timber"},{"n":"Hirschwald","sec":"Fathom","w":"cool forested world","s":"grey-green forest under heavy cloud","m":"three moons","r":"venison, timber"},{"n":"Mirevale","sec":"Dunmere","w":"warm swamp world, toxic air","s":"murky olive green with yellow haze","m":"none","r":"methane, peat"},{"n":"Feudgrass","sec":"Isfjell","w":"warm world of grassy plains, deserts and mountains","s":"green-gold plains and tan deserts","m":"none","r":"cattle, leather, grain"},{"n":"Resin Moon","sec":"Fathom","w":"dry rocky world with one forested moon","s":"bare brown world beside a bright green moon","m":"one forested moon","r":"resin, timber"},{"n":"Bitterwell","sec":"Fusoria","w":"acid desert world, corrosive rains","s":"sickly yellow-white clouds over pale sand","m":"none","r":"industrial acids, chemicals"},{"n":"Rio Turvo","sec":"Sunscald","w":"warm world of murky jungle and swamp","s":"dark green with brown rivers","m":"one moon","r":"mercenaries, weapons, timber"},{"n":"Longquay","sec":"Mica","w":"temperate world, port cities on long coasts","s":"green coasts lit up along every harbour","m":"none","r":"freight handling, repair work"},{"n":"Otium","sec":"Ferraria","w":"temperate world of forests, mountains and plains","s":"bright green with clear skies","m":"none","r":"food, rest houses, entertainment"},{"n":"Novy Rynek","sec":"Fusoria","w":"temperate plains world, one great urban sprawl","s":"grey-brown city mesh over green plains","m":"none","r":"trade goods, finance, warehousing"},{"n":"Kept Faith","sec":"Moorings","w":"temperate world of forests, mountains and seas","s":"green and blue with high plateaus","m":"one moon","r":"food, timber, pilgrims"},{"n":"Silberberg","sec":"Dunmere","w":"cold mountain world, thin dry air","s":"grey and white peaks, dark valleys","m":"none","r":"quarry stone, slate, ore Lode has not yet found"},{"n":"Ridgefold","sec":"Mata Alta","w":"temperate world of forested mountains and valleys","s":"dark green ridges in long parallel stripes","m":"none","r":"hardwood timber, resin, game"},{"n":"Tinderland","sec":"Ulaan Tal","w":"warm world of rainforest, savannah and desert","s":"green, gold and brown bands","m":"none","r":"grain, timber, charcoal"},{"n":"Firmitas","sec":"Thesauros","w":"temperate world of hills, mud plains and rock stacks","s":"brown and grey with flooded plains","m":"none","r":"labour, quarried stone, crops"},{"n":"Castellum","sec":"Halite","w":"high mountain world, cold winds","s":"dark granite grey with snow-white ridges","m":"none","r":"garrison troops, training grounds"},{"n":"Folio","sec":"Altofen","w":"temperate city-world","s":"grey and white, few open spaces, a pale ring of archive stations","m":"none","r":"archives, information, tourism"},{"n":"Saltwood","sec":"Excubia","w":"hot jungle and shallow sea","s":"turquoise shallows broken by dark green islands","m":"none","r":"timber, fish, salt"},{"n":"Skarholm","sec":"Amargura","w":"cold ocean world of rocky islands","s":"dark navy sea flecked with grey islands","m":"none","r":"cod-like fish, kelp oil, sea salt"},{"n":"Azzurra","sec":"Altofen","w":"temperate world of oceans, forests and mountains","s":"bright blue seas and green continents","m":"none","r":"luxury goods, fabric, jewellery"},{"n":"Brandt's Giant","sec":"Mata Alta","w":"gas giant, storm bands of hydrogen and ammonia","s":"honey amber with brown bands","m":"eleven small moons and a faint dust ring","r":"fuel gas, hydrogen"},{"n":"Brennhof","sec":"Las Mieses","w":"hot city-world, thick air, breath masks advised","s":"brown haze over orange city lights","m":"none","r":"hyperdrive engines, machine tools"},{"n":"Deepcut","sec":"Halvmark","w":"dry world of deep canyons","s":"red-brown with black canyon lines","m":"three small moons","r":"flood silt farming, cave storage"},{"n":"Nutrix","sec":"Ommata","w":"varied world of forests, deserts and tundra","s":"mottled green, tan and white","m":"none","r":"births, biotech, medicine"},{"n":"Craterhold","sec":"Salus","w":"rocky world with a shifting atmosphere, frozen plains and hot belts","s":"patchy blue haze over white and brown, changing week to week","m":"three moons","r":"instruments, electronics"},{"n":"Lindenfall","sec":"Shingle","w":"temperate world of forests, caves and mountains","s":"green and slate blue under thin cloud","m":"one large white moon","r":"starship drives, precision machining"},{"n":"Kinoko","sec":"Halvmark","w":"volcanic flatlands, sulphur air, thin oxygen","s":"mustard-yellow plains with white farm domes","m":"none","r":"medicinal fungi, moulds, mosses"},{"n":"The Shoal","sec":"Fusoria","w":"gas giant, uninhabitable","s":"pale orange with soft cream bands","m":"twenty-six moons, several habitable","r":"hidden camps, fuel, moon-ice water"},{"n":"The Cuts","sec":"Sendero","w":"mountain world of canyons","s":"red-brown canyons with green floors","m":"two moons","r":"hideouts, raids"},{"n":"Sabkha","sec":"Mirabel","w":"hot desert of salt flats","s":"dazzling white with brown edges","m":"none","r":"salt, water, hiding places"},{"n":"Milestone Nine","sec":"Hard Winter","w":"rocky world with an orbital customs hulk","s":"grey with a bright hulk in orbit","m":"none","r":"customs, waystation trade"},{"n":"Nyika","sec":"Ciénaga","w":"warm savanna world","s":"yellow grassland with green river lines","m":"two moons","r":"cattle, salt beef, hides"},{"n":"Kelpfast","sec":"Thousand Mouths","w":"ocean world, no land","s":"bright turquoise with drifting green dots","m":"one small moon","r":"kelp, fish, fresh water"},{"n":"Pronoia","sec":"Ilanga","w":"cold world of cliffs, glaciers and ice caves","s":"white and blue with dark cliff walls","m":"none","r":"data storage, signals monitoring"},{"n":"Marisol","sec":"Tessera","w":"warm ocean world, scattered archipelagos","s":"turquoise seas under white cloud spirals","m":"two moons","r":"music, art, fine textiles"},{"n":"Clove","sec":"Ilanga","w":"hot humid world, low forests","s":"dark green with brown river mouths","m":"one small moon","r":"peppers, herbs, fruit, rope fibre"},{"n":"Coldhearth","sec":"Clearholm","w":"cold arid world of glaciers, tundra and forests","s":"white and dark green, its cities unlit","m":"two moons","r":"nothing worked; empty towns"},{"n":"Ashenmark","sec":"Solacia","w":"warm wasteland with mountains","s":"black and grey scorched lands","m":"none","r":"salvage"},{"n":"Tallow Mesa","sec":"Clearholm","w":"temperate world of plains, mesas and highlands","s":"tan and red with green highland patches","m":"one moon","r":"debt recovery, bounties, captives"}];
+</script>
+
+<script>
+(() => {
+'use strict';
+const $ = (id) => document.getElementById(id);
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+
+/* ---------- colours ---------- */
+const hex2rgb = (h) => { const n = parseInt(h.slice(1), 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]; };
+const rgb2hex = (c) => '#' + c.map(v => Math.round(clamp(v, 0, 1) * 255).toString(16).padStart(2, '0')).join('');
+const mixHex = (a, b, t) => { const A = hex2rgb(a), B = hex2rgb(b); return rgb2hex(A.map((v, i) => lerp(v, B[i], t))); };
+const lighten = (h, t) => mixHex(h, '#ffffff', t);
+const darken = (h, t) => mixHex(h, '#000000', t);
+function hexHue(h) { const [r, g, b] = hex2rgb(h); const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn; if (!d) return -1; let x; if (mx === r) x = ((g - b) / d) % 6; else if (mx === g) x = (b - r) / d + 2; else x = (r - g) / d + 4; return (x * 60 + 360) % 360; }
+function hexSat(h) { const [r, g, b] = hex2rgb(h); const mx = Math.max(r, g, b), mn = Math.min(r, g, b); return mx ? (mx - mn) / mx : 0; }
+function shiftHue(h, deg) {
+  const [r, g, b] = hex2rgb(h); const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+  if (!d) return h; const s = d / (1 - Math.abs(2 * l - 1)); let hh = hexHue(h); hh = (hh + deg + 360) % 360;
+  const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((hh / 60) % 2 - 1)), m = l - c / 2; let o;
+  if (hh < 60) o = [c, x, 0]; else if (hh < 120) o = [x, c, 0]; else if (hh < 180) o = [0, c, x]; else if (hh < 240) o = [0, x, c]; else if (hh < 300) o = [x, 0, c]; else o = [c, 0, x];
+  return rgb2hex(o.map(v => v + m));
+}
+
+/* ---------- seeded random ---------- */
+function rng(seed) { let s = (seed >>> 0) || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function hashStr(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+
+/* ---------- world kinds ---------- */
+const KINDS = [
+  { id: 'terran', name: 'Living world', sub: 'sea, land, clouds' },
+  { id: 'ocean', name: 'Ocean world', sub: 'islands only' },
+  { id: 'swamp', name: 'Swamp / jungle', sub: 'wet, hazy, green' },
+  { id: 'desert', name: 'Desert', sub: 'dry, dusty' },
+  { id: 'ice', name: 'Ice world', sub: 'frozen, white' },
+  { id: 'rock', name: 'Barren rock', sub: 'craters, no air' },
+  { id: 'lava', name: 'Volcanic', sub: 'glowing cracks' },
+  { id: 'city', name: 'City world', sub: 'lights everywhere' },
+  { id: 'locked', name: 'Tidally locked', sub: 'one face to the sun' },
+  { id: 'gas', name: 'Gas giant', sub: 'bands and storms' },
+];
+const LABELS = {
+  rocky: ['Sea', 'Lowlands', 'Midlands', 'Highlands', 'Ice caps'],
+  noSea: ['', 'Lowlands', 'Midlands', 'Highlands', 'Frost'],
+  lava: ['', 'Rock', 'Dark rock', 'Ash', 'Lava glow'],
+  gas: ['Band 1', 'Band 2', 'Band 3', 'Band 4', 'Storms'],
+  locked: ['Twilight sea', 'Twilight land', 'Scorched side', 'Frozen side', 'Ice'],
+};
+const KIND_LABELS = (t) => t === 'gas' ? LABELS.gas : t === 'locked' ? LABELS.locked : t === 'lava' ? LABELS.lava : (t === 'desert' || t === 'rock') ? LABELS.noSea : LABELS.rocky;
+const HAS_SEA = (t) => ['terran', 'ocean', 'swamp', 'city', 'ice', 'locked'].includes(t);
+const IS_ROCKY = (t) => t !== 'gas';
+
+const BASE = {
+  seed: 7, sea: 0.5, mount: 0.5, wet: 0, scale: 1.0, ice: 0.4, clouds: 0.5, haze: 0.6, cities: 0, lava: 0, craters: 0, scars: 0,
+  bands: 9, turb: 0.6, storms: 2, stormSize: 1.0,
+  spin: 0.25, cloudSpeed: 0.3, flow: 0.4, tilt: 22, roll: -12, sun: -55, sunH: 12, zoom: 1,
+  ring: { on: false, inner: 1.35, width: 0.8, op: 0.55, gaps: 0.5, spin: 0.3, c1: '#cdb98f', c2: '#6f6048' },
+  moons: 1, moonSpeed: 0.6,
+};
+const KIND_DEF = {
+  terran: { wet: 0, pal: ['#1c4d8f', '#3f7a3c', '#7b7a45', '#8f7f6d', '#f1f5f9'], sea: 0.55, mount: 0.5, clouds: 0.5, haze: 0.65, hazeCol: '#78aaf2', ice: 0.3, cities: 0.3 },
+  ocean: { wet: 0.15, pal: ['#123f78', '#2f8a78', '#6aa078', '#9a9a82', '#f1f5f9'], sea: 0.95, mount: 0.4, clouds: 0.6, haze: 0.7, hazeCol: '#7fb4ff', ice: 0.3, scale: 1.5 },
+  swamp: { wet: 0.4, pal: ['#25463a', '#44683a', '#68793f', '#85805a', '#e0e8e0'], sea: 0.45, mount: 0.2, clouds: 0.7, haze: 0.8, hazeCol: '#9cc88a', ice: 0.1 },
+  desert: { wet: -0.45, pal: ['#000000', '#c99b5c', '#b46f3a', '#8c4d2a', '#efe4d2'], sea: 0, mount: 0.55, clouds: 0.12, haze: 0.4, hazeCol: '#e8b87a', ice: 0.15, craters: 0.1 },
+  ice: { wet: 0, pal: ['#4f7ca8', '#d8e6f1', '#b9d0e4', '#ffffff', '#ffffff'], sea: 0.35, mount: 0.45, clouds: 0.25, haze: 0.45, hazeCol: '#bfe0ff', ice: 1, craters: 0.2 },
+  rock: { pal: ['#000000', '#59564f', '#8a857b', '#b5afa3', '#e8e8ea'], sea: 0, mount: 0.3, clouds: 0, haze: 0, hazeCol: '#aab4c4', ice: 0, craters: 0.8 },
+  lava: { pal: ['#000000', '#2d2320', '#463631', '#6a5848', '#ff6a1f'], sea: 0, mount: 0.6, clouds: 0.15, haze: 0.5, hazeCol: '#ff8a50', ice: 0, lava: 0.9, craters: 0.2 },
+  city: { wet: -0.1, pal: ['#2b4f6e', '#6e7075', '#868a8f', '#a2a7ad', '#e8eef2'], sea: 0.15, mount: 0.3, clouds: 0.3, haze: 0.55, hazeCol: '#c3a07a', ice: 0.1, cities: 0.9 },
+  locked: { wet: 0, pal: ['#2b6e8f', '#5b8a4a', '#c0582c', '#dbe7f2', '#ffffff'], sea: 0.4, mount: 0.45, clouds: 0.35, haze: 0.6, hazeCol: '#8cc0ff', ice: 0, spin: 0 },
+  gas: { pal: ['#c9a36b', '#e8d3a6', '#a8744a', '#f2e8d2', '#b3472f'], bands: 10, turb: 0.6, storms: 2, stormSize: 1.0, clouds: 0, haze: 0.5, hazeCol: '#e9c690', sea: 0, spin: 0.3, flow: 0.45 },
+};
+function makeDefaults(kind, seed) {
+  const k = KIND_DEF[kind];
+  const P = JSON.parse(JSON.stringify(BASE));
+  Object.assign(P, JSON.parse(JSON.stringify(k)));
+  P.kind = kind; P.seed = seed; P.name = '';
+  if (kind === 'gas') { P.moons = 2; P.ring.on = false; }
+  if (kind === 'locked') P.moons = 0;
+  return P;
+}
+
+/* ---------- state ---------- */
+let P = makeDefaults('terran', 7);
+let paused = false, frozen = false, quality = 1;
+try { if (localStorage.getItem('pm_quality') === '0') quality = 0; } catch (e) {}
+const T = { spin: 0, cloud: 0, flow: 0, ring: 0, moon: 0, time: 0 };
+
+/* ---------- controls ---------- */
+const CONTROLS = [
+  // section, key, label, min, max, step, visible(P), readout
+  ['Look', 'sea', 'Ocean level', 0, 1, 0.01, (p) => HAS_SEA(p.kind)],
+  ['Look', 'wet', 'Wetness', -1, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'rock' && p.kind !== 'lava'],
+  ['Look', 'mount', 'Mountains', 0, 1, 0.01, (p) => IS_ROCKY(p.kind)],
+  ['Look', 'size', 'Continent size', 0.5, 2.5, 0.01, (p) => IS_ROCKY(p.kind)],
+  ['Look', 'ice', 'Ice caps', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'rock' && p.kind !== 'lava' && p.kind !== 'desert'],
+  ['Look', 'craters', 'Craters', 0, 1, 0.01, (p) => IS_ROCKY(p.kind)],
+  ['Look', 'scars', 'Mining scars', 0, 1, 0.01, (p) => IS_ROCKY(p.kind)],
+  ['Look', 'cities', 'City lights', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'lava'],
+  ['Look', 'lava', 'Lava cracks', 0, 1, 0.01, (p) => IS_ROCKY(p.kind)],
+  ['Look', 'bands', 'Bands', 3, 20, 1, (p) => p.kind === 'gas'],
+  ['Look', 'turb', 'Turbulence', 0, 1.4, 0.01, (p) => p.kind === 'gas'],
+  ['Look', 'storms', 'Giant storms', 0, 6, 1, (p) => p.kind === 'gas'],
+  ['Look', 'stormSize', 'Storm size', 0.2, 1.6, 0.01, (p) => p.kind === 'gas'],
+  ['Sky', 'clouds', 'Clouds', 0, 1, 0.01, (p) => IS_ROCKY(p.kind)],
+  ['Sky', 'haze', 'Atmosphere glow', 0, 1.3, 0.01, () => true],
+  ['Motion', 'spin', 'Rotation', -1, 1, 0.01, () => true, (v, p) => spinText(v, p)],
+  ['Motion', 'cloudSpeed', 'Cloud drift', -1, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'rock'],
+  ['Motion', 'flow', 'Band flow', 0, 1.5, 0.01, (p) => p.kind === 'gas'],
+  ['Motion', 'ringSpin', 'Ring shimmer', -1, 1, 0.01, (p) => p.ring.on],
+  ['Motion', 'moonSpeed', 'Moon orbits', 0, 2, 0.01, (p) => p.moons > 0],
+  ['Cam', 'tilt', 'Tilt toward you', 6, 85, 1, () => true, (v) => v + '°'],
+  ['Cam', 'roll', 'Roll', -90, 90, 1, () => true, (v) => v + '°'],
+  ['Cam', 'sun', 'Sun side', -180, 180, 1, () => true, (v) => v + '°'],
+  ['Cam', 'sunH', 'Sun height', -60, 60, 1, () => true, (v) => v + '°'],
+  ['Cam', 'zoom', 'Zoom', 0.5, 1.8, 0.01, () => true],
+  ['Ring', 'ringInner', 'Distance', 1.1, 2.4, 0.01, () => true],
+  ['Ring', 'ringWidth', 'Width', 0.1, 1.4, 0.01, () => true],
+  ['Ring', 'ringOp', 'Thickness', 0.1, 1, 0.01, () => true],
+  ['Ring', 'ringGaps', 'Gaps', 0, 1, 0.01, () => true],
+  ['Moon', 'moons', 'How many', 0, 5, 1, () => true],
+];
+function spinText(v, p) { if (Math.abs(v) < 0.01) return 'stopped'; const s = 2 * Math.PI / (Math.abs(v) * 0.5); return (v < 0 ? '↺ ' : '') + Math.round(s) + ' s'; }
+const SEC_HOST = { Look: 'ctlLook', Sky: 'ctlSky', Motion: 'ctlMotion', Cam: 'ctlCam', Ring: 'ctlRing', Moon: 'ctlMoon' };
+const ctlEls = {};
+const get = (k) => k === 'size' ? 3 - P.scale : k === 'ringInner' ? P.ring.inner : k === 'ringWidth' ? P.ring.width : k === 'ringOp' ? P.ring.op : k === 'ringGaps' ? P.ring.gaps : k === 'ringSpin' ? P.ring.spin : P[k];
+const set = (k, v) => { if (k === 'size') P.scale = 3 - v; else if (k === 'ringInner') P.ring.inner = v; else if (k === 'ringWidth') P.ring.width = v; else if (k === 'ringOp') P.ring.op = v; else if (k === 'ringGaps') P.ring.gaps = v; else if (k === 'ringSpin') P.ring.spin = v; else P[k] = v; };
+
+function buildControls() {
+  for (const c of CONTROLS) {
+    const [sec, key, label, min, max, step, vis, ro] = c;
+    const row = document.createElement('div'); row.className = 'ctl';
+    const id = 'c_' + key;
+    row.innerHTML = `<label for="${id}">${label}</label><input type="range" id="${id}" min="${min}" max="${max}" step="${step}"><output></output>`;
+    $(SEC_HOST[sec]).appendChild(row);
+    const inp = row.querySelector('input'), out = row.querySelector('output');
+    inp.addEventListener('input', () => { set(key, parseFloat(inp.value)); refreshOut(c); if (key === 'moons') rebuildMoons(); if (key === 'tilt' || key === 'roll') {} });
+    ctlEls[key] = { row, inp, out, c };
+  }
+}
+function refreshOut(c) {
+  const e = ctlEls[c[1]]; const v = get(c[1]);
+  e.out.textContent = c[7] ? c[7](v, P) : (Number.isInteger(c[5]) ? String(Math.round(v)) : v.toFixed(2));
+}
+function syncControls() {
+  for (const k in ctlEls) {
+    const e = ctlEls[k]; e.inp.value = get(k); e.row.hidden = !e.c[6](P); refreshOut(e.c);
+  }
+  $('ringOn').checked = !!P.ring.on;
+  $('ctlRing').hidden = !P.ring.on; $('swRing').hidden = !P.ring.on;
+  // palette swatches
+  const lab = KIND_LABELS(P.kind), host = $('swatches'); host.innerHTML = '';
+  for (let i = 0; i < 5; i++) {
+    if (!lab[i]) continue;
+    if (i === 0 && !HAS_SEA(P.kind) && P.kind !== 'gas') continue;
+    if (i === 4 && (P.kind === 'rock' || P.kind === 'desert') && !P.ice && !P.craters) {}
+    const d = document.createElement('label'); d.className = 'sw';
+    d.innerHTML = `<input type="color" value="${P.pal[i]}" aria-label="${lab[i]}"><span>${lab[i]}</span>`;
+    d.querySelector('input').addEventListener('input', (ev) => { P.pal[i] = ev.target.value; });
+    host.appendChild(d);
+  }
+  const hz = $('swHaze'); hz.innerHTML = '';
+  const dh = document.createElement('label'); dh.className = 'sw';
+  dh.innerHTML = `<input type="color" value="${P.hazeCol}" aria-label="Glow colour"><span>Glow</span>`;
+  dh.querySelector('input').addEventListener('input', (ev) => { P.hazeCol = ev.target.value; });
+  hz.appendChild(dh);
+  const sr = $('swRing'); sr.innerHTML = '';
+  [['c1', 'Ring light'], ['c2', 'Ring dark']].forEach(([k, l]) => {
+    const d = document.createElement('label'); d.className = 'sw';
+    d.innerHTML = `<input type="color" value="${P.ring[k]}" aria-label="${l}"><span>${l}</span>`;
+    d.querySelector('input').addEventListener('input', (ev) => { P.ring[k] = ev.target.value; });
+    sr.appendChild(d);
+  });
+  document.querySelectorAll('#chips .chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kind === P.kind)));
+  $('pName').value = P.name || '';
+  $('tagName').textContent = P.name || 'Unnamed';
+  $('tagKind').textContent = (KINDS.find(k => k.id === P.kind) || {}).name || '';
+  rebuildMoons();
+}
+
+/* ---------- moons ---------- */
+let moons = [];
+function rebuildMoons() {
+  const r = rng(hashStr('moon' + P.seed));
+  moons = [];
+  const start = Math.max(1.55, P.ring.on ? P.ring.inner + P.ring.width + 0.3 : 1.55);
+  for (let i = 0; i < Math.round(P.moons); i++) {
+    const tone = 0.45 + r() * 0.4, warm = r();
+    const base = mixHex('#8d8a85', '#a9876a', warm * 0.6);
+    moons.push({ ro: start + i * (0.3 + r() * 0.14) + r() * 0.1, size: 0.07 + r() * 0.16, ph: r() * 6.283, inc: (r() - 0.5) * 0.5, col: darken(base, 1 - tone), dir: 1 });
+  }
+}
+
+/* ---------- GL ---------- */
+const cv = $('cv');
+const gl = cv.getContext('webgl2', { antialias: false, alpha: false, preserveDrawingBuffer: false });
+let prog, loc = {}, glOK = !!gl;
+function initGL() {
+  if (!gl) return;
+  const mk = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(s)); throw new Error('shader: ' + gl.getShaderInfoLog(s)); } return s; };
+  prog = gl.createProgram();
+  gl.attachShader(prog, mk(gl.VERTEX_SHADER, $('vs').textContent.trim()));
+  gl.attachShader(prog, mk(gl.FRAGMENT_SHADER, $('fs').textContent.trim()));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+  gl.useProgram(prog);
+  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  const a = gl.getAttribLocation(prog, 'a'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
+  const n = gl.getProgramParameter(prog, gl.ACTIVE_UNIFORMS);
+  for (let i = 0; i < n; i++) { const info = gl.getActiveUniform(prog, i); loc[info.name.replace('[0]', '')] = gl.getUniformLocation(prog, info.name); }
+}
+const KIND_TYPE = (k) => k === 'gas' ? 1 : k === 'locked' ? 2 : 0;
+
+function frame(dt) {
+  const spinRate = P.kind === 'locked' ? 0 : P.spin * 0.5;
+  T.spin += spinRate * dt; T.cloud += P.cloudSpeed * 0.3 * dt; T.flow += P.flow * 0.25 * dt; T.ring += P.ring.spin * 0.3 * dt; T.moon += P.moonSpeed * dt; T.time += dt;
+}
+function vec3(a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; }
+function draw(w, h, tmul) {
+  const D = Math.PI / 180;
+  const phi = P.tilt * D, R = P.roll * D;
+  const U = [Math.cos(R), Math.sin(R), 0];
+  const A = [-Math.sin(R) * Math.cos(phi), Math.cos(R) * Math.cos(phi), Math.sin(phi)];
+  const W = vec3(U, A);
+  const sd = P.sun * D, sh = P.sunH * D;
+  const L = [Math.sin(sd) * Math.cos(sh), Math.sin(sh), Math.cos(sd) * Math.cos(sh)];
+  const ringOut = P.ring.inner + P.ring.width;
+  const mx = moons.reduce((m, o) => Math.max(m, o.ro + o.size), 0);
+  const extent = Math.max(1.3, P.ring.on ? ringOut * 1.04 : 0, mx * 0.95);
+  const aspect = w / h;
+  const extentV = Math.max(1.3, P.ring.on ? ringOut * 0.72 : 0, mx * 0.75);
+  const zoom = Math.min(aspect * 0.92 / extent, 0.92 / extentV) * P.zoom;
+  gl.viewport(0, 0, w, h);
+  gl.uniform2f(loc.uRes, w, h); gl.uniform1f(loc.uZoom, zoom);
+  gl.uniform1i(loc.uType, KIND_TYPE(P.kind));
+  gl.uniform3fv(loc['uPal'], new Float32Array(P.pal.flatMap(hex2rgb)));
+  gl.uniform3fv(loc.uHazeCol, hex2rgb(P.hazeCol));
+  const f = (n, v) => gl.uniform1f(loc[n], v);
+  f('uSeed', (P.seed % 997) * 0.173); f('uSea', P.sea); f('uMount', P.mount); f('uScale', P.scale); f('uIce', P.ice); f('uClouds', P.clouds); f('uHaze', P.haze);
+  f('uWet', P.wet || 0); f('uBiome', (P.kind === 'rock' || P.kind === 'lava') ? 0 : 1); f('uQ', quality); f('uCities', P.cities); f('uLava', P.lava); f('uCraters', P.craters); f('uScars', P.scars);
+  f('uBands', P.bands); f('uTurb', P.turb); f('uStorms', P.storms); f('uStormSize', P.stormSize);
+  f('uSpin', T.spin); f('uCloudAng', T.cloud); f('uFlowT', T.flow); f('uRingAng', T.ring); f('uTime', T.time);
+  gl.uniform3fv(loc.uAxis, A); gl.uniform3fv(loc.uU, U); gl.uniform3fv(loc.uW, W); gl.uniform3fv(loc.uL, L);
+  f('uRingOn', P.ring.on ? 1 : 0); f('uRingIn', P.ring.inner); f('uRingOut', ringOut); f('uRingOp', P.ring.op); f('uRingGaps', P.ring.gaps);
+  gl.uniform3fv(loc.uRingCol, hex2rgb(P.ring.c1)); gl.uniform3fv(loc.uRingCol2, hex2rgb(P.ring.c2));
+  // moons in world space, far to near
+  const ms = moons.map((m) => {
+    const a = m.ph + T.moon * 0.35 / Math.pow(m.ro, 1.5);
+    const x = Math.cos(a) * m.ro, z0 = Math.sin(a) * m.ro;
+    const y = z0 * Math.sin(m.inc), z = z0 * Math.cos(m.inc);
+    const wp = [U[0] * x + A[0] * y + W[0] * z, U[1] * x + A[1] * y + W[1] * z, U[2] * x + A[2] * y + W[2] * z];
+    return { wp, m };
+  }).sort((p, q) => p.wp[2] - q.wp[2]);
+  const mv = new Float32Array(20), mc = new Float32Array(15);
+  ms.forEach((o, i) => { mv.set([...o.wp, o.m.size], i * 4); mc.set(hex2rgb(o.m.col), i * 3); });
+  gl.uniform1i(loc.uMoonN, ms.length);
+  gl.uniform4fv(loc['uMoon'], mv); gl.uniform3fv(loc['uMoonCol'], mc);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+
+function fit() {
+  const rect = cv.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  let w = Math.max(2, Math.round(rect.width * dpr)), h = Math.max(2, Math.round(rect.height * dpr));
+  const cap = 1100; const s = Math.min(1, cap / Math.max(w, h)); w = Math.round(w * s); h = Math.round(h * s);
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+}
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  if (glOK && !frozen) { fit(); if (!paused) frame(dt); draw(cv.width, cv.height); }
+  requestAnimationFrame(loop);
+}
+
+/* ---------- drag to turn ---------- */
+let dragging = false, lx = 0;
+cv.addEventListener('pointerdown', (e) => { dragging = true; lx = e.clientX; cv.setPointerCapture(e.pointerId); cv.classList.add('drag'); });
+cv.addEventListener('pointermove', (e) => { if (!dragging) return; T.spin += (e.clientX - lx) * 0.008; lx = e.clientX; });
+const endDrag = () => { dragging = false; cv.classList.remove('drag'); };
+cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
+
+/* ---------- kinds, surprise ---------- */
+function setKind(kind, keepSeed) {
+  const seed = keepSeed ? P.seed : 1 + Math.floor(Math.random() * 9999);
+  const name = P.name;
+  P = makeDefaults(kind, seed); P.name = name;
+  syncControls();
+}
+function surprise() {
+  const kind = KINDS[Math.floor(Math.random() * KINDS.length)].id;
+  P = makeDefaults(kind, 1 + Math.floor(Math.random() * 9999));
+  const hue = (Math.random() - 0.5) * (kind === 'gas' ? 120 : 70);
+  P.pal = P.pal.map((c, i) => (i === 4 && kind !== 'gas') ? c : shiftHue(c, hue));
+  if (kind === 'lava') P.pal[4] = '#ff6a1f';
+  P.tilt = 10 + Math.random() * 45; P.roll = (Math.random() - 0.5) * 60;
+  P.moons = Math.floor(Math.random() * 4);
+  if (Math.random() < 0.28) { P.ring.on = true; P.ring.inner = 1.3 + Math.random() * 0.4; P.ring.width = 0.3 + Math.random() * 0.8; P.ring.c1 = lighten(P.pal[1], 0.3); P.ring.c2 = darken(P.pal[2], 0.3); }
+  P.name = '';
+  syncControls();
+}
+
+/* ---------- systems ---------- */
+const WORD_NUM = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12 };
+const COLW = { white: '#e9eef2', grey: '#8b9096', gray: '#8b9096', black: '#1d1e22', blue: '#2f67b5', green: '#4b8a45', gold: '#d1a846', golden: '#d1a846', yellow: '#d9c04e', brown: '#86603a', tan: '#c2a070', rust: '#a24f2b', red: '#a8372c', orange: '#d9792b', amber: '#d39a38', cream: '#eadfc2', violet: '#6b4a9c', purple: '#6b4a9c', pink: '#d68aa5', silver: '#b6bec6', slate: '#59636e', turquoise: '#2fb0a8', teal: '#2a8c8c', ochre: '#b8892f', mustard: '#c2a02a', copper: '#b06a40', bronze: '#94703a', crimson: '#9a2b34', scarlet: '#b3382c', indigo: '#3c3f8f', lilac: '#a48ac8', beige: '#d3c19b', sand: '#d6bf8a', ivory: '#efe9d6', rose: '#d58a98', lime: '#9cc24a', olive: '#6b7a3a', maroon: '#6c2a2d', khaki: '#aaa070', salt: '#eef0f0', steel: '#6e7f90' };
+const COLRE = /\b(pale|dark|deep|bright|brilliant|dull|light|rust|olive|blood|dusty|flat|blinding|faint|burnt|soft|muted)?[ -]?(white|grey|gray|black|blue|green|golden|gold|yellow|brown|tan|rust|red|orange|amber|cream|violet|purple|pink|silver|slate|turquoise|teal|ochre|mustard|copper|bronze|crimson|scarlet|indigo|lilac|beige|sand|ivory|rose|lime|olive|maroon|khaki|salt|steel)\b/g;
+function extractColors(text) {
+  const out = []; let m; COLRE.lastIndex = 0;
+  while ((m = COLRE.exec(text))) {
+    let c = COLW[m[2]]; const mod = m[1];
+    if (mod === 'pale' || mod === 'light' || mod === 'soft') c = lighten(c, 0.35);
+    else if (mod === 'dark' || mod === 'burnt') c = darken(c, 0.45);
+    else if (mod === 'deep') c = darken(c, 0.3);
+    else if (mod === 'bright' || mod === 'brilliant' || mod === 'blinding') c = lighten(c, 0.15);
+    else if (mod === 'dull' || mod === 'dusty' || mod === 'muted') c = mixHex(c, '#808080', 0.4);
+    if (!out.includes(c)) out.push(c);
+  }
+  return out;
+}
+function classify(wo, sp) {
+  const all = wo + ' ' + sp;
+  if (/gas giant/.test(wo)) return 'gas';
+  if (/one face blazing|slow bright terminator|permanent day|tidally|always faces/.test(all)) return 'locked';
+  if (/city[- ]world|ecumenopolis|world[- ]city|city of|sprawl/.test(wo)) return 'city';
+  if (/\b(lava|volcan\w*|magma|molten)\b/.test(all) && !/forest|jungle|swamp|temperate|ocean|farm|glacier/.test(wo)) return 'lava';
+  if (/ocean world|water world|island world|archipelago|sea world|shallow seas|no land/.test(wo)) return 'ocean';
+  if (/swamp|marsh|bog|wetland|mire|fen\b/.test(wo)) return 'swamp';
+  if (/\b(ice|icy|glacier|glaciers|frozen|frigid|snow|tundra|arctic|polar|permafrost)\b/.test(wo)) return 'ice';
+  if (/^(brilliant |blinding |flat dull |flat |pure )?white/.test(sp) && !/rock|desert|barren/.test(wo)) return 'ice';
+  if (/desert|dry|arid|dune|mesa|wasteland|savann?ah|badlands|steppe/.test(wo)) return 'desert';
+  if (/barren|rocky|\brock\b|asteroid|slag|airless|thin air|crater|ash\b/.test(wo + ' ' + sp)) return 'rock';
+  return 'terran';
+}
+function derive(s) {
+  const wo = s.w.toLowerCase(), sp = s.s.toLowerCase(), mo = s.m.toLowerCase();
+  const kind = classify(wo, sp);
+  const P2 = makeDefaults(kind, hashStr(s.n) % 9000 + 1);
+  P2.name = s.n;
+  const cols = extractColors(sp);
+  const isBlue = (c) => { const h = hexHue(c); return h >= 175 && h <= 255 && hexSat(c) > 0.25; };
+  const isWhite = (c) => hexSat(c) < 0.12 && hex2rgb(c)[0] > 0.8;
+  const blues = cols.filter(isBlue), whites = cols.filter(isWhite);
+  const land = cols.filter((c) => !isBlue(c) && !isWhite(c));
+  const pal = P2.pal;
+  if (kind === 'gas') {
+    const g = cols.length ? cols : ['#c9a36b', '#e8d3a6', '#a8744a'];
+    pal[0] = g[0]; pal[1] = g[1] || lighten(g[0], 0.35); pal[2] = g[2] || darken(g[0], 0.3); pal[3] = g[3] || lighten(g[1] || g[0], 0.4);
+    pal[4] = darken(shiftHue(pal[2], -12), 0.1); if (hexSat(pal[4]) < 0.3) pal[4] = '#b3472f';
+  } else if (kind === 'lava') {
+    const glow = cols.find((c) => { const h = hexHue(c); return (h <= 40 || h >= 340) && hexSat(c) > 0.5; });
+    if (glow) pal[4] = lighten(glow, 0.15);
+    const rocks = land.filter((c) => hexSat(c) < 0.6);
+    if (rocks[0]) { pal[1] = darken(rocks[0], 0.55); pal[2] = darken(rocks[0], 0.35); pal[3] = rocks[0]; }
+  } else if (kind === 'locked') {
+    // keep the lore-neutral defaults; tint twilight land by the first colour
+    if (land[0]) pal[1] = mixHex(pal[1], land[0], 0.4);
+  } else {
+    if (HAS_SEA(kind) && blues[0]) pal[0] = darken(blues[0], 0.25);
+    if (land.length >= 3) { pal[1] = land[0]; pal[2] = land[1]; pal[3] = land[2]; }
+    else if (land.length === 2) { pal[1] = land[0]; pal[2] = land[1]; pal[3] = lighten(land[1], 0.25); }
+    else if (land.length === 1) { pal[1] = darken(land[0], 0.2); pal[2] = land[0]; pal[3] = lighten(land[0], 0.25); }
+    else if (kind === 'ice') { const b = blues[0] || '#7fa4c8'; pal[1] = mixHex('#ffffff', b, 0.18); pal[2] = mixHex('#ffffff', b, 0.35); pal[3] = '#ffffff'; }
+    if (kind === 'ice' && land.length) { pal[1] = mixHex(lighten(land[0], 0.5), '#ffffff', 0.3); pal[2] = lighten(land[land.length > 1 ? 1 : 0], 0.4); pal[3] = '#ffffff'; }
+    if (whites[0] && kind !== 'ice') pal[4] = whites[0];
+    if (kind === 'ocean' && blues[0]) pal[0] = darken(blues[0], 0.3);
+  }
+  // water and relief
+  if (HAS_SEA(kind)) {
+    let sea = P2.sea;
+    if (/no land/.test(wo)) sea = 1; else if (/ocean|archipelago|island|shallow seas/.test(wo)) sea = 0.8;
+    else if (/sea|lake|river|coast|delta|reef/.test(wo + ' ' + sp)) sea = Math.max(sea, 0.5);
+    else if (/\bdry\b|plain|plateau|steppe/.test(wo)) sea = 0.28;
+    P2.sea = sea;
+  }
+  if (/mountain|peaks|cliff|canyon|ridge|rift|highland|mesa|crag|spire/.test(wo + ' ' + sp)) P2.mount = 0.78;
+  else if (/plain|flat|grass|steppe|farm|delta|marsh|swamp|savann|dune|floodplain/.test(wo)) P2.mount = 0.2;
+  if (/storm|rain|mist|fog|haze|smog|cloud|wet|humid|swamp|monsoon/.test(wo + ' ' + sp)) { P2.clouds = Math.max(P2.clouds, 0.7); P2.haze = Math.max(P2.haze, 0.8); }
+  if (/thin air|barren|airless/.test(wo)) { P2.clouds = 0.05; P2.haze = Math.min(P2.haze, 0.2); }
+  if (/smog|brown haze|yellow haze|thick/.test(sp)) { P2.hazeCol = '#b99668'; P2.haze = Math.max(P2.haze, 0.85); P2.clouds = Math.max(P2.clouds, 0.6); }
+  if (/swamp|marsh|bog|jungle|rainforest|wet|humid|rain|monsoon|delta/.test(wo + ' ' + sp)) P2.wet = Math.max(P2.wet, 0.35);
+  if (/desert|dry|arid|dune|mesa|steppe|barren|wasteland/.test(wo)) P2.wet = Math.min(P2.wet, -0.4);
+  // lights and scars
+  if (kind !== 'gas') {
+    if (/lights|city|cities|sprawl|domes|towers|docks|stations|gates|yards|lamps|crowded|halo/.test(sp + ' ' + wo)) P2.cities = Math.max(P2.cities, kind === 'city' ? 1 : 0.6);
+    else if (kind !== 'city') P2.cities = /farm|village|town/.test(wo + sp) ? 0.2 : (kind === 'rock' || kind === 'lava' || kind === 'ice') ? 0 : 0.15;
+    if (/scar|mine|mining|quarr|pit\b|slag|rust|gash/.test(sp + ' ' + wo)) P2.scars = /slag/.test(sp + wo) ? 0.9 : 0.7;
+  }
+  // moons and rings
+  let nm = 0; const nmw = mo.match(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|\d+)\b/);
+  if (/^none/.test(mo)) nm = 0; else if (nmw) nm = WORD_NUM[nmw[1]] || parseInt(nmw[1], 10) || 1; else if (/several|hundreds|moonlets/.test(mo)) nm = 4; else if (/moon/.test(mo)) nm = 1;
+  P2.moons = Math.min(5, nm);
+  const ringTxt = mo + ' ' + sp;
+  const RING_RE = /\b(pale|faint|thin|dark|heavy|wide|broken|glittering|debris|dust|dusty|icy|rock|bright)\s+(?:\w+\s+)?ring\b(?!\s+of\s+(?:docks?|stations?|archive|yards?|lights))|ring of (?:rock debris|dumped hulls|stolen haulers)|moonlets in a wide ring/;
+  if (RING_RE.test(ringTxt) && !/one with|ringed with|ringed by|toll ring/.test(mo)) {
+    P2.ring.on = true;
+    P2.ring.op = /faint|thin|broken|dust/.test(ringTxt) ? 0.28 : /heavy|wide|vast|bright/.test(ringTxt) ? 0.75 : 0.5;
+    P2.ring.inner = 1.35; P2.ring.width = /wide|vast/.test(ringTxt) ? 1.0 : /thin|faint/.test(ringTxt) ? 0.45 : 0.75;
+    P2.ring.c1 = lighten(pal[2], 0.3); P2.ring.c2 = darken(pal[1], 0.3);
+    if (/debris|rock|hull|hauler/.test(ringTxt)) { P2.ring.c1 = '#a69b8c'; P2.ring.c2 = '#5c554c'; P2.ring.gaps = 0.8; }
+  }
+  const r = rng(hashStr(s.n));
+  P2.tilt = 14 + r() * 28; P2.roll = (r() - 0.5) * 50; P2.sun = -(35 + r() * 50) * (r() < 0.75 ? 1 : -1);
+  P2.spin = (0.12 + r() * 0.3) * (r() < 0.9 ? 1 : -1);
+  if (kind === 'locked') P2.spin = 0;
+  return P2;
+}
+let sysIdx = -1;
+const sysByName = new Map();
+function loadSystem(i) {
+  sysIdx = ((i % SYSTEMS.length) + SYSTEMS.length) % SYSTEMS.length;
+  const s = SYSTEMS[sysIdx];
+  P = derive(s);
+  $('sysIn').value = s.n;
+  $('sysInfo').innerHTML = `<b>${esc(s.n)}</b> · ${esc(s.sec)} sector<br>${esc(s.w)}.<br>From space: ${esc(s.s)}.<br>Moons and rings: ${esc(s.m)}.`;
+  syncControls();
+}
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* ---------- presets: library, code, files ---------- */
+const slug = (t) => (t || 'planet').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48) || 'planet';
+const toCode = () => JSON.stringify({ format: 'praedra-planet', v: 1, name: P.name, params: P });
+function fromCode(txt) {
+  const o = JSON.parse(txt); const p = o.params || o;
+  if (!p || !p.kind || !p.pal) throw new Error('not a planet preset');
+  const d = makeDefaults(KINDS.some(k => k.id === p.kind) ? p.kind : 'terran', p.seed || 1);
+  P = Object.assign(d, p, { ring: Object.assign(d.ring, p.ring || {}), pal: (p.pal || d.pal).slice(0, 5) });
+  syncControls();
+}
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2400); }
+
+let dbc = null, lib = {};
+const LKEY = 'pm_library_v1';
+function readLocal() { try { return JSON.parse(localStorage.getItem(LKEY) || '{}'); } catch (e) { return {}; } }
+function writeLocal(o) { try { localStorage.setItem(LKEY, JSON.stringify(o)); } catch (e) {} }
+function renderLib() {
+  const ul = $('lib'); ul.innerHTML = '';
+  const ids = Object.keys(lib).sort((a, b) => (lib[a].name || a).localeCompare(lib[b].name || b));
+  for (const id of ids) {
+    const li = document.createElement('li');
+    li.innerHTML = `<span>${esc(lib[id].name || id)}</span><button type="button" data-a="load">Load</button><button type="button" data-a="del" aria-label="Delete">✕</button>`;
+    li.addEventListener('click', (ev) => {
+      const a = ev.target.dataset && ev.target.dataset.a; if (!a) return;
+      if (a === 'load') { try { fromCode(lib[id].code); toast('Loaded ' + (lib[id].name || id)); } catch (e) { toast('Could not load that preset'); } }
+      if (a === 'del') {
+        if (dbc) dbc.collection('presets').doc(id).delete().catch(() => toast('Delete failed'));
+        else { delete lib[id]; writeLocal(lib); renderLib(); }
+      }
+    });
+    ul.appendChild(li);
+  }
+  $('libNote').textContent = ids.length ? '' : 'Nothing saved yet.';
+}
+async function initLib() {
+  lib = readLocal(); renderLib();
+  try {
+    const db = window.claude && window.claude.use ? await window.claude.use('db') : null;
+    if (!db) { $('libNote').textContent = (Object.keys(lib).length ? '' : 'Nothing saved yet. ') + 'Saved in this browser only.'; return; }
+    dbc = db;
+    db.collection('presets').onSnapshot((snap) => {
+      lib = {}; snap.docs.forEach((d) => { const v = d.data() || {}; lib[d.id] = { name: v.name, code: v.code }; });
+      renderLib();
+    }, () => { dbc = null; });
+  } catch (e) { dbc = null; }
+}
+async function saveToLib() {
+  P.name = $('pName').value.trim() || P.name || 'Unnamed';
+  $('tagName').textContent = P.name;
+  const id = slug(P.name), rec = { name: P.name, kind: P.kind, code: toCode(), updatedAt: new Date().toISOString() };
+  if (dbc) { try { await dbc.collection('presets').doc(id).set(rec); toast('Saved “' + P.name + '” to your library'); } catch (e) { toast('Could not save to the shared library'); } }
+  else { lib[id] = rec; writeLocal(lib); renderLib(); toast('Saved “' + P.name + '” in this browser'); }
+}
+async function saveFile(filename, data, mime) {
+  try {
+    const dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null;
+    if (dl) { await dl.save({ filename, data }); return true; }
+  } catch (e) { if (e && e.code === 'declined') return false; }
+  try { const blob = data instanceof Blob ? data : new Blob([data], { type: mime }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; document.body.appendChild(a); a.click(); a.remove(); return true; } catch (e) { return false; }
+}
+function snapshot(size) {
+  const ow = cv.width, oh = cv.height;
+  const q0 = quality; quality = 1; cv.width = size; cv.height = size; draw(size, size); quality = q0;
+  return new Promise((res) => cv.toBlob((b) => { cv.width = ow; cv.height = oh; res(b); }, 'image/png'));
+}
+let snapBlob = null;
+async function openSnap() {
+  snapBlob = await snapshot(1600);
+  if (!snapBlob) { toast('Could not capture the image'); return; }
+  $('snapImg').src = URL.createObjectURL(snapBlob); $('snap').classList.add('on');
+}
+
+/* ---------- wire up ---------- */
+function boot() {
+  const chips = $('chips');
+  KINDS.forEach((k) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.kind = k.id; b.setAttribute('aria-pressed', 'false');
+    b.innerHTML = `${k.name}<small>${k.sub}</small>`;
+    b.addEventListener('click', () => setKind(k.id, false));
+    chips.appendChild(b);
+  });
+  buildControls();
+  const dl = $('sysList');
+  SYSTEMS.forEach((s, i) => { sysByName.set(s.n.toLowerCase(), i); const o = document.createElement('option'); o.value = s.n; o.label = s.sec; dl.appendChild(o); });
+  $('sysIn').addEventListener('change', () => { const i = sysByName.get($('sysIn').value.trim().toLowerCase()); if (i !== undefined) loadSystem(i); else toast('No system with that name'); });
+  $('btnPrev').addEventListener('click', () => loadSystem(sysIdx < 0 ? SYSTEMS.length - 1 : sysIdx - 1));
+  $('btnNext').addEventListener('click', () => loadSystem(sysIdx + 1));
+  $('btnSeed').addEventListener('click', () => { P.seed = 1 + Math.floor(Math.random() * 9999); rebuildMoons(); });
+  $('btnSurprise').addEventListener('click', surprise);
+  $('ringOn').addEventListener('change', (e) => { P.ring.on = e.target.checked; syncControls(); });
+  $('pName').addEventListener('input', (e) => { P.name = e.target.value; $('tagName').textContent = P.name || 'Unnamed'; });
+  $('btnPause').addEventListener('click', () => { paused = !paused; $('btnPause').textContent = paused ? 'Play' : 'Pause'; });
+  $('btnSave').addEventListener('click', saveToLib);
+  $('btnExport').addEventListener('click', async () => { const ok = await saveFile(slug(P.name) + '.planet.json', toCode(), 'application/json'); toast(ok ? 'Preset file ready' : 'Not saved'); });
+  $('btnCopy').addEventListener('click', async () => { $('code').value = toCode(); try { await navigator.clipboard.writeText($('code').value); toast('Preset code copied'); } catch (e) { $('code').select(); toast('Select and copy the code'); } });
+  $('btnLoad').addEventListener('click', () => { try { fromCode($('code').value); toast('Preset loaded'); } catch (e) { toast('That code is not a planet preset'); } });
+  $('btnSnap').addEventListener('click', openSnap);
+  const qLabel = () => { $('btnQ').textContent = 'Detail: ' + (quality ? 'High' : 'Fast'); };
+  qLabel();
+  $('btnQ').addEventListener('click', () => { quality = quality ? 0 : 1; try { localStorage.setItem('pm_quality', String(quality)); } catch (e) {} qLabel(); });
+  $('snapClose').addEventListener('click', () => { $('snap').classList.remove('on'); });
+  $('snapSave').addEventListener('click', async () => { const ok = await saveFile(slug(P.name) + '.png', snapBlob, 'image/png'); toast(ok ? 'Image ready' : 'Right-click the image to save it'); });
+  initLib();
+  if (SYSTEMS.length && !location.hash) { /* start on a classic-looking world */ }
+  P = makeDefaults('terran', 7); P.name = 'Test world'; P.moons = 2; syncControls();
+  if (!glOK) { document.querySelector('.hint').textContent = 'This browser cannot run WebGL 2, so the planet cannot be drawn.'; return; }
+  try { initGL(); } catch (e) { glOK = false; document.querySelector('.hint').textContent = 'Shader error: ' + e.message; console.error(e); return; }
+  requestAnimationFrame(loop);
+}
+window.__pm = { get P() { return P; }, setP(p) { P = p; syncControls(); }, derive, loadSystem, SYSTEMS, classify, makeDefaults, KINDS, setKind, frame, T, draw: () => draw(cv.width, cv.height), pause(v) { paused = v; }, freeze(v) { frozen = v; }, setQ(v) { quality = v; }, fromCode };
+boot();
+})();
+</script>
