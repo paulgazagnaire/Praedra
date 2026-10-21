@@ -48,7 +48,7 @@ Every world with Cities above zero gets one population density field, and both s
 Seed changes the layout. The look is fixed by the shader, not by a preset value beyond `cities`.
 
 ## Clouds
-Clouds follow the weather of a real planet: wet belts at the equator and mid latitudes, clear subtropics, and a few cyclones per hemisphere that curl the cloud into spirals (opposite ways north and south). Thick cloud is bright, thin cloud is grey and translucent with ragged edges, and the side facing the sun is lit while the far side sits in its own shadow. High detail adds the shading and the cloud shadows on the ground. The Clouds slider sets how much of the sky is covered; Cloud drift moves the whole pattern.
+Clouds follow the weather of a real planet: wet belts at the equator and mid latitudes, clear subtropics, and four cyclones per hemisphere with spiral arms, turning opposite ways north and south. A coarse cloud mass is sheared into long arms by the cyclones, puffy cells and ragged fine detail are added on top (not sheared, so thin cloud breaks into wisps), thick cloud is bright and thin cloud greyer. High detail adds relief lighting (the sun side of a cloud is lit, the far side shaded) and ground shadows that get longer at a low sun. Fast detail drops those two and a few noise layers. The Clouds slider sets how much of the sky is covered; Cloud drift moves the whole pattern. High detail costs roughly a quarter more on software rendering than before; a real graphics card has not been measured.
 
 ## Known limits
 - The system presets are a first guess read from each description (colours, moons, rings). Expect to adjust some by hand.
