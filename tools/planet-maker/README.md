@@ -31,7 +31,7 @@ Edit `planet-maker.src.html` (the shader and the page), never `index.html`. `par
     "ring": { "on": false, "type": "broad|narrow|dusty|arcs|wreck|moonfed", "inner": 1.1..2.8, "width": 0.04..2.6, "op": 0.1..1, "gaps": 0..1,
               "struct": 0..1, "clump": 0..1, "dust": 0..1, "feeder": 0..5, "seed": 0..9999, "spin": -1..1, "c1": "#hex", "c2": "#hex" },
     "moons": 0..5,
-    "moonList": [ { "type": "rock", "size": 0.04..0.5, "orbit": 1.3..7, "speed": -2..3, "tilt": -60..60, "phase": 0..360,
+    "moonList": [ { "type": "rock", "size": 0.015..0.5, "orbit": 1.3..7, "speed": -2..3, "tilt": -60..60, "phase": 0..360,
                     "detail": 0..1, "feat": 0..1, "haze": 0..1, "shape": 0..1, "spin": -1..1, "seed": 0..9999,
                     "c1": "#hex", "c2": "#hex", "c3": "#hex" } ] } }
 ```
@@ -124,3 +124,4 @@ The light and shade on mountains and craters comes from the slope of the height 
 - Rings are flat: no thickness, no braids, no waves. A ring has one source moon at most, and moons never push each other's gaps around beyond the three resonances listed under Rings.
 - At most 5 moons per planet. Moons start small, 2 to 17 percent of the planet's radius (Earth's Moon is 27 percent, Titan about 4 percent of Saturn's, the small captured rocks far less), and they sit much closer than real moons would. The Size slider goes down to 1.5 percent. Orbits are circular.
 - Ring and moon draw order is approximate when a moon passes behind a ring.
+- Moons make the shader bigger, and on software rendering a gas giant with 5 moons costs about 3 times a world without moons in both Fast and High. A cheap distance test before shading each moon changes nothing: with the moon code never run the cost is the same, so it comes from the size of the shader, not the maths. The fix would be to draw planet and moons in separate passes; it is not done because it has not been measured on a real graphics card.
