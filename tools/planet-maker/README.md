@@ -85,7 +85,7 @@ Left out on purpose (real, but they would read as one of the above at this size)
 
 **System presets.** Each system's moon text picks the first moon's kind when it says something ("white", "icy", "volcanic", "hazy", "captured", "black", "dark", "quarried"…); every other moon is drawn from the seed, with more rocky and captured moons on rocky worlds and more ice-rock and hazy moons around gas giants.
 
-**Shadows.** Each moon casts a soft shadow on the planet when it passes between the planet and the sun: a dark spot that crosses the surface as the moon orbits. Shadows are drawn on the planet's sunlit side only, and a moon shadows the planet even while it is behind it as seen from the camera.
+**Shadows.** Each moon casts a soft shadow on the planet when it passes between the planet and the sun: a dark spot that crosses the surface as the moon orbits. Shadows are drawn on the planet's sunlit side only, and a moon shadows the planet even while it is behind it as seen from the camera. A moon also shades the rings: a soft dark streak on the ring behind it, away from the sun (a moon in the ring plane leaves a long thin one, a tilted moon drops its shadow on another part of the ring), drawn on the ring's sunlit side.
 
 Moons are shaded once and only compiled into the shader when a planet has at least one, so a world with no moons costs nothing extra.
 
@@ -109,7 +109,7 @@ Left out on purpose: Saturn's F ring (braided and kinked, it would read as Narro
 - Dusty, arc, wreckage and moon-fed rings need a moon that belongs to them (the Source moon slider, 1 to 5; "none" leaves the ring as a free-floating one). Picking such a kind adds a moon if there is none, puts it where that kind needs it (inside a dusty or wreckage ring, just inside the arcs, in the thick part of the moon-fed dust), flattens its orbit into the ring plane and makes it a small captured rock or a bright ice moon. After that you can move it: the ring bunches up, or the bulge and tail follow it, wherever it goes and wherever it is on its orbit.
 - Picking any ring kind moves other moons out of the ring so they do not sit inside it by accident; drag a moon back in on purpose to cut a lane.
 
-**Light.** With the sun on your side the rings reflect (dense ice is bright, dust is dull). With the sun behind the rings, dense rings turn dark and thin or dusty ones glow by forward scattering; the Backlit glow slider sets how much. Rings cast a shadow on the planet (thin narrow rings leave a pattern of fine lines) and the planet casts a soft shadow on the rings.
+**Light.** With the sun on your side the rings reflect (dense ice is bright, dust is dull). With the sun behind the rings, dense rings turn dark and thin or dusty ones glow by forward scattering; the Backlit glow slider sets how much. Rings cast a shadow on the planet (thin narrow rings leave a pattern of fine lines) and the planet casts a soft shadow on the rings, and the rings cast one on moons that sit where the sun's light crosses them (dense ring: dark, thin dusty ring: a faint dimming).
 
 **Editor.** In the Rings section: tick "This planet has rings", pick a kind, then Distance, Width, Thickness and the kind's own sliders (renamed per kind; those that do not apply are hidden), plus two colours. New look rerolls the pattern and nudges the colours, Reset to kind restores the kind's defaults.
 
@@ -124,7 +124,7 @@ The light and shade on mountains and craters comes from the slope of the height 
 
 ## Known limits
 - The system presets are a first guess read from each description (colours, moons, rings). Expect to adjust some by hand.
-- The whole planet is one pass; rings do not light moons and do not cast shadows on them.
+- The whole planet is one pass. Moons do not shadow each other, and a moon's shadow is a plain round disc (lumpy outlines are not followed).
 - Rings are flat: no thickness, no braids, no waves. A ring has one source moon at most, and moons never push each other's gaps around beyond the three resonances listed under Rings.
 - At most 5 moons per planet. Moons start small, 2 to 17 percent of the planet's radius (Earth's Moon is 27 percent, Titan about 4 percent of Saturn's, the small captured rocks far less), and they sit much closer than real moons would. The Size slider goes down to 1.5 percent. Orbits are circular.
 - Ring and moon draw order is approximate when a moon passes behind a ring.
