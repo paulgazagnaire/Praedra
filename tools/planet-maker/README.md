@@ -117,6 +117,15 @@ Left out on purpose: Saturn's F ring (braided and kinked, it would read as Narro
 
 Rings are only compiled into the shader when a planet has them. On software rendering a ringed planet costs about the same per frame as before; a real graphics card has not been measured.
 
+## Gas giants
+The belts are not a regular stripe pattern. Three waves of different spacing are added and the latitude is bent by slow noise, so some belts are broad and some thin, some faint, and the stripes fade toward the poles. The Bands slider is roughly the number of stripes (belts plus zones), not a pattern repeat count; saved planets with a Bands value keep it but look different from before.
+
+The wind follows the same profile: belts and zones blow in opposite directions with a fast equator, so the shear sits where a belt meets a zone. That is where the turbulence is: edges turn wavy and curl, fine streaks run along the flow, and (in High detail) strings of small pale and dark ovals form along the edges, with soft mottling inside the broad belts and zones. Turbulence turns all of this up or down.
+
+Giant storms are no longer flat discs. Each one twirls the sky around it before the bands are drawn, so the belts bend into spirals inside the storm and into arcs around it, the storm tints those swirled bands instead of painting over them, and the air near it is more turbulent. Storm size sets how far the twirl reaches. The belt colours are still the first four palette colours and the storm colour is the fifth.
+
+Cost: on software rendering a gas giant in High is about 30 percent slower per frame than before; Fast skips the grain, ovals and puffs. Not measured on a real graphics card. The bands still slide past each other as before (Band flow), but the new wind speeds are lower, so they shear more gently. Not drawn: storms placed on a belt edge on purpose (they sit at a random latitude and the bands bend around them wherever they land), long-lived storm wakes, hexagons at the poles.
+
 ## Terrain relief
 **Mountains.** They used to be one smooth ridge layer, which read as sand dunes. Now they are long belts (where plates would have collided) with sharp crests: a ridged multifractal, each layer weighted by the one before, so crests carry the fine detail and valleys stay smooth. Between the belts the land is plains and low hills. Steep faces turn bare rock, and the highest crests keep snow even in a warm climate (less on worlds with few ice caps). The Mountains slider still runs from none to everything. It costs about 10 to 20 percent more per frame on software rendering.
 
