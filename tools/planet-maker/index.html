@@ -352,9 +352,22 @@ vec3 gasAlbedo(vec3 q) {
 }
 
 // --- clouds ----------------------------------------------------------------
-// Weather in layers: where it clouds up (wet belts at the equator and mid latitudes, clear subtropics), cyclones with
-// spiral arms, a coarse cloud mass that the cyclones shear into long arms, and fine ragged detail that is not sheared,
-// so thin cloud breaks into wisps instead of taffy.
+// Two decks, as on Earth. The low deck is the weather you see from orbit: cloud belts at the equator and mid latitudes,
+// a narrow ragged storm line along the equator (the ITCZ), clear subtropics that still hold scattered cumulus puffs,
+// cyclones with spiral arms, and small cells so the tops look like heaped cumulus instead of fog. The high deck is thin
+// ice cirrus: combed into long streaks along the jet streams, see-through, drifting faster, and still lit after the
+// ground has gone dark at dusk.
+// nearest-point distance for small cells, searched like the crater grid (8 cells)
+float cellF(vec3 x) {
+  vec3 ip = floor(x), fp = fract(x), sd = step(0.5, fp);
+  float d = 4.0;
+  for (int k = 0; k < 2; k++) for (int j = 0; j < 2; j++) for (int i = 0; i < 2; i++) {
+    vec3 g = vec3(float(i), float(j), float(k)) - 1.0 + sd;
+    vec3 r = g + 0.28 + 0.44 * hash33(ip + g + 91.0) - fp;
+    d = min(d, dot(r, r));
+  }
+  return sqrt(d);
+}
 vec3 rodrigues(vec3 v, vec3 k, float a) { float c = cos(a), s = sin(a); return v * c + cross(k, v) * s + k * dot(k, v) * (1.0 - c); }
 float cloudAt(vec3 q, float extra, int oct) {
   vec3 c0 = rotY(q, uCloudAng);
@@ -388,8 +401,33 @@ float cloudAt(vec3 q, float extra, int oct) {
   vec3 wd = c0 * vec3(2.0, 3.0, 2.0) + so + 11.0;
   float det = fbm(wd * 7.0 + 3.0, 3);
   cl += 0.20 * (det - 0.5);
+  // heaped tops: small cells, strongest in the subtropics where they stand alone as trade-wind cumulus
+  float sub = exp(-pow((L - 0.40) / 0.14, 2.0));
+  float puff = 1.0 - smoothstep(0.10, 0.52, cellF(c * vec3(1.0, 1.25, 1.0) * 10.0 + so + 40.0));
+  float clump = smoothstep(0.35, 0.70, fbm(c * vec3(2.4, 3.0, 2.4) + so + 47.0, 3));   // puffs gather in patches and streets, not a regular dot grid
+  cl += (0.09 + 0.20 * sub * (0.25 + 0.75 * clump)) * (puff - 0.40) + 0.07 * sub * clump;
+  // the storm line along the equator: narrow, bent by the wind, ragged
+  float itcz = exp(-pow((c0.y - 0.03 + 0.05 * gnoise(c0 * vec3(3.0, 1.0, 3.0) + so + 29.0)) / 0.05, 2.0));
+  cl += 0.24 * itcz * (0.55 + 0.9 * det);
   float thr = mix(0.90, 0.47, clamp(uClouds + extra, 0.0, 1.0));
-  return clamp(smoothstep(thr, thr + 0.28, cl) * (0.70 + 0.60 * det), 0.0, 1.0);
+  return clamp(smoothstep(thr, thr + 0.36, cl) * (0.70 + 0.60 * det), 0.0, 1.0);
+}
+
+// High ice cloud: thin streaks along the wind (squashed noise, so features run east-west), bent by jet-stream meanders,
+// with fine fibres inside; thickest at mid latitudes and around the equatorial storm line (anvils), thin at the poles.
+float cirrusAt(vec3 q, float extra, int oct) {
+  vec3 c = rotY(q, uCloudAng * 1.8 + 0.9);
+  vec3 so = sOff();
+  float L = abs(c.y);
+  float y = c.y + 0.11 * gnoise(c * vec3(2.2, 1.0, 2.2) + so + 61.0) + 0.04 * gnoise(c * 5.0 + so + 67.0);
+  float cov = clamp(uClouds * 1.1 + extra * 0.5, 0.0, 1.0);
+  // where there is cirrus at all: big patches with clear sky between them
+  float zone = smoothstep(mix(0.62, 0.40, cov), mix(0.80, 0.58, cov), fbm(vec3(c.x * 1.3, y * 3.0, c.z * 1.3) + so + 97.0, 3));
+  float veil = fbm(vec3(c.x * 1.6, y * 6.0, c.z * 1.6) + so + 71.0, oct);
+  float hair = fbm(vec3(c.x * 4.0, y * 75.0, c.z * 4.0) + so + 83.0, max(oct - 2, 2));
+  float jets = 0.55 + 0.45 * exp(-pow((L - 0.58) / 0.24, 2.0)) + 0.35 * exp(-pow((L - 0.04) / 0.10, 2.0));
+  jets *= 1.0 - 0.7 * smoothstep(0.82, 1.0, L);
+  return smoothstep(0.28, 0.66, veil) * zone * (0.30 + 0.70 * smoothstep(0.30, 0.72, hair)) * jets;
 }
 
 // --- big cities: planned corridors and hubs ---------------------------------
@@ -465,9 +503,12 @@ vec3 shadePlanet(vec3 p, out float shine) {
   vec3 q = vec3(cs * q0.x + sn * q0.z, q0.y, -sn * q0.x + cs * q0.z);
   vec3 lq0 = vec3(dot(uL, uU), dot(uL, uAxis), dot(uL, uW));
   vec3 lq = vec3(cs * lq0.x + sn * lq0.z, lq0.y, -sn * lq0.x + cs * lq0.z);
+  vec3 vq0 = vec3(uU.z, uAxis.z, uW.z);
+  vec3 vq = vec3(cs * vq0.x + sn * vq0.z, vq0.y, -sn * vq0.x + cs * vq0.z);   // toward the viewer, in the planet's frame
   float ndl = dot(p, uL);
   float nz = p.z;
   vec3 albedo; vec3 n = p; vec3 emis = vec3(0.0);
+  float cirD = 0.0;
   float cloudD = 0.0, cloudS = 0.0; float landMask = 1.0; float night = smoothstep(0.10, -0.14, ndl);
 
   if (uType == 1) {
@@ -596,6 +637,7 @@ vec3 shadePlanet(vec3 p, out float shine) {
     float extra = (uType == 2) ? 0.35 * smoothstep(0.2, 0.9, cth) - 0.35 * smoothstep(0.0, -0.5, cth) : 0.0;
     if (uClouds > 0.01) {
       cloudD = cloudAt(q, extra, OCT(6));
+      cirD = cirrusAt(normalize(q + vq * 0.035), extra, OCT(5));   // it floats higher, so it shifts against the low deck
       if (uQ > 0.5) {
         cloudS = cloudAt(normalize(q + lq * 0.012), extra, 4);   // relief: is there more cloud toward the sun?
         float cloudG = cloudAt(normalize(q + lq * (0.02 + 0.05 * (1.0 - clamp(ndl, 0.0, 1.0)))), extra, 4);   // ground shadow, longer at a low sun
@@ -623,12 +665,17 @@ vec3 shadePlanet(vec3 p, out float shine) {
     surf += vec3(1.0, 0.95, 0.85) * pow(max(dot(n, hv), 0.0), 150.0) * 0.5 * shine * sh;
   }
   // thick cloud is bright, thin cloud greyer; the side facing the sun is lit, the far side sits in its own shadow
-  float lit = (uQ > 0.5) ? clamp(0.88 + (cloudD - cloudS) * 1.1, 0.58, 1.10) : 1.0;
+  float lit = (uQ > 0.5) ? clamp(0.86 + (cloudD - cloudS) * 1.2, 0.50, 1.10) : 1.0;
   float thick = mix(0.80, 1.0, smoothstep(0.2, 0.9, cloudD));
   vec3 cloudC = vec3(0.96, 0.97, 1.0) * (max(ndl + 0.05, 0.0) * 1.15 * sh * lit * thick + 0.025);
   cloudC = mix(cloudC, cloudC * vec3(1.0, 0.82, 0.72), smoothstep(0.25, 0.0, ndl) * 0.5);
-  vec3 col = mix(surf, cloudC, smoothstep(0.06, 0.7, cloudD) * 0.96);
-  col += emis * (1.0 - cloudD * 0.85);
+  vec3 col = mix(surf, cloudC, smoothstep(0.04, 0.95, cloudD) * 0.97);
+  // high cirrus: it sits above the low deck, sees the sun for longer at dusk, and turns pink-gold at the day-night line
+  float ndh = ndl + 0.13;
+  vec3 cirC = vec3(0.97, 0.98, 1.0) * (max(ndh, 0.0) * 1.05 * sh + 0.02);
+  cirC = mix(cirC, vec3(1.0, 0.66, 0.46) * max(ndh, 0.0) * 1.5, smoothstep(0.26, 0.0, ndh) * 0.65);
+  col = mix(col, cirC, smoothstep(0.03, 0.9, cirD) * 0.55);
+  col += emis * (1.0 - cloudD * 0.85) * (1.0 - cirD * 0.25);
   // atmosphere: blue edge on the lit side, red band along the day-night line
   float rim = pow(1.0 - nz, 3.0);
   float dayF = smoothstep(-0.25, 0.55, ndl);
