@@ -885,9 +885,10 @@ vec3 shadePlanet(vec3 p, out float shine) {
       cirD = cirrusAt(normalize(q + vq * 0.035), extra, OCT(5));   // it floats higher, so it shifts against the low deck
       {
         // one tap toward the sun serves both: relief (is there more cloud on the sun side?) and the ground shadow, thrown further at a low sun
-        float cloudG = cloudAt(normalize(q + lq * (0.014 + 0.03 * (1.0 - clamp(ndl, 0.0, 1.0)))), extra, 4) * uLowCl;
+        // the offset is much bigger than real clouds would give (10 km up is a hair on a planet) so the shadows read from orbit
+        float cloudG = cloudAt(normalize(q + lq * (0.04 + 0.11 * (1.0 - clamp(ndl, 0.0, 1.0)))), extra, 4) * uLowCl;
         cloudS = cloudG;
-        albedo *= 1.0 - 0.30 * smoothstep(0.15, 0.8, cloudG) * (1.0 - smoothstep(0.0, 0.8, cloudD));
+        albedo *= 1.0 - 0.70 * smoothstep(0.10, 0.65, cloudG) * (1.0 - smoothstep(0.0, 0.8, cloudD));
       }
 #endif
     }
@@ -914,7 +915,7 @@ vec3 shadePlanet(vec3 p, out float shine) {
     surf += vec3(1.0, 0.95, 0.85) * pow(max(dot(n, hv), 0.0), 150.0) * 0.5 * shine * sh;
   }
   // thick cloud is bright, thin cloud greyer; the side facing the sun is lit, the far side sits in its own shadow
-  float lit = (uQ > 0.5) ? clamp(0.92 + (cloudD - cloudS) * 1.2, 0.55, 1.08) : 1.0;
+  float lit = (uQ > 0.5) ? clamp(0.92 + (cloudD - cloudS) * 0.6, 0.55, 1.08) : 1.0;
   float thick = mix(0.58, 1.0, smoothstep(0.25, 0.95, cloudD));
   vec3 cloudC = uCloudCol * (max(ndl + 0.05, 0.0) * 1.15 * sh * lit * thick + 0.025);
   cloudC += uAsh * emis * 0.4;   // smoke over a lava field is lit orange from below
