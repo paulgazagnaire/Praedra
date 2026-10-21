@@ -862,7 +862,7 @@ vec3 shadePlanet(vec3 p, out float shine) {
   float lit = (uQ > 0.5) ? clamp(0.92 + (cloudD - cloudS) * 1.2, 0.55, 1.08) : 1.0;
   float thick = mix(0.58, 1.0, smoothstep(0.25, 0.95, cloudD));
   vec3 cloudC = uCloudCol * (max(ndl + 0.05, 0.0) * 1.15 * sh * lit * thick + 0.025);
-  cloudC += uAsh * emis * 1.6;   // smoke over a lava field is lit orange from below
+  cloudC += uAsh * emis * 0.4;   // smoke over a lava field is lit orange from below
   cloudC = mix(cloudC, cloudC * vec3(1.0, 0.82, 0.72), smoothstep(0.25, 0.0, ndl) * 0.5);
   vec3 col = mix(surf, cloudC, smoothstep(0.03, 0.70, cloudD) * 0.97);
   // high cirrus: it sits above the low deck, sees the sun for longer at dusk, and turns pink-gold at the day-night line
@@ -1581,7 +1581,7 @@ function initGL() {
   gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 }
 // what a world's clouds are made of: water everywhere except molten worlds (ash and smoke) and deserts (blown dust)
-const CLOUD_COL = { water: [0.96, 0.97, 1.0], lava: [0.5, 0.43, 0.38], desert: [0.86, 0.68, 0.48], ice: [0.62, 0.78, 1.0] };
+const CLOUD_COL = { water: [0.96, 0.97, 1.0], lava: [0.36, 0.31, 0.28], desert: [0.86, 0.68, 0.48], ice: [0.62, 0.78, 1.0] };
 const LOW_CLOUD = { ice: 0.55 };   // a frozen world keeps thin ice-crystal streaks and a faint haze, not a water cloud deck
 const CLOUD_LABEL = { lava: 'Ash and smoke', desert: 'Dust storms', ice: 'Ice crystal haze' };
 const KIND_TYPE = (k) => k === 'gas' ? 1 : k === 'locked' ? 2 : 0;
