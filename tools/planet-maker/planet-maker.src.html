@@ -213,6 +213,7 @@ uniform int uType;            // 0 rocky, 1 gas giant, 2 tidally locked
 uniform vec3 uPal[5];
 uniform vec3 uHazeCol;
 uniform float uAsh;           // 1 on a molten world: its clouds are ash and smoke, not water
+uniform float uLowCl;        // how much of the low cloud deck shows: 1 normally, little on a frozen world (too cold and dry for a water deck)
 uniform vec3 uCloudCol;       // what the clouds are made of: white for water, tan for dust, near black for ash
 uniform float uSeed, uSea, uMount, uScale, uIce, uClouds, uHaze, uCities, uLava, uCraters, uScars, uWet, uBiome, uQ;
 uniform float uBands, uTurb, uStorms, uStormSize;
@@ -304,17 +305,33 @@ float craters(vec3 p, float density) {
   return acc;
 }
 
-// Terrain: big warped continents, fine detail on top, mountain ridges inland.
+// Terrain: big warped continents, fine detail on top, mountain ranges inland.
+// Mountains are long belts (where plates collided) with sharp crests: a ridged multifractal, each octave weighted by the one before it,
+// so crests carry the fine detail and valleys stay smooth, like eroded ranges with side spurs. A single smooth ridge would read as sand dunes.
 float heightAt(vec3 q, int oct) {
   vec3 s = q * uScale * 1.5 + sOff();
   vec3 w = vec3(gnoise(s * 0.8 + 3.1), gnoise(s * 0.8 + 17.7), gnoise(s * 0.8 + 41.3));
   s += w * 0.75;
   float cont = fbm(s * 0.55, 3);
   float det = fbm(s * 1.8 + 5.0, max(oct - 1, 2));
-  float r = 1.0 - abs(2.0 * fbm(s * 1.3 + 9.0, max(oct - 2, 2)) - 1.0);
-  r *= r;
   float h = cont * 0.62 + det * 0.38;
-  h = mix(h, h * 0.7 + r * 0.5 * smoothstep(0.38, 0.62, cont), uMount * 0.9);
+  if (uMount > 0.001) {
+    float bl = 1.0 - abs(2.0 * fbm(s * 0.75 + 9.0, 2) - 1.0);
+    float belt = smoothstep(0.66, 0.93, bl) * smoothstep(0.38, 0.56, cont);
+    vec3 sr = s * 2.6 + w * 0.3 + 23.0;
+    float sum = 0.0, amp = 0.5, prev = 1.0;
+    for (int i = 0; i < 6; i++) {
+      if (i >= oct - 1) break;
+      float n = 1.0 - abs(2.0 * noise(sr) - 1.0);
+      n *= n;
+      sum += n * amp * prev;
+      prev = clamp(n * 1.6, 0.0, 1.0);
+      sr = M3 * sr * 2.1 + vec3(3.3, 1.9, 7.1); amp *= 0.5;
+    }
+    float ridges = sum * 1.15;
+    float foothill = fbm(s * 2.6 + 31.0, max(oct - 3, 2));
+    h = mix(h, h * 0.72 + ridges * (0.03 + 0.62 * belt) * smoothstep(0.30, 0.52, cont) + foothill * 0.10, uMount * 0.9);
+  }
   return (h - 0.5) * 1.5 + 0.5;
 }
 
@@ -715,6 +732,7 @@ vec3 shadePlanet(vec3 p, out float shine) {
       float iceThr = mix(-0.2, 0.45, uIce);
       snow = smoothstep(iceThr + 0.05, iceThr - 0.05, temp + (fbm(q * 9.0 + sOff(), 3) - 0.5) * 0.12);
       snow *= step(0.001, uIce);
+      snow = max(snow, smoothstep(0.80, 0.98, lh) * clamp(uMount * 1.6, 0.0, 1.0) * clamp(uIce * 3.0, 0.0, 1.0));   // the highest crests keep snow even in a warm climate
     } else {
       float moist = fbm(q * 3.0 + sOff() + 9.0, 3);
       habM = moist;
@@ -723,6 +741,8 @@ vec3 shadePlanet(vec3 p, out float shine) {
       land = mix(land, uPal[3], smoothstep(0.5, 0.95, lh + 0.25 * (moist - 0.5)));
     }
     land *= 0.84 + 0.32 * fbm(q * 14.0 + sOff(), 3);
+    float rockF = smoothstep(2.5, 7.0, length(g)) * clamp(uMount * 1.6, 0.0, 1.0);
+    land = mix(land, mix(uPal[3], uPal[2], 0.45) * (0.5 + 0.25 * lh), rockF * 0.8);   // steep faces are bare rock, not soil or grass
     if (uQ > 0.5) land *= 0.92 + 0.16 * noise(q * 70.0 + sOff());
 
     float depth = clamp((t - h0) / 0.25, 0.0, 1.0);
@@ -804,12 +824,12 @@ vec3 shadePlanet(vec3 p, out float shine) {
     // clouds follow the water: deserts stay clearer, wet land and open sea carry more
     if (uBiome > 0.5) extra += (landMask > 0.5) ? (habM - 0.45) * 0.45 : 0.06;
     if (uClouds > 0.01) {
-      cloudD = cloudAt(q, extra, OCT(6));
+      cloudD = cloudAt(q, extra, OCT(6)) * uLowCl;
 #ifdef PM_HIQ
       cirD = cirrusAt(normalize(q + vq * 0.035), extra, OCT(5));   // it floats higher, so it shifts against the low deck
       {
         // one tap toward the sun serves both: relief (is there more cloud on the sun side?) and the ground shadow, thrown further at a low sun
-        float cloudG = cloudAt(normalize(q + lq * (0.014 + 0.03 * (1.0 - clamp(ndl, 0.0, 1.0)))), extra, 4);
+        float cloudG = cloudAt(normalize(q + lq * (0.014 + 0.03 * (1.0 - clamp(ndl, 0.0, 1.0)))), extra, 4) * uLowCl;
         cloudS = cloudG;
         albedo *= 1.0 - 0.30 * smoothstep(0.15, 0.8, cloudG) * (1.0 - smoothstep(0.0, 0.8, cloudD));
       }
@@ -1153,7 +1173,7 @@ const KIND_DEF = {
   ocean: { wet: 0.15, pal: ['#123f78', '#2f8a78', '#6aa078', '#9a9a82', '#f1f5f9'], sea: 0.95, mount: 0.4, clouds: 0.6, haze: 0.7, hazeCol: '#7fb4ff', ice: 0.3, scale: 1.5 },
   swamp: { wet: 0.4, pal: ['#25463a', '#44683a', '#68793f', '#85805a', '#e0e8e0'], sea: 0.45, mount: 0.2, clouds: 0.7, haze: 0.8, hazeCol: '#9cc88a', ice: 0.1 },
   desert: { wet: -0.45, pal: ['#000000', '#c99b5c', '#b46f3a', '#8c4d2a', '#efe4d2'], sea: 0, mount: 0.55, clouds: 0.12, haze: 0.4, hazeCol: '#e8b87a', ice: 0.15, craters: 0.1 },
-  ice: { wet: 0, pal: ['#4f7ca8', '#d8e6f1', '#b9d0e4', '#ffffff', '#ffffff'], sea: 0.35, mount: 0.45, clouds: 0.25, haze: 0.45, hazeCol: '#bfe0ff', ice: 1, craters: 0.2 },
+  ice: { wet: 0, pal: ['#4f7ca8', '#d8e6f1', '#b9d0e4', '#ffffff', '#ffffff'], sea: 0.35, mount: 0.45, clouds: 0.45, haze: 0.45, hazeCol: '#bfe0ff', ice: 1, craters: 0.2 },
   rock: { pal: ['#000000', '#59564f', '#8a857b', '#b5afa3', '#e8e8ea'], sea: 0, mount: 0.3, clouds: 0, haze: 0, hazeCol: '#aab4c4', ice: 0, craters: 0.8 },
   lava: { pal: ['#000000', '#2d2320', '#463631', '#6a5848', '#ff6a1f'], sea: 0, mount: 0.6, clouds: 0.3, haze: 0.5, hazeCol: '#ff8a50', ice: 0, lava: 0.9, craters: 0.2 },
   city: { wet: -0.1, pal: ['#2b4f6e', '#6e7075', '#868a8f', '#a2a7ad', '#e8eef2'], sea: 0.15, mount: 0.3, clouds: 0.3, haze: 0.55, hazeCol: '#c3a07a', ice: 0.1, cities: 0.9 },
@@ -1554,8 +1574,9 @@ function initGL() {
   gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 }
 // what a world's clouds are made of: water everywhere except molten worlds (ash and smoke) and deserts (blown dust)
-const CLOUD_COL = { water: [0.96, 0.97, 1.0], lava: [0.3, 0.25, 0.22], desert: [0.86, 0.68, 0.48] };
-const CLOUD_LABEL = { lava: 'Ash and smoke', desert: 'Dust storms' };
+const CLOUD_COL = { water: [0.96, 0.97, 1.0], lava: [0.3, 0.25, 0.22], desert: [0.86, 0.68, 0.48], ice: [0.9, 0.95, 1.0] };
+const LOW_CLOUD = { ice: 0.22 };   // a frozen world keeps thin ice-crystal streaks and a faint haze, not a water cloud deck
+const CLOUD_LABEL = { lava: 'Ash and smoke', desert: 'Dust storms', ice: 'Ice crystal haze' };
 const KIND_TYPE = (k) => k === 'gas' ? 1 : k === 'locked' ? 2 : 0;
 
 function frame(dt) {
@@ -1586,7 +1607,7 @@ function draw(w, h, tmul) {
   gl.uniform3fv(loc['uPal'], new Float32Array(P.pal.flatMap(hex2rgb)));
   gl.uniform3fv(loc.uHazeCol, hex2rgb(P.hazeCol));
   const f = (n, v) => gl.uniform1f(loc[n], v);
-  f('uSeed', (P.seed % 997) * 0.173); f('uSea', P.sea); f('uMount', P.mount); f('uScale', P.scale); f('uIce', P.ice); f('uClouds', clouds); f('uAsh', P.kind === 'lava' ? 1 : 0); gl.uniform3fv(loc.uCloudCol, CLOUD_COL[P.kind] || CLOUD_COL.water); f('uHaze', P.haze);
+  f('uSeed', (P.seed % 997) * 0.173); f('uSea', P.sea); f('uMount', P.mount); f('uScale', P.scale); f('uIce', P.ice); f('uClouds', clouds); f('uAsh', P.kind === 'lava' ? 1 : 0); f('uLowCl', LOW_CLOUD[P.kind] === undefined ? 1 : LOW_CLOUD[P.kind]); gl.uniform3fv(loc.uCloudCol, CLOUD_COL[P.kind] || CLOUD_COL.water); f('uHaze', P.haze);
   f('uWet', P.wet || 0); f('uBiome', (P.kind === 'rock' || P.kind === 'lava') ? 0 : 1); f('uQ', quality); f('uCities', P.cities); f('uLava', P.lava); f('uCraters', P.craters); f('uScars', P.scars);
   f('uBands', P.bands); f('uTurb', P.turb); f('uStorms', P.storms); f('uStormSize', P.stormSize);
   f('uSpin', T.spin); f('uCloudAng', T.cloud); f('uFlowT', T.flow); f('uRingAng', T.ring); f('uTime', T.time);
@@ -1817,9 +1838,13 @@ function sanitize(p, d) {
   if (typeof sd === 'number' && isFinite(sd)) out.seed = Math.min(99999, Math.max(0, Math.round(sd)));
   const pr = p.ring || {};
   out.ring.on = !!pr.on;
+  // a different kind starts from that kind's own geometry, colours and source moon, like sanitizeMoon; an unknown kind stays as the default
+  if (Object.hasOwn(RING_IDX, pr.type) && pr.type !== d.ring.type) {
+    const T = RING_TYPES[RING_IDX[pr.type]];
+    Object.assign(out.ring, T.d, { type: pr.type, c1: T.c[0], c2: T.c[1], feeder: T.feed ? 1 : 0 });
+  }
   for (const k in RING_RANGE) if (pr[k] !== undefined) out.ring[k] = clampNum(pr[k], RING_RANGE[k], d.ring[k]);
   for (const k of ['c1', 'c2']) if (isHex(pr[k])) out.ring[k] = pr[k];
-  if (Object.hasOwn(RING_IDX, pr.type)) out.ring.type = pr.type;
   const pal = Array.isArray(p.pal) ? p.pal : [];
   out.pal = d.pal.map((c, i) => isHex(pal[i]) ? pal[i] : c);
   if (isHex(p.hazeCol)) out.hazeCol = p.hazeCol;
