@@ -460,8 +460,8 @@ float cloudAt(vec3 q, float extra, int oct) {
 #else
   cl += 0.15 * itcz;
 #endif
-  float thr = mix(0.83, 0.34, clamp(uClouds + extra, 0.0, 1.0));
-  return clamp(smoothstep(thr, thr + 0.20, cl) * (0.78 + 0.44 * det), 0.0, 1.0);
+  float thr = mix(0.78, 0.29, clamp(uClouds + extra, 0.0, 1.0));
+  return clamp(smoothstep(thr, thr + 0.42, cl) * (0.74 + 0.52 * det), 0.0, 1.0);
 }
 
 // High ice cloud: thin streaks along the wind (squashed noise, so features run east-west), bent by jet-stream meanders,
@@ -725,11 +725,11 @@ vec3 shadePlanet(vec3 p, out float shine) {
     surf += vec3(1.0, 0.95, 0.85) * pow(max(dot(n, hv), 0.0), 150.0) * 0.5 * shine * sh;
   }
   // thick cloud is bright, thin cloud greyer; the side facing the sun is lit, the far side sits in its own shadow
-  float lit = (uQ > 0.5) ? clamp(0.90 + (cloudD - cloudS) * 0.6, 0.72, 1.06) : 1.0;
-  float thick = mix(0.80, 1.0, smoothstep(0.2, 0.9, cloudD));
+  float lit = (uQ > 0.5) ? clamp(0.92 + (cloudD - cloudS) * 1.2, 0.55, 1.08) : 1.0;
+  float thick = mix(0.58, 1.0, smoothstep(0.25, 0.95, cloudD));
   vec3 cloudC = vec3(0.96, 0.97, 1.0) * (max(ndl + 0.05, 0.0) * 1.15 * sh * lit * thick + 0.025);
   cloudC = mix(cloudC, cloudC * vec3(1.0, 0.82, 0.72), smoothstep(0.25, 0.0, ndl) * 0.5);
-  vec3 col = mix(surf, cloudC, smoothstep(0.04, 0.95, cloudD) * 0.97);
+  vec3 col = mix(surf, cloudC, smoothstep(0.03, 0.70, cloudD) * 0.97);
   // high cirrus: it sits above the low deck, sees the sun for longer at dusk, and turns pink-gold at the day-night line
   float ndh = ndl + 0.13;
   vec3 cirC = vec3(0.97, 0.98, 1.0) * (max(ndh, 0.0) * 1.05 * sh + 0.02);
