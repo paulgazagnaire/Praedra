@@ -357,16 +357,17 @@ vec3 gasAlbedo(vec3 q) {
 // cyclones with spiral arms, and small cells so the tops look like heaped cumulus instead of fog. The high deck is thin
 // ice cirrus: combed into long streaks along the jet streams, see-through, drifting faster, and still lit after the
 // ground has gone dark at dusk.
-// nearest-point distance for small cells, searched like the crater grid (8 cells)
-float cellF(vec3 x) {
+// cell noise: distance to the nearest cell centre and to the wall between cells, searched like the crater grid (8 cells)
+vec2 cellF(vec3 x) {
   vec3 ip = floor(x), fp = fract(x), sd = step(0.5, fp);
-  float d = 4.0;
+  float d1 = 4.0, d2 = 4.0;
   for (int k = 0; k < 2; k++) for (int j = 0; j < 2; j++) for (int i = 0; i < 2; i++) {
     vec3 g = vec3(float(i), float(j), float(k)) - 1.0 + sd;
     vec3 r = g + 0.28 + 0.44 * hash33(ip + g + 91.0) - fp;
-    d = min(d, dot(r, r));
+    float d = dot(r, r);
+    if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) { d2 = d; }
   }
-  return sqrt(d);
+  return vec2(sqrt(d1), sqrt(d2) - sqrt(d1));   // distance to the nearest cell centre, distance to the cell wall
 }
 vec3 rodrigues(vec3 v, vec3 k, float a) { float c = cos(a), s = sin(a); return v * c + cross(k, v) * s + k * dot(k, v) * (1.0 - c); }
 float cloudAt(vec3 q, float extra, int oct) {
@@ -374,12 +375,15 @@ float cloudAt(vec3 q, float extra, int oct) {
   vec3 c = c0;
   vec3 so = sOff();
   float L = abs(c0.y);
+  float hs = (c0.y >= 0.0) ? 1.0 : -1.0;
+  float lon = atan(c0.z, c0.x);
+  vec3 hw = hash33(vec3(uSeed * 0.37, 1.3, 5.7));
   float arms = 0.0;
   for (int i = 0; i < 8; i++) {
     vec3 h = hash33(vec3(float(i) * 2.3 + uSeed * 0.7, 4.1, 8.8));
     float hem = (i < 4) ? 1.0 : -1.0;
-    float lon = h.x * 6.2831, la = (0.50 + 0.50 * h.y) * hem;
-    vec3 k = vec3(cos(la) * cos(lon), sin(la), cos(la) * sin(lon));
+    float lo = h.x * 6.2831, la = (0.50 + 0.50 * h.y) * hem;
+    vec3 k = vec3(cos(la) * cos(lo), sin(la), cos(la) * sin(lo));
     float d2 = 1.0 - dot(c0, k);
     float R2 = 0.030 + 0.045 * h.z;
     float f = exp(-d2 / R2);
@@ -392,25 +396,38 @@ float cloudAt(vec3 q, float extra, int oct) {
     float arm = 0.5 + 0.5 * cos(2.0 * hem * ph - 11.0 * r);
     arms += f * arm * smoothstep(0.03, 0.12, r) * (0.55 + 0.35 * h.z);
   }
-  float band = 0.62 + 0.34 * exp(-pow(L / 0.17, 2.0)) + 0.30 * exp(-pow((L - 0.70) / 0.17, 2.0)) - 0.34 * exp(-pow((L - 0.40) / 0.11, 2.0));
-  vec3 w = c * vec3(2.0, 3.2, 2.0) + so + 5.0;
+  // Earth's zonal profile, from satellite cloud climatology: cloudy tropics (in clusters), the driest and thinnest
+  // cover in the subtropical high-pressure belts, the heaviest cover in the mid-latitude storm tracks, thick at the poles.
+  float zonal = 0.07 * exp(-pow(L / 0.13, 2.0)) - 0.04 * exp(-pow((L - 0.42) / 0.13, 2.0))
+              + 0.10 * exp(-pow((L - 0.80) / 0.15, 2.0)) + 0.03 * smoothstep(0.88, 1.0, L);
+  vec3 cw = rotY(c, 1.4 * abs(c.y));   // fronts lean the same way in both hemispheres (mirrored), as Coriolis bends them
+  vec3 w = cw * vec3(2.0, 3.2, 2.0) + so + 5.0;
   w += vec3(gnoise(w * 1.1), gnoise(w * 1.1 + 7.0), gnoise(w * 1.1 + 13.0)) * 0.40;
-  vec3 wb = c * vec3(2.0, 3.0, 2.0) + so + 23.0;
-  float billow = 1.0 - abs(2.0 * fbm(wb * 3.2, 3) - 1.0);   // puffy cells
-  float cl = fbm(w * 1.0, oct) * (0.62 + 0.76 * band) + 0.30 * arms + 0.16 * (billow - 0.5);
+  float cl = fbm(w * 1.0, oct) + zonal + 0.30 * arms;
   vec3 wd = c0 * vec3(2.0, 3.0, 2.0) + so + 11.0;
   float det = fbm(wd * 7.0 + 3.0, 3);
-  cl += 0.20 * (det - 0.5);
-  // heaped tops: small cells, strongest in the subtropics where they stand alone as trade-wind cumulus
-  float sub = exp(-pow((L - 0.40) / 0.14, 2.0));
-  float puff = 1.0 - smoothstep(0.10, 0.52, cellF(c * vec3(1.0, 1.25, 1.0) * 10.0 + so + 40.0));
-  float clump = smoothstep(0.35, 0.70, fbm(c * vec3(2.4, 3.0, 2.4) + so + 47.0, 3));   // puffs gather in patches and streets, not a regular dot grid
-  cl += (0.09 + 0.20 * sub * (0.25 + 0.75 * clump)) * (puff - 0.40) + 0.07 * sub * clump;
-  // the storm line along the equator: narrow, bent by the wind, ragged
-  float itcz = exp(-pow((c0.y - 0.03 + 0.05 * gnoise(c0 * vec3(3.0, 1.0, 3.0) + so + 29.0)) / 0.05, 2.0));
-  cl += 0.24 * itcz * (0.55 + 0.9 * det);
-  float thr = mix(0.90, 0.47, clamp(uClouds + extra, 0.0, 1.0));
-  return clamp(smoothstep(thr, thr + 0.36, cl) * (0.70 + 0.60 * det), 0.0, 1.0);
+  cl += 0.16 * (det - 0.5);
+  // storm tracks: waves in the jet stream (3 to 5 around the planet) bend the cloud into long fronts and comma-shaped sweeps
+  float kw = 3.0 + floor(hw.x * 3.0), phw = hw.y * 6.2831 + hs * 1.9;
+  float track = 0.76 + 0.10 * sin(kw * lon + phw) + 0.04 * sin(2.0 * kw * lon + 2.0 * phw);
+  float front = exp(-pow((L - track) / 0.055, 2.0));
+  float fshape = 0.15 + 1.4 * smoothstep(0.30, 0.70, fbm(vec3(cos(lon), sin(lon), hs * 0.7 + L * 2.0) * 1.9 + so + 37.0, 3));   // storms are separate systems along the track
+  cl += 0.28 * front * fshape;
+  // feathery streaks drawn out along the flow (stretched noise; the cyclone swirl twists them into tails)
+  float midw = smoothstep(0.25, 0.55, L) * (1.0 - 0.6 * smoothstep(0.85, 1.0, L));
+  cl += 0.20 * midw * (fbm(cw * vec3(1.5, 7.5, 1.5) + so + 53.0, 3) - 0.5);
+  // small cells: heaped tops everywhere, and in the subtropics broad sheets and fields of low cloud
+  float sub = exp(-pow((L - 0.40) / 0.15, 2.0));
+  vec3 wc = c * vec3(1.0, 1.4, 1.0) * 22.0 + so + 40.0;
+  wc += vec3(gnoise(wc * 0.35), gnoise(wc * 0.35 + 9.0), gnoise(wc * 0.35 + 17.0)) * 1.3;   // bend the cells so none is a neat disc
+  float puff = 1.0 - smoothstep(0.10, 0.62, cellF(wc).x);
+  float clump = smoothstep(0.38, 0.62, fbm(c * vec3(2.2, 2.8, 2.2) + so + 47.0, 3));
+  cl += (0.05 + 0.14 * sub * clump) * (puff - 0.40) + 0.12 * sub * clump;
+  // the storm line along the equator, broken into clusters
+  float itcz = exp(-pow((c0.y - 0.03 + 0.05 * gnoise(c0 * vec3(3.0, 1.0, 3.0) + so + 29.0)) / 0.07, 2.0));
+  cl += 0.30 * itcz * (0.05 + 1.3 * smoothstep(0.45, 0.70, fbm(c0 * vec3(4.0, 2.0, 4.0) + so + 19.0, 3)));
+  float thr = mix(0.83, 0.34, clamp(uClouds + extra, 0.0, 1.0));
+  return clamp(smoothstep(thr, thr + 0.20, cl) * (0.78 + 0.44 * det), 0.0, 1.0);
 }
 
 // High ice cloud: thin streaks along the wind (squashed noise, so features run east-west), bent by jet-stream meanders,
@@ -635,13 +652,16 @@ vec3 shadePlanet(vec3 p, out float shine) {
       n = normalize(mix(n, p, ub * 0.8));
     }
     float extra = (uType == 2) ? 0.35 * smoothstep(0.2, 0.9, cth) - 0.35 * smoothstep(0.0, -0.5, cth) : 0.0;
+    // clouds follow the water: deserts stay clearer, wet land and open sea carry more
+    if (uBiome > 0.5) extra += (landMask > 0.5) ? (habM - 0.45) * 0.45 : 0.06;
     if (uClouds > 0.01) {
       cloudD = cloudAt(q, extra, OCT(6));
       cirD = cirrusAt(normalize(q + vq * 0.035), extra, OCT(5));   // it floats higher, so it shifts against the low deck
       if (uQ > 0.5) {
-        cloudS = cloudAt(normalize(q + lq * 0.012), extra, 4);   // relief: is there more cloud toward the sun?
-        float cloudG = cloudAt(normalize(q + lq * (0.02 + 0.05 * (1.0 - clamp(ndl, 0.0, 1.0)))), extra, 4);   // ground shadow, longer at a low sun
-        albedo *= 1.0 - 0.45 * smoothstep(0.15, 0.8, cloudG) * (1.0 - smoothstep(0.0, 0.8, cloudD));
+        // one tap toward the sun serves both: relief (is there more cloud on the sun side?) and the ground shadow, thrown further at a low sun
+        float cloudG = cloudAt(normalize(q + lq * (0.014 + 0.03 * (1.0 - clamp(ndl, 0.0, 1.0)))), extra, 4);
+        cloudS = cloudG;
+        albedo *= 1.0 - 0.30 * smoothstep(0.15, 0.8, cloudG) * (1.0 - smoothstep(0.0, 0.8, cloudD));
       }
     }
   }
@@ -665,7 +685,7 @@ vec3 shadePlanet(vec3 p, out float shine) {
     surf += vec3(1.0, 0.95, 0.85) * pow(max(dot(n, hv), 0.0), 150.0) * 0.5 * shine * sh;
   }
   // thick cloud is bright, thin cloud greyer; the side facing the sun is lit, the far side sits in its own shadow
-  float lit = (uQ > 0.5) ? clamp(0.86 + (cloudD - cloudS) * 1.2, 0.50, 1.10) : 1.0;
+  float lit = (uQ > 0.5) ? clamp(0.90 + (cloudD - cloudS) * 0.6, 0.72, 1.06) : 1.0;
   float thick = mix(0.80, 1.0, smoothstep(0.2, 0.9, cloudD));
   vec3 cloudC = vec3(0.96, 0.97, 1.0) * (max(ndl + 0.05, 0.0) * 1.15 * sh * lit * thick + 0.025);
   cloudC = mix(cloudC, cloudC * vec3(1.0, 0.82, 0.72), smoothstep(0.25, 0.0, ndl) * 0.5);
