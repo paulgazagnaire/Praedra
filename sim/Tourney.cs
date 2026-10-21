@@ -10,12 +10,13 @@ using Praedra.Core.Setup;
 internal static class Tourney
 {
     public const string Usage = """
-          dotnet run --project sim -- tourney [--a hard] [--b medium] [--seeds 1-16] [--days 3000] [--jobs 4] [--csv out.csv] [--verbose] [--a-params K=V,...] [--b-params K=V,...] [--settings K=V,...]
+          dotnet run --project sim -- tourney [--a hard] [--b medium] [--seeds 1-16] [--days 3000] [--jobs 4] [--csv out.csv] [--verbose] [--a-params K=V,...] [--b-params K=V,...] [--empire-params K=V,...] [--alliance-params K=V,...] [--settings K=V,...]
         tourney plays the simple AI at level A against level B (easy, medium, hard; core/AI/AiLevel.cs), fog on for both, from the MedA start:
         every seed once with A as the Empire and once with A as the Alliance. It prints, per level and side, the wins, the median win day, the day
         the Empire's own picture first showed the true Rebel HQ, and each level's mean share of the systems the two sides hold at the end (a win
         counts 100%, a loss 0%). --a-params / --b-params set SimpleAiParams values on top of a level (e.g. "MilitaryEvery=1,ScoutCount=8"; ints and
-        bools), to try a knob before it becomes part of a level. --seeds takes a range (1-16), a list (1,4,9) or a count (16 = 1-16). --jobs plays that many games at once.
+        bools), to try a knob before it becomes part of a level. --empire-params / --alliance-params do the same for whichever level plays that side,
+        on top of --a-params / --b-params (e.g. only the Empire shields its capital, as a human Empire player would). --seeds takes a range (1-16), a list (1,4,9) or a count (16 = 1-16). --jobs plays that many games at once.
         """;
 
     private sealed record GameResult(int Seed, bool AIsEmpire, AiLevel EmpireLevel, AiLevel AllianceLevel, Side? Winner, int Day, int EmpireSystems,
@@ -28,7 +29,7 @@ internal static class Tourney
 
     public static int Run(string[] a)
     {
-        AiLevel la = AiLevel.Hard, lb = AiLevel.Medium; string? pa = null, pb = null, ps = null; int days = 3000, jobs = Environment.ProcessorCount; string? csv = null; bool verbose = false;
+        AiLevel la = AiLevel.Hard, lb = AiLevel.Medium; string? pa = null, pb = null, pe = null, pal = null, ps = null; int days = 3000, jobs = Environment.ProcessorCount; string? csv = null; bool verbose = false;
         var seeds = Enumerable.Range(1, 16).ToList();
         for (int i = 0; i < a.Length; i++)
         {
@@ -44,6 +45,8 @@ internal static class Tourney
                 case "--csv": csv = Next(); break;
                 case "--a-params": pa = Next(); break;
                 case "--b-params": pb = Next(); break;
+                case "--empire-params": pe = Next(); break;
+                case "--alliance-params": pal = Next(); break;
                 case "--settings": ps = Next(); break;
                 case "--verbose": verbose = true; break;
                 default: throw new ArgumentException($"Unknown option '{key}'.");
@@ -52,13 +55,14 @@ internal static class Tourney
         var clock = System.Diagnostics.Stopwatch.StartNew();
         var paramsA = WithOverrides(AiLevels.For(la), pa); var paramsB = WithOverrides(AiLevels.For(lb), pb);
         var settings = SettingsWith(ps);
-        Console.WriteLine($"Tournament: {la}{(pa != null ? " [" + pa + "]" : "")} (A) against {lb}{(pb != null ? " [" + pb + "]" : "")} (B), seeds {string.Join(",", seeds)}, up to {days} days, fog on, {jobs} at once{(ps != null ? ", settings " + ps : "")}.");
+        Console.WriteLine($"Tournament: {la}{(pa != null ? " [" + pa + "]" : "")} (A) against {lb}{(pb != null ? " [" + pb + "]" : "")} (B){(pe != null ? ", Empire [" + pe + "]" : "")}{(pal != null ? ", Alliance [" + pal + "]" : "")}, seeds {string.Join(",", seeds)}, up to {days} days, fog on, {jobs} at once{(ps != null ? ", settings " + ps : "")}.");
         NewGame.Create(new NewGameOptions { Seed = seeds[0], Preset = StartPreset.MedA }); // loads the shared data once before the parallel games
         var games = seeds.SelectMany(s => new[] { (Seed: s, AEmp: true), (Seed: s, AEmp: false) }).ToList();
         var results = new ConcurrentBag<GameResult>();
         Parallel.ForEach(games, new ParallelOptions { MaxDegreeOfParallelism = jobs }, g =>
         {
-            var r = Play(g.Seed, g.AEmp, g.AEmp ? la : lb, g.AEmp ? lb : la, g.AEmp ? paramsA : paramsB, g.AEmp ? paramsB : paramsA, days, settings);
+            var (pEmp, pAll) = SideParams(g.AEmp, paramsA, paramsB, pe, pal);
+            var r = Play(g.Seed, g.AEmp, g.AEmp ? la : lb, g.AEmp ? lb : la, pEmp, pAll, days, settings);
             results.Add(r);
             if (verbose) lock (results) Console.WriteLine("  " + Line(r));
         });
@@ -142,6 +146,13 @@ internal static class Tourney
         static System.Reflection.PropertyInfo Prop(object o, string name) =>
             o.GetType().GetProperty(name) ?? throw new ArgumentException($"{o.GetType().Name} has no {name}.");
     }
+
+    /// <summary>
+    /// The Empire's and the Alliance's parameters for one game: A's and B's (each its level with --a-params / --b-params), whichever side each
+    /// plays, then --empire-params on the Empire's and --alliance-params on the Alliance's.
+    /// </summary>
+    internal static (SimpleAiParams Empire, SimpleAiParams Alliance) SideParams(bool aIsEmpire, SimpleAiParams a, SimpleAiParams b, string? empire, string? alliance) =>
+        (WithOverrides(aIsEmpire ? a : b, empire), WithOverrides(aIsEmpire ? b : a, alliance));
 
     /// <summary>A copy of the parameters with "Name=value" pairs set (int and bool properties of SimpleAiParams).</summary>
     internal static SimpleAiParams WithOverrides(SimpleAiParams p, string? spec)
