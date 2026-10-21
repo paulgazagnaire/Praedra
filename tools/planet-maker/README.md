@@ -29,11 +29,15 @@ Edit `planet-maker.src.html` (the shader and the page), never `index.html`. `par
     "spin": -1..1, "cloudSpeed": -1..1, "flow": 0..1.5, "moonSpeed": 0..2,
     "tilt": 6..85, "roll": -90..90, "sun": -180..180, "sunH": -60..60, "zoom": 0.5..1.8,
     "ring": { "on": false, "inner": 1.35, "width": 0.8, "op": 0.55, "gaps": 0.5, "spin": 0.3, "c1": "#hex", "c2": "#hex" },
-    "moons": 0..5 } }
+    "moons": 0..5,
+    "moonList": [ { "type": "rock", "size": 0.04..0.5, "orbit": 1.3..4.2, "speed": -2..3, "tilt": -60..60, "phase": 0..360,
+                    "detail": 0..1, "feat": 0..1, "haze": 0..1, "shape": 0..1, "spin": -1..1, "seed": 0..9999,
+                    "c1": "#hex", "c2": "#hex", "c3": "#hex" } ] } }
 ```
+`moonList` holds the moons in order (the `moons` slider shows the first n). A preset without it still loads: the moons are generated from the seed and the world type.
 Speeds: rotation = `spin * 0.5` radians per second (0.25 is one turn in about 50 s).
 
-Pasted presets and library entries are checked on load: numbers are clamped to their slider range (moons 0 to 5), bad colours are replaced, and a short palette is filled from the world type's defaults.
+Pasted presets and library entries are checked on load: numbers are clamped to their slider range (moons 0 to 5, each moon's numbers and colours the same way, an unknown moon type becomes cratered rock), bad colours are replaced, and a short palette is filled from the world type's defaults.
 
 ## Using it in Godot later
 The shader is GLSL ES 3.00 with no tricks. Porting to a Godot `.gdshader` is a mechanical rename (`uniform` blocks stay, `fragColor` becomes `COLOR`). The preset values map one-to-one onto the shader uniforms, so the game can draw the same planet from the same JSON.
@@ -56,7 +60,30 @@ The cloud layout is modelled on Earth's satellite cloud climatology, so a planet
 
 A second, high deck of thin ice cirrus sits above: patchy, combed into fine streaks along the jet streams, see-through, drifting faster than the low deck, shifted against it by height, and still lit after the ground has gone dark at dusk (pink-gold at the day-night line). The shader is compiled in variants, so work a planet does not use costs nothing: gas giants and worlds with Clouds at 0 skip all cloud code, and Fast detail also skips the high cirrus deck, small cells, streaks, relief and ground shadows and uses fewer cyclones. The Clouds slider sets overall cover, Cloud drift moves the whole pattern. Gas giants have their own bands and storms and are not affected. On software rendering, a cloudy world in High costs about 40 to 60 percent more than before clouds were added, Fast about 10 percent more, and worlds without clouds nothing; a real graphics card has not been measured.
 
+## Moons
+Moons are no longer one kind. There are eight, each modelled on something that exists. The surveyed inventory below says what was left out and why.
+
+| Kind | Real examples | What defines the look |
+|---|---|---|
+| Cratered rock | Earth's Moon, Mercury | pale highlands, craters, dark plains in the big basins |
+| Dark ice-rock | Callisto, Iapetus, Rhea | very dark old crust, bright ice splashed out of craters, one face darker than the other |
+| Smooth ice | Europa, Enceladus | bright, nearly no craters, long dark cracks, mottled chaos terrain, ice sheen |
+| Volcanic | Io | sulphur yellows and oranges, frost, dark calderas, vents that glow on the night side |
+| Hazy giant | Titan | thick orange smog over the ground, soft bands, bright atmosphere rim |
+| Frozen plains | Pluto, Triton, Charon | cream nitrogen ice, dark red equatorial band, smooth bright lobe, bright poles |
+| Captured rock | Phobos, Deimos, Amalthea | small, knobbly (not round), dark, deeply cratered, parallel grooves |
+| Living moon | none known; a settled moon | ocean, land, polar ice and cloud under a blue atmosphere |
+
+Left out on purpose (real, but they would read as one of the above at this size): Ganymede (ice-rock with a Callisto look and grooved terrain), Mimas and other small icy craterlets (cratered rock with a huge crater), Hyperion (a sponge-textured captured rock), Miranda (patchwork of terrains), Moon-sized dwarf planets (frozen plains), irregular outer moons (captured rock). Not drawn at all: moonlet swarms, ring-moon pairs, binary moons, co-orbitals, moons with their own rings.
+
+**Editor.** In the Moons section: How many (0 to 5), pick which moon, pick its kind, then every setting for that moon: Size, Distance, Orbit speed (negative runs backwards), Orbit tilt, Start position, Detail, Feature, Atmosphere, Lumpy shape, Own spin (0 keeps one face to the planet), three colours. The Detail and Feature sliders are renamed per kind (for Smooth ice they read Mottling and Cracks, for Volcanic Vents and Eruptions). New look rerolls the moon's pattern, Reset to kind restores that kind's defaults. Lowering How many keeps your edits to the hidden moons.
+
+**System presets.** Each system's moon text picks the first moon's kind when it says something ("white", "icy", "volcanic", "hazy", "captured", "black", "dark", "quarried"…); every other moon is drawn from the seed, with more rocky and captured moons on rocky worlds and more ice-rock and hazy moons around gas giants.
+
+Moons are shaded once and only compiled into the shader when a planet has at least one, so a world with no moons costs nothing extra.
+
 ## Known limits
 - The system presets are a first guess read from each description (colours, moons, rings). Expect to adjust some by hand.
 - The whole planet is one pass; moons do not cast shadows on the planet, and rings do not light moons.
+- At most 5 moons per planet. Moon sizes are artistic (real moons are far smaller next to their planet), and orbits are circular.
 - Ring and moon draw order is approximate when a moon passes behind a ring.

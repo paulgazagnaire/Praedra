@@ -54,6 +54,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 .row2 { display: flex; gap: 8px; }
 .row2 > * { flex: 1; min-width: 0; }
 .stagebtns button { background: rgba(16,19,26,.85); text-align: center; }
+.sub { margin: 14px 0 8px; font: 500 11px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
 .ctl { display: grid; grid-template-columns: 112px minmax(0, 1fr) 54px; align-items: center; gap: 8px; margin: 9px 0; }
 .ctl label { color: var(--fg); font-size: 13px; }
 .ctl output { font: 12px var(--font-mono); color: var(--dim); text-align: right; white-space: nowrap; }
@@ -151,9 +152,22 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
       <div class="sw-row" id="swRing"></div>
     </details>
 
-    <details class="sec">
+    <details class="sec" open>
       <summary>Moons</summary>
       <div id="ctlMoon"></div>
+      <div id="moonPick" hidden>
+        <h3 class="sub">Which moon</h3>
+        <div class="chips" id="moonTabs"></div>
+        <h3 class="sub">Kind of moon</h3>
+        <div class="chips" id="moonTypes"></div>
+        <p class="note" id="moonNote"></p>
+        <div id="ctlMoonEd"></div>
+        <div class="sw-row" id="swMoon"></div>
+        <div class="row2">
+          <button id="moonNew" type="button">New look</button>
+          <button id="moonReset" type="button">Reset to kind</button>
+        </div>
+      </div>
     </details>
 
     <section class="sec">
@@ -195,8 +209,12 @@ uniform vec3 uAxis, uU, uW, uL;
 uniform float uRingOn, uRingIn, uRingOut, uRingOp, uRingGaps;
 uniform vec3 uRingCol, uRingCol2;
 uniform int uMoonN;
-uniform vec4 uMoon[5];
-uniform vec3 uMoonCol[5];
+uniform vec4 uMoon[5];      // xyz: position (planet radius = 1), w: radius
+uniform vec4 uMoonP[5];     // kind, detail, feature, atmosphere
+uniform vec4 uMoonQ[5];     // lumpiness, seed, turn about the planet's axis
+uniform vec3 uMoonCol[5];   // colour A
+uniform vec3 uMoonCol2[5];  // colour B
+uniform vec3 uMoonCol3[5];  // atmosphere colour
 
 const float PI = 3.14159265;
 const mat3 M3 = mat3(0.00, 0.80, 0.60, -0.80, 0.36, -0.48, -0.60, -0.48, 0.64);
@@ -351,14 +369,6 @@ vec3 gasAlbedo(vec3 q) {
   return col;
 }
 
-// --- clouds ----------------------------------------------------------------
-// This section is compiled only into the shader variants that draw clouds (PM_CLOUDS); the detail-only extras sit behind PM_HIQ.
-#ifdef PM_CLOUDS
-// Two decks, as on Earth. The low deck is the weather you see from orbit: cloud belts at the equator and mid latitudes,
-// a narrow ragged storm line along the equator (the ITCZ), clear subtropics that still hold scattered cumulus puffs,
-// cyclones with spiral arms, and small cells so the tops look like heaped cumulus instead of fog. The high deck is thin
-// ice cirrus: combed into long streaks along the jet streams, see-through, drifting faster, and still lit after the
-// ground has gone dark at dusk.
 // cell noise: distance to the nearest cell centre and to the wall between cells, searched like the crater grid (8 cells)
 vec2 cellF(vec3 x) {
   vec3 ip = floor(x), fp = fract(x), sd = step(0.5, fp);
@@ -371,6 +381,15 @@ vec2 cellF(vec3 x) {
   }
   return vec2(sqrt(d1), sqrt(d2) - sqrt(d1));   // distance to the nearest cell centre, distance to the cell wall
 }
+
+// --- clouds ----------------------------------------------------------------
+// This section is compiled only into the shader variants that draw clouds (PM_CLOUDS); the detail-only extras sit behind PM_HIQ.
+#ifdef PM_CLOUDS
+// Two decks, as on Earth. The low deck is the weather you see from orbit: cloud belts at the equator and mid latitudes,
+// a narrow ragged storm line along the equator (the ITCZ), clear subtropics that still hold scattered cumulus puffs,
+// cyclones with spiral arms, and small cells so the tops look like heaped cumulus instead of fog. The high deck is thin
+// ice cirrus: combed into long streaks along the jet streams, see-through, drifting faster, and still lit after the
+// ground has gone dark at dusk.
 vec3 rodrigues(vec3 v, vec3 k, float a) { float c = cos(a), s = sin(a); return v * c + cross(k, v) * s + k * dot(k, v) * (1.0 - c); }
 float cloudAt(vec3 q, float extra, int oct) {
   vec3 c0 = rotY(q, uCloudAng);
@@ -726,27 +745,124 @@ vec3 shadePlanet(vec3 p, out float shine) {
 }
 
 // --- moons -----------------------------------------------------------------
-void drawMoon(int i, vec2 uv, float px, inout vec3 col) {
-  vec4 m = uMoon[i];
+#ifdef PM_MOONS
+// Eight kinds, each modelled on something real (the page script lists them as MOON_TYPES). q is the unit direction on the
+// moon in its own frame; a surface returns its colour and any glow of its own (lava).
+void moonSurface(int ty, vec3 q, float sd, float detail, float feat, vec3 c1, vec3 c2, out vec3 alb, out vec3 emis) {
+  emis = vec3(0.0);
+  float base = fbm(q * 5.1 + sd, 4);
+  float cr = craters(q * 0.9 + sd, mix(0.12, 0.9, detail));
+  if (ty == 0) {
+    // cratered rock (the Moon, Mercury): pale highlands, dark plains filling the big basins
+    float maria = smoothstep(0.50, 0.60, fbm(q * 1.5 + sd * 1.3 + 9.0, 3)) * feat;
+    alb = mix(c1, c2, maria) * (0.72 + 0.5 * base) * (1.0 + cr * (0.15 + 0.35 * detail));
+  } else if (ty == 1) {
+    // dark ice-rock (Callisto, Iapetus): a dark crust, fresh ice splashed out of craters, one face darker than the other
+    float spots = clamp(cr * 1.4, 0.0, 1.0) * detail;
+    float hemi = smoothstep(-0.25, 0.35, q.x + 0.3 * (base - 0.5)) * feat;
+    alb = mix(c1, c2, clamp(max(spots, hemi), 0.0, 1.0)) * (0.75 + 0.5 * base);
+  } else if (ty == 2) {
+    // smooth ice (Europa, Enceladus): bright and nearly crater-free, cut by long dark cracks, with mottled chaos terrain
+    vec3 w = q * 2.4 + sd;
+    w += vec3(gnoise(w * 1.3), gnoise(w * 1.3 + 5.0), gnoise(w * 1.3 + 9.0)) * 0.5;
+    float r1 = 1.0 - abs(2.0 * fbm(w * 1.6 + 3.0, 3) - 1.0);
+    float r2 = 1.0 - abs(2.0 * fbm(w * 3.4 + 11.0, 3) - 1.0);
+    float cracks = clamp(smoothstep(0.90 - 0.07 * feat, 0.985, r1) + 0.6 * smoothstep(0.93 - 0.05 * feat, 0.99, r2), 0.0, 1.0) * feat;
+    float chaos = smoothstep(0.55, 0.72, fbm(q * 2.0 + sd + 21.0, 3)) * detail;
+    alb = mix(c1 * (0.92 + 0.16 * base), c2, clamp(cracks * 1.2 + chaos * 0.45, 0.0, 1.0)) * (1.0 - cr * 0.1);
+  } else if (ty == 3) {
+    // volcanic (Io): sulphur yellows and oranges, white frost, dark calderas; active vents glow
+    vec3 b = mix(c1, c2, smoothstep(0.35, 0.70, fbm(q * 2.2 + sd, 4)));
+    b = mix(b, vec3(0.93, 0.92, 0.82), smoothstep(0.68, 0.80, fbm(q * 3.5 + sd + 7.0, 3)) * 0.55);
+    vec2 cf = cellF(q * (3.0 + 4.0 * detail) + sd);
+    float vent = 1.0 - smoothstep(0.05, 0.12, cf.x);
+    float act = smoothstep(0.50, 0.72, fbm(q * 1.8 + sd + 31.0, 3)) * feat;
+    alb = mix(b * (0.85 + 0.3 * base), vec3(0.06, 0.04, 0.035), vent * 0.9);
+    emis = vec3(1.0, 0.36, 0.08) * (vent * act * 1.7 + smoothstep(0.12, 0.17, cf.x) * (1.0 - smoothstep(0.17, 0.24, cf.x)) * act * 0.5);
+  } else if (ty == 4) {
+    // hazy giant (Titan): a thick orange smog hides the ground, leaving soft bands and blotches
+    float band = fbm(vec3(q.x * 1.2, q.y * 6.0, q.z * 1.2) + sd, 3);
+    float blot = fbm(q * 2.4 + sd + 5.0, 3);
+    alb = mix(c1, c2, clamp(feat * (0.55 * band + 0.55 * smoothstep(0.35, 0.72, blot)) + (1.0 - feat) * 0.25, 0.0, 1.0)) * (0.9 + 0.2 * detail * (blot - 0.5));
+  } else if (ty == 5) {
+    // frozen plains (Pluto, Triton): cream nitrogen ice, a dark red band around the equator, a smooth bright lobe, bright poles
+    float latm = exp(-pow(q.y / 0.55, 2.0));
+    float dk = smoothstep(0.52, 0.66, fbm(q * 1.7 + sd + 13.0, 4) + 0.22 * latm) * feat;
+    float plains = smoothstep(0.50, 0.62, fbm(q * 1.3 + sd + 41.0, 3));
+    float tex = 0.88 + 0.24 * detail * (smoothstep(0.10, 0.50, cellF(q * 9.0 + sd).x) - 0.5) * (1.0 - plains);
+    vec3 a = mix(c1 * tex, c2 * (0.8 + 0.4 * base), dk * (1.0 - 0.85 * plains));
+    alb = mix(a, c1 * 1.08, smoothstep(0.72, 0.92, abs(q.y)) * 0.7) * (1.0 - cr * 0.08);
+  } else if (ty == 6) {
+    // captured rock (Phobos, Amalthea): dark and deeply cratered, pale where fresh rock is exposed, parallel grooves
+    float gr = smoothstep(0.88, 1.0, 0.5 + 0.5 * sin(dot(q, normalize(vec3(0.4, 0.2, 0.9))) * 40.0 + 3.0 * fbm(q * 3.0 + sd, 2)));
+    alb = mix(c1, c2, clamp(cr * 1.3 * detail, 0.0, 1.0)) * (0.6 + 0.7 * base) * (1.0 - 0.35 * gr * feat);
+  } else {
+    // living moon: ocean, land, polar ice and cloud
+    float h = fbm(q * 1.9 + sd, 5);
+    float sea = mix(0.35, 0.66, feat);
+    float land = smoothstep(sea, sea + 0.02, h);
+    vec3 ocean = mix(c1, c1 + vec3(0.04, 0.22, 0.2), exp(-max(sea - h, 0.0) * 18.0));
+    vec3 ground = mix(c2, c2 * 0.55 + vec3(0.18, 0.14, 0.08), smoothstep(0.4, 0.75, fbm(q * 4.0 + sd + 3.0, 3)));
+    vec3 a = mix(ocean, ground, land);
+    a = mix(a, vec3(0.93, 0.95, 0.98), smoothstep(0.78, 0.92, abs(q.y) + 0.1 * (base - 0.5)));
+    float cth = mix(0.78, 0.46, detail);
+    float cld = smoothstep(cth, cth + 0.16, fbm(vec3(q.x * 1.4, q.y * 3.4, q.z * 1.4) + sd + 17.0, 5));
+    alb = mix(a, vec3(0.95, 0.96, 0.98), cld * 0.92);
+  }
+}
+
+// Shades moon i once: mc is its colour with coverage in .a, add is glow to lay over the sky around it. main() composites it
+// before the planet when the moon is behind it and after when in front.
+void shadeMoon(int i, vec2 uv, float px, out vec4 mcOut, out vec3 add) {
+  mcOut = vec4(0.0); add = vec3(0.0);
+  vec4 m = uMoon[i], mp = uMoonP[i], mq = uMoonQ[i];
+  int ty = int(mp.x + 0.5);
+  float haze = mp.w, shape = mq.x;
   vec2 d = uv - m.xy;
-  float r = length(d) / m.w;
-  float cov = clamp((1.0 - r) * m.w / px + 0.5, 0.0, 1.0);
-  if (cov <= 0.0) return;
+  float ang = atan(d.y, d.x);
+  // lumpy outline for small captured rocks: a few low harmonics around the rim
+  float rr = 1.0 + shape * (0.17 * sin(2.0 * ang + mq.y * 6.0) + 0.08 * sin(3.0 * ang + mq.y * 11.0) + 0.05 * sin(5.0 * ang + mq.y * 17.0));
+  float rad = m.w * rr;
+  float r = length(d) / rad;
+  float cov = clamp((1.0 - r) * rad / px + 0.5, 0.0, 1.0);
+  vec3 sunV = uL;
+  float sunSide = dot(normalize(d + vec2(1e-5)), sunV.xy);
+  vec3 cen = m.xyz;
+  float bb = dot(cen, uL), cc = dot(cen, cen) - 1.0, dd = bb * bb - cc;
+  float shd0 = (dd > 0.0 && (-bb + sqrt(dd)) > 0.0 && cc > 0.0) ? 0.0 : 1.0;
+  if (cov <= 0.0) {
+    // atmosphere glow just outside the rim, on the sunlit side
+    if (haze > 0.0 && r < 1.0 + 0.22 * haze + 0.05) {
+      float g = exp(-(r - 1.0) / (0.025 + 0.05 * haze)) * haze * smoothstep(-0.55, 0.5, sunSide) * shd0;
+      add = uMoonCol3[i] * g * 0.8;
+    }
+    return;
+  }
   r = min(r, 0.9999);
-  vec3 n = vec3(d / m.w, sqrt(1.0 - r * r));
+  vec3 n = vec3(d / rad, sqrt(1.0 - r * r));
+  vec3 q = rotY(vec3(dot(n, uU), dot(n, uAxis), dot(n, uW)), mq.z);
+  float sd = mq.y * 0.37;
+  if (shape > 0.01) {   // lumps in the shading too, so the rock looks knobbly and not like a squashed ball
+    vec3 bump = vec3(gnoise(q * 3.5 + sd), gnoise(q * 3.5 + sd + 7.0), gnoise(q * 3.5 + sd + 13.0));
+    n = normalize(n + shape * 0.45 * bump);
+  }
+  vec3 alb, emis;
+  moonSurface(ty, q, sd, mp.y, mp.z, uMoonCol[i], uMoonCol2[i], alb, emis);
   vec3 pos = m.xyz + n * m.w;
-  vec3 bc = uMoonCol[i];
-  float fi = float(i) * 4.7 + uSeed;
-  vec3 sp = n * 3.0 + fi;
-  float tex = 0.72 + 0.5 * fbm(sp * 1.7, 4);
-  float cr = craters(n * 0.9 + fi, 0.5);
-  float lit = max(dot(n, uL), 0.0);
   float b = dot(pos, uL), c = dot(pos, pos) - 1.0, disc = b * b - c;
   float shd = 1.0;
   if (disc > 0.0 && (-b + sqrt(disc)) > 0.0 && c > 0.0) shd = 0.0;
-  vec3 mc = bc * tex * (1.0 + cr * 0.35) * (lit * 1.15 * shd + 0.02);
-  col = mix(col, mc, cov);
+  float ndl = dot(n, uL);
+  float lit = (ty == 4 || ty == 7) ? mix(max(ndl, 0.0), pow(clamp(ndl * 0.5 + 0.5, 0.0, 1.0), 2.2), 0.6 * (ty == 4 ? 1.0 : 0.5)) : max(ndl, 0.0);
+  vec3 mc = alb * (lit * 1.15 * shd + 0.02) + emis * (1.0 - 0.6 * lit * shd);
+  if (ty == 2) mc += vec3(1.0, 0.97, 0.92) * pow(max(dot(n, normalize(uL + vec3(0.0, 0.0, 1.0))), 0.0), 36.0) * 0.18 * shd;   // sheen on ice
+  if (haze > 0.0) {   // atmosphere seen edge-on over the limb
+    float rim = pow(1.0 - n.z, 2.6) * haze;
+    mc += uMoonCol3[i] * rim * (lit * 0.9 * shd + 0.06) * 0.8;
+  }
+  mcOut = vec4(mc, cov);
 }
+#endif
 
 vec3 stars(vec2 fc) {
   vec3 c = vec3(0.0);
@@ -770,7 +886,11 @@ void main() {
   float px = 2.0 / (uRes.y * uZoom);
   vec3 col = vec3(0.012, 0.014, 0.022) + stars(fc);
 
-  for (int i = 0; i < 5; i++) { if (i >= uMoonN) break; if (uMoon[i].z < 0.0) drawMoon(i, uv, px, col); }
+#ifdef PM_MOONS
+  vec4 MC[5]; vec3 MA[5];
+  for (int i = 0; i < 5; i++) { MC[i] = vec4(0.0); MA[i] = vec3(0.0); if (i >= uMoonN) break; shadeMoon(i, uv, px, MC[i], MA[i]); }
+  for (int i = 0; i < 5; i++) { if (i >= uMoonN) break; if (uMoon[i].z < 0.0) { col += MA[i]; col = mix(col, MC[i].rgb, MC[i].a); } }
+#endif
 
   float r = length(uv);
   float zp = (r < 1.0) ? sqrt(1.0 - r * r) : -1.0;
@@ -813,7 +933,9 @@ void main() {
   }
   if (ringA > 0.0 && ringFront) col = mix(col, ringC, ringA);
 
-  for (int i = 0; i < 5; i++) { if (i >= uMoonN) break; if (uMoon[i].z >= 0.0) drawMoon(i, uv, px, col); }
+#ifdef PM_MOONS
+  for (int i = 0; i < 5; i++) { if (i >= uMoonN) break; if (uMoon[i].z >= 0.0) { col += MA[i]; col = mix(col, MC[i].rgb, MC[i].a); } }
+#endif
 
   col = col / (1.0 + col * 0.08);
   fragColor = vec4(pow(clamp(col, 0.0, 1.0), vec3(0.96)), 1.0);
@@ -884,7 +1006,7 @@ const BASE = {
   bands: 9, turb: 0.6, storms: 2, stormSize: 1.0,
   spin: 0.25, cloudSpeed: 0.3, flow: 0.4, tilt: 22, roll: -12, sun: -55, sunH: 12, zoom: 1,
   ring: { on: false, inner: 1.35, width: 0.8, op: 0.55, gaps: 0.5, spin: 0.3, c1: '#cdb98f', c2: '#6f6048' },
-  moons: 1, moonSpeed: 0.6,
+  moons: 1, moonSpeed: 0.6, moonList: [],
 };
 const KIND_DEF = {
   terran: { wet: 0, pal: ['#1c4d8f', '#3f7a3c', '#7b7a45', '#8f7f6d', '#f1f5f9'], sea: 0.55, mount: 0.5, clouds: 0.5, haze: 0.65, hazeCol: '#78aaf2', ice: 0.3, cities: 0.3 },
@@ -962,7 +1084,7 @@ function buildControls() {
     row.innerHTML = `<label for="${id}">${label}</label><input type="range" id="${id}" min="${min}" max="${max}" step="${step}"><output></output>`;
     $(SEC_HOST[sec]).appendChild(row);
     const inp = row.querySelector('input'), out = row.querySelector('output');
-    inp.addEventListener('input', () => { set(key, parseFloat(inp.value)); refreshOut(c); if (key === 'moons') rebuildMoons(); if (key === 'tilt' || key === 'roll') {} });
+    inp.addEventListener('input', () => { set(key, parseFloat(inp.value)); refreshOut(c); if (key === 'moons') { const n0 = ensureMoons(); if (n0 > 0 && selMoon >= n0) selMoon = n0 - 1; rebuildMoons(); } if (key === 'tilt' || key === 'roll') {} });
     ctlEls[key] = { row, inp, out, c };
   }
 }
@@ -1007,29 +1129,152 @@ function syncControls() {
 }
 
 /* ---------- moons ---------- */
-let moons = [];
-function rebuildMoons() {
-  const r = rng(hashStr('moon' + P.seed));
-  moons = [];
-  const start = Math.max(1.55, P.ring.on ? P.ring.inner + P.ring.width + 0.3 : 1.55);
-  for (let i = 0, n = Math.min(5, Math.max(0, Math.round(P.moons) || 0)); i < n; i++) {
-    const tone = 0.45 + r() * 0.4, warm = r();
-    const base = mixHex('#8d8a85', '#a9876a', warm * 0.6);
-    moons.push({ ro: start + i * (0.3 + r() * 0.14) + r() * 0.1, size: 0.07 + r() * 0.16, ph: r() * 6.283, inc: (r() - 0.5) * 0.5, col: darken(base, 1 - tone), dir: 1 });
-  }
+// Eight kinds of moon, each modelled on something that really exists. The shader draws them in moonSurface(), in this order.
+// c: colour A, colour B, atmosphere colour; L: what colour A, colour B, the Detail slider and the Feature slider mean for this kind.
+const MOON_TYPES = [
+  { id: 'rock', name: 'Cratered rock', real: 'Earth\'s Moon, Mercury', note: 'Pale highlands pocked with craters, with smooth dark plains filling the big basins.',
+    c: ['#9b968e', '#4d4a46', '#bcc4d0'], L: ['Highlands', 'Dark plains', 'Craters', 'Dark plains'], d: { detail: 0.6, feat: 0.5, haze: 0, shape: 0 }, size: [0.08, 0.2] },
+  { id: 'dirty', name: 'Dark ice-rock', real: 'Callisto, Iapetus, Rhea', note: 'A very old dark crust with bright ice splashed out of the craters. Turn up the two-tone face for Iapetus.',
+    c: ['#4a3f38', '#d7d3cb', '#b9c3d1'], L: ['Dark crust', 'Bright ice', 'Bright craters', 'Two-tone face'], d: { detail: 0.6, feat: 0.0, haze: 0, shape: 0 }, size: [0.09, 0.22] },
+  { id: 'ice', name: 'Smooth ice', real: 'Europa, Enceladus', note: 'Bright water ice with almost no craters, cut by long dark cracks and patches of mottled chaos.',
+    c: ['#e7eef2', '#9b6a4f', '#cfe6ff'], L: ['Ice', 'Cracks', 'Mottling', 'Cracks'], d: { detail: 0.35, feat: 0.55, haze: 0.12, shape: 0 }, size: [0.08, 0.2] },
+  { id: 'volcanic', name: 'Volcanic', real: 'Io', note: 'Sulphur yellows and oranges, white frost, dark calderas. Active vents glow, most visible on the night side.',
+    c: ['#d9c24a', '#c2552a', '#f4d87a'], L: ['Sulphur', 'Lava flows', 'Vents', 'Eruptions'], d: { detail: 0.5, feat: 0.6, haze: 0.14, shape: 0 }, size: [0.1, 0.2] },
+  { id: 'hazy', name: 'Hazy giant', real: 'Titan', note: 'A thick orange smog hides the ground. Soft bands, a bright atmosphere around the rim, a soft day-night line.',
+    c: ['#d9a05a', '#8a5a2e', '#ff9a3c'], L: ['Haze top', 'Haze deep', 'Blotches', 'Bands'], d: { detail: 0.5, feat: 0.4, haze: 0.85, shape: 0 }, size: [0.2, 0.32] },
+  { id: 'frozen', name: 'Frozen plains', real: 'Pluto, Triton, Charon', note: 'Cream nitrogen ice with a dark red band around the equator, a smooth bright lobe, and bright poles.',
+    c: ['#e8d9c8', '#8c4a35', '#c8d8f0'], L: ['Ice', 'Dark patches', 'Texture', 'Dark patches'], d: { detail: 0.5, feat: 0.5, haze: 0.08, shape: 0 }, size: [0.1, 0.22] },
+  { id: 'asteroid', name: 'Captured rock', real: 'Phobos, Deimos, Amalthea', note: 'A small dark lump of rock, knobbly and deeply cratered, with parallel grooves. Not round at all.',
+    c: ['#5a534c', '#a79d90', '#ffffff'], L: ['Rock', 'Fresh rock', 'Craters', 'Grooves'], d: { detail: 0.7, feat: 0.5, haze: 0, shape: 0.75 }, size: [0.045, 0.1] },
+  { id: 'living', name: 'Living moon', real: 'A habitable moon of a giant planet', note: 'Ocean, land, polar ice and cloud, with a blue atmosphere. Rare, but it is what a settled moon would look like.',
+    c: ['#1f5a9a', '#4f8a45', '#7fb0ff'], L: ['Ocean', 'Land', 'Clouds', 'Ocean cover'], d: { detail: 0.5, feat: 0.6, haze: 0.6, shape: 0 }, size: [0.14, 0.26] },
+];
+const MOON_IDX = {}; MOON_TYPES.forEach((t, i) => { MOON_IDX[t.id] = i; });
+const MOON_RANGE = { size: [0.04, 0.5], orbit: [1.3, 4.2], speed: [-2, 3], tilt: [-60, 60], phase: [0, 360], detail: [0, 1], feat: [0, 1], haze: [0, 1], shape: [0, 1], spin: [-1, 1], seed: [0, 9999, 1] };
+const moonStart = (ring) => Math.max(1.55, ring && ring.on ? ring.inner + ring.width + 0.3 : 1.55);
+// A first guess for moon number i of a planet; the same seed always gives the same moon.
+function genMoon(seed, kind, i, hint, start) {
+  const r = rng(hashStr('moon' + seed + '_' + i));
+  const W = kind === 'gas' ? [16, 16, 18, 12, 10, 6, 18, 4] : [46, 10, 8, 4, 2, 4, 24, 2];
+  let t;
+  if (hint && MOON_IDX[hint] !== undefined) t = MOON_IDX[hint];
+  else { let x = r() * W.reduce((a, b) => a + b, 0); t = 0; while (t < 7 && x >= W[t]) { x -= W[t]; t++; } }
+  const T = MOON_TYPES[t];
+  const tone = (r() - 0.5) * 0.3, hue = (r() - 0.5) * ((T.id === 'volcanic' || T.id === 'living') ? 14 : 34);
+  const tint = (c) => shiftHue(tone > 0 ? lighten(c, tone) : darken(c, -tone), hue);
+  return {
+    type: T.id, size: lerp(T.size[0], T.size[1], r()), orbit: (start || 1.55) + i * (0.3 + r() * 0.14) + r() * 0.1, speed: 1, tilt: (r() - 0.5) * 28, phase: r() * 360,
+    c1: tint(T.c[0]), c2: tint(T.c[1]), c3: T.c[2], detail: T.d.detail, feat: T.d.feat, haze: T.d.haze, shape: T.d.shape, spin: 0, seed: 1 + Math.floor(r() * 9999),
+  };
 }
+// the description of a system sometimes says what its first moon is like
+function moonHint(t) {
+  if (/volcan|molten|fire|glowing|furnace/.test(t)) return 'volcanic';
+  if (/\bwhite\b|\bicy\b|\bice\b|frozen|snow/.test(t)) return 'ice';
+  if (/\bhaze\b|\bhazy\b|smog/.test(t)) return 'hazy';
+  if (/captured|asteroid|moonlet|pitted|scarred|quarried|honeycombed|hollowed/.test(t)) return 'asteroid';
+  if (/\bblack\b|\bdark\b|dust|covered|\bold\b/.test(t)) return 'dirty';
+  return null;
+}
+// the planet keeps a list of up to 5 moons; the slider decides how many are shown, so lowering and raising it keeps your edits
+function ensureMoons() {
+  if (!Array.isArray(P.moonList)) P.moonList = [];
+  const n = clamp(Math.round(P.moons) || 0, 0, 5);
+  while (P.moonList.length < n) P.moonList.push(genMoon(P.seed, P.kind, P.moonList.length, null, moonStart(P.ring)));
+  return n;
+}
+const activeMoons = () => P.moonList.slice(0, ensureMoons());
+function sanitizeMoon(m, d) {
+  const o = Object.assign({}, d);
+  if (m && MOON_IDX[m.type] !== undefined) o.type = m.type;
+  for (const k in MOON_RANGE) if (m && m[k] !== undefined) o[k] = clampNum(m[k], MOON_RANGE[k], d[k]);
+  for (const k of ['c1', 'c2', 'c3']) if (m && isHex(m[k])) o[k] = m[k];
+  return o;
+}
+let selMoon = 0;
+const MOON_CTL = [
+  ['size', 'Size', 0.04, 0.5, 0.01, (v) => v.toFixed(2)],
+  ['orbit', 'Distance', 1.3, 4.2, 0.01, (v) => v.toFixed(2)],
+  ['speed', 'Orbit speed', -2, 3, 0.01, (v) => (v < -0.01 ? 'back ' : '') + Math.abs(v).toFixed(2)],
+  ['tilt', 'Orbit tilt', -60, 60, 1, (v) => Math.round(v) + '°'],
+  ['phase', 'Start position', 0, 360, 1, (v) => Math.round(v) + '°'],
+  ['detail', 'Detail', 0, 1, 0.01, (v) => v.toFixed(2)],
+  ['feat', 'Feature', 0, 1, 0.01, (v) => v.toFixed(2)],
+  ['haze', 'Atmosphere', 0, 1, 0.01, (v) => v.toFixed(2)],
+  ['shape', 'Lumpy shape', 0, 1, 0.01, (v) => v.toFixed(2)],
+  ['spin', 'Own spin', -1, 1, 0.01, (v) => Math.abs(v) < 0.02 ? 'locked' : v.toFixed(2)],
+];
+const moonEls = {};
+function buildMoonUI() {
+  const host = $('ctlMoonEd');
+  for (const [key, label, min, max, step, fmt] of MOON_CTL) {
+    const row = document.createElement('div'); row.className = 'ctl';
+    row.innerHTML = `<label for="m_${key}">${label}</label><input type="range" id="m_${key}" min="${min}" max="${max}" step="${step}"><output></output>`;
+    host.appendChild(row);
+    const inp = row.querySelector('input'), out = row.querySelector('output');
+    inp.addEventListener('input', () => { const m = P.moonList[selMoon]; if (!m) return; m[key] = parseFloat(inp.value); out.textContent = fmt(m[key]); });
+    moonEls[key] = { row, inp, out, fmt, label: row.querySelector('label') };
+  }
+  const tp = $('moonTypes');
+  MOON_TYPES.forEach((t) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.mt = t.id;
+    b.innerHTML = `${esc(t.name)}<small>${esc(t.real)}</small>`;
+    b.addEventListener('click', () => { const m = P.moonList[selMoon]; if (!m) return; applyMoonType(m, t.id); syncMoonUI(); });
+    tp.appendChild(b);
+  });
+  $('moonNew').addEventListener('click', () => {
+    const m = P.moonList[selMoon]; if (!m) return;
+    const g = genMoon(Math.floor(Math.random() * 99999), 'x', 0, m.type, 1.55);
+    m.seed = g.seed; m.c1 = g.c1; m.c2 = g.c2; syncMoonUI();
+  });
+  $('moonReset').addEventListener('click', () => { const m = P.moonList[selMoon]; if (m) { applyMoonType(m, m.type); syncMoonUI(); } });
+}
+// switching kind keeps where the moon is and how big it is, and takes the new kind's colours and character
+function applyMoonType(m, id) {
+  const T = MOON_TYPES[MOON_IDX[id]];
+  m.type = id; m.c1 = T.c[0]; m.c2 = T.c[1]; m.c3 = T.c[2];
+  m.detail = T.d.detail; m.feat = T.d.feat; m.haze = T.d.haze; m.shape = T.d.shape;
+}
+function syncMoonUI() {
+  const n = ensureMoons();
+  $('moonPick').hidden = n === 0;
+  if (n === 0) return;
+  selMoon = clamp(selMoon, 0, n - 1);
+  const tabs = $('moonTabs'); tabs.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip';
+    b.setAttribute('aria-pressed', String(i === selMoon));
+    b.innerHTML = `Moon ${i + 1}<small>${esc(MOON_TYPES[MOON_IDX[P.moonList[i].type]].name)}</small>`;
+    b.addEventListener('click', () => { selMoon = i; syncMoonUI(); });
+    tabs.appendChild(b);
+  }
+  const m = P.moonList[selMoon], T = MOON_TYPES[MOON_IDX[m.type]];
+  document.querySelectorAll('#moonTypes .chip').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mt === m.type)));
+  $('moonNote').textContent = T.note;
+  for (const [key] of MOON_CTL) { const e = moonEls[key]; e.inp.value = m[key]; e.out.textContent = e.fmt(m[key]); }
+  moonEls.detail.label.textContent = T.L[2]; moonEls.feat.label.textContent = T.L[3];
+  const sw = $('swMoon'); sw.innerHTML = '';
+  [['c1', T.L[0]], ['c2', T.L[1]], ['c3', 'Atmosphere']].forEach(([k, l]) => {
+    const d = document.createElement('label'); d.className = 'sw';
+    d.innerHTML = `<input type="color" value="${m[k]}" aria-label="${esc(l)}"><span>${esc(l)}</span>`;
+    d.querySelector('input').addEventListener('input', (ev) => { m[k] = ev.target.value; });
+    sw.appendChild(d);
+  });
+}
+function rebuildMoons() { syncMoonUI(); }
 
 /* ---------- GL ---------- */
 const cv = $('cv');
 const gl = cv.getContext('webgl2', { antialias: false, alpha: false, preserveDrawingBuffer: false });
 let prog, loc = {}, glOK = !!gl;
 // The fragment shader is compiled in variants so work a planet does not use costs nothing: PM_CLOUDS only when the planet
-// draws clouds (not gas giants, not Clouds = 0), PM_HIQ only in High detail (high cirrus deck, small cells, streaks, relief).
+// draws clouds (not gas giants, not Clouds = 0), PM_HIQ only in High detail (high cirrus deck, small cells, streaks, relief),
+// PM_MOONS only when at least one moon is on.
 const progs = {};
 let vbuf = null;
 function makeProgram(key) {
   const mk = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(s)); throw new Error('shader: ' + gl.getShaderInfoLog(s)); } return s; };
-  const defs = (key.indexOf('C') >= 0 ? '#define PM_CLOUDS\n' : '') + (key.indexOf('H') >= 0 ? '#define PM_HIQ\n' : '');
+  const defs = (key.indexOf('C') >= 0 ? '#define PM_CLOUDS\n' : '') + (key.indexOf('H') >= 0 ? '#define PM_HIQ\n' : '') + (key.indexOf('M') >= 0 ? '#define PM_MOONS\n' : '');
   const pr = gl.createProgram();
   gl.attachShader(pr, mk(gl.VERTEX_SHADER, $('vs').textContent.trim()));
   gl.attachShader(pr, mk(gl.FRAGMENT_SHADER, $('fs').textContent.trim().replace('#version 300 es', '#version 300 es\n' + defs)));
@@ -1069,12 +1314,13 @@ function draw(w, h, tmul) {
   const sd = P.sun * D, sh = P.sunH * D;
   const L = [Math.sin(sd) * Math.cos(sh), Math.sin(sh), Math.cos(sd) * Math.cos(sh)];
   const ringOut = P.ring.inner + P.ring.width;
-  const mx = moons.reduce((m, o) => Math.max(m, o.ro + o.size), 0);
+  const mm = activeMoons();
+  const mx = mm.reduce((m, o) => Math.max(m, o.orbit + o.size), 0);
   const extent = Math.max(1.3, P.ring.on ? ringOut * 1.04 : 0, mx * 0.95);
   const aspect = w / h;
   const extentV = Math.max(1.3, P.ring.on ? ringOut * 0.72 : 0, mx * 0.75);
   const zoom = Math.min(aspect * 0.92 / extent, 0.92 / extentV) * P.zoom;
-  useVariant((P.kind !== 'gas' && P.clouds > 0.01 ? 'C' : '') + (quality ? 'H' : ''));
+  useVariant((P.kind !== 'gas' && P.clouds > 0.01 ? 'C' : '') + (quality ? 'H' : '') + (mm.length ? 'M' : ''));
   gl.viewport(0, 0, w, h);
   gl.uniform2f(loc.uRes, w, h); gl.uniform1f(loc.uZoom, zoom);
   gl.uniform1i(loc.uType, KIND_TYPE(P.kind));
@@ -1089,18 +1335,26 @@ function draw(w, h, tmul) {
   f('uRingOn', P.ring.on ? 1 : 0); f('uRingIn', P.ring.inner); f('uRingOut', ringOut); f('uRingOp', P.ring.op); f('uRingGaps', P.ring.gaps);
   gl.uniform3fv(loc.uRingCol, hex2rgb(P.ring.c1)); gl.uniform3fv(loc.uRingCol2, hex2rgb(P.ring.c2));
   // moons in world space, far to near
-  const ms = moons.map((m) => {
-    const a = m.ph + T.moon * 0.35 / Math.pow(m.ro, 1.5);
-    const x = Math.cos(a) * m.ro, z0 = Math.sin(a) * m.ro;
-    const y = z0 * Math.sin(m.inc), z = z0 * Math.cos(m.inc);
+  const ms = mm.map((m) => {
+    const a = m.phase * D + T.moon * 0.35 * m.speed / Math.pow(m.orbit, 1.5);
+    const inc = m.tilt * D;
+    const x = Math.cos(a) * m.orbit, z0 = Math.sin(a) * m.orbit;
+    const y = z0 * Math.sin(inc), z = z0 * Math.cos(inc);
     const wp = [U[0] * x + A[0] * y + W[0] * z, U[1] * x + A[1] * y + W[1] * z, U[2] * x + A[2] * y + W[2] * z];
-    return { wp, m };
+    return { wp, m, a };
   }).sort((p, q) => p.wp[2] - q.wp[2]);
-  const mv = new Float32Array(20), mc = new Float32Array(15);
+  const mv = new Float32Array(20), mp = new Float32Array(20), mq = new Float32Array(20), mc1 = new Float32Array(15), mc2 = new Float32Array(15), mc3 = new Float32Array(15);
   ms.length = Math.min(ms.length, 5);
-  ms.forEach((o, i) => { mv.set([...o.wp, o.m.size], i * 4); mc.set(hex2rgb(o.m.col), i * 3); });
+  ms.forEach((o, i) => {
+    const m = o.m;
+    mv.set([...o.wp, m.size], i * 4);
+    mp.set([MOON_IDX[m.type] || 0, m.detail, m.feat, m.haze], i * 4);
+    mq.set([m.shape, m.seed, o.a + T.moon * m.spin * 0.5, 0], i * 4);   // turning with the orbit keeps one face to the planet
+    mc1.set(hex2rgb(m.c1), i * 3); mc2.set(hex2rgb(m.c2), i * 3); mc3.set(hex2rgb(m.c3), i * 3);
+  });
   gl.uniform1i(loc.uMoonN, ms.length);
-  gl.uniform4fv(loc['uMoon'], mv); gl.uniform3fv(loc['uMoonCol'], mc);
+  gl.uniform4fv(loc['uMoon'], mv); gl.uniform4fv(loc['uMoonP'], mp); gl.uniform4fv(loc['uMoonQ'], mq);
+  gl.uniform3fv(loc['uMoonCol'], mc1); gl.uniform3fv(loc['uMoonCol2'], mc2); gl.uniform3fv(loc['uMoonCol3'], mc3);
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 }
 
@@ -1245,6 +1499,8 @@ function derive(s) {
     P2.ring.c1 = lighten(pal[2], 0.3); P2.ring.c2 = darken(pal[1], 0.3);
     if (/debris|rock|hull|hauler/.test(ringTxt)) { P2.ring.c1 = '#a69b8c'; P2.ring.c2 = '#5c554c'; P2.ring.gaps = 0.8; }
   }
+  const hint = moonHint(mo);
+  P2.moonList = Array.from({ length: P2.moons }, (_, i) => genMoon(P2.seed, P2.kind, i, i === 0 ? hint : null, moonStart(P2.ring)));
   const r = rng(hashStr(s.n));
   P2.tilt = 14 + r() * 28; P2.roll = (r() - 0.5) * 50; P2.sun = -(35 + r() * 50) * (r() < 0.75 ? 1 : -1);
   P2.spin = (0.12 + r() * 0.3) * (r() < 0.9 ? 1 : -1);
@@ -1265,7 +1521,7 @@ const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 
 /* ---------- presets: library, code, files ---------- */
 const slug = (t) => (t || 'planet').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48) || 'planet';
-const toCode = () => JSON.stringify({ format: 'praedra-planet', v: 1, name: P.name, params: P });
+const toCode = () => JSON.stringify({ format: 'praedra-planet', v: 1, name: P.name, params: Object.assign({}, P, { moonList: activeMoons() }) });
 // pasted presets are untrusted: clamp every number to its slider range, check colours, fill gaps from the defaults
 const PARAM_RANGE = {
   sea: [0, 1], wet: [-1, 1], mount: [0, 1], scale: [0.5, 2.5], ice: [0, 1], clouds: [0, 1], haze: [0, 1.3], cities: [0, 1], lava: [0, 1], craters: [0, 1], scars: [0, 1],
@@ -1287,6 +1543,10 @@ function sanitize(p, d) {
   const pal = Array.isArray(p.pal) ? p.pal : [];
   out.pal = d.pal.map((c, i) => isHex(pal[i]) ? pal[i] : c);
   if (isHex(p.hazeCol)) out.hazeCol = p.hazeCol;
+  if (Array.isArray(p.moonList)) {
+    out.moonList = p.moonList.slice(0, 5).map((m, i) => sanitizeMoon(m && typeof m === 'object' ? m : {}, genMoon(out.seed, out.kind, i, null, moonStart(out.ring))));
+    if (p.moons === undefined) out.moons = out.moonList.length;
+  }
   out.name = typeof p.name === 'string' ? p.name.slice(0, 60) : '';
   return out;
 }
@@ -1371,12 +1631,13 @@ function boot() {
     chips.appendChild(b);
   });
   buildControls();
+  buildMoonUI();
   const dl = $('sysList');
   SYSTEMS.forEach((s, i) => { sysByName.set(s.n.toLowerCase(), i); const o = document.createElement('option'); o.value = s.n; o.label = s.sec; dl.appendChild(o); });
   $('sysIn').addEventListener('change', () => { const i = sysByName.get($('sysIn').value.trim().toLowerCase()); if (i !== undefined) loadSystem(i); else toast('No system with that name'); });
   $('btnPrev').addEventListener('click', () => loadSystem(sysIdx < 0 ? SYSTEMS.length - 1 : sysIdx - 1));
   $('btnNext').addEventListener('click', () => loadSystem(sysIdx + 1));
-  $('btnSeed').addEventListener('click', () => { P.seed = 1 + Math.floor(Math.random() * 9999); rebuildMoons(); });
+  $('btnSeed').addEventListener('click', () => { P.seed = 1 + Math.floor(Math.random() * 9999); P.moonList = []; rebuildMoons(); });
   $('btnSurprise').addEventListener('click', surprise);
   $('ringOn').addEventListener('change', (e) => { P.ring.on = e.target.checked; syncControls(); });
   $('pName').addEventListener('input', (e) => { P.name = e.target.value; $('tagName').textContent = P.name || 'Unnamed'; });
@@ -1398,7 +1659,7 @@ function boot() {
   try { initGL(); } catch (e) { glOK = false; document.querySelector('.hint').textContent = 'Shader error: ' + e.message; console.error(e); return; }
   requestAnimationFrame(loop);
 }
-window.__pm = { get P() { return P; }, setP(p) { P = p; syncControls(); }, derive, loadSystem, SYSTEMS, classify, makeDefaults, KINDS, setKind, frame, T, draw: () => draw(cv.width, cv.height), pause(v) { paused = v; }, freeze(v) { frozen = v; }, setQ(v) { quality = v; }, fromCode };
+window.__pm = { get P() { return P; }, setP(p) { P = p; syncControls(); }, derive, loadSystem, SYSTEMS, classify, makeDefaults, KINDS, setKind, frame, T, draw: () => draw(cv.width, cv.height), pause(v) { paused = v; }, freeze(v) { frozen = v; }, setQ(v) { quality = v; }, fromCode, MOON_TYPES, ensureMoons, syncMoonUI, selectMoon(i) { selMoon = i; syncMoonUI(); } };
 boot();
 })();
 </script>
