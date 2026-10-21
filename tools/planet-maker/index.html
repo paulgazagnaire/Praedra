@@ -352,6 +352,8 @@ vec3 gasAlbedo(vec3 q) {
 }
 
 // --- clouds ----------------------------------------------------------------
+// This section is compiled only into the shader variants that draw clouds (PM_CLOUDS); the detail-only extras sit behind PM_HIQ.
+#ifdef PM_CLOUDS
 // Two decks, as on Earth. The low deck is the weather you see from orbit: cloud belts at the equator and mid latitudes,
 // a narrow ragged storm line along the equator (the ITCZ), clear subtropics that still hold scattered cumulus puffs,
 // cyclones with spiral arms, and small cells so the tops look like heaped cumulus instead of fog. The high deck is thin
@@ -380,6 +382,9 @@ float cloudAt(vec3 q, float extra, int oct) {
   vec3 hw = hash33(vec3(uSeed * 0.37, 1.3, 5.7));
   float arms = 0.0;
   for (int i = 0; i < 8; i++) {
+#ifndef PM_HIQ
+    if ((i & 1) == 1) continue;   // Fast: two cyclones per hemisphere instead of four
+#endif
     vec3 h = hash33(vec3(float(i) * 2.3 + uSeed * 0.7, 4.1, 8.8));
     float hem = (i < 4) ? 1.0 : -1.0;
     float lo = h.x * 6.2831, la = (0.50 + 0.50 * h.y) * hem;
@@ -402,7 +407,9 @@ float cloudAt(vec3 q, float extra, int oct) {
               + 0.10 * exp(-pow((L - 0.80) / 0.15, 2.0)) + 0.03 * smoothstep(0.88, 1.0, L);
   vec3 cw = rotY(c, 1.4 * abs(c.y));   // fronts lean the same way in both hemispheres (mirrored), as Coriolis bends them
   vec3 w = cw * vec3(2.0, 3.2, 2.0) + so + 5.0;
+#ifdef PM_HIQ
   w += vec3(gnoise(w * 1.1), gnoise(w * 1.1 + 7.0), gnoise(w * 1.1 + 13.0)) * 0.40;
+#endif
   float cl = fbm(w * 1.0, oct) + zonal + 0.30 * arms;
   vec3 wd = c0 * vec3(2.0, 3.0, 2.0) + so + 11.0;
   float det = fbm(wd * 7.0 + 3.0, 3);
@@ -413,9 +420,12 @@ float cloudAt(vec3 q, float extra, int oct) {
   float front = exp(-pow((L - track) / 0.055, 2.0));
   float fshape = 0.15 + 1.4 * smoothstep(0.30, 0.70, fbm(vec3(cos(lon), sin(lon), hs * 0.7 + L * 2.0) * 1.9 + so + 37.0, 3));   // storms are separate systems along the track
   cl += 0.28 * front * fshape;
+#ifdef PM_HIQ
   // feathery streaks drawn out along the flow (stretched noise; the cyclone swirl twists them into tails)
   float midw = smoothstep(0.25, 0.55, L) * (1.0 - 0.6 * smoothstep(0.85, 1.0, L));
   cl += 0.20 * midw * (fbm(cw * vec3(1.5, 7.5, 1.5) + so + 53.0, 3) - 0.5);
+#endif
+#ifdef PM_HIQ
   // small cells: heaped tops everywhere, and in the subtropics broad sheets and fields of low cloud
   float sub = exp(-pow((L - 0.40) / 0.15, 2.0));
   vec3 wc = c * vec3(1.0, 1.4, 1.0) * 22.0 + so + 40.0;
@@ -423,9 +433,14 @@ float cloudAt(vec3 q, float extra, int oct) {
   float puff = 1.0 - smoothstep(0.10, 0.62, cellF(wc).x);
   float clump = smoothstep(0.38, 0.62, fbm(c * vec3(2.2, 2.8, 2.2) + so + 47.0, 3));
   cl += (0.05 + 0.14 * sub * clump) * (puff - 0.40) + 0.12 * sub * clump;
+#endif
   // the storm line along the equator, broken into clusters
   float itcz = exp(-pow((c0.y - 0.03 + 0.05 * gnoise(c0 * vec3(3.0, 1.0, 3.0) + so + 29.0)) / 0.07, 2.0));
+#ifdef PM_HIQ
   cl += 0.30 * itcz * (0.05 + 1.3 * smoothstep(0.45, 0.70, fbm(c0 * vec3(4.0, 2.0, 4.0) + so + 19.0, 3)));
+#else
+  cl += 0.15 * itcz;
+#endif
   float thr = mix(0.83, 0.34, clamp(uClouds + extra, 0.0, 1.0));
   return clamp(smoothstep(thr, thr + 0.20, cl) * (0.78 + 0.44 * det), 0.0, 1.0);
 }
@@ -446,6 +461,7 @@ float cirrusAt(vec3 q, float extra, int oct) {
   jets *= 1.0 - 0.7 * smoothstep(0.82, 1.0, L);
   return smoothstep(0.28, 0.66, veil) * zone * (0.30 + 0.70 * smoothstep(0.30, 0.72, hair)) * jets;
 }
+#endif
 
 // --- big cities: planned corridors and hubs ---------------------------------
 // Highways are great circles across the planet; hubs sit where two highways cross and carry
@@ -651,19 +667,23 @@ vec3 shadePlanet(vec3 p, out float shine) {
       albedo = mix(albedo, vec3(0.07, 0.07, 0.08), clamp(netL * 0.9, 0.0, 0.85) * ub * ub);
       n = normalize(mix(n, p, ub * 0.8));
     }
+#ifdef PM_CLOUDS
     float extra = (uType == 2) ? 0.35 * smoothstep(0.2, 0.9, cth) - 0.35 * smoothstep(0.0, -0.5, cth) : 0.0;
     // clouds follow the water: deserts stay clearer, wet land and open sea carry more
     if (uBiome > 0.5) extra += (landMask > 0.5) ? (habM - 0.45) * 0.45 : 0.06;
     if (uClouds > 0.01) {
       cloudD = cloudAt(q, extra, OCT(6));
+#ifdef PM_HIQ
       cirD = cirrusAt(normalize(q + vq * 0.035), extra, OCT(5));   // it floats higher, so it shifts against the low deck
-      if (uQ > 0.5) {
+      {
         // one tap toward the sun serves both: relief (is there more cloud on the sun side?) and the ground shadow, thrown further at a low sun
         float cloudG = cloudAt(normalize(q + lq * (0.014 + 0.03 * (1.0 - clamp(ndl, 0.0, 1.0)))), extra, 4);
         cloudS = cloudG;
         albedo *= 1.0 - 0.30 * smoothstep(0.15, 0.8, cloudG) * (1.0 - smoothstep(0.0, 0.8, cloudD));
       }
+#endif
     }
+#endif
   }
 
   float diffS = max(dot(n, uL), 0.0);
@@ -1003,20 +1023,35 @@ function rebuildMoons() {
 const cv = $('cv');
 const gl = cv.getContext('webgl2', { antialias: false, alpha: false, preserveDrawingBuffer: false });
 let prog, loc = {}, glOK = !!gl;
+// The fragment shader is compiled in variants so work a planet does not use costs nothing: PM_CLOUDS only when the planet
+// draws clouds (not gas giants, not Clouds = 0), PM_HIQ only in High detail (high cirrus deck, small cells, streaks, relief).
+const progs = {};
+let vbuf = null;
+function makeProgram(key) {
+  const mk = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(s)); throw new Error('shader: ' + gl.getShaderInfoLog(s)); } return s; };
+  const defs = (key.indexOf('C') >= 0 ? '#define PM_CLOUDS\n' : '') + (key.indexOf('H') >= 0 ? '#define PM_HIQ\n' : '');
+  const pr = gl.createProgram();
+  gl.attachShader(pr, mk(gl.VERTEX_SHADER, $('vs').textContent.trim()));
+  gl.attachShader(pr, mk(gl.FRAGMENT_SHADER, $('fs').textContent.trim().replace('#version 300 es', '#version 300 es\n' + defs)));
+  gl.bindAttribLocation(pr, 0, 'a');
+  gl.linkProgram(pr);
+  if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
+  const l = {};
+  const n = gl.getProgramParameter(pr, gl.ACTIVE_UNIFORMS);
+  for (let i = 0; i < n; i++) { const info = gl.getActiveUniform(pr, i); l[info.name.replace('[0]', '')] = gl.getUniformLocation(pr, info.name); }
+  return { pr, l };
+}
+function useVariant(key) {
+  if (!progs[key]) progs[key] = makeProgram(key);
+  prog = progs[key].pr; loc = progs[key].l;
+  gl.useProgram(prog);
+}
 function initGL() {
   if (!gl) return;
-  const mk = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(s)); throw new Error('shader: ' + gl.getShaderInfoLog(s)); } return s; };
-  prog = gl.createProgram();
-  gl.attachShader(prog, mk(gl.VERTEX_SHADER, $('vs').textContent.trim()));
-  gl.attachShader(prog, mk(gl.FRAGMENT_SHADER, $('fs').textContent.trim()));
-  gl.linkProgram(prog);
-  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
-  gl.useProgram(prog);
-  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  useVariant('H');
+  vbuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vbuf);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-  const a = gl.getAttribLocation(prog, 'a'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
-  const n = gl.getProgramParameter(prog, gl.ACTIVE_UNIFORMS);
-  for (let i = 0; i < n; i++) { const info = gl.getActiveUniform(prog, i); loc[info.name.replace('[0]', '')] = gl.getUniformLocation(prog, info.name); }
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 }
 const KIND_TYPE = (k) => k === 'gas' ? 1 : k === 'locked' ? 2 : 0;
 
@@ -1039,6 +1074,7 @@ function draw(w, h, tmul) {
   const aspect = w / h;
   const extentV = Math.max(1.3, P.ring.on ? ringOut * 0.72 : 0, mx * 0.75);
   const zoom = Math.min(aspect * 0.92 / extent, 0.92 / extentV) * P.zoom;
+  useVariant((P.kind !== 'gas' && P.clouds > 0.01 ? 'C' : '') + (quality ? 'H' : ''));
   gl.viewport(0, 0, w, h);
   gl.uniform2f(loc.uRes, w, h); gl.uniform1f(loc.uZoom, zoom);
   gl.uniform1i(loc.uType, KIND_TYPE(P.kind));
