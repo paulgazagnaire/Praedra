@@ -42,7 +42,10 @@ The shader is GLSL ES 3.00 with no tricks. Porting to a Godot `.gdshader` is a m
 The page has a Detail: High / Fast button (not part of a preset). High uses more noise layers, cloud shadows and a third crater size; Fast drops them for slower graphics cards.
 
 ## Inhabited worlds (cities slider)
-Every world with Cities above zero draws the same planned network, and the slider sets how much is built: low = a few small districts and short highways, high = a whole built-up planet. It draws a planned network: long highways, hubs where highways cross (nested squares or pentagons, never circles), and a fine street grid only inside lit districts, with dark land between them. Seed changes the layout. By day the same districts are paved grey with dark streets and hub outlines, so the city matches its night lights. The look is fixed by the shader, not by a preset value beyond `cities`.
+Every world with Cities above zero gets one population density field, and both sides of the planet draw from it, so a place that glows at night is built up by day. People settle coasts first (and basins on worlds with no sea), then lowlands with a mild climate and some water; hot, dry, cold or high land stays empty. The slider sets how far they spread: low = a few coastal towns, high = most of the land, 0.7 and up = a whole built-up planet (hubs and highways everywhere).
+- Night: dense lights in the cores, a dim glow and scattered villages in the farmland around them, planned highways, avenues and square or pentagon hubs inside built-up land.
+- Day: grey paved districts with dark streets and hub outlines, farmland patchwork around them (irrigation discs on dry worlds), none on airless rock.
+Seed changes the layout. The look is fixed by the shader, not by a preset value beyond `cities`.
 
 ## Known limits
 - The system presets are a first guess read from each description (colours, moons, rings). Expect to adjust some by hand.
