@@ -352,14 +352,30 @@ vec3 gasAlbedo(vec3 q) {
 }
 
 // --- clouds ----------------------------------------------------------------
+// Weather in three layers: where it clouds up (wet belts at the equator and mid latitudes, clear subtropics),
+// cyclones that curl the cloud into spirals, and fine ragged edges so thin cloud breaks into wisps.
+vec3 rodrigues(vec3 v, vec3 k, float a) { float c = cos(a), s = sin(a); return v * c + cross(k, v) * s + k * dot(k, v) * (1.0 - c); }
 float cloudAt(vec3 q, float extra, int oct) {
   vec3 c = rotY(q, uCloudAng);
   vec3 so = sOff();
-  vec3 w = c * vec3(2.0, 2.9, 2.0) + so + 5.0;
-  w += vec3(gnoise(w * 1.3), gnoise(w * 1.3 + 7.0), gnoise(w * 1.3 + 13.0)) * 0.9;
-  float cl = fbm(w * 1.5, oct);
+  float L = abs(c.y);
+  // cyclones: a few per hemisphere in the mid latitudes, turning opposite ways north and south
+  for (int i = 0; i < 6; i++) {
+    vec3 h = hash33(vec3(float(i) * 2.3 + uSeed * 0.7, 4.1, 8.8));
+    float lon = h.x * 6.2831, la = (0.55 + 0.45 * h.y) * ((i < 3) ? 1.0 : -1.0);
+    vec3 k = vec3(cos(la) * cos(lon), sin(la), cos(la) * sin(lon));
+    float d2 = 1.0 - dot(c, k);
+    float r = 0.07 + 0.08 * h.z;
+    c = rodrigues(c, k, ((i < 3) ? 1.0 : -1.0) * 1.5 * exp(-d2 / r));
+  }
+  float band = 0.62 + 0.34 * exp(-pow(L / 0.17, 2.0)) + 0.30 * exp(-pow((L - 0.70) / 0.17, 2.0)) - 0.34 * exp(-pow((L - 0.40) / 0.11, 2.0));
+  vec3 w = c * vec3(2.0, 3.2, 2.0) + so + 5.0;
+  w += vec3(gnoise(w * 1.1), gnoise(w * 1.1 + 7.0), gnoise(w * 1.1 + 13.0)) * 0.40;
+  float cl = fbm(w * 1.0, oct) * (0.62 + 0.76 * band);
+  float det = fbm(w * 7.0 + 3.0, 3);
+  cl += 0.20 * (det - 0.5);
   float thr = mix(0.80, 0.42, clamp(uClouds + extra, 0.0, 1.0));
-  return smoothstep(thr, thr + 0.2, cl);
+  return clamp(smoothstep(thr, thr + 0.40, cl) * (0.72 + 0.56 * det), 0.0, 1.0);
 }
 
 // --- big cities: planned corridors and hubs ---------------------------------
@@ -438,7 +454,7 @@ vec3 shadePlanet(vec3 p, out float shine) {
   float ndl = dot(p, uL);
   float nz = p.z;
   vec3 albedo; vec3 n = p; vec3 emis = vec3(0.0);
-  float cloudD = 0.0; float landMask = 1.0; float night = smoothstep(0.10, -0.14, ndl);
+  float cloudD = 0.0, cloudS = 0.0; float landMask = 1.0; float night = smoothstep(0.10, -0.14, ndl);
 
   if (uType == 1) {
     albedo = gasAlbedo(q) * (0.62 + 0.38 * nz);
@@ -567,8 +583,8 @@ vec3 shadePlanet(vec3 p, out float shine) {
     if (uClouds > 0.01) {
       cloudD = cloudAt(q, extra, OCT(6));
       if (uQ > 0.5) {
-        float shd = cloudAt(normalize(q + lq * 0.04), extra, 4);
-        albedo *= 1.0 - 0.45 * shd * (1.0 - cloudD);
+        cloudS = cloudAt(normalize(q + lq * 0.03), extra, 4);
+        albedo *= 1.0 - 0.40 * smoothstep(0.15, 0.8, cloudS) * (1.0 - smoothstep(0.0, 0.8, cloudD));
       }
     }
   }
@@ -591,9 +607,12 @@ vec3 shadePlanet(vec3 p, out float shine) {
     vec3 hv = normalize(uL + vec3(0.0, 0.0, 1.0));
     surf += vec3(1.0, 0.95, 0.85) * pow(max(dot(n, hv), 0.0), 150.0) * 0.5 * shine * sh;
   }
-  vec3 cloudC = vec3(0.96, 0.97, 1.0) * (diffC * 1.15 * sh + 0.025);
+  // thick cloud is bright, thin cloud greyer; the side facing the sun is lit, the far side sits in its own shadow
+  float lit = (uQ > 0.5) ? clamp(0.78 + (cloudD - cloudS) * 0.75, 0.55, 1.08) : 1.0;
+  float thick = mix(0.80, 1.0, smoothstep(0.2, 0.9, cloudD));
+  vec3 cloudC = vec3(0.96, 0.97, 1.0) * (max(ndl + 0.05, 0.0) * 1.15 * sh * lit * thick + 0.025);
   cloudC = mix(cloudC, cloudC * vec3(1.0, 0.82, 0.72), smoothstep(0.25, 0.0, ndl) * 0.5);
-  vec3 col = mix(surf, cloudC, cloudD * 0.94);
+  vec3 col = mix(surf, cloudC, smoothstep(0.0, 0.8, cloudD) * 0.95);
   col += emis * (1.0 - cloudD * 0.85);
   // atmosphere: blue edge on the lit side, red band along the day-night line
   float rim = pow(1.0 - nz, 3.0);

@@ -47,6 +47,9 @@ Every world with Cities above zero gets one population density field, and both s
 - Day: grey paved districts with dark streets and hub outlines, farmland patchwork around them (irrigation discs on dry worlds), none on airless rock.
 Seed changes the layout. The look is fixed by the shader, not by a preset value beyond `cities`.
 
+## Clouds
+Clouds follow the weather of a real planet: wet belts at the equator and mid latitudes, clear subtropics, and a few cyclones per hemisphere that curl the cloud into spirals (opposite ways north and south). Thick cloud is bright, thin cloud is grey and translucent with ragged edges, and the side facing the sun is lit while the far side sits in its own shadow. High detail adds the shading and the cloud shadows on the ground. The Clouds slider sets how much of the sky is covered; Cloud drift moves the whole pattern.
+
 ## Known limits
 - The system presets are a first guess read from each description (colours, moons, rings). Expect to adjust some by hand.
 - The whole planet is one pass; moons do not cast shadows on the planet, and rings do not light moons.
