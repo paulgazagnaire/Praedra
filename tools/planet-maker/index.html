@@ -988,6 +988,17 @@ void shadeMoon(int i, vec2 uv, float px, out vec4 mcOut, out vec3 add) {
   float b = dot(pos, uL), c = dot(pos, pos) - 1.0, disc = b * b - c;
   float shd = 1.0;
   if (disc > 0.0 && (-b + sqrt(disc)) > 0.0 && c > 0.0) shd = 0.0;
+#ifdef PM_RINGS
+  // the rings throw their shadow on the moon too: follow the sun ray from this point to the ring plane and see what grains it crosses there
+  if (shd > 0.0 && uRingOn > 0.5 && abs(dot(uAxis, uL)) > 0.02) {
+    float tt = -dot(uAxis, pos) / dot(uAxis, uL);
+    if (tt > 0.004) {
+      vec3 pt = pos + tt * uL;
+      float rq = length(pt);
+      if (rq > uRingIn - 0.02 && rq < uRingOut + 0.02) shd *= exp(-ringProps(rq, atan(dot(pt, uW), dot(pt, uU))).x * uRingOp * 2.2 * 0.8);
+    }
+  }
+#endif
   float ndl = dot(n, uL);
   float lit = (ty == 4 || ty == 7) ? mix(max(ndl, 0.0), pow(clamp(ndl * 0.5 + 0.5, 0.0, 1.0), 2.2), 0.6 * (ty == 4 ? 1.0 : 0.5)) : max(ndl, 0.0);
   vec3 mc = alb * (lit * 1.15 * shd + 0.02) + emis * (1.0 - 0.6 * lit * shd);
@@ -1054,6 +1065,20 @@ void main() {
       float b = dot(hp, uL), c = dot(hp, hp) - 1.0, disc = b * b - c;
       float inShade = (c > 0.0 && (-b + sqrt(max(disc, 0.0))) > 0.0) ? smoothstep(-0.02, 0.05, disc) : 0.0;
       ringC = rc * mix(thru, litSide, smoothstep(-0.06, 0.06, sd)) * mix(1.0, 0.07, inShade);
+#ifdef PM_MOONS
+      // a moon between this bit of ring and the sun leaves a shadow on it, as Mimas does on Saturn's rings
+      float moonSh = 1.0;
+      for (int i = 0; i < 5; i++) {
+        if (i >= uMoonN) break;
+        vec3 dm = uMoon[i].xyz - hp;
+        float t0 = dot(dm, uL);
+        if (t0 > 0.0) {
+          float R = uMoon[i].w, soft = R * (0.12 + 0.10 * t0);
+          moonSh *= 1.0 - 0.85 * (1.0 - smoothstep(R - soft, R + soft, length(dm - t0 * uL)));
+        }
+      }
+      ringC *= mix(1.0, moonSh, smoothstep(-0.06, 0.06, sd));
+#endif
       ringA = 1.0 - exp(-tau);
     }
   }
