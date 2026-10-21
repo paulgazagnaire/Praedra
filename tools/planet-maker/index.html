@@ -575,8 +575,9 @@ vec3 shadePlanet(vec3 p, out float shine) {
     vec3 t1 = normalize(cross(q, ax)); vec3 t2 = cross(q, t1);
     vec3 qa = normalize(q + e * t1), qb = normalize(q + e * t2);
     float hx = heightAt(qa, OCT(4)), hy = heightAt(qb, OCT(4));
-    if (uCraters > 0.0) { hx += craters(qa, 0.5) * uCraters * 0.10; hy += craters(qb, 0.5) * uCraters * 0.10; }
-    vec3 g = ((hx - h0) / e) * t1 + ((hy - h0) / e) * t2;
+    float hg = heightAt(q, OCT(4));   // the slope must compare samples of the same detail; against the finer h0 the extra octaves read as huge slopes and smear the relief
+    if (uCraters > 0.0) { float cg = craters(q, 0.5) * uCraters * 0.10; hg += cg; hx += craters(qa, 0.5) * uCraters * 0.10; hy += craters(qb, 0.5) * uCraters * 0.10; }
+    vec3 g = ((hx - hg) / e) * t1 + ((hy - hg) / e) * t2;
     g = vec3(cs * g.x - sn * g.z, g.y, sn * g.x + cs * g.z);
     vec3 gw = uU * g.x + uAxis * g.y + uW * g.z;
 

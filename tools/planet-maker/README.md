@@ -84,6 +84,9 @@ Left out on purpose (real, but they would read as one of the above at this size)
 
 Moons are shaded once and only compiled into the shader when a planet has at least one, so a world with no moons costs nothing extra.
 
+## Terrain relief
+The light and shade on mountains and craters comes from the slope of the height map, measured from two nearby samples. Both samples now use the same amount of detail (before, the centre sample had two more layers of noise, which the slope read as huge cliffs and smeared Earth-like and desert highlands into streaks). Craters on rock worlds are unchanged.
+
 ## Known limits
 - The system presets are a first guess read from each description (colours, moons, rings). Expect to adjust some by hand.
 - The whole planet is one pass; rings do not light moons and do not cast shadows on them.
