@@ -999,7 +999,10 @@ void main() {
 
 #ifdef PM_MOONS
   vec4 MC[5]; vec3 MA[5];
-  for (int i = 0; i < 5; i++) { MC[i] = vec4(0.0); MA[i] = vec3(0.0); if (i >= uMoonN) break; shadeMoon(i, uv, px, MC[i], MA[i]); }
+  for (int i = 0; i < 5; i++) { MC[i] = vec4(0.0); MA[i] = vec3(0.0); if (i >= uMoonN) break;
+    // most pixels are nowhere near a moon, so shade it only close by (lumps reach 30% out, the glow 27% further, plus a pixel)
+    if (length(uv - uMoon[i].xy) < uMoon[i].w * (1.0 + 0.3 * uMoonQ[i].x) * (1.0 + 0.22 * uMoonP[i].w + 0.06) + px) shadeMoon(i, uv, px, MC[i], MA[i]);
+  }
   for (int i = 0; i < 5; i++) { if (i >= uMoonN) break; if (uMoon[i].z < 0.0) { col += MA[i]; col = mix(col, MC[i].rgb, MC[i].a); } }
 #endif
 
@@ -1307,7 +1310,8 @@ function ensureMoons(Q = P) {
 const activeMoons = () => P.moonList.slice(0, ensureMoons());
 function sanitizeMoon(m, d) {
   const o = Object.assign({}, d);
-  if (m && MOON_IDX[m.type] !== undefined) o.type = m.type;
+  // a different kind starts from that kind's own colours and character; an unknown kind becomes cratered rock
+  if (m && m.type !== undefined && m.type !== d.type) applyMoonType(o, Object.hasOwn(MOON_IDX, m.type) ? m.type : 'rock');
   for (const k in MOON_RANGE) if (m && m[k] !== undefined) o[k] = clampNum(m[k], MOON_RANGE[k], d[k]);
   for (const k of ['c1', 'c2', 'c3']) if (m && isHex(m[k])) o[k] = m[k];
   return o;
@@ -1787,7 +1791,7 @@ const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 
 /* ---------- presets: library, code, files ---------- */
 const slug = (t) => (t || 'planet').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48) || 'planet';
-const toCode = () => JSON.stringify({ format: 'praedra-planet', v: 1, name: P.name, params: Object.assign({}, P, { moonList: activeMoons() }) });
+const toCode = () => JSON.stringify({ format: 'praedra-planet', v: 1, name: P.name, params: Object.assign({}, P, { moonList: P.moonList.slice(0, 5) }) });
 // pasted presets are untrusted: clamp every number to its slider range, check colours, fill gaps from the defaults
 const PARAM_RANGE = {
   sea: [0, 1], wet: [-1, 1], mount: [0, 1], scale: [0.5, 2.5], ice: [0, 1], clouds: [0, 1], haze: [0, 1.3], cities: [0, 1], lava: [0, 1], craters: [0, 1], scars: [0, 1],
@@ -1806,7 +1810,7 @@ function sanitize(p, d) {
   out.ring.on = !!pr.on;
   for (const k in RING_RANGE) if (pr[k] !== undefined) out.ring[k] = clampNum(pr[k], RING_RANGE[k], d.ring[k]);
   for (const k of ['c1', 'c2']) if (isHex(pr[k])) out.ring[k] = pr[k];
-  if (RING_IDX[pr.type] !== undefined) out.ring.type = pr.type;
+  if (Object.hasOwn(RING_IDX, pr.type)) out.ring.type = pr.type;
   const pal = Array.isArray(p.pal) ? p.pal : [];
   out.pal = d.pal.map((c, i) => isHex(pal[i]) ? pal[i] : c);
   if (isHex(p.hazeCol)) out.hazeCol = p.hazeCol;
