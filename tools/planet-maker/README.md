@@ -118,6 +118,8 @@ Left out on purpose: Saturn's F ring (braided and kinked, it would read as Narro
 Rings are only compiled into the shader when a planet has them. On software rendering a ringed planet costs about the same per frame as before; a real graphics card has not been measured.
 
 ## Terrain relief
+**Mountains.** They used to be one smooth ridge layer, which read as sand dunes. Now they are long belts (where plates would have collided) with sharp crests: a ridged multifractal, each layer weighted by the one before, so crests carry the fine detail and valleys stay smooth. Between the belts the land is plains and low hills. Steep faces turn bare rock, and the highest crests keep snow even in a warm climate (less on worlds with few ice caps). The Mountains slider still runs from none to everything. It costs about 10 to 20 percent more per frame on software rendering.
+
 The light and shade on mountains and craters comes from the slope of the height map, measured from two nearby samples. Both samples now use the same amount of detail (before, the centre sample had two more layers of noise, which the slope read as huge cliffs and smeared Earth-like and desert highlands into streaks). Craters on rock worlds are unchanged.
 
 ## Known limits

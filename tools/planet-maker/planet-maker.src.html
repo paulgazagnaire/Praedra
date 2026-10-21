@@ -305,17 +305,33 @@ float craters(vec3 p, float density) {
   return acc;
 }
 
-// Terrain: big warped continents, fine detail on top, mountain ridges inland.
+// Terrain: big warped continents, fine detail on top, mountain ranges inland.
+// Mountains are long belts (where plates collided) with sharp crests: a ridged multifractal, each octave weighted by the one before it,
+// so crests carry the fine detail and valleys stay smooth, like eroded ranges with side spurs. A single smooth ridge would read as sand dunes.
 float heightAt(vec3 q, int oct) {
   vec3 s = q * uScale * 1.5 + sOff();
   vec3 w = vec3(gnoise(s * 0.8 + 3.1), gnoise(s * 0.8 + 17.7), gnoise(s * 0.8 + 41.3));
   s += w * 0.75;
   float cont = fbm(s * 0.55, 3);
   float det = fbm(s * 1.8 + 5.0, max(oct - 1, 2));
-  float r = 1.0 - abs(2.0 * fbm(s * 1.3 + 9.0, max(oct - 2, 2)) - 1.0);
-  r *= r;
   float h = cont * 0.62 + det * 0.38;
-  h = mix(h, h * 0.7 + r * 0.5 * smoothstep(0.38, 0.62, cont), uMount * 0.9);
+  if (uMount > 0.001) {
+    float bl = 1.0 - abs(2.0 * fbm(s * 0.75 + 9.0, 2) - 1.0);
+    float belt = smoothstep(0.66, 0.93, bl) * smoothstep(0.38, 0.56, cont);
+    vec3 sr = s * 2.6 + w * 0.3 + 23.0;
+    float sum = 0.0, amp = 0.5, prev = 1.0;
+    for (int i = 0; i < 6; i++) {
+      if (i >= oct - 1) break;
+      float n = 1.0 - abs(2.0 * noise(sr) - 1.0);
+      n *= n;
+      sum += n * amp * prev;
+      prev = clamp(n * 1.6, 0.0, 1.0);
+      sr = M3 * sr * 2.1 + vec3(3.3, 1.9, 7.1); amp *= 0.5;
+    }
+    float ridges = sum * 1.15;
+    float foothill = fbm(s * 2.6 + 31.0, max(oct - 3, 2));
+    h = mix(h, h * 0.72 + ridges * (0.03 + 0.62 * belt) * smoothstep(0.30, 0.52, cont) + foothill * 0.10, uMount * 0.9);
+  }
   return (h - 0.5) * 1.5 + 0.5;
 }
 
@@ -716,6 +732,7 @@ vec3 shadePlanet(vec3 p, out float shine) {
       float iceThr = mix(-0.2, 0.45, uIce);
       snow = smoothstep(iceThr + 0.05, iceThr - 0.05, temp + (fbm(q * 9.0 + sOff(), 3) - 0.5) * 0.12);
       snow *= step(0.001, uIce);
+      snow = max(snow, smoothstep(0.80, 0.98, lh) * clamp(uMount * 1.6, 0.0, 1.0) * clamp(uIce * 3.0, 0.0, 1.0));   // the highest crests keep snow even in a warm climate
     } else {
       float moist = fbm(q * 3.0 + sOff() + 9.0, 3);
       habM = moist;
@@ -724,6 +741,8 @@ vec3 shadePlanet(vec3 p, out float shine) {
       land = mix(land, uPal[3], smoothstep(0.5, 0.95, lh + 0.25 * (moist - 0.5)));
     }
     land *= 0.84 + 0.32 * fbm(q * 14.0 + sOff(), 3);
+    float rockF = smoothstep(2.5, 7.0, length(g)) * clamp(uMount * 1.6, 0.0, 1.0);
+    land = mix(land, mix(uPal[3], uPal[2], 0.45) * (0.5 + 0.25 * lh), rockF * 0.8);   // steep faces are bare rock, not soil or grass
     if (uQ > 0.5) land *= 0.92 + 0.16 * noise(q * 70.0 + sOff());
 
     float depth = clamp((t - h0) / 0.25, 0.0, 1.0);
