@@ -72,7 +72,7 @@ Moons are no longer one kind. There are eight, each modelled on something that e
 | Hazy giant | Titan | thick orange smog over the ground, soft bands, bright atmosphere rim |
 | Frozen plains | Pluto, Triton, Charon | cream nitrogen ice, dark red equatorial band, smooth bright lobe, bright poles |
 | Captured rock | Phobos, Deimos, Amalthea | small, knobbly (not round), dark, deeply cratered, parallel grooves |
-| Living moon | none known; a settled moon | ocean, land, polar ice and cloud under a blue atmosphere |
+| Living moon | none known; thought possible around a giant planet | kept plain on purpose: ocean, a few big continents, polar ice, a thin atmosphere; cloud wisps off until turned up |
 
 Left out on purpose (real, but they would read as one of the above at this size): Ganymede (ice-rock with a Callisto look and grooved terrain), Mimas and other small icy craterlets (cratered rock with a huge crater), Hyperion (a sponge-textured captured rock), Miranda (patchwork of terrains), Moon-sized dwarf planets (frozen plains), irregular outer moons (captured rock). Not drawn at all: moonlet swarms, ring-moon pairs, binary moons, co-orbitals, moons with their own rings.
 
@@ -80,10 +80,12 @@ Left out on purpose (real, but they would read as one of the above at this size)
 
 **System presets.** Each system's moon text picks the first moon's kind when it says something ("white", "icy", "volcanic", "hazy", "captured", "black", "dark", "quarried"…); every other moon is drawn from the seed, with more rocky and captured moons on rocky worlds and more ice-rock and hazy moons around gas giants.
 
+**Shadows.** Each moon casts a soft shadow on the planet when it passes between the planet and the sun: a dark spot that crosses the surface as the moon orbits. Shadows are drawn on the planet's sunlit side only, and a moon shadows the planet even while it is behind it as seen from the camera.
+
 Moons are shaded once and only compiled into the shader when a planet has at least one, so a world with no moons costs nothing extra.
 
 ## Known limits
 - The system presets are a first guess read from each description (colours, moons, rings). Expect to adjust some by hand.
-- The whole planet is one pass; moons do not cast shadows on the planet, and rings do not light moons.
-- At most 5 moons per planet. Moon sizes are artistic (real moons are far smaller next to their planet), and orbits are circular.
+- The whole planet is one pass; rings do not light moons and do not cast shadows on them.
+- At most 5 moons per planet. Moons start small, 2 to 17 percent of the planet's radius (Earth's Moon is 27 percent, Titan about 4 percent of Saturn's, the small captured rocks far less), and they sit much closer than real moons would. The Size slider goes down to 1.5 percent. Orbits are circular.
 - Ring and moon draw order is approximate when a moon passes behind a ring.
