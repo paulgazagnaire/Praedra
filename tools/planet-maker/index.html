@@ -212,6 +212,8 @@ uniform float uZoom;
 uniform int uType;            // 0 rocky, 1 gas giant, 2 tidally locked
 uniform vec3 uPal[5];
 uniform vec3 uHazeCol;
+uniform float uAsh;           // 1 on a molten world: its clouds are ash and smoke, not water
+uniform vec3 uCloudCol;       // what the clouds are made of: white for water, tan for dust, near black for ash
 uniform float uSeed, uSea, uMount, uScale, uIce, uClouds, uHaze, uCities, uLava, uCraters, uScars, uWet, uBiome, uQ;
 uniform float uBands, uTurb, uStorms, uStormSize;
 uniform float uSpin, uCloudAng, uFlowT, uRingAng, uTime;
@@ -838,14 +840,16 @@ vec3 shadePlanet(vec3 p, out float shine) {
   // thick cloud is bright, thin cloud greyer; the side facing the sun is lit, the far side sits in its own shadow
   float lit = (uQ > 0.5) ? clamp(0.92 + (cloudD - cloudS) * 1.2, 0.55, 1.08) : 1.0;
   float thick = mix(0.58, 1.0, smoothstep(0.25, 0.95, cloudD));
-  vec3 cloudC = vec3(0.96, 0.97, 1.0) * (max(ndl + 0.05, 0.0) * 1.15 * sh * lit * thick + 0.025);
+  vec3 cloudC = uCloudCol * (max(ndl + 0.05, 0.0) * 1.15 * sh * lit * thick + 0.025);
+  cloudC += uAsh * emis * 0.9;   // smoke over a lava field is lit orange from below
   cloudC = mix(cloudC, cloudC * vec3(1.0, 0.82, 0.72), smoothstep(0.25, 0.0, ndl) * 0.5);
   vec3 col = mix(surf, cloudC, smoothstep(0.03, 0.70, cloudD) * 0.97);
   // high cirrus: it sits above the low deck, sees the sun for longer at dusk, and turns pink-gold at the day-night line
   float ndh = ndl + 0.13;
   vec3 cirC = vec3(0.97, 0.98, 1.0) * (max(ndh, 0.0) * 1.05 * sh + 0.02);
   cirC = mix(cirC, vec3(1.0, 0.66, 0.46) * max(ndh, 0.0) * 1.5, smoothstep(0.26, 0.0, ndh) * 0.65);
-  col = mix(col, cirC, smoothstep(0.03, 0.9, cirD) * 0.55);
+  cirC *= uCloudCol / vec3(0.96, 0.97, 1.0);
+  col = mix(col, cirC, smoothstep(0.03, 0.9, cirD) * 0.55 * (1.0 - uAsh));
   col += emis * (1.0 - cloudD * 0.85) * (1.0 - cirD * 0.25);
   // atmosphere: blue edge on the lit side, red band along the day-night line
   float rim = pow(1.0 - nz, 3.0);
@@ -1151,7 +1155,7 @@ const KIND_DEF = {
   desert: { wet: -0.45, pal: ['#000000', '#c99b5c', '#b46f3a', '#8c4d2a', '#efe4d2'], sea: 0, mount: 0.55, clouds: 0.12, haze: 0.4, hazeCol: '#e8b87a', ice: 0.15, craters: 0.1 },
   ice: { wet: 0, pal: ['#4f7ca8', '#d8e6f1', '#b9d0e4', '#ffffff', '#ffffff'], sea: 0.35, mount: 0.45, clouds: 0.25, haze: 0.45, hazeCol: '#bfe0ff', ice: 1, craters: 0.2 },
   rock: { pal: ['#000000', '#59564f', '#8a857b', '#b5afa3', '#e8e8ea'], sea: 0, mount: 0.3, clouds: 0, haze: 0, hazeCol: '#aab4c4', ice: 0, craters: 0.8 },
-  lava: { pal: ['#000000', '#2d2320', '#463631', '#6a5848', '#ff6a1f'], sea: 0, mount: 0.6, clouds: 0.15, haze: 0.5, hazeCol: '#ff8a50', ice: 0, lava: 0.9, craters: 0.2 },
+  lava: { pal: ['#000000', '#2d2320', '#463631', '#6a5848', '#ff6a1f'], sea: 0, mount: 0.6, clouds: 0.3, haze: 0.5, hazeCol: '#ff8a50', ice: 0, lava: 0.9, craters: 0.2 },
   city: { wet: -0.1, pal: ['#2b4f6e', '#6e7075', '#868a8f', '#a2a7ad', '#e8eef2'], sea: 0.15, mount: 0.3, clouds: 0.3, haze: 0.55, hazeCol: '#c3a07a', ice: 0.1, cities: 0.9 },
   locked: { wet: 0, pal: ['#2b6e8f', '#5b8a4a', '#c0582c', '#dbe7f2', '#ffffff'], sea: 0.4, mount: 0.45, clouds: 0.35, haze: 0.6, hazeCol: '#8cc0ff', ice: 0, spin: 0 },
   gas: { pal: ['#c9a36b', '#e8d3a6', '#a8744a', '#f2e8d2', '#b3472f'], bands: 10, turb: 0.6, storms: 2, stormSize: 1.0, clouds: 0, haze: 0.5, hazeCol: '#e9c690', sea: 0, spin: 0.3, flow: 0.45 },
@@ -1188,7 +1192,7 @@ const CONTROLS = [
   ['Look', 'turb', 'Turbulence', 0, 1.4, 0.01, (p) => p.kind === 'gas'],
   ['Look', 'storms', 'Giant storms', 0, 6, 1, (p) => p.kind === 'gas'],
   ['Look', 'stormSize', 'Storm size', 0.2, 1.6, 0.01, (p) => p.kind === 'gas'],
-  ['Sky', 'clouds', 'Clouds', 0, 1, 0.01, (p) => IS_ROCKY(p.kind)],
+  ['Sky', 'clouds', 'Clouds', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'rock'],
   ['Sky', 'haze', 'Atmosphere glow', 0, 1.3, 0.01, () => true],
   ['Motion', 'spin', 'Rotation', -1, 1, 0.01, () => true, (v, p) => spinText(v, p)],
   ['Motion', 'cloudSpeed', 'Cloud drift', -1, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'rock'],
@@ -1245,6 +1249,7 @@ function syncControls() {
   dh.querySelector('input').addEventListener('input', (ev) => { P.hazeCol = ev.target.value; });
   hz.appendChild(dh);
   document.querySelectorAll('#chips .chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kind === P.kind)));
+  ctlEls.clouds.row.querySelector('label').textContent = CLOUD_LABEL[P.kind] || 'Clouds';
   $('pName').value = P.name || '';
   $('tagName').textContent = P.name || 'Unnamed';
   $('tagKind').textContent = (KINDS.find(k => k.id === P.kind) || {}).name || '';
@@ -1548,6 +1553,9 @@ function initGL() {
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
   gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 }
+// what a world's clouds are made of: water everywhere except molten worlds (ash and smoke) and deserts (blown dust)
+const CLOUD_COL = { water: [0.96, 0.97, 1.0], lava: [0.3, 0.25, 0.22], desert: [0.86, 0.68, 0.48] };
+const CLOUD_LABEL = { lava: 'Ash and smoke', desert: 'Dust storms' };
 const KIND_TYPE = (k) => k === 'gas' ? 1 : k === 'locked' ? 2 : 0;
 
 function frame(dt) {
@@ -1570,14 +1578,15 @@ function draw(w, h, tmul) {
   const aspect = w / h;
   const extentV = Math.max(1.3, P.ring.on ? ringOut * Math.max(0.72, Math.sin(phi)) * 1.04 : 0, mx * 0.75);
   const zoom = Math.min(aspect * 0.92 / extent, 0.92 / extentV) * P.zoom;
-  useVariant((P.kind !== 'gas' && P.clouds > 0.01 ? 'C' : '') + (quality ? 'H' : '') + (mm.length ? 'M' : '') + (P.ring.on ? 'R' : ''));
+  const clouds = P.kind === 'rock' ? 0 : P.clouds;   // an airless world has no weather, whatever the slider says
+  useVariant((P.kind !== 'gas' && clouds > 0.01 ? 'C' : '') + (quality ? 'H' : '') + (mm.length ? 'M' : '') + (P.ring.on ? 'R' : ''));
   gl.viewport(0, 0, w, h);
   gl.uniform2f(loc.uRes, w, h); gl.uniform1f(loc.uZoom, zoom);
   gl.uniform1i(loc.uType, KIND_TYPE(P.kind));
   gl.uniform3fv(loc['uPal'], new Float32Array(P.pal.flatMap(hex2rgb)));
   gl.uniform3fv(loc.uHazeCol, hex2rgb(P.hazeCol));
   const f = (n, v) => gl.uniform1f(loc[n], v);
-  f('uSeed', (P.seed % 997) * 0.173); f('uSea', P.sea); f('uMount', P.mount); f('uScale', P.scale); f('uIce', P.ice); f('uClouds', P.clouds); f('uHaze', P.haze);
+  f('uSeed', (P.seed % 997) * 0.173); f('uSea', P.sea); f('uMount', P.mount); f('uScale', P.scale); f('uIce', P.ice); f('uClouds', clouds); f('uAsh', P.kind === 'lava' ? 1 : 0); gl.uniform3fv(loc.uCloudCol, CLOUD_COL[P.kind] || CLOUD_COL.water); f('uHaze', P.haze);
   f('uWet', P.wet || 0); f('uBiome', (P.kind === 'rock' || P.kind === 'lava') ? 0 : 1); f('uQ', quality); f('uCities', P.cities); f('uLava', P.lava); f('uCraters', P.craters); f('uScars', P.scars);
   f('uBands', P.bands); f('uTurb', P.turb); f('uStorms', P.storms); f('uStormSize', P.stormSize);
   f('uSpin', T.spin); f('uCloudAng', T.cloud); f('uFlowT', T.flow); f('uRingAng', T.ring); f('uTime', T.time);
