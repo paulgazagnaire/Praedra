@@ -55,6 +55,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 .row2 > * { flex: 1; min-width: 0; }
 .stagebtns button { background: rgba(16,19,26,.85); text-align: center; }
 .sub { margin: 14px 0 8px; font: 500 11px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+[hidden] { display: none !important; }   /* a display rule below would otherwise keep a hidden row on screen */
 .ctl { display: grid; grid-template-columns: 112px minmax(0, 1fr) 54px; align-items: center; gap: 8px; margin: 9px 0; }
 .ctl label { color: var(--fg); font-size: 13px; }
 .ctl output { font: 12px var(--font-mono); color: var(--dim); text-align: right; white-space: nowrap; }
@@ -148,8 +149,17 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
     <details class="sec">
       <summary>Rings</summary>
       <label class="chk"><input type="checkbox" id="ringOn"> This planet has rings</label>
-      <div id="ctlRing"></div>
-      <div class="sw-row" id="swRing"></div>
+      <div id="ringPick" hidden>
+        <h3 class="sub">Kind of ring</h3>
+        <div class="chips" id="ringTypes"></div>
+        <p class="note" id="ringNote"></p>
+        <div id="ctlRingEd"></div>
+        <div class="sw-row" id="swRing"></div>
+        <div class="row2">
+          <button id="ringNew" type="button">New look</button>
+          <button id="ringReset" type="button">Reset to kind</button>
+        </div>
+      </div>
     </details>
 
     <details class="sec" open>
@@ -206,7 +216,11 @@ uniform float uSeed, uSea, uMount, uScale, uIce, uClouds, uHaze, uCities, uLava,
 uniform float uBands, uTurb, uStorms, uStormSize;
 uniform float uSpin, uCloudAng, uFlowT, uRingAng, uTime;
 uniform vec3 uAxis, uU, uW, uL;
-uniform float uRingOn, uRingIn, uRingOut, uRingOp, uRingGaps;
+uniform float uRingOn, uRingIn, uRingOut, uRingOp, uRingGaps, uRingStruct, uRingClump, uRingDust, uRingSeed;
+uniform int uRingType;      // 0 broad icy, 1 narrow dark, 2 faint dust, 3 clumpy arcs, 4 fresh wreckage, 5 moon-fed dust
+uniform vec4 uRingFeed;     // x: orbit of the moon that feeds the ring (0: none), y: its angle around the ring
+uniform int uRGapN;
+uniform vec4 uRGap[6];      // gaps cut by moons: x centre, y half width, z depth
 uniform vec3 uRingCol, uRingCol2;
 uniform int uMoonN;
 uniform vec4 uMoon[5];      // xyz: position (planet radius = 1), w: radius
@@ -309,20 +323,116 @@ vec3 ramp4(float t) {
   return mix(uPal[2], uPal[3], t - 2.0);
 }
 
-float ringDens(float rr, float ang) {
-  float u = (rr - uRingIn) / (uRingOut - uRingIn);
-  if (u < 0.0 || u > 1.0) return 0.0;
-  vec3 so = sOff();
-  float f = fbm(vec3(rr * 38.0, so.x, 0.7), 4);
-  float fine = noise(vec3(rr * 230.0, so.y, 1.3));
-  float d = mix(0.45, 1.0, f) * (0.72 + 0.28 * fine);
-  float gap = smoothstep(0.58, 0.74, noise(vec3(rr * 9.0, so.z, 3.0))) * uRingGaps;
-  d *= 1.0 - gap;
-  d *= smoothstep(0.0, 0.06, u) * smoothstep(1.0, 0.9, u);
-  float cl = fbm(vec3(cos(ang + uRingAng) * 2.5 + so.x, sin(ang + uRingAng) * 2.5, rr * 6.0), 3);
-  d *= 0.78 + 0.44 * cl;
-  return clamp(d, 0.0, 1.0);
+#ifdef PM_RINGS
+float gPx = 0.0;            // planet radii per pixel, so a thin ring never gets narrower than a pixel
+float wrapPi(float a) { return a - 6.2831853 * floor((a + 3.1415927) / 6.2831853); }
+float bump(float x, float w) { x /= w; return exp(-x * x); }
+
+// What a ring is made of at distance rr (planet radii) and angle ang around the planet:
+// x = how much material is there (0..1), y = how light it is (0 dark .. 1 light). One branch for each kind of ring.
+vec2 ringProps(float rr, float ang) {
+  float span = uRingOut - uRingIn;
+  float u = (rr - uRingIn) / span;
+  if (u < 0.0 || u > 1.0) return vec2(0.0);
+  vec3 so = sOff() + vec3(uRingSeed * 1.13, uRingSeed * 0.71, uRingSeed * 1.91);
+  float ra = ang + uRingAng;
+  float pxu = gPx * 1.3 / span;
+  float edge = 1.0 - smoothstep(1.0 - pxu, 1.0, u);
+  float d = 0.0, tone = 0.5;
+  bool fed = uRingFeed.x > 0.0;
+  if (uRingType == 0) {
+    // broad icy rings: dim C ring, dense bright B ring, paler A ring (gaps are cut afterwards, by moons)
+    float cR = 0.2 * smoothstep(0.0, 0.05, u);
+    float bR = smoothstep(0.2, 0.28, u) * (0.8 + 0.2 * smoothstep(0.3, 0.5, u)) * (1.0 - smoothstep(0.645, 0.655, u));
+    float aR = smoothstep(0.645, 0.665, u) * 0.58;
+    d = max(max(cR, bR), aR);
+    float f = fbm(vec3(rr * 38.0, so.x, 0.7), 4);
+    float fine = noise(vec3(rr * 140.0, so.y, 1.3));
+    d *= mix(1.0, mix(0.45, 1.0, f) * (0.72 + 0.28 * fine), uRingStruct);
+    tone = mix(0.2, 0.9, smoothstep(0.16, 0.3, u));
+    tone = mix(tone, 0.62, smoothstep(0.64, 0.68, u));
+    tone += (f - 0.5) * 0.4 * uRingStruct;
+    // spokes: dark wedges of dust that float above the B ring
+    float zoneB = smoothstep(0.3, 0.38, u) * (1.0 - smoothstep(0.55, 0.62, u));
+    float sp = smoothstep(0.55, 0.8, fbm(vec3(cos(ra) * 3.0 + so.z, sin(ra) * 3.0, rr * 1.2 + 5.0), 3));
+    d *= 1.0 - 0.55 * sp * zoneB * uRingClump;
+    tone -= 0.25 * sp * zoneB * uRingClump;
+    d *= edge;
+  } else if (uRingType == 1) {
+    // narrow dark rings: separate thin rings with clean space between, the outer one the widest and brightest
+    int n = 3 + int(uRingStruct * 7.0 + 0.5);
+    for (int i = 0; i < 10; i++) {
+      if (i >= n) break;
+      vec3 h = hash33(vec3(float(i) * 1.7 + 3.0, so.x, so.y));
+      bool outer = (i == n - 1);
+      float c = outer ? 0.93 : (float(i) + 0.2 + 0.6 * h.x) / float(n) * 0.9 + 0.02;
+      float w = outer ? 0.022 * (1.0 + 0.5 * sin(ra + h.x * 6.0)) : 0.004 + 0.007 * h.y;
+      w = max(w, pxu);
+      float a = outer ? 1.0 : 0.4 + 0.5 * h.z;
+      float rg = a * (1.0 - smoothstep(w * 0.7, w * 1.3, abs(u - c)));
+      if (rg > d) { d = rg; tone = outer ? 0.5 : 0.12 + 0.3 * h.z; }
+    }
+    float tr = 0.04 * (0.5 + noise(vec3(rr * 30.0, so.z, 2.0)));
+    if (tr > d) { d = tr; tone = 0.3; }
+  } else if (uRingType == 2) {
+    // faint dust: a main band, a halo inside it and a soft tail outside, bunched up along the orbit of the moon feeding it
+    float mainB = smoothstep(0.26, 0.32, u) * (1.0 - smoothstep(0.6, 0.64, u));
+    float halo = 0.38 * smoothstep(0.0, 0.3, u) * (1.0 - mainB);
+    float goss = 0.3 * exp(-(u - 0.62) * 5.0) * smoothstep(0.58, 0.64, u);
+    d = 0.8 * mainB + uRingStruct * (halo + goss);
+    if (fed) {
+      float x = rr - uRingFeed.x;
+      d += 0.5 * bump(x, 0.025 + 0.02 * span) + (x < 0.0 ? 0.3 * uRingStruct * exp(x / (0.4 * span)) : 0.0);
+    }
+    d *= 0.75 + 0.5 * fbm(vec3(rr * 18.0, so.y, 0.3), 2);
+    d *= 1.0 - smoothstep(0.9, 1.0, u);
+    tone = 0.35 + 0.35 * mainB + 0.3 * fbm(vec3(rr * 9.0, so.x, 2.0), 2);
+  } else if (uRingType == 3) {
+    // clumpy arcs: a thin ring that is only thick in a few arcs, bunched together
+    float core = 1.0 - smoothstep(0.3, 1.0, abs(u - 0.5) * 2.0);
+    int na = 1 + int(uRingStruct * 4.0 + 0.5);
+    float th0 = so.x * 3.7, arc = 0.0;
+    for (int i = 0; i < 5; i++) {
+      if (i >= na) break;
+      vec3 h = hash33(vec3(float(i) * 2.3 + 1.0, so.y, so.z));
+      arc = max(arc, (0.7 + 0.3 * h.z) * bump(wrapPi(ra - th0 - float(i) * 0.3 - 0.06 * h.x), 0.045 + 0.07 * h.y));
+    }
+    d = core * (mix(0.6, 0.07, uRingClump) + uRingClump * 1.3 * arc);
+    tone = 0.35 + 0.5 * arc;
+  } else if (uRingType == 4) {
+    // fresh wreckage: lumpy dark rock, a heavy bulge where the biggest piece still is, and a tail that the orbits smear out
+    float lump = fbm(vec3(cos(ra) * 2.0 + so.x, sin(ra) * 2.0, rr * 7.0), 3);
+    float grain = 0.5 * noise(vec3(rr * 140.0, so.y, 2.0)) + 0.5 * noise(vec3(rr * 60.0, so.z, 4.0));
+    float e2 = smoothstep(0.0, 0.08, u) * (1.0 - smoothstep(0.88, 1.0, u));
+    float base = 0.2 * e2 * mix(1.0, 0.55 + 0.9 * lump, uRingClump) * mix(1.0, 0.45 + 0.8 * grain, uRingStruct);
+    float a0 = fed ? uRingFeed.x : uRingIn + 0.45 * span;
+    float az = fed ? uRingFeed.y : so.x * 6.0;
+    // material further out falls behind the moon, material further in runs ahead: the streak is a spiral
+    float dth = wrapPi(ang - az - 3.0 * (pow(a0 / rr, 1.5) - 1.0));
+    float sig = 0.28 + 0.5 * abs(rr - a0) / span;
+    float streak = exp(-(dth * dth) / (sig * sig));
+    float da = wrapPi(ang - az);
+    float blob = bump(rr - a0, 0.12 * span + 0.02) * exp(-(da * da) / 0.05);
+    d = clamp(base + uRingClump * e2 * (1.0 * streak + 1.2 * blob), 0.0, 1.0);
+    tone = 0.2 + 0.3 * lump + 0.4 * streak + 0.3 * blob;
+  } else {
+    // moon-fed dust: thickest on the orbit of the moon that sprays it, a sharp inner edge and a long tail outward
+    float a0 = fed ? uRingFeed.x : uRingIn + 0.25 * span;
+    float x = rr - a0;
+    float reach = mix(0.25, 1.1, uRingStruct) * span;
+    float dens = x >= 0.0 ? exp(-x / reach) : exp(x / (0.12 * span + 0.03));
+    d = 0.9 * dens * smoothstep(0.0, 0.03, u);
+    d *= 0.85 + 0.3 * fbm(vec3(cos(ra) * 1.5 + so.x, sin(ra) * 1.5, rr * 3.0), 2);
+    tone = 0.55 + 0.4 * dens;
+  }
+  for (int i = 0; i < 6; i++) {
+    if (i >= uRGapN) break;
+    float x = abs(rr - uRGap[i].x);
+    d *= 1.0 - uRingGaps * uRGap[i].z * (1.0 - smoothstep(uRGap[i].y * 0.55, uRGap[i].y * 1.35, x));
+  }
+  return vec2(clamp(d, 0.0, 1.0), clamp(tone, 0.0, 1.0));
 }
+#endif
 
 // --- gas giant -------------------------------------------------------------
 vec3 gasBands(vec3 q, float shift) {
@@ -709,15 +819,16 @@ vec3 shadePlanet(vec3 p, out float shine) {
   float diffS = max(dot(n, uL), 0.0);
   float diffC = max(ndl, 0.0);
   float sh = 1.0;
+#ifdef PM_RINGS
   if (uRingOn > 0.5 && abs(dot(uAxis, uL)) > 0.02) {
     float tt = -dot(uAxis, p) / dot(uAxis, uL);
     if (tt > 0.0) {
       vec3 pt = p + tt * uL;
-      float rr = length(pt);
-      float dd = ringDens(rr, atan(dot(pt, uW), dot(pt, uU)));
-      sh = 1.0 - dd * uRingOp * 0.9;
+      vec2 rp = ringProps(length(pt), atan(dot(pt, uW), dot(pt, uU)));
+      sh = exp(-rp.x * uRingOp * 2.2 * 0.8);
     }
   }
+#endif
   float ls = (uType == 1) ? pow(diffS, 0.85) : diffS;
   vec3 surf = albedo * (ls * 1.12 * sh + 0.018 + (uType == 2 ? 0.05 * (1.0 - smoothstep(-0.3, 0.1, ndl)) : 0.0));
   if (shine > 0.0) {
@@ -895,24 +1006,32 @@ void main() {
   float r = length(uv);
   float zp = (r < 1.0) ? sqrt(1.0 - r * r) : -1.0;
 
+#ifdef PM_RINGS
   float ringA = 0.0; vec3 ringC = vec3(0.0); float zr = -99.0;
+  gPx = px;
   if (uRingOn > 0.5) {
     float den = uAxis.z;
     float tHit = (uAxis.x * uv.x + uAxis.y * uv.y + uAxis.z * 5.0) / den;
     vec3 hp = vec3(uv, 5.0 - tHit);
     float rr = length(hp);
-    float dd = ringDens(rr, atan(dot(hp, uW), dot(hp, uU)));
-    if (dd > 0.0) {
+    vec2 rp = ringProps(rr, atan(dot(hp, uW), dot(hp, uU)));
+    if (rp.x > 0.003) {
       zr = hp.z;
-      float f = fbm(vec3(rr * 20.0, uSeed, 2.0), 3);
-      vec3 rc = mix(uRingCol2, uRingCol, f);
-      float lit = 0.3 + 0.7 * smoothstep(0.0, 0.3, abs(dot(uAxis, uL)));
+      float tau = rp.x * uRingOp * 2.2;                 // how opaque the grains are here
+      vec3 rc = mix(uRingCol2, uRingCol, rp.y);
+      float sd = dot(uAxis, uL);                         // > 0: the sun is on the side you look from
+      float el = 0.3 + 0.7 * smoothstep(0.0, 0.3, abs(sd));
+      float litSide = el * (1.0 - 0.5 * uRingDust);       // dust throws light forward, so it looks dull with the sun behind you
+      float thru = (0.1 + 1.5 * uRingDust) * exp(-tau * 0.5) * el;   // sun behind the rings: dense parts go dark, thin dusty parts glow
       float b = dot(hp, uL), c = dot(hp, hp) - 1.0, disc = b * b - c;
-      float shd = (disc > 0.0 && (-b + sqrt(disc)) > 0.0 && c > 0.0) ? 0.1 : 1.0;
-      ringC = rc * lit * shd;
-      ringA = clamp(dd * uRingOp, 0.0, 1.0);
+      float inShade = (c > 0.0 && (-b + sqrt(max(disc, 0.0))) > 0.0) ? smoothstep(-0.02, 0.05, disc) : 0.0;
+      ringC = rc * mix(thru, litSide, smoothstep(-0.06, 0.06, sd)) * mix(1.0, 0.07, inShade);
+      ringA = 1.0 - exp(-tau);
     }
   }
+#else
+  const float ringA = 0.0; const vec3 ringC = vec3(0.0); const float zr = -99.0;
+#endif
   bool ringFront = (r < 1.0) && (zr >= zp);
   if (ringA > 0.0 && !ringFront) col = mix(col, ringC, ringA);
 
@@ -1019,7 +1138,7 @@ const BASE = {
   seed: 7, sea: 0.5, mount: 0.5, wet: 0, scale: 1.0, ice: 0.4, clouds: 0.5, haze: 0.6, cities: 0, lava: 0, craters: 0, scars: 0,
   bands: 9, turb: 0.6, storms: 2, stormSize: 1.0,
   spin: 0.25, cloudSpeed: 0.3, flow: 0.4, tilt: 22, roll: -12, sun: -55, sunH: 12, zoom: 1,
-  ring: { on: false, inner: 1.35, width: 0.8, op: 0.55, gaps: 0.5, spin: 0.3, c1: '#cdb98f', c2: '#6f6048' },
+  ring: { on: false, type: 'broad', inner: 1.24, width: 1.03, op: 0.8, gaps: 0.8, struct: 0.6, clump: 0.3, dust: 0.15, feeder: 0, seed: 1, spin: 0.3, c1: '#d8c8a4', c2: '#7a6a55' },
   moons: 1, moonSpeed: 0.6, moonList: [],
 };
 const KIND_DEF = {
@@ -1078,17 +1197,13 @@ const CONTROLS = [
   ['Cam', 'sun', 'Sun side', -180, 180, 1, () => true, (v) => v + '°'],
   ['Cam', 'sunH', 'Sun height', -60, 60, 1, () => true, (v) => v + '°'],
   ['Cam', 'zoom', 'Zoom', 0.5, 1.8, 0.01, () => true],
-  ['Ring', 'ringInner', 'Distance', 1.1, 2.4, 0.01, () => true],
-  ['Ring', 'ringWidth', 'Width', 0.1, 1.4, 0.01, () => true],
-  ['Ring', 'ringOp', 'Thickness', 0.1, 1, 0.01, () => true],
-  ['Ring', 'ringGaps', 'Gaps', 0, 1, 0.01, () => true],
   ['Moon', 'moons', 'How many', 0, 5, 1, () => true],
 ];
 function spinText(v, p) { if (Math.abs(v) < 0.01) return 'stopped'; const s = 2 * Math.PI / (Math.abs(v) * 0.5); return (v < 0 ? '↺ ' : '') + Math.round(s) + ' s'; }
-const SEC_HOST = { Look: 'ctlLook', Sky: 'ctlSky', Motion: 'ctlMotion', Cam: 'ctlCam', Ring: 'ctlRing', Moon: 'ctlMoon' };
+const SEC_HOST = { Look: 'ctlLook', Sky: 'ctlSky', Motion: 'ctlMotion', Cam: 'ctlCam', Moon: 'ctlMoon' };
 const ctlEls = {};
-const get = (k) => k === 'size' ? 3 - P.scale : k === 'ringInner' ? P.ring.inner : k === 'ringWidth' ? P.ring.width : k === 'ringOp' ? P.ring.op : k === 'ringGaps' ? P.ring.gaps : k === 'ringSpin' ? P.ring.spin : P[k];
-const set = (k, v) => { if (k === 'size') P.scale = 3 - v; else if (k === 'ringInner') P.ring.inner = v; else if (k === 'ringWidth') P.ring.width = v; else if (k === 'ringOp') P.ring.op = v; else if (k === 'ringGaps') P.ring.gaps = v; else if (k === 'ringSpin') P.ring.spin = v; else P[k] = v; };
+const get = (k) => k === 'size' ? 3 - P.scale : k === 'ringSpin' ? P.ring.spin : P[k];
+const set = (k, v) => { if (k === 'size') P.scale = 3 - v; else if (k === 'ringSpin') P.ring.spin = v; else P[k] = v; };
 
 function buildControls() {
   for (const c of CONTROLS) {
@@ -1110,8 +1225,6 @@ function syncControls() {
   for (const k in ctlEls) {
     const e = ctlEls[k]; e.inp.value = get(k); e.row.hidden = !e.c[6](P); refreshOut(e.c);
   }
-  $('ringOn').checked = !!P.ring.on;
-  $('ctlRing').hidden = !P.ring.on; $('swRing').hidden = !P.ring.on;
   // palette swatches
   const lab = KIND_LABELS(P.kind), host = $('swatches'); host.innerHTML = '';
   for (let i = 0; i < 5; i++) {
@@ -1128,17 +1241,11 @@ function syncControls() {
   dh.innerHTML = `<input type="color" value="${P.hazeCol}" aria-label="Glow colour"><span>Glow</span>`;
   dh.querySelector('input').addEventListener('input', (ev) => { P.hazeCol = ev.target.value; });
   hz.appendChild(dh);
-  const sr = $('swRing'); sr.innerHTML = '';
-  [['c1', 'Ring light'], ['c2', 'Ring dark']].forEach(([k, l]) => {
-    const d = document.createElement('label'); d.className = 'sw';
-    d.innerHTML = `<input type="color" value="${P.ring[k]}" aria-label="${l}"><span>${l}</span>`;
-    d.querySelector('input').addEventListener('input', (ev) => { P.ring[k] = ev.target.value; });
-    sr.appendChild(d);
-  });
   document.querySelectorAll('#chips .chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kind === P.kind)));
   $('pName').value = P.name || '';
   $('tagName').textContent = P.name || 'Unnamed';
   $('tagKind').textContent = (KINDS.find(k => k.id === P.kind) || {}).name || '';
+  syncRingUI();
   rebuildMoons();
 }
 
@@ -1164,7 +1271,7 @@ const MOON_TYPES = [
     c: ['#2a5f95', '#6c8a4f', '#8fb8f0'], L: ['Ocean', 'Land', 'Cloud wisps', 'Ocean cover'], d: { detail: 0.0, feat: 0.5, haze: 0.3, shape: 0 }, size: [0.07, 0.13] },
 ];
 const MOON_IDX = {}; MOON_TYPES.forEach((t, i) => { MOON_IDX[t.id] = i; });
-const MOON_RANGE = { size: [0.015, 0.5], orbit: [1.3, 4.2], speed: [-2, 3], tilt: [-60, 60], phase: [0, 360], detail: [0, 1], feat: [0, 1], haze: [0, 1], shape: [0, 1], spin: [-1, 1], seed: [0, 9999, 1] };
+const MOON_RANGE = { size: [0.015, 0.5], orbit: [1.3, 7], speed: [-2, 3], tilt: [-60, 60], phase: [0, 360], detail: [0, 1], feat: [0, 1], haze: [0, 1], shape: [0, 1], spin: [-1, 1], seed: [0, 9999, 1] };
 const moonStart = (ring) => Math.max(1.55, ring && ring.on ? ring.inner + ring.width + 0.3 : 1.55);
 // A first guess for moon number i of a planet; the same seed always gives the same moon.
 function genMoon(seed, kind, i, hint, start) {
@@ -1191,10 +1298,10 @@ function moonHint(t) {
   return null;
 }
 // the planet keeps a list of up to 5 moons; the slider decides how many are shown, so lowering and raising it keeps your edits
-function ensureMoons() {
-  if (!Array.isArray(P.moonList)) P.moonList = [];
-  const n = clamp(Math.round(P.moons) || 0, 0, 5);
-  while (P.moonList.length < n) P.moonList.push(genMoon(P.seed, P.kind, P.moonList.length, null, moonStart(P.ring)));
+function ensureMoons(Q = P) {
+  if (!Array.isArray(Q.moonList)) Q.moonList = [];
+  const n = clamp(Math.round(Q.moons) || 0, 0, 5);
+  while (Q.moonList.length < n) Q.moonList.push(genMoon(Q.seed, Q.kind, Q.moonList.length, null, moonStart(Q.ring)));
   return n;
 }
 const activeMoons = () => P.moonList.slice(0, ensureMoons());
@@ -1208,7 +1315,7 @@ function sanitizeMoon(m, d) {
 let selMoon = 0;
 const MOON_CTL = [
   ['size', 'Size', 0.015, 0.5, 0.005, (v) => v.toFixed(2)],
-  ['orbit', 'Distance', 1.3, 4.2, 0.01, (v) => v.toFixed(2)],
+  ['orbit', 'Distance', 1.3, 7, 0.01, (v) => v.toFixed(2)],
   ['speed', 'Orbit speed', -2, 3, 0.01, (v) => (v < -0.01 ? 'back ' : '') + Math.abs(v).toFixed(2)],
   ['tilt', 'Orbit tilt', -60, 60, 1, (v) => Math.round(v) + '°'],
   ['phase', 'Start position', 0, 360, 1, (v) => Math.round(v) + '°'],
@@ -1277,18 +1384,143 @@ function syncMoonUI() {
 }
 function rebuildMoons() { syncMoonUI(); }
 
+/* ---------- rings ---------- */
+// Six kinds of ring, each modelled on one that really exists. The shader draws them in ringProps(), in this order.
+// d: the kind's own starting values; c: light and dark grain colours; L: what each slider means for this kind (null: not used by this kind);
+// feed: the moon the ring belongs to (where it sits across the ring, from its inner edge, in widths; which moon kind; how big).
+const RING_TYPES = [
+  { id: 'broad', name: 'Broad icy rings', real: 'Saturn', note: 'Ice grains from dust to house-sized boulders, spread out flat. A dim see-through inner ring, a dense bright middle one, a paler outer one. Moons carve it: a moon inside the ring clears a lane, and a moon outside clears gaps where grains would be tugged on every second orbit (the big one is the Cassini Division).',
+    d: { inner: 1.24, width: 1.03, op: 0.8, gaps: 0.8, struct: 0.6, clump: 0.3, dust: 0.15 }, c: ['#d8c8a4', '#7a6a55'],
+    L: { gaps: 'Gaps', struct: 'Ringlets', clump: 'Dark spokes', dust: 'Backlit glow', feeder: null } },
+  { id: 'narrow', name: 'Narrow dark rings', real: 'Uranus', note: 'A handful of thin, sharp-edged rings, dark as soot, with clean empty space between them. The widest and brightest, on the outside, is held in shape by two small moons, one on each side.',
+    d: { inner: 1.6, width: 0.5, op: 0.9, gaps: 0, struct: 0.6, clump: 0, dust: 0.05 }, c: ['#6e6a67', '#1f1d1c'],
+    L: { gaps: null, struct: 'Number of rings', clump: null, dust: 'Backlit glow', feeder: null } },
+  { id: 'dusty', name: 'Faint dust rings', real: 'Jupiter', note: 'Dust, not ice: tiny grains chipped off small inner moons by meteorites, so the ring needs a source moon and the dust bunches up along its orbit. A main band, a halo inside it and a soft tail outside. Dull with the sun behind you, glowing when the sun is behind the planet.',
+    d: { inner: 1.4, width: 0.75, op: 0.16, gaps: 0, struct: 0.7, clump: 0, dust: 0.9 }, c: ['#bda98d', '#6a5a48'],
+    L: { gaps: null, struct: 'Halo and tail', clump: null, dust: 'Backlit glow', feeder: 'Dust-source moon' }, feed: { at: 0.5, type: 'asteroid', size: 0.028 } },
+  { id: 'arcs', name: 'Clumpy arcs', real: 'Neptune', note: 'A thin ring that is thick only in a few bright arcs, bunched in one stretch of the orbit. A small moon just inside it keeps the grains clumped with its gravity. Set Arc contrast to zero and the arcs smear into a plain thin ring.',
+    d: { inner: 2.3, width: 0.18, op: 0.7, gaps: 0, struct: 0.6, clump: 0.8, dust: 0.5 }, c: ['#aab1b9', '#4d535b'],
+    L: { gaps: null, struct: 'Number of arcs', clump: 'Arc contrast', dust: 'Backlit glow', feeder: 'Shepherd moon' }, feed: { at: -0.45, type: 'asteroid', size: 0.03 } },
+  { id: 'wreck', name: 'Fresh wreckage', real: 'A moon torn apart', note: 'What is left of a moon that strayed inside the distance where tides pull a body apart (the Roche limit), or was smashed. Dark lumpy rock, a heavy bulge where the biggest piece still is, and a smeared tail behind it: inner grains orbit faster than outer ones, so the debris stretches into a spiral. In time it spreads into an even ring.',
+    d: { inner: 1.5, width: 0.5, op: 0.8, gaps: 0.5, struct: 0.5, clump: 0.7, dust: 0.35 }, c: ['#9b9184', '#4f483f'],
+    L: { gaps: 'Gaps', struct: 'Grain', clump: 'Bulge and tail', dust: 'Backlit glow', feeder: 'Remnant moon' }, feed: { at: 0.45, type: 'asteroid', size: 0.045 } },
+  { id: 'moonfed', name: 'Moon-fed dust', real: 'Saturn\'s E ring', note: 'Ice crystals sprayed from geysers on one small moon, thickest on its orbit and thinning outward. Very wide, thin and white-blue, bright only with the sun behind the planet. Shrunk here so the planet stays big (the real one reaches 3 to 8 planet radii).',
+    d: { inner: 1.6, width: 2.0, op: 0.2, gaps: 0, struct: 0.5, clump: 0, dust: 0.85 }, c: ['#e0ebf6', '#7f95ad'],
+    L: { gaps: null, struct: 'Reach', clump: null, dust: 'Backlit glow', feeder: 'Geyser moon' }, feed: { at: 0.25, type: 'ice', size: 0.075 } },
+];
+const RING_IDX = {}; RING_TYPES.forEach((t, i) => { RING_IDX[t.id] = i; });
+const ringType = (r) => RING_TYPES[RING_IDX[r.type] || 0];
+// A ring and its moons shape each other. A moon whose orbit crosses the ring clears a lane; a moon outside it clears gaps where a grain
+// would circle 2, 3/2 or 3 times for each orbit of the moon (the 2:1, 3:2 and 3:1 resonances, at 0.63, 0.76 and 0.48 of the moon's distance).
+const RESONANCES = [[0.63, 0.012, 0.5, 0.85], [0.763, 0.006, 0.2, 0.45], [0.481, 0.006, 0.25, 0.55]];
+function ringGapList(mm, ring) {
+  const lo = ring.inner, hi = ring.inner + ring.width, out = [];
+  mm.forEach((m, i) => {
+    if (ring.feeder === i + 1) return;   // the moon that feeds a ring lives in it and does not cut it
+    if (m.orbit > lo - 0.02 && m.orbit < hi + 0.02) out.push([m.orbit, 0.012 + m.size * 0.28, 0.95]);
+    for (const [k, h0, hs, dp] of RESONANCES) { const c = m.orbit * k; if (c > lo && c < hi) out.push([c, h0 + m.size * hs, dp]); }
+  });
+  out.sort((p, q) => q[1] * q[2] - p[1] * p[2]);
+  if (ring.type === 'broad') {
+    // a broad ring always has its two famous gaps unless a moon already cut something there
+    const near = (a, b) => out.some((g) => g[0] > lo + a * ring.width && g[0] < lo + b * ring.width);
+    if (!near(0.5, 0.8)) out.push([lo + 0.655 * ring.width, 0.04 * ring.width, 0.92]);
+    if (!near(0.82, 0.99)) out.push([lo + 0.905 * ring.width, 0.008 * ring.width + 0.003, 0.9]);
+  }
+  return out.slice(0, 6);
+}
+// moves the moon the ring belongs to onto the spot its kind of ring needs
+function placeFeeder(Q) {
+  const r = Q.ring, T = ringType(r);
+  if (!r.on || !T.feed || r.feeder < 1) return;
+  const m = Q.moonList[r.feeder - 1]; if (!m) return;
+  m.tilt = 0; m.orbit = r.inner + T.feed.at * r.width; m.size = T.feed.size;
+  if (m.type !== T.feed.type) applyMoonType(m, T.feed.type);
+}
+// a ring never sits where a moon already is, except the moon it belongs to or one the user put there on purpose
+function applyRingType(Q, id) {
+  const T = RING_TYPES[RING_IDX[id]], r = Q.ring;
+  r.type = id; Object.assign(r, T.d); r.c1 = T.c[0]; r.c2 = T.c[1];
+  if (T.feed && Q.moons < 1) Q.moons = 1;
+  ensureMoons(Q);
+  r.feeder = T.feed ? 1 : 0;
+  placeFeeder(Q);
+  const out = r.inner + r.width;
+  Q.moonList.forEach((m, i) => { if (i !== r.feeder - 1 && m.orbit > r.inner - 0.05 && m.orbit < out + 0.2) m.orbit = moonStart(r) + i * 0.3; });
+}
+const RING_CTL = [
+  ['inner', 'Distance', 1.1, 2.8, 0.01, (v) => v.toFixed(2)],
+  ['width', 'Width', 0.04, 2.6, 0.01, (v) => v.toFixed(2)],
+  ['op', 'Thickness', 0.1, 1, 0.01, (v) => v.toFixed(2)],
+  ['gaps', 'Gaps', 0, 1, 0.01, (v) => v.toFixed(2)],
+  ['struct', 'Detail', 0, 1, 0.01, (v) => v.toFixed(2)],
+  ['clump', 'Clumps', 0, 1, 0.01, (v) => v.toFixed(2)],
+  ['dust', 'Backlit glow', 0, 1, 0.01, (v) => v.toFixed(2)],
+  ['feeder', 'Source moon', 0, 5, 1, (v) => v < 1 ? 'none' : 'Moon ' + Math.round(v)],
+];
+const ringEls = {};
+function buildRingUI() {
+  const host = $('ctlRingEd');
+  for (const [key, label, min, max, step, fmt] of RING_CTL) {
+    const row = document.createElement('div'); row.className = 'ctl';
+    row.innerHTML = `<label for="r_${key}">${label}</label><input type="range" id="r_${key}" min="${min}" max="${max}" step="${step}"><output></output>`;
+    host.appendChild(row);
+    const inp = row.querySelector('input'), out = row.querySelector('output');
+    inp.addEventListener('input', () => {
+      P.ring[key] = parseFloat(inp.value); out.textContent = fmt(P.ring[key]);
+      if (key === 'feeder') { placeFeeder(P); syncMoonUI(); }
+    });
+    ringEls[key] = { row, inp, out, fmt, label: row.querySelector('label') };
+  }
+  const tp = $('ringTypes');
+  RING_TYPES.forEach((t) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.rt = t.id;
+    b.innerHTML = `${esc(t.name)}<small>${esc(t.real)}</small>`;
+    b.addEventListener('click', () => { applyRingType(P, t.id); syncControls(); });
+    tp.appendChild(b);
+  });
+  $('ringNew').addEventListener('click', () => {
+    P.ring.seed = 1 + Math.floor(Math.random() * 9999);
+    const h = (Math.random() - 0.5) * 24; P.ring.c1 = shiftHue(P.ring.c1, h); P.ring.c2 = shiftHue(P.ring.c2, h); syncRingUI();
+  });
+  $('ringReset').addEventListener('click', () => { const sd = P.ring.seed; applyRingType(P, P.ring.type); P.ring.seed = sd; syncControls(); });
+}
+function syncRingUI() {
+  const on = !!P.ring.on;
+  $('ringOn').checked = on; $('ringPick').hidden = !on;
+  if (!on) return;
+  const T = ringType(P.ring);
+  document.querySelectorAll('#ringTypes .chip').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.rt === T.id)));
+  $('ringNote').textContent = T.note;
+  for (const [key, label] of RING_CTL) {
+    const e = ringEls[key];
+    const lab = key === 'feeder' ? T.L.feeder : (key in T.L ? T.L[key] : label);
+    e.row.hidden = lab === null || (key === 'feeder' && P.moons < 1);
+    if (lab) e.label.textContent = lab;
+    if (key === 'feeder') e.inp.max = Math.max(1, Math.min(5, Math.round(P.moons)));
+    e.inp.value = P.ring[key]; e.out.textContent = e.fmt(P.ring[key]);
+  }
+  const sr = $('swRing'); sr.innerHTML = '';
+  [['c1', 'Ring light'], ['c2', 'Ring dark']].forEach(([k, l]) => {
+    const d = document.createElement('label'); d.className = 'sw';
+    d.innerHTML = `<input type="color" value="${P.ring[k]}" aria-label="${l}"><span>${l}</span>`;
+    d.querySelector('input').addEventListener('input', (ev) => { P.ring[k] = ev.target.value; });
+    sr.appendChild(d);
+  });
+}
+
 /* ---------- GL ---------- */
 const cv = $('cv');
 const gl = cv.getContext('webgl2', { antialias: false, alpha: false, preserveDrawingBuffer: false });
 let prog, loc = {}, glOK = !!gl;
 // The fragment shader is compiled in variants so work a planet does not use costs nothing: PM_CLOUDS only when the planet
 // draws clouds (not gas giants, not Clouds = 0), PM_HIQ only in High detail (high cirrus deck, small cells, streaks, relief),
-// PM_MOONS only when at least one moon is on.
+// PM_MOONS only when at least one moon is on, PM_RINGS only when the planet has rings.
 const progs = {};
 let vbuf = null;
 function makeProgram(key) {
   const mk = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(s)); throw new Error('shader: ' + gl.getShaderInfoLog(s)); } return s; };
-  const defs = (key.indexOf('C') >= 0 ? '#define PM_CLOUDS\n' : '') + (key.indexOf('H') >= 0 ? '#define PM_HIQ\n' : '') + (key.indexOf('M') >= 0 ? '#define PM_MOONS\n' : '');
+  const defs = (key.indexOf('C') >= 0 ? '#define PM_CLOUDS\n' : '') + (key.indexOf('H') >= 0 ? '#define PM_HIQ\n' : '') + (key.indexOf('M') >= 0 ? '#define PM_MOONS\n' : '') + (key.indexOf('R') >= 0 ? '#define PM_RINGS\n' : '');
   const pr = gl.createProgram();
   gl.attachShader(pr, mk(gl.VERTEX_SHADER, $('vs').textContent.trim()));
   gl.attachShader(pr, mk(gl.FRAGMENT_SHADER, $('fs').textContent.trim().replace('#version 300 es', '#version 300 es\n' + defs)));
@@ -1332,9 +1564,9 @@ function draw(w, h, tmul) {
   const mx = mm.reduce((m, o) => Math.max(m, o.orbit + o.size), 0);
   const extent = Math.max(1.3, P.ring.on ? ringOut * 1.04 : 0, mx * 0.95);
   const aspect = w / h;
-  const extentV = Math.max(1.3, P.ring.on ? ringOut * 0.72 : 0, mx * 0.75);
+  const extentV = Math.max(1.3, P.ring.on ? ringOut * Math.max(0.72, Math.sin(phi)) * 1.04 : 0, mx * 0.75);
   const zoom = Math.min(aspect * 0.92 / extent, 0.92 / extentV) * P.zoom;
-  useVariant((P.kind !== 'gas' && P.clouds > 0.01 ? 'C' : '') + (quality ? 'H' : '') + (mm.length ? 'M' : ''));
+  useVariant((P.kind !== 'gas' && P.clouds > 0.01 ? 'C' : '') + (quality ? 'H' : '') + (mm.length ? 'M' : '') + (P.ring.on ? 'R' : ''));
   gl.viewport(0, 0, w, h);
   gl.uniform2f(loc.uRes, w, h); gl.uniform1f(loc.uZoom, zoom);
   gl.uniform1i(loc.uType, KIND_TYPE(P.kind));
@@ -1346,7 +1578,9 @@ function draw(w, h, tmul) {
   f('uBands', P.bands); f('uTurb', P.turb); f('uStorms', P.storms); f('uStormSize', P.stormSize);
   f('uSpin', T.spin); f('uCloudAng', T.cloud); f('uFlowT', T.flow); f('uRingAng', T.ring); f('uTime', T.time);
   gl.uniform3fv(loc.uAxis, A); gl.uniform3fv(loc.uU, U); gl.uniform3fv(loc.uW, W); gl.uniform3fv(loc.uL, L);
-  f('uRingOn', P.ring.on ? 1 : 0); f('uRingIn', P.ring.inner); f('uRingOut', ringOut); f('uRingOp', P.ring.op); f('uRingGaps', P.ring.gaps);
+  const rg = P.ring, RT = ringType(rg);
+  f('uRingOn', rg.on ? 1 : 0); f('uRingIn', rg.inner); f('uRingOut', ringOut); f('uRingOp', rg.op); f('uRingGaps', RT.L.gaps ? rg.gaps : 0);
+  f('uRingStruct', rg.struct); f('uRingClump', RT.L.clump ? rg.clump : 0); f('uRingDust', rg.dust); f('uRingSeed', (rg.seed % 997) * 0.173); gl.uniform1i(loc.uRingType, RING_IDX[rg.type] || 0);
   gl.uniform3fv(loc.uRingCol, hex2rgb(P.ring.c1)); gl.uniform3fv(loc.uRingCol2, hex2rgb(P.ring.c2));
   // moons in world space, far to near
   const ms = mm.map((m) => {
@@ -1366,6 +1600,16 @@ function draw(w, h, tmul) {
     mq.set([m.shape, m.seed, o.a + T.moon * m.spin * 0.5, 0], i * 4);   // turning with the orbit keeps one face to the planet
     mc1.set(hex2rgb(m.c1), i * 3); mc2.set(hex2rgb(m.c2), i * 3); mc3.set(hex2rgb(m.c3), i * 3);
   });
+  // the moon a ring belongs to tells the ring where to bunch up (its orbit) and where along the orbit it is now
+  let feed = [0, 0, 0, 0];
+  if (rg.on && RT.feed && rg.feeder > 0 && rg.feeder <= mm.length) {
+    const fm = mm[rg.feeder - 1], o = ms.find((q) => q.m === fm);
+    if (o) feed = [fm.orbit, Math.atan2(Math.sin(o.a) * Math.cos(fm.tilt * D), Math.cos(o.a)), 1, 0];
+  }
+  gl.uniform4fv(loc.uRingFeed, feed);
+  const gaps = rg.on && RT.L.gaps && rg.gaps > 0 ? ringGapList(mm, rg) : [], gv = new Float32Array(24);
+  gaps.forEach((g, i) => gv.set([g[0], g[1], g[2], 0], i * 4));
+  gl.uniform1i(loc.uRGapN, gaps.length); gl.uniform4fv(loc['uRGap'], gv);
   gl.uniform1i(loc.uMoonN, ms.length);
   gl.uniform4fv(loc['uMoon'], mv); gl.uniform4fv(loc['uMoonP'], mp); gl.uniform4fv(loc['uMoonQ'], mq);
   gl.uniform3fv(loc['uMoonCol'], mc1); gl.uniform3fv(loc['uMoonCol2'], mc2); gl.uniform3fv(loc['uMoonCol3'], mc3);
@@ -1410,7 +1654,10 @@ function surprise() {
   if (kind === 'lava') P.pal[4] = '#ff6a1f';
   P.tilt = 10 + Math.random() * 45; P.roll = (Math.random() - 0.5) * 60;
   P.moons = Math.floor(Math.random() * 4);
-  if (Math.random() < 0.28) { P.ring.on = true; P.ring.inner = 1.3 + Math.random() * 0.4; P.ring.width = 0.3 + Math.random() * 0.8; P.ring.c1 = lighten(P.pal[1], 0.3); P.ring.c2 = darken(P.pal[2], 0.3); }
+  if (Math.random() < 0.28) {
+    P.ring.on = true; applyRingType(P, RING_TYPES[Math.floor(Math.random() * RING_TYPES.length)].id);
+    const rh = (Math.random() - 0.5) * 40; P.ring.c1 = shiftHue(P.ring.c1, rh); P.ring.c2 = shiftHue(P.ring.c2, rh); P.ring.seed = 1 + Math.floor(Math.random() * 9999);
+  }
   P.name = '';
   syncControls();
 }
@@ -1507,14 +1754,19 @@ function derive(s) {
   const ringTxt = mo + ' ' + sp;
   const RING_RE = /\b(pale|faint|thin|dark|heavy|wide|broken|glittering|debris|dust|dusty|icy|rock|bright)\s+(?:\w+\s+)?ring\b(?!\s+of\s+(?:docks?|stations?|archive|yards?|lights))|ring of (?:rock debris|dumped hulls|stolen haulers)|moonlets in a wide ring/;
   if (RING_RE.test(ringTxt) && !/one with|ringed with|ringed by|toll ring/.test(mo)) {
-    P2.ring.on = true;
-    P2.ring.op = /faint|thin|broken|dust/.test(ringTxt) ? 0.28 : /heavy|wide|vast|bright/.test(ringTxt) ? 0.75 : 0.5;
-    P2.ring.inner = 1.35; P2.ring.width = /wide|vast/.test(ringTxt) ? 1.0 : /thin|faint/.test(ringTxt) ? 0.45 : 0.75;
-    P2.ring.c1 = lighten(pal[2], 0.3); P2.ring.c2 = darken(pal[1], 0.3);
-    if (/debris|rock|hull|hauler/.test(ringTxt)) { P2.ring.c1 = '#a69b8c'; P2.ring.c2 = '#5c554c'; P2.ring.gaps = 0.8; }
+    // wreckage if the text says debris, dust if it says faint, narrow dark rings if it says dark, otherwise broad icy rings
+    const tp = /debris|rock|hull|hauler|wreck|broken/.test(ringTxt) ? 'wreck' : /dust|dusty|faint|thin/.test(ringTxt) ? 'dusty' : /\bdark\b|black/.test(ringTxt) ? 'narrow' : 'broad';
+    const T = RING_TYPES[RING_IDX[tp]], R = P2.ring;
+    R.on = true; R.type = tp; Object.assign(R, T.d); R.c1 = T.c[0]; R.c2 = T.c[1];
+    if (tp === 'broad') { R.c1 = lighten(pal[2], 0.3); R.c2 = darken(pal[1], 0.3); }
+    if (/faint|thin/.test(ringTxt)) { R.op = Math.min(R.op, 0.3); R.width *= 0.8; } else if (/heavy|vast|bright/.test(ringTxt)) R.op = Math.min(1, R.op + 0.1);
+    if (/wide|vast/.test(ringTxt)) R.width *= 1.3;
+    R.seed = 1 + Math.floor(rng(hashStr(s.n + 'ring'))() * 9999);
+    R.feeder = T.feed && P2.moons > 0 ? 1 : 0;
   }
   const hint = moonHint(mo);
   P2.moonList = Array.from({ length: P2.moons }, (_, i) => genMoon(P2.seed, P2.kind, i, i === 0 ? hint : null, moonStart(P2.ring)));
+  placeFeeder(P2);
   const r = rng(hashStr(s.n));
   P2.tilt = 14 + r() * 28; P2.roll = (r() - 0.5) * 50; P2.sun = -(35 + r() * 50) * (r() < 0.75 ? 1 : -1);
   P2.spin = (0.12 + r() * 0.3) * (r() < 0.9 ? 1 : -1);
@@ -1542,7 +1794,7 @@ const PARAM_RANGE = {
   bands: [3, 20, 1], turb: [0, 1.4], storms: [0, 6, 1], stormSize: [0.2, 1.6], spin: [-1, 1], cloudSpeed: [-1, 1], flow: [0, 1.5], moonSpeed: [0, 2],
   tilt: [6, 85], roll: [-90, 90], sun: [-180, 180], sunH: [-60, 60], zoom: [0.5, 1.8], moons: [0, 5, 1],
 };
-const RING_RANGE = { inner: [1.1, 2.4], width: [0.1, 1.4], op: [0.1, 1], gaps: [0, 1], spin: [-1, 1] };
+const RING_RANGE = { inner: [1.1, 2.8], width: [0.04, 2.6], op: [0.1, 1], gaps: [0, 1], struct: [0, 1], clump: [0, 1], dust: [0, 1], feeder: [0, 5, 1], seed: [0, 9999, 1], spin: [-1, 1] };
 const isHex = (c) => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
 const clampNum = (v, r, dflt) => { v = typeof v === 'string' ? parseFloat(v) : v; if (typeof v !== 'number' || !isFinite(v)) return dflt; v = Math.min(r[1], Math.max(r[0], v)); return r[2] ? Math.round(v) : v; };
 function sanitize(p, d) {
@@ -1554,6 +1806,7 @@ function sanitize(p, d) {
   out.ring.on = !!pr.on;
   for (const k in RING_RANGE) if (pr[k] !== undefined) out.ring[k] = clampNum(pr[k], RING_RANGE[k], d.ring[k]);
   for (const k of ['c1', 'c2']) if (isHex(pr[k])) out.ring[k] = pr[k];
+  if (RING_IDX[pr.type] !== undefined) out.ring.type = pr.type;
   const pal = Array.isArray(p.pal) ? p.pal : [];
   out.pal = d.pal.map((c, i) => isHex(pal[i]) ? pal[i] : c);
   if (isHex(p.hazeCol)) out.hazeCol = p.hazeCol;
@@ -1646,12 +1899,13 @@ function boot() {
   });
   buildControls();
   buildMoonUI();
+  buildRingUI();
   const dl = $('sysList');
   SYSTEMS.forEach((s, i) => { sysByName.set(s.n.toLowerCase(), i); const o = document.createElement('option'); o.value = s.n; o.label = s.sec; dl.appendChild(o); });
   $('sysIn').addEventListener('change', () => { const i = sysByName.get($('sysIn').value.trim().toLowerCase()); if (i !== undefined) loadSystem(i); else toast('No system with that name'); });
   $('btnPrev').addEventListener('click', () => loadSystem(sysIdx < 0 ? SYSTEMS.length - 1 : sysIdx - 1));
   $('btnNext').addEventListener('click', () => loadSystem(sysIdx + 1));
-  $('btnSeed').addEventListener('click', () => { P.seed = 1 + Math.floor(Math.random() * 9999); P.moonList = []; rebuildMoons(); });
+  $('btnSeed').addEventListener('click', () => { P.seed = 1 + Math.floor(Math.random() * 9999); P.moonList = []; ensureMoons(); placeFeeder(P); rebuildMoons(); });
   $('btnSurprise').addEventListener('click', surprise);
   $('ringOn').addEventListener('change', (e) => { P.ring.on = e.target.checked; syncControls(); });
   $('pName').addEventListener('input', (e) => { P.name = e.target.value; $('tagName').textContent = P.name || 'Unnamed'; });
@@ -1673,7 +1927,7 @@ function boot() {
   try { initGL(); } catch (e) { glOK = false; document.querySelector('.hint').textContent = 'Shader error: ' + e.message; console.error(e); return; }
   requestAnimationFrame(loop);
 }
-window.__pm = { get P() { return P; }, setP(p) { P = p; syncControls(); }, derive, loadSystem, SYSTEMS, classify, makeDefaults, KINDS, setKind, frame, T, draw: () => draw(cv.width, cv.height), pause(v) { paused = v; }, freeze(v) { frozen = v; }, setQ(v) { quality = v; }, fromCode, MOON_TYPES, ensureMoons, syncMoonUI, selectMoon(i) { selMoon = i; syncMoonUI(); } };
+window.__pm = { get P() { return P; }, setP(p) { P = p; syncControls(); }, derive, loadSystem, SYSTEMS, classify, makeDefaults, KINDS, setKind, frame, T, draw: () => draw(cv.width, cv.height), pause(v) { paused = v; }, freeze(v) { frozen = v; }, setQ(v) { quality = v; }, fromCode, MOON_TYPES, RING_TYPES, applyRingType, placeFeeder, syncRingUI, ensureMoons, syncMoonUI, selectMoon(i) { selMoon = i; syncMoonUI(); } };
 boot();
 })();
 </script>
