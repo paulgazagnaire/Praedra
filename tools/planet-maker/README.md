@@ -38,7 +38,7 @@ Edit `planet-maker.src.html` (the shader and the page), never `index.html`. `par
 `moonList` holds the moons in order (the `moons` slider shows the first n). A preset without it still loads: the moons are generated from the seed and the world type.
 Speeds: rotation = `spin * 0.5` radians per second (0.25 is one turn in about 50 s).
 
-Pasted presets and library entries are checked on load: numbers are clamped to their slider range (moons 0 to 5, each moon's numbers and colours the same way, an unknown moon type becomes cratered rock, an unknown ring type becomes broad icy rings; presets saved before ring kinds existed load as broad icy rings with their old size and colours), bad colours are replaced, and a short palette is filled from the world type's defaults.
+Pasted presets and library entries are checked on load: numbers are clamped to their slider range (moons 0 to 5, each moon's numbers and colours the same way, an unknown moon type becomes cratered rock, an unknown ring type becomes broad icy rings; presets saved before ring kinds existed load as broad icy rings with their old size and colours; a hand-written ring of another kind starts from that kind's own size, colours and source moon, so only the fields you write override it), bad colours are replaced, and a short palette is filled from the world type's defaults.
 
 ## Using it in Godot later
 The shader is GLSL ES 3.00 with no tricks. Porting to a Godot `.gdshader` is a mechanical rename (`uniform` blocks stay, `fragColor` becomes `COLOR`). The preset values map one-to-one onto the shader uniforms, so the game can draw the same planet from the same JSON.

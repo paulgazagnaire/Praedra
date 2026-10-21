@@ -1819,9 +1819,13 @@ function sanitize(p, d) {
   if (typeof sd === 'number' && isFinite(sd)) out.seed = Math.min(99999, Math.max(0, Math.round(sd)));
   const pr = p.ring || {};
   out.ring.on = !!pr.on;
+  // a different kind starts from that kind's own geometry, colours and source moon, like sanitizeMoon; an unknown kind stays as the default
+  if (Object.hasOwn(RING_IDX, pr.type) && pr.type !== d.ring.type) {
+    const T = RING_TYPES[RING_IDX[pr.type]];
+    Object.assign(out.ring, T.d, { type: pr.type, c1: T.c[0], c2: T.c[1], feeder: T.feed ? 1 : 0 });
+  }
   for (const k in RING_RANGE) if (pr[k] !== undefined) out.ring[k] = clampNum(pr[k], RING_RANGE[k], d.ring[k]);
   for (const k of ['c1', 'c2']) if (isHex(pr[k])) out.ring[k] = pr[k];
-  if (Object.hasOwn(RING_IDX, pr.type)) out.ring.type = pr.type;
   const pal = Array.isArray(p.pal) ? p.pal : [];
   out.pal = d.pal.map((c, i) => isHex(pal[i]) ? pal[i] : c);
   if (isHex(p.hazeCol)) out.hazeCol = p.hazeCol;
