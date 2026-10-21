@@ -54,6 +54,7 @@ internal static class Tourney
         }
         var clock = System.Diagnostics.Stopwatch.StartNew();
         var paramsA = WithOverrides(AiLevels.For(la), pa); var paramsB = WithOverrides(AiLevels.For(lb), pb);
+        var sides = SideParams(paramsA, paramsB, pe, pal); // checks --empire-params / --alliance-params here, before any game (QA-28)
         var settings = SettingsWith(ps);
         Console.WriteLine($"Tournament: {la}{(pa != null ? " [" + pa + "]" : "")} (A) against {lb}{(pb != null ? " [" + pb + "]" : "")} (B){(pe != null ? ", Empire [" + pe + "]" : "")}{(pal != null ? ", Alliance [" + pal + "]" : "")}, seeds {string.Join(",", seeds)}, up to {days} days, fog on, {jobs} at once{(ps != null ? ", settings " + ps : "")}.");
         NewGame.Create(new NewGameOptions { Seed = seeds[0], Preset = StartPreset.MedA }); // loads the shared data once before the parallel games
@@ -61,7 +62,7 @@ internal static class Tourney
         var results = new ConcurrentBag<GameResult>();
         Parallel.ForEach(games, new ParallelOptions { MaxDegreeOfParallelism = jobs }, g =>
         {
-            var (pEmp, pAll) = SideParams(g.AEmp, paramsA, paramsB, pe, pal);
+            var (pEmp, pAll) = sides(g.AEmp);
             var r = Play(g.Seed, g.AEmp, g.AEmp ? la : lb, g.AEmp ? lb : la, pEmp, pAll, days, settings);
             results.Add(r);
             if (verbose) lock (results) Console.WriteLine("  " + Line(r));
@@ -148,11 +149,16 @@ internal static class Tourney
     }
 
     /// <summary>
-    /// The Empire's and the Alliance's parameters for one game: A's and B's (each its level with --a-params / --b-params), whichever side each
-    /// plays, then --empire-params on the Empire's and --alliance-params on the Alliance's.
+    /// The Empire's and the Alliance's parameters for a game, by whether A plays the Empire: A's and B's (each its level with --a-params /
+    /// --b-params), whichever side each plays, then --empire-params on the Empire's and --alliance-params on the Alliance's. The four sets are
+    /// made here, so a bad value is an ArgumentException before any game starts.
     /// </summary>
-    internal static (SimpleAiParams Empire, SimpleAiParams Alliance) SideParams(bool aIsEmpire, SimpleAiParams a, SimpleAiParams b, string? empire, string? alliance) =>
-        (WithOverrides(aIsEmpire ? a : b, empire), WithOverrides(aIsEmpire ? b : a, alliance));
+    internal static Func<bool, (SimpleAiParams Empire, SimpleAiParams Alliance)> SideParams(SimpleAiParams a, SimpleAiParams b, string? empire, string? alliance)
+    {
+        var aEmp = WithOverrides(a, empire); var bEmp = WithOverrides(b, empire);
+        var aAll = WithOverrides(a, alliance); var bAll = WithOverrides(b, alliance);
+        return aIsEmpire => aIsEmpire ? (aEmp, bAll) : (bEmp, aAll);
+    }
 
     /// <summary>A copy of the parameters with "Name=value" pairs set (int and bool properties of SimpleAiParams).</summary>
     internal static SimpleAiParams WithOverrides(SimpleAiParams p, string? spec)
@@ -163,8 +169,9 @@ internal static class Tourney
         {
             var kv = pair.Split('=', 2);
             var prop = typeof(SimpleAiParams).GetProperty(kv[0]) ?? throw new ArgumentException($"SimpleAiParams has no {kv[0]}.");
-            object v = prop.PropertyType == typeof(int) ? int.Parse(kv[1], CultureInfo.InvariantCulture)
-                     : prop.PropertyType == typeof(bool) ? bool.Parse(kv[1])
+            string value = kv.Length == 2 ? kv[1] : throw new ArgumentException($"{kv[0]} needs a value ({kv[0]}=...).");
+            object v = prop.PropertyType == typeof(int) ? (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : throw new ArgumentException($"{kv[0]} must be an integer, not '{value}'."))
+                     : prop.PropertyType == typeof(bool) ? (bool.TryParse(value, out var b) ? b : throw new ArgumentException($"{kv[0]} must be true or false, not '{value}'."))
                      : throw new ArgumentException($"{kv[0]} is not an int or a bool.");
             prop.SetValue(copy, v);
         }
