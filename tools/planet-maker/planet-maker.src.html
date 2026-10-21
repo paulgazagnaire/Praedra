@@ -367,9 +367,10 @@ float cloudAt(vec3 q, float extra, int oct) {
 // concentric rings; a finer grid of avenues shows up inside urban districts.
 vec3 gcNormal(int i, float salt) { return normalize(hash33(vec3(float(i) * 1.37 + uSeed * 0.31, salt, 2.2)) - 0.5 + vec3(0.001)); }
 
-float cityNet(vec3 q, out float glow, out float urbanOut) {
+float cityNet(vec3 q, float core, out float glow, out float urbanOut) {
   // hubs at highway crossings
   float cn = clamp((uCities - 0.1) / 0.9, 0.0, 1.0);
+  float gate = mix(smoothstep(0.05, 0.5, core), 1.0, smoothstep(0.7, 1.0, uCities));
   float gl = 0.0;
   float bestD = 9.0; float rank = 0.0; vec3 bestP = vec3(0.0); vec3 bestN = vec3(0.0); float bestK = 0.0;
   for (int i = 0; i < 7; i++) {
@@ -384,11 +385,10 @@ float cityNet(vec3 q, out float glow, out float urbanOut) {
       p /= l;
       float d1 = length(q - p), d2 = length(q + p);
       float d = min(d1, d2);
-      gl = max(gl, exp(-d / 0.30) * (0.35 + 0.65 * h.y));
+      gl = max(gl, exp(-d / 0.30) * (0.35 + 0.65 * h.y) * gate);
       if (d < bestD) { bestD = d; rank = h.y; bestK = h.z; bestP = (d1 < d2) ? p : -p; bestN = ni; }
     }
   }
-  float uf = fbm(q * 2.4 + sOff() * 0.5 + 71.0, 4);
   glow = gl;
   float R = mix(0.10, 0.30, rank * rank) * mix(0.55, 1.0, cn);
   float light = 0.0;
@@ -407,11 +407,10 @@ float cityNet(vec3 q, out float glow, out float urbanOut) {
       float ri = floor(u * nR);
       float band = abs(fract(u * nR) - 0.5) * 2.0;
       float seg = step(0.2, noise(vec3(ang * 2.0, ri * 1.7, rank * 40.0)));
-      light += smoothstep(0.70, 0.92, band) * seg * (1.0 - u * 0.35) * 1.15;
-      light += smoothstep(0.20, 0.0, u) * 1.4;
+      light += (smoothstep(0.70, 0.92, band) * seg * (1.0 - u * 0.35) * 1.15 + smoothstep(0.20, 0.0, u) * 1.4) * gate;
     }
   }
-  float urban = clamp(smoothstep(mix(0.76, 0.54, cn), mix(0.88, 0.70, cn), uf) + glow * 1.3, 0.0, 1.0);
+  float urban = clamp(core + glow * 1.3, 0.0, 1.0);
   urbanOut = urban;
   // highways, dimmer outside districts
   for (int i = 0; i < 7; i++) {
@@ -465,6 +464,7 @@ vec3 shadePlanet(vec3 p, out float shine) {
     float lh = (uSea > 0.02) ? clamp(landv / (1.0 - t), 0.0, 1.0) : clamp(h0 * 1.15 - 0.1, 0.0, 1.0);
 
     vec3 land; float snow = 0.0;
+    float habT = 0.6, habM = 0.5;
     if (uBiome > 0.5) {
       // climate: warm at the equator, cold at the poles and on peaks; wet near coasts
       float L = abs(q.y);
@@ -472,6 +472,7 @@ vec3 shadePlanet(vec3 p, out float shine) {
       float temp = 1.0 - pow(L, 1.6) * 1.25 + tn * 0.25 - lh * 0.45;
       float coast = (uSea > 0.02) ? exp(-max(landv, 0.0) * 16.0) : 0.0;
       float moist = clamp(fbm(q * 2.6 + sOff() + 33.0, 3) + uWet * 0.5 + coast * 0.22, 0.0, 1.0);
+      habT = temp; habM = moist;
       land = mix(uPal[2], uPal[1], smoothstep(0.34, 0.64, moist));
       land = mix(land, mix(uPal[3], uPal[4], 0.35), smoothstep(0.40, 0.12, temp));
       land = mix(land, uPal[3], smoothstep(0.45, 0.85, lh));
@@ -480,6 +481,7 @@ vec3 shadePlanet(vec3 p, out float shine) {
       snow *= step(0.001, uIce);
     } else {
       float moist = fbm(q * 3.0 + sOff() + 9.0, 3);
+      habM = moist;
       float lh2 = clamp(lh * 0.8 + (moist - 0.5) * 0.7 + 0.1, 0.0, 1.0);
       land = mix(uPal[1], uPal[2], smoothstep(0.1, 0.55, lh2));
       land = mix(land, uPal[3], smoothstep(0.5, 0.95, lh + 0.25 * (moist - 0.5)));
@@ -523,20 +525,41 @@ vec3 shadePlanet(vec3 p, out float shine) {
       albedo = mix(albedo, albedo * 0.45, smoothstep(0.82, 0.97, lv) * uLava);
     }
     if (uCities > 0.0) {
-      // every inhabited world gets the same planned network; uCities sets how much of the land is built up
+      // people settle coasts first, then lowlands with a mild climate and some water; uCities sets how far they spread.
+      // One density field feeds both sides of the planet: night lights and daytime fields and pavement.
+      float cn = clamp((uCities - 0.1) / 0.9, 0.0, 1.0);
+      float ecu = smoothstep(0.7, 1.0, uCities);
+      float lw = max(landv, 0.0);
+      float site = (uSea > 0.02) ? 0.6 * exp(-lw * 14.0) + 0.4 * exp(-lw * 5.0) : 0.8 * (1.0 - lh);
+      float climate = exp(-pow((habT - 0.62) / 0.34, 2.0)) * mix(0.5, 1.0, smoothstep(0.2, 0.6, habM));
+      float lowland = 1.0 - smoothstep(0.30, 0.75, lh);
+      float reg = fbm(q * 3.0 + sOff() + 61.0, 4);
+      float loc = fbm(q * 11.0 + sOff() + 83.0, 3);
+      float pop = climate * lowland * (0.25 + 0.75 * site) * (0.35 + 1.1 * reg) * (0.7 + 0.6 * loc) * 1.9 * mix(0.6, 1.0, uBiome) + ecu * 0.55;
+      float coreT = mix(1.10, 0.28, cn);
+      float core = smoothstep(coreT, coreT + 0.22, pop + 0.12 * (loc - 0.5));
+      float farm = smoothstep(coreT - 0.62, coreT - 0.12, pop) * uBiome;   // no fields on airless rock
       float netL = 0.0, netG = 0.0, urban = 0.0;
-      netL = cityNet(q, netG, urban);
-      float dots = step(0.52, noise(q * 160.0)) * urban * urban;
+      netL = cityNet(q, core, netG, urban);
       float ground = landMask * (1.0 - snow);
-      emis += vec3(1.0, 0.78, 0.45) * dots * 0.45 * ground * night;
+      float dots = step(0.52, noise(q * 160.0)) * urban * urban;
+      float vill = step(0.82, noise(q * 180.0)) * farm * (1.0 - urban);
+      emis += vec3(1.0, 0.78, 0.45) * (dots * 0.45 + vill * 0.30) * ground * night;
       vec3 netC = mix(vec3(1.0, 0.68, 0.36), vec3(1.0, 0.88, 0.62), clamp(netL * 0.5, 0.0, 1.0));
       emis += netC * netL * 1.15 * night * ground;
-      emis += vec3(1.0, 0.55, 0.25) * (netG * 0.35 + urban * 0.07) * night * ground;
-      // daylight: districts are paved over (grey, flat, blocky), streets and hub rings read as dark lines
+      emis += vec3(1.0, 0.55, 0.25) * (netG * 0.35 + urban * 0.07 + farm * 0.02) * night * ground;
+      // daylight: farmland patchwork around the towns, paved grey districts inside, dark streets and hub outlines
       float ub = clamp(urban, 0.0, 1.0) * ground;
-      float blocks = 0.80 + 0.40 * noise(q * 120.0) * (0.6 + 0.4 * step(0.5, noise(q * 300.0)));
-      vec3 paved = (mix(vec3(0.34, 0.34, 0.36), vec3(0.50, 0.46, 0.40), noise(q * 22.0 + 3.0)) + albedo * 0.18) * blocks;
-      albedo = mix(albedo, paved, smoothstep(0.08, 0.7, ub) * 0.92);
+      vec3 fc = hash33(floor(M3 * q * 95.0));
+      float wetF = smoothstep(0.2, 0.7, habM);
+      vec3 wetField = mix(vec3(0.62, 0.55, 0.30), vec3(0.30, 0.44, 0.17), fc.x) * (0.78 + 0.45 * fc.y);
+      float disc = smoothstep(0.30 + 0.16 * fc.y, 0.20 + 0.16 * fc.y, length(fract(M3 * q * 95.0) - 0.5 - (fc - 0.5) * 0.30)) * step(0.35, fc.z);
+      vec3 aridField = mix(albedo * 1.12, vec3(0.30, 0.42, 0.17) * (0.8 + 0.4 * fc.y), disc);
+      vec3 fieldC = mix(aridField, mix(albedo * 1.1, wetField, 0.75), wetF);
+      albedo = mix(albedo, fieldC, farm * (1.0 - ub) * ground * 0.9);
+      float blocks = (0.80 + 0.40 * noise(q * 120.0) * (0.6 + 0.4 * step(0.5, noise(q * 300.0)))) * (0.80 + 0.40 * fbm(q * 26.0 + sOff() + 17.0, 3));
+      vec3 paved = (mix(vec3(0.48, 0.44, 0.37), vec3(0.34, 0.34, 0.37), smoothstep(0.35, 1.0, pop) * (0.7 + 0.5 * noise(q * 22.0 + 3.0))) + albedo * 0.25) * blocks;
+      albedo = mix(albedo, paved, smoothstep(0.03, 0.45, ub) * 0.95);
       albedo = mix(albedo, vec3(0.07, 0.07, 0.08), clamp(netL * 0.9, 0.0, 0.85) * ub * ub);
       n = normalize(mix(n, p, ub * 0.8));
     }
