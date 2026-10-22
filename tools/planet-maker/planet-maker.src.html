@@ -215,7 +215,7 @@ uniform vec3 uHazeCol;
 uniform float uAsh;           // 1 on a molten world: its clouds are ash and smoke, not water
 uniform float uLowCl;        // how much of the low cloud deck shows: 1 normally, little on a frozen world (too cold and dry for a water deck)
 uniform vec3 uCloudCol;       // what the clouds are made of: white for water, tan for dust, near black for ash
-uniform float uSeed, uSea, uMount, uScale, uIce, uClouds, uHaze, uCities, uLava, uCraters, uScars, uWet, uBiome, uQ;
+uniform float uSeed, uSea, uMount, uScale, uIce, uClouds, uHaze, uCities, uDens, uPlan, uRad, uLava, uCraters, uScars, uWet, uBiome, uQ;
 uniform float uBands, uTurb, uStorms, uStormSize;
 uniform float uSpin, uCloudAng, uFlowT, uRingAng, uTime;
 uniform vec3 uAxis, uU, uW, uL;
@@ -667,69 +667,135 @@ float cirrusAt(vec3 q, float extra, int oct) {
 }
 #endif
 
-// --- big cities: planned corridors and hubs ---------------------------------
-// Highways are great circles across the planet; hubs sit where two highways cross and carry
-// concentric rings; a finer grid of avenues shows up inside urban districts.
-vec3 gcNormal(int i, float salt) { return normalize(hash33(vec3(float(i) * 1.37 + uSeed * 0.31, salt, 2.2)) - 0.5 + vec3(0.001)); }
+// --- cities ------------------------------------------------------------------
+// What a settled world looks like from orbit depends on how many people live on each square kilometre of land (log10, dl).
+// Thin settlement is organic: dark land, scattered villages, towns, a few bright cities that glow, thin veins between them.
+// As the density climbs the glow joins into sprawl with a fractal edge. Past a threshold (moved by uPlan) some districts turn
+// planned: grids and ring-and-spoke layouts, each no wider than a district (about 450 km), so nothing runs for thousands of km.
+// Every size is in kilometres and scales with the planet radius uRad.
+float gPxC = 0.0;   // planet radii per pixel
+// nearest cell centre of a jittered 3D grid (8 cells searched): offset to it in cell units, its hash, and how far the next cell is
+vec3 cellC(vec3 x, out vec3 hh, out float wall) {
+  vec3 ip = floor(x), fp = fract(x), sd = step(0.5, fp);
+  float d1 = 9.0, d2 = 9.0; vec3 best = vec3(0.0); hh = vec3(0.0);
+  for (int k = 0; k < 2; k++) for (int j = 0; j < 2; j++) for (int i = 0; i < 2; i++) {
+    vec3 g = vec3(float(i), float(j), float(k)) - 1.0 + sd;
+    vec3 hs = hash33(ip + g + 53.0);
+    vec3 r = g + 0.2 + 0.6 * hs - fp;
+    float d = dot(r, r);
+    if (d < d1) { d2 = d1; d1 = d; best = r; hh = hs; } else if (d < d2) { d2 = d; }
+  }
+  wall = sqrt(d2) - sqrt(d1);
+  return best;
+}
+// a line every 1.0 along v; fw is the pixel size and w the line's own half-width, both in the same units
+float gridLine(float v, float fw, float w) {
+  float d = abs(fract(v + 0.5) - 0.5);
+  float hw = max(w, fw * 0.8);
+  float l = smoothstep(hw, hw * 0.35, d) * min(1.0, w / hw);
+  return mix(l, 2.0 * w, smoothstep(0.25, 0.6, fw));   // finer than a pixel: show the average, not moire
+}
 
-float cityNet(vec3 q, float core, out float glow, out float urbanOut) {
-  // hubs at highway crossings
-  float cn = clamp((uCities - 0.1) / 0.9, 0.0, 1.0);
-  float gate = mix(smoothstep(0.05, 0.5, core), 1.0, smoothstep(0.7, 1.0, uCities));
-  float gl = 0.0;
-  float bestD = 9.0; float rank = 0.0; vec3 bestP = vec3(0.0); vec3 bestN = vec3(0.0); float bestK = 0.0;
-  for (int i = 0; i < 7; i++) {
-    vec3 ni = gcNormal(i, 7.7);
-    for (int j = 0; j < 7; j++) {
-      if (j <= i) continue;
-      vec3 h = hash33(vec3(float(i) * 3.1 + uSeed, float(j) * 5.3, 9.1));
-      if (h.x > mix(0.30, 0.62, cn)) continue;
-      vec3 p = cross(ni, gcNormal(j, 7.7));
-      float l = length(p);
-      if (l < 0.2) continue;
-      p /= l;
-      float d1 = length(q - p), d2 = length(q + p);
-      float d = min(d1, d2);
-      gl = max(gl, exp(-d / 0.30) * (0.35 + 0.65 * h.y) * gate);
-      if (d < bestD) { bestD = d; rank = h.y; bestK = h.z; bestP = (d1 < d2) ? p : -p; bestN = ni; }
+// night light (about 0..2) at q. urban = how paved it is by day, streets = dark lines by day, halo = soft sky glow
+float cityField(vec3 q, float dl, out float urban, out float streets, out float halo) {
+  float kPx = gPxC * uRad;                       // km per pixel
+  vec3 so3 = sOff() + 140.0;
+  vec3 qw = q + 0.045 * vec3(gnoise(q * 7.0 + so3), gnoise(q * 7.0 + so3 + 17.0), gnoise(q * 7.0 + so3 + 41.0));   // bends every edge so nothing lines up
+  float f1 = uRad / 110.0, f2 = uRad / 320.0;
+  float dens1 = smoothstep(0.4, 3.0, dl);
+
+  // sprawl: past about 100 people per km2 the lights join into one mass with a ragged edge
+  float sp = smoothstep(2.3, 4.0, dl + 1.1 * (fbm(qw * f2 * 1.3 + so3, 4) - 0.5));
+  float tex = 0.40 + 0.60 * step(0.45, noise(qw * (uRad / 28.0) + so3 + 3.0));
+  float sprawl = sp * tex * 0.6;
+
+  // villages: sparse dots that bunch around the towns
+  float clu = fbm(qw * f1 * 0.9 + so3 + 9.0, 3);
+  float dotThr = mix(0.90, 0.50, dens1) - 0.35 * (clu - 0.5);
+  float dots = step(dotThr, noise(qw * (uRad / 40.0) + so3)) * smoothstep(0.3, 1.2, dl);
+
+  // towns (about 110 km apart) and cities (about 320 km apart): each a blob with a bright core and a bloom
+  float wl;
+  vec3 h1; vec3 r1 = cellC(qw * f1 + so3, h1, wl);
+  float d1 = length(r1) * (0.75 + 0.5 * fbm(qw * f1 * 2.7 + so3 + 5.0, 2));
+  float pres1 = smoothstep(h1.x - 0.1, h1.x + 0.1, smoothstep(0.4, 2.4, dl) * 0.9);
+  float town = pres1 * smoothstep(mix(0.10, 0.30, h1.y) * mix(0.8, 1.4, smoothstep(1.0, 3.5, dl)), 0.0, d1);
+  vec3 h2; vec3 r2 = cellC(qw * f2 + so3 + 31.0, h2, wl);
+  float d2 = length(r2) * (0.65 + 0.7 * fbm(qw * f2 * 2.5 + so3 + 7.0, 3));
+  float pres2 = smoothstep(h2.x - 0.1, h2.x + 0.1, smoothstep(0.9, 3.0, dl) * 0.9);
+  float sz2 = mix(0.12, 0.34, h2.y) * mix(0.9, 1.5, smoothstep(2.0, 4.0, dl));
+  float core = pres2 * exp(-3.0 * pow(d2 / sz2, 2.0));
+  float bloom = pres2 * exp(-d2 / (sz2 * 2.2));
+
+  // veins: thin winding lines (rivers, coast roads) that only show where people live
+  float rid = 1.0 - abs(2.0 * fbm(qw * (uRad / 900.0) + so3 + 5.0, 3) - 1.0);
+  float rid2 = 1.0 - abs(2.0 * fbm(qw * (uRad / 380.0) + so3 + 9.0, 3) - 1.0);
+  float vein = smoothstep(0.955, 0.995, rid) + 0.6 * smoothstep(0.965, 0.997, rid2);
+  vein *= smoothstep(1.3, 2.6, dl) * (0.10 + 0.90 * smoothstep(0.0, 0.5, bloom + town));
+
+  float L = dots * 0.40 * (1.0 - 0.6 * sp) + town * 0.75 + core * 1.5 + sprawl + vein * 0.45;
+  urban = clamp(sp + core + bloom * 0.5 + town * 0.45, 0.0, 1.0);
+  halo = sp * 0.5 + bloom * 0.7 + town * 0.3;
+  streets = vein * 0.4;
+
+  // planned districts: ~450 km cells, where density passes the threshold; the Planning slider moves it and also sets how many districts are planned
+  float gg = smoothstep(2.9, 3.9, dl + (uPlan - 0.5) * 1.6);
+  if (gg > 0.01) {
+    float f3 = uRad / 460.0;
+    vec3 h3; float w3; vec3 r3 = cellC(qw * f3 + so3 + 77.0, h3, w3);
+    vec3 hd = hash33(h3 * 91.7 + 3.0);
+    float planned = gg * smoothstep(0.10 + 0.85 * uPlan + 0.05, 0.10 + 0.85 * uPlan - 0.05, hd.y);
+    if (planned > 0.01) {
+      vec3 qc = normalize(qw + r3 / f3);
+      vec3 tt = normalize(cross(qc, hd - 0.5 + vec3(0.003)));
+      vec3 tb = cross(qc, tt);
+      float ang = hd.x * 3.14159;
+      vec3 tA = tt * cos(ang) + tb * sin(ang), tB = -tt * sin(ang) + tb * cos(ang);
+      vec2 lc = vec2(dot(q, tA), dot(q, tB)) * uRad;      // km from the district centre, in its own frame
+      float Lg = 0.0;
+      if (hd.z < 0.6) {
+        // street grid: a main road every ~80 km with a finer grid in the lit blocks between
+        float Pm = 62.0 + 40.0 * h3.z;
+        vec2 g = lc / Pm;
+        float fw = kPx / Pm;
+        vec3 hb = hash33(vec3(floor(g), h3.x * 50.0));
+        float blk = smoothstep(0.12, 0.35, hb.x);
+        float prim = max(gridLine(g.x, fw, 0.035), gridLine(g.y, fw, 0.035)) * smoothstep(0.12, 0.30, noise(vec3(g * 0.9, h3.y * 40.0)));
+        float sec = max(gridLine(g.x * 4.0, fw * 4.0, 0.09), gridLine(g.y * 4.0, fw * 4.0, 0.09));
+        Lg = prim * 0.95 + sec * 0.55 * blk + blk * 0.28 * (0.6 + 0.8 * hb.y);
+      } else {
+        // ring-and-spoke: a bright hub, rings every ~45 km, spokes between them
+        float rho = length(lc);
+        float Pr = 38.0 + 20.0 * h3.z;
+        float ns = 8.0 + floor(hd.x * 8.0);
+        float phi = atan(lc.y, lc.x) * ns / 6.2831853;
+        float spk = max(rho * 6.2831853 / ns, 1.0);
+        float rings = gridLine(rho / Pr, kPx / Pr, 0.04) * smoothstep(0.25, 0.5, noise(vec3(rho / Pr, h3.y * 30.0, 2.0)) + 0.35);
+        float spokes = gridLine(phi, kPx / spk, 0.035) * smoothstep(0.0, 25.0, rho) * smoothstep(0.25, 0.5, noise(vec3(phi * 2.0, rho * 0.02, h3.x * 20.0)) + 0.3);
+        float hub = smoothstep(14.0, 5.0, rho) * 1.4 + 0.5 * gridLine(rho / 26.0, kPx / 26.0, 0.05) * smoothstep(80.0, 40.0, rho);
+        Lg = rings * 0.9 + spokes * 0.8 + hub + 0.25 * smoothstep(300.0, 60.0, rho) * smoothstep(0.1, 0.4, hash33(vec3(floor(lc / (Pr * 0.5)), h3.x * 50.0)).x);
+      }
+      // the district's own wall: a ring road, broken here and there
+      float wkm = w3 * 460.0 * 0.5;
+      float hwR = max(2.5, kPx * 0.8);
+      float arter = smoothstep(hwR, hwR * 0.3, wkm) * smoothstep(0.45, 0.60, noise(qw * (uRad / 70.0) + so3 + 12.0)) * smoothstep(0.35, 0.5, hd.x);
+      float edge = smoothstep(0.0, 18.0, wkm);   // the district thins out toward its wall
+      float bri = 0.65 + 0.70 * hash33(h3 * 17.3 + 5.0).x;   // some districts are dim and residential, some bright
+      Lg = (Lg * (0.35 + 0.65 * edge) + arter * 0.5) * bri;
+      L = mix(L, L * 0.40 + Lg * 1.15, planned);
+      streets = mix(streets, Lg * 0.75, planned);
+      urban = mix(urban, max(urban, 0.85), planned * 0.8);
+      halo = mix(halo, max(halo, 0.55), planned * 0.8);
     }
   }
-  glow = gl;
-  float R = mix(0.10, 0.30, rank * rank) * mix(0.55, 1.0, cn);
-  float light = 0.0;
-  if (bestD < 8.0) {
-    vec3 w = q - bestP; w -= bestP * dot(w, bestP);
-    vec3 t1 = normalize(cross(bestP, bestN)); vec3 t2 = cross(bestP, t1);
-    float ang = atan(dot(w, t2), dot(w, t1));
-    // squares or pentagons, never circles; rotated to follow the first highway
-    float sides = (bestK < 0.5) ? 4.0 : 5.0;
-    float sec = 6.2831853 / sides;
-    float a2 = mod(ang, sec) - 0.5 * sec;
-    float rp = length(w) * cos(a2) / cos(0.5 * sec);
-    float u = rp / R;
-    if (u < 1.0) {
-      float nR = floor(2.0 + 4.0 * rank);
-      float ri = floor(u * nR);
-      float band = abs(fract(u * nR) - 0.5) * 2.0;
-      float seg = step(0.2, noise(vec3(ang * 2.0, ri * 1.7, rank * 40.0)));
-      light += (smoothstep(0.70, 0.92, band) * seg * (1.0 - u * 0.35) * 1.15 + smoothstep(0.20, 0.0, u) * 1.4) * gate;
-    }
-  }
-  float urban = clamp(core + glow * 1.3, 0.0, 1.0);
-  urbanOut = urban;
-  // highways, dimmer outside districts
-  for (int i = 0; i < 7; i++) {
-    float d = abs(dot(q, gcNormal(i, 7.7)));
-    light += smoothstep(0.008, 0.0020, d) * (0.10 * cn * cn + 0.90 * urban) * mix(0.35, 0.65, cn);
-  }
-  // avenues, only inside districts
-  int nm = (uQ > 0.5) ? 16 : 8;
-  for (int i = 0; i < 16; i++) {
-    if (i >= nm) break;
-    float d = abs(dot(q, gcNormal(i, 31.4)));
-    light += smoothstep(0.0045, 0.0010, d) * urban * urban * urban * 0.4;
-  }
-  return light;
+  // big dark and bright regions, and dark rivers and parks winding through the dense land, so a packed world is never a flat wash
+  float macro = 0.45 + 0.95 * smoothstep(0.25, 0.75, fbm(qw * f2 * 0.5 + so3 + 21.0, 3));
+  float rid3 = 1.0 - abs(2.0 * fbm(qw * (uRad / 520.0) + so3 + 33.0, 3) - 1.0);
+  float wet = smoothstep(0.955, 0.990, rid3);
+  float packed = smoothstep(2.6, 4.0, dl);
+  L *= mix(1.0, macro * (1.0 - 0.6 * wet), packed);
+  urban *= 1.0 - 0.6 * wet * packed;
+  return L;
 }
 
 // --- planet ----------------------------------------------------------------
@@ -837,30 +903,25 @@ vec3 shadePlanet(vec3 p, out float shine) {
       albedo = mix(albedo, albedo * 0.45, smoothstep(0.82, 0.97, lv) * uLava);
     }
     if (uCities > 0.0) {
-      // people settle coasts first, then lowlands with a mild climate and some water; uCities sets how far they spread.
-      // One density field feeds both sides of the planet: night lights and daytime fields and pavement.
-      float cn = clamp((uCities - 0.1) / 0.9, 0.0, 1.0);
-      float ecu = smoothstep(0.7, 1.0, uCities);
+      // people settle coasts first, then lowlands with a mild climate and some water. That gives a settling score; the planet's
+      // average density (uDens, from population, radius and land) lifts or lowers it into a local density, and the density decides the look.
+      // One field feeds both sides of the planet: night lights and daytime fields and pavement.
       float lw = max(landv, 0.0);
       float site = (uSea > 0.02) ? 0.6 * exp(-lw * 14.0) + 0.4 * exp(-lw * 5.0) : 0.8 * (1.0 - lh);
       float climate = exp(-pow((habT - 0.62) / 0.34, 2.0)) * mix(0.5, 1.0, smoothstep(0.2, 0.6, habM));
       float lowland = 1.0 - smoothstep(0.30, 0.75, lh);
       float reg = fbm(q * 3.0 + sOff() + 61.0, 4);
       float loc = fbm(q * 11.0 + sOff() + 83.0, 3);
-      float pop = climate * lowland * (0.25 + 0.75 * site) * (0.35 + 1.1 * reg) * (0.7 + 0.6 * loc) * 1.9 * mix(0.6, 1.0, uBiome) + ecu * 0.55;
-      float coreT = mix(1.10, 0.28, cn);
-      float core = smoothstep(coreT, coreT + 0.22, pop + 0.12 * (loc - 0.5));
-      float farm = smoothstep(coreT - 0.62, coreT - 0.12, pop) * uBiome;   // no fields on airless rock
-      float netL = 0.0, netG = 0.0, urban = 0.0;
-      netL = cityNet(q, core, netG, urban);
+      float settle = climate * lowland * (0.25 + 0.75 * site) * (0.35 + 1.1 * reg) * (0.7 + 0.6 * loc) * 1.9 * mix(0.6, 1.0, uBiome);
+      float crowd = smoothstep(3.0, 4.6, uDens);   // on a packed world people live on bare rock too
+      float dl = uDens + 0.75 + 2.4 * (1.0 - 0.5 * crowd) * (settle - 0.6) - 2.5 * (1.0 - crowd) * (1.0 - smoothstep(0.02, 0.12, settle));
+      float urban, streets, halo;
+      float Ln = cityField(q, dl, urban, streets, halo);
       float ground = landMask * (1.0 - snow);
-      float dots = step(0.52, noise(q * 160.0)) * urban * urban;
-      float vill = step(0.82, noise(q * 180.0)) * farm * (1.0 - urban);
-      emis += vec3(1.0, 0.78, 0.45) * (dots * 0.45 + vill * 0.30) * ground * night;
-      vec3 netC = mix(vec3(1.0, 0.68, 0.36), vec3(1.0, 0.88, 0.62), clamp(netL * 0.5, 0.0, 1.0));
-      emis += netC * netL * 1.15 * night * ground;
-      emis += vec3(1.0, 0.55, 0.25) * (netG * 0.35 + urban * 0.07 + farm * 0.02) * night * ground;
-      // daylight: farmland patchwork around the towns, paved grey districts inside, dark streets and hub outlines
+      vec3 netC = mix(vec3(1.0, 0.62, 0.28), vec3(1.0, 0.86, 0.58), clamp(Ln * 0.5, 0.0, 1.0));
+      emis += (netC * Ln * 0.95 + vec3(1.0, 0.55, 0.25) * halo * 0.22) * night * ground;
+      // daylight: farmland patchwork around the towns, paved grey districts inside, dark streets
+      float farm = smoothstep(0.8, 1.9, dl) * (1.0 - smoothstep(2.6, 3.4, dl)) * uBiome;   // no fields on airless rock
       float ub = clamp(urban, 0.0, 1.0) * ground;
       vec3 fc = hash33(floor(M3 * q * 95.0));
       float wetF = smoothstep(0.2, 0.7, habM);
@@ -870,9 +931,9 @@ vec3 shadePlanet(vec3 p, out float shine) {
       vec3 fieldC = mix(aridField, mix(albedo * 1.1, wetField, 0.75), wetF);
       albedo = mix(albedo, fieldC, farm * (1.0 - ub) * ground * 0.9);
       float blocks = (0.80 + 0.40 * noise(q * 120.0) * (0.6 + 0.4 * step(0.5, noise(q * 300.0)))) * (0.80 + 0.40 * fbm(q * 26.0 + sOff() + 17.0, 3));
-      vec3 paved = (mix(vec3(0.48, 0.44, 0.37), vec3(0.34, 0.34, 0.37), smoothstep(0.35, 1.0, pop) * (0.7 + 0.5 * noise(q * 22.0 + 3.0))) + albedo * 0.25) * blocks;
+      vec3 paved = (mix(vec3(0.48, 0.44, 0.37), vec3(0.34, 0.34, 0.37), smoothstep(2.8, 4.5, dl) * (0.7 + 0.5 * noise(q * 22.0 + 3.0))) + albedo * 0.25) * blocks;
       albedo = mix(albedo, paved, smoothstep(0.03, 0.45, ub) * 0.95);
-      albedo = mix(albedo, vec3(0.07, 0.07, 0.08), clamp(netL * 0.9, 0.0, 0.85) * ub * ub);
+      albedo = mix(albedo, vec3(0.07, 0.07, 0.08), clamp(streets * 0.9, 0.0, 0.85) * ub * ub);
       n = normalize(mix(n, p, ub * 0.8));
     }
 #ifdef PM_CLOUDS
@@ -1087,6 +1148,7 @@ void main() {
   vec2 fc = gl_FragCoord.xy;
   vec2 uv = (fc - 0.5 * uRes) / (0.5 * uRes.y) / uZoom;
   float px = 2.0 / (uRes.y * uZoom);
+  gPxC = px;
   vec3 col = vec3(0.012, 0.014, 0.022) + stars(fc);
 
 #ifdef PM_MOONS
@@ -1244,21 +1306,21 @@ const HAS_SEA = (t) => ['terran', 'ocean', 'swamp', 'city', 'ice', 'locked'].inc
 const IS_ROCKY = (t) => t !== 'gas';
 
 const BASE = {
-  seed: 7, sea: 0.5, mount: 0.5, wet: 0, scale: 1.0, ice: 0.4, clouds: 0.5, haze: 0.6, cities: 0, lava: 0, craters: 0, scars: 0,
+  seed: 7, sea: 0.5, mount: 0.5, wet: 0, scale: 1.0, ice: 0.4, clouds: 0.5, haze: 0.6, cities: 0, rad: 6371, plan: 0.5, land: null, lava: 0, craters: 0, scars: 0,
   bands: 9, turb: 0.6, storms: 2, stormSize: 1.0,
   spin: 0.25, cloudSpeed: 0.3, flow: 0.4, tilt: 22, roll: -12, sun: -55, sunH: 12, zoom: 1,
   ring: { on: false, type: 'broad', inner: 1.24, width: 1.03, op: 0.8, gaps: 0.8, struct: 0.6, clump: 0.3, dust: 0.15, feeder: 0, seed: 1, spin: 0.3, c1: '#d8c8a4', c2: '#7a6a55' },
   moons: 1, moonSpeed: 0.6, moonList: [],
 };
 const KIND_DEF = {
-  terran: { wet: 0, pal: ['#1c4d8f', '#3f7a3c', '#7b7a45', '#8f7f6d', '#f1f5f9'], sea: 0.55, mount: 0.5, clouds: 0.5, haze: 0.65, hazeCol: '#78aaf2', ice: 0.3, cities: 0.3 },
+  terran: { wet: 0, pal: ['#1c4d8f', '#3f7a3c', '#7b7a45', '#8f7f6d', '#f1f5f9'], sea: 0.55, mount: 0.5, clouds: 0.5, haze: 0.65, hazeCol: '#78aaf2', ice: 0.3, cities: 0.48 },
   ocean: { wet: 0.15, pal: ['#123f78', '#2f8a78', '#6aa078', '#9a9a82', '#f1f5f9'], sea: 0.95, mount: 0.4, clouds: 0.6, haze: 0.7, hazeCol: '#7fb4ff', ice: 0.3, scale: 1.5 },
   swamp: { wet: 0.4, pal: ['#25463a', '#44683a', '#68793f', '#85805a', '#e0e8e0'], sea: 0.45, mount: 0.2, clouds: 0.7, haze: 0.8, hazeCol: '#9cc88a', ice: 0.1 },
   desert: { wet: -0.45, pal: ['#000000', '#c99b5c', '#b46f3a', '#8c4d2a', '#efe4d2'], sea: 0, mount: 0.55, clouds: 0.12, haze: 0.4, hazeCol: '#e8b87a', ice: 0.15, craters: 0.1 },
   ice: { wet: 0, pal: ['#4f7ca8', '#d8e6f1', '#b9d0e4', '#ffffff', '#ffffff'], sea: 0.35, mount: 0.45, clouds: 0.45, haze: 0.45, hazeCol: '#bfe0ff', ice: 1, craters: 0.2 },
   rock: { pal: ['#000000', '#59564f', '#8a857b', '#b5afa3', '#e8e8ea'], sea: 0, mount: 0.3, clouds: 0, haze: 0, hazeCol: '#aab4c4', ice: 0, craters: 0.8 },
   lava: { pal: ['#000000', '#2d2320', '#463631', '#6a5848', '#ff6a1f'], sea: 0, mount: 0.6, clouds: 0.3, haze: 0.5, hazeCol: '#ff8a50', ice: 0, lava: 0.9, craters: 0.2 },
-  city: { wet: -0.1, pal: ['#2b4f6e', '#6e7075', '#868a8f', '#a2a7ad', '#e8eef2'], sea: 0.15, mount: 0.3, clouds: 0.3, haze: 0.55, hazeCol: '#c3a07a', ice: 0.1, cities: 0.9 },
+  city: { wet: -0.1, pal: ['#2b4f6e', '#6e7075', '#868a8f', '#a2a7ad', '#e8eef2'], sea: 0.15, mount: 0.3, clouds: 0.3, haze: 0.55, hazeCol: '#c3a07a', ice: 0.1, cities: 0.97, plan: 0.75 },
   locked: { wet: 0, pal: ['#2b6e8f', '#5b8a4a', '#c0582c', '#dbe7f2', '#ffffff'], sea: 0.4, mount: 0.45, clouds: 0.35, haze: 0.6, hazeCol: '#8cc0ff', ice: 0, spin: 0 },
   gas: { pal: ['#c9a36b', '#e8d3a6', '#a8744a', '#f2e8d2', '#b3472f'], bands: 10, turb: 0.6, storms: 2, stormSize: 1.0, clouds: 0, haze: 0.5, hazeCol: '#e9c690', sea: 0, spin: 0.3, flow: 0.45 },
 };
@@ -1278,6 +1340,28 @@ let paused = false, frozen = false, quality = 1;
 try { if (localStorage.getItem('pm_quality') === '0') quality = 0; } catch (e) {}
 const T = { spin: 0, cloud: 0, flow: 0, ring: 0, moon: 0, time: 0 };
 
+/* ---------- population and density ---------- */
+// The Population slider is a log scale: 0.01 billion at the left, 10,000 billion at the right. Density is people per km2 of land;
+// it sets the whole look of the cities (see cityField in the shader).
+const popBillions = (pos) => pos > 0 ? Math.pow(10, -2 + 6 * pos) : 0;
+const landShare = (p) => p.land != null ? p.land : HAS_SEA(p.kind) ? Math.min(1, Math.max(0.04, 1 - 1.2 * p.sea)) : 1;   // estimate from the ocean slider
+function popText(pos) {
+  const b = popBillions(pos);
+  return b <= 0 ? 'none' : b >= 1000 ? +(b / 1000).toPrecision(2) + ' trillion' : b >= 1 ? +b.toPrecision(2) + ' billion' : Math.round(b * 1000) + ' million';
+}
+const DENS_CLASSES = [[0.5, 'empty'], [5, 'frontier'], [30, 'rural'], [150, 'settled'], [600, 'dense'], [3000, 'metropolitan'], [15000, 'megalopolis'], [Infinity, 'ecumenopolis']];
+function cityStats(p) {
+  const B = popBillions(p.cities), area = 4 * Math.PI * p.rad * p.rad * landShare(p);
+  const dens = B * 1e9 / area;
+  return { B, dens, ld: Math.log10(Math.max(dens, 0.001)), cls: DENS_CLASSES.find((c) => dens < c[0])[1] };
+}
+function updateCityInfo() {
+  const el = $('cityInfo'); if (!el) return;
+  const vis = IS_ROCKY(P.kind) && P.kind !== 'lava' && P.cities > 0; el.hidden = !vis; if (!vis) return;
+  const s = cityStats(P);
+  el.textContent = (s.dens < 10 ? s.dens.toFixed(1) : Math.round(s.dens).toLocaleString('en-US')) + ' people per km² of land · ' + s.cls;
+}
+
 /* ---------- controls ---------- */
 const CONTROLS = [
   // section, key, label, min, max, step, visible(P), readout
@@ -1288,7 +1372,10 @@ const CONTROLS = [
   ['Look', 'ice', 'Ice caps', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'rock' && p.kind !== 'lava' && p.kind !== 'desert'],
   ['Look', 'craters', 'Craters', 0, 1, 0.01, (p) => IS_ROCKY(p.kind)],
   ['Look', 'scars', 'Mining scars', 0, 1, 0.01, (p) => IS_ROCKY(p.kind)],
-  ['Look', 'cities', 'City lights', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'lava'],
+  ['Look', 'cities', 'Population', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'lava', (v) => popText(v)],
+  ['Look', 'rad', 'Planet radius', 1500, 15000, 100, (p) => IS_ROCKY(p.kind) && p.kind !== 'lava', (v) => Math.round(v) + ' km'],
+  ['Look', 'land', 'Land share', 0.02, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'lava', (v) => Math.round(v * 100) + '%'],
+  ['Look', 'plan', 'Grown or planned', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'lava', (v) => v < 0.2 ? 'all grown' : v < 0.4 ? 'mostly grown' : v < 0.6 ? 'mixed' : v < 0.8 ? 'mostly planned' : 'all planned'],
   ['Look', 'lava', 'Lava cracks', 0, 1, 0.01, (p) => IS_ROCKY(p.kind)],
   ['Look', 'bands', 'Bands', 3, 20, 1, (p) => p.kind === 'gas'],
   ['Look', 'turb', 'Turbulence', 0, 1.4, 0.01, (p) => p.kind === 'gas'],
@@ -1311,8 +1398,8 @@ const CONTROLS = [
 function spinText(v, p) { if (Math.abs(v) < 0.01) return 'stopped'; const s = 2 * Math.PI / (Math.abs(v) * 0.5); return (v < 0 ? '↺ ' : '') + Math.round(s) + ' s'; }
 const SEC_HOST = { Look: 'ctlLook', Sky: 'ctlSky', Motion: 'ctlMotion', Cam: 'ctlCam', Moon: 'ctlMoon' };
 const ctlEls = {};
-const get = (k) => k === 'size' ? 3 - P.scale : k === 'ringSpin' ? P.ring.spin : P[k];
-const set = (k, v) => { if (k === 'size') P.scale = 3 - v; else if (k === 'ringSpin') P.ring.spin = v; else P[k] = v; };
+const get = (k) => k === 'size' ? 3 - P.scale : k === 'land' ? landShare(P) : k === 'ringSpin' ? P.ring.spin : P[k];
+const set = (k, v) => { if (k === 'size') P.scale = 3 - v; else if (k === 'land') P.land = v; else if (k === 'ringSpin') P.ring.spin = v; else P[k] = v; };
 
 function buildControls() {
   for (const c of CONTROLS) {
@@ -1322,9 +1409,11 @@ function buildControls() {
     row.innerHTML = `<label for="${id}">${label}</label><input type="range" id="${id}" min="${min}" max="${max}" step="${step}"><output></output>`;
     $(SEC_HOST[sec]).appendChild(row);
     const inp = row.querySelector('input'), out = row.querySelector('output');
-    inp.addEventListener('input', () => { set(key, parseFloat(inp.value)); refreshOut(c); if (key === 'moons') { const n0 = ensureMoons(); if (n0 > 0 && selMoon >= n0) selMoon = n0 - 1; rebuildMoons(); } if (key === 'tilt' || key === 'roll') {} });
+    inp.addEventListener('input', () => { set(key, parseFloat(inp.value)); refreshOut(c); updateCityInfo(); if (key === 'moons') { const n0 = ensureMoons(); if (n0 > 0 && selMoon >= n0) selMoon = n0 - 1; rebuildMoons(); } if (key === 'tilt' || key === 'roll') {} });
     ctlEls[key] = { row, inp, out, c };
   }
+  const info = document.createElement('div'); info.id = 'cityInfo'; info.className = 'note'; info.style.cssText = 'margin:-2px 0 8px;opacity:.75;font-size:12px';
+  ctlEls.cities.row.after(info);
 }
 function refreshOut(c) {
   const e = ctlEls[c[1]]; const v = get(c[1]);
@@ -1334,6 +1423,7 @@ function syncControls() {
   for (const k in ctlEls) {
     const e = ctlEls[k]; e.inp.value = get(k); e.row.hidden = !e.c[6](P); refreshOut(e.c);
   }
+  updateCityInfo();
   // palette swatches
   const lab = KIND_LABELS(P.kind), host = $('swatches'); host.innerHTML = '';
   for (let i = 0; i < 5; i++) {
@@ -1696,7 +1786,7 @@ function draw(w, h, tmul) {
   gl.uniform3fv(loc.uHazeCol, hex2rgb(P.hazeCol));
   const f = (n, v) => gl.uniform1f(loc[n], v);
   f('uSeed', (P.seed % 997) * 0.173); f('uSea', P.sea); f('uMount', P.mount); f('uScale', P.scale); f('uIce', P.ice); f('uClouds', clouds); f('uAsh', P.kind === 'lava' ? 1 : 0); f('uLowCl', LOW_CLOUD[P.kind] === undefined ? 1 : LOW_CLOUD[P.kind]); gl.uniform3fv(loc.uCloudCol, CLOUD_COL[P.kind] || CLOUD_COL.water); f('uHaze', P.haze);
-  f('uWet', P.wet || 0); f('uBiome', (P.kind === 'rock' || P.kind === 'lava') ? 0 : 1); f('uQ', quality); f('uCities', P.cities); f('uLava', P.lava); f('uCraters', P.craters); f('uScars', P.scars);
+  f('uWet', P.wet || 0); f('uBiome', (P.kind === 'rock' || P.kind === 'lava') ? 0 : 1); f('uQ', quality); f('uCities', P.cities); f('uDens', cityStats(P).ld); f('uPlan', P.plan); f('uRad', P.rad); f('uLava', P.lava); f('uCraters', P.craters); f('uScars', P.scars);
   f('uBands', P.bands); f('uTurb', P.turb); f('uStorms', P.storms); f('uStormSize', P.stormSize);
   f('uSpin', T.spin); f('uCloudAng', T.cloud); f('uFlowT', T.flow); f('uRingAng', T.ring); f('uTime', T.time);
   gl.uniform3fv(loc.uAxis, A); gl.uniform3fv(loc.uU, U); gl.uniform3fv(loc.uW, W); gl.uniform3fv(loc.uL, L);
@@ -1865,14 +1955,18 @@ function derive(s) {
   if (/desert|dry|arid|dune|mesa|steppe|barren|wasteland/.test(wo)) P2.wet = Math.min(P2.wet, -0.4);
   // lights and scars
   if (kind !== 'gas') {
-    if (/lights|city|cities|sprawl|domes|towers|docks|stations|gates|yards|lamps|crowded|halo/.test(sp + ' ' + wo)) P2.cities = Math.max(P2.cities, kind === 'city' ? 1 : 0.6);
-    else if (kind !== 'city') P2.cities = /farm|village|town/.test(wo + sp) ? 0.2 : (kind === 'rock' || kind === 'lava' || kind === 'ice') ? 0 : 0.15;
+    if (/lights|city|cities|sprawl|domes|towers|docks|stations|gates|yards|lamps|crowded|halo/.test(sp + ' ' + wo)) P2.cities = Math.max(P2.cities, kind === 'city' ? 0.97 : 0.58);
+    else if (kind !== 'city') P2.cities = /farm|village|town/.test(wo + sp) ? 0.3 : (kind === 'rock' || kind === 'lava' || kind === 'ice') ? 0 : 0.22;
     if (/scar|mine|mining|quarr|pit\b|slag|rust|gash/.test(sp + ' ' + wo)) P2.scars = /slag/.test(sp + wo) ? 0.9 : 0.7;
   }
   // moons and rings
   let nm = 0; const nmw = mo.match(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|many|dozens|\d+)\b/);
   if (/^none/.test(mo)) nm = 0; else if (nmw) nm = WORD_NUM[nmw[1]] || parseInt(nmw[1], 10) || 1; else if (/several|hundreds|moonlets/.test(mo)) nm = 4; else if (/moon/.test(mo)) nm = 1;
   P2.moons = Math.min(5, nm);
+  // real numbers, when a system has them: population in billions, radius in km, land in percent
+  if (s.popB > 0) P2.cities = Math.min(1, Math.max(0.001, (Math.log10(s.popB) + 2) / 6));
+  if (s.radiusKm > 0) P2.rad = s.radiusKm;
+  if (s.landPct >= 0) P2.land = s.landPct / 100;
   const ringTxt = mo + ' ' + sp;
   const RING_RE = /\b(pale|faint|thin|dark|heavy|wide|broken|glittering|debris|dust|dusty|icy|rock|bright)\s+(?:\w+\s+)?ring\b(?!\s+of\s+(?:docks?|stations?|archive|yards?|lights))|ring of (?:rock debris|dumped hulls|stolen haulers)|moonlets in a wide ring/;
   if (RING_RE.test(ringTxt) && !/one with|ringed with|ringed by|toll ring/.test(mo)) {
@@ -1912,7 +2006,7 @@ const slug = (t) => (t || 'planet').toLowerCase().replace(/[^a-z0-9]+/g, '-').re
 const toCode = () => JSON.stringify({ format: 'praedra-planet', v: 1, name: P.name, params: Object.assign({}, P, { moonList: P.moonList.slice(0, 5) }) });
 // pasted presets are untrusted: clamp every number to its slider range, check colours, fill gaps from the defaults
 const PARAM_RANGE = {
-  sea: [0, 1], wet: [-1, 1], mount: [0, 1], scale: [0.5, 2.5], ice: [0, 1], clouds: [0, 1], haze: [0, 1.3], cities: [0, 1], lava: [0, 1], craters: [0, 1], scars: [0, 1],
+  sea: [0, 1], wet: [-1, 1], mount: [0, 1], scale: [0.5, 2.5], ice: [0, 1], clouds: [0, 1], haze: [0, 1.3], cities: [0, 1], rad: [1000, 30000], plan: [0, 1], land: [0, 1], lava: [0, 1], craters: [0, 1], scars: [0, 1],
   bands: [3, 20, 1], turb: [0, 1.4], storms: [0, 6, 1], stormSize: [0.2, 1.6], spin: [-1, 1], cloudSpeed: [-1, 1], flow: [0, 1.5], moonSpeed: [0, 2],
   tilt: [6, 85], roll: [-90, 90], sun: [-180, 180], sunH: [-60, 60], zoom: [0.5, 1.8], moons: [0, 5, 1],
 };
