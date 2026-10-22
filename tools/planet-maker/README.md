@@ -24,7 +24,7 @@ Edit `planet-maker.src.html` (the shader and the page), never `index.html`. `par
     "pal": ["#sea","#low","#mid","#high","#ice|storm|lava glow"],
     "hazeCol": "#aab4c4",
     "sea": 0..1, "wet": -1..1, "mount": 0..1, "scale": 0.5..2.5, "ice": 0..1, "clouds": 0..1, "haze": 0..1.3,
-    "cities": 0..1, "lava": 0..1, "craters": 0..1, "scars": 0..1,
+    "cities": 0..1, "rad": 1000..30000, "plan": 0..1, "land": 0..1 or null, "lava": 0..1, "craters": 0..1, "scars": 0..1,
     "bands": 3..20, "turb": 0..1.4, "storms": 0..6, "stormSize": 0.2..1.6,
     "spin": -1..1, "cloudSpeed": -1..1, "flow": 0..1.5, "moonSpeed": 0..2,
     "tilt": 6..85, "roll": -90..90, "sun": -180..180, "sunH": -60..60, "zoom": 0.5..1.8,
@@ -46,11 +46,23 @@ The shader is GLSL ES 3.00 with no tricks. Porting to a Godot `.gdshader` is a m
 ## Detail switch
 The page has a Detail: High / Fast button (not part of a preset). High uses more noise layers, cloud shadows and a third crater size; Fast drops them for slower graphics cards.
 
-## Inhabited worlds (cities slider)
-Every world with Cities above zero gets one population density field, and both sides of the planet draw from it, so a place that glows at night is built up by day. People settle coasts first (and basins on worlds with no sea), then lowlands with a mild climate and some water; hot, dry, cold or high land stays empty. The slider sets how far they spread: low = a few coastal towns, high = most of the land, 0.7 and up = a whole built-up planet (hubs and highways everywhere).
-- Night: dense lights in the cores, a dim glow and scattered villages in the farmland around them, planned highways, avenues and square or pentagon hubs inside built-up land.
-- Day: grey paved districts with dark streets and hub outlines, farmland patchwork around them (irrigation discs on dry worlds), none on airless rock.
-Seed changes the layout. The look is fixed by the shader, not by a preset value beyond `cities`.
+## Inhabited worlds (population and density)
+How a settled world looks from space is set by one number: how many people live on each square kilometre of land. The sliders feed it:
+- **Population**, log scale: 0.01 billion at the left to 10,000 billion (10 trillion) at the right. Stored as `cities` (0..1; 0 = no people). Earth is about 8 billion.
+- **Planet radius** in km (`rad`, default 6371): sets the land area, and every light pattern is measured in km, so a small moon is not covered by Earth-sized cities.
+- **Land share** (`land`): estimated from the Ocean level (about 1 − 1.2 × ocean) until you move it. It only changes the density, not the shape of the continents.
+- **Grown or planned** (`plan`, 0..1, default 0.5): moves the density at which districts turn planned, and how many of them do.
+The line under Population shows the result, for example "44 people per km² of land · settled". Names by density: empty (< 0.5), frontier (< 5), rural (< 30), settled (< 150), dense (< 600), metropolitan (< 3,000), megalopolis (< 15,000), ecumenopolis (more).
+
+Where people live is still the old settling score (coasts and basins first, then lowlands with a mild climate and some water). The average density lifts or lowers that score into a local density, and the local density picks the look:
+- Thin: dark land, scattered villages that bunch around towns, a few bright cities with a bloom, faint winding veins (rivers, coast roads) only where people live. Nothing is straight.
+- Dense: the lights join into sprawl with a ragged edge, with dark rivers and parks and big bright and dim regions, so it never goes flat.
+- Packed (past about 1,000 per km² locally, earlier if Planned is high): some districts, about 450 km across, turn planned: a street grid with a main road every 60–100 km, or a hub with rings and spokes. Each district has its own direction, brightness and size, and its ring road is broken in places. No line is longer than a district.
+- A world where everyone lives on bare rock too (very high density) loses the empty patches.
+- Day: grey paved districts with dark streets, farmland patchwork at moderate density (irrigation discs on dry worlds), none on airless rock.
+Seed changes the layout.
+
+Systems can carry real numbers later: `popB` (population in billions), `radiusKm` and `landPct` in `systems.json` are read when a system loads and set these sliders. Old saved presets keep working, but their `cities` value now means population on the log scale (old 0.3 = 0.6 billion, old 1 = 10 trillion).
 
 ## Clouds
 The cloud layout is modelled on Earth's satellite cloud climatology, so a planet with the Clouds slider near the middle shows roughly Earth's mix of clear and cloudy sky (checked by counting covered pixels per latitude on a debug render):
@@ -138,5 +150,6 @@ The light and shade on mountains and craters comes from the slope of the height 
 - The whole planet is one pass. Moons do not shadow each other, and a moon's shadow is a plain round disc (lumpy outlines are not followed).
 - Rings are flat: no thickness, no braids, no waves. A ring has one source moon at most, and moons never push each other's gaps around beyond the three resonances listed under Rings.
 - At most 5 moons per planet. Moons start small, 2 to 17 percent of the planet's radius (Earth's Moon is 27 percent, Titan about 4 percent of Saturn's, the small captured rocks far less), and they sit much closer than real moons would. The Size slider goes down to 1.5 percent. Orbits are circular.
+- City looks are tuned by eye on software rendering, never on a real graphics card, and from the usual viewing size the planned districts read as texture more than as streets. The land share estimate from the Ocean slider is rough (it does not count the land actually drawn), so type the real land share when it matters. Cities are one colour: no tints for different districts yet.
 - Ring and moon draw order is approximate when a moon passes behind a ring.
 - Moons make the shader bigger, and on software rendering a gas giant with 5 moons costs about 3 times a world without moons in both Fast and High. A cheap distance test before shading each moon changes nothing: with the moon code never run the cost is the same, so it comes from the size of the shader, not the maths. The fix would be to draw planet and moons in separate passes; it is not done because it has not been measured on a real graphics card.
