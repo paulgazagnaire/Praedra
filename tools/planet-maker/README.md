@@ -24,7 +24,7 @@ Edit `planet-maker.src.html` (the shader and the page), never `index.html`. `par
     "pal": ["#sea","#low","#mid","#high","#ice|storm|lava glow"],
     "hazeCol": "#aab4c4",
     "sea": 0..1, "wet": -1..1, "mount": 0..1, "scale": 0.5..2.5, "ice": 0..1, "clouds": 0..1, "haze": 0..1.3,
-    "cities": 0..1, "rad": 1000..30000, "plan": 0..1, "land": 0..1 or null, "lava": 0..1, "craters": 0..1, "scars": 0..1,
+    "cities": 0..1, "rad": 1500..15000, "plan": 0..1, "land": 0.02..1 or null, "lava": 0..1, "craters": 0..1, "scars": 0..1,
     "bands": 3..20, "turb": 0..1.4, "storms": 0..6, "stormSize": 0.2..1.6,
     "spin": -1..1, "cloudSpeed": -1..1, "flow": 0..1.5, "moonSpeed": 0..2,
     "tilt": 6..85, "roll": -90..90, "sun": -180..180, "sunH": -60..60, "zoom": 0.5..1.8,
