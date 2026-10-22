@@ -922,7 +922,11 @@ vec3 shadePlanet(vec3 p, out float shine) {
       emis += (netC * Ln * 0.95 + vec3(1.0, 0.55, 0.25) * halo * 0.22) * night * ground;
       // daylight: farmland patchwork around the towns, paved grey districts inside, dark streets
       float farm = smoothstep(0.8, 1.9, dl) * (1.0 - smoothstep(2.6, 3.4, dl)) * uBiome;   // no fields on airless rock
-      float ub = clamp(urban, 0.0, 1.0) * ground;
+      // by day a town is a few km of roofs: invisible from orbit unless the built-up land is drawn wider than the lights. So the day
+      // side reads the night field: wherever lights shine, or people are dense enough that they would, the ground is built over
+      float area = smoothstep(1.6, 3.2, dl + 0.9 * (fbm(q * (uRad / 260.0) + sOff() + 5.0, 3) - 0.5)) * (0.6 + 0.4 * noise(q * (uRad / 45.0) + sOff()));
+      float built = clamp(Ln * 0.8 + halo * 1.1, 0.0, 1.0);
+      float ub = clamp(max(urban, max(built, area)), 0.0, 1.0) * ground;
       vec3 fc = hash33(floor(M3 * q * 95.0));
       float wetF = smoothstep(0.2, 0.7, habM);
       vec3 wetField = mix(vec3(0.62, 0.55, 0.30), vec3(0.30, 0.44, 0.17), fc.x) * (0.78 + 0.45 * fc.y);
@@ -932,9 +936,9 @@ vec3 shadePlanet(vec3 p, out float shine) {
       albedo = mix(albedo, fieldC, farm * (1.0 - ub) * ground * 0.9);
       float blocks = (0.80 + 0.40 * noise(q * 120.0) * (0.6 + 0.4 * step(0.5, noise(q * 300.0)))) * (0.80 + 0.40 * fbm(q * 26.0 + sOff() + 17.0, 3));
       vec3 paved = (mix(vec3(0.48, 0.44, 0.37), vec3(0.34, 0.34, 0.37), smoothstep(2.8, 4.5, dl) * (0.7 + 0.5 * noise(q * 22.0 + 3.0))) + albedo * 0.25) * blocks;
-      albedo = mix(albedo, paved, smoothstep(0.03, 0.45, ub) * 0.95);
+      albedo = mix(albedo, paved, smoothstep(0.02, 0.30, ub) * 0.95);
       albedo = mix(albedo, vec3(0.07, 0.07, 0.08), clamp(streets * 0.9, 0.0, 0.85) * ub * ub);
-      n = normalize(mix(n, p, ub * 0.8));
+      n = normalize(mix(n, p, clamp(urban, 0.0, 1.0) * ground * 0.8));
     }
 #ifdef PM_CLOUDS
     float extra = (uType == 2) ? 0.35 * smoothstep(0.2, 0.9, cth) - 0.35 * smoothstep(0.0, -0.5, cth) : 0.0;

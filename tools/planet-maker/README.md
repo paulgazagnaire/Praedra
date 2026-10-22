@@ -59,7 +59,7 @@ Where people live is still the old settling score (coasts and basins first, then
 - Dense: the lights join into sprawl with a ragged edge, with dark rivers and parks and big bright and dim regions, so it never goes flat.
 - Packed (past about 1,000 per km² locally, earlier if Planned is high): some districts, about 450 km across, turn planned: a street grid with a main road every 60–100 km, or a hub with rings and spokes. Each district has its own direction, brightness and size, and its ring road is broken in places. No line is longer than a district.
 - A world where everyone lives on bare rock too (very high density) loses the empty patches.
-- Day: grey paved districts with dark streets, farmland patchwork at moderate density (irrigation discs on dry worlds), none on airless rock.
+- Day: a town is only a few km of roofs, so drawn to scale it would vanish from orbit. The day side therefore reads the night field: wherever lights shine, or the local density is high enough that they would, the ground turns grey and built-up (a broad patchy area, wider than the lights), with dark streets inside planned districts. Farmland patchwork at moderate density (irrigation discs on dry worlds), none on airless rock. Relief is only flattened inside real cities, not across the wider built-up area.
 Seed changes the layout.
 
 Systems can carry real numbers later: `popB` (population in billions), `radiusKm` and `landPct` in `systems.json` are read when a system loads and set these sliders. Old saved presets keep working, but their `cities` value now means population on the log scale (old 0.3 = 0.6 billion, old 1 = 10 trillion).
