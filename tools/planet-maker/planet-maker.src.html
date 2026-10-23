@@ -132,13 +132,13 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
       <div id="ctlMega"></div>
     </details>
 
-    <details class="sec" open>
+    <details class="sec" id="secLook" open>
       <summary>Look</summary>
       <div class="sw-row" id="swatches"></div>
       <div id="ctlLook"></div>
     </details>
 
-    <details class="sec" open>
+    <details class="sec" id="secSky" open>
       <summary>Sky</summary>
       <div id="ctlSky"></div>
       <div class="sw-row" id="swHaze"></div>
@@ -237,6 +237,9 @@ uniform vec3 uRingCol, uRingCol2;
 uniform vec4 uMegaA;        // ring: x half width of the floor, y wall height, z wall thickness, w how much of a planet's latitudes the floor covers (radians)
 uniform vec4 uMegaB;        // ring: x share of the loop in shade, y plating detail, z hull lights, w star glow
 uniform vec3 uMegaHull, uMegaAcc;
+uniform float uMegaT;       // 0 ring, 1 cylinder, 2 dark cylinder
+uniform vec4 uMegaC;        // cylinders: x half length, y radius, z half the gap between a pair (0: one cylinder), w window share
+uniform vec4 uMegaD;        // cylinders: x mirror width, y mirror angle from straight out (radians), z bounding radius
 #endif
 uniform int uMoonN;
 uniform vec4 uMoon[5];      // xyz: position (planet radius = 1), w: radius
@@ -1050,43 +1053,137 @@ vec3 megaFloor(vec3 pp) {
   gL = uL; gFlat = 0.0;
   return c * (0.72 + 0.28 * smoothstep(0.0, 0.035, uMegaA.x - abs(pp.y)));   // a little shade where the floor meets the wall
 }
-// The hull: square plates with seams, a heavier rib every twelfth plate, a few hazard plates, an accent stripe along each edge, and
-// small lights. Coordinates turn with the ring (th - uSpin), so the plates slide when it spins.
-vec3 megaHull(vec3 pp, vec3 n, float rho, out vec3 emis) {
-  bool face = abs(n.y) > 0.5;
-  float th = atan(pp.z, pp.x) - uSpin;
-  float cw = 2.0 * PI / (12.0 * floor(mix(5.0, 18.0, uMegaB.y) + 0.5));   // a whole number of ribs round the loop, so the plates meet at the seam
-  vec2 g = vec2(th / cw, (face ? rho : pp.y) / (cw * 2.0));
+// The hull: square plates with seams, a heavier rib every twelfth plate, a few hazard plates, an accent stripe where the caller asks
+// for one, and small lights. th is the angle round the body (already turned with it), along the distance across it, sc the body's
+// radius (so plates scale with it), face true on an end face.
+vec3 megaHull(float th, float along, bool face, float sc, float stripe, out vec3 emis) {
+  float cw = 2.0 * PI / (12.0 * floor((uMegaT > 0.5 ? mix(1.0, 3.0, uMegaB.y) : mix(5.0, 18.0, uMegaB.y)) + 0.5));   // a whole number of ribs round the body, so the plates meet at the seam
+  vec2 g = vec2(th / cw, along / (sc * cw * 2.0));
   vec2 id = floor(g), f = fract(g);
   vec3 h = hash33(vec3(id, uSeed + (face ? 7.0 : 0.0)));
   float seam = 1.0 - smoothstep(0.0, 0.10, min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)));
-  float rx = fract(g.x / 12.0), ry = fract(g.y / 5.0);
+  float rp = uMegaT > 0.5 ? 4.0 : 12.0, rx = fract(g.x / rp), ry = fract(g.y / 5.0);
   float rib = max(1.0 - smoothstep(0.0, 0.06, min(rx, 1.0 - rx)), 0.8 * (1.0 - smoothstep(0.0, 0.05, min(ry, 1.0 - ry))));
   vec3 c = uMegaHull * (0.45 + 0.35 * h.x + 0.10 * h.y) * (1.0 - 0.55 * seam) * (1.0 - 0.45 * rib);
-  float stripe = smoothstep(0.012, 0.0, abs(abs(pp.y) - uMegaA.x * 0.62)) * (face ? 0.0 : 1.0);
   c = mix(c, uMegaAcc * 0.7, max(stripe, step(0.965, h.z) * (1.0 - seam) * 0.8));
   float dotL = (1.0 - smoothstep(0.08, 0.16, length(f - 0.5))) * step(0.93 - 0.08 * uMegaB.z, h.y) * uMegaB.z;
   emis = uMegaAcc * dotL * 1.1;
   return c;
 }
-// One pixel of the ring: colour and coverage
+// Cylinders: a drum that turns about its long axis (y), seen from outside under the real sun. A pair is two drums side by side
+// turning opposite ways; each end has a still neck and a docking wheel, and a pair is joined by a bar across each end. Three of
+// the six long strips are windows (the kind with mirrors), and a mirror stands out from each window edge on its own hinge.
+float sdCapCyl(vec3 p, float r, float h) { vec2 d = vec2(length(p.xz) - r, abs(p.y) - h); return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)); }
+float sdBox3(vec3 p, vec3 b) { vec3 d = abs(p) - b; return length(max(d, 0.0)) + min(max(d.x, max(d.y, d.z)), 0.0); }
+const float CYL_NECK = 0.07;
+const float CYL_SECTOR = 2.0 * PI / 3.0;
+// the drum's own frame: x folded onto the near drum of a pair, and the turn of that drum (a pair turns opposite ways)
+void cylFrame(vec3 p, out vec3 l, out vec3 q) {
+  l = p; float sgn = 1.0;
+  if (uMegaC.z > 0.0) { sgn = p.x < 0.0 ? -1.0 : 1.0; l.x = abs(p.x) - uMegaC.z; }
+  float a = uSpin * sgn, cs = cos(a), sn = sin(a);
+  q = vec3(cs * l.x + sn * l.z, l.y, -sn * l.x + cs * l.z);
+}
+void cylParts(vec3 p, out float body, out float mir, out float hub, out float frm) {
+  float R = uMegaC.y, H = uMegaC.x;
+  vec3 l, q; cylFrame(p, l, q);
+  body = sdCapCyl(l, R, H);
+  float ay = abs(l.y);
+  hub = min(sdCapCyl(vec3(l.x, ay - H - 0.5 * CYL_NECK, l.z), 0.22 * R, 0.5 * CYL_NECK), sdCapCyl(vec3(l.x, ay - H - CYL_NECK, l.z), 0.42 * R, 0.012));
+  frm = (uMegaC.z > 0.0) ? sdBox3(vec3(p.x, abs(p.y) - H - CYL_NECK, p.z), vec3(uMegaC.z, 0.012, 0.03)) : 1e3;
+  mir = 1e3;
+  if (uMegaT < 1.5 && uMegaD.x > 0.0) {
+    // fold the turn into one window and mirror it, so one panel on one hinge stands for all six
+    float ang = atan(q.z, q.x), rad = length(q.xz);
+    float a = mod(ang + 0.5 * CYL_SECTOR, CYL_SECTOR) - 0.5 * CYL_SECTOR;
+    vec2 f = vec2(rad * cos(a), rad * abs(sin(a)));
+    float hw = uMegaC.w * 0.5 * CYL_SECTOR, ca = cos(uMegaD.y), sa = sin(uMegaD.y);
+    vec2 hinge = R * vec2(cos(hw), sin(hw)), rd = vec2(cos(hw), sin(hw)), td = vec2(-sin(hw), cos(hw));   // td runs away from the window
+    vec2 dir = rd * ca + td * sa, pr = vec2(-dir.y, dir.x), rel = f - hinge;
+    mir = sdBox3(vec3(dot(rel, dir) - 0.5 * uMegaD.x, q.y, dot(rel, pr)), vec3(0.5 * uMegaD.x, H * 0.985, 0.004));
+  }
+}
+float megaDist(vec3 p) {
+  if (uMegaT < 0.5) return megaMap(p);
+  float b, m, h, f; cylParts(p, b, m, h, f);
+  return min(min(b, m), min(h, f));
+}
+vec3 shadeCyl(vec3 pp, vec3 n) {
+  float R = uMegaC.y, H = uMegaC.x;
+  float body, mir, hub, frm; cylParts(pp, body, mir, hub, frm);
+  vec3 l, q; cylFrame(pp, l, q);
+  vec3 nv = uU * n.x + uAxis * n.y + uW * n.z;
+  vec3 alb, emis = vec3(0.0); float specK = 0.18, specP = 28.0;
+  if (mir < min(min(body, hub), frm)) {
+    // a mirror: bright, silvery, lit from either face, with a panel seam every quarter
+    float lit = dot(nv, gL); if (lit < 0.0) nv = -nv;
+    float seam = smoothstep(0.02, 0.0, abs(fract(q.y / (0.25 * H) + 0.5) - 0.5));
+    alb = vec3(0.72, 0.78, 0.88) * (0.88 - 0.25 * seam) * (lit > 0.0 ? 1.0 : 0.4);
+    specK = 0.9; specP = 36.0;
+  } else {
+    float ang = atan(q.z, q.x), rad = length(q.xz);
+    float a = mod(ang + 0.5 * CYL_SECTOR, CYL_SECTOR) - 0.5 * CYL_SECTOR;
+    bool isBody = body <= min(hub, frm), face = abs(n.y) > 0.5;
+    float hw = uMegaC.w * 0.5 * CYL_SECTOR, stripe = 0.0;
+    bool win = false;
+    vec3 em;
+    alb = megaHull(ang, face ? rad : q.y, face, R, 0.0, em);
+    if (isBody && !face && uMegaT < 1.5) {
+      stripe = 1.0 - smoothstep(0.012, 0.03, abs(abs(a) - hw));
+      win = abs(a) < hw - 0.012;
+      alb = megaHull(ang, q.y, false, R, stripe, em);
+    }
+    if (!isBody) { alb = megaHull(ang, face ? rad : q.y, face, R, hub < frm ? 0.35 * step(0.5, fract(rad / (0.12 * R))) : 0.0, em); }
+    emis = em;
+    if (win) {
+      // glass over a lit interior: panes between dark mullions, each one a little different
+      vec2 g = vec2(a / hw * 2.5 + 0.5, q.y / (0.6 * R));
+      vec2 id = floor(g), fr = fract(g);
+      vec3 hh = hash33(vec3(id, uSeed + 3.0));
+      float mull = 1.0 - smoothstep(0.0, 0.07, min(min(fr.x, 1.0 - fr.x), min(fr.y, 1.0 - fr.y)));
+      vec3 glow = mix(vec3(1.0, 0.88, 0.66), uMegaAcc * 1.3, 0.2) * (0.65 + 0.35 * hh.x) * (hh.y > 0.12 ? 1.0 : 0.25);
+      alb = mix(vec3(0.05, 0.06, 0.08), alb * 0.5, mull);
+      emis = glow * (1.0 - mull) * 0.95;
+      specK = 0.6; specP = 40.0;
+    }
+    if (uMegaT > 1.5) {
+      // Rama: dull and dark, three shallow grooves, no lights to speak of
+      float groove = 1.0 - smoothstep(0.0, 0.014, abs(a));
+      alb *= 0.9 * (1.0 - 0.6 * groove * (isBody && !face ? 1.0 : 0.0));
+      emis *= 0.2;
+    }
+  }
+  float sun = max(dot(nv, gL), 0.0);
+  float spec = pow(max(dot(nv, normalize(gL + vec3(0.0, 0.0, 1.0))), 0.0), specP) * specK;
+  return alb * (0.09 + sun) + vec3(spec) * sun + emis;
+}
+// One pixel of a megastructure: colour and coverage
 vec4 shadeMega(vec2 uv, float px) {
-  if (length(uv) > 1.1 + px) return vec4(0.0);
+  bool cyl = uMegaT > 0.5;
+  float bound = cyl ? uMegaD.z : 1.1;
+  if (length(uv) > bound + px) return vec4(0.0);
   vec3 z0 = vec3(uv, 2.0);
   vec3 o = vec3(dot(z0, uU), dot(z0, uAxis), dot(z0, uW));
   vec3 d = -vec3(uU.z, uAxis.z, uW.z);
-  float t = 0.0, mind = 1e3, tm = 0.0;
+  float t = 0.0, tmax = 4.0, mind = 1e3, tm = 0.0;
+  if (cyl) {
+    // start at the bounding sphere, so the march doesn't cross empty space
+    float bb = dot(o, d), rb = bound + 2.0 * px, disc = bb * bb - (dot(o, o) - rb * rb);
+    if (disc <= 0.0) return vec4(0.0);
+    float s = sqrt(disc); t = max(-bb - s, 0.0); tmax = -bb + s;
+  }
   for (int i = 0; i < 90; i++) {
-    float h = megaMap(o + d * t);
+    float h = megaDist(o + d * t);
     if (h < mind) { mind = h; tm = t; }
-    if (h < 0.25 * px || t > 4.0) break;
-    t += h * 0.92;
+    if (h < 0.25 * px || t > tmax) break;
+    t += h * (cyl ? 0.8 : 0.92);
   }
   float a = clamp(1.0 - (mind - 0.25 * px) / (0.75 * px), 0.0, 1.0);
   if (a <= 0.0) return vec4(0.0);
   vec3 pp = o + d * tm;
   vec2 e = vec2(max(0.002, 0.7 * px), 0.0);
-  vec3 n = normalize(vec3(megaMap(pp + e.xyy) - megaMap(pp - e.xyy), megaMap(pp + e.yxy) - megaMap(pp - e.yxy), megaMap(pp + e.yyx) - megaMap(pp - e.yyx)));
+  vec3 n = normalize(vec3(megaDist(pp + e.xyy) - megaDist(pp - e.xyy), megaDist(pp + e.yxy) - megaDist(pp - e.yxy), megaDist(pp + e.yyx) - megaDist(pp - e.yyx)));
+  if (cyl) return vec4(shadeCyl(pp, n), a);
   float rho = length(pp.xz), y = abs(pp.y);
   vec3 rh = vec3(pp.x, 0.0, pp.z) / max(rho, 1e-4);
   float wh = uMegaA.x;
@@ -1095,7 +1192,9 @@ vec4 shadeMega(vec2 uv, float px) {
     col = megaFloor(pp);
   } else {
     vec3 emis;
-    vec3 alb = megaHull(pp, n, rho, emis);
+    bool face = abs(n.y) > 0.5;
+    float stripe = smoothstep(0.012, 0.0, abs(y - wh * 0.62)) * (face ? 0.0 : 1.0);
+    vec3 alb = megaHull(atan(pp.z, pp.x) - uSpin, face ? rho : pp.y, face, 1.0, stripe, emis);
     vec3 nv = uU * n.x + uAxis * n.y + uW * n.z;
     float sun = max(dot(nv, gL), 0.0);
     float star = max(dot(n, normalize(-pp)), 0.0);
@@ -1335,9 +1434,9 @@ void main() {
   gL = uL; gFlat = 0.0;
 #ifdef PM_MEGA
   if (uType == 3) {
-    // the star at the centre of the ring, then the ring in front of it
+    // the star at the centre of a ring, then the structure in front of it
     float rs = length(uv);
-    col += vec3(1.0, 0.93, 0.78) * uMegaB.w * (1.6 * smoothstep(0.05, 0.0, rs) + 0.35 * exp(-rs * rs / 0.02) + 0.12 * exp(-rs * rs / 0.25));
+    if (uMegaT < 0.5) col += vec3(1.0, 0.93, 0.78) * uMegaB.w * (1.6 * smoothstep(0.05, 0.0, rs) + 0.35 * exp(-rs * rs / 0.02) + 0.12 * exp(-rs * rs / 0.25));
     vec4 mg = shadeMega(uv, px);
     col = mix(col, mg.rgb, mg.a);
     col = col / (1.0 + col * 0.08);
@@ -1507,7 +1606,7 @@ const BASE = {
   spin: 0.25, cloudSpeed: 0.3, flow: 0.4, tilt: 22, roll: -12, sun: -55, sunH: 12, zoom: 1,
   ring: { on: false, type: 'broad', inner: 1.24, width: 1.03, op: 0.8, gaps: 0.8, struct: 0.6, clump: 0.3, dust: 0.15, feeder: 0, seed: 1, spin: 0.3, c1: '#d8c8a4', c2: '#7a6a55' },
   moons: 1, moonSpeed: 0.6, moonList: [],
-  mType: 'ring', mWidth: 0.22, mWall: 0.05, mSpan: 0.7, mShade: 0.28, mPlate: 0.6, mLights: 0.5, mStar: 1, mHull: '#8b9199', mAcc: '#e0a64a',
+  mType: 'ring', mLen: 4.5, mPair: 2, mWin: 0.4, mMir: 0.45, mMirA: 40, mWidth: 0.22, mWall: 0.05, mSpan: 0.7, mShade: 0.28, mPlate: 0.6, mLights: 0.5, mStar: 1, mHull: '#8b9199', mAcc: '#e0a64a',
 };
 const KIND_DEF = {
   terran: { wet: 0, pal: ['#1c4d8f', '#3f7a3c', '#7b7a45', '#8f7f6d', '#f1f5f9'], sea: 0.55, mount: 0.5, clouds: 0.5, haze: 0.65, hazeCol: '#78aaf2', ice: 0.3, cities: 0.48 },
@@ -1561,15 +1660,22 @@ function updateCityInfo() {
 }
 
 /* ---------- controls ---------- */
-const NOMEGA = (p) => p.kind !== 'mega';   // a megastructure has no planet radius, moons, rings or atmosphere of its own
+const ISMEGA = (p, ...ids) => p.kind === 'mega' && ids.includes(p.mType);
+const NOMEGA = (p) => p.kind !== 'mega';
+const TERR = (p) => p.kind !== 'mega' || ISMEGA(p, 'ring');   // a megastructure has no planet radius, moons, rings or atmosphere of its own
 const CONTROLS = [
-  ['Struct', 'mWidth', 'Width', 0.06, 0.6, 0.01, (p) => p.kind === 'mega', (v) => (v * 100).toFixed(0) + '%'],
-  ['Struct', 'mWall', 'Rim wall height', 0, 0.12, 0.005, (p) => p.kind === 'mega'],
-  ['Struct', 'mSpan', 'Climate range', 0.25, 1.3, 0.01, (p) => p.kind === 'mega', (v) => v < 0.5 ? 'tropical' : v < 0.9 ? 'mild' : 'varied'],
-  ['Struct', 'mShade', 'Night share', 0, 0.6, 0.01, (p) => p.kind === 'mega', (v) => v < 0.01 ? 'none' : Math.round(v * 100) + '%'],
+  ['Struct', 'mLen', 'Length to width', 1.5, 9, 0.1, (p) => ISMEGA(p, 'cylinder', 'rama'), (v) => v.toFixed(1) + ' : 1'],
+  ['Struct', 'mPair', 'Drums', 1, 2, 1, (p) => ISMEGA(p, 'cylinder'), (v) => v < 1.5 ? 'one' : 'a pair'],
+  ['Struct', 'mWin', 'Window share', 0.15, 0.7, 0.01, (p) => ISMEGA(p, 'cylinder'), (v) => Math.round(v * 100) + '%'],
+  ['Struct', 'mMir', 'Mirror size', 0.2, 1, 0.01, (p) => ISMEGA(p, 'cylinder'), (v) => Math.round(v * 100) + '%'],
+  ['Struct', 'mMirA', 'Mirror angle', 0, 60, 1, (p) => ISMEGA(p, 'cylinder'), (v) => Math.round(v) + '°'],
+  ['Struct', 'mWidth', 'Width', 0.06, 0.6, 0.01, (p) => ISMEGA(p, 'ring'), (v) => (v * 100).toFixed(0) + '%'],
+  ['Struct', 'mWall', 'Rim wall height', 0, 0.12, 0.005, (p) => ISMEGA(p, 'ring')],
+  ['Struct', 'mSpan', 'Climate range', 0.25, 1.3, 0.01, (p) => ISMEGA(p, 'ring'), (v) => v < 0.5 ? 'tropical' : v < 0.9 ? 'mild' : 'varied'],
+  ['Struct', 'mShade', 'Night share', 0, 0.6, 0.01, (p) => ISMEGA(p, 'ring'), (v) => v < 0.01 ? 'none' : Math.round(v * 100) + '%'],
   ['Struct', 'mPlate', 'Hull plating', 0, 1, 0.01, (p) => p.kind === 'mega'],
   ['Struct', 'mLights', 'Hull lights', 0, 1, 0.01, (p) => p.kind === 'mega'],
-  ['Struct', 'mStar', 'Star glow', 0, 1.5, 0.01, (p) => p.kind === 'mega'],
+  ['Struct', 'mStar', 'Star glow', 0, 1.5, 0.01, (p) => ISMEGA(p, 'ring')],
   // section, key, label, min, max, step, visible(P), readout
   ['Look', 'sea', 'Ocean level', 0, 1, 0.01, (p) => HAS_SEA(p.kind)],
   ['Look', 'wet', 'Wetness', -1, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'rock' && p.kind !== 'lava'],
@@ -1601,6 +1707,8 @@ const CONTROLS = [
   ['Cam', 'zoom', 'Zoom', 0.5, 1.8, 0.01, () => true],
   ['Moon', 'moons', 'How many', 0, 5, 1, () => true],
 ];
+// a drum has no ground, sea or sky to adjust: the terrain, weather and palette controls belong to the ring and the planets
+for (const c of CONTROLS) if (c[0] === 'Look' || c[0] === 'Sky' || c[1] === 'cloudSpeed') { const f = c[6]; c[6] = (p) => f(p) && TERR(p); }
 function spinText(v, p) { if (Math.abs(v) < 0.01) return 'stopped'; const s = 2 * Math.PI / (Math.abs(v) * 0.5); return (v < 0 ? '↺ ' : '') + Math.round(s) + ' s'; }
 const SEC_HOST = { Struct: 'ctlMega', Look: 'ctlLook', Sky: 'ctlSky', Motion: 'ctlMotion', Cam: 'ctlCam', Moon: 'ctlMoon' };
 const ctlEls = {};
@@ -1652,7 +1760,7 @@ function syncControls() {
   $('tagName').textContent = P.name || 'Unnamed';
   $('tagKind').textContent = (KINDS.find(k => k.id === P.kind) || {}).name || '';
   const mg = P.kind === 'mega';
-  $('secMega').hidden = !mg; $('secRings').hidden = mg; $('secMoons').hidden = mg; $('swHaze').hidden = mg;
+  $('secMega').hidden = !mg; $('secLook').hidden = !TERR(P); $('secSky').hidden = !TERR(P); $('secRings').hidden = mg; $('secMoons').hidden = mg; $('swHaze').hidden = mg;
   ctlEls.cities.row.querySelector('label').textContent = mg ? 'Settlement' : 'Population';
   syncMegaUI();
   syncRingUI();
@@ -1660,10 +1768,14 @@ function syncControls() {
 }
 
 /* ---------- megastructures ---------- */
-// What a megastructure can be. The shader draws each in shadeMega(); only the ring exists so far.
+// What a megastructure can be. The shader draws each in shadeMega(). cam: the angle a type looks best from; d: values it starts with.
 const MEGA_TYPES = [
   { id: 'ring', name: 'Ring', real: 'Niven\'s Ringworld, Banks\'s Orbitals, Bishop ring, Halo-type rings',
     note: 'A solid band round a star, spun for gravity, with a wall along each edge to hold the air in. Seen at an angle, the near half shows the dull outer hull and the far half shows the ground on the inside of the loop. Shade squares near the star give it night. Width is exaggerated: a real Ringworld would be a hair-thin line from here.' },
+  { id: 'cylinder', name: 'Cylinder', real: 'O\'Neill\'s Island Three, Babylon 5, Elysium-type pairs', cam: { tilt: 20, roll: -22 },
+    note: 'A long drum spun for gravity, seen from outside: three long strips of window and three of hull, with a mirror hinged on each window edge to steer sunlight in. Pick one drum or a counter-rotating pair, so the pair does not twist in space. Each end has a still neck and a docking wheel. Only the outside shows; the land is inside.' },
+  { id: 'rama', name: 'Rama', real: 'Clarke\'s Rama, a Bernal-type worldship', cam: { tilt: 20, roll: -22 }, d: { mLen: 3.2, mHull: '#7a746c', mAcc: '#a9a39a', mLights: 0.1 },
+    note: 'A dark, windowless drum with nothing on it but three shallow grooves and a few dim lights: a ship that is also a world, and gives nothing away from outside.' },
 ];
 const MEGA_IDX = {}; MEGA_TYPES.forEach((t, i) => { MEGA_IDX[t.id] = i; });
 function buildMegaUI() {
@@ -1671,7 +1783,13 @@ function buildMegaUI() {
   MEGA_TYPES.forEach((t) => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.mt = t.id; b.setAttribute('aria-pressed', 'false');
     b.innerHTML = `${t.name}<small>${t.real}</small>`;
-    b.addEventListener('click', () => { P.mType = t.id; syncMegaUI(); });
+    b.addEventListener('click', () => {
+      if (P.mType === t.id) return;
+      P.mType = t.id;
+      if (t.cam) { P.tilt = t.cam.tilt; P.roll = t.cam.roll; }
+      if (t.d) Object.assign(P, t.d); else if (t.id === 'cylinder') Object.assign(P, { mLen: 4.5, mHull: '#8b9199', mAcc: '#e0a64a', mLights: 0.5 }); else if (t.id === 'ring') Object.assign(P, { tilt: 34, roll: -14, mHull: '#8b9199', mAcc: '#e0a64a', mLights: 0.5 });
+      syncControls();
+    });
     host.appendChild(b);
   });
   const sw = $('swMega');
@@ -2035,6 +2153,21 @@ function draw(w, h, tmul) {
   f('uSpin', T.spin); f('uCloudAng', T.cloud); f('uFlowT', T.flow); f('uRingAng', T.ring); f('uTime', T.time);
   if (mega) {
     const wd = P.mWidth * 0.5;
+    const mt = P.mType === 'rama' ? 2 : P.mType === 'cylinder' ? 1 : 0;
+    gl.uniform1f(loc.uMegaT, mt);
+    if (mt) {
+      // fit the drum (or the pair, with its mirrors) in the frame: height H sets the scale, then everything is brought to a bound of 1.15
+      const pair = mt === 1 && P.mPair >= 1.5, mir = mt === 1 ? P.mMir : 0;
+      let H = 0.9, R, off, bound;
+      for (let i = 0; i < 3; i++) {
+        R = H / P.mLen; off = pair ? R * (1.15 + 0.9 * mir) : 0;
+        bound = Math.hypot(H + 0.07 + 0.03, off + R * (1 + 1.05 * mir)) + 0.04;
+        H *= 1.25 / bound;
+      }
+      R = H / P.mLen; off = pair ? R * (1.15 + 0.9 * mir) : 0;
+      bound = Math.hypot(H + 0.07 + 0.03, off + R * (1 + 1.05 * mir)) + 0.04;
+      gl.uniform4f(loc.uMegaC, H, R, off, P.mWin); gl.uniform4f(loc.uMegaD, mir * R, P.mMirA * D, bound, 0);
+    }
     gl.uniform4f(loc.uMegaA, wd, P.mWall, 0.02, P.mSpan); gl.uniform4f(loc.uMegaB, P.mShade, P.mPlate, P.mLights, P.mStar);
     gl.uniform3fv(loc.uMegaHull, hex2rgb(P.mHull)); gl.uniform3fv(loc.uMegaAcc, hex2rgb(P.mAcc));
   }
@@ -2259,7 +2392,7 @@ const PARAM_RANGE = {
   sea: [0, 1], wet: [-1, 1], mount: [0, 1], scale: [0.5, 2.5], ice: [0, 1], clouds: [0, 1], haze: [0, 1.3], cities: [0, 1], rad: [1500, 15000], plan: [0, 1], land: [0.02, 1], lava: [0, 1], craters: [0, 1], scars: [0, 1],
   bands: [3, 20, 1], turb: [0, 1.4], storms: [0, 6, 1], stormSize: [0.2, 1.6], spin: [-1, 1], cloudSpeed: [-1, 1], flow: [0, 1.5], moonSpeed: [0, 2],
   tilt: [6, 85], roll: [-90, 90], sun: [-180, 180], sunH: [-60, 60], zoom: [0.5, 1.8], moons: [0, 5, 1],
-  mWidth: [0.06, 0.6], mWall: [0, 0.12], mSpan: [0.25, 1.3], mShade: [0, 0.6], mPlate: [0, 1], mLights: [0, 1], mStar: [0, 1.5],
+  mLen: [1.5, 9], mPair: [1, 2, 1], mWin: [0.15, 0.7], mMir: [0.2, 1], mMirA: [0, 60], mWidth: [0.06, 0.6], mWall: [0, 0.12], mSpan: [0.25, 1.3], mShade: [0, 0.6], mPlate: [0, 1], mLights: [0, 1], mStar: [0, 1.5],
 };
 const RING_RANGE = { inner: [1.1, 2.8], width: [0.04, 2.6], op: [0.1, 1], gaps: [0, 1], struct: [0, 1], clump: [0, 1], dust: [0, 1], feeder: [0, 5, 1], seed: [0, 9999, 1], spin: [-1, 1] };
 const isHex = (c) => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
