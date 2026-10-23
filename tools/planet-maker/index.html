@@ -237,9 +237,9 @@ uniform vec3 uRingCol, uRingCol2;
 uniform vec4 uMegaA;        // ring: x half width of the floor, y wall height, z wall thickness, w how much of a planet's latitudes the floor covers (radians)
 uniform vec4 uMegaB;        // ring: x share of the loop in shade, y plating detail, z hull lights, w star glow
 uniform vec3 uMegaHull, uMegaAcc;
-uniform float uMegaT;       // 0 ring, 1 cylinder, 2 dark cylinder, 3 wheel, 4 gate
-uniform vec4 uMegaC;        // cylinders: x half length, y radius, z half the gap between a pair (0: one cylinder), w window share; wheels and gates: x ring radius, y tube radius, w window share
-uniform vec4 uMegaD;        // cylinders: x mirror width, y mirror angle from straight out (radians), z bounding radius; wheels: x spokes, y mirror size over the hub; gates: w how lit the disc is
+uniform float uMegaT;       // 0 ring, 1 cylinder, 2 dark cylinder, 3 wheel, 4 gate, 5 shell, 6 swarm
+uniform vec4 uMegaC;        // cylinders: x half length, y radius, z half the gap between a pair (0: one cylinder), w window share; shells and swarms: x layers, y share of plates open (shell) or of cells holding a panel (swarm), z cos of the cap's half angle, w panel size; wheels and gates: x ring radius, y tube radius, w window share
+uniform vec4 uMegaD;        // cylinders: x mirror width, y mirror angle from straight out (radians), z bounding radius; wheels: x spokes, y mirror size over the hub; gates: w how lit the disc is; shells and swarms: x latitude bands
 #endif
 uniform int uMoonN;
 uniform vec4 uMoon[5];      // xyz: position (planet radius = 1), w: radius
@@ -1262,8 +1262,100 @@ vec4 gateDisc(vec3 o, vec3 d, out float tp) {
   float al = uMegaD.w * (1.0 - smoothstep(0.85, 1.0, rad)) * (0.5 + 0.5 * f);
   return vec4(c * 1.4, al);
 }
+// Shells and swarms: spheres built round a star, seen from outside. No marching is needed: a ray crosses each concentric sphere
+// twice, so the picture is the layers' front faces from the outside in, then the star, then their back faces from the inside out,
+// each one letting through what its gaps leave. Cells are in latitude bands with a whole number of cells per band, so none pinch
+// at the poles and all meet at the seam.
+void shCell(vec3 p, float nb, out vec2 id, out vec2 f) {
+  float v = (asin(clamp(p.y, -1.0, 1.0)) / PI + 0.5) * nb;
+  float j = min(floor(v), nb - 1.0);
+  float cnt = max(3.0, floor(2.0 * nb * cos((j + 0.5) / nb * PI - 0.5 * PI) + 0.5));
+  float u = (atan(p.z, p.x) / (2.0 * PI) + 0.5) * cnt;
+  float i = min(floor(u), cnt - 1.0);
+  id = vec2(i, j); f = vec2(u - i, v - j);
+}
+// a point on layer k, turned into that layer's own frame (layers turn opposite ways at different speeds; a swarm's are also tilted)
+vec3 shLayer(vec3 p, int k) {
+  float a = uSpin * ((k % 2 == 0) ? 1.0 : -1.0) * (1.0 + 0.35 * float(k)), cs = cos(a), sn = sin(a);
+  p = vec3(cs * p.x + sn * p.z, p.y, -sn * p.x + cs * p.z);
+  if (uMegaT > 5.5) { float t = 0.45 * float(k), c2 = cos(t), s2 = sin(t); p = vec3(p.x, c2 * p.y - s2 * p.z, s2 * p.y + c2 * p.z); }
+  return p;
+}
+// one face of one layer at unit direction n (planet frame): colour and how much it blocks
+vec4 shSurf(vec3 n, int k, bool back) {
+  vec3 pl = shLayer(n, k);
+  vec3 nv = uU * n.x + uAxis * n.y + uW * n.z;
+  if (back) nv = -nv;
+  float kk = float(k), nl = uMegaC.x;
+  vec2 id, f; shCell(pl, uMegaD.x, id, f);
+  vec3 h = hash33(vec3(id, uSeed + 17.0 * kk));
+  float sun = max(dot(nv, gL), 0.0);
+  float starK = 0.6 + 1.1 * uMegaB.w * (1.0 + 0.5 * kk);
+  vec3 warm = vec3(1.0, 0.82, 0.55);
+  if (uMegaT < 5.5) {
+    // shell: square plates with a strut round each; some plates are open
+    float fd = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y));
+    float seam = 1.0 - smoothstep(0.0, 0.07, fd);
+    float open = (h.x < uMegaC.y) ? smoothstep(0.10, 0.13, fd) : 0.0;
+    vec3 hullC = mix(uMegaHull, uMegaAcc, back ? 0.35 : 0.5 * kk / max(nl, 1.0));
+    vec3 alb = hullC * (0.45 + 0.35 * h.y + 0.10 * h.z) * (1.0 - 0.55 * seam);
+    alb = mix(alb, uMegaAcc * 0.7, step(0.955, h.z) * (1.0 - seam) * 0.8);
+    float dotL = (1.0 - smoothstep(0.08, 0.16, length(f - 0.5))) * step(0.93 - 0.08 * uMegaB.z, h.y) * uMegaB.z;
+    if (back) return vec4(alb * warm * starK + uMegaAcc * dotL * 0.4, 1.0 - open);
+    float spec = pow(max(dot(nv, normalize(gL + vec3(0.0, 0.0, 1.0))), 0.0), 28.0) * 0.18;
+    return vec4(alb * (0.14 + sun) + vec3(spec) * sun + uMegaAcc * dotL * 1.1, 1.0 - open);
+  }
+  // swarm: separate flat panels, each turned a little differently
+  float ang = h.y * 6.2832, ca = cos(ang), sa = sin(ang);
+  vec2 q = f - 0.5; q = vec2(ca * q.x + sa * q.y, -sa * q.x + ca * q.y);
+  float sz = 0.5 * uMegaC.w, m = (h.x < uMegaC.y) ? 1.0 - smoothstep(sz - 0.06, sz, max(abs(q.x), abs(q.y))) : 0.0;
+  if (back) {
+    // collector face: dark cells with a gold edge, lit by the star
+    float edge = smoothstep(sz - 0.14, sz - 0.04, max(abs(q.x), abs(q.y)));
+    return vec4(mix(vec3(0.05, 0.09, 0.20), vec3(0.9, 0.65, 0.25), edge) * warm * starK * (0.7 + 0.5 * h.z), m);
+  }
+  vec3 pn = normalize(nv + (h.yzx - 0.5) * 0.9);
+  float spec = pow(max(dot(pn, normalize(gL + vec3(0.0, 0.0, 1.0))), 0.0), 24.0);
+  vec3 alb = mix(uMegaHull, vec3(1.0), 0.35) * (0.55 + 0.45 * h.z);
+  return vec4(alb * (0.10 + 0.9 * max(dot(pn, gL), 0.0)) + vec3(1.0, 0.95, 0.85) * spec * 1.2 * step(0.0, dot(nv, gL)), m);
+}
+vec4 shadeShell(vec2 uv, float px) {
+  if (length(uv) > 1.0 + 2.0 * px) return vec4(0.0);
+  vec3 z0 = vec3(uv, 2.0);
+  vec3 o = vec3(dot(z0, uU), dot(z0, uAxis), dot(z0, uW));
+  vec3 d = -vec3(uU.z, uAxis.z, uW.z);
+  float b = dot(o, d), dm2 = max(dot(o, o) - b * b, 0.0), dmin = sqrt(dm2);
+  vec3 cd = normalize(vec3(dot(uL, uU), dot(uL, uAxis), dot(uL, uW)));
+  int nl = int(uMegaC.x + 0.5);
+  vec3 col = vec3(0.0); float T = 1.0;
+  for (int k = 0; k < 4; k++) {
+    if (k >= nl) break;
+    float R = 1.0 - 0.14 * float(k), cov = clamp((R - dmin) / px * 0.75 + 0.5, 0.0, 1.0);
+    if (cov <= 0.0) continue;
+    vec3 n = normalize(o + d * (-b - sqrt(max(R * R - dm2, 0.0))));
+    if (dot(n, cd) < uMegaC.z) continue;
+    vec4 s = shSurf(n, k, false); float a = s.a * cov;
+    col += T * a * s.rgb; T *= 1.0 - a;
+  }
+  // the star: a hot disc at the centre, in front of every back face
+  float sr = 0.06;
+  float cs = (1.0 - smoothstep(sr - 1.5 * px, sr, dmin));
+  col += T * cs * vec3(1.0, 0.93, 0.78) * (1.6 + 2.0 * uMegaB.w); T *= 1.0 - cs;
+  for (int k = 3; k >= 0; k--) {
+    if (k >= nl) continue;
+    float R = 1.0 - 0.14 * float(k), cov = clamp((R - dmin) / px * 0.75 + 0.5, 0.0, 1.0);
+    if (cov <= 0.0) continue;
+    vec3 n = normalize(o + d * (-b + sqrt(max(R * R - dm2, 0.0))));
+    if (dot(n, cd) < uMegaC.z) continue;
+    vec4 s = shSurf(n, k, true); float a = s.a * cov;
+    col += T * a * s.rgb; T *= 1.0 - a;
+  }
+  float A = 1.0 - T;
+  return A > 0.0 ? vec4(col / A, A) : vec4(0.0);
+}
 // One pixel of a megastructure: colour and coverage
 vec4 shadeMega(vec2 uv, float px) {
+  if (uMegaT > 4.5) return shadeShell(uv, px);
   bool solid = uMegaT > 0.5, tor = uMegaT > 2.5;
   float bound = solid ? uMegaD.z : 1.1;
   if (length(uv) > bound + px) return vec4(0.0);
@@ -1559,7 +1651,7 @@ void main() {
   if (uType == 3) {
     // the star at the centre of a ring, then the structure in front of it
     float rs = length(uv);
-    if (uMegaT < 0.5) col += vec3(1.0, 0.93, 0.78) * uMegaB.w * (1.6 * smoothstep(0.05, 0.0, rs) + 0.35 * exp(-rs * rs / 0.02) + 0.12 * exp(-rs * rs / 0.25));
+    if (uMegaT < 0.5 || uMegaT > 4.5) col += vec3(1.0, 0.93, 0.78) * uMegaB.w * (1.6 * smoothstep(0.05, 0.0, rs) + 0.35 * exp(-rs * rs / 0.02) + 0.12 * exp(-rs * rs / 0.25));
     vec4 mg = shadeMega(uv, px);
     col = mix(col, mg.rgb, mg.a);
     col = col / (1.0 + col * 0.08);
@@ -1729,7 +1821,7 @@ const BASE = {
   spin: 0.25, cloudSpeed: 0.3, flow: 0.4, tilt: 22, roll: -12, sun: -55, sunH: 12, zoom: 1,
   ring: { on: false, type: 'broad', inner: 1.24, width: 1.03, op: 0.8, gaps: 0.8, struct: 0.6, clump: 0.3, dust: 0.15, feeder: 0, seed: 1, spin: 0.3, c1: '#d8c8a4', c2: '#7a6a55' },
   moons: 1, moonSpeed: 0.6, moonList: [],
-  mType: 'ring', mLen: 4.5, mPair: 2, mWin: 0.4, mMir: 0.45, mMirA: 40, mTube: 0.12, mSpokes: 6, mTop: 0.6, mAct: 0.7, mWidth: 0.22, mWall: 0.05, mSpan: 0.7, mShade: 0.28, mPlate: 0.6, mLights: 0.5, mStar: 1, mHull: '#8b9199', mAcc: '#e0a64a',
+  mType: 'ring', mLen: 4.5, mPair: 2, mWin: 0.4, mMir: 0.45, mMirA: 40, mTube: 0.12, mSpokes: 6, mTop: 0.6, mAct: 0.7, mLayers: 2, mOpen: 0.35, mDens: 0.3, mPanel: 0.5, mFine: 0.35, mCap: 1, mWidth: 0.22, mWall: 0.05, mSpan: 0.7, mShade: 0.28, mPlate: 0.6, mLights: 0.5, mStar: 1, mHull: '#8b9199', mAcc: '#e0a64a',
 };
 const KIND_DEF = {
   terran: { wet: 0, pal: ['#1c4d8f', '#3f7a3c', '#7b7a45', '#8f7f6d', '#f1f5f9'], sea: 0.55, mount: 0.5, clouds: 0.5, haze: 0.65, hazeCol: '#78aaf2', ice: 0.3, cities: 0.48 },
@@ -1789,6 +1881,12 @@ const TERR = (p) => p.kind !== 'mega' || ISMEGA(p, 'ring');   // a megastructure
 const CONTROLS = [
   ['Struct', 'mLen', 'Length to width', 1.5, 9, 0.1, (p) => ISMEGA(p, 'cylinder', 'rama'), (v) => v.toFixed(1) + ' : 1'],
   ['Struct', 'mPair', 'Drums', 1, 2, 1, (p) => ISMEGA(p, 'cylinder'), (v) => v < 1.5 ? 'one' : 'a pair'],
+  ['Struct', 'mLayers', 'Layers', 1, 4, 1, (p) => ISMEGA(p, 'shell', 'swarm')],
+  ['Struct', 'mOpen', 'Gaps', 0, 0.9, 0.01, (p) => ISMEGA(p, 'shell'), (v) => v < 0.02 ? 'solid' : Math.round(v * 100) + '%'],
+  ['Struct', 'mDens', 'Panel density', 0.08, 1, 0.01, (p) => ISMEGA(p, 'swarm'), (v) => Math.round(v * 100) + '%'],
+  ['Struct', 'mPanel', 'Panel size', 0.25, 0.95, 0.01, (p) => ISMEGA(p, 'swarm'), (v) => Math.round(v * 100) + '%'],
+  ['Struct', 'mFine', 'Panel fineness', 0, 1, 0.01, (p) => ISMEGA(p, 'swarm')],
+  ['Struct', 'mCap', 'Coverage', 0.12, 1, 0.01, (p) => ISMEGA(p, 'shell', 'swarm'), (v) => v > 0.98 ? 'all round' : Math.round(v * 100) + '%'],
   ['Struct', 'mTube', 'Tube thickness', 0.03, 0.3, 0.005, (p) => ISMEGA(p, 'wheel', 'gate'), (v) => Math.round(v * 100) + '%'],
   ['Struct', 'mSpokes', 'Spokes', 3, 8, 1, (p) => ISMEGA(p, 'wheel')],
   ['Struct', 'mTop', 'Mirror over hub', 0, 1, 0.01, (p) => ISMEGA(p, 'wheel'), (v) => v < 0.02 ? 'none' : Math.round(v * 100) + '%'],
@@ -1800,9 +1898,9 @@ const CONTROLS = [
   ['Struct', 'mWall', 'Rim wall height', 0, 0.12, 0.005, (p) => ISMEGA(p, 'ring')],
   ['Struct', 'mSpan', 'Climate range', 0.25, 1.3, 0.01, (p) => ISMEGA(p, 'ring'), (v) => v < 0.5 ? 'tropical' : v < 0.9 ? 'mild' : 'varied'],
   ['Struct', 'mShade', 'Night share', 0, 0.6, 0.01, (p) => ISMEGA(p, 'ring'), (v) => v < 0.01 ? 'none' : Math.round(v * 100) + '%'],
-  ['Struct', 'mPlate', 'Hull plating', 0, 1, 0.01, (p) => p.kind === 'mega'],
-  ['Struct', 'mLights', 'Hull lights', 0, 1, 0.01, (p) => p.kind === 'mega'],
-  ['Struct', 'mStar', 'Star glow', 0, 1.5, 0.01, (p) => ISMEGA(p, 'ring')],
+  ['Struct', 'mPlate', 'Hull plating', 0, 1, 0.01, (p) => ISMEGA(p, 'ring', 'cylinder', 'rama', 'wheel', 'gate', 'shell')],
+  ['Struct', 'mLights', 'Hull lights', 0, 1, 0.01, (p) => ISMEGA(p, 'ring', 'cylinder', 'rama', 'wheel', 'gate', 'shell')],
+  ['Struct', 'mStar', 'Star glow', 0, 1.5, 0.01, (p) => ISMEGA(p, 'ring', 'shell', 'swarm')],
   // section, key, label, min, max, step, visible(P), readout
   ['Look', 'sea', 'Ocean level', 0, 1, 0.01, (p) => HAS_SEA(p.kind)],
   ['Look', 'wet', 'Wetness', -1, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'rock' && p.kind !== 'lava'],
@@ -1905,6 +2003,10 @@ const MEGA_TYPES = [
     note: 'A fat tube bent into a ring and spun for gravity, hung by spokes from a still hub with docking ports. A band of windows runs along the inner face of the tube. Turn up the mirror over the hub for the Stanford torus, which steers sunlight in through those windows; set it to none for a plain station wheel; make the tube thin and the spokes few for a lean one.' },
   { id: 'gate', name: 'Gate', real: 'Ring gates: Stargate, Contact\'s machine, jump-gate rings', cam: { tilt: 55, roll: -18 }, d: { mTube: 0.05, mHull: '#3d424a', mAcc: '#7fc8ff', mLights: 0.3 },
     note: 'A bare thin ring with no spokes and no hub: dark hull, nine glowing nodes round it, and a swirling disc of light across the middle. Gate energy lights the nodes and the disc; at none it is a dormant ring.' },
+  { id: 'shell', name: 'Shell', real: 'Dyson shell, Matrioshka brain, Shkadov thruster (Stapledon, Dyson, Bradbury)', cam: { tilt: 24, roll: -12 }, d: { mLayers: 2, mOpen: 0.35, mCap: 1, mHull: '#8a847c', mAcc: '#ffb347', mLights: 0.4 },
+    note: 'A sphere of plates built round a star to catch all its light. Gaps opens some plates so the star shows through; Layers nests more shells inside the first, each warmer than the one outside it (a Matrioshka brain); Coverage below 100% leaves only a cap on the Sun side (a Shkadov thruster, which pushes a star by reflecting its light). Only the outside and the lit inside show.' },
+  { id: 'swarm', name: 'Swarm', real: 'Dyson swarm and bubble (Dyson 1960), statite mirrors', cam: { tilt: 24, roll: -12 }, d: { mLayers: 3, mDens: 0.3, mPanel: 0.5, mFine: 0.35, mCap: 1, mHull: '#b8bcc4', mAcc: '#ffb347' },
+    note: 'Not one shell but thousands of separate panels circling a star on many orbits, none touching: Dyson\'s own version, since a rigid shell cannot hold together. The outer faces are bright silver and catch the Sun; through the gaps you see the dark collector faces on the far side and the star. Each layer turns on its own tilt and speed. Small thin panels read as a Dyson bubble.' },
   { id: 'rama', name: 'Rama', real: 'Clarke\'s Rama, a Bernal-type worldship', cam: { tilt: 20, roll: -22 }, d: { mLen: 3.2, mHull: '#7a746c', mAcc: '#a9a39a', mLights: 0.1 },
     note: 'A dark, windowless drum with nothing on it but three shallow grooves and a few dim lights: a ship that is also a world, and gives nothing away from outside.' },
 ];
@@ -2284,15 +2386,18 @@ function draw(w, h, tmul) {
   f('uSpin', T.spin); f('uCloudAng', T.cloud); f('uFlowT', T.flow); f('uRingAng', T.ring); f('uTime', T.time);
   if (mega) {
     const wd = P.mWidth * 0.5;
-    const mt = { ring: 0, cylinder: 1, rama: 2, wheel: 3, gate: 4 }[P.mType] || 0;
+    const mt = { ring: 0, cylinder: 1, rama: 2, wheel: 3, gate: 4, shell: 5, swarm: 6 }[P.mType] || 0;
     gl.uniform1f(loc.uMegaT, mt);
-    if (mt >= 3) {
+    if (mt >= 3 && mt < 5) {
       // a wheel or gate: ring radius Rm, tube radius r. The mirror over a wheel's hub sets the bound; everything is scaled to a bound of 1.2
       const mirOn = mt === 3 ? P.mTop : 0;
       let Rm = 1, r = P.mTube * Rm;
       const bnd = (Rm) => Math.max(Rm * (1 + P.mTube), Math.hypot(0.42 * Rm * mirOn, (0.16 + 0.6 + 0.42 * mirOn * 0.71) * Rm)) + 0.04;
       Rm *= 1.2 / bnd(Rm); r = P.mTube * Rm;
       gl.uniform4f(loc.uMegaC, Rm, r, 0, P.mWin); gl.uniform4f(loc.uMegaD, Math.round(P.mSpokes), mirOn, bnd(Rm), mt === 4 ? P.mAct : 0);
+    } else if (mt >= 5) {
+      gl.uniform4f(loc.uMegaC, Math.round(P.mLayers), mt === 5 ? P.mOpen : P.mDens, Math.cos(Math.PI * P.mCap), P.mPanel);
+      gl.uniform4f(loc.uMegaD, mt === 5 ? Math.round(14 + 24 * P.mPlate) : Math.round(30 + 80 * P.mFine), 0, 1.12, 0);
     } else if (mt) {
       // fit the drum (or the pair, with its mirrors) in the frame: height H sets the scale, then everything is brought to a bound of 1.15
       const pair = mt === 1 && P.mPair >= 1.5, mir = mt === 1 ? P.mMir : 0;
@@ -2530,7 +2635,7 @@ const PARAM_RANGE = {
   sea: [0, 1], wet: [-1, 1], mount: [0, 1], scale: [0.5, 2.5], ice: [0, 1], clouds: [0, 1], haze: [0, 1.3], cities: [0, 1], rad: [1500, 15000], plan: [0, 1], land: [0.02, 1], lava: [0, 1], craters: [0, 1], scars: [0, 1],
   bands: [3, 20, 1], turb: [0, 1.4], storms: [0, 6, 1], stormSize: [0.2, 1.6], spin: [-1, 1], cloudSpeed: [-1, 1], flow: [0, 1.5], moonSpeed: [0, 2],
   tilt: [6, 85], roll: [-90, 90], sun: [-180, 180], sunH: [-60, 60], zoom: [0.5, 1.8], moons: [0, 5, 1],
-  mLen: [1.5, 9], mPair: [1, 2, 1], mWin: [0.15, 0.7], mMir: [0.2, 1], mMirA: [0, 60], mTube: [0.03, 0.3], mSpokes: [3, 8, 1], mTop: [0, 1], mAct: [0, 1], mWidth: [0.06, 0.6], mWall: [0, 0.12], mSpan: [0.25, 1.3], mShade: [0, 0.6], mPlate: [0, 1], mLights: [0, 1], mStar: [0, 1.5],
+  mLen: [1.5, 9], mPair: [1, 2, 1], mWin: [0.15, 0.7], mMir: [0.2, 1], mMirA: [0, 60], mTube: [0.03, 0.3], mSpokes: [3, 8, 1], mTop: [0, 1], mAct: [0, 1], mLayers: [1, 4, 1], mOpen: [0, 0.9], mDens: [0.08, 1], mPanel: [0.25, 0.95], mFine: [0, 1], mCap: [0.12, 1], mWidth: [0.06, 0.6], mWall: [0, 0.12], mSpan: [0.25, 1.3], mShade: [0, 0.6], mPlate: [0, 1], mLights: [0, 1], mStar: [0, 1.5],
 };
 const RING_RANGE = { inner: [1.1, 2.8], width: [0.04, 2.6], op: [0.1, 1], gaps: [0, 1], struct: [0, 1], clump: [0, 1], dust: [0, 1], feeder: [0, 5, 1], seed: [0, 9999, 1], spin: [-1, 1] };
 const isHex = (c) => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
