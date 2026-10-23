@@ -1004,7 +1004,7 @@ vec3 shadePlanet(vec3 p, out float shine) {
 
 // --- moons -----------------------------------------------------------------
 #ifdef PM_MOONS
-// Eight kinds, each modelled on something real (the page script lists them as MOON_TYPES). q is the unit direction on the
+// Nine kinds, eight modelled on something real (the page script lists them as MOON_TYPES). q is the unit direction on the
 // moon in its own frame; a surface returns its colour and any glow of its own (lava).
 void moonSurface(int ty, vec3 q, float sd, float detail, float feat, vec3 c1, vec3 c2, out vec3 alb, out vec3 emis) {
   emis = vec3(0.0);
@@ -1054,6 +1054,54 @@ void moonSurface(int ty, vec3 q, float sd, float detail, float feat, vec3 c1, ve
     // captured rock (Phobos, Amalthea): dark and deeply cratered, pale where fresh rock is exposed, parallel grooves
     float gr = smoothstep(0.88, 1.0, 0.5 + 0.5 * sin(dot(q, normalize(vec3(0.4, 0.2, 0.9))) * 40.0 + 3.0 * fbm(q * 3.0 + sd, 2)));
     alb = mix(c1, c2, clamp(cr * 1.3 * detail, 0.0, 1.0)) * (0.6 + 0.7 * base) * (1.0 - 0.35 * gr * feat);
+  } else if (ty == 8) {
+    // industrial: a moon built over. Bare mined rock with glowing slag, steel-plated districts, open pits with scaffolding across
+    // them. detail = how many pits and towers, feat = how much of the surface is built over. (The towers are in shadeMoon.)
+    vec3 hh; float wl;
+    cellC(q * 2.2 + sd, hh, wl);
+    float built = 1.0 - smoothstep(feat * 1.1 - 0.12, feat * 1.1 + 0.02, hh.x);
+    vec3 rock = c1 * (0.70 + 0.55 * base) * (1.0 + cr * (0.10 + 0.25 * detail));
+    // plates: square panels on each face of an imaginary cube, with seams, a few hazard and dark panels, lit windows
+    vec3 aq = abs(q);
+    float ax = (aq.x > max(aq.y, aq.z)) ? 0.0 : ((aq.y > aq.z) ? 1.0 : 2.0);
+    vec2 pc = (ax < 0.5) ? q.yz : ((ax < 1.5) ? q.xz : q.xy);
+    vec2 pg = pc * (9.0 + 16.0 * detail) + hh.xy * 5.0;
+    vec2 pid = floor(pg), pf = fract(pg);
+    vec3 ht = hash33(vec3(pid, ax + 11.0 * floor(hh.z * 7.0)));
+    float seam = 1.0 - smoothstep(0.0, 0.09, min(min(pf.x, 1.0 - pf.x), min(pf.y, 1.0 - pf.y)));
+    vec3 plate = c2 * (0.40 + 0.45 * ht.x) * (0.8 + 0.4 * hh.y) * (1.0 - 0.6 * seam);
+    plate = mix(plate, vec3(0.85, 0.42, 0.10) * 0.8, step(0.94, ht.y) * (1.0 - seam));
+    plate *= 1.0 - 0.5 * step(ht.y, 0.12);
+    alb = mix(rock, plate, built);
+    float win = (1.0 - smoothstep(0.07, 0.15, length(pf - 0.5))) * step(0.76, ht.z) * built;
+    float bec = (1.0 - smoothstep(0.04, 0.09, length(pf - 0.5))) * step(0.985, ht.y) * built;
+    emis += vec3(1.0, 0.74, 0.40) * win * 0.9 + vec3(0.35, 0.9, 1.0) * bec * 1.2 + vec3(1.0, 0.62, 0.30) * built * (1.0 - seam) * 0.025;
+    // slag channels: ridged veins of glowing metal through the bare rock
+    float rid = 1.0 - abs(2.0 * fbm(q * 3.2 + sd + 60.0, 3) - 1.0);
+    float slag = smoothstep(0.978, 0.997, rid) * (1.0 - built) * (0.4 + 0.6 * detail);
+    alb *= 1.0 - 0.6 * slag;
+    emis += vec3(1.0, 0.40, 0.08) * slag * 0.7;
+    // pits: round open workings, stepped terraces going down into a hot glow
+    vec3 hd; float wd;
+    vec3 po = cellC(q * 3.4 + sd + 40.0, hd, wd);
+    float dist = length(po), rP = 0.26 + 0.2 * hd.y;
+    float has = step(hd.x, 0.15 + 0.5 * detail);
+    float pit = has * (1.0 - smoothstep(rP * 0.84, rP * 0.92, dist));
+    float depth = clamp(dist / (rP * 0.9), 0.0, 1.0);
+    float ter = 0.5 + 0.5 * sin(depth * 24.0);
+    vec3 pitCol = mix(vec3(0.03, 0.03, 0.035), c2 * 0.30, ter * 0.65);
+    float rim = has * smoothstep(rP * 0.84, rP * 0.9, dist) * (1.0 - smoothstep(rP * 0.97, rP * 1.04, dist));
+    // scaffolding across the pit: a diagonal lattice, two main beams, and a ring round the edge
+    vec3 e1 = normalize(cross(q, hd - 0.5 + 0.002)), e2 = cross(q, e1);
+    float u = dot(po, e1), v = dot(po, e2);
+    float l1 = abs(fract((u + v) * 7.0) - 0.5), l2 = abs(fract((u - v) * 7.0) - 0.5);
+    float lat = 1.0 - smoothstep(0.045, 0.09, min(l1, l2));
+    float beams = 1.0 - smoothstep(0.015, 0.035, min(abs(u), abs(v)));
+    float truss = pit * step(0.45, hd.z) * clamp(lat * 0.85 + beams, 0.0, 1.0);
+    alb = mix(alb, pitCol, pit);
+    alb = mix(alb, c2 * 1.1, rim * 0.9);
+    alb = mix(alb, c2 * 0.8, truss);
+    emis += vec3(1.0, 0.42, 0.10) * pit * pow(1.0 - depth, 2.0) * (1.0 - 0.75 * truss) * 0.9;
   } else {
     // living moon, kept plain on purpose: a blue ocean, a few big soft continents, polar ice, and faint cloud wisps only if asked for
     float h = fbm(q * 1.2 + sd, 3);
@@ -1079,6 +1127,16 @@ void shadeMoon(int i, vec2 uv, float px, out vec4 mcOut, out vec3 add) {
   float ang = atan(d.y, d.x);
   // lumpy outline for small captured rocks: a few low harmonics around the rim
   float rr = 1.0 + shape * (0.17 * sin(2.0 * ang + mq.y * 6.0) + 0.08 * sin(3.0 * ang + mq.y * 11.0) + 0.05 * sin(5.0 * ang + mq.y * 17.0));
+  float tu = 0.0, th = 0.0;
+  if (ty == 8) {
+    // industrial: towers standing out from the rim, in 23 slots round the moon. Each is a tall stem on a wider, lower base.
+    float sl = ang * 3.660564;
+    vec3 hs = hash33(vec3(mod(floor(sl), 23.0), mq.y, 3.0));
+    float f = abs(fract(sl) - 0.5), wd = 0.05 + 0.07 * hs.z;
+    th = step(0.8 - 0.5 * mp.y, hs.x) * (0.05 + 0.15 * hs.y) * (0.6 + 0.8 * mp.y);
+    rr += max(th * (1.0 - smoothstep(wd, wd + 0.04, f)), 0.55 * th * (1.0 - smoothstep(2.2 * wd, 2.2 * wd + 0.04, f)));
+    tu = (fract(sl) - 0.5) * 0.2735;
+  }
   float rad = m.w * rr;
   float r = length(d) / rad;
   float cov = clamp((1.0 - r) * rad / px + 0.5, 0.0, 1.0);
@@ -1095,8 +1153,24 @@ void shadeMoon(int i, vec2 uv, float px, out vec4 mcOut, out vec3 add) {
     }
     return;
   }
+  if (ty == 8) {
+    float rb = length(d) / m.w;
+    if (rb > 1.0) {
+      // a tower: steel lattice, lit from the sun side, with a beacon on the stem's tip
+      float v = rb - 1.0;
+      float l1 = abs(fract((tu + v) * 20.0) - 0.5), l2 = abs(fract((tu - v) * 20.0) - 0.5);
+      float beam = 1.0 - smoothstep(0.10, 0.17, min(l1, l2));
+      vec3 steel = uMoonCol2[i];
+      float lt = smoothstep(-0.25, 0.5, sunSide) * shd0;
+      vec3 sc = mix(steel * 0.25, steel * 0.95, beam) * (0.10 + 0.9 * lt);
+      sc += vec3(0.35, 0.9, 1.0) * (1.0 - smoothstep(0.006, 0.014, length(vec2(tu, v - th)))) * step(0.001, th) * 1.4;
+      mcOut = vec4(sc, cov);
+      return;
+    }
+    r = rb;
+  }
   r = min(r, 0.9999);
-  vec3 n = vec3(d / rad, sqrt(1.0 - r * r));
+  vec3 n = vec3(d / ((ty == 8) ? m.w : rad), sqrt(1.0 - r * r));
   vec3 q = rotY(vec3(dot(n, uU), dot(n, uAxis), dot(n, uW)), mq.z);
   float sd = mq.y * 0.37;
   if (shape > 0.01) {   // lumps in the shading too, so the rock looks knobbly and not like a squashed ball
@@ -1159,7 +1233,7 @@ void main() {
   vec4 MC[5]; vec3 MA[5];
   for (int i = 0; i < 5; i++) { MC[i] = vec4(0.0); MA[i] = vec3(0.0); if (i >= uMoonN) break;
     // most pixels are nowhere near a moon, so shade it only close by (lumps reach 30% out, the glow 27% further, plus a pixel)
-    if (length(uv - uMoon[i].xy) < uMoon[i].w * (1.0 + 0.3 * uMoonQ[i].x) * (1.0 + 0.22 * uMoonP[i].w + 0.06) + px) shadeMoon(i, uv, px, MC[i], MA[i]);
+    if (length(uv - uMoon[i].xy) < uMoon[i].w * (1.0 + 0.3 * uMoonQ[i].x + ((uMoonP[i].x > 7.5 && uMoonP[i].x < 8.5) ? 0.3 : 0.0)) * (1.0 + 0.22 * uMoonP[i].w + 0.06) + px) shadeMoon(i, uv, px, MC[i], MA[i]);
   }
   for (int i = 0; i < 5; i++) { if (i >= uMoonN) break; if (uMoon[i].z < 0.0) { col += MA[i]; col = mix(col, MC[i].rgb, MC[i].a); } }
 #endif
@@ -1454,7 +1528,7 @@ function syncControls() {
 }
 
 /* ---------- moons ---------- */
-// Eight kinds of moon, each modelled on something that really exists. The shader draws them in moonSurface(), in this order.
+// Nine kinds of moon, eight modelled on something that really exists. The shader draws them in moonSurface(), in this order.
 // c: colour A, colour B, atmosphere colour; L: what colour A, colour B, the Detail slider and the Feature slider mean for this kind.
 const MOON_TYPES = [
   { id: 'rock', name: 'Cratered rock', real: 'Earth\'s Moon, Mercury', note: 'Pale highlands pocked with craters, with smooth dark plains filling the big basins.',
@@ -1473,6 +1547,8 @@ const MOON_TYPES = [
     c: ['#5a534c', '#a79d90', '#ffffff'], L: ['Rock', 'Fresh rock', 'Craters', 'Grooves'], d: { detail: 0.7, feat: 0.5, haze: 0, shape: 0.75 }, size: [0.02, 0.05] },
   { id: 'living', name: 'Living moon', real: 'No known example; a habitable moon of a giant planet is thought possible', note: 'Kept plain: ocean, a few big continents, polar ice and a thin atmosphere. Cloud wisps are off until you turn them up.',
     c: ['#2a5f95', '#6c8a4f', '#8fb8f0'], L: ['Ocean', 'Land', 'Cloud wisps', 'Ocean cover'], d: { detail: 0.0, feat: 0.5, haze: 0.3, shape: 0 }, size: [0.07, 0.13] },
+  { id: 'industrial', name: 'Industrial', real: 'No real example; a moon turned into a factory', note: 'Mined bare rock with glowing slag, steel-plated districts with lit windows, open pits crossed by scaffolding, and towers standing out from the rim.',
+    c: ['#5e5a55', '#9aa3ab', '#ffffff'], L: ['Mined rock', 'Steel plating', 'Pits and towers', 'Built-over share'], d: { detail: 0.6, feat: 0.6, haze: 0, shape: 0 }, size: [0.06, 0.12] },
 ];
 const MOON_IDX = {}; MOON_TYPES.forEach((t, i) => { MOON_IDX[t.id] = i; });
 const MOON_RANGE = { size: [0.015, 0.5], orbit: [1.3, 7], speed: [-2, 3], tilt: [-60, 60], phase: [0, 360], detail: [0, 1], feat: [0, 1], haze: [0, 1], shape: [0, 1], spin: [-1, 1], seed: [0, 9999, 1] };
@@ -1497,7 +1573,8 @@ function moonHint(t) {
   if (/volcan|molten|fire|glowing|furnace/.test(t)) return 'volcanic';
   if (/\bwhite\b|\bicy\b|\bice\b|frozen|snow/.test(t)) return 'ice';
   if (/\bhaze\b|\bhazy\b|smog/.test(t)) return 'hazy';
-  if (/captured|asteroid|moonlet|pitted|scarred|quarried|honeycombed|hollowed/.test(t)) return 'asteroid';
+  if (/factory|refiner|dock frames|dry dock|shipyard|foundry|forge|smelt|quarried|industrial/.test(t)) return 'industrial';
+  if (/captured|asteroid|moonlet|pitted|scarred|honeycombed|hollowed/.test(t)) return 'asteroid';
   if (/\bblack\b|\bdark\b|dust|covered|\bold\b/.test(t)) return 'dirty';
   return null;
 }
