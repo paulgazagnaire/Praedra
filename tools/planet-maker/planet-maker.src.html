@@ -237,9 +237,9 @@ uniform vec3 uRingCol, uRingCol2;
 uniform vec4 uMegaA;        // ring: x half width of the floor, y wall height, z wall thickness, w how much of a planet's latitudes the floor covers (radians)
 uniform vec4 uMegaB;        // ring: x share of the loop in shade, y plating detail, z hull lights, w star glow
 uniform vec3 uMegaHull, uMegaAcc;
-uniform float uMegaT;       // 0 ring, 1 cylinder, 2 dark cylinder
-uniform vec4 uMegaC;        // cylinders: x half length, y radius, z half the gap between a pair (0: one cylinder), w window share
-uniform vec4 uMegaD;        // cylinders: x mirror width, y mirror angle from straight out (radians), z bounding radius
+uniform float uMegaT;       // 0 ring, 1 cylinder, 2 dark cylinder, 3 wheel, 4 gate
+uniform vec4 uMegaC;        // cylinders: x half length, y radius, z half the gap between a pair (0: one cylinder), w window share; wheels and gates: x ring radius, y tube radius, w window share
+uniform vec4 uMegaD;        // cylinders: x mirror width, y mirror angle from straight out (radians), z bounding radius; wheels: x spokes, y mirror size over the hub; gates: w how lit the disc is
 #endif
 uniform int uMoonN;
 uniform vec4 uMoon[5];      // xyz: position (planet radius = 1), w: radius
@@ -1157,51 +1157,174 @@ vec3 shadeCyl(vec3 pp, vec3 n) {
   float spec = pow(max(dot(nv, normalize(gL + vec3(0.0, 0.0, 1.0))), 0.0), specP) * specK;
   return alb * (0.09 + sun) + vec3(spec) * sun + emis;
 }
+// Wheels and gates: a tube bent into a ring about y, the whole turning about y. A wheel has spokes to a still hub with docking
+// ports, a band of windows along the tube's inner face, and (the Stanford kind) a flat mirror tilted over the hub. A gate is the bare
+// thin ring, dark, with glowing nodes round it and a swirling disc filling the middle.
+const float TOR_HUB_R = 0.14, TOR_HUB_H = 0.16, TOR_MIRROR_UP = 0.6, TOR_MIRROR_R = 0.42;
+void torParts(vec3 p, out float tube, out float spoke, out float hub, out float mir) {
+  float Rm = uMegaC.x, r = uMegaC.y;
+  tube = length(vec2(length(p.xz) - Rm, p.y)) - r;
+  spoke = 1e3; hub = 1e3; mir = 1e3;
+  if (uMegaT < 3.5) {
+    float rh = TOR_HUB_R * Rm, hh = TOR_HUB_H * Rm;
+    float ca = cos(uSpin), sn = sin(uSpin);
+    vec3 q = vec3(ca * p.x + sn * p.z, p.y, -sn * p.x + ca * p.z);
+    float sec = 2.0 * PI / uMegaD.x;
+    float a = mod(atan(q.z, q.x) + 0.5 * sec, sec) - 0.5 * sec, rad = length(q.xz);
+    vec2 f = vec2(rad * cos(a), rad * sin(a));
+    float rs = max(0.008, 0.16 * r);
+    spoke = max(length(vec2(q.y, f.y)) - rs, max(0.5 * rh - f.x, f.x - (Rm - 0.5 * r)));
+    float ay = abs(p.y);
+    hub = min(sdCapCyl(p, rh, hh), sdCapCyl(vec3(p.x, ay - hh - 0.05 * Rm, p.z), 0.4 * rh, 0.05 * Rm));
+    if (uMegaD.y > 0.0) {
+      float yM = hh + TOR_MIRROR_UP * Rm, mr = TOR_MIRROR_R * Rm * uMegaD.y, c = 0.70711;
+      vec3 m = vec3(p.x, p.y - yM, p.z);
+      float disc = sdCapCyl(vec3(m.x, c * m.y + c * m.z, -c * m.y + c * m.z), mr, 0.006);
+      float mast = sdCapCyl(vec3(p.x, p.y - hh - 0.5 * (yM - hh), p.z), 0.012 * Rm, 0.5 * (yM - hh));
+      mir = min(disc, mast);
+    }
+  }
+}
+float torDist(vec3 p) {
+  float t, s, h, m; torParts(p, t, s, h, m);
+  return min(min(t, s), min(h, m));
+}
+vec3 shadeTor(vec3 pp, vec3 n) {
+  float Rm = uMegaC.x, r = uMegaC.y;
+  float tube, spoke, hub, mir; torParts(pp, tube, spoke, hub, mir);
+  float ca = cos(uSpin), sn = sin(uSpin);
+  vec3 q = vec3(ca * pp.x + sn * pp.z, pp.y, -sn * pp.x + ca * pp.z);
+  vec3 nv = uU * n.x + uAxis * n.y + uW * n.z;
+  vec3 alb, emis = vec3(0.0); float specK = 0.18, specP = 28.0;
+  float near = min(min(tube, spoke), min(hub, mir));
+  float ang = atan(q.z, q.x);
+  if (mir <= near) {
+    float lit = dot(nv, gL); if (lit < 0.0) nv = -nv;
+    // the flat mirror: segment seams and a dark frame round the edge (the mast is plain)
+    float yM = TOR_HUB_H * Rm + TOR_MIRROR_UP * Rm, mr = TOR_MIRROR_R * Rm * uMegaD.y;
+    vec3 m = vec3(pp.x, pp.y - yM, pp.z);
+    vec2 lv = vec2(m.x, -0.70711 * m.y + 0.70711 * m.z);
+    float rn = length(lv) / mr;
+    float seam = (rn < 1.03) ? max(smoothstep(0.46, 0.5, abs(fract(atan(lv.y, lv.x) / (2.0 * PI) * 16.0) - 0.5)), smoothstep(0.46, 0.5, abs(fract(rn * 4.0) - 0.5))) : 0.0;
+    float frame = (rn < 1.03) ? smoothstep(0.9, 0.96, rn) : 0.0;
+    alb = vec3(0.72, 0.78, 0.88) * (0.9 - 0.3 * seam - 0.45 * frame) * (lit > 0.0 ? 1.0 : 0.4);
+    specK = 0.9; specP = 36.0;
+  } else if (tube <= near) {
+    float psi = atan(pp.y, length(pp.xz) - Rm);
+    float cwc = 2.0 * PI / (12.0 * floor(mix(1.0, 3.0, uMegaB.y) + 0.5));
+    float M = 2.0 * max(2.0, floor(PI * r / (Rm * cwc) * 0.5 + 0.5)), sc = PI * r / (M * cwc);
+    vec3 em;
+    bool gate = uMegaT > 3.5;
+    float wc = abs(abs(psi) - 2.1), hwp = uMegaC.w * 0.9;
+    float edge = gate ? 0.0 : (1.0 - smoothstep(0.02, 0.05, abs(wc - hwp)));
+    alb = megaHull(ang, r * psi, false, sc, edge, em);
+    emis = em;
+    if (!gate && wc < hwp - 0.02) {
+      // the band of windows on the tube's inner face: panes between mullions over a lit interior
+      vec2 g = vec2(ang / (2.0 * PI) * 120.0, (abs(psi) - 2.1) / hwp * 1.5 + 0.5);
+      vec2 id = floor(g), fr = fract(g);
+      vec3 hh = hash33(vec3(id, uSeed + 5.0));
+      float mull = 1.0 - smoothstep(0.0, 0.12, min(min(fr.x, 1.0 - fr.x), min(fr.y, 1.0 - fr.y)));
+      vec3 glow = mix(vec3(1.0, 0.88, 0.66), uMegaAcc * 1.3, 0.2) * (0.65 + 0.35 * hh.x) * (hh.y > 0.12 ? 1.0 : 0.25);
+      alb = mix(vec3(0.05, 0.06, 0.08), alb * 0.5, mull);
+      emis = glow * (1.0 - mull) * 0.95;
+      specK = 0.6; specP = 40.0;
+    }
+    if (gate) {
+      // nine glowing nodes round the ring, on the face that looks along the axis
+      float sector = 2.0 * PI / 9.0, da = abs(mod(ang + 0.5 * sector, sector) - 0.5 * sector) * Rm / r;
+      float node = (1.0 - smoothstep(0.35, 0.6, da)) * (1.0 - smoothstep(0.55, 0.85, abs(abs(psi) - 1.57) * 1.4));
+      alb *= 0.8;
+      emis += uMegaAcc * node * (0.35 + 1.4 * uMegaD.w);
+    }
+  } else {
+    // spokes and hub: plain plates, a stripe and lights on the docking ports
+    vec3 em;
+    alb = megaHull(ang, hub < spoke ? q.y : length(q.xz), abs(n.y) > 0.5, Rm * 0.3, hub < spoke ? 0.3 * step(0.5, fract(length(pp.xz) / (0.02 * Rm))) : 0.0, em);
+    emis = em;
+  }
+  float sun = max(dot(nv, gL), 0.0);
+  float spec = pow(max(dot(nv, normalize(gL + vec3(0.0, 0.0, 1.0))), 0.0), specP) * specK;
+  return alb * (0.09 + sun) + vec3(spec) * sun + emis;
+}
+// The gate's disc: a swirl of light across the middle of the ring, seen from either side. Returns colour and coverage, and where on the ray it sits.
+vec4 gateDisc(vec3 o, vec3 d, out float tp) {
+  tp = 1e3;
+  if (abs(d.y) < 1e-4) return vec4(0.0);
+  float t = -o.y / d.y; vec3 hp = o + d * t;
+  float rad = length(hp.xz) / (uMegaC.x - 0.6 * uMegaC.y);
+  if (rad > 1.0) return vec4(0.0);
+  tp = t;
+  float sw = atan(hp.z, hp.x) + 2.4 * (1.0 - rad) - uSpin;
+  float f = fbm(vec3(cos(sw), sin(sw), 0.0) * rad * 2.4 + uSeed, 4);
+  float core = clamp(f * 1.8 - 0.4, 0.0, 1.0);
+  vec3 c = mix(uMegaAcc * 0.55, vec3(0.8, 0.93, 1.0), core * core) * (0.6 + 0.9 * (1.0 - rad));
+  float al = uMegaD.w * (1.0 - smoothstep(0.85, 1.0, rad)) * (0.5 + 0.5 * f);
+  return vec4(c * 1.4, al);
+}
 // One pixel of a megastructure: colour and coverage
 vec4 shadeMega(vec2 uv, float px) {
-  bool cyl = uMegaT > 0.5;
-  float bound = cyl ? uMegaD.z : 1.1;
+  bool solid = uMegaT > 0.5, tor = uMegaT > 2.5;
+  float bound = solid ? uMegaD.z : 1.1;
   if (length(uv) > bound + px) return vec4(0.0);
   vec3 z0 = vec3(uv, 2.0);
   vec3 o = vec3(dot(z0, uU), dot(z0, uAxis), dot(z0, uW));
   vec3 d = -vec3(uU.z, uAxis.z, uW.z);
   float t = 0.0, tmax = 4.0, mind = 1e3, tm = 0.0;
-  if (cyl) {
+  if (solid) {
     // start at the bounding sphere, so the march doesn't cross empty space
     float bb = dot(o, d), rb = bound + 2.0 * px, disc = bb * bb - (dot(o, o) - rb * rb);
     if (disc <= 0.0) return vec4(0.0);
     float s = sqrt(disc); t = max(-bb - s, 0.0); tmax = -bb + s;
   }
   for (int i = 0; i < 90; i++) {
-    float h = megaDist(o + d * t);
+    float h = tor ? torDist(o + d * t) : megaDist(o + d * t);
     if (h < mind) { mind = h; tm = t; }
     if (h < 0.25 * px || t > tmax) break;
-    t += h * (cyl ? 0.8 : 0.92);
+    t += h * (solid ? 0.8 : 0.92);
   }
   float a = clamp(1.0 - (mind - 0.25 * px) / (0.75 * px), 0.0, 1.0);
-  if (a <= 0.0) return vec4(0.0);
-  vec3 pp = o + d * tm;
-  vec2 e = vec2(max(0.002, 0.7 * px), 0.0);
-  vec3 n = normalize(vec3(megaDist(pp + e.xyy) - megaDist(pp - e.xyy), megaDist(pp + e.yxy) - megaDist(pp - e.yxy), megaDist(pp + e.yyx) - megaDist(pp - e.yyx)));
-  if (cyl) return vec4(shadeCyl(pp, n), a);
-  float rho = length(pp.xz), y = abs(pp.y);
-  vec3 rh = vec3(pp.x, 0.0, pp.z) / max(rho, 1e-4);
-  float wh = uMegaA.x;
-  vec3 col;
-  if (dot(n, rh) < -0.6 && abs(rho - 1.0) < 0.012 && y < wh + 0.004) {
-    col = megaFloor(pp);
-  } else {
-    vec3 emis;
-    bool face = abs(n.y) > 0.5;
-    float stripe = smoothstep(0.012, 0.0, abs(y - wh * 0.62)) * (face ? 0.0 : 1.0);
-    vec3 alb = megaHull(atan(pp.z, pp.x) - uSpin, face ? rho : pp.y, face, 1.0, stripe, emis);
-    vec3 nv = uU * n.x + uAxis * n.y + uW * n.z;
-    float sun = max(dot(nv, gL), 0.0);
-    float star = max(dot(n, normalize(-pp)), 0.0);
-    float spec = pow(max(dot(nv, normalize(gL + vec3(0.0, 0.0, 1.0))), 0.0), 28.0) * 0.18;
-    col = alb * (0.09 + 1.0 * sun + 0.85 * star * vec3(1.0, 0.93, 0.78)) + vec3(spec) * sun + emis;
+  vec4 sol = vec4(0.0);
+  if (a > 0.0) {
+    vec3 pp = o + d * tm;
+    vec2 e = vec2(max(0.002, 0.7 * px), 0.0);
+    vec3 n;
+    if (tor) n = normalize(vec3(torDist(pp + e.xyy) - torDist(pp - e.xyy), torDist(pp + e.yxy) - torDist(pp - e.yxy), torDist(pp + e.yyx) - torDist(pp - e.yyx)));
+    else n = normalize(vec3(megaDist(pp + e.xyy) - megaDist(pp - e.xyy), megaDist(pp + e.yxy) - megaDist(pp - e.yxy), megaDist(pp + e.yyx) - megaDist(pp - e.yyx)));
+    vec3 col;
+    if (tor) col = shadeTor(pp, n);
+    else if (solid) col = shadeCyl(pp, n);
+    else {
+      float rho = length(pp.xz), y = abs(pp.y);
+      vec3 rh = vec3(pp.x, 0.0, pp.z) / max(rho, 1e-4);
+      float wh = uMegaA.x;
+      if (dot(n, rh) < -0.6 && abs(rho - 1.0) < 0.012 && y < wh + 0.004) {
+        col = megaFloor(pp);
+      } else {
+        vec3 emis;
+        bool face = abs(n.y) > 0.5;
+        float stripe = smoothstep(0.012, 0.0, abs(y - wh * 0.62)) * (face ? 0.0 : 1.0);
+        vec3 alb = megaHull(atan(pp.z, pp.x) - uSpin, face ? rho : pp.y, face, 1.0, stripe, emis);
+        vec3 nv = uU * n.x + uAxis * n.y + uW * n.z;
+        float sun = max(dot(nv, gL), 0.0);
+        float star = max(dot(n, normalize(-pp)), 0.0);
+        float spec = pow(max(dot(nv, normalize(gL + vec3(0.0, 0.0, 1.0))), 0.0), 28.0) * 0.18;
+        col = alb * (0.09 + 1.0 * sun + 0.85 * star * vec3(1.0, 0.93, 0.78)) + vec3(spec) * sun + emis;
+      }
+    }
+    sol = vec4(col, a);
   }
-  return vec4(col, a);
+  if (uMegaT > 3.5 && uMegaD.w > 0.0) {
+    // the gate's disc, in front of or behind whatever the ring shows at this pixel
+    float tp; vec4 dc = gateDisc(o, d, tp);
+    if (dc.a > 0.0) {
+      bool front = sol.a <= 0.0 || tp < tm;
+      vec4 top = front ? dc : sol, bot = front ? sol : dc;
+      float A = top.a + bot.a * (1.0 - top.a);
+      return vec4((top.rgb * top.a + bot.rgb * bot.a * (1.0 - top.a)) / max(A, 1e-4), A);
+    }
+  }
+  return sol;
 }
 #endif
 
@@ -1606,7 +1729,7 @@ const BASE = {
   spin: 0.25, cloudSpeed: 0.3, flow: 0.4, tilt: 22, roll: -12, sun: -55, sunH: 12, zoom: 1,
   ring: { on: false, type: 'broad', inner: 1.24, width: 1.03, op: 0.8, gaps: 0.8, struct: 0.6, clump: 0.3, dust: 0.15, feeder: 0, seed: 1, spin: 0.3, c1: '#d8c8a4', c2: '#7a6a55' },
   moons: 1, moonSpeed: 0.6, moonList: [],
-  mType: 'ring', mLen: 4.5, mPair: 2, mWin: 0.4, mMir: 0.45, mMirA: 40, mWidth: 0.22, mWall: 0.05, mSpan: 0.7, mShade: 0.28, mPlate: 0.6, mLights: 0.5, mStar: 1, mHull: '#8b9199', mAcc: '#e0a64a',
+  mType: 'ring', mLen: 4.5, mPair: 2, mWin: 0.4, mMir: 0.45, mMirA: 40, mTube: 0.12, mSpokes: 6, mTop: 0.6, mAct: 0.7, mWidth: 0.22, mWall: 0.05, mSpan: 0.7, mShade: 0.28, mPlate: 0.6, mLights: 0.5, mStar: 1, mHull: '#8b9199', mAcc: '#e0a64a',
 };
 const KIND_DEF = {
   terran: { wet: 0, pal: ['#1c4d8f', '#3f7a3c', '#7b7a45', '#8f7f6d', '#f1f5f9'], sea: 0.55, mount: 0.5, clouds: 0.5, haze: 0.65, hazeCol: '#78aaf2', ice: 0.3, cities: 0.48 },
@@ -1666,7 +1789,11 @@ const TERR = (p) => p.kind !== 'mega' || ISMEGA(p, 'ring');   // a megastructure
 const CONTROLS = [
   ['Struct', 'mLen', 'Length to width', 1.5, 9, 0.1, (p) => ISMEGA(p, 'cylinder', 'rama'), (v) => v.toFixed(1) + ' : 1'],
   ['Struct', 'mPair', 'Drums', 1, 2, 1, (p) => ISMEGA(p, 'cylinder'), (v) => v < 1.5 ? 'one' : 'a pair'],
-  ['Struct', 'mWin', 'Window share', 0.15, 0.7, 0.01, (p) => ISMEGA(p, 'cylinder'), (v) => Math.round(v * 100) + '%'],
+  ['Struct', 'mTube', 'Tube thickness', 0.03, 0.3, 0.005, (p) => ISMEGA(p, 'wheel', 'gate'), (v) => Math.round(v * 100) + '%'],
+  ['Struct', 'mSpokes', 'Spokes', 3, 8, 1, (p) => ISMEGA(p, 'wheel')],
+  ['Struct', 'mTop', 'Mirror over hub', 0, 1, 0.01, (p) => ISMEGA(p, 'wheel'), (v) => v < 0.02 ? 'none' : Math.round(v * 100) + '%'],
+  ['Struct', 'mAct', 'Gate energy', 0, 1, 0.01, (p) => ISMEGA(p, 'gate'), (v) => v < 0.02 ? 'dormant' : Math.round(v * 100) + '%'],
+  ['Struct', 'mWin', 'Window share', 0.15, 0.7, 0.01, (p) => ISMEGA(p, 'cylinder', 'wheel'), (v) => Math.round(v * 100) + '%'],
   ['Struct', 'mMir', 'Mirror size', 0.2, 1, 0.01, (p) => ISMEGA(p, 'cylinder'), (v) => Math.round(v * 100) + '%'],
   ['Struct', 'mMirA', 'Mirror angle', 0, 60, 1, (p) => ISMEGA(p, 'cylinder'), (v) => Math.round(v) + '°'],
   ['Struct', 'mWidth', 'Width', 0.06, 0.6, 0.01, (p) => ISMEGA(p, 'ring'), (v) => (v * 100).toFixed(0) + '%'],
@@ -1774,6 +1901,10 @@ const MEGA_TYPES = [
     note: 'A solid band round a star, spun for gravity, with a wall along each edge to hold the air in. Seen at an angle, the near half shows the dull outer hull and the far half shows the ground on the inside of the loop. Shade squares near the star give it night. Width is exaggerated: a real Ringworld would be a hair-thin line from here.' },
   { id: 'cylinder', name: 'Cylinder', real: 'O\'Neill\'s Island Three, Babylon 5, Elysium-type pairs', cam: { tilt: 20, roll: -22 },
     note: 'A long drum spun for gravity, seen from outside: three long strips of window and three of hull, with a mirror hinged on each window edge to steer sunlight in. Pick one drum or a counter-rotating pair, so the pair does not twist in space. Each end has a still neck and a docking wheel. Only the outside shows; the land is inside.' },
+  { id: 'wheel', name: 'Wheel', real: 'The Stanford torus, 2001\'s Space Station V, von Braun\'s wheel', cam: { tilt: 42, roll: -20 }, d: { mTube: 0.12, mHull: '#8b9199', mAcc: '#e0a64a', mLights: 0.5 },
+    note: 'A fat tube bent into a ring and spun for gravity, hung by spokes from a still hub with docking ports. A band of windows runs along the inner face of the tube. Turn up the mirror over the hub for the Stanford torus, which steers sunlight in through those windows; set it to none for a plain station wheel; make the tube thin and the spokes few for a lean one.' },
+  { id: 'gate', name: 'Gate', real: 'Ring gates: Stargate, Contact\'s machine, jump-gate rings', cam: { tilt: 55, roll: -18 }, d: { mTube: 0.05, mHull: '#3d424a', mAcc: '#7fc8ff', mLights: 0.3 },
+    note: 'A bare thin ring with no spokes and no hub: dark hull, nine glowing nodes round it, and a swirling disc of light across the middle. Gate energy lights the nodes and the disc; at none it is a dormant ring.' },
   { id: 'rama', name: 'Rama', real: 'Clarke\'s Rama, a Bernal-type worldship', cam: { tilt: 20, roll: -22 }, d: { mLen: 3.2, mHull: '#7a746c', mAcc: '#a9a39a', mLights: 0.1 },
     note: 'A dark, windowless drum with nothing on it but three shallow grooves and a few dim lights: a ship that is also a world, and gives nothing away from outside.' },
 ];
@@ -1787,7 +1918,7 @@ function buildMegaUI() {
       if (P.mType === t.id) return;
       P.mType = t.id;
       if (t.cam) { P.tilt = t.cam.tilt; P.roll = t.cam.roll; }
-      if (t.d) Object.assign(P, t.d); else if (t.id === 'cylinder') Object.assign(P, { mLen: 4.5, mHull: '#8b9199', mAcc: '#e0a64a', mLights: 0.5 }); else if (t.id === 'ring') Object.assign(P, { tilt: 34, roll: -14, mHull: '#8b9199', mAcc: '#e0a64a', mLights: 0.5 });
+      Object.assign(P, { mHull: '#8b9199', mAcc: '#e0a64a', mLights: 0.5 }, t.id === 'ring' ? { tilt: 34, roll: -14 } : t.id === 'cylinder' ? { mLen: 4.5 } : {}, t.d || {});
       syncControls();
     });
     host.appendChild(b);
@@ -2153,9 +2284,16 @@ function draw(w, h, tmul) {
   f('uSpin', T.spin); f('uCloudAng', T.cloud); f('uFlowT', T.flow); f('uRingAng', T.ring); f('uTime', T.time);
   if (mega) {
     const wd = P.mWidth * 0.5;
-    const mt = P.mType === 'rama' ? 2 : P.mType === 'cylinder' ? 1 : 0;
+    const mt = { ring: 0, cylinder: 1, rama: 2, wheel: 3, gate: 4 }[P.mType] || 0;
     gl.uniform1f(loc.uMegaT, mt);
-    if (mt) {
+    if (mt >= 3) {
+      // a wheel or gate: ring radius Rm, tube radius r. The mirror over a wheel's hub sets the bound; everything is scaled to a bound of 1.2
+      const mirOn = mt === 3 ? P.mTop : 0;
+      let Rm = 1, r = P.mTube * Rm;
+      const bnd = (Rm) => Math.max(Rm * (1 + P.mTube), Math.hypot(0.42 * Rm * mirOn, (0.16 + 0.6 + 0.42 * mirOn * 0.71) * Rm)) + 0.04;
+      Rm *= 1.2 / bnd(Rm); r = P.mTube * Rm;
+      gl.uniform4f(loc.uMegaC, Rm, r, 0, P.mWin); gl.uniform4f(loc.uMegaD, Math.round(P.mSpokes), mirOn, bnd(Rm), mt === 4 ? P.mAct : 0);
+    } else if (mt) {
       // fit the drum (or the pair, with its mirrors) in the frame: height H sets the scale, then everything is brought to a bound of 1.15
       const pair = mt === 1 && P.mPair >= 1.5, mir = mt === 1 ? P.mMir : 0;
       let H = 0.9, R, off, bound;
@@ -2392,7 +2530,7 @@ const PARAM_RANGE = {
   sea: [0, 1], wet: [-1, 1], mount: [0, 1], scale: [0.5, 2.5], ice: [0, 1], clouds: [0, 1], haze: [0, 1.3], cities: [0, 1], rad: [1500, 15000], plan: [0, 1], land: [0.02, 1], lava: [0, 1], craters: [0, 1], scars: [0, 1],
   bands: [3, 20, 1], turb: [0, 1.4], storms: [0, 6, 1], stormSize: [0.2, 1.6], spin: [-1, 1], cloudSpeed: [-1, 1], flow: [0, 1.5], moonSpeed: [0, 2],
   tilt: [6, 85], roll: [-90, 90], sun: [-180, 180], sunH: [-60, 60], zoom: [0.5, 1.8], moons: [0, 5, 1],
-  mLen: [1.5, 9], mPair: [1, 2, 1], mWin: [0.15, 0.7], mMir: [0.2, 1], mMirA: [0, 60], mWidth: [0.06, 0.6], mWall: [0, 0.12], mSpan: [0.25, 1.3], mShade: [0, 0.6], mPlate: [0, 1], mLights: [0, 1], mStar: [0, 1.5],
+  mLen: [1.5, 9], mPair: [1, 2, 1], mWin: [0.15, 0.7], mMir: [0.2, 1], mMirA: [0, 60], mTube: [0.03, 0.3], mSpokes: [3, 8, 1], mTop: [0, 1], mAct: [0, 1], mWidth: [0.06, 0.6], mWall: [0, 0.12], mSpan: [0.25, 1.3], mShade: [0, 0.6], mPlate: [0, 1], mLights: [0, 1], mStar: [0, 1.5],
 };
 const RING_RANGE = { inner: [1.1, 2.8], width: [0.04, 2.6], op: [0.1, 1], gaps: [0, 1], struct: [0, 1], clump: [0, 1], dust: [0, 1], feeder: [0, 5, 1], seed: [0, 9999, 1], spin: [-1, 1] };
 const isHex = (c) => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
