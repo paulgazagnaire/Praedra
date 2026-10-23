@@ -1995,19 +1995,19 @@ function syncControls() {
 /* ---------- megastructures ---------- */
 // What a megastructure can be. The shader draws each in shadeMega(). cam: the angle a type looks best from; d: values it starts with.
 const MEGA_TYPES = [
-  { id: 'ring', name: 'Ring', real: 'Niven\'s Ringworld, Banks\'s Orbitals, Bishop ring, Halo-type rings',
+  { id: 'ring', size: 'about 300 million km across, 1.6 million km wide', sizeLong: 'Ringworld scale: a loop about 300 million km across (a loop the size of Earth\'s orbit) and a band about 1.6 million km wide. Width is exaggerated here', name: 'Ring', real: 'Niven\'s Ringworld, Banks\'s Orbitals, Bishop ring, Halo-type rings',
     note: 'A solid band round a star, spun for gravity, with a wall along each edge to hold the air in. Seen at an angle, the near half shows the dull outer hull and the far half shows the ground on the inside of the loop. Shade squares near the star give it night. Width is exaggerated: a real Ringworld would be a hair-thin line from here.' },
-  { id: 'cylinder', name: 'Cylinder', real: 'O\'Neill\'s Island Three, Babylon 5, Elysium-type pairs', cam: { tilt: 20, roll: -22 },
+  { id: 'cylinder', size: 'each drum 32 km long, 6.4 km across', sizeLong: 'O\'Neill\'s Island Three: each drum 32 km long and 6.4 km across; a pair stands 2 to 3 km apart', name: 'Cylinder', real: 'O\'Neill\'s Island Three, Babylon 5, Elysium-type pairs', cam: { tilt: 20, roll: -22 },
     note: 'A long drum spun for gravity, seen from outside: three long strips of window and three of hull, with a mirror hinged on each window edge to steer sunlight in. Pick one drum or a counter-rotating pair, so the pair does not twist in space. Each end has a still neck and a docking wheel. Only the outside shows; the land is inside.' },
-  { id: 'wheel', name: 'Wheel', real: 'The Stanford torus, 2001\'s Space Station V, von Braun\'s wheel', cam: { tilt: 42, roll: -20 }, d: { mTube: 0.12, mHull: '#8b9199', mAcc: '#e0a64a', mLights: 0.5 },
+  { id: 'wheel', size: '1.8 km across, tube 130 m', sizeLong: 'The Stanford torus: about 1.8 km across, with a tube about 130 m thick, holding around 10,000 people', name: 'Wheel', real: 'The Stanford torus, 2001\'s Space Station V, von Braun\'s wheel', cam: { tilt: 42, roll: -20 }, d: { mTube: 0.12, mHull: '#8b9199', mAcc: '#e0a64a', mLights: 0.5 },
     note: 'A fat tube bent into a ring and spun for gravity, hung by spokes from a still hub with docking ports. A band of windows runs along the inner face of the tube. Turn up the mirror over the hub for the Stanford torus, which steers sunlight in through those windows; set it to none for a plain station wheel; make the tube thin and the spokes few for a lean one.' },
-  { id: 'gate', name: 'Gate', real: 'Ring gates: Stargate, Contact\'s machine, jump-gate rings', cam: { tilt: 55, roll: -18 }, d: { mTube: 0.05, mHull: '#3d424a', mAcc: '#7fc8ff', mLights: 0.3 },
+  { id: 'gate', size: 'a few km across (story-dependent)', sizeLong: 'No fixed size: stories put gates from tens of metres to a few kilometres across. Shown here as a few kilometres', name: 'Gate', real: 'Ring gates: Stargate, Contact\'s machine, jump-gate rings', cam: { tilt: 55, roll: -18 }, d: { mTube: 0.05, mHull: '#3d424a', mAcc: '#7fc8ff', mLights: 0.3 },
     note: 'A bare thin ring with no spokes and no hub: dark hull, nine glowing nodes round it, and a swirling disc of light across the middle. Gate energy lights the nodes and the disc; at none it is a dormant ring.' },
-  { id: 'shell', name: 'Shell', real: 'Dyson shell, Matrioshka brain, Shkadov thruster (Stapledon, Dyson, Bradbury)', cam: { tilt: 24, roll: -12 }, d: { mLayers: 2, mOpen: 0.35, mCap: 1, mHull: '#8a847c', mAcc: '#ffb347', mLights: 0.4 },
+  { id: 'shell', size: 'about 300 million km across', sizeLong: 'A Dyson shell at Earth\'s distance from its star: about 300 million km across, and in theory only a few metres thick', name: 'Shell', real: 'Dyson shell, Matrioshka brain, Shkadov thruster (Stapledon, Dyson, Bradbury)', cam: { tilt: 24, roll: -12 }, d: { mLayers: 2, mOpen: 0.35, mCap: 1, mHull: '#8a847c', mAcc: '#ffb347', mLights: 0.4 },
     note: 'A sphere of plates built round a star to catch all its light. Gaps opens some plates so the star shows through; Layers nests more shells inside the first, each warmer than the one outside it (a Matrioshka brain); Coverage below 100% leaves only a cap on the Sun side (a Shkadov thruster, which pushes a star by reflecting its light). Only the outside and the lit inside show.' },
-  { id: 'swarm', name: 'Swarm', real: 'Dyson swarm and bubble (Dyson 1960), statite mirrors', cam: { tilt: 24, roll: -12 }, d: { mLayers: 3, mDens: 0.3, mPanel: 0.5, mFine: 0.35, mCap: 1, mHull: '#b8bcc4', mAcc: '#ffb347' },
+  { id: 'swarm', size: 'panels a few km across, 100 million km out', sizeLong: 'A Dyson swarm: panels a few km across on orbits near 100 million km from the star, in numbers beyond counting', name: 'Swarm', real: 'Dyson swarm and bubble (Dyson 1960), statite mirrors', cam: { tilt: 24, roll: -12 }, d: { mLayers: 3, mDens: 0.3, mPanel: 0.5, mFine: 0.35, mCap: 1, mHull: '#b8bcc4', mAcc: '#ffb347' },
     note: 'Not one shell but thousands of separate panels circling a star on many orbits, none touching: Dyson\'s own version, since a rigid shell cannot hold together. The outer faces are bright silver and catch the Sun; through the gaps you see the dark collector faces on the far side and the star. Each layer turns on its own tilt and speed. Small thin panels read as a Dyson bubble.' },
-  { id: 'rama', name: 'Rama', real: 'Clarke\'s Rama, a Bernal-type worldship', cam: { tilt: 20, roll: -22 }, d: { mLen: 3.2, mHull: '#7a746c', mAcc: '#a9a39a', mLights: 0.1 },
+  { id: 'rama', size: '50 km long, 16 km across', sizeLong: 'Clarke\'s Rama: about 50 km long and 16 km across', name: 'Rama', real: 'Clarke\'s Rama, a Bernal-type worldship', cam: { tilt: 20, roll: -22 }, d: { mLen: 3.2, mHull: '#7a746c', mAcc: '#a9a39a', mLights: 0.1 },
     note: 'A dark, windowless drum with nothing on it but three shallow grooves and a few dim lights: a ship that is also a world, and gives nothing away from outside.' },
 ];
 const MEGA_IDX = {}; MEGA_TYPES.forEach((t, i) => { MEGA_IDX[t.id] = i; });
@@ -2036,7 +2036,8 @@ function buildMegaUI() {
 function syncMegaUI() {
   const t = MEGA_TYPES[MEGA_IDX[P.mType] || 0];
   document.querySelectorAll('#megaTypes .chip').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mt === t.id)));
-  $('megaNote').textContent = t.note;
+  $('megaNote').textContent = t.note + ' Typical size: ' + t.sizeLong + '. Not drawn to scale beside a planet.';
+  if (P.kind === 'mega') $('tagKind').textContent = 'Megastructure · ' + t.name + ' · ' + t.size;
   document.querySelectorAll('#swMega .sw').forEach((d) => { d.querySelector('input').value = P[d.dataset.k]; });
 }
 
