@@ -124,6 +124,14 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
       <p class="sysinfo" id="sysInfo">Each system gets a first guess built from its description (colours, moons, rings). Tweak it, then save it.</p>
     </section>
 
+    <details class="sec" id="secMega" open hidden>
+      <summary>Structure</summary>
+      <div class="chips" id="megaTypes"></div>
+      <p class="note" id="megaNote"></p>
+      <div class="sw-row" id="swMega"></div>
+      <div id="ctlMega"></div>
+    </details>
+
     <details class="sec" open>
       <summary>Look</summary>
       <div class="sw-row" id="swatches"></div>
@@ -146,7 +154,7 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
       <div id="ctlCam"></div>
     </details>
 
-    <details class="sec">
+    <details class="sec" id="secRings">
       <summary>Rings</summary>
       <label class="chk"><input type="checkbox" id="ringOn"> This planet has rings</label>
       <div id="ringPick" hidden>
@@ -162,7 +170,7 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
       </div>
     </details>
 
-    <details class="sec" open>
+    <details class="sec" id="secMoons" open>
       <summary>Moons</summary>
       <div id="ctlMoon"></div>
       <div id="moonPick" hidden>
@@ -225,6 +233,11 @@ uniform vec4 uRingFeed;     // x: orbit of the moon that feeds the ring (0: none
 uniform int uRGapN;
 uniform vec4 uRGap[6];      // gaps cut by moons: x centre, y half width, z depth
 uniform vec3 uRingCol, uRingCol2;
+#ifdef PM_MEGA
+uniform vec4 uMegaA;        // ring: x half width of the floor, y wall height, z wall thickness, w how much of a planet's latitudes the floor covers (radians)
+uniform vec4 uMegaB;        // ring: x share of the loop in shade, y plating detail, z hull lights, w star glow
+uniform vec3 uMegaHull, uMegaAcc;
+#endif
 uniform int uMoonN;
 uniform vec4 uMoon[5];      // xyz: position (planet radius = 1), w: radius
 uniform vec4 uMoonP[5];     // kind, detail, feature, atmosphere
@@ -799,17 +812,20 @@ float cityField(vec3 q, float dl, out float urban, out float streets, out float 
 }
 
 // --- planet ----------------------------------------------------------------
+// the light shadePlanet uses: the sun, except on the floor of a ring, where the star at its centre is overhead (set by shadeMega)
+vec3 gL = vec3(0.0, 0.0, 1.0);
+float gFlat = 0.0;   // 1: no atmosphere seen edge-on at the limb (the floor of a ring is flat ground)
 vec3 shadePlanet(vec3 p, out float shine) {
   shine = 0.0;
   vec3 q0 = vec3(dot(p, uU), dot(p, uAxis), dot(p, uW));
   float cs = cos(uSpin), sn = sin(uSpin);
   vec3 q = vec3(cs * q0.x + sn * q0.z, q0.y, -sn * q0.x + cs * q0.z);
-  vec3 lq0 = vec3(dot(uL, uU), dot(uL, uAxis), dot(uL, uW));
+  vec3 lq0 = vec3(dot(gL, uU), dot(gL, uAxis), dot(gL, uW));
   vec3 lq = vec3(cs * lq0.x + sn * lq0.z, lq0.y, -sn * lq0.x + cs * lq0.z);
   vec3 vq0 = vec3(uU.z, uAxis.z, uW.z);
   vec3 vq = vec3(cs * vq0.x + sn * vq0.z, vq0.y, -sn * vq0.x + cs * vq0.z);   // toward the viewer, in the planet's frame
-  float ndl = dot(p, uL);
-  float nz = p.z;
+  float ndl = dot(p, gL);
+  float nz = (gFlat > 0.5) ? 1.0 : p.z;
   vec3 albedo; vec3 n = p; vec3 emis = vec3(0.0);
   float cirD = 0.0;
   float cloudD = 0.0, cloudS = 0.0; float landMask = 1.0; float night = smoothstep(0.10, -0.14, ndl);
@@ -960,14 +976,14 @@ vec3 shadePlanet(vec3 p, out float shine) {
 #endif
   }
 
-  float diffS = max(dot(n, uL), 0.0);
+  float diffS = max(dot(n, gL), 0.0);
   float diffC = max(ndl, 0.0);
   float sh = 1.0;
 #ifdef PM_RINGS
-  if (uRingOn > 0.5 && abs(dot(uAxis, uL)) > 0.02) {
-    float tt = -dot(uAxis, p) / dot(uAxis, uL);
+  if (uRingOn > 0.5 && abs(dot(uAxis, gL)) > 0.02) {
+    float tt = -dot(uAxis, p) / dot(uAxis, gL);
     if (tt > 0.0) {
-      vec3 pt = p + tt * uL;
+      vec3 pt = p + tt * gL;
       vec2 rp = ringProps(length(pt), atan(dot(pt, uW), dot(pt, uU)));
       sh = exp(-rp.x * uRingOp * 2.2 * 0.8);
     }
@@ -976,7 +992,7 @@ vec3 shadePlanet(vec3 p, out float shine) {
   float ls = (uType == 1) ? pow(diffS, 0.85) : diffS;
   vec3 surf = albedo * (ls * 1.12 * sh + 0.018 + (uType == 2 ? 0.05 * (1.0 - smoothstep(-0.3, 0.1, ndl)) : 0.0));
   if (shine > 0.0) {
-    vec3 hv = normalize(uL + vec3(0.0, 0.0, 1.0));
+    vec3 hv = normalize(gL + vec3(0.0, 0.0, 1.0));
     surf += vec3(1.0, 0.95, 0.85) * pow(max(dot(n, hv), 0.0), 150.0) * 0.5 * shine * sh;
   }
   // thick cloud is bright, thin cloud greyer; the side facing the sun is lit, the far side sits in its own shadow
@@ -1001,6 +1017,94 @@ vec3 shadePlanet(vec3 p, out float shine) {
   col += vec3(1.0, 0.42, 0.16) * exp(-pow(ndl / 0.09, 2.0)) * pow(1.0 - nz, 2.0) * uHaze * 0.45;
   return col;
 }
+
+// --- megastructures --------------------------------------------------------
+#ifdef PM_MEGA
+// A ring around a star, drawn by sphere tracing a solid of revolution. In the ring's own frame its axis is y and the floor sits
+// at radius 1; the profile is a slab under the floor plus a wall standing in toward the axis along each edge. The ray goes straight
+// down the view (z) and is carried into that frame with the same basis the planet uses.
+float sdBox2(vec2 p, vec2 b) { vec2 d = abs(p) - b; return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0); }
+const float MEGA_SLAB = 0.02;
+float megaMap(vec3 p) {
+  float rho = length(p.xz), y = abs(p.y);
+  float wh = uMegaA.x, hw = uMegaA.y, wt = uMegaA.z;
+  float slab = sdBox2(vec2(rho - (1.0 + 0.5 * MEGA_SLAB), y), vec2(0.5 * MEGA_SLAB, wh + wt));
+  float wall = sdBox2(vec2(rho - (1.0 + 0.5 * (MEGA_SLAB - hw)), y - (wh + 0.5 * wt)), vec2(0.5 * (hw + MEGA_SLAB), 0.5 * wt));
+  return min(slab, wall);
+}
+// The floor: the same ground the planets have, laid along the strip. Round the loop is a full turn of longitude; across it the floor
+// covers a band of latitudes (uMegaA.w), so the climate runs from tropic in the middle to cold at the walls. Shade squares near the
+// star put parts of the loop in night; the pattern is fixed in space and the ground turns under it.
+vec3 megaFloor(vec3 pp) {
+  float th = atan(pp.z, pp.x);
+  float ph = clamp(pp.y / max(uMegaA.x, 1e-3), -1.0, 1.0) * uMegaA.w;
+  vec3 qd = vec3(cos(ph) * cos(th), sin(ph), cos(ph) * sin(th));
+  vec3 pv = uU * qd.x + uAxis * qd.y + uW * qd.z;
+  vec3 tg = normalize(uW * cos(th) - uU * sin(th));
+  float u = fract(th / (2.0 * PI) * 6.0 + 0.05 * uSeed);
+  float day = (uMegaB.x < 0.01) ? 1.0 : smoothstep(0.5 * uMegaB.x - 0.12, 0.5 * uMegaB.x + 0.12, abs(u - 0.5));
+  gL = normalize(pv * (day * 1.6 - 0.6) + tg * 0.4);
+  gFlat = 1.0;
+  float shine;
+  vec3 c = shadePlanet(pv, shine);
+  gL = uL; gFlat = 0.0;
+  return c * (0.72 + 0.28 * smoothstep(0.0, 0.035, uMegaA.x - abs(pp.y)));   // a little shade where the floor meets the wall
+}
+// The hull: square plates with seams, a heavier rib every twelfth plate, a few hazard plates, an accent stripe along each edge, and
+// small lights. Coordinates turn with the ring (th - uSpin), so the plates slide when it spins.
+vec3 megaHull(vec3 pp, vec3 n, float rho, out vec3 emis) {
+  bool face = abs(n.y) > 0.5;
+  float th = atan(pp.z, pp.x) - uSpin;
+  float cw = 2.0 * PI / (12.0 * floor(mix(5.0, 18.0, uMegaB.y) + 0.5));   // a whole number of ribs round the loop, so the plates meet at the seam
+  vec2 g = vec2(th / cw, (face ? rho : pp.y) / (cw * 2.0));
+  vec2 id = floor(g), f = fract(g);
+  vec3 h = hash33(vec3(id, uSeed + (face ? 7.0 : 0.0)));
+  float seam = 1.0 - smoothstep(0.0, 0.10, min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)));
+  float rx = fract(g.x / 12.0), ry = fract(g.y / 5.0);
+  float rib = max(1.0 - smoothstep(0.0, 0.06, min(rx, 1.0 - rx)), 0.8 * (1.0 - smoothstep(0.0, 0.05, min(ry, 1.0 - ry))));
+  vec3 c = uMegaHull * (0.45 + 0.35 * h.x + 0.10 * h.y) * (1.0 - 0.55 * seam) * (1.0 - 0.45 * rib);
+  float stripe = smoothstep(0.012, 0.0, abs(abs(pp.y) - uMegaA.x * 0.62)) * (face ? 0.0 : 1.0);
+  c = mix(c, uMegaAcc * 0.7, max(stripe, step(0.965, h.z) * (1.0 - seam) * 0.8));
+  float dotL = (1.0 - smoothstep(0.08, 0.16, length(f - 0.5))) * step(0.93 - 0.08 * uMegaB.z, h.y) * uMegaB.z;
+  emis = uMegaAcc * dotL * 1.1;
+  return c;
+}
+// One pixel of the ring: colour and coverage
+vec4 shadeMega(vec2 uv, float px) {
+  if (length(uv) > 1.1 + px) return vec4(0.0);
+  vec3 z0 = vec3(uv, 2.0);
+  vec3 o = vec3(dot(z0, uU), dot(z0, uAxis), dot(z0, uW));
+  vec3 d = -vec3(uU.z, uAxis.z, uW.z);
+  float t = 0.0, mind = 1e3, tm = 0.0;
+  for (int i = 0; i < 90; i++) {
+    float h = megaMap(o + d * t);
+    if (h < mind) { mind = h; tm = t; }
+    if (h < 0.25 * px || t > 4.0) break;
+    t += h * 0.92;
+  }
+  float a = clamp(1.0 - (mind - 0.25 * px) / (0.75 * px), 0.0, 1.0);
+  if (a <= 0.0) return vec4(0.0);
+  vec3 pp = o + d * tm;
+  vec2 e = vec2(max(0.002, 0.7 * px), 0.0);
+  vec3 n = normalize(vec3(megaMap(pp + e.xyy) - megaMap(pp - e.xyy), megaMap(pp + e.yxy) - megaMap(pp - e.yxy), megaMap(pp + e.yyx) - megaMap(pp - e.yyx)));
+  float rho = length(pp.xz), y = abs(pp.y);
+  vec3 rh = vec3(pp.x, 0.0, pp.z) / max(rho, 1e-4);
+  float wh = uMegaA.x;
+  vec3 col;
+  if (dot(n, rh) < -0.6 && abs(rho - 1.0) < 0.012 && y < wh + 0.004) {
+    col = megaFloor(pp);
+  } else {
+    vec3 emis;
+    vec3 alb = megaHull(pp, n, rho, emis);
+    vec3 nv = uU * n.x + uAxis * n.y + uW * n.z;
+    float sun = max(dot(nv, gL), 0.0);
+    float star = max(dot(n, normalize(-pp)), 0.0);
+    float spec = pow(max(dot(nv, normalize(gL + vec3(0.0, 0.0, 1.0))), 0.0), 28.0) * 0.18;
+    col = alb * (0.09 + 1.0 * sun + 0.85 * star * vec3(1.0, 0.93, 0.78)) + vec3(spec) * sun + emis;
+  }
+  return vec4(col, a);
+}
+#endif
 
 // --- moons -----------------------------------------------------------------
 #ifdef PM_MOONS
@@ -1228,6 +1332,19 @@ void main() {
   float px = 2.0 / (uRes.y * uZoom);
   gPxC = px;
   vec3 col = vec3(0.012, 0.014, 0.022) + stars(fc);
+  gL = uL; gFlat = 0.0;
+#ifdef PM_MEGA
+  if (uType == 3) {
+    // the star at the centre of the ring, then the ring in front of it
+    float rs = length(uv);
+    col += vec3(1.0, 0.93, 0.78) * uMegaB.w * (1.6 * smoothstep(0.05, 0.0, rs) + 0.35 * exp(-rs * rs / 0.02) + 0.12 * exp(-rs * rs / 0.25));
+    vec4 mg = shadeMega(uv, px);
+    col = mix(col, mg.rgb, mg.a);
+    col = col / (1.0 + col * 0.08);
+    fragColor = vec4(pow(clamp(col, 0.0, 1.0), vec3(0.96)), 1.0);
+    return;
+  }
+#endif
 
 #ifdef PM_MOONS
   vec4 MC[5]; vec3 MA[5];
@@ -1371,6 +1488,7 @@ const KINDS = [
   { id: 'city', name: 'City world', sub: 'lights everywhere' },
   { id: 'locked', name: 'Tidally locked', sub: 'one face to the sun' },
   { id: 'gas', name: 'Gas giant', sub: 'bands and storms' },
+  { id: 'mega', name: 'Megastructure', sub: 'ring; more to come' },
 ];
 const LABELS = {
   rocky: ['Sea', 'Lowlands', 'Midlands', 'Highlands', 'Ice caps'],
@@ -1380,7 +1498,7 @@ const LABELS = {
   locked: ['Twilight sea', 'Twilight land', 'Scorched side', 'Frozen side', 'Ice'],
 };
 const KIND_LABELS = (t) => t === 'gas' ? LABELS.gas : t === 'locked' ? LABELS.locked : t === 'lava' ? LABELS.lava : (t === 'desert' || t === 'rock') ? LABELS.noSea : LABELS.rocky;
-const HAS_SEA = (t) => ['terran', 'ocean', 'swamp', 'city', 'ice', 'locked'].includes(t);
+const HAS_SEA = (t) => ['terran', 'ocean', 'swamp', 'city', 'ice', 'locked', 'mega'].includes(t);
 const IS_ROCKY = (t) => t !== 'gas';
 
 const BASE = {
@@ -1389,6 +1507,7 @@ const BASE = {
   spin: 0.25, cloudSpeed: 0.3, flow: 0.4, tilt: 22, roll: -12, sun: -55, sunH: 12, zoom: 1,
   ring: { on: false, type: 'broad', inner: 1.24, width: 1.03, op: 0.8, gaps: 0.8, struct: 0.6, clump: 0.3, dust: 0.15, feeder: 0, seed: 1, spin: 0.3, c1: '#d8c8a4', c2: '#7a6a55' },
   moons: 1, moonSpeed: 0.6, moonList: [],
+  mType: 'ring', mWidth: 0.22, mWall: 0.05, mSpan: 0.7, mShade: 0.28, mPlate: 0.6, mLights: 0.5, mStar: 1, mHull: '#8b9199', mAcc: '#e0a64a',
 };
 const KIND_DEF = {
   terran: { wet: 0, pal: ['#1c4d8f', '#3f7a3c', '#7b7a45', '#8f7f6d', '#f1f5f9'], sea: 0.55, mount: 0.5, clouds: 0.5, haze: 0.65, hazeCol: '#78aaf2', ice: 0.3, cities: 0.48 },
@@ -1400,6 +1519,7 @@ const KIND_DEF = {
   lava: { pal: ['#000000', '#2d2320', '#463631', '#6a5848', '#ff6a1f'], sea: 0, mount: 0.6, clouds: 0.3, haze: 0.5, hazeCol: '#ff8a50', ice: 0, lava: 0.9, craters: 0.2 },
   city: { wet: -0.1, pal: ['#2b4f6e', '#6e7075', '#868a8f', '#a2a7ad', '#e8eef2'], sea: 0.15, mount: 0.3, clouds: 0.3, haze: 0.55, hazeCol: '#c3a07a', ice: 0.1, cities: 0.97, plan: 0.75 },
   locked: { wet: 0, pal: ['#2b6e8f', '#5b8a4a', '#c0582c', '#dbe7f2', '#ffffff'], sea: 0.4, mount: 0.45, clouds: 0.35, haze: 0.6, hazeCol: '#8cc0ff', ice: 0, spin: 0 },
+  mega: { wet: 0, pal: ['#1c4d8f', '#4f8a3c', '#8a8a48', '#8f7f6d', '#f1f5f9'], sea: 0.5, mount: 0.45, clouds: 0.35, haze: 0, hazeCol: '#78aaf2', ice: 0.25, cities: 0.4, scale: 1.3, tilt: 34, roll: -14, moons: 0 },
   gas: { pal: ['#c9a36b', '#e8d3a6', '#a8744a', '#f2e8d2', '#b3472f'], bands: 10, turb: 0.6, storms: 2, stormSize: 1.0, clouds: 0, haze: 0.5, hazeCol: '#e9c690', sea: 0, spin: 0.3, flow: 0.45 },
 };
 function makeDefaults(kind, seed) {
@@ -1435,32 +1555,40 @@ function cityStats(p) {
 }
 function updateCityInfo() {
   const el = $('cityInfo'); if (!el) return;
-  const vis = IS_ROCKY(P.kind) && P.kind !== 'lava' && P.cities > 0; el.hidden = !vis; if (!vis) return;
+  const vis = IS_ROCKY(P.kind) && P.kind !== 'lava' && P.cities > 0 && P.kind !== 'mega'; el.hidden = !vis; if (!vis) return;
   const s = cityStats(P);
   el.textContent = (s.dens < 10 ? s.dens.toFixed(1) : Math.round(s.dens).toLocaleString('en-US')) + ' people per km² of land · ' + s.cls;
 }
 
 /* ---------- controls ---------- */
+const NOMEGA = (p) => p.kind !== 'mega';   // a megastructure has no planet radius, moons, rings or atmosphere of its own
 const CONTROLS = [
+  ['Struct', 'mWidth', 'Width', 0.06, 0.6, 0.01, (p) => p.kind === 'mega', (v) => (v * 100).toFixed(0) + '%'],
+  ['Struct', 'mWall', 'Rim wall height', 0, 0.12, 0.005, (p) => p.kind === 'mega'],
+  ['Struct', 'mSpan', 'Climate range', 0.25, 1.3, 0.01, (p) => p.kind === 'mega', (v) => v < 0.5 ? 'tropical' : v < 0.9 ? 'mild' : 'varied'],
+  ['Struct', 'mShade', 'Night share', 0, 0.6, 0.01, (p) => p.kind === 'mega', (v) => v < 0.01 ? 'none' : Math.round(v * 100) + '%'],
+  ['Struct', 'mPlate', 'Hull plating', 0, 1, 0.01, (p) => p.kind === 'mega'],
+  ['Struct', 'mLights', 'Hull lights', 0, 1, 0.01, (p) => p.kind === 'mega'],
+  ['Struct', 'mStar', 'Star glow', 0, 1.5, 0.01, (p) => p.kind === 'mega'],
   // section, key, label, min, max, step, visible(P), readout
   ['Look', 'sea', 'Ocean level', 0, 1, 0.01, (p) => HAS_SEA(p.kind)],
   ['Look', 'wet', 'Wetness', -1, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'rock' && p.kind !== 'lava'],
   ['Look', 'mount', 'Mountains', 0, 1, 0.01, (p) => IS_ROCKY(p.kind)],
   ['Look', 'size', 'Continent size', 0.5, 2.5, 0.01, (p) => IS_ROCKY(p.kind)],
   ['Look', 'ice', 'Ice caps', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'rock' && p.kind !== 'lava' && p.kind !== 'desert'],
-  ['Look', 'craters', 'Craters', 0, 1, 0.01, (p) => IS_ROCKY(p.kind)],
-  ['Look', 'scars', 'Mining scars', 0, 1, 0.01, (p) => IS_ROCKY(p.kind)],
-  ['Look', 'cities', 'Population', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'lava', (v) => popText(v)],
-  ['Look', 'rad', 'Planet radius', 1500, 15000, 100, (p) => IS_ROCKY(p.kind) && p.kind !== 'lava', (v) => Math.round(v) + ' km'],
-  ['Look', 'land', 'Land share', 0.02, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'lava', (v) => Math.round(v * 100) + '%'],
+  ['Look', 'craters', 'Craters', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && NOMEGA(p)],
+  ['Look', 'scars', 'Mining scars', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && NOMEGA(p)],
+  ['Look', 'cities', 'Population', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'lava', (v, p) => p.kind === 'mega' ? cityStats(p).cls : popText(v)],
+  ['Look', 'rad', 'Planet radius', 1500, 15000, 100, (p) => IS_ROCKY(p.kind) && p.kind !== 'lava' && NOMEGA(p), (v) => Math.round(v) + ' km'],
+  ['Look', 'land', 'Land share', 0.02, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'lava' && NOMEGA(p), (v) => Math.round(v * 100) + '%'],
   ['Look', 'plan', 'Grown or planned', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'lava', (v) => v < 0.2 ? 'all grown' : v < 0.4 ? 'mostly grown' : v < 0.6 ? 'mixed' : v < 0.8 ? 'mostly planned' : 'all planned'],
-  ['Look', 'lava', 'Lava cracks', 0, 1, 0.01, (p) => IS_ROCKY(p.kind)],
+  ['Look', 'lava', 'Lava cracks', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && NOMEGA(p)],
   ['Look', 'bands', 'Bands', 3, 20, 1, (p) => p.kind === 'gas'],
   ['Look', 'turb', 'Turbulence', 0, 1.4, 0.01, (p) => p.kind === 'gas'],
   ['Look', 'storms', 'Giant storms', 0, 6, 1, (p) => p.kind === 'gas'],
   ['Look', 'stormSize', 'Storm size', 0.2, 1.6, 0.01, (p) => p.kind === 'gas'],
   ['Sky', 'clouds', 'Clouds', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'rock'],
-  ['Sky', 'haze', 'Atmosphere glow', 0, 1.3, 0.01, () => true],
+  ['Sky', 'haze', 'Atmosphere glow', 0, 1.3, 0.01, NOMEGA],
   ['Motion', 'spin', 'Rotation', -1, 1, 0.01, () => true, (v, p) => spinText(v, p)],
   ['Motion', 'cloudSpeed', 'Cloud drift', -1, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'rock'],
   ['Motion', 'flow', 'Band flow', 0, 1.5, 0.01, (p) => p.kind === 'gas'],
@@ -1474,7 +1602,7 @@ const CONTROLS = [
   ['Moon', 'moons', 'How many', 0, 5, 1, () => true],
 ];
 function spinText(v, p) { if (Math.abs(v) < 0.01) return 'stopped'; const s = 2 * Math.PI / (Math.abs(v) * 0.5); return (v < 0 ? '↺ ' : '') + Math.round(s) + ' s'; }
-const SEC_HOST = { Look: 'ctlLook', Sky: 'ctlSky', Motion: 'ctlMotion', Cam: 'ctlCam', Moon: 'ctlMoon' };
+const SEC_HOST = { Struct: 'ctlMega', Look: 'ctlLook', Sky: 'ctlSky', Motion: 'ctlMotion', Cam: 'ctlCam', Moon: 'ctlMoon' };
 const ctlEls = {};
 const get = (k) => k === 'size' ? 3 - P.scale : k === 'land' ? landShare(P) : k === 'ringSpin' ? P.ring.spin : P[k];
 const set = (k, v) => { if (k === 'size') P.scale = 3 - v; else if (k === 'land') P.land = v; else if (k === 'ringSpin') P.ring.spin = v; else P[k] = v; };
@@ -1523,8 +1651,42 @@ function syncControls() {
   $('pName').value = P.name || '';
   $('tagName').textContent = P.name || 'Unnamed';
   $('tagKind').textContent = (KINDS.find(k => k.id === P.kind) || {}).name || '';
+  const mg = P.kind === 'mega';
+  $('secMega').hidden = !mg; $('secRings').hidden = mg; $('secMoons').hidden = mg; $('swHaze').hidden = mg;
+  ctlEls.cities.row.querySelector('label').textContent = mg ? 'Settlement' : 'Population';
+  syncMegaUI();
   syncRingUI();
   rebuildMoons();
+}
+
+/* ---------- megastructures ---------- */
+// What a megastructure can be. The shader draws each in shadeMega(); only the ring exists so far.
+const MEGA_TYPES = [
+  { id: 'ring', name: 'Ring', real: 'Niven\'s Ringworld, Banks\'s Orbitals, Bishop ring, Halo-type rings',
+    note: 'A solid band round a star, spun for gravity, with a wall along each edge to hold the air in. Seen at an angle, the near half shows the dull outer hull and the far half shows the ground on the inside of the loop. Shade squares near the star give it night. Width is exaggerated: a real Ringworld would be a hair-thin line from here.' },
+];
+const MEGA_IDX = {}; MEGA_TYPES.forEach((t, i) => { MEGA_IDX[t.id] = i; });
+function buildMegaUI() {
+  const host = $('megaTypes');
+  MEGA_TYPES.forEach((t) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.mt = t.id; b.setAttribute('aria-pressed', 'false');
+    b.innerHTML = `${t.name}<small>${t.real}</small>`;
+    b.addEventListener('click', () => { P.mType = t.id; syncMegaUI(); });
+    host.appendChild(b);
+  });
+  const sw = $('swMega');
+  [['mHull', 'Hull'], ['mAcc', 'Accent and lights']].forEach(([k, label]) => {
+    const d = document.createElement('label'); d.className = 'sw';
+    d.innerHTML = `<input type="color" aria-label="${label}"><span>${label}</span>`;
+    d.querySelector('input').addEventListener('input', (ev) => { P[k] = ev.target.value; });
+    d.dataset.k = k; sw.appendChild(d);
+  });
+}
+function syncMegaUI() {
+  const t = MEGA_TYPES[MEGA_IDX[P.mType] || 0];
+  document.querySelectorAll('#megaTypes .chip').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mt === t.id)));
+  $('megaNote').textContent = t.note;
+  document.querySelectorAll('#swMega .sw').forEach((d) => { d.querySelector('input').value = P[d.dataset.k]; });
 }
 
 /* ---------- moons ---------- */
@@ -1803,12 +1965,12 @@ const gl = cv.getContext('webgl2', { antialias: false, alpha: false, preserveDra
 let prog, loc = {}, glOK = !!gl;
 // The fragment shader is compiled in variants so work a planet does not use costs nothing: PM_CLOUDS only when the planet
 // draws clouds (not gas giants, not Clouds = 0), PM_HIQ only in High detail (high cirrus deck, small cells, streaks, relief),
-// PM_MOONS only when at least one moon is on, PM_RINGS only when the planet has rings.
+// PM_MOONS only when at least one moon is on, PM_RINGS only when the planet has rings, PM_MEGA only for a megastructure.
 const progs = {};
 let vbuf = null;
 function makeProgram(key) {
   const mk = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(s)); throw new Error('shader: ' + gl.getShaderInfoLog(s)); } return s; };
-  const defs = (key.indexOf('C') >= 0 ? '#define PM_CLOUDS\n' : '') + (key.indexOf('H') >= 0 ? '#define PM_HIQ\n' : '') + (key.indexOf('M') >= 0 ? '#define PM_MOONS\n' : '') + (key.indexOf('R') >= 0 ? '#define PM_RINGS\n' : '');
+  const defs = (key.indexOf('C') >= 0 ? '#define PM_CLOUDS\n' : '') + (key.indexOf('H') >= 0 ? '#define PM_HIQ\n' : '') + (key.indexOf('M') >= 0 ? '#define PM_MOONS\n' : '') + (key.indexOf('R') >= 0 ? '#define PM_RINGS\n' : '') + (key.indexOf('G') >= 0 ? '#define PM_MEGA\n' : '');
   const pr = gl.createProgram();
   gl.attachShader(pr, mk(gl.VERTEX_SHADER, $('vs').textContent.trim()));
   gl.attachShader(pr, mk(gl.FRAGMENT_SHADER, $('fs').textContent.trim().replace('#version 300 es', '#version 300 es\n' + defs)));
@@ -1836,7 +1998,7 @@ function initGL() {
 const CLOUD_COL = { water: [0.96, 0.97, 1.0], lava: [0.36, 0.31, 0.28], desert: [0.86, 0.68, 0.48], ice: [0.62, 0.78, 1.0] };
 const LOW_CLOUD = { ice: 0.55 };   // a frozen world keeps thin ice-crystal streaks and a faint haze, not a water cloud deck
 const CLOUD_LABEL = { lava: 'Ash and smoke', desert: 'Dust storms', ice: 'Ice crystal haze' };
-const KIND_TYPE = (k) => k === 'gas' ? 1 : k === 'locked' ? 2 : 0;
+const KIND_TYPE = (k) => k === 'gas' ? 1 : k === 'locked' ? 2 : k === 'mega' ? 3 : 0;
 
 function frame(dt) {
   const spinRate = P.kind === 'locked' ? 0 : P.spin * 0.5;
@@ -1852,14 +2014,15 @@ function draw(w, h, tmul) {
   const sd = P.sun * D, sh = P.sunH * D;
   const L = [Math.sin(sd) * Math.cos(sh), Math.sin(sh), Math.cos(sd) * Math.cos(sh)];
   const ringOut = P.ring.inner + P.ring.width;
-  const mm = activeMoons();
+  const mega = P.kind === 'mega';
+  const mm = mega ? [] : activeMoons();
   const mx = mm.reduce((m, o) => Math.max(m, o.orbit + o.size), 0);
-  const extent = Math.max(1.3, P.ring.on ? ringOut * 1.04 : 0, mx * 0.95);
+  const extent = Math.max(1.3, P.ring.on && !mega ? ringOut * 1.04 : 0, mx * 0.95);
   const aspect = w / h;
-  const extentV = Math.max(1.3, P.ring.on ? ringOut * Math.max(0.72, Math.sin(phi)) * 1.04 : 0, mx * 0.75);
+  const extentV = Math.max(1.3, P.ring.on && !mega ? ringOut * Math.max(0.72, Math.sin(phi)) * 1.04 : 0, mx * 0.75);
   const zoom = Math.min(aspect * 0.92 / extent, 0.92 / extentV) * P.zoom;
   const clouds = P.kind === 'rock' ? 0 : P.clouds;   // an airless world has no weather, whatever the slider says
-  useVariant((P.kind !== 'gas' && clouds > 0.01 ? 'C' : '') + (quality ? 'H' : '') + (mm.length ? 'M' : '') + (P.ring.on ? 'R' : ''));
+  useVariant((P.kind !== 'gas' && clouds > 0.01 ? 'C' : '') + (quality ? 'H' : '') + (mm.length ? 'M' : '') + (P.ring.on && !mega ? 'R' : '') + (mega ? 'G' : ''));
   gl.viewport(0, 0, w, h);
   gl.uniform2f(loc.uRes, w, h); gl.uniform1f(loc.uZoom, zoom);
   gl.uniform1i(loc.uType, KIND_TYPE(P.kind));
@@ -1870,9 +2033,14 @@ function draw(w, h, tmul) {
   f('uWet', P.wet || 0); f('uBiome', (P.kind === 'rock' || P.kind === 'lava') ? 0 : 1); f('uQ', quality); f('uCities', P.cities); f('uDens', cityStats(P).ld); f('uPlan', P.plan); f('uRad', P.rad); f('uLava', P.lava); f('uCraters', P.craters); f('uScars', P.scars);
   f('uBands', P.bands); f('uTurb', P.turb); f('uStorms', P.storms); f('uStormSize', P.stormSize);
   f('uSpin', T.spin); f('uCloudAng', T.cloud); f('uFlowT', T.flow); f('uRingAng', T.ring); f('uTime', T.time);
+  if (mega) {
+    const wd = P.mWidth * 0.5;
+    gl.uniform4f(loc.uMegaA, wd, P.mWall, 0.02, P.mSpan); gl.uniform4f(loc.uMegaB, P.mShade, P.mPlate, P.mLights, P.mStar);
+    gl.uniform3fv(loc.uMegaHull, hex2rgb(P.mHull)); gl.uniform3fv(loc.uMegaAcc, hex2rgb(P.mAcc));
+  }
   gl.uniform3fv(loc.uAxis, A); gl.uniform3fv(loc.uU, U); gl.uniform3fv(loc.uW, W); gl.uniform3fv(loc.uL, L);
   const rg = P.ring, RT = ringType(rg);
-  f('uRingOn', rg.on ? 1 : 0); f('uRingIn', rg.inner); f('uRingOut', ringOut); f('uRingOp', rg.op); f('uRingGaps', RT.L.gaps ? rg.gaps : 0);
+  f('uRingOn', rg.on && !mega ? 1 : 0); f('uRingIn', rg.inner); f('uRingOut', ringOut); f('uRingOp', rg.op); f('uRingGaps', RT.L.gaps ? rg.gaps : 0);
   f('uRingStruct', rg.struct); f('uRingClump', RT.L.clump ? rg.clump : 0); f('uRingDust', rg.dust); f('uRingSeed', (rg.seed % 997) * 0.173); gl.uniform1i(loc.uRingType, RING_IDX[rg.type] || 0);
   gl.uniform3fv(loc.uRingCol, hex2rgb(P.ring.c1)); gl.uniform3fv(loc.uRingCol2, hex2rgb(P.ring.c2));
   // moons in world space, far to near
@@ -1940,7 +2108,8 @@ function setKind(kind, keepSeed) {
   syncControls();
 }
 function surprise() {
-  const kind = KINDS[Math.floor(Math.random() * KINDS.length)].id;
+  const pool = KINDS.filter((k) => k.id !== 'mega');   // a megastructure is something you pick on purpose
+  const kind = pool[Math.floor(Math.random() * pool.length)].id;
   P = makeDefaults(kind, 1 + Math.floor(Math.random() * 9999));
   const hue = (Math.random() - 0.5) * (kind === 'gas' ? 120 : 70);
   P.pal = P.pal.map((c, i) => (i === 4 && kind !== 'gas') ? c : shiftHue(c, hue));
@@ -2090,6 +2259,7 @@ const PARAM_RANGE = {
   sea: [0, 1], wet: [-1, 1], mount: [0, 1], scale: [0.5, 2.5], ice: [0, 1], clouds: [0, 1], haze: [0, 1.3], cities: [0, 1], rad: [1500, 15000], plan: [0, 1], land: [0.02, 1], lava: [0, 1], craters: [0, 1], scars: [0, 1],
   bands: [3, 20, 1], turb: [0, 1.4], storms: [0, 6, 1], stormSize: [0.2, 1.6], spin: [-1, 1], cloudSpeed: [-1, 1], flow: [0, 1.5], moonSpeed: [0, 2],
   tilt: [6, 85], roll: [-90, 90], sun: [-180, 180], sunH: [-60, 60], zoom: [0.5, 1.8], moons: [0, 5, 1],
+  mWidth: [0.06, 0.6], mWall: [0, 0.12], mSpan: [0.25, 1.3], mShade: [0, 0.6], mPlate: [0, 1], mLights: [0, 1], mStar: [0, 1.5],
 };
 const RING_RANGE = { inner: [1.1, 2.8], width: [0.04, 2.6], op: [0.1, 1], gaps: [0, 1], struct: [0, 1], clump: [0, 1], dust: [0, 1], feeder: [0, 5, 1], seed: [0, 9999, 1], spin: [-1, 1] };
 const isHex = (c) => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
@@ -2111,6 +2281,8 @@ function sanitize(p, d) {
   const pal = Array.isArray(p.pal) ? p.pal : [];
   out.pal = d.pal.map((c, i) => isHex(pal[i]) ? pal[i] : c);
   if (isHex(p.hazeCol)) out.hazeCol = p.hazeCol;
+  for (const k of ['mHull', 'mAcc']) if (isHex(p[k])) out[k] = p[k];
+  if (Object.hasOwn(MEGA_IDX, p.mType)) out.mType = p.mType;
   if (Array.isArray(p.moonList)) {
     out.moonList = p.moonList.slice(0, 5).map((m, i) => sanitizeMoon(m && typeof m === 'object' ? m : {}, genMoon(out.seed, out.kind, i, null, moonStart(out.ring))));
     if (p.moons === undefined) out.moons = out.moonList.length;
@@ -2201,6 +2373,7 @@ function boot() {
   buildControls();
   buildMoonUI();
   buildRingUI();
+  buildMegaUI();
   const dl = $('sysList');
   SYSTEMS.forEach((s, i) => { sysByName.set(s.n.toLowerCase(), i); const o = document.createElement('option'); o.value = s.n; o.label = s.sec; dl.appendChild(o); });
   $('sysIn').addEventListener('change', () => { const i = sysByName.get($('sysIn').value.trim().toLowerCase()); if (i !== undefined) loadSystem(i); else toast('No system with that name'); });
@@ -2228,7 +2401,7 @@ function boot() {
   try { initGL(); } catch (e) { glOK = false; document.querySelector('.hint').textContent = 'Shader error: ' + e.message; console.error(e); return; }
   requestAnimationFrame(loop);
 }
-window.__pm = { get P() { return P; }, setP(p) { P = p; syncControls(); }, derive, loadSystem, SYSTEMS, classify, makeDefaults, KINDS, setKind, frame, T, draw: () => draw(cv.width, cv.height), pause(v) { paused = v; }, freeze(v) { frozen = v; }, setQ(v) { quality = v; }, fromCode, MOON_TYPES, RING_TYPES, ringGapList, applyRingType, placeFeeder, syncRingUI, ensureMoons, syncMoonUI, selectMoon(i) { selMoon = i; syncMoonUI(); } };
+window.__pm = { get P() { return P; }, setP(p) { P = p; syncControls(); }, derive, loadSystem, SYSTEMS, classify, makeDefaults, KINDS, setKind, frame, T, draw: () => draw(cv.width, cv.height), pause(v) { paused = v; }, freeze(v) { frozen = v; }, setQ(v) { quality = v; }, fromCode, MOON_TYPES, RING_TYPES, ringGapList, applyRingType, placeFeeder, syncRingUI, ensureMoons, syncMoonUI, selectMoon(i) { selMoon = i; syncMoonUI(); }, MEGA_TYPES };
 boot();
 })();
 </script>

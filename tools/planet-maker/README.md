@@ -106,6 +106,17 @@ Left out on purpose (real, but they would read as one of the above at this size)
 
 Moons are shaded once and only compiled into the shader when a planet has at least one, so a world with no moons costs nothing extra.
 
+## Megastructures
+A new kind in the first list, **Megastructure**, for things people built that are bigger than a planet. Only the **Ring** exists so far; a cylinder, a torus, a shell and more are planned (see the survey doc). Moons, planetary rings and the planet's own atmosphere glow do not apply and are hidden for it.
+
+**Ring** (Niven's Ringworld, Banks's Orbitals, Bishop ring, Halo-type rings). A solid band round a star, spun for gravity, with a wall along each edge. It is drawn by sphere tracing a solid of revolution (one shape, a slab with two walls), not as a sphere, so it is a separate drawing path: it is compiled into the shader only for this kind and costs other kinds nothing.
+- **Seen at an angle** the near half shows the outer hull and the far half shows the ground on the inside of the loop, with the star glowing in the middle. The floor is the same terrain the planets use (ocean, land, mountains, ice, clouds, city lights), laid along the strip, so all the Look sliders work on it. Round the loop is a full turn of longitude; across it the floor covers a band of latitudes (Climate range), so it runs from tropic in the middle to cold at the walls.
+- **Night.** Shade squares near the star put parts of the loop in shade (Night share, six stripes round the loop). The shade is fixed in space and the ground turns under it (Rotation), so the cities light up as night passes over them.
+- **Hull.** Square plates with seams, a heavier rib every twelfth plate, a hazard plate here and there, an accent stripe along each edge, small lights (Hull plating, Hull lights, Hull and Accent colours). The plates turn with the ring.
+- **Width and walls.** Width is a share of the ring's radius, 6 to 60 percent. A real Ringworld is about 0.7 percent, a hair-thin line, so width is **not to scale**. Rim wall height is up to 12 percent.
+- **Framing.** The ring fills the frame on its own with the star at the centre. It is not drawn to scale beside any planet.
+- **Sky.** Star glow sets the light in the middle. The hull is lit by the Sun side and Sun height sliders as an outside light; the floor is lit only by the star, always overhead. That is not physically consistent (the star would not light the outside), but a ring lit only from inside is a black line.
+
 ## Rings
 Rings are no longer one flat band with noise. There are six kinds, each modelled on a ring that exists, and they share what makes real rings: grains in a thin flat sheet that sit inside the distance where tides would pull a moon apart (about 2.4 planet radii for ice), so moons start outside them, and gaps and edges that moons cut.
 
@@ -155,5 +166,6 @@ The light and shade on mountains and craters comes from the slope of the height 
 - At most 5 moons per planet. Moons start small, 2 to 17 percent of the planet's radius (Earth's Moon is 27 percent, Titan about 4 percent of Saturn's, the small captured rocks far less), and they sit much closer than real moons would. The Size slider goes down to 1.5 percent. Orbits are circular.
 - City looks are tuned by eye on software rendering, never on a real graphics card, and from the usual viewing size the planned districts read as texture more than as streets. The land share estimate from the Ocean slider is rough (it does not count the land actually drawn), so type the real land share when it matters. Cities are one colour: no tints for different districts yet.
 - Industrial moon: the pits and plating are painted on the surface (nothing is raised), so scaffolding casts no shadow and plates have no relief, and towers are only seen at the edge, so a tower that points at you is invisible. Looks tuned by eye on software rendering only.
+- Megastructure ring: the floor is flat terrain with no height, so the walls cast no shadow on it and there is no air haze when you look across the loop. Shade squares are not drawn, only their shadow. Only one star. Tuned by eye on software rendering, where a ring in High costs about 1.7 times a planet (the floor terrain is most of it); a real graphics card has not been measured.
 - Ring and moon draw order is approximate when a moon passes behind a ring.
 - Moons make the shader bigger, and on software rendering a gas giant with 5 moons costs about 3 times a world without moons in both Fast and High. A cheap distance test before shading each moon changes nothing: with the moon code never run the cost is the same, so it comes from the size of the shader, not the maths. The fix would be to draw planet and moons in separate passes; it is not done because it has not been measured on a real graphics card.
