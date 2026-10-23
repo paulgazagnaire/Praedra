@@ -30,6 +30,7 @@ body {
 #cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
 #cv.drag { cursor: grabbing; }
 .tag { position: absolute; left: 16px; top: 14px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); pointer-events: none; }
+.tag .sz { display: block; max-width: 340px; margin-top: 3px; font-size: 11px; letter-spacing: .04em; text-transform: none; line-height: 1.35; }
 .tag b { display: block; font-family: var(--font-body); font-size: 20px; letter-spacing: 0; text-transform: none; color: var(--fg); font-weight: 600; }
 .hint { position: absolute; left: 16px; bottom: 14px; font-size: 12px; color: var(--dim); pointer-events: none; }
 .stagebtns { position: absolute; right: 14px; top: 12px; display: flex; gap: 8px; }
@@ -94,7 +95,7 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
 <div id="app">
   <main class="stage">
     <canvas id="cv" aria-label="Planet preview"></canvas>
-    <div class="tag"><span id="tagKind">Planet</span><b id="tagName">Unnamed</b></div>
+    <div class="tag"><span id="tagKind">Planet</span><b id="tagName">Unnamed</b><span class="sz" id="tagSize" hidden></span></div>
     <div class="stagebtns">
       <button id="btnQ" type="button" title="Switch to Fast if the animation stutters">Detail: High</button>
       <button id="btnPause" type="button">Pause</button>
@@ -1256,7 +1257,11 @@ vec4 gateDisc(vec3 o, vec3 d, out float tp) {
   if (rad > 1.0) return vec4(0.0);
   tp = t;
   float sw = atan(hp.z, hp.x) + 2.4 * (1.0 - rad) - uSpin;
+  #ifdef PM_HIQ
   float f = fbm(vec3(cos(sw), sin(sw), 0.0) * rad * 2.4 + uSeed, 4);
+#else
+  float f = fbm(vec3(cos(sw), sin(sw), 0.0) * rad * 2.4 + uSeed, 2);
+#endif
   float core = clamp(f * 1.8 - 0.4, 0.0, 1.0);
   vec3 c = mix(uMegaAcc * 0.55, vec3(0.8, 0.93, 1.0), core * core) * (0.6 + 0.9 * (1.0 - rad));
   float al = uMegaD.w * (1.0 - smoothstep(0.85, 1.0, rad)) * (0.5 + 0.5 * f);
@@ -1353,6 +1358,14 @@ vec4 shadeShell(vec2 uv, float px) {
   float A = 1.0 - T;
   return A > 0.0 ? vec4(col / A, A) : vec4(0.0);
 }
+// How hard the trace works: High takes up to 90 steps to within a quarter of a pixel with the safest stride and six samples for the
+// normal; Fast takes up to 44 steps to within half a pixel with a longer stride (the thin mirrors can then look a little ragged).
+#ifdef PM_HIQ
+const int MEGA_STEPS = 90; const float MEGA_HIT = 0.25, MEGA_STRIDE = 0.8;
+#else
+const int MEGA_STEPS = 44; const float MEGA_HIT = 0.5, MEGA_STRIDE = 0.9;
+#endif
+float megaAny(vec3 p) { return uMegaT > 2.5 ? torDist(p) : megaDist(p); }
 // One pixel of a megastructure: colour and coverage
 vec4 shadeMega(vec2 uv, float px) {
   if (uMegaT > 4.5) return shadeShell(uv, px);
@@ -1369,20 +1382,25 @@ vec4 shadeMega(vec2 uv, float px) {
     if (disc <= 0.0) return vec4(0.0);
     float s = sqrt(disc); t = max(-bb - s, 0.0); tmax = -bb + s;
   }
-  for (int i = 0; i < 90; i++) {
-    float h = tor ? torDist(o + d * t) : megaDist(o + d * t);
+  for (int i = 0; i < MEGA_STEPS; i++) {
+    float h = megaAny(o + d * t);
     if (h < mind) { mind = h; tm = t; }
-    if (h < 0.25 * px || t > tmax) break;
-    t += h * (solid ? 0.8 : 0.92);
+    if (h < MEGA_HIT * px || t > tmax) break;
+    t += h * (solid ? MEGA_STRIDE : 0.92);
   }
-  float a = clamp(1.0 - (mind - 0.25 * px) / (0.75 * px), 0.0, 1.0);
+  float a = clamp(1.0 - (mind - MEGA_HIT * px) / (0.75 * px), 0.0, 1.0);
   vec4 sol = vec4(0.0);
   if (a > 0.0) {
     vec3 pp = o + d * tm;
     vec2 e = vec2(max(0.002, 0.7 * px), 0.0);
     vec3 n;
-    if (tor) n = normalize(vec3(torDist(pp + e.xyy) - torDist(pp - e.xyy), torDist(pp + e.yxy) - torDist(pp - e.yxy), torDist(pp + e.yyx) - torDist(pp - e.yyx)));
-    else n = normalize(vec3(megaDist(pp + e.xyy) - megaDist(pp - e.xyy), megaDist(pp + e.yxy) - megaDist(pp - e.yxy), megaDist(pp + e.yyx) - megaDist(pp - e.yyx)));
+#ifdef PM_HIQ
+    n = normalize(vec3(megaAny(pp + e.xyy) - megaAny(pp - e.xyy), megaAny(pp + e.yxy) - megaAny(pp - e.yxy), megaAny(pp + e.yyx) - megaAny(pp - e.yyx)));
+#else
+    // Fast: four samples instead of six
+    vec2 k = vec2(1.0, -1.0) * e.x;
+    n = normalize(k.xyy * megaAny(pp + k.xyy) + k.yyx * megaAny(pp + k.yyx) + k.yxy * megaAny(pp + k.yxy) + k.xxx * megaAny(pp + k.xxx));
+#endif
     vec3 col;
     if (tor) col = shadeTor(pp, n);
     else if (solid) col = shadeCyl(pp, n);
@@ -2037,7 +2055,8 @@ function syncMegaUI() {
   const t = MEGA_TYPES[MEGA_IDX[P.mType] || 0];
   document.querySelectorAll('#megaTypes .chip').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mt === t.id)));
   $('megaNote').textContent = t.note + ' Typical size: ' + t.sizeLong + '. Not drawn to scale beside a planet.';
-  if (P.kind === 'mega') $('tagKind').textContent = 'Megastructure · ' + t.name + ' · ' + t.size;
+  if (P.kind === 'mega') $('tagKind').textContent = 'Megastructure · ' + t.name;
+  $('tagSize').hidden = P.kind !== 'mega'; $('tagSize').textContent = 'Typical size: ' + t.size;
   document.querySelectorAll('#swMega .sw').forEach((d) => { d.querySelector('input').value = P[d.dataset.k]; });
 }
 
