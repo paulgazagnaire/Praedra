@@ -171,6 +171,15 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
       </div>
     </details>
 
+    <details class="sec" id="secOrbit">
+      <summary>Orbital ring and space elevator</summary>
+      <label class="chk"><input type="checkbox" id="orbOn"> An orbital ring round the equator</label>
+      <label class="chk"><input type="checkbox" id="elevOn"> A space elevator</label>
+      <p class="note" id="orbNote"></p>
+      <div id="ctlOrb"></div>
+      <div class="sw-row" id="swOrb"></div>
+    </details>
+
     <details class="sec" id="secMoons" open>
       <summary>Moons</summary>
       <div id="ctlMoon"></div>
@@ -1584,6 +1593,178 @@ void shadeMoon(int i, vec2 uv, float px, out vec4 mcOut, out vec3 add) {
 }
 #endif
 
+#ifdef PM_ORB
+// ---- orbital ring and space elevator: human-made works on an ordinary planet ----
+// The ring is a metal band round the equator with round stations along it. The elevator is one to four cables standing up from the equator.
+uniform vec4 uOrbA;         // orbital ring: x on (0 or 1), y radius to the middle of the band (planet radii), z half its width, w stations
+uniform vec4 uOrbB;         // x lights, y cables (0: no elevator), z distance of a cable's top from the centre (planet radii), w angle of the first cable round the axis (radians, spin included)
+uniform vec3 uOrbHull, uOrbAcc;
+
+// 1 where a point is in the planet's shadow, 0 in sunlight
+float orbInShadow(vec3 P) {
+  float b = dot(P, uL), c = dot(P, P) - 1.0, disc = b * b - c;
+  return (c > 0.0 && (-b + sqrt(max(disc, 0.0))) > 0.0) ? smoothstep(-0.02, 0.05, disc) : 0.0;
+}
+
+// The band: whatever lies between two cylinders round the planet's axis and between two planes either side of the equator. The same test serves the eye and the sun.
+// Returns the distance along the ray where it first enters the band (-1: it never does); n is the outward normal there and len how far the ray stays inside,
+// which the sun's ray turns into a soft shadow. grow fattens the band, so a pixel can ask whether it is close.
+float obBand(vec3 o, vec3 d, float grow, out vec3 n, out float len) {
+  n = vec3(0.0); len = 0.0;
+  float H = uOrbA.z + grow, T = uOrbA.z * 0.8 + grow;
+  float R1 = uOrbA.y + T, R0 = uOrbA.y - T;
+  float ao = dot(uAxis, o), ad = dot(uAxis, d);
+  float qa = 1.0 - ad * ad, qb = dot(o, d) - ao * ad, qc = dot(o, o) - ao * ao;
+  float d1 = qb * qb - qa * (qc - R1 * R1);
+  if (d1 <= 0.0 || qa < 1e-5) return -1.0;
+  float tm1 = (-qb - sqrt(d1)) / qa, tp1 = (-qb + sqrt(d1)) / qa;
+  float tl = -1e4, th = 1e4;
+  if (abs(ad) > 1e-4) { float t1 = (-H - ao) / ad, t2 = (H - ao) / ad; tl = min(t1, t2); th = max(t1, t2); }
+  else if (abs(ao) > H) return -1.0;
+  float d0 = qb * qb - qa * (qc - R0 * R0);
+  float e1 = tp1, s2 = 1e5;       // piece one runs from the outer wall to the hole's near wall; piece two from the hole's far wall out again
+  if (d0 > 0.0) { float sq = sqrt(d0); e1 = (-qb - sq) / qa; s2 = (-qb + sq) / qa; }
+  float lo = max(tm1, tl), hi = min(e1, th);
+  bool inner = false, side = (tl > tm1);
+  if (!(hi > lo && hi > 0.0)) {
+    lo = max(s2, tl); hi = min(tp1, th);
+    if (!(hi > lo && hi > 0.0)) return -1.0;
+    inner = true; side = (tl > s2);
+  }
+  len = hi - lo;
+  float t = max(lo, 0.0);
+  vec3 P = o + t * d;
+  vec3 rad = normalize(P - uAxis * dot(uAxis, P));
+  n = side ? -sign(ad) * uAxis : (inner ? -rad : rad);
+  return t;
+}
+
+// The stations: a ball on the band at each of the evenly spaced places, drifting slowly round. Gives the height of the nearest one under this pixel.
+float obBeads(vec2 uv, float grow, out vec3 n, out vec3 P) {
+  float zb = -99.0; n = vec3(0.0); P = vec3(0.0);
+  int ns = int(uOrbA.w + 0.5);
+  float rs = uOrbA.z * 2.2 + 0.004;
+  for (int k = 0; k < 16; k++) {
+    if (k >= ns) break;
+    float a = 6.2831853 * float(k) / float(ns) + 0.3 + uTime * 0.03;
+    vec3 C = (uU * cos(a) + uW * sin(a)) * uOrbA.y;
+    float dd = length(uv - C.xy);
+    if (dd < rs + grow) {
+      float zz = C.z + sqrt(max(rs * rs - dd * dd, 0.0));
+      if (zz > zb) { zb = zz; P = vec3(uv, zz); n = normalize(P - C); }
+    }
+  }
+  return zb;
+}
+
+// which face of the band a point is on: 0 the outer wall, 1 a flat side, 2 the inner wall
+int obKind(vec3 P, vec3 n) {
+  if (abs(dot(n, uAxis)) > 0.5) return 1;
+  vec3 rad = normalize(P - uAxis * dot(uAxis, P));
+  return (dot(n, rad) > 0.0) ? 0 : 2;
+}
+const vec2 ORB_OFF[4] = vec2[4](vec2(-0.375, -0.125), vec2(0.125, -0.375), vec2(0.375, 0.125), vec2(-0.125, 0.375));
+
+// Colour of a bit of the ring: kind 0 the outer wall, 1 a flat side, 2 the inner wall, 3 a station. em is the light it gives off itself.
+vec3 orbColor(vec3 P, vec3 n, int kind, out vec3 em) {
+  float sh = orbInShadow(P);
+  float H = uOrbA.z, T = H * 0.8;
+  float turn = atan(dot(P, uW), dot(P, uU)) * 0.15915494;      // a full turn is 1
+  float hgt = dot(P, uAxis);
+  float v = (kind == 3) ? hgt / (H * 2.2) : hgt / H;           // -1..1 up the wall
+  float lit = max(dot(n, uL), 0.0) * (1.0 - sh);
+  float plates = (kind == 3) ? 18.0 : 96.0;
+  float u = turn * plates;
+  vec3 cell = vec3(floor(u), floor(v * 2.0 + 2.0), float(kind));
+  float tone = 0.80 + 0.32 * hash33(cell).x;
+  float fu = fract(u);
+  float seam = 1.0 - 0.55 * (smoothstep(0.0, 0.07, fu) * smoothstep(1.0, 0.93, fu));
+  vec3 hull = uOrbHull * tone * ((kind == 2) ? 0.55 : 1.0);
+  em = vec3(0.0);
+  float strip = 0.0;
+  if (kind == 0) strip = 1.0 - smoothstep(0.14, 0.20, abs(v));                    // the lit band of windows round the middle of the wall
+  else if (kind == 3) strip = 1.0 - smoothstep(0.10, 0.16, abs(v));
+  else if (kind == 1) { float rr = length(P - uAxis * hgt) - uOrbA.y; strip = 1.0 - smoothstep(0.10 * T, 0.2 * T, abs(rr)); }   // the rotor line along a flat side
+  float dash = (kind == 1) ? 1.0 : smoothstep(0.25, 0.35, fract(u * ((kind == 3) ? 1.0 : 2.0))) * smoothstep(0.95, 0.85, fract(u * ((kind == 3) ? 1.0 : 2.0)));
+  float chase = pow(max(0.5 + 0.5 * sin(turn * 6.2831853 * 5.0 - uTime * 0.9), 0.0), 5.0);
+  em = uOrbAcc * strip * dash * (0.22 + 1.5 * sh + 0.5 * chase) * uOrbB.x;
+  if (kind == 3 && dot(n, uAxis) > 0.93) em += uOrbAcc * 1.6 * uOrbB.x * (0.5 + 0.5 * sin(uTime * 2.0 + turn * 40.0));   // a beacon on top of a station
+  vec3 col = hull * seam * (0.13 + 1.25 * lit) * (1.0 - 0.45 * strip) * ((kind == 3) ? 1.25 : 1.0);
+  vec3 hv = normalize(uL + vec3(0.0, 0.0, 1.0));
+  col += vec3(1.0, 0.96, 0.9) * pow(max(dot(n, hv), 0.0), 26.0) * 0.38 * (1.0 - sh) * ((kind == 2) ? 0.3 : 1.0);   // metal glints
+  col += hull * 0.07;                                                                                                // light thrown back by the planet
+  return col;
+}
+
+// The cables. Returns how much of this pixel they cover; ec is their colour (lights included) and ez their height above the screen's middle plane.
+float orbCable(vec2 uv, float px, out vec3 ec, out float ez) {
+  ec = vec3(0.0); ez = -99.0;
+  float cov = 0.0;
+  int nc = int(uOrbB.y + 0.5);
+  float w0 = max(0.0055, 0.7 * px);
+  for (int k = 0; k < 4; k++) {
+    if (k >= nc) break;
+    float a = uOrbB.w + 6.2831853 * float(k) / float(nc);
+    vec3 nk = uU * cos(a) + uW * sin(a);
+    vec3 P0 = nk * 0.996, P1 = nk * uOrbB.z;
+    vec2 D = P1.xy - P0.xy;
+    float dl2 = dot(D, D);
+    bool endOn = dl2 < 16.0 * px * px;                         // looking straight down a cable it is a dot, and the nearest end hides the rest
+    float s = (!endOn) ? clamp(dot(uv - P0.xy, D) / dl2, 0.0, 1.0) : 0.0;
+    float zc = endOn ? max(P0.z, P1.z) : mix(P0.z, P1.z, s);
+    float dist = length(uv - (P0.xy + D * s));
+    float c = 1.0 - smoothstep(w0 - 0.5 * px, w0 + 0.5 * px, dist);
+    vec3 pos = nk * mix(0.996, uOrbB.z, s);
+    float sh = orbInShadow(pos);
+    vec3 cc = uOrbHull * (0.10 + 0.95 * (1.0 - sh)) * (0.65 + 0.35 * (1.0 - dist / w0));
+    vec3 ce = vec3(0.0);
+    // climbers: little lit pods creeping up and down the cable
+    for (int i = 0; i < 5; i++) {
+      float sp = 0.05 + 0.9 * fract(float(i) * 0.2 + 0.11 * float(k) + uTime * (((i & 1) == 0) ? 0.012 : -0.012));
+      vec3 Pp = mix(P0, P1, sp);
+      float rp = w0 * 2.3;
+      float cp = 1.0 - smoothstep(rp - 0.5 * px, rp + 0.5 * px, length(uv - Pp.xy));
+      if (cp > c) { c = cp; zc = Pp.z; cc = mix(uOrbHull, uOrbAcc, 0.55) * (0.25 + 0.75 * (1.0 - orbInShadow(Pp))); ce = uOrbAcc * (0.15 + 1.3 * orbInShadow(Pp)) * uOrbB.x; }
+    }
+    // the station at the top: a hub with a solar panel out each side, across the cable
+    vec2 t = (!endOn) ? normalize(vec2(-D.y, D.x)) : vec2(1.0, 0.0);
+    vec2 rel = uv - P1.xy;
+    float along = dot(rel, t), across = dot(rel, vec2(-t.y, t.x));
+    float hub = 1.0 - smoothstep(0.016 - 0.5 * px, 0.016 + 0.5 * px, length(rel));
+    float arm = (1.0 - smoothstep(0.044 - 0.5 * px, 0.044 + 0.5 * px, abs(along))) * (1.0 - smoothstep(0.011 - 0.5 * px, 0.011 + 0.5 * px, abs(across))) * step(0.014, abs(along));
+    float stn = max(hub, arm);
+    if (stn > c) {
+      float shT = orbInShadow(P1);
+      vec3 solar = mix(vec3(0.05, 0.09, 0.18), vec3(0.16, 0.25, 0.42), 0.5 + 0.5 * sin(along * 260.0)) * (0.3 + 0.9 * (1.0 - shT));
+      cc = mix(solar, uOrbHull * (0.15 + 0.9 * (1.0 - shT)), hub);
+      ce = uOrbAcc * hub * (0.3 + 1.2 * shT) * uOrbB.x;
+      c = stn; zc = P1.z;
+    }
+    // the foot, on the ground
+    if (P0.z > 0.0) {
+      float foot = 1.0 - smoothstep(0.012 - 0.5 * px, 0.012 + 0.5 * px, length(uv - P0.xy));
+      if (foot > c) { c = foot; zc = P0.z + 0.01; float shF = orbInShadow(nk); cc = mix(uOrbHull, uOrbAcc, 0.3) * (0.2 + 0.8 * (1.0 - shF)); ce = uOrbAcc * 0.5 * shF * uOrbB.x; }
+    }
+    if (c > cov) { cov = c; ec = cc + ce; ez = zc; }
+  }
+  return cov;
+}
+
+// 1 where a cable runs through the planet's ring: the ring is swept clear along it
+float elevLane(vec3 hp) {
+  float l = 0.0;
+  int nc = int(uOrbB.y + 0.5);
+  for (int k = 0; k < 4; k++) {
+    if (k >= nc) break;
+    float a = uOrbB.w + 6.2831853 * float(k) / float(nc);
+    vec3 nk = uU * cos(a) + uW * sin(a);
+    float along = dot(hp, nk);
+    if (along > 0.0) l = max(l, 1.0 - smoothstep(0.022, 0.05, length(hp - nk * along)));
+  }
+  return l;
+}
+#endif
+
 vec3 stars(vec2 fc) {
   vec3 c = vec3(0.0);
   for (int l = 0; l < 2; l++) {
@@ -1641,6 +1822,9 @@ void main() {
     vec3 hp = vec3(uv, 5.0 - tHit);
     float rr = length(hp);
     vec2 rp = ringProps(rr, atan(dot(hp, uW), dot(hp, uU)));
+#ifdef PM_ORB
+    rp.x *= 1.0 - elevLane(hp);   // a cable through the ring: the grains are swept clear along it
+#endif
     if (rp.x > 0.003) {
       zr = hp.z;
       float tau = rp.x * uRingOp * 2.2;                 // how opaque the grains are here
@@ -1672,8 +1856,49 @@ void main() {
 #else
   const float ringA = 0.0; const vec3 ringC = vec3(0.0); const float zr = -99.0;
 #endif
+#ifdef PM_ORB
+  // the orbital ring and the cables
+  float obA = 0.0; vec3 obC = vec3(0.0); float obZ = -99.0;
+  if (uOrbA.x > 0.5) {
+    vec3 dn = vec3(0.0, 0.0, -1.0), n0, bP0;
+    float l0;
+    // most pixels are nowhere near the band or a station: only look closer where one is within a pixel or two
+    if (obBand(vec3(uv, 6.0), dn, 1.5 * px + 0.003, n0, l0) >= 0.0 || obBeads(uv, 1.5 * px, n0, bP0) > -90.0) {
+      float hits = 0.0, bz = -99.0; vec3 bn = vec3(0.0), bP = vec3(0.0); int bkind = 0;
+      for (int s = 0; s < 4; s++) {
+        vec2 q = uv + ORB_OFF[s] * px;
+        vec3 n1, n2, P2; float l1;
+        float t = obBand(vec3(q, 6.0), dn, 0.0, n1, l1);
+        float z1 = (t >= 0.0) ? 6.0 - t : -99.0;
+        float z2 = obBeads(q, 0.0, n2, P2);
+        float z = max(z1, z2);
+        if (z < -90.0) continue;
+        hits += 1.0;
+        if (z > bz) {
+          bz = z;
+          if (z1 >= z2) { bP = vec3(q, z1); bn = n1; bkind = obKind(bP, n1); } else { bP = P2; bn = n2; bkind = 3; }
+        }
+      }
+      if (hits > 0.0) {
+        vec3 em;
+        obC = orbColor(bP, bn, bkind, em);
+        obC += em;
+        obA = hits * 0.25; obZ = bz;
+      }
+    }
+  }
+  float ecov = 0.0; vec3 ecol = vec3(0.0); float ez = -99.0;
+  if (uOrbB.y > 0.5) ecov = orbCable(uv, px, ecol, ez);
+  // a part of either that is behind the planet is hidden; a part that is not in front of the screen's middle plane is drawn before the planet, the rest after it
+  bool obHide = (r < 1.0) && (obZ < zp), obFront = obZ >= 0.0;
+  bool ecHide = (r < 1.0) && (ez < zp), ecFront = ez >= 0.0;
+#endif
   bool ringFront = (r < 1.0) && (zr >= zp);
   if (ringA > 0.0 && !ringFront) col = mix(col, ringC, ringA);
+#ifdef PM_ORB
+  if (obA > 0.0 && !obFront && !obHide) col = mix(col, obC, obA);
+  if (ecov > 0.0 && !ecFront && !ecHide) col = mix(col, ecol, ecov);
+#endif
 
   // atmosphere glow outside the limb: blue by day, red where the sun is setting
   if (uHaze > 0.0 && r >= 1.0) {
@@ -1702,9 +1927,20 @@ void main() {
     }
     pc *= mix(1.0, eclipse, smoothstep(-0.02, 0.2, dot(p, uL)));
 #endif
+#ifdef PM_ORB
+    // the orbital ring's shadow falls across the sunlit side of the planet; the band's thickness along the sun's ray sets how dark it is
+    if (uOrbA.x > 0.5) {
+      float lt = dot(p, uL);
+      if (lt > 0.0) { vec3 sn; float sl; if (obBand(p * 1.002, uL, 0.0, sn, sl) > 0.0) pc *= 1.0 - 0.6 * smoothstep(0.0, 0.025, sl) * smoothstep(0.0, 0.2, lt); }
+    }
+#endif
     col = mix(col, pc, cov);
   }
   if (ringA > 0.0 && ringFront) col = mix(col, ringC, ringA);
+#ifdef PM_ORB
+  if (obA > 0.0 && obFront && !obHide) col = mix(col, obC, obA);
+  if (ecov > 0.0 && ecFront && !ecHide) col = mix(col, ecol, ecov);
+#endif
 
 #ifdef PM_MOONS
   for (int i = 0; i < 5; i++) { if (i >= uMoonN) break; if (uMoon[i].z >= 0.0) { col += MA[i]; col = mix(col, MC[i].rgb, MC[i].a); } }
@@ -1782,6 +2018,7 @@ const BASE = {
   ring: { on: false, type: 'broad', inner: 1.24, width: 1.03, op: 0.8, gaps: 0.8, struct: 0.6, clump: 0.3, dust: 0.15, feeder: 0, seed: 1, spin: 0.3, c1: '#d8c8a4', c2: '#7a6a55' },
   moons: 1, moonSpeed: 0.6, moonList: [],
   mType: 'ring', mLen: 4.5, mPair: 2, mWin: 0.4, mMir: 0.45, mMirA: 40, mTube: 0.12, mSpokes: 6, mTop: 0.6, mLayers: 2, mOpen: 0.35, mCap: 1, mWidth: 0.22, mWall: 0.05, mSpan: 0.7, mShade: 0.28, mPlate: 0.6, mLights: 0.5, mStar: 1, mHull: '#8b9199', mAcc: '#e0a64a',
+  oOn: 0, oHt: 0.12, oWid: 0.045, oStn: 8, oLit: 0.6, oHull: '#8b9199', oAcc: '#e0a64a', eOn: 0, eLon: -20, eHt: 0.9, eN: 1,
 };
 const KIND_DEF = {
   terran: { wet: 0, pal: ['#1c4d8f', '#3f7a3c', '#7b7a45', '#8f7f6d', '#f1f5f9'], sea: 0.55, mount: 0.5, clouds: 0.5, haze: 0.65, hazeCol: '#78aaf2', ice: 0.3, cities: 0.48 },
@@ -1837,6 +2074,12 @@ function updateCityInfo() {
 /* ---------- controls ---------- */
 const ISMEGA = (p, ...ids) => p.kind === 'mega' && ids.includes(p.mType);
 const NOMEGA = (p) => p.kind !== 'mega';
+// A space elevator needs ground to stand on and a spin to hang from: not a gas giant, not a world that always shows one face to its sun, and not a megastructure.
+const ELEV_OK = (k) => k !== 'gas' && k !== 'locked' && k !== 'mega';
+// Heights are fractions of the planet's radius; show them in kilometres where the planet has a size of its own
+const heightText = (v, p) => p.kind === 'gas' ? v.toFixed(2) + ' radii' : Math.round(v * p.rad).toLocaleString('en-US') + ' km';
+// Radius of the middle of the orbital ring: never so low that the band touches the ground
+const orbRadius = (p) => 1 + Math.max(p.oHt, p.oWid * 0.5 * 0.8 + 0.012);
 const TERR = (p) => p.kind !== 'mega' || ISMEGA(p, 'ring');   // a megastructure has no planet radius, moons, rings or atmosphere of its own
 const CONTROLS = [
   ['Struct', 'mLen', 'Length to width', 1.5, 9, 0.1, (p) => ISMEGA(p, 'cylinder'), (v) => v.toFixed(1) + ' : 1'],
@@ -1857,6 +2100,13 @@ const CONTROLS = [
   ['Struct', 'mPlate', 'Hull plating', 0, 1, 0.01, (p) => ISMEGA(p, 'ring', 'cylinder', 'wheel', 'shell')],
   ['Struct', 'mLights', 'Hull lights', 0, 1, 0.01, (p) => ISMEGA(p, 'ring', 'cylinder', 'wheel', 'shell')],
   ['Struct', 'mStar', 'Star glow', 0, 1.5, 0.01, (p) => ISMEGA(p, 'ring', 'shell')],
+  ['Orb', 'oHt', 'Ring height', 0.04, 0.3, 0.005, (p) => NOMEGA(p) && !!p.oOn, (v, p) => heightText(v, p)],
+  ['Orb', 'oWid', 'Ring width', 0.01, 0.1, 0.005, (p) => NOMEGA(p) && !!p.oOn, (v) => (v * 100).toFixed(1) + '% of a radius'],
+  ['Orb', 'oStn', 'Stations', 0, 16, 1, (p) => NOMEGA(p) && !!p.oOn, (v) => v < 1 ? 'none' : String(Math.round(v))],
+  ['Orb', 'eN', 'Cables', 1, 4, 1, (p) => ELEV_OK(p.kind) && !!p.eOn],
+  ['Orb', 'eLon', 'Cable position', -180, 180, 1, (p) => ELEV_OK(p.kind) && !!p.eOn, (v) => Math.round(v) + '°'],
+  ['Orb', 'eHt', 'Cable height', 0.3, 3, 0.05, (p) => ELEV_OK(p.kind) && !!p.eOn, (v, p) => heightText(v, p)],
+  ['Orb', 'oLit', 'Lights', 0, 1, 0.01, (p) => NOMEGA(p) && !!(p.oOn || p.eOn), (v) => v < 0.02 ? 'off' : Math.round(v * 100) + '%'],
   // section, key, label, min, max, step, visible(P), readout
   ['Look', 'sea', 'Ocean level', 0, 1, 0.01, (p) => HAS_SEA(p.kind)],
   ['Look', 'wet', 'Wetness', -1, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'rock' && p.kind !== 'lava'],
@@ -1891,7 +2141,7 @@ const CONTROLS = [
 // a drum has no ground, sea or sky to adjust: the terrain, weather and palette controls belong to the ring and the planets
 for (const c of CONTROLS) if (c[0] === 'Look' || c[0] === 'Sky' || c[1] === 'cloudSpeed') { const f = c[6]; c[6] = (p) => f(p) && TERR(p); }
 function spinText(v, p) { if (Math.abs(v) < 0.01) return 'stopped'; const s = 2 * Math.PI / (Math.abs(v) * 0.5); return (v < 0 ? '↺ ' : '') + Math.round(s) + ' s'; }
-const SEC_HOST = { Struct: 'ctlMega', Look: 'ctlLook', Sky: 'ctlSky', Motion: 'ctlMotion', Cam: 'ctlCam', Moon: 'ctlMoon' };
+const SEC_HOST = { Orb: 'ctlOrb', Struct: 'ctlMega', Look: 'ctlLook', Sky: 'ctlSky', Motion: 'ctlMotion', Cam: 'ctlCam', Moon: 'ctlMoon' };
 const ctlEls = {};
 const get = (k) => k === 'size' ? 3 - P.scale : k === 'land' ? landShare(P) : k === 'ringSpin' ? P.ring.spin : P[k];
 const set = (k, v) => { if (k === 'size') P.scale = 3 - v; else if (k === 'land') P.land = v; else if (k === 'ringSpin') P.ring.spin = v; else P[k] = v; };
@@ -1915,6 +2165,8 @@ function refreshOut(c) {
   e.out.textContent = c[7] ? c[7](v, P) : (Number.isInteger(c[5]) ? String(Math.round(v)) : v.toFixed(2));
 }
 function syncControls() {
+  if (!ELEV_OK(P.kind)) P.eOn = 0;
+  if (P.kind === 'mega') P.oOn = 0;
   for (const k in ctlEls) {
     const e = ctlEls[k]; e.inp.value = get(k); e.row.hidden = !e.c[6](P); refreshOut(e.c);
   }
@@ -1941,10 +2193,11 @@ function syncControls() {
   $('tagName').textContent = P.name || 'Unnamed';
   $('tagKind').textContent = (KINDS.find(k => k.id === P.kind) || {}).name || '';
   const mg = P.kind === 'mega';
-  $('secMega').hidden = !mg; $('secLook').hidden = !TERR(P); $('secSky').hidden = !TERR(P); $('secRings').hidden = mg; $('secMoons').hidden = mg; $('swHaze').hidden = mg;
+  $('secMega').hidden = !mg; $('secLook').hidden = !TERR(P); $('secSky').hidden = !TERR(P); $('secRings').hidden = mg; $('secMoons').hidden = mg; $('secOrbit').hidden = mg; $('swHaze').hidden = mg;
   ctlEls.cities.row.querySelector('label').textContent = mg ? 'Settlement' : 'Population';
   syncMegaUI();
   syncRingUI();
+  syncOrbUI();
   rebuildMoons();
 }
 
@@ -1990,6 +2243,31 @@ function syncMegaUI() {
   if (P.kind === 'mega') $('tagKind').textContent = 'Megastructure · ' + t.name;
   $('tagSize').hidden = P.kind !== 'mega'; $('tagSize').textContent = 'Typical size: ' + t.size;
   document.querySelectorAll('#swMega .sw').forEach((d) => { d.querySelector('input').value = P[d.dataset.k]; });
+}
+
+/* ---------- orbital ring and space elevator ---------- */
+// Human-made works on an ordinary planet, drawn in the shader's orbCable, obBand and obBeads. Colours and lights are shared by both.
+function buildOrbUI() {
+  const sw = $('swOrb');
+  [['oHull', 'Hull'], ['oAcc', 'Accent and lights']].forEach(([k, label]) => {
+    const d = document.createElement('label'); d.className = 'sw';
+    d.innerHTML = `<input type="color" aria-label="${label}"><span>${label}</span>`;
+    d.querySelector('input').addEventListener('input', (ev) => { P[k] = ev.target.value; });
+    d.dataset.k = k; sw.appendChild(d);
+  });
+  $('orbOn').addEventListener('change', (e) => { P.oOn = e.target.checked ? 1 : 0; syncControls(); });
+  $('elevOn').addEventListener('change', (e) => { P.eOn = e.target.checked ? 1 : 0; syncControls(); });
+}
+function syncOrbUI() {
+  const ok = ELEV_OK(P.kind);
+  $('orbOn').checked = !!P.oOn; $('elevOn').checked = !!P.eOn; $('elevOn').disabled = !ok;
+  const note = [];
+  if (P.oOn) note.push('Orbital ring: a hoop of metal built round the equator, high enough to clear the air, with stations along it and lit windows on the night side. Its width is exaggerated; a real one would be a hair-thin line from here. It sweeps a clear lane through any natural ring at its height.');
+  if (P.eOn) note.push('Space elevator: a cable from the equator up to a station, with climbers on it. It turns with the ground, so turn Rotation down to keep it still. A cable through a natural ring leaves a clear lane. A real cable reaches 5.6 planet radii up (35,786 km on Earth); this one is shorter so the planet stays big.');
+  if (!ok) note.push('No space elevator here: it needs solid ground to stand on and a spin to hang from, so not on a gas giant or a tidally locked world.');
+  $('orbNote').textContent = note.join(' ');
+  document.querySelectorAll('#swOrb .sw').forEach((d) => { d.querySelector('input').value = P[d.dataset.k]; });
+  $('swOrb').hidden = !(P.oOn || P.eOn);
 }
 
 /* ---------- moons ---------- */
@@ -2162,7 +2440,7 @@ const ringType = (r) => RING_TYPES[RING_IDX[r.type] || 0];
 const RESONANCES = [[0.63, 0.012, 0.5, 0.85], [0.763, 0.006, 0.2, 0.45], [0.481, 0.006, 0.25, 0.55]];
 // Every moon inside a ring sweeps its own lane clear, whatever kind of ring it is (the moon a ring is made from excepted).
 // The resonance gaps and a broad ring's two famous gaps are the optional extras, scaled by the Gaps slider; `extras` says whether they apply.
-function ringGapList(mm, ring, extras) {
+function ringGapList(mm, ring, extras, orb) {
   const lo = ring.inner, hi = ring.inner + ring.width, lanes = [], out = [];
   mm.forEach((m, i) => {
     if (ring.feeder === i + 1) return;   // the moon that feeds a ring lives in it and does not cut it
@@ -2173,6 +2451,8 @@ function ringGapList(mm, ring, extras) {
     if (!extras) return;
     for (const [k, h0, hs, dp] of RESONANCES) { const c = m.orbit * k; if (c > lo && c < hi) out.push([c, h0 + m.size * hs, dp * plane, 0]); }
   });
+  // an orbital ring sweeps its own lane clear too: orb is [its radius, its half width]
+  if (orb && orb[0] > lo - 0.02 && orb[0] < hi + 0.02) lanes.push([orb[0], orb[1], 1, 1]);
   out.sort((p, q) => q[1] * q[2] - p[1] * p[2]);
   if (extras && ring.type === 'broad') {
     // a broad ring always has its two famous gaps unless a moon already cut something there
@@ -2268,12 +2548,12 @@ const gl = cv.getContext('webgl2', { antialias: false, alpha: false, preserveDra
 let prog, loc = {}, glOK = !!gl;
 // The fragment shader is compiled in variants so work a planet does not use costs nothing: PM_CLOUDS only when the planet
 // draws clouds (not gas giants, not Clouds = 0), PM_HIQ only in High detail (high cirrus deck, small cells, streaks, relief),
-// PM_MOONS only when at least one moon is on, PM_RINGS only when the planet has rings, PM_MEGA only for a megastructure.
+// PM_MOONS only when at least one moon is on, PM_RINGS only when the planet has rings, PM_MEGA only for a megastructure, PM_ORB only with an orbital ring or a space elevator.
 const progs = {};
 let vbuf = null;
 function makeProgram(key) {
   const mk = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(s)); throw new Error('shader: ' + gl.getShaderInfoLog(s)); } return s; };
-  const defs = (key.indexOf('C') >= 0 ? '#define PM_CLOUDS\n' : '') + (key.indexOf('H') >= 0 ? '#define PM_HIQ\n' : '') + (key.indexOf('M') >= 0 ? '#define PM_MOONS\n' : '') + (key.indexOf('R') >= 0 ? '#define PM_RINGS\n' : '') + (key.indexOf('G') >= 0 ? '#define PM_MEGA\n' : '');
+  const defs = (key.indexOf('C') >= 0 ? '#define PM_CLOUDS\n' : '') + (key.indexOf('H') >= 0 ? '#define PM_HIQ\n' : '') + (key.indexOf('M') >= 0 ? '#define PM_MOONS\n' : '') + (key.indexOf('R') >= 0 ? '#define PM_RINGS\n' : '') + (key.indexOf('G') >= 0 ? '#define PM_MEGA\n' : '') + (key.indexOf('O') >= 0 ? '#define PM_ORB\n' : '');
   const pr = gl.createProgram();
   gl.attachShader(pr, mk(gl.VERTEX_SHADER, $('vs').textContent.trim()));
   gl.attachShader(pr, mk(gl.FRAGMENT_SHADER, $('fs').textContent.trim().replace('#version 300 es', '#version 300 es\n' + defs)));
@@ -2320,12 +2600,16 @@ function draw(w, h, tmul) {
   const mega = P.kind === 'mega';
   const mm = mega ? [] : activeMoons();
   const mx = mm.reduce((m, o) => Math.max(m, o.orbit + o.size), 0);
-  const extent = Math.max(1.3, P.ring.on && !mega ? ringOut * 1.04 : 0, mx * 0.95);
+  // an orbital ring and a space elevator (not on a megastructure, and no elevator on a gas giant or a tidally locked world)
+  const orbOn = !mega && !!P.oOn, elevOn = !mega && !!P.eOn && ELEV_OK(P.kind), orb = orbOn || elevOn;
+  const orbR = orbOn ? orbRadius(P) : 0, orbH = P.oWid * 0.5, elevTop = elevOn ? 1 + P.eHt : 0;
+  const orbExt = orbOn ? (orbR + orbH * 2.2 + 0.01) * 1.05 : 0, elevExt = elevTop * 1.05;
+  const extent = Math.max(1.3, P.ring.on && !mega ? ringOut * 1.04 : 0, mx * 0.95, orbExt, elevExt);
   const aspect = w / h;
-  const extentV = Math.max(1.3, P.ring.on && !mega ? ringOut * Math.max(0.72, Math.sin(phi)) * 1.04 : 0, mx * 0.75);
+  const extentV = Math.max(1.3, P.ring.on && !mega ? ringOut * Math.max(0.72, Math.sin(phi)) * 1.04 : 0, mx * 0.75, orbExt * Math.max(0.72, Math.sin(phi)), elevExt);
   const zoom = Math.min(aspect * 0.92 / extent, 0.92 / extentV) * P.zoom;
   const clouds = P.kind === 'rock' ? 0 : P.clouds;   // an airless world has no weather, whatever the slider says
-  useVariant((P.kind !== 'gas' && clouds > 0.01 ? 'C' : '') + (quality ? 'H' : '') + (mm.length ? 'M' : '') + (P.ring.on && !mega ? 'R' : '') + (mega ? 'G' : ''));
+  useVariant((P.kind !== 'gas' && clouds > 0.01 ? 'C' : '') + (quality ? 'H' : '') + (mm.length ? 'M' : '') + (P.ring.on && !mega ? 'R' : '') + (mega ? 'G' : '') + (orb ? 'O' : ''));
   gl.viewport(0, 0, w, h);
   gl.uniform2f(loc.uRes, w, h); gl.uniform1f(loc.uZoom, zoom);
   gl.uniform1i(loc.uType, KIND_TYPE(P.kind));
@@ -2366,6 +2650,12 @@ function draw(w, h, tmul) {
     gl.uniform4f(loc.uMegaA, wd, P.mWall, 0.02, P.mSpan); gl.uniform4f(loc.uMegaB, P.mShade, P.mPlate, P.mLights, P.mStar);
     gl.uniform3fv(loc.uMegaHull, hex2rgb(P.mHull)); gl.uniform3fv(loc.uMegaAcc, hex2rgb(P.mAcc));
   }
+  if (orb) {
+    // a cable stands on the ground, so it turns with the planet: its place in the planet's frame plus the spin the shader applies to the ground
+    gl.uniform4f(loc.uOrbA, orbOn ? 1 : 0, orbR, orbH, Math.round(P.oStn));
+    gl.uniform4f(loc.uOrbB, P.oLit, elevOn ? Math.round(P.eN) : 0, elevTop, P.eLon * D + T.spin);
+    gl.uniform3fv(loc.uOrbHull, hex2rgb(P.oHull)); gl.uniform3fv(loc.uOrbAcc, hex2rgb(P.oAcc));
+  }
   gl.uniform3fv(loc.uAxis, A); gl.uniform3fv(loc.uU, U); gl.uniform3fv(loc.uW, W); gl.uniform3fv(loc.uL, L);
   const rg = P.ring, RT = ringType(rg);
   f('uRingOn', rg.on && !mega ? 1 : 0); f('uRingIn', rg.inner); f('uRingOut', ringOut); f('uRingOp', rg.op); f('uRingGaps', RT.L.gaps ? rg.gaps : 0);
@@ -2396,7 +2686,7 @@ function draw(w, h, tmul) {
     if (o) feed = [fm.orbit, Math.atan2(Math.sin(o.a) * Math.cos(fm.tilt * D), Math.cos(o.a)), 1, 0];
   }
   gl.uniform4fv(loc.uRingFeed, feed);
-  const gaps = rg.on ? ringGapList(mm, rg, !!RT.L.gaps && rg.gaps > 0) : [], gv = new Float32Array(24);
+  const gaps = rg.on ? ringGapList(mm, rg, !!RT.L.gaps && rg.gaps > 0, orbOn ? [orbR, orbH + 0.05] : null) : [], gv = new Float32Array(24);
   gaps.forEach((g, i) => gv.set(g, i * 4));
   gl.uniform1i(loc.uRGapN, gaps.length); gl.uniform4fv(loc['uRGap'], gv);
   gl.uniform1i(loc.uMoonN, ms.length);
@@ -2588,6 +2878,7 @@ const PARAM_RANGE = {
   bands: [3, 20, 1], turb: [0, 1.4], storms: [0, 6, 1], stormSize: [0.2, 1.6], spin: [-1, 1], cloudSpeed: [-1, 1], flow: [0, 1.5], moonSpeed: [0, 2],
   tilt: [6, 85], roll: [-90, 90], sun: [-180, 180], sunH: [-60, 60], zoom: [0.5, 1.8], moons: [0, 5, 1],
   mLen: [1.5, 9], mPair: [1, 2, 1], mWin: [0.15, 0.7], mMir: [0.2, 1], mMirA: [0, 60], mTube: [0.03, 0.3], mSpokes: [3, 8, 1], mTop: [0, 1], mLayers: [1, 4, 1], mOpen: [0, 0.9], mCap: [0.12, 1], mWidth: [0.06, 0.6], mWall: [0, 0.12], mSpan: [0.25, 1.3], mShade: [0, 0.6], mPlate: [0, 1], mLights: [0, 1], mStar: [0, 1.5],
+  oOn: [0, 1, 1], oHt: [0.04, 0.3], oWid: [0.01, 0.1], oStn: [0, 16, 1], oLit: [0, 1], eOn: [0, 1, 1], eLon: [-180, 180], eHt: [0.3, 3], eN: [1, 4, 1],
 };
 const RING_RANGE = { inner: [1.1, 2.8], width: [0.04, 2.6], op: [0.1, 1], gaps: [0, 1], struct: [0, 1], clump: [0, 1], dust: [0, 1], feeder: [0, 5, 1], seed: [0, 9999, 1], spin: [-1, 1] };
 const isHex = (c) => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
@@ -2609,7 +2900,9 @@ function sanitize(p, d) {
   const pal = Array.isArray(p.pal) ? p.pal : [];
   out.pal = d.pal.map((c, i) => isHex(pal[i]) ? pal[i] : c);
   if (isHex(p.hazeCol)) out.hazeCol = p.hazeCol;
-  for (const k of ['mHull', 'mAcc']) if (isHex(p[k])) out[k] = p[k];
+  for (const k of ['mHull', 'mAcc', 'oHull', 'oAcc']) if (isHex(p[k])) out[k] = p[k];
+  if (!ELEV_OK(out.kind)) out.eOn = 0;   // a pasted preset cannot put an elevator where none can stand
+  if (out.kind === 'mega') out.oOn = 0;
   if (Object.hasOwn(MEGA_IDX, p.mType)) out.mType = p.mType;
   if (Array.isArray(p.moonList)) {
     out.moonList = p.moonList.slice(0, 5).map((m, i) => sanitizeMoon(m && typeof m === 'object' ? m : {}, genMoon(out.seed, out.kind, i, null, moonStart(out.ring))));
@@ -2702,6 +2995,7 @@ function boot() {
   buildMoonUI();
   buildRingUI();
   buildMegaUI();
+  buildOrbUI();
   const dl = $('sysList');
   SYSTEMS.forEach((s, i) => { sysByName.set(s.n.toLowerCase(), i); const o = document.createElement('option'); o.value = s.n; o.label = s.sec; dl.appendChild(o); });
   $('sysIn').addEventListener('change', () => { const i = sysByName.get($('sysIn').value.trim().toLowerCase()); if (i !== undefined) loadSystem(i); else toast('No system with that name'); });
