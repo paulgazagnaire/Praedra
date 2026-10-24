@@ -149,22 +149,6 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
       <div class="sw-row" id="swHaze"></div>
     </details>
 
-    <details class="sec" id="secBack" open>
-      <summary>Backdrop</summary>
-      <label class="chk"><input type="checkbox" id="skyOn"> A sky behind the planet</label>
-      <div id="skyBox">
-        <h3 class="sub">Kind of sky</h3>
-        <div class="chips" id="skyThemes"></div>
-        <p class="note" id="skyNote"></p>
-        <div id="ctlBack"></div>
-        <p class="note" id="skyContents"></p>
-        <div class="row2">
-          <button id="skyNew" type="button">New sky</button>
-          <button id="skyFollow" type="button">Follow the planet</button>
-        </div>
-      </div>
-    </details>
-
     <details class="sec" open>
       <summary>Motion</summary>
       <div id="ctlMotion"></div>
@@ -173,6 +157,11 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
     <details class="sec">
       <summary>Camera and sun</summary>
       <div id="ctlCam"></div>
+    </details>
+
+    <details class="sec" open>
+      <summary>Stars</summary>
+      <div id="ctlStars"></div>
     </details>
 
     <details class="sec" id="secRings">
@@ -242,358 +231,12 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
 <div id="snap"><img id="snapImg" alt="Planet snapshot"><div class="row2" style="max-width:420px"><button id="snapSave" type="button" class="primary">Save PNG</button><button id="snapClose" type="button">Close</button></div><p class="note">If Save does nothing, right-click (or long-press) the image and choose Save.</p></div>
 <div class="toast" id="toast" role="status"></div>
 
-<script id="skyfs" type="x-shader/x-fragment">#version 300 es
-precision highp float;
-out vec4 fragColor;
-// The sky behind the planet. It is drawn once into a texture (again only when the sky or the picture size changes), so the planet's own shader pays nothing for it.
-uniform vec2 uRes;
-uniform vec4 uA;      // x sky seed, y how many stars, z how much Milky Way, w how much gas cloud
-uniform vec4 uB;      // x angle of the Milky Way, y its half width (screen heights), z how far it sits off centre, w how much it arches
-uniform vec4 uC;      // x where along the band it is brightest, y star warmth (-1 blue .. 1 red), z how many objects, w how bright the objects are
-uniform vec3 uBase, uBandCore, uBandEdge, uNeb1, uNeb2;
-uniform vec4 uLens;   // xy: place of a black hole (-1..1 across the picture), z: how far it bends the sky behind it (screen heights), w: on
-uniform vec4 uF0[12]; // xy: place (-1..1 across the picture), z: size (screen heights), w: kind
-uniform vec4 uF1[12]; // x: angle, y: shape (squash or width), z: seed, w: brightness
-uniform vec3 uF2[12], uF3[12];   // the object's two colours
-
-uvec3 pcg3d(uvec3 v) {
-  v = v * 1664525u + 1013904223u;
-  v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
-  v ^= v >> 16u;
-  v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
-  return v;
-}
-vec3 h33(vec3 p) { return vec3(pcg3d(floatBitsToUint(p))) * (1.0 / 4294967296.0); }
-vec3 ig(ivec3 i) { return vec3(pcg3d(uvec3(i))) * (2.0 / 4294967296.0) - 1.0; }
-float gnoise(vec3 p) {
-  ivec3 i = ivec3(floor(p)); vec3 f = fract(p);
-  vec3 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
-  float a = dot(ig(i), f);
-  float b = dot(ig(i + ivec3(1, 0, 0)), f - vec3(1, 0, 0));
-  float c = dot(ig(i + ivec3(0, 1, 0)), f - vec3(0, 1, 0));
-  float d = dot(ig(i + ivec3(1, 1, 0)), f - vec3(1, 1, 0));
-  float e = dot(ig(i + ivec3(0, 0, 1)), f - vec3(0, 0, 1));
-  float g = dot(ig(i + ivec3(1, 0, 1)), f - vec3(1, 0, 1));
-  float h = dot(ig(i + ivec3(0, 1, 1)), f - vec3(0, 1, 1));
-  float k = dot(ig(i + ivec3(1, 1, 1)), f - vec3(1, 1, 1));
-  return mix(mix(mix(a, b, u.x), mix(c, d, u.x), u.y), mix(mix(e, g, u.x), mix(h, k, u.x), u.y), u.z);
-}
-float nz(vec3 p) { return clamp(0.5 + 0.95 * gnoise(p), 0.0, 1.0); }
-const mat3 SM = mat3(0.00, 0.80, 0.60, -0.80, 0.36, -0.48, -0.60, -0.48, 0.64);
-float sfbm(vec3 p, int oct) {
-  float a = 0.5, s = 0.0, n = 0.0;
-  for (int i = 0; i < 6; i++) {
-    if (i >= oct) break;
-    s += a * nz(p); n += a;
-    p = SM * p * 2.03 + vec3(1.7, 9.2, 3.1); a *= 0.5;
-  }
-  return s / n;
-}
-// 0..1, sharp crests: the thin bright threads of gas
-float ridge(vec3 p, int oct) {
-  float a = 0.5, s = 0.0, n = 0.0;
-  for (int i = 0; i < 5; i++) {
-    if (i >= oct) break;
-    float r = 1.0 - abs(2.0 * nz(p) - 1.0);
-    s += a * r * r; n += a;
-    p = SM * p * 2.07 + vec3(4.1, 2.3, 7.7); a *= 0.5;
-  }
-  return s / n;
-}
-vec2 rt(vec2 d, float a) { float c = cos(a), s = sin(a); return vec2(c * d.x + s * d.y, -s * d.x + c * d.y); }
-
-vec3 starCol(float t, float warm) {
-  t = clamp(t + 0.2 * warm, 0.0, 1.0);
-  vec3 c = mix(vec3(0.60, 0.75, 1.00), vec3(1.00, 0.97, 0.92), smoothstep(0.0, 0.35, t));
-  c = mix(c, vec3(1.00, 0.84, 0.58), smoothstep(0.35, 0.7, t));
-  return mix(mix(c, vec3(1.00, 0.56, 0.38), smoothstep(0.7, 1.0, t)), vec3(1.0), 0.35);
-}
-
-// loose stars in three sizes of grid cell, thicker along the Milky Way
-vec3 starLayers(vec2 q, float prof, float sc) {
-  vec2 qd = q * 700.0;
-  vec3 c = vec3(0.0);
-  for (int l = 0; l < 3; l++) {
-    float cs = (l == 0) ? 40.0 : (l == 1) ? 19.0 : 9.5;
-    float ang = float(l) * 0.83 + 0.4;
-    vec2 p = vec2(cos(ang) * qd.x + sin(ang) * qd.y, -sin(ang) * qd.x + cos(ang) * qd.y);
-    vec2 g = floor(p / cs), f = fract(p / cs);
-    vec3 h = h33(vec3(g, float(l) * 11.0 + uA.x));
-    float pr = ((l == 0) ? 0.05 : (l == 1) ? 0.12 : 0.3) * uA.y * (1.0 + 5.0 * prof);
-    if (h.x < pr) {
-      vec3 h2 = h33(vec3(g + 31.0, float(l) * 11.0 + uA.x + 5.0));
-      float dpx = length(f - (0.2 + 0.6 * h.yz)) * cs * sc;
-      float m = pow(h2.x, 2.2);
-      float sig = max(0.55, (0.4 + 1.1 * m) * sc * ((l == 0) ? 1.0 : 0.8));
-      float I = (0.1 + 0.9 * m) * exp(-dpx * dpx / (2.0 * sig * sig));
-      if (l == 0) I += m * m * 0.5 * exp(-pow(dpx / (2.2 * sig), 2.0)) * smoothstep(0.2 * cs * sc, 0.1 * cs * sc, dpx);
-      c += starCol(pow(h2.y, 0.8), uC.y) * I * ((l == 0) ? 0.9 : (l == 1) ? 0.65 : 0.5);
-    }
-  }
-  return c;
-}
-
-// the Milky Way: x along the band, y across it
-vec2 bandXY(vec2 q) {
-  vec2 d = q - vec2(0.0, uB.z);
-  vec2 b = rt(d, uB.x);
-  b.y += uB.w * b.x * b.x;
-  return b;
-}
-
-vec3 bigGas(vec2 q) {
-  if (uA.w < 0.002) return vec3(0.0);
-  float n1 = sfbm(vec3(q * 1.7, uA.x + 40.0), 4);
-  float n2 = sfbm(vec3(q * 3.4 + 4.0, uA.x + 60.0), 3);
-  float m = smoothstep(0.42, 0.78, n1) * (0.4 + 0.8 * n2);
-  vec3 c = mix(uNeb1, uNeb2, smoothstep(0.3, 0.7, sfbm(vec3(q * 1.1 + 9.0, uA.x + 80.0), 2)));
-  return c * m * uA.w;
-}
-
-float bright(vec2 d, float s) { return exp(-dot(d, d) / (2.0 * s * s)); }
-
-// One object of the sky. Adds its light to `emit`, and how much it blocks of what is behind it to `blk`.
-void feature(int i, vec2 q, float asp, float px, inout vec3 emit, inout float blk) {
-  vec4 f0 = uF0[i], f1 = uF1[i];
-  vec2 pos = vec2(f0.x * 0.5 * asp, f0.y * 0.5);
-  float S = f0.z; int kind = int(f0.w + 0.5);
-  vec2 d = q - pos;
-  if (length(d) > S * 2.6) return;
-  float B = f1.w * uC.w, sd = f1.z;
-  if (kind == 5 || kind == 6 || kind == 13) B *= 0.65;   // the boldest shapes sit back a little more
-  vec3 C2 = uF2[i], C3 = uF3[i];
-  vec2 e = rt(d, f1.x);
-  float rg = length(d) / S;
-
-  if (kind == 0) {
-    // a bright star with diffraction spikes
-    float rr = length(d);
-    float s0 = max(px * 0.8, 0.045 * S);
-    float core = exp(-rr * rr / (2.0 * s0 * s0));
-    float halo = pow(1.0 / (1.0 + pow(rr / (0.22 * S), 2.0)), 1.6) * 0.35;
-    float s1 = max(px * 0.7, s0 * 0.3), L = S * 0.8;
-    float sp = 1.0 / (1.0 + pow(e.y / s1, 2.0)) * exp(-abs(e.x) / (0.4 * L)) + 1.0 / (1.0 + pow(e.x / s1, 2.0)) * exp(-abs(e.y) / (0.4 * L));
-    vec2 e2 = rt(e, 0.7853982);
-    float sp2 = 1.0 / (1.0 + pow(e2.y / (s1 * 1.5), 2.0)) * exp(-abs(e2.x) / (0.2 * L)) + 1.0 / (1.0 + pow(e2.x / (s1 * 1.5), 2.0)) * exp(-abs(e2.y) / (0.2 * L));
-    emit += B * (mix(C2, vec3(1.0), core) * (core * 1.7 + halo) + C2 * (0.4 * sp + 0.12 * sp2));
-  } else if (kind == 1) {
-    // a spiral galaxy, seen at a slant
-    vec2 g = vec2(e.x, e.y / f1.y) / S;
-    float r = length(g), th = atan(g.y, g.x);
-    float hh = h33(vec3(sd, 3.1, 7.7)).x;
-    float arms = 2.0 + floor(hh * 2.99);
-    float spiral = 0.5 + 0.5 * cos(arms * (th - (2.0 + 2.2 * hh) * log(r + 0.06)) + sd * 6.28);
-    float disc = exp(-r * 3.0) * smoothstep(1.15, 0.9, r);
-    float bulge = exp(-r * r * 55.0) * 2.2 + exp(-r * r * 8.0) * 0.5;
-    float knots = pow(nz(vec3(g * 14.0, sd)), 3.0);
-    float I = disc * (0.22 + 1.0 * pow(spiral, 2.2) * (0.55 + 0.9 * knots)) * smoothstep(0.02, 0.2, r);
-    emit += B * (bulge * C3 + I * mix(C3, C2, smoothstep(0.1, 0.55, r)) * 1.1 + exp(-r * 1.6) * 0.07 * C2 * smoothstep(1.3, 0.6, r));
-  } else if (kind == 2) {
-    // an elliptical galaxy: a smooth glow, no arms
-    vec2 g = vec2(e.x, e.y / f1.y) / S;
-    float r = sqrt(dot(g, g) + 0.0009);
-    float I = exp(-7.67 * (pow(r, 0.25) - 1.0));
-    I = I / (1.0 + 0.12 * I) * smoothstep(1.7, 0.9, r);
-    emit += B * 0.2 * I * mix(C3, C2, smoothstep(0.1, 0.8, r));
-  } else if (kind == 3) {
-    // a galaxy edge on: a thin disc split by a dark lane of dust
-    vec2 g = e / S;
-    float ky = f1.y, rx = abs(g.x);
-    float disc = exp(-pow(g.y / (ky * (1.0 - 0.45 * min(rx, 1.0))), 2.0)) * exp(-rx * 2.0) * smoothstep(1.2, 0.9, rx);
-    float bulge = exp(-(g.x * g.x) / (2.0 * 0.014) - (g.y * g.y) / (2.0 * 0.01)) * 1.8 + exp(-(g.x * g.x) / 0.22 - (g.y * g.y) / 0.05) * 0.35;
-    float lane = exp(-pow((g.y - 0.012) / (ky * 0.2), 2.0)) * smoothstep(1.0, 0.2, rx) * (0.65 + 0.7 * nz(vec3(g.x * 9.0, g.y * 30.0, sd)));
-    emit += B * ((disc * 0.9 * mix(C3, C2, smoothstep(0.1, 0.6, rx)) + bulge * C3) * (1.0 - 0.8 * min(lane, 1.0)));
-    blk = max(blk, 0.35 * lane);
-  } else if (kind == 4) {
-    // a cloud of glowing gas with newborn stars in it
-    vec2 g = d / S;
-    vec3 pp = vec3(g * 2.6, sd);
-    float w = sfbm(pp + 2.0 * vec3(sfbm(pp * 1.3 + 7.0, 3), sfbm(pp * 1.3 + 13.0, 3), 0.0), 5);
-    float env = exp(-rg * rg * 1.5);
-    float dens = smoothstep(0.38, 0.75, w) * env;
-    float fil = ridge(pp * 2.2 + 5.0, 4) * env;
-    vec3 col = mix(C2, C3, smoothstep(0.3, 0.7, nz(pp * 0.9 + 21.0)));
-    emit += B * ((dens * (0.5 + 1.2 * fil) + 0.05 * env) * col * 1.15);
-    for (int k = 0; k < 4; k++) {
-      vec3 h = h33(vec3(sd, float(k), 1.0));
-      vec2 sp = (h.xy - 0.5) * 1.1 * S;
-      float s0 = max(px * 0.8, 0.003);
-      emit += B * (bright(d - sp, s0) * 1.2 + bright(d - sp, s0 * 5.0) * 0.18) * mix(vec3(0.7, 0.85, 1.0), vec3(1.0), h.z) * smoothstep(1.2, 0.5, rg);
-    }
-  } else if (kind == 5) {
-    // a planetary nebula: the shell of gas a dying star blew off
-    vec2 g = rt(d, f1.x) / S;
-    float rr = length(vec2(g.x * 0.8, g.y * 1.25));
-    float ring = exp(-pow((rr - 0.55) / 0.11, 2.0));
-    float shell = exp(-pow((rr - 0.62) / 0.3, 2.0)) * 0.35;
-    float mo = 0.55 + 0.9 * nz(vec3(g * 5.0, sd));
-    vec3 col = mix(C2, C3, smoothstep(0.35, 0.85, rr));
-    emit += B * ((ring * 0.95 + shell) * mo * col + bright(d, max(px * 0.8, 0.0035)) * vec3(0.9, 0.95, 1.0) * 1.3);
-  } else if (kind == 6) {
-    // a supernova remnant: threads of gas on a ragged shell
-    vec2 g = d / S;
-    float th = atan(g.y, g.x);
-    float R = 0.62 + 0.2 * (nz(vec3(cos(th) * 1.1, sin(th) * 1.1, sd)) - 0.5);
-    float sh = exp(-pow((rg - R) / 0.07, 2.0));
-    float fil = pow(ridge(vec3(g * 5.0, sd), 5), 2.5);
-    float arc = smoothstep(0.25, 0.6, nz(vec3(cos(th) * 1.2, sin(th) * 1.2, sd + 9.0)));
-    float I = sh * (0.25 + 1.2 * fil) * (0.35 + 0.9 * arc);
-    float inner = exp(-rg * rg * 3.0) * 0.14 * (0.4 + nz(vec3(g * 3.0, sd + 4.0)));
-    float wisp = exp(-pow((rg - R - 0.34) / 0.09, 2.0)) * 0.3 * pow(ridge(vec3(g * 4.0 + 11.0, sd), 4), 2.0) * arc;
-    vec3 col = mix(C2, C3, smoothstep(0.3, 0.7, nz(vec3(g * 2.0, sd + 14.0))));
-    emit += B * ((I * 1.4 + wisp) * col + inner * C3);
-  } else if (kind == 7) {
-    // a dark cloud of dust that blots out what is behind it
-    vec2 g = rt(d, f1.x) / S; g.y /= f1.y;
-    float rr = length(g);
-    float w = sfbm(vec3(g * 2.8, sd), 5);
-    float dens = smoothstep(0.38, 0.62, w) * exp(-rr * rr * 1.8);
-    blk = max(blk, dens * 0.93);
-    emit += B * 0.06 * C2 * (dens * (1.0 - dens) * 4.0);
-  } else if (kind == 8) {
-    // a globular cluster: a ball of old stars, packed tight at the middle
-    float prof = pow(1.0 / (1.0 + pow(rg / 0.16, 2.0)), 1.1) * smoothstep(1.1, 0.7, rg);
-    float cs = 0.010;
-    vec2 gp = d / cs; vec2 gi = floor(gp), gf = fract(gp);
-    vec3 h = h33(vec3(gi, sd));
-    float st = 0.0;
-    if (h.x < prof * 0.9) { vec2 dd = (gf - (0.25 + 0.5 * h.yz)) * cs; st = bright(dd, max(px * 0.7, 0.0011)) * (0.35 + 0.65 * h.y); }
-    emit += B * (prof * 0.6 * C3 + st * 1.6 * mix(C2, C3, h.z));
-  } else if (kind == 9) {
-    // an open cluster: a handful of young blue stars that were born together
-    for (int j = 0; j < 14; j++) {
-      vec3 h = h33(vec3(float(j) * 1.3 + sd, 5.0, 9.0));
-      vec2 sp = (h.xy * 2.0 - 1.0) * S * (0.3 + 0.7 * h.z);
-      float m = h33(vec3(float(j), sd, 2.0)).x;
-      float s0 = max(px * 0.8, 0.0014 + 0.0032 * m);
-      vec2 dd = d - sp;
-      emit += B * (bright(dd, s0) * (0.45 + 0.8 * m) + bright(dd, s0 * 4.0) * 0.12 * m) * ((h.z > 0.8) ? C3 : C2);
-    }
-    emit += B * 0.05 * exp(-rg * rg * 2.0) * C2;
-  } else if (kind == 10) {
-    // a black hole, with its glowing disc bent over the top and under the bottom
-    vec2 g = e;
-    float rs = 0.26 * S, rl = length(g), k = f1.y;
-    float ru = length(vec2(g.x, g.y / k)) / S;
-    float disc = smoothstep(0.34, 0.42, ru) * smoothstep(0.82, 0.5, ru) * exp(-(ru - 0.34) * 2.5);
-    float dop = 1.0 + 0.6 * (g.x / S);
-    vec3 hot = mix(C2, vec3(1.0, 0.96, 0.9), exp(-(ru - 0.34) * 8.0));
-    float horizon = 1.0 - smoothstep(rs * 0.97, rs * 1.03, rl);
-    float mask = (g.y < 0.0) ? 1.0 : 1.0 - horizon;
-    float streak = 0.7 + 0.5 * nz(vec3(ru * 14.0, atan(g.y / k, g.x) * 3.0, sd));
-    float ring = exp(-pow((rl - 1.28 * rs) / (0.16 * rs), 2.0));
-    float lens = exp(-pow((rl - 1.28 * rs) / (0.5 * rs), 2.0)) * exp(-pow(g.x / (1.4 * rs), 2.0)) * 0.7;
-    emit += B * hot * dop * (disc * mask * streak * 3.0 + (ring * 1.4 + lens * 1.1) * (1.0 - horizon)) + B * 0.02 * C2 * exp(-rl / (S * 0.8));
-    blk = max(blk, horizon);
-  } else if (kind == 11) {
-    // a pulsar: a spinning neutron star sweeping two beams across the sky
-    float rr = length(d);
-    float s0 = max(px * 0.9, 0.003);
-    float core = exp(-rr * rr / (2.0 * s0 * s0)) * 1.6 + pow(1.0 / (1.0 + pow(rr / (0.04 * S), 2.0)), 1.5) * 0.4;
-    float w = max(px * 0.8, 0.0022) * (1.0 + 4.0 * abs(e.x) / S);
-    float beam = exp(-pow(e.y / w, 2.0)) * exp(-abs(e.x) / (S * 1.1)) * 0.75;
-    float waves = 0.0;
-    emit += B * C2 * (core + beam + waves);
-  } else if (kind == 12) {
-    // a comet: a bright head and two tails, one of gas and one of dust
-    float rr = length(d);
-    float head = bright(d, max(px * 1.1, 0.0035)) * 1.8 + exp(-rr / (S * 0.07)) * 0.4;
-    float L = 2.0 * S, t = e.x / L;
-    float on = smoothstep(0.0, 0.03, t);
-    float wi = 0.003 + 0.009 * t;
-    float ion = exp(-pow(e.y / wi, 2.0)) * exp(-t * 2.2) * (0.6 + 0.8 * nz(vec3(t * 16.0, e.y * 300.0, sd))) * on;
-    float wd = 0.006 + 0.05 * t;
-    float dust = exp(-pow((e.y - 0.09 * L * t * t) / wd, 2.0)) * exp(-t * 2.8) * 0.5 * on;
-    emit += B * (head * vec3(1.0, 0.98, 0.94) + ion * C2 * 0.9 + dust * C3);
-  } else if (kind == 13) {
-    // a neighbouring planet, lit from one side, maybe with rings
-    vec2 g = d / S;
-    vec3 hs = h33(vec3(sd, 8.0, 2.0));
-    float la = hs.x * 6.2832;
-    vec3 L = normalize(vec3(cos(la), sin(la), mix(-0.25, 0.75, hs.y)));
-    float aa = px / S;
-    float pm = 1.0 - smoothstep(1.0 - aa, 1.0 + aa, rg);
-    float z = sqrt(max(0.0, 1.0 - rg * rg));
-    vec3 n = vec3(g, z);
-    vec2 ge = rt(d, f1.x) / S;
-    float bands = 0.5 + 0.5 * sin(ge.y * 9.0 + 2.2 * nz(vec3(g * 3.0, sd)) + sd);
-    vec3 body = mix(C2, C3, bands) * (0.85 + 0.3 * nz(vec3(g * 9.0, sd + 4.0)));
-    float lit = smoothstep(-0.06, 0.5, dot(n, L));
-    vec3 planet = body * (0.03 + 1.15 * lit) + C2 * pow(1.0 - z, 3.0) * smoothstep(-0.2, 0.4, dot(n, L)) * 0.7;
-    float ky = 0.32 + 0.25 * hs.z;
-    vec2 er = vec2(ge.x, ge.y / ky);
-    float rr = length(er);
-    float ringM = step(0.5, f1.y) * smoothstep(1.35, 1.42, rr) * smoothstep(2.3, 2.2, rr) * (0.3 + 0.5 * (0.5 + 0.5 * sin(rr * 22.0 + sd) * sin(rr * 7.0 + 1.0))) * (1.0 - 0.9 * exp(-pow((rr - 1.95) / 0.04, 2.0))) * 0.7;
-    vec3 ringC = mix(C3, vec3(1.0), 0.35) * ringM * (0.35 + 0.65 * smoothstep(-0.7, 0.7, dot(normalize(vec2(cos(la), sin(la))), normalize(d + 1e-5)) * 0.5 + 0.5));
-    float frontRing = (ge.y < 0.0) ? 1.0 : 0.0;
-    vec3 outc = (1.0 - frontRing) * ringC * (1.0 - pm) + planet * pm + frontRing * ringC;
-    emit += B * outc;
-    blk = max(blk, max(pm, ringM * 0.5));
-  } else {
-    // a quasar: the blazing heart of a far galaxy, firing two jets
-    float rr = length(d);
-    float s0 = max(px * 0.9, 0.003);
-    float core = exp(-rr * rr / (2.0 * s0 * s0)) * 2.0 + pow(1.0 / (1.0 + pow(rr / (0.08 * S), 2.0)), 1.5) * 0.55;
-    float w = 0.002 + 0.004 * abs(e.x) / S;
-    float jets = exp(-pow(e.y / w, 2.0)) * exp(-abs(e.x) / (S * 0.6)) * (0.5 + 0.9 * nz(vec3(e.x * 60.0 / S, sd, 3.0))) * smoothstep(0.02, 0.1, abs(e.x) / S);
-    vec2 g = vec2(e.x, e.y / 0.7) / S;
-    emit += B * (core * mix(vec3(1.0), C2, 0.3) + jets * C2 * 0.8 + exp(-dot(g, g) * 9.0) * 0.12 * vec3(1.0, 0.9, 0.75));
-  }
-}
-
-void main() {
-  vec2 fc = gl_FragCoord.xy;
-  float asp = uRes.x / uRes.y;
-  vec2 q = (fc - 0.5 * uRes) / uRes.y;
-  float px = 1.0 / uRes.y, sc = uRes.y / 700.0;
-  // a black hole bends the sky behind it
-  vec2 qs = q;
-  if (uLens.w > 0.5) {
-    vec2 dl = q - vec2(uLens.x * 0.5 * asp, uLens.y * 0.5);
-    qs = q - dl * (uLens.z * uLens.z / max(dot(dl, dl), 1e-5));
-  }
-  vec3 col = uBase * (0.75 + 0.7 * nz(vec3(qs * 0.9, uA.x)));
-  col += bigGas(qs);
-  // the Milky Way
-  vec2 b = bandXY(qs);
-  float hw = max(uB.y, 0.03);
-  float prof = exp(-pow(b.y / hw, 2.0));
-  if (uA.z > 0.001) {
-    float br = 0.3 + 1.0 * exp(-pow((b.x - uC.x) / 0.5, 2.0));
-    float n = sfbm(vec3(b * vec2(2.5, 0.45 / hw), uA.x + 20.0), 4);
-    float n2 = sfbm(vec3(b * vec2(7.0, 1.4 / hw) + 9.0, uA.x + 30.0), 3);
-    float glow = prof * (0.2 + 1.2 * n) * br * (0.55 + 0.9 * n2);
-    float dn = sfbm(vec3(b.x * 3.0, b.y * 1.6 / hw, uA.x + 50.0), 4);
-    float lane = smoothstep(0.5, 0.64, dn) * exp(-pow(b.y / (hw * 0.55), 2.0));
-    float rift = exp(-pow((b.y - 0.1 * hw * (dn - 0.5) * 4.0) / (0.1 * hw), 2.0)) * smoothstep(0.35, 0.6, sfbm(vec3(b * vec2(5.0, 2.0 / hw) + 3.0, uA.x + 60.0), 3));
-    vec3 bc = mix(uBandEdge, uBandCore, clamp(prof * prof * br * 1.3, 0.0, 1.0));
-    col += bc * glow * 0.55 * uA.z * (1.0 - 0.8 * lane) * (1.0 - 0.6 * rift);
-  }
-  vec3 sc3 = starLayers(qs, prof * min(uA.z, 1.5), sc);
-  // fine grit of unresolved stars along the band
-  float grit = h33(vec3(fc, 77.0)).x;
-  sc3 += step(1.0 - 0.05 * prof * uA.z, grit) * (0.1 + 0.3 * h33(vec3(fc, 91.0)).y) * vec3(0.9, 0.93, 1.0);
-  col += sc3;
-  for (int i = 0; i < 12; i++) {
-    if (float(i) >= uC.z) break;
-    float blk = 0.0; vec3 em = vec3(0.0);
-    feature(i, q, asp, px, em, blk);
-    col = col * (1.0 - blk) + em;
-  }
-  col = 1.0 - exp(-col * 1.25);
-  col += (h33(vec3(fc, 5.0)).x - 0.5) / 255.0;
-  fragColor = vec4(col, 1.0);
-}
-</script>
-
 <script id="fs" type="x-shader/x-fragment">#version 300 es
 precision highp float;
 out vec4 fragColor;
 uniform vec2 uRes;
 uniform float uZoom;
 uniform vec2 uShift;        // moves the view (a ring's close-up on its far floor)
-uniform highp sampler2D uSkyTex;   // the sky behind the planet, drawn by the sky pass
-uniform float uSkyOn;       // 0: no sky texture, draw the plain star field
 uniform int uType;            // 0 rocky, 1 gas giant, 2 tidally locked
 uniform vec3 uPal[5];
 uniform vec3 uHazeCol;
@@ -602,7 +245,7 @@ uniform float uLowCl;        // how much of the low cloud deck shows: 1 normally
 uniform vec3 uCloudCol;       // what the clouds are made of: white for water, tan for dust, near black for ash
 uniform float uSeed, uSea, uMount, uScale, uIce, uClouds, uHaze, uCities, uDens, uPlan, uRad, uLava, uCraters, uScars, uWet, uBiome, uQ;
 uniform float uBands, uTurb, uStorms, uStormSize;
-uniform float uSpin, uCloudAng, uFlowT, uRingAng, uTime;
+uniform float uSpin, uCloudAng, uFlowT, uRingAng, uTime, uStarDens;
 uniform vec3 uAxis, uU, uW, uL;
 uniform float uRingOn, uRingIn, uRingOut, uRingOp, uRingGaps, uRingStruct, uRingClump, uRingDust, uRingSeed;
 uniform int uRingType;      // 0 broad icy, 1 narrow dark, 2 faint dust, 3 clumpy arcs, 4 fresh wreckage, 5 moon-fed dust
@@ -2183,7 +1826,7 @@ vec3 stars(vec2 fc) {
     float cell = (l == 0) ? 46.0 : 21.0;
     vec2 g = floor(fc / cell), f = fract(fc / cell);
     vec3 h = hash33(vec3(g, float(l) * 7.0 + 1.0));
-    if (h.x > 0.93) {
+    if (h.x > 1.0 - 0.28 * uStarDens * uStarDens) {   // 0.5 is the earlier 7% of cells (same stars); 0 none; 1 four times as many
       float d = length(f - h.yz);
       float tw = 0.75 + 0.25 * sin(uTime * (0.6 + h.x * 3.0) + h.y * 60.0);
       vec3 tint = mix(vec3(0.75, 0.85, 1.0), vec3(1.0, 0.88, 0.7), h.z);
@@ -2198,7 +1841,7 @@ void main() {
   vec2 uv = (fc - 0.5 * uRes) / (0.5 * uRes.y) / uZoom + uShift;
   float px = 2.0 / (uRes.y * uZoom);
   gPxC = px;
-  vec3 col = (uSkyOn > 0.5) ? texelFetch(uSkyTex, ivec2(fc), 0).rgb : vec3(0.012, 0.014, 0.022) + stars(fc);
+  vec3 col = vec3(0.012, 0.014, 0.022) + stars(fc);
   gL = uL; gFlat = 0.0;
 #ifdef PM_MEGA
   if (uType == 3) {
@@ -2426,11 +2069,10 @@ const IS_ROCKY = (t) => t !== 'gas';
 const BASE = {
   seed: 7, sea: 0.5, mount: 0.5, wet: 0, scale: 1.0, ice: 0.4, clouds: 0.5, haze: 0.6, cities: 0, rad: 6371, plan: 0.5, land: null, lava: 0, craters: 0, scars: 0,
   bands: 9, turb: 0.6, storms: 2, stormSize: 1.0,
-  spin: 0.25, cloudSpeed: 0.3, flow: 0.4, tilt: 22, roll: -12, sun: -55, sunH: 12, zoom: 1,
+  spin: 0.25, cloudSpeed: 0.3, flow: 0.4, tilt: 22, roll: -12, sun: -55, sunH: 12, zoom: 1, starDens: 0.5,
   ring: { on: false, type: 'broad', inner: 1.24, width: 1.03, op: 0.8, gaps: 0.8, struct: 0.6, clump: 0.3, dust: 0.15, feeder: 0, seed: 1, spin: 0.3, c1: '#d8c8a4', c2: '#7a6a55' },
   moons: 1, moonSpeed: 0.6, moonList: [],
   mLayers: 2, mOpen: 0.35, mCap: 1, mWidth: 0.14, mWall: 0.05, mSpan: 0.7, mShade: 0.28, mPlate: 0.6, mLights: 0.5, mStar: 1, mSun: 'star', mPorts: 0.6, mLook: 0, mHull: '#8b9199', mAcc: '#e0a64a',
-  sky: 0, skyTheme: 'auto', skyOn: 1, skyStars: 0.5, skyBand: 0.5, skyNeb: 0.5, skyObj: 0.25,
   oOn: 0, oHt: 0.12, oWid: 0.045, oStn: 8, oLit: 0.6, oHull: '#8b9199', oAcc: '#e0a64a', eOn: 0, eLon: -20, eHt: 0.9, eN: 1,
 };
 const KIND_DEF = {
@@ -2558,16 +2200,13 @@ const CONTROLS = [
   ['Cam', 'sun', 'Sun side', -180, 180, 1, () => true, (v) => v + '°'],
   ['Cam', 'sunH', 'Sun height', -60, 60, 1, () => true, (v) => v + '°'],
   ['Cam', 'zoom', 'Zoom', 0.5, 1.8, 0.01, () => true],
-  ['Back', 'skyStars', 'Stars', 0, 1, 0.01, () => true, (v) => v < 0.03 ? 'none' : v < 0.35 ? 'sparse' : v < 0.65 ? 'normal' : v < 0.9 ? 'crowded' : 'packed'],
-  ['Back', 'skyBand', 'Milky Way', 0, 1, 0.01, () => true, (v) => v < 0.03 ? 'off' : v < 0.35 ? 'faint' : v < 0.65 ? 'clear' : 'bright'],
-  ['Back', 'skyNeb', 'Gas clouds', 0, 1, 0.01, () => true, (v) => v < 0.03 ? 'none' : v < 0.35 ? 'faint' : v < 0.65 ? 'clear' : 'vivid'],
-  ['Back', 'skyObj', 'Things to see', 0, 1, 0.01, () => true, (v) => Math.ceil(v * 12 - 1e-6) + ' of 12'],
+  ['Stars', 'starDens', 'Star density', 0, 1, 0.01, () => true, (v) => v < 0.01 ? 'none' : v < 0.3 ? 'sparse' : v < 0.7 ? 'normal' : v < 0.9 ? 'dense' : 'packed'],
   ['Moon', 'moons', 'How many', 0, 5, 1, () => true],
 ];
 // a drum has no ground, sea or sky to adjust: the terrain, weather and palette controls belong to the ring and the planets
 for (const c of CONTROLS) if (c[0] === 'Look' || c[0] === 'Sky' || c[1] === 'cloudSpeed') { const f = c[6]; c[6] = (p) => f(p) && TERR(p); }
 function spinText(v, p) { if (Math.abs(v) < 0.01) return 'stopped'; const s = 2 * Math.PI / (Math.abs(v) * 0.5); return (v < 0 ? '↺ ' : '') + Math.round(s) + ' s'; }
-const SEC_HOST = { Orb: 'ctlOrb', Struct: 'ctlMega', Look: 'ctlLook', Sky: 'ctlSky', Back: 'ctlBack', Motion: 'ctlMotion', Cam: 'ctlCam', Moon: 'ctlMoon' };
+const SEC_HOST = { Orb: 'ctlOrb', Struct: 'ctlMega', Look: 'ctlLook', Sky: 'ctlSky', Motion: 'ctlMotion', Cam: 'ctlCam', Stars: 'ctlStars', Moon: 'ctlMoon' };
 const ctlEls = {};
 const get = (k) => k === 'size' ? 3 - P.scale : k === 'land' ? landShare(P) : k === 'ringSpin' ? P.ring.spin : P[k];
 const set = (k, v) => { if (k === 'size') P.scale = 3 - v; else if (k === 'land') P.land = v; else if (k === 'ringSpin') P.ring.spin = v; else P[k] = v; };
@@ -2580,7 +2219,7 @@ function buildControls() {
     row.innerHTML = `<label for="${id}">${label}</label><input type="range" id="${id}" min="${min}" max="${max}" step="${step}"><output></output>`;
     $(SEC_HOST[sec]).appendChild(row);
     const inp = row.querySelector('input'), out = row.querySelector('output');
-    inp.addEventListener('input', () => { set(key, parseFloat(inp.value)); refreshOut(c); updateCityInfo(); if (sec === 'Back') skyUISync(); if (key === 'moons') { const n0 = ensureMoons(); if (n0 > 0 && selMoon >= n0) selMoon = n0 - 1; rebuildMoons(); } if (key === 'tilt' || key === 'roll') {} });
+    inp.addEventListener('input', () => { set(key, parseFloat(inp.value)); refreshOut(c); updateCityInfo(); if (key === 'moons') { const n0 = ensureMoons(); if (n0 > 0 && selMoon >= n0) selMoon = n0 - 1; rebuildMoons(); } if (key === 'tilt' || key === 'roll') {} });
     ctlEls[key] = { row, inp, out, c };
   }
   const info = document.createElement('div'); info.id = 'cityInfo'; info.className = 'note'; info.style.cssText = 'margin:-2px 0 8px;opacity:.75;font-size:12px';
@@ -2624,7 +2263,6 @@ function syncControls() {
   syncMegaUI();
   syncRingUI();
   syncOrbUI();
-  skyUISync();
   rebuildMoons();
 }
 
@@ -3003,249 +2641,6 @@ function initGL() {
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
   gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 }
-/* ---------- the sky behind the planet ---------- */
-// Every planet gets its own sky: stars, a Milky Way, gas clouds and a handful of things worth looking at (galaxies, nebulae, clusters, a black hole, a comet...).
-// planSky() decides what is in it from a seed, so the same planet always has the same sky; the sky shader (skyfs) draws it once into a texture.
-const SKY_KIND = { star: 0, spiral: 1, elliptical: 2, edgeon: 3, emission: 4, planetary: 5, remnant: 6, dark: 7, globular: 8, open: 9, hole: 10, pulsar: 11, comet: 12, planet: 13, quasar: 14 };
-const SKY_NAME = { star: ['bright star', 'bright stars'], spiral: ['spiral galaxy', 'spiral galaxies'], elliptical: ['elliptical galaxy', 'elliptical galaxies'], edgeon: ['galaxy seen edge-on', 'galaxies seen edge-on'], emission: ['glowing gas nebula', 'glowing gas nebulae'], planetary: ['planetary nebula', 'planetary nebulae'], remnant: ['supernova remnant', 'supernova remnants'], dark: ['dark dust cloud', 'dark dust clouds'], globular: ['globular cluster', 'globular clusters'], open: ['open star cluster', 'open star clusters'], hole: ['black hole', 'black holes'], pulsar: ['pulsar', 'pulsars'], comet: ['comet', 'comets'], planet: ['neighbouring planet', 'neighbouring planets'], quasar: ['quasar', 'quasars'] };
-const SKY_THEMES = [
-  { id: 'auto', name: 'Auto', sub: 'picked for this planet', w: 0, note: 'Picks one of the skies below from the planet, so every world gets its own. Choose a kind to force it.' },
-  { id: 'deep', name: 'Deep field', sub: 'galaxies everywhere', w: 0.14, note: 'Far from any galaxy\'s disc: few stars of our own, and a crowd of other galaxies of every shape, a quasar among them.' },
-  { id: 'nursery', name: 'Stellar nursery', sub: 'gas, dust, newborn stars', w: 0.12, note: 'A star-forming region: great glowing clouds in two colours, dark dust cutting across them, and clusters of young blue stars.' },
-  { id: 'lane', name: 'Galactic lane', sub: 'the Milky Way, edge on', w: 0.2, note: 'A planet in the plane of its galaxy: a broad band of a billion stars cut by dust, with old clusters and a few bright neighbours.' },
-  { id: 'twin', name: 'Twin suns', sub: 'a binary pair', w: 0.1, note: 'Two bright stars of different colours circling each other, with a dying star\'s gas shell, a young cluster and, sometimes, a giant planet.' },
-  { id: 'remnant', name: 'Supernova remnant', sub: 'a star that died here', w: 0.1, note: 'The ragged shell of a star that blew up, a pulsar where its core was, and wisps of gas still glowing.' },
-  { id: 'hole', name: 'Black hole', sub: 'light bent round a hole', w: 0.06, note: 'A black hole with its glowing disc, and the Milky Way behind it bent into arcs around it.' },
-  { id: 'core', name: 'Cluster core', sub: 'a sky packed with stars', w: 0.08, note: 'The middle of a huge old cluster: stars crowd the sky so thickly there is hardly any black left, most of them old and red.' },
-  { id: 'neighbours', name: 'Giant neighbours', sub: 'planets in the sky', w: 0.12, note: 'This system\'s own sky: a giant neighbour with rings filling a corner, smaller worlds, the system\'s sun, and a comet.' },
-  { id: 'rim', name: 'Quiet rim', sub: 'one galaxy, mostly dark', w: 0.08, note: 'The empty edge of a galaxy: very few stars, and the galaxy itself hanging huge and faint in the sky.' },
-];
-function rng32(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-function hsl(h, s, l) {
-  h = ((h % 1) + 1) % 1;
-  const a = s * Math.min(l, 1 - l), f = (n) => { const k = (n + h * 12) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
-  return [f(0), f(8), f(4)];
-}
-const NEB_PAIRS = [[[0.97, 0.75, 0.5], [0.52, 0.65, 0.45]], [[0.01, 0.85, 0.45], [0.62, 0.6, 0.5]], [[0.78, 0.55, 0.5], [0.93, 0.7, 0.55]], [[0.07, 0.85, 0.5], [0.55, 0.55, 0.5]], [[0.4, 0.6, 0.4], [0.92, 0.6, 0.5]], [[0.58, 0.7, 0.5], [0.85, 0.6, 0.55]]];
-function planSky(seed, themeId) {
-  const R = rng32(seed);
-  const rg = (a, b) => a + (b - a) * R();
-  const pickOf = (arr) => arr[Math.floor(R() * arr.length)];
-  let theme = themeId;
-  if (!SKY_THEMES.some((t) => t.id === theme) || theme === 'auto') {
-    let x = R() * SKY_THEMES.reduce((s, t) => s + t.w, 0);
-    theme = 'lane';
-    for (const t of SKY_THEMES) { x -= t.w; if (t.w > 0 && x <= 0) { theme = t.id; break; } }
-  }
-  const feats = [];
-  // a place for something of this size: round the planet, not behind it, clear of what is already there
-  const spot = (size) => {
-    let best = [1, 0.9];
-    for (let t = 0; t < 80; t++) {
-      const a = R() * 6.2832, rho = 0.74 + R() * 0.6;
-      // most of it stays in the picture: a big thing sits further in than a small one
-      const xm = Math.min(1.1, 1.0 - 0.77 * size + 0.1), ym = Math.min(1.05, 1.0 - size + 0.1);
-      const x = Math.max(-xm, Math.min(xm, Math.cos(a) * rho)), y = Math.max(-ym, Math.min(ym, Math.sin(a) * rho));
-      if (Math.hypot(x * 0.65, y * 0.5) < 0.4 + size * 0.25) continue;
-      best = [x, y];
-      if (!feats.some((f) => Math.hypot((f.x - x) * 0.65, (f.y - y) * 0.5) < (f.size + size) * 0.55)) return best;
-    }
-    return best;
-  };
-  const add = (kind, size, o = {}) => {
-    const [x, y] = o.at || spot(size);
-    feats.push({ kind, x, y, size, ang: o.ang !== undefined ? o.ang : rg(0, 3.1416), aux: o.aux !== undefined ? o.aux : 1, seed: rg(1, 90), bri: o.bri !== undefined ? o.bri : 1, c1: o.c1 || [1, 1, 1], c2: o.c2 || [1, 1, 1], label: o.label || kind });
-    return feats[feats.length - 1];
-  };
-  const starColour = () => pickOf([hsl(0.6, 0.55, 0.85), hsl(0.58, 0.35, 0.92), [1, 0.97, 0.9], hsl(0.12, 0.6, 0.85), hsl(0.07, 0.7, 0.75), hsl(0.03, 0.75, 0.68)]);
-  const K = {
-    star: (s, o) => add('star', s || rg(0.05, 0.09), Object.assign({ c1: starColour(), bri: rg(0.9, 1.4) }, o)),
-    spiral: (s, o) => add('spiral', s || rg(0.05, 0.1), Object.assign({ aux: rg(0.32, 0.9), c1: hsl(rg(0.56, 0.64), 0.5, 0.72), c2: hsl(rg(0.07, 0.13), 0.55, 0.82), bri: rg(0.8, 1.2) }, o)),
-    elliptical: (s, o) => add('elliptical', s || rg(0.04, 0.08), Object.assign({ aux: rg(0.55, 1), c1: hsl(0.09, 0.45, 0.8), c2: hsl(rg(0.07, 0.12), 0.5, 0.78), bri: rg(0.8, 1.2) }, o)),
-    edgeon: (s, o) => add('edgeon', s || rg(0.08, 0.14), Object.assign({ aux: rg(0.05, 0.1), c1: hsl(rg(0.1, 0.16), 0.4, 0.78), c2: hsl(0.1, 0.55, 0.85), bri: rg(0.9, 1.3) }, o)),
-    emission: (s, o) => { const p = pickOf(NEB_PAIRS); return add('emission', s || rg(0.14, 0.24), Object.assign({ c1: hsl(...p[0]), c2: hsl(...p[1]), bri: rg(0.8, 1.15) }, o)); },
-    planetary: (s, o) => add('planetary', s || rg(0.05, 0.09), Object.assign({ c1: hsl(rg(0.44, 0.5), 0.7, 0.55), c2: hsl(rg(0.0, 0.03), 0.8, 0.5), bri: rg(0.9, 1.3) }, o)),
-    remnant: (s, o) => add('remnant', s || rg(0.18, 0.28), Object.assign({ c1: hsl(rg(0.0, 0.04), 0.85, 0.5), c2: hsl(rg(0.55, 0.62), 0.75, 0.55), bri: rg(0.9, 1.25) }, o)),
-    dark: (s, o) => add('dark', s || rg(0.1, 0.18), Object.assign({ aux: rg(0.45, 1), c1: hsl(0.02, 0.6, 0.4), bri: 1 }, o)),
-    globular: (s, o) => add('globular', s || rg(0.07, 0.12), Object.assign({ c1: hsl(0.1, 0.5, 0.85), c2: hsl(0.1, 0.6, 0.7), bri: rg(0.9, 1.3) }, o)),
-    open: (s, o) => add('open', s || rg(0.06, 0.1), Object.assign({ c1: hsl(0.6, 0.6, 0.85), c2: hsl(0.07, 0.8, 0.7), bri: rg(0.9, 1.3) }, o)),
-    hole: (s, o) => add('hole', s || rg(0.11, 0.16), Object.assign({ aux: rg(0.16, 0.3), c1: hsl(rg(0.05, 0.1), 0.85, 0.55), bri: 1 }, o)),
-    pulsar: (s, o) => add('pulsar', s || rg(0.1, 0.16), Object.assign({ c1: hsl(0.6, 0.55, 0.85), bri: rg(0.9, 1.2) }, o)),
-    comet: (s, o) => add('comet', s || rg(0.1, 0.16), Object.assign({ c1: hsl(0.56, 0.6, 0.72), c2: hsl(0.12, 0.35, 0.85), bri: rg(0.9, 1.2) }, o)),
-    planet: (s, o) => { const ringed = R() < 0.55, h = rg(0, 1); return add('planet', s || rg(0.05, 0.1), Object.assign({ aux: ringed ? 1 : 0, c1: hsl(h, rg(0.3, 0.55), rg(0.55, 0.72)), c2: hsl(h + rg(-0.08, 0.08), rg(0.25, 0.5), rg(0.35, 0.55)), bri: 1, label: ringed ? 'ringed planet' : 'neighbouring planet' }, o)); },
-    quasar: (s, o) => add('quasar', s || rg(0.08, 0.13), Object.assign({ c1: hsl(0.6, 0.7, 0.75), bri: rg(0.9, 1.2) }, o)),
-  };
-  // top the list up from a pool of small things, never more than a few of one kind (two comets, one quasar...)
-  const CAP = { comet: 2, quasar: 1, hole: 1, pulsar: 1, remnant: 2, planetary: 2, star: 4 };
-  const fill = (n, pool) => { for (let t = 0; feats.length < n && t < 60; t++) { const before = feats.length; pickOf(pool)(); const f = feats[feats.length - 1]; if (feats.filter((q) => q.kind === f.kind).length > (CAP[f.kind] || 4)) feats.length = before; } };
-  const band = (amt, o = {}) => ({ amt, ang: o.ang !== undefined ? o.ang : rg(-0.55, 0.55) + (R() < 0.25 ? 1.57 : 0), w: o.w || rg(0.1, 0.2), off: o.off !== undefined ? o.off : rg(-0.2, 0.2), arch: rg(-0.35, 0.35), bulge: rg(-0.5, 0.5), core: o.core || hsl(rg(0.07, 0.12), rg(0.3, 0.5), 0.86), edge: o.edge || hsl(rg(0.56, 0.64), rg(0.25, 0.45), 0.6) });
-  const nebPair = () => { const p = pickOf(NEB_PAIRS); return [hsl(...p[0]), hsl(...p[1])]; };
-  const S = { theme, seed, dens: 1, warm: 0, base: [0.004, 0.0055, 0.012], band: band(0), neb: { amt: 0.1, c1: [0.05, 0.08, 0.22], c2: [0.12, 0.05, 0.2] }, lens: null, feats };
-
-  if (theme === 'deep') {
-    S.dens = 0.5; S.base = [0.003, 0.0035, 0.009]; S.band = R() < 0.3 ? band(0.35) : band(0);
-    S.neb = { amt: 0.05, c1: [0.03, 0.05, 0.12], c2: [0.06, 0.04, 0.1] };
-    K.spiral(rg(0.14, 0.2), { aux: rg(0.4, 0.8) }); K.quasar(); K.edgeon(); K.elliptical(); K.spiral(); K.elliptical();
-    fill(12, [() => K.spiral(rg(0.04, 0.07)), () => K.elliptical(rg(0.03, 0.06)), () => K.edgeon(rg(0.06, 0.1)), () => K.star()]);
-  } else if (theme === 'nursery') {
-    S.dens = 0.9; S.base = [0.008, 0.005, 0.014]; S.band = R() < 0.5 ? band(0.4) : band(0);
-    const [n1, n2] = nebPair(); S.neb = { amt: 0.3, c1: n1.map((v) => v * 0.55), c2: n2.map((v) => v * 0.55) };
-    K.emission(rg(0.24, 0.32)); K.dark(rg(0.14, 0.2)); K.emission(rg(0.12, 0.18)); K.open(); K.star(); K.dark(); K.open(); K.star(rg(0.06, 0.1), { c1: hsl(0.6, 0.6, 0.9) });
-    fill(12, [() => K.open(rg(0.05, 0.08)), () => K.dark(rg(0.08, 0.13)), () => K.star(), () => K.emission(rg(0.1, 0.15))]);
-  } else if (theme === 'lane') {
-    S.dens = 1.2; S.band = band(1.0, { w: rg(0.14, 0.24) });
-    S.neb = { amt: 0.12, c1: [0.06, 0.07, 0.16], c2: [0.14, 0.06, 0.1] };
-    K.globular(); K.dark(rg(0.12, 0.2)); K.globular(); K.star(); K.open(); K.emission(rg(0.1, 0.16)); K.globular(); K.star(); K.planetary();
-    fill(12, [() => K.open(rg(0.05, 0.08)), () => K.star(), () => K.dark(rg(0.08, 0.13)), () => K.globular(rg(0.05, 0.09)), () => K.planetary(rg(0.04, 0.07))]);
-  } else if (theme === 'twin') {
-    S.dens = 0.8; S.band = R() < 0.6 ? band(0.5) : band(0);
-    const at0 = spot(0.14), at = [Math.max(-0.78, Math.min(0.78, at0[0])), Math.max(-0.72, Math.min(0.72, at0[1]))], a = R() * 6.28, gap = rg(0.12, 0.18);
-    K.star(rg(0.13, 0.17), { at, c1: hsl(0.6, 0.6, 0.9), bri: 1.5, ang: 0.3 });
-    K.star(rg(0.08, 0.12), { at: [at[0] + Math.cos(a) * gap * 2 / 1.3, at[1] + Math.sin(a) * gap * 2], c1: hsl(0.06, 0.8, 0.75), bri: 1.3, ang: 0.5 });
-    K.planetary(rg(0.08, 0.12)); K.open(); K.planet(rg(0.09, 0.15), { aux: 1 });
-    fill(12, [() => K.star(), () => K.open(rg(0.05, 0.08)), () => K.spiral(rg(0.04, 0.06)), () => K.elliptical(rg(0.03, 0.05))]);
-  } else if (theme === 'remnant') {
-    S.dens = 0.7; S.band = R() < 0.5 ? band(0.45) : band(0);
-    const [n1, n2] = nebPair(); S.neb = { amt: 0.18, c1: n1.map((v) => v * 0.4), c2: n2.map((v) => v * 0.4) };
-    const r = K.remnant(rg(0.24, 0.32));
-    K.pulsar(rg(0.12, 0.17), { at: [r.x + rg(-0.1, 0.1), r.y + rg(-0.1, 0.1)] });
-    K.remnant(rg(0.09, 0.13)); K.globular(); K.star(); K.dark(rg(0.08, 0.12));
-    fill(12, [() => K.star(), () => K.spiral(rg(0.04, 0.06)), () => K.open(rg(0.05, 0.08)), () => K.elliptical(rg(0.03, 0.05))]);
-  } else if (theme === 'hole') {
-    S.dens = 0.9; S.band = band(1.1, { w: rg(0.12, 0.18) });
-    const hs = rg(0.12, 0.17), h = K.hole(hs, { at: [(R() < 0.5 ? -1 : 1) * rg(0.74, 0.86), rg(-0.4, 0.4)] });
-    // the band runs through the hole's place so it is bent round it
-    const ang = Math.atan2(h.y * 0.5, h.x * 0.65);
-    S.band.ang = ang; S.band.arch = 0; S.band.off = 0;
-    S.lens = { x: h.x, y: h.y, re: hs * 0.5 };
-    K.quasar(); K.star(); K.spiral(); K.globular(); K.pulsar(rg(0.08, 0.12)); K.star();
-    fill(12, [() => K.star(), () => K.spiral(rg(0.04, 0.06)), () => K.open(rg(0.05, 0.07)), () => K.elliptical(rg(0.03, 0.05))]);
-  } else if (theme === 'core') {
-    S.dens = 3.2; S.warm = 0.45; S.base = [0.012, 0.009, 0.012]; S.band = R() < 0.4 ? band(0.5, { core: hsl(0.08, 0.5, 0.88) }) : band(0);
-    S.neb = { amt: 0.14, c1: [0.14, 0.07, 0.04], c2: [0.1, 0.05, 0.1] };
-    K.globular(rg(0.26, 0.34), { at: [rg(-0.5, 0.5), rg(0.5, 0.75) * (R() < 0.5 ? 1 : -1)] }); K.star(rg(0.08, 0.12), { c1: hsl(0.03, 0.8, 0.65), bri: 1.5 }); K.globular(rg(0.08, 0.12)); K.star(rg(0.06, 0.09), { c1: hsl(0.05, 0.8, 0.7) }); K.planetary(); K.open(); K.star(rg(0.06, 0.09), { c1: hsl(0.08, 0.7, 0.8) });
-    fill(12, [() => K.star(), () => K.globular(rg(0.05, 0.09)), () => K.planetary(rg(0.04, 0.07)), () => K.open(rg(0.05, 0.08))]);
-  } else if (theme === 'neighbours') {
-    S.dens = 0.9; S.band = R() < 0.5 ? band(0.5) : band(0);
-    const big = K.planet(rg(0.11, 0.16), { aux: 1 });
-    // pull the big one toward a corner so its rings and curve fill it
-    big.x = (big.x < 0 ? -1 : 1) * 1.05; big.y = (big.y < 0 ? -1 : 1) * rg(0.35, 0.8);
-    K.star(rg(0.1, 0.15), { c1: [1, 0.96, 0.85], bri: 1.6 }); K.planet(rg(0.045, 0.08)); K.planet(rg(0.035, 0.06)); K.comet(); K.star(); K.star();
-    fill(12, [() => K.star(), () => K.planet(rg(0.03, 0.05)), () => K.spiral(rg(0.04, 0.06)), () => K.open(rg(0.05, 0.07))]);
-  } else {
-    // rim
-    S.dens = 0.3; S.base = [0.003, 0.0035, 0.008]; S.band = band(0);
-    S.neb = { amt: 0.04, c1: [0.03, 0.04, 0.1], c2: [0.06, 0.03, 0.08] };
-    const g = K.spiral(rg(0.34, 0.42), { aux: rg(0.3, 0.6), bri: 0.9 });
-    g.x = (g.x < 0 ? -1 : 1) * rg(0.55, 0.85); g.y = rg(-0.55, 0.55);
-    K.globular(); K.elliptical(); K.quasar(); K.star(); K.elliptical(rg(0.03, 0.05)); K.spiral(rg(0.04, 0.06));
-    fill(12, [() => K.star(), () => K.elliptical(rg(0.03, 0.05)), () => K.spiral(rg(0.03, 0.05)), () => K.globular(rg(0.04, 0.07))]);
-  }
-  feats.length = Math.min(feats.length, 12);
-  return S;
-}
-// words for the "In this sky" line, from the first n objects
-function skyDescribe(plan, n, bandOn, gasOn) {
-  const cnt = {};
-  plan.feats.slice(0, n).forEach((f) => { cnt[f.label] = (cnt[f.label] || 0) + 1; });
-  const parts = Object.keys(cnt).map((k) => { const nm = SKY_NAME[k] || [k, k + 's']; return cnt[k] > 1 ? cnt[k] + ' ' + nm[1] : (/^[aeiou]/.test(nm[0]) ? 'an ' : 'a ') + nm[0]; });
-  if (bandOn) parts.unshift('the Milky Way');
-  parts.unshift('stars');
-  if (gasOn) parts.push('drifting gas');
-  return parts.join(', ');
-}
-const skySeedOf = (p) => hashStr('sky:' + (p.sky > 0 ? 'x' + p.sky : 's' + p.seed));   // 32 bits, so 555 systems never share a sky
-let skyPlanCache = { key: '', plan: null };
-function getSkyPlan() {
-  const seed = skySeedOf(P), key = seed + '|' + P.skyTheme;
-  if (skyPlanCache.key !== key) skyPlanCache = { key, plan: planSky(seed, P.skyTheme) };
-  return skyPlanCache.plan;
-}
-// what the sliders do on top of the plan: more or fewer stars, a stronger band, thicker gas, more objects
-// the sky is meant to sit quietly behind the planet: objects are dim, stars thin, and only a few things show by default
-const SKY_OBJ_GAIN = 0.5;
-function skyMix(plan) {
-  const n = Math.max(0, Math.min(plan.feats.length, Math.ceil(P.skyObj * 12 - 1e-6)));
-  const lensOn = !!(plan.lens && plan.feats.findIndex((f) => f.kind === SKY_KIND.hole) < n && plan.feats.findIndex((f) => f.kind === SKY_KIND.hole) >= 0);
-  return { n, stars: plan.dens * (0.1 + 1.3 * P.skyStars), band: Math.min(1.6, plan.band.amt * 2 * P.skyBand), gas: plan.neb.amt * 1.1 * P.skyNeb, lensOn };
-}
-
-/* sky pass: draws the plan into a texture the size of the picture */
-const sky = { pr: null, l: null, tex: null, fbo: null, w: 0, h: 0, key: '', failed: false };
-function skyInit() {
-  const mk = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error('sky shader: ' + gl.getShaderInfoLog(s)); return s; };
-  const pr = gl.createProgram();
-  gl.attachShader(pr, mk(gl.VERTEX_SHADER, $('vs').textContent.trim()));
-  gl.attachShader(pr, mk(gl.FRAGMENT_SHADER, $('skyfs').textContent.trim()));
-  gl.bindAttribLocation(pr, 0, 'a');
-  gl.linkProgram(pr);
-  if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
-  const l = {}, n = gl.getProgramParameter(pr, gl.ACTIVE_UNIFORMS);
-  for (let i = 0; i < n; i++) { const info = gl.getActiveUniform(pr, i); l[info.name.replace('[0]', '')] = gl.getUniformLocation(pr, info.name); }
-  sky.pr = pr; sky.l = l;
-  sky.tex = gl.createTexture(); sky.fbo = gl.createFramebuffer();
-  gl.bindTexture(gl.TEXTURE_2D, sky.tex);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-}
-// true when a sky texture of this picture size is ready to use
-function skyBake(w, h) {
-  if (!P.skyOn || sky.failed) return false;
-  try {
-    if (!sky.pr) skyInit();
-    const plan = getSkyPlan(), m = skyMix(plan);
-    const key = [w, h, skySeedOf(P), P.skyTheme, P.skyStars, P.skyBand, P.skyNeb, P.skyObj].join('|');
-    if (sky.key === key) return true;
-    gl.bindTexture(gl.TEXTURE_2D, sky.tex);
-    if (sky.w !== w || sky.h !== h) { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null); sky.w = w; sky.h = h; }
-    gl.bindFramebuffer(gl.FRAMEBUFFER, sky.fbo);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, sky.tex, 0);
-    gl.viewport(0, 0, w, h);
-    gl.useProgram(sky.pr);
-    const L = sky.l, b = plan.band;
-    gl.uniform2f(L.uRes, w, h);
-    gl.uniform4f(L.uA, (skySeedOf(P) % 9973) * 0.0731, m.stars, m.band, m.gas);
-    gl.uniform4f(L.uB, b.ang, b.w, b.off, b.arch);
-    gl.uniform4f(L.uC, b.bulge, plan.warm, m.n, SKY_OBJ_GAIN);
-    gl.uniform3fv(L.uBase, plan.base); gl.uniform3fv(L.uBandCore, b.core); gl.uniform3fv(L.uBandEdge, b.edge);
-    gl.uniform3fv(L.uNeb1, plan.neb.c1); gl.uniform3fv(L.uNeb2, plan.neb.c2);
-    gl.uniform4f(L.uLens, plan.lens ? plan.lens.x : 0, plan.lens ? plan.lens.y : 0, plan.lens ? plan.lens.re : 0, m.lensOn ? 1 : 0);
-    const f0 = new Float32Array(48), f1 = new Float32Array(48), f2 = new Float32Array(36), f3 = new Float32Array(36);
-    plan.feats.forEach((f, i) => { f0.set([f.x, f.y, f.size, SKY_KIND[f.kind]], i * 4); f1.set([f.ang, f.aux, f.seed, f.bri], i * 4); f2.set(f.c1, i * 3); f3.set(f.c2, i * 3); });
-    gl.uniform4fv(L.uF0, f0); gl.uniform4fv(L.uF1, f1); gl.uniform3fv(L.uF2, f2); gl.uniform3fv(L.uF3, f3);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    sky.key = key;
-    return true;
-  } catch (e) {
-    sky.failed = true; gl.bindFramebuffer(gl.FRAMEBUFFER, null); console.error(e);
-    return false;
-  }
-}
-function skyUIBuild() {
-  const box = $('skyThemes');
-  SKY_THEMES.forEach((t) => {
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.sky = t.id; b.setAttribute('aria-pressed', 'false');
-    b.innerHTML = `${esc(t.name)}<small>${esc(t.sub)}</small>`;
-    b.addEventListener('click', () => { P.skyTheme = t.id; skyUISync(); });
-    box.appendChild(b);
-  });
-  $('skyOn').addEventListener('change', (e) => { P.skyOn = e.target.checked ? 1 : 0; skyUISync(); });
-  $('skyNew').addEventListener('click', () => { P.sky = 1 + Math.floor(Math.random() * 4294967294); skyUISync(); });
-  $('skyFollow').addEventListener('click', () => { P.sky = 0; skyUISync(); });
-}
-function skyUISync() {
-  if (!$('skyOn')) return;
-  $('skyOn').checked = !!P.skyOn;
-  $('skyBox').hidden = !P.skyOn;
-  document.querySelectorAll('#skyThemes .chip').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.sky === P.skyTheme)));
-  const plan = getSkyPlan(), m = skyMix(plan), t = SKY_THEMES.find((x) => x.id === plan.theme);
-  $('skyNote').textContent = (P.skyTheme === 'auto' ? 'This planet\'s sky is “' + t.name + '”. ' : '') + t.note;
-  $('skyContents').textContent = 'In this sky: ' + skyDescribe(plan, m.n, m.band > 0.05, m.gas > 0.03) + '.';
-  $('skyFollow').disabled = !(P.sky > 0);
-}
-
 // what a world's clouds are made of: water everywhere except molten worlds (ash and smoke) and deserts (blown dust)
 const CLOUD_COL = { water: [0.96, 0.97, 1.0], lava: [0.36, 0.31, 0.28], desert: [0.86, 0.68, 0.48], ice: [0.62, 0.78, 1.0] };
 const LOW_CLOUD = { ice: 0.55 };   // a frozen world keeps thin ice-crystal streaks and a faint haze, not a water cloud deck
@@ -3282,7 +2677,6 @@ function draw(w, h, tmul) {
   if (look > 0) { const Wv = vec3(U, A), sg = Wv[2] > 0 ? -1 : 1; farS[0] = sg * Wv[0] * look; farS[1] = sg * Wv[1] * look; }
   const zoom = Math.min(aspect * 0.92 / extent, 0.92 / extentV) * P.zoom * (1 + 3.0 * look);
   const clouds = P.kind === 'rock' ? 0 : P.clouds;   // an airless world has no weather, whatever the slider says
-  const skyOK = skyBake(w, h);
   useVariant((P.kind !== 'gas' && clouds > 0.01 ? 'C' : '') + (quality ? 'H' : '') + (mm.length ? 'M' : '') + (P.ring.on && !mega ? 'R' : '') + (mega ? 'G' : '') + (orb ? 'O' : ''));
   gl.viewport(0, 0, w, h);
   gl.uniform2f(loc.uRes, w, h); gl.uniform1f(loc.uZoom, zoom); gl.uniform2f(loc.uShift, farS[0], farS[1]);
@@ -3293,8 +2687,7 @@ function draw(w, h, tmul) {
   f('uSeed', (P.seed % 997) * 0.173); f('uSea', P.sea); f('uMount', P.mount); f('uScale', P.scale); f('uIce', P.ice); f('uClouds', clouds); f('uAsh', P.kind === 'lava' ? 1 : 0); f('uLowCl', LOW_CLOUD[P.kind] === undefined ? 1 : LOW_CLOUD[P.kind]); gl.uniform3fv(loc.uCloudCol, CLOUD_COL[P.kind] || CLOUD_COL.water); f('uHaze', P.haze);
   f('uWet', P.wet || 0); f('uBiome', (P.kind === 'rock' || P.kind === 'lava') ? 0 : 1); f('uQ', quality); f('uCities', P.cities); f('uDens', cityStats(P).ld); f('uPlan', P.plan); f('uRad', P.rad); f('uLava', P.lava); f('uCraters', P.craters); f('uScars', P.scars);
   f('uBands', P.bands); f('uTurb', P.turb); f('uStorms', P.storms); f('uStormSize', P.stormSize);
-  f('uSkyOn', skyOK ? 1 : 0); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, sky.tex); gl.uniform1i(loc.uSkyTex, 0);
-  f('uSpin', T.spin); f('uCloudAng', T.cloud); f('uFlowT', T.flow); f('uRingAng', T.ring); f('uTime', T.time);
+  f('uSpin', T.spin); f('uCloudAng', T.cloud); f('uFlowT', T.flow); f('uRingAng', T.ring); f('uTime', T.time); f('uStarDens', P.starDens);
   if (mega) {
     const wd = P.mWidth * 0.5;
     const mt = P.kind === 'shell' ? 1 : 0;
@@ -3435,7 +2828,6 @@ function derive(s) {
   const kind = classify(wo, sp);
   const P2 = makeDefaults(kind, hashStr(s.n) % 9000 + 1);
   P2.name = s.n;
-  P2.sky = hashStr('sky:' + s.n) % 4294967295 + 1;   // every system has a sky of its own, whatever its shape number
   const cols = extractColors(sp);
   const isBlue = (c) => { const h = hexHue(c); return h >= 175 && h <= 255 && hexSat(c) > 0.25; };
   const isWhite = (c) => hexSat(c) < 0.12 && hex2rgb(c)[0] > 0.8;
@@ -3534,9 +2926,8 @@ const toCode = () => JSON.stringify({ format: 'praedra-planet', v: 1, name: P.na
 const PARAM_RANGE = {
   sea: [0, 1], wet: [-1, 1], mount: [0, 1], scale: [0.5, 2.5], ice: [0, 1], clouds: [0, 1], haze: [0, 1.3], cities: [0, 1], rad: [1500, 15000], plan: [0, 1], land: [0.02, 1], lava: [0, 1], craters: [0, 1], scars: [0, 1],
   bands: [3, 20, 1], turb: [0, 1.4], storms: [0, 6, 1], stormSize: [0.2, 1.6], spin: [-1, 1], cloudSpeed: [-1, 1], flow: [0, 1.5], moonSpeed: [0, 2],
-  tilt: [6, 85], roll: [-90, 90], sun: [-180, 180], sunH: [-60, 60], zoom: [0.5, 1.8], moons: [0, 5, 1],
+  tilt: [6, 85], roll: [-90, 90], sun: [-180, 180], sunH: [-60, 60], zoom: [0.5, 1.8], starDens: [0, 1], moons: [0, 5, 1],
   mLayers: [1, 4, 1], mOpen: [0, 0.9], mCap: [0.12, 1], mWidth: [0.06, 0.6], mWall: [0, 0.12], mSpan: [0.25, 1.3], mShade: [0, 0.6], mPlate: [0, 1], mLights: [0, 1], mStar: [0, 1.5], mPorts: [0, 1], mLook: [0, 1],
-  sky: [0, 4294967295, 1], skyOn: [0, 1, 1], skyStars: [0, 1], skyBand: [0, 1], skyNeb: [0, 1], skyObj: [0, 1],
   oOn: [0, 1, 1], oHt: [0.04, 0.3], oWid: [0.01, 0.1], oStn: [0, 16, 1], oLit: [0, 1], eOn: [0, 1, 1], eLon: [-180, 180], eHt: [0.3, 3], eN: [1, 4, 1],
 };
 const RING_RANGE = { inner: [1.1, 2.8], width: [0.04, 2.6], op: [0.1, 1], gaps: [0, 1], struct: [0, 1], clump: [0, 1], dust: [0, 1], feeder: [0, 5, 1], seed: [0, 9999, 1], spin: [-1, 1] };
@@ -3562,7 +2953,6 @@ function sanitize(p, d) {
   for (const k of ['mHull', 'mAcc', 'oHull', 'oAcc']) if (isHex(p[k])) out[k] = p[k];
   if (!ELEV_OK(out.kind)) out.eOn = 0;   // a pasted preset cannot put an elevator where none can stand
   if (IS_MEGA(out.kind)) out.oOn = 0;
-  out.skyTheme = SKY_THEMES.some((t) => t.id === p.skyTheme) ? p.skyTheme : d.skyTheme;
   out.mSun = CENTRES.some((c) => c.id === p.mSun) ? p.mSun : d.mSun;
   if (Array.isArray(p.moonList)) {
     out.moonList = p.moonList.slice(0, 5).map((m, i) => sanitizeMoon(m && typeof m === 'object' ? m : {}, genMoon(out.seed, out.kind, i, null, moonStart(out.ring))));
@@ -3658,7 +3048,6 @@ function boot() {
   buildRingUI();
   buildMegaUI();
   buildOrbUI();
-  skyUIBuild();
   const dl = $('sysList');
   SYSTEMS.forEach((s, i) => { sysByName.set(s.n.toLowerCase(), i); const o = document.createElement('option'); o.value = s.n; o.label = s.sec; dl.appendChild(o); });
   $('sysIn').addEventListener('change', () => { const i = sysByName.get($('sysIn').value.trim().toLowerCase()); if (i !== undefined) loadSystem(i); else toast('No system with that name'); });
@@ -3686,7 +3075,7 @@ function boot() {
   try { initGL(); } catch (e) { glOK = false; document.querySelector('.hint').textContent = 'Shader error: ' + e.message; console.error(e); return; }
   requestAnimationFrame(loop);
 }
-window.__pm = { get P() { return P; }, setP(p) { P = p; syncControls(); }, derive, loadSystem, SYSTEMS, classify, makeDefaults, KINDS, setKind, frame, T, draw: () => draw(cv.width, cv.height), pause(v) { paused = v; }, freeze(v) { frozen = v; }, setQ(v) { quality = v; }, fromCode, MOON_TYPES, RING_TYPES, ringGapList, applyRingType, placeFeeder, syncRingUI, ensureMoons, syncMoonUI, selectMoon(i) { selMoon = i; syncMoonUI(); }, MEGA_TYPES, planSky, SKY_THEMES, getSkyPlan, skyMix, skySeedOf, skyDescribe, sky };
+window.__pm = { get P() { return P; }, setP(p) { P = p; syncControls(); }, derive, loadSystem, SYSTEMS, classify, makeDefaults, KINDS, setKind, frame, T, draw: () => draw(cv.width, cv.height), pause(v) { paused = v; }, freeze(v) { frozen = v; }, setQ(v) { quality = v; }, fromCode, MOON_TYPES, RING_TYPES, ringGapList, applyRingType, placeFeeder, syncRingUI, ensureMoons, syncMoonUI, selectMoon(i) { selMoon = i; syncMoonUI(); }, MEGA_TYPES };
 boot();
 })();
 </script>

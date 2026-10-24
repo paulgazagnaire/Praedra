@@ -27,11 +27,9 @@ Edit `planet-maker.src.html` (the shader and the page), never `index.html`. `par
     "cities": 0..1, "rad": 1500..15000, "plan": 0..1, "land": 0.02..1 or null, "lava": 0..1, "craters": 0..1, "scars": 0..1,
     "bands": 3..20, "turb": 0..1.4, "storms": 0..6, "stormSize": 0.2..1.6,
     "spin": -1..1, "cloudSpeed": -1..1, "flow": 0..1.5, "moonSpeed": 0..2,
-    "tilt": 6..85, "roll": -90..90, "sun": -180..180, "sunH": -60..60, "zoom": 0.5..1.8,
+    "tilt": 6..85, "roll": -90..90, "sun": -180..180, "sunH": -60..60, "zoom": 0.5..1.8, "starDens": 0..1,
     "ring": { "on": false, "type": "broad|narrow|dusty|arcs|wreck|moonfed", "inner": 1.1..2.8, "width": 0.04..2.6, "op": 0.1..1, "gaps": 0..1,
               "struct": 0..1, "clump": 0..1, "dust": 0..1, "feeder": 0..5, "seed": 0..9999, "spin": -1..1, "c1": "#hex", "c2": "#hex" },
-    "sky": 0..4294967295, "skyTheme": "auto|deep|nursery|lane|twin|remnant|hole|core|neighbours|rim", "skyOn": 0|1,   // the backdrop: 0 = follows the shape number
-    "skyStars": 0..1, "skyBand": 0..1, "skyNeb": 0..1, "skyObj": 0..1,
     "oOn": 0|1, "oHt": 0.04..0.3, "oWid": 0.01..0.1, "oStn": 0..16, "oLit": 0..1, "oHull": "#hex", "oAcc": "#hex",   // orbital ring
     "eOn": 0|1, "eLon": -180..180, "eHt": 0.3..3, "eN": 1..4,                                                      // space elevator
     "moons": 0..5,
@@ -147,6 +145,10 @@ Two human-made works you can switch on for a planet, in their own box under Ring
 - **With a natural ring** the cable lies in the ring's plane, so the ring is swept clear along it (a narrow lane, drawn as a gap in the ring on the cable's side).
 - It is compiled into the shader only when one of them is on, so planets without them cost nothing.
 
+## Stars
+
+The background is plain black with stars and nothing else. One slider, Star density (0 to 1, default 0.5), sets how many: none, sparse, normal, dense, packed. The default is the same star field as before the slider existed. The stars twinkle slowly and sit on the screen, so they do not turn with the planet. It works for every world, Ring and Shell included, and is saved in presets as `starDens`.
+
 ## Rings
 Rings are no longer one flat band with noise. There are six kinds, each modelled on a ring that exists, and they share what makes real rings: grains in a thin flat sheet that sit inside the distance where tides would pull a moon apart (about 2.4 planet radii for ice), so moons start outside them, and gaps and edges that moons cut.
 
@@ -184,35 +186,18 @@ Giant storms are no longer flat discs. Each one twirls the sky around it before 
 
 Cost: on software rendering a gas giant in High is about 30 percent slower per frame than before; Fast skips the grain, ovals and puffs. Not measured on a real graphics card. The bands still slide past each other as before (Band flow), but the new wind speeds are lower, so they shear more gently. Not drawn: storms placed on a belt edge on purpose (they sit at a random latitude and the bands bend around them wherever they land), long-lived storm wakes, hexagons at the poles.
 
-## Backdrop (the sky behind the planet)
-Every planet has a sky of its own: stars of every colour and brightness, a Milky Way with dark dust lanes, drifting gas, and up to 12 things worth looking at. It sits in its own section, **Backdrop**, for every kind of world, ring and shell included (switch it off and the plain star field of the earlier versions comes back).
-
-**Where it comes from.** A seed decides everything, so a planet always has the same sky. The seed is the planet's shape number (so "New shape" changes the sky too), or a number of its own once you press **New sky** (then the sky stays put when the shape changes; **Follow the planet** goes back). Each of the 555 systems starts with a sky made from its name: 555 different skies, none shared (checked). The sky is not tied to the system's description yet; if the Lore Master wants a particular system to sit in a nebula or beside a black hole, that is one line per system in `systems.json` once decided.
-
-**Kinds of sky** (the chips; Auto picks one from the seed, and the note under the chips names which): Deep field (galaxies everywhere, a quasar), Stellar nursery (big glowing gas clouds, dark dust, young blue clusters), Galactic lane (the Milky Way, old clusters, bright neighbours), Twin suns (two bright stars of different colours, a dying star's gas shell, sometimes a giant planet), Supernova remnant (a ragged shell, a pulsar), Black hole (disc bent over and under the hole, the Milky Way bent into arcs round it), Cluster core (a sky packed with old red stars), Giant neighbours (a ringed giant filling a corner, smaller worlds, the system's sun, comets), Quiet rim (almost nothing but one huge faint galaxy).
-
-**What can appear** (15 kinds): bright stars with spikes, spiral, elliptical and edge-on galaxies (the last with a dust lane), glowing gas nebulae, planetary nebulae, supernova remnants, dark dust clouds that blot out the stars behind them, globular and open star clusters, a black hole, a pulsar with its two beams, comets with a gas tail and a dust tail, neighbouring planets (banded, lit from one side, half of them ringed) and a quasar with its jets.
-
-**Sliders.** Stars, Milky Way and Gas clouds scale what the kind brings (the middle is the kind's own amount). Things to see shows the first n of the 12 objects, most important first (default 3, so the sky starts quiet; objects are drawn at half brightness, stars thin, the Milky Way and gas faint, and the boldest shapes (giant planet, supernova remnant, planetary nebula) a third dimmer still. Push the sliders up for a richer sky). The line under the sliders lists what is in view.
-
-**How it is drawn.** The sky is drawn once into a picture the size of the canvas and only drawn again when the sky or the canvas size changes, so the planet's own shader pays nothing for it and the planet's pixels are identical with the sky off or on (checked on a terran world: nothing differs inside the disc; only the pixels on its edge blend with the background). Planet and moons are drawn on top. Positions are chosen so most things sit around the planet, not behind it, and keep their place on a wider or taller picture; on a very tall, narrow canvas some objects fall off the edge.
-
-**Preset fields.** `sky` (0 = follow the shape number), `skyTheme`, `skyOn`, `skyStars`, `skyBand`, `skyNeb`, `skyObj`. A preset saved before the backdrop existed loads with the automatic sky; bad values are clamped like every other field.
-
 ## Terrain relief
 **Mountains.** They used to be one smooth ridge layer, which read as sand dunes. Now they are long belts (where plates would have collided) with sharp crests: a ridged multifractal, each layer weighted by the one before, so crests carry the fine detail and valleys stay smooth. Between the belts the land is plains and low hills. Steep faces turn bare rock, and the highest crests keep snow even in a warm climate (less on worlds with few ice caps). The Mountains slider still runs from none to everything. It costs about 10 to 20 percent more per frame on software rendering.
 
 The light and shade on mountains and craters comes from the slope of the height map, measured from two nearby samples. Both samples now use the same amount of detail (before, the centre sample had two more layers of noise, which the slope read as huge cliffs and smeared Earth-like and desert highlands into streaks). Craters on rock worlds are unchanged.
 
 ## Known limits
-- Backdrop: tuned by eye on software rendering only. The sky does not move or twinkle (it is a still picture, by design). It is a flat picture, not a sphere: the Camera sliders (tilt, roll, sun) do not turn it, and zoom does not scale it. Objects are drawn flat: nothing in the sky is lit by the planet's sun or shadowed by the planet; only the black hole bends the sky behind it (stars and the Milky Way, not the other objects). Gas and galaxies are procedural noise, so they look like the real thing at a glance and not at all like any particular real object. Skies are random per system, not read from the system's description. Every slider move redraws the whole sky (see the timing line below; real graphics cards are not measured).
 - The system presets are a first guess read from each description (colours, moons, rings). Expect to adjust some by hand.
 - The whole planet is one pass. Moons do not shadow each other, and a moon's shadow is a plain round disc (lumpy outlines are not followed).
 - Rings are flat: no thickness, no braids, no waves. A ring has one source moon at most, and moons never push each other's gaps around beyond the three resonances listed under Rings.
 - At most 5 moons per planet. Moons start small, 2 to 17 percent of the planet's radius (Earth's Moon is 27 percent, Titan about 4 percent of Saturn's, the small captured rocks far less), and they sit much closer than real moons would. The Size slider goes down to 1.5 percent. Orbits are circular.
 - City looks are tuned by eye on software rendering, never on a real graphics card, and from the usual viewing size the planned districts read as texture more than as streets. The land share estimate from the Ocean slider is rough (it does not count the land actually drawn), so type the real land share when it matters. Cities are one colour: no tints for different districts yet.
 - Industrial moon: the pits and plating are painted on the surface (nothing is raised), so scaffolding casts no shadow and plates have no relief, and towers are only seen at the edge, so a tower that points at you is invisible. Looks tuned by eye on software rendering only.
-- Backdrop timing (software rendering, SwiftShader, 1040 x 800, High, a terran world with 2 moons, second pass so compiles are excluded; real graphics cards not measured): a frame took 7.0 s in the version before, 7.5 to 8.2 s with the sky off and 7.3 to 9.9 s with the sky drawn and cached, which is inside this renderer's run-to-run noise. Drawing the sky itself adds about 6 to 7 s, once, every time the sky, a Backdrop slider or the canvas size changes (14.5 s against 7.5 s for the frame that does it). Dragging a Backdrop slider therefore redraws the sky on every step; if that is slow on Paul's Mac the fix is to draw the smooth layers (gas, Milky Way) at a third of the size.
 - Ring timing after the spaceports, windows, shade squares and centre machines (software rendering, SwiftShader, 600 x 480, 2 frames after warm-up, same session as the version before): High / Fast, in seconds: terran 1.76 / 0.87; Ring 6.9 / 4.8 against 7.3 / 4.7 before; with Spaceports at none 6.8; a wide ring with tall walls 7.2 against 6.9. So no measurable change on this renderer; the piers only cost anything near the hull. Shell and the terran planet are pixel for pixel unchanged.
 - Ring and Shell timing (software rendering, SwiftShader, 512 px, 3 frames after warm-up; real graphics cards not measured). High / Fast, in seconds: terran planet 7.1 / 3.4; Ring 14.9 / 10.2; Shell 5.6 / 3.5. Runs on this renderer differ by up to 2 times from one session to the next (the QA round measured the Ring at 6.1 against 9.8 for a terran, the opposite order to mine), so read these as "about a planet or less" for everything except the Ring, whose cost is its floor terrain and moves with Clouds and Population. Fast Detail on a structure takes fewer trace steps (44 against 90), accepts a hit within half a pixel and takes four samples for the normal instead of six; it changes 1 to 8 percent of the pixels.
 - Shell world: the star is a flat bright disc with the same glow as the ring's, hidden by any solid plate in front of it (so a closed shell shows no star, as it should). Layers do not shadow each other. The cap of a Shkadov thruster is a hard-edged slice of the sphere, not a bowl, and it does not push anything. Tuned by eye on software rendering only; see the timing note above.
