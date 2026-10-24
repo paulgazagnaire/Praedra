@@ -244,7 +244,7 @@ uniform vec3 uHazeCol;
 uniform float uAsh;           // 1 on a molten world: its clouds are ash and smoke, not water
 uniform float uLowCl;        // how much of the low cloud deck shows: 1 normally, little on a frozen world (too cold and dry for a water deck)
 uniform vec3 uCloudCol;       // what the clouds are made of: white for water, tan for dust, near black for ash
-uniform float uSeed, uSea, uMount, uScale, uIce, uClouds, uHaze, uCities, uDens, uPlan, uRad, uLava, uCraters, uScars, uWet, uBiome, uQ;
+uniform float uSeed, uSea, uMount, uScale, uIce, uClouds, uHaze, uCities, uPopT, uDens, uPlan, uRad, uLava, uCraters, uScars, uWet, uBiome, uQ;
 uniform float uBands, uTurb, uStorms, uStormSize;
 uniform float uSpin, uCloudAng, uFlowT, uRingAng, uTime, uStarDens;
 uniform vec3 uAxis, uU, uW, uL;
@@ -851,58 +851,83 @@ vec3 siteC(vec3 x, out vec3 hh, out float wall) {
   wall = sqrt(d2) - sqrt(d1);
   return best;
 }
-// A city is a big white tiered disc (a main platform with a dome in the middle) ringed by smaller discs and a few spires, standing on
-// stilts above the cloud and throwing a soft shadow on it. Cities gather in calm mid-latitude regions; the Population slider (the same
-// log scale as on a rocky world) sets how many regions there are and how full they are. Capitals are half as big again. By night the
-// discs show rings of lit windows and the spires burn bright; by day they are white against the cloud, with the shadow and a thin
-// dark rim. Sizes are exaggerated on purpose: a real city is a few km, here the big discs are about 2000 km (a few percent of a radius).
+// A city is an uneven white platform with tier rings, small towers and a pale dome, tied by thin walkways to a ring of satellite pods,
+// and it throws a soft shadow on the cloud. Cities gather in calm mid-latitude regions; the Population slider (the same log scale as on
+// a rocky world) sets how many regions there are and how full they are. A few cities are a little bigger. By night the platforms show
+// rings of lit windows and the pods and walkways glow; by day they are white against the cloud, with the shadow and a thin dark rim.
+// Sizes are exaggerated on purpose: a real city is a few km, here a big platform is about 2000 km across (a few percent of a radius).
 // body = white structure (0..1), shade = dark shadow and rim lines, lit = night windows, glow = soft light on the cloud round a city.
 void gasCities(vec3 q, vec3 lt, out float body, out float shade, out float lit, out float glow, out float dm) {
   body = 0.0; shade = 0.0; lit = 0.0; glow = 0.0; dm = 0.0;
   float amt = clamp(uCities, 0.0, 1.0);
-  float ra = 0.1 + 0.9 * amt;                      // the slider's bottom is 10 million: below that a world still gets one small region
+  float ra = 0.1 + 0.9 * amt;                      // below 10 million a world still gets one small region
   float reg = fbm(q * 2.4 + sOff() + 41.0, 3);
   float inreg = smoothstep(0.64 - 0.34 * ra, 0.70 - 0.34 * ra, reg) * smoothstep(0.92, 0.55, abs(q.y));   // none at the poles
   if (inreg <= 0.0) return;
-  const float G1 = 4.5;                            // a site about every 1/4.5 of a radius
+  const float G1 = 4.0;                            // a site about every 1/4 of a radius
   vec3 h1; float w1;
   vec3 r1 = siteC(q * G1, h1, w1);                 // offset to the nearest city site, in site units
-  float on = step(h1.x, (0.30 + 0.45 * amt) * (0.08 + 0.92 * smoothstep(0.0, 0.15, amt))) * inreg;
+  float on = step(h1.x, (0.30 + 0.45 * amt) * (0.08 + 0.92 * smoothstep(0.0, 0.15, amt)) * mix(0.3, 1.0, uPopT)) * inreg;   // below 10 million a world has fewer still
   if (on <= 0.0) return;
-  float d1 = length(r1);
-  float R = mix(0.15, 0.21, h1.y) * (1.0 + 0.2 * step(0.86, h1.z));   // at most 0.25 plus the lobes: wider than 0.33 and the next site's cell cuts the disc
+  float R = mix(0.11, 0.16, h1.y) * (1.0 + 0.15 * step(0.86, h1.z));   // the platform; with its pods a city reaches about 0.4, and a site's cell is at least 0.35 wide
   float Re = max(R, 1.4 * gPxC * G1);              // never thinner than a pixel; the light it loses is taken from its brightness
   float fade = R / Re;
-  vec3 ltn = normalize(lt + vec3(1e-4));
-  float edge = smoothstep(0.0, 0.2, w1);          // soft things fade out before they meet the next site's cell
+  float px1 = gPxC * G1;                           // site units per pixel
+  float edge = smoothstep(0.0, 0.2, w1);           // soft things fade out before they meet the next site's cell
+  // the tangent plane at the city: x, y of the point relative to the city's middle, and the direction to the sun in the same axes
   vec3 t1 = normalize(cross(q, vec3(0.0, 1.0, 0.002))), t2 = cross(q, t1);
-  float az = atan(dot(r1, t2), dot(r1, t1));
-  float lobes = 1.0 + 0.09 * cos(az * (5.0 + floor(h1.y * 3.0)) + h1.x * 6.28);   // round pods round the edge, like Kamino's towers
+  vec2 pp = vec2(-dot(r1, t1), -dot(r1, t2));
+  float d1 = length(pp);                           // distance along the surface: r1 also has a share across the sphere, which would shrink every city whose site sits off the surface
+  vec3 ltn = normalize(lt + vec3(1e-4));
+  vec2 ls = vec2(dot(ltn, t1), dot(ltn, t2));
+  float az = atan(pp.y, pp.x);
+  // the main platform: a lobed disc (round pods round the edge, a little uneven), a dome, tier rings and joints
+  float lobes = 1.0 + 0.07 * cos(az * (5.0 + floor(h1.y * 3.0)) + h1.x * 6.28) + 0.04 * cos(az * 9.0 + h1.y * 40.0);
   float Rl = Re * lobes;
-  float shd = smoothstep(Rl * 1.3, Rl * 0.85, length(r1 - ltn * (0.45 * Re))) * edge;
-  float m = smoothstep(Rl, Rl * 0.9, d1);   // the shadow falls away from the sun
+  float m = smoothstep(Rl, Rl * 0.9, d1);
+  float shd = smoothstep(Rl * 1.3, Rl * 0.85, length(pp + ls * (0.45 * Re))) * edge;   // the shadow falls away from the sun
   float dome = smoothstep(Re * 0.42, Re * 0.2, d1);
   float tier = max(smoothstep(0.035, 0.0, abs(d1 - 0.62 * Re)), smoothstep(0.03, 0.0, abs(d1 - 0.84 * Re))) * m;
-  float ang = az * (12.0 / 6.2831853);
-  float fa = fract(ang + h1.x * 12.0);
+  float fa = fract(az * (12.0 / 6.2831853) + h1.x * 12.0);
   float spoke = smoothstep(0.05, 0.0, min(fa, 1.0 - fa)) * m * (1.0 - dome);
   float rim = smoothstep(Rl * 1.14, Rl, d1) * (1.0 - m);
-  // smaller discs and spires round the main one
-  float near = smoothstep(0.62, 0.45, d1) * edge;
+  // eight small towers round the dome
+  float sec2 = 6.2831853 / 8.0;
+  float k2 = floor(az / sec2 + 0.5);
+  float Rt = max(0.075 * Re, 0.7 * px1);
+  float tower = smoothstep(Rt, Rt * 0.6, length(pp - vec2(cos(k2 * sec2), sin(k2 * sec2)) * 0.58 * Re)) * m * (Rt > 0.075 * Re ? 0.6 : 1.0);
+  // a ring of five to eight pods tied to the platform by walkways
+  float n = 5.0 + floor(fract(h1.y * 7.31) * 4.0);
+  float sec = 6.2831853 / n, ph = h1.x * 6.28;
+  float kk = floor((az - ph) / sec + 0.5);
+  float kh = mod(kk, n);
+  vec2 dk = vec2(cos(kk * sec + ph), sin(kk * sec + ph));
+  float here = step(fract(kh * 0.37 + h1.x * 9.0), 0.86) * edge;   // a pod is sometimes missing
+  float Rring = 1.9 * Re;
+  float Rp = 0.30 * Re * (0.75 + 0.5 * fract(kh * 0.618 + h1.y * 5.0));
+  vec2 pc = dk * Rring;
+  float dp = length(pp - pc);
+  float pod = smoothstep(Rp, Rp * 0.85, dp) * here;
+  float podShd = smoothstep(Rp * 1.25, Rp * 0.9, length(pp - pc + ls * (0.5 * Rp))) * here;
+  float podDome = smoothstep(Rp * 0.5, Rp * 0.25, dp) * pod;
+  float along = dot(pp, dk), perp = abs(dot(pp, vec2(-dk.y, dk.x)));
+  float bw = max(0.016, 0.8 * px1);
+  float bridge = step(Re * 0.85, along) * step(along, Rring - Rp * 0.8) * smoothstep(bw, bw * 0.5, perp) * here;
+  // a few small rafts adrift beyond the pods
+  float near = smoothstep(0.62, 0.50, d1) * smoothstep(0.40, 0.46, d1) * edge;
   vec3 h2; float w2;
   float G2 = G1 * 3.6;
   vec3 r2 = siteC(q * G2, h2, w2);
   float d2 = length(r2);
-  float spire = step(0.84, h2.z);
-  float Rs = mix(0.20, 0.30, h2.y) * (1.0 + 0.1 * spire);
+  float Rs = mix(0.20, 0.30, h2.y);
   float Rse = max(Rs, 1.1 * gPxC * G2);
-  float sd = smoothstep(Rse, Rse * 0.8, d2) * step(h2.x, 0.45) * near * (Rs / Rse);
-  body = clamp(max(m * fade, sd), 0.0, 1.0);
-  shade = clamp(0.9 * shd * (1.0 - body) * fade + 0.5 * rim * fade + 0.45 * tier * fade + 0.25 * spoke * fade, 0.0, 1.0);
-  dm = dome * m;
+  float sd = smoothstep(Rse, Rse * 0.8, d2) * step(h2.x, 0.30) * near * (Rs / Rse);
+  body = clamp(max(max(m * fade, max(pod, bridge * 0.9)), sd), 0.0, 1.0);
+  shade = clamp(0.9 * max(shd, podShd) * (1.0 - body) * fade + 0.5 * rim * fade + 0.45 * tier * fade + 0.25 * spoke * fade + 0.3 * smoothstep(Rp * 1.2, Rp, dp) * (1.0 - pod) * here * fade, 0.0, 1.0);
+  dm = max(max(dome * m, podDome * 0.8), tower * 0.8);
   float rings = 0.30 + 0.70 * step(0.5, fract(d1 / Re * 5.5 + h1.x * 3.0));
-  lit = (m * rings * (0.8 + 0.4 * h1.y) + dome * 0.9) * fade + sd * (0.7 + 0.5 * spire + 0.4 * h2.x);
-  glow = smoothstep(Re * 1.9, 0.0, d1) * fade * edge * (0.4 + 0.4 * h1.y);
+  lit = (m * rings * (0.8 + 0.4 * h1.y) + dome * 0.9 + tower * 0.7) * fade + pod * (0.55 + 0.45 * step(0.5, fract(dp / Rp * 2.5))) * 0.9 + podDome * 0.5 + bridge * 0.35 + sd * 0.8;
+  glow = smoothstep(Re * 2.0, 0.0, d1) * fade * edge * (0.4 + 0.4 * h1.y) + smoothstep(Rp * 2.0, 0.0, dp) * here * 0.25;
 }
 
 // --- planet ----------------------------------------------------------------
@@ -2153,15 +2178,17 @@ const BASE = {
   mLayers: 2, mOpen: 0.35, mCap: 1, mWidth: 0.14, mWall: 0.05, mSpan: 0.7, mShade: 0.28, mPlate: 0.6, mLights: 0.5, mStar: 1, mSun: 'star', mPorts: 0.6, mLook: 0, mHull: '#8b9199', mAcc: '#e0a64a',
   oOn: 0, oHt: 0.12, oWid: 0.045, oStn: 8, oLit: 0.6, oHull: '#8b9199', oAcc: '#e0a64a', eOn: 0, eLon: -20, eHt: 0.9, eN: 1,
 };
+// an old Population slider position (before preset code v2, when the left end was 10 million) as a position on the current scale; 0, "none", stays 0
+const L2N = (v) => v > 0 ? (5 + 6 * v) / 11 : 0;
 const KIND_DEF = {
-  terran: { wet: 0, pal: ['#1c4d8f', '#3f7a3c', '#7b7a45', '#8f7f6d', '#f1f5f9'], sea: 0.55, mount: 0.5, clouds: 0.5, haze: 0.65, hazeCol: '#78aaf2', ice: 0.3, cities: 0.48 },
+  terran: { wet: 0, pal: ['#1c4d8f', '#3f7a3c', '#7b7a45', '#8f7f6d', '#f1f5f9'], sea: 0.55, mount: 0.5, clouds: 0.5, haze: 0.65, hazeCol: '#78aaf2', ice: 0.3, cities: L2N(0.48) },
   ocean: { wet: 0.15, pal: ['#123f78', '#2f8a78', '#6aa078', '#9a9a82', '#f1f5f9'], sea: 0.95, mount: 0.4, clouds: 0.6, haze: 0.7, hazeCol: '#7fb4ff', ice: 0.3, scale: 1.5 },
   swamp: { wet: 0.4, pal: ['#25463a', '#44683a', '#68793f', '#85805a', '#e0e8e0'], sea: 0.45, mount: 0.2, clouds: 0.7, haze: 0.8, hazeCol: '#9cc88a', ice: 0.1 },
   desert: { wet: -0.45, pal: ['#000000', '#c99b5c', '#b46f3a', '#8c4d2a', '#efe4d2'], sea: 0, mount: 0.55, clouds: 0.12, haze: 0.4, hazeCol: '#e8b87a', ice: 0.15, craters: 0.1 },
   ice: { wet: 0, pal: ['#4f7ca8', '#d8e6f1', '#b9d0e4', '#ffffff', '#ffffff'], sea: 0.35, mount: 0.45, clouds: 0.45, haze: 0.45, hazeCol: '#bfe0ff', ice: 1, craters: 0.2 },
   rock: { pal: ['#000000', '#59564f', '#8a857b', '#b5afa3', '#e8e8ea'], sea: 0, mount: 0.3, clouds: 0, haze: 0, hazeCol: '#aab4c4', ice: 0, craters: 0.8 },
   lava: { pal: ['#000000', '#2d2320', '#463631', '#6a5848', '#ff6a1f'], sea: 0, mount: 0.6, clouds: 0.3, haze: 0.5, hazeCol: '#ff8a50', ice: 0, lava: 0.9, craters: 0.2 },
-  city: { wet: -0.1, pal: ['#2b4f6e', '#6e7075', '#868a8f', '#a2a7ad', '#e8eef2'], sea: 0.15, mount: 0.3, clouds: 0.3, haze: 0.55, hazeCol: '#c3a07a', ice: 0.1, cities: 0.97, plan: 0.75 },
+  city: { wet: -0.1, pal: ['#2b4f6e', '#6e7075', '#868a8f', '#a2a7ad', '#e8eef2'], sea: 0.15, mount: 0.3, clouds: 0.3, haze: 0.55, hazeCol: '#c3a07a', ice: 0.1, cities: L2N(0.97), plan: 0.75 },
   locked: { wet: 0, pal: ['#2b6e8f', '#5b8a4a', '#c0582c', '#dbe7f2', '#ffffff'], sea: 0.4, mount: 0.45, clouds: 0.35, haze: 0.6, hazeCol: '#8cc0ff', ice: 0, spin: 0 },
   // a ring or a shell is built round a star: no moons, rings or atmosphere of its own. Only the ring has ground (the same terrain the planets use)
   ring: { wet: 0, pal: ['#1c4d8f', '#4f8a3c', '#8a8a48', '#8f7f6d', '#f1f5f9'], sea: 0.5, mount: 0.45, clouds: 0.35, haze: 0, hazeCol: '#78aaf2', ice: 0.25, cities: 0.4, scale: 1.3, tilt: 34, roll: -14, moons: 0 },
@@ -2185,13 +2212,21 @@ try { if (localStorage.getItem('pm_quality') === '0') quality = 0; } catch (e) {
 const T = { spin: 0, cloud: 0, flow: 0, ring: 0, moon: 0, time: 0 };
 
 /* ---------- population and density ---------- */
-// The Population slider is a log scale: 0.01 billion at the left, 10,000 billion at the right. Density is people per km2 of land;
-// it sets the whole look of the cities (see cityField in the shader).
-const popBillions = (pos) => pos > 0 ? Math.pow(10, -2 + 6 * pos) : 0;
+// The Population slider is a log scale: 100 people at the left, 10,000 billion at the right (eleven steps of ten). Density is people per km2 of land;
+// it sets the whole look of the cities (see cityField in the shader). Until v2 of the preset code the left end was 10 million and the slider
+// ran over six steps of ten (see L2N).
+const POP_LO = -7, POP_SPAN = 11;
+const popBillions = (pos) => pos > 0 ? Math.pow(10, POP_LO + POP_SPAN * pos) : 0;
+const popPos = (b) => b > 0 ? Math.min(1, Math.max(0.001, (Math.log10(b) - POP_LO) / POP_SPAN)) : 0;
+// the shader was tuned on the old six-decade scale: it still gets that position (10 million and up), and how far a smaller population is below it
+const legacyAmt = (pos) => pos > 0 ? Math.max(0.0005, Math.min(1, (POP_SPAN * pos - 5) / 6)) : 0;
+const popBelowT = (pos) => pos > 0 ? Math.min(1, Math.max(0, POP_SPAN * pos / 5)) : 1;
 const landShare = (p) => p.land != null ? Math.max(0.02, p.land) : HAS_SEA(p.kind) ? Math.min(1, Math.max(0.04, 1 - 1.2 * p.sea)) : 1;   // estimate from the ocean slider
 function popText(pos) {
   const b = popBillions(pos);
-  return b <= 0 ? 'none' : b >= 1000 ? +(b / 1000).toPrecision(2) + ' trillion' : b >= 1 ? +b.toPrecision(2) + ' billion' : Math.round(b * 1000) + ' million';
+  const n = b * 1e9;
+  return b <= 0 ? 'none' : b >= 1000 ? +(b / 1000).toPrecision(2) + ' trillion' : b >= 1 ? +b.toPrecision(2) + ' billion' : n >= 1e7 ? Math.round(n / 1e6) + ' million'
+    : n >= 1e6 ? +(n / 1e6).toPrecision(2) + ' million' : n >= 1e3 ? +(n / 1e3).toPrecision(2) + ' thousand' : Math.max(100, Math.round(n / 10) * 10) + ' people';
 }
 const DENS_CLASSES = [[0.5, 'empty'], [5, 'frontier'], [30, 'rural'], [150, 'settled'], [600, 'dense'], [3000, 'metropolitan'], [15000, 'megalopolis'], [Infinity, 'ecumenopolis']];
 function cityStats(p) {
@@ -2214,7 +2249,7 @@ function updateCityInfo() {
   const el = $('cityInfo'); if (!el) return;
   const vis = IS_ROCKY(P.kind) && P.kind !== 'lava' && P.cities > 0 && P.kind !== 'shell'; el.hidden = !vis; if (!vis) return;
   const s = cityStats(P);
-  el.textContent = (s.dens < 10 ? s.dens.toFixed(1) : Math.round(s.dens).toLocaleString('en-US')) + ' people per km² of land · ' + s.cls + (P.kind === 'ring' ? ' · about ' + ringPeople(s.dens) + ' on a ring this size' : '');
+  el.textContent = (s.dens < 0.1 ? 'under 0.1' : s.dens < 10 ? s.dens.toFixed(1) : Math.round(s.dens).toLocaleString('en-US')) + ' people per km² of land · ' + s.cls + (P.kind === 'ring' ? ' · about ' + ringPeople(s.dens) + ' on a ring this size' : '');
 }
 
 /* ---------- controls ---------- */
@@ -2257,7 +2292,7 @@ const CONTROLS = [
   ['Look', 'ice', 'Ice caps', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'rock' && p.kind !== 'lava' && p.kind !== 'desert'],
   ['Look', 'craters', 'Craters', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && NOMEGA(p)],
   ['Look', 'scars', 'Mining scars', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && NOMEGA(p)],
-  ['Look', 'cities', 'Population', 0, 1, 0.01, (p) => p.kind === 'gas' || (IS_ROCKY(p.kind) && p.kind !== 'lava'), (v, p) => IS_MEGA(p.kind) ? cityStats(p).cls : popText(v)],
+  ['Look', 'cities', 'Population', 0, 1, 0.005, (p) => p.kind === 'gas' || (IS_ROCKY(p.kind) && p.kind !== 'lava'), (v, p) => IS_MEGA(p.kind) ? cityStats(p).cls : popText(v)],
   ['Look', 'rad', 'Planet radius', 1500, 15000, 100, (p) => IS_ROCKY(p.kind) && p.kind !== 'lava' && NOMEGA(p), (v) => Math.round(v) + ' km'],
   ['Look', 'land', 'Land share', 0.02, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'lava' && NOMEGA(p), (v) => Math.round(v * 100) + '%'],
   ['Look', 'plan', 'Grown or planned', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'lava', (v) => v < 0.2 ? 'all grown' : v < 0.4 ? 'mostly grown' : v < 0.6 ? 'mixed' : v < 0.8 ? 'mostly planned' : 'all planned'],
@@ -2763,7 +2798,7 @@ function draw(w, h, tmul) {
   gl.uniform3fv(loc.uHazeCol, hex2rgb(P.hazeCol));
   const f = (n, v) => gl.uniform1f(loc[n], v);
   f('uSeed', (P.seed % 997) * 0.173); f('uSea', P.sea); f('uMount', P.mount); f('uScale', P.scale); f('uIce', P.ice); f('uClouds', clouds); f('uAsh', P.kind === 'lava' ? 1 : 0); f('uLowCl', LOW_CLOUD[P.kind] === undefined ? 1 : LOW_CLOUD[P.kind]); gl.uniform3fv(loc.uCloudCol, CLOUD_COL[P.kind] || CLOUD_COL.water); f('uHaze', P.haze);
-  f('uWet', P.wet || 0); f('uBiome', (P.kind === 'rock' || P.kind === 'lava') ? 0 : 1); f('uQ', quality); f('uCities', P.cities); f('uDens', cityStats(P).ld); f('uPlan', P.plan); f('uRad', P.rad); f('uLava', P.lava); f('uCraters', P.craters); f('uScars', P.scars);
+  f('uWet', P.wet || 0); f('uBiome', (P.kind === 'rock' || P.kind === 'lava') ? 0 : 1); f('uQ', quality); f('uCities', IS_MEGA(P.kind) ? P.cities : legacyAmt(P.cities)); f('uPopT', IS_MEGA(P.kind) ? 1 : popBelowT(P.cities)); f('uDens', cityStats(P).ld); f('uPlan', P.plan); f('uRad', P.rad); f('uLava', P.lava); f('uCraters', P.craters); f('uScars', P.scars);
   f('uBands', P.bands); f('uTurb', P.turb); f('uStorms', P.storms); f('uStormSize', P.stormSize);
   f('uSpin', T.spin); f('uCloudAng', T.cloud); f('uFlowT', T.flow); f('uRingAng', T.ring); f('uTime', T.time); f('uStarDens', P.starDens);
   if (mega) {
@@ -2951,8 +2986,8 @@ function derive(s) {
   if (/desert|dry|arid|dune|mesa|steppe|barren|wasteland/.test(wo)) P2.wet = Math.min(P2.wet, -0.4);
   // lights and scars
   if (kind !== 'gas') {
-    if (/lights|city|cities|sprawl|domes|towers|docks|stations|gates|yards|lamps|crowded|halo/.test(sp + ' ' + wo)) P2.cities = Math.max(P2.cities, kind === 'city' ? 0.97 : 0.58);
-    else if (kind !== 'city') P2.cities = /farm|village|town/.test(wo + sp) ? 0.3 : (kind === 'rock' || kind === 'lava' || kind === 'ice') ? 0 : 0.22;
+    if (/lights|city|cities|sprawl|domes|towers|docks|stations|gates|yards|lamps|crowded|halo/.test(sp + ' ' + wo)) P2.cities = Math.max(P2.cities, L2N(kind === 'city' ? 0.97 : 0.58));
+    else if (kind !== 'city') P2.cities = /farm|village|town/.test(wo + sp) ? L2N(0.3) : (kind === 'rock' || kind === 'lava' || kind === 'ice') ? 0 : L2N(0.22);
     if (/scar|mine|mining|quarr|pit\b|slag|rust|gash/.test(sp + ' ' + wo)) P2.scars = /slag/.test(sp + wo) ? 0.9 : 0.7;
   }
   // moons and rings
@@ -2960,7 +2995,7 @@ function derive(s) {
   if (/^none/.test(mo)) nm = 0; else if (nmw) nm = WORD_NUM[nmw[1]] || parseInt(nmw[1], 10) || 1; else if (/several|hundreds|moonlets/.test(mo)) nm = 4; else if (/moon/.test(mo)) nm = 1;
   P2.moons = Math.min(5, nm);
   // real numbers, when a system has them: population in billions, radius in km, land in percent
-  if (s.popB > 0) P2.cities = Math.min(1, Math.max(0.001, (Math.log10(s.popB) + 2) / 6));
+  if (s.popB > 0) P2.cities = popPos(s.popB);
   if (s.radiusKm > 0) P2.rad = Math.min(15000, Math.max(1500, s.radiusKm));
   if (typeof s.landPct === 'number' && isFinite(s.landPct)) P2.land = Math.min(1, Math.max(0.02, s.landPct / 100));
   const ringTxt = mo + ' ' + sp;
@@ -2993,7 +3028,7 @@ function loadSystem(i) {
   // the lore sheet's own settings when the system has them (08-planet-presets.json), else a first guess from its description
   if (s.p) {
     const sd = typeof s.sd === 'number' ? s.sd : 0.5;   // Core 0.8, Inner Rim 0.6, Outer Rim 0.4: the star density slider
-    fromCode(JSON.stringify({ format: 'praedra-planet', v: 1, name: s.n, params: Object.assign({}, PRESET_BASE, s.p, { starDens: sd, name: s.n }) }));
+    fromCode(JSON.stringify({ format: 'praedra-planet', v: 2, name: s.n, params: Object.assign({}, PRESET_BASE, s.p, { starDens: sd, name: s.n }) }));
   } else P = derive(s);
   $('sysIn').value = s.n;
   const TF = { ongoing: 'being terraformed', done: 'terraformed', failed: 'terraforming failed' };
@@ -3005,7 +3040,7 @@ const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 
 /* ---------- presets: library, code, files ---------- */
 const slug = (t) => (t || 'planet').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48) || 'planet';
-const toCode = () => JSON.stringify({ format: 'praedra-planet', v: 1, name: P.name, params: Object.assign({}, P, { moonList: P.moonList.slice(0, 5) }) });
+const toCode = () => JSON.stringify({ format: 'praedra-planet', v: 2, name: P.name, params: Object.assign({}, P, { moonList: P.moonList.slice(0, 5) }) });
 // pasted presets are untrusted: clamp every number to its slider range, check colours, fill gaps from the defaults
 const PARAM_RANGE = {
   sea: [0, 1], wet: [-1, 1], mount: [0, 1], scale: [0.5, 2.5], ice: [0, 1], clouds: [0, 1], haze: [0, 1.3], cities: [0, 1], rad: [1500, 15000], plan: [0, 1], land: [0.02, 1], lava: [0, 1], craters: [0, 1], scars: [0, 1],
@@ -3051,7 +3086,9 @@ function fromCode(txt) {
   // presets saved when Ring and Shell were structures under a Megastructure kind: a shell stays a shell, every other structure (ring, cylinder, wheel and the removed ones) loads as a ring
   const kind = p.kind === 'mega' ? (p.mType === 'shell' ? 'shell' : 'ring') : p.kind;
   const d = makeDefaults(KINDS.some(k => k.id === kind) ? kind : 'terran', 1);
-  const q = sanitize(Object.assign({}, p, { kind }), d);
+  const pq = Object.assign({}, p, { kind });
+  if (!(o.v >= 2) && typeof pq.cities === 'number' && !IS_MEGA(kind)) pq.cities = L2N(pq.cities);   // codes before v2 used the old population scale
+  const q = sanitize(pq, d);
   if (typeof o.name === 'string' && !q.name) q.name = o.name.slice(0, 60);
   P = q;
   syncControls();
