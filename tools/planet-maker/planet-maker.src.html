@@ -836,6 +836,26 @@ float cityField(vec3 q, float dl, out float urban, out float streets, out float 
   return L;
 }
 
+// --- floating cities (gas giants) --------------------------------------------
+// People live on decks hung in the cloud tops. They gather in a few calm regions, and inside a region a city is a cluster of decks
+// on a jittered grid, a few of them big hubs. The Population slider (the same log scale as on a rocky world) sets how many regions
+// there are and how full they are. Returns the deck (0..1, drawn dark by day and lit by night) and a soft glow round the decks.
+float gasCityField(vec3 q, out float glow) {
+  float amt = clamp(uCities, 0.0, 1.0);
+  float reg = fbm(q * 2.4 + sOff() + 41.0, 3);
+  float zone = smoothstep(0.92, 0.55, abs(q.y));   // calm mid-latitudes: none at the poles
+  float inreg = smoothstep(0.66 - 0.26 * amt, 0.72 - 0.26 * amt, reg) * zone;
+  vec3 hh; float wall;
+  vec3 r = cellC(q * 46.0, hh, wall);              // offset to the nearest deck site, in cell units (a cell is 1/46 of a radius)
+  float on = step(hh.x, 0.30 + 0.60 * amt) * inreg;
+  float hub = step(0.93, hh.z);
+  float rad = mix(0.10, 0.20, hh.y) * (1.0 + 1.2 * hub);
+  float rr = max(rad, gPxC * 46.0 * 0.75);         // never thinner than a pixel; the light it loses is taken from its brightness
+  float d = length(r);
+  glow = smoothstep(rr * 3.4, 0.0, d) * on * (0.5 + 0.8 * hub) * (rad / rr);
+  return smoothstep(rr, rr * 0.45, d) * on * (rad / rr);
+}
+
 // --- planet ----------------------------------------------------------------
 // the light shadePlanet uses: the sun, except on the floor of a ring, where the star at its centre is overhead (set by shadeMega)
 vec3 gL = vec3(0.0, 0.0, 1.0);
@@ -857,6 +877,11 @@ vec3 shadePlanet(vec3 p, out float shine) {
 
   if (uType == 1) {
     albedo = gasAlbedo(q) * (0.62 + 0.38 * nz);
+    if (uCities > 0.0) {
+      float glw; float dk = gasCityField(q, glw);
+      albedo = mix(albedo, vec3(0.26, 0.27, 0.30), clamp(dk, 0.0, 1.0) * 0.8);   // hulls and decks, seen as dark specks by day
+      emis += (vec3(1.0, 0.68, 0.36) * dk * 1.5 + vec3(1.0, 0.55, 0.26) * glw * 0.35) * night;
+    }
   } else {
     float t = mix(0.28, 0.62, uSea);
     float h0 = heightAt(q, OCT(6));
@@ -2181,7 +2206,7 @@ const CONTROLS = [
   ['Look', 'ice', 'Ice caps', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'rock' && p.kind !== 'lava' && p.kind !== 'desert'],
   ['Look', 'craters', 'Craters', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && NOMEGA(p)],
   ['Look', 'scars', 'Mining scars', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && NOMEGA(p)],
-  ['Look', 'cities', 'Population', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'lava', (v, p) => IS_MEGA(p.kind) ? cityStats(p).cls : popText(v)],
+  ['Look', 'cities', 'Population', 0, 1, 0.01, (p) => p.kind === 'gas' || (IS_ROCKY(p.kind) && p.kind !== 'lava'), (v, p) => IS_MEGA(p.kind) ? cityStats(p).cls : popText(v)],
   ['Look', 'rad', 'Planet radius', 1500, 15000, 100, (p) => IS_ROCKY(p.kind) && p.kind !== 'lava' && NOMEGA(p), (v) => Math.round(v) + ' km'],
   ['Look', 'land', 'Land share', 0.02, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'lava' && NOMEGA(p), (v) => Math.round(v * 100) + '%'],
   ['Look', 'plan', 'Grown or planned', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'lava', (v) => v < 0.2 ? 'all grown' : v < 0.4 ? 'mostly grown' : v < 0.6 ? 'mixed' : v < 0.8 ? 'mostly planned' : 'all planned'],
@@ -2261,7 +2286,7 @@ function syncControls() {
   $('tagKind').textContent = (KINDS.find(k => k.id === P.kind) || {}).name || '';
   const mg = IS_MEGA(P.kind);
   $('secMega').hidden = !mg; $('secLook').hidden = !TERR(P); $('secSky').hidden = !TERR(P); $('secRings').hidden = mg; $('secMoons').hidden = mg; $('secOrbit').hidden = mg; $('swHaze').hidden = mg;
-  ctlEls.cities.row.querySelector('label').textContent = mg ? 'Settlement' : 'Population';
+  ctlEls.cities.row.querySelector('label').textContent = mg ? 'Settlement' : P.kind === 'gas' ? 'Floating cities' : 'Population';
   syncMegaUI();
   syncRingUI();
   syncOrbUI();

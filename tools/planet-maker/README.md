@@ -189,12 +189,17 @@ Giant storms are no longer flat discs. Each one twirls the sky around it before 
 
 Cost: on software rendering a gas giant in High is about 30 percent slower per frame than before; Fast skips the grain, ovals and puffs. Not measured on a real graphics card. The bands still slide past each other as before (Band flow), but the new wind speeds are lower, so they shear more gently. Not drawn: storms placed on a belt edge on purpose (they sit at a random latitude and the bands bend around them wherever they land), long-lived storm wakes, hexagons at the poles.
 
+**Floating cities.** The Population slider becomes "Floating cities" on a gas giant: people living on decks, rafts and balloons in the cloud tops. They gather in calm mid-latitude regions (none at the poles), and inside a region a city is a cluster of decks on a jittered grid with a few bigger hubs. More people means more regions and fuller ones. At night the decks are lit (warm lights with a soft glow); by day they are dark specks on the cloud. The slider keeps the rocky worlds' scale (0.01 to 10,000 billion), so 5 billion sits near the middle. The cities stay put while the bands flow past. A new gas giant starts at none.
+
+The 59 lore systems whose people really live in the clouds get their population from the lore sheet through `CLOUD_M` in `parse_presets.py` (read by hand from each gas giant's World and Population lines; moon, ring and orbit dwellers are left out, and eight mixed ones use the sheet's whole number). Change that table and rerun the steps under Rebuild to fix one.
+
 ## Terrain relief
 **Mountains.** They used to be one smooth ridge layer, which read as sand dunes. Now they are long belts (where plates would have collided) with sharp crests: a ridged multifractal, each layer weighted by the one before, so crests carry the fine detail and valleys stay smooth. Between the belts the land is plains and low hills. Steep faces turn bare rock, and the highest crests keep snow even in a warm climate (less on worlds with few ice caps). The Mountains slider still runs from none to everything. It costs about 10 to 20 percent more per frame on software rendering.
 
 The light and shade on mountains and craters comes from the slope of the height map, measured from two nearby samples. Both samples now use the same amount of detail (before, the centre sample had two more layers of noise, which the slope read as huge cliffs and smeared Earth-like and desert highlands into streaks). Craters on rock worlds are unchanged.
 
 ## Known limits
+- Floating cities: tuned by eye on software rendering only. A deck is a dot, not a shape (no keels, balloons, rotors or cables), the cities do not follow the wind, and a hub is just a bigger dot. Sizes are exaggerated so decks read from orbit.
 - The system presets are a first guess read from each description (colours, moons, rings). Expect to adjust some by hand.
 - The whole planet is one pass. Moons do not shadow each other, and a moon's shadow is a plain round disc (lumpy outlines are not followed).
 - Rings are flat: no thickness, no braids, no waves. A ring has one source moon at most, and moons never push each other's gaps around beyond the three resonances listed under Rings.
