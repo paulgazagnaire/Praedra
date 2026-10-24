@@ -1,4 +1,4 @@
-# usage: python3 parse_presets.py <systems-from-parse.py.json> <08-planet-presets.json> systems.json preset-base.json
+# usage: python3 parse_presets.py <systems-from-parse.py.json> <08-planet-presets.json> systems.json preset-base.json [sector-density.json]
 # Merges the lore sheet's planet presets into the system list. Every preset repeats mostly the same settings, so the
 # most common value of each setting goes to preset-base.json and each system keeps only what differs ("p").
 import json, sys, collections, math, re
@@ -33,6 +33,7 @@ def people(txt):   # the first head count in a world's population line, or None 
     m = re.match(r'(?:about |roughly )?(\w+) ', t)
     return float(WORDS[m.group(1)]) if m and m.group(1) in WORDS else None
 sysf, prf, out, base_out = sys.argv[1:5]
+sector_sd = json.load(open(sys.argv[5], encoding='utf8')) if len(sys.argv) > 5 else {}   # from regions.py: the star density of each sector
 rows = {r['n']: r for r in json.load(open(sysf, encoding='utf8'))}
 pre = json.load(open(prf, encoding='utf8'))['systems']
 assert all(any(p['name'] == n and p['kind'] == 'gas' for p in pre) for n in CLOUD_M), 'a cloud-city system is not a gas giant'
@@ -57,7 +58,7 @@ base = {k: json.loads(c.most_common(1)[0][0]) for k, c in count.items()}
 res = []
 for p in pre:
     r = dict(rows[p['name']]); t = p['text']
-    r['pop'] = t['population']; r['lore'] = t['lore']; r['tf'] = p['terraform']; r['sd'] = p['starDensity']
+    r['pop'] = t['population']; r['lore'] = t['lore']; r['tf'] = p['terraform']; r['sd'] = sector_sd.get(r['sec'], p['starDensity'])
     r['p'] = {k: v for k, v in params[p['name']].items() if dump(v) != dump(base[k])}
     res.append(r)
 json.dump(res, open(out, 'w', encoding='utf8'), ensure_ascii=False, separators=(',', ':'))
