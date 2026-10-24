@@ -249,7 +249,7 @@ out vec4 fragColor;
 uniform vec2 uRes;
 uniform vec4 uA;      // x sky seed, y how many stars, z how much Milky Way, w how much gas cloud
 uniform vec4 uB;      // x angle of the Milky Way, y its half width (screen heights), z how far it sits off centre, w how much it arches
-uniform vec4 uC;      // x where along the band it is brightest, y star warmth (-1 blue .. 1 red), z how many objects, w how bright the objects are
+uniform vec4 uC;      // x where along the band it is brightest, y star warmth (-1 blue .. 1 red), z how many objects, w unused
 uniform vec3 uBase, uBandCore, uBandEdge, uNeb1, uNeb2;
 uniform vec4 uLens;   // xy: place of a black hole (-1..1 across the picture), z: how far it bends the sky behind it (screen heights), w: on
 uniform vec4 uF0[12]; // xy: place (-1..1 across the picture), z: size (screen heights), w: kind
@@ -327,7 +327,7 @@ vec3 starLayers(vec2 q, float prof, float sc) {
       float sig = max(0.55, (0.4 + 1.1 * m) * sc * ((l == 0) ? 1.0 : 0.8));
       float I = (0.1 + 0.9 * m) * exp(-dpx * dpx / (2.0 * sig * sig));
       if (l == 0) I += m * m * 0.5 * exp(-pow(dpx / (2.2 * sig), 2.0)) * smoothstep(0.2 * cs * sc, 0.1 * cs * sc, dpx);
-      c += starCol(pow(h2.y, 0.8), uC.y) * I * ((l == 0) ? 0.9 : (l == 1) ? 0.65 : 0.5);
+      c += starCol(pow(h2.y, 0.8), uC.y) * I * ((l == 0) ? 1.3 : (l == 1) ? 0.95 : 0.7);
     }
   }
   return c;
@@ -359,8 +359,7 @@ void feature(int i, vec2 q, float asp, float px, inout vec3 emit, inout float bl
   float S = f0.z; int kind = int(f0.w + 0.5);
   vec2 d = q - pos;
   if (length(d) > S * 2.6) return;
-  float B = f1.w * uC.w, sd = f1.z;
-  if (kind == 5 || kind == 6 || kind == 13) B *= 0.65;   // the boldest shapes sit back a little more
+  float B = f1.w, sd = f1.z;
   vec3 C2 = uF2[i], C3 = uF3[i];
   vec2 e = rt(d, f1.x);
   float rg = length(d) / S;
@@ -371,11 +370,11 @@ void feature(int i, vec2 q, float asp, float px, inout vec3 emit, inout float bl
     float s0 = max(px * 0.8, 0.045 * S);
     float core = exp(-rr * rr / (2.0 * s0 * s0));
     float halo = pow(1.0 / (1.0 + pow(rr / (0.22 * S), 2.0)), 1.6) * 0.35;
-    float s1 = max(px * 0.7, s0 * 0.3), L = S * 0.8;
+    float s1 = max(px * 0.7, s0 * 0.3), L = S * 1.5;
     float sp = 1.0 / (1.0 + pow(e.y / s1, 2.0)) * exp(-abs(e.x) / (0.4 * L)) + 1.0 / (1.0 + pow(e.x / s1, 2.0)) * exp(-abs(e.y) / (0.4 * L));
     vec2 e2 = rt(e, 0.7853982);
     float sp2 = 1.0 / (1.0 + pow(e2.y / (s1 * 1.5), 2.0)) * exp(-abs(e2.x) / (0.2 * L)) + 1.0 / (1.0 + pow(e2.x / (s1 * 1.5), 2.0)) * exp(-abs(e2.y) / (0.2 * L));
-    emit += B * (mix(C2, vec3(1.0), core) * (core * 1.7 + halo) + C2 * (0.4 * sp + 0.12 * sp2));
+    emit += B * (mix(C2, vec3(1.0), core) * (core * 1.7 + halo) + C2 * (0.75 * sp + 0.28 * sp2));
   } else if (kind == 1) {
     // a spiral galaxy, seen at a slant
     vec2 g = vec2(e.x, e.y / f1.y) / S;
@@ -567,7 +566,7 @@ void main() {
     float lane = smoothstep(0.5, 0.64, dn) * exp(-pow(b.y / (hw * 0.55), 2.0));
     float rift = exp(-pow((b.y - 0.1 * hw * (dn - 0.5) * 4.0) / (0.1 * hw), 2.0)) * smoothstep(0.35, 0.6, sfbm(vec3(b * vec2(5.0, 2.0 / hw) + 3.0, uA.x + 60.0), 3));
     vec3 bc = mix(uBandEdge, uBandCore, clamp(prof * prof * br * 1.3, 0.0, 1.0));
-    col += bc * glow * 0.55 * uA.z * (1.0 - 0.8 * lane) * (1.0 - 0.6 * rift);
+    col += bc * glow * 0.95 * uA.z * (1.0 - 0.8 * lane) * (1.0 - 0.6 * rift);
   }
   vec3 sc3 = starLayers(qs, prof * min(uA.z, 1.5), sc);
   // fine grit of unresolved stars along the band
@@ -2430,7 +2429,7 @@ const BASE = {
   ring: { on: false, type: 'broad', inner: 1.24, width: 1.03, op: 0.8, gaps: 0.8, struct: 0.6, clump: 0.3, dust: 0.15, feeder: 0, seed: 1, spin: 0.3, c1: '#d8c8a4', c2: '#7a6a55' },
   moons: 1, moonSpeed: 0.6, moonList: [],
   mLayers: 2, mOpen: 0.35, mCap: 1, mWidth: 0.14, mWall: 0.05, mSpan: 0.7, mShade: 0.28, mPlate: 0.6, mLights: 0.5, mStar: 1, mSun: 'star', mPorts: 0.6, mLook: 0, mHull: '#8b9199', mAcc: '#e0a64a',
-  sky: 0, skyTheme: 'auto', skyOn: 1, skyStars: 0.5, skyBand: 0.5, skyNeb: 0.5, skyObj: 0.25,
+  sky: 0, skyTheme: 'auto', skyOn: 1, skyStars: 0.5, skyBand: 0.5, skyNeb: 0.5, skyObj: 0.6,
   oOn: 0, oHt: 0.12, oWid: 0.045, oStn: 8, oLit: 0.6, oHull: '#8b9199', oAcc: '#e0a64a', eOn: 0, eLon: -20, eHt: 0.9, eN: 1,
 };
 const KIND_DEF = {
@@ -3086,30 +3085,30 @@ function planSky(seed, themeId) {
     S.dens = 0.5; S.base = [0.003, 0.0035, 0.009]; S.band = R() < 0.3 ? band(0.35) : band(0);
     S.neb = { amt: 0.05, c1: [0.03, 0.05, 0.12], c2: [0.06, 0.04, 0.1] };
     K.spiral(rg(0.14, 0.2), { aux: rg(0.4, 0.8) }); K.quasar(); K.edgeon(); K.elliptical(); K.spiral(); K.elliptical();
-    fill(12, [() => K.spiral(rg(0.04, 0.07)), () => K.elliptical(rg(0.03, 0.06)), () => K.edgeon(rg(0.06, 0.1)), () => K.star()]);
+    fill(12, [() => K.spiral(rg(0.04, 0.07)), () => K.elliptical(rg(0.03, 0.06)), () => K.edgeon(rg(0.06, 0.1)), () => K.star(), () => K.comet()]);
   } else if (theme === 'nursery') {
     S.dens = 0.9; S.base = [0.008, 0.005, 0.014]; S.band = R() < 0.5 ? band(0.4) : band(0);
     const [n1, n2] = nebPair(); S.neb = { amt: 0.3, c1: n1.map((v) => v * 0.55), c2: n2.map((v) => v * 0.55) };
     K.emission(rg(0.24, 0.32)); K.dark(rg(0.14, 0.2)); K.emission(rg(0.12, 0.18)); K.open(); K.star(); K.dark(); K.open(); K.star(rg(0.06, 0.1), { c1: hsl(0.6, 0.6, 0.9) });
-    fill(12, [() => K.open(rg(0.05, 0.08)), () => K.dark(rg(0.08, 0.13)), () => K.star(), () => K.emission(rg(0.1, 0.15))]);
+    fill(12, [() => K.open(rg(0.05, 0.08)), () => K.dark(rg(0.08, 0.13)), () => K.star(), () => K.emission(rg(0.1, 0.15)), () => K.comet()]);
   } else if (theme === 'lane') {
     S.dens = 1.2; S.band = band(1.0, { w: rg(0.14, 0.24) });
     S.neb = { amt: 0.12, c1: [0.06, 0.07, 0.16], c2: [0.14, 0.06, 0.1] };
     K.globular(); K.dark(rg(0.12, 0.2)); K.globular(); K.star(); K.open(); K.emission(rg(0.1, 0.16)); K.globular(); K.star(); K.planetary();
-    fill(12, [() => K.open(rg(0.05, 0.08)), () => K.star(), () => K.dark(rg(0.08, 0.13)), () => K.globular(rg(0.05, 0.09)), () => K.planetary(rg(0.04, 0.07))]);
+    fill(12, [() => K.open(rg(0.05, 0.08)), () => K.star(), () => K.dark(rg(0.08, 0.13)), () => K.globular(rg(0.05, 0.09)), () => K.comet(), () => K.planetary(rg(0.04, 0.07))]);
   } else if (theme === 'twin') {
     S.dens = 0.8; S.band = R() < 0.6 ? band(0.5) : band(0);
     const at0 = spot(0.14), at = [Math.max(-0.78, Math.min(0.78, at0[0])), Math.max(-0.72, Math.min(0.72, at0[1]))], a = R() * 6.28, gap = rg(0.12, 0.18);
     K.star(rg(0.13, 0.17), { at, c1: hsl(0.6, 0.6, 0.9), bri: 1.5, ang: 0.3 });
     K.star(rg(0.08, 0.12), { at: [at[0] + Math.cos(a) * gap * 2 / 1.3, at[1] + Math.sin(a) * gap * 2], c1: hsl(0.06, 0.8, 0.75), bri: 1.3, ang: 0.5 });
     K.planetary(rg(0.08, 0.12)); K.open(); K.planet(rg(0.09, 0.15), { aux: 1 });
-    fill(12, [() => K.star(), () => K.open(rg(0.05, 0.08)), () => K.spiral(rg(0.04, 0.06)), () => K.elliptical(rg(0.03, 0.05))]);
+    fill(12, [() => K.star(), () => K.open(rg(0.05, 0.08)), () => K.spiral(rg(0.04, 0.06)), () => K.elliptical(rg(0.03, 0.05)), () => K.comet()]);
   } else if (theme === 'remnant') {
     S.dens = 0.7; S.band = R() < 0.5 ? band(0.45) : band(0);
     const [n1, n2] = nebPair(); S.neb = { amt: 0.18, c1: n1.map((v) => v * 0.4), c2: n2.map((v) => v * 0.4) };
     const r = K.remnant(rg(0.24, 0.32));
     K.pulsar(rg(0.12, 0.17), { at: [r.x + rg(-0.1, 0.1), r.y + rg(-0.1, 0.1)] });
-    K.remnant(rg(0.09, 0.13)); K.globular(); K.star(); K.dark(rg(0.08, 0.12));
+    K.remnant(rg(0.09, 0.13)); K.globular(); K.star(); K.comet(); K.dark(rg(0.08, 0.12));
     fill(12, [() => K.star(), () => K.spiral(rg(0.04, 0.06)), () => K.open(rg(0.05, 0.08)), () => K.elliptical(rg(0.03, 0.05))]);
   } else if (theme === 'hole') {
     S.dens = 0.9; S.band = band(1.1, { w: rg(0.12, 0.18) });
@@ -3119,18 +3118,18 @@ function planSky(seed, themeId) {
     S.band.ang = ang; S.band.arch = 0; S.band.off = 0;
     S.lens = { x: h.x, y: h.y, re: hs * 0.5 };
     K.quasar(); K.star(); K.spiral(); K.globular(); K.pulsar(rg(0.08, 0.12)); K.star();
-    fill(12, [() => K.star(), () => K.spiral(rg(0.04, 0.06)), () => K.open(rg(0.05, 0.07)), () => K.elliptical(rg(0.03, 0.05))]);
+    fill(12, [() => K.star(), () => K.spiral(rg(0.04, 0.06)), () => K.open(rg(0.05, 0.07)), () => K.comet(), () => K.elliptical(rg(0.03, 0.05))]);
   } else if (theme === 'core') {
     S.dens = 3.2; S.warm = 0.45; S.base = [0.012, 0.009, 0.012]; S.band = R() < 0.4 ? band(0.5, { core: hsl(0.08, 0.5, 0.88) }) : band(0);
     S.neb = { amt: 0.14, c1: [0.14, 0.07, 0.04], c2: [0.1, 0.05, 0.1] };
     K.globular(rg(0.26, 0.34), { at: [rg(-0.5, 0.5), rg(0.5, 0.75) * (R() < 0.5 ? 1 : -1)] }); K.star(rg(0.08, 0.12), { c1: hsl(0.03, 0.8, 0.65), bri: 1.5 }); K.globular(rg(0.08, 0.12)); K.star(rg(0.06, 0.09), { c1: hsl(0.05, 0.8, 0.7) }); K.planetary(); K.open(); K.star(rg(0.06, 0.09), { c1: hsl(0.08, 0.7, 0.8) });
-    fill(12, [() => K.star(), () => K.globular(rg(0.05, 0.09)), () => K.planetary(rg(0.04, 0.07)), () => K.open(rg(0.05, 0.08))]);
+    fill(12, [() => K.star(), () => K.globular(rg(0.05, 0.09)), () => K.planetary(rg(0.04, 0.07)), () => K.open(rg(0.05, 0.08)), () => K.comet()]);
   } else if (theme === 'neighbours') {
     S.dens = 0.9; S.band = R() < 0.5 ? band(0.5) : band(0);
-    const big = K.planet(rg(0.11, 0.16), { aux: 1 });
+    const big = K.planet(rg(0.17, 0.26), { aux: 1 });
     // pull the big one toward a corner so its rings and curve fill it
     big.x = (big.x < 0 ? -1 : 1) * 1.05; big.y = (big.y < 0 ? -1 : 1) * rg(0.35, 0.8);
-    K.star(rg(0.1, 0.15), { c1: [1, 0.96, 0.85], bri: 1.6 }); K.planet(rg(0.045, 0.08)); K.planet(rg(0.035, 0.06)); K.comet(); K.star(); K.star();
+    K.star(rg(0.1, 0.15), { c1: [1, 0.96, 0.85], bri: 1.6 }); K.planet(rg(0.045, 0.08)); K.planet(rg(0.035, 0.06)); K.comet(); K.comet(rg(0.08, 0.12)); K.star(); K.star();
     fill(12, [() => K.star(), () => K.planet(rg(0.03, 0.05)), () => K.spiral(rg(0.04, 0.06)), () => K.open(rg(0.05, 0.07))]);
   } else {
     // rim
@@ -3138,7 +3137,7 @@ function planSky(seed, themeId) {
     S.neb = { amt: 0.04, c1: [0.03, 0.04, 0.1], c2: [0.06, 0.03, 0.08] };
     const g = K.spiral(rg(0.34, 0.42), { aux: rg(0.3, 0.6), bri: 0.9 });
     g.x = (g.x < 0 ? -1 : 1) * rg(0.55, 0.85); g.y = rg(-0.55, 0.55);
-    K.globular(); K.elliptical(); K.quasar(); K.star(); K.elliptical(rg(0.03, 0.05)); K.spiral(rg(0.04, 0.06));
+    K.globular(); K.elliptical(); K.quasar(); K.star(); K.elliptical(rg(0.03, 0.05)); K.spiral(rg(0.04, 0.06)); K.comet();
     fill(12, [() => K.star(), () => K.elliptical(rg(0.03, 0.05)), () => K.spiral(rg(0.03, 0.05)), () => K.globular(rg(0.04, 0.07))]);
   }
   feats.length = Math.min(feats.length, 12);
@@ -3162,12 +3161,10 @@ function getSkyPlan() {
   return skyPlanCache.plan;
 }
 // what the sliders do on top of the plan: more or fewer stars, a stronger band, thicker gas, more objects
-// the sky is meant to sit quietly behind the planet: objects are dim, stars thin, and only a few things show by default
-const SKY_OBJ_GAIN = 0.5;
 function skyMix(plan) {
   const n = Math.max(0, Math.min(plan.feats.length, Math.ceil(P.skyObj * 12 - 1e-6)));
   const lensOn = !!(plan.lens && plan.feats.findIndex((f) => f.kind === SKY_KIND.hole) < n && plan.feats.findIndex((f) => f.kind === SKY_KIND.hole) >= 0);
-  return { n, stars: plan.dens * (0.1 + 1.3 * P.skyStars), band: Math.min(1.6, plan.band.amt * 2 * P.skyBand), gas: plan.neb.amt * 1.1 * P.skyNeb, lensOn };
+  return { n, stars: plan.dens * (0.15 + 1.7 * P.skyStars), band: Math.min(1.6, plan.band.amt * 2 * P.skyBand), gas: plan.neb.amt * 2 * P.skyNeb, lensOn };
 }
 
 /* sky pass: draws the plan into a texture the size of the picture */
@@ -3207,7 +3204,7 @@ function skyBake(w, h) {
     gl.uniform2f(L.uRes, w, h);
     gl.uniform4f(L.uA, (skySeedOf(P) % 9973) * 0.0731, m.stars, m.band, m.gas);
     gl.uniform4f(L.uB, b.ang, b.w, b.off, b.arch);
-    gl.uniform4f(L.uC, b.bulge, plan.warm, m.n, SKY_OBJ_GAIN);
+    gl.uniform4f(L.uC, b.bulge, plan.warm, m.n, 0);
     gl.uniform3fv(L.uBase, plan.base); gl.uniform3fv(L.uBandCore, b.core); gl.uniform3fv(L.uBandEdge, b.edge);
     gl.uniform3fv(L.uNeb1, plan.neb.c1); gl.uniform3fv(L.uNeb2, plan.neb.c2);
     gl.uniform4f(L.uLens, plan.lens ? plan.lens.x : 0, plan.lens ? plan.lens.y : 0, plan.lens ? plan.lens.re : 0, m.lensOn ? 1 : 0);
