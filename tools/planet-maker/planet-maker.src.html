@@ -837,24 +837,72 @@ float cityField(vec3 q, float dl, out float urban, out float streets, out float 
 }
 
 // --- floating cities (gas giants) --------------------------------------------
-// People live on decks hung in the cloud tops. They gather in a few calm regions, and inside a region a city is a cluster of decks
-// on a jittered grid, a few of them big hubs. The Population slider (the same log scale as on a rocky world) sets how many regions
-// there are and how full they are. Returns the deck (0..1, drawn dark by day and lit by night) and a soft glow round the decks.
-float gasCityField(vec3 q, out float glow) {
+// like cellC, but a site sits within 0.15 of its cell's middle, so no two sites are closer than 0.7 and a disc up to 0.33 wide is never cut by a neighbour's cell
+vec3 siteC(vec3 x, out vec3 hh, out float wall) {
+  vec3 ip = floor(x), fp = fract(x), sd = step(0.5, fp);
+  float d1 = 9.0, d2 = 9.0; vec3 best = vec3(0.0); hh = vec3(0.0);
+  for (int k = 0; k < 2; k++) for (int j = 0; j < 2; j++) for (int i = 0; i < 2; i++) {
+    vec3 g = vec3(float(i), float(j), float(k)) - 1.0 + sd;
+    vec3 hs = hash33(ip + g + 53.0);
+    vec3 r = g + 0.35 + 0.30 * hs - fp;
+    float d = dot(r, r);
+    if (d < d1) { d2 = d1; d1 = d; best = r; hh = hs; } else if (d < d2) { d2 = d; }
+  }
+  wall = sqrt(d2) - sqrt(d1);
+  return best;
+}
+// A city is a big white tiered disc (a main platform with a dome in the middle) ringed by smaller discs and a few spires, standing on
+// stilts above the cloud and throwing a soft shadow on it. Cities gather in calm mid-latitude regions; the Population slider (the same
+// log scale as on a rocky world) sets how many regions there are and how full they are. Capitals are half as big again. By night the
+// discs show rings of lit windows and the spires burn bright; by day they are white against the cloud, with the shadow and a thin
+// dark rim. Sizes are exaggerated on purpose: a real city is a few km, here the big discs are about 2000 km (a few percent of a radius).
+// body = white structure (0..1), shade = dark shadow and rim lines, lit = night windows, glow = soft light on the cloud round a city.
+void gasCities(vec3 q, vec3 lt, out float body, out float shade, out float lit, out float glow, out float dm) {
+  body = 0.0; shade = 0.0; lit = 0.0; glow = 0.0; dm = 0.0;
   float amt = clamp(uCities, 0.0, 1.0);
-  float ra = 0.1 + 0.9 * amt;                      // the slider's bottom is 10 million: below that a world still gets one small region of faint lights
+  float ra = 0.1 + 0.9 * amt;                      // the slider's bottom is 10 million: below that a world still gets one small region
   float reg = fbm(q * 2.4 + sOff() + 41.0, 3);
-  float zone = smoothstep(0.92, 0.55, abs(q.y));   // calm mid-latitudes: none at the poles
-  float inreg = smoothstep(0.66 - 0.26 * ra, 0.72 - 0.26 * ra, reg) * zone;
-  vec3 hh; float wall;
-  vec3 r = cellC(q * 46.0, hh, wall);              // offset to the nearest deck site, in cell units (a cell is 1/46 of a radius)
-  float on = step(hh.x, (0.30 + 0.60 * amt) * (0.08 + 0.92 * smoothstep(0.0, 0.15, amt))) * inreg;
-  float hub = step(0.93, hh.z);
-  float rad = mix(0.10, 0.20, hh.y) * (1.0 + 1.2 * hub);
-  float rr = max(rad, gPxC * 46.0 * 0.75);         // never thinner than a pixel; the light it loses is taken from its brightness
-  float d = length(r);
-  glow = smoothstep(rr * 3.4, 0.0, d) * on * (0.5 + 0.8 * hub) * (rad / rr);
-  return smoothstep(rr, rr * 0.45, d) * on * (rad / rr);
+  float inreg = smoothstep(0.64 - 0.34 * ra, 0.70 - 0.34 * ra, reg) * smoothstep(0.92, 0.55, abs(q.y));   // none at the poles
+  if (inreg <= 0.0) return;
+  const float G1 = 4.5;                            // a site about every 1/4.5 of a radius
+  vec3 h1; float w1;
+  vec3 r1 = siteC(q * G1, h1, w1);                 // offset to the nearest city site, in site units
+  float on = step(h1.x, (0.30 + 0.45 * amt) * (0.08 + 0.92 * smoothstep(0.0, 0.15, amt))) * inreg;
+  if (on <= 0.0) return;
+  float d1 = length(r1);
+  float R = mix(0.15, 0.21, h1.y) * (1.0 + 0.2 * step(0.86, h1.z));   // at most 0.25 plus the lobes: wider than 0.33 and the next site's cell cuts the disc
+  float Re = max(R, 1.4 * gPxC * G1);              // never thinner than a pixel; the light it loses is taken from its brightness
+  float fade = R / Re;
+  vec3 ltn = normalize(lt + vec3(1e-4));
+  float edge = smoothstep(0.0, 0.2, w1);          // soft things fade out before they meet the next site's cell
+  vec3 t1 = normalize(cross(q, vec3(0.0, 1.0, 0.002))), t2 = cross(q, t1);
+  float az = atan(dot(r1, t2), dot(r1, t1));
+  float lobes = 1.0 + 0.09 * cos(az * (5.0 + floor(h1.y * 3.0)) + h1.x * 6.28);   // round pods round the edge, like Kamino's towers
+  float Rl = Re * lobes;
+  float shd = smoothstep(Rl * 1.3, Rl * 0.85, length(r1 - ltn * (0.45 * Re))) * edge;
+  float m = smoothstep(Rl, Rl * 0.9, d1);   // the shadow falls away from the sun
+  float dome = smoothstep(Re * 0.42, Re * 0.2, d1);
+  float tier = max(smoothstep(0.035, 0.0, abs(d1 - 0.62 * Re)), smoothstep(0.03, 0.0, abs(d1 - 0.84 * Re))) * m;
+  float ang = az * (12.0 / 6.2831853);
+  float fa = fract(ang + h1.x * 12.0);
+  float spoke = smoothstep(0.05, 0.0, min(fa, 1.0 - fa)) * m * (1.0 - dome);
+  float rim = smoothstep(Rl * 1.14, Rl, d1) * (1.0 - m);
+  // smaller discs and spires round the main one
+  float near = smoothstep(0.62, 0.45, d1) * edge;
+  vec3 h2; float w2;
+  float G2 = G1 * 3.6;
+  vec3 r2 = siteC(q * G2, h2, w2);
+  float d2 = length(r2);
+  float spire = step(0.84, h2.z);
+  float Rs = mix(0.20, 0.30, h2.y) * (1.0 + 0.1 * spire);
+  float Rse = max(Rs, 1.1 * gPxC * G2);
+  float sd = smoothstep(Rse, Rse * 0.8, d2) * step(h2.x, 0.45) * near * (Rs / Rse);
+  body = clamp(max(m * fade, sd), 0.0, 1.0);
+  shade = clamp(0.9 * shd * (1.0 - body) * fade + 0.5 * rim * fade + 0.45 * tier * fade + 0.25 * spoke * fade, 0.0, 1.0);
+  dm = dome * m;
+  float rings = 0.30 + 0.70 * step(0.5, fract(d1 / Re * 5.5 + h1.x * 3.0));
+  lit = (m * rings * (0.8 + 0.4 * h1.y) + dome * 0.9) * fade + sd * (0.7 + 0.5 * spire + 0.4 * h2.x);
+  glow = smoothstep(Re * 1.9, 0.0, d1) * fade * edge * (0.4 + 0.4 * h1.y);
 }
 
 // --- planet ----------------------------------------------------------------
@@ -879,9 +927,11 @@ vec3 shadePlanet(vec3 p, out float shine) {
   if (uType == 1) {
     albedo = gasAlbedo(q) * (0.62 + 0.38 * nz);
     if (uCities > 0.0) {
-      float glw; float dk = gasCityField(q, glw);
-      albedo = mix(albedo, vec3(0.26, 0.27, 0.30), clamp(dk, 0.0, 1.0) * 0.8);   // hulls and decks, seen as dark specks by day
-      emis += (vec3(1.0, 0.68, 0.36) * dk * 1.5 + vec3(1.0, 0.55, 0.26) * glw * 0.35) * night;
+      float cb, cs, cl, cg, cd;
+      gasCities(q, lq - q * dot(lq, q), cb, cs, cl, cg, cd);
+      // white decks with a pale blue dome, their shadow, rims and joints, seen by day
+      albedo = mix(albedo * (1.0 - 0.6 * cs), mix(vec3(1.0, 1.0, 1.02), vec3(0.74, 0.85, 1.0), cd), cb);
+      emis += (vec3(0.78, 0.90, 1.0) * cl * 1.05 + vec3(1.0, 0.72, 0.42) * cg * 0.16) * night;
     }
   } else {
     float t = mix(0.28, 0.62, uSea);
