@@ -128,6 +128,11 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
     <details class="sec" id="secMega" open hidden>
       <summary>Structure</summary>
       <p class="note" id="megaNote"></p>
+      <div id="megaCentreBox" hidden>
+        <h3 class="sub">What hangs at the centre</h3>
+        <div class="chips" id="megaCentre"></div>
+        <p class="note" id="megaCentreNote"></p>
+      </div>
       <div class="sw-row" id="swMega"></div>
       <div id="ctlMega"></div>
     </details>
@@ -226,6 +231,7 @@ precision highp float;
 out vec4 fragColor;
 uniform vec2 uRes;
 uniform float uZoom;
+uniform vec2 uShift;        // moves the view (a ring's close-up on its far floor)
 uniform int uType;            // 0 rocky, 1 gas giant, 2 tidally locked
 uniform vec3 uPal[5];
 uniform vec3 uHazeCol;
@@ -249,6 +255,7 @@ uniform vec3 uMegaHull, uMegaAcc;
 uniform float uMegaT;       // 0 ring, 1 shell
 uniform vec4 uMegaC;        // shells: x layers, y share of plates open, z cos of the cap's half angle
 uniform vec4 uMegaD;        // shells: x latitude bands
+uniform vec4 uMegaE;        // ring: x what hangs at the centre (0 star, 1 fusion lamp, 2 gyro core), y how many spaceport piers stand off the hull
 #endif
 uniform int uMoonN;
 uniform vec4 uMoon[5];      // xyz: position (planet radius = 1), w: radius
@@ -1037,35 +1044,99 @@ vec3 shadePlanet(vec3 p, out float shine) {
 // down the view (z) and is carried into that frame with the same basis the planet uses.
 float sdBox2(vec2 p, vec2 b) { vec2 d = abs(p) - b; return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0); }
 const float MEGA_SLAB = 0.02;
+float sdBox3(vec3 p, vec3 b) { vec3 d = abs(p) - b; return length(max(d, 0.0)) + min(max(d.x, max(d.y, d.z)), 0.0); }
+const float PIER_R = 1.0 + MEGA_SLAB;
+// Spaceports: thin piers standing out from the outer hull, one per cell round the loop (the cells turn with the hull). The Spaceports
+// slider sets how many cells there are (40 to 120) and how many of them carry a pier. A pier is a spine, a cross bar of berths 2/3 of
+// the way out and a docking block at the tip, with its own height on the hull and length. Cells are periodic, so a point is measured
+// against its own cell and the nearest neighbour; a cell without a pier answers with the width of a cell, a safe lower bound.
+float pierNp() { return floor(mix(40.0, 120.0, uMegaE.y) + 0.5); }
+float pierDist(vec3 p, float rho, float u, float i, float np) {
+  vec3 h = hash33(vec3(mod(i, np), uSeed + 31.0, 1.0));
+  if (h.x > 0.3 + 0.5 * uMegaE.y) return 0.8 * 2.0 * PI * rho / np;
+  float da = (u - i) * (2.0 * PI / np);
+  float L = mix(0.03, 0.11, h.y);
+  float yc = (h.z - 0.5) * 1.3 * (uMegaA.x + 0.02);
+  vec3 q = vec3(rho * cos(da) - PIER_R, p.y - yc, rho * sin(da));
+  float d = sdBox3(q - vec3(0.5 * L, 0.0, 0.0), vec3(0.5 * L + 0.001, 0.0042, 0.0042));
+  d = min(d, sdBox3(q - vec3(0.68 * L, 0.0, 0.0), vec3(0.0032, 0.013 + 0.03 * h.y, 0.0032)));
+  return min(d, sdBox3(q - vec3(L, 0.0, 0.0), vec3(0.007)));
+}
 float megaMap(vec3 p) {
   float rho = length(p.xz), y = abs(p.y);
   float wh = uMegaA.x, hw = uMegaA.y, wt = uMegaA.z;
   float slab = sdBox2(vec2(rho - (1.0 + 0.5 * MEGA_SLAB), y), vec2(0.5 * MEGA_SLAB, wh + wt));
   float wall = sdBox2(vec2(rho - (1.0 + 0.5 * (MEGA_SLAB - hw)), y - (wh + 0.5 * wt)), vec2(0.5 * (hw + MEGA_SLAB), 0.5 * wt));
-  return min(slab, wall);
+  float d = min(slab, wall);
+  if (uMegaE.y > 0.02) {
+    // piers only exist inside this box; outside it the box itself is a safe step
+    float dz = sdBox2(vec2(rho - 1.08, y), vec2(0.065, 0.65 * (wh + 0.02) + 0.05));
+    if (dz > 0.012) return min(d, dz);
+    float np = pierNp();
+    float u = (atan(p.z, p.x) - uSpin) * np / (2.0 * PI);
+    float i0 = floor(u + 0.5);
+    float i1 = i0 + ((u > i0) ? 1.0 : -1.0);
+    d = min(d, min(pierDist(p, rho, u, i0, np), pierDist(p, rho, u, i1, np)));
+  }
+  return d;
 }
-// The floor: the same ground the planets have, laid along the strip. Round the loop is a full turn of longitude; across it the floor
-// covers a band of latitudes (uMegaA.w), so the climate runs from tropic in the middle to cold at the walls. Shade squares near the
-// star put parts of the loop in night; the pattern is fixed in space and the ground turns under it.
-vec3 megaFloor(vec3 pp) {
+// The pier a hit point belongs to: its colour and its lights (running lights along the spine, lamps on the berth bar, red and green
+// lights on the tip, blinking)
+vec3 pierLook(vec3 pp, float rho, out vec3 emis) {
+  float np = pierNp();
+  float u = (atan(pp.z, pp.x) - uSpin) * np / (2.0 * PI);
+  float i = floor(u + 0.5);
+  vec3 h = hash33(vec3(mod(i, np), uSeed + 31.0, 1.0));
+  float da = (u - i) * (2.0 * PI / np);
+  float L = mix(0.03, 0.11, h.y);
+  float yc = (h.z - 0.5) * 1.3 * (uMegaA.x + 0.02);
+  float x = rho * cos(da) - PIER_R, s = rho * sin(da), yy = pp.y - yc;
+  vec3 c = uMegaHull * (0.55 + 0.30 * h.x);
+  float blink = step(0.5, fract(uTime * 0.7 + h.x * 4.0));
+  // running lights: small dots along the spine; lamps at both ends of the berth bar; a red or a green light on top of the tip
+  emis = uMegaAcc * step(0.82, fract(x / 0.014)) * step(0.0, yy) * (0.2 + 0.8 * uMegaB.z) * 0.8;
+  emis += uMegaAcc * step(0.016, abs(yy)) * step(abs(x - 0.68 * L), 0.004) * 0.9;
+  emis += ((s > 0.0) ? vec3(0.15, 1.0, 0.35) : vec3(1.0, 0.15, 0.10)) * step(L - 0.0035, x) * step(0.0, yy) * (0.4 + 0.6 * blink) * 1.2;
+  return c;
+}
+// The floor: the same ground the planets have, laid along the strip. Across the strip it covers a band of latitudes (uMegaA.w), so the
+// climate runs from tropic in the middle to cold at the walls. To keep a mountain as wide as it is long, the loop carries K whole
+// turns of that planet's longitude (K is about the band's width in latitude over its width in length); a smooth warp that depends on
+// the angle round the loop makes the turns differ, so nothing repeats. The low light leans along the loop, so slopes have a lit side
+// and a shaded one. Shade squares near the star put parts of the loop in night; the pattern is fixed in space and the ground turns under it.
+// Seen through the air that fills the loop, the far ground is hazy: ro and rd are the ray in the ring's frame, tt where it hits.
+vec3 megaFloor(vec3 pp, vec3 ro, vec3 rd, float tt) {
   float th = atan(pp.z, pp.x);
-  float ph = clamp(pp.y / max(uMegaA.x, 1e-3), -1.0, 1.0) * uMegaA.w;
-  vec3 qd = vec3(cos(ph) * cos(th), sin(ph), cos(ph) * sin(th));
+  float wd = max(uMegaA.x, 1e-3), S = uMegaA.w;
+  float K = clamp(floor(S / wd + 0.5), 1.0, 12.0);
+  vec2 cr = vec2(cos(th), sin(th)) * 1.25;
+  vec3 wp = vec3(gnoise(vec3(cr, uSeed + 3.0)), gnoise(vec3(cr + 7.3, uSeed + 11.0)), gnoise(vec3(cr - 5.1, uSeed + 19.0)));
+  float lon = K * th - (K - 1.0) * uSpin + 3.2 * wp.x;
+  float ph = clamp(pp.y / wd, -1.0, 1.0) * S + 0.22 * wp.z;
+  vec3 qd = vec3(cos(ph) * cos(lon), sin(ph), cos(ph) * sin(lon));
   vec3 pv = uU * qd.x + uAxis * qd.y + uW * qd.z;
   vec3 tg = normalize(uW * cos(th) - uU * sin(th));
   float u = fract(th / (2.0 * PI) * 6.0 + 0.05 * uSeed);
   float day = (uMegaB.x < 0.01) ? 1.0 : smoothstep(0.5 * uMegaB.x - 0.12, 0.5 * uMegaB.x + 0.12, abs(u - 0.5));
-  gL = normalize(pv * (day * 1.6 - 0.6) + tg * 0.4);
+  gL = normalize(pv * (day * 1.45 - 0.55) + tg * (0.20 + 0.55 * day));
   gFlat = 1.0;
   float shine;
   vec3 c = shadePlanet(pv, shine);
   gL = uL; gFlat = 0.0;
+  // the air in the loop: a long way through it turns the ground pale blue, lit by day and nearly dark at night
+  vec2 a2 = rd.xz, o2 = ro.xz;
+  float qa = max(dot(a2, a2), 1e-3), qb = dot(o2, a2), qc = dot(o2, o2) - 1.0;
+  float tn = (-qb - sqrt(max(qb * qb - qa * qc, 0.0))) / qa;
+  float hz = 1.0 - exp(-clamp(tt - tn, 0.0, 3.0) * 0.30);
+  c = mix(c, uHazeCol * (0.10 + 0.55 * day), hz * 0.40);
   return c * (0.72 + 0.28 * smoothstep(0.0, 0.035, uMegaA.x - abs(pp.y)));   // a little shade where the floor meets the wall
 }
-// The ring's hull: square plates with seams, a heavier rib every twelfth plate, a few hazard plates, an accent stripe where the caller asks
-// for one, and small lights. th is the angle round the ring (already turned with it), along the distance across it, sc a scale for the
-// plates, face true on an end face.
-vec3 megaHull(float th, float along, bool face, float sc, float stripe, out vec3 emis) {
+// The ring's hull: plates with seams, a heavier rib every twelfth plate, a few hazard plates, an accent stripe where the caller asks
+// for one, small lights. th is the angle round the ring (already turned with it), along the distance across it, sc a scale for the
+// plates, face true on an end face, px the size of a pixel and rho the radius, to know how big a plate is on the screen. Finer layers
+// (sub-panels, rows of windows, docking bays) fade out as they shrink under a couple of pixels, so a small picture stays calm and a big
+// one gains detail.
+vec3 megaHull(float th, float along, bool face, float sc, float stripe, float px, float rho, out vec3 emis) {
   float cw = 2.0 * PI / (12.0 * floor(mix(5.0, 18.0, uMegaB.y) + 0.5));   // a whole number of ribs round the body, so the plates meet at the seam
   vec2 g = vec2(th / cw, along / (sc * cw * 2.0));
   vec2 id = floor(g), f = fract(g);
@@ -1077,6 +1148,51 @@ vec3 megaHull(float th, float along, bool face, float sc, float stripe, out vec3
   c = mix(c, uMegaAcc * 0.7, max(stripe, step(0.965, h.z) * (1.0 - seam) * 0.8));
   float dotL = (1.0 - smoothstep(0.08, 0.16, length(f - 0.5))) * step(0.93 - 0.08 * uMegaB.z, h.y) * uMegaB.z;
   emis = uMegaAcc * dotL * 1.1;
+  float pw = cw * rho;   // a plate's width on the ring, in the units of the picture
+  // sub-panels: every plate is 4 x 4 panels
+  float fineP = smoothstep(1.5 * px, 4.0 * px, pw / 4.0);
+  vec2 g2 = g * 4.0, f2 = fract(g2);
+  float seam2 = 1.0 - smoothstep(0.0, 0.09, min(min(f2.x, 1.0 - f2.x), min(f2.y, 1.0 - f2.y)));
+  vec3 h2 = hash33(vec3(floor(g2), uSeed + 3.0 + (face ? 7.0 : 0.0)));
+  c *= (1.0 - 0.28 * seam2 * fineP) * (1.0 + (h2.x - 0.5) * 0.30 * fineP);
+  // docking bays: some blocks of 12 x 5 plates carry a deep recess with a lit rim and a floodlit floor
+  vec2 gb = g / vec2(12.0, 5.0), fb = fract(gb);
+  vec3 hb = hash33(vec3(floor(gb), uSeed + 53.0));
+  if (hb.x > 0.80) {
+    vec2 bl = abs(fb - 0.5) - vec2(0.17, 0.13);   // negative inside the recess
+    float inB = 1.0 - smoothstep(-0.01, 0.01, max(bl.x, bl.y));
+    float rim = 1.0 - smoothstep(0.0, 0.02, abs(max(bl.x, bl.y)));
+    c *= 1.0 - 0.80 * inB;
+    emis += uMegaAcc * (rim * 1.1 + inB * 0.18 * (0.5 + 0.5 * h2.y)) * (0.35 + 0.65 * uMegaB.z);
+  }
+  // windows: rows of small lit panes over the outer hull, grouped in districts that are mostly lit or mostly dark
+  if (!face) {
+    vec2 g3 = vec2(g.x * 8.0, g.y * 12.0), f3 = fract(g3);
+    vec3 h3 = hash33(vec3(floor(g3), uSeed + 71.0));
+    float district = mix(0.05, 0.9, h.y) * (0.25 + 0.75 * uMegaB.z);
+    float lit = step(h3.x, district);
+    float pane = (1.0 - smoothstep(0.24, 0.34, abs(f3.x - 0.5))) * (1.0 - smoothstep(0.20, 0.32, abs(f3.y - 0.5)));
+    float fineW = smoothstep(1.0 * px, 2.5 * px, pw / 8.0);
+    float win = mix(district * 0.25, pane * lit, fineW);
+    emis += mix(uMegaAcc, vec3(1.0, 0.86, 0.60), 0.55) * win * 0.9;
+  }
+  return c;
+}
+// The inner face of a rim wall, seen from across the loop: terraces stepping up it, with rows of lit windows in them
+vec3 megaWallLook(vec3 pp, float px, out vec3 emis) {
+  float th = atan(pp.z, pp.x) - uSpin;
+  float climb = clamp((1.0 - length(pp.xz)) / max(uMegaA.y, 1e-3), 0.0, 1.0);
+  float nt = 8.0;
+  float ft = fract(climb * nt);
+  float fineT = smoothstep(0.5 * px, 1.5 * px, uMegaA.y / nt);
+  vec3 c = uMegaHull * (0.55 + 0.22 * step(0.82, ft) - 0.20 * step(ft, 0.12) * fineT);
+  float nc = 360.0;
+  vec2 g = vec2(th / (2.0 * PI) * nc, climb * nt * 3.0);
+  vec3 h = hash33(vec3(floor(g), uSeed + 91.0));
+  float pane = (1.0 - smoothstep(0.25, 0.4, abs(fract(g.x) - 0.5))) * (1.0 - smoothstep(0.2, 0.35, abs(fract(g.y) - 0.5)));
+  float lit = step(h.x, 0.25 + 0.5 * uMegaB.z);
+  float fineW = smoothstep(1.0 * px, 2.5 * px, 2.0 * PI / nc);
+  emis = mix(uMegaAcc, vec3(1.0, 0.86, 0.60), 0.55) * mix(0.18, pane * lit, fineW) * 0.9;
   return c;
 }
 // Shells: spheres built round a star, seen from outside. No marching is needed: a ray crosses each concentric sphere
@@ -1156,6 +1272,104 @@ vec4 shadeShell(vec2 uv, float px) {
   float A = 1.0 - T;
   return A > 0.0 ? vec4(col / A, A) : vec4(0.0);
 }
+// What hangs at the centre of a ring. A star is a bright point with a glow. The fusion lamp is a machine: a rod of plasma along the
+// ring's axis, held in a sheath with a magnet coil every few steps and a cap at each end, with a bulb of light at its middle. The
+// gyro core is a hot ball held in three tilted rings that turn about it, with a jet of plasma out of each pole. Centre glow sets how
+// bright the light is. The ring is lit the same whatever hangs here: the drawing is the machine, not a different source.
+vec3 megaCentre(vec2 uv, float px) {
+  float rs = length(uv);
+  vec3 sun = vec3(1.0, 0.93, 0.78);
+  float g = uMegaB.w;
+  int ty = int(uMegaE.x + 0.5);
+  if (ty == 0) return sun * g * (1.6 * smoothstep(0.05, 0.0, rs) + 0.35 * exp(-rs * rs / 0.02) + 0.12 * exp(-rs * rs / 0.25));
+  vec3 c = sun * g * (0.30 * exp(-rs * rs / 0.012) + 0.10 * exp(-rs * rs / 0.20));
+  vec2 ad = uAxis.xy;
+  float al2 = dot(ad, ad);
+  float s = (al2 > 1e-4) ? dot(uv, ad) / al2 : 0.0;   // along the axis, in the ring's units
+  if (ty == 1) {
+    const float H = 0.40, LP = 0.21;
+    float a = abs(s);
+    float dist = length(uv - ad * clamp(s, -H, H));
+    // the plasma rod, fattest at the bulb
+    float rp = 0.0085 + 0.016 * exp(-s * s / 0.004);
+    float rod = (1.0 - smoothstep(rp - px, rp + px, dist)) * (1.0 - smoothstep(LP - 0.02, LP, a));
+    c += sun * g * (2.2 * rod + 0.8 * exp(-dist * dist / 0.0006) * (1.0 - smoothstep(LP, LP + 0.08, a)));
+    // the sheath beyond it, with coils
+    float coil = step(0.5, fract((a - LP) / 0.05));
+    float rs2 = mix(0.0125, 0.019, coil);
+    float sheath = (1.0 - smoothstep(rs2 - px, rs2 + px, dist)) * step(LP - 0.02, a) * (1.0 - smoothstep(H, H + px, a));
+    float shade = 0.55 + 0.45 * (1.0 - clamp(dist / rs2, 0.0, 1.0));
+    c = mix(c, uMegaHull * 0.8 * shade + uMegaAcc * coil * 0.35, sheath);
+    // caps
+    float cap = (1.0 - smoothstep(0.024 - px, 0.024 + px, length(uv - ad * (H * sign(s))))) * step(H - 0.02, a);
+    c = mix(c, uMegaHull * 0.9 + uMegaAcc * 0.25, cap);
+    return c;
+  }
+  // gyro core
+  float rc = 0.024;
+  for (int pass = 0; pass < 2; pass++) {
+    if (pass == 1) {
+      float core = 1.0 - smoothstep(rc - px, rc + px, rs);
+      c += sun * g * 0.9 * exp(-rs * rs / 0.0009) + sun * g * 2.4 * core;
+      // the jets: out of both poles, thinning with distance
+      float da = length(uv - ad * s);
+      c += sun * g * 0.9 * exp(-da * da / 0.00004) * exp(-abs(s) * 5.0) * step(rc, abs(s)) * (1.0 - smoothstep(0.35, 0.5, abs(s)));
+    }
+    for (int k = 0; k < 3; k++) {
+      float kk = float(k);
+      float R = 0.10 + 0.055 * kk;
+      float tilt = 0.55 + 0.5 * kk, ph = uTime * (0.30 + 0.17 * kk) + 2.1 * kk;
+      vec3 n = vec3(sin(tilt) * sin(ph), cos(tilt), sin(tilt) * cos(ph));
+      vec3 nv = uU * n.x + uAxis * n.y + uW * n.z;
+      if (abs(nv.z) < 0.02) continue;
+      float zh = -(uv.x * nv.x + uv.y * nv.y) / nv.z;
+      if ((zh > 0.0) != (pass == 1)) continue;
+      vec3 p = vec3(uv, zh);
+      float wR = 0.0065 + 0.0015 * kk;
+      float dr = abs(length(p) - R);
+      float m = 1.0 - smoothstep(wR - px, wR + px, dr);
+      if (m <= 0.0) continue;
+      vec3 e1 = normalize(cross(nv, vec3(0.31, 0.77, 0.55)));
+      vec3 e2 = cross(nv, e1);
+      float tick = step(0.72, fract(atan(dot(p, e2), dot(p, e1)) * (8.0 / (2.0 * PI)) + uTime * 0.2 * (kk + 1.0)));
+      vec3 rc2 = uMegaHull * (0.50 + 0.30 * (1.0 - dr / wR)) + uMegaAcc * tick * 0.9;
+      c = mix(c, rc2, m);
+    }
+  }
+  return c;
+}
+// Niven's shadow squares: six plates on an inner orbit that turn the star off for a stretch of the loop. They stand where megaFloor
+// puts the six nights, so the dark stretches on the ground are the shadows of these plates. Each faces the star with a wide, low
+// panel; its star side is lit, its far side is dark with a lit edge. tp returns how far along the ray the nearest plate was.
+vec4 megaPlates(vec3 o, vec3 d, out float tp) {
+  tp = 1e3;
+  vec4 best = vec4(0.0);
+  if (uMegaB.x < 0.01) return best;
+  const float Rs = 0.46;
+  float hx = Rs * tan(uMegaB.x * PI / 6.0);
+  float hy = Rs * (uMegaA.x + 0.01) * 1.15 + 0.004;
+  for (int k = 0; k < 6; k++) {
+    float th = (float(k) + 0.5 - 0.05 * uSeed) * (PI / 3.0);
+    vec3 rn = vec3(cos(th), 0.0, sin(th)), tn = vec3(-sin(th), 0.0, cos(th));
+    float den = dot(d, rn);
+    if (abs(den) < 1e-4) continue;
+    float t = (Rs - dot(o, rn)) / den;
+    if (t < 0.0 || t > tp) continue;
+    vec3 p = o + d * t;
+    vec2 lp = vec2(dot(p, tn), p.y);
+    if (abs(lp.x) > hx || abs(lp.y) > hy) continue;
+    float edge = 1.0 - smoothstep(0.0, 0.006, min(hx - abs(lp.x), hy - abs(lp.y)));
+    vec2 gp = vec2(lp.x / (2.0 * hx) * 9.0 + 4.5, lp.y / (2.0 * hy) * 3.0 + 1.5);
+    float seam = 1.0 - smoothstep(0.0, 0.07, min(min(fract(gp.x), 1.0 - fract(gp.x)), min(fract(gp.y), 1.0 - fract(gp.y))));
+    float hh = hash33(vec3(floor(gp), uSeed + float(k))).x;
+    vec3 c;
+    if (den > 0.0) c = uMegaHull * (0.50 + 0.25 * hh) * (1.0 - 0.45 * seam) * vec3(1.0, 0.90, 0.72) * 1.1;
+    else c = uMegaHull * (0.045 + 0.02 * hh) * (1.0 - 0.4 * seam);
+    c += uMegaAcc * edge * 0.55;
+    tp = t; best = vec4(c, 1.0);
+  }
+  return best;
+}
 // How hard the trace works: High takes up to 90 steps to within a quarter of a pixel and six samples for the normal; Fast takes up to
 // 44 steps to within half a pixel and four samples for the normal.
 #ifdef PM_HIQ
@@ -1166,7 +1380,7 @@ const int MEGA_STEPS = 44; const float MEGA_HIT = 0.5;
 // One pixel of a ring or a shell: colour and coverage
 vec4 shadeMega(vec2 uv, float px) {
   if (uMegaT > 0.5) return shadeShell(uv, px);
-  if (length(uv) > 1.1 + px) return vec4(0.0);
+  if (length(uv) > 1.2 + px) return vec4(0.0);
   vec3 z0 = vec3(uv, 2.0);
   vec3 o = vec3(dot(z0, uU), dot(z0, uAxis), dot(z0, uW));
   vec3 d = -vec3(uU.z, uAxis.z, uW.z);
@@ -1195,12 +1409,18 @@ vec4 shadeMega(vec2 uv, float px) {
     vec3 rh = vec3(pp.x, 0.0, pp.z) / max(rho, 1e-4);
     float wh = uMegaA.x;
     if (dot(n, rh) < -0.6 && abs(rho - 1.0) < 0.012 && y < wh + 0.004) {
-      col = megaFloor(pp);
+      col = megaFloor(pp, o, d, tm);
     } else {
-      vec3 emis;
+      vec3 emis, alb;
       bool face = abs(n.y) > 0.5;
-      float stripe = smoothstep(0.012, 0.0, abs(y - wh * 0.62)) * (face ? 0.0 : 1.0);
-      vec3 alb = megaHull(atan(pp.z, pp.x) - uSpin, face ? rho : pp.y, face, 1.0, stripe, emis);
+      if (rho > PIER_R + 0.004) {
+        alb = pierLook(pp, rho, emis);
+      } else if (face && rho < 0.995 && n.y * pp.y < 0.0) {
+        alb = megaWallLook(pp, px, emis);
+      } else {
+        float stripe = smoothstep(0.012, 0.0, abs(y - wh * 0.62)) * (face ? 0.0 : 1.0);
+        alb = megaHull(atan(pp.z, pp.x) - uSpin, face ? rho : pp.y, face, 1.0, stripe, px, rho, emis);
+      }
       vec3 nv = uU * n.x + uAxis * n.y + uW * n.z;
       float sun = max(dot(nv, gL), 0.0);
       float star = max(dot(n, normalize(-pp)), 0.0);
@@ -1208,6 +1428,12 @@ vec4 shadeMega(vec2 uv, float px) {
       col = alb * (0.09 + 1.0 * sun + 0.85 * star * vec3(1.0, 0.93, 0.78)) + vec3(spec) * sun + emis;
     }
     sol = vec4(col, a);
+  }
+  // the shade squares near the star, in front of or behind whatever the ray met
+  if (uMegaB.x > 0.01 && length(uv) < 0.8) {
+    float tp;
+    vec4 pl = megaPlates(o, d, tp);
+    if (pl.a > 0.0) sol = (sol.a > 0.0 && tm < tp) ? vec4(mix(pl.rgb, sol.rgb, sol.a), 1.0) : pl;
   }
   return sol;
 }
@@ -1607,7 +1833,7 @@ vec3 stars(vec2 fc) {
 
 void main() {
   vec2 fc = gl_FragCoord.xy;
-  vec2 uv = (fc - 0.5 * uRes) / (0.5 * uRes.y) / uZoom;
+  vec2 uv = (fc - 0.5 * uRes) / (0.5 * uRes.y) / uZoom + uShift;
   float px = 2.0 / (uRes.y * uZoom);
   gPxC = px;
   vec3 col = vec3(0.012, 0.014, 0.022) + stars(fc);
@@ -1615,8 +1841,7 @@ void main() {
 #ifdef PM_MEGA
   if (uType == 3) {
     // the star at the centre of a ring or a shell, then the structure in front of it
-    float rs = length(uv);
-    col += vec3(1.0, 0.93, 0.78) * uMegaB.w * (1.6 * smoothstep(0.05, 0.0, rs) + 0.35 * exp(-rs * rs / 0.02) + 0.12 * exp(-rs * rs / 0.25));
+    col += megaCentre(uv, px);
     vec4 mg = shadeMega(uv, px);
     col = mix(col, mg.rgb, mg.a);
     col = col / (1.0 + col * 0.08);
@@ -1842,7 +2067,7 @@ const BASE = {
   spin: 0.25, cloudSpeed: 0.3, flow: 0.4, tilt: 22, roll: -12, sun: -55, sunH: 12, zoom: 1,
   ring: { on: false, type: 'broad', inner: 1.24, width: 1.03, op: 0.8, gaps: 0.8, struct: 0.6, clump: 0.3, dust: 0.15, feeder: 0, seed: 1, spin: 0.3, c1: '#d8c8a4', c2: '#7a6a55' },
   moons: 1, moonSpeed: 0.6, moonList: [],
-  mLayers: 2, mOpen: 0.35, mCap: 1, mWidth: 0.22, mWall: 0.05, mSpan: 0.7, mShade: 0.28, mPlate: 0.6, mLights: 0.5, mStar: 1, mHull: '#8b9199', mAcc: '#e0a64a',
+  mLayers: 2, mOpen: 0.35, mCap: 1, mWidth: 0.14, mWall: 0.05, mSpan: 0.7, mShade: 0.28, mPlate: 0.6, mLights: 0.5, mStar: 1, mSun: 'star', mPorts: 0.6, mLook: 0, mHull: '#8b9199', mAcc: '#e0a64a',
   oOn: 0, oHt: 0.12, oWid: 0.045, oStn: 8, oLit: 0.6, oHull: '#8b9199', oAcc: '#e0a64a', eOn: 0, eLon: -20, eHt: 0.9, eN: 1,
 };
 const KIND_DEF = {
@@ -1887,15 +2112,26 @@ function popText(pos) {
 }
 const DENS_CLASSES = [[0.5, 'empty'], [5, 'frontier'], [30, 'rural'], [150, 'settled'], [600, 'dense'], [3000, 'metropolitan'], [15000, 'megalopolis'], [Infinity, 'ecumenopolis']];
 function cityStats(p) {
+  if (IS_MEGA(p.kind)) {
+    // a ring is built for people, on land that is all floor: the Population slider runs from 16 to about 100,000 per km2
+    const ld = 1.2 + 3.8 * p.cities, dens = Math.pow(10, ld);
+    return { B: 0, dens, ld, cls: (DENS_CLASSES.find((c) => dens < c[0]) || DENS_CLASSES[DENS_CLASSES.length - 1])[1] };
+  }
   const B = popBillions(p.cities), area = 4 * Math.PI * p.rad * p.rad * landShare(p);
   const dens = isFinite(B * 1e9 / area) ? B * 1e9 / area : 0;
   return { B, dens, ld: Math.min(8, Math.log10(Math.max(dens, 0.001))), cls: (DENS_CLASSES.find((c) => dens < c[0]) || DENS_CLASSES[DENS_CLASSES.length - 1])[1] };
 }
+// the floor of the ring in the size note (a band 1.6 million km wide round a loop 300 million km across) is about 1.5e15 km2
+const RING_AREA_KM2 = 1.5e15;
+function ringPeople(dens) {
+  const n = dens * RING_AREA_KM2;
+  return n >= 1e18 ? +(n / 1e18).toPrecision(2) + ' quintillion' : n >= 1e15 ? Math.round(n / 1e15).toLocaleString('en-US') + ' quadrillion' : Math.round(n / 1e12).toLocaleString('en-US') + ' trillion';
+}
 function updateCityInfo() {
   const el = $('cityInfo'); if (!el) return;
-  const vis = IS_ROCKY(P.kind) && P.kind !== 'lava' && P.cities > 0 && !IS_MEGA(P.kind); el.hidden = !vis; if (!vis) return;
+  const vis = IS_ROCKY(P.kind) && P.kind !== 'lava' && P.cities > 0 && P.kind !== 'shell'; el.hidden = !vis; if (!vis) return;
   const s = cityStats(P);
-  el.textContent = (s.dens < 10 ? s.dens.toFixed(1) : Math.round(s.dens).toLocaleString('en-US')) + ' people per km² of land · ' + s.cls;
+  el.textContent = (s.dens < 10 ? s.dens.toFixed(1) : Math.round(s.dens).toLocaleString('en-US')) + ' people per km² of land · ' + s.cls + (P.kind === 'ring' ? ' · about ' + ringPeople(s.dens) + ' on a ring this size' : '');
 }
 
 /* ---------- controls ---------- */
@@ -1920,7 +2156,9 @@ const CONTROLS = [
   ['Struct', 'mShade', 'Night share', 0, 0.6, 0.01, (p) => ISMEGA(p, 'ring'), (v) => v < 0.01 ? 'none' : Math.round(v * 100) + '%'],
   ['Struct', 'mPlate', 'Hull plating', 0, 1, 0.01, (p) => ISMEGA(p, 'ring', 'shell')],
   ['Struct', 'mLights', 'Hull lights', 0, 1, 0.01, (p) => ISMEGA(p, 'ring', 'shell')],
-  ['Struct', 'mStar', 'Star glow', 0, 1.5, 0.01, (p) => ISMEGA(p, 'ring', 'shell')],
+  ['Struct', 'mPorts', 'Spaceports', 0, 1, 0.01, (p) => ISMEGA(p, 'ring'), (v) => v < 0.02 ? 'none' : v < 0.35 ? 'a few' : v < 0.7 ? 'many' : 'hundreds'],
+  ['Struct', 'mLook', 'Close in on the far floor', 0, 1, 0.01, (p) => ISMEGA(p, 'ring'), (v) => v < 0.02 ? 'whole ring' : Math.round(v * 100) + '%'],
+  ['Struct', 'mStar', 'Centre glow', 0, 1.5, 0.01, (p) => ISMEGA(p, 'ring', 'shell')],
   ['Orb', 'oHt', 'Ring height', 0.04, 0.3, 0.005, (p) => NOMEGA(p) && !!p.oOn, (v, p) => heightText(v, p)],
   ['Orb', 'oWid', 'Ring width', 0.01, 0.1, 0.005, (p) => NOMEGA(p) && !!p.oOn, (v) => (v * 100).toFixed(1) + '% of a radius'],
   ['Orb', 'oStn', 'Stations', 0, 16, 1, (p) => NOMEGA(p) && !!p.oOn, (v) => v < 1 ? 'none' : String(Math.round(v))],
@@ -2030,7 +2268,21 @@ const MEGA_TYPES = [
   { id: 'shell', size: 'about 300 million km across', sizeLong: 'A Dyson shell at Earth\'s distance from its star: about 300 million km across, and in theory only a few metres thick', name: 'Shell', real: 'Dyson shell, Matrioshka brain, Shkadov thruster (Stapledon, Dyson, Bradbury)',
     note: 'A sphere of plates built round a star to catch all its light. Gaps opens some plates so the star shows through; Layers nests more shells inside the first, each warmer than the one outside it (a Matrioshka brain); Coverage below 100% leaves only a cap on the Sun side (a Shkadov thruster, which pushes a star by reflecting its light). Only the outside and the lit inside show.' },
 ];
+// What hangs at the centre of a ring (the shader's megaCentre). Only the drawing changes: the ring is lit the same.
+const CENTRES = [
+  { id: 'star', name: 'Star', real: 'a real sun', note: 'A real star: a point of light with its glow. Nothing is drawn beside it.' },
+  { id: 'lamp', name: 'Fusion lamp', real: 'a machine', note: 'A made sun: a rod of plasma standing along the ring\'s axis, held in a sheath with a magnet coil every few steps and a cap at each end, with a bulb of light at its middle. Seen from the side it is a column of light through the loop.' },
+  { id: 'core', name: 'Gyro core', real: 'a machine', note: 'A made sun: a hot ball held in three tilted rings that turn about it, with a jet of plasma out of each pole. The rings turn while the picture plays.' },
+];
+const CENTRE_IDX = (id) => Math.max(0, CENTRES.findIndex((c) => c.id === id));
 function buildMegaUI() {
+  const cp = $('megaCentre');
+  CENTRES.forEach((c) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.centre = c.id; b.setAttribute('aria-pressed', 'false');
+    b.innerHTML = `${esc(c.name)}<small>${esc(c.real)}</small>`;
+    b.addEventListener('click', () => { P.mSun = c.id; syncMegaUI(); });
+    cp.appendChild(b);
+  });
   const sw = $('swMega');
   [['mHull', 'Hull'], ['mAcc', 'Accent and lights']].forEach(([k, label]) => {
     const d = document.createElement('label'); d.className = 'sw';
@@ -2045,6 +2297,10 @@ function syncMegaUI() {
   $('megaNote').textContent = t.note + ' Typical size: ' + t.sizeLong + '. Not drawn to scale beside a planet.';
   $('tagSize').hidden = false; $('tagSize').textContent = 'Typical size: ' + t.size;
   document.querySelectorAll('#swMega .sw').forEach((d) => { d.querySelector('input').value = P[d.dataset.k]; });
+  // the centre of a ring (a shell has only a star)
+  $('megaCentreBox').hidden = P.kind !== 'ring';
+  document.querySelectorAll('#megaCentre .chip').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.centre === P.mSun)));
+  const cs = CENTRES.find((c) => c.id === P.mSun); $('megaCentreNote').textContent = cs ? cs.note : '';
 }
 
 /* ---------- orbital ring and space elevator ---------- */
@@ -2409,11 +2665,15 @@ function draw(w, h, tmul) {
   const extent = Math.max(1.3, P.ring.on && !mega ? ringOut * 1.04 : 0, mx * 0.95, orbExt, elevExt);
   const aspect = w / h;
   const extentV = Math.max(1.3, P.ring.on && !mega ? ringOut * Math.max(0.72, Math.sin(phi)) * 1.04 : 0, mx * 0.75, orbExt * Math.max(0.72, Math.sin(phi)), elevExt);
-  const zoom = Math.min(aspect * 0.92 / extent, 0.92 / extentV) * P.zoom;
+  // a ring can be viewed close up on its far floor: the picture moves to that part of the loop and magnifies
+  const look = P.kind === 'ring' ? P.mLook : 0;
+  const farS = [0, 0];
+  if (look > 0) { const Wv = vec3(U, A), sg = Wv[2] > 0 ? -1 : 1; farS[0] = sg * Wv[0] * look; farS[1] = sg * Wv[1] * look; }
+  const zoom = Math.min(aspect * 0.92 / extent, 0.92 / extentV) * P.zoom * (1 + 3.0 * look);
   const clouds = P.kind === 'rock' ? 0 : P.clouds;   // an airless world has no weather, whatever the slider says
   useVariant((P.kind !== 'gas' && clouds > 0.01 ? 'C' : '') + (quality ? 'H' : '') + (mm.length ? 'M' : '') + (P.ring.on && !mega ? 'R' : '') + (mega ? 'G' : '') + (orb ? 'O' : ''));
   gl.viewport(0, 0, w, h);
-  gl.uniform2f(loc.uRes, w, h); gl.uniform1f(loc.uZoom, zoom);
+  gl.uniform2f(loc.uRes, w, h); gl.uniform1f(loc.uZoom, zoom); gl.uniform2f(loc.uShift, farS[0], farS[1]);
   gl.uniform1i(loc.uType, KIND_TYPE(P.kind));
   gl.uniform3fv(loc['uPal'], new Float32Array(P.pal.flatMap(hex2rgb)));
   gl.uniform3fv(loc.uHazeCol, hex2rgb(P.hazeCol));
@@ -2430,6 +2690,7 @@ function draw(w, h, tmul) {
       gl.uniform4f(loc.uMegaC, Math.round(P.mLayers), P.mOpen, Math.cos(Math.PI * P.mCap), 0);
       gl.uniform4f(loc.uMegaD, Math.round(14 + 24 * P.mPlate), 0, 1.12, 0);
     }
+    gl.uniform4f(loc.uMegaE, mt ? 0 : CENTRE_IDX(P.mSun), mt ? 0 : P.mPorts, 0, 0);
     gl.uniform4f(loc.uMegaA, wd, P.mWall, 0.02, P.mSpan); gl.uniform4f(loc.uMegaB, P.mShade, P.mPlate, P.mLights, P.mStar);
     gl.uniform3fv(loc.uMegaHull, hex2rgb(P.mHull)); gl.uniform3fv(loc.uMegaAcc, hex2rgb(P.mAcc));
   }
@@ -2660,7 +2921,7 @@ const PARAM_RANGE = {
   sea: [0, 1], wet: [-1, 1], mount: [0, 1], scale: [0.5, 2.5], ice: [0, 1], clouds: [0, 1], haze: [0, 1.3], cities: [0, 1], rad: [1500, 15000], plan: [0, 1], land: [0.02, 1], lava: [0, 1], craters: [0, 1], scars: [0, 1],
   bands: [3, 20, 1], turb: [0, 1.4], storms: [0, 6, 1], stormSize: [0.2, 1.6], spin: [-1, 1], cloudSpeed: [-1, 1], flow: [0, 1.5], moonSpeed: [0, 2],
   tilt: [6, 85], roll: [-90, 90], sun: [-180, 180], sunH: [-60, 60], zoom: [0.5, 1.8], moons: [0, 5, 1],
-  mLayers: [1, 4, 1], mOpen: [0, 0.9], mCap: [0.12, 1], mWidth: [0.06, 0.6], mWall: [0, 0.12], mSpan: [0.25, 1.3], mShade: [0, 0.6], mPlate: [0, 1], mLights: [0, 1], mStar: [0, 1.5],
+  mLayers: [1, 4, 1], mOpen: [0, 0.9], mCap: [0.12, 1], mWidth: [0.06, 0.6], mWall: [0, 0.12], mSpan: [0.25, 1.3], mShade: [0, 0.6], mPlate: [0, 1], mLights: [0, 1], mStar: [0, 1.5], mPorts: [0, 1], mLook: [0, 1],
   oOn: [0, 1, 1], oHt: [0.04, 0.3], oWid: [0.01, 0.1], oStn: [0, 16, 1], oLit: [0, 1], eOn: [0, 1, 1], eLon: [-180, 180], eHt: [0.3, 3], eN: [1, 4, 1],
 };
 const RING_RANGE = { inner: [1.1, 2.8], width: [0.04, 2.6], op: [0.1, 1], gaps: [0, 1], struct: [0, 1], clump: [0, 1], dust: [0, 1], feeder: [0, 5, 1], seed: [0, 9999, 1], spin: [-1, 1] };
@@ -2686,6 +2947,7 @@ function sanitize(p, d) {
   for (const k of ['mHull', 'mAcc', 'oHull', 'oAcc']) if (isHex(p[k])) out[k] = p[k];
   if (!ELEV_OK(out.kind)) out.eOn = 0;   // a pasted preset cannot put an elevator where none can stand
   if (IS_MEGA(out.kind)) out.oOn = 0;
+  out.mSun = CENTRES.some((c) => c.id === p.mSun) ? p.mSun : d.mSun;
   if (Array.isArray(p.moonList)) {
     out.moonList = p.moonList.slice(0, 5).map((m, i) => sanitizeMoon(m && typeof m === 'object' ? m : {}, genMoon(out.seed, out.kind, i, null, moonStart(out.ring))));
     if (p.moons === undefined) out.moons = out.moonList.length;
