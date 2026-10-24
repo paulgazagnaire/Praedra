@@ -647,7 +647,9 @@ public class CaptureTests
 
     // ---------------------------------------------------------------- integration with construction: a running yard project and an inbound delivery
 
-    private const string Home = "Coruscant", Far = "Corellia";
+    // v6 re-pin 2026-10-24: Far was Corellia (one great-route leg, 7 days at speed 100, 5 at 80); on the spiral map Brentaal IV takes
+    // the same days from Coruscant over two legs (a free jump to Rhinnal, then a minor-route leg).
+    private const string Home = "Coruscant", Far = "Brentaal IV";
 
     private static CtlWorld BuildScenario()
     {

@@ -11,10 +11,12 @@ namespace Praedra.Core.Tests.Construction;
 public class ConstructionTests
 {
     private const string Home = "Coruscant";
-    private const string Far = "Corellia";
+    // v6 re-pin 2026-10-24: Far was Corellia (one great-route leg, 7 days at speed 100, 5 at 80). On the spiral map no single-hop trip
+    // from Coruscant takes those days; Rhinnal is the longest one the router flies direct (a 23-unit free jump: 4 days at speed 100, 3 at 80).
+    private const string Far = "Rhinnal";
     private static readonly Side Emp = Side.Empire;
 
-    /// <summary>Empire at Coruscant with yards of the given kinds, refined stock, and Corellia held too (support 100 both).</summary>
+    /// <summary>Empire at Coruscant with yards of the given kinds, refined stock, and Rhinnal held too (support 100 both).</summary>
     private static BuildWorld Empire(int refined, params FacilityKind[] yards)
     {
         var w = new BuildWorld();
@@ -286,7 +288,7 @@ public class ConstructionTests
 
     // m2-construction C12
     [Fact]
-    public void C12_MineDeliveredToCorellia()
+    public void C12_MineDeliveredToRhinnal() // v6 re-pin 2026-10-24: was Corellia (7 days); Rhinnal is 4 days, so every day after departure moves 3 earlier
     {
         var w = Empire(100, FacilityKind.ConstructionYard);
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, Far));
@@ -295,16 +297,16 @@ public class ConstructionTests
         var dep = w.Events<DeliveryDeparted>().Single();
         Assert.Equal(81, dep.Day);
         Assert.Equal(new[] { Home, Far }, dep.Path.Items);
-        Assert.Equal(7, dep.FirstHopTicks); // route leg: map distance 100 * 100 / (5 * 300) = 6.67, rounded to 7
-        Assert.Equal(88, dep.DueDay);
+        Assert.Equal(4, dep.FirstHopTicks); // free jump: map distance 23, base 4, 4 * 100 / 100 = 4
+        Assert.Equal(85, dep.DueDay);
         var mine = w.Eco.Objects.Single(o => o.Class == "Mine");
         Assert.False(mine.Completed);
-        w.RunTo(87);
+        w.RunTo(84);
         Assert.False(mine.Completed);
-        w.RunTo(88); // placed in Step 87, step 3
+        w.RunTo(85); // placed in Step 84, step 3
         Assert.True(mine.Completed);
-        Assert.Equal(88, w.Events<DeliveryArrived>().Single().Day);
-        Assert.Equal(91, mine.Due); // joined the idle sweep that Step: first cycle at hook 88 (draw 0: d = 6, 0 + 3)
+        Assert.Equal(85, w.Events<DeliveryArrived>().Single().Day);
+        Assert.Equal(88, mine.Due); // joined the idle sweep that Step: first cycle at hook 85 (draw 0: d = 6, 0 + 3)
         Assert.Contains((0, 6), w.Stub!.Requests);
         Assert.Empty(w.Build.Deliveries);
     }
@@ -317,9 +319,9 @@ public class ConstructionTests
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Shipyard, "Imperial Star Destroyer", 1, Far));
         w.RunTo(449);
         var dep = w.Events<DeliveryDeparted>().Single();
-        Assert.Equal(5, dep.FirstHopTicks); // route leg: 100 * 80 / (5 * 300) = 5.33, rounded to 5
-        w.RunTo(454);
-        Assert.Equal(454, w.Events<DeliveryArrived>().Single().Day);
+        Assert.Equal(3, dep.FirstHopTicks); // v6 re-pin 2026-10-24: free jump, base 4, 4 * 80 / 100 = 3.2, floored to 3 (was 5)
+        w.RunTo(452);
+        Assert.Equal(452, w.Events<DeliveryArrived>().Single().Day);
         Assert.True(w.Eco.Objects.Single(o => o.Class == "Imperial Star Destroyer").Completed);
     }
 
@@ -330,9 +332,9 @@ public class ConstructionTests
         var w = Empire(100, FacilityKind.OrbitalShipyard);
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Shipyard, "TIE Fighter", 1, Far)); // hyperdrive 0 as a fleet, 100 as a delivery
         w.RunTo(13);
-        Assert.Equal(7, w.Events<DeliveryDeparted>().Single().FirstHopTicks);
-        w.RunTo(20);
-        Assert.Equal(20, w.Events<DeliveryArrived>().Single().Day);
+        Assert.Equal(4, w.Events<DeliveryDeparted>().Single().FirstHopTicks); // v6 re-pin 2026-10-24 (was 7)
+        w.RunTo(17);
+        Assert.Equal(17, w.Events<DeliveryArrived>().Single().Day);
     }
 
     // ---------------------------------------------------------------- rejections (C15 to C19)
@@ -399,9 +401,9 @@ public class ConstructionTests
         w.RunTo(81);
         w.Fleets.SetOwner(Far, Side.Alliance); // captured during the flight
         int before = w.Eco.Refined(Emp);
-        w.RunTo(88);
+        w.RunTo(85);
         var refused = w.Events<DeliveryRefused>().Single();
-        Assert.Equal(88, refused.Day);
+        Assert.Equal(85, refused.Day); // v6 re-pin 2026-10-24: the 4-day flight to Rhinnal (was 88)
         Assert.Equal(10, refused.Refund);
         Assert.Equal(before + 10, w.Eco.Refined(Emp));
         Assert.DoesNotContain(w.Eco.Objects, o => o.Class == "Mine");
@@ -416,7 +418,7 @@ public class ConstructionTests
         w.Build.LostDestination = LostDestinationRule.Refuse;
         w.TryOrder(Emp, Home, YardFamily.Construction, "LNR Series I", 1, Far);
         Assert.Equal(10 + 7, w.Eco.Load(Emp));
-        w.RunTo(30); // 7 points x 4 days: complete at hook 29, flight 7 days
+        w.RunTo(30); // 7 points x 4 days: complete at hook 29, flight 4 days (v6)
         w.Fleets.SetOwner(Far, Side.Alliance);
         w.RunTo(40);
         Assert.Equal(3, w.Events<DeliveryRefused>().Single().Refund); // floor(7 / 2)
@@ -460,7 +462,7 @@ public class ConstructionTests
         w.Fleets.SetOwner(Far, Emp);
         w.Run(1);
         Assert.Single(w.Events<DeliveryResumed>());
-        w.Run(8); // 7 days of flight
+        w.Run(8); // 4 days of flight on the v6 map (7 before), and some slack
         Assert.Single(w.Events<DeliveryArrived>());
     }
 
@@ -830,10 +832,10 @@ public class ConstructionTests
             return w;
         }
         var straight = Make(); straight.Run(1476);
-        var saved = Make(); saved.Run(276); // the first Victory Destroyer left at hook 273 and is in flight
+        var saved = Make(); saved.Run(274); // the first Victory Destroyer left at hook 273 and is in flight (v6 re-pin 2026-10-24: a 3-day flight, so save at 274, not 276)
         Assert.NotEmpty(saved.C.Deliveries); // something is in flight or held at the save
         saved.Reload();
-        saved.Run(1200);
+        saved.Run(1202);
         Assert.Equal(1476, saved.Game.Day);
         Assert.Equal(GameSave.StateHash(straight.Game), GameSave.StateHash(saved.Game));
         Assert.NotEmpty(saved.Events<UnitCompleted>().Concat<GameEvent>(Array.Empty<GameEvent>()));

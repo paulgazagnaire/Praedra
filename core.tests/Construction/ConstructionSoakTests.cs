@@ -60,7 +60,9 @@ public class ConstructionSoakTests
         Assert.Equal(a, b);
         Assert.NotEqual(a, c); // the home's mines and refineries draw their first cycles
         Assert.Equal(5, da.Game.Events.OfType<UnitCompleted>().Count());
-        Assert.Equal(2, da.Game.Events.OfType<DeliveryHeld>().Count(e => e.Reason == "FleetPresent"));
+        // v6 re-pin 2026-10-24 (was 2): the picket sits at Tralus, the first stop out of Coruscant on the spiral map, so the mine's delivery to
+        // Corellia (Coruscant, Tralus, Kimanan, Gatalenta, Corellia) is held there too, beside the two regiments bound for Hoth.
+        Assert.Equal(3, da.Game.Events.OfType<DeliveryHeld>().Count(e => e.Reason == "FleetPresent"));
         Assert.Empty(da.Game.State.Construction.Deliveries);
     }
 

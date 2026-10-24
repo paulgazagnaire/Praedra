@@ -20,35 +20,41 @@ public class TravelTests
     private static int OffRoute(string a, string b, int speed) => TravelFormula.HopTicks(MapDist(G, a, b) / 5, speed, 100);
 
     [Fact]
-    public void T1_CoruscantCorelliaMajorRoute() // m1-travel T1: map distance 100, factor 300: 100 * speed / 1500, rounded half up
+    public void T1_LongMajorRouteLeg() // m1-travel T1: factor 300: distance * speed / 1500, rounded half up
     {
-        Assert.Equal(100, MapDist(G, "Coruscant", "Corellia"));
-        Assert.Equal(new[] { 7, 5, 4, 3 }, new[] { 100, 80, 60, 50 }.Select(s => Leg("Coruscant", "Corellia", s))); // 6.67, 5.33, 4, 3.33
+        // v6 re-pin 2026-10-24: Coruscant-Corellia is no longer a link; Coruscant's great-route links are 18 and 29 units, too short
+        // to show the rounding, so the leg is the longest great-route link, Epikonia-Vondarc (Long Haul, 111 units).
+        Assert.Equal(1, G.FindLane("Epikonia", "Vondarc")!.Tier);
+        Assert.Equal(111, MapDist(G, "Epikonia", "Vondarc"));
+        Assert.Equal(new[] { 7, 6, 4, 4 }, new[] { 100, 80, 60, 50 }.Select(s => Leg("Epikonia", "Vondarc", s))); // 7.4, 5.92, 4.44, 3.7
     }
 
     [Fact]
     public void T2_CoruscantYavinOffRouteIsTheOriginalFormula() // m1-travel T2: (isqrt / 5) * speed / 100, both divisions floored (Traced)
     {
-        Assert.Equal(48, MapDist(G, "Coruscant", "Yavin") / 5);
-        Assert.Equal(new[] { 48, 38, 24 }, new[] { 100, 80, 50 }.Select(s => OffRoute("Coruscant", "Yavin", s)));
+        // v6 re-pin 2026-10-24: Yavin is 294 units from Coruscant (was 240); 58 * 80 / 100 = 46.4, 58 * 50 / 100 = 29.
+        Assert.Equal(58, MapDist(G, "Coruscant", "Yavin") / 5);
+        Assert.Equal(new[] { 58, 46, 29 }, new[] { 100, 80, 50 }.Select(s => OffRoute("Coruscant", "Yavin", s)));
         Assert.Null(G.FindLane("Coruscant", "Yavin"));
     }
 
     [Fact]
-    public void T3_CorelliaDurosShortMajorLeg() // m1-travel T3
+    public void T3_ShortMajorLeg() // m1-travel T3
     {
-        Assert.Equal(1, G.FindLane("Corellia", "Duros")!.Tier);
-        Assert.Equal(24, MapDist(G, "Corellia", "Duros"));
-        Assert.Equal(new[] { 2, 1, 1 }, new[] { 100, 80, 50 }.Select(s => Leg("Corellia", "Duros", s))); // 1.6, 1.28, 0.8 raised to 1
+        // v6 re-pin 2026-10-24: Corellia-Duros is no longer a link; Azbian-Contruum is a 25-unit great-route link.
+        Assert.Equal(1, G.FindLane("Azbian", "Contruum")!.Tier);
+        Assert.Equal(25, MapDist(G, "Azbian", "Contruum"));
+        Assert.Equal(new[] { 2, 1, 1 }, new[] { 100, 80, 50 }.Select(s => Leg("Azbian", "Contruum", s))); // 1.67, 1.33, 0.83 raised to 1
     }
 
     [Fact]
-    public void T4_CoruscantCorulagMinorRoute() // m1-travel T4: factor 150
+    public void T4_CoruscantMinorRoute() // m1-travel T4: factor 150
     {
-        int d = MapDist(G, "Coruscant", "Corulag");
-        Assert.Equal(150, G.FindLane("Coruscant", "Corulag")!.FactorPercent);
-        Assert.Equal((d * 100 * 2 + 750) / 1500, Leg("Coruscant", "Corulag", 100));
-        Assert.Equal(Math.Max(1, (d * 80 * 2 + 750) / 1500), Leg("Coruscant", "Corulag", 80));
+        // v6 re-pin 2026-10-24: Coruscant's minor link is Uveron (was Corulag).
+        int d = MapDist(G, "Coruscant", "Uveron");
+        Assert.Equal(150, G.FindLane("Coruscant", "Uveron")!.FactorPercent);
+        Assert.Equal((d * 100 * 2 + 750) / 1500, Leg("Coruscant", "Uveron", 100));
+        Assert.Equal(Math.Max(1, (d * 80 * 2 + 750) / 1500), Leg("Coruscant", "Uveron", 80));
     }
 
     [Theory]
@@ -102,9 +108,9 @@ public class TravelTests
     {
         var r = new Pathfinder(G).Find("Coruscant", "Hoth", 80);
         Assert.True(r.Ok);
-        Assert.Equal(32, r.TotalTicks);
+        Assert.Equal(45, r.TotalTicks); // v6 re-pin 2026-10-24 (was 32): Hoth is 432 units out on the spiral rim
         var names = r.Names(G);
-        Assert.Equal(new[] { "Coruscant", "Corellia", "Duros" }, names.Take(3));
+        Assert.Equal(new[] { "Coruscant", "Tralus", "Talus" }, names.Take(3)); // v6 re-pin 2026-10-24: out along the Trunk Line
         Assert.Equal("Hoth", names[^1]);
         foreach (var mid in r.Systems.Skip(1).SkipLast(1)) Assert.True(G.OnRoute(mid)); // never stops at an off-route system on the way
         Assert.False(G.OnRoute(G.Get("Hoth").Index)); // Hoth is off every route: the last leg is off-route
@@ -116,7 +122,7 @@ public class TravelTests
         var pf = new Pathfinder(G, TravelMode.Straight);
         var r = pf.Find("Coruscant", "Hoth", 80);
         AssertPath(r, G, new[] { "Coruscant", "Hoth" }, new[] { OffRoute("Coruscant", "Hoth", 80) }, OffRoute("Coruscant", "Hoth", 80));
-        Assert.Equal(74, r.TotalTicks);
+        Assert.Equal(68, r.TotalTicks); // v6 re-pin 2026-10-24: 432 / 5 = 86, 86 * 80 / 100 = 68.8
     }
 
     // S(0,0) and E(500,0) off-route; R1(100,0) - R2(400,0) a major route link; X(250,10) off-route, between them.
@@ -185,7 +191,7 @@ public class TravelTests
         Assert.Equal(80, fleet);
         var nav = TravelFormula.NavigatorSpeed(fleet, 80);
         Assert.Equal(64, nav);
-        Assert.Equal(4, Leg("Coruscant", "Corellia", nav)); // 100 * 64 / 1500 = 4.27
+        Assert.Equal(5, Leg("Epikonia", "Vondarc", nav)); // v6 re-pin 2026-10-24 (the T1 leg): 111 * 64 / 1500 = 4.74
     }
 
     [Fact]
@@ -197,7 +203,7 @@ public class TravelTests
 
     [Fact]
     public void T18_HanMissionGroupSpeed50() // m1-travel T18
-        => Assert.Equal(3, Leg("Coruscant", "Corellia", 50));
+        => Assert.Equal(4, Leg("Epikonia", "Vondarc", 50)); // v6 re-pin 2026-10-24 (the T1 leg): 111 * 50 / 1500 = 3.7
 
     [Fact]
     public void T20_IlumAndCsillaAreReachable() // m1-travel T20: free travel reaches the two systems outside sectors (no lanes needed)

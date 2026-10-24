@@ -86,7 +86,9 @@ public class SimpleAiAgentsTests
         // B7 re-pin 2026-10-19 (Dev lead; the Classic bombardment, B7-bombardment): BombardWastedHits, BatteryReturnFire, BombardFleetsTogether,
         // BombardDamageScales and MilitaryCollateral are DEFAULT on, core rules this old AI cannot switch off. With those five switches off the hash
         // is exactly the previous pin ca568ccf...8252 (checked when re-pinned, main 07ff5e9; the gap fills C5, C7 and the C8 data do not touch this game).
-        Assert.Equal("d5798f1633cdcfc63dd84692cabfad3f7e0b814918f6558bd7fa7c4d14c23f02", h.StateHash());
+        // v6 re-pin 2026-10-24 (Dev lead; Paul approved the two-arm spiral map, planets/16): every position, route and sector changed, and so
+        // did the day-one deal, so this old AI plays another game on seed 1. All switches above unchanged.
+        Assert.Equal("ca5216f458b80f9c9429511dcee70f9800f022fae73887128078fa8ccd72e3be", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"
