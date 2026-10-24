@@ -4,19 +4,20 @@
 import json, sys, collections, math
 # People living in the clouds of a gas giant (millions), read by hand from each gas giant's World and Population lines in the
 # lore sheet. Only worlds whose people live on decks, rafts, balloons or platforms in the atmosphere are listed; worlds whose people
-# live on a moon, aboard a ring or in orbit are left out. Marked * mix cloud people with moon or station people (the sheet gives one
-# number); the whole number is used. The Floating cities slider takes the log position of this population.
+# live on a moon, aboard a ring or in orbit are left out. Where the sheet gives one number for cloud and moon people, only the cloud
+# share is used (checked by the Lore Master). The Floating cities slider takes the log position of this population.
 CLOUD_M = {
-    'Vigilia': 600, 'Hartwell': 300, 'Ardlinn': 3500, 'Pyrite': 900, 'Disciplina': 10000, 'Sourwater': 0.02, 'Natron': 670,
-    'Nueva Pradera': 3500, 'Ellerbeck': 700, 'Limes': 5, 'Gypsum Minor': 6, 'Kolokol': 700, 'Dongyu': 900, 'Kaukomaa': 800,
+    'Vigilia': 300, 'Hartwell': 300, 'Ardlinn': 3500, 'Pyrite': 900, 'Disciplina': 8000, 'Sourwater': 0.02, 'Natron': 670,
+    'Nueva Pradera': 3000, 'Ellerbeck': 700, 'Limes': 5, 'Gypsum Minor': 2, 'Kolokol': 700, 'Dongyu': 900, 'Kaukomaa': 800,
     'Lowenna': 600, 'Port Sorrel': 12, 'Marisol': 5000, 'Lagoa Funda': 0.6, 'Natalis': 200, 'Old Amber': 0.6, 'Halfpenny': 20,
-    'Azzurra': 850, 'Brushfield': 1, 'Kovarna': 9300, 'Kalinov': 20, 'Wellhead': 2000, 'Kreuzweg': 90, 'Groza': 0.04,
-    'Zlatna': 5000, 'Nowhere': 0.08, 'Backwater': 0.02, 'The Ladle': 0.009, 'Goldcloud': 0.2, 'Aozora': 1, 'Slate Hill': 5,
+    'Azzurra': 850, 'Brushfield': 1, 'Kovarna': 9300, 'Kalinov': 20, 'Wellhead': 2000, 'Kreuzweg': 90, 'Groza': 0.02,
+    'Zlatna': 4500, 'Nowhere': 0.08, 'Backwater': 0.02, 'The Ladle': 0.009, 'Goldcloud': 0.2, 'Aozora': 1, 'Slate Hill': 5,
     'Stormfen': 30, 'Sankt Odile': 2, 'Sonnfeld': 5000, 'Redfen': 0.0006, 'Ivyholm': 1000, "Brandt's Giant": 0.003, 'Meseta': 8,
-    'Mirevale': 6, 'Novy Rynek': 2000, 'Awlbridge': 60, 'Bluefathom': 5, 'Belavista': 6000, 'Los Pozos': 0.2, 'Signum': 150,
-    'Flarewater': 800, 'Naphtha': 0.09, 'Last Platform': 0.0003, 'Halvmark': 9, 'Brokengate': 0.8, 'Seven Gates': 5000,
+    'Mirevale': 6, 'Novy Rynek': 2000, 'Awlbridge': 60, 'Bluefathom': 0.005, 'Belavista': 6000, 'Los Pozos': 0.2, 'Signum': 150,
+    'Flarewater': 800, 'Naphtha': 0.01, 'Last Platform': 0.0003, 'Halvmark': 9, 'Brokengate': 0.8, 'Seven Gates': 5000,
     'Waymark': 25, 'Opsis': 3400, 'Endline': 200, 'Skylark': 1,
-}   # mixed: Vigilia, Disciplina, Nueva Pradera, Gypsum Minor, Zlatna, Naphtha, Halvmark, Endline
+    'Nebbia': 11, 'Drift Harbour': 0.5, 'Kairos': 0.2, 'Grandmother': 0.5,   # Lore Master's check: Nebbia's villages all float in the fog; the last three have only faint lights
+}
 def cloud_pos(millions):   # the inverse of the tool's popBillions: 0.01 billion at 0, 10,000 billion at 1
     return round(min(1.0, max(0.003, (math.log10(millions / 1000.0) + 2) / 6)), 3)
 sysf, prf, out, base_out = sys.argv[1:5]

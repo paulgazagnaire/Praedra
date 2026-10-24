@@ -842,12 +842,13 @@ float cityField(vec3 q, float dl, out float urban, out float streets, out float 
 // there are and how full they are. Returns the deck (0..1, drawn dark by day and lit by night) and a soft glow round the decks.
 float gasCityField(vec3 q, out float glow) {
   float amt = clamp(uCities, 0.0, 1.0);
+  float ra = 0.1 + 0.9 * amt;                      // the slider's bottom is 10 million: below that a world still gets one small region of faint lights
   float reg = fbm(q * 2.4 + sOff() + 41.0, 3);
   float zone = smoothstep(0.92, 0.55, abs(q.y));   // calm mid-latitudes: none at the poles
-  float inreg = smoothstep(0.66 - 0.26 * amt, 0.72 - 0.26 * amt, reg) * zone;
+  float inreg = smoothstep(0.66 - 0.26 * ra, 0.72 - 0.26 * ra, reg) * zone;
   vec3 hh; float wall;
   vec3 r = cellC(q * 46.0, hh, wall);              // offset to the nearest deck site, in cell units (a cell is 1/46 of a radius)
-  float on = step(hh.x, 0.30 + 0.60 * amt) * inreg;
+  float on = step(hh.x, (0.30 + 0.60 * amt) * (0.08 + 0.92 * smoothstep(0.0, 0.15, amt))) * inreg;
   float hub = step(0.93, hh.z);
   float rad = mix(0.10, 0.20, hh.y) * (1.0 + 1.2 * hub);
   float rr = max(rad, gPxC * 46.0 * 0.75);         // never thinner than a pixel; the light it loses is taken from its brightness
