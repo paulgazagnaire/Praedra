@@ -14,9 +14,9 @@ Draws planets purely in code (one WebGL2 fragment shader, no images, no librarie
 ```
 python3 build.py planet-maker.src.html systems.json index.html
 ```
-Edit `planet-maker.src.html` (the shader and the page), never `index.html`. To reload the lore sheet: `python3 parse.py <07-systems.md> /tmp/sys.json`, then `python3 parse_presets.py /tmp/sys.json <08-planet-presets.json> systems.json preset-base.json`, then rebuild.
+Edit `planet-maker.src.html` (the shader and the page), never `index.html`. To reload the lore sheet: `python3 parse.py <07-systems.md> /tmp/sys.json`, then `python3 regions.py <07-systems.md> <galaxy-shape/proposed-spiral-data.json> /tmp/sys.json sector-density.json` (the region of every sector), then `python3 parse_presets.py /tmp/sys.json <08-planet-presets.json> systems.json preset-base.json sector-density.json`, then rebuild.
 
-Picking a system loads the planet the lore sheet describes (its kind, colours, moons, ring, camera and people), shows its story under the name, and sets Star density from its sector (Core 0.8, Inner Rim 0.6, Outer Rim 0.4, beyond 0.2). If a system has no settings of its own it is drawn from its description as a first guess.
+Picking a system loads the planet the lore sheet describes (its kind, colours, moons, ring, camera and people), shows its story under the name, and sets Star density from its sector (Core 0.8, Inner Rim 0.6, Outer Rim 0.4, beyond 0.2). The spiral galaxy keeps 7 core, 19 inner-rim and 38 outer-rim sectors; `regions.py` ranks the sectors by distance from Charter to say which is which, so every system in a sector has the same density (the 08 sheet's per-system value was set before the sectors were regrouped). If a system has no settings of its own it is drawn from its description as a first guess.
 
 ## Preset format
 ```json
