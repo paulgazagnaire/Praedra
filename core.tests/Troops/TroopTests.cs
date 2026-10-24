@@ -15,7 +15,9 @@ namespace Praedra.Core.Tests.Troops;
 // The real galaxy, ship data, costs and troop files are used.
 public class TroopTests
 {
-    private const string Home = "Coruscant", Far = "Corellia";
+    // v6 re-pin 2026-10-24: Far was Corellia (one great-route leg, 7 days at speed 100, 5 at 80). On the spiral map no single-hop trip
+    // from Coruscant takes those days; Rhinnal is the longest one the router flies direct (a 23-unit free jump: 4 days at speed 100, 3 at 80).
+    private const string Home = "Coruscant", Far = "Rhinnal";
     private const string Isd = "Imperial Star Destroyer", Storm = "Stormtrooper Regiment";
     private static readonly Side Emp = Side.Empire, Reb = Side.Alliance;
 
@@ -209,14 +211,14 @@ public class TroopTests
 
     // m3-troops T9
     [Fact]
-    public void T9_DeliveryToCorelliaTakesSevenDaysAndAppearsInStep3()
+    public void T9_DeliveryToRhinnalTakesFourDaysAndAppearsInStep3() // v6 re-pin 2026-10-24: was Corellia, 7 days
     {
         var w = T(regiments: false);
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Training, Storm, 1, Far));
         w.RunTo(60);
         var dep = w.Events<DeliveryDeparted>().Single();
         var arr = w.Events<DeliveryArrived>().Single();
-        Assert.Equal(7, arr.Day - dep.Day); // route leg: 100 * 100 / (5 * 300) = 6.67, rounded to 7
+        Assert.Equal(4, arr.Day - dep.Day); // free jump: map distance 23, base 4, 4 * 100 / 100 = 4
         var made = w.Events<RegimentCreated>().Single(); // once, on arrival (not at completion)
         Assert.Equal((Far, arr.Day), (made.System, made.Day));
         var o = w.Obj(made.Id);
@@ -514,7 +516,7 @@ public class TroopTests
         var w = T();
         Assert.Null(Load(w, 200, 401, 402));
         Assert.Null(Step(w, w.Fleets.SubmitMove(Emp, 200, Far)));
-        w.Run(2);
+        w.Run(1); // v6 re-pin 2026-10-24: the flight to Rhinnal takes 3 days at speed 80 (was 5), so check one day in, not two
         Assert.Null(w.State.Fleets[200].At);
         w.Scrap(Emp, 201); // ScrapObject on a flying ship
         w.Run(1);

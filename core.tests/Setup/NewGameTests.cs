@@ -15,6 +15,10 @@ public class NewGameTests
     private static GameHost Make(StartPreset p, int seed = 1, GameSettings? s = null) =>
         NewGame.Create(GameData.Default, new NewGameOptions { Seed = seed, Preset = p, Settings = (s ?? new GameSettings()) with { DealMode = DealMode.File } });
 
+    // v6 re-pin 2026-10-24: the day-one files' HQ is Cymoon on the spiral map (deal_day_one.py, setup-victory/09; was Cyclor, now only 122 units
+    // from Coruscant, inside the 200-unit HQ rule).
+    private const string FileHq = "Cymoon";
+
     private static int Held(GameHost h, Side s) => h.Game.State.SystemOwners.Count(kv => kv.Value == s);
 
     // Owners of the day-one CSV with the seven fixed owners on top (m5-setup-and-victory §Fixed owners).
@@ -33,11 +37,11 @@ public class NewGameTests
         Assert.Equal(alliance, Held(h, Side.Alliance));
         Assert.Equal(empire, Held(h, Side.Empire));
         Assert.Equal(Side.Empire, h.Control.HolderOf("Coruscant"));
-        Assert.Equal("Cyclor", h.HqSystem);
-        Assert.Equal(Side.Alliance, h.Control.HolderOf("Cyclor"));
+        Assert.Equal(FileHq, h.HqSystem);
+        Assert.Equal(Side.Alliance, h.Control.HolderOf(FileHq));
         Assert.Equal(100, h.Economy.SupportOf("Yavin", Side.Alliance));
         Assert.True(h.IsExplored("Coruscant", Side.Alliance) && h.IsExplored("Coruscant", Side.Empire));
-        Assert.True(h.IsExplored("Cyclor", Side.Alliance) && !h.IsExplored("Cyclor", Side.Empire));
+        Assert.True(h.IsExplored(FileHq, Side.Alliance) && !h.IsExplored(FileHq, Side.Empire));
         Assert.Null(h.Victory.Winner);
     }
 
@@ -65,7 +69,7 @@ public class NewGameTests
         foreach (var s in new[] { "Kuat", "Fondor", "Corellia", "Rendili" }) Assert.Equal(Side.Empire, h.Control.HolderOf(s));
         foreach (var s in new[] { "Sullust", "Mon Calamari", "Bilbringi" }) Assert.Null(h.Control.HolderOf(s));
         Assert.Equal(0, h.Economy.SupportOf("Coruscant", Side.Alliance));
-        Assert.Equal(100, h.Economy.SupportOf("Cyclor", Side.Alliance));
+        Assert.Equal(100, h.Economy.SupportOf(FileHq, Side.Alliance));
         Assert.Equal(100, h.Economy.SupportOf("Yavin", Side.Alliance));
         Assert.Contains(h.Economy.Objects, o => o.Category == ObjectCategory.Regiment && o.System == "Rendili" && o.Side == Side.Empire);
         Assert.Contains(h.Economy.Objects, o => o.Class == "Orbital Shipyard" && o.System == "Kuat");
@@ -75,7 +79,7 @@ public class NewGameTests
     public void GameOverFreezesStepAndRejectsOrders()
     {
         var h = Make(StartPreset.MedA, 1, OldVictory.Settings);
-        CaptureOnNextStep(h, "Cyclor", Side.Empire);
+        CaptureOnNextStep(h, FileHq, Side.Empire);
         h.Game.Step();
         Assert.True(h.Game.IsOver);
         int day = h.Game.Day, events = h.Game.Events.Count;
@@ -125,7 +129,7 @@ public class NewGameTests
     {
         var h = Make(StartPreset.MedA, 1, OldVictory.Settings);
         h.Game.Step(); Assert.Null(h.Victory.Winner);
-        CaptureOnNextStep(h, "Cyclor", Side.Empire);
+        CaptureOnNextStep(h, FileHq, Side.Empire);
         h.Game.Step();
         Assert.Equal(Side.Empire, h.Victory.Winner);
         var won = h.Game.Events.OfType<GameWon>().Single();
@@ -148,7 +152,7 @@ public class NewGameTests
     public void SwitchesTurnConditionsOff()
     {
         var h = Make(StartPreset.MedA, 1, new GameSettings { Victory = new VictoryRules { EmpireWinsOnHqLost = false } });
-        CaptureOnNextStep(h, "Cyclor", Side.Empire);
+        CaptureOnNextStep(h, FileHq, Side.Empire);
         h.Game.Step();
         Assert.Null(h.Victory.Winner);
     }
@@ -175,13 +179,13 @@ public class NewGameTests
     public void SaveLoadKeepsHqExploredAndWinner()
     {
         var h = Make(StartPreset.MedA, 1, OldVictory.Settings);
-        CaptureOnNextStep(h, "Cyclor", Side.Empire);
+        CaptureOnNextStep(h, FileHq, Side.Empire);
         h.Game.Step();
         string save = h.Save();
         var l = GameHost.Load(save);
-        Assert.Equal("Cyclor", l.HqSystem);
+        Assert.Equal(FileHq, l.HqSystem);
         Assert.Equal(Side.Empire, l.Victory.Winner);
-        Assert.True(l.IsExplored("Cyclor", Side.Alliance));
+        Assert.True(l.IsExplored(FileHq, Side.Alliance));
         Assert.Equal(h.StateHash(), l.StateHash());
         Assert.Equal(save, l.Save());
     }

@@ -15,7 +15,12 @@ namespace Praedra.Core.Tests.Fleets;
 // Hook time T = K + 1; events of orders carry Day = K. The real galaxy, ship data and costs files are used.
 public class FleetOrderTests
 {
-    private const string Home = "Coruscant", Far = "Corellia";
+    // v6 re-pin 2026-10-24: Far was Corellia; on the spiral map Brentaal IV takes the same days from Coruscant (5 at speed 80,
+    // 7 at 100, 4 at 60) over two legs (a free jump to Rhinnal, then a minor-route leg).
+    private const string Home = "Coruscant", Far = "Brentaal IV";
+    // v6 re-pin 2026-10-24: Corellia was also the first stop on the way to Hoth (F16, F21); on the spiral map that way leaves along
+    // the Trunk Line, and Talus is the second stop on it at every speed.
+    private const string OnTheWayToHoth = "Talus";
     private const string Isd = "Imperial Star Destroyer", Carrack = "Carrack Light Cruiser", Tie = "TIE Fighter", Xwing = "X-wing";
     private static readonly Side Emp = Side.Empire, Reb = Side.Alliance;
 
@@ -359,17 +364,17 @@ public class FleetOrderTests
     public void F16_ASquadronFleetStoppedAtAnIntermediateSystemLandsThere()
     {
         var w = F();
-        w.Fleets.AddFleet(Emp, "Picket", new[] { "Interdictor Cruiser" }, Far); // gravity-well ship on the route to Hoth (Paul 2026-10-16: only these pull fleets out)
+        w.Fleets.AddFleet(Emp, "Picket", new[] { "Interdictor Cruiser" }, OnTheWayToHoth); // gravity-well ship on the route to Hoth (Paul 2026-10-16: only these pull fleets out)
         long seq = w.Fleets.SubmitMoveSquadrons(Reb, new[] { 310, 311 }, "Hoth");
         w.Run(1);
         Assert.Null(w.RejectionOf(seq));
         int fid = w.Events<OrderAccepted>().Single().Fleet!.Value;
         w.RunTo(4);
         var stop = Assert.Single(w.Events<ForcedStop>());
-        Assert.Equal((fid, Far, 4), (stop.Fleet, stop.System, stop.Day));
+        Assert.Equal((fid, OnTheWayToHoth, 2), (stop.Fleet, stop.System, stop.Day)); // v6: 29 * 60 / 1500 = 1.16 -> 1, then 20 * 60 / 1500 raised to 1
         Assert.Equal(DissolveCause.SquadronsArrived, Assert.Single(w.Events<FleetDissolved>()).Cause);
         Assert.DoesNotContain(fid, w.State.Fleets.Keys);
-        Assert.All(new[] { 310, 311 }, id => Assert.Equal(Far, w.Obj(id).System));
+        Assert.All(new[] { 310, 311 }, id => Assert.Equal(OnTheWayToHoth, w.Obj(id).System));
     }
 
     // m3-fleets §Unescorted squadrons: MoveSquadrons rejections
@@ -554,14 +559,14 @@ public class FleetOrderTests
     public void F21_ABasedSquadronIsNotAFleetForTheForcedStopButCountsAsPresenceForTheBlockadeFlag()
     {
         var w = new BuildWorld();
-        // an Alliance squadron based at Corellia; no Alliance fleet there
-        w.Hold(Far, Reb);
-        w.Eco.AddObject(Reb, Xwing, Far, true);
+        // an Alliance squadron based on the way to Hoth; no Alliance fleet there
+        w.Hold(OnTheWayToHoth, Reb);
+        w.Eco.AddObject(Reb, Xwing, OnTheWayToHoth, true);
         int empire = w.Fleets.AddFleet(Emp, "Red", new[] { Isd }, Home);
-        w.Fleets.SubmitMove(Emp, empire, "Hoth"); // passes Corellia
+        w.Fleets.SubmitMove(Emp, empire, "Hoth"); // passes Talus (v6 re-pin 2026-10-24: was Corellia)
         w.Run(8);
         Assert.Empty(w.Events<ForcedStop>());
-        Assert.Contains(w.Events<FleetPassed>(), e => e.System == Far);
+        Assert.Contains(w.Events<FleetPassed>(), e => e.System == OnTheWayToHoth);
 
         // the Classic blockade flag: an Empire fleet alone at an Alliance system blockades; with a based Alliance squadron the battle bit is on
         var w2 = new BuildWorld();
