@@ -27,7 +27,7 @@ Edit `planet-maker.src.html` (the shader and the page), never `index.html`. `par
     "cities": 0..1, "rad": 1500..15000, "plan": 0..1, "land": 0.02..1 or null, "lava": 0..1, "craters": 0..1, "scars": 0..1,
     "bands": 3..20, "turb": 0..1.4, "storms": 0..6, "stormSize": 0.2..1.6,
     "spin": -1..1, "cloudSpeed": -1..1, "flow": 0..1.5, "moonSpeed": 0..2,
-    "tilt": 6..85, "roll": -90..90, "sun": -180..180, "sunH": -60..60, "zoom": 0.5..1.8,
+    "tilt": 6..85, "roll": -90..90, "sun": -180..180, "sunH": -60..60, "zoom": 0.5..1.8, "starDens": 0..1,
     "ring": { "on": false, "type": "broad|narrow|dusty|arcs|wreck|moonfed", "inner": 1.1..2.8, "width": 0.04..2.6, "op": 0.1..1, "gaps": 0..1,
               "struct": 0..1, "clump": 0..1, "dust": 0..1, "feeder": 0..5, "seed": 0..9999, "spin": -1..1, "c1": "#hex", "c2": "#hex" },
     "oOn": 0|1, "oHt": 0.04..0.3, "oWid": 0.01..0.1, "oStn": 0..16, "oLit": 0..1, "oHull": "#hex", "oAcc": "#hex",   // orbital ring
@@ -144,6 +144,10 @@ Two human-made works you can switch on for a planet, in their own box under Ring
 - The planet's shadow darkens a cable and its station; the climbers' lights stay on. A cable behind the planet is hidden and shows again past the limb. Looking straight down a cable it is a dot with the nearest end on top.
 - **With a natural ring** the cable lies in the ring's plane, so the ring is swept clear along it (a narrow lane, drawn as a gap in the ring on the cable's side).
 - It is compiled into the shader only when one of them is on, so planets without them cost nothing.
+
+## Stars
+
+The background is plain black with stars and nothing else. One slider, Star density (0 to 1, default 0.5), sets how many: none, sparse, normal, dense, packed. The default is the same star field as before the slider existed. The stars twinkle slowly and sit on the screen, so they do not turn with the planet. It works for every world, Ring and Shell included, and is saved in presets as `starDens`.
 
 ## Rings
 Rings are no longer one flat band with noise. There are six kinds, each modelled on a ring that exists, and they share what makes real rings: grains in a thin flat sheet that sit inside the distance where tides would pull a moon apart (about 2.4 planet radii for ice), so moons start outside them, and gaps and edges that moons cut.

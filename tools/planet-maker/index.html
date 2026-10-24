@@ -159,6 +159,11 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
       <div id="ctlCam"></div>
     </details>
 
+    <details class="sec" open>
+      <summary>Stars</summary>
+      <div id="ctlStars"></div>
+    </details>
+
     <details class="sec" id="secRings">
       <summary>Rings</summary>
       <label class="chk"><input type="checkbox" id="ringOn"> This planet has rings</label>
@@ -240,7 +245,7 @@ uniform float uLowCl;        // how much of the low cloud deck shows: 1 normally
 uniform vec3 uCloudCol;       // what the clouds are made of: white for water, tan for dust, near black for ash
 uniform float uSeed, uSea, uMount, uScale, uIce, uClouds, uHaze, uCities, uDens, uPlan, uRad, uLava, uCraters, uScars, uWet, uBiome, uQ;
 uniform float uBands, uTurb, uStorms, uStormSize;
-uniform float uSpin, uCloudAng, uFlowT, uRingAng, uTime;
+uniform float uSpin, uCloudAng, uFlowT, uRingAng, uTime, uStarDens;
 uniform vec3 uAxis, uU, uW, uL;
 uniform float uRingOn, uRingIn, uRingOut, uRingOp, uRingGaps, uRingStruct, uRingClump, uRingDust, uRingSeed;
 uniform int uRingType;      // 0 broad icy, 1 narrow dark, 2 faint dust, 3 clumpy arcs, 4 fresh wreckage, 5 moon-fed dust
@@ -1821,7 +1826,7 @@ vec3 stars(vec2 fc) {
     float cell = (l == 0) ? 46.0 : 21.0;
     vec2 g = floor(fc / cell), f = fract(fc / cell);
     vec3 h = hash33(vec3(g, float(l) * 7.0 + 1.0));
-    if (h.x > 0.93) {
+    if (h.x > 1.0 - 0.28 * uStarDens * uStarDens) {   // 0.5 is the earlier 7% of cells (same stars); 0 none; 1 four times as many
       float d = length(f - h.yz);
       float tw = 0.75 + 0.25 * sin(uTime * (0.6 + h.x * 3.0) + h.y * 60.0);
       vec3 tint = mix(vec3(0.75, 0.85, 1.0), vec3(1.0, 0.88, 0.7), h.z);
@@ -2064,7 +2069,7 @@ const IS_ROCKY = (t) => t !== 'gas';
 const BASE = {
   seed: 7, sea: 0.5, mount: 0.5, wet: 0, scale: 1.0, ice: 0.4, clouds: 0.5, haze: 0.6, cities: 0, rad: 6371, plan: 0.5, land: null, lava: 0, craters: 0, scars: 0,
   bands: 9, turb: 0.6, storms: 2, stormSize: 1.0,
-  spin: 0.25, cloudSpeed: 0.3, flow: 0.4, tilt: 22, roll: -12, sun: -55, sunH: 12, zoom: 1,
+  spin: 0.25, cloudSpeed: 0.3, flow: 0.4, tilt: 22, roll: -12, sun: -55, sunH: 12, zoom: 1, starDens: 0.5,
   ring: { on: false, type: 'broad', inner: 1.24, width: 1.03, op: 0.8, gaps: 0.8, struct: 0.6, clump: 0.3, dust: 0.15, feeder: 0, seed: 1, spin: 0.3, c1: '#d8c8a4', c2: '#7a6a55' },
   moons: 1, moonSpeed: 0.6, moonList: [],
   mLayers: 2, mOpen: 0.35, mCap: 1, mWidth: 0.14, mWall: 0.05, mSpan: 0.7, mShade: 0.28, mPlate: 0.6, mLights: 0.5, mStar: 1, mSun: 'star', mPorts: 0.6, mLook: 0, mHull: '#8b9199', mAcc: '#e0a64a',
@@ -2195,12 +2200,13 @@ const CONTROLS = [
   ['Cam', 'sun', 'Sun side', -180, 180, 1, () => true, (v) => v + '°'],
   ['Cam', 'sunH', 'Sun height', -60, 60, 1, () => true, (v) => v + '°'],
   ['Cam', 'zoom', 'Zoom', 0.5, 1.8, 0.01, () => true],
+  ['Stars', 'starDens', 'Star density', 0, 1, 0.01, () => true, (v) => v < 0.01 ? 'none' : v < 0.3 ? 'sparse' : v < 0.7 ? 'normal' : v < 0.9 ? 'dense' : 'packed'],
   ['Moon', 'moons', 'How many', 0, 5, 1, () => true],
 ];
 // a drum has no ground, sea or sky to adjust: the terrain, weather and palette controls belong to the ring and the planets
 for (const c of CONTROLS) if (c[0] === 'Look' || c[0] === 'Sky' || c[1] === 'cloudSpeed') { const f = c[6]; c[6] = (p) => f(p) && TERR(p); }
 function spinText(v, p) { if (Math.abs(v) < 0.01) return 'stopped'; const s = 2 * Math.PI / (Math.abs(v) * 0.5); return (v < 0 ? '↺ ' : '') + Math.round(s) + ' s'; }
-const SEC_HOST = { Orb: 'ctlOrb', Struct: 'ctlMega', Look: 'ctlLook', Sky: 'ctlSky', Motion: 'ctlMotion', Cam: 'ctlCam', Moon: 'ctlMoon' };
+const SEC_HOST = { Orb: 'ctlOrb', Struct: 'ctlMega', Look: 'ctlLook', Sky: 'ctlSky', Motion: 'ctlMotion', Cam: 'ctlCam', Stars: 'ctlStars', Moon: 'ctlMoon' };
 const ctlEls = {};
 const get = (k) => k === 'size' ? 3 - P.scale : k === 'land' ? landShare(P) : k === 'ringSpin' ? P.ring.spin : P[k];
 const set = (k, v) => { if (k === 'size') P.scale = 3 - v; else if (k === 'land') P.land = v; else if (k === 'ringSpin') P.ring.spin = v; else P[k] = v; };
@@ -2681,7 +2687,7 @@ function draw(w, h, tmul) {
   f('uSeed', (P.seed % 997) * 0.173); f('uSea', P.sea); f('uMount', P.mount); f('uScale', P.scale); f('uIce', P.ice); f('uClouds', clouds); f('uAsh', P.kind === 'lava' ? 1 : 0); f('uLowCl', LOW_CLOUD[P.kind] === undefined ? 1 : LOW_CLOUD[P.kind]); gl.uniform3fv(loc.uCloudCol, CLOUD_COL[P.kind] || CLOUD_COL.water); f('uHaze', P.haze);
   f('uWet', P.wet || 0); f('uBiome', (P.kind === 'rock' || P.kind === 'lava') ? 0 : 1); f('uQ', quality); f('uCities', P.cities); f('uDens', cityStats(P).ld); f('uPlan', P.plan); f('uRad', P.rad); f('uLava', P.lava); f('uCraters', P.craters); f('uScars', P.scars);
   f('uBands', P.bands); f('uTurb', P.turb); f('uStorms', P.storms); f('uStormSize', P.stormSize);
-  f('uSpin', T.spin); f('uCloudAng', T.cloud); f('uFlowT', T.flow); f('uRingAng', T.ring); f('uTime', T.time);
+  f('uSpin', T.spin); f('uCloudAng', T.cloud); f('uFlowT', T.flow); f('uRingAng', T.ring); f('uTime', T.time); f('uStarDens', P.starDens);
   if (mega) {
     const wd = P.mWidth * 0.5;
     const mt = P.kind === 'shell' ? 1 : 0;
@@ -2920,7 +2926,7 @@ const toCode = () => JSON.stringify({ format: 'praedra-planet', v: 1, name: P.na
 const PARAM_RANGE = {
   sea: [0, 1], wet: [-1, 1], mount: [0, 1], scale: [0.5, 2.5], ice: [0, 1], clouds: [0, 1], haze: [0, 1.3], cities: [0, 1], rad: [1500, 15000], plan: [0, 1], land: [0.02, 1], lava: [0, 1], craters: [0, 1], scars: [0, 1],
   bands: [3, 20, 1], turb: [0, 1.4], storms: [0, 6, 1], stormSize: [0.2, 1.6], spin: [-1, 1], cloudSpeed: [-1, 1], flow: [0, 1.5], moonSpeed: [0, 2],
-  tilt: [6, 85], roll: [-90, 90], sun: [-180, 180], sunH: [-60, 60], zoom: [0.5, 1.8], moons: [0, 5, 1],
+  tilt: [6, 85], roll: [-90, 90], sun: [-180, 180], sunH: [-60, 60], zoom: [0.5, 1.8], starDens: [0, 1], moons: [0, 5, 1],
   mLayers: [1, 4, 1], mOpen: [0, 0.9], mCap: [0.12, 1], mWidth: [0.06, 0.6], mWall: [0, 0.12], mSpan: [0.25, 1.3], mShade: [0, 0.6], mPlate: [0, 1], mLights: [0, 1], mStar: [0, 1.5], mPorts: [0, 1], mLook: [0, 1],
   oOn: [0, 1, 1], oHt: [0.04, 0.3], oWid: [0.01, 0.1], oStn: [0, 16, 1], oLit: [0, 1], eOn: [0, 1, 1], eLon: [-180, 180], eHt: [0.3, 3], eN: [1, 4, 1],
 };
