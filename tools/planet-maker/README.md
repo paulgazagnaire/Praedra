@@ -5,15 +5,18 @@ Draws planets purely in code (one WebGL2 fragment shader, no images, no librarie
 ## Files
 - `index.html` — the whole tool, self-contained. Open it in any browser.
 - `planet-maker.src.html` — the same page with a placeholder where the system list goes.
-- `systems.json` — the 555 systems (name, sector, world, from-space, moons) read from `specs/creative/07-systems.md`.
-- `build.py` / `parse.py` — rebuild `index.html` from the two files above.
+- `systems.json` — the 555 systems: name, sector, world, from-space, moons, people, story, terraforming, star density, and each system's own planet settings (`p`). Built by `parse.py` (text from `specs/creative/07-systems.md`) and `parse_presets.py` (settings from `specs/creative/08-planet-presets.json`).
+- `preset-base.json` — the setting values most systems share; a system's `p` only lists what differs.
+- `build.py` / `parse.py` / `parse_presets.py` — rebuild `index.html` from the files above.
 - `presets/` — named presets exported from the tool (`<name>.planet.json`), one per system once the team has saved them.
 
 ## Rebuild
 ```
 python3 build.py planet-maker.src.html systems.json index.html
 ```
-Edit `planet-maker.src.html` (the shader and the page), never `index.html`. `parse.py <07-systems.md> systems.json` rereads the system list from the lore sheet.
+Edit `planet-maker.src.html` (the shader and the page), never `index.html`. To reload the lore sheet: `python3 parse.py <07-systems.md> /tmp/sys.json`, then `python3 parse_presets.py /tmp/sys.json <08-planet-presets.json> systems.json preset-base.json`, then rebuild.
+
+Picking a system loads the planet the lore sheet describes (its kind, colours, moons, ring, camera and people), shows its story under the name, and sets Star density from its sector (Core 0.8, Inner Rim 0.6, Outer Rim 0.4, beyond 0.2). If a system has no settings of its own it is drawn from its description as a first guess.
 
 ## Preset format
 ```json

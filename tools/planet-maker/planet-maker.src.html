@@ -72,6 +72,7 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
 .note { color: var(--dim); font-size: 12px; margin: 8px 0 0; }
 .sysinfo { font-size: 12px; color: var(--dim); margin: 8px 0 0; }
 .sysinfo b { color: var(--fg); font-weight: 500; }
+.sysinfo .lore { display: block; margin-top: 6px; opacity: .85; }
 .lib { list-style: none; margin: 10px 0 0; padding: 0; }
 .lib li { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-top: 1px solid var(--line); }
 .lib li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -122,7 +123,7 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
         <button id="btnPrev" type="button">◀ Previous</button>
         <button id="btnNext" type="button">Next ▶</button>
       </div>
-      <p class="sysinfo" id="sysInfo">Each system gets a first guess built from its description (colours, moons, rings). Tweak it, then save it.</p>
+      <p class="sysinfo" id="sysInfo">Pick a system to see its planet as the lore sheet describes it. Tweak it, then save it.</p>
     </section>
 
     <details class="sec" id="secMega" open hidden>
@@ -2011,6 +2012,7 @@ in vec2 a; void main() { gl_Position = vec4(a, 0.0, 1.0); }
 
 <script>
 const SYSTEMS = /*__SYSTEMS__*/[];
+const PRESET_BASE = /*__PRESET_BASE__*/{};   // the setting values most systems share; a system's own `p` holds only what differs
 </script>
 
 <script>
@@ -2912,9 +2914,15 @@ const sysByName = new Map();
 function loadSystem(i) {
   sysIdx = ((i % SYSTEMS.length) + SYSTEMS.length) % SYSTEMS.length;
   const s = SYSTEMS[sysIdx];
-  P = derive(s);
+  // the lore sheet's own settings when the system has them (08-planet-presets.json), else a first guess from its description
+  if (s.p) {
+    const sd = typeof s.sd === 'number' ? s.sd : 0.5;   // Core 0.8, Inner Rim 0.6, Outer Rim 0.4: the star density slider
+    fromCode(JSON.stringify({ format: 'praedra-planet', v: 1, name: s.n, params: Object.assign({}, PRESET_BASE, s.p, { starDens: sd, name: s.n }) }));
+  } else P = derive(s);
   $('sysIn').value = s.n;
-  $('sysInfo').innerHTML = `<b>${esc(s.n)}</b> · ${esc(s.sec)} sector<br>${esc(s.w)}.<br>From space: ${esc(s.s)}.<br>Moons and rings: ${esc(s.m)}.`;
+  const TF = { ongoing: 'being terraformed', done: 'terraformed', failed: 'terraforming failed' };
+  $('sysInfo').innerHTML = `<b>${esc(s.n)}</b> · ${esc(s.sec)} sector<br>${esc(s.w)}.<br>From space: ${esc(s.s)}.<br>Moons and rings: ${esc(s.m)}.` +
+    (s.pop ? `<br>People: ${esc(s.pop)}.` : '') + (TF[s.tf] ? `<br>Terraforming: ${TF[s.tf]}.` : '') + (s.lore ? `<br><span class="lore">${esc(s.lore)}</span>` : '');
   syncControls();
 }
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
