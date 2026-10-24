@@ -864,45 +864,70 @@ void gasCities(vec3 q, vec3 lt, out float body, out float shade, out float lit, 
   float reg = fbm(q * 2.4 + sOff() + 41.0, 3);
   float inreg = smoothstep(0.64 - 0.34 * ra, 0.70 - 0.34 * ra, reg) * smoothstep(0.92, 0.55, abs(q.y));   // none at the poles
   if (inreg <= 0.0) return;
-  const float G1 = 4.5;                            // a site about every 1/4.5 of a radius
+  const float G1 = 4.0;                            // a site about every 1/4 of a radius
   vec3 h1; float w1;
   vec3 r1 = siteC(q * G1, h1, w1);                 // offset to the nearest city site, in site units
   float on = step(h1.x, (0.30 + 0.45 * amt) * (0.08 + 0.92 * smoothstep(0.0, 0.15, amt))) * inreg;
   if (on <= 0.0) return;
-  float d1 = length(r1);
-  float R = mix(0.15, 0.21, h1.y) * (1.0 + 0.2 * step(0.86, h1.z));   // at most 0.25 plus the lobes: wider than 0.33 and the next site's cell cuts the disc
+  float R = mix(0.11, 0.16, h1.y) * (1.0 + 0.15 * step(0.86, h1.z));   // the platform; with its pods a city reaches about 0.4, and a site's cell is at least 0.35 wide
   float Re = max(R, 1.4 * gPxC * G1);              // never thinner than a pixel; the light it loses is taken from its brightness
   float fade = R / Re;
-  vec3 ltn = normalize(lt + vec3(1e-4));
-  float edge = smoothstep(0.0, 0.2, w1);          // soft things fade out before they meet the next site's cell
+  float px1 = gPxC * G1;                           // site units per pixel
+  float edge = smoothstep(0.0, 0.2, w1);           // soft things fade out before they meet the next site's cell
+  // the tangent plane at the city: x, y of the point relative to the city's middle, and the direction to the sun in the same axes
   vec3 t1 = normalize(cross(q, vec3(0.0, 1.0, 0.002))), t2 = cross(q, t1);
-  float az = atan(dot(r1, t2), dot(r1, t1));
-  float lobes = 1.0 + 0.09 * cos(az * (5.0 + floor(h1.y * 3.0)) + h1.x * 6.28);   // round pods round the edge, like Kamino's towers
+  vec2 pp = vec2(-dot(r1, t1), -dot(r1, t2));
+  float d1 = length(pp);                           // distance along the surface: r1 also has a share across the sphere, which would shrink every city whose site sits off the surface
+  vec3 ltn = normalize(lt + vec3(1e-4));
+  vec2 ls = vec2(dot(ltn, t1), dot(ltn, t2));
+  float az = atan(pp.y, pp.x);
+  // the main platform: a lobed disc (round pods round the edge, a little uneven), a dome, tier rings and joints
+  float lobes = 1.0 + 0.07 * cos(az * (5.0 + floor(h1.y * 3.0)) + h1.x * 6.28) + 0.04 * cos(az * 9.0 + h1.y * 40.0);
   float Rl = Re * lobes;
-  float shd = smoothstep(Rl * 1.3, Rl * 0.85, length(r1 - ltn * (0.45 * Re))) * edge;
-  float m = smoothstep(Rl, Rl * 0.9, d1);   // the shadow falls away from the sun
+  float m = smoothstep(Rl, Rl * 0.9, d1);
+  float shd = smoothstep(Rl * 1.3, Rl * 0.85, length(pp + ls * (0.45 * Re))) * edge;   // the shadow falls away from the sun
   float dome = smoothstep(Re * 0.42, Re * 0.2, d1);
   float tier = max(smoothstep(0.035, 0.0, abs(d1 - 0.62 * Re)), smoothstep(0.03, 0.0, abs(d1 - 0.84 * Re))) * m;
-  float ang = az * (12.0 / 6.2831853);
-  float fa = fract(ang + h1.x * 12.0);
+  float fa = fract(az * (12.0 / 6.2831853) + h1.x * 12.0);
   float spoke = smoothstep(0.05, 0.0, min(fa, 1.0 - fa)) * m * (1.0 - dome);
   float rim = smoothstep(Rl * 1.14, Rl, d1) * (1.0 - m);
-  // smaller discs and spires round the main one
-  float near = smoothstep(0.62, 0.45, d1) * edge;
+  // eight small towers round the dome
+  float sec2 = 6.2831853 / 8.0;
+  float k2 = floor(az / sec2 + 0.5);
+  float Rt = max(0.075 * Re, 0.7 * px1);
+  float tower = smoothstep(Rt, Rt * 0.6, length(pp - vec2(cos(k2 * sec2), sin(k2 * sec2)) * 0.58 * Re)) * m * (Rt > 0.075 * Re ? 0.6 : 1.0);
+  // a ring of five to eight pods tied to the platform by walkways
+  float n = 5.0 + floor(fract(h1.y * 7.31) * 4.0);
+  float sec = 6.2831853 / n, ph = h1.x * 6.28;
+  float kk = floor((az - ph) / sec + 0.5);
+  float kh = mod(kk, n);
+  vec2 dk = vec2(cos(kk * sec + ph), sin(kk * sec + ph));
+  float here = step(fract(kh * 0.37 + h1.x * 9.0), 0.86) * edge;   // a pod is sometimes missing
+  float Rring = 1.9 * Re;
+  float Rp = 0.30 * Re * (0.75 + 0.5 * fract(kh * 0.618 + h1.y * 5.0));
+  vec2 pc = dk * Rring;
+  float dp = length(pp - pc);
+  float pod = smoothstep(Rp, Rp * 0.85, dp) * here;
+  float podShd = smoothstep(Rp * 1.25, Rp * 0.9, length(pp - pc + ls * (0.5 * Rp))) * here;
+  float podDome = smoothstep(Rp * 0.5, Rp * 0.25, dp) * pod;
+  float along = dot(pp, dk), perp = abs(dot(pp, vec2(-dk.y, dk.x)));
+  float bw = max(0.016, 0.8 * px1);
+  float bridge = step(Re * 0.85, along) * step(along, Rring - Rp * 0.8) * smoothstep(bw, bw * 0.5, perp) * here;
+  // a few small rafts adrift beyond the pods
+  float near = smoothstep(0.62, 0.50, d1) * smoothstep(0.40, 0.46, d1) * edge;
   vec3 h2; float w2;
   float G2 = G1 * 3.6;
   vec3 r2 = siteC(q * G2, h2, w2);
   float d2 = length(r2);
-  float spire = step(0.84, h2.z);
-  float Rs = mix(0.20, 0.30, h2.y) * (1.0 + 0.1 * spire);
+  float Rs = mix(0.20, 0.30, h2.y);
   float Rse = max(Rs, 1.1 * gPxC * G2);
-  float sd = smoothstep(Rse, Rse * 0.8, d2) * step(h2.x, 0.45) * near * (Rs / Rse);
-  body = clamp(max(m * fade, sd), 0.0, 1.0);
-  shade = clamp(0.9 * shd * (1.0 - body) * fade + 0.5 * rim * fade + 0.45 * tier * fade + 0.25 * spoke * fade, 0.0, 1.0);
-  dm = dome * m;
+  float sd = smoothstep(Rse, Rse * 0.8, d2) * step(h2.x, 0.30) * near * (Rs / Rse);
+  body = clamp(max(max(m * fade, max(pod, bridge * 0.9)), sd), 0.0, 1.0);
+  shade = clamp(0.9 * max(shd, podShd) * (1.0 - body) * fade + 0.5 * rim * fade + 0.45 * tier * fade + 0.25 * spoke * fade + 0.3 * smoothstep(Rp * 1.2, Rp, dp) * (1.0 - pod) * here * fade, 0.0, 1.0);
+  dm = max(max(dome * m, podDome * 0.8), tower * 0.8);
   float rings = 0.30 + 0.70 * step(0.5, fract(d1 / Re * 5.5 + h1.x * 3.0));
-  lit = (m * rings * (0.8 + 0.4 * h1.y) + dome * 0.9) * fade + sd * (0.7 + 0.5 * spire + 0.4 * h2.x);
-  glow = smoothstep(Re * 1.9, 0.0, d1) * fade * edge * (0.4 + 0.4 * h1.y);
+  lit = (m * rings * (0.8 + 0.4 * h1.y) + dome * 0.9 + tower * 0.7) * fade + pod * (0.55 + 0.45 * step(0.5, fract(dp / Rp * 2.5))) * 0.9 + podDome * 0.5 + bridge * 0.35 + sd * 0.8;
+  glow = smoothstep(Re * 2.0, 0.0, d1) * fade * edge * (0.4 + 0.4 * h1.y) + smoothstep(Rp * 2.0, 0.0, dp) * here * 0.25;
 }
 
 // --- planet ----------------------------------------------------------------
