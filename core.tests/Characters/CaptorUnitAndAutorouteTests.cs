@@ -130,7 +130,7 @@ public class CaptorUnitAndAutorouteTests
         Assert.Equal(H, han.Transit!.Path[^1]);
     }
 
-    // B2e-22: Abduction succeeds (Han takes Piett at Imperial T): Piett is the team's captive, ends where the team ends (home H, Alliance), and is
+    // B2e-22: Abduction succeeds (Han takes Admiral Decimus Varo at Imperial T): Admiral Decimus Varo is the team's captive, ends where the team ends (home H, Alliance), and is
     // not freed on the way
     [Fact]
     public void B2e22_AbductedCharacterTravelsWithTheTeam()
@@ -157,7 +157,7 @@ public class CaptorUnitAndAutorouteTests
         Assert.Equal(H, w.Ch.LocationOf(han));
     }
 
-    // B2e-23: Mon Mothma freed (Rescue, liberation to neutral, escape) on an Imperial world; her last mission was to end at Alliance world X:
+    // B2e-23: Mae Abara freed (Rescue, liberation to neutral, escape) on an Imperial world; her last mission was to end at Alliance world X:
     // she sets off the same step for X
     [Theory]
     [InlineData("rescue")]
@@ -220,7 +220,7 @@ public class CaptorUnitAndAutorouteTests
         Assert.Equal(H, leia.Transit!.Path[^1]);
     }
 
-    // QA-9 (Round 10, seed 4): Mon Mothma, caught in a duel and then rescued on an Imperial world, sat there injured for 1,400 days (she cannot
+    // QA-9 (Round 10, seed 4): Mae Abara, caught in a duel and then rescued on an Imperial world, sat there injured for 1,400 days (she cannot
     // heal on enemy ground and nothing moved her). Now she sets off for her side's world, arrives, and heals there.
     [Fact]
     public void QA9_RescuedKeyCharacterGoesHomeAndHeals()

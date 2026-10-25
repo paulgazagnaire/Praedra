@@ -11,7 +11,7 @@ namespace Praedra.Core.Tests.Missions;
 // m = its size, m = 0: nobody and no draw; else one draw rand(0..m-1); m = 1 sets the side's pool-empty flag.
 public class RecruitmentPickTests
 {
-    private const int Ackbar = 832, Madine = 837, BelIblis = 844; // characters.csv; Bel Iblis is cut (roster in_game 0)
+    private const int Ackbar = 832, Madine = 837; // characters.csv
 
     /// <summary>T held by the Alliance, Leia (leadership 80) at T, and the given characters created but not placed (the pool).</summary>
     private static MissionWorld World(params int[] pool)
@@ -70,7 +70,7 @@ public class RecruitmentPickTests
         Assert.False(two.Ch.PoolEmpty(Side.Alliance));
     }
 
-    // m5-missions MI63: pool Ackbar, Lando, Madine (id order), draw r = 1: Lando is placed free at the target system T, with the skills the creation
+    // m5-missions MI63: pool Keth, Lando, Madine (id order), draw r = 1: Lando is placed free at the target system T, with the skills the creation
     // rule rolled (base + rand(0..variance), m5-characters-and-force §Rolling the stats), the recruit recorded on the mission
     [Fact]
     public void MI63_PickAtTargetSystem_WithRolledSkills()
@@ -98,25 +98,24 @@ public class RecruitmentPickTests
         Assert.False(w.Ch.Get(Madine)!.Placed);
     }
 
-    // m5-missions MI64: majors are never recruited and only in-game roster rows count: with Luke (major) and Bel Iblis (cut) unplaced the pool is
-    // empty (nobody, no draw); adding Lando gives m = 1 (draw rand(0..0)) and Lando
+    // m5-missions MI64: majors are never recruited and only in-game roster rows count: with Luke (major) unplaced the pool is empty (no draw);
+    // adding Lando gives m = 1 (draw rand(0..0)) and Lando. The cut characters are no longer in the data at all (Praedra names stage 2), so
+    // the roster check has no record to test here; CharacterSetupTests.Roster_RefinedFilmEra checks they are gone.
     [Fact]
     public void MI64_MajorsAndCutCharactersAreNeverPicked()
     {
-        var w = World(Luke, BelIblis);
+        var w = World(Luke);
         Assert.Equal(CharacterKind.Major, w.Ch.Data.Get(Luke).Kind);
-        Assert.False(w.Ch.Data.Get(BelIblis).InGame);
         Assert.Empty(w.Ch.RecruitPoolOf(Side.Alliance));
         RunRecruitment(w);
         Assert.Empty(w.Events<CharacterRecruited>());
         Assert.False(w.Ch.Get(Luke)!.Placed);
 
-        var w2 = World(Luke, Lando, BelIblis);
+        var w2 = World(Luke, Lando);
         int id = RunRecruitment(w2);
         Assert.Equal(1, w2.Stub!.Count(0, 0));
         Assert.Equal(Lando, w2.M.Get(id)!.RecruitedCharacterKey);
         Assert.False(w2.Ch.Get(Luke)!.Placed);
-        Assert.False(w2.Ch.Get(BelIblis)!.Placed);
         Assert.True(w2.Ch.PoolEmpty(Side.Alliance)); // m counted Lando only
     }
 

@@ -28,7 +28,7 @@ public enum ForceDiscoveryMode
 /// <summary>Which Imperial officers the start cast keeps. rule: m5-setup-and-victory §P9 item 2 (StartCastOfficers).</summary>
 public enum StartCastOfficers
 {
-    /// <summary>DEFAULT: Vader and the five officers (Jerjerrod, Ozzel, Piett, Veers, Needa).</summary>
+    /// <summary>DEFAULT: Vader and the five officers (Project Director Cyprian Galena, Admiral Lucan Mordant, Admiral Decimus Varo, Eighty-Eight, Captain Ilian Venia).</summary>
     Classic,
     /// <summary>Vader only; the five officers stay in the Empire pool.</summary>
     None,

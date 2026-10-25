@@ -16,15 +16,16 @@ public class CharacterSetupTests
     public void Roster_RefinedFilmEra()
     {
         var d = GameData.Default.Characters;
-        Assert.Equal(76, d.All.Count);
+        // The 11 cut characters (ids below) are left out of the data altogether (Praedra names stage 2, 2026-10-25: cut, so never named).
+        Assert.Equal(65, d.All.Count);
         Assert.Equal(65, d.Roster.Count);
-        foreach (var cut in new[] { "Thrawn", "Pellaeon", "Garm Bel Iblis", "Daala", "Zuggs", "Niles Ferrier", "Grammel", "Griff", "Klev", "Ma'w'shiye", "Kaiya Andrimetrum" })
-            Assert.DoesNotContain(d.Roster, c => c.Name == cut);
-        foreach (var hunter in new[] { "Boba Fett", "Bossk", "Dengar", "Black Krrsantan" })
+        foreach (var cut in new[] { 844, 854, 857, 904, 905, 906, 907, 911, 913, 914, 915 })
+            Assert.False(d.TryGet(cut, out _));
+        foreach (var hunter in new[] { "Usura", "Mora", "Damnum", "Pignus" })
         {
             var c = d.Roster.Single(x => x.Name == hunter);
             Assert.Equal(Side.Empire, c.Side);
-            Assert.False(c.CanAdmiral || c.CanCommander || c.CanGeneral); // no officer roles, like Chewbacca
+            Assert.False(c.CanAdmiral || c.CanCommander || c.CanGeneral); // no officer roles, like Oti
         }
         Assert.Equal(50, d.Get(Han).NavigatorSpeed);
         Assert.Equal(100, d.Get(Luke).NavigatorSpeed);
@@ -82,11 +83,11 @@ public class CharacterSetupTests
 
     // m5-characters-and-force CH40 (Q17, Paul 2026-10-18 cards "Skip the strong" and "Leave out hunters"): the draw never takes anyone already at
     // Force 80+ (the Emperor and Vader keep their Force but never train) nor a character flagged never_talented (the bounty hunters); Leia and
-    // Chewbacca stay in the pool. With both switches off the strong can be drawn again.
+    // Oti stay in the pool. With both switches off the strong can be drawn again.
     [Fact]
     public void CH40_TalentedDrawSkipsTheStrongAndTheHunters()
     {
-        var hunters = new[] { 928, 929, 930, 931 }; // Boba Fett, Bossk, Dengar, Black Krrsantan (roster.csv never_talented = 1)
+        var hunters = new[] { 928, 929, 930, 931 }; // Usura, Mora, Damnum, Pignus (roster.csv never_talented = 1)
         var first = Make(1).Characters;
         Assert.All(hunters, id => Assert.True(first.Data.Get(id).NeverTalented));
         Assert.False(first.Data.Get(577).NeverTalented); // Leia

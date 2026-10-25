@@ -84,7 +84,7 @@ public class MissionRollTests
         Assert.Equal(p, m.FoilChance(x));
     }
 
-    // m5-missions MI4 in a game (B2d): a guarding ship's officer is its fleet's Admiral (Piett, espionage 60): the arriving check (orbit) walks the
+    // m5-missions MI4 in a game (B2d): a guarding ship's officer is its fleet's Admiral (Admiral Decimus Varo, espionage 60): the arriving check (orbit) walks the
     // Mandate (detection 10): x = 80 - 10 - 0 - 21 + 1 = 50, p = 60
     [Fact]
     public void MI4_FleetAdmiralIsTheOfficerOfAGuardingShip()

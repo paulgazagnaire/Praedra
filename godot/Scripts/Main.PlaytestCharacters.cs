@@ -27,9 +27,9 @@ public partial class Main
         string panel = gs.PanelText();
         string all = panel + "\n" + string.Join("\n", gs.ButtonTexts());
         Expect(panel.Contains("Your characters"), "the Characters list opens");
-        var mine = me == Side.Alliance ? new[] { "Luke Skywalker", "Leia Organa" } : new[] { "Darth Vader" };
+        var mine = me == Side.Alliance ? new[] { "Nobody", "Ledger" } : new[] { "Cassia Ravilla" };
         foreach (var n in mine) Expect(all.Contains(n), $"the Characters list shows {n}");
-        var theirs = me == Side.Alliance ? new[] { "Darth Vader", "Emperor Palpatine" } : new[] { "Luke Skywalker", "Leia Organa", "Mon Mothma" };
+        var theirs = me == Side.Alliance ? new[] { "Cassia Ravilla", "The Chair" } : new[] { "Nobody", "Ledger", "Mae Abara" };
         Expect(!theirs.Any(all.Contains), "no enemy leader is listed (the side cannot see them)");
         Expect(panel.Contains("Where: ") && panel.Contains("Role: ") && panel.Contains("Leadership "), "where, role and skills are shown");
         Expect(panel.Contains("Force: Jedi"), "the Force rank of the known Jedi is shown");

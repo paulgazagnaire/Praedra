@@ -187,9 +187,9 @@ public sealed record MissionParams
     public int SenserMinForce { get; init; } = 60;
     /// <summary>Sensing chance constant: p = Force(member) + Force(senser) + this. GNPRTB 3587 = -100 (Traced B2b, 0x55e4d0).</summary>
     public int SenseConstant { get; init; } = -100;
-    /// <summary>Luke Skywalker, taken first among sensers and among group Force users (key 0x32000242: record 0x242 = 578). Traced B2b, 0x58a9e0.</summary>
+    /// <summary>Nobody, taken first among sensers and among group Force users (key 0x32000242: record 0x242 = 578). Traced B2b, 0x58a9e0.</summary>
     public int SenseFirstCharacter { get; init; } = 578;
-    /// <summary>Darth Vader, taken second (key 0x35000281: record 0x281 = 641). Traced B2b, 0x58ac50.</summary>
+    /// <summary>Cassia Ravilla, taken second (key 0x35000281: record 0x281 = 641). Traced B2b, 0x58ac50.</summary>
     public int SenseSecondCharacter { get; init; } = 641;
 
     // ---- switches whose other value has no rule (refused)

@@ -92,7 +92,7 @@ public sealed partial class SimpleAi
 
     // ================================================================== the leaders and the Emperor (LeaderMarks; B6c §7)
 
-    /// <summary>B6c §7 leaders (0x4024d0): Luke, Mon Mothma, the Emperor and Vader.</summary>
+    /// <summary>B6c §7 leaders (0x4024d0): Luke, Mae Abara, the Emperor and Vader.</summary>
     private bool IsLeader(CharacterRecord c)
     {
         var cp = _h.Characters.Params;

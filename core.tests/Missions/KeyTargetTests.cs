@@ -86,7 +86,7 @@ public class KeyTargetTests
         Assert.False(w.Ch.IsDead(Luke));
     }
 
-    // m5-missions KT5: the cap applies: a perfect team (table 55) gets 4 percent against Luke, 2 against Mon Mothma (draws 3 / 4 and 1 / 2)
+    // m5-missions KT5: the cap applies: a perfect team (table 55) gets 4 percent against Luke, 2 against Mae Abara (draws 3 / 4 and 1 / 2)
     [Theory]
     [InlineData(Luke, 3, true, 4)]
     [InlineData(Luke, 4, false, 4)]
@@ -179,7 +179,7 @@ public class KeyTargetTests
         Assert.Equal(4, w.Stub.Count(0, 99)); // two betrayal draws (B2b), roll, and (B2e moved) the Hurt roll of the injury
     }
 
-    // m5-missions KT10: a key kill waives the Empire's Luke term (KeyDeathFallback default WaiveCondition); the Empire wins when Mon Mothma is
+    // m5-missions KT10: a key kill waives the Empire's Luke term (KeyDeathFallback default WaiveCondition); the Empire wins when Mae Abara is
     // captured and the HQ is gone, and not before
     [Fact]
     public void KT10_KillOfLukeSatisfiesTheEmpireTermAndTheEmpireWins()
@@ -195,7 +195,7 @@ public class KeyTargetTests
         w.Game.Step();
         Assert.True(w.Host.Victory.Rules.StandardVictory); // standard victory is the default
         Assert.Equal(KeyDeathFallback.WaiveCondition, w.Host.Victory.Rules.KeyDeathFallback);
-        Assert.Null(w.Host.Victory.Winner); // Luke's term waived, Mon Mothma still free
+        Assert.Null(w.Host.Victory.Winner); // Luke's term waived, Mae Abara still free
         w.RunIteration(w.LastMission);
         Assert.True(w.Ch.IsDead(Luke));
         Assert.Null(w.Host.Victory.Winner);
@@ -257,7 +257,7 @@ public class KeyTargetTests
         if (success) Assert.Equal(MissionModule.CauseAbduction, w.Events<CharacterCaptured>().Single().Cause);
     }
 
-    // m5-missions KT14: Abduction of the four: one roll per iteration with three members; Luke and Mon Mothma are gated too (Empire team, fleet)
+    // m5-missions KT14: Abduction of the four: one roll per iteration with three members; Luke and Mae Abara are gated too (Empire team, fleet)
     [Fact]
     public void KT14_AbductionOneRollAndGateInFleet()
     {
@@ -315,7 +315,7 @@ public class KeyTargetTests
         Assert.NotEqual(Protected, StartReason(w, MissionKind.Assassination, Vader, Luke));
     }
 
-    // m5-missions §6a data: the file ships Luke 4, Mon Mothma 2, Vader 4, Palpatine 2
+    // m5-missions §6a data: the file ships Luke 4, Mae Abara 2, Vader 4, Palpatine 2
     [Fact]
     public void KT17_ShippedCaps()
     {

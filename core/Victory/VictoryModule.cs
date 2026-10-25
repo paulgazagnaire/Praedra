@@ -23,8 +23,8 @@ public sealed record VictoryRules
     /// <summary>Alliance wins when the Empire holds no system. New rule, not Classic (B4 §15 [EXE-own]); DEFAULT New on (Decided extension, playable slice 2026-10-12).</summary>
     public bool AllianceWinsWhenEmpireHasNoSystems { get; init; } = true;
     /// <summary>
-    /// Standard victory (m5-setup-and-victory: HqOnlyVictory = false): the Empire's HQ term also needs Luke Skywalker and Mon Mothma captured, the
-    /// Alliance's Charter term needs Darth Vader and Emperor Palpatine captured (victory-rules.csv, CharacterCaptured rows). The setup sheet's
+    /// Standard victory (m5-setup-and-victory: HqOnlyVictory = false): the Empire's HQ term also needs Nobody and Mae Abara captured, the
+    /// Alliance's Charter term needs Cassia Ravilla and The Chair captured (victory-rules.csv, CharacterCaptured rows). The setup sheet's
     /// DEFAULT is standard (on since 2026-10-16): missions that capture characters now exist (Abduction, and the Kidnap of m5-missions §6a).
     /// HQ-only (this switch false) stays a switch but is not shown on the new-game screen (m5-setup-and-victory §Defaults).
     /// </summary>

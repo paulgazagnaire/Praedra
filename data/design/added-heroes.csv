@@ -1,17 +1,17 @@
 kind,name,id,alliance,empire,dip,dipv,esp,espv,ship,shipv,troop,troopv,fac,facv,com,comv,lead,leadv,loy,loyv,jprob,knownjedi,jlvl,jlvlv,admiral,commander,general,nobetray,trainer,source
-minor,Airen Cracken,858,1,0,30,20,80,20,0,0,0,0,0,0,40,20,70,15,100,0,10,0,10,20,0,1,1,0,0,"Proposal: heroes/added-heroes (Alliance); loyalty 100+0 DEFAULT as the 60 originals"
-minor,Nien Nunb,859,1,0,30,20,40,30,30,30,0,0,0,0,80,15,60,20,100,0,0,0,0,0,1,1,0,0,0,"Proposal: heroes/added-heroes (Alliance)"
-minor,Hera Syndulla,860,1,0,40,20,30,20,0,0,0,0,0,0,80,15,70,15,100,0,0,0,0,0,1,1,1,0,0,"Proposal: heroes/added-heroes (Alliance); three roles break stat-ceiling rule 6"
-minor,Shara Bey,861,1,0,20,20,30,20,0,0,0,0,0,0,80,15,50,20,100,0,0,0,0,0,0,1,0,0,0,"Proposal: heroes/added-heroes (Alliance)"
-minor,Tycho Celchu,862,1,0,30,20,40,20,0,0,0,0,0,0,80,15,60,20,100,0,0,0,0,0,0,1,0,0,0,"Proposal: heroes/added-heroes (Alliance, Legends)"
-minor,Winter Celchu,863,1,0,50,30,90,10,0,0,0,0,0,0,30,20,40,20,100,0,0,0,0,0,0,1,0,0,0,"Proposal: heroes/added-heroes (Alliance, Legends)"
-minor,Kyle Katarn,864,1,0,20,20,80,20,0,0,50,30,0,0,90,5,50,20,100,0,20,0,10,30,0,1,1,0,0,"Proposal: heroes/added-heroes (Alliance, Legends)"
-minor,Quarrie,865,1,0,0,0,20,20,90,10,0,0,60,30,0,0,30,20,100,0,0,0,0,0,0,0,0,0,0,"Proposal: heroes/added-heroes (Alliance)"
-minor,Garrick Versio,924,0,1,30,20,80,20,0,0,0,0,0,0,40,20,70,15,100,0,0,0,0,0,1,1,0,0,0,"Proposal: heroes/added-heroes (Empire)"
-minor,Mara Jade,925,0,1,20,20,90,10,0,0,0,0,0,0,90,5,40,20,100,0,50,0,20,20,0,1,0,1,0,"Proposal: heroes/added-heroes (Empire, Legends; unable_to_betray)"
-minor,Ysanne Isard,926,0,1,60,30,90,10,0,0,0,0,0,0,20,20,60,20,100,0,0,0,0,0,0,0,0,0,0,"Proposal: heroes/added-heroes (Empire, Legends; betrayable on purpose)"
-minor,Rae Sloane,927,0,1,30,20,30,20,20,20,0,0,0,0,30,20,70,15,100,0,0,0,0,0,1,0,0,0,0,"Proposal: heroes/added-heroes (Empire)"
-minor,Boba Fett,928,0,1,0,0,90,10,0,0,0,0,0,0,90,5,0,30,100,0,0,0,0,0,0,0,0,0,0,"Proposal: heroes/added-heroes (Imperial bounty hunter, Empire only, Decided); diplomacy and design skills not given: 0+0 DEFAULT"
-minor,Bossk,929,0,1,0,0,70,20,0,0,0,0,0,0,80,15,0,30,100,0,0,0,0,0,0,0,0,0,0,"Proposal: heroes/added-heroes (Imperial bounty hunter, Empire only, Legends); unlisted skills 0+0 DEFAULT"
-minor,Dengar,930,0,1,0,0,70,20,0,0,0,0,0,0,70,20,0,30,100,0,0,0,0,0,0,0,0,0,0,"Proposal: heroes/added-heroes (Imperial bounty hunter, Empire only); unlisted skills 0+0 DEFAULT"
-minor,Black Krrsantan,931,0,1,0,0,40,20,0,0,0,0,0,0,90,5,0,30,100,0,0,0,0,0,0,0,0,0,0,"Proposal: heroes/added-heroes (Imperial bounty hunter, Empire only); unlisted skills 0+0 DEFAULT"
+minor,Ida Kral,858,1,0,30,20,80,20,0,0,0,0,0,0,40,20,70,15,100,0,10,0,10,20,0,1,1,0,0,Proposal: heroes/added-heroes (Alliance); loyalty 100+0 DEFAULT as the 60 originals
+minor,Tam Szabo,859,1,0,30,20,40,30,30,30,0,0,0,0,80,15,60,20,100,0,0,0,0,0,1,1,0,0,0,Proposal: heroes/added-heroes (Alliance)
+minor,Captain Sunday,860,1,0,40,20,30,20,0,0,0,0,0,0,80,15,70,15,100,0,0,0,0,0,1,1,1,0,0,Proposal: heroes/added-heroes (Alliance); three roles break stat-ceiling rule 6
+minor,Wick,861,1,0,20,20,30,20,0,0,0,0,0,0,80,15,50,20,100,0,0,0,0,0,0,1,0,0,0,Proposal: heroes/added-heroes (Alliance)
+minor,Ansel Mbatha,862,1,0,30,20,40,20,0,0,0,0,0,0,80,15,60,20,100,0,0,0,0,0,0,1,0,0,0,"Proposal: heroes/added-heroes (Alliance, Legends)"
+minor,Vesna Ilić,863,1,0,50,30,90,10,0,0,0,0,0,0,30,20,40,20,100,0,0,0,0,0,0,1,0,0,0,"Proposal: heroes/added-heroes (Alliance, Legends)"
+minor,Mateus Kale,864,1,0,20,20,80,20,0,0,50,30,0,0,90,5,50,20,100,0,20,0,10,30,0,1,1,0,0,"Proposal: heroes/added-heroes (Alliance, Legends)"
+minor,Ushe,865,1,0,0,0,20,20,90,10,0,0,60,30,0,0,30,20,100,0,0,0,0,0,0,0,0,0,0,Proposal: heroes/added-heroes (Alliance)
+minor,Commander Terminus Rade,924,0,1,30,20,80,20,0,0,0,0,0,0,40,20,70,15,100,0,0,0,0,0,1,1,0,0,0,Proposal: heroes/added-heroes (Empire)
+minor,Clementia Noll,925,0,1,20,20,90,10,0,0,0,0,0,0,90,5,40,20,100,0,50,0,20,20,0,1,0,1,0,"Proposal: heroes/added-heroes (Empire, Legends; unable_to_betray)"
+minor,Director Pythia Kallos,926,0,1,60,30,90,10,0,0,0,0,0,0,20,20,60,20,100,0,0,0,0,0,0,0,0,0,0,"Proposal: heroes/added-heroes (Empire, Legends; betrayable on purpose)"
+minor,Captain Aurelia Quell,927,0,1,30,20,30,20,20,20,0,0,0,0,30,20,70,15,100,0,0,0,0,0,1,0,0,0,0,Proposal: heroes/added-heroes (Empire)
+minor,Usura,928,0,1,0,0,90,10,0,0,0,0,0,0,90,5,0,30,100,0,0,0,0,0,0,0,0,0,0,"Proposal: heroes/added-heroes (Imperial bounty hunter, Empire only, Decided); diplomacy and design skills not given: 0+0 DEFAULT"
+minor,Mora,929,0,1,0,0,70,20,0,0,0,0,0,0,80,15,0,30,100,0,0,0,0,0,0,0,0,0,0,"Proposal: heroes/added-heroes (Imperial bounty hunter, Empire only, Legends); unlisted skills 0+0 DEFAULT"
+minor,Damnum,930,0,1,0,0,70,20,0,0,0,0,0,0,70,20,0,30,100,0,0,0,0,0,0,0,0,0,0,"Proposal: heroes/added-heroes (Imperial bounty hunter, Empire only); unlisted skills 0+0 DEFAULT"
+minor,Pignus,931,0,1,0,0,40,20,0,0,0,0,0,0,90,5,0,30,100,0,0,0,0,0,0,0,0,0,0,"Proposal: heroes/added-heroes (Imperial bounty hunter, Empire only); unlisted skills 0+0 DEFAULT"

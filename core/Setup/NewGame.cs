@@ -100,7 +100,7 @@ public static class NewGame
         host.Control.SetupNewGame();
 
         // P9 starting characters, after the forces and before the economy timers and the research arming (P10): the roster's creation draws,
-        // then Palpatine at Charter, Vader and the officers at random Empire locations, the Empire extras, Mon Mothma at the HQ, the The Shoal six,
+        // then Palpatine at Charter, Vader and the officers at random Empire locations, the Empire extras, Mae Abara at the HQ, The Shoal six,
         // the Alliance extras. rule: m5-setup-and-victory §P9; m5-characters-and-force §Rolling the stats.
         host.Characters.SetupNewGame(state.Scenario.HqSystem);
 
