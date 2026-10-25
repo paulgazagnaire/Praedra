@@ -302,24 +302,22 @@ public class B5aControlTests
         }
     }
 
-    // B5a-9 (section 5): the Collective takes a world with a harvester shield and a Mordant Lien-150: shield destroyed, Mordant Lien-150 Collective. The same world going
-    // neutral instead: shield destroyed, Mordant Lien-150 neutral.
+    // B5a-9 (section 5): the Collective takes a world with a Mordant Lien-150: it becomes the Collective's. The same world going neutral instead:
+    // it goes neutral. (The sheet's planet-killer shield, destroyed in both cases, is cut: data/design/cut-classes.csv.)
     [Fact]
-    public void B5a9_ShieldDestroyed_Kdy150ChangesSideOrGoesNeutral()
+    public void B5a9_Kdy150ChangesSideOrGoesNeutral()
     {
         foreach (var neutral in new[] { false, true })
         {
             var w = new DerivedWorld();
             w.Hold(C, Side.Hand, 35);
-            int shield = w.H.Economy.AddFacility(C, FacilityKind.HarvesterShield);
             int kdy = w.H.Economy.AddFacility(C, FacilityKind.Kdy150);
             if (neutral) w.Ctl.SubmitDebugSetSupport(Side.Hand, C, 50);
             else w.Ctl.SubmitDebugSetTroops(Side.Collective, C, Side.Collective, DerivedWorld.RebArmy, 1);
             w.Step();
             Side? to = neutral ? null : Side.Collective;
             Assert.Equal(to, w.Ctl.HolderOf(C));
-            Assert.Null(w.H.Economy.Find(shield));
-            Assert.Equal(shield, Assert.Single(w.Events<FacilityRemoved>()).Facility);
+            Assert.Empty(w.Events<FacilityRemoved>());
             Assert.Equal(to, w.H.Economy.OwnerOf(w.H.Economy.Find(kdy)!));
             var t = Assert.Single(w.Events<FacilityTransferred>());
             Assert.Equal((kdy, (Side?)Side.Hand, to), (t.Facility, t.From, t.To));

@@ -246,6 +246,9 @@ public sealed class GameHost
             settings = settings with { Battle = new Praedra.Core.Battle.BattleParams { Ruleset = ruleset.Value } };
         var (memories, core) = ReadAiMemory(body, data.Names);
         var host = new GameHost(GameSave.Load(data.Names.Apply(core)), data, settings); // a save from before the Praedra names loads renamed
+        // a save from before a cut (data/design/cut-classes.csv: Classic's planet-killer shield) loses those objects, silently
+        foreach (int id in host.Economy.Objects.Where(o => data.Names.Cut.Contains(o.Class)).Select(o => o.Id).OrderBy(i => i).ToList())
+            host.Economy.RemoveObject(id);
         host._aiMemory.AddRange(memories);
         return host;
     }

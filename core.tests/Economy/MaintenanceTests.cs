@@ -254,16 +254,7 @@ public class MaintenanceTests
         Assert.True(w.Eco.Load(Side.Hand) > w.Eco.Capacity(Side.Hand));
     }
 
-    // m2-maintenance M19
-    [Fact]
-    public void M19_HarvesterShieldRefundsTwelve()
-    {
-        var w = FixtureE();
-        int id = w.Eco.AddFacility(Home, FacilityKind.HarvesterShield);
-        Submit(w, id);
-        w.Run(1);
-        Assert.Equal(12, Scraps(w)[0].Refund);
-    }
+    // m2-maintenance M19 (the planet-killer shield's refund of 12) is gone with the shield (cut: data/design/cut-classes.csv).
 
     // m2-maintenance M20
     [Fact]

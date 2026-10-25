@@ -205,23 +205,8 @@ public class ResearchTests
         }
     }
 
-    // m5-research RS16
-    [Fact]
-    public void RS16_HarvesterShieldIsHandRungThree()
-    {
-        var w = new ResearchWorld();
-        w.Add(E, Facility, 24 + 40);
-        Assert.Equal(2, w.Research.Level(E, Facility));
-        Assert.False(w.Build.IsResearched(E, "Harvester Shield"));
-        w.Add(E, Facility, 24);
-        Assert.Equal(3, w.Research.Level(E, Facility));
-        Assert.True(w.Build.IsResearched(E, "Harvester Shield"));
-        w.Hold(Yard1, E); w.Fac(Yard1, FacilityKind.ConstructionYard);
-        Assert.Null(w.TryOrder(E, Yard1, YardFamily.Construction, "Harvester Shield", 1, Yard1));
-        w.Hold(Yard2, A); w.Fac(Yard2, FacilityKind.ConstructionYard);
-        w.Research.SetLevel(A, Facility, 6);
-        Assert.Equal(RejectReason.NotAvailable, w.TryOrder(A, Yard2, YardFamily.Construction, "Harvester Shield", 1, Yard2));
-    }
+    // m5-research RS16 (the planet-killer shield as the Hand's facility rung three) is gone with the shield (cut: data/design/cut-classes.csv);
+    // the Hand's facility ladder is now the Collective's (RS33).
 
     // m5-research RS17
     [Fact]
@@ -574,7 +559,7 @@ public class ResearchTests
         Assert.Null(w.Research.KindOf(ResearchData.AdvancedSensorStation));
         Assert.Equal(6, w.Research.Ladder(A, Facility).Max(r => r.Order));
         Assert.Equal(204, w.Research.Ladder(A, Facility).Sum(r => r.Difficulty));
-        Assert.Equal(228, w.Research.Ladder(E, Facility).Sum(r => r.Difficulty));
+        Assert.Equal(204, w.Research.Ladder(E, Facility).Sum(r => r.Difficulty)); // was 228 with the cut planet-killer shield (24)
         // the other totals of the sheet's Numbers table
         Assert.Equal(648, w.Research.Ladder(A, Ship).Sum(r => r.Difficulty));
         Assert.Equal(604, w.Research.Ladder(E, Ship).Sum(r => r.Difficulty));

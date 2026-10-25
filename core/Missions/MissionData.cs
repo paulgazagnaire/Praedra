@@ -14,8 +14,8 @@ public enum MissionKind
     Move = 0x01, Return = 0x02, Autorouting = 0x03, Adrift = 0x04,
     Diplomacy = 0x10, Rescue = 0x11, Sabotage = 0x12, Espionage = 0x13, Reconnaissance = 0x15, Recruitment = 0x16, Abduction = 0x17,
     ShipResearch = 0x20, FacilityResearch = 0x21, TroopResearch = 0x22,
-    InciteUprising = 0x40, SpikeTheHarvester = 0x41, TrainTalent = 0x42, Dagobah = 0x43, Palace = 0x44, Leave = 0x45, Retreat = 0x46,
-    SubdueUprising = 0x80, Assassination = 0x81, Pickup = 0x82, Repossession = 0x83,
+    InciteUprising = 0x40, SpikeTheHarvester = 0x41, TrainTalent = 0x42, Leave = 0x45, Retreat = 0x46,
+    SubdueUprising = 0x80, Assassination = 0x81, Repossession = 0x83,
 }
 
 /// <summary>

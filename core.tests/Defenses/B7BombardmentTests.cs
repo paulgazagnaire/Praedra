@@ -347,7 +347,7 @@ public class B7BombardmentTests
         var d = BombWorld.RealData.Value;
         Assert.Equal(new[] { 2, 3, 3, 2, 4, 4, 5, 2 }, new[] { "Orbital Shipyard", "Training Facility", "Construction Yard", "Advanced Shipyard",
             "Advanced Training Facility", "Advanced Construction Yard", "Mine", "Refinery" }.Select(d.FacilityDefense));
-        Assert.Equal(new[] { 5, 4, 2, 1, 3, 3 }, new[] { "Mordant Lien-150", "Mordant Covenant I", "Lode Escrow I", "Harvester Shield", "Mordant Covenant II", "Lode Escrow II" }
+        Assert.Equal(new[] { 5, 4, 2, 3, 3 }, new[] { "Mordant Lien-150", "Mordant Covenant I", "Lode Escrow I", "Mordant Covenant II", "Lode Escrow II" }
             .Select(d.FacilityDefense));
         Assert.Equal(9, d.HqDefense);
         var original = CsvTable.Load(Path.Combine(TestData.ClassicDir, DefenseData.BombardmentFile));

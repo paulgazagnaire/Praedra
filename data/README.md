@@ -37,16 +37,16 @@ Characters (m5-characters-and-force, m5-setup-and-victory P9), copied 2026-10-12
 - `original/characters.csv` holds the 60 original records of `MJCHARSD` and `MNCHARSD` (ids 576-579, 640-641, 832-857, 896-923), read by the importer. Since B1 Shenir Rix (918) is Force 10 +- 40 and Noval Garaint (919) 30 +- 20, as in the file (the old spec copy had them swapped).
 - `design/added-heroes.csv` holds the 16 heroes Paul added (heroes/added-heroes: 8 Collective, 4 Hand, 4 Hand Repossessors), Proposal stats, ids after each side's minor block (858-865, 924-931). Skills the source leaves blank are 0+0 and loyalty is 100+0 (DEFAULT, as the 60 originals); each row says so.
 - `design/roster.csv` lists the 65 characters in the game, all with `in_game` 1 (Decided, heroes/refined-roster). The 11 cut Classic characters (ids 844, 854, 857, 904-907, 911, 913-915) have no Praedra name, so they are left out of the roster and of `classic/characters.csv` (the importer drops every character not in the roster); only the raw files keep them.
-- `design/navigator_speed.csv` is the Navigator table of m5-characters-and-force (Han 50 Traced, the rest Proposal); unlisted characters are 100.
+- `design/navigator_speed.csv` is the Navigator table of m5-characters-and-force (Midwife 50 Traced, the rest Proposal); unlisted characters are 100.
 - `design/start-cast.csv` is the fixed start cast of m5-setup-and-victory P9 in placement order (Traced, setup-victory/03), with the two extras rows.
 - `design/victory-rules.csv` is the victory rule table of m5-setup-and-victory (subjects by character id); only the `CharacterCaptured` rows are read so far (standard victory is a switch, off by default).
 
 Missions (m5-missions):
 - `original/mission-records.csv` holds the 25 `MISSNSD` records (kind and success table names are ours, missions/01).
 - `original/mission-tables.csv` holds every row of `FOILTB`, the ten `*MSTB` success tables and the decoy table (written as `FDECOYTB`; the importer checks that `TDECOYTB` is identical). Decoys are accepted. The lookup mode stays `Step` (DEFAULT) until B2.
-- `mission-numbers.csv`: the rows that are one GNPRTB value are in `original/` (detection constant, officer percentages, incite support, leadership divisor, research skill gain, group speed, Han's mission speed); the rest (die size, diplomacy and subdue ranges, Han's record id; FOILTB below its first row uses the common lookup since B2a) are in `design/mission-numbers.csv`. Each row keeps its source tag.
+- `mission-numbers.csv`: the rows that are one GNPRTB value are in `original/` (detection constant, officer percentages, incite support, leadership divisor, research skill gain, group speed, Runner lines speed); the rest (die size, diplomacy and subdue ranges, Midwife's record id; FOILTB below its first row uses the common lookup since B2a) are in `design/mission-numbers.csv`. Each row keeps its source tag.
 - `design/mission-foilable.csv` says which kinds a detection can foil (DEFAULT per the sheet).
-- `design/assassination-key-targets.csv` lists the key characters (Luke 578, Mon Mothma 576, Vader 641, Palpatine 640) and their success cap in percent for Assassination and Abduction (m5-missions section 6a; Decided Paul 2026-10-16, numbers Proposal). Tune the caps here, no code change.
+- `design/assassination-key-targets.csv` lists the key characters (Nobody 578, Mae Abara 576, Cassia Ravilla 641, The Chair 640) and their success cap in percent for Assassination and Abduction (m5-missions section 6a; Decided Paul 2026-10-16, numbers Proposal). Tune the caps here, no code change.
 
 Sensor Station (m5-fog-and-hq N4, economy/15 §2; designed, not in Classic; Paul 2026-10-16): its rows are in `design/unit-and-facility-costs.csv` (cost 10, maintenance 5, research order 0), `design/research-unlocks.csv` (level 0, start yes/yes) and `design/bombardment-defense.csv` (DEFAULT 5, the value every facility had before B7), each with its tag.
 

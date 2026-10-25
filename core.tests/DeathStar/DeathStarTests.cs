@@ -416,26 +416,8 @@ public class HarvesterTests
         Assert.False(w.Host.Harvester.HasHarvester(Side.Hand, MissionWorld.T));
     }
 
-    // m5-death-star DS12
-    [Fact]
-    public void DS12_ShieldBlocksDestroyIsASwitch()
-    {
-        foreach (bool blocks in new[] { true, false })
-        {
-            var w = new DsWorld(new HarvesterParams { ShieldBlocksDestroy = blocks });
-            w.Hold(A1, Side.Collective, 80);
-            w.Host.Economy.AddFacility(A1, FacilityKind.HarvesterShield);
-            int attacker = w.Harvester(Side.Hand, A1);
-            string? reason = w.Destroy(Side.Hand, attacker);
-            if (blocks) { Assert.Equal(HarvesterReject.ShieldProtected, reason); Assert.False(w.Game.State.Harvester.IsDestroyed(A1)); }
-            else { Assert.Null(reason); Assert.True(w.Game.State.Harvester.IsDestroyed(A1)); } // DEFAULT: nothing in the destroy path reads the shield
-        }
-        // the shield only protects against an enemy: a Hand attacker at a Hand system with its own shield is not stopped
-        var own = new DsWorld(new HarvesterParams { ShieldBlocksDestroy = true });
-        own.Hold(A1, Side.Hand, 20);
-        own.Host.Economy.AddFacility(A1, FacilityKind.HarvesterShield);
-        Assert.Null(own.Destroy(Side.Hand, own.Harvester(Side.Hand, A1)));
-    }
+    // m5-death-star DS12 (legality 6, the planet-killer shield blocking Destroy System) has nothing to test: the shield is cut
+    // (data/design/cut-classes.csv; Decided Paul 2026-10-25).
 
     // m5-death-star DS13
     [Fact]
@@ -491,7 +473,7 @@ public class HarvesterTests
     public void Switches_DefaultsAndRefusedValues()
     {
         var p = new HarvesterParams();
-        Assert.Equal((1, false, false, 10, 2, 100), (p.CapPerSystem, p.ShieldBlocksDestroy, p.TrenchRun, p.SectorPenalty, p.RevoltFromStrike, p.RevoltCollectiveSupport));
+        Assert.Equal((1, false, 10, 2, 100), (p.CapPerSystem, p.TrenchRun, p.SectorPenalty, p.RevoltFromStrike, p.RevoltCollectiveSupport));
         Assert.Equal(50, new CharacterParams().HarvesterHitPercent);
         Assert.Throws<RuleMissingException>(() => new DsWorld(new HarvesterParams { TrenchRun = true })); // no code until a rule exists
         Assert.Contains("5.6", Game.WorkList);

@@ -66,6 +66,22 @@ public class NameMigrationTests
         Assert.Equal(host.StateHash(), loaded.StateHash());
     }
 
+    // Praedra names stage 3c: Classic's planet-killer shield is cut (data/design/cut-classes.csv); a save that still holds one loads without it
+    [Fact]
+    public void ASaveWithACutClassLoadsWithoutIt()
+    {
+        var host = NewGame.Create(new NewGameOptions { Seed = 7 });
+        string save = host.Save();
+        var mine = host.Economy.Objects.Where(o => o.Class == "Mine").OrderBy(o => o.Id).First();
+        string tag = $"\"Id\":{mine.Id},\"Category\":0,\"Class\":\"Mine\"";
+        Assert.Contains(tag, save);
+        string old = save.Replace(tag, tag.Replace("\"Mine\"", "\"Death Star Shield\""), StringComparison.Ordinal);
+        var loaded = GameHost.Load(old);
+        Assert.Null(loaded.Economy.Find(mine.Id));
+        Assert.Equal(host.Economy.Objects.Count - 1, loaded.Economy.Objects.Count);
+        Assert.Contains("Death Star Shield", GameData.Default.Names.Cut);
+    }
+
     [Fact]
     public void TableErrorsAreReported()
     {

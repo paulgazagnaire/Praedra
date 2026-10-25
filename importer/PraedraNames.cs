@@ -9,7 +9,26 @@ public static class PraedraNames
 {
     public const string TableFile = "name-migrations.csv";
 
-    public const string RosterFile = "roster.csv";
+    public const string RosterFile = "roster.csv", CutFile = "cut-classes.csv";
+
+    /// <summary>
+    /// Classic classes and mission kinds cut from Praedra (data/design/cut-classes.csv, by Classic name): the drop-in tables leave out every row
+    /// whose name (or, in mission tables, kind) is one of them; the raw files keep them.
+    /// </summary>
+    public static IReadOnlySet<string> LoadCut()
+    {
+        var t = Csv.Load(DesignFile(CutFile));
+        return Enumerable.Range(0, t.Rows.Count).Select(r => t.Get(r, "name")).ToHashSet(StringComparer.Ordinal);
+    }
+
+    /// <summary>The CSV text without the rows whose "name" cell, or "kind" cell in mission-records.csv and mission-foilable.csv, is cut.</summary>
+    public static string DropCut(string file, string text, IReadOnlySet<string> cut)
+    {
+        var t = Csv.Parse(file, text);
+        var cols = t.Header.Select((h, i) => (h, i)).Where(x => x.h == "name" || (x.h == "kind" && file.StartsWith("mission-", StringComparison.Ordinal)))
+            .Select(x => x.i).ToList();
+        return Csv.Write(t.Header, t.Rows.Where(r => !cols.Any(i => cut.Contains(r[i]))));
+    }
 
     /// <summary>Reads the table from data/design of the repository that holds Praedra.sln (searched upwards from the program and the working folder).</summary>
     public static IReadOnlyDictionary<string, string> Load() => Parse(Csv.Load(DesignFile(TableFile)));

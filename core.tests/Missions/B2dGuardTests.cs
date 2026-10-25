@@ -228,7 +228,7 @@ public class B2dGuardTests
     {
         var d = GameData.Default.Missions;
         Assert.True(d.Get(MissionKind.TrainTalent).Foilable);
-        foreach (var k in new[] { MissionKind.Move, MissionKind.Return, MissionKind.Adrift, MissionKind.Dagobah, MissionKind.Repossession })
+        foreach (var k in new[] { MissionKind.Move, MissionKind.Return, MissionKind.Adrift, MissionKind.Leave, MissionKind.Repossession })
             Assert.False(d.Get(k).Foilable);
         Assert.Equal(14, d.Evade!.Count);
         Assert.Equal((15, 70, 99), (new MissionWorld().M.Lookup(d.Evade, -50), MissionModule.Lookup(d.Evade, 15, MstbLookupMode.Step, MstbBelowFirstRow.FirstRowValue), MissionModule.Lookup(d.Evade, 101, MstbLookupMode.Step, MstbBelowFirstRow.FirstRowValue)));

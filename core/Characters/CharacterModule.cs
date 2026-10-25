@@ -520,7 +520,7 @@ public sealed class CharacterModule
         c.Transit = null;
         c.Status = CharacterStatus.Captured; c.Captor = captor; c.HeldAt = at; c.HeldAboard = 0; c.HeldAboardShip = 0; c.System = at; c.NextHealDay = 0;
         // rule: §Escape (B2e §3 "Can escape", "When attempts happen"): the timer is set as the State changes, before the state-change rule moves
-        // him; Jabba's Palace passes 0 (0x54b040), so a story capture never tries
+        // him; Classic's story capture passes 0 (0x54b040), so a story capture never tries
         bool escapes = canEscape ?? cause != CharacterCause.Story;
         c.NextEscapeDay = escapes && Params.CaptiveEscape ? (ctx?.Day ?? _game.Day) + EscapeDelay(ctx?.Rng ?? _game.Rng) : 0;
         // rule: §Capture 2 (B2e §3 "Where a new prisoner is held" steps 1-2; QA-7): to the captor's place when he or the captor is on a mission
@@ -872,7 +872,7 @@ public sealed class CharacterModule
     }
 
     /// <summary>
-    /// A story discovery ("Leia Uses Force", MissionKind.Dagobah; m5-missions calls it): a hidden Force user becomes discovered. Event ForceDiscovered.
+    /// A story discovery (Classic's film story missions called it; they are cut, data/design/cut-classes.csv, so only tests do now): a hidden Force user becomes discovered. Event ForceDiscovered.
     /// With <see cref="ForceDiscoveryMode.Story"/> (DEFAULT) this and the known Jedi at creation are the only discoveries. rule: §Force (Force discovery).
     /// </summary>
     public bool DiscoverForce(StepContext? ctx, CharacterRecord c, string cause)

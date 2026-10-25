@@ -67,9 +67,10 @@ public class CaptureTests
     private static List<GameEvent> CaptureEvents(CtlWorld w) =>
         w.Game.Events.Where(e => ControlKinds.Contains(e.GetType())).ToList();
 
-    // m2-control-and-capture C1: Collective captures a Hand system with the full set; only the harvester shield is removed
+    // m2-control-and-capture C1: Collective captures a Hand system with the full set; everything transfers (the sheet's planet-killer shield,
+    // the one facility it removed, is cut: data/design/cut-classes.csv)
     [Fact]
-    public void C1_CollectiveCapture_EverythingTransfers_ShieldRemoved()
+    public void C1_CollectiveCapture_EverythingTransfers()
     {
         var w = new CtlWorld();
         w.Hold(Emp, Side.Hand, 80);
@@ -77,7 +78,6 @@ public class CaptureTests
         var refs = new[] { w.S.W.Refinery(Emp), w.S.W.Refinery(Emp) };
         int yard = w.Eco.AddFacility(Emp, FacilityKind.OrbitalShipyard);
         int kdy = w.Eco.AddFacility(Emp, FacilityKind.Kdy150);
-        int shield = w.Eco.AddFacility(Emp, FacilityKind.HarvesterShield);
         w.Capture(Side.Collective, Emp);
         w.Run(1);
 
@@ -87,12 +87,10 @@ public class CaptureTests
         var moved = w.Events<FacilityTransferred>().Select(e => e.Facility).ToList();
         Assert.Equal(mines.Concat(refs).Concat(new[] { yard, kdy }).OrderBy(i => i).ToList(), moved);
         foreach (int id in moved) Assert.Equal(Side.Collective, w.Eco.OwnerOf(w.Eco.Find(id)!));
-        var removed = Assert.Single(w.Events<FacilityRemoved>());
-        Assert.Equal(shield, removed.Facility);
-        Assert.Null(w.Eco.Find(shield));
+        Assert.Empty(w.Events<FacilityRemoved>());
     }
 
-    // C2: the Hand captures a Collective system with the same set minus the shield; nothing is removed
+    // C2: the Hand captures a Collective system with the same set; nothing is removed
     [Fact]
     public void C2_HandCapture_EverythingTransfers_NothingRemoved()
     {
@@ -105,21 +103,6 @@ public class CaptureTests
         Assert.Equal(ids.OrderBy(i => i).ToList(), w.Events<FacilityTransferred>().Select(e => e.Facility).ToList());
         Assert.Empty(w.Events<FacilityRemoved>());
         Assert.All(ids, id => Assert.Equal(Side.Hand, w.Eco.OwnerOf(w.Eco.Find(id)!)));
-    }
-
-    // The shield only serves the Hand: a Hand capture of a neutral system keeps one, a Collective capture removes it (Lead, DEFAULT).
-    [Fact]
-    public void ShieldServesOnlyTheHand()
-    {
-        var w = new CtlWorld();
-        Assert.True(w.Ctl.ServesSide("Harvester Shield", Side.Hand));
-        Assert.False(w.Ctl.ServesSide("Harvester Shield", Side.Collective));
-        Assert.True(w.Ctl.ServesSide("Mine", Side.Collective));
-        w.Fleets.SetOwner(Emp, null);
-        int shield = w.Eco.AddFacility(Emp, FacilityKind.HarvesterShield);
-        w.Capture(Side.Hand, Emp);
-        w.Run(1);
-        Assert.Equal(Side.Hand, w.Eco.OwnerOf(w.Eco.Find(shield)!));
     }
 
     // C3: capture of a neutral system with a shipyard (side 3): the shipyard becomes the capturer's
@@ -484,7 +467,7 @@ public class CaptureTests
             var w = new CtlWorld(stub: false, seed: 7);
             w.Hold(Emp, Side.Hand, 80);
             w.Hold(Ally, Side.Collective, 80);
-            w.S.W.Mine(Emp); w.S.W.Refinery(Emp); w.Eco.AddFacility(Emp, FacilityKind.HarvesterShield);
+            w.S.W.Mine(Emp); w.S.W.Refinery(Emp); w.Eco.AddFacility(Emp, FacilityKind.Kdy150);
             w.Eco.AddFacility(Emp, FacilityKind.Mine, completed: false);
             w.S.Uprising(Emp, Side.Hand, erosionDue: 10, incidentDue: 12);
             w.Fleets.AddFleet(Side.Collective, "Picket", new[] { "Dodger" }, Emp);
@@ -503,7 +486,7 @@ public class CaptureTests
         var a = Play(out int da); var b = Play(out int db);
         Assert.Equal(1, da); Assert.Equal(1, db);
         Assert.Equal(a, b);
-        Assert.Contains(a, e => e is FacilityRemoved);
+        Assert.Contains(a, e => e is FacilityTransferred);
     }
 
     // SetHolder to the side that already holds the system changes nothing and raises nothing
