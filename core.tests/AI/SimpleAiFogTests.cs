@@ -27,7 +27,7 @@ public class SimpleAiFogTests
 
     // m5-fog-and-hq §N5: KnownEnemyHq is set only when the Hand's own picture shows the HQ.
     [Fact]
-    public void KnownEnemyHqComesOnlyFromTheEmpiresPicture()
+    public void KnownEnemyHqComesOnlyFromTheHandsPicture()
     {
         var (m, h) = Match(1);
         m.Hand.KnownEnemyHq = h.HqSystem; // a caller's hint is ignored with fog

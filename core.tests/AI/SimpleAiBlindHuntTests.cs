@@ -61,7 +61,7 @@ public class SimpleAiBlindHuntTests
         // v6 re-pin 2026-10-25 (Dev lead; Paul chose "Ship now" on the spiral-map card, re-measure the AI checks on the new map; ai-notes/2026-10-24-spiral-map-v6.md): on the spiral map X is close enough that the scouts often reach it anyway. Measured to day 800: on 364, 451, 379,
         // 352; off 364, 445, 391, 481. Floors: on, every seed by day 500; on never more than 10 days after off; on at least 100 days sooner on
         // some seed (the test still measures the switch). The v5 floor (on by 400, off never) waits for AI tuning to resume.
-        // Praedra names re-pin 2026-10-25 (Dev lead; Paul's order to remove the Star Wars names; systems sort by name, so every game moved):
+        // Praedra names re-pin 2026-10-25 (Dev lead; Paul's order to remove the old placeholder names; systems sort by name, so every game moved):
         // measured to day 800: on 364, 328, 307, 379; off 364, 394, 307, 379. Floors: on, every seed by day 500 (unchanged); on never more
         // than 10 days after off (unchanged); on at least 60 days sooner on some seed (was 100; measured 66).
         var res = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => (s, On: EndDay(s, true, 500), Off: EndDay(s, false, 500)));

@@ -188,7 +188,7 @@ public class B5aControlTests
         Assert.Equal((66, 31), (w.A(C), w.A(D)));
     }
 
-    // Puts n regiments of the side aboard enough Bulk Transports (6 troop slots each) of a new fleet at the system.
+    // Puts n regiments of the side aboard enough Barges (6 troop slots each) of a new fleet at the system.
     private static (int Fleet, List<int> Regs) Transports(DerivedWorld w, Side side, string system, int n)
     {
         int ships = (n + 5) / 6;

@@ -292,7 +292,7 @@ public partial class GameScreen
 
         Line(name, null, 22);
         string hqNote = name == S.MyHqSystem ? "   (YOUR HEADQUARTERS)"
-            : name == S.EnemyHqSystem ? (Me == Side.Hand ? "   (REBEL HQ - take it to win)" : "   (ENEMY CAPITAL - take it to win)") : "";
+            : name == S.EnemyHqSystem ? (Me == Side.Hand ? "   (COLLECTIVE HQ - take it to win)" : "   (ENEMY CAPITAL - take it to win)") : "";
         Line($"{(sys.IsOutsideSectors ? "Outside the sectors" : sys.Sector)}{hqNote}", Dim);
         Add(new HSeparator());
 
