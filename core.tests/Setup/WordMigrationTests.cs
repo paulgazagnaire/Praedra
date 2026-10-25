@@ -1,3 +1,4 @@
+using Praedra.Core.Data;
 using Praedra.Core.Setup;
 using Xunit;
 
@@ -22,6 +23,7 @@ public class WordMigrationTests
     [InlineData("SpecialForces", "SpecialForces")] // military forces keep their word
     [InlineData("SpecialForce", "SpecialForce")]
     [InlineData("ForcedStop", "ForcedStop")]
+    [InlineData("AlliancePocketsMayEnterCore", "CollectivePocketsMayEnterHeartland")] // QA-47: the word swap, then the identifier row
     [InlineData("Imperial Star", "Imperial Star")] // not an identifier: names go through the name table only
     public void IdentifiersAreRenamedWordByWord(string old, string expected) =>
         Assert.Equal(expected, GameData.Default.Names.CurrentIdentifier(old));
@@ -40,5 +42,16 @@ public class WordMigrationTests
         Assert.Equal(123, loaded.Settings.Deal!.HandJitterMax);
         Assert.Equal(45, loaded.Settings.Deal!.CollectiveJitterMax);
         Assert.Equal(host.StateHash(), loaded.StateHash());
+    }
+
+    // QA-47: CurrentIdentifier runs the word table twice, which is safe only while no new word or identifier is itself an old one
+    [Fact]
+    public void NoNewWordIsAnOldOne()
+    {
+        var t = CsvTable.Parse(File.ReadAllText(Path.Combine(GameData.FindRepoRoot(), "data", "design", NameMigrations.WordsFileName)), NameMigrations.WordsFileName);
+        var rows = Enumerable.Range(0, t.RowCount).Where(r => t.Get(r, "kind") != "phrase" && t.Get(r, "old") != t.Get(r, "new"))
+            .Select(r => (Old: t.Get(r, "old"), New: t.Get(r, "new"))).ToList();
+        var olds = rows.Select(r => r.Old).ToHashSet(StringComparer.Ordinal);
+        Assert.Empty(rows.Where(r => olds.Contains(r.New)));
     }
 }
