@@ -1,4 +1,4 @@
-kind,name,id,collective,hand,dip,dipv,esp,espv,ship,shipv,troop,troopv,fac,facv,com,comv,lead,leadv,loy,loyv,jprob,knownjedi,jlvl,jlvlv,admiral,commander,general,nobetray,trainer,source
+kind,name,id,collective,hand,dip,dipv,esp,espv,ship,shipv,troop,troopv,fac,facv,com,comv,lead,leadv,loy,loyv,tprob,knowntalent,tlvl,tlvlv,admiral,commander,general,nobetray,trainer,source
 minor,Ida Kral,858,1,0,30,20,80,20,0,0,0,0,0,0,40,20,70,15,100,0,10,0,10,20,0,1,1,0,0,Proposal: heroes/added-heroes (Collective); loyalty 100+0 DEFAULT as the 60 originals
 minor,Tam Szabo,859,1,0,30,20,40,30,30,30,0,0,0,0,80,15,60,20,100,0,0,0,0,0,1,1,0,0,0,Proposal: heroes/added-heroes (Collective)
 minor,Captain Sunday,860,1,0,40,20,30,20,0,0,0,0,0,0,80,15,70,15,100,0,0,0,0,0,1,1,1,0,0,Proposal: heroes/added-heroes (Collective); three roles break stat-ceiling rule 6

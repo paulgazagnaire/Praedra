@@ -9,8 +9,8 @@ using static Praedra.Core.Tests.Characters.CharWorld;
 
 namespace Praedra.Core.Tests.Characters;
 
-// B2e-escape-injury-and-the-force tests B2e-1 to B2e-19. rule: m5-characters-and-force §Capture, injury, death, freeing; §Escape; §Force;
-// §Seat of Power; m5-missions §4 (the Force-user encounter).
+// B2e-escape-injury-and-the-force tests B2e-1 to B2e-19. rule: m5-characters-and-force §Capture, injury, death, freeing; §Escape; §Talent;
+// §Seat of Power; m5-missions §4 (the Talent encounter).
 public class B2eCharacterTests
 {
     private const string HandCommandos = "Closers";
@@ -22,21 +22,21 @@ public class B2eCharacterTests
         return c;
     }
 
-    /// <summary>B2e tests the Classic effective skills: ForceSkillPercent 100 set explicitly. rule: m5-characters-and-force §Force (Classic = 100).</summary>
-    private const int Classic = CharacterParams.ClassicForceSkillPercent;
+    /// <summary>B2e tests the Classic effective skills: TalentSkillPercent 100 set explicitly. rule: m5-characters-and-force §Talent (Classic = 100).</summary>
+    private const int Classic = CharacterParams.ClassicTalentSkillPercent;
 
-    private static CharacterRecord Force(CharacterRecord c, int f)
+    private static CharacterRecord Talent(CharacterRecord c, int f)
     {
-        c.ForceUser = f > 0; c.ForceDiscovered = f > 0; c.ForceExperience = f; c.ForceTraining = 0;
+        c.TalentHolder = f > 0; c.TalentDiscovered = f > 0; c.TalentExperience = f; c.TalentTraining = 0;
         return c;
     }
 
-    // B2e-1: Luke, base diplomacy 50, espionage 50, combat 90, ship design 0, Force 50: effective 75, 75, 135, 0; with 40 injury points combat 95
+    // B2e-1: Luke, base diplomacy 50, espionage 50, combat 90, ship design 0, Talent 50: effective 75, 75, 135, 0; with 40 injury points combat 95
     [Fact]
     public void B2e1_EffectiveSkillsOfLuke()
     {
         var w = new CharWorld();
-        var luke = Force(Skills(w.Add(Luke, Yavin), dip: 50, esp: 50, com: 90, ship: 0), 50);
+        var luke = Talent(Skills(w.Add(Luke, Yavin), dip: 50, esp: 50, com: 90, ship: 0), 50);
         Assert.Equal((75, 75, 135, 0), (luke.EffectiveSkill(Skill.Diplomacy, Classic), luke.EffectiveSkill(Skill.Espionage, Classic),
             luke.EffectiveSkill(Skill.Combat, Classic), luke.EffectiveSkill(Skill.ShipDesign, Classic)));
         luke.Injury = 40;
@@ -44,15 +44,15 @@ public class B2eCharacterTests
         Assert.Equal(75, luke.EffectiveSkill(Skill.Diplomacy, Classic)); // the injury comes off combat only
     }
 
-    // B2e-2: Vader Force 120, base combat 100: 220; a character with Force 0 keeps his base skills
+    // B2e-2: Vader Talent 120, base combat 100: 220; a character with Talent 0 keeps his base skills
     [Fact]
-    public void B2e2_VaderAndAForcelessCharacter()
+    public void B2e2_VaderAndAnUntalentedCharacter()
     {
         var w = new CharWorld();
-        var vader = Force(Skills(w.Add(Vader, Coruscant), com: 100, esp: 50), 120);
+        var vader = Talent(Skills(w.Add(Vader, Coruscant), com: 100, esp: 50), 120);
         Assert.Equal((220, 110), (vader.EffectiveSkill(Skill.Combat, Classic), vader.EffectiveSkill(Skill.Espionage, Classic)));
         var han = Skills(w.Add(Han, Yavin), dip: 30, esp: 70, com: 100, lead: 90, ship: 10);
-        Assert.Equal(0, han.EffectiveForce);
+        Assert.Equal(0, han.EffectiveTalent);
         foreach (Skill s in Enum.GetValues<Skill>()) Assert.Equal(han.BaseSkill(s), han.EffectiveSkill(s, Classic));
     }
 
@@ -102,7 +102,7 @@ public class B2eCharacterTests
         Assert.Equal(before, w.Stub.Requests.Count);
     }
 
-    // B2e-6: 5 points standing on an own planet heal 1 a day (5 days); with Force 80, 2, 2, 1 (3 days); travelling, on an enemy planet or captured: none
+    // B2e-6: 5 points standing on an own planet heal 1 a day (5 days); with Talent 80, 2, 2, 1 (3 days); travelling, on an enemy planet or captured: none
     [Theory]
     [InlineData("own", 5)]
     [InlineData("fast", 3)]
@@ -114,7 +114,7 @@ public class B2eCharacterTests
         var w = new CharWorld();
         w.Hold(Yavin, Side.Collective); w.Hold(Hoth, Side.Hand);
         var han = w.Add(Han, where == "enemy" ? Hoth : Yavin);
-        if (where == "fast") Force(han, 80);
+        if (where == "fast") Talent(han, 80);
         if (where == "travelling") Assert.Null(w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Han, Coruscant)));
         w.StepWith("5.2", ctx =>
         {
@@ -209,9 +209,9 @@ public class B2eCharacterTests
     [Fact]
     public void B2e9_EscapeChanceWithGuards()
     {
-        var w = new CharWorld(CharWorld.ClassicForce()); // the Classic Force (m5-characters-and-force §Force CH37)
+        var w = new CharWorld(CharWorld.ClassicTalent()); // the Classic Talent (m5-characters-and-force §Talent CH37)
         w.Hold(Hoth, Side.Hand);
-        Force(Skills(w.Add(Vader, Hoth), com: 100), 120);
+        Talent(Skills(w.Add(Vader, Hoth), com: 100), 120);
         w.Host.Economy.AddObject(Side.Hand, HandCommandos, Hoth, true);
         w.Host.Economy.AddObject(Side.Hand, HandCommandos, Hoth, true);
         var han = Skills(w.Add(Han, Hoth), esp: 100, com: 100);
@@ -281,17 +281,17 @@ public class B2eCharacterTests
         Assert.Empty(w.Stub.Requests.Skip(before).Where(r => r != (0, spread)));
     }
 
-    // B2e-13: Luke (combat 135, Force 50) foiled with a mutual discovery of Vader (220, 120): duel x = -85 -> 15; the hurt rolls in order; Luke learns
-    // his heritage; free, so one hand draw (1..100) and Force +17; both keys cleared
+    // B2e-13: Luke (combat 135, Talent 50) foiled with a mutual discovery of Vader (220, 120): duel x = -85 -> 15; the hurt rolls in order; Luke learns
+    // his heritage; free, so one hand draw (1..100) and Talent +17; both keys cleared
     [Fact]
     public void B2e13_LukeMeetsVader()
     {
-        var w = new MissionWorld(characters: CharWorld.ClassicForce()); // the Classic Force (m5-characters-and-force §Force CH37)
+        var w = new MissionWorld(characters: CharWorld.ClassicTalent()); // the Classic Talent (m5-characters-and-force §Talent CH37)
         w.Hold(MissionWorld.T, Side.Hand, 0);
         var luke = w.Agent(Luke, MissionWorld.H, esp: 50, com: 90);
         var vader = w.Agent(Vader, MissionWorld.T, com: 100);
-        Assert.Equal((50, 120), (luke.EffectiveForce, vader.EffectiveForce));
-        luke.DiscoveredForceUser = Vader; vader.DiscoveredForceUser = Luke; luke.PairId = vader.PairId = 1;
+        Assert.Equal((50, 120), (luke.EffectiveTalent, vader.EffectiveTalent));
+        luke.DiscoveredTalentHolder = Vader; vader.DiscoveredTalentHolder = Luke; luke.PairId = vader.PairId = 1;
         w.Start(Side.Collective, MissionKind.Espionage, new[] { Luke }, MissionWorld.T);
         w.Game.Step();
         w.RunUntilWorking(w.LastMission);
@@ -305,40 +305,40 @@ public class B2eCharacterTests
         Assert.Equal(new[] { (0, 99), (0, 99), (0, 99), (0, 99), (0, 99), (0, 99) }, w.RequestsSince(from).Where(r => r == (0, 99)).Take(6));
         Assert.True(luke.KnowsHeritage);
         Assert.Equal(40, luke.Injury);
-        Assert.Equal(67, luke.EffectiveForce);
-        Assert.Equal((0, 0, 0, 0), (luke.DiscoveredForceUser, vader.DiscoveredForceUser, luke.PairId, vader.PairId));
-        var e = w.Events<ForceEncounterResolved>().Single();
+        Assert.Equal(67, luke.EffectiveTalent);
+        Assert.Equal((0, 0, 0, 0), (luke.DiscoveredTalentHolder, vader.DiscoveredTalentHolder, luke.PairId, vader.PairId));
+        var e = w.Events<TalentEncounterResolved>().Single();
         Assert.Equal((Luke, Vader, true, false, false), (e.Member, e.Other, e.MemberEscaped, e.MemberHurt, e.OtherHurt));
-        Assert.Equal(17, w.Events<ForceGained>().Single().Gain);
+        Assert.Equal(17, w.Events<TalentGained>().Single().Gain);
     }
 
-    // B2e-14: Leia (aware, Force 10) meets the Emperor (150): Leia +28 Force if free
+    // B2e-14: Leia (aware, Talent 10) meets the Emperor (150): Leia +28 Talent if free
     [Fact]
     public void B2e14_LeiaMeetsTheEmperor()
     {
         var w = new CharWorld();
-        var leia = Force(Skills(w.Add(Leia, Yavin), com: 50), 10);
-        var emp = Force(Skills(w.Add(Palpatine, Coruscant), com: 50), 150);
+        var leia = Talent(Skills(w.Add(Leia, Yavin), com: 50), 10);
+        var emp = Talent(Skills(w.Add(Palpatine, Coruscant), com: 50), 150);
         w.Stub!.Expect(0, 99, 99, 99); // both HurtBy rolls miss
-        w.StepWith("5.3", ctx => w.Ch.ForceEncounter(ctx, ctx.Day + 1, 0, leia, emp, mHurtInDuel: false, mEscaped: true));
-        Assert.Equal(38, leia.EffectiveForce);
-        Assert.Equal(150, emp.EffectiveForce);
+        w.StepWith("5.3", ctx => w.Ch.TalentEncounter(ctx, ctx.Day + 1, 0, leia, emp, mHurtInDuel: false, mEscaped: true));
+        Assert.Equal(38, leia.EffectiveTalent);
+        Assert.Equal(150, emp.EffectiveTalent);
     }
 
-    // B2e-15: two minors with a mutual discovery: hurt rolls, base combat +1 to whoever hurt the other; no Force change
+    // B2e-15: two minors with a mutual discovery: hurt rolls, base combat +1 to whoever hurt the other; no Talent change
     [Fact]
     public void B2e15_TwoMinors()
     {
         var w = new CharWorld();
-        var a = Force(Skills(w.Add(Wedge, Yavin), com: 40), 30);
-        var b = Force(Skills(w.Add(Piett, Hoth), com: 60), 70);
+        var a = Talent(Skills(w.Add(Wedge, Yavin), com: 40), 30);
+        var b = Talent(Skills(w.Add(Piett, Hoth), com: 60), 70);
         // a's HurtBy (p = 20): 0 hits, sizes 0, 0; a's death draw 99; b's HurtBy (p = 1): 0 hits, sizes 0, 0; b's death draw 99
         w.Stub!.Expect(0, 99, 0, 99, 0, 99);
-        w.StepWith("5.3", ctx => w.Ch.ForceEncounter(ctx, ctx.Day + 1, 0, a, b, mHurtInDuel: false, mEscaped: true));
+        w.StepWith("5.3", ctx => w.Ch.TalentEncounter(ctx, ctx.Day + 1, 0, a, b, mHurtInDuel: false, mEscaped: true));
         Assert.Equal((1, 1), (a.Injury, b.Injury));
         Assert.Equal((41, 61), (a.BaseSkill(Skill.Combat), b.BaseSkill(Skill.Combat)));
-        Assert.Equal((30, 70), (a.EffectiveForce, b.EffectiveForce));
-        Assert.Empty(w.Events<ForceGained>());
+        Assert.Equal((30, 70), (a.EffectiveTalent, b.EffectiveTalent));
+        Assert.Empty(w.Events<TalentGained>());
     }
 
     // B2e-16: a mutual discovery with different pair ids: nothing, no draw (the member then duels a guard as in B2d)
@@ -347,7 +347,7 @@ public class B2eCharacterTests
     {
         var w = new CharWorld();
         var luke = w.Add(Luke, Yavin); var vader = w.Add(Vader, Coruscant);
-        luke.DiscoveredForceUser = Vader; vader.DiscoveredForceUser = Luke; luke.PairId = 1; vader.PairId = 2;
+        luke.DiscoveredTalentHolder = Vader; vader.DiscoveredTalentHolder = Luke; luke.PairId = 1; vader.PairId = 2;
         Assert.False(w.Ch.MutualDiscovery(luke, out _));
         vader.PairId = 1;
         Assert.True(w.Ch.MutualDiscovery(luke, out var x));
@@ -357,35 +357,35 @@ public class B2eCharacterTests
         Assert.Empty(w.Stub!.Requests);
     }
 
-    // B2e-17: Vader awakens an unaware Hand Force user on his planet the next day, Force rolled then; Luke at 50 awakens nobody; at 80 he awakens
+    // B2e-17: Vader awakens an unaware Hand talented character on his planet the next day, Talent rolled then; Luke at 50 awakens nobody; at 80 he awakens
     // Collective minors (level 10 + rand(0..40)); Leia only after Luke knows his heritage
     [Fact]
     public void B2e17_Awakening()
     {
         var w = new CharWorld(new CharacterParams { TrainerPick = TrainerPick.Fixed }); // the Classic trainer flag (Luke, Vader); Random is CH39
         w.Hold(Yavin, Side.Collective); w.Hold(Coruscant, Side.Hand);
-        Force(w.Add(Vader, Coruscant), 120);
-        var piett = w.Add(Piett, Coruscant); piett.ForceUser = true; // an unaware Force user
-        var luke = Force(w.Add(Luke, Yavin), 50);
+        Talent(w.Add(Vader, Coruscant), 120);
+        var piett = w.Add(Piett, Coruscant); piett.TalentHolder = true; // an unaware talented character
+        var luke = Talent(w.Add(Luke, Yavin), 50);
         var wedge = w.Add(Wedge, Yavin); var leia = w.Add(Leia, Yavin);
-        Assert.True(wedge.ForceUser && leia.ForceUser && !wedge.ForceDiscovered && !leia.ForceDiscovered);
+        Assert.True(wedge.TalentHolder && leia.TalentHolder && !wedge.TalentDiscovered && !leia.TalentDiscovered);
         w.Game.Step(); // the timers turn on
-        Assert.False(piett.ForceDiscovered);
+        Assert.False(piett.TalentDiscovered);
         w.Game.Step();
-        Assert.True(piett.ForceDiscovered);
-        Assert.Equal((Vader, 10), (piett.AwakenedBy, piett.EffectiveForce)); // his record: jedi_level 10 + rand(0..40), the stub answers 0
-        Assert.False(wedge.ForceDiscovered); // Luke at 50 is no trainer
+        Assert.True(piett.TalentDiscovered);
+        Assert.Equal((Vader, 10), (piett.AwakenedBy, piett.EffectiveTalent)); // his record: tlvl 10 + rand(0..40), the stub answers 0
+        Assert.False(wedge.TalentDiscovered); // Luke at 50 is no trainer
 
-        luke.ForceExperience = 80;
+        luke.TalentExperience = 80;
         w.Stub!.Expect(0, 40, 33);
         w.Run(2);
-        Assert.True(wedge.ForceDiscovered);
-        Assert.Equal((Luke, 43), (wedge.AwakenedBy, wedge.EffectiveForce));
-        Assert.False(leia.ForceDiscovered); // Luke does not know his heritage
+        Assert.True(wedge.TalentDiscovered);
+        Assert.Equal((Luke, 43), (wedge.AwakenedBy, wedge.EffectiveTalent));
+        Assert.False(leia.TalentDiscovered); // Luke does not know his heritage
         luke.KnowsHeritage = true;
         w.Game.Step();
-        Assert.True(leia.ForceDiscovered && leia.KnowsHeritage);
-        Assert.Equal(10, leia.EffectiveForce);
+        Assert.True(leia.TalentDiscovered && leia.KnowsHeritage);
+        Assert.Equal(10, leia.EffectiveTalent);
     }
 
     // B2e-18: the Emperor on Charter, the Hand holds it: Hand base leadership 100 -> 150, Collective unchanged; once he is captured, 100
@@ -411,7 +411,7 @@ public class B2eCharacterTests
     {
         var w = new CharWorld(new CharacterParams { TrainerPick = TrainerPick.Fixed }); // the Classic trainer flag (Luke, Vader); Random is CH39
         w.Hold(Coruscant, Side.Hand);
-        Force(w.Add(Vader, Coruscant), 120);
+        Talent(w.Add(Vader, Coruscant), 120);
         w.Run(30);
         var bare = new CharWorld(); // the same galaxy without Vader: its other timers (support incidents, m2-popular-support) draw the same
         bare.Hold(Coruscant, Side.Hand);
@@ -420,7 +420,7 @@ public class B2eCharacterTests
         Assert.NotEqual(0, w.C(Vader).NextAwakenDay);
     }
 
-    // Work 1, 2, 4: injury points, escape timers and the Force fields are saved and hashed
+    // Work 1, 2, 4: injury points, escape timers and Talent fields are saved and hashed
     [Fact]
     public void InjuryAndTimersAreSavedAndHashed()
     {

@@ -69,3 +69,48 @@ word,BountyHunters,Repossessors
 word,Bounty,Repossession
 word,Vacation,Leave
 word,Sabbatical,Retreat
+phrase,ForceRank.Trainee,TalentRank.Latent
+phrase,ForceRank.Student,TalentRank.Deviation
+phrase,ForceRank.Knight,TalentRank.Anomaly
+phrase,ForceRank.Master,TalentRank.Unforecastable
+phrase,"{ Trainee, Student, Knight, Master }","{ Latent, Deviation, Anomaly, Unforecastable }"
+phrase,Jedi Trainee,Latent
+phrase,Jedi Student,Deviation
+phrase,Jedi Knight,Anomaly
+phrase,Jedi Master,Unforecastable
+phrase,Force-sensitive,talented
+phrase,Force-user encounter,Talent encounter
+phrase,Force-user,talented
+phrase,Force users,talented characters
+phrase,Force user,talented character
+phrase,in the Force,in Talent
+phrase,the Force,Talent
+phrase,a Jedi,a talented character
+phrase,Jedi,Talent
+identifier,TalentedForceMin,TalentedMin
+identifier,TalentedForceMax,TalentedMax
+identifier,ForceStudentMin,TalentDeviationMin
+identifier,ForceKnightMin,TalentAnomalyMin
+identifier,ForceMasterMin,TalentUnforecastableMin
+identifier,TrainerNeedsKnight,TrainerNeedsAnomaly
+word,SpecialForce,SpecialForce
+word,TaskForce,TaskForce
+word,ForceOf,ForceOf
+word,AgentForce,AgentForce
+word,ArmedForce,ArmedForce
+word,ForceFleet,ForceFleet
+word,ForceUsers,TalentHolders
+word,ForceUser,TalentHolder
+word,KnownJedi,KnownTalent
+word,JediTrainer,TalentTrainer
+word,Force,Talent
+phrase,jedi_level_variance,tlvlv
+phrase,jedi_level,tlvl
+phrase,jedi_probability,tprob
+phrase,jedi_trainer,trainer
+phrase,known_jedi,knowntalent
+word,knownjedi,knowntalent
+word,jprob,tprob
+word,jlvlv,tlvlv
+word,jlvl,tlvl
+word,jedi,talented

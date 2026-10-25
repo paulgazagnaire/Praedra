@@ -1,25 +1,25 @@
 namespace Praedra.Core.Characters;
 
 /// <summary>
-/// Who can train and awaken the Force. rule: m5-characters-and-force §Rule (New) 4 (Paul 2026-10-18).
+/// Who can train and awaken Talent. rule: m5-characters-and-force §Rule (New) 4 (Paul 2026-10-18).
 /// </summary>
 public enum TrainerPick
 {
-    /// <summary>The Classic data flag <c>jedi_trainer</c> (Luke, Vader). Classic.</summary>
+    /// <summary>The Classic data flag <c>trainer</c> (Luke, Vader). Classic.</summary>
     Fixed,
     /// <summary>DEFAULT (New): <see cref="CharacterParams.TalentedPerSide"/> characters per side drawn at every game start.</summary>
     Random,
 }
 
-/// <summary>Force discovery mode. rule: m5-characters-and-force §Force (Force discovery).</summary>
-public enum ForceDiscoveryMode
+/// <summary>Talent discovery mode. rule: m5-characters-and-force §Talent (Talent discovery).</summary>
+public enum TalentDiscoveryMode
 {
     /// <summary>
-    /// DEFAULT, the original (Traced B2e §5): a Jedi trainer with Force 80+ awakens, every day, the unaware Force users of his side on his place
-    /// (Leia only by Luke once he knows his heritage). Story calls to <see cref="CharacterModule.DiscoverForce"/> still work.
+    /// DEFAULT, the original (Traced B2e §5): a talented character trainer with Talent 80+ awakens, every day, the unaware talented characters of his side on his place
+    /// (Leia only by Luke once he knows his heritage). Story calls to <see cref="CharacterModule.DiscoverTalent"/> still work.
     /// </summary>
     Trainer,
-    /// <summary>Only known Jedi at creation and story calls to <see cref="CharacterModule.DiscoverForce"/> (the sheet's earlier DEFAULT).</summary>
+    /// <summary>Only known Talent at creation and story calls to <see cref="CharacterModule.DiscoverTalent"/> (the sheet's earlier DEFAULT).</summary>
     Story,
     /// <summary>The original detection routine 0x58a3f0 (not decoded: Missing). Refused.</summary>
     Detection,
@@ -60,9 +60,9 @@ public sealed record CharacterParams
     public int HarvesterHitPercent { get; init; } = 50;
     /// <summary>
     /// Train Talent gain cap, percent of the gap: <c>g = rand(0..gap * this / 100)</c>. DEFAULT 25 (New, Paul 2026-10-18: five or six trainers, so
-    /// training is slower); <see cref="ClassicTrainingGainPercent"/> 50 = Classic (GNPRTB 6173). rule: m5-characters-and-force §Force (Train Talent: the roll).
+    /// training is slower); <see cref="ClassicTrainingGainPercent"/> 50 = Classic (GNPRTB 6173). rule: m5-characters-and-force §Talent (Train Talent: the roll).
     /// </summary>
-    public int ForceTrainingGainPercent { get; init; } = 25;
+    public int TalentTrainingGainPercent { get; init; } = 25;
     /// <summary>
     /// Prisoners land (New, Paul 2026-10-18 decision card "Land them"): at day end a fleet standing at a system its own side holds, not blockaded,
     /// puts the prisoners it holds aboard ashore there, where an ordinary Rescue can reach them. DEFAULT true; false = Classic (a prisoner aboard stays
@@ -75,22 +75,22 @@ public sealed record CharacterParams
     public int TrainingChanceCap { get; init; } = 100;
     /// <summary>
     /// Train Talent chance scale: <c>chance = min(gap, 100) * this / 100</c>. DEFAULT 50 (New, Paul 2026-10-18); 100 = Classic (Traced, reading [inferred]).
-    /// rule: m5-characters-and-force §Force (Train Talent: the roll; New, Paul 2026-10-18; Classic = 100).
+    /// rule: m5-characters-and-force §Talent (Train Talent: the roll; New, Paul 2026-10-18; Classic = 100).
     /// </summary>
-    public int ForceTrainingChancePercent { get; init; } = 50;
+    public int TalentTrainingChancePercent { get; init; } = 50;
     /// <summary>
-    /// Share of the Force that multiplies diplomacy, espionage and combat: <c>B + B * F * this / 10000</c>. DEFAULT 40 (New, Paul 2026-10-18: a master
-    /// at 120 gives +48% instead of +120%); 100 = Classic (Traced B2e §1). rule: m5-characters-and-force §Force (New, Paul 2026-10-18; Classic = 100).
+    /// Share of Talent that multiplies diplomacy, espionage and combat: <c>B + B * F * this / 10000</c>. DEFAULT 40 (New, Paul 2026-10-18: an Unforecastable
+    /// at 120 gives +48% instead of +120%); 100 = Classic (Traced B2e §1). rule: m5-characters-and-force §Talent (New, Paul 2026-10-18; Classic = 100).
     /// </summary>
-    public int ForceSkillPercent { get; init; } = 40;
-    /// <summary>The Classic values of the three Force tone-down switches (Classic). rule: m5-characters-and-force §Force (Classic = 100 / 100 / 50).</summary>
-    public const int ClassicForceSkillPercent = 100, ClassicTrainingChancePercent = 100;
-    /// <summary>Lowest effective Force of a Jedi Student. DEFAULT 1 (no number known; Open question 15).</summary>
-    public int ForceStudentMin { get; init; } = 1;
-    /// <summary>Lowest effective Force of a Jedi Knight (GNPRTB 2560/2580 = 80). Traced number, mapping DEFAULT.</summary>
-    public int ForceKnightMin { get; init; } = 80;
-    /// <summary>Lowest effective Force of a Jedi Master (GNPRTB 2581 = 100). Traced number, mapping DEFAULT.</summary>
-    public int ForceMasterMin { get; init; } = 100;
+    public int TalentSkillPercent { get; init; } = 40;
+    /// <summary>The Classic values of the three Talent tone-down switches (Classic). rule: m5-characters-and-force §Talent (Classic = 100 / 100 / 50).</summary>
+    public const int ClassicTalentSkillPercent = 100, ClassicTrainingChancePercent = 100;
+    /// <summary>Lowest effective Talent of a Deviation. DEFAULT 1 (no number known; Open question 15).</summary>
+    public int TalentDeviationMin { get; init; } = 1;
+    /// <summary>Lowest effective Talent of a Anomaly (GNPRTB 2560/2580 = 80). Traced number, mapping DEFAULT.</summary>
+    public int TalentAnomalyMin { get; init; } = 80;
+    /// <summary>Lowest effective Talent of a Unforecastable (GNPRTB 2581 = 100). Traced number, mapping DEFAULT.</summary>
+    public int TalentUnforecastableMin { get; init; } = 100;
     /// <summary>Navigator floor on a fleet's speed when a navigator (best below 100) rides. Proposal (heroes/mission-speed item 7).</summary>
     public int NavigatorFloor { get; init; } = Travel.TravelFormula.NavigatorFloor;
 
@@ -105,7 +105,7 @@ public sealed record CharacterParams
     public int Hurt2MinChance { get; init; } = 1;
     public int Hurt2SizeBase { get; init; } = 1;
     public int Hurt2SizeSpread { get; init; } = 29;
-    /// <summary>HurtBy(a, b) of the Force-user encounter, chance <c>max(this, b - a)</c>: GNPRTB 2571 = 1, size base 2572 = 1, spread 2573 = 29. 0x53ea70.</summary>
+    /// <summary>HurtBy(a, b) of the Talent encounter, chance <c>max(this, b - a)</c>: GNPRTB 2571 = 1, size base 2572 = 1, spread 2573 = 29. 0x53ea70.</summary>
     public int HurtByMinChance { get; init; } = 1;
     public int HurtBySizeBase { get; init; } = 1;
     public int HurtBySizeSpread { get; init; } = 29;
@@ -115,15 +115,15 @@ public sealed record CharacterParams
     public int HurtFixedSizeSpread { get; init; } = 29;
     /// <summary>An injured minor dies if <c>rand(0..99) &lt; this</c>. GNPRTB 2577 = 25 (0x56f160 -> 0x53eb30).</summary>
     public int MinorDeathPercent { get; init; } = 25;
-    /// <summary>Force at or above which a character heals fast (FastHeal). GNPRTB 2560 = 80 (0x4eeff0).</summary>
-    public int FastHealMinForce { get; init; } = 80;
+    /// <summary>Talent at or above which a character heals fast (FastHeal). GNPRTB 2560 = 80 (0x4eeff0).</summary>
+    public int FastHealMinTalent { get; init; } = 80;
     /// <summary>Healing timer period with FastHeal, days: GNPRTB 2561 = 1; without: 2562 = 1 (spread 0, no draw).</summary>
     public int HealPeriodFast { get; init; } = 1;
     public int HealPeriod { get; init; } = 1;
     /// <summary>Points healed per firing: GNPRTB 2563 = 2 with FastHeal, 2564 = 1 without (0x4ef100).</summary>
     public int HealFast { get; init; } = 2;
     public int HealSlow { get; init; } = 1;
-    /// <summary>Base combat gained by whoever hurts the other in a Force-user encounter. GNPRTB 2578 = 1 (0x560200).</summary>
+    /// <summary>Base combat gained by whoever hurts the other in a Talent encounter. GNPRTB 2578 = 1 (0x560200).</summary>
     public int EncounterCombatGain { get; init; } = 1;
 
     // ---- escape (Traced B2e §3). rule: §Escape
@@ -131,31 +131,31 @@ public sealed record CharacterParams
     public int EscapeDelayBase { get; init; } = 100;
     public int EscapeDelaySpread { get; init; } = 1000;
 
-    // ---- Force (Traced B2e §4, §5). rule: §Force
+    // ---- Talent (Traced B2e §4, §5). rule: §Talent
     /// <summary>Who trains and awakens: DEFAULT Random (New, Paul 2026-10-18); Fixed = the Classic data flag. rule: §Rule (New) 4.</summary>
     public TrainerPick TrainerPick { get; init; } = TrainerPick.Random;
     /// <summary>Talented characters drawn per side at setup (Art Director proposal, 2026-10-18: 3 per side, 6 in all). rule: §Rule (New) 4.</summary>
     public int TalentedPerSide { get; init; } = 3;
     /// <summary>
-    /// The Force a drawn talented character gets: rand(min..max), kept if his own is higher (Q16 DEFAULT). PROPOSAL (Dev lead 2026-10-18): 80 =
-    /// <see cref="TrainerMinForce"/> so he can awaken; 120 = Vader's Classic value. rule: §Rule (New) 4.
+    /// The Talent a drawn talented character gets: rand(min..max), kept if his own is higher (Q16 DEFAULT). PROPOSAL (Dev lead 2026-10-18): 80 =
+    /// <see cref="TrainerMinTalent"/> so he can awaken; 120 = Vader's Classic value. rule: §Rule (New) 4.
     /// </summary>
-    public int TalentedForceMin { get; init; } = 80;
-    /// <summary>See <see cref="TalentedForceMin"/>.</summary>
-    public int TalentedForceMax { get; init; } = 120;
+    public int TalentedMin { get; init; } = 80;
+    /// <summary>See <see cref="TalentedMin"/>.</summary>
+    public int TalentedMax { get; init; } = 120;
     /// <summary>
-    /// Leave out of the talented draw anyone whose own Force is already at <see cref="TalentedForceMin"/> or above: they keep their Force but are
+    /// Leave out of the talented draw anyone whose own Talent is already at <see cref="TalentedMin"/> or above: they keep their Talent but are
     /// not talented, so they never train or awaken anyone; the drawn are always new faces. Paul 2026-10-18 (card "Skip the strong"). rule: §Rule (New) 4, Q17.
     /// </summary>
     public bool TalentedSkipStrong { get; init; } = true;
     /// <summary>Leave out of the talented draw the characters flagged never_talented in roster.csv (the Repossessors). Paul 2026-10-18 (card "Leave out hunters"). rule: §Rule (New) 4, Q17.</summary>
     public bool TalentedSkipFlagged { get; init; } = true;
-    /// <summary>Lowest Force of an awakening trainer (DiscoveringForceUser). GNPRTB 2580 = 80 (0x4ef070).</summary>
-    public int TrainerMinForce { get; init; } = 80;
+    /// <summary>Lowest Talent of an awakening trainer (DiscoveringTalentHolder). GNPRTB 2580 = 80 (0x4ef070).</summary>
+    public int TrainerMinTalent { get; init; } = 80;
     /// <summary>Awakening timer: GNPRTB 2582 = 1 day, spread 2583 = 0 (no draw).</summary>
     public int AwakenPeriod { get; init; } = 1;
     public int AwakenSpread { get; init; }
-    /// <summary>Luke's Force gain after meeting Vader, percent of the gap: GNPRTB 3072 = 25; at least 3084 = 1.</summary>
+    /// <summary>Luke's Talent gain after meeting Vader, percent of the gap: GNPRTB 3072 = 25; at least 3084 = 1.</summary>
     public int LukeVaderGainPercent { get; init; } = 25;
     public int LukeVaderMinGain { get; init; } = 1;
     /// <summary>Luke after the Emperor: GNPRTB 3073 = 20, at least 3085 = 1.</summary>
@@ -167,12 +167,12 @@ public sealed record CharacterParams
     /// <summary>Leia after the Emperor: GNPRTB 3075 = 20, at least 3087 = 1.</summary>
     public int LeiaEmperorGainPercent { get; init; } = 20;
     public int LeiaEmperorMinGain { get; init; } = 1;
-    /// <summary>Luke loses his hand (an injury) only below this Force. GNPRTB 3077 = 80 (0x561b60).</summary>
-    public int LukeHandMaxForce { get; init; } = 80;
+    /// <summary>Luke loses his hand (an injury) only below this Talent. GNPRTB 3077 = 80 (0x561b60).</summary>
+    public int LukeHandMaxTalent { get; init; } = 80;
     /// <summary>Luke's hand injury <c>rand(0..spread) + base</c>: GNPRTB 3080 = 99, 3079 = 1.</summary>
     public int LukeHandSpread { get; init; } = 99;
     public int LukeHandBase { get; init; } = 1;
-    /// <summary>The four Jedi of the encounter effects, by record id (keys 0x32000242, 0x31000241, 0x35000281, 0x34000280). Traced B2e §4.</summary>
+    /// <summary>The four Talent of the encounter effects, by record id (keys 0x32000242, 0x31000241, 0x35000281, 0x34000280). Traced B2e §4.</summary>
     public int Luke { get; init; } = 0x242;
     public int Leia { get; init; } = 0x241;
     public int Vader { get; init; } = 0x281;
@@ -229,13 +229,13 @@ public sealed record CharacterParams
     /// </summary>
     public bool SeatOfPower { get; init; } = true;
     /// <summary>DEFAULT Trainer (Traced B2e §5); Story keeps only the story calls; Detection refused.</summary>
-    public ForceDiscoveryMode ForceDiscovery { get; init; } = ForceDiscoveryMode.Trainer;
-    /// <summary>Force growth outside training (Missing). DEFAULT false; on refused.</summary>
-    public bool ForceGrowth { get; init; }
+    public TalentDiscoveryMode TalentDiscovery { get; init; } = TalentDiscoveryMode.Trainer;
+    /// <summary>Talent growth outside training (Missing). DEFAULT false; on refused.</summary>
+    public bool TalentGrowth { get; init; }
     /// <summary>Skill growth (Missing). DEFAULT false; on refused.</summary>
     public bool SkillGrowth { get; init; }
-    /// <summary>A trainer needs Jedi Knight rank. DEFAULT false (Open question 6).</summary>
-    public bool TrainerNeedsKnight { get; init; }
+    /// <summary>A trainer needs Anomaly rank. DEFAULT false (Open question 6).</summary>
+    public bool TrainerNeedsAnomaly { get; init; }
     /// <summary>A navigator aboard speeds a fleet. Classic false (DEFAULT here), New true (Decided in principle; numbers Proposal).</summary>
     public bool NavigatorBonus { get; init; }
 
@@ -248,8 +248,8 @@ public sealed record CharacterParams
     /// <summary>Throw <see cref="RuleMissingException"/> for every switch value the sheet refuses. rule: §Defaults for undecided items, CH31.</summary>
     public void Validate()
     {
-        if (ForceDiscovery == ForceDiscoveryMode.Detection) throw new RuleMissingException("ForceDiscovery=Detection");
-        if (ForceGrowth) throw new RuleMissingException("ForceGrowth");
+        if (TalentDiscovery == TalentDiscoveryMode.Detection) throw new RuleMissingException("TalentDiscovery=Detection");
+        if (TalentGrowth) throw new RuleMissingException("TalentGrowth");
         if (SkillGrowth) throw new RuleMissingException("SkillGrowth");
         if (BlockadeEscapeRisk) throw new RuleMissingException("BlockadeEscapeRisk");
         if (AssaultHarmsCharacters) throw new RuleMissingException("AssaultHarmsCharacters");

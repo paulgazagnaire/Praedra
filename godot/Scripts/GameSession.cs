@@ -435,11 +435,11 @@ public sealed partial class GameSession
         return "no post";
     }
 
-    /// <summary>The skills the sheet uses (leadership feeds the posts), and the Force rank only when the side knows the character is a Force user. rule: m5-characters-and-force §Posts, §Force (Rank).</summary>
+    /// <summary>The skills the sheet uses (leadership feeds the posts), and Talent rank only when the side knows the character is a talented character. rule: m5-characters-and-force §Posts, §Talent (Rank).</summary>
     public string SkillsOf(CharacterRecord c)
     {
         string s = $"Leadership {Chars.EffectiveSkill(c, Skill.Leadership)}, combat {Chars.EffectiveSkill(c, Skill.Combat)}, diplomacy {Chars.EffectiveSkill(c, Skill.Diplomacy)}, espionage {Chars.EffectiveSkill(c, Skill.Espionage)}";
-        if (c.ForceUser && c.ForceDiscovered && Chars.RankOf(c) is ForceRank r) s += $"; Force: {RankWords(r)} ({c.EffectiveForce})";
+        if (c.TalentHolder && c.TalentDiscovered && Chars.RankOf(c) is TalentRank r) s += $"; Talent: {RankWords(r)} ({c.EffectiveTalent})";
         return s;
     }
 
@@ -470,13 +470,13 @@ public sealed partial class GameSession
         _ => "a system General",
     };
 
-    /// <summary>Classic text names of the ranks. rule: m5-characters-and-force §Force (Rank).</summary>
-    public static string RankWords(ForceRank r) => r switch
+    /// <summary>Classic text names of the ranks. rule: m5-characters-and-force §Talent (Rank).</summary>
+    public static string RankWords(TalentRank r) => r switch
     {
-        ForceRank.Student => "Jedi Student",
-        ForceRank.Knight => "Jedi Knight",
-        ForceRank.Master => "Jedi Master",
-        _ => "Jedi Trainee",
+        TalentRank.Deviation => "Deviation",
+        TalentRank.Anomaly => "Anomaly",
+        TalentRank.Unforecastable => "Unforecastable",
+        _ => "Latent",
     };
 
     static string SensorSizeWords(SensorSize s) => s switch
@@ -683,16 +683,16 @@ public sealed partial class GameSession
             case CharacterKilled c:
                 yield return new Message(d, Mine(c.Side) ? $"{CharName(c.Character)} was killed{At(c.System)}{CauseWords(c.Cause)}." : $"Enemy leader {CharName(c.Character)} was killed{At(c.System)}.", c.System, Mine(c.Side) ? MsgKind.Bad : MsgKind.Good);
                 break;
-            case ForceTrainingResult t when Mine(t.Side):
+            case TalentTrainingResult t when Mine(t.Side):
                 yield return new Message(d, t.Success
-                    ? $"Train Talent: {CharName(t.Student)} grew stronger in the Force under {CharName(t.Trainer)} (Force now {t.NewForce})."
+                    ? $"Train Talent: {CharName(t.Student)} grew in Talent under {CharName(t.Trainer)} (Talent now {t.NewTalent})."
                     : $"Train Talent: {CharName(t.Student)} made no progress with {CharName(t.Trainer)} this time.", null, t.Success ? MsgKind.Good : MsgKind.Info);
                 break;
-            case ForceRankChanged r when Mine(r.Side) && r.To is ForceRank to:
+            case TalentRankChanged r when Mine(r.Side) && r.To is TalentRank to:
                 yield return new Message(d, $"{CharName(r.Character)} is now a {RankWords(to)}.", null, MsgKind.Good);
                 break;
-            case ForceDiscovered f:
-                yield return new Message(d, Mine(f.Side) ? $"{CharName(f.Character)} is strong in the Force! Train Talent is now possible." : $"Enemy leader {CharName(f.Character)} is strong in the Force.", null, Mine(f.Side) ? MsgKind.Good : MsgKind.Warn);
+            case TalentDiscovered f:
+                yield return new Message(d, Mine(f.Side) ? $"{CharName(f.Character)} shows Talent! Train Talent is now possible." : $"Enemy leader {CharName(f.Character)} shows Talent.", null, Mine(f.Side) ? MsgKind.Good : MsgKind.Warn);
                 break;
 
             // ---- research

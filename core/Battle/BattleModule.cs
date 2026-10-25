@@ -146,7 +146,7 @@ public sealed class BattleModule
     private bool Present(string system, Side side) =>
         State.Fleets.Values.Any(f => f.At == system && f.Side == side) || _fleets.BasedSquadrons(system, side).Any();
 
-    private sealed class Force
+    private sealed class ArmedForce
     {
         public string System = "";
         public ulong Seed;
@@ -172,11 +172,11 @@ public sealed class BattleModule
         // generator); Game and the New ruleset take one draw per battle, in system-name order, also when none is needed. Forces are fixed now, so a
         // fleet that retreats into another battle's system this Step is not in that battle (it meets the enemy next Step).
         bool seedDraw = Params.Ruleset == BattleRuleset.New || Params.BattleRng == ClassicBattleRng.Game;
-        var forces = new List<Force>();
+        var forces = new List<ArmedForce>();
         foreach (var sys in systems)
         {
             uint seed = seedDraw ? unchecked((uint)ctx.Rng.NextInt(int.MinValue, int.MaxValue)) : 0; // exactly one native draw
-            forces.Add(BuildForce(sys, seed));
+            forces.Add(BuildArmedForce(sys, seed));
         }
 
         var touched = new SortedSet<string>(StringComparer.Ordinal);
@@ -184,9 +184,9 @@ public sealed class BattleModule
         foreach (var sys in touched) _fleets.RefreshBlockadeFlag(ctx, sys, day); // rule: m4-battle-classic §1.2 (blockade flags recomputed after the battle)
     }
 
-    private Force BuildForce(string sys, ulong seed)
+    private ArmedForce BuildArmedForce(string sys, ulong seed)
     {
-        var force = new Force { System = sys, Seed = seed };
+        var force = new ArmedForce { System = sys, Seed = seed };
         foreach (var side in new[] { Side.Collective, Side.Hand })
         {
             var fleets = State.Fleets.Values.Where(f => f.At == sys && f.Side == side).ToList();
@@ -260,7 +260,7 @@ public sealed class BattleModule
 
     // ================================================================== one battle
 
-    private void RunBattle(StepContext ctx, int day, Force force, SortedSet<string> touched)
+    private void RunBattle(StepContext ctx, int day, ArmedForce force, SortedSet<string> touched)
     {
         string sys = force.System;
         var collective = force.Units.Where(u => u.Side == Side.Collective).Select(u => u.ObjectId).ToList();
@@ -420,7 +420,7 @@ public sealed class BattleModule
         return best;
     }
 
-    private void Relocate(StepContext ctx, int day, Force force, Side side, SortedDictionary<string, int> set, SortedSet<string> touched)
+    private void Relocate(StepContext ctx, int day, ArmedForce force, Side side, SortedDictionary<string, int> set, SortedSet<string> touched)
     {
         string from = force.System;
         if (set.Count == 0) return;

@@ -22,7 +22,7 @@ public sealed partial class SimpleAi
     private Dictionary<string, int>? _belief; private int _beliefMax;
     private List<Fleet>? _scouts;
     private Dictionary<string, int>? _risk;
-    private readonly Dictionary<string, List<Force>> _targetForces = new(StringComparer.Ordinal);   // lookup only
+    private readonly Dictionary<string, List<ArmedForce>> _targetForces = new(StringComparer.Ordinal);   // lookup only
     private readonly Dictionary<(string, string, int), int> _ticks = new();                          // lookup only
 
     private readonly Dictionary<string, List<DefenderSeen>> _missionDefenders = new(StringComparer.Ordinal); // lookup only
@@ -52,11 +52,11 @@ public sealed partial class SimpleAi
     /// Enemy fleets the side believes stand at a system, for choosing targets: group E of the picture up to FogFleetMemoryDays old, whatever
     /// the knowledge level (a stale sighting is the best guess; the odds asked grow with its age, <see cref="TargetOdds"/>). No fog: the truth.
     /// </summary>
-    private List<Force> TargetFleetsAt(string system)
+    private List<ArmedForce> TargetFleetsAt(string system)
     {
         if (_view == null) return EnemyFleetsAt(system);
         if (_targetForces.TryGetValue(system, out var cached)) return cached;
-        var list = new List<Force>();
+        var list = new List<ArmedForce>();
         if (_view.Picture(system)?.Fleets is { } e && AgeOf(e) <= _p.FogFleetMemoryDays)
             foreach (var fp in e.Value) if (fp.Side != _side) list.Add(ForceOf(system, fp));
         return _targetForces[system] = list;
@@ -680,7 +680,7 @@ public sealed partial class SimpleAi
 
     /// <summary>
     /// The strength of the strongest enemy fleet the side knows of: without fog every enemy fleet; with fog the fleets of its picture (as
-    /// <see cref="Str(Force)"/>), each at its whole strength when seen within FogFleetMemoryDays and older ones fading by TaskForceFadePercent
+    /// <see cref="Str(ArmedForce)"/>), each at its whole strength when seen within FogFleetMemoryDays and older ones fading by TaskForceFadePercent
     /// per 100 days beyond that (QA-20: a fleet out of sight is not a fleet gone; the picture keeps a fleet's last sighting until that system
     /// is looked at again). 0 when none.
     /// </summary>

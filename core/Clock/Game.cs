@@ -51,7 +51,7 @@ public sealed class GameState
     public Praedra.Core.Fog.FogState Fog { get; init; } = new();
     /// <summary>Research points, levels, exhausted flags and tick timers per side; the two percents. rule: m5-research §State per side.</summary>
     public Praedra.Core.Research.ResearchState Research { get; init; } = new();
-    /// <summary>Every character (stats, Force, status, post, place, trip) and the system General table. rule: m5-characters-and-force §The character object.</summary>
+    /// <summary>Every character (stats, Talent, status, post, place, trip) and the system General table. rule: m5-characters-and-force §The character object.</summary>
     public Praedra.Core.Characters.CharacterState Characters { get; init; } = new();
     /// <summary>Every running mission group (team, decoys, trip, timer). rule: m5-missions §Orders, §Rule (Classic).</summary>
     public Praedra.Core.Missions.MissionState Missions { get; init; } = new();

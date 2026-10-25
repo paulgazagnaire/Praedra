@@ -98,7 +98,7 @@ public sealed partial class GameSession
         MissionKind.Assassination => "Kills an enemy leader. Skill: combat.",
         MissionKind.Recruitment => "Brings a new leader to your side at one of your systems.",
         MissionKind.SpikeTheHarvester => "Destroys an enemy harvester.",
-        MissionKind.TrainTalent => "Trains a Force user.",
+        MissionKind.TrainTalent => "Trains a talented character.",
         _ => "",
     };
 

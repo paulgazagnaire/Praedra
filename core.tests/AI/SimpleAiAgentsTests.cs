@@ -75,7 +75,7 @@ public class SimpleAiAgentsTests
         // re-pinned 2026-10-18: battle default New (m4-battle-new) on top of fog group D storing characters (m5-fog-and-hq, was 9188df4d...05ff).
         // With Battle.Ruleset = Classic the battle part matched the previous pin exactly (checked when re-pinned on the battle branch).
         // Talented re-pin 2026-10-18 (Dev lead; Paul's random trainers, m5-characters-and-force Rule New 4): TrainerPick is DEFAULT Random, so setup
-        // draws 3 talented per side and their Force (more draws, saved Talented, higher skills). With TrainerPick = Fixed the hash is exactly the
+        // draws 3 talented per side and their Talent (more draws, saved Talented, higher skills). With TrainerPick = Fixed the hash is exactly the
         // previous pin 55805ed7...c838 (checked when re-pinned, main 4691273).
         // Q17 re-pin 2026-10-18 (Dev lead; Paul's cards "Skip the strong" and "Leave out hunters"): the talented draw leaves out the already strong
         // and the never_talented hunters, so other characters are drawn. With TalentedSkipStrong and TalentedSkipFlagged off the hash is exactly
@@ -93,9 +93,10 @@ public class SimpleAiAgentsTests
         // QA-40 re-pin 2026-10-25 (the fixed v6 links; the rename pin was 48a89624...1270). All switches above unchanged.
         // Side words re-pin 2026-10-25 (Dev lead, Praedra names stage 3: Side.Hand -> Side.Hand...): the state JSON names its fields, so the hash
         // moved with the field names (QA-40 pin a492bf33...1d2e); the game is the same (a 1000-day campaign and 8 AI games print the same).
-        // Harvester words re-pin 2026-10-25 (stage 3b: DeathStar -> Harvester, Tractor -> HoldBeam in field and class names; side-words pin
-        // 8b911e2b...634a); the game is the same (the campaign and 8 AI games print the same).
-        Assert.Equal("f9bf473a98f332d3fc319ffe869f72cb01e8abc7351b0d3c43fa6add89dc5dad", h.StateHash());
+        // Harvester words re-pin 2026-10-25 (stage 3b: the harvester and Hold beam words in field and class names; side-words pin
+        // 8b911e2b...634a); Talent words re-pin 2026-10-25 (stage 3d: the Talent words in field names; harvester pin f9bf473a...dad);
+        // the game is the same each time (the campaign and 8 AI games print the same).
+        Assert.Equal("bec66201564b67f1492bf2abbe75a13bc0140bc2eac3dd9ccd00301e923139a6", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"

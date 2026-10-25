@@ -223,7 +223,7 @@ internal static class SimCli
         return 0;
     }
 
-    // The characters placed at setup (m5-setup-and-victory P9) with where they stand and their Force, per side.
+    // The characters placed at setup (m5-setup-and-victory P9) with where they stand and their Talent, per side.
     private static void PrintCast(GameHost host)
     {
         var ch = host.Characters;
@@ -232,7 +232,7 @@ internal static class SimCli
             var placed = ch.InPlay.Where(c => c.Side == side).Select(c =>
             {
                 string where = c.AttachedFleet != 0 ? $"fleet {c.AttachedFleet} at {ch.LocationOf(c)}" : ch.LocationOf(c) ?? "in transit";
-                string force = c.ForceUser ? $", Force {c.EffectiveForce}{(c.ForceDiscovered ? "" : " hidden")}" : "";
+                string force = c.TalentHolder ? $", Talent {c.EffectiveTalent}{(c.TalentDiscovered ? "" : " hidden")}" : "";
                 return $"{ch.ClassOf(c).Name} ({where}{force})";
             });
             Console.WriteLine($"Cast {side}: {string.Join("; ", placed)}. Pool: {ch.PoolOf(side).Count}.");

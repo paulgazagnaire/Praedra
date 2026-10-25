@@ -35,7 +35,7 @@ public class PlanMoveTests
     }
 
     [Fact]
-    public void PM2_WaypointsForceThePathAndTheOrderCarriesThem() // m1-travel PM2
+    public void PM2_WaypointsSetThePathAndTheOrderCarriesThem() // m1-travel PM2
     {
         var (h, f) = Corvette();
         var fast = h.PlanMove(Side.Collective, f, "The Thaw");

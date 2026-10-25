@@ -57,11 +57,11 @@ public sealed record MissionDetectionRoll(int Index, int Day, int Mission, Side 
     : GameEvent(Index, Day, nameof(MissionDetectionRoll));
 
 /// <summary>What foiled a mission. rule: m5-missions §3 (B2b §1: sensing, betrayal, then the detection walk).</summary>
-public enum MissionFoilCause { Detected, ForceSensed, Betrayed }
+public enum MissionFoilCause { Detected, TalentSensed, Betrayed }
 
 /// <summary>
 /// The mission was foiled: no success roll, no effect; the mission ends Foiled. Detected: Defender and DefenderClass name the unit (Character 0).
-/// ForceSensed: Character is the first senser whose hit foiled it; Betrayed: Character is the traitor (Defender 0, DefenderClass ""). rule: §4.
+/// TalentSensed: Character is the first senser whose hit foiled it; Betrayed: Character is the traitor (Defender 0, DefenderClass ""). rule: §4.
 /// </summary>
 public sealed record MissionFoiled(int Index, int Day, int Mission, Side Side, string System, int Defender, string DefenderClass,
     MissionFoilCause Cause = MissionFoilCause.Detected, int Character = 0, int EndCode = 4)
@@ -84,20 +84,20 @@ public sealed record MissionKeyDuelCaptureRoll(int Index, int Day, int Mission, 
     bool Captured)
     : GameEvent(Index, Day, nameof(MissionKeyDuelCaptureRoll));
 
-/// <summary>One Force sensing draw: group Force user Member against enemy Senser, chance p = Force + Force - 100 (only drawn when p > 0). rule: §3 Force sensing.</summary>
-public sealed record MissionForceSenseRoll(int Index, int Day, int Mission, Side Side, string Target, int Member, int Senser, int Chance, int Roll, bool Sensed)
-    : GameEvent(Index, Day, nameof(MissionForceSenseRoll));
+/// <summary>One Talent sensing draw: group talented character Member against enemy Senser, chance p = Talent + Talent - 100 (only drawn when p > 0). rule: §3 Talent sensing.</summary>
+public sealed record MissionTalentSenseRoll(int Index, int Day, int Mission, Side Side, string Target, int Member, int Senser, int Chance, int Roll, bool Sensed)
+    : GameEvent(Index, Day, nameof(MissionTalentSenseRoll));
 
-/// <summary>A senser sensed a group member. A team member foils the mission (Foiled true); a sensed decoy foils nothing. rule: §3 Force sensing step 4.</summary>
-public sealed record MissionForceSensed(int Index, int Day, int Mission, Side Side, string Target, int Member, bool Decoy, int Senser, bool Foiled)
-    : GameEvent(Index, Day, nameof(MissionForceSensed));
+/// <summary>A senser sensed a group member. A team member foils the mission (Foiled true); a sensed decoy foils nothing. rule: §3 Talent sensing step 4.</summary>
+public sealed record MissionTalentSensed(int Index, int Day, int Mission, Side Side, string Target, int Member, bool Decoy, int Senser, bool Foiled)
+    : GameEvent(Index, Day, nameof(MissionTalentSensed));
 
 /// <summary>
-/// Two Force users learned of each other (0x55ff60): each records the other and both sides are told, so the event has no Side field.
-/// rule: §3 Force sensing step 4.
+/// Two talented characters learned of each other (0x55ff60): each records the other and both sides are told, so the event has no Side field.
+/// rule: §3 Talent sensing step 4.
 /// </summary>
-public sealed record ForceUserDiscovered(int Index, int Day, int Mission, int Member, Side MemberSide, int Senser, Side SenserSide)
-    : GameEvent(Index, Day, nameof(ForceUserDiscovered));
+public sealed record TalentHolderDiscovered(int Index, int Day, int Mission, int Member, Side MemberSide, int Senser, Side SenserSide)
+    : GameEvent(Index, Day, nameof(TalentHolderDiscovered));
 
 /// <summary>One member's betrayal draw: chance 100 - loyalty, drawn even when 0. rule: §3 Betrayal.</summary>
 public sealed record MissionBetrayalRoll(int Index, int Day, int Mission, Side Side, string Target, int Member, bool IsCharacter, int Chance, int Roll, bool Betrays)

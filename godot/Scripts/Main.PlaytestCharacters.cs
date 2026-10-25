@@ -32,7 +32,7 @@ public partial class Main
         var theirs = me == Side.Collective ? new[] { "Cassia Ravilla", "The Chair" } : new[] { "Nobody", "Ledger", "Mae Abara" };
         Expect(!theirs.Any(all.Contains), "no enemy leader is listed (the side cannot see them)");
         Expect(panel.Contains("Where: ") && panel.Contains("Role: ") && panel.Contains("Leadership "), "where, role and skills are shown");
-        Expect(panel.Contains("Force: Jedi"), "the Force rank of the known Jedi is shown");
+        Expect(panel.Contains("; Talent: "), "the Talent rank of the known talented character is shown");
         GD.Print("  characters: " + string.Join(" | ", s.MyCharacters.Select(c => $"{s.CharName(c.Id)} {s.WhereIsCharacter(c)} [{s.RoleOf(c)}] {s.CapabilityOf(c)}")));
 
         bool CanPost(CharacterRecord c) { var k = cm.ClassOf(c); return k.CanAdmiral || k.CanCommander || k.CanGeneral; }

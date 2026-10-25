@@ -14,7 +14,7 @@ public class OldSaveLoadTests
     {
         var loaded = GameHost.Load(OldSave());
         Assert.Equal(60, loaded.Game.Day);
-        Assert.Equal("50bd1fea6dd1bcfcad8bca17e4eea326cbec55897cb3679f79fb735957cf4055", loaded.StateHash()); // loaded with the Praedra names and words (side words only: 9105e202...) (the state JSON names its fields, so the hash moved; with the names only: 7861e101..., before them: 620900ae..., the hash 492d052 printed for this game)
+        Assert.Equal("bd7426f2b5f0012a2f10f7cea3bf832a17f7037c2da9818efeecc92e2df20010", loaded.StateHash()); // loaded with the Praedra names and words (up to the harvester words: 50bd1fea..., side words only: 9105e202...) (the state JSON names its fields, so the hash moved; with the names only: 7861e101..., before them: 620900ae..., the hash 492d052 printed for this game)
         Assert.Equal(Praedra.Core.Battle.ClassicBattleRng.Classic, loaded.Settings.Battle!.BattleRng);
         Assert.Equal(Praedra.Core.Battle.ClassicTaskForces.Classic, loaded.Settings.Battle!.TaskForces);
         Assert.Equal(Praedra.Core.Characters.StartCastOfficers.Classic, loaded.Settings.Characters!.StartCastOfficers);

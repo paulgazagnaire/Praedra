@@ -12,8 +12,8 @@ public enum CharacterPost { None, Admiral, Commander, General }
 /// <summary>Any post, for <see cref="PostVacated"/>: the three fleet posts and the system's General.</summary>
 public enum PostKind { Admiral, Commander, General, SystemGeneral }
 
-/// <summary>Jedi rank from the effective Force (display and eligibility only). rule: m5-characters-and-force §Force (Rank).</summary>
-public enum ForceRank { Trainee, Student, Knight, Master }
+/// <summary>Talent rank from the effective Talent (display and eligibility only). rule: m5-characters-and-force §Talent (Rank).</summary>
+public enum TalentRank { Latent, Deviation, Anomaly, Unforecastable }
 
 /// <summary>
 /// Saved runtime state of one character (all in the state hash). rule: m5-characters-and-force §The character object (saved runtime state).
@@ -30,22 +30,22 @@ public sealed class CharacterRecord
     public List<int> Skills { get; set; } = new();
     public int Loyalty { get; set; }
     /// <summary>
-    /// <c>ForceExperience</c> (+0x8e): rolled <c>jedi_level + rand(0..jedi_level_variance)</c> when the character has both ForcePotential and
-    /// ForceAware (0x4eee60), and raised by the Force-user encounter. 0 until then: a Force user has Force 0 until he is aware. Was <c>ForceBase</c>.
-    /// rule: m5-characters-and-force §Force (Traced B2e §1, §5).
+    /// <c>TalentExperience</c> (+0x8e): rolled <c>tlvl + rand(0..tlvlv)</c> when the character has both TalentPotential and
+    /// TalentAware (0x4eee60), and raised by the Talent encounter. 0 until then: a talented character has Talent 0 until he is aware. Was <c>TalentBase</c>.
+    /// rule: m5-characters-and-force §Talent (Traced B2e §1, §5).
     /// </summary>
-    public int ForceExperience { get; set; }
-    /// <summary><c>ForceTraining</c> (+0x90), written only by Train Talent. Was <c>ForceAcquired</c>. rule: §Force (Traced B2e §1).</summary>
-    public int ForceTraining { get; set; }
-    /// <summary>ForcePotential (+0xac bit 0x20): the character has the Force, known or not. rule: §Rolling the stats (awakening), §Force.</summary>
-    public bool ForceUser { get; set; }
-    /// <summary>ForceAware (+0xac bit 0x10): the character knows he has the Force (trainable, Force rolled). rule: §Force (Force discovery; B2e §5).</summary>
-    public bool ForceDiscovered { get; set; }
+    public int TalentExperience { get; set; }
+    /// <summary><c>TalentTraining</c> (+0x90), written only by Train Talent. Was <c>TalentAcquired</c>. rule: §Talent (Traced B2e §1).</summary>
+    public int TalentTraining { get; set; }
+    /// <summary>TalentPotential (+0xac bit 0x20): the character has Talent, known or not. rule: §Rolling the stats (awakening), §Talent.</summary>
+    public bool TalentHolder { get; set; }
+    /// <summary>TalentAware (+0xac bit 0x10): the character knows he has Talent (trainable, Talent rolled). rule: §Talent (Talent discovery; B2e §5).</summary>
+    public bool TalentDiscovered { get; set; }
     /// <summary>Drawn talented at setup: can train and awaken under <see cref="TrainerPick.Random"/>. rule: §Rule (New) 4.</summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public bool Talented { get; set; }
     /// <summary>
-    /// Injury points (+0x94, 0..32767): they come off effective combat and heal 1 a day (2 with Force 80+) while Healing. Injured status = points
+    /// Injury points (+0x94, 0..32767): they come off effective combat and heal 1 a day (2 with Talent 80+) while Healing. Injured status = points
     /// above 0 while not captured or dead. Replaces <c>injured_days_left</c>. rule: §Capture, injury, death, freeing (Traced B2e §2).
     /// </summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
@@ -55,14 +55,14 @@ public sealed class CharacterRecord
     public int LeadershipAdjustment { get; set; }
     /// <summary>
     /// The pair id (character data +0x34) stamped on both characters when they discovered each other (0x55ff60), from
-    /// <see cref="CharacterState.NextPairId"/>; the encounter needs the same non-zero id on both. 0 = none. rule: §Force (B2e §4).
+    /// <see cref="CharacterState.NextPairId"/>; the encounter needs the same non-zero id on both. 0 = none. rule: §Talent (B2e §4).
     /// </summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public int PairId { get; set; }
-    /// <summary>KnowsHeritage (Luke and Leia, +0xb0 bit 0x1; name inferred from the string order). rule: §Force (B2e §4, §5).</summary>
+    /// <summary>KnowsHeritage (Luke and Leia, +0xb0 bit 0x1; name inferred from the string order). rule: §Talent (B2e §4, §5).</summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public bool KnowsHeritage { get; set; }
-    /// <summary>The trainer who awakened this character (+0xa4; record id, 0 = none). rule: §Force (B2e §5).</summary>
+    /// <summary>The trainer who awakened this character (+0xa4; record id, 0 = none). rule: §Talent (B2e §5).</summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public int AwakenedBy { get; set; }
     /// <summary>
@@ -77,15 +77,15 @@ public sealed class CharacterRecord
     /// </summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public int NextHealDay { get; set; }
-    /// <summary>The awakening timer (event 0x389) of a trainer whose DiscoveringForceUser flag is on; 0 = off. Same alignment. rule: §Force (B2e §5, §7).</summary>
+    /// <summary>The awakening timer (event 0x389) of a trainer whose DiscoveringTalentHolder flag is on; 0 = off. Same alignment. rule: §Talent (B2e §5, §7).</summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public int NextAwakenDay { get; set; }
     /// <summary>
-    /// The enemy Force user this character sensed or was sensed by (record id; 0 = none). Traced +0x9c "ForceUserDiscoveredKey" (B2b, 0x4ee500).
-    /// Cleared by the Force-user encounter (B2e §4 step 6). Omitted from the save while 0, so older saves and hashes are unchanged. rule: m5-missions §3 Force sensing.
+    /// The enemy talented character this character sensed or was sensed by (record id; 0 = none). Traced +0x9c "TalentHolderDiscoveredKey" (B2b, 0x4ee500).
+    /// Cleared by the Talent encounter (B2e §4 step 6). Omitted from the save while 0, so older saves and hashes are unchanged. rule: m5-missions §3 Talent sensing.
     /// </summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
-    public int DiscoveredForceUser { get; set; }
+    public int DiscoveredTalentHolder { get; set; }
     /// <summary>The traitor this character identified (record id; 0 = none). Traced +0xa0 "TraitorDiscoveredKey" (B2b, 0x4ee5c0). Omitted while 0. rule: m5-missions §3 Betrayal.</summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public int IdentifiedTraitor { get; set; }
@@ -121,22 +121,22 @@ public sealed class CharacterRecord
     /// <summary>A lone character's trip, exactly as a fleet's. rule: m5-characters-and-force §Moving a character alone.</summary>
     public FleetTransit? Transit { get; set; }
 
-    /// <summary>Force <c>F</c> (+0x8c) = ForceExperience + ForceTraining (0x4eee40). rule: §Force (Traced B2e §1).</summary>
-    [System.Text.Json.Serialization.JsonIgnore] public int EffectiveForce => ForceExperience + ForceTraining;
+    /// <summary>Talent <c>F</c> (+0x8c) = TalentExperience + TalentTraining (0x4eee40). rule: §Talent (Traced B2e §1).</summary>
+    [System.Text.Json.Serialization.JsonIgnore] public int EffectiveTalent => TalentExperience + TalentTraining;
     /// <summary>The rolled (base) skill (+0x58..+0x64). Rules read <see cref="EffectiveSkill"/>; this is for growth and display of the base.</summary>
     public int BaseSkill(Skill s) => Skills[(int)s];
 
     /// <summary>
     /// The effective skill every rule reads (B2b, B2d, mission odds, the AI): diplomacy and espionage <c>B + B * F * pct / 10000</c>; the three
     /// research skills <c>B</c>; combat <c>max(0, B + B * F * pct / 10000 - Injury)</c>; leadership <c>B + B * LeadershipAdjustment / 100</c>.
-    /// Integer division; <paramref name="forceSkillPercent"/> is <see cref="CharacterParams.ForceSkillPercent"/> (100 = Classic, bit-identical to
+    /// Integer division; <paramref name="forceSkillPercent"/> is <see cref="CharacterParams.TalentSkillPercent"/> (100 = Classic, bit-identical to
     /// <c>B + B * F / 100</c>). Callers go through <see cref="CharacterModule.EffectiveSkill"/>.
-    /// rule: m5-characters-and-force §Force (effects; Traced B2e §1: 0x4eecb0, 0x4eecf0, 0x4eed30..0x4eed70, 0x4eed90, 0x4eede0).
+    /// rule: m5-characters-and-force §Talent (effects; Traced B2e §1: 0x4eecb0, 0x4eecf0, 0x4eed30..0x4eed70, 0x4eed90, 0x4eede0).
     /// </summary>
     public int EffectiveSkill(Skill s, int forceSkillPercent)
     {
-        int b = Skills[(int)s], f = EffectiveForce;
-        // rule: m5-characters-and-force §Force (New, Paul 2026-10-18; Classic = 100)
+        int b = Skills[(int)s], f = EffectiveTalent;
+        // rule: m5-characters-and-force §Talent (New, Paul 2026-10-18; Classic = 100)
         int force = b * f * forceSkillPercent / (PercentDivisor * PercentDivisor);
         return s switch
         {
@@ -152,8 +152,8 @@ public sealed class CharacterRecord
 
     internal CharacterRecord Clone() => new()
     {
-        Id = Id, Side = Side, Placed = Placed, Skills = new List<int>(Skills), Loyalty = Loyalty, ForceExperience = ForceExperience, ForceTraining = ForceTraining,
-        ForceUser = ForceUser, ForceDiscovered = ForceDiscovered, Talented = Talented, DiscoveredForceUser = DiscoveredForceUser, IdentifiedTraitor = IdentifiedTraitor, Status = Status, System = System, AttachedFleet = AttachedFleet, Post = Post,
+        Id = Id, Side = Side, Placed = Placed, Skills = new List<int>(Skills), Loyalty = Loyalty, TalentExperience = TalentExperience, TalentTraining = TalentTraining,
+        TalentHolder = TalentHolder, TalentDiscovered = TalentDiscovered, Talented = Talented, DiscoveredTalentHolder = DiscoveredTalentHolder, IdentifiedTraitor = IdentifiedTraitor, Status = Status, System = System, AttachedFleet = AttachedFleet, Post = Post,
         Captor = Captor, HeldAt = HeldAt, HeldAboard = HeldAboard, HeldAboardShip = HeldAboardShip, ReturnPlace = ReturnPlace, AutoroutePending = AutoroutePending, JoinFleet = JoinFleet, Injury = Injury, LeadershipAdjustment = LeadershipAdjustment, PairId = PairId, KnowsHeritage = KnowsHeritage,
         AwakenedBy = AwakenedBy, NextEscapeDay = NextEscapeDay, NextHealDay = NextHealDay, NextAwakenDay = NextAwakenDay,
         Transit = Transit == null ? null : new FleetTransit
@@ -167,7 +167,7 @@ public sealed class CharacterState
     public SortedDictionary<int, CharacterRecord> Characters { get; init; } = new();
     /// <summary>System name -> character id of its General (one per system). rule: §The character object (SystemGeneral table).</summary>
     public SortedDictionary<string, int> SystemGenerals { get; init; } = new(StringComparer.Ordinal);
-    /// <summary>The last pair id handed out (the game-wide counter of 0x55ff60); 0 = none yet. rule: m5-characters-and-force §Force (B2e §4).</summary>
+    /// <summary>The last pair id handed out (the game-wide counter of 0x55ff60); 0 = none yet. rule: m5-characters-and-force §Talent (B2e §4).</summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public int NextPairId { get; set; }
     /// <summary>
