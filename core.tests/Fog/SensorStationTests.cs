@@ -11,7 +11,7 @@ using Praedra.Core.Tests.Control;
 namespace Praedra.Core.Tests.Fog;
 
 // Sensor Station tests SS1 to SS22 of m5-fog-and-hq §N4 (route-only, N-day warning: movement-redesign-draft §C; window 10 days Decided by
-// Paul 2026-10-16), on Map M (FogWorld: chain C0 - R1 - R2 - R3 - R4, every one a route system; Ilum on no route; Empire holds C0 and R1,
+// Paul 2026-10-16), on Map M (FogWorld: chain C0 - R1 - R2 - R3 - R4, every one a route system; Glasswood on no route; Empire holds C0 and R1,
 // Alliance holds R2, R3, R4; Empire fleet E1 of 3 Imperial Star Destroyers at R1). Map M travels hop by hop along its links (TravelMode.Lanes),
 // so every leg is a route leg; SS17 and SS7b use TravelMode.Straight for off-route jumps. The tests read the day a fleet really reaches a
 // system from FleetArrived / FleetPassed, so they do not depend on a link's travel time.

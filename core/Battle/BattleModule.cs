@@ -78,7 +78,7 @@ public sealed class BattleModule
 
     /// <summary>
     /// The AI side's threshold at the Battle Alert, from its own view of the system (B6a §2): 0.9 unless it holds the system with a usable planet squadron;
-    /// then 0 at Coruscant or an HQ world, else min(A / B, 0.9) with A, B the firepower of its fleets and of the other fleets there (B = 0: r = A).
+    /// then 0 at Charter or an HQ world, else min(A / B, 0.9) with A, B the firepower of its fleets and of the other fleets there (B = 0: r = A).
     /// DEFAULT: the AI has a record of every fleet in the battle (they are at its system); the save-only flag +0x418 and "no posture yet" are not modelled.
     /// rule: B6a §2.
     /// </summary>

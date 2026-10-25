@@ -15,7 +15,7 @@ public enum DealMode { Anchored, File }
 /// </summary>
 public sealed record DealParams
 {
-    /// <summary>The HQ is at least this many map units (straight line) from Coruscant. Proposal, m5-setup-and-victory §P1 HQ pick (HqMinDistance; setup-victory/10 v5 banner, replaces "5 lane hops" and "2 lanes").</summary>
+    /// <summary>The HQ is at least this many map units (straight line) from Charter. Proposal, m5-setup-and-victory §P1 HQ pick (HqMinDistance; setup-victory/10 v5 banner, replaces "5 lane hops" and "2 lanes").</summary>
     public int HqMinDistance { get; init; } = 200;
     /// <summary>The totals table is written for this many systems; totals scale by (systems in sectors) / this, rounded half up. DEFAULT, setup-victory/10 v5 banner (keeps the Classic share; Medium: Empire 90 -> 138, Alliance 25 -> 38 at 553 in sectors).</summary>
     public int TotalsBaseSystems { get; init; } = 360;
@@ -74,9 +74,9 @@ public sealed record AnchoredDeal(IReadOnlyList<DayOneRow> Rows, string Hq, IRea
 public static class AnchoredDealer
 {
     private const string Core = "core", InnerRim = "inner_rim", OuterRim = "outer_rim"; // group names, m1-galaxy-data
-    private const string Yavin = "Yavin", Coruscant = "Coruscant"; // fixed by the original, m5-setup-and-victory §P1 (Traced: both looked up by id)
+    private const string Yavin = "The Shoal", Coruscant = "Charter"; // fixed by the original, m5-setup-and-victory §P1 (Traced: both looked up by id)
 
-    /// <summary>The checks of the anchors file against the galaxy: every anchor exists, no duplicates, none is Coruscant or Yavin. rule: m5-setup-and-victory §Mode Anchored step 1</summary>
+    /// <summary>The checks of the anchors file against the galaxy: every anchor exists, no duplicates, none is Charter or The Shoal. rule: m5-setup-and-victory §Mode Anchored step 1</summary>
     public static void Validate(Galaxy g, IReadOnlyList<AnchorRow> anchors)
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -97,11 +97,11 @@ public static class AnchoredDealer
         string GroupOf(int i) => g.Systems[i].Group;
         bool IsRim(int i) => GroupOf(i) is InnerRim or OuterRim;
         string Affiliation(int i) => g.Systems[i].Carried.TryGetValue("affiliation", out var a) ? a.Trim() : "";
-        bool InSectors(int i) => !g.Systems[i].IsOutsideSectors; // Ilum and Csilla are never dealt
+        bool InSectors(int i) => !g.Systems[i].IsOutsideSectors; // Glasswood and Frostholm are never dealt
 
         // ---- step 1: fixed
         g.TryFindSystem(Coruscant, out int coruscant);
-        if (!g.TryFindSystem(Yavin, out int yavin)) throw new SetupException("The galaxy has no Yavin.");
+        if (!g.TryFindSystem(Yavin, out int yavin)) throw new SetupException("The galaxy has no The Shoal.");
         var owner = new Side?[n];
         var locked = new bool[n];
         var anchor = new bool[n];
@@ -117,11 +117,11 @@ public static class AnchoredDealer
             else locked[i] = true; // locked neutral: never dealt, never scattered
         }
 
-        // ---- step 2: HQ (1 draw). Candidates: rim, not Yavin, not an anchor of any kind, far enough from Coruscant (straight line).
+        // ---- step 2: HQ (1 draw). Candidates: rim, not The Shoal, not an anchor of any kind, far enough from Charter (straight line).
         var candidates = new List<int>();
         for (int i = 0; i < n; i++)
             if (IsRim(i) && i != yavin && !anchor[i] && MapDistance(g, i, coruscant) >= p.HqMinDistance) candidates.Add(i);
-        if (candidates.Count == 0) throw new SetupException("No system satisfies the HQ candidate rule (rim, not an anchor, far enough from Coruscant).");
+        if (candidates.Count == 0) throw new SetupException("No system satisfies the HQ candidate rule (rim, not an anchor, far enough from Charter).");
         candidates.Sort((a, b) => string.CompareOrdinal(Name(a), Name(b)));
         int hq = candidates[rng.NextInt(0, candidates.Count - 1)];
         owner[hq] = Side.Alliance;
@@ -179,7 +179,7 @@ public static class AnchoredDealer
         }
         foreach (int i in extras) owner[i] = Side.Alliance;
 
-        // ---- step 6: grow pockets (Blocs step 5), seeds in order Yavin, the HQ, the Alliance anchors, the extras
+        // ---- step 6: grow pockets (Blocs step 5), seeds in order The Shoal, the HQ, the Alliance anchors, the extras
         var seeds = new List<int> { yavin, hq }; seeds.AddRange(allianceAnchors); seeds.AddRange(extras);
         var pockets = seeds.Select(s => new List<int> { s }).ToList();
         int placed = extras.Count;
@@ -218,7 +218,7 @@ public static class AnchoredDealer
             if (IsRim(loose[k])) { owner[loose[k]] = Side.Alliance; aPlaced++; }
         if (aPlaced < scatterA) shortfalls.Add(new DealShortfall(Side.Alliance, scatterA - aPlaced, "scatter"));
 
-        // ---- step 8: strong and weak. Anchors, Coruscant, Yavin and the HQ are strong; the shuffled lists decide the rest (Empire list first, then Alliance).
+        // ---- step 8: strong and weak. Anchors, Charter, The Shoal and the HQ are strong; the shuffled lists decide the rest (Empire list first, then Alliance).
         var weak = new bool[n];
         int empireExceptCoruscant = 0;
         var ed = new List<int>(); var ad = new List<int>();

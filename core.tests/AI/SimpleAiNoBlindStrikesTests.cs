@@ -6,7 +6,7 @@ using Praedra.Core.Setup;
 namespace Praedra.Core.Tests.AI;
 
 // QA-22 (QA round 38): the AI shelled worlds where it saw nothing to hit (Medium mirror seed 3: 401 of 461 strikes had no military target, a
-// strike every 3 days on Dathomir on days 259-268). Under B7 an empty Military strike always rolls collateral against the bomber. The AI now
+// strike every 3 days on Redfen on days 259-268). Under B7 an empty Military strike always rolls collateral against the bomber. The AI now
 // can order a Military strike only when its picture shows a military target there. rule: ai tuning, SimpleAiParams.NoBlindStrikes (DEFAULT
 // off, measured: it does not end more games on B7 main and weakens Hard; New AI rule, no sheet); B7-bombardment §5.3; m3-bombardment §Targets.
 public class SimpleAiNoBlindStrikesTests

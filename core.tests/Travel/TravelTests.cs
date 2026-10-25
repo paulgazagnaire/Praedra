@@ -24,37 +24,37 @@ public class TravelTests
     {
         // v6 re-pin 2026-10-24: Coruscant-Corellia is no longer a link; Coruscant's great-route links are 18 and 29 units, too short
         // to show the rounding, so the leg is the longest great-route link, Epikonia-Vondarc (Long Haul, 111 units).
-        Assert.Equal(1, G.FindLane("Epikonia", "Vondarc")!.Tier);
-        Assert.Equal(111, MapDist(G, "Epikonia", "Vondarc"));
-        Assert.Equal(new[] { 7, 6, 4, 4 }, new[] { 100, 80, 60, 50 }.Select(s => Leg("Epikonia", "Vondarc", s))); // 7.4, 5.92, 4.44, 3.7
+        Assert.Equal(1, G.FindLane("Ellerbeck", "Longquay")!.Tier);
+        Assert.Equal(111, MapDist(G, "Ellerbeck", "Longquay"));
+        Assert.Equal(new[] { 7, 6, 4, 4 }, new[] { 100, 80, 60, 50 }.Select(s => Leg("Ellerbeck", "Longquay", s))); // 7.4, 5.92, 4.44, 3.7
     }
 
     [Fact]
     public void T2_CoruscantYavinOffRouteIsTheOriginalFormula() // m1-travel T2: (isqrt / 5) * speed / 100, both divisions floored (Traced)
     {
-        // v6 re-pin 2026-10-24: Yavin is 294 units from Coruscant (was 240); 58 * 80 / 100 = 46.4, 58 * 50 / 100 = 29.
-        Assert.Equal(58, MapDist(G, "Coruscant", "Yavin") / 5);
-        Assert.Equal(new[] { 58, 46, 29 }, new[] { 100, 80, 50 }.Select(s => OffRoute("Coruscant", "Yavin", s)));
-        Assert.Null(G.FindLane("Coruscant", "Yavin"));
+        // v6 re-pin 2026-10-24: The Shoal is 294 units from Charter (was 240); 58 * 80 / 100 = 46.4, 58 * 50 / 100 = 29.
+        Assert.Equal(58, MapDist(G, "Charter", "The Shoal") / 5);
+        Assert.Equal(new[] { 58, 46, 29 }, new[] { 100, 80, 50 }.Select(s => OffRoute("Charter", "The Shoal", s)));
+        Assert.Null(G.FindLane("Charter", "The Shoal"));
     }
 
     [Fact]
     public void T3_ShortMajorLeg() // m1-travel T3
     {
         // v6 re-pin 2026-10-24: Corellia-Duros is no longer a link; Azbian-Contruum is a 25-unit great-route link.
-        Assert.Equal(1, G.FindLane("Azbian", "Contruum")!.Tier);
-        Assert.Equal(25, MapDist(G, "Azbian", "Contruum"));
-        Assert.Equal(new[] { 2, 1, 1 }, new[] { 100, 80, 50 }.Select(s => Leg("Azbian", "Contruum", s))); // 1.67, 1.33, 0.83 raised to 1
+        Assert.Equal(1, G.FindLane("Kaolin", "Puerto Hierro")!.Tier);
+        Assert.Equal(25, MapDist(G, "Kaolin", "Puerto Hierro"));
+        Assert.Equal(new[] { 2, 1, 1 }, new[] { 100, 80, 50 }.Select(s => Leg("Kaolin", "Puerto Hierro", s))); // 1.67, 1.33, 0.83 raised to 1
     }
 
     [Fact]
     public void T4_CoruscantMinorRoute() // m1-travel T4: factor 150
     {
-        // v6 re-pin 2026-10-24: Coruscant's minor link is Uveron (was Corulag).
-        int d = MapDist(G, "Coruscant", "Uveron");
-        Assert.Equal(150, G.FindLane("Coruscant", "Uveron")!.FactorPercent);
-        Assert.Equal((d * 100 * 2 + 750) / 1500, Leg("Coruscant", "Uveron", 100));
-        Assert.Equal(Math.Max(1, (d * 80 * 2 + 750) / 1500), Leg("Coruscant", "Uveron", 80));
+        // v6 re-pin 2026-10-24: Coruscant's minor link is Hartwell (was Tutela).
+        int d = MapDist(G, "Charter", "Hartwell");
+        Assert.Equal(150, G.FindLane("Charter", "Hartwell")!.FactorPercent);
+        Assert.Equal((d * 100 * 2 + 750) / 1500, Leg("Charter", "Hartwell", 100));
+        Assert.Equal(Math.Max(1, (d * 80 * 2 + 750) / 1500), Leg("Charter", "Hartwell", 80));
     }
 
     [Theory]
@@ -70,18 +70,18 @@ public class TravelTests
 
     [Fact]
     public void T6_FleetSpeedIsLargestRating() // m1-travel T6
-        => Assert.Equal(100, SpeedOf("Imperial Star Destroyer", "Medium Transport"));
+        => Assert.Equal(100, SpeedOf("Mandate", "Mule"));
 
     [Fact]
     public void T7_MonCalamariAndIsd() // m1-travel T7
-        => Assert.Equal(80, SpeedOf("Mon Calamari Cruiser", "Imperial Star Destroyer"));
+        => Assert.Equal(80, SpeedOf("Ark", "Mandate"));
 
     [Fact]
     public void T8_TieFighterAloneIsImmobile() // m1-travel T8
     {
-        int speed = SpeedOf("TIE Fighter");
+        int speed = SpeedOf("Gleaner");
         Assert.Equal(0, speed);
-        var r = new Pathfinder(G).Find("Coruscant", "Corellia", speed);
+        var r = new Pathfinder(G).Find("Charter", "Classis", speed);
         Assert.Equal(PathStatus.Immobile, r.Status);
     }
 
@@ -90,7 +90,7 @@ public class TravelTests
     {
         Assert.Equal(0, TravelFormula.FleetSpeed(new[] { 80, 0 }, Array.Empty<int>()));
         Assert.Equal(80, TravelFormula.FleetSpeed(new[] { 80 }, new[] { 0, 60 })); // carried squadrons never count
-        Assert.Equal(60, SpeedOf("X-wing")); // squadron-only fleet uses squadron ratings
+        Assert.Equal(60, SpeedOf("Swift")); // squadron-only fleet uses squadron ratings
         Assert.Equal(100, TravelFormula.FleetSpeed(Array.Empty<int>(), Array.Empty<int>())); // unrated: default 100
     }
 
@@ -106,22 +106,22 @@ public class TravelTests
     [Fact]
     public void T9_CoruscantToHothRidesTheRoutes() // m1-travel T9 (real data, speed 80)
     {
-        var r = new Pathfinder(G).Find("Coruscant", "Hoth", 80);
+        var r = new Pathfinder(G).Find("Charter", "The Thaw", 80);
         Assert.True(r.Ok);
-        Assert.Equal(45, r.TotalTicks); // v6 re-pin 2026-10-24 (was 32): Hoth is 432 units out on the spiral rim
+        Assert.Equal(45, r.TotalTicks); // v6 re-pin 2026-10-24 (was 32): The Thaw is 432 units out on the spiral rim
         var names = r.Names(G);
-        Assert.Equal(new[] { "Coruscant", "Tralus", "Talus" }, names.Take(3)); // v6 re-pin 2026-10-24: out along the Trunk Line
-        Assert.Equal("Hoth", names[^1]);
+        Assert.Equal(new[] { "Charter", "Bina Major", "Bina Minor" }, names.Take(3)); // v6 re-pin 2026-10-24: out along the Trunk Line
+        Assert.Equal("The Thaw", names[^1]);
         foreach (var mid in r.Systems.Skip(1).SkipLast(1)) Assert.True(G.OnRoute(mid)); // never stops at an off-route system on the way
-        Assert.False(G.OnRoute(G.Get("Hoth").Index)); // Hoth is off every route: the last leg is off-route
+        Assert.False(G.OnRoute(G.Get("The Thaw").Index)); // The Thaw is off every route: the last leg is off-route
     }
 
     [Fact]
     public void T10_ClassicStraightLineIsOneLeg() // m1-travel T10 (TravelMode.Straight, the Classic rule)
     {
         var pf = new Pathfinder(G, TravelMode.Straight);
-        var r = pf.Find("Coruscant", "Hoth", 80);
-        AssertPath(r, G, new[] { "Coruscant", "Hoth" }, new[] { OffRoute("Coruscant", "Hoth", 80) }, OffRoute("Coruscant", "Hoth", 80));
+        var r = pf.Find("Charter", "The Thaw", 80);
+        AssertPath(r, G, new[] { "Charter", "The Thaw" }, new[] { OffRoute("Charter", "The Thaw", 80) }, OffRoute("Charter", "The Thaw", 80));
         Assert.Equal(68, r.TotalTicks); // v6 re-pin 2026-10-24: 432 / 5 = 86, 86 * 80 / 100 = 68.8
     }
 
@@ -187,11 +187,11 @@ public class TravelTests
     [Fact]
     public void T16_NavigatorOnIsdFleet() // m1-travel T16
     {
-        var fleet = SpeedOf("Imperial Star Destroyer");
+        var fleet = SpeedOf("Mandate");
         Assert.Equal(80, fleet);
         var nav = TravelFormula.NavigatorSpeed(fleet, 80);
         Assert.Equal(64, nav);
-        Assert.Equal(5, Leg("Epikonia", "Vondarc", nav)); // v6 re-pin 2026-10-24 (the T1 leg): 111 * 64 / 1500 = 4.74
+        Assert.Equal(5, Leg("Ellerbeck", "Longquay", nav)); // v6 re-pin 2026-10-24 (the T1 leg): 111 * 64 / 1500 = 4.74
     }
 
     [Fact]
@@ -203,32 +203,32 @@ public class TravelTests
 
     [Fact]
     public void T18_HanMissionGroupSpeed50() // m1-travel T18
-        => Assert.Equal(4, Leg("Epikonia", "Vondarc", 50)); // v6 re-pin 2026-10-24 (the T1 leg): 111 * 50 / 1500 = 3.7
+        => Assert.Equal(4, Leg("Ellerbeck", "Longquay", 50)); // v6 re-pin 2026-10-24 (the T1 leg): 111 * 50 / 1500 = 3.7
 
     [Fact]
     public void T20_IlumAndCsillaAreReachable() // m1-travel T20: free travel reaches the two systems outside sectors (no lanes needed)
     {
         var pf = new Pathfinder(G);
-        var r = pf.Find("Coruscant", "Ilum", 80);
+        var r = pf.Find("Charter", "Glasswood", 80);
         Assert.True(r.Ok);
-        Assert.Equal("Ilum", r.Names(G)[^1]);
-        Assert.True(pf.Find("Csilla", "Coruscant", 80).Ok);
+        Assert.Equal("Glasswood", r.Names(G)[^1]);
+        Assert.True(pf.Find("Frostholm", "Charter", 80).Ok);
     }
 
     [Fact]
     public void RejectionReasons() // m1-travel §Defaults (AlreadyThere, Immobile), §Path rule 6
     {
         var pf = new Pathfinder(G);
-        Assert.Equal(PathStatus.AlreadyThere, pf.Find("Coruscant", "Coruscant", 80).Status);
-        Assert.Equal(PathStatus.UnknownSystem, pf.Find("Coruscant", "Nowhere", 80).Status);
-        Assert.Equal(PathStatus.UnknownSystem, pf.Find("Nowhere", "Coruscant", 80).Status);
-        Assert.Equal(PathStatus.Immobile, pf.Find("Coruscant", "Corellia", 0).Status);
+        Assert.Equal(PathStatus.AlreadyThere, pf.Find("Charter", "Charter", 80).Status);
+        Assert.Equal(PathStatus.UnknownSystem, pf.Find("Charter", "No Such Place", 80).Status);
+        Assert.Equal(PathStatus.UnknownSystem, pf.Find("No Such Place", "Charter", 80).Status);
+        Assert.Equal(PathStatus.Immobile, pf.Find("Charter", "Classis", 0).Status);
     }
 
     [Fact]
     public void T21_SameInputsGiveIdenticalPaths() // m1-travel T21
     {
-        var names = new[] { "Coruscant", "Hoth", "Flax", "Felucia", "Bespin", "Kessel", "Tatooine" };
+        var names = new[] { "Charter", "The Thaw", "Opifex", "Greenfever", "Drift Harbour", "The Lantern", "Amargura" };
         List<string> Run()
         {
             var pf = new Pathfinder(TestData.RealGalaxy);
@@ -247,9 +247,9 @@ public class TravelTests
     public void PathsAreCachedPerStartEndAndSpeed() // m1-travel §Path rule 4
     {
         var pf = new Pathfinder(G);
-        var a = pf.Find("Coruscant", "Hoth", 50);
-        Assert.Same(a, pf.Find("Coruscant", "Hoth", 50));
-        var b = pf.Find("Coruscant", "Hoth", 80);
+        var a = pf.Find("Charter", "The Thaw", 50);
+        Assert.Same(a, pf.Find("Charter", "The Thaw", 50));
+        var b = pf.Find("Charter", "The Thaw", 80);
         Assert.NotSame(a, b);
         Assert.Equal(2, pf.CachedCount);
     }
@@ -257,7 +257,7 @@ public class TravelTests
     [Fact]
     public void EveryHopIsAtLeastOneDay() // m1-travel §Per-hop formula
     {
-        var r = new Pathfinder(G).Find("Coruscant", "Hoth", 50);
+        var r = new Pathfinder(G).Find("Charter", "The Thaw", 50);
         Assert.All(r.HopTicks, t => Assert.True(t >= 1));
         Assert.True(r.TotalTicks >= r.Hops);
     }

@@ -20,8 +20,8 @@ public class GameHostTests
         Assert.Equal(7, d.StartingFacilities.Count);
         Assert.Equal(d.Galaxy.Systems.Count, d.Slots.Count);
         Assert.True(d.Ships.ContainsKey(d.Blockade.EconomicShipClass));
-        Assert.Equal(6, d.Costs.Get("Imperial Army Regiment").Cost); // costs file is read
-        Assert.Equal(10, d.Weights.Weight10("Imperial Army Regiment"));
+        Assert.Equal(6, d.Costs.Get("Tranches").Cost); // costs file is read
+        Assert.Equal(10, d.Weights.Weight10("Tranches"));
         Assert.Same(GameData.Default, GameData.Default);
     }
 
@@ -112,13 +112,13 @@ public class GameHostTests
     {
         var h = GameHost.New(1);
         // support -> economy: the Death Star flag is the support module's
-        Assert.False(h.Economy.IsDeathStarSector("Coruscant"));
-        h.Support.SetDeathStarSystem("Coruscant", true);
-        Assert.True(h.Economy.IsDeathStarSector("Coruscant"));
+        Assert.False(h.Economy.IsDeathStarSector("Charter"));
+        h.Support.SetDeathStarSystem("Charter", true);
+        Assert.True(h.Economy.IsDeathStarSector("Charter"));
         // support -> construction: an uprising stops yards
-        Assert.False(h.Construction.IsInUprising("Kuat"));
-        h.Game.State.Support.Systems["Kuat"] = new SystemSupportState { Uprising = true, Rebels = Side.Alliance, ErosionDue = 99, IncidentDue = 99 };
-        Assert.True(h.Construction.IsInUprising("Kuat"));
+        Assert.False(h.Construction.IsInUprising("Navalia"));
+        h.Game.State.Support.Systems["Navalia"] = new SystemSupportState { Uprising = true, Rebels = Side.Alliance, ErosionDue = 99, IncidentDue = 99 };
+        Assert.True(h.Construction.IsInUprising("Navalia"));
         // control: the debug order is accepted only when the setting is on
         Assert.Equal(RejectReason.DebugDisabled, RunDebugCapture(GameHost.New(1)));
         Assert.Null(RunDebugCapture(GameHost.New(1, new GameSettings { DebugOrdersEnabled = true })));
@@ -126,8 +126,8 @@ public class GameHostTests
 
     private static string? RunDebugCapture(GameHost h)
     {
-        h.Fleets.SetOwner("Kuat", Side.Alliance);
-        long seq = h.Control.SubmitCapture(Side.Empire, "Kuat") /* (B5a, 2026-10-17) Derived control: troops take the world */;
+        h.Fleets.SetOwner("Navalia", Side.Alliance);
+        long seq = h.Control.SubmitCapture(Side.Empire, "Navalia") /* (B5a, 2026-10-17) Derived control: troops take the world */;
         h.Game.Step();
         return h.Game.Events.OfType<OrderRejected>().FirstOrDefault(e => e.Sequence == seq)?.Reason;
     }
@@ -137,16 +137,16 @@ public class GameHostTests
     public void CaptureCancelsTheLosersProjectsThroughTheHostWiring()
     {
         var h = GameHost.New(1, new GameSettings { IncidentsEnabled = false, DebugOrdersEnabled = true });
-        h.Fleets.SetOwner("Sullust", Side.Alliance);
-        h.Economy.AddFacility("Sullust", FacilityKind.TrainingFacility);
+        h.Fleets.SetOwner("Caminus", Side.Alliance);
+        h.Economy.AddFacility("Caminus", FacilityKind.TrainingFacility);
         h.Economy.SetPools(Side.Alliance, 0, 50);
         h.Construction.RefuseOverdrawOrders = false; // B5b 2026-10-18: no mines here (capacity 0); the upkeep refusal is not what this checks
-        long build = h.Construction.SubmitBuild(Side.Alliance, "Sullust", YardFamily.Training, "Alliance Army Regiment", 2);
+        long build = h.Construction.SubmitBuild(Side.Alliance, "Caminus", YardFamily.Training, "Militia", 2);
         h.Game.Step();
-        Assert.NotNull(h.Construction.ProjectAt("Sullust", YardFamily.Training));
-        h.Control.SubmitCapture(Side.Empire, "Sullust") /* (B5a, 2026-10-17) Derived control: troops take the world */;
+        Assert.NotNull(h.Construction.ProjectAt("Caminus", YardFamily.Training));
+        h.Control.SubmitCapture(Side.Empire, "Caminus") /* (B5a, 2026-10-17) Derived control: troops take the world */;
         h.Game.Step();
-        Assert.Null(h.Construction.ProjectAt("Sullust", YardFamily.Training));
+        Assert.Null(h.Construction.ProjectAt("Caminus", YardFamily.Training));
         Assert.Contains(h.Game.Events, e => e is ProjectCancelled { Reason: "SystemLost" });
         Assert.NotEqual(0, build);
     }
@@ -172,16 +172,16 @@ public class GameHostTests
         var owners = c.Game.State.SystemOwners;
         int e = owners.Count(kv => kv.Value == Side.Empire), a = owners.Count(kv => kv.Value == Side.Alliance);
         Assert.InRange(e, 15, 20); Assert.InRange(a, 15, 20);
-        // the starting-facilities rows inside the regions are placed: Kuat and Corellia (Empire), Sullust (Neutral row, held by the Alliance here)
+        // the starting-facilities rows inside the regions are placed: Navalia and Classis (Empire), Caminus (Neutral row, held by the Alliance here)
         bool Has(string sys, FacilityKind k) => c.Host.Economy.Objects.Any(o => o.System == sys && o.Class == FacilityKinds.ClassName(k) && o.Completed);
-        Assert.True(Has("Kuat", FacilityKind.OrbitalShipyard) && Has("Corellia", FacilityKind.OrbitalShipyard) && Has("Sullust", FacilityKind.OrbitalShipyard));
-        Assert.False(Has("Fondor", FacilityKind.OrbitalShipyard)); // outside both regions: not used
+        Assert.True(Has("Navalia", FacilityKind.OrbitalShipyard) && Has("Classis", FacilityKind.OrbitalShipyard) && Has("Caminus", FacilityKind.OrbitalShipyard));
+        Assert.False(Has("Incus", FacilityKind.OrbitalShipyard)); // outside both regions: not used
         CampaignInvariants.Check(c.Host, "day 0");
         // every region system holds only its side's units
         foreach (var o in c.Host.Economy.Objects.Where(o => o.Category == ObjectCategory.Regiment && o.System != null))
             Assert.Equal(o.Side, owners[o.System!]);
-        Assert.Equal(Side.Empire, owners["Coruscant"]);
-        Assert.Equal(Side.Alliance, owners["Sullust"]);
+        Assert.Equal(Side.Empire, owners["Charter"]);
+        Assert.Equal(Side.Alliance, owners["Caminus"]);
     }
 
     // the script is a function of the day: the same orders on the same day whatever came before

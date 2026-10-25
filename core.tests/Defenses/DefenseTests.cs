@@ -24,12 +24,12 @@ public class DefenseTests
         Assert.Equal(new[] { 1, 2, 3, 4, 5, 6 }, rows.Select(r => r.Id));
         var expect = new (string Name, int Family, int Cost, int Maint, int Ro, int Rd, int Attack, int Shield, int Bd, DefenseJob Job)[]
         {
-            ("KDY-150", 34, 4, 4, 0, 0, 2000, 0, 5, DefenseJob.Battery),
-            ("LNR Series I", 35, 7, 7, 0, 0, 800, 0, 4, DefenseJob.Battery),
-            ("GenCore Level I", 36, 12, 12, 0, 0, 0, 40, 2, DefenseJob.ShieldGenerator),
+            ("Mordant Lien-150", 34, 4, 4, 0, 0, 2000, 0, 5, DefenseJob.Battery),
+            ("Mordant Covenant I", 35, 7, 7, 0, 0, 800, 0, 4, DefenseJob.Battery),
+            ("Lode Escrow I", 36, 12, 12, 0, 0, 0, 40, 2, DefenseJob.ShieldGenerator),
             ("Death Star Shield", 37, 25, 20, 3, 24, 0, 0, 1, DefenseJob.DeathStarShield),
-            ("LNR Series II", 35, 10, 4, 4, 40, 5000, 0, 3, DefenseJob.Battery),
-            ("GenCore Level II", 36, 20, 7, 6, 40, 0, 80, 3, DefenseJob.ShieldGenerator),
+            ("Mordant Covenant II", 35, 10, 4, 4, 40, 5000, 0, 3, DefenseJob.Battery),
+            ("Lode Escrow II", 36, 20, 7, 6, 40, 0, 80, 3, DefenseJob.ShieldGenerator),
         };
         for (int i = 0; i < 6; i++)
         {
@@ -141,12 +141,12 @@ public class DefenseTests
     public void D9_AllianceBuildOrderOfDeathStarShieldIsNotAvailable()
     {
         var a = new BuildWorld();
-        a.Hold("Corellia", Side.Alliance); a.Yard("Corellia", FacilityKind.ConstructionYard);
-        Assert.Equal(RejectReason.NotAvailable, a.TryOrder(Side.Alliance, "Corellia", YardFamily.Construction, "Death Star Shield", 1, "Corellia"));
+        a.Hold("Classis", Side.Alliance); a.Yard("Classis", FacilityKind.ConstructionYard);
+        Assert.Equal(RejectReason.NotAvailable, a.TryOrder(Side.Alliance, "Classis", YardFamily.Construction, "Death Star Shield", 1, "Classis"));
         var e = new BuildWorld();
         e.Build.RespectResearchOrder = false; // research gate off = all available (the gate is on by default since m5-research)
-        e.Hold("Corellia", Side.Empire); e.Yard("Corellia", FacilityKind.ConstructionYard);
-        Assert.Null(e.TryOrder(Side.Empire, "Corellia", YardFamily.Construction, "Death Star Shield", 1, "Corellia")); // research flag off = all available
+        e.Hold("Classis", Side.Empire); e.Yard("Classis", FacilityKind.ConstructionYard);
+        Assert.Null(e.TryOrder(Side.Empire, "Classis", YardFamily.Construction, "Death Star Shield", 1, "Classis")); // research flag off = all available
     }
 
     // m3-planetary-defenses D10 (control sheet C1): the Death Star Shield is removed on an Alliance capture, the other defenses transfer
@@ -154,9 +154,9 @@ public class DefenseTests
     public void D10_AllianceCaptureRemovesTheDeathStarShieldOnly()
     {
         var w = new CtlWorld();
-        w.Hold("Corellia", Side.Empire, 80);
-        int shield = w.Eco.AddFacility("Corellia", Dss), gen = w.Eco.AddFacility("Corellia", Gen1), kdy = w.Eco.AddFacility("Corellia", Kdy);
-        w.Capture(Side.Alliance, "Corellia");
+        w.Hold("Classis", Side.Empire, 80);
+        int shield = w.Eco.AddFacility("Classis", Dss), gen = w.Eco.AddFacility("Classis", Gen1), kdy = w.Eco.AddFacility("Classis", Kdy);
+        w.Capture(Side.Alliance, "Classis");
         w.Run(1);
         Assert.Equal(new[] { shield }, w.Events<FacilityRemoved>().Select(e => e.Facility));
         Assert.Equal(new[] { gen, kdy }, w.Events<FacilityTransferred>().Select(e => e.Facility));
@@ -223,7 +223,7 @@ public class DefenseTests
         var w = new BombWorld(bp: BombWorld.M3Rule);
         w.Hold(Side.Alliance);
         int l = w.Facility(Lnr1), k = w.Facility(Kdy);
-        int fleet = w.Fleet(Side.Empire, BombWorld.Sys, "Victory Destroyer", 2); // P = 8
+        int fleet = w.Fleet(Side.Empire, BombWorld.Sys, "Decree", 2); // P = 8
         var ships = ShipState(w);
         w.Dice(Enumerable.Repeat((0, 1), 8).ToArray()); // every roll is too low to destroy anything
         Assert.Null(w.TryBombard(Side.Empire, fleet, BombWorld.Sys, BombardCategory.Military));
@@ -236,7 +236,7 @@ public class DefenseTests
     [Fact]
     public void D15_NeutralFacilitiesShootAtTheEmpire()
     {
-        var w = new BombWorld(); // Denon has no holder here: neutral
+        var w = new BombWorld(); // Fiducia has no holder here: neutral
         int k = w.Facility(Kdy), g = w.Facility(Gen1);
         Assert.Equal(new[] { k, g }, w.Def.BatteryShots(BombWorld.Sys, Side.Empire).Select(s => s.Facility));
         Assert.Equal(new[] { k, g }, w.Def.BatteryShots(BombWorld.Sys, Side.Alliance).Select(s => s.Facility));
@@ -289,9 +289,9 @@ public class DefenseTests
     {
         string good = File.ReadAllText(Path.Combine(TestData.ClassicDir, DefenseData.DefensesFile));
         string bomb = TestData.MergedText(DefenseData.BombardmentFile);
-        Assert.Throws<Praedra.Core.Data.DataLoadException>(() => DefenseData.Parse(good.Replace("KDY-150", "Mystery Gun"), "d.csv", bomb, "b.csv"));
+        Assert.Throws<Praedra.Core.Data.DataLoadException>(() => DefenseData.Parse(good.Replace("Mordant Lien-150", "Mystery Gun"), "d.csv", bomb, "b.csv"));
         Assert.Throws<Praedra.Core.Data.DataLoadException>(() => DefenseData.Parse(good.Replace(",battery", ",flak"), "d.csv", bomb, "b.csv"));
-        Assert.Throws<Praedra.Core.Data.DataLoadException>(() => DefenseData.Parse(good, "d.csv", bomb.Replace("troop,Sullustan Regiment", "troop,Alliance Army Regiment"), "b.csv"));
+        Assert.Throws<Praedra.Core.Data.DataLoadException>(() => DefenseData.Parse(good, "d.csv", bomb.Replace("troop,Nhal Lookouts", "troop,Militia"), "b.csv"));
     }
 
     // m3-bombardment §Resolution 4: every regiment class and every facility class has a bombardment defense
@@ -300,8 +300,8 @@ public class DefenseTests
     {
         var d = BombWorld.RealData.Value; var costs = EcoWorld.Costs.Value;
         foreach (var k in FacilityKinds.All) Assert.InRange(d.FacilityDefense(FacilityKinds.ClassName(k)), 0, 10);
-        foreach (var name in new[] { "Alliance Fleet Regiment", "Alliance Army Regiment", "Sullustan Regiment", "Wookiee Regiment", "Mon Calamari Regiment",
-                     "Stormtrooper Regiment", "Imperial Fleet Regiment", "Imperial Army Regiment", "War Droid Regiment", "Dark Trooper Regiment" })
+        foreach (var name in new[] { "Deckhands", "Militia", "Nhal Lookouts", "Kiru Sparks", "Ilmar Shade Guard",
+                     "Pacifiers", "Ballast", "Tranches", "Proxies", "Lictors" })
         {
             Assert.Equal(ObjectCategory.Regiment, costs.Get(name).Category);
             Assert.InRange(d.RegimentDefense(name), 0, 10);

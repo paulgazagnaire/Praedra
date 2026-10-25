@@ -56,7 +56,7 @@ public sealed record BombardParams
     /// </summary>
     public bool BombardWastedHits { get; init; } = true;
     /// <summary>
-    /// C2: every working KDY-150 and LNR fires one shot at a random bombarding capital ship before any bomb falls. Off = the m3 hook event only.
+    /// C2: every working Mordant Lien-150 and LNR fires one shot at a random bombarding capital ship before any bomb falls. Off = the m3 hook event only.
     /// DEFAULT on in both modes. rule: B7-bombardment §4.
     /// </summary>
     public bool BatteryReturnFire { get; init; } = true;
@@ -100,7 +100,7 @@ public sealed class BombardmentModule
     private readonly DefenseModule _def;
     private readonly List<BombardOrder> _pending = new(); // accepted this Step; consumed at slot 5.1
 
-    /// <summary>DEFFACSD families of the two battery kinds. rule: B7-bombardment §4.1 (KDY-150 family 0x22, LNR I and II family 0x23).</summary>
+    /// <summary>DEFFACSD families of the two battery kinds. rule: B7-bombardment §4.1 (Mordant Lien-150 family 0x22, LNR I and II family 0x23).</summary>
     public const int KdyFamily = 0x22, LnrFamily = 0x23;
 
     public BombardParams Params { get; }
@@ -428,7 +428,7 @@ public sealed class BombardmentModule
     // ================================================================== return fire (B7-bombardment §4)
 
     /// <summary>
-    /// Every completed KDY-150, then every completed LNR, fires one shot at a random ship of <paramref name="ships"/>: rand(0..n - 1), damage
+    /// Every completed Mordant Lien-150, then every completed LNR, fires one shot at a random ship of <paramref name="ships"/>: rand(0..n - 1), damage
     /// attack x (L / 40 + 1). Then ship by ship: the current shield S = shield x (4 - c) / 4 x hull left / hull; ion eats S, turbolaser eats what is
     /// left of S then the hull (stays; at 0 the ship is destroyed); a survivor that lost hull rolls for a critical hit. A ship with ion left after its
     /// shields is grounded for this strike. Shield loss and the ion and turbolaser amounts end with the strike (nothing of them is stored).

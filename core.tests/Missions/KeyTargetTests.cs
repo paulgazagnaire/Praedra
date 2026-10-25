@@ -35,7 +35,7 @@ public class KeyTargetTests
 
     private static void RideFleet(MissionWorld w, int character, Side side)
     {
-        int f = w.Host.Fleets.AddFleet(side, "Escort", new[] { "Imperial Star Destroyer" }, T);
+        int f = w.Host.Fleets.AddFleet(side, "Escort", new[] { "Mandate" }, T);
         w.Ch.Get(character)!.AttachedFleet = f;
     }
 
@@ -285,20 +285,20 @@ public class KeyTargetTests
         Assert.Equal(Protected, StartReason(f, MissionKind.Abduction, Han, Palpatine, Side.Alliance));
     }
 
-    // m5-missions KT15: an Empire key target at Coruscant is protected while the Empire's garrison there covers N, and not otherwise (real galaxy)
+    // m5-missions KT15: an Empire key target at Charter is protected while the Empire's garrison there covers N, and not otherwise (real galaxy)
     [Fact]
     public void KT15_CoruscantIsTheEmpiresProtectedCapital()
     {
         var h = NewGame.Create(GameData.Default, new NewGameOptions { Seed = 1 });
-        const string Cor = "Coruscant";
+        const string Cor = "Charter";
         h.Ch().Place(Palpatine, Cor);
         h.Ch().Place(Han, Cor);
         h.Economy.SetAllianceSupport(Cor, 100); // Empire support 0: N is large
-        foreach (var o in h.Economy.Objects.Where(o => o.Category == ObjectCategory.Regiment && o.System == Cor).ToList()) o.System = "Yavin"; // clear the setup garrison
+        foreach (var o in h.Economy.Objects.Where(o => o.Category == ObjectCategory.Regiment && o.System == Cor).ToList()) o.System = "The Shoal"; // clear the setup garrison
         var order = new StartMissionOrder(0, Side.Alliance, MissionKind.Abduction, new List<int> { Han }, new List<int>(), new List<int>(), null, Palpatine, null, null);
-        Assert.True(h.Support.Garrison10(Cor) < 10 * h.Support.RequiredGarrison(Cor), "setup leaves Coruscant short of N");
+        Assert.True(h.Support.Garrison10(Cor) < 10 * h.Support.RequiredGarrison(Cor), "setup leaves Charter short of N");
         Assert.Null(h.Missions.CheckStart(order).Reason);
-        while (h.Support.Garrison10(Cor) < 10 * h.Support.RequiredGarrison(Cor)) h.Economy.AddObject(Side.Empire, "Imperial Army Regiment", Cor, true);
+        while (h.Support.Garrison10(Cor) < 10 * h.Support.RequiredGarrison(Cor)) h.Economy.AddObject(Side.Empire, "Tranches", Cor, true);
         Assert.Equal(Protected, h.Missions.CheckStart(order).Reason);
     }
 

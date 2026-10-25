@@ -14,7 +14,7 @@ public class B7BombardmentTests
     private const string Sys = BombWorld.Sys;
     private static readonly Side Emp = Side.Empire, All = Side.Alliance;
     private const BombardCategory Mil = BombardCategory.Military, Civ = BombardCategory.Civilian, Gen = BombardCategory.General;
-    private const string Neb = "Nebulon-B Frigate", ImpArmy = "Imperial Army Regiment";
+    private const string Neb = "Mender", ImpArmy = "Tranches";
 
     private static EconObject Ship(BombWorld w, int fleet, int index = 0) => w.Eco.Find(w.Game.State.Fleets[fleet].Ships[index])!;
 
@@ -57,7 +57,7 @@ public class B7BombardmentTests
         Assert.Empty(w2.Stub.Requests);           // one ship: no target draw; destroyed: no critical roll; no hits: no collateral
     }
 
-    // B7-bombardment Q75: one KDY-150 against a Nebulon-B carrying 2 B-wing squadrons: the frigate's 1 does not count; P = 4 (the B-wings) x admiral
+    // B7-bombardment Q75: one Mordant Lien-150 against a Nebulon-B carrying 2 Maul squadrons: the frigate's 1 does not count; P = 4 (the B-wings) x admiral
     [Theory]
     [InlineData(0, 4)]
     [InlineData(40, 8)]
@@ -66,7 +66,7 @@ public class B7BombardmentTests
         var w = new BombWorld();
         w.Hold(Emp);
         w.Facility(FacilityKind.Kdy150);
-        int f = w.Fleets.AddFleet(All, "Neb", new[] { Neb }, Sys, new[] { "B-wing", "B-wing" });
+        int f = w.Fleets.AddFleet(All, "Neb", new[] { Neb }, Sys, new[] { "Maul", "Maul" });
         w.Bomb.AdmiralLeadership = _ => leadership;
         Assert.Equal(1 * (leadership / 40 + 1) + power, w.Bomb.Power(w.Game.State.Fleets[f])); // outside a strike the frigate counts
         Assert.Null(w.TryBombard(All, f, Sys, Civ)); // Civilian on a world with no civilian facility: no hit draws anything
@@ -84,7 +84,7 @@ public class B7BombardmentTests
     {
         var w = new BombWorld(stub: false, seed: 76, data: BombWorld.ArmyDefense(0), bp: new BombardParams { BombardWastedHits = wasted });
         w.Hold(All);
-        int f = w.Fleet(Emp, Sys, "Carrack Light Cruiser", 2); // P = 2
+        int f = w.Fleet(Emp, Sys, "Warrant", 2); // P = 2
         long killed = 0;
         const int trials = 20_000;
         for (int i = 0; i < trials; i++)
@@ -106,7 +106,7 @@ public class B7BombardmentTests
         var w = new BombWorld(data: BombWorld.ArmyDefense(0));
         w.Hold(All);
         int a = w.Regiment(All, BombWorld.Army), b = w.Regiment(All, BombWorld.Army);
-        int f = w.Fleet(Emp, Sys, "Carrack Light Cruiser", 2);
+        int f = w.Fleet(Emp, Sys, "Warrant", 2);
         w.Stub.Expect(0, 2, 1);                   // collateral x = 1: none
         w.Stub.Expect(0, 1, 0, 1);                // t = 0 (a dies), then t = 1 with one standing: wasted
         w.Stub.Expect(1, 10, 1);
@@ -126,7 +126,7 @@ public class B7BombardmentTests
         var w = new BombWorld(stub: false, seed: 77, bp: new BombardParams { BombardFleetsTogether = together });
         w.Hold(Emp);
         w.Facility(FacilityKind.GenCoreLevelI);
-        var ships = Enumerable.Repeat("Bulwark Battlecruiser", 7).Concat(Enumerable.Repeat("Corellian Corvette", 2)).ToArray(); // 7 x 4 + 2 x 1 = 30
+        var ships = Enumerable.Repeat("Barricade", 7).Concat(Enumerable.Repeat("Dodger", 2)).ToArray(); // 7 x 4 + 2 x 1 = 30
         int a = w.Fleet(All, Sys, ships), b = w.Fleet(All, Sys, ships);
         w.Bombard(All, a, Sys, Mil); w.Bombard(All, b, Sys, Mil);
         w.Run(1);
@@ -150,7 +150,7 @@ public class B7BombardmentTests
     {
         var w = new BombWorld(stub: false, seed: 5);
         w.Hold(All);
-        int a = w.Fleet(Emp, Sys, "Victory Destroyer"), b = w.Fleet(Emp, Sys, "Victory Destroyer"); // 4 each
+        int a = w.Fleet(Emp, Sys, "Decree"), b = w.Fleet(Emp, Sys, "Decree"); // 4 each
         w.Bomb.AdmiralLeadership = fl => fl.Id == b ? 80 : 0;                                      // b: x3
         w.Bombard(Emp, b, Sys, Gen); w.Bombard(Emp, a, Sys, Mil);
         w.Run(1);
@@ -182,7 +182,7 @@ public class B7BombardmentTests
         var w = new BombWorld();
         w.Hold(All, 45);
         w.Eco.SetSlots(Sys, 4, 0);
-        int f = w.Fleet(Emp, Sys, "Carrack Light Cruiser");
+        int f = w.Fleet(Emp, Sys, "Warrant");
         w.Stub.Expect(1, 10, 10);                 // pool [Energy]: m0 = 1, no pick draw; the die 10 beats 9
         Assert.Null(w.TryBombard(Emp, f, Sys, Gen));
         Assert.Equal(3, w.Eco.SlotsOf(Sys).Energy);
@@ -197,7 +197,7 @@ public class B7BombardmentTests
         var w = new BombWorld(stub: false, seed: 80);
         w.Hold(All, 70);                          // no garrison needed (60 or more), and the bomber's 30 can lose 20
         w.Eco.SetSlots(Sys, 4, 4);
-        int f = w.Fleet(Emp, Sys, "Carrack Light Cruiser"); // 1 hit
+        int f = w.Fleet(Emp, Sys, "Warrant"); // 1 hit
         int lost = 0, penalties = 0;
         const int trials = 10_000;
         for (int i = 0; i < trials; i++)
@@ -229,7 +229,7 @@ public class B7BombardmentTests
         w.Eco.SetSlots(Sys, 4, 4);
         int reg = w.Regiment(All, BombWorld.Army);
         int mine = w.Eco.AddFacility(Sys, FacilityKind.Mine), refinery = w.Eco.AddFacility(Sys, FacilityKind.Refinery);
-        int f = w.Fleet(Emp, Sys, "Carrack Light Cruiser");
+        int f = w.Fleet(Emp, Sys, "Warrant");
         w.Stub.Expect(0, 1, 0, 1);                // x = 0 (collateral); then the pick over [mine, refinery] = 1 (the refinery), ignored
         w.Stub.Expect(1, 10, 6, 1);               // collateral die 6 > 5: the mine (not the refinery) falls; the hit's die 1
         Assert.Null(w.TryBombard(Emp, f, Sys, Mil));
@@ -247,7 +247,7 @@ public class B7BombardmentTests
     {
         var w = new BombWorld();
         w.Hold(All);
-        int f = w.Fleet(Emp, Sys, "Carrack Light Cruiser");
+        int f = w.Fleet(Emp, Sys, "Warrant");
         w.Stub.Expect(1, 10, 10);
         Assert.Null(w.TryBombard(Emp, f, Sys, Mil)); // m0 = 0: rand(0..0) draws nothing and gives 0
         var c = Assert.Single(w.Events<CollateralHit>());
@@ -258,7 +258,7 @@ public class B7BombardmentTests
         var g = new BombWorld();
         g.Hold(All);
         g.Facility(FacilityKind.GenCoreLevelI);
-        int f2 = g.Fleet(Emp, Sys, "Carrack Light Cruiser");
+        int f2 = g.Fleet(Emp, Sys, "Warrant");
         Assert.Null(g.TryBombard(Emp, f2, Sys, Mil)); // P 1 < S 40: no hits
         Assert.Empty(g.Events<CollateralHit>());
         Assert.Empty(g.Stub.Requests);
@@ -276,7 +276,7 @@ public class B7BombardmentTests
         Assert.Equal(power, w.Bomb.Power(w.Game.State.Fleets[f]));
     }
 
-    // B7-bombardment §5.1 (C4): a squadron counts v - v x lost craft / squadron size, truncated (B-wing 2, size 12)
+    // B7-bombardment §5.1 (C4): a squadron counts v - v x lost craft / squadron size, truncated (Maul 2, size 12)
     [Theory]
     [InlineData(0, 2)]
     [InlineData(5, 2)]   // 2 - 10 / 12 = 2 - 0
@@ -286,7 +286,7 @@ public class B7BombardmentTests
     public void DepletedSquadronBombsLess(int lost, int value)
     {
         var w = new BombWorld();
-        int f = w.Fleets.AddFleet(All, "Carrier", new[] { "Alliance Escort Carrier" }, Sys, new[] { "B-wing" }); // the carrier counts 0
+        int f = w.Fleets.AddFleet(All, "Carrier", new[] { "Nest" }, Sys, new[] { "Maul" }); // the carrier counts 0
         var sq = w.Eco.Objects.Single(o => o.Category == ObjectCategory.Fighter);
         sq.CraftLost = lost;
         Assert.Equal(value, w.Bomb.Power(w.Game.State.Fleets[f]));
@@ -299,7 +299,7 @@ public class B7BombardmentTests
     {
         var w = new BombWorld(stub: false, seed: 82);
         w.Hold(Emp);
-        int f = w.Fleet(All, Sys, Enumerable.Repeat("Liberator Cruiser", 13).ToArray()); // 13 x 2 = 26
+        int f = w.Fleet(All, Sys, Enumerable.Repeat("Jubilee", 13).ToArray()); // 13 x 2 = 26
         long killed = 0; int wiped = 0;
         const int trials = 10_000;
         for (int i = 0; i < trials; i++)
@@ -327,7 +327,7 @@ public class B7BombardmentTests
         var w = new BombWorld();
         w.Hold(All);
         w.Eco.SetSlots(Sys, 4, 4);
-        int f = w.Fleet(Emp, Sys, "Carrack Light Cruiser");
+        int f = w.Fleet(Emp, Sys, "Warrant");
         int destroyed = 0;
         for (int r = 1; r <= 10; r++)
         {
@@ -347,7 +347,7 @@ public class B7BombardmentTests
         var d = BombWorld.RealData.Value;
         Assert.Equal(new[] { 2, 3, 3, 2, 4, 4, 5, 2 }, new[] { "Orbital Shipyard", "Training Facility", "Construction Yard", "Advanced Shipyard",
             "Advanced Training Facility", "Advanced Construction Yard", "Mine", "Refinery" }.Select(d.FacilityDefense));
-        Assert.Equal(new[] { 5, 4, 2, 1, 3, 3 }, new[] { "KDY-150", "LNR Series I", "GenCore Level I", "Death Star Shield", "LNR Series II", "GenCore Level II" }
+        Assert.Equal(new[] { 5, 4, 2, 1, 3, 3 }, new[] { "Mordant Lien-150", "Mordant Covenant I", "Lode Escrow I", "Death Star Shield", "Mordant Covenant II", "Lode Escrow II" }
             .Select(d.FacilityDefense));
         Assert.Equal(9, d.HqDefense);
         var original = CsvTable.Load(Path.Combine(TestData.ClassicDir, DefenseData.BombardmentFile));
@@ -401,7 +401,7 @@ public class B7BombardmentTests
         var w = new BombWorld();
         w.Hold(Emp);
         w.Facility(FacilityKind.LnrSeriesI);
-        int f = w.Fleet(All, Sys, "Bulwark Battlecruiser");         // shield 1100, hull 3000: 800 is absorbed, no hull lost, no roll
+        int f = w.Fleet(All, Sys, "Barricade");         // shield 1100, hull 3000: 800 is absorbed, no hull lost, no roll
         Assert.Null(w.TryBombard(All, f, Sys, Civ));
         Assert.Equal(0, w.Stub.Count(0, 50));
         Assert.Equal(3000, Ship(w, f).Hull);
@@ -410,7 +410,7 @@ public class B7BombardmentTests
         g.Hold(Emp);
         g.Facility(FacilityKind.LnrSeriesII);                         // fires first (both LNR: id order)
         g.Facility(FacilityKind.LnrSeriesI);
-        int f2 = g.Fleet(All, Sys, "Mon Calamari Cruiser", "Mon Calamari Cruiser"); // shield 300, hull 2400
+        int f2 = g.Fleet(All, Sys, "Ark", "Ark"); // shield 300, hull 2400
         g.Stub.Expect(0, 1, 0, 1);                                    // LNR II at ship 0 (destroyed: 300 + 2400 < 5000), LNR I at ship 1
         g.Stub.Expect(0, 50, 0);                                      // ship 1: 800 lost, 1600 left: 0 + pct(800, 2400) = 33 < 50: no hit
         var ship1 = Ship(g, f2, 1);
@@ -431,7 +431,7 @@ public class B7BombardmentTests
         var w = new BombWorld();
         w.Hold(Emp);
         w.Facility(FacilityKind.Kdy150);
-        int f = w.Fleet(All, Sys, "Assault Frigate");                // shield 600, hull 1400
+        int f = w.Fleet(All, Sys, "Crowbar");                // shield 600, hull 1400
         var ship = Ship(w, f);
         ship.Hull = 700; ship.Hits![0] = 1;                           // 600 x 3 / 4 = 450, x 700 / 1400 = 225
         Assert.Null(w.TryBombard(All, f, Sys, Civ));
@@ -446,7 +446,7 @@ public class B7BombardmentTests
         var w = new BombWorld();
         w.Hold(Emp);
         w.Facility(FacilityKind.Kdy150); w.Facility(FacilityKind.LnrSeriesI);
-        int f = w.Fleet(All, Sys, "Bulwark Battlecruiser");         // shield 1100, hull 3000: KDY 2000 takes all 1100, LNR 800 all to hull
+        int f = w.Fleet(All, Sys, "Barricade");         // shield 1100, hull 3000: KDY 2000 takes all 1100, LNR 800 all to hull
         w.Stub.Expect(0, 50, 50, 0);
         Assert.Null(w.TryBombard(All, f, Sys, Civ));
         var d = Assert.Single(w.Events<BombardShipDamaged>());
@@ -485,7 +485,7 @@ public class B7BombardmentTests
         var w = new BombWorld();
         w.Hold(Emp);
         w.Facility(FacilityKind.LnrSeriesII);
-        int f = w.Fleets.AddFleet(All, "Neb", new[] { Neb }, Sys, new[] { "B-wing" });
+        int f = w.Fleets.AddFleet(All, "Neb", new[] { Neb }, Sys, new[] { "Maul" });
         int ship = w.Game.State.Fleets[f].Ships[0];
         int reg = w.Regiment(All, BombWorld.Army); var r = w.Eco.Find(reg)!; r.System = null; r.AboardShip = ship;
         Assert.Null(w.TryBombard(All, f, Sys, Mil));
@@ -493,7 +493,7 @@ public class B7BombardmentTests
         Assert.Equal("ShipLost", w.Events<RegimentDestroyed>().Single().Reason);
         var sq = w.Eco.Objects.Single(o => o.Category == ObjectCategory.Fighter);
         Assert.Equal(0, sq.AboardShip);
-        Assert.Equal(0, w.Events<BombardmentStarted>().Single().Hits); // §4.7: no bombarding ship left (the landed B-wing does not bomb)
+        Assert.Equal(0, w.Events<BombardmentStarted>().Single().Hits); // §4.7: no bombarding ship left (the landed Maul does not bomb)
     }
 
     // B7-bombardment §4 (C2 off): the m3 hook only: the batteries listed after the hits, no ship touched, no draw
@@ -521,7 +521,7 @@ public class B7BombardmentTests
         w.Hold(All);
         w.Eco.SetSlots(Sys, 4, 1);
         w.Regiment(All, BombWorld.Army); w.Facility(FacilityKind.ConstructionYard);
-        int f = w.Fleet(Emp, Sys, "Carrack Light Cruiser");
+        int f = w.Fleet(Emp, Sys, "Warrant");
         w.Stub.Expect(1, 10, 1);
         w.TryBombard(Emp, f, Sys, Civ);
         Assert.Empty(w.Stub.Requests.Where(r => r.Min == 0)); // Civilian = [yard]: one target, no pick draw
@@ -547,7 +547,7 @@ public class B7BombardmentTests
         off.Hold(All);
         off.Bomb.IsRebelHq = s => s == Sys;
         off.Regiment(All, BombWorld.Army);
-        int f = off.Fleet(Emp, Sys, "Carrack Light Cruiser");
+        int f = off.Fleet(Emp, Sys, "Warrant");
         off.Stub.Expect(0, 1, 1);
         off.Stub.Expect(1, 10, 1);
         Assert.Null(off.TryBombard(Emp, f, Sys, Mil));
@@ -557,7 +557,7 @@ public class B7BombardmentTests
         on.Hold(All);
         on.Bomb.IsRebelHq = s => s == Sys;
         on.Regiment(All, BombWorld.Army);
-        int f2 = on.Fleet(Emp, Sys, "Carrack Light Cruiser");
+        int f2 = on.Fleet(Emp, Sys, "Warrant");
         on.Stub.Expect(0, 2, 1);                                    // m0 = 2: collateral x = 1
         on.Stub.Expect(0, 1, 1);                                    // t = 1: the HQ
         on.Stub.Expect(1, 10, 9);                                   // 9 does not beat 9
@@ -581,7 +581,7 @@ public class B7BombardmentTests
             w.Eco.SetSlots(Sys, 6, 2);
             w.Eco.AddFacility(Sys, FacilityKind.Mine); w.Facility(FacilityKind.Kdy150); w.Facility(FacilityKind.LnrSeriesI); w.Facility(FacilityKind.LnrSeriesI);
             for (int i = 0; i < 6; i++) w.Regiment(Emp, ImpArmy);
-            int a = w.Fleet(All, Sys, Neb, Neb, "Liberator Cruiser"), b = w.Fleets.AddFleet(All, "B", new[] { Neb }, Sys, new[] { "B-wing", "Y-wing" });
+            int a = w.Fleet(All, Sys, Neb, Neb, "Jubilee"), b = w.Fleets.AddFleet(All, "B", new[] { Neb }, Sys, new[] { "Maul", "Plough" });
             w.Bombard(All, a, Sys, Mil); w.Bombard(All, b, Sys, Mil);
             w.Run(1);
             return w;

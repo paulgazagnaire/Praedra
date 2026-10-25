@@ -72,7 +72,7 @@ public class HqTests
         Assert.Equal(HqRejectReason.NotAlliance, new FogWorld().TryMoveHq(Side.Empire, R3));                     // HQ7
         var ilum = new FogWorld(beforeSetup: x => x.H.Fleets.SetOwner(Ilum, Side.Alliance));
         Assert.Equal(RejectReason.Unreachable, ilum.TryMoveHq(Side.Alliance, Ilum));                             // HQ8
-        Assert.Equal(RejectReason.UnknownSystem, new FogWorld().TryMoveHq(Side.Alliance, "Nowhere"));
+        Assert.Equal(RejectReason.UnknownSystem, new FogWorld().TryMoveHq(Side.Alliance, "No Such Place"));
         Assert.Null(new FogWorld().TryMoveHq(Side.Alliance, R3));                                                 // HQ17 (no Empire fleet at R2)
     }
 
@@ -251,7 +251,7 @@ public class HqTests
             var w = new FogWorld();
             // (B5a, 2026-10-17) under derived control the two moves' support losses (70 -> 50 at R2) would turn the unguarded Alliance worlds
             // neutral and destroy the HQ (a capture draw); a regiment on each keeps them the Alliance's, so the test still sees only the HQ's own draws
-            foreach (var sys in new[] { R2, R3, R4 }) w.H.Economy.AddObject(Side.Alliance, "Alliance Army Regiment", sys);
+            foreach (var sys in new[] { R2, R3, R4 }) w.H.Economy.AddObject(Side.Alliance, "Militia", sys);
             // draws made in slots 1 to 3 (orders, departures, arrivals: the HQ's slots; nothing else there draws on Map M)
             long before = 0, hqDraws = 0;
             w.Game.RegisterHook("3", ctx => hqDraws += ctx.Rng.Draws - before);

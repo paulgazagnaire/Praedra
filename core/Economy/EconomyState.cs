@@ -18,7 +18,7 @@ public sealed class EconObject
 {
     public int Id { get; set; }
     public ObjectCategory Category { get; set; }
-    /// <summary>Class name as in the costs file ("Mine", "Imperial Star Destroyer", ...).</summary>
+    /// <summary>Class name as in the costs file ("Mine", "Mandate", ...).</summary>
     public string Class { get; set; } = "";
     /// <summary>Owner of a non-facility object. Null for facilities (owner = owner of <see cref="System"/>).</summary>
     public Side? Side { get; set; }
@@ -80,7 +80,7 @@ public sealed class EconObject
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public bool ScrapPending { get; set; }
     /// <summary>
-    /// Display name of a capital ship ("Corellian Corvette 1"), given at setup; null = none (shown by class). Display only, never read by a rule.
+    /// Display name of a capital ship ("Dodger 1"), given at setup; null = none (shown by class). Display only, never read by a rule.
     /// Omitted from the save while null, so saves and hashes of games that name nothing are unchanged. rule: m5-setup-and-victory §P7 Names (B4 §12).
     /// </summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]

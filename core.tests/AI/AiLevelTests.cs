@@ -73,8 +73,8 @@ public class AiLevelTests
     // ai/09 §6 row "concurrent offensive jobs": with MaxOffensives 1 the side never has two armed fleets (scouts aside) flying at once to
     // systems it does not hold. Measured on seed 2: 1 at most over 500 days.
     // A leg that only stops on the way to a held system is no offensive (2026-10-17, merge of main #57 into m0/importer: on seed 2 the Empire
-    // sent fleets 329 on day 391 and 557 on day 397 to relieve Alpinn, a held system under threat; the way was blocked, so each order flew the
-    // first leg of the way around, to neutral Vorzyd, and the two were counted as two offensives at once on days 397-398. Relief is allowed
+    // sent fleets 329 on day 391 and 557 on day 397 to relieve Ilanga, a held system under threat; the way was blocked, so each order flew the
+    // first leg of the way around, to neutral Novy Rynek, and the two were counted as two offensives at once on days 397-398. Relief is allowed
     // at any count, SimpleAiParams.MaxOffensives).
     [Fact]
     public void Easy_RunsAtMostOneOffensiveAtATime()
@@ -108,5 +108,5 @@ public class AiLevelTests
     }
 
     private static bool IsScout(GameHost h, Praedra.Core.Fleets.Fleet f) =>
-        f.Ships.Count == 1 && h.Economy.Find(f.Ships[0]) is { } o && o.Class is "Galleon" or "Medium Transport";
+        f.Ships.Count == 1 && h.Economy.Find(f.Ships[0]) is { } o && o.Class is "Bond" or "Mule";
 }

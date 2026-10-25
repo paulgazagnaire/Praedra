@@ -1,0 +1,682 @@
+kind,old,new
+capital_ship,Alliance Dreadnaught,Grudge
+capital_ship,Alliance Escort Carrier,Nest
+capital_ship,Assault Frigate,Crowbar
+capital_ship,Assault Transport,Indenture
+capital_ship,Bulk Cruiser,Hauler
+capital_ship,Bulk Transport,Barge
+capital_ship,Bulwark Battlecruiser,Barricade
+capital_ship,CC-7700 Frigate,Snare
+capital_ship,CC-9600 Frigate,Picket
+capital_ship,Carrack Light Cruiser,Warrant
+capital_ship,Corellian Corvette,Dodger
+capital_ship,Corellian Gunship,Wasp
+capital_ship,Dauntless Cruiser,Homeward
+capital_ship,Galleon,Bond
+capital_ship,Imperial Dreadnaught,Statute
+capital_ship,Imperial Escort Carrier,Tender
+capital_ship,Imperial II Star Destroyer,Mandate II
+capital_ship,Imperial Star Destroyer,Mandate
+capital_ship,Interdictor Cruiser,Subpoena
+capital_ship,Lancer Frigate,Writ
+capital_ship,Liberator Cruiser,Jubilee
+capital_ship,Medium Transport,Mule
+capital_ship,Mon Calamari Cruiser,Ark
+capital_ship,Nebulon-B Frigate,Mender
+capital_ship,Star Galleon,Bond II
+capital_ship,Strike Cruiser,Injunction
+capital_ship,Super Star Destroyer,Edict
+capital_ship,Victory Destroyer,Decree
+capital_ship,Victory II Star Destroyer,Decree II
+fighter,A-wing,Needle
+fighter,B-wing,Maul
+fighter,TIE Bomber,Thresher
+fighter,TIE Defender,Winnower
+fighter,TIE Fighter,Gleaner
+fighter,TIE Interceptor,Sickle
+fighter,X-wing,Swift
+fighter,Y-wing,Plough
+regiment,Alliance Army Regiment,Militia
+regiment,Alliance Fleet Regiment,Deckhands
+regiment,Dark Trooper Regiment,Lictors
+regiment,Imperial Army Regiment,Tranches
+regiment,Imperial Fleet Regiment,Ballast
+regiment,Mon Calamari Regiment,Ilmar Shade Guard
+regiment,Stormtrooper Regiment,Pacifiers
+regiment,Sullustan Regiment,Nhal Lookouts
+regiment,War Droid Regiment,Proxies
+regiment,Wookiee Regiment,Kiru Sparks
+sector,Ab Dalis Sector,Rio Lodo Sector
+sector,Abregado Sector,Feldspar Sector
+sector,Akiva Sector,Bauxite IV Sector
+sector,Akrit'tar Sector,Hundred Lakes Sector
+sector,Algarian Sector,Semeion Sector
+sector,Alk'lellish III Sector,Caza Real Sector
+sector,Alpinn Sector,Ilanga Sector
+sector,Altarrn Sector,Vinculum Sector
+sector,Amorris Sector,Shelter Sector
+sector,Ansion Sector,Ulaan Tal Sector
+sector,Aridus Sector,Ashfall Sector
+sector,Averam Sector,Three Lamps Sector
+sector,Axxila Sector,Highfall Sector
+sector,Balfron Sector,Tarrow Sector
+sector,Balmorra Sector,Tormentum Sector
+sector,Bandomeer Sector,Salitre Sector
+sector,Bardotta Sector,Quieta Sector
+sector,Belsavis Sector,Varmdal Sector
+sector,Bespin Sector,Drift Harbour Sector
+sector,Bilbringi Sector,Ferraria Sector
+sector,Bimmisaari Sector,Vinograd Sector
+sector,Borleias Sector,Excubia Sector
+sector,Bothawui Sector,Akousma Sector
+sector,Byss Sector,Mirabel Sector
+sector,Cato Neimoidia Sector,Mechane Sector
+sector,Cerea Sector,Bosque Alto Sector
+sector,Chandrila Sector,Lenitas Sector
+sector,Chrondre Sector,Thesauros Sector
+sector,Corellia Sector,Classis Sector
+sector,Coruscant Sector,Charter Sector
+sector,Couronne Sector,Bellwether Sector
+sector,Cymoon Sector,Altofen Sector
+sector,Cyrkon Sector,Rauchtal Sector
+sector,Dagobah Sector,Eldingar Sector
+sector,Dotharian Sector,Muster Rock Sector
+sector,Endor Sector,Fyrholm Sector
+sector,Etti Sector,Clearholm Sector
+sector,Felucia Sector,Greenfever Sector
+sector,Fondor Sector,Incus Sector
+sector,G'rho Sector,Ironbeach Sector
+sector,Hoth Sector,Thaw Sector
+sector,Ithor Sector,Mata Alta Sector
+sector,Kashyyyk Sector,Longtide Sector
+sector,Kessel Sector,Lantern Sector
+sector,Lianna Sector,Dunmere Sector
+sector,Mandalore Sector,Cohors Sector
+sector,Mon Calamari Sector,Moorings Sector
+sector,Muunilinst Sector,Zlatna Sector
+sector,Naboo Sector,Solacia Sector
+sector,Nubia Sector,Ommata Sector
+sector,Oetrago Sector,Lesnaya Sector
+sector,Ord Mantell Sector,Fairhaven Sector
+sector,Praesitlyn Sector,Longwire Sector
+sector,Raxus Sector,Slate Hill Sector
+sector,Rendili Sector,Castra Sector
+sector,Rishi Sector,Pulau Hijau Sector
+sector,Rodia Sector,Sendero Sector
+sector,Ryloth Sector,Laterite Sector
+sector,Saleucami Sector,Ciénaga Sector
+sector,Sluis Van Sector,Kranholm Sector
+sector,Sullust Sector,Caminus Sector
+sector,Takodana Sector,Lagoa Funda Sector
+sector,Toydaria Sector,Nebbia Sector
+sector,Tund Sector,Fallout Sector
+sector,none (outside sectors),Outside any sector
+special_force,Bothan Spies,Listeners
+special_force,Bounty Hunters,Repossessors
+special_force,Guerrillas,Strikers
+special_force,Imperial Commandos,Closers
+special_force,Imperial Espionage Droid,Auditors
+special_force,Imperial Probe Droid,Speculators
+special_force,Infiltrators,Wreckers
+special_force,Longprobe Y-wing Recon Team,Spotters
+special_force,Noghri Death Commandos,Notaries
+system,Ab Dalis,Rio Lodo
+system,Abednedo,Mercado Alto
+system,Abregado,Feldspar
+system,Adega,Solheim
+system,Aduba,Shirakaba
+system,Af'El,Sunscald
+system,Agamar,Isfjell
+system,Agrilat,Marl
+system,Akiva,Bauxite IV
+system,Akrit'tar,Hundred Lakes
+system,Aldhani,Cairnfell
+system,Aleen,Mesa Roja
+system,Algarian,Semeion
+system,Alk'lellish III,Caza Real
+system,Allanteen VI,Ninegates
+system,Allyuen,Hard Winter
+system,Alpinn,Ilanga
+system,Altarrn,Vinculum
+system,Ambria,Paydirt
+system,Amorris,Shelter
+system,Anaxes,Fusoria
+system,Anchoron,Skylark
+system,Ando,Halite
+system,Annaj,Ferrymoor
+system,Anoat,Rustwell
+system,Ansion,Ulaan Tal
+system,Antar 4,Uzun Su
+system,Ardennia,Sankt Odile
+system,Aridus,Ashfall
+system,Arkania,Isbrand
+system,Arkanis,Signum
+system,Atollon,Dry Reef
+system,Averam,Three Lamps
+system,Axxila,Highfall
+system,Azbian,Kaolin
+system,Bajic,Halvmark
+system,Bakura,Hollenvale
+system,Balfron,Tarrow
+system,Balmorra,Tormentum
+system,Balosar,Lowmarket
+system,Bandomeer,Salitre
+system,Barab I,Scaldwell
+system,Bardotta,Quieta
+system,Baroonda,Lunaria
+system,Barton IV,Permit Hill
+system,Basilisk,Scoria
+system,Bastatha,Tessera
+system,Bastion,Oldwatch
+system,Batuu,Los Pozos
+system,Begamor,Port Isolde
+system,Belladoon,Nowhere
+system,Belsavis,Varmdal
+system,Beltire,Grimwall
+system,Berchest,Cristalina
+system,Bescane,Grimsholt
+system,Bespin,Drift Harbour
+system,Bestine IV,Delicia
+system,Bilbringi,Ferraria
+system,Bimmisaari,Vinograd
+system,Birren,Port Sorrel
+system,Blutopia,Amoena
+system,Bogden,Steeplewater
+system,Bonadan,Murkhaven
+system,Boonta,Junkhold
+system,Boordii,Side Gate
+system,Borleias,Excubia
+system,Borosk,Shingle
+system,Bortras,Las Presas
+system,Botajef,Partus
+system,Bothawui,Akousma
+system,Botor,Alumen
+system,Bpfassh,Gemelos
+system,Bracca,Hulkfield
+system,Brentaal IV,Cambium
+system,Bromlarch,Commonhold
+system,Byblos,Grauburg
+system,Byss,Mirabel
+system,Cadomai,Isvik
+system,Cal-Seti,Rosvik
+system,Candovant,Gypsum Minor
+system,Cantonica,Wadi Sabr
+system,Caprionril,Serra Alta
+system,Caraad,Malleus
+system,Cardooine,Marga
+system,Carida,Custodia
+system,Carlac,Bluesand
+system,Castell,Limonite III
+system,Cathar,Umoya
+system,Cato Neimoidia,Mechane
+system,Celanon,Bread Street
+system,Cerea,Bosque Alto
+system,Chalacta,Sierra Seca
+system,Chalcedon,Warmwell
+system,Champala,Nacar
+system,Chanceuxi,Belle Rive
+system,Chandrila,Lenitas
+system,Chardaan,Natalis
+system,Charmath,Sevenwells
+system,Charros,Tinplate
+system,Chazwa,Nueva Pradera
+system,Christophsis,Meridian
+system,Chrondre,Thesauros
+system,Chyron,Penhallow
+system,Circumtore,Spindle
+system,Ciutric,Old Bench
+system,Clak'dor VII,Opsis
+system,Commenor,Porphyry
+system,Cona,Sedova
+system,Concord Dawn,Benigna
+system,Contruum,Puerto Hierro
+system,Corellia,Classis
+system,Corfai,Magnetite III
+system,Corsin,Waymeet
+system,Corstris,Deadfall
+system,Corulag,Tutela
+system,Coruscant,Charter
+system,Corvus,Riftwood
+system,Coto-Xana,Pyrite
+system,Couronne,Bellwether
+system,Crait,Saltgreen
+system,Csilla,Frostholm
+system,Culroon III,Krasny Yar
+system,Cyclor,Cutbank
+system,Cymoon,Altofen
+system,Cyrkon,Rauchtal
+system,D'Assem,Ashgrove
+system,D'Qar,Kanon
+system,Da Soocha,Seven Keys
+system,Daalang,Kaukomaa
+system,Dagobah,Eldingar
+system,Daiyu,Dongyu
+system,Daltar,Oionos
+system,Dantooine,Fallow
+system,Danzik,Lignite
+system,Dar'Or,Vexillum
+system,Dathomir,Redfen
+system,Davnar,Morrowfield
+system,Delaya,Tranquilla
+system,Denab,Havdal
+system,Denon,Fiducia
+system,Derra IV,Ribeira
+system,Desevro,Graustadt
+system,Desix,Las Eras
+system,Despayre,Undergrowth
+system,Deyer,Weirholm
+system,Dolla,Uhrwald
+system,Dorin,Natron
+system,Dotharian,Muster Rock
+system,Douglas III,Brannock
+system,Drall,Beryl
+system,Dressel,Groenveld
+system,Dromund Kaas,Stormfen
+system,Druckenwell,Kovarna
+system,Dubrillion,The Rafts
+system,Duros,Hiberna
+system,Eiattu,Placida
+system,Eiram,Fathom
+system,Elrood,Lockout
+system,Empress Teta,Bastide
+system,Endor,Fyrholm
+system,Engira,Bluefathom
+system,Enthenium,Hardwood
+system,Entralla,Ain Tamra
+system,Epikonia,Ellerbeck
+system,Eriadu,Cunabula
+system,Espirion,Agua Mansa
+system,Etti,Clearholm
+system,Exodeen,Tourmaline
+system,F'tral,Sweetsea
+system,Falleen,Suavis
+system,Farstine,Flarewater
+system,Fedalle,Vigilia
+system,Fedje,The Stumps
+system,Fef,Birchholm
+system,Felucia,Greenfever
+system,Ferrix,Officina
+system,Filve,Ostwerk
+system,Firro,Bela Voda
+system,Five Points,Hollow Fork
+system,Flax,Opifex
+system,Florn,The Wall
+system,Florrum,Brimstone
+system,Foless,Buyback
+system,Fondor,Incus
+system,Formos,First Morning
+system,Fornax,Bare Acre
+system,Fwillsving,Holdfast
+system,G'rho,Ironbeach
+system,Gad,Severitas
+system,Gallios,Aozora
+system,Galpos II,Second Spring
+system,Gamorr,Clanmoor
+system,Gand,Bellglass
+system,Gandolo IV,Ferrite IV
+system,Garban,Truce Moor
+system,Garqi,Cafetal
+system,Gatalenta,Quies
+system,Gazian,Morelle
+system,Geedon V,Ostrog
+system,Generis,Longgrass
+system,Gentes,Mudlark
+system,Geonosis,Ergon
+system,Geptish,Waymark
+system,Gerenthum,Seven Gates
+system,Gerrigon,Cidermoor
+system,Ghorman,Mollis
+system,Gigor,Perpetua
+system,Giju,Techne
+system,Gizer,Pennygate
+system,Glee Anselm,Mwezi
+system,Gorse,Stannum
+system,Grange,Steading
+system,Guat'a,Old Lens
+system,Gyndine,Velika Ravan
+system,H'nemthe,Kairos
+system,Halais,Subsidia
+system,Halowan,Arithmos
+system,Hapes,Seldwyn
+system,Hefi,Westerholm
+system,Hishyim,Erg Lahmar
+system,Honoghr,Barewood
+system,Hosnian Prime,Fiscus
+system,Hoth,The Thaw
+system,Hozrel XI,Farrow
+system,Hynestia,Archeion
+system,Hypori,Probatio
+system,Idaflor,Unlisted
+system,Iego,Rubble Sky
+system,Ikkrukk,Skalna
+system,Iktotch,Pedregal
+system,Ilum,Glasswood
+system,Imynusoph,Nadezhda
+system,Intuci,Highmere
+system,Inusagi,Feriae
+system,Iridonia,Deep Wells
+system,Isde Naha,Standstill
+system,Ithor,Mata Alta
+system,Jabiim,Mokra
+system,Jaemus,Stepwell
+system,Jakku,Kalium II
+system,Jaminere,Sonnfeld
+system,Jelucan,Felsite III
+system,Jerijador,Awlbridge
+system,Joiol,Wrenfield
+system,Jomark,Skerrholm
+system,Kabal,Ilhas Fundas
+system,Kal'Shebbol,Regrowth
+system,Kalarba,Tidewall
+system,Kaller,Timberline
+system,Kamparas,Valle Hondo
+system,Karfeddion,Montefosco
+system,Karthon,Landfall
+system,Kartoosh,Lowmoor
+system,Kashyyyk,Longtide
+system,Kegan,Supper Hill
+system,Kennerla,Sinkwater
+system,Kerkoidia,Mbuga
+system,Kessar,Rietmoor
+system,Kessel,The Lantern
+system,Ketaris,Seafold
+system,Khomm,Horasis
+system,Khuiumin,Agmen
+system,Kiffex,Retentio
+system,Kimanan,Consolatio
+system,Kinyen,Tierra Larga
+system,Kira,Kestrel Downs
+system,Kirdo III,Barro Rojo
+system,Kiros,Hundred Falls
+system,Kirrek,Stonebrake
+system,Kitel Phard,Thornveld
+system,Klatooine,Khamsin
+system,Kol Iben,Naphtha
+system,Kooriva,Ilha Verde
+system,Korbori,Lastwell
+system,Korriban,Breakyard
+system,Korrus,Plainsong
+system,Kothlis,Statio
+system,Kriselist,Nordhaven
+system,Krownest,Vinterby
+system,Kuat,Navalia
+system,Kubindi,Stewpot
+system,Kullgroon,Highrime
+system,Kwenn,Stepstone
+system,Lafete,The Kiln
+system,Lafra,Alvorada
+system,Lannik,Two Crowns
+system,Lantillies,Neuwerft
+system,Lasan,Loomhollow
+system,Lelmra,Kamenitsa
+system,Leritor,Tres Rios
+system,Lespectus,Limes
+system,Lianna,Dunmere
+system,Linuri,Kaskela
+system,Lipsec,Vaultrock
+system,Listehol,Icetap
+system,Llanic,Dormilona
+system,Loronar,Vallum
+system,Lorrd,Kaltwasser
+system,Lorta,Campo Alto
+system,Lothal,Llano Grande
+system,Lotho Minor,Midden
+system,Lowick,The Flats
+system,Lutrillia,Ochre Wells
+system,Madurs,Terracotta
+system,Malachor,Ghostlight
+system,Malastare,Wellhead
+system,Manda,Stillwater
+system,Mandalore,Cohors
+system,Manpha,Gumwater
+system,Mantessa,Dulcia
+system,Mardona,Fabrica
+system,Marleyvane,Seedbank
+system,Merokia,Hardpan
+system,Merson,Selvagem
+system,Metagos,Vidrio
+system,Mikkia,Halfwinter
+system,Milagro,Clinker
+system,Mimban,Blackmire
+system,Mina-Rau,Plenty
+system,Mindar,Four Lamps
+system,Mirial,Greysand
+system,Mokivj,Halfsky
+system,Molavar,Tierra Seca
+system,Moltok,Ashgarden
+system,Mon Calamari,The Moorings
+system,Mon Gazza,Laetitia
+system,Montross,Highbarrow
+system,Morvogodine,Long Strike
+system,Mrisst,Ardlinn
+system,Mugaar,Towline
+system,Munto Codru,The Notch
+system,Murkhana,Plage Blanche
+system,Mustafar,Blackglass
+system,Muunilinst,Zlatna
+system,Mygeeto,Rimeglass
+system,Mykapo,Oranjeveld
+system,N'zoth,Tamarisk
+system,Naboo,Solacia
+system,Nacon,Sourwater
+system,Nag Ubdur,Wolfram II
+system,Najan-Rovi,Mica
+system,Nal Hutta,Vrijhaven
+system,Nam'ta,The Ladle
+system,Namadii,Mill Hollow
+system,Nanth'ri,Lowenna
+system,Nantoon,Old Amber
+system,Nar Kanji,Hartsease
+system,Nar Shaddaa,Hoogstad
+system,Naraka,Stonecrop
+system,Narkina,Grandmother
+system,Neelgaimon,Ardlow
+system,Neimoidia,Medela
+system,Nentan,Alabaster
+system,Nevarro,Cendrine
+system,New Cov,Verdemar
+system,Nexus Ortai,Kruispunt
+system,Nixus,Whitecairn
+system,Norulac,Sawtooth
+system,Norval II,Duskwater
+system,Novka,Chert
+system,Nubia,Ommata
+system,Numidian Prime,Thousand Mouths
+system,Oba Diah,Black Teeth
+system,Obroa-skai,Whitmark
+system,Oetrago,Lesnaya
+system,Omwat,Kilele
+system,Onderon,Kronholm
+system,Ord Cestus,Stopped Line
+system,Ord Ibanna,Last Platform
+system,Ord Mantell,Fairhaven
+system,Ord Pardon,Stopgap
+system,Ord Trasi,Pale Ridge
+system,Orinda,Vysoka
+system,Orish,Cinnabar
+system,Orto,Hlubina
+system,Oseon,Rockclaim
+system,Pagodon,Bilokray
+system,Palanhi,Puerto Ceniza
+system,Pamarthe,Campus
+system,Pantolomin,Belmare
+system,Pantora,Veenhoven
+system,Parwa,Haematite
+system,Pax,Kreuzweg
+system,Phindar,Organon
+system,Phorliss,Stibium
+system,Phraetiss,Horsemarch
+system,Pil Diller,Last Tank
+system,Plexis,Stabilis
+system,Poderis,Altamesa
+system,Ponemah,Wadi Noor
+system,Praesitlyn,Longwire
+system,Pzob,Fernhollow
+system,Qat Chrystac,Glassfield
+system,Quarzite,Lowlight
+system,Quell,Stochos
+system,Quence,Portelle
+system,Quermia,Hortensia
+system,Rafa,Snowmouth
+system,Raithal,Constantia
+system,Rajtiri,Sunderby
+system,Ralltiir,Disciplina
+system,Randon,Galeholm
+system,Rattatak,Zubets
+system,Raxus,Slate Hill
+system,Raydonia,Requies
+system,Regis Kor,Stonebarrow
+system,Rekelos,Kalinov
+system,Rendili,Castra
+system,Rhinnal,Remedium
+system,Riflor,Fuego Alto
+system,Ringo Vinda,Teloneum
+system,Rior,Mudhaven
+system,Rishi,Pulau Hijau
+system,Rodia,Sendero
+system,Roona,Brushfield
+system,Rorak,Waypost
+system,Rothana,Kvitberg
+system,Ruuria,Rosenbach
+system,Ruusan,Ninefold
+system,Ryloth,Laterite
+system,Saleucami,Ciénaga
+system,Salliche,Las Mieses
+system,Sarka,Corundum
+system,Sason,Goldcloud
+system,Savareen,Long Strand
+system,Scarif,Hagelfeld
+system,Scipio,Dry House
+system,Seatos,Holmvik
+system,Sedri,Pescadora
+system,Selaggis,Groza
+system,Selonia,Marmor
+system,Serenno,Ebbeholm
+system,Sernpidal,Mar Seco
+system,Sesid,Motu Ahi
+system,Sevarcos,Quebrada Honda
+system,Shantipole,Needlepeak
+system,Shili,Saffron Downs
+system,Skako,Gnomon
+system,Skor II,Make Do
+system,Sleheyron,Emberhold
+system,Sluis Van,Kranholm
+system,Smarteel,Mirrorfield
+system,Socorro,Coldwell
+system,Solarine,Long Noon
+system,Sorgan,Willowmere
+system,Spefik,Whetstone
+system,Spuma,Viridia
+system,Sriluur,Cinco Lunas
+system,Stic,Theorema
+system,Stobar,Halfpenny
+system,Storthus,Hardscrabble
+system,Sullust,Caminus
+system,Sump,Blackfen
+system,Suria,Kesari
+system,Svivren,Hoshimachi
+system,Sy Myrth,Belavista
+system,Syvris,San Teodor
+system,Taanab,Granero
+system,Tah'Nuhna,Glasshold
+system,Takobo,Weitfeld
+system,Takodana,Lagoa Funda
+system,Talus,Bina Minor
+system,Tangrene,Kloof
+system,Tarabba,Blind Eye
+system,Targyon,Kizil Dala
+system,Taris,Ivyholm
+system,Tatooine,Amargura
+system,Tawl,Old Salvage
+system,Telos IV,Tabularium
+system,Tepasi,Skopia
+system,Terminus,Endline
+system,Thabeska,Backwater
+system,Thanta Zilbra,Silica Minor
+system,Thila,Nascentia
+system,Tholoth,Codicil
+system,Thrakia,Kalmoor
+system,Thyferra,Salus
+system,Tibrin,Rigwater
+system,Tieos,Shiree
+system,Tierfon,Specula
+system,Tiferep Major,Mittelfeld
+system,Tirahnn,Nueve Lunas
+system,Togoria,Redveld
+system,Tokmia,Tyomny Les
+system,Toola,Long Winter
+system,Toprawa,Hutan Raya
+system,Toydaria,Nebbia
+system,Tralus,Bina Major
+system,Trammis,Ventstown
+system,Trenchenovu,Brokengate
+system,Triffis,Fallen Keel
+system,Trillia,Pinehallow
+system,Triton,Dar Sukun
+system,Trogan,Meseta
+system,Tund,Fallout
+system,Tynna,Prognosis
+system,Tython,Old Cairn
+system,Ubduria,Imani Falls
+system,Ubrikkia,Kolokol
+system,Ukio,Broadacre
+system,Umbara,Overgrowth
+system,Umgul,Voluptas
+system,Urdur,Nordlys
+system,Utapau,Saltreach
+system,Uvena,Mossgarden
+system,Uveron,Hartwell
+system,Uyter,Haverland
+system,Vagran,Loess
+system,Vakkar,Praesidium
+system,Valboraan,Hammada
+system,Vallt,Yukihama
+system,Valo,Metsola
+system,Valrar,Treaty Wood
+system,Vandelhelm,Hollowstone
+system,Vandor,Kaldvik
+system,Vardos,Sigillum
+system,Varn,Longshore
+system,Vassek,Hirschwald
+system,Veelo,Mirevale
+system,Vinsoth,Feudgrass
+system,Virgillia,Resin Moon
+system,Vjun,Bitterwell
+system,Vodran,Rio Turvo
+system,Vondarc,Longquay
+system,Vortex,Otium
+system,Vorzyd,Novy Rynek
+system,Voss,Kept Faith
+system,Waskiro,Silberberg
+system,Wayland,Ridgefold
+system,Wistril,Tinderland
+system,Wobani,Firmitas
+system,Womrik,Castellum
+system,Woostri,Folio
+system,Wor Tandell,Saltwood
+system,Wrea,Skarholm
+system,Wroona,Azzurra
+system,Wynkahthu,Brandt's Giant
+system,Xa Fel,Brennhof
+system,Xagobah,Deepcut
+system,Xyquine,Nutrix
+system,Yag'Dhul,Craterhold
+system,Yaga Minor,Lindenfall
+system,Yar Togna,Kinoko
+system,Yavin,The Shoal
+system,Yerbana,The Cuts
+system,Zardossa Stix,Sabkha
+system,Zastiga,Milestone Nine
+system,Zebitrope IV,Nyika
+system,Zeffliffl,Kelpfast
+system,Zeffo,Pronoia
+system,Zeltros,Marisol
+system,Zhadalene,Clove
+system,Ziost,Coldhearth
+system,Zolan,Ashenmark
+system,Zygerria,Tallow Mesa
+defense,GenCore Level I,Lode Escrow I
+defense,GenCore Level II,Lode Escrow II
+defense,KDY-150,Mordant Lien-150
+defense,LNR Series I,Mordant Covenant I
+defense,LNR Series II,Mordant Covenant II

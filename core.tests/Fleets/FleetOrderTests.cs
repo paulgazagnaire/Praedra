@@ -9,19 +9,19 @@ using Praedra.Core.Tests.Economy;
 namespace Praedra.Core.Tests.Fleets;
 
 // Tests of m3-fleets (ids F1 to F22 as in the sheet's table, then extra tests named after the rule they check).
-// Fixture F: Empire holds Coruscant; spare fleet 200 holds ISD 201, ISD 202, Carrack 203 (completed, at Coruscant); TIE Fighter squadrons
-// 301 to 307 (the sheet lists 301 to 306; 307 is the "one more" of F11) and Alliance X-wing squadrons 310 and 311, all based at Coruscant;
-// Stormtrooper regiments 401 to 403 on Coruscant. The first id the fleet counter hands out is 204, as the sheet's F3 expects.
+// Fixture F: Empire holds Charter; spare fleet 200 holds ISD 201, ISD 202, Carrack 203 (completed, at Charter); Gleaner squadrons
+// 301 to 307 (the sheet lists 301 to 306; 307 is the "one more" of F11) and Alliance Swift squadrons 310 and 311, all based at Charter;
+// Stormtrooper regiments 401 to 403 on Charter. The first id the fleet counter hands out is 204, as the sheet's F3 expects.
 // Hook time T = K + 1; events of orders carry Day = K. The real galaxy, ship data and costs files are used.
 public class FleetOrderTests
 {
-    // v6 re-pin 2026-10-24: Far was Corellia; on the spiral map Brentaal IV takes the same days from Coruscant (5 at speed 80,
-    // 7 at 100, 4 at 60) over two legs (a free jump to Rhinnal, then a minor-route leg).
-    private const string Home = "Coruscant", Far = "Brentaal IV";
-    // v6 re-pin 2026-10-24: Corellia was also the first stop on the way to Hoth (F16, F21); on the spiral map that way leaves along
-    // the Trunk Line, and Talus is the second stop on it at every speed.
-    private const string OnTheWayToHoth = "Talus";
-    private const string Isd = "Imperial Star Destroyer", Carrack = "Carrack Light Cruiser", Tie = "TIE Fighter", Xwing = "X-wing";
+    // v6 re-pin 2026-10-24: Far was Classis; on the spiral map Cambium takes the same days from Charter (5 at speed 80,
+    // 7 at 100, 4 at 60) over two legs (a free jump to Remedium, then a minor-route leg).
+    private const string Home = "Charter", Far = "Cambium";
+    // v6 re-pin 2026-10-24: Classis was also the first stop on the way to The Thaw (F16, F21); on the spiral map that way leaves along
+    // the Trunk Line, and Bina Minor is the second stop on it at every speed.
+    private const string OnTheWayToHoth = "Bina Minor";
+    private const string Isd = "Mandate", Carrack = "Warrant", Tie = "Gleaner", Xwing = "Swift";
     private static readonly Side Emp = Side.Empire, Reb = Side.Alliance;
 
     private static BuildWorld F(bool wireFleets = false)
@@ -36,7 +36,7 @@ public class FleetOrderTests
         for (int id = 301; id <= 307; id++) w.Eco.AddObject(Emp, Tie, Home, true, id);
         w.Eco.AddObject(Reb, Xwing, Home, true, 310);
         w.Eco.AddObject(Reb, Xwing, Home, true, 311);
-        for (int id = 401; id <= 403; id++) w.Eco.AddObject(Emp, "Stormtrooper Regiment", Home, true, id);
+        for (int id = 401; id <= 403; id++) w.Eco.AddObject(Emp, "Pacifiers", Home, true, id);
         w.E.NextObjectId = 204;
         return w;
     }
@@ -66,7 +66,7 @@ public class FleetOrderTests
         w.Hold(Home, Emp);
         w.Yard(Home, FacilityKind.OrbitalShipyard);
         w.Refined(Emp, 1000);
-        Assert.Null(w.TryOrder(Emp, Home, YardFamily.Shipyard, "Imperial Star Destroyer", 2));
+        Assert.Null(w.TryOrder(Emp, Home, YardFamily.Shipyard, "Mandate", 2));
         w.RunTo(449);
         var created = Assert.Single(w.Events<FleetCreated>());
         var joined = Assert.Single(w.Events<ShipJoinedFleet>());
@@ -95,7 +95,7 @@ public class FleetOrderTests
         w.Hold(Home, Emp); w.Hold(Far, Emp);
         w.Yard(Home, FacilityKind.OrbitalShipyard);
         w.Refined(Emp, 1000);
-        Assert.Null(w.TryOrder(Emp, Home, YardFamily.Shipyard, "Imperial Star Destroyer", 3));
+        Assert.Null(w.TryOrder(Emp, Home, YardFamily.Shipyard, "Mandate", 3));
         w.RunTo(897);
         int first = Assert.Single(w.Events<FleetCreated>()).Fleet;
         Assert.Equal(2, w.State.Fleets[first].Ships.Count);
@@ -123,7 +123,7 @@ public class FleetOrderTests
         w.Hold(Home, Emp); w.Hold(Far, Emp);
         w.Yard(Home, FacilityKind.OrbitalShipyard);
         w.Refined(Emp, 1000);
-        Assert.Null(w.TryOrder(Emp, Home, YardFamily.Shipyard, "Imperial Star Destroyer", 1, Far));
+        Assert.Null(w.TryOrder(Emp, Home, YardFamily.Shipyard, "Mandate", 1, Far));
         w.RunTo(453);
         Assert.Empty(w.Events<ShipJoinedFleet>()); // still in delivery: in no fleet
         w.RunTo(454);
@@ -146,8 +146,8 @@ public class FleetOrderTests
         w.Hold(Home, Emp);
         w.Yard(Home, FacilityKind.OrbitalShipyard); w.Yard(Home, FacilityKind.TrainingFacility);
         w.Refined(Emp, 1000);
-        Assert.Null(w.TryOrder(Emp, Home, YardFamily.Shipyard, "TIE Fighter", 1));
-        Assert.Null(w.TryOrder(Emp, Home, YardFamily.Training, "Stormtrooper Regiment", 1));
+        Assert.Null(w.TryOrder(Emp, Home, YardFamily.Shipyard, "Gleaner", 1));
+        Assert.Null(w.TryOrder(Emp, Home, YardFamily.Training, "Pacifiers", 1));
         w.Run(100);
         Assert.Equal(2, w.Events<UnitCompleted>().Count);
         Assert.Empty(w.State.Fleets);
@@ -364,8 +364,8 @@ public class FleetOrderTests
     public void F16_ASquadronFleetStoppedAtAnIntermediateSystemLandsThere()
     {
         var w = F();
-        w.Fleets.AddFleet(Emp, "Picket", new[] { "Interdictor Cruiser" }, OnTheWayToHoth); // gravity-well ship on the route to Hoth (Paul 2026-10-16: only these pull fleets out)
-        long seq = w.Fleets.SubmitMoveSquadrons(Reb, new[] { 310, 311 }, "Hoth");
+        w.Fleets.AddFleet(Emp, "Picket", new[] { "Subpoena" }, OnTheWayToHoth); // gravity-well ship on the route to The Thaw (Paul 2026-10-16: only these pull fleets out)
+        long seq = w.Fleets.SubmitMoveSquadrons(Reb, new[] { 310, 311 }, "The Thaw");
         w.Run(1);
         Assert.Null(w.RejectionOf(seq));
         int fid = w.Events<OrderAccepted>().Single().Fleet!.Value;
@@ -391,14 +391,14 @@ public class FleetOrderTests
             w.Fleets.SubmitMoveSquadrons(Reb, new[] { 999 }, Far),           // unknown
             w.Fleets.SubmitMoveSquadrons(Reb, new[] { 301 }, Far),           // the Empire's squadron
             w.Fleets.SubmitMoveSquadrons(Emp, new[] { 301 }, Far),           // aboard
-            w.Fleets.SubmitMoveSquadrons(Reb, new[] { 310 }, "Nowhere"),
+            w.Fleets.SubmitMoveSquadrons(Reb, new[] { 310 }, "No Such Place"),
             w.Fleets.SubmitMoveSquadrons(Reb, new[] { 310 }, Home),          // already there
             w.Fleets.SubmitMoveSquadrons(Reb, Array.Empty<int>(), Far),
         };
         w.Run(1);
         Assert.Equal(
             new[] { RejectReason.DuplicateSquadron, RejectReason.UnknownSquadron, RejectReason.NotYours, RejectReason.SquadronAboard,
-                    RejectReason.UnknownSystem, RejectReason.AlreadyThere, RejectReason.EmptySelection }, // no Unreachable: free travel reaches Ilum
+                    RejectReason.UnknownSystem, RejectReason.AlreadyThere, RejectReason.EmptySelection }, // no Unreachable: free travel reaches Glasswood
             seqs.Select(w.RejectionOf));
         Assert.Equal(before, Snap(w));
     }
@@ -409,7 +409,7 @@ public class FleetOrderTests
     {
         var w = F();
         w.Eco.AddObject(Reb, Xwing, Far, true, 312);
-        Assert.Equal(RejectReason.NotSameSystem, Step(w, w.Fleets.SubmitMoveSquadrons(Reb, new[] { 310, 312 }, "Hoth")));
+        Assert.Equal(RejectReason.NotSameSystem, Step(w, w.Fleets.SubmitMoveSquadrons(Reb, new[] { 310, 312 }, "The Thaw")));
     }
 
     // m3-fleets §Unescorted squadrons: the slowest rating decides, any rating 0 makes it immobile
@@ -417,7 +417,7 @@ public class FleetOrderTests
     public void A_squadron_fleet_flies_at_its_largest_rating()
     {
         var w = F();
-        w.Eco.AddObject(Emp, "TIE Defender", Home, true, 320);
+        w.Eco.AddObject(Emp, "Winnower", Home, true, 320);
         Assert.Equal(RejectReason.Immobile, Step(w, w.Fleets.SubmitMoveSquadrons(Emp, new[] { 320, 301 }, Far)));
         Assert.Null(Step(w, w.Fleets.SubmitMoveSquadrons(Emp, new[] { 320 }, Far)));
         Assert.Equal(4, w.Events<OrderAccepted>().Single().TotalTicks); // Defender 60
@@ -463,7 +463,7 @@ public class FleetOrderTests
         w.Fleets.SubmitMergeFleets(Emp, 205, 204); w.Run(1);                           // 205 dissolves (Merged)
         w.Fleets.SubmitUnloadSquadrons(Emp, 204, new[] { 302 }); w.Run(1);
         w.Fleets.SubmitLoadSquadrons(Emp, 204, new[] { 301 }); w.Run(1);              // rejected: already aboard
-        w.Fleets.SubmitMoveSquadrons(Reb, new[] { 310, 311 }, "Hoth"); w.Run(1);
+        w.Fleets.SubmitMoveSquadrons(Reb, new[] { 310, 311 }, "The Thaw"); w.Run(1);
         w.Fleets.SubmitMove(Emp, 204, Far); w.Run(30);
         return w;
     }
@@ -539,7 +539,7 @@ public class FleetOrderTests
     public void F20_AFleetOfOneBulkTransportIsUnarmedButStillAFleetAndCarriesSixRegiments()
     {
         var w = new BuildWorld();
-        int f = w.Fleets.AddFleet(Reb, "Freighter", new[] { "Bulk Transport" }, Home);
+        int f = w.Fleets.AddFleet(Reb, "Freighter", new[] { "Barge" }, Home);
         var fleet = w.State.Fleets[f];
         Assert.False(CombatStrength.IsArmed(w.Fleets.Classes(fleet)));
         Assert.Equal(0, w.Fleets.StrengthOf(fleet));
@@ -547,7 +547,7 @@ public class FleetOrderTests
         Assert.Equal(0, w.Fleets.FreeBerths(fleet));
         // as an enemy at the middle of a trip it does not stop a passing fleet (m1 B3 with a real fleet)
         var w2 = new World(World.BCMap());
-        w2.Add(Side.Alliance, "Freight", "B", "Bulk Transport");
+        w2.Add(Side.Alliance, "Freight", "B", "Barge");
         int pass = w2.Add(Side.Empire, "Red", "A", Isd);
         w2.Move(Side.Empire, pass, "C");
         w2.Run(40);
@@ -559,11 +559,11 @@ public class FleetOrderTests
     public void F21_ABasedSquadronIsNotAFleetForTheForcedStopButCountsAsPresenceForTheBlockadeFlag()
     {
         var w = new BuildWorld();
-        // an Alliance squadron based on the way to Hoth; no Alliance fleet there
+        // an Alliance squadron based on the way to The Thaw; no Alliance fleet there
         w.Hold(OnTheWayToHoth, Reb);
         w.Eco.AddObject(Reb, Xwing, OnTheWayToHoth, true);
         int empire = w.Fleets.AddFleet(Emp, "Red", new[] { Isd }, Home);
-        w.Fleets.SubmitMove(Emp, empire, "Hoth"); // passes Talus (v6 re-pin 2026-10-24: was Corellia)
+        w.Fleets.SubmitMove(Emp, empire, "The Thaw"); // passes Bina Minor (v6 re-pin 2026-10-24: was Classis)
         w.Run(8);
         Assert.Empty(w.Events<ForcedStop>());
         Assert.Contains(w.Events<FleetPassed>(), e => e.System == OnTheWayToHoth);
@@ -644,7 +644,7 @@ public class FleetOrderTests
         int far = w.Fleets.FleetsAt(Far).Single().Ships.Single();
         Assert.Equal(RejectReason.NotSameSystem, Step(w, w.Fleets.SubmitCreateFleet(Emp, new[] { 201, far })));
         // and a fleet in transit anywhere in the list wins: InTransit
-        Assert.Null(Step(w, w.Fleets.SubmitMove(Emp, 200, "Hoth")));
+        Assert.Null(Step(w, w.Fleets.SubmitMove(Emp, 200, "The Thaw")));
         Assert.Equal(RejectReason.InTransit, Step(w, w.Fleets.SubmitCreateFleet(Emp, new[] { 201, 202 })));
     }
 
@@ -722,7 +722,7 @@ public class FleetOrderTests
         {
             w.Fleets.SubmitLoadSquadrons(Emp, 200, new[] { queued }),   // NotCompleted
             w.Fleets.SubmitLoadSquadrons(Emp, 200, new[] { 301 }),      // already aboard: not based
-            w.Fleets.SubmitLoadSquadrons(Emp, farFleet, new[] { 302 }), // squadron at Coruscant, fleet at Corellia
+            w.Fleets.SubmitLoadSquadrons(Emp, farFleet, new[] { 302 }), // squadron at Charter, fleet at Classis
         };
         w.Run(1);
         Assert.Equal(new[] { RejectReason.NotCompleted, RejectReason.SquadronNotBased, RejectReason.NotAtFleetSystem }, seqs.Select(w.RejectionOf));
@@ -759,7 +759,7 @@ public class FleetOrderTests
         var w = new EcoWorld(freeShips: true);
         w.Hold(Home, Emp, 25);
         int fleet = w.Fleets.AddFleet(Emp, "F", new[] { Isd }, Home);
-        for (int i = 0; i < 3; i++) w.Eco.AddObject(Emp, "Stormtrooper Regiment", Home);
+        for (int i = 0; i < 3; i++) w.Eco.AddObject(Emp, "Pacifiers", Home);
         w.Eco.AddObject(Emp, Tie, Home);
         Assert.Equal(50 - 10 - 6 - 5, w.Eco.DiversionPercent(Home, Emp)); // ship 10, three regiments 6, one based squadron 5
         int ship = w.State.Fleets[fleet].Ships.Single();

@@ -65,9 +65,9 @@ internal static class SimCli
 
     private static readonly Dictionary<string, string> Aliases = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["CR90"] = "Corellian Corvette", ["CR90 Corvette"] = "Corellian Corvette", ["Corvette"] = "Corellian Corvette",
-        ["ISD"] = "Imperial Star Destroyer", ["Star Destroyer"] = "Imperial Star Destroyer",
-        ["VSD"] = "Victory Destroyer", ["Interdictor"] = "Interdictor Cruiser",
+        ["CR90"] = "Dodger", ["CR90 Corvette"] = "Dodger", ["Corvette"] = "Dodger",
+        ["ISD"] = "Mandate", ["Star Destroyer"] = "Mandate",
+        ["VSD"] = "Decree", ["Interdictor"] = "Subpoena",
     };
 
     public static int Run(string[] args)
@@ -411,7 +411,7 @@ internal static class SimCli
     }
 
     // Support demo (engine/04, package P2.3). Reads state and events; draws nothing itself. At --reinforce-day eight Alliance
-    // regiments land on Mon Calamari (a setup-time action between Steps, as the construction package will do through orders later).
+    // regiments land on The Moorings (a setup-time action between Steps, as the construction package will do through orders later).
     private static int Support(string[] a)
     {
         int days = 360, reinforce = 120; ulong seed = 1; var ruleset = GarrisonRuleset.Classic;
@@ -431,7 +431,7 @@ internal static class SimCli
         var demo = DemoScenario.Create(FindRoot(), seed, incidents: false, support: true);
         var game = demo.Game; var eco = demo.Economy; var sup = demo.Support!; var fleets = demo.Fleets;
         sup.Ruleset = ruleset;
-        string[] watch = { "Mon Calamari", "Bespin", "Corellia", "Fondor", "Coruscant" };
+        string[] watch = { "The Moorings", "Drift Harbour", "Classis", "Incus", "Charter" };
         Console.WriteLine($"Support demo: {days} days, seed {seed}, ruleset {ruleset}, reinforcements on day {reinforce}. Economy incidents off.");
         Console.WriteLine("Support is the Alliance share (0..100); N = required garrison, G = regiments there (tenths in New).");
         Console.WriteLine();
@@ -453,8 +453,8 @@ internal static class SimCli
         {
             if (day == reinforce)
             {
-                for (int k = 0; k < 8; k++) eco.AddObject(Side.Alliance, "Alliance Army Regiment", "Mon Calamari");
-                Console.WriteLine($"Day {game.Day}: 8 Alliance Army Regiments land on Mon Calamari.");
+                for (int k = 0; k < 8; k++) eco.AddObject(Side.Alliance, "Militia", "The Moorings");
+                Console.WriteLine($"Day {game.Day}: 8 Alliance Army Regiments land on The Moorings.");
             }
             game.Step();
             for (; printed < game.Events.Count; printed++)
@@ -652,7 +652,7 @@ internal static class SimCli
     private static int MissionCmd(string[] a)
     {
         int missions = 1000, support = 50; ulong seed = 1; int? officerEsp = null;
-        MissionKind? kind = null; Side side = Side.Alliance; string at = "Coruscant", ownerArg = "";
+        MissionKind? kind = null; Side side = Side.Alliance; string at = "Charter", ownerArg = "";
         var agents = new List<string>(); var skills = new SortedDictionary<Skill, int>();
         List<(string, int)> sfs = new(), ships = new(), troops = new(); string? officer = null, targetAgent = null; var facilities = new List<FacilityKind>();
         for (int i = 0; i < a.Length; i++)

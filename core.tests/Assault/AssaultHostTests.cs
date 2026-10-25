@@ -23,18 +23,18 @@ public class AssaultHostTests
     private static GameHost Scenario(ulong seed)
     {
         var h = GameHost.New(seed, new GameSettings { IncidentsEnabled = false });
-        h.Fleets.SetOwner("Denon", Side.Alliance);
-        h.Economy.SetAllianceSupport("Denon", 100);
-        for (int i = 0; i < 5; i++) h.Economy.AddObject(Side.Alliance, "Alliance Army Regiment", "Denon");
-        h.Economy.AddFacility("Denon", FacilityKind.Kdy150);
-        int f = h.Fleets.AddFleet(Side.Empire, "Landing", new[] { "Victory Destroyer", "Victory Destroyer", "Victory Destroyer" }, "Denon");
+        h.Fleets.SetOwner("Fiducia", Side.Alliance);
+        h.Economy.SetAllianceSupport("Fiducia", 100);
+        for (int i = 0; i < 5; i++) h.Economy.AddObject(Side.Alliance, "Militia", "Fiducia");
+        h.Economy.AddFacility("Fiducia", FacilityKind.Kdy150);
+        int f = h.Fleets.AddFleet(Side.Empire, "Landing", new[] { "Decree", "Decree", "Decree" }, "Fiducia");
         var ships = h.Game.State.Fleets[f].Ships;
         for (int i = 0; i < 6; i++)
         {
-            var r = h.Economy.Find(h.Economy.AddObject(Side.Empire, "Stormtrooper Regiment", null))!;
+            var r = h.Economy.Find(h.Economy.AddObject(Side.Empire, "Pacifiers", null))!;
             r.AboardShip = ships[i / 2]; r.System = null;
         }
-        h.Assault.SubmitAssault(Side.Empire, f, "Denon");
+        h.Assault.SubmitAssault(Side.Empire, f, "Fiducia");
         return h;
     }
 
@@ -78,10 +78,10 @@ public class AssaultHostTests
         var json = h.Save();
         Assert.Contains("\"Assault\"", json);
         var l = GameHost.Load(json);
-        Assert.Contains(l.Game.Queue, o => o is AssaultOrder { System: "Denon", Side: Side.Empire });
+        Assert.Contains(l.Game.Queue, o => o is AssaultOrder { System: "Fiducia", Side: Side.Empire });
     }
 
-    // the test campaign's one scripted assault (day 250, the interdiction fleet lands on Kinyen), with every daily invariant green
+    // the test campaign's one scripted assault (day 250, the interdiction fleet lands on Tierra Larga), with every daily invariant green
     [Fact]
     public void CampaignScriptedAssaultResolvesOnItsDay()
     {

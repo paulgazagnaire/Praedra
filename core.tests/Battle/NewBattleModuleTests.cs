@@ -9,7 +9,7 @@ namespace Praedra.Core.Tests.Battle;
 // contact detection, OnContact, retreat destinations, write-back, FoughtThisStep and events work as for Classic, with BattleParams.Ruleset = New.
 public class NewBattleModuleTests
 {
-    private const string Corvette = "Corellian Corvette", Isd = "Imperial Star Destroyer", Interdictor = "Interdictor Cruiser", MonCal = "Mon Calamari Cruiser";
+    private const string Corvette = "Dodger", Isd = "Mandate", Interdictor = "Subpoena", MonCal = "Ark";
 
     // tractors: m4-retreat-damage-repair §6 (DEFAULT on). Tests of the base retreat rules that an ISD's tractor would change pass false.
     private static BattleWorld World(bool rolls = true, ulong seed = 1, RetreatMode mode = RetreatMode.LaneAdjacent, bool tractors = true) =>
@@ -127,7 +127,7 @@ public class NewBattleModuleTests
         var w = World(tractors: false); // tractors off: a held corvette would fight on and could shoot the TIEs after launch
         w.Fleets.SetOwner("A", Side.Alliance);
         w.Fleet(Side.Alliance, "B", Corvette, 4);
-        int imp = w.Fleets.AddFleet(Side.Empire, "imp", new[] { Isd }, "B", new[] { "TIE Fighter", "TIE Bomber" });
+        int imp = w.Fleets.AddFleet(Side.Empire, "imp", new[] { Isd }, "B", new[] { "Gleaner", "Thresher" });
         int isdId = w.F(imp).Ships[0];
         var squads = w.Game.State.Economy.Objects.Values.Where(o => o.Category == ObjectCategory.Fighter && o.AboardShip == isdId).Select(o => o.Id).ToList();
         Assert.Equal(2, squads.Count);

@@ -8,16 +8,16 @@ namespace Praedra.Core.Tests.Battle;
 // The battles here are Classic (B6a is the Classic AI threshold): Ruleset = Classic is set explicitly since the DEFAULT became New (2026-10-18).
 public class AiThresholdTests
 {
-    private const string Victory = "Victory Destroyer", MonCal = "Mon Calamari Cruiser", Isd = "Imperial Star Destroyer";
+    private const string Victory = "Decree", MonCal = "Ark", Isd = "Mandate";
 
-    // B6a-1 set-up: Empire AI at its own non-HQ world B; its fleet 1 Victory; enemy 2 Mon Cal carrying 1 completed X-wing squadron each
+    // B6a-1 set-up: Empire AI at its own non-HQ world B; its fleet 1 Victory; enemy 2 Mon Cal carrying 1 completed Swift squadron each
     private static BattleWorld World1(bool owned = true, bool planetSquadron = true, BattleParams? p = null)
     {
         var w = new BattleWorld(p ?? new BattleParams { Ruleset = BattleRuleset.Classic, SubsystemRolls = false, EmpireIsAi = true });
         if (owned) w.Fleets.SetOwner("B", Side.Empire);
-        if (planetSquadron) w.Eco.AddObject(Side.Empire, "TIE Fighter", "B");
+        if (planetSquadron) w.Eco.AddObject(Side.Empire, "Gleaner", "B");
         w.Fleet(Side.Empire, "B", Victory, 1);
-        w.Fleets.AddFleet(Side.Alliance, "Rebels", new[] { MonCal, MonCal }, "B", new[] { "X-wing", "X-wing" });
+        w.Fleets.AddFleet(Side.Alliance, "Rebels", new[] { MonCal, MonCal }, "B", new[] { "Swift", "Swift" });
         return w;
     }
 
@@ -27,24 +27,24 @@ public class AiThresholdTests
     {
         var s = World.Ships.Value;
         Assert.Equal(2000, AiFirepower.Ship(s[Isd], 0, true));
-        Assert.Equal(4000, AiFirepower.Ship(s["Imperial II Star Destroyer"], 0, true));
+        Assert.Equal(4000, AiFirepower.Ship(s["Mandate II"], 0, true));
         Assert.Equal(1200, AiFirepower.Ship(s[Victory], 0, true));
         Assert.Equal(1800, AiFirepower.Ship(s[MonCal], 0, true));
-        Assert.Equal(771, AiFirepower.Ship(s["Nebulon-B Frigate"], 0, true));
-        Assert.Equal(133, AiFirepower.Ship(s["Corellian Corvette"], 0, true));
+        Assert.Equal(771, AiFirepower.Ship(s["Mender"], 0, true));
+        Assert.Equal(133, AiFirepower.Ship(s["Dodger"], 0, true));
         Assert.Equal(1000, AiFirepower.Ship(s[Isd], 2, true));       // w = 20 - 10
         Assert.Equal(0, AiFirepower.Ship(s[Isd], 0, false));         // under construction
-        foreach (var f in new[] { "X-wing", "A-wing", "TIE Fighter", "TIE Interceptor", "TIE Defender" }) Assert.Equal(199, AiFirepower.FighterValue(s[f], 12));
-        foreach (var f in new[] { "Y-wing", "TIE Bomber" }) Assert.Equal(574, AiFirepower.FighterValue(s[f], 12));
-        Assert.Equal(628, AiFirepower.FighterValue(s["B-wing"], 12));
-        Assert.Equal(287, AiFirepower.Squadron(s["Y-wing"], 12, 6, true));
+        foreach (var f in new[] { "Swift", "Needle", "Gleaner", "Sickle", "Winnower" }) Assert.Equal(199, AiFirepower.FighterValue(s[f], 12));
+        foreach (var f in new[] { "Plough", "Thresher" }) Assert.Equal(574, AiFirepower.FighterValue(s[f], 12));
+        Assert.Equal(628, AiFirepower.FighterValue(s["Maul"], 12));
+        Assert.Equal(287, AiFirepower.Squadron(s["Plough"], 12, 6, true));
         // ISD at half hull: 2000 (hull is not in it); Mon Cal carrying 6 of 12 Y-wings: 1800 + 287
         var w = new BattleWorld();
         int isd = w.Fleet(Side.Empire, "B", Isd, 1);
         w.Obj(w.F(isd).Ships[0]).Hull = 1375;
         Assert.Equal(2000, w.Battles.FleetFirepower(w.F(isd)));
-        int mc = w.Fleets.AddFleet(Side.Alliance, "MC", new[] { MonCal }, "B", new[] { "Y-wing" });
-        w.Game.State.Economy.Objects.Values.Single(o => o.Class == "Y-wing").CraftLost = 6;
+        int mc = w.Fleets.AddFleet(Side.Alliance, "MC", new[] { MonCal }, "B", new[] { "Plough" });
+        w.Game.State.Economy.Objects.Values.Single(o => o.Class == "Plough").CraftLost = 6;
         Assert.Equal(2087, w.Battles.FleetFirepower(w.F(mc)));
     }
 
@@ -70,7 +70,7 @@ public class AiThresholdTests
         Assert.Equal(BattleOutcome.Retreated, r.Empire);
     }
 
-    // B6a-4: at Coruscant (or an HQ world) held with a planet squadron: 0, it fights on (the data value names the system)
+    // B6a-4: at Charter (or an HQ world) held with a planet squadron: 0, it fights on (the data value names the system)
     [Fact]
     public void B6a_4_CoruscantFightsToTheEnd()
     {
@@ -86,7 +86,7 @@ public class AiThresholdTests
     {
         var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.Classic, SubsystemRolls = false, EmpireIsAi = true });
         w.Fleets.SetOwner("B", Side.Empire);
-        w.Eco.AddObject(Side.Empire, "TIE Fighter", "B");
+        w.Eco.AddObject(Side.Empire, "Gleaner", "B");
         w.Fleet(Side.Empire, "B", Isd, 2);
         Assert.Equal(0.9, w.Battles.AiThreshold("B", Side.Empire)); // B = 0
         w.Fleet(Side.Alliance, "B", MonCal, 1);

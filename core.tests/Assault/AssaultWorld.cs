@@ -12,14 +12,14 @@ namespace Praedra.Core.Tests.Assault;
 
 /// <summary>
 /// A <see cref="BombWorld"/> (fleets, economy, support, defenses, bombardment, real files) with the troop, control and assault modules
-/// attached. Stub generator unless <c>stub: false</c>. <see cref="Sys"/> is "Denon". Regiments "aboard" are placed on the first ship of the
+/// attached. Stub generator unless <c>stub: false</c>. <see cref="Sys"/> is "Fiducia". Regiments "aboard" are placed on the first ship of the
 /// fleet without a capacity check (the troop orders are tested elsewhere).
 /// </summary>
 internal sealed class AssaultWorld
 {
     public const string Sys = BombWorld.Sys;
-    public const string Reb = "Alliance Army Regiment", Imp = "Imperial Army Regiment";
-    public const string Isd = "Imperial Star Destroyer", Neb = "Nebulon-B Frigate";
+    public const string Reb = "Militia", Imp = "Tranches";
+    public const string Isd = "Mandate", Neb = "Mender";
 
     public static readonly Lazy<TroopData> Troops = new(() => TroopData.Load(TestData.ClassicDir, TestData.DesignDir));
 

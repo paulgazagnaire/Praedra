@@ -14,14 +14,14 @@ public class BattleHostTests
     public void ShipThatFoughtAtItsOwnYardRepairsOnTheFastTimer()
     {
         var h = GameHost.New(1, new GameSettings { IncidentsEnabled = false, Economy = new EconomyParams { ScrapPeriod = 1_000_000 } });
-        const string yard = "Kuat";
+        const string yard = "Navalia";
         h.Fleets.SetOwner(yard, Side.Empire);
         h.Economy.AddFacility(yard, FacilityKind.OrbitalShipyard);
-        for (int i = 0; i < 3; i++) h.Economy.AddObject(Side.Empire, "Imperial Army Regiment", yard); // no uprising: the yard is usable
-        int f = h.Fleets.AddFleet(Side.Empire, "F", new[] { "Imperial Star Destroyer" }, yard);
+        for (int i = 0; i < 3; i++) h.Economy.AddObject(Side.Empire, "Tranches", yard); // no uprising: the yard is usable
+        int f = h.Fleets.AddFleet(Side.Empire, "F", new[] { "Mandate" }, yard);
         var isd = h.Game.State.Economy.Objects[h.Game.State.Fleets[f].Ships[0]];
         isd.Hull = 1790;
-        h.Fleets.AddFleet(Side.Alliance, "Raiders", new[] { "Corellian Corvette", "Corellian Corvette" }, yard);
+        h.Fleets.AddFleet(Side.Alliance, "Raiders", new[] { "Dodger", "Dodger" }, yard);
 
         h.Game.Step(); // the battle day (hook time 1): the timer starts, nothing repaired yet
         Assert.Single(h.Game.Events.OfType<Praedra.Core.Battle.BattleEnded>());

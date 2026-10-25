@@ -1,11 +1,11 @@
 id,name,weight10,defense
-1,Alliance Fleet Regiment,6,3
-2,Alliance Army Regiment,10,5
-3,Sullustan Regiment,8,4
-4,Wookiee Regiment,8,4
-5,Mon Calamari Regiment,16,8
-6,Stormtrooper Regiment,12,6
-7,Imperial Fleet Regiment,6,3
-8,Imperial Army Regiment,10,5
-9,War Droid Regiment,4,2
-10,Dark Trooper Regiment,16,8
+1,Deckhands,6,3
+2,Militia,10,5
+3,Nhal Lookouts,8,4
+4,Kiru Sparks,8,4
+5,Ilmar Shade Guard,16,8
+6,Pacifiers,12,6
+7,Ballast,6,3
+8,Tranches,10,5
+9,Proxies,4,2
+10,Lictors,16,8

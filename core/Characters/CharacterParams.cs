@@ -181,8 +181,8 @@ public sealed record CharacterParams
     // ---- Seat of Power (Traced B2e §6). rule: §Seat of Power
     /// <summary>LeadershipAdjustment of Empire-only characters while the Seat of Power holds. GNPRTB 3076 = 50 (0x5618d0).</summary>
     public int SeatOfPowerAdjustment { get; init; } = 50;
-    /// <summary>The Seat of Power system, key 0x90000009 = SYSTEMSD record 265 (Coruscant: inferred from the family and id, not by name).</summary>
-    public string SeatOfPowerSystem { get; init; } = "Coruscant";
+    /// <summary>The Seat of Power system, key 0x90000009 = SYSTEMSD record 265 (Charter: inferred from the family and id, not by name).</summary>
+    public string SeatOfPowerSystem { get; init; } = "Charter";
 
     // ---- switches (§Defaults for undecided items)
     /// <summary>Attached characters ride their fleet; false = detached at departure when a MoveFleet is accepted. DEFAULT true.</summary>
@@ -224,7 +224,7 @@ public sealed record CharacterParams
     /// <summary>GNPRTB 2593 = 0. Traced B2c, 0x561780.</summary>
     public int HqShiftBase { get; init; }
     /// <summary>
-    /// The Imperial Seat of Power: while the Emperor is free on Coruscant and the Empire holds it, Empire-only characters lead x1.5. DEFAULT true
+    /// The Imperial Seat of Power: while the Emperor is free on Charter and the Empire holds it, Empire-only characters lead x1.5. DEFAULT true
     /// (Traced B2e §6); false: never. rule: §Seat of Power.
     /// </summary>
     public bool SeatOfPower { get; init; } = true;

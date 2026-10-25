@@ -49,11 +49,11 @@ public class BombardmentHostTests
         GameHost Make()
         {
             var h = GameHost.New(5, new GameSettings { IncidentsEnabled = false });
-            h.Fleets.SetOwner("Denon", Side.Alliance);
-            h.Economy.SetAllianceSupport("Denon", 100);
-            for (int i = 0; i < 4; i++) h.Economy.AddObject(Side.Alliance, "Alliance Army Regiment", "Denon");
-            int f = h.Fleets.AddFleet(Side.Empire, "Raid", new[] { "Victory Destroyer", "Victory Destroyer" }, "Denon");
-            h.Bombardment.SubmitBombard(Side.Empire, f, "Denon", BombardCategory.Military);
+            h.Fleets.SetOwner("Fiducia", Side.Alliance);
+            h.Economy.SetAllianceSupport("Fiducia", 100);
+            for (int i = 0; i < 4; i++) h.Economy.AddObject(Side.Alliance, "Militia", "Fiducia");
+            int f = h.Fleets.AddFleet(Side.Empire, "Raid", new[] { "Decree", "Decree" }, "Fiducia");
+            h.Bombardment.SubmitBombard(Side.Empire, f, "Fiducia", BombardCategory.Military);
             return h;
         }
         var whole = Make();
@@ -66,9 +66,9 @@ public class BombardmentHostTests
         Assert.True(whole.Game.Events.SequenceEqual(loaded.Game.Events));
     }
 
-    // the test campaign's one scripted bombardment (day 200, the interdiction fleet shells Kinyen), with every daily invariant green. Since B7 the
-    // Kinyen battery (a KDY-150) fires back first (B7-bombardment §4, C2 DEFAULT on): on seed 1 its shot falls on the Victory Destroyer, whose
-    // shields cannot hold 2000 ion, so the ship is grounded and the fleet (Interdictor 0 + Victory Destroyer 4) strikes with P = 0, no hits.
+    // the test campaign's one scripted bombardment (day 200, the interdiction fleet shells Tierra Larga), with every daily invariant green. Since B7 the
+    // Tierra Larga battery (a Mordant Lien-150) fires back first (B7-bombardment §4, C2 DEFAULT on): on seed 1 its shot falls on the Decree, whose
+    // shields cannot hold 2000 ion, so the ship is grounded and the fleet (Interdictor 0 + Decree 4) strikes with P = 0, no hits.
     // Before B7 the strike was P = 4, 4 hits, 4 TargetHit events.
     [Fact]
     public void CampaignScriptedBombardmentResolvesOnItsDay()
@@ -82,7 +82,7 @@ public class BombardmentHostTests
         Assert.True(shot.Ion);
         var dmg = Assert.Single(run.Events.OfType<BombardShipDamaged>());
         Assert.Equal((shot.Ship, true, 0), (dmg.Ship, dmg.Grounded, dmg.HullLost));
-        Assert.Equal("Victory Destroyer", run.Host.Economy.Find(shot.Ship)?.Class);
+        Assert.Equal("Decree", run.Host.Economy.Find(shot.Ship)?.Class);
         Assert.Equal((TestCampaign.BlockadedSystem, Side.Empire, BombardCategory.General, 0, 0, 0), (started.System, started.Side, started.Category, started.P, started.S, started.Hits));
         var resolved = Assert.Single(run.Events.OfType<BombardmentResolved>());
         Assert.Equal(started.System, resolved.System);

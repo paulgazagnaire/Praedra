@@ -29,8 +29,8 @@ public enum ControlRule { Derived, AssaultOnly }
 /// </summary>
 public sealed class ControlModule
 {
-    /// <summary>The capital system, for the capital hook only (B5a section 6.3: Coruscant, system id 0x109). Name from the planets file.</summary>
-    public const string CapitalSystem = "Coruscant";
+    /// <summary>The capital system, for the capital hook only (B5a section 6.3: Charter, system id 0x109). Name from the planets file.</summary>
+    public const string CapitalSystem = "Charter";
 
     /// <summary>
     /// A world with no regiments joins the side whose support there is at least this (GNPRTB 7760 = 60 in every column, [DAT-own]); between the two
@@ -65,7 +65,7 @@ public sealed class ControlModule
     public bool DebugOrdersEnabled { get; set; }
 
     /// <summary>
-    /// The capital hook (B5a section 6.3): on every holder change, with true when the system is <see cref="CapitalSystem"/>. The Coruscant
+    /// The capital hook (B5a section 6.3): on every holder change, with true when the system is <see cref="CapitalSystem"/>. The Charter
     /// amounts are read (SDPRTB 5154: 10 if the Alliance is involved plus 5 if the Empire is; 5155: 100 / 90) but its scope (<c>0x55e010</c>)
     /// and the extra test <c>0x5180e0</c> are not, so DEFAULT: nothing subscribes and no support changes. Open question 4.
     /// </summary>

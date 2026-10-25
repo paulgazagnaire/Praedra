@@ -11,7 +11,7 @@ public sealed class StarSystem
     public string Group { get; }
     public int MapX { get; }
     public int MapY { get; }
-    /// <summary>All other planets-file columns (canon_x, origin, tier, affiliation, ...). Carried, never used for rules.</summary>
+    /// <summary>All other planets-file columns (origin, tier, affiliation, ...). Carried, never used for rules.</summary>
     public IReadOnlyDictionary<string, string> Carried { get; }
 
     public StarSystem(int index, string name, string sector, string group, int mapX, int mapY,
@@ -73,7 +73,7 @@ public readonly record struct Neighbour(int System, Lane Lane);
 public sealed class Galaxy
 {
     /// <summary>Sector label for the two outsiders. rule: m1-galaxy-data §What the loader reads.</summary>
-    public const string OutsideSectorsLabel = "none (outside sectors)";
+    public const string OutsideSectorsLabel = "Outside any sector";
 
     private readonly Dictionary<string, int> _byName;
     private readonly Neighbour[][] _neighbours;

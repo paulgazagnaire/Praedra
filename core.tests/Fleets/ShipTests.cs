@@ -10,13 +10,13 @@ using Praedra.Core.Tests.Economy;
 namespace Praedra.Core.Tests.Fleets;
 
 // Tests of m3-ships-and-fighters (ids S1 to S17 as in the sheet's table, then extra tests named after the rule they check).
-// The real CSV files are used. Hop Coruscant to Corellia is tier 1, base 20.
+// The real CSV files are used. Hop Charter to Classis is tier 1, base 20.
 public class ShipTests
 {
-    // v6 re-pin 2026-10-24: Far was Corellia (one 100-unit great-route leg); on the spiral map it is Brentaal IV, two legs from
-    // Coruscant (a free jump to Rhinnal, then a minor-route leg) that also take 5 days at speed 80 and 7 at speed 100.
-    private const string Home = "Coruscant", Far = "Brentaal IV";
-    private const string Isd = "Imperial Star Destroyer";
+    // v6 re-pin 2026-10-24: Far was Classis (one 100-unit great-route leg); on the spiral map it is Cambium, two legs from
+    // Charter (a free jump to Remedium, then a minor-route leg) that also take 5 days at speed 80 and 7 at speed 100.
+    private const string Home = "Charter", Far = "Cambium";
+    private const string Isd = "Mandate";
 
     private static IReadOnlyList<ShipClass> Capitals() => ShipData.LoadCapitalShips(Path.Combine(TestData.ClassicDir, ShipData.CapitalShipsFile));
     private static IReadOnlyList<ShipClass> Fighters() => ShipData.LoadFighters(Path.Combine(TestData.ClassicDir, ShipData.FightersFile));
@@ -83,12 +83,12 @@ public class ShipTests
     [Fact]
     public void S5_TheSameIdInTwoKindsIsTwoClasses()
     {
-        Assert.Equal("X-wing", Fighters().Single(x => x.Id == 3).Name);
+        Assert.Equal("Swift", Fighters().Single(x => x.Id == 3).Name);
         var t = Csv(CostData.FileName);
         string troop3 = "";
         for (int r = 0; r < t.RowCount; r++)
             if (t.Get(r, "kind") == "troop" && t.GetInt(r, "id") == 3) troop3 = t.Get(r, "name");
-        Assert.Equal("Sullustan Regiment", troop3);
+        Assert.Equal("Nhal Lookouts", troop3);
     }
 
     // every ship and fighter class has a cost row of the same name and category, and the other way round (the registry joins them by name)
@@ -121,7 +121,7 @@ public class ShipTests
     // m3-ships-and-fighters S6
     [Fact]
     public void S6_TheEmpireCannotOrderAnAllianceClass()
-        => Assert.Equal(RejectReason.NotAvailable, Yard(Side.Empire).TryOrder(Side.Empire, Home, YardFamily.Shipyard, "Mon Calamari Cruiser", 1));
+        => Assert.Equal(RejectReason.NotAvailable, Yard(Side.Empire).TryOrder(Side.Empire, Home, YardFamily.Shipyard, "Ark", 1));
 
     // m3-ships-and-fighters S7
     [Fact]
@@ -129,12 +129,12 @@ public class ShipTests
     {
         var w = Yard(Side.Alliance);
         w.Build.RespectResearchOrder = false; // AllAvailable (the M3 stub; the default is on since m5-research §Defaults)
-        Assert.Null(w.TryOrder(Side.Alliance, Home, YardFamily.Shipyard, "Bulwark Battlecruiser", 1)); // research order 11
+        Assert.Null(w.TryOrder(Side.Alliance, Home, YardFamily.Shipyard, "Barricade", 1)); // research order 11
         Assert.DoesNotContain(w.Game.Events, e => e is OrderRejected);
         // the same order under RespectResearchOrder
         var w2 = Yard(Side.Alliance);
         w2.Build.RespectResearchOrder = true;
-        Assert.Equal(RejectReason.NotResearched, w2.TryOrder(Side.Alliance, Home, YardFamily.Shipyard, "Bulwark Battlecruiser", 1));
+        Assert.Equal(RejectReason.NotResearched, w2.TryOrder(Side.Alliance, Home, YardFamily.Shipyard, "Barricade", 1));
     }
 
     // m3-ships-and-fighters S8
@@ -149,11 +149,11 @@ public class ShipTests
                  .Select(c => c.Name).OrderBy(n => n, StringComparer.Ordinal).ToList();
         Assert.Equal(6, At(ShipSide.Alliance, true).Count);
         Assert.Equal(7, At(ShipSide.Empire, true).Count);
-        Assert.Equal(new[] { "Alliance Dreadnaught", "Alliance Escort Carrier", "Bulk Cruiser", "Bulk Transport", "Corellian Corvette", "Medium Transport" }, At(ShipSide.Alliance, true));
-        Assert.Equal(new[] { "X-wing", "Y-wing" }, At(ShipSide.Alliance, false));
-        Assert.Equal(new[] { "TIE Fighter" }, At(ShipSide.Empire, false));
+        Assert.Equal(new[] { "Barge", "Dodger", "Grudge", "Hauler", "Mule", "Nest" }, At(ShipSide.Alliance, true));
+        Assert.Equal(new[] { "Plough", "Swift" }, At(ShipSide.Alliance, false));
+        Assert.Equal(new[] { "Gleaner" }, At(ShipSide.Empire, false));
         // a grant opens one more class
-        w.Build.GrantResearch(Side.Alliance, "Mon Calamari Cruiser");
+        w.Build.GrantResearch(Side.Alliance, "Ark");
         Assert.Equal(7, At(ShipSide.Alliance, true).Count);
     }
 
@@ -233,9 +233,9 @@ public class ShipTests
     [Fact]
     public void S12_ADamagedMediumTransportKeepsItsRating()
     {
-        var (w, f, ship) = Fleet("Medium Transport");
+        var (w, f, ship) = Fleet("Mule");
         Assert.Equal(7, DaysTo(w, f, Far)); // speed 100, undamaged: 7 days on the v6 two-leg trip
-        var (w2, f2, ship2) = Fleet("Medium Transport");
+        var (w2, f2, ship2) = Fleet("Mule");
         Damage(w2, ship2, 360, 0, 0, 0, 0, 5, 0); // hyperdrive_if_damaged is 0: use the normal rating
         Assert.Equal(7, DaysTo(w2, f2, Far));
     }
@@ -282,9 +282,9 @@ public class ShipTests
     public void S15_OnlyBulkTransportsOrGalleonsAreUnarmedAndOneCorvetteArmsThem()
     {
         var w = new BuildWorld();
-        int bulk = w.Fleets.AddFleet(Side.Alliance, "Bulk", new[] { "Bulk Transport" }, Home);
-        int galleon = w.Fleets.AddFleet(Side.Empire, "Galleon", new[] { "Galleon" }, Home);
-        int mixed = w.Fleets.AddFleet(Side.Alliance, "Mixed", new[] { "Bulk Transport", "Corellian Corvette" }, Home);
+        int bulk = w.Fleets.AddFleet(Side.Alliance, "Bulk", new[] { "Barge" }, Home);
+        int galleon = w.Fleets.AddFleet(Side.Empire, "Bond", new[] { "Bond" }, Home);
+        int mixed = w.Fleets.AddFleet(Side.Alliance, "Mixed", new[] { "Barge", "Dodger" }, Home);
         Assert.False(CombatStrength.IsArmed(w.Fleets.Classes(w.State.Fleets[bulk])));
         Assert.False(CombatStrength.IsArmed(w.Fleets.Classes(w.State.Fleets[galleon])));
         Assert.True(CombatStrength.IsArmed(w.Fleets.Classes(w.State.Fleets[mixed])));
@@ -313,7 +313,7 @@ public class ShipTests
         var w = new BuildWorld(7); // a real generator: any draw would be counted
         Capitals(); Fighters(); ShipData.LoadAll(TestData.ClassicDir);
         w.Fleets.DebugOrdersEnabled = true;
-        int f = w.Fleets.AddFleet(Side.Empire, "F", new[] { Isd, "Medium Transport" }, Home, new[] { "TIE Fighter" });
+        int f = w.Fleets.AddFleet(Side.Empire, "F", new[] { Isd, "Mule" }, Home, new[] { "Gleaner" });
         int ship = w.State.Fleets[f].Ships[0];
         w.Fleets.SubmitDebugSetDamage(Side.Empire, ship, 1200, new[] { 0, 2, 0, 1, 3, 0 });
         w.Fleets.SubmitMove(Side.Empire, f, Far);
@@ -330,9 +330,9 @@ public class ShipTests
         var w = new BuildWorld();
         int a = w.Eco.AddObject(Side.Empire, Isd, null, true);
         int b = w.Eco.AddObject(Side.Empire, "Death Star", null, false);
-        int c = w.Eco.AddObject(Side.Empire, "TIE Fighter", Home, true);
-        int d = w.Eco.AddObject(Side.Empire, "Stormtrooper Regiment", Home, true);
-        int e = w.Fleets.AddFleet(Side.Alliance, "F", new[] { "Nebulon-B Frigate" }, Home);
+        int c = w.Eco.AddObject(Side.Empire, "Gleaner", Home, true);
+        int d = w.Eco.AddObject(Side.Empire, "Pacifiers", Home, true);
+        int e = w.Fleets.AddFleet(Side.Alliance, "F", new[] { "Mender" }, Home);
         Assert.Equal(2750, w.Obj(a).Hull);
         Assert.Equal(new[] { 0, 0, 0, 0, 0, 0 }, w.Obj(a).Hits!);
         Assert.Equal(25000, w.Obj(b).Hull);
@@ -349,8 +349,8 @@ public class ShipTests
         w.Hold(Home, Side.Empire);
         w.Yard(Home, FacilityKind.OrbitalShipyard);
         w.Refined(Side.Empire, 200);
-        Assert.Null(w.TryOrder(Side.Empire, Home, YardFamily.Shipyard, "Victory Destroyer", 1));
-        var ship = w.Eco.Objects.Single(o => o.Class == "Victory Destroyer");
+        Assert.Null(w.TryOrder(Side.Empire, Home, YardFamily.Shipyard, "Decree", 1));
+        var ship = w.Eco.Objects.Single(o => o.Class == "Decree");
         Assert.Equal(1800, ship.Hull);
         Assert.Equal(6, ship.Hits!.Count);
     }

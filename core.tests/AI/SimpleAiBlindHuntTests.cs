@@ -15,7 +15,7 @@ public class SimpleAiBlindHuntTests
     public void BlindHuntIsOnByDefault() => Assert.True(new SimpleAiParams().BlindHunt);
 
     // The QA-19 shape on a short game. Day 1: Imperial regiments take every Rebel system but one, X: the Rebel system the Empire's picture does not
-    // show as Rebel (a hidden cell) that lies farthest from Coruscant. Assault-only control, so the debug regiments set the holder. The Alliance
+    // show as Rebel (a hidden cell) that lies farthest from Charter. Assault-only control, so the debug regiments set the holder. The Alliance
     // gives no orders. Day 300: a debug espionage refreshes the Empire's picture of every system it does not hold except X, so from then on X is
     // the one system it has not looked at for long, while the others age past StaleDays (all tie for the scouts, as on seed 15) but not past
     // BlindStaleDays. The day the game ends (the Alliance holds no system), or 0 by the day limit.
@@ -36,7 +36,7 @@ public class SimpleAiBlindHuntTests
             if (!taken)
             {
                 taken = true;
-                foreach (var s in rebel) if (s != x) h.Control.DebugApplyTroops(ctx, s, Side.Empire, "Imperial Army Regiment", 3);
+                foreach (var s in rebel) if (s != x) h.Control.DebugApplyTroops(ctx, s, Side.Empire, "Tranches", 3);
             }
             else if (!refreshed && ctx.Day >= 300)
             {
@@ -52,7 +52,7 @@ public class SimpleAiBlindHuntTests
         return h.Victory.Winner == Side.Empire ? h.Game.Day : 0;
     }
 
-    // Measured on v5 (seeds 1-4, the last Rebel system Kal'Shebbol on each): BlindHunt on, the game ends on day 352, 352, 361, 364; off, on day 457,
+    // Measured on v5 (seeds 1-4, the last Rebel system Regrowth on each): BlindHunt on, the game ends on day 352, 352, 361, 364; off, on day 457,
     // 460, 424, 424 (its scouts look at X too, but no pile goes there until X is the nearest neutral target left). Floors: on, every seed by
     // day 400; off, none by day 400.
     [Fact]
@@ -61,9 +61,12 @@ public class SimpleAiBlindHuntTests
         // v6 re-pin 2026-10-25 (Dev lead; Paul chose "Ship now" on the spiral-map card, re-measure the AI checks on the new map; ai-notes/2026-10-24-spiral-map-v6.md): on the spiral map X is close enough that the scouts often reach it anyway. Measured to day 800: on 364, 451, 379,
         // 352; off 364, 445, 391, 481. Floors: on, every seed by day 500; on never more than 10 days after off; on at least 100 days sooner on
         // some seed (the test still measures the switch). The v5 floor (on by 400, off never) waits for AI tuning to resume.
+        // Praedra names re-pin 2026-10-25 (Dev lead; Paul's order to remove the Star Wars names; systems sort by name, so every game moved):
+        // measured to day 800: on 364, 328, 307, 379; off 364, 394, 307, 379. Floors: on, every seed by day 500 (unchanged); on never more
+        // than 10 days after off (unchanged); on at least 60 days sooner on some seed (was 100; measured 66).
         var res = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => (s, On: EndDay(s, true, 500), Off: EndDay(s, false, 500)));
         Assert.All(res, r => Assert.True(r.On > 0, $"seed {r.s}: BlindHunt on, no winner by day 500"));
         Assert.All(res, r => Assert.True(r.Off == 0 || r.On <= r.Off + 10, $"seed {r.s}: BlindHunt on ended on day {r.On}, off on day {r.Off}"));
-        Assert.Contains(res, r => r.Off == 0 || r.Off - r.On >= 100);
+        Assert.Contains(res, r => r.Off == 0 || r.Off - r.On >= 60);
     }
 }

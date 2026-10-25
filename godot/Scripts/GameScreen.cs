@@ -352,7 +352,7 @@ public partial class GameScreen : Control
 
     static readonly string[] HowToLines =
     {
-        "GOAL: Empire - capture the Rebel headquarters system (first you must find it). Alliance - capture Coruscant. (Your HQ, and the enemy HQ once you know where it is, are tagged on the map; the My HQ / Enemy HQ buttons jump there.) You also win if the other side loses every system.",
+        "GOAL: Empire - capture the Rebel headquarters system (first you must find it). Alliance - capture Charter. (Your HQ, and the enemy HQ once you know where it is, are tagged on the map; the My HQ / Enemy HQ buttons jump there.) You also win if the other side loses every system.",
         "TIME: press Play (or Space) to run the clock, again to pause. Speed buttons or keys 1-4 (Play starts at 5x). N or +1 day moves one day. It pauses by itself after a battle, a capture or an invasion.",
         "ORDERS: everything you order starts when the next day begins. After giving orders, press Play or +1 day.",
         "MOVE A FLEET: click one of your fleets on the map (white outline) or its name in the Your fleets list, press Move..., then click the destination. The white line shows the route and the arrival day.",

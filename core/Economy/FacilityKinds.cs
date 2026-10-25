@@ -24,7 +24,7 @@ public static class FacilityKinds
         "Mine", "Refinery",
         "Orbital Shipyard", "Training Facility", "Construction Yard",
         "Advanced Shipyard", "Advanced Training Facility", "Advanced Construction Yard",
-        "KDY-150", "LNR Series I", "GenCore Level I", "Death Star Shield", "LNR Series II", "GenCore Level II",
+        "Mordant Lien-150", "Mordant Covenant I", "Lode Escrow I", "Death Star Shield", "Mordant Covenant II", "Lode Escrow II",
         "Sensor Station",
     };
 

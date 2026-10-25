@@ -12,7 +12,7 @@ namespace Praedra.Core.Tests.Characters;
 public class CaptorUnitAndAutorouteTests
 {
     private static int Fleet(MissionWorld w, Side side, string system, params string[] ships) => w.Host.Fleets.AddFleet(side, "F", ships, system);
-    private const string Isd = "Imperial Star Destroyer", Corvette = "Corellian Corvette";
+    private const string Isd = "Mandate", Corvette = "Dodger";
 
     private static void StepWith(MissionWorld w, string slot, Action<StepContext> work)
     {

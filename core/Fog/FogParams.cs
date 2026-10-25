@@ -43,8 +43,8 @@ public sealed record FogParams
     public int ObservedWindowDays { get; init; } = 30;
     /// <summary>One HQ: a reveal that finds it clears the side's other HqHere flags. rule: §N5.</summary>
     public bool SingleHqCleanup { get; init; } = true;
-    /// <summary>Systems each side gets a FullCopy of at setup (matched by name, skipped when not in the galaxy). Traced: Yavin to the Empire. rule: §F4 3.</summary>
-    public IReadOnlyList<string> StartFullCopyEmpire { get; init; } = new[] { "Yavin" };
+    /// <summary>Systems each side gets a FullCopy of at setup (matched by name, skipped when not in the galaxy). Traced: The Shoal to the Empire. rule: §F4 3.</summary>
+    public IReadOnlyList<string> StartFullCopyEmpire { get; init; } = new[] { "The Shoal" };
     public IReadOnlyList<string> StartFullCopyAlliance { get; init; } = Array.Empty<string>();
     /// <summary>
     /// The Setup reveal also writes group C (facilities) for the start_explored_all systems (never D or E). Classic = on (B4 §11, [EXE-own]
@@ -58,7 +58,7 @@ public sealed record FogParams
     /// <summary>Rich target (holds the HQ): N = rand(0..RichSpread) + RichBase. GNPRTB 6181 = 4, 6180 = 1.</summary>
     public int EspionageRichSpread { get; init; } = 4;
     public int EspionageRichBase { get; init; } = 1;
-    /// <summary>Empire-held Coruscant: GNPRTB 6179 = 4, 6178 = 1.</summary>
+    /// <summary>Empire-held Charter: GNPRTB 6179 = 4, 6178 = 1.</summary>
     public int EspionageCapitalSpread { get; init; } = 4;
     public int EspionageCapitalBase { get; init; } = 1;
     /// <summary>Other targets: GNPRTB 6177 = 0, 6176 = 1.</summary>
@@ -80,7 +80,7 @@ public sealed record FogParams
     public int SensorSquadronMax { get; init; } = 9;
 
     /// <summary>The capital for the espionage "rich" test (planets file name).</summary>
-    public string CapitalSystem { get; init; } = "Coruscant";
+    public string CapitalSystem { get; init; } = "Charter";
 
     /// <summary>The Sensor Station effect is on in New and off in Classic. rule: §Rule (New) intro.</summary>
     public bool SensorsWork => Ruleset == FogRuleset.New;

@@ -6,16 +6,16 @@ using Xunit.Abstractions;
 namespace Praedra.Core.Tests.Battle;
 
 // Tests of space-combat/11 section 4 (closing range, which supersedes m4-battle-new section 5) and of m4-battle-new section 6 (facing), on ships whose
-// strongest guns are on the broadside (Dauntless Cruiser). Finding of the "4 Dauntless v 2 Imperial II" bug hunt: facing, arc mapping and data copy were
+// strongest guns are on the broadside (Homeward). Finding of the "4 Dauntless v 2 Imperial II" bug hunt: facing, arc mapping and data copy were
 // correct; the Dauntless lost because the old StandOff rule parked the Imperial II out of their reach. The new rule closes to min(reach_a, reach_b).
 public class NewBattleBroadsideTests
 {
     private readonly ITestOutputHelper _out;
     public NewBattleBroadsideTests(ITestOutputHelper output) { _out = output; }
 
-    private const string Dauntless = "Dauntless Cruiser", ImperialII = "Imperial II Star Destroyer", Isd = "Imperial Star Destroyer", Strike = "Strike Cruiser", BulkCruiser = "Bulk Cruiser", Carrack = "Carrack Light Cruiser",
-        Bulwark = "Bulwark Battlecruiser", Cc9600 = "CC-9600 Frigate", VictoryDestroyer = "Victory Destroyer", Corvette = "Corellian Corvette",
-        EscortCarrier = "Imperial Escort Carrier", Nebulon = "Nebulon-B Frigate";
+    private const string Dauntless = "Homeward", ImperialII = "Mandate II", Isd = "Mandate", Strike = "Injunction", BulkCruiser = "Hauler", Carrack = "Warrant",
+        Bulwark = "Barricade", Cc9600 = "Picket", VictoryDestroyer = "Decree", Corvette = "Dodger",
+        EscortCarrier = "Tender", Nebulon = "Mender";
 
     private static (NewBattle B, ClassicBattleResult R) Run(NewBattleParams np, ulong seed, (string, int)[]? a = null, (string, int)[]? e = null,
         bool canRetreat = true, Action<NewBattle>? hook = null, bool log = true)
@@ -140,8 +140,8 @@ public class NewBattleBroadsideTests
         Assert.Equal(21, nb.Distance);
     }
 
-    // space-combat/11 §4 (4) first half: kiting needs a speed edge AND the larger reach. Carrack Light Cruiser (sublight 6, reach 50) v Bulk Cruiser (sublight 3, reach 35): kite.
-    // Equal speed (Bulk Cruiser 3 v Strike 3) with the larger reach on the Strike: no kite. (Pairs re-picked 2026-10-17 after the lore sublight values; the rule is unchanged.) A speed edge with the smaller reach (CC-9600, 6, v Victory Destroyer, 3): no kite.
+    // space-combat/11 §4 (4) first half: kiting needs a speed edge AND the larger reach. Warrant (sublight 6, reach 50) v Hauler (sublight 3, reach 35): kite.
+    // Equal speed (Hauler 3 v Strike 3) with the larger reach on the Strike: no kite. (Pairs re-picked 2026-10-17 after the lore sublight values; the rule is unchanged.) A speed edge with the smaller reach (CC-9600, 6, v Decree, 3): no kite.
     [Fact]
     public void Section4_4_KiteOnlyWithSpeedEdgeAndLargerReach()
     {
@@ -149,7 +149,7 @@ public class NewBattleBroadsideTests
         var kite = Run(new NewBattleParams(), 1, new[] { (BulkCruiser, 1) }, new[] { (Carrack, 1) }, canRetreat: false,
             hook: nb0 => nb0.AfterTick = t => { if (t == 1) { kre = nb0.LastReach(Side.Empire); kra = nb0.LastReach(Side.Alliance); } }).B;
         Assert.True(Sublight(Carrack) >= Sublight(BulkCruiser) + 1);
-        Assert.True(kite.KiteSeconds > 0, "Carrack v Bulk Cruiser should kite");
+        Assert.True(kite.KiteSeconds > 0, "Carrack v Hauler should kite");
         Assert.True(kre > kra, $"reach at t = 1: {kre} v {kra}"); // read at the start: the kiter may be gone by the end
 
         var equalSpeed = Run(new NewBattleParams(), 1, new[] { (BulkCruiser, 1) }, new[] { (Strike, 1) }, canRetreat: false).B;
@@ -162,12 +162,12 @@ public class NewBattleBroadsideTests
         Assert.True(fastShort.LastReach(Side.Alliance) < fastShort.LastReach(Side.Empire));
         Assert.Equal(0, fastShort.KiteSeconds);
 
-        // the speed edge is a tunable: with an edge of 4 points Carrack (6) v Bulk Cruiser (3) no longer kites
+        // the speed edge is a tunable: with an edge of 4 points Carrack (6) v Hauler (3) no longer kites
         var noEdge = Run(new NewBattleParams { KiteSpeedEdge = 4 }, 1, new[] { (BulkCruiser, 1) }, new[] { (Carrack, 1) }, canRetreat: false).B;
         Assert.Equal(0, noEdge.KiteSeconds);
     }
 
-    // space-combat/11 §4 (4) second half: the slower chaser closes at HALF speed, so the kite ends. Carrack v Bulk Cruiser: the Bulk Cruiser (sublight 3, 4.5 units/s) closes at 2.25 units/s
+    // space-combat/11 §4 (4) second half: the slower chaser closes at HALF speed, so the kite ends. Carrack v Hauler: the Hauler (sublight 3, 4.5 units/s) closes at 2.25 units/s
     // inside the Carrack's reach, until D = its own reach; the kiter fires alone meanwhile.
     [Fact]
     public void Section4_4_TheChaserClosesAtHalfSpeedAndTheKiteEnds()
@@ -229,7 +229,7 @@ public class NewBattleBroadsideTests
         Assert.Equal(firstCloser == Side.Alliance ? 4 * 3.0 : 5 * 3.0, first, 9);
     }
 
-    // space-combat/11 §4 (6): if nobody has a target in range for 20 s, both close at full speed to D = 15. Corellian Corvette (lasers only) v Imperial Escort Carrier
+    // space-combat/11 §4 (6): if nobody has a target in range for 20 s, both close at full speed to D = 15. Dodger (lasers only) v Tender
     // (no weapon that can hurt a shielded ship): nobody can ever fire, so D stays at the start value for 20 s and then goes to 15.
     [Fact]
     public void Section4_6_NoFireSafetyClosesToFifteenAfterTwentySeconds()

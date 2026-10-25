@@ -45,7 +45,11 @@ public class SimpleAiTaskForceTests
         // v6 re-pin 2026-10-25 (Dev lead; Paul chose "Ship now" on the spiral-map card, re-measure the AI checks on the new map; ai-notes/2026-10-24-spiral-map-v6.md): on, the Empire wins on day 1219, 1123, 1222, 1267 (splits 0, 6, 4, 0); off, on day -, 1300, 1258, - (0 splits). Floors: on, every
         // seed by day 1275 (was 1250); off, at least 2 seeds still going on day 1250 (unchanged); on ends at least 75 days sooner on average
         // (was 100; measured 82).
-        const int limit = 1300, by = 1250, onBy = 1275;
+        // Praedra names re-pin 2026-10-25 (Dev lead; Paul's order to remove the Star Wars names; systems sort by name, so every game moved):
+        // on, the Empire wins on day 1333, 1249, 1141, 1108 (splits 6, 4, 3, 3); off, on day 1369, 1387, 1312, 1087 (0 splits). Floors: on,
+        // every seed by day 1350 (was 1275); limit 1400 (was 1300); off, at least 2 seeds still going on day 1250 (unchanged); on ends at
+        // least 75 days sooner on average (unchanged; measured 81). Measured with the AI no longer sending load orders that can only bounce.
+        const int limit = 1400, by = 1250, onBy = 1350;
         var res = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => (s, On: Play(s, true, limit), Off: Play(s, false, limit)));
         Assert.All(res, r => Assert.True(r.On.End is > 0 and <= onBy, $"seed {r.s}: TaskForces on, the Empire won on day {r.On.End} (0 = not by {limit})"));
         Assert.True(res.Sum(r => r.On.Splits) > 0, "TaskForces on: no task-force split on any seed");

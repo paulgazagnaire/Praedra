@@ -100,9 +100,9 @@ public class B2cLoyaltyTriggerTests
     public void B2c4_EmpireAlone_ShiftIsSix()
     {
         var w = World();
-        w.Host.Fleets.AddFleet(Side.Empire, "F", new[] { "Victory Destroyer" }, T);
-        var lost = Ships(w, Side.Alliance, "Bulwark Battlecruiser", "Mon Calamari Cruiser", "Mon Calamari Cruiser")
-            .Concat(Ships(w, Side.Empire, "Victory Destroyer")).ToArray();
+        w.Host.Fleets.AddFleet(Side.Empire, "F", new[] { "Decree" }, T);
+        var lost = Ships(w, Side.Alliance, "Barricade", "Ark", "Ark")
+            .Concat(Ships(w, Side.Empire, "Decree")).ToArray();
         Assert.Equal(6, w.Host.Loyalty.LossShift(LoyaltyModule.SideNumberEmpire, 194, 30));
         Battle(w, lost);
         Assert.Equal(new[] { 194, 30, 0 }, w.Host.Loyalty.TallyOf(T)!.Battle);
@@ -115,9 +115,9 @@ public class B2cLoyaltyTriggerTests
     public void B2c5_AllianceAlone_HeavierLosses_ShiftIsMinusTwo()
     {
         var w = World();
-        w.Host.Fleets.AddFleet(Side.Alliance, "F", new[] { "Mon Calamari Cruiser" }, T);
-        var lost = Ships(w, Side.Alliance, "Bulwark Battlecruiser", "Assault Frigate", "Alliance Escort Carrier")
-            .Concat(Ships(w, Side.Empire, "Strike Cruiser", "Galleon", "Galleon")).ToArray();
+        w.Host.Fleets.AddFleet(Side.Alliance, "F", new[] { "Ark" }, T);
+        var lost = Ships(w, Side.Alliance, "Barricade", "Crowbar", "Nest")
+            .Concat(Ships(w, Side.Empire, "Injunction", "Bond", "Bond")).ToArray();
         Battle(w, lost);
         Assert.Equal(new[] { 150, 40, 0 }, w.Host.Loyalty.TallyOf(T)!.Battle);
         Assert.Equal(98, Loy(w, Lando));
@@ -133,10 +133,10 @@ public class B2cLoyaltyTriggerTests
         var w = World();
         if (both)
         {
-            w.Host.Fleets.AddFleet(Side.Alliance, "A", new[] { "Mon Calamari Cruiser" }, T);
-            w.Host.Fleets.AddFleet(Side.Empire, "E", new[] { "Victory Destroyer" }, T);
+            w.Host.Fleets.AddFleet(Side.Alliance, "A", new[] { "Ark" }, T);
+            w.Host.Fleets.AddFleet(Side.Empire, "E", new[] { "Decree" }, T);
         }
-        Battle(w, Ships(w, Side.Alliance, "Bulwark Battlecruiser", "Bulwark Battlecruiser"));
+        Battle(w, Ships(w, Side.Alliance, "Barricade", "Barricade"));
         Assert.Empty(w.Events<LoyaltyChanged>());
         Assert.Equal(100, Loy(w, Lando));
     }
@@ -146,8 +146,8 @@ public class B2cLoyaltyTriggerTests
     public void B2c7_OnlyFightersDied_TalliesZero_NoChange()
     {
         var w = World();
-        w.Host.Fleets.AddFleet(Side.Empire, "F", new[] { "Victory Destroyer" }, T);
-        Battle(w, Ships(w, Side.Alliance, "X-wing", "X-wing", "Y-wing"));
+        w.Host.Fleets.AddFleet(Side.Empire, "F", new[] { "Decree" }, T);
+        Battle(w, Ships(w, Side.Alliance, "Swift", "Swift", "Plough"));
         Assert.Equal(new[] { 0, 0, 0 }, w.Host.Loyalty.TallyOf(T)!.Battle);
         Assert.Empty(w.Events<LoyaltyChanged>());
     }
@@ -191,12 +191,12 @@ public class B2cLoyaltyTriggerTests
     public void B2c10_SecondBattleStartsFromZero()
     {
         var w = World();
-        w.Host.Fleets.AddFleet(Side.Empire, "F", new[] { "Victory Destroyer" }, T);
-        var first = Ships(w, Side.Alliance, "Bulwark Battlecruiser");
+        w.Host.Fleets.AddFleet(Side.Empire, "F", new[] { "Decree" }, T);
+        var first = Ships(w, Side.Alliance, "Barricade");
         Emit(w, (i, d) => new BattleStarted(i, d, T, new ValueList<int>(Array.Empty<int>()), new ValueList<int>(Array.Empty<int>())));
         foreach (var u in first) Emit(w, (i, d) => new UnitDestroyed(i, d, T, u, 1, UnitLossReason.Combat));
         Assert.Equal(110, w.Host.Loyalty.TallyOf(T)!.Battle[0]);
-        Battle(w, Ships(w, Side.Alliance, "Mon Calamari Cruiser", "Mon Calamari Cruiser"));
+        Battle(w, Ships(w, Side.Alliance, "Ark", "Ark"));
         Assert.Equal(new[] { 84, 0, 0 }, w.Host.Loyalty.TallyOf(T)!.Battle);
         Assert.Equal(98, Loy(w, Lando)); // 84 / 50 + 84 / 50 = 2, not the 6 of 194
     }
@@ -214,8 +214,8 @@ public class B2cLoyaltyTriggerTests
         Assert.Single(w.Events<SystemCaptured>());
         Emit(w, (i, d) => new HqDestroyed(i, d, "Test", H));
         Assert.Equal(before, w.Stub.Count(0, 5));
-        w.Host.Fleets.AddFleet(Side.Empire, "F", new[] { "Victory Destroyer" }, T);
-        Battle(w, Ships(w, Side.Alliance, "Bulwark Battlecruiser"));
+        w.Host.Fleets.AddFleet(Side.Empire, "F", new[] { "Decree" }, T);
+        Battle(w, Ships(w, Side.Alliance, "Barricade"));
         Emit(w, (i, d) => new BlockadeStarted(i, d, T, Side.Empire));
         RegimentLost(w, Side.Alliance, RebArmy, "AssaultBattery", 20);
         Emit(w, (i, d) => new BlockadeLifted(i, d, T, Side.Empire));

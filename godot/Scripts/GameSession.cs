@@ -168,13 +168,13 @@ public sealed partial class GameSession
     }
 
     /// <summary>
-    /// The player's own headquarters system (Empire: Coruscant; Alliance: where the HQ stands), or null (the HQ is moving or destroyed).
+    /// The player's own headquarters system (Empire: Charter; Alliance: where the HQ stands), or null (the HQ is moving or destroyed).
     /// </summary>
     public string MyHqSystem => Player == Side.Empire ? GameBoot.EmpireCapital
         : (OwnHq.Status == HqStatus.AtRest ? OwnHq.System : null);
 
     /// <summary>
-    /// The enemy's headquarters as the player's side knows it: the Alliance always knows Coruscant; the Empire only the system its own
+    /// The enemy's headquarters as the player's side knows it: the Alliance always knows Charter; the Empire only the system its own
     /// picture shows the Rebel HQ at (KnownHq, rule: m5-fog-and-hq §N5), else null = unknown.
     /// </summary>
     public string EnemyHqSystem => Player == Side.Alliance ? GameBoot.EmpireCapital : Fog.KnownHq(Side.Empire)?.System;

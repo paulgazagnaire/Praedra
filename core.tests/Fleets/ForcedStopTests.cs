@@ -5,15 +5,15 @@ using Praedra.Core.Ships;
 namespace Praedra.Core.Tests.Fleets;
 
 // rule: m1-forced-stop-and-blockade §Tests B1-B17 on the synthetic map A(0,0) B(100,0) C(200,0): tier 3 lanes, a speed-80
-// fleet needs 16 days per hop. F = an Alliance Corellian Corvette (the "CR90"; strength 0 (laser-only), speed 80) ordered A to C on day 0.
+// fleet needs 16 days per hop. F = an Alliance Dodger (the "CR90"; strength 0 (laser-only), speed 80) ordered A to C on day 0.
 //
 // TRIGGERS. The sheet wrote B2, B6, B7 for AnyArmedFleet; the lead's override (section "Update 2026-10-12") makes PaulRule the
 // default. Each test says which trigger(s) it runs under. Tests that depend on strength levels carry "M4 re-check":
 // CombatStrength is m4-battle-new §12 (the M1 placeholder, sum of refined_material_cost, is gone).
 public class ForcedStopTests
 {
-    private const string Isd = "Imperial Star Destroyer";
-    private const string Corvette = "Corellian Corvette"; // "CR90 Corvette" in the lead's brief; the data calls it this
+    private const string Isd = "Mandate";
+    private const string Corvette = "Dodger"; // "CR90 Corvette" in the lead's brief; the data calls it this
 
     public static IEnumerable<object[]> AllTriggers() => new[]
     {
@@ -70,13 +70,13 @@ public class ForcedStopTests
         Assert.Empty(w.Events<FleetArrived>(x => x.Fleet == f));
     }
 
-    [Theory, MemberData(nameof(AllTriggers))] // B3: Bulk Transport has attack 0 in the data, so it is never armed under any trigger
+    [Theory, MemberData(nameof(AllTriggers))] // B3: Barge has attack 0 in the data, so it is never armed under any trigger
     public void B3_empire_unarmed_transport_at_B_does_not_stop_F(ForcedStopTrigger t)
     {
-        // Note: the ship data lists Bulk Transport as Alliance-only (is_empire = 0); the sheet calls it an Empire fleet. Side is not
+        // Note: the ship data lists Barge as Alliance-only (is_empire = 0); the sheet calls it an Empire fleet. Side is not
         // checked against ship data in M1 (that is M3's CreateFleet), so the sheet's test runs as written.
         var (w, f) = Start(t);
-        w.Add(Side.Empire, "E", "B", "Bulk Transport");
+        w.Add(Side.Empire, "E", "B", "Barge");
         w.Move(Side.Alliance, f, "C");
         w.Run(40);
         AssertReaches(w, f, "C", 32);
@@ -128,7 +128,7 @@ public class ForcedStopTests
     public void Two_enemy_fleets_passing_B_on_the_same_day_both_stop(ForcedStopTrigger t)
     {
         var (w, f) = Start(t);
-        int e = w.Add(Side.Empire, "E", "D", "Lancer Frigate"); // laser-only: strength 0, like the corvette
+        int e = w.Add(Side.Empire, "E", "D", "Writ"); // laser-only: strength 0, like the corvette
         w.Move(Side.Empire, e, "C"); // D -> B -> C, reaches B on day 16 as well
         w.Move(Side.Alliance, f, "C");
         w.Run(16);
@@ -172,11 +172,11 @@ public class ForcedStopTests
         Assert.Empty(w.Events<Contact>());
     }
 
-    [Fact] // B9: GravityWellShip trigger, one Interdictor Cruiser
+    [Fact] // B9: GravityWellShip trigger, one Subpoena
     public void B9_gravity_well_trigger_one_Interdictor_at_B_stops_F_on_day_16()
     {
         var (w, f) = Start(ForcedStopTrigger.GravityWellShip);
-        int e = w.Add(Side.Empire, "E", "B", "Interdictor Cruiser");
+        int e = w.Add(Side.Empire, "E", "B", "Subpoena");
         w.Move(Side.Alliance, f, "C");
         w.Run(16);
         var stop = Assert.Single(w.Events<ForcedStop>());
@@ -276,7 +276,7 @@ public class ForcedStopTests
     {
         var w = new World(World.BCMap(), t);
         w.Fleets.SetOwner("B", Side.Alliance);
-        w.Add(Side.Empire, "E", "B", "Galleon");
+        w.Add(Side.Empire, "E", "B", "Bond");
         int f = w.Add(Side.Alliance, "F", "A", Corvette);
         w.Move(Side.Alliance, f, "C");
         w.Run(15);
@@ -353,8 +353,8 @@ public class ForcedStopTests
     public void PaulRule_an_Interdictor_stops_a_much_stronger_fleet()
     {
         var w = new World(World.BCMap(), ForcedStopTrigger.PaulRule);
-        var inter = w.Fleets.AddFleet(Side.Empire, "Picket", new[] { "Interdictor Cruiser" }, "B");
-        int big = w.Add(Side.Alliance, "Big", "A", "Bulwark Battlecruiser", "Bulwark Battlecruiser"); // 2 x 248 against 40
+        var inter = w.Fleets.AddFleet(Side.Empire, "Picket", new[] { "Subpoena" }, "B");
+        int big = w.Add(Side.Alliance, "Big", "A", "Barricade", "Barricade"); // 2 x 248 against 40
         w.Move(Side.Alliance, big, "C");
         w.Run(12); // speed 60: 12 days per hop
         var stop = Assert.Single(w.Events<ForcedStop>());
@@ -368,7 +368,7 @@ public class ForcedStopTests
     public void PaulRule_the_passing_fleets_own_gravity_well_ship_does_not_exempt_it()
     {
         var w = new World(World.BCMap(), ForcedStopTrigger.PaulRule);
-        int mover = w.Add(Side.Alliance, "Mover", "A", "CC-7700 Frigate"); // gravity_well_projector 4, speed 70
+        int mover = w.Add(Side.Alliance, "Mover", "A", "Snare"); // gravity_well_projector 4, speed 70
         w.Add(Side.Empire, "E", "B", Isd);
         w.Move(Side.Alliance, mover, "C");
         w.Run(14);
@@ -378,26 +378,26 @@ public class ForcedStopTests
     [Fact] // PaulRule: T is >= (exactly half stops); enemy fleets at the system add up (one force); M4 re-check
     public void PaulRule_threshold_is_inclusive_and_enemy_fleets_are_pooled()
     {
-        // passing: Victory Destroyer = 68; enemy Nebulon-B 34 = exactly 0.5 x 68 -> stops
+        // passing: Decree = 68; enemy Nebulon-B 34 = exactly 0.5 x 68 -> stops
         var w = new World(World.BCMap());
-        int mover = w.Add(Side.Empire, "Mover", "A", "Victory Destroyer");
-        w.Add(Side.Alliance, "Nebulon", "B", "Nebulon-B Frigate");
+        int mover = w.Add(Side.Empire, "Mover", "A", "Decree");
+        w.Add(Side.Alliance, "Nebulon", "B", "Mender");
         w.Move(Side.Empire, mover, "C");
         w.Run(16);
         Assert.Single(w.Events<ForcedStop>());
 
-        // passing: 2 ISD = 224, half = 112. A Mon Calamari Cruiser (92) alone passes; with a second fleet, a Nebulon-B (34), 126 stops.
+        // passing: 2 ISD = 224, half = 112. A Ark (92) alone passes; with a second fleet, a Nebulon-B (34), 126 stops.
         var alone = new World(World.BCMap());
         int m1 = alone.Add(Side.Empire, "Mover", "A", Isd, Isd);
-        alone.Add(Side.Alliance, "MonCal", "B", "Mon Calamari Cruiser");
+        alone.Add(Side.Alliance, "MonCal", "B", "Ark");
         alone.Move(Side.Empire, m1, "C");
         alone.Run(40);
         Assert.Empty(alone.Events<ForcedStop>());
 
         var w2 = new World(World.BCMap());
         int m2 = w2.Add(Side.Empire, "Mover", "A", Isd, Isd);
-        w2.Add(Side.Alliance, "MonCal", "B", "Mon Calamari Cruiser");
-        w2.Add(Side.Alliance, "Helper", "B", "Nebulon-B Frigate");
+        w2.Add(Side.Alliance, "MonCal", "B", "Ark");
+        w2.Add(Side.Alliance, "Helper", "B", "Mender");
         w2.Move(Side.Empire, m2, "C");
         w2.Run(16);
         Assert.Equal(m2, Assert.Single(w2.Events<ForcedStop>()).Fleet);
@@ -422,7 +422,7 @@ public class ForcedStopTests
     public void PaulRule_corvettes_do_not_stop_a_shielded_transport()
     {
         var w = new World(World.BCMap());
-        int t = w.Add(Side.Empire, "Galleon", "A", "Galleon"); // attack 0, speed 80, shield 100
+        int t = w.Add(Side.Empire, "Bond", "A", "Bond"); // attack 0, speed 80, shield 100
         w.Add(Side.Alliance, "Corvette", "B", Corvette);       // armed (attack > 0), strength against a shielded ship 0
         w.Move(Side.Empire, t, "C");
         w.Run(40);
@@ -453,7 +453,7 @@ public class ForcedStopTests
     public void PaulRule_an_unarmed_passing_fleet_is_stopped_by_an_armed_enemy_fleet()
     {
         var w = new World(World.BCMap());
-        int t = w.Add(Side.Alliance, "Transport", "A", "Bulk Transport"); // attack 0, speed 90: 18 days per hop
+        int t = w.Add(Side.Alliance, "Transport", "A", "Barge"); // attack 0, speed 90: 18 days per hop
         w.Add(Side.Empire, "E", "B", Isd);
         w.Move(Side.Alliance, t, "C");
         w.Run(18);
@@ -472,12 +472,12 @@ public class ForcedStopTests
         Assert.Single(w.Events<ForcedStop>());
     }
 
-    [Fact] // PaulRule, GravityWellShip: the CC-7700 Frigate (Alliance) has gravity_well_projector 4 too
+    [Fact] // PaulRule, GravityWellShip: the Snare (Alliance) has gravity_well_projector 4 too
     public void Gravity_well_trigger_stops_for_a_CC7700_as_well()
     {
         var w = new World(World.BCMap(), ForcedStopTrigger.GravityWellShip);
         int e = w.Add(Side.Empire, "E", "A", Isd);
-        w.Add(Side.Alliance, "Picket", "B", "CC-7700 Frigate");
+        w.Add(Side.Alliance, "Picket", "B", "Snare");
         w.Move(Side.Empire, e, "C");
         w.Run(16);
         Assert.Single(w.Events<ForcedStop>());
@@ -494,7 +494,7 @@ public class ForcedStopTests
         Assert.Equal(50, data.ThresholdPercent);
         Assert.Equal(64.8, w.Fleets.EconomicStrength, 1e-9); // m4-battle-new N8: CS(3 Victory Destroyers, REF = 3 ISD) (was the placeholder 204)
         Assert.Equal(3, data.ReferenceShipCount);
-        Assert.Equal("Imperial Star Destroyer", data.ReferenceShipClass);
+        Assert.Equal("Mandate", data.ReferenceShipClass);
     }
 
     [Fact] // M4 re-check for the strength cases
@@ -503,7 +503,7 @@ public class ForcedStopTests
         var w = new World(World.BCMap());
         string Vd = World.Blockade.EconomicShipClass;
         Assert.False(w.Fleets.IsEconomicBlockade("B", Side.Alliance)); // nobody there
-        w.Add(Side.Empire, "Picket", "B", "Interdictor Cruiser");
+        w.Add(Side.Empire, "Picket", "B", "Subpoena");
         Assert.True(w.Fleets.IsEconomicBlockade("B", Side.Alliance)); // gravity-well ship: always
         Assert.False(w.Fleets.IsEconomicBlockade("B", Side.Empire)); // against the Empire, only Alliance ships count
 
@@ -516,7 +516,7 @@ public class ForcedStopTests
         Assert.True(w.Fleets.IsEconomicBlockade("A", Side.Alliance));
 
         var w2 = new World(World.BCMap());
-        w2.Add(Side.Empire, "Galleon", "B", "Galleon"); // unarmed: never
+        w2.Add(Side.Empire, "Bond", "B", "Bond"); // unarmed: never
         Assert.False(w2.Fleets.IsEconomicBlockade("B", Side.Alliance));
         w2.Add(Side.Alliance, "Ally", "B", Corvette);
         Assert.False(w2.Fleets.IsEconomicBlockade("B", Side.Empire)); // 0 < E
@@ -557,8 +557,8 @@ public class ForcedStopTests
     public void Armed_is_attack_above_zero()
     {
         var s = World.Ships.Value;
-        Assert.False(CombatStrength.IsArmed(new[] { s["Galleon"], s["Bulk Transport"] }));
-        Assert.True(CombatStrength.IsArmed(new[] { s["Galleon"], s["TIE Fighter"] })); // a squadron arms a fleet
+        Assert.False(CombatStrength.IsArmed(new[] { s["Bond"], s["Barge"] }));
+        Assert.True(CombatStrength.IsArmed(new[] { s["Bond"], s["Gleaner"] })); // a squadron arms a fleet
         Assert.Equal(0, new CombatStrength(Praedra.Core.Battle.NewBattleData.Default).Of(Array.Empty<ShipClass>(), new[] { s[Isd] }));
     }
 
@@ -567,7 +567,7 @@ public class ForcedStopTests
     {
         Assert.Throws<Praedra.Core.Data.DataLoadException>(() => BlockadeData.Parse("key,value\nforced_stop_threshold_percent,50\n"));
         Assert.Throws<Praedra.Core.Data.DataLoadException>(() => BlockadeData.Parse(
-            "key,value\nforced_stop_threshold_percent,half\neconomic_blockade_ship_class,Galleon\neconomic_blockade_ship_count,3\n"));
+            "key,value\nforced_stop_threshold_percent,half\neconomic_blockade_ship_class,Bond\neconomic_blockade_ship_count,3\n"));
         var d = BlockadeData.Parse("key,value\nforced_stop_threshold_percent,50\neconomic_blockade_ship_class,No Such Ship\neconomic_blockade_ship_count,3\n");
         Assert.Throws<Praedra.Core.Data.DataLoadException>(() => d.EconomicStrength(World.Ships.Value));
     }

@@ -17,7 +17,7 @@ public class BombardmentStatTests
     {
         var w = new BombWorld(stub: false, seed: (ulong)(800 + d), data: BombWorld.ArmyDefense(d));
         w.Hold(All);
-        int fleet = w.Fleet(Emp, Sys, "Carrack Light Cruiser"); // P = 1: one hit per bombardment
+        int fleet = w.Fleet(Emp, Sys, "Warrant"); // P = 1: one hit per bombardment
         int destroyed = 0;
         const int trials = 10_000;
         for (int i = 0; i < trials; i++)
@@ -33,18 +33,18 @@ public class BombardmentStatTests
 
     public static IEnumerable<object[]> DefenseValues() => Enumerable.Range(0, 11).Select(d => new object[] { d });
 
-    // m3-bombardment B9: 4 hits on one Mon Calamari regiment (defense 9): destroyed with probability 1 - 0.9^4 = 34.39 percent (20,000 runs, within 1.0 point)
+    // m3-bombardment B9: 4 hits on one The Moorings regiment (defense 9): destroyed with probability 1 - 0.9^4 = 34.39 percent (20,000 runs, within 1.0 point)
     [Fact]
     public void B9_FourHitsOnAMonCalamariRegiment()
     {
         var w = new BombWorld(stub: false, seed: 9);
         w.Hold(All);
-        int fleet = w.Fleet(Emp, Sys, "Victory Destroyer"); // P = 4
+        int fleet = w.Fleet(Emp, Sys, "Decree"); // P = 4
         int destroyed = 0;
         const int trials = 20_000;
         for (int i = 0; i < trials; i++)
         {
-            int reg = w.Regiment(All, "Mon Calamari Regiment");
+            int reg = w.Regiment(All, "Ilmar Shade Guard");
             w.Bombard(Emp, fleet, Sys, BombardCategory.Military);
             w.Run(1);
             if (w.Eco.Find(reg) == null) destroyed++; else w.Eco.RemoveObject(reg);
@@ -68,7 +68,7 @@ public class BombardmentStatTests
         var w = new BombWorld(stub: false, seed: (ulong)(1000 + victoryDestroyers),
             bp: new BombardParams { BombardWastedHits = wastedHits, BatteryReturnFire = false });
         w.Hold(All);
-        int fleet = w.Fleet(Emp, Sys, "Victory Destroyer", victoryDestroyers); // 4 each: P = 8, 24, 60
+        int fleet = w.Fleet(Emp, Sys, "Decree", victoryDestroyers); // 4 each: P = 8, 24, 60
         long total = 0;
         const int trials = 20_000;
         for (int i = 0; i < trials; i++)

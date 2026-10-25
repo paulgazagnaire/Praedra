@@ -33,14 +33,14 @@ public class SimpleAiGarrisonsFirstTests
         {
             if (taken) return;
             taken = true;
-            foreach (var s in rebel) if (s != h.HqSystem) h.Control.DebugApplyTroops(ctx, s, Side.Empire, "Imperial Army Regiment", 1);
+            foreach (var s in rebel) if (s != h.HqSystem) h.Control.DebugApplyTroops(ctx, s, Side.Empire, "Tranches", 1);
         });
         int ordered = 0;
         while (h.Game.Day < 500 && h.Victory.Winner == null)
         {
             m.Step();
             foreach (var o in m.Empire.Submitted)
-                if (o.Kind == "Build" && o.Detail.Contains("Imperial Army Regiment", StringComparison.Ordinal)) ordered += int.Parse(o.Detail.Split(' ')[0]);
+                if (o.Kind == "Build" && o.Detail.Contains("Tranches", StringComparison.Ordinal)) ordered += int.Parse(o.Detail.Split(' ')[0]);
         }
         return (ordered, h.Economy.Objects.Count(o => o.Class == "Training Facility" && h.Economy.OwnerOf(o) == Side.Empire));
     }

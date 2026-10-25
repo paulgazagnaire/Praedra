@@ -20,7 +20,7 @@ namespace Praedra.Core.Setup;
 /// <see cref="Load"/> continues exactly as the uninterrupted game does.
 ///
 /// Placement follows the starting-facilities data list where it fits: a row whose system is in a region is placed there (a "Neutral" row
-/// goes to whoever holds the system here); rows for systems outside both regions (Fondor, Rendili, Mon Calamari, Bilbringi) are not used.
+/// goes to whoever holds the system here); rows for systems outside both regions (Incus, Castra, The Moorings, Ferraria) are not used.
 /// Regiments per system are the sheet's requirement N for the system's support (<see cref="SupportModule.RequiredGarrison(SupportParams, int, bool, bool)"/>)
 /// minus a shortfall, so a few systems start under-garrisoned and rise. rule: m2-uprisings-and-garrison §Required garrison N.
 /// </summary>
@@ -29,22 +29,22 @@ public sealed class TestCampaign
     /// <summary>The day of the scripted capture (stand-in for an M3 assault, slot 5.2).</summary>
     public const int CaptureDay = 400;
     /// <summary>The Alliance system the Empire captures on <see cref="CaptureDay"/>.</summary>
-    public const string CaptureSystem = "Denon";
+    public const string CaptureSystem = "Fiducia";
     /// <summary>The regiment class the scripted capture places on <see cref="CaptureSystem"/> under derived control (B5a).</summary>
-    public const string CaptureRegiment = "Imperial Army Regiment";
+    public const string CaptureRegiment = "Tranches";
     /// <summary>
     /// How many: 6, the most an assault lands (m3-assault §Landing, the cap 6 [EXE-own], B5a section 3). Under derived control the world stays the
     /// Empire's only while its regiments stand there, so the stand-in lands what a real assault would.
     /// </summary>
     public const int CaptureRegiments = 6;
     /// <summary>The Alliance system the Empire's interdiction fleet parks at, from day <see cref="BlockadeFrom"/>.</summary>
-    public const string BlockadedSystem = "Kinyen";
+    public const string BlockadedSystem = "Tierra Larga";
     public const int BlockadeFrom = 60;
     public const string InterdictionFleet = "Interdiction";
     /// <summary>
     /// The day of the one scripted bombardment (m3-bombardment, slot 5.1): the Empire's interdiction fleet, parked at <see cref="BlockadedSystem"/>
     /// since <see cref="BlockadeFrom"/>, shells that system with a General bombardment. No Alliance fleet is there on that day (the relief fleet
-    /// arrives later), so the order is accepted. The system holds a KDY-150 battery (placed by <see cref="Deal"/>), so the return-fire hook runs too.
+    /// arrives later), so the order is accepted. The system holds a Mordant Lien-150 battery (placed by <see cref="Deal"/>), so the return-fire hook runs too.
     /// </summary>
     public const int BombardDay = 200;
     /// <summary>
@@ -53,7 +53,7 @@ public sealed class TestCampaign
     /// Alliance relief fleet only arrives on day 300, so no enemy fleet is there and the order is accepted.
     /// </summary>
     public const int AssaultDay = 250;
-    public const int AssaultRegiments = 2; // the Victory Destroyer carries 2
+    public const int AssaultRegiments = 2; // the Decree carries 2
     /// <summary>The name of a side's standing reserve fleet (stays at its capital), e.g. "Empire Reserve".</summary>
     public static string ReserveFleet(Side side) => $"{side} Reserve";
 
@@ -99,50 +99,50 @@ public sealed class TestCampaign
     /// <summary>Region of each side: (system, Alliance support, mines, refineries, regiments short of N, regiment class, extra regiments).</summary>
     private sealed record Site(string System, int AllianceSupport, int Mines, int Refineries, int Short, string Regiment, int Extra = 0);
 
-    private const string Army = "Imperial Army Regiment", Storm = "Stormtrooper Regiment", ImpFleet = "Imperial Fleet Regiment";
-    private const string RebArmy = "Alliance Army Regiment", RebFleet = "Alliance Fleet Regiment";
+    private const string Army = "Tranches", Storm = "Pacifiers", ImpFleet = "Ballast";
+    private const string RebArmy = "Militia", RebFleet = "Deckhands";
 
-    // Empire: Coruscant and its neighbours, Kuat and Corellia (starting yards). Alliance support is low where the Empire is popular.
-    // Delaya starts 2 regiments short (uprising from the first day). Taanab is garrisoned with fleet regiments (weight 0.6 in New).
+    // Empire: Charter and its neighbours, Navalia and Classis (starting yards). Alliance support is low where the Empire is popular.
+    // Tranquilla starts 2 regiments short (uprising from the first day). Granero is garrisoned with fleet regiments (weight 0.6 in New).
     private static readonly Site[] EmpireRegion =
     {
-        new("Coruscant", 10, 3, 3, 0, Storm, 2), new("Byss", 15, 3, 2, 0, Army), new("Corellia", 65, 2, 2, 0, Army),
-        new("Kuat", 20, 2, 2, 0, Army), new("Corulag", 25, 0, 0, 0, Army), new("Delaya", 70, 0, 0, 2, Army),
-        new("Pantolomin", 30, 2, 1, 0, Army), new("Skako", 40, 0, 0, 0, Army), new("Taanab", 55, 0, 0, 0, ImpFleet),
-        new("Anaxes", 45, 0, 0, 0, Army), new("Commenor", 20, 3, 3, 0, Army), new("Corfai", 30, 2, 2, 0, Army),
-        new("Duros", 55, 0, 0, 0, Army), new("Fedalle", 25, 2, 2, 0, Army), new("Hosnian Prime", 40, 2, 2, 0, Army),
-        new("Loronar", 35, 0, 0, 0, Army), new("Nubia", 45, 0, 0, 0, Army), new("Balmorra", 25, 2, 2, 0, Army),
+        new("Charter", 10, 3, 3, 0, Storm, 2), new("Mirabel", 15, 3, 2, 0, Army), new("Classis", 65, 2, 2, 0, Army),
+        new("Navalia", 20, 2, 2, 0, Army), new("Tutela", 25, 0, 0, 0, Army), new("Tranquilla", 70, 0, 0, 2, Army),
+        new("Belmare", 30, 2, 1, 0, Army), new("Gnomon", 40, 0, 0, 0, Army), new("Granero", 55, 0, 0, 0, ImpFleet),
+        new("Fusoria", 45, 0, 0, 0, Army), new("Porphyry", 20, 3, 3, 0, Army), new("Magnetite III", 30, 2, 2, 0, Army),
+        new("Hiberna", 55, 0, 0, 0, Army), new("Vigilia", 25, 2, 2, 0, Army), new("Fiscus", 40, 2, 2, 0, Army),
+        new("Vallum", 35, 0, 0, 0, Army), new("Ommata", 45, 0, 0, 0, Army), new("Tormentum", 25, 2, 2, 0, Army),
     };
 
-    // Alliance: the Sullust and Thyferra cluster. Terminus starts 2 regiments short. Denon (support 55) is the capture target.
+    // Alliance: the Caminus and Salus cluster. Endline starts 2 regiments short. Fiducia (support 55) is the capture target.
     private static readonly Site[] AllianceRegion =
     {
-        new("Sullust", 80, 2, 2, 0, RebArmy, 2), new("Eriadu", 75, 2, 1, 0, RebArmy), new("Malastare", 70, 0, 0, 0, RebArmy),
-        new("Qat Chrystac", 65, 0, 0, 0, RebArmy), new("Stobar", 80, 2, 2, 0, RebArmy), new("Clak'dor VII", 90, 0, 0, 0, RebArmy),
-        new("Denon", 55, 2, 2, 0, RebArmy, 1), new("Derra IV", 85, 0, 0, 0, RebArmy), new("Inusagi", 85, 0, 0, 0, RebArmy),
-        new("Kinyen", 50, 2, 2, 0, RebArmy), new("Milagro", 70, 0, 0, 0, RebArmy), new("Ord Ibanna", 95, 0, 0, 0, RebArmy),
-        new("Terminus", 35, 0, 0, 2, RebArmy), new("Thyferra", 60, 2, 2, 0, RebArmy), new("Woostri", 75, 0, 0, 0, RebArmy),
-        new("Yag'Dhul", 65, 1, 2, 0, RebFleet),
+        new("Caminus", 80, 2, 2, 0, RebArmy, 2), new("Cunabula", 75, 2, 1, 0, RebArmy), new("Wellhead", 70, 0, 0, 0, RebArmy),
+        new("Glassfield", 65, 0, 0, 0, RebArmy), new("Halfpenny", 80, 2, 2, 0, RebArmy), new("Opsis", 90, 0, 0, 0, RebArmy),
+        new("Fiducia", 55, 2, 2, 0, RebArmy, 1), new("Ribeira", 85, 0, 0, 0, RebArmy), new("Feriae", 85, 0, 0, 0, RebArmy),
+        new("Tierra Larga", 50, 2, 2, 0, RebArmy), new("Clinker", 70, 0, 0, 0, RebArmy), new("Last Platform", 95, 0, 0, 0, RebArmy),
+        new("Endline", 35, 0, 0, 2, RebArmy), new("Salus", 60, 2, 2, 0, RebArmy), new("Folio", 75, 0, 0, 0, RebArmy),
+        new("Craterhold", 65, 1, 2, 0, RebFleet),
     };
 
-    // Yards beyond the starting-facilities list (that list gives Kuat, Corellia and Sullust their Orbital Shipyard here).
+    // Yards beyond the starting-facilities list (that list gives Navalia, Classis and Caminus their Orbital Shipyard here).
     private static readonly (string System, FacilityKind Kind)[] ExtraYards =
     {
-        ("Coruscant", FacilityKind.OrbitalShipyard), ("Coruscant", FacilityKind.TrainingFacility),
-        ("Coruscant", FacilityKind.ConstructionYard), ("Coruscant", FacilityKind.ConstructionYard),
-        ("Kuat", FacilityKind.ConstructionYard), ("Hosnian Prime", FacilityKind.TrainingFacility),
-        ("Sullust", FacilityKind.TrainingFacility), ("Sullust", FacilityKind.ConstructionYard),
-        ("Denon", FacilityKind.TrainingFacility), ("Denon", FacilityKind.ConstructionYard),
-        ("Kinyen", FacilityKind.TrainingFacility), ("Thyferra", FacilityKind.OrbitalShipyard),
-        ("Kinyen", FacilityKind.Kdy150), // the battery of the scripted bombardment (m3-planetary-defenses)
+        ("Charter", FacilityKind.OrbitalShipyard), ("Charter", FacilityKind.TrainingFacility),
+        ("Charter", FacilityKind.ConstructionYard), ("Charter", FacilityKind.ConstructionYard),
+        ("Navalia", FacilityKind.ConstructionYard), ("Fiscus", FacilityKind.TrainingFacility),
+        ("Caminus", FacilityKind.TrainingFacility), ("Caminus", FacilityKind.ConstructionYard),
+        ("Fiducia", FacilityKind.TrainingFacility), ("Fiducia", FacilityKind.ConstructionYard),
+        ("Tierra Larga", FacilityKind.TrainingFacility), ("Salus", FacilityKind.OrbitalShipyard),
+        ("Tierra Larga", FacilityKind.Kdy150), // the battery of the scripted bombardment (m3-planetary-defenses)
     };
 
     // Standing "navy": the ships of each side's reserve fleet. They carry maintenance load like every fleet ship (one registry, m3-fleets).
     private static readonly (Side Side, string Class, int Count)[] Navy =
     {
-        (Side.Empire, "Imperial Star Destroyer", 3), (Side.Empire, "Victory Destroyer", 2), (Side.Empire, "Carrack Light Cruiser", 1),
-        (Side.Empire, "Interdictor Cruiser", 1),
-        (Side.Alliance, "Nebulon-B Frigate", 2), (Side.Alliance, "Corellian Corvette", 2), (Side.Alliance, "Mon Calamari Cruiser", 1),
+        (Side.Empire, "Mandate", 3), (Side.Empire, "Decree", 2), (Side.Empire, "Warrant", 1),
+        (Side.Empire, "Subpoena", 1),
+        (Side.Alliance, "Mender", 2), (Side.Alliance, "Dodger", 2), (Side.Alliance, "Ark", 1),
     };
 
     private static void Deal(GameHost host)
@@ -181,25 +181,25 @@ public sealed class TestCampaign
         // The standing navy is one reserve fleet per side at its capital (ships in a fleet, so they pay upkeep like any ship: m3-fleets).
         foreach (var side in new[] { Side.Empire, Side.Alliance })
             fleets.AddFleet(side, ReserveFleet(side), Navy.Where(n => n.Side == side).SelectMany(n => Enumerable.Repeat(n.Class, n.Count)),
-                side == Side.Empire ? "Coruscant" : "Sullust");
+                side == Side.Empire ? "Charter" : "Caminus");
 
         // Fleets (by name; the script finds them by name).
-        fleets.AddFleet(Side.Empire, "Home Fleet", new[] { "Imperial Star Destroyer", "Imperial Star Destroyer" }, "Coruscant");
-        fleets.AddFleet(Side.Empire, "Kuat Picket", new[] { "Victory Destroyer" }, "Kuat");
-        int interdiction = fleets.AddFleet(Side.Empire, InterdictionFleet, new[] { "Interdictor Cruiser", "Victory Destroyer" }, "Hosnian Prime");
-        // The landing force of the scripted assault rides the Victory Destroyer (placed aboard directly: the load order needs a held system).
-        int carrier = host.Game.State.Fleets[interdiction].Ships.Last();
+        fleets.AddFleet(Side.Empire, "Home Fleet", new[] { "Mandate", "Mandate" }, "Charter");
+        fleets.AddFleet(Side.Empire, "Navalia Picket", new[] { "Decree" }, "Navalia");
+        int interdiction = fleets.AddFleet(Side.Empire, InterdictionFleet, new[] { "Subpoena", "Decree" }, "Fiscus", listedOrder: true); // ids in this order whatever the names
+        // The landing force of the scripted assault rides the Decree (placed aboard directly: the load order needs a held system).
+        int carrier = host.Game.State.Fleets[interdiction].Ships.Last(id => eco.Find(id)!.Class == "Decree");
         for (int i = 0; i < AssaultRegiments; i++)
         {
             var reg = eco.Find(eco.AddObject(Side.Empire, Storm, null))!;
             reg.AboardShip = carrier; reg.System = null;
         }
-        fleets.AddFleet(Side.Empire, "Patrol", new[] { "Carrack Light Cruiser" }, "Coruscant");
-        fleets.AddFleet(Side.Alliance, "Sullust Fleet", new[] { "Nebulon-B Frigate", "Corellian Corvette" }, "Sullust", new[] { "X-wing" });
-        fleets.AddFleet(Side.Alliance, "Thyferra Picket", new[] { "Corellian Corvette", "Corellian Corvette" }, "Thyferra");
-        fleets.AddFleet(Side.Alliance, "Relief", new[] { "Nebulon-B Frigate" }, "Sullust");
+        fleets.AddFleet(Side.Empire, "Patrol", new[] { "Warrant" }, "Charter");
+        fleets.AddFleet(Side.Alliance, "Caminus Fleet", new[] { "Mender", "Dodger" }, "Caminus", new[] { "Swift" });
+        fleets.AddFleet(Side.Alliance, "Salus Picket", new[] { "Dodger", "Dodger" }, "Salus");
+        fleets.AddFleet(Side.Alliance, "Relief", new[] { "Mender" }, "Caminus");
 
-        host.Construction.GrantResearch(Side.Alliance, "Nebulon-B Frigate"); // research order 1: the script builds one, so the test setup grants it (m5-research §Availability test step 3)
+        host.Construction.GrantResearch(Side.Alliance, "Mender"); // research order 1: the script builds one, so the test setup grants it (m5-research §Availability test step 3)
         eco.SetupNewGame(); // stockpile 0/0 (the economy's DEFAULT), then the two incident timers armed
         host.Research.SetupNewGame(); // then the two research tick arming draws (m5-research §Random draws (a)); the only draws of setup
         // (B5a, 2026-10-17) control is derived once after setup, as a new game does (no draw). rule: m2-control-and-capture §Who holds a system (B5a §Rebuild 2)
@@ -225,47 +225,47 @@ public sealed class TestCampaign
     private static readonly BuildStep[] Builds =
     {
         // Empire
-        new(10, 120, Side.Empire, "Coruscant", YardFamily.Training, Army, 2, "Delaya"),
-        new(30, 150, Side.Empire, "Hosnian Prime", YardFamily.Training, Storm, 2, "Corellia"),
-        new(5, 250, Side.Empire, "Kuat", YardFamily.Shipyard, "Carrack Light Cruiser", 1, "Coruscant"),
-        new(130, 250, Side.Empire, "Kuat", YardFamily.Shipyard, "TIE Fighter", 4),
-        new(50, 400, Side.Empire, "Coruscant", YardFamily.Shipyard, "Victory Destroyer", 1, "Kuat"),
-        new(20, 500, Side.Empire, "Coruscant", YardFamily.Construction, "Mine", 1, "Duros"),
-        new(120, 500, Side.Empire, "Coruscant", YardFamily.Construction, "Refinery", 1, "Duros"),
-        new(250, 700, Side.Empire, "Coruscant", YardFamily.Construction, "Training Facility", 1, "Nubia"),
-        new(70, 500, Side.Empire, "Kuat", YardFamily.Construction, "Mine", 1, "Skako"),
-        new(220, 500, Side.Empire, "Kuat", YardFamily.Construction, "Refinery", 1, "Skako"),
+        new(10, 120, Side.Empire, "Charter", YardFamily.Training, Army, 2, "Tranquilla"),
+        new(30, 150, Side.Empire, "Fiscus", YardFamily.Training, Storm, 2, "Classis"),
+        new(5, 250, Side.Empire, "Navalia", YardFamily.Shipyard, "Warrant", 1, "Charter"),
+        new(130, 250, Side.Empire, "Navalia", YardFamily.Shipyard, "Gleaner", 4),
+        new(50, 400, Side.Empire, "Charter", YardFamily.Shipyard, "Decree", 1, "Navalia"),
+        new(20, 500, Side.Empire, "Charter", YardFamily.Construction, "Mine", 1, "Hiberna"),
+        new(120, 500, Side.Empire, "Charter", YardFamily.Construction, "Refinery", 1, "Hiberna"),
+        new(250, 700, Side.Empire, "Charter", YardFamily.Construction, "Training Facility", 1, "Ommata"),
+        new(70, 500, Side.Empire, "Navalia", YardFamily.Construction, "Mine", 1, "Gnomon"),
+        new(220, 500, Side.Empire, "Navalia", YardFamily.Construction, "Refinery", 1, "Gnomon"),
         // Alliance
-        new(10, 100, Side.Alliance, "Sullust", YardFamily.Training, RebArmy, 3, "Terminus"),
-        new(40, 90, Side.Alliance, "Kinyen", YardFamily.Training, RebArmy, 2, "Kinyen"),
-        new(30, 150, Side.Alliance, "Sullust", YardFamily.Shipyard, "Corellian Corvette", 2),
-        new(20, 400, Side.Alliance, "Thyferra", YardFamily.Shipyard, "Nebulon-B Frigate", 1, "Sullust"),
-        new(200, 400, Side.Alliance, "Thyferra", YardFamily.Shipyard, "X-wing", 3),
-        new(50, 600, Side.Alliance, "Sullust", YardFamily.Construction, "Refinery", 1, "Eriadu"),
-        new(150, 600, Side.Alliance, "Sullust", YardFamily.Construction, "Mine", 1, "Eriadu"),
-        new(380, 0, Side.Alliance, "Denon", YardFamily.Construction, "Mine", 1, "Denon"),   // still building when Denon falls: cancelled
-        new(380, 0, Side.Alliance, "Denon", YardFamily.Training, RebArmy, 2, "Denon"),      // same
+        new(10, 100, Side.Alliance, "Caminus", YardFamily.Training, RebArmy, 3, "Endline"),
+        new(40, 90, Side.Alliance, "Tierra Larga", YardFamily.Training, RebArmy, 2, "Tierra Larga"),
+        new(30, 150, Side.Alliance, "Caminus", YardFamily.Shipyard, "Dodger", 2),
+        new(20, 400, Side.Alliance, "Salus", YardFamily.Shipyard, "Mender", 1, "Caminus"),
+        new(200, 400, Side.Alliance, "Salus", YardFamily.Shipyard, "Swift", 3),
+        new(50, 600, Side.Alliance, "Caminus", YardFamily.Construction, "Refinery", 1, "Cunabula"),
+        new(150, 600, Side.Alliance, "Caminus", YardFamily.Construction, "Mine", 1, "Cunabula"),
+        new(380, 0, Side.Alliance, "Fiducia", YardFamily.Construction, "Mine", 1, "Fiducia"),   // still building when Fiducia falls: cancelled
+        new(380, 0, Side.Alliance, "Fiducia", YardFamily.Training, RebArmy, 2, "Fiducia"),      // same
     };
 
     private static readonly MoveStep[] Moves =
     {
-        // Empire: the interdiction fleet parks at an Alliance system (blockade), leaves on day 700; a patrol shuttles Coruscant - Corellia.
+        // Empire: the interdiction fleet parks at an Alliance system (blockade), leaves on day 700; a patrol shuttles Charter - Classis.
         new(BlockadeFrom, 0, Side.Empire, InterdictionFleet, BlockadedSystem),
-        new(700, 0, Side.Empire, InterdictionFleet, "Hosnian Prime"),
-        new(20, 80, Side.Empire, "Patrol", "Corellia"),
-        new(60, 80, Side.Empire, "Patrol", "Coruscant"),
-        // Alliance: a picket shuttles Thyferra - Yag'Dhul; a relief fleet goes to the blockaded system on day 300 and home on day 800.
-        new(30, 100, Side.Alliance, "Thyferra Picket", "Yag'Dhul"),
-        new(80, 100, Side.Alliance, "Thyferra Picket", "Thyferra"),
+        new(700, 0, Side.Empire, InterdictionFleet, "Fiscus"),
+        new(20, 80, Side.Empire, "Patrol", "Classis"),
+        new(60, 80, Side.Empire, "Patrol", "Charter"),
+        // Alliance: a picket shuttles Salus - Craterhold; a relief fleet goes to the blockaded system on day 300 and home on day 800.
+        new(30, 100, Side.Alliance, "Salus Picket", "Craterhold"),
+        new(80, 100, Side.Alliance, "Salus Picket", "Salus"),
         new(300, 0, Side.Alliance, "Relief", BlockadedSystem),
-        new(800, 0, Side.Alliance, "Relief", "Sullust"),
+        new(800, 0, Side.Alliance, "Relief", "Caminus"),
     };
 
     /// <summary>A load or unload order for a fleet (by name) issued on <c>First</c>, <c>First + Every</c>, ...: <c>Count</c> regiments (the lowest ids that qualify).</summary>
     private sealed record TroopStep(int First, int Every, Side Side, string Fleet, bool Load, int Count);
 
-    // The Home Fleet (2 ISD, 6 slots) carries two regiments Coruscant -> Corellia and back; the Alliance reserve (one Mon Calamari Cruiser, 1 slot)
-    // loads and unloads one at Sullust. Exercises m3-troops-and-special-forces loading, unloading and the "aboard is not garrison" rule.
+    // The Home Fleet (2 ISD, 6 slots) carries two regiments Charter -> Classis and back; the Alliance reserve (one Ark, 1 slot)
+    // loads and unloads one at Caminus. Exercises m3-troops-and-special-forces loading, unloading and the "aboard is not garrison" rule.
     private static readonly TroopStep[] Troops =
     {
         new(100, 300, Side.Empire, "Home Fleet", true, 2), new(170, 300, Side.Empire, "Home Fleet", false, 2),
@@ -274,7 +274,7 @@ public sealed class TestCampaign
     };
     private static readonly MoveStep[] TroopMoves =
     {
-        new(101, 300, Side.Empire, "Home Fleet", "Corellia"), new(181, 300, Side.Empire, "Home Fleet", "Coruscant"),
+        new(101, 300, Side.Empire, "Home Fleet", "Classis"), new(181, 300, Side.Empire, "Home Fleet", "Charter"),
     };
 
     private static bool Due(int day, int first, int every) => day >= first && (every == 0 ? day == first : (day - first) % every == 0);

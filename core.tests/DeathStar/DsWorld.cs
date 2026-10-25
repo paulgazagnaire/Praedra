@@ -16,7 +16,7 @@ namespace Praedra.Core.Tests.DeathStar;
 internal sealed class DsWorld
 {
     public const string A1 = "A1", A2 = "A2", A3 = "A3", A4 = "A4", A5 = "A5", A6 = "A6", B1 = "B1", B2 = "B2", B3 = "B3";
-    public const string DeathStarClass = "Death Star", Isd = "Imperial Star Destroyer", Corvette = "Corellian Corvette";
+    public const string DeathStarClass = "Death Star", Isd = "Mandate", Corvette = "Dodger";
     // character record ids (data/classic/characters.csv): four Alliance minors and two majors
     public const int Luke = 578, Vader = 641, Drayson = 840, Borsk = 841, Tura = 842, Derlin = 843;
     public const string Sa = "SA", Sb = "SB";

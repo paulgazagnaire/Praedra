@@ -10,7 +10,7 @@ namespace Praedra.Core.Tests.Repair;
 // sheet's RT tests that still apply.
 public class RepairTests
 {
-    private const string Yard = "Kuat", Other = "Coruscant";
+    private const string Yard = "Navalia", Other = "Charter";
     // weapons 2, sub-light 1, primary hyperdrive 1 (B3-24)
     private static readonly int[] StartHits = { 0, 2, 0, 1, 1, 0 };
 
@@ -20,7 +20,7 @@ public class RepairTests
         var h = GameHost.New(seed, new GameSettings { IncidentsEnabled = false, Economy = new EconomyParams { ScrapPeriod = 1_000_000 } }, data);
         h.Fleets.SetOwner(Yard, Side.Empire);
         h.Fleets.SetOwner(Other, Side.Empire);
-        Garrison(h, Yard, "Imperial Army Regiment");
+        Garrison(h, Yard, "Tranches");
         return h;
     }
 
@@ -33,7 +33,7 @@ public class RepairTests
     // an ISD at 1790 of 2750 with hits (0,2,0,1,1,0)
     private static (int fleet, EconObject isd) Damaged(GameHost h, Side side, string system, int[]? hits = null)
     {
-        int f = h.Fleets.AddFleet(side, "F", new[] { "Imperial Star Destroyer" }, system);
+        int f = h.Fleets.AddFleet(side, "F", new[] { "Mandate" }, system);
         var isd = h.Game.State.Economy.Objects[h.Game.State.Fleets[f].Ships[0]];
         isd.Hull = 1790; isd.Hits = new List<int>(hits ?? StartHits);
         return (f, isd);
@@ -73,7 +73,7 @@ public class RepairTests
         {
             var g = Host();
             g.Economy.AddFacility(Yard, FacilityKind.OrbitalShipyard);
-            if (damaged) Damaged(g, Side.Empire, Yard); else g.Fleets.AddFleet(Side.Empire, "F", new[] { "Imperial Star Destroyer" }, Yard);
+            if (damaged) Damaged(g, Side.Empire, Yard); else g.Fleets.AddFleet(Side.Empire, "F", new[] { "Mandate" }, Yard);
             for (int d = 0; d < 8; d++) g.Game.Step();
             return g.Game.Rng.Draws;
         }
@@ -134,7 +134,7 @@ public class RepairTests
         var h = Host();
         h.Economy.AddFacility(Yard, FacilityKind.OrbitalShipyard);
         Assert.False(h.Repair.YardSuspended(Yard));
-        Assert.True(h.Repair.YardSuspended("Hoth")); // no owner: suspended
+        Assert.True(h.Repair.YardSuspended("The Thaw")); // no owner: suspended
         Assert.True(h.Repair.FastRepair(Yard, Side.Empire));
         Assert.False(h.Repair.FastRepair(Yard, Side.Alliance));
     }
@@ -160,7 +160,7 @@ public class RepairTests
     {
         var h = Host();
         h.Economy.AddFacility(Yard, FacilityKind.OrbitalShipyard);
-        int id = h.Economy.AddObject(Side.Empire, "TIE Fighter", Yard);
+        int id = h.Economy.AddObject(Side.Empire, "Gleaner", Yard);
         var sq = h.Game.State.Economy.Objects[id];
         sq.CraftLost = 5;
         var seen = new List<int>();
@@ -176,7 +176,7 @@ public class RepairTests
     public void CraftLostIsSavedAndHashed()
     {
         var h = Host();
-        int id = h.Economy.AddObject(Side.Empire, "TIE Fighter", Yard);
+        int id = h.Economy.AddObject(Side.Empire, "Gleaner", Yard);
         string before = GameSave.StateHash(h.Game);
         h.Game.State.Economy.Objects[id].CraftLost = 3;
         Assert.NotEqual(before, GameSave.StateHash(h.Game));
@@ -189,13 +189,13 @@ public class RepairTests
     public void AllianceBeforeEmpireThenShipIdAscending()
     {
         var h = Host();
-        h.Fleets.SetOwner("Hoth", Side.Alliance);
-        Garrison(h, "Hoth", "Alliance Army Regiment");
+        h.Fleets.SetOwner("The Thaw", Side.Alliance);
+        Garrison(h, "The Thaw", "Militia");
         h.Economy.AddFacility(Yard, FacilityKind.OrbitalShipyard);
-        h.Economy.AddFacility("Hoth", FacilityKind.OrbitalShipyard);
+        h.Economy.AddFacility("The Thaw", FacilityKind.OrbitalShipyard);
         var e1 = Damaged(h, Side.Empire, Yard).isd;
         var e2 = Damaged(h, Side.Empire, Yard).isd;
-        var a1 = Damaged(h, Side.Alliance, "Hoth").isd;
+        var a1 = Damaged(h, Side.Alliance, "The Thaw").isd;
         h.Game.Step(); h.Game.Step();
         Assert.Equal(new[] { a1.Id, e1.Id, e2.Id }, Repaired(h).Select(e => e.Ship));
         Assert.True(a1.Id > e1.Id); // the Alliance ship has the higher id: the side order, not the id, comes first

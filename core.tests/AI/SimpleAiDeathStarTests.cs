@@ -16,7 +16,7 @@ public class SimpleAiDeathStarTests
     private readonly ITestOutputHelper _out;
     public SimpleAiDeathStarTests(ITestOutputHelper o) { _out = o; }
 
-    private const string Ds = EconomyModule.DeathStarClass, Isd = "Imperial Star Destroyer";
+    private const string Ds = EconomyModule.DeathStarClass, Isd = "Mandate";
     private static int Margin(GameHost h) => h.Economy.Capacity(Side.Empire) / 10; // 10% of the Empire capacity (MedA: 2100 since the v5 economy scaling)
 
     private static (AiMatch M, GameHost H) Match(int seed, SimpleAiParams p, bool knowHq = false, Side? passive = Side.Alliance)

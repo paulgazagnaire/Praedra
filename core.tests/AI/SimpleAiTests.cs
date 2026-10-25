@@ -11,7 +11,7 @@ using Xunit.Abstractions;
 namespace Praedra.Core.Tests.AI;
 
 // AI vs AI on the test campaign start (core/Setup/TestCampaign.cs). The campaign's scripted orders are NOT used (the AIs play instead);
-// its one scripted capture of Denon on day 400 still fires (a hook inside TestCampaign), so captures are counted by cause.
+// its one scripted capture of Fiducia on day 400 still fires (a hook inside TestCampaign), so captures are counted by cause.
 public class SimpleAiTests
 {
     private readonly ITestOutputHelper _out;

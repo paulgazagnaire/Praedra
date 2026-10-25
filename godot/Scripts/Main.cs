@@ -163,7 +163,7 @@ public partial class Main : Control
         s.Track(s.Host.Fleets.SubmitMove(me, fleet.Id, dest), $"Move {fleet.Name} to {dest}");
         var yard = s.Host.Economy.Objects.FirstOrDefault(o => o.Category == Praedra.Core.Economy.ObjectCategory.Facility && o.Completed && o.Side == null
             && o.Class == "Orbital Shipyard" && s.OwnerOf(o.System!) == me);
-        if (yard != null) s.Track(s.Host.Construction.SubmitBuild(me, yard.System!, YardFamily.Shipyard, "Corellian Corvette", 1), "Build a corvette");
+        if (yard != null) s.Track(s.Host.Construction.SubmitBuild(me, yard.System!, YardFamily.Shipyard, "Dodger", 1), "Build a corvette");
         s.Track(s.Host.Bombardment.SubmitBombard(me, fleet.Id, fleet.At!, BombardCategory.General), "Bombard own system (expected refusal)");
 
         int refusals = 0, saveDay = 30; string json = null, hash = null;

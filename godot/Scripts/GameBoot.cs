@@ -147,7 +147,7 @@ public static class GameBoot
     public static string WinReason(GameHost host) => host.Victory.Reason;
 
     /// <summary>Headquarters system of a side as the core holds it (truth; the screens use GameSession.MyHqSystem / EnemyHqSystem, which
-    /// respect the fog): Coruscant for the Empire, the Rebel HQ for the Alliance (null while it moves).</summary>
+    /// respect the fog): Charter for the Empire, the Rebel HQ for the Alliance (null while it moves).</summary>
     public static string CapitalOf(GameHost host, Side side) => side == Side.Empire ? EmpireCapital : host.HqSystem;
 
     // ------------------------------------------------------------------ save files

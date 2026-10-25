@@ -28,7 +28,7 @@ public partial class Main
         int Ticks(string a, string b) => fm.FindPath(a, b, 100) is { Ok: true } p ? p.TotalTicks : int.MaxValue;
         string hq = s.MyHqSystem, enemyHq = s.EnemyHqSystem;
         // a neutral system in a sector, nobody there, not a capital or HQ (destroying one would end the game)
-        var cands = gs.G.Systems.Where(x => !x.IsOutsideSectors && s.OwnerOf(x.Name) == null && x.Name != hq && x.Name != enemyHq && x.Name != GameBoot.EmpireCapital && x.Name != "Coruscant"
+        var cands = gs.G.Systems.Where(x => !x.IsOutsideSectors && s.OwnerOf(x.Name) == null && x.Name != hq && x.Name != enemyHq && x.Name != GameBoot.EmpireCapital && x.Name != "Charter"
                 && !s.Game.State.Fleets.Values.Any(f => f.At == x.Name) && !s.Game.State.DeathStar.IsDestroyed(x.Name)
                 && (agent == null || Ticks(agent.System, x.Name) < int.MaxValue))
             .Select(x => x.Name).OrderBy(n => agent == null ? 0 : Ticks(agent.System, n)).ThenBy(n => n, StringComparer.Ordinal).ToList();
