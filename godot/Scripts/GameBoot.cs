@@ -167,7 +167,7 @@ public static class GameBoot
         using var f = FileAccess.Open(path, FileAccess.ModeFlags.Write);
         if (f == null) throw new IOException($"Cannot write {path}: {FileAccess.GetOpenError()}");
         // First line: who the player is and the opponent's level (the core's save holds the game only). Second line: the core's save.
-        f.StoreLine($"PRAEDRA-SAVE 1 {player} {level}");
+        f.StoreLine(PlayerSaveHeader.Write(player, level));
         f.StoreString(json);
     }
 
@@ -180,9 +180,7 @@ public static class GameBoot
         string all = f.GetAsText();
         int nl = all.IndexOf('\n');
         if (nl < 0) return null;
-        var parts = all[..nl].Trim().Split(' ');
-        if (parts.Length is not (3 or 4) || parts[0] is not ("PRAEDRA-SAVE" or "REBELLION-SAVE") || !Enum.TryParse(parts[2], out Side side)) return null;
-        var level = parts.Length == 4 && Enum.TryParse(parts[3], out AiLevel l) ? l : AiLevel.Medium;
+        if (PlayerSaveHeader.Read(all[..nl]) is not var (side, level)) return null;
         return (side, all[(nl + 1)..], level);
     }
 }
