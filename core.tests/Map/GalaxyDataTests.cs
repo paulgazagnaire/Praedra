@@ -13,15 +13,16 @@ public class GalaxyDataTests
     public void G1_RealFilesLoadWithExpectedCounts() // m1-galaxy-data G1 (v6 spiral data, planets/16)
     {
         // v6 re-pin 2026-10-24: the spiral map (planets/16) has 390 links, all great-route links of kind route, no route-inferred.
+        // QA-40 re-pin 2026-10-25 (Planets fix_v6_qa40.py): 394 links, 106 great-route links, 18 bridges.
         Assert.Equal(555, G.Systems.Count);
-        Assert.Equal(390, G.Lanes.Count);
+        Assert.Equal(394, G.Lanes.Count);
         Assert.Equal(64, G.Sectors.Count);
-        Assert.Equal(102, G.Lanes.Count(l => l.Tier == 1));
+        Assert.Equal(106, G.Lanes.Count(l => l.Tier == 1));
         Assert.Equal(288, G.Lanes.Count(l => l.Tier == 2));
         Assert.Equal(0, G.Lanes.Count(l => l.Tier == 3));
-        Assert.Equal(102, G.Lanes.Count(l => l.Kind == "route"));
+        Assert.Equal(106, G.Lanes.Count(l => l.Kind == "route"));
         Assert.Equal(0, G.Lanes.Count(l => l.Kind == "route-inferred"));
-        Assert.Equal(19, G.Lanes.Count(l => l.Kind == "bridge"));
+        Assert.Equal(18, G.Lanes.Count(l => l.Kind == "bridge"));
         Assert.Empty(G.Warnings); // check 10: stored lane_count and chokepoint agree with the recomputed values
     }
 
@@ -36,11 +37,11 @@ public class GalaxyDataTests
     }
 
     [Fact]
-    public void G3_RouteSystems() // m1-galaxy-data G3: 358 systems on a route, the rest reached by free travel only
+    public void G3_RouteSystems() // m1-galaxy-data G3: 359 systems on a route, the rest reached by free travel only
     {
-        // v6 re-pin 2026-10-24: 358 on a route (was 332); The Shoal is on a route now, The Thaw is the off-route example.
-        Assert.Equal(358, G.Systems.Count(s => G.OnRoute(s.Index)));
-        Assert.Equal(358, G.Systems.Count(s => G.NeighboursOf(s.Index).Count > 0));
+        // v6 re-pin 2026-10-24: 358 on a route (was 332); The Shoal is on a route now, The Thaw is the off-route example. QA-40 re-pin 2026-10-25: 359.
+        Assert.Equal(359, G.Systems.Count(s => G.OnRoute(s.Index)));
+        Assert.Equal(359, G.Systems.Count(s => G.NeighboursOf(s.Index).Count > 0));
         Assert.Empty(G.NeighboursOf(G.Get("Glasswood").Index));
         Assert.Empty(G.NeighboursOf(G.Get("Frostholm").Index));
         Assert.False(G.OnRoute(G.Get("The Thaw").Index));
@@ -51,8 +52,8 @@ public class GalaxyDataTests
     public void G4_ChokepointsAndLaneCounts() // m1-galaxy-data G4 (chokepoints per route network)
     {
         var chokes = GalaxyLoader.Chokepoints(G);
-        Assert.Equal(179, chokes.Count); // v6 re-pin 2026-10-24 (was 98)
-        Assert.Equal(64, G.Systems.Count(s => G.NeighboursOf(s.Index).Count == 1)); // v6 re-pin 2026-10-24 (was 45)
+        Assert.Equal(174, chokes.Count); // QA-40 re-pin 2026-10-25 (v6 179, v5 98)
+        Assert.Equal(62, G.Systems.Count(s => G.NeighboursOf(s.Index).Count == 1)); // QA-40 re-pin 2026-10-25 (v6 64, v5 45)
         foreach (var s in G.Systems)
         {
             Assert.Equal(int.Parse(s.Carried["lane_count"]), G.NeighboursOf(s.Index).Count);
@@ -244,7 +245,7 @@ public class GalaxyDataTests
         var expected = ExpectedGalaxyCounts.Load(Path.Combine(TestData.DesignDir, GalaxyLoader.CountsFile));
         expected.Check(G); // the real data matches
         var ex = Assert.Throws<DataLoadException>(() => (expected with { Lanes = 520 }).Check(G));
-        Assert.Contains("lanes: expected 520, found 390", ex.Message);
+        Assert.Contains("lanes: expected 520, found 394", ex.Message);
     }
 
     [Fact]

@@ -19,8 +19,10 @@ public class FleetOrderTests
     // 7 at 100, 4 at 60) over two legs (a free jump to Remedium, then a minor-route leg).
     private const string Home = "Charter", Far = "Cambium";
     // v6 re-pin 2026-10-24: Classis was also the first stop on the way to The Thaw (F16, F21); on the spiral map that way leaves along
-    // the Trunk Line, and Bina Minor is the second stop on it at every speed.
-    private const string OnTheWayToHoth = "Bina Minor";
+    // the Trunk Line, and Bina Minor was the second stop on it at every speed. QA-40 re-pin 2026-10-25: fleets now leave along the Charter Road
+    // (Pyrite, Vigilia) and squadrons through Pyrite, Las Mieses.
+    private const string OnTheWayToHoth = "Vigilia";
+    private const string SquadronWayToHoth = "Las Mieses"; // QA-40 re-pin 2026-10-25: squadrons (speed 60) fly Charter, Pyrite, Las Mieses... to The Thaw
     private const string Isd = "Mandate", Carrack = "Warrant", Tie = "Gleaner", Xwing = "Swift";
     private static readonly Side Emp = Side.Empire, Reb = Side.Alliance;
 
@@ -364,17 +366,17 @@ public class FleetOrderTests
     public void F16_ASquadronFleetStoppedAtAnIntermediateSystemLandsThere()
     {
         var w = F();
-        w.Fleets.AddFleet(Emp, "Picket", new[] { "Subpoena" }, OnTheWayToHoth); // gravity-well ship on the route to The Thaw (Paul 2026-10-16: only these pull fleets out)
+        w.Fleets.AddFleet(Emp, "Picket", new[] { "Subpoena" }, SquadronWayToHoth); // gravity-well ship on the route to The Thaw (Paul 2026-10-16: only these pull fleets out)
         long seq = w.Fleets.SubmitMoveSquadrons(Reb, new[] { 310, 311 }, "The Thaw");
         w.Run(1);
         Assert.Null(w.RejectionOf(seq));
         int fid = w.Events<OrderAccepted>().Single().Fleet!.Value;
         w.RunTo(4);
         var stop = Assert.Single(w.Events<ForcedStop>());
-        Assert.Equal((fid, OnTheWayToHoth, 2), (stop.Fleet, stop.System, stop.Day)); // v6: 29 * 60 / 1500 = 1.16 -> 1, then 20 * 60 / 1500 raised to 1
+        Assert.Equal((fid, SquadronWayToHoth, 2), (stop.Fleet, stop.System, stop.Day)); // QA-40 re-pin 2026-10-25: Pyrite on day 1, Las Mieses on day 2
         Assert.Equal(DissolveCause.SquadronsArrived, Assert.Single(w.Events<FleetDissolved>()).Cause);
         Assert.DoesNotContain(fid, w.State.Fleets.Keys);
-        Assert.All(new[] { 310, 311 }, id => Assert.Equal(OnTheWayToHoth, w.Obj(id).System));
+        Assert.All(new[] { 310, 311 }, id => Assert.Equal(SquadronWayToHoth, w.Obj(id).System));
     }
 
     // m3-fleets §Unescorted squadrons: MoveSquadrons rejections

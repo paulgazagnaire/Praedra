@@ -110,7 +110,7 @@ public class TravelTests
         Assert.True(r.Ok);
         Assert.Equal(45, r.TotalTicks); // v6 re-pin 2026-10-24 (was 32): The Thaw is 432 units out on the spiral rim
         var names = r.Names(G);
-        Assert.Equal(new[] { "Charter", "Bina Major", "Bina Minor" }, names.Take(3)); // v6 re-pin 2026-10-24: out along the Trunk Line
+        Assert.Equal(new[] { "Charter", "Pyrite", "Vigilia" }, names.Take(3)); // QA-40 re-pin 2026-10-25: out along the Charter Road (v6: the Trunk Line)
         Assert.Equal("The Thaw", names[^1]);
         foreach (var mid in r.Systems.Skip(1).SkipLast(1)) Assert.True(G.OnRoute(mid)); // never stops at an off-route system on the way
         Assert.False(G.OnRoute(G.Get("The Thaw").Index)); // The Thaw is off every route: the last leg is off-route

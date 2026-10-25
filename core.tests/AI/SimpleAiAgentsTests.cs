@@ -90,7 +90,8 @@ public class SimpleAiAgentsTests
         // did the day-one deal, so this old AI plays another game on seed 1. All switches above unchanged.
         // Praedra names re-pin 2026-10-25 (Dev lead; Paul's order to remove every Star Wars name): systems are ordered by name, so the
         // renamed systems sort differently and seed 1 plays another game (the v6 pin was ca5216f4...e3be). All switches above unchanged.
-        Assert.Equal("48a89624192dc01d49fd311e2c909124501da222eb5bfee61022cfc9720f1270", h.StateHash());
+        // QA-40 re-pin 2026-10-25 (the fixed v6 links; the rename pin was 48a89624...1270). All switches above unchanged.
+        Assert.Equal("a492bf33dc35ef0a276dd67ee67a7f683caec1f474c215b0d082e50277831d2e", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"

@@ -11,9 +11,10 @@ public class MovementTests
     private const string Isd = "Mandate";
     // Free travel with routes (Paul 2026-10-16): Charter to The Thaw at speed 80 rides the routes (m1-travel T9).
     // v6 re-pin 2026-10-24: on the spiral map it leaves along the Trunk Line and reaches The Thaw (off every route) from Hollenvale, day 45.
-    private static readonly string[] CoruscantHoth = { "Charter", "Bina Major", "Bina Minor", "Magnetite III", "Nordhaven", "Tierra Larga", "Seldwyn", "Overgrowth",
+    // QA-40 re-pin 2026-10-25 (the Trunk Line now runs through Nutrix; Lowmarket is on the Nordhaven link): same 45 days
+    private static readonly string[] CoruscantHoth = { "Charter", "Pyrite", "Vigilia", "Nutrix", "Nordhaven", "Lowmarket", "Tierra Larga", "Seldwyn", "Overgrowth",
         "Longtide", "Galeholm", "Stopgap", "Groenveld", "Brokengate", "Towline", "Ashgarden", "Pale Ridge", "Zlatna", "Oldwatch", "Hollenvale", "The Thaw" };
-    private static readonly int[] CoruscantHothHops = { 2, 1, 1, 2, 2, 1, 2, 1, 2, 1, 2, 2, 1, 2, 4, 2, 8, 4, 5 };
+    private static readonly int[] CoruscantHothHops = { 1, 2, 2, 1, 1, 1, 1, 2, 1, 2, 1, 2, 2, 1, 2, 4, 2, 8, 4, 5 };
 
     private static World Real(ForcedStopTrigger t = ForcedStopTrigger.PaulRule, ulong seed = 1) => new(TestData.RealGalaxy, t, seed);
 
@@ -227,8 +228,8 @@ public class MovementTests
         var first = ScenarioWorld(5); Scenario(first, 0, 7);
         Assert.Equal(7, first.Game.Day);
         var mid = first.Fleet(1);
-        Assert.Null(mid.At); // mid-leg (v6 re-pin 2026-10-24: Nordhaven to Tierra Larga, days 6 to 8; was Ommata to Fiscus)
-        Assert.Equal(("Nordhaven", "Tierra Larga"), (mid.Transit!.Path[mid.Transit.HopIndex], mid.Transit.Path[mid.Transit.HopIndex + 1]));
+        Assert.Null(mid.At); // mid-leg (QA-40 re-pin 2026-10-25: Lowmarket to Tierra Larga, days 7 to 8; v6: Nordhaven to Tierra Larga)
+        Assert.Equal(("Lowmarket", "Tierra Larga"), (mid.Transit!.Path[mid.Transit.HopIndex], mid.Transit.Path[mid.Transit.HopIndex + 1]));
 
         string json = GameSave.Save(first.Game);
         var loaded = new World(GameSave.Load(json), TestData.RealGalaxy);
