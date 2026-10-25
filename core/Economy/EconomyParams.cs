@@ -68,8 +68,8 @@ public sealed record EconomyParams
     public int ShipPresence { get; init; } = 10;
     public int FighterPresence { get; init; } = 5;
     public int RegimentPresence { get; init; } = 2;
-    /// <summary>Hand regiments count this many times in a Death Star sector (GNPRTB 7680). Traced.</summary>
-    public int DeathStarRegimentMultiplier { get; init; } = 2;
+    /// <summary>Hand regiments count this many times in a harvester sector (GNPRTB 7680). Traced.</summary>
+    public int HarvesterRegimentMultiplier { get; init; } = 2;
     /// <summary>Starting stockpile of raw and refined. DEFAULT (Lead): 0 and 0.</summary>
     public int StartRaw { get; init; } = 0;
     public int StartRefined { get; init; } = 0;

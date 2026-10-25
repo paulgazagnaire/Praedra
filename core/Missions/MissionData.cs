@@ -14,8 +14,8 @@ public enum MissionKind
     Move = 0x01, Return = 0x02, Autorouting = 0x03, Adrift = 0x04,
     Diplomacy = 0x10, Rescue = 0x11, Sabotage = 0x12, Espionage = 0x13, Reconnaissance = 0x15, Recruitment = 0x16, Abduction = 0x17,
     ShipResearch = 0x20, FacilityResearch = 0x21, TroopResearch = 0x22,
-    InciteUprising = 0x40, DeathStarSabotage = 0x41, JediTraining = 0x42, Dagobah = 0x43, Palace = 0x44, Vacation = 0x45, Sabbatical = 0x46,
-    SubdueUprising = 0x80, Assassination = 0x81, Pickup = 0x82, Bounty = 0x83,
+    InciteUprising = 0x40, SpikeTheHarvester = 0x41, TrainTalent = 0x42, Dagobah = 0x43, Palace = 0x44, Leave = 0x45, Retreat = 0x46,
+    SubdueUprising = 0x80, Assassination = 0x81, Pickup = 0x82, Repossession = 0x83,
 }
 
 /// <summary>
@@ -23,7 +23,7 @@ public enum MissionKind
 /// the sheet's DEFAULT fall-back table). Timer = <c>TimerMin + rand(0..TimerSpread)</c> days. rule: m5-missions §Mission records (data), §3 (Foilable).
 /// </summary>
 /// <remarks>
-/// B2d: <see cref="GuardChecks"/> is MISSNSD word 14 (0 = the mission check never runs, only Bounty; 0x520b80) and <see cref="Foilable"/> is word 15
+/// B2d: <see cref="GuardChecks"/> is MISSNSD word 14 (0 = the mission check never runs, only Repossession; 0x520b80) and <see cref="Foilable"/> is word 15
 /// <c>can_resign</c> (0x520b90: the mission ends when foiled; 0x5346b0: a member may leave after a duel), read from the records file when it has the
 /// column; the design fall-back table is used otherwise. rule: m5-missions §1, §3 Foilable, §4 (Traced B2d).
 /// </remarks>

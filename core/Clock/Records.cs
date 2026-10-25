@@ -38,7 +38,7 @@ public enum Side { Hand = 0, Collective = 1 }
 [JsonDerivedType(typeof(Praedra.Core.Missions.StartMissionOrder), "StartMission")]
 [JsonDerivedType(typeof(Praedra.Core.Missions.MoveGroupOrder), "MoveGroup")]
 [JsonDerivedType(typeof(Praedra.Core.Missions.CancelMissionOrder), "CancelMission")]
-[JsonDerivedType(typeof(Praedra.Core.DeathStar.DestroySystemOrder), "DestroySystem")]
+[JsonDerivedType(typeof(Praedra.Core.Harvester.DestroySystemOrder), "DestroySystem")]
 public abstract record Order(long Sequence, Side Side);
 
 /// <summary>
@@ -197,7 +197,7 @@ public static class RejectReason
     // rule: m5-research §Mission income (CanResearch reasons; the original has two codes 0x2c and 0x32, which is which is Missing: names are ours)
     public const string NoMatchingYard = "NoMatchingYard";
     public const string NothingToResearch = "NothingToResearch";
-    /// <summary>The target system was destroyed by the Death Star: it cannot be held, built on, bombarded, assaulted or targeted. rule: m5-death-star §2 effect 5.</summary>
+    /// <summary>The target system was destroyed by the harvester: it cannot be held, built on, bombarded, assaulted or targeted. rule: m5-death-star §2 effect 5.</summary>
     public const string SystemDestroyed = "SystemDestroyed";
     /// <summary>No handler is registered for this order type (e.g. a save with fleet orders loaded before the fleet module was attached).</summary>
     public const string UnknownOrderType = "UnknownOrderType";

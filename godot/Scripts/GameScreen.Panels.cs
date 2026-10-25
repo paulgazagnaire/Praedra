@@ -296,7 +296,7 @@ public partial class GameScreen
         Line($"{(sys.IsOutsideSectors ? "Outside the sectors" : sys.Sector)}{hqNote}", Dim);
         Add(new HSeparator());
 
-        // ---- destroyed by the Death Star: nothing is left to see, build, invade or target. rule: m5-death-star §2 effect 5
+        // ---- destroyed by the harvester: nothing is left to see, build, invade or target. rule: m5-death-star §2 effect 5
         if (S.IsDestroyed(name)) { DestroyedPanel(name); return; }
 
         // ---- fog of war: anything not yours shows only the side's picture, with its age. rule: m5-fog-and-hq §N2, §N8
@@ -558,7 +558,7 @@ public partial class GameScreen
                 if (!cons.IsResearched(Me, r.Name)) hint = "  (not researched)";
                 else if (r.Category == ObjectCategory.Facility && FacilityKinds.TryParse(r.Name, out var kind) && eco.CheckPlace(system, kind) is { } why) hint = why == "OnePerPlanet" ? "  (one per planet: this planet already has one)" : "  (no free slot)";
                 else if (r.Cost > refined) hint = "  (waits for refined)";
-                if (r.Name == Praedra.Core.DeathStar.DeathStarModule.ShipClass && S.HasOwnDeathStarAt(system)) hint = "  (one per system: this system already has one)";
+                if (r.Name == Praedra.Core.Harvester.HarvesterModule.ShipClass && S.HasOwnHarvesterAt(system)) hint = "  (one per system: this system already has one)";
                 var row = r;
                 var fam2 = Praedra.Core.Construction.Yards.BuiltBy(r.Category);
                 var btn = Act($"{r.Name}   {r.Cost} refined, upkeep {r.Maintenance}, ~{days} days{hint}", () => SubmitBuild(system, fam2, row),
@@ -679,7 +679,7 @@ public partial class GameScreen
             }
         }
 
-        if (atSystem && S.HoldsDeathStar(f)) DeathStarSection(f);
+        if (atSystem && S.HoldsHarvester(f)) HarvesterSection(f);
 
         OfficersSection(f);
 
@@ -716,15 +716,15 @@ public partial class GameScreen
         }
     }
 
-    // ================================================================== the Death Star (rule: m5-death-star §2)
+    // ================================================================== the harvester (rule: m5-death-star §2)
 
-    void DeathStarSection(Fleet f)
+    void HarvesterSection(Fleet f)
     {
         string at = f.At;
         bool gone = S.IsDestroyed(at);
         bool pending = S.PendingOf(f.Id).Any(p => p.StartsWith("Destroy System", StringComparison.Ordinal));
-        Heading("Death Star");
-        Line("This fleet holds a Death Star. Destroy System wipes out the system it is at.", Dim, 13);
+        Heading("harvester");
+        Line("This fleet holds a harvester. Destroy System wipes out the system it is at.", Dim, 13);
         Act("Destroy System...", () => AskDestroySystem(f.Id),
             "Opens a question first. The strike happens when the next day starts.", gone || pending);
         if (gone) Line($"{at} is already destroyed.", Dim, 13);

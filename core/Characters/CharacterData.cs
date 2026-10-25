@@ -80,7 +80,7 @@ public sealed class CharacterData
         var neverTalented = new HashSet<int>(); // membership test only
         var rt = CsvTable.Load(Path.Combine(design, RosterFile));
         rt.Require("id", "in_game");
-        bool hasNever = rt.HasColumn("never_talented"); // m5-characters-and-force Q17 (Paul 2026-10-18): 1 = never in the talented draw (the bounty hunters)
+        bool hasNever = rt.HasColumn("never_talented"); // m5-characters-and-force Q17 (Paul 2026-10-18): 1 = never in the talented draw (the Repossessors)
         for (int r = 0; r < rt.RowCount; r++)
         {
             inGame[rt.GetInt(r, "id")] = rt.GetInt(r, "in_game") == 1;

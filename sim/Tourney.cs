@@ -85,7 +85,7 @@ internal static class Tourney
         if (csv != null)
         {
             using var w = new StreamWriter(csv);
-            w.WriteLine("seed,a_is_empire,hand_level,collective_level,winner,day,hand_systems,collective_systems,hq_found_day,hand_captures,collective_captures");
+            w.WriteLine("seed,a_is_hand,hand_level,collective_level,winner,day,hand_systems,collective_systems,hq_found_day,hand_captures,collective_captures");
             foreach (var r in all)
                 w.WriteLine(string.Join(",", r.Seed, r.AIsHand, r.HandLevel, r.CollectiveLevel, r.Winner?.ToString() ?? "", r.Day, r.HandSystems, r.CollectiveSystems,
                                         r.HqFoundDay?.ToString(CultureInfo.InvariantCulture) ?? "", r.HandCaptures, r.CollectiveCaptures));

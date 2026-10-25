@@ -119,7 +119,7 @@ public sealed class RepairModule
 
     /// <summary>
     /// A capital ship's turn (0x501c50): hull damage falls by trunc(class hull / 10); then, with any hits, rand(0..99) &lt; damage_control fixes one hit,
-    /// picked by rand(0..total - 1) (no draw when total is 1) walking shield gen, weapons, tractor, sub-light, primary and backup hyperdrive.
+    /// picked by rand(0..total - 1) (no draw when total is 1) walking shield gen, weapons, Hold beam, sub-light, primary and backup hyperdrive.
     /// rule: m4-retreat-damage-repair §5.
     /// </summary>
     private void ShipTurn(StepContext ctx, int t, EconObject ship, int max, int damageControl)

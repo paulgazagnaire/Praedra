@@ -82,8 +82,8 @@ public sealed record GameSettings
     /// rule: m5-research §Availability test.
     /// </summary>
     public bool RespectResearchOrder { get; init; } = true;
-    /// <summary>The Death Star class row can be built. rule: m3-ships-and-fighters §Death Star as an ordinary class row.</summary>
-    public bool DeathStarClassBuildable { get; init; } = true;
+    /// <summary>The harvester class row can be built. rule: m3-ships-and-fighters §harvester as an ordinary class row.</summary>
+    public bool HarvesterClassBuildable { get; init; } = true;
     /// <summary>Yards stop under the Classic blockade flag instead of the economic blockade. rule: m2-construction §Suspension.</summary>
     public bool UseClassicBlockadeFlag { get; init; }
     /// <summary>A suspended yard's running cycle: Pause (DEFAULT, Paul economy/02 "shipyards are paused") or Abandon (Classic, B5b §3). rule: m2-construction §Suspension (Blockade pause, 2026-10-18).</summary>
@@ -106,7 +106,7 @@ public sealed record GameSettings
     public bool DebugOrdersEnabled { get; init; }
 
     // ---- defenses and bombardment. rule: m3-planetary-defenses §Defaults for undecided items; m3-bombardment §Defaults for undecided items
-    /// <summary>Number tables and switches of the defense queries (assault gate, Death Star Shield counts for the gate). Null = the module's defaults.</summary>
+    /// <summary>Number tables and switches of the defense queries (assault gate, Harvester Shield counts for the gate). Null = the module's defaults.</summary>
     public DefenseParams? Defense { get; init; }
     /// <summary>
     /// Numbers and switches of the bombardment (admiral and General steps, die, Energy and Raw defence, the -20, the critical roll; the B7 switches
@@ -115,16 +115,16 @@ public sealed record GameSettings
     /// </summary>
     public BombardParams? Bombard { get; init; }
 
-    // ---- the Death Star. rule: m5-death-star §Interfaces, §2, §4
-    /// <summary>Death Star switches and numbers (cap per system, ShieldBlocksDestroy, TrenchRun, sector penalty). Null = the sheet's DEFAULTs. Refused values throw at attach.</summary>
-    public Praedra.Core.DeathStar.DeathStarParams? DeathStar { get; init; }
+    // ---- the harvester. rule: m5-death-star §Interfaces, §2, §4
+    /// <summary>harvester switches and numbers (cap per system, ShieldBlocksDestroy, TrenchRun, sector penalty). Null = the sheet's DEFAULTs. Refused values throw at attach.</summary>
+    public Praedra.Core.Harvester.HarvesterParams? Harvester { get; init; }
 
     // ---- assault. rule: m3-assault §Defaults for undecided items
     /// <summary>Number table and switches of the assault (die, leadership step, thresholds, collateral mode, landing cap, passes, enemy fleet blocks). Null = the module's defaults.</summary>
     public AssaultParams? Assault { get; init; }
 
     // ---- battle. rule: m4-battle-classic §Defaults for undecided items; m4-retreat-damage-repair §Defaults
-    /// <summary>Switches and numbers of the Classic battle and the retreat (SubsystemRolls, task forces, tactic, RetreatMode, DeathStarStalemate, AI sides). Null = the module's defaults.</summary>
+    /// <summary>Switches and numbers of the Classic battle and the retreat (SubsystemRolls, task forces, tactic, RetreatMode, HarvesterStalemate, AI sides). Null = the module's defaults.</summary>
     public Praedra.Core.Battle.BattleParams? Battle { get; init; }
 
     // ---- research. rule: m5-research §Defaults for undecided items

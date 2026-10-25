@@ -55,7 +55,7 @@ public class GameHostTests
         Assert.Equal(con.UseClassicBlockadeFlag, s.UseClassicBlockadeFlag);
         Assert.Equal(ctl.DebugOrdersEnabled, s.DebugOrdersEnabled);
         Assert.Equal(fleets.DebugOrdersEnabled, s.DebugOrdersEnabled);
-        Assert.Equal(con.DeathStarClassBuildable, s.DeathStarClassBuildable);
+        Assert.Equal(con.HarvesterClassBuildable, s.HarvesterClassBuildable);
         var trp = Praedra.Core.Troops.TroopModule.Attach(g, fleets, data.Troops);
         Assert.Equal(trp.UnloadOnlyAtHeldSystem, s.UnloadOnlyAtHeldSystem);
         Assert.Null(s.Economy); Assert.Null(s.Support); Assert.Null(s.Construction);
@@ -80,7 +80,7 @@ public class GameHostTests
             AutoscrapMode = AutoscrapMode.Smart, SlotSource = SlotSource.Rolled, SupportRuleset = GarrisonRuleset.New,
             BlockadeSupportEffect = false, DeliveryForcedStop = false, LostDestination = LostDestinationRule.Refuse,
             UnitDestinationMustBeControlled = false, RespectResearchOrder = false, UseClassicBlockadeFlag = true, DebugOrdersEnabled = true,
-            DeathStarClassBuildable = false, UnloadOnlyAtHeldSystem = false,
+            HarvesterClassBuildable = false, UnloadOnlyAtHeldSystem = false,
             SuspendedLeaveCapacity = true, MineStopMode = StopMode.Abandon, YardStopMode = StopMode.Abandon,
             Economy = new EconomyParams { ScrapPeriod = 7 }, Support = new SupportParams { ErosionPeriod = 11 },
             Construction = new ConstructionParams { StandardCycleDays = 3 },
@@ -96,7 +96,7 @@ public class GameHostTests
             Assert.False(h.Construction.UnitDestinationMustBeControlled); Assert.False(h.Construction.RespectResearchOrder);
             Assert.False(h.Research.Params.FacilityResearch); Assert.Equal(Praedra.Core.Research.ResearchScale.Fixed, h.Research.Params.ResearchCostScale);
             Assert.True(h.Construction.UseClassicBlockadeFlag); Assert.True(h.Control.DebugOrdersEnabled);
-            Assert.True(h.Fleets.DebugOrdersEnabled); Assert.False(h.Construction.DeathStarClassBuildable);
+            Assert.True(h.Fleets.DebugOrdersEnabled); Assert.False(h.Construction.HarvesterClassBuildable);
             Assert.False(h.Troops.UnloadOnlyAtHeldSystem);
             Assert.True(h.Economy.SuspendedLeaveCapacity); Assert.Equal(StopMode.Abandon, h.Economy.MineStopMode); Assert.Equal(StopMode.Abandon, h.Construction.YardStopMode);
             Assert.Equal(7, h.Economy.Params.ScrapPeriod); Assert.Equal(11, h.Support.Params.ErosionPeriod); Assert.Equal(3, h.Construction.Params.StandardCycleDays);
@@ -111,10 +111,10 @@ public class GameHostTests
     public void ModulesAreWiredToEachOther()
     {
         var h = GameHost.New(1);
-        // support -> economy: the Death Star flag is the support module's
-        Assert.False(h.Economy.IsDeathStarSector("Charter"));
-        h.Support.SetDeathStarSystem("Charter", true);
-        Assert.True(h.Economy.IsDeathStarSector("Charter"));
+        // support -> economy: the harvester flag is the support module's
+        Assert.False(h.Economy.IsHarvesterSector("Charter"));
+        h.Support.SetHarvesterSystem("Charter", true);
+        Assert.True(h.Economy.IsHarvesterSector("Charter"));
         // support -> construction: an uprising stops yards
         Assert.False(h.Construction.IsInUprising("Navalia"));
         h.Game.State.Support.Systems["Navalia"] = new SystemSupportState { Uprising = true, Collective = Side.Collective, ErosionDue = 99, IncidentDue = 99 };

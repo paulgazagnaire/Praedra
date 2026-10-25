@@ -188,18 +188,18 @@ public class PoolTests
 
     // m2-mines-refineries-pools P12
     [Fact]
-    public void P12_DeathStarSectorDoublesHandRegiments()
+    public void P12_HarvesterSectorDoublesHandRegiments()
     {
         var w = Smuggle(25, 3, "Mandate");
-        w.Eco.IsDeathStarSector = s => s == Home;
+        w.Eco.IsHarvesterSector = s => s == Home;
         Assert.Equal(28, w.Eco.DiversionPercent(Home, Side.Hand)); // 50 - 10 - 12
     }
 
     // m2-mines-refineries-pools P13
     [Fact]
-    public void P13_OwnDeathStarInAFleetMakesItZeroWithNoDraw()
+    public void P13_OwnHarvesterInAFleetMakesItZeroWithNoDraw()
     {
-        var w = Smuggle(25, 3, "Mandate", "Death Star");
+        var w = Smuggle(25, 3, "Mandate", "harvester");
         Assert.Equal(0, w.Eco.DiversionPercent(Home, Side.Hand));
         w.Mine(Home);
         w.Run(30); // load 18 (three regiments): d = 28, first cycle 14, so it finishes at hook time 15

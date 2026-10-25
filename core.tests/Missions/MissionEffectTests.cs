@@ -11,15 +11,15 @@ namespace Praedra.Core.Tests.Missions;
 public class MissionEffectTests
 {
     // A Diplomacy team at T; the success roll draws 0; the gain draws as given. Returns the world after the first iteration.
-    private static MissionWorld Diplomacy(Side side, Side? holder, int collectiveSupport, int gainDraw, int gainMax, int dip = 120, int regiments = 0, bool deathStar = false,
+    private static MissionWorld Diplomacy(Side side, Side? holder, int collectiveSupport, int gainDraw, int gainMax, int dip = 120, int regiments = 0, bool harvester = false,
         Praedra.Core.Control.ControlRule rule = Praedra.Core.Control.ControlRule.AssaultOnly)
     {
         var w = new MissionWorld(rule: rule);
         w.Hold(T, holder, collectiveSupport);
         if (holder is Side h) for (int i = 0; i < regiments; i++) w.Unit(h, h == Side.Collective ? RebArmy : ImpArmy, T);
-        // The sector flag is recomputed every day at slot 5.6 from the Death Stars in fleets (m5-death-star §3), so a hand-set flag would be cleared:
-        // a Hand Death Star at H (same sector as T) raises it the honest way.
-        if (deathStar) w.Host.Fleets.AddFleet(Side.Hand, "Death Star", new[] { "Death Star" }, H);
+        // The sector flag is recomputed every day at slot 5.6 from the harvesters in fleets (m5-death-star §3), so a hand-set flag would be cleared:
+        // a Hand harvester at H (same sector as T) raises it the honest way.
+        if (harvester) w.Host.Fleets.AddFleet(Side.Hand, "harvester", new[] { "harvester" }, H);
         int agent = side == Side.Collective ? Leia : Piett;
         w.Agent(agent, T, dip: dip);
         w.Stub!.Expect(0, 99, 0).Expect(0, gainMax, gainDraw);
@@ -60,9 +60,9 @@ public class MissionEffectTests
     [Fact]
     public void MI29_DiplomacyHand() => Assert.Equal(35, A(Diplomacy(Side.Hand, Side.Hand, 40, 4, 19)));
 
-    // m5-missions MI30: MI27 in a Death Star sector: 7 / 2 = 3, A = 43
+    // m5-missions MI30: MI27 in a harvester sector: 7 / 2 = 3, A = 43
     [Fact]
-    public void MI30_DeathStarDamping() => Assert.Equal(43, A(Diplomacy(Side.Collective, Side.Collective, 40, 6, 19, regiments: 2, deathStar: true)));
+    public void MI30_HarvesterDamping() => Assert.Equal(43, A(Diplomacy(Side.Collective, Side.Collective, 40, 6, 19, regiments: 2, harvester: true)));
 
     // m5-missions MI31: A = 95 with g = 10: clamp, A = 100
     [Fact]
@@ -201,17 +201,17 @@ public class MissionEffectTests
         Assert.Equal(1, w.Stub.Count(0, 2)); // the timer only
     }
 
-    // m5-missions MI37: Death Star Sabotage x = 100 (p = 99) with a stub Death Star: Destroy called once
+    // m5-missions MI37: Spike the Harvester x = 100 (p = 99) with a stub harvester: Destroy called once
     [Fact]
-    public void MI37_DeathStarSabotage()
+    public void MI37_HarvesterSabotage()
     {
         var w = new MissionWorld(characters: Praedra.Core.Tests.Characters.CharWorld.ClassicForce()); // the Classic Force (m5-characters-and-force §Force CH37)
         w.Hold(T, Side.Hand, 0);
         w.Agent(Luke, T, esp: 100, com: 100);
         var calls = new List<(string, Side)>();
-        w.M.HasDeathStar = (owner, sys) => owner == Side.Hand && sys == T;
-        w.M.DestroyDeathStar = (_, sys, owner) => calls.Add((sys, owner));
-        w.Start(Side.Collective, MissionKind.DeathStarSabotage, new[] { Luke }, T);
+        w.M.HasHarvester = (owner, sys) => owner == Side.Hand && sys == T;
+        w.M.DestroyHarvester = (_, sys, owner) => calls.Add((sys, owner));
+        w.Start(Side.Collective, MissionKind.SpikeTheHarvester, new[] { Luke }, T);
         w.Game.Step();
         w.RunIteration(w.LastMission);
         Assert.Equal((150, 99), (w.Events<MissionMemberRoll>().Single().Input, w.Events<MissionMemberRoll>().Single().Chance)); // B2e moved: Luke's Force 50 raises both skills to 150

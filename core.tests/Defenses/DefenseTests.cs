@@ -13,7 +13,7 @@ namespace Praedra.Core.Tests.Defenses;
 public class DefenseTests
 {
     private static readonly FacilityKind Kdy = FacilityKind.Kdy150, Lnr1 = FacilityKind.LnrSeriesI, Lnr2 = FacilityKind.LnrSeriesII,
-        Gen1 = FacilityKind.GenCoreLevelI, Gen2 = FacilityKind.GenCoreLevelII, Dss = FacilityKind.DeathStarShield;
+        Gen1 = FacilityKind.GenCoreLevelI, Gen2 = FacilityKind.GenCoreLevelII, Dss = FacilityKind.HarvesterShield;
 
     // m3-planetary-defenses D1: the six rows exactly as the table; only class 4 is Hand only; cost and maintenance agree with the costs file
     [Fact]
@@ -27,7 +27,7 @@ public class DefenseTests
             ("Mordant Lien-150", 34, 4, 4, 0, 0, 2000, 0, 5, DefenseJob.Battery),
             ("Mordant Covenant I", 35, 7, 7, 0, 0, 800, 0, 4, DefenseJob.Battery),
             ("Lode Escrow I", 36, 12, 12, 0, 0, 0, 40, 2, DefenseJob.ShieldGenerator),
-            ("Death Star Shield", 37, 25, 20, 3, 24, 0, 0, 1, DefenseJob.DeathStarShield),
+            ("Harvester Shield", 37, 25, 20, 3, 24, 0, 0, 1, DefenseJob.HarvesterShield),
             ("Mordant Covenant II", 35, 10, 4, 4, 40, 5000, 0, 3, DefenseJob.Battery),
             ("Lode Escrow II", 36, 20, 7, 6, 40, 0, 80, 3, DefenseJob.ShieldGenerator),
         };
@@ -136,22 +136,22 @@ public class DefenseTests
         Assert.Equal(new[] { k }, w.Def.ReturnFireSet(BombWorld.Sys));
     }
 
-    // m3-planetary-defenses D9: the Collective cannot order a Death Star Shield (construction sheet: NotAvailable); the Hand can
+    // m3-planetary-defenses D9: the Collective cannot order a Harvester Shield (construction sheet: NotAvailable); the Hand can
     [Fact]
-    public void D9_CollectiveBuildOrderOfDeathStarShieldIsNotAvailable()
+    public void D9_CollectiveBuildOrderOfHarvesterShieldIsNotAvailable()
     {
         var a = new BuildWorld();
         a.Hold("Classis", Side.Collective); a.Yard("Classis", FacilityKind.ConstructionYard);
-        Assert.Equal(RejectReason.NotAvailable, a.TryOrder(Side.Collective, "Classis", YardFamily.Construction, "Death Star Shield", 1, "Classis"));
+        Assert.Equal(RejectReason.NotAvailable, a.TryOrder(Side.Collective, "Classis", YardFamily.Construction, "Harvester Shield", 1, "Classis"));
         var e = new BuildWorld();
         e.Build.RespectResearchOrder = false; // research gate off = all available (the gate is on by default since m5-research)
         e.Hold("Classis", Side.Hand); e.Yard("Classis", FacilityKind.ConstructionYard);
-        Assert.Null(e.TryOrder(Side.Hand, "Classis", YardFamily.Construction, "Death Star Shield", 1, "Classis")); // research flag off = all available
+        Assert.Null(e.TryOrder(Side.Hand, "Classis", YardFamily.Construction, "Harvester Shield", 1, "Classis")); // research flag off = all available
     }
 
-    // m3-planetary-defenses D10 (control sheet C1): the Death Star Shield is removed on a Collective capture, the other defenses transfer
+    // m3-planetary-defenses D10 (control sheet C1): the harvester shield is removed on a Collective capture, the other defenses transfer
     [Fact]
-    public void D10_CollectiveCaptureRemovesTheDeathStarShieldOnly()
+    public void D10_CollectiveCaptureRemovesTheHarvesterShieldOnly()
     {
         var w = new CtlWorld();
         w.Hold("Classis", Side.Hand, 80);
@@ -170,7 +170,7 @@ public class DefenseTests
         w.Hold(Side.Collective);
         w.Facility(Gen1); w.Facility(Gen1);
         Assert.True(w.Def.AssaultForbidden(BombWorld.Sys));
-        w.Fleet(Side.Hand, BombWorld.Sys, "Death Star", 6); // P = 90, S = 80, 10 hits
+        w.Fleet(Side.Hand, BombWorld.Sys, "harvester", 6); // P = 90, S = 80, 10 hits
         w.Stub.Expect(0, 2, 1); // B7-bombardment §5.3: the military collateral x = rand(0..m0 = 2) comes first: 1, no collateral
         w.Dice((0, 10), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1)); // the first shield falls, the second survives nine rolls
         int fleet = w.Game.State.Fleets.Keys.Single();
@@ -244,17 +244,17 @@ public class DefenseTests
 
     // ---------------------------------------------------------------- extra tests
 
-    // m3-planetary-defenses §Defaults (DEFAULT: the Death Star Shield has no M3 effect): not a generator, subtracts 0, but a switch counts it for the gate
+    // m3-planetary-defenses §Defaults (DEFAULT: the harvester shield has no M3 effect): not a generator, subtracts 0, but a switch counts it for the gate
     [Fact]
-    public void DeathStarShieldIsNotAGateShieldByDefaultAndTheSwitchCountsIt()
+    public void HarvesterShieldIsNotAGateShieldByDefaultAndTheSwitchCountsIt()
     {
         var w = new BombWorld();
         w.Facility(Dss); w.Facility(Dss);
         Assert.Equal(0, w.Def.ShieldGenerators(BombWorld.Sys));
         Assert.Equal(0, w.Def.ShieldStrength(BombWorld.Sys));
-        Assert.False(w.Def.AssaultForbidden(BombWorld.Sys)); // m3-assault A10: two Death Star Shields only: accepted
+        Assert.False(w.Def.AssaultForbidden(BombWorld.Sys)); // m3-assault A10: two Harvester Shields only: accepted
 
-        var s = new BombWorld(dp: new DefenseParams { DeathStarShieldCountsForGate = true });
+        var s = new BombWorld(dp: new DefenseParams { HarvesterShieldCountsForGate = true });
         s.Facility(Dss); s.Facility(Dss);
         Assert.True(s.Def.AssaultForbidden(BombWorld.Sys));
         Assert.Equal(0, s.Def.ShieldGenerators(BombWorld.Sys)); // the count itself never includes it

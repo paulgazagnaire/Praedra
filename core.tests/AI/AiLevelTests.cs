@@ -58,8 +58,8 @@ public class AiLevelTests
     [Fact]
     public void Level_KeepsTheBaseParameters()
     {
-        var b = new SimpleAiParams { UseFog = true, UseDeathStar = false };
-        Assert.False(AiLevels.For(AiLevel.Easy, b).UseDeathStar);
+        var b = new SimpleAiParams { UseFog = true, UseHarvester = false };
+        Assert.False(AiLevels.For(AiLevel.Easy, b).UseHarvester);
         Assert.Equal(b, AiLevels.For(AiLevel.Medium, b));
     }
 

@@ -39,9 +39,9 @@ public static class DropInStage
         [0x10] = ("Diplomacy", "DIPLMSTB"), [0x11] = ("Rescue", "RESCMSTB"), [0x12] = ("Sabotage", "SBTGMSTB"), [0x13] = ("Espionage", "ESPIMSTB"),
         [0x15] = ("Reconnaissance", ""), [0x16] = ("Recruitment", "RCRTMSTB"), [0x17] = ("Abduction", "ABDCMSTB"),
         [0x20] = ("ShipResearch", ""), [0x21] = ("FacilityResearch", ""), [0x22] = ("TroopResearch", ""),
-        [0x40] = ("InciteUprising", "INCTMSTB"), [0x41] = ("DeathStarSabotage", "DSSBMSTB"), [0x42] = ("JediTraining", ""),
-        [0x43] = ("Dagobah", ""), [0x44] = ("Palace", ""), [0x45] = ("Vacation", ""), [0x46] = ("Sabbatical", ""),
-        [0x80] = ("SubdueUprising", "SUBDMSTB"), [0x81] = ("Assassination", "ASSNMSTB"), [0x82] = ("Pickup", ""), [0x83] = ("Bounty", ""),
+        [0x40] = ("InciteUprising", "INCTMSTB"), [0x41] = ("SpikeTheHarvester", "DSSBMSTB"), [0x42] = ("TrainTalent", ""),
+        [0x43] = ("Dagobah", ""), [0x44] = ("Palace", ""), [0x45] = ("Leave", ""), [0x46] = ("Retreat", ""),
+        [0x80] = ("SubdueUprising", "SUBDMSTB"), [0x81] = ("Assassination", "ASSNMSTB"), [0x82] = ("Pickup", ""), [0x83] = ("Repossession", ""),
     };
 
     /// <summary>
@@ -65,7 +65,7 @@ public static class DropInStage
     {
         0x22 or 0x23 => "battery",
         0x24 => "shield generator",
-        0x25 => "death star shield",
+        0x25 => "harvester shield",
         _ => throw new ImportException($"{where}: no defense kind for family {family}."),
     };
 
@@ -117,7 +117,7 @@ public static class DropInStage
         var cols = new List<string>();
         foreach (var c in t.Header.Skip(t.Col("is_alliance")))
         {
-            string o = c switch { "cost" => "refined_material_cost", "maintenance" => "maintenance_cost", _ => c == lastRaw ? lastOut! : c };
+            string o = c switch { "cost" => "refined_material_cost", "maintenance" => "maintenance_cost", _ => c == lastRaw ? lastOut! : OutHeader(c) };
             header.Add(o); cols.Add(c);
         }
         var rows = Rows(t, r =>
@@ -197,7 +197,7 @@ public static class DropInStage
 
     /// <summary>
     /// research-unlocks.csv. research_family from production_family; start_*: n/a when the side cannot have the class or the class costs 0
-    /// (never listed: economy/14 §3, Bounty Hunters), else yes at level 0 and locked above. rule: m5-research §Ladders; economy/14.
+    /// (never listed: economy/14 §3, Repossessors), else yes at level 0 and locked above. rule: m5-research §Ladders; economy/14.
     /// </summary>
     private static string Research(Raw raw)
     {
@@ -286,6 +286,17 @@ public static class DropInStage
     }
 
     // ------------------------------------------------------------------ helpers
+
+    /// <summary>
+    /// The drop-in header for a raw column: Classic's raw files keep their own words (is_alliance, tractor_beam_power), the drop-in tables use
+    /// the Praedra words (tools/names/rename_words.py).
+    /// </summary>
+    private static string OutHeader(string raw) => raw switch
+    {
+        "is_alliance" => "is_collective", "is_empire" => "is_hand",
+        "tractor_beam_power" => "hold_beam_power", "tractor_beam_range" => "hold_beam_range",
+        _ => raw,
+    };
 
     private static IEnumerable<IEnumerable<string>> Rows(CsvFile t, Func<int, IEnumerable<string>> row) =>
         Enumerable.Range(0, t.Rows.Count).Select(row).ToList();

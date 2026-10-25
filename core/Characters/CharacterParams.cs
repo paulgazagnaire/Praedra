@@ -56,11 +56,11 @@ public sealed record CharacterParams
     // ---- numbers (§Numbers)
     /// <summary>Speed rating of a lone character (GNPRTB 1). Traced, m1-travel.</summary>
     public int CharacterSpeed { get; init; } = Travel.TravelFormula.DefaultSpeed;
-    /// <summary>Death Star hit chance on a minor, percent (GNPRTB 0x606 = 50). Traced, Decided (Paul).</summary>
-    public int DeathStarHitPercent { get; init; } = 50;
+    /// <summary>harvester hit chance on a minor, percent (GNPRTB 0x606 = 50). Traced, Decided (Paul).</summary>
+    public int HarvesterHitPercent { get; init; } = 50;
     /// <summary>
-    /// Jedi Training gain cap, percent of the gap: <c>g = rand(0..gap * this / 100)</c>. DEFAULT 25 (New, Paul 2026-10-18: five or six trainers, so
-    /// training is slower); <see cref="ClassicTrainingGainPercent"/> 50 = Classic (GNPRTB 6173). rule: m5-characters-and-force §Force (Jedi Training: the roll).
+    /// Train Talent gain cap, percent of the gap: <c>g = rand(0..gap * this / 100)</c>. DEFAULT 25 (New, Paul 2026-10-18: five or six trainers, so
+    /// training is slower); <see cref="ClassicTrainingGainPercent"/> 50 = Classic (GNPRTB 6173). rule: m5-characters-and-force §Force (Train Talent: the roll).
     /// </summary>
     public int ForceTrainingGainPercent { get; init; } = 25;
     /// <summary>
@@ -74,8 +74,8 @@ public sealed record CharacterParams
     /// <summary>Training chance cap, percent (min(gap, 100)). Traced code, reading [inferred].</summary>
     public int TrainingChanceCap { get; init; } = 100;
     /// <summary>
-    /// Jedi Training chance scale: <c>chance = min(gap, 100) * this / 100</c>. DEFAULT 50 (New, Paul 2026-10-18); 100 = Classic (Traced, reading [inferred]).
-    /// rule: m5-characters-and-force §Force (Jedi Training: the roll; New, Paul 2026-10-18; Classic = 100).
+    /// Train Talent chance scale: <c>chance = min(gap, 100) * this / 100</c>. DEFAULT 50 (New, Paul 2026-10-18); 100 = Classic (Traced, reading [inferred]).
+    /// rule: m5-characters-and-force §Force (Train Talent: the roll; New, Paul 2026-10-18; Classic = 100).
     /// </summary>
     public int ForceTrainingChancePercent { get; init; } = 50;
     /// <summary>
@@ -148,7 +148,7 @@ public sealed record CharacterParams
     /// not talented, so they never train or awaken anyone; the drawn are always new faces. Paul 2026-10-18 (card "Skip the strong"). rule: §Rule (New) 4, Q17.
     /// </summary>
     public bool TalentedSkipStrong { get; init; } = true;
-    /// <summary>Leave out of the talented draw the characters flagged never_talented in roster.csv (the bounty hunters). Paul 2026-10-18 (card "Leave out hunters"). rule: §Rule (New) 4, Q17.</summary>
+    /// <summary>Leave out of the talented draw the characters flagged never_talented in roster.csv (the Repossessors). Paul 2026-10-18 (card "Leave out hunters"). rule: §Rule (New) 4, Q17.</summary>
     public bool TalentedSkipFlagged { get; init; } = true;
     /// <summary>Lowest Force of an awakening trainer (DiscoveringForceUser). GNPRTB 2580 = 80 (0x4ef070).</summary>
     public int TrainerMinForce { get; init; } = 80;
@@ -195,12 +195,12 @@ public sealed record CharacterParams
     public bool BlockadeEscapeRisk { get; init; }
     /// <summary>Assaults capture or kill officers (Missing). DEFAULT false; on refused.</summary>
     public bool AssaultHarmsCharacters { get; init; }
-    /// <summary>Major characters can die (else Kill becomes Injure). DEFAULT false (Traced for the Death Star; Open question 2).</summary>
+    /// <summary>Major characters can die (else Kill becomes Injure). DEFAULT false (Traced for the harvester; Open question 2).</summary>
     public bool MajorsCanDie { get; init; }
     /// <summary>Minor characters can die. DEFAULT true (Traced per-character bit, source unknown).</summary>
     public bool MinorsCanDie { get; init; } = true;
-    /// <summary>The Death Star's roll also hits the attacker's own characters. DEFAULT true.</summary>
-    public bool DeathStarHitsOwnCharacters { get; init; } = true;
+    /// <summary>The harvester's roll also hits the attacker's own characters. DEFAULT true.</summary>
+    public bool HarvesterHitsOwnCharacters { get; init; } = true;
     /// <summary>
     /// Prisoners try to escape on their own: an attempt every <c>100 + rand(0..1000)</c> days, ESCAPETB on <c>combat + espionage - captors' average
     /// combat - captors' special forces</c>. DEFAULT true (Traced B2e §3); false: no timers and no draws (comparison runs). rule: §Escape.

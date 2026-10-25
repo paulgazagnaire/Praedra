@@ -45,7 +45,7 @@ public sealed class NewBattle
         public List<Rec> Recs = new();
         public double Assigned;      // saturation scratch
         public double Threat;
-        public NU? HeldBy;           // capital ship of a retreating side held by this enemy tractor ship (stays on the field). rule: m4-retreat-damage-repair §6
+        public NU? HeldBy;           // capital ship of a retreating side held by this enemy Hold beam ship (stays on the field). rule: m4-retreat-damage-repair §6
         public double HullRatio => HullMax <= 0 ? 0 : Math.Max(0.0, Math.Min(1.0, Hull / HullMax));
         public bool OnField => State == St.Active || State == St.Jumping;
     }
@@ -167,24 +167,24 @@ public sealed class NewBattle
         return null;
     }
 
-    // ---------------------------------------------------------------- tractor beams hold retreat (New only). rule: m4-retreat-damage-repair §6
+    // ---------------------------------------------------------------- Hold beams hold retreat (New only). rule: m4-retreat-damage-repair §6
 
-    /// <summary>A capital ship with tractor_beam_power &gt; 0 whose tractor counter is clear. The power is not used beyond &gt; 0 (DEFAULT). rule: m4-retreat-damage-repair §6.</summary>
-    private static bool TractorWorks(NU h) => h.Capital && h.B.Class.TractorBeamPower > 0 && h.B.Hits[ObjectRegistry.TractorCounter] == 0;
+    /// <summary>A capital ship with hold_beam_power &gt; 0 whose Hold beam counter is clear. The power is not used beyond &gt; 0 (DEFAULT). rule: m4-retreat-damage-repair §6.</summary>
+    private static bool HoldBeamWorks(NU h) => h.Capital && h.B.Class.HoldBeamPower > 0 && h.B.Hits[ObjectRegistry.HoldBeamCounter] == 0;
 
-    /// <summary>The hold lasts while the holder is alive (on the field or jumping) with a working tractor. rule: m4-retreat-damage-repair §6.</summary>
-    private bool HoldValid(NU held) => held.HeldBy is { } h && AliveShip(h) && TractorWorks(h);
+    /// <summary>The hold lasts while the holder is alive (on the field or jumping) with a working Hold beam. rule: m4-retreat-damage-repair §6.</summary>
+    private bool HoldValid(NU held) => held.HeldBy is { } h && AliveShip(h) && HoldBeamWorks(h);
 
     /// <summary>
-    /// The holder of a ship that tries to jump: the first enemy capital ship by unit id that is on the field (not jumping), has a working tractor, a
+    /// The holder of a ship that tries to jump: the first enemy capital ship by unit id that is on the field (not jumping), has a working Hold beam, a
     /// larger max hull, and holds no other ship still on the field. No draw. DEFAULT (Proposal: smaller = lower max hull). rule: m4-retreat-damage-repair §6.
     /// </summary>
     private NU? FindHolder(NU ship)
     {
-        if (!_np.TractorBeamsHoldRetreat || !ship.Capital) return null;
+        if (!_np.HoldBeamsHoldRetreat || !ship.Capital) return null;
         foreach (var h in _u)
         {
-            if (h.Side == ship.Side || h.State != St.Active || !TractorWorks(h) || !(h.HullMax > ship.HullMax)) continue;
+            if (h.Side == ship.Side || h.State != St.Active || !HoldBeamWorks(h) || !(h.HullMax > ship.HullMax)) continue;
             bool busy = false;
             foreach (var x in _u) if (x != ship && x.HeldBy == h && x.State == St.Active) { busy = true; break; } // one ship at a time
             if (!busy) return h;
@@ -192,14 +192,14 @@ public sealed class NewBattle
         return null;
     }
 
-    /// <summary>Try to hold a ship that is about to jump; true = it stays on the field (a <see cref="TractorHeldStep"/> and a log line). rule: m4-retreat-damage-repair §6.</summary>
+    /// <summary>Try to hold a ship that is about to jump; true = it stays on the field (a <see cref="HoldBeamHeldStep"/> and a log line). rule: m4-retreat-damage-repair §6.</summary>
     private bool TryHold(NU ship)
     {
         var h = FindHolder(ship);
         if (h == null) return false;
         ship.HeldBy = h;
-        _steps.Add(new TractorHeldStep(ship.B, h.B, _t));
-        Note("held", ship, h, "tractor");
+        _steps.Add(new HoldBeamHeldStep(ship.B, h.B, _t));
+        Note("held", ship, h, "Hold beam");
         return true;
     }
 
@@ -684,7 +684,7 @@ public sealed class NewBattle
                     double score = _rng.NextInt(0, _np.HullRollSides - 1) + 100.0 * hullLost / v.HullMax;
                     if (score > _p.SubsystemScoreAbove)
                     {
-                        int idx = score <= _p.ShieldGeneratorUpTo ? 0 : score <= _p.WeaponsUpTo ? 1 : score <= _p.TractorUpTo ? 2 : score <= _p.SubLightUpTo ? 3 : ObjectRegistry.HyperdriveCounter;
+                        int idx = score <= _p.ShieldGeneratorUpTo ? 0 : score <= _p.WeaponsUpTo ? 1 : score <= _p.HoldBeamUpTo ? 2 : score <= _p.SubLightUpTo ? 3 : ObjectRegistry.HyperdriveCounter;
                         Bump(v, idx);
                     }
                 }
@@ -776,7 +776,7 @@ public sealed class NewBattle
                 if (carrierLeft || (u.State == St.Jumping && t >= u.JumpEnd)) Leave(u);
             }
 
-        // a held ship whose hold has ended (holder dead or gone, tractor hit) tries again: another free tractor ship may hold it, else it jumps;
+        // a held ship whose hold has ended (holder dead or gone, Hold beam hit) tries again: another free Hold beam ship may hold it, else it jumps;
         // with its hyperdrive knocked out meanwhile it is destroyed like any non-jumping ship of a retreating side. rule: m4-retreat-damage-repair §6, §2 (1)
         foreach (var u in _u)
         {
@@ -849,7 +849,7 @@ public sealed class NewBattle
         {
             if (u.Side != side || !u.Capital || u.State != St.Active) continue;
             if (!HyperdriveOk(u)) { Kill(u, UnitLossReason.NoHyperdrive); continue; } // left behind (DEFAULT, open question 8)
-            if (TryHold(u)) continue; // held by an enemy tractor: stays on the field and fights on. rule: m4-retreat-damage-repair §6
+            if (TryHold(u)) continue; // held by an enemy Hold beam: stays on the field and fights on. rule: m4-retreat-damage-repair §6
             u.State = St.Jumping; u.JumpEnd = _t + _np.JumpSeconds; leaving.Add(u); Note("jump", u, null, "");
         }
         var free = new Dictionary<int, int>(); // lookup only; read through `leaving`

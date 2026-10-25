@@ -48,8 +48,8 @@ public sealed class ConstructionModule
     /// rule: m5-research §Availability test.
     /// </summary>
     public Func<Side, string, bool>? ResearchOrderReached { get; set; }
-    /// <summary>The Death Star class row can be ordered at a Shipyard. DEFAULT true; off: the order is rejected NotAvailable. rule: m3-ships-and-fighters §Death Star as an ordinary class row (S14).</summary>
-    public bool DeathStarClassBuildable { get; set; } = true;
+    /// <summary>The harvester class row can be ordered at a Shipyard. DEFAULT true; off: the order is rejected NotAvailable. rule: m3-ships-and-fighters §harvester as an ordinary class row (S14).</summary>
+    public bool HarvesterClassBuildable { get; set; } = true;
     /// <summary>Yards stop under the Classic blockade flag (<see cref="FleetModule.IsBlockadedClassic"/>) instead of the economic blockade. DEFAULT off. rule: m2-construction §Suspension.</summary>
     public bool UseClassicBlockadeFlag { get; set; }
     /// <summary>
@@ -75,8 +75,8 @@ public sealed class ConstructionModule
     /// </summary>
     public Func<string, bool> IsInUprising { get; set; } = _ => false;
     /// <summary>
-    /// An extra build check run after the research gate and the count check (null = none): a rejection reason or null. The Death Star module sets it
-    /// for the one-per-system cap (DeathStarLimit). rule: m5-death-star §1.
+    /// An extra build check run after the research gate and the count check (null = none): a rejection reason or null. The harvester module sets it
+    /// for the one-per-system cap (HarvesterLimit). rule: m5-death-star §1.
     /// </summary>
     public Func<BuildOrder, string?>? ExtraBuildCheck { get; set; }
     /// <summary>
@@ -210,7 +210,7 @@ public sealed class ConstructionModule
         if (Yards.BuiltBy(row.Category) != o.Family) return OrderResult.Reject(RejectReason.WrongFamily);
         // rule: m2-construction §Build order (NotAvailable: the file's side flag; cost 0 is not buildable, m3-troops-and-special-forces §Training Facility production)
         if (!(o.Side == Side.Hand ? row.Hand : row.Collective) || row.Cost <= 0) return OrderResult.Reject(RejectReason.NotAvailable);
-        if (o.Class == EconomyModule.DeathStarClass && !DeathStarClassBuildable) return OrderResult.Reject(RejectReason.NotAvailable); // rule: m3-ships-and-fighters §Death Star (S14)
+        if (o.Class == EconomyModule.HarvesterClass && !HarvesterClassBuildable) return OrderResult.Reject(RejectReason.NotAvailable); // rule: m3-ships-and-fighters §harvester (S14)
         if (!IsResearched(o.Side, o.Class)) return OrderResult.Reject(RejectReason.NotResearched);
         if (o.Count < 1) return OrderResult.Reject(RejectReason.BadCount);
         if (ExtraBuildCheck?.Invoke(o) is { } extra) return OrderResult.Reject(extra);
@@ -334,7 +334,7 @@ public sealed class ConstructionModule
     }
 
     /// <summary>
-    /// For the Death Star: a system was destroyed. Every project standing on it or heading for it is cancelled (reason SystemDestroyed, no refund,
+    /// For the harvester: a system was destroyed. Every project standing on it or heading for it is cancelled (reason SystemDestroyed, no refund,
     /// maintenance freed), and every facility still travelling to it is removed with its delivery (no refund). Other units heading for it follow
     /// <see cref="LostDestination"/> on arrival. Call before the planet's own objects are removed. rule: m5-death-star §2 effect 2 ("completed or in a queue", no refund).
     /// </summary>

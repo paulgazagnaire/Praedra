@@ -32,7 +32,7 @@ public sealed class SupportModule
         _game = game; _galaxy = galaxy; _eco = eco; _fleets = fleets; Weights = weights; Params = p;
     }
 
-    /// <summary>Register hooks 6.1 to 6.3 and wire the Death Star flag into <see cref="EconomyModule.IsDeathStarSector"/>.</summary>
+    /// <summary>Register hooks 6.1 to 6.3 and wire the harvester flag into <see cref="EconomyModule.IsHarvesterSector"/>.</summary>
     public static SupportModule Attach(Game game, Galaxy galaxy, EconomyModule eco, FleetModule fleets, GarrisonWeights? weights = null, SupportParams? p = null)
     {
         var prm = p ?? new SupportParams();
@@ -40,7 +40,7 @@ public sealed class SupportModule
         game.RegisterHook("6.1", m.RefreshGarrisons);
         game.RegisterHook("6.2", m.SupportTimers);
         game.RegisterHook("6.3", m.IncidentTimers);
-        eco.IsDeathStarSector = m.IsDeathStarSector;
+        eco.IsHarvesterSector = m.IsHarvesterSector;
         return m;
     }
 
@@ -50,25 +50,25 @@ public sealed class SupportModule
     // ================================================================== setup (between Steps; not orders, no events)
 
     /// <summary>
-    /// Setup only: set or clear the Death Star flag on every system of a sector. M2 sets nothing itself (the Death Star is M4/M6).
-    /// rule: m2-popular-support §Death Star sector flag.
+    /// Setup only: set or clear the harvester flag on every system of a sector. M2 sets nothing itself (the harvester is M4/M6).
+    /// rule: m2-popular-support §harvester sector flag.
     /// </summary>
-    public void SetDeathStarSector(string sector, bool on)
+    public void SetHarvesterSector(string sector, bool on)
     {
         var sec = _galaxy.Sectors.FirstOrDefault(s => s.Name == sector) ?? throw new ArgumentException($"Unknown sector '{sector}'.");
-        foreach (var i in sec.Members) SetDeathStarSystem(_galaxy.Systems[i].Name, on);
+        foreach (var i in sec.Members) SetHarvesterSystem(_galaxy.Systems[i].Name, on);
     }
 
     /// <summary>Setup only: set or clear the flag on one system (tests with synthetic data).</summary>
-    public void SetDeathStarSystem(string system, bool on)
+    public void SetHarvesterSystem(string system, bool on)
     {
         if (!_galaxy.TryFindSystem(system, out _)) throw new ArgumentException($"Unknown system '{system}'.");
-        if (on) S.DeathStar.Add(system); else S.DeathStar.Remove(system);
+        if (on) S.Harvester.Add(system); else S.Harvester.Remove(system);
     }
 
     // ================================================================== queries
 
-    public bool IsDeathStarSector(string system) => S.DeathStar.Contains(system);
+    public bool IsHarvesterSector(string system) => S.Harvester.Contains(system);
     public bool IsUprising(string system) => S.Systems.TryGetValue(system, out var s) && s.Uprising;
     public SystemSupportState? StateOf(string system) => S.Systems.TryGetValue(system, out var s) ? s : null;
 
@@ -76,18 +76,18 @@ public sealed class SupportModule
     public int RequiredGarrison(string system)
     {
         if (_fleets.OwnerOf(system) is not Side holder) return 0;
-        return RequiredGarrison(Params, _eco.SupportOf(system, holder), IsUprising(system), holder == Side.Hand && IsDeathStarSector(system));
+        return RequiredGarrison(Params, _eco.SupportOf(system, holder), IsUprising(system), holder == Side.Hand && IsHarvesterSector(system));
     }
 
     /// <summary>
-    /// N = 0 if s >= 60 else ceil((60 - s) / 10); x2 in uprising; then / 2 (truncating) for the Hand in a Death Star sector.
+    /// N = 0 if s >= 60 else ceil((60 - s) / 10); x2 in uprising; then / 2 (truncating) for the Hand in a harvester sector.
     /// Order 1, 2, 3 (DEFAULT). rule: m2-uprisings-and-garrison §Required garrison N (GNPRTB 7761, 7762, 7682, 7680).
     /// </summary>
-    public static int RequiredGarrison(SupportParams p, int controllerSupport, bool uprising, bool handInDeathStarSector)
+    public static int RequiredGarrison(SupportParams p, int controllerSupport, bool uprising, bool handInHarvesterSector)
     {
         int n = controllerSupport >= p.GarrisonFreeSupport ? 0 : (p.GarrisonFreeSupport - controllerSupport + p.GarrisonStep - 1) / p.GarrisonStep;
         if (uprising) n *= p.UprisingMultiplier;
-        if (handInDeathStarSector) n /= p.DeathStarGarrisonDivisor;
+        if (handInHarvesterSector) n /= p.HarvesterGarrisonDivisor;
         return n;
     }
 
@@ -116,10 +116,10 @@ public sealed class SupportModule
 
     /// <summary>
     /// The one entry point for every change of support. <paramref name="amount"/> is from the point of view of <paramref name="side"/>.
-    /// Collective axis; Death Star damping of rises (truncating); clamp 0..100; <see cref="SupportChanged"/> if the value moved. Returns the
+    /// Collective axis; harvester damping of rises (truncating); clamp 0..100; <see cref="SupportChanged"/> if the value moved. Returns the
     /// new Collective share. A destroyed system has no support value: nothing changes (rule: m5-death-star §2 effect 5).
-    /// <paramref name="dampen"/> false skips step 2, the Death Star damping: the Death Star's own sector reaction passes false (rule: m5-death-star §2
-    /// effect 7: "The Hand's Death Star damping does not apply to these two changes").
+    /// <paramref name="dampen"/> false skips step 2, the harvester damping: the harvester's own sector reaction passes false (rule: m5-death-star §2
+    /// effect 7: "The Hand's harvester damping does not apply to these two changes").
     /// rule: m2-popular-support §One entry point for every change (steps 1 to 4).
     /// </summary>
     public int ChangeSupport(StepContext ctx, string system, Side side, int amount, SupportCause cause, bool dampen = true)
@@ -128,7 +128,7 @@ public sealed class SupportModule
         if (_eco.IsDestroyed(system)) return 0;
         int old = _eco.SupportOf(system, Side.Collective);
         int d = side == Side.Collective ? amount : -amount;                       // 1. Collective axis
-        if (dampen && d > 0 && IsDeathStarSector(system)) d /= Params.DeathStarDampingDivisor; // 2. damping, only rises, toward zero
+        if (dampen && d > 0 && IsHarvesterSector(system)) d /= Params.HarvesterDampingDivisor; // 2. damping, only rises, toward zero
         int now = Math.Clamp(old + d, Params.SupportMin, Params.SupportMax);    // 3. clamp
         if (now == old) return old;
         _game.State.Economy.CollectiveSupport[system] = now;
@@ -175,7 +175,7 @@ public sealed class SupportModule
             if (holder is Side h)
             {
                 bool on = st is { Uprising: true };
-                int n = RequiredGarrison(Params, _eco.SupportOf(sys, h), on, h == Side.Hand && IsDeathStarSector(sys));
+                int n = RequiredGarrison(Params, _eco.SupportOf(sys, h), on, h == Side.Hand && IsHarvesterSector(sys));
                 int surplus10 = g10.GetValueOrDefault(sys) - 10 * n; // N in tenths; Classic weights are 10 each
                 if (!on && surplus10 < 0)
                     StartUprising(ctx, t, sys, h);
@@ -209,7 +209,7 @@ public sealed class SupportModule
     }
 
     /// <summary>
-    /// Start an uprising at a held system at once, whatever the garrison (the Death Star's second strike in a sector, Hand systems). No-op without
+    /// Start an uprising at a held system at once, whatever the garrison (the harvester's second strike in a sector, Hand systems). No-op without
     /// a holder or with an uprising already on. The timers are armed as in slot 6.1 (one draw for the incident timer); slot 6.1 later judges it by
     /// the normal garrison rule. rule: m5-death-star §2 effect 7 (Strike 2 or later); m2-uprisings-and-garrison §Uprising start, keep, end.
     /// </summary>
@@ -228,14 +228,14 @@ public sealed class SupportModule
     public bool CheckUprisingNow(StepContext ctx, string system)
     {
         if (_fleets.OwnerOf(system) is not Side holder || IsUprising(system)) return false;
-        int n = RequiredGarrison(Params, _eco.SupportOf(system, holder), false, holder == Side.Hand && IsDeathStarSector(system));
+        int n = RequiredGarrison(Params, _eco.SupportOf(system, holder), false, holder == Side.Hand && IsHarvesterSector(system));
         if (Garrison10(system) - 10 * n >= 0) return false;
         StartUprising(ctx, ctx.Day + 1, system, holder);
         return true;
     }
 
     /// <summary>
-    /// A system was destroyed: its uprising ends (UprisingEnded "SystemDestroyed"), its timers are disarmed and it leaves the Death Star sector flag
+    /// A system was destroyed: its uprising ends (UprisingEnded "SystemDestroyed"), its timers are disarmed and it leaves the harvester sector flag
     /// table; its support value is dropped. rule: m5-death-star §2 effect 5 (holder none, no support value).
     /// </summary>
     public void OnSystemDestroyed(StepContext ctx, string system)
@@ -244,7 +244,7 @@ public sealed class SupportModule
         if (st is { Uprising: true }) EndUprising(ctx, ctx.Day + 1, system, st, "SystemDestroyed");
         if (st != null) { st.PresenceDue = 0; st.ErosionDue = 0; st.IncidentDue = 0; }
         S.Prune(system);
-        S.DeathStar.Remove(system);
+        S.Harvester.Remove(system);
         _game.State.Economy.CollectiveSupport.Remove(system);
     }
 
@@ -349,7 +349,7 @@ public sealed class SupportModule
     {
         var regs = HolderRegiments(system, holder).ToList();
         int stormtroopers = regs.Count(o => o.Class == Params.StormtrooperClass);
-        return IncidentScore(Params, d1, d2, _eco.SupportOf(system, holder), regs.Count, stormtroopers, holder == Side.Hand && IsDeathStarSector(system))
+        return IncidentScore(Params, d1, d2, _eco.SupportOf(system, holder), regs.Count, stormtroopers, holder == Side.Hand && IsHarvesterSector(system))
             + (AgentIncidentTerm?.Invoke(system) ?? 0);
     }
 
@@ -374,13 +374,13 @@ public sealed class SupportModule
     }
 
     /// <summary>
-    /// score = d1 + d2 + ceil((60 - s) / 10) - k x R - T, k = 2 for the Hand in a Death Star sector else 1; R and T are flat counts in both
+    /// score = d1 + d2 + ceil((60 - s) / 10) - k x R - T, k = 2 for the Hand in a harvester sector else 1; R and T are flat counts in both
     /// rulesets (DEFAULT). rule: m2-uprisings-and-garrison §Incident (Score).
     /// </summary>
-    public static int IncidentScore(SupportParams p, int d1, int d2, int controllerSupport, int regiments, int stormtroopers, bool handInDeathStarSector)
+    public static int IncidentScore(SupportParams p, int d1, int d2, int controllerSupport, int regiments, int stormtroopers, bool handInHarvesterSector)
     {
         int unrest = controllerSupport >= p.GarrisonFreeSupport ? 0 : (p.GarrisonFreeSupport - controllerSupport + p.GarrisonStep - 1) / p.GarrisonStep;
-        int k = handInDeathStarSector ? p.DeathStarScoreMultiplier : 1;
+        int k = handInHarvesterSector ? p.HarvesterScoreMultiplier : 1;
         return d1 + d2 + unrest - k * regiments - stormtroopers;
     }
 

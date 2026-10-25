@@ -68,7 +68,7 @@ public sealed class NameMigrations
     }
 
     /// <summary>
-    /// An identifier (a save's property name, an enum value) with its old words replaced (EmpireWinsOnHqLost -> HandWinsOnHqLost, Empire ->
+    /// An identifier (a save's property name, an enum value) with its old words replaced (HandWinsOnHqLost -> HandWinsOnHqLost, Hand ->
     /// Hand). Only text that looks like an identifier is touched, so a name with spaces never is.
     /// </summary>
     public string CurrentIdentifier(string id) =>

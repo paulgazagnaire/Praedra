@@ -35,7 +35,7 @@ public sealed class GameState
 
     /// <summary>Construction state: projects, deliveries, refined line, research grants. rule: m2-construction.</summary>
     public ConstructionState Construction { get; init; } = new();
-    /// <summary>Uprising flags, support timers and the Death Star sector flag. rule: m2-popular-support, m2-uprisings-and-garrison.</summary>
+    /// <summary>Uprising flags, support timers and the harvester sector flag. rule: m2-popular-support, m2-uprisings-and-garrison.</summary>
     public SupportState Support { get; init; } = new();
 
     /// <summary>Control settings stored per game (scorched earth). rule: m2-control-and-capture §Scorched earth.</summary>
@@ -56,7 +56,7 @@ public sealed class GameState
     /// <summary>Every running mission group (team, decoys, trip, timer). rule: m5-missions §Orders, §Rule (Classic).</summary>
     public Praedra.Core.Missions.MissionState Missions { get; init; } = new();
     /// <summary>Destroyed systems and the strikes per sector. rule: m5-death-star §Interfaces.</summary>
-    public Praedra.Core.DeathStar.DeathStarState DeathStar { get; init; } = new();
+    public Praedra.Core.Harvester.HarvesterState Harvester { get; init; } = new();
     /// <summary>Per-system loss tallies of the loyalty triggers (B2c). rule: m5-characters-and-force §Loyalty and betrayal.</summary>
     public Praedra.Core.Characters.LoyaltyState Loyalty { get; init; } = new();
 
@@ -77,7 +77,7 @@ public sealed class GameState
         Research.CopyFrom(other.Research);
         Characters.CopyFrom(other.Characters);
         Missions.CopyFrom(other.Missions);
-        DeathStar.CopyFrom(other.DeathStar);
+        Harvester.CopyFrom(other.Harvester);
         if (other.Loyalty != null) Loyalty.CopyFrom(other.Loyalty);
     }
 }
@@ -121,7 +121,7 @@ public sealed class Game
         "5.2", // Assaults (M3)
         "5.3", // Mission resolution (M5). rule: m5-missions §Where it runs in the day Step (Lead notes: after assault 5.2, before the fog refresh 5.4)
         "5.4", // Live refresh of each side's picture (M5 fog; 5.3 is mission resolution, m5-missions). rule: m5-fog-and-hq §F8, Lead notes
-        "5.6", // Death Star sector flag, once per day after battles and missions, before support at 6.1. rule: m5-death-star §3
+        "5.6", // harvester sector flag, once per day after battles and missions, before support at 6.1. rule: m5-death-star §3
         "6.1", "6.2", "6.3", "6.4", "6.5", "6.6", "6.7", "6.8", // Day-end hooks (empty in M1)
         "6.9", // Research tick, after strategic repair (6.8). rule: m5-research §Where it runs in the day Step
         "6.10", // Character day-end: injuries heal, escape rolls. rule: m5-characters-and-force §Where it runs in the day Step

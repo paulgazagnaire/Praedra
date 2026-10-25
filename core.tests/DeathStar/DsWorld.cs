@@ -1,22 +1,22 @@
 using Praedra.Core.Characters;
 using Praedra.Core.Clock;
-using Praedra.Core.DeathStar;
+using Praedra.Core.Harvester;
 using Praedra.Core.Economy;
 using Praedra.Core.Map;
 using Praedra.Core.Setup;
 using Praedra.Core.Tests.Economy;
 
-namespace Praedra.Core.Tests.DeathStar;
+namespace Praedra.Core.Tests.Harvester;
 
 /// <summary>
-/// A full <see cref="GameHost"/> on a small map for the Death Star tests (m5-death-star §Tests). Sector SA has six systems on a line, A1 to A6
+/// A full <see cref="GameHost"/> on a small map for the harvester tests (m5-death-star §Tests). Sector SA has six systems on a line, A1 to A6
 /// (lanes A1-A2 ... A5-A6); sector SB has B1, B2, B3 (lanes A1-B1, B1-B2, B2-B3). All populated, 9 energy and 3 raw. No owners unless set; every
 /// support value is the data default until set. Incidents off, autoscrap out of reach, debug orders on. A stub generator unless a seed is given.
 /// </summary>
 internal sealed class DsWorld
 {
     public const string A1 = "A1", A2 = "A2", A3 = "A3", A4 = "A4", A5 = "A5", A6 = "A6", B1 = "B1", B2 = "B2", B3 = "B3";
-    public const string DeathStarClass = "Death Star", Isd = "Mandate", Corvette = "Dodger";
+    public const string HarvesterClass = "harvester", Isd = "Mandate", Corvette = "Dodger";
     // character record ids (data/classic/characters.csv): four Collective minors and two majors
     public const int Luke = 578, Vader = 641, Drayson = 840, Borsk = 841, Tura = 842, Derlin = 843;
     public const string Sa = "SA", Sb = "SB";
@@ -38,14 +38,14 @@ internal sealed class DsWorld
     public StubRng? Stub { get; }
     public GameHost Host { get; private set; }
     public Game Game => Host.Game;
-    public Praedra.Core.DeathStar.DeathStarModule Ds => Host.DeathStar;
+    public Praedra.Core.Harvester.HarvesterModule Ds => Host.Harvester;
     private readonly GameSettings _settings;
 
-    public DsWorld(DeathStarParams? ds = null, CharacterParams? ch = null, ulong? seed = null, GameSettings? settings = null, Praedra.Core.Control.ControlRule? rule = null)
+    public DsWorld(HarvesterParams? ds = null, CharacterParams? ch = null, ulong? seed = null, GameSettings? settings = null, Praedra.Core.Control.ControlRule? rule = null)
     {
         // B5b 2026-10-18: RefuseOverdrawOrders off for the same reason autoscrap is out of reach: the small map has no mines (capacity 0).
         _settings = (settings ?? new GameSettings { IncidentsEnabled = false, DebugOrdersEnabled = true, Economy = new EconomyParams { ScrapPeriod = 1_000_000 }, RefuseOverdrawOrders = false })
-            with { DeathStar = ds, Characters = ch };
+            with { Harvester = ds, Characters = ch };
         if (rule is { } r) _settings = _settings with { ControlRule = r }; // B5a tests set Derived explicitly (DEFAULT AssaultOnly, 2026-10-18)
         if (seed is ulong s) Host = GameHost.New(s, _settings, Data);
         else { Stub = new StubRng(); Host = GameHost.New(Stub, _settings, Data); }
@@ -61,8 +61,8 @@ internal sealed class DsWorld
     public int Fleet(Side side, string system, params string[] classes) =>
         Host.Fleets.AddFleet(side, $"F{Game.State.Fleets.Count + 1}", classes, system);
 
-    public int DeathStar(Side side, string system, params string[] extra) =>
-        Fleet(side, system, new[] { DeathStarClass }.Concat(extra).ToArray());
+    public int Harvester(Side side, string system, params string[] extra) =>
+        Fleet(side, system, new[] { HarvesterClass }.Concat(extra).ToArray());
 
     /// <summary>A roster character at base values (no game draw), placed at a system.</summary>
     public CharacterRecord Person(int id, string system)

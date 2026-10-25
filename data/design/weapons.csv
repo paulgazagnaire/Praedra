@@ -126,14 +126,14 @@ Edict,134,Hand,capital,starboard,ion_cannon,200,20,20,10,2.0,40.0,40,medium
 Indenture,135,Hand,capital,fore,laser_cannon,150,5,6,1,6.0,30.0,25,close
 Indenture,135,Hand,capital,port,laser_cannon,60,2,6,1,6.0,12.0,25,close
 Indenture,135,Hand,capital,starboard,laser_cannon,60,2,6,1,6.0,12.0,25,close
-Death Star,136,Hand,capital,fore,turbolaser,1400,140,40,20,2.0,280.0,60,long
-Death Star,136,Hand,capital,aft,turbolaser,1400,140,40,20,2.0,280.0,60,long
-Death Star,136,Hand,capital,port,turbolaser,1400,140,40,20,2.0,280.0,60,long
-Death Star,136,Hand,capital,starboard,turbolaser,1400,140,40,20,2.0,280.0,60,long
-Death Star,136,Hand,capital,fore,ion_cannon,400,40,20,10,2.0,80.0,40,medium
-Death Star,136,Hand,capital,aft,ion_cannon,400,40,20,10,2.0,80.0,40,medium
-Death Star,136,Hand,capital,port,ion_cannon,400,40,20,10,2.0,80.0,40,medium
-Death Star,136,Hand,capital,starboard,ion_cannon,400,40,20,10,2.0,80.0,40,medium
+harvester,136,Hand,capital,fore,turbolaser,1400,140,40,20,2.0,280.0,60,long
+harvester,136,Hand,capital,aft,turbolaser,1400,140,40,20,2.0,280.0,60,long
+harvester,136,Hand,capital,port,turbolaser,1400,140,40,20,2.0,280.0,60,long
+harvester,136,Hand,capital,starboard,turbolaser,1400,140,40,20,2.0,280.0,60,long
+harvester,136,Hand,capital,fore,ion_cannon,400,40,20,10,2.0,80.0,40,medium
+harvester,136,Hand,capital,aft,ion_cannon,400,40,20,10,2.0,80.0,40,medium
+harvester,136,Hand,capital,port,ion_cannon,400,40,20,10,2.0,80.0,40,medium
+harvester,136,Hand,capital,starboard,ion_cannon,400,40,20,10,2.0,80.0,40,medium
 Decree II,138,Hand,capital,fore,turbolaser,120,12,40,20,2.0,24.0,60,long
 Decree II,138,Hand,capital,aft,turbolaser,80,8,40,20,2.0,16.0,60,long
 Decree II,138,Hand,capital,port,turbolaser,80,8,40,20,2.0,16.0,60,long

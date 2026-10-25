@@ -30,8 +30,8 @@ namespace Praedra.Core.AI;
 /// It reads the other side only through the "what the AI may see" block of SimpleAi.cs (MissionDefendersAt, SupportSeen, OwnerSeen,
 /// EnemyCharactersSeen, the belief map and the picture), so with UseFog it reads only its side's knowledge (m5-fog-and-hq §N8). Own characters,
 /// own missions and own systems are the side's own state. Like the rest of the AI it keeps no memory between days and draws no random number.
-/// Not used (refused by the core with RuleMissing, or impossible today): decoys (the Classic AI's, B6c §7: the decoy table is Missing), Jedi Training,
-/// Death Star Sabotage; not planned: Assassination (a kill of a major
+/// Not used (refused by the core with RuleMissing, or impossible today): decoys (the Classic AI's, B6c §7: the decoy table is Missing), Train Talent,
+/// Spike the Harvester; not planned: Assassination (a kill of a major
 /// becomes an injury; the AI prefers Abduction).
 /// </summary>
 public sealed partial class SimpleAi

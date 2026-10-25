@@ -14,7 +14,7 @@ public static class AiFirepower
     public const int LaserDivisor = 6;
     /// <summary>Weapon hits take a quarter each off the recharge rate (B3, 0..4 hits). rule: B6a §3.</summary>
     public const int WeaponHitDivisor = 4;
-    /// <summary>The weapons counter in a ship's hits (shield gen, weapons, tractor, sub-light, hyperdrive, backup). rule: m4-battle-classic §7.</summary>
+    /// <summary>The weapons counter in a ship's hits (shield gen, weapons, Hold beam, sub-light, hyperdrive, backup). rule: m4-battle-classic §7.</summary>
     public const int WeaponsCounter = 1;
 
     /// <summary>

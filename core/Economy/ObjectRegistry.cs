@@ -10,12 +10,12 @@ namespace Praedra.Core.Economy;
 /// </summary>
 public static class ObjectRegistry
 {
-    /// <summary>Damage counters per ship, in this order: shield generator, weapons, tractor, sub-light, hyperdrive, damage control. rule: m3-ships-and-fighters §Damaged state.</summary>
+    /// <summary>Damage counters per ship, in this order: shield generator, weapons, Hold beam, sub-light, hyperdrive, damage control. rule: m3-ships-and-fighters §Damaged state.</summary>
     public const int HitCounters = 6;
     /// <summary>Index of the hyperdrive counter. A ship is damaged for travel when it is above 0. rule: m3-ships-and-fighters §Damaged state (DEFAULT).</summary>
     public const int HyperdriveCounter = 4;
-    /// <summary>Index of the tractor counter. rule: m3-ships-and-fighters §Damaged state; m4-retreat-damage-repair §6 (a working tractor has it at 0).</summary>
-    public const int TractorCounter = 2;
+    /// <summary>Index of the Hold beam counter. rule: m3-ships-and-fighters §Damaged state; m4-retreat-damage-repair §6 (a working Hold beam has it at 0).</summary>
+    public const int HoldBeamCounter = 2;
     /// <summary>Highest value of one damage counter. rule: m3-ships-and-fighters §Damaged state.</summary>
     public const int MaxHit = 15;
 

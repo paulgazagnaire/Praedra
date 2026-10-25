@@ -371,7 +371,7 @@ public partial class GameScreen : Control
         "   Worth it now: Espionage (see what an enemy system holds) and Diplomacy (win a neutral system over before you take it). Sabotage is very hard: the team is usually caught.",
         "REBEL HQ (Collective): click your HQ system and press Move HQ..., then click one of your systems. The HQ travels for some days (it cannot be attacked on the way); a big enemy blockade pins it in place.",
         "DEATH STAR: the Hand can build it like any capital ship at a shipyard (one per system; it is huge and very slow). Select its fleet at a system and press Destroy System: the planet and everything on it are gone for good, enemy ships there die, and the rest of the sector turns against the Hand (a second strike in the same sector turns the whole sector to the Collective). Destroyed systems stay on the map as dark grey crosses; fleets can still pass through them.",
-        "   To stop it (Collective): beat its fleet in battle (it is an ordinary ship in the fight), or send a Death Star Sabotage mission to the system where it stands (the Missions planner offers it once an agent with the skills is free). Watch the messages for \"New Death Star deployed\".",
+        "   To stop it (Collective): beat its fleet in battle (it is an ordinary ship in the fight), or send a Spike the Harvester mission to the system where it stands (the Missions planner offers it once an agent with the skills is free). Watch the messages for \"New harvester deployed\".",
         "SAVING: Save / Load in the top bar (one slot). The game also saves itself every 30 days; Continue on the start screen loads that.",
     };
 
@@ -552,7 +552,7 @@ public partial class GameScreen : Control
                 "battle" => "Paused: a battle was fought",
                 "captured" => "Paused: a system changed hands",
                 "invaded" or "invasion" => "Paused: an invasion is taking place",
-                "destroyed" => "Paused: the Death Star destroyed a system",
+                "destroyed" => "Paused: the harvester destroyed a system",
                 _ => "Paused",
             });
             return false;

@@ -258,8 +258,8 @@ public sealed partial class SimpleAi
     // ================================================================== helpers
 
     private bool Held(string s) => _h.Fleets.OwnerOf(s) == _side;
-    /// <summary>Was the system destroyed by the Death Star? Public to both sides (the galaxy notice "Planet Destroyed"); the AI never targets or counts one. rule: m5-death-star §2 effect 5.</summary>
-    private bool Destroyed(string s) => _h.Game.State.DeathStar.IsDestroyed(s);
+    /// <summary>Was the system destroyed by the harvester? Public to both sides (the galaxy notice "Planet Destroyed"); the AI never targets or counts one. rule: m5-death-star §2 effect 5.</summary>
+    private bool Destroyed(string s) => _h.Game.State.Harvester.IsDestroyed(s);
     private IEnumerable<string> HeldSystems() => S.SystemOwners.Where(kv => kv.Value == _side).Select(kv => kv.Key); // sorted ordinal
     private int UnratedSpeed => _h.Construction.Params.UnratedDeliverySpeed;
     private int Budget => _h.Economy.Free(_side) - _plannedLoad - _p.MaintenanceMargin;
@@ -468,7 +468,7 @@ public sealed partial class SimpleAi
         PlanGarrison();
         PlanInvasionRegiments();
         PlanAgentForceBuild(); // after the regiments: a training yard goes to the garrisons first
-        PlanDeathStarBuild(); // before the ships: it takes its yard and its budget first (m5-death-star §6.1)
+        PlanHarvesterBuild(); // before the ships: it takes its yard and its budget first (m5-death-star §6.1)
         PlanShips();
     }
 
@@ -658,7 +658,7 @@ public sealed partial class SimpleAi
         string? best = null; double bs = 0;
         foreach (var n in ShipClassNames(ObjectCategory.CapitalShip))
         {
-            if (n == EconomyModule.DeathStarClass) continue;
+            if (n == EconomyModule.HarvesterClass) continue;
             var sc = _h.Fleets.ShipClasses[n]; var r = eco.Costs.Get(n);
             // rule: m2-construction §Build time: ceil(cost / yards) x 4 days per unit (standard yards)
             if ((r.Cost + yards - 1) / yards * 4 > _p.MaxBuildDays) continue;
@@ -761,7 +761,7 @@ public sealed partial class SimpleAi
         {
             if (!o.Completed || eco.OwnerOf(o) != _side || o.Category == ObjectCategory.Facility || o.Category == ObjectCategory.SpecialForce) continue;
             int m = Maint(o.Class);
-            bool keep = _p.UseDeathStar && IsDeathStarShip(o); // rule: m5-death-star §6.2: scrapped last, after everything else
+            bool keep = _p.UseHarvester && IsHarvesterShip(o); // rule: m5-death-star §6.2: scrapped last, after everything else
             if (m <= 0) continue;
             double use;
             if (o.Category == ObjectCategory.Regiment)
@@ -1077,7 +1077,7 @@ public sealed partial class SimpleAi
         var idle = S.Fleets.Values.Where(f => f.Side == _side && f.Transit == null && f.At != null && f.Ships.Count > 0 && !Pending(f)).ToList();
         if (_view != null) { var scouts = PlanScouts(idle); idle = idle.Where(f => !scouts.Contains(f.Id)).ToList(); } // fog: scouts go their own way
         var cap = GuardSystem();
-        var dsFleets = PrepareDeathStar(idle);
+        var dsFleets = PrepareHarvester(idle);
         foreach (var g in idle.GroupBy(f => f.At!, StringComparer.Ordinal).OrderBy(g => g.Key, StringComparer.Ordinal))
         {
             var list = g.OrderBy(f => f.Id).ToList();
@@ -1085,7 +1085,7 @@ public sealed partial class SimpleAi
             if (dsHere.Count > 0) list = list.Where(f => !dsFleets.Contains(f.Id)).ToList();
             if (!Held(g.Key))
             {
-                foreach (var d in dsHere) DeathStarAway(d);
+                foreach (var d in dsHere) HarvesterAway(d);
                 foreach (var f in list) DecideAtTarget(f);
                 continue;
             }
@@ -1101,8 +1101,8 @@ public sealed partial class SimpleAi
                 for (int i = 1; i < home.Count; i++) Merge(home[i], home[0]);
                 if (home.Count == 1 && _p.SplitHomeSurplus) SplitHomeSurplus(home[0], acc);
             }
-            if (dsHere.Count > 0) { strike = DeathStarHome(dsHere, strike); }
-            else strike = DeathStarCall(g.Key, strike);
+            if (dsHere.Count > 0) { strike = HarvesterHome(dsHere, strike); }
+            else strike = HarvesterCall(g.Key, strike);
             if (strike.Count == 0) continue;
             var forces = TaskForces(strike);
             _tfClaims = forces.Count > 1 ? Claims() : null;

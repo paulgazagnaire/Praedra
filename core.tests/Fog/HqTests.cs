@@ -163,7 +163,7 @@ public class HqTests
 
     // m5-fog-and-hq HQ21
     [Fact]
-    public void HQ21_DeathStarHook()
+    public void HQ21_HarvesterHook()
     {
         var w = new FogWorld();
         w.InStep(ctx => w.Fog.OnSystemDestroyed(ctx, R2));

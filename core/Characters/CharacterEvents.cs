@@ -42,7 +42,7 @@ public static class CharacterReject
 /// <summary>Why a state change happened (callers pass it). rule: m5-characters-and-force §Capture, injury, death, freeing.</summary>
 public static class CharacterCause
 {
-    public const string Mission = "Mission", Battle = "Battle", DeathStar = "DeathStar", Uprising = "Uprising", Assault = "Assault",
+    public const string Mission = "Mission", Battle = "Battle", Harvester = "Harvester", Uprising = "Uprising", Assault = "Assault",
         Blockade = "Blockade", Story = "Story", Debug = "Debug", Escape = "Escape";
     /// <summary>B2e: a prisoner freed because his place changed side; the Force-user encounter; a trainer's awakening.</summary>
     public const string Liberation = "Liberation", ForceEncounter = "ForceEncounter", Awakened = "Awakened";
@@ -76,7 +76,7 @@ public sealed record PrisonerLanded(int Index, int Day, int Character, Side Side
 public sealed record CharacterFreed(int Index, int Day, int Character, Side Side, string? System, string Cause) : GameEvent(Index, Day, nameof(CharacterFreed));
 public sealed record CharacterEscaped(int Index, int Day, int Character, Side Side, string? System) : GameEvent(Index, Day, nameof(CharacterEscaped));
 public sealed record CharacterKilled(int Index, int Day, int Character, Side Side, string? System, string Cause) : GameEvent(Index, Day, nameof(CharacterKilled));
-/// <summary>One student's Jedi Training roll. rule: §Force (Jedi Training: the roll).</summary>
+/// <summary>One student's Train Talent roll. rule: §Force (Train Talent: the roll).</summary>
 public sealed record ForceTrainingResult(int Index, int Day, int Trainer, int Student, Side Side, int Gap, int R, bool Success, int Gain, int NewForce)
     : GameEvent(Index, Day, nameof(ForceTrainingResult));
 /// <summary>Rank null = not a Force user.</summary>

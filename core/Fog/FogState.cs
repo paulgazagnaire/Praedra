@@ -81,7 +81,7 @@ public sealed class SystemKnowledge
     // ---- group A: status (populated, slot values). DEFAULT: energy and raw slot totals are part of the status (see the build notes).
     public int? StampA { get; set; }
     public bool Populated { get; set; }
-    /// <summary>The side has been told the system was destroyed by the Death Star (reveal kind Destroyed, "Planet Destroyed"); permanent. rule: m5-death-star §2 effect 6.</summary>
+    /// <summary>The side has been told the system was destroyed by the harvester (reveal kind Destroyed, "Planet Destroyed"); permanent. rule: m5-death-star §2 effect 6.</summary>
     public bool Destroyed { get; set; }
     public int Energy { get; set; }
     public int Raw { get; set; }

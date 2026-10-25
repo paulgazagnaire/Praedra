@@ -22,7 +22,7 @@ research_family,kind,dat_id,name,collective,hand,cost,level,rdiff,start_collecti
 0x28 ship,capital ship,133,Mandate,0,1,112,0,0,n/a,yes
 0x28 ship,capital ship,134,Edict,0,1,282,11,100,n/a,locked
 0x28 ship,capital ship,135,Indenture,0,1,12,5,40,n/a,locked
-0x28 ship,capital ship,136,Death Star,0,1,584,0,0,n/a,yes
+0x28 ship,capital ship,136,harvester,0,1,584,0,0,n/a,yes
 0x28 ship,capital ship,137,Bond,0,1,10,0,0,n/a,yes
 0x28 ship,capital ship,138,Decree II,0,1,72,7,80,n/a,locked
 0x28 ship,capital ship,139,Mandate II,0,1,158,10,100,n/a,locked
@@ -67,6 +67,6 @@ research_family,kind,dat_id,name,collective,hand,cost,level,rdiff,start_collecti
 0x2a facility,defense,1,Mordant Lien-150,1,1,4,0,0,yes,yes
 0x2a facility,defense,2,Mordant Covenant I,1,1,7,0,0,yes,yes
 0x2a facility,defense,3,Lode Escrow I,1,1,12,0,0,yes,yes
-0x2a facility,defense,4,Death Star Shield,0,1,25,3,24,n/a,locked
+0x2a facility,defense,4,Harvester Shield,0,1,25,3,24,n/a,locked
 0x2a facility,defense,5,Mordant Covenant II,1,1,10,4,40,locked,locked
 0x2a facility,defense,6,Lode Escrow II,1,1,20,6,40,locked,locked

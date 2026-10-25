@@ -43,10 +43,10 @@ public sealed record BombardParams
     public int CriticalAt { get; init; } = 50;
     /// <summary>The system is CSCRHTTB(rand(0..this)). GNPRTB 2051.</summary>
     public int CriticalTableMax { get; init; } = 50;
-    /// <summary>CSCRHTTB [DAT-own] (rows from thresholds 0, 16, 31, 41, 46): 0-15 shield recharge, 16-30 weapons, 31-40 tractor beam, 41-45 speed, 46-50 hyperdrive.</summary>
+    /// <summary>CSCRHTTB [DAT-own] (rows from thresholds 0, 16, 31, 41, 46): 0-15 shield recharge, 16-30 weapons, 31-40 Hold beam, 41-45 speed, 46-50 hyperdrive.</summary>
     public int CriticalShieldUpTo { get; init; } = 15;
     public int CriticalWeaponsUpTo { get; init; } = 30;
-    public int CriticalTractorUpTo { get; init; } = 40;
+    public int CriticalHoldBeamUpTo { get; init; } = 40;
     public int CriticalSpeedUpTo { get; init; } = 45;
 
     // ---- switches (B7-bombardment §Collisions; Dev lead 2026-10-19)
@@ -491,7 +491,7 @@ public sealed class BombardmentModule
         int score = Rand(ctx, Params.CriticalRollMax) + 100 * hullLoss / (hullLoss + ship.Hull); // pct(a, b) = 100 x a / b (0x53e1b0)
         if (score < Params.CriticalAt) return -1;
         int roll = Rand(ctx, Params.CriticalTableMax);
-        int idx = roll <= Params.CriticalShieldUpTo ? 0 : roll <= Params.CriticalWeaponsUpTo ? 1 : roll <= Params.CriticalTractorUpTo ? 2
+        int idx = roll <= Params.CriticalShieldUpTo ? 0 : roll <= Params.CriticalWeaponsUpTo ? 1 : roll <= Params.CriticalHoldBeamUpTo ? 2
             : roll <= Params.CriticalSpeedUpTo ? 3 : ObjectRegistry.HyperdriveCounter;
         ship.Hits ??= new List<int>(new int[ObjectRegistry.HitCounters]);
         if (idx == ObjectRegistry.HyperdriveCounter && ship.Hits[idx] >= Params.CriticalCap) idx = ObjectRegistry.HyperdriveCounter + 1; // the backup hyperdrive
@@ -501,7 +501,7 @@ public sealed class BombardmentModule
 
     /// <summary>
     /// A ship destroyed by return fire (reason 15). B7-bombardment §10 did not read what happens to the units aboard, so the rebuild's one generic
-    /// ship-loss path is used, as for a battle loss and the Death Star (BattleModule.DestroyUnit, DeathStarModule.LoseShip): the regiments aboard
+    /// ship-loss path is used, as for a battle loss and the harvester (BattleModule.DestroyUnit, HarvesterModule.LoseShip): the regiments aboard
     /// are lost with it, the squadrons aboard land when it leaves its fleet. rule: B7-bombardment §4.4.4; m4-battle-classic §10.
     /// </summary>
     private void LoseShip(StepContext ctx, int day, string system, EconObject ship)

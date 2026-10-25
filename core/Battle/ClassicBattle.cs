@@ -28,7 +28,7 @@ public sealed class BattleUnit
     /// </summary>
     public double ShieldMax { get; set; }
     /// <summary>
-    /// The six counters. Classic battle: shield generator, weapons, tractor, sub-light, hyperdrive (primary + backup, see <see cref="BattleModule"/>), and
+    /// The six counters. Classic battle: shield generator, weapons, Hold beam, sub-light, hyperdrive (primary + backup, see <see cref="BattleModule"/>), and
     /// index 5 unused. Squadrons take the same rolls. rule: m4-battle-classic §6, §7.
     /// </summary>
     public int[] Hits { get; } = new int[ObjectRegistry.HitCounters];
@@ -63,8 +63,8 @@ public abstract record BattleStep;
 public sealed record UnitDestroyedStep(BattleUnit Unit, int Second, UnitLossReason Reason) : BattleStep;
 /// <summary>The first refusal of a retreat in this battle. rule: m4-retreat-damage-repair §1.</summary>
 public sealed record RetreatRefusedStep(Side Side, RetreatRefusal Reason) : BattleStep;
-/// <summary>New rules: a ship of a retreating side was held by an enemy tractor beam and stays on the field. rule: m4-retreat-damage-repair §6.</summary>
-public sealed record TractorHeldStep(BattleUnit Ship, BattleUnit Holder, int Second) : BattleStep;
+/// <summary>New rules: a ship of a retreating side was held by an enemy Hold beam and stays on the field. rule: m4-retreat-damage-repair §6.</summary>
+public sealed record HoldBeamHeldStep(BattleUnit Ship, BattleUnit Holder, int Second) : BattleStep;
 /// <summary>A side retreated (its units are marked <see cref="BattleUnit.Left"/>). rule: m4-retreat-damage-repair §2.</summary>
 public sealed record SideRetreatedStep(Side Side, int Second) : BattleStep;
 
@@ -372,8 +372,8 @@ public sealed class ClassicBattle
     private IEnumerable<BattleUnit> AliveOf(Side s) => _units.Where(u => u.Alive && u.Side == s);
     private bool HasUnits(Side s) => _units.Any(u => u.Alive && u.Side == s);
     private static bool Active(BattleUnit u) => u.Alive && !u.Docked;
-    private bool IsDeathStar(BattleUnit u) => u.IsCapital && u.Class.Id == _p.DeathStarClassId;
-    private bool DeathStarWorks(Side s) => s == Side.Hand && AliveOf(s).Any(IsDeathStar);
+    private bool IsHarvester(BattleUnit u) => u.IsCapital && u.Class.Id == _p.HarvesterClassId;
+    private bool HarvesterWorks(Side s) => s == Side.Hand && AliveOf(s).Any(IsHarvester);
 
     private double TfRate(ClassicTaskForce tf, BattleUnit v)
     {
@@ -488,8 +488,8 @@ public sealed class ClassicBattle
         if (_retreated[I(side)]) return RetreatRefusal.NoDestination; // already done (never asked in practice)
         // no enemy capital ship in the battle with the gravity-well flag (a static class flag)
         if (AliveOf(Other(side)).Any(u => u.IsCapital && u.Class.GravityWellProjector > 0)) return RetreatRefusal.GravityWell;
-        // some own unit can jump, or the Hand has a working Death Star
-        bool able = AliveOf(side).Any(u => !u.Docked && ClassicRates.CanJump(_p, u)) || DeathStarWorks(side);
+        // some own unit can jump, or the Hand has a working harvester
+        bool able = AliveOf(side).Any(u => !u.Docked && ClassicRates.CanJump(_p, u)) || HarvesterWorks(side);
         if (!able) return RetreatRefusal.NoHyperdrive;
         if (!_hasDestination[I(side)]) return RetreatRefusal.NoDestination; // ours: a destination exists (m4-retreat-damage-repair §1 (5))
         return null;
@@ -644,7 +644,7 @@ public sealed class ClassicBattle
         if (!_p.SubsystemRolls) return;
         double score = _dice.Rand(_p.RollSides) - 100.0 * (h0 - v.Hull) / h0;
         if (score <= _p.SubsystemScoreAbove) return;
-        int idx = score <= _p.ShieldGeneratorUpTo ? 0 : score <= _p.WeaponsUpTo ? 1 : score <= _p.TractorUpTo ? 2 : score <= _p.SubLightUpTo ? 3 : ObjectRegistry.HyperdriveCounter;
+        int idx = score <= _p.ShieldGeneratorUpTo ? 0 : score <= _p.WeaponsUpTo ? 1 : score <= _p.HoldBeamUpTo ? 2 : score <= _p.SubLightUpTo ? 3 : ObjectRegistry.HyperdriveCounter;
         Bump(v, idx);
     }
 
@@ -746,7 +746,7 @@ public sealed class ClassicBattle
 
     /// <summary>
     /// Squadrons first, in the side's list order: one that can jump leaves; else it docks in its own carrier still in the battle (its hyperdrive is not
-    /// checked), else in the first own capital ship with room, else (Hand) in the Death Star; no room: destroyed. Then the Death Star leaves; then
+    /// checked), else in the first own capital ship with room, else (Hand) in the harvester; no room: destroyed. Then the harvester leaves; then
     /// capital ships that can jump leave and the others are destroyed with everything docked in them. rule: m4-retreat-damage-repair §2.
     /// </summary>
     private void ExecuteRetreat(Side side)
@@ -759,13 +759,13 @@ public sealed class ClassicBattle
             BattleUnit? ship = null;
             var own = q.Carrier != 0 ? _units.FirstOrDefault(c => c.IsCapital && c.Side == side && c.ObjectId == q.Carrier && Active(c)) : null;
             if (own != null && HasRoom(own)) ship = own;
-            ship ??= _units.FirstOrDefault(c => c.IsCapital && c.Side == side && Active(c) && !IsDeathStar(c) && HasRoom(c));
-            if (ship == null && side == Side.Hand) ship = _units.FirstOrDefault(c => Active(c) && c.Side == side && IsDeathStar(c) && HasRoom(c));
+            ship ??= _units.FirstOrDefault(c => c.IsCapital && c.Side == side && Active(c) && !IsHarvester(c) && HasRoom(c));
+            if (ship == null && side == Side.Hand) ship = _units.FirstOrDefault(c => Active(c) && c.Side == side && IsHarvester(c) && HasRoom(c));
             if (ship == null) { Kill(q, UnitLossReason.NoBerth); continue; }
             q.Docked = true; q.DockedIn = ship;
         }
         // squadrons docked from the start that never launched (none in practice) stay docked in their carrier
-        foreach (var ds in _units.Where(u => u.Side == side && Active(u) && IsDeathStar(u)).ToList()) Leave(ds);
+        foreach (var ds in _units.Where(u => u.Side == side && Active(u) && IsHarvester(u)).ToList()) Leave(ds);
         foreach (var c in _units.Where(u => u.Side == side && u.IsCapital && Active(u)).ToList())
         {
             if (ClassicRates.CanJump(_p, c)) Leave(c);
@@ -805,9 +805,9 @@ public sealed class ClassicBattle
         bool guard = _second >= _p.SafetyGuardSeconds;
         if ((_timer[0] >= _p.StalemateSeconds && _timer[1] >= _p.StalemateSeconds) || guard)
         {
-            // rule: m4-battle-classic §8.3; m4-retreat-damage-repair §2 (DeathStarStalemate: the Collective's stalemate strength is -1 while the Hand's Death Star works)
+            // rule: m4-battle-classic §8.3; m4-retreat-damage-repair §2 (HarvesterStalemate: the Collective's stalemate strength is -1 while the Hand's harvester works)
             double a = str[I(Side.Collective)], e = str[I(Side.Hand)];
-            if (_p.DeathStarStalemate && DeathStarWorks(Side.Hand)) a = -1;
+            if (_p.HarvesterStalemate && HarvesterWorks(Side.Hand)) a = -1;
             var flagged = new List<Side>();
             if (a >= e) flagged.Add(Side.Hand);
             if (a <= e) flagged.Add(Side.Collective);

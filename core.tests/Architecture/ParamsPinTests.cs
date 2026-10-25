@@ -50,7 +50,7 @@ public class ParamsPinTests
         yield return ("EconomyParams.ShipPresence", eco.ShipPresence, G, 7686, 1);
         yield return ("EconomyParams.FighterPresence", eco.FighterPresence, G, 7687, 1);
         yield return ("EconomyParams.RegimentPresence", eco.RegimentPresence, G, 7688, 1);
-        yield return ("EconomyParams.DeathStarRegimentMultiplier", eco.DeathStarRegimentMultiplier, G, 7680, 1);
+        yield return ("EconomyParams.HarvesterRegimentMultiplier", eco.HarvesterRegimentMultiplier, G, 7680, 1);
         yield return ("EconomyParams.ResourceIntervalMin", eco.ResourceIntervalMin, G, 7719, 1);
         yield return ("EconomyParams.ResourceIntervalSpread", eco.ResourceIntervalSpread, G, 7720, 1);
         yield return ("EconomyParams.DisasterIntervalMin", eco.DisasterIntervalMin, G, 7717, 1);
@@ -69,7 +69,7 @@ public class ParamsPinTests
         yield return ("EconomyParams.RimEnergySpreadB", eco.RimEnergySpreadB, G, 7727, 1);
         yield return ("EconomyParams.ScrapPeriod", eco.ScrapPeriod, G, 7168, 1);
         // m2 support and garrison
-        yield return ("SupportParams.DeathStarDampingDivisor", sup.DeathStarDampingDivisor, G, 7681, 1);
+        yield return ("SupportParams.HarvesterDampingDivisor", sup.HarvesterDampingDivisor, G, 7681, 1);
         yield return ("SupportParams.ErosionPeriod", sup.ErosionPeriod, G, 7698, 1);
         yield return ("SupportParams.ErosionAmount", sup.ErosionAmount, G, 7697, 1);
         yield return ("SupportParams.PresencePeriod (7694)", sup.PresencePeriod, G, 7694, 1);
@@ -80,8 +80,8 @@ public class ParamsPinTests
         yield return ("SupportParams.GarrisonFreeSupport", sup.GarrisonFreeSupport, G, 7761, 1);
         yield return ("SupportParams.GarrisonStep (cited as -10)", sup.GarrisonStep, G, 7762, -1);
         yield return ("SupportParams.UprisingMultiplier", sup.UprisingMultiplier, G, 7682, 1);
-        yield return ("SupportParams.DeathStarGarrisonDivisor", sup.DeathStarGarrisonDivisor, G, 7680, 1);
-        yield return ("SupportParams.DeathStarScoreMultiplier", sup.DeathStarScoreMultiplier, G, 7680, 1);
+        yield return ("SupportParams.HarvesterGarrisonDivisor", sup.HarvesterGarrisonDivisor, G, 7680, 1);
+        yield return ("SupportParams.HarvesterScoreMultiplier", sup.HarvesterScoreMultiplier, G, 7680, 1);
         yield return ("SupportParams.IncidentIntervalMin", sup.IncidentIntervalMin, G, 7701, 1);
         yield return ("SupportParams.IncidentIntervalSpread", sup.IncidentIntervalSpread, G, 7702, 1);
         yield return ("SupportParams.DieBase", sup.DieBase, G, 7707, 1);
@@ -105,7 +105,7 @@ public class ParamsPinTests
         yield return ("BombardParams.CriticalAt", bomb.CriticalAt, G, 2050, 1);
         yield return ("BombardParams.CriticalTableMax", bomb.CriticalTableMax, G, 2051, 1);
         // m5 characters
-        yield return ("CharacterParams.DeathStarHitPercent", ch.DeathStarHitPercent, G, 0x606, 1);
+        yield return ("CharacterParams.HarvesterHitPercent", ch.HarvesterHitPercent, G, 0x606, 1);
         yield return ("CharacterParams.ClassicTrainingGainPercent", CharacterParams.ClassicTrainingGainPercent, G, 6173, 1); // the New DEFAULT ForceTrainingGainPercent is 25 (Paul 2026-10-18)
         yield return ("CharacterParams.ForceKnightMin (2560)", ch.ForceKnightMin, G, 2560, 1);
         yield return ("CharacterParams.ForceKnightMin (2580)", ch.ForceKnightMin, G, 2580, 1);

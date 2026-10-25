@@ -48,7 +48,7 @@ public sealed record BatteryShot(int Index, int Day, string System, int Facility
 /// <summary>
 /// The return fire applied to one ship: the ion and turbolaser totals, its current shield S, the hull lost (stays), whether it was destroyed,
 /// whether it is grounded (ion left after the shields: its own value counts 0 this strike) and the system counter raised by a critical hit
-/// (0 shield recharge, 1 weapons, 2 tractor, 3 speed, 4 primary hyperdrive, 5 backup; -1 none). rule: B7-bombardment §4.
+/// (0 shield recharge, 1 weapons, 2 Hold beam, 3 speed, 4 primary hyperdrive, 5 backup; -1 none). rule: B7-bombardment §4.
 /// </summary>
 public sealed record BombardShipDamaged(int Index, int Day, string System, int Ship, int Ion, int Turbolaser, int Shield, int HullLost, bool Destroyed, bool Grounded, int Critical)
     : GameEvent(Index, Day, nameof(BombardShipDamaged));

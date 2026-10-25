@@ -88,7 +88,7 @@ public sealed class VictoryModule
         string? collectiveReason = null, handReason = null;
         bool keysA = !Rules.StandardVictory || KeysCaptured(Side.Collective), keysE = !Rules.StandardVictory || KeysCaptured(Side.Hand);
         // rule: m5-setup-and-victory §Victory: Charter held by the Collective OR destroyed (B4 §15 [EXE-own], bit 3 of +0x50)
-        bool corDestroyed = ctx.State.DeathStar.IsDestroyed(CoruscantName);
+        bool corDestroyed = ctx.State.Harvester.IsDestroyed(CoruscantName);
         if (Rules.CollectiveWinsOnCoruscant && keysA && (Holds(CoruscantName, Side.Collective) || corDestroyed))
             collectiveReason = corDestroyed
                 ? (Rules.StandardVictory ? "Charter is destroyed with Vader and Palpatine captured" : "Charter is destroyed")

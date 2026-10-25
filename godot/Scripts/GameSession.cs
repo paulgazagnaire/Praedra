@@ -320,11 +320,11 @@ public sealed partial class GameSession
         HqRejectReason.NoFunds => "not enough refined material to move the headquarters",
         AssaultReject.NoTroops => "no regiments aboard",
         AssaultReject.FullyShielded => "the planet's shields are too strong (bombard the shield generators first)",
-        Praedra.Core.DeathStar.DeathStarReject.NoDeathStar => "the fleet holds no finished Death Star",
-        Praedra.Core.DeathStar.DeathStarReject.AlreadyDestroyed => "that system is already destroyed",
-        Praedra.Core.DeathStar.DeathStarReject.ShieldProtected => "an enemy Death Star Shield protects that system",
-        Praedra.Core.DeathStar.DeathStarReject.DeathStarLimit => "only one Death Star per system: this system already has one (build it at another shipyard)",
-        "SystemDestroyed" => "that system was destroyed by the Death Star",
+        Praedra.Core.Harvester.HarvesterReject.NoHarvester => "the fleet holds no finished harvester",
+        Praedra.Core.Harvester.HarvesterReject.AlreadyDestroyed => "that system is already destroyed",
+        Praedra.Core.Harvester.HarvesterReject.ShieldProtected => "an enemy Harvester Shield protects that system",
+        Praedra.Core.Harvester.HarvesterReject.HarvesterLimit => "only one harvester per system: this system already has one (build it at another shipyard)",
+        "SystemDestroyed" => "that system was destroyed by the harvester",
         _ => reason,
     };
 
@@ -492,7 +492,7 @@ public sealed partial class GameSession
     static string CauseWords(string cause) => cause switch
     {
         CharacterCause.Battle => " in battle",
-        CharacterCause.DeathStar => " by the Death Star",
+        CharacterCause.Harvester => " by the harvester",
         CharacterCause.Uprising => " in an uprising",
         CharacterCause.Assault => " in an invasion",
         CharacterCause.Mission => " on a mission",
@@ -540,7 +540,7 @@ public sealed partial class GameSession
         {
             bool combat = events[_printed] is Contact or ForcedStop or FleetRetreated or BattleEnded or SystemCaptured
                 or BombardmentStarted or BombardmentResolved or BombardCancelled or AssaultStarted or AssaultResolved or AssaultCancelled
-                or Praedra.Core.DeathStar.SystemDestroyed or Praedra.Core.DeathStar.FleetDestroyedByDeathStar;
+                or Praedra.Core.Harvester.SystemDestroyed or Praedra.Core.Harvester.FleetDestroyedByHarvester;
             foreach (var m0 in Describe(events[_printed], o))
             {
                 var m = combat ? m0 with { Combat = true } : m0;
@@ -686,14 +686,14 @@ public sealed partial class GameSession
                 break;
             case ForceTrainingResult t when Mine(t.Side):
                 yield return new Message(d, t.Success
-                    ? $"Jedi training: {CharName(t.Student)} grew stronger in the Force under {CharName(t.Trainer)} (Force now {t.NewForce})."
-                    : $"Jedi training: {CharName(t.Student)} made no progress with {CharName(t.Trainer)} this time.", null, t.Success ? MsgKind.Good : MsgKind.Info);
+                    ? $"Train Talent: {CharName(t.Student)} grew stronger in the Force under {CharName(t.Trainer)} (Force now {t.NewForce})."
+                    : $"Train Talent: {CharName(t.Student)} made no progress with {CharName(t.Trainer)} this time.", null, t.Success ? MsgKind.Good : MsgKind.Info);
                 break;
             case ForceRankChanged r when Mine(r.Side) && r.To is ForceRank to:
                 yield return new Message(d, $"{CharName(r.Character)} is now a {RankWords(to)}.", null, MsgKind.Good);
                 break;
             case ForceDiscovered f:
-                yield return new Message(d, Mine(f.Side) ? $"{CharName(f.Character)} is strong in the Force! Jedi training is now possible." : $"Enemy leader {CharName(f.Character)} is strong in the Force.", null, Mine(f.Side) ? MsgKind.Good : MsgKind.Warn);
+                yield return new Message(d, Mine(f.Side) ? $"{CharName(f.Character)} is strong in the Force! Train Talent is now possible." : $"Enemy leader {CharName(f.Character)} is strong in the Force.", null, Mine(f.Side) ? MsgKind.Good : MsgKind.Warn);
                 break;
 
             // ---- research
@@ -809,17 +809,17 @@ public sealed partial class GameSession
                 yield return new Message(d, $"Invasion of {a.System} by {FleetName(a.Fleet)} was cancelled ({Why(a.Reason)}).", a.System, MsgKind.Warn);
                 break;
 
-            // ---- the Death Star (GameSession.DeathStar.cs); the clock pauses on a destroyed system like on a capture
-            case Praedra.Core.DeathStar.SystemDestroyed:
-                foreach (var m in DescribeDeathStar(e))
+            // ---- the harvester (GameSession.Harvester.cs); the clock pauses on a destroyed system like on a capture
+            case Praedra.Core.Harvester.SystemDestroyed:
+                foreach (var m in DescribeHarvester(e))
                 {
                     o.PauseReason ??= "destroyed";
                     o.Popup ??= m with { Title = "System destroyed", Detail = m.Text + " The planet and everything on it are gone for good." };
                     yield return m;
                 }
                 break;
-            case Praedra.Core.DeathStar.IDeathStarEvent or Praedra.Core.DeathStar.DestroySystemCancelled:
-                foreach (var m in DescribeDeathStar(e)) yield return m;
+            case Praedra.Core.Harvester.IHarvesterEvent or Praedra.Core.Harvester.DestroySystemCancelled:
+                foreach (var m in DescribeHarvester(e)) yield return m;
                 break;
 
             // ---- missions (GameSession.Missions.cs)
@@ -840,7 +840,7 @@ public sealed partial class GameSession
         DestroyReason.Bombardment => "bombardment",
         DestroyReason.Assault => "invasion",
         DestroyReason.Sabotage => "sabotage by enemy agents",
-        DestroyReason.DeathStar => "Death Star",
+        DestroyReason.Harvester => "harvester",
         _ => r.ToString(),
     };
 

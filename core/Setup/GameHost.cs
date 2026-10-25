@@ -18,15 +18,15 @@ namespace Praedra.Core.Setup;
 /// Attach order (it decides the order of hooks inside a slot, and what each module may read):
 ///   1. FleetModule      (steps 1-5; everyone reads owners and fleets from it)
 ///   2. EconomyModule    (6.4, 6.5, 6.7; reads fleets)
-///   3. SupportModule    (6.1-6.3; reads economy and fleets; wires <see cref="EconomyModule.IsDeathStarSector"/>)
+///   3. SupportModule    (6.1-6.3; reads economy and fleets; wires <see cref="EconomyModule.IsHarvesterSector"/>)
 ///   4. ConstructionModule (3, 4 after the fleets; 6.6; serves the refined line from the economy's event; yards stop in an uprising from support;
 ///      its UnitAppeared event is wired to <see cref="FleetModule.OnUnitAppeared"/>: new ships join the spare fleet)
 ///   5. TroopModule     (step 1 load and unload orders; reads fleets; the construction event also announces regiments and special forces)
 ///   6. ControlModule    (derived control: recomputed after every support change and every change in the regiments standing on a system; the flip
 ///      and its sector step; calls support and construction; B5a)
 ///   7. DefenseModule, BombardmentModule (defense queries; the Bombard order and slot 5.1; reads fleets, economy and support, calls support's ChangeSupport)
-///   7b. DeathStarModule (the Destroy System order and slot 5.1 after the bombardment's hook, the sector flag at 5.6, the one-per-system build cap, the
-///      DeathStarDeployed notice; reads fleets, economy, support, control, construction and defenses; its character, mission and fog hooks are wired
+///   7b. HarvesterModule (the Destroy System order and slot 5.1 after the bombardment's hook, the sector flag at 5.6, the one-per-system build cap, the
+///      HarvesterDeployed notice; reads fleets, economy, support, control, construction and defenses; its character, mission and fog hooks are wired
 ///      once those modules exist). rule: m5-death-star
 ///   8. AssaultModule (the Assault order and slot 5.2; reads troops, defenses and bombardment; the landing makes control's recompute flip the world)
 ///   9. BattleModule (slot 5), RepairModule (slot 6.8)
@@ -38,7 +38,7 @@ namespace Praedra.Core.Setup;
 ///  13. MissionModule (orders; slots 2 and 3 after the characters, 5.3 after assault and before the fog refresh; wires the characters' IsOnMission and
 ///      MissionMembershipEnded, the fog's AgentsAt, support's incident terms and per-incident hook). rule: m5-missions
 ///  14. VictoryModule (slot 6.11, the last day-end slot; must stay last; reads the characters' captured and dead states)
-/// Cross-wiring done inside the Attach calls: support into economy (Death Star flag) and construction (uprising stops yards),
+/// Cross-wiring done inside the Attach calls: support into economy (harvester flag) and construction (uprising stops yards),
 /// construction into economy (refined line, removed objects) and control (cancel projects on capture).
 ///
 /// The host does not deal a starting position: it makes the Game and the modules only. Setup (owners, facilities, stockpile, the economy's
@@ -59,8 +59,8 @@ public sealed class GameHost
     /// <summary>The defense queries the assault and bombardment call. rule: m3-planetary-defenses §Queries.</summary>
     public DefenseModule Defenses { get; }
     public BombardmentModule Bombardment { get; }
-    /// <summary>The Death Star: Destroy System (slot 5.1), the sector flag (5.6), the build cap. rule: m5-death-star.</summary>
-    public Praedra.Core.DeathStar.DeathStarModule DeathStar { get; }
+    /// <summary>The harvester: Destroy System (slot 5.1), the sector flag (5.6), the build cap. rule: m5-death-star.</summary>
+    public Praedra.Core.Harvester.HarvesterModule Harvester { get; }
     /// <summary>The Assault order and slot 5.2. rule: m3-assault.</summary>
     public AssaultModule Assault { get; }
     /// <summary>The Classic battle, step 5 after the contacts and before slots 5.1 and 5.2. rule: m4-battle-classic.</summary>
@@ -147,7 +147,7 @@ public sealed class GameHost
         Construction.LostDestination = settings.LostDestination;
         Construction.UnitDestinationMustBeControlled = settings.UnitDestinationMustBeControlled;
         Construction.RespectResearchOrder = settings.RespectResearchOrder;
-        Construction.DeathStarClassBuildable = settings.DeathStarClassBuildable;
+        Construction.HarvesterClassBuildable = settings.HarvesterClassBuildable;
         Construction.UseClassicBlockadeFlag = settings.UseClassicBlockadeFlag;
         Construction.YardStopMode = settings.YardStopMode;
         Construction.RefuseOverdrawOrders = settings.RefuseOverdrawOrders;
@@ -172,8 +172,8 @@ public sealed class GameHost
         Defenses = DefenseModule.Attach(Economy, Fleets, data.Defenses, settings.Defense);
         Bombardment = BombardmentModule.Attach(game, Economy, Fleets, Support, Defenses, settings.Bombard);
         // After the bombardment (its slot 5.1 hook runs first) and before the assault. rule: m5-death-star §2 ("resolved in slot 5.1 after the bombardment hook")
-        DeathStar = Praedra.Core.DeathStar.DeathStarModule.Attach(game, data.Galaxy, Fleets, Economy, Support, Control, Construction, Defenses, settings.DeathStar);
-        Construction.UnitAppeared += DeathStar.OnUnitAppeared; // after the fleet module's handler (the ship has joined its fleet): DeathStarDeployed
+        Harvester = Praedra.Core.Harvester.HarvesterModule.Attach(game, data.Galaxy, Fleets, Economy, Support, Control, Construction, Defenses, settings.Harvester);
+        Construction.UnitAppeared += Harvester.OnUnitAppeared; // after the fleet module's handler (the ship has joined its fleet): HarvesterDeployed
         Assault = AssaultModule.Attach(game, Economy, Fleets, Troops, Control, Defenses, Bombardment, settings.Assault);
         // Slot 5: registered after the fleet module's contact hook, so it runs after it, and (slot 5 precedes 5.1 and 5.2) before bombardment and assault.
         Battles = Praedra.Core.Battle.BattleModule.Attach(game, data.Galaxy, Fleets, Economy, settings.Battle, data.NewBattle);
@@ -206,13 +206,13 @@ public sealed class GameHost
         if (Characters.EscapeTable == null && data.Missions.Escape is { } esc) Characters.EscapeTable = esc.Select(r => (r.Threshold, r.Value)).ToList();
         Characters.SpecialForcesOnPlanet = Missions.SpecialForcesOnPlanet;
         Missions.Recruit = Characters.Recruit; // rule: m5-missions §6 Recruitment (Recruitment pick, 2026-10-18)
-        // The Death Star's hooks into the characters, missions and fog (they attach after it). rule: m5-death-star §2 effects 3, 4, 6; §5
-        DeathStar.MissionsEnded = Missions.OnSystemDestroyed;
-        DeathStar.CharacterRoll = Characters.DeathStarStrike;
-        DeathStar.CharacterRelocate = Characters.DeathStarRelocate;
-        DeathStar.FogNotice = Fog.OnSystemDestroyed;
-        Missions.HasDeathStar = DeathStar.HasDeathStar;
-        Missions.DestroyDeathStar = DeathStar.Destroy;
+        // The harvester's hooks into the characters, missions and fog (they attach after it). rule: m5-death-star §2 effects 3, 4, 6; §5
+        Harvester.MissionsEnded = Missions.OnSystemDestroyed;
+        Harvester.CharacterRoll = Characters.HarvesterStrike;
+        Harvester.CharacterRelocate = Characters.HarvesterRelocate;
+        Harvester.FogNotice = Fog.OnSystemDestroyed;
+        Missions.HasHarvester = Harvester.HasHarvester;
+        Missions.DestroyHarvester = Harvester.Destroy;
         Victory = Praedra.Core.Victory.VictoryModule.Attach(game, settings.Victory); // slot 6.11, the last day-end slot; must stay last
         Victory.Keys = data.Characters.VictoryKeys;
         Victory.IsCaptured = Characters.IsCaptured;
@@ -342,7 +342,7 @@ public sealed class GameHost
         Construction = s.Construction ?? new ConstructionParams(),
         Defense = s.Defense ?? new DefenseParams(),
         Bombard = s.Bombard ?? new BombardParams(),
-        DeathStar = s.DeathStar ?? new Praedra.Core.DeathStar.DeathStarParams(),
+        Harvester = s.Harvester ?? new Praedra.Core.Harvester.HarvesterParams(),
         Assault = s.Assault ?? new AssaultParams(),
         Battle = s.Battle ?? new Praedra.Core.Battle.BattleParams(),
         Research = s.Research ?? new Praedra.Core.Research.ResearchParams(),

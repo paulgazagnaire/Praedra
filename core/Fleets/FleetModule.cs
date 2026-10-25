@@ -419,8 +419,8 @@ public sealed class FleetModule
     }
 
     /// <summary>
-    /// Battle write-back (New rules): ships of a retreating fleet that a tractor beam kept in the battle stay at the fleet's system in a new fleet;
-    /// the rest of the fleet relocates. Not for the whole fleet (that fleet simply stays). Emits FleetCreated (cause TractorHeld). Returns the new fleet id.
+    /// Battle write-back (New rules): ships of a retreating fleet that a Hold beam kept in the battle stay at the fleet's system in a new fleet;
+    /// the rest of the fleet relocates. Not for the whole fleet (that fleet simply stays). Emits FleetCreated (cause HoldBeamHeld). Returns the new fleet id.
     /// rule: m4-retreat-damage-repair §6.
     /// </summary>
     internal int SplitOffHeld(StepContext ctx, int day, Fleet fleet, IReadOnlyCollection<int> ships)
@@ -429,7 +429,7 @@ public sealed class FleetModule
         foreach (var s in ships) fleet.Ships.Remove(s);
         var f = NewFleet(fleet.Side, system, ships);
         var members = new ValueList<int>(f.Ships.ToList());
-        ctx.Emit((i, _) => new FleetCreated(i, day, f.Id, system, members, FleetCreateCause.TractorHeld));
+        ctx.Emit((i, _) => new FleetCreated(i, day, f.Id, system, members, FleetCreateCause.HoldBeamHeld));
         return f.Id;
     }
 

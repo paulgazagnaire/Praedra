@@ -63,7 +63,7 @@ public class B2cLoyaltyTriggerTests
         Assert.Single(w.Events<LoyaltyChanged>());
     }
 
-    // B2c-2: our core has no event for a system turning neutral (SystemCaptured.To cannot be neutral; the Death Star clears the owner
+    // B2c-2: our core has no event for a system turning neutral (SystemCaptured.To cannot be neutral; the harvester clears the owner
     // without one), so Classic's "nothing" holds by construction: a holder cleared to neutral draws nothing and moves nothing.
     // (B5a, 2026-10-17) a flip to neutral now has its events (SystemCaptured and HolderChangeAftermath with To = null); the loyalty trigger
     // still reacts only to a side, so the expectation stands. This test clears the owner by hand, without a flip.

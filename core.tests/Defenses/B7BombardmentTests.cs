@@ -167,7 +167,7 @@ public class B7BombardmentTests
         w.Hold(All, 45);
         w.Eco.SetSlots(Sys, 6, 4);
         for (int i = 0; i < 3; i++) w.Eco.AddFacility(Sys, FacilityKind.Mine);
-        int f = w.Fleet(Emp, Sys, "Death Star", 2); // 30 hits
+        int f = w.Fleet(Emp, Sys, "harvester", 2); // 30 hits
         Assert.Null(w.TryBombard(Emp, f, Sys, Civ));
         Assert.Equal((6, 4), (w.Eco.SlotsOf(Sys).Energy, w.Eco.SlotsOf(Sys).Raw));
         Assert.Empty(w.Events<ResourceReduced>());
@@ -347,7 +347,7 @@ public class B7BombardmentTests
         var d = BombWorld.RealData.Value;
         Assert.Equal(new[] { 2, 3, 3, 2, 4, 4, 5, 2 }, new[] { "Orbital Shipyard", "Training Facility", "Construction Yard", "Advanced Shipyard",
             "Advanced Training Facility", "Advanced Construction Yard", "Mine", "Refinery" }.Select(d.FacilityDefense));
-        Assert.Equal(new[] { 5, 4, 2, 1, 3, 3 }, new[] { "Mordant Lien-150", "Mordant Covenant I", "Lode Escrow I", "Death Star Shield", "Mordant Covenant II", "Lode Escrow II" }
+        Assert.Equal(new[] { 5, 4, 2, 1, 3, 3 }, new[] { "Mordant Lien-150", "Mordant Covenant I", "Lode Escrow I", "Harvester Shield", "Mordant Covenant II", "Lode Escrow II" }
             .Select(d.FacilityDefense));
         Assert.Equal(9, d.HqDefense);
         var original = CsvTable.Load(Path.Combine(TestData.ClassicDir, DefenseData.BombardmentFile));
@@ -370,7 +370,7 @@ public class B7BombardmentTests
     {
         var t = CsvTable.Load(Path.Combine(TestData.ClassicDir, "raw", "CSCRHTTB.csv"));
         var p = new BombardParams();
-        Assert.Equal(new[] { 0, p.CriticalShieldUpTo + 1, p.CriticalWeaponsUpTo + 1, p.CriticalTractorUpTo + 1, p.CriticalSpeedUpTo + 1 },
+        Assert.Equal(new[] { 0, p.CriticalShieldUpTo + 1, p.CriticalWeaponsUpTo + 1, p.CriticalHoldBeamUpTo + 1, p.CriticalSpeedUpTo + 1 },
             Enumerable.Range(0, t.RowCount).Select(r => t.GetInt(r, "threshold")));
     }
 
@@ -529,7 +529,7 @@ public class B7BombardmentTests
         g.Hold(All, 70);
         g.Eco.SetSlots(Sys, 4, 1);
         g.Regiment(All, BombWorld.Army); g.Facility(FacilityKind.GenCoreLevelI); g.Facility(FacilityKind.ConstructionYard);
-        int f2 = g.Fleet(Emp, Sys, "Death Star", 3);           // 45 - 40 = 5 hits
+        int f2 = g.Fleet(Emp, Sys, "harvester", 3);           // 45 - 40 = 5 hits
         g.Stub.Expect(0, 4, 4, 0, 0, 0, 0);
         g.Stub.Expect(1, 10, 10, 1, 1, 1, 1);
         g.TryBombard(Emp, f2, Sys, Gen);

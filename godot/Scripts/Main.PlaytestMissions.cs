@@ -204,10 +204,10 @@ public partial class Main
         var texts = gs.ButtonTexts().ToList();
         if (checkRefusedKind)
         {
-            // Recruitment runs since 2026-10-18 (m5-missions §6, the recruit pick); Jedi training is still refused by the rule book
-            string blocked = texts.FirstOrDefault(t => t.StartsWith("Jedi training - ", StringComparison.Ordinal));
-            Expect(blocked != null && blocked.Contains("rule book") && !gs.Enabled("Jedi training"), "Jedi training is greyed out with a plain reason: " + blocked);
-            Expect(!texts.Any(t => t.StartsWith(s.Player == Side.Collective ? "Assassination" : "Death Star", StringComparison.Ordinal)), "the other side's kind is not offered");
+            // Recruitment runs since 2026-10-18 (m5-missions §6, the recruit pick); Train Talent is still refused by the rule book
+            string blocked = texts.FirstOrDefault(t => t.StartsWith("Train Talent - ", StringComparison.Ordinal));
+            Expect(blocked != null && blocked.Contains("rule book") && !gs.Enabled("Train Talent"), "Train Talent is greyed out with a plain reason: " + blocked);
+            Expect(!texts.Any(t => t.StartsWith(s.Player == Side.Collective ? "Assassination" : "harvester", StringComparison.Ordinal)), "the other side's kind is not offered");
         }
         Expect(gs.Enabled(kw), $"{kw} is allowed for this team");
         Expect(gs.Click(kw), $"choose {kw}");

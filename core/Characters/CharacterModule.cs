@@ -6,8 +6,8 @@ namespace Praedra.Core.Characters;
 
 /// <summary>
 /// Characters: the roster rolled at creation, posts (fleet Admiral, Commander, General; system General) and the three leadership hooks, riding a
-/// fleet and moving alone, the New-rule Navigator, the state machine (free, injured, captured, dead) with its six functions, the Death Star's
-/// roll on characters, uprising incident effects 3 to 5, the Force score, rank and the Jedi Training roll. Holds data and settings only; the state
+/// fleet and moving alone, the New-rule Navigator, the state machine (free, injured, captured, dead) with its six functions, the harvester's
+/// roll on characters, uprising incident effects 3 to 5, the Force score, rank and the Train Talent roll. Holds data and settings only; the state
 /// lives in <see cref="GameState.Characters"/>. After <see cref="GameSave.Load"/>, attach again. Every loop is in ascending character id
 /// (m1-clock rule 5). rule: m5-characters-and-force (module CharacterModule, core/Characters/).
 ///
@@ -194,7 +194,7 @@ public sealed class CharacterModule
     }
 
     /// <summary>
-    /// The eligibility the Jedi Training mission checks: the trainer has the trainer flag, is Free and available (and a Knight with
+    /// The eligibility the Train Talent mission checks: the trainer has the trainer flag, is Free and available (and a Knight with
     /// <see cref="CharacterParams.TrainerNeedsKnight"/>); the student is a discovered Force user, Free, same side, at the trainer's system.
     /// rule: §Force (Eligibility).
     /// </summary>
@@ -328,7 +328,7 @@ public sealed class CharacterModule
         {
             var pool = S.Characters.Values.Where(c => c.Placed && c.Side == side
                 && !(Params.TalentedSkipStrong && c.EffectiveForce >= Params.TalentedForceMin)   // Q17 (Paul 2026-10-18): never the already strong
-                && !(Params.TalentedSkipFlagged && ClassOf(c).NeverTalented)).ToList();          // Q17 (Paul 2026-10-18): never the bounty hunters; id order
+                && !(Params.TalentedSkipFlagged && ClassOf(c).NeverTalented)).ToList();          // Q17 (Paul 2026-10-18): never the Repossessors; id order
             for (int k = 0; k < Params.TalentedPerSide && pool.Count > 0; k++)
             {
                 var c = pool[rng.NextInt(0, pool.Count - 1)];
@@ -486,7 +486,7 @@ public sealed class CharacterModule
     }
 
     /// <summary>
-    /// A caller that passes no amount (uprising code 3, the Death Star's hit, a major's Kill fallback, a key target's injury): only a Free or Injured
+    /// A caller that passes no amount (uprising code 3, the harvester's hit, a major's Kill fallback, a key target's injury): only a Free or Injured
     /// character; the Hurt roll on his own combat (DEFAULT: Classic's system routines call that slot, not read), then AddInjury. Returns true
     /// when points were added. rule: §Capture, injury, death, freeing 1 (B2e Work 2); CH22.
     /// </summary>
@@ -505,7 +505,7 @@ public sealed class CharacterModule
     /// a mission he is moved to the captor's place (aboard the captor's fleet, else onto its planet; placed there at once, DEFAULT), his own
     /// mission membership ends, a captor on a mission takes him into its team as a captive (<see cref="JoinAsCaptive"/>), and then, unless he is
     /// such a captive, the liberation test runs on him at once: on a planet not held by the captor's side he is freed there, no draw. A capture
-    /// without a unit (the Death Star's fallback, story and test captures) keeps him where he stood and makes no liberation test (DEFAULT).
+    /// without a unit (the harvester's fallback, story and test captures) keeps him where he stood and makes no liberation test (DEFAULT).
     /// </summary>
     public bool Capture(StepContext? ctx, CharacterRecord c, Side captor, string? heldAt, string cause, bool? canEscape = null, CaptorUnit? unit = null)
     {
@@ -603,7 +603,7 @@ public sealed class CharacterModule
         c.AutoroutePending = false;
         if (!c.Placed || c.Status is not (CharacterStatus.Free or CharacterStatus.Injured) || c.AttachedFleet != 0 || c.Transit != null
             || c.System is not { } sys || IsOnMission(c.Id)) return false;
-        bool Destroyed(string n) => State.DeathStar.IsDestroyed(n);
+        bool Destroyed(string n) => State.Harvester.IsDestroyed(n);
         bool Acceptable(string? n) => n != null && _fleets.OwnerOf(n) == c.Side && !Destroyed(n);
         if (Acceptable(sys)) return false; // step 1 (0x54c7d0: on his own side's ground he just stays)
         if (BattlePending(sys)) { c.AutoroutePending = true; return false; } // flag 0x1000 (BattlePending, inferred)
@@ -636,7 +636,7 @@ public sealed class CharacterModule
         string? best = null; int bestTicks = int.MaxValue;
         foreach (var sys in _fleets.Galaxy.Systems) // system index order: the first of equal ticks wins
         {
-            if (sys.Name == from || State.DeathStar.IsDestroyed(sys.Name) || !ok(sys.Name)) continue;
+            if (sys.Name == from || State.Harvester.IsDestroyed(sys.Name) || !ok(sys.Name)) continue;
             var p = _fleets.FindPath(from, sys.Name, Params.CharacterSpeed);
             if (p.Ok && p.TotalTicks < bestTicks) { best = sys.Name; bestTicks = p.TotalTicks; }
         }
@@ -683,27 +683,27 @@ public sealed class CharacterModule
     // ================================================================== other sheets' effects
 
     /// <summary>
-    /// The Death Star's roll on the characters of a destroyed system (called by the Death Star module at slot 5.1): candidates are characters
+    /// The harvester's roll on the characters of a destroyed system (called by the harvester module at slot 5.1): candidates are characters
     /// located there that ride no fleet (standing, or held as prisoners), Free, Injured or Captured, both sides with
-    /// <see cref="CharacterParams.DeathStarHitsOwnCharacters"/> (else not the attacker's). Riders of a fleet that died with the system are already
+    /// <see cref="CharacterParams.HarvesterHitsOwnCharacters"/> (else not the attacker's). Riders of a fleet that died with the system are already
     /// detached and stand there; riders of the attacker's own fleet stay aboard and are not candidates. In id order each MINOR draws
-    /// r = rand(1..100) and is hit if r &lt;= <see cref="CharacterParams.DeathStarHitPercent"/> (50): Injure then Kill (a captive is killed without
+    /// r = rand(1..100) and is hit if r &lt;= <see cref="CharacterParams.HarvesterHitPercent"/> (50): Injure then Kill (a captive is killed without
     /// the injury). Majors cost no draw. Then the system's General post is cleared.
-    /// rule: m5-death-star §2 effect 3 (rand(1..100) &lt;= DeathStarMinorKillPct, minors only, draw order by id);
-    /// m5-characters-and-force §The Death Star's roll on characters (CH19: the same chance, there written rand(0..99) &lt; 50).
+    /// rule: m5-death-star §2 effect 3 (rand(1..100) &lt;= HarvesterMinorKillPct, minors only, draw order by id);
+    /// m5-characters-and-force §The harvester's roll on characters (CH19: the same chance, there written rand(0..99) &lt; 50).
     /// </summary>
-    public void DeathStarStrike(StepContext ctx, string system, Side attacker)
+    public void HarvesterStrike(StepContext ctx, string system, Side attacker)
     {
         var cands = S.Characters.Values.Where(c => c.Placed && ClassOf(c).Kind == CharacterKind.Minor
             && c.Status is CharacterStatus.Free or CharacterStatus.Injured or CharacterStatus.Captured
-            && c.AttachedFleet == 0 && LocationOf(c) == system && (Params.DeathStarHitsOwnCharacters || c.Side != attacker)).ToList();
+            && c.AttachedFleet == 0 && LocationOf(c) == system && (Params.HarvesterHitsOwnCharacters || c.Side != attacker)).ToList();
         foreach (var c in cands)
         {
-            int r = ctx.Rng.NextInt(DeathStarDieMin, DeathStarDieMax);
-            if (r > Params.DeathStarHitPercent) continue;
+            int r = ctx.Rng.NextInt(HarvesterDieMin, HarvesterDieMax);
+            if (r > Params.HarvesterHitPercent) continue;
             // the hit: the Hurt roll on a free one (B2e Work 2: callers that pass no amount use Hurt), then the kill if he did not die of it
-            if (c.Status != CharacterStatus.Captured) Injure(ctx, c, CharacterCause.DeathStar);
-            if (c.Status != CharacterStatus.Dead) Kill(ctx, c, CharacterCause.DeathStar); // reason 10
+            if (c.Status != CharacterStatus.Captured) Injure(ctx, c, CharacterCause.Harvester);
+            if (c.Status != CharacterStatus.Dead) Kill(ctx, c, CharacterCause.Harvester); // reason 10
         }
         if (S.SystemGenerals.TryGetValue(system, out var gid) && Get(gid) is { } g)
         {
@@ -713,11 +713,11 @@ public sealed class CharacterModule
         }
     }
 
-    /// <summary>The Death Star's die is rand(1..100), a percent roll. rule: m5-death-star §2 effect 3 (Traced shape, GNPRTB 0x606).</summary>
-    private const int DeathStarDieMin = 1, DeathStarDieMax = 100;
+    /// <summary>The harvester's die is rand(1..100), a percent roll. rule: m5-death-star §2 effect 3 (Traced shape, GNPRTB 0x606).</summary>
+    private const int HarvesterDieMin = 1, HarvesterDieMax = 100;
 
     /// <summary>
-    /// What happens to the characters that survived the Death Star's roll on a destroyed system (called after <see cref="DeathStarStrike"/>): every
+    /// What happens to the characters that survived the harvester's roll on a destroyed system (called after <see cref="HarvesterStrike"/>): every
     /// character located there that rides no fleet is moved. A Free or Injured one of the attacker's side boards the attacking fleet
     /// <paramref name="attackerFleet"/> (a passenger, no post; DEFAULT). Any other goes to the nearest system its side holds (fewest lane steps,
     /// ties by system index = name order), leaving now and arriving the next day (DEFAULT); with no system left to go to it is captured by the
@@ -725,7 +725,7 @@ public sealed class CharacterModule
     /// holds none (our DEFAULT: the sheet names no rule for prisoners). The destroyed system itself never counts as held.
     /// rule: m5-death-star §2 effect 3 (every character that survives is moved).
     /// </summary>
-    public void DeathStarRelocate(StepContext ctx, string system, Side attacker, int attackerFleet)
+    public void HarvesterRelocate(StepContext ctx, string system, Side attacker, int attackerFleet)
     {
         int day = ctx.Day + 1;
         var movers = S.Characters.Values.Where(c => c.Placed && c.Status is CharacterStatus.Free or CharacterStatus.Injured or CharacterStatus.Captured
@@ -741,21 +741,21 @@ public sealed class CharacterModule
             {
                 c.AttachedFleet = fleet.Id; c.Post = CharacterPost.None; c.System = system;
                 int fid = fleet.Id; var side = c.Side;
-                ctx.Emit((i, _) => new CharacterAttached(i, day, c.Id, side, fid, CharacterPost.None, CharacterCause.DeathStar));
+                ctx.Emit((i, _) => new CharacterAttached(i, day, c.Id, side, fid, CharacterPost.None, CharacterCause.Harvester));
                 continue;
             }
             var dest = NearestHeldSystem(system, c.Side);
-            if (dest == null) { Capture(ctx, c, c.Side == Side.Hand ? Side.Collective : Side.Hand, system, CharacterCause.DeathStar); continue; }
+            if (dest == null) { Capture(ctx, c, c.Side == Side.Hand ? Side.Collective : Side.Hand, system, CharacterCause.Harvester); continue; }
             // one hop of one tick: it leaves now (slot 5.1 of Step K) and arrives in step 3 of Step K + 1, "the next day"
             c.System = null;
-            c.Transit = new FleetTransit { Path = new List<string> { system, dest }, HopTicks = new List<int> { DeathStarFlightTicks }, HopIndex = 0, DueDay = ctx.Day + 1 + DeathStarFlightTicks };
+            c.Transit = new FleetTransit { Path = new List<string> { system, dest }, HopTicks = new List<int> { HarvesterFlightTicks }, HopIndex = 0, DueDay = ctx.Day + 1 + HarvesterFlightTicks };
             string from = system, to = dest; var cs = c.Side;
-            ctx.Emit((i, _) => new CharacterDeparted(i, day, c.Id, cs, from, DeathStarFlightTicks));
+            ctx.Emit((i, _) => new CharacterDeparted(i, day, c.Id, cs, from, HarvesterFlightTicks));
         }
     }
 
     /// <summary>Ticks of the relocation flight of a survivor: it arrives the next day. rule: m5-death-star §2 effect 3 (DEFAULT, "arriving the next day").</summary>
-    private const int DeathStarFlightTicks = 1;
+    private const int HarvesterFlightTicks = 1;
 
     /// <summary>
     /// The system <paramref name="side"/> holds that is fewest lane steps from <paramref name="from"/> (breadth-first over every lane, through any
@@ -841,11 +841,11 @@ public sealed class CharacterModule
     // ================================================================== Force (§Force)
 
     /// <summary>
-    /// One Jedi Training round (the mission calls it at the end of its timer): for each student in id order, gap = trainer - student (effective);
+    /// One Train Talent round (the mission calls it at the end of its timer): for each student in id order, gap = trainer - student (effective);
     /// draw r = rand(0..99) always; success if gap &gt; 0 and r &lt; min(gap, 100) * ForceTrainingChancePercent / 100; on success draw
     /// g = rand(0..gap * ForceTrainingGainPercent / 100) (New DEFAULTs 50 and 25; Classic 100 and 50) and add it to the
     /// student's acquired Force. Events ForceTrainingResult, then ForceRankChanged if the rank changed. No student reaches the trainer.
-    /// rule: §Force (Jedi Training: the roll), Traced 0x55c7c0, 0x53e2f0, 0x55ca20 (chance reading [inferred]); CH3 to CH6.
+    /// rule: §Force (Train Talent: the roll), Traced 0x55c7c0, 0x53e2f0, 0x55ca20 (chance reading [inferred]); CH3 to CH6.
     /// </summary>
     public void ForceTrainingRound(StepContext ctx, CharacterRecord trainer, IEnumerable<CharacterRecord> students)
     {
@@ -855,7 +855,7 @@ public sealed class CharacterModule
             var before = RankOf(s);
             int gap = trainer.EffectiveForce - s.EffectiveForce;
             int r = ctx.Rng.NextInt(0, 99);
-            // rule: m5-characters-and-force §Force (Jedi Training: the roll; New, Paul 2026-10-18; Classic = 100 / 50)
+            // rule: m5-characters-and-force §Force (Train Talent: the roll; New, Paul 2026-10-18; Classic = 100 / 50)
             int chance = Math.Min(gap, Params.TrainingChanceCap) * Params.ForceTrainingChancePercent / CharacterRecord.PercentDivisor;
             bool success = gap > 0 && r < chance;
             int gain = 0;

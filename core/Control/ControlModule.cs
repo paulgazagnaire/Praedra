@@ -13,7 +13,7 @@ public sealed record CaptureInfo(StepContext Ctx, string System, Side? Old, Side
 /// <summary>
 /// How control of a system is decided. Derived (Classic, DEFAULT in Classic and New, Dev lead 2026-10-17): the holder is worked out from the regiments
 /// standing on the planet and, when nobody's stand there, from support (60 or more joins a side). AssaultOnly (the rebuild before B5a): support
-/// never changes control, only a won assault, the Death Star's revolt and the debug order do. rule: m2-control-and-capture §How control changes
+/// never changes control, only a won assault, the harvester's revolt and the debug order do. rule: m2-control-and-capture §How control changes
 /// (B5a section 10, decision 1).
 /// </summary>
 public enum ControlRule { Derived, AssaultOnly }
@@ -140,7 +140,7 @@ public sealed class ControlModule
 
     /// <summary>
     /// Can a completed facility of this class serve the side? The class's side flags in the costs file ([DAT-own] MANFACSD, PROFACSD, DEFFACSD):
-    /// the Collective needs the Collective flag, the Hand the Hand flag, neutral (null) needs both (<c>0x4f27d0</c>). So the Death Star Shield
+    /// the Collective needs the Collective flag, the Hand the Hand flag, neutral (null) needs both (<c>0x4f27d0</c>). So the harvester shield
     /// (Hand only) dies when the Collective takes its world or the world goes neutral; every other class serves both. rule: B5a section 5.
     /// </summary>
     public bool ServesSide(string facilityClass, Side? side)
