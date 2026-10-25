@@ -3027,7 +3027,7 @@ function loadSystem(i) {
   const s = SYSTEMS[sysIdx];
   // the lore sheet's own settings when the system has them (08-planet-presets.json), else a first guess from its description
   if (s.p) {
-    const sd = typeof s.sd === 'number' ? s.sd : 0.5;   // Core 0.8, Inner Rim 0.6, Outer Rim 0.4: the star density slider
+    const sd = typeof s.sd === 'number' ? s.sd : 0.5;   // Heartland 0.8, Midreach 0.6, Farreach 0.4: the star density slider
     fromCode(JSON.stringify({ format: 'praedra-planet', v: 2, name: s.n, params: Object.assign({}, PRESET_BASE, s.p, { starDens: sd, name: s.n }) }));
   } else P = derive(s);
   $('sysIn').value = s.n;

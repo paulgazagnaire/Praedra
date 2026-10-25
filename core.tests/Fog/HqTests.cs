@@ -70,8 +70,8 @@ public class HqTests
         Assert.Equal(RejectReason.InTransit, w.TryMoveHq(Side.Collective, R4));                                     // HQ6
         Assert.Equal(R3, w.Hq.Path[^1]);
         Assert.Equal(HqRejectReason.NotCollective, new FogWorld().TryMoveHq(Side.Hand, R3));                     // HQ7
-        var ilum = new FogWorld(beforeSetup: x => x.H.Fleets.SetOwner(Glasswood, Side.Collective));
-        Assert.Equal(RejectReason.Unreachable, ilum.TryMoveHq(Side.Collective, Glasswood));                             // HQ8
+        var far = new FogWorld(beforeSetup: x => x.H.Fleets.SetOwner(Glasswood, Side.Collective));
+        Assert.Equal(RejectReason.Unreachable, far.TryMoveHq(Side.Collective, Glasswood));                             // HQ8
         Assert.Equal(RejectReason.UnknownSystem, new FogWorld().TryMoveHq(Side.Collective, "No Such Place"));
         Assert.Null(new FogWorld().TryMoveHq(Side.Collective, R3));                                                 // HQ17 (no Hand fleet at R2)
     }

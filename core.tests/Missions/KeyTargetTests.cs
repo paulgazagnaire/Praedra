@@ -287,7 +287,7 @@ public class KeyTargetTests
 
     // m5-missions KT15: a Hand key target at Charter is protected while the Hand's garrison there covers N, and not otherwise (real galaxy)
     [Fact]
-    public void KT15_CharterIsTheEmpiresProtectedCapital()
+    public void KT15_CharterIsTheHandsProtectedCapital()
     {
         var h = NewGame.Create(GameData.Default, new NewGameOptions { Seed = 1 });
         const string Cor = "Charter";

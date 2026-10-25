@@ -19,7 +19,7 @@ public class MovementTests
     private static World Real(ForcedStopTrigger t = ForcedStopTrigger.PaulRule, ulong seed = 1) => new(TestData.RealGalaxy, t, seed);
 
     [Fact] // m1-clock-and-orders K2
-    public void K2_charter_to_kimanan_accepted_with_4_ticks_and_departs_on_day_0()
+    public void K2_charter_to_consolatio_accepted_with_4_ticks_and_departs_on_day_0()
     {
         // v6 re-pin 2026-10-24: Classis is no longer one hop from Charter. No single-hop trip from Charter takes 5 days at
         // speed 80 on the spiral map; Consolatio is the nearest one-hop trip of several days (a 4-day free jump).
@@ -59,7 +59,7 @@ public class MovementTests
     }
 
     [Fact] // m1-clock-and-orders K4 (numbers agree with the real data and the formula: no mismatch)
-    public void K4_charter_to_hoth_passes_and_arrives_on_the_sheet_days()
+    public void K4_charter_to_the_thaw_passes_and_arrives_on_the_sheet_days()
     {
         var w = Real();
         int f = w.Add(Side.Hand, "Red", "Charter", Mandate);

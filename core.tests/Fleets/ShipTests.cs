@@ -279,7 +279,7 @@ public class ShipTests
 
     // m3-ships-and-fighters S15
     [Fact]
-    public void S15_OnlyBulkTransportsOrGalleonsAreUnarmedAndOneCorvetteArmsThem()
+    public void S15_OnlyBargesOrBondsAreUnarmedAndOneCorvetteArmsThem()
     {
         var w = new BuildWorld();
         int bulk = w.Fleets.AddFleet(Side.Collective, "Bulk", new[] { "Barge" }, Home);

@@ -343,7 +343,7 @@ public class ClassicBattleTests
 
     // B3-18
     [Fact]
-    public void B3_18_CorvettesRetreatAfterTheEmpiresVolley()
+    public void B3_18_CorvettesRetreatAfterTheHandsVolley()
     {
         var (r, u) = Run(P, new[] { (Corvette, 4) }, new[] { (Mandate, 1) }, alert: Alert(Retreat, Fight));
         Assert.Equal(1, r.Seconds);
@@ -383,7 +383,7 @@ public class ClassicBattleTests
         var (r3, _) = Run(P, new[] { ("Bond", 1) }, new[] { ("Barge", 1) }, alert: Alert(Fight, Fight));
         Assert.Equal(1, r3.Seconds);
         Assert.True(r3.CollectiveRetreated && r3.HandRetreated);
-        Assert.Equal(1, r3.Draws); // the Bulk Transport's (Hand, fires first) zero hit on the Bond still rolls the generator (1 percent minimum); B3-20 as corrected in m4-battle-classic
+        Assert.Equal(1, r3.Draws); // the Barge's (Hand, fires first) zero hit on the Bond still rolls the generator (1 percent minimum); B3-20 as corrected in m4-battle-classic
     }
 
     // B3-21
@@ -620,7 +620,7 @@ public class ClassicBattleTests
         Console.WriteLine($"BC9 12 Dodger vs Mandate, rolls on, Classic dice: t = {r.Seconds}, draws {r.Draws}, Collective {r.CollectiveOutcome} (lost {r.CollectiveLosses}), Hand {r.HandOutcome}, Mandate hull {u.Single(x => x.Side == Side.Hand).Hull:0.0}");
     }
 
-    // m4-battle-classic BC17 (moved by B3: the Hand's step comes first; the Bulk Transport's zero hit draws nothing with rolls off; both leave in second 1)
+    // m4-battle-classic BC17 (moved by B3: the Hand's step comes first; the Barge's zero hit draws nothing with rolls off; both leave in second 1)
     [Fact]
     public void BC17_UnarmedFleetsBothRetreatAtOnce()
     {

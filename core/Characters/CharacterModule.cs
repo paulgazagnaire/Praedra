@@ -184,9 +184,9 @@ public sealed class CharacterModule
     /// <summary>Rank from the effective Talent (null = not a talented character). rule: §Talent (Rank), CH7.</summary>
     public TalentRank? RankOf(CharacterRecord c) => RankFor(c.TalentHolder, c.EffectiveTalent);
 
-    public TalentRank? RankFor(bool forceUser, int effectiveTalent)
+    public TalentRank? RankFor(bool talented, int effectiveTalent)
     {
-        if (!forceUser) return null;
+        if (!talented) return null;
         if (effectiveTalent >= Params.TalentUnforecastableMin) return TalentRank.Unforecastable;
         if (effectiveTalent >= Params.TalentAnomalyMin) return TalentRank.Anomaly;
         if (effectiveTalent >= Params.TalentDeviationMin) return TalentRank.Deviation;

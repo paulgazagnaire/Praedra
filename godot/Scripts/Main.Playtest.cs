@@ -453,7 +453,7 @@ public partial class Main
     {
         var s = gs.S;
         Expect(s.Fog.KnownHq(Side.Hand) == null, "the Hand does not know the Hearth at the start");
-        Expect(!gs.MapTags().Any(t => t.Text.Contains("REBEL HQ")), "no REBEL HQ (TARGET) tag on the map");
+        Expect(!gs.MapTags().Any(t => t.Text.Contains("COLLECTIVE HQ")), "no COLLECTIVE HQ (TARGET) tag on the map");
         Expect(gs.ButtonTexts().Contains("Enemy HQ: unknown"), "the Enemy HQ button says unknown");
         Expect(gs.Click("Enemy HQ: unknown") && gs.ToastText.Contains("unknown"), "pressing it says the HQ location is unknown: " + gs.ToastText);
         Expect(gs.MapTags().Any(t => t.Text == "YOUR CAPITAL" && t.System == GameBoot.HandCapital), "your capital is tagged");

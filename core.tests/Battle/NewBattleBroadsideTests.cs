@@ -46,7 +46,7 @@ public class NewBattleBroadsideTests
     // space-combat/11 §4 (3): "4 Homeward v 2 Mandate II" (the bug report). Under the old m4-battle-new §5 rule (desiredD = R - 16) the Mandate II parked at D = 54
     // and the Homeward never fired (0 of 200 seeds won). Under the new rule D = min(reach) so both fire. What the rule gives is asserted and printed.
     [Fact]
-    public void ClosingRange_FourHomewardV2HandII_NowGetInRangeAndFire()
+    public void ClosingRange_FourHomewardV2MandateII_NowGetInRangeAndFire()
     {
         // one battle, seed 1: both sides fire, the Homeward turn broadside, D settles at min(reach) = 26 (both ion ranges: 40 - 12 - 2)
         var (nb, r) = Run(new NewBattleParams(), 1);

@@ -88,7 +88,7 @@ public class SimpleAiAgentsTests
         // is exactly the previous pin ca568ccf...8252 (checked when re-pinned, main 07ff5e9; the gap fills C5, C7 and the C8 data do not touch this game).
         // v6 re-pin 2026-10-24 (Dev lead; Paul approved the two-arm spiral map, planets/16): every position, route and sector changed, and so
         // did the day-one deal, so this old AI plays another game on seed 1. All switches above unchanged.
-        // Praedra names re-pin 2026-10-25 (Dev lead; Paul's order to remove every Star Wars name): systems are ordered by name, so the
+        // Praedra names re-pin 2026-10-25 (Dev lead; Paul's order to remove every old placeholder name): systems are ordered by name, so the
         // renamed systems sort differently and seed 1 plays another game (the v6 pin was ca5216f4...e3be). All switches above unchanged.
         // QA-40 re-pin 2026-10-25 (the fixed v6 links; the rename pin was 48a89624...1270). All switches above unchanged.
         // Side words re-pin 2026-10-25 (Dev lead, Praedra names stage 3: Side.Hand -> Side.Hand...): the state JSON names its fields, so the hash
