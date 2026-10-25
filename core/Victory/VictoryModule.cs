@@ -38,12 +38,11 @@ public enum KeyDeathFallback { None, WaiveCondition, Immortal }
 
 /// <summary>
 /// Checks the victory conditions at the end of every Step (slot 6.11, last the other day-end hooks). Draws no random numbers. Once a winner
-/// is set it stays and no second GameWon is raised. Gleaner (both sides satisfied in one check): the Collective, as in the original
+/// is set it stays and no second GameWon is raised. Tie (both sides satisfied in one check): the Collective, as in the original
 /// (setup-victory/04 §3 "Gleaner"). After <see cref="GameSave.Load"/>, attach again.
 /// </summary>
 public sealed class VictoryModule
 {
-    public const string CharterName = "Charter";
     private readonly Game _game;
     public VictoryRules Rules { get; }
 
@@ -88,8 +87,8 @@ public sealed class VictoryModule
         string? collectiveReason = null, handReason = null;
         bool keysA = !Rules.StandardVictory || KeysCaptured(Side.Collective), keysE = !Rules.StandardVictory || KeysCaptured(Side.Hand);
         // rule: m5-setup-and-victory §Victory: Charter held by the Collective OR destroyed (B4 §15 [EXE-own], bit 3 of +0x50)
-        bool corDestroyed = ctx.State.Harvester.IsDestroyed(CharterName);
-        if (Rules.CollectiveWinsOnCharter && keysA && (Holds(CharterName, Side.Collective) || corDestroyed))
+        bool corDestroyed = ctx.State.Harvester.IsDestroyed(Control.ControlModule.CapitalSystem);
+        if (Rules.CollectiveWinsOnCharter && keysA && (Holds(Control.ControlModule.CapitalSystem, Side.Collective) || corDestroyed))
             collectiveReason = corDestroyed
                 ? (Rules.StandardVictory ? "Charter is destroyed with Ravilla and Chair captured" : "Charter is destroyed")
                 : (Rules.StandardVictory ? "Collective holds Charter with Ravilla and Chair captured" : "Collective captured Charter");

@@ -256,7 +256,7 @@ public class HarvesterTests
         w.Hold(A1, Side.Collective, 80); w.Hold(A2, Side.Hand, 20);
         w.Host.Fog.PlaceHq(A1);
         w.Game.State.Scenario.Active = true;
-        w.Game.State.Harvester.Destroyed.Add(VictoryModule.CharterName);
+        w.Game.State.Harvester.Destroyed.Add(Praedra.Core.Control.ControlModule.CapitalSystem);
         w.Game.Step();
         Assert.Equal(collectiveWins ? Side.Collective : null, w.Host.Victory.Winner);
         if (collectiveWins) Assert.Equal("Charter is destroyed", w.Host.Victory.Reason);

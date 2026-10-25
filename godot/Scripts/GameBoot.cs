@@ -18,39 +18,9 @@ namespace PraedraViewer;
 /// </summary>
 public enum Preset { Easy, Medium, Hard }
 
-/// <summary>What the computer opponent does once per day, before the core's Step.</summary>
-public interface IOpponent
-{
-    void PlanDay();
-}
-
-/// <summary>Opponent that runs a callback once per day (the core's SimpleAi).</summary>
-public sealed class DelegateOpponent : IOpponent
-{
-    private readonly System.Action _plan;
-    public DelegateOpponent(System.Action plan) { _plan = plan; }
-    public void PlanDay() => _plan();
-}
-
-/// <summary>Opponent that does nothing (used until the core's SimpleAi exists).</summary>
-public sealed class NoOpOpponent : IOpponent
-{
-    public void PlanDay() { }
-}
-
-/// <summary>
-/// THE ADAPTER. Everything the UI needs from the not-yet-finished parts of the core (new-game setup, the opponent AI, the victory check)
-/// goes through this one file, so the lead can switch to the real ones in a few lines. Search this file for "TODO(lead)".
-///
-/// Today: the game is built the way core/Setup/TestCampaign.cs builds its test game (two regions, a few fleets), the opponent does nothing,
-/// and there is no winner.
-/// </summary>
+/// <summary>What the screens need from the core to start, load and save a game: the data, the new-game setup, the computer opponent and the winner.</summary>
 public static class GameBoot
 {
-    /// <summary>True while the start position is the placeholder campaign and the opponent does nothing; the start screen says so.
-    /// TODO(lead): set to false once NewGame.Create and SimpleAi are wired in.</summary>
-    public const bool PlaceholderMode = false;
-
     /// <summary>DEFAULT false: the Hand AI does not know where the Hearth is. true = it is told (as in `sim aivai`), and strikes it at about day 240.</summary>
     public const bool HandAiKnowsHearth = false;
 
@@ -128,14 +98,14 @@ public static class GameBoot
     public static AiLevel AiLevelFor(Preset p) => p switch { Preset.Easy => AiLevel.Easy, Preset.Hard => AiLevel.Hard, _ => AiLevel.Medium };
 
     /// <summary>The computer opponent for <paramref name="aiSide"/>: the simple AI (core/AI) at <paramref name="level"/>.</summary>
-    public static IOpponent CreateOpponent(GameHost host, Side aiSide, AiLevel level = AiLevel.Medium)
+    public static SimpleAi CreateOpponent(GameHost host, Side aiSide, AiLevel level = AiLevel.Medium)
     {
         var ai = new SimpleAi(host, aiSide, AiLevels.For(level, new SimpleAiParams { UseFog = AiUsesFog }));
         host.Battles.SetControllers(handAi: aiSide == Side.Hand, collectiveAi: aiSide == Side.Collective); // rule: B6a §1 (the other side is the human)
         // DEFAULT: the Hand AI is NOT told where the Hearth is (economy-ai D4: the AI plays fair with fog of war). With fog on it reads
         // the HQ only from its own picture (m5-fog-and-hq §N5 KnownHq). It still conquers systems and wins if it captures the HQ.
         if (aiSide == Side.Hand && HandAiKnowsHearth) ai.KnownEnemyHq = host.HqSystem;
-        return new DelegateOpponent(ai.PlanDay);
+        return ai;
     }
 
     /// <summary>The winning side, or null while the game goes on.</summary>

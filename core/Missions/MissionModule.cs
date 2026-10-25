@@ -525,7 +525,7 @@ public sealed class MissionModule
         if (tc.AttachedFleet != 0) return MissionReject.TargetProtected;
         // rule: m5-missions §6a (Abduction paragraph): the protected capital is the Hearth system for a Collective target, Charter for a Hand target (Lead DEFAULT)
         var hq = _game.State.Scenario.Hq;
-        string? capital = tc.Side == Side.Collective ? (hq.Status == HqStatus.AtRest ? hq.System : null) : Victory.VictoryModule.CharterName;
+        string? capital = tc.Side == Side.Collective ? (hq.Status == HqStatus.AtRest ? hq.System : null) : Control.ControlModule.CapitalSystem;
         if (capital != null && _ch.LocationOf(tc) == capital && _fleets.OwnerOf(capital) == tc.Side
             && _support.Garrison10(capital) >= 10 * _support.RequiredGarrison(capital))
             return MissionReject.TargetProtected;

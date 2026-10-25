@@ -49,7 +49,7 @@ public sealed partial class GameSession
     /// <summary>How well the computer opponent plays (kept in the save's first line).</summary>
     public AiLevel Level { get; }
     public Side Enemy => Player == Side.Hand ? Side.Collective : Side.Hand;
-    public IOpponent Opponent { get; }
+    public SimpleAi Opponent { get; }
     /// <summary>Test only (the headless playtest): the computer side plans nothing, so a test fleet it would scrap or move stays put.</summary>
     public bool OpponentIdle { get; set; }
     public List<Message> Messages { get; } = new();

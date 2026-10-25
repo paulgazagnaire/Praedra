@@ -157,14 +157,14 @@ public class TravelTests
     }
 
     [Fact]
-    public void T14_GleanerOnTicksFewestLegsWins() // m1-travel T14: S-R1-E (10 + 10) ties S-E (20): one leg wins
+    public void T14_TieOnTicksFewestLegsWins() // m1-travel T14: S-R1-E (10 + 10) ties S-E (20): one leg wins
     {
         var g = TestData.Synthetic(new[] { ("E", 100, 0), ("R1", 50, 0), ("S", 0, 0) }, new[] { ("R1", "E", "generated") });
         AssertPath(new Pathfinder(g).Find("S", "E", 100), g, new[] { "S", "E" }, new[] { 20 }, 20);
     }
 
     [Fact]
-    public void T15_GleanerOnTicksAndLegsTakesTheSmallerPredecessor() // m1-travel T15: via P or Q both 28 + 9 = 37 in 2 legs: P (smaller name)
+    public void T15_TieOnTicksAndLegsTakesTheSmallerPredecessor() // m1-travel T15: via P or Q both 28 + 9 = 37 in 2 legs: P (smaller name)
     {
         var g = TestData.Synthetic(new[] { ("E", 200, 100), ("P", 100, 200), ("Q", 100, 0), ("S", 0, 100) },
             new[] { ("P", "E", "route"), ("Q", "E", "route") });

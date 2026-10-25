@@ -26,7 +26,7 @@ public class SimpleAiBlindHuntTests
         var view = h.Fog.ViewFor(Side.Hand);
         var g = h.Data.Galaxy;
         var collective = h.Game.State.SystemOwners.Where(kv => kv.Value == Side.Collective).Select(kv => kv.Key).OrderBy(s => s, StringComparer.Ordinal).ToList();
-        Assert.True(g.TryFindSystem(Praedra.Core.Victory.VictoryModule.CharterName, out int ci));
+        Assert.True(g.TryFindSystem(Praedra.Core.Control.ControlModule.CapitalSystem, out int ci));
         long Far(string s) { g.TryFindSystem(s, out int i); long dx = g.Systems[i].MapX - g.Systems[ci].MapX, dy = g.Systems[i].MapY - g.Systems[ci].MapY; return dx * dx + dy * dy; }
         string x = collective.Where(s => s != h.HqSystem && view.Picture(s)?.Owner?.Value.Owner != Side.Collective)
             .OrderByDescending(Far).ThenBy(s => s, StringComparer.Ordinal).First();
