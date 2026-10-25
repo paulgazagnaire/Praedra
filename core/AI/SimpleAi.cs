@@ -68,7 +68,7 @@ public sealed partial class SimpleAi
     public void PlanDay()
     {
         _submitted.Clear(); _plannedLoad = 0; _busy.Clear(); _reservedEnergy.Clear(); _reservedRaw.Clear(); _reservedYards.Clear(); _strength.Clear();
-        _capitalDone = _rallyDone = false; _hops = null; _finishing = null; _blind = null; _tfStrength = null; _threats = null; _offensives = -1; _lost = null; _lostBattles = null; _runners = null; _bounced = null;
+        _capitalDone = _rallyDone = false; _hops = null; _finishing = null; _blind = null; _tfStrength = null; _threats = null; _offensives = -1; _lost = null; _lostBattles = null; _runners = null; _bounced = null; _loading.Clear();
         int day = Today, phase = (int)_side;
         _rng = new GameRng((ulong)day * 2 + (ulong)_side + 0x5A1D, 0xA1);
         _view = _p.UseFog ? _h.Fog.ViewFor(_side) : null;
@@ -853,6 +853,8 @@ public sealed partial class SimpleAi
     private double OddsAt(string system, int basePercent) => LostBattles().ContainsKey(system) ? basePercent * _p.LossOddsFactor : basePercent;
 
     private Dictionary<string, int>? _runners, _bounced;
+    /// <summary>Regiments and squadrons already named in a load order this review (orders run at the next Step, so the picture still shows them on the ground).</summary>
+    private readonly HashSet<int> _loading = new(); // lookup only
 
     /// <summary>
     /// Battles of the last RunnerMemoryDays where the other side retreated (rule: m4-retreat-damage-repair §1, the morale retreat of
@@ -1265,8 +1267,11 @@ public sealed partial class SimpleAi
         int aboard = p.Aboard;
         var spare = SpareRegimentIds(at);
         int take = Math.Min(spare.Count, p.FreeSlots);
+        // two fleets at one system in one review would name the same regiments; the second order could only bounce (AlreadyAboard), so it is not sent
+        if (take > 0 && spare.Take(take).Any(_loading.Contains)) take = 0;
         if (take > 0)
         {
+            _loading.UnionWith(spare.Take(take));
             long seq = _h.Troops.SubmitLoad(_side, f.Id, spare.Take(take));
             Note(seq, "LoadRegiments", $"{take} onto fleet {f.Id} at {at}");
             aboard += take;
@@ -1275,8 +1280,9 @@ public sealed partial class SimpleAi
         if (bt > 0)
         {
             var sq = _h.Fleets.BasedSquadrons(at, _side).Select(o => o.Id).Take(bt).ToList();
-            if (sq.Count > 0)
+            if (sq.Count > 0 && !sq.Any(_loading.Contains)) // the same for squadrons (SquadronNotBased)
             {
+                _loading.UnionWith(sq);
                 long seq = _h.Fleets.SubmitLoadSquadrons(_side, f.Id, sq);
                 Note(seq, "LoadSquadrons", $"{sq.Count} onto fleet {f.Id} at {at}");
             }
