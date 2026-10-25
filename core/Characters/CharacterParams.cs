@@ -1,7 +1,7 @@
 namespace Praedra.Core.Characters;
 
 /// <summary>
-/// Who can train and awaken Talent. rule: m5-characters-and-force §Rule (New) 4 (Paul 2026-10-18).
+/// Who can train and awaken Talent. rule: m5-characters-and-talent §Rule (New) 4 (Paul 2026-10-18).
 /// </summary>
 public enum TrainerPick
 {
@@ -11,7 +11,7 @@ public enum TrainerPick
     Random,
 }
 
-/// <summary>Talent discovery mode. rule: m5-characters-and-force §Talent (Talent discovery).</summary>
+/// <summary>Talent discovery mode. rule: m5-characters-and-talent §Talent (Talent discovery).</summary>
 public enum TalentDiscoveryMode
 {
     /// <summary>
@@ -35,20 +35,20 @@ public enum StartCastOfficers
 }
 
 /// <summary>
-/// A switch set to a value whose rule is Missing in the sheet: the game refuses to start. rule: m5-characters-and-force §Defaults for undecided
+/// A switch set to a value whose rule is Missing in the sheet: the game refuses to start. rule: m5-characters-and-talent §Defaults for undecided
 /// items ("on refused"), the sheet's <c>RuleMissing</c> refusal.
 /// </summary>
 public sealed class RuleMissingException : InvalidOperationException
 {
     public string Rule { get; }
-    public RuleMissingException(string rule) : this(rule, "m5-characters-and-force") { }
+    public RuleMissingException(string rule) : this(rule, "m5-characters-and-talent") { }
     /// <summary>The same refusal for another sheet's switch (m5-missions uses it too).</summary>
     public RuleMissingException(string rule, string sheet) : base($"RuleMissing {{{rule}}}: the rule book has no rule for this switch value ({sheet}).") { Rule = rule; }
 }
 
 /// <summary>
-/// The switches and numbers of m5-characters-and-force, each with the sheet's DEFAULT (and its tag). Settings, not saved. Values whose rule is
-/// Missing are refused at attach with <see cref="RuleMissingException"/>. rule: m5-characters-and-force §Defaults for undecided items, §Numbers;
+/// The switches and numbers of m5-characters-and-talent, each with the sheet's DEFAULT (and its tag). Settings, not saved. Values whose rule is
+/// Missing are refused at attach with <see cref="RuleMissingException"/>. rule: m5-characters-and-talent §Defaults for undecided items, §Numbers;
 /// CLAUDE.md hard rule 7.
 /// </summary>
 public sealed record CharacterParams
@@ -60,30 +60,30 @@ public sealed record CharacterParams
     public int HarvesterHitPercent { get; init; } = 50;
     /// <summary>
     /// Train Talent gain cap, percent of the gap: <c>g = rand(0..gap * this / 100)</c>. DEFAULT 25 (New, Paul 2026-10-18: five or six trainers, so
-    /// training is slower); <see cref="ClassicTrainingGainPercent"/> 50 = Classic (GNPRTB 6173). rule: m5-characters-and-force §Talent (Train Talent: the roll).
+    /// training is slower); <see cref="ClassicTrainingGainPercent"/> 50 = Classic (GNPRTB 6173). rule: m5-characters-and-talent §Talent (Train Talent: the roll).
     /// </summary>
     public int TalentTrainingGainPercent { get; init; } = 25;
     /// <summary>
     /// Prisoners land (New, Paul 2026-10-18 decision card "Land them"): at day end a fleet standing at a system its own side holds, not blockaded,
     /// puts the prisoners it holds aboard ashore there, where an ordinary Rescue can reach them. DEFAULT true; false = Classic (a prisoner aboard stays
-    /// aboard until he escapes; B2e §3 "A prisoner held aboard stays aboard"). rule: m5-characters-and-force §Capture, injury, death, freeing.
+    /// aboard until he escapes; B2e §3 "A prisoner held aboard stays aboard"). rule: m5-characters-and-talent §Capture, injury, death, freeing.
     /// </summary>
     public bool LandPrisoners { get; init; } = true;
-    /// <summary>The Classic training gain percent (GNPRTB 6173 = 50). Traced, 0x55ca20. rule: m5-characters-and-force §Numbers.</summary>
+    /// <summary>The Classic training gain percent (GNPRTB 6173 = 50). Traced, 0x55ca20. rule: m5-characters-and-talent §Numbers.</summary>
     public const int ClassicTrainingGainPercent = 50;
     /// <summary>Training chance cap, percent (min(gap, 100)). Traced code, reading [inferred].</summary>
     public int TrainingChanceCap { get; init; } = 100;
     /// <summary>
     /// Train Talent chance scale: <c>chance = min(gap, 100) * this / 100</c>. DEFAULT 50 (New, Paul 2026-10-18); 100 = Classic (Traced, reading [inferred]).
-    /// rule: m5-characters-and-force §Talent (Train Talent: the roll; New, Paul 2026-10-18; Classic = 100).
+    /// rule: m5-characters-and-talent §Talent (Train Talent: the roll; New, Paul 2026-10-18; Classic = 100).
     /// </summary>
     public int TalentTrainingChancePercent { get; init; } = 50;
     /// <summary>
     /// Share of Talent that multiplies diplomacy, espionage and combat: <c>B + B * F * this / 10000</c>. DEFAULT 40 (New, Paul 2026-10-18: an Unforecastable
-    /// at 120 gives +48% instead of +120%); 100 = Classic (Traced B2e §1). rule: m5-characters-and-force §Talent (New, Paul 2026-10-18; Classic = 100).
+    /// at 120 gives +48% instead of +120%); 100 = Classic (Traced B2e §1). rule: m5-characters-and-talent §Talent (New, Paul 2026-10-18; Classic = 100).
     /// </summary>
     public int TalentSkillPercent { get; init; } = 40;
-    /// <summary>The Classic values of the three Talent tone-down switches (Classic). rule: m5-characters-and-force §Talent (Classic = 100 / 100 / 50).</summary>
+    /// <summary>The Classic values of the three Talent tone-down switches (Classic). rule: m5-characters-and-talent §Talent (Classic = 100 / 100 / 50).</summary>
     public const int ClassicTalentSkillPercent = 100, ClassicTrainingChancePercent = 100;
     /// <summary>Lowest effective Talent of a Deviation. DEFAULT 1 (no number known; Open question 15).</summary>
     public int TalentDeviationMin { get; init; } = 1;
@@ -94,7 +94,7 @@ public sealed record CharacterParams
     /// <summary>Navigator floor on a fleet's speed when a navigator (best below 100) rides. Proposal (heroes/mission-speed item 7).</summary>
     public int NavigatorFloor { get; init; } = Travel.TravelFormula.NavigatorFloor;
 
-    // ---- injury (Traced B2e §2). rule: m5-characters-and-force §Capture, injury, death, freeing
+    // ---- injury (Traced B2e §2). rule: m5-characters-and-talent §Capture, injury, death, freeing
     /// <summary>Lowest chance of the Hurt roll <c>max(this, 100 - v)</c>. GNPRTB 2565 = 1 (0x53e990).</summary>
     public int HurtMinChance { get; init; } = 1;
     /// <summary>Hurt size <c>rand(0..p) + rand(0..spread) + base</c>: base GNPRTB 2566 = 1.</summary>

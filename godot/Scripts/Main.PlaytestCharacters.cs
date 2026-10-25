@@ -9,7 +9,7 @@ using Side = Praedra.Core.Clock.Side;
 namespace PraedraViewer;
 
 /// <summary>
-/// Playtest of the character screens (rule: m5-characters-and-force): the Characters list, moving a character alone, attaching it to a fleet,
+/// Playtest of the character screens (rule: m5-characters-and-talent): the Characters list, moving a character alone, attaching it to a fleet,
 /// a refused order with its plain reason, detaching, and naming and releasing a system General. Every action is a click on the real button;
 /// the core is only read to choose where to click and to check the result.
 /// </summary>

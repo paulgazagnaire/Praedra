@@ -118,7 +118,7 @@ public class FogTests
 
     // m5-fog-and-hq FW7 (owner part; the level part contradicts §N1, see the build notes)
     [Fact]
-    public void FW7_CoreReportTellsBothSides()
+    public void FW7_HeartlandReportTellsBothSides()
     {
         var w = new FogWorld();
         w.StepTo(4);

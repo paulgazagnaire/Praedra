@@ -77,7 +77,7 @@ public class SimpleAiFogPlayTests
         Assert.True(a.TotalSent > 20);
     }
 
-    // ai/07 §7 (Hand: belief-map search), ai/12 D1. The fogged Hand against a Collective that gives no orders explores the rim with its
+    // ai/07 §7 (Hand: belief-map search), ai/12 D1. The fogged Hand against a Collective that gives no orders explores the outer systems with its
     // scouts, builds its belief map from what it sees, and takes the Hearth (§F7: capturing the HQ system destroys it). Measured on the
     // MedA start: day 376 (seeds 1 to 5 alike: the passive game draws little); limit 500 for margin.
     [Fact]
@@ -102,7 +102,7 @@ public class SimpleAiFogPlayTests
         Assert.True(m.TotalRejected * 20 <= m.TotalSent, $"{m.TotalRejected} of {m.TotalSent} orders rejected");
     }
 
-    // The fogged Collective against a Hand that gives no orders takes Charter (known to all: a Core system), estimating its garrison
+    // The fogged Collective against a Hand that gives no orders takes Charter (known to all: a Heartland system), estimating its garrison
     // from what it has seen. Measured: day 702 (seeds 1 to 5: 702 to 705); limit 850.
     [Fact]
     public void FoggedCollective_AgainstPassiveHand_KeepsCapturing()
@@ -149,7 +149,7 @@ public class SimpleAiFogPlayTests
     {
         var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA, Settings = Praedra.Core.Tests.Setup.DealSettings.FileOldVictory });
         var ai = new SimpleAi(h, Side.Collective, Fog);
-        // a Hand system the Collective's picture shows Hand, ground never seen (a Core system: owner reported, nothing else)
+        // a Hand system the Collective's picture shows Hand, ground never seen (a Heartland system: owner reported, nothing else)
         string other = h.Data.Galaxy.Systems.Select(x => x.Name).First(n => n != "Charter" &&
             h.Fog.Picture(Side.Collective, n) is { Ground: null } p && p.Owner?.Value.Owner == Side.Hand);
         Assert.Null(h.Fog.Picture(Side.Collective, "Charter")!.Ground);

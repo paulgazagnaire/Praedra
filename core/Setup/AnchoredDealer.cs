@@ -27,11 +27,11 @@ public sealed record DealParams
     public int HandAffiliationBias { get; init; } = -15;
     /// <summary>Score bias of a Collective-friendly system. Proposal, m5-setup-and-victory §Mode Blocs step 2 (CollectiveFriendlyBias).</summary>
     public int CollectiveFriendlyBias { get; init; } = 15;
-    /// <summary>Collective pockets may grow into group core. Proposal, m5-setup-and-victory §Mode Blocs step 5 (CollectivePocketsMayEnterCore).</summary>
-    public bool CollectivePocketsMayEnterCore { get; init; }
+    /// <summary>Collective pockets may grow into group heartland. Proposal, m5-setup-and-victory §Mode Blocs step 5 (CollectivePocketsMayEnterHeartland).</summary>
+    public bool CollectivePocketsMayEnterHeartland { get; init; }
     /// <summary>One in this many of the Hand's bloc systems is a scattered outpost instead. Decided Paul 2026-10-16, m5-setup-and-victory §Mode Anchored step 3 (needE / 10).</summary>
     public int HandScatterDivisor { get; init; } = 10;
-    /// <summary>One in this many of the Collective's dealt systems is a scattered rim cell instead. Decided Paul 2026-10-16, m5-setup-and-victory §Mode Anchored step 3 (needA / 6).</summary>
+    /// <summary>One in this many of the Collective's dealt systems is a scattered outer cell instead. Decided Paul 2026-10-16, m5-setup-and-victory §Mode Anchored step 3 (needA / 6).</summary>
     public int CollectiveScatterDivisor { get; init; } = 6;
     /// <summary>Collective extra seeds. Proposal, m5-setup-and-victory §Mode Anchored step 5 (min(3, needA)).</summary>
     public int CollectiveExtraSeeds { get; init; } = 3;
@@ -48,9 +48,9 @@ public sealed record DealParams
     /// <summary>The spread of the two bands above. Traced, m5-setup-and-victory §P2.</summary>
     public int BandSpread { get; init; } = 30;
     /// <summary>Neutral core system: rand(0..18) + 50 - 18/2. Traced, m5-setup-and-victory §P2 (GNPRTB 7764 = 18).</summary>
-    public int NeutralCoreSpread { get; init; } = 18;
-    /// <summary>Neutral system outside group core: fixed, no draw. Traced shape, m5-setup-and-victory §P2.</summary>
-    public int NeutralRimSupport { get; init; } = 50;
+    public int NeutralHeartlandSpread { get; init; } = 18;
+    /// <summary>Neutral system outside group heartland: fixed, no draw. Traced shape, m5-setup-and-victory §P2.</summary>
+    public int NeutralReachSupport { get; init; } = 50;
 }
 
 /// <summary>Raised by setup when its data or rule cannot produce a game (a bad anchor, no HQ candidate). The message says which.</summary>
@@ -73,7 +73,7 @@ public sealed record AnchoredDeal(IReadOnlyList<DayOneRow> Rows, string Hq, IRea
 /// </summary>
 public static class AnchoredDealer
 {
-    private const string Core = "core", InnerRim = "inner_rim", OuterRim = "outer_rim"; // group names, m1-galaxy-data
+    private const string Heartland = "heartland", Midreach = "midreach", Farreach = "farreach"; // group names, m1-galaxy-data
     private const string Shoal = "The Shoal", Charter = "Charter"; // fixed by the original, m5-setup-and-victory §P1 (Traced: both looked up by id)
 
     /// <summary>The checks of the anchors file against the galaxy: every anchor exists, no duplicates, none is Charter or The Shoal. rule: m5-setup-and-victory §Mode Anchored step 1</summary>
@@ -95,7 +95,7 @@ public static class AnchoredDealer
         var shortfalls = new List<DealShortfall>();
         string Name(int i) => g.Systems[i].Name;
         string GroupOf(int i) => g.Systems[i].Group;
-        bool IsRim(int i) => GroupOf(i) is InnerRim or OuterRim;
+        bool IsReach(int i) => GroupOf(i) is Midreach or Farreach;
         string Affiliation(int i) => g.Systems[i].Carried.TryGetValue("affiliation", out var a) ? a.Trim() : "";
         bool InSectors(int i) => !g.Systems[i].IsOutsideSectors; // Glasswood and Frostholm are never dealt
 
@@ -117,11 +117,11 @@ public static class AnchoredDealer
             else locked[i] = true; // locked neutral: never dealt, never scattered
         }
 
-        // ---- step 2: HQ (1 draw). Candidates: rim, not The Shoal, not an anchor of any kind, far enough from Charter (straight line).
+        // ---- step 2: HQ (1 draw). Candidates: outer, not The Shoal, not an anchor of any kind, far enough from Charter (straight line).
         var candidates = new List<int>();
         for (int i = 0; i < n; i++)
-            if (IsRim(i) && i != shoal && !anchor[i] && MapDistance(g, i, charter) >= p.HqMinDistance) candidates.Add(i);
-        if (candidates.Count == 0) throw new SetupException("No system satisfies the HQ candidate rule (rim, not an anchor, far enough from Charter).");
+            if (IsReach(i) && i != shoal && !anchor[i] && MapDistance(g, i, charter) >= p.HqMinDistance) candidates.Add(i);
+        if (candidates.Count == 0) throw new SetupException("No system satisfies the HQ candidate rule (outer, not an anchor, far enough from Charter).");
         candidates.Sort((a, b) => string.CompareOrdinal(Name(a), Name(b)));
         int hq = candidates[rng.NextInt(0, candidates.Count - 1)];
         owner[hq] = Side.Collective;
@@ -159,7 +159,7 @@ public static class AnchoredDealer
         var dE = LaneTimes(g, allHand, p.LaneTimeDivisor);
         var dEmap = LaneTimes(g, allHand, 1);
         var free = new List<int>();
-        for (int i = 0; i < n; i++) if (Open(i) && IsRim(i)) free.Add(i);
+        for (int i = 0; i < n; i++) if (Open(i) && IsReach(i)) free.Add(i);
         var jitter = new int[n];
         foreach (int i in free) jitter[i] = rng.NextInt(0, p.CollectiveJitterMax); // always drawn, fixed count
         int wantExtra = Math.Min(p.CollectiveExtraSeeds, needA);
@@ -191,7 +191,7 @@ public static class AnchoredDealer
                 int best = -1; long bestKey = 0;
                 for (int v = 0; v < n; v++)
                 {
-                    if (!Open(v) || (!p.CollectivePocketsMayEnterCore && GroupOf(v) == Core)) continue;
+                    if (!Open(v) || (!p.CollectivePocketsMayEnterHeartland && GroupOf(v) == Heartland)) continue;
                     int near = int.MaxValue;
                     foreach (int u in pockets[si]) near = Math.Min(near, MapDistance(g, u, v));
                     if (near > p.PocketReach) continue;
@@ -206,7 +206,7 @@ public static class AnchoredDealer
         }
         if (placed < needA) shortfalls.Add(new DealShortfall(Side.Collective, needA - placed, "pockets"));
 
-        // ---- step 7: scatter (Hand outposts anywhere, then Collective rim cells, continuing in the shuffled order)
+        // ---- step 7: scatter (Hand outposts anywhere, then Collective outer cells, continuing in the shuffled order)
         var loose = new List<int>();
         for (int i = 0; i < n; i++) if (Open(i)) loose.Add(i);
         Shuffle(loose, rng);
@@ -215,7 +215,7 @@ public static class AnchoredDealer
         if (ePlaced < scatterE) shortfalls.Add(new DealShortfall(Side.Hand, scatterE - ePlaced, "scatter"));
         int aPlaced = 0;
         for (int k = ePlaced; k < loose.Count && aPlaced < scatterA; k++)
-            if (IsRim(loose[k])) { owner[loose[k]] = Side.Collective; aPlaced++; }
+            if (IsReach(loose[k])) { owner[loose[k]] = Side.Collective; aPlaced++; }
         if (aPlaced < scatterA) shortfalls.Add(new DealShortfall(Side.Collective, scatterA - aPlaced, "scatter"));
 
         // ---- step 8: strong and weak. Anchors, Charter, The Shoal and the HQ are strong; the shuffled lists decide the rest (Hand list first, then Collective).
@@ -245,9 +245,9 @@ public static class AnchoredDealer
             else if (anchorSupport[i] is { } fixedSupport) support = fixedSupport; // no draw
             else if (owner[i] == Side.Collective) support = (weak[i] ? p.WeakBase : p.StrongBase) + rng.NextInt(0, p.BandSpread);
             else if (owner[i] == Side.Hand) support = 100 - ((weak[i] ? p.WeakBase : p.StrongBase) + rng.NextInt(0, p.BandSpread));
-            else if (GroupOf(i) == Core) support = rng.NextInt(0, p.NeutralCoreSpread) + p.NeutralRimSupport - p.NeutralCoreSpread / 2;
-            else support = p.NeutralRimSupport;
-            bool exploredAll = GroupOf(i) == Core || i == charter || i == shoal;
+            else if (GroupOf(i) == Heartland) support = rng.NextInt(0, p.NeutralHeartlandSpread) + p.NeutralReachSupport - p.NeutralHeartlandSpread / 2;
+            else support = p.NeutralReachSupport;
+            bool exploredAll = GroupOf(i) == Heartland || i == charter || i == shoal;
             rows.Add(new DayOneRow(Name(i), owner[i], support, weak[i], exploredAll, owner[i] != null, i == hq));
         }
         return new AnchoredDeal(rows, Name(hq), shortfalls);

@@ -59,7 +59,7 @@ public sealed record EconomyParams
     /// <summary>Support is clamped to this range when a cycle starts. DEFAULT (pools sheet: "clamped to 1..100").</summary>
     public int SupportFloor { get; init; } = 1;
     public int SupportCeiling { get; init; } = 100;
-    /// <summary>Support of a system nobody has set: rim populated systems start at exactly 50 (m2-popular-support, starting values reference). DEFAULT.</summary>
+    /// <summary>Support of a system nobody has set: outer populated systems start at exactly 50 (m2-popular-support, starting values reference). DEFAULT.</summary>
     public int DefaultCollectiveSupport { get; init; } = 50;
     /// <summary>Smuggling tiers: (highest support in the tier, percent). Support above the last bound gives 0. GNPRTB 7732 to 7737. Traced.</summary>
     public IReadOnlyList<(int MaxSupport, int Percent)> SmugglingTiers { get; init; } =
@@ -87,17 +87,17 @@ public sealed record EconomyParams
     public int DisasterDestroyPercent { get; init; } = 10;
 
     // ---- start rolls (SlotSource = Rolled only). Traced, economy/01.
-    public int CorePopulatedPercent { get; init; } = 100;   // GNPRTB 7730
-    public int RimPopulatedPercent { get; init; } = 31;     // GNPRTB 7731
-    public int CoreEnergyBase { get; init; } = 10;          // 7721
-    public int CoreEnergySpread { get; init; } = 4;         // 7722
-    public int CoreRawBase { get; init; } = 5;              // 7723
-    public int CoreRawSpread { get; init; } = 9;            // 7724
-    public int RimEnergyBase { get; init; } = 1;            // 7725
-    public int RimEnergySpreadA { get; init; } = 4;         // 7726
-    public int RimEnergySpreadB { get; init; } = 9;         // 7727
-    public int RimRawBase { get; init; } = 1;               // 7728
-    public int RimRawSpread { get; init; } = 14;            // 7729
+    public int HeartlandPopulatedPercent { get; init; } = 100;   // GNPRTB 7730
+    public int ReachPopulatedPercent { get; init; } = 31;     // GNPRTB 7731
+    public int HeartlandEnergyBase { get; init; } = 10;          // 7721
+    public int HeartlandEnergySpread { get; init; } = 4;         // 7722
+    public int HeartlandRawBase { get; init; } = 5;              // 7723
+    public int HeartlandRawSpread { get; init; } = 9;            // 7724
+    public int ReachEnergyBase { get; init; } = 1;            // 7725
+    public int ReachEnergySpreadA { get; init; } = 4;         // 7726
+    public int ReachEnergySpreadB { get; init; } = 9;         // 7727
+    public int ReachRawBase { get; init; } = 1;               // 7728
+    public int ReachRawSpread { get; init; } = 14;            // 7729
 
     // ---- maintenance sheet
     /// <summary>Autoscrap period in days (GNPRTB 7168). Lead.</summary>

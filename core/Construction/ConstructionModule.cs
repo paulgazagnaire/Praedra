@@ -76,7 +76,7 @@ public sealed class ConstructionModule
     public Func<string, bool> IsInUprising { get; set; } = _ => false;
     /// <summary>
     /// An extra build check run after the research gate and the count check (null = none): a rejection reason or null. The harvester module sets it
-    /// for the one-per-system cap (HarvesterLimit). rule: m5-death-star §1.
+    /// for the one-per-system cap (HarvesterLimit). rule: m5-harvester §1.
     /// </summary>
     public Func<BuildOrder, string?>? ExtraBuildCheck { get; set; }
     /// <summary>
@@ -203,7 +203,7 @@ public sealed class ConstructionModule
     private OrderResult HandleBuild(StepContext ctx, BuildOrder o)
     {
         if (!_galaxy.TryFindSystem(o.System, out _)) return OrderResult.Reject(RejectReason.UnknownSystem);
-        if (_eco.IsDestroyed(o.System) || (o.Destination != null && _eco.IsDestroyed(o.Destination))) return OrderResult.Reject(RejectReason.SystemDestroyed); // rule: m5-death-star §2 effect 5 (no builds)
+        if (_eco.IsDestroyed(o.System) || (o.Destination != null && _eco.IsDestroyed(o.Destination))) return OrderResult.Reject(RejectReason.SystemDestroyed); // rule: m5-harvester §2 effect 5 (no builds)
         if (!_eco.Costs.TryGet(o.Class, out var row)) return OrderResult.Reject(RejectReason.UnknownItem);
         if (_fleets.OwnerOf(o.System) != o.Side) return OrderResult.Reject(RejectReason.NotYours); // also a neutral system (C24)
         if (!YardsOf(o.System, o.Family).Any()) return OrderResult.Reject(RejectReason.NoYard);
@@ -336,7 +336,7 @@ public sealed class ConstructionModule
     /// <summary>
     /// For the harvester: a system was destroyed. Every project standing on it or heading for it is cancelled (reason SystemDestroyed, no refund,
     /// maintenance freed), and every facility still travelling to it is removed with its delivery (no refund). Other units heading for it follow
-    /// <see cref="LostDestination"/> on arrival. Call before the planet's own objects are removed. rule: m5-death-star §2 effect 2 ("completed or in a queue", no refund).
+    /// <see cref="LostDestination"/> on arrival. Call before the planet's own objects are removed. rule: m5-harvester §2 effect 2 ("completed or in a queue", no refund).
     /// </summary>
     public void CancelProjectsOnDestroy(StepContext ctx, string system)
     {

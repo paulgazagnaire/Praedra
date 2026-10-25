@@ -170,15 +170,15 @@ public class GalaxyDataTests
 
     // ---- validation checks beyond G10-G12 ----
 
-    private const string Tiny = "name,sector,group,map_x,map_y\nA,S,core,1,1\nB,S,core,2,2\n";
+    private const string Tiny = "name,sector,group,map_x,map_y\nA,S,heartland,1,1\nB,S,heartland,2,2\n";
     private const string TinyLane = "from,to,kind,routes\nA,B,generated,\n";
 
     [Fact]
     public void Check1_DuplicateAndEmptyNamesFail()
     {
-        var ex = Assert.Throws<DataLoadException>(() => GalaxyLoader.Load(Tiny + "A,S,core,3,3\n", TinyLane, TestData.Tiers));
+        var ex = Assert.Throws<DataLoadException>(() => GalaxyLoader.Load(Tiny + "A,S,heartland,3,3\n", TinyLane, TestData.Tiers));
         Assert.Contains("duplicate system name 'A'", ex.Message);
-        Assert.Throws<DataLoadException>(() => GalaxyLoader.Load(Tiny + ",S,core,3,3\n", TinyLane, TestData.Tiers));
+        Assert.Throws<DataLoadException>(() => GalaxyLoader.Load(Tiny + ",S,heartland,3,3\n", TinyLane, TestData.Tiers));
     }
 
     [Fact]
@@ -199,27 +199,27 @@ public class GalaxyDataTests
     }
 
     [Theory]
-    [InlineData("A,S,core,1024,1")]
-    [InlineData("A,S,core,-1,1")]
-    [InlineData("A,S,core,x,1")]
+    [InlineData("A,S,heartland,1024,1")]
+    [InlineData("A,S,heartland,-1,1")]
+    [InlineData("A,S,heartland,x,1")]
     public void Check5_MapPositionMustBeIntegerInRange(string row)
     {
         Assert.Throws<DataLoadException>(() =>
-            GalaxyLoader.Load("name,sector,group,map_x,map_y\n" + row + "\nB,S,core,2,2\n", TinyLane, TestData.Tiers));
+            GalaxyLoader.Load("name,sector,group,map_x,map_y\n" + row + "\nB,S,heartland,2,2\n", TinyLane, TestData.Tiers));
     }
 
     [Fact]
     public void Check6_MixedGroupInSectorFails()
     {
         var ex = Assert.Throws<DataLoadException>(() =>
-            GalaxyLoader.Load("name,sector,group,map_x,map_y\nA,S,core,1,1\nB,S,outer_rim,2,2\n", TinyLane, TestData.Tiers));
+            GalaxyLoader.Load("name,sector,group,map_x,map_y\nA,S,heartland,1,1\nB,S,farreach,2,2\n", TinyLane, TestData.Tiers));
         Assert.Contains("mixes groups", ex.Message);
     }
 
     [Fact]
     public void Check7_OutsidersHaveNoLanesOthersMayHaveNone() // since 2026-10-16 a system may lie off every route (free travel)
     {
-        var g = GalaxyLoader.Load(Tiny + "C,S,core,3,3\n", TinyLane, TestData.Tiers);
+        var g = GalaxyLoader.Load(Tiny + "C,S,heartland,3,3\n", TinyLane, TestData.Tiers);
         Assert.False(g.OnRoute(g.Get("C").Index));
         // Glasswood with a lane
         var p = Tiny + $"Glasswood,{Galaxy.OutsideSectorsLabel},,9,9\n";
@@ -234,7 +234,7 @@ public class GalaxyDataTests
     [Fact]
     public void Check8_SeparateRouteNetworksLoad() // the old "one connected lane graph" check is gone (m1-galaxy-data check 8, retired 2026-10-16)
     {
-        var p = Tiny + "C,S,core,3,3\nD,S,core,4,4\n";
+        var p = Tiny + "C,S,heartland,3,3\nD,S,heartland,4,4\n";
         var g = GalaxyLoader.Load(p, TinyLane + "C,D,generated,\n", TestData.Tiers);
         Assert.Equal(2, g.Lanes.Count);
     }
@@ -251,7 +251,7 @@ public class GalaxyDataTests
     [Fact]
     public void Check10_StoredColumnMismatchIsOnlyAWarning()
     {
-        var p = "name,sector,group,map_x,map_y,chokepoint,lane_count\nA,S,core,1,1,1,5\nB,S,core,2,2,0,1\n";
+        var p = "name,sector,group,map_x,map_y,chokepoint,lane_count\nA,S,heartland,1,1,1,5\nB,S,heartland,2,2,0,1\n";
         var g = GalaxyLoader.Load(p, TinyLane, TestData.Tiers);
         Assert.Equal(2, g.Warnings.Count); // A: lane_count 5 vs 1, chokepoint 1 vs 0
         Assert.Contains(g.Warnings, w => w.Contains("lane_count"));
@@ -312,9 +312,9 @@ public class GalaxyDataTests
     public void SlotValuesRefuseUnknownDuplicateAndMissingSystems()
     {
         var text = File.ReadAllText(Path.Combine(TestData.DesignDir, SlotValues.File));
-        var ex = Assert.Throws<DataLoadException>(() => SlotValues.Parse(text + "No Such Place,X,core,1,1,1,formula,\n", G));
+        var ex = Assert.Throws<DataLoadException>(() => SlotValues.Parse(text + "No Such Place,X,heartland,1,1,1,formula,\n", G));
         Assert.Contains("No Such Place", ex.Message);
-        ex = Assert.Throws<DataLoadException>(() => SlotValues.Parse(text + "Feldspar,Incus Sector,inner_rim,1,1,1,formula,\n", G));
+        ex = Assert.Throws<DataLoadException>(() => SlotValues.Parse(text + "Feldspar,Incus Sector,midreach,1,1,1,formula,\n", G));
         Assert.Contains("twice", ex.Message);
         var lines = text.Split('\n').ToList();
         lines.RemoveAt(2); // drop one system's row

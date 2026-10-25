@@ -93,11 +93,11 @@ public sealed record BattleParams
     /// <summary>Laser against a capital ship (float 0x3e2b020c). Traced.</summary>
     public double LaserVsCapital { get; init; } = 0.167;
     public double IonVsCapital { get; init; } = 1.0;
-    public double TurbolaserVsCapital { get; init; } = 1.0;
-    /// <summary>Laser, ion and turbolaser against a squadron (the laser and turbolaser terms are times the maneuverability ratio). Traced.</summary>
+    public double HeavyCannonVsCapital { get; init; } = 1.0;
+    /// <summary>Laser, ion and heavy cannon against a squadron (the laser and heavy cannon terms are times the maneuverability ratio). Traced.</summary>
     public double LaserVsSquadron { get; init; } = 1.0;
     public double IonVsSquadron { get; init; }
-    public double TurbolaserVsSquadron { get; init; } = 0.5;
+    public double HeavyCannonVsSquadron { get; init; } = 0.5;
     /// <summary>Floor of the maneuverability ratio against a squadron (0x66c518). Traced.</summary>
     public double ManeuverFloor { get; init; } = 0.1;
     /// <summary>Maneuverability cap. Traced (0x5b0be0, 0x5ba270).</summary>

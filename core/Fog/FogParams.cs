@@ -27,8 +27,8 @@ public sealed record FogParams
     public FogRuleset Ruleset { get; init; } = FogRuleset.New;
     /// <summary>The galaxy graph is public to both sides. rule: §F1 LanesPublic (the core never fogs the graph; the switch is recorded only).</summary>
     public bool LanesPublic { get; init; } = true;
-    /// <summary>Core-group systems report owner and support to both sides every Step. rule: §F2 CoreReport (Manual p.69).</summary>
-    public bool CoreReportsInstantly { get; init; } = true;
+    /// <summary>Heartland systems report owner and support to both sides every Step. rule: §F2 HeartlandReport (Manual p.69).</summary>
+    public bool HeartlandReportsInstantly { get; init; } = true;
     /// <summary>A fleet passing a system explores it and is logged. DEFAULT true in New; Classic forces it off. rule: §Defaults PassingFleetsExplore.</summary>
     public bool PassingFleetsExplore { get; init; } = true;
     /// <summary>An agent on a mission gives live access (needs m5-missions' AgentsAt). rule: §F3 3.</summary>
@@ -51,8 +51,8 @@ public sealed record FogParams
     /// 0x51b990, 0x539ac0). DEFAULT on (Classic); AI measured 2026-10-18: floors pass, Medium mirror 12/16 either way. rule: m5-fog-and-hq §F2 Setup, §F4 1.
     /// </summary>
     public bool SetupRevealsFacilities { get; init; } = true;
-    /// <summary>The galaxy group whose systems report instantly (planets file group label). rule: §F2 CoreReport ("Group is Core"), Contradictions 9.</summary>
-    public string CoreGroup { get; init; } = "core";
+    /// <summary>The galaxy group whose systems report instantly (planets file group label). rule: §F2 HeartlandReport ("Group is Core"), Contradictions 9.</summary>
+    public string HeartlandGroup { get; init; } = "heartland";
 
     // ---- espionage extra systems. rule: §F2 Espionage success 2 (GNPRTB 6176 to 6181, Traced)
     /// <summary>Rich target (holds the HQ): N = rand(0..RichSpread) + RichBase. GNPRTB 6181 = 4, 6180 = 1.</summary>

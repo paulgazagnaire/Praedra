@@ -1,5 +1,5 @@
 weapon,vs_capital_shield,vs_capital_hull,vs_fighter,fighter_uses_maneuver_ratio,hit_huge,hit_large,hit_medium,hit_small,hit_fighter,source
-turbolaser,1.0,1.0,0.5,1,0.95,0.90,0.75,0.50,0.10,"m4-battle-new §2 (multipliers Traced space-combat/02; hit chances Proposal value (tune) ships/11 rule 3)"
+heavy_cannon,1.0,1.0,0.5,1,0.95,0.90,0.75,0.50,0.10,"m4-battle-new §2 (multipliers Traced space-combat/02; hit chances Proposal value (tune) ships/11 rule 3)"
 ion_cannon,1.5,0.5,0,0,0.95,0.90,0.80,0.55,0.10,"m4-battle-new §2 (Proposal value (tune) ships/11; vs fighter 0 Traced)"
 laser_cannon,0.167,0.167,1.0,1,0.90,0.90,0.90,0.85,0.70,"m4-battle-new §2 (0.167 and 1.0 vs fighter Traced space-combat/02; hit chances Proposal value (tune) ships/11 rule 3)"
 torpedo,0.5,1.0,0,0,0.90,0.90,0.90,0.85,0.70,"m4-battle-new §2 (0.5 vs shield Proposal value (tune); only used when switch TorpedoesVsShields is on, else torpedoes fire only at shield-0 capitals; hit chances as the laser row, DEFAULT; vs fighter not allowed)"

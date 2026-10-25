@@ -169,11 +169,11 @@ public class CombatStrengthTests
         }
         var mandate = data.Class(Mandate);
         Assert.Equal(8, mandate.Batteries.Count);
-        Assert.Equal((Arc.Fore, WeaponKind.Turbolaser, 10, 40.0, 20, 50), (mandate.Batteries[0].Arc, mandate.Batteries[0].Weapon, mandate.Batteries[0].Guns, mandate.Batteries[0].ShotDamage, mandate.Batteries[0].Reload, mandate.Batteries[0].Range));
+        Assert.Equal((Arc.Fore, WeaponKind.HeavyCannon, 10, 40.0, 20, 50), (mandate.Batteries[0].Arc, mandate.Batteries[0].Weapon, mandate.Batteries[0].Guns, mandate.Batteries[0].ShotDamage, mandate.Batteries[0].Reload, mandate.Batteries[0].Range));
         Assert.Equal((2750, 300, 15.0, 1.5, SizeClass.Large), (mandate.Hull, mandate.ShieldPool, mandate.ShieldRegen, mandate.Deflection, mandate.Size));
         var bomber = data.Class("Thresher");
         Assert.Equal((8, 35.0, 7), (bomber.Torpedoes, bomber.TorpedoDamage, bomber.TorpedoRange));
         Assert.Equal(2, bomber.Batteries.Count); // laser and ion; torpedoes are not a battery
-        Assert.Equal((uint)(0.95 * 4294967296.0), data.Weapon(WeaponKind.Turbolaser).Threshold[(int)SizeClass.Huge]);
+        Assert.Equal((uint)(0.95 * 4294967296.0), data.Weapon(WeaponKind.HeavyCannon).Threshold[(int)SizeClass.Huge]);
     }
 }

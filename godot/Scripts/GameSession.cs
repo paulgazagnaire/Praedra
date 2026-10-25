@@ -327,7 +327,7 @@ public sealed partial class GameSession
         _ => reason,
     };
 
-    /// <summary>The words for a refused character order (the shared reasons read differently for a character). rule: m5-characters-and-force §Posts (Orders), §Moving a character alone.</summary>
+    /// <summary>The words for a refused character order (the shared reasons read differently for a character). rule: m5-characters-and-talent §Posts (Orders), §Moving a character alone.</summary>
     public static string WhyCharacter(string reason) => reason switch
     {
         CharacterReject.UnknownCharacter => "that character is not in the game",
@@ -423,7 +423,7 @@ public sealed partial class GameSession
         return c.Transit is { } t ? t.Path[Math.Min(t.HopIndex + 1, t.Path.Count - 1)] : c.System;
     }
 
-    /// <summary>The character's post in words. rule: m5-characters-and-force §Posts.</summary>
+    /// <summary>The character's post in words. rule: m5-characters-and-talent §Posts.</summary>
     public string RoleOf(CharacterRecord c)
     {
         if (SystemPostOf(c) is string sys) return $"system General of {sys}";
@@ -435,7 +435,7 @@ public sealed partial class GameSession
         return "no post";
     }
 
-    /// <summary>The skills the sheet uses (leadership feeds the posts), and Talent rank only when the side knows the character is a talented character. rule: m5-characters-and-force §Posts, §Talent (Rank).</summary>
+    /// <summary>The skills the sheet uses (leadership feeds the posts), and Talent rank only when the side knows the character is a talented character. rule: m5-characters-and-talent §Posts, §Talent (Rank).</summary>
     public string SkillsOf(CharacterRecord c)
     {
         string s = $"Leadership {Chars.EffectiveSkill(c, Skill.Leadership)}, combat {Chars.EffectiveSkill(c, Skill.Combat)}, diplomacy {Chars.EffectiveSkill(c, Skill.Diplomacy)}, espionage {Chars.EffectiveSkill(c, Skill.Espionage)}";
@@ -443,7 +443,7 @@ public sealed partial class GameSession
         return s;
     }
 
-    /// <summary>Which posts the character's record allows. rule: m5-characters-and-force §Posts (Capability).</summary>
+    /// <summary>Which posts the character's record allows. rule: m5-characters-and-talent §Posts (Capability).</summary>
     public string CapabilityOf(CharacterRecord c)
     {
         var cls = Chars.ClassOf(c);
@@ -470,7 +470,7 @@ public sealed partial class GameSession
         _ => "a system General",
     };
 
-    /// <summary>Classic text names of the ranks. rule: m5-characters-and-force §Talent (Rank).</summary>
+    /// <summary>Classic text names of the ranks. rule: m5-characters-and-talent §Talent (Rank).</summary>
     public static string RankWords(TalentRank r) => r switch
     {
         TalentRank.Deviation => "Deviation",
@@ -636,7 +636,7 @@ public sealed partial class GameSession
                 yield return BattleReport(be, o);
                 break;
 
-            // ---- characters: only the feed the player's side may see (rule: m5-fog-and-hq §N8 event audience; m5-characters-and-force §Events)
+            // ---- characters: only the feed the player's side may see (rule: m5-fog-and-hq §N8 event audience; m5-characters-and-talent §Events)
             case CharacterCreated c:
                 yield return new Message(d, Mine(c.Side) ? $"{CharName(c.Character)} joined your side{At(c.System)}." : $"A new {NameOf(c.Side)} leader, {CharName(c.Character)}, appeared{At(c.System)}.", c.System, Mine(c.Side) ? MsgKind.Good : MsgKind.Info);
                 break;

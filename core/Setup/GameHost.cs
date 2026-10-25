@@ -27,14 +27,14 @@ namespace Praedra.Core.Setup;
 ///   7. DefenseModule, BombardmentModule (defense queries; the Bombard order and slot 5.1; reads fleets, economy and support, calls support's ChangeSupport)
 ///   7b. HarvesterModule (the Destroy System order and slot 5.1 after the bombardment's hook, the sector flag at 5.6, the one-per-system build cap, the
 ///      HarvesterDeployed notice; reads fleets, economy, support, control, construction and defenses; its character, mission and fog hooks are wired
-///      once those modules exist). rule: m5-death-star
+///      once those modules exist). rule: m5-harvester
 ///   8. AssaultModule (the Assault order and slot 5.2; reads troops, defenses and bombardment; the landing makes control's recompute flip the world)
 ///   9. BattleModule (slot 5), RepairModule (slot 6.8)
 ///  10. FogModule (MoveHq; slot 2 after the fleet departures, slot 3 HQ arrival after the fleet arrivals and deliveries, 3.1 sightings, 5.4 live
 ///      refresh, 6.8 log pruning after repair; listens to control's HolderChanged; sets the game's event audience). rule: m5-fog-and-hq §F8
 ///  11. ResearchModule (slot 6.9; reads economy and fleets; construction's research gate reads its levels)
 ///  12. CharacterModule (orders; slots 2 and 3 after the fleets, 6.10; wires bombardment's AdmiralLeadership, assault's FleetGeneralLeadership and
-///      SystemGeneralLeadership, the fleet Navigator speed and fleet-removal hooks, control's HolderChanged and CharactersAtCapture, support's incident codes 3-5). rule: m5-characters-and-force
+///      SystemGeneralLeadership, the fleet Navigator speed and fleet-removal hooks, control's HolderChanged and CharactersAtCapture, support's incident codes 3-5). rule: m5-characters-and-talent
 ///  13. MissionModule (orders; slots 2 and 3 after the characters, 5.3 after assault and before the fog refresh; wires the characters' IsOnMission and
 ///      MissionMembershipEnded, the fog's AgentsAt, support's incident terms and per-incident hook). rule: m5-missions
 ///  14. VictoryModule (slot 6.11, the last day-end slot; must stay last; reads the characters' captured and dead states)
@@ -59,7 +59,7 @@ public sealed class GameHost
     /// <summary>The defense queries the assault and bombardment call. rule: m3-planetary-defenses §Queries.</summary>
     public DefenseModule Defenses { get; }
     public BombardmentModule Bombardment { get; }
-    /// <summary>The harvester: Destroy System (slot 5.1), the sector flag (5.6), the build cap. rule: m5-death-star.</summary>
+    /// <summary>The harvester: Destroy System (slot 5.1), the sector flag (5.6), the build cap. rule: m5-harvester.</summary>
     public Praedra.Core.Harvester.HarvesterModule Harvester { get; }
     /// <summary>The Assault order and slot 5.2. rule: m3-assault.</summary>
     public AssaultModule Assault { get; }
@@ -74,7 +74,7 @@ public sealed class GameHost
     /// <summary>Victory check (slot 6.11, last; runs only in a game made by <see cref="NewGame"/>): <c>Victory.Winner</c> is null while the game runs. rule: setup-victory/04.</summary>
     public Praedra.Core.Victory.VictoryModule Victory { get; }
 
-    /// <summary>Characters, posts, leadership, capture and death, Talent (slots 2, 3, 6.10). rule: m5-characters-and-force.</summary>
+    /// <summary>Characters, posts, leadership, capture and death, Talent (slots 2, 3, 6.10). rule: m5-characters-and-talent.</summary>
     public Praedra.Core.Characters.CharacterModule Characters { get; }
     /// <summary>What moves loyalty (B2c).</summary>
     public Praedra.Core.Characters.LoyaltyModule Loyalty { get; }
@@ -171,7 +171,7 @@ public sealed class GameHost
 
         Defenses = DefenseModule.Attach(Economy, Fleets, data.Defenses, settings.Defense);
         Bombardment = BombardmentModule.Attach(game, Economy, Fleets, Support, Defenses, settings.Bombard);
-        // After the bombardment (its slot 5.1 hook runs first) and before the assault. rule: m5-death-star §2 ("resolved in slot 5.1 after the bombardment hook")
+        // After the bombardment (its slot 5.1 hook runs first) and before the assault. rule: m5-harvester §2 ("resolved in slot 5.1 after the bombardment hook")
         Harvester = Praedra.Core.Harvester.HarvesterModule.Attach(game, data.Galaxy, Fleets, Economy, Support, Control, Construction, Defenses, settings.Harvester);
         Construction.UnitAppeared += Harvester.OnUnitAppeared; // after the fleet module's handler (the ship has joined its fleet): HarvesterDeployed
         Assault = AssaultModule.Attach(game, Economy, Fleets, Troops, Control, Defenses, Bombardment, settings.Assault);
@@ -183,7 +183,7 @@ public sealed class GameHost
         Research = Praedra.Core.Research.ResearchModule.Attach(game, Economy, Fleets, data.Research, settings.Research); // slot 6.9, after repair
         Construction.ResearchOrderReached = Research.OrderReached; // the research gate reads the side's levels. rule: m5-research §Availability test
         // Characters: slots 2 and 3 after the fleets, 6.10 after research. The three M3 leadership hooks, the Navigator speed, the system General
-        // cleared on a holder change and the uprising incident codes 3 to 5. rule: m5-characters-and-force §Where it runs in the day Step.
+        // cleared on a holder change and the uprising incident codes 3 to 5. rule: m5-characters-and-talent §Where it runs in the day Step.
         Characters = Praedra.Core.Characters.CharacterModule.Attach(game, Fleets, data.Characters, settings.Characters);
         Bombardment.AdmiralLeadership = Characters.AdmiralLeadership;
         // rule: B7-bombardment §4.3: the holder's General standing on the system multiplies the batteries' return fire (the system General post is
@@ -195,18 +195,18 @@ public sealed class GameHost
         Control.HolderChanged += Characters.OnHolderChanged;
         Control.CharactersAtCapture = Characters.OnCapture; // prisoners freed, characters leave (B5a section 5)
         Support.CharacterIncident = Characters.UprisingIncident;
-        // What moves loyalty: the four triggers react to their events as they are emitted. rule: m5-characters-and-force §Loyalty and betrayal (B2c)
+        // What moves loyalty: the four triggers react to their events as they are emitted. rule: m5-characters-and-talent §Loyalty and betrayal (B2c)
         Loyalty = Praedra.Core.Characters.LoyaltyModule.Attach(game, Characters, Fleets, Economy, data.Troops);
         // Missions: orders, slots 2 and 3 after the characters, 5.3; wires the characters' IsOnMission and membership end, the fog's AgentsAt and the
         // support module's incident terms. rule: m5-missions §Where it runs in the day Step.
         Missions = Praedra.Core.Missions.MissionModule.Attach(game, Fleets, Economy, Support, Troops, Research, Characters, Fog, data.Missions, settings.Missions);
         Missions.FacilityFamily = cls => data.Defenses.TryGetClass(cls, out var dc) ? dc.Family : 0; // rule: m5-missions §3 (B2d: the Mordant Lien-150 test)
         // The escape attempt's inputs: ESCAPETB from mission-tables.csv (unless the settings give one) and the captor's special forces on the planet.
-        // rule: m5-characters-and-force §Escape (B2e §3)
+        // rule: m5-characters-and-talent §Escape (B2e §3)
         if (Characters.EscapeTable == null && data.Missions.Escape is { } esc) Characters.EscapeTable = esc.Select(r => (r.Threshold, r.Value)).ToList();
         Characters.SpecialForcesOnPlanet = Missions.SpecialForcesOnPlanet;
         Missions.Recruit = Characters.Recruit; // rule: m5-missions §6 Recruitment (Recruitment pick, 2026-10-18)
-        // The harvester's hooks into the characters, missions and fog (they attach after it). rule: m5-death-star §2 effects 3, 4, 6; §5
+        // The harvester's hooks into the characters, missions and fog (they attach after it). rule: m5-harvester §2 effects 3, 4, 6; §5
         Harvester.MissionsEnded = Missions.OnSystemDestroyed;
         Harvester.CharacterRoll = Characters.HarvesterStrike;
         Harvester.CharacterRelocate = Characters.HarvesterRelocate;
@@ -229,6 +229,37 @@ public sealed class GameHost
         new(new Game(rng), data ?? GameData.Default, settings ?? new GameSettings());
 
     /// <summary>
+    /// Take cut objects (<paramref name="cut"/>) out of every build queue and delivery of an old save. A project whose current unit goes starts
+    /// its next unit from zero progress; a project left empty takes its next queued order or ends. QA-46.
+    /// </summary>
+    private static void DropCutUnits(ConstructionState c, HashSet<int> cut)
+    {
+        foreach (var d in c.Deliveries.Where(kv => cut.Contains(kv.Value.Object)).Select(kv => kv.Key).ToList()) c.Deliveries.Remove(d);
+        foreach (var (system, by) in c.Projects.ToList())
+        {
+            foreach (var (family, p) in by.ToList())
+            {
+                if (p.Units.Count > 0 && cut.Contains(p.Units[0])) p.Progress = 0;
+                p.Units.RemoveAll(cut.Contains);
+                if (p.Next != null)
+                {
+                    foreach (var q in p.Next) q.Units.RemoveAll(cut.Contains);
+                    p.Next.RemoveAll(q => q.Units.Count == 0);
+                    if (p.Next.Count == 0) p.Next = null;
+                }
+                if (p.Units.Count == 0 && p.Next != null)
+                {
+                    p.Units = p.Next[0].Units; p.Destination = p.Next[0].Destination; p.Progress = 0;
+                    p.Next.RemoveAt(0);
+                    if (p.Next.Count == 0) p.Next = null;
+                }
+                if (p.Units.Count == 0) by.Remove(family);
+            }
+            if (by.Count == 0) c.Projects.Remove(system);
+        }
+    }
+
+    /// <summary>
     /// A game from a save (<see cref="GameSave.Save"/> or <see cref="SaveWithSettings"/>), with every module attached again. Settings are not in the
     /// plain save: pass them again. A save written by <see cref="SaveWithSettings"/> carries every game setting (QA-17); they are used when
     /// <paramref name="settings"/> is null, and passed settings replace them whole. It also carries the battle ruleset; it is applied when
@@ -247,8 +278,9 @@ public sealed class GameHost
         var (memories, core) = ReadAiMemory(body, data.Names);
         var host = new GameHost(GameSave.Load(data.Names.Apply(core)), data, settings); // a save from before the Praedra names loads renamed
         // a save from before a cut (data/design/cut-classes.csv: Classic's planet-killer shield) loses those objects, silently
-        foreach (int id in host.Economy.Objects.Where(o => data.Names.Cut.Contains(o.Class)).Select(o => o.Id).OrderBy(i => i).ToList())
-            host.Economy.RemoveObject(id);
+        var cut = host.Economy.Objects.Where(o => data.Names.Cut.Contains(o.Class)).Select(o => o.Id).OrderBy(i => i).ToList();
+        if (cut.Count > 0) DropCutUnits(host.Game.State.Construction, cut.ToHashSet()); // QA-46: one still being built or delivered goes too
+        foreach (int id in cut) host.Economy.RemoveObject(id);
         host._aiMemory.AddRange(memories);
         return host;
     }

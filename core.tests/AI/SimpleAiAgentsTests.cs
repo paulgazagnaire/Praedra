@@ -40,7 +40,7 @@ public class SimpleAiAgentsTests
             FinishWhenAheadRatio = 0, KeyHunt = false, TaskForces = false });
         m.RunTo(1000);
         Assert.DoesNotContain(m.Sent.Keys, k => k.Contains("Mission", StringComparison.Ordinal) || k.Contains("Character", StringComparison.Ordinal) || k.Contains("General", StringComparison.Ordinal));
-        // The pin moved when the harvester added saved state (m5-death-star: GameState.Harvester, SystemKnowledge.Destroyed). The game plays identically:
+        // The pin moved when the harvester added saved state (m5-harvester: GameState.Harvester, SystemKnowledge.Destroyed). The game plays identically:
         // the old hash e8fb3f75...c779 is recovered exactly by removing those new fields from the hashed JSON (checked when the pin was moved).
         // v5 re-pin 2026-10-16: the v5 galaxy (555 systems, routes) changes every game, so the hash now pins this branch's old AI on the
         // v5 map; the new v5 AI fixes (FogAvoidEnemyStops, SplitHomeSurplus) and the AI trainer's fixes (DetourToHeldStop,
@@ -74,7 +74,7 @@ public class SimpleAiAgentsTests
         // (SuspendedLeaveCapacity on, both modes Abandon) the hash is exactly the AssaultOnly pin 1e675764...ba62 (checked when re-pinned, main eb722bd merged).
         // re-pinned 2026-10-18: battle default New (m4-battle-new) on top of fog group D storing characters (m5-fog-and-hq, was 9188df4d...05ff).
         // With Battle.Ruleset = Classic the battle part matched the previous pin exactly (checked when re-pinned on the battle branch).
-        // Talented re-pin 2026-10-18 (Dev lead; Paul's random trainers, m5-characters-and-force Rule New 4): TrainerPick is DEFAULT Random, so setup
+        // Talented re-pin 2026-10-18 (Dev lead; Paul's random trainers, m5-characters-and-talent Rule New 4): TrainerPick is DEFAULT Random, so setup
         // draws 3 talented per side and their Talent (more draws, saved Talented, higher skills). With TrainerPick = Fixed the hash is exactly the
         // previous pin 55805ed7...c838 (checked when re-pinned, main 4691273).
         // Q17 re-pin 2026-10-18 (Dev lead; Paul's cards "Skip the strong" and "Leave out hunters"): the talented draw leaves out the already strong
@@ -112,7 +112,7 @@ public class SimpleAiAgentsTests
     }
 
     // QA-8, B6c-15 in play (SimpleAiParams.LeaderMarks, DEFAULT off since 2026-10-18, QA-12; on here): while the Hand holds Charter The Chair is kept there (The Chair home),
-    // so the Seat of Power stays on (m5-characters-and-force §Seat of Power); the six story characters are never commanders and The Chair
+    // so the Seat of Power stays on (m5-characters-and-talent §Seat of Power); the six story characters are never commanders and The Chair
     // is never a diplomat (B6c-14). Fogged Medium mirror, seeds 1 to 8, 1500 days: on 1500 of 1500 days on every seed with the
     // switch; 15 to 103 days without it, and The Chair held by the Collective on seeds 3, 4 and 6 (56, 203 and 84 days).
     [Fact]

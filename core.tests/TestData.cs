@@ -31,7 +31,7 @@ internal static class TestData
     /// <summary>Synthetic galaxy: systems (name, x, y) all in sector "S", lanes (a, b) all kind 'generated' (tier 3).</summary>
     public static Galaxy Synthetic((string name, int x, int y)[] systems, (string a, string b)[] lanes)
     {
-        var p = "name,sector,group,map_x,map_y\n" + string.Join("\n", systems.Select(s => $"{s.name},S,core,{s.x},{s.y}"));
+        var p = "name,sector,group,map_x,map_y\n" + string.Join("\n", systems.Select(s => $"{s.name},S,heartland,{s.x},{s.y}"));
         var l = "from,to,kind,routes\n" + string.Join("\n", lanes.Select(x => $"{x.a},{x.b},generated,"));
         return GalaxyLoader.Load(p, l, Tiers);
     }
@@ -39,7 +39,7 @@ internal static class TestData
     /// <summary>Synthetic galaxy with chosen lane kinds: (a, b, kind); a "route" kind gets the route name "Test Run" (tier 1, factor 300).</summary>
     public static Galaxy Synthetic((string name, int x, int y)[] systems, (string a, string b, string kind)[] lanes)
     {
-        var p = "name,sector,group,map_x,map_y\n" + string.Join("\n", systems.Select(s => $"{s.name},S,core,{s.x},{s.y}"));
+        var p = "name,sector,group,map_x,map_y\n" + string.Join("\n", systems.Select(s => $"{s.name},S,heartland,{s.x},{s.y}"));
         var l = "from,to,kind,routes\n" + string.Join("\n", lanes.Select(x => $"{x.a},{x.b},{x.kind},{(x.kind.StartsWith("route") ? "Test Run" : "")}"));
         return GalaxyLoader.Load(p, l, Tiers);
     }

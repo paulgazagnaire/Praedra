@@ -8,7 +8,7 @@ namespace Praedra.Core.Research;
 public enum ResearchKind { Ship = 0, Troop = 1, Facility = 2 }
 
 /// <summary>
-/// One row of the research ladders (data/classic/research-unlocks.csv, read from the Classic files by importer/, then the rows of
+/// One row of the research ladders (data/classic/research-unlocks.csv, copied from the Classic files, then the rows of
 /// data/design/research-unlocks.csv). <see cref="Catalogue"/> is the row's position in the file: the catalogue order of m5-research §The level check step 4 (DEFAULT).
 /// rule: m5-research §Which track an item belongs to, §Ladders.
 /// </summary>

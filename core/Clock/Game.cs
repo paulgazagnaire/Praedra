@@ -51,13 +51,13 @@ public sealed class GameState
     public Praedra.Core.Fog.FogState Fog { get; init; } = new();
     /// <summary>Research points, levels, exhausted flags and tick timers per side; the two percents. rule: m5-research §State per side.</summary>
     public Praedra.Core.Research.ResearchState Research { get; init; } = new();
-    /// <summary>Every character (stats, Talent, status, post, place, trip) and the system General table. rule: m5-characters-and-force §The character object.</summary>
+    /// <summary>Every character (stats, Talent, status, post, place, trip) and the system General table. rule: m5-characters-and-talent §The character object.</summary>
     public Praedra.Core.Characters.CharacterState Characters { get; init; } = new();
     /// <summary>Every running mission group (team, decoys, trip, timer). rule: m5-missions §Orders, §Rule (Classic).</summary>
     public Praedra.Core.Missions.MissionState Missions { get; init; } = new();
-    /// <summary>Destroyed systems and the strikes per sector. rule: m5-death-star §Interfaces.</summary>
+    /// <summary>Destroyed systems and the strikes per sector. rule: m5-harvester §Interfaces.</summary>
     public Praedra.Core.Harvester.HarvesterState Harvester { get; init; } = new();
-    /// <summary>Per-system loss tallies of the loyalty triggers (B2c). rule: m5-characters-and-force §Loyalty and betrayal.</summary>
+    /// <summary>Per-system loss tallies of the loyalty triggers (B2c). rule: m5-characters-and-talent §Loyalty and betrayal.</summary>
     public Praedra.Core.Characters.LoyaltyState Loyalty { get; init; } = new();
 
     /// <summary>Copy another state's content into this one (used by Load, which needs ordinal-comparer dictionaries).</summary>
@@ -121,10 +121,10 @@ public sealed class Game
         "5.2", // Assaults (M3)
         "5.3", // Mission resolution (M5). rule: m5-missions §Where it runs in the day Step (Lead notes: after assault 5.2, before the fog refresh 5.4)
         "5.4", // Live refresh of each side's picture (M5 fog; 5.3 is mission resolution, m5-missions). rule: m5-fog-and-hq §F8, Lead notes
-        "5.6", // harvester sector flag, once per day after battles and missions, before support at 6.1. rule: m5-death-star §3
+        "5.6", // harvester sector flag, once per day after battles and missions, before support at 6.1. rule: m5-harvester §3
         "6.1", "6.2", "6.3", "6.4", "6.5", "6.6", "6.7", "6.8", // Day-end hooks (empty in M1)
         "6.9", // Research tick, after strategic repair (6.8). rule: m5-research §Where it runs in the day Step
-        "6.10", // Character day-end: injuries heal, escape rolls. rule: m5-characters-and-force §Where it runs in the day Step
+        "6.10", // Character day-end: injuries heal, escape rolls. rule: m5-characters-and-talent §Where it runs in the day Step
         "6.11", // Victory check: MUST stay the last day-end slot. rule: m5-setup-and-victory §Game over
         "7",   // Day becomes K + 1
     };
@@ -173,7 +173,7 @@ public sealed class Game
     /// <summary>
     /// Register a rule that reacts to an event at the moment it is emitted inside a Step (same Step, same place in the draw order). Events
     /// emitted outside a Step (setup) reach no observer. The observer may change state, draw and emit; its own events are observed too.
-    /// rule: m5-characters-and-force §Loyalty (B2c: Classic's rule events 0x31b, 0x300, 0x305 and the battle end call their handlers at once).
+    /// rule: m5-characters-and-talent §Loyalty (B2c: Classic's rule events 0x31b, 0x300, 0x305 and the battle end call their handlers at once).
     /// </summary>
     public void ObserveEvents(Action<StepContext, GameEvent> observer) => _observers.Add(observer);
 

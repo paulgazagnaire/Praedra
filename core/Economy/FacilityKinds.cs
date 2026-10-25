@@ -52,12 +52,12 @@ public static class FacilityKinds
 /// <summary>The kind of thing an economy object is. rule: m2-maintenance §Load (the object families).</summary>
 public enum ObjectCategory { Facility = 0, CapitalShip = 1, Fighter = 2, Regiment = 3, SpecialForce = 4 }
 
-/// <summary>One row of unit-and-facility-costs.csv (data/classic, read from the Classic files by importer/; the Sensor Station row is data/design).</summary>
+/// <summary>One row of unit-and-facility-costs.csv (data/classic, copied from the Classic files; the Sensor Station row is data/design).</summary>
 public sealed record CostRow(ObjectCategory Category, string Name, int Cost, int Maintenance, int ResearchOrder,
     bool Collective = true, bool Hand = true);
 
 /// <summary>
-/// Refined cost and maintenance per class, from data/classic/unit-and-facility-costs.csv (the importer's copy of the Classic files) merged with
+/// Refined cost and maintenance per class, from data/classic/unit-and-facility-costs.csv (our copy of the Classic numbers) merged with
 /// data/design/unit-and-facility-costs.csv (classes not in the game, each row with its tag). Looked up by class name; names are unique.
 /// rule: B1-own-importer §Work 3.
 /// </summary>

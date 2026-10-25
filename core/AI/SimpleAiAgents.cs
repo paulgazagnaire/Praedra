@@ -17,7 +17,7 @@ namespace Praedra.Core.AI;
 /// <item>Hand with fog: keeps its best spies (HqSpies) off the posts while the Hearth is unknown or due a re-check;</item>
 /// <item>posts the best leader as General of the system whose loss ends the game (Charter, the Hearth), moving him or her there first;</item>
 /// <item>posts leaders as Admiral (fleets that can bombard) and General (fleets that carry troops) of the strongest fleets (OfficerFleets), the
-/// officers waiting at the rally system for their fleet (m5-characters-and-force §Posts; the bonuses are m3-bombardment and m3-assault's);</item>
+/// officers waiting at the rally system for their fleet (m5-characters-and-talent §Posts; the bonuses are m3-bombardment and m3-assault's);</item>
 /// <item>sends one-member missions by expected value: value x chance / (travel days + MissionTravelBias), chance = P(not detected) x P(success)
 /// from the core's own tables (MissionModule.FoilChance, DetectionX, Lookup: m5-missions §3, §Mission tables) against the defenders the side
 /// believes are there. Kinds: Hand HQ hunt (Espionage or Reconnaissance on the highest HQ-belief systems, then a re-check of a known HQ),
@@ -58,7 +58,7 @@ public sealed partial class SimpleAi
     /// <summary>Free to take an order today: placed, Free, not attached, no system post, not on a mission, standing on a system (m5-characters §Availability).</summary>
     private bool Standing(CharacterRecord c) => _h.Characters.IsAvailable(c) && c.Transit == null && c.System != null;
     private bool IsKey(CharacterRecord c) => _h.Characters.ClassOf(c).Kind == CharacterKind.Major;
-    private int Skill(CharacterRecord c, Skill s) => _h.Characters.EffectiveSkill(c, s); // m5-characters-and-force §Talent (B2e §1: every reader takes the effective skill)
+    private int Skill(CharacterRecord c, Skill s) => _h.Characters.EffectiveSkill(c, s); // m5-characters-and-talent §Talent (B2e §1: every reader takes the effective skill)
 
     private int CharTicks(string from, string to) => TicksCached(from, to, _h.Characters.Params.CharacterSpeed);
 
@@ -106,7 +106,7 @@ public sealed partial class SimpleAi
     /// <summary>
     /// The Chair home (B6c §7, planner kind 6, Hand only): while the Hand holds the Seat of Power system (Charter, which is in its own
     /// sector, so the "holds a system in Charter's sector" start test holds too), The Chair is taken off every other job, brought there and
-    /// kept there; the Seat of Power (m5-characters-and-force §Seat of Power) stays on. With ChairHomeAfterRecruiting the planner, as in Classic,
+    /// kept there; the Seat of Power (m5-characters-and-talent §Seat of Power) stays on. With ChairHomeAfterRecruiting the planner, as in Classic,
     /// starts only once the side has nobody left to recruit (the recruitment count ctrl+0xa4 is 0: the pool-empty flag, or an empty pool), so
     /// until then The Chair recruits and subdues like any leader (QA-12). QA-8 measured The Chair on Charter on 1-7% of days without the
     /// planner, and captured on missions.
@@ -251,7 +251,7 @@ public sealed partial class SimpleAi
         return best;
     }
 
-    // ================================================================== posts (m5-characters-and-force §Posts)
+    // ================================================================== posts (m5-characters-and-talent §Posts)
 
     private bool MoveCharacter(CharacterRecord c, string dest)
     {

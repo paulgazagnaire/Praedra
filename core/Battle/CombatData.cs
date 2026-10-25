@@ -8,7 +8,7 @@ namespace Praedra.Core.Battle;
 public enum Arc { Fore = 0, Aft = 1, Port = 2, Starboard = 3 }
 
 /// <summary>Weapon types of the New battle. <c>Torpedo</c> is a squadron's one salvo. rule: m4-battle-new §2.</summary>
-public enum WeaponKind { Turbolaser = 0, IonCannon = 1, LaserCannon = 2, Torpedo = 3 }
+public enum WeaponKind { HeavyCannon = 0, IonCannon = 1, LaserCannon = 2, Torpedo = 3 }
 
 /// <summary>Size class of a hull (the index into the hit-chance row): fighter squadrons, then small to huge. rule: m4-battle-new §1, §2.</summary>
 public enum SizeClass { Fighter = 0, Small = 1, Medium = 2, Large = 3, Huge = 4 }
@@ -206,7 +206,7 @@ public sealed class NewBattleData
 
     private static WeaponKind ParseWeapon(string s, string where) => s switch
     {
-        "turbolaser" => WeaponKind.Turbolaser, "ion_cannon" => WeaponKind.IonCannon, "laser_cannon" => WeaponKind.LaserCannon,
+        "heavy_cannon" => WeaponKind.HeavyCannon, "ion_cannon" => WeaponKind.IonCannon, "laser_cannon" => WeaponKind.LaserCannon,
         "torpedo" => WeaponKind.Torpedo, _ => throw new DataLoadException($"{where}: unknown weapon '{s}'."),
     };
 

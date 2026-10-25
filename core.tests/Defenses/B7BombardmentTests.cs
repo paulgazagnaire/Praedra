@@ -36,7 +36,7 @@ public class B7BombardmentTests
         var ship = Ship(w, f);
         Assert.Equal(100, ship.Hull);
         var d = Assert.Single(w.Events<BombardShipDamaged>());
-        Assert.Equal((800, 300, 500, false, 0), (d.Turbolaser, d.Shield, d.HullLost, d.Destroyed, d.Critical));
+        Assert.Equal((800, 300, 500, false, 0), (d.HeavyCannon, d.Shield, d.HullLost, d.Destroyed, d.Critical));
         Assert.Equal(1, ship.Hits![0]);
         Assert.Equal(1, w.Events<BombardmentStarted>().Single().Hits); // C4: 1 - 1 x 500 / 600 = 1 - 0 (truncating)
         Assert.NotNull(w.Eco.Find(reg));
@@ -364,14 +364,12 @@ public class B7BombardmentTests
         Assert.Equal(p, Praedra.Core.Setup.GameHost.New(1).Bombardment.Params);
     }
 
-    // B7-bombardment §4.4.5: CSCRHTTB (the critical-hit table) has the thresholds the module uses: 0, 16, 31, 41, 46 over rand(0..50)
+    // B7-bombardment §4.4.5: the critical-hit table (CSCRHTTB) thresholds the module uses: 0, 16, 31, 41, 46 over rand(0..50)
     [Fact]
-    public void CriticalTableIsTheOriginalFile()
+    public void CriticalTableThresholds()
     {
-        var t = CsvTable.Load(Path.Combine(TestData.ClassicDir, "raw", "CSCRHTTB.csv"));
         var p = new BombardParams();
-        Assert.Equal(new[] { 0, p.CriticalShieldUpTo + 1, p.CriticalWeaponsUpTo + 1, p.CriticalHoldBeamUpTo + 1, p.CriticalSpeedUpTo + 1 },
-            Enumerable.Range(0, t.RowCount).Select(r => t.GetInt(r, "threshold")));
+        Assert.Equal(new[] { 0, 16, 31, 41, 46 }, new[] { 0, p.CriticalShieldUpTo + 1, p.CriticalWeaponsUpTo + 1, p.CriticalHoldBeamUpTo + 1, p.CriticalSpeedUpTo + 1 });
     }
 
     // B7-bombardment §4.4.5: the CSCRHTTB roll picks the counter; the hyperdrive goes to the backup once the primary is at the cap 4
@@ -439,9 +437,9 @@ public class B7BombardmentTests
         Assert.Equal((225, 2000, 0, true), (d.Shield, d.Ion, d.HullLost, d.Grounded));
     }
 
-    // B7-bombardment §4.4.2, §4.4.3: ion eats the shield first, turbolaser eats what is left of it, then the hull; ion left grounds the ship
+    // B7-bombardment §4.4.2, §4.4.3: ion eats the shield first, heavy cannon eats what is left of it, then the hull; ion left grounds the ship
     [Fact]
-    public void IonFirstThenTurbolaserThenHull()
+    public void IonFirstThenHeavyCannonThenHull()
     {
         var w = new BombWorld();
         w.Hold(Emp);

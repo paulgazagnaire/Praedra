@@ -16,7 +16,7 @@ public sealed record DefenseClass(int Id, string Name, int Family, int Cost, int
 
 /// <summary>
 /// The defense classes and every bombardment defense value that is data: <c>defense-facilities.csv</c> (the six classes) and
-/// <c>bombardment-defense.csv</c> (from data/classic/, read by importer/: regiments from TROOPSD, the manufacturing and production facilities
+/// <c>bombardment-defense.csv</c> (from data/classic/, copied from the Classic files: regiments from TROOPSD, the manufacturing and production facilities
 /// from MANFACSD/PROFACSD word 12, the Hearth from ALLFACSD word 12; the Sensor Station, not a Classic class, is a DEFAULT row of
 /// data/design/bombardment-defense.csv, merged). rule: m3-planetary-defenses §The six classes ("Load these from the importer as a data file
 /// keyed by class id"); m3-bombardment §Resolution 4; B7-bombardment §7 (C8).

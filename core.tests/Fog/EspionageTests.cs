@@ -13,8 +13,8 @@ public class EspionageTests
     private static readonly Lazy<GameData> MapE = new(() =>
     {
         var names = Enumerable.Range(1, 12).Select(i => $"A{i:00}").ToList();
-        var planets = "name,sector,group,map_x,map_y\nE0,S0,outer_rim,0,0\n" +
-                      string.Join("\n", names.Select((n, i) => $"{n},{(i < 6 ? "S1" : "S2")},outer_rim,{(i + 1) * 80},0")) + "\n";
+        var planets = "name,sector,group,map_x,map_y\nE0,S0,farreach,0,0\n" +
+                      string.Join("\n", names.Select((n, i) => $"{n},{(i < 6 ? "S1" : "S2")},farreach,{(i + 1) * 80},0")) + "\n";
         var chain = new[] { "E0" }.Concat(names).ToList();
         var lanes = "from,to,kind,routes\n" + string.Join("\n", chain.Zip(chain.Skip(1)).Select(p => $"{p.First},{p.Second},generated,")) + "\n";
         var g = GalaxyLoader.Load(planets, lanes, TestData.Tiers);

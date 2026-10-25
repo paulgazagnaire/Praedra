@@ -1,3 +1,6 @@
+using System.Text.RegularExpressions;
+using Praedra.Core.Clock;
+using Praedra.Core.Construction;
 using Praedra.Core.Data;
 using Praedra.Core.Setup;
 using Xunit;
@@ -80,6 +83,26 @@ public class NameMigrationTests
         Assert.Null(loaded.Economy.Find(mine.Id));
         Assert.Equal(host.Economy.Objects.Count - 1, loaded.Economy.Objects.Count);
         Assert.Contains("Death Star Shield", GameData.Default.Names.Cut);
+    }
+
+    // QA-46: a cut object still in a build queue goes with it; the rest of the queue keeps building and the game steps on.
+    [Fact]
+    public void ASaveWithACutClassInABuildQueueLoadsAndSteps()
+    {
+        var host = NewGame.Create(new NewGameOptions { Seed = 7 });
+        string yard = host.Economy.Objects.Where(o => o.Class == "Orbital Shipyard" && host.Economy.OwnerOf(o) == Side.Hand)
+            .Select(o => o.System!).OrderBy(s => s, StringComparer.Ordinal).First();
+        host.Game.Submit(seq => new BuildOrder(seq, Side.Hand, yard, YardFamily.Shipyard, "Bond", 2, null));
+        host.Game.Step();
+        var units = host.Game.State.Construction.AllProjects().Single(p => p.System == yard).AllUnits().ToList();
+        Assert.Equal(2, units.Count);
+        var tag = new Regex($"(\"Id\":{units[0]},\"Category\":\\d+,\"Class\":\")Bond\"");
+        string save = host.Save();
+        Assert.Matches(tag, save);
+        var loaded = GameHost.Load(tag.Replace(save, "${1}Death Star Shield\""));
+        Assert.Null(loaded.Economy.Find(units[0]));
+        Assert.Equal(new[] { units[1] }, loaded.Game.State.Construction.AllProjects().Single(p => p.System == yard).AllUnits());
+        for (int i = 0; i < 5; i++) loaded.Game.Step(); // threw KeyNotFoundException in ConstructionModule.CostOf before
     }
 
     [Fact]

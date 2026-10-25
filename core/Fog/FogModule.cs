@@ -223,13 +223,13 @@ public sealed class FogModule
             case RevealKind.Presence: a = b = e = true; c = d = false; break;
             case RevealKind.Recon: a = b = e = true; c = Params.ReconRevealsFacilities; d = false; break;
             case RevealKind.Engagement: b = e = true; d = groundToo; a = c = false; break;
-            case RevealKind.LossNotice: case RevealKind.CoreReport: b = true; a = c = d = e = false; break;
+            case RevealKind.LossNotice: case RevealKind.HeartlandReport: b = true; a = c = d = e = false; break;
             case RevealKind.Destroyed: a = b = true; c = d = e = false; break;
             default: throw new ArgumentOutOfRangeException(nameof(kind));
         }
         var know = F.Of(side);
         var k = know.Touch(sys);
-        if (kind == RevealKind.Destroyed) k.Destroyed = true; // rule: m5-death-star §2 effect 6 (every side's view learns the system is destroyed)
+        if (kind == RevealKind.Destroyed) k.Destroyed = true; // rule: m5-harvester §2 effect 6 (every side's view learns the system is destroyed)
         if (a)
         {
             var slots = _eco.SlotsOf(sys);
@@ -545,7 +545,7 @@ public sealed class FogModule
 
     // ================================================================== slot 5.4: live refresh
 
-    // rule: §F8 slot 5.4; §F3 (live access); §F2 OwnLive, Presence, CoreReport, Engagement
+    // rule: §F8 slot 5.4; §F3 (live access); §F2 OwnLive, Presence, HeartlandReport, Engagement
     private void LiveRefresh(StepContext ctx)
     {
         int stamp = ctx.Day + 1;
@@ -565,7 +565,7 @@ public sealed class FogModule
                 string n = sys.Name;
                 if (_fleets.OwnerOf(n) == side) { Write(ctx, truth, side, n, RevealKind.OwnLive, stamp); F.Of(side).Touch(n).LastLookDay = stamp; continue; }
                 if (truth.HasFleet(side, n) || AgentHere(side, n)) { Write(ctx, truth, side, n, RevealKind.Presence, stamp); F.Of(side).Touch(n).LastLookDay = stamp; continue; }
-                if (Params.CoreReportsInstantly && sys.Group == Params.CoreGroup) Write(ctx, truth, side, n, RevealKind.CoreReport, stamp);
+                if (Params.HeartlandReportsInstantly && sys.Group == Params.HeartlandGroup) Write(ctx, truth, side, n, RevealKind.HeartlandReport, stamp);
             }
     }
 
@@ -681,7 +681,7 @@ public sealed class FogModule
     // ================================================================== event audience
 
     // rule: §N8 Event audience. DEFAULT: the side of the event's subject, plus the other side if it has live access (kinds 1 to 3, not the
-    // Core report) to the event's system at that moment. Exceptions: HqDeparted, HqArrived and an HqMove support change go to the Collective
+    // Heartland report) to the event's system at that moment. Exceptions: HqDeparted, HqArrived and an HqMove support change go to the Collective
     // only (§N7 1: the Hand must never be told "the HQ arrived"); HqDestroyed, GameWon go to both; SystemCaptured to winner, loser and any
     // side with live access. The fog's own per-viewer events go to their viewer. The subject and the system are read from the event's
     // fields named Side, Holder, Owner or Fleet (the fleet's side) and System; an event with neither goes to both (Contradictions 11: the
@@ -695,7 +695,7 @@ public sealed class FogModule
             case HqDeparted or HqArrived: return All;
             case SupportChanged sc when sc.Cause == SupportCause.HqMove: return All;
             case HqDestroyed or Victory.GameWon: return Both;
-            case Harvester.IHarvesterEvent: return Both; // galaxy notices: "New harvester Deployed", "Planet Destroyed", ... (m5-death-star §1, §2 effect 6)
+            case Harvester.IHarvesterEvent: return Both; // galaxy notices: "New harvester Deployed", "Planet Destroyed", ... (m5-harvester §1, §2 effect 6)
             case SystemExplored x: return Bit(x.Viewer);
             case OwnerChangeSeen x: return Bit(x.Viewer);
             case FleetSighted x: return Bit(x.Viewer);

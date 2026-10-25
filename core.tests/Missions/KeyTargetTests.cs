@@ -17,7 +17,7 @@ public class KeyTargetTests
     // Ravilla qualified for a kill or kidnap: combat 100 and espionage 60. Nobody or Mon stands at T (Collective), HQ placed at T when asked.
     private static MissionWorld Assassin(int target, int ravillaCombat = 100, int ravillaEsp = 60, int regiments = -1, bool hq = false)
     {
-        var w = new MissionWorld(characters: Praedra.Core.Tests.Characters.CharWorld.ClassicTalent()); // the Classic Talent (100 / 100 / 50): m5-characters-and-force §Talent CH37
+        var w = new MissionWorld(characters: Praedra.Core.Tests.Characters.CharWorld.ClassicTalent()); // the Classic Talent (100 / 100 / 50): m5-characters-and-talent §Talent CH37
         w.Hold(T, Side.Collective, 30); // N = ceil(30 / 10) = 3 regiments
         for (int i = 0; i < Math.Max(regiments, 0); i++) w.Unit(Side.Collective, RebArmy, T);
         w.Agent(Ravilla, T, esp: ravillaEsp, com: ravillaCombat);

@@ -103,7 +103,7 @@ public class NewBattleBroadsideTests
     }
 
     // space-combat/11 §4 (2): reach uses the batteries that hold 90% of the in-arc dps. An Mandate against a shielded Homeward: ions (35, x1.5 on shields) carry 60% of the dps and
-    // the turbolasers (50) 40%, so 90% needs the ions: reach = 35 - 12 - 2 = 21, not 50 - 14 = 36. Lowering the share to 30% lets the turbolasers set it (36).
+    // the heavy cannons (50) 40%, so 90% needs the ions: reach = 35 - 12 - 2 = 21, not 50 - 14 = 36. Lowering the share to 30% lets the heavy cannons set it (36).
     [Fact]
     public void Section4_2_ReachUsesTheBatteriesHolding90PercentOfTheDps()
     {
@@ -116,7 +116,7 @@ public class NewBattleBroadsideTests
         }
         Assert.Equal(21, Reach(0.9));
         Assert.Equal(36, Reach(0.3));
-        // and the Homeward (ion 40 and turbolaser 65): ions carry the dps against a shield too, reach 40 - 14 = 26
+        // and the Homeward (ion 40 and heavy cannon 65): ions carry the dps against a shield too, reach 40 - 14 = 26
         double homeward = -1;
         Run(new NewBattleParams(), 1, new[] { (Homeward, 1) }, new[] { (Mandate, 1) }, log: false, hook: nb0 => nb0.AfterTick = t => { if (t == 3) homeward = nb0.LastReach(Side.Collective); });
         Assert.Equal(26, homeward);
@@ -136,7 +136,7 @@ public class NewBattleBroadsideTests
         Assert.Equal(21, re);
         Assert.Equal(Math.Min(ra, re), target);
         Assert.True(ShotsBy(nb, Side.Collective) > 0 && ShotsBy(nb, Side.Hand) > 0);
-        // the lock-out of the old rule: the longer-ranged side (Mandate turbolaser 50) used to park out of reach of the shorter-ranged one
+        // the lock-out of the old rule: the longer-ranged side (Mandate heavy cannon 50) used to park out of reach of the shorter-ranged one
         Assert.Equal(21, nb.Distance);
     }
 

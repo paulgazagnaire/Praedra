@@ -19,7 +19,7 @@ public partial class StartMenu : Control
 
     static readonly string[] SideBlurb =
     {
-        "The Galactic Hand: strong fleets, and a galaxy to keep in line. Crush the Collective.",
+        "The Hand: strong fleets, and a galaxy to keep in line. Crush the Collective.",
         "The Collective Collective: few ships, many friends. Win the people over and take down the Hand.",
     };
 

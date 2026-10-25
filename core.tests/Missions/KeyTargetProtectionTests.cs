@@ -109,7 +109,7 @@ public class KeyTargetProtectionTests
     // Ravilla on Assassination of a target standing at Collective T with one landed Collective Army regiment.
     private static MissionWorld KeyJob(int target, MissionParams? p, int ravillaEsp = 60, int regiments = 1)
     {
-        var w = new MissionWorld(p, characters: Praedra.Core.Tests.Characters.CharWorld.ClassicTalent()); // the Classic Talent (100 / 100 / 50): m5-characters-and-force §Talent CH37
+        var w = new MissionWorld(p, characters: Praedra.Core.Tests.Characters.CharWorld.ClassicTalent()); // the Classic Talent (100 / 100 / 50): m5-characters-and-talent §Talent CH37
         w.Hold(T, Side.Collective, 30);
         for (int i = 0; i < regiments; i++) w.Unit(Side.Collective, RebArmy, T);
         w.Agent(Ravilla, T, esp: ravillaEsp, com: 100);

@@ -748,3 +748,6 @@ character,Black Krrsantan,Pignus
 facility,Alliance Headquarters,Hearth
 capital_ship,Death Star,harvester
 defense,Death Star Shield,Harvester Shield
+group,core,heartland
+group,inner_rim,midreach
+group,outer_rim,farreach

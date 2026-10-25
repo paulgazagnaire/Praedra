@@ -163,7 +163,7 @@ public sealed partial class SimpleAi
         var d = new Dictionary<string, int>(StringComparer.Ordinal);
         _belief = d; _beliefMax = 0;
         if (_view == null || _side != Side.Hand) return d;
-        string core = _h.Fog.Params.CoreGroup;
+        string core = _h.Fog.Params.HeartlandGroup;
         // Collective fleet sightings by system (the side's own log of the last ObservedWindowDays). rule: m5-fog-and-hq §N7 2
         var sightings = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var s in _view.Sightings(Today - _view.ObservedWindowDays))
@@ -178,7 +178,7 @@ public sealed partial class SimpleAi
             if (Held(s) || Destroyed(s)) continue;
             var pic = _view.Picture(s);
             int w;
-            if (pic == null) w = string.Equals(sys.Group, core, StringComparison.OrdinalIgnoreCase) ? 0 : _p.BeliefUnexplored; // §N7 4: only rim starts and Collective systems
+            if (pic == null) w = string.Equals(sys.Group, core, StringComparison.OrdinalIgnoreCase) ? 0 : _p.BeliefUnexplored; // §N7 4: only outer starts and Collective systems
             else
             {
                 var owner = pic.Owner;

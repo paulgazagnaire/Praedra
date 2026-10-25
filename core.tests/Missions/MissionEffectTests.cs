@@ -17,7 +17,7 @@ public class MissionEffectTests
         var w = new MissionWorld(rule: rule);
         w.Hold(T, holder, collectiveSupport);
         if (holder is Side h) for (int i = 0; i < regiments; i++) w.Unit(h, h == Side.Collective ? RebArmy : ImpArmy, T);
-        // The sector flag is recomputed every day at slot 5.6 from the harvesters in fleets (m5-death-star §3), so a hand-set flag would be cleared:
+        // The sector flag is recomputed every day at slot 5.6 from the harvesters in fleets (m5-harvester §3), so a hand-set flag would be cleared:
         // a Hand harvester at H (same sector as T) raises it the honest way.
         if (harvester) w.Host.Fleets.AddFleet(Side.Hand, "harvester", new[] { "harvester" }, H);
         int agent = side == Side.Collective ? Ledger : Varo;
@@ -205,7 +205,7 @@ public class MissionEffectTests
     [Fact]
     public void MI37_HarvesterSabotage()
     {
-        var w = new MissionWorld(characters: Praedra.Core.Tests.Characters.CharWorld.ClassicTalent()); // the Classic Talent (m5-characters-and-force §Talent CH37)
+        var w = new MissionWorld(characters: Praedra.Core.Tests.Characters.CharWorld.ClassicTalent()); // the Classic Talent (m5-characters-and-talent §Talent CH37)
         w.Hold(T, Side.Hand, 0);
         w.Agent(Nobody, T, esp: 100, com: 100);
         var calls = new List<(string, Side)>();

@@ -226,7 +226,7 @@ public sealed class ControlModule
 
     private bool Recompute(StepContext ctx, string system, int bits)
     {
-        if (_eco.IsDestroyed(system)) { _presence[system] = bits; return false; } // rule: m5-death-star §2 effect 5: a destroyed system cannot be held
+        if (_eco.IsDestroyed(system)) { _presence[system] = bits; return false; } // rule: m5-harvester §2 effect 5: a destroyed system cannot be held
         int prev = PreviousMilitary(system);
         int mil = bits == (CollectiveBit | HandBit) ? prev : SingleMilitary(bits); // both present: unchanged
         if (bits == (CollectiveBit | HandBit)) { C.Contested ??= new SortedDictionary<string, int>(StringComparer.Ordinal); C.Contested[system] = mil; }
@@ -416,7 +416,7 @@ public sealed class ControlModule
     {
         if (!_galaxy.TryFindSystem(system, out _)) throw new ArgumentException($"Unknown system '{system}'.");
         if (Rule != ControlRule.AssaultOnly) return false;
-        if (_eco.IsDestroyed(system)) return false; // rule: m5-death-star §2 effect 5
+        if (_eco.IsDestroyed(system)) return false; // rule: m5-harvester §2 effect 5
         Side? old = HolderOf(system);
         if (old == newHolder) return false;
         int bits = PresenceAt(system);
@@ -436,7 +436,7 @@ public sealed class ControlModule
         if (!DebugOrdersEnabled) return OrderResult.Reject(RejectReason.DebugDisabled);
         if (Rule != ControlRule.AssaultOnly) return OrderResult.Reject(RejectReason.NotUnderDerivedControl);
         if (!_galaxy.TryFindSystem(o.System, out _)) return OrderResult.Reject(RejectReason.UnknownSystem);
-        if (_eco.IsDestroyed(o.System)) return OrderResult.Reject(RejectReason.SystemDestroyed); // rule: m5-death-star §2 effect 5 (cannot be held)
+        if (_eco.IsDestroyed(o.System)) return OrderResult.Reject(RejectReason.SystemDestroyed); // rule: m5-harvester §2 effect 5 (cannot be held)
         if (HolderOf(o.System) == o.NewHolder) return OrderResult.Reject(RejectReason.AlreadyHolder);
         SetHolder(ctx, o.System, o.NewHolder, CaptureCause.Debug);
         return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));

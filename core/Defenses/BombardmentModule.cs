@@ -219,11 +219,11 @@ public sealed class BombardmentModule
         if (f.Side != side) return RejectReason.NotYours;
         if (f.At == null) return RejectReason.InTransit;
         if (f.At != system) return BombardReject.NotAtSystem;
-        if (_eco.IsDestroyed(system)) return RejectReason.SystemDestroyed;                                   // rule: m5-death-star §2 effect 5 (cannot be bombarded)
+        if (_eco.IsDestroyed(system)) return RejectReason.SystemDestroyed;                                   // rule: m5-harvester §2 effect 5 (cannot be bombarded)
         if (_fleets.OwnerOf(system) == side) return BombardReject.OwnSystem;                                 // 2 (enemy or neutral allowed)
         if (_fleets.FleetsAt(system).Any(x => x.Side != side)) return BombardReject.EnemyFleetPresent;       // 3 (DEFAULT: both sides, any fleet)
         if (Power(f) <= 0) return BombardReject.NoBombardPower;                                              // 4 (DEFAULT)
-        if (category == BombardCategory.DestroySystem) return RejectReason.NotAvailable;                     // 5 (Destroy System is its own order, DestroySystemOrder: m5-death-star §2)
+        if (category == BombardCategory.DestroySystem) return RejectReason.NotAvailable;                     // 5 (Destroy System is its own order, DestroySystemOrder: m5-harvester §2)
         if (atOrder && (_pending.Any(p => p.Fleet == fleetId) || OtherOrderPending(fleetId))) return BombardReject.OrderPending;             // 6 (DEFAULT)
         return null;
     }
@@ -429,9 +429,9 @@ public sealed class BombardmentModule
 
     /// <summary>
     /// Every completed Mordant Lien-150, then every completed Covenant, fires one shot at a random ship of <paramref name="ships"/>: rand(0..n - 1), damage
-    /// attack x (L / 40 + 1). Then ship by ship: the current shield S = shield x (4 - c) / 4 x hull left / hull; ion eats S, turbolaser eats what is
+    /// attack x (L / 40 + 1). Then ship by ship: the current shield S = shield x (4 - c) / 4 x hull left / hull; ion eats S, heavy cannon eats what is
     /// left of S then the hull (stays; at 0 the ship is destroyed); a survivor that lost hull rolls for a critical hit. A ship with ion left after its
-    /// shields is grounded for this strike. Shield loss and the ion and turbolaser amounts end with the strike (nothing of them is stored).
+    /// shields is grounded for this strike. Shield loss and the ion and heavy cannon amounts end with the strike (nothing of them is stored).
     /// rule: B7-bombardment §4 (0x58dc10, 0x58d540, 0x5018c0, 0x5585e0).
     /// </summary>
     private void ReturnFire(StepContext ctx, int day, string system, List<EconObject> ships, SortedSet<int> grounded)
@@ -468,7 +468,7 @@ public sealed class BombardmentModule
             long s = shield;
             long ionLeft = ion[k] - s;                         // §4.4.2: ion eats S first; what is left stays on the ship for this strike
             if (ionLeft >= 0) s = 0; else { s = -ionLeft; ionLeft = 0; }
-            long hullLoss = Math.Clamp(turbo[k] - s, 0, left); // §4.4.3, §4.4.4: turbolaser eats what is left of S, then the hull, capped at the hull
+            long hullLoss = Math.Clamp(turbo[k] - s, 0, left); // §4.4.3, §4.4.4: heavy cannon eats what is left of S, then the hull, capped at the hull
             ship.Hull = left - (int)hullLoss;
             bool destroyed = ship.Hull <= 0;
             bool isGrounded = !destroyed && ionLeft > 0;       // §4.5 (the object-bit exemption +0x24 & 0x30 was not read: never applied)

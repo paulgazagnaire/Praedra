@@ -248,7 +248,7 @@ public partial class GameScreen
         if (p.Kind is not MissionKind sel) { CloseRow(); return; }
         Heading("3. Target");
         Line(GameSession.KindHelp(sel), Dim, 13);
-        if (sel == MissionKind.SpikeTheHarvester) Line(S.EnemyHarvesterNote, Dim, 13); // rule: m5-death-star §5
+        if (sel == MissionKind.SpikeTheHarvester) Line(S.EnemyHarvesterNote, Dim, 13); // rule: m5-harvester §5
         if (sel == MissionKind.Rescue)
         {
             var prisoners = S.MyCharacters.Where(c => c.Status == CharacterStatus.Captured && c.HeldAt != null).ToList();

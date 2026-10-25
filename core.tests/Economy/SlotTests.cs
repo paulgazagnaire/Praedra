@@ -244,7 +244,7 @@ public class SlotTests
 
     // m2-slots-and-resources S15
     [Fact]
-    public void S15_RolledCoreSystemsMatchTheMonteCarloMeans()
+    public void S15_RolledHeartlandSystemsMatchTheMonteCarloMeans()
     {
         var rng = new GameRng(2026);
         var p = new EconomyParams();
@@ -260,7 +260,7 @@ public class SlotTests
         Assert.Equal(n, populated);
     }
 
-    // m2-slots-and-resources §Rule (New) SlotSource: rolled in ordinal name order, rim stays within the caps
+    // m2-slots-and-resources §Rule (New) SlotSource: rolled in ordinal name order, outer systems stay within the caps
     [Fact]
     public void RolledSlotSourceFillsEverySystemAndIsDeterministic()
     {

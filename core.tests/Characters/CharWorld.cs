@@ -19,7 +19,7 @@ internal sealed class CharWorld
     public const int Varo = 898, EightyEight = 899;
 
     /// <summary>The Classic Talent values (Classic): TalentSkillPercent 100, TalentTrainingChancePercent 100, TalentTrainingGainPercent 50 (GNPRTB 6173).
-    /// rule: m5-characters-and-force §Talent (Classic = 100 / 100 / 50).</summary>
+    /// rule: m5-characters-and-talent §Talent (Classic = 100 / 100 / 50).</summary>
     public static CharacterParams ClassicTalent(CharacterParams? p = null) => (p ?? new CharacterParams()) with
     {
         TalentSkillPercent = CharacterParams.ClassicTalentSkillPercent, TalentTrainingChancePercent = CharacterParams.ClassicTrainingChancePercent,

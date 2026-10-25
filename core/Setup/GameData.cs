@@ -37,7 +37,7 @@ public sealed record GameData(
     /// <summary>The repository's own data (found by walking up from the program folder to Praedra.sln), loaded once and shared.</summary>
     public static GameData Default => _default.Value;
 
-    /// <summary>Read the data folders under <paramref name="repoRoot"/>: <c>data/design</c> and <c>data/classic</c> (written by importer/; some
+    /// <summary>Read the data folders under <paramref name="repoRoot"/>: <c>data/design</c> and <c>data/classic</c> (copied from the Classic files; some
     /// original files are merged with the design file of the same name). rule: B1-own-importer §Work 3, 4.</summary>
     public static GameData Load(string repoRoot)
     {
