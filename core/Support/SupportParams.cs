@@ -67,8 +67,8 @@ public sealed record SupportParams
     /// <summary>GNPRTB 7707 / 7708: each die is Base + rand(0..Spread). Traced.</summary>
     public int DieBase { get; init; } = 1;
     public int DieSpread { get; init; } = 9;
-    /// <summary>The Stormtrooper Regiment class (0x10000006, TROOPSD id 6). Traced.</summary>
-    public string StormtrooperClass { get; init; } = "Stormtrooper Regiment";
+    /// <summary>The Pacifiers class (0x10000006, TROOPSD id 6). Traced.</summary>
+    public string StormtrooperClass { get; init; } = "Pacifiers";
     /// <summary>UPRIS1TB: (lowest score, code); "largest threshold at or below the score". Scores below the first threshold give code 0. Traced.</summary>
     public IReadOnlyList<(int MinScore, int Code)> Table1 { get; init; } = new[] { (6, 1), (10, 2) };
     /// <summary>UPRIS2TB. Traced.</summary>

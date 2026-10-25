@@ -1,556 +1,556 @@
-name,sector,group,canon_region,energy,raw,populated,basis,why
-Ab Dalis,Ab Dalis Sector,outer_rim,unknown,6,4,1,region,
-Abednedo,Chandrila Sector,inner_rim,Core,12,9,1,formula,
-Abregado,Abregado Sector,inner_rim,Core,12,9,1,formula,
-Adega,Ryloth Sector,outer_rim,Outer Rim,6,4,1,formula,
-Aduba,Tund Sector,outer_rim,Outer Rim,6,4,1,region,
-Af'El,Saleucami Sector,outer_rim,Outer Rim,6,3,1,keyword,agricultural
-Agamar,Alpinn Sector,outer_rim,Outer Rim,6,4,1,formula,
-Agrilat,Cato Neimoidia Sector,inner_rim,?,6,3,1,formula,
-Akiva,Akiva Sector,outer_rim,Outer Rim,6,4,1,formula,
-Akrit'tar,Akrit'tar Sector,outer_rim,Outer Rim,6,4,1,formula,
-Aldhani,Ithor Sector,outer_rim,Outer Rim,6,4,1,region,
-Aleen,Ord Mantell Sector,outer_rim,Mid Rim,8,5,1,formula,
-Algarian,Algarian Sector,inner_rim,Mid Rim,8,5,1,formula,
-Alk'lellish III,Alk'lellish III Sector,inner_rim,Outer Rim,6,4,1,formula,
-Allanteen VI,Oetrago Sector,inner_rim,Mid Rim,8,5,1,formula,
-Allyuen,Praesitlyn Sector,outer_rim,Outer Rim,6,4,1,formula,
-Alpinn,Alpinn Sector,outer_rim,Outer Rim,6,5,1,keyword,mining
-Altarrn,Altarrn Sector,inner_rim,Mid Rim,8,5,1,formula,
-Ambria,Kashyyyk Sector,inner_rim,Inner Rim,10,7,1,formula,
-Amorris,Amorris Sector,outer_rim,Outer Rim,6,4,1,formula,
-Anaxes,Lianna Sector,outer_rim,Core,12,9,1,formula,
-Anchoron,Sullust Sector,outer_rim,Outer Rim,6,4,1,formula,
-Ando,Akiva Sector,outer_rim,Mid Rim,8,5,1,formula,
-Annaj,Bespin Sector,outer_rim,Outer Rim,6,4,1,formula,
-Anoat,Hoth Sector,outer_rim,Outer Rim,6,4,1,formula,
-Ansion,Ansion Sector,outer_rim,Mid Rim,8,5,1,formula,
-Antar 4,Cato Neimoidia Sector,inner_rim,Mid Rim,10,7,1,keyword,billions of people
-Ardennia,Algarian Sector,inner_rim,Outer Rim,6,4,1,region,
-Aridus,Aridus Sector,inner_rim,Mid Rim,8,5,1,formula,
-Arkania,Altarrn Sector,inner_rim,Inner Rim,10,7,1,formula,
-Arkanis,Naboo Sector,outer_rim,Outer Rim,6,4,1,formula,
-Atollon,Kessel Sector,outer_rim,Outer Rim,6,4,1,formula,
-Averam,Averam Sector,inner_rim,Outer Rim,6,4,1,formula,
-Axxila,Axxila Sector,outer_rim,Outer Rim,6,5,1,keyword,mining
-Azbian,Averam Sector,inner_rim,?,6,3,1,formula,
-Bajic,Ryloth Sector,outer_rim,Outer Rim,6,4,1,region,
-Bakura,Hoth Sector,outer_rim,Wild Space,7,6,1,lore,colony world [Wookieepedia-adjusted]
-Balfron,Balfron Sector,core,Core,12,11,1,formula,
-Balmorra,Balmorra Sector,inner_rim,Colonies,12,7,1,lore,arms-manufacturing world
-Balosar,Cerea Sector,inner_rim,Core,12,11,1,formula,
-Bandomeer,Bandomeer Sector,outer_rim,Outer Rim,6,4,1,formula,
-Barab I,Tund Sector,outer_rim,Outer Rim,8,7,1,keyword,billions of people; mining
-Bardotta,Bardotta Sector,inner_rim,Core,12,9,1,formula,
-Baroonda,Saleucami Sector,outer_rim,Outer Rim,6,4,1,region,
-Barton IV,Mon Calamari Sector,outer_rim,Outer Rim,6,4,1,region,
-Basilisk,Coruscant Sector,core,Core,12,11,1,formula,
-Bastatha,Byss Sector,inner_rim,Colonies,11,8,1,formula,
-Bastion,Endor Sector,outer_rim,Outer Rim,6,4,1,formula,
-Batuu,Ansion Sector,outer_rim,Outer Rim,6,4,1,formula,
-Begamor,Ithor Sector,outer_rim,Outer Rim,8,5,1,keyword,billions of people
-Belladoon,Muunilinst Sector,outer_rim,Outer Rim,6,4,1,region,
-Belsavis,Belsavis Sector,outer_rim,Outer Rim,6,4,1,formula,
-Beltire,Ansion Sector,outer_rim,Mid Rim,8,5,1,region,
-Berchest,Alk'lellish III Sector,inner_rim,Inner Rim,10,7,1,formula,
-Bescane,Hoth Sector,outer_rim,Outer Rim,8,5,1,keyword,billions of people; mining; agricultural
-Bespin,Bespin Sector,outer_rim,Outer Rim,8,5,1,lore,"Cloud City, tibanna gas"
-Bestine IV,Fondor Sector,inner_rim,Inner Rim,10,7,1,formula,
-Bilbringi,Bilbringi Sector,inner_rim,Inner Rim,11,6,1,lore,"Imperial shipyard, Inner Rim fleet base"
-Bimmisaari,Bimmisaari Sector,inner_rim,Mid Rim,8,5,1,formula,
-Birren,Balmorra Sector,inner_rim,Inner Rim,10,7,1,formula,
-Blutopia,Takodana Sector,inner_rim,Expansion Region,9,6,1,region,
-Bogden,Altarrn Sector,inner_rim,Inner Rim,10,7,1,formula,
-Bonadan,Mandalore Sector,outer_rim,Outer Rim,6,4,1,formula,
-Boonta,Cymoon Sector,inner_rim,Outer Rim,6,4,1,region,
-Boordii,Amorris Sector,outer_rim,Expansion Region,9,6,1,formula,
-Borleias,Borleias Sector,core,Core,12,11,1,formula,
-Borosk,Algarian Sector,inner_rim,Mid Rim,8,5,1,region,
-Bortras,Sullust Sector,outer_rim,Outer Rim,6,4,1,formula,
-Botajef,Etti Sector,outer_rim,Outer Rim,9,6,1,keyword,billions of people; yards/academy
-Bothawui,Bothawui Sector,inner_rim,Mid Rim,8,3,1,lore,information broker world
-Botor,Nubia Sector,core,Core,12,9,1,region,
-Bpfassh,Averam Sector,inner_rim,Outer Rim,6,4,1,formula,
-Bracca,Bimmisaari Sector,inner_rim,Mid Rim,8,5,1,formula,
-Brentaal IV,Rendili Sector,core,Core,14,8,1,keyword,billions of people; agricultural
-Bromlarch,Lianna Sector,outer_rim,Mid Rim,8,5,1,region,
-Byblos,Corellia Sector,inner_rim,Core,12,9,1,formula,
-Byss,Byss Sector,inner_rim,Deep Core,14,13,1,formula,
-Cadomai,Mandalore Sector,outer_rim,Outer Rim,6,4,1,region,
-Cal-Seti,Coruscant Sector,core,unknown,12,7,1,keyword,agricultural
-Candovant,Oetrago Sector,inner_rim,Colonies,11,8,1,region,
-Cantonica,Mandalore Sector,outer_rim,Outer Rim,6,4,1,formula,
-Caprionril,Balfron Sector,core,Core,12,11,1,formula,
-Caraad,Chandrila Sector,inner_rim,unknown,12,9,1,region,
-Cardooine,Lianna Sector,outer_rim,Outer Rim,6,4,1,formula,
-Carida,Bilbringi Sector,inner_rim,Colonies,11,10,1,formula,
-Carlac,Algarian Sector,inner_rim,Outer Rim,5,3,1,keyword,harsh climate
-Castell,Alk'lellish III Sector,inner_rim,Colonies,12,11,1,keyword,yards/academy; mining
-Cathar,Axxila Sector,outer_rim,Outer Rim,6,4,1,formula,
-Cato Neimoidia,Cato Neimoidia Sector,inner_rim,Colonies,10,5,1,lore,Neimoidian trade world
-Celanon,Akiva Sector,outer_rim,Outer Rim,6,3,1,keyword,agricultural
-Cerea,Cerea Sector,inner_rim,Mid Rim,8,5,1,formula,
-Chalacta,Algarian Sector,inner_rim,Mid Rim,8,5,1,region,
-Chalcedon,Bardotta Sector,inner_rim,Mid Rim,8,5,1,formula,
-Champala,Altarrn Sector,inner_rim,Inner Rim,12,8,1,keyword,billions of people
-Chanceuxi,Alpinn Sector,outer_rim,Outer Rim,6,4,1,region,
-Chandrila,Chandrila Sector,inner_rim,Core,8,3,1,lore,"wealthy Core world, Mon Mothma [Wookieepedia-adjusted]"
-Chardaan,Abregado Sector,inner_rim,Inner Rim,11,8,1,keyword,yards/academy
-Charmath,Balfron Sector,core,Core,12,11,1,formula,
-Charros,Bimmisaari Sector,inner_rim,Mid Rim,8,5,1,region,
-Chazwa,Alk'lellish III Sector,inner_rim,Inner Rim,10,7,1,formula,
-Christophsis,Naboo Sector,outer_rim,Outer Rim,6,4,1,formula,
-Chrondre,Chrondre Sector,outer_rim,?,6,3,1,formula,
-Chyron,Takodana Sector,inner_rim,Expansion Region,9,6,1,region,
-Circumtore,Saleucami Sector,outer_rim,Hutt Space,6,3,1,region,
-Ciutric,Ithor Sector,outer_rim,Outer Rim,6,4,1,region,
-Clak'dor VII,Sluis Van Sector,outer_rim,Outer Rim,6,4,1,formula,
-Commenor,Cato Neimoidia Sector,inner_rim,Colonies,11,10,1,formula,
-Cona,Balmorra Sector,inner_rim,Inner Rim,10,7,1,formula,
-Concord Dawn,Lianna Sector,outer_rim,Expansion Region,9,6,1,formula,
-Contruum,Averam Sector,inner_rim,Mid Rim,11,9,1,keyword,billions of people; yards/academy; mining
-Corellia,Corellia Sector,inner_rim,Core,14,7,1,lore,Corellian Engineering Corporation; heavy industry
-Corfai,Nubia Sector,core,Core,12,11,1,formula,
-Corsin,Alk'lellish III Sector,inner_rim,Expansion Region,9,6,1,formula,
-Corstris,Akiva Sector,outer_rim,Outer Rim,6,4,1,formula,
-Corulag,Chandrila Sector,inner_rim,Core,10,4,1,lore,Imperial academy world; Sienar and Aether Hypernautics research
-Coruscant,Coruscant Sector,core,Core,15,4,1,lore,"ecumenopolis, capital; almost no ore of its own"
-Corvus,Mon Calamari Sector,outer_rim,Outer Rim,6,4,1,formula,
-Coto-Xana,Coruscant Sector,core,unknown,12,9,1,region,
-Couronne,Couronne Sector,inner_rim,Expansion Region,9,6,1,region,
-Crait,Abregado Sector,inner_rim,Mid Rim,8,5,1,formula,
-Csilla,none (outside sectors),,Unknown Regions,4,2,1,formula,
-Culroon III,Ab Dalis Sector,outer_rim,Outer Rim,6,4,1,formula,
-Cyclor,Chandrila Sector,inner_rim,Mid Rim,9,6,1,keyword,yards/academy
-Cymoon,Cymoon Sector,inner_rim,Expansion Region,9,6,1,region,
-Cyrkon,Cyrkon Sector,outer_rim,Outer Rim,6,4,1,formula,
-D'Assem,Alk'lellish III Sector,inner_rim,unknown,10,7,1,region,
-D'Qar,Naboo Sector,outer_rim,Outer Rim,6,4,1,formula,
-Da Soocha,Saleucami Sector,outer_rim,Mid Rim,8,5,1,formula,
-Daalang,Couronne Sector,inner_rim,Mid Rim,10,7,1,keyword,billions of people
-Dagobah,Dagobah Sector,outer_rim,Outer Rim,1,1,1,lore,"swamp, Yoda; a hidden place"
-Daiyu,Balmorra Sector,inner_rim,Mid Rim,8,5,1,region,
-Daltar,Cato Neimoidia Sector,inner_rim,?,6,5,1,formula,
-Dantooine,Ithor Sector,outer_rim,Outer Rim,5,3,1,lore,"agricultural, old Rebel base"
-Danzik,Alpinn Sector,outer_rim,Outer Rim,6,4,1,region,
-Dar'Or,Chrondre Sector,outer_rim,Mid Rim,8,5,1,formula,
-Dathomir,Axxila Sector,outer_rim,Outer Rim,3,2,1,lore,Nightsister world [Wookieepedia-adjusted]
-Davnar,Bothawui Sector,inner_rim,?,6,3,1,formula,
-Delaya,Kashyyyk Sector,inner_rim,Core,12,11,1,formula,
-Denab,Sullust Sector,outer_rim,Outer Rim,6,4,1,formula,
-Denon,Oetrago Sector,inner_rim,Core,12,9,1,formula,
-Derra IV,Chandrila Sector,inner_rim,Expansion Region,9,6,1,formula,
-Desevro,Mon Calamari Sector,outer_rim,Outer Rim,8,4,1,keyword,billions of people; agricultural
-Desix,Toydaria Sector,outer_rim,Hutt Space,6,3,1,formula,
-Despayre,Ithor Sector,outer_rim,Outer Rim,6,4,1,formula,
-Deyer,Ord Mantell Sector,outer_rim,Outer Rim,6,4,1,formula,
-Dolla,Bespin Sector,outer_rim,Outer Rim,6,4,1,region,
-Dorin,Altarrn Sector,inner_rim,Expansion Region,9,6,1,formula,
-Dotharian,Dotharian Sector,outer_rim,Mid Rim,8,5,1,formula,
-Douglas III,Naboo Sector,outer_rim,Outer Rim,6,4,1,formula,
-Drall,Corellia Sector,inner_rim,Core,12,11,1,formula,
-Dressel,Couronne Sector,inner_rim,Mid Rim,10,7,1,keyword,billions of people
-Dromund Kaas,Felucia Sector,outer_rim,Outer Rim,6,4,1,formula,
-Druckenwell,Amorris Sector,outer_rim,Mid Rim,10,5,1,keyword,billions of people; agricultural
-Dubrillion,Hoth Sector,outer_rim,Outer Rim,6,4,1,formula,
-Duros,Nubia Sector,core,Core,12,4,1,lore,"orbital shipyards, spacer culture"
-Eiattu,Averam Sector,inner_rim,Mid Rim,8,5,1,region,Not in lore sheet; region default
-Eiram,Hoth Sector,outer_rim,Outer Rim,6,4,1,region,
-Elrood,Belsavis Sector,outer_rim,Outer Rim,6,4,1,formula,
-Empress Teta,Byss Sector,inner_rim,Deep Core,15,11,1,keyword,billions of people; mining; city world
-Endor,Endor Sector,outer_rim,Outer Rim,4,2,1,lore,"forest moon, Ewoks"
-Engira,Chrondre Sector,outer_rim,Outer Rim,6,4,1,formula,
-Enthenium,Raxus Sector,outer_rim,Outer Rim,6,4,1,region,
-Entralla,Ansion Sector,outer_rim,Colonies,11,8,1,region,
-Epikonia,Alk'lellish III Sector,inner_rim,Mid Rim,8,5,1,region,
-Eriadu,Belsavis Sector,outer_rim,Outer Rim,11,8,1,lore,Outer Rim industrial hub (Tarkin) [Wookieepedia-adjusted]
-Espirion,Cato Neimoidia Sector,inner_rim,Core,12,9,1,formula,
-Etti,Etti Sector,outer_rim,Outer Rim,6,4,1,region,
-Exodeen,Nubia Sector,core,Colonies,10,5,1,lore,"Exodeen: dense, long-settled Hydian Way world"
-F'tral,Toydaria Sector,outer_rim,Outer Rim,6,4,1,formula,
-Falleen,Amorris Sector,outer_rim,Mid Rim,8,5,1,formula,
-Farstine,Naboo Sector,outer_rim,Mid Rim,10,7,1,keyword,billions of people
-Fedalle,Nubia Sector,core,Core,12,11,1,formula,
-Fedje,Bespin Sector,outer_rim,Outer Rim,6,4,1,formula,
-Fef,Altarrn Sector,inner_rim,Mid Rim,8,5,1,formula,
-Felucia,Felucia Sector,outer_rim,Outer Rim,6,4,1,formula,
-Ferrix,Etti Sector,outer_rim,Outer Rim,6,4,1,formula,
-Filve,Toydaria Sector,outer_rim,Mid Rim,8,5,1,formula,
-Firro,Borleias Sector,core,Core,12,11,1,formula,
-Five Points,Lianna Sector,outer_rim,Outer Rim,6,4,1,region,
-Flax,Aridus Sector,inner_rim,Expansion Region,9,6,1,formula,
-Florn,Mon Calamari Sector,outer_rim,Outer Rim,8,5,1,keyword,billions of people
-Florrum,Felucia Sector,outer_rim,Outer Rim,6,4,1,formula,
-Foless,Bilbringi Sector,inner_rim,Colonies,13,10,1,keyword,billions of people
-Fondor,Fondor Sector,inner_rim,Colonies,13,5,1,lore,"Fondor shipyards, Imperial-run"
-Formos,Akrit'tar Sector,outer_rim,Outer Rim,6,4,1,formula,
-Fornax,Bimmisaari Sector,inner_rim,Mid Rim,8,5,1,formula,
-Fwillsving,Tund Sector,outer_rim,Outer Rim,6,4,1,formula,
-G'rho,G'rho Sector,outer_rim,Wild Space,4,2,1,formula,
-Gad,Belsavis Sector,outer_rim,Outer Rim,6,4,1,region,
-Gallios,Ithor Sector,outer_rim,Outer Rim,6,4,1,formula,
-Galpos II,Rishi Sector,outer_rim,Mid Rim,8,5,1,formula,
-Gamorr,Cyrkon Sector,outer_rim,Outer Rim,6,4,1,formula,
-Gand,Kessel Sector,outer_rim,Outer Rim,6,4,1,formula,
-Gandolo IV,Oetrago Sector,inner_rim,?,6,3,1,formula,
-Garban,Cyrkon Sector,outer_rim,Outer Rim,6,4,1,formula,
-Garqi,Endor Sector,outer_rim,Outer Rim,6,3,1,keyword,agricultural
-Gatalenta,Rendili Sector,core,Core Worlds,12,9,1,region,
-Gazian,Averam Sector,inner_rim,Inner Rim,10,7,1,formula,
-Geedon V,Axxila Sector,outer_rim,Outer Rim,6,4,1,formula,
-Generis,Alpinn Sector,outer_rim,Outer Rim,6,4,1,formula,
-Gentes,G'rho Sector,outer_rim,Outer Rim,6,4,1,formula,
-Geonosis,Rishi Sector,outer_rim,Outer Rim,6,4,1,formula,
-Geptish,Muunilinst Sector,outer_rim,unknown,6,4,1,region,
-Gerenthum,G'rho Sector,outer_rim,unknown,8,4,1,keyword,billions of people; agricultural
-Gerrigon,Ord Mantell Sector,outer_rim,unknown,6,4,1,region,
-Ghorman,Fondor Sector,inner_rim,Colonies,7,4,1,lore,textile world
-Gigor,Etti Sector,outer_rim,Outer Rim,5,3,1,keyword,harsh climate
-Giju,Fondor Sector,inner_rim,Colonies,13,7,1,keyword,billions of people; agricultural
-Gizer,Cerea Sector,inner_rim,Mid Rim,8,5,1,region,
-Glee Anselm,Bardotta Sector,inner_rim,Mid Rim,8,5,1,formula,
-Gorse,Balmorra Sector,inner_rim,Inner Rim,10,7,1,formula,
-Grange,Couronne Sector,inner_rim,Mid Rim,8,5,1,region,
-Guat'a,Ryloth Sector,outer_rim,Outer Rim,5,4,1,keyword,harsh climate; mining
-Gyndine,Cato Neimoidia Sector,inner_rim,Expansion Region,12,8,1,keyword,billions of people; yards/academy
-H'nemthe,Belsavis Sector,outer_rim,Outer Rim,6,4,1,formula,
-Halais,Byss Sector,inner_rim,Colonies,11,8,1,region,
-Halowan,Borleias Sector,core,Colonies,11,10,1,formula,
-Hapes,Kashyyyk Sector,inner_rim,Inner Rim,12,4,1,lore,"Hapes Consortium: rich, closed"
-Hefi,Cyrkon Sector,outer_rim,Outer Rim,6,4,1,formula,
-Hishyim,Cyrkon Sector,outer_rim,Outer Rim,6,4,1,formula,
-Honoghr,Dotharian Sector,outer_rim,Outer Rim,5,3,1,lore,"Noghri homeworld, ravaged"
-Hosnian Prime,Corellia Sector,inner_rim,Core,12,11,1,formula,
-Hoth,Hoth Sector,outer_rim,Outer Rim,2,1,1,lore,ice world; no one lives there yet
-Hozrel XI,Akrit'tar Sector,outer_rim,Outer Rim,6,4,1,formula,
-Hynestia,Fondor Sector,inner_rim,Colonies,11,8,1,formula,
-Hypori,Ryloth Sector,outer_rim,Outer Rim,6,4,1,formula,
-Idaflor,Ab Dalis Sector,outer_rim,Outer Rim,6,4,1,region,
-Iego,Kessel Sector,outer_rim,Outer Rim,6,4,1,formula,
-Ikkrukk,Naboo Sector,outer_rim,Mid Rim,8,5,1,formula,
-Iktotch,Aridus Sector,inner_rim,Mid Rim,8,5,1,formula,
-Ilum,none (outside sectors),,Unknown Regions,4,2,1,formula,
-Imynusoph,Hoth Sector,outer_rim,Outer Rim,4,3,1,keyword,under 1 million
-Intuci,Rishi Sector,outer_rim,Outer Rim,6,4,1,formula,
-Inusagi,Rodia Sector,outer_rim,Mid Rim,8,5,1,formula,
-Iridonia,Ansion Sector,outer_rim,Mid Rim,8,5,1,formula,
-Isde Naha,Bespin Sector,outer_rim,Outer Rim,8,5,1,keyword,billions of people
-Ithor,Ithor Sector,outer_rim,Mid Rim,8,4,1,lore,"lush, agricultural"
-Jabiim,Cymoon Sector,inner_rim,Outer Rim,6,5,1,keyword,mining
-Jaemus,Endor Sector,outer_rim,Outer Rim,7,5,1,keyword,yards/academy
-Jakku,Bardotta Sector,inner_rim,Expansion Region,3,3,1,lore,"desert wasteland, nothing yet [Wookieepedia-adjusted]"
-Jaminere,Mon Calamari Sector,outer_rim,Outer Rim,8,5,1,keyword,billions of people
-Jelucan,Etti Sector,outer_rim,Outer Rim,6,4,1,formula,
-Jerijador,Akrit'tar Sector,outer_rim,Outer Rim,6,4,1,formula,
-Joiol,Bilbringi Sector,inner_rim,Inner Rim,10,7,1,formula,
-Jomark,Chrondre Sector,outer_rim,Outer Rim,6,4,1,formula,
-Kabal,Sluis Van Sector,outer_rim,Outer Rim,6,4,1,formula,
-Kal'Shebbol,Dagobah Sector,outer_rim,Outer Rim,6,4,1,formula,
-Kalarba,Aridus Sector,inner_rim,Mid Rim,8,5,1,formula,
-Kaller,Praesitlyn Sector,outer_rim,Outer Rim,6,5,1,keyword,mining
-Kamparas,Coruscant Sector,core,Core,12,11,1,formula,
-Karfeddion,Sullust Sector,outer_rim,Mid Rim,10,7,1,keyword,billions of people
-Karthon,Ansion Sector,outer_rim,Outer Rim,6,4,1,region,
-Kartoosh,Saleucami Sector,outer_rim,Mid Rim,8,5,1,region,
-Kashyyyk,Kashyyyk Sector,inner_rim,Mid Rim,7,5,1,lore,"Wookiee homeworld, timber"
-Kegan,Saleucami Sector,outer_rim,Outer Rim,6,4,1,region,
-Kennerla,Sullust Sector,outer_rim,unknown,7,5,1,keyword,yards/academy
-Kerkoidia,Rodia Sector,outer_rim,Mid Rim,8,5,1,formula,
-Kessar,Bardotta Sector,inner_rim,Outer Rim,6,4,1,region,
-Kessel,Kessel Sector,outer_rim,Outer Rim,6,6,1,lore,spice mines; every slot is a mine
-Ketaris,Alpinn Sector,outer_rim,Outer Rim,6,4,1,formula,
-Khomm,Cerea Sector,inner_rim,Core,12,9,1,formula,
-Khuiumin,Bardotta Sector,inner_rim,?,6,3,1,formula,
-Kiffex,Takodana Sector,inner_rim,Inner Rim,10,7,1,formula,
-Kimanan,Rendili Sector,core,Inner Rim,10,7,1,formula,
-Kinyen,Cerea Sector,inner_rim,Expansion Region,9,6,1,formula,
-Kira,Abregado Sector,inner_rim,Expansion Region,9,6,1,region,
-Kirdo III,Ab Dalis Sector,outer_rim,Outer Rim,6,4,1,formula,
-Kiros,Chandrila Sector,inner_rim,Expansion Region,9,6,1,formula,
-Kirrek,Rendili Sector,core,Deep Core,14,13,1,formula,
-Kitel Phard,Byss Sector,inner_rim,Core Worlds,12,9,1,region,
-Klatooine,Toydaria Sector,outer_rim,Hutt Space,6,3,1,formula,
-Kol Iben,Naboo Sector,outer_rim,Outer Rim,4,1,1,keyword,gas giant
-Kooriva,Bilbringi Sector,inner_rim,Inner Rim,10,7,1,formula,
-Korbori,Axxila Sector,outer_rim,Colonies,11,8,1,region,
-Korriban,Felucia Sector,outer_rim,Outer Rim,4,2,1,lore,ancient Sith tomb world
-Korrus,Endor Sector,outer_rim,Outer Rim,6,4,1,formula,
-Kothlis,Bothawui Sector,inner_rim,Mid Rim,7,3,1,lore,Alliance-leaning frontier [Wookieepedia-adjusted]
-Kriselist,Cerea Sector,inner_rim,Mid Rim,8,5,1,region,
-Krownest,Etti Sector,outer_rim,Expansion Region,9,6,1,formula,
-Kuat,Oetrago Sector,inner_rim,Core,15,6,1,lore,Kuat Drive Yards: the biggest yard complex
-Kubindi,Akrit'tar Sector,outer_rim,Outer Rim,6,4,1,formula,
-Kullgroon,Balmorra Sector,inner_rim,Inner Rim,10,7,1,formula,
-Kwenn,Algarian Sector,inner_rim,Mid Rim,8,5,1,formula,
-Lafete,G'rho Sector,outer_rim,Outer Rim,6,4,1,region,
-Lafra,Mandalore Sector,outer_rim,Outer Rim,6,4,1,formula,
-Lannik,Bothawui Sector,inner_rim,Mid Rim,10,7,1,keyword,billions of people
-Lantillies,Bimmisaari Sector,inner_rim,Inner Rim,10,7,1,formula,
-Lasan,Dagobah Sector,outer_rim,Outer Rim,6,4,1,formula,
-Lelmra,Cato Neimoidia Sector,inner_rim,Mid Rim,8,5,1,formula,
-Leritor,Bothawui Sector,inner_rim,Mid Rim,8,5,1,keyword,mining; agricultural
-Lespectus,Balfron Sector,core,Core Worlds,12,9,1,region,
-Lianna,Lianna Sector,outer_rim,Outer Rim,10,5,1,lore,"Lianna Shipyards, starship components"
-Linuri,Aridus Sector,inner_rim,Mid Rim,8,5,1,formula,
-Lipsec,Bespin Sector,outer_rim,Outer Rim,6,4,1,region,
-Listehol,Raxus Sector,outer_rim,Outer Rim,6,4,1,region,
-Llanic,Rodia Sector,outer_rim,Outer Rim,5,4,1,keyword,small population; mining
-Loronar,Corellia Sector,inner_rim,Core,12,5,1,lore,"Loronar Corporation: weapons, ships"
-Lorrd,Bandomeer Sector,outer_rim,Outer Rim,6,4,1,formula,
-Lorta,Ord Mantell Sector,outer_rim,Mid Rim,8,5,1,region,
-Lothal,Cymoon Sector,inner_rim,Inner Rim,6,4,1,lore,agricultural frontier
-Lotho Minor,Bespin Sector,outer_rim,Outer Rim,6,4,1,formula,
-Lowick,Tund Sector,outer_rim,Outer Rim,6,4,1,formula,
-Lutrillia,G'rho Sector,outer_rim,Outer Rim,6,4,1,region,
-Madurs,Toydaria Sector,outer_rim,unknown,4,1,1,keyword,gas giant
-Malachor,Mandalore Sector,outer_rim,Outer Rim,6,4,1,formula,
-Malastare,Cymoon Sector,inner_rim,Mid Rim,8,5,1,lore,fuel and podracing
-Manda,Rishi Sector,outer_rim,unknown,6,4,1,region,Not in lore sheet; region default
-Mandalore,Mandalore Sector,outer_rim,Outer Rim,6,4,1,formula,
-Manpha,G'rho Sector,outer_rim,Outer Rim,6,4,1,region,
-Mantessa,Fondor Sector,inner_rim,Inner Rim,10,7,1,formula,
-Mardona,Aridus Sector,inner_rim,unknown,10,7,1,region,Not in lore sheet; region default
-Marleyvane,Cyrkon Sector,outer_rim,Outer Rim,7,5,1,keyword,yards/academy
-Merokia,Praesitlyn Sector,outer_rim,Outer Rim,5,3,1,keyword,harsh climate
-Merson,Byss Sector,inner_rim,Inner Rim,10,7,1,region,
-Metagos,Toydaria Sector,outer_rim,Outer Rim,6,4,1,region,
-Mikkia,Altarrn Sector,inner_rim,Expansion Region,9,8,1,keyword,mining
-Milagro,Aridus Sector,inner_rim,Mid Rim,8,5,1,formula,
-Mimban,Cato Neimoidia Sector,inner_rim,Expansion Region,9,6,1,formula,
-Mina-Rau,Bandomeer Sector,outer_rim,unknown,6,3,1,keyword,agricultural
-Mindar,Bothawui Sector,inner_rim,?,6,3,1,formula,
-Mirial,Bandomeer Sector,outer_rim,Outer Rim,4,3,1,keyword,small population; harsh climate
-Mokivj,Endor Sector,outer_rim,Outer Rim,6,4,1,region,
-Molavar,Ryloth Sector,outer_rim,Outer Rim,5,3,1,keyword,small population
-Moltok,Muunilinst Sector,outer_rim,Outer Rim,6,4,1,formula,
-Mon Calamari,Mon Calamari Sector,outer_rim,Outer Rim,10,5,1,lore,"floating cities, shipyards; ocean world"
-Mon Gazza,Muunilinst Sector,outer_rim,Mid Rim,8,7,1,keyword,mining
-Montross,Kashyyyk Sector,inner_rim,Inner Rim,10,7,1,formula,
-Morvogodine,Akrit'tar Sector,outer_rim,Outer Rim,6,4,1,formula,
-Mrisst,Borleias Sector,core,Colonies,11,10,1,formula,
-Mugaar,Muunilinst Sector,outer_rim,Mid Rim,8,5,1,region,
-Munto Codru,Kessel Sector,outer_rim,Outer Rim,6,4,1,formula,
-Murkhana,Toydaria Sector,outer_rim,Outer Rim,6,4,1,formula,
-Mustafar,Praesitlyn Sector,outer_rim,Outer Rim,8,8,1,lore,volcanic mining; raw cannot exceed energy
-Muunilinst,Muunilinst Sector,outer_rim,Outer Rim,12,8,1,lore,"Banking Clan: wealth, not ore [Wookieepedia-adjusted]"
-Mygeeto,Endor Sector,outer_rim,Outer Rim,6,4,1,formula,
-Mykapo,Akrit'tar Sector,outer_rim,Outer Rim,6,4,1,formula,
-N'zoth,Byss Sector,inner_rim,Deep Core (Koornacht Cluster),14,11,1,region,
-Naboo,Naboo Sector,outer_rim,Mid Rim,9,3,1,lore,prosperous but pastoral [Wookieepedia-adjusted]
-Nacon,Coruscant Sector,core,Deep Core,14,11,1,region,
-Nag Ubdur,Lianna Sector,outer_rim,Outer Rim,6,4,1,region,
-Najan-Rovi,Averam Sector,inner_rim,Outer Rim,5,1,1,keyword,gas giant; yards/academy
-Nal Hutta,Toydaria Sector,outer_rim,Mid Rim,8,6,1,lore,"Hutt homeworld, polluted [Wookieepedia-adjusted]"
-Nam'ta,Bespin Sector,outer_rim,Outer Rim,6,4,1,formula,
-Namadii,Ansion Sector,outer_rim,Mid Rim,7,5,1,keyword,small population
-Nanth'ri,Balmorra Sector,inner_rim,Mid Rim,10,7,1,keyword,billions of people
-Nantoon,Bilbringi Sector,inner_rim,Colonies,11,8,1,region,
-Nar Kanji,Bimmisaari Sector,inner_rim,Mid Rim,8,5,1,formula,
-Nar Shaddaa,Dotharian Sector,outer_rim,Mid Rim,12,3,1,lore,"vertical city-moon: huge capacity, no ore"
-Naraka,Cymoon Sector,inner_rim,Outer Rim,6,4,1,region,
-Narkina,Ryloth Sector,outer_rim,Outer Rim,6,4,1,formula,
-Neelgaimon,Raxus Sector,outer_rim,Outer Rim,6,4,1,formula,
-Neimoidia,Balmorra Sector,inner_rim,Mid Rim,10,5,1,lore,"Neimoidian homeworld, wealthy, starship exports"
-Nentan,Fondor Sector,inner_rim,Mid Rim,8,7,1,formula,
-Nevarro,G'rho Sector,outer_rim,Outer Rim,6,4,1,formula,
-New Cov,Aridus Sector,inner_rim,Mid Rim,8,5,1,formula,
-Nexus Ortai,Abregado Sector,inner_rim,unknown,10,7,1,region,
-Nixus,Ab Dalis Sector,outer_rim,Outer Rim,5,4,1,keyword,harsh climate; mining
-Norulac,Kashyyyk Sector,inner_rim,Inner Rim,10,7,1,formula,
-Norval II,Akrit'tar Sector,outer_rim,Outer Rim,6,4,1,formula,
-Novka,Rishi Sector,outer_rim,Mid Rim,8,5,1,region,
-Nubia,Nubia Sector,core,Core,8,5,1,lore,developed Core world [Wookieepedia-adjusted]
-Numidian Prime,Bothawui Sector,inner_rim,Mid Rim,8,5,1,region,
-Oba Diah,Dotharian Sector,outer_rim,Outer Rim,6,5,1,keyword,mining
-Obroa-skai,Averam Sector,inner_rim,Inner Rim,10,7,1,formula,
-Oetrago,Oetrago Sector,inner_rim,?,6,3,1,formula,
-Omwat,Sullust Sector,outer_rim,Outer Rim,6,4,1,formula,
-Onderon,Kashyyyk Sector,inner_rim,Inner Rim,6,4,1,lore,"Inner Rim, old kingdom"
-Ord Cestus,Bandomeer Sector,outer_rim,Outer Rim,6,4,1,region,
-Ord Ibanna,Belsavis Sector,outer_rim,Outer Rim,6,4,1,formula,
-Ord Mantell,Ord Mantell Sector,outer_rim,Mid Rim,8,3,1,lore,smuggler hub [Wookieepedia-adjusted]
-Ord Pardon,Couronne Sector,inner_rim,?,6,3,1,formula,
-Ord Trasi,Muunilinst Sector,outer_rim,Outer Rim,6,4,1,formula,
-Orinda,Endor Sector,outer_rim,Mid Rim,8,5,1,region,
-Orish,Corellia Sector,inner_rim,Outer Rim,6,4,1,region,
-Orto,Rodia Sector,outer_rim,Outer Rim,6,4,1,formula,
-Oseon,Akrit'tar Sector,outer_rim,The Centrality,12,9,1,formula,
-Pagodon,Ryloth Sector,outer_rim,Outer Rim,6,4,1,formula,
-Palanhi,Balfron Sector,core,Colonies,11,10,1,formula,
-Pamarthe,Sluis Van Sector,outer_rim,Outer Rim,6,4,1,region,
-Pantolomin,Coruscant Sector,core,Core,12,11,1,formula,
-Pantora,Sluis Van Sector,outer_rim,Outer Rim,6,4,1,formula,
-Parwa,Sluis Van Sector,outer_rim,Outer Rim,6,4,1,region,
-Pax,Axxila Sector,outer_rim,Expansion Region,9,6,1,region,
-Phindar,Akiva Sector,outer_rim,Outer Rim,5,2,1,keyword,small population; agricultural
-Phorliss,Borleias Sector,core,Core,12,11,1,formula,
-Phraetiss,Balfron Sector,core,Core,12,11,1,formula,
-Pil Diller,Raxus Sector,outer_rim,Outer Rim,6,4,1,formula,
-Plexis,Cerea Sector,inner_rim,Core,12,9,1,formula,
-Poderis,Corellia Sector,inner_rim,Inner Rim,10,7,1,formula,
-Ponemah,Ord Mantell Sector,outer_rim,unknown,5,3,1,keyword,harsh climate
-Praesitlyn,Praesitlyn Sector,outer_rim,Outer Rim,6,4,1,formula,
-Pzob,Tund Sector,outer_rim,Outer Rim,6,4,1,formula,
-Qat Chrystac,Cymoon Sector,inner_rim,Expansion Region,9,6,1,formula,
-Quarzite,Chandrila Sector,inner_rim,Inner Rim,10,7,1,formula,
-Quell,Lianna Sector,outer_rim,Outer Rim,6,4,1,region,
-Quence,Sluis Van Sector,outer_rim,Outer Rim,6,4,1,region,
-Quermia,Mon Calamari Sector,outer_rim,Outer Rim,6,4,1,region,
-Rafa,Kessel Sector,outer_rim,Outer Rim,6,4,1,formula,
-Raithal,Takodana Sector,inner_rim,Colonies,12,8,1,keyword,yards/academy
-Rajtiri,Kashyyyk Sector,inner_rim,Expansion Region,8,5,1,keyword,harsh climate
-Ralltiir,Borleias Sector,core,Core,12,11,1,formula,
-Randon,Couronne Sector,inner_rim,Mid Rim,8,5,1,region,
-Rattatak,Ord Mantell Sector,outer_rim,Outer Rim,6,4,1,formula,
-Raxus,Raxus Sector,outer_rim,Outer Rim,6,4,1,formula,
-Raydonia,Mandalore Sector,outer_rim,Outer Rim,6,4,1,region,
-Regis Kor,Ord Mantell Sector,outer_rim,unknown,6,4,1,region,
-Rekelos,Takodana Sector,inner_rim,unknown,10,7,1,region,
-Rendili,Rendili Sector,core,Core,12,5,1,lore,Rendili StarDrive
-Rhinnal,Rendili Sector,core,unknown,12,7,1,keyword,agricultural
-Riflor,Saleucami Sector,outer_rim,Mid Rim,10,9,1,keyword,billions of people; mining
-Ringo Vinda,Takodana Sector,inner_rim,Mid Rim,8,5,1,formula,
-Rior,Sluis Van Sector,outer_rim,Outer Rim,6,4,1,region,
-Rishi,Rishi Sector,outer_rim,Outer Rim,4,3,1,lore,remote listening post [Wookieepedia-adjusted]
-Rodia,Rodia Sector,outer_rim,Outer Rim,6,4,1,formula,
-Roona,Cerea Sector,inner_rim,Mid Rim,8,5,1,region,
-Rorak,Dotharian Sector,outer_rim,Hutt Space,6,3,1,region,
-Rothana,Cyrkon Sector,outer_rim,Outer Rim,6,4,1,formula,
-Ruuria,Etti Sector,outer_rim,Outer Rim,6,4,1,formula,
-Ruusan,Couronne Sector,inner_rim,Inner Rim,10,7,1,formula,
-Ryloth,Ryloth Sector,outer_rim,Outer Rim,6,3,1,lore,"ryll mining, Twi'lek [Wookieepedia-adjusted]"
-Saleucami,Saleucami Sector,outer_rim,Outer Rim,6,4,1,formula,
-Salliche,Coruscant Sector,core,Core Worlds,12,7,1,keyword,agricultural
-Sarka,Chrondre Sector,outer_rim,Mid Rim,8,5,1,formula,
-Sason,Muunilinst Sector,outer_rim,Outer Rim,4,1,1,keyword,gas giant
-Savareen,Kessel Sector,outer_rim,Outer Rim,6,4,1,formula,
-Scarif,Cyrkon Sector,outer_rim,unknown,6,3,1,lore,"Tropical vault world, Imperial security complex; few mines, no lore sheet row (own knowledge, unchecked)"
-Scipio,Muunilinst Sector,outer_rim,Outer Rim,6,4,1,formula,
-Seatos,Sluis Van Sector,outer_rim,Outer Rim,6,4,1,region,
-Sedri,Dotharian Sector,outer_rim,Outer Rim,6,4,1,formula,
-Selaggis,Raxus Sector,outer_rim,Outer Rim,6,4,1,formula,
-Selonia,Corellia Sector,inner_rim,Core,12,11,1,formula,
-Serenno,Amorris Sector,outer_rim,Outer Rim,6,4,1,formula,
-Sernpidal,Bespin Sector,outer_rim,Outer Rim,6,4,1,keyword,mining; agricultural
-Sesid,Bandomeer Sector,outer_rim,Outer Rim,6,4,1,formula,
-Sevarcos,Dagobah Sector,outer_rim,Outer Rim,6,4,1,formula,
-Shantipole,Saleucami Sector,outer_rim,Mid Rim,8,5,1,formula,
-Shili,Bilbringi Sector,inner_rim,Expansion Region,9,6,1,formula,
-Skako,Borleias Sector,core,Core,11,6,1,lore,Skakoan industrial planet
-Skor II,Praesitlyn Sector,outer_rim,Outer Rim,6,4,1,formula,
-Sleheyron,Dotharian Sector,outer_rim,Hutt Space,6,3,1,formula,
-Sluis Van,Sluis Van Sector,outer_rim,Outer Rim,11,5,1,lore,major shipyards and trade
-Smarteel,Tund Sector,outer_rim,Outer Rim,6,4,1,formula,
-Socorro,Ab Dalis Sector,outer_rim,Outer Rim,6,4,1,formula,
-Solarine,Ansion Sector,outer_rim,Outer Rim,6,4,1,region,
-Sorgan,Bardotta Sector,inner_rim,Outer Rim,6,4,1,formula,
-Spefik,Ithor Sector,outer_rim,Outer Rim,6,4,1,formula,
-Spuma,Bardotta Sector,inner_rim,Outer Rim,6,4,1,formula,
-Sriluur,Dotharian Sector,outer_rim,Hutt Space,5,4,1,keyword,harsh climate; mining
-Stic,Mandalore Sector,outer_rim,Outer Rim,6,4,1,formula,
-Stobar,Abregado Sector,inner_rim,Inner Rim,10,7,1,formula,
-Storthus,Amorris Sector,outer_rim,Mid Rim,8,5,1,formula,
-Sullust,Sullust Sector,outer_rim,Outer Rim,11,8,1,lore,SoroSuub: volcanic mining and industry
-Sump,Hoth Sector,outer_rim,Outer Rim,8,5,1,keyword,billions of people
-Suria,Naboo Sector,outer_rim,unknown,6,4,1,region,
-Svivren,Ab Dalis Sector,outer_rim,Outer Rim,6,4,1,formula,
-Sy Myrth,Chrondre Sector,outer_rim,Outer Rim,6,4,1,formula,
-Syvris,Tund Sector,outer_rim,Outer Rim,6,4,1,region,
-Taanab,Oetrago Sector,inner_rim,Inner Rim,10,7,1,formula,
-Tah'Nuhna,Bothawui Sector,inner_rim,Mid Rim,8,5,1,region,
-Takobo,G'rho Sector,outer_rim,Outer Rim,6,4,1,formula,
-Takodana,Takodana Sector,inner_rim,Mid Rim,8,5,1,formula,
-Talus,Nubia Sector,core,Core,12,11,1,formula,
-Tangrene,Bandomeer Sector,outer_rim,Outer Rim,6,4,1,formula,
-Tarabba,Belsavis Sector,outer_rim,unknown,6,4,1,region,
-Targyon,Etti Sector,outer_rim,unknown,6,4,1,region,
-Taris,Amorris Sector,outer_rim,Outer Rim,6,4,1,formula,
-Tatooine,Rishi Sector,outer_rim,Outer Rim,5,3,1,lore,"desert, moisture farms, Hutt-run"
-Tawl,Praesitlyn Sector,outer_rim,unknown,6,4,1,region,
-Telos IV,Mandalore Sector,outer_rim,Outer Rim,6,4,1,formula,
-Tepasi,Rendili Sector,core,Core,14,11,1,keyword,billions of people
-Terminus,Raxus Sector,outer_rim,Outer Rim,6,4,1,formula,
-Thabeska,Raxus Sector,outer_rim,Outer Rim,6,4,1,region,
-Thanta Zilbra,Akiva Sector,outer_rim,Outer Rim,6,4,1,formula,
-Thila,Akiva Sector,outer_rim,Outer Rim,6,4,1,formula,
-Tholoth,Balfron Sector,core,Colonies,11,8,1,region,
-Thrakia,Cerea Sector,inner_rim,Inner Rim,10,7,1,formula,
-Thyferra,Fondor Sector,inner_rim,Inner Rim,9,5,1,lore,bacta monopoly
-Tibrin,Praesitlyn Sector,outer_rim,Mid Rim,8,5,1,formula,
-Tieos,Rishi Sector,outer_rim,Outer Rim,6,4,1,formula,
-Tierfon,Averam Sector,inner_rim,Expansion Region,9,6,1,formula,
-Tiferep Major,Praesitlyn Sector,outer_rim,Mid Rim,10,7,1,keyword,billions of people
-Tirahnn,Takodana Sector,inner_rim,Inner Rim,12,11,1,keyword,billions of people; mining
-Togoria,Bimmisaari Sector,inner_rim,Mid Rim,8,5,1,formula,
-Tokmia,Ord Mantell Sector,outer_rim,Outer Rim,6,4,1,formula,
-Toola,Raxus Sector,outer_rim,Outer Rim,6,4,1,formula,
-Toprawa,Akiva Sector,outer_rim,Outer Rim,6,4,1,formula,
-Toydaria,Toydaria Sector,outer_rim,Mid Rim,8,5,1,formula,
-Tralus,Rendili Sector,core,Core,12,11,1,formula,
-Trammis,Kessel Sector,outer_rim,Outer Rim,6,4,1,formula,
-Trenchenovu,Couronne Sector,inner_rim,Outer Rim,6,4,1,formula,
-Triffis,Rodia Sector,outer_rim,Mid Rim,8,5,1,formula,
-Trillia,Amorris Sector,outer_rim,Expansion Region,9,6,1,region,
-Triton,Belsavis Sector,outer_rim,Outer Rim,6,4,1,formula,
-Trogan,Abregado Sector,inner_rim,Outer Rim,6,4,1,formula,
-Tund,Tund Sector,outer_rim,Outer Rim,6,4,1,formula,
-Tynna,Abregado Sector,inner_rim,Expansion Region,11,7,1,keyword,billions of people
-Tython,Nubia Sector,core,Core,2,1,1,lore,"ancient Jedi world, ruins [Wookieepedia-adjusted]"
-Ubduria,Alk'lellish III Sector,inner_rim,Inner Rim,10,7,1,formula,
-Ubrikkia,Algarian Sector,inner_rim,Mid Rim,8,5,1,formula,
-Ukio,Rishi Sector,outer_rim,Outer Rim,6,4,1,formula,
-Umbara,Kashyyyk Sector,inner_rim,Expansion Region,9,6,1,formula,
-Umgul,Chandrila Sector,inner_rim,Mid Rim,8,5,1,formula,
-Urdur,Felucia Sector,outer_rim,Outer Rim,6,4,1,formula,
-Utapau,Sullust Sector,outer_rim,Outer Rim,7,6,1,lore,sinkhole mining
-Uvena,Dagobah Sector,outer_rim,Outer Rim,6,4,1,formula,
-Uveron,Coruscant Sector,core,Colonies,11,8,1,region,
-Uyter,Bimmisaari Sector,inner_rim,Mid Rim,9,4,1,keyword,yards/academy; agricultural
-Vagran,Corellia Sector,inner_rim,Core,12,11,1,formula,
-Vakkar,Bilbringi Sector,inner_rim,Core,12,11,1,formula,
-Valboraan,Algarian Sector,inner_rim,Colonies,10,8,1,keyword,harsh climate
-Vallt,Bardotta Sector,inner_rim,Mid Rim,8,5,1,formula,
-Valo,Dagobah Sector,outer_rim,Outer Rim,6,4,1,region,
-Valrar,Algarian Sector,inner_rim,Mid Rim,8,5,1,formula,
-Vandelhelm,Abregado Sector,inner_rim,Mid Rim,9,8,1,keyword,yards/academy; mining
-Vandor,Axxila Sector,outer_rim,Mid Rim,8,5,1,formula,
-Vardos,Rendili Sector,core,Core,12,11,1,formula,
-Varn,Bandomeer Sector,outer_rim,Outer Rim,6,4,1,formula,
-Vassek,Hoth Sector,outer_rim,Outer Rim,6,4,1,formula,
-Veelo,Lianna Sector,outer_rim,Outer Rim,6,4,1,region,
-Vinsoth,Bandomeer Sector,outer_rim,Outer Rim,6,4,1,formula,
-Virgillia,Etti Sector,outer_rim,Outer Rim,6,4,1,region,
-Vjun,Felucia Sector,outer_rim,Outer Rim,6,4,1,formula,
-Vodran,Chrondre Sector,outer_rim,Hutt Space,6,3,1,formula,
-Vondarc,Belsavis Sector,outer_rim,Mid Rim,8,5,1,region,
-Vortex,Altarrn Sector,inner_rim,Mid Rim,8,5,1,formula,
-Vorzyd,Aridus Sector,inner_rim,Outer Rim,9,3,1,lore,"Gambler Paradise: gambling and trade, imports raw goods"
-Voss,Mon Calamari Sector,outer_rim,Outer Rim,6,4,1,formula,
-Waskiro,Chrondre Sector,outer_rim,Outer Rim,6,4,1,formula,
-Wayland,Axxila Sector,outer_rim,Outer Rim,5,3,1,lore,Emperor's hidden storehouse
-Wistril,Ansion Sector,outer_rim,Outer Rim,6,4,1,formula,
-Wobani,Dotharian Sector,outer_rim,Outer Rim,6,4,1,formula,
-Womrik,Oetrago Sector,inner_rim,Mid Rim,8,5,1,formula,
-Woostri,Cymoon Sector,inner_rim,Expansion Region,9,6,1,formula,
-Wor Tandell,Borleias Sector,core,Core,12,11,1,formula,
-Wrea,Ab Dalis Sector,outer_rim,Outer Rim,6,4,1,formula,
-Wroona,Bilbringi Sector,inner_rim,Mid Rim,11,7,1,keyword,billions of people; yards/academy
-Wynkahthu,Axxila Sector,outer_rim,Mid Rim,4,1,1,keyword,gas giant
-Xa Fel,Balfron Sector,core,Core,12,11,1,formula,
-Xagobah,Dagobah Sector,outer_rim,Outer Rim,6,4,1,region,
-Xyquine,Nubia Sector,core,Core,12,11,1,formula,
-Yag'Dhul,Fondor Sector,inner_rim,Inner Rim,10,7,1,formula,
-Yaga Minor,Endor Sector,outer_rim,Outer Rim,6,4,1,formula,
-Yar Togna,Dagobah Sector,outer_rim,Outer Rim,6,4,1,formula,
-Yavin,Felucia Sector,outer_rim,Outer Rim,7,4,1,lore,Rebel base moon; engine adds the start base
-Yerbana,Rodia Sector,outer_rim,Outer Rim,6,4,1,formula,
-Zardossa Stix,Byss Sector,inner_rim,Mid Rim,7,5,1,keyword,harsh climate
-Zastiga,G'rho Sector,outer_rim,Outer Rim,6,4,1,region,
-Zebitrope IV,Chrondre Sector,outer_rim,Outer Rim,6,4,1,formula,
-Zeffliffl,Ithor Sector,outer_rim,Outer Rim,6,4,1,formula,
-Zeffo,Alpinn Sector,outer_rim,Outer Rim,6,4,1,formula,
-Zeltros,Couronne Sector,inner_rim,Mid Rim,10,3,1,lore,"Zeltron pleasure world: entertainment and luxury, no heavy industry"
-Zhadalene,Alpinn Sector,outer_rim,Outer Rim,6,4,1,region,
-Ziost,Felucia Sector,outer_rim,Outer Rim,6,4,1,formula,
-Zolan,Rodia Sector,outer_rim,Mid Rim,8,5,1,formula,
-Zygerria,Akiva Sector,outer_rim,Outer Rim,5,3,1,keyword,small population
+name,sector,group,energy,raw,populated,basis,why
+Rio Lodo,Rio Lodo Sector,outer_rim,6,4,1,region,
+Mercado Alto,Lenitas Sector,inner_rim,12,9,1,formula,
+Feldspar,Feldspar Sector,inner_rim,12,9,1,formula,
+Solheim,Laterite Sector,outer_rim,6,4,1,formula,
+Shirakaba,Fallout Sector,outer_rim,6,4,1,region,
+Sunscald,Ciénaga Sector,outer_rim,6,3,1,keyword,agricultural
+Isfjell,Ilanga Sector,outer_rim,6,4,1,formula,
+Marl,Mechane Sector,inner_rim,6,3,1,formula,
+Bauxite IV,Bauxite IV Sector,outer_rim,6,4,1,formula,
+Hundred Lakes,Hundred Lakes Sector,outer_rim,6,4,1,formula,
+Cairnfell,Mata Alta Sector,outer_rim,6,4,1,region,
+Mesa Roja,Fairhaven Sector,outer_rim,8,5,1,formula,
+Semeion,Semeion Sector,inner_rim,8,5,1,formula,
+Caza Real,Caza Real Sector,inner_rim,6,4,1,formula,
+Ninegates,Lesnaya Sector,inner_rim,8,5,1,formula,
+Hard Winter,Longwire Sector,outer_rim,6,4,1,formula,
+Ilanga,Ilanga Sector,outer_rim,6,5,1,keyword,mining
+Vinculum,Vinculum Sector,inner_rim,8,5,1,formula,
+Paydirt,Longtide Sector,inner_rim,10,7,1,formula,
+Shelter,Shelter Sector,outer_rim,6,4,1,formula,
+Fusoria,Dunmere Sector,outer_rim,12,9,1,formula,
+Skylark,Caminus Sector,outer_rim,6,4,1,formula,
+Halite,Bauxite IV Sector,outer_rim,8,5,1,formula,
+Ferrymoor,Drift Harbour Sector,outer_rim,6,4,1,formula,
+Rustwell,Thaw Sector,outer_rim,6,4,1,formula,
+Ulaan Tal,Ulaan Tal Sector,outer_rim,8,5,1,formula,
+Uzun Su,Mechane Sector,inner_rim,10,7,1,keyword,billions of people
+Sankt Odile,Semeion Sector,inner_rim,6,4,1,region,
+Ashfall,Ashfall Sector,inner_rim,8,5,1,formula,
+Isbrand,Vinculum Sector,inner_rim,10,7,1,formula,
+Signum,Solacia Sector,outer_rim,6,4,1,formula,
+Dry Reef,Lantern Sector,outer_rim,6,4,1,formula,
+Three Lamps,Three Lamps Sector,inner_rim,6,4,1,formula,
+Highfall,Highfall Sector,outer_rim,6,5,1,keyword,mining
+Kaolin,Three Lamps Sector,inner_rim,6,3,1,formula,
+Halvmark,Laterite Sector,outer_rim,6,4,1,region,
+Hollenvale,Thaw Sector,outer_rim,7,6,1,lore,colony world [Wookieepedia-adjusted]
+Tarrow,Tarrow Sector,core,12,11,1,formula,
+Tormentum,Tormentum Sector,inner_rim,12,7,1,lore,arms-manufacturing world
+Lowmarket,Bosque Alto Sector,inner_rim,12,11,1,formula,
+Salitre,Salitre Sector,outer_rim,6,4,1,formula,
+Scaldwell,Fallout Sector,outer_rim,8,7,1,keyword,billions of people; mining
+Quieta,Quieta Sector,inner_rim,12,9,1,formula,
+Lunaria,Ciénaga Sector,outer_rim,6,4,1,region,
+Permit Hill,Moorings Sector,outer_rim,6,4,1,region,
+Scoria,Charter Sector,core,12,11,1,formula,
+Tessera,Mirabel Sector,inner_rim,11,8,1,formula,
+Oldwatch,Fyrholm Sector,outer_rim,6,4,1,formula,
+Los Pozos,Ulaan Tal Sector,outer_rim,6,4,1,formula,
+Port Isolde,Mata Alta Sector,outer_rim,8,5,1,keyword,billions of people
+Nowhere,Zlatna Sector,outer_rim,6,4,1,region,
+Varmdal,Varmdal Sector,outer_rim,6,4,1,formula,
+Grimwall,Ulaan Tal Sector,outer_rim,8,5,1,region,
+Cristalina,Caza Real Sector,inner_rim,10,7,1,formula,
+Grimsholt,Thaw Sector,outer_rim,8,5,1,keyword,billions of people; mining; agricultural
+Drift Harbour,Drift Harbour Sector,outer_rim,8,5,1,lore,"Cloud City, tibanna gas"
+Delicia,Incus Sector,inner_rim,10,7,1,formula,
+Ferraria,Ferraria Sector,inner_rim,11,6,1,lore,"Imperial shipyard, Inner Rim fleet base"
+Vinograd,Vinograd Sector,inner_rim,8,5,1,formula,
+Port Sorrel,Tormentum Sector,inner_rim,10,7,1,formula,
+Amoena,Lagoa Funda Sector,inner_rim,9,6,1,region,
+Steeplewater,Vinculum Sector,inner_rim,10,7,1,formula,
+Murkhaven,Cohors Sector,outer_rim,6,4,1,formula,
+Junkhold,Altofen Sector,inner_rim,6,4,1,region,
+Side Gate,Shelter Sector,outer_rim,9,6,1,formula,
+Excubia,Excubia Sector,core,12,11,1,formula,
+Shingle,Semeion Sector,inner_rim,8,5,1,region,
+Las Presas,Caminus Sector,outer_rim,6,4,1,formula,
+Partus,Clearholm Sector,outer_rim,9,6,1,keyword,billions of people; yards/academy
+Akousma,Akousma Sector,inner_rim,8,3,1,lore,information broker world
+Alumen,Ommata Sector,core,12,9,1,region,
+Gemelos,Three Lamps Sector,inner_rim,6,4,1,formula,
+Hulkfield,Vinograd Sector,inner_rim,8,5,1,formula,
+Cambium,Castra Sector,core,14,8,1,keyword,billions of people; agricultural
+Commonhold,Dunmere Sector,outer_rim,8,5,1,region,
+Grauburg,Classis Sector,inner_rim,12,9,1,formula,
+Mirabel,Mirabel Sector,inner_rim,14,13,1,formula,
+Isvik,Cohors Sector,outer_rim,6,4,1,region,
+Rosvik,Charter Sector,core,12,7,1,keyword,agricultural
+Gypsum Minor,Lesnaya Sector,inner_rim,11,8,1,region,
+Wadi Sabr,Cohors Sector,outer_rim,6,4,1,formula,
+Serra Alta,Tarrow Sector,core,12,11,1,formula,
+Malleus,Lenitas Sector,inner_rim,12,9,1,region,
+Marga,Dunmere Sector,outer_rim,6,4,1,formula,
+Custodia,Ferraria Sector,inner_rim,11,10,1,formula,
+Bluesand,Semeion Sector,inner_rim,5,3,1,keyword,harsh climate
+Limonite III,Caza Real Sector,inner_rim,12,11,1,keyword,yards/academy; mining
+Umoya,Highfall Sector,outer_rim,6,4,1,formula,
+Mechane,Mechane Sector,inner_rim,10,5,1,lore,Neimoidian trade world
+Bread Street,Bauxite IV Sector,outer_rim,6,3,1,keyword,agricultural
+Bosque Alto,Bosque Alto Sector,inner_rim,8,5,1,formula,
+Sierra Seca,Semeion Sector,inner_rim,8,5,1,region,
+Warmwell,Quieta Sector,inner_rim,8,5,1,formula,
+Nacar,Vinculum Sector,inner_rim,12,8,1,keyword,billions of people
+Belle Rive,Ilanga Sector,outer_rim,6,4,1,region,
+Lenitas,Lenitas Sector,inner_rim,8,3,1,lore,"wealthy Core world, Mon Mothma [Wookieepedia-adjusted]"
+Natalis,Feldspar Sector,inner_rim,11,8,1,keyword,yards/academy
+Sevenwells,Tarrow Sector,core,12,11,1,formula,
+Tinplate,Vinograd Sector,inner_rim,8,5,1,region,
+Nueva Pradera,Caza Real Sector,inner_rim,10,7,1,formula,
+Meridian,Solacia Sector,outer_rim,6,4,1,formula,
+Thesauros,Thesauros Sector,outer_rim,6,3,1,formula,
+Penhallow,Lagoa Funda Sector,inner_rim,9,6,1,region,
+Spindle,Ciénaga Sector,outer_rim,6,3,1,region,
+Old Bench,Mata Alta Sector,outer_rim,6,4,1,region,
+Opsis,Kranholm Sector,outer_rim,6,4,1,formula,
+Porphyry,Mechane Sector,inner_rim,11,10,1,formula,
+Sedova,Tormentum Sector,inner_rim,10,7,1,formula,
+Benigna,Dunmere Sector,outer_rim,9,6,1,formula,
+Puerto Hierro,Three Lamps Sector,inner_rim,11,9,1,keyword,billions of people; yards/academy; mining
+Classis,Classis Sector,inner_rim,14,7,1,lore,Corellian Engineering Corporation; heavy industry
+Magnetite III,Ommata Sector,core,12,11,1,formula,
+Waymeet,Caza Real Sector,inner_rim,9,6,1,formula,
+Deadfall,Bauxite IV Sector,outer_rim,6,4,1,formula,
+Tutela,Lenitas Sector,inner_rim,10,4,1,lore,Imperial academy world; Sienar and Aether Hypernautics research
+Charter,Charter Sector,core,15,4,1,lore,"ecumenopolis, capital; almost no ore of its own"
+Riftwood,Moorings Sector,outer_rim,6,4,1,formula,
+Pyrite,Charter Sector,core,12,9,1,region,
+Bellwether,Bellwether Sector,inner_rim,9,6,1,region,
+Saltgreen,Feldspar Sector,inner_rim,8,5,1,formula,
+Frostholm,Outside any sector,,4,2,1,formula,
+Krasny Yar,Rio Lodo Sector,outer_rim,6,4,1,formula,
+Cutbank,Lenitas Sector,inner_rim,9,6,1,keyword,yards/academy
+Altofen,Altofen Sector,inner_rim,9,6,1,region,
+Rauchtal,Rauchtal Sector,outer_rim,6,4,1,formula,
+Ashgrove,Caza Real Sector,inner_rim,10,7,1,region,
+Kanon,Solacia Sector,outer_rim,6,4,1,formula,
+Seven Keys,Ciénaga Sector,outer_rim,8,5,1,formula,
+Kaukomaa,Bellwether Sector,inner_rim,10,7,1,keyword,billions of people
+Eldingar,Eldingar Sector,outer_rim,1,1,1,lore,"swamp, Yoda; a hidden place"
+Dongyu,Tormentum Sector,inner_rim,8,5,1,region,
+Oionos,Mechane Sector,inner_rim,6,5,1,formula,
+Fallow,Mata Alta Sector,outer_rim,5,3,1,lore,"agricultural, old Rebel base"
+Lignite,Ilanga Sector,outer_rim,6,4,1,region,
+Vexillum,Thesauros Sector,outer_rim,8,5,1,formula,
+Redfen,Highfall Sector,outer_rim,3,2,1,lore,Nightsister world [Wookieepedia-adjusted]
+Morrowfield,Akousma Sector,inner_rim,6,3,1,formula,
+Tranquilla,Longtide Sector,inner_rim,12,11,1,formula,
+Havdal,Caminus Sector,outer_rim,6,4,1,formula,
+Fiducia,Lesnaya Sector,inner_rim,12,9,1,formula,
+Ribeira,Lenitas Sector,inner_rim,9,6,1,formula,
+Graustadt,Moorings Sector,outer_rim,8,4,1,keyword,billions of people; agricultural
+Las Eras,Nebbia Sector,outer_rim,6,3,1,formula,
+Undergrowth,Mata Alta Sector,outer_rim,6,4,1,formula,
+Weirholm,Fairhaven Sector,outer_rim,6,4,1,formula,
+Uhrwald,Drift Harbour Sector,outer_rim,6,4,1,region,
+Natron,Vinculum Sector,inner_rim,9,6,1,formula,
+Muster Rock,Muster Rock Sector,outer_rim,8,5,1,formula,
+Brannock,Solacia Sector,outer_rim,6,4,1,formula,
+Beryl,Classis Sector,inner_rim,12,11,1,formula,
+Groenveld,Bellwether Sector,inner_rim,10,7,1,keyword,billions of people
+Stormfen,Greenfever Sector,outer_rim,6,4,1,formula,
+Kovarna,Shelter Sector,outer_rim,10,5,1,keyword,billions of people; agricultural
+The Rafts,Thaw Sector,outer_rim,6,4,1,formula,
+Hiberna,Ommata Sector,core,12,4,1,lore,"orbital shipyards, spacer culture"
+Placida,Three Lamps Sector,inner_rim,8,5,1,region,Not in lore sheet; region default
+Fathom,Thaw Sector,outer_rim,6,4,1,region,
+Lockout,Varmdal Sector,outer_rim,6,4,1,formula,
+Bastide,Mirabel Sector,inner_rim,15,11,1,keyword,billions of people; mining; city world
+Fyrholm,Fyrholm Sector,outer_rim,4,2,1,lore,"forest moon, Ewoks"
+Bluefathom,Thesauros Sector,outer_rim,6,4,1,formula,
+Hardwood,Slate Hill Sector,outer_rim,6,4,1,region,
+Ain Tamra,Ulaan Tal Sector,outer_rim,11,8,1,region,
+Ellerbeck,Caza Real Sector,inner_rim,8,5,1,region,
+Cunabula,Varmdal Sector,outer_rim,11,8,1,lore,Outer Rim industrial hub (Tarkin) [Wookieepedia-adjusted]
+Agua Mansa,Mechane Sector,inner_rim,12,9,1,formula,
+Clearholm,Clearholm Sector,outer_rim,6,4,1,region,
+Tourmaline,Ommata Sector,core,10,5,1,lore,"Tourmaline: dense, long-settled Hydian Way world"
+Sweetsea,Nebbia Sector,outer_rim,6,4,1,formula,
+Suavis,Shelter Sector,outer_rim,8,5,1,formula,
+Flarewater,Solacia Sector,outer_rim,10,7,1,keyword,billions of people
+Vigilia,Ommata Sector,core,12,11,1,formula,
+The Stumps,Drift Harbour Sector,outer_rim,6,4,1,formula,
+Birchholm,Vinculum Sector,inner_rim,8,5,1,formula,
+Greenfever,Greenfever Sector,outer_rim,6,4,1,formula,
+Officina,Clearholm Sector,outer_rim,6,4,1,formula,
+Ostwerk,Nebbia Sector,outer_rim,8,5,1,formula,
+Bela Voda,Excubia Sector,core,12,11,1,formula,
+Hollow Fork,Dunmere Sector,outer_rim,6,4,1,region,
+Opifex,Ashfall Sector,inner_rim,9,6,1,formula,
+The Wall,Moorings Sector,outer_rim,8,5,1,keyword,billions of people
+Brimstone,Greenfever Sector,outer_rim,6,4,1,formula,
+Buyback,Ferraria Sector,inner_rim,13,10,1,keyword,billions of people
+Incus,Incus Sector,inner_rim,13,5,1,lore,"Incus shipyards, Imperial-run"
+First Morning,Hundred Lakes Sector,outer_rim,6,4,1,formula,
+Bare Acre,Vinograd Sector,inner_rim,8,5,1,formula,
+Holdfast,Fallout Sector,outer_rim,6,4,1,formula,
+Ironbeach,Ironbeach Sector,outer_rim,4,2,1,formula,
+Severitas,Varmdal Sector,outer_rim,6,4,1,region,
+Aozora,Mata Alta Sector,outer_rim,6,4,1,formula,
+Second Spring,Pulau Hijau Sector,outer_rim,8,5,1,formula,
+Clanmoor,Rauchtal Sector,outer_rim,6,4,1,formula,
+Bellglass,Lantern Sector,outer_rim,6,4,1,formula,
+Ferrite IV,Lesnaya Sector,inner_rim,6,3,1,formula,
+Truce Moor,Rauchtal Sector,outer_rim,6,4,1,formula,
+Cafetal,Fyrholm Sector,outer_rim,6,3,1,keyword,agricultural
+Quies,Castra Sector,core,12,9,1,region,
+Morelle,Three Lamps Sector,inner_rim,10,7,1,formula,
+Ostrog,Highfall Sector,outer_rim,6,4,1,formula,
+Longgrass,Ilanga Sector,outer_rim,6,4,1,formula,
+Mudlark,Ironbeach Sector,outer_rim,6,4,1,formula,
+Ergon,Pulau Hijau Sector,outer_rim,6,4,1,formula,
+Waymark,Zlatna Sector,outer_rim,6,4,1,region,
+Seven Gates,Ironbeach Sector,outer_rim,8,4,1,keyword,billions of people; agricultural
+Cidermoor,Fairhaven Sector,outer_rim,6,4,1,region,
+Mollis,Incus Sector,inner_rim,7,4,1,lore,textile world
+Perpetua,Clearholm Sector,outer_rim,5,3,1,keyword,harsh climate
+Techne,Incus Sector,inner_rim,13,7,1,keyword,billions of people; agricultural
+Pennygate,Bosque Alto Sector,inner_rim,8,5,1,region,
+Mwezi,Quieta Sector,inner_rim,8,5,1,formula,
+Stannum,Tormentum Sector,inner_rim,10,7,1,formula,
+Steading,Bellwether Sector,inner_rim,8,5,1,region,
+Old Lens,Laterite Sector,outer_rim,5,4,1,keyword,harsh climate; mining
+Velika Ravan,Mechane Sector,inner_rim,12,8,1,keyword,billions of people; yards/academy
+Kairos,Varmdal Sector,outer_rim,6,4,1,formula,
+Subsidia,Mirabel Sector,inner_rim,11,8,1,region,
+Arithmos,Excubia Sector,core,11,10,1,formula,
+Seldwyn,Longtide Sector,inner_rim,12,4,1,lore,"Seldwyn Consortium: rich, closed"
+Westerholm,Rauchtal Sector,outer_rim,6,4,1,formula,
+Erg Lahmar,Rauchtal Sector,outer_rim,6,4,1,formula,
+Barewood,Muster Rock Sector,outer_rim,5,3,1,lore,"Noghri homeworld, ravaged"
+Fiscus,Classis Sector,inner_rim,12,11,1,formula,
+The Thaw,Thaw Sector,outer_rim,2,1,1,lore,ice world; no one lives there yet
+Farrow,Hundred Lakes Sector,outer_rim,6,4,1,formula,
+Archeion,Incus Sector,inner_rim,11,8,1,formula,
+Probatio,Laterite Sector,outer_rim,6,4,1,formula,
+Unlisted,Rio Lodo Sector,outer_rim,6,4,1,region,
+Rubble Sky,Lantern Sector,outer_rim,6,4,1,formula,
+Skalna,Solacia Sector,outer_rim,8,5,1,formula,
+Pedregal,Ashfall Sector,inner_rim,8,5,1,formula,
+Glasswood,Outside any sector,,4,2,1,formula,
+Nadezhda,Thaw Sector,outer_rim,4,3,1,keyword,under 1 million
+Highmere,Pulau Hijau Sector,outer_rim,6,4,1,formula,
+Feriae,Sendero Sector,outer_rim,8,5,1,formula,
+Deep Wells,Ulaan Tal Sector,outer_rim,8,5,1,formula,
+Standstill,Drift Harbour Sector,outer_rim,8,5,1,keyword,billions of people
+Mata Alta,Mata Alta Sector,outer_rim,8,4,1,lore,"lush, agricultural"
+Mokra,Altofen Sector,inner_rim,6,5,1,keyword,mining
+Stepwell,Fyrholm Sector,outer_rim,7,5,1,keyword,yards/academy
+Kalium II,Quieta Sector,inner_rim,3,3,1,lore,"desert wasteland, nothing yet [Wookieepedia-adjusted]"
+Sonnfeld,Moorings Sector,outer_rim,8,5,1,keyword,billions of people
+Felsite III,Clearholm Sector,outer_rim,6,4,1,formula,
+Awlbridge,Hundred Lakes Sector,outer_rim,6,4,1,formula,
+Wrenfield,Ferraria Sector,inner_rim,10,7,1,formula,
+Skerrholm,Thesauros Sector,outer_rim,6,4,1,formula,
+Ilhas Fundas,Kranholm Sector,outer_rim,6,4,1,formula,
+Regrowth,Eldingar Sector,outer_rim,6,4,1,formula,
+Tidewall,Ashfall Sector,inner_rim,8,5,1,formula,
+Timberline,Longwire Sector,outer_rim,6,5,1,keyword,mining
+Valle Hondo,Charter Sector,core,12,11,1,formula,
+Montefosco,Caminus Sector,outer_rim,10,7,1,keyword,billions of people
+Landfall,Ulaan Tal Sector,outer_rim,6,4,1,region,
+Lowmoor,Ciénaga Sector,outer_rim,8,5,1,region,
+Longtide,Longtide Sector,inner_rim,7,5,1,lore,"Wookiee homeworld, timber"
+Supper Hill,Ciénaga Sector,outer_rim,6,4,1,region,
+Sinkwater,Caminus Sector,outer_rim,7,5,1,keyword,yards/academy
+Mbuga,Sendero Sector,outer_rim,8,5,1,formula,
+Rietmoor,Quieta Sector,inner_rim,6,4,1,region,
+The Lantern,Lantern Sector,outer_rim,6,6,1,lore,spice mines; every slot is a mine
+Seafold,Ilanga Sector,outer_rim,6,4,1,formula,
+Horasis,Bosque Alto Sector,inner_rim,12,9,1,formula,
+Agmen,Quieta Sector,inner_rim,6,3,1,formula,
+Retentio,Lagoa Funda Sector,inner_rim,10,7,1,formula,
+Consolatio,Castra Sector,core,10,7,1,formula,
+Tierra Larga,Bosque Alto Sector,inner_rim,9,6,1,formula,
+Kestrel Downs,Feldspar Sector,inner_rim,9,6,1,region,
+Barro Rojo,Rio Lodo Sector,outer_rim,6,4,1,formula,
+Hundred Falls,Lenitas Sector,inner_rim,9,6,1,formula,
+Stonebrake,Castra Sector,core,14,13,1,formula,
+Thornveld,Mirabel Sector,inner_rim,12,9,1,region,
+Khamsin,Nebbia Sector,outer_rim,6,3,1,formula,
+Naphtha,Solacia Sector,outer_rim,4,1,1,keyword,gas giant
+Ilha Verde,Ferraria Sector,inner_rim,10,7,1,formula,
+Lastwell,Highfall Sector,outer_rim,11,8,1,region,
+Breakyard,Greenfever Sector,outer_rim,4,2,1,lore,ancient Sith tomb world
+Plainsong,Fyrholm Sector,outer_rim,6,4,1,formula,
+Statio,Akousma Sector,inner_rim,7,3,1,lore,Alliance-leaning frontier [Wookieepedia-adjusted]
+Nordhaven,Bosque Alto Sector,inner_rim,8,5,1,region,
+Vinterby,Clearholm Sector,outer_rim,9,6,1,formula,
+Navalia,Lesnaya Sector,inner_rim,15,6,1,lore,Navalia Drive Yards: the biggest yard complex
+Stewpot,Hundred Lakes Sector,outer_rim,6,4,1,formula,
+Highrime,Tormentum Sector,inner_rim,10,7,1,formula,
+Stepstone,Semeion Sector,inner_rim,8,5,1,formula,
+The Kiln,Ironbeach Sector,outer_rim,6,4,1,region,
+Alvorada,Cohors Sector,outer_rim,6,4,1,formula,
+Two Crowns,Akousma Sector,inner_rim,10,7,1,keyword,billions of people
+Neuwerft,Vinograd Sector,inner_rim,10,7,1,formula,
+Loomhollow,Eldingar Sector,outer_rim,6,4,1,formula,
+Kamenitsa,Mechane Sector,inner_rim,8,5,1,formula,
+Tres Rios,Akousma Sector,inner_rim,8,5,1,keyword,mining; agricultural
+Limes,Tarrow Sector,core,12,9,1,region,
+Dunmere,Dunmere Sector,outer_rim,10,5,1,lore,"Dunmere Shipyards, starship components"
+Kaskela,Ashfall Sector,inner_rim,8,5,1,formula,
+Vaultrock,Drift Harbour Sector,outer_rim,6,4,1,region,
+Icetap,Slate Hill Sector,outer_rim,6,4,1,region,
+Dormilona,Sendero Sector,outer_rim,5,4,1,keyword,small population; mining
+Vallum,Classis Sector,inner_rim,12,5,1,lore,"Vallum Corporation: weapons, ships"
+Kaltwasser,Salitre Sector,outer_rim,6,4,1,formula,
+Campo Alto,Fairhaven Sector,outer_rim,8,5,1,region,
+Llano Grande,Altofen Sector,inner_rim,6,4,1,lore,agricultural frontier
+Midden,Drift Harbour Sector,outer_rim,6,4,1,formula,
+The Flats,Fallout Sector,outer_rim,6,4,1,formula,
+Ochre Wells,Ironbeach Sector,outer_rim,6,4,1,region,
+Terracotta,Nebbia Sector,outer_rim,4,1,1,keyword,gas giant
+Ghostlight,Cohors Sector,outer_rim,6,4,1,formula,
+Wellhead,Altofen Sector,inner_rim,8,5,1,lore,fuel and podracing
+Stillwater,Pulau Hijau Sector,outer_rim,6,4,1,region,Not in lore sheet; region default
+Cohors,Cohors Sector,outer_rim,6,4,1,formula,
+Gumwater,Ironbeach Sector,outer_rim,6,4,1,region,
+Dulcia,Incus Sector,inner_rim,10,7,1,formula,
+Fabrica,Ashfall Sector,inner_rim,10,7,1,region,Not in lore sheet; region default
+Seedbank,Rauchtal Sector,outer_rim,7,5,1,keyword,yards/academy
+Hardpan,Longwire Sector,outer_rim,5,3,1,keyword,harsh climate
+Selvagem,Mirabel Sector,inner_rim,10,7,1,region,
+Vidrio,Nebbia Sector,outer_rim,6,4,1,region,
+Halfwinter,Vinculum Sector,inner_rim,9,8,1,keyword,mining
+Clinker,Ashfall Sector,inner_rim,8,5,1,formula,
+Blackmire,Mechane Sector,inner_rim,9,6,1,formula,
+Plenty,Salitre Sector,outer_rim,6,3,1,keyword,agricultural
+Four Lamps,Akousma Sector,inner_rim,6,3,1,formula,
+Greysand,Salitre Sector,outer_rim,4,3,1,keyword,small population; harsh climate
+Halfsky,Fyrholm Sector,outer_rim,6,4,1,region,
+Tierra Seca,Laterite Sector,outer_rim,5,3,1,keyword,small population
+Ashgarden,Zlatna Sector,outer_rim,6,4,1,formula,
+The Moorings,Moorings Sector,outer_rim,10,5,1,lore,"floating cities, shipyards; ocean world"
+Laetitia,Zlatna Sector,outer_rim,8,7,1,keyword,mining
+Highbarrow,Longtide Sector,inner_rim,10,7,1,formula,
+Long Strike,Hundred Lakes Sector,outer_rim,6,4,1,formula,
+Ardlinn,Excubia Sector,core,11,10,1,formula,
+Towline,Zlatna Sector,outer_rim,8,5,1,region,
+The Notch,Lantern Sector,outer_rim,6,4,1,formula,
+Plage Blanche,Nebbia Sector,outer_rim,6,4,1,formula,
+Blackglass,Longwire Sector,outer_rim,8,8,1,lore,volcanic mining; raw cannot exceed energy
+Zlatna,Zlatna Sector,outer_rim,12,8,1,lore,"Banking Clan: wealth, not ore [Wookieepedia-adjusted]"
+Rimeglass,Fyrholm Sector,outer_rim,6,4,1,formula,
+Oranjeveld,Hundred Lakes Sector,outer_rim,6,4,1,formula,
+Tamarisk,Mirabel Sector,inner_rim,14,11,1,region,
+Solacia,Solacia Sector,outer_rim,9,3,1,lore,prosperous but pastoral [Wookieepedia-adjusted]
+Sourwater,Charter Sector,core,14,11,1,region,
+Wolfram II,Dunmere Sector,outer_rim,6,4,1,region,
+Mica,Three Lamps Sector,inner_rim,5,1,1,keyword,gas giant; yards/academy
+Vrijhaven,Nebbia Sector,outer_rim,8,6,1,lore,"Hutt homeworld, polluted [Wookieepedia-adjusted]"
+The Ladle,Drift Harbour Sector,outer_rim,6,4,1,formula,
+Mill Hollow,Ulaan Tal Sector,outer_rim,7,5,1,keyword,small population
+Lowenna,Tormentum Sector,inner_rim,10,7,1,keyword,billions of people
+Old Amber,Ferraria Sector,inner_rim,11,8,1,region,
+Hartsease,Vinograd Sector,inner_rim,8,5,1,formula,
+Hoogstad,Muster Rock Sector,outer_rim,12,3,1,lore,"vertical city-moon: huge capacity, no ore"
+Stonecrop,Altofen Sector,inner_rim,6,4,1,region,
+Grandmother,Laterite Sector,outer_rim,6,4,1,formula,
+Ardlow,Slate Hill Sector,outer_rim,6,4,1,formula,
+Medela,Tormentum Sector,inner_rim,10,5,1,lore,"Neimoidian homeworld, wealthy, starship exports"
+Alabaster,Incus Sector,inner_rim,8,7,1,formula,
+Cendrine,Ironbeach Sector,outer_rim,6,4,1,formula,
+Verdemar,Ashfall Sector,inner_rim,8,5,1,formula,
+Kruispunt,Feldspar Sector,inner_rim,10,7,1,region,
+Whitecairn,Rio Lodo Sector,outer_rim,5,4,1,keyword,harsh climate; mining
+Sawtooth,Longtide Sector,inner_rim,10,7,1,formula,
+Duskwater,Hundred Lakes Sector,outer_rim,6,4,1,formula,
+Chert,Pulau Hijau Sector,outer_rim,8,5,1,region,
+Ommata,Ommata Sector,core,8,5,1,lore,developed Core world [Wookieepedia-adjusted]
+Thousand Mouths,Akousma Sector,inner_rim,8,5,1,region,
+Black Teeth,Muster Rock Sector,outer_rim,6,5,1,keyword,mining
+Whitmark,Three Lamps Sector,inner_rim,10,7,1,formula,
+Lesnaya,Lesnaya Sector,inner_rim,6,3,1,formula,
+Kilele,Caminus Sector,outer_rim,6,4,1,formula,
+Kronholm,Longtide Sector,inner_rim,6,4,1,lore,"Inner Rim, old kingdom"
+Stopped Line,Salitre Sector,outer_rim,6,4,1,region,
+Last Platform,Varmdal Sector,outer_rim,6,4,1,formula,
+Fairhaven,Fairhaven Sector,outer_rim,8,3,1,lore,smuggler hub [Wookieepedia-adjusted]
+Stopgap,Bellwether Sector,inner_rim,6,3,1,formula,
+Pale Ridge,Zlatna Sector,outer_rim,6,4,1,formula,
+Vysoka,Fyrholm Sector,outer_rim,8,5,1,region,
+Cinnabar,Classis Sector,inner_rim,6,4,1,region,
+Hlubina,Sendero Sector,outer_rim,6,4,1,formula,
+Rockclaim,Hundred Lakes Sector,outer_rim,12,9,1,formula,
+Bilokray,Laterite Sector,outer_rim,6,4,1,formula,
+Puerto Ceniza,Tarrow Sector,core,11,10,1,formula,
+Campus,Kranholm Sector,outer_rim,6,4,1,region,
+Belmare,Charter Sector,core,12,11,1,formula,
+Veenhoven,Kranholm Sector,outer_rim,6,4,1,formula,
+Haematite,Kranholm Sector,outer_rim,6,4,1,region,
+Kreuzweg,Highfall Sector,outer_rim,9,6,1,region,
+Organon,Bauxite IV Sector,outer_rim,5,2,1,keyword,small population; agricultural
+Stibium,Excubia Sector,core,12,11,1,formula,
+Horsemarch,Tarrow Sector,core,12,11,1,formula,
+Last Tank,Slate Hill Sector,outer_rim,6,4,1,formula,
+Stabilis,Bosque Alto Sector,inner_rim,12,9,1,formula,
+Altamesa,Classis Sector,inner_rim,10,7,1,formula,
+Wadi Noor,Fairhaven Sector,outer_rim,5,3,1,keyword,harsh climate
+Longwire,Longwire Sector,outer_rim,6,4,1,formula,
+Fernhollow,Fallout Sector,outer_rim,6,4,1,formula,
+Glassfield,Altofen Sector,inner_rim,9,6,1,formula,
+Lowlight,Lenitas Sector,inner_rim,10,7,1,formula,
+Stochos,Dunmere Sector,outer_rim,6,4,1,region,
+Portelle,Kranholm Sector,outer_rim,6,4,1,region,
+Hortensia,Moorings Sector,outer_rim,6,4,1,region,
+Snowmouth,Lantern Sector,outer_rim,6,4,1,formula,
+Constantia,Lagoa Funda Sector,inner_rim,12,8,1,keyword,yards/academy
+Sunderby,Longtide Sector,inner_rim,8,5,1,keyword,harsh climate
+Disciplina,Excubia Sector,core,12,11,1,formula,
+Galeholm,Bellwether Sector,inner_rim,8,5,1,region,
+Zubets,Fairhaven Sector,outer_rim,6,4,1,formula,
+Slate Hill,Slate Hill Sector,outer_rim,6,4,1,formula,
+Requies,Cohors Sector,outer_rim,6,4,1,region,
+Stonebarrow,Fairhaven Sector,outer_rim,6,4,1,region,
+Kalinov,Lagoa Funda Sector,inner_rim,10,7,1,region,
+Castra,Castra Sector,core,12,5,1,lore,Castra StarDrive
+Remedium,Castra Sector,core,12,7,1,keyword,agricultural
+Fuego Alto,Ciénaga Sector,outer_rim,10,9,1,keyword,billions of people; mining
+Teloneum,Lagoa Funda Sector,inner_rim,8,5,1,formula,
+Mudhaven,Kranholm Sector,outer_rim,6,4,1,region,
+Pulau Hijau,Pulau Hijau Sector,outer_rim,4,3,1,lore,remote listening post [Wookieepedia-adjusted]
+Sendero,Sendero Sector,outer_rim,6,4,1,formula,
+Brushfield,Bosque Alto Sector,inner_rim,8,5,1,region,
+Waypost,Muster Rock Sector,outer_rim,6,3,1,region,
+Kvitberg,Rauchtal Sector,outer_rim,6,4,1,formula,
+Rosenbach,Clearholm Sector,outer_rim,6,4,1,formula,
+Ninefold,Bellwether Sector,inner_rim,10,7,1,formula,
+Laterite,Laterite Sector,outer_rim,6,3,1,lore,"ryll mining, Twi'lek [Wookieepedia-adjusted]"
+Ciénaga,Ciénaga Sector,outer_rim,6,4,1,formula,
+Las Mieses,Charter Sector,core,12,7,1,keyword,agricultural
+Corundum,Thesauros Sector,outer_rim,8,5,1,formula,
+Goldcloud,Zlatna Sector,outer_rim,4,1,1,keyword,gas giant
+Long Strand,Lantern Sector,outer_rim,6,4,1,formula,
+Hagelfeld,Rauchtal Sector,outer_rim,6,3,1,lore,"Tropical vault world, Imperial security complex; few mines, no lore sheet row (own knowledge, unchecked)"
+Dry House,Zlatna Sector,outer_rim,6,4,1,formula,
+Holmvik,Kranholm Sector,outer_rim,6,4,1,region,
+Pescadora,Muster Rock Sector,outer_rim,6,4,1,formula,
+Groza,Slate Hill Sector,outer_rim,6,4,1,formula,
+Marmor,Classis Sector,inner_rim,12,11,1,formula,
+Ebbeholm,Shelter Sector,outer_rim,6,4,1,formula,
+Mar Seco,Drift Harbour Sector,outer_rim,6,4,1,keyword,mining; agricultural
+Motu Ahi,Salitre Sector,outer_rim,6,4,1,formula,
+Quebrada Honda,Eldingar Sector,outer_rim,6,4,1,formula,
+Needlepeak,Ciénaga Sector,outer_rim,8,5,1,formula,
+Saffron Downs,Ferraria Sector,inner_rim,9,6,1,formula,
+Gnomon,Excubia Sector,core,11,6,1,lore,Skakoan industrial planet
+Make Do,Longwire Sector,outer_rim,6,4,1,formula,
+Emberhold,Muster Rock Sector,outer_rim,6,3,1,formula,
+Kranholm,Kranholm Sector,outer_rim,11,5,1,lore,major shipyards and trade
+Mirrorfield,Fallout Sector,outer_rim,6,4,1,formula,
+Coldwell,Rio Lodo Sector,outer_rim,6,4,1,formula,
+Long Noon,Ulaan Tal Sector,outer_rim,6,4,1,region,
+Willowmere,Quieta Sector,inner_rim,6,4,1,formula,
+Whetstone,Mata Alta Sector,outer_rim,6,4,1,formula,
+Viridia,Quieta Sector,inner_rim,6,4,1,formula,
+Cinco Lunas,Muster Rock Sector,outer_rim,5,4,1,keyword,harsh climate; mining
+Theorema,Cohors Sector,outer_rim,6,4,1,formula,
+Halfpenny,Feldspar Sector,inner_rim,10,7,1,formula,
+Hardscrabble,Shelter Sector,outer_rim,8,5,1,formula,
+Caminus,Caminus Sector,outer_rim,11,8,1,lore,SoroSuub: volcanic mining and industry
+Blackfen,Thaw Sector,outer_rim,8,5,1,keyword,billions of people
+Kesari,Solacia Sector,outer_rim,6,4,1,region,
+Hoshimachi,Rio Lodo Sector,outer_rim,6,4,1,formula,
+Belavista,Thesauros Sector,outer_rim,6,4,1,formula,
+San Teodor,Fallout Sector,outer_rim,6,4,1,region,
+Granero,Lesnaya Sector,inner_rim,10,7,1,formula,
+Glasshold,Akousma Sector,inner_rim,8,5,1,region,
+Weitfeld,Ironbeach Sector,outer_rim,6,4,1,formula,
+Lagoa Funda,Lagoa Funda Sector,inner_rim,8,5,1,formula,
+Bina Minor,Ommata Sector,core,12,11,1,formula,
+Kloof,Salitre Sector,outer_rim,6,4,1,formula,
+Blind Eye,Varmdal Sector,outer_rim,6,4,1,region,
+Kizil Dala,Clearholm Sector,outer_rim,6,4,1,region,
+Ivyholm,Shelter Sector,outer_rim,6,4,1,formula,
+Amargura,Pulau Hijau Sector,outer_rim,5,3,1,lore,"desert, moisture farms, Hutt-run"
+Old Salvage,Longwire Sector,outer_rim,6,4,1,region,
+Tabularium,Cohors Sector,outer_rim,6,4,1,formula,
+Skopia,Castra Sector,core,14,11,1,keyword,billions of people
+Endline,Slate Hill Sector,outer_rim,6,4,1,formula,
+Backwater,Slate Hill Sector,outer_rim,6,4,1,region,
+Silica Minor,Bauxite IV Sector,outer_rim,6,4,1,formula,
+Nascentia,Bauxite IV Sector,outer_rim,6,4,1,formula,
+Codicil,Tarrow Sector,core,11,8,1,region,
+Kalmoor,Bosque Alto Sector,inner_rim,10,7,1,formula,
+Salus,Incus Sector,inner_rim,9,5,1,lore,bacta monopoly
+Rigwater,Longwire Sector,outer_rim,8,5,1,formula,
+Shiree,Pulau Hijau Sector,outer_rim,6,4,1,formula,
+Specula,Three Lamps Sector,inner_rim,9,6,1,formula,
+Mittelfeld,Longwire Sector,outer_rim,10,7,1,keyword,billions of people
+Nueve Lunas,Lagoa Funda Sector,inner_rim,12,11,1,keyword,billions of people; mining
+Redveld,Vinograd Sector,inner_rim,8,5,1,formula,
+Tyomny Les,Fairhaven Sector,outer_rim,6,4,1,formula,
+Long Winter,Slate Hill Sector,outer_rim,6,4,1,formula,
+Hutan Raya,Bauxite IV Sector,outer_rim,6,4,1,formula,
+Nebbia,Nebbia Sector,outer_rim,8,5,1,formula,
+Bina Major,Castra Sector,core,12,11,1,formula,
+Ventstown,Lantern Sector,outer_rim,6,4,1,formula,
+Brokengate,Bellwether Sector,inner_rim,6,4,1,formula,
+Fallen Keel,Sendero Sector,outer_rim,8,5,1,formula,
+Pinehallow,Shelter Sector,outer_rim,9,6,1,region,
+Dar Sukun,Varmdal Sector,outer_rim,6,4,1,formula,
+Meseta,Feldspar Sector,inner_rim,6,4,1,formula,
+Fallout,Fallout Sector,outer_rim,6,4,1,formula,
+Prognosis,Feldspar Sector,inner_rim,11,7,1,keyword,billions of people
+Old Cairn,Ommata Sector,core,2,1,1,lore,"ancient Jedi world, ruins [Wookieepedia-adjusted]"
+Imani Falls,Caza Real Sector,inner_rim,10,7,1,formula,
+Kolokol,Semeion Sector,inner_rim,8,5,1,formula,
+Broadacre,Pulau Hijau Sector,outer_rim,6,4,1,formula,
+Overgrowth,Longtide Sector,inner_rim,9,6,1,formula,
+Voluptas,Lenitas Sector,inner_rim,8,5,1,formula,
+Nordlys,Greenfever Sector,outer_rim,6,4,1,formula,
+Saltreach,Caminus Sector,outer_rim,7,6,1,lore,sinkhole mining
+Mossgarden,Eldingar Sector,outer_rim,6,4,1,formula,
+Hartwell,Charter Sector,core,11,8,1,region,
+Haverland,Vinograd Sector,inner_rim,9,4,1,keyword,yards/academy; agricultural
+Loess,Classis Sector,inner_rim,12,11,1,formula,
+Praesidium,Ferraria Sector,inner_rim,12,11,1,formula,
+Hammada,Semeion Sector,inner_rim,10,8,1,keyword,harsh climate
+Yukihama,Quieta Sector,inner_rim,8,5,1,formula,
+Metsola,Eldingar Sector,outer_rim,6,4,1,region,
+Treaty Wood,Semeion Sector,inner_rim,8,5,1,formula,
+Hollowstone,Feldspar Sector,inner_rim,9,8,1,keyword,yards/academy; mining
+Kaldvik,Highfall Sector,outer_rim,8,5,1,formula,
+Sigillum,Castra Sector,core,12,11,1,formula,
+Longshore,Salitre Sector,outer_rim,6,4,1,formula,
+Hirschwald,Thaw Sector,outer_rim,6,4,1,formula,
+Mirevale,Dunmere Sector,outer_rim,6,4,1,region,
+Feudgrass,Salitre Sector,outer_rim,6,4,1,formula,
+Resin Moon,Clearholm Sector,outer_rim,6,4,1,region,
+Bitterwell,Greenfever Sector,outer_rim,6,4,1,formula,
+Rio Turvo,Thesauros Sector,outer_rim,6,3,1,formula,
+Longquay,Varmdal Sector,outer_rim,8,5,1,region,
+Otium,Vinculum Sector,inner_rim,8,5,1,formula,
+Novy Rynek,Ashfall Sector,inner_rim,9,3,1,lore,"Gambler Paradise: gambling and trade, imports raw goods"
+Kept Faith,Moorings Sector,outer_rim,6,4,1,formula,
+Silberberg,Thesauros Sector,outer_rim,6,4,1,formula,
+Ridgefold,Highfall Sector,outer_rim,5,3,1,lore,Emperor's hidden storehouse
+Tinderland,Ulaan Tal Sector,outer_rim,6,4,1,formula,
+Firmitas,Muster Rock Sector,outer_rim,6,4,1,formula,
+Castellum,Lesnaya Sector,inner_rim,8,5,1,formula,
+Folio,Altofen Sector,inner_rim,9,6,1,formula,
+Saltwood,Excubia Sector,core,12,11,1,formula,
+Skarholm,Rio Lodo Sector,outer_rim,6,4,1,formula,
+Azzurra,Ferraria Sector,inner_rim,11,7,1,keyword,billions of people; yards/academy
+Brandt's Giant,Highfall Sector,outer_rim,4,1,1,keyword,gas giant
+Brennhof,Tarrow Sector,core,12,11,1,formula,
+Deepcut,Eldingar Sector,outer_rim,6,4,1,region,
+Nutrix,Ommata Sector,core,12,11,1,formula,
+Craterhold,Incus Sector,inner_rim,10,7,1,formula,
+Lindenfall,Fyrholm Sector,outer_rim,6,4,1,formula,
+Kinoko,Eldingar Sector,outer_rim,6,4,1,formula,
+The Shoal,Greenfever Sector,outer_rim,7,4,1,lore,Rebel base moon; engine adds the start base
+The Cuts,Sendero Sector,outer_rim,6,4,1,formula,
+Sabkha,Mirabel Sector,inner_rim,7,5,1,keyword,harsh climate
+Milestone Nine,Ironbeach Sector,outer_rim,6,4,1,region,
+Nyika,Thesauros Sector,outer_rim,6,4,1,formula,
+Kelpfast,Mata Alta Sector,outer_rim,6,4,1,formula,
+Pronoia,Ilanga Sector,outer_rim,6,4,1,formula,
+Marisol,Bellwether Sector,inner_rim,10,3,1,lore,"Zeltron pleasure world: entertainment and luxury, no heavy industry"
+Clove,Ilanga Sector,outer_rim,6,4,1,region,
+Coldhearth,Greenfever Sector,outer_rim,6,4,1,formula,
+Ashenmark,Sendero Sector,outer_rim,8,5,1,formula,
+Tallow Mesa,Bauxite IV Sector,outer_rim,5,3,1,keyword,small population

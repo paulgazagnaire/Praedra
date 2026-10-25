@@ -53,16 +53,16 @@ public class AssaultStatTests
     [Fact]
     public void A13_FourFleetAgainstTwoArmy()
     {
-        var r = Run(13, 20_000, "Alliance Fleet Regiment", 4, AssaultWorld.Imp, 2);
+        var r = Run(13, 20_000, "Deckhands", 4, AssaultWorld.Imp, 2);
         Assert.True(Math.Abs(r.Win - 48.0) <= 2.0, $"win {r.Win:F2} percent");
         Assert.True(Math.Abs(r.MeanLeft - 3.03) <= 0.1, $"mean left {r.MeanLeft:F3}");
     }
 
-    // m3-assault A14: the same plus one KDY-150: win 32.2 percent
+    // m3-assault A14: the same plus one Mordant Lien-150: win 32.2 percent
     [Fact]
     public void A14_WithAKdy()
     {
-        var r = Run(14, 20_000, "Alliance Fleet Regiment", 4, AssaultWorld.Imp, 2, 0, FacilityKind.Kdy150);
+        var r = Run(14, 20_000, "Deckhands", 4, AssaultWorld.Imp, 2, 0, FacilityKind.Kdy150);
         Assert.True(Math.Abs(r.Win - 32.2) <= 2.0, $"win {r.Win:F2} percent");
     }
 
@@ -78,8 +78,8 @@ public class AssaultStatTests
     [Fact]
     public void A16_WookieeAgainstDarkTrooper()
     {
-        var withGeneral = Run(16, 20_000, "Wookiee Regiment", 8, "Dark Trooper Regiment", 6, attackerLeadership: 90);
-        var without = Run(17, 20_000, "Wookiee Regiment", 8, "Dark Trooper Regiment", 6);
+        var withGeneral = Run(16, 20_000, "Kiru Sparks", 8, "Lictors", 6, attackerLeadership: 90);
+        var without = Run(17, 20_000, "Kiru Sparks", 8, "Lictors", 6);
         Assert.True(Math.Abs(withGeneral.Win - 2.7) <= 2.0, $"with L 90: win {withGeneral.Win:F2} percent");
         Assert.True(Math.Abs(without.Win - 0.2) <= 2.0, $"without: win {without.Win:F2} percent");
         Assert.True(withGeneral.Win > without.Win);

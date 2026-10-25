@@ -15,7 +15,7 @@ public class FogSettingsTests
         Assert.True(p.LanesPublic); Assert.True(p.CoreReportsInstantly); Assert.True(p.PassingFleetsExplore); Assert.True(p.AgentPresenceCounts);
         Assert.True(p.ReconRevealsFacilities); Assert.False(p.PresenceRevealsHq); Assert.Equal(SectorSuspicion.Off, p.SectorSuspicion);
         Assert.Equal(30, p.ObservedWindowDays); Assert.True(p.SingleHqCleanup);
-        Assert.Equal(new[] { "Yavin" }, p.StartFullCopyEmpire); Assert.Empty(p.StartFullCopyAlliance);
+        Assert.Equal(new[] { "The Shoal" }, p.StartFullCopyEmpire); Assert.Empty(p.StartFullCopyAlliance);
         Assert.Equal((4, 1, 4, 1, 0, 1), (p.EspionageRichSpread, p.EspionageRichBase, p.EspionageCapitalSpread, p.EspionageCapitalBase, p.EspionageOtherSpread, p.EspionageOtherBase));
         var h = new HqParams();
         Assert.Equal((100, 0, false, true), (h.Speed, h.MoveCost, h.UsesFacilitySlot, h.DestinationMustBeHeld));

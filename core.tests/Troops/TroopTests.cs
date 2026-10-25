@@ -10,20 +10,20 @@ using Praedra.Core.Troops;
 namespace Praedra.Core.Tests.Troops;
 
 // Tests of m3-troops-and-special-forces (ids T1 to T23 as in the sheet's table, then extra tests named after the rule they check).
-// Fixture T: Empire holds Coruscant with one standard Training Facility (id 500) and refined 1000; ISD 201 (3 slots), fleet 200 at
-// Coruscant; Stormtrooper regiments 401 to 403 on Coruscant. Hook time T = K + 1; events of orders carry Day = K.
+// Fixture T: Empire holds Charter with one standard Training Facility (id 500) and refined 1000; ISD 201 (3 slots), fleet 200 at
+// Charter; Stormtrooper regiments 401 to 403 on Charter. Hook time T = K + 1; events of orders carry Day = K.
 // The real galaxy, ship data, costs and troop files are used.
 public class TroopTests
 {
-    // v6 re-pin 2026-10-24: Far was Corellia (one great-route leg, 7 days at speed 100, 5 at 80). On the spiral map no single-hop trip
-    // from Coruscant takes those days; Rhinnal is the longest one the router flies direct (a 23-unit free jump: 4 days at speed 100, 3 at 80).
-    private const string Home = "Coruscant", Far = "Rhinnal";
-    private const string Isd = "Imperial Star Destroyer", Storm = "Stormtrooper Regiment";
+    // v6 re-pin 2026-10-24: Far was Classis (one great-route leg, 7 days at speed 100, 5 at 80). On the spiral map no single-hop trip
+    // from Charter takes those days; Remedium is the longest one the router flies direct (a 23-unit free jump: 4 days at speed 100, 3 at 80).
+    private const string Home = "Charter", Far = "Remedium";
+    private const string Isd = "Mandate", Storm = "Pacifiers";
     private static readonly Side Emp = Side.Empire, Reb = Side.Alliance;
 
     private static TroopData Data => BuildWorld.RealTroops.Value;
 
-    /// <summary>Fixture T. <paramref name="regiments"/> = ids 401 to 403 on Coruscant; <paramref name="support"/> only for tests of the garrison.</summary>
+    /// <summary>Fixture T. <paramref name="regiments"/> = ids 401 to 403 on Charter; <paramref name="support"/> only for tests of the garrison.</summary>
     private static BuildWorld T(bool regiments = true, bool withSupport = false, int holderSupport = 100)
     {
         var w = new BuildWorld(withSupport: withSupport, wireFleets: true);
@@ -56,7 +56,7 @@ public class TroopTests
         Assert.Equal(new[] { 6, 7, 8, 9, 10 }, Data.Regiments.Where(r => r.Side == Emp).Select(r => r.Id).ToArray());
         var st = Data.Regiment(Storm)!;
         Assert.Equal((9, 6, 6, 6, 0), (st.Cost, st.Maintenance, st.Attack, st.Defense, st.ResearchOrder));
-        var dt = Data.Regiment("Dark Trooper Regiment")!;
+        var dt = Data.Regiment("Lictors")!;
         Assert.Equal((12, 8, 2), (dt.Cost, dt.Maintenance, dt.ResearchOrder));
         Assert.All(Data.Regiments, r => Assert.Equal(TroopData.TrainingFamily, r.ProductionFamily));
     }
@@ -67,10 +67,10 @@ public class TroopTests
     {
         var expected = new (string, int, int, int, int, int, int)[] // name, cost, maint, attack, defense, research order, bombardment defense
         {
-            ("Alliance Fleet Regiment", 8, 6, 6, 3, 0, 5), ("Alliance Army Regiment", 6, 3, 3, 5, 0, 5), ("Sullustan Regiment", 3, 1, 1, 4, 1, 2),
-            ("Wookiee Regiment", 10, 8, 8, 4, 3, 4), ("Mon Calamari Regiment", 6, 4, 2, 8, 2, 9),
-            ("Stormtrooper Regiment", 9, 6, 6, 6, 0, 6), ("Imperial Fleet Regiment", 7, 5, 5, 3, 0, 2), ("Imperial Army Regiment", 6, 3, 3, 5, 0, 5),
-            ("War Droid Regiment", 9, 8, 8, 2, 1, 2), ("Dark Trooper Regiment", 12, 8, 8, 8, 2, 6),
+            ("Deckhands", 8, 6, 6, 3, 0, 5), ("Militia", 6, 3, 3, 5, 0, 5), ("Nhal Lookouts", 3, 1, 1, 4, 1, 2),
+            ("Kiru Sparks", 10, 8, 8, 4, 3, 4), ("Ilmar Shade Guard", 6, 4, 2, 8, 2, 9),
+            ("Pacifiers", 9, 6, 6, 6, 0, 6), ("Ballast", 7, 5, 5, 3, 0, 2), ("Tranches", 6, 3, 3, 5, 0, 5),
+            ("Proxies", 9, 8, 8, 2, 1, 2), ("Lictors", 12, 8, 8, 8, 2, 6),
         };
         foreach (var (n, cost, maint, atk, def, ro, bd) in expected)
         {
@@ -88,7 +88,7 @@ public class TroopTests
         Assert.Equal(9, Data.SpecialForces.Count);
         Assert.Equal(4, Data.SpecialForces.Count(s => s.Side == Reb));
         Assert.Equal(5, Data.SpecialForces.Count(s => s.Side == Emp));
-        var bh = Data.SpecialForce("Bounty Hunters")!;
+        var bh = Data.SpecialForce("Repossessors")!;
         Assert.Equal((0, 0), (bh.Cost, bh.Maintenance));
         Assert.All(Data.SpecialForces, s => Assert.Equal(0, s.ResearchOrder));
         Assert.All(Data.SpecialForces, s => Assert.Equal((0, 0, 0, 100), (s.EspionageVariance, s.CombatVariance, s.LeadershipVariance, s.LoyaltyBase)));
@@ -102,13 +102,14 @@ public class TroopTests
     [Fact]
     public void T23_NamesTableRenamesWithoutChangingStats()
     {
-        var eh = Data.SpecialForce("Noghri Death Commandos")!;
-        var isb = Data.SpecialForce("Imperial Espionage Droid")!;
-        Assert.Equal("Emperor's Hands", Data.SpecialForceDisplayName(eh));
-        Assert.Equal("ISB Agents", Data.SpecialForceDisplayName(isb));
+        var eh = Data.SpecialForce("Notaries")!;
+        var isb = Data.SpecialForce("Auditors")!;
+        // Praedra names 2026-10-25: the classes carry their Praedra names (Notaries, Auditors), so unit-names.csv no longer renames them
+        Assert.Equal("Notaries", Data.SpecialForceDisplayName(eh));
+        Assert.Equal("Auditors", Data.SpecialForceDisplayName(isb));
         Assert.Equal((8, 0x800, 55, 70, 2, 1), (eh.Id, eh.MissionBit, eh.Espionage, eh.Combat, eh.Cost, eh.Maintenance));
         Assert.Equal((6, 0x200, 60, 5, 1, 1), (isb.Id, isb.MissionBit, isb.Espionage, isb.Combat, isb.Cost, isb.Maintenance));
-        Assert.Equal("Guerrillas", Data.SpecialForceDisplayName(Data.SpecialForce("Guerrillas")!)); // not renamed
+        Assert.Equal("Strikers", Data.SpecialForceDisplayName(Data.SpecialForce("Strikers")!)); // not renamed
         Assert.Equal(new[] { 0x001, 0x002, 0x004, 0x008, 0x100, 0x200, 0x400, 0x800, 0x1000 }, Data.SpecialForces.Select(s => s.MissionBit).ToArray());
     }
 
@@ -173,7 +174,7 @@ public class TroopTests
     public void T6_BountyHuntersAreNotBuildable()
     {
         var w = T(regiments: false);
-        Assert.Equal("NotAvailable", w.TryOrder(Emp, Home, YardFamily.Training, "Bounty Hunters", 1));
+        Assert.Equal("NotAvailable", w.TryOrder(Emp, Home, YardFamily.Training, "Repossessors", 1));
     }
 
     // m3-troops T7
@@ -204,14 +205,14 @@ public class TroopTests
     {
         var w = T(regiments: false);
         w.Build.RespectResearchOrder = true;
-        Assert.Equal("NotResearched", w.TryOrder(Emp, Home, YardFamily.Training, "Dark Trooper Regiment", 1));
+        Assert.Equal("NotResearched", w.TryOrder(Emp, Home, YardFamily.Training, "Lictors", 1));
         w.Build.RespectResearchOrder = false; // AllAvailable
-        Assert.Null(w.TryOrder(Emp, Home, YardFamily.Training, "Dark Trooper Regiment", 1));
+        Assert.Null(w.TryOrder(Emp, Home, YardFamily.Training, "Lictors", 1));
     }
 
     // m3-troops T9
     [Fact]
-    public void T9_DeliveryToRhinnalTakesFourDaysAndAppearsInStep3() // v6 re-pin 2026-10-24: was Corellia, 7 days
+    public void T9_DeliveryToRhinnalTakesFourDaysAndAppearsInStep3() // v6 re-pin 2026-10-24: was Classis, 7 days
     {
         var w = T(regiments: false);
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Training, Storm, 1, Far));
@@ -230,17 +231,17 @@ public class TroopTests
     public void T10_DestinationHeldByTheAllianceIsBadDestination()
     {
         var w = T(regiments: false);
-        w.Hold("Hoth", Reb);
-        Assert.Equal("BadDestination", w.TryOrder(Emp, Home, YardFamily.Training, Storm, 1, "Hoth"));
+        w.Hold("The Thaw", Reb);
+        Assert.Equal("BadDestination", w.TryOrder(Emp, Home, YardFamily.Training, Storm, 1, "The Thaw"));
     }
 
-    // m3-troops T10b, superseded by free travel (movement-redesign-draft §A, Paul 2026-10-16): Ilum, off every route, is reachable.
+    // m3-troops T10b, superseded by free travel (movement-redesign-draft §A, Paul 2026-10-16): Glasswood, off every route, is reachable.
     [Fact]
     public void T10b_OffRouteDestinationIsReachableByFreeTravel()
     {
         var w = T(regiments: false);
-        w.Hold("Ilum", Emp);
-        Assert.Null(w.TryOrder(Emp, Home, YardFamily.Training, Storm, 1, "Ilum"));
+        w.Hold("Glasswood", Emp);
+        Assert.Null(w.TryOrder(Emp, Home, YardFamily.Training, Storm, 1, "Glasswood"));
     }
 
     // ---------------------------------------------------------------- loading (T11 to T15, T18)
@@ -277,9 +278,9 @@ public class TroopTests
     {
         var w = new BuildWorld(wireFleets: true);
         w.Hold(Home, Reb);
-        w.Eco.AddObject(Reb, "Medium Transport", null, true, 201);
+        w.Eco.AddObject(Reb, "Mule", null, true, 201);
         w.Fleets.AddFleetOf(Reb, "Transport", Home, new[] { 201 }, 200);
-        for (int id = 401; id <= 403; id++) w.Eco.AddObject(Reb, "Alliance Army Regiment", Home, true, id);
+        for (int id = 401; id <= 403; id++) w.Eco.AddObject(Reb, "Militia", Home, true, id);
         var before = Snap(w);
         Assert.Equal("NoCapacity", Step(w, w.Troops.SubmitLoad(Reb, 200, new[] { 401, 402, 403 })));
         Assert.Equal(before, Snap(w)); // none loaded
@@ -324,7 +325,7 @@ public class TroopTests
     public void T18_ASpecialForceIsAnUnknownRegiment()
     {
         var w = T();
-        w.Eco.AddObject(Emp, "Imperial Probe Droid", Home, true, 410);
+        w.Eco.AddObject(Emp, "Speculators", Home, true, 410);
         Assert.Equal("UnknownRegiment", Load(w, 200, 410));
         Assert.Equal("UnknownRegiment", Load(w, 200, 999)); // no such object either
         Assert.Equal("UnknownRegiment", Load(w, 200, 201)); // a ship is not a regiment
@@ -337,9 +338,9 @@ public class TroopTests
     public void CommonRejections()
     {
         var w = T();
-        w.Eco.AddObject(Reb, "Alliance Army Regiment", Home, true, 420);
+        w.Eco.AddObject(Reb, "Militia", Home, true, 420);
         w.Eco.AddObject(Emp, Storm, Home, false, 421); // queued, not completed
-        w.Eco.AddObject(Reb, "Corellian Corvette", null, true, 430);
+        w.Eco.AddObject(Reb, "Dodger", null, true, 430);
         w.Fleets.AddFleetOf(Reb, "Rebel", Home, new[] { 430 }, 431);
         var before = Snap(w);
         Assert.Equal("UnknownFleet", Load(w, 999, 401));
@@ -377,7 +378,7 @@ public class TroopTests
     public void T16_AboardRegimentsAreNoGarrisonUntilUnloaded()
     {
         var w = T(regiments: false, withSupport: true, holderSupport: 30); // N = 3
-        w.Eco.AddObject(Emp, "Imperial Star Destroyer", null, true, 202);
+        w.Eco.AddObject(Emp, "Mandate", null, true, 202);
         w.Fleets.AddFleetOf(Emp, "Two", Home, new[] { 202 }, 210);
         for (int id = 401; id <= 406; id++) w.Eco.AddObject(Emp, Storm, Home, true, id);
         Assert.Equal(3, w.Support!.RequiredGarrison(Home));
@@ -429,14 +430,14 @@ public class TroopTests
     {
         var w = T();
         Assert.Null(Load(w, 200, 401));
-        Assert.Null(Step(w, w.Fleets.SubmitMove(Emp, 200, "Hoth"))); // neutral
+        Assert.Null(Step(w, w.Fleets.SubmitMove(Emp, 200, "The Thaw"))); // neutral
         w.Run(80);
-        Assert.Equal("Hoth", w.State.Fleets[200].At);
+        Assert.Equal("The Thaw", w.State.Fleets[200].At);
         Assert.True(w.Troops.UnloadOnlyAtHeldSystem);
         Assert.Equal("NotYourSystem", Unload(w, 200, 401));
         w.Troops.UnloadOnlyAtHeldSystem = false;
         Assert.Null(Unload(w, 200, 401));
-        Assert.Equal("Hoth", w.Obj(401).System);
+        Assert.Equal("The Thaw", w.Obj(401).System);
     }
 
     // m3-troops §Orders (UnloadRegiments): NotAboard for a landed regiment or one on another fleet; InTransit while flying
@@ -516,7 +517,7 @@ public class TroopTests
         var w = T();
         Assert.Null(Load(w, 200, 401, 402));
         Assert.Null(Step(w, w.Fleets.SubmitMove(Emp, 200, Far)));
-        w.Run(1); // v6 re-pin 2026-10-24: the flight to Rhinnal takes 3 days at speed 80 (was 5), so check one day in, not two
+        w.Run(1); // v6 re-pin 2026-10-24: the flight to Remedium takes 3 days at speed 80 (was 5), so check one day in, not two
         Assert.Null(w.State.Fleets[200].At);
         w.Scrap(Emp, 201); // ScrapObject on a flying ship
         w.Run(1);
@@ -533,11 +534,11 @@ public class TroopTests
     {
         var w = T(regiments: false);
         int load0 = w.Eco.Load(Emp);
-        Assert.Null(w.TryOrder(Emp, Home, YardFamily.Training, "Imperial Probe Droid", 1));
+        Assert.Null(w.TryOrder(Emp, Home, YardFamily.Training, "Speculators", 1));
         Assert.Equal(load0 + 1, w.Eco.Load(Emp));
         w.RunTo(8);
         var e = w.Events<SpecialForceCreated>().Single();
-        Assert.Equal((5, Home, "Imperial Probe Droid"), (e.Day, e.System, e.Class));
+        Assert.Equal((5, Home, "Speculators"), (e.Day, e.System, e.Class));
         var o = w.Obj(e.Id);
         Assert.Equal((Home, 0, true), (o.System, o.AboardShip, o.Completed));
         Assert.Single(w.State.Fleets);
@@ -549,14 +550,14 @@ public class TroopTests
     public void T20_SpecialForcesNeverCountForTheGarrison()
     {
         var w = new BuildWorld(withSupport: true);
-        w.Hold("Bespin", Reb, 40); // N = 2
-        w.Eco.AddObject(Reb, "Infiltrators", "Bespin", true);
-        w.Eco.AddObject(Reb, "Infiltrators", "Bespin", true);
-        Assert.Equal(2, w.Support!.RequiredGarrison("Bespin"));
+        w.Hold("Drift Harbour", Reb, 40); // N = 2
+        w.Eco.AddObject(Reb, "Wreckers", "Drift Harbour", true);
+        w.Eco.AddObject(Reb, "Wreckers", "Drift Harbour", true);
+        Assert.Equal(2, w.Support!.RequiredGarrison("Drift Harbour"));
         w.Run(2);
-        Assert.Equal(0, w.Support.Garrison10("Bespin"));
-        Assert.Equal(0, w.Support.RegimentCount("Bespin"));
-        Assert.True(w.Support.IsUprising("Bespin")); // as for 0 regiments
+        Assert.Equal(0, w.Support.Garrison10("Drift Harbour"));
+        Assert.Equal(0, w.Support.RegimentCount("Drift Harbour"));
+        Assert.True(w.Support.IsUprising("Drift Harbour")); // as for 0 regiments
     }
 
     // m3-troops T21 (B5a, 2026-10-17: the sheet's expectation changed): special forces cannot be scrapped (Classic code 23, B5a section 7);
@@ -566,8 +567,8 @@ public class TroopTests
     {
         var w = new BuildWorld();
         w.Hold(Home, Reb);
-        int inf = w.Eco.AddObject(Reb, "Infiltrators", Home, true);
-        int gue = w.Eco.AddObject(Reb, "Guerrillas", Home, true);
+        int inf = w.Eco.AddObject(Reb, "Wreckers", Home, true);
+        int gue = w.Eco.AddObject(Reb, "Strikers", Home, true);
         int load = w.Eco.Load(Reb), refined = w.Eco.Refined(Reb);
         w.Scrap(Reb, inf);
         w.Run(1);
@@ -584,7 +585,7 @@ public class TroopTests
     public void ASpecialForceOnACapturedSystemIsUntouched()
     {
         var w = T();
-        int sf = w.Eco.AddObject(Emp, "Imperial Commandos", Home, true);
+        int sf = w.Eco.AddObject(Emp, "Closers", Home, true);
         w.Hold(Home, Reb);
         w.Run(3);
         Assert.Equal((Home, 0, Emp), (w.Obj(sf).System, w.Obj(sf).AboardShip, w.Obj(sf).Side));
@@ -602,7 +603,7 @@ public class TroopTests
         w.Fleets.AddFleetOf(Emp, "Fleet", Home, new[] { 201 }, 200);
         for (int id = 401; id <= 403; id++) w.Eco.AddObject(Emp, Storm, Home, true, id);
         w.Order(Emp, Home, YardFamily.Training, Storm, 2, Far);
-        w.Order(Emp, Home, YardFamily.Training, "Imperial Probe Droid", 1);
+        w.Order(Emp, Home, YardFamily.Training, "Speculators", 1);
         w.Run(1);
         w.Troops.SubmitLoad(Emp, 200, new[] { 401, 402, 403 });
         w.Troops.SubmitLoad(Emp, 200, new[] { 401 }); // rejected
@@ -635,7 +636,7 @@ public class TroopTests
         var w = T();
         w.Eco.AddObject(Emp, Isd, null, true, 202);
         w.Fleets.AddFleetOf(Emp, "Other", Home, new[] { 202 }, 210);
-        w.Eco.AddObject(Reb, "Alliance Army Regiment", Home, true, 420);
+        w.Eco.AddObject(Reb, "Militia", Home, true, 420);
         Assert.Null(Step(w, w.Troops.SubmitLoad(Emp, 210, new[] { 403 })));
         Assert.Null(Load(w, 200, 402, 401));
         var list = w.Troops.RegimentsAboardAt(Home, Emp);

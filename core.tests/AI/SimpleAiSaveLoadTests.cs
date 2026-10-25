@@ -58,7 +58,7 @@ public class SimpleAiSaveLoadTests
 
     // m1-clock-and-orders K16: QA-17 repro. The save kept only the battle ruleset; every other setting fell back to the code DEFAULT on load.
     // Seed 12 under ControlRule Derived (AssaultOnly is the code DEFAULT today), fog AIs to day 400: the loaded copy came back AssaultOnly and
-    // split on day 448 (Begamor changed hands only in Classic).
+    // split on day 448 (Port Isolde changed hands only in Classic).
     [Fact]
     public void K16_SaveKeepsEveryGameSetting()
     {

@@ -164,7 +164,7 @@ public class MissionOrderTests
         var w = new MissionWorld();
         w.Agent(Leia, T, dip: 100, lead: 100);
         w.Hold(X, Side.Empire, 0); w.Hold(Alderaan, null, 50); w.Hold(Bespin, Side.Alliance, 0); w.Hold(H, Side.Alliance, 100);
-        w.Game.Step(); // 6.1: Bespin (support 0, no garrison) rises
+        w.Game.Step(); // 6.1: Drift Harbour (support 0, no garrison) rises
         Assert.True(w.Host.Support.IsUprising(Bespin));
         Assert.Equal(MissionReject.BadTarget, w.Try(s => new StartMissionOrder(s, Side.Alliance, MissionKind.Diplomacy, new() { Leia }, new(), new(), X)));
         Assert.Equal(MissionReject.BadTarget, w.Try(s => new StartMissionOrder(s, Side.Alliance, MissionKind.Diplomacy, new() { Leia }, new(), new(), Bespin)));
@@ -197,7 +197,7 @@ public class MissionOrderTests
         Assert.Empty(w.M.Missions);
     }
 
-    // m5-missions MI53: Death Star Sabotage with no Death Star; a story kind (Dagobah)
+    // m5-missions MI53: Death Star Sabotage with no Death Star; a story kind (MissionKind.Dagobah)
     [Fact]
     public void MI53_NoDeathStarAndHiddenKind()
     {
@@ -236,7 +236,7 @@ public class MissionOrderTests
         Assert.Equal(H, w.Ch.Get(Leia)!.System);
     }
 
-    // m5-missions MI55: the mission ends after HomeSystem was captured; Alderaan and Bespin are both own systems 4 ticks away: the tie goes to Alderaan
+    // m5-missions MI55: the mission ends after HomeSystem was captured; Alderaan and Drift Harbour are both own systems 4 ticks away: the tie goes to Alderaan
     [Fact]
     public void MI55_ReturnToNearestOwnSystem()
     {
@@ -325,7 +325,7 @@ public class MissionOrderTests
     public void MI59_NoForcedStop()
     {
         var w = new MissionWorld();
-        w.Host.Fleets.AddFleet(Side.Empire, "Picket", new[] { "Imperial Star Destroyer" }, T);
+        w.Host.Fleets.AddFleet(Side.Empire, "Picket", new[] { "Mandate" }, T);
         w.Agent(Leia, H);
         int draws = w.Stub!.Requests.Count;
         w.Submit(s => new MoveGroupOrder(s, Side.Alliance, new() { Leia }, new(), X));
@@ -337,7 +337,7 @@ public class MissionOrderTests
         Assert.Equal(draws, w.Stub.Requests.Count);
     }
 
-    // MoveGroup checks: Bounty Hunters cannot Move (mask all but 0x1000); AlreadyThere; UnknownSystem; members become free on arrival.
+    // MoveGroup checks: Repossessors cannot Move (mask all but 0x1000); AlreadyThere; UnknownSystem; members become free on arrival.
     [Fact]
     public void MoveGroupChecks()
     {
@@ -345,7 +345,7 @@ public class MissionOrderTests
         w.Agent(Vader, T);
         int hunters = w.Unit(Side.Empire, Hunters, T), probe = w.Unit(Side.Empire, Probe, T);
         Assert.Equal(MissionReject.NotEligibleSpecialForce, w.Try(s => new MoveGroupOrder(s, Side.Empire, new() { Vader }, new() { hunters }, H)));
-        Assert.Equal(RejectReason.UnknownSystem, w.Try(s => new MoveGroupOrder(s, Side.Empire, new() { Vader }, new(), "Nowhere")));
+        Assert.Equal(RejectReason.UnknownSystem, w.Try(s => new MoveGroupOrder(s, Side.Empire, new() { Vader }, new(), "No Such Place")));
         Assert.Equal(RejectReason.AlreadyThere, w.Try(s => new MoveGroupOrder(s, Side.Empire, new() { Vader }, new(), T)));
         Assert.Null(w.Try(s => new MoveGroupOrder(s, Side.Empire, new() { Vader }, new() { probe }, H)));
         Assert.Null(w.Host.Economy.Find(probe)!.System);
@@ -427,7 +427,7 @@ public class MissionOrderTests
         Assert.True(d.Get(MissionKind.Dagobah).Hidden);
         Assert.False(d.Get(MissionKind.Assassination).Alliance);
         Assert.Equal((35, 35, -1, 50, 579), (d.Numbers.DecoyOfficerPercent, d.Numbers.DetectionOfficerPercent, d.Numbers.DetectionConstant, d.Numbers.HanMissionSpeed, d.Numbers.HanCharacterId));
-        Assert.Equal(10, GameData.Default.Ships["Imperial Star Destroyer"].Detection > 0 ? 10 : 0); // ships carry their detection column
+        Assert.Equal(10, GameData.Default.Ships["Mandate"].Detection > 0 ? 10 : 0); // ships carry their detection column
         Assert.Contains("5.3", Game.WorkList);
         Assert.True(Game.WorkList.ToList().IndexOf("5.3") > Game.WorkList.ToList().IndexOf("5.2") && Game.WorkList.ToList().IndexOf("5.3") < Game.WorkList.ToList().IndexOf("5.4"));
     }
@@ -442,12 +442,12 @@ public class MissionOrderTests
     {
         var w = new MissionWorld(new MissionParams { CountAboardUnits = countAboard });
         w.Hold(T, Side.Empire, 0);
-        int fleet = w.Host.Fleets.AddFleet(Side.Empire, "E", new[] { "Imperial Star Destroyer" }, T);
+        int fleet = w.Host.Fleets.AddFleet(Side.Empire, "E", new[] { "Mandate" }, T);
         int ship = w.Game.State.Fleets[fleet].Ships[0];
         var aboard = w.Host.Economy.Find(w.Unit(Side.Empire, ImpArmy, T))!;
         aboard.System = null; aboard.AboardShip = ship;
         int landed = w.Unit(Side.Empire, Storm, T);
-        int based = w.Unit(Side.Empire, "TIE Fighter", T);
+        int based = w.Unit(Side.Empire, "Gleaner", T);
         w.Unit(Side.Empire, Probe, T); w.Unit(Side.Alliance, RebArmy, T); w.Host.Economy.AddFacility(T, FacilityKind.Mine);
         w.Agent(Piett, T, esp: 60); w.Ch.SetPost(Piett, fleet, CharacterPost.Admiral);
         w.Agent(Veers, T, esp: 40); w.Ch.SetPost(Veers, fleet, CharacterPost.General);

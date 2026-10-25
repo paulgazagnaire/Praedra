@@ -527,9 +527,9 @@ public partial class Main
         }
         s.Host.Control.DebugOrdersEnabled = true; // test-only path: the core's debug order, off in the real game
         Side winner = playerWins ? me : s.Enemy;
-        string goal = winner == Side.Alliance ? "Coruscant" : s.Host.HqSystem;
+        string goal = winner == Side.Alliance ? "Charter" : s.Host.HqSystem;
         // (B5a) under derived control a world is taken by regiments standing on it: six of the winner's Army regiments replace those there
-        s.Host.Control.SubmitDebugSetTroops(winner, goal, winner, winner == Side.Alliance ? "Alliance Army Regiment" : "Imperial Army Regiment", 6);
+        s.Host.Control.SubmitDebugSetTroops(winner, goal, winner, winner == Side.Alliance ? "Militia" : "Tranches", 6);
         // Standard victory (the default since 2026-10-16) also needs the two enemy leaders captive: test-only, straight through the character module.
         foreach (var k in s.Host.Victory.Keys.Where(k => k.Standard && k.Side == winner))
             if (s.Host.Characters.Get(k.Character) is { } c) s.Host.Characters.Capture(null, c, winner, null, "Playtest");

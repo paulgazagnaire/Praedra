@@ -8,7 +8,7 @@ namespace Praedra.Core.Tests.Economy;
 // load 0, stockpile 0 / 0. Stub draws return 0 unless stated.
 public class PoolTests
 {
-    private const string Home = "Coruscant";
+    private const string Home = "Charter";
 
     private static EcoWorld SetupS1(int support = 100, bool freeShips = false)
     {
@@ -82,7 +82,7 @@ public class PoolTests
         var w = new EcoWorld();
         w.Hold(Home, Side.Empire, 50);
         w.Mine(Home, id: 1);
-        for (int i = 0; i < 9; i++) w.Eco.AddObject(Side.Empire, "Stormtrooper Regiment"); // load 54: share min(50, 54) = 50
+        for (int i = 0; i < 9; i++) w.Eco.AddObject(Side.Empire, "Pacifiers"); // load 54: share min(50, 54) = 50
         Assert.Equal(20, EconomyModule.CycleDays(new EconomyParams(), 50, 50));
         w.Stub!.Expect(0, 20, draw);
         w.Run(1);
@@ -114,9 +114,9 @@ public class PoolTests
     private static EcoWorld Block(int mines, int refineries)
     {
         var w = new EcoWorld();
-        w.Hold("Kuat", Side.Alliance, 100);
-        for (int i = 0; i < mines; i++) w.Mine("Kuat");
-        for (int i = 0; i < refineries; i++) w.Refinery("Kuat");
+        w.Hold("Navalia", Side.Alliance, 100);
+        for (int i = 0; i < mines; i++) w.Mine("Navalia");
+        for (int i = 0; i < refineries; i++) w.Refinery("Navalia");
         return w;
     }
 
@@ -125,7 +125,7 @@ public class PoolTests
     public void P7_SevenPairsAtLoad175ShareTwentyFiveEach()
     {
         var w = Block(7, 7);
-        for (int i = 0; i < 5; i++) w.Eco.AddObject(Side.Alliance, "Nebulon-B Frigate"); // 5 x 35 = 175
+        for (int i = 0; i < 5; i++) w.Eco.AddObject(Side.Alliance, "Mender"); // 5 x 35 = 175
         Assert.Equal(175, w.Eco.Load(Side.Alliance));
         w.Run(1); // B5b 2026-10-18: shares are dealt incrementally at the 6.5 hook (B5b §4), so they are read after the first day.
         foreach (var o in w.Eco.Objects.Where(o => o.Class is "Mine" or "Refinery"))
@@ -140,11 +140,11 @@ public class PoolTests
     public void P8_SharesCapAtFiftyAndExtraLoadIsNotDealt(int load)
     {
         var w = Block(7, 0);
-        for (int i = 0; i < 10; i++) w.Eco.AddObject(Side.Alliance, "Nebulon-B Frigate"); // 350
+        for (int i = 0; i < 10; i++) w.Eco.AddObject(Side.Alliance, "Mender"); // 350
         if (load == 400)
         {
-            for (int i = 0; i < 10; i++) w.Eco.AddObject(Side.Alliance, "Alliance Army Regiment"); // 30
-            for (int i = 0; i < 5; i++) w.Eco.AddObject(Side.Alliance, "X-wing"); // 20
+            for (int i = 0; i < 10; i++) w.Eco.AddObject(Side.Alliance, "Militia"); // 30
+            for (int i = 0; i < 5; i++) w.Eco.AddObject(Side.Alliance, "Swift"); // 20
         }
         Assert.Equal(load, w.Eco.Load(Side.Alliance));
         w.Run(1); // B5b 2026-10-18: shares are dealt incrementally at the 6.5 hook (B5b §4), so they are read after the first day.
@@ -156,7 +156,7 @@ public class PoolTests
     public void P9_ThreeMinesLoadTenShareFourThreeThree()
     {
         var w = Block(3, 0);
-        for (int i = 0; i < 10; i++) w.Eco.AddObject(Side.Alliance, "Guerrillas"); // maintenance 1 each
+        for (int i = 0; i < 10; i++) w.Eco.AddObject(Side.Alliance, "Strikers"); // maintenance 1 each
         w.Run(1); // B5b 2026-10-18: shares are dealt incrementally at the 6.5 hook (B5b §4), so they are read after the first day.
         Assert.Equal(new[] { 4, 3, 3 }, w.Eco.Objects.Where(o => o.Class == "Mine").Select(o => w.Eco.ShareOf(o.Id)).ToArray());
     }
@@ -173,7 +173,7 @@ public class PoolTests
     {
         var w = new EcoWorld(freeShips: true); // fleet ships pay upkeep now; these sheet numbers assume only the regiments do
         w.Hold(Home, Side.Empire, support);
-        for (int i = 0; i < regiments; i++) w.Eco.AddObject(Side.Empire, "Stormtrooper Regiment", Home);
+        for (int i = 0; i < regiments; i++) w.Eco.AddObject(Side.Empire, "Pacifiers", Home);
         if (ships.Length > 0) w.Fleets.AddFleet(Side.Empire, "F", ships, Home);
         return w;
     }
@@ -182,7 +182,7 @@ public class PoolTests
     [Fact]
     public void P11_SupportTwentyFiveShipAndThreeRegiments()
     {
-        var w = Smuggle(25, 3, "Imperial Star Destroyer");
+        var w = Smuggle(25, 3, "Mandate");
         Assert.Equal(34, w.Eco.DiversionPercent(Home, Side.Empire)); // 50 - 10 - 6
     }
 
@@ -190,7 +190,7 @@ public class PoolTests
     [Fact]
     public void P12_DeathStarSectorDoublesEmpireRegiments()
     {
-        var w = Smuggle(25, 3, "Imperial Star Destroyer");
+        var w = Smuggle(25, 3, "Mandate");
         w.Eco.IsDeathStarSector = s => s == Home;
         Assert.Equal(28, w.Eco.DiversionPercent(Home, Side.Empire)); // 50 - 10 - 12
     }
@@ -199,7 +199,7 @@ public class PoolTests
     [Fact]
     public void P13_OwnDeathStarInAFleetMakesItZeroWithNoDraw()
     {
-        var w = Smuggle(25, 3, "Imperial Star Destroyer", "Death Star");
+        var w = Smuggle(25, 3, "Mandate", "Death Star");
         Assert.Equal(0, w.Eco.DiversionPercent(Home, Side.Empire));
         w.Mine(Home);
         w.Run(30); // load 18 (three regiments): d = 28, first cycle 14, so it finishes at hook time 15
@@ -229,7 +229,7 @@ public class PoolTests
     [Fact]
     public void P15_SixDestroyersClampToZeroAndMakeNoDraw()
     {
-        var w = Smuggle(25, 0, Enumerable.Repeat("Imperial Star Destroyer", 6).ToArray());
+        var w = Smuggle(25, 0, Enumerable.Repeat("Mandate", 6).ToArray());
         Assert.Equal(0, w.Eco.DiversionPercent(Home, Side.Empire));
         w.Mine(Home, id: 1);
         w.Run(25); // d = 20, first cycle 10, ends at hook time 11
@@ -248,8 +248,8 @@ public class PoolTests
     public void DiversionCountsFightersOfTheControllerOnly()
     {
         var w = Smuggle(25);
-        for (int i = 0; i < 2; i++) w.Eco.AddObject(Side.Empire, "TIE Fighter", Home); // based squadrons; squadrons aboard are not "on the system"
-        w.Fleets.AddFleet(Side.Alliance, "E", new[] { "Corellian Corvette" }, Home);
+        for (int i = 0; i < 2; i++) w.Eco.AddObject(Side.Empire, "Gleaner", Home); // based squadrons; squadrons aboard are not "on the system"
+        w.Fleets.AddFleet(Side.Alliance, "E", new[] { "Dodger" }, Home);
         Assert.Equal(40, w.Eco.DiversionPercent(Home, Side.Empire)); // 50 - 2 x 5; the enemy corvette does not count
     }
 
@@ -271,7 +271,7 @@ public class PoolTests
     }
 
     private static int EnemyInterdictor(EcoWorld w, Side enemy, string system) =>
-        w.Fleets.AddFleet(enemy, "Blockade", new[] { "Interdictor Cruiser" }, system);
+        w.Fleets.AddFleet(enemy, "Blockade", new[] { "Subpoena" }, system);
 
     // m2-mines-refineries-pools P18
     [Fact]
@@ -369,8 +369,8 @@ public class PoolTests
     public void P20_TwoSidesDueOnOneDayAreProcessedInIdOrder()
     {
         var w = new EcoWorld();
-        w.Hold("Sullust", Side.Alliance); w.Hold(Home, Side.Empire);
-        w.Mine("Sullust", id: 1); w.Mine(Home, id: 2);
+        w.Hold("Caminus", Side.Alliance); w.Hold(Home, Side.Empire);
+        w.Mine("Caminus", id: 1); w.Mine(Home, id: 2);
         w.Run(3);
         var e = w.Events<ResourceProduced>();
         Assert.Equal(new[] { 1, 2 }, e.Select(x => x.Facility).ToArray());
@@ -380,7 +380,7 @@ public class PoolTests
     private static EcoWorld Pairs(ulong seed, bool incidents)
     {
         var w = new EcoWorld(seed, incidents);
-        var names = TestData.RealGalaxy.Systems.Where(s => s.Name != "Ilum" && s.Name != "Csilla").Take(20).Select(s => s.Name).ToArray();
+        var names = TestData.RealGalaxy.Systems.Where(s => s.Name != "Glasswood" && s.Name != "Frostholm").Take(20).Select(s => s.Name).ToArray();
         for (int i = 0; i < names.Length; i++)
         {
             var side = i % 2 == 0 ? Side.Empire : Side.Alliance;
@@ -440,7 +440,7 @@ public class PoolTests
         var w = new EcoWorld();
         w.Hold(Home, Side.Empire, 100);
         w.Refinery(Home, id: 2);
-        w.Hold("Sullust", Side.Alliance); w.Refinery("Sullust", id: 5);
+        w.Hold("Caminus", Side.Alliance); w.Refinery("Caminus", id: 5);
         w.Run(1);
         Assert.Equal(new[] { 2 }, w.Eco.RawLine(Side.Empire).ToArray());
         w.Fleets.SetOwner(Home, Side.Alliance);

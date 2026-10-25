@@ -18,25 +18,25 @@ public static class DemoScenario
         var fm = FleetModule.Attach(game, galaxy, ships, blockade, ForcedStopTrigger.PaulRule);
 
         // Who owns what (so a blockade flag can fire: an enemy fleet sitting in an owned system).
-        fm.SetOwner("Coruscant", Side.Empire);
-        fm.SetOwner("Yavin", Side.Empire);
-        fm.SetOwner("Sullust", Side.Empire);   // Home One arrives here: Rebel fleet in an Imperial system
-        fm.SetOwner("Kinyen", Side.Alliance);  // the Imperial picket sits here: blockade on from day 1
-        fm.SetOwner("Hoth", Side.Alliance);
-        fm.SetOwner("Mon Calamari", Side.Alliance);
-        fm.SetOwner("Fondor", Side.Empire);
+        fm.SetOwner("Charter", Side.Empire);
+        fm.SetOwner("The Shoal", Side.Empire);
+        fm.SetOwner("Caminus", Side.Empire);   // Home One arrives here: Rebel fleet in an Imperial system
+        fm.SetOwner("Tierra Larga", Side.Alliance);  // the Imperial picket sits here: blockade on from day 1
+        fm.SetOwner("The Thaw", Side.Alliance);
+        fm.SetOwner("The Moorings", Side.Alliance);
+        fm.SetOwner("Incus", Side.Empire);
 
         // Moving fleets: (side, name, ships, from, to)
-        Go(fm, Side.Alliance, "Red", new[] { "Corellian Corvette", "Corellian Corvette" }, "Coruscant", "Hoth");        // stopped at Kinyen
-        Go(fm, Side.Empire, "Death Squadron", new[] { "Imperial Star Destroyer", "Imperial Star Destroyer" }, "Coruscant", "Yavin");
-        Go(fm, Side.Alliance, "Home One", new[] { "Mon Calamari Cruiser" }, "Mon Calamari", "Sullust");
-        Go(fm, Side.Alliance, "Blue", new[] { "Nebulon-B Frigate", "Nebulon-B Frigate" }, "Hoth", "Corellia");
-        Go(fm, Side.Empire, "Vengeance", new[] { "Victory Destroyer", "Victory Destroyer", "Victory Destroyer" }, "Fondor", "Utapau");
-        Go(fm, Side.Alliance, "Supply Run", new[] { "Medium Transport" }, "Endor", "Naboo");
-        Go(fm, Side.Empire, "Tarkin's Patrol", new[] { "Strike Cruiser" }, "Bastion", "Dagobah");
+        Go(fm, Side.Alliance, "Red", new[] { "Dodger", "Dodger" }, "Charter", "The Thaw");        // stopped at Tierra Larga
+        Go(fm, Side.Empire, "Death Squadron", new[] { "Mandate", "Mandate" }, "Charter", "The Shoal");
+        Go(fm, Side.Alliance, "Home One", new[] { "Ark" }, "The Moorings", "Caminus");
+        Go(fm, Side.Alliance, "Blue", new[] { "Mender", "Mender" }, "The Thaw", "Classis");
+        Go(fm, Side.Empire, "Vengeance", new[] { "Decree", "Decree", "Decree" }, "Incus", "Saltreach");
+        Go(fm, Side.Alliance, "Supply Run", new[] { "Mule" }, "Fyrholm", "Solacia");
+        Go(fm, Side.Empire, "Tarkin's Patrol", new[] { "Injunction" }, "Oldwatch", "Eldingar");
 
-        // Stationary: the Imperial picket at Kinyen (an Interdictor Cruiser has a gravity-well projector).
-        fm.AddFleet(Side.Empire, "Picket-1", new[] { "Interdictor Cruiser" }, "Kinyen");
+        // Stationary: the Imperial picket at Tierra Larga (an Subpoena has a gravity-well projector).
+        fm.AddFleet(Side.Empire, "Picket-1", new[] { "Subpoena" }, "Tierra Larga");
         return fm;
     }
 

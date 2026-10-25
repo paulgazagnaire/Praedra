@@ -87,15 +87,18 @@ public sealed class FleetModule
 
     /// <summary>
     /// Setup only: place a new fleet of new, completed ships at a system (games and tests; not an order, raises no event). The fleet and its
-    /// ships get ids from the shared object counter (the fleet first, then the ships and the squadrons, each in class-name order), or
-    /// <paramref name="id"/> for the fleet. <paramref name="squadrons"/> are created aboard the fleet's ships, each on the first ship with a
+    /// ships get ids from the shared object counter (the fleet first, then the ships and the squadrons, each in class-name order, or in the
+    /// order given when <paramref name="listedOrder"/> is set), or <paramref name="id"/> for the fleet. <paramref name="squadrons"/> are created aboard the fleet's ships, each on the first ship with a
     /// free berth by ship id, and must fit. Call it between Steps. rule: m3-fleets §What a fleet is; §Carrying rules.
     /// </summary>
-    public int AddFleet(Side side, string name, IEnumerable<string> ships, string system, IEnumerable<string>? squadrons = null, int? id = null)
+    public int AddFleet(Side side, string name, IEnumerable<string> ships, string system, IEnumerable<string>? squadrons = null, int? id = null,
+        bool listedOrder = false)
     {
         // Sorted by class name (ordinal) so the same fleet always gets the same ids whatever the order it was listed in (canonical save and hash).
-        var shipList = ships.OrderBy(c => c, StringComparer.Ordinal).ToList();
-        var squadList = (squadrons ?? Array.Empty<string>()).OrderBy(c => c, StringComparer.Ordinal).ToList();
+        // listedOrder: the caller's order is already fixed (a data file), so ids do not depend on class names and a rename leaves the game as it was.
+        var shipList = listedOrder ? ships.ToList() : ships.OrderBy(c => c, StringComparer.Ordinal).ToList();
+        var squadList = listedOrder ? (squadrons ?? Array.Empty<string>()).ToList()
+            : (squadrons ?? Array.Empty<string>()).OrderBy(c => c, StringComparer.Ordinal).ToList();
         // rule: m3-fleets §What a fleet is, invariants 1 and 4 (never empty; ships, or only squadrons that fly)
         if (shipList.Count == 0) throw new ArgumentException("A fleet needs at least one capital ship (squadrons ride aboard ships).");
         foreach (var c in shipList)

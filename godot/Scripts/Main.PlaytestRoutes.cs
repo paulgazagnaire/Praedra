@@ -10,7 +10,7 @@ namespace PraedraViewer;
 /// <summary>
 /// Playtest of the move preview's trap warning and shift-click waypoints (rule: m1-travel §Path rule (3), (5); Paul 2026-10-16: the game
 /// proposes the fastest path, turns it red when it crosses a known enemy interdictor, never detours on its own, and waypoints force any path).
-/// A fresh Alliance game: an Empire Interdictor Cruiser is planted, in sight, on the way of a long move; the preview must turn red and name it,
+/// A fresh Alliance game: an Empire Subpoena is planted, in sight, on the way of a long move; the preview must turn red and name it,
 /// a waypoint around it must clear the warning, a waypoint onto it must keep the warning, and the order sent must fly the previewed path.
 /// </summary>
 public partial class Main
@@ -42,7 +42,7 @@ public partial class Main
 
         s.OpponentIdle = true; // the Empire AI would fly the planted ship away before the picture is taken
         fm.SetOwner(trap, me); // the Alliance holds it, so it sees the fleets there live
-        fm.AddFleet(Side.Empire, "Net", new[] { "Interdictor Cruiser" }, trap);
+        fm.AddFleet(Side.Empire, "Net", new[] { "Subpoena" }, trap);
         gs.PlayDay(); // the side's picture is taken in the day step
         var red = gs.PlanWithWaypoints(mover.Id, Array.Empty<string>(), dest, confirm: false);
         Expect(red.Red && red.Banner.Contains("TRAP") && red.Banner.Contains(trap) && red.Traps.Contains(trap),

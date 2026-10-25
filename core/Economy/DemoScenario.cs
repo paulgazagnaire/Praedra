@@ -24,11 +24,11 @@ public sealed class DemoScenario
     // (system, Alliance support, mines, refineries); mines never exceed the system's raw slots.
     private static readonly (string System, int AllianceSupport, int Mines, int Refineries)[] EmpireSystems =
     {
-        ("Coruscant", 10, 3, 3), ("Kuat", 20, 4, 3), ("Corellia", 65, 4, 2), ("Fondor", 75, 3, 2),
+        ("Charter", 10, 3, 3), ("Navalia", 20, 4, 3), ("Classis", 65, 4, 2), ("Incus", 75, 3, 2),
     };
     private static readonly (string System, int AllianceSupport, int Mines, int Refineries)[] AllianceSystems =
     {
-        ("Sullust", 80, 4, 3), ("Mon Calamari", 25, 3, 2), ("Yavin", 100, 2, 2), ("Bespin", 30, 3, 2),
+        ("Caminus", 80, 4, 3), ("The Moorings", 25, 3, 2), ("The Shoal", 100, 2, 2), ("Drift Harbour", 30, 3, 2),
     };
 
     public static DemoScenario Create(string repoRoot, ulong seed, bool incidents = true, bool support = false)
@@ -56,37 +56,37 @@ public sealed class DemoScenario
         foreach (var s in AllianceSystems) Place(Side.Alliance, s);
 
         // Load (maintenance): yards, ships and troops as economy objects. The Empire ends up above its capacity so autoscrap runs.
-        eco.AddFacility("Kuat", FacilityKind.OrbitalShipyard);
-        eco.AddFacility("Fondor", FacilityKind.OrbitalShipyard);
-        eco.AddFacility("Coruscant", FacilityKind.ConstructionYard);
-        for (int i = 0; i < 5; i++) eco.AddObject(Side.Empire, "Imperial Star Destroyer");
-        eco.AddObject(Side.Empire, "Super Star Destroyer");
-        for (int i = 0; i < 10; i++) eco.AddObject(Side.Empire, "Stormtrooper Regiment", "Coruscant");
-        eco.AddFacility("Sullust", FacilityKind.Kdy150);
-        for (int i = 0; i < 3; i++) eco.AddObject(Side.Alliance, "Mon Calamari Cruiser");
-        for (int i = 0; i < 4; i++) eco.AddObject(Side.Alliance, "Nebulon-B Frigate");
-        for (int i = 0; i < 6; i++) eco.AddObject(Side.Alliance, "Alliance Army Regiment", "Yavin");
+        eco.AddFacility("Navalia", FacilityKind.OrbitalShipyard);
+        eco.AddFacility("Incus", FacilityKind.OrbitalShipyard);
+        eco.AddFacility("Charter", FacilityKind.ConstructionYard);
+        for (int i = 0; i < 5; i++) eco.AddObject(Side.Empire, "Mandate");
+        eco.AddObject(Side.Empire, "Edict");
+        for (int i = 0; i < 10; i++) eco.AddObject(Side.Empire, "Pacifiers", "Charter");
+        eco.AddFacility("Caminus", FacilityKind.Kdy150);
+        for (int i = 0; i < 3; i++) eco.AddObject(Side.Alliance, "Ark");
+        for (int i = 0; i < 4; i++) eco.AddObject(Side.Alliance, "Mender");
+        for (int i = 0; i < 6; i++) eco.AddObject(Side.Alliance, "Militia", "The Shoal");
 
-        // Fleets: an Imperial picket at Kuat, a Rebel picket at Sullust, an Interdictor sent to blockade Bespin and a Rebel
-        // transport sent from Hoth to Yavin. Movement draws no random numbers.
-        fleets.AddFleet(Side.Empire, "Kuat Picket", new[] { "Imperial Star Destroyer" }, "Kuat");
-        fleets.AddFleet(Side.Alliance, "Sullust Picket", new[] { "Corellian Corvette" }, "Sullust");
-        eco.AddObject(Side.Alliance, "X-wing", "Sullust"); // a squadron based at Sullust (a corvette has no berth)
-        int interdictor = fleets.AddFleet(Side.Empire, "Interdiction", new[] { "Interdictor Cruiser" }, "Kinyen");
-        int transport = fleets.AddFleet(Side.Alliance, "Supply", new[] { "Medium Transport" }, "Hoth");
-        fleets.SubmitMove(Side.Empire, interdictor, "Bespin");
-        fleets.SubmitMove(Side.Alliance, transport, "Yavin");
+        // Fleets: an Imperial picket at Navalia, a Rebel picket at Caminus, an Interdictor sent to blockade Drift Harbour and a Rebel
+        // transport sent from The Thaw to The Shoal. Movement draws no random numbers.
+        fleets.AddFleet(Side.Empire, "Navalia Picket", new[] { "Mandate" }, "Navalia");
+        fleets.AddFleet(Side.Alliance, "Caminus Picket", new[] { "Dodger" }, "Caminus");
+        eco.AddObject(Side.Alliance, "Swift", "Caminus"); // a squadron based at Caminus (a corvette has no berth)
+        int interdictor = fleets.AddFleet(Side.Empire, "Interdiction", new[] { "Subpoena" }, "Tierra Larga");
+        int transport = fleets.AddFleet(Side.Alliance, "Supply", new[] { "Mule" }, "The Thaw");
+        fleets.SubmitMove(Side.Empire, interdictor, "Drift Harbour");
+        fleets.SubmitMove(Side.Alliance, transport, "The Shoal");
 
-        // Support on: garrisons and the support module. Mon Calamari (support 25, no regiments) is the system that rises; Corellia,
-        // Fondor and Bespin are garrisoned. Bespin is blockaded by the Interdictor (the Empire has 70 there, a majority, so
+        // Support on: garrisons and the support module. The Moorings (support 25, no regiments) is the system that rises; Classis,
+        // Incus and Drift Harbour are garrisoned. Drift Harbour is blockaded by the Interdictor (the Empire has 70 there, a majority, so
         // Alliance support there drops 1 per 30 days; see m2-popular-support, presence timer). rule: m2-uprisings-and-garrison, m2-popular-support.
         SupportModule? sup = null;
         if (support)
         {
             sup = SupportModule.Attach(game, galaxy, eco, fleets, weights);
-            for (int i = 0; i < 3; i++) eco.AddObject(Side.Empire, "Imperial Army Regiment", "Corellia");
-            for (int i = 0; i < 4; i++) eco.AddObject(Side.Empire, "Imperial Army Regiment", "Fondor");
-            for (int i = 0; i < 4; i++) eco.AddObject(Side.Alliance, "Alliance Army Regiment", "Bespin");
+            for (int i = 0; i < 3; i++) eco.AddObject(Side.Empire, "Tranches", "Classis");
+            for (int i = 0; i < 4; i++) eco.AddObject(Side.Empire, "Tranches", "Incus");
+            for (int i = 0; i < 4; i++) eco.AddObject(Side.Alliance, "Militia", "Drift Harbour");
         }
 
         eco.SetupNewGame();

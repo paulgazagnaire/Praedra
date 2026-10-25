@@ -38,13 +38,13 @@ public class GalaxyDataTests
     [Fact]
     public void G3_RouteSystems() // m1-galaxy-data G3: 358 systems on a route, the rest reached by free travel only
     {
-        // v6 re-pin 2026-10-24: 358 on a route (was 332); Yavin is on a route now, Hoth is the off-route example.
+        // v6 re-pin 2026-10-24: 358 on a route (was 332); The Shoal is on a route now, The Thaw is the off-route example.
         Assert.Equal(358, G.Systems.Count(s => G.OnRoute(s.Index)));
         Assert.Equal(358, G.Systems.Count(s => G.NeighboursOf(s.Index).Count > 0));
-        Assert.Empty(G.NeighboursOf(G.Get("Ilum").Index));
-        Assert.Empty(G.NeighboursOf(G.Get("Csilla").Index));
-        Assert.False(G.OnRoute(G.Get("Hoth").Index));
-        Assert.True(G.OnRoute(G.Get("Coruscant").Index));
+        Assert.Empty(G.NeighboursOf(G.Get("Glasswood").Index));
+        Assert.Empty(G.NeighboursOf(G.Get("Frostholm").Index));
+        Assert.False(G.OnRoute(G.Get("The Thaw").Index));
+        Assert.True(G.OnRoute(G.Get("Charter").Index));
     }
 
     [Fact]
@@ -66,7 +66,7 @@ public class GalaxyDataTests
         // v6 re-pin 2026-10-24: v6 has no route-inferred links; the kind stays tier 1 in the tier table, and a real great-route
         // link (Coruscant-Tralus, Trunk Line) is tier 1 with factor 300.
         Assert.Equal(1, TestData.Tiers.TierOfKind("route-inferred"));
-        var l = G.FindLane("Coruscant", "Tralus")!;
+        var l = G.FindLane("Charter", "Bina Major")!;
         Assert.Equal("route", l.Kind);
         Assert.Equal("Trunk Line", l.Routes);
         Assert.Equal(1, l.Tier);
@@ -76,33 +76,33 @@ public class GalaxyDataTests
     [Fact]
     public void G6_OfficialLaneIsTier2() // m1-galaxy-data G6
     {
-        var l = G.FindLane("Coruscant", "Uveron")!; // v6 re-pin 2026-10-24: Coruscant's minor link (was Corulag)
+        var l = G.FindLane("Charter", "Hartwell")!; // v6 re-pin 2026-10-24: Coruscant's minor link (was Tutela)
         Assert.Equal("official", l.Kind);
         Assert.Equal(2, l.Tier);
         Assert.Equal(150, l.FactorPercent);
-        Assert.Equal("bridge", G.FindLane("Gizer", "Kinyen")!.Kind); // v6 re-pin 2026-10-24 (was Mirial-Jelucan)
-        Assert.Equal(2, G.FindLane("Gizer", "Kinyen")!.Tier); // bridge: a minor link
+        Assert.Equal("bridge", G.FindLane("Pennygate", "Tierra Larga")!.Kind); // v6 re-pin 2026-10-24 (was Mirial-Jelucan)
+        Assert.Equal(2, G.FindLane("Pennygate", "Tierra Larga")!.Tier); // bridge: a minor link
     }
 
     [Fact]
     public void G7_NoGeneratedLanes() // m1-galaxy-data G7: the v6 data has no generated placeholder lanes
     {
         Assert.DoesNotContain(G.Lanes, l => l.Kind == "generated");
-        Assert.Null(G.FindLane("Coruscant", "Yavin"));
+        Assert.Null(G.FindLane("Charter", "The Shoal"));
     }
 
     [Fact]
     public void G8_BaseDistanceCoruscantCorellia() // m1-galaxy-data G8
     {
-        // v6 re-pin 2026-10-24: Coruscant sits at the centre (500,500); Corellia is no longer linked to it, so the stored
+        // v6 re-pin 2026-10-24: Charter sits at the centre (500,500); Classis is no longer linked to it, so the stored
         // lane base distance is checked on Coruscant-Tralus (503,471): 3*3 + 29*29 = 850, isqrt 29, /5 = 5.
-        var c = G.Get("Coruscant"); var k = G.Get("Corellia"); var t = G.Get("Tralus");
+        var c = G.Get("Charter"); var k = G.Get("Classis"); var t = G.Get("Bina Major");
         Assert.Equal((500, 500), (c.MapX, c.MapY));
         Assert.Equal((454, 424), (k.MapX, k.MapY));
         Assert.Equal(7892, 46 * 46 + 76 * 76);
         Assert.Equal(88, (int)GalaxyLoader.Isqrt(7892));
         Assert.Equal((503, 471), (t.MapX, t.MapY));
-        Assert.Equal(5, G.FindLane("Coruscant", "Tralus")!.BaseDistance);
+        Assert.Equal(5, G.FindLane("Charter", "Bina Major")!.BaseDistance);
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public class GalaxyDataTests
             foreach (int j in near) Assert.Contains(s.Index, G.NearOf(j));
             foreach (var nb in G.NeighboursOf(s.Index)) Assert.Contains(nb.System, near); // route links are always nearby
         }
-        var seen = new HashSet<int> { G.Get("Coruscant").Index };
+        var seen = new HashSet<int> { G.Get("Charter").Index };
         var stack = new Stack<int>(seen);
         while (stack.Count > 0) foreach (int n in G.NearOf(stack.Pop())) if (seen.Add(n)) stack.Push(n);
         Assert.Equal(553, seen.Count(i => !G.Systems[i].IsOutsideSectors));
@@ -127,16 +127,16 @@ public class GalaxyDataTests
     public void G10_LaneToMissingSystemFails() // m1-galaxy-data G10 (check 2)
     {
         var ex = Assert.Throws<DataLoadException>(() =>
-            GalaxyLoader.Load(TestData.PlanetsText, TestData.LanesText + "Coruscant,Nowhere,generated,,,\n", TestData.Tiers));
-        Assert.Contains("Nowhere", ex.Message);
-        Assert.Contains("Coruscant", ex.Message);
+            GalaxyLoader.Load(TestData.PlanetsText, TestData.LanesText + "Charter,No Such Place,generated,,,\n", TestData.Tiers));
+        Assert.Contains("No Such Place", ex.Message);
+        Assert.Contains("Charter", ex.Message);
     }
 
     [Fact]
     public void G11_EleventhSystemInASectorFails() // m1-galaxy-data G11 (check 6): a 9-system sector plus two
     {
         var full = G.Sectors.First(s => s.Members.Count == 9);
-        var rows = $"Zzz Extra,{full.Name},{full.Group},,,,10,10,,,,0,0,0,,\nZzz Extra2,{full.Name},{full.Group},,,,12,12,,,,0,0,0,,\n";
+        var rows = $"Zzz Extra,{full.Name},{full.Group},10,10,,,,0,0,0,,\nZzz Extra2,{full.Name},{full.Group},12,12,,,,0,0,0,,\n";
         var ex = Assert.Throws<DataLoadException>(() =>
             GalaxyLoader.Load(TestData.PlanetsText + rows, TestData.LanesText, TestData.Tiers));
         Assert.Contains(full.Name, ex.Message);
@@ -146,14 +146,14 @@ public class GalaxyDataTests
     public void G12_SamePairTwiceFails() // m1-galaxy-data G12 (check 3)
     {
         var ex = Assert.Throws<DataLoadException>(() =>
-            GalaxyLoader.Load(TestData.PlanetsText, TestData.LanesText + "Tralus,Coruscant,route,Trunk Line,,\n", TestData.Tiers));
+            GalaxyLoader.Load(TestData.PlanetsText, TestData.LanesText + "Bina Major,Charter,route,Trunk Line,,\n", TestData.Tiers));
         Assert.Contains("already has a lane", ex.Message);
     }
 
     [Fact]
     public void G13_NeighboursBothWaysAndSorted() // m1-galaxy-data G13
     {
-        var a = G.Get("Coruscant"); var b = G.Get("Tralus"); // v6 re-pin 2026-10-24 (Corellia-Duros is no longer a link)
+        var a = G.Get("Charter"); var b = G.Get("Bina Major"); // v6 re-pin 2026-10-24 (Corellia-Duros is no longer a link)
         Assert.Contains(G.NeighboursOf(a.Index), n => n.System == b.Index);
         Assert.Contains(G.NeighboursOf(b.Index), n => n.System == a.Index);
         foreach (var s in G.Systems)
@@ -220,9 +220,9 @@ public class GalaxyDataTests
     {
         var g = GalaxyLoader.Load(Tiny + "C,S,core,3,3\n", TinyLane, TestData.Tiers);
         Assert.False(g.OnRoute(g.Get("C").Index));
-        // Ilum with a lane
-        var p = Tiny + $"Ilum,{Galaxy.OutsideSectorsLabel},,9,9\n";
-        var ex = Assert.Throws<DataLoadException>(() => GalaxyLoader.Load(p, TinyLane + "A,Ilum,generated,\n", TestData.Tiers));
+        // Glasswood with a lane
+        var p = Tiny + $"Glasswood,{Galaxy.OutsideSectorsLabel},,9,9\n";
+        var ex = Assert.Throws<DataLoadException>(() => GalaxyLoader.Load(p, TinyLane + "A,Glasswood,generated,\n", TestData.Tiers));
         Assert.Contains("no route links", ex.Message);
         // someone else outside sectors
         ex = Assert.Throws<DataLoadException>(() =>
@@ -279,9 +279,8 @@ public class GalaxyDataTests
     [Fact]
     public void CarriedColumnsAreKept()
     {
-        var c = G.Get("Coruscant");
-        Assert.Equal("Core", c.Carried["canon_region"]);
-        Assert.Contains("origin", c.Carried.Keys);
+        var c = G.Get("Charter");
+        Assert.Equal("roster", c.Carried["origin"]);
         Assert.DoesNotContain("map_x", c.Carried.Keys);
     }
 
@@ -304,7 +303,7 @@ public class GalaxyDataTests
     {
         var sv = SlotValues.Load(Path.Combine(TestData.DesignDir, SlotValues.File), G);
         Assert.Equal(555, sv.Count);
-        var a = sv.Of(G.Get("Abregado").Index);
+        var a = sv.Of(G.Get("Feldspar").Index);
         Assert.Equal((12, 9, true), (a.Energy, a.Raw, a.Populated));
     }
 
@@ -312,9 +311,9 @@ public class GalaxyDataTests
     public void SlotValuesRefuseUnknownDuplicateAndMissingSystems()
     {
         var text = File.ReadAllText(Path.Combine(TestData.DesignDir, SlotValues.File));
-        var ex = Assert.Throws<DataLoadException>(() => SlotValues.Parse(text + "Nowhere,X,core,Core,1,1,1,formula,\n", G));
-        Assert.Contains("Nowhere", ex.Message);
-        ex = Assert.Throws<DataLoadException>(() => SlotValues.Parse(text + "Abregado,Fondor Sector,inner_rim,Core,1,1,1,formula,\n", G));
+        var ex = Assert.Throws<DataLoadException>(() => SlotValues.Parse(text + "No Such Place,X,core,1,1,1,formula,\n", G));
+        Assert.Contains("No Such Place", ex.Message);
+        ex = Assert.Throws<DataLoadException>(() => SlotValues.Parse(text + "Feldspar,Incus Sector,inner_rim,1,1,1,formula,\n", G));
         Assert.Contains("twice", ex.Message);
         var lines = text.Split('\n').ToList();
         lines.RemoveAt(2); // drop one system's row
@@ -329,16 +328,16 @@ public class GalaxyDataTests
     {
         var all = ShipData.LoadAll(TestData.ClassicDir);
         Assert.Equal(30 + 8, all.Count);
-        var isd = all["Imperial Star Destroyer"];
+        var isd = all["Mandate"];
         Assert.True(isd.IsCapital);
         Assert.Equal((80, 100, 0, 480), (isd.Hyperdrive, isd.HyperdriveIfDamaged, isd.GravityWellProjector, isd.OverallAttackStrength));
         Assert.Equal(ShipSide.Empire, isd.Side);
-        Assert.Equal(4, all["CC-7700 Frigate"].GravityWellProjector);
-        Assert.Equal(4, all["Interdictor Cruiser"].GravityWellProjector);
-        Assert.Equal(0, all["TIE Fighter"].Hyperdrive);
-        Assert.False(all["TIE Fighter"].IsCapital);
-        Assert.Equal(60, all["Mon Calamari Cruiser"].Speed(false));
-        Assert.Equal(100, all["Mon Calamari Cruiser"].Speed(true));
-        Assert.Equal(80, all["Corellian Corvette"].Speed(true)); // damaged rating 0 in the data: normal rating
+        Assert.Equal(4, all["Snare"].GravityWellProjector);
+        Assert.Equal(4, all["Subpoena"].GravityWellProjector);
+        Assert.Equal(0, all["Gleaner"].Hyperdrive);
+        Assert.False(all["Gleaner"].IsCapital);
+        Assert.Equal(60, all["Ark"].Speed(false));
+        Assert.Equal(100, all["Ark"].Speed(true));
+        Assert.Equal(80, all["Dodger"].Speed(true)); // damaged rating 0 in the data: normal rating
     }
 }

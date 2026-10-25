@@ -97,7 +97,7 @@ public sealed class FogModule
     /// <summary>
     /// Setup, day 0 (outside a Step; raises nothing): systems with <c>start_explored_all</c> give both sides Explored and groups A and B, and C
     /// (the facilities) with <see cref="FogParams.SetupRevealsFacilities"/> (Classic = on, B4 §11; DEFAULT off); never D or E, LastLookDay null;
-    /// each side gets OwnLive of the systems it holds; the StartFullCopy lists give a FullCopy (Yavin to the Empire,
+    /// each side gets OwnLive of the systems it holds; the StartFullCopy lists give a FullCopy (The Shoal to the Empire,
     /// only if the galaxy has it). Nothing reveals the HQ system. Call after owners, facilities and fleets are dealt. rule: m5-fog-and-hq §F4.
     /// </summary>
     public void SetupNewGame(IEnumerable<string> startExploredAll)

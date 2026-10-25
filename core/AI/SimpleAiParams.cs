@@ -33,11 +33,11 @@ public sealed record SimpleAiParams
     public int ExtraYardRefinedReserve { get; init; } = 40;
 
     // ---- production
-    /// <summary>Regiments kept on the system whose loss ends the game (Coruscant for the Empire, the Rebel HQ for the Alliance), at least. DEFAULT.</summary>
+    /// <summary>Regiments kept on the system whose loss ends the game (Charter for the Empire, the Rebel HQ for the Alliance), at least. DEFAULT.</summary>
     public int CriticalGarrison { get; init; } = 8;
     /// <summary>
     /// The Classic AI's garrison floor (B6b §3): on every own world below 70 support it wants min((79 - s) / 10, 6) regiments (doubled in an uprising),
-    /// and 9 on its special world (the Rebel HQ for the Alliance, Coruscant for the Empire); it builds toward that and never moves a regiment that
+    /// and 9 on its special world (the Rebel HQ for the Alliance, Charter for the Empire); it builds toward that and never moves a regiment that
     /// would leave a world below it. Replaces the B5a last-regiment guard (a weaker form: 1 below 60). It belongs to derived control
     /// (GameSettings.ControlRule = Derived) but stays DEFAULT off under it: with it on, 14 of 32 Hard mirror games had no winner by day 3000 against
     /// 8 with it off, and the Medium mirror failed the games-end floor (AI trainer, 2026-10-18). Off = the rule's need, <see cref="CriticalGarrison"/>
@@ -76,7 +76,7 @@ public sealed record SimpleAiParams
     /// <summary>One ship order keeps its yard busy at most this many days (count x build days), but at least one ship. DEFAULT.</summary>
     public int MaxOrderDays { get; init; } = 160;
     /// <summary>The enemy force a purchase is measured against (strength per price, FleetModule's CombatStrength). DEFAULT: the other side's typical line.</summary>
-    public IReadOnlyList<string> ReferenceEnemy(Side side) => side == Side.Empire ? new[] { "Mon Calamari Cruiser", "Mon Calamari Cruiser", "Nebulon-B Frigate" } : new[] { "Imperial Star Destroyer", "Imperial Star Destroyer", "Victory Destroyer" };
+    public IReadOnlyList<string> ReferenceEnemy(Side side) => side == Side.Empire ? new[] { "Ark", "Ark", "Mender" } : new[] { "Mandate", "Mandate", "Decree" };
     /// <summary>A warship above this refined cost is only ordered when the refined pool holds at least twice its cost. DEFAULT.</summary>
     public int HeavyShipCost { get; init; } = 80;
 
@@ -100,7 +100,7 @@ public sealed record SimpleAiParams
     public int RetreatOddsPercent { get; init; } = 80;
     /// <summary>Enemy fleets are hunted only when at most this many ticks away. DEFAULT.</summary>
     public int HuntTicks { get; init; } = 60;
-    /// <summary>The system that wins the game (the Rebel HQ for the Empire, Coruscant for the Alliance) is attacked from any distance once a pile is this strong (percent of REF). DEFAULT.</summary>
+    /// <summary>The system that wins the game (the Rebel HQ for the Empire, Charter for the Alliance) is attacked from any distance once a pile is this strong (percent of REF). DEFAULT.</summary>
     public int WinStrikeStrength { get; init; } = 40;
     /// <summary>A system lost to the enemy this many days ago or less is worth double as a target. DEFAULT.</summary>
     public int RetakeDays { get; init; } = 200;
@@ -130,7 +130,7 @@ public sealed record SimpleAiParams
     /// <summary>
     /// With fog, a stop on the way at a system the picture shows enemy-held counts as blocked unless its fleets are seen there now: the side
     /// cannot see a gravity well it has not looked at, and the enemy's capital always has one at the start (a fogged strike pile flew
-    /// through Coruscant and was pulled out and destroyed on the v5 map). The router then goes around (free travel). DEFAULT (lead 2026-10-16).
+    /// through Charter and was pulled out and destroyed on the v5 map). The router then goes around (free travel). DEFAULT (lead 2026-10-16).
     /// </summary>
     public bool FogAvoidEnemyStops { get; init; } = true;
 
@@ -219,8 +219,8 @@ public sealed record SimpleAiParams
     public int ScoutUpkeepBudget { get; init; } = 60;
     /// <summary>Scout classes by side, first available wins for builds (cheap upkeep first). DEFAULT.</summary>
     public IReadOnlyList<string> ScoutClasses(Side side) => side == Side.Empire ? EmpireScouts : AllianceScouts;
-    public IReadOnlyList<string> EmpireScouts { get; init; } = new[] { "Galleon" };
-    public IReadOnlyList<string> AllianceScouts { get; init; } = new[] { "Medium Transport" };
+    public IReadOnlyList<string> EmpireScouts { get; init; } = new[] { "Bond" };
+    public IReadOnlyList<string> AllianceScouts { get; init; } = new[] { "Mule" };
     /// <summary>Scouts look at systems at most this many lanes from a held system (Empire: HQ candidates at any distance). DEFAULT.</summary>
     public int ScoutHops { get; init; } = 4;
     /// <summary>Scouting value of a never-explored system. DEFAULT.</summary>
@@ -239,7 +239,7 @@ public sealed record SimpleAiParams
     /// Scouts kept on top of ScoutCount as explorers (the lowest fleet ids): each goes to the nearest system the side has never explored, at any
     /// distance (no ScoutHops limit), over a trip that ScoutPathClear allows; with none left they scout as the others. AI trainer 2026-10-17
     /// (QA-2): the value per day of travel always picked a stale system near home, so in seed 3 the Empire never explored six systems in
-    /// 3000 days, the Rebel HQ (Munto Codru) among them, and the game stalled with the Alliance holding 9 systems and no forces. DEFAULT 1 at
+    /// 3000 days, the Rebel HQ (The Notch) among them, and the game stalled with the Alliance holding 9 systems and no forces. DEFAULT 1 at
     /// every level (lead 2026-10-17: an AI that never finds the HQ is a bug, not a difficulty). 0 = none (the AI of before).
     /// </summary>
     public int ExplorerScouts { get; init; } = 1;
@@ -254,7 +254,7 @@ public sealed record SimpleAiParams
     /// FogUnknownDefenders (FogUnknownWinDefenders on the winning system) as if never seen. Only espionage, an assault or holding the system
     /// shows group D (m5-fog-and-hq §F1), so an old count is never refreshed by a fleet passing by, and with the staleness margin it only grew.
     /// An assault on a wrong guess shows the true garrison, so a bad guess corrects itself. AI trainer 2026-10-17 (QA-5): in seed 8 Hard the
-    /// Empire, holding 375-449 systems, never took Lannik and Toprawa (0 regiments each from day 2400) because it still believed the 6
+    /// Empire, holding 375-449 systems, never took Two Crowns and Hutan Raya (0 regiments each from day 2400) because it still believed the 6
     /// regiments it saw there around day 1250 (9 with the margin, so 18 regiments asked aboard). 0 = never forget (the AI of before).
     /// </summary>
     public int FogGroundForgetDays { get; init; } = 365;
@@ -263,7 +263,7 @@ public sealed record SimpleAiParams
     /// The Classic AI's leader marks (B6c §7): the six story characters (Luke, Mon Mothma, the Emperor, Vader, Leia, Han) are never fleet or army
     /// commanders, the Emperor is never a diplomat, and the Empire keeps the Emperor at the Seat of Power while it holds it (Emperor home;
     /// SimpleAiAgents.EmperorHome). The leaders' ban from Incite, Rescue, Sabotage and Abduction is already this AI's rule for every major
-    /// character (NoKeyKinds). QA-8 (2026-10-18): without it the Emperor stood on Coruscant 1-7% of days, so the Seat of Power was off ~95%
+    /// character (NoKeyKinds). QA-8 (2026-10-18): without it the Emperor stood on Charter 1-7% of days, so the Seat of Power was off ~95%
     /// of the game, and he was captured on missions. DEFAULT false (2026-10-18, the Dev lead's audit under Paul's 07:43 rule: Classic AI behaviour
     /// belongs to the Classic AI yardstick, not the default AI; QA-12: on, Medium mirror Empire wins fell from 13/16 to 5/16 and 11 of 16 games
     /// had no winner). No Classic AI level exists yet; until one does, turn it on with `sim tourney --a-params LeaderMarks=true` or in code (QA-15).
@@ -277,7 +277,7 @@ public sealed record SimpleAiParams
     /// (Classic). Off = home from day one (#68).
     /// </summary>
     public bool EmperorHomeAfterRecruiting { get; init; } = true;
-    /// <summary>Regiments assumed on the enemy's game-winning system (Coruscant for the Alliance, a known HQ) when its ground was never seen. DEFAULT.</summary>
+    /// <summary>Regiments assumed on the enemy's game-winning system (Charter for the Alliance, a known HQ) when its ground was never seen. DEFAULT.</summary>
     public int FogUnknownWinDefenders { get; init; } = 8;
     /// <summary>Bombardments of the game-winning system in 30 days at most (with fog the AI cannot see the shelling work). DEFAULT.</summary>
     public int FogWinBombardmentsPer30Days { get; init; } = 8;
@@ -392,7 +392,7 @@ public sealed record SimpleAiParams
     /// system on the belief map; a cheap droid is what a player sends (cost 1, upkeep 1). 0 = none (DEFAULT, the Medium AI).
     /// </summary>
     public int HuntDroids { get; init; }
-    public string HuntDroidClass { get; init; } = "Imperial Probe Droid";
+    public string HuntDroidClass { get; init; } = "Speculators";
     public int DroidSearchTargets { get; init; } = 24;
     /// <summary>For the spies a candidate whose owner the side has never seen weighs at least this (the belief map gives it BeliefUnexplored). DEFAULT.</summary>
     public int SpyUnexploredBelief { get; init; } = 120;
@@ -463,12 +463,12 @@ public sealed record SimpleAiParams
     public int SpecialForcesWanted { get; init; } = 8;
     /// <summary>
     /// The agent classes built, fewest first (list order on a tie): one per kind of job the AI plans (m5-missions §Special forces masks).
-    /// Alliance: Infiltrators (Sabotage, Rescue, Abduction), Guerrillas (Incite, Subdue). Empire: ISB Agents (Espionage on the HQ hunt), Emperor's
-    /// Hands (Rescue, Abduction), Imperial Commandos (Subdue). The Bothan Spies are left out: the Alliance plans no Espionage. DEFAULT.
+    /// Alliance: Wreckers (Sabotage, Rescue, Abduction), Strikers (Incite, Subdue). Empire: Auditors (Espionage on the HQ hunt), Notaries
+    /// (Rescue, Abduction), Closers (Subdue). The Listeners are left out: the Alliance plans no Espionage. DEFAULT.
     /// </summary>
     public IReadOnlyList<string> AgentForceClasses(Side side) => side == Side.Empire ? EmpireAgentForces : AllianceAgentForces;
-    public IReadOnlyList<string> AllianceAgentForces { get; init; } = new[] { "Infiltrators", "Guerrillas" };
-    public IReadOnlyList<string> EmpireAgentForces { get; init; } = new[] { "Imperial Espionage Droid", "Noghri Death Commandos", "Imperial Commandos" };
+    public IReadOnlyList<string> AllianceAgentForces { get; init; } = new[] { "Wreckers", "Strikers" };
+    public IReadOnlyList<string> EmpireAgentForces { get; init; } = new[] { "Auditors", "Notaries", "Closers" };
     /// <summary>A picture's owner is trusted for a mission target (Diplomacy on neutral, Incite) when at most this old. DEFAULT.</summary>
     public int MissionOwnerTrustDays { get; init; } = 60;
     /// <summary>An enemy character is an Abduction target only when the side's own feed placed it at a system it sees, or its picture's group D showed it, within this many days. DEFAULT.</summary>
@@ -486,19 +486,19 @@ public sealed record SimpleAiParams
     /// </summary>
     public bool VictoryKeysSkipOddsFloor { get; init; } = true;
     /// <summary>
-    /// Value of an Abduction of one of the side's victory keys once it is ahead (FinishWhenAheadRatio, or for the Alliance Coruscant held or
+    /// Value of an Abduction of one of the side's victory keys once it is ahead (FinishWhenAheadRatio, or for the Alliance Charter held or
     /// destroyed), so a key outranks routine jobs then; before that, the ordinary major value (AbductionValue x 2). 0 = always the ordinary
     /// value. DEFAULT (AI tuning, no rule).
     /// </summary>
     public int VictoryKeyValue { get; init; } = 20000;
     /// <summary>
     /// Key hunt (QA round 29, 2026-10-18), the Alliance only: with fog, while it is ahead (FinishWhenAheadRatio, or holding or having destroyed
-    /// Coruscant, its place term) and still needs the Emperor or Vader captured to win (its standard victory keys), it sends spies (Espionage)
+    /// Charter, its place term) and still needs the Emperor or Vader captured to win (its standard victory keys), it sends spies (Espionage)
     /// to look for them: first where its pictures last showed one (within KeyInfoDays), then across the systems its picture shows Imperial-held,
     /// nearest first, skipping one whose ground it saw within KeyLookDays or where a look was foiled within SpyFoilMemoryDays. A look that
     /// finds a key makes him an Abduction target as before. The spies only look: the AI never reads where a key truly is. Without it the
     /// Alliance AI saw the Emperor and Vader on almost no day of 3000 (QA seeds 9 and 13 Medium mirror, 2 and 5 Medium Empire vs Hard Alliance:
-    /// Coruscant held from day 1250-2250, no key seen after, no capture). With it the keys are found and abducted at, but not captured: the
+    /// Charter held from day 1250-2250, no key seen after, no capture). With it the keys are found and abducted at, but not captured: the
     /// key-target caps (2% Emperor, 4% Vader; m5-missions §6a) and the fleet gate (Vader riding a fleet) hold. On the Empire side it cost the
     /// Medium mirror its floor (seeds 1-8: 4 games without a winner instead of 1), so the Empire is left out. New AI rule (no sheet).
     /// false = the AI before. DEFAULT true.
@@ -574,15 +574,15 @@ public sealed record SimpleAiParams
     // ---- what to build, by side (first class that is buildable, researched and affordable wins). Class names of unit-and-facility-costs.csv. DEFAULT.
     public IReadOnlyList<string> Warships(Side side) => side == Side.Empire ? EmpireWarships : AllianceWarships;
     public IReadOnlyList<string> HeavyWarships(Side side) => side == Side.Empire ? EmpireHeavy : AllianceHeavy;
-    public string Transport(Side side) => side == Side.Empire ? "Star Galleon" : "Bulk Transport";
-    public string Fighter(Side side) => side == Side.Empire ? "TIE Fighter" : "X-wing";
-    public string GarrisonRegiment(Side side) => side == Side.Empire ? "Imperial Army Regiment" : "Alliance Army Regiment";
-    public string InvasionRegiment(Side side) => side == Side.Empire ? "Stormtrooper Regiment" : "Alliance Fleet Regiment";
+    public string Transport(Side side) => side == Side.Empire ? "Bond II" : "Barge";
+    public string Fighter(Side side) => side == Side.Empire ? "Gleaner" : "Swift";
+    public string GarrisonRegiment(Side side) => side == Side.Empire ? "Tranches" : "Militia";
+    public string InvasionRegiment(Side side) => side == Side.Empire ? "Pacifiers" : "Deckhands";
 
-    public IReadOnlyList<string> EmpireWarships { get; init; } = new[] { "Lancer Frigate", "Carrack Light Cruiser", "Victory Destroyer" };
-    public IReadOnlyList<string> AllianceWarships { get; init; } = new[] { "Corellian Corvette", "Corellian Gunship", "Nebulon-B Frigate" };
-    public IReadOnlyList<string> EmpireHeavy { get; init; } = new[] { "Imperial Star Destroyer" };
-    public IReadOnlyList<string> AllianceHeavy { get; init; } = new[] { "Mon Calamari Cruiser" };
+    public IReadOnlyList<string> EmpireWarships { get; init; } = new[] { "Writ", "Warrant", "Decree" };
+    public IReadOnlyList<string> AllianceWarships { get; init; } = new[] { "Dodger", "Wasp", "Mender" };
+    public IReadOnlyList<string> EmpireHeavy { get; init; } = new[] { "Mandate" };
+    public IReadOnlyList<string> AllianceHeavy { get; init; } = new[] { "Ark" };
 
     // ---- the Death Star. rule: m5-death-star §6 (Computer opponent)
     /// <summary>

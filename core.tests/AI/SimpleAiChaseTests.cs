@@ -8,7 +8,7 @@ namespace Praedra.Core.Tests.AI;
 
 // Regression: a strike pile chased a small enemy fleet that kept retreating between two systems (the morale retreat of m4-battle-classic,
 // to a lane neighbour by m4-retreat-damage-repair §3), with no losses on either side, for 50 days and more (sim aivai --passive empire
-// --seed 1, days 741 to 790, Basilisk and Kirrek). The AI keeps no memory between days, so it now reads the retreats from the side's own event
+// --seed 1, days 741 to 790, Scoria and Stonebrake). The AI keeps no memory between days, so it now reads the retreats from the side's own event
 // feed: an enemy fleet that retreated from it at or next to a system is no longer hunted there for RunnerMemoryDays (SimpleAiParams.RunnerRetreats,
 // DEFAULT 1), and a fleet does not go back to, or through, a system where its own armed fleet had to retreat lately (AvoidBlockedPaths).
 // The thresholds are AI tuning (SimpleAiParams DEFAULTs), not rules.
@@ -21,8 +21,8 @@ public class SimpleAiChaseTests
     private static readonly SimpleAiParams NoChaseMemory = new() { RunnerRetreats = 0, RetreatCountsAsLoss = false, AvoidBlockedPaths = false };
 
     /// <summary>
-    /// MedA seed 1 with the Empire passive. An Alliance strike pile (three Mon Calamari Cruisers, no troops) stands on an Alliance-held system
-    /// A next to a system B it does not hold; a lone Carrack Light Cruiser (armed, far weaker) stands on B, which has another neighbour (Imperial or neutral) to
+    /// MedA seed 1 with the Empire passive. An Alliance strike pile (three The Moorings Cruisers, no troops) stands on an Alliance-held system
+    /// A next to a system B it does not hold; a lone Warrant (armed, far weaker) stands on B, which has another neighbour (Imperial or neutral) to
     /// retreat to. Returns the retreats of that Carrack from battles with no losses on either side, by day, over <paramref name="days"/> days.
     /// </summary>
     private List<int> Chase(SimpleAiParams? alliance, int days)
@@ -37,7 +37,7 @@ public class SimpleAiChaseTests
             foreach (var nb in g.NeighboursOf(sys.Index).OrderBy(n => g.Systems[n.System].Name, StringComparer.Ordinal))
             {
                 string bn = g.Systems[nb.System].Name;
-                if (bn == "Coruscant" || (owners.TryGetValue(bn, out var ob) && ob == Side.Alliance)) continue;
+                if (bn == "Charter" || (owners.TryGetValue(bn, out var ob) && ob == Side.Alliance)) continue;
                 if (h.Fleets.FleetsAt(bn).Any()) continue;
                 // B needs another neighbour, Imperial or neutral and without fleets (the Carrack's way out)
                 if (!g.NeighboursOf(nb.System).Any(x => g.Systems[x.System].Name is var xn && xn != sys.Name && !(owners.TryGetValue(xn, out var ox) && ox == Side.Alliance) && !h.Fleets.FleetsAt(xn).Any())) continue;
@@ -46,8 +46,8 @@ public class SimpleAiChaseTests
             if (a != null) break;
         }
         Assert.NotNull(a);
-        h.Fleets.AddFleet(Side.Alliance, "Strike", new[] { "Mon Calamari Cruiser", "Mon Calamari Cruiser", "Mon Calamari Cruiser" }, a!);
-        int prey = h.Fleets.AddFleet(Side.Empire, "Prey", new[] { "Carrack Light Cruiser" }, b!);
+        h.Fleets.AddFleet(Side.Alliance, "Strike", new[] { "Ark", "Ark", "Ark" }, a!);
+        int prey = h.Fleets.AddFleet(Side.Empire, "Prey", new[] { "Warrant" }, b!);
         var m = new AiMatch(h, alliance: alliance, passive: Side.Empire);
         m.RunTo(days);
         var ev = h.Game.Events; var retreats = new List<int>(); var pending = new List<FleetRetreated>();

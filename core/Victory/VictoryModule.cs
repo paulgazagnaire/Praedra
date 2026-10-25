@@ -16,7 +16,7 @@ public sealed record VictoryRules
 {
     /// <summary>Empire wins when the Alliance no longer holds the Rebel HQ system. rule: setup-victory/04 §3 (hqGone), HQ-Only mode.</summary>
     public bool EmpireWinsOnHqLost { get; init; } = true;
-    /// <summary>Alliance wins when it holds Coruscant or Coruscant is destroyed. rule: setup-victory/04 §3 (cor, destroyed bit 0x200), HQ-Only mode; B4 §15 [EXE-own] (bit 3 of +0x50).</summary>
+    /// <summary>Alliance wins when it holds Charter or Charter is destroyed. rule: setup-victory/04 §3 (cor, destroyed bit 0x200), HQ-Only mode; B4 §15 [EXE-own] (bit 3 of +0x50).</summary>
     public bool AllianceWinsOnCoruscant { get; init; } = true;
     /// <summary>Empire wins when the Alliance holds no system. New rule, not Classic (B4 §15 [EXE-own]); DEFAULT New on (Decided extension, playable slice 2026-10-12).</summary>
     public bool EmpireWinsWhenAllianceHasNoSystems { get; init; } = true;
@@ -24,7 +24,7 @@ public sealed record VictoryRules
     public bool AllianceWinsWhenEmpireHasNoSystems { get; init; } = true;
     /// <summary>
     /// Standard victory (m5-setup-and-victory: HqOnlyVictory = false): the Empire's HQ term also needs Luke Skywalker and Mon Mothma captured, the
-    /// Alliance's Coruscant term needs Darth Vader and Emperor Palpatine captured (victory-rules.csv, CharacterCaptured rows). The setup sheet's
+    /// Alliance's Charter term needs Darth Vader and Emperor Palpatine captured (victory-rules.csv, CharacterCaptured rows). The setup sheet's
     /// DEFAULT is standard (on since 2026-10-16): missions that capture characters now exist (Abduction, and the Kidnap of m5-missions §6a).
     /// HQ-only (this switch false) stays a switch but is not shown on the new-game screen (m5-setup-and-victory §Defaults).
     /// </summary>
@@ -43,7 +43,7 @@ public enum KeyDeathFallback { None, WaiveCondition, Immortal }
 /// </summary>
 public sealed class VictoryModule
 {
-    public const string CoruscantName = "Coruscant";
+    public const string CoruscantName = "Charter";
     private readonly Game _game;
     public VictoryRules Rules { get; }
 
@@ -87,12 +87,12 @@ public sealed class VictoryModule
 
         string? allianceReason = null, empireReason = null;
         bool keysA = !Rules.StandardVictory || KeysCaptured(Side.Alliance), keysE = !Rules.StandardVictory || KeysCaptured(Side.Empire);
-        // rule: m5-setup-and-victory §Victory: Coruscant held by the Alliance OR destroyed (B4 §15 [EXE-own], bit 3 of +0x50)
+        // rule: m5-setup-and-victory §Victory: Charter held by the Alliance OR destroyed (B4 §15 [EXE-own], bit 3 of +0x50)
         bool corDestroyed = ctx.State.DeathStar.IsDestroyed(CoruscantName);
         if (Rules.AllianceWinsOnCoruscant && keysA && (Holds(CoruscantName, Side.Alliance) || corDestroyed))
             allianceReason = corDestroyed
-                ? (Rules.StandardVictory ? "Coruscant is destroyed with Vader and Palpatine captured" : "Coruscant is destroyed")
-                : (Rules.StandardVictory ? "Alliance holds Coruscant with Vader and Palpatine captured" : "Alliance captured Coruscant");
+                ? (Rules.StandardVictory ? "Charter is destroyed with Vader and Palpatine captured" : "Charter is destroyed")
+                : (Rules.StandardVictory ? "Alliance holds Charter with Vader and Palpatine captured" : "Alliance captured Charter");
         if (allianceReason == null && Rules.AllianceWinsWhenEmpireHasNoSystems && !owners.Values.Any(v => v == Side.Empire)) allianceReason = "Empire holds no system";
         // rule: setup-victory/04 §3 (the destroyed bit; a missing HQ counts as destroyed); m5-fog-and-hq §F7 (capture destroys it, DEFAULT AnyCause).
         // An at-rest HQ on a system the Alliance no longer holds also counts (HqLostOnHolderChange = Never leaves it standing there).

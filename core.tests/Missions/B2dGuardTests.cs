@@ -12,7 +12,7 @@ namespace Praedra.Core.Tests.Missions;
 // Unless a test says otherwise, an Alliance team flies from H (neutral) to T (Empire-held): the leaving checks at H meet nobody.
 public class B2dGuardTests
 {
-    private const string Isd = "Imperial Star Destroyer";
+    private const string Isd = "Mandate";
 
     private static MissionWorld World(MissionParams? p = null, bool decoys = false, CharacterParams? characters = null)
     {
@@ -21,7 +21,7 @@ public class B2dGuardTests
         return w;
     }
 
-    // A completed KDY-150 of the Alliance at the system.
+    // A completed Mordant Lien-150 of the Alliance at the system.
     private static void Ion(MissionWorld w, string system) => w.Host.Economy.Find(w.Host.Economy.AddFacility(system, FacilityKind.Kdy150))!.Side = Side.Alliance;
 
     private static int Fleet(MissionWorld w, Side side, string system, params string[] ships) => w.Host.Fleets.AddFleet(side, "F", ships, system);
@@ -44,7 +44,7 @@ public class B2dGuardTests
         var w = World();
         w.Agent(Leia, H, esp: 50);
         for (int i = 0; i < 3; i++) w.Unit(Side.Empire, ImpArmy, T);
-        w.Unit(Side.Empire, "TIE Fighter", T); w.Unit(Side.Empire, "TIE Fighter", T);
+        w.Unit(Side.Empire, "Gleaner", T); w.Unit(Side.Empire, "Gleaner", T);
         int fleet = Fleet(w, Side.Empire, T, Isd);
         int ship = w.Game.State.Fleets[fleet].Ships[0];
         w.Stub!.Expect(0, 99, 99);
@@ -70,7 +70,7 @@ public class B2dGuardTests
         Assert.Equal(new[] { ship, probe }, w.Events<MissionDetectionRoll>().Select(r => r.Defender));
     }
 
-    // B2d-3: as B2d-1, the Alliance also owns a KDY-150 there: no draw at arrival, none in the job
+    // B2d-3: as B2d-1, the Alliance also owns a Mordant Lien-150 there: no draw at arrival, none in the job
     [Fact]
     public void B2d3_OwnIonCannonShieldsFromFleets()
     {
@@ -103,7 +103,7 @@ public class B2dGuardTests
         Assert.DoesNotContain(probe, job);
     }
 
-    // B2d-5: a team leaving its own system where an Imperial fleet sits: the leaving orbit check walks the fleet's ship; with an own KDY-150 there,
+    // B2d-5: a team leaving its own system where an Imperial fleet sits: the leaving orbit check walks the fleet's ship; with an own Mordant Lien-150 there,
     // no leaving draw
     [Theory]
     [InlineData(false, 1)]
@@ -160,7 +160,7 @@ public class B2dGuardTests
         else Assert.Equal((fleet, (string?)null, T), (w.Ch.Get(Han)!.HeldAboard, w.Ch.Get(Han)!.HeldAt, w.Ch.LocationOf(w.Ch.Get(Han)!)));
     }
 
-    // B2d-8: a special force with combat 0 (Bothan Spies) against a guard without a commander: x = 0, p = 40: draw 40 destroys it (MissionDuel)
+    // B2d-8: a special force with combat 0 (Listeners) against a guard without a commander: x = 0, p = 40: draw 40 destroys it (MissionDuel)
     [Fact]
     public void B2d8_SpecialForceDestroyedInTheDuel()
     {
@@ -256,7 +256,7 @@ public class B2dGuardTests
     public void B2d13_GuardsAnySide(bool anySide, int guards)
     {
         var w = World(new MissionParams { GuardsAnySide = anySide });
-        Fleet(w, Side.Alliance, T, "Mon Calamari Cruiser");
+        Fleet(w, Side.Alliance, T, "Ark");
         Fleet(w, Side.Empire, T, Isd);
         // read between Steps: in a Step the two fleets would fight first
         var group = new MissionGroup { Side = Side.Alliance, Kind = MissionKind.Espionage, Home = H, Target = T };

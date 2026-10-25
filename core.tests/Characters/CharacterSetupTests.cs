@@ -131,7 +131,7 @@ public class CharacterSetupTests
         w.Hold(Hoth, Side.Empire); w.Hold(Yavin, Side.Empire);
         int f = w.Fleet(Side.Empire, Coruscant, Isd, 3);
         var stub = new Praedra.Core.Tests.Economy.StubRng().Queue(1, 2, 1);
-        Assert.Equal((Yavin, 0), w.Ch.RandomLocation(Side.Empire, stub));
+        Assert.Equal((Hoth, 0), w.Ch.RandomLocation(Side.Empire, stub));
         Assert.Equal(((string?)null, f), w.Ch.RandomLocation(Side.Empire, stub));
         Assert.Equal(new[] { (0, 2), (0, 2), (0, 2) }, stub.Requests.Select(r => (r.Min, r.Max)));
     }

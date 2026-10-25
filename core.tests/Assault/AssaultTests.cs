@@ -61,8 +61,8 @@ public class AssaultTests
     [Fact]
     public void A2_MatrixOfUnits07()
     {
-        string[] names = { "Alliance Fleet Regiment", "Alliance Army Regiment", "Sullustan Regiment", "Wookiee Regiment", "Mon Calamari Regiment",
-            "Stormtrooper Regiment", "Imperial Fleet Regiment", "Imperial Army Regiment", "War Droid Regiment", "Dark Trooper Regiment" };
+        string[] names = { "Deckhands", "Militia", "Nhal Lookouts", "Kiru Sparks", "Ilmar Shade Guard",
+            "Pacifiers", "Ballast", "Tranches", "Proxies", "Lictors" };
         string[] rows =
         {
             "73/18 55/36 64/27 64/27 27/64 45/45 73/18 55/36 82/9 27/64",
@@ -140,7 +140,7 @@ public class AssaultTests
     {
         var def = new AssaultWorld().B.Def;
         var data = def.Data;
-        var got = new[] { "KDY-150", "LNR Series I", "LNR Series II", "GenCore Level I" }.Select(n => def.ChancePercent(data.Get(n).Attack)).ToArray();
+        var got = new[] { "Mordant Lien-150", "Mordant Covenant I", "Mordant Covenant II", "Lode Escrow I" }.Select(n => def.ChancePercent(data.Get(n).Attack)).ToArray();
         Assert.Equal(new[] { 400, 160, 1000, 0 }, got);
         Assert.All(got.Take(3), c => Assert.True(c > 99));
     }
@@ -179,7 +179,7 @@ public class AssaultTests
         var w = new AssaultWorld();
         w.Hold(Emp);
         int fleet = w.Fleet(All, AssaultWorld.Neb);
-        var regs = w.Aboard(fleet, "Alliance Fleet Regiment", 4);
+        var regs = w.Aboard(fleet, "Deckhands", 4);
         Assert.Null(w.Try(All, fleet));
         // (B5a, 2026-10-17) the win flips the world inside slot 5.2; at Alliance support 0 the landed regiments are short of N = 6, so the capture starts the uprising at once (its (0,70) draw): B5a section 7, m2-control-and-capture C7
         Assert.Equal(new[] { (0, 70) }, w.AssaultDraws); // the assault itself draws nothing
@@ -263,14 +263,14 @@ public class AssaultTests
         w.Aboard(f, Reb, 1);
         Assert.Equal(RejectReason.UnknownFleet, w.Try(All, 99999));
         Assert.Equal(RejectReason.NotYours, w.Try(Emp, f));
-        Assert.Equal(AssaultReject.NotAtSystem, w.Try(All, f, "Bespin"));
+        Assert.Equal(AssaultReject.NotAtSystem, w.Try(All, f, "Drift Harbour"));
         // own system
-        int g = w.Fleet(Emp, system: "Bespin");
+        int g = w.Fleet(Emp, system: "Drift Harbour");
         w.Aboard(g, Imp, 1);
-        w.B.Fleets.SetOwner("Bespin", Emp);
-        Assert.Equal(AssaultReject.OwnSystem, w.Try(Emp, g, "Bespin"));
+        w.B.Fleets.SetOwner("Drift Harbour", Emp);
+        Assert.Equal(AssaultReject.OwnSystem, w.Try(Emp, g, "Drift Harbour"));
         // transit
-        w.B.Fleets.SubmitMove(All, f, "Bespin");
+        w.B.Fleets.SubmitMove(All, f, "Drift Harbour");
         w.Run(1);
         Assert.Equal(RejectReason.InTransit, w.Try(All, f));
         // an enemy fleet at the system (any fleet, armed or not)
@@ -278,7 +278,7 @@ public class AssaultTests
         w2.Hold(Emp);
         int a = w2.Fleet(All, AssaultWorld.Neb);
         w2.Aboard(a, Reb, 1);
-        w2.Fleet(Emp, "Imperial Star Destroyer");
+        w2.Fleet(Emp, "Mandate");
         Assert.Equal(AssaultReject.EnemyFleetPresent, w2.Try(All, a));
     }
 
@@ -292,7 +292,7 @@ public class AssaultTests
         var regs = w.Aboard(f, Reb, 2);
         w.Defenders(Emp, Imp, 1);
         bool done = false;
-        w.Game.RegisterHook("3", _ => { if (!done) { done = true; w.Fleet(Emp, "Victory Destroyer"); } }); // the arrival of step 3
+        w.Game.RegisterHook("3", _ => { if (!done) { done = true; w.Fleet(Emp, "Decree"); } }); // the arrival of step 3
         Assert.Null(w.Try(All, f));
         var c = Assert.Single(w.Events<AssaultCancelled>());
         Assert.Equal((f, Sys, AssaultReject.EnemyFleetPresent, w.Game.Day), (c.Fleet, c.System, c.Reason, c.Day));
@@ -308,7 +308,7 @@ public class AssaultTests
     {
         var w = new AssaultWorld();
         w.Hold(Emp);
-        int f = w.Fleet(All, "Victory Destroyer"); // has bombardment power and room for regiments (no capacity check here)
+        int f = w.Fleet(All, "Decree"); // has bombardment power and room for regiments (no capacity check here)
         w.Aboard(f, Reb, 2);
         w.Submit(All, f); w.Submit(All, f);
         long second = w.Submit(All, f);
@@ -318,7 +318,7 @@ public class AssaultTests
 
         var v = new AssaultWorld();
         v.Hold(Emp);
-        int g = v.Fleet(All, "Victory Destroyer");
+        int g = v.Fleet(All, "Decree");
         v.Aboard(g, Reb, 2);
         long bomb = v.B.Bombard(All, g, Sys, BombardCategory.Military);
         v.B.Stub.Expect(1, 10, 1); // B7-bombardment §5.3: the Military strike with hits and no target draws the collateral die
@@ -329,7 +329,7 @@ public class AssaultTests
         // the other way round
         var u = new AssaultWorld();
         u.Hold(Emp);
-        int h = u.Fleet(All, "Victory Destroyer");
+        int h = u.Fleet(All, "Decree");
         u.Aboard(h, Reb, 2);
         long ass2 = u.Submit(All, h);
         long bomb2 = u.B.Bombard(All, h, Sys, BombardCategory.Military);
@@ -424,7 +424,7 @@ public class AssaultTests
         w.Hold(Emp);
         int f = w.Fleet(All, AssaultWorld.Neb);
         w.Aboard(f, Reb, 2);
-        int guard = w.Fleet(Emp, "Victory Destroyer", 1, "Bespin"); // an Empire fleet elsewhere carries a regiment: not at the system
+        int guard = w.Fleet(Emp, "Decree", 1, "Drift Harbour"); // an Empire fleet elsewhere carries a regiment: not at the system
         w.Aboard(guard, Imp, 1);
         int landed = w.Defenders(All, Reb, 1).Single(); // an Alliance regiment already on the system (own side): not a defender
         w.Try(All, f);
@@ -648,18 +648,18 @@ public class AssaultTests
         Assert.Equal(new Side?[] { Side.Alliance }, w.Events<SystemCaptured>().Take(1).Select(c => c.To).ToArray());
     }
 
-    // m3-assault §Where it runs: systems in name order, each with its own events; Bespin before Denon
+    // m3-assault §Where it runs: systems in name order, each with its own events; Drift Harbour before Fiducia
     [Fact]
     public void SystemsResolveInNameOrder()
     {
         var w = new AssaultWorld();
-        w.Hold(Emp); w.Hold(Emp, system: "Bespin");
+        w.Hold(Emp); w.Hold(Emp, system: "Drift Harbour");
         int a = w.Fleet(All, AssaultWorld.Neb, 1, Sys);
-        int b = w.Fleet(All, AssaultWorld.Neb, 1, "Bespin");
+        int b = w.Fleet(All, AssaultWorld.Neb, 1, "Drift Harbour");
         w.Aboard(a, Reb, 1); w.Aboard(b, Reb, 1);
-        w.Submit(All, a, Sys); w.Submit(All, b, "Bespin");
+        w.Submit(All, a, Sys); w.Submit(All, b, "Drift Harbour");
         w.Run(1);
-        Assert.Equal(new[] { "Bespin", Sys }, w.Events<AssaultStarted>().Select(s => s.System).ToArray());
+        Assert.Equal(new[] { "Drift Harbour", Sys }, w.Events<AssaultStarted>().Select(s => s.System).ToArray());
         Assert.All(w.Events<AssaultStarted>(), s => Assert.Equal(w.Game.Day, s.Day)); // day = K + 1
     }
 
@@ -688,7 +688,7 @@ public class AssaultTests
         var w = new AssaultWorld(stub: false, seed: 5, p: new AssaultParams { Passes = 0 });
         w.Hold(Emp);
         int f = w.Fleet(All, AssaultWorld.Neb);
-        w.Aboard(f, "Wookiee Regiment", 6);
+        w.Aboard(f, "Kiru Sparks", 6);
         w.Defenders(Emp, Imp, 2);
         w.Try(All, f);
         var res = w.LastResolved();

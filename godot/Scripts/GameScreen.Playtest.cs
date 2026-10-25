@@ -174,7 +174,7 @@ public partial class GameScreen
         string trap = plan.Path[plan.Path.Count / 2];
         S.OpponentIdle = true; // keep the planted ship where it is
         Fm.SetOwner(trap, Me);
-        Fm.AddFleet(Me == Praedra.Core.Clock.Side.Empire ? Praedra.Core.Clock.Side.Alliance : Praedra.Core.Clock.Side.Empire, "Net", new[] { "Interdictor Cruiser" }, trap);
+        Fm.AddFleet(Me == Praedra.Core.Clock.Side.Empire ? Praedra.Core.Clock.Side.Alliance : Praedra.Core.Clock.Side.Empire, "Net", new[] { "Subpoena" }, trap);
         StepOne(); // the side's picture is taken in the day step
         ShotPreview(to);
     }

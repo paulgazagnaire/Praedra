@@ -8,11 +8,11 @@ namespace Praedra.Core.Tests.Support;
 // m2-popular-support, tests S1 to S17 (A = Alliance support). Test ids are named in the comments.
 public class SupportTests
 {
-    private const string Ally = "Bespin";   // Alliance-held in most tests
-    private const string Emp = "Corellia";  // Empire-held in most tests
+    private const string Ally = "Drift Harbour";   // Alliance-held in most tests
+    private const string Emp = "Classis";  // Empire-held in most tests
 
     private static void Blockade(SupWorld w, string system, Side by) =>
-        w.W.Fleets.AddFleet(by, "Picket", new[] { by == Side.Empire ? "Imperial Star Destroyer" : "Corellian Corvette" }, system);
+        w.W.Fleets.AddFleet(by, "Picket", new[] { by == Side.Empire ? "Mandate" : "Dodger" }, system);
 
     // ---------------------------------------------------------------- uprising erosion (timer 0x384)
 
@@ -118,7 +118,7 @@ public class SupportTests
     {
         var w = new SupWorld();
         w.Hold(Emp, Side.Empire, 40); // A = 60; N = 2
-        w.Regiments(Emp, Side.Empire, "Imperial Army Regiment", 2); // no uprising to disturb the test
+        w.Regiments(Emp, Side.Empire, "Tranches", 2); // no uprising to disturb the test
         Blockade(w, Emp, Side.Alliance);
         w.Run(31);
         Assert.Equal(61, w.A(Emp));
@@ -130,7 +130,7 @@ public class SupportTests
     {
         var w = new SupWorld();
         w.Hold(Emp, Side.Empire, 50); // A = 50; N = 1
-        w.Regiments(Emp, Side.Empire, "Imperial Army Regiment", 1);
+        w.Regiments(Emp, Side.Empire, "Tranches", 1);
         Blockade(w, Emp, Side.Alliance);
         w.Run(31);
         Assert.Equal(49, w.A(Emp));
@@ -286,11 +286,11 @@ public class SupportTests
     public void S15_NeutralSystemNeverMoves()
     {
         var w = new SupWorld();
-        w.W.Eco.SetAllianceSupport("Kuat", 33);
-        Blockade(w, "Kuat", Side.Empire);
-        Blockade(w, "Kuat", Side.Alliance);
+        w.W.Eco.SetAllianceSupport("Navalia", 33);
+        Blockade(w, "Navalia", Side.Empire);
+        Blockade(w, "Navalia", Side.Alliance);
         w.Run(200);
-        Assert.Equal(33, w.A("Kuat"));
+        Assert.Equal(33, w.A("Navalia"));
         Assert.Empty(w.Game.State.Support.Systems);
         Assert.Empty(w.Events<SupportChanged>());
     }
@@ -300,8 +300,8 @@ public class SupportTests
     public void S16_NothingDrifts()
     {
         var w = new SupWorld(stub: false, seed: 7);
-        foreach (var s in new[] { "Coruscant", "Kuat", "Fondor" }) w.Hold(s, Side.Empire, 80);
-        foreach (var s in new[] { "Yavin", "Hoth", "Sullust" }) w.Hold(s, Side.Alliance, 100);
+        foreach (var s in new[] { "Charter", "Navalia", "Incus" }) w.Hold(s, Side.Empire, 80);
+        foreach (var s in new[] { "The Shoal", "The Thaw", "Caminus" }) w.Hold(s, Side.Alliance, 100);
         var before = TestData.RealGalaxy.Systems.Select(s => w.A(s.Name)).ToList();
         w.Run(1000);
         Assert.Equal(before, TestData.RealGalaxy.Systems.Select(s => w.A(s.Name)).ToList());
@@ -338,8 +338,8 @@ public class SupportTests
     {
         var w = new SupWorld();
         var g = TestData.RealGalaxy;
-        string sector = g.Get("Coruscant").Sector;
-        Assert.False(w.W.Eco.IsDeathStarSector("Coruscant"));
+        string sector = g.Get("Charter").Sector;
+        Assert.False(w.W.Eco.IsDeathStarSector("Charter"));
         w.Sup.SetDeathStarSector(sector, true);
         var members = g.Systems.Where(s => s.Sector == sector).Select(s => s.Name).ToList();
         Assert.True(members.Count > 1);
@@ -356,7 +356,7 @@ public class SupportTests
     {
         var w = new SupWorld();
         w.Hold(Emp, Side.Empire, 20);                 // tier 75
-        w.Regiments(Emp, Side.Empire, "Imperial Army Regiment", 5);
+        w.Regiments(Emp, Side.Empire, "Tranches", 5);
         Assert.Equal(75 - 2 * 5, w.W.Eco.DiversionPercent(Emp, Side.Empire));
         w.Sup.SetDeathStarSystem(Emp, true);
         Assert.Equal(75 - 2 * 2 * 5, w.W.Eco.DiversionPercent(Emp, Side.Empire));

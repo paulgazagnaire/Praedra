@@ -1,17 +1,17 @@
 character,name,rule,place,officer,source
-640,Emperor Palpatine,FixedSystem,Coruscant,0,"Traced: m5-setup-and-victory P9 item 1 (setup-victory/03, 0x55f7b0)"
-641,Darth Vader,RandomLocation,,0,"Traced: m5-setup-and-victory P9 item 2"
-896,Jerjerrod,RandomLocation,,1,"Traced: m5-setup-and-victory P9 item 2 (StartCastOfficers Classic keeps him)"
-897,Ozzel,RandomLocation,,1,"Traced: m5-setup-and-victory P9 item 2 (StartCastOfficers Classic keeps him)"
-898,Piett,RandomLocation,,1,"Traced: m5-setup-and-victory P9 item 2 (StartCastOfficers Classic keeps him)"
-899,Veers,RandomLocation,,1,"Traced: m5-setup-and-victory P9 item 2 (StartCastOfficers Classic keeps him)"
-908,Needa,RandomLocation,,1,"Traced: m5-setup-and-victory P9 item 2 (StartCastOfficers Classic keeps him)"
--1,Empire extras,Extras,Empire,0,"Traced: m5-setup-and-victory P9 item 3 (StartExtrasPerSide)"
-576,Mon Mothma,FixedHq,,0,"Traced: m5-setup-and-victory P9 item 4"
-578,Luke Skywalker,FixedSystem,Yavin,0,"Traced: m5-setup-and-victory P9 item 5; order Luke, Leia, Han, Chewbacca, Dodonna, Wedge (B4 §9, [EXE-own] 0x55f7b0)"
-577,Leia Organa,FixedSystem,Yavin,0,"Traced: m5-setup-and-victory P9 item 5; order Luke, Leia, Han, Chewbacca, Dodonna, Wedge (B4 §9, [EXE-own] 0x55f7b0)"
-579,Han Solo,FixedSystem,Yavin,0,"Traced: m5-setup-and-victory P9 item 5; order Luke, Leia, Han, Chewbacca, Dodonna, Wedge (B4 §9, [EXE-own] 0x55f7b0)"
-835,Chewbacca,FixedSystem,Yavin,0,"Traced: m5-setup-and-victory P9 item 5; order Luke, Leia, Han, Chewbacca, Dodonna, Wedge (B4 §9, [EXE-own] 0x55f7b0)"
-836,Jan Dodonna,FixedSystem,Yavin,0,"Traced: m5-setup-and-victory P9 item 5; order Luke, Leia, Han, Chewbacca, Dodonna, Wedge (B4 §9, [EXE-own] 0x55f7b0)"
-833,Wedge Antilles,FixedSystem,Yavin,0,"Traced: m5-setup-and-victory P9 item 5; order Luke, Leia, Han, Chewbacca, Dodonna, Wedge (B4 §9, [EXE-own] 0x55f7b0)"
--1,Alliance extras,Extras,Alliance,0,"Traced: m5-setup-and-victory P9 item 6 (StartExtrasPerSide)"
+640,Emperor Palpatine,FixedSystem,Charter,0,"Traced: m5-setup-and-victory P9 item 1 (setup-victory/03, 0x55f7b0)"
+641,Darth Vader,RandomLocation,,0,Traced: m5-setup-and-victory P9 item 2
+896,Jerjerrod,RandomLocation,,1,Traced: m5-setup-and-victory P9 item 2 (StartCastOfficers Classic keeps him)
+897,Ozzel,RandomLocation,,1,Traced: m5-setup-and-victory P9 item 2 (StartCastOfficers Classic keeps him)
+898,Piett,RandomLocation,,1,Traced: m5-setup-and-victory P9 item 2 (StartCastOfficers Classic keeps him)
+899,Veers,RandomLocation,,1,Traced: m5-setup-and-victory P9 item 2 (StartCastOfficers Classic keeps him)
+908,Needa,RandomLocation,,1,Traced: m5-setup-and-victory P9 item 2 (StartCastOfficers Classic keeps him)
+-1,Empire extras,Extras,Empire,0,Traced: m5-setup-and-victory P9 item 3 (StartExtrasPerSide)
+576,Mon Mothma,FixedHq,,0,Traced: m5-setup-and-victory P9 item 4
+578,Luke Skywalker,FixedSystem,The Shoal,0,"Traced: m5-setup-and-victory P9 item 5; order Luke, Leia, Han, Chewbacca, Dodonna, Wedge (B4 §9, [EXE-own] 0x55f7b0)"
+577,Leia Organa,FixedSystem,The Shoal,0,"Traced: m5-setup-and-victory P9 item 5; order Luke, Leia, Han, Chewbacca, Dodonna, Wedge (B4 §9, [EXE-own] 0x55f7b0)"
+579,Han Solo,FixedSystem,The Shoal,0,"Traced: m5-setup-and-victory P9 item 5; order Luke, Leia, Han, Chewbacca, Dodonna, Wedge (B4 §9, [EXE-own] 0x55f7b0)"
+835,Chewbacca,FixedSystem,The Shoal,0,"Traced: m5-setup-and-victory P9 item 5; order Luke, Leia, Han, Chewbacca, Dodonna, Wedge (B4 §9, [EXE-own] 0x55f7b0)"
+836,Jan Dodonna,FixedSystem,The Shoal,0,"Traced: m5-setup-and-victory P9 item 5; order Luke, Leia, Han, Chewbacca, Dodonna, Wedge (B4 §9, [EXE-own] 0x55f7b0)"
+833,Wedge Antilles,FixedSystem,The Shoal,0,"Traced: m5-setup-and-victory P9 item 5; order Luke, Leia, Han, Chewbacca, Dodonna, Wedge (B4 §9, [EXE-own] 0x55f7b0)"
+-1,Alliance extras,Extras,Alliance,0,Traced: m5-setup-and-victory P9 item 6 (StartExtrasPerSide)

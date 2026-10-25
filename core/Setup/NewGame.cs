@@ -48,7 +48,7 @@ public static class NewGame
         var forces = nd.Forces;
         var state = host.Game.State;
 
-        // ---- owners, support, explored, HQ (setup-victory/09 §1-5). Rows for systems off the graph (Ilum, Csilla) are skipped.
+        // ---- owners, support, explored, HQ (setup-victory/09 §1-5). Rows for systems off the graph (Glasswood, Frostholm) are skipped.
         foreach (var r in rows)
         {
             if (!galaxy.TryFindSystem(r.Name, out _)) continue;
@@ -71,9 +71,9 @@ public static class NewGame
             }
             else { fleets.SetOwner(sys, null); eco.SetAllianceSupport(sys, 50); state.Scenario.Explored.Remove(sys); }
         }
-        // Support bands that setup fixes (setup-victory/09 §2): Coruscant 0, Yavin and the HQ 100.
-        eco.SetAllianceSupport("Coruscant", 0);
-        eco.SetAllianceSupport("Yavin", 100);
+        // Support bands that setup fixes (setup-victory/09 §2): Charter 0, The Shoal and the HQ 100.
+        eco.SetAllianceSupport("Charter", 0);
+        eco.SetAllianceSupport("The Shoal", 100);
         if (state.Scenario.HqSystem is { } hq) eco.SetAllianceSupport(hq, 100);
         state.Scenario.Active = true;
 
@@ -100,7 +100,7 @@ public static class NewGame
         host.Control.SetupNewGame();
 
         // P9 starting characters, after the forces and before the economy timers and the research arming (P10): the roster's creation draws,
-        // then Palpatine at Coruscant, Vader and the officers at random Empire locations, the Empire extras, Mon Mothma at the HQ, the Yavin six,
+        // then Palpatine at Charter, Vader and the officers at random Empire locations, the Empire extras, Mon Mothma at the HQ, the The Shoal six,
         // the Alliance extras. rule: m5-setup-and-victory §P9; m5-characters-and-force §Rolling the stats.
         host.Characters.SetupNewGame(state.Scenario.HqSystem);
 
@@ -162,7 +162,7 @@ public static class NewGame
         }
 
         // garrison: the sheet's required N for the holder's support (N = ceil((60 - s) / 10) below 60, else 0), at least min_garrison (Classic = 0,
-        // B4 §6: worlds at 60 or more, Coruscant, Yavin and the HQ get none; 0 only with the Classic setup, part B, so 1 until then); extra regiments at the base to load and send
+        // B4 §6: worlds at 60 or more, Charter, The Shoal and the HQ get none; 0 only with the Classic setup, part B, so 1 until then); extra regiments at the base to load and send
         // rule: m5-setup-and-victory §P6 ([EXE-own] 0x51ab20); m2-uprisings-and-garrison §Required garrison N (no system starts in uprising)
         string gClass = forces.Str(side, "garrison_class"); int minG = minGarrison ?? forces.Int(side, "min_garrison");
         foreach (var sys in held)
@@ -184,7 +184,7 @@ public static class NewGame
             var squads = f.Squadrons.Take(berths).ToList();
             if (load + shipCost + squads.Sum(c => eco.Costs.Get(c).Maintenance) > budget) squads.Clear();
             load += shipCost + squads.Sum(c => eco.Costs.Get(c).Maintenance);
-            host.Fleets.AddFleet(side, f.Name, f.Ships, f.AtBase ? baseSys : siteSys, squads);
+            host.Fleets.AddFleet(side, f.Name, f.Ships, f.AtBase ? baseSys : siteSys, squads, listedOrder: true);
         }
     }
 

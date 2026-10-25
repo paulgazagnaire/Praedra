@@ -24,7 +24,7 @@ internal static class DerivedCapture
 {
     public const int Regiments = 6;
 
-    public static string ArmyOf(Side side) => side == Side.Alliance ? "Alliance Army Regiment" : "Imperial Army Regiment";
+    public static string ArmyOf(Side side) => side == Side.Alliance ? "Militia" : "Tranches";
 
     /// <summary>Queue the capture for the next Step (a DebugSetTroops order).</summary>
     public static long SubmitCapture(this ControlModule c, Side side, string system) =>
@@ -37,13 +37,13 @@ internal static class DerivedCapture
 
 /// <summary>
 /// A full <see cref="GameHost"/> on the real galaxy with the derived control rule (the DEFAULT), debug orders on, incidents off and autoscrap out of
-/// reach. The Corellia Sector is the stage. v6 re-pin 2026-10-24: on the spiral map it holds 9 populated inner-rim worlds (Byblos, Corellia,
-/// Drall, Hosnian Prime, Loronar, Orish, Poderis, Selonia, Vagran); Duros and Tralus moved to other sectors, so Drall and Poderis take their parts.
+/// reach. The Classis Sector is the stage. v6 re-pin 2026-10-24: on the spiral map it holds 9 populated inner-rim worlds (Grauburg, Classis,
+/// Beryl, Fiscus, Vallum, Cinnabar, Altamesa, Marmor, Loess); Hiberna and Bina Major moved to other sectors, so Beryl and Altamesa take their parts.
 /// </summary>
 internal sealed class DerivedWorld
 {
-    public const string Corellia = "Corellia", Drall = "Drall", Poderis = "Poderis", Vagran = "Vagran", Selonia = "Selonia";
-    public const string ImpArmy = "Imperial Army Regiment", RebArmy = "Alliance Army Regiment";
+    public const string Corellia = "Classis", Drall = "Beryl", Poderis = "Altamesa", Vagran = "Loess", Selonia = "Marmor";
+    public const string ImpArmy = "Tranches", RebArmy = "Militia";
     public const int Lando = 834, Piett = 898;
 
     public GameHost H { get; }
@@ -114,7 +114,7 @@ public class B5aControlTests
         var evs = w.Game.Events.ToList();
         int iSup = evs.FindIndex(e => e is SupportChanged s && s.System == C && s.Cause == SupportCause.Diplomacy);
         Assert.Equal(iSup + 1, evs.IndexOf(cap)); // inside the support change
-        Assert.Equal(new[] { (C, 61), (D, 31), (T, 71) }, w.SectorSteps().Select(s => (s.System, s.New)).ToArray());
+        Assert.Equal(new[] { (T, 71), (D, 31), (C, 61) }, w.SectorSteps().Select(s => (s.System, s.New)).ToArray());
         Assert.Equal(50, w.A(V));
     }
 
@@ -146,12 +146,12 @@ public class B5aControlTests
         w.Hold(C, Side.Empire, 30);
         w.Hold(D, Side.Empire, 30);
         int reg = w.Regiments(C, Side.Empire, 1)[0];
-        int fleet = w.H.Fleets.AddFleet(Side.Empire, "Lift", new[] { "Imperial Star Destroyer" }, C);
+        int fleet = w.H.Fleets.AddFleet(Side.Empire, "Lift", new[] { "Mandate" }, C);
         w.Ctl.SubmitDebugSetSupport(Side.Empire, C, 100);
         w.Step();
         Assert.Equal(Side.Empire, w.Ctl.HolderOf(C)); // troops hold a world at any support
         Assert.Empty(w.Events<SystemCaptured>());
-        if (deathStarSector) w.H.Support.SetDeathStarSector("Corellia Sector", true);
+        if (deathStarSector) w.H.Support.SetDeathStarSector("Classis Sector", true);
         w.H.Troops.SubmitLoad(Side.Empire, fleet, new[] { reg });
         w.Step();
         Assert.Equal(Side.Alliance, w.Ctl.HolderOf(C));
@@ -184,7 +184,7 @@ public class B5aControlTests
         Assert.Equal((Side.Empire, (Side?)null, CaptureCause.TroopsLeft), (caps[0].From!.Value, caps[0].To, caps[0].Cause));
         Assert.Equal(((Side?)null, (Side?)Side.Alliance, CaptureCause.Support), (caps[1].From, caps[1].To, caps[1].Cause));
         var steps = w.SectorSteps();
-        Assert.Equal(new[] { (C, 10), (D, 10), (C, 1), (D, 1) }, steps.Select(s => (s.System, s.New - s.Old)).ToArray());
+        Assert.Equal(new[] { (D, 10), (C, 10), (D, 1), (C, 1) }, steps.Select(s => (s.System, s.New - s.Old)).ToArray());
         Assert.Equal((66, 31), (w.A(C), w.A(D)));
     }
 
@@ -192,7 +192,7 @@ public class B5aControlTests
     private static (int Fleet, List<int> Regs) Transports(DerivedWorld w, Side side, string system, int n)
     {
         int ships = (n + 5) / 6;
-        int fleet = w.H.Fleets.AddFleet(side, "Landing", Enumerable.Repeat("Bulk Transport", ships), system);
+        int fleet = w.H.Fleets.AddFleet(side, "Landing", Enumerable.Repeat("Barge", ships), system);
         var shipIds = w.Game.State.Fleets[fleet].Ships.ToList();
         var regs = new List<int>();
         for (int k = 0; k < n; k++)
@@ -302,8 +302,8 @@ public class B5aControlTests
         }
     }
 
-    // B5a-9 (section 5): the Alliance takes a world with a Death Star shield and a KDY-150: shield destroyed, KDY-150 Alliance. The same world going
-    // neutral instead: shield destroyed, KDY-150 neutral.
+    // B5a-9 (section 5): the Alliance takes a world with a Death Star shield and a Mordant Lien-150: shield destroyed, Mordant Lien-150 Alliance. The same world going
+    // neutral instead: shield destroyed, Mordant Lien-150 neutral.
     [Fact]
     public void B5a9_ShieldDestroyed_Kdy150ChangesSideOrGoesNeutral()
     {
@@ -337,11 +337,11 @@ public class B5aControlTests
         int yard = w.H.Economy.AddFacility(C, FacilityKind.OrbitalShipyard);
         w.H.Economy.AddFacility(D, FacilityKind.TrainingFacility);
         w.H.Economy.SetPools(Side.Empire, 0, 1000);
-        w.H.Construction.GrantResearch(Side.Empire, "Imperial Star Destroyer");
-        w.H.Construction.SubmitBuild(Side.Empire, C, YardFamily.Shipyard, "Imperial Star Destroyer", 1);
+        w.H.Construction.GrantResearch(Side.Empire, "Mandate");
+        w.H.Construction.SubmitBuild(Side.Empire, C, YardFamily.Shipyard, "Mandate", 1);
         w.H.Construction.SubmitBuild(Side.Empire, D, YardFamily.Training, DerivedWorld.ImpArmy, 2, C);
         w.Step();
-        int isd = w.H.Economy.Objects.Single(o => o.Class == "Imperial Star Destroyer").Id;
+        int isd = w.H.Economy.Objects.Single(o => o.Class == "Mandate").Id;
         int refined = w.H.Economy.Refined(Side.Empire);
         w.Ctl.SubmitDebugSetTroops(Side.Alliance, C, Side.Alliance, DerivedWorld.RebArmy, 1);
         w.Step();
@@ -353,7 +353,7 @@ public class B5aControlTests
         Assert.Equal(C, w.H.Construction.ProjectAt(D, YardFamily.Training)!.Destination);
     }
 
-    // B5a-11 (section 5): the Empire takes an Alliance world: the Alliance's Infiltrators there (not on a mission) are destroyed, the ones on a mission
+    // B5a-11 (section 5): the Empire takes an Alliance world: the Alliance's Wreckers there (not on a mission) are destroyed, the ones on a mission
     // survive; the Alliance character there leaves and is not captured; a prisoner held there for the old side goes free.
     [Fact]
     public void B5a11_OldSideSpecialForcesDie_CharactersLeave_PrisonersFreed()
@@ -361,8 +361,8 @@ public class B5aControlTests
         var w = new DerivedWorld();
         w.Hold(C, Side.Alliance, 70);
         w.Hold(T, Side.Alliance, 70); // somewhere for the Alliance to go
-        int idle = w.H.Economy.AddObject(Side.Alliance, "Infiltrators", C);
-        int working = w.H.Economy.AddObject(Side.Alliance, "Infiltrators", C);
+        int idle = w.H.Economy.AddObject(Side.Alliance, "Wreckers", C);
+        int working = w.H.Economy.AddObject(Side.Alliance, "Wreckers", C);
         w.Game.State.Missions.Missions[9000] = new MissionGroup
         {
             Id = 9000, Kind = MissionKind.Sabotage, Side = Side.Alliance, SpecialForces = new() { working }, Home = T, Target = C,
@@ -407,14 +407,14 @@ public class B5aControlTests
         });
         w.Step();
         Assert.Equal(new[] { C, D }, w.Events<SystemCaptured>().Where(e => e.To == null && e.Cause == CaptureCause.Support).Select(e => e.System).ToArray());
-        // Corellia's step only (Drall is still at 70 when it comes; its own flip in the same tick gives none). Steps come in name order:
-        // v6 re-pin 2026-10-24, Poderis (T) now sorts before Selonia (S).
-        Assert.Equal(new[] { (C, 57), (D, 69), (T, 69), (S, 69), (V, 69) }, w.SectorSteps().Select(s => (s.System, s.New)).ToArray());
+        // Corellia's step only (Beryl is still at 70 when it comes; its own flip in the same tick gives none). Steps come in name order:
+        // Praedra names 2026-10-25: Altamesa (T), Beryl (D), Classis (C), Loess (V), Marmor (S).
+        Assert.Equal(new[] { (T, 69), (D, 69), (C, 57), (V, 69), (S, 69) }, w.SectorSteps().Select(s => (s.System, s.New)).ToArray());
         Assert.Equal(57, w.A(D));
         w.InSlot("6.2", ctx => w.H.Support.ChangeSupport(ctx, T, Side.Alliance, -12, SupportCause.Other, dampen: false));
         w.Step();
         Assert.Null(w.Ctl.HolderOf(T));
-        Assert.Equal(new[] { (C, 56), (D, 56), (T, 56), (S, 68), (V, 68) }, w.SectorSteps().Skip(5).Select(s => (s.System, s.New)).ToArray());
+        Assert.Equal(new[] { (T, 56), (D, 56), (C, 56), (V, 68), (S, 68) }, w.SectorSteps().Skip(5).Select(s => (s.System, s.New)).ToArray());
         int before = w.SectorSteps().Count;
         w.Ctl.SubmitDebugSetSupport(Side.Alliance, V, 58);
         w.InSlot("6.2", ctx => w.H.Support.ChangeSupport(ctx, S, Side.Alliance, -12, SupportCause.Other, dampen: false));
@@ -432,9 +432,9 @@ public class B5aControlTests
         w.Hold(C, Side.Empire, 80);
         w.Hold(D, Side.Empire, 30);
         int mine = w.H.Economy.AddFacility(C, FacilityKind.Mine);
-        w.H.Fleets.AddFleet(Side.Alliance, "Blockade", new[] { "Corellian Corvette" }, C);
+        w.H.Fleets.AddFleet(Side.Alliance, "Blockade", new[] { "Dodger" }, C);
         int reg = w.Regiments(D, Side.Empire, 2)[0];
-        int sf = w.H.Economy.AddObject(Side.Empire, "Imperial Commandos", D);
+        int sf = w.H.Economy.AddObject(Side.Empire, "Closers", D);
         w.Step();
         Assert.True(w.H.Fleets.IsBlockadedClassic(C));
         w.H.Support.StartUprisingNow(new StepContext(w.Game, w.Game.Day), D);
@@ -473,7 +473,7 @@ public class B5aControlTests
         var w = new DerivedWorld();
         w.Hold(C, Side.Empire, 30); w.Hold(D, null, 50); w.Hold(T, Side.Empire, 30);
         w.Regiments(T, Side.Empire, 1);
-        w.Game.State.DeathStar.StrikesInSector["Corellia Sector"] = 1;
+        w.Game.State.DeathStar.StrikesInSector["Classis Sector"] = 1;
         w.InSlot("5.1", ctx => w.H.DeathStar.GetType().GetMethod("SectorReaction", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
             .Invoke(w.H.DeathStar, new object[] { ctx, ctx.Day + 1, DerivedWorld.Vagran }));
         w.Step();
@@ -489,7 +489,7 @@ public class B5aControlTests
     public void B5a_DeathStarFalloutClassic_GalaxyWide()
     {
         var w = new DerivedWorld(settings: DerivedWorld.Settings(ds: new DeathStarParams { Fallout = DeathStarFallout.Classic }));
-        const string rimHigh = "Bespin", rimLow = "Hoth", coreFar = "Coruscant", never = "Kuat";
+        const string rimHigh = "Drift Harbour", rimLow = "The Thaw", coreFar = "Charter", never = "Navalia";
         w.Hold(coreFar, Side.Empire, 10); w.Regiments(coreFar, Side.Empire, 1);
         w.Hold(rimHigh, Side.Empire, 5); w.Hold(rimLow, Side.Empire, 20);
         w.Hold(never, null, 50);
@@ -509,8 +509,8 @@ public class B5aControlTests
     public void B5c11_DeathStarFalloutClassic_HalvedInTheDeathStarSector()
     {
         var w = new DerivedWorld(settings: DerivedWorld.Settings(ds: new DeathStarParams { Fallout = DeathStarFallout.Classic }));
-        const string rimInSector = "Hoth", rimElsewhere = "Bespin", coreElsewhere = "Coruscant";
-        const string coreInSector = "Duros"; // v6 re-pin 2026-10-24: D (Drall) is an inner-rim world now; Duros is still core (flags are per system)
+        const string rimInSector = "The Thaw", rimElsewhere = "Drift Harbour", coreElsewhere = "Charter";
+        const string coreInSector = "Hiberna"; // v6 re-pin 2026-10-24: D (Beryl) is an inner-rim world now; Hiberna is still core (flags are per system)
         w.Hold(coreInSector, Side.Empire, 10); w.Regiments(coreInSector, Side.Empire, 1); // core, in the flagged sector
         w.Hold(coreElsewhere, Side.Empire, 10); w.Regiments(coreElsewhere, Side.Empire, 1);
         w.Hold(rimInSector, Side.Empire, 20); w.Hold(rimElsewhere, Side.Empire, 20);
@@ -533,8 +533,8 @@ public class B5aControlTests
         var w = new DerivedWorld();
         w.Hold(C, Side.Alliance, 50); w.Regiments(C, Side.Alliance, 1);
         w.Hold(T, Side.Alliance, 80);
-        int based = w.H.Economy.AddObject(Side.Alliance, "X-wing", C);
-        int unfinished = w.H.Economy.AddObject(Side.Alliance, "X-wing", C, completed: false);
+        int based = w.H.Economy.AddObject(Side.Alliance, "Swift", C);
+        int unfinished = w.H.Economy.AddObject(Side.Alliance, "Swift", C, completed: false);
         w.InSlot("5.2", ctx => w.Ctl.DebugApplyTroops(ctx, C, Side.Empire, DerivedWorld.ImpArmy, 6));
         w.Step();
         Assert.Equal(Side.Empire, w.Ctl.HolderOf(C));
@@ -557,7 +557,7 @@ public class B5aControlTests
         var w = new DerivedWorld();
         w.Hold(C, Side.Alliance, 50); w.Regiments(C, Side.Alliance, 1);
         w.Hold(T, Side.Alliance, 80);
-        int based = w.H.Economy.AddObject(Side.Alliance, "X-wing", C);
+        int based = w.H.Economy.AddObject(Side.Alliance, "Swift", C);
         w.InSlot(slot, ctx => { if (w.Ctl.HolderOf(C) == Side.Alliance) w.Ctl.DebugApplyTroops(ctx, C, Side.Empire, DerivedWorld.ImpArmy, 6); });
         w.Step();
         var created = Assert.Single(w.Events<FleetCreated>(), e => e.Cause == FleetCreateCause.Squadrons);
@@ -590,8 +590,8 @@ public class B5aControlTests
         Assert.Equal(2, Target(T, 55));
         Assert.Equal(4, Target(V, 30));
         Assert.Equal(8, Target(DerivedWorld.Selonia, 30, uprising: true));
-        Assert.Equal(12, Target("Corfai", 5, uprising: true)); // B6b-4: min(7, 6) x 2
-        var hq = w.H.HqSystem ?? "Yavin";
+        Assert.Equal(12, Target("Magnetite III", 5, uprising: true)); // B6b-4: min(7, 6) x 2
+        var hq = w.H.HqSystem ?? "The Shoal";
         if (w.H.HqSystem == null) w.H.Game.State.Scenario.HqSystem = hq;
         Assert.Equal(9, Target(hq, 90));                       // B6b-5: the special world
         // QA-10: while the HQ is on the way, the special base is at its destination (regiments are ordered there before it arrives)

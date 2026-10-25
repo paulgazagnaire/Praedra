@@ -587,7 +587,7 @@ public sealed partial class SimpleAi
     /// 2026-10-17). rule: ai tuning, B6b §3 and §11 (Dev lead 2026-10-18).
     /// </summary>
     /// <summary>
-    /// The world the Classic AI's special base (9) applies to: Coruscant for the Empire; for the Alliance the Rebel HQ's world, or while the HQ is on
+    /// The world the Classic AI's special base (9) applies to: Charter for the Empire; for the Alliance the Rebel HQ's world, or while the HQ is on
     /// the way, its destination (its own HQ: the side knows where it goes), so regiments are ordered there when the move starts and the HQ does
     /// not arrive on an unguarded world (QA-10, Dev lead 2026-10-18). rule: ai tuning, B6b §3 ("special" system).
     /// </summary>

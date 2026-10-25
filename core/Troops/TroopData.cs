@@ -54,7 +54,7 @@ public sealed class TroopData
     /// <summary>The name shown for a regiment class (the data name: no regiment is renamed).</summary>
     public string RegimentDisplayName(RegimentClass c) => _display.TryGetValue(("troop", c.Id), out var n) ? n : c.Name;
 
-    /// <summary>The name shown for a special-force class: id 8 "Emperor's Hands", id 6 "ISB Agents" (Decided, Paul 2026-10-12). Stats and ids are unchanged.</summary>
+    /// <summary>The name shown for a special-force class: the unit-names.csv entry if any (empty since the Praedra names, 2026-10-25), else the class name. Stats and ids are unchanged.</summary>
     public string SpecialForceDisplayName(SpecialForceClass c) => _display.TryGetValue(("special_force", c.Id), out var n) ? n : c.Name;
 
     public static TroopData Load(string originalDir, string designDir) =>

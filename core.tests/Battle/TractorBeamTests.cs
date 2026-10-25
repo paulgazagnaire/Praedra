@@ -13,8 +13,8 @@ public class TractorBeamTests
     private static IReadOnlyDictionary<string, ShipClass> Ships => NewBattleTests.Ships;
     private static readonly BattleParams New = NewBattleTests.New;
     private static readonly BattleParams NewNoTractors = NewBattleTests.NewNoTractors;
-    private const string Corvette = "Corellian Corvette", Isd = "Imperial Star Destroyer", MonCal = "Mon Calamari Cruiser", Ssd = "Super Star Destroyer",
-        Interdictor = "Interdictor Cruiser", Bulwark = "Bulwark Battlecruiser";
+    private const string Corvette = "Dodger", Isd = "Mandate", MonCal = "Ark", Ssd = "Edict",
+        Interdictor = "Subpoena", Bulwark = "Barricade";
 
     // alert indexed by (int)Side: Empire, Alliance. The Alliance answers Retreat: its ships try to jump at second 0.
     private static readonly OnContactMode[] AllianceRetreats = { OnContactMode.Fight, OnContactMode.Retreat };
@@ -84,7 +84,7 @@ public class TractorBeamTests
         Assert.True(r.AllianceRetreated);
     }
 
-    // m4-retreat-damage-repair TB4: the holder dies (an SSD at hull 1, its side cannot retreat): the held Mon Calamari Cruiser tries again and jumps out
+    // m4-retreat-damage-repair TB4: the holder dies (an SSD at hull 1, its side cannot retreat): the held Ark tries again and jumps out
     [Fact]
     public void TB4_HolderDestroyedFreesTheHeldShip()
     {

@@ -8,7 +8,7 @@ using Praedra.Core.Tests.Control;
 
 namespace Praedra.Core.Tests.Fog;
 
-// Fog of war tests FW1 to FW15 of m5-fog-and-hq §Tests, on Map M (FogWorld). Fleet F = one Corellian Corvette (speed 80): a hop of 100
+// Fog of war tests FW1 to FW15 of m5-fog-and-hq §Tests, on Map M (FogWorld). Fleet F = one Dodger (speed 80): a hop of 100
 // map units on a tier 3 lane takes 16 days.
 public class FogTests
 {

@@ -11,12 +11,12 @@ namespace Praedra.Core.Tests.Economy;
 // Sheets: m2-mines-refineries-pools, m2-maintenance, m2-construction (B5b corrections, 2026-10-18). Hook time T = K + 1.
 public class B5bEconomyTests
 {
-    private const string Home = "Coruscant";
-    private const string Kuat = "Kuat";
-    private const string Sullust = "Sullust";
+    private const string Home = "Charter";
+    private const string Kuat = "Navalia";
+    private const string Sullust = "Caminus";
 
     private static int Interdictor(EcoWorld w, Side side, string system) =>
-        w.Fleets.AddFleet(side, "Blockade", new[] { "Interdictor Cruiser" }, system);
+        w.Fleets.AddFleet(side, "Blockade", new[] { "Subpoena" }, system);
 
     // B5b-1: capacity 350, load 300: 1 ISD (71) refused whole, nothing created; 2 Corellian Corvettes (46) accepted; 3 (69) refused whole.
     // rule: m2-maintenance §Overdraft (B5b §7, [EXE-own] 0x52e970)
@@ -32,11 +32,11 @@ public class B5bEconomyTests
             w.Yard(sys, FacilityKind.OrbitalShipyard); // 13
             w.Refined(side, 1000);
         }
-        for (int i = 0; i < 4; i++) w.Eco.AddObject(Side.Empire, "Imperial Star Destroyer", Home); // 284
-        w.Eco.AddObject(Side.Empire, "TIE Fighter", Home); // 3
-        for (int i = 0; i < 8; i++) w.Eco.AddObject(Side.Alliance, "Nebulon-B Frigate", Sullust); // 280
-        for (int i = 0; i < 2; i++) w.Eco.AddObject(Side.Alliance, "Alliance Army Regiment", Sullust); // 6
-        w.Eco.AddObject(Side.Alliance, "Guerrillas", Sullust); // 1
+        for (int i = 0; i < 4; i++) w.Eco.AddObject(Side.Empire, "Mandate", Home); // 284
+        w.Eco.AddObject(Side.Empire, "Gleaner", Home); // 3
+        for (int i = 0; i < 8; i++) w.Eco.AddObject(Side.Alliance, "Mender", Sullust); // 280
+        for (int i = 0; i < 2; i++) w.Eco.AddObject(Side.Alliance, "Militia", Sullust); // 6
+        w.Eco.AddObject(Side.Alliance, "Strikers", Sullust); // 1
         foreach (var side in new[] { Side.Empire, Side.Alliance })
         {
             Assert.Equal(350, w.Eco.Capacity(side));
@@ -44,13 +44,13 @@ public class B5bEconomyTests
         }
         int objects = w.Eco.Objects.Count();
 
-        Assert.Equal(RejectReason.NoUpkeep, w.TryOrder(Side.Empire, Home, YardFamily.Shipyard, "Imperial Star Destroyer", 1));
-        Assert.Equal(RejectReason.NoUpkeep, w.TryOrder(Side.Alliance, Sullust, YardFamily.Shipyard, "Corellian Corvette", 3));
+        Assert.Equal(RejectReason.NoUpkeep, w.TryOrder(Side.Empire, Home, YardFamily.Shipyard, "Mandate", 1));
+        Assert.Equal(RejectReason.NoUpkeep, w.TryOrder(Side.Alliance, Sullust, YardFamily.Shipyard, "Dodger", 3));
         Assert.Equal(objects, w.Eco.Objects.Count()); // nothing created, no partial order
         Assert.Empty(w.Events<ProjectStarted>());
         Assert.Equal((300, 300), (w.Eco.Load(Side.Empire), w.Eco.Load(Side.Alliance)));
 
-        Assert.Null(w.TryOrder(Side.Alliance, Sullust, YardFamily.Shipyard, "Corellian Corvette", 2));
+        Assert.Null(w.TryOrder(Side.Alliance, Sullust, YardFamily.Shipyard, "Dodger", 2));
         Assert.Equal(346, w.Eco.Load(Side.Alliance));
         Assert.Equal(2, Assert.Single(w.Events<ProjectStarted>()).Count);
     }
@@ -237,13 +237,13 @@ public class B5bEconomyTests
         int[] Shares() => w.Eco.Objects.Where(o => o.Class == "Mine").Select(o => w.Eco.ShareOf(o.Id)).ToArray();
         w.Run(1);
         Assert.Equal(new[] { 0, 0, 0 }, Shares());
-        for (int i = 0; i < 10; i++) w.Eco.AddObject(Side.Alliance, "Guerrillas"); // maintenance 1 each
+        for (int i = 0; i < 10; i++) w.Eco.AddObject(Side.Alliance, "Strikers"); // maintenance 1 each
         w.Run(1);
         Assert.Equal(new[] { 4, 3, 3 }, Shares());
         w.Mine(Kuat);
         w.Run(1);
         Assert.Equal(new[] { 4, 3, 3, 0 }, Shares()); // existing shares are kept; the newcomer has none
-        for (int i = 0; i < 2; i++) w.Eco.AddObject(Side.Alliance, "Guerrillas");
+        for (int i = 0; i < 2; i++) w.Eco.AddObject(Side.Alliance, "Strikers");
         w.Run(1);
         Assert.Equal(new[] { 4, 3, 3, 2 }, Shares());
     }
@@ -254,7 +254,7 @@ public class B5bEconomyTests
         var w = new EcoWorld();
         w.Hold(Home, Side.Empire, 100);
         w.Mine(Home, id: 1); w.Mine(Home, id: 2); w.Refinery(Home, id: 3); w.Refinery(Home, id: 4);
-        for (int i = 0; i < 15; i++) w.Eco.AddObject(Side.Empire, "Stormtrooper Regiment", Home);
+        for (int i = 0; i < 15; i++) w.Eco.AddObject(Side.Empire, "Pacifiers", Home);
         return w;
     }
 
@@ -295,9 +295,9 @@ public class B5bEconomyTests
     {
         var w = new EcoWorld(); // capacity 0, so the Empire is over from the first day: armed at hook 1, first firing at hook 11
         w.Hold(Home, Side.Empire, 100);
-        int fleet = w.Fleets.AddFleet(Side.Empire, "F", new[] { "Imperial Star Destroyer" }, Home);
+        int fleet = w.Fleets.AddFleet(Side.Empire, "F", new[] { "Mandate" }, Home);
         int ship = w.State.Fleets[fleet].Ships.Single();
-        w.Fleets.SubmitMove(Side.Empire, fleet, "Hoth");
+        w.Fleets.SubmitMove(Side.Empire, fleet, "The Thaw");
         RunToDay(w, 11); // through hook 11
         Assert.Null(w.State.Fleets[fleet].At); // still on its way
         Assert.Empty(w.Events<FleetArrived>());
@@ -355,13 +355,13 @@ public class B5bEconomyTests
         w.Hold(Home, Side.Empire);
         w.Yard(Home, FacilityKind.OrbitalShipyard);
         w.Refined(Side.Empire, 1000);
-        Assert.Null(w.TryOrder(Side.Empire, Home, YardFamily.Shipyard, "TIE Fighter", 1));
-        Assert.Null(w.TryOrder(Side.Empire, Home, YardFamily.Shipyard, "Imperial Star Destroyer", 1));
+        Assert.Null(w.TryOrder(Side.Empire, Home, YardFamily.Shipyard, "Gleaner", 1));
+        Assert.Null(w.TryOrder(Side.Empire, Home, YardFamily.Shipyard, "Mandate", 1));
         Assert.Empty(w.Events<ProjectCancelled>());
         var started = w.Events<ProjectStarted>();
         int tie = started[0].Units.Items[0], isd = started[1].Units.Items[0];
         var p = w.Build.ProjectAt(Home, YardFamily.Shipyard)!;
-        Assert.Equal(new[] { tie, isd }, p.AllUnits().ToArray()); // the ISD waits behind the TIE Fighter
+        Assert.Equal(new[] { tie, isd }, p.AllUnits().ToArray()); // the ISD waits behind the Gleaner
         while (!w.Events<UnitCompleted>().Any() && w.Game.Day < 200) w.Run(1);
         Assert.Equal(tie, Assert.Single(w.Events<UnitCompleted>()).Object); // the first order finished first
         Assert.Equal(new[] { isd }, w.Build.ProjectAt(Home, YardFamily.Shipyard)!.AllUnits().ToArray());
@@ -376,7 +376,7 @@ public class B5bEconomyTests
         Assert.NotNull(w.Eco.Find(tie)); // the finished unit stays
     }
 
-    // B5b-10 (queue detail): each queued order keeps its own destination: a unit for Kuat departs for Kuat even when the order behind it is
+    // B5b-10 (queue detail): each queued order keeps its own destination: a unit for Navalia departs for Navalia even when the order behind it is
     // for the yard's own system. rule: m2-construction §Projects and queues (B5b §7)
     [Fact]
     public void B5b_10_EachQueuedOrderKeepsItsOwnDestination()
@@ -385,14 +385,14 @@ public class B5bEconomyTests
         w.Hold(Home, Side.Empire); w.Hold(Kuat, Side.Empire);
         w.Yard(Home, FacilityKind.OrbitalShipyard);
         w.Refined(Side.Empire, 1000);
-        Assert.Null(w.TryOrder(Side.Empire, Home, YardFamily.Shipyard, "TIE Fighter", 1, Kuat));
-        Assert.Null(w.TryOrder(Side.Empire, Home, YardFamily.Shipyard, "TIE Fighter", 1));
+        Assert.Null(w.TryOrder(Side.Empire, Home, YardFamily.Shipyard, "Gleaner", 1, Kuat));
+        Assert.Null(w.TryOrder(Side.Empire, Home, YardFamily.Shipyard, "Gleaner", 1));
         while (w.Events<UnitCompleted>().Count < 2 && w.Game.Day < 200) w.Run(1);
         var done = w.Events<UnitCompleted>();
-        Assert.Equal(("TIE Fighter", Kuat), (done[0].Class, done[0].Destination));
+        Assert.Equal(("Gleaner", Kuat), (done[0].Class, done[0].Destination));
         Assert.NotEqual(0, done[0].DeliveryId);
         Assert.Equal(Kuat, Assert.Single(w.Events<DeliveryDeparted>()).To);
-        Assert.Equal(("TIE Fighter", Home, 0), (done[1].Class, done[1].Destination, done[1].DeliveryId));
+        Assert.Equal(("Gleaner", Home, 0), (done[1].Class, done[1].Destination, done[1].DeliveryId));
     }
 
     // B5b-11: a new game in the Classic economy (Settings.Economy set) starts with raw 0 and refined 0.

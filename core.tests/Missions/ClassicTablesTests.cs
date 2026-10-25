@@ -40,7 +40,7 @@ public class ClassicTablesTests
     }
 
     // B1-own-importer Q6: with the shipped data a mission with one decoy is accepted and its MissionDecoyRoll uses the decoy table
-    // (Infiltrators espionage 60 against one Imperial Probe Droid on the planet, detection 0 (B2d: special forces guard a planet target): x = 60,
+    // (Wreckers espionage 60 against one Speculators on the planet, detection 0 (B2d: special forces guard a planet target): x = 60,
     // chance 94)
     [Fact]
     public void Q6_OneDecoyIsAcceptedWithTheShippedData()

@@ -19,8 +19,8 @@ public class NewBattleTests
     internal static readonly BattleParams NewNoRolls = new() { Ruleset = BattleRuleset.New, SubsystemRolls = false };
     /// <summary>New with tractor beams off (m4-retreat-damage-repair §6): for the sheet's base retreat tests, where an ISD would hold one corvette.</summary>
     internal static readonly BattleParams NewNoTractors = new() { Ruleset = BattleRuleset.New, New = new NewBattleParams { TractorBeamsHoldRetreat = false } };
-    private const string Corvette = "Corellian Corvette", Isd = "Imperial Star Destroyer", MonCal = "Mon Calamari Cruiser", Lancer = "Lancer Frigate",
-        Interdictor = "Interdictor Cruiser", Bomber = "TIE Bomber";
+    private const string Corvette = "Dodger", Isd = "Mandate", MonCal = "Ark", Lancer = "Writ",
+        Interdictor = "Subpoena", Bomber = "Thresher";
 
     internal static (ClassicBattleResult R, IReadOnlyList<BattleUnit> U) Fight(BattleParams p, (string, int)[] alliance, (string, int)[] empire, ulong seed = 1,
         bool aCan = true, bool eCan = true, bool carry = false, Action<IReadOnlyList<BattleUnit>>? prepare = null, OnContactMode[]? alert = null) =>
@@ -110,7 +110,7 @@ public class NewBattleTests
 
     // ---------------------------------------------------------------- N5 gravity wells
 
-    // m4-battle-new N5 (changed setup, see the report): the corvettes cannot hurt a hull-1 Interdictor (its shield is up), so a weakened Mon Calamari
+    // m4-battle-new N5 (changed setup, see the report): the corvettes cannot hurt a hull-1 Interdictor (its shield is up), so a weakened The Moorings
     // Cruiser (hull 30%, flagged all the same) shoots it. While the Interdictor lives the Alliance cannot retreat; once it is dead the retreat works.
     [Fact]
     public void N5_AGravityWellShipBlocksRetreatWhileItLivesAndKillingItFreesTheRetreat()
@@ -136,7 +136,7 @@ public class NewBattleTests
         }
     }
 
-    // ---------------------------------------------------------------- N6, N17 mirror and Mon Calamari
+    // ---------------------------------------------------------------- N6, N17 mirror and The Moorings
 
     // m4-battle-new N6 (no side-order bias): 2 ISD v 2 ISD, each side wins 45 to 55% (here 1000 seeds, so the band is tight enough to mean something)
     [Fact]
@@ -153,12 +153,12 @@ public class NewBattleTests
         Assert.InRange(e, 450, 550);
     }
 
-    // m4-battle-new N6 (second half) and N17: ISD v Mon Calamari, 100 seeds each side; rates recorded (tuneable), the two assignments of the sides agree
+    // m4-battle-new N6 (second half) and N17: ISD v The Moorings, 100 seeds each side; rates recorded (tuneable), the two assignments of the sides agree
     [Fact]
     public void N17_IsdVsMonCalamari_RatesAreTheSameWhicheverSideIsWhich()
     {
         int monCalAsAlliance = 0, monCalAsEmpire = 0;
-        // Mon Calamari is an Alliance class and the ISD an Empire class, but the engine does not care which side a class is on: swap by listing it on the other side
+        // The Moorings is an Alliance class and the ISD an Empire class, but the engine does not care which side a class is on: swap by listing it on the other side
         for (ulong seed = 1; seed <= 100; seed++)
         {
             var (r, _) = Fight(New, new[] { (MonCal, 1) }, new[] { (Isd, 1) }, seed);
@@ -166,8 +166,8 @@ public class NewBattleTests
             var (r2, _) = Fight(New, new[] { (Isd, 1) }, new[] { (MonCal, 1) }, seed);
             if (r2.EmpireOutcome == BattleOutcome.Victorious) monCalAsEmpire++;
         }
-        _out.WriteLine($"Mon Calamari v ISD, 100 seeds: wins as Alliance {monCalAsAlliance}, as Empire {monCalAsEmpire} (sheet model about 2 in 3)");
-        // N17: recorded, tuneable, not a hard bound. space-combat/11 §4: both close to D = 21 and fight at the ISD's ion range, so the ISD now wins most (Mon Calamari 18% of 100 seeds
+        _out.WriteLine($"The Moorings v ISD, 100 seeds: wins as Alliance {monCalAsAlliance}, as Empire {monCalAsEmpire} (sheet model about 2 in 3)");
+        // N17: recorded, tuneable, not a hard bound. space-combat/11 §4: both close to D = 21 and fight at the ISD's ion range, so the ISD now wins most (The Moorings 18% of 100 seeds
         // against 73% under the old m4-battle-new §5 rule). Balance flag for the Space combat owner.
         Assert.InRange(monCalAsAlliance, 5, 90);
         Assert.InRange(monCalAsEmpire, 5, 90);
@@ -180,7 +180,7 @@ public class NewBattleTests
     [Fact]
     public void N7_ShieldDoesNotRegenerateForFiveSecondsAfterAHit()
     {
-        // space-combat/11 §4 changed the engagement: both ships now fire from the first seconds at D = 21, so the Mon Calamari is hit again within 5 s on most seeds;
+        // space-combat/11 §4 changed the engagement: both ships now fire from the first seconds at D = 21, so the The Moorings is hit again within 5 s on most seeds;
         // look for the first seed with a hit followed by a quiet spell (a regen at +5), instead of fixing seed 3.
         bool found = false;
         for (ulong seed = 1; seed <= 40 && !found; seed++)
@@ -213,7 +213,7 @@ public class NewBattleTests
 
     // ---------------------------------------------------------------- N13, N14 fighters
 
-    // m4-battle-new N13: an ISD carrying 6 TIE Bomber squadrons beats an ISD; without the hangar it is even
+    // m4-battle-new N13: an ISD carrying 6 Thresher squadrons beats an ISD; without the hangar it is even
     [Fact]
     public void N13_IsdCarryingSixBomberSquadronsBeatsAnIsd()
     {
@@ -251,9 +251,9 @@ public class NewBattleTests
     [Fact]
     public void SquadronsUnderSixCraftAreLostAtTheEndAndWholeOnesStay()
     {
-        var (r, u) = Fight(NewNoTractors, new[] { (Corvette, 4) }, new[] { (Isd, 1), ("TIE Fighter", 2) }, 1, carry: true, // tractors off: a held corvette would shoot the TIEs
-            prepare: x => x.Where(q => q.Class.Name == "TIE Fighter").Last().Hull = 40); // ceil(40 / 8) = 5 craft
-        var sq = u.Where(x => x.Class.Name == "TIE Fighter").OrderBy(x => x.ObjectId).ToList();
+        var (r, u) = Fight(NewNoTractors, new[] { (Corvette, 4) }, new[] { (Isd, 1), ("Gleaner", 2) }, 1, carry: true, // tractors off: a held corvette would shoot the TIEs
+            prepare: x => x.Where(q => q.Class.Name == "Gleaner").Last().Hull = 40); // ceil(40 / 8) = 5 craft
+        var sq = u.Where(x => x.Class.Name == "Gleaner").OrderBy(x => x.ObjectId).ToList();
         Assert.False(sq[0].Destroyed);
         Assert.True(sq[1].Destroyed);
         Assert.Equal(UnitLossReason.Combat, sq[1].Loss);
@@ -264,10 +264,10 @@ public class NewBattleTests
     public void RetreatingCarrierTakesItsSquadronsAndOthersWithoutBerthOrHyperdriveAreLost()
     {
         // Alliance: an Escort Carrier with 6 berths and 8 TIE-less... use Empire squadrons: ISD (6 berths) carries 6, two more are based
-        var (r, u) = Fight(New, new[] { (Isd, 1), ("TIE Fighter", 8) }, new[] { (MonCal, 1), (Isd, 3) }, 1, carry: true,
+        var (r, u) = Fight(New, new[] { (Isd, 1), ("Gleaner", 8) }, new[] { (MonCal, 1), (Isd, 3) }, 1, carry: true,
             prepare: x => { }, alert: new[] { OnContactMode.Fight, OnContactMode.Retreat }); // indexed by (int)Side: Empire, Alliance
         Assert.True(r.AllianceRetreated);
-        var sq = u.Where(x => x.Side == Side.Alliance && x.Class.Name == "TIE Fighter").OrderBy(x => x.ObjectId).ToList();
+        var sq = u.Where(x => x.Side == Side.Alliance && x.Class.Name == "Gleaner").OrderBy(x => x.ObjectId).ToList();
         Assert.Equal(6, sq.Count(x => x.Left)); // the six riding the ISD
         Assert.Equal(2, sq.Count(x => x.Destroyed && x.Loss == UnitLossReason.NoBerth));
     }
@@ -279,9 +279,9 @@ public class NewBattleTests
         int FirstTorpedoTick(NewBattleParams np)
         {
             var (nb, units) = QuickBattle.PrepareNew(new BattleParams { Ruleset = BattleRuleset.New, New = np }, Ships,
-                new[] { ("Alliance Escort Carrier", 1), ("Y-wing", 6) }, new[] { (Isd, 1) }, 5, empireCanLand: false, carry: true, logEvents: true); // the ISD cannot run, as it otherwise would (six Y-wing ion batteries outweigh it)
+                new[] { ("Nest", 1), ("Plough", 6) }, new[] { (Isd, 1) }, 5, empireCanLand: false, carry: true, logEvents: true); // the ISD cannot run, as it otherwise would (six Plough ion batteries outweigh it)
             nb.Run();
-            var ids = units.Where(x => x.Class.Name == "Y-wing").Select(x => x.ObjectId).ToHashSet();
+            var ids = units.Where(x => x.Class.Name == "Plough").Select(x => x.ObjectId).ToHashSet();
             var torp = nb.Log!.Where(e => ids.Contains(e.Unit) && e.Detail == "Torpedo").Select(e => e.T).ToList();
             return torp.Count == 0 ? -1 : torp.Min();
         }
@@ -321,7 +321,7 @@ public class NewBattleTests
     [Theory]
     [InlineData(Isd, Isd, 60)]       // turbolaser 50
     [InlineData(Corvette, Corvette, 27)] // laser 17
-    [InlineData(Corvette, "Imperial II Star Destroyer", 80)] // turbolaser 70
+    [InlineData(Corvette, "Mandate II", 80)] // turbolaser 70
     public void LeadUpdate2_StartDistanceIsTheLongestRangePlusTen(string a, string e, int d)
     {
         var (nb, _) = QuickBattle.PrepareNew(New, Ships, new[] { (a, 1) }, new[] { (e, 1) }, 1);
@@ -335,7 +335,7 @@ public class NewBattleTests
     {
         var m = new CombatModel(NewBattleData.Default);
         var data = NewBattleData.Default;
-        foreach (var name in new[] { "Bulk Cruiser", "Corellian Corvette", "Medium Transport", "Corellian Gunship" })
+        foreach (var name in new[] { "Hauler", "Dodger", "Mule", "Wasp" })
         {
             var target = Combatant.Strategic(data.Class(name));
             Assert.Equal(0.0, m.ShotValue(WeaponKind.LaserCannon, 6.0, data.Class(Corvette), target));
@@ -343,10 +343,10 @@ public class NewBattleTests
         // with the shield down a laser hurts the hull at 0.167
         var down = new Combatant { Class = data.Class(Isd), HullRatio = 1, ShieldFactor = 0.5, ShieldUp = false };
         Assert.Equal(6.0 * 0.167, m.ShotValue(WeaponKind.LaserCannon, 6.0, data.Class(Corvette), down), 1e-12);
-        // Deflection is the class column (ISD 1.5), not shield / 200: ion 20 x 1.5 = 30 passes, a Y-wing ion 2.25 x 1.5 = 3.375 passes the ISD (1.5) but not the Bulwark (5.5)
+        // Deflection is the class column (ISD 1.5), not shield / 200: ion 20 x 1.5 = 30 passes, a Plough ion 2.25 x 1.5 = 3.375 passes the ISD (1.5) but not the Bulwark (5.5)
         Assert.Equal(30.0, m.ShotValue(WeaponKind.IonCannon, 20, data.Class(Isd), Combatant.Strategic(data.Class(MonCal))), 1e-12);
-        Assert.True(m.ShotValue(WeaponKind.IonCannon, 2.25, data.Class("Y-wing"), Combatant.Strategic(data.Class(Isd))) > 0);
-        Assert.Equal(0.0, m.ShotValue(WeaponKind.IonCannon, 2.25, data.Class("Y-wing"), Combatant.Strategic(data.Class("Bulwark Battlecruiser"))));
+        Assert.True(m.ShotValue(WeaponKind.IonCannon, 2.25, data.Class("Plough"), Combatant.Strategic(data.Class(Isd))) > 0);
+        Assert.Equal(0.0, m.ShotValue(WeaponKind.IonCannon, 2.25, data.Class("Plough"), Combatant.Strategic(data.Class("Barricade"))));
         // torpedoes only at shield-0 capitals by default
         Assert.Equal(0.0, m.ShotValue(WeaponKind.Torpedo, 35, data.Class(Bomber), Combatant.Strategic(data.Class(Isd))));
         Assert.Equal(35.0, m.ShotValue(WeaponKind.Torpedo, 35, data.Class(Bomber), down), 1e-12);
@@ -371,11 +371,11 @@ public class NewBattleTests
     public void FighterMultipliersUseTheManeuverRatio()
     {
         var d = NewBattleData.Default; var m = new CombatModel(d);
-        var tie = Combatant.Strategic(d.Class("TIE Fighter")); // maneuver 5, shield pool 0
+        var tie = Combatant.Strategic(d.Class("Gleaner")); // maneuver 5, shield pool 0
         Assert.Equal(40 * 0.5 * (1.0 / 5), m.ShotValue(WeaponKind.Turbolaser, 40, d.Class(Isd), tie), 1e-12); // ISD maneuver 1
         Assert.Equal(6.0 * 1.0 * (3.0 / 5), m.ShotValue(WeaponKind.LaserCannon, 6, d.Class(Corvette), tie), 1e-12); // Corvette maneuver 3
         Assert.Equal(0.0, m.ShotValue(WeaponKind.IonCannon, 20, d.Class(Isd), tie));
-        Assert.Equal(3.75, m.ShotValue(WeaponKind.LaserCannon, 3.75, d.Class("A-wing"), tie), 1e-12); // ratio capped at 1
+        Assert.Equal(3.75, m.ShotValue(WeaponKind.LaserCannon, 3.75, d.Class("Needle"), tie), 1e-12); // ratio capped at 1
     }
 
     // space-combat/11 §4 (3), (7) (supersedes m4-battle-new §5): StandOff closes to min(reach), Surround closes to 15; both finish
@@ -411,8 +411,8 @@ public class NewBattleTests
     [Fact]
     public void N16_FortyVsFortyMixedShipsFinishQuickly()
     {
-        var a = new[] { (MonCal, 4), ("Nebulon-B Frigate", 8), (Corvette, 12), ("Dauntless Cruiser", 2), ("Liberator Cruiser", 4), ("Assault Frigate", 4), ("Corellian Gunship", 6) };
-        var e = new[] { (Isd, 8), ("Strike Cruiser", 6), (Lancer, 8), ("Victory II Star Destroyer", 4), ("Carrack Light Cruiser", 6), ("Imperial II Star Destroyer", 2), (Interdictor, 6) };
+        var a = new[] { (MonCal, 4), ("Mender", 8), (Corvette, 12), ("Homeward", 2), ("Jubilee", 4), ("Crowbar", 4), ("Wasp", 6) };
+        var e = new[] { (Isd, 8), ("Injunction", 6), (Lancer, 8), ("Decree II", 4), ("Warrant", 6), ("Mandate II", 2), (Interdictor, 6) };
         Fight(New, a, e, 99); // warm-up (JIT, data load)
         var sw = Stopwatch.StartNew();
         int battles = 3; long secs = 0;
@@ -433,8 +433,8 @@ public class NewBattleTests
             ("8 CR90 v 1 ISD", new[] { (Corvette, 8) }, new[] { (Isd, 1) }),
             ("1 Mon Cal v 1 ISD", new[] { (MonCal, 1) }, new[] { (Isd, 1) }),
             ("2 ISD v 3 Mon Cal", new[] { (Isd, 2) }, new[] { (MonCal, 3) }),
-            ("Strike Cruiser v Victory II", new[] { ("Strike Cruiser", 1) }, new[] { ("Victory II Star Destroyer", 1) }),
-            ("4 Dauntless v 2 Imp II", new[] { ("Dauntless Cruiser", 4) }, new[] { ("Imperial II Star Destroyer", 2) }),
+            ("Injunction v Victory II", new[] { ("Injunction", 1) }, new[] { ("Decree II", 1) }),
+            ("4 Dauntless v 2 Imp II", new[] { ("Homeward", 4) }, new[] { ("Mandate II", 2) }),
         };
         foreach (var (name, a, e) in cases)
         {

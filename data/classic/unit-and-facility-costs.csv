@@ -1,61 +1,61 @@
 kind,id,name,alliance,empire,cost,maint,rorder,rdiff
-capital ship,64,Mon Calamari Cruiser,1,0,92,70,2,24
-capital ship,65,Bulk Cruiser,1,0,30,30,0,0
-capital ship,66,Assault Frigate,1,0,60,60,7,60
-capital ship,67,Nebulon-B Frigate,1,0,34,35,1,12
-capital ship,68,Alliance Escort Carrier,1,0,32,29,0,0
-capital ship,69,Corellian Corvette,1,0,14,23,0,0
-capital ship,70,Medium Transport,1,0,10,12,0,0
-capital ship,71,Bulk Transport,1,0,24,22,0,0
-capital ship,72,Corellian Gunship,1,0,10,23,4,48
-capital ship,73,Alliance Dreadnaught,1,0,44,33,0,0
-capital ship,74,CC-7700 Frigate,1,0,42,37,6,70
-capital ship,75,Bulwark Battlecruiser,1,0,248,175,11,100
-capital ship,76,Liberator Cruiser,1,0,66,55,8,80
-capital ship,77,CC-9600 Frigate,1,0,58,53,9,80
-capital ship,78,Dauntless Cruiser,1,0,136,90,10,100
-capital ship,128,Strike Cruiser,0,1,70,60,9,80
-capital ship,129,Lancer Frigate,0,1,14,30,2,28
-capital ship,130,Interdictor Cruiser,0,1,40,34,6,70
-capital ship,131,Carrack Light Cruiser,0,1,26,24,0,0
-capital ship,132,Victory Destroyer,0,1,68,44,0,0
-capital ship,133,Imperial Star Destroyer,0,1,112,71,0,0
-capital ship,134,Super Star Destroyer,0,1,282,170,11,100
-capital ship,135,Assault Transport,0,1,12,29,5,40
+capital ship,64,Ark,1,0,92,70,2,24
+capital ship,65,Hauler,1,0,30,30,0,0
+capital ship,66,Crowbar,1,0,60,60,7,60
+capital ship,67,Mender,1,0,34,35,1,12
+capital ship,68,Nest,1,0,32,29,0,0
+capital ship,69,Dodger,1,0,14,23,0,0
+capital ship,70,Mule,1,0,10,12,0,0
+capital ship,71,Barge,1,0,24,22,0,0
+capital ship,72,Wasp,1,0,10,23,4,48
+capital ship,73,Grudge,1,0,44,33,0,0
+capital ship,74,Snare,1,0,42,37,6,70
+capital ship,75,Barricade,1,0,248,175,11,100
+capital ship,76,Jubilee,1,0,66,55,8,80
+capital ship,77,Picket,1,0,58,53,9,80
+capital ship,78,Homeward,1,0,136,90,10,100
+capital ship,128,Injunction,0,1,70,60,9,80
+capital ship,129,Writ,0,1,14,30,2,28
+capital ship,130,Subpoena,0,1,40,34,6,70
+capital ship,131,Warrant,0,1,26,24,0,0
+capital ship,132,Decree,0,1,68,44,0,0
+capital ship,133,Mandate,0,1,112,71,0,0
+capital ship,134,Edict,0,1,282,170,11,100
+capital ship,135,Indenture,0,1,12,29,5,40
 capital ship,136,Death Star,0,1,584,600,0,0
-capital ship,137,Galleon,0,1,10,10,0,0
-capital ship,138,Victory II Star Destroyer,0,1,72,63,7,80
-capital ship,139,Imperial II Star Destroyer,0,1,158,99,10,100
-capital ship,140,Star Galleon,0,1,15,20,4,24
-capital ship,141,Imperial Escort Carrier,0,1,34,30,0,0
-capital ship,142,Imperial Dreadnaught,0,1,44,33,0,0
-fighter,1,A-wing,1,0,5,4,3,24
-fighter,2,B-wing,1,0,7,8,5,50
-fighter,3,X-wing,1,0,5,4,0,0
-fighter,4,Y-wing,1,0,5,4,0,0
-fighter,5,TIE Fighter,0,1,3,3,0,0
-fighter,6,TIE Interceptor,0,1,3,3,3,24
-fighter,7,TIE Bomber,0,1,3,3,1,8
-fighter,8,TIE Defender,0,1,5,7,8,50
-troop,1,Alliance Fleet Regiment,1,0,8,6,0,0
-troop,2,Alliance Army Regiment,1,0,6,3,0,0
-troop,3,Sullustan Regiment,1,0,3,1,1,12
-troop,4,Wookiee Regiment,1,0,10,8,3,60
-troop,5,Mon Calamari Regiment,1,0,6,4,2,40
-troop,6,Stormtrooper Regiment,0,1,9,6,0,0
-troop,7,Imperial Fleet Regiment,0,1,7,5,0,0
-troop,8,Imperial Army Regiment,0,1,6,3,0,0
-troop,9,War Droid Regiment,0,1,9,8,1,46
-troop,10,Dark Trooper Regiment,0,1,12,8,2,66
-special force,1,Guerrillas,1,0,1,1,0,0
-special force,2,Infiltrators,1,0,2,1,0,0
-special force,3,Longprobe Y-wing Recon Team,1,0,2,1,0,0
-special force,4,Bothan Spies,1,0,1,1,0,0
-special force,5,Imperial Probe Droid,0,1,1,1,0,0
-special force,6,Imperial Espionage Droid,0,1,1,1,0,0
-special force,7,Imperial Commandos,0,1,2,1,0,0
-special force,8,Noghri Death Commandos,0,1,2,1,0,0
-special force,9,Bounty Hunters,0,1,0,0,0,0
+capital ship,137,Bond,0,1,10,10,0,0
+capital ship,138,Decree II,0,1,72,63,7,80
+capital ship,139,Mandate II,0,1,158,99,10,100
+capital ship,140,Bond II,0,1,15,20,4,24
+capital ship,141,Tender,0,1,34,30,0,0
+capital ship,142,Statute,0,1,44,33,0,0
+fighter,1,Needle,1,0,5,4,3,24
+fighter,2,Maul,1,0,7,8,5,50
+fighter,3,Swift,1,0,5,4,0,0
+fighter,4,Plough,1,0,5,4,0,0
+fighter,5,Gleaner,0,1,3,3,0,0
+fighter,6,Sickle,0,1,3,3,3,24
+fighter,7,Thresher,0,1,3,3,1,8
+fighter,8,Winnower,0,1,5,7,8,50
+troop,1,Deckhands,1,0,8,6,0,0
+troop,2,Militia,1,0,6,3,0,0
+troop,3,Nhal Lookouts,1,0,3,1,1,12
+troop,4,Kiru Sparks,1,0,10,8,3,60
+troop,5,Ilmar Shade Guard,1,0,6,4,2,40
+troop,6,Pacifiers,0,1,9,6,0,0
+troop,7,Ballast,0,1,7,5,0,0
+troop,8,Tranches,0,1,6,3,0,0
+troop,9,Proxies,0,1,9,8,1,46
+troop,10,Lictors,0,1,12,8,2,66
+special force,1,Strikers,1,0,1,1,0,0
+special force,2,Wreckers,1,0,2,1,0,0
+special force,3,Spotters,1,0,2,1,0,0
+special force,4,Listeners,1,0,1,1,0,0
+special force,5,Speculators,0,1,1,1,0,0
+special force,6,Auditors,0,1,1,1,0,0
+special force,7,Closers,0,1,2,1,0,0
+special force,8,Notaries,0,1,2,1,0,0
+special force,9,Repossessors,0,1,0,0,0,0
 facility,1,Orbital Shipyard,1,1,20,13,0,0
 facility,2,Training Facility,1,1,10,10,0,0
 facility,3,Construction Yard,1,1,10,10,0,0
@@ -64,9 +64,9 @@ facility,5,Advanced Training Facility,1,1,10,10,1,24
 facility,6,Advanced Construction Yard,1,1,10,10,2,40
 facility,1,Mine,1,1,20,0,0,0
 facility,2,Refinery,1,1,20,0,0,0
-defense,1,KDY-150,1,1,4,4,0,0
-defense,2,LNR Series I,1,1,7,7,0,0
-defense,3,GenCore Level I,1,1,12,12,0,0
+defense,1,Mordant Lien-150,1,1,4,4,0,0
+defense,2,Mordant Covenant I,1,1,7,7,0,0
+defense,3,Lode Escrow I,1,1,12,12,0,0
 defense,4,Death Star Shield,0,1,25,20,3,24
-defense,5,LNR Series II,1,1,10,4,4,40
-defense,6,GenCore Level II,1,1,20,7,6,40
+defense,5,Mordant Covenant II,1,1,10,4,4,40
+defense,6,Lode Escrow II,1,1,20,7,6,40

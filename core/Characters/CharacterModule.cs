@@ -872,7 +872,7 @@ public sealed class CharacterModule
     }
 
     /// <summary>
-    /// A story discovery ("Leia Uses Force", Dagobah; m5-missions calls it): a hidden Force user becomes discovered. Event ForceDiscovered.
+    /// A story discovery ("Leia Uses Force", MissionKind.Dagobah; m5-missions calls it): a hidden Force user becomes discovered. Event ForceDiscovered.
     /// With <see cref="ForceDiscoveryMode.Story"/> (DEFAULT) this and the known Jedi at creation are the only discoveries. rule: §Force (Force discovery).
     /// </summary>
     public bool DiscoverForce(StepContext? ctx, CharacterRecord c, string cause)
@@ -1329,7 +1329,7 @@ public sealed class CharacterModule
     /// The Seat of Power (0x5617b0, 0x5618d0): on while the Emperor is placed, alive, not captured, stands (riding no fleet, not travelling) on the
     /// Seat of Power system and the Empire holds it, and <see cref="CharacterParams.SeatOfPower"/>. Every Empire-only character's
     /// LeadershipAdjustment is then GNPRTB 3076 (50), else 0. No draws. Recomputed at setup, arrivals, captures, freeings, deaths, holder changes
-    /// and day-end. rule: §Seat of Power (Traced B2e §6; Coruscant inferred).
+    /// and day-end. rule: §Seat of Power (Traced B2e §6; Charter inferred).
     /// </summary>
     public void RefreshSeatOfPower()
     {

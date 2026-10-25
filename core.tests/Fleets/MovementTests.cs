@@ -5,14 +5,14 @@ namespace Praedra.Core.Tests.Fleets;
 
 // rule: m1-clock-and-orders §Order of work, §Orders in, §Events out; m1-travel §Orders in transit.
 // Tests K2-K9, K12, K13, K15 plus T19 (rejection while in transit) and the lane invariant. K10 and K11 are here too
-// because they need fleets. The real galaxy and the real ship data are used; "ISD fleet" = one Imperial Star Destroyer (speed 80).
+// because they need fleets. The real galaxy and the real ship data are used; "ISD fleet" = one Mandate (speed 80).
 public class MovementTests
 {
-    private const string Isd = "Imperial Star Destroyer";
-    // Free travel with routes (Paul 2026-10-16): Coruscant to Hoth at speed 80 rides the routes (m1-travel T9).
-    // v6 re-pin 2026-10-24: on the spiral map it leaves along the Trunk Line and reaches Hoth (off every route) from Bakura, day 45.
-    private static readonly string[] CoruscantHoth = { "Coruscant", "Tralus", "Talus", "Corfai", "Kriselist", "Kinyen", "Hapes", "Umbara",
-        "Kashyyyk", "Randon", "Ord Pardon", "Dressel", "Trenchenovu", "Mugaar", "Moltok", "Ord Trasi", "Muunilinst", "Bastion", "Bakura", "Hoth" };
+    private const string Isd = "Mandate";
+    // Free travel with routes (Paul 2026-10-16): Charter to The Thaw at speed 80 rides the routes (m1-travel T9).
+    // v6 re-pin 2026-10-24: on the spiral map it leaves along the Trunk Line and reaches The Thaw (off every route) from Hollenvale, day 45.
+    private static readonly string[] CoruscantHoth = { "Charter", "Bina Major", "Bina Minor", "Magnetite III", "Nordhaven", "Tierra Larga", "Seldwyn", "Overgrowth",
+        "Longtide", "Galeholm", "Stopgap", "Groenveld", "Brokengate", "Towline", "Ashgarden", "Pale Ridge", "Zlatna", "Oldwatch", "Hollenvale", "The Thaw" };
     private static readonly int[] CoruscantHothHops = { 2, 1, 1, 2, 2, 1, 2, 1, 2, 1, 2, 2, 1, 2, 4, 2, 8, 4, 5 };
 
     private static World Real(ForcedStopTrigger t = ForcedStopTrigger.PaulRule, ulong seed = 1) => new(TestData.RealGalaxy, t, seed);
@@ -20,21 +20,21 @@ public class MovementTests
     [Fact] // m1-clock-and-orders K2
     public void K2_coruscant_to_kimanan_accepted_with_4_ticks_and_departs_on_day_0()
     {
-        // v6 re-pin 2026-10-24: Corellia is no longer one hop from Coruscant. No single-hop trip from Coruscant takes 5 days at
-        // speed 80 on the spiral map; Kimanan is the nearest one-hop trip of several days (a 4-day free jump).
+        // v6 re-pin 2026-10-24: Classis is no longer one hop from Charter. No single-hop trip from Charter takes 5 days at
+        // speed 80 on the spiral map; Consolatio is the nearest one-hop trip of several days (a 4-day free jump).
         var w = Real();
-        int f = w.Add(Side.Empire, "Red", "Coruscant", Isd);
-        long seq = w.Fleets.SubmitMove(Side.Empire, f, "Kimanan");
+        int f = w.Add(Side.Empire, "Red", "Charter", Isd);
+        long seq = w.Fleets.SubmitMove(Side.Empire, f, "Consolatio");
         w.Run(1);
         var acc = Assert.Single(w.Events<OrderAccepted>());
         Assert.Equal(seq, acc.Sequence);
         Assert.Equal(f, acc.Fleet);
-        Assert.Equal(new[] { "Coruscant", "Kimanan" }, acc.Path!.Items);
+        Assert.Equal(new[] { "Charter", "Consolatio" }, acc.Path!.Items);
         Assert.Equal(4, acc.TotalTicks);
         Assert.Equal(4, acc.ArrivalDay);
         Assert.Equal(0, acc.Day);
         var dep = Assert.Single(w.Events<FleetDeparted>());
-        Assert.Equal(new FleetDeparted(dep.Index, 0, f, "Coruscant", 4), dep);
+        Assert.Equal(new FleetDeparted(dep.Index, 0, f, "Charter", 4), dep);
         Assert.True(acc.Index < dep.Index); // step 1 before step 2
     }
 
@@ -42,27 +42,27 @@ public class MovementTests
     public void K3_in_transit_after_3_steps_arrived_on_day_4_after_the_4th()
     {
         var w = Real();
-        int f = w.Add(Side.Empire, "Red", "Coruscant", Isd);
-        w.Move(Side.Empire, f, "Kimanan");
+        int f = w.Add(Side.Empire, "Red", "Charter", Isd);
+        w.Move(Side.Empire, f, "Consolatio");
         w.Run(3);
         Assert.Null(w.Fleet(f).At);
         Assert.NotNull(w.Fleet(f).Transit);
         Assert.Empty(w.Events<FleetArrived>());
         w.Run(1);
         var arr = Assert.Single(w.Events<FleetArrived>());
-        Assert.Equal(new FleetArrived(arr.Index, 4, f, "Kimanan"), arr);
+        Assert.Equal(new FleetArrived(arr.Index, 4, f, "Consolatio"), arr);
         Assert.Equal(4, w.Game.Day);
-        Assert.Equal("Kimanan", w.Fleet(f).At);
+        Assert.Equal("Consolatio", w.Fleet(f).At);
         Assert.Null(w.Fleet(f).Transit);
-        Assert.Equal("Coruscant", w.Fleet(f).PreviousSystem);
+        Assert.Equal("Charter", w.Fleet(f).PreviousSystem);
     }
 
     [Fact] // m1-clock-and-orders K4 (numbers agree with the real data and the formula: no mismatch)
     public void K4_coruscant_to_hoth_passes_and_arrives_on_the_sheet_days()
     {
         var w = Real();
-        int f = w.Add(Side.Empire, "Red", "Coruscant", Isd);
-        w.Move(Side.Empire, f, "Hoth");
+        int f = w.Add(Side.Empire, "Red", "Charter", Isd);
+        w.Move(Side.Empire, f, "The Thaw");
         w.Run(48);
         var acc = Assert.Single(w.Events<OrderAccepted>());
         Assert.Equal(CoruscantHoth, acc.Path!.Items);
@@ -70,29 +70,29 @@ public class MovementTests
         Assert.Equal(45, acc.ArrivalDay);
         var passes = new List<(int, string)>(); int day = 0;
         for (int k = 0; k < CoruscantHothHops.Length - 1; k++) { day += CoruscantHothHops[k]; passes.Add((day, CoruscantHoth[k + 1])); }
-        Assert.Equal((40, "Bakura"), passes[^1]); // v6 re-pin 2026-10-24 (was day 27, Gerenthum)
+        Assert.Equal((40, "Hollenvale"), passes[^1]); // v6 re-pin 2026-10-24 (was day 27, Seven Gates)
         Assert.Equal(passes, w.Events<FleetPassed>().Select(e => (e.Day, e.System)));
         var arr = Assert.Single(w.Events<FleetArrived>());
-        Assert.Equal((45, "Hoth"), (arr.Day, arr.System));
+        Assert.Equal((45, "The Thaw"), (arr.Day, arr.System));
         Assert.Empty(w.Events<ForcedStop>());
     }
 
-    [Fact] // m1-clock-and-orders K5 (v6 re-pin 2026-10-24: the last leg is Bakura to Hoth, days 40 to 45; was 27 to 32)
+    [Fact] // m1-clock-and-orders K5 (v6 re-pin 2026-10-24: the last leg is Hollenvale to The Thaw, days 40 to 45; was 27 to 32)
     public void K5_after_40_steps_on_the_last_leg_after_45_arrived()
     {
         var w = Real();
-        int f = w.Add(Side.Empire, "Red", "Coruscant", Isd);
-        w.Move(Side.Empire, f, "Hoth");
+        int f = w.Add(Side.Empire, "Red", "Charter", Isd);
+        w.Move(Side.Empire, f, "The Thaw");
         w.Run(40);
         var t = w.Fleet(f).Transit!;
         Assert.Null(w.Fleet(f).At);
-        Assert.Equal(("Bakura", "Hoth"), (t.Path[t.HopIndex], t.Path[t.HopIndex + 1]));
+        Assert.Equal(("Hollenvale", "The Thaw"), (t.Path[t.HopIndex], t.Path[t.HopIndex + 1]));
         Assert.Equal(45, t.DueDay);
-        Assert.Equal("Bakura", w.Fleet(f).PreviousSystem);
+        Assert.Equal("Hollenvale", w.Fleet(f).PreviousSystem);
         w.Run(4);
         Assert.Null(w.Fleet(f).At);
         w.Run(1);
-        Assert.Equal("Hoth", w.Fleet(f).At);
+        Assert.Equal("The Thaw", w.Fleet(f).At);
         Assert.Null(w.Fleet(f).Transit);
     }
 
@@ -100,25 +100,25 @@ public class MovementTests
     public void K6_two_orders_for_one_fleet_in_one_step_first_accepted_second_rejected_in_transit()
     {
         var w = Real();
-        int f = w.Add(Side.Empire, "Red", "Coruscant", Isd);
-        long s1 = w.Fleets.SubmitMove(Side.Empire, f, "Corellia");
-        long s2 = w.Fleets.SubmitMove(Side.Empire, f, "Hoth");
+        int f = w.Add(Side.Empire, "Red", "Charter", Isd);
+        long s1 = w.Fleets.SubmitMove(Side.Empire, f, "Classis");
+        long s2 = w.Fleets.SubmitMove(Side.Empire, f, "The Thaw");
         w.Run(1);
         Assert.Equal(s1, Assert.Single(w.Events<OrderAccepted>()).Sequence);
         var rej = Assert.Single(w.Events<OrderRejected>());
         Assert.Equal((s2, RejectReason.InTransit), (rej.Sequence, rej.Reason));
-        Assert.Equal("Corellia", w.Fleet(f).Transit!.Path[^1]); // the first order stands
+        Assert.Equal("Classis", w.Fleet(f).Transit!.Path[^1]); // the first order stands
     }
 
     [Fact] // m1-clock-and-orders K7; m1-travel T19
     public void K7_T19_order_for_a_fleet_already_moving_is_rejected_and_state_is_unchanged()
     {
         var w = Real();
-        int f = w.Add(Side.Empire, "Red", "Coruscant", Isd);
-        w.Move(Side.Empire, f, "Hoth");
+        int f = w.Add(Side.Empire, "Red", "Charter", Isd);
+        w.Move(Side.Empire, f, "The Thaw");
         w.Run(3);
         string before = World.StateJson(w.Game);
-        long seq = w.Fleets.SubmitMove(Side.Empire, f, "Corellia");
+        long seq = w.Fleets.SubmitMove(Side.Empire, f, "Classis");
         w.Game.Step();
         var rej = Assert.Single(w.Events<OrderRejected>());
         Assert.Equal((seq, RejectReason.InTransit), (rej.Sequence, rej.Reason));
@@ -129,11 +129,11 @@ public class MovementTests
     public void K8_alliance_cannot_move_an_empire_fleet()
     {
         var w = Real();
-        int f = w.Add(Side.Empire, "Red", "Coruscant", Isd);
-        w.Fleets.SubmitMove(Side.Alliance, f, "Corellia");
+        int f = w.Add(Side.Empire, "Red", "Charter", Isd);
+        w.Fleets.SubmitMove(Side.Alliance, f, "Classis");
         w.Run(1);
         Assert.Equal(RejectReason.NotYours, Assert.Single(w.Events<OrderRejected>()).Reason);
-        Assert.Equal("Coruscant", w.Fleet(f).At);
+        Assert.Equal("Charter", w.Fleet(f).At);
         Assert.Null(w.Fleet(f).Transit);
     }
 
@@ -143,13 +143,13 @@ public class MovementTests
     public void Move_order_rejections_unknown_fleet_already_there_unknown_system_unreachable()
     {
         var w = Real();
-        int isd = w.Add(Side.Empire, "Red", "Coruscant", Isd);
-        w.Fleets.SubmitMove(Side.Empire, 99, "Corellia");
-        w.Fleets.SubmitMove(Side.Empire, isd, "Coruscant");
-        w.Fleets.SubmitMove(Side.Empire, isd, "Nowhere");
+        int isd = w.Add(Side.Empire, "Red", "Charter", Isd);
+        w.Fleets.SubmitMove(Side.Empire, 99, "Classis");
+        w.Fleets.SubmitMove(Side.Empire, isd, "Charter");
+        w.Fleets.SubmitMove(Side.Empire, isd, "No Such Place");
         string before = World.StateJson(w.Game);
         w.Run(1);
-        // Unreachable no longer happens on the real map: free travel reaches every system, Ilum included (m1-travel T20)
+        // Unreachable no longer happens on the real map: free travel reaches every system, Glasswood included (m1-travel T20)
         Assert.Equal(
             new[] { RejectReason.UnknownFleet, RejectReason.AlreadyThere, RejectReason.UnknownSystem },
             w.Events<OrderRejected>().Select(e => e.Reason));
@@ -164,10 +164,10 @@ public class MovementTests
         string Run(bool empireFirst)
         {
             var w = Real();
-            int e = w.Add(Side.Empire, "Red", "Coruscant", Isd);
-            int a = w.Add(Side.Alliance, "Blue", "Corellia", "Corellian Corvette");
-            if (empireFirst) { w.Move(Side.Empire, e, "Hoth"); w.Move(Side.Alliance, a, "Bespin"); }
-            else { w.Move(Side.Alliance, a, "Bespin"); w.Move(Side.Empire, e, "Hoth"); }
+            int e = w.Add(Side.Empire, "Red", "Charter", Isd);
+            int a = w.Add(Side.Alliance, "Blue", "Classis", "Dodger");
+            if (empireFirst) { w.Move(Side.Empire, e, "The Thaw"); w.Move(Side.Alliance, a, "Drift Harbour"); }
+            else { w.Move(Side.Alliance, a, "Drift Harbour"); w.Move(Side.Empire, e, "The Thaw"); }
             w.Run(15);
             return GameSave.StateHash(w.Game);
         }
@@ -179,8 +179,8 @@ public class MovementTests
     {
         for (int d = fromDay; d < toDay; d++)
         {
-            if (d == 0) w.Move(Side.Empire, 1, "Hoth");
-            if (d == 22) w.Move(Side.Empire, 1, "Hoth"); // after the stop at Kinyen (day 8 on the v6 map; was day 20)
+            if (d == 0) w.Move(Side.Empire, 1, "The Thaw");
+            if (d == 22) w.Move(Side.Empire, 1, "The Thaw"); // after the stop at Tierra Larga (day 8 on the v6 map; was day 20)
             w.Game.Step();
         }
     }
@@ -188,10 +188,10 @@ public class MovementTests
     private static World ScenarioWorld(ulong seed)
     {
         var w = Real(seed: seed);
-        w.Add(Side.Empire, "Red", "Coruscant", Isd);                       // fleet 1
-        w.Add(Side.Alliance, "Picket", "Kinyen", "CC-7700 Frigate");      // fleet 2: gravity-well ship on the route, pulls the mover out
-        w.Fleets.SetOwner("Kinyen", Side.Alliance);
-        w.Fleets.SetOwner("Hoth", Side.Alliance); // the mover ends up alone at an Alliance system: Classic blockade
+        w.Add(Side.Empire, "Red", "Charter", Isd);                       // fleet 1
+        w.Add(Side.Alliance, "Picket", "Tierra Larga", "Snare");      // fleet 2: gravity-well ship on the route, pulls the mover out
+        w.Fleets.SetOwner("Tierra Larga", Side.Alliance);
+        w.Fleets.SetOwner("The Thaw", Side.Alliance); // the mover ends up alone at an Alliance system: Classic blockade
         return w;
     }
 
@@ -227,8 +227,8 @@ public class MovementTests
         var first = ScenarioWorld(5); Scenario(first, 0, 7);
         Assert.Equal(7, first.Game.Day);
         var mid = first.Fleet(1);
-        Assert.Null(mid.At); // mid-leg (v6 re-pin 2026-10-24: Kriselist to Kinyen, days 6 to 8; was Nubia to Hosnian Prime)
-        Assert.Equal(("Kriselist", "Kinyen"), (mid.Transit!.Path[mid.Transit.HopIndex], mid.Transit.Path[mid.Transit.HopIndex + 1]));
+        Assert.Null(mid.At); // mid-leg (v6 re-pin 2026-10-24: Nordhaven to Tierra Larga, days 6 to 8; was Ommata to Fiscus)
+        Assert.Equal(("Nordhaven", "Tierra Larga"), (mid.Transit!.Path[mid.Transit.HopIndex], mid.Transit.Path[mid.Transit.HopIndex + 1]));
 
         string json = GameSave.Save(first.Game);
         var loaded = new World(GameSave.Load(json), TestData.RealGalaxy);
@@ -241,18 +241,18 @@ public class MovementTests
         // Events are not saved: the loaded game only has the events of the continued days (and counts its indexes from 0).
         Assert.Equal(whole.Game.Events.Skip(first.Game.Events.Count).Select(e => e with { Index = 0 }),
                      loaded.Game.Events.Select(e => e with { Index = 0 }));
-        Assert.Contains(loaded.Events<ForcedStop>(), e => e.System == "Kinyen");
+        Assert.Contains(loaded.Events<ForcedStop>(), e => e.System == "Tierra Larga");
     }
 
     [Fact] // m1-clock-and-orders K13
     public void K13_a_queued_move_order_survives_save_and_load_and_is_processed_in_the_next_step()
     {
         var w = Real();
-        int f = w.Add(Side.Empire, "Red", "Coruscant", Isd);
-        long seq = w.Fleets.SubmitMove(Side.Empire, f, "Corellia");
+        int f = w.Add(Side.Empire, "Red", "Charter", Isd);
+        long seq = w.Fleets.SubmitMove(Side.Empire, f, "Classis");
         var loaded = new World(GameSave.Load(GameSave.Save(w.Game)), TestData.RealGalaxy);
         var queued = Assert.IsType<MoveFleetOrder>(Assert.Single(loaded.Game.Queue));
-        Assert.Equal((seq, f, "Corellia"), (queued.Sequence, queued.FleetId, queued.Destination));
+        Assert.Equal((seq, f, "Classis"), (queued.Sequence, queued.FleetId, queued.Destination));
         loaded.Game.Step();
         Assert.Empty(loaded.Game.Queue);
         Assert.Equal(seq, Assert.Single(loaded.Events<OrderAccepted>()).Sequence);
@@ -263,8 +263,8 @@ public class MovementTests
     public void A_move_order_without_the_fleet_module_is_rejected_not_a_crash()
     {
         var w = Real();
-        int f = w.Add(Side.Empire, "Red", "Coruscant", Isd);
-        w.Fleets.SubmitMove(Side.Empire, f, "Corellia");
+        int f = w.Add(Side.Empire, "Red", "Charter", Isd);
+        w.Fleets.SubmitMove(Side.Empire, f, "Classis");
         var bare = GameSave.Load(GameSave.Save(w.Game));
         bare.Step();
         Assert.Equal(RejectReason.UnknownOrderType, Assert.IsType<OrderRejected>(Assert.Single(bare.Events)).Reason);
@@ -274,7 +274,7 @@ public class MovementTests
     public void K15_a_fleet_arriving_as_an_enemy_leaves_is_not_stopped()
     {
         var w = new World(World.BCMap());
-        int f = w.Add(Side.Alliance, "F", "A", "Corellian Corvette");
+        int f = w.Add(Side.Alliance, "F", "A", "Dodger");
         int e = w.Add(Side.Empire, "E", "B", Isd);
         w.Move(Side.Alliance, f, "C");
         w.RunTo(15);
@@ -289,7 +289,7 @@ public class MovementTests
     public void A_fleet_is_always_at_a_system_or_on_exactly_one_leg()
     {
         var w = ScenarioWorld(1);
-        w.Move(Side.Empire, 1, "Hoth");
+        w.Move(Side.Empire, 1, "The Thaw");
         for (int d = 0; d < 40; d++)
         {
             w.Game.Step();
@@ -309,16 +309,16 @@ public class MovementTests
     public void Hash_covers_fleet_state_and_is_canonical()
     {
         var a = Real(); var b = Real();
-        a.Add(Side.Empire, "Red", "Coruscant", Isd, "Corellian Gunship"); // a fleet's ships are stored sorted
-        b.Add(Side.Empire, "Red", "Coruscant", "Corellian Gunship", Isd);
+        a.Add(Side.Empire, "Red", "Charter", Isd, "Wasp"); // a fleet's ships are stored sorted
+        b.Add(Side.Empire, "Red", "Charter", "Wasp", Isd);
         Assert.Equal(GameSave.StateHash(a.Game), GameSave.StateHash(b.Game));
-        a.Move(Side.Empire, 1, "Hoth"); b.Move(Side.Empire, 1, "Hoth");
+        a.Move(Side.Empire, 1, "The Thaw"); b.Move(Side.Empire, 1, "The Thaw");
         a.Run(3); b.Run(3);
         Assert.Equal(GameSave.StateHash(a.Game), GameSave.StateHash(b.Game));
         b.Run(1);
         Assert.NotEqual(GameSave.StateHash(a.Game), GameSave.StateHash(b.Game));
         var c = Real();
-        c.Add(Side.Empire, "Red", "Coruscant", Isd, "Corellian Gunship");
+        c.Add(Side.Empire, "Red", "Charter", Isd, "Wasp");
         Assert.NotEqual(GameSave.StateHash(Real().Game), GameSave.StateHash(c.Game));
     }
 
@@ -326,19 +326,19 @@ public class MovementTests
     public void AddFleet_refuses_empty_fleets_and_unknown_names()
     {
         var w = Real();
-        Assert.Throws<ArgumentException>(() => w.Fleets.AddFleet(Side.Empire, "x", Array.Empty<string>(), "Coruscant"));
-        Assert.Throws<ArgumentException>(() => w.Add(Side.Empire, "x", "Coruscant", "Nope"));
-        Assert.Throws<ArgumentException>(() => w.Add(Side.Empire, "x", "Nowhere", Isd));
-        Assert.Throws<ArgumentException>(() => w.Fleets.AddFleet(Side.Empire, "x", new[] { "TIE Fighter" }, "Coruscant")); // a squadron is not a ship
+        Assert.Throws<ArgumentException>(() => w.Fleets.AddFleet(Side.Empire, "x", Array.Empty<string>(), "Charter"));
+        Assert.Throws<ArgumentException>(() => w.Add(Side.Empire, "x", "Charter", "Nope"));
+        Assert.Throws<ArgumentException>(() => w.Add(Side.Empire, "x", "No Such Place", Isd));
+        Assert.Throws<ArgumentException>(() => w.Fleets.AddFleet(Side.Empire, "x", new[] { "Gleaner" }, "Charter")); // a squadron is not a ship
     }
 
     [Fact] // m1-travel §Rule (Classic): a speed-100 transport slows the fleet; rating comes from the data
     public void Fleet_speed_uses_the_slowest_capital_ship_and_ignores_squadrons_aboard()
     {
         var w = Real();
-        int f = w.Fleets.AddFleet(Side.Empire, "Mixed", new[] { Isd, "Medium Transport" }, "Coruscant", new[] { "TIE Fighter" });
+        int f = w.Fleets.AddFleet(Side.Empire, "Mixed", new[] { Isd, "Mule" }, "Charter", new[] { "Gleaner" });
         Assert.Equal(100, w.Fleets.SpeedOf(w.Fleet(f)));
-        int g = w.Fleets.AddFleet(Side.Empire, "Carrier", new[] { Isd }, "Coruscant", new[] { "TIE Fighter" });
+        int g = w.Fleets.AddFleet(Side.Empire, "Carrier", new[] { Isd }, "Charter", new[] { "Gleaner" });
         Assert.Equal(80, w.Fleets.SpeedOf(w.Fleet(g)));
     }
 }

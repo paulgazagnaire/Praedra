@@ -61,7 +61,7 @@ public class SimpleAiOpponentTests
         Assert.True(games.Count(g => g.Winner == Side.Empire) >= 7, $"the Empire won by day 400 on only {games.Count(g => g.Winner == Side.Empire)} of 8 seeds");
     }
 
-    // Over seeds 1 to 8 (MultiSeed), the day the Alliance AI takes Coruscant, and its captures by day 365:
+    // Over seeds 1 to 8 (MultiSeed), the day the Alliance AI takes Charter, and its captures by day 365:
     //   8a378a8 (pre-B2e): 1323, 1098, 1320, 1101, 1749, 1503, 1050, 1422;  captures 16 to 20
     //   9ec544f (B2e):     1191, 1056, 1530, 1320,  528,  972,  639,  966;  captures 16 to 18
     // Floor: the Alliance wins by day 1600 on at least 6 of 8 (7 and 8 measured), with at least 12 captures by day 365 on at least 7 of 8

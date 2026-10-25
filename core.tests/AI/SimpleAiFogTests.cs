@@ -43,7 +43,7 @@ public class SimpleAiFogTests
 
     // m5-fog-and-hq FN1 with the AI: two games that differ only in where the (unseen) HQ stands give the Empire AI the same view, so the
     // same orders, day after day, as long as its knowledge is the same (its spies may find out, SimpleAiParams.UseCharactersAndMissions:
-    // measured, the knowledge parts on day 135 on seed 2, when a look at the HQ candidate Dagobah reports an HQ in one game only).
+    // measured, the knowledge parts on day 135 on seed 2, when a look at the HQ candidate Eldingar reports an HQ in one game only).
     [Fact]
     public void FN1_EmpireAiOrdersDoNotDependOnAnUnseenHq()
     {
@@ -68,7 +68,7 @@ public class SimpleAiFogTests
     // m5-fog-and-hq §N9: same seed, same game; a game loaded in the middle continues the same way every time.
     // v5 re-pin 2026-10-16 (Paul chose re-pin on the map PR; the AI trainer owns the fix): the AI is NOT memoryless. It reads the recent event
     // log (bombardments of the last 30 days, retreats, lost battles, foiled looks), and a save keeps no events, so after a load the AI
-    // forgets them. On v5 seed 3 a pile that shelled Desevro before day 100 lands on day 102 in the uninterrupted game and shells again in
+    // forgets them. On v5 seed 3 a pile that shelled Graustadt before day 100 lands on day 102 in the uninterrupted game and shells again in
     // the loaded one. The test now pins that two loads of the same save play the same; "loaded = uninterrupted" is the trainer's target.
     [Fact]
     public void FogGamesAreDeterministicAndSurviveSaveLoad()

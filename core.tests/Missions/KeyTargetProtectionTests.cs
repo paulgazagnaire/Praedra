@@ -9,7 +9,7 @@ namespace Praedra.Core.Tests.Missions;
 // Key-target protections, 2026-10-18): the cap roll on a key character's duel capture, the full guard set at a key target, base skills.
 public class KeyTargetProtectionTests
 {
-    private const string Corvette = "Corellian Corvette";
+    private const string Corvette = "Dodger";
 
     // The B2e-20 setup: Imperial member on Diplomacy from H to Imperial T, where an Alliance corvette (Admiral Wedge, combat 80) detects him at
     // the arrival walk (draw 0) and wins the duel (draw 99); the member's Hurt roll misses (99); then, under Capped, the cap roll.

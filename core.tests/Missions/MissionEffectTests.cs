@@ -288,7 +288,7 @@ public class MissionEffectTests
         Assert.True(w.Host.Victory.Rules.StandardVictory); // re-pinned 2026-10-16: standard victory default
     }
 
-    // m5-missions MI56: a working Incite team (character leadership 70 + Guerrillas 50): incite_term = 7 + 5 = 12; Subdue the same members: -12; none: 0
+    // m5-missions MI56: a working Incite team (character leadership 70 + Strikers 50): incite_term = 7 + 5 = 12; Subdue the same members: -12; none: 0
     [Fact]
     public void MI56_IncidentTerms()
     {
@@ -306,7 +306,7 @@ public class MissionEffectTests
         int baseScore = SupportModule.IncidentScore(w.Host.Support.Params, 1, 1, 70, 0, 0, false);
         Assert.Equal(baseScore + 12, w.Host.Support.IncidentScore(T, Side.Empire, 1, 1));
 
-        // Subdue: Empire at an Empire system in uprising, Veers (leadership 70) + Imperial Commandos (50)
+        // Subdue: Empire at an Empire system in uprising, Veers (leadership 70) + Closers (50)
         var s = new MissionWorld();
         s.Hold(X, Side.Empire, 80);
         s.Game.Step();

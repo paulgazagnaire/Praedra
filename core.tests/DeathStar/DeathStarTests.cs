@@ -87,7 +87,7 @@ public class DeathStarTests
         var w = new DsWorld();
         w.Hold(A3, null, 50);
         int mine = w.Host.Economy.AddFacility(A3, FacilityKind.Mine);
-        int reg = w.Host.Economy.AddObject(Side.Alliance, "Alliance Army Regiment", A3);
+        int reg = w.Host.Economy.AddObject(Side.Alliance, "Militia", A3);
         // A fleet of both sides at one system fights at slot 5, before the strike at 5.1, so an enemy fleet that is still there at 5.1 is one that
         // the battle left alone (a stalemate). The test puts it there after the battle, at the end of slot 5, to reach the rule on its own.
         int enemy = 0, aboard = 0; var enemyShips = new List<int>();
@@ -95,7 +95,7 @@ public class DeathStarTests
         {
             if (enemy != 0) return;
             enemy = w.Fleet(Side.Alliance, A3, Corvette, Corvette);
-            aboard = w.Host.Economy.AddObject(Side.Alliance, "Alliance Army Regiment");
+            aboard = w.Host.Economy.AddObject(Side.Alliance, "Militia");
             w.Host.Economy.Find(aboard)!.AboardShip = w.ShipOf(enemy);
             enemyShips.AddRange(w.Game.State.Fleets[enemy].Ships);
         });
@@ -245,7 +245,7 @@ public class DeathStarTests
         Assert.Equal(Side.Empire, Assert.Single(w.Events<Praedra.Core.Victory.GameWon>()).Winner);
     }
 
-    // m5-setup-and-victory SV52 (B4 §15): a destroyed Coruscant meets the Alliance's place term; in a standard game the key captures are still needed
+    // m5-setup-and-victory SV52 (B4 §15): a destroyed Charter meets the Alliance's place term; in a standard game the key captures are still needed
     [Theory]
     [InlineData(false, true)]
     [InlineData(true, false)]
@@ -259,7 +259,7 @@ public class DeathStarTests
         w.Game.State.DeathStar.Destroyed.Add(VictoryModule.CoruscantName);
         w.Game.Step();
         Assert.Equal(allianceWins ? Side.Alliance : null, w.Host.Victory.Winner);
-        if (allianceWins) Assert.Equal("Coruscant is destroyed", w.Host.Victory.Reason);
+        if (allianceWins) Assert.Equal("Charter is destroyed", w.Host.Victory.Reason);
     }
 
     // m5-death-star DS7. (B5a, 2026-10-18) Run under both control rules: AssaultOnly (the DEFAULT until the AI copes) and Derived (Classic).
@@ -305,7 +305,7 @@ public class DeathStarTests
         w.Hold(A1, Side.Empire, 40); w.Hold(A2, Side.Empire, 40);
         w.Hold(A3, null, 50);                 // neutral: becomes Alliance-held at 100
         w.Hold(A4, Side.Empire, 30);          // Imperial with a garrison of 5 regiments (the strike-2 requirement is 6: 12 in an uprising, halved in a Death Star sector): stays Imperial, at 100, uprising at once
-        for (int i = 0; i < 5; i++) w.Host.Economy.AddObject(Side.Empire, "Imperial Army Regiment", A4);
+        for (int i = 0; i < 5; i++) w.Host.Economy.AddObject(Side.Empire, "Tranches", A4);
         w.Hold(A5, Side.Alliance, 60);        // Alliance: just goes to 100
         w.Hold(A6, null, 50);
         w.Hold(B1, Side.Alliance, 12);
@@ -471,7 +471,7 @@ public class DeathStarTests
         var w = new DsWorld(seed: seed);
         w.Hold(A3, null, 50); w.Hold(A4, Side.Empire, 60); w.Hold(A5, Side.Alliance, 60); w.Hold(A6, null, 50);
         w.Hold(A1, Side.Alliance, 80); w.Hold(A2, Side.Empire, 30); w.Hold(B1, Side.Alliance, 80);
-        for (int i = 0; i < 5; i++) w.Host.Economy.AddObject(Side.Empire, "Imperial Army Regiment", A4);
+        for (int i = 0; i < 5; i++) w.Host.Economy.AddObject(Side.Empire, "Tranches", A4);
         w.Host.Economy.AddFacility(A3, FacilityKind.Mine);
         w.Fleet(Side.Alliance, A3, Corvette, Corvette);
         foreach (var m in new[] { Drayson, Borsk, Tura, Derlin }) w.Person(m, A3);

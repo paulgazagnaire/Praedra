@@ -15,8 +15,8 @@ public class B2aDecoyTests
     [InlineData(-100)]
     public void B2a1_FoilBelowFirstRowIs99(int x) => Assert.Equal(99, new MissionWorld().M.FoilChance(x));
 
-    // B2a-2: one guard (a Probe Droid, detection 0), two decoys each with p = 50 (synthetic decoy table: 50 from x = 0; Infiltrators espionage 60
-    // and Bothan Spies espionage 70 give x = 60 and 70): exactly two draws, the pick then the roll
+    // B2a-2: one guard (a Probe Droid, detection 0), two decoys each with p = 50 (synthetic decoy table: 50 from x = 0; Wreckers espionage 60
+    // and Listeners espionage 70 give x = 60 and 70): exactly two draws, the pick then the roll
     [Fact]
     public void B2a2_TwoDecoysOnePickOneRoll()
     {
@@ -88,7 +88,7 @@ public class B2aDecoyTests
         Assert.Single(w.Events<MissionMemberRoll>()); // the last draw is Leia's success roll, not a detection
     }
 
-    // B2a-4: a working mission whose non-decoy members are all gone (the team's Bothan Spies removed by the test), decoys left, defenders present:
+    // B2a-4: a working mission whose non-decoy members are all gone (the team's Listeners removed by the test), decoys left, defenders present:
     // decoy draws happen, no detection draw, never foiled by the walk. The day Step prunes gone members first and ends an emptied team Cancelled
     // (m5-missions DEFAULT, before the decoy pass), so the test runs the pass and walk directly on the group.
     [Fact]

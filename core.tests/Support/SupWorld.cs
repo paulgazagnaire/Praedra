@@ -37,7 +37,7 @@ internal sealed class SupWorld
         for (int i = 0; i < n; i++) W.Eco.AddObject(side, cls, system);
     }
 
-    public static string ArmyOf(Side side) => side == Side.Empire ? "Imperial Army Regiment" : "Alliance Army Regiment";
+    public static string ArmyOf(Side side) => side == Side.Empire ? "Tranches" : "Militia";
 
     /// <summary>Set an uprising running by hand (the sheet's tests start from "uprising on"). Rebels = the other side than the holder.</summary>
     public SystemSupportState Uprising(string system, Side holder, int erosionDue = 0, int incidentDue = 0)

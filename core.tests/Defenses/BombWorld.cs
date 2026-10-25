@@ -15,9 +15,9 @@ namespace Praedra.Core.Tests.Defenses;
 /// </summary>
 internal sealed class BombWorld
 {
-    public const string Sys = "Denon";
-    public const string Other = "Bespin";
-    public const string Imp = "Coruscant";
+    public const string Sys = "Fiducia";
+    public const string Other = "Drift Harbour";
+    public const string Imp = "Charter";
 
     public static readonly Lazy<DefenseData> RealData = new(() => DefenseData.Load(TestData.ClassicDir, TestData.DesignDir));
 
@@ -55,7 +55,7 @@ internal sealed class BombWorld
 
     /// <summary>Data where every Army regiment (both sides) has bombardment defense <paramref name="d"/>.</summary>
     public static DefenseData ArmyDefense(int d) => DataWith(t => string.Join("\n", t.Split('\n').Select(l =>
-        l.StartsWith("troop,Alliance Army Regiment,") || l.StartsWith("troop,Imperial Army Regiment,")
+        l.StartsWith("troop,Militia,") || l.StartsWith("troop,Tranches,")
             ? l.Split(',')[0] + "," + l.Split(',')[1] + "," + d + "," + l.Split(',')[3] : l)));
 
     public void Hold(Side side, int support = 100, string system = Sys) => S.Hold(system, side, support);
@@ -86,6 +86,6 @@ internal sealed class BombWorld
     /// <summary>Stub draws as (t, r) pairs, in order.</summary>
     public void Dice(params (int T, int R)[] hits) { foreach (var (t, r) in hits) Stub.Queue(t, r); }
 
-    public static readonly string Army = "Alliance Army Regiment";
-    public static readonly string Isd = "Imperial Star Destroyer";
+    public static readonly string Army = "Militia";
+    public static readonly string Isd = "Mandate";
 }

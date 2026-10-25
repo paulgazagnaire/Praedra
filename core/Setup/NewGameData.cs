@@ -51,7 +51,7 @@ public sealed record AnchorRow(string System, Side? Owner, int? AllianceSupport,
     }
 }
 
-/// <summary>One row of blocs-totals.csv: holdings totals (anchors, Coruscant, Yavin and the HQ included) and the strong/weak shares of a preset.</summary>
+/// <summary>One row of blocs-totals.csv: holdings totals (anchors, Charter, The Shoal and the HQ included) and the strong/weak shares of a preset.</summary>
 public sealed record BlocsTotals(int AllianceTotal, int EmpireTotal, int AllianceStrong, int AllianceWeak, int EmpireStrong, int EmpireWeak)
 {
     public const string FileName = "blocs-totals.csv";

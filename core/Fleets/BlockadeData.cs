@@ -36,13 +36,13 @@ public sealed class BlockadeData
     public string EconomicShipClass { get; }
     /// <summary>How many of that class make E.</summary>
     public int EconomicShipCount { get; }
-    /// <summary>The fixed reference force E is measured against: this ship class ... DEFAULT Imperial Star Destroyer (m4-battle-new §12, open question 3).</summary>
+    /// <summary>The fixed reference force E is measured against: this ship class ... DEFAULT Mandate (m4-battle-new §12, open question 3).</summary>
     public string ReferenceShipClass { get; }
     /// <summary>... this many of it. DEFAULT 3. rule: m4-battle-new §12.</summary>
     public int ReferenceShipCount { get; }
 
     public BlockadeData(int thresholdPercent, string economicShipClass, int economicShipCount,
-        string referenceShipClass = "Imperial Star Destroyer", int referenceShipCount = 3)
+        string referenceShipClass = "Mandate", int referenceShipCount = 3)
     {
         if (thresholdPercent < 0) throw new DataLoadException("blockade: forced_stop_threshold_percent must not be negative.");
         if (economicShipCount < 0) throw new DataLoadException("blockade: economic_blockade_ship_count must not be negative.");
@@ -92,7 +92,7 @@ public sealed class BlockadeData
                 ? i : throw new DataLoadException($"{source}: key '{k}' must be an integer, found '{s}'.");
         }
         // the reference force is optional in the file (DEFAULT 3 Imperial Star Destroyers). rule: m4-battle-new §12
-        string refClass = values.TryGetValue("economic_blockade_reference_class", out var rc) ? rc : "Imperial Star Destroyer";
+        string refClass = values.TryGetValue("economic_blockade_reference_class", out var rc) ? rc : "Mandate";
         int refCount = values.ContainsKey("economic_blockade_reference_count") ? Int("economic_blockade_reference_count") : 3;
         return new BlockadeData(Int("forced_stop_threshold_percent"), Need("economic_blockade_ship_class"), Int("economic_blockade_ship_count"), refClass, refCount);
     }

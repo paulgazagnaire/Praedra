@@ -1,6 +1,6 @@
 kind,side,key,value,source
-param,Empire,base_system,Coruscant,DEFAULT (playable slice 2026-10-12)
-param,Alliance,base_system,Yavin,DEFAULT (playable slice 2026-10-12)
+param,Empire,base_system,Charter,DEFAULT (playable slice 2026-10-12)
+param,Alliance,base_system,The Shoal,DEFAULT (playable slice 2026-10-12)
 param,Empire,economy_systems,14,DEFAULT (playable slice 2026-10-12)
 param,Empire,mines_per_system,2,DEFAULT (playable slice 2026-10-12)
 param,Empire,refineries_per_system,2,DEFAULT (playable slice 2026-10-12)
@@ -19,10 +19,10 @@ param,Alliance,base_regiments,6,DEFAULT (playable slice 2026-10-12)
 param,Alliance,fill_percent,90,DEFAULT (playable slice 2026-10-12)
 param,Alliance,start_raw,0,DEFAULT (playable slice 2026-10-12)
 param,Alliance,start_refined,300,DEFAULT (playable slice 2026-10-12)
-param,Empire,garrison_class,Imperial Army Regiment,DEFAULT (playable slice 2026-10-12)
-param,Alliance,garrison_class,Alliance Army Regiment,DEFAULT (playable slice 2026-10-12)
-param,Empire,base_regiment_class,Stormtrooper Regiment,DEFAULT (playable slice 2026-10-12)
-param,Alliance,base_regiment_class,Alliance Army Regiment,DEFAULT (playable slice 2026-10-12)
+param,Empire,garrison_class,Tranches,DEFAULT (playable slice 2026-10-12)
+param,Alliance,garrison_class,Militia,DEFAULT (playable slice 2026-10-12)
+param,Empire,base_regiment_class,Pacifiers,DEFAULT (playable slice 2026-10-12)
+param,Alliance,base_regiment_class,Militia,DEFAULT (playable slice 2026-10-12)
 base_facility,Empire,Orbital Shipyard,1,DEFAULT (playable slice 2026-10-12)
 base_facility,Empire,Training Facility,1,DEFAULT (playable slice 2026-10-12)
 base_facility,Empire,Construction Yard,1,DEFAULT (playable slice 2026-10-12)
@@ -33,14 +33,14 @@ base_facility,Alliance,Training Facility,1,DEFAULT (playable slice 2026-10-12)
 base_facility,Alliance,Construction Yard,1,DEFAULT (playable slice 2026-10-12)
 site_facility,Alliance,Orbital Shipyard,1,DEFAULT (playable slice 2026-10-12)
 site_facility,Alliance,Training Facility,1,DEFAULT (playable slice 2026-10-12)
-fleet,Empire,Home Fleet@base,Imperial Star Destroyer*2;Victory Destroyer / TIE Fighter*4,DEFAULT (playable slice 2026-10-12)
-fleet,Empire,Picket@site,Carrack Light Cruiser;Lancer Frigate,DEFAULT (playable slice 2026-10-12)
-fleet,Empire,Interdiction@base,Interdictor Cruiser;Carrack Light Cruiser,DEFAULT (playable slice 2026-10-12)
-fleet,Alliance,Rebel Fleet@base,Nebulon-B Frigate*2;Corellian Corvette*2 / X-wing*3,DEFAULT (playable slice 2026-10-12)
-fleet,Alliance,Cruiser Group@site,Mon Calamari Cruiser;Corellian Corvette,DEFAULT (playable slice 2026-10-12)
-fleet,Alliance,Raiders@base,Corellian Corvette*2,DEFAULT (playable slice 2026-10-12)
+fleet,Empire,Home Fleet@base,Mandate*2;Decree / Gleaner*4,DEFAULT (playable slice 2026-10-12)
+fleet,Empire,Picket@site,Warrant;Writ,DEFAULT (playable slice 2026-10-12)
+fleet,Empire,Interdiction@base,Warrant;Subpoena,DEFAULT (playable slice 2026-10-12)
+fleet,Alliance,Rebel Fleet@base,Dodger*2;Mender*2 / Swift*3,DEFAULT (playable slice 2026-10-12)
+fleet,Alliance,Cruiser Group@site,Dodger;Ark,DEFAULT (playable slice 2026-10-12)
+fleet,Alliance,Raiders@base,Dodger*2,DEFAULT (playable slice 2026-10-12)
 param,*,fleet_name,Fleet,"[DAT-own] FLEETSD id 4 name, text 11523; setup names fleets ""Fleet n"" per side (B4 §12)"
-hq_unit,Alliance,Alliance Army Regiment,2,"Classic fixed HQ forces, placed only with GameSettings.HqFixedForces (DEFAULT off until the Classic setup, part B): CMUNHQTB keys 1..1, placed on the HQ system, not in a fleet (B4 §7 step 2, [EXE-own] 0x51ad90 via 0x51be90; contents [DAT-own])"
-hq_unit,Alliance,Alliance Fleet Regiment,1,"Classic fixed HQ forces, placed only with GameSettings.HqFixedForces (DEFAULT off until the Classic setup, part B): CMUNHQTB keys 1..1, placed on the HQ system, not in a fleet (B4 §7 step 2, [EXE-own] 0x51ad90 via 0x51be90; contents [DAT-own])"
-hq_unit,Alliance,X-wing,4,"Classic fixed HQ forces, placed only with GameSettings.HqFixedForces (DEFAULT off until the Classic setup, part B): CMUNHQTB keys 1..1, placed on the HQ system, not in a fleet (B4 §7 step 2, [EXE-own] 0x51ad90 via 0x51be90; contents [DAT-own])"
-hq_unit,Alliance,Y-wing,2,"Classic fixed HQ forces, placed only with GameSettings.HqFixedForces (DEFAULT off until the Classic setup, part B): CMUNHQTB keys 1..1, placed on the HQ system, not in a fleet (B4 §7 step 2, [EXE-own] 0x51ad90 via 0x51be90; contents [DAT-own])"
+hq_unit,Alliance,Militia,2,"Classic fixed HQ forces, placed only with GameSettings.HqFixedForces (DEFAULT off until the Classic setup, part B): CMUNHQTB keys 1..1, placed on the HQ system, not in a fleet (B4 §7 step 2, [EXE-own] 0x51ad90 via 0x51be90; contents [DAT-own])"
+hq_unit,Alliance,Deckhands,1,"Classic fixed HQ forces, placed only with GameSettings.HqFixedForces (DEFAULT off until the Classic setup, part B): CMUNHQTB keys 1..1, placed on the HQ system, not in a fleet (B4 §7 step 2, [EXE-own] 0x51ad90 via 0x51be90; contents [DAT-own])"
+hq_unit,Alliance,Swift,4,"Classic fixed HQ forces, placed only with GameSettings.HqFixedForces (DEFAULT off until the Classic setup, part B): CMUNHQTB keys 1..1, placed on the HQ system, not in a fleet (B4 §7 step 2, [EXE-own] 0x51ad90 via 0x51be90; contents [DAT-own])"
+hq_unit,Alliance,Plough,2,"Classic fixed HQ forces, placed only with GameSettings.HqFixedForces (DEFAULT off until the Classic setup, part B): CMUNHQTB keys 1..1, placed on the HQ system, not in a fleet (B4 §7 step 2, [EXE-own] 0x51ad90 via 0x51be90; contents [DAT-own])"

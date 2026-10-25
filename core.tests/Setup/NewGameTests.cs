@@ -15,9 +15,9 @@ public class NewGameTests
     private static GameHost Make(StartPreset p, int seed = 1, GameSettings? s = null) =>
         NewGame.Create(GameData.Default, new NewGameOptions { Seed = seed, Preset = p, Settings = (s ?? new GameSettings()) with { DealMode = DealMode.File } });
 
-    // v6 re-pin 2026-10-24: the day-one files' HQ is Cymoon on the spiral map (deal_day_one.py, setup-victory/09; was Cyclor, now only 122 units
-    // from Coruscant, inside the 200-unit HQ rule).
-    private const string FileHq = "Cymoon";
+    // v6 re-pin 2026-10-24: the day-one files' HQ is Altofen on the spiral map (deal_day_one.py, setup-victory/09; was Cutbank, now only 122 units
+    // from Charter, inside the 200-unit HQ rule).
+    private const string FileHq = "Altofen";
 
     private static int Held(GameHost h, Side s) => h.Game.State.SystemOwners.Count(kv => kv.Value == s);
 
@@ -36,11 +36,11 @@ public class NewGameTests
         var h = Make(p);
         Assert.Equal(alliance, Held(h, Side.Alliance));
         Assert.Equal(empire, Held(h, Side.Empire));
-        Assert.Equal(Side.Empire, h.Control.HolderOf("Coruscant"));
+        Assert.Equal(Side.Empire, h.Control.HolderOf("Charter"));
         Assert.Equal(FileHq, h.HqSystem);
         Assert.Equal(Side.Alliance, h.Control.HolderOf(FileHq));
-        Assert.Equal(100, h.Economy.SupportOf("Yavin", Side.Alliance));
-        Assert.True(h.IsExplored("Coruscant", Side.Alliance) && h.IsExplored("Coruscant", Side.Empire));
+        Assert.Equal(100, h.Economy.SupportOf("The Shoal", Side.Alliance));
+        Assert.True(h.IsExplored("Charter", Side.Alliance) && h.IsExplored("Charter", Side.Empire));
         Assert.True(h.IsExplored(FileHq, Side.Alliance) && !h.IsExplored(FileHq, Side.Empire));
         Assert.Null(h.Victory.Winner);
     }
@@ -66,13 +66,13 @@ public class NewGameTests
     {
         var h = Make(p);
         Assert.Equal(a, Held(h, Side.Alliance)); Assert.Equal(e, Held(h, Side.Empire));
-        foreach (var s in new[] { "Kuat", "Fondor", "Corellia", "Rendili" }) Assert.Equal(Side.Empire, h.Control.HolderOf(s));
-        foreach (var s in new[] { "Sullust", "Mon Calamari", "Bilbringi" }) Assert.Null(h.Control.HolderOf(s));
-        Assert.Equal(0, h.Economy.SupportOf("Coruscant", Side.Alliance));
+        foreach (var s in new[] { "Navalia", "Incus", "Classis", "Castra" }) Assert.Equal(Side.Empire, h.Control.HolderOf(s));
+        foreach (var s in new[] { "Caminus", "The Moorings", "Ferraria" }) Assert.Null(h.Control.HolderOf(s));
+        Assert.Equal(0, h.Economy.SupportOf("Charter", Side.Alliance));
         Assert.Equal(100, h.Economy.SupportOf(FileHq, Side.Alliance));
-        Assert.Equal(100, h.Economy.SupportOf("Yavin", Side.Alliance));
-        Assert.Contains(h.Economy.Objects, o => o.Category == ObjectCategory.Regiment && o.System == "Rendili" && o.Side == Side.Empire);
-        Assert.Contains(h.Economy.Objects, o => o.Class == "Orbital Shipyard" && o.System == "Kuat");
+        Assert.Equal(100, h.Economy.SupportOf("The Shoal", Side.Alliance));
+        Assert.Contains(h.Economy.Objects, o => o.Category == ObjectCategory.Regiment && o.System == "Castra" && o.Side == Side.Empire);
+        Assert.Contains(h.Economy.Objects, o => o.Class == "Orbital Shipyard" && o.System == "Navalia");
     }
 
     [Fact]
@@ -142,7 +142,7 @@ public class NewGameTests
     public void AllianceWinsWhenCoruscantCaptured()
     {
         var h = Make(StartPreset.MedE, 1, OldVictory.Settings);
-        CaptureOnNextStep(h, "Coruscant", Side.Alliance);
+        CaptureOnNextStep(h, "Charter", Side.Alliance);
         h.Game.Step();
         Assert.Equal(Side.Alliance, h.Victory.Winner);
         Assert.Single(h.Game.Events.OfType<GameWon>());

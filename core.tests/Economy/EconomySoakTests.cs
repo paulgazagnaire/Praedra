@@ -113,8 +113,8 @@ public class EconomySoakTests
         string Make(ulong seed)
         {
             var w = new EcoWorld(seed);
-            w.Hold("Coruscant", Side.Empire, 100); // no mine or refinery: no first-cycle draw; incidents off; no load
-            w.Eco.AddFacility("Coruscant", FacilityKind.OrbitalShipyard);
+            w.Hold("Charter", Side.Empire, 100); // no mine or refinery: no first-cycle draw; incidents off; no load
+            w.Eco.AddFacility("Charter", FacilityKind.OrbitalShipyard);
             w.Run(300);
             return GameSave.WorldHash(w.Game);
         }
@@ -143,8 +143,8 @@ public class EconomySoakTests
         d = DemoScenario.Create(TestData.RepoRoot, seed, incidents, support: true);
         for (int i = 0; i < days; i++)
         {
-            if (reinforce && i == 150) // eight regiments land on Mon Calamari: the uprising there can end
-                for (int k = 0; k < 8; k++) d.Economy.AddObject(Side.Alliance, "Alliance Army Regiment", "Mon Calamari");
+            if (reinforce && i == 150) // eight regiments land on The Moorings: the uprising there can end
+                for (int k = 0; k < 8; k++) d.Economy.AddObject(Side.Alliance, "Militia", "The Moorings");
             d.Game.Step();
             CheckInvariants(d); CheckSupportInvariants(d);
         }

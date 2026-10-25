@@ -38,7 +38,7 @@ public class SimpleAiFogPlayTests
     }
 
     // FN1 for the Alliance AI: two games that differ only in Imperial forces the Alliance has never seen (an extra fleet on an Imperial
-    // system it has not explored, extra regiments on Coruscant whose ground it has never seen) give the Alliance the same knowledge, and
+    // system it has not explored, extra regiments on Charter whose ground it has never seen) give the Alliance the same knowledge, and
     // while the knowledge is the same the Alliance AI gives the same orders.
     [Fact]
     public void FN1_AllianceAiOrdersDoNotDependOnUnseenImperialForces()
@@ -52,11 +52,11 @@ public class SimpleAiFogPlayTests
             var g = h.Data.Galaxy;
             var rebels = h.Game.State.SystemOwners.Where(kv => kv.Value == Side.Alliance).Select(kv => g.Get(kv.Key)).ToList();
             int Nearest(string s) { var x = g.Get(s); return rebels.Min(r => (r.MapX - x.MapX) * (r.MapX - x.MapX) + (r.MapY - x.MapY) * (r.MapY - x.MapY)); }
-            hidden = h.Game.State.SystemOwners.Where(kv => kv.Value == Side.Empire && kv.Key != "Coruscant" && !h.Fog.IsExplored(Side.Alliance, kv.Key))
+            hidden = h.Game.State.SystemOwners.Where(kv => kv.Value == Side.Empire && kv.Key != "Charter" && !h.Fog.IsExplored(Side.Alliance, kv.Key))
                 .Select(kv => kv.Key).OrderByDescending(Nearest).ThenBy(s => s, StringComparer.Ordinal).First();
-            int fleet = h.Fleets.AddFleet(Side.Empire, "Hidden", new[] { "Imperial Star Destroyer" }, hidden);
+            int fleet = h.Fleets.AddFleet(Side.Empire, "Hidden", new[] { "Mandate" }, hidden);
             var ids = h.Game.State.Fleets[fleet].Ships.ToList();
-            for (int i = 0; i < 3; i++) ids.Add(h.Economy.AddObject(Side.Empire, "Imperial Army Regiment", "Coruscant"));
+            for (int i = 0; i < 3; i++) ids.Add(h.Economy.AddObject(Side.Empire, "Tranches", "Charter"));
             if (!keep) foreach (var id in ids) h.Economy.RemoveObject(id);
         }
         var (a, ha) = Match(4, passive: Side.Empire, setup: h => Extra(h, keep: false));
@@ -83,7 +83,7 @@ public class SimpleAiFogPlayTests
     [Fact]
     public void FoggedEmpire_AgainstPassiveAlliance_FindsAndTakesTheHq()
     {
-        // // v5 re-pin 2026-10-16 (Paul chose re-pin on the map PR; the AI trainer owns restoring the old target): measured day 1282 on v5 (the HQ, Cyclor, starts beside Naboo, where the Alliance would not hide it, so the belief map
+        // // v5 re-pin 2026-10-16 (Paul chose re-pin on the map PR; the AI trainer owns restoring the old target): measured day 1282 on v5 (the HQ, Cutbank, starts beside Solacia, where the Alliance would not hide it, so the belief map
         // looks there late), limit 500 -> 1400
         var (m, h) = Match(1, passive: Side.Alliance);
         int explored0 = Explored(h, Side.Empire), explored200 = -1;
@@ -102,7 +102,7 @@ public class SimpleAiFogPlayTests
         Assert.True(m.TotalRejected * 20 <= m.TotalSent, $"{m.TotalRejected} of {m.TotalSent} orders rejected");
     }
 
-    // The fogged Alliance against an Empire that gives no orders takes Coruscant (known to all: a Core system), estimating its garrison
+    // The fogged Alliance against an Empire that gives no orders takes Charter (known to all: a Core system), estimating its garrison
     // from what it has seen. Measured: day 702 (seeds 1 to 5: 702 to 705); limit 850.
     [Fact]
     public void FoggedAlliance_AgainstPassiveEmpire_KeepsCapturing()
@@ -111,7 +111,7 @@ public class SimpleAiFogPlayTests
         m.RunTo(850);
         int captures = h.Game.Events.OfType<SystemCaptured>().Count(e => e.To == Side.Alliance);
         _out.WriteLine($"winner {h.Victory.Winner} day {h.Game.Day} ({h.Victory.Reason}); Alliance captures {captures}; orders {m.TotalSent} rejected {m.TotalRejected}");
-        // // v5 re-pin 2026-10-16 (Paul chose re-pin on the map PR; the AI trainer owns restoring the old target): on v5 the fogged Alliance does not take Coruscant (measured: 8 captures by day 850, 20 by day 3000, no winner). The test
+        // // v5 re-pin 2026-10-16 (Paul chose re-pin on the map PR; the AI trainer owns restoring the old target): on v5 the fogged Alliance does not take Charter (measured: 8 captures by day 850, 20 by day 3000, no winner). The test
         // now pins that it keeps capturing; the old target (wins by day 850) is the trainer's.
         Assert.True(captures >= 6, $"only {captures} Alliance captures by day 850");
         Assert.True(m.TotalRejected * 20 <= m.TotalSent, $"{m.TotalRejected} of {m.TotalSent} orders rejected");
@@ -127,7 +127,7 @@ public class SimpleAiFogPlayTests
         var (m, h) = Match(1, passive: Side.Empire, setup: x =>
         {
             hq = x.HqSystem!;
-            x.Fleets.AddFleet(Side.Empire, "Probe", new[] { "Imperial Star Destroyer", "Imperial Star Destroyer", "Imperial Star Destroyer" }, hq);
+            x.Fleets.AddFleet(Side.Empire, "Probe", new[] { "Mandate", "Mandate", "Mandate" }, hq);
         });
         m.RunTo(10);
         var dep = h.Game.Events.OfType<HqDeparted>().ToList();
@@ -150,19 +150,19 @@ public class SimpleAiFogPlayTests
         var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA, Settings = Praedra.Core.Tests.Setup.DealSettings.FileOldVictory });
         var ai = new SimpleAi(h, Side.Alliance, Fog);
         // an Imperial system the Alliance's picture shows Imperial, ground never seen (a Core system: owner reported, nothing else)
-        string other = h.Data.Galaxy.Systems.Select(x => x.Name).First(n => n != "Coruscant" &&
+        string other = h.Data.Galaxy.Systems.Select(x => x.Name).First(n => n != "Charter" &&
             h.Fog.Picture(Side.Alliance, n) is { Ground: null } p && p.Owner?.Value.Owner == Side.Empire);
-        Assert.Null(h.Fog.Picture(Side.Alliance, "Coruscant")!.Ground);
-        Assert.Equal(Fog.FogUnknownWinDefenders, ai.DefendersEstimate("Coruscant"));
+        Assert.Null(h.Fog.Picture(Side.Alliance, "Charter")!.Ground);
+        Assert.Equal(Fog.FogUnknownWinDefenders, ai.DefendersEstimate("Charter"));
         Assert.Equal(Fog.FogUnknownDefenders, ai.DefendersEstimate(other));
         bool done = false;
-        h.Game.RegisterHook("6.8", ctx => { if (!done) { done = true; h.Fog.EspionageSuccess(ctx, Side.Alliance, "Coruscant"); } });
+        h.Game.RegisterHook("6.8", ctx => { if (!done) { done = true; h.Fog.EspionageSuccess(ctx, Side.Alliance, "Charter"); } });
         h.Game.Step();
-        int seen = h.Fog.Picture(Side.Alliance, "Coruscant")!.Ground!.Value.Where(g => g.Side == Side.Empire).Sum(g => g.Total);
+        int seen = h.Fog.Picture(Side.Alliance, "Charter")!.Ground!.Value.Where(g => g.Side == Side.Empire).Sum(g => g.Total);
         Assert.True(seen > 0);
-        Assert.Equal(seen, ai.DefendersEstimate("Coruscant"));
+        Assert.Equal(seen, ai.DefendersEstimate("Charter"));
         while (h.Game.Day < 1 + Fog.StaleDays + 10) h.Game.Step(); // nobody orders anything; the picture ages
-        Assert.Equal((seen * (100 + Fog.FogStaleMarginPercent) + 99) / 100, ai.DefendersEstimate("Coruscant"));
+        Assert.Equal((seen * (100 + Fog.FogStaleMarginPercent) + 99) / 100, ai.DefendersEstimate("Charter"));
     }
 
     // QA-5 (SimpleAiParams.FogGroundForgetDays): a garrison seen longer ago than FogGroundForgetDays is forgotten and the never-seen guess comes
@@ -174,14 +174,14 @@ public class SimpleAiFogPlayTests
         var p = Fog with { FogGroundForgetDays = 30 };
         var ai = new SimpleAi(h, Side.Alliance, p);
         bool done = false;
-        h.Game.RegisterHook("6.8", ctx => { if (!done) { done = true; h.Fog.EspionageSuccess(ctx, Side.Alliance, "Coruscant"); } });
+        h.Game.RegisterHook("6.8", ctx => { if (!done) { done = true; h.Fog.EspionageSuccess(ctx, Side.Alliance, "Charter"); } });
         h.Game.Step();
-        int seen = h.Fog.Picture(Side.Alliance, "Coruscant")!.Ground!.Value.Where(g => g.Side == Side.Empire).Sum(g => g.Total);
+        int seen = h.Fog.Picture(Side.Alliance, "Charter")!.Ground!.Value.Where(g => g.Side == Side.Empire).Sum(g => g.Total);
         Assert.NotEqual(p.FogUnknownWinDefenders, seen);
         while (h.Game.Day < 1 + 30) h.Game.Step();
-        Assert.Equal((seen * StalePercent(p, 30) + 99) / 100, ai.DefendersEstimate("Coruscant")); // 30 days old: still believed
+        Assert.Equal((seen * StalePercent(p, 30) + 99) / 100, ai.DefendersEstimate("Charter")); // 30 days old: still believed
         h.Game.Step();
-        Assert.Equal(p.FogUnknownWinDefenders, ai.DefendersEstimate("Coruscant"));               // 31 days old: forgotten
+        Assert.Equal(p.FogUnknownWinDefenders, ai.DefendersEstimate("Charter"));               // 31 days old: forgotten
     }
 
     private static int StalePercent(SimpleAiParams p, int age) => 100 + p.FogStaleMarginPercent * Math.Clamp(age, 0, p.StaleDays) / p.StaleDays;

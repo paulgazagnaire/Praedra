@@ -8,7 +8,7 @@ namespace Praedra.Core.Tests.Economy;
 // 10 Stormtrooper Regiments ids 105 to 114; all completed. Load = 13 + 4 x 71 + 10 x 6 = 357.
 public class MaintenanceTests
 {
-    private const string Home = "Corellia";
+    private const string Home = "Classis";
 
     private static EcoWorld FixtureE(EcoWorld? w = null)
     {
@@ -17,8 +17,8 @@ public class MaintenanceTests
         for (int i = 1; i <= 7; i++) w.Mine(Home, id: i);
         for (int i = 8; i <= 14; i++) w.Refinery(Home, id: i);
         w.Eco.AddFacility(Home, FacilityKind.OrbitalShipyard, id: 100);
-        for (int i = 101; i <= 104; i++) w.Eco.AddObject(Side.Empire, "Imperial Star Destroyer", id: i);
-        for (int i = 105; i <= 114; i++) w.Eco.AddObject(Side.Empire, "Stormtrooper Regiment", id: i);
+        for (int i = 101; i <= 104; i++) w.Eco.AddObject(Side.Empire, "Mandate", id: i);
+        for (int i = 105; i <= 114; i++) w.Eco.AddObject(Side.Empire, "Pacifiers", id: i);
         return w;
     }
 
@@ -70,10 +70,10 @@ public class MaintenanceTests
         // These worlds are over from Day 0; the 6.7 hook first sees it at T = 1, so the first firing is T = 11 (was 10).
         var w = new EcoWorld();
         w.Hold(Home, Side.Empire);
-        int a = w.Eco.AddObject(Side.Empire, "Imperial Star Destroyer"); // 71
-        int b = w.Eco.AddObject(Side.Empire, "Assault Transport");       // 29
+        int a = w.Eco.AddObject(Side.Empire, "Mandate"); // 71
+        int b = w.Eco.AddObject(Side.Empire, "Indenture");       // 29
         Assert.Equal(100, w.Eco.Load(Side.Empire));
-        for (int i = 0; i < 3; i++) w.Eco.AddObject(Side.Empire, "Imperial Star Destroyer", completed: false);
+        for (int i = 0; i < 3; i++) w.Eco.AddObject(Side.Empire, "Mandate", completed: false);
         Assert.Equal(313, w.Eco.Load(Side.Empire));
         w.Run(11); // capacity 0: autoscrap fires at hook time 11 over the two completed objects only
         var s = Assert.Single(Scraps(w));
@@ -87,19 +87,19 @@ public class MaintenanceTests
     {
         var w = new EcoWorld();
         w.Hold(Home, Side.Empire);
-        w.Eco.AddObject(Side.Empire, "Imperial Star Destroyer"); w.Eco.AddObject(Side.Empire, "Assault Transport");
-        var queued = Enumerable.Range(0, 3).Select(_ => w.Eco.AddObject(Side.Empire, "Imperial Star Destroyer", completed: false)).ToList();
+        w.Eco.AddObject(Side.Empire, "Mandate"); w.Eco.AddObject(Side.Empire, "Indenture");
+        var queued = Enumerable.Range(0, 3).Select(_ => w.Eco.AddObject(Side.Empire, "Mandate", completed: false)).ToList();
         foreach (var id in queued) w.Eco.RemoveObject(id);
         Assert.Equal(100, w.Eco.Load(Side.Empire));
         Assert.Equal(0, w.Eco.Refined(Side.Empire));
     }
 
-    // m2-maintenance M9 (there is no character object; a zero-maintenance object stands in: Bounty Hunters, cost 0)
+    // m2-maintenance M9 (there is no character object; a zero-maintenance object stands in: Repossessors, cost 0)
     [Fact]
     public void M9_ZeroMaintenanceObjectsDoNotChangeLoad()
     {
         var w = FixtureE();
-        w.Eco.AddObject(Side.Empire, "Bounty Hunters");
+        w.Eco.AddObject(Side.Empire, "Repossessors");
         Assert.Equal(357, w.Eco.Load(Side.Empire));
     }
 
@@ -108,7 +108,7 @@ public class MaintenanceTests
     public void M10_NeutralShipyardIsInNoSidesLoad()
     {
         var w = new EcoWorld();
-        w.Eco.AddFacility("Hoth", FacilityKind.OrbitalShipyard);
+        w.Eco.AddFacility("The Thaw", FacilityKind.OrbitalShipyard);
         Assert.Equal(0, w.Eco.Load(Side.Empire));
         Assert.Equal(0, w.Eco.Load(Side.Alliance));
     }
@@ -234,7 +234,7 @@ public class MaintenanceTests
     public void ScrapOrderRejections()
     {
         var w = FixtureE();
-        w.Eco.AddObject(Side.Empire, "Imperial Star Destroyer", id: 200, completed: false);
+        w.Eco.AddObject(Side.Empire, "Mandate", id: 200, completed: false);
         Submit(w, 999); Submit(w, 101, Side.Alliance); Submit(w, 200);
         w.Run(1);
         Assert.Equal(new[] { RejectReason.UnknownObject, RejectReason.NotYours, RejectReason.NotCompleted },
@@ -272,9 +272,9 @@ public class MaintenanceTests
         // B5b 2026-10-18: the autoscrap timer is armed when the overdraft is first seen (B5b §6, [EXE-own] 0x5329f0).
         // These worlds are over from Day 0; the 6.7 hook first sees it at T = 1, so the first firing is T = 11 (was 10).
         var w = FixtureE();
-        w.Hold("Sullust", Side.Alliance);
-        w.Mine("Sullust"); w.Refinery("Sullust");
-        for (int i = 0; i < 3; i++) w.Eco.AddObject(Side.Alliance, "Mon Calamari Cruiser"); // 210 over capacity 50
+        w.Hold("Caminus", Side.Alliance);
+        w.Mine("Caminus"); w.Refinery("Caminus");
+        for (int i = 0; i < 3; i++) w.Eco.AddObject(Side.Alliance, "Ark"); // 210 over capacity 50
         w.Run(11);
         Assert.Equal(new[] { Side.Alliance, Side.Empire }, Scraps(w).Select(s => s.Side).ToArray());
         int a = w.Stub!.Requests.IndexOf((0, 2)), e = w.Stub.Requests.IndexOf((0, 14));
@@ -289,8 +289,8 @@ public class MaintenanceTests
         // These worlds are over from Day 0; the 6.7 hook first sees it at T = 1, so the first firing is T = 11 (was 10).
         var w = new EcoWorld();
         w.Hold(Home, Side.Empire);
-        int done = w.Eco.AddObject(Side.Empire, "Stormtrooper Regiment");
-        w.Eco.AddObject(Side.Empire, "Stormtrooper Regiment", completed: false);
+        int done = w.Eco.AddObject(Side.Empire, "Pacifiers");
+        w.Eco.AddObject(Side.Empire, "Pacifiers", completed: false);
         w.Run(11);
         Assert.Equal(done, Assert.Single(Scraps(w)).Object);
         Assert.Equal(1, w.Stub!.Count(0, 0)); // list of one

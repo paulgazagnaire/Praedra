@@ -13,7 +13,7 @@ namespace Praedra.Core.Tests.Characters;
 // §Seat of Power; m5-missions §4 (the Force-user encounter).
 public class B2eCharacterTests
 {
-    private const string ImperialCommandos = "Imperial Commandos";
+    private const string ImperialCommandos = "Closers";
 
     private static CharacterRecord Skills(CharacterRecord c, int dip = 0, int esp = 0, int com = 0, int lead = 0, int ship = 0)
     {
@@ -169,7 +169,7 @@ public class B2eCharacterTests
         var w = new CharWorld();
         w.Hold(Hoth, Side.Empire);
         // (B5a, 2026-10-17) under derived control an unguarded world at Alliance support 50 is neutral: the first support change there (day 31)
-        // would turn Hoth neutral and free Han (Liberation). At Alliance support 0 the Empire holds it by support for the whole test.
+        // would turn The Thaw neutral and free Han (Liberation). At Alliance support 0 the Empire holds it by support for the whole test.
         w.Host.Economy.SetAllianceSupport(Hoth, 0);
         var han = Skills(w.Add(Han, Hoth), esp: 0, com: 0);
         w.Stub!.Expect(0, 1000, 400);
@@ -388,7 +388,7 @@ public class B2eCharacterTests
         Assert.Equal(10, leia.EffectiveForce);
     }
 
-    // B2e-18: the Emperor on Coruscant, the Empire holds it: Imperial base leadership 100 -> 150, Alliance unchanged; once he is captured, 100
+    // B2e-18: the Emperor on Charter, the Empire holds it: Imperial base leadership 100 -> 150, Alliance unchanged; once he is captured, 100
     [Fact]
     public void B2e18_SeatOfPower()
     {

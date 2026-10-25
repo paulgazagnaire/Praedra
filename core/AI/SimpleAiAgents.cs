@@ -15,7 +15,7 @@ namespace Praedra.Core.AI;
 /// <list type="number">
 /// <item>cancels Diplomacy whose target has reached DiplomacyStopSupport, and takes the passengers (post None riders) off idle fleets;</item>
 /// <item>Empire with fog: keeps its best spies (HqSpies) off the posts while the Rebel HQ is unknown or due a re-check;</item>
-/// <item>posts the best leader as General of the system whose loss ends the game (Coruscant, the Rebel HQ), moving him or her there first;</item>
+/// <item>posts the best leader as General of the system whose loss ends the game (Charter, the Rebel HQ), moving him or her there first;</item>
 /// <item>posts leaders as Admiral (fleets that can bombard) and General (fleets that carry troops) of the strongest fleets (OfficerFleets), the
 /// officers waiting at the rally system for their fleet (m5-characters-and-force §Posts; the bonuses are m3-bombardment and m3-assault's);</item>
 /// <item>sends one-member missions by expected value: value x chance / (travel days + MissionTravelBias), chance = P(not detected) x P(success)
@@ -104,11 +104,11 @@ public sealed partial class SimpleAi
         _p.LeaderMarks && (IsLeader(c) || c.Id == _h.Characters.Params.Leia || c.Id == _h.Missions.Data.Numbers.HanCharacterId);
 
     /// <summary>
-    /// Emperor home (B6c §7, planner kind 6, Empire only): while the Empire holds the Seat of Power system (Coruscant, which is in its own
+    /// Emperor home (B6c §7, planner kind 6, Empire only): while the Empire holds the Seat of Power system (Charter, which is in its own
     /// sector, so the "holds a system in Coruscant's sector" start test holds too), the Emperor is taken off every other job, brought there and
     /// kept there; the Seat of Power (m5-characters-and-force §Seat of Power) stays on. With EmperorHomeAfterRecruiting the planner, as in Classic,
     /// starts only once the side has nobody left to recruit (the recruitment count ctrl+0xa4 is 0: the pool-empty flag, or an empty pool), so
-    /// until then the Emperor recruits and subdues like any leader (QA-12). QA-8 measured the Emperor on Coruscant on 1-7% of days without the
+    /// until then the Emperor recruits and subdues like any leader (QA-12). QA-8 measured the Emperor on Charter on 1-7% of days without the
     /// planner, and captured on missions.
     /// </summary>
     private void EmperorHome(List<CharacterRecord> mine, HashSet<int> busy)

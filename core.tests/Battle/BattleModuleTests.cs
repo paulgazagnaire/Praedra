@@ -9,7 +9,7 @@ namespace Praedra.Core.Tests.Battle;
 // Every BattleParams here sets Ruleset = Classic explicitly: these are Classic-battle tests and the DEFAULT became New (Paul, 2026-10-18).
 public class BattleModuleTests
 {
-    private const string Corvette = "Corellian Corvette", Isd = "Imperial Star Destroyer", Interdictor = "Interdictor Cruiser";
+    private const string Corvette = "Dodger", Isd = "Mandate", Interdictor = "Subpoena";
 
     // m4-retreat-damage-repair RT1 (moved by B3: the old 0.33 morale rule is gone; the Corvettes answer Retreat at the alert, take the ISD's volley and leave in
     // second 1. With Fight they would leave at second 163, after three of them are destroyed, see RT1b)
@@ -132,8 +132,8 @@ public class BattleModuleTests
         w.Fleets.SetOwner("A", Side.Alliance);
         w.Fleets.SetOwner("C", Side.Empire);
         // unarmed fleets: both flagged at t = 1, both can leave; D (shortest lane, neutral) is the choice of both
-        int a = w.Fleets.AddFleet(Side.Alliance, "a", new[] { "Galleon" }, "B");
-        int e = w.Fleets.AddFleet(Side.Empire, "e", new[] { "Bulk Transport" }, "B");
+        int a = w.Fleets.AddFleet(Side.Alliance, "a", new[] { "Bond" }, "B");
+        int e = w.Fleets.AddFleet(Side.Empire, "e", new[] { "Barge" }, "B");
         w.Run();
         Assert.Equal("D", w.F(a).At);
         Assert.Equal("D", w.F(e).At);
@@ -258,7 +258,7 @@ public class BattleModuleTests
         Assert.Equal(1349, (int)Math.Truncate(Math.Max(1.0, 1349.8)));
         Assert.Equal(new List<int> { 0, 0, 0, 0, 1, 1 }, BattleModule.StoredHits(p, ships[Isd], new[] { 0, 0, 0, 0, 2, 0 }));
         Assert.Equal(new List<int> { 4, 4, 0, 0, 1, 0 }, BattleModule.StoredHits(p, ships[Corvette], new[] { 5, 4, 0, 0, 1, 0 }));
-        // a game battle: the Y-wing squadrons of a carrier-less Alliance raid; a squadron at hull 17 comes back with 2 craft (10 lost)
+        // a game battle: the Plough squadrons of a carrier-less Alliance raid; a squadron at hull 17 comes back with 2 craft (10 lost)
         Assert.Equal(2, Math.Max(1, (int)Math.Truncate(17 / p.SquadronCraftHull)));
         Assert.Equal(1, Math.Max(1, (int)Math.Truncate(0.4)));
     }
@@ -269,7 +269,7 @@ public class BattleModuleTests
     {
         var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.Classic });
         w.Fleets.SetOwner("A", Side.Alliance);
-        int sq = w.Eco.AddObject(Side.Alliance, "X-wing", "B");
+        int sq = w.Eco.AddObject(Side.Alliance, "Swift", "B");
         w.Obj(sq).CraftLost = 4;
         w.Fleet(Side.Empire, "B", Isd, 1);
         w.Run();
@@ -301,8 +301,8 @@ public class BattleModuleTests
     {
         var w = new BattleWorld();
         w.Fleets.SetOwner("B", Side.Empire);
-        w.Eco.AddObject(Side.Empire, "TIE Fighter", "B");
-        w.Fleet(Side.Alliance, "B", "Nebulon-B Frigate", 1);
+        w.Eco.AddObject(Side.Empire, "Gleaner", "B");
+        w.Fleet(Side.Alliance, "B", "Mender", 1);
         w.Run();
         Assert.Single(w.Events<BattleStarted>());
         Assert.Single(w.Events<BattleEnded>());
@@ -324,9 +324,9 @@ public class BattleModuleTests
     {
         var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.Classic, SubsystemRolls = false, RetreatMode = RetreatMode.NoRetreat });
         int rebel = w.Fleet(Side.Alliance, "B", Corvette, 2);
-        int reg = w.Eco.AddObject(Side.Alliance, "Alliance Army Regiment", null);
+        int reg = w.Eco.AddObject(Side.Alliance, "Militia", null);
         w.Obj(reg).AboardShip = w.F(rebel).Ships[0];
-        w.Fleets.AddFleet(Side.Empire, "imp", new[] { Isd }, "B", new[] { "TIE Fighter" });
+        w.Fleets.AddFleet(Side.Empire, "imp", new[] { Isd }, "B", new[] { "Gleaner" });
         w.Run();
         Assert.False(w.Game.State.Fleets.ContainsKey(rebel));
         Assert.False(w.Game.State.Economy.Objects.ContainsKey(reg));

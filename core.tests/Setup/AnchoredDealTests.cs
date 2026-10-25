@@ -45,7 +45,7 @@ public class AnchoredDealTests
         Assert.NotEqual(Make(StartPreset.MedA, 1).StateHash(), Make(StartPreset.MedA, 2).StateHash());
     }
 
-    // m5-setup-and-victory AN3: exact totals per preset, scaled to the galaxy (systems in sectors / 360, rounded half up), Ilum and Csilla neutral
+    // m5-setup-and-victory AN3: exact totals per preset, scaled to the galaxy (systems in sectors / 360, rounded half up), Glasswood and Frostholm neutral
     [Theory, MemberData(nameof(AllPresets))]
     public void AN3_ExactTotals(StartPreset p)
     {
@@ -57,11 +57,11 @@ public class AnchoredDealTests
             var h = Make(p, seed);
             Assert.Equal(Scaled(t.AllianceTotal), Count(h, Side.Alliance));
             Assert.Equal(Scaled(t.EmpireTotal), Count(h, Side.Empire));
-            Assert.Null(Holder(h, "Ilum")); Assert.Null(Holder(h, "Csilla"));
+            Assert.Null(Holder(h, "Glasswood")); Assert.Null(Holder(h, "Frostholm"));
         }
     }
 
-    // m5-setup-and-victory AN4: every anchor has its owner; Coruscant Empire, Yavin and the HQ Alliance
+    // m5-setup-and-victory AN4: every anchor has its owner; Charter Empire, The Shoal and the HQ Alliance
     [Theory, MemberData(nameof(AllPresets))]
     public void AN4_AnchorsHaveTheirOwner(StartPreset p)
     {
@@ -70,38 +70,38 @@ public class AnchoredDealTests
         Assert.Equal(3, ND.Anchors.Count(a => a.Owner == Side.Alliance));
         Assert.Equal(11, ND.Anchors.Count(a => a.Owner == null));
         foreach (var a in ND.Anchors) Assert.Equal(a.Owner, Holder(h, a.System));
-        Assert.Equal(Side.Empire, Holder(h, "Coruscant"));
-        Assert.Equal(Side.Alliance, Holder(h, "Yavin"));
+        Assert.Equal(Side.Empire, Holder(h, "Charter"));
+        Assert.Equal(Side.Alliance, Holder(h, "The Shoal"));
         Assert.Equal(Side.Alliance, Holder(h, h.HqSystem!));
     }
 
-    // m5-setup-and-victory AN5: locked neutrals stay neutral on every seed (and Hosnian Prime is an Empire anchor)
+    // m5-setup-and-victory AN5: locked neutrals stay neutral on every seed (and Fiscus is an Empire anchor)
     [Fact]
     public void AN5_LockedNeutralsStayNeutral()
     {
         var locked = ND.Anchors.Where(a => a.Owner == null).Select(a => a.System).ToList();
-        Assert.Contains("Tatooine", locked); Assert.Contains("Korriban", locked);
+        Assert.Contains("Amargura", locked); Assert.Contains("Breakyard", locked);
         foreach (var p in Presets)
             for (int seed = 1; seed <= 10; seed++)
             {
                 var d = Deal(p, seed);
                 foreach (var s in locked) Assert.Null(d.Rows.Single(r => r.Name == s).Owner);
             }
-        Assert.Equal(Side.Empire, Holder(Make(StartPreset.Easy, 1), "Hosnian Prime"));
+        Assert.Equal(Side.Empire, Holder(Make(StartPreset.Easy, 1), "Fiscus"));
     }
 
-    // m5-setup-and-victory AN6: the HQ satisfies the candidate rule (rim, not Yavin, not an anchor, at least 200 map units from Coruscant)
+    // m5-setup-and-victory AN6: the HQ satisfies the candidate rule (rim, not The Shoal, not an anchor, at least 200 map units from Charter)
     [Theory, MemberData(nameof(AllPresets))]
     public void AN6_HqSatisfiesCandidateRule(StartPreset p)
     {
         var anchors = ND.Anchors.Select(a => a.System).ToHashSet(StringComparer.Ordinal);
-        var c = G.Get("Coruscant");
+        var c = G.Get("Charter");
         for (int seed = 1; seed <= 12; seed++)
         {
             var hq = Deal(p, seed).Hq;
             var s = G.Get(hq);
             Assert.Contains(s.Group, new[] { "inner_rim", "outer_rim" });
-            Assert.NotEqual("Yavin", hq);
+            Assert.NotEqual("The Shoal", hq);
             Assert.DoesNotContain(hq, anchors);
             Assert.True(Praedra.Core.Travel.TravelFormula.MapDistance(s.MapX, s.MapY, c.MapX, c.MapY) >= 200);
         }
@@ -116,13 +116,13 @@ public class AnchoredDealTests
                 Assert.NotEqual("core", G.Get(r.Name).Group);
     }
 
-    // m5-setup-and-victory AN8: Chandrila 57, Sullust 58 (Empire-held, Rebel sympathy), no draw
+    // m5-setup-and-victory AN8: Lenitas 57, Caminus 58 (Empire-held, Rebel sympathy), no draw
     [Theory, MemberData(nameof(AllPresets))]
     public void AN8_AnchorSupport(StartPreset p)
     {
         var h = Make(p, 5);
-        Assert.Equal(57, h.Economy.SupportOf("Chandrila", Side.Alliance)); Assert.Equal(Side.Empire, Holder(h, "Chandrila"));
-        Assert.Equal(58, h.Economy.SupportOf("Sullust", Side.Alliance)); Assert.Equal(Side.Empire, Holder(h, "Sullust"));
+        Assert.Equal(57, h.Economy.SupportOf("Lenitas", Side.Alliance)); Assert.Equal(Side.Empire, Holder(h, "Lenitas"));
+        Assert.Equal(58, h.Economy.SupportOf("Caminus", Side.Alliance)); Assert.Equal(Side.Empire, Holder(h, "Caminus"));
         // other anchors use their holder's strong band: Empire 10..40 (Alliance support), Alliance 60..90
         foreach (var a in ND.Anchors.Where(a => a.Owner == Side.Empire && a.AllianceSupport == null))
             Assert.InRange(h.Economy.SupportOf(a.System, Side.Alliance), 10, 40);
@@ -130,16 +130,16 @@ public class AnchoredDealTests
             Assert.InRange(h.Economy.SupportOf(a.System, Side.Alliance), 60, 90);
     }
 
-    // m5-setup-and-victory AN9: Coruscant 0, Yavin and the HQ 100
+    // m5-setup-and-victory AN9: Charter 0, The Shoal and the HQ 100
     [Theory, MemberData(nameof(AllPresets))]
     public void AN9_FixedSupportBands(StartPreset p)
     {
         var h = Make(p, 4);
-        Assert.Equal(0, h.Economy.SupportOf("Coruscant", Side.Alliance));
-        Assert.Equal(100, h.Economy.SupportOf("Yavin", Side.Alliance));
+        Assert.Equal(0, h.Economy.SupportOf("Charter", Side.Alliance));
+        Assert.Equal(100, h.Economy.SupportOf("The Shoal", Side.Alliance));
         Assert.Equal(100, h.Economy.SupportOf(h.HqSystem!, Side.Alliance));
-        Assert.True(h.IsExplored("Coruscant", Side.Alliance) && h.IsExplored("Coruscant", Side.Empire));
-        Assert.True(h.IsExplored("Yavin", Side.Empire));
+        Assert.True(h.IsExplored("Charter", Side.Alliance) && h.IsExplored("Charter", Side.Empire));
+        Assert.True(h.IsExplored("The Shoal", Side.Empire));
         Assert.False(h.IsExplored(h.HqSystem!, Side.Empire));
     }
 
@@ -152,14 +152,14 @@ public class AnchoredDealTests
         foreach (var (sys, o) in ND.FixedOwners) owners[sys] = o;
         Assert.Equal(owners.Values.Count(v => v == Side.Alliance), Count(h, Side.Alliance));
         Assert.Equal(owners.Values.Count(v => v == Side.Empire), Count(h, Side.Empire));
-        Assert.Equal("Cymoon", h.HqSystem); // v6 re-pin 2026-10-24: the day-one files' HQ on the spiral map (was Cyclor)
-        foreach (var s in new[] { "Kuat", "Fondor", "Corellia", "Rendili" }) Assert.Equal(Side.Empire, Holder(h, s));
-        foreach (var s in new[] { "Sullust", "Mon Calamari", "Bilbringi" }) Assert.Null(Holder(h, s));
+        Assert.Equal("Altofen", h.HqSystem); // v6 re-pin 2026-10-24: the day-one files' HQ on the spiral map (was Cutbank)
+        foreach (var s in new[] { "Navalia", "Incus", "Classis", "Castra" }) Assert.Equal(Side.Empire, Holder(h, s));
+        foreach (var s in new[] { "Caminus", "The Moorings", "Ferraria" }) Assert.Null(Holder(h, s));
         Assert.Equal(h.StateHash(), Make(p, 1, DealMode.File).StateHash());
         Assert.Equal(DealMode.Anchored, new GameSettings().DealMode); // the DEFAULT
     }
 
-    // m5-setup-and-victory AN11: anchor validation (unknown system, duplicate, Coruscant, Yavin) throws SetupException
+    // m5-setup-and-victory AN11: anchor validation (unknown system, duplicate, Charter, The Shoal) throws SetupException
     [Fact]
     public void AN11_AnchorValidation()
     {
@@ -169,12 +169,12 @@ public class AnchoredDealTests
             var ex = Assert.Throws<SetupException>(() => AnchoredDealer.Validate(G, rows));
             Assert.Contains(text, ex.Message);
         }
-        Check("not a system", R("Nowhere"));
-        Check("twice", R("Kuat"), R("Kuat"));
-        Check("Coruscant", R("Coruscant"));
-        Check("Yavin", R("Yavin"));
+        Check("not a system", R("No Such Place"));
+        Check("twice", R("Navalia"), R("Navalia"));
+        Check("Charter", R("Charter"));
+        Check("The Shoal", R("The Shoal"));
         AnchoredDealer.Validate(G, ND.Anchors); // the shipped file is valid
-        Assert.Throws<SetupException>(() => AnchoredDealer.Deal(G, new GameRng(1), new[] { R("Yavin") }, ND.Totals[StartPreset.Easy], new DealParams()));
+        Assert.Throws<SetupException>(() => AnchoredDealer.Deal(G, new GameRng(1), new[] { R("The Shoal") }, ND.Totals[StartPreset.Easy], new DealParams()));
     }
 
     // m5-setup-and-victory AN12: no shortfall on the shipped data (every preset, 25 seeds)
@@ -185,19 +185,19 @@ public class AnchoredDealTests
             for (int seed = 1; seed <= 25; seed++) Assert.Empty(Deal(p, seed).Shortfalls);
     }
 
-    // m5-setup-and-victory AN13: the starting yards: Mon Calamari Alliance, Sullust and Bilbringi Empire, each holder gets the Orbital Shipyard
+    // m5-setup-and-victory AN13: the starting yards: The Moorings Alliance, Caminus and Ferraria Empire, each holder gets the Orbital Shipyard
     [Theory, MemberData(nameof(AllPresets))]
     public void AN13_StartingYardsFollowTheAnchors(StartPreset p)
     {
         var h = Make(p, 2);
-        foreach (var (s, side) in new[] { ("Mon Calamari", Side.Alliance), ("Sullust", Side.Empire), ("Bilbringi", Side.Empire), ("Kuat", Side.Empire) })
+        foreach (var (s, side) in new[] { ("The Moorings", Side.Alliance), ("Caminus", Side.Empire), ("Ferraria", Side.Empire), ("Navalia", Side.Empire) })
         {
             Assert.Equal(side, Holder(h, s));
             Assert.Contains(h.Economy.Objects, o => o.Class == "Orbital Shipyard" && o.System == s && h.Economy.OwnerOf(o) == side);
         }
     }
 
-    // m5-setup-and-victory AN14: strong/weak: Alliance all strong (wA = 0), anchors, Coruscant, Yavin and the HQ never weak, the Empire has weak systems when wE > 0
+    // m5-setup-and-victory AN14: strong/weak: Alliance all strong (wA = 0), anchors, Charter, The Shoal and the HQ never weak, the Empire has weak systems when wE > 0
     [Theory, MemberData(nameof(AllPresets))]
     public void AN14_StrongAndWeak(StartPreset p)
     {
@@ -212,7 +212,7 @@ public class AnchoredDealTests
                 if (r.Owner == null) Assert.False(r.Weak);
             }
             Assert.True(d.Rows.Count(r => r.Weak) > 0);
-            Assert.False(d.Rows.Single(r => r.Name == "Coruscant").Weak);
+            Assert.False(d.Rows.Single(r => r.Name == "Charter").Weak);
         }
     }
 

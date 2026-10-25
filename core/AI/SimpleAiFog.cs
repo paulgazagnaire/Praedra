@@ -571,7 +571,7 @@ public sealed partial class SimpleAi
     // ================================================================== the key hunt (KeyHunt)
 
     /// <summary>
-    /// KeyHunt: fog on, the Alliance, ahead (Finishing, or its place term: Coruscant held or destroyed), and a key of its standard victory set
+    /// KeyHunt: fog on, the Alliance, ahead (Finishing, or its place term: Charter held or destroyed), and a key of its standard victory set
     /// not yet its own prisoner (own state). A dead key is not known here and still hunted: the looks then find nobody.
     /// </summary>
     private bool KeyHuntOn()
@@ -580,7 +580,7 @@ public sealed partial class SimpleAi
         return KeyAhead();
     }
 
-    /// <summary>The side is ahead for its victory keys: Finishing, or for the Alliance its place term (Coruscant held or destroyed).</summary>
+    /// <summary>The side is ahead for its victory keys: Finishing, or for the Alliance its place term (Charter held or destroyed).</summary>
     private bool KeyAhead()
     {
         string cor = Praedra.Core.Victory.VictoryModule.CoruscantName;

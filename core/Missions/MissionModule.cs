@@ -34,7 +34,7 @@ public sealed class MissionModule
     /// §1 (Traced B2d §2).
     /// </summary>
     public const int KindWordMission = 0x4112, KindWordAdrift = 0x4103, KindWordMove = 0;
-    /// <summary>DEFFACSD family of the KDY-150 ion cannon: an own one at the place stops the orbit guards of a leaving or arriving check (0x5275d0, range [0x22, 0x23)). rule: B2d §3.</summary>
+    /// <summary>DEFFACSD family of the Mordant Lien-150 ion cannon: an own one at the place stops the orbit guards of a leaving or arriving check (0x5275d0, range [0x22, 0x23)). rule: B2d §3.</summary>
     public const int IonCannonFamily = 0x22;
 
     private readonly Game _game;
@@ -238,7 +238,7 @@ public sealed class MissionModule
     /// <summary>
     /// The scopes of one check pass at <paramref name="place"/> (B2d §3): planet (kind 2): members on the planet; guards = the special forces on the
     /// planet if the other side holds it. Orbit (kind 1): members aboard, plus those on the planet when the mission travels; guards = the capital
-    /// ships of every fleet there (and the regiments aboard) if the other side has a fleet there and the mission side has no KDY-150 there. Next to the
+    /// ships of every fleet there (and the regiments aboard) if the other side has a fleet there and the mission side has no Mordant Lien-150 there. Next to the
     /// target (kind 4): every member; guards as planet (target on the planet) or as orbit without the ion test (target in orbit).
     /// </summary>
     public Scope ScopeOf(MissionGroup m, CheckKind kind, string place)
@@ -523,7 +523,7 @@ public sealed class MissionModule
     {
         if (!IsKeyTarget(k, targetChar, out _) || _ch.Get(targetChar!.Value) is not { } tc) return null;
         if (tc.AttachedFleet != 0) return MissionReject.TargetProtected;
-        // rule: m5-missions §6a (Abduction paragraph): the protected capital is the Rebel HQ system for an Alliance target, Coruscant for an Empire target (Lead DEFAULT)
+        // rule: m5-missions §6a (Abduction paragraph): the protected capital is the Rebel HQ system for an Alliance target, Charter for an Empire target (Lead DEFAULT)
         var hq = _game.State.Scenario.Hq;
         string? capital = tc.Side == Side.Alliance ? (hq.Status == HqStatus.AtRest ? hq.System : null) : Victory.VictoryModule.CoruscantName;
         if (capital != null && _ch.LocationOf(tc) == capital && _fleets.OwnerOf(capital) == tc.Side
@@ -618,7 +618,7 @@ public sealed class MissionModule
         return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
     }
 
-    // rule: §Orders (MoveGroup): the members' checks, the Move record's special-force mask (all but Bounty Hunters), then UnknownSystem,
+    // rule: §Orders (MoveGroup): the members' checks, the Move record's special-force mask (all but Repossessors), then UnknownSystem,
     // AlreadyThere, Unreachable. Characters need no skill for a Move.
     private OrderResult HandleMoveGroup(StepContext ctx, MoveGroupOrder o)
     {

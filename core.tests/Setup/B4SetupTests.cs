@@ -10,7 +10,7 @@ namespace Praedra.Core.Tests.Setup;
 /// <summary>
 /// Reverse-engineering batch B4 (new-game setup), part A: the code on main today (NewGame with the Anchored deal and new-game-forces.csv).
 /// Day-one knowledge (m5-fog-and-hq §F2 Setup, §F4; B4 §11), garrisons (m5-setup-and-victory §P6; B4 §6), names (§P7 Names; B4 §12) and the
-/// Yavin order of the starting characters (§P9; B4 §9). The Classic setup tests B4-6 to B4-13 wait for DealMode Classic (part B).
+/// The Shoal order of the starting characters (§P9; B4 §9). The Classic setup tests B4-6 to B4-13 wait for DealMode Classic (part B).
 /// </summary>
 public class B4SetupTests
 {
@@ -34,7 +34,7 @@ public class B4SetupTests
         // DEFAULT on (Classic) since 2026-10-18 (AI trainer: the AI floors pass with it); with the switch off there is no C.
         Assert.True(new Praedra.Core.Fog.FogParams().SetupRevealsFacilities);
         var off = NewGame.Create(new NewGameOptions { Seed = 1, Settings = new GameSettings { Fog = new Praedra.Core.Fog.FogParams { SetupRevealsFacilities = false } } });
-        Assert.Null(off.Fog.Picture(Side.Alliance, "Coruscant")!.Facilities);
+        Assert.Null(off.Fog.Picture(Side.Alliance, "Charter")!.Facilities);
         foreach (var h in Seeds.Select(MakeReveal))
         {
             var fog = h.Game.State.Fog;
@@ -56,37 +56,37 @@ public class B4SetupTests
                 checkedSystems++;
             }
             Assert.True(checkedSystems > 0);
-            // Coruscant stands for the batch's example: its Construction Yard is seen, its troops and fleet are not.
-            var cor = h.Fog.Picture(Side.Alliance, "Coruscant")!;
+            // Charter stands for the batch's example: its Construction Yard is seen, its troops and fleet are not.
+            var cor = h.Fog.Picture(Side.Alliance, "Charter")!;
             Assert.True(cor.Facilities!.Value.GetValueOrDefault("Construction Yard") > 0);
-            Assert.True(Standing(h, Side.Empire, "Stormtrooper Regiment", "Coruscant") > 0);
-            Assert.Contains(h.Game.State.Fleets.Values, f => f.Side == Side.Empire && f.At == "Coruscant");
+            Assert.True(Standing(h, Side.Empire, "Pacifiers", "Charter") > 0);
+            Assert.Contains(h.Game.State.Fleets.Values, f => f.Side == Side.Empire && f.At == "Charter");
             Assert.Null(cor.Ground); Assert.Null(cor.Fleets);
         }
     }
 
-    // B4-2: on day 0 the Empire's picture of Yavin is the full copy taken after the characters are placed; its picture of the HQ system has no
+    // B4-2: on day 0 the Empire's picture of The Shoal is the full copy taken after the characters are placed; its picture of the HQ system has no
     // facilities and HqHere false. rule: m5-fog-and-hq §F4 3 and 4; m5-setup-and-victory §P9 (B4 §9, §11)
-    // The fog picture has no character list (group D holds regiments and special forces only), so the six characters are checked at Yavin in the
+    // The fog picture has no character list (group D holds regiments and special forces only), so the six characters are checked at The Shoal in the
     // state when the copy is taken, and their order in start-cast.csv.
     [Fact]
     public void B4_2_EmpireSeesYavinInFullAndNothingOfTheHq()
     {
         int[] yavinSix = { Luke, Leia, Han, Chewbacca, Dodonna, Wedge };
-        var cast = GameData.Default.Characters.StartCast.Where(r => r.Rule == StartRule.FixedSystem && r.Place == "Yavin").Select(r => r.Character);
+        var cast = GameData.Default.Characters.StartCast.Where(r => r.Rule == StartRule.FixedSystem && r.Place == "The Shoal").Select(r => r.Character);
         Assert.Equal(yavinSix, cast);
         foreach (var h in Games())
         {
             foreach (var id in yavinSix)
             {
                 var c = h.Characters.Get(id)!;
-                Assert.True(c.Placed); Assert.Equal("Yavin", c.System); Assert.Equal(0, c.AttachedFleet);
+                Assert.True(c.Placed); Assert.Equal("The Shoal", c.System); Assert.Equal(0, c.AttachedFleet);
             }
-            var k = h.Game.State.Fog.Empire.Systems["Yavin"];
+            var k = h.Game.State.Fog.Empire.Systems["The Shoal"];
             Assert.True(k.Explored);
             Assert.Equal(0, k.StampC); Assert.Equal(0, k.StampD); Assert.Equal(0, k.StampE);
             var ground = k.Ground.Single(g => g.Side == Side.Alliance);
-            Assert.Equal(Standing(h, Side.Alliance, "Alliance Army Regiment", "Yavin"), ground.Units.GetValueOrDefault("Alliance Army Regiment"));
+            Assert.Equal(Standing(h, Side.Alliance, "Militia", "The Shoal"), ground.Units.GetValueOrDefault("Militia"));
 
             string hq = h.HqSystem!;
             Assert.False(h.Fog.IsExplored(Side.Empire, hq));
@@ -98,7 +98,7 @@ public class B4SetupTests
         }
     }
 
-    // B4-3: an Empire system at Empire support 37 has 3 Imperial Army regiments on day 0, one at 75 has none; Coruscant, Yavin and the HQ have
+    // B4-3: an Empire system at Empire support 37 has 3 Imperial Army regiments on day 0, one at 75 has none; Charter, The Shoal and the HQ have
     // no garrison regiments. Every held system gets exactly N = ceil((60 - s) / 10) below 60 and none at 60 or more (min_garrison 0, Classic).
     // rule: m5-setup-and-victory §P6 ([EXE-own] 0x51ab20; B4 §6); m2-uprisings-and-garrison §Required garrison N
     [Fact]
@@ -134,17 +134,17 @@ public class B4SetupTests
             }
             Assert.True(below > 0); // the rule is exercised: some holdings start below 60
             // the fixed worlds: none of the garrison class beyond the base regiments
-            Assert.Equal(0, Standing(h, Side.Empire, "Imperial Army Regiment", "Coruscant"));
-            Assert.Equal(forces.Int(Side.Alliance, "base_regiments"), Standing(h, Side.Alliance, "Alliance Army Regiment", "Yavin"));
-            Assert.Equal(2, Standing(h, Side.Alliance, "Alliance Army Regiment", h.HqSystem!)); // the fixed HQ forces only, no garrison
-            // the batch's anchors: Chandrila (Alliance 57) and Sullust (58), Empire-held at Empire support 43 and 42, get 2 regiments each
-            foreach (var sys in new[] { "Chandrila", "Sullust" })
+            Assert.Equal(0, Standing(h, Side.Empire, "Tranches", "Charter"));
+            Assert.Equal(forces.Int(Side.Alliance, "base_regiments"), Standing(h, Side.Alliance, "Militia", "The Shoal"));
+            Assert.Equal(2, Standing(h, Side.Alliance, "Militia", h.HqSystem!)); // the fixed HQ forces only, no garrison
+            // the batch's anchors: Lenitas (Alliance 57) and Caminus (58), Empire-held at Empire support 43 and 42, get 2 regiments each
+            foreach (var sys in new[] { "Lenitas", "Caminus" })
                 if (h.Control.HolderOf(sys) == Side.Empire && h.Economy.SupportOf(sys, Side.Alliance) is 57 or 58)
-                    Assert.Equal(2, Standing(h, Side.Empire, "Imperial Army Regiment", sys));
+                    Assert.Equal(2, Standing(h, Side.Empire, "Tranches", sys));
         }
     }
 
-    // B4-4: with every Alliance system at support 60 or more, the Alliance has no garrison regiment on day 0 outside the fixed Yavin (base) and
+    // B4-4: with every Alliance system at support 60 or more, the Alliance has no garrison regiment on day 0 outside the fixed The Shoal (base) and
     // HQ troops. rule: m5-setup-and-victory §P6 (B4 §6: in Classic only the Empire starts with garrisons)
     [Fact]
     public void B4_4_AllianceAtSixtyOrMoreHasNoGarrison()
@@ -157,14 +157,14 @@ public class B4SetupTests
             if (held.Any(s => h.Economy.SupportOf(s, Side.Alliance) < 60)) continue; // the batch's condition
             games++;
             var outside = h.Economy.Objects.Where(o => o.Category == ObjectCategory.Regiment && o.Side == Side.Alliance && o.AboardShip == 0
-                && o.System != null && o.System != "Yavin" && o.System != h.HqSystem).ToList();
+                && o.System != null && o.System != "The Shoal" && o.System != h.HqSystem).ToList();
             Assert.Empty(outside);
         }
         Assert.True(games > 0, "no seed in 1..12 gives every Alliance holding support 60 or more");
     }
 
     // B4-4 (the HQ troops it names): with HqFixedForces on, the Rebel HQ system starts with the fixed CMUNHQTB forces standing on it, not in a
-    // fleet: 2 Alliance Army Regiments, 1 Alliance Fleet Regiment, 4 X-wing, 2 Y-wing. Off (DEFAULT until the Classic setup) it gets none of
+    // fleet: 2 Alliance Army Regiments, 1 Deckhands, 4 Swift, 2 Plough. Off (DEFAULT until the Classic setup) it gets none of
     // them. rule: m5-setup-and-victory §P7 ([EXE-own] 0x51ad90; B4 §7 step 2)
     [Fact]
     public void B4_4_TheHqStartsWithItsFixedForces()
@@ -175,17 +175,17 @@ public class B4SetupTests
             string hq = h.HqSystem!;
             var there = h.Economy.Objects.Where(o => o.Side == Side.Alliance && o.System == hq && o.AboardShip == 0 && o.Category != ObjectCategory.Facility)
                 .GroupBy(o => o.Class).ToDictionary(g => g.Key, g => g.Count());
-            Assert.Equal(new Dictionary<string, int> { ["Alliance Army Regiment"] = 2, ["Alliance Fleet Regiment"] = 1, ["X-wing"] = 4, ["Y-wing"] = 2 }
+            Assert.Equal(new Dictionary<string, int> { ["Militia"] = 2, ["Deckhands"] = 1, ["Swift"] = 4, ["Plough"] = 2 }
                 .OrderBy(kv => kv.Key, StringComparer.Ordinal), there.OrderBy(kv => kv.Key, StringComparer.Ordinal));
             Assert.All(h.Economy.Objects.Where(o => o.System == hq && o.Category != ObjectCategory.Facility), o => Assert.True(o.Completed));
         }
-        // File mode too (the HQ is Cymoon in the v6 day-one files; Cyclor on v5)
+        // File mode too (the HQ is Altofen in the v6 day-one files; Cutbank on v5)
         var f = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA, Settings = Classic with { DealMode = DealMode.File } });
-        Assert.Equal(2, Standing(f, Side.Alliance, "Alliance Army Regiment", f.HqSystem!));
+        Assert.Equal(2, Standing(f, Side.Alliance, "Militia", f.HqSystem!));
         // switch off (DEFAULT): only the garrison stands there (min_garrison 1 of the data), no Fleet regiment, no squadron
         var off = Make(1);
-        Assert.Equal(1, Standing(off, Side.Alliance, "Alliance Army Regiment", off.HqSystem!));
-        Assert.DoesNotContain(off.Economy.Objects, o => o.System == off.HqSystem && o.Side == Side.Alliance && o.Class is "Alliance Fleet Regiment" or "X-wing" or "Y-wing");
+        Assert.Equal(1, Standing(off, Side.Alliance, "Militia", off.HqSystem!));
+        Assert.DoesNotContain(off.Economy.Objects, o => o.System == off.HqSystem && o.Side == Side.Alliance && o.Class is "Deckhands" or "Swift" or "Plough");
     }
 
     // B4-5: the first fleet of each side is "Fleet 1", fleets count per side in id order; two Corellian Corvettes of one side are "... 1" and
@@ -205,10 +205,10 @@ public class B4SetupTests
                 foreach (var g in ships.GroupBy(o => o.Class))
                     Assert.Equal(Enumerable.Range(1, g.Count()).Select(n => $"{g.Key} {n}"), g.Select(o => o.Name));
             }
-            var corvettes = st.Economy.Objects.Values.Where(o => o.Side == Side.Alliance && o.Class == "Corellian Corvette").OrderBy(o => o.Id).ToList();
+            var corvettes = st.Economy.Objects.Values.Where(o => o.Side == Side.Alliance && o.Class == "Dodger").OrderBy(o => o.Id).ToList();
             Assert.True(corvettes.Count >= 2);
-            Assert.Equal("Corellian Corvette 1", corvettes[0].Name);
-            Assert.Equal("Corellian Corvette 2", corvettes[1].Name);
+            Assert.Equal("Dodger 1", corvettes[0].Name);
+            Assert.Equal("Dodger 2", corvettes[1].Name);
             // fighters and regiments get no name
             Assert.All(st.Economy.Objects.Values.Where(o => o.Category != ObjectCategory.CapitalShip), o => Assert.Null(o.Name));
         }

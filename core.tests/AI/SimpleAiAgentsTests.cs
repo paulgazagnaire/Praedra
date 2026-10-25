@@ -88,7 +88,9 @@ public class SimpleAiAgentsTests
         // is exactly the previous pin ca568ccf...8252 (checked when re-pinned, main 07ff5e9; the gap fills C5, C7 and the C8 data do not touch this game).
         // v6 re-pin 2026-10-24 (Dev lead; Paul approved the two-arm spiral map, planets/16): every position, route and sector changed, and so
         // did the day-one deal, so this old AI plays another game on seed 1. All switches above unchanged.
-        Assert.Equal("ca5216f458b80f9c9429511dcee70f9800f022fae73887128078fa8ccd72e3be", h.StateHash());
+        // Praedra names re-pin 2026-10-25 (Dev lead; Paul's order to remove every Star Wars name): systems are ordered by name, so the
+        // renamed systems sort differently and seed 1 plays another game (the v6 pin was ca5216f4...e3be). All switches above unchanged.
+        Assert.Equal("48a89624192dc01d49fd311e2c909124501da222eb5bfee61022cfc9720f1270", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"
@@ -103,7 +105,7 @@ public class SimpleAiAgentsTests
             Assert.False(src.Contains(bad, StringComparison.Ordinal), $"SimpleAiAgents.cs mentions {bad}");
     }
 
-    // QA-8, B6c-15 in play (SimpleAiParams.LeaderMarks, DEFAULT off since 2026-10-18, QA-12; on here): while the Empire holds Coruscant the Emperor is kept there (Emperor home),
+    // QA-8, B6c-15 in play (SimpleAiParams.LeaderMarks, DEFAULT off since 2026-10-18, QA-12; on here): while the Empire holds Charter the Emperor is kept there (Emperor home),
     // so the Seat of Power stays on (m5-characters-and-force §Seat of Power); the six story characters are never commanders and the Emperor
     // is never a diplomat (B6c-14). Fogged Medium mirror, seeds 1 to 8, 1500 days: on 1500 of 1500 days on every seed with the
     // switch; 15 to 103 days without it, and the Emperor held by the Alliance on seeds 3, 4 and 6 (56, 203 and 84 days).
@@ -137,7 +139,7 @@ public class SimpleAiAgentsTests
     // QA-7 follow-up (2026-10-18): since #69 a duel prisoner is held aboard the captor's fleet. The AI's Rescue planner looked only at held_at
     // (a planet), so such a prisoner was never rescued; with RescueAboardFleets it targets him where that fleet stands (m5-missions TargetReason:
     // LocationOf, the prisoner can be rescued only while his fleet stands at a system). An Empire character is captured aboard an Alliance
-    // fleet (Crait on seed 1) on day 31. QA-13: such tries practically never succeed (8 Medium mirrors: 458 tries, 3 rescues; only at fleets
+    // fleet (Saltgreen on seed 1) on day 31. QA-13: such tries practically never succeed (8 Medium mirrors: 458 tries, 3 rescues; only at fleets
     // parked on a captor-held world: 205 tries, 0), so the switch is DEFAULT off and the default AI sends none.
     private static int RescuesAboard(SimpleAiParams p, out int prisonerId, out string? at)
     {
@@ -145,7 +147,7 @@ public class SimpleAiAgentsTests
         var (m, h) = Match(1, p, passive: Side.Alliance, settings: Praedra.Core.Tests.Setup.DealSettings.FileOldVictory with { Characters = new CharacterParams { LandPrisoners = false } });
         m.RunTo(30);
         var cp = h.Characters.Params;
-        // the smallest Alliance fleet standing away from the HQ (Crait on seed 1; at the HQ the odds stay below the AI's floor)
+        // the smallest Alliance fleet standing away from the HQ (Saltgreen on seed 1; at the HQ the odds stay below the AI's floor)
         var fleet = h.Game.State.Fleets.Values.Where(f => f.Side == Side.Alliance && f.At != null && f.At != h.HqSystem && f.Ships.Count > 0)
             .OrderBy(f => f.Ships.Count).ThenBy(f => f.Id).First();
         var prisoner = h.Characters.InPlay.Where(c => c.Side == Side.Empire && c.Status == CharacterStatus.Free && c.Transit == null && c.Id != cp.Emperor
@@ -181,7 +183,7 @@ public class SimpleAiAgentsTests
 
     // ai/07 §7 (Empire: belief-map search with spies), m5-missions (Espionage writes the ground and HqHere), m5-fog-and-hq §N5. Against an
     // Alliance that gives no orders the fogged Empire sends its spies to the best HQ candidates and takes the HQ. Measured on the 360-system
-    // map (seed 1): KnownHq day 299, won day 352. On v5 the spies never find the HQ (Cyclor, beside Naboo, ranks low on the belief map: the
+    // map (seed 1): KnownHq day 299, won day 352. On v5 the spies never find the HQ (Cutbank, beside Solacia, ranks low on the belief map: the
     // Alliance would not hide there), on any of seeds 1 to 8, and the HQ falls to conquest; the old target (KnownHq by day 400) stays the
     // trainer's.
     // Over seeds 1 to 8 (MultiSeed), the day the HQ falls:
@@ -213,9 +215,9 @@ public class SimpleAiAgentsTests
     // A moved HQ is found again (ai/07 §7; m5-fog-and-hq §F6 MoveHq, §N5). Against a passive Alliance the test moves the HQ on day 0 (a
     // MoveHq order for the Alliance) to the held system with HqMinLanes lanes or more that is farthest by travel; the Empire's picture must
     // later show the HQ at its new system, or the Empire takes it there. On the 360-system map the Empire knew the HQ first (seed 1: known
-    // day 139, Lowick re-found 887 days after the move); on v5 the spies never find the first HQ (above), so the HQ moves before the
+    // day 139, The Flats re-found 887 days after the move); on v5 the spies never find the first HQ (above), so the HQ moves before the
     // Empire knows it.
-    // Over seeds 1 to 8 (MultiSeed; Cyclor -> Dubrillion on every seed), the day the moved HQ is re-found or taken:
+    // Over seeds 1 to 8 (MultiSeed; Cutbank -> The Rafts on every seed), the day the moved HQ is re-found or taken:
     //   8a378a8 (pre-B2e): taken 838, 781, 1480, 1006, 985, 982, 640, 724   (never re-found by a look)
     //   9ec544f (B2e):     taken 637, 886, 724, 682, re-found 1136, re-found 1237, taken 1063, 730
     // Floor: re-found or taken within 1300 days on at least 6 of 8. The spies seldom re-find it: what this pins is that the Empire gets
@@ -379,7 +381,7 @@ public class SimpleAiAgentsTests
     }
 
     // Key hunt (SimpleAiParams.KeyHunt, DEFAULT on; QA round 29). Fog, the Empire passive, seeds 1 to 4 (MultiSeed). On day 1 a test hook
-    // hands Coruscant to the Alliance (DebugApplyTroops: its place term; standard victory, the default settings), so the Alliance is ahead and
+    // hands Charter to the Alliance (DebugApplyTroops: its place term; standard victory, the default settings), so the Alliance is ahead and
     // still needs the Emperor and Vader captured. With the hunt its spies look at systems its own picture shows Imperial-held (or where its
     // picture last showed a key); the Alliance plans no other Espionage, so without the hunt it sends none. rule: m5-fog-and-hq §N8 (the AI
     // reads only its side's knowledge), §F1 group D (an Espionage success writes the characters present).
@@ -406,10 +408,10 @@ public class SimpleAiAgentsTests
 
     private static (int Seed, int Looks, int OffTarget, int? KeySeenDay, int Abductions) Hunt(int seed, SimpleAiParams p)
     {
-        var (m, h) = Match(seed, p, passive: Side.Empire, settings: new GameSettings()); // standard victory: Coruscant alone does not win
+        var (m, h) = Match(seed, p, passive: Side.Empire, settings: new GameSettings()); // standard victory: Charter alone does not win
         var cp = h.Characters.Params; var keys = new[] { cp.Emperor, cp.Vader };
         bool done = false;
-        h.Game.RegisterHook("5.2", ctx => { if (!done) { done = true; h.Control.DebugApplyTroops(ctx, "Coruscant", Side.Alliance, "Alliance Army Regiment", 10); } });
+        h.Game.RegisterHook("5.2", ctx => { if (!done) { done = true; h.Control.DebugApplyTroops(ctx, "Charter", Side.Alliance, "Militia", 10); } });
         int looks = 0, offTarget = 0, abductions = 0, seen = 0; int? keySeen = null;
         while (h.Game.Day < 800 && h.Victory.Winner == null)
         {
@@ -441,8 +443,8 @@ public class SimpleAiAgentsTests
         var on = new SimpleAi(h, Side.Alliance, Fog); var off = new SimpleAi(h, Side.Alliance, Fog with { AbductionKeyCap = false });
         Assert.True(h.Missions.IsKeyTarget(MissionKind.Abduction, cp.Emperor, out int capE));
         Assert.True(h.Missions.IsKeyTarget(MissionKind.Abduction, cp.Vader, out int capV));
-        int e1 = on.AbductionPercentEstimate(best, cp.Emperor, "Coruscant"), e0 = off.AbductionPercentEstimate(best, cp.Emperor, "Coruscant");
-        int v1 = on.AbductionPercentEstimate(best, cp.Vader, "Coruscant"), v0 = off.AbductionPercentEstimate(best, cp.Vader, "Coruscant");
+        int e1 = on.AbductionPercentEstimate(best, cp.Emperor, "Charter"), e0 = off.AbductionPercentEstimate(best, cp.Emperor, "Charter");
+        int v1 = on.AbductionPercentEstimate(best, cp.Vader, "Charter"), v0 = off.AbductionPercentEstimate(best, cp.Vader, "Charter");
         _out.WriteLine($"Emperor {e0} -> {e1} (cap {capE}); Vader {v0} -> {v1} (cap {capV})");
         Assert.Equal(Math.Min(e0, capE), e1);
         Assert.Equal(Math.Min(v0, capV), v1);

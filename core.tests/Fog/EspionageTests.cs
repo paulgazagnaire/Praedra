@@ -145,11 +145,11 @@ public class EspionageTests
     public void FE7_EmpireStartsWithAFullCopyOfYavin()
     {
         var h = NewGame.Create(new NewGameOptions { Seed = 1 });
-        var k = h.Game.State.Fog.Empire.Systems["Yavin"];
+        var k = h.Game.State.Fog.Empire.Systems["The Shoal"];
         Assert.True(k.Explored);
         Assert.Equal(0, k.StampC); Assert.Equal(0, k.StampD); Assert.Equal(0, k.StampE);
-        Assert.False(k.HqHere); // it is Yavin, not the HQ system
-        Assert.NotEqual("Yavin", h.HqSystem);
+        Assert.False(k.HqHere); // it is The Shoal, not the HQ system
+        Assert.NotEqual("The Shoal", h.HqSystem);
         Assert.False(h.Fog.IsExplored(Side.Empire, h.HqSystem!)); // nothing reveals the HQ system at start (§F4 4)
         Assert.Null(h.Fog.KnownHq(Side.Empire));
     }

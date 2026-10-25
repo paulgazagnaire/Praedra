@@ -88,7 +88,7 @@ public partial class Main
                 Expect(gs.Has($"Send a mission from {han.System}..."), "the system panel offers Send a mission from...");
                 SpyAndCheck(gs, $"Send a mission from {han.System}...", "Han Solo", enemy);
             }
-            PlaytestSpecialForces(gs, "Bothan Spies");
+            PlaytestSpecialForces(gs, "Listeners");
         }
         else
         {

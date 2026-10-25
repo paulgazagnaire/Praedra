@@ -35,7 +35,7 @@ public class MissionRollTests
     [InlineData(1, 94)] [InlineData(10, 94)] [InlineData(11, 90)] [InlineData(100, 30)] [InlineData(101, 25)] [InlineData(500, 25)]
     public void MI1_FoilTable(int x, int p) => Assert.Equal(p, new MissionWorld().M.FoilChance(x));
 
-    // m5-missions MI2: average 50 against detection 50 gives x = 1, p = 94 (here, B2d: espionage 1 against an Imperial Probe Droid on the planet,
+    // m5-missions MI2: average 50 against detection 50 gives x = 1, p = 94 (here, B2d: espionage 1 against an Speculators on the planet,
     // detection 0 (SPECFCSD word 13), x = 2, the same row)
     [Theory]
     [InlineData(93, true)]
@@ -50,7 +50,7 @@ public class MissionRollTests
         Assert.Equal(detected ? MissionOutcome.Foiled : MissionOutcome.Failed, w.Events<MissionEnded>().Single().Outcome);
     }
 
-    // m5-missions MI3: Bothan Spies (70) plus a character (50): average 60, one special force, a Probe Droid guard (detection 0, B2d):
+    // m5-missions MI3: Listeners (70) plus a character (50): average 60, one special force, a Probe Droid guard (detection 0, B2d):
     // x = 60 - 0 - 1 + 1 = 60, p = 50
     [Theory]
     [InlineData(49, true)]
@@ -85,14 +85,14 @@ public class MissionRollTests
     }
 
     // m5-missions MI4 in a game (B2d): a guarding ship's officer is its fleet's Admiral (Piett, espionage 60): the arriving check (orbit) walks the
-    // Imperial Star Destroyer (detection 10): x = 80 - 10 - 0 - 21 + 1 = 50, p = 60
+    // Mandate (detection 10): x = 80 - 10 - 0 - 21 + 1 = 50, p = 60
     [Fact]
     public void MI4_FleetAdmiralIsTheOfficerOfAGuardingShip()
     {
         var w = new MissionWorld();
         w.Hold(T, Side.Empire, 0);
         w.Agent(Leia, H, esp: 80);
-        int fleet = w.Host.Fleets.AddFleet(Side.Empire, "E", new[] { "Imperial Star Destroyer" }, T);
+        int fleet = w.Host.Fleets.AddFleet(Side.Empire, "E", new[] { "Mandate" }, T);
         w.Agent(Piett, T, esp: 60); w.Ch.SetPost(Piett, fleet, CharacterPost.Admiral);
         w.Stub!.Expect(0, 99, 99, 99, 99); // the arriving walk, then the job check's betrayal draw and the success roll
         w.Start(Side.Alliance, MissionKind.Espionage, new[] { Leia }, T);
@@ -102,7 +102,7 @@ public class MissionRollTests
         Assert.Equal((50, 60), (roll.X, roll.Chance));
     }
 
-    // m5-missions MI6 in a game: two Bothan Spies (70 each) against a Probe Droid (detection 0, B2d): x = 70 - 0 - 2 + 1 = 69, p = 45
+    // m5-missions MI6 in a game: two Listeners (70 each) against a Probe Droid (detection 0, B2d): x = 70 - 0 - 2 + 1 = 69, p = 45
     [Fact]
     public void MI6_TwoSpecialForces()
     {
@@ -128,7 +128,7 @@ public class MissionRollTests
         Assert.Equal((101, 25, detected), (roll.X, roll.Chance, roll.Detected));
     }
 
-    // m5-missions MI8: x below -20: the first row, p = 99 (B2a: was 100), the draw is still made. B2d: at the arriving check a Lancer Frigate
+    // m5-missions MI8: x below -20: the first row, p = 99 (B2a: was 100), the draw is still made. B2d: at the arriving check a Writ
     // (detection 30) guards: x = 1 - 30 + 1 = -28; draw 98 detects; the escape duel follows (one draw), no betrayal (job check only)
     [Fact]
     public void MI8_NoRowStillDraws()
@@ -136,7 +136,7 @@ public class MissionRollTests
         var w = new MissionWorld();
         w.Hold(T, Side.Empire, 0);
         w.Agent(Leia, H, esp: 1);
-        w.Host.Fleets.AddFleet(Side.Empire, "E", new[] { "Lancer Frigate" }, T);
+        w.Host.Fleets.AddFleet(Side.Empire, "E", new[] { "Writ" }, T);
         w.Stub!.Expect(0, 99, 98, 0);
         w.Start(Side.Alliance, MissionKind.Espionage, new[] { Leia }, T);
         w.Run(5);
@@ -166,7 +166,7 @@ public class MissionRollTests
         Assert.Single(w.Events<MissionMemberRoll>());
     }
 
-    // m5-missions MI10: two guards (B2d: Guerrillas on the Alliance planet, detection 0), x = 61, p = 45; draws 70, 44: A not, B detects; draw 10:
+    // m5-missions MI10: two guards (B2d: Strikers on the Alliance planet, detection 0), x = 61, p = 45; draws 70, 44: A not, B detects; draw 10:
     // one draw, A detects. The foiled handling then makes Piett's escape duel against one of the two guards (a pick draw, then the duel draw).
     [Theory]
     [InlineData(new[] { 70, 44 }, 2, 1)]
@@ -230,7 +230,7 @@ public class MissionRollTests
         Assert.Equal((inf, b, false), w.Events<MissionDuel>().Select(e => (e.Member, e.Guard, e.Escaped)).Single());
     }
 
-    // m5-missions MI13 (B2a): one guard (a Probe Droid, B2d), two decoys (60 and 55): one pick k = rand(0..1) = 1 (the second decoy, Guerrillas), then one roll 10:
+    // m5-missions MI13 (B2a): one guard (a Probe Droid, B2d), two decoys (60 and 55): one pick k = rand(0..1) = 1 (the second decoy, Strikers), then one roll 10:
     // decoyed after two draws (pick, roll). Before B2a every decoy was tried in turn.
     [Fact]
     public void MI13_SecondDecoySucceeds()
@@ -440,7 +440,7 @@ public class MissionRollTests
         Assert.True(w.Host.IsExplored(T, Side.Alliance)); // the fog's Recon reveal
     }
 
-    // A Sabotage team of Leia and Han (espionage 50, combat 50) flies from H to T, which has three facilities and (B2d) one Imperial Probe Droid on
+    // A Sabotage team of Leia and Han (espionage 50, combat 50) flies from H to T, which has three facilities and (B2d) one Speculators on
     // the planet as its guard (detection 0, no commander).
     private static (MissionWorld W, List<int> Exposed) SabotageWorld(int[] rolls, bool decoy, bool defender = true, bool hooks = true, bool infiltratorMember = false)
     {
@@ -559,7 +559,7 @@ public class MissionRollTests
         var w = new MissionWorld();
         w.Hold(T, Side.Alliance, 100);
         w.Agent(Leia, H, dip: 100);
-        w.Host.Fleets.AddFleet(Side.Empire, "E", new[] { "Imperial Star Destroyer" }, T);
+        w.Host.Fleets.AddFleet(Side.Empire, "E", new[] { "Mandate" }, T);
         int calls = 0;
         w.M.OnTeamExposed = (_, _, _, _) => calls++;
         w.Start(Side.Alliance, MissionKind.Diplomacy, new[] { Leia }, T);
@@ -578,7 +578,7 @@ public class MissionRollTests
         var w = new MissionWorld(new MissionParams { MissionGuardChecks = false });
         w.Hold(T, Side.Empire, 0);
         w.Agent(Leia, T, esp: 50);
-        w.Host.Fleets.AddFleet(Side.Empire, "E", new[] { "Imperial Star Destroyer" }, T);
+        w.Host.Fleets.AddFleet(Side.Empire, "E", new[] { "Mandate" }, T);
         int from = w.Stub!.Requests.Count;
         w.Start(Side.Alliance, MissionKind.Espionage, new[] { Leia }, T);
         w.Game.Step();
@@ -587,7 +587,7 @@ public class MissionRollTests
         var on = new MissionWorld();
         on.Hold(T, Side.Empire, 0);
         on.Agent(Leia, T, esp: 50);
-        on.Host.Fleets.AddFleet(Side.Empire, "E", new[] { "Imperial Star Destroyer" }, T);
+        on.Host.Fleets.AddFleet(Side.Empire, "E", new[] { "Mandate" }, T);
         on.Stub!.Expect(0, 99, 99);
         from = on.Stub.Requests.Count;
         on.Start(Side.Alliance, MissionKind.Espionage, new[] { Leia }, T);

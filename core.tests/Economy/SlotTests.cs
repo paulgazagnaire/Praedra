@@ -29,11 +29,11 @@ public class SlotTests
 
     // m2-slots-and-resources S2
     [Theory]
-    [InlineData("Kuat", 15, 6)]
-    [InlineData("Coruscant", 15, 4)]
-    [InlineData("Corellia", 14, 7)]
-    [InlineData("Kessel", 6, 6)]
-    [InlineData("Hoth", 2, 1)]
+    [InlineData("Navalia", 15, 6)]
+    [InlineData("Charter", 15, 4)]
+    [InlineData("Classis", 14, 7)]
+    [InlineData("The Lantern", 6, 6)]
+    [InlineData("The Thaw", 2, 1)]
     public void S2_NamedSystemsHaveTheirSlots(string system, int energy, int raw)
     {
         var w = new EcoWorld();
@@ -46,9 +46,9 @@ public class SlotTests
     public void S3_FullSystemRejectsA16thFacility()
     {
         var w = new EcoWorld();
-        for (int i = 0; i < 15; i++) w.Eco.AddFacility("Kuat", i % 2 == 0 ? FacilityKind.Refinery : FacilityKind.Kdy150);
-        Assert.Equal("NoSlot", w.Eco.CheckPlace("Kuat", FacilityKind.OrbitalShipyard));
-        Assert.Equal("NoSlot", w.Eco.CheckPlace("Kuat", FacilityKind.Mine));
+        for (int i = 0; i < 15; i++) w.Eco.AddFacility("Navalia", i % 2 == 0 ? FacilityKind.Refinery : FacilityKind.Kdy150);
+        Assert.Equal("NoSlot", w.Eco.CheckPlace("Navalia", FacilityKind.OrbitalShipyard));
+        Assert.Equal("NoSlot", w.Eco.CheckPlace("Navalia", FacilityKind.Mine));
     }
 
     // m2-slots-and-resources S4 (a reserved delivery counts as used)
@@ -56,12 +56,12 @@ public class SlotTests
     public void S4_KesselMineNeedsFreeRawAndEnergy()
     {
         var w = new EcoWorld();
-        for (int i = 0; i < 5; i++) w.Mine("Kessel");
-        Assert.Null(w.Eco.CheckPlace("Kessel", FacilityKind.Mine));
-        w.Mine("Kessel", completed: false); // accepted order: slot reserved at once
-        Assert.Equal("NoSlot", w.Eco.CheckPlace("Kessel", FacilityKind.Mine));
-        Assert.Equal(0, w.Eco.FreeEnergy("Kessel"));
-        Assert.Equal(0, w.Eco.FreeRaw("Kessel"));
+        for (int i = 0; i < 5; i++) w.Mine("The Lantern");
+        Assert.Null(w.Eco.CheckPlace("The Lantern", FacilityKind.Mine));
+        w.Mine("The Lantern", completed: false); // accepted order: slot reserved at once
+        Assert.Equal("NoSlot", w.Eco.CheckPlace("The Lantern", FacilityKind.Mine));
+        Assert.Equal(0, w.Eco.FreeEnergy("The Lantern"));
+        Assert.Equal(0, w.Eco.FreeRaw("The Lantern"));
     }
 
     // m2-slots-and-resources S5
@@ -70,16 +70,16 @@ public class SlotTests
     {
         var w = new EcoWorld();
         w.Stub!.Expect(0, 3, 2); // the mine's and refinery's first-cycle draws have other ranges
-        w.Hold("Kessel", Side.Empire);
-        w.Eco.SetSlots("Kessel", 3, 3);
-        w.Mine("Kessel", id: 5); w.Refinery("Kessel", id: 6);
-        w.Eco.AddFacility("Kessel", FacilityKind.OrbitalShipyard, id: 7);
-        w.Eco.AddFacility("Kessel", FacilityKind.LnrSeriesI, id: 8);
-        w.InStep(ctx => w.Eco.EnforceCapacity(ctx, "Kessel"));
+        w.Hold("The Lantern", Side.Empire);
+        w.Eco.SetSlots("The Lantern", 3, 3);
+        w.Mine("The Lantern", id: 5); w.Refinery("The Lantern", id: 6);
+        w.Eco.AddFacility("The Lantern", FacilityKind.OrbitalShipyard, id: 7);
+        w.Eco.AddFacility("The Lantern", FacilityKind.LnrSeriesI, id: 8);
+        w.InStep(ctx => w.Eco.EnforceCapacity(ctx, "The Lantern"));
         w.Run(1);
         Assert.Equal(new[] { (0, 3) }, w.Stub.Requests.Where(r => r.Max == 3).ToArray());
         var e = Assert.Single(w.Events<FacilityDestroyed>());
-        Assert.Equal((7, "Kessel", DestroyReason.OverEnergy), (e.Facility, e.System, e.Reason));
+        Assert.Equal((7, "The Lantern", DestroyReason.OverEnergy), (e.Facility, e.System, e.Reason));
         Assert.Null(w.Eco.Find(7));
         Assert.Equal(0, w.Eco.Refined(Side.Empire)); // no refund
     }
@@ -90,9 +90,9 @@ public class SlotTests
     {
         var w = new EcoWorld();
         w.Stub!.Expect(0, 1, 1);
-        w.Eco.SetSlots("Kessel", 4, 1);
-        w.Mine("Kessel", id: 1); w.Mine("Kessel", id: 2);
-        w.InStep(ctx => w.Eco.EnforceCapacity(ctx, "Kessel"));
+        w.Eco.SetSlots("The Lantern", 4, 1);
+        w.Mine("The Lantern", id: 1); w.Mine("The Lantern", id: 2);
+        w.InStep(ctx => w.Eco.EnforceCapacity(ctx, "The Lantern"));
         w.Run(1);
         Assert.Single(w.Stub.Requests, (0, 1));
         var e = Assert.Single(w.Events<FacilityDestroyed>());
@@ -113,9 +113,9 @@ public class SlotTests
     [Fact]
     public void S7_RawPlusIncidentAppliesAndRearmsTimer()
     {
-        var w = IncidentWorld("Coruscant", 62, 99, out _);
+        var w = IncidentWorld("Charter", 62, 99, out _);
         w.Run(1);
-        Assert.Equal(5, w.Eco.SlotsOf("Coruscant").Raw);
+        Assert.Equal(5, w.Eco.SlotsOf("Charter").Raw);
         var e = Assert.Single(w.Events<ResourceIncident>());
         Assert.Equal((SlotChange.RawPlus, 4, 5), (e.Change, e.Before, e.After));
         Assert.Equal(1 + 100, w.E.ResourceDue); // T + 100
@@ -126,9 +126,9 @@ public class SlotTests
     [Fact]
     public void S8_EnergyPlusAtTheCapDoesNothingButStillRearms()
     {
-        var w = IncidentWorld("Coruscant", 80, 99, out _);
+        var w = IncidentWorld("Charter", 80, 99, out _);
         w.Run(1);
-        Assert.Equal(15, w.Eco.SlotsOf("Coruscant").Energy);
+        Assert.Equal(15, w.Eco.SlotsOf("Charter").Energy);
         Assert.Empty(w.E.Slots);
         var e = Assert.Single(w.Events<ResourceIncident>());
         Assert.Equal(SlotChange.None, e.Change);
@@ -139,19 +139,19 @@ public class SlotTests
     [Fact]
     public void S9_RawMinusWithoutMineDoesNothing()
     {
-        var w = IncidentWorld("Coruscant", 10, 0, out _);
+        var w = IncidentWorld("Charter", 10, 0, out _);
         w.Run(1);
-        Assert.Equal(4, w.Eco.SlotsOf("Coruscant").Raw);
+        Assert.Equal(4, w.Eco.SlotsOf("Charter").Raw);
         Assert.Equal(SlotChange.None, Assert.Single(w.Events<ResourceIncident>()).Change);
     }
 
     [Fact]
     public void S9b_RawMinusWithAMineLowersRaw()
     {
-        var w = IncidentWorld("Coruscant", 10, 0, out _);
-        w.Mine("Coruscant");
+        var w = IncidentWorld("Charter", 10, 0, out _);
+        w.Mine("Charter");
         w.Run(1);
-        Assert.Equal(3, w.Eco.SlotsOf("Coruscant").Raw);
+        Assert.Equal(3, w.Eco.SlotsOf("Charter").Raw);
         Assert.Empty(w.Events<FacilityDestroyed>()); // 1 mine <= raw 3
     }
 
@@ -159,12 +159,12 @@ public class SlotTests
     [Fact]
     public void S10_EnergyMinusThenOverCapacityDestroysTwoWithTwoDraws()
     {
-        var w = IncidentWorld("Kessel", 30, 0, out _);
-        w.Eco.SetSlots("Kessel", 2, 1);
-        w.Refinery("Kessel", id: 1); w.Eco.AddFacility("Kessel", FacilityKind.Kdy150, id: 2); w.Eco.AddFacility("Kessel", FacilityKind.LnrSeriesI, id: 3);
+        var w = IncidentWorld("The Lantern", 30, 0, out _);
+        w.Eco.SetSlots("The Lantern", 2, 1);
+        w.Refinery("The Lantern", id: 1); w.Eco.AddFacility("The Lantern", FacilityKind.Kdy150, id: 2); w.Eco.AddFacility("The Lantern", FacilityKind.LnrSeriesI, id: 3);
         w.Stub!.Expect(0, 2, 0).Expect(0, 1, 0);
         w.Run(1);
-        Assert.Equal(1, w.Eco.SlotsOf("Kessel").Energy);
+        Assert.Equal(1, w.Eco.SlotsOf("The Lantern").Energy);
         var destroyed = w.Events<FacilityDestroyed>();
         Assert.Equal(2, destroyed.Count);
         Assert.All(destroyed, d => Assert.Equal(DestroyReason.OverEnergy, d.Reason));
@@ -178,8 +178,8 @@ public class SlotTests
     public void S11_DisasterDestroysFacilitiesBelowTenPercentAndKeepsSlots()
     {
         var w = new EcoWorld(incidents: true);
-        w.Stub!.Expect(0, 554, EcoWorld.IndexOf("Kessel")).Queue();
-        w.Mine("Kessel", id: 3); w.Refinery("Kessel", id: 4); w.Eco.AddFacility("Kessel", FacilityKind.Kdy150, id: 9);
+        w.Stub!.Expect(0, 554, EcoWorld.IndexOf("The Lantern")).Queue();
+        w.Mine("The Lantern", id: 3); w.Refinery("The Lantern", id: 4); w.Eco.AddFacility("The Lantern", FacilityKind.Kdy150, id: 9);
         // per-facility rolls are (0,99): 5, 50, 9
         w.Stub.Expect(0, 99, 5, 50, 9);
         w.E.DisasterDue = 1;
@@ -190,7 +190,7 @@ public class SlotTests
         Assert.Equal(new[] { 3, 9 }, w.Events<FacilityDestroyed>().Select(e => e.Facility).ToArray());
         Assert.All(w.Events<FacilityDestroyed>(), e => Assert.Equal(DestroyReason.Disaster, e.Reason));
         Assert.NotNull(w.Eco.Find(4));
-        var s = w.Eco.SlotsOf("Kessel");
+        var s = w.Eco.SlotsOf("The Lantern");
         Assert.Equal((6, 6), (s.Energy, s.Raw));
         Assert.Empty(w.E.Slots);
         Assert.True(w.E.DisasterDue > 1);
@@ -201,8 +201,8 @@ public class SlotTests
     public void S12_ResourceIncidentIsFullyResolvedBeforeTheDisaster()
     {
         var w = new EcoWorld(incidents: true);
-        w.Eco.AddFacility("Hoth", FacilityKind.Kdy150, id: 1);
-        w.Stub!.Queue(EcoWorld.IndexOf("Coruscant"), 62, 10, EcoWorld.IndexOf("Hoth"), 50, 10);
+        w.Eco.AddFacility("The Thaw", FacilityKind.Kdy150, id: 1);
+        w.Stub!.Queue(EcoWorld.IndexOf("Charter"), 62, 10, EcoWorld.IndexOf("The Thaw"), 50, 10);
         w.E.ResourceDue = 1; w.E.DisasterDue = 1;
         w.Run(1);
         Assert.Equal(new[] { (0, 554), (0, 99), (0, 499), (0, 554), (0, 99), (0, 399) }, w.Stub.Requests.ToArray());

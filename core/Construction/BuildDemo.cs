@@ -14,9 +14,9 @@ namespace Praedra.Core.Construction;
 /// </summary>
 public sealed class BuildDemo
 {
-    public const string HomeSystem = "Coruscant";
-    public const string NearSystem = "Corellia";
-    public const string FarSystem = "Hoth";
+    public const string HomeSystem = "Charter";
+    public const string NearSystem = "Classis";
+    public const string FarSystem = "The Thaw";
 
     public required Game Game { get; init; }
     public required FleetModule Fleets { get; init; }
@@ -60,10 +60,10 @@ public sealed class BuildDemo
         string at = path[1];
         int atIndex = galaxy.Systems.ToList().FindIndex(s => s.Name == at);
         string away = galaxy.NearOf(atIndex).Select(n => galaxy.Systems[n].Name).Where(n => !path.Contains(n)).OrderBy(n => n, StringComparer.Ordinal).First();
-        int picket = fleets.AddFleet(Side.Alliance, "Rebel Picket", new[] { "Corellian Corvette" }, at);
+        int picket = fleets.AddFleet(Side.Alliance, "Rebel Picket", new[] { "Dodger" }, at);
 
-        build.SubmitBuild(Side.Empire, HomeSystem, YardFamily.Shipyard, "TIE Fighter", 2);
-        build.SubmitBuild(Side.Empire, HomeSystem, YardFamily.Training, "Stormtrooper Regiment", 2, FarSystem);
+        build.SubmitBuild(Side.Empire, HomeSystem, YardFamily.Shipyard, "Gleaner", 2);
+        build.SubmitBuild(Side.Empire, HomeSystem, YardFamily.Training, "Pacifiers", 2, FarSystem);
         build.SubmitBuild(Side.Empire, HomeSystem, YardFamily.Construction, "Mine", 1, NearSystem);
         return new BuildDemo
         {

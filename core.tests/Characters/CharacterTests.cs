@@ -275,7 +275,7 @@ public class CharacterTests
     [Fact]
     public void CH11_AttachRejections_ChewbaccaAsPassenger()
     {
-        // The Empire ISD at Yavin starts a battle on the Step. Ruleset = Classic set explicitly (battle DEFAULT New since 2026-10-18): in Classic
+        // The Empire ISD at The Shoal starts a battle on the Step. Ruleset = Classic set explicitly (battle DEFAULT New since 2026-10-18): in Classic
         // both corvettes retreat together; in New the ISD's tractor beam holds fleet f's corvette and destroys it (m4-retreat-damage-repair
         // TractorBeamsHoldRetreat), which dissolves the fleet and detaches Chewbacca. This test checks the attach rules, not the battle.
         var w = new CharWorld(settings: new GameSettings { IncidentsEnabled = false, DebugOrdersEnabled = true,
@@ -505,7 +505,7 @@ public class CharacterTests
         {
             Assert.Single(w.Events<CharacterInjured>());
             Assert.Empty(w.Events<CharacterKilled>());
-            // B2e moved: the Kill becomes the Hurt roll (p = 1 for Luke's effective combat 135; the stub's 0 hits, size 0 + 0 + 1); Yavin is
+            // B2e moved: the Kill becomes the Hurt roll (p = 1 for Luke's effective combat 135; the stub's 0 hits, size 0 + 0 + 1); The Shoal is
             // nobody's, so he does not heal
             Assert.Equal((CharacterStatus.Injured, 1), (luke.Status, luke.Injury));
             w.StepWith("5.2", ctx => w.Ch.Capture(ctx, luke, Side.Empire, null, CharacterCause.Mission));
@@ -672,7 +672,7 @@ public class CharacterTests
         w.Add(Piett, Hoth);
         Assert.Null(w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Empire, Piett, Hoth)));
         // (B5a, 2026-10-17) under ControlRule = Derived the holder follows the regiments: an Alliance regiment lands on the empty world (B5a section 1)
-        w.StepWith("5.2", ctx => w.Host.Control.DebugApplyTroops(ctx, Hoth, Side.Alliance, "Alliance Army Regiment", 1));
+        w.StepWith("5.2", ctx => w.Host.Control.DebugApplyTroops(ctx, Hoth, Side.Alliance, "Militia", 1));
         Assert.Equal(Side.Alliance, w.Host.Control.HolderOf(Hoth));
         var pv = Assert.Single(w.Events<PostVacated>());
         Assert.Equal((Piett, PostKind.SystemGeneral, CharacterCause.HolderChanged), (pv.Character, pv.Post, pv.Cause));
@@ -788,8 +788,8 @@ public class CharacterTests
         var han = ch.Get(Han)!;
         var fleet = h.Game.State.Fleets.Values.FirstOrDefault(f => f.Side == Side.Alliance && f.At == ch.LocationOf(han));
         if (fleet != null) h.Game.Submit(seq => new AttachCharacterOrder(seq, Side.Alliance, Han, fleet.Id, CharacterPost.General));
-        h.Game.Submit(seq => new MoveCharacterOrder(seq, Side.Alliance, Wedge, "Hoth"));
-        h.Game.Submit(seq => new MoveCharacterOrder(seq, Side.Empire, Vader, "Coruscant"));
+        h.Game.Submit(seq => new MoveCharacterOrder(seq, Side.Alliance, Wedge, "The Thaw"));
+        h.Game.Submit(seq => new MoveCharacterOrder(seq, Side.Empire, Vader, "Charter"));
     }
 
     // m5-characters-and-force CH34
@@ -828,7 +828,7 @@ public class CharacterTests
         Assert.Equal(CharacterReject.Attached, w.Try(seq => new MoveCharacterOrder(seq, Side.Alliance, Ackbar, Hoth)));
         Assert.Equal(CharacterReject.AlreadyAttached, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Alliance, Ackbar, Yavin)));
         Assert.Equal(RejectReason.AlreadyThere, w.Try(seq => new MoveCharacterOrder(seq, Side.Alliance, Wedge, Yavin)));
-        Assert.Equal(CharacterReject.NoPath, w.Try(seq => new MoveCharacterOrder(seq, Side.Alliance, Wedge, "Nowhere")));
+        Assert.Equal(CharacterReject.NoPath, w.Try(seq => new MoveCharacterOrder(seq, Side.Alliance, Wedge, "No Such Place")));
         Assert.Equal(CharacterReject.UnknownCharacter, w.Try(seq => new MoveCharacterOrder(seq, Side.Alliance, 999, Hoth)));
         Assert.Equal(CharacterReject.UnknownCharacter, w.Try(seq => new MoveCharacterOrder(seq, Side.Alliance, Luke, Hoth))); // not placed
         Assert.Null(w.Try(seq => new MoveCharacterOrder(seq, Side.Alliance, Wedge, Hoth)));

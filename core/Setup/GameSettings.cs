@@ -21,8 +21,8 @@ public sealed record GameSettings
     /// <summary>Numbers and switches of the Anchored deal. Null = the sheet's DEFAULTs.</summary>
     public DealParams? Deal { get; init; }
     /// <summary>
-    /// Place the Classic fixed Rebel HQ forces (<c>hq_unit</c> rows of new-game-forces.csv: 2 Alliance Army, 1 Alliance Fleet Regiment, 4 X-wing,
-    /// 2 Y-wing, standing on the HQ system) at setup. DEFAULT off: the Classic setup (part B of batch B4) turns it on together with
+    /// Place the Classic fixed Rebel HQ forces (<c>hq_unit</c> rows of new-game-forces.csv: 2 Alliance Army, 1 Deckhands, 4 Swift,
+    /// 2 Plough, standing on the HQ system) at setup. DEFAULT off: the Classic setup (part B of batch B4) turns it on together with
     /// <see cref="MinGarrison"/> 0; on the hand-made forces table alone the Classic garrison rule only makes the Empire richer.
     /// rule: m5-setup-and-victory §P6, §P7 ([EXE-own] 0x51ad90; B4 §7 step 2).
     /// </summary>

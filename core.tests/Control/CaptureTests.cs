@@ -59,8 +59,8 @@ internal sealed class CtlWorld
 // m2-control-and-capture, tests C1 to C19. C16 is an M6 test (the AI); here C14 checks that the switch is stored, saved and on by default.
 public class CaptureTests
 {
-    private const string Emp = "Corellia";  // Empire-held in most tests
-    private const string Ally = "Bespin";   // Alliance-held in most tests
+    private const string Emp = "Classis";  // Empire-held in most tests
+    private const string Ally = "Drift Harbour";   // Alliance-held in most tests
 
     private static readonly Type[] ControlKinds = { typeof(SystemCaptured), typeof(FacilityTransferred), typeof(FacilityRemoved), typeof(UnfinishedFacilityCancelled), typeof(UprisingEnded) };
 
@@ -170,12 +170,12 @@ public class CaptureTests
         var w = new CtlWorld(construction: true);
         w.Hold(Emp, Side.Empire, 80);
         int yard = w.Eco.AddFacility(Emp, FacilityKind.OrbitalShipyard);
-        int army = w.Eco.AddObject(Side.Empire, "Imperial Army Regiment", Emp);                          // completed regiment of the old holder: destroyed (B5a)
+        int army = w.Eco.AddObject(Side.Empire, "Tranches", Emp);                          // completed regiment of the old holder: destroyed (B5a)
         w.Eco.SetPools(Side.Empire, 0, 1000);
-        w.Build!.GrantResearch(Side.Empire, "Imperial Star Destroyer");
-        w.Build.SubmitBuild(Side.Empire, Emp, YardFamily.Shipyard, "Imperial Star Destroyer", 1);
+        w.Build!.GrantResearch(Side.Empire, "Mandate");
+        w.Build.SubmitBuild(Side.Empire, Emp, YardFamily.Shipyard, "Mandate", 1);
         w.Run(1);
-        var isd = w.Eco.Objects.Single(o => o.Class == "Imperial Star Destroyer").Id;
+        var isd = w.Eco.Objects.Single(o => o.Class == "Mandate").Id;
         Assert.NotNull(w.Build.ProjectAt(Emp, YardFamily.Shipyard));
         int refinedBefore = w.Eco.Refined(Side.Empire);
         w.Capture(Side.Alliance, Emp);
@@ -327,7 +327,7 @@ public class CaptureTests
     {
         var w = new CtlWorld();
         w.Hold(Emp, Side.Empire, 80);
-        w.Fleets.AddFleet(Side.Alliance, "Picket", new[] { "Corellian Corvette" }, Emp);
+        w.Fleets.AddFleet(Side.Alliance, "Picket", new[] { "Dodger" }, Emp);
         w.Run(1);
         Assert.Equal(Side.Alliance, w.Game.State.Blockades[Emp]);
         w.Capture(Side.Alliance, Emp);
@@ -345,7 +345,7 @@ public class CaptureTests
     {
         var w = new CtlWorld();
         w.Hold(Emp, Side.Empire, 80);
-        w.Fleets.AddFleet(Side.Empire, "Home", new[] { "Imperial Star Destroyer" }, Emp);
+        w.Fleets.AddFleet(Side.Empire, "Home", new[] { "Mandate" }, Emp);
         w.Run(1);
         Assert.Empty(w.Game.State.Blockades);
         w.Capture(Side.Alliance, Emp);
@@ -487,7 +487,7 @@ public class CaptureTests
             w.S.W.Mine(Emp); w.S.W.Refinery(Emp); w.Eco.AddFacility(Emp, FacilityKind.DeathStarShield);
             w.Eco.AddFacility(Emp, FacilityKind.Mine, completed: false);
             w.S.Uprising(Emp, Side.Empire, erosionDue: 10, incidentDue: 12);
-            w.Fleets.AddFleet(Side.Alliance, "Picket", new[] { "Corellian Corvette" }, Emp);
+            w.Fleets.AddFleet(Side.Alliance, "Picket", new[] { "Dodger" }, Emp);
             int d = 0;
             w.InAssaultSlot(ctx =>
             {
@@ -533,7 +533,7 @@ public class CaptureTests
 
         w.Ctl.DebugOrdersEnabled = true;
         w.Capture(Side.Empire, Emp);
-        w.Ctl.SubmitDebugSetHolder(Side.Empire, "Nowhere", Side.Empire);
+        w.Ctl.SubmitDebugSetHolder(Side.Empire, "No Such Place", Side.Empire);
         w.Run(1);
         Assert.Equal(new[] { RejectReason.DebugDisabled, RejectReason.AlreadyHolder, RejectReason.UnknownSystem },
             w.Events<OrderRejected>().Select(r => r.Reason).ToArray());
@@ -562,8 +562,8 @@ public class CaptureTests
         w.S.W.Mine(Ally); w.S.W.Refinery(Ally);
         w.Eco.AddFacility(Emp, FacilityKind.OrbitalShipyard);
         w.S.Regiments(Emp, Side.Empire, SupWorld.ArmyOf(Side.Empire), 2);
-        w.Fleets.AddFleet(Side.Alliance, "Raiders", new[] { "Corellian Corvette" }, Emp);
-        w.Fleets.AddFleet(Side.Empire, "Hammer", new[] { "Imperial Star Destroyer" }, Ally);
+        w.Fleets.AddFleet(Side.Alliance, "Raiders", new[] { "Dodger" }, Emp);
+        w.Fleets.AddFleet(Side.Empire, "Hammer", new[] { "Mandate" }, Ally);
         return w;
     }
 
@@ -595,7 +595,7 @@ public class CaptureTests
         w.Capture(Side.Alliance, Emp);
         w.Run(1);
 
-        // fleets: the owner changed, the blockade flag follows, the old holder's fleet at Corellia is not there
+        // fleets: the owner changed, the blockade flag follows, the old holder's fleet at Classis is not there
         Assert.Equal(Side.Alliance, w.Fleets.OwnerOf(Emp));
         Assert.False(w.Game.State.Blockades.ContainsKey(Emp));
         // economy: the facilities are the Alliance's, capacity moved, no negative pool
@@ -608,7 +608,7 @@ public class CaptureTests
         Assert.Equal(aAtCapture, w.A(Emp)); // the 40 blockaded days may have moved it; the capture itself does not
         Assert.DoesNotContain(w.Events<SupportChanged>(), e => e.System == Emp && e.Day == 41);
         Assert.False(w.S.Sup.IsUprising(Emp));
-        // the mines now produce for the Alliance: run on and see Alliance-side output from Corellia
+        // the mines now produce for the Alliance: run on and see Alliance-side output from Classis
         w.Run(400);
         Assert.Contains(w.Events<ResourceProduced>(), e => e.System == Emp && e.Day > 41 && e.Controller == Side.Alliance);
         Assert.DoesNotContain(w.Events<ResourceProduced>(), e => e.System == Emp && e.Day > 41 && e.Controller == Side.Empire);
@@ -647,21 +647,21 @@ public class CaptureTests
 
     // ---------------------------------------------------------------- integration with construction: a running yard project and an inbound delivery
 
-    // v6 re-pin 2026-10-24: Far was Corellia (one great-route leg, 7 days at speed 100, 5 at 80); on the spiral map Brentaal IV takes
-    // the same days from Coruscant over two legs (a free jump to Rhinnal, then a minor-route leg).
-    private const string Home = "Coruscant", Far = "Brentaal IV";
+    // v6 re-pin 2026-10-24: Far was Classis (one great-route leg, 7 days at speed 100, 5 at 80); on the spiral map Cambium takes
+    // the same days from Charter over two legs (a free jump to Remedium, then a minor-route leg).
+    private const string Home = "Charter", Far = "Cambium";
 
     private static CtlWorld BuildScenario()
     {
         var w = new CtlWorld(stub: false, seed: 21, construction: true);
-        w.Hold(Home, Side.Empire, 100); w.Hold(Far, Side.Empire, 100); // A = 0 at Corellia: a hostile world for an Alliance holder
+        w.Hold(Home, Side.Empire, 100); w.Hold(Far, Side.Empire, 100); // A = 0 at Classis: a hostile world for an Alliance holder
         w.Eco.AddFacility(Home, FacilityKind.ConstructionYard);
         w.Eco.AddFacility(Far, FacilityKind.OrbitalShipyard);
         w.Eco.SetPools(Side.Empire, 0, 2000);
-        w.Build!.GrantResearch(Side.Empire, "Imperial Star Destroyer");
-        w.Build.SubmitBuild(Side.Empire, Home, YardFamily.Construction, "Mine", 1, Far);                // delivery will fly Coruscant to Corellia
-        w.Build.SubmitBuild(Side.Empire, Far, YardFamily.Shipyard, "Imperial Star Destroyer", 1);        // running yard project at Corellia
-        w.Fleets.AddFleet(Side.Alliance, "Picket", new[] { "Corellian Corvette" }, Far);                  // blockades Corellia
+        w.Build!.GrantResearch(Side.Empire, "Mandate");
+        w.Build.SubmitBuild(Side.Empire, Home, YardFamily.Construction, "Mine", 1, Far);                // delivery will fly Charter to Classis
+        w.Build.SubmitBuild(Side.Empire, Far, YardFamily.Shipyard, "Mandate", 1);        // running yard project at Classis
+        w.Fleets.AddFleet(Side.Alliance, "Picket", new[] { "Dodger" }, Far);                  // blockades Classis
         return w;
     }
 

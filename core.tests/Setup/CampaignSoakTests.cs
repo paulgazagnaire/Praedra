@@ -174,7 +174,7 @@ public class CampaignSoakTests
 
     // ---------------------------------------------------------------- the settings reach the modules through the host
 
-    // m2-uprisings-and-garrison §Garrison G and the check: Taanab holds 2 Imperial Fleet Regiments for a requirement of 2.
+    // m2-uprisings-and-garrison §Garrison G and the check: Granero holds 2 Imperial Fleet Regiments for a requirement of 2.
     // Classic counts 1.0 each (enough); New weighs them 0.6 each (1.2 < 2: an uprising on the first day).
     [Fact]
     public void RulesetSettingChangesTheOutcomeAtTaanab()
@@ -183,7 +183,7 @@ public class CampaignSoakTests
         {
             var c = TestCampaign.New(1, CampaignHarness.Settings(r));
             c.Step();
-            return c.Host.Support.IsUprising("Taanab");
+            return c.Host.Support.IsUprising("Granero");
         }
         Assert.False(Rises(GarrisonRuleset.Classic));
         Assert.True(Rises(GarrisonRuleset.New));
@@ -199,13 +199,13 @@ public class CampaignSoakTests
         var asNew = TestCampaign.Load(c.Host.Save(), CampaignHarness.Settings(GarrisonRuleset.New));
         Assert.Equal(GarrisonRuleset.New, asNew.Host.Support.Ruleset);
         asNew.Step();
-        Assert.True(asNew.Host.Support.IsUprising("Taanab"));
+        Assert.True(asNew.Host.Support.IsUprising("Granero"));
         var asClassic = TestCampaign.Load(c.Host.Save());
         asClassic.Step();
-        Assert.False(asClassic.Host.Support.IsUprising("Taanab"));
+        Assert.False(asClassic.Host.Support.IsUprising("Granero"));
     }
 
-    // m4-battle-classic §1: the relief fleet arriving at Kinyen on day 300 meets the Empire's interdiction fleet and the contact is a real
+    // m4-battle-classic §1: the relief fleet arriving at Tierra Larga on day 300 meets the Empire's interdiction fleet and the contact is a real
     // Classic battle (invariants stay green on every day of the checked run). The Interdictor's gravity well forbids a retreat.
     [Theory, MemberData(nameof(Rulesets))]
     public void KinyenContactIsARealClassicBattle(GarrisonRuleset r)
@@ -224,9 +224,9 @@ public class CampaignSoakTests
         {
             // B7 re-expectation 2026-10-19: the day-200 scripted bombardment now draws the Classic way (B7-bombardment §8: one return-fire pick instead of
             // four hits' picks and dice), so on this ruleset the game generator reaches the day-313 battle in another state and the same forces fight
-            // another battle: the Empire retreats (its Victory Destroyer is lost to NoHyperdrive) and the Alliance holds the field. Before B7 the
+            // another battle: the Empire retreats (its Decree is lost to NoHyperdrive) and the Alliance holds the field. Before B7 the
             // Alliance was Annihilated after a GravityWell refusal, as in the Classic row above (which still shows the gravity well).
-            // v6 re-pin 2026-10-24: on the spiral map the seeded game reaches the Kinyen battle in another state again, and it is the battle this test
+            // v6 re-pin 2026-10-24: on the spiral map the seeded game reaches the Tierra Larga battle in another state again, and it is the battle this test
             // was written for: the Interdictor's gravity well refuses the Alliance's retreat, the Alliance is Annihilated, the Empire holds the field.
             Assert.Equal((Praedra.Core.Battle.BattleOutcome.Annihilated, Praedra.Core.Battle.BattleOutcome.Victorious), (end.Result.Alliance, end.Result.Empire));
             Assert.Contains(run.Events.OfType<Praedra.Core.Battle.RetreatRefused>(), x => x.Reason == Praedra.Core.Battle.RetreatRefusal.GravityWell);
@@ -234,7 +234,7 @@ public class CampaignSoakTests
     }
 
     // m4-battle-classic §1 (the gravity-well half of the test above, New ruleset): with the five B7 bombardment switches off the day-200 bombardment
-    // draws as before B7, so the day-313 Kinyen battle is the one this test was written for: the Interdictor's gravity well refuses the Alliance's
+    // draws as before B7, so the day-313 Tierra Larga battle is the one this test was written for: the Interdictor's gravity well refuses the Alliance's
     // retreat and it is Annihilated. Keeps that check on the New ruleset after B7 re-routed the seeded game (Dev lead, 2026-10-19).
     [Fact]
     public void KinyenContactNewRulesetGravityWellWithPreB7Bombardment()

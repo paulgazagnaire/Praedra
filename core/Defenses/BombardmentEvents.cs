@@ -41,7 +41,7 @@ public sealed record HitWasted(int Index, int Day, string System, int Pick, int 
 public sealed record CollateralHit(int Index, int Day, string System, int Facility, int Defense, int Roll, bool Destroyed)
     : GameEvent(Index, Day, nameof(CollateralHit));
 
-/// <summary>One battery's shot at a bombarding capital ship: Damage = attack x (L / 40 + 1); Ion for a KDY-150, else turbolaser (LNR). rule: B7-bombardment §4.</summary>
+/// <summary>One battery's shot at a bombarding capital ship: Damage = attack x (L / 40 + 1); Ion for a Mordant Lien-150, else turbolaser (LNR). rule: B7-bombardment §4.</summary>
 public sealed record BatteryShot(int Index, int Day, string System, int Facility, int Ship, int Damage, bool Ion)
     : GameEvent(Index, Day, nameof(BatteryShot));
 
@@ -62,7 +62,7 @@ public sealed record ResourceReduced(int Index, int Day, string System, string R
     : GameEvent(Index, Day, nameof(ResourceReduced));
 
 /// <summary>
-/// The batteries that fire back: every completed KDY-150 then every completed LNR (BatteryReturnFire on, emitted before their shots), or with the
+/// The batteries that fire back: every completed Mordant Lien-150 then every completed LNR (BatteryReturnFire on, emitted before their shots), or with the
 /// switch off the m3 hook (every completed battery, id order, after the hits; changes no ship). rule: m3-bombardment §Resolution 6; B7-bombardment §4.
 /// </summary>
 public sealed record BatteryReturnFire(int Index, int Day, string System, ValueList<int> Facilities)
