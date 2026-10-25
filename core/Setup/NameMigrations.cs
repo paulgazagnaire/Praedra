@@ -86,8 +86,15 @@ public sealed class NameMigrations
     /// An identifier (a save's property name, an enum value) with its old words replaced (HandWinsOnHqLost -> HandWinsOnHqLost, Hand ->
     /// Hand). Only text that looks like an identifier is touched, so a name with spaces never is.
     /// </summary>
-    public string CurrentIdentifier(string id) =>
-        _words == null || !IsIdentifier(id) ? id : _words.Replace(id, m => _wordMap[m.Value]);
+    public string CurrentIdentifier(string id)
+    {
+        if (_words == null || !IsIdentifier(id)) return id;
+        string once = _words.Replace(id, m => _wordMap[m.Value]);
+        // QA-47: a word swap can leave an in-between name that has its own identifier row (AlliancePocketsMayEnterCore ->
+        // CollectivePocketsMayEnterCore -> CollectivePocketsMayEnterHeartland); one more pass applies it. No new word is an old one, so a
+        // second pass never renames twice.
+        return once == id ? once : _words.Replace(once, m => _wordMap[m.Value]);
+    }
 
     private static bool IsIdentifier(string s) =>
         s.Length > 0 && (char.IsLetter(s[0]) || s[0] == '_') && s.All(c => char.IsLetterOrDigit(c) || c == '_');
