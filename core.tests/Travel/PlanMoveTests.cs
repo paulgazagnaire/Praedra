@@ -4,7 +4,7 @@ using Praedra.Core.Travel;
 
 namespace Praedra.Core.Tests.Travel;
 
-// m1-travel §Path rule (3) waypoints and known traps, (5) the preview is the path flown. On the v5 galaxy with GameHost.
+// m1-travel §Path rule (3) waypoints and known traps, (5) the preview is the path flown. On the v6 galaxy with GameHost.
 public class PlanMoveTests
 {
     private static (GameHost h, int fleet) Corvette(GameSettings? s = null)
@@ -42,7 +42,9 @@ public class PlanMoveTests
         Assert.DoesNotContain("Coruscant", fast.Path);
         var via = h.PlanMove(Side.Alliance, f, "Hoth", new[] { "Coruscant" });
         Assert.True(via.Ok);
-        Assert.Equal(new[] { "Corellia", "Coruscant" }, via.Path.Take(2));
+        // v6 re-pin 2026-10-24: Corellia is no longer linked to Coruscant; the path flies the router's own way to the waypoint
+        // (Corellia, Gatalenta, Kimanan, Coruscant), then on to Hoth.
+        Assert.Equal(h.PlanMove(Side.Alliance, f, "Coruscant").Path, via.Path.Take(4));
         Assert.Equal("Hoth", via.Path[^1]);
         Assert.True(via.ArrivalDay >= fast.ArrivalDay); // the fastest path was the router's own choice
         long seq = h.Fleets.SubmitMove(Side.Alliance, f, "Hoth", new[] { "Coruscant" });

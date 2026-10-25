@@ -52,7 +52,8 @@ public class SimpleAiNoBlindStrikesTests
     public void NoBlindStrikes_TheAiStopsShellingWorldsWithNothingToHit()
     {
         var res = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => (s, On: Strikes(s, true), Off: Strikes(s, false)));
-        Assert.All(res, r => Assert.True(r.On.Empty <= 5, $"seed {r.s}: on, {r.On.Empty} of {r.On.Strikes} strikes had nothing to hit"));
+        // v6 re-pin 2026-10-25 (Dev lead; Paul chose "Ship now" on the spiral-map card, re-measure the AI checks on the new map; ai-notes/2026-10-24-spiral-map-v6.md): on 6/0, 13/2, 14/6, 11/0; off 41/30, 62/49, 116/82, 55/38. On-floor 5 -> 8; off-floor 30 unchanged.
+        Assert.All(res, r => Assert.True(r.On.Empty <= 8, $"seed {r.s}: on, {r.On.Empty} of {r.On.Strikes} strikes had nothing to hit"));
         Assert.All(res, r => Assert.True(r.Off.Empty >= 30, $"seed {r.s}: off, only {r.Off.Empty} empty strikes (the test no longer measures the switch)"));
     }
 

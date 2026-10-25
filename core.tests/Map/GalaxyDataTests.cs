@@ -10,36 +10,40 @@ public class GalaxyDataTests
     private static Galaxy G => TestData.RealGalaxy;
 
     [Fact]
-    public void G1_RealFilesLoadWithExpectedCounts() // m1-galaxy-data G1 (v5 data, planets/15)
+    public void G1_RealFilesLoadWithExpectedCounts() // m1-galaxy-data G1 (v6 spiral data, planets/16)
     {
+        // v6 re-pin 2026-10-24: the spiral map (planets/16) has 390 links, all great-route links of kind route, no route-inferred.
         Assert.Equal(555, G.Systems.Count);
-        Assert.Equal(377, G.Lanes.Count);
+        Assert.Equal(390, G.Lanes.Count);
         Assert.Equal(64, G.Sectors.Count);
-        Assert.Equal(117, G.Lanes.Count(l => l.Tier == 1));
-        Assert.Equal(260, G.Lanes.Count(l => l.Tier == 2));
+        Assert.Equal(102, G.Lanes.Count(l => l.Tier == 1));
+        Assert.Equal(288, G.Lanes.Count(l => l.Tier == 2));
         Assert.Equal(0, G.Lanes.Count(l => l.Tier == 3));
-        Assert.Equal(95, G.Lanes.Count(l => l.Kind == "route"));
-        Assert.Equal(22, G.Lanes.Count(l => l.Kind == "route-inferred"));
+        Assert.Equal(102, G.Lanes.Count(l => l.Kind == "route"));
+        Assert.Equal(0, G.Lanes.Count(l => l.Kind == "route-inferred"));
+        Assert.Equal(19, G.Lanes.Count(l => l.Kind == "bridge"));
         Assert.Empty(G.Warnings); // check 10: stored lane_count and chokepoint agree with the recomputed values
     }
 
     [Fact]
     public void G2_SectorSizes() // m1-galaxy-data G2
     {
-        Assert.Equal(10, G.Sectors.Max(s => s.Members.Count)); // capped at 10 (Paul 2026-10-16)
+        // v6 re-pin 2026-10-24: the spiral re-cut makes sectors of 8 or 9 (planets/16); the cap stays 10 (Paul 2026-10-16).
+        Assert.True(G.Sectors.Max(s => s.Members.Count) <= GalaxyRules.Default.MaxSectorSize);
         var hist = G.Sectors.GroupBy(s => s.Members.Count).ToDictionary(x => x.Key, x => x.Count());
-        Assert.Equal(new Dictionary<int, int> { [10] = 2, [9] = 37, [8] = 25 }, hist);
+        Assert.Equal(new Dictionary<int, int> { [9] = 41, [8] = 23 }, hist);
         Assert.Equal(553, G.Sectors.Sum(s => s.Members.Count));
     }
 
     [Fact]
-    public void G3_RouteSystems() // m1-galaxy-data G3: 332 systems on a route, the rest reached by free travel only
+    public void G3_RouteSystems() // m1-galaxy-data G3: 358 systems on a route, the rest reached by free travel only
     {
-        Assert.Equal(332, G.Systems.Count(s => G.OnRoute(s.Index)));
-        Assert.Equal(332, G.Systems.Count(s => G.NeighboursOf(s.Index).Count > 0));
+        // v6 re-pin 2026-10-24: 358 on a route (was 332); Yavin is on a route now, Hoth is the off-route example.
+        Assert.Equal(358, G.Systems.Count(s => G.OnRoute(s.Index)));
+        Assert.Equal(358, G.Systems.Count(s => G.NeighboursOf(s.Index).Count > 0));
         Assert.Empty(G.NeighboursOf(G.Get("Ilum").Index));
         Assert.Empty(G.NeighboursOf(G.Get("Csilla").Index));
-        Assert.False(G.OnRoute(G.Get("Yavin").Index));
+        Assert.False(G.OnRoute(G.Get("Hoth").Index));
         Assert.True(G.OnRoute(G.Get("Coruscant").Index));
     }
 
@@ -47,8 +51,8 @@ public class GalaxyDataTests
     public void G4_ChokepointsAndLaneCounts() // m1-galaxy-data G4 (chokepoints per route network)
     {
         var chokes = GalaxyLoader.Chokepoints(G);
-        Assert.Equal(98, chokes.Count);
-        Assert.Equal(45, G.Systems.Count(s => G.NeighboursOf(s.Index).Count == 1));
+        Assert.Equal(179, chokes.Count); // v6 re-pin 2026-10-24 (was 98)
+        Assert.Equal(64, G.Systems.Count(s => G.NeighboursOf(s.Index).Count == 1)); // v6 re-pin 2026-10-24 (was 45)
         foreach (var s in G.Systems)
         {
             Assert.Equal(int.Parse(s.Carried["lane_count"]), G.NeighboursOf(s.Index).Count);
@@ -59,9 +63,12 @@ public class GalaxyDataTests
     [Fact]
     public void G5_RouteInferredLaneIsTier1() // m1-galaxy-data G5
     {
-        var l = G.FindLane("Coruscant", "Corellia")!;
-        Assert.Equal("route-inferred", l.Kind);
-        Assert.Equal("Corellian Run", l.Routes);
+        // v6 re-pin 2026-10-24: v6 has no route-inferred links; the kind stays tier 1 in the tier table, and a real great-route
+        // link (Coruscant-Tralus, Trunk Line) is tier 1 with factor 300.
+        Assert.Equal(1, TestData.Tiers.TierOfKind("route-inferred"));
+        var l = G.FindLane("Coruscant", "Tralus")!;
+        Assert.Equal("route", l.Kind);
+        Assert.Equal("Trunk Line", l.Routes);
         Assert.Equal(1, l.Tier);
         Assert.Equal(300, l.FactorPercent);
     }
@@ -69,15 +76,16 @@ public class GalaxyDataTests
     [Fact]
     public void G6_OfficialLaneIsTier2() // m1-galaxy-data G6
     {
-        var l = G.FindLane("Coruscant", "Corulag")!;
+        var l = G.FindLane("Coruscant", "Uveron")!; // v6 re-pin 2026-10-24: Coruscant's minor link (was Corulag)
         Assert.Equal("official", l.Kind);
         Assert.Equal(2, l.Tier);
         Assert.Equal(150, l.FactorPercent);
-        Assert.Equal(2, G.FindLane("Mirial", "Jelucan")!.Tier); // bridge: a minor link
+        Assert.Equal("bridge", G.FindLane("Gizer", "Kinyen")!.Kind); // v6 re-pin 2026-10-24 (was Mirial-Jelucan)
+        Assert.Equal(2, G.FindLane("Gizer", "Kinyen")!.Tier); // bridge: a minor link
     }
 
     [Fact]
-    public void G7_NoGeneratedLanes() // m1-galaxy-data G7: the v5 data has no generated placeholder lanes
+    public void G7_NoGeneratedLanes() // m1-galaxy-data G7: the v6 data has no generated placeholder lanes
     {
         Assert.DoesNotContain(G.Lanes, l => l.Kind == "generated");
         Assert.Null(G.FindLane("Coruscant", "Yavin"));
@@ -86,12 +94,15 @@ public class GalaxyDataTests
     [Fact]
     public void G8_BaseDistanceCoruscantCorellia() // m1-galaxy-data G8
     {
-        var c = G.Get("Coruscant"); var k = G.Get("Corellia");
-        Assert.Equal((395, 402), (c.MapX, c.MapY));
-        Assert.Equal((440, 492), (k.MapX, k.MapY));
-        Assert.Equal(10125, 45 * 45 + 90 * 90);
-        Assert.Equal(100, (int)GalaxyLoader.Isqrt(10125));
-        Assert.Equal(20, G.FindLane("Coruscant", "Corellia")!.BaseDistance);
+        // v6 re-pin 2026-10-24: Coruscant sits at the centre (500,500); Corellia is no longer linked to it, so the stored
+        // lane base distance is checked on Coruscant-Tralus (503,471): 3*3 + 29*29 = 850, isqrt 29, /5 = 5.
+        var c = G.Get("Coruscant"); var k = G.Get("Corellia"); var t = G.Get("Tralus");
+        Assert.Equal((500, 500), (c.MapX, c.MapY));
+        Assert.Equal((454, 424), (k.MapX, k.MapY));
+        Assert.Equal(7892, 46 * 46 + 76 * 76);
+        Assert.Equal(88, (int)GalaxyLoader.Isqrt(7892));
+        Assert.Equal((503, 471), (t.MapX, t.MapY));
+        Assert.Equal(5, G.FindLane("Coruscant", "Tralus")!.BaseDistance);
     }
 
     [Fact]
@@ -135,14 +146,14 @@ public class GalaxyDataTests
     public void G12_SamePairTwiceFails() // m1-galaxy-data G12 (check 3)
     {
         var ex = Assert.Throws<DataLoadException>(() =>
-            GalaxyLoader.Load(TestData.PlanetsText, TestData.LanesText + "Corellia,Coruscant,route,Corellian Run,,\n", TestData.Tiers));
+            GalaxyLoader.Load(TestData.PlanetsText, TestData.LanesText + "Tralus,Coruscant,route,Trunk Line,,\n", TestData.Tiers));
         Assert.Contains("already has a lane", ex.Message);
     }
 
     [Fact]
     public void G13_NeighboursBothWaysAndSorted() // m1-galaxy-data G13
     {
-        var a = G.Get("Corellia"); var b = G.Get("Duros");
+        var a = G.Get("Coruscant"); var b = G.Get("Tralus"); // v6 re-pin 2026-10-24 (Corellia-Duros is no longer a link)
         Assert.Contains(G.NeighboursOf(a.Index), n => n.System == b.Index);
         Assert.Contains(G.NeighboursOf(b.Index), n => n.System == a.Index);
         foreach (var s in G.Systems)
@@ -233,7 +244,7 @@ public class GalaxyDataTests
         var expected = ExpectedGalaxyCounts.Load(Path.Combine(TestData.DesignDir, GalaxyLoader.CountsFile));
         expected.Check(G); // the real data matches
         var ex = Assert.Throws<DataLoadException>(() => (expected with { Lanes = 520 }).Check(G));
-        Assert.Contains("lanes: expected 520, found 377", ex.Message);
+        Assert.Contains("lanes: expected 520, found 390", ex.Message);
     }
 
     [Fact]

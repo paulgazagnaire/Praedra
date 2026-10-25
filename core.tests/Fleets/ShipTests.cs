@@ -13,7 +13,9 @@ namespace Praedra.Core.Tests.Fleets;
 // The real CSV files are used. Hop Coruscant to Corellia is tier 1, base 20.
 public class ShipTests
 {
-    private const string Home = "Coruscant", Far = "Corellia";
+    // v6 re-pin 2026-10-24: Far was Corellia (one 100-unit great-route leg); on the spiral map it is Brentaal IV, two legs from
+    // Coruscant (a free jump to Rhinnal, then a minor-route leg) that also take 5 days at speed 80 and 7 at speed 100.
+    private const string Home = "Coruscant", Far = "Brentaal IV";
     private const string Isd = "Imperial Star Destroyer";
 
     private static IReadOnlyList<ShipClass> Capitals() => ShipData.LoadCapitalShips(Path.Combine(TestData.ClassicDir, ShipData.CapitalShipsFile));
@@ -204,7 +206,7 @@ public class ShipTests
     public void S9_AnUndamagedIsdTakesFiveDays()
     {
         var (w, f, _) = Fleet(Isd);
-        Assert.Equal(5, DaysTo(w, f, Far)); // route leg: 100 * 80 / (5 * 300) = 5.33, rounded to 5
+        Assert.Equal(5, DaysTo(w, f, Far)); // v6: two legs, 5 days in all (was one route leg: 100 * 80 / (5 * 300) = 5.33, rounded to 5)
     }
 
     // m3-ships-and-fighters S10
@@ -214,7 +216,7 @@ public class ShipTests
         var (w, f, ship) = Fleet(Isd);
         Damage(w, ship, 2750, 0, 0, 0, 0, 1, 0);
         Assert.Equal(100, w.Fleets.SpeedOf(w.State.Fleets[f]));
-        Assert.Equal(7, DaysTo(w, f, Far)); // route leg: 100 * 100 / (5 * 300) = 6.67, rounded to 7
+        Assert.Equal(7, DaysTo(w, f, Far)); // v6: two legs, 7 days in all (was one route leg: 100 * 100 / (5 * 300) = 6.67, rounded to 7)
     }
 
     // m3-ships-and-fighters S11
@@ -232,7 +234,7 @@ public class ShipTests
     public void S12_ADamagedMediumTransportKeepsItsRating()
     {
         var (w, f, ship) = Fleet("Medium Transport");
-        Assert.Equal(7, DaysTo(w, f, Far)); // 100 * 100 / (5 * 300) rounded, undamaged
+        Assert.Equal(7, DaysTo(w, f, Far)); // speed 100, undamaged: 7 days on the v6 two-leg trip
         var (w2, f2, ship2) = Fleet("Medium Transport");
         Damage(w2, ship2, 360, 0, 0, 0, 0, 5, 0); // hyperdrive_if_damaged is 0: use the normal rating
         Assert.Equal(7, DaysTo(w2, f2, Far));

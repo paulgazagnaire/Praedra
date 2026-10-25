@@ -47,8 +47,13 @@ public class SimpleAiFogPlayTests
         // both games take the same ids from the shared object counter; game A gives the extra units back at once (ids stay aligned)
         void Extra(GameHost h, bool keep)
         {
+            // v6 re-pin 2026-10-24: on the spiral map the first such system by name was seen by the Alliance on day 11 (the test then proves nothing),
+            // so the hidden fleet goes to the unexplored Imperial system farthest from every Alliance system (ties by name).
+            var g = h.Data.Galaxy;
+            var rebels = h.Game.State.SystemOwners.Where(kv => kv.Value == Side.Alliance).Select(kv => g.Get(kv.Key)).ToList();
+            int Nearest(string s) { var x = g.Get(s); return rebels.Min(r => (r.MapX - x.MapX) * (r.MapX - x.MapX) + (r.MapY - x.MapY) * (r.MapY - x.MapY)); }
             hidden = h.Game.State.SystemOwners.Where(kv => kv.Value == Side.Empire && kv.Key != "Coruscant" && !h.Fog.IsExplored(Side.Alliance, kv.Key))
-                .Select(kv => kv.Key).First();
+                .Select(kv => kv.Key).OrderByDescending(Nearest).ThenBy(s => s, StringComparer.Ordinal).First();
             int fleet = h.Fleets.AddFleet(Side.Empire, "Hidden", new[] { "Imperial Star Destroyer" }, hidden);
             var ids = h.Game.State.Fleets[fleet].Ships.ToList();
             for (int i = 0; i < 3; i++) ids.Add(h.Economy.AddObject(Side.Empire, "Imperial Army Regiment", "Coruscant"));

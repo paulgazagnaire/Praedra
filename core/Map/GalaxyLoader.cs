@@ -61,8 +61,8 @@ public sealed record ExpectedGalaxyCounts(int Systems, int Sectors, int Lanes, i
 /// <summary>Reads the planets and lanes files into an immutable <see cref="Galaxy"/>. rule: m1-galaxy-data.</summary>
 public static class GalaxyLoader
 {
-    public const string PlanetsFile = "extended-galaxy-v5-planets.csv";
-    public const string LanesFile = "extended-galaxy-v5-lanes.csv";
+    public const string PlanetsFile = "extended-galaxy-v6-planets.csv";
+    public const string LanesFile = "extended-galaxy-v6-lanes.csv";
     public const string TiersFile = "lane-tiers.csv";
     public const string CountsFile = "expected-galaxy-counts.csv";
 

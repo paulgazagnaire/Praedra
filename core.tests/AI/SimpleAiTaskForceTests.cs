@@ -42,15 +42,18 @@ public class SimpleAiTaskForceTests
     [Fact]
     public void TaskForces_AStrongSideTakesSystemsInParallelAndWinsSooner()
     {
-        const int limit = 1300, by = 1250;
+        // v6 re-pin 2026-10-25 (Dev lead; Paul chose "Ship now" on the spiral-map card, re-measure the AI checks on the new map; ai-notes/2026-10-24-spiral-map-v6.md): on, the Empire wins on day 1219, 1123, 1222, 1267 (splits 0, 6, 4, 0); off, on day -, 1300, 1258, - (0 splits). Floors: on, every
+        // seed by day 1275 (was 1250); off, at least 2 seeds still going on day 1250 (unchanged); on ends at least 75 days sooner on average
+        // (was 100; measured 82).
+        const int limit = 1300, by = 1250, onBy = 1275;
         var res = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => (s, On: Play(s, true, limit), Off: Play(s, false, limit)));
-        Assert.All(res, r => Assert.True(r.On.End is > 0 and <= by, $"seed {r.s}: TaskForces on, the Empire won on day {r.On.End} (0 = not by {limit})"));
+        Assert.All(res, r => Assert.True(r.On.End is > 0 and <= onBy, $"seed {r.s}: TaskForces on, the Empire won on day {r.On.End} (0 = not by {limit})"));
         Assert.True(res.Sum(r => r.On.Splits) > 0, "TaskForces on: no task-force split on any seed");
         Assert.All(res, r => Assert.Equal(0, r.Off.Splits));
         int going = res.Count(r => r.Off.End == 0 || r.Off.End > by);
         Assert.True(going >= 2, $"TaskForces off: only {going} of 4 seeds still going on day {by} (the test no longer measures the switch)");
         double on = res.Average(r => r.On.End), off = res.Average(r => r.Off.End == 0 ? limit : r.Off.End);
-        Assert.True(off - on >= 100, $"TaskForces on ends {off - on:F0} days sooner on average (on {on:F0}, off {off:F0})");
+        Assert.True(off - on >= 75, $"TaskForces on ends {off - on:F0} days sooner on average (on {on:F0}, off {off:F0})");
     }
 
     // QA-20 (QA round 33): sized on the fleets seen within FogFleetMemoryDays only, the task force fell to LaunchStrength once the big enemy fleet

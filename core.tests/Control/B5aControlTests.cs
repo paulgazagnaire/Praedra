@@ -37,11 +37,12 @@ internal static class DerivedCapture
 
 /// <summary>
 /// A full <see cref="GameHost"/> on the real galaxy with the derived control rule (the DEFAULT), debug orders on, incidents off and autoscrap out of
-/// reach. The Corellia Sector (8 populated core worlds) is the stage: Corellia, Corfai, Duros, Gatalenta, Rendili, Selonia, Tralus, Vagran.
+/// reach. The Corellia Sector is the stage. v6 re-pin 2026-10-24: on the spiral map it holds 9 populated inner-rim worlds (Byblos, Corellia,
+/// Drall, Hosnian Prime, Loronar, Orish, Poderis, Selonia, Vagran); Duros and Tralus moved to other sectors, so Drall and Poderis take their parts.
 /// </summary>
 internal sealed class DerivedWorld
 {
-    public const string Corellia = "Corellia", Duros = "Duros", Tralus = "Tralus", Vagran = "Vagran", Selonia = "Selonia";
+    public const string Corellia = "Corellia", Drall = "Drall", Poderis = "Poderis", Vagran = "Vagran", Selonia = "Selonia";
     public const string ImpArmy = "Imperial Army Regiment", RebArmy = "Alliance Army Regiment";
     public const int Lando = 834, Piett = 898;
 
@@ -93,7 +94,7 @@ internal sealed class DerivedWorld
 // decided with it (DeathStarFallout Classic, the strike-2 revolt under derived control) and the AI's last-regiment guard.
 public class B5aControlTests
 {
-    private const string C = DerivedWorld.Corellia, D = DerivedWorld.Duros, T = DerivedWorld.Tralus, V = DerivedWorld.Vagran;
+    private const string C = DerivedWorld.Corellia, D = DerivedWorld.Drall, T = DerivedWorld.Poderis, V = DerivedWorld.Vagran;
 
     // B5a-1 (sections 1, 6): a neutral world with no regiments at Alliance support 59; one support change of +1 makes it Alliance in the same call,
     // cause Support; the sector step gives +1 to the Alliance in every ever-held populated system of the sector, the world itself included.
@@ -406,13 +407,14 @@ public class B5aControlTests
         });
         w.Step();
         Assert.Equal(new[] { C, D }, w.Events<SystemCaptured>().Where(e => e.To == null && e.Cause == CaptureCause.Support).Select(e => e.System).ToArray());
-        // Corellia's step only (Duros is still at 70 when it comes; its own flip in the same tick gives none)
-        Assert.Equal(new[] { (C, 57), (D, 69), (S, 69), (T, 69), (V, 69) }, w.SectorSteps().Select(s => (s.System, s.New)).ToArray());
+        // Corellia's step only (Drall is still at 70 when it comes; its own flip in the same tick gives none). Steps come in name order:
+        // v6 re-pin 2026-10-24, Poderis (T) now sorts before Selonia (S).
+        Assert.Equal(new[] { (C, 57), (D, 69), (T, 69), (S, 69), (V, 69) }, w.SectorSteps().Select(s => (s.System, s.New)).ToArray());
         Assert.Equal(57, w.A(D));
         w.InSlot("6.2", ctx => w.H.Support.ChangeSupport(ctx, T, Side.Alliance, -12, SupportCause.Other, dampen: false));
         w.Step();
         Assert.Null(w.Ctl.HolderOf(T));
-        Assert.Equal(new[] { (C, 56), (D, 56), (S, 68), (T, 56), (V, 68) }, w.SectorSteps().Skip(5).Select(s => (s.System, s.New)).ToArray());
+        Assert.Equal(new[] { (C, 56), (D, 56), (T, 56), (S, 68), (V, 68) }, w.SectorSteps().Skip(5).Select(s => (s.System, s.New)).ToArray());
         int before = w.SectorSteps().Count;
         w.Ctl.SubmitDebugSetSupport(Side.Alliance, V, 58);
         w.InSlot("6.2", ctx => w.H.Support.ChangeSupport(ctx, S, Side.Alliance, -12, SupportCause.Other, dampen: false));
@@ -508,17 +510,18 @@ public class B5aControlTests
     {
         var w = new DerivedWorld(settings: DerivedWorld.Settings(ds: new DeathStarParams { Fallout = DeathStarFallout.Classic }));
         const string rimInSector = "Hoth", rimElsewhere = "Bespin", coreElsewhere = "Coruscant";
-        w.Hold(D, Side.Empire, 10); w.Regiments(D, Side.Empire, 1);           // core, in the flagged sector
+        const string coreInSector = "Duros"; // v6 re-pin 2026-10-24: D (Drall) is an inner-rim world now; Duros is still core (flags are per system)
+        w.Hold(coreInSector, Side.Empire, 10); w.Regiments(coreInSector, Side.Empire, 1); // core, in the flagged sector
         w.Hold(coreElsewhere, Side.Empire, 10); w.Regiments(coreElsewhere, Side.Empire, 1);
         w.Hold(rimInSector, Side.Empire, 20); w.Hold(rimElsewhere, Side.Empire, 20);
         w.InSlot("5.1", ctx =>
         {
-            w.H.Support.SetDeathStarSystem(D, true); w.H.Support.SetDeathStarSystem(rimInSector, true); // the Death Star's sector (flags per system)
+            w.H.Support.SetDeathStarSystem(coreInSector, true); w.H.Support.SetDeathStarSystem(rimInSector, true); // the Death Star's sector (flags per system)
             w.H.DeathStar.GetType().GetMethod("SectorReaction", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
                 .Invoke(w.H.DeathStar, new object[] { ctx, ctx.Day + 1, DerivedWorld.Vagran });
         });
         w.Step();
-        Assert.Equal((15, 20), (w.A(D), w.A(coreElsewhere)));
+        Assert.Equal((15, 20), (w.A(coreInSector), w.A(coreElsewhere)));
         Assert.Equal((21, 22), (w.A(rimInSector), w.A(rimElsewhere)));
     }
 

@@ -226,8 +226,10 @@ public class CampaignSoakTests
             // four hits' picks and dice), so on this ruleset the game generator reaches the day-313 battle in another state and the same forces fight
             // another battle: the Empire retreats (its Victory Destroyer is lost to NoHyperdrive) and the Alliance holds the field. Before B7 the
             // Alliance was Annihilated after a GravityWell refusal, as in the Classic row above (which still shows the gravity well).
-            Assert.Equal((Praedra.Core.Battle.BattleOutcome.Victorious, Praedra.Core.Battle.BattleOutcome.Retreated), (end.Result.Alliance, end.Result.Empire));
-            Assert.Contains(run.Events.OfType<Praedra.Core.Battle.UnitDestroyed>(), x => x.System == TestCampaign.BlockadedSystem && x.Reason == Praedra.Core.Battle.UnitLossReason.NoHyperdrive);
+            // v6 re-pin 2026-10-24: on the spiral map the seeded game reaches the Kinyen battle in another state again, and it is the battle this test
+            // was written for: the Interdictor's gravity well refuses the Alliance's retreat, the Alliance is Annihilated, the Empire holds the field.
+            Assert.Equal((Praedra.Core.Battle.BattleOutcome.Annihilated, Praedra.Core.Battle.BattleOutcome.Victorious), (end.Result.Alliance, end.Result.Empire));
+            Assert.Contains(run.Events.OfType<Praedra.Core.Battle.RetreatRefused>(), x => x.Reason == Praedra.Core.Battle.RetreatRefusal.GravityWell);
         }
     }
 

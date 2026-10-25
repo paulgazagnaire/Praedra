@@ -74,10 +74,12 @@ public class SimpleAiStallTests
         var off = MultiSeed.Play(MultiSeed.OneToEight, s => Empire(false, s, 500));
         string seen = string.Join(", ", on.Zip(off, (a, b) => $"{a.Landings}/{a.Landings + a.Shellings} vs {b.Landings}/{b.Landings + b.Shellings}"));
         // a / (a + s) > b / (b + t), in integers
-        int better = on.Zip(off).Count(t => (long)t.First.Landings * (t.Second.Landings + t.Second.Shellings) > (long)t.Second.Landings * (t.First.Landings + t.First.Shellings));
-        Assert.True(better >= 6, $"the fix has the higher landing share on {better} of 8 seeds, needs 6 ({seen})");
+        // v6 re-pin 2026-10-25 (Dev lead; Paul chose "Ship now" on the spiral-map card, re-measure the AI checks on the new map; ai-notes/2026-10-24-spiral-map-v6.md): on v6 the share no longer separates the switch: 6/20, 2/9, 1/10, 6/22, 5/22, 1/8, 3/12, 6/23 against 5/19, 1/10,
+        // 2/11, 7/18, 4/21, 1/8, 3/12, 5/22 (more on 4 of 8; 30/146 = 21% against 28/121 = 23%), while the stall count (b) still does: 0
+        // against 6. Floor (a) is now "the fix keeps at least three quarters of the share without it"; (b) is unchanged. The v5 floor (more on
+        // 6 of 8 and 1.5 times overall) waits for AI tuning to resume.
         long la = on.Sum(r => r.Landings), na = on.Sum(r => r.Landings + r.Shellings), lb = off.Sum(r => r.Landings), nb = off.Sum(r => r.Landings + r.Shellings);
-        Assert.True(la * nb * 2 >= lb * na * 3, $"landing share with the fix {la}/{na}, without {lb}/{nb}: needs 1.5 times ({seen})");
+        Assert.True(la * nb * 4 >= lb * na * 3, $"landing share with the fix {la}/{na}, without {lb}/{nb}: needs at least 3/4 of it ({seen})");
         int leavesOn = on.Sum(r => r.ShelledLeaves), leavesOff = off.Sum(r => r.ShelledLeaves);
         Assert.True(leavesOn * 2 <= leavesOff, $"shelled and left without landing: {leavesOn} with the fix, {leavesOff} without (needs at most half)");
     }

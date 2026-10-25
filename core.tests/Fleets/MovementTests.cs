@@ -9,47 +9,50 @@ namespace Praedra.Core.Tests.Fleets;
 public class MovementTests
 {
     private const string Isd = "Imperial Star Destroyer";
-    // Free travel with routes (Paul 2026-10-16): Coruscant to Hoth at speed 80 rides the Corellian Run and the Corellian Trade Spine (m1-travel T9).
-    private static readonly string[] CoruscantHoth = { "Coruscant", "Corellia", "Duros", "Nubia", "Hosnian Prime", "Nantoon", "Foless", "Bestine IV",
-        "Yag'Dhul", "Roona", "Cymoon", "Kinyen", "Blutopia", "Kriselist", "Geptish", "Mugaar", "Gerenthum", "Hoth" };
-    private static readonly int[] CoruscantHothHops = { 5, 1, 1, 1, 3, 1, 1, 2, 2, 1, 2, 1, 2, 2, 1, 1, 5 };
+    // Free travel with routes (Paul 2026-10-16): Coruscant to Hoth at speed 80 rides the routes (m1-travel T9).
+    // v6 re-pin 2026-10-24: on the spiral map it leaves along the Trunk Line and reaches Hoth (off every route) from Bakura, day 45.
+    private static readonly string[] CoruscantHoth = { "Coruscant", "Tralus", "Talus", "Corfai", "Kriselist", "Kinyen", "Hapes", "Umbara",
+        "Kashyyyk", "Randon", "Ord Pardon", "Dressel", "Trenchenovu", "Mugaar", "Moltok", "Ord Trasi", "Muunilinst", "Bastion", "Bakura", "Hoth" };
+    private static readonly int[] CoruscantHothHops = { 2, 1, 1, 2, 2, 1, 2, 1, 2, 1, 2, 2, 1, 2, 4, 2, 8, 4, 5 };
 
     private static World Real(ForcedStopTrigger t = ForcedStopTrigger.PaulRule, ulong seed = 1) => new(TestData.RealGalaxy, t, seed);
 
     [Fact] // m1-clock-and-orders K2
-    public void K2_coruscant_to_corellia_accepted_with_5_ticks_and_departs_on_day_0()
+    public void K2_coruscant_to_kimanan_accepted_with_4_ticks_and_departs_on_day_0()
     {
+        // v6 re-pin 2026-10-24: Corellia is no longer one hop from Coruscant. No single-hop trip from Coruscant takes 5 days at
+        // speed 80 on the spiral map; Kimanan is the nearest one-hop trip of several days (a 4-day free jump).
         var w = Real();
         int f = w.Add(Side.Empire, "Red", "Coruscant", Isd);
-        long seq = w.Fleets.SubmitMove(Side.Empire, f, "Corellia");
+        long seq = w.Fleets.SubmitMove(Side.Empire, f, "Kimanan");
         w.Run(1);
         var acc = Assert.Single(w.Events<OrderAccepted>());
         Assert.Equal(seq, acc.Sequence);
         Assert.Equal(f, acc.Fleet);
-        Assert.Equal(new[] { "Coruscant", "Corellia" }, acc.Path!.Items);
-        Assert.Equal(5, acc.TotalTicks);
-        Assert.Equal(5, acc.ArrivalDay);
+        Assert.Equal(new[] { "Coruscant", "Kimanan" }, acc.Path!.Items);
+        Assert.Equal(4, acc.TotalTicks);
+        Assert.Equal(4, acc.ArrivalDay);
         Assert.Equal(0, acc.Day);
         var dep = Assert.Single(w.Events<FleetDeparted>());
-        Assert.Equal(new FleetDeparted(dep.Index, 0, f, "Coruscant", 5), dep);
+        Assert.Equal(new FleetDeparted(dep.Index, 0, f, "Coruscant", 4), dep);
         Assert.True(acc.Index < dep.Index); // step 1 before step 2
     }
 
-    [Fact] // m1-clock-and-orders K3
-    public void K3_in_transit_after_4_steps_arrived_on_day_5_after_the_5th()
+    [Fact] // m1-clock-and-orders K3 (v6 re-pin 2026-10-24: the K2 trip, 4 days)
+    public void K3_in_transit_after_3_steps_arrived_on_day_4_after_the_4th()
     {
         var w = Real();
         int f = w.Add(Side.Empire, "Red", "Coruscant", Isd);
-        w.Move(Side.Empire, f, "Corellia");
-        w.Run(4);
+        w.Move(Side.Empire, f, "Kimanan");
+        w.Run(3);
         Assert.Null(w.Fleet(f).At);
         Assert.NotNull(w.Fleet(f).Transit);
         Assert.Empty(w.Events<FleetArrived>());
         w.Run(1);
         var arr = Assert.Single(w.Events<FleetArrived>());
-        Assert.Equal(new FleetArrived(arr.Index, 5, f, "Corellia"), arr);
-        Assert.Equal(5, w.Game.Day);
-        Assert.Equal("Corellia", w.Fleet(f).At);
+        Assert.Equal(new FleetArrived(arr.Index, 4, f, "Kimanan"), arr);
+        Assert.Equal(4, w.Game.Day);
+        Assert.Equal("Kimanan", w.Fleet(f).At);
         Assert.Null(w.Fleet(f).Transit);
         Assert.Equal("Coruscant", w.Fleet(f).PreviousSystem);
     }
@@ -60,32 +63,32 @@ public class MovementTests
         var w = Real();
         int f = w.Add(Side.Empire, "Red", "Coruscant", Isd);
         w.Move(Side.Empire, f, "Hoth");
-        w.Run(35);
+        w.Run(48);
         var acc = Assert.Single(w.Events<OrderAccepted>());
         Assert.Equal(CoruscantHoth, acc.Path!.Items);
-        Assert.Equal(32, acc.TotalTicks);
-        Assert.Equal(32, acc.ArrivalDay);
+        Assert.Equal(45, acc.TotalTicks); // v6 re-pin 2026-10-24 (was 32)
+        Assert.Equal(45, acc.ArrivalDay);
         var passes = new List<(int, string)>(); int day = 0;
         for (int k = 0; k < CoruscantHothHops.Length - 1; k++) { day += CoruscantHothHops[k]; passes.Add((day, CoruscantHoth[k + 1])); }
-        Assert.Equal((27, "Gerenthum"), passes[^1]);
+        Assert.Equal((40, "Bakura"), passes[^1]); // v6 re-pin 2026-10-24 (was day 27, Gerenthum)
         Assert.Equal(passes, w.Events<FleetPassed>().Select(e => (e.Day, e.System)));
         var arr = Assert.Single(w.Events<FleetArrived>());
-        Assert.Equal((32, "Hoth"), (arr.Day, arr.System));
+        Assert.Equal((45, "Hoth"), (arr.Day, arr.System));
         Assert.Empty(w.Events<ForcedStop>());
     }
 
-    [Fact] // m1-clock-and-orders K5
-    public void K5_after_27_steps_on_the_last_leg_after_32_arrived()
+    [Fact] // m1-clock-and-orders K5 (v6 re-pin 2026-10-24: the last leg is Bakura to Hoth, days 40 to 45; was 27 to 32)
+    public void K5_after_40_steps_on_the_last_leg_after_45_arrived()
     {
         var w = Real();
         int f = w.Add(Side.Empire, "Red", "Coruscant", Isd);
         w.Move(Side.Empire, f, "Hoth");
-        w.Run(27);
+        w.Run(40);
         var t = w.Fleet(f).Transit!;
         Assert.Null(w.Fleet(f).At);
-        Assert.Equal(("Gerenthum", "Hoth"), (t.Path[t.HopIndex], t.Path[t.HopIndex + 1]));
-        Assert.Equal(32, t.DueDay);
-        Assert.Equal("Gerenthum", w.Fleet(f).PreviousSystem);
+        Assert.Equal(("Bakura", "Hoth"), (t.Path[t.HopIndex], t.Path[t.HopIndex + 1]));
+        Assert.Equal(45, t.DueDay);
+        Assert.Equal("Bakura", w.Fleet(f).PreviousSystem);
         w.Run(4);
         Assert.Null(w.Fleet(f).At);
         w.Run(1);
@@ -177,7 +180,7 @@ public class MovementTests
         for (int d = fromDay; d < toDay; d++)
         {
             if (d == 0) w.Move(Side.Empire, 1, "Hoth");
-            if (d == 22) w.Move(Side.Empire, 1, "Hoth"); // after the stop at Kinyen (day 20)
+            if (d == 22) w.Move(Side.Empire, 1, "Hoth"); // after the stop at Kinyen (day 8 on the v6 map; was day 20)
             w.Game.Step();
         }
     }
@@ -224,8 +227,8 @@ public class MovementTests
         var first = ScenarioWorld(5); Scenario(first, 0, 7);
         Assert.Equal(7, first.Game.Day);
         var mid = first.Fleet(1);
-        Assert.Null(mid.At); // mid-leg (Nubia to Hosnian Prime)
-        Assert.Equal(("Nubia", "Hosnian Prime"), (mid.Transit!.Path[mid.Transit.HopIndex], mid.Transit.Path[mid.Transit.HopIndex + 1]));
+        Assert.Null(mid.At); // mid-leg (v6 re-pin 2026-10-24: Kriselist to Kinyen, days 6 to 8; was Nubia to Hosnian Prime)
+        Assert.Equal(("Kriselist", "Kinyen"), (mid.Transit!.Path[mid.Transit.HopIndex], mid.Transit.Path[mid.Transit.HopIndex + 1]));
 
         string json = GameSave.Save(first.Game);
         var loaded = new World(GameSave.Load(json), TestData.RealGalaxy);

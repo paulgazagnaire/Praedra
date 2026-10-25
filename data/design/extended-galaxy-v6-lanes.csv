@@ -1,0 +1,391 @@
+from,to,kind,routes,tier,speed_factor
+Christophsis,Geonosis,route,Charter Road,major,300
+Christophsis,Svivren,route,Charter Road,major,300
+Coruscant,Coto-Xana,route,Charter Road,major,300
+Coto-Xana,Phorliss,route,Charter Road,major,300
+Desix,Klatooine,route,Charter Road,major,300
+Desix,Saleucami,route,Charter Road,major,300
+Geonosis,Manda,route,Charter Road,major,300
+Kirdo III,Svivren,route,Charter Road,major,300
+Klatooine,Manda,route,Charter Road,major,300
+Kooriva,Lothal,route,Charter Road,major,300
+Kooriva,Quarzite,route,Charter Road,major,300
+Lothal,Tirahnn,route,Charter Road,major,300
+Mrisst,Phorliss,route,Charter Road,major,300
+Mrisst,Taanab,route,Charter Road,major,300
+Quarzite,Taanab,route,Charter Road,major,300
+Ringo Vinda,Saleucami,route,Charter Road,major,300
+Ringo Vinda,Tirahnn,route,Charter Road,major,300
+Kessel,Savareen,route,Lantern Run,major,300
+Alk'lellish III,Berchest,route,Long Haul,major,300
+Alk'lellish III,Corsin,route,Long Haul,major,300
+Anchoron,Sullust,route,Long Haul,major,300
+Bandomeer,Tangrene,route,Long Haul,major,300
+Bandomeer,Vinsoth,route,Long Haul,major,300
+Berchest,Epikonia,route,Long Haul,major,300
+Cal-Seti,Salliche,route,Long Haul,major,300
+Cal-Seti,Xa Fel,route,Long Haul,major,300
+Castell,Chazwa,route,Long Haul,major,300
+Castell,Orish,route,Long Haul,major,300
+Cathar,Tangrene,route,Long Haul,major,300
+Cathar,Wayland,route,Long Haul,major,300
+Cato Neimoidia,Daltar,route,Long Haul,major,300
+Cato Neimoidia,Gyndine,route,Long Haul,major,300
+Chazwa,Corsin,route,Long Haul,major,300
+Coto-Xana,Fedalle,route,Long Haul,major,300
+Coto-Xana,Salliche,route,Long Haul,major,300
+Daltar,Xa Fel,route,Long Haul,major,300
+Epikonia,Vondarc,route,Long Haul,major,300
+Fedalle,Xyquine,route,Long Haul,major,300
+Gyndine,Mimban,route,Long Haul,major,300
+Karfeddion,Sullust,route,Long Haul,major,300
+Karfeddion,Vondarc,route,Long Haul,major,300
+Korbori,Wayland,route,Long Haul,major,300
+Listehol,Pil Diller,route,Long Haul,major,300
+Listehol,Terminus,route,Long Haul,major,300
+Mimban,Vandor,route,Long Haul,major,300
+Orish,Xyquine,route,Long Haul,major,300
+Pax,Vandor,route,Long Haul,major,300
+Pil Diller,Vinsoth,route,Long Haul,major,300
+Iego,Kessel,route,Long Odds,major,300
+Abregado,Crait,route,Salt Lane,major,300
+Azbian,Bimmisaari,route,Salt Lane,major,300
+Azbian,Contruum,route,Salt Lane,major,300
+Bimmisaari,Charros,route,Salt Lane,major,300
+Bothawui,Korbori,route,Salt Lane,major,300
+Bothawui,Kothlis,route,Salt Lane,major,300
+Bromlarch,Vorzyd,route,Salt Lane,major,300
+Chalacta,Nar Kanji,route,Salt Lane,major,300
+Chalacta,Ubrikkia,route,Salt Lane,major,300
+Charros,Nar Kanji,route,Salt Lane,major,300
+Crait,Trogan,route,Salt Lane,major,300
+Dressel,Tah'Nuhna,route,Salt Lane,major,300
+Dressel,Ubrikkia,route,Salt Lane,major,300
+Falleen,Pax,route,Salt Lane,major,300
+Falleen,Storthus,route,Salt Lane,major,300
+Kalarba,Milagro,route,Salt Lane,major,300
+Kalarba,Vorzyd,route,Salt Lane,major,300
+Korbori,Pax,route,Salt Lane,major,300
+Kothlis,Tah'Nuhna,route,Salt Lane,major,300
+Milagro,New Cov,route,Salt Lane,major,300
+New Cov,Storthus,route,Salt Lane,major,300
+Corfai,Kriselist,route,Trunk Line,major,300
+Corfai,Talus,route,Trunk Line,major,300
+Coruscant,Tralus,route,Trunk Line,major,300
+Despayre,Ketaris,route,Trunk Line,major,300
+Despayre,Zeffliffl,route,Trunk Line,major,300
+Dressel,Ord Pardon,route,Trunk Line,major,300
+Dressel,Trenchenovu,route,Trunk Line,major,300
+Hapes,Kinyen,route,Trunk Line,major,300
+Hapes,Umbara,route,Trunk Line,major,300
+Kashyyyk,Randon,route,Trunk Line,major,300
+Kashyyyk,Umbara,route,Trunk Line,major,300
+Ketaris,Zeffo,route,Trunk Line,major,300
+Kinyen,Kriselist,route,Trunk Line,major,300
+Listehol,Zastiga,route,Trunk Line,major,300
+Moltok,Mugaar,route,Trunk Line,major,300
+Moltok,Zeffliffl,route,Trunk Line,major,300
+Mugaar,Trenchenovu,route,Trunk Line,major,300
+Ord Pardon,Randon,route,Trunk Line,major,300
+Talus,Tralus,route,Trunk Line,major,300
+Zastiga,Zhadalene,route,Trunk Line,major,300
+Zeffo,Zhadalene,route,Trunk Line,major,300
+Anaxes,Sy Myrth,route,Yard Road,major,300
+Anaxes,Trogan,route,Yard Road,major,300
+Atollon,Iego,route,Yard Road,major,300
+Atollon,Rafa,route,Yard Road,major,300
+Bromlarch,Oetrago,route,Yard Road,major,300
+Bromlarch,Trogan,route,Yard Road,major,300
+Denon,Kuat,route,Yard Road,major,300
+Denon,Oetrago,route,Yard Road,major,300
+Iego,Sy Myrth,route,Yard Road,major,300
+Munto Codru,Rafa,route,Yard Road,major,300
+Munto Codru,Savareen,route,Yard Road,major,300
+Abednedo,Cyclor,official,,minor,150
+Abednedo,Taanab,bridge,,minor,150
+Abregado,Vandelhelm,official,,minor,150
+Agrilat,Commenor,official,,minor,150
+Akrit'tar,Morvogodine,official,,minor,150
+Aleen,Tawl,official,,minor,150
+Algarian,Trenchenovu,official,,minor,150
+Allanteen VI,Gandolo IV,official,,minor,150
+Allanteen VI,Mardona,official,,minor,150
+Allyuen,Mustafar,official,,minor,150
+Alpinn,Ketaris,official,,minor,150
+Alpinn,Tangrene,official,,minor,150
+Altarrn,Dorin,official,,minor,150
+Ambria,Couronne,official,,minor,150
+Ambria,Kashyyyk,bridge,,minor,150
+Amorris,Phindar,official,,minor,150
+Amorris,Taris,official,,minor,150
+Anchoron,Utapau,official,,minor,150
+Ando,Storthus,official,,minor,150
+Anoat,Bakura,official,,minor,150
+Anoat,Dolla,official,,minor,150
+Antar 4,Aridus,official,,minor,150
+Antar 4,Espirion,official,,minor,150
+Aridus,Mardona,official,,minor,150
+Arkania,Poderis,official,,minor,150
+Bakura,Bastion,official,,minor,150
+Balfron,Charmath,official,,minor,150
+Balfron,Kamparas,official,,minor,150
+Balfron,Pantolomin,official,,minor,150
+Balmorra,Commenor,official,,minor,150
+Balosar,Kriselist,bridge,,minor,150
+Balosar,Plexis,official,,minor,150
+Barab I,Gamorr,official,,minor,150
+Barab I,Lowick,official,,minor,150
+Bardotta,Jakku,official,,minor,150
+Bardotta,Mantessa,official,,minor,150
+Barton IV,Felucia,official,,minor,150
+Basilisk,Cal-Seti,official,,minor,150
+Basilisk,Kamparas,official,,minor,150
+Basilisk,Pantolomin,official,,minor,150
+Bastatha,Cona,official,,minor,150
+Bastatha,Halais,official,,minor,150
+Bastion,Endor,official,,minor,150
+Batuu,Karthon,official,,minor,150
+Batuu,Yaga Minor,official,,minor,150
+Belsavis,Tarabba,official,,minor,150
+Belsavis,Triton,official,,minor,150
+Berchest,D'Assem,official,,minor,150
+Berchest,Tierfon,official,,minor,150
+Bestine IV,Ghorman,bridge,,minor,150
+Bestine IV,Thyferra,official,,minor,150
+Bilbringi,Nantoon,official,,minor,150
+Bilbringi,Vakkar,official,,minor,150
+Birren,Gorse,official,,minor,150
+Birren,Zeltros,bridge,,minor,150
+Blutopia,Raithal,official,,minor,150
+Blutopia,Rekelos,official,,minor,150
+Bogden,Champala,official,,minor,150
+Bogden,Vortex,official,,minor,150
+Bonadan,Cantonica,official,,minor,150
+Bonadan,Malachor,official,,minor,150
+Borleias,Caraad,official,,minor,150
+Borleias,Chandrila,official,,minor,150
+Borleias,Wor Tandell,official,,minor,150
+Bothawui,Mindar,official,,minor,150
+Botor,Duros,official,,minor,150
+Botor,Nacon,official,,minor,150
+Botor,Tython,official,,minor,150
+Bpfassh,Eiattu,official,,minor,150
+Bpfassh,Tierfon,official,,minor,150
+Bracca,Lantillies,official,,minor,150
+Bracca,Rajtiri,official,,minor,150
+Bracca,Togoria,official,,minor,150
+Brentaal IV,Kirrek,official,,minor,150
+Brentaal IV,Rhinnal,official,,minor,150
+Brentaal IV,Vardos,official,,minor,150
+Byblos,Hosnian Prime,official,,minor,150
+Byblos,Selonia,official,,minor,150
+Byss,Kitel Phard,official,,minor,150
+Byss,Zardossa Stix,official,,minor,150
+Candovant,Tholoth,official,,minor,150
+Cantonica,Felucia,official,,minor,150
+Cantonica,Ziost,official,,minor,150
+Caprionril,Charmath,official,,minor,150
+Caprionril,Firro,official,,minor,150
+Caprionril,Phraetiss,official,,minor,150
+Caraad,Chandrila,official,,minor,150
+Caraad,Ralltiir,official,,minor,150
+Carida,Yag'Dhul,official,,minor,150
+Cato Neimoidia,Espirion,official,,minor,150
+Cerea,Roona,official,,minor,150
+Cerea,Thrakia,official,,minor,150
+Cerea,Ubduria,official,,minor,150
+Chalcedon,Kartoosh,official,,minor,150
+Champala,Mikkia,official,,minor,150
+Chandrila,Kiros,official,,minor,150
+Chardaan,Nexus Ortai,official,,minor,150
+Chardaan,Umgul,official,,minor,150
+Charmath,Phraetiss,official,,minor,150
+Charros,Solarine,official,,minor,150
+Christophsis,Ikkrukk,official,,minor,150
+Christophsis,Tatooine,official,,minor,150
+Chyron,Kiffex,official,,minor,150
+Chyron,Takodana,official,,minor,150
+Commenor,Daltar,bridge,,minor,150
+Cona,Daiyu,official,,minor,150
+Cona,Neimoidia,official,,minor,150
+Cona,Zeltros,official,,minor,150
+Contruum,Gazian,official,,minor,150
+Corellia,Corulag,official,,minor,150
+Corellia,Gatalenta,official,,minor,150
+Corellia,Vagran,official,,minor,150
+Corfai,Xyquine,official,,minor,150
+Corstris,Phindar,official,,minor,150
+Corstris,Yavin,official,,minor,150
+Corulag,Kiros,official,,minor,150
+Corulag,Kirrek,official,,minor,150
+Coruscant,Uveron,official,,minor,150
+Corvus,Jaminere,official,,minor,150
+Corvus,Sy Myrth,official,,minor,150
+Corvus,Veelo,official,,minor,150
+Cymoon,Lothal,official,,minor,150
+D'Assem,Mikkia,official,,minor,150
+Daalang,Grange,official,,minor,150
+Daalang,Ruusan,official,,minor,150
+Daalang,Tah'Nuhna,bridge,,minor,150
+Daiyu,Kullgroon,official,,minor,150
+Dar'Or,Zebitrope IV,official,,minor,150
+Davnar,Kullgroon,official,,minor,150
+Davnar,Pax,official,,minor,150
+Delaya,Norulac,official,,minor,150
+Delaya,Onderon,official,,minor,150
+Denab,Tarabba,official,,minor,150
+Denab,Triton,official,,minor,150
+Derra IV,Quarzite,official,,minor,150
+Derra IV,Umgul,official,,minor,150
+Despayre,Ord Trasi,official,,minor,150
+Dolla,Lotho Minor,official,,minor,150
+Dorin,Mantessa,official,,minor,150
+Dotharian,Metagos,official,,minor,150
+Dotharian,Rorak,official,,minor,150
+Drall,Loronar,official,,minor,150
+Drall,Nubia,official,,minor,150
+Druckenwell,Iktotch,official,,minor,150
+Druckenwell,Lelmra,official,,minor,150
+Druckenwell,Trillia,official,,minor,150
+Duros,Talus,official,,minor,150
+Eiattu,Najan-Rovi,official,,minor,150
+Empress Teta,Kitel Phard,official,,minor,150
+Empress Teta,N'zoth,official,,minor,150
+Empress Teta,Salliche,official,,minor,150
+Endor,Mokivj,official,,minor,150
+Espirion,Gyndine,official,,minor,150
+Espirion,Lelmra,official,,minor,150
+Exodeen,Plexis,official,,minor,150
+Farstine,Orto,official,,minor,150
+Farstine,Yerbana,official,,minor,150
+Fedalle,Tython,official,,minor,150
+Fef,Glee Anselm,official,,minor,150
+Ferrix,Jelucan,official,,minor,150
+Ferrix,Zygerria,official,,minor,150
+Filve,Inusagi,official,,minor,150
+Filve,Klatooine,official,,minor,150
+Firro,Tholoth,bridge,,minor,150
+Foless,Kooriva,bridge,,minor,150
+Foless,Yag'Dhul,official,,minor,150
+Fondor,Giju,official,,minor,150
+Gamorr,Hefi,official,,minor,150
+Garqi,Muunilinst,official,,minor,150
+Garqi,Yaga Minor,official,,minor,150
+Gatalenta,Rendili,official,,minor,150
+Gatalenta,Vagran,official,,minor,150
+Gazian,Obroa-skai,official,,minor,150
+Gerenthum,Lotho Minor,official,,minor,150
+Gerenthum,Lutrillia,official,,minor,150
+Ghorman,Mantessa,official,,minor,150
+Ghorman,Wroona,official,,minor,150
+Giju,Hynestia,official,,minor,150
+Gizer,Kinyen,bridge,,minor,150
+Gizer,Thrakia,official,,minor,150
+Glee Anselm,Jakku,official,,minor,150
+Glee Anselm,Spuma,official,,minor,150
+Grange,Ruusan,official,,minor,150
+Gyndine,Neimoidia,official,,minor,150
+H'nemthe,Ord Ibanna,official,,minor,150
+Halais,Merson,official,,minor,150
+Halowan,Phorliss,official,,minor,150
+Halowan,Ralltiir,official,,minor,150
+Halowan,Skako,official,,minor,150
+Hapes,Montross,bridge,,minor,150
+Hefi,Intuci,official,,minor,150
+Hefi,Scarif,official,,minor,150
+Hosnian Prime,Rendili,official,,minor,150
+Hosnian Prime,Vagran,official,,minor,150
+Hynestia,Takodana,official,,minor,150
+Ikkrukk,Socorro,official,,minor,150
+Iktotch,New Cov,official,,minor,150
+Intuci,Molavar,official,,minor,150
+Inusagi,Yerbana,official,,minor,150
+Jaminere,Veelo,official,,minor,150
+Jaminere,Voss,bridge,,minor,150
+Jelucan,Raxus,official,,minor,150
+Joiol,Nantoon,official,,minor,150
+Joiol,Shili,official,,minor,150
+Jomark,Mykapo,official,,minor,150
+Jomark,Zebitrope IV,official,,minor,150
+Kabal,Sullust,official,,minor,150
+Kalarba,Linuri,official,,minor,150
+Kamparas,Pantolomin,official,,minor,150
+Karthon,Rattatak,official,,minor,150
+Kartoosh,Riflor,official,,minor,150
+Kennerla,Omwat,official,,minor,150
+Kessar,Khuiumin,official,,minor,150
+Kessar,Orto,official,,minor,150
+Kessar,Spuma,official,,minor,150
+Khomm,Zardossa Stix,official,,minor,150
+Kiffex,Rekelos,official,,minor,150
+Kimanan,Tepasi,official,,minor,150
+Kimanan,Tralus,official,,minor,150
+Kimanan,Vardos,official,,minor,150
+Kira,Nexus Ortai,official,,minor,150
+Kirrek,Vardos,official,,minor,150
+Kitel Phard,N'zoth,official,,minor,150
+Klatooine,Metagos,official,,minor,150
+Kooriva,Tynna,bridge,,minor,150
+Kuat,Womrik,official,,minor,150
+Kwenn,Ubrikkia,official,,minor,150
+Lannik,Nanth'ri,official,,minor,150
+Lannik,Tah'Nuhna,bridge,,minor,150
+Leritor,Mon Gazza,official,,minor,150
+Lespectus,Tholoth,official,,minor,150
+Listehol,Lutrillia,official,,minor,150
+Listehol,Thabeska,official,,minor,150
+Loronar,Nubia,official,,minor,150
+Loronar,Poderis,bridge,,minor,150
+Loronar,Selonia,official,,minor,150
+Lowick,Morvogodine,official,,minor,150
+Malachor,Zygerria,official,,minor,150
+Malastare,Woostri,official,,minor,150
+Mandalore,Phindar,official,,minor,150
+Mantessa,Nentan,official,,minor,150
+Merokia,Mustafar,official,,minor,150
+Merokia,Tibrin,official,,minor,150
+Metagos,Nar Shaddaa,official,,minor,150
+Milagro,Nag Ubdur,official,,minor,150
+Mina-Rau,Phindar,official,,minor,150
+Mina-Rau,Tangrene,official,,minor,150
+Molavar,Tatooine,official,,minor,150
+Mon Calamari,Voss,official,,minor,150
+Mon Gazza,Mugaar,bridge,,minor,150
+Montross,Rajtiri,official,,minor,150
+Mrisst,Wor Tandell,official,,minor,150
+Muunilinst,Ord Trasi,official,,minor,150
+Mykapo,Rorak,official,,minor,150
+N'zoth,Palanhi,official,,minor,150
+Nacon,Tython,official,,minor,150
+Nag Ubdur,Quell,official,,minor,150
+Nar Shaddaa,Rorak,official,,minor,150
+Nentan,Vakkar,official,,minor,150
+Norulac,Zeltros,official,,minor,150
+Nubia,Selonia,official,,minor,150
+Omwat,Utapau,bridge,,minor,150
+Ord Ibanna,Vondarc,official,,minor,150
+Palanhi,Xa Fel,official,,minor,150
+Pax,Taris,official,,minor,150
+Praesitlyn,Tarabba,official,,minor,150
+Praesitlyn,Tibrin,official,,minor,150
+Qat Chrystac,Tirahnn,official,,minor,150
+Quarzite,Wroona,official,,minor,150
+Quell,Veelo,official,,minor,150
+Quence,Utapau,official,,minor,150
+Quence,Xagobah,official,,minor,150
+Rafa,Trammis,official,,minor,150
+Raithal,Ringo Vinda,bridge,,minor,150
+Ralltiir,Skako,official,,minor,150
+Raxus,Thabeska,official,,minor,150
+Rhinnal,Tepasi,official,,minor,150
+Rhinnal,Uveron,official,,minor,150
+Riflor,Saleucami,bridge,,minor,150
+Seatos,Socorro,official,,minor,150
+Skako,Uveron,official,,minor,150
+Socorro,Yar Togna,official,,minor,150
+Stobar,Tynna,official,,minor,150
+Tawl,Tiferep Major,official,,minor,150
+Togoria,Uyter,official,,minor,150
+Ubrikkia,Valboraan,official,,minor,150
+Vandelhelm,Woostri,official,,minor,150
+Xagobah,Yar Togna,official,,minor,150

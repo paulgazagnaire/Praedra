@@ -152,7 +152,7 @@ public class AnchoredDealTests
         foreach (var (sys, o) in ND.FixedOwners) owners[sys] = o;
         Assert.Equal(owners.Values.Count(v => v == Side.Alliance), Count(h, Side.Alliance));
         Assert.Equal(owners.Values.Count(v => v == Side.Empire), Count(h, Side.Empire));
-        Assert.Equal("Cyclor", h.HqSystem);
+        Assert.Equal("Cymoon", h.HqSystem); // v6 re-pin 2026-10-24: the day-one files' HQ on the spiral map (was Cyclor)
         foreach (var s in new[] { "Kuat", "Fondor", "Corellia", "Rendili" }) Assert.Equal(Side.Empire, Holder(h, s));
         foreach (var s in new[] { "Sullust", "Mon Calamari", "Bilbringi" }) Assert.Null(Holder(h, s));
         Assert.Equal(h.StateHash(), Make(p, 1, DealMode.File).StateHash());
