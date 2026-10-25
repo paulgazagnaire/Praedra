@@ -37,6 +37,8 @@ public class GamesEndTests
         });
         foreach (var g in games) _out.WriteLine($"seed {g.Seed}: winner {g.Winner?.ToString() ?? "none"} day {g.Day}; systems {g.Empire}/{g.Alliance}");
         int open = games.Count(g => g.Winner == null);
-        Assert.True(open <= 3, $"{open} of 8 Medium mirrors have no winner by day 3000");
+        // v6 re-pin 2026-10-25 (Dev lead; Paul chose "Ship now" on the spiral-map card, re-measure the AI checks on the new map; ai-notes/2026-10-24-spiral-map-v6.md): measured 4 of 8 open on v6 (seeds 1, 2, 3, 4; seeds 2 and 4 end 298/2 and 268/5, the known endgame stall). The bar was 3 on v5;
+        // it goes back to 3 when the endgame rule (the dominance-win card) lands.
+        Assert.True(open <= 4, $"{open} of 8 Medium mirrors have no winner by day 3000");
     }
 }

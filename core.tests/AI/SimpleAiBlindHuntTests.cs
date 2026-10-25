@@ -52,14 +52,18 @@ public class SimpleAiBlindHuntTests
         return h.Victory.Winner == Side.Empire ? h.Game.Day : 0;
     }
 
-    // Measured (seeds 1-4, the last Rebel system Kal'Shebbol on each): BlindHunt on, the game ends on day 352, 352, 361, 364; off, on day 457,
+    // Measured on v5 (seeds 1-4, the last Rebel system Kal'Shebbol on each): BlindHunt on, the game ends on day 352, 352, 361, 364; off, on day 457,
     // 460, 424, 424 (its scouts look at X too, but no pile goes there until X is the nearest neutral target left). Floors: on, every seed by
     // day 400; off, none by day 400.
     [Fact]
     public void BlindHunt_TheEmpireTakesTheLastRebelSystemItHasNotSeenForLong()
     {
-        var res = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => (s, On: EndDay(s, true, 400), Off: EndDay(s, false, 400)));
-        Assert.All(res, r => Assert.True(r.On > 0, $"seed {r.s}: BlindHunt on, no winner by day 400"));
-        Assert.All(res, r => Assert.True(r.Off == 0, $"seed {r.s}: BlindHunt off, the game ended on day {r.Off} (the test no longer measures the switch)"));
+        // v6 re-pin 2026-10-25 (Dev lead; Paul chose "Ship now" on the spiral-map card, re-measure the AI checks on the new map; ai-notes/2026-10-24-spiral-map-v6.md): on the spiral map X is close enough that the scouts often reach it anyway. Measured to day 800: on 364, 451, 379,
+        // 352; off 364, 445, 391, 481. Floors: on, every seed by day 500; on never more than 10 days after off; on at least 100 days sooner on
+        // some seed (the test still measures the switch). The v5 floor (on by 400, off never) waits for AI tuning to resume.
+        var res = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => (s, On: EndDay(s, true, 500), Off: EndDay(s, false, 500)));
+        Assert.All(res, r => Assert.True(r.On > 0, $"seed {r.s}: BlindHunt on, no winner by day 500"));
+        Assert.All(res, r => Assert.True(r.Off == 0 || r.On <= r.Off + 10, $"seed {r.s}: BlindHunt on ended on day {r.On}, off on day {r.Off}"));
+        Assert.Contains(res, r => r.Off == 0 || r.Off - r.On >= 100);
     }
 }
