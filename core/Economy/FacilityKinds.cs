@@ -11,7 +11,7 @@ public enum FacilityKind
     Mine, Refinery,
     OrbitalShipyard, TrainingFacility, ConstructionYard,
     AdvancedShipyard, AdvancedTrainingFacility, AdvancedConstructionYard,
-    Kdy150, LnrSeriesI, GenCoreLevelI, LnrSeriesII, GenCoreLevelII,
+    Lien150, CovenantI, EscrowI, CovenantII, EscrowII,
     /// <summary>Designed, not in Classic: 1 energy slot, 10 refined, maintenance 5, one per planet. rule: m5-fog-and-hq §N4; economy/15 §2 (Paul 2026-10-16).</summary>
     SensorStation,
 }

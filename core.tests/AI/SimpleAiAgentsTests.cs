@@ -111,12 +111,12 @@ public class SimpleAiAgentsTests
             Assert.False(src.Contains(bad, StringComparison.Ordinal), $"SimpleAiAgents.cs mentions {bad}");
     }
 
-    // QA-8, B6c-15 in play (SimpleAiParams.LeaderMarks, DEFAULT off since 2026-10-18, QA-12; on here): while the Hand holds Charter the Emperor is kept there (Emperor home),
-    // so the Seat of Power stays on (m5-characters-and-force §Seat of Power); the six story characters are never commanders and the Emperor
+    // QA-8, B6c-15 in play (SimpleAiParams.LeaderMarks, DEFAULT off since 2026-10-18, QA-12; on here): while the Hand holds Charter The Chair is kept there (The Chair home),
+    // so the Seat of Power stays on (m5-characters-and-force §Seat of Power); the six story characters are never commanders and The Chair
     // is never a diplomat (B6c-14). Fogged Medium mirror, seeds 1 to 8, 1500 days: on 1500 of 1500 days on every seed with the
-    // switch; 15 to 103 days without it, and the Emperor held by the Collective on seeds 3, 4 and 6 (56, 203 and 84 days).
+    // switch; 15 to 103 days without it, and The Chair held by the Collective on seeds 3, 4 and 6 (56, 203 and 84 days).
     [Fact]
-    public void LeaderMarks_EmperorHome_TheSeatOfPowerStaysOn()
+    public void LeaderMarks_ChairHome_TheSeatOfPowerStaysOn()
     {
         Assert.False(new SimpleAiParams().LeaderMarks);
         var games = MultiSeed.Play(new[] { 1, 2, 3, 4 }, seed =>
@@ -124,21 +124,21 @@ public class SimpleAiAgentsTests
             var (m, h) = Match(seed, Fog with { LeaderMarks = true });
             int on = 0, days = 0;
             while (h.Game.Day < 700 && h.Victory.Winner == null) { m.Step(); days++; if (h.Characters.SeatOfPowerOn) on++; }
-            // B6c-14 in play: the six story characters are never made commanders, the Emperor is never a diplomat
+            // B6c-14 in play: the six story characters are never made commanders, The Chair is never a diplomat
             var cp = h.Characters.Params;
-            var story = new HashSet<int> { cp.Luke, cp.Leia, cp.Vader, cp.Emperor, new SimpleAiParams().MonMothmaId, h.Missions.Data.Numbers.HanCharacterId };
+            var story = new HashSet<int> { cp.Nobody, cp.Ledger, cp.Ravilla, cp.Chair, new SimpleAiParams().MaeAbaraId, h.Missions.Data.Numbers.MidwifeCharacterId };
             var ev = h.Game.Events;
             int commands = ev.OfType<CharacterAttached>().Count(e => e.Day > 0 && e.Post != CharacterPost.None && story.Contains(e.Character))
                          + ev.OfType<SystemGeneralAssigned>().Count(e => story.Contains(e.Character));
-            int emperorDiplomacy = ev.OfType<MissionStarted>().Count(e => e.MissionKind == MissionKind.Diplomacy && e.Characters.Items.Contains(cp.Emperor));
-            return (Seed: seed, On: on, Days: days, Commands: commands, EmperorDiplomacy: emperorDiplomacy);
+            int chairDiplomacy = ev.OfType<MissionStarted>().Count(e => e.MissionKind == MissionKind.Diplomacy && e.Characters.Items.Contains(cp.Chair));
+            return (Seed: seed, On: on, Days: days, Commands: commands, ChairDiplomacy: chairDiplomacy);
         });
         foreach (var g in games)
         {
-            _out.WriteLine($"seed {g.Seed}: Seat of Power on {g.On} of {g.Days} days; story commanders {g.Commands}; Emperor diplomacy {g.EmperorDiplomacy}");
+            _out.WriteLine($"seed {g.Seed}: Seat of Power on {g.On} of {g.Days} days; story commanders {g.Commands}; Chair diplomacy {g.ChairDiplomacy}");
             Assert.True(g.On * 20 >= g.Days * 19, $"seed {g.Seed}: Seat of Power on only {g.On} of {g.Days} days");
             Assert.Equal(0, g.Commands);
-            Assert.Equal(0, g.EmperorDiplomacy);
+            Assert.Equal(0, g.ChairDiplomacy);
         }
     }
 
@@ -156,7 +156,7 @@ public class SimpleAiAgentsTests
         // the smallest Collective fleet standing away from the HQ (Saltgreen on seed 1; at the HQ the odds stay below the AI's floor)
         var fleet = h.Game.State.Fleets.Values.Where(f => f.Side == Side.Collective && f.At != null && f.At != h.HqSystem && f.Ships.Count > 0)
             .OrderBy(f => f.Ships.Count).ThenBy(f => f.Id).First();
-        var prisoner = h.Characters.InPlay.Where(c => c.Side == Side.Hand && c.Status == CharacterStatus.Free && c.Transit == null && c.Id != cp.Emperor
+        var prisoner = h.Characters.InPlay.Where(c => c.Side == Side.Hand && c.Status == CharacterStatus.Free && c.Transit == null && c.Id != cp.Chair
                                                       && !h.Missions.IsOnMission(c.Id))
             .OrderBy(c => c.Id).First();
         bool done = false;
@@ -311,7 +311,7 @@ public class SimpleAiAgentsTests
     // QA-6: B6c §7 (the Classic AI's Sabotage, Recon, espionage-team and Abduction/Assassination filters admit special forces, inferred from the
     // mask), B6b §9 (it keeps at least 8 special forces), m5-missions §Special forces (a special force is a team member only of the kinds whose
     // record mask holds its class bit). With SimpleAiParams.SpecialForceAgents (DEFAULT off) on, each side keeps SpecialForcesWanted special forces
-    // of its agent classes and sends them alone on planned missions; off, no special force goes on a mission (the HQ-hunt droids are Hard's).
+    // of its agent classes and sends them alone on planned missions; off, no special force goes on a mission (the HQ-hunt speculators are Hard's).
     // Measured on 146027a + this change, seeds 1 to 4, fog, 1000 days (special-force missions Hand / Collective): 12/2, 0/1, 18/3, 16/3;
     // kinds Subdue (most), Espionage, Abduction. Floor: both sides send one on at least 3 of 4 seeds; only agent classes go; at most 1
     // order in 20 rejected. Off: none on seed 1. AI Recruitment (QA-12, MaxRecruiters 2) is off here: with it on, the recruited minors take
@@ -344,18 +344,18 @@ public class SimpleAiAgentsTests
         Assert.DoesNotContain(ho.Game.Events.OfType<MissionStarted>(), e => e.SpecialForces.Items.Count > 0);
     }
 
-    // QA-12, B6c §7 list item 1 (Recruitment: up to 2 running while the side has anyone left to recruit, leadership at least 80) and the Emperor-
+    // QA-12, B6c §7 list item 1 (Recruitment: up to 2 running while the side has anyone left to recruit, leadership at least 80) and The Chair-
     // home planner's start test (ctrl+0xa4 == 0: nobody left to recruit). m5-missions §6 Recruitment places the recruit at the target system.
     // Seed 1, fog, leader marks on, by day 700: the Hand's pool (19) empties on day 280, the Collective's (24) on day 357; at most 2 running per
     // side; the Seat of Power is on 360 of the 360 days from 60 days after the Hand's pool empties.
     // Checked: never more than MaxRecruiters Recruitments running per side; each recruiter has leadership at least RecruitMinLeadership when
     // sent; both pools empty by day 700; no Recruitment is sent once a side's pool is empty; after the Hand's pool empties the Seat of Power is on.
     [Fact]
-    public void Recruitment_TwoAtATime_UntilThePoolIsEmpty_ThenTheEmperorGoesHome()
+    public void Recruitment_TwoAtATime_UntilThePoolIsEmpty_ThenTheChairGoesHome()
     {
         var p = new SimpleAiParams();
-        Assert.Equal((2, 80, true), (p.MaxRecruiters, p.RecruitMinLeadership, p.EmperorHomeAfterRecruiting));
-        var (m, h) = Match(1, Fog with { LeaderMarks = true }); // the Emperor-home planner is a leader-marks rule (DEFAULT off)
+        Assert.Equal((2, 80, true), (p.MaxRecruiters, p.RecruitMinLeadership, p.ChairHomeAfterRecruiting));
+        var (m, h) = Match(1, Fog with { LeaderMarks = true }); // The Chair-home planner is a leader-marks rule (DEFAULT off)
         var running = new Dictionary<int, Side>(); // mission id -> side (lookup only)
         int maxE = 0, maxA = 0, weak = 0, afterEmpty = 0, seatDays = 0, seatOn = 0;
         int? emptyE = null, emptyA = null;
@@ -388,7 +388,7 @@ public class SimpleAiAgentsTests
 
     // Key hunt (SimpleAiParams.KeyHunt, DEFAULT on; QA round 29). Fog, the Hand passive, seeds 1 to 4 (MultiSeed). On day 1 a test hook
     // hands Charter to the Collective (DebugApplyTroops: its place term; standard victory, the default settings), so the Collective is ahead and
-    // still needs the Emperor and Vader captured. With the hunt its spies look at systems its own picture shows Hand-held (or where its
+    // still needs The Chair and Ravilla captured. With the hunt its spies look at systems its own picture shows Hand-held (or where its
     // picture last showed a key); the Collective plans no other Espionage, so without the hunt it sends none. rule: m5-fog-and-hq §N8 (the AI
     // reads only its side's knowledge), §F1 group D (an Espionage success writes the characters present).
     // Measured by day 800 (looks / first day a picture showed a key / Abductions at keys), AI trainer 2026-10-18 on main 4774ff7 plus the hunt:
@@ -396,7 +396,7 @@ public class SimpleAiAgentsTests
     // The Hand keeps all its ~140 systems here, so the sweep is slow; in a real endgame it holds far fewer.
     // Floor: at least 20 looks on every seed, none at a system the picture did not show Hand (or a key at); a key seen on at least 1 of 4.
     [Fact]
-    public void KeyHunt_AheadTheCollectiveLooksForTheEmperorAndVader_WhereItsPictureSays()
+    public void KeyHunt_AheadTheCollectiveLooksForTheChairAndRavilla_WhereItsPictureSays()
     {
         Assert.True(new SimpleAiParams().KeyHunt);
         var on = MultiSeed.Play(new[] { 1, 2, 3, 4 }, seed => Hunt(seed, Fog));
@@ -415,7 +415,7 @@ public class SimpleAiAgentsTests
     private static (int Seed, int Looks, int OffTarget, int? KeySeenDay, int Abductions) Hunt(int seed, SimpleAiParams p)
     {
         var (m, h) = Match(seed, p, passive: Side.Hand, settings: new GameSettings()); // standard victory: Charter alone does not win
-        var cp = h.Characters.Params; var keys = new[] { cp.Emperor, cp.Vader };
+        var cp = h.Characters.Params; var keys = new[] { cp.Chair, cp.Ravilla };
         bool done = false;
         h.Game.RegisterHook("5.2", ctx => { if (!done) { done = true; h.Control.DebugApplyTroops(ctx, "Charter", Side.Collective, "Militia", 10); } });
         int looks = 0, offTarget = 0, abductions = 0, seen = 0; int? keySeen = null;
@@ -437,8 +437,8 @@ public class SimpleAiAgentsTests
     }
 
     // rule: m5-missions §6a.3 (a key target's chance is min(table, cap_percent)): with AbductionKeyCap (DEFAULT on) the planner reads the
-    // Emperor's and Vader's Abduction chance as the core rolls it, so the odds floor (MissionMinOddsPercent) applies; off, the table alone.
-    // Seed 1, the Collective's best fighter at day 0 against the Emperor: 95 off, 2 on (the key-target file: Emperor 2, Vader 4).
+    // The Chair's and Ravilla's Abduction chance as the core rolls it, so the odds floor (MissionMinOddsPercent) applies; off, the table alone.
+    // Seed 1, the Collective's best fighter at day 0 against The Chair: 95 off, 2 on (the key-target file: The Chair 2, Ravilla 4).
     [Fact]
     public void AbductionOdds_OfAKeyTarget_ReadTheCap()
     {
@@ -447,14 +447,14 @@ public class SimpleAiAgentsTests
         var cp = h.Characters.Params;
         var best = h.Characters.InPlay.Where(c => c.Side == Side.Collective).OrderByDescending(c => h.Characters.EffectiveSkill(c, Skill.Combat)).ThenBy(c => c.Id).First();
         var on = new SimpleAi(h, Side.Collective, Fog); var off = new SimpleAi(h, Side.Collective, Fog with { AbductionKeyCap = false });
-        Assert.True(h.Missions.IsKeyTarget(MissionKind.Abduction, cp.Emperor, out int capE));
-        Assert.True(h.Missions.IsKeyTarget(MissionKind.Abduction, cp.Vader, out int capV));
-        int e1 = on.AbductionPercentEstimate(best, cp.Emperor, "Charter"), e0 = off.AbductionPercentEstimate(best, cp.Emperor, "Charter");
-        int v1 = on.AbductionPercentEstimate(best, cp.Vader, "Charter"), v0 = off.AbductionPercentEstimate(best, cp.Vader, "Charter");
-        _out.WriteLine($"Emperor {e0} -> {e1} (cap {capE}); Vader {v0} -> {v1} (cap {capV})");
+        Assert.True(h.Missions.IsKeyTarget(MissionKind.Abduction, cp.Chair, out int capE));
+        Assert.True(h.Missions.IsKeyTarget(MissionKind.Abduction, cp.Ravilla, out int capV));
+        int e1 = on.AbductionPercentEstimate(best, cp.Chair, "Charter"), e0 = off.AbductionPercentEstimate(best, cp.Chair, "Charter");
+        int v1 = on.AbductionPercentEstimate(best, cp.Ravilla, "Charter"), v0 = off.AbductionPercentEstimate(best, cp.Ravilla, "Charter");
+        _out.WriteLine($"Chair {e0} -> {e1} (cap {capE}); Ravilla {v0} -> {v1} (cap {capV})");
         Assert.Equal(Math.Min(e0, capE), e1);
         Assert.Equal(Math.Min(v0, capV), v1);
-        Assert.True(e0 > capE && e1 < new SimpleAiParams().MissionMinOddsPercent, $"Emperor {e0} -> {e1}");
+        Assert.True(e0 > capE && e1 < new SimpleAiParams().MissionMinOddsPercent, $"Chair {e0} -> {e1}");
     }
 }
 

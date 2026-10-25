@@ -92,6 +92,17 @@ public sealed class NameMigrations
     private static bool IsIdentifier(string s) =>
         s.Length > 0 && (char.IsLetter(s[0]) || s[0] == '_') && s.All(c => char.IsLetterOrDigit(c) || c == '_');
 
+    /// <summary>
+    /// A ship's display name written from its class, "&lt;class&gt; &lt;n&gt;" (NewGame names ships that way), with an old class name: the same
+    /// name with the new class ("Ark 1" -> "Ark 1"). Null when <paramref name="s"/> is not such a name. QA-44.
+    /// </summary>
+    private string? Numbered(string s)
+    {
+        int space = s.LastIndexOf(' ');
+        if (space <= 0 || space == s.Length - 1 || !s.AsSpan(space + 1).ToString().All(char.IsAsciiDigit)) return null;
+        return _map.TryGetValue(s[..space], out var n) ? n + s[space..] : null;
+    }
+
     /// <summary>The name to use today for <paramref name="name"/> (itself when it was never renamed).</summary>
     public string Current(string name) => _map.TryGetValue(name, out var n) ? n : name;
 
@@ -124,7 +135,7 @@ public sealed class NameMigrations
                 return copy;
             }
             case JsonValue v when v.TryGetValue<string>(out var s):
-                return JsonValue.Create(_map.ContainsKey(s) ? Current(s) : CurrentIdentifier(s));
+                return JsonValue.Create(_map.ContainsKey(s) ? Current(s) : Numbered(s) ?? CurrentIdentifier(s));
             default:
                 return node;
         }

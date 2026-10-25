@@ -27,9 +27,9 @@ public class CharacterSetupTests
             Assert.Equal(Side.Hand, c.Side);
             Assert.False(c.CanAdmiral || c.CanCommander || c.CanGeneral); // no officer roles, like Oti
         }
-        Assert.Equal(50, d.Get(Han).NavigatorSpeed);
-        Assert.Equal(100, d.Get(Luke).NavigatorSpeed);
-        Assert.True(d.Get(Luke).TalentTrainer && d.Get(Vader).TalentTrainer);
+        Assert.Equal(50, d.Get(Midwife).NavigatorSpeed);
+        Assert.Equal(100, d.Get(Nobody).NavigatorSpeed);
+        Assert.True(d.Get(Nobody).TalentTrainer && d.Get(Ravilla).TalentTrainer);
         Assert.All(d.All.Where(c => !c.Added), c => Assert.Equal((100, 0), (c.LoyaltyBase, c.LoyaltyVariance)));
     }
 
@@ -39,10 +39,10 @@ public class CharacterSetupTests
     {
         var h = Make();
         var ch = h.Characters;
-        Assert.Equal(Coruscant, ch.LocationOf(ch.Get(Palpatine)!));
-        Assert.Equal(h.HqSystem, ch.LocationOf(ch.Get(MonMothma)!));
-        foreach (var id in new[] { Leia, Luke, Han, Wedge, Chewbacca, Dodonna }) Assert.Equal(Yavin, ch.LocationOf(ch.Get(id)!));
-        foreach (var id in new[] { Vader, 896, 897, Piett, Veers, 908 }) Assert.True(ch.Get(id)!.Placed);
+        Assert.Equal(Charter, ch.LocationOf(ch.Get(Chair)!));
+        Assert.Equal(h.HqSystem, ch.LocationOf(ch.Get(MaeAbara)!));
+        foreach (var id in new[] { Ledger, Nobody, Midwife, FortyOne, Oti, OldDebt }) Assert.Equal(Shoal, ch.LocationOf(ch.Get(id)!));
+        foreach (var id in new[] { Ravilla, 896, 897, Varo, EightyEight, 908 }) Assert.True(ch.Get(id)!.Placed);
         foreach (var side in new[] { Side.Hand, Side.Collective })
             Assert.Equal(7 + 4, ch.InPlay.Count(c => c.Side == side));
         Assert.Equal(65, ch.All.Count); // the whole roster is created (unplaced = the recruitment pool)
@@ -50,14 +50,14 @@ public class CharacterSetupTests
         {
             Assert.True(ch.Data.Get(c.Id).InGame);
             if (c.AttachedFleet != 0) Assert.Equal(c.Side, h.Game.State.Fleets[c.AttachedFleet].Side);
-            else Assert.True(h.Game.State.SystemOwners.ContainsKey(c.System!) || c.Id is Palpatine or MonMothma || c.System == Yavin);
+            else Assert.True(h.Game.State.SystemOwners.ContainsKey(c.System!) || c.Id is Chair or MaeAbara || c.System == Shoal);
             Assert.Equal(CharacterPost.None, c.Post); // nobody holds a post on day 0
         }
         Assert.Empty(h.Game.Events); // setup raises no per-object events
     }
 
     // m5-characters-and-force CH39 (Rule New 4, Paul 2026-10-18): TrainerPick Random (DEFAULT) draws 3 talented placed characters per side, each an
-    // aware talented character with Talent 80..120 (or his own if higher), and only they can train; Fixed (Classic) draws nothing and Luke and Vader train
+    // aware talented character with Talent 80..120 (or his own if higher), and only they can train; Fixed (Classic) draws nothing and Nobody and Ravilla train
     [Fact]
     public void CH39_RandomTalentedTrainers()
     {
@@ -78,11 +78,11 @@ public class CharacterSetupTests
 
         var classic = Make(1, new GameSettings { Characters = new CharacterParams { TrainerPick = TrainerPick.Fixed } }).Characters;
         Assert.DoesNotContain(classic.All, c => c.Talented);
-        Assert.Equal(new[] { Luke, Vader }.OrderBy(x => x), classic.All.Where(classic.IsTrainer).Select(c => c.Id).OrderBy(x => x));
+        Assert.Equal(new[] { Nobody, Ravilla }.OrderBy(x => x), classic.All.Where(classic.IsTrainer).Select(c => c.Id).OrderBy(x => x));
     }
 
     // m5-characters-and-force CH40 (Q17, Paul 2026-10-18 cards "Skip the strong" and "Leave out hunters"): the draw never takes anyone already at
-    // Talent 80+ (the Emperor and Vader keep their Talent but never train) nor a character flagged never_talented (the Repossessors); Leia and
+    // Talent 80+ (The Chair and Ravilla keep their Talent but never train) nor a character flagged never_talented (the Repossessors); Ledger and
     // Oti stay in the pool. With both switches off the strong can be drawn again.
     [Fact]
     public void CH40_TalentedDrawSkipsTheStrongAndTheHunters()
@@ -90,18 +90,18 @@ public class CharacterSetupTests
         var hunters = new[] { 928, 929, 930, 931 }; // Usura, Mora, Damnum, Pignus (roster.csv never_talented = 1)
         var first = Make(1).Characters;
         Assert.All(hunters, id => Assert.True(first.Data.Get(id).NeverTalented));
-        Assert.False(first.Data.Get(577).NeverTalented); // Leia
+        Assert.False(first.Data.Get(577).NeverTalented); // Ledger
         foreach (int seed in Enumerable.Range(1, 12))
         {
             var ch = Make(seed).Characters;
-            Assert.All(ch.All.Where(c => c.Talented), c => Assert.DoesNotContain(c.Id, hunters.Append(Palpatine).Append(Vader)));
+            Assert.All(ch.All.Where(c => c.Talented), c => Assert.DoesNotContain(c.Id, hunters.Append(Chair).Append(Ravilla)));
             Assert.Equal(3, ch.InPlay.Count(c => c.Side == Side.Hand && c.Talented));
-            Assert.True(ch.Get(Vader)!.EffectiveTalent >= 80);
-            Assert.False(ch.IsTrainer(ch.Get(Vader)!));
+            Assert.True(ch.Get(Ravilla)!.EffectiveTalent >= 80);
+            Assert.False(ch.IsTrainer(ch.Get(Ravilla)!));
         }
         var open = new CharacterParams { TalentedSkipStrong = false, TalentedSkipFlagged = false };
         Assert.Contains(Enumerable.Range(1, 30), seed =>
-            Make(seed, new GameSettings { Characters = open }).Characters.All.Any(c => c.Talented && (c.Id == Vader || c.Id == Palpatine)));
+            Make(seed, new GameSettings { Characters = open }).Characters.All.Any(c => c.Talented && (c.Id == Ravilla || c.Id == Chair)));
     }
 
     // m5-setup-and-victory SV44: same seed same cast; the character draws come before the economy and research arming
@@ -120,7 +120,7 @@ public class CharacterSetupTests
     {
         var h = Make(1, new GameSettings { Characters = new CharacterParams { StartCastOfficers = StartCastOfficers.None, StartExtrasPerSide = 0 } });
         var emp = h.Characters.InPlay.Where(c => c.Side == Side.Hand).Select(c => c.Id).ToList();
-        Assert.Equal(new[] { Palpatine, Vader }, emp);
+        Assert.Equal(new[] { Chair, Ravilla }, emp);
         Assert.Equal(7, h.Characters.InPlay.Count(c => c.Side == Side.Collective));
     }
 
@@ -129,10 +129,10 @@ public class CharacterSetupTests
     public void RandomLocation_DrawsSystemThenFleetShip()
     {
         var w = new CharWorld();
-        w.Hold(Hoth, Side.Hand); w.Hold(Yavin, Side.Hand);
-        int f = w.Fleet(Side.Hand, Coruscant, Isd, 3);
+        w.Hold(Thaw, Side.Hand); w.Hold(Shoal, Side.Hand);
+        int f = w.Fleet(Side.Hand, Charter, Mandate, 3);
         var stub = new Praedra.Core.Tests.Economy.StubRng().Queue(1, 2, 1);
-        Assert.Equal((Hoth, 0), w.Ch.RandomLocation(Side.Hand, stub));
+        Assert.Equal((Thaw, 0), w.Ch.RandomLocation(Side.Hand, stub));
         Assert.Equal(((string?)null, f), w.Ch.RandomLocation(Side.Hand, stub));
         Assert.Equal(new[] { (0, 2), (0, 2), (0, 2) }, stub.Requests.Select(r => (r.Min, r.Max)));
     }
@@ -142,20 +142,20 @@ public class CharacterSetupTests
     public void Victory_StandardNeedsTheKeyCharactersCaptured()
     {
         var off = Make(2, OldVictory.Settings); // HQ-only set explicitly: standard victory is the default now
-        off.Fleets.SetOwner(Coruscant, Side.Collective);
+        off.Fleets.SetOwner(Charter, Side.Collective);
         off.Game.Step();
         Assert.Equal(Side.Collective, off.Victory.Winner); // HQ-only flavour (explicit)
 
         var h = Make(2); // the default: standard victory
-        h.Fleets.SetOwner(Coruscant, Side.Collective);
+        h.Fleets.SetOwner(Charter, Side.Collective);
         h.Game.Step();
-        Assert.Null(h.Victory.Winner); // Vader and Palpatine are free
+        Assert.Null(h.Victory.Winner); // Ravilla and The Chair are free
         bool done = false;
         h.Game.RegisterHook("5.2", ctx =>
         {
             if (done) return; done = true;
-            h.Characters.Capture(ctx, h.Characters.Get(Vader)!, Side.Collective, null, CharacterCause.Mission);
-            h.Characters.Capture(ctx, h.Characters.Get(Palpatine)!, Side.Collective, null, CharacterCause.Mission);
+            h.Characters.Capture(ctx, h.Characters.Get(Ravilla)!, Side.Collective, null, CharacterCause.Mission);
+            h.Characters.Capture(ctx, h.Characters.Get(Chair)!, Side.Collective, null, CharacterCause.Mission);
         });
         h.Game.Step();
         Assert.Equal(Side.Collective, h.Victory.Winner);
@@ -171,9 +171,9 @@ public class CharacterSetupTests
             Victory = new VictoryRules { StandardVictory = true, KeyDeathFallback = KeyDeathFallback.Immortal },
         });
         bool once = false;
-        imm.Game.RegisterHook("5.2", ctx => { if (!once) { once = true; imm.Characters.Kill(ctx, imm.Characters.Get(Luke)!, CharacterCause.Mission); } });
+        imm.Game.RegisterHook("5.2", ctx => { if (!once) { once = true; imm.Characters.Kill(ctx, imm.Characters.Get(Nobody)!, CharacterCause.Mission); } });
         imm.Game.Step();
-        Assert.NotEqual(CharacterStatus.Dead, imm.Characters.Get(Luke)!.Status);
+        Assert.NotEqual(CharacterStatus.Dead, imm.Characters.Get(Nobody)!.Status);
 
         var waive = Make(3, new GameSettings
         {
@@ -184,11 +184,11 @@ public class CharacterSetupTests
         waive.Game.RegisterHook("5.2", ctx =>
         {
             if (once2) return; once2 = true;
-            waive.Characters.Kill(ctx, waive.Characters.Get(Vader)!, CharacterCause.Mission);
-            waive.Characters.Capture(ctx, waive.Characters.Get(Palpatine)!, Side.Collective, null, CharacterCause.Mission);
+            waive.Characters.Kill(ctx, waive.Characters.Get(Ravilla)!, CharacterCause.Mission);
+            waive.Characters.Capture(ctx, waive.Characters.Get(Chair)!, Side.Collective, null, CharacterCause.Mission);
         });
         waive.Game.Step();
-        Assert.Equal(CharacterStatus.Dead, waive.Characters.Get(Vader)!.Status);
+        Assert.Equal(CharacterStatus.Dead, waive.Characters.Get(Ravilla)!.Status);
         Assert.True(waive.Victory.KeysCaptured(Side.Collective));
     }
 

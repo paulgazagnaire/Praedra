@@ -19,18 +19,18 @@ public class BattleHostTests
         h.Economy.AddFacility(yard, FacilityKind.OrbitalShipyard);
         for (int i = 0; i < 3; i++) h.Economy.AddObject(Side.Hand, "Tranches", yard); // no uprising: the yard is usable
         int f = h.Fleets.AddFleet(Side.Hand, "F", new[] { "Mandate" }, yard);
-        var isd = h.Game.State.Economy.Objects[h.Game.State.Fleets[f].Ships[0]];
-        isd.Hull = 1790;
+        var mandate = h.Game.State.Economy.Objects[h.Game.State.Fleets[f].Ships[0]];
+        mandate.Hull = 1790;
         h.Fleets.AddFleet(Side.Collective, "Raiders", new[] { "Dodger", "Dodger" }, yard);
 
         h.Game.Step(); // the battle day (hook time 1): the timer starts, nothing repaired yet
         Assert.Single(h.Game.Events.OfType<Praedra.Core.Battle.BattleEnded>());
         Assert.Empty(h.Game.Events.OfType<ShipRepaired>());
-        int afterBattle = isd.Hull;
+        int afterBattle = mandate.Hull;
         h.Game.Step(); // hook time 2: the first turn
         Assert.Single(h.Game.Events.OfType<Praedra.Core.Battle.BattleEnded>());
         Assert.Equal(2, h.Game.Events.OfType<ShipRepaired>().Single().Day);
-        Assert.True(isd.Hull > afterBattle);
+        Assert.True(mandate.Hull > afterBattle);
     }
 
     // m4-battle-classic section 1.4: the host attaches the module and OnContact is part of the saved state

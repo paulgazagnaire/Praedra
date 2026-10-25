@@ -248,7 +248,7 @@ internal static class CampaignInvariants
             if (s.Uprising)
             {
                 Assert.True(state.SystemOwners.TryGetValue(sys, out var holder), $"{where}: uprising on neutral {sys}");
-                Assert.Equal(Other(holder), s.Collective);                       // the rebels are the other side than the holder
+                Assert.Equal(Other(holder), s.Collective);                       // the collective are the other side than the holder
                 Assert.True(s.ErosionDue > host.Game.Day && s.IncidentDue > host.Game.Day, $"{where}: overdue uprising timer on {sys}");
             }
             if (s.PresenceDue != 0)

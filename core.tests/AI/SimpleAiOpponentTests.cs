@@ -70,7 +70,7 @@ public class SimpleAiOpponentTests
     // missions, 813 with them (SimpleAiParams.UseCharactersAndMissions), 795 since the AI stops hunting fleets that only retreat
     // (SimpleAiParams.RunnerRetreats, SimpleAiChaseTests), all on the 360-system map.
     [Fact]
-    public void CollectiveAi_AgainstPassiveHand_MakesSteadyProgress_AndWinsByTakingCoruscant()
+    public void CollectiveAi_AgainstPassiveHand_MakesSteadyProgress_AndWinsByTakingCharter()
     {
         var games = MultiSeed.Play(MultiSeed.OneToEight, s => PlayPassive(s, Side.Collective, 1600));
         Report(Side.Collective, games);

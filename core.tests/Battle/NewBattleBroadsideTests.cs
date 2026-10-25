@@ -6,22 +6,22 @@ using Xunit.Abstractions;
 namespace Praedra.Core.Tests.Battle;
 
 // Tests of space-combat/11 section 4 (closing range, which supersedes m4-battle-new section 5) and of m4-battle-new section 6 (facing), on ships whose
-// strongest guns are on the broadside (Homeward). Finding of the "4 Dauntless v 2 Mandate II" bug hunt: facing, arc mapping and data copy were
-// correct; the Dauntless lost because the old StandOff rule parked the Mandate II out of their reach. The new rule closes to min(reach_a, reach_b).
+// strongest guns are on the broadside (Homeward). Finding of the "4 Homeward v 2 Mandate II" bug hunt: facing, arc mapping and data copy were
+// correct; the Homeward lost because the old StandOff rule parked the Mandate II out of their reach. The new rule closes to min(reach_a, reach_b).
 public class NewBattleBroadsideTests
 {
     private readonly ITestOutputHelper _out;
     public NewBattleBroadsideTests(ITestOutputHelper output) { _out = output; }
 
-    private const string Dauntless = "Homeward", HandII = "Mandate II", Isd = "Mandate", Strike = "Injunction", BulkCruiser = "Hauler", Carrack = "Warrant",
-        Bulwark = "Barricade", Cc9600 = "Picket", VictoryDestroyer = "Decree", Corvette = "Dodger",
-        EscortCarrier = "Tender", Nebulon = "Mender";
+    private const string Homeward = "Homeward", MandateII = "Mandate II", Mandate = "Mandate", Strike = "Injunction", BulkCruiser = "Hauler", Warrant = "Warrant",
+        Barricade = "Barricade", Cc9600 = "Picket", VictoryDestroyer = "Decree", Corvette = "Dodger",
+        EscortCarrier = "Tender", Mender = "Mender";
 
     private static (NewBattle B, ClassicBattleResult R) Run(NewBattleParams np, ulong seed, (string, int)[]? a = null, (string, int)[]? e = null,
         bool canRetreat = true, Action<NewBattle>? hook = null, bool log = true)
     {
         var p = new BattleParams { Ruleset = BattleRuleset.New, New = np };
-        var (nb, _) = QuickBattle.PrepareNew(p, NewBattleTests.Ships, a ?? new[] { (Dauntless, 4) }, e ?? new[] { (HandII, 2) }, seed, canRetreat, canRetreat, logEvents: log);
+        var (nb, _) = QuickBattle.PrepareNew(p, NewBattleTests.Ships, a ?? new[] { (Homeward, 4) }, e ?? new[] { (MandateII, 2) }, seed, canRetreat, canRetreat, logEvents: log);
         hook?.Invoke(nb);
         return (nb, nb.Run());
     }
@@ -43,12 +43,12 @@ public class NewBattleBroadsideTests
 
     // ---------------------------------------------------------------- the pinned bug-report case, revised to the new rule
 
-    // space-combat/11 §4 (3): "4 Dauntless v 2 Mandate II" (the bug report). Under the old m4-battle-new §5 rule (desiredD = R - 16) the Mandate II parked at D = 54
-    // and the Dauntless never fired (0 of 200 seeds won). Under the new rule D = min(reach) so both fire. What the rule gives is asserted and printed.
+    // space-combat/11 §4 (3): "4 Homeward v 2 Mandate II" (the bug report). Under the old m4-battle-new §5 rule (desiredD = R - 16) the Mandate II parked at D = 54
+    // and the Homeward never fired (0 of 200 seeds won). Under the new rule D = min(reach) so both fire. What the rule gives is asserted and printed.
     [Fact]
-    public void ClosingRange_FourDauntlessV2HandII_NowGetInRangeAndFire()
+    public void ClosingRange_FourHomewardV2HandII_NowGetInRangeAndFire()
     {
-        // one battle, seed 1: both sides fire, the Dauntless turn broadside, D settles at min(reach) = 26 (both ion ranges: 40 - 12 - 2)
+        // one battle, seed 1: both sides fire, the Homeward turn broadside, D settles at min(reach) = 26 (both ion ranges: 40 - 12 - 2)
         var (nb, r) = Run(new NewBattleParams(), 1);
         Assert.Equal(80, nb.StartDistance);      // longest range present (70) + 10: unchanged
         Assert.Equal(26, nb.TargetDistance);     // min(26, 26)
@@ -57,21 +57,21 @@ public class NewBattleBroadsideTests
         var sideOf = nb.Units.ToDictionary(u => u.ObjectId, u => u.Side);
         Assert.Contains(nb.Log!, l => l.Kind == "turn" && l.Detail == "broadside" && sideOf[l.Unit] == Side.Collective);
 
-        int aw = 0, ew = 0, none = 0, dauntlessSurvivors = 0;
+        int aw = 0, ew = 0, none = 0, homewardSurvivors = 0;
         for (ulong seed = 1; seed <= 200; seed++)
         {
             var (b, res) = Run(new NewBattleParams(), seed, log: false);
             if (res.CollectiveOutcome == BattleOutcome.Victorious) aw++; else if (res.HandOutcome == BattleOutcome.Victorious) ew++; else none++;
-            dauntlessSurvivors += b.Units.Count(u => u.Side == Side.Collective && u.IsCapital && !u.Destroyed && !u.Left);
+            homewardSurvivors += b.Units.Count(u => u.Side == Side.Collective && u.IsCapital && !u.Destroyed && !u.Left);
         }
-        _out.WriteLine($"4 Dauntless v 2 Mandate II, 200 seeds: Collective wins {aw / 2.0:0.0}%, Hand wins {ew / 2.0:0.0}%, none {none / 2.0:0.0}%, mean Dauntless survivors {dauntlessSurvivors / 200.0:0.00}");
-        Assert.True(aw >= 120, $"4 Dauntless should mostly win against 2 Mandate II, won {aw}/200");
+        _out.WriteLine($"4 Homeward v 2 Mandate II, 200 seeds: Collective wins {aw / 2.0:0.0}%, Hand wins {ew / 2.0:0.0}%, none {none / 2.0:0.0}%, mean Homeward survivors {homewardSurvivors / 200.0:0.00}");
+        Assert.True(aw >= 120, $"4 Homeward should mostly win against 2 Mandate II, won {aw}/200");
     }
 
     // ---------------------------------------------------------------- space-combat/11 section 4, one test per numbered point
 
     // space-combat/11 §4 (1): weapons fire at their exact DAT range. Bands are labels. With a slow approach (k = 0.5) the Mandate II (range 70) opens fire while the
-    // Dauntless (65) are still out of range; no shot is ever fired beyond the shooter's longest DAT range, and the Mandate II fire at pair range 66 to 70 (long band, not a band edge).
+    // Homeward (65) are still out of range; no shot is ever fired beyond the shooter's longest DAT range, and the Mandate II fire at pair range 66 to 70 (long band, not a band edge).
     [Fact]
     public void Section4_1_WeaponsFireAtExactDatRange()
     {
@@ -102,7 +102,7 @@ public class NewBattleBroadsideTests
         Assert.True(shotsAtDatRange > 0, "the Mandate II never fired alone at pair range 66..70");
     }
 
-    // space-combat/11 §4 (2): reach uses the batteries that hold 90% of the in-arc dps. An ISD against a shielded Dauntless: ions (35, x1.5 on shields) carry 60% of the dps and
+    // space-combat/11 §4 (2): reach uses the batteries that hold 90% of the in-arc dps. An Mandate against a shielded Homeward: ions (35, x1.5 on shields) carry 60% of the dps and
     // the turbolasers (50) 40%, so 90% needs the ions: reach = 35 - 12 - 2 = 21, not 50 - 14 = 36. Lowering the share to 30% lets the turbolasers set it (36).
     [Fact]
     public void Section4_2_ReachUsesTheBatteriesHolding90PercentOfTheDps()
@@ -110,24 +110,24 @@ public class NewBattleBroadsideTests
         double Reach(double share)
         {
             double reach = -1;
-            Run(new NewBattleParams { ReachDpsShare = share }, 1, new[] { (Dauntless, 1) }, new[] { (Isd, 1) }, log: false,
+            Run(new NewBattleParams { ReachDpsShare = share }, 1, new[] { (Homeward, 1) }, new[] { (Mandate, 1) }, log: false,
                 hook: nb0 => nb0.AfterTick = t => { if (t == 3) reach = nb0.LastReach(Side.Hand); });
             return reach;
         }
         Assert.Equal(21, Reach(0.9));
         Assert.Equal(36, Reach(0.3));
-        // and the Dauntless (ion 40 and turbolaser 65): ions carry the dps against a shield too, reach 40 - 14 = 26
-        double dauntless = -1;
-        Run(new NewBattleParams(), 1, new[] { (Dauntless, 1) }, new[] { (Isd, 1) }, log: false, hook: nb0 => nb0.AfterTick = t => { if (t == 3) dauntless = nb0.LastReach(Side.Collective); });
-        Assert.Equal(26, dauntless);
+        // and the Homeward (ion 40 and turbolaser 65): ions carry the dps against a shield too, reach 40 - 14 = 26
+        double homeward = -1;
+        Run(new NewBattleParams(), 1, new[] { (Homeward, 1) }, new[] { (Mandate, 1) }, log: false, hook: nb0 => nb0.AfterTick = t => { if (t == 3) homeward = nb0.LastReach(Side.Collective); });
+        Assert.Equal(26, homeward);
     }
 
-    // space-combat/11 §4 (3): D = min(reach_a, reach_b), so both sides can fire. Dauntless (reach 26) against an ISD (reach 21): D heads for 21 and the Dauntless still fire.
+    // space-combat/11 §4 (3): D = min(reach_a, reach_b), so both sides can fire. Homeward (reach 26) against an Mandate (reach 21): D heads for 21 and the Homeward still fire.
     [Fact]
     public void Section4_3_FleetDistanceIsTheSmallerReachAndBothSidesFire()
     {
         double ra = -1, re = -1, target = -1;
-        var (nb, _) = Run(new NewBattleParams(), 1, new[] { (Dauntless, 1) }, new[] { (Isd, 1) }, canRetreat: false, hook: nb0 => nb0.AfterTick = t =>
+        var (nb, _) = Run(new NewBattleParams(), 1, new[] { (Homeward, 1) }, new[] { (Mandate, 1) }, canRetreat: false, hook: nb0 => nb0.AfterTick = t =>
         {
             if (t != 3) return;
             ra = nb0.LastReach(Side.Collective); re = nb0.LastReach(Side.Hand); target = nb0.TargetDistance;
@@ -136,7 +136,7 @@ public class NewBattleBroadsideTests
         Assert.Equal(21, re);
         Assert.Equal(Math.Min(ra, re), target);
         Assert.True(ShotsBy(nb, Side.Collective) > 0 && ShotsBy(nb, Side.Hand) > 0);
-        // the lock-out of the old rule: the longer-ranged side (ISD turbolaser 50) used to park out of reach of the shorter-ranged one
+        // the lock-out of the old rule: the longer-ranged side (Mandate turbolaser 50) used to park out of reach of the shorter-ranged one
         Assert.Equal(21, nb.Distance);
     }
 
@@ -146,10 +146,10 @@ public class NewBattleBroadsideTests
     public void Section4_4_KiteOnlyWithSpeedEdgeAndLargerReach()
     {
         double kre = -1, kra = -1;
-        var kite = Run(new NewBattleParams(), 1, new[] { (BulkCruiser, 1) }, new[] { (Carrack, 1) }, canRetreat: false,
+        var kite = Run(new NewBattleParams(), 1, new[] { (BulkCruiser, 1) }, new[] { (Warrant, 1) }, canRetreat: false,
             hook: nb0 => nb0.AfterTick = t => { if (t == 1) { kre = nb0.LastReach(Side.Hand); kra = nb0.LastReach(Side.Collective); } }).B;
-        Assert.True(Sublight(Carrack) >= Sublight(BulkCruiser) + 1);
-        Assert.True(kite.KiteSeconds > 0, "Carrack v Hauler should kite");
+        Assert.True(Sublight(Warrant) >= Sublight(BulkCruiser) + 1);
+        Assert.True(kite.KiteSeconds > 0, "Warrant v Hauler should kite");
         Assert.True(kre > kra, $"reach at t = 1: {kre} v {kra}"); // read at the start: the kiter may be gone by the end
 
         var equalSpeed = Run(new NewBattleParams(), 1, new[] { (BulkCruiser, 1) }, new[] { (Strike, 1) }, canRetreat: false).B;
@@ -162,19 +162,19 @@ public class NewBattleBroadsideTests
         Assert.True(fastShort.LastReach(Side.Collective) < fastShort.LastReach(Side.Hand));
         Assert.Equal(0, fastShort.KiteSeconds);
 
-        // the speed edge is a tunable: with an edge of 4 points Carrack (6) v Hauler (3) no longer kites
-        var noEdge = Run(new NewBattleParams { KiteSpeedEdge = 4 }, 1, new[] { (BulkCruiser, 1) }, new[] { (Carrack, 1) }, canRetreat: false).B;
+        // the speed edge is a tunable: with an edge of 4 points Warrant (6) v Hauler (3) no longer kites
+        var noEdge = Run(new NewBattleParams { KiteSpeedEdge = 4 }, 1, new[] { (BulkCruiser, 1) }, new[] { (Warrant, 1) }, canRetreat: false).B;
         Assert.Equal(0, noEdge.KiteSeconds);
     }
 
-    // space-combat/11 §4 (4) second half: the slower chaser closes at HALF speed, so the kite ends. Carrack v Hauler: the Hauler (sublight 3, 4.5 units/s) closes at 2.25 units/s
-    // inside the Carrack's reach, until D = its own reach; the kiter fires alone meanwhile.
+    // space-combat/11 §4 (4) second half: the slower chaser closes at HALF speed, so the kite ends. Warrant v Hauler: the Hauler (sublight 3, 4.5 units/s) closes at 2.25 units/s
+    // inside the Warrant's reach, until D = its own reach; the kiter fires alone meanwhile.
     [Fact]
     public void Section4_4_TheChaserClosesAtHalfSpeedAndTheKiteEnds()
     {
         var deltas = new List<(int T, double D, double Dist)>();
         double prev = 0; double reachFast = 0, reachSlow = 0;
-        var (nb, _) = Run(new NewBattleParams(), 1, new[] { (BulkCruiser, 1) }, new[] { (Carrack, 1) }, canRetreat: false, hook: nb0 =>
+        var (nb, _) = Run(new NewBattleParams(), 1, new[] { (BulkCruiser, 1) }, new[] { (Warrant, 1) }, canRetreat: false, hook: nb0 =>
         {
             prev = -1;
             nb0.AfterTick = t =>
@@ -194,14 +194,14 @@ public class NewBattleBroadsideTests
         Assert.True(deltas.Any(x => Math.Abs(x.Dist - reachSlow) < 1e-9), "the chaser never closed to its own reach");
     }
 
-    // space-combat/11 §4 (5): closing speed = slowest sublight of the closing fleet x 1.5 per point. The side with the smaller reach closes. A fleet of Dauntless (4)
-    // and Nebulon-B (4) against one Mandate II (5): whichever side closes moves D by 1.5 x its slowest sublight each second.
+    // space-combat/11 §4 (5): closing speed = slowest sublight of the closing fleet x 1.5 per point. The side with the smaller reach closes. A fleet of Homeward (4)
+    // and Mender (4) against one Mandate II (5): whichever side closes moves D by 1.5 x its slowest sublight each second.
     [Fact]
     public void Section4_5_ClosingSpeedIsTheSlowestSublightOfTheClosingFleetTimes1Point5()
     {
         var steps = new List<double>(); var closer = new List<Side>();
         double prev = -1;
-        var (nb, _) = Run(new NewBattleParams(), 1, new[] { (Dauntless, 1), (Nebulon, 1) }, new[] { (HandII, 1) }, canRetreat: false, hook: nb0 =>
+        var (nb, _) = Run(new NewBattleParams(), 1, new[] { (Homeward, 1), (Mender, 1) }, new[] { (MandateII, 1) }, canRetreat: false, hook: nb0 =>
             nb0.AfterTick = t =>
             {
                 if (prev >= 0 && prev - nb0.Distance > 0)
@@ -212,14 +212,14 @@ public class NewBattleBroadsideTests
                 prev = nb0.Distance;
             });
         Assert.NotEmpty(steps);
-        double slowestCollective = Math.Min(Sublight(Dauntless), Sublight(Nebulon)) * 1.5, hand = Sublight(HandII) * 1.5;
+        double slowestCollective = Math.Min(Sublight(Homeward), Sublight(Mender)) * 1.5, hand = Sublight(MandateII) * 1.5;
         Assert.Equal(4 * 1.5, slowestCollective);
         Assert.Equal(5 * 1.5, hand);
         // every full-size step is exactly the closing side's slowest sublight x 1.5 (the last step is cut at the target)
         for (int i = 0; i < steps.Count - 1; i++) Assert.Equal(closer[i] == Side.Collective ? slowestCollective : hand, steps[i], 9);
         // the tunable: k = 3.0 doubles the first step (the side with the smaller reach closes)
         double first = -1; Side firstCloser = Side.Collective;
-        Run(new NewBattleParams { ClosingK = 3.0 }, 1, new[] { (Dauntless, 1), (Nebulon, 1) }, new[] { (HandII, 1) }, canRetreat: false, hook: nb0 =>
+        Run(new NewBattleParams { ClosingK = 3.0 }, 1, new[] { (Homeward, 1), (Mender, 1) }, new[] { (MandateII, 1) }, canRetreat: false, hook: nb0 =>
             nb0.AfterTick = t =>
             {
                 if (t != 0) return;
@@ -251,7 +251,7 @@ public class NewBattleBroadsideTests
     public void Section4_7_SurroundClosesToFifteen()
     {
         var p = new BattleParams { Ruleset = BattleRuleset.New };
-        var (su, _) = QuickBattle.PrepareNew(p, NewBattleTests.Ships, new[] { (Isd, 1) }, new[] { (Isd, 1) }, 4);
+        var (su, _) = QuickBattle.PrepareNew(p, NewBattleTests.Ships, new[] { (Mandate, 1) }, new[] { (Mandate, 1) }, 4);
         su.SetTactic(Side.Collective, BattleTactic.Surround); su.SetTactic(Side.Hand, BattleTactic.Surround);
         double min = 1e9; su.AfterTick = _ => min = Math.Min(min, su.Distance); su.Run();
         Assert.Equal(15, min);

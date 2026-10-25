@@ -22,15 +22,15 @@ public class TravelTests
     [Fact]
     public void T1_LongMajorRouteLeg() // m1-travel T1: factor 300: distance * speed / 1500, rounded half up
     {
-        // v6 re-pin 2026-10-24: Coruscant-Corellia is no longer a link; Coruscant's great-route links are 18 and 29 units, too short
-        // to show the rounding, so the leg is the longest great-route link, Epikonia-Vondarc (Long Haul, 111 units).
+        // v6 re-pin 2026-10-24: Charter-Classis is no longer a link; Charter's great-route links are 18 and 29 units, too short
+        // to show the rounding, so the leg is the longest great-route link, Ellerbeck-Longquay (Long Haul, 111 units).
         Assert.Equal(1, G.FindLane("Ellerbeck", "Longquay")!.Tier);
         Assert.Equal(111, MapDist(G, "Ellerbeck", "Longquay"));
         Assert.Equal(new[] { 7, 6, 4, 4 }, new[] { 100, 80, 60, 50 }.Select(s => Leg("Ellerbeck", "Longquay", s))); // 7.4, 5.92, 4.44, 3.7
     }
 
     [Fact]
-    public void T2_CoruscantYavinOffRouteIsTheOriginalFormula() // m1-travel T2: (isqrt / 5) * speed / 100, both divisions floored (Traced)
+    public void T2_CharterShoalOffRouteIsTheOriginalFormula() // m1-travel T2: (isqrt / 5) * speed / 100, both divisions floored (Traced)
     {
         // v6 re-pin 2026-10-24: The Shoal is 294 units from Charter (was 240); 58 * 80 / 100 = 46.4, 58 * 50 / 100 = 29.
         Assert.Equal(58, MapDist(G, "Charter", "The Shoal") / 5);
@@ -41,16 +41,16 @@ public class TravelTests
     [Fact]
     public void T3_ShortMajorLeg() // m1-travel T3
     {
-        // v6 re-pin 2026-10-24: Corellia-Duros is no longer a link; Azbian-Contruum is a 25-unit great-route link.
+        // v6 re-pin 2026-10-24: Classis-Hiberna is no longer a link; Kaolin-Puerto Hierro is a 25-unit great-route link.
         Assert.Equal(1, G.FindLane("Kaolin", "Puerto Hierro")!.Tier);
         Assert.Equal(25, MapDist(G, "Kaolin", "Puerto Hierro"));
         Assert.Equal(new[] { 2, 1, 1 }, new[] { 100, 80, 50 }.Select(s => Leg("Kaolin", "Puerto Hierro", s))); // 1.67, 1.33, 0.83 raised to 1
     }
 
     [Fact]
-    public void T4_CoruscantMinorRoute() // m1-travel T4: factor 150
+    public void T4_CharterMinorRoute() // m1-travel T4: factor 150
     {
-        // v6 re-pin 2026-10-24: Coruscant's minor link is Hartwell (was Tutela).
+        // v6 re-pin 2026-10-24: Charter's minor link is Hartwell (was Tutela).
         int d = MapDist(G, "Charter", "Hartwell");
         Assert.Equal(150, G.FindLane("Charter", "Hartwell")!.FactorPercent);
         Assert.Equal((d * 100 * 2 + 750) / 1500, Leg("Charter", "Hartwell", 100));
@@ -73,11 +73,11 @@ public class TravelTests
         => Assert.Equal(100, SpeedOf("Mandate", "Mule"));
 
     [Fact]
-    public void T7_MonCalamariAndIsd() // m1-travel T7
+    public void T7_MonCalamariAndMandate() // m1-travel T7
         => Assert.Equal(80, SpeedOf("Ark", "Mandate"));
 
     [Fact]
-    public void T8_TieFighterAloneIsImmobile() // m1-travel T8
+    public void T8_GleanerFighterAloneIsImmobile() // m1-travel T8
     {
         int speed = SpeedOf("Gleaner");
         Assert.Equal(0, speed);
@@ -104,7 +104,7 @@ public class TravelTests
     }
 
     [Fact]
-    public void T9_CoruscantToHothRidesTheRoutes() // m1-travel T9 (real data, speed 80)
+    public void T9_CharterToThawRidesTheRoutes() // m1-travel T9 (real data, speed 80)
     {
         var r = new Pathfinder(G).Find("Charter", "The Thaw", 80);
         Assert.True(r.Ok);
@@ -157,14 +157,14 @@ public class TravelTests
     }
 
     [Fact]
-    public void T14_TieOnTicksFewestLegsWins() // m1-travel T14: S-R1-E (10 + 10) ties S-E (20): one leg wins
+    public void T14_GleanerOnTicksFewestLegsWins() // m1-travel T14: S-R1-E (10 + 10) ties S-E (20): one leg wins
     {
         var g = TestData.Synthetic(new[] { ("E", 100, 0), ("R1", 50, 0), ("S", 0, 0) }, new[] { ("R1", "E", "generated") });
         AssertPath(new Pathfinder(g).Find("S", "E", 100), g, new[] { "S", "E" }, new[] { 20 }, 20);
     }
 
     [Fact]
-    public void T15_TieOnTicksAndLegsTakesTheSmallerPredecessor() // m1-travel T15: via P or Q both 28 + 9 = 37 in 2 legs: P (smaller name)
+    public void T15_GleanerOnTicksAndLegsTakesTheSmallerPredecessor() // m1-travel T15: via P or Q both 28 + 9 = 37 in 2 legs: P (smaller name)
     {
         var g = TestData.Synthetic(new[] { ("E", 200, 100), ("P", 100, 200), ("Q", 100, 0), ("S", 0, 100) },
             new[] { ("P", "E", "route"), ("Q", "E", "route") });
@@ -185,7 +185,7 @@ public class TravelTests
     }
 
     [Fact]
-    public void T16_NavigatorOnIsdFleet() // m1-travel T16
+    public void T16_NavigatorOnMandateFleet() // m1-travel T16
     {
         var fleet = SpeedOf("Mandate");
         Assert.Equal(80, fleet);
@@ -202,11 +202,11 @@ public class TravelTests
     }
 
     [Fact]
-    public void T18_HanMissionGroupSpeed50() // m1-travel T18
+    public void T18_MidwifeMissionGroupSpeed50() // m1-travel T18
         => Assert.Equal(4, Leg("Ellerbeck", "Longquay", 50)); // v6 re-pin 2026-10-24 (the T1 leg): 111 * 50 / 1500 = 3.7
 
     [Fact]
-    public void T20_IlumAndCsillaAreReachable() // m1-travel T20: free travel reaches the two systems outside sectors (no lanes needed)
+    public void T20_GlasswoodAndFrostholmAreReachable() // m1-travel T20: free travel reaches the two systems outside sectors (no lanes needed)
     {
         var pf = new Pathfinder(G);
         var r = pf.Find("Charter", "Glasswood", 80);

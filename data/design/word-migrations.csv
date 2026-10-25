@@ -114,3 +114,184 @@ word,jprob,tprob
 word,jlvlv,tlvlv
 word,jlvl,tlvl
 word,jedi,talented
+phrase,the Emperor's,The Chair's
+phrase,the Emperor,The Chair
+phrase,Han Solo's,Midwife's
+phrase,Han Solo,Midwife
+phrase,Mon Mothma,Mae Abara
+phrase,Darth Vader,Cassia Ravilla
+phrase,Luke Skywalker,Nobody
+phrase,Leia Organa,Ledger
+phrase,Crix Madine,Sister Wake
+phrase,Jan Dodonna,Old Debt
+phrase,Tura Raftican,Static
+phrase,Borsk Fey'lya,Day After
+phrase,Carlist Rieekan,June Halvorsen
+phrase,Bren Derlin,Rowan Achterberg
+phrase,Wedge Antilles,Forty-One
+phrase,Lando Calrissian,Foreman
+phrase,Imperial Probe Droids,Speculators
+phrase,Imperial Probe Droid,Speculator
+phrase,Probe Droids,Speculators
+phrase,Probe Droid,Speculator
+phrase,Imperial Espionage Droid,Auditor
+phrase,War Droids,Proxies
+phrase,War Droid,Proxy
+phrase,Corellian Corvettes,Dodgers
+phrase,Corellian Corvette,Dodger
+phrase,Corellian Gunship,Wasp
+phrase,CR90 Corvettes,Dodgers
+phrase,CR90 Corvette,Dodger
+phrase,Mon Calamari Cruisers,Arks
+phrase,Mon Calamari Cruiser,Ark
+phrase,Mon Calamari Regiment,Ilmar Shade Guard
+phrase,Mon Calamari,The Moorings
+phrase,Dark Troopers,Lictors
+phrase,Dark Trooper,Lictor
+phrase,TIE Fighters,Gleaners
+phrase,TIE Fighter,Gleaner
+phrase,TIE Interceptors,Sickles
+phrase,TIE Interceptor,Sickle
+phrase,TIE Defenders,Winnowers
+phrase,TIE Defender,Winnower
+phrase,TIE Bombers,Threshers
+phrase,TIE Bomber,Thresher
+phrase,TIE-less,fighter-less
+phrase,X-wings,Swifts
+phrase,X-wing,Swift
+phrase,Y-wings,Ploughs
+phrase,Y-wing,Plough
+phrase,A-wings,Needles
+phrase,A-wing,Needle
+phrase,B-wings,Mauls
+phrase,B-wing,Maul
+phrase,Five Points,Hollow Fork
+phrase,Bothan Spies,Listeners
+phrase,Tarkin's Patrol,Hand Patrol
+phrase,Nebulon-B,Mender
+phrase,Super Star Destroyers,Edicts
+phrase,Super Star Destroyer,Edict
+phrase,Victory Star Destroyers,Decrees
+phrase,Victory Star Destroyer,Decree
+phrase,Victory Destroyers,Decrees
+phrase,Victory Destroyer,Decree
+phrase,Star Destroyers,Mandates
+phrase,Star Destroyer,Mandate
+phrase,Hand Mandates,Mandates
+phrase,Hand Mandate,Mandate
+identifier,HanMissionSpeed,RunnerLines
+identifier,HandII,MandateII
+word,Stormtroopers,Pacifiers
+word,Stormtrooper,Pacifier
+word,DarkTroopers,Lictors
+word,DarkTrooper,Lictor
+word,Sullustan,Nhal
+word,TIEs,Gleaners
+word,Luke,Nobody
+word,Leia,Ledger
+word,Vader,Ravilla
+word,Han,Midwife
+word,Palpatine,Chair
+word,Emperor,Chair
+word,Lando,Foreman
+word,Wedge,FortyOne
+word,Piett,Varo
+word,Ackbar,Keth
+word,MonMothma,MaeAbara
+word,Mothma,Abara
+word,Veers,EightyEight
+word,Chewbacca,Oti
+word,Madine,Wake
+word,Drayson,Sobel
+word,Afyon,Petrenko
+word,Dodonna,OldDebt
+word,Borsk,DayAfter
+word,Rieekan,Halvorsen
+word,Derlin,Achterberg
+word,Rix,Doran
+word,Garaint,Vance
+word,Coruscant,Charter
+word,Hoth,Thaw
+word,Yavin,Shoal
+word,Kuat,Navalia
+word,Ilum,Glasswood
+word,Sullust,Caminus
+word,Corellia,Classis
+word,Bespin,DriftHarbour
+word,Dagobah,Eldingar
+word,Vagran,Loess
+word,Selonia,Marmor
+word,Tralus,BinaMajor
+word,Poderis,Altamesa
+word,Duros,Hiberna
+word,Drall,Beryl
+word,Rhinnal,Remedium
+word,Kinyen,TierraLarga
+word,Kessel,Lantern
+word,Vondarc,Longquay
+word,Mirial,Greysand
+word,Jelucan,Felsite
+word,Epikonia,Ellerbeck
+word,Contruum,PuertoHierro
+word,Azbian,Kaolin
+word,Taanab,Granero
+word,Csilla,Frostholm
+word,Endor,Fyrholm
+word,Tatooine,Amargura
+word,Kashyyyk,Longtide
+word,Isds,Mandates
+word,Isd,Mandate
+word,ISD,Mandate
+word,Ssd,Edict
+word,SSD,Edict
+word,MonCal,Ark
+word,CR90,Dodger
+word,Cr90,Dodger
+word,Dauntless,Homeward
+word,Carrack,Warrant
+word,Nebulon,Mender
+word,Bulwark,Barricade
+word,Xwing,Swift
+word,Tie,Gleaner
+word,TIE,Gleaner
+word,Kdy150,Lien150
+word,Kdy,Lien
+word,KDY,Lien
+word,LnrSeriesII,CovenantII
+word,LnrSeriesI,CovenantI
+word,Lnr,Covenant
+word,LNR,Covenant
+word,GenCoreLevelII,EscrowII
+word,GenCoreLevelI,EscrowI
+word,GenCore,Escrow
+word,Bothan,Listeners
+word,Noghri,Notaries
+word,HuntDroids,HuntSpeculators
+word,HuntDroid,HuntSpeculator
+word,Droids,Speculators
+word,Droid,Speculator
+word,Wookiees,KiruSparks
+word,Wookiee,KiruSparks
+word,luke,nobody
+word,leia,ledger
+word,vader,ravilla
+word,han,midwife
+word,piett,varo
+word,lando,foreman
+word,ackbar,keth
+word,wedge,fortyOne
+word,emperor,chair
+word,isds,mandates
+word,isd,mandate
+word,ssd,edict
+word,monCal,ark
+word,bothan,listeners
+word,droids,speculators
+word,droid,speculator
+word,yavin,shoal
+word,coruscant,charter
+word,kdy,lien
+word,lnr,covenant
+word,dauntless,homeward
+word,stormtroopers,pacifiers
+word,Alderaan,Afar

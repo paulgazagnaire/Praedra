@@ -97,5 +97,5 @@ public sealed record TalentEncounterResolved(int Index, int Day, int Mission, in
     bool MemberHurt, bool OtherHurt) : GameEvent(Index, Day, nameof(TalentEncounterResolved));
 /// <summary>A character's Talent experience grew (the encounter). rule: §Talent (B2e §4 step 7).</summary>
 public sealed record TalentGained(int Index, int Day, int Character, Side Side, int Gain, int NewTalent, string Cause) : GameEvent(Index, Day, nameof(TalentGained));
-/// <summary>Luke (or Leia) learned his heritage. rule: §Talent (B2e §4, §5).</summary>
+/// <summary>Nobody (or Ledger) learned his heritage. rule: §Talent (B2e §4, §5).</summary>
 public sealed record HeritageLearned(int Index, int Day, int Character, Side Side) : GameEvent(Index, Day, nameof(HeritageLearned));

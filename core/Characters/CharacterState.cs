@@ -59,7 +59,7 @@ public sealed class CharacterRecord
     /// </summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public int PairId { get; set; }
-    /// <summary>KnowsHeritage (Luke and Leia, +0xb0 bit 0x1; name inferred from the string order). rule: §Talent (B2e §4, §5).</summary>
+    /// <summary>KnowsHeritage (Nobody and Ledger, +0xb0 bit 0x1; name inferred from the string order). rule: §Talent (B2e §4, §5).</summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public bool KnowsHeritage { get; set; }
     /// <summary>The trainer who awakened this character (+0xa4; record id, 0 = none). rule: §Talent (B2e §5).</summary>

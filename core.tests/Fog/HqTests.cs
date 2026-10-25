@@ -45,7 +45,7 @@ public class HqTests
     [Fact]
     public void HQ2_TwoHopsNoStopAtAnEnemyFleet()
     {
-        var w = new FogWorld(beforeSetup: x => x.Fleet(Side.Hand, R3, Isd, 14));
+        var w = new FogWorld(beforeSetup: x => x.Fleet(Side.Hand, R3, Mandate, 14));
         long seq = w.Fog.SubmitMoveHq(Side.Collective, R4);
         w.Step();
         var acc = Assert.Single(w.Events<OrderAccepted>(), e => e.Sequence == seq);
@@ -70,17 +70,17 @@ public class HqTests
         Assert.Equal(RejectReason.InTransit, w.TryMoveHq(Side.Collective, R4));                                     // HQ6
         Assert.Equal(R3, w.Hq.Path[^1]);
         Assert.Equal(HqRejectReason.NotCollective, new FogWorld().TryMoveHq(Side.Hand, R3));                     // HQ7
-        var ilum = new FogWorld(beforeSetup: x => x.H.Fleets.SetOwner(Ilum, Side.Collective));
-        Assert.Equal(RejectReason.Unreachable, ilum.TryMoveHq(Side.Collective, Ilum));                             // HQ8
+        var ilum = new FogWorld(beforeSetup: x => x.H.Fleets.SetOwner(Glasswood, Side.Collective));
+        Assert.Equal(RejectReason.Unreachable, ilum.TryMoveHq(Side.Collective, Glasswood));                             // HQ8
         Assert.Equal(RejectReason.UnknownSystem, new FogWorld().TryMoveHq(Side.Collective, "No Such Place"));
         Assert.Null(new FogWorld().TryMoveHq(Side.Collective, R3));                                                 // HQ17 (no Hand fleet at R2)
     }
 
-    /// <summary>A Map M world with a Hand fleet of <paramref name="isd"/> ISDs (and squadrons aboard) at R2 for one Step (flag computed), then MoveHq(R3).</summary>
-    private static string? Pin(int isd, int squadrons = 0, bool collectiveFleet = false, GameSettings? s = null)
+    /// <summary>A Map M world with a Hand fleet of <paramref name="mandate"/> Mandates (and squadrons aboard) at R2 for one Step (flag computed), then MoveHq(R3).</summary>
+    private static string? Pin(int mandate, int squadrons = 0, bool collectiveFleet = false, GameSettings? s = null)
     {
         var w = new FogWorld(s);
-        w.Fleet(Side.Hand, R2, Isd, isd, squadrons);
+        w.Fleet(Side.Hand, R2, Mandate, mandate, squadrons);
         if (collectiveFleet) w.Fleet(Side.Collective, R2, Corvette, 1);
         w.Game.State.Blockades.Clear();
         if (!collectiveFleet) w.Game.State.Blockades[R2] = Side.Hand; // the flag as step 5 leaves it
@@ -107,8 +107,8 @@ public class HqTests
         string? Try(int squadrons)
         {
             var w = new FogWorld();
-            var ids = Enumerable.Range(0, squadrons).Select(_ => w.H.Economy.AddObject(Side.Hand, Tie, null)).ToList();
-            int fid = w.H.Economy.AddObject(Side.Hand, Tie, null); w.H.Economy.RemoveObject(fid); // a fresh id for the fleet
+            var ids = Enumerable.Range(0, squadrons).Select(_ => w.H.Economy.AddObject(Side.Hand, Gleaner, null)).ToList();
+            int fid = w.H.Economy.AddObject(Side.Hand, Gleaner, null); w.H.Economy.RemoveObject(fid); // a fresh id for the fleet
             w.Game.State.Fleets[fid] = new Fleet { Id = fid, Side = Side.Hand, Squadrons = ids, At = R2 };
             w.Game.State.Blockades[R2] = Side.Hand;
             return w.TryMoveHq(Side.Collective, R3);

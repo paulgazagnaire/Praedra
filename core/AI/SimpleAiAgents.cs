@@ -21,7 +21,7 @@ namespace Praedra.Core.AI;
 /// <item>sends one-member missions by expected value: value x chance / (travel days + MissionTravelBias), chance = P(not detected) x P(success)
 /// from the core's own tables (MissionModule.FoilChance, DetectionX, Lookup: m5-missions §3, §Mission tables) against the defenders the side
 /// believes are there. Kinds: Hand HQ hunt (Espionage or Reconnaissance on the highest HQ-belief systems, then a re-check of a known HQ),
-/// the Collective's key hunt (Espionage for the Emperor and Vader while it is ahead, KeyHunt),
+/// the Collective's key hunt (Espionage for The Chair and Ravilla while it is ahead, KeyHunt),
 /// the blind hunt (Espionage at the oldest looks while the picture shows no enemy system, BlindHunt),
 /// Subdue on own systems in uprising, Rescue of own prisoners, Abduction of enemy characters the side has seen, Diplomacy on own low-support
 /// systems and neutral border systems, Collective Incite and Sabotage on enemy systems where no defender is believed, and Research. With
@@ -47,12 +47,12 @@ public sealed partial class SimpleAi
         var busy = new HashSet<int>();
         PlanMissionCancels();
         DetachRiders(busy);
-        EmperorHome(mine, busy);
+        ChairHome(mine, busy);
         var spies = ReserveSpies(mine, busy);
         PlanSystemGeneral(mine, busy, spies);
         PlanFleetOfficers(mine, busy, spies);
         PlanMissions(mine, busy);
-        if (_p.HuntDroids > 0) PlanDroidLooks();
+        if (_p.HuntSpeculators > 0) PlanSpeculatorLooks();
     }
 
     /// <summary>Free to take an order today: placed, Free, not attached, no system post, not on a mission, standing on a system (m5-characters §Availability).</summary>
@@ -90,39 +90,39 @@ public sealed partial class SimpleAi
             }
     }
 
-    // ================================================================== the leaders and the Emperor (LeaderMarks; B6c §7)
+    // ================================================================== the leaders and The Chair (LeaderMarks; B6c §7)
 
-    /// <summary>B6c §7 leaders (0x4024d0): Luke, Mae Abara, the Emperor and Vader.</summary>
+    /// <summary>B6c §7 leaders (0x4024d0): Nobody, Mae Abara, The Chair and Ravilla.</summary>
     private bool IsLeader(CharacterRecord c)
     {
         var cp = _h.Characters.Params;
-        return c.Id == cp.Luke || c.Id == _p.MonMothmaId || c.Id == cp.Emperor || c.Id == cp.Vader;
+        return c.Id == cp.Nobody || c.Id == _p.MaeAbaraId || c.Id == cp.Chair || c.Id == cp.Ravilla;
     }
 
-    /// <summary>B6c §7 story characters (0x4025f0): the four leaders plus Leia and Han. With LeaderMarks the AI never makes them fleet or army commanders.</summary>
+    /// <summary>B6c §7 story characters (0x4025f0): the four leaders plus Ledger and Midwife. With LeaderMarks the AI never makes them fleet or army commanders.</summary>
     private bool NeverCommands(CharacterRecord c) =>
-        _p.LeaderMarks && (IsLeader(c) || c.Id == _h.Characters.Params.Leia || c.Id == _h.Missions.Data.Numbers.HanCharacterId);
+        _p.LeaderMarks && (IsLeader(c) || c.Id == _h.Characters.Params.Ledger || c.Id == _h.Missions.Data.Numbers.MidwifeCharacterId);
 
     /// <summary>
-    /// Emperor home (B6c §7, planner kind 6, Hand only): while the Hand holds the Seat of Power system (Charter, which is in its own
-    /// sector, so the "holds a system in Coruscant's sector" start test holds too), the Emperor is taken off every other job, brought there and
-    /// kept there; the Seat of Power (m5-characters-and-force §Seat of Power) stays on. With EmperorHomeAfterRecruiting the planner, as in Classic,
+    /// The Chair home (B6c §7, planner kind 6, Hand only): while the Hand holds the Seat of Power system (Charter, which is in its own
+    /// sector, so the "holds a system in Charter's sector" start test holds too), The Chair is taken off every other job, brought there and
+    /// kept there; the Seat of Power (m5-characters-and-force §Seat of Power) stays on. With ChairHomeAfterRecruiting the planner, as in Classic,
     /// starts only once the side has nobody left to recruit (the recruitment count ctrl+0xa4 is 0: the pool-empty flag, or an empty pool), so
-    /// until then the Emperor recruits and subdues like any leader (QA-12). QA-8 measured the Emperor on Charter on 1-7% of days without the
+    /// until then The Chair recruits and subdues like any leader (QA-12). QA-8 measured The Chair on Charter on 1-7% of days without the
     /// planner, and captured on missions.
     /// </summary>
-    private void EmperorHome(List<CharacterRecord> mine, HashSet<int> busy)
+    private void ChairHome(List<CharacterRecord> mine, HashSet<int> busy)
     {
         var cp = _h.Characters.Params;
         if (!_p.LeaderMarks || _side != Side.Hand || !Held(cp.SeatOfPowerSystem)) return;
-        if (_p.EmperorHomeAfterRecruiting && !NobodyToRecruit) return; // B6c §7: starts when ctrl+0xa4 == 0
-        var e = mine.FirstOrDefault(c => c.Id == cp.Emperor);
+        if (_p.ChairHomeAfterRecruiting && !NobodyToRecruit) return; // B6c §7: starts when ctrl+0xa4 == 0
+        var e = mine.FirstOrDefault(c => c.Id == cp.Chair);
         if (e == null) return;
         busy.Add(e.Id);
         if (e.AttachedFleet != 0 && e.Post != CharacterPost.None && e.Transit == null)
         {
             long seq = _h.Game.Submit(sq => new DetachCharacterOrder(sq, _side, e.Id));
-            Note(seq, "DetachCharacter", $"{_h.Characters.ClassOf(e).Name} off fleet {e.AttachedFleet} (Emperor home)");
+            Note(seq, "DetachCharacter", $"{_h.Characters.ClassOf(e).Name} off fleet {e.AttachedFleet} (Chair home)");
             return;
         }
         if (Standing(e)) MoveCharacter(e, cp.SeatOfPowerSystem);
@@ -566,7 +566,7 @@ public sealed partial class SimpleAi
                     int est = k.SkillBase[(int)Characters.Skill.Combat] + k.SkillVariance[(int)Characters.Skill.Combat] / 2;
                     int pct = Table(sk(Characters.Skill.Combat) - est);
                     // rule: m5-missions §6a.3: a key target's chance is min(table, cap_percent), a published rule (the key-target file), not hidden
-                    // information; without it the AI believed 95% at the Emperor where the real chance is 2% (PR #92 probe, seed 9: 20 tries, 0 captures)
+                    // information; without it the AI believed 95% at The Chair where the real chance is 2% (PR #92 probe, seed 9: 20 tries, 0 captures)
                     return _p.AbductionKeyCap && mi.IsKeyTarget(j.Kind, j.TargetCharacter, out int cap) ? Math.Min(pct, cap) : pct;
                 }
             default: return ResearchSkillOf(j.Kind) is Skill rs ? Math.Min(100, sk(rs)) : 0;
@@ -613,9 +613,9 @@ public sealed partial class SimpleAi
         var rec = mi.Data.Get(j.Kind);
         int defenders = rec.Foilable ? MissionDefendersAt(j.System).Count : 0;
         if (key && (NoKeyKinds.Contains(j.Kind) || (_h.Characters.Params.MajorsCanDie && defenders > 0))) return null;
-        if (_p.LeaderMarks && j.Kind == MissionKind.Diplomacy && c.Id == _h.Characters.Params.Emperor) return null; // B6c §7: the Emperor is never a diplomat
+        if (_p.LeaderMarks && j.Kind == MissionKind.Diplomacy && c.Id == _h.Characters.Params.Chair) return null; // B6c §7: The Chair is never a diplomat
         var n = mi.Data.Numbers;
-        int speed = c.Id == n.HanCharacterId ? n.HanMissionSpeed : n.GroupSpeed; // m5-missions §1 group speed (a lone Han flies at 50)
+        int speed = c.Id == n.MidwifeCharacterId ? n.RunnerLines : n.GroupSpeed; // m5-missions §1 group speed (a lone Midwife flies at 50)
         return Score(j, sk, c.System!, speed, 0, key ? _p.KeyCharacterValuePercent : 100);
     }
 
@@ -653,31 +653,31 @@ public sealed partial class SimpleAi
         return value * chance * 100 / (ticks + _p.MissionTravelBias);
     }
 
-    // ================================================================== probe droids on the HQ hunt (HuntDroids)
+    // ================================================================== probe speculators on the HQ hunt (HuntSpeculators)
 
-    /// <summary>The side's completed droids of HuntDroidClass, standing landed on a held system and not in a mission (object id order).</summary>
-    private List<EconObject> FreeDroids() => _h.Economy.Objects
-        .Where(o => o.Category == ObjectCategory.SpecialForce && o.Side == _side && o.Completed && o.Class == _p.HuntDroidClass && o.AboardShip == 0
+    /// <summary>The side's completed speculators of HuntSpeculatorClass, standing landed on a held system and not in a mission (object id order).</summary>
+    private List<EconObject> FreeSpeculators() => _h.Economy.Objects
+        .Where(o => o.Category == ObjectCategory.SpecialForce && o.Side == _side && o.Completed && o.Class == _p.HuntSpeculatorClass && o.AboardShip == 0
                     && o.System != null && Held(o.System) && !_h.Missions.IsSpecialForceBusy(o.Id))
         .OrderBy(o => o.Id).ToList();
 
-    private bool DroidHuntOn => HqHuntOn && KnownEnemyHq == null && KindUsable(MissionKind.Reconnaissance) && _h.Fog.Params.ReconRevealsFacilities;
+    private bool SpeculatorHuntOn => HqHuntOn && KnownEnemyHq == null && KindUsable(MissionKind.Reconnaissance) && _h.Fog.Params.ReconRevealsFacilities;
 
     /// <summary>
-    /// Every free droid goes alone on a Reconnaissance (m5-missions §Orders StartMission: a special force whose bit is in the record's mask is a
-    /// team on its own) of an HQ search target of the deeper list (DroidSearchTargets) that no own Espionage or Reconnaissance works yet: best
+    /// Every free speculator goes alone on a Reconnaissance (m5-missions §Orders StartMission: a special force whose bit is in the record's mask is a
+    /// team on its own) of an HQ search target of the deeper list (SpeculatorSearchTargets) that no own Espionage or Reconnaissance works yet: best
     /// search score per day of travel first. Targets the characters were sent to today are taken (their orders come first in the queue).
     /// </summary>
-    private void PlanDroidLooks()
+    private void PlanSpeculatorLooks()
     {
-        if (!DroidHuntOn) return;
-        var droids = FreeDroids();
-        if (droids.Count == 0) return;
+        if (!SpeculatorHuntOn) return;
+        var speculators = FreeSpeculators();
+        if (speculators.Count == 0) return;
         var taken = new HashSet<string>(OwnMissions().Where(m => m.Kind is MissionKind.Espionage or MissionKind.Reconnaissance).Select(m => m.Target), StringComparer.Ordinal);
         taken.UnionWith(_looksToday);
-        var targets = SearchTargets(_p.DroidSearchTargets);
+        var targets = SearchTargets(_p.SpeculatorSearchTargets);
         int speed = _h.Missions.Data.Numbers.GroupSpeed;
-        foreach (var d in droids)
+        foreach (var d in speculators)
         {
             string? best = null; long bestScore = 0;
             foreach (var (s, sc) in targets)
@@ -691,33 +691,33 @@ public sealed partial class SimpleAi
             if (best == null) return;
             var target = best; var id = d.Id;
             long seq = _h.Game.Submit(sq => new StartMissionOrder(sq, _side, MissionKind.Reconnaissance, new List<int>(), new List<int> { id }, new List<int>(), target));
-            Note(seq, "MissionReconnaissance", $"droid {id} from {d.System} to {target} ev {bestScore}");
+            Note(seq, "MissionReconnaissance", $"speculator {id} from {d.System} to {target} ev {bestScore}");
             taken.Add(target);
         }
     }
 
-    /// <summary>Production: keep HuntDroids droids (built or queued) while the droid hunt is on, built at the training yard nearest the spy base.</summary>
-    private void PlanDroidBuild()
+    /// <summary>Production: keep HuntSpeculators speculators (built or queued) while the speculator hunt is on, built at the training yard nearest the spy base.</summary>
+    private void PlanSpeculatorBuild()
     {
-        if (_p.HuntDroids <= 0 || !DroidHuntOn || !Available(_p.HuntDroidClass)) return;
-        int have = _h.Economy.Objects.Count(o => o.Category == ObjectCategory.SpecialForce && o.Side == _side && o.Class == _p.HuntDroidClass);
-        int want = _p.HuntDroids - have;
-        if (want <= 0 || Budget < want * Maint(_p.HuntDroidClass)) return;
+        if (_p.HuntSpeculators <= 0 || !SpeculatorHuntOn || !Available(_p.HuntSpeculatorClass)) return;
+        int have = _h.Economy.Objects.Count(o => o.Category == ObjectCategory.SpecialForce && o.Side == _side && o.Class == _p.HuntSpeculatorClass);
+        int want = _p.HuntSpeculators - have;
+        if (want <= 0 || Budget < want * Maint(_p.HuntSpeculatorClass)) return;
         string dest = SpyBase() ?? Capital() ?? "";
         if (dest == "") return;
         var yard = TrainingYardNear(dest);
         if (yard == null) return;
-        long seq = _h.Construction.SubmitBuild(_side, yard, YardFamily.Training, _p.HuntDroidClass, want, dest == yard ? null : dest);
-        Note(seq, "Build", $"{want} x {_p.HuntDroidClass} at {yard} for {dest} (HQ hunt)");
+        long seq = _h.Construction.SubmitBuild(_side, yard, YardFamily.Training, _p.HuntSpeculatorClass, want, dest == yard ? null : dest);
+        Note(seq, "Build", $"{want} x {_p.HuntSpeculatorClass} at {yard} for {dest} (HQ hunt)");
         _busy.Add((yard, YardFamily.Training));
-        _plannedLoad += want * Maint(_p.HuntDroidClass);
+        _plannedLoad += want * Maint(_p.HuntSpeculatorClass);
     }
 
     // ================================================================== special forces as mission agents (SpecialForceAgents, QA-6)
 
     /// <summary>
     /// The side's completed special forces free to go alone on a mission: landed on a held system, not in a mission, of a class with a mission
-    /// bit; the HQ-hunt droids (HuntDroidClass, while HuntDroids is on) are the droid planner's. Object id order.
+    /// bit; the HQ-hunt speculators (HuntSpeculatorClass, while HuntSpeculators is on) are the speculator planner's. Object id order.
     /// </summary>
     private List<(EconObject O, SpecialForceClass K)> FreeAgentForces()
     {
@@ -725,7 +725,7 @@ public sealed partial class SimpleAi
         foreach (var o in _h.Economy.Objects.Where(o => o.Category == ObjectCategory.SpecialForce && o.Side == _side && o.Completed && o.AboardShip == 0
                      && o.System != null && Held(o.System) && !_h.Missions.IsSpecialForceBusy(o.Id)).OrderBy(o => o.Id))
         {
-            if (_p.HuntDroids > 0 && o.Class == _p.HuntDroidClass) continue;
+            if (_p.HuntSpeculators > 0 && o.Class == _p.HuntSpeculatorClass) continue;
             if (_h.Troops.Data.SpecialForce(o.Class) is { MissionBit: > 0 } k) list.Add((o, k));
         }
         return list;

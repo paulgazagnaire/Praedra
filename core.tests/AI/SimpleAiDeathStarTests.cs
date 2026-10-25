@@ -16,7 +16,7 @@ public class SimpleAiHarvesterTests
     private readonly ITestOutputHelper _out;
     public SimpleAiHarvesterTests(ITestOutputHelper o) { _out = o; }
 
-    private const string Ds = EconomyModule.HarvesterClass, Isd = "Mandate";
+    private const string Ds = EconomyModule.HarvesterClass, Mandate = "Mandate";
     private static int Margin(GameHost h) => h.Economy.Capacity(Side.Hand) / 10; // 10% of the Hand capacity (MedA: 2100 since the v5 economy scaling)
 
     private static (AiMatch M, GameHost H) Match(int seed, SimpleAiParams p, bool knowHq = false, Side? passive = Side.Collective)
@@ -75,7 +75,7 @@ public class SimpleAiHarvesterTests
         h.Economy.SetPools(Side.Hand, 0, 2000);
         int cap = h.Economy.Capacity(Side.Hand), upkeep = h.Economy.Costs.Get(Ds).Maintenance;
         while (h.Economy.Free(Side.Hand) - upkeep >= cap / 10 && h.Economy.Free(Side.Hand) > 0)
-            h.Fleets.AddFleet(Side.Hand, "Filler", new[] { Isd }, ControlModule.CapitalSystem);
+            h.Fleets.AddFleet(Side.Hand, "Filler", new[] { Mandate }, ControlModule.CapitalSystem);
         Assert.True(h.Economy.Free(Side.Hand) >= 0);
         Days(m, 12);
         Assert.Empty(Harvesters(h));
@@ -115,7 +115,7 @@ public class SimpleAiHarvesterTests
         var eco = h.Economy;
         h.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds }, ControlModule.CapitalSystem);
         Days(m, 3);
-        h.Fleets.AddFleet(Side.Hand, "Spare", new[] { Isd, Isd }, ControlModule.CapitalSystem);
+        h.Fleets.AddFleet(Side.Hand, "Spare", new[] { Mandate, Mandate }, ControlModule.CapitalSystem);
         var mines = eco.Objects.Where(o => o.Completed && o.Class == "Mine" && eco.OwnerOf(o) == Side.Hand).OrderBy(o => o.Id).ToList();
         int n = Math.Min(mines.Count, Math.Max(0, eco.Free(Side.Hand)) / 50 + 1);
         for (int i = 0; i < n; i++) { var id = mines[i].Id; h.Game.Submit(seq => new ScrapObjectOrder(seq, Side.Hand, id)); }
@@ -134,7 +134,7 @@ public class SimpleAiHarvesterTests
     public void WaitsWithoutEscort()
     {
         var (m, h) = Match(1, Quiet(escort: 1e9), knowHq: true);
-        int id = h.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds, Isd }, ControlModule.CapitalSystem);
+        int id = h.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds, Mandate }, ControlModule.CapitalSystem);
         Days(m, 90);
         var f = h.Game.State.Fleets[id];
         Assert.Equal(ControlModule.CapitalSystem, f.At);
@@ -150,7 +150,7 @@ public class SimpleAiHarvesterTests
     {
         var (m, h) = Match(1, Quiet(), knowHq: true);
         string hq = h.HqSystem!;
-        int id = h.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds, Isd, Isd, Isd, Isd, Isd }, ControlModule.CapitalSystem);
+        int id = h.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds, Mandate, Mandate, Mandate, Mandate, Mandate }, ControlModule.CapitalSystem);
         while (h.Game.Day < 2500 && h.Victory.Winner == null) m.Step();
         var hit = h.Game.Events.OfType<SystemDestroyed>().ToList();
         _out.WriteLine($"day {h.Game.Day} winner {h.Victory.Winner} reason {h.Victory.Reason}; destroyed {string.Join(",", hit.Select(e => e.System + "@" + e.Day))}");
@@ -163,7 +163,7 @@ public class SimpleAiHarvesterTests
     public void WithNoKnownHq_StaysHome()
     {
         var (m, h) = Match(1, Quiet(), knowHq: false);
-        int id = h.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds, Isd, Isd, Isd, Isd, Isd }, ControlModule.CapitalSystem);
+        int id = h.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds, Mandate, Mandate, Mandate, Mandate, Mandate }, ControlModule.CapitalSystem);
         Days(m, 120);
         var f = h.Game.State.Fleets[id];
         Assert.Equal(ControlModule.CapitalSystem, f.At);
@@ -177,7 +177,7 @@ public class SimpleAiHarvesterTests
     {
         var p = Quiet() with { UseFog = true };
         var (m, h) = Match(1, p);
-        int id = h.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds, Isd, Isd, Isd, Isd, Isd }, ControlModule.CapitalSystem);
+        int id = h.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds, Mandate, Mandate, Mandate, Mandate, Mandate }, ControlModule.CapitalSystem);
         m.Hand.KnownEnemyHq = h.HqSystem; // overwritten from the side's picture on the first planning day
         m.Step();
         Assert.NotEqual(h.HqSystem, m.Hand.KnownEnemyHq);
@@ -202,22 +202,22 @@ public class SimpleAiHarvesterTests
 
         var (m1, h1) = Match(1, p);
         var (n1, hq1) = Pick(h1); Align(m1, h1);
-        int f1 = h1.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds, Isd }, n1);
+        int f1 = h1.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds, Mandate }, n1);
         m1.Hand.KnownEnemyHq = n1; m1.Hand.PlanDay();
         Assert.Contains(m1.Hand.Submitted, o => o.Kind == "DestroySystem" && o.Detail.Contains($"fleet {f1}"));
 
         // (b) the same with a Collective fleet standing there: no strike
         var (m2, h2) = Match(1, p);
         var (n2, _) = Pick(h2); Align(m2, h2);
-        int f2 = h2.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds, Isd }, n2);
-        h2.Fleets.AddFleet(Side.Collective, "Guard", new[] { Isd }, n2);
+        int f2 = h2.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds, Mandate }, n2);
+        h2.Fleets.AddFleet(Side.Collective, "Guard", new[] { Mandate }, n2);
         m2.Hand.KnownEnemyHq = n2; m2.Hand.PlanDay();
         Assert.DoesNotContain(m2.Hand.Submitted, o => o.Kind == "DestroySystem");
 
         // (c) the HQ moved (known now elsewhere): it sets out for it
         var (m3, h3) = Match(1, p);
         var (n3, hq3) = Pick(h3); Align(m3, h3);
-        int f3 = h3.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds, Isd }, n3);
+        int f3 = h3.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds, Mandate }, n3);
         m3.Hand.KnownEnemyHq = hq3; m3.Hand.PlanDay();
         Assert.DoesNotContain(m3.Hand.Submitted, o => o.Kind == "DestroySystem");
         Assert.Contains(m3.Hand.Submitted, o => o.Kind == "Move" && o.Detail.Contains($"fleet {f3}") && o.Detail.EndsWith("-> " + hq3));

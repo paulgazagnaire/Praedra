@@ -65,8 +65,8 @@ public partial class Main
             var working = mm.Get(dipId) is { Phase: MissionPhase.Working } w ? w : null;
             if (working == null)
             {
-                var leia = cm.Get(577);
-                string own = leia != null && Free(leia) ? leia.System : null;
+                var ledger = cm.Get(577);
+                string own = ledger != null && Free(ledger) ? ledger.System : null;
                 if (own != null && s.OwnerOf(own) == me)
                 {
                     int id2 = SendThroughPlanner(gs, "Send Ledger on a mission...", null, MissionKind.Diplomacy, own, checkRefusedKind: false);
@@ -77,16 +77,16 @@ public partial class Main
             if (working != null) CancelThroughList(gs, working);
 
             // ---------------------------------------------------------------- Midwife: Espionage from the system panel
-            var han = cm.Get(579);
-            Expect(han != null && Free(han), "Midwife is free to go on a mission");
-            if (han != null && Free(han))
+            var midwife = cm.Get(579);
+            Expect(midwife != null && Free(midwife), "Midwife is free to go on a mission");
+            if (midwife != null && Free(midwife))
             {
                 string enemy = s.Game.State.SystemOwners.Where(kv => kv.Value == s.Enemy).Select(kv => kv.Key)
-                    .Where(n => Ticks(han.System, n) < int.MaxValue).OrderBy(n => Ticks(han.System, n)).ThenBy(n => n, StringComparer.Ordinal).First();
-                GD.Print($"  Midwife at {han.System}: espionage on {enemy}");
-                gs.SelectSystem(han.System); gs.PlayRefresh();
-                Expect(gs.Has($"Send a mission from {han.System}..."), "the system panel offers Send a mission from...");
-                SpyAndCheck(gs, $"Send a mission from {han.System}...", "Midwife", enemy);
+                    .Where(n => Ticks(midwife.System, n) < int.MaxValue).OrderBy(n => Ticks(midwife.System, n)).ThenBy(n => n, StringComparer.Ordinal).First();
+                GD.Print($"  Midwife at {midwife.System}: espionage on {enemy}");
+                gs.SelectSystem(midwife.System); gs.PlayRefresh();
+                Expect(gs.Has($"Send a mission from {midwife.System}..."), "the system panel offers Send a mission from...");
+                SpyAndCheck(gs, $"Send a mission from {midwife.System}...", "Midwife", enemy);
             }
             PlaytestSpecialForces(gs, "Listeners");
         }

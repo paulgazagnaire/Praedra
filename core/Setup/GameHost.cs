@@ -361,7 +361,7 @@ public sealed class GameHost
         if (!body.StartsWith(SettingsTag, StringComparison.Ordinal)) return (null, body); // saves made before QA-17: the caller's or the DEFAULT settings
         int nl = body.IndexOf('\n');
         if (nl < 0) throw new InvalidDataException("settings line without a game");
-        // QA-41: settings name systems and units too (Fog.CapitalSystem, Support.StormtrooperClass...), so a save from before the Praedra names
+        // QA-41: settings name systems and units too (Fog.CapitalSystem, Support.PacifierClass...), so a save from before the Praedra names
         // gets its settings renamed like its state
         var s = System.Text.Json.JsonSerializer.Deserialize<GameSettings>(names.Apply(UpgradeSettingsJson(body[SettingsTag.Length..nl])), SettingsJson)
             ?? throw new InvalidDataException("empty settings line");

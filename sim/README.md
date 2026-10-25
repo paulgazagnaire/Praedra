@@ -14,13 +14,13 @@ dotnet run --project sim -- move --fleet <name> --side <Collective|Hand> --ships
 
 `--enemy` places a stationary fleet of the other side (named Picket-1, Picket-2, ...). `--owner` sets who owns a system
 (default: every system neutral). Ship classes are the names in `data/classic/capital-ships.csv` and `fighters.csv`, matched
-ignoring case; `CR90` and `CR90 Corvette` are accepted for the Dodger and `ISD` for the Mandate.
+ignoring case; `Corvette` is accepted for the Dodger and `Interdictor` for the Subpoena.
 The run ends when the fleet is no longer in transit (arrived, stopped or order rejected) or after `--days`.
 
 ### Example 1: a clean trip
 
 ```
-$ dotnet run --project sim -- move --fleet Red --side Collective --ships "CR90 Corvette:2" --from Charter --to Lowmarket
+$ dotnet run --project sim -- move --fleet Red --side Collective --ships "Dodger:2" --from Charter --to Lowmarket
 Collective fleet Red: 2 x Dodger, speed 80
 Trigger: PaulRule. Seed: 1.
 
@@ -38,7 +38,7 @@ After 7 days: Collective fleet Red is at Lowmarket. Random numbers drawn: 0.
 ### Example 2: a Subpoena at Nutrix forces a stop
 
 ```
-$ dotnet run --project sim -- move --fleet Red --side Collective --ships "CR90 Corvette:2" --from Charter --to Lowmarket \
+$ dotnet run --project sim -- move --fleet Red --side Collective --ships "Dodger:2" --from Charter --to Lowmarket \
       --enemy "Subpoena:1@Nutrix" --seed 1
 Collective fleet Red: 2 x Dodger, speed 80
 Hand fleet Picket-1 waits at Nutrix: 1 x Subpoena

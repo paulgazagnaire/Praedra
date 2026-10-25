@@ -348,8 +348,8 @@ public sealed class SupportModule
     public int IncidentScore(string system, Side holder, int d1, int d2)
     {
         var regs = HolderRegiments(system, holder).ToList();
-        int stormtroopers = regs.Count(o => o.Class == Params.StormtrooperClass);
-        return IncidentScore(Params, d1, d2, _eco.SupportOf(system, holder), regs.Count, stormtroopers, holder == Side.Hand && IsHarvesterSector(system))
+        int pacifiers = regs.Count(o => o.Class == Params.PacifierClass);
+        return IncidentScore(Params, d1, d2, _eco.SupportOf(system, holder), regs.Count, pacifiers, holder == Side.Hand && IsHarvesterSector(system))
             + (AgentIncidentTerm?.Invoke(system) ?? 0);
     }
 
@@ -377,11 +377,11 @@ public sealed class SupportModule
     /// score = d1 + d2 + ceil((60 - s) / 10) - k x R - T, k = 2 for the Hand in a harvester sector else 1; R and T are flat counts in both
     /// rulesets (DEFAULT). rule: m2-uprisings-and-garrison §Incident (Score).
     /// </summary>
-    public static int IncidentScore(SupportParams p, int d1, int d2, int controllerSupport, int regiments, int stormtroopers, bool handInHarvesterSector)
+    public static int IncidentScore(SupportParams p, int d1, int d2, int controllerSupport, int regiments, int pacifiers, bool handInHarvesterSector)
     {
         int unrest = controllerSupport >= p.GarrisonFreeSupport ? 0 : (p.GarrisonFreeSupport - controllerSupport + p.GarrisonStep - 1) / p.GarrisonStep;
         int k = handInHarvesterSector ? p.HarvesterScoreMultiplier : 1;
-        return d1 + d2 + unrest - k * regiments - stormtroopers;
+        return d1 + d2 + unrest - k * regiments - pacifiers;
     }
 
     /// <summary>"Largest threshold at or below the score"; below the first threshold the code is 0. rule: m2-uprisings-and-garrison §Incident (Lookup).</summary>

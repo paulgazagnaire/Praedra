@@ -16,7 +16,7 @@ public class ShipTests
     // v6 re-pin 2026-10-24: Far was Classis (one 100-unit great-route leg); on the spiral map it is Cambium, two legs from
     // Charter (a free jump to Remedium, then a minor-route leg) that also take 5 days at speed 80 and 7 at speed 100.
     private const string Home = "Charter", Far = "Cambium";
-    private const string Isd = "Mandate";
+    private const string Mandate = "Mandate";
 
     private static IReadOnlyList<ShipClass> Capitals() => ShipData.LoadCapitalShips(Path.Combine(TestData.ClassicDir, ShipData.CapitalShipsFile));
     private static IReadOnlyList<ShipClass> Fighters() => ShipData.LoadFighters(Path.Combine(TestData.ClassicDir, ShipData.FightersFile));
@@ -54,14 +54,14 @@ public class ShipTests
 
     // m3-ships-and-fighters S3
     [Fact]
-    public void S3_TheIsdRow()
+    public void S3_TheMandateRow()
     {
-        var isd = Capitals().Single(x => x.Id == 133);
-        Assert.Equal(Isd, isd.Name);
-        Assert.Equal(112, isd.RefinedMaterialCost);
-        Assert.Equal(71, EcoWorld.Costs.Value.Get(Isd).Maintenance);
-        Assert.Equal((2750, 300, 80, 100), (isd.Hull, isd.ShieldStrength, isd.Hyperdrive, isd.HyperdriveIfDamaged));
-        Assert.Equal((6, 3, 480), (isd.FighterCapacity, isd.TroopCapacity, isd.OverallAttackStrength));
+        var mandate = Capitals().Single(x => x.Id == 133);
+        Assert.Equal(Mandate, mandate.Name);
+        Assert.Equal(112, mandate.RefinedMaterialCost);
+        Assert.Equal(71, EcoWorld.Costs.Value.Get(Mandate).Maintenance);
+        Assert.Equal((2750, 300, 80, 100), (mandate.Hull, mandate.ShieldStrength, mandate.Hyperdrive, mandate.HyperdriveIfDamaged));
+        Assert.Equal((6, 3, 480), (mandate.FighterCapacity, mandate.TroopCapacity, mandate.OverallAttackStrength));
     }
 
     // m3-ships-and-fighters S4
@@ -125,7 +125,7 @@ public class ShipTests
 
     // m3-ships-and-fighters S7
     [Fact]
-    public void S7_AllAvailableLetsTheCollectiveOrderABulwark()
+    public void S7_AllAvailableLetsTheCollectiveOrderABarricade()
     {
         var w = Yard(Side.Collective);
         w.Build.RespectResearchOrder = false; // AllAvailable (the M3 stub; the default is on since m5-research §Defaults)
@@ -203,9 +203,9 @@ public class ShipTests
 
     // m3-ships-and-fighters S9
     [Fact]
-    public void S9_AnUndamagedIsdTakesFiveDays()
+    public void S9_AnUndamagedMandateTakesFiveDays()
     {
-        var (w, f, _) = Fleet(Isd);
+        var (w, f, _) = Fleet(Mandate);
         Assert.Equal(5, DaysTo(w, f, Far)); // v6: two legs, 5 days in all (was one route leg: 100 * 80 / (5 * 300) = 5.33, rounded to 5)
     }
 
@@ -213,7 +213,7 @@ public class ShipTests
     [Fact]
     public void S10_AHyperdriveHitMakesItTakeSevenDays()
     {
-        var (w, f, ship) = Fleet(Isd);
+        var (w, f, ship) = Fleet(Mandate);
         Damage(w, ship, 2750, 0, 0, 0, 0, 1, 0);
         Assert.Equal(100, w.Fleets.SpeedOf(w.State.Fleets[f]));
         Assert.Equal(7, DaysTo(w, f, Far)); // v6: two legs, 7 days in all (was one route leg: 100 * 100 / (5 * 300) = 6.67, rounded to 7)
@@ -223,7 +223,7 @@ public class ShipTests
     [Fact]
     public void S11_HullLossAloneDoesNotSlowIt()
     {
-        var (w, f, ship) = Fleet(Isd);
+        var (w, f, ship) = Fleet(Mandate);
         Damage(w, ship, 1, 0, 0, 0, 0, 0, 0);
         Assert.Equal(1, w.Obj(ship).Hull);
         Assert.Equal(5, DaysTo(w, f, Far));
@@ -244,7 +244,7 @@ public class ShipTests
     [Fact]
     public void S13_AHullAboveTheClassMaximumIsABadValue()
     {
-        var (w, _, ship) = Fleet(Isd);
+        var (w, _, ship) = Fleet(Mandate);
         string before = System.Text.Json.JsonSerializer.Serialize(w.State.Economy.Objects);
         long seq = w.Fleets.SubmitDebugSetDamage(Side.Hand, ship, 3000, new[] { 0, 0, 0, 0, 0, 0 });
         w.Run(1);
@@ -270,7 +270,7 @@ public class ShipTests
     [Fact]
     public void DebugSetDamage_is_refused_unless_debug_orders_are_enabled()
     {
-        var (w, _, ship) = Fleet(Isd);
+        var (w, _, ship) = Fleet(Mandate);
         w.Fleets.DebugOrdersEnabled = false;
         long seq = w.Fleets.SubmitDebugSetDamage(Side.Hand, ship, 10, new[] { 0, 0, 0, 0, 0, 0 });
         w.Run(1);
@@ -294,7 +294,7 @@ public class ShipTests
     [Fact]
     public void S16_HullAndCountersSurviveSaveAndLoad()
     {
-        var (w, _, ship) = Fleet(Isd);
+        var (w, _, ship) = Fleet(Mandate);
         Damage(w, ship, 1200, 0, 2, 0, 1, 3, 0);
         var loaded = GameSave.Load(GameSave.Save(w.Game));
         var o = loaded.State.Economy.Objects[ship];
@@ -313,7 +313,7 @@ public class ShipTests
         var w = new BuildWorld(7); // a real generator: any draw would be counted
         Capitals(); Fighters(); ShipData.LoadAll(TestData.ClassicDir);
         w.Fleets.DebugOrdersEnabled = true;
-        int f = w.Fleets.AddFleet(Side.Hand, "F", new[] { Isd, "Mule" }, Home, new[] { "Gleaner" });
+        int f = w.Fleets.AddFleet(Side.Hand, "F", new[] { Mandate, "Mule" }, Home, new[] { "Gleaner" });
         int ship = w.State.Fleets[f].Ships[0];
         w.Fleets.SubmitDebugSetDamage(Side.Hand, ship, 1200, new[] { 0, 2, 0, 1, 3, 0 });
         w.Fleets.SubmitMove(Side.Hand, f, Far);
@@ -328,7 +328,7 @@ public class ShipTests
     public void A_new_ship_starts_at_full_hull_with_six_zero_counters()
     {
         var w = new BuildWorld();
-        int a = w.Eco.AddObject(Side.Hand, Isd, null, true);
+        int a = w.Eco.AddObject(Side.Hand, Mandate, null, true);
         int b = w.Eco.AddObject(Side.Hand, "harvester", null, false);
         int c = w.Eco.AddObject(Side.Hand, "Gleaner", Home, true);
         int d = w.Eco.AddObject(Side.Hand, "Pacifiers", Home, true);

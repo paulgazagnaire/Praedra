@@ -275,7 +275,7 @@ public sealed partial class SimpleAi
 
     /// <summary>
     /// The capital ships of a fleet as combat units (hull ratio and weapons counter from the objects), WITHOUT the squadrons. The AI does not
-    /// trust squadrons when it weighs a fight: a carrier full of B-wings measured 437 and was annihilated by two Star Destroyers in the same
+    /// trust squadrons when it weighs a fight: a carrier full of Mauls measured 437 and was annihilated by two Mandates in the same
     /// build's battles (see SimpleAiParams.FighterTrustPercent).
     /// </summary>
     private List<Combatant> ShipUnits(Fleet f)
@@ -294,7 +294,7 @@ public sealed partial class SimpleAi
     private List<Combatant>? _refUnits;
     private List<Combatant> RefUnits() => _refUnits ??= _h.Fleets.Blockade.Reference(_h.Fleets.ShipClasses).Select(c => _h.Fleets.Strength.Unit(c)).ToList();
 
-    /// <summary>A fleet's strength against the reference force REF (3 ISD, m4-battle-new §12), capital ships only; percent-like scale of FleetModule.StrengthOf.</summary>
+    /// <summary>A fleet's strength against the reference force REF (3 Mandate, m4-battle-new §12), capital ships only; percent-like scale of FleetModule.StrengthOf.</summary>
     private double Str(Fleet f)
     {
         if (!_strength.TryGetValue(f.Id, out var v)) _strength[f.Id] = v = _h.Fleets.Strength.Of(ShipUnits(f), RefUnits());
@@ -464,7 +464,7 @@ public sealed partial class SimpleAi
     private void PlanProduction()
     {
         if (_view != null) PlanScoutBuild();
-        if (_view != null && _side == Side.Hand) PlanDroidBuild();
+        if (_view != null && _side == Side.Hand) PlanSpeculatorBuild();
         PlanGarrison();
         PlanInvasionRegiments();
         PlanAgentForceBuild(); // after the regiments: a training yard goes to the garrisons first

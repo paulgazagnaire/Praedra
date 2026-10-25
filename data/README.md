@@ -34,7 +34,7 @@ Sources (project folder `praedra/specs/`): `economy/data/slot-values-draft.csv`.
 `design/research-rules.csv` is the data table `ResearchRules` of m5-research (facility tick delay and random span, points per yard, mission point roll, Sensor Station tier 2 rung and cost); each row carries its source tag.
 
 Characters (m5-characters-and-force, m5-setup-and-victory P9), copied 2026-10-12:
-- `original/characters.csv` holds the 60 original records of `MJCHARSD` and `MNCHARSD` (ids 576-579, 640-641, 832-857, 896-923), read by the importer. Since B1 Shenir Rix (918) is Talent 10 +- 40 and Noval Garaint (919) 30 +- 20, as in the file (the old spec copy had them swapped).
+- `original/characters.csv` holds the 60 original records of `MJCHARSD` and `MNCHARSD` (ids 576-579, 640-641, 832-857, 896-923), read by the importer. Since B1 Shenir Doran (918) is Talent 10 +- 40 and Noval Vance (919) 30 +- 20, as in the file (the old spec copy had them swapped).
 - `design/added-heroes.csv` holds the 16 heroes Paul added (heroes/added-heroes: 8 Collective, 4 Hand, 4 Hand Repossessors), Proposal stats, ids after each side's minor block (858-865, 924-931). Skills the source leaves blank are 0+0 and loyalty is 100+0 (DEFAULT, as the 60 originals); each row says so.
 - `design/roster.csv` lists the 65 characters in the game, all with `in_game` 1 (Decided, heroes/refined-roster). The 11 cut Classic characters (ids 844, 854, 857, 904-907, 911, 913-915) have no Praedra name, so they are left out of the roster and of `classic/characters.csv` (the importer drops every character not in the roster); only the raw files keep them.
 - `design/navigator_speed.csv` is the Navigator table of m5-characters-and-force (Midwife 50 Traced, the rest Proposal); unlisted characters are 100.

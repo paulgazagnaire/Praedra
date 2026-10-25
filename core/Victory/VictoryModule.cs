@@ -17,7 +17,7 @@ public sealed record VictoryRules
     /// <summary>Hand wins when the Collective no longer holds the Hearth system. rule: setup-victory/04 §3 (hqGone), HQ-Only mode.</summary>
     public bool HandWinsOnHqLost { get; init; } = true;
     /// <summary>Collective wins when it holds Charter or Charter is destroyed. rule: setup-victory/04 §3 (cor, destroyed bit 0x200), HQ-Only mode; B4 §15 [EXE-own] (bit 3 of +0x50).</summary>
-    public bool CollectiveWinsOnCoruscant { get; init; } = true;
+    public bool CollectiveWinsOnCharter { get; init; } = true;
     /// <summary>Hand wins when the Collective holds no system. New rule, not Classic (B4 §15 [EXE-own]); DEFAULT New on (Decided extension, playable slice 2026-10-12).</summary>
     public bool HandWinsWhenCollectiveHasNoSystems { get; init; } = true;
     /// <summary>Collective wins when the Hand holds no system. New rule, not Classic (B4 §15 [EXE-own]); DEFAULT New on (Decided extension, playable slice 2026-10-12).</summary>
@@ -38,12 +38,12 @@ public enum KeyDeathFallback { None, WaiveCondition, Immortal }
 
 /// <summary>
 /// Checks the victory conditions at the end of every Step (slot 6.11, last the other day-end hooks). Draws no random numbers. Once a winner
-/// is set it stays and no second GameWon is raised. Tie (both sides satisfied in one check): the Collective, as in the original
-/// (setup-victory/04 §3 "Tie"). After <see cref="GameSave.Load"/>, attach again.
+/// is set it stays and no second GameWon is raised. Gleaner (both sides satisfied in one check): the Collective, as in the original
+/// (setup-victory/04 §3 "Gleaner"). After <see cref="GameSave.Load"/>, attach again.
 /// </summary>
 public sealed class VictoryModule
 {
-    public const string CoruscantName = "Charter";
+    public const string CharterName = "Charter";
     private readonly Game _game;
     public VictoryRules Rules { get; }
 
@@ -88,11 +88,11 @@ public sealed class VictoryModule
         string? collectiveReason = null, handReason = null;
         bool keysA = !Rules.StandardVictory || KeysCaptured(Side.Collective), keysE = !Rules.StandardVictory || KeysCaptured(Side.Hand);
         // rule: m5-setup-and-victory §Victory: Charter held by the Collective OR destroyed (B4 §15 [EXE-own], bit 3 of +0x50)
-        bool corDestroyed = ctx.State.Harvester.IsDestroyed(CoruscantName);
-        if (Rules.CollectiveWinsOnCoruscant && keysA && (Holds(CoruscantName, Side.Collective) || corDestroyed))
+        bool corDestroyed = ctx.State.Harvester.IsDestroyed(CharterName);
+        if (Rules.CollectiveWinsOnCharter && keysA && (Holds(CharterName, Side.Collective) || corDestroyed))
             collectiveReason = corDestroyed
-                ? (Rules.StandardVictory ? "Charter is destroyed with Vader and Palpatine captured" : "Charter is destroyed")
-                : (Rules.StandardVictory ? "Collective holds Charter with Vader and Palpatine captured" : "Collective captured Charter");
+                ? (Rules.StandardVictory ? "Charter is destroyed with Ravilla and Chair captured" : "Charter is destroyed")
+                : (Rules.StandardVictory ? "Collective holds Charter with Ravilla and Chair captured" : "Collective captured Charter");
         if (collectiveReason == null && Rules.CollectiveWinsWhenHandHasNoSystems && !owners.Values.Any(v => v == Side.Hand)) collectiveReason = "Hand holds no system";
         // rule: setup-victory/04 §3 (the destroyed bit; a missing HQ counts as destroyed); m5-fog-and-hq §F7 (capture destroys it, DEFAULT AnyCause).
         // An at-rest HQ on a system the Collective no longer holds also counts (HqLostOnHolderChange = Never leaves it standing there).

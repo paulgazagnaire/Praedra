@@ -60,18 +60,18 @@ public sealed class DefenseModule
     }
 
     /// <summary>
-    /// Number of completed GenCore generators (family 36). The harvester shield (family 37) is not counted. rule: m3-planetary-defenses §Queries
+    /// Number of completed Escrow generators (family 36). The harvester shield (family 37) is not counted. rule: m3-planetary-defenses §Queries
     /// (ShieldGenerators; D2).
     /// </summary>
     public int ShieldGenerators(string system) => DefensesOf(system).Count(d => d.Class.Job == DefenseJob.ShieldGenerator);
 
     /// <summary>
-    /// Sum of the shield strength of every completed defense facility (only GenCore is non-zero): 0, 40, 80, 120, 160. Read once at the start
+    /// Sum of the shield strength of every completed defense facility (only Escrow is non-zero): 0, 40, 80, 120, 160. Read once at the start
     /// of each bombardment. rule: m3-planetary-defenses §Queries (ShieldStrength; D3).
     /// </summary>
     public int ShieldStrength(string system) => DefensesOf(system).Sum(d => d.Class.Shield);
 
-    /// <summary>Completed batteries (families 34 and 35: KDY and LNR). For UI counts and the M6 AI; no M3 rule reads it. rule: m3-planetary-defenses §Queries (Batteries; D7).</summary>
+    /// <summary>Completed batteries (families 34 and 35: Lien and Covenant). For UI counts and the M6 AI; no M3 rule reads it. rule: m3-planetary-defenses §Queries (Batteries; D7).</summary>
     public int Batteries(string system) => DefensesOf(system).Count(d => d.Class.Job == DefenseJob.Battery);
 
     /// <summary>

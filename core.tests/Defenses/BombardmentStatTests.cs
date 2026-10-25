@@ -55,11 +55,11 @@ public class BombardmentStatTests
 
     // m3-bombardment B10: reference means over 20,000 runs (tolerance 0.05). With BombardWastedHits on (B7 C1, DEFAULT) the means are B7-bombardment §9's
     // 2.92, 4.63 and 5.12 (were 3.93, 5.00 and 5.99 under the m3 live-pool rule, kept here as the switch-off rows). Return fire is off in this test:
-    // the LNR I would damage the Victory Destroyers and lower P (B7 §4), and B10 measures the hits only
+    // the Covenant I would damage the Decrees and lower P (B7 §4), and B10 measures the hits only
     [Theory]
-    [InlineData(2, false, true, 2.92)]    // 8 hits on 4 Army regiments plus an LNR I (pool Military): 2.92 of 5 (m3 rule 3.93)
+    [InlineData(2, false, true, 2.92)]    // 8 hits on 4 Army regiments plus an Covenant I (pool Military): 2.92 of 5 (m3 rule 3.93)
     [InlineData(6, false, true, 4.63)]    // 24 hits: 4.63 (m3 rule 5.00)
-    [InlineData(15, true, true, 5.12)]    // 20 hits (P = 60, GenCore I absorbs 40) on 4 Army + LNR I + GenCore I: 5.12 of 6 (m3 rule 5.99)
+    [InlineData(15, true, true, 5.12)]    // 20 hits (P = 60, Escrow I absorbs 40) on 4 Army + Covenant I + Escrow I: 5.12 of 6 (m3 rule 5.99)
     [InlineData(2, false, false, 3.93)]   // the m3 rule (C1 off)
     [InlineData(6, false, false, 5.00)]
     [InlineData(15, true, false, 5.99)]
@@ -74,8 +74,8 @@ public class BombardmentStatTests
         for (int i = 0; i < trials; i++)
         {
             for (int k = 0; k < 4; k++) w.Regiment(All, BombWorld.Army);
-            w.Facility(FacilityKind.LnrSeriesI);
-            if (withShield) w.Facility(FacilityKind.GenCoreLevelI);
+            w.Facility(FacilityKind.CovenantI);
+            if (withShield) w.Facility(FacilityKind.EscrowI);
             int before = w.Eco.Objects.Count(o => o.System == Sys);
             w.Bombard(Emp, fleet, Sys, BombardCategory.Military);
             w.Run(1);

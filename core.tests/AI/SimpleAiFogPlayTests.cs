@@ -50,8 +50,8 @@ public class SimpleAiFogPlayTests
             // v6 re-pin 2026-10-24: on the spiral map the first such system by name was seen by the Collective on day 11 (the test then proves nothing),
             // so the hidden fleet goes to the unexplored Hand system farthest from every Collective system (ties by name).
             var g = h.Data.Galaxy;
-            var rebels = h.Game.State.SystemOwners.Where(kv => kv.Value == Side.Collective).Select(kv => g.Get(kv.Key)).ToList();
-            int Nearest(string s) { var x = g.Get(s); return rebels.Min(r => (r.MapX - x.MapX) * (r.MapX - x.MapX) + (r.MapY - x.MapY) * (r.MapY - x.MapY)); }
+            var collective = h.Game.State.SystemOwners.Where(kv => kv.Value == Side.Collective).Select(kv => g.Get(kv.Key)).ToList();
+            int Nearest(string s) { var x = g.Get(s); return collective.Min(r => (r.MapX - x.MapX) * (r.MapX - x.MapX) + (r.MapY - x.MapY) * (r.MapY - x.MapY)); }
             hidden = h.Game.State.SystemOwners.Where(kv => kv.Value == Side.Hand && kv.Key != "Charter" && !h.Fog.IsExplored(Side.Collective, kv.Key))
                 .Select(kv => kv.Key).OrderByDescending(Nearest).ThenBy(s => s, StringComparer.Ordinal).First();
             int fleet = h.Fleets.AddFleet(Side.Hand, "Hidden", new[] { "Mandate" }, hidden);

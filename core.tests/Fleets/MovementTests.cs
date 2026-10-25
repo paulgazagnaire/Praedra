@@ -5,26 +5,26 @@ namespace Praedra.Core.Tests.Fleets;
 
 // rule: m1-clock-and-orders §Order of work, §Orders in, §Events out; m1-travel §Orders in transit.
 // Tests K2-K9, K12, K13, K15 plus T19 (rejection while in transit) and the lane invariant. K10 and K11 are here too
-// because they need fleets. The real galaxy and the real ship data are used; "ISD fleet" = one Mandate (speed 80).
+// because they need fleets. The real galaxy and the real ship data are used; "Mandate fleet" = one Mandate (speed 80).
 public class MovementTests
 {
-    private const string Isd = "Mandate";
+    private const string Mandate = "Mandate";
     // Free travel with routes (Paul 2026-10-16): Charter to The Thaw at speed 80 rides the routes (m1-travel T9).
     // v6 re-pin 2026-10-24: on the spiral map it leaves along the Trunk Line and reaches The Thaw (off every route) from Hollenvale, day 45.
     // QA-40 re-pin 2026-10-25 (the Trunk Line now runs through Nutrix; Lowmarket is on the Nordhaven link): same 45 days
-    private static readonly string[] CoruscantHoth = { "Charter", "Pyrite", "Vigilia", "Nutrix", "Nordhaven", "Lowmarket", "Tierra Larga", "Seldwyn", "Overgrowth",
+    private static readonly string[] CharterThaw = { "Charter", "Pyrite", "Vigilia", "Nutrix", "Nordhaven", "Lowmarket", "Tierra Larga", "Seldwyn", "Overgrowth",
         "Longtide", "Galeholm", "Stopgap", "Groenveld", "Brokengate", "Towline", "Ashgarden", "Pale Ridge", "Zlatna", "Oldwatch", "Hollenvale", "The Thaw" };
-    private static readonly int[] CoruscantHothHops = { 1, 2, 2, 1, 1, 1, 1, 2, 1, 2, 1, 2, 2, 1, 2, 4, 2, 8, 4, 5 };
+    private static readonly int[] CharterThawHops = { 1, 2, 2, 1, 1, 1, 1, 2, 1, 2, 1, 2, 2, 1, 2, 4, 2, 8, 4, 5 };
 
     private static World Real(ForcedStopTrigger t = ForcedStopTrigger.PaulRule, ulong seed = 1) => new(TestData.RealGalaxy, t, seed);
 
     [Fact] // m1-clock-and-orders K2
-    public void K2_coruscant_to_kimanan_accepted_with_4_ticks_and_departs_on_day_0()
+    public void K2_charter_to_kimanan_accepted_with_4_ticks_and_departs_on_day_0()
     {
         // v6 re-pin 2026-10-24: Classis is no longer one hop from Charter. No single-hop trip from Charter takes 5 days at
         // speed 80 on the spiral map; Consolatio is the nearest one-hop trip of several days (a 4-day free jump).
         var w = Real();
-        int f = w.Add(Side.Hand, "Red", "Charter", Isd);
+        int f = w.Add(Side.Hand, "Red", "Charter", Mandate);
         long seq = w.Fleets.SubmitMove(Side.Hand, f, "Consolatio");
         w.Run(1);
         var acc = Assert.Single(w.Events<OrderAccepted>());
@@ -43,7 +43,7 @@ public class MovementTests
     public void K3_in_transit_after_3_steps_arrived_on_day_4_after_the_4th()
     {
         var w = Real();
-        int f = w.Add(Side.Hand, "Red", "Charter", Isd);
+        int f = w.Add(Side.Hand, "Red", "Charter", Mandate);
         w.Move(Side.Hand, f, "Consolatio");
         w.Run(3);
         Assert.Null(w.Fleet(f).At);
@@ -59,18 +59,18 @@ public class MovementTests
     }
 
     [Fact] // m1-clock-and-orders K4 (numbers agree with the real data and the formula: no mismatch)
-    public void K4_coruscant_to_hoth_passes_and_arrives_on_the_sheet_days()
+    public void K4_charter_to_hoth_passes_and_arrives_on_the_sheet_days()
     {
         var w = Real();
-        int f = w.Add(Side.Hand, "Red", "Charter", Isd);
+        int f = w.Add(Side.Hand, "Red", "Charter", Mandate);
         w.Move(Side.Hand, f, "The Thaw");
         w.Run(48);
         var acc = Assert.Single(w.Events<OrderAccepted>());
-        Assert.Equal(CoruscantHoth, acc.Path!.Items);
+        Assert.Equal(CharterThaw, acc.Path!.Items);
         Assert.Equal(45, acc.TotalTicks); // v6 re-pin 2026-10-24 (was 32)
         Assert.Equal(45, acc.ArrivalDay);
         var passes = new List<(int, string)>(); int day = 0;
-        for (int k = 0; k < CoruscantHothHops.Length - 1; k++) { day += CoruscantHothHops[k]; passes.Add((day, CoruscantHoth[k + 1])); }
+        for (int k = 0; k < CharterThawHops.Length - 1; k++) { day += CharterThawHops[k]; passes.Add((day, CharterThaw[k + 1])); }
         Assert.Equal((40, "Hollenvale"), passes[^1]); // v6 re-pin 2026-10-24 (was day 27, Seven Gates)
         Assert.Equal(passes, w.Events<FleetPassed>().Select(e => (e.Day, e.System)));
         var arr = Assert.Single(w.Events<FleetArrived>());
@@ -82,7 +82,7 @@ public class MovementTests
     public void K5_after_40_steps_on_the_last_leg_after_45_arrived()
     {
         var w = Real();
-        int f = w.Add(Side.Hand, "Red", "Charter", Isd);
+        int f = w.Add(Side.Hand, "Red", "Charter", Mandate);
         w.Move(Side.Hand, f, "The Thaw");
         w.Run(40);
         var t = w.Fleet(f).Transit!;
@@ -101,7 +101,7 @@ public class MovementTests
     public void K6_two_orders_for_one_fleet_in_one_step_first_accepted_second_rejected_in_transit()
     {
         var w = Real();
-        int f = w.Add(Side.Hand, "Red", "Charter", Isd);
+        int f = w.Add(Side.Hand, "Red", "Charter", Mandate);
         long s1 = w.Fleets.SubmitMove(Side.Hand, f, "Classis");
         long s2 = w.Fleets.SubmitMove(Side.Hand, f, "The Thaw");
         w.Run(1);
@@ -115,7 +115,7 @@ public class MovementTests
     public void K7_T19_order_for_a_fleet_already_moving_is_rejected_and_state_is_unchanged()
     {
         var w = Real();
-        int f = w.Add(Side.Hand, "Red", "Charter", Isd);
+        int f = w.Add(Side.Hand, "Red", "Charter", Mandate);
         w.Move(Side.Hand, f, "The Thaw");
         w.Run(3);
         string before = World.StateJson(w.Game);
@@ -123,14 +123,14 @@ public class MovementTests
         w.Game.Step();
         var rej = Assert.Single(w.Events<OrderRejected>());
         Assert.Equal((seq, RejectReason.InTransit), (rej.Sequence, rej.Reason));
-        Assert.Equal(CoruscantHoth, w.Fleet(f).Transit!.Path); // path untouched
+        Assert.Equal(CharterThaw, w.Fleet(f).Transit!.Path); // path untouched
     }
 
     [Fact] // m1-clock-and-orders K8
     public void K8_collective_cannot_move_an_hand_fleet()
     {
         var w = Real();
-        int f = w.Add(Side.Hand, "Red", "Charter", Isd);
+        int f = w.Add(Side.Hand, "Red", "Charter", Mandate);
         w.Fleets.SubmitMove(Side.Collective, f, "Classis");
         w.Run(1);
         Assert.Equal(RejectReason.NotYours, Assert.Single(w.Events<OrderRejected>()).Reason);
@@ -139,15 +139,15 @@ public class MovementTests
     }
 
     // m1-clock-and-orders §Orders in: the other MoveFleet rejections; m1-travel T20. T8 (Immobile) cannot happen to a ship fleet any more: every
-    // capital ship has a rating of 50 or more (m3-fleets §Fleet speed); a lone TIE squadron is refused by MoveSquadrons (FleetTests F14).
+    // capital ship has a rating of 50 or more (m3-fleets §Fleet speed); a lone Gleaner squadron is refused by MoveSquadrons (FleetTests F14).
     [Fact]
     public void Move_order_rejections_unknown_fleet_already_there_unknown_system_unreachable()
     {
         var w = Real();
-        int isd = w.Add(Side.Hand, "Red", "Charter", Isd);
+        int mandate = w.Add(Side.Hand, "Red", "Charter", Mandate);
         w.Fleets.SubmitMove(Side.Hand, 99, "Classis");
-        w.Fleets.SubmitMove(Side.Hand, isd, "Charter");
-        w.Fleets.SubmitMove(Side.Hand, isd, "No Such Place");
+        w.Fleets.SubmitMove(Side.Hand, mandate, "Charter");
+        w.Fleets.SubmitMove(Side.Hand, mandate, "No Such Place");
         string before = World.StateJson(w.Game);
         w.Run(1);
         // Unreachable no longer happens on the real map: free travel reaches every system, Glasswood included (m1-travel T20)
@@ -165,7 +165,7 @@ public class MovementTests
         string Run(bool handFirst)
         {
             var w = Real();
-            int e = w.Add(Side.Hand, "Red", "Charter", Isd);
+            int e = w.Add(Side.Hand, "Red", "Charter", Mandate);
             int a = w.Add(Side.Collective, "Blue", "Classis", "Dodger");
             if (handFirst) { w.Move(Side.Hand, e, "The Thaw"); w.Move(Side.Collective, a, "Drift Harbour"); }
             else { w.Move(Side.Collective, a, "Drift Harbour"); w.Move(Side.Hand, e, "The Thaw"); }
@@ -189,7 +189,7 @@ public class MovementTests
     private static World ScenarioWorld(ulong seed)
     {
         var w = Real(seed: seed);
-        w.Add(Side.Hand, "Red", "Charter", Isd);                       // fleet 1
+        w.Add(Side.Hand, "Red", "Charter", Mandate);                       // fleet 1
         w.Add(Side.Collective, "Picket", "Tierra Larga", "Snare");      // fleet 2: gravity-well ship on the route, pulls the mover out
         w.Fleets.SetOwner("Tierra Larga", Side.Collective);
         w.Fleets.SetOwner("The Thaw", Side.Collective); // the mover ends up alone at a Collective system: Classic blockade
@@ -249,7 +249,7 @@ public class MovementTests
     public void K13_a_queued_move_order_survives_save_and_load_and_is_processed_in_the_next_step()
     {
         var w = Real();
-        int f = w.Add(Side.Hand, "Red", "Charter", Isd);
+        int f = w.Add(Side.Hand, "Red", "Charter", Mandate);
         long seq = w.Fleets.SubmitMove(Side.Hand, f, "Classis");
         var loaded = new World(GameSave.Load(GameSave.Save(w.Game)), TestData.RealGalaxy);
         var queued = Assert.IsType<MoveFleetOrder>(Assert.Single(loaded.Game.Queue));
@@ -264,7 +264,7 @@ public class MovementTests
     public void A_move_order_without_the_fleet_module_is_rejected_not_a_crash()
     {
         var w = Real();
-        int f = w.Add(Side.Hand, "Red", "Charter", Isd);
+        int f = w.Add(Side.Hand, "Red", "Charter", Mandate);
         w.Fleets.SubmitMove(Side.Hand, f, "Classis");
         var bare = GameSave.Load(GameSave.Save(w.Game));
         bare.Step();
@@ -276,7 +276,7 @@ public class MovementTests
     {
         var w = new World(World.BCMap());
         int f = w.Add(Side.Collective, "F", "A", "Dodger");
-        int e = w.Add(Side.Hand, "E", "B", Isd);
+        int e = w.Add(Side.Hand, "E", "B", Mandate);
         w.Move(Side.Collective, f, "C");
         w.RunTo(15);
         w.Move(Side.Hand, e, "A"); // processed in the Step with K = 15, the one in which F arrives (day 16)
@@ -310,8 +310,8 @@ public class MovementTests
     public void Hash_covers_fleet_state_and_is_canonical()
     {
         var a = Real(); var b = Real();
-        a.Add(Side.Hand, "Red", "Charter", Isd, "Wasp"); // a fleet's ships are stored sorted
-        b.Add(Side.Hand, "Red", "Charter", "Wasp", Isd);
+        a.Add(Side.Hand, "Red", "Charter", Mandate, "Wasp"); // a fleet's ships are stored sorted
+        b.Add(Side.Hand, "Red", "Charter", "Wasp", Mandate);
         Assert.Equal(GameSave.StateHash(a.Game), GameSave.StateHash(b.Game));
         a.Move(Side.Hand, 1, "The Thaw"); b.Move(Side.Hand, 1, "The Thaw");
         a.Run(3); b.Run(3);
@@ -319,7 +319,7 @@ public class MovementTests
         b.Run(1);
         Assert.NotEqual(GameSave.StateHash(a.Game), GameSave.StateHash(b.Game));
         var c = Real();
-        c.Add(Side.Hand, "Red", "Charter", Isd, "Wasp");
+        c.Add(Side.Hand, "Red", "Charter", Mandate, "Wasp");
         Assert.NotEqual(GameSave.StateHash(Real().Game), GameSave.StateHash(c.Game));
     }
 
@@ -329,7 +329,7 @@ public class MovementTests
         var w = Real();
         Assert.Throws<ArgumentException>(() => w.Fleets.AddFleet(Side.Hand, "x", Array.Empty<string>(), "Charter"));
         Assert.Throws<ArgumentException>(() => w.Add(Side.Hand, "x", "Charter", "Nope"));
-        Assert.Throws<ArgumentException>(() => w.Add(Side.Hand, "x", "No Such Place", Isd));
+        Assert.Throws<ArgumentException>(() => w.Add(Side.Hand, "x", "No Such Place", Mandate));
         Assert.Throws<ArgumentException>(() => w.Fleets.AddFleet(Side.Hand, "x", new[] { "Gleaner" }, "Charter")); // a squadron is not a ship
     }
 
@@ -337,9 +337,9 @@ public class MovementTests
     public void Fleet_speed_uses_the_slowest_capital_ship_and_ignores_squadrons_aboard()
     {
         var w = Real();
-        int f = w.Fleets.AddFleet(Side.Hand, "Mixed", new[] { Isd, "Mule" }, "Charter", new[] { "Gleaner" });
+        int f = w.Fleets.AddFleet(Side.Hand, "Mixed", new[] { Mandate, "Mule" }, "Charter", new[] { "Gleaner" });
         Assert.Equal(100, w.Fleets.SpeedOf(w.Fleet(f)));
-        int g = w.Fleets.AddFleet(Side.Hand, "Carrier", new[] { Isd }, "Charter", new[] { "Gleaner" });
+        int g = w.Fleets.AddFleet(Side.Hand, "Carrier", new[] { Mandate }, "Charter", new[] { "Gleaner" });
         Assert.Equal(80, w.Fleets.SpeedOf(w.Fleet(g)));
     }
 }

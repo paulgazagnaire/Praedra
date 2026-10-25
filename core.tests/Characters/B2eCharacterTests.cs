@@ -31,29 +31,29 @@ public class B2eCharacterTests
         return c;
     }
 
-    // B2e-1: Luke, base diplomacy 50, espionage 50, combat 90, ship design 0, Talent 50: effective 75, 75, 135, 0; with 40 injury points combat 95
+    // B2e-1: Nobody, base diplomacy 50, espionage 50, combat 90, ship design 0, Talent 50: effective 75, 75, 135, 0; with 40 injury points combat 95
     [Fact]
-    public void B2e1_EffectiveSkillsOfLuke()
+    public void B2e1_EffectiveSkillsOfNobody()
     {
         var w = new CharWorld();
-        var luke = Talent(Skills(w.Add(Luke, Yavin), dip: 50, esp: 50, com: 90, ship: 0), 50);
-        Assert.Equal((75, 75, 135, 0), (luke.EffectiveSkill(Skill.Diplomacy, Classic), luke.EffectiveSkill(Skill.Espionage, Classic),
-            luke.EffectiveSkill(Skill.Combat, Classic), luke.EffectiveSkill(Skill.ShipDesign, Classic)));
-        luke.Injury = 40;
-        Assert.Equal(95, luke.EffectiveSkill(Skill.Combat, Classic));
-        Assert.Equal(75, luke.EffectiveSkill(Skill.Diplomacy, Classic)); // the injury comes off combat only
+        var nobody = Talent(Skills(w.Add(Nobody, Shoal), dip: 50, esp: 50, com: 90, ship: 0), 50);
+        Assert.Equal((75, 75, 135, 0), (nobody.EffectiveSkill(Skill.Diplomacy, Classic), nobody.EffectiveSkill(Skill.Espionage, Classic),
+            nobody.EffectiveSkill(Skill.Combat, Classic), nobody.EffectiveSkill(Skill.ShipDesign, Classic)));
+        nobody.Injury = 40;
+        Assert.Equal(95, nobody.EffectiveSkill(Skill.Combat, Classic));
+        Assert.Equal(75, nobody.EffectiveSkill(Skill.Diplomacy, Classic)); // the injury comes off combat only
     }
 
-    // B2e-2: Vader Talent 120, base combat 100: 220; a character with Talent 0 keeps his base skills
+    // B2e-2: Ravilla Talent 120, base combat 100: 220; a character with Talent 0 keeps his base skills
     [Fact]
-    public void B2e2_VaderAndAnUntalentedCharacter()
+    public void B2e2_RavillaAndAnUntalentedCharacter()
     {
         var w = new CharWorld();
-        var vader = Talent(Skills(w.Add(Vader, Coruscant), com: 100, esp: 50), 120);
-        Assert.Equal((220, 110), (vader.EffectiveSkill(Skill.Combat, Classic), vader.EffectiveSkill(Skill.Espionage, Classic)));
-        var han = Skills(w.Add(Han, Yavin), dip: 30, esp: 70, com: 100, lead: 90, ship: 10);
-        Assert.Equal(0, han.EffectiveTalent);
-        foreach (Skill s in Enum.GetValues<Skill>()) Assert.Equal(han.BaseSkill(s), han.EffectiveSkill(s, Classic));
+        var ravilla = Talent(Skills(w.Add(Ravilla, Charter), com: 100, esp: 50), 120);
+        Assert.Equal((220, 110), (ravilla.EffectiveSkill(Skill.Combat, Classic), ravilla.EffectiveSkill(Skill.Espionage, Classic)));
+        var midwife = Skills(w.Add(Midwife, Shoal), dip: 30, esp: 70, com: 100, lead: 90, ship: 10);
+        Assert.Equal(0, midwife.EffectiveTalent);
+        foreach (Skill s in Enum.GetValues<Skill>()) Assert.Equal(midwife.BaseSkill(s), midwife.EffectiveSkill(s, Classic));
     }
 
     // B2e-3: Hurt(50) with draws 49, 10, 5: n = 16; with first draw 50: no injury and one draw only
@@ -87,18 +87,18 @@ public class B2eCharacterTests
     public void B2e5_MinorDeathTest(int draw, bool dies)
     {
         var w = new CharWorld();
-        var wedge = w.Add(Wedge, Yavin);
+        var fortyOne = w.Add(FortyOne, Shoal);
         w.Stub!.Expect(0, 99, draw);
         int before = w.Stub.Requests.Count;
-        w.StepWith("5.2", ctx => w.Ch.AddInjury(ctx, wedge, 10, CharacterCause.Mission));
-        Assert.Equal(dies ? CharacterStatus.Dead : CharacterStatus.Injured, wedge.Status);
+        w.StepWith("5.2", ctx => w.Ch.AddInjury(ctx, fortyOne, 10, CharacterCause.Mission));
+        Assert.Equal(dies ? CharacterStatus.Dead : CharacterStatus.Injured, fortyOne.Status);
         if (dies) Assert.Equal(CharacterCause.Mission, w.Events<CharacterKilled>().Single().Cause);
         Assert.Equal(1, w.Stub.Requests.Skip(before).Count(r => r == (0, 99)));
 
-        var luke = w.Add(Luke, Yavin);
+        var nobody = w.Add(Nobody, Shoal);
         before = w.Stub.Requests.Count;
-        w.StepWith("5.2", ctx => w.Ch.AddInjury(ctx, luke, 10, CharacterCause.Mission));
-        Assert.Equal(CharacterStatus.Injured, luke.Status);
+        w.StepWith("5.2", ctx => w.Ch.AddInjury(ctx, nobody, 10, CharacterCause.Mission));
+        Assert.Equal(CharacterStatus.Injured, nobody.Status);
         Assert.Equal(before, w.Stub.Requests.Count);
     }
 
@@ -112,24 +112,24 @@ public class B2eCharacterTests
     public void B2e6_Healing(string where, int days)
     {
         var w = new CharWorld();
-        w.Hold(Yavin, Side.Collective); w.Hold(Hoth, Side.Hand);
-        var han = w.Add(Han, where == "enemy" ? Hoth : Yavin);
-        if (where == "fast") Talent(han, 80);
-        if (where == "travelling") Assert.Null(w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Han, Coruscant)));
+        w.Hold(Shoal, Side.Collective); w.Hold(Thaw, Side.Hand);
+        var midwife = w.Add(Midwife, where == "enemy" ? Thaw : Shoal);
+        if (where == "fast") Talent(midwife, 80);
+        if (where == "travelling") Assert.Null(w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Midwife, Charter)));
         w.StepWith("5.2", ctx =>
         {
-            w.Ch.AddInjury(ctx, han, 5, CharacterCause.Debug);
-            if (where == "captured") w.Ch.Capture(ctx, han, Side.Hand, null, CharacterCause.Debug, canEscape: false);
+            w.Ch.AddInjury(ctx, midwife, 5, CharacterCause.Debug);
+            if (where == "captured") w.Ch.Capture(ctx, midwife, Side.Hand, null, CharacterCause.Debug, canEscape: false);
         });
         int before = w.Stub!.Requests.Count;
         for (int d = 1; d <= 6; d++)
         {
             w.Game.Step();
-            if (days > 0 && d < days) Assert.True(han.Injury > 0, $"day {d}: {han.Injury}");
-            if (days > 0 && d == days) { Assert.Equal(0, han.Injury); Assert.Equal(CharacterStatus.Free, han.Status); }
-            if (where == "fast" && d == 1) Assert.Equal(3, han.Injury);
+            if (days > 0 && d < days) Assert.True(midwife.Injury > 0, $"day {d}: {midwife.Injury}");
+            if (days > 0 && d == days) { Assert.Equal(0, midwife.Injury); Assert.Equal(CharacterStatus.Free, midwife.Status); }
+            if (where == "fast" && d == 1) Assert.Equal(3, midwife.Injury);
         }
-        if (days < 0) Assert.Equal(5, han.Injury);
+        if (days < 0) Assert.Equal(5, midwife.Injury);
         Assert.Equal(before, w.Stub.Requests.Count); // B2e-19 in passing: the healing timer has spread 0 and draws nothing
     }
 
@@ -138,27 +138,27 @@ public class B2eCharacterTests
     public void B2e7_InjuryEndsThePostAndTheMission()
     {
         var w = new CharWorld();
-        int f = w.Fleet(Side.Collective, Yavin);
-        w.Add(Ackbar, Yavin); w.Ch.SetPost(Ackbar, f, CharacterPost.Admiral);
+        int f = w.Fleet(Side.Collective, Shoal);
+        w.Add(Keth, Shoal); w.Ch.SetPost(Keth, f, CharacterPost.Admiral);
         w.Stub!.Expect(0, 99, 99); // Keth is a minor: his death draw misses
-        w.StepWith("5.2", ctx => w.Ch.AddInjury(ctx, w.C(Ackbar), 5, CharacterCause.Debug));
-        Assert.Equal((f, CharacterPost.None), (w.C(Ackbar).AttachedFleet, w.C(Ackbar).Post));
+        w.StepWith("5.2", ctx => w.Ch.AddInjury(ctx, w.C(Keth), 5, CharacterCause.Debug));
+        Assert.Equal((f, CharacterPost.None), (w.C(Keth).AttachedFleet, w.C(Keth).Post));
         Assert.Equal(PostKind.Admiral, w.Events<PostVacated>().Single().Post);
 
         var m = new MissionWorld();
         m.Hold(MissionWorld.T, Side.Hand, 0);
-        var leia = m.Agent(Leia, MissionWorld.H, esp: 50);
-        m.Agent(Han, MissionWorld.H, esp: 50);
-        m.Start(Side.Collective, MissionKind.Espionage, new[] { Leia, Han }, MissionWorld.T);
+        var ledger = m.Agent(Ledger, MissionWorld.H, esp: 50);
+        m.Agent(Midwife, MissionWorld.H, esp: 50);
+        m.Start(Side.Collective, MissionKind.Espionage, new[] { Ledger, Midwife }, MissionWorld.T);
         m.Game.Step();
         int id = m.LastMission;
-        Assert.True(m.Ch.IsOnMission(Leia));
+        Assert.True(m.Ch.IsOnMission(Ledger));
         bool done = false;
-        m.Game.RegisterHook("5.2", ctx => { if (!done) { done = true; m.Ch.AddInjury(ctx, leia, 5, CharacterCause.Debug); } });
+        m.Game.RegisterHook("5.2", ctx => { if (!done) { done = true; m.Ch.AddInjury(ctx, ledger, 5, CharacterCause.Debug); } });
         m.Game.Step();
-        Assert.False(m.Ch.IsOnMission(Leia)); // Espionage can resign (MISSNSD word 15)
-        Assert.True(m.Ch.IsOnMission(Han));
-        Assert.NotNull(leia.System);
+        Assert.False(m.Ch.IsOnMission(Ledger)); // Espionage can resign (MISSNSD word 15)
+        Assert.True(m.Ch.IsOnMission(Midwife));
+        Assert.NotNull(ledger.System);
         Assert.Equal(id, m.LastMission);
     }
 
@@ -167,15 +167,15 @@ public class B2eCharacterTests
     public void B2e8_EscapeTimer()
     {
         var w = new CharWorld();
-        w.Hold(Hoth, Side.Hand);
+        w.Hold(Thaw, Side.Hand);
         // (B5a, 2026-10-17) under derived control an unguarded world at Collective support 50 is neutral: the first support change there (day 31)
-        // would turn The Thaw neutral and free Han (Liberation). At Collective support 0 the Hand holds it by support for the whole test.
-        w.Host.Economy.SetCollectiveSupport(Hoth, 0);
-        var han = Skills(w.Add(Han, Hoth), esp: 0, com: 0);
+        // would turn The Thaw neutral and free Midwife (Liberation). At Collective support 0 the Hand holds it by support for the whole test.
+        w.Host.Economy.SetCollectiveSupport(Thaw, 0);
+        var midwife = Skills(w.Add(Midwife, Thaw), esp: 0, com: 0);
         w.Stub!.Expect(0, 1000, 400);
         int d = w.Game.Day;
-        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, han, Side.Hand, null, CharacterCause.Debug));
-        Assert.Equal(d + 500, han.NextEscapeDay);
+        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, midwife, Side.Hand, null, CharacterCause.Debug));
+        Assert.Equal(d + 500, midwife.NextEscapeDay);
         while (w.Game.Day < d + 500) w.Game.Step();
         Assert.Empty(w.Events<EscapeAttempted>());
         w.Stub.Expect(0, 99, 99).Expect(0, 1000, 7);
@@ -184,25 +184,25 @@ public class B2eCharacterTests
         var a = w.Events<EscapeAttempted>().Single();
         Assert.False(a.Escaped);
         Assert.Equal(new[] { (0, 99), (0, 1000) }, w.Stub.Requests.Skip(from));
-        Assert.Equal(d + 500 + 107, han.NextEscapeDay);
+        Assert.Equal(d + 500 + 107, midwife.NextEscapeDay);
     }
 
-    // B2e-9: Han (100, 100) alone: x = 200 -> 30 (29 escapes, 30 not); with Vader (220) and 2 Hand special forces: x = -22 -> 3; Leia (50, 30) there: x = -142 -> 1
+    // B2e-9: Midwife (100, 100) alone: x = 200 -> 30 (29 escapes, 30 not); with Ravilla (220) and 2 Hand special forces: x = -22 -> 3; Ledger (50, 30) there: x = -142 -> 1
     [Theory]
     [InlineData(29, true)]
     [InlineData(30, false)]
     public void B2e9_EscapeChance(int draw, bool escapes)
     {
         var w = new CharWorld();
-        w.Hold(Hoth, Side.Hand);
-        var han = Skills(w.Add(Han, Hoth), esp: 100, com: 100);
-        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, han, Side.Hand, null, CharacterCause.Debug));
-        han.NextEscapeDay = w.Game.Day;
+        w.Hold(Thaw, Side.Hand);
+        var midwife = Skills(w.Add(Midwife, Thaw), esp: 100, com: 100);
+        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, midwife, Side.Hand, null, CharacterCause.Debug));
+        midwife.NextEscapeDay = w.Game.Day;
         w.Stub!.Expect(0, 99, draw);
         w.Game.Step();
         var a = w.Events<EscapeAttempted>().Single();
         Assert.Equal((0, 0, 200, 30, escapes), (a.CaptorAverageCombat, a.CaptorSpecialForces, a.X, a.Chance, a.Escaped));
-        Assert.Equal(escapes ? CharacterStatus.Free : CharacterStatus.Captured, han.Status);
+        Assert.Equal(escapes ? CharacterStatus.Free : CharacterStatus.Captured, midwife.Status);
         if (escapes) Assert.Single(w.Events<CharacterEscaped>());
     }
 
@@ -210,17 +210,17 @@ public class B2eCharacterTests
     public void B2e9_EscapeChanceWithGuards()
     {
         var w = new CharWorld(CharWorld.ClassicTalent()); // the Classic Talent (m5-characters-and-force §Talent CH37)
-        w.Hold(Hoth, Side.Hand);
-        Talent(Skills(w.Add(Vader, Hoth), com: 100), 120);
-        w.Host.Economy.AddObject(Side.Hand, HandCommandos, Hoth, true);
-        w.Host.Economy.AddObject(Side.Hand, HandCommandos, Hoth, true);
-        var han = Skills(w.Add(Han, Hoth), esp: 100, com: 100);
-        var leia = Skills(w.Add(Leia, Hoth), esp: 30, com: 50);
-        w.StepWith("5.2", ctx => { w.Ch.Capture(ctx, han, Side.Hand, null, CharacterCause.Debug); w.Ch.Capture(ctx, leia, Side.Hand, null, CharacterCause.Debug); });
-        han.NextEscapeDay = leia.NextEscapeDay = w.Game.Day;
+        w.Hold(Thaw, Side.Hand);
+        Talent(Skills(w.Add(Ravilla, Thaw), com: 100), 120);
+        w.Host.Economy.AddObject(Side.Hand, HandCommandos, Thaw, true);
+        w.Host.Economy.AddObject(Side.Hand, HandCommandos, Thaw, true);
+        var midwife = Skills(w.Add(Midwife, Thaw), esp: 100, com: 100);
+        var ledger = Skills(w.Add(Ledger, Thaw), esp: 30, com: 50);
+        w.StepWith("5.2", ctx => { w.Ch.Capture(ctx, midwife, Side.Hand, null, CharacterCause.Debug); w.Ch.Capture(ctx, ledger, Side.Hand, null, CharacterCause.Debug); });
+        midwife.NextEscapeDay = ledger.NextEscapeDay = w.Game.Day;
         w.Stub!.Expect(0, 99, 99, 99);
         w.Game.Step();
-        Assert.Equal(new[] { (Leia, 220, 2, -142, 1), (Han, 220, 2, -22, 3) },
+        Assert.Equal(new[] { (Ledger, 220, 2, -142, 1), (Midwife, 220, 2, -22, 3) },
             w.Events<EscapeAttempted>().OrderBy(e => e.Character).Select(e => (e.Character, e.CaptorAverageCombat, e.CaptorSpecialForces, e.X, e.Chance)));
     }
 
@@ -229,33 +229,33 @@ public class B2eCharacterTests
     public void B2e10_RidersAndPrisonersDoNotGuard()
     {
         var w = new CharWorld();
-        w.Hold(Hoth, Side.Hand);
-        int f = w.Fleet(Side.Hand, Hoth, Isd);
-        Skills(w.Add(Piett, Hoth), com: 80); w.Ch.PlaceInFleet(Piett, f);
-        var han = Skills(w.Add(Han, Hoth), esp: 10, com: 10);
-        var wedge = Skills(w.Add(Wedge, Hoth), com: 90);
-        w.StepWith("5.2", ctx => { w.Ch.Capture(ctx, han, Side.Hand, null, CharacterCause.Debug); w.Ch.Capture(ctx, wedge, Side.Hand, null, CharacterCause.Debug); });
-        han.NextEscapeDay = w.Game.Day; wedge.NextEscapeDay = 0;
+        w.Hold(Thaw, Side.Hand);
+        int f = w.Fleet(Side.Hand, Thaw, Mandate);
+        Skills(w.Add(Varo, Thaw), com: 80); w.Ch.PlaceInFleet(Varo, f);
+        var midwife = Skills(w.Add(Midwife, Thaw), esp: 10, com: 10);
+        var fortyOne = Skills(w.Add(FortyOne, Thaw), com: 90);
+        w.StepWith("5.2", ctx => { w.Ch.Capture(ctx, midwife, Side.Hand, null, CharacterCause.Debug); w.Ch.Capture(ctx, fortyOne, Side.Hand, null, CharacterCause.Debug); });
+        midwife.NextEscapeDay = w.Game.Day; fortyOne.NextEscapeDay = 0;
         w.Stub!.Expect(0, 99, 99);
         w.Game.Step();
         Assert.Equal((0, 20), w.Events<EscapeAttempted>().Select(e => (e.CaptorAverageCombat, e.X)).Single());
     }
 
-    // B2e-11: Han captured by the Palace story: no escape timer, no draw ever
+    // B2e-11: Midwife captured by the Palace story: no escape timer, no draw ever
     [Fact]
     public void B2e11_StoryPrisonersNeverTry()
     {
         var w = new CharWorld();
-        var han = w.Add(Han, Hoth);
+        var midwife = w.Add(Midwife, Thaw);
         int before = w.Stub!.Requests.Count;
-        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, han, Side.Hand, Hoth, CharacterCause.Story));
+        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, midwife, Side.Hand, Thaw, CharacterCause.Story));
         w.Run(1200);
-        Assert.Equal(0, han.NextEscapeDay);
+        Assert.Equal(0, midwife.NextEscapeDay);
         Assert.Equal(before, w.Stub.Requests.Count);
         Assert.Empty(w.Events<EscapeAttempted>());
     }
 
-    // B2e-12: the Collective retakes the planet holding Han: freed; the planet turns neutral: freed; a battle that changes nothing: nothing; no draw
+    // B2e-12: the Collective retakes the planet holding Midwife: freed; the planet turns neutral: freed; a battle that changes nothing: nothing; no draw
     [Theory]
     [InlineData("retaken")]
     [InlineData("neutral")]
@@ -263,65 +263,65 @@ public class B2eCharacterTests
     public void B2e12_Liberation(string how)
     {
         var w = new CharWorld();
-        w.Hold(Hoth, Side.Hand);
-        var han = w.Add(Han, Hoth);
-        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, han, Side.Hand, null, CharacterCause.Debug));
+        w.Hold(Thaw, Side.Hand);
+        var midwife = w.Add(Midwife, Thaw);
+        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, midwife, Side.Hand, null, CharacterCause.Debug));
         int before = w.Stub!.Requests.Count;
         w.StepWith("5.2", ctx =>
         {
-            if (how == "retaken") { w.Hold(Hoth, Side.Collective); w.Ch.OnHolderChanged(new CaptureInfo(ctx, Hoth, Side.Hand, Side.Collective, CaptureCause.Debug)); }
-            else if (how == "neutral") { w.Host.Fleets.SetOwner(Hoth, null); w.Ch.Liberate(ctx, Hoth); }
-            else w.Ch.Liberate(ctx, Hoth);
+            if (how == "retaken") { w.Hold(Thaw, Side.Collective); w.Ch.OnHolderChanged(new CaptureInfo(ctx, Thaw, Side.Hand, Side.Collective, CaptureCause.Debug)); }
+            else if (how == "neutral") { w.Host.Fleets.SetOwner(Thaw, null); w.Ch.Liberate(ctx, Thaw); }
+            else w.Ch.Liberate(ctx, Thaw);
         });
         bool freed = how != "nothing";
-        Assert.Equal(freed ? CharacterStatus.Free : CharacterStatus.Captured, han.Status);
+        Assert.Equal(freed ? CharacterStatus.Free : CharacterStatus.Captured, midwife.Status);
         if (freed) Assert.Equal(CharacterCause.Liberation, w.Events<CharacterFreed>().Single().Cause);
         // the only draw is the support incident timer a Collective-held planet starts (GNPRTB 7702, m2-popular-support), never a character draw
         int spread = new Praedra.Core.Support.SupportParams().IncidentIntervalSpread;
         Assert.Empty(w.Stub.Requests.Skip(before).Where(r => r != (0, spread)));
     }
 
-    // B2e-13: Luke (combat 135, Talent 50) foiled with a mutual discovery of Vader (220, 120): duel x = -85 -> 15; the hurt rolls in order; Luke learns
+    // B2e-13: Nobody (combat 135, Talent 50) foiled with a mutual discovery of Ravilla (220, 120): duel x = -85 -> 15; the hurt rolls in order; Nobody learns
     // his heritage; free, so one hand draw (1..100) and Talent +17; both keys cleared
     [Fact]
-    public void B2e13_LukeMeetsVader()
+    public void B2e13_NobodyMeetsRavilla()
     {
         var w = new MissionWorld(characters: CharWorld.ClassicTalent()); // the Classic Talent (m5-characters-and-force §Talent CH37)
         w.Hold(MissionWorld.T, Side.Hand, 0);
-        var luke = w.Agent(Luke, MissionWorld.H, esp: 50, com: 90);
-        var vader = w.Agent(Vader, MissionWorld.T, com: 100);
-        Assert.Equal((50, 120), (luke.EffectiveTalent, vader.EffectiveTalent));
-        luke.DiscoveredTalentHolder = Vader; vader.DiscoveredTalentHolder = Luke; luke.PairId = vader.PairId = 1;
-        w.Start(Side.Collective, MissionKind.Espionage, new[] { Luke }, MissionWorld.T);
+        var nobody = w.Agent(Nobody, MissionWorld.H, esp: 50, com: 90);
+        var ravilla = w.Agent(Ravilla, MissionWorld.T, com: 100);
+        Assert.Equal((50, 120), (nobody.EffectiveTalent, ravilla.EffectiveTalent));
+        nobody.DiscoveredTalentHolder = Ravilla; ravilla.DiscoveredTalentHolder = Nobody; nobody.PairId = ravilla.PairId = 1;
+        w.Start(Side.Collective, MissionKind.Espionage, new[] { Nobody }, MissionWorld.T);
         w.Game.Step();
         w.RunUntilWorking(w.LastMission);
-        // Vader senses Luke (p = 70: 0 hits; he has a discovered user, so one try), foiled; then the encounter: duel 0 escapes, Luke's Hurt (p = 1)
-        // 99, Luke's HurtBy (p = 85) 99, Vader's HurtBy (p = 1) 99, the hand draw 39 (40 points)
+        // Ravilla senses Nobody (p = 70: 0 hits; he has a discovered user, so one try), foiled; then the encounter: duel 0 escapes, Nobody's Hurt (p = 1)
+        // 99, Nobody's HurtBy (p = 85) 99, Ravilla's HurtBy (p = 1) 99, the hand draw 39 (40 points)
         w.Stub!.Expect(0, 99, 0, 0, 99, 99, 99, 39);
         int from = w.Stub.Requests.Count;
         w.RunIteration(w.LastMission);
         var d = w.Events<MissionDuel>().Single();
-        Assert.Equal((Luke, Vader, -85, 15, true), (d.Member, d.Guard, d.X, d.Chance, d.Escaped));
+        Assert.Equal((Nobody, Ravilla, -85, 15, true), (d.Member, d.Guard, d.X, d.Chance, d.Escaped));
         Assert.Equal(new[] { (0, 99), (0, 99), (0, 99), (0, 99), (0, 99), (0, 99) }, w.RequestsSince(from).Where(r => r == (0, 99)).Take(6));
-        Assert.True(luke.KnowsHeritage);
-        Assert.Equal(40, luke.Injury);
-        Assert.Equal(67, luke.EffectiveTalent);
-        Assert.Equal((0, 0, 0, 0), (luke.DiscoveredTalentHolder, vader.DiscoveredTalentHolder, luke.PairId, vader.PairId));
+        Assert.True(nobody.KnowsHeritage);
+        Assert.Equal(40, nobody.Injury);
+        Assert.Equal(67, nobody.EffectiveTalent);
+        Assert.Equal((0, 0, 0, 0), (nobody.DiscoveredTalentHolder, ravilla.DiscoveredTalentHolder, nobody.PairId, ravilla.PairId));
         var e = w.Events<TalentEncounterResolved>().Single();
-        Assert.Equal((Luke, Vader, true, false, false), (e.Member, e.Other, e.MemberEscaped, e.MemberHurt, e.OtherHurt));
+        Assert.Equal((Nobody, Ravilla, true, false, false), (e.Member, e.Other, e.MemberEscaped, e.MemberHurt, e.OtherHurt));
         Assert.Equal(17, w.Events<TalentGained>().Single().Gain);
     }
 
-    // B2e-14: Leia (aware, Talent 10) meets the Emperor (150): Leia +28 Talent if free
+    // B2e-14: Ledger (aware, Talent 10) meets The Chair (150): Ledger +28 Talent if free
     [Fact]
-    public void B2e14_LeiaMeetsTheEmperor()
+    public void B2e14_LedgerMeetsTheChair()
     {
         var w = new CharWorld();
-        var leia = Talent(Skills(w.Add(Leia, Yavin), com: 50), 10);
-        var emp = Talent(Skills(w.Add(Palpatine, Coruscant), com: 50), 150);
+        var ledger = Talent(Skills(w.Add(Ledger, Shoal), com: 50), 10);
+        var emp = Talent(Skills(w.Add(Chair, Charter), com: 50), 150);
         w.Stub!.Expect(0, 99, 99, 99); // both HurtBy rolls miss
-        w.StepWith("5.3", ctx => w.Ch.TalentEncounter(ctx, ctx.Day + 1, 0, leia, emp, mHurtInDuel: false, mEscaped: true));
-        Assert.Equal(38, leia.EffectiveTalent);
+        w.StepWith("5.3", ctx => w.Ch.TalentEncounter(ctx, ctx.Day + 1, 0, ledger, emp, mHurtInDuel: false, mEscaped: true));
+        Assert.Equal(38, ledger.EffectiveTalent);
         Assert.Equal(150, emp.EffectiveTalent);
     }
 
@@ -330,8 +330,8 @@ public class B2eCharacterTests
     public void B2e15_TwoMinors()
     {
         var w = new CharWorld();
-        var a = Talent(Skills(w.Add(Wedge, Yavin), com: 40), 30);
-        var b = Talent(Skills(w.Add(Piett, Hoth), com: 60), 70);
+        var a = Talent(Skills(w.Add(FortyOne, Shoal), com: 40), 30);
+        var b = Talent(Skills(w.Add(Varo, Thaw), com: 60), 70);
         // a's HurtBy (p = 20): 0 hits, sizes 0, 0; a's death draw 99; b's HurtBy (p = 1): 0 hits, sizes 0, 0; b's death draw 99
         w.Stub!.Expect(0, 99, 0, 99, 0, 99);
         w.StepWith("5.3", ctx => w.Ch.TalentEncounter(ctx, ctx.Day + 1, 0, a, b, mHurtInDuel: false, mEscaped: true));
@@ -346,78 +346,78 @@ public class B2eCharacterTests
     public void B2e16_PairIdsMustMatch()
     {
         var w = new CharWorld();
-        var luke = w.Add(Luke, Yavin); var vader = w.Add(Vader, Coruscant);
-        luke.DiscoveredTalentHolder = Vader; vader.DiscoveredTalentHolder = Luke; luke.PairId = 1; vader.PairId = 2;
-        Assert.False(w.Ch.MutualDiscovery(luke, out _));
-        vader.PairId = 1;
-        Assert.True(w.Ch.MutualDiscovery(luke, out var x));
-        Assert.Equal(Vader, x!.Id);
-        luke.PairId = vader.PairId = 0;
-        Assert.False(w.Ch.MutualDiscovery(luke, out _));
+        var nobody = w.Add(Nobody, Shoal); var ravilla = w.Add(Ravilla, Charter);
+        nobody.DiscoveredTalentHolder = Ravilla; ravilla.DiscoveredTalentHolder = Nobody; nobody.PairId = 1; ravilla.PairId = 2;
+        Assert.False(w.Ch.MutualDiscovery(nobody, out _));
+        ravilla.PairId = 1;
+        Assert.True(w.Ch.MutualDiscovery(nobody, out var x));
+        Assert.Equal(Ravilla, x!.Id);
+        nobody.PairId = ravilla.PairId = 0;
+        Assert.False(w.Ch.MutualDiscovery(nobody, out _));
         Assert.Empty(w.Stub!.Requests);
     }
 
-    // B2e-17: Vader awakens an unaware Hand talented character on his planet the next day, Talent rolled then; Luke at 50 awakens nobody; at 80 he awakens
-    // Collective minors (level 10 + rand(0..40)); Leia only after Luke knows his heritage
+    // B2e-17: Ravilla awakens an unaware Hand talented character on his planet the next day, Talent rolled then; Nobody at 50 awakens nobody; at 80 he awakens
+    // Collective minors (level 10 + rand(0..40)); Ledger only after Nobody knows his heritage
     [Fact]
     public void B2e17_Awakening()
     {
-        var w = new CharWorld(new CharacterParams { TrainerPick = TrainerPick.Fixed }); // the Classic trainer flag (Luke, Vader); Random is CH39
-        w.Hold(Yavin, Side.Collective); w.Hold(Coruscant, Side.Hand);
-        Talent(w.Add(Vader, Coruscant), 120);
-        var piett = w.Add(Piett, Coruscant); piett.TalentHolder = true; // an unaware talented character
-        var luke = Talent(w.Add(Luke, Yavin), 50);
-        var wedge = w.Add(Wedge, Yavin); var leia = w.Add(Leia, Yavin);
-        Assert.True(wedge.TalentHolder && leia.TalentHolder && !wedge.TalentDiscovered && !leia.TalentDiscovered);
+        var w = new CharWorld(new CharacterParams { TrainerPick = TrainerPick.Fixed }); // the Classic trainer flag (Nobody, Ravilla); Random is CH39
+        w.Hold(Shoal, Side.Collective); w.Hold(Charter, Side.Hand);
+        Talent(w.Add(Ravilla, Charter), 120);
+        var varo = w.Add(Varo, Charter); varo.TalentHolder = true; // an unaware talented character
+        var nobody = Talent(w.Add(Nobody, Shoal), 50);
+        var fortyOne = w.Add(FortyOne, Shoal); var ledger = w.Add(Ledger, Shoal);
+        Assert.True(fortyOne.TalentHolder && ledger.TalentHolder && !fortyOne.TalentDiscovered && !ledger.TalentDiscovered);
         w.Game.Step(); // the timers turn on
-        Assert.False(piett.TalentDiscovered);
+        Assert.False(varo.TalentDiscovered);
         w.Game.Step();
-        Assert.True(piett.TalentDiscovered);
-        Assert.Equal((Vader, 10), (piett.AwakenedBy, piett.EffectiveTalent)); // his record: tlvl 10 + rand(0..40), the stub answers 0
-        Assert.False(wedge.TalentDiscovered); // Luke at 50 is no trainer
+        Assert.True(varo.TalentDiscovered);
+        Assert.Equal((Ravilla, 10), (varo.AwakenedBy, varo.EffectiveTalent)); // his record: tlvl 10 + rand(0..40), the stub answers 0
+        Assert.False(fortyOne.TalentDiscovered); // Nobody at 50 is no trainer
 
-        luke.TalentExperience = 80;
+        nobody.TalentExperience = 80;
         w.Stub!.Expect(0, 40, 33);
         w.Run(2);
-        Assert.True(wedge.TalentDiscovered);
-        Assert.Equal((Luke, 43), (wedge.AwakenedBy, wedge.EffectiveTalent));
-        Assert.False(leia.TalentDiscovered); // Luke does not know his heritage
-        luke.KnowsHeritage = true;
+        Assert.True(fortyOne.TalentDiscovered);
+        Assert.Equal((Nobody, 43), (fortyOne.AwakenedBy, fortyOne.EffectiveTalent));
+        Assert.False(ledger.TalentDiscovered); // Nobody does not know his heritage
+        nobody.KnowsHeritage = true;
         w.Game.Step();
-        Assert.True(leia.TalentDiscovered && leia.KnowsHeritage);
-        Assert.Equal(10, leia.EffectiveTalent);
+        Assert.True(ledger.TalentDiscovered && ledger.KnowsHeritage);
+        Assert.Equal(10, ledger.EffectiveTalent);
     }
 
-    // B2e-18: the Emperor on Charter, the Hand holds it: Hand base leadership 100 -> 150, Collective unchanged; once he is captured, 100
+    // B2e-18: The Chair on Charter, the Hand holds it: Hand base leadership 100 -> 150, Collective unchanged; once he is captured, 100
     [Fact]
     public void B2e18_SeatOfPower()
     {
         var w = new CharWorld();
-        w.Hold(Coruscant, Side.Hand);
-        var piett = Skills(w.Add(Piett, Hoth), lead: 100);
-        var ackbar = Skills(w.Add(Ackbar, Yavin), lead: 100);
-        var emp = w.Add(Palpatine, Coruscant);
+        w.Hold(Charter, Side.Hand);
+        var varo = Skills(w.Add(Varo, Thaw), lead: 100);
+        var keth = Skills(w.Add(Keth, Shoal), lead: 100);
+        var emp = w.Add(Chair, Charter);
         w.Game.Step();
         Assert.True(w.Ch.SeatOfPowerOn);
-        Assert.Equal((150, 100), (w.Ch.EffectiveLeadership(piett), w.Ch.EffectiveLeadership(ackbar)));
+        Assert.Equal((150, 100), (w.Ch.EffectiveLeadership(varo), w.Ch.EffectiveLeadership(keth)));
         w.StepWith("5.2", ctx => w.Ch.Capture(ctx, emp, Side.Collective, null, CharacterCause.Debug));
         Assert.False(w.Ch.SeatOfPowerOn);
-        Assert.Equal((100, 100), (w.Ch.EffectiveLeadership(piett), w.Ch.EffectiveLeadership(ackbar)));
+        Assert.Equal((100, 100), (w.Ch.EffectiveLeadership(varo), w.Ch.EffectiveLeadership(keth)));
     }
 
-    // B2e-19: a timer with spread 0 makes no draw (the awakening timer of Vader runs every day)
+    // B2e-19: a timer with spread 0 makes no draw (the awakening timer of Ravilla runs every day)
     [Fact]
     public void B2e19_SpreadZeroTimersDrawNothing()
     {
-        var w = new CharWorld(new CharacterParams { TrainerPick = TrainerPick.Fixed }); // the Classic trainer flag (Luke, Vader); Random is CH39
-        w.Hold(Coruscant, Side.Hand);
-        Talent(w.Add(Vader, Coruscant), 120);
+        var w = new CharWorld(new CharacterParams { TrainerPick = TrainerPick.Fixed }); // the Classic trainer flag (Nobody, Ravilla); Random is CH39
+        w.Hold(Charter, Side.Hand);
+        Talent(w.Add(Ravilla, Charter), 120);
         w.Run(30);
-        var bare = new CharWorld(); // the same galaxy without Vader: its other timers (support incidents, m2-popular-support) draw the same
-        bare.Hold(Coruscant, Side.Hand);
+        var bare = new CharWorld(); // the same galaxy without Ravilla: its other timers (support incidents, m2-popular-support) draw the same
+        bare.Hold(Charter, Side.Hand);
         bare.Run(30);
         Assert.Equal(bare.Stub!.Requests, w.Stub!.Requests);
-        Assert.NotEqual(0, w.C(Vader).NextAwakenDay);
+        Assert.NotEqual(0, w.C(Ravilla).NextAwakenDay);
     }
 
     // Work 1, 2, 4: injury points, escape timers and Talent fields are saved and hashed
@@ -425,14 +425,14 @@ public class B2eCharacterTests
     public void InjuryAndTimersAreSavedAndHashed()
     {
         var w = new CharWorld();
-        w.Hold(Hoth, Side.Hand);
-        var han = w.Add(Han, Hoth);
-        w.StepWith("5.2", ctx => { w.Ch.AddInjury(ctx, han, 7, CharacterCause.Debug); w.Ch.Capture(ctx, han, Side.Hand, null, CharacterCause.Debug); });
-        han.PairId = 3; han.KnowsHeritage = true; w.Game.State.Characters.NextPairId = 3;
+        w.Hold(Thaw, Side.Hand);
+        var midwife = w.Add(Midwife, Thaw);
+        w.StepWith("5.2", ctx => { w.Ch.AddInjury(ctx, midwife, 7, CharacterCause.Debug); w.Ch.Capture(ctx, midwife, Side.Hand, null, CharacterCause.Debug); });
+        midwife.PairId = 3; midwife.KnowsHeritage = true; w.Game.State.Characters.NextPairId = 3;
         string hash = GameSave.StateHash(w.Game);
         w.Reload();
-        var back = w.C(Han);
-        Assert.Equal((7, han.NextEscapeDay, 3, true, 3), (back.Injury, back.NextEscapeDay, back.PairId, back.KnowsHeritage, w.Game.State.Characters.NextPairId));
+        var back = w.C(Midwife);
+        Assert.Equal((7, midwife.NextEscapeDay, 3, true, 3), (back.Injury, back.NextEscapeDay, back.PairId, back.KnowsHeritage, w.Game.State.Characters.NextPairId));
         Assert.Equal(hash, GameSave.StateHash(w.Game));
         back.Injury = 8;
         Assert.NotEqual(hash, GameSave.StateHash(w.Game));

@@ -62,7 +62,7 @@ public sealed class DemoScenario
         for (int i = 0; i < 5; i++) eco.AddObject(Side.Hand, "Mandate");
         eco.AddObject(Side.Hand, "Edict");
         for (int i = 0; i < 10; i++) eco.AddObject(Side.Hand, "Pacifiers", "Charter");
-        eco.AddFacility("Caminus", FacilityKind.Kdy150);
+        eco.AddFacility("Caminus", FacilityKind.Lien150);
         for (int i = 0; i < 3; i++) eco.AddObject(Side.Collective, "Ark");
         for (int i = 0; i < 4; i++) eco.AddObject(Side.Collective, "Mender");
         for (int i = 0; i < 6; i++) eco.AddObject(Side.Collective, "Militia", "The Shoal");

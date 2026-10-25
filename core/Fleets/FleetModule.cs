@@ -249,7 +249,7 @@ public sealed class FleetModule
     /// <summary>The fastest path with no stop at the given systems on the way (see Pathfinder.FindAvoiding).</summary>
     public PathResult FindPathAvoiding(int from, int to, int speed, IReadOnlyCollection<int> avoid) => _pathfinder.FindAvoiding(from, to, speed, avoid);
 
-    /// <summary>A fleet's strength against the economic reference force REF (3 ISD): the absolute measure E is compared with. rule: m4-battle-new §12.</summary>
+    /// <summary>A fleet's strength against the economic reference force REF (3 Mandate): the absolute measure E is compared with. rule: m4-battle-new §12.</summary>
     public double StrengthOf(Fleet f) => Strength.Of(StrengthUnits(f), _reference.Select(c => Strength.Unit(c)));
 
     /// <summary>
@@ -983,7 +983,7 @@ public sealed class FleetModule
         var blockers = FleetsAt(system).Where(f => f.Side == Other(againstSide)).ToList();
         if (!CombatStrength.IsArmed(Classes(blockers))) return false;
         if (Classes(blockers).Any(c => c.GravityWellProjector > 0)) return true;
-        // rule: m4-battle-new §12 (economic blockade by strength): CS(blockers, REF) >= E, REF = 3 ISD (DEFAULT)
+        // rule: m4-battle-new §12 (economic blockade by strength): CS(blockers, REF) >= E, REF = 3 Mandate (DEFAULT)
         return Strength.Of(blockers.SelectMany(StrengthUnits), _reference.Select(c => Strength.Unit(c))) >= EconomicStrength;
     }
 

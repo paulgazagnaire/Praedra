@@ -26,7 +26,7 @@ public class AssaultHostTests
         h.Fleets.SetOwner("Fiducia", Side.Collective);
         h.Economy.SetCollectiveSupport("Fiducia", 100);
         for (int i = 0; i < 5; i++) h.Economy.AddObject(Side.Collective, "Militia", "Fiducia");
-        h.Economy.AddFacility("Fiducia", FacilityKind.Kdy150);
+        h.Economy.AddFacility("Fiducia", FacilityKind.Lien150);
         int f = h.Fleets.AddFleet(Side.Hand, "Landing", new[] { "Decree", "Decree", "Decree" }, "Fiducia");
         var ships = h.Game.State.Fleets[f].Ships;
         for (int i = 0; i < 6; i++)

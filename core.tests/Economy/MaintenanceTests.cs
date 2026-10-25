@@ -4,8 +4,8 @@ using Praedra.Core.Economy;
 namespace Praedra.Core.Tests.Economy;
 
 // Tests of m2-maintenance (ids M1 to M22) on the real costs file. Hook time T = K + 1; events carry Day = T.
-// Hand fixture E: 7 mines and 7 refineries (capacity 350); Orbital Shipyard id 100; 4 ISD ids 101 to 104;
-// 10 Stormtrooper Regiments ids 105 to 114; all completed. Load = 13 + 4 x 71 + 10 x 6 = 357.
+// Hand fixture E: 7 mines and 7 refineries (capacity 350); Orbital Shipyard id 100; 4 Mandate ids 101 to 104;
+// 10 Pacifier Regiments ids 105 to 114; all completed. Load = 13 + 4 x 71 + 10 x 6 = 357.
 public class MaintenanceTests
 {
     private const string Home = "Classis";
@@ -62,7 +62,7 @@ public class MaintenanceTests
         Assert.Equal(400, w.Eco.Capacity(Side.Hand));
     }
 
-    // m2-maintenance M7 (the order itself is construction's; the three ISD objects it would create are added here)
+    // m2-maintenance M7 (the order itself is construction's; the three Mandate objects it would create are added here)
     [Fact]
     public void M7_QueuedShipsCountAtOnceButAreNotAutoscrappable()
     {

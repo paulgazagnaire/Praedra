@@ -178,7 +178,7 @@ public sealed record BattleParams
     /// <summary>The AI's threshold cap and default, 0.9 (float 0x3f666666, seven copies 0x65c8e4..0x65ca04). [EXE-own] rule: B6a §2.</summary>
     public double AiRetreatCap { get; init; } = 0.9;
     /// <summary>The system where an AI side holding it with a planet squadron fights to the end (system id 0x109, B5). [EXE-own] rule: B6a §2.</summary>
-    public string CoruscantSystem { get; init; } = "Charter";
+    public string CharterSystem { get; init; } = "Charter";
     /// <summary>Seconds without a new low of strength, for both sides, that make a stalemate (0x66c3e0). Traced.</summary>
     public int StalemateSeconds { get; init; } = 1200;
     /// <summary>Engineering guard (not in Classic): a battle that reaches this second is treated as a stalemate. DEFAULT.</summary>

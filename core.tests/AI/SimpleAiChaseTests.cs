@@ -23,7 +23,7 @@ public class SimpleAiChaseTests
     /// <summary>
     /// MedA seed 1 with the Hand passive. A Collective strike pile (three The Moorings Cruisers, no troops) stands on a Collective-held system
     /// A next to a system B it does not hold; a lone Warrant (armed, far weaker) stands on B, which has another neighbour (Hand or neutral) to
-    /// retreat to. Returns the retreats of that Carrack from battles with no losses on either side, by day, over <paramref name="days"/> days.
+    /// retreat to. Returns the retreats of that Warrant from battles with no losses on either side, by day, over <paramref name="days"/> days.
     /// </summary>
     private List<int> Chase(SimpleAiParams? collective, int days)
     {
@@ -39,7 +39,7 @@ public class SimpleAiChaseTests
                 string bn = g.Systems[nb.System].Name;
                 if (bn == "Charter" || (owners.TryGetValue(bn, out var ob) && ob == Side.Collective)) continue;
                 if (h.Fleets.FleetsAt(bn).Any()) continue;
-                // B needs another neighbour, Hand or neutral and without fleets (the Carrack's way out)
+                // B needs another neighbour, Hand or neutral and without fleets (the Warrant's way out)
                 if (!g.NeighboursOf(nb.System).Any(x => g.Systems[x.System].Name is var xn && xn != sys.Name && !(owners.TryGetValue(xn, out var ox) && ox == Side.Collective) && !h.Fleets.FleetsAt(xn).Any())) continue;
                 a = sys.Name; b = bn; break;
             }
@@ -58,11 +58,11 @@ public class SimpleAiChaseTests
                 if (be.Result.CollectiveLosses == 0 && be.Result.HandLosses == 0) retreats.AddRange(pending.Where(x => x.Fleet == prey).Select(x => x.Day));
                 pending.Clear();
             }
-        _out.WriteLine($"A {a}, B {b}: the Carrack retreated without losses on days {string.Join(", ", retreats)}");
+        _out.WriteLine($"A {a}, B {b}: the Warrant retreated without losses on days {string.Join(", ", retreats)}");
         return retreats;
     }
 
-    // m6 chase fix T1: the scenario reproduces the chase with the old behaviour (no memory of retreats): the Carrack is hunted again and again.
+    // m6 chase fix T1: the scenario reproduces the chase with the old behaviour (no memory of retreats): the Warrant is hunted again and again.
     [Fact]
     public void T1_WithoutRetreatMemory_ThePileChasesARetreatingFleet()
     {

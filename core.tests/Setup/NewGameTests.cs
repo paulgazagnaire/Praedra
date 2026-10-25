@@ -139,7 +139,7 @@ public class NewGameTests
     }
 
     [Fact]
-    public void CollectiveWinsWhenCoruscantCaptured()
+    public void CollectiveWinsWhenCharterCaptured()
     {
         var h = Make(StartPreset.MedE, 1, OldVictory.Settings);
         CaptureOnNextStep(h, "Charter", Side.Collective);

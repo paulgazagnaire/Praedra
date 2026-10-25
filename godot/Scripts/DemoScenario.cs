@@ -33,7 +33,7 @@ public static class DemoScenario
         Go(fm, Side.Collective, "Blue", new[] { "Mender", "Mender" }, "The Thaw", "Classis");
         Go(fm, Side.Hand, "Vengeance", new[] { "Decree", "Decree", "Decree" }, "Incus", "Saltreach");
         Go(fm, Side.Collective, "Supply Run", new[] { "Mule" }, "Fyrholm", "Solacia");
-        Go(fm, Side.Hand, "Tarkin's Patrol", new[] { "Injunction" }, "Oldwatch", "Eldingar");
+        Go(fm, Side.Hand, "Hand Patrol", new[] { "Injunction" }, "Oldwatch", "Eldingar");
 
         // Stationary: the Hand picket at Tierra Larga (an Subpoena has a gravity-well projector).
         fm.AddFleet(Side.Hand, "Picket-1", new[] { "Subpoena" }, "Tierra Larga");

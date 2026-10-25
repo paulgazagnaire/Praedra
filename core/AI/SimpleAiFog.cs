@@ -196,7 +196,7 @@ public sealed partial class SimpleAi
                     if (sup > _p.BeliefSupportFloor) w += (sup - _p.BeliefSupportFloor) * (sup - _p.BeliefSupportFloor) / Math.Max(1, _p.BeliefSupportDivisor);
                     int ally = allies.GetValueOrDefault(sys.Sector) - (owner?.Value.Owner == Side.Collective ? 1 : 0);
                     w += _p.BeliefPerSectorAlly * Math.Max(0, ally);
-                    // a group C look that showed no HQ (Yavin's day-0 copy, a captured and lost system) clears it for a while. rule: §N5
+                    // a group C look that showed no HQ (The Shoal's day-0 copy, a captured and lost system) clears it for a while. rule: §N5
                     if (pic.Facilities is { } cc && !pic.HqHere)
                         w = (int)((long)w * Math.Clamp(AgeOf(cc), 0, _p.BeliefClearedDays) / Math.Max(1, _p.BeliefClearedDays));
                 }
@@ -583,7 +583,7 @@ public sealed partial class SimpleAi
     /// <summary>The side is ahead for its victory keys: Finishing, or for the Collective its place term (Charter held or destroyed).</summary>
     private bool KeyAhead()
     {
-        string cor = Praedra.Core.Victory.VictoryModule.CoruscantName;
+        string cor = Praedra.Core.Victory.VictoryModule.CharterName;
         return Finishing() || (_side == Side.Collective && (Held(cor) || Destroyed(cor)));
     }
 

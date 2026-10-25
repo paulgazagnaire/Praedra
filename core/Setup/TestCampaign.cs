@@ -49,7 +49,7 @@ public sealed class TestCampaign
     public const int BombardDay = 200;
     /// <summary>
     /// The day of the one scripted assault (m3-assault, slot 5.2): fifty days after the bombardment, the interdiction fleet lands the
-    /// <see cref="AssaultRegiments"/> Stormtrooper regiments it has carried since the start on the system it blockades and has shelled. The
+    /// <see cref="AssaultRegiments"/> Pacifier regiments it has carried since the start on the system it blockades and has shelled. The
     /// Collective relief fleet only arrives on day 300, so no enemy fleet is there and the order is accepted.
     /// </summary>
     public const int AssaultDay = 250;
@@ -134,7 +134,7 @@ public sealed class TestCampaign
         ("Caminus", FacilityKind.TrainingFacility), ("Caminus", FacilityKind.ConstructionYard),
         ("Fiducia", FacilityKind.TrainingFacility), ("Fiducia", FacilityKind.ConstructionYard),
         ("Tierra Larga", FacilityKind.TrainingFacility), ("Salus", FacilityKind.OrbitalShipyard),
-        ("Tierra Larga", FacilityKind.Kdy150), // the battery of the scripted bombardment (m3-planetary-defenses)
+        ("Tierra Larga", FacilityKind.Lien150), // the battery of the scripted bombardment (m3-planetary-defenses)
     };
 
     // Standing "navy": the ships of each side's reserve fleet. They carry maintenance load like every fleet ship (one registry, m3-fleets).
@@ -264,7 +264,7 @@ public sealed class TestCampaign
     /// <summary>A load or unload order for a fleet (by name) issued on <c>First</c>, <c>First + Every</c>, ...: <c>Count</c> regiments (the lowest ids that qualify).</summary>
     private sealed record TroopStep(int First, int Every, Side Side, string Fleet, bool Load, int Count);
 
-    // The Home Fleet (2 ISD, 6 slots) carries two regiments Charter -> Classis and back; the Collective reserve (one Ark, 1 slot)
+    // The Home Fleet (2 Mandate, 6 slots) carries two regiments Charter -> Classis and back; the Collective reserve (one Ark, 1 slot)
     // loads and unloads one at Caminus. Exercises m3-troops-and-special-forces loading, unloading and the "aboard is not garrison" rule.
     private static readonly TroopStep[] Troops =
     {

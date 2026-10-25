@@ -10,7 +10,7 @@ namespace Praedra.Core.Tests.Missions;
 // the success rolls. B2d: the team starts at H so the leaving and arriving checks have no sensers (sensers stand in the check's scopes).
 public class B2bTalentAndBetrayalTests
 {
-    private const int Crix = 837, Rieekan = 838; // Collective characters who can betray (nobetray 0)
+    private const int Crix = 837, Halvorsen = 838; // Collective characters who can betray (nobetray 0)
 
     private static CharacterRecord Talent(MissionWorld w, int id, int force)
     {
@@ -37,27 +37,27 @@ public class B2bTalentAndBetrayalTests
         return w.LastMission;
     }
 
-    // B2b-1: p = Talent + Talent - 100: Luke (50) vs Vader (120) is 70; 30 vs 60 is -10 and no draw; Talent 0 vs 120 is 0 and no draw
+    // B2b-1: p = Talent + Talent - 100: Nobody (50) vs Ravilla (120) is 70; 30 vs 60 is -10 and no draw; Talent 0 vs 120 is 0 and no draw
     [Fact]
     public void B2b1_SenseChance()
     {
         var m = new MissionWorld().M;
         Assert.Equal((70, -10, 0), (m.SenseChance(50, 120), m.SenseChance(30, 60), m.SenseChance(0, 120)));
 
-        var w = World(agents: new[] { (Luke, 50), (Vader, 120) });
+        var w = World(agents: new[] { (Nobody, 50), (Ravilla, 120) });
         w.Stub!.Expect(0, 99, 99);
-        int id = StartEspionage(w, new[] { Luke });
+        int id = StartEspionage(w, new[] { Nobody });
         w.RunIteration(id);
-        Assert.Equal((Luke, Vader, 70, 99, false), w.Events<MissionTalentSenseRoll>().Select(e => (e.Member, e.Senser, e.Chance, e.Roll, e.Sensed)).Single());
+        Assert.Equal((Nobody, Ravilla, 70, 99, false), w.Events<MissionTalentSenseRoll>().Select(e => (e.Member, e.Senser, e.Chance, e.Roll, e.Sensed)).Single());
 
         foreach (var (member, senser) in new[] { (30, 60), (0, 120) })
         {
-            var v = World(agents: new[] { (Leia, member), (Vader, senser) });
-            int mid = StartEspionage(v, new[] { Leia });
+            var v = World(agents: new[] { (Ledger, member), (Ravilla, senser) });
+            int mid = StartEspionage(v, new[] { Ledger });
             int from = v.Stub!.Requests.Count;
             v.RunIteration(mid);
             Assert.Empty(v.Events<MissionTalentSenseRoll>());
-            Assert.Equal(new[] { (0, 99), (0, 99) }, v.RequestsSince(from)); // Leia's betrayal draw and success roll only
+            Assert.Equal(new[] { (0, 99), (0, 99) }, v.RequestsSince(from)); // Ledger's betrayal draw and success roll only
         }
     }
 
@@ -65,48 +65,48 @@ public class B2bTalentAndBetrayalTests
     [Fact]
     public void B2b2_SenserFilter()
     {
-        var w = World(agents: new[] { (Luke, 50), (Piett, 59), (Veers, 60), (MonMothma, 150), (Palpatine, 120) });
-        w.Ch.Capture(null, w.Ch.Get(Palpatine)!, Side.Collective, T, CharacterCause.Debug);
+        var w = World(agents: new[] { (Nobody, 50), (Varo, 59), (EightyEight, 60), (MaeAbara, 150), (Chair, 120) });
+        w.Ch.Capture(null, w.Ch.Get(Chair)!, Side.Collective, T, CharacterCause.Debug);
         w.Stub!.Expect(0, 99, 99);
-        int id = StartEspionage(w, new[] { Luke });
-        Assert.Equal(new[] { Veers }, w.M.Sensers(w.M.Get(id)!).Select(c => c.Id));
+        int id = StartEspionage(w, new[] { Nobody });
+        Assert.Equal(new[] { EightyEight }, w.M.Sensers(w.M.Get(id)!).Select(c => c.Id));
         w.RunIteration(id);
-        Assert.Equal((Veers, 10), w.Events<MissionTalentSenseRoll>().Select(e => (e.Senser, e.Chance)).Single());
+        Assert.Equal((EightyEight, 10), w.Events<MissionTalentSenseRoll>().Select(e => (e.Senser, e.Chance)).Single());
     }
 
     // B2b-3: the member filter: a member with Talent 0 and a removed member with Talent 80 (captured after the start) are not rolled
     [Fact]
     public void B2b3_MemberFilter()
     {
-        var w = World(agents: new[] { (Han, 0), (Lando, 80), (Vader, 120) });
-        int id = StartEspionage(w, new[] { Han, Lando });
-        w.Ch.Capture(null, w.Ch.Get(Lando)!, Side.Hand, T, CharacterCause.Debug);
+        var w = World(agents: new[] { (Midwife, 0), (Foreman, 80), (Ravilla, 120) });
+        int id = StartEspionage(w, new[] { Midwife, Foreman });
+        w.Ch.Capture(null, w.Ch.Get(Foreman)!, Side.Hand, T, CharacterCause.Debug);
         w.RunIteration(id);
         Assert.Empty(w.Events<MissionTalentSenseRoll>());
-        Assert.Single(w.Events<MissionBetrayalRoll>()); // Han only: Lando left the group
+        Assert.Single(w.Events<MissionBetrayalRoll>()); // Midwife only: Foreman left the group
     }
 
-    // B2b-4: a decoy (Talent 80) sensed by Vader (p = 100): not foiled; the decoy pass and the detection walk still run
+    // B2b-4: a decoy (Talent 80) sensed by Ravilla (p = 100): not foiled; the decoy pass and the detection walk still run
     [Fact]
     public void B2b4_SensedDecoyFoilsNothing()
     {
-        var w = World(decoys: true, p: new MissionParams { DecoysFromSpecialForcesOnly = false }, agents: new[] { (Leia, 0), (Lando, 80), (Vader, 120) });
+        var w = World(decoys: true, p: new MissionParams { DecoysFromSpecialForcesOnly = false }, agents: new[] { (Ledger, 0), (Foreman, 80), (Ravilla, 120) });
         int guard = w.Unit(Side.Hand, Probe, T); // B2d: a special force on the enemy-held planet guards a planet target
-        // B2e moved: the mutual discovery makes Lando meet Vader in the decoy pre-step (B2e §4) instead of rolling against the guard. Draws:
-        // sensed (0 < 100), two betrayal draws, Lando's duel against Vader (x = 0: 0 escapes, he leaves the group), his Hurt roll (combat 0: p = 100,
-        // 99 hits; sizes 0 and 0), his death draw 99 (lives), Vader's HurtBy (p = 1: 99 misses), walk misses, success roll fails
+        // B2e moved: the mutual discovery makes Foreman meet Ravilla in the decoy pre-step (B2e §4) instead of rolling against the guard. Draws:
+        // sensed (0 < 100), two betrayal draws, Foreman's duel against Ravilla (x = 0: 0 escapes, he leaves the group), his Hurt roll (combat 0: p = 100,
+        // 99 hits; sizes 0 and 0), his death draw 99 (lives), Ravilla's HurtBy (p = 1: 99 misses), walk misses, success roll fails
         w.Stub!.Expect(0, 99, 0, 99, 99, 0, 99, 99, 99, 99, 99);
-        int id = StartEspionage(w, new[] { Leia }, decoyChars: new[] { Lando });
+        int id = StartEspionage(w, new[] { Ledger }, decoyChars: new[] { Foreman });
         w.RunIteration(id);
         var sensed = w.Events<MissionTalentSensed>().Single();
-        Assert.Equal((Lando, true, Vader, false), (sensed.Member, sensed.Decoy, sensed.Senser, sensed.Foiled));
+        Assert.Equal((Foreman, true, Ravilla, false), (sensed.Member, sensed.Decoy, sensed.Senser, sensed.Foiled));
         Assert.Equal(2, w.Events<MissionBetrayalRoll>().Count);
-        Assert.Empty(w.Events<MissionDecoyRoll>()); // Lando left the group after his encounter
+        Assert.Empty(w.Events<MissionDecoyRoll>()); // Foreman left the group after his encounter
         var enc = w.Events<Praedra.Core.Characters.TalentEncounterResolved>().Single();
-        Assert.Equal((Lando, Vader, true), (enc.Member, enc.Other, enc.MemberEscaped));
+        Assert.Equal((Foreman, Ravilla, true), (enc.Member, enc.Other, enc.MemberEscaped));
         Assert.Single(w.Events<MissionDetectionRoll>());
         Assert.Empty(w.Events<MissionFoiled>());
-        Assert.Equal((0, 0), (w.Ch.Get(Vader)!.DiscoveredTalentHolder, w.Ch.Get(Lando)!.DiscoveredTalentHolder)); // cleared by the encounter
+        Assert.Equal((0, 0), (w.Ch.Get(Ravilla)!.DiscoveredTalentHolder, w.Ch.Get(Foreman)!.DiscoveredTalentHolder)); // cleared by the encounter
         Assert.Single(w.Events<TalentHolderDiscovered>());
         Assert.True(guard > 0);
     }
@@ -115,120 +115,120 @@ public class B2bTalentAndBetrayalTests
     [Fact]
     public void B2b5_SensedTeamMemberFoils()
     {
-        var w = World(decoys: true, agents: new[] { (Leia, 80), (Vader, 120) });
+        var w = World(decoys: true, agents: new[] { (Ledger, 80), (Ravilla, 120) });
         w.Unit(Side.Hand, Probe, T);
         int inf = w.Unit(Side.Collective, Infiltrators, H);
-        int id = StartEspionage(w, new[] { Leia }, decoys: new[] { inf });
+        int id = StartEspionage(w, new[] { Ledger }, decoys: new[] { inf });
         int from = w.Stub!.Requests.Count;
         w.RunIteration(id);
-        // the sensing roll, then Leia's escape duel: B2e moved, against Vader (the mutual discovery meets in an encounter, B2e §4), not the guard
+        // the sensing roll, then Ledger's escape duel: B2e moved, against Ravilla (the mutual discovery meets in an encounter, B2e §4), not the guard
         Assert.Equal(new[] { (0, 99), (0, 99) }, w.RequestsSince(from).Take(2));
-        Assert.Equal((Leia, Vader), w.Events<Praedra.Core.Characters.TalentEncounterResolved>().Select(e => (e.Member, e.Other)).Single());
+        Assert.Equal((Ledger, Ravilla), w.Events<Praedra.Core.Characters.TalentEncounterResolved>().Select(e => (e.Member, e.Other)).Single());
         var f = w.Events<MissionFoiled>().Single();
-        Assert.Equal((MissionFoilCause.TalentSensed, Vader, 0), (f.Cause, f.Character, f.Defender));
+        Assert.Equal((MissionFoilCause.TalentSensed, Ravilla, 0), (f.Cause, f.Character, f.Defender));
         Assert.Empty(w.Events<MissionBetrayalRoll>());
         Assert.Empty(w.Events<MissionDecoyRoll>());
         Assert.Empty(w.Events<MissionDetectionRoll>());
         Assert.Equal(MissionOutcome.Foiled, w.Events<MissionEnded>().Single().Outcome);
     }
 
-    // B2b-6: sensers Vader (120), X = Admiral Decimus Varo (70), Z = Eighty-Eight (80); group talented characters Luke (50), Y = Wedge (40), W = Lando (45). By hand:
-    //   Vader first: Luke p 70 roll 99 (miss); pick (0..1) = 1 takes Lando: p 65 roll 10 (hit, foiled; Vader's discovered user is set: he stops).
-    //   pick (0..1) between Admiral Decimus Varo and Eighty-Eight = 0: Admiral Decimus Varo: Luke p 20 roll 5 (hit: he stops).
-    //   Eighty-Eight (last, no pick): Luke p 30 roll 99; pick (0..1) = 1 takes Lando: p 25 roll 99; Wedge (last, no pick): p 20 roll 99.
+    // B2b-6: sensers Ravilla (120), X = Admiral Decimus Varo (70), Z = Eighty-Eight (80); group talented characters Nobody (50), Y = Forty-One (40), W = Foreman (45). By hand:
+    //   Ravilla first: Nobody p 70 roll 99 (miss); pick (0..1) = 1 takes Foreman: p 65 roll 10 (hit, foiled; Ravilla's discovered user is set: he stops).
+    //   pick (0..1) between Admiral Decimus Varo and Eighty-Eight = 0: Admiral Decimus Varo: Nobody p 20 roll 5 (hit: he stops).
+    //   Eighty-Eight (last, no pick): Nobody p 30 roll 99; pick (0..1) = 1 takes Foreman: p 25 roll 99; Forty-One (last, no pick): p 20 roll 99.
     // Foiled, so no betrayal draw.
     [Fact]
     public void B2b6_SenseOrderAndPicks()
     {
-        var w = World(agents: new[] { (Luke, 50), (Wedge, 40), (Lando, 45), (Vader, 120), (Piett, 70), (Veers, 80) });
+        var w = World(agents: new[] { (Nobody, 50), (FortyOne, 40), (Foreman, 45), (Ravilla, 120), (Varo, 70), (EightyEight, 80) });
         w.Stub!.Expect(0, 1, 1, 0, 1).Expect(0, 99, 99, 10, 5, 99, 99, 99);
-        int id = StartEspionage(w, new[] { Luke, Wedge, Lando });
+        int id = StartEspionage(w, new[] { Nobody, FortyOne, Foreman });
         int from = w.Stub.Requests.Count;
         w.RunIteration(id);
         // the sensing draws; B2e: the two mutual discoveries then meet in Talent encounters (B2e §4), whose draws follow
         Assert.Equal(new[] { (0, 99), (0, 1), (0, 99), (0, 1), (0, 99), (0, 99), (0, 1), (0, 99), (0, 99) }, w.RequestsSince(from).Take(9));
-        Assert.Equal(new[] { (Luke, Vader, 70, false), (Lando, Vader, 65, true), (Luke, Piett, 20, true), (Luke, Veers, 30, false), (Lando, Veers, 25, false), (Wedge, Veers, 20, false) },
+        Assert.Equal(new[] { (Nobody, Ravilla, 70, false), (Foreman, Ravilla, 65, true), (Nobody, Varo, 20, true), (Nobody, EightyEight, 30, false), (Foreman, EightyEight, 25, false), (FortyOne, EightyEight, 20, false) },
             w.Events<MissionTalentSenseRoll>().Select(e => (e.Member, e.Senser, e.Chance, e.Sensed)));
-        Assert.Equal((MissionFoilCause.TalentSensed, Vader), (w.Events<MissionFoiled>().Single().Cause, w.Events<MissionFoiled>().Single().Character));
-        Assert.Equal(new[] { (Lando, Vader), (Luke, Piett) }, w.Events<TalentHolderDiscovered>().Select(e => (e.Member, e.Senser)));
-        // B2e: Luke meets Admiral Decimus Varo (team order: Luke first, then Lando meets Vader); the encounters clear the keys
-        Assert.Equal(new[] { (Luke, Piett), (Lando, Vader) }, w.Events<Praedra.Core.Characters.TalentEncounterResolved>().Select(e => (e.Member, e.Other)));
-        Assert.Equal((0, 0, 0, 0), (w.Ch.Get(Vader)!.DiscoveredTalentHolder, w.Ch.Get(Lando)!.DiscoveredTalentHolder,
-            w.Ch.Get(Piett)!.DiscoveredTalentHolder, w.Ch.Get(Luke)!.DiscoveredTalentHolder));
+        Assert.Equal((MissionFoilCause.TalentSensed, Ravilla), (w.Events<MissionFoiled>().Single().Cause, w.Events<MissionFoiled>().Single().Character));
+        Assert.Equal(new[] { (Foreman, Ravilla), (Nobody, Varo) }, w.Events<TalentHolderDiscovered>().Select(e => (e.Member, e.Senser)));
+        // B2e: Nobody meets Admiral Decimus Varo (team order: Nobody first, then Foreman meets Ravilla); the encounters clear the keys
+        Assert.Equal(new[] { (Nobody, Varo), (Foreman, Ravilla) }, w.Events<Praedra.Core.Characters.TalentEncounterResolved>().Select(e => (e.Member, e.Other)));
+        Assert.Equal((0, 0, 0, 0), (w.Ch.Get(Ravilla)!.DiscoveredTalentHolder, w.Ch.Get(Foreman)!.DiscoveredTalentHolder,
+            w.Ch.Get(Varo)!.DiscoveredTalentHolder, w.Ch.Get(Nobody)!.DiscoveredTalentHolder));
         Assert.Empty(w.Events<MissionBetrayalRoll>());
     }
 
-    // B2b-7: a senser who already has a discovered talented character makes exactly one sensing roll per check, against the first member (Luke)
+    // B2b-7: a senser who already has a discovered talented character makes exactly one sensing roll per check, against the first member (Nobody)
     [Fact]
     public void B2b7_DiscoveredSenserRollsOncePerCheck()
     {
-        var w = World(agents: new[] { (Luke, 50), (Wedge, 40), (Lando, 45), (Vader, 120) });
-        w.Ch.Get(Vader)!.DiscoveredTalentHolder = Palpatine;
+        var w = World(agents: new[] { (Nobody, 50), (FortyOne, 40), (Foreman, 45), (Ravilla, 120) });
+        w.Ch.Get(Ravilla)!.DiscoveredTalentHolder = Chair;
         w.Stub!.Expect(0, 99, 99);
-        int id = StartEspionage(w, new[] { Luke, Wedge, Lando });
+        int id = StartEspionage(w, new[] { Nobody, FortyOne, Foreman });
         w.RunIteration(id);
-        Assert.Equal((Luke, Vader), w.Events<MissionTalentSenseRoll>().Select(e => (e.Member, e.Senser)).Single());
-        Assert.Equal(0, w.Stub.Count(0, 1)); // no member pick: he stopped after Luke
+        Assert.Equal((Nobody, Ravilla), w.Events<MissionTalentSenseRoll>().Select(e => (e.Member, e.Senser)).Single());
+        Assert.Equal(0, w.Stub.Count(0, 1)); // no member pick: he stopped after Nobody
     }
 
     // B2b-8: three members at loyalty 100: three betrayal draws (chance 0), no traitor, no identification draw
     [Fact]
     public void B2b8_LoyalMembersDrawButNeverBetray()
     {
-        var w = World(agents: new[] { (Leia, 0), (Han, 0), (Lando, 0) });
-        int id = StartEspionage(w, new[] { Leia, Han, Lando });
+        var w = World(agents: new[] { (Ledger, 0), (Midwife, 0), (Foreman, 0) });
+        int id = StartEspionage(w, new[] { Ledger, Midwife, Foreman });
         int from = w.Stub!.Requests.Count;
         w.RunIteration(id);
         var rolls = w.Events<MissionBetrayalRoll>();
-        Assert.Equal(new[] { (Leia, 0, false), (Han, 0, false), (Lando, 0, false) }, rolls.Select(r => (r.Member, r.Chance, r.Betrays)));
+        Assert.Equal(new[] { (Ledger, 0, false), (Midwife, 0, false), (Foreman, 0, false) }, rolls.Select(r => (r.Member, r.Chance, r.Betrays)));
         Assert.Empty(w.Events<MissionBetrayed>());
         Assert.Empty(w.Events<TraitorIdentified>());
         Assert.Equal(6, w.RequestsSince(from).Count); // three betrayal draws, three success rolls
     }
 
-    // B2b-9: member 1 (Leia) at loyalty 0 betrays on the first draw: foiled, cause Betrayed; identification draws for member 2 (Han, Talent 0: a draw
-    // even at 0) and member 3 (Wedge, Talent 100: identifies), then the walk stops
+    // B2b-9: member 1 (Ledger) at loyalty 0 betrays on the first draw: foiled, cause Betrayed; identification draws for member 2 (Midwife, Talent 0: a draw
+    // even at 0) and member 3 (Forty-One, Talent 100: identifies), then the walk stops
     [Fact]
     public void B2b9_TraitorFoilsAndIsIdentified()
     {
-        var w = World(agents: new[] { (Leia, 0), (Han, 0), (Wedge, 100) });
-        w.Ch.Get(Leia)!.Loyalty = 0;
+        var w = World(agents: new[] { (Ledger, 0), (Midwife, 0), (FortyOne, 100) });
+        w.Ch.Get(Ledger)!.Loyalty = 0;
         w.Stub!.Expect(0, 99, 0, 0, 50);
-        int id = StartEspionage(w, new[] { Leia, Han, Wedge });
+        int id = StartEspionage(w, new[] { Ledger, Midwife, FortyOne });
         int from = w.Stub.Requests.Count;
         w.RunIteration(id);
         Assert.Equal(new[] { (0, 99), (0, 99), (0, 99) }, w.RequestsSince(from));
-        Assert.Equal((Leia, 100, true), w.Events<MissionBetrayalRoll>().Select(r => (r.Member, r.Chance, r.Betrays)).Single());
-        Assert.Equal(Leia, w.Events<MissionBetrayed>().Single().Member);
+        Assert.Equal((Ledger, 100, true), w.Events<MissionBetrayalRoll>().Select(r => (r.Member, r.Chance, r.Betrays)).Single());
+        Assert.Equal(Ledger, w.Events<MissionBetrayed>().Single().Member);
         var f = w.Events<MissionFoiled>().Single();
-        Assert.Equal((MissionFoilCause.Betrayed, Leia), (f.Cause, f.Character));
-        Assert.Equal((Wedge, Leia), w.Events<TraitorIdentified>().Select(e => (e.Identifier, e.Traitor)).Single());
-        Assert.Equal((0, Leia), (w.Ch.Get(Han)!.IdentifiedTraitor, w.Ch.Get(Wedge)!.IdentifiedTraitor));
+        Assert.Equal((MissionFoilCause.Betrayed, Ledger), (f.Cause, f.Character));
+        Assert.Equal((FortyOne, Ledger), w.Events<TraitorIdentified>().Select(e => (e.Identifier, e.Traitor)).Single());
+        Assert.Equal((0, Ledger), (w.Ch.Get(Midwife)!.IdentifiedTraitor, w.Ch.Get(FortyOne)!.IdentifiedTraitor));
         Assert.Empty(w.Events<MissionMemberRoll>());
     }
 
-    // B2b-10: ShiftLoyalty(1, -5): a Collective character at 100 -> 95, a Hand at 98 -> 100 (clamped), Luke unchanged (unable to betray),
+    // B2b-10: ShiftLoyalty(1, -5): a Collective character at 100 -> 95, a Hand at 98 -> 100 (clamped), Nobody unchanged (unable to betray),
     // a Collective character at 3 -> 0 (clamped)
     [Fact]
     public void B2b10_ShiftLoyalty()
     {
-        var w = World(agents: new[] { (Lando, 0), (Piett, 0), (Luke, 50), (Crix, 0) });
-        w.Ch.Get(Piett)!.Loyalty = 98; w.Ch.Get(Crix)!.Loyalty = 3;
+        var w = World(agents: new[] { (Foreman, 0), (Varo, 0), (Nobody, 50), (Crix, 0) });
+        w.Ch.Get(Varo)!.Loyalty = 98; w.Ch.Get(Crix)!.Loyalty = 3;
         w.Ch.ShiftLoyalty(new StepContext(w.Game, w.Game.Day), CharacterModule.SideNumberCollective, -5);
-        Assert.Equal((95, 100, 100, 0), (w.Ch.Get(Lando)!.Loyalty, w.Ch.Get(Piett)!.Loyalty, w.Ch.Get(Luke)!.Loyalty, w.Ch.Get(Crix)!.Loyalty));
-        Assert.Equal(new[] { (Lando, 100, 95), (Piett, 98, 100), (Crix, 3, 0) }, w.Events<LoyaltyChanged>().Select(e => (e.Character, e.From, e.To)).OrderBy(e => e.Character != Lando).ThenBy(e => e.Character != Piett));
+        Assert.Equal((95, 100, 100, 0), (w.Ch.Get(Foreman)!.Loyalty, w.Ch.Get(Varo)!.Loyalty, w.Ch.Get(Nobody)!.Loyalty, w.Ch.Get(Crix)!.Loyalty));
+        Assert.Equal(new[] { (Foreman, 100, 95), (Varo, 98, 100), (Crix, 3, 0) }, w.Events<LoyaltyChanged>().Select(e => (e.Character, e.From, e.To)).OrderBy(e => e.Character != Foreman).ThenBy(e => e.Character != Varo));
     }
 
     // B2b-11: ShiftLoyalty(3, 5) (neutral) and ShiftLoyalty(1, 0): nothing changes, no event
     [Fact]
     public void B2b11_ShiftLoyaltyNoOps()
     {
-        var w = World(agents: new[] { (Lando, 0), (Piett, 0), (Rieekan, 0) });
-        w.Ch.Get(Rieekan)!.Loyalty = 50;
+        var w = World(agents: new[] { (Foreman, 0), (Varo, 0), (Halvorsen, 0) });
+        w.Ch.Get(Halvorsen)!.Loyalty = 50;
         var ctx = new StepContext(w.Game, w.Game.Day);
         w.Ch.ShiftLoyalty(ctx, 3, 5);
         w.Ch.ShiftLoyalty(ctx, CharacterModule.SideNumberCollective, 0);
-        Assert.Equal((100, 100, 50), (w.Ch.Get(Lando)!.Loyalty, w.Ch.Get(Piett)!.Loyalty, w.Ch.Get(Rieekan)!.Loyalty));
+        Assert.Equal((100, 100, 50), (w.Ch.Get(Foreman)!.Loyalty, w.Ch.Get(Varo)!.Loyalty, w.Ch.Get(Halvorsen)!.Loyalty));
         Assert.Empty(w.Events<LoyaltyChanged>());
     }
 
@@ -236,12 +236,12 @@ public class B2bTalentAndBetrayalTests
     [Fact]
     public void DiscoveredKeysAreSaved()
     {
-        var w = World(agents: new[] { (Lando, 0) });
+        var w = World(agents: new[] { (Foreman, 0) });
         Assert.DoesNotContain("DiscoveredTalentHolder", w.Host.Save());
-        w.Ch.Get(Lando)!.DiscoveredTalentHolder = Vader; w.Ch.Get(Lando)!.IdentifiedTraitor = Crix;
+        w.Ch.Get(Foreman)!.DiscoveredTalentHolder = Ravilla; w.Ch.Get(Foreman)!.IdentifiedTraitor = Crix;
         string hash = w.Host.StateHash();
         w.Reload();
-        Assert.Equal((Vader, Crix), (w.Ch.Get(Lando)!.DiscoveredTalentHolder, w.Ch.Get(Lando)!.IdentifiedTraitor));
+        Assert.Equal((Ravilla, Crix), (w.Ch.Get(Foreman)!.DiscoveredTalentHolder, w.Ch.Get(Foreman)!.IdentifiedTraitor));
         Assert.Equal(hash, w.Host.StateHash());
     }
 }
