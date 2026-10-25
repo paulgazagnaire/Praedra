@@ -126,7 +126,7 @@ public class SupportTests
 
     // S8: same with A = 50: not strictly more than 50: Collective -1, A = 49
     [Fact]
-    public void S8_GleanerIsNotAMajority()
+    public void S8_TieIsNotAMajority()
     {
         var w = new SupWorld();
         w.Hold(Emp, Side.Hand, 50); // A = 50; N = 1

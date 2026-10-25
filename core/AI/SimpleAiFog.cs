@@ -583,7 +583,7 @@ public sealed partial class SimpleAi
     /// <summary>The side is ahead for its victory keys: Finishing, or for the Collective its place term (Charter held or destroyed).</summary>
     private bool KeyAhead()
     {
-        string cor = Praedra.Core.Victory.VictoryModule.CharterName;
+        string cor = Praedra.Core.Control.ControlModule.CapitalSystem;
         return Finishing() || (_side == Side.Collective && (Held(cor) || Destroyed(cor)));
     }
 

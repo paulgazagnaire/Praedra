@@ -89,18 +89,6 @@ public partial class StartMenu : Control
         load.Disabled = !GameBoot.SaveExists(GameBoot.SaveSlot);
         box.AddChild(load);
         box.AddChild(Big("Quit", () => QuitRequested?.Invoke()));
-
-        if (GameBoot.PlaceholderMode)
-        {
-            var note = new Label
-            {
-                Text = "Test build: the computer opponent is not playing yet, so the other side sits still.",
-                AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(440, 0),
-                HorizontalAlignment = HorizontalAlignment.Center,
-            };
-            note.Modulate = new Color(1f, 0.8f, 0.4f, 0.8f);
-            box.AddChild(note);
-        }
     }
 
     void SetSide(Side s)
