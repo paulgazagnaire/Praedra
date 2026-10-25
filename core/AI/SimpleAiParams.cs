@@ -77,8 +77,6 @@ public sealed record SimpleAiParams
     public int MaxOrderDays { get; init; } = 160;
     /// <summary>The enemy force a purchase is measured against (strength per price, FleetModule's CombatStrength). DEFAULT: the other side's typical line.</summary>
     public IReadOnlyList<string> ReferenceEnemy(Side side) => side == Side.Hand ? new[] { "Ark", "Ark", "Mender" } : new[] { "Mandate", "Mandate", "Decree" };
-    /// <summary>A warship above this refined cost is only ordered when the refined pool holds at least twice its cost. DEFAULT.</summary>
-    public int HeavyShipCost { get; init; } = 80;
 
     // ---- military
     /// <summary>The fleets at the capital keep adding up (lowest id first) until they reach this strength; they are the home defence and never leave. DEFAULT.</summary>
@@ -572,17 +570,10 @@ public sealed record SimpleAiParams
     public int KeyCharacterValuePercent { get; init; } = 50;
 
     // ---- what to build, by side (first class that is buildable, researched and affordable wins). Class names of unit-and-facility-costs.csv. DEFAULT.
-    public IReadOnlyList<string> Warships(Side side) => side == Side.Hand ? HandWarships : CollectiveWarships;
-    public IReadOnlyList<string> HeavyWarships(Side side) => side == Side.Hand ? HandHeavy : CollectiveHeavy;
     public string Transport(Side side) => side == Side.Hand ? "Bond II" : "Barge";
     public string Fighter(Side side) => side == Side.Hand ? "Gleaner" : "Swift";
     public string GarrisonRegiment(Side side) => side == Side.Hand ? "Tranches" : "Militia";
     public string InvasionRegiment(Side side) => side == Side.Hand ? "Pacifiers" : "Deckhands";
-
-    public IReadOnlyList<string> HandWarships { get; init; } = new[] { "Writ", "Warrant", "Decree" };
-    public IReadOnlyList<string> CollectiveWarships { get; init; } = new[] { "Dodger", "Wasp", "Mender" };
-    public IReadOnlyList<string> HandHeavy { get; init; } = new[] { "Mandate" };
-    public IReadOnlyList<string> CollectiveHeavy { get; init; } = new[] { "Ark" };
 
     // ---- the harvester. rule: m5-harvester §6 (Computer opponent)
     /// <summary>

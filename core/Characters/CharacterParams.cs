@@ -101,18 +101,10 @@ public sealed record CharacterParams
     public int HurtSizeBase { get; init; } = 1;
     /// <summary>Hurt size spread, GNPRTB 2567 = 29.</summary>
     public int HurtSizeSpread { get; init; } = 29;
-    /// <summary>Hurt2 (vtable +0x2e8, caller not read): GNPRTB 2568 = 1 (lowest chance), 2569 = 1 (size base), 2570 = 29 (size spread). 0x53ea00.</summary>
-    public int Hurt2MinChance { get; init; } = 1;
-    public int Hurt2SizeBase { get; init; } = 1;
-    public int Hurt2SizeSpread { get; init; } = 29;
     /// <summary>HurtBy(a, b) of the Talent encounter, chance <c>max(this, b - a)</c>: GNPRTB 2571 = 1, size base 2572 = 1, spread 2573 = 29. 0x53ea70.</summary>
     public int HurtByMinChance { get; init; } = 1;
     public int HurtBySizeBase { get; init; } = 1;
     public int HurtBySizeSpread { get; init; } = 29;
-    /// <summary>HurtFixed (vtable +0x2ec, caller not read): chance GNPRTB 2574 = 100, size base 2575 = 1, spread 2576 = 29. 0x53eae0.</summary>
-    public int HurtFixedChance { get; init; } = 100;
-    public int HurtFixedSizeBase { get; init; } = 1;
-    public int HurtFixedSizeSpread { get; init; } = 29;
     /// <summary>An injured minor dies if <c>rand(0..99) &lt; this</c>. GNPRTB 2577 = 25 (0x56f160 -> 0x53eb30).</summary>
     public int MinorDeathPercent { get; init; } = 25;
     /// <summary>Talent at or above which a character heals fast (FastHeal). GNPRTB 2560 = 80 (0x4eeff0).</summary>

@@ -53,7 +53,6 @@ public sealed partial class GameSession
     /// <summary>Test only (the headless playtest): the computer side plans nothing, so a test fleet it would scrap or move stays put.</summary>
     public bool OpponentIdle { get; set; }
     public List<Message> Messages { get; } = new();
-    public int Autosaves { get; private set; }
     public Side? Winner { get; private set; }
 
     // What each order the player queued was, by sequence number, so a refusal can be explained in words.
@@ -378,7 +377,6 @@ public sealed partial class GameSession
 
     public void PlanCharacterMove(int character, PlannedMove m) => _plannedCharMoves[character] = m;
     public PlannedMove? PlannedCharacterMoveOf(int character) => _plannedCharMoves.TryGetValue(character, out var m) ? m : null;
-    public IEnumerable<KeyValuePair<int, PlannedMove>> PlannedCharacterMoves => _plannedCharMoves.OrderBy(kv => kv.Key);
 
     /// <summary>The last day of a trip (the next stop plus the remaining hops).</summary>
     public static int ArrivalDay(FleetTransit t)

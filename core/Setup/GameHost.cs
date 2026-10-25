@@ -172,12 +172,12 @@ public sealed class GameHost
         Defenses = DefenseModule.Attach(Economy, Fleets, data.Defenses, settings.Defense);
         Bombardment = BombardmentModule.Attach(game, Economy, Fleets, Support, Defenses, settings.Bombard);
         // After the bombardment (its slot 5.1 hook runs first) and before the assault. rule: m5-harvester §2 ("resolved in slot 5.1 after the bombardment hook")
-        Harvester = Praedra.Core.Harvester.HarvesterModule.Attach(game, data.Galaxy, Fleets, Economy, Support, Control, Construction, Defenses, settings.Harvester);
+        Harvester = Praedra.Core.Harvester.HarvesterModule.Attach(game, data.Galaxy, Fleets, Economy, Support, Control, Construction, settings.Harvester);
         Construction.UnitAppeared += Harvester.OnUnitAppeared; // after the fleet module's handler (the ship has joined its fleet): HarvesterDeployed
         Assault = AssaultModule.Attach(game, Economy, Fleets, Troops, Control, Defenses, Bombardment, settings.Assault);
         // Slot 5: registered after the fleet module's contact hook, so it runs after it, and (slot 5 precedes 5.1 and 5.2) before bombardment and assault.
         Battles = Praedra.Core.Battle.BattleModule.Attach(game, data.Galaxy, Fleets, Economy, settings.Battle, data.NewBattle);
-        Repair = Praedra.Core.Repair.RepairModule.Attach(game, Economy, Fleets, data.Repair); // slot 6.8
+        Repair = Praedra.Core.Repair.RepairModule.Attach(game, Fleets, data.Repair); // slot 6.8
         Repair.YardSuspended = Construction.IsSuspendedAt; // a blockade or an uprising drops FastRepair. rule: m4-retreat-damage-repair §5
         Fog = Praedra.Core.Fog.FogModule.Attach(game, data.Galaxy, Fleets, Economy, Support, Control, settings.Fog, settings.Hq); // after repair (shares 6.8)
         Research = Praedra.Core.Research.ResearchModule.Attach(game, Economy, Fleets, data.Research, settings.Research); // slot 6.9, after repair

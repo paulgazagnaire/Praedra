@@ -47,9 +47,6 @@ public sealed class NoOpOpponent : IOpponent
 /// </summary>
 public static class GameBoot
 {
-    /// <summary>The seed of the placeholder game. TODO(lead): NewGameOptions may carry its own seed.</summary>
-    public const ulong DefaultSeed = 1998UL;
-
     /// <summary>True while the start position is the placeholder campaign and the opponent does nothing; the start screen says so.
     /// TODO(lead): set to false once NewGame.Create and SimpleAi are wired in.</summary>
     public const bool PlaceholderMode = false;
@@ -146,13 +143,9 @@ public static class GameBoot
 
     public static string WinReason(GameHost host) => host.Victory.Reason;
 
-    /// <summary>Headquarters system of a side as the core holds it (truth; the screens use GameSession.MyHqSystem / EnemyHqSystem, which
-    /// respect the fog): Charter for the Hand, the Hearth for the Collective (null while it moves).</summary>
-    public static string CapitalOf(GameHost host, Side side) => side == Side.Hand ? HandCapital : host.HqSystem;
 
     // ------------------------------------------------------------------ save files
 
-    public static string SaveFolder => ProjectSettings.GlobalizePath("user://");
     // Not const: the headless playtest points them at throw-away files so it never touches a player's saves.
     public static string SaveSlot = "user://save1.json";
     public static string AutoSaveSlot = "user://autosave.json";

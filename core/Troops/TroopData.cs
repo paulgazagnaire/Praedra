@@ -51,9 +51,6 @@ public sealed class TroopData
     public RegimentClass? Regiment(string className) => _regByName.TryGetValue(className, out var c) ? c : null;
     public SpecialForceClass? SpecialForce(string className) => _sfByName.TryGetValue(className, out var c) ? c : null;
 
-    /// <summary>The name shown for a regiment class (the data name: no regiment is renamed).</summary>
-    public string RegimentDisplayName(RegimentClass c) => _display.TryGetValue(("troop", c.Id), out var n) ? n : c.Name;
-
     /// <summary>The name shown for a special-force class: the unit-names.csv entry if any (empty since the Praedra names, 2026-10-25), else the class name. Stats and ids are unchanged.</summary>
     public string SpecialForceDisplayName(SpecialForceClass c) => _display.TryGetValue(("special_force", c.Id), out var n) ? n : c.Name;
 

@@ -15,7 +15,6 @@ namespace Praedra.Core.Repair;
 public sealed class RepairModule
 {
     private readonly Game _game;
-    private readonly EconomyModule _eco;
     private readonly FleetModule _fleets;
 
     public RepairRules Rules { get; }
@@ -26,13 +25,13 @@ public sealed class RepairModule
     /// </summary>
     public Func<string, bool> YardSuspended { get; set; } = _ => false;
 
-    private RepairModule(Game game, EconomyModule eco, FleetModule fleets, RepairRules rules)
-    { _game = game; _eco = eco; _fleets = fleets; Rules = rules; }
+    private RepairModule(Game game, FleetModule fleets, RepairRules rules)
+    { _game = game; _fleets = fleets; Rules = rules; }
 
     /// <summary>Register slot 6.8. rule: m4-retreat-damage-repair §5 (Day Step slot 6.8, after autoscrap 6.7).</summary>
-    public static RepairModule Attach(Game game, EconomyModule eco, FleetModule fleets, RepairRules rules)
+    public static RepairModule Attach(Game game, FleetModule fleets, RepairRules rules)
     {
-        var m = new RepairModule(game, eco, fleets, rules);
+        var m = new RepairModule(game, fleets, rules);
         game.RegisterHook("6.8", m.Repair);
         return m;
     }

@@ -67,7 +67,6 @@ public sealed class CharacterData
 
     public CharacterClass Get(int id) => _byId.TryGetValue(id, out var c) ? c : throw new KeyNotFoundException($"No character record {id}.");
     public bool TryGet(int id, out CharacterClass c) => _byId.TryGetValue(id, out c!);
-    public CharacterClass? ByName(string name) => All.FirstOrDefault(c => c.Name == name);
 
     public static CharacterData Load(string original, string design)
     {

@@ -74,13 +74,6 @@ public partial class GameScreen
     }
 
     /// <summary>How a path travels, for the move banner: legs along a route versus free jumps through open space.</summary>
-    string LegWords(Praedra.Core.Travel.PathResult pr)
-    {
-        var hops = new List<bool>();
-        for (int k = 0; k + 1 < pr.Systems.Count; k++) hops.Add(G.FindLane(pr.Systems[k], pr.Systems[k + 1]) != null);
-        return LegWords(hops);
-    }
-
     string LegWords(IReadOnlyList<bool> routeHop)
     {
         int onRoute = routeHop.Count(r => r);

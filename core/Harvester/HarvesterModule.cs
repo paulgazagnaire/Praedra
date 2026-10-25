@@ -30,7 +30,6 @@ public sealed class HarvesterModule
     private readonly SupportModule _support;
     private readonly ControlModule _control;
     private readonly ConstructionModule _construction;
-    private readonly DefenseModule _def;
     private readonly List<DestroySystemOrder> _pending = new(); // accepted this Step; consumed at slot 5.1
     private string _lossCause = "Battle"; // why a harvester is leaving the game while a unit is lost (set around our own removals)
 
@@ -46,9 +45,9 @@ public sealed class HarvesterModule
     public Action<StepContext, string>? FogNotice { get; set; }
 
     private HarvesterModule(Game game, Galaxy galaxy, FleetModule fleets, EconomyModule eco, SupportModule support, ControlModule control,
-        ConstructionModule construction, DefenseModule def, HarvesterParams p)
+        ConstructionModule construction, HarvesterParams p)
     {
-        _game = game; _galaxy = galaxy; _fleets = fleets; _eco = eco; _support = support; _control = control; _construction = construction; _def = def; Params = p;
+        _game = game; _galaxy = galaxy; _fleets = fleets; _eco = eco; _support = support; _control = control; _construction = construction; Params = p;
     }
 
     /// <summary>
@@ -57,11 +56,11 @@ public sealed class HarvesterModule
     /// rule: m5-harvester §1, §2, §3.
     /// </summary>
     public static HarvesterModule Attach(Game game, Galaxy galaxy, FleetModule fleets, EconomyModule eco, SupportModule support, ControlModule control,
-        ConstructionModule construction, DefenseModule def, HarvesterParams? p = null)
+        ConstructionModule construction, HarvesterParams? p = null)
     {
         p ??= new HarvesterParams();
         p.Validate();
-        var m = new HarvesterModule(game, galaxy, fleets, eco, support, control, construction, def, p);
+        var m = new HarvesterModule(game, galaxy, fleets, eco, support, control, construction, p);
         game.RegisterOrderHandler<DestroySystemOrder>(m.HandleOrder);
         game.RegisterHook("5.1", m.Resolve);
         game.RegisterHook("5.6", m.RefreshSectorFlag);
@@ -73,7 +72,6 @@ public sealed class HarvesterModule
     private HarvesterState S => _game.State.Harvester;
     private GameState State => _game.State;
     private EconomyState E => _game.State.Economy;
-    private static Side Other(Side s) => s == Side.Hand ? Side.Collective : Side.Hand;
 
     // ================================================================== queries
 

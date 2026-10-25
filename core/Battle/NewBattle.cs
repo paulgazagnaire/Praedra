@@ -247,12 +247,12 @@ public sealed class NewBattle
             RefreshCombatants();
             Movement(t);                // 1
             RefreshCombatants();
-            Facing(t);                  // 2
+            Facing();                   // 2
             SelectTargets(t);           // 3
             Fire(t);                    // 4
             ApplyDamage(t);             // 4b
             CooldownsAndShields(t);     // 5
-            SquadronHousekeeping(t);    // 6
+            SquadronHousekeeping();     // 6
             ended = RetreatAndEnd(t, low, lowT);  // 7
             // step 8 (events) is the log written as things happen
             AfterTick?.Invoke(t);
@@ -433,7 +433,7 @@ public sealed class NewBattle
         return star > port ? CombatModel.StarboardMask : CombatModel.PortMask; // tie: port
     }
 
-    private void Facing(int t)
+    private void Facing()
     {
         foreach (var u in _u)
         {
@@ -730,7 +730,7 @@ public sealed class NewBattle
 
     // ---------------------------------------------------------------- step 6: fighters
 
-    private void SquadronHousekeeping(int t)
+    private void SquadronHousekeeping()
     {
         foreach (var u in _u)
         {

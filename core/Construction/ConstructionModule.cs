@@ -100,7 +100,7 @@ public sealed class ConstructionModule
         game.RegisterHook("3", m.DeliveryArrivals);
         game.RegisterHook("4", m.DeliveryStops);
         game.RegisterHook("6.6", m.YardsHook);
-        eco.RefinedPoolGrew += (ctx, side) => m.ServeRefinedLine(ctx, ctx.Day + 1, side);
+        eco.RefinedPoolGrew += (ctx, side) => m.ServeRefinedLine(ctx.Day + 1, side);
         eco.ObjectRemoved += m.OnObjectRemoved;
         return m;
     }
@@ -399,8 +399,8 @@ public sealed class ConstructionModule
         }
 
         // Refined that arrived without an event (a setup change, a refund served elsewhere) reaches the head of each line now (Collective, then Hand).
-        ServeRefinedLine(ctx, t, Side.Collective);
-        ServeRefinedLine(ctx, t, Side.Hand);
+        ServeRefinedLine(t, Side.Collective);
+        ServeRefinedLine(t, Side.Hand);
 
         // 6.6.b: idle yards start cycles, project by project (system name ordinal, then family 0x28, 0x29, 0x2a).
         foreach (var p in C.AllProjects())
@@ -425,7 +425,7 @@ public sealed class ConstructionModule
     {
         C.Of(side).RefinedLine.Add(yard.Id);
         yard.InLine = true;
-        ServeRefinedLine(ctx, t, side);
+        ServeRefinedLine(t, side);
         if (yard.InLine)
         {
             int id = yard.Id; string sys = yard.System!;
@@ -435,7 +435,7 @@ public sealed class ConstructionModule
 
     // rule: m2-mines-refineries-pools §Asking for raw / serving a line (the refined line works the same: first in first out,
     // a suspended yard keeps its place and is skipped). Called whenever the side's refined grew and when a yard asks.
-    private void ServeRefinedLine(StepContext ctx, int t, Side side)
+    private void ServeRefinedLine(int t, Side side)
     {
         var line = C.Of(side).RefinedLine;
         var pool = E.Pool(side);
@@ -473,8 +473,8 @@ public sealed class ConstructionModule
         }
         var obj = E.Objects[id];
         int deliveryId = 0;
-        if (dest != p.System) deliveryId = Depart(ctx, t, p, obj, dest); // the finished unit's own destination (the next queued order may have another)
-        else Appear(ctx, obj, p.System, UnitAppearance.Completed);
+        if (dest != p.System) deliveryId = Depart(t, p, obj, dest); // the finished unit's own destination (the next queued order may have another)
+        else Appear(obj, p.System);
         string cls = obj.Class, yard = p.System; var side = p.Side;
         ctx.Emit((i, _) => new UnitCompleted(i, t, id, cls, side, yard, dest, deliveryId));
         // The delivery events follow the completion event.
@@ -483,7 +483,7 @@ public sealed class ConstructionModule
     }
 
     /// <summary>The unit stands where it is meant to: a facility installs (no side of its own), others get a location. rule: m2-construction §Completion and delivery.</summary>
-    private void Appear(StepContext ctx, EconObject obj, string system, UnitAppearance how)
+    private void Appear(EconObject obj, string system)
     {
         obj.Completed = true;
         if (obj.Category == ObjectCategory.Facility) obj.Side = null;
@@ -492,7 +492,7 @@ public sealed class ConstructionModule
 
     // ================================================================== deliveries
 
-    private int Depart(StepContext ctx, int t, Project p, EconObject obj, string dest)
+    private int Depart(int t, Project p, EconObject obj, string dest)
     {
         var row = _eco.Costs.Get(obj.Class);
         var path = _fleets.FindPath(p.System, dest, DeliverySpeed(row));
@@ -618,7 +618,7 @@ public sealed class ConstructionModule
             ctx.Emit((i, _) => new DeliveryRefused(i, day, id, oid, cls, sys, side, refund));
             return;
         }
-        Appear(ctx, obj, sys, UnitAppearance.Delivered);
+        Appear(obj, sys);
         C.Deliveries.Remove(d.Id);
         {
             int id = d.Id, oid = obj.Id; string cls = obj.Class;
