@@ -91,7 +91,7 @@ public sealed class BlockadeData
             return int.TryParse(s, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var i)
                 ? i : throw new DataLoadException($"{source}: key '{k}' must be an integer, found '{s}'.");
         }
-        // the reference force is optional in the file (DEFAULT 3 Imperial Star Destroyers). rule: m4-battle-new §12
+        // the reference force is optional in the file (DEFAULT 3 Hand Star Destroyers). rule: m4-battle-new §12
         string refClass = values.TryGetValue("economic_blockade_reference_class", out var rc) ? rc : "Mandate";
         int refCount = values.ContainsKey("economic_blockade_reference_count") ? Int("economic_blockade_reference_count") : 3;
         return new BlockadeData(Int("forced_stop_threshold_percent"), Need("economic_blockade_ship_class"), Int("economic_blockade_ship_count"), refClass, refCount);

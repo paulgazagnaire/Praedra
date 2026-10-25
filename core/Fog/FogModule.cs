@@ -16,26 +16,26 @@ public enum KnowledgeLevel { Unknown, Charted, Observed, Held }
 public sealed record KnownHqInfo(string System, int Stamp);
 
 /// <summary>
-/// Fog of war and the Rebel HQ (M5). Holds settings only; the state lives in <see cref="GameState.Fog"/> (pictures, logs, clues) and
+/// Fog of war and the Hearth (M5). Holds settings only; the state lives in <see cref="GameState.Fog"/> (pictures, logs, clues) and
 /// <see cref="Victory.ScenarioState.Hq"/> (the HQ). Every write of a picture goes through <see cref="Reveal"/>. Draws random numbers only in
 /// the espionage extras (<see cref="EspionageSuccess"/>); reveals and HQ moves draw none. After <see cref="GameSave.Load"/>, attach again.
 ///
 /// Slots (rule: m5-fog-and-hq §F8): 1 MoveHq; 2 HqDeparted (after the fleet departures); 3 HQ arrival (after the fleet arrivals);
 /// 3.1 sightings; 5.4 live refresh (after bombardment and assault, after m5-missions' 5.3); 6.8 the sighting log is pruned (after repair).
 /// Capture (any slot): <see cref="ControlModule.HolderChanged"/> gives the loser its LossNotice and applies the HQ capture rule (F7).
-/// Every loop over systems is in galaxy index order (= ordinal name), sides Empire then Alliance, fleets by id. rule: §N9.
+/// Every loop over systems is in galaxy index order (= ordinal name), sides Hand then Collective, fleets by id. rule: §N9.
 /// </summary>
 public sealed class FogModule
 {
     public const string CauseCaptured = "Captured";
-    /// <summary>The HQ world turned from the Alliance on support alone, no troops there (B5a; QA-11, 2026-10-18).</summary>
+    /// <summary>The HQ world turned from the Collective on support alone, no troops there (B5a; QA-11, 2026-10-18).</summary>
     public const string CauseLostSupport = "LostSupport";
-    /// <summary>The HQ world's last Alliance regiment left or died and support handed the world over (B5a; QA-11, 2026-10-18).</summary>
+    /// <summary>The HQ world's last Collective regiment left or died and support handed the world over (B5a; QA-11, 2026-10-18).</summary>
     public const string CauseTroopsLeft = "TroopsLeft";
     public const string CauseDestinationLost = "DestinationLost";
     public const string CauseSystemDestroyed = "SystemDestroyed";
 
-    private static readonly Side[] Sides = { Side.Empire, Side.Alliance };
+    private static readonly Side[] Sides = { Side.Hand, Side.Collective };
 
     private readonly Game _game;
     private readonly Galaxy _galaxy;
@@ -90,14 +90,14 @@ public sealed class FogModule
     private GameState State => _game.State;
     private FogState F => State.Fog;
     private HqState Hq => State.Scenario.Hq;
-    private static Side Other(Side s) => s == Side.Empire ? Side.Alliance : Side.Empire;
+    private static Side Other(Side s) => s == Side.Hand ? Side.Collective : Side.Hand;
 
     // ================================================================== setup
 
     /// <summary>
     /// Setup, day 0 (outside a Step; raises nothing): systems with <c>start_explored_all</c> give both sides Explored and groups A and B, and C
     /// (the facilities) with <see cref="FogParams.SetupRevealsFacilities"/> (Classic = on, B4 §11; DEFAULT off); never D or E, LastLookDay null;
-    /// each side gets OwnLive of the systems it holds; the StartFullCopy lists give a FullCopy (The Shoal to the Empire,
+    /// each side gets OwnLive of the systems it holds; the StartFullCopy lists give a FullCopy (The Shoal to the Hand,
     /// only if the galaxy has it). Nothing reveals the HQ system. Call after owners, facilities and fleets are dealt. rule: m5-fog-and-hq §F4.
     /// </summary>
     public void SetupNewGame(IEnumerable<string> startExploredAll)
@@ -113,7 +113,7 @@ public sealed class FogModule
                 if (all.Contains(sys.Name)) Write(null, truth, side, sys.Name, RevealKind.Setup, day);
                 if (_fleets.OwnerOf(sys.Name) == side) Write(null, truth, side, sys.Name, RevealKind.OwnLive, day);
             }
-            var list = side == Side.Empire ? Params.StartFullCopyEmpire : Params.StartFullCopyAlliance;
+            var list = side == Side.Hand ? Params.StartFullCopyHand : Params.StartFullCopyCollective;
             foreach (var s in list.OrderBy(x => x, StringComparer.Ordinal))
                 if (_galaxy.TryFindSystem(s, out _)) Write(null, truth, side, s, RevealKind.FullCopy, day);
         }
@@ -151,7 +151,7 @@ public sealed class FogModule
         bool exploredBefore = F.Of(side).Systems.TryGetValue(target, out var before) && before.Explored;
         Side? holder = _fleets.OwnerOf(target);
         bool hqThere = HqAt(target);
-        bool capital = target == Params.CapitalSystem && holder == Side.Empire;
+        bool capital = target == Params.CapitalSystem && holder == Side.Hand;
         var truth = new Truth(this);
         Write(ctx, truth, side, target, RevealKind.FullCopy, stamp); // 1.
 
@@ -175,8 +175,8 @@ public sealed class FogModule
             }
         }
 
-        // §N6 sector suspicion (Proposal, off by default): an espionage success on an Alliance system in the sector that holds the HQ.
-        if (Params.SectorSuspicion == SectorSuspicion.OnEspionage && side != Side.Alliance && holder == Side.Alliance
+        // §N6 sector suspicion (Proposal, off by default): an espionage success on a Collective system in the sector that holds the HQ.
+        if (Params.SectorSuspicion == SectorSuspicion.OnEspionage && side != Side.Collective && holder == Side.Collective
             && Hq.Status == HqStatus.AtRest && Hq.System != null && _galaxy.Get(Hq.System).Sector == _galaxy.Systems[ti].Sector)
         {
             string sector = _galaxy.Systems[ti].Sector;
@@ -245,7 +245,7 @@ public sealed class FogModule
             Side? now = _fleets.OwnerOf(sys);
             Side? was = k.Owner;
             bool seenBefore = k.Explored && k.StampB != null;
-            k.Owner = now; k.AllianceSupport = _eco.SupportOf(sys, Side.Alliance); k.StampB = stamp;
+            k.Owner = now; k.CollectiveSupport = _eco.SupportOf(sys, Side.Collective); k.StampB = stamp;
             if (seenBefore && was != now) ctx?.Emit((i, _) => new OwnerChangeSeen(i, stamp, side, sys, was, now));
         }
         if (c)
@@ -317,18 +317,18 @@ public sealed class FogModule
     // rule: m5-fog-and-hq §F6 (rejections checked in the table's order; acceptance 1 to 5)
     private OrderResult HandleMoveHq(StepContext ctx, MoveHqOrder o)
     {
-        if (o.Side != Side.Alliance) return OrderResult.Reject(HqRejectReason.NotAlliance);                 // 1
+        if (o.Side != Side.Collective) return OrderResult.Reject(HqRejectReason.NotCollective);                 // 1
         if (Hq.Status is HqStatus.Destroyed or HqStatus.None) return OrderResult.Reject(HqRejectReason.NoHq); // 2
         if (Hq.Status == HqStatus.InTransit) return OrderResult.Reject(RejectReason.InTransit);               // 3
         if (!_galaxy.TryFindSystem(o.Destination, out _)) return OrderResult.Reject(RejectReason.UnknownSystem); // 4
         string at = Hq.System!;
         if (o.Destination == at) return OrderResult.Reject(RejectReason.AlreadyThere);                        // 5
-        if (HqRules.DestinationMustBeHeld && _fleets.OwnerOf(o.Destination) != Side.Alliance) return OrderResult.Reject(HqRejectReason.NotHeld); // 6
+        if (HqRules.DestinationMustBeHeld && _fleets.OwnerOf(o.Destination) != Side.Collective) return OrderResult.Reject(HqRejectReason.NotHeld); // 6
         var path = _fleets.FindPath(at, o.Destination, HqRules.Speed);
         if (!path.Ok) return OrderResult.Reject(RejectReason.Unreachable);                                    // 7
         if (IsPinned(at)) return OrderResult.Reject(HqRejectReason.Pinned);                                   // 8
         if (HqRules.UsesFacilitySlot && _eco.FreeEnergy(o.Destination) < 1) return OrderResult.Reject(RejectReason.NoSlot); // 9
-        var pool = State.Economy.Pool(Side.Alliance);
+        var pool = State.Economy.Pool(Side.Collective);
         if (HqRules.MoveCost > 0 && pool.Refined < HqRules.MoveCost) return OrderResult.Reject(HqRejectReason.NoFunds); // cost, DEFAULT 0
         if (HqRules.MoveCost > 0) pool.Refined -= HqRules.MoveCost;
 
@@ -354,7 +354,7 @@ public sealed class FogModule
     {
         if (HqRules.DepartureOperands == HqDepartureOperands.Off) return false;
         if (!State.Blockades.TryGetValue(system, out var blockader)) return false;
-        Side counted = HqRules.DepartureOperands == HqDepartureOperands.Blockaders ? blockader : Side.Alliance;
+        Side counted = HqRules.DepartureOperands == HqDepartureOperands.Blockaders ? blockader : Side.Collective;
         int ships = 0, fighters = 0;
         foreach (var f in _fleets.FleetsAt(system).Where(f => f.Side == counted))
         {
@@ -378,7 +378,7 @@ public sealed class FogModule
             Hq.DueDay = day + Hq.HopTicks[Hq.HopIndex];
             return;
         }
-        if (_fleets.OwnerOf(reached) != Side.Alliance)
+        if (_fleets.OwnerOf(reached) != Side.Collective)
         {
             DestroyHq(ctx, CauseDestinationLost, reached); // HqLostDestination = DestroyOnArrival: no support effect, no HqArrived
             return;
@@ -395,7 +395,7 @@ public sealed class FogModule
                 foreach (var m in sec.Members) // index order = ordinal names
                 {
                     string name = _galaxy.Systems[m].Name;
-                    if (_eco.SlotsOf(name).Populated) _support.ChangeSupport(ctx, name, Side.Alliance, HqRules.ArrivalSupportDelta, SupportCause.HqMove);
+                    if (_eco.SlotsOf(name).Populated) _support.ChangeSupport(ctx, name, Side.Collective, HqRules.ArrivalSupportDelta, SupportCause.HqMove);
                 }
         }
     }
@@ -417,7 +417,7 @@ public sealed class FogModule
     private void OnHolderChanged(CaptureInfo info)
     {
         if (info.Old is Side loser) Write(info.Ctx, new Truth(this), loser, info.System, RevealKind.LossNotice, info.Ctx.Day + 1);
-        if (HqAt(info.System) && info.New != Side.Alliance) // the Empire took it, or it went neutral (B5a section 5: the HQ cannot serve side 3)
+        if (HqAt(info.System) && info.New != Side.Collective) // the Hand took it, or it went neutral (B5a section 5: the HQ cannot serve side 3)
         {
             bool lost = HqRules.LostOnHolderChange switch
             {
@@ -473,7 +473,7 @@ public sealed class FogModule
     }
 
     // rule: m5-fog-and-hq §N4 (route-only, N-day warning; movement-redesign-draft §C), §F8 slot 3.1: Sensor Station warnings, after the
-    // fleet sightings; sides Empire before Alliance, then other-side fleets by id, then the station systems in path order.
+    // fleet sightings; sides Hand before Collective, then other-side fleets by id, then the station systems in path order.
     // A warning goes to the owner of a finished station at S for an other-side fleet in transit whose remaining path (the systems after
     // its current position, the destination included) contains S, when 0 < (day it reaches S) - today <= SensorWarningDays. One warning
     // per (fleet, station system, reach day): the side remembers the warnings it got until the reach day is over.
@@ -630,12 +630,12 @@ public sealed class FogModule
     }
 
     /// <summary>
-    /// The side's belief about the HQ: for the Alliance the truth (its own object; null in transit or destroyed); for the Empire the system its
+    /// The side's belief about the HQ: for the Collective the truth (its own object; null in transit or destroyed); for the Hand the system its
     /// picture shows HqHere at, with the stamp of that group C write, possibly out of date. rule: §N5 KnownHq.
     /// </summary>
     public KnownHqInfo? KnownHq(Side side)
     {
-        if (side == Side.Alliance) return Hq.Status == HqStatus.AtRest ? new KnownHqInfo(Hq.System!, _game.Day) : null;
+        if (side == Side.Collective) return Hq.Status == HqStatus.AtRest ? new KnownHqInfo(Hq.System!, _game.Day) : null;
         foreach (var kv in F.Of(side).Systems)
             if (kv.Value.Explored && kv.Value.HqHere) return new KnownHqInfo(kv.Key, kv.Value.HqStamp ?? 0);
         return null;
@@ -681,15 +681,15 @@ public sealed class FogModule
     // ================================================================== event audience
 
     // rule: §N8 Event audience. DEFAULT: the side of the event's subject, plus the other side if it has live access (kinds 1 to 3, not the
-    // Core report) to the event's system at that moment. Exceptions: HqDeparted, HqArrived and an HqMove support change go to the Alliance
-    // only (§N7 1: the Empire must never be told "the HQ arrived"); HqDestroyed, GameWon go to both; SystemCaptured to winner, loser and any
+    // Core report) to the event's system at that moment. Exceptions: HqDeparted, HqArrived and an HqMove support change go to the Collective
+    // only (§N7 1: the Hand must never be told "the HQ arrived"); HqDestroyed, GameWon go to both; SystemCaptured to winner, loser and any
     // side with live access. The fog's own per-viewer events go to their viewer. The subject and the system are read from the event's
     // fields named Side, Holder, Owner or Fleet (the fleet's side) and System; an event with neither goes to both (Contradictions 11: the
     // other sheets' events have no audience entry yet).
     private int Audience(GameEvent e, Order? order)
     {
         const int Emp = 1, All = 2, Both = 3;
-        int Bit(Side s) => s == Side.Empire ? Emp : All;
+        int Bit(Side s) => s == Side.Hand ? Emp : All;
         switch (e)
         {
             case HqDeparted or HqArrived: return All;
@@ -719,8 +719,8 @@ public sealed class FogModule
     private int LiveMask(string system)
     {
         int m = 0;
-        if (HasLiveAccess(Side.Empire, system)) m |= 1;
-        if (HasLiveAccess(Side.Alliance, system)) m |= 2;
+        if (HasLiveAccess(Side.Hand, system)) m |= 1;
+        if (HasLiveAccess(Side.Collective, system)) m |= 2;
         return m;
     }
 

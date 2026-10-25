@@ -27,14 +27,14 @@ public sealed record DeathStarParams
     /// <summary>Trench run in auto-resolved battles. DEFAULT off; on has no rule (Missing: ships/12 asks for a design), so it is refused. rule: m5-death-star §4.</summary>
     public bool TrenchRun { get; init; }
 
-    /// <summary>Support change for every other system of a sector at its first strike, in Alliance points: DeathStarSectorPenalty = 10 (Classic's already halved value; Paul replaced the galaxy-wide drop and the -20 on the target). Traced; Paul. rule: m5-death-star §2 effect 7.</summary>
+    /// <summary>Support change for every other system of a sector at its first strike, in Collective points: DeathStarSectorPenalty = 10 (Classic's already halved value; Paul replaced the galaxy-wide drop and the -20 on the target). Traced; Paul. rule: m5-death-star §2 effect 7.</summary>
     public int SectorPenalty { get; init; } = 10;
 
-    /// <summary>The strike in a sector (counted for the whole game) from which every remaining system turns fully Alliance: the second. Paul. rule: m5-death-star §2 effect 7.</summary>
+    /// <summary>The strike in a sector (counted for the whole game) from which every remaining system turns fully Collective: the second. Paul. rule: m5-death-star §2 effect 7.</summary>
     public int RevoltFromStrike { get; init; } = 2;
 
-    /// <summary>Alliance support the revolt sets (the maximum of the support scale). Paul ("full Alliance support"). rule: m5-death-star §2 effect 7.</summary>
-    public int RevoltAllianceSupport { get; init; } = 100;
+    /// <summary>Collective support the revolt sets (the maximum of the support scale). Paul ("full Collective support"). rule: m5-death-star §2 effect 7.</summary>
+    public int RevoltCollectiveSupport { get; init; } = 100;
 
     /// <summary>The fallout of a destroyed planet: Classic (, galaxy-wide) or New (Paul's sector rule). DEFAULT New. rule: m5-death-star §2 effect 7 (B5a, 2026-10-17).</summary>
     public DeathStarFallout Fallout { get; init; } = DeathStarFallout.New;

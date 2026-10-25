@@ -157,7 +157,7 @@ public static class DropInStage
     /// <summary>characters.csv: kind (major = MJCHARSD, minor = MNCHARSD), name, then words 0..36 with word 5 split. rule: 02-gdata-formats §5.</summary>
     private static string Characters(Raw raw, IReadOnlySet<int> roster)
     {
-        var header = new[] { "kind", "name", "id", "field2", "pf", "npf", "family", "textid", "f7", "alliance", "empire", "cost", "maint", "rorder", "rdiff",
+        var header = new[] { "kind", "name", "id", "field2", "pf", "npf", "family", "textid", "f7", "collective", "hand", "cost", "maint", "rorder", "rdiff",
             "dip", "dipv", "esp", "espv", "ship", "shipv", "troop", "troopv", "fac", "facv", "com", "comv", "lead", "leadv", "loy", "loyv",
             "jprob", "knownjedi", "jlvl", "jlvlv", "admiral", "commander", "general", "nobetray", "trainer" };
         var rows = new List<IEnumerable<string>>();
@@ -192,7 +192,7 @@ public static class DropInStage
             rows.AddRange(Rows(t, r => new[] { kind, S(t, r, "id"), raw.Name(t, r), S(t, r, "is_alliance"), S(t, r, "is_empire"), S(t, r, "cost"), S(t, r, "maintenance"),
                 S(t, r, "research_order"), S(t, r, "research_difficulty") }));
         }
-        return Csv.Write(new[] { "kind", "id", "name", "alliance", "empire", "cost", "maint", "rorder", "rdiff" }, rows);
+        return Csv.Write(new[] { "kind", "id", "name", "collective", "hand", "cost", "maint", "rorder", "rdiff" }, rows);
     }
 
     /// <summary>
@@ -218,13 +218,13 @@ public static class DropInStage
                     S(t, r, "research_order"), S(t, r, "research_difficulty"), Start("is_alliance"), Start("is_empire") };
             }));
         }
-        return Csv.Write(new[] { "research_family", "kind", "dat_id", "name", "alliance", "empire", "cost", "level", "rdiff", "start_alliance", "start_empire" }, rows);
+        return Csv.Write(new[] { "research_family", "kind", "dat_id", "name", "collective", "hand", "cost", "level", "rdiff", "start_collective", "start_hand" }, rows);
     }
 
     private static string MissionRecords(Raw raw)
     {
         var t = raw["MISSNSD"];
-        return Csv.Write(new[] { "dat_id", "kind", "alliance", "empire", "timer_min", "timer_spread", "hidden", "repeats", "table", "special_force_mask", "guard_checks", "can_resign", "source" },
+        return Csv.Write(new[] { "dat_id", "kind", "collective", "hand", "timer_min", "timer_spread", "hidden", "repeats", "table", "special_force_mask", "guard_checks", "can_resign", "source" },
             Rows(t, r =>
             {
                 int id = t.Int(r, "id");
@@ -259,7 +259,7 @@ public static class DropInStage
 
     /// <summary>
     /// bombardment-defense.csv: the regiment rows (TROOPSD bombardment_defense), then the manufacturing and production facilities (MANFACSD and
-    /// PROFACSD word 12, raw column f12) and the Rebel HQ (ALLFACSD word 12), read as the bombardment defence by the Classic strike (class word 12,
+    /// PROFACSD word 12, raw column f12) and the Hearth (ALLFACSD word 12), read as the bombardment defence by the Classic strike (class word 12,
     /// vtable +0x1c0). Only the Sensor Station (not a Classic class) stays in data/design. rule: m3-bombardment B7; B7-bombardment §3, §7 (C8).
     /// </summary>
     private static string Bombardment(Raw raw)
@@ -296,16 +296,16 @@ public static class DropInStage
 
     private static string OneSide(CsvFile t, int r) => (t.Int(r, "is_alliance"), t.Int(r, "is_empire")) switch
     {
-        (1, 0) => "Alliance",
-        (0, 1) => "Empire",
+        (1, 0) => "Collective",
+        (0, 1) => "Hand",
         var x => throw new ImportException($"{t.Name} row {r + 1}: is_alliance, is_empire = {x}, expected one side."),
     };
 
     private static string BothSides(CsvFile t, int r) => (t.Int(r, "is_alliance"), t.Int(r, "is_empire")) switch
     {
         (1, 1) => "both",
-        (0, 1) => "empire",
-        (1, 0) => "alliance",
+        (0, 1) => "hand",
+        (1, 0) => "collective",
         var x => throw new ImportException($"{t.Name} row {r + 1}: is_alliance, is_empire = {x}, no side."),
     };
 

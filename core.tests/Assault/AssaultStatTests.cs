@@ -7,13 +7,13 @@ namespace Praedra.Core.Tests.Assault;
 // m3-assault A4, A13 to A16: statistical tests with the seeded game generator through the real module (one Step per assault).
 public class AssaultStatTests
 {
-    private static readonly Side Emp = Side.Empire, All = Side.Alliance;
+    private static readonly Side Emp = Side.Hand, All = Side.Collective;
     private const string Sys = AssaultWorld.Sys;
 
     private sealed record Rates(double Win, double MeanLeft, double AttackerDies, double DefenderDies, double Nobody);
 
     /// <summary>
-    /// <paramref name="trials"/> assaults of <paramref name="n"/> Alliance regiments of one class against <paramref name="m"/> Imperial ones
+    /// <paramref name="trials"/> assaults of <paramref name="n"/> Collective regiments of one class against <paramref name="m"/> Hand ones
     /// (plus the given facilities); the world is reset after each. MeanLeft = attackers alive at the end, averaged over all assaults.
     /// </summary>
     private static Rates Run(ulong seed, int trials, string attackers, int n, string defenders, int m, int attackerLeadership = 0, params FacilityKind[] facilities)
@@ -49,7 +49,7 @@ public class AssaultStatTests
         Assert.True(Math.Abs(r.Nobody - 9.0) <= 2.0, $"nobody {r.Nobody:F2}");
     }
 
-    // m3-assault A13: 4 Alliance Fleet vs 2 Imperial Army (20,000 seeded assaults): win 48.0 percent (2.0 points), mean attackers left 3.03 (0.1)
+    // m3-assault A13: 4 Collective Fleet vs 2 Hand Army (20,000 seeded assaults): win 48.0 percent (2.0 points), mean attackers left 3.03 (0.1)
     [Fact]
     public void A13_FourFleetAgainstTwoArmy()
     {

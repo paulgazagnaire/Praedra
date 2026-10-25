@@ -53,7 +53,7 @@ public class SimpleAiSaveLoadTests
 
         var old = GameHost.Load(lines[0] + "\n" + lines[3]); // an older save: header and core only
         Assert.Equal(host.StateHash(), old.StateHash());
-        Assert.Empty(old.AiMemoryFor(Side.Empire, true).Notes);
+        Assert.Empty(old.AiMemoryFor(Side.Hand, true).Notes);
     }
 
     // m1-clock-and-orders K16: QA-17 repro. The save kept only the battle ruleset; every other setting fell back to the code DEFAULT on load.

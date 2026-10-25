@@ -11,12 +11,12 @@ namespace Praedra.Core.Control;
 /// </summary>
 public sealed class ControlState
 {
-    public bool ScorchedEarthEmpire { get; set; } = true;
-    public bool ScorchedEarthAlliance { get; set; } = true;
+    public bool ScorchedEarthHand { get; set; } = true;
+    public bool ScorchedEarthCollective { get; set; } = true;
 
     /// <summary>
     /// Systems where both sides have regiments standing on the planet, with the military side they had before the second side arrived
-    /// (0 = none, 1 = Alliance, 2 = Empire: the Classic numbering). The Classic control word keeps the previous military side in that case
+    /// (0 = none, 1 = Collective, 2 = Hand: the Classic numbering). The Classic control word keeps the previous military side in that case
     /// (system +0x84 bits 4-5, <c>0x50b610</c>). Everywhere else the military side is derived from the regiments standing there, so only this
     /// case needs a memory. rule: m2-control-and-capture §How control changes (B5a section 1).
     /// </summary>
@@ -30,17 +30,17 @@ public sealed class ControlState
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public SortedSet<string>? EverHeld { get; set; }
 
-    public bool ScorchedEarth(Side s) => s == Side.Empire ? ScorchedEarthEmpire : ScorchedEarthAlliance;
+    public bool ScorchedEarth(Side s) => s == Side.Hand ? ScorchedEarthHand : ScorchedEarthCollective;
 
     public void SetScorchedEarth(Side s, bool on)
     {
-        if (s == Side.Empire) ScorchedEarthEmpire = on; else ScorchedEarthAlliance = on;
+        if (s == Side.Hand) ScorchedEarthHand = on; else ScorchedEarthCollective = on;
     }
 
     internal void CopyFrom(ControlState o)
     {
-        ScorchedEarthEmpire = o.ScorchedEarthEmpire;
-        ScorchedEarthAlliance = o.ScorchedEarthAlliance;
+        ScorchedEarthHand = o.ScorchedEarthHand;
+        ScorchedEarthCollective = o.ScorchedEarthCollective;
         Contested = o.Contested == null || o.Contested.Count == 0 ? null : new SortedDictionary<string, int>(o.Contested, StringComparer.Ordinal);
         EverHeld = o.EverHeld == null || o.EverHeld.Count == 0 ? null : new SortedSet<string>(o.EverHeld, StringComparer.Ordinal);
     }

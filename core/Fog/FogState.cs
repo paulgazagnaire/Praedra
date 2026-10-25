@@ -9,17 +9,17 @@ namespace Praedra.Core.Fog;
 /// </summary>
 public sealed class FogState
 {
-    public SideKnowledge Empire { get; init; } = new();
-    public SideKnowledge Alliance { get; init; } = new();
+    public SideKnowledge Hand { get; init; } = new();
+    public SideKnowledge Collective { get; init; } = new();
     /// <summary>Systems with <c>start_explored_all</c> = 1 (setup data). rule: m5-fog-and-hq §F2 Espionage (pool "explored class").</summary>
     public SortedSet<string> StartExploredAll { get; init; } = new(StringComparer.Ordinal);
 
-    public SideKnowledge Of(Side s) => s == Side.Empire ? Empire : Alliance;
+    public SideKnowledge Of(Side s) => s == Side.Hand ? Hand : Collective;
 
     internal void CopyFrom(FogState o)
     {
-        Empire.CopyFrom(o.Empire);
-        Alliance.CopyFrom(o.Alliance);
+        Hand.CopyFrom(o.Hand);
+        Collective.CopyFrom(o.Collective);
         foreach (var s in o.StartExploredAll) StartExploredAll.Add(s);
     }
 }
@@ -90,8 +90,8 @@ public sealed class SystemKnowledge
     public int? StampB { get; set; }
     /// <summary>Holder when last seen; null = neutral.</summary>
     public Side? Owner { get; set; }
-    /// <summary>Alliance support 0..100 when last seen (Empire = 100 minus it).</summary>
-    public int AllianceSupport { get; set; }
+    /// <summary>Collective support 0..100 when last seen (Hand = 100 minus it).</summary>
+    public int CollectiveSupport { get; set; }
 
     // ---- group C: facilities and defences, and HqHere
     public int? StampC { get; set; }
@@ -123,7 +123,7 @@ public sealed class SystemKnowledge
     {
         Explored = Explored, LastLookDay = LastLookDay,
         StampA = StampA, Populated = Populated, Destroyed = Destroyed, Energy = Energy, Raw = Raw,
-        StampB = StampB, Owner = Owner, AllianceSupport = AllianceSupport,
+        StampB = StampB, Owner = Owner, CollectiveSupport = CollectiveSupport,
         StampC = StampC, Facilities = new SortedDictionary<string, int>(Facilities, StringComparer.Ordinal), FacilitiesQueued = FacilitiesQueued, HqHere = HqHere, HqStamp = HqStamp,
         StampD = StampD, Ground = Ground.Select(g => g.Clone()).ToList(), Characters = Characters?.Select(c => c.Clone()).ToList(),
         StampE = StampE, Fleets = Fleets.Select(f => f.Clone()).ToList(),
@@ -196,12 +196,12 @@ public sealed class Sighting
 /// <summary>"The HQ is in this sector", given by an espionage success when <see cref="FogParams.SectorSuspicion"/> is on. rule: §N6.</summary>
 public sealed record HqSectorClue(string Sector, int Day);
 
-/// <summary>Where the Rebel HQ is. None = the game has no HQ (a bare host or the test campaign). rule: m5-fog-and-hq §F5.</summary>
+/// <summary>Where the Hearth is. None = the game has no HQ (a bare host or the test campaign). rule: m5-fog-and-hq §F5.</summary>
 public enum HqStatus { None, AtRest, InTransit, Destroyed }
 
 /// <summary>
-/// The Rebel HQ as one state record (DEFAULT: kept outside the facility registry, so scrapping, autoscrap and assault collateral cannot touch
-/// it). Owner is always the Alliance. While in transit it has the same shape as a fleet transit. Saved and hashed. rule: m5-fog-and-hq §F5.
+/// The Hearth as one state record (DEFAULT: kept outside the facility registry, so scrapping, autoscrap and assault collateral cannot touch
+/// it). Owner is always the Collective. While in transit it has the same shape as a fleet transit. Saved and hashed. rule: m5-fog-and-hq §F5.
 /// </summary>
 public sealed class HqState
 {

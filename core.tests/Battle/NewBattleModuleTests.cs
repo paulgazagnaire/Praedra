@@ -21,10 +21,10 @@ public class NewBattleModuleTests
     public void NM1_CorvettesRetreatToTheSystemTheyCameFrom()
     {
         var w = World(tractors: false);
-        w.Fleets.SetOwner("A", Side.Alliance);
-        int rebel = w.Fleet(Side.Alliance, "A", Corvette, 4);
-        int imp = w.Fleet(Side.Empire, "B", Isd, 1);
-        w.Fleets.SubmitMove(Side.Alliance, rebel, "B");
+        w.Fleets.SetOwner("A", Side.Collective);
+        int rebel = w.Fleet(Side.Collective, "A", Corvette, 4);
+        int imp = w.Fleet(Side.Hand, "B", Isd, 1);
+        w.Fleets.SubmitMove(Side.Collective, rebel, "B");
         w.Run(40);
         var re = w.Events<FleetRetreated>().Single();
         Assert.Equal(("B", "A"), (re.From, re.To));
@@ -32,8 +32,8 @@ public class NewBattleModuleTests
         Assert.Equal("B", w.F(rebel).PreviousSystem);
         var end = w.Events<BattleEnded>().Single().Result;
         Assert.InRange(end.Seconds, 5, 6);
-        Assert.Equal(BattleOutcome.Retreated, end.Alliance);
-        Assert.Equal(BattleOutcome.Victorious, end.Empire);
+        Assert.Equal(BattleOutcome.Retreated, end.Collective);
+        Assert.Equal(BattleOutcome.Victorious, end.Hand);
         Assert.Equal(2750, w.Obj(w.F(imp).Ships[0]).Hull);
     }
 
@@ -42,13 +42,13 @@ public class NewBattleModuleTests
     public void NM2_NoDestinationFightsOnAndDies()
     {
         var w = World();
-        foreach (var s in new[] { "A", "C", "D" }) w.Fleets.SetOwner(s, Side.Empire);
-        int rebel = w.Fleet(Side.Alliance, "B", Corvette, 4);
-        int imp = w.Fleet(Side.Empire, "B", Isd, 1);
+        foreach (var s in new[] { "A", "C", "D" }) w.Fleets.SetOwner(s, Side.Hand);
+        int rebel = w.Fleet(Side.Collective, "B", Corvette, 4);
+        int imp = w.Fleet(Side.Hand, "B", Isd, 1);
         w.Run();
         Assert.Equal(RetreatRefusal.NoDestination, w.Events<RetreatRefused>().Single().Reason);
         Assert.False(w.Game.State.Fleets.ContainsKey(rebel));
-        Assert.Equal(BattleOutcome.Annihilated, w.Events<BattleEnded>().Single().Result.Alliance);
+        Assert.Equal(BattleOutcome.Annihilated, w.Events<BattleEnded>().Single().Result.Collective);
         Assert.Equal(4, w.Events<UnitDestroyed>().Count);
         Assert.Equal(2750, w.Obj(w.F(imp).Ships[0]).Hull);
     }
@@ -58,9 +58,9 @@ public class NewBattleModuleTests
     public void NM3_GravityWellRefusesTheRetreat()
     {
         var w = World();
-        w.Fleets.SetOwner("A", Side.Alliance);
-        int rebel = w.Fleet(Side.Alliance, "B", Corvette, 4);
-        w.Fleets.AddFleet(Side.Empire, "imp", new[] { Isd, Interdictor }, "B");
+        w.Fleets.SetOwner("A", Side.Collective);
+        int rebel = w.Fleet(Side.Collective, "B", Corvette, 4);
+        w.Fleets.AddFleet(Side.Hand, "imp", new[] { Isd, Interdictor }, "B");
         w.Run();
         Assert.Equal(RetreatRefusal.GravityWell, w.Events<RetreatRefused>().Single().Reason);
         Assert.False(w.Game.State.Fleets.ContainsKey(rebel));
@@ -72,8 +72,8 @@ public class NewBattleModuleTests
     public void NM4_OneSeedDrawPerBattleInNameOrder()
     {
         var w = World();
-        w.Fleet(Side.Alliance, "C", Corvette, 12); w.Fleet(Side.Empire, "C", Isd, 1);
-        w.Fleet(Side.Alliance, "B", Corvette, 12); w.Fleet(Side.Empire, "B", Isd, 1);
+        w.Fleet(Side.Collective, "C", Corvette, 12); w.Fleet(Side.Hand, "C", Isd, 1);
+        w.Fleet(Side.Collective, "B", Corvette, 12); w.Fleet(Side.Hand, "B", Isd, 1);
         long before = w.Game.Rng.Draws;
         w.Run();
         Assert.Equal(before + 2, w.Game.Rng.Draws);
@@ -87,8 +87,8 @@ public class NewBattleModuleTests
         for (ulong seed = 1; seed <= 12; seed++)
         {
             var w = World(seed: seed);
-            int mc = w.Fleet(Side.Alliance, "B", MonCal, 1);
-            int imp = w.Fleet(Side.Empire, "B", Isd, 1);
+            int mc = w.Fleet(Side.Collective, "B", MonCal, 1);
+            int imp = w.Fleet(Side.Hand, "B", Isd, 1);
             int mcId = w.F(mc).Ships[0], impId = w.F(imp).Ships[0];
             w.Run();
             var end = w.Events<BattleEnded>().Single().Result;
@@ -102,7 +102,7 @@ public class NewBattleModuleTests
                 Assert.InRange(o.Hull, 1, max);
                 Assert.All(o.Hits!, h => Assert.InRange(h, 0, 15));
             }
-            Assert.True(end.Alliance != BattleOutcome.Indecisive || end.Empire != BattleOutcome.Indecisive || end.Seconds > 0);
+            Assert.True(end.Collective != BattleOutcome.Indecisive || end.Hand != BattleOutcome.Indecisive || end.Seconds > 0);
         }
     }
 
@@ -111,7 +111,7 @@ public class NewBattleModuleTests
     public void NM6_FoughtThisStepCoversEveryUnitOfTheBattle()
     {
         var w = World();
-        int a = w.Fleet(Side.Alliance, "B", MonCal, 1), e = w.Fleet(Side.Empire, "B", Isd, 1);
+        int a = w.Fleet(Side.Collective, "B", MonCal, 1), e = w.Fleet(Side.Hand, "B", Isd, 1);
         int aId = w.F(a).Ships[0], eId = w.F(e).Ships[0];
         bool inside = false;
         w.Game.RegisterHook("6.8", _ => inside = w.Battles.FoughtThisStep(aId) && w.Battles.FoughtThisStep(eId));
@@ -125,9 +125,9 @@ public class NewBattleModuleTests
     public void NM7_CarriedSquadronsStayAboardTheirCarrier()
     {
         var w = World(tractors: false); // tractors off: a held corvette would fight on and could shoot the TIEs after launch
-        w.Fleets.SetOwner("A", Side.Alliance);
-        w.Fleet(Side.Alliance, "B", Corvette, 4);
-        int imp = w.Fleets.AddFleet(Side.Empire, "imp", new[] { Isd }, "B", new[] { "Gleaner", "Thresher" });
+        w.Fleets.SetOwner("A", Side.Collective);
+        w.Fleet(Side.Collective, "B", Corvette, 4);
+        int imp = w.Fleets.AddFleet(Side.Hand, "imp", new[] { Isd }, "B", new[] { "Gleaner", "Thresher" });
         int isdId = w.F(imp).Ships[0];
         var squads = w.Game.State.Economy.Objects.Values.Where(o => o.Category == ObjectCategory.Fighter && o.AboardShip == isdId).Select(o => o.Id).ToList();
         Assert.Equal(2, squads.Count);
@@ -142,7 +142,7 @@ public class NewBattleModuleTests
         string Run()
         {
             var w = World(seed: 5);
-            w.Fleet(Side.Alliance, "B", MonCal, 2); w.Fleet(Side.Empire, "B", Isd, 2);
+            w.Fleet(Side.Collective, "B", MonCal, 2); w.Fleet(Side.Hand, "B", Isd, 2);
             w.Run(3);
             return GameSave.StateHash(w.Game);
         }
@@ -154,14 +154,14 @@ public class NewBattleModuleTests
     public void NM9_OnContactRetreat()
     {
         var w = World(rolls: false, tractors: false); // tractors off: the base alert retreat (5 s)
-        w.Fleets.SetOwner("A", Side.Alliance);
-        int rebel = w.Fleet(Side.Alliance, "B", Corvette, 12);
-        w.Fleet(Side.Empire, "B", Isd, 1);
-        w.Battles.SubmitSetOnContact(Side.Alliance, OnContactMode.Retreat);
+        w.Fleets.SetOwner("A", Side.Collective);
+        int rebel = w.Fleet(Side.Collective, "B", Corvette, 12);
+        w.Fleet(Side.Hand, "B", Isd, 1);
+        w.Battles.SubmitSetOnContact(Side.Collective, OnContactMode.Retreat);
         w.Run();
         Assert.Equal("D", w.F(rebel).At); // D is nearer than A
         Assert.Equal(5, w.Events<BattleEnded>().Single().Result.Seconds);
-        Assert.Equal(BattleOutcome.Retreated, w.Events<BattleEnded>().Single().Result.Alliance);
+        Assert.Equal(BattleOutcome.Retreated, w.Events<BattleEnded>().Single().Result.Collective);
     }
 
     // the New ruleset is the DEFAULT (Paul, 2026-10-18 decision card; was Classic)

@@ -93,7 +93,7 @@ internal sealed class BuildWorld
     public void Hold(string system, Side side, int supportOfHolder = 100)
     {
         Fleets.SetOwner(system, side);
-        Eco.SetAllianceSupport(system, side == Side.Alliance ? supportOfHolder : 100 - supportOfHolder);
+        Eco.SetCollectiveSupport(system, side == Side.Collective ? supportOfHolder : 100 - supportOfHolder);
     }
 
     public int Yard(string system, FacilityKind kind, int? id = null) => Eco.AddFacility(system, kind, true, id);

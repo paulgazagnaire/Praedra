@@ -2,5 +2,5 @@ key,value,source
 forced_stop_threshold_percent,50,"T = 0.5 as a percent. Design number (Decided rule, Proposal value): m1-forced-stop-and-blockade Update 2026-10-12"
 economic_blockade_ship_class,Decree,Ship class whose combat strength sets E. 'Victory Star Destroyer' in the sheet; the ship data has 'Victory Destroyer' (id 132) and 'Victory II Star Destroyer' (id 138). Lead to confirm which.
 economic_blockade_ship_count,3,E = combat strength of this many ships of that class. Design number: m1-forced-stop-and-blockade Update 2026-10-12
-economic_blockade_reference_class,Mandate,"Class of the fixed reference force E is measured against. DEFAULT (m4-battle-new §12, open question 3): REF = 3 Imperial Star Destroyers."
+economic_blockade_reference_class,Mandate,"Class of the fixed reference force E is measured against. DEFAULT (m4-battle-new §12, open question 3): REF = 3 Hand Star Destroyers."
 economic_blockade_reference_count,3,How many of the reference class make REF. DEFAULT (m4-battle-new §12).

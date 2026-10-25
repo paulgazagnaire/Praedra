@@ -22,7 +22,7 @@ public class SimpleAiOpponentTests
     {
         var host = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = Praedra.Core.Tests.Setup.DealSettings.FileOldVictory });
         var m = new AiMatch(host, passive: passive);
-        m.Empire.KnownEnemyHq = host.HqSystem; // no fog yet: the Empire knows the Rebel HQ
+        m.Hand.KnownEnemyHq = host.HqSystem; // no fog yet: the Hand knows the Hearth
         return (m, host);
     }
 
@@ -30,7 +30,7 @@ public class SimpleAiOpponentTests
 
     private static (int Seed, Side? Winner, int Day, int Captures365, int Captures, int Sent, int Rejected) PlayPassive(int seed, Side ai, int maxDays)
     {
-        var (m, host) = NewMatch(seed, ai == Side.Empire ? Side.Alliance : Side.Empire);
+        var (m, host) = NewMatch(seed, ai == Side.Hand ? Side.Collective : Side.Hand);
         int at365 = -1;
         while (host.Game.Day < maxDays && host.Victory.Winner == null)
         {
@@ -50,44 +50,44 @@ public class SimpleAiOpponentTests
         }
     }
 
-    // Over seeds 1 to 8 (MultiSeed), the day the Empire AI takes the Rebel HQ (no fog: it knows where the HQ is):
+    // Over seeds 1 to 8 (MultiSeed), the day the Hand AI takes the Hearth (no fog: it knows where the HQ is):
     //   8a378a8 (pre-B2e): 271, 262, 256, 271, 271, 235, 235, 235;  9ec544f (B2e): 262, 271, 256, 256, 262, 271, 262, 262
-    // Floor: the Empire wins by day 400 on at least 7 of 8. Replaces (AI trainer, 2026-10-18, the Dev lead's ask) the seed-1 limit of 700.
+    // Floor: the Hand wins by day 400 on at least 7 of 8. Replaces (AI trainer, 2026-10-18, the Dev lead's ask) the seed-1 limit of 700.
     [Fact]
-    public void EmpireAi_AgainstPassiveAlliance_WinsByTakingTheRebelHq()
+    public void HandAi_AgainstPassiveCollective_WinsByTakingTheHearth()
     {
-        var games = MultiSeed.Play(MultiSeed.OneToEight, s => PlayPassive(s, Side.Empire, 400));
-        Report(Side.Empire, games);
-        Assert.True(games.Count(g => g.Winner == Side.Empire) >= 7, $"the Empire won by day 400 on only {games.Count(g => g.Winner == Side.Empire)} of 8 seeds");
+        var games = MultiSeed.Play(MultiSeed.OneToEight, s => PlayPassive(s, Side.Hand, 400));
+        Report(Side.Hand, games);
+        Assert.True(games.Count(g => g.Winner == Side.Hand) >= 7, $"the Hand won by day 400 on only {games.Count(g => g.Winner == Side.Hand)} of 8 seeds");
     }
 
-    // Over seeds 1 to 8 (MultiSeed), the day the Alliance AI takes Charter, and its captures by day 365:
+    // Over seeds 1 to 8 (MultiSeed), the day the Collective AI takes Charter, and its captures by day 365:
     //   8a378a8 (pre-B2e): 1323, 1098, 1320, 1101, 1749, 1503, 1050, 1422;  captures 16 to 20
     //   9ec544f (B2e):     1191, 1056, 1530, 1320,  528,  972,  639,  966;  captures 16 to 18
-    // Floor: the Alliance wins by day 1600 on at least 6 of 8 (7 and 8 measured), with at least 12 captures by day 365 on at least 7 of 8
+    // Floor: the Collective wins by day 1600 on at least 6 of 8 (7 and 8 measured), with at least 12 captures by day 365 on at least 7 of 8
     // (8 and 8 measured). Replaces (AI trainer, 2026-10-18, the Dev lead's ask) the seed-1 limit, re-pinned from 850 to 1350 in four
     // steps (v5, B2b, B2d) as each batch sent the one game another way. Earlier measurements on seed 1: day 783 without characters and
     // missions, 813 with them (SimpleAiParams.UseCharactersAndMissions), 795 since the AI stops hunting fleets that only retreat
     // (SimpleAiParams.RunnerRetreats, SimpleAiChaseTests), all on the 360-system map.
     [Fact]
-    public void AllianceAi_AgainstPassiveEmpire_MakesSteadyProgress_AndWinsByTakingCoruscant()
+    public void CollectiveAi_AgainstPassiveHand_MakesSteadyProgress_AndWinsByTakingCoruscant()
     {
-        var games = MultiSeed.Play(MultiSeed.OneToEight, s => PlayPassive(s, Side.Alliance, 1600));
-        Report(Side.Alliance, games);
-        Assert.True(games.Count(g => g.Winner == Side.Alliance) >= 6, $"the Alliance won by day 1600 on only {games.Count(g => g.Winner == Side.Alliance)} of 8 seeds");
+        var games = MultiSeed.Play(MultiSeed.OneToEight, s => PlayPassive(s, Side.Collective, 1600));
+        Report(Side.Collective, games);
+        Assert.True(games.Count(g => g.Winner == Side.Collective) >= 6, $"the Collective won by day 1600 on only {games.Count(g => g.Winner == Side.Collective)} of 8 seeds");
         Assert.True(games.Count(g => g.Captures365 >= 12) >= 7, $"12 captures by day 365 on only {games.Count(g => g.Captures365 >= 12)} of 8 seeds");
     }
 
     [Fact]
     public void PassiveSideGivesNoOrders()
     {
-        var (m, host) = NewMatch(2, Side.Empire);
+        var (m, host) = NewMatch(2, Side.Hand);
         m.RunTo(120);
-        Assert.DoesNotContain(m.Sent.Keys, k => k.StartsWith("Empire ", StringComparison.Ordinal));
-        Assert.Contains(m.Sent.Keys, k => k.StartsWith("Alliance ", StringComparison.Ordinal));
+        Assert.DoesNotContain(m.Sent.Keys, k => k.StartsWith("Hand ", StringComparison.Ordinal));
+        Assert.Contains(m.Sent.Keys, k => k.StartsWith("Collective ", StringComparison.Ordinal));
     }
 
-    // Over seeds 1 to 8 (MultiSeed), battles by day 700 (the Empire knows the Rebel HQ, so most games end by day 250 to 560):
+    // Over seeds 1 to 8 (MultiSeed), battles by day 700 (the Hand knows the Hearth, so most games end by day 250 to 560):
     //   8a378a8 (pre-B2e): 1, 5, 1, 4, 2, 3, 4, 3 (23);  9ec544f (B2e): 8, 4, 4, 4, 2, 2, 3, 3 (30)
     // Floor: at least 16 battles in all, and at least 2 on at least 5 of 8 seeds (6 and 8 measured). On every seed, at most 60 side-days
     // over the upkeep capacity (0 measured everywhere: the AI keeps clear of the autoscrap by scrapping its own least useful items) and at
@@ -103,7 +103,7 @@ public class SimpleAiOpponentTests
             while (host.Game.Day < 700 && host.Victory.Winner == null)
             {
                 m.Step();
-                foreach (var s in new[] { Side.Empire, Side.Alliance }) if (host.Economy.Free(s) < 0) overDays++;
+                foreach (var s in new[] { Side.Hand, Side.Collective }) if (host.Economy.Free(s) < 0) overDays++;
             }
             var ev = host.Game.Events;
             int autoscrap = ev.OfType<ObjectScrapped>().Count(e => e.Reason == "Autoscrap");
@@ -122,36 +122,36 @@ public class SimpleAiOpponentTests
     [Fact]
     public void UpkeepCrisis_TheAiScrapsItsOwnLeastUsefulItems_BeforeTheAutoscrapPicks()
     {
-        // Captures can take mines and refineries away. Here the test scraps Empire mines (a player order) until the load is above the capacity.
-        var (m, host) = NewMatch(3, Side.Alliance);
+        // Captures can take mines and refineries away. Here the test scraps Hand mines (a player order) until the load is above the capacity.
+        var (m, host) = NewMatch(3, Side.Collective);
         m.RunTo(60);
         var eco = host.Economy;
-        var mines = eco.Objects.Where(o => o.Completed && o.Class == "Mine" && eco.OwnerOf(o) == Side.Empire).OrderBy(o => o.Id).ToList();
-        int n = Math.Min(mines.Count, eco.Free(Side.Empire) / 50 + 2);
-        for (int i = 0; i < n; i++) { var id = mines[i].Id; host.Game.Submit(seq => new ScrapObjectOrder(seq, Side.Empire, id)); }
-        // the Alliance is passive, so the Empire AI is the only one planning; two steps: the scraps land, then the AI sees the overdraft
+        var mines = eco.Objects.Where(o => o.Completed && o.Class == "Mine" && eco.OwnerOf(o) == Side.Hand).OrderBy(o => o.Id).ToList();
+        int n = Math.Min(mines.Count, eco.Free(Side.Hand) / 50 + 2);
+        for (int i = 0; i < n; i++) { var id = mines[i].Id; host.Game.Submit(seq => new ScrapObjectOrder(seq, Side.Hand, id)); }
+        // the Collective is passive, so the Hand AI is the only one planning; two steps: the scraps land, then the AI sees the overdraft
         m.Step();
-        Assert.True(eco.Free(Side.Empire) < 0, "the test did not create an overdraft");
+        Assert.True(eco.Free(Side.Hand) < 0, "the test did not create an overdraft");
         int sentScraps = 0;
         for (int d = 0; d < 6; d++)
         {
             m.Step();
-            sentScraps += m.Empire.Submitted.Count(o => o.Kind == "Scrap");
-            if (eco.Free(Side.Empire) >= 0) break;
+            sentScraps += m.Hand.Submitted.Count(o => o.Kind == "Scrap");
+            if (eco.Free(Side.Hand) >= 0) break;
         }
         Assert.True(sentScraps >= 1, "the AI sent no ScrapObject order");
-        Assert.True(eco.Free(Side.Empire) >= 0, $"still over capacity: free {eco.Free(Side.Empire)}");
-        Assert.Equal(0, host.Game.Events.OfType<ObjectScrapped>().Count(e => e.Reason == "Autoscrap" && e.Side == Side.Empire));
+        Assert.True(eco.Free(Side.Hand) >= 0, $"still over capacity: free {eco.Free(Side.Hand)}");
+        Assert.Equal(0, host.Game.Events.OfType<ObjectScrapped>().Count(e => e.Reason == "Autoscrap" && e.Side == Side.Hand));
         // never a yard, mine or refinery
-        foreach (var e in host.Game.Events.OfType<ObjectScrapped>().Where(e => e.Side == Side.Empire && e.Reason == "Order" && e.Day > 60))
+        foreach (var e in host.Game.Events.OfType<ObjectScrapped>().Where(e => e.Side == Side.Hand && e.Reason == "Order" && e.Day > 60))
             Assert.DoesNotContain(e.Class, new[] { "Orbital Shipyard", "Training Facility", "Construction Yard", "Refinery" });
     }
 
     [Fact]
     public void SameSeed_SameHash_WithAPassiveSide()
     {
-        var (a, ha) = NewMatch(4, Side.Alliance); a.RunTo(250);
-        var (b, hb) = NewMatch(4, Side.Alliance); b.RunTo(250);
+        var (a, ha) = NewMatch(4, Side.Collective); a.RunTo(250);
+        var (b, hb) = NewMatch(4, Side.Collective); b.RunTo(250);
         Assert.Equal(ha.StateHash(), hb.StateHash());
     }
 
@@ -166,7 +166,7 @@ public class SimpleAiOpponentTests
         var save = host.SaveWithSettings();
         m.RunTo(300);
         var host2 = GameHost.Load(save, Praedra.Core.Tests.Setup.DealSettings.FileOldVictory); // the same settings as the game (settings are not in the save)
-        var m2 = new AiMatch(host2); m2.Empire.KnownEnemyHq = host2.HqSystem;
+        var m2 = new AiMatch(host2); m2.Hand.KnownEnemyHq = host2.HqSystem;
         m2.RunTo(300);
         Assert.Equal(host.StateHash(), host2.StateHash());
     }
@@ -176,7 +176,7 @@ public class SimpleAiOpponentTests
     {
         var (m, host) = NewMatch(3, null);
         long before = host.Game.Rng.Draws;
-        for (int d = 0; d < 30; d++) { m.Empire.PlanDay(); m.Alliance.PlanDay(); }
+        for (int d = 0; d < 30; d++) { m.Hand.PlanDay(); m.Collective.PlanDay(); }
         Assert.Equal(before, host.Game.Rng.Draws);
     }
 
@@ -191,7 +191,7 @@ public class SimpleAiOpponentTests
         while (host.Game.Day < 500 && host.Victory.Winner == null) m.Step();
         Assert.DoesNotContain(host.Game.Events, e => e is OrderRejected r && r.Reason == RejectReason.NotResearched);
         Assert.Contains(host.Game.Events, e => e is Praedra.Core.Research.ResearchLevelReached);
-        _out.WriteLine($"levels after {host.Game.Day} days: " + string.Join("; ", new[] { Side.Alliance, Side.Empire }.Select(s =>
+        _out.WriteLine($"levels after {host.Game.Day} days: " + string.Join("; ", new[] { Side.Collective, Side.Hand }.Select(s =>
             $"{s} " + string.Join("/", Praedra.Core.Research.ResearchModule.Kinds.Select(k => host.Research.Level(s, k))))));
     }
 }

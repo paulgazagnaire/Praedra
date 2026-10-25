@@ -58,7 +58,7 @@ public sealed class RepairModule
         ? (fast ? Rules.FastRepairPeriodDays : Rules.RepairPeriodDays)
         : (fast ? Rules.SquadronFastRepairPeriodDays : Rules.SquadronRepairPeriodDays);
 
-    // rule: m4-retreat-damage-repair §5: side Alliance then Empire, object id ascending; per unit the damage-control roll, then the pick
+    // rule: m4-retreat-damage-repair §5: side Collective then Hand, object id ascending; per unit the damage-control roll, then the pick
     private void Repair(StepContext ctx)
     {
         int k = ctx.Day, t = ctx.Day + 1;
@@ -76,7 +76,7 @@ public sealed class RepairModule
             if (f.At == null || f.Transit != null) { foreach (var id in f.Ships) moving.Add(id); foreach (var id in f.Squadrons) moving.Add(id); }
 
         var fastCache = new Dictionary<(string, Side), bool>(); // lookup only
-        foreach (var side in new[] { Side.Alliance, Side.Empire })
+        foreach (var side in new[] { Side.Collective, Side.Hand })
         {
             foreach (var o in E.Objects.Values.ToList()) // id-sorted registry
             {

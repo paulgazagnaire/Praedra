@@ -43,11 +43,11 @@ public class SimpleAiTests
         int won = ev.OfType<AssaultResolved>().Count(e => e.Result == "Won");
         int capt = ev.OfType<SystemCaptured>().Count(e => e.Cause == CaptureCause.Assault);
         int battles = ev.OfType<BattleEnded>().Count();
-        _out.WriteLine($"built E {built(Side.Empire)} A {built(Side.Alliance)}; assaults {assaults} won {won}; captures {capt}; battles {battles}; orders {m.TotalSent} rejected {m.TotalRejected}");
+        _out.WriteLine($"built E {built(Side.Hand)} A {built(Side.Collective)}; assaults {assaults} won {won}; captures {capt}; battles {battles}; orders {m.TotalSent} rejected {m.TotalRejected}");
         foreach (var kv in m.Rejected) _out.WriteLine($"  rejected {kv.Key}: {kv.Value}");
         foreach (var kv in m.Sent) _out.WriteLine($"  sent {kv.Key}: {kv.Value}");
-        Assert.True(built(Side.Empire) > 10);
-        Assert.True(built(Side.Alliance) > 10);
+        Assert.True(built(Side.Hand) > 10);
+        Assert.True(built(Side.Collective) > 10);
         Assert.True(assaults >= 1, "no assault happened");
     }
 
@@ -72,7 +72,7 @@ public class SimpleAiTests
         // Planning without stepping draws nothing from the game generator.
         var c = TestCampaign.New(3);
         long before = c.Game.Rng.Draws;
-        var ai = new SimpleAi(c.Host, Side.Empire);
+        var ai = new SimpleAi(c.Host, Side.Hand);
         for (int d = 0; d < 20; d++) ai.PlanDay();
         Assert.Equal(before, c.Game.Rng.Draws);
     }
@@ -97,7 +97,7 @@ public class SimpleAiTests
     {
         var host = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA });
         var m = new AiMatch(host);
-        m.Empire.KnownEnemyHq = host.HqSystem;
+        m.Hand.KnownEnemyHq = host.HqSystem;
         for (int i = 0; i < Days && host.Victory.Winner == null; i++)
         {
             m.Step();

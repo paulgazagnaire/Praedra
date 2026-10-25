@@ -68,8 +68,8 @@ public sealed class NewBattle
     private int _t;
 
     private static int I(Side s) => (int)s;
-    private static Side Other(Side s) => s == Side.Alliance ? Side.Empire : Side.Alliance;
-    private static readonly Side[] Sides = { Side.Alliance, Side.Empire };
+    private static Side Other(Side s) => s == Side.Collective ? Side.Hand : Side.Collective;
+    private static readonly Side[] Sides = { Side.Collective, Side.Hand };
 
     /// <param name="units">All units of both sides. The processing order (the sheet's unit ids) is ascending <see cref="BattleUnit.ObjectId"/> (creation order), ties by list position.</param>
     /// <param name="hasDestination">Per side (by <c>(int)Side</c>): does a valid retreat system exist? rule: m4-retreat-damage-repair §1 (5).</param>
@@ -229,7 +229,7 @@ public sealed class NewBattle
         _d = longest + _np.StartDistanceMargin;
         StartDistance = _d;
 
-        // rule: m4-battle-classic §1.3 (alert), shared: a side set to Retreat leaves at second 0 if it can; when both are set, only the Alliance goes
+        // rule: m4-battle-classic §1.3 (alert), shared: a side set to Retreat leaves at second 0 if it can; when both are set, only the Collective goes
         _t = 0;
         foreach (var side in Sides)
         {
@@ -364,7 +364,7 @@ public sealed class NewBattle
                     u.State = St.Active; u.FireFrom = t + _np.FlightSeconds;
                     Note("launch", u, u.Carrier, "");
                 }
-        double sa = SlowestSublight(Side.Alliance), se = SlowestSublight(Side.Empire);
+        double sa = SlowestSublight(Side.Collective), se = SlowestSublight(Side.Hand);
         if (sa < 0 && se < 0) return;
         SafetyClosing = false;
         // rule: space-combat/11 section 4 (6): no armed contact for 20 s, both close at full speed to D = 15 (only ever closes)
@@ -375,7 +375,7 @@ public sealed class NewBattle
             if (_d > TargetDistance) _d = Math.Max(TargetDistance, _d - both);
             return;
         }
-        double ra = sa >= 0 ? Reach(Side.Alliance) : -1, re = se >= 0 ? Reach(Side.Empire) : -1;
+        double ra = sa >= 0 ? Reach(Side.Collective) : -1, re = se >= 0 ? Reach(Side.Hand) : -1;
         if (ra < 0 && re < 0) return; // nobody can hurt anybody: hold (the safety rule takes over)
         double speed, want, k = _np.ClosingK;
         if (ra < 0 || re < 0)
@@ -399,7 +399,7 @@ public sealed class NewBattle
                 if (_d <= reachFast) { speed *= _np.KiteChaserFactor; _kiteSeconds++; } // full speed until the kiter's reach, then half
             }
         }
-        TargetDistance = want; _lastReach[I(Side.Alliance)] = ra; _lastReach[I(Side.Empire)] = re;
+        TargetDistance = want; _lastReach[I(Side.Collective)] = ra; _lastReach[I(Side.Hand)] = re;
         if (_d > want) _d = Math.Max(want, _d - k * speed); // rule: space-combat/11 section 4 (5)
     }
 
@@ -809,8 +809,8 @@ public sealed class NewBattle
         if ((t - lowT[0] >= _np.StalemateSeconds && t - lowT[1] >= _np.StalemateSeconds) || t >= _np.TickCap)
         {
             var flagged = new List<Side>();
-            if (str[I(Side.Alliance)] <= str[I(Side.Empire)]) flagged.Add(Side.Alliance);
-            if (str[I(Side.Empire)] <= str[I(Side.Alliance)]) flagged.Add(Side.Empire);
+            if (str[I(Side.Collective)] <= str[I(Side.Hand)]) flagged.Add(Side.Collective);
+            if (str[I(Side.Hand)] <= str[I(Side.Collective)]) flagged.Add(Side.Hand);
             var can = flagged.Select(s => _decided[I(s)] ? (RetreatRefusal?)RetreatRefusal.NoDestination : CanRetreat(s)).ToList();
             for (int k = 0; k < flagged.Count; k++)
             {
@@ -827,7 +827,7 @@ public sealed class NewBattle
         }
 
         // end: a side has no live ships (none on the field, none jumping). Squadrons without ships count for nothing. rule: m4-battle-new §11.5
-        return ShipsLive(Side.Alliance) == 0 || ShipsLive(Side.Empire) == 0;
+        return ShipsLive(Side.Collective) == 0 || ShipsLive(Side.Hand) == 0;
     }
 
     private void Leave(NU u)
@@ -907,8 +907,8 @@ public sealed class NewBattle
     private ClassicBattleResult Finish()
     {
         foreach (var u in _u) { u.B.Hull = u.Hull; u.B.Shield = u.Shield; }
-        bool aliveA = ShipsLive(Side.Alliance) > 0, aliveE = ShipsLive(Side.Empire) > 0;
-        bool retA = _u.Any(u => u.Side == Side.Alliance && u.B.Left), retE = _u.Any(u => u.Side == Side.Empire && u.B.Left);
+        bool aliveA = ShipsLive(Side.Collective) > 0, aliveE = ShipsLive(Side.Hand) > 0;
+        bool retA = _u.Any(u => u.Side == Side.Collective && u.B.Left), retE = _u.Any(u => u.Side == Side.Hand && u.B.Left);
         BattleOutcome Outcome(bool alive, bool otherAlive, bool retreated) =>
             alive && !otherAlive ? BattleOutcome.Victorious
             : !alive && otherAlive ? (retreated ? BattleOutcome.Retreated : BattleOutcome.Annihilated)
@@ -918,10 +918,10 @@ public sealed class NewBattle
         return new ClassicBattleResult
         {
             Seconds = _t,
-            AllianceOutcome = Outcome(aliveA, aliveE, retA), EmpireOutcome = Outcome(aliveE, aliveA, retE),
-            AllianceLosses = Lost(Side.Alliance), EmpireLosses = Lost(Side.Empire),
-            AllianceSurvivors = Survived(Side.Alliance), EmpireSurvivors = Survived(Side.Empire),
-            AllianceRetreated = retA, EmpireRetreated = retE,
+            CollectiveOutcome = Outcome(aliveA, aliveE, retA), HandOutcome = Outcome(aliveE, aliveA, retE),
+            CollectiveLosses = Lost(Side.Collective), HandLosses = Lost(Side.Hand),
+            CollectiveSurvivors = Survived(Side.Collective), HandSurvivors = Survived(Side.Hand),
+            CollectiveRetreated = retA, HandRetreated = retE,
             Draws = _rng.Draws,
             Steps = _steps,
         };

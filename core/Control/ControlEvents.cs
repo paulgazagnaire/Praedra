@@ -15,7 +15,7 @@ namespace Praedra.Core.Control;
 public enum CaptureCause
 {
     Debug, Assault,
-    /// <summary>A neutral system of a sector struck twice by the Death Star turns Alliance (AssaultOnly only). rule: m5-death-star §2 effect 7.</summary>
+    /// <summary>A neutral system of a sector struck twice by the Death Star turns Collective (AssaultOnly only). rule: m5-death-star §2 effect 7.</summary>
     DeathStarRevolt,
     /// <summary>Support alone moved the world: no regiments on it before or after. Headlines "Joins", "Joins Enemy", "Declares Neutrality".</summary>
     Support,
@@ -45,7 +45,7 @@ public sealed record UnitLostAtCapture(int Index, int Day, int Object, string Cl
 public sealed record FacilityTransferred(int Index, int Day, int Facility, string Class, string System, Side? From, Side? To)
     : GameEvent(Index, Day, nameof(FacilityTransferred));
 
-/// <summary>A completed facility whose class cannot serve the new side was removed (Death Star Shield when the Alliance takes it or it goes neutral). rule: B5a section 5.</summary>
+/// <summary>A completed facility whose class cannot serve the new side was removed (Death Star Shield when the Collective takes it or it goes neutral). rule: B5a section 5.</summary>
 public sealed record FacilityRemoved(int Index, int Day, int Facility, string Class, string System)
     : GameEvent(Index, Day, nameof(FacilityRemoved));
 

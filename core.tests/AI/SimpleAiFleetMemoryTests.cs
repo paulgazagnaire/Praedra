@@ -5,8 +5,8 @@ using Praedra.Core.Setup;
 namespace Praedra.Core.Tests.AI;
 
 // QA-20 (QA round 34): task forces read the enemy fleets of the side's picture, and a later look at a system replaces its entry, so a big fleet
-// that left a system was forgotten the day the side looked there again (seed 10 Hard Empire vs Medium Alliance: known 43 against a true 227 on
-// day 2000, and the Empire's 240 fleet split into 83/82/63). The side now keeps the strongest enemy fleet it has seen in its AI memory, fading
+// that left a system was forgotten the day the side looked there again (seed 10 Hard Hand vs Medium Collective: known 43 against a true 227 on
+// day 2000, and the Hand's 240 fleet split into 83/82/63). The side now keeps the strongest enemy fleet it has seen in its AI memory, fading
 // the same way (TaskForceFadePercent), and a save carries it. rule: ai tuning, SimpleAiParams.FleetMemory (DEFAULT false, measured; New AI rule,
 // no sheet); m1-clock-and-orders K12 (save, load, continue).
 public class SimpleAiFleetMemoryTests
@@ -28,12 +28,12 @@ public class SimpleAiFleetMemoryTests
         while (host.Game.Day < 400)
         {
             m.Step();
-            double picture = m.Empire.PictureStrongestEnemyFleet(), kept = m.Empire.RememberedFleet();
+            double picture = m.Hand.PictureStrongestEnemyFleet(), kept = m.Hand.RememberedFleet();
             seenMax = Math.Max(seenMax, picture);
             Assert.True(kept <= seenMax + 1e-9, $"day {host.Game.Day}: remembered {kept} above anything the picture showed ({seenMax})");
             if (kept > picture) outlived++;
         }
-        Assert.True(host.AiMemoryFor(Side.Empire, true).FleetSeen > 0, "the Empire remembers no enemy fleet by day 400");
+        Assert.True(host.AiMemoryFor(Side.Hand, true).FleetSeen > 0, "the Hand remembers no enemy fleet by day 400");
         Assert.True(outlived > 0, "the remembered fleet never outlived the picture's entries");
     }
 
@@ -44,14 +44,14 @@ public class SimpleAiFleetMemoryTests
     {
         var host = NewGame.Create(new NewGameOptions { Seed = 3, Preset = StartPreset.MedA });
         new AiMatch(host, Fog(), Fog()).RunTo(400);
-        var mem = host.AiMemoryFor(Side.Empire, true);
+        var mem = host.AiMemoryFor(Side.Hand, true);
         Assert.True(mem.FleetSeen > 0);
 
         string save = host.SaveWithSettings();
         Assert.Contains("\"FleetSeen\":", save);
         var loaded = GameHost.Load(save);
-        Assert.Equal(mem.FleetSeen, loaded.AiMemoryFor(Side.Empire, true).FleetSeen);
-        Assert.Equal(mem.FleetSeenDay, loaded.AiMemoryFor(Side.Empire, true).FleetSeenDay);
+        Assert.Equal(mem.FleetSeen, loaded.AiMemoryFor(Side.Hand, true).FleetSeen);
+        Assert.Equal(mem.FleetSeenDay, loaded.AiMemoryFor(Side.Hand, true).FleetSeenDay);
         Assert.Equal(save, loaded.SaveWithSettings());
 
         var a = new AiMatch(host, Fog(), Fog());
@@ -75,7 +75,7 @@ public class SimpleAiFleetMemoryTests
         Assert.DoesNotContain("FleetSeen", old);
         var loaded = GameHost.Load(old);
         Assert.Equal(host.StateHash(), loaded.StateHash());
-        Assert.Equal(0, loaded.AiMemoryFor(Side.Empire, true).FleetSeen);
-        Assert.Equal(0, loaded.AiMemoryFor(Side.Alliance, true).FleetSeen);
+        Assert.Equal(0, loaded.AiMemoryFor(Side.Hand, true).FleetSeen);
+        Assert.Equal(0, loaded.AiMemoryFor(Side.Collective, true).FleetSeen);
     }
 }

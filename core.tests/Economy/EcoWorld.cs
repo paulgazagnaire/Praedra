@@ -92,11 +92,11 @@ internal sealed class EcoWorld
     public void Run(int steps) { for (int i = 0; i < steps; i++) Game.Step(); }
     public List<T> Events<T>() where T : GameEvent => Game.Events.OfType<T>().ToList();
 
-    /// <summary>Own a system and set the owner's support (Empire or Alliance value as seen by the owner).</summary>
+    /// <summary>Own a system and set the owner's support (Hand or Collective value as seen by the owner).</summary>
     public void Hold(string system, Side side, int supportOfHolder = 100)
     {
         Fleets.SetOwner(system, side);
-        Eco.SetAllianceSupport(system, side == Side.Alliance ? supportOfHolder : 100 - supportOfHolder);
+        Eco.SetCollectiveSupport(system, side == Side.Collective ? supportOfHolder : 100 - supportOfHolder);
     }
 
     public int Mine(string system, bool completed = true, int? id = null) => Eco.AddFacility(system, FacilityKind.Mine, completed, id);

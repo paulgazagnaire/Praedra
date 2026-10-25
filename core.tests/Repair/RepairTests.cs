@@ -18,8 +18,8 @@ public class RepairTests
     private static GameHost Host(ulong seed = 1, GameData? data = null)
     {
         var h = GameHost.New(seed, new GameSettings { IncidentsEnabled = false, Economy = new EconomyParams { ScrapPeriod = 1_000_000 } }, data);
-        h.Fleets.SetOwner(Yard, Side.Empire);
-        h.Fleets.SetOwner(Other, Side.Empire);
+        h.Fleets.SetOwner(Yard, Side.Hand);
+        h.Fleets.SetOwner(Other, Side.Hand);
         Garrison(h, Yard, "Tranches");
         return h;
     }
@@ -47,7 +47,7 @@ public class RepairTests
     {
         var h = Host();
         h.Economy.AddFacility(Yard, FacilityKind.OrbitalShipyard);
-        var (_, isd) = Damaged(h, Side.Empire, Yard);
+        var (_, isd) = Damaged(h, Side.Hand, Yard);
         var hulls = new List<int>(); var sums = new List<int> { StartHits.Sum() };
         for (int day = 1; day <= 8; day++)
         {
@@ -73,7 +73,7 @@ public class RepairTests
         {
             var g = Host();
             g.Economy.AddFacility(Yard, FacilityKind.OrbitalShipyard);
-            if (damaged) Damaged(g, Side.Empire, Yard); else g.Fleets.AddFleet(Side.Empire, "F", new[] { "Mandate" }, Yard);
+            if (damaged) Damaged(g, Side.Hand, Yard); else g.Fleets.AddFleet(Side.Hand, "F", new[] { "Mandate" }, Yard);
             for (int d = 0; d < 8; d++) g.Game.Step();
             return g.Game.Rng.Draws;
         }
@@ -85,8 +85,8 @@ public class RepairTests
     public void B3_25_AwayFromAYardEveryThirtyDays()
     {
         var h = Host();
-        h.Economy.AddFacility(Yard, FacilityKind.AdvancedShipyard); // Empire yard; the Alliance ship there is not at its own yard
-        var ships = new[] { Damaged(h, Side.Empire, Other).isd, Damaged(h, Side.Alliance, Yard).isd };
+        h.Economy.AddFacility(Yard, FacilityKind.AdvancedShipyard); // Hand yard; the Collective ship there is not at its own yard
+        var ships = new[] { Damaged(h, Side.Hand, Other).isd, Damaged(h, Side.Collective, Yard).isd };
         for (int i = 0; i < 29; i++) h.Game.Step();
         Assert.All(ships, s => Assert.Equal(1790, s.Hull));
         h.Game.Step(); // hook time 30
@@ -102,7 +102,7 @@ public class RepairTests
     {
         var h = Host();
         h.Economy.AddFacility(Yard, FacilityKind.OrbitalShipyard);
-        var (f, isd) = Damaged(h, Side.Empire, Yard);
+        var (f, isd) = Damaged(h, Side.Hand, Yard);
         var fleet = h.Game.State.Fleets[f];
         fleet.At = null;
         fleet.Transit = new FleetTransit { Path = new() { Yard, Other }, HopTicks = new() { 50 }, HopIndex = 0, DueDay = 50 };
@@ -118,7 +118,7 @@ public class RepairTests
     {
         var h = Host();
         h.Economy.AddFacility(Yard, FacilityKind.OrbitalShipyard);
-        var (_, isd) = Damaged(h, Side.Empire, Yard);
+        var (_, isd) = Damaged(h, Side.Hand, Yard);
         h.Repair.YardSuspended = s => s == Yard;
         for (int i = 0; i < 29; i++) h.Game.Step();
         Assert.Equal(1790, isd.Hull);
@@ -135,8 +135,8 @@ public class RepairTests
         h.Economy.AddFacility(Yard, FacilityKind.OrbitalShipyard);
         Assert.False(h.Repair.YardSuspended(Yard));
         Assert.True(h.Repair.YardSuspended("The Thaw")); // no owner: suspended
-        Assert.True(h.Repair.FastRepair(Yard, Side.Empire));
-        Assert.False(h.Repair.FastRepair(Yard, Side.Alliance));
+        Assert.True(h.Repair.FastRepair(Yard, Side.Hand));
+        Assert.False(h.Repair.FastRepair(Yard, Side.Collective));
     }
 
     // m4-retreat-damage-repair section 5: a change of the period restarts the timer from that day
@@ -144,7 +144,7 @@ public class RepairTests
     public void ChangeOfPeriodRestartsTheTimer()
     {
         var h = Host();
-        var (_, isd) = Damaged(h, Side.Empire, Yard); // no yard yet: the 30-day timer runs
+        var (_, isd) = Damaged(h, Side.Hand, Yard); // no yard yet: the 30-day timer runs
         for (int i = 0; i < 10; i++) h.Game.Step();
         Assert.Equal(1, isd.RepairMode);
         h.Economy.AddFacility(Yard, FacilityKind.OrbitalShipyard); // day 10: FastRepair from now
@@ -160,7 +160,7 @@ public class RepairTests
     {
         var h = Host();
         h.Economy.AddFacility(Yard, FacilityKind.OrbitalShipyard);
-        int id = h.Economy.AddObject(Side.Empire, "Gleaner", Yard);
+        int id = h.Economy.AddObject(Side.Hand, "Gleaner", Yard);
         var sq = h.Game.State.Economy.Objects[id];
         sq.CraftLost = 5;
         var seen = new List<int>();
@@ -176,7 +176,7 @@ public class RepairTests
     public void CraftLostIsSavedAndHashed()
     {
         var h = Host();
-        int id = h.Economy.AddObject(Side.Empire, "Gleaner", Yard);
+        int id = h.Economy.AddObject(Side.Hand, "Gleaner", Yard);
         string before = GameSave.StateHash(h.Game);
         h.Game.State.Economy.Objects[id].CraftLost = 3;
         Assert.NotEqual(before, GameSave.StateHash(h.Game));
@@ -184,21 +184,21 @@ public class RepairTests
         Assert.Equal(3, g.State.Economy.Objects[id].CraftLost);
     }
 
-    // m4-retreat-damage-repair section 5 (order: side Alliance then Empire, object id ascending)
+    // m4-retreat-damage-repair section 5 (order: side Collective then Hand, object id ascending)
     [Fact]
-    public void AllianceBeforeEmpireThenShipIdAscending()
+    public void CollectiveBeforeHandThenShipIdAscending()
     {
         var h = Host();
-        h.Fleets.SetOwner("The Thaw", Side.Alliance);
+        h.Fleets.SetOwner("The Thaw", Side.Collective);
         Garrison(h, "The Thaw", "Militia");
         h.Economy.AddFacility(Yard, FacilityKind.OrbitalShipyard);
         h.Economy.AddFacility("The Thaw", FacilityKind.OrbitalShipyard);
-        var e1 = Damaged(h, Side.Empire, Yard).isd;
-        var e2 = Damaged(h, Side.Empire, Yard).isd;
-        var a1 = Damaged(h, Side.Alliance, "The Thaw").isd;
+        var e1 = Damaged(h, Side.Hand, Yard).isd;
+        var e2 = Damaged(h, Side.Hand, Yard).isd;
+        var a1 = Damaged(h, Side.Collective, "The Thaw").isd;
         h.Game.Step(); h.Game.Step();
         Assert.Equal(new[] { a1.Id, e1.Id, e2.Id }, Repaired(h).Select(e => e.Ship));
-        Assert.True(a1.Id > e1.Id); // the Alliance ship has the higher id: the side order, not the id, comes first
+        Assert.True(a1.Id > e1.Id); // the Collective ship has the higher id: the side order, not the id, comes first
     }
 
     // m4-retreat-damage-repair section 5: hits alone keep a ship damaged; the hull is capped; a whole ship stops its timer
@@ -207,7 +207,7 @@ public class RepairTests
     {
         var h = Host();
         h.Economy.AddFacility(Yard, FacilityKind.OrbitalShipyard);
-        var (_, isd) = Damaged(h, Side.Empire, Yard, new[] { 0, 0, 0, 0, 1, 0 });
+        var (_, isd) = Damaged(h, Side.Hand, Yard, new[] { 0, 0, 0, 0, 1, 0 });
         isd.Hull = 2750;
         for (int i = 0; i < 60 && isd.Hits!.Sum() > 0; i++) h.Game.Step();
         Assert.Equal(2750, isd.Hull);
@@ -238,8 +238,8 @@ public class RepairTests
         var data = GameData.Default with { Repair = new RepairRules(true, 30, 3, 30, 3, 5) };
         var h = Host(data: data);
         h.Economy.AddFacility(Yard, FacilityKind.OrbitalShipyard);
-        var away = Damaged(h, Side.Empire, Other).isd;
-        var home = Damaged(h, Side.Empire, Yard).isd;
+        var away = Damaged(h, Side.Hand, Other).isd;
+        var home = Damaged(h, Side.Hand, Yard).isd;
         for (int i = 0; i < 3; i++) h.Game.Step();
         Assert.Equal(1790 + 550, home.Hull); // divisor 5, period 3
         for (int i = 0; i < 30; i++) h.Game.Step();
@@ -254,7 +254,7 @@ public class RepairTests
         {
             var h = Host(seed: 7);
             h.Economy.AddFacility(Yard, FacilityKind.OrbitalShipyard);
-            Damaged(h, Side.Empire, Yard);
+            Damaged(h, Side.Hand, Yard);
             for (int i = 0; i < 12; i++) h.Game.Step();
             return string.Join("|", h.Game.Events.Select(e => $"{e.Kind}@{e.Day}")) + h.StateHash();
         }

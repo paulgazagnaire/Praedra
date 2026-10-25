@@ -3,7 +3,7 @@ using Praedra.Core.Clock;
 namespace Praedra.Core.Victory;
 
 /// <summary>
-/// Per-game scenario state, saved and hashed: whether victory is checked, the Rebel HQ system, the explored flags dealt at setup and the
+/// Per-game scenario state, saved and hashed: whether victory is checked, the Hearth system, the explored flags dealt at setup and the
 /// result. rule: setup-victory/04-victory-conditions §3 (HQ-Only mode); setup-victory/09-day-one-state-360 §4 (explored), §5 (HQ).
 /// The HQ itself is <see cref="Hq"/> (m5-fog-and-hq §F5: it can move and be destroyed). The explored flags here are the ones DEALT at setup;
 /// the live per-side knowledge is <see cref="Fog.FogState"/>, which the fog module fills from them.
@@ -12,7 +12,7 @@ public sealed class ScenarioState
 {
     /// <summary>Victory is only checked in a game made by NewGame (a bare GameHost.New has no owners and would end on day 1).</summary>
     public bool Active { get; set; }
-    /// <summary>The Rebel HQ (where it stands, its transit, whether it was destroyed). rule: m5-fog-and-hq §F5 HqState.</summary>
+    /// <summary>The Hearth (where it stands, its transit, whether it was destroyed). rule: m5-fog-and-hq §F5 HqState.</summary>
     public Fog.HqState Hq { get; init; } = new();
 
     /// <summary>
@@ -28,10 +28,10 @@ public sealed class ScenarioState
     /// <summary>The winner, null while the game runs. Set once.</summary>
     public Side? Winner { get; set; }
     public string? WinReason { get; set; }
-    /// <summary>Per system: bit 1 = known to the Empire, bit 2 = known to the Alliance. A system not listed is known to nobody.</summary>
+    /// <summary>Per system: bit 1 = known to the Hand, bit 2 = known to the Collective. A system not listed is known to nobody.</summary>
     public SortedDictionary<string, int> Explored { get; init; } = new(StringComparer.Ordinal);
 
-    public static int Bit(Side s) => s == Side.Empire ? 1 : 2;
+    public static int Bit(Side s) => s == Side.Hand ? 1 : 2;
 
     internal void CopyFrom(ScenarioState o)
     {

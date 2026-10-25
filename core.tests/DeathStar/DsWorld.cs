@@ -17,7 +17,7 @@ internal sealed class DsWorld
 {
     public const string A1 = "A1", A2 = "A2", A3 = "A3", A4 = "A4", A5 = "A5", A6 = "A6", B1 = "B1", B2 = "B2", B3 = "B3";
     public const string DeathStarClass = "Death Star", Isd = "Mandate", Corvette = "Dodger";
-    // character record ids (data/classic/characters.csv): four Alliance minors and two majors
+    // character record ids (data/classic/characters.csv): four Collective minors and two majors
     public const int Luke = 578, Vader = 641, Drayson = 840, Borsk = 841, Tura = 842, Derlin = 843;
     public const string Sa = "SA", Sb = "SB";
 
@@ -51,11 +51,11 @@ internal sealed class DsWorld
         else { Stub = new StubRng(); Host = GameHost.New(Stub, _settings, Data); }
     }
 
-    /// <summary>Owner and Alliance support of a system.</summary>
-    public void Hold(string system, Side? side, int allianceSupport = 50)
+    /// <summary>Owner and Collective support of a system.</summary>
+    public void Hold(string system, Side? side, int collectiveSupport = 50)
     {
         Host.Fleets.SetOwner(system, side);
-        Host.Economy.SetAllianceSupport(system, allianceSupport);
+        Host.Economy.SetCollectiveSupport(system, collectiveSupport);
     }
 
     public int Fleet(Side side, string system, params string[] classes) =>
@@ -86,7 +86,7 @@ internal sealed class DsWorld
 
     public void Run(int steps) { for (int i = 0; i < steps; i++) Game.Step(); }
     public List<T> Events<T>() where T : GameEvent => Game.Events.OfType<T>().ToList();
-    public int Alliance(string system) => Host.Economy.SupportOf(system, Side.Alliance);
+    public int Collective(string system) => Host.Economy.SupportOf(system, Side.Collective);
     public bool Exists(int objectId) => Host.Economy.Find(objectId) != null;
     public bool FleetExists(int fleetId) => Game.State.Fleets.ContainsKey(fleetId);
     public int ShipOf(int fleetId) => Game.State.Fleets[fleetId].Ships[0];

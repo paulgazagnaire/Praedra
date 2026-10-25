@@ -16,8 +16,8 @@ public enum AiRetreatRule { Classic = 0, Fixed = 1 }
 /// </summary>
 public enum ClassicTaskForces { PerUnit = 0, PerSide = 1, Classic = 2 }
 
-/// <summary>Who fires first in a second. EmpireFirst (DEFAULT, Traced B3 §3): the Empire's whole step, then the Alliance's. Simultaneous: both from the same state. rule: m4-battle-classic §3.</summary>
-public enum ClassicFireOrder { EmpireFirst = 0, Simultaneous = 1 }
+/// <summary>Who fires first in a second. HandFirst (DEFAULT, Traced B3 §3): the Hand's whole step, then the Collective's. Simultaneous: both from the same state. rule: m4-battle-classic §3.</summary>
+public enum ClassicFireOrder { HandFirst = 0, Simultaneous = 1 }
 
 /// <summary>
 /// The battle dice. Classic (DEFAULT, Traced B3 §13): a Lehmer generator inside the battle, seed 12345678, made fresh for every battle; the battle
@@ -58,8 +58,8 @@ public sealed record BattleParams
     public bool SubsystemRolls { get; init; } = true;
     /// <summary>DEFAULT Classic (Traced, B3 §2). rule: m4-battle-classic §2.</summary>
     public ClassicTaskForces TaskForces { get; init; } = ClassicTaskForces.Classic;
-    /// <summary>DEFAULT EmpireFirst (Traced, B3 §3). rule: m4-battle-classic §3.</summary>
-    public ClassicFireOrder FireOrder { get; init; } = ClassicFireOrder.EmpireFirst;
+    /// <summary>DEFAULT HandFirst (Traced, B3 §3). rule: m4-battle-classic §3.</summary>
+    public ClassicFireOrder FireOrder { get; init; } = ClassicFireOrder.HandFirst;
     /// <summary>DEFAULT Classic (Traced, B3 §13). rule: m4-battle-classic §1.4.</summary>
     public ClassicBattleRng BattleRng { get; init; } = ClassicBattleRng.Classic;
     /// <summary>DEFAULT Stand Off, for both sides. rule: m4-battle-classic §6.</summary>
@@ -67,17 +67,17 @@ public sealed record BattleParams
     /// <summary>DEFAULT LaneAdjacent. rule: m4-retreat-damage-repair §3.</summary>
     public RetreatMode RetreatMode { get; init; } = RetreatMode.LaneAdjacent;
     /// <summary>
-    /// While the Empire has a working Death Star in the battle, the Alliance's stalemate strength counts as -1, so the Alliance is always the flagged side.
+    /// While the Hand has a working Death Star in the battle, the Collective's stalemate strength counts as -1, so the Collective is always the flagged side.
     /// DEFAULT on (Traced, B3 §12). rule: m4-retreat-damage-repair §2.
     /// </summary>
     public bool DeathStarStalemate { get; init; } = true;
     /// <summary>
-    /// The Empire side is the AI (no human plays it): it always fights (Simulate) and its threshold is the AI's (B6a §2). Filled from the game's side
+    /// The Hand side is the AI (no human plays it): it always fights (Simulate) and its threshold is the AI's (B6a §2). Filled from the game's side
     /// controllers (AiMatch sets both, the Godot opponent its side; <see cref="BattleModule.SetControllers"/>). DEFAULT false. rule: B6a §1, m4-battle-classic §1.3.
     /// </summary>
-    public bool EmpireIsAi { get; init; }
-    /// <summary>Same for the Alliance. DEFAULT false.</summary>
-    public bool AllianceIsAi { get; init; }
+    public bool HandIsAi { get; init; }
+    /// <summary>Same for the Collective. DEFAULT false.</summary>
+    public bool CollectiveIsAi { get; init; }
 
     // ---- Classic's battle generator. rule: m4-battle-classic §1.4 (Traced, B3 §13)
     /// <summary>Seed of the Classic battle generator (0xbc614e). Traced.</summary>

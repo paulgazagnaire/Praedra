@@ -12,18 +12,18 @@ namespace Praedra.Core.Battle;
 /// </summary>
 public sealed class BattleState
 {
-    public int EmpireOnContact { get; set; }
-    public int AllianceOnContact { get; set; }
+    public int HandOnContact { get; set; }
+    public int CollectiveOnContact { get; set; }
     /// <summary>The Step (K) whose battles fill <see cref="Fought"/>; -1 = none yet.</summary>
     public int FoughtDay { get; set; } = -1;
     /// <summary>Object ids (ships and squadrons) that took part in a battle in Step <see cref="FoughtDay"/>, ascending. Stale after that Step: the query checks the day.</summary>
     public List<int> Fought { get; set; } = new();
 
-    public OnContactMode OnContact(Side s) => (OnContactMode)(s == Side.Empire ? EmpireOnContact : AllianceOnContact);
+    public OnContactMode OnContact(Side s) => (OnContactMode)(s == Side.Hand ? HandOnContact : CollectiveOnContact);
 
     internal void CopyFrom(BattleState o)
     {
-        EmpireOnContact = o.EmpireOnContact; AllianceOnContact = o.AllianceOnContact;
+        HandOnContact = o.HandOnContact; CollectiveOnContact = o.CollectiveOnContact;
         FoughtDay = o.FoughtDay; Fought = new List<int>(o.Fought);
     }
 }
@@ -68,13 +68,13 @@ public sealed class BattleModule
     public OnContactMode OnContactOf(Side side) => IsAi(side) ? OnContactMode.Fight : B.OnContact(side);
 
     /// <summary>True when no human plays the side (its controller is the computer). rule: B6a §1.</summary>
-    public bool IsAi(Side s) => s == Side.Empire ? Params.EmpireIsAi : Params.AllianceIsAi;
+    public bool IsAi(Side s) => s == Side.Hand ? Params.HandIsAi : Params.CollectiveIsAi;
 
     /// <summary>
     /// Set the side controllers (fixed at game start; not game state): AiMatch sets both, the Godot opponent its own side. The battle reads them at the
     /// alert. rule: B6a §1 (a side is AI when no human plays it).
     /// </summary>
-    public void SetControllers(bool empireAi, bool allianceAi) => Params = Params with { EmpireIsAi = empireAi, AllianceIsAi = allianceAi };
+    public void SetControllers(bool handAi, bool collectiveAi) => Params = Params with { HandIsAi = handAi, CollectiveIsAi = collectiveAi };
 
     /// <summary>
     /// The AI side's threshold at the Battle Alert, from its own view of the system (B6a §2): 0.9 unless it holds the system with a usable planet squadron;
@@ -137,7 +137,7 @@ public sealed class BattleModule
     {
         if (!Enum.IsDefined(o.Mode)) return OrderResult.Reject(RejectReason.BadValue);
         if (IsAi(o.Side)) return OrderResult.Reject(BattleReject.AiSide);
-        if (o.Side == Side.Empire) B.EmpireOnContact = (int)o.Mode; else B.AllianceOnContact = (int)o.Mode;
+        if (o.Side == Side.Hand) B.HandOnContact = (int)o.Mode; else B.CollectiveOnContact = (int)o.Mode;
         return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
     }
 
@@ -165,7 +165,7 @@ public sealed class BattleModule
         var names = new SortedSet<string>(StringComparer.Ordinal);
         foreach (var f in State.Fleets.Values) if (f.At != null) names.Add(f.At);
         foreach (var o in E.Objects.Values) if (o.Category == ObjectCategory.Fighter && o.Completed && o.System != null && o.AboardShip == 0) names.Add(o.System);
-        var systems = names.Where(s => Present(s, Side.Alliance) && Present(s, Side.Empire)).ToList();
+        var systems = names.Where(s => Present(s, Side.Collective) && Present(s, Side.Hand)).ToList();
         if (systems.Count == 0) return;
 
         // rule: m4-battle-classic §1.4: Classic with ClassicBattleRng = Classic (DEFAULT) makes no game draw (each battle restarts its own fixed
@@ -187,7 +187,7 @@ public sealed class BattleModule
     private Force BuildForce(string sys, ulong seed)
     {
         var force = new Force { System = sys, Seed = seed };
-        foreach (var side in new[] { Side.Alliance, Side.Empire })
+        foreach (var side in new[] { Side.Collective, Side.Hand })
         {
             var fleets = State.Fleets.Values.Where(f => f.At == sys && f.Side == side).ToList();
             var ships = fleets.SelectMany(f => f.Ships).OrderBy(i => i).ToList();
@@ -263,11 +263,11 @@ public sealed class BattleModule
     private void RunBattle(StepContext ctx, int day, Force force, SortedSet<string> touched)
     {
         string sys = force.System;
-        var alliance = force.Units.Where(u => u.Side == Side.Alliance).Select(u => u.ObjectId).ToList();
-        var empire = force.Units.Where(u => u.Side == Side.Empire).Select(u => u.ObjectId).ToList();
-        ctx.Emit((i, _) => new BattleStarted(i, day, sys, new ValueList<int>(alliance), new ValueList<int>(empire)));
+        var collective = force.Units.Where(u => u.Side == Side.Collective).Select(u => u.ObjectId).ToList();
+        var hand = force.Units.Where(u => u.Side == Side.Hand).Select(u => u.ObjectId).ToList();
+        ctx.Emit((i, _) => new BattleStarted(i, day, sys, new ValueList<int>(collective), new ValueList<int>(hand)));
         var alert = new OnContactMode[2];
-        foreach (var s in new[] { Side.Alliance, Side.Empire })
+        foreach (var s in new[] { Side.Collective, Side.Hand })
         {
             var mode = OnContactOf(s);
             alert[(int)s] = mode;
@@ -276,7 +276,7 @@ public sealed class BattleModule
 
         // retreat destinations, fixed before any unit moves. rule: m4-retreat-damage-repair §3
         var dest = new Dictionary<Side, SortedDictionary<string, int>>();
-        foreach (var s in new[] { Side.Alliance, Side.Empire }) dest[s] = ValidRetreatSystems(sys, s);
+        foreach (var s in new[] { Side.Collective, Side.Hand }) dest[s] = ValidRetreatSystems(sys, s);
         var has = new bool[2];
         foreach (var s in dest.Keys) has[(int)s] = dest[s].Count > 0;
 
@@ -288,7 +288,7 @@ public sealed class BattleModule
         {
             var ai = new bool[2];
             var aiThreshold = new double[2];
-            foreach (var s in new[] { Side.Alliance, Side.Empire })
+            foreach (var s in new[] { Side.Collective, Side.Hand })
             {
                 ai[(int)s] = IsAi(s);
                 if (ai[(int)s]) aiThreshold[(int)s] = AiThreshold(sys, s); // rule: B6a §2: once per battle, at the alert
@@ -321,7 +321,7 @@ public sealed class BattleModule
             }
         }
 
-        var left = new Dictionary<Side, bool> { [Side.Alliance] = false, [Side.Empire] = false };
+        var left = new Dictionary<Side, bool> { [Side.Collective] = false, [Side.Hand] = false };
         foreach (var step in result.Steps)
         {
             switch (step)
@@ -340,14 +340,14 @@ public sealed class BattleModule
 
         // relocation of retreating sides: sets were computed above, before anything moved
         touched.Add(sys);
-        foreach (var side in new[] { Side.Alliance, Side.Empire })
+        foreach (var side in new[] { Side.Collective, Side.Hand })
             if (left[side]) Relocate(ctx, day, force, side, dest[side], touched);
 
         foreach (var u in force.Units) B.Fought.Add(u.ObjectId);
         B.Fought.Sort();
 
-        var res = new BattleResult(sys, result.Seconds, result.AllianceOutcome, result.EmpireOutcome,
-            result.AllianceLosses, result.EmpireLosses, result.AllianceSurvivors, result.EmpireSurvivors);
+        var res = new BattleResult(sys, result.Seconds, result.CollectiveOutcome, result.HandOutcome,
+            result.CollectiveLosses, result.HandLosses, result.CollectiveSurvivors, result.HandSurvivors);
         ctx.Emit((i, _) => new BattleEnded(i, day, res));
     }
 
@@ -382,7 +382,7 @@ public sealed class BattleModule
             foreach (int nb in _galaxy.NearOf(from)) dist[_galaxy.Systems[nb].Name] = BaseTo(from, nb);
         else
             dist = PathDistances(from);
-        var enemy = side == Side.Alliance ? Side.Empire : Side.Alliance;
+        var enemy = side == Side.Collective ? Side.Hand : Side.Collective;
         foreach (var (name, d) in dist)
         {
             if (name == sys) continue;

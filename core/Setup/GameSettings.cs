@@ -21,9 +21,9 @@ public sealed record GameSettings
     /// <summary>Numbers and switches of the Anchored deal. Null = the sheet's DEFAULTs.</summary>
     public DealParams? Deal { get; init; }
     /// <summary>
-    /// Place the Classic fixed Rebel HQ forces (<c>hq_unit</c> rows of new-game-forces.csv: 2 Alliance Army, 1 Deckhands, 4 Swift,
+    /// Place the Classic fixed Hearth forces (<c>hq_unit</c> rows of new-game-forces.csv: 2 Collective Army, 1 Deckhands, 4 Swift,
     /// 2 Plough, standing on the HQ system) at setup. DEFAULT off: the Classic setup (part B of batch B4) turns it on together with
-    /// <see cref="MinGarrison"/> 0; on the hand-made forces table alone the Classic garrison rule only makes the Empire richer.
+    /// <see cref="MinGarrison"/> 0; on the hand-made forces table alone the Classic garrison rule only makes the Hand richer.
     /// rule: m5-setup-and-victory §P6, §P7 ([EXE-own] 0x51ad90; B4 §7 step 2).
     /// </summary>
     public bool HqFixedForces { get; init; }
@@ -97,7 +97,7 @@ public sealed record GameSettings
     // ---- control. rule: m2-control-and-capture
     /// <summary>
     /// How control is decided: Derived (Classic: troops on the planet, else support 60 or more) or AssaultOnly (the rule before B5a: support never
-    /// changes control). DEFAULT Derived (Paul's card 2026-10-18 20:42: the only change that made the Rebel AI hard to kill), with the AI's
+    /// changes control). DEFAULT Derived (Paul's card 2026-10-18 20:42: the only change that made the Collective AI hard to kill), with the AI's
     /// Classic garrison floor off (<see cref="Praedra.Core.AI.SimpleAiParams.ClassicGarrisonFloor"/>); AssaultOnly is the new-game option.
     /// rule: m2-control-and-capture §How control changes (B5a decision 1).
     /// </summary>
@@ -143,7 +143,7 @@ public sealed record GameSettings
     /// <summary>Victory switches. Null = all on (DEFAULT).</summary>
     public Praedra.Core.Victory.VictoryRules? Victory { get; init; }
 
-    // ---- fog of war and the Rebel HQ. rule: m5-fog-and-hq §Defaults for undecided items
+    // ---- fog of war and the Hearth. rule: m5-fog-and-hq §Defaults for undecided items
     /// <summary>Fog switches (ruleset, Core reports, passing fleets, recon, presence reveals HQ, sector clue, observed window, start full copy). Null = the sheet's DEFAULTs.</summary>
     public Praedra.Core.Fog.FogParams? Fog { get; init; }
     /// <summary>HQ move and loss switches and numbers (speed, cost, departure refusal, arrival support effect, capture rule). Null = the sheet's DEFAULTs.</summary>

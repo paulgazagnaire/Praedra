@@ -89,10 +89,10 @@ public sealed class ConstructionState
     /// <summary>Projects by system name (ordinal), then family id (0x28, 0x29, 0x2a): the processing order of slot 6.6.b.</summary>
     public SortedDictionary<string, SortedDictionary<int, Project>> Projects { get; init; } = new(StringComparer.Ordinal);
     public SortedDictionary<int, Delivery> Deliveries { get; init; } = new();
-    public SideConstruction Empire { get; init; } = new();
-    public SideConstruction Alliance { get; init; } = new();
+    public SideConstruction Hand { get; init; } = new();
+    public SideConstruction Collective { get; init; } = new();
 
-    public SideConstruction Of(Side s) => s == Side.Empire ? Empire : Alliance;
+    public SideConstruction Of(Side s) => s == Side.Hand ? Hand : Collective;
 
     public Project? Find(string system, YardFamily family) =>
         Projects.TryGetValue(system, out var by) && by.TryGetValue((int)family, out var p) ? p : null;
@@ -123,7 +123,7 @@ public sealed class ConstructionState
                 mine[kv.Key] = kv.Value;
             }
         foreach (var kv in o.Deliveries) Deliveries[kv.Key] = kv.Value;
-        Empire.CopyFrom(o.Empire);
-        Alliance.CopyFrom(o.Alliance);
+        Hand.CopyFrom(o.Hand);
+        Collective.CopyFrom(o.Collective);
     }
 }

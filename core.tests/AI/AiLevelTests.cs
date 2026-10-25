@@ -72,7 +72,7 @@ public class AiLevelTests
 
     // ai/09 §6 row "concurrent offensive jobs": with MaxOffensives 1 the side never has two armed fleets (scouts aside) flying at once to
     // systems it does not hold. Measured on seed 2: 1 at most over 500 days.
-    // A leg that only stops on the way to a held system is no offensive (2026-10-17, merge of main #57 into m0/importer: on seed 2 the Empire
+    // A leg that only stops on the way to a held system is no offensive (2026-10-17, merge of main #57 into m0/importer: on seed 2 the Hand
     // sent fleets 329 on day 391 and 557 on day 397 to relieve Ilanga, a held system under threat; the way was blocked, so each order flew the
     // first leg of the way around, to neutral Novy Rynek, and the two were counted as two offensives at once on days 397-398. Relief is allowed
     // at any count, SimpleAiParams.MaxOffensives).
@@ -87,20 +87,20 @@ public class AiLevelTests
         for (int day = 0; day < 500; day++)
         {
             m.Step();
-            foreach (var o in m.Empire.Submitted.Concat(m.Alliance.Submitted).Where(o => o.Kind == "Move"))
+            foreach (var o in m.Hand.Submitted.Concat(m.Collective.Submitted).Where(o => o.Kind == "Move"))
             {
                 var w = o.Detail.Split(' ');
                 int id = int.Parse(w[1]); int k = o.Detail.IndexOf(SimpleAi.OnTheWayTo, StringComparison.Ordinal);
                 if (k >= 0) goal[id] = o.Detail[(k + SimpleAi.OnTheWayTo.Length)..]; else goal.Remove(id);
             }
-            foreach (var side in new[] { Side.Empire, Side.Alliance })
+            foreach (var side in new[] { Side.Hand, Side.Collective })
             {
                 int n = h.Game.State.Fleets.Values.Count(f => f.Side == side && f.Ships.Count > 0 && f.Transit is { } t && h.Fleets.OwnerOf(t.Path[^1]) != side
                                                              && !(goal.TryGetValue(f.Id, out var g) && h.Fleets.OwnerOf(g) == side)
                                                              && h.Fleets.StrengthOf(f) > 0 && !IsScout(h, f));
                 worst = Math.Max(worst, n);
             }
-            launches += m.Empire.Submitted.Concat(m.Alliance.Submitted).Count(o => o.Kind == "Move");
+            launches += m.Hand.Submitted.Concat(m.Collective.Submitted).Count(o => o.Kind == "Move");
         }
         _out.WriteLine($"most armed fleets flying to systems not held at once: {worst}; moves {launches}");
         Assert.True(worst <= 1, $"{worst} armed fleets flew to systems not held at once");

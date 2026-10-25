@@ -145,8 +145,8 @@ public sealed class AssaultModule
 
     // ================================================================== slot 5.2
 
-    /// <summary>The sheet numbers the sides 1 = Alliance, 2 = Empire (side 3 is neutral): "side 1 first". rule: m3-assault §Resolution (two sides, one neutral system).</summary>
-    private static int SideRank(Side s) => s == Side.Alliance ? 1 : 2;
+    /// <summary>The sheet numbers the sides 1 = Collective, 2 = Hand (side 3 is neutral): "side 1 first". rule: m3-assault §Resolution (two sides, one neutral system).</summary>
+    private static int SideRank(Side s) => s == Side.Collective ? 1 : 2;
 
     private sealed class Att { public required AboardRegiment R; public bool Dead; }
 

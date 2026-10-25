@@ -54,7 +54,7 @@ public enum ObjectCategory { Facility = 0, CapitalShip = 1, Fighter = 2, Regimen
 
 /// <summary>One row of unit-and-facility-costs.csv (data/classic, read from the Classic files by importer/; the Sensor Station row is data/design).</summary>
 public sealed record CostRow(ObjectCategory Category, string Name, int Cost, int Maintenance, int ResearchOrder,
-    bool Alliance = true, bool Empire = true);
+    bool Collective = true, bool Hand = true);
 
 /// <summary>
 /// Refined cost and maintenance per class, from data/classic/unit-and-facility-costs.csv (the importer's copy of the Classic files) merged with
@@ -101,7 +101,7 @@ public sealed class CostData
             };
             int cost = t.GetInt(r, "cost"), maint = t.GetInt(r, "maint");
             if (cost < 0 || maint < 0) throw new DataLoadException($"{t.Where(r)}: '{name}' has a negative cost or maintenance.");
-            if (!rows.TryAdd(name, new CostRow(cat, name, cost, maint, t.GetInt(r, "rorder"), t.GetInt(r, "alliance") != 0, t.GetInt(r, "empire") != 0)))
+            if (!rows.TryAdd(name, new CostRow(cat, name, cost, maint, t.GetInt(r, "rorder"), t.GetInt(r, "collective") != 0, t.GetInt(r, "hand") != 0)))
                 throw new DataLoadException($"{t.Where(r)}: class name '{name}' appears twice.");
         }
         return new CostData(rows);

@@ -10,7 +10,7 @@ namespace PraedraViewer;
 
 /// <summary>
 /// Playtest of the Death Star screens (rule: m5-death-star). The core's setup helper puts a Death Star fleet at a system (test only: a real game
-/// builds one at a shipyard). The Empire presses Destroy System and confirms; the Alliance sees the enemy strike on its own screen and checks that
+/// builds one at a shipyard). The Hand presses Destroy System and confirms; the Collective sees the enemy strike on its own screen and checks that
 /// Death Star Sabotage can pick the system. Both then step a day and check the core, the map, the panel and the messages.
 /// </summary>
 public partial class Main
@@ -21,14 +21,14 @@ public partial class Main
         GD.Print("--- death star");
         gs.View.Select(-1); gs.PlayRefresh();
 
-        // a free Alliance agent who can do Death Star Sabotage (the planner test); its system picks where the Death Star stands
-        CharacterRecord agent = me == Side.Alliance
+        // a free Collective agent who can do Death Star Sabotage (the planner test); its system picks where the Death Star stands
+        CharacterRecord agent = me == Side.Collective
             ? s.MyCharacters.Where(c => cm.IsAvailable(c) && c.Transit == null && c.System != null && mm.CanDo(c, MissionKind.DeathStarSabotage)).OrderBy(c => c.Id).FirstOrDefault()
             : null;
         int Ticks(string a, string b) => fm.FindPath(a, b, 100) is { Ok: true } p ? p.TotalTicks : int.MaxValue;
         string hq = s.MyHqSystem, enemyHq = s.EnemyHqSystem;
         // a neutral system in a sector, nobody there, not a capital or HQ (destroying one would end the game)
-        var cands = gs.G.Systems.Where(x => !x.IsOutsideSectors && s.OwnerOf(x.Name) == null && x.Name != hq && x.Name != enemyHq && x.Name != GameBoot.EmpireCapital && x.Name != "Charter"
+        var cands = gs.G.Systems.Where(x => !x.IsOutsideSectors && s.OwnerOf(x.Name) == null && x.Name != hq && x.Name != enemyHq && x.Name != GameBoot.HandCapital && x.Name != "Charter"
                 && !s.Game.State.Fleets.Values.Any(f => f.At == x.Name) && !s.Game.State.DeathStar.IsDestroyed(x.Name)
                 && (agent == null || Ticks(agent.System, x.Name) < int.MaxValue))
             .Select(x => x.Name).OrderBy(n => agent == null ? 0 : Ticks(agent.System, n)).ThenBy(n => n, StringComparer.Ordinal).ToList();
@@ -38,11 +38,11 @@ public partial class Main
         var star = gs.G.Get(target);
         GD.Print($"  Death Star fleet at {target} (sector {star.Sector})");
 
-        int dsFleet = fm.AddFleet(Side.Empire, "DS Strike", new[] { Praedra.Core.DeathStar.DeathStarModule.ShipClass }, target);
+        int dsFleet = fm.AddFleet(Side.Hand, "DS Strike", new[] { Praedra.Core.DeathStar.DeathStarModule.ShipClass }, target);
         var fleet = s.Game.State.Fleets[dsFleet];
-        Expect(s.HoldsDeathStar(fleet) && ds.HasDeathStar(Side.Empire, target), $"the core says the Empire has a Death Star at {target}");
+        Expect(s.HoldsDeathStar(fleet) && ds.HasDeathStar(Side.Hand, target), $"the core says the Hand has a Death Star at {target}");
 
-        if (me == Side.Empire)
+        if (me == Side.Hand)
         {
             // ---- Fleet panel: the button, the confirm dialog, the order
             SelectFleetByList(gs, fleet);
@@ -61,15 +61,15 @@ public partial class Main
         var strikesBefore = ds.StrikesIn(star.Sector);
         int before = s.Messages.Count;
         bool? cont = null;
-        if (me == Side.Alliance)
+        if (me == Side.Collective)
         {
-            // ---- Alliance: the Empire's strike is queued through the core (as the computer side would), and the computer side sits out these days:
+            // ---- Collective: the Hand's strike is queued through the core (as the computer side would), and the computer side sits out these days:
             // its upkeep scrapping would remove a 600-upkeep ship that only exists in this test.
             s.OpponentIdle = true;
-            long seq = ds.SubmitDestroySystem(Side.Empire, dsFleet);
-            Expect(seq > 0, "the Empire's Destroy System order is queued in the core");
+            long seq = ds.SubmitDestroySystem(Side.Hand, dsFleet);
+            Expect(seq > 0, "the Hand's Destroy System order is queued in the core");
             // Death Star Sabotage can pick the system where the enemy Death Star stands
-            Expect(agent != null, "a free Alliance agent can do Death Star Sabotage");
+            Expect(agent != null, "a free Collective agent can do Death Star Sabotage");
             if (agent != null)
             {
                 string name = s.CharName(agent.Id);
@@ -103,7 +103,7 @@ public partial class Main
         string panel = gs.PanelText();
         Expect(panel.Contains($"Destroyed by the Death Star on day {s.Game.Day}") , "the panel says when it was destroyed: " + panel.Replace("\n", " / "));
         Expect(!panel.Contains("Build") && !gs.Has("Invade") && !gs.Has("Send a mission from") && !panel.Contains("Owner:"), "the destroyed system offers no build, invade or mission actions");
-        if (me == Side.Empire)
+        if (me == Side.Hand)
         {
             SelectFleetByList(gs, fleet);
             Expect(gs.Has("Destroy System") && !gs.Enabled("Destroy System") && gs.PanelText().Contains("already destroyed"), "Destroy System is greyed out at a destroyed system");
@@ -118,7 +118,7 @@ public partial class Main
                 .Select(o => o.System).OrderBy(x => x, StringComparer.Ordinal).FirstOrDefault();
             if (yard != null)
             {
-                fm.AddFleet(Side.Empire, "DS Guard", new[] { Praedra.Core.DeathStar.DeathStarModule.ShipClass }, yard);
+                fm.AddFleet(Side.Hand, "DS Guard", new[] { Praedra.Core.DeathStar.DeathStarModule.ShipClass }, yard);
                 gs.SelectSystem(yard); gs.PlayRefresh();
                 gs.Click(">  Ships"); gs.PlayRefresh();
                 string row = gs.ButtonTexts().FirstOrDefault(t => t.StartsWith("Death Star   ", StringComparison.Ordinal));

@@ -1,17 +1,17 @@
-name,start_owner,start_alliance_support,start_weak,start_explored_all,start_explored_owner,is_hq,sector,group,on_route
-Feldspar,Empire,12,0,0,1,0,Feldspar Sector,inner_rim,1
+name,start_owner,start_collective_support,start_weak,start_explored_all,start_explored_owner,is_hq,sector,group,on_route
+Feldspar,Hand,12,0,0,1,0,Feldspar Sector,inner_rim,1
 Umoya,neutral,50,0,0,0,0,Highfall Sector,outer_rim,1
 Seven Keys,neutral,50,0,0,0,0,Ciénaga Sector,outer_rim,0
-Second Spring,Alliance,62,0,0,1,0,Pulau Hijau Sector,outer_rim,0
+Second Spring,Collective,62,0,0,1,0,Pulau Hijau Sector,outer_rim,0
 Truce Moor,neutral,50,0,0,0,0,Rauchtal Sector,outer_rim,0
 Westerholm,neutral,50,0,0,0,0,Rauchtal Sector,outer_rim,1
 Erg Lahmar,neutral,50,0,0,0,0,Rauchtal Sector,outer_rim,0
-Highmere,Empire,11,0,0,1,0,Pulau Hijau Sector,outer_rim,1
+Highmere,Hand,11,0,0,1,0,Pulau Hijau Sector,outer_rim,1
 Shiree,neutral,50,0,0,0,0,Pulau Hijau Sector,outer_rim,0
 Broadacre,neutral,50,0,0,0,0,Pulau Hijau Sector,outer_rim,0
-Undergrowth,Alliance,62,0,0,1,0,Mata Alta Sector,outer_rim,1
+Undergrowth,Collective,62,0,0,1,0,Mata Alta Sector,outer_rim,1
 The Stumps,neutral,50,0,0,0,0,Drift Harbour Sector,outer_rim,0
-Longgrass,Empire,13,0,0,1,0,Ilanga Sector,outer_rim,0
+Longgrass,Hand,13,0,0,1,0,Ilanga Sector,outer_rim,0
 Ashgarden,neutral,50,0,0,0,0,Zlatna Sector,outer_rim,1
 The Ladle,neutral,50,0,0,0,0,Drift Harbour Sector,outer_rim,0
 Whetstone,neutral,50,0,0,0,0,Mata Alta Sector,outer_rim,0
@@ -21,65 +21,65 @@ Ventstown,neutral,50,0,0,0,0,Lantern Sector,outer_rim,1
 Kelpfast,neutral,50,0,0,0,0,Mata Alta Sector,outer_rim,1
 Hundred Lakes,neutral,50,0,0,0,0,Hundred Lakes Sector,outer_rim,1
 Sweetsea,neutral,50,0,0,0,0,Nebbia Sector,outer_rim,0
-Holdfast,Alliance,60,0,0,1,0,Fallout Sector,outer_rim,0
-Mata Alta,Alliance,72,0,0,1,0,Mata Alta Sector,outer_rim,0
+Holdfast,Collective,60,0,0,1,0,Fallout Sector,outer_rim,0
+Mata Alta,Collective,72,0,0,1,0,Mata Alta Sector,outer_rim,0
 Awlbridge,neutral,50,0,0,0,0,Hundred Lakes Sector,outer_rim,0
 The Lantern,neutral,50,0,0,0,0,Lantern Sector,outer_rim,1
 Stewpot,neutral,50,0,0,0,0,Hundred Lakes Sector,outer_rim,0
-Long Strike,Alliance,68,0,0,1,0,Hundred Lakes Sector,outer_rim,1
+Long Strike,Collective,68,0,0,1,0,Hundred Lakes Sector,outer_rim,1
 Duskwater,neutral,50,0,0,0,0,Hundred Lakes Sector,outer_rim,0
 Make Do,neutral,50,0,0,0,0,Longwire Sector,outer_rim,0
 Hard Winter,neutral,50,0,0,0,0,Longwire Sector,outer_rim,1
-Rustwell,Alliance,74,0,0,1,0,Thaw Sector,outer_rim,1
+Rustwell,Collective,74,0,0,1,0,Thaw Sector,outer_rim,1
 Drift Harbour,neutral,50,0,0,0,0,Drift Harbour Sector,outer_rim,0
 Weirholm,neutral,50,0,0,0,0,Fairhaven Sector,outer_rim,0
 Mudlark,neutral,50,0,0,0,0,Ironbeach Sector,outer_rim,0
-The Thaw,Alliance,68,0,0,1,0,Thaw Sector,outer_rim,0
+The Thaw,Collective,68,0,0,1,0,Thaw Sector,outer_rim,0
 Kamenitsa,neutral,50,0,0,0,0,Mechane Sector,inner_rim,1
 Verdemar,neutral,50,0,0,0,0,Ashfall Sector,inner_rim,1
-Hardscrabble,Empire,15,0,0,1,0,Shelter Sector,outer_rim,1
+Hardscrabble,Hand,15,0,0,1,0,Shelter Sector,outer_rim,1
 Tyomny Les,neutral,50,0,0,0,0,Fairhaven Sector,outer_rim,0
-Porphyry,Empire,15,0,0,1,0,Mechane Sector,inner_rim,1
-Classis,Empire,29,0,0,1,0,Classis Sector,inner_rim,1
-Magnetite III,Empire,20,0,1,1,0,Ommata Sector,core,1
+Porphyry,Hand,15,0,0,1,0,Mechane Sector,inner_rim,1
+Classis,Hand,29,0,0,1,0,Classis Sector,inner_rim,1
+Magnetite III,Hand,20,0,1,1,0,Ommata Sector,core,1
 Hiberna,neutral,56,0,1,0,0,Ommata Sector,core,1
-Beryl,Empire,16,0,0,1,0,Classis Sector,inner_rim,1
-Marmor,Empire,30,0,0,1,0,Classis Sector,inner_rim,1
+Beryl,Hand,16,0,0,1,0,Classis Sector,inner_rim,1
+Marmor,Hand,30,0,0,1,0,Classis Sector,inner_rim,1
 Bina Minor,neutral,53,0,1,0,0,Ommata Sector,core,1
-Bina Major,Empire,66,1,1,1,0,Castra Sector,core,1
-Loess,Empire,15,0,0,1,0,Classis Sector,inner_rim,1
+Bina Major,Hand,66,1,1,1,0,Castra Sector,core,1
+Loess,Hand,15,0,0,1,0,Classis Sector,inner_rim,1
 Nutrix,neutral,44,0,1,0,0,Ommata Sector,core,1
 Tarrow,neutral,56,0,1,0,0,Tarrow Sector,core,1
 Serra Alta,neutral,52,0,1,0,0,Tarrow Sector,core,1
 Valle Hondo,neutral,45,0,1,0,0,Charter Sector,core,1
-Seafold,Empire,27,0,0,1,0,Ilanga Sector,outer_rim,1
+Seafold,Hand,27,0,0,1,0,Ilanga Sector,outer_rim,1
 Kilele,neutral,50,0,0,0,0,Caminus Sector,outer_rim,1
 Belmare,neutral,45,0,1,0,0,Charter Sector,core,1
 Stibium,neutral,41,0,1,0,0,Excubia Sector,core,1
 Corundum,neutral,50,0,0,0,0,Thesauros Sector,outer_rim,0
 Kloof,neutral,50,0,0,0,0,Salitre Sector,outer_rim,1
 Saltwood,neutral,46,0,1,0,0,Excubia Sector,core,1
-Semeion,Alliance,86,0,0,1,0,Semeion Sector,inner_rim,1
+Semeion,Collective,86,0,0,1,0,Semeion Sector,inner_rim,1
 Ostwerk,neutral,50,0,0,0,0,Nebbia Sector,outer_rim,1
 Clanmoor,neutral,50,0,0,0,0,Rauchtal Sector,outer_rim,1
 Khamsin,neutral,50,0,0,0,0,Nebbia Sector,outer_rim,1
 Fairhaven,neutral,50,0,0,0,0,Fairhaven Sector,outer_rim,0
 Stopgap,neutral,50,0,0,0,0,Bellwether Sector,inner_rim,1
-Pale Ridge,Alliance,68,0,0,1,0,Zlatna Sector,outer_rim,1
+Pale Ridge,Collective,68,0,0,1,0,Zlatna Sector,outer_rim,1
 Hutan Raya,neutral,50,0,0,0,0,Bauxite IV Sector,outer_rim,0
-Castellum,Empire,29,0,0,1,0,Lesnaya Sector,inner_rim,1
+Castellum,Hand,29,0,0,1,0,Lesnaya Sector,inner_rim,1
 Nyika,neutral,50,0,0,0,0,Thesauros Sector,outer_rim,1
-Halite,Empire,13,0,0,1,0,Bauxite IV Sector,outer_rim,1
+Halite,Hand,13,0,0,1,0,Bauxite IV Sector,outer_rim,1
 Cristalina,neutral,50,0,0,0,0,Caza Real Sector,inner_rim,1
 Vinograd,neutral,50,0,0,0,0,Vinograd Sector,inner_rim,1
-Custodia,Empire,36,0,0,1,0,Ferraria Sector,inner_rim,1
+Custodia,Hand,36,0,0,1,0,Ferraria Sector,inner_rim,1
 Tranquilla,neutral,50,0,0,0,0,Longtide Sector,inner_rim,1
 Arithmos,neutral,59,0,1,0,0,Excubia Sector,core,1
-Ardlinn,Empire,15,0,1,1,0,Excubia Sector,core,1
+Ardlinn,Hand,15,0,1,1,0,Excubia Sector,core,1
 Whitmark,neutral,50,0,0,0,0,Three Lamps Sector,inner_rim,1
 Puerto Ceniza,neutral,50,0,1,0,0,Tarrow Sector,core,1
 Disciplina,neutral,54,0,1,0,0,Excubia Sector,core,1
-Ferraria,Empire,32,0,0,1,0,Ferraria Sector,inner_rim,1
+Ferraria,Hand,32,0,0,1,0,Ferraria Sector,inner_rim,1
 Mirabel,neutral,50,0,0,0,0,Mirabel Sector,inner_rim,1
 Sevenwells,neutral,57,0,1,0,0,Tarrow Sector,core,1
 Bela Voda,neutral,50,0,1,0,0,Excubia Sector,core,1
@@ -87,7 +87,7 @@ Horasis,neutral,50,0,0,0,0,Bosque Alto Sector,inner_rim,1
 Tierra Larga,neutral,50,0,0,0,0,Bosque Alto Sector,inner_rim,1
 Horsemarch,neutral,54,0,1,0,0,Tarrow Sector,core,1
 Pulau Hijau,neutral,50,0,0,0,0,Pulau Hijau Sector,outer_rim,0
-Granero,Empire,18,0,0,1,0,Lesnaya Sector,inner_rim,1
+Granero,Hand,18,0,0,1,0,Lesnaya Sector,inner_rim,1
 Tinderland,neutral,50,0,0,0,0,Ulaan Tal Sector,outer_rim,0
 Vinculum,neutral,50,0,0,0,0,Vinculum Sector,inner_rim,1
 Isbrand,neutral,50,0,0,0,0,Vinculum Sector,inner_rim,1
@@ -98,11 +98,11 @@ Alabaster,neutral,50,0,0,0,0,Incus Sector,inner_rim,1
 Pescadora,neutral,50,0,0,0,0,Muster Rock Sector,outer_rim,0
 Treaty Wood,neutral,50,0,0,0,0,Semeion Sector,inner_rim,0
 Otium,neutral,50,0,0,0,0,Vinculum Sector,inner_rim,1
-Craterhold,Empire,72,1,0,1,0,Incus Sector,inner_rim,1
+Craterhold,Hand,72,1,0,1,0,Incus Sector,inner_rim,1
 Kaolin,neutral,50,0,0,0,0,Three Lamps Sector,inner_rim,1
 Marga,neutral,50,0,0,0,0,Dunmere Sector,outer_rim,0
 Thesauros,neutral,50,0,0,0,0,Thesauros Sector,outer_rim,0
-Vexillum,Empire,27,0,0,1,0,Thesauros Sector,outer_rim,1
+Vexillum,Hand,27,0,0,1,0,Thesauros Sector,outer_rim,1
 Brannock,neutral,50,0,0,0,0,Solacia Sector,outer_rim,0
 Bluefathom,neutral,50,0,0,0,0,Thesauros Sector,outer_rim,0
 Skerrholm,neutral,50,0,0,0,0,Thesauros Sector,outer_rim,1
@@ -112,18 +112,18 @@ Silberberg,neutral,50,0,0,0,0,Thesauros Sector,outer_rim,0
 Krasny Yar,neutral,50,0,0,0,0,Rio Lodo Sector,outer_rim,0
 Morrowfield,neutral,50,0,0,0,0,Akousma Sector,inner_rim,1
 Ribeira,neutral,50,0,0,0,0,Lenitas Sector,inner_rim,1
-Four Lamps,Empire,30,0,0,1,0,Akousma Sector,inner_rim,1
+Four Lamps,Hand,30,0,0,1,0,Akousma Sector,inner_rim,1
 The Notch,neutral,50,0,0,0,0,Lantern Sector,outer_rim,1
 Vrijhaven,neutral,50,0,0,0,0,Nebbia Sector,outer_rim,0
 Mirrorfield,neutral,50,0,0,0,0,Fallout Sector,outer_rim,0
 Viridia,neutral,50,0,0,0,0,Quieta Sector,inner_rim,1
 Rio Turvo,neutral,50,0,0,0,0,Thesauros Sector,outer_rim,0
 Brennhof,neutral,56,0,1,0,0,Tarrow Sector,core,1
-Skylark,Empire,34,0,0,1,0,Caminus Sector,outer_rim,1
+Skylark,Hand,34,0,0,1,0,Caminus Sector,outer_rim,1
 Warmwell,neutral,50,0,0,0,0,Quieta Sector,inner_rim,1
 Opsis,neutral,50,0,0,0,0,Kranholm Sector,outer_rim,0
 Sedova,neutral,50,0,0,0,0,Tormentum Sector,inner_rim,1
-Fallow,Alliance,82,0,0,1,0,Mata Alta Sector,outer_rim,0
+Fallow,Collective,82,0,0,1,0,Mata Alta Sector,outer_rim,0
 Kairos,neutral,50,0,0,0,0,Varmdal Sector,outer_rim,1
 Ilhas Fundas,neutral,50,0,0,0,0,Kranholm Sector,outer_rim,1
 Lesnaya,neutral,50,0,0,0,0,Lesnaya Sector,inner_rim,1
@@ -138,14 +138,14 @@ Ferrite IV,neutral,50,0,0,0,0,Lesnaya Sector,inner_rim,1
 Farrow,neutral,50,0,0,0,0,Hundred Lakes Sector,outer_rim,0
 Agmen,neutral,50,0,0,0,0,Quieta Sector,inner_rim,1
 Fernhollow,neutral,50,0,0,0,0,Fallout Sector,outer_rim,0
-Bitterwell,Alliance,90,0,0,1,0,Greenfever Sector,outer_rim,0
+Bitterwell,Collective,90,0,0,1,0,Greenfever Sector,outer_rim,0
 Hollenvale,neutral,50,0,0,0,0,Thaw Sector,outer_rim,1
 Nueva Pradera,neutral,50,0,0,0,0,Caza Real Sector,inner_rim,1
-Oionos,Empire,28,0,0,1,0,Mechane Sector,inner_rim,1
-Wrenfield,Empire,18,0,0,1,0,Ferraria Sector,inner_rim,1
+Oionos,Hand,28,0,0,1,0,Mechane Sector,inner_rim,1
+Wrenfield,Hand,18,0,0,1,0,Ferraria Sector,inner_rim,1
 Alvorada,neutral,50,0,0,0,0,Cohors Sector,outer_rim,0
-Consolatio,Empire,27,0,1,1,0,Castra Sector,core,1
-Dulcia,Empire,38,0,0,1,0,Incus Sector,inner_rim,1
+Consolatio,Hand,27,0,1,1,0,Castra Sector,core,1
+Dulcia,Hand,38,0,0,1,0,Incus Sector,inner_rim,1
 Altamesa,neutral,50,0,0,0,0,Classis Sector,inner_rim,1
 Laterite,neutral,50,0,0,0,0,Laterite Sector,outer_rim,0
 Amargura,neutral,50,0,0,0,0,Pulau Hijau Sector,outer_rim,1
@@ -162,22 +162,22 @@ Feudgrass,neutral,50,0,0,0,0,Salitre Sector,outer_rim,1
 Three Lamps,neutral,50,0,0,0,0,Three Lamps Sector,inner_rim,0
 Tormentum,neutral,50,0,0,0,0,Tormentum Sector,inner_rim,1
 Las Presas,neutral,50,0,0,0,0,Caminus Sector,outer_rim,0
-Lenitas,Empire,57,0,0,1,0,Lenitas Sector,inner_rim,1
+Lenitas,Hand,57,0,0,1,0,Lenitas Sector,inner_rim,1
 Waymeet,neutral,50,0,0,0,0,Caza Real Sector,inner_rim,1
-Charter,Empire,0,0,1,1,0,Charter Sector,core,1
+Charter,Hand,0,0,1,1,0,Charter Sector,core,1
 Mollis,neutral,50,0,0,0,0,Incus Sector,inner_rim,1
 Hoshimachi,neutral,50,0,0,0,0,Rio Lodo Sector,outer_rim,1
 Mossgarden,neutral,50,0,0,0,0,Eldingar Sector,outer_rim,0
 Lindenfall,neutral,50,0,0,0,0,Fyrholm Sector,outer_rim,1
-Akousma,Empire,36,0,0,1,0,Akousma Sector,inner_rim,1
+Akousma,Hand,36,0,0,1,0,Akousma Sector,inner_rim,1
 Gemelos,neutral,50,0,0,0,0,Three Lamps Sector,inner_rim,1
-The Moorings,Alliance,66,0,0,1,0,Moorings Sector,outer_rim,1
+The Moorings,Collective,66,0,0,1,0,Moorings Sector,outer_rim,1
 Havdal,neutral,50,0,0,0,0,Caminus Sector,outer_rim,1
 Statio,neutral,50,0,0,0,0,Akousma Sector,inner_rim,1
-Hlubina,Empire,10,0,0,1,0,Sendero Sector,outer_rim,1
+Hlubina,Hand,10,0,0,1,0,Sendero Sector,outer_rim,1
 Longwire,neutral,50,0,0,0,0,Longwire Sector,outer_rim,1
 Kranholm,neutral,50,0,0,0,0,Kranholm Sector,outer_rim,0
-Caminus,Empire,58,0,0,1,0,Caminus Sector,outer_rim,1
+Caminus,Hand,58,0,0,1,0,Caminus Sector,outer_rim,1
 Voluptas,neutral,50,0,0,0,0,Lenitas Sector,inner_rim,1
 Caza Real,neutral,50,0,0,0,0,Caza Real Sector,inner_rim,1
 Side Gate,neutral,50,0,0,0,0,Shelter Sector,outer_rim,0
@@ -185,31 +185,31 @@ Opifex,neutral,50,0,0,0,0,Ashfall Sector,inner_rim,0
 Ostrog,neutral,50,0,0,0,0,Highfall Sector,outer_rim,0
 Longtide,neutral,50,0,0,0,0,Longtide Sector,inner_rim,1
 Kaskela,neutral,50,0,0,0,0,Ashfall Sector,inner_rim,1
-Glassfield,Alliance,64,0,0,1,0,Altofen Sector,inner_rim,1
+Glassfield,Collective,64,0,0,1,0,Altofen Sector,inner_rim,1
 Specula,neutral,50,0,0,0,0,Three Lamps Sector,inner_rim,1
 Folio,neutral,50,0,0,0,0,Altofen Sector,inner_rim,1
-The Shoal,Alliance,100,0,1,1,0,Greenfever Sector,outer_rim,1
+The Shoal,Collective,100,0,1,1,0,Greenfever Sector,outer_rim,1
 Paydirt,neutral,50,0,0,0,0,Longtide Sector,inner_rim,1
 Ironbeach,neutral,50,0,0,0,0,Ironbeach Sector,outer_rim,0
 Barro Rojo,neutral,50,0,0,0,0,Rio Lodo Sector,outer_rim,1
-Ardlow,Empire,33,0,0,1,0,Slate Hill Sector,outer_rim,0
+Ardlow,Hand,33,0,0,1,0,Slate Hill Sector,outer_rim,0
 Sawtooth,neutral,50,0,0,0,0,Longtide Sector,inner_rim,1
 Rosenbach,neutral,50,0,0,0,0,Clearholm Sector,outer_rim,0
 Theorema,neutral,50,0,0,0,0,Cohors Sector,outer_rim,0
-Silica Minor,Empire,17,0,0,1,0,Bauxite IV Sector,outer_rim,0
+Silica Minor,Hand,17,0,0,1,0,Bauxite IV Sector,outer_rim,0
 Nascentia,neutral,50,0,0,0,0,Bauxite IV Sector,outer_rim,0
-Fallout,Alliance,60,0,0,1,0,Fallout Sector,outer_rim,0
-Navalia,Empire,37,0,0,1,0,Lesnaya Sector,inner_rim,1
-Incus,Empire,32,0,0,1,0,Incus Sector,inner_rim,1
-Castra,Empire,36,0,1,1,0,Castra Sector,core,1
+Fallout,Collective,60,0,0,1,0,Fallout Sector,outer_rim,0
+Navalia,Hand,37,0,0,1,0,Lesnaya Sector,inner_rim,1
+Incus,Hand,32,0,0,1,0,Incus Sector,inner_rim,1
+Castra,Hand,36,0,1,1,0,Castra Sector,core,1
 Tutela,neutral,50,0,0,0,0,Lenitas Sector,inner_rim,1
-Fusoria,Empire,25,0,0,1,0,Dunmere Sector,outer_rim,1
-Fiscus,Empire,16,0,0,1,0,Classis Sector,inner_rim,1
+Fusoria,Hand,25,0,0,1,0,Dunmere Sector,outer_rim,1
+Fiscus,Hand,16,0,0,1,0,Classis Sector,inner_rim,1
 Mechane,neutral,50,0,0,0,0,Mechane Sector,inner_rim,1
 Salus,neutral,50,0,0,0,0,Incus Sector,inner_rim,1
 Kronholm,neutral,50,0,0,0,0,Longtide Sector,inner_rim,1
 Kalium II,neutral,50,0,0,0,0,Quieta Sector,inner_rim,1
-Solacia,Empire,10,0,0,1,0,Solacia Sector,outer_rim,0
+Solacia,Hand,10,0,0,1,0,Solacia Sector,outer_rim,0
 Wellhead,neutral,50,0,0,0,0,Altofen Sector,inner_rim,1
 Nebbia,neutral,50,0,0,0,0,Nebbia Sector,outer_rim,0
 Lagoa Funda,neutral,50,0,0,0,0,Lagoa Funda Sector,inner_rim,1
@@ -220,64 +220,64 @@ Mwezi,neutral,50,0,0,0,0,Quieta Sector,inner_rim,1
 Overgrowth,neutral,50,0,0,0,0,Longtide Sector,inner_rim,1
 Blackmire,neutral,50,0,0,0,0,Mechane Sector,inner_rim,1
 Natron,neutral,50,0,0,0,0,Vinculum Sector,inner_rim,1
-Saffron Downs,Empire,37,0,0,1,0,Ferraria Sector,inner_rim,1
-Hundred Falls,Empire,28,0,0,1,0,Lenitas Sector,inner_rim,1
+Saffron Downs,Hand,37,0,0,1,0,Ferraria Sector,inner_rim,1
+Hundred Falls,Hand,28,0,0,1,0,Lenitas Sector,inner_rim,1
 Rimeglass,neutral,50,0,0,0,0,Fyrholm Sector,outer_rim,0
 Zlatna,neutral,50,0,0,0,0,Zlatna Sector,outer_rim,1
 Slate Hill,neutral,50,0,0,0,0,Slate Hill Sector,outer_rim,1
 Last Platform,neutral,50,0,0,0,0,Varmdal Sector,outer_rim,1
 Hoogstad,neutral,50,0,0,0,0,Muster Rock Sector,outer_rim,1
 Sendero,neutral,50,0,0,0,0,Sendero Sector,outer_rim,0
-Ciénaga,Empire,20,0,0,1,0,Ciénaga Sector,outer_rim,1
+Ciénaga,Hand,20,0,0,1,0,Ciénaga Sector,outer_rim,1
 Saltreach,neutral,50,0,0,0,0,Caminus Sector,outer_rim,1
 Greenfever,neutral,50,0,0,0,0,Greenfever Sector,outer_rim,1
-Cohors,Empire,17,0,0,1,0,Cohors Sector,outer_rim,1
-Llano Grande,Empire,35,0,0,1,0,Altofen Sector,inner_rim,1
+Cohors,Hand,17,0,0,1,0,Cohors Sector,outer_rim,1
+Llano Grande,Hand,35,0,0,1,0,Altofen Sector,inner_rim,1
 Dry Reef,neutral,50,0,0,0,0,Lantern Sector,outer_rim,1
 Saltgreen,neutral,50,0,0,0,0,Feldspar Sector,inner_rim,1
 Kanon,neutral,50,0,0,0,0,Solacia Sector,outer_rim,0
-Rubble Sky,Empire,14,0,0,1,0,Lantern Sector,outer_rim,1
+Rubble Sky,Hand,14,0,0,1,0,Lantern Sector,outer_rim,1
 Ivyholm,neutral,50,0,0,0,0,Shelter Sector,outer_rim,1
 Tabularium,neutral,50,0,0,0,0,Cohors Sector,outer_rim,0
 Meridian,neutral,50,0,0,0,0,Solacia Sector,outer_rim,1
 Breakyard,neutral,50,0,0,0,0,Greenfever Sector,outer_rim,0
-Coldhearth,Empire,40,0,0,1,0,Greenfever Sector,outer_rim,1
-Stormfen,Alliance,62,0,0,1,0,Greenfever Sector,outer_rim,0
+Coldhearth,Hand,40,0,0,1,0,Greenfever Sector,outer_rim,1
+Stormfen,Collective,62,0,0,1,0,Greenfever Sector,outer_rim,0
 Blackglass,neutral,50,0,0,0,0,Longwire Sector,outer_rim,1
 Eldingar,neutral,50,0,0,0,0,Eldingar Sector,outer_rim,0
 Oldwatch,neutral,50,0,0,0,0,Fyrholm Sector,outer_rim,1
 Ridgefold,neutral,50,0,0,0,0,Highfall Sector,outer_rim,1
 Barewood,neutral,50,0,0,0,0,Muster Rock Sector,outer_rim,0
 Varmdal,neutral,50,0,0,0,0,Varmdal Sector,outer_rim,1
-Kept Faith,Alliance,73,0,0,1,0,Moorings Sector,outer_rim,1
+Kept Faith,Collective,73,0,0,1,0,Moorings Sector,outer_rim,1
 Needlepeak,neutral,50,0,0,0,0,Ciénaga Sector,outer_rim,0
 Benigna,neutral,50,0,0,0,0,Dunmere Sector,outer_rim,0
 Salitre,neutral,50,0,0,0,0,Salitre Sector,outer_rim,1
-Excubia,Empire,21,0,1,1,0,Excubia Sector,core,1
+Excubia,Hand,21,0,1,1,0,Excubia Sector,core,1
 Hulkfield,neutral,50,0,0,0,0,Vinograd Sector,inner_rim,1
-Praesidium,Empire,10,0,0,1,0,Ferraria Sector,inner_rim,1
-Steeplewater,Empire,39,0,0,1,0,Vinculum Sector,inner_rim,1
+Praesidium,Hand,10,0,0,1,0,Ferraria Sector,inner_rim,1
+Steeplewater,Hand,39,0,0,1,0,Vinculum Sector,inner_rim,1
 Neuwerft,neutral,50,0,0,0,0,Vinograd Sector,inner_rim,1
 Morelle,neutral,50,0,0,0,0,Three Lamps Sector,inner_rim,1
-Mesa Roja,Alliance,77,0,0,1,0,Fairhaven Sector,outer_rim,1
-Gnomon,Empire,34,0,1,1,0,Excubia Sector,core,1
+Mesa Roja,Collective,77,0,0,1,0,Fairhaven Sector,outer_rim,1
+Gnomon,Hand,34,0,1,1,0,Excubia Sector,core,1
 Imani Falls,neutral,50,0,0,0,0,Caza Real Sector,inner_rim,1
 Aozora,neutral,50,0,0,0,0,Mata Alta Sector,outer_rim,0
 Weitfeld,neutral,50,0,0,0,0,Ironbeach Sector,outer_rim,0
 Highbarrow,neutral,50,0,0,0,0,Longtide Sector,inner_rim,1
 Isfjell,neutral,50,0,0,0,0,Ilanga Sector,outer_rim,0
-Bauxite IV,Empire,23,0,0,1,0,Bauxite IV Sector,outer_rim,0
+Bauxite IV,Hand,23,0,0,1,0,Bauxite IV Sector,outer_rim,0
 Vinterby,neutral,50,0,0,0,0,Clearholm Sector,outer_rim,0
 Seldwyn,neutral,50,0,0,0,0,Longtide Sector,inner_rim,1
 Vallum,neutral,50,0,0,0,0,Classis Sector,inner_rim,1
-Fiducia,Empire,27,0,0,1,0,Lesnaya Sector,inner_rim,1
-Grauburg,Empire,29,0,0,1,0,Classis Sector,inner_rim,1
-Ommata,Empire,39,0,1,1,0,Ommata Sector,core,1
+Fiducia,Hand,27,0,0,1,0,Lesnaya Sector,inner_rim,1
+Grauburg,Hand,29,0,0,1,0,Classis Sector,inner_rim,1
+Ommata,Hand,39,0,1,1,0,Ommata Sector,core,1
 Ilha Verde,neutral,50,0,0,0,0,Ferraria Sector,inner_rim,1
 Lowlight,neutral,50,0,0,0,0,Lenitas Sector,inner_rim,1
 Lowmarket,neutral,50,0,0,0,0,Bosque Alto Sector,inner_rim,1
 Vigilia,neutral,44,0,1,0,0,Ommata Sector,core,1
-Sigillum,Empire,17,0,1,1,0,Castra Sector,core,1
+Sigillum,Hand,17,0,1,1,0,Castra Sector,core,1
 Old Cairn,neutral,58,0,1,0,0,Ommata Sector,core,1
 Ninefold,neutral,50,0,0,0,0,Bellwether Sector,inner_rim,1
 Tessera,neutral,50,0,0,0,0,Mirabel Sector,inner_rim,1
@@ -285,22 +285,22 @@ Stabilis,neutral,50,0,0,0,0,Bosque Alto Sector,inner_rim,1
 Agua Mansa,neutral,50,0,0,0,0,Mechane Sector,inner_rim,1
 Port Sorrel,neutral,50,0,0,0,0,Tormentum Sector,inner_rim,1
 Highrime,neutral,50,0,0,0,0,Tormentum Sector,inner_rim,1
-Archeion,Empire,19,0,0,1,0,Incus Sector,inner_rim,1
+Archeion,Hand,19,0,0,1,0,Incus Sector,inner_rim,1
 Quieta,neutral,50,0,0,0,0,Quieta Sector,inner_rim,1
-Delicia,Empire,27,0,0,1,0,Incus Sector,inner_rim,1
+Delicia,Hand,27,0,0,1,0,Incus Sector,inner_rim,1
 Mercado Alto,neutral,50,0,0,0,0,Lenitas Sector,inner_rim,1
 Stannum,neutral,50,0,0,0,0,Tormentum Sector,inner_rim,1
-Officina,Empire,14,0,0,1,0,Clearholm Sector,outer_rim,1
+Officina,Hand,14,0,0,1,0,Clearholm Sector,outer_rim,1
 Murkhaven,neutral,50,0,0,0,0,Cohors Sector,outer_rim,1
 Plage Blanche,neutral,50,0,0,0,0,Nebbia Sector,outer_rim,0
 Riftwood,neutral,50,0,0,0,0,Moorings Sector,outer_rim,1
 Ebbeholm,neutral,50,0,0,0,0,Shelter Sector,outer_rim,0
-Brimstone,Alliance,81,0,0,1,0,Greenfever Sector,outer_rim,0
+Brimstone,Collective,81,0,0,1,0,Greenfever Sector,outer_rim,0
 Bellglass,neutral,50,0,0,0,0,Lantern Sector,outer_rim,0
-Pronoia,Empire,17,0,0,1,0,Ilanga Sector,outer_rim,1
+Pronoia,Hand,17,0,0,1,0,Ilanga Sector,outer_rim,1
 Ghostlight,neutral,50,0,0,0,0,Cohors Sector,outer_rim,1
-Firmitas,Empire,37,0,0,1,0,Muster Rock Sector,outer_rim,0
-Felsite III,Empire,32,0,0,1,0,Clearholm Sector,outer_rim,1
+Firmitas,Hand,37,0,0,1,0,Muster Rock Sector,outer_rim,0
+Felsite III,Hand,32,0,0,1,0,Clearholm Sector,outer_rim,1
 Wadi Sabr,neutral,50,0,0,0,0,Cohors Sector,outer_rim,1
 Oranjeveld,neutral,50,0,0,0,0,Hundred Lakes Sector,outer_rim,1
 Long Winter,neutral,50,0,0,0,0,Slate Hill Sector,outer_rim,0
@@ -308,11 +308,11 @@ Teloneum,neutral,50,0,0,0,0,Lagoa Funda Sector,inner_rim,1
 Motu Ahi,neutral,50,0,0,0,0,Salitre Sector,outer_rim,0
 Kaltwasser,neutral,50,0,0,0,0,Salitre Sector,outer_rim,0
 Belavista,neutral,50,0,0,0,0,Thesauros Sector,outer_rim,1
-Cunabula,Empire,19,0,0,1,0,Varmdal Sector,outer_rim,0
+Cunabula,Hand,19,0,0,1,0,Varmdal Sector,outer_rim,0
 Loomhollow,neutral,50,0,0,0,0,Eldingar Sector,outer_rim,0
 Quebrada Honda,neutral,50,0,0,0,0,Eldingar Sector,outer_rim,0
-Ninegates,Empire,32,0,0,1,0,Lesnaya Sector,inner_rim,1
-Veenhoven,Empire,35,0,0,1,0,Kranholm Sector,outer_rim,0
+Ninegates,Hand,32,0,0,1,0,Lesnaya Sector,inner_rim,1
+Veenhoven,Hand,35,0,0,1,0,Kranholm Sector,outer_rim,0
 Pedregal,neutral,50,0,0,0,0,Ashfall Sector,inner_rim,1
 Regrowth,neutral,50,0,0,0,0,Eldingar Sector,outer_rim,0
 Yukihama,neutral,50,0,0,0,0,Quieta Sector,inner_rim,0
@@ -321,16 +321,16 @@ Feriae,neutral,50,0,0,0,0,Sendero Sector,outer_rim,1
 Skalna,neutral,50,0,0,0,0,Solacia Sector,outer_rim,1
 Kinoko,neutral,50,0,0,0,0,Eldingar Sector,outer_rim,1
 Tidewall,neutral,50,0,0,0,0,Ashfall Sector,inner_rim,1
-Halfpenny,Empire,25,0,0,1,0,Feldspar Sector,inner_rim,1
+Halfpenny,Hand,25,0,0,1,0,Feldspar Sector,inner_rim,1
 Fallen Keel,neutral,50,0,0,0,0,Sendero Sector,outer_rim,0
 Ashfall,neutral,50,0,0,0,0,Ashfall Sector,inner_rim,1
 Ashenmark,neutral,50,0,0,0,0,Sendero Sector,outer_rim,0
 Clinker,neutral,50,0,0,0,0,Ashfall Sector,inner_rim,1
-Ergon,Empire,15,0,0,1,0,Pulau Hijau Sector,outer_rim,1
+Ergon,Hand,15,0,0,1,0,Pulau Hijau Sector,outer_rim,1
 Probatio,neutral,50,0,0,0,0,Laterite Sector,outer_rim,0
 Grandmother,neutral,50,0,0,0,0,Laterite Sector,outer_rim,0
 Kaldvik,neutral,50,0,0,0,0,Highfall Sector,outer_rim,1
-Signum,Empire,15,0,0,1,0,Solacia Sector,outer_rim,0
+Signum,Hand,15,0,0,1,0,Solacia Sector,outer_rim,0
 Kvitberg,neutral,50,0,0,0,0,Rauchtal Sector,outer_rim,0
 Coldwell,neutral,50,0,0,0,0,Rio Lodo Sector,outer_rim,1
 Skarholm,neutral,50,0,0,0,0,Rio Lodo Sector,outer_rim,0
@@ -338,11 +338,11 @@ Kolokol,neutral,50,0,0,0,0,Semeion Sector,inner_rim,1
 First Morning,neutral,50,0,0,0,0,Hundred Lakes Sector,outer_rim,0
 Emberhold,neutral,50,0,0,0,0,Muster Rock Sector,outer_rim,0
 Suavis,neutral,50,0,0,0,0,Shelter Sector,outer_rim,1
-The Flats,Alliance,82,0,0,1,0,Fallout Sector,outer_rim,1
-Muster Rock,Empire,13,0,0,1,0,Muster Rock Sector,outer_rim,1
+The Flats,Collective,82,0,0,1,0,Fallout Sector,outer_rim,1
+Muster Rock,Hand,13,0,0,1,0,Muster Rock Sector,outer_rim,1
 Rauchtal,neutral,50,0,0,0,0,Rauchtal Sector,outer_rim,0
 The Cuts,neutral,50,0,0,0,0,Sendero Sector,outer_rim,1
-Las Eras,Empire,39,0,0,1,0,Nebbia Sector,outer_rim,1
+Las Eras,Hand,39,0,0,1,0,Nebbia Sector,outer_rim,1
 Stepstone,neutral,50,0,0,0,0,Semeion Sector,inner_rim,1
 Hartsease,neutral,50,0,0,0,0,Vinograd Sector,inner_rim,1
 Willowmere,neutral,50,0,0,0,0,Quieta Sector,inner_rim,0
@@ -354,9 +354,9 @@ The Rafts,neutral,50,0,0,0,0,Thaw Sector,outer_rim,0
 Zubets,neutral,50,0,0,0,0,Fairhaven Sector,outer_rim,1
 Plainsong,neutral,50,0,0,0,0,Fyrholm Sector,outer_rim,0
 Endline,neutral,50,0,0,0,0,Slate Hill Sector,outer_rim,1
-Hirschwald,Alliance,85,0,0,1,0,Thaw Sector,outer_rim,0
+Hirschwald,Collective,85,0,0,1,0,Thaw Sector,outer_rim,0
 Midden,neutral,50,0,0,0,0,Drift Harbour Sector,outer_rim,1
-Brokengate,Alliance,66,0,0,1,0,Bellwether Sector,inner_rim,1
+Brokengate,Collective,66,0,0,1,0,Bellwether Sector,inner_rim,1
 Long Strand,neutral,50,0,0,0,0,Lantern Sector,outer_rim,1
 Rockclaim,neutral,50,0,0,0,0,Hundred Lakes Sector,outer_rim,0
 Halvmark,neutral,50,0,0,0,0,Laterite Sector,outer_rim,0
@@ -365,13 +365,13 @@ Sonnfeld,neutral,50,0,0,0,0,Moorings Sector,outer_rim,1
 Dormilona,neutral,50,0,0,0,0,Sendero Sector,outer_rim,0
 Limes,neutral,53,0,1,0,0,Tarrow Sector,core,1
 Tierra Seca,neutral,50,0,0,0,0,Laterite Sector,outer_rim,1
-Medela,Empire,37,0,0,1,0,Tormentum Sector,inner_rim,1
+Medela,Hand,37,0,0,1,0,Tormentum Sector,inner_rim,1
 Nadezhda,neutral,50,0,0,0,0,Thaw Sector,outer_rim,0
 Marisol,neutral,50,0,0,0,0,Bellwether Sector,inner_rim,1
-Perpetua,Empire,19,0,0,1,0,Clearholm Sector,outer_rim,0
+Perpetua,Hand,19,0,0,1,0,Clearholm Sector,outer_rim,0
 Novy Rynek,neutral,50,0,0,0,0,Ashfall Sector,inner_rim,1
 Sierra Seca,neutral,50,0,0,0,0,Semeion Sector,inner_rim,1
-Remedium,Empire,26,0,1,1,0,Castra Sector,core,1
+Remedium,Hand,26,0,1,1,0,Castra Sector,core,1
 Gypsum Minor,neutral,50,0,0,0,0,Lesnaya Sector,inner_rim,1
 Portelle,neutral,50,0,0,0,0,Kranholm Sector,outer_rim,1
 Tourmaline,neutral,50,0,1,0,0,Ommata Sector,core,1
@@ -383,24 +383,24 @@ Vidrio,neutral,50,0,0,0,0,Nebbia Sector,outer_rim,1
 Two Crowns,neutral,50,0,0,0,0,Akousma Sector,inner_rim,1
 Penhallow,neutral,50,0,0,0,0,Lagoa Funda Sector,inner_rim,1
 Pennygate,neutral,50,0,0,0,0,Bosque Alto Sector,inner_rim,1
-Supper Hill,Empire,19,0,0,1,0,Ciénaga Sector,outer_rim,0
+Supper Hill,Hand,19,0,0,1,0,Ciénaga Sector,outer_rim,0
 Natalis,neutral,50,0,0,0,0,Feldspar Sector,inner_rim,1
 Campo Alto,neutral,50,0,0,0,0,Fairhaven Sector,outer_rim,0
 Sinkwater,neutral,50,0,0,0,0,Caminus Sector,outer_rim,1
 Whitecairn,neutral,50,0,0,0,0,Rio Lodo Sector,outer_rim,0
-Mittelfeld,Alliance,76,0,0,1,0,Longwire Sector,outer_rim,1
+Mittelfeld,Collective,76,0,0,1,0,Longwire Sector,outer_rim,1
 Flarewater,neutral,50,0,0,0,0,Solacia Sector,outer_rim,1
-Groenveld,Alliance,75,0,0,1,0,Bellwether Sector,inner_rim,1
+Groenveld,Collective,75,0,0,1,0,Bellwether Sector,inner_rim,1
 Sabkha,neutral,50,0,0,0,0,Mirabel Sector,inner_rim,1
-Cinnabar,Empire,12,0,0,1,0,Classis Sector,inner_rim,1
+Cinnabar,Hand,12,0,0,1,0,Classis Sector,inner_rim,1
 Old Lens,neutral,50,0,0,0,0,Laterite Sector,outer_rim,0
-Mokra,Alliance,72,0,0,1,0,Altofen Sector,inner_rim,0
-Belle Rive,Empire,37,0,0,1,0,Ilanga Sector,outer_rim,0
+Mokra,Collective,72,0,0,1,0,Altofen Sector,inner_rim,0
+Belle Rive,Hand,37,0,0,1,0,Ilanga Sector,outer_rim,0
 Campus,neutral,50,0,0,0,0,Kranholm Sector,outer_rim,0
 Organon,neutral,50,0,0,0,0,Bauxite IV Sector,outer_rim,1
 Port Isolde,neutral,50,0,0,0,0,Mata Alta Sector,outer_rim,0
-Nacar,Empire,21,0,0,1,0,Vinculum Sector,inner_rim,1
-Azzurra,Empire,53,1,0,1,0,Ferraria Sector,inner_rim,1
+Nacar,Hand,21,0,0,1,0,Vinculum Sector,inner_rim,1
+Azzurra,Hand,53,1,0,1,0,Ferraria Sector,inner_rim,1
 Longquay,neutral,50,0,0,0,0,Varmdal Sector,outer_rim,1
 Brandt's Giant,neutral,50,0,0,0,0,Highfall Sector,outer_rim,0
 Lunaria,neutral,50,0,0,0,0,Ciénaga Sector,outer_rim,0
@@ -418,8 +418,8 @@ Severitas,neutral,50,0,0,0,0,Varmdal Sector,outer_rim,0
 Cutbank,neutral,50,0,0,0,0,Lenitas Sector,inner_rim,1
 Graustadt,neutral,50,0,0,0,0,Moorings Sector,outer_rim,0
 Shirakaba,neutral,50,0,0,0,0,Fallout Sector,outer_rim,0
-Junkhold,Alliance,75,0,0,1,0,Altofen Sector,inner_rim,0
-Prognosis,Empire,37,0,0,1,0,Feldspar Sector,inner_rim,1
+Junkhold,Collective,75,0,0,1,0,Altofen Sector,inner_rim,0
+Prognosis,Hand,37,0,0,1,0,Feldspar Sector,inner_rim,1
 Waymark,neutral,50,0,0,0,0,Zlatna Sector,outer_rim,0
 Terracotta,neutral,50,0,0,0,0,Nebbia Sector,outer_rim,0
 Kesari,neutral,50,0,0,0,0,Solacia Sector,outer_rim,0
@@ -428,11 +428,11 @@ Goldcloud,neutral,50,0,0,0,0,Zlatna Sector,outer_rim,0
 Selvagem,neutral,50,0,0,0,0,Mirabel Sector,inner_rim,1
 Cinco Lunas,neutral,50,0,0,0,0,Muster Rock Sector,outer_rim,0
 Brushfield,neutral,50,0,0,0,0,Bosque Alto Sector,inner_rim,1
-Sourwater,Empire,28,0,1,1,0,Charter Sector,core,1
+Sourwater,Hand,28,0,1,1,0,Charter Sector,core,1
 Mill Hollow,neutral,50,0,0,0,0,Ulaan Tal Sector,outer_rim,0
 Dongyu,neutral,50,0,0,0,0,Tormentum Sector,inner_rim,1
-Old Salvage,Alliance,79,0,0,1,0,Longwire Sector,outer_rim,1
-Fathom,Alliance,88,0,0,1,0,Thaw Sector,outer_rim,0
+Old Salvage,Collective,79,0,0,1,0,Longwire Sector,outer_rim,1
+Fathom,Collective,88,0,0,1,0,Thaw Sector,outer_rim,0
 Lastwell,neutral,50,0,0,0,0,Highfall Sector,outer_rim,1
 Stonebarrow,neutral,50,0,0,0,0,Fairhaven Sector,outer_rim,0
 The Kiln,neutral,50,0,0,0,0,Ironbeach Sector,outer_rim,0
@@ -450,13 +450,13 @@ Waypost,neutral,50,0,0,0,0,Muster Rock Sector,outer_rim,1
 Halfsky,neutral,50,0,0,0,0,Fyrholm Sector,outer_rim,1
 Montefosco,neutral,50,0,0,0,0,Caminus Sector,outer_rim,1
 Plenty,neutral,50,0,0,0,0,Salitre Sector,outer_rim,1
-Ilanga,Empire,35,0,0,1,0,Ilanga Sector,outer_rim,1
+Ilanga,Hand,35,0,0,1,0,Ilanga Sector,outer_rim,1
 Stopped Line,neutral,50,0,0,0,0,Salitre Sector,outer_rim,0
 Tallow Mesa,neutral,50,0,0,0,0,Bauxite IV Sector,outer_rim,1
 Holmvik,neutral,50,0,0,0,0,Kranholm Sector,outer_rim,1
 Cafetal,neutral,50,0,0,0,0,Fyrholm Sector,outer_rim,1
 Ellerbeck,neutral,50,0,0,0,0,Caza Real Sector,inner_rim,1
-Pyrite,Empire,24,0,1,1,0,Charter Sector,core,1
+Pyrite,Hand,24,0,1,1,0,Charter Sector,core,1
 Stepwell,neutral,50,0,0,0,0,Fyrholm Sector,outer_rim,0
 Kizil Dala,neutral,50,0,0,0,0,Clearholm Sector,outer_rim,0
 Wolfram II,neutral,50,0,0,0,0,Dunmere Sector,outer_rim,1
@@ -469,44 +469,44 @@ Partus,neutral,50,0,0,0,0,Clearholm Sector,outer_rim,0
 Bastide,neutral,50,0,0,0,0,Mirabel Sector,inner_rim,1
 Metsola,neutral,50,0,0,0,0,Eldingar Sector,outer_rim,0
 Greysand,neutral,50,0,0,0,0,Salitre Sector,outer_rim,0
-Hollowstone,Empire,32,0,0,1,0,Feldspar Sector,inner_rim,1
+Hollowstone,Hand,32,0,0,1,0,Feldspar Sector,inner_rim,1
 Clove,neutral,50,0,0,0,0,Ilanga Sector,outer_rim,1
 Naphtha,neutral,50,0,0,0,0,Solacia Sector,outer_rim,0
 Galeholm,neutral,50,0,0,0,0,Bellwether Sector,inner_rim,1
 Cairnfell,neutral,50,0,0,0,0,Mata Alta Sector,outer_rim,0
-The Wall,Alliance,73,0,0,1,0,Moorings Sector,outer_rim,0
+The Wall,Collective,73,0,0,1,0,Moorings Sector,outer_rim,0
 Steading,neutral,50,0,0,0,0,Bellwether Sector,inner_rim,1
 Lowmoor,neutral,50,0,0,0,0,Ciénaga Sector,outer_rim,1
 Uhrwald,neutral,50,0,0,0,0,Drift Harbour Sector,outer_rim,1
 Glasshold,neutral,50,0,0,0,0,Akousma Sector,inner_rim,1
-Limonite III,Empire,17,0,0,1,0,Caza Real Sector,inner_rim,1
+Limonite III,Hand,17,0,0,1,0,Caza Real Sector,inner_rim,1
 Grimsholt,neutral,50,0,0,0,0,Thaw Sector,outer_rim,0
 Kruispunt,neutral,50,0,0,0,0,Feldspar Sector,inner_rim,1
-Quies,Empire,12,0,1,1,0,Castra Sector,core,1
+Quies,Hand,12,0,1,1,0,Castra Sector,core,1
 Shingle,neutral,50,0,0,0,0,Semeion Sector,inner_rim,0
 Milestone Nine,neutral,50,0,0,0,0,Ironbeach Sector,outer_rim,1
 Stonecrop,neutral,50,0,0,0,0,Altofen Sector,inner_rim,0
 Bluesand,neutral,50,0,0,0,0,Semeion Sector,inner_rim,0
-Nueve Lunas,Alliance,89,0,0,1,0,Lagoa Funda Sector,inner_rim,1
-Old Amber,Empire,23,0,0,1,0,Ferraria Sector,inner_rim,1
+Nueve Lunas,Collective,89,0,0,1,0,Lagoa Funda Sector,inner_rim,1
+Old Amber,Hand,23,0,0,1,0,Ferraria Sector,inner_rim,1
 Tamarisk,neutral,50,0,0,0,0,Mirabel Sector,inner_rim,1
 Thornveld,neutral,50,0,0,0,0,Mirabel Sector,inner_rim,1
-Altofen,Alliance,100,0,0,1,1,Altofen Sector,inner_rim,1
+Altofen,Collective,100,0,0,1,1,Altofen Sector,inner_rim,1
 Kalinov,neutral,50,0,0,0,0,Lagoa Funda Sector,inner_rim,1
 Blackfen,neutral,50,0,0,0,0,Thaw Sector,outer_rim,0
-Alumen,Empire,31,0,1,1,0,Ommata Sector,core,1
+Alumen,Hand,31,0,1,1,0,Ommata Sector,core,1
 Permit Hill,neutral,50,0,0,0,0,Moorings Sector,outer_rim,1
 Kreuzweg,neutral,50,0,0,0,0,Highfall Sector,outer_rim,1
 Commonhold,neutral,50,0,0,0,0,Dunmere Sector,outer_rim,1
 Ochre Wells,neutral,50,0,0,0,0,Ironbeach Sector,outer_rim,1
 Puerto Hierro,neutral,50,0,0,0,0,Three Lamps Sector,inner_rim,1
 Techne,neutral,50,0,0,0,0,Incus Sector,inner_rim,1
-Lignite,Empire,13,0,0,1,0,Ilanga Sector,outer_rim,0
+Lignite,Hand,13,0,0,1,0,Ilanga Sector,outer_rim,0
 Kaukomaa,neutral,50,0,0,0,0,Bellwether Sector,inner_rim,1
 Ashgrove,neutral,50,0,0,0,0,Caza Real Sector,inner_rim,1
 Haverland,neutral,50,0,0,0,0,Vinograd Sector,inner_rim,1
-Buyback,Empire,25,0,0,1,0,Ferraria Sector,inner_rim,1
-Malleus,Empire,20,0,0,1,0,Lenitas Sector,inner_rim,1
+Buyback,Hand,25,0,0,1,0,Ferraria Sector,inner_rim,1
+Malleus,Hand,20,0,0,1,0,Lenitas Sector,inner_rim,1
 Wadi Noor,neutral,50,0,0,0,0,Fairhaven Sector,outer_rim,0
 Hartwell,neutral,58,0,1,0,0,Charter Sector,core,1
 Hollow Fork,neutral,50,0,0,0,0,Dunmere Sector,outer_rim,0
@@ -518,9 +518,9 @@ Scaldwell,neutral,50,0,0,0,0,Fallout Sector,outer_rim,1
 Constantia,neutral,50,0,0,0,0,Lagoa Funda Sector,inner_rim,1
 Hortensia,neutral,50,0,0,0,0,Moorings Sector,outer_rim,0
 Pinehallow,neutral,50,0,0,0,0,Shelter Sector,outer_rim,1
-Clearholm,Empire,11,0,0,1,0,Clearholm Sector,outer_rim,0
+Clearholm,Hand,11,0,0,1,0,Clearholm Sector,outer_rim,0
 Mudhaven,neutral,50,0,0,0,0,Kranholm Sector,outer_rim,0
-Skopia,Empire,34,0,1,1,0,Castra Sector,core,1
+Skopia,Hand,34,0,1,1,0,Castra Sector,core,1
 Spindle,neutral,50,0,0,0,0,Ciénaga Sector,outer_rim,0
 Thousand Mouths,neutral,50,0,0,0,0,Akousma Sector,inner_rim,0
 Uzun Su,neutral,50,0,0,0,0,Mechane Sector,inner_rim,1
@@ -547,7 +547,7 @@ Icetap,neutral,50,0,0,0,0,Slate Hill Sector,outer_rim,1
 Haematite,neutral,50,0,0,0,0,Kranholm Sector,outer_rim,0
 Mar Seco,neutral,50,0,0,0,0,Drift Harbour Sector,outer_rim,0
 Nordhaven,neutral,50,0,0,0,0,Bosque Alto Sector,inner_rim,1
-Codicil,Empire,15,0,1,1,0,Tarrow Sector,core,1
+Codicil,Hand,15,0,1,1,0,Tarrow Sector,core,1
 Stillwater,neutral,50,0,0,0,0,Pulau Hijau Sector,outer_rim,1
 Placida,neutral,50,0,0,0,0,Three Lamps Sector,inner_rim,1
 Fabrica,neutral,50,0,0,0,0,Ashfall Sector,inner_rim,1

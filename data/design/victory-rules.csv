@@ -1,9 +1,9 @@
 mode,side,term,kind,subject,source
-Standard,Empire,1,CharacterCaptured,578,"Traced: m5-setup-and-victory Victory (Nobody, original id 578)"
-Standard,Empire,2,CharacterCaptured,576,"Traced: m5-setup-and-victory Victory (Mae Abara, original id 576)"
-Standard,Empire,3,RebelHqGone,,Traced: m5-setup-and-victory Victory
-Standard,Alliance,1,CharacterCaptured,641,"Traced: m5-setup-and-victory Victory (Cassia Ravilla, original id 641)"
-Standard,Alliance,2,CharacterCaptured,640,"Traced: m5-setup-and-victory Victory (The Chair, original id 640)"
-Standard,Alliance,3,SystemHeldOrDestroyed,Charter,Traced: m5-setup-and-victory Victory
-HqOnly,Empire,1,RebelHqGone,,Traced: m5-setup-and-victory Victory (HQ-only)
-HqOnly,Alliance,1,SystemHeldOrDestroyed,Charter,Traced: m5-setup-and-victory Victory (HQ-only)
+Standard,Hand,1,CharacterCaptured,578,"Traced: m5-setup-and-victory Victory (Nobody, original id 578)"
+Standard,Hand,2,CharacterCaptured,576,"Traced: m5-setup-and-victory Victory (Mae Abara, original id 576)"
+Standard,Hand,3,HearthGone,,Traced: m5-setup-and-victory Victory
+Standard,Collective,1,CharacterCaptured,641,"Traced: m5-setup-and-victory Victory (Cassia Ravilla, original id 641)"
+Standard,Collective,2,CharacterCaptured,640,"Traced: m5-setup-and-victory Victory (The Chair, original id 640)"
+Standard,Collective,3,SystemHeldOrDestroyed,Charter,Traced: m5-setup-and-victory Victory
+HqOnly,Hand,1,HearthGone,,Traced: m5-setup-and-victory Victory (HQ-only)
+HqOnly,Collective,1,SystemHeldOrDestroyed,Charter,Traced: m5-setup-and-victory Victory (HQ-only)

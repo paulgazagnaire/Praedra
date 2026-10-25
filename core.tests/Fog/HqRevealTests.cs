@@ -23,13 +23,13 @@ public class HqRevealTests
     [Fact]
     public void HR1_PresenceDoesNotRevealTheHq()
     {
-        var w = new FogWorld(beforeSetup: x => x.Fleet(Side.Empire, R2, Isd, 1));
+        var w = new FogWorld(beforeSetup: x => x.Fleet(Side.Hand, R2, Isd, 1));
         w.Step(100);
-        var p = w.Pic(Side.Empire, R2)!;
-        Assert.Equal(Side.Alliance, p.Owner!.Value.Owner);
+        var p = w.Pic(Side.Hand, R2)!;
+        Assert.Equal(Side.Collective, p.Owner!.Value.Owner);
         Assert.NotNull(p.Fleets);
         Assert.False(p.HqHere);
-        Assert.Null(w.Fog.KnownHq(Side.Empire));
+        Assert.Null(w.Fog.KnownHq(Side.Hand));
     }
 
     // m5-fog-and-hq HR2
@@ -37,35 +37,35 @@ public class HqRevealTests
     public void HR2_PresenceRevealsTheHqWhenSwitchedOn()
     {
         var w = new FogWorld(new GameSettings { Fog = new FogParams { PresenceRevealsHq = true } });
-        w.H.Fleets.SubmitMove(Side.Empire, w.E1, R2);
+        w.H.Fleets.SubmitMove(Side.Hand, w.E1, R2);
         w.StepTo(16);
-        Assert.True(w.Pic(Side.Empire, R2)!.HqHere);
-        Assert.Equal(new KnownHqInfo(R2, 16), w.Fog.KnownHq(Side.Empire));
+        Assert.True(w.Pic(Side.Hand, R2)!.HqHere);
+        Assert.Equal(new KnownHqInfo(R2, 16), w.Fog.KnownHq(Side.Hand));
     }
 
     private static (FogWorld W, int Seen) Hr3()
     {
         var w = new FogWorld();
         w.StepTo(29);
-        int seen = Espionage(w, Side.Empire, R2); // FE1 on day 30
+        int seen = Espionage(w, Side.Hand, R2); // FE1 on day 30
         Assert.Equal(30, seen);
         w.StepTo(31);
-        w.Fog.SubmitMoveHq(Side.Alliance, R3); // arrives day 51
+        w.Fog.SubmitMoveHq(Side.Collective, R3); // arrives day 51
         return (w, seen);
     }
 
     // m5-fog-and-hq HR3
     [Fact]
-    public void HR3_TheEmpireIsNotToldWhenTheHqMoves()
+    public void HR3_TheHandIsNotToldWhenTheHqMoves()
     {
         var (w, _) = Hr3();
         w.StepTo(80);
         Assert.Equal(R3, w.H.HqSystem);
-        Assert.Equal(new KnownHqInfo(R2, 30), w.Fog.KnownHq(Side.Empire));
-        Assert.Equal(50, w.Game.Day - w.Fog.KnownHq(Side.Empire)!.Stamp);
-        Assert.False(w.Know(Side.Empire, R3)?.HqHere ?? false);
-        Assert.DoesNotContain(w.EventsFor(Side.Empire), e => e is HqDeparted or HqArrived);
-        Assert.DoesNotContain(w.EventsFor(Side.Empire), e => e is SupportChanged s && s.Cause == SupportCause.HqMove);
+        Assert.Equal(new KnownHqInfo(R2, 30), w.Fog.KnownHq(Side.Hand));
+        Assert.Equal(50, w.Game.Day - w.Fog.KnownHq(Side.Hand)!.Stamp);
+        Assert.False(w.Know(Side.Hand, R3)?.HqHere ?? false);
+        Assert.DoesNotContain(w.EventsFor(Side.Hand), e => e is HqDeparted or HqArrived);
+        Assert.DoesNotContain(w.EventsFor(Side.Hand), e => e is SupportChanged s && s.Cause == SupportCause.HqMove);
     }
 
     // m5-fog-and-hq HR4
@@ -74,10 +74,10 @@ public class HqRevealTests
     {
         var (w, _) = Hr3();
         w.StepTo(79);
-        int stamp = Espionage(w, Side.Empire, R3);
-        Assert.True(w.Know(Side.Empire, R3)!.HqHere);
-        Assert.False(w.Know(Side.Empire, R2)!.HqHere);
-        Assert.Equal(new KnownHqInfo(R3, stamp), w.Fog.KnownHq(Side.Empire));
+        int stamp = Espionage(w, Side.Hand, R3);
+        Assert.True(w.Know(Side.Hand, R3)!.HqHere);
+        Assert.False(w.Know(Side.Hand, R2)!.HqHere);
+        Assert.Equal(new KnownHqInfo(R3, stamp), w.Fog.KnownHq(Side.Hand));
         Assert.Equal(80, stamp);
     }
 
@@ -87,9 +87,9 @@ public class HqRevealTests
     {
         var (w, _) = Hr3();
         w.StepTo(59);
-        Espionage(w, Side.Empire, R2);
-        Assert.False(w.Know(Side.Empire, R2)!.HqHere);
-        Assert.Null(w.Fog.KnownHq(Side.Empire));
+        Espionage(w, Side.Hand, R2);
+        Assert.False(w.Know(Side.Hand, R2)!.HqHere);
+        Assert.Null(w.Fog.KnownHq(Side.Hand));
     }
 
     // m5-fog-and-hq HR6
@@ -97,9 +97,9 @@ public class HqRevealTests
     public void HR6_NoSectorClueByDefault()
     {
         var w = new FogWorld();
-        Espionage(w, Side.Empire, R3);
-        Assert.Empty(w.Fog.Clues(Side.Empire));
-        Assert.DoesNotContain(w.Game.State.Fog.Empire.Systems.Values, k => k.HqHere);
+        Espionage(w, Side.Hand, R3);
+        Assert.Empty(w.Fog.Clues(Side.Hand));
+        Assert.DoesNotContain(w.Game.State.Fog.Hand.Systems.Values, k => k.HqHere);
     }
 
     // m5-fog-and-hq HR7
@@ -107,21 +107,21 @@ public class HqRevealTests
     public void HR7_SectorClueWhenSwitchedOn()
     {
         var w = new FogWorld(new GameSettings { Fog = new FogParams { SectorSuspicion = SectorSuspicion.OnEspionage } });
-        int stamp = Espionage(w, Side.Empire, R3);
-        Assert.Equal(new HqSectorClue("SR", stamp), Assert.Single(w.Fog.Clues(Side.Empire)));
-        Assert.DoesNotContain(w.Game.State.Fog.Empire.Systems.Values, k => k.HqHere);
-        Assert.Empty(w.Fog.Clues(Side.Alliance));
-        Assert.Contains(w.EventsFor(Side.Empire), e => e is HqSectorClueGiven);
-        Assert.DoesNotContain(w.EventsFor(Side.Alliance), e => e is HqSectorClueGiven);
+        int stamp = Espionage(w, Side.Hand, R3);
+        Assert.Equal(new HqSectorClue("SR", stamp), Assert.Single(w.Fog.Clues(Side.Hand)));
+        Assert.DoesNotContain(w.Game.State.Fog.Hand.Systems.Values, k => k.HqHere);
+        Assert.Empty(w.Fog.Clues(Side.Collective));
+        Assert.Contains(w.EventsFor(Side.Hand), e => e is HqSectorClueGiven);
+        Assert.DoesNotContain(w.EventsFor(Side.Collective), e => e is HqSectorClueGiven);
     }
 
     // m5-fog-and-hq HR8
     [Fact]
-    public void HR8_TheEmpireViewDoesNotHoldTheHq()
+    public void HR8_TheHandViewDoesNotHoldTheHq()
     {
         var w = new FogWorld();
         w.Step(10);
-        var v = w.Fog.ViewFor(Side.Empire);
+        var v = w.Fog.ViewFor(Side.Hand);
         Assert.Null(v.KnownHq);
         foreach (var s in w.H.Data.Galaxy.Systems) Assert.False(v.Picture(s.Name)?.HqHere ?? false);
         // no member of the view returns or holds the HQ state, the game or the module
@@ -137,22 +137,22 @@ public class HqRevealTests
     [Fact]
     public void HR9_HR10_SupportDropIsSeenOnlyWithLiveAccess()
     {
-        var w = new FogWorld(beforeSetup: x => x.Fleet(Side.Empire, R4, Isd, 1));
-        w.Fog.SubmitMoveHq(Side.Alliance, R3); // arrives day 20
+        var w = new FogWorld(beforeSetup: x => x.Fleet(Side.Hand, R4, Isd, 1));
+        w.Fog.SubmitMoveHq(Side.Collective, R3); // arrives day 20
         w.StepTo(5);
-        Assert.Equal(70, w.Pic(Side.Empire, R4)!.Owner!.Value.AllianceSupport);
+        Assert.Equal(70, w.Pic(Side.Hand, R4)!.Owner!.Value.CollectiveSupport);
         w.StepTo(20);
-        var b = w.Pic(Side.Empire, R4)!.Owner!;
-        Assert.Equal(60, b.Value.AllianceSupport);
+        var b = w.Pic(Side.Hand, R4)!.Owner!;
+        Assert.Equal(60, b.Value.CollectiveSupport);
         Assert.Equal(20, b.Stamp);
-        Assert.DoesNotContain(w.EventsFor(Side.Empire), e => e is HqArrived);
-        Assert.False(w.Pic(Side.Empire, R4)!.HqHere);
+        Assert.DoesNotContain(w.EventsFor(Side.Hand), e => e is HqArrived);
+        Assert.False(w.Pic(Side.Hand, R4)!.HqHere);
 
-        var none = new FogWorld(); // HR10: no Empire fleet at R4
-        none.Fog.SubmitMoveHq(Side.Alliance, R3);
+        var none = new FogWorld(); // HR10: no Hand fleet at R4
+        none.Fog.SubmitMoveHq(Side.Collective, R3);
         none.StepTo(20);
-        Assert.Null(none.Pic(Side.Empire, R4));
-        Assert.Equal(60, none.H.Economy.SupportOf(R4, Side.Alliance));
+        Assert.Null(none.Pic(Side.Hand, R4));
+        Assert.Equal(60, none.H.Economy.SupportOf(R4, Side.Collective));
     }
 
     // m5-fog-and-hq HR11
@@ -160,59 +160,59 @@ public class HqRevealTests
     public void HR11_DetectedMissionGoesToTheDefenderOnly()
     {
         var w = new FogWorld();
-        w.InStep(ctx => w.Fog.OnMissionDetected(ctx, Side.Alliance, R3));
+        w.InStep(ctx => w.Fog.OnMissionDetected(ctx, Side.Collective, R3));
         w.Step();
-        var s = Assert.Single(w.Fog.Sightings(Side.Alliance));
-        Assert.Equal((SightingKind.AgentDetected, R3, Side.Empire), (s.Kind, s.System, s.Side));
-        Assert.Empty(w.Fog.Sightings(Side.Empire));
-        Assert.DoesNotContain(w.EventsFor(Side.Empire), e => e is AgentDetected);
+        var s = Assert.Single(w.Fog.Sightings(Side.Collective));
+        Assert.Equal((SightingKind.AgentDetected, R3, Side.Hand), (s.Kind, s.System, s.Side));
+        Assert.Empty(w.Fog.Sightings(Side.Hand));
+        Assert.DoesNotContain(w.EventsFor(Side.Hand), e => e is AgentDetected);
     }
 
     // m5-fog-and-hq FN1
     [Fact]
-    public void FN1_EmpireKnowledgeDoesNotDependOnWhereTheHqIs()
+    public void FN1_HandKnowledgeDoesNotDependOnWhereTheHqIs()
     {
         var a = new FogWorld(hq: R2);
         var b = new FogWorld(hq: R4);
-        foreach (var w in new[] { a, b }) w.H.Fleets.SubmitMove(Side.Empire, w.E1, R2);
+        foreach (var w in new[] { a, b }) w.H.Fleets.SubmitMove(Side.Hand, w.E1, R2);
         for (int day = 0; day < 60; day++)
         {
-            Assert.Equal(a.Fog.KnowledgeHash(Side.Empire), b.Fog.KnowledgeHash(Side.Empire));
-            if (day == 30) foreach (var w in new[] { a, b }) w.H.Fleets.SubmitMove(Side.Empire, w.E1, R1);
+            Assert.Equal(a.Fog.KnowledgeHash(Side.Hand), b.Fog.KnowledgeHash(Side.Hand));
+            if (day == 30) foreach (var w in new[] { a, b }) w.H.Fleets.SubmitMove(Side.Hand, w.E1, R1);
             a.Step(); b.Step();
         }
-        string Accepted(FogWorld w) => string.Join(";", w.EventsFor(Side.Empire).OfType<OrderAccepted>().Select(e => e.ToString()));
+        string Accepted(FogWorld w) => string.Join(";", w.EventsFor(Side.Hand).OfType<OrderAccepted>().Select(e => e.ToString()));
         Assert.Equal(Accepted(a), Accepted(b));
         Assert.NotEqual(a.H.StateHash(), b.H.StateHash()); // the worlds do differ
     }
 
     // m5-fog-and-hq FN3 (partial: the M6 AI assembly does not exist; the view itself exposes no truth type, see HR8) and FN4
     [Fact]
-    public void FN4_EmpireFeedHasNoAllianceOrdersNorHqMoves()
+    public void FN4_HandFeedHasNoCollectiveOrdersNorHqMoves()
     {
         var w = new FogWorld();
-        int f = w.Fleet(Side.Alliance, R2, Corvette, 1);
-        var allianceSeqs = new HashSet<long> { w.Fog.SubmitMoveHq(Side.Alliance, R3), w.H.Fleets.SubmitMove(Side.Alliance, f, R4) };
+        int f = w.Fleet(Side.Collective, R2, Corvette, 1);
+        var collectiveSeqs = new HashSet<long> { w.Fog.SubmitMoveHq(Side.Collective, R3), w.H.Fleets.SubmitMove(Side.Collective, f, R4) };
         w.StepTo(40);
-        var feed = w.EventsFor(Side.Empire);
-        Assert.DoesNotContain(feed, e => e is OrderAccepted oa && allianceSeqs.Contains(oa.Sequence));
+        var feed = w.EventsFor(Side.Hand);
+        Assert.DoesNotContain(feed, e => e is OrderAccepted oa && collectiveSeqs.Contains(oa.Sequence));
         Assert.DoesNotContain(feed, e => e is HqDeparted or HqArrived);
-        Assert.Contains(w.EventsFor(Side.Alliance), e => e is OrderAccepted oa && allianceSeqs.Contains(oa.Sequence));
-        Assert.Contains(w.EventsFor(Side.Alliance), e => e is HqArrived);
+        Assert.Contains(w.EventsFor(Side.Collective), e => e is OrderAccepted oa && collectiveSeqs.Contains(oa.Sequence));
+        Assert.Contains(w.EventsFor(Side.Collective), e => e is HqArrived);
     }
 
     // m5-fog-and-hq FN5
     [Fact]
-    public void FN5_NoEnemyFleetIdsInTheAllianceKnowledge()
+    public void FN5_NoEnemyFleetIdsInTheCollectiveKnowledge()
     {
         var w = new FogWorld();
-        int g = w.Fleet(Side.Empire, R4, Isd, 2);
-        w.H.Fleets.SubmitMove(Side.Empire, g, R2);
-        int f = w.Fleet(Side.Alliance, R2, Corvette, 1);
-        w.H.Fleets.SubmitMove(Side.Alliance, f, R1);
+        int g = w.Fleet(Side.Hand, R4, Isd, 2);
+        w.H.Fleets.SubmitMove(Side.Hand, g, R2);
+        int f = w.Fleet(Side.Collective, R2, Corvette, 1);
+        w.H.Fleets.SubmitMove(Side.Collective, f, R1);
         w.StepTo(20);
-        Assert.NotEmpty(w.Fog.Sightings(Side.Alliance));
-        var json = JsonSerializer.Serialize(w.Game.State.Fog.Alliance);
+        Assert.NotEmpty(w.Fog.Sightings(Side.Collective));
+        var json = JsonSerializer.Serialize(w.Game.State.Fog.Collective);
         Assert.DoesNotContain("\"Id\"", json);
         Assert.DoesNotContain("Fleet\":", json.Replace("\"Fleets\":", "")); // no single fleet reference field
         foreach (var t in new[] { typeof(FleetPicture), typeof(Sighting), typeof(SystemKnowledge), typeof(GroundPicture), typeof(FleetSighted) })

@@ -53,7 +53,7 @@ public sealed class EconomyModule
     public AutoscrapMode AutoscrapMode { get; set; } = AutoscrapMode.Classic;
     public SlotSource SlotSource { get; set; } = SlotSource.Pinned;
     /// <summary>
-    /// Is the system in a Death Star sector (Empire regiments count double for smuggling)? The flag belongs to the support
+    /// Is the system in a Death Star sector (Hand regiments count double for smuggling)? The flag belongs to the support
     /// sheet (m2-popular-support §Death Star sector); M2 sets nothing, so the default answers no.
     /// </summary>
     public Func<string, bool> IsDeathStarSector { get; set; } = _ => false;
@@ -154,12 +154,12 @@ public sealed class EconomyModule
         E.Slots[system] = new SlotState { Energy = 0, Raw = 0, Populated = false };
     }
 
-    /// <summary>Setup only: Alliance support of a system, 0..100 (Empire support is 100 minus it). Read-only for the economy afterwards.</summary>
-    public void SetAllianceSupport(string system, int allianceSupport)
+    /// <summary>Setup only: Collective support of a system, 0..100 (Hand support is 100 minus it). Read-only for the economy afterwards.</summary>
+    public void SetCollectiveSupport(string system, int collectiveSupport)
     {
         if (!_galaxy.TryFindSystem(system, out _)) throw new ArgumentException($"Unknown system '{system}'.");
-        if (allianceSupport is < 0 or > 100) throw new ArgumentOutOfRangeException(nameof(allianceSupport));
-        E.AllianceSupport[system] = allianceSupport;
+        if (collectiveSupport is < 0 or > 100) throw new ArgumentOutOfRangeException(nameof(collectiveSupport));
+        E.CollectiveSupport[system] = collectiveSupport;
     }
 
     /// <summary>Setup only: a side's stockpile.</summary>
@@ -177,8 +177,8 @@ public sealed class EconomyModule
     /// </summary>
     public void SetupNewGame()
     {
-        SetPools(Side.Empire, Params.StartRaw, Params.StartRefined);
-        SetPools(Side.Alliance, Params.StartRaw, Params.StartRefined);
+        SetPools(Side.Hand, Params.StartRaw, Params.StartRefined);
+        SetPools(Side.Collective, Params.StartRaw, Params.StartRefined);
         if (SlotSource == SlotSource.Rolled)
             foreach (var s in _galaxy.Systems) // ordinal name order
                 E.Slots[s.Name] = SlotRoller.Roll(_game.Rng, s.Group == "core", Params);
@@ -239,12 +239,12 @@ public sealed class EconomyModule
     /// <summary>Has the Death Star destroyed the system? A destroyed system has no slots, no production and no support value. rule: m5-death-star §2 effect 5.</summary>
     public bool IsDestroyed(string system) => _game.State.DeathStar.IsDestroyed(system);
 
-    /// <summary>Support of a side in a system. Alliance share is stored; Empire = 100 - it. rule: m2-popular-support §What it stores. A destroyed system has no support value: 0 for both sides (rule: m5-death-star §2 effect 5).</summary>
+    /// <summary>Support of a side in a system. Collective share is stored; Hand = 100 - it. rule: m2-popular-support §What it stores. A destroyed system has no support value: 0 for both sides (rule: m5-death-star §2 effect 5).</summary>
     public int SupportOf(string system, Side side)
     {
         if (IsDestroyed(system)) return 0;
-        int a = E.AllianceSupport.TryGetValue(system, out var v) ? v : Params.DefaultAllianceSupport;
-        return side == Side.Alliance ? a : 100 - a;
+        int a = E.CollectiveSupport.TryGetValue(system, out var v) ? v : Params.DefaultCollectiveSupport;
+        return side == Side.Collective ? a : 100 - a;
     }
 
     // A facility queued or in delivery carries its ordering side (m2-construction); an installed one has none and follows its system.
@@ -297,7 +297,7 @@ public sealed class EconomyModule
     /// </summary>
     public void DealShares()
     {
-        foreach (var side in new[] { Side.Empire, Side.Alliance })
+        foreach (var side in new[] { Side.Hand, Side.Collective })
         {
             int load = Load(side);
             foreach (var kind in new[] { FacilityKind.Mine, FacilityKind.Refinery })
@@ -360,7 +360,7 @@ public sealed class EconomyModule
             if (o.Category == ObjectCategory.Regiment) regiments++;
             else if (o.Category == ObjectCategory.Fighter) fighters++;
         }
-        int mult = controller == Side.Empire && IsDeathStarSector(system) ? Params.DeathStarRegimentMultiplier : 1;
+        int mult = controller == Side.Hand && IsDeathStarSector(system) ? Params.DeathStarRegimentMultiplier : 1;
         int v = tier - Params.ShipPresence * ships - Params.FighterPresence * fighters - Params.RegimentPresence * mult * regiments;
         return Math.Clamp(v, 0, 100);
     }
@@ -391,15 +391,15 @@ public sealed class EconomyModule
 
     private static bool IsClass(EconObject o, FacilityKind k) => o.Category == ObjectCategory.Facility && o.Class == FacilityKinds.ClassName(k);
 
-    private static Side Other(Side s) => s == Side.Empire ? Side.Alliance : Side.Empire;
+    private static Side Other(Side s) => s == Side.Hand ? Side.Collective : Side.Hand;
 
     // ================================================================== removal, destruction, scrapping
 
     private void Remove(EconObject o)
     {
         E.Objects.Remove(o.Id);
-        E.Empire.RawLine.Remove(o.Id);
-        E.Alliance.RawLine.Remove(o.Id);
+        E.Hand.RawLine.Remove(o.Id);
+        E.Collective.RawLine.Remove(o.Id);
     }
 
     /// <summary>
@@ -464,7 +464,7 @@ public sealed class EconomyModule
     }
 
     // rule: m2-construction §Scrapping (ScrapObject, step 1): any completed installed object of the side, except the ones Classic answers code 23
-    // ("cannot be scrapped": the Rebel HQ, characters and special forces; the HQ and characters are not registry objects here, so they are
+    // ("cannot be scrapped": the Hearth, characters and special forces; the HQ and characters are not registry objects here, so they are
     // UnknownObject). No check reads blockade, uprising or who holds the system (B5a section 8, handler 0x579860).
     private OrderResult HandleScrap(StepContext ctx, ScrapObjectOrder o)
     {
@@ -603,13 +603,13 @@ public sealed class EconomyModule
         if (reason == "Suspended" && MineStopMode == StopMode.Pause && f.Due != 0) f.PausedFor = side; // frozen from today (the caller moves Due on)
         else { f.Due = 0; f.Startup = false; }
         f.Share = 0; f.WorkSide = null;
-        if (f.InLine) { E.Empire.RawLine.Remove(f.Id); E.Alliance.RawLine.Remove(f.Id); f.InLine = false; }
+        if (f.InLine) { E.Hand.RawLine.Remove(f.Id); E.Collective.RawLine.Remove(f.Id); f.InLine = false; }
     }
 
     /// <summary>Entries that are gone, not completed, or no longer working for the line's side leave the line. rule: m2-mines-refineries-pools §Side change (B5b §3: the old place is lost).</summary>
     private void NormalizeLines()
     {
-        foreach (var side in new[] { Side.Alliance, Side.Empire })
+        foreach (var side in new[] { Side.Collective, Side.Hand })
         {
             var line = E.Pool(side).RawLine;
             for (int i = 0; i < line.Count;)
@@ -695,12 +695,12 @@ public sealed class EconomyModule
 
     // ================================================================== 6.7 autoscrap
 
-    // rule: m2-maintenance §Overdraft and autoscrap; §Where it runs (6.7.a Alliance, 6.7.b Empire). Armed timer (Classic, B5b §6, 0x5329f0): armed when
+    // rule: m2-maintenance §Overdraft and autoscrap; §Where it runs (6.7.a Collective, 6.7.b Hand). Armed timer (Classic, B5b §6, 0x5329f0): armed when
     // the overdraft starts, first firing 10 days later, then every 10 days while over; dropped when it ends.
     private void Autoscrap(StepContext ctx)
     {
         int t = ctx.Day + 1;
-        foreach (var side in new[] { Side.Alliance, Side.Empire })
+        foreach (var side in new[] { Side.Collective, Side.Hand })
         {
             // A victim picked while in transit is scrapped once it has arrived (B5b §6, 0x4fb310).
             foreach (var o in E.Objects.Values.Where(o => o.ScrapPending && OwnerOf(o) == side).ToList())

@@ -10,7 +10,7 @@ namespace PraedraViewer;
 
 /// <summary>
 /// Playtest of the mission screens (rule: m5-missions): the Missions list (button and key M), a kind refused with a plain reason, Diplomacy on a
-/// neutral system with its outcome message within the expected days, Espionage with its result, and cancelling a mission. The Empire sends an
+/// neutral system with its outcome message within the expected days, Espionage with its result, and cancelling a mission. The Hand sends an
 /// espionage mission. Every action is a click on the real button; the core is only read to choose where to click and to check the result.
 /// </summary>
 public partial class Main
@@ -35,7 +35,7 @@ public partial class Main
         bool Free(CharacterRecord c) => cm.IsAvailable(c) && c.Transit == null && c.System != null;
         int Ticks(string a, string b) => fm.FindPath(a, b, 100) is { Ok: true } p ? p.TotalTicks : int.MaxValue;
 
-        if (me == Side.Alliance)
+        if (me == Side.Collective)
         {
             // ---------------------------------------------------------------- Mae Abara: a refused kind, then Diplomacy on a neutral system
             var mon = cm.Get(576);
@@ -92,9 +92,9 @@ public partial class Main
         }
         else
         {
-            // ---------------------------------------------------------------- Empire: Cassia Ravilla (or any free spy) on Espionage
+            // ---------------------------------------------------------------- Hand: Cassia Ravilla (or any free spy) on Espionage
             var spy = s.MyCharacters.Where(c => Free(c) && mm.CanDo(c, MissionKind.Espionage)).OrderBy(c => c.Id == 641 ? 0 : 1).ThenByDescending(c => s.Chars.EffectiveSkill(c, Skill.Espionage)).FirstOrDefault();
-            Expect(spy != null, "a free Imperial character can spy");
+            Expect(spy != null, "a free Hand character can spy");
             if (spy == null) return;
             string name = s.CharName(spy.Id);
             string target = s.Game.State.SystemOwners.Where(kv => kv.Value == s.Enemy).Select(kv => kv.Key)
@@ -207,7 +207,7 @@ public partial class Main
             // Recruitment runs since 2026-10-18 (m5-missions §6, the recruit pick); Jedi training is still refused by the rule book
             string blocked = texts.FirstOrDefault(t => t.StartsWith("Jedi training - ", StringComparison.Ordinal));
             Expect(blocked != null && blocked.Contains("rule book") && !gs.Enabled("Jedi training"), "Jedi training is greyed out with a plain reason: " + blocked);
-            Expect(!texts.Any(t => t.StartsWith(s.Player == Side.Alliance ? "Assassination" : "Death Star", StringComparison.Ordinal)), "the other side's kind is not offered");
+            Expect(!texts.Any(t => t.StartsWith(s.Player == Side.Collective ? "Assassination" : "Death Star", StringComparison.Ordinal)), "the other side's kind is not offered");
         }
         Expect(gs.Enabled(kw), $"{kw} is allowed for this team");
         Expect(gs.Click(kw), $"choose {kw}");

@@ -76,7 +76,7 @@ public sealed record BombardParams
     /// </summary>
     public bool MilitaryCollateral { get; init; } = true;
     /// <summary>
-    /// C9: the Rebel HQ is a Military target (defence ALLFACSD word 12 = 9). DEFAULT off in both modes: it collides with the protected movable HQ and
+    /// C9: the Hearth is a Military target (defence ALLFACSD word 12 = 9). DEFAULT off in both modes: it collides with the protected movable HQ and
     /// what a destroyed HQ does was not read (B7-bombardment §10); with it on, a destroyed HQ calls <see cref="BombardmentModule.HqDestroyed"/>,
     /// which throws until that effect is traced. rule: B7-bombardment §3, §Collisions C9.
     /// </summary>
@@ -117,16 +117,16 @@ public sealed class BombardmentModule
     /// </summary>
     public Func<string, int> BatteryGeneralLeadership { get; set; } = _ => 0;
 
-    /// <summary>Is the Rebel HQ at this system? Read only with <see cref="BombardParams.HqBombardable"/>. GameHost wires the HQ system. rule: B7-bombardment §3 (C9).</summary>
-    public Func<string, bool> IsRebelHq { get; set; } = _ => false;
+    /// <summary>Is the Hearth at this system? Read only with <see cref="BombardParams.HqBombardable"/>. GameHost wires the HQ system. rule: B7-bombardment §3 (C9).</summary>
+    public Func<string, bool> IsHearth { get; set; } = _ => false;
 
     /// <summary>
-    /// What a destroyed Rebel HQ does. NOT TRACED (B7-bombardment §10: relocation, victory, loss of the HQ bonuses were not read), so the default throws.
+    /// What a destroyed Hearth does. NOT TRACED (B7-bombardment §10: relocation, victory, loss of the HQ bonuses were not read), so the default throws.
     /// Reached only with <see cref="BombardParams.HqBombardable"/> on (DEFAULT off). Replace it once the effect is read; never guess it here.
     /// rule: B7-bombardment §Collisions C9, §10.
     /// </summary>
     public Action<StepContext, int, string> HqDestroyed { get; set; } = (_, _, system) =>
-        throw new NotImplementedException($"Bombardment destroyed the Rebel HQ at {system}: the effect is not traced (B7-bombardment §10). Keep HqBombardable off.");
+        throw new NotImplementedException($"Bombardment destroyed the Hearth at {system}: the effect is not traced (B7-bombardment §10). Keep HqBombardable off.");
 
     /// <summary>True while an accepted bombardment of this fleet waits for slot 5.1 (the fleet flag 0x40).</summary>
     public bool HasPending(int fleet) => _pending.Any(p => p.Fleet == fleet);
@@ -519,7 +519,7 @@ public sealed class BombardmentModule
 
     /// <summary>
     /// The targets of a category still standing, in the Classic walk order. Only the holder's completed objects standing directly on the system:
-    /// Military = regiments (id order), then defence facilities (id order), then the Rebel HQ (only with <see cref="BombardParams.HqBombardable"/>);
+    /// Military = regiments (id order), then defence facilities (id order), then the Hearth (only with <see cref="BombardParams.HqBombardable"/>);
     /// Civilian = the non-defence facilities (id order); General = Military, then Civilian, then Energy (while above 0), then Raw (while above 0).
     /// Energy and Raw are never Civilian targets (C5, gap fill). Special forces, characters, fighters and ships are never targets.
     /// rule: B7-bombardment §1 (pool flags), §3; m3-bombardment §Resolution 3.
@@ -536,8 +536,8 @@ public sealed class BombardmentModule
                 if (o.Category == ObjectCategory.Regiment && o.Completed && o.System == system && o.AboardShip == 0 && holder != null && o.Side == holder)
                     pool.Add(new Target(Kind.Regiment, o.Id, _def.Data.RegimentDefense(o.Class)));
             foreach (var (f, c) in _def.DefensesOf(system)) pool.Add(new Target(Kind.Facility, f.Id, c.BombardDefense));
-            // rule: B7-bombardment §3 (C9): the Rebel HQ (families 0x20-0x21, ALLFACSD word 12) is the holder's Military target; DEFAULT off
-            if (Params.HqBombardable && holder == Side.Alliance && IsRebelHq(system)) pool.Add(new Target(Kind.Hq, 0, _def.Data.HqDefense));
+            // rule: B7-bombardment §3 (C9): the Hearth (families 0x20-0x21, ALLFACSD word 12) is the holder's Military target; DEFAULT off
+            if (Params.HqBombardable && holder == Side.Collective && IsHearth(system)) pool.Add(new Target(Kind.Hq, 0, _def.Data.HqDefense));
         }
         if (civilian)
             foreach (var o in CivilianFacilities(system))

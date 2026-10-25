@@ -14,19 +14,19 @@ public class KeyTargetTests
 {
     private const string Protected = MissionReject.TargetProtected;
 
-    // Vader qualified for a kill or kidnap: combat 100 and espionage 60. Luke or Mon stands at T (Alliance), HQ placed at T when asked.
+    // Vader qualified for a kill or kidnap: combat 100 and espionage 60. Luke or Mon stands at T (Collective), HQ placed at T when asked.
     private static MissionWorld Assassin(int target, int vaderCombat = 100, int vaderEsp = 60, int regiments = -1, bool hq = false)
     {
         var w = new MissionWorld(characters: Praedra.Core.Tests.Characters.CharWorld.ClassicForce()); // the Classic Force (100 / 100 / 50): m5-characters-and-force §Force CH37
-        w.Hold(T, Side.Alliance, 30); // N = ceil(30 / 10) = 3 regiments
-        for (int i = 0; i < Math.Max(regiments, 0); i++) w.Unit(Side.Alliance, RebArmy, T);
+        w.Hold(T, Side.Collective, 30); // N = ceil(30 / 10) = 3 regiments
+        for (int i = 0; i < Math.Max(regiments, 0); i++) w.Unit(Side.Collective, RebArmy, T);
         w.Agent(Vader, T, esp: vaderEsp, com: vaderCombat);
         w.Agent(target, T);
         if (hq) w.Host.Fog.PlaceHq(T);
         return w;
     }
 
-    private static string? StartReason(MissionWorld w, MissionKind kind, int agent, int target, Side side = Side.Empire)
+    private static string? StartReason(MissionWorld w, MissionKind kind, int agent, int target, Side side = Side.Hand)
     {
         long s = w.Start(side, kind, new[] { agent }, null, targetChar: target);
         w.Game.Step();
@@ -46,11 +46,11 @@ public class KeyTargetTests
     public void KT1_GateRefusesAKeyTargetInAFleet(int target)
     {
         var w = Assassin(target);
-        RideFleet(w, target, Side.Alliance);
+        RideFleet(w, target, Side.Collective);
         Assert.Equal(Protected, StartReason(w, MissionKind.Assassination, Vader, target));
     }
 
-    // m5-missions KT2: at the Rebel HQ the gate refuses only while the Alliance garrison covers the required N (3 here)
+    // m5-missions KT2: at the Hearth the gate refuses only while the Collective garrison covers the required N (3 here)
     [Fact]
     public void KT2_GateAtTheHqNeedsAFullGarrison()
     {
@@ -68,7 +68,7 @@ public class KeyTargetTests
         Assert.Null(StartReason(notHq, MissionKind.Assassination, Vader, Luke));
         var hqElsewhere = Assassin(MonMothma, regiments: 5, hq: false);
         hqElsewhere.Host.Fog.PlaceHq(H);
-        hqElsewhere.Hold(H, Side.Alliance, 100);
+        hqElsewhere.Hold(H, Side.Collective, 100);
         Assert.Null(StartReason(hqElsewhere, MissionKind.Assassination, Vader, MonMothma));
     }
 
@@ -79,7 +79,7 @@ public class KeyTargetTests
         var w = Assassin(Luke, regiments: 2, hq: true);
         Assert.Null(StartReason(w, MissionKind.Assassination, Vader, Luke));
         int id = w.LastMission;
-        for (int i = 0; i < 4; i++) w.Unit(Side.Alliance, RebArmy, T); // reinforcements (the short garrison started an uprising: N is doubled to 6)
+        for (int i = 0; i < 4; i++) w.Unit(Side.Collective, RebArmy, T); // reinforcements (the short garrison started an uprising: N is doubled to 6)
         w.RunIteration(id);
         Assert.Empty(w.Events<MissionMemberRoll>());
         Assert.Equal(MissionOutcome.TargetInvalid, w.Events<MissionEnded>().Single().Outcome);
@@ -111,7 +111,7 @@ public class KeyTargetTests
         w.Agent(Piett, T, com: 20);
         w.Agent(Veers, T, com: 40, esp: 10);
         w.Stub!.Expect(0, 99, Bt(3, 50)); // B2b: the betrayal draws come first
-        long s = w.Start(Side.Empire, MissionKind.Assassination, new[] { Vader, Piett, Veers }, null, targetChar: Luke);
+        long s = w.Start(Side.Hand, MissionKind.Assassination, new[] { Vader, Piett, Veers }, null, targetChar: Luke);
         w.Game.Step();
         Assert.Null(w.Reason(s));
         w.RunIteration(w.LastMission);
@@ -120,7 +120,7 @@ public class KeyTargetTests
         Assert.Equal(4, w.Stub.Count(0, 99)); // three betrayal draws (B2b) and the one roll
     }
 
-    // m5-missions KT7: a qualified team draws k: k < 3 kidnaps (Capture by the Empire, cause Kidnap), else kills (Dead although MajorsCanDie is off)
+    // m5-missions KT7: a qualified team draws k: k < 3 kidnaps (Capture by the Hand, cause Kidnap), else kills (Dead although MajorsCanDie is off)
     [Theory]
     [InlineData(2, true)]
     [InlineData(3, false)]
@@ -134,7 +134,7 @@ public class KeyTargetTests
         var luke = w.Ch.Get(Luke)!;
         if (kidnap)
         {
-            Assert.Equal((CharacterStatus.Captured, Side.Empire), (luke.Status, luke.Captor!.Value));
+            Assert.Equal((CharacterStatus.Captured, Side.Hand), (luke.Status, luke.Captor!.Value));
             Assert.Equal(MissionModule.CauseKidnap, w.Events<CharacterCaptured>().Single().Cause);
             Assert.Empty(w.Events<CharacterKilled>());
         }
@@ -171,7 +171,7 @@ public class KeyTargetTests
         var w = Assassin(Luke, vaderCombat: 100, vaderEsp: 0);
         w.Agent(Piett, T, esp: 100, com: 1);
         w.Stub!.Expect(0, 99, Bt(2, 0)); // B2b: the betrayal draws come first
-        long s = w.Start(Side.Empire, MissionKind.Assassination, new[] { Vader, Piett }, null, targetChar: Luke);
+        long s = w.Start(Side.Hand, MissionKind.Assassination, new[] { Vader, Piett }, null, targetChar: Luke);
         w.Game.Step();
         Assert.Null(w.Reason(s));
         w.RunIteration(w.LastMission);
@@ -179,18 +179,18 @@ public class KeyTargetTests
         Assert.Equal(4, w.Stub.Count(0, 99)); // two betrayal draws (B2b), roll, and (B2e moved) the Hurt roll of the injury
     }
 
-    // m5-missions KT10: a key kill waives the Empire's Luke term (KeyDeathFallback default WaiveCondition); the Empire wins when Mae Abara is
+    // m5-missions KT10: a key kill waives the Hand's Luke term (KeyDeathFallback default WaiveCondition); the Hand wins when Mae Abara is
     // captured and the HQ is gone, and not before
     [Fact]
-    public void KT10_KillOfLukeSatisfiesTheEmpireTermAndTheEmpireWins()
+    public void KT10_KillOfLukeSatisfiesTheHandTermAndTheHandWins()
     {
         var w = Assassin(Luke);
-        w.Hold("X", Side.Alliance, 80); // the Alliance keeps a system, so "holds no system" does not end the game
-        w.Hold(T, Side.Empire, 20);     // T fell: the HQ at rest on a system the Alliance no longer holds
+        w.Hold("X", Side.Collective, 80); // the Collective keeps a system, so "holds no system" does not end the game
+        w.Hold(T, Side.Hand, 20);     // T fell: the HQ at rest on a system the Collective no longer holds
         w.Host.Fog.PlaceHq(T);
         w.Game.State.Scenario.Active = true;
         w.Stub!.Expect(0, 99, Bt(1, 0, 50)); // B2b: the betrayal draws come first
-        // the team is Empire, Luke is an Alliance character on a system now held by the Empire: still a legal target (free, there, no fleet, HQ not Alliance-held)
+        // the team is Hand, Luke is a Collective character on a system now held by the Hand: still a legal target (free, there, no fleet, HQ not Collective-held)
         Assert.Null(StartReason(w, MissionKind.Assassination, Vader, Luke));
         w.Game.Step();
         Assert.True(w.Host.Victory.Rules.StandardVictory); // standard victory is the default
@@ -199,9 +199,9 @@ public class KeyTargetTests
         w.RunIteration(w.LastMission);
         Assert.True(w.Ch.IsDead(Luke));
         Assert.Null(w.Host.Victory.Winner);
-        w.Ch.Capture(null, w.Ch.Get(MonMothma) ?? w.Agent(MonMothma, T), Side.Empire, T, CharacterCause.Debug);
+        w.Ch.Capture(null, w.Ch.Get(MonMothma) ?? w.Agent(MonMothma, T), Side.Hand, T, CharacterCause.Debug);
         w.Game.Step();
-        Assert.Equal(Side.Empire, w.Host.Victory.Winner);
+        Assert.Equal(Side.Hand, w.Host.Victory.Winner);
     }
 
     // m5-missions KT11: non-key targets are unchanged: one roll per member, the table value uncapped, Kill as before
@@ -213,7 +213,7 @@ public class KeyTargetTests
         w.Agent(Piett, T, com: 100);
         w.Agent(Wedge, T);
         w.Stub!.Expect(0, 99, Bt(2, 54, 99)); // B2b: the betrayal draws come first
-        long s = w.Start(Side.Empire, MissionKind.Assassination, new[] { Vader, Piett }, null, targetChar: Wedge);
+        long s = w.Start(Side.Hand, MissionKind.Assassination, new[] { Vader, Piett }, null, targetChar: Wedge);
         w.Game.Step();
         Assert.Null(w.Reason(s));
         w.RunIteration(w.LastMission);
@@ -223,16 +223,16 @@ public class KeyTargetTests
         Assert.True(w.Ch.IsDead(Wedge));
     }
 
-    // m5-missions KT12: Vader and Palpatine cannot be assassinated: the Alliance has no Assassination mission
+    // m5-missions KT12: Vader and Palpatine cannot be assassinated: the Collective has no Assassination mission
     [Theory]
     [InlineData(Vader)]
     [InlineData(Palpatine)]
-    public void KT12_AllianceCannotAssassinateTheEmperorsSide(int target)
+    public void KT12_CollectiveCannotAssassinateTheEmperorsSide(int target)
     {
         var w = new MissionWorld();
         w.Agent(Han, T, com: 100);
         w.Agent(target, T);
-        Assert.Equal(MissionReject.WrongSide, StartReason(w, MissionKind.Assassination, Han, target, Side.Alliance));
+        Assert.Equal(MissionReject.WrongSide, StartReason(w, MissionKind.Assassination, Han, target, Side.Collective));
     }
 
     // m5-missions KT13: Abduction of the four: the cap applies (Vader 4, Palpatine 2), a success is the normal capture (cause Abduction, no k draw)
@@ -244,11 +244,11 @@ public class KeyTargetTests
     public void KT13_AbductionOfTheFourIsCapped(int target, int roll, bool success)
     {
         var w = new MissionWorld();
-        w.Hold(T, Side.Empire, 20);
+        w.Hold(T, Side.Hand, 20);
         w.Agent(Han, T, com: 100);
         w.Agent(target, T);
         w.Stub!.Expect(0, 99, Bt(1, roll, 50)); // B2b: the betrayal draws come first (Han has no Force: no sensing draw)
-        Assert.Null(StartReason(w, MissionKind.Abduction, Han, target, Side.Alliance));
+        Assert.Null(StartReason(w, MissionKind.Abduction, Han, target, Side.Collective));
         w.RunIteration(w.LastMission);
         var r = w.Events<MissionMemberRoll>().Single();
         Assert.Equal((target == Vader ? 4 : 2, success), (r.Chance, r.Success));
@@ -257,12 +257,12 @@ public class KeyTargetTests
         if (success) Assert.Equal(MissionModule.CauseAbduction, w.Events<CharacterCaptured>().Single().Cause);
     }
 
-    // m5-missions KT14: Abduction of the four: one roll per iteration with three members; Luke and Mae Abara are gated too (Empire team, fleet)
+    // m5-missions KT14: Abduction of the four: one roll per iteration with three members; Luke and Mae Abara are gated too (Hand team, fleet)
     [Fact]
     public void KT14_AbductionOneRollAndGateInFleet()
     {
         var w = new MissionWorld();
-        w.Hold(T, Side.Empire, 20);
+        w.Hold(T, Side.Hand, 20);
         w.Agent(Han, H, com: 100); // B2d: the team flies in from H (a team leaving T would meet Vader's sensing at the leaving check too)
         w.Agent(Leia, H, com: 50);
         w.Agent(Wedge, H, com: 50);
@@ -270,22 +270,22 @@ public class KeyTargetTests
         // B2e moved: Leia and Wedge are Force users who are not aware, so their Force is 0 and Vader senses nobody (was two sense rolls); three
         // betrayal draws, then the roll
         w.Stub!.Expect(0, 99, 99, 99, 99, 50);
-        w.Start(Side.Alliance, MissionKind.Abduction, new[] { Han, Leia, Wedge }, null, targetChar: Vader);
+        w.Start(Side.Collective, MissionKind.Abduction, new[] { Han, Leia, Wedge }, null, targetChar: Vader);
         w.Game.Step();
         w.RunIteration(w.LastMission);
         Assert.Single(w.Events<MissionMemberRoll>());
         Assert.Empty(w.Events<MissionForceSenseRoll>());
 
         var g = Assassin(Luke);
-        RideFleet(g, Luke, Side.Alliance);
+        RideFleet(g, Luke, Side.Collective);
         Assert.Equal(Protected, StartReason(g, MissionKind.Abduction, Vader, Luke));
         var f = new MissionWorld();
         f.Agent(Han, T, com: 100); f.Agent(Palpatine, T);
-        RideFleet(f, Palpatine, Side.Empire);
-        Assert.Equal(Protected, StartReason(f, MissionKind.Abduction, Han, Palpatine, Side.Alliance));
+        RideFleet(f, Palpatine, Side.Hand);
+        Assert.Equal(Protected, StartReason(f, MissionKind.Abduction, Han, Palpatine, Side.Collective));
     }
 
-    // m5-missions KT15: an Empire key target at Charter is protected while the Empire's garrison there covers N, and not otherwise (real galaxy)
+    // m5-missions KT15: a Hand key target at Charter is protected while the Hand's garrison there covers N, and not otherwise (real galaxy)
     [Fact]
     public void KT15_CoruscantIsTheEmpiresProtectedCapital()
     {
@@ -293,12 +293,12 @@ public class KeyTargetTests
         const string Cor = "Charter";
         h.Ch().Place(Palpatine, Cor);
         h.Ch().Place(Han, Cor);
-        h.Economy.SetAllianceSupport(Cor, 100); // Empire support 0: N is large
+        h.Economy.SetCollectiveSupport(Cor, 100); // Hand support 0: N is large
         foreach (var o in h.Economy.Objects.Where(o => o.Category == ObjectCategory.Regiment && o.System == Cor).ToList()) o.System = "The Shoal"; // clear the setup garrison
-        var order = new StartMissionOrder(0, Side.Alliance, MissionKind.Abduction, new List<int> { Han }, new List<int>(), new List<int>(), null, Palpatine, null, null);
+        var order = new StartMissionOrder(0, Side.Collective, MissionKind.Abduction, new List<int> { Han }, new List<int>(), new List<int>(), null, Palpatine, null, null);
         Assert.True(h.Support.Garrison10(Cor) < 10 * h.Support.RequiredGarrison(Cor), "setup leaves Charter short of N");
         Assert.Null(h.Missions.CheckStart(order).Reason);
-        while (h.Support.Garrison10(Cor) < 10 * h.Support.RequiredGarrison(Cor)) h.Economy.AddObject(Side.Empire, "Tranches", Cor, true);
+        while (h.Support.Garrison10(Cor) < 10 * h.Support.RequiredGarrison(Cor)) h.Economy.AddObject(Side.Hand, "Tranches", Cor, true);
         Assert.Equal(Protected, h.Missions.CheckStart(order).Reason);
     }
 
@@ -307,10 +307,10 @@ public class KeyTargetTests
     public void KT16_SwitchOffRestoresOrdinaryTargets()
     {
         var w = new MissionWorld(new MissionParams { KeyTargetRules = false });
-        w.Hold(T, Side.Alliance, 30);
+        w.Hold(T, Side.Collective, 30);
         w.Agent(Vader, T, com: 100);
         w.Agent(Luke, T);
-        RideFleet(w, Luke, Side.Alliance);
+        RideFleet(w, Luke, Side.Collective);
         // a fleet rider is still a legal target in the old rules only if the ordinary checks pass; the gate must not be the reason
         Assert.NotEqual(Protected, StartReason(w, MissionKind.Assassination, Vader, Luke));
     }

@@ -15,7 +15,7 @@ public class DefenseTests
     private static readonly FacilityKind Kdy = FacilityKind.Kdy150, Lnr1 = FacilityKind.LnrSeriesI, Lnr2 = FacilityKind.LnrSeriesII,
         Gen1 = FacilityKind.GenCoreLevelI, Gen2 = FacilityKind.GenCoreLevelII, Dss = FacilityKind.DeathStarShield;
 
-    // m3-planetary-defenses D1: the six rows exactly as the table; only class 4 is Empire only; cost and maintenance agree with the costs file
+    // m3-planetary-defenses D1: the six rows exactly as the table; only class 4 is Hand only; cost and maintenance agree with the costs file
     [Fact]
     public void D1_SixRowsAsTheTable()
     {
@@ -37,13 +37,13 @@ public class DefenseTests
             Assert.Equal((e.Name, e.Family, e.Cost, e.Maint, e.Ro, e.Rd, e.Attack, e.Shield, e.Bd, e.Job),
                 (r.Name, r.Family, r.Cost, r.Maintenance, r.ResearchOrder, r.ResearchDifficulty, r.Attack, r.Shield, r.BombardDefense, r.Job));
         }
-        Assert.Equal(new[] { 4 }, rows.Where(r => r.EmpireOnly).Select(r => r.Id));
+        Assert.Equal(new[] { 4 }, rows.Where(r => r.HandOnly).Select(r => r.Id));
         var costs = EcoWorld.Costs.Value;
         foreach (var r in rows) // "Costs and maintenance agree with unit-and-facility-costs.csv"
         {
             var c = costs.Get(r.Name);
             Assert.Equal((r.Cost, r.Maintenance, r.ResearchOrder), (c.Cost, c.Maintenance, c.ResearchOrder));
-            Assert.Equal(r.EmpireOnly, !c.Alliance);
+            Assert.Equal(r.HandOnly, !c.Collective);
         }
     }
 
@@ -99,13 +99,13 @@ public class DefenseTests
     public void D5_BatteryShotsListsEveryDefenseInIdOrder()
     {
         var w = new BombWorld();
-        w.Hold(Side.Alliance);
+        w.Hold(Side.Collective);
         int g = w.Facility(Gen1), k = w.Facility(Kdy), l = w.Facility(Lnr1);
-        var shots = w.Def.BatteryShots(BombWorld.Sys, Side.Empire);
+        var shots = w.Def.BatteryShots(BombWorld.Sys, Side.Hand);
         Assert.Equal(new[] { g, k, l }, shots.Select(s => s.Facility));
         Assert.Equal(new[] { 0, 2000, 800 }, shots.Select(s => s.Attack));
         Assert.Equal(new[] { 0, 400, 160 }, shots.Select(s => s.ChancePercent));
-        Assert.Empty(w.Def.BatteryShots(BombWorld.Sys, Side.Alliance)); // the holder never shoots at itself
+        Assert.Empty(w.Def.BatteryShots(BombWorld.Sys, Side.Collective)); // the holder never shoots at itself
     }
 
     // m3-planetary-defenses D6
@@ -113,9 +113,9 @@ public class DefenseTests
     public void D6_OnlyTheCompletedKdyShoots()
     {
         var w = new BombWorld();
-        w.Hold(Side.Alliance);
+        w.Hold(Side.Collective);
         int done = w.Facility(Kdy); w.Facility(Kdy, completed: false);
-        Assert.Equal(new[] { done }, w.Def.BatteryShots(BombWorld.Sys, Side.Empire).Select(s => s.Facility));
+        Assert.Equal(new[] { done }, w.Def.BatteryShots(BombWorld.Sys, Side.Hand).Select(s => s.Facility));
     }
 
     // m3-planetary-defenses D7
@@ -136,27 +136,27 @@ public class DefenseTests
         Assert.Equal(new[] { k }, w.Def.ReturnFireSet(BombWorld.Sys));
     }
 
-    // m3-planetary-defenses D9: the Alliance cannot order a Death Star Shield (construction sheet: NotAvailable); the Empire can
+    // m3-planetary-defenses D9: the Collective cannot order a Death Star Shield (construction sheet: NotAvailable); the Hand can
     [Fact]
-    public void D9_AllianceBuildOrderOfDeathStarShieldIsNotAvailable()
+    public void D9_CollectiveBuildOrderOfDeathStarShieldIsNotAvailable()
     {
         var a = new BuildWorld();
-        a.Hold("Classis", Side.Alliance); a.Yard("Classis", FacilityKind.ConstructionYard);
-        Assert.Equal(RejectReason.NotAvailable, a.TryOrder(Side.Alliance, "Classis", YardFamily.Construction, "Death Star Shield", 1, "Classis"));
+        a.Hold("Classis", Side.Collective); a.Yard("Classis", FacilityKind.ConstructionYard);
+        Assert.Equal(RejectReason.NotAvailable, a.TryOrder(Side.Collective, "Classis", YardFamily.Construction, "Death Star Shield", 1, "Classis"));
         var e = new BuildWorld();
         e.Build.RespectResearchOrder = false; // research gate off = all available (the gate is on by default since m5-research)
-        e.Hold("Classis", Side.Empire); e.Yard("Classis", FacilityKind.ConstructionYard);
-        Assert.Null(e.TryOrder(Side.Empire, "Classis", YardFamily.Construction, "Death Star Shield", 1, "Classis")); // research flag off = all available
+        e.Hold("Classis", Side.Hand); e.Yard("Classis", FacilityKind.ConstructionYard);
+        Assert.Null(e.TryOrder(Side.Hand, "Classis", YardFamily.Construction, "Death Star Shield", 1, "Classis")); // research flag off = all available
     }
 
-    // m3-planetary-defenses D10 (control sheet C1): the Death Star Shield is removed on an Alliance capture, the other defenses transfer
+    // m3-planetary-defenses D10 (control sheet C1): the Death Star Shield is removed on a Collective capture, the other defenses transfer
     [Fact]
-    public void D10_AllianceCaptureRemovesTheDeathStarShieldOnly()
+    public void D10_CollectiveCaptureRemovesTheDeathStarShieldOnly()
     {
         var w = new CtlWorld();
-        w.Hold("Classis", Side.Empire, 80);
+        w.Hold("Classis", Side.Hand, 80);
         int shield = w.Eco.AddFacility("Classis", Dss), gen = w.Eco.AddFacility("Classis", Gen1), kdy = w.Eco.AddFacility("Classis", Kdy);
-        w.Capture(Side.Alliance, "Classis");
+        w.Capture(Side.Collective, "Classis");
         w.Run(1);
         Assert.Equal(new[] { shield }, w.Events<FacilityRemoved>().Select(e => e.Facility));
         Assert.Equal(new[] { gen, kdy }, w.Events<FacilityTransferred>().Select(e => e.Facility));
@@ -167,14 +167,14 @@ public class DefenseTests
     public void D11_OneOfTwoShieldsDestroyedOpensTheGate()
     {
         var w = new BombWorld();
-        w.Hold(Side.Alliance);
+        w.Hold(Side.Collective);
         w.Facility(Gen1); w.Facility(Gen1);
         Assert.True(w.Def.AssaultForbidden(BombWorld.Sys));
-        w.Fleet(Side.Empire, BombWorld.Sys, "Death Star", 6); // P = 90, S = 80, 10 hits
+        w.Fleet(Side.Hand, BombWorld.Sys, "Death Star", 6); // P = 90, S = 80, 10 hits
         w.Stub.Expect(0, 2, 1); // B7-bombardment §5.3: the military collateral x = rand(0..m0 = 2) comes first: 1, no collateral
         w.Dice((0, 10), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1)); // the first shield falls, the second survives nine rolls
         int fleet = w.Game.State.Fleets.Keys.Single();
-        Assert.Null(w.TryBombard(Side.Empire, fleet, BombWorld.Sys, BombardCategory.Military));
+        Assert.Null(w.TryBombard(Side.Hand, fleet, BombWorld.Sys, BombardCategory.Military));
         Assert.Equal(1, w.Def.ShieldGenerators(BombWorld.Sys));
         Assert.False(w.Def.AssaultForbidden(BombWorld.Sys));
     }
@@ -184,7 +184,7 @@ public class DefenseTests
     public void D12_OverCapacityDestroysOneDefenseWithOnePick()
     {
         var w = new BombWorld();
-        w.Hold(Side.Alliance);
+        w.Hold(Side.Collective);
         w.Eco.SetSlots(BombWorld.Sys, 3, 0);
         int a = w.Facility(Kdy), b = w.Facility(Lnr1), c = w.Facility(Gen1);
         w.Eco.SetSlots(BombWorld.Sys, 2, 0);
@@ -201,10 +201,10 @@ public class DefenseTests
     public void D13_QueriesAreRepeatableAndDrawNothing()
     {
         var w = new BombWorld(stub: false, seed: 5);
-        w.Hold(Side.Alliance);
+        w.Hold(Side.Collective);
         w.Facility(Gen1); w.Facility(Kdy); w.Facility(Lnr2); w.Facility(Dss); w.Facility(Gen2, completed: false);
         string Snapshot() => string.Join("|", w.Def.ShieldGenerators(BombWorld.Sys), w.Def.ShieldStrength(BombWorld.Sys), w.Def.Batteries(BombWorld.Sys),
-            string.Join(",", w.Def.BatteryShots(BombWorld.Sys, Side.Empire).Select(s => $"{s.Facility}:{s.Attack}:{s.ChancePercent}")),
+            string.Join(",", w.Def.BatteryShots(BombWorld.Sys, Side.Hand).Select(s => $"{s.Facility}:{s.Attack}:{s.ChancePercent}")),
             string.Join(",", w.Def.ReturnFireSet(BombWorld.Sys)), w.Def.AssaultForbidden(BombWorld.Sys), w.Def.GateShields(BombWorld.Sys));
         string first = Snapshot();
         long draws = w.Game.Rng.Draws;
@@ -221,25 +221,25 @@ public class DefenseTests
         // The m3 hook, kept as the BatteryReturnFire-off path (B7 switches off). With the B7 DEFAULTs the batteries do damage ships:
         // B7-bombardment §4, tested in B7BombardmentTests.
         var w = new BombWorld(bp: BombWorld.M3Rule);
-        w.Hold(Side.Alliance);
+        w.Hold(Side.Collective);
         int l = w.Facility(Lnr1), k = w.Facility(Kdy);
-        int fleet = w.Fleet(Side.Empire, BombWorld.Sys, "Decree", 2); // P = 8
+        int fleet = w.Fleet(Side.Hand, BombWorld.Sys, "Decree", 2); // P = 8
         var ships = ShipState(w);
         w.Dice(Enumerable.Repeat((0, 1), 8).ToArray()); // every roll is too low to destroy anything
-        Assert.Null(w.TryBombard(Side.Empire, fleet, BombWorld.Sys, BombardCategory.Military));
+        Assert.Null(w.TryBombard(Side.Hand, fleet, BombWorld.Sys, BombardCategory.Military));
         var fire = Assert.Single(w.Events<BatteryReturnFire>());
         Assert.Equal(new[] { l, k }, fire.Facilities.Items);
         Assert.Equal(ships, ShipState(w));
     }
 
-    // m3-planetary-defenses D15: a neutral system's defense facilities (side 3) are in BatteryShots for an Empire assault
+    // m3-planetary-defenses D15: a neutral system's defense facilities (side 3) are in BatteryShots for a Hand assault
     [Fact]
-    public void D15_NeutralFacilitiesShootAtTheEmpire()
+    public void D15_NeutralFacilitiesShootAtTheHand()
     {
         var w = new BombWorld(); // Fiducia has no holder here: neutral
         int k = w.Facility(Kdy), g = w.Facility(Gen1);
-        Assert.Equal(new[] { k, g }, w.Def.BatteryShots(BombWorld.Sys, Side.Empire).Select(s => s.Facility));
-        Assert.Equal(new[] { k, g }, w.Def.BatteryShots(BombWorld.Sys, Side.Alliance).Select(s => s.Facility));
+        Assert.Equal(new[] { k, g }, w.Def.BatteryShots(BombWorld.Sys, Side.Hand).Select(s => s.Facility));
+        Assert.Equal(new[] { k, g }, w.Def.BatteryShots(BombWorld.Sys, Side.Collective).Select(s => s.Facility));
     }
 
     // ---------------------------------------------------------------- extra tests

@@ -345,7 +345,7 @@ public sealed class FleetModule
     /// </summary>
     public void SendBasedSquadronsAway(StepContext ctx, string system, Side? holder)
     {
-        foreach (var side in new[] { Side.Alliance, Side.Empire })
+        foreach (var side in new[] { Side.Collective, Side.Hand })
         {
             if (side == holder) continue;
             var squads = BasedSquadrons(system, side).OrderBy(o => o.Id).ToList();
@@ -904,8 +904,8 @@ public sealed class FleetModule
         var present = PresentBySystem();
         foreach (var (sys, here) in present)
         {
-            var emp = here.Where(f => f.Side == Side.Empire).Select(f => f.Id).ToList();
-            var all = here.Where(f => f.Side == Side.Alliance).Select(f => f.Id).ToList();
+            var emp = here.Where(f => f.Side == Side.Hand).Select(f => f.Id).ToList();
+            var all = here.Where(f => f.Side == Side.Collective).Select(f => f.Id).ToList();
             if (emp.Count > 0 && all.Count > 0)
                 ctx.Emit((i, _) => new Contact(i, day, sys, new ValueList<int>(emp), new ValueList<int>(all)));
         }
@@ -987,7 +987,7 @@ public sealed class FleetModule
         return Strength.Of(blockers.SelectMany(StrengthUnits), _reference.Select(c => Strength.Unit(c))) >= EconomicStrength;
     }
 
-    private static Side Other(Side s) => s == Side.Empire ? Side.Alliance : Side.Empire;
+    private static Side Other(Side s) => s == Side.Hand ? Side.Collective : Side.Hand;
 
     /// <summary>Fleets placed at a system, grouped by system in ordinal name order, each group by fleet id.</summary>
     private SortedDictionary<string, List<Fleet>> PresentBySystem()

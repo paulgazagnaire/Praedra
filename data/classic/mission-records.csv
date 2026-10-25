@@ -1,4 +1,4 @@
-dat_id,kind,alliance,empire,timer_min,timer_spread,hidden,repeats,table,special_force_mask,guard_checks,can_resign,source
+dat_id,kind,collective,hand,timer_min,timer_spread,hidden,repeats,table,special_force_mask,guard_checks,can_resign,source
 0x01,Move,1,1,0,0,1,0,,0x0F0F,1,0,classic: MISSNSD record 1 (importer); kind and table: missions/01
 0x02,Return,1,1,0,0,1,0,,0x1F0F,1,0,classic: MISSNSD record 2 (importer); kind and table: missions/01
 0x03,Autorouting,1,1,0,0,1,0,,0x0F0F,1,0,classic: MISSNSD record 3 (importer); kind and table: missions/01

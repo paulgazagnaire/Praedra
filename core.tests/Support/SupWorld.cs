@@ -30,19 +30,19 @@ internal sealed class SupWorld
     /// <summary>Hold a system and set the holder's own support.</summary>
     public void Hold(string system, Side side, int holderSupport) => W.Hold(system, side, holderSupport);
 
-    public int A(string system) => W.Eco.SupportOf(system, Side.Alliance);
+    public int A(string system) => W.Eco.SupportOf(system, Side.Collective);
 
     public void Regiments(string system, Side side, string cls, int n)
     {
         for (int i = 0; i < n; i++) W.Eco.AddObject(side, cls, system);
     }
 
-    public static string ArmyOf(Side side) => side == Side.Empire ? "Tranches" : "Militia";
+    public static string ArmyOf(Side side) => side == Side.Hand ? "Tranches" : "Militia";
 
-    /// <summary>Set an uprising running by hand (the sheet's tests start from "uprising on"). Rebels = the other side than the holder.</summary>
+    /// <summary>Set an uprising running by hand (the sheet's tests start from "uprising on"). Collective = the other side than the holder.</summary>
     public SystemSupportState Uprising(string system, Side holder, int erosionDue = 0, int incidentDue = 0)
     {
-        var st = new SystemSupportState { Uprising = true, Rebels = holder == Side.Empire ? Side.Alliance : Side.Empire, ErosionDue = erosionDue, IncidentDue = incidentDue };
+        var st = new SystemSupportState { Uprising = true, Collective = holder == Side.Hand ? Side.Collective : Side.Hand, ErosionDue = erosionDue, IncidentDue = incidentDue };
         Game.State.Support.Systems[system] = st;
         return st;
     }

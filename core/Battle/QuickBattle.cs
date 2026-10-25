@@ -33,27 +33,27 @@ public static class QuickBattle
     }
 
     /// <summary>
-    /// Run one battle. Alliance units come first. With ClassicBattleRng = Game the battle generator is seeded with <paramref name="seed"/> (Classic ignores it).
+    /// Run one battle. Collective units come first. With ClassicBattleRng = Game the battle generator is seeded with <paramref name="seed"/> (Classic ignores it).
     /// <paramref name="alert"/> null = sides without a controller (threshold <see cref="BattleParams.RetreatThreshold"/>); <paramref name="ai"/> marks AI sides. <see cref="BattleParams.Ruleset"/> picks the
     /// engine; for New, unit ids are interleaved between the sides (neither is processed first, m4-battle-new §3.2), <paramref name="carry"/> puts each side's
     /// squadrons aboard its carriers in id order (else they are based), and <paramref name="prepare"/> may change the units (hull, counters) before the start.
     /// </summary>
     public static (ClassicBattleResult Result, IReadOnlyList<BattleUnit> Units) Run(BattleParams p, IReadOnlyDictionary<string, ShipClass> classes,
-        IEnumerable<(string Class, int Count)> alliance, IEnumerable<(string Class, int Count)> empire, ulong seed,
-        bool allianceCanLand = true, bool empireCanLand = true, OnContactMode[]? alert = null,
+        IEnumerable<(string Class, int Count)> collective, IEnumerable<(string Class, int Count)> hand, ulong seed,
+        bool collectiveCanLand = true, bool handCanLand = true, OnContactMode[]? alert = null,
         NewBattleData? data = null, bool carry = false, Action<IReadOnlyList<BattleUnit>>? prepare = null, bool[]? ai = null)
     {
         if (p.Ruleset == BattleRuleset.New)
         {
-            var (nb, units) = PrepareNew(p, classes, alliance, empire, seed, allianceCanLand, empireCanLand, alert, data, carry, prepare);
+            var (nb, units) = PrepareNew(p, classes, collective, hand, seed, collectiveCanLand, handCanLand, alert, data, carry, prepare);
             return (nb.Run(), units);
         }
         int id = 1;
-        var a = Units(p, classes, Side.Alliance, alliance, ref id);
-        var e = Units(p, classes, Side.Empire, empire, ref id, a.Count);
+        var a = Units(p, classes, Side.Collective, collective, ref id);
+        var e = Units(p, classes, Side.Hand, hand, ref id, a.Count);
         var all = a.Concat(e).ToList();
         var hasDest = new bool[2];
-        hasDest[(int)Side.Alliance] = allianceCanLand; hasDest[(int)Side.Empire] = empireCanLand;
+        hasDest[(int)Side.Collective] = collectiveCanLand; hasDest[(int)Side.Hand] = handCanLand;
         if (carry) { Carry(a); Carry(e); }
         prepare?.Invoke(all);
         var battle = new ClassicBattle(p, all, new GameRng(seed), hasDest, alert, ai);
@@ -62,16 +62,16 @@ public static class QuickBattle
 
     /// <summary>The New battle ready to run (so a caller can set the tactic, the tick hook or the event log first). See <see cref="Run"/> for the parameters.</summary>
     public static (NewBattle Battle, IReadOnlyList<BattleUnit> Units) PrepareNew(BattleParams p, IReadOnlyDictionary<string, ShipClass> classes,
-        IEnumerable<(string Class, int Count)> alliance, IEnumerable<(string Class, int Count)> empire, ulong seed,
-        bool allianceCanLand = true, bool empireCanLand = true, OnContactMode[]? alert = null,
+        IEnumerable<(string Class, int Count)> collective, IEnumerable<(string Class, int Count)> hand, ulong seed,
+        bool collectiveCanLand = true, bool handCanLand = true, OnContactMode[]? alert = null,
         NewBattleData? data = null, bool carry = false, Action<IReadOnlyList<BattleUnit>>? prepare = null, bool logEvents = false)
     {
         int id = 1;
-        var a = Units(p, classes, Side.Alliance, alliance, ref id);
-        var e = Units(p, classes, Side.Empire, empire, ref id, a.Count);
+        var a = Units(p, classes, Side.Collective, collective, ref id);
+        var e = Units(p, classes, Side.Hand, hand, ref id, a.Count);
         var all = a.Concat(e).ToList();
         var hasDest = new bool[2];
-        hasDest[(int)Side.Alliance] = allianceCanLand; hasDest[(int)Side.Empire] = empireCanLand;
+        hasDest[(int)Side.Collective] = collectiveCanLand; hasDest[(int)Side.Hand] = handCanLand;
         Interleave(a, e);
         if (carry) { Carry(a); Carry(e); }
         prepare?.Invoke(all);

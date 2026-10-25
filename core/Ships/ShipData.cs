@@ -17,7 +17,7 @@ public sealed record ShipArcs(ArcCounts Fore, ArcCounts Aft, ArcCounts Port, Arc
 }
 
 [Flags]
-public enum ShipSide { None = 0, Alliance = 1, Empire = 2 }
+public enum ShipSide { None = 0, Collective = 1, Hand = 2 }
 
 /// <summary>
 /// The ship-class fields the core needs so far (travel, forced stop, ship object, carrying capacity, bombardment power: <c>Bombardment</c> is a capital ship's bombardment_modifier or a squadron's bombardment value). Loaded from data/classic/ (CAPSHPSD and FIGHTSD, read by
@@ -124,7 +124,7 @@ public static class ShipData
             var name = t.Get(r, "name").Trim();
             if (name.Length == 0) throw new DataLoadException($"{t.Where(r)}: ship class name is empty.");
             if (!seen.Add(name)) throw new DataLoadException($"{t.Where(r)}: duplicate ship class '{name}'.");
-            var side = (t.GetInt(r, "is_alliance") != 0 ? ShipSide.Alliance : 0) | (t.GetInt(r, "is_empire") != 0 ? ShipSide.Empire : 0);
+            var side = (t.GetInt(r, "is_alliance") != 0 ? ShipSide.Collective : 0) | (t.GetInt(r, "is_empire") != 0 ? ShipSide.Hand : 0);
             int hd = t.GetInt(r, "hyperdrive"), hdd = t.GetInt(r, "hyperdrive_if_damaged");
             if (hd < 0 || hdd < 0) throw new DataLoadException($"{t.Where(r)}: '{name}' has a negative hyperdrive rating.");
             list.Add(new ShipClass(name, isCapital, side, hd, hdd,

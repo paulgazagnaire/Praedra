@@ -10,7 +10,7 @@ namespace Praedra.Core.AI;
 
 /// <summary>
 /// The parts of the simple AI that exist only behind the fog (<see cref="SimpleAiParams.UseFog"/>): scouting, estimates from the last-seen
-/// picture, the Empire's belief map of the Rebel HQ and the Alliance's risk-based HQ moves. Everything about the other side is read from
+/// picture, the Hand's belief map of the Hearth and the Collective's risk-based HQ moves. Everything about the other side is read from
 /// the side's <see cref="KnowledgeView"/> (m5-fog-and-hq §N8, the AI plays fair: Decided); own state is read as before. Like the rest of the
 /// AI it keeps no plans between days: belief, risk and scout roles are re-derived every day from the view and the side's own fleets (the few
 /// events it reads back come from the side's <see cref="AiMemory"/>, which a save carries).
@@ -138,16 +138,16 @@ public sealed partial class SimpleAi
         return DefendersAt(system);
     }
 
-    // ================================================================== the Empire's belief map of the Rebel HQ (ai/07 §7)
+    // ================================================================== the Hand's belief map of the Hearth (ai/07 §7)
 
-    private bool HqSearchOn => _view != null && _side == Side.Empire && KnownEnemyHq == null;
+    private bool HqSearchOn => _view != null && _side == Side.Hand && KnownEnemyHq == null;
 
-    /// <summary>HQ belief weight of a system (0 = cannot hold it as far as the Empire knows). Empire with fog only.</summary>
+    /// <summary>HQ belief weight of a system (0 = cannot hold it as far as the Hand knows). Hand with fog only.</summary>
     private int Belief(string system) => Beliefs().TryGetValue(system, out var w) ? w : 0;
     private int BeliefMax { get { Beliefs(); return _beliefMax; } }
 
     /// <summary>
-    /// The Empire's HQ belief map as it stands (fog only; empty otherwise), highest first, ties by name: for logs and tests. Rebuilt from the
+    /// The Hand's HQ belief map as it stands (fog only; empty otherwise), highest first, ties by name: for logs and tests. Rebuilt from the
     /// view on each call; reads nothing else of the other side.
     /// </summary>
     public IReadOnlyList<(string System, int Weight)> HqBelief()
@@ -162,39 +162,39 @@ public sealed partial class SimpleAi
         if (_belief != null) return _belief;
         var d = new Dictionary<string, int>(StringComparer.Ordinal);
         _belief = d; _beliefMax = 0;
-        if (_view == null || _side != Side.Empire) return d;
+        if (_view == null || _side != Side.Hand) return d;
         string core = _h.Fog.Params.CoreGroup;
-        // Alliance fleet sightings by system (the side's own log of the last ObservedWindowDays). rule: m5-fog-and-hq §N7 2
+        // Collective fleet sightings by system (the side's own log of the last ObservedWindowDays). rule: m5-fog-and-hq §N7 2
         var sightings = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var s in _view.Sightings(Today - _view.ObservedWindowDays))
-            if (s.Side == Side.Alliance) sightings[s.System] = sightings.GetValueOrDefault(s.System) + 1;
+            if (s.Side == Side.Collective) sightings[s.System] = sightings.GetValueOrDefault(s.System) + 1;
         var clues = new HashSet<string>(_view.HqSectorClues.Select(c => c.Sector), StringComparer.Ordinal);
-        var allies = new Dictionary<string, int>(StringComparer.Ordinal); // Alliance-held systems per sector, as the picture shows them
+        var allies = new Dictionary<string, int>(StringComparer.Ordinal); // Collective-held systems per sector, as the picture shows them
         foreach (var sys in _h.Data.Galaxy.Systems)
-            if (_view.Picture(sys.Name)?.Owner?.Value.Owner == Side.Alliance) allies[sys.Sector] = allies.GetValueOrDefault(sys.Sector) + 1;
+            if (_view.Picture(sys.Name)?.Owner?.Value.Owner == Side.Collective) allies[sys.Sector] = allies.GetValueOrDefault(sys.Sector) + 1;
         foreach (var sys in _h.Data.Galaxy.Systems)
         {
             string s = sys.Name;
             if (Held(s) || Destroyed(s)) continue;
             var pic = _view.Picture(s);
             int w;
-            if (pic == null) w = string.Equals(sys.Group, core, StringComparison.OrdinalIgnoreCase) ? 0 : _p.BeliefUnexplored; // §N7 4: only rim starts and Alliance systems
+            if (pic == null) w = string.Equals(sys.Group, core, StringComparison.OrdinalIgnoreCase) ? 0 : _p.BeliefUnexplored; // §N7 4: only rim starts and Collective systems
             else
             {
                 var owner = pic.Owner;
                 if (owner == null) w = _p.BeliefUnexplored;
-                else if (owner.Value.Owner == Side.Alliance) w = _p.BeliefAllianceHeld;
+                else if (owner.Value.Owner == Side.Collective) w = _p.BeliefCollectiveHeld;
                 else w = AgeOf(owner) > _p.BeliefOwnerTrustDays ? _p.BeliefStaleOther : 0;
                 if (w > 0)
                 {
                     if (pic.Fleets is { } e && AgeOf(e) <= _p.FogFleetMemoryDays)
-                        w += _p.BeliefPerShipSeen * e.Value.Where(f => f.Side == Side.Alliance).Sum(f => f.ShipCount);
+                        w += _p.BeliefPerShipSeen * e.Value.Where(f => f.Side == Side.Collective).Sum(f => f.ShipCount);
                     if (pic.Facilities is { } c) w += _p.BeliefPerFacilitySeen * c.Value.Values.Sum();
-                    if (pic.Ground is { } g) w += _p.BeliefPerRegimentSeen * g.Value.Where(x => x.Side == Side.Alliance).Sum(x => x.Total);
+                    if (pic.Ground is { } g) w += _p.BeliefPerRegimentSeen * g.Value.Where(x => x.Side == Side.Collective).Sum(x => x.Total);
                     w += Math.Min(_p.BeliefSightingCap, _p.BeliefPerSighting * sightings.GetValueOrDefault(s));
-                    int sup = owner?.Value.AllianceSupport ?? 0;
+                    int sup = owner?.Value.CollectiveSupport ?? 0;
                     if (sup > _p.BeliefSupportFloor) w += (sup - _p.BeliefSupportFloor) * (sup - _p.BeliefSupportFloor) / Math.Max(1, _p.BeliefSupportDivisor);
-                    int ally = allies.GetValueOrDefault(sys.Sector) - (owner?.Value.Owner == Side.Alliance ? 1 : 0);
+                    int ally = allies.GetValueOrDefault(sys.Sector) - (owner?.Value.Owner == Side.Collective ? 1 : 0);
                     w += _p.BeliefPerSectorAlly * Math.Max(0, ally);
                     // a group C look that showed no HQ (Yavin's day-0 copy, a captured and lost system) clears it for a while. rule: §N5
                     if (pic.Facilities is { } cc && !pic.HqHere)
@@ -387,8 +387,8 @@ public sealed partial class SimpleAi
 
     /// <summary>
     /// How much a fresh look at a system is worth: never explored = ScoutUnexploredValue; seen = its age as a share of StaleDays (0 while
-    /// Held or Observed), doubled for enemy-held; the Empire adds HQ belief. Systems with armed enemy ships seen lately are avoided, and only
-    /// systems within ScoutHops of the side's holdings count (the Empire also looks at HQ candidates farther away).
+    /// Held or Observed), doubled for enemy-held; the Hand adds HQ belief. Systems with armed enemy ships seen lately are avoided, and only
+    /// systems within ScoutHops of the side's holdings count (the Hand also looks at HQ candidates farther away).
     /// </summary>
     private int ScoutValue(string s, int hop)
     {
@@ -411,12 +411,12 @@ public sealed partial class SimpleAi
         return v;
     }
 
-    // ================================================================== the Alliance hides its HQ (ai/07 §7)
+    // ================================================================== the Collective hides its HQ (ai/07 §7)
 
     /// <summary>
-    /// Risk per system from what the Alliance sees: every Imperial fleet sighting in its log of the last ObservedWindowDays (and every Imperial
+    /// Risk per system from what the Collective sees: every Hand fleet sighting in its log of the last ObservedWindowDays (and every Hand
     /// fleet it sees standing on its systems) adds HqRiskHere at that system, HqRiskNear one lane away and HqRiskFar two lanes away; every
-    /// neighbour the picture shows Imperial adds HqRiskEnemyNeighbour.
+    /// neighbour the picture shows Hand adds HqRiskEnemyNeighbour.
     /// </summary>
     private Dictionary<string, int> Risk()
     {
@@ -446,7 +446,7 @@ public sealed partial class SimpleAi
         return _risk = d;
     }
 
-    /// <summary>Lanes from each system to the nearest system the picture shows Imperial (int.MaxValue when none is known).</summary>
+    /// <summary>Lanes from each system to the nearest system the picture shows Hand (int.MaxValue when none is known).</summary>
     private int[] HopsFromEnemy()
     {
         var g = _h.Data.Galaxy; var dist = new int[g.Systems.Count]; Array.Fill(dist, int.MaxValue);
@@ -461,13 +461,13 @@ public sealed partial class SimpleAi
     }
 
     /// <summary>
-    /// Daily, Alliance with fog: move the HQ (MoveHq, m5-fog-and-hq §F6) when the risk at its system reaches HqMoveRisk and the last move is at
+    /// Daily, Collective with fog: move the HQ (MoveHq, m5-fog-and-hq §F6) when the risk at its system reaches HqMoveRisk and the last move is at
     /// least HqMoveCooldownDays old; the destination is a held system with HqMinLanes lanes or more, no enemy fleet seen on it, risk below half
-    /// of HqMoveRisk, as far from the Empire as possible, then the least risk, then the shortest trip.
+    /// of HqMoveRisk, as far from the Hand as possible, then the least risk, then the shortest trip.
     /// </summary>
     private void PlanHqHide()
     {
-        var hq = _view!.KnownHq; // the Alliance's own HQ (its own object, §N5)
+        var hq = _view!.KnownHq; // the Collective's own HQ (its own object, §N5)
         if (hq == null) return;
         string at = hq.System;
         var risk = Risk();
@@ -571,20 +571,20 @@ public sealed partial class SimpleAi
     // ================================================================== the key hunt (KeyHunt)
 
     /// <summary>
-    /// KeyHunt: fog on, the Alliance, ahead (Finishing, or its place term: Charter held or destroyed), and a key of its standard victory set
+    /// KeyHunt: fog on, the Collective, ahead (Finishing, or its place term: Charter held or destroyed), and a key of its standard victory set
     /// not yet its own prisoner (own state). A dead key is not known here and still hunted: the looks then find nobody.
     /// </summary>
     private bool KeyHuntOn()
     {
-        if (!_p.KeyHunt || _view == null || _side != Side.Alliance || HuntedKeys().Count == 0) return false;
+        if (!_p.KeyHunt || _view == null || _side != Side.Collective || HuntedKeys().Count == 0) return false;
         return KeyAhead();
     }
 
-    /// <summary>The side is ahead for its victory keys: Finishing, or for the Alliance its place term (Charter held or destroyed).</summary>
+    /// <summary>The side is ahead for its victory keys: Finishing, or for the Collective its place term (Charter held or destroyed).</summary>
     private bool KeyAhead()
     {
         string cor = Praedra.Core.Victory.VictoryModule.CoruscantName;
-        return Finishing() || (_side == Side.Alliance && (Held(cor) || Destroyed(cor)));
+        return Finishing() || (_side == Side.Collective && (Held(cor) || Destroyed(cor)));
     }
 
     /// <summary>Is the character one of the side's standard victory keys (the characters it must capture to win)?</summary>

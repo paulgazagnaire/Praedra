@@ -24,7 +24,7 @@ public class CharacterSetupTests
         foreach (var hunter in new[] { "Usura", "Mora", "Damnum", "Pignus" })
         {
             var c = d.Roster.Single(x => x.Name == hunter);
-            Assert.Equal(Side.Empire, c.Side);
+            Assert.Equal(Side.Hand, c.Side);
             Assert.False(c.CanAdmiral || c.CanCommander || c.CanGeneral); // no officer roles, like Oti
         }
         Assert.Equal(50, d.Get(Han).NavigatorSpeed);
@@ -43,7 +43,7 @@ public class CharacterSetupTests
         Assert.Equal(h.HqSystem, ch.LocationOf(ch.Get(MonMothma)!));
         foreach (var id in new[] { Leia, Luke, Han, Wedge, Chewbacca, Dodonna }) Assert.Equal(Yavin, ch.LocationOf(ch.Get(id)!));
         foreach (var id in new[] { Vader, 896, 897, Piett, Veers, 908 }) Assert.True(ch.Get(id)!.Placed);
-        foreach (var side in new[] { Side.Empire, Side.Alliance })
+        foreach (var side in new[] { Side.Hand, Side.Collective })
             Assert.Equal(7 + 4, ch.InPlay.Count(c => c.Side == side));
         Assert.Equal(65, ch.All.Count); // the whole roster is created (unplaced = the recruitment pool)
         foreach (var c in ch.InPlay)
@@ -65,7 +65,7 @@ public class CharacterSetupTests
         {
             var h = Make(seed);
             var ch = h.Characters;
-            foreach (var side in new[] { Side.Alliance, Side.Empire })
+            foreach (var side in new[] { Side.Collective, Side.Hand })
             {
                 var t = ch.InPlay.Where(c => c.Side == side && c.Talented).ToList();
                 Assert.Equal(3, t.Count);
@@ -95,7 +95,7 @@ public class CharacterSetupTests
         {
             var ch = Make(seed).Characters;
             Assert.All(ch.All.Where(c => c.Talented), c => Assert.DoesNotContain(c.Id, hunters.Append(Palpatine).Append(Vader)));
-            Assert.Equal(3, ch.InPlay.Count(c => c.Side == Side.Empire && c.Talented));
+            Assert.Equal(3, ch.InPlay.Count(c => c.Side == Side.Hand && c.Talented));
             Assert.True(ch.Get(Vader)!.EffectiveForce >= 80);
             Assert.False(ch.IsTrainer(ch.Get(Vader)!));
         }
@@ -119,9 +119,9 @@ public class CharacterSetupTests
     public void P9_Switches()
     {
         var h = Make(1, new GameSettings { Characters = new CharacterParams { StartCastOfficers = StartCastOfficers.None, StartExtrasPerSide = 0 } });
-        var emp = h.Characters.InPlay.Where(c => c.Side == Side.Empire).Select(c => c.Id).ToList();
+        var emp = h.Characters.InPlay.Where(c => c.Side == Side.Hand).Select(c => c.Id).ToList();
         Assert.Equal(new[] { Palpatine, Vader }, emp);
-        Assert.Equal(7, h.Characters.InPlay.Count(c => c.Side == Side.Alliance));
+        Assert.Equal(7, h.Characters.InPlay.Count(c => c.Side == Side.Collective));
     }
 
     // m5-setup-and-victory §P9 (RandomLocation): r over systems then fleets; a fleet costs a second draw j
@@ -129,11 +129,11 @@ public class CharacterSetupTests
     public void RandomLocation_DrawsSystemThenFleetShip()
     {
         var w = new CharWorld();
-        w.Hold(Hoth, Side.Empire); w.Hold(Yavin, Side.Empire);
-        int f = w.Fleet(Side.Empire, Coruscant, Isd, 3);
+        w.Hold(Hoth, Side.Hand); w.Hold(Yavin, Side.Hand);
+        int f = w.Fleet(Side.Hand, Coruscant, Isd, 3);
         var stub = new Praedra.Core.Tests.Economy.StubRng().Queue(1, 2, 1);
-        Assert.Equal((Hoth, 0), w.Ch.RandomLocation(Side.Empire, stub));
-        Assert.Equal(((string?)null, f), w.Ch.RandomLocation(Side.Empire, stub));
+        Assert.Equal((Hoth, 0), w.Ch.RandomLocation(Side.Hand, stub));
+        Assert.Equal(((string?)null, f), w.Ch.RandomLocation(Side.Hand, stub));
         Assert.Equal(new[] { (0, 2), (0, 2), (0, 2) }, stub.Requests.Select(r => (r.Min, r.Max)));
     }
 
@@ -142,23 +142,23 @@ public class CharacterSetupTests
     public void Victory_StandardNeedsTheKeyCharactersCaptured()
     {
         var off = Make(2, OldVictory.Settings); // HQ-only set explicitly: standard victory is the default now
-        off.Fleets.SetOwner(Coruscant, Side.Alliance);
+        off.Fleets.SetOwner(Coruscant, Side.Collective);
         off.Game.Step();
-        Assert.Equal(Side.Alliance, off.Victory.Winner); // HQ-only flavour (explicit)
+        Assert.Equal(Side.Collective, off.Victory.Winner); // HQ-only flavour (explicit)
 
         var h = Make(2); // the default: standard victory
-        h.Fleets.SetOwner(Coruscant, Side.Alliance);
+        h.Fleets.SetOwner(Coruscant, Side.Collective);
         h.Game.Step();
         Assert.Null(h.Victory.Winner); // Vader and Palpatine are free
         bool done = false;
         h.Game.RegisterHook("5.2", ctx =>
         {
             if (done) return; done = true;
-            h.Characters.Capture(ctx, h.Characters.Get(Vader)!, Side.Alliance, null, CharacterCause.Mission);
-            h.Characters.Capture(ctx, h.Characters.Get(Palpatine)!, Side.Alliance, null, CharacterCause.Mission);
+            h.Characters.Capture(ctx, h.Characters.Get(Vader)!, Side.Collective, null, CharacterCause.Mission);
+            h.Characters.Capture(ctx, h.Characters.Get(Palpatine)!, Side.Collective, null, CharacterCause.Mission);
         });
         h.Game.Step();
-        Assert.Equal(Side.Alliance, h.Victory.Winner);
+        Assert.Equal(Side.Collective, h.Victory.Winner);
     }
 
     // m5-setup-and-victory §Victory (KeyDeathFallback): Immortal turns a key character's death into an injury; Waive counts it as captured
@@ -185,11 +185,11 @@ public class CharacterSetupTests
         {
             if (once2) return; once2 = true;
             waive.Characters.Kill(ctx, waive.Characters.Get(Vader)!, CharacterCause.Mission);
-            waive.Characters.Capture(ctx, waive.Characters.Get(Palpatine)!, Side.Alliance, null, CharacterCause.Mission);
+            waive.Characters.Capture(ctx, waive.Characters.Get(Palpatine)!, Side.Collective, null, CharacterCause.Mission);
         });
         waive.Game.Step();
         Assert.Equal(CharacterStatus.Dead, waive.Characters.Get(Vader)!.Status);
-        Assert.True(waive.Victory.KeysCaptured(Side.Alliance));
+        Assert.True(waive.Victory.KeysCaptured(Side.Collective));
     }
 
     // m5-characters-and-force §Where it runs: the simple AI ignores characters and the game keeps running with them

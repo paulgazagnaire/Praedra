@@ -10,8 +10,8 @@ namespace Praedra.Core.AI;
 public sealed class AiMatch
 {
     public GameHost Host { get; }
-    public SimpleAi Empire { get; }
-    public SimpleAi Alliance { get; }
+    public SimpleAi Hand { get; }
+    public SimpleAi Collective { get; }
     /// <summary>Orders queued, by "Side Kind".</summary>
     public SortedDictionary<string, int> Sent { get; } = new(StringComparer.Ordinal);
     /// <summary>Orders rejected, by "Side Kind Reason".</summary>
@@ -25,19 +25,19 @@ public sealed class AiMatch
     /// <summary>A side that gives no orders at all (a scripted passive player), or null when both sides play.</summary>
     public Side? Passive { get; }
 
-    public AiMatch(GameHost host, SimpleAiParams? empire = null, SimpleAiParams? alliance = null, Side? passive = null)
+    public AiMatch(GameHost host, SimpleAiParams? hand = null, SimpleAiParams? collective = null, Side? passive = null)
     {
         Host = host; Passive = passive;
-        Empire = new SimpleAi(host, Side.Empire, empire);
-        Alliance = new SimpleAi(host, Side.Alliance, alliance);
+        Hand = new SimpleAi(host, Side.Hand, hand);
+        Collective = new SimpleAi(host, Side.Collective, collective);
         _eventsSeen = host.Game.Events.Count;
-        host.Battles.SetControllers(empireAi: true, allianceAi: true); // rule: B6a §1: the AI match plays both sides
+        host.Battles.SetControllers(handAi: true, collectiveAi: true); // rule: B6a §1: the AI match plays both sides
     }
 
     public void Step()
     {
         _kinds.Clear();
-        foreach (var ai in new[] { Empire, Alliance })
+        foreach (var ai in new[] { Hand, Collective })
         {
             if (ai.Side == Passive) continue;
             ai.PlanDay();

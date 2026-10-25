@@ -117,7 +117,7 @@ public class GameHostTests
         Assert.True(h.Economy.IsDeathStarSector("Charter"));
         // support -> construction: an uprising stops yards
         Assert.False(h.Construction.IsInUprising("Navalia"));
-        h.Game.State.Support.Systems["Navalia"] = new SystemSupportState { Uprising = true, Rebels = Side.Alliance, ErosionDue = 99, IncidentDue = 99 };
+        h.Game.State.Support.Systems["Navalia"] = new SystemSupportState { Uprising = true, Collective = Side.Collective, ErosionDue = 99, IncidentDue = 99 };
         Assert.True(h.Construction.IsInUprising("Navalia"));
         // control: the debug order is accepted only when the setting is on
         Assert.Equal(RejectReason.DebugDisabled, RunDebugCapture(GameHost.New(1)));
@@ -126,8 +126,8 @@ public class GameHostTests
 
     private static string? RunDebugCapture(GameHost h)
     {
-        h.Fleets.SetOwner("Navalia", Side.Alliance);
-        long seq = h.Control.SubmitCapture(Side.Empire, "Navalia") /* (B5a, 2026-10-17) Derived control: troops take the world */;
+        h.Fleets.SetOwner("Navalia", Side.Collective);
+        long seq = h.Control.SubmitCapture(Side.Hand, "Navalia") /* (B5a, 2026-10-17) Derived control: troops take the world */;
         h.Game.Step();
         return h.Game.Events.OfType<OrderRejected>().FirstOrDefault(e => e.Sequence == seq)?.Reason;
     }
@@ -137,14 +137,14 @@ public class GameHostTests
     public void CaptureCancelsTheLosersProjectsThroughTheHostWiring()
     {
         var h = GameHost.New(1, new GameSettings { IncidentsEnabled = false, DebugOrdersEnabled = true });
-        h.Fleets.SetOwner("Caminus", Side.Alliance);
+        h.Fleets.SetOwner("Caminus", Side.Collective);
         h.Economy.AddFacility("Caminus", FacilityKind.TrainingFacility);
-        h.Economy.SetPools(Side.Alliance, 0, 50);
+        h.Economy.SetPools(Side.Collective, 0, 50);
         h.Construction.RefuseOverdrawOrders = false; // B5b 2026-10-18: no mines here (capacity 0); the upkeep refusal is not what this checks
-        long build = h.Construction.SubmitBuild(Side.Alliance, "Caminus", YardFamily.Training, "Militia", 2);
+        long build = h.Construction.SubmitBuild(Side.Collective, "Caminus", YardFamily.Training, "Militia", 2);
         h.Game.Step();
         Assert.NotNull(h.Construction.ProjectAt("Caminus", YardFamily.Training));
-        h.Control.SubmitCapture(Side.Empire, "Caminus") /* (B5a, 2026-10-17) Derived control: troops take the world */;
+        h.Control.SubmitCapture(Side.Hand, "Caminus") /* (B5a, 2026-10-17) Derived control: troops take the world */;
         h.Game.Step();
         Assert.Null(h.Construction.ProjectAt("Caminus", YardFamily.Training));
         Assert.Contains(h.Game.Events, e => e is ProjectCancelled { Reason: "SystemLost" });
@@ -170,9 +170,9 @@ public class GameHostTests
     {
         var c = TestCampaign.New(1);
         var owners = c.Game.State.SystemOwners;
-        int e = owners.Count(kv => kv.Value == Side.Empire), a = owners.Count(kv => kv.Value == Side.Alliance);
+        int e = owners.Count(kv => kv.Value == Side.Hand), a = owners.Count(kv => kv.Value == Side.Collective);
         Assert.InRange(e, 15, 20); Assert.InRange(a, 15, 20);
-        // the starting-facilities rows inside the regions are placed: Navalia and Classis (Empire), Caminus (Neutral row, held by the Alliance here)
+        // the starting-facilities rows inside the regions are placed: Navalia and Classis (Hand), Caminus (Neutral row, held by the Collective here)
         bool Has(string sys, FacilityKind k) => c.Host.Economy.Objects.Any(o => o.System == sys && o.Class == FacilityKinds.ClassName(k) && o.Completed);
         Assert.True(Has("Navalia", FacilityKind.OrbitalShipyard) && Has("Classis", FacilityKind.OrbitalShipyard) && Has("Caminus", FacilityKind.OrbitalShipyard));
         Assert.False(Has("Incus", FacilityKind.OrbitalShipyard)); // outside both regions: not used
@@ -180,8 +180,8 @@ public class GameHostTests
         // every region system holds only its side's units
         foreach (var o in c.Host.Economy.Objects.Where(o => o.Category == ObjectCategory.Regiment && o.System != null))
             Assert.Equal(o.Side, owners[o.System!]);
-        Assert.Equal(Side.Empire, owners["Charter"]);
-        Assert.Equal(Side.Alliance, owners["Caminus"]);
+        Assert.Equal(Side.Hand, owners["Charter"]);
+        Assert.Equal(Side.Collective, owners["Caminus"]);
     }
 
     // the script is a function of the day: the same orders on the same day whatever came before

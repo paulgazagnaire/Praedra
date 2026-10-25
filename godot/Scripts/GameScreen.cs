@@ -99,7 +99,7 @@ public partial class GameScreen : Control
         _fleets.Bind(S.Game, G);
 
         // Start with the map centred on the player's headquarters.
-        string home = S.MyHqSystem ?? (S.OwnHq is { Status: Praedra.Core.Fog.HqStatus.InTransit } th ? th.Path[^1] : GameBoot.EmpireCapital);
+        string home = S.MyHqSystem ?? (S.OwnHq is { Status: Praedra.Core.Fog.HqStatus.InTransit } th ? th.Path[^1] : GameBoot.HandCapital);
         if (G.TryFindSystem(home, out int homeIdx)) { _view.FocusOn(homeIdx, 2.4f); }
         S.Say($"You lead the {S.NameOf(S.Player)}. Your headquarters is {home}. Press Play (or Space) to start the clock; the How to play button explains the rest.", MsgKind.Good, home);
         foreach (var m in S.Messages) AddLogItem(m);
@@ -108,7 +108,7 @@ public partial class GameScreen : Control
         if (_showHowToOnStart && GameBoot.HowToUnseen()) ShowHowTo();
     }
 
-    /// <summary>Whose headquarters the player knows at a system: their own always, the enemy's only when known (the Empire: KnownHq).</summary>
+    /// <summary>Whose headquarters the player knows at a system: their own always, the enemy's only when known (the Hand: KnownHq).</summary>
     Side? HqSideAt(int i)
     {
         string name = G.Systems[i].Name;
@@ -131,8 +131,8 @@ public partial class GameScreen : Control
     (string Text, Color Color)? CapitalTagOf(int i)
     {
         if (HqSideAt(i) is not Side side) return null;
-        if (side == S.Player) return (side == Side.Empire ? "YOUR CAPITAL" : "YOUR HQ", new Color(1f, 0.95f, 0.5f));
-        return (side == Side.Empire ? "ENEMY CAPITAL" : "REBEL HQ (TARGET)", new Color(1f, 0.45f, 0.4f));
+        if (side == S.Player) return (side == Side.Hand ? "YOUR CAPITAL" : "YOUR HQ", new Color(1f, 0.95f, 0.5f));
+        return (side == Side.Hand ? "ENEMY CAPITAL" : "REBEL HQ (TARGET)", new Color(1f, 0.45f, 0.4f));
     }
 
     // ================================================================== UI skeleton
@@ -352,7 +352,7 @@ public partial class GameScreen : Control
 
     static readonly string[] HowToLines =
     {
-        "GOAL: Empire - capture the Rebel headquarters system (first you must find it). Alliance - capture Charter. (Your HQ, and the enemy HQ once you know where it is, are tagged on the map; the My HQ / Enemy HQ buttons jump there.) You also win if the other side loses every system.",
+        "GOAL: Hand - capture the Collective headquarters system (first you must find it). Collective - capture Charter. (Your HQ, and the enemy HQ once you know where it is, are tagged on the map; the My HQ / Enemy HQ buttons jump there.) You also win if the other side loses every system.",
         "TIME: press Play (or Space) to run the clock, again to pause. Speed buttons or keys 1-4 (Play starts at 5x). N or +1 day moves one day. It pauses by itself after a battle, a capture or an invasion.",
         "ORDERS: everything you order starts when the next day begins. After giving orders, press Play or +1 day.",
         "MOVE A FLEET: click one of your fleets on the map (white outline) or its name in the Your fleets list, press Move..., then click the destination. The white line shows the route and the arrival day.",
@@ -363,15 +363,15 @@ public partial class GameScreen : Control
         "BUILD: click one of your planets. The Build menu has Facilities, Ships, Fighters and Troops (click a heading to open it). Ships need a Shipyard there, troops a Training facility, buildings a Construction yard and a free slot.",
         "MONEY: Raw is ore from mines. Refineries turn it into Refined, which is what you spend. Upkeep (used / limit) is the running cost of everything you own; over the limit, units get scrapped. More mines and refineries raise the limit.",
         "ORDER: a planet needs enough regiments to keep the people calm. Too few and it revolts (red ring): yards and mines there stop.",
-        "MAP: wheel or + / - zoom, drag or arrow keys pan, Home resets, Esc cancels. Orange = Alliance, green = Empire, grey = nobody. Ships can jump anywhere, but the drawn hyperspace routes are faster: bright thick lines are major routes (3x speed), thin lines minor routes (1.5x). Routes (L) shows or hides them. When you move a fleet the preview is solid where it rides a route and dashed where it jumps through open space. It turns red when it passes a system where you saw an enemy interdictor, which can pull the fleet out of hyperspace there: the game never detours on its own, so Shift-click systems to add waypoints and steer around (or through) it; Backspace drops the last waypoint.",
-        "FOG OF WAR: you see live only systems you hold or have a fleet at. Other systems show what you saw last (the panel says \"last seen day N\"); dim hollow dots are unexplored. Enemy fleets appear only where you can see them. The Empire does not know where the Rebel HQ is until it finds it.",
+        "MAP: wheel or + / - zoom, drag or arrow keys pan, Home resets, Esc cancels. Orange = Collective, green = Hand, grey = nobody. Ships can jump anywhere, but the drawn hyperspace routes are faster: bright thick lines are major routes (3x speed), thin lines minor routes (1.5x). Routes (L) shows or hides them. When you move a fleet the preview is solid where it rides a route and dashed where it jumps through open space. It turns red when it passes a system where you saw an enemy interdictor, which can pull the fleet out of hyperspace there: the game never detours on its own, so Shift-click systems to add waypoints and steer around (or through) it; Backspace drops the last waypoint.",
+        "FOG OF WAR: you see live only systems you hold or have a fleet at. Other systems show what you saw last (the panel says \"last seen day N\"); dim hollow dots are unexplored. Enemy fleets appear only where you can see them. The Hand does not know where the Hearth is until it finds it.",
         "CHARACTERS: press Characters (or C) for your leaders: where they are, their post, status and skills. Leaders give bonuses: a fleet's Admiral boosts its bombardment, a fleet's General its regiments in an invasion, a system's General the defenders there.",
         "   Select a fleet to attach a character standing at the same system (as Admiral, Commander, General or passenger) or to detach one; select one of your systems to name or release its General. Move <name>... sends a character alone: the route and arrival day show before you confirm.",
         "MISSIONS: press Send NAME on a mission... in the Characters list (or Send a mission from... on a system panel), tick the team (characters and special forces standing together), pick the kind and click the target: the route and arrival day show first. The Missions list (M) shows each team's phase and expected day, and can cancel one.",
         "   Worth it now: Espionage (see what an enemy system holds) and Diplomacy (win a neutral system over before you take it). Sabotage is very hard: the team is usually caught.",
-        "REBEL HQ (Alliance): click your HQ system and press Move HQ..., then click one of your systems. The HQ travels for some days (it cannot be attacked on the way); a big enemy blockade pins it in place.",
-        "DEATH STAR: the Empire can build it like any capital ship at a shipyard (one per system; it is huge and very slow). Select its fleet at a system and press Destroy System: the planet and everything on it are gone for good, enemy ships there die, and the rest of the sector turns against the Empire (a second strike in the same sector turns the whole sector to the Alliance). Destroyed systems stay on the map as dark grey crosses; fleets can still pass through them.",
-        "   To stop it (Alliance): beat its fleet in battle (it is an ordinary ship in the fight), or send a Death Star Sabotage mission to the system where it stands (the Missions planner offers it once an agent with the skills is free). Watch the messages for \"New Death Star deployed\".",
+        "REBEL HQ (Collective): click your HQ system and press Move HQ..., then click one of your systems. The HQ travels for some days (it cannot be attacked on the way); a big enemy blockade pins it in place.",
+        "DEATH STAR: the Hand can build it like any capital ship at a shipyard (one per system; it is huge and very slow). Select its fleet at a system and press Destroy System: the planet and everything on it are gone for good, enemy ships there die, and the rest of the sector turns against the Hand (a second strike in the same sector turns the whole sector to the Collective). Destroyed systems stay on the map as dark grey crosses; fleets can still pass through them.",
+        "   To stop it (Collective): beat its fleet in battle (it is an ordinary ship in the fight), or send a Death Star Sabotage mission to the system where it stands (the Missions planner offers it once an agent with the skills is free). Watch the messages for \"New Death Star deployed\".",
         "SAVING: Save / Load in the top bar (one slot). The game also saves itself every 30 days; Continue on the start screen loads that.",
     };
 
@@ -482,7 +482,7 @@ public partial class GameScreen : Control
         _view.Centre(idx); _view.Select(idx);
     }
 
-    const string EnemyHqUnknownText = "The Rebel HQ location is unknown. Your picture of the galaxy has never shown it: explore Rebel systems to find it.";
+    const string EnemyHqUnknownText = "The Hearth location is unknown. Your picture of the galaxy has never shown it: explore Collective systems to find it.";
 
     static string HqMovingText(Praedra.Core.Fog.HqState h) => $"HQ moving to {h.Path[^1]}, arrives day {GameSession.HqArrivalDay(h)}";
 
@@ -587,7 +587,7 @@ public partial class GameScreen : Control
         _dayLabel.Text = $"Day {S.Game.Day}";
         _sideLabel.Text = $"  {S.NameOf(S.Player)} - {(S.Rules == Praedra.Core.Battle.BattleRuleset.New ? "New" : "Classic")} battles";
         _sideLabel.TooltipText = "Your side. Space battle rules: " + GameBoot.RulesName(S.Rules) + " (chosen at the start of the game).";
-        _sideLabel.AddThemeColorOverride("font_color", S.Player == Side.Empire ? GalaxyView.EmpireColor : GalaxyView.AllianceColor);
+        _sideLabel.AddThemeColorOverride("font_color", S.Player == Side.Hand ? GalaxyView.HandColor : GalaxyView.CollectiveColor);
         var eco = S.Host.Economy;
         int load = eco.Load(S.Player), cap = eco.Capacity(S.Player);
         _rawLabel.Text = $"Raw {eco.Raw(S.Player)}";

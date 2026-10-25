@@ -270,7 +270,7 @@ public partial class GameScreen
         Line("Press Characters (or C) to see your leaders. " + LeaderHelp);
         Line("Press Missions (or M) for your agents' missions. " + MissionAdvice);
         Add(new Control { CustomMinimumSize = new Vector2(0, 6) });
-        Line("Colours: orange = Alliance, green = Empire, small grey dot = neutral, hollow ring = never explored. Point at a system to see its sector. A big double ring marks a headquarters, a red ring an uprising, a yellow ring a blockade.", Dim);
+        Line("Colours: orange = Collective, green = Hand, small grey dot = neutral, hollow ring = never explored. Point at a system to see its sector. A big double ring marks a headquarters, a red ring an uprising, a yellow ring a blockade.", Dim);
         Line("Fog of war: you see live only the systems you hold or have a fleet at. Others show what you saw last (with the day); dim hollow dots are unexplored. Enemy fleets show only where you can see them.", Dim);
         Add(new Control { CustomMinimumSize = new Vector2(0, 6) });
         Line("Space: play / pause     N: one day     1-4: speed     C: characters     M: missions\nWheel or +/-: zoom     drag or arrows: pan\nEsc: cancel / deselect", Dim);
@@ -292,7 +292,7 @@ public partial class GameScreen
 
         Line(name, null, 22);
         string hqNote = name == S.MyHqSystem ? "   (YOUR HEADQUARTERS)"
-            : name == S.EnemyHqSystem ? (Me == Side.Empire ? "   (REBEL HQ - take it to win)" : "   (ENEMY CAPITAL - take it to win)") : "";
+            : name == S.EnemyHqSystem ? (Me == Side.Hand ? "   (REBEL HQ - take it to win)" : "   (ENEMY CAPITAL - take it to win)") : "";
         Line($"{(sys.IsOutsideSectors ? "Outside the sectors" : sys.Sector)}{hqNote}", Dim);
         Add(new HSeparator());
 
@@ -315,8 +315,8 @@ public partial class GameScreen
                 sees ? Good : new Color(1f, 0.85f, 0.4f));
         }
         Line(!ownerKnown ? "Owner: unknown" : owner == null ? "Owner: nobody (neutral)" : $"Owner: {S.You(owner.Value)}", !ownerKnown || owner == null ? Dim : (mine ? Good : Bad));
-        if (mine) Line($"Support: Alliance {eco.SupportOf(name, Side.Alliance)}%, Empire {eco.SupportOf(name, Side.Empire)}%");
-        else if (pic.Owner is { } po) Line($"Support: Alliance {po.Value.AllianceSupport}% (as last seen)");
+        if (mine) Line($"Support: Collective {eco.SupportOf(name, Side.Collective)}%, Hand {eco.SupportOf(name, Side.Hand)}%");
+        else if (pic.Owner is { } po) Line($"Support: Collective {po.Value.CollectiveSupport}% (as last seen)");
         if (mine || sees)
         {
             if (S.Host.Support.IsUprising(name)) Line(mine ? "UPRISING! The people are in revolt here: yards and mines stop until it ends." : "Uprising: the people here are in revolt.", Bad);
@@ -355,8 +355,8 @@ public partial class GameScreen
             Line((fac.Value.Count == 0 ? "none" : string.Join(", ", fac.Value.OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv => kv.Value == 1 ? kv.Key : $"{kv.Value} x {kv.Key}"))) + $"   (seen day {fac.Stamp})");
         else Line("unknown (nobody has looked at the ground yet)", Dim);
 
-        // the Rebel HQ: the Alliance can move it (rule: m5-fog-and-hq §F6)
-        if (mine && Me == Side.Alliance && name == S.MyHqSystem) HqSection(name);
+        // the Hearth: the Collective can move it (rule: m5-fog-and-hq §F6)
+        if (mine && Me == Side.Collective && name == S.MyHqSystem) HqSection(name);
 
         // the build menu comes right after the facilities so a new player does not have to scroll for it
         if (mine) BuildMenu(name);
@@ -422,12 +422,12 @@ public partial class GameScreen
         }
     }
 
-    // ================================================================== the Rebel HQ (Alliance)
+    // ================================================================== the Hearth (Collective)
 
     void HqSection(string at)
     {
         Heading("Headquarters");
-        Line("Your HQ is here. If the Empire takes this system, the HQ is lost and you lose. The Empire does not know where it is unless its spies find it.", Dim, 13);
+        Line("Your HQ is here. If the Hand takes this system, the HQ is lost and you lose. The Hand does not know where it is unless its spies find it.", Dim, 13);
         if (S.PendingHqMove is string to) { Line($"Waiting for the next day: move the HQ to {to}.", new Color(1f, 0.85f, 0.4f)); return; }
         bool pinned = S.Fog.IsPinned(at);
         Act(_moveHq ? "Cancel HQ move" : "Move HQ...", () => { if (_moveHq) CancelMove(); else StartHqMove(); },
@@ -523,7 +523,7 @@ public partial class GameScreen
         }
 
         var p = cons.Params;
-        var allRows = eco.Costs.Rows.Where(r => (Me == Side.Empire ? r.Empire : r.Alliance) && r.Cost > 0).ToList();
+        var allRows = eco.Costs.Rows.Where(r => (Me == Side.Hand ? r.Hand : r.Collective) && r.Cost > 0).ToList();
         foreach (var section in new[] { "Facilities", "Ships", "Fighters", "Troops" })
         {
             var rows = allRows.Where(r => SectionOf(r.Category) == section).ToList();
@@ -737,7 +737,7 @@ public partial class GameScreen
         string at = f.At;
         Confirm($"Destroy {at}?",
             $"{at} and everything on it (the planet, buildings, troops, and every enemy or neutral ship there) will be destroyed for good, and about half of the minor characters there will die. " +
-            "The rest of the sector turns against the Empire, and a second strike in the same sector turns the whole sector to the Alliance. It happens when the next day starts and cannot be undone.",
+            "The rest of the sector turns against the Hand, and a second strike in the same sector turns the whole sector to the Collective. It happens when the next day starts and cannot be undone.",
             "Yes, destroy it", () => DestroySystem(fleetId));
     }
 

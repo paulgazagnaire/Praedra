@@ -60,7 +60,7 @@ public sealed record EconomyParams
     public int SupportFloor { get; init; } = 1;
     public int SupportCeiling { get; init; } = 100;
     /// <summary>Support of a system nobody has set: rim populated systems start at exactly 50 (m2-popular-support, starting values reference). DEFAULT.</summary>
-    public int DefaultAllianceSupport { get; init; } = 50;
+    public int DefaultCollectiveSupport { get; init; } = 50;
     /// <summary>Smuggling tiers: (highest support in the tier, percent). Support above the last bound gives 0. GNPRTB 7732 to 7737. Traced.</summary>
     public IReadOnlyList<(int MaxSupport, int Percent)> SmugglingTiers { get; init; } =
         new[] { (20, 75), (30, 50), (40, 25) };
@@ -68,7 +68,7 @@ public sealed record EconomyParams
     public int ShipPresence { get; init; } = 10;
     public int FighterPresence { get; init; } = 5;
     public int RegimentPresence { get; init; } = 2;
-    /// <summary>Empire regiments count this many times in a Death Star sector (GNPRTB 7680). Traced.</summary>
+    /// <summary>Hand regiments count this many times in a Death Star sector (GNPRTB 7680). Traced.</summary>
     public int DeathStarRegimentMultiplier { get; init; } = 2;
     /// <summary>Starting stockpile of raw and refined. DEFAULT (Lead): 0 and 0.</summary>
     public int StartRaw { get; init; } = 0;

@@ -1,4 +1,4 @@
-research_family,kind,dat_id,name,alliance,empire,cost,level,rdiff,start_alliance,start_empire
+research_family,kind,dat_id,name,collective,hand,cost,level,rdiff,start_collective,start_hand
 0x28 ship,capital ship,64,Ark,1,0,92,2,24,locked,n/a
 0x28 ship,capital ship,65,Hauler,1,0,30,0,0,yes,n/a
 0x28 ship,capital ship,66,Crowbar,1,0,60,7,60,locked,n/a

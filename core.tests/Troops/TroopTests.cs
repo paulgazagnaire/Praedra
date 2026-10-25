@@ -10,7 +10,7 @@ using Praedra.Core.Troops;
 namespace Praedra.Core.Tests.Troops;
 
 // Tests of m3-troops-and-special-forces (ids T1 to T23 as in the sheet's table, then extra tests named after the rule they check).
-// Fixture T: Empire holds Charter with one standard Training Facility (id 500) and refined 1000; ISD 201 (3 slots), fleet 200 at
+// Fixture T: Hand holds Charter with one standard Training Facility (id 500) and refined 1000; ISD 201 (3 slots), fleet 200 at
 // Charter; Stormtrooper regiments 401 to 403 on Charter. Hook time T = K + 1; events of orders carry Day = K.
 // The real galaxy, ship data, costs and troop files are used.
 public class TroopTests
@@ -19,7 +19,7 @@ public class TroopTests
     // from Charter takes those days; Remedium is the longest one the router flies direct (a 23-unit free jump: 4 days at speed 100, 3 at 80).
     private const string Home = "Charter", Far = "Remedium";
     private const string Isd = "Mandate", Storm = "Pacifiers";
-    private static readonly Side Emp = Side.Empire, Reb = Side.Alliance;
+    private static readonly Side Emp = Side.Hand, Reb = Side.Collective;
 
     private static TroopData Data => BuildWorld.RealTroops.Value;
 
@@ -162,7 +162,7 @@ public class TroopTests
 
     // m3-troops T5
     [Fact]
-    public void T5_AllianceCannotOrderAStormtrooper()
+    public void T5_CollectiveCannotOrderAStormtrooper()
     {
         var w = new BuildWorld();
         w.Hold(Home, Reb); w.Yard(Home, FacilityKind.TrainingFacility); w.Refined(Reb, 100);
@@ -228,7 +228,7 @@ public class TroopTests
 
     // m3-troops T10
     [Fact]
-    public void T10_DestinationHeldByTheAllianceIsBadDestination()
+    public void T10_DestinationHeldByTheCollectiveIsBadDestination()
     {
         var w = T(regiments: false);
         w.Hold("The Thaw", Reb);
@@ -341,7 +341,7 @@ public class TroopTests
         w.Eco.AddObject(Reb, "Militia", Home, true, 420);
         w.Eco.AddObject(Emp, Storm, Home, false, 421); // queued, not completed
         w.Eco.AddObject(Reb, "Dodger", null, true, 430);
-        w.Fleets.AddFleetOf(Reb, "Rebel", Home, new[] { 430 }, 431);
+        w.Fleets.AddFleetOf(Reb, "Collective", Home, new[] { 430 }, 431);
         var before = Snap(w);
         Assert.Equal("UnknownFleet", Load(w, 999, 401));
         Assert.Equal("NotYours", Step(w, w.Troops.SubmitLoad(Reb, 200, new[] { 401 }))); // a fleet of the other side
@@ -411,7 +411,7 @@ public class TroopTests
 
     // m3-troops T17
     [Fact]
-    public void T17_UnloadAtAnAllianceHeldSystemIsNotYourSystem()
+    public void T17_UnloadAtAnCollectiveHeldSystemIsNotYourSystem()
     {
         var w = T();
         Assert.Null(Load(w, 200, 401));
@@ -645,7 +645,7 @@ public class TroopTests
         Assert.Equal(new[] { 201, 201, 202 }, list.Select(a => a.Ship).ToArray());
         Assert.Empty(w.Troops.RegimentsAboardAt(Home, Reb));
         Assert.Empty(w.Troops.RegimentsAboardAt(Far, Emp));
-        Assert.Equal(new[] { 420 }, w.Troops.RegimentsOnSystem(Home, Emp).Select(o => o.Id).ToArray()); // defenders of an Empire attack
+        Assert.Equal(new[] { 420 }, w.Troops.RegimentsOnSystem(Home, Emp).Select(o => o.Id).ToArray()); // defenders of a Hand attack
         Assert.Empty(w.Troops.RegimentsOnSystem(Home, Reb)); // aboard ones never defend
         // a fleet in transit is not "at the system"
         Assert.Null(Step(w, w.Fleets.SubmitMove(Emp, 200, Far)));

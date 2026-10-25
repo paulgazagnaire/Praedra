@@ -25,7 +25,7 @@ public sealed class MissionModule
 {
     // Causes passed to the character and support functions. rule: §6 (Capture(target, S, Abduction), Kill(target, Assassination), Free(prisoner)).
     public const string CauseAbduction = "Abduction", CauseAssassination = "Assassination", CauseRescue = "Rescue", CauseSubdue = "Subdue",
-        CauseKidnap = "Kidnap", // rule: m5-missions §6a.4 (Capture(target, Empire, Kidnap))
+        CauseKidnap = "Kidnap", // rule: m5-missions §6a.4 (Capture(target, Hand, Kidnap))
         CauseMissionDuel = "MissionDuel"; // rule: m5-missions §4 (B2d §5: Capture(c, captor side, held at the check's place, MissionDuel))
 
     /// <summary>
@@ -107,7 +107,7 @@ public sealed class MissionModule
 
     private MissionState S => _game.State.Missions;
     private EconomyState E => _game.State.Economy;
-    private static Side Other(Side s) => s == Side.Empire ? Side.Alliance : Side.Empire;
+    private static Side Other(Side s) => s == Side.Hand ? Side.Collective : Side.Hand;
 
     // ================================================================== queries
 
@@ -515,17 +515,17 @@ public sealed class MissionModule
     private int KeyCom(MissionGroup m, Agent a) => KeyBase(m, a) ? Math.Max(0, a.C!.BaseSkill(Skill.Combat) - a.C!.Injury) : a.Combat;
 
     /// <summary>
-    /// rule: m5-missions §6a.1 exposure gate: TargetProtected if the key target rides a fleet, or stands at the Rebel HQ system (HQ at rest there)
-    /// and the Alliance's garrison there covers the required garrison N (m2-uprisings-and-garrison: G10 >= 10 * N, the same check as the uprising refresh).
+    /// rule: m5-missions §6a.1 exposure gate: TargetProtected if the key target rides a fleet, or stands at the Hearth system (HQ at rest there)
+    /// and the Collective's garrison there covers the required garrison N (m2-uprisings-and-garrison: G10 >= 10 * N, the same check as the uprising refresh).
     /// Checked at the order and at each iteration start, not at landing.
     /// </summary>
     private string? KeyGate(MissionKind k, int? targetChar)
     {
         if (!IsKeyTarget(k, targetChar, out _) || _ch.Get(targetChar!.Value) is not { } tc) return null;
         if (tc.AttachedFleet != 0) return MissionReject.TargetProtected;
-        // rule: m5-missions §6a (Abduction paragraph): the protected capital is the Rebel HQ system for an Alliance target, Charter for an Empire target (Lead DEFAULT)
+        // rule: m5-missions §6a (Abduction paragraph): the protected capital is the Hearth system for a Collective target, Charter for a Hand target (Lead DEFAULT)
         var hq = _game.State.Scenario.Hq;
-        string? capital = tc.Side == Side.Alliance ? (hq.Status == HqStatus.AtRest ? hq.System : null) : Victory.VictoryModule.CoruscantName;
+        string? capital = tc.Side == Side.Collective ? (hq.Status == HqStatus.AtRest ? hq.System : null) : Victory.VictoryModule.CoruscantName;
         if (capital != null && _ch.LocationOf(tc) == capital && _fleets.OwnerOf(capital) == tc.Side
             && _support.Garrison10(capital) >= 10 * _support.RequiredGarrison(capital))
             return MissionReject.TargetProtected;

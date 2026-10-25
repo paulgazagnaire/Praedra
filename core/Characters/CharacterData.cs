@@ -120,24 +120,24 @@ public sealed class CharacterData
 
     private static Side ParseSide(string s, CsvTable t, int r) => s.Trim() switch
     {
-        "Empire" => Side.Empire, "Alliance" => Side.Alliance, var x => throw new DataLoadException($"{t.Where(r)}: side '{x}'."),
+        "Hand" => Side.Hand, "Collective" => Side.Collective, var x => throw new DataLoadException($"{t.Where(r)}: side '{x}'."),
     };
 
     private static readonly string[] SkillColumns = { "dip", "esp", "ship", "troop", "fac", "com", "lead" };
 
     private static IEnumerable<CharacterClass> Rows(CsvTable t, bool added, Dictionary<int, int> nav, Dictionary<int, bool> inGame, HashSet<int> neverTalented)
     {
-        t.Require("kind", "name", "id", "alliance", "empire", "loy", "loyv", "jprob", "knownjedi", "jlvl", "jlvlv", "admiral", "commander", "general", "nobetray", "trainer");
+        t.Require("kind", "name", "id", "collective", "hand", "loy", "loyv", "jprob", "knownjedi", "jlvl", "jlvlv", "admiral", "commander", "general", "nobetray", "trainer");
         for (int r = 0; r < t.RowCount; r++)
         {
             int id = t.GetInt(r, "id");
-            bool all = t.GetInt(r, "alliance") == 1, emp = t.GetInt(r, "empire") == 1;
+            bool all = t.GetInt(r, "collective") == 1, emp = t.GetInt(r, "hand") == 1;
             if (all == emp) throw new DataLoadException($"{t.Where(r)}: a character serves exactly one side.");
             var kind = t.Get(r, "kind").Trim() switch
             {
                 "major" => CharacterKind.Major, "minor" => CharacterKind.Minor, var k => throw new DataLoadException($"{t.Where(r)}: kind '{k}'."),
             };
-            yield return new CharacterClass(id, t.Get(r, "name").Trim(), all ? Side.Alliance : Side.Empire, kind,
+            yield return new CharacterClass(id, t.Get(r, "name").Trim(), all ? Side.Collective : Side.Hand, kind,
                 SkillColumns.Select(c => t.GetInt(r, c)).ToList(), SkillColumns.Select(c => t.GetInt(r, c + "v")).ToList(),
                 t.GetInt(r, "loy"), t.GetInt(r, "loyv"),
                 t.GetInt(r, "jprob"), t.GetInt(r, "knownjedi") == 1, t.GetInt(r, "jlvl"), t.GetInt(r, "jlvlv"),

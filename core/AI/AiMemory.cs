@@ -101,7 +101,7 @@ public sealed class AiMemory
     public void Ingest(IReadOnlyList<GameEvent> feed, Func<int, bool> armedCapital)
     {
         if (_feedSeen >= feed.Count) return;
-        Side enemy = Side == Side.Empire ? Side.Alliance : Side.Empire;
+        Side enemy = Side == Side.Hand ? Side.Collective : Side.Hand;
         int first = Notes.Count;
         int batchMin = int.MaxValue;
         var sources = new List<int>(); // feed index of each new note
@@ -151,11 +151,11 @@ public sealed class AiMemory
         var r = be.Result;
         List<int>? armed = null;
         if (_runStarts.TryGetValue(r.System, out var bs))
-            armed = (Side == Side.Alliance ? bs.AllianceUnits : bs.EmpireUnits).Items.Where(armedCapital).ToList();
+            armed = (Side == Side.Collective ? bs.CollectiveUnits : bs.HandUnits).Items.Where(armedCapital).ToList();
         return new AiNote
         {
             Kind = AiNoteKind.Battle, System = r.System, Armed = armed,
-            Own = Side == Side.Alliance ? r.Alliance : r.Empire, Other = Side == Side.Alliance ? r.Empire : r.Alliance,
+            Own = Side == Side.Collective ? r.Collective : r.Hand, Other = Side == Side.Collective ? r.Hand : r.Collective,
         };
     }
 

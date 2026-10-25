@@ -54,8 +54,8 @@ public static class GameBoot
     /// TODO(lead): set to false once NewGame.Create and SimpleAi are wired in.</summary>
     public const bool PlaceholderMode = false;
 
-    /// <summary>DEFAULT false: the Empire AI does not know where the Rebel HQ is. true = it is told (as in `sim aivai`), and strikes it at about day 240.</summary>
-    public const bool EmpireAiKnowsRebelHq = false;
+    /// <summary>DEFAULT false: the Hand AI does not know where the Hearth is. true = it is told (as in `sim aivai`), and strikes it at about day 240.</summary>
+    public const bool HandAiKnowsHearth = false;
 
     /// <summary>
     /// DEFAULT true: the computer opponent reads the other side only through its own side's fog-of-war view (SimpleAiParams.UseFog).
@@ -63,8 +63,8 @@ public static class GameBoot
     /// </summary>
     public const bool AiUsesFog = true;
 
-    /// <summary>The Empire's capital (the Alliance's goal), the core's own name for it. rule: m2-control-and-capture (capital system).</summary>
-    public const string EmpireCapital = Praedra.Core.Control.ControlModule.CapitalSystem;
+    /// <summary>The Hand's capital (the Collective's goal), the core's own name for it. rule: m2-control-and-capture (capital system).</summary>
+    public const string HandCapital = Praedra.Core.Control.ControlModule.CapitalSystem;
 
     static GameData _data;
 
@@ -96,14 +96,14 @@ public static class GameBoot
 
     // ------------------------------------------------------------------ new game / load
 
-    /// <summary>The core's start preset for a side and difficulty. Easy exists for the Alliance only, so Empire/Easy plays MedE.</summary>
+    /// <summary>The core's start preset for a side and difficulty. Easy exists for the Collective only, so Hand/Easy plays MedE.</summary>
     public static StartPreset PresetFor(Side player, Preset p) => (player, p) switch
     {
-        (Side.Alliance, Preset.Easy) => StartPreset.Easy,
-        (Side.Empire, Preset.Easy) => StartPreset.MedE,
-        (Side.Alliance, Preset.Medium) => StartPreset.MedA,
-        (Side.Empire, Preset.Medium) => StartPreset.MedE,
-        (Side.Alliance, _) => StartPreset.HardA,
+        (Side.Collective, Preset.Easy) => StartPreset.Easy,
+        (Side.Hand, Preset.Easy) => StartPreset.MedE,
+        (Side.Collective, Preset.Medium) => StartPreset.MedA,
+        (Side.Hand, Preset.Medium) => StartPreset.MedE,
+        (Side.Collective, _) => StartPreset.HardA,
         _ => StartPreset.HardE,
     };
 
@@ -134,10 +134,10 @@ public static class GameBoot
     public static IOpponent CreateOpponent(GameHost host, Side aiSide, AiLevel level = AiLevel.Medium)
     {
         var ai = new SimpleAi(host, aiSide, AiLevels.For(level, new SimpleAiParams { UseFog = AiUsesFog }));
-        host.Battles.SetControllers(empireAi: aiSide == Side.Empire, allianceAi: aiSide == Side.Alliance); // rule: B6a §1 (the other side is the human)
-        // DEFAULT: the Empire AI is NOT told where the Rebel HQ is (economy-ai D4: the AI plays fair with fog of war). With fog on it reads
+        host.Battles.SetControllers(handAi: aiSide == Side.Hand, collectiveAi: aiSide == Side.Collective); // rule: B6a §1 (the other side is the human)
+        // DEFAULT: the Hand AI is NOT told where the Hearth is (economy-ai D4: the AI plays fair with fog of war). With fog on it reads
         // the HQ only from its own picture (m5-fog-and-hq §N5 KnownHq). It still conquers systems and wins if it captures the HQ.
-        if (aiSide == Side.Empire && EmpireAiKnowsRebelHq) ai.KnownEnemyHq = host.HqSystem;
+        if (aiSide == Side.Hand && HandAiKnowsHearth) ai.KnownEnemyHq = host.HqSystem;
         return new DelegateOpponent(ai.PlanDay);
     }
 
@@ -147,8 +147,8 @@ public static class GameBoot
     public static string WinReason(GameHost host) => host.Victory.Reason;
 
     /// <summary>Headquarters system of a side as the core holds it (truth; the screens use GameSession.MyHqSystem / EnemyHqSystem, which
-    /// respect the fog): Charter for the Empire, the Rebel HQ for the Alliance (null while it moves).</summary>
-    public static string CapitalOf(GameHost host, Side side) => side == Side.Empire ? EmpireCapital : host.HqSystem;
+    /// respect the fog): Charter for the Hand, the Hearth for the Collective (null while it moves).</summary>
+    public static string CapitalOf(GameHost host, Side side) => side == Side.Hand ? HandCapital : host.HqSystem;
 
     // ------------------------------------------------------------------ save files
 

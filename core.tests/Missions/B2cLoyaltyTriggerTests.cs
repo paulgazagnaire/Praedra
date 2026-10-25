@@ -11,7 +11,7 @@ using Praedra.Core.Tests.Control;
 namespace Praedra.Core.Tests.Missions;
 
 /// <summary>
-/// B2c: the four triggers that move loyalty and the per-system loss tallies they read. Lando is the Alliance minor, Admiral Decimus Varo the Imperial minor,
+/// B2c: the four triggers that move loyalty and the per-system loss tallies they read. Lando is the Collective minor, Admiral Decimus Varo the Hand minor,
 /// Luke is unable to betray (never moves). Battle and blockade events are emitted as the battle and blockade code emits them, through a
 /// StepContext, so the observer runs exactly as in a Step. rule: m5-characters-and-force §Loyalty and betrayal (Traced, B2c).
 /// </summary>
@@ -50,10 +50,10 @@ public class B2cLoyaltyTriggerTests
     public void B2c1_CaptureShiftsTowardTheNewOwner_OneDraw()
     {
         var w = World();
-        w.Hold(T, Side.Alliance, 60);
+        w.Hold(T, Side.Collective, 60);
         w.Stub!.Expect(0, 5, 3);
         int before = w.Stub.Count(0, 5);
-        w.Host.Control.SubmitCapture(Side.Empire, T) /* (B5a, 2026-10-17) Derived control: troops take the world */;
+        w.Host.Control.SubmitCapture(Side.Hand, T) /* (B5a, 2026-10-17) Derived control: troops take the world */;
         w.Game.Step();
         Assert.Single(w.Events<SystemCaptured>());
         Assert.Equal(1, w.Stub.Count(0, 5) - before);
@@ -71,7 +71,7 @@ public class B2cLoyaltyTriggerTests
     public void B2c2_ToNeutral_NoDrawNoChange()
     {
         var w = World();
-        w.Hold(T, Side.Empire, 40);
+        w.Hold(T, Side.Hand, 40);
         w.Game.Step();
         int before = w.Stub!.Count(0, 5);
         w.Hold(T, null, 40);
@@ -83,7 +83,7 @@ public class B2cLoyaltyTriggerTests
 
     // B2c-3
     [Fact]
-    public void B2c3_HqDestroyed_AllianceLosesK()
+    public void B2c3_HqDestroyed_CollectiveLosesK()
     {
         var w = World(piett: 97);
         w.Stub!.Expect(0, 5, 2);
@@ -97,13 +97,13 @@ public class B2cLoyaltyTriggerTests
 
     // B2c-4
     [Fact]
-    public void B2c4_EmpireAlone_ShiftIsSix()
+    public void B2c4_HandAlone_ShiftIsSix()
     {
         var w = World();
-        w.Host.Fleets.AddFleet(Side.Empire, "F", new[] { "Decree" }, T);
-        var lost = Ships(w, Side.Alliance, "Barricade", "Ark", "Ark")
-            .Concat(Ships(w, Side.Empire, "Decree")).ToArray();
-        Assert.Equal(6, w.Host.Loyalty.LossShift(LoyaltyModule.SideNumberEmpire, 194, 30));
+        w.Host.Fleets.AddFleet(Side.Hand, "F", new[] { "Decree" }, T);
+        var lost = Ships(w, Side.Collective, "Barricade", "Ark", "Ark")
+            .Concat(Ships(w, Side.Hand, "Decree")).ToArray();
+        Assert.Equal(6, w.Host.Loyalty.LossShift(LoyaltyModule.SideNumberHand, 194, 30));
         Battle(w, lost);
         Assert.Equal(new[] { 194, 30, 0 }, w.Host.Loyalty.TallyOf(T)!.Battle);
         Assert.Equal(94, Loy(w, Lando));
@@ -112,12 +112,12 @@ public class B2cLoyaltyTriggerTests
 
     // B2c-5
     [Fact]
-    public void B2c5_AllianceAlone_HeavierLosses_ShiftIsMinusTwo()
+    public void B2c5_CollectiveAlone_HeavierLosses_ShiftIsMinusTwo()
     {
         var w = World();
-        w.Host.Fleets.AddFleet(Side.Alliance, "F", new[] { "Ark" }, T);
-        var lost = Ships(w, Side.Alliance, "Barricade", "Crowbar", "Nest")
-            .Concat(Ships(w, Side.Empire, "Injunction", "Bond", "Bond")).ToArray();
+        w.Host.Fleets.AddFleet(Side.Collective, "F", new[] { "Ark" }, T);
+        var lost = Ships(w, Side.Collective, "Barricade", "Crowbar", "Nest")
+            .Concat(Ships(w, Side.Hand, "Injunction", "Bond", "Bond")).ToArray();
         Battle(w, lost);
         Assert.Equal(new[] { 150, 40, 0 }, w.Host.Loyalty.TallyOf(T)!.Battle);
         Assert.Equal(98, Loy(w, Lando));
@@ -133,10 +133,10 @@ public class B2cLoyaltyTriggerTests
         var w = World();
         if (both)
         {
-            w.Host.Fleets.AddFleet(Side.Alliance, "A", new[] { "Ark" }, T);
-            w.Host.Fleets.AddFleet(Side.Empire, "E", new[] { "Decree" }, T);
+            w.Host.Fleets.AddFleet(Side.Collective, "A", new[] { "Ark" }, T);
+            w.Host.Fleets.AddFleet(Side.Hand, "E", new[] { "Decree" }, T);
         }
-        Battle(w, Ships(w, Side.Alliance, "Barricade", "Barricade"));
+        Battle(w, Ships(w, Side.Collective, "Barricade", "Barricade"));
         Assert.Empty(w.Events<LoyaltyChanged>());
         Assert.Equal(100, Loy(w, Lando));
     }
@@ -146,8 +146,8 @@ public class B2cLoyaltyTriggerTests
     public void B2c7_OnlyFightersDied_TalliesZero_NoChange()
     {
         var w = World();
-        w.Host.Fleets.AddFleet(Side.Empire, "F", new[] { "Decree" }, T);
-        Battle(w, Ships(w, Side.Alliance, "Swift", "Swift", "Plough"));
+        w.Host.Fleets.AddFleet(Side.Hand, "F", new[] { "Decree" }, T);
+        Battle(w, Ships(w, Side.Collective, "Swift", "Swift", "Plough"));
         Assert.Equal(new[] { 0, 0, 0 }, w.Host.Loyalty.TallyOf(T)!.Battle);
         Assert.Empty(w.Events<LoyaltyChanged>());
     }
@@ -157,14 +157,14 @@ public class B2cLoyaltyTriggerTests
     public void B2c8_BlockadeBombardsAndLeaves_DefenderGains_ShiftZero()
     {
         var w = World();
-        w.Hold(T, Side.Alliance, 60);
-        Emit(w, (i, d) => new BlockadeStarted(i, d, T, Side.Empire));
-        RegimentLost(w, Side.Alliance, RebArmy, "Bombardment", 2);
+        w.Hold(T, Side.Collective, 60);
+        Emit(w, (i, d) => new BlockadeStarted(i, d, T, Side.Hand));
+        RegimentLost(w, Side.Collective, RebArmy, "Bombardment", 2);
         var t = w.Host.Loyalty.TallyOf(T)!;
-        Assert.Equal(LoyaltyModule.SideNumberEmpire, t.Blockader);
+        Assert.Equal(LoyaltyModule.SideNumberHand, t.Blockader);
         Assert.Equal(new[] { 10, 0, 0 }, t.Bombardment);
-        Assert.Equal(0, w.Host.Loyalty.LossShift(LoyaltyModule.SideNumberAlliance, 10, 0));
-        Emit(w, (i, d) => new BlockadeLifted(i, d, T, Side.Empire));
+        Assert.Equal(0, w.Host.Loyalty.LossShift(LoyaltyModule.SideNumberCollective, 10, 0));
+        Emit(w, (i, d) => new BlockadeLifted(i, d, T, Side.Hand));
         Assert.Empty(w.Events<LoyaltyChanged>());
     }
 
@@ -172,16 +172,16 @@ public class B2cLoyaltyTriggerTests
     [Theory]
     [InlineData(4, 100)]
     [InlineData(20, 97)]
-    public void B2c9_BlockaderTakesTheSystem_BlockaderGains(int allianceRegiments, int lando)
+    public void B2c9_BlockaderTakesTheSystem_BlockaderGains(int collectiveRegiments, int lando)
     {
         var w = World();
-        w.Hold(T, Side.Alliance, 60);
-        Emit(w, (i, d) => new BlockadeStarted(i, d, T, Side.Empire));
-        RegimentLost(w, Side.Empire, Storm, "AssaultDuel");
-        RegimentLost(w, Side.Alliance, RebArmy, "AssaultBattery", allianceRegiments);
-        Assert.Equal(new[] { 5 * allianceRegiments, 6, 0 }, w.Host.Loyalty.TallyOf(T)!.Assault);
-        w.Host.Fleets.SetOwner(T, Side.Empire);
-        Emit(w, (i, d) => new BlockadeLifted(i, d, T, Side.Empire));
+        w.Hold(T, Side.Collective, 60);
+        Emit(w, (i, d) => new BlockadeStarted(i, d, T, Side.Hand));
+        RegimentLost(w, Side.Hand, Storm, "AssaultDuel");
+        RegimentLost(w, Side.Collective, RebArmy, "AssaultBattery", collectiveRegiments);
+        Assert.Equal(new[] { 5 * collectiveRegiments, 6, 0 }, w.Host.Loyalty.TallyOf(T)!.Assault);
+        w.Host.Fleets.SetOwner(T, Side.Hand);
+        Emit(w, (i, d) => new BlockadeLifted(i, d, T, Side.Hand));
         Assert.Equal(lando, Loy(w, Lando));
         Assert.Equal(100, Loy(w, Piett));
     }
@@ -191,12 +191,12 @@ public class B2cLoyaltyTriggerTests
     public void B2c10_SecondBattleStartsFromZero()
     {
         var w = World();
-        w.Host.Fleets.AddFleet(Side.Empire, "F", new[] { "Decree" }, T);
-        var first = Ships(w, Side.Alliance, "Barricade");
+        w.Host.Fleets.AddFleet(Side.Hand, "F", new[] { "Decree" }, T);
+        var first = Ships(w, Side.Collective, "Barricade");
         Emit(w, (i, d) => new BattleStarted(i, d, T, new ValueList<int>(Array.Empty<int>()), new ValueList<int>(Array.Empty<int>())));
         foreach (var u in first) Emit(w, (i, d) => new UnitDestroyed(i, d, T, u, 1, UnitLossReason.Combat));
         Assert.Equal(110, w.Host.Loyalty.TallyOf(T)!.Battle[0]);
-        Battle(w, Ships(w, Side.Alliance, "Ark", "Ark"));
+        Battle(w, Ships(w, Side.Collective, "Ark", "Ark"));
         Assert.Equal(new[] { 84, 0, 0 }, w.Host.Loyalty.TallyOf(T)!.Battle);
         Assert.Equal(98, Loy(w, Lando)); // 84 / 50 + 84 / 50 = 2, not the 6 of 194
     }
@@ -206,19 +206,19 @@ public class B2cLoyaltyTriggerTests
     public void B2c11_SwitchOff_NoTriggerDrawsOrShifts()
     {
         var w = World(new CharacterParams { LoyaltyTriggers = false });
-        w.Hold(T, Side.Alliance, 60);
+        w.Hold(T, Side.Collective, 60);
         w.Game.Step();
         int before = w.Stub!.Count(0, 5);
-        w.Host.Control.SubmitCapture(Side.Empire, T) /* (B5a, 2026-10-17) Derived control: troops take the world */;
+        w.Host.Control.SubmitCapture(Side.Hand, T) /* (B5a, 2026-10-17) Derived control: troops take the world */;
         w.Game.Step();
         Assert.Single(w.Events<SystemCaptured>());
         Emit(w, (i, d) => new HqDestroyed(i, d, "Test", H));
         Assert.Equal(before, w.Stub.Count(0, 5));
-        w.Host.Fleets.AddFleet(Side.Empire, "F", new[] { "Decree" }, T);
-        Battle(w, Ships(w, Side.Alliance, "Barricade"));
-        Emit(w, (i, d) => new BlockadeStarted(i, d, T, Side.Empire));
-        RegimentLost(w, Side.Alliance, RebArmy, "AssaultBattery", 20);
-        Emit(w, (i, d) => new BlockadeLifted(i, d, T, Side.Empire));
+        w.Host.Fleets.AddFleet(Side.Hand, "F", new[] { "Decree" }, T);
+        Battle(w, Ships(w, Side.Collective, "Barricade"));
+        Emit(w, (i, d) => new BlockadeStarted(i, d, T, Side.Hand));
+        RegimentLost(w, Side.Collective, RebArmy, "AssaultBattery", 20);
+        Emit(w, (i, d) => new BlockadeLifted(i, d, T, Side.Hand));
         Assert.Empty(w.Events<LoyaltyChanged>());
         Assert.Null(w.Host.Loyalty.TallyOf(T));
         Assert.Equal(100, Loy(w, Lando));
@@ -230,14 +230,14 @@ public class B2cLoyaltyTriggerTests
     {
         var w = World();
         string h0 = w.Host.StateHash();
-        Emit(w, (i, d) => new BlockadeStarted(i, d, T, Side.Empire));
-        RegimentLost(w, Side.Alliance, RebArmy, "Bombardment", 3);
+        Emit(w, (i, d) => new BlockadeStarted(i, d, T, Side.Hand));
+        RegimentLost(w, Side.Collective, RebArmy, "Bombardment", 3);
         string h1 = w.Host.StateHash();
         Assert.NotEqual(h0, h1);
         w.Reload();
         Assert.Equal(h1, w.Host.StateHash());
         var t = w.Host.Loyalty.TallyOf(T)!;
         Assert.Equal(new[] { 15, 0, 0 }, t.Bombardment);
-        Assert.Equal(LoyaltyModule.SideNumberEmpire, t.Blockader);
+        Assert.Equal(LoyaltyModule.SideNumberHand, t.Blockader);
     }
 }

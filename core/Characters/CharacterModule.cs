@@ -103,7 +103,7 @@ public sealed class CharacterModule
         .Where(c => !c.Placed && c.Side == side && Data.TryGet(c.Id, out var cls) && cls.InGame && cls.Kind == CharacterKind.Minor).ToList(); // SortedDictionary: id order
 
     /// <summary>The side's pool-empty flag: set when a Recruitment took the last member of its pool. rule: m5-missions §6 Recruitment (2026-10-18).</summary>
-    public bool PoolEmpty(Side side) => side == Side.Alliance ? S.AlliancePoolEmpty : S.EmpirePoolEmpty;
+    public bool PoolEmpty(Side side) => side == Side.Collective ? S.CollectivePoolEmpty : S.HandPoolEmpty;
 
     /// <summary>
     /// The character sheet's <c>Recruit(side, system)</c>, the setup extras pick (m5-setup-and-victory §P9 "An extra") with the place given:
@@ -120,7 +120,7 @@ public sealed class CharacterModule
         if (m == 0) return null; // nobody is recruited and no draw
         var c = pool[ctx.Rng.NextInt(0, m - 1)];
         Place(c.Id, system, ctx);
-        if (m == 1) { if (side == Side.Alliance) S.AlliancePoolEmpty = true; else S.EmpirePoolEmpty = true; }
+        if (m == 1) { if (side == Side.Collective) S.CollectivePoolEmpty = true; else S.HandPoolEmpty = true; }
         return c;
     }
 
@@ -295,13 +295,13 @@ public sealed class CharacterModule
             switch (row.Rule)
             {
                 case StartRule.FixedSystem: Place(row.Character, row.Place); break;
-                case StartRule.FixedHq: Place(row.Character, hqSystem ?? throw new InvalidOperationException("Setup: no Rebel HQ system for the FixedHq character.")); break;
+                case StartRule.FixedHq: Place(row.Character, hqSystem ?? throw new InvalidOperationException("Setup: no Hearth system for the FixedHq character.")); break;
                 case StartRule.RandomLocation:
                     if (row.Officer && Params.StartCastOfficers == StartCastOfficers.None) break; // the officer stays in the pool
                     PlaceAt(row.Character, RandomLocation(Data.Get(row.Character).Side, rng));
                     break;
                 case StartRule.Extras:
-                    var side = row.Place == "Empire" ? Side.Empire : row.Place == "Alliance" ? Side.Alliance : throw new InvalidOperationException($"start-cast: extras side '{row.Place}'.");
+                    var side = row.Place == "Hand" ? Side.Hand : row.Place == "Collective" ? Side.Collective : throw new InvalidOperationException($"start-cast: extras side '{row.Place}'.");
                     for (int k = 0; k < Params.StartExtrasPerSide; k++)
                     {
                         var loc = RandomLocation(side, rng);
@@ -317,14 +317,14 @@ public sealed class CharacterModule
     }
 
     /// <summary>
-    /// Random trainers (New, Paul 2026-10-18), after the start cast: for the Alliance then the Empire (DEFAULT order), up to TalentedPerSide draws
+    /// Random trainers (New, Paul 2026-10-18), after the start cast: for the Collective then the Hand (DEFAULT order), up to TalentedPerSide draws
     /// k = rand(0..n-1) over that side's placed characters in id order, without replacement; each drawn one is Talented, a Force user and aware,
     /// with Force = rand(TalentedForceMin..TalentedForceMax) unless his own is higher (Q16 DEFAULT): one more draw each. The pool leaves out the already
     /// strong (own Force at TalentedForceMin or more) and the never_talented characters (Q17, Paul 2026-10-18). rule: §Rule (New) 4.
     /// </summary>
     private void PickTalented(GameRng rng)
     {
-        foreach (var side in new[] { Side.Alliance, Side.Empire })
+        foreach (var side in new[] { Side.Collective, Side.Hand })
         {
             var pool = S.Characters.Values.Where(c => c.Placed && c.Side == side
                 && !(Params.TalentedSkipStrong && c.EffectiveForce >= Params.TalentedForceMin)   // Q17 (Paul 2026-10-18): never the already strong
@@ -648,7 +648,7 @@ public sealed class CharacterModule
     {
         bool a = false, e = false;
         foreach (var f in State.Fleets.Values)
-            if (f.At == system && f.Ships.Count + f.Squadrons.Count > 0) { if (f.Side == Side.Alliance) a = true; else if (f.Side == Side.Empire) e = true; }
+            if (f.At == system && f.Ships.Count + f.Squadrons.Count > 0) { if (f.Side == Side.Collective) a = true; else if (f.Side == Side.Hand) e = true; }
         return a && e;
     }
 
@@ -734,7 +734,7 @@ public sealed class CharacterModule
         {
             if (c.Status == CharacterStatus.Captured)
             {
-                if (NearestHeldSystem(system, c.Captor ?? (c.Side == Side.Empire ? Side.Alliance : Side.Empire)) is { } held) { c.HeldAt = held; c.System = held; }
+                if (NearestHeldSystem(system, c.Captor ?? (c.Side == Side.Hand ? Side.Collective : Side.Hand)) is { } held) { c.HeldAt = held; c.System = held; }
                 continue;
             }
             if (c.Side == attacker && State.Fleets.TryGetValue(attackerFleet, out var fleet) && fleet.At == system)
@@ -745,7 +745,7 @@ public sealed class CharacterModule
                 continue;
             }
             var dest = NearestHeldSystem(system, c.Side);
-            if (dest == null) { Capture(ctx, c, c.Side == Side.Empire ? Side.Alliance : Side.Empire, system, CharacterCause.DeathStar); continue; }
+            if (dest == null) { Capture(ctx, c, c.Side == Side.Hand ? Side.Collective : Side.Hand, system, CharacterCause.DeathStar); continue; }
             // one hop of one tick: it leaves now (slot 5.1 of Step K) and arrives in step 3 of Step K + 1, "the next day"
             c.System = null;
             c.Transit = new FleetTransit { Path = new List<string> { system, dest }, HopTicks = new List<int> { DeathStarFlightTicks }, HopIndex = 0, DueDay = ctx.Day + 1 + DeathStarFlightTicks };
@@ -978,8 +978,8 @@ public sealed class CharacterModule
     /// Raise one skill (m5-missions: a successful research member gains GNPRTB 6158 = 1 in that research skill; Classic's character-side check
     /// before the gain is Missing, so no cap). Not the refused SkillGrowth switch (growth outside research missions). rule: m5-missions §6 Research.
     /// </summary>
-    /// <summary>The original's side numbers (1 = Alliance, 2 = Empire, 3 = neutral). rule: m5-characters-and-force §Loyalty (B2b §4).</summary>
-    public const int SideNumberAlliance = 1, SideNumberEmpire = 2;
+    /// <summary>The original's side numbers (1 = Collective, 2 = Hand, 3 = neutral). rule: m5-characters-and-force §Loyalty (B2b §4).</summary>
+    public const int SideNumberCollective = 1, SideNumberHand = 2;
     /// <summary>Loyalty bounds (0x53e0d0 with 0x661a84 = 0 and 0x661a88 = 100). Traced B2b.</summary>
     public const int LoyaltyMin = 0, LoyaltyMax = 100;
 
@@ -992,8 +992,8 @@ public sealed class CharacterModule
     {
         if (amount == 0) return;
         Side side;
-        if (sideNumber == SideNumberAlliance) side = Side.Alliance;
-        else if (sideNumber == SideNumberEmpire) side = Side.Empire;
+        if (sideNumber == SideNumberCollective) side = Side.Collective;
+        else if (sideNumber == SideNumberHand) side = Side.Hand;
         else return;
         int day = ctx?.Day ?? _game.Day;
         foreach (var c in S.Characters.Values)
@@ -1327,7 +1327,7 @@ public sealed class CharacterModule
 
     /// <summary>
     /// The Seat of Power (0x5617b0, 0x5618d0): on while the Emperor is placed, alive, not captured, stands (riding no fleet, not travelling) on the
-    /// Seat of Power system and the Empire holds it, and <see cref="CharacterParams.SeatOfPower"/>. Every Empire-only character's
+    /// Seat of Power system and the Hand holds it, and <see cref="CharacterParams.SeatOfPower"/>. Every Hand-only character's
     /// LeadershipAdjustment is then GNPRTB 3076 (50), else 0. No draws. Recomputed at setup, arrivals, captures, freeings, deaths, holder changes
     /// and day-end. rule: §Seat of Power (Traced B2e §6; Charter inferred).
     /// </summary>
@@ -1335,12 +1335,12 @@ public sealed class CharacterModule
     {
         bool on = SeatOfPowerOn;
         foreach (var c in S.Characters.Values)
-            c.LeadershipAdjustment = on && Data.TryGet(c.Id, out var cls) && cls.Side == Side.Empire ? Params.SeatOfPowerAdjustment : 0;
+            c.LeadershipAdjustment = on && Data.TryGet(c.Id, out var cls) && cls.Side == Side.Hand ? Params.SeatOfPowerAdjustment : 0;
     }
 
     public bool SeatOfPowerOn =>
         Params.SeatOfPower && Get(Params.Emperor) is { Placed: true } e && e.Status is CharacterStatus.Free or CharacterStatus.Injured
-        && e.AttachedFleet == 0 && e.Transit == null && e.System == Params.SeatOfPowerSystem && _fleets.OwnerOf(Params.SeatOfPowerSystem) == Side.Empire;
+        && e.AttachedFleet == 0 && e.Transit == null && e.System == Params.SeatOfPowerSystem && _fleets.OwnerOf(Params.SeatOfPowerSystem) == Side.Hand;
 
     /// <summary>
     /// ESCAPETB lookup: the percent of the largest table point at or below the input; below the first point, the first point's value (the

@@ -8,7 +8,7 @@ namespace Praedra.Core.Support;
 /// <summary>
 /// Popular support, its two timers, the garrison requirement, uprisings and their incidents. Registers hooks 6.1 (garrison and
 /// uprising refresh, arming and disarming timers), 6.2 (support timers due) and 6.3 (incident timers due) on a <see cref="Game"/>.
-/// Holds data and settings only; the state lives in <see cref="GameState.Support"/> and <see cref="EconomyState.AllianceSupport"/>.
+/// Holds data and settings only; the state lives in <see cref="GameState.Support"/> and <see cref="EconomyState.CollectiveSupport"/>.
 /// After <see cref="GameSave.Load"/>, attach again to the loaded game. Attach after the fleet and economy modules.
 /// rule: m2-popular-support, m2-uprisings-and-garrison.
 /// </summary>
@@ -45,7 +45,7 @@ public sealed class SupportModule
     }
 
     private SupportState S => _game.State.Support;
-    private static Side Other(Side s) => s == Side.Empire ? Side.Alliance : Side.Empire;
+    private static Side Other(Side s) => s == Side.Hand ? Side.Collective : Side.Hand;
 
     // ================================================================== setup (between Steps; not orders, no events)
 
@@ -76,18 +76,18 @@ public sealed class SupportModule
     public int RequiredGarrison(string system)
     {
         if (_fleets.OwnerOf(system) is not Side holder) return 0;
-        return RequiredGarrison(Params, _eco.SupportOf(system, holder), IsUprising(system), holder == Side.Empire && IsDeathStarSector(system));
+        return RequiredGarrison(Params, _eco.SupportOf(system, holder), IsUprising(system), holder == Side.Hand && IsDeathStarSector(system));
     }
 
     /// <summary>
-    /// N = 0 if s >= 60 else ceil((60 - s) / 10); x2 in uprising; then / 2 (truncating) for the Empire in a Death Star sector.
+    /// N = 0 if s >= 60 else ceil((60 - s) / 10); x2 in uprising; then / 2 (truncating) for the Hand in a Death Star sector.
     /// Order 1, 2, 3 (DEFAULT). rule: m2-uprisings-and-garrison §Required garrison N (GNPRTB 7761, 7762, 7682, 7680).
     /// </summary>
-    public static int RequiredGarrison(SupportParams p, int controllerSupport, bool uprising, bool empireInDeathStarSector)
+    public static int RequiredGarrison(SupportParams p, int controllerSupport, bool uprising, bool handInDeathStarSector)
     {
         int n = controllerSupport >= p.GarrisonFreeSupport ? 0 : (p.GarrisonFreeSupport - controllerSupport + p.GarrisonStep - 1) / p.GarrisonStep;
         if (uprising) n *= p.UprisingMultiplier;
-        if (empireInDeathStarSector) n /= p.DeathStarGarrisonDivisor;
+        if (handInDeathStarSector) n /= p.DeathStarGarrisonDivisor;
         return n;
     }
 
@@ -116,22 +116,22 @@ public sealed class SupportModule
 
     /// <summary>
     /// The one entry point for every change of support. <paramref name="amount"/> is from the point of view of <paramref name="side"/>.
-    /// Alliance axis; Death Star damping of rises (truncating); clamp 0..100; <see cref="SupportChanged"/> if the value moved. Returns the
-    /// new Alliance share. A destroyed system has no support value: nothing changes (rule: m5-death-star §2 effect 5).
+    /// Collective axis; Death Star damping of rises (truncating); clamp 0..100; <see cref="SupportChanged"/> if the value moved. Returns the
+    /// new Collective share. A destroyed system has no support value: nothing changes (rule: m5-death-star §2 effect 5).
     /// <paramref name="dampen"/> false skips step 2, the Death Star damping: the Death Star's own sector reaction passes false (rule: m5-death-star §2
-    /// effect 7: "The Empire's Death Star damping does not apply to these two changes").
+    /// effect 7: "The Hand's Death Star damping does not apply to these two changes").
     /// rule: m2-popular-support §One entry point for every change (steps 1 to 4).
     /// </summary>
     public int ChangeSupport(StepContext ctx, string system, Side side, int amount, SupportCause cause, bool dampen = true)
     {
         if (!_galaxy.TryFindSystem(system, out _)) throw new ArgumentException($"Unknown system '{system}'.");
         if (_eco.IsDestroyed(system)) return 0;
-        int old = _eco.SupportOf(system, Side.Alliance);
-        int d = side == Side.Alliance ? amount : -amount;                       // 1. Alliance axis
+        int old = _eco.SupportOf(system, Side.Collective);
+        int d = side == Side.Collective ? amount : -amount;                       // 1. Collective axis
         if (dampen && d > 0 && IsDeathStarSector(system)) d /= Params.DeathStarDampingDivisor; // 2. damping, only rises, toward zero
         int now = Math.Clamp(old + d, Params.SupportMin, Params.SupportMax);    // 3. clamp
         if (now == old) return old;
-        _game.State.Economy.AllianceSupport[system] = now;
+        _game.State.Economy.CollectiveSupport[system] = now;
         int day = ctx.Day + 1;
         ctx.Emit((i, _) => new SupportChanged(i, day, system, old, now, cause));  // 4. event
         AfterSupportChange?.Invoke(ctx, system); // every change runs the control recompute at once (B5a section 2; B5c section 3)
@@ -169,13 +169,13 @@ public sealed class SupportModule
             var st = StateOf(sys);
 
             // A flag whose holder is gone or changed: cleared first (DEFAULT, capture sheet), then judged afresh for the new holder.
-            if (st is { Uprising: true } && (holder == null || holder != Other(st.Rebels)))
+            if (st is { Uprising: true } && (holder == null || holder != Other(st.Collective)))
                 EndUprising(ctx, t, sys, st, holder == null ? "NoHolder" : "ControlChanged");
 
             if (holder is Side h)
             {
                 bool on = st is { Uprising: true };
-                int n = RequiredGarrison(Params, _eco.SupportOf(sys, h), on, h == Side.Empire && IsDeathStarSector(sys));
+                int n = RequiredGarrison(Params, _eco.SupportOf(sys, h), on, h == Side.Hand && IsDeathStarSector(sys));
                 int surplus10 = g10.GetValueOrDefault(sys) - 10 * n; // N in tenths; Classic weights are 10 each
                 if (!on && surplus10 < 0)
                     StartUprising(ctx, t, sys, h);
@@ -196,7 +196,7 @@ public sealed class SupportModule
     {
         var st = S.Touch(sys);
         st.Uprising = true;
-        st.Rebels = Other(holder);
+        st.Collective = Other(holder);
         st.ErosionDue = t + Params.ErosionPeriod;                                                  // timer 0x384
         st.IncidentDue = t + Params.IncidentIntervalMin + ctx.Rng.NextInt(0, Params.IncidentIntervalSpread); // timer 0x38d, the one draw
         ctx.Emit((i, _) => new UprisingStarted(i, t, sys, holder));
@@ -209,7 +209,7 @@ public sealed class SupportModule
     }
 
     /// <summary>
-    /// Start an uprising at a held system at once, whatever the garrison (the Death Star's second strike in a sector, Imperial systems). No-op without
+    /// Start an uprising at a held system at once, whatever the garrison (the Death Star's second strike in a sector, Hand systems). No-op without
     /// a holder or with an uprising already on. The timers are armed as in slot 6.1 (one draw for the incident timer); slot 6.1 later judges it by
     /// the normal garrison rule. rule: m5-death-star §2 effect 7 (Strike 2 or later); m2-uprisings-and-garrison §Uprising start, keep, end.
     /// </summary>
@@ -228,7 +228,7 @@ public sealed class SupportModule
     public bool CheckUprisingNow(StepContext ctx, string system)
     {
         if (_fleets.OwnerOf(system) is not Side holder || IsUprising(system)) return false;
-        int n = RequiredGarrison(Params, _eco.SupportOf(system, holder), false, holder == Side.Empire && IsDeathStarSector(system));
+        int n = RequiredGarrison(Params, _eco.SupportOf(system, holder), false, holder == Side.Hand && IsDeathStarSector(system));
         if (Garrison10(system) - 10 * n >= 0) return false;
         StartUprising(ctx, ctx.Day + 1, system, holder);
         return true;
@@ -245,7 +245,7 @@ public sealed class SupportModule
         if (st != null) { st.PresenceDue = 0; st.ErosionDue = 0; st.IncidentDue = 0; }
         S.Prune(system);
         S.DeathStar.Remove(system);
-        _game.State.Economy.AllianceSupport.Remove(system);
+        _game.State.Economy.CollectiveSupport.Remove(system);
     }
 
     /// <summary>
@@ -304,7 +304,7 @@ public sealed class SupportModule
     internal void FireErosion(StepContext ctx, int t, string sys)
     {
         var st = S.Systems[sys];
-        ChangeSupport(ctx, sys, Other(st.Rebels), Params.ErosionAmount, SupportCause.UprisingErosion);
+        ChangeSupport(ctx, sys, Other(st.Collective), Params.ErosionAmount, SupportCause.UprisingErosion);
         st.ErosionDue = t + Params.ErosionPeriod; // condition still holds (6.1 disarms the timer when the uprising ends)
     }
 
@@ -327,7 +327,7 @@ public sealed class SupportModule
         foreach (var sys in S.Systems.Where(kv => kv.Value.IncidentDue == t).Select(kv => kv.Key).ToList())
         {
             var st = S.Systems[sys];
-            Side holder = Other(st.Rebels);
+            Side holder = Other(st.Collective);
             var rng = ctx.Rng;
             int d1 = Params.DieBase + rng.NextInt(0, Params.DieSpread);
             int d2 = Params.DieBase + rng.NextInt(0, Params.DieSpread);
@@ -349,7 +349,7 @@ public sealed class SupportModule
     {
         var regs = HolderRegiments(system, holder).ToList();
         int stormtroopers = regs.Count(o => o.Class == Params.StormtrooperClass);
-        return IncidentScore(Params, d1, d2, _eco.SupportOf(system, holder), regs.Count, stormtroopers, holder == Side.Empire && IsDeathStarSector(system))
+        return IncidentScore(Params, d1, d2, _eco.SupportOf(system, holder), regs.Count, stormtroopers, holder == Side.Hand && IsDeathStarSector(system))
             + (AgentIncidentTerm?.Invoke(system) ?? 0);
     }
 
@@ -374,13 +374,13 @@ public sealed class SupportModule
     }
 
     /// <summary>
-    /// score = d1 + d2 + ceil((60 - s) / 10) - k x R - T, k = 2 for the Empire in a Death Star sector else 1; R and T are flat counts in both
+    /// score = d1 + d2 + ceil((60 - s) / 10) - k x R - T, k = 2 for the Hand in a Death Star sector else 1; R and T are flat counts in both
     /// rulesets (DEFAULT). rule: m2-uprisings-and-garrison §Incident (Score).
     /// </summary>
-    public static int IncidentScore(SupportParams p, int d1, int d2, int controllerSupport, int regiments, int stormtroopers, bool empireInDeathStarSector)
+    public static int IncidentScore(SupportParams p, int d1, int d2, int controllerSupport, int regiments, int stormtroopers, bool handInDeathStarSector)
     {
         int unrest = controllerSupport >= p.GarrisonFreeSupport ? 0 : (p.GarrisonFreeSupport - controllerSupport + p.GarrisonStep - 1) / p.GarrisonStep;
-        int k = empireInDeathStarSector ? p.DeathStarScoreMultiplier : 1;
+        int k = handInDeathStarSector ? p.DeathStarScoreMultiplier : 1;
         return d1 + d2 + unrest - k * regiments - stormtroopers;
     }
 

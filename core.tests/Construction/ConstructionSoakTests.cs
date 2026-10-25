@@ -12,7 +12,7 @@ public class ConstructionSoakTests
     {
         var c = d.Game.State.Construction;
         var eco = d.Economy;
-        Assert.True(eco.Refined(Side.Empire) >= 0 && eco.Refined(Side.Alliance) >= 0);
+        Assert.True(eco.Refined(Side.Hand) >= 0 && eco.Refined(Side.Collective) >= 0);
         var seen = new HashSet<int>();
         foreach (var p in c.AllProjects())
         {
@@ -36,7 +36,7 @@ public class ConstructionSoakTests
             if (dl.InFlight) Assert.False(dl.Held);
         }
         // every waiting yard is in exactly one line, and the line holds only waiting yards
-        var lines = c.Empire.RefinedLine.Concat(c.Alliance.RefinedLine).ToList();
+        var lines = c.Hand.RefinedLine.Concat(c.Collective.RefinedLine).ToList();
         Assert.Equal(lines.Count, lines.Distinct().Count());
         Assert.Equal(lines.Count, eco.Objects.Count(o => o.InLine && FacilityKinds.TryParse(o.Class, out var k) && FacilityKinds.IsYard(k)));
     }
@@ -46,7 +46,7 @@ public class ConstructionSoakTests
         d = BuildDemo.Create(TestData.RepoRoot, seed);
         for (int i = 0; i < days; i++)
         {
-            if (d.Game.Day == 100) d.Fleets.SubmitMove(Side.Alliance, d.Picket, d.PicketMovesTo);
+            if (d.Game.Day == 100) d.Fleets.SubmitMove(Side.Collective, d.Picket, d.PicketMovesTo);
             d.Game.Step();
             CheckInvariants(d);
         }

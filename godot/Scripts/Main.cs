@@ -38,7 +38,7 @@ public partial class Main : Control
             }
 
         if (_args.Contains("--menu") || (shot == null && !_args.Contains("--newgame"))) { ShowMenu(shot, shotFrames); return; }
-        var side = Arg("--side") == "Empire" ? Side.Empire : Side.Alliance;
+        var side = Arg("--side") == "Hand" ? Side.Hand : Side.Collective;
         var preset = Enum.TryParse(Arg("--preset"), true, out Preset p) ? p : Preset.Medium;
         var rules = string.Equals(Arg("--rules"), "classic", StringComparison.OrdinalIgnoreCase) ? Praedra.Core.Battle.BattleRuleset.Classic : Praedra.Core.Battle.BattleRuleset.New; // DEFAULT New (m4-battle-new; Paul 2026-10-18)
         StartGame(GameSession.New(GameBoot.LoadData(), side, preset, rules, NewGameSeed()), shot, shotFrames, true);
@@ -151,7 +151,7 @@ public partial class Main : Control
     void Smoke()
     {
         var data = GameBoot.LoadData();
-        var s = GameSession.New(data, Side.Alliance, Preset.Medium, seed: 1);
+        var s = GameSession.New(data, Side.Collective, Preset.Medium, seed: 1);
         var me = s.Player;
         Check(data.Galaxy.Systems.Count > 100, "galaxy loaded");
         var mine = s.Game.State.SystemOwners.Where(kv => kv.Value == me).Select(kv => kv.Key).ToList();

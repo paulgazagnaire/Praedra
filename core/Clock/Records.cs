@@ -3,7 +3,7 @@ using Praedra.Core.Construction;
 
 namespace Praedra.Core.Clock;
 
-public enum Side { Empire = 0, Alliance = 1 }
+public enum Side { Hand = 0, Collective = 1 }
 
 /// <summary>
 /// An order is data: {sequence, side, type, parameters}. The core assigns Sequence on submit.
@@ -70,10 +70,10 @@ public sealed record ScrapObjectOrder(long Sequence, Side Side, int ObjectId) : 
 public sealed record DebugSetHolderOrder(long Sequence, Side Side, string System, Side NewHolder) : Order(Sequence, Side);
 
 /// <summary>
-/// Debug order: set a system's Alliance support (0..100) through ChangeSupport, undamped; control follows (B5a section 9). For tests and tools only;
+/// Debug order: set a system's Collective support (0..100) through ChangeSupport, undamped; control follows (B5a section 9). For tests and tools only;
 /// rejected unless debug orders are enabled. The handler lives in Praedra.Core.Control.ControlModule.
 /// </summary>
-public sealed record DebugSetSupportOrder(long Sequence, Side Side, string System, int AllianceSupport) : Order(Sequence, Side);
+public sealed record DebugSetSupportOrder(long Sequence, Side Side, string System, int CollectiveSupport) : Order(Sequence, Side);
 
 /// <summary>
 /// Debug order: the regiments standing on a system become <paramref name="Count"/> finished regiments of <paramref name="RegimentClass"/> for

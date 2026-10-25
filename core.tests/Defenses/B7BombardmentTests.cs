@@ -12,7 +12,7 @@ namespace Praedra.Core.Tests.Defenses;
 public class B7BombardmentTests
 {
     private const string Sys = BombWorld.Sys;
-    private static readonly Side Emp = Side.Empire, All = Side.Alliance;
+    private static readonly Side Emp = Side.Hand, All = Side.Collective;
     private const BombardCategory Mil = BombardCategory.Military, Civ = BombardCategory.Civilian, Gen = BombardCategory.General;
     private const string Neb = "Mender", ImpArmy = "Tranches";
 
@@ -117,7 +117,7 @@ public class B7BombardmentTests
         Assert.Equal(new[] { (0, 2), (0, 1), (1, 10), (0, 1) }, w.Stub.Requests);
     }
 
-    // B7-bombardment Q77: two Alliance fleets of base 30, both ordered, one GenCore I: one strike, 20 hits; the m3 rule (C3 off) 0 and 0
+    // B7-bombardment Q77: two Collective fleets of base 30, both ordered, one GenCore I: one strike, 20 hits; the m3 rule (C3 off) 0 and 0
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -202,7 +202,7 @@ public class B7BombardmentTests
         const int trials = 10_000;
         for (int i = 0; i < trials; i++)
         {
-            w.Eco.SetAllianceSupport(Sys, 70);
+            w.Eco.SetCollectiveSupport(Sys, 70);
             int reg = w.Regiment(All, BombWorld.Army);
             int mine = w.Eco.AddFacility(Sys, FacilityKind.Mine);
             int before = w.Events<SupportChanged>().Count(e => e.Cause == SupportCause.Bombardment);
@@ -292,7 +292,7 @@ public class B7BombardmentTests
         Assert.Equal(value, w.Bomb.Power(w.Game.State.Fleets[f]));
     }
 
-    // B7-bombardment Q82: 9 Imperial Army regiments, 26 hits, Military, 10,000 runs: mean kills about 7.0 (reference model 6.96), all 9 in about 7
+    // B7-bombardment Q82: 9 Hand Army regiments, 26 hits, Military, 10,000 runs: mean kills about 7.0 (reference model 6.96), all 9 in about 7
     // percent (model 7.2)
     [Fact]
     public void Q82_NineRegimentsMostlySurvive26Hits()
@@ -340,7 +340,7 @@ public class B7BombardmentTests
         Assert.Equal(destroyedOfTen, destroyed);
     }
 
-    // B7-bombardment §7 (C8): the building defences come from the Classic data files (MANFACSD and PROFACSD word 12), the Rebel HQ is 9 (ALLFACSD)
+    // B7-bombardment §7 (C8): the building defences come from the Classic data files (MANFACSD and PROFACSD word 12), the Hearth is 9 (ALLFACSD)
     [Fact]
     public void BuildingDefencesAreData()
     {
@@ -538,14 +538,14 @@ public class B7BombardmentTests
         Assert.Single(g.Events<SupportChanged>());             // C7: a raw loss costs -20 too
     }
 
-    // B7-bombardment §3 and C9: HqBombardable off (DEFAULT): the Rebel HQ is no target; on: a Military target of defence 9 after the defences, and its
+    // B7-bombardment §3 and C9: HqBombardable off (DEFAULT): the Hearth is no target; on: a Military target of defence 9 after the defences, and its
     // destruction reaches the untraced hook, which throws
     [Fact]
-    public void RebelHqIsATargetOnlyWithTheSwitchAndItsEffectIsNotGuessed()
+    public void HearthIsATargetOnlyWithTheSwitchAndItsEffectIsNotGuessed()
     {
         var off = new BombWorld();
         off.Hold(All);
-        off.Bomb.IsRebelHq = s => s == Sys;
+        off.Bomb.IsHearth = s => s == Sys;
         off.Regiment(All, BombWorld.Army);
         int f = off.Fleet(Emp, Sys, "Warrant");
         off.Stub.Expect(0, 1, 1);
@@ -555,7 +555,7 @@ public class B7BombardmentTests
 
         var on = new BombWorld(bp: new BombardParams { HqBombardable = true });
         on.Hold(All);
-        on.Bomb.IsRebelHq = s => s == Sys;
+        on.Bomb.IsHearth = s => s == Sys;
         on.Regiment(All, BombWorld.Army);
         int f2 = on.Fleet(Emp, Sys, "Warrant");
         on.Stub.Expect(0, 2, 1);                                    // m0 = 2: collateral x = 1

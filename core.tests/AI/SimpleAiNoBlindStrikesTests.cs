@@ -36,7 +36,7 @@ public class SimpleAiNoBlindStrikesTests
                 if (mil && o.System != null) targets[o.System] = targets.GetValueOrDefault(o.System) + 1;
             }
             m.Step();
-            foreach (var ai in new[] { m.Empire, m.Alliance })
+            foreach (var ai in new[] { m.Hand, m.Collective })
                 foreach (var o in ai.Submitted.Where(x => x.Kind == "Bombard"))
                 {
                     strikes++;

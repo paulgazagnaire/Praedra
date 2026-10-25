@@ -5,17 +5,17 @@ using Praedra.Core.Fleets;
 
 namespace Praedra.Core.AI;
 
-// The Empire AI and the Death Star. rule: m5-death-star §6 (Computer opponent), switch SimpleAiParams.UseDeathStar (DEFAULT true).
-// 1 build one at a time, with headroom, at the system with the most shipyards; 2 never scrap it first (PlanUpkeepCrisis); 3 wait for an escort of at least E; 4 go only to the Rebel
+// The Hand AI and the Death Star. rule: m5-death-star §6 (Computer opponent), switch SimpleAiParams.UseDeathStar (DEFAULT true).
+// 1 build one at a time, with headroom, at the system with the most shipyards; 2 never scrap it first (PlanUpkeepCrisis); 3 wait for an escort of at least E; 4 go only to the Collective
 // HQ the AI knows (KnownEnemyHq: with fog that is the side's own picture) and fire on the day it stands there with no enemy fleet left;
-// if the HQ moves, go to the newly known one; 5 the Alliance never builds one. Everything here is read through the same helpers as the rest
+// if the HQ moves, go to the newly known one; 5 the Collective never builds one. Everything here is read through the same helpers as the rest
 // of the AI (fog view when UseFog is on), so it never peeks at the true HQ.
 public sealed partial class SimpleAi
 {
     private Fleet? _dsFleet;       // the idle Death Star fleet of this review (lowest id), null when none
     private string? _dsWaitAt;     // where it waits for an escort (held system), null when nobody should be called to it
 
-    private bool DeathStarOn => _p.UseDeathStar && _side == Side.Empire;
+    private bool DeathStarOn => _p.UseDeathStar && _side == Side.Hand;
 
     private static bool IsDeathStarShip(EconObject o) => o.Category == ObjectCategory.CapitalShip && o.Class == EconomyModule.DeathStarClass;
 

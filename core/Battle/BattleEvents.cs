@@ -3,7 +3,7 @@ using Praedra.Core.Clock;
 namespace Praedra.Core.Battle;
 
 // Events of the battle (step 5, before slots 5.1 and 5.2). Day is K + 1 like the other step 3 to 5 events.
-// Order for one battle: BattleStarted, BattleChoice (Alliance, Empire), then per destroyed unit UnitDestroyed / RetreatRefused / RetreatHeldByTractor / FleetRetreated /
+// Order for one battle: BattleStarted, BattleChoice (Collective, Hand), then per destroyed unit UnitDestroyed / RetreatRefused / RetreatHeldByTractor / FleetRetreated /
 // SquadronsRelocated in the order they happen, then BattleEnded. rule: m4-battle-classic §10; m4-retreat-damage-repair §Where it runs.
 
 /// <summary>SetOnContact: a side's standing answer to the Battle Alert. Order (step 1). rule: m4-battle-classic §1.3.</summary>
@@ -16,7 +16,7 @@ public static class BattleReject
 }
 
 /// <summary>Battle begins. Fields: system, object ids of each side's units (ships, then squadrons).</summary>
-public sealed record BattleStarted(int Index, int Day, string System, ValueList<int> AllianceUnits, ValueList<int> EmpireUnits)
+public sealed record BattleStarted(int Index, int Day, string System, ValueList<int> CollectiveUnits, ValueList<int> HandUnits)
     : GameEvent(Index, Day, nameof(BattleStarted));
 
 /// <summary>What a side answered at the alert.</summary>
@@ -44,8 +44,8 @@ public sealed record SquadronsRelocated(int Index, int Day, ValueList<int> Squad
     : GameEvent(Index, Day, nameof(SquadronsRelocated));
 
 /// <summary>The outcome record of a battle. rule: m4-battle-classic §8.</summary>
-public sealed record BattleResult(string System, int Seconds, BattleOutcome Alliance, BattleOutcome Empire,
-    int AllianceLosses, int EmpireLosses, int AllianceSurvivors, int EmpireSurvivors);
+public sealed record BattleResult(string System, int Seconds, BattleOutcome Collective, BattleOutcome Hand,
+    int CollectiveLosses, int HandLosses, int CollectiveSurvivors, int HandSurvivors);
 
 /// <summary>Battle over.</summary>
 public sealed record BattleEnded(int Index, int Day, BattleResult Result)

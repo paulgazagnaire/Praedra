@@ -23,10 +23,10 @@ public sealed record SubmittedOrder(long Sequence, string Kind, string Detail);
 ///
 /// VISIBILITY: with <see cref="SimpleAiParams.UseFog"/> on, every look at the other side goes through the side's
 /// <see cref="Praedra.Core.Fog.KnowledgeView"/> (m5-fog-and-hq §N8, the fairness contract): enemy fleets, garrisons, holders, facilities and slot
-/// values come from the side's own picture (possibly stale), the event feed is the side's filtered one, and the Empire's
-/// <see cref="KnownEnemyHq"/> is set only from the Empire's own picture of the HQ. With it off (DEFAULT for now) the AI still sees everything.
+/// values come from the side's own picture (possibly stale), the event feed is the side's filtered one, and the Hand's
+/// <see cref="KnownEnemyHq"/> is set only from the Hand's own picture of the HQ. With it off (DEFAULT for now) the AI still sees everything.
 /// The looks are in one block below ("what the AI may see"), so nothing else reads the other side. With fog the AI also scouts, weighs stale
-/// pictures with a margin, hunts the Rebel HQ with a belief map (Empire) and moves its HQ by risk (Alliance): see SimpleAiFog.cs. None of
+/// pictures with a margin, hunts the Hearth with a belief map (Hand) and moves its HQ by risk (Collective): see SimpleAiFog.cs. None of
 /// that runs with fog off, so the fog-off AI is unchanged.
 /// </summary>
 public sealed partial class SimpleAi
@@ -52,14 +52,14 @@ public sealed partial class SimpleAi
     public Side Side => _side;
     public SimpleAiParams Params => _p;
     /// <summary>
-    /// The enemy HQ, when known (the Empire hunts it first). Null = unknown. Without fog the caller may set it; with
-    /// <see cref="SimpleAiParams.UseFog"/> it is overwritten every day from the Empire's own picture (m5-fog-and-hq §N5 KnownHq).
+    /// The enemy HQ, when known (the Hand hunts it first). Null = unknown. Without fog the caller may set it; with
+    /// <see cref="SimpleAiParams.UseFog"/> it is overwritten every day from the Hand's own picture (m5-fog-and-hq §N5 KnownHq).
     /// </summary>
     public string? KnownEnemyHq { get; set; }
     /// <summary>The orders queued by the last <see cref="PlanDay"/>.</summary>
     public IReadOnlyList<SubmittedOrder> Submitted => _submitted;
 
-    private Side Enemy => _side == Side.Empire ? Side.Alliance : Side.Empire;
+    private Side Enemy => _side == Side.Hand ? Side.Collective : Side.Hand;
     private GameState S => _h.Game.State;
     private int Today => _h.Game.Day;
 
@@ -75,9 +75,9 @@ public sealed partial class SimpleAi
         Remember();
         _seenForces.Clear(); ClearFogScratch();
         RememberStrongestFleet();
-        if (_view != null && _side == Side.Empire) KnownEnemyHq = _view.KnownHq?.System; // only what the Empire's own picture shows
+        if (_view != null && _side == Side.Hand) KnownEnemyHq = _view.KnownHq?.System; // only what the Hand's own picture shows
         PlanUpkeepCrisis();
-        if (_view != null && _side == Side.Alliance) PlanHqHide(); // fog: the HQ hides by risk (ai/07 §7), checked daily
+        if (_view != null && _side == Side.Collective) PlanHqHide(); // fog: the HQ hides by risk (ai/07 §7), checked daily
         // characters and missions (SimpleAiAgents.cs); before the military review so an officer boards a fleet before it leaves today
         if (_p.UseCharactersAndMissions && (day + phase) % Math.Max(1, _p.AgentsEvery) == 0) PlanAgents();
         if ((day + phase) % _p.EconomyEvery == 0) PlanEconomy();
@@ -218,7 +218,7 @@ public sealed partial class SimpleAi
         if (_view == null || Held(system)) return _h.Economy.SupportOf(system, _side);
         var o = _view.Picture(system)?.Owner;
         if (o == null) return null;
-        return _side == Side.Alliance ? o.Value.AllianceSupport : 100 - o.Value.AllianceSupport;
+        return _side == Side.Collective ? o.Value.CollectiveSupport : 100 - o.Value.CollectiveSupport;
     }
 
     /// <summary>
@@ -304,7 +304,7 @@ public sealed partial class SimpleAi
     private bool Available(string cls)
     {
         if (!_h.Economy.Costs.TryGet(cls, out var row) || row.Cost <= 0) return false;
-        if (!(_side == Side.Empire ? row.Empire : row.Alliance)) return false;
+        if (!(_side == Side.Hand ? row.Hand : row.Collective)) return false;
         return _h.Construction.IsResearched(_side, cls);
     }
 
@@ -325,7 +325,7 @@ public sealed partial class SimpleAi
     {
         if (_capitalDone) return _capital;
         _capitalDone = true;
-        if (_side == Side.Empire && Held(Praedra.Core.Control.ControlModule.CapitalSystem)) return _capital = Praedra.Core.Control.ControlModule.CapitalSystem;
+        if (_side == Side.Hand && Held(Praedra.Core.Control.ControlModule.CapitalSystem)) return _capital = Praedra.Core.Control.ControlModule.CapitalSystem;
         // No HQ in the core yet: the held system with the most finished facilities (DEFAULT).
         _capital = HeldSystems().Select(s => (s, n: _h.Economy.Objects.Count(o => o.Completed && o.Category == ObjectCategory.Facility && o.System == s)))
             .Where(t => t.n > 0).OrderByDescending(t => t.n).ThenBy(t => t.s, StringComparer.Ordinal).Select(t => t.s).FirstOrDefault();
@@ -464,7 +464,7 @@ public sealed partial class SimpleAi
     private void PlanProduction()
     {
         if (_view != null) PlanScoutBuild();
-        if (_view != null && _side == Side.Empire) PlanDroidBuild();
+        if (_view != null && _side == Side.Hand) PlanDroidBuild();
         PlanGarrison();
         PlanInvasionRegiments();
         PlanAgentForceBuild(); // after the regiments: a training yard goes to the garrisons first
@@ -587,7 +587,7 @@ public sealed partial class SimpleAi
     /// 2026-10-17). rule: ai tuning, B6b §3 and §11 (Dev lead 2026-10-18).
     /// </summary>
     /// <summary>
-    /// The world the Classic AI's special base (9) applies to: Charter for the Empire; for the Alliance the Rebel HQ's world, or while the HQ is on
+    /// The world the Classic AI's special base (9) applies to: Charter for the Hand; for the Collective the Hearth's world, or while the HQ is on
     /// the way, its destination (its own HQ: the side knows where it goes), so regiments are ordered there when the move starts and the HQ does
     /// not arrive on an unguarded world (QA-10, Dev lead 2026-10-18). rule: ai tuning, B6b §3 ("special" system).
     /// </summary>
@@ -595,7 +595,7 @@ public sealed partial class SimpleAi
     {
         if (CriticalSystem() is { } c) return c;
         var hq = _h.Game.State.Scenario.Hq;
-        return _side == Side.Alliance && hq.Status == Praedra.Core.Fog.HqStatus.InTransit && hq.Path.Count > 0 ? hq.Path[^1] : null;
+        return _side == Side.Collective && hq.Status == Praedra.Core.Fog.HqStatus.InTransit && hq.Path.Count > 0 ? hq.Path[^1] : null;
     }
 
     internal int GarrisonTarget(string system)
@@ -928,14 +928,14 @@ public sealed partial class SimpleAi
         return a * 100 / b;
     }
 
-    private string? CriticalSystem() => _side == Side.Empire ? Praedra.Core.Control.ControlModule.CapitalSystem : _h.HqSystem; // the system whose loss ends the game for the side
+    private string? CriticalSystem() => _side == Side.Hand ? Praedra.Core.Control.ControlModule.CapitalSystem : _h.HqSystem; // the system whose loss ends the game for the side
     /// <summary>
     /// The home guard stands at the system whose loss ends the game for the side, when the side holds it. New warships are only sent there
     /// when it has a shipyard (so the guard can be topped up); otherwise the guard is whatever fleet already stands there.
     /// </summary>
     private string? GuardSystem() { var c = CriticalSystem(); return c != null && Held(c) ? c : null; }
-    // The Empire only strikes an HQ it has been told about (KnownEnemyHq); no peeking at the true HQ (economy-ai D4: the AI plays fair with fog of war).
-    private string? WinTarget() => _side == Side.Empire ? KnownEnemyHq : Praedra.Core.Control.ControlModule.CapitalSystem;
+    // The Hand only strikes an HQ it has been told about (KnownEnemyHq); no peeking at the true HQ (economy-ai D4: the AI plays fair with fog of war).
+    private string? WinTarget() => _side == Side.Hand ? KnownEnemyHq : Praedra.Core.Control.ControlModule.CapitalSystem;
 
     private bool Pending(Fleet f) => _h.Bombardment.HasPending(f.Id) || _h.Assault.HasPending(f.Id);
 
@@ -1013,8 +1013,8 @@ public sealed partial class SimpleAi
     /// <summary>
     /// DetourToHeldStop: the leg of a detour that keeps the fleet's purpose. The AI keeps no memory between days, so a fleet that stops at a
     /// system it does not hold plans there as at a target (DecideAtTarget): with no business there it leaves for the rally system and the
-    /// trip it was on is lost. Measured on the v5 map (Alliance vs passive Empire, seed 1): a strike pile fetching troops went around a blocked
-    /// stop to an Imperial system, turned back to the rally, and did that again for 200 days with its troop holds empty. So the leg ends at
+    /// trip it was on is lost. Measured on the v5 map (Collective vs passive Hand, seed 1): a strike pile fetching troops went around a blocked
+    /// stop to a Hand system, turned back to the rally, and did that again for 200 days with its troop holds empty. So the leg ends at
     /// the first stop of the way around that the side holds (there DecideOwn plans the rest of the trip again), when the direct trip there is
     /// clear. Null (no such stop) = keep the first stop, as the AI of before.
     /// </summary>
@@ -1189,7 +1189,7 @@ public sealed partial class SimpleAi
 
     /// <summary>
     /// The home guard is whole fleets, so new warships delivered to it while it was weak stay there for good once it is strong (seen on the
-    /// v5 galaxy: an Alliance HQ guard of strength 119 sat still for 300 days while the strike pile never reached LaunchStrength). When one
+    /// v5 galaxy: a Collective HQ guard of strength 119 sat still for 300 days while the strike pile never reached LaunchStrength). When one
     /// guard fleet is at least LaunchStrength above HomeDefenceStrength, its newest armed ships are split off (one order) while the guard keeps
     /// HomeDefenceStrength; the split fleet is a strike fleet from the next review. A ship's share of the fleet strength is in proportion to its
     /// class strength. DEFAULT (lead 2026-10-16, a bug fix of the home-defence rule above).
@@ -1475,7 +1475,7 @@ public sealed partial class SimpleAi
             // fog, blind hunt (QA-19): the picture shows no enemy system, so a system not looked at for long is worth a visit
             int blindValue = blind ? BlindTargetValue(s, hops[sys.Index]) : 0;
             bool isBlind = blindValue > 0;
-            // fog: systems the picture shows enemy-held reach farther; the Empire's HQ candidates (belief map) from any distance
+            // fog: systems the picture shows enemy-held reach farther; the Hand's HQ candidates (belief map) from any distance
             bool seenEnemy = _view != null && IsEnemyHeld(s);
             int reach = seenEnemy ? Math.Max(_p.TargetHops, _p.FogEnemyTargetHops) : _p.TargetHops;
             int belief = search && seenEnemy ? Belief(s) : 0;

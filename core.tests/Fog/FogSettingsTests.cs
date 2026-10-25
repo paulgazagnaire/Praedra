@@ -15,7 +15,7 @@ public class FogSettingsTests
         Assert.True(p.LanesPublic); Assert.True(p.CoreReportsInstantly); Assert.True(p.PassingFleetsExplore); Assert.True(p.AgentPresenceCounts);
         Assert.True(p.ReconRevealsFacilities); Assert.False(p.PresenceRevealsHq); Assert.Equal(SectorSuspicion.Off, p.SectorSuspicion);
         Assert.Equal(30, p.ObservedWindowDays); Assert.True(p.SingleHqCleanup);
-        Assert.Equal(new[] { "The Shoal" }, p.StartFullCopyEmpire); Assert.Empty(p.StartFullCopyAlliance);
+        Assert.Equal(new[] { "The Shoal" }, p.StartFullCopyHand); Assert.Empty(p.StartFullCopyCollective);
         Assert.Equal((4, 1, 4, 1, 0, 1), (p.EspionageRichSpread, p.EspionageRichBase, p.EspionageCapitalSpread, p.EspionageCapitalBase, p.EspionageOtherSpread, p.EspionageOtherBase));
         var h = new HqParams();
         Assert.Equal((100, 0, false, true), (h.Speed, h.MoveCost, h.UsesFacilitySlot, h.DestinationMustBeHeld));
@@ -28,7 +28,7 @@ public class FogSettingsTests
         var s = new GameSettings();
         Assert.Null(s.Fog); Assert.Null(s.Hq);
         var host = GameHost.New(1);
-        Assert.Equal(p, host.Fog.Params with { StartFullCopyEmpire = p.StartFullCopyEmpire, StartFullCopyAlliance = p.StartFullCopyAlliance });
+        Assert.Equal(p, host.Fog.Params with { StartFullCopyHand = p.StartFullCopyHand, StartFullCopyCollective = p.StartFullCopyCollective });
         Assert.Equal(h, host.Fog.HqRules);
     }
 
@@ -55,10 +55,10 @@ public class FogSettingsTests
     public void MoveCostIsPaidOrRefused()
     {
         var w = new FogWorld(new GameSettings { Hq = new HqParams { MoveCost = 25 } });
-        w.H.Economy.SetPools(Side.Alliance, 0, 20);
-        Assert.Equal(HqRejectReason.NoFunds, w.TryMoveHq(Side.Alliance, FogWorld.R3));
-        w.H.Economy.SetPools(Side.Alliance, 0, 30);
-        Assert.Null(w.TryMoveHq(Side.Alliance, FogWorld.R3));
-        Assert.Equal(5, w.Game.State.Economy.Alliance.Refined);
+        w.H.Economy.SetPools(Side.Collective, 0, 20);
+        Assert.Equal(HqRejectReason.NoFunds, w.TryMoveHq(Side.Collective, FogWorld.R3));
+        w.H.Economy.SetPools(Side.Collective, 0, 30);
+        Assert.Null(w.TryMoveHq(Side.Collective, FogWorld.R3));
+        Assert.Equal(5, w.Game.State.Economy.Collective.Refined);
     }
 }

@@ -22,7 +22,7 @@ public class GarrisonTests
         Assert.Equal(n, s.Select(x => SupportModule.RequiredGarrison(P, x, false, false)).ToArray());
     }
 
-    // G2: s = 40 in uprising / Empire Death Star / both: 4 / 1 / 2
+    // G2: s = 40 in uprising / Hand Death Star / both: 4 / 1 / 2
     [Fact]
     public void G2_Flags()
     {
@@ -31,11 +31,11 @@ public class GarrisonTests
         Assert.Equal(2, SupportModule.RequiredGarrison(P, 40, true, true));
     }
 
-    // G3: s = 50, Empire Death Star: N = 0 (1 / 2 truncated)
+    // G3: s = 50, Hand Death Star: N = 0 (1 / 2 truncated)
     [Fact]
     public void G3_HalvingTruncates() => Assert.Equal(0, SupportModule.RequiredGarrison(P, 50, false, true));
 
-    // the sheet's table, every row: no flag, uprising, Empire Death Star, both
+    // the sheet's table, every row: no flag, uprising, Hand Death Star, both
     [Theory]
     [InlineData(0, 6, 12, 3, 6)]
     [InlineData(9, 6, 12, 3, 6)]
@@ -59,30 +59,30 @@ public class GarrisonTests
         Assert.Equal(both, SupportModule.RequiredGarrison(P, s, true, true));
     }
 
-    // the Death Star halving is the Empire's only; the module reads support of the holder, the flag and the uprising flag
+    // the Death Star halving is the Hand's only; the module reads support of the holder, the flag and the uprising flag
     [Fact]
     public void RequiredGarrisonReadsTheSystem()
     {
         var w = new SupWorld();
-        w.Hold(Emp, Side.Empire, 40);
+        w.Hold(Emp, Side.Hand, 40);
         Assert.Equal(2, w.Sup.RequiredGarrison(Emp));
         w.Sup.SetDeathStarSystem(Emp, true);
         Assert.Equal(1, w.Sup.RequiredGarrison(Emp));
-        w.Hold(Ally, Side.Alliance, 40);
+        w.Hold(Ally, Side.Collective, 40);
         w.Sup.SetDeathStarSystem(Ally, true);
-        Assert.Equal(2, w.Sup.RequiredGarrison(Ally)); // Alliance: no halving
+        Assert.Equal(2, w.Sup.RequiredGarrison(Ally)); // Collective: no halving
         Assert.Equal(0, w.Sup.RequiredGarrison("Navalia")); // neutral
     }
 
     // ---------------------------------------------------------------- uprising start, keep, end
 
-    // G4: Classic, Empire holds, s = 30 (N = 3), 3 regiments: surplus 0, no uprising
+    // G4: Classic, Hand holds, s = 30 (N = 3), 3 regiments: surplus 0, no uprising
     [Fact]
     public void G4_SurplusZeroNoUprising()
     {
         var w = new SupWorld();
-        w.Hold(Emp, Side.Empire, 30);
-        w.Regiments(Emp, Side.Empire, "Tranches", 3);
+        w.Hold(Emp, Side.Hand, 30);
+        w.Regiments(Emp, Side.Hand, "Tranches", 3);
         w.Run(5);
         Assert.False(w.Sup.IsUprising(Emp));
         Assert.Empty(w.Events<UprisingStarted>());
@@ -93,15 +93,15 @@ public class GarrisonTests
     public void G5_UprisingStartsWithOneDraw()
     {
         var w = new SupWorld();
-        w.Hold(Emp, Side.Empire, 30);
-        w.Regiments(Emp, Side.Empire, "Tranches", 2);
+        w.Hold(Emp, Side.Hand, 30);
+        w.Regiments(Emp, Side.Hand, "Tranches", 2);
         w.Stub.Queue(40);
         w.Run(1);
         var e = Assert.Single(w.Events<UprisingStarted>());
-        Assert.Equal((Emp, Side.Empire, 1), (e.System, e.Holder, e.Day));
+        Assert.Equal((Emp, Side.Hand, 1), (e.System, e.Holder, e.Day));
         Assert.Equal(new[] { (0, 70) }, w.Stub.Requests.ToArray());
         var st = w.Sup.StateOf(Emp)!;
-        Assert.Equal(Side.Alliance, st.Rebels);
+        Assert.Equal(Side.Collective, st.Collective);
         Assert.Equal(31, st.ErosionDue);
         Assert.Equal(1 + 30 + 40, st.IncidentDue);
     }
@@ -111,9 +111,9 @@ public class GarrisonTests
     public void G6_UprisingStaysOn()
     {
         var w = new SupWorld();
-        w.Hold(Emp, Side.Empire, 30);
-        w.Regiments(Emp, Side.Empire, "Tranches", 5);
-        w.Uprising(Emp, Side.Empire, erosionDue: 30, incidentDue: 90);
+        w.Hold(Emp, Side.Hand, 30);
+        w.Regiments(Emp, Side.Hand, "Tranches", 5);
+        w.Uprising(Emp, Side.Hand, erosionDue: 30, incidentDue: 90);
         w.Run(1);
         Assert.True(w.Sup.IsUprising(Emp));
         Assert.Empty(w.Events<UprisingEnded>());
@@ -124,9 +124,9 @@ public class GarrisonTests
     public void G7_UprisingEndsAtTwiceN()
     {
         var w = new SupWorld();
-        w.Hold(Emp, Side.Empire, 30);
-        w.Regiments(Emp, Side.Empire, "Tranches", 6);
-        w.Uprising(Emp, Side.Empire, erosionDue: 30, incidentDue: 90);
+        w.Hold(Emp, Side.Hand, 30);
+        w.Regiments(Emp, Side.Hand, "Tranches", 6);
+        w.Uprising(Emp, Side.Hand, erosionDue: 30, incidentDue: 90);
         w.Run(1);
         Assert.False(w.Sup.IsUprising(Emp));
         Assert.Equal("Garrison", w.Events<UprisingEnded>().Single().Reason);
@@ -141,11 +141,11 @@ public class GarrisonTests
     public void G8_SupportRisesToSixty()
     {
         var w = new SupWorld();
-        w.Hold(Emp, Side.Empire, 30);
-        w.Uprising(Emp, Side.Empire, erosionDue: 30, incidentDue: 90);
+        w.Hold(Emp, Side.Hand, 30);
+        w.Uprising(Emp, Side.Hand, erosionDue: 30, incidentDue: 90);
         w.Run(1);
         Assert.True(w.Sup.IsUprising(Emp));
-        w.W.Eco.SetAllianceSupport(Emp, 40); // Empire support 60
+        w.W.Eco.SetCollectiveSupport(Emp, 40); // Hand support 60
         w.Run(1);
         Assert.False(w.Sup.IsUprising(Emp));
         Assert.Equal("NoRequirement", w.Events<UprisingEnded>().Single().Reason);
@@ -156,11 +156,11 @@ public class GarrisonTests
     public void GarrisonChangesAreSeenAtTheNextRefresh()
     {
         var w = new SupWorld();
-        w.Hold(Emp, Side.Empire, 30);
+        w.Hold(Emp, Side.Hand, 30);
         w.Stub.Queue(40);
         w.Run(1);
         Assert.True(w.Sup.IsUprising(Emp));
-        w.Regiments(Emp, Side.Empire, "Tranches", 6);
+        w.Regiments(Emp, Side.Hand, "Tranches", 6);
         Assert.True(w.Sup.IsUprising(Emp)); // nothing changes between Steps
         w.Run(1);
         Assert.False(w.Sup.IsUprising(Emp));
@@ -171,12 +171,12 @@ public class GarrisonTests
     public void OnlyLandedCompletedRegimentsOfTheHolderCount()
     {
         var w = new SupWorld();
-        w.Hold(Emp, Side.Empire, 40); // N = 2
-        w.W.Eco.AddObject(Side.Empire, "Tranches", Emp);
-        w.W.Eco.AddObject(Side.Empire, "Tranches", Emp, completed: false);
-        w.W.Eco.AddObject(Side.Empire, "Tranches");                     // no system: aboard something
-        w.W.Eco.AddObject(Side.Alliance, "Militia", Emp);              // the other side's
-        w.W.Eco.AddObject(Side.Empire, "Speculators", Emp);                  // a special force
+        w.Hold(Emp, Side.Hand, 40); // N = 2
+        w.W.Eco.AddObject(Side.Hand, "Tranches", Emp);
+        w.W.Eco.AddObject(Side.Hand, "Tranches", Emp, completed: false);
+        w.W.Eco.AddObject(Side.Hand, "Tranches");                     // no system: aboard something
+        w.W.Eco.AddObject(Side.Collective, "Militia", Emp);              // the other side's
+        w.W.Eco.AddObject(Side.Hand, "Speculators", Emp);                  // a special force
         Assert.Equal(1, w.Sup.RegimentCount(Emp));
         Assert.Equal(10, w.Sup.Garrison10(Emp));
         w.Stub.Queue(0);
@@ -189,16 +189,16 @@ public class GarrisonTests
     public void ControlChangeClearsThenJudgesTheNewHolder()
     {
         var w = new SupWorld();
-        w.Hold(Emp, Side.Empire, 30);
+        w.Hold(Emp, Side.Hand, 30);
         w.Stub.Queue(10, 20);
         w.Run(1);
         Assert.True(w.Sup.IsUprising(Emp));
-        w.W.Fleets.SetOwner(Emp, Side.Alliance); // A = 70: the Alliance holds a loyal world, N = 0
+        w.W.Fleets.SetOwner(Emp, Side.Collective); // A = 70: the Collective holds a loyal world, N = 0
         w.Run(1);
         Assert.False(w.Sup.IsUprising(Emp));
         Assert.Equal("ControlChanged", w.Events<UprisingEnded>().Single().Reason);
-        // captured back: Empire support 30 again, no garrison: a new uprising for the Empire
-        w.W.Fleets.SetOwner(Emp, Side.Empire);
+        // captured back: Hand support 30 again, no garrison: a new uprising for the Hand
+        w.W.Fleets.SetOwner(Emp, Side.Hand);
         w.Run(1);
         Assert.True(w.Sup.IsUprising(Emp));
         Assert.Equal(2, w.Events<UprisingStarted>().Count);
@@ -209,8 +209,8 @@ public class GarrisonTests
     public void ClearUprisingOnCapture()
     {
         var w = new SupWorld();
-        w.Hold(Emp, Side.Empire, 30);
-        w.Uprising(Emp, Side.Empire, erosionDue: 30, incidentDue: 90);
+        w.Hold(Emp, Side.Hand, 30);
+        w.Uprising(Emp, Side.Hand, erosionDue: 30, incidentDue: 90);
         w.InStep(ctx => w.Sup.ClearUprisingOnCapture(ctx, Emp));
         w.Run(1);
         Assert.Equal("Captured", w.Events<UprisingEnded>().Single().Reason);
@@ -222,8 +222,8 @@ public class GarrisonTests
     private static (int G10, bool Satisfied) NewCase(string cls, int n, int support = 40)
     {
         var w = new SupWorld(GarrisonRuleset.New);
-        w.Hold(Emp, Side.Empire, support);
-        w.Regiments(Emp, Side.Empire, cls, n);
+        w.Hold(Emp, Side.Hand, support);
+        w.Regiments(Emp, Side.Hand, cls, n);
         int need10 = 10 * w.Sup.RequiredGarrison(Emp);
         return (w.Sup.Garrison10(Emp), w.Sup.Garrison10(Emp) >= need10);
     }
@@ -241,8 +241,8 @@ public class GarrisonTests
         Assert.Equal((g10, ok), NewCase(cls, n));
         // and the Step agrees: the uprising starts exactly when the check fails
         var w = new SupWorld(GarrisonRuleset.New);
-        w.Hold(Emp, Side.Empire, 40);
-        w.Regiments(Emp, Side.Empire, cls, n);
+        w.Hold(Emp, Side.Hand, 40);
+        w.Regiments(Emp, Side.Hand, cls, n);
         w.Run(1);
         Assert.Equal(!ok, w.Sup.IsUprising(Emp));
     }
@@ -263,10 +263,10 @@ public class GarrisonTests
         bool Run(GarrisonRuleset r)
         {
             var w = new SupWorld(r);
-            w.Hold(Emp, Side.Empire, support);
-            w.Regiments(Emp, Side.Empire, "Tranches", regs);
-            w.Hold(Ally, Side.Alliance, support);
-            w.Regiments(Ally, Side.Alliance, "Militia", regs);
+            w.Hold(Emp, Side.Hand, support);
+            w.Regiments(Emp, Side.Hand, "Tranches", regs);
+            w.Hold(Ally, Side.Collective, support);
+            w.Regiments(Ally, Side.Collective, "Militia", regs);
             w.Stub.Queue(0, 0);
             w.Run(1);
             return w.Sup.IsUprising(Emp) == w.Sup.IsUprising(Ally) && w.Sup.IsUprising(Emp);
@@ -279,8 +279,8 @@ public class GarrisonTests
     public void ClassicIgnoresWeights_UnknownClassWeighsOne()
     {
         var w = new SupWorld(GarrisonRuleset.Classic);
-        w.Hold(Emp, Side.Empire, 40);
-        w.Regiments(Emp, Side.Empire, "Proxies", 3);
+        w.Hold(Emp, Side.Hand, 40);
+        w.Regiments(Emp, Side.Hand, "Proxies", 3);
         Assert.Equal(30, w.Sup.Garrison10(Emp));
         Assert.Equal(10, SupWorld.Weights.Value.Weight10("Some New Regiment"));
         Assert.Equal(6, SupWorld.Weights.Value.Weight10("Deckhands"));
@@ -312,20 +312,20 @@ public class GarrisonTests
         Assert.Equal(c2, SupportModule.Lookup(P.Table2, score));
     }
 
-    // G14 through the module: the Empire in a Death Star sector, a Stormtrooper counts in R and again in T
+    // G14 through the module: the Hand in a Death Star sector, a Stormtrooper counts in R and again in T
     [Fact]
     public void G14_ScoreFromTheSystem()
     {
         var w = new SupWorld();
-        w.Hold(Emp, Side.Empire, 20);
+        w.Hold(Emp, Side.Hand, 20);
         w.Sup.SetDeathStarSystem(Emp, true);
-        w.Regiments(Emp, Side.Empire, "Pacifiers", 1);
-        w.Regiments(Emp, Side.Empire, "Tranches", 1);
-        Assert.Equal(9, w.Sup.IncidentScore(Emp, Side.Empire, 5, 5)); // 10 + 4 - 2*2 - 1
+        w.Regiments(Emp, Side.Hand, "Pacifiers", 1);
+        w.Regiments(Emp, Side.Hand, "Tranches", 1);
+        Assert.Equal(9, w.Sup.IncidentScore(Emp, Side.Hand, 5, 5)); // 10 + 4 - 2*2 - 1
         Assert.Equal(10 + 4 - 2 - 1, SupportModule.IncidentScore(P, 5, 5, 20, 2, 1, false));
         // the New ruleset still uses the flat count here (DEFAULT)
         w.Sup.Ruleset = GarrisonRuleset.New;
-        Assert.Equal(9, w.Sup.IncidentScore(Emp, Side.Empire, 5, 5));
+        Assert.Equal(9, w.Sup.IncidentScore(Emp, Side.Hand, 5, 5));
     }
 
     private static (int[] C1, int[] C2) Odds(int s, int r)
@@ -375,11 +375,11 @@ public class GarrisonTests
     public void G21_RegimentDestroyed_DrawOrder()
     {
         var w = new SupWorld();
-        w.Hold(Ally, Side.Alliance, 40);
+        w.Hold(Ally, Side.Collective, 40);
         foreach (var k in new[] { FacilityKind.OrbitalShipyard, FacilityKind.TrainingFacility, FacilityKind.ConstructionYard, FacilityKind.Kdy150 })
             w.W.Eco.AddFacility(Ally, k);
-        var ids = Enumerable.Range(0, 3).Select(_ => w.W.Eco.AddObject(Side.Alliance, "Militia", Ally)).ToArray();
-        w.Uprising(Ally, Side.Alliance, erosionDue: 31, incidentDue: 1);
+        var ids = Enumerable.Range(0, 3).Select(_ => w.W.Eco.AddObject(Side.Collective, "Militia", Ally)).ToArray();
+        w.Uprising(Ally, Side.Collective, erosionDue: 31, incidentDue: 1);
         w.Stub.Queue(9, 9, 1, 40); // d1 = d2 = 10, victim index 1, re-arm 40
         w.Run(1);
         var inc = Assert.Single(w.Events<IncidentRolled>());
@@ -398,8 +398,8 @@ public class GarrisonTests
     public void G22_NoFacilityNoDraw()
     {
         var w = new SupWorld();
-        w.Hold(Ally, Side.Alliance, 40);
-        w.Uprising(Ally, Side.Alliance, erosionDue: 31, incidentDue: 1);
+        w.Hold(Ally, Side.Collective, 40);
+        w.Uprising(Ally, Side.Collective, erosionDue: 31, incidentDue: 1);
         w.Stub.Queue(1, 1); // d = 2 + 2 = 4, + 2 = 6: codes (1, 0)
         w.Run(1);
         var inc = Assert.Single(w.Events<IncidentRolled>());
@@ -413,11 +413,11 @@ public class GarrisonTests
     public void Code1_DestroysOneCompletedFacility()
     {
         var w = new SupWorld();
-        w.Hold(Ally, Side.Alliance, 40);
+        w.Hold(Ally, Side.Collective, 40);
         int a = w.W.Eco.AddFacility(Ally, FacilityKind.OrbitalShipyard);
         int queued = w.W.Eco.AddFacility(Ally, FacilityKind.TrainingFacility, completed: false);
         int b = w.W.Eco.AddFacility(Ally, FacilityKind.ConstructionYard);
-        w.Uprising(Ally, Side.Alliance, erosionDue: 31, incidentDue: 1);
+        w.Uprising(Ally, Side.Collective, erosionDue: 31, incidentDue: 1);
         w.Stub.Queue(1, 1, 1, 5); // score 6 -> code 1; pick index 1 of the two completed (ids a, b) = b; re-arm 5
         w.Run(1);
         var d = Assert.Single(w.Events<FacilityDestroyed>());
@@ -431,9 +431,9 @@ public class GarrisonTests
     public void Code2_NeedsAHolderRegiment()
     {
         var w = new SupWorld();
-        w.Hold(Ally, Side.Alliance, 40);
-        w.W.Eco.AddObject(Side.Empire, "Tranches", Ally); // not the holder's
-        w.Uprising(Ally, Side.Alliance, erosionDue: 31, incidentDue: 1);
+        w.Hold(Ally, Side.Collective, 40);
+        w.W.Eco.AddObject(Side.Hand, "Tranches", Ally); // not the holder's
+        w.Uprising(Ally, Side.Collective, erosionDue: 31, incidentDue: 1);
         w.Stub.Queue(9, 9);
         w.Run(1);
         Assert.Empty(w.Events<RegimentDestroyed>());
@@ -445,10 +445,10 @@ public class GarrisonTests
     public void G23_IncidentTimer()
     {
         var w = new SupWorld();
-        w.Hold(Ally, Side.Alliance, 60);
+        w.Hold(Ally, Side.Collective, 60);
         w.Stub.Expect(0, 70, 40, 15);
         w.Run(10);
-        w.W.Eco.SetAllianceSupport(Ally, 40);
+        w.W.Eco.SetCollectiveSupport(Ally, 40);
         w.Run(70); // Steps 10..79: not yet
         Assert.Empty(w.Events<IncidentRolled>());
         w.Run(1);  // Step 80
@@ -465,10 +465,10 @@ public class GarrisonTests
         (List<GameEvent> Ev, string Hash, long Draws) Run(ulong seed)
         {
             var w = new SupWorld(stub: false, seed: seed);
-            w.Hold(Ally, Side.Alliance, 30); w.Hold(Emp, Side.Empire, 35);
+            w.Hold(Ally, Side.Collective, 30); w.Hold(Emp, Side.Hand, 35);
             foreach (var k in new[] { FacilityKind.OrbitalShipyard, FacilityKind.ConstructionYard, FacilityKind.Kdy150 }) { w.W.Eco.AddFacility(Ally, k); w.W.Eco.AddFacility(Emp, k); }
-            w.Regiments(Ally, Side.Alliance, "Militia", 3);
-            w.Regiments(Emp, Side.Empire, "Tranches", 2);
+            w.Regiments(Ally, Side.Collective, "Militia", 3);
+            w.Regiments(Emp, Side.Hand, "Tranches", 2);
             w.Run(500);
             return (w.Game.Events.ToList(), GameSave.StateHash(w.Game), w.Game.Rng.Draws);
         }
@@ -483,10 +483,10 @@ public class GarrisonTests
     public void G25_SystemNameOrder()
     {
         var w = new SupWorld();
-        w.Hold(Emp, Side.Empire, 40);
-        w.Hold(Ally, Side.Alliance, 40);
-        w.Uprising(Emp, Side.Empire, erosionDue: 31, incidentDue: 1);
-        w.Uprising(Ally, Side.Alliance, erosionDue: 31, incidentDue: 1);
+        w.Hold(Emp, Side.Hand, 40);
+        w.Hold(Ally, Side.Collective, 40);
+        w.Uprising(Emp, Side.Hand, erosionDue: 31, incidentDue: 1);
+        w.Uprising(Ally, Side.Collective, erosionDue: 31, incidentDue: 1);
         w.Stub.Queue(1, 2, 10, 3, 4, 20); // Classis: d = 2, 3, re-arm 10; Drift Harbour: d = 4, 5, re-arm 20
         w.Run(1);
         var ev = w.Events<IncidentRolled>();

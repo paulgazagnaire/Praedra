@@ -12,8 +12,8 @@ namespace Praedra.Core.Characters;
 /// <summary>
 /// What moves loyalty (B2c): the four game events that call <see cref="CharacterModule.ShiftLoyalty"/>, reacting to the event at the moment it is
 /// emitted (<see cref="Game.ObserveEvents"/>), and the per-system loss tallies they read (<see cref="LoyaltyState"/>, saved and hashed).
-/// 1. A holder change to Alliance or Empire (HolderChangeAftermath, the queued 0x31b; B5a): one draw k = rand(0..SDPRTB 2561) + 2562, ShiftLoyalty(new owner, k); to neutral: nothing.
-/// 2. HqDestroyed (the Alliance HQ, any cause): one draw, ShiftLoyalty(Alliance, -k), k in 0..5.
+/// 1. A holder change to Collective or Hand (HolderChangeAftermath, the queued 0x31b; B5a): one draw k = rand(0..SDPRTB 2561) + 2562, ShiftLoyalty(new owner, k); to neutral: nothing.
+/// 2. HqDestroyed (the Collective HQ, any cause): one draw, ShiftLoyalty(Collective, -k), k in 0..5.
 /// 3. BattleEnded with exactly one side's fleets or regiments left at the system: ShiftLoyalty(winner, loss shift of the battle tallies).
 /// 4. BlockadeLifted: ShiftLoyalty(gaining side, loss shift of the assault and bombardment tallies).
 /// Switch <see cref="CharacterParams.LoyaltyTriggers"/> (DEFAULT on). rule: m5-characters-and-force §Loyalty and betrayal (Traced, B2c).
@@ -21,7 +21,7 @@ namespace Praedra.Core.Characters;
 public sealed class LoyaltyModule
 {
     /// <summary>The original's side numbers. rule: B2c §Rules.</summary>
-    public const int SideNumberAlliance = CharacterModule.SideNumberAlliance, SideNumberEmpire = CharacterModule.SideNumberEmpire, SideNumberNeutral = 3;
+    public const int SideNumberCollective = CharacterModule.SideNumberCollective, SideNumberHand = CharacterModule.SideNumberHand, SideNumberNeutral = 3;
 
     private readonly Game _game;
     private readonly CharacterModule _ch;
@@ -54,17 +54,17 @@ public sealed class LoyaltyModule
         return t;
     }
 
-    public static int SideNumber(Side? s) => s switch { Side.Alliance => SideNumberAlliance, Side.Empire => SideNumberEmpire, _ => SideNumberNeutral };
+    public static int SideNumber(Side? s) => s switch { Side.Collective => SideNumberCollective, Side.Hand => SideNumberHand, _ => SideNumberNeutral };
     private static int Index(int sideNumber) => sideNumber - 1;
 
     /// <summary>
-    /// <c>0x53ec10(W, T1, T2)</c>: W = Alliance: (T2 - T1) / d + T2 / d; W = Empire: (T1 - T2) / d + T1 / d; C division truncating toward zero
+    /// <c>0x53ec10(W, T1, T2)</c>: W = Collective: (T2 - T1) / d + T2 / d; W = Hand: (T1 - T2) / d + T1 / d; C division truncating toward zero
     /// (SDPRTB 2560 = 50). rule: B2c §4.
     /// </summary>
-    public int LossShift(int winner, int allianceLoss, int empireLoss)
+    public int LossShift(int winner, int collectiveLoss, int handLoss)
     {
         int d = P.LossShiftDivisor;
-        int enemy = winner == SideNumberAlliance ? empireLoss : allianceLoss, own = winner == SideNumberAlliance ? allianceLoss : empireLoss;
+        int enemy = winner == SideNumberCollective ? handLoss : collectiveLoss, own = winner == SideNumberCollective ? collectiveLoss : handLoss;
         return (enemy - own) / d + enemy / d;
     }
 
@@ -83,18 +83,18 @@ public sealed class LoyaltyModule
         {
             // rule: B2c §1 (0x5616a0): the new owner's shift, one draw; the old side's amount is 0 (no draw); neutral: nothing. It runs in the
             // handler of the queued event 0x31b, after the flip's own draws (B5a section 7), so it reacts to HolderChangeAftermath.
-            case HolderChangeAftermath c when c.To is Side.Alliance or Side.Empire:
+            case HolderChangeAftermath c when c.To is Side.Collective or Side.Hand:
                 {
                     int k = ctx.Rng.NextInt(0, P.CaptureShiftSpread) + P.CaptureShiftBase;
                     _ch.ShiftLoyalty(ctx, SideNumber(c.To.Value), k);
                     break;
                 }
-            // rule: B2c §2 (0x561780): the Alliance HQ stops existing; a negative bound draws 0..|bound| and negates (0x53e290)
+            // rule: B2c §2 (0x561780): the Collective HQ stops existing; a negative bound draws 0..|bound| and negates (0x53e290)
             case HqDestroyed:
                 {
                     int b = P.HqShiftBound;
                     int k = (b < 0 ? -ctx.Rng.NextInt(0, -b) : ctx.Rng.NextInt(0, b)) + P.HqShiftBase;
-                    _ch.ShiftLoyalty(ctx, SideNumberAlliance, k);
+                    _ch.ShiftLoyalty(ctx, SideNumberCollective, k);
                     break;
                 }
             // rule: B2c §3 resets: a battle starting resets the battle tallies of all three sides (0x511080)
@@ -121,9 +121,9 @@ public sealed class LoyaltyModule
             case BattleEnded be:
                 {
                     string sys = be.Result.System;
-                    bool a = Present(sys, Side.Alliance), m = Present(sys, Side.Empire);
+                    bool a = Present(sys, Side.Collective), m = Present(sys, Side.Hand);
                     if (a == m) break;
-                    int w = a ? SideNumberAlliance : SideNumberEmpire;
+                    int w = a ? SideNumberCollective : SideNumberHand;
                     var t = TallyOf(sys);
                     int shift = LossShift(w, t?.Battle[0] ?? 0, t?.Battle[1] ?? 0);
                     _ch.ShiftLoyalty(ctx, w, shift);
@@ -144,10 +144,10 @@ public sealed class LoyaltyModule
                     int b = t?.Blockader ?? SideNumber(bl.Blockader);
                     if (b == SideNumberNeutral) break;
                     bool blockaderGains = _eco.IsDestroyed(bl.System) || SideNumber(_fleets.OwnerOf(bl.System)) == b;
-                    int g = blockaderGains ? b : (b == SideNumberAlliance ? SideNumberEmpire : SideNumberAlliance);
+                    int g = blockaderGains ? b : (b == SideNumberCollective ? SideNumberHand : SideNumberCollective);
                     int X(int s) => t == null ? 0 : t.Assault[Index(s)] + t.Bombardment[Index(s)]
                         + (s != b ? t.Assault[Index(SideNumberNeutral)] + t.Bombardment[Index(SideNumberNeutral)] : 0); // 0x509a20
-                    _ch.ShiftLoyalty(ctx, g, LossShift(g, X(SideNumberAlliance), X(SideNumberEmpire)));
+                    _ch.ShiftLoyalty(ctx, g, LossShift(g, X(SideNumberCollective), X(SideNumberHand)));
                     break;
                 }
         }

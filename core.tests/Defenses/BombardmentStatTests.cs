@@ -8,7 +8,7 @@ namespace Praedra.Core.Tests.Defenses;
 public class BombardmentStatTests
 {
     private const string Sys = BombWorld.Sys;
-    private static readonly Side Emp = Side.Empire, All = Side.Alliance;
+    private static readonly Side Emp = Side.Hand, All = Side.Collective;
 
     // m3-bombardment B8: 10,000 single hits on one target of each bombardment defense 0..10: each observed rate within 2.0 points of exact
     [Theory]

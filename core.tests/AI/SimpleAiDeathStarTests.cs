@@ -9,32 +9,32 @@ using Xunit.Abstractions;
 
 namespace Praedra.Core.Tests.AI;
 
-// The computer opponent's Death Star (m5-death-star §6, SimpleAiParams.UseDeathStar). The Alliance AI is a passive scripted side in the scenario
-// tests so that only the Empire AI acts; the campaign test lets both AIs play with fog.
+// The computer opponent's Death Star (m5-death-star §6, SimpleAiParams.UseDeathStar). The Collective AI is a passive scripted side in the scenario
+// tests so that only the Hand AI acts; the campaign test lets both AIs play with fog.
 public class SimpleAiDeathStarTests
 {
     private readonly ITestOutputHelper _out;
     public SimpleAiDeathStarTests(ITestOutputHelper o) { _out = o; }
 
     private const string Ds = EconomyModule.DeathStarClass, Isd = "Mandate";
-    private static int Margin(GameHost h) => h.Economy.Capacity(Side.Empire) / 10; // 10% of the Empire capacity (MedA: 2100 since the v5 economy scaling)
+    private static int Margin(GameHost h) => h.Economy.Capacity(Side.Hand) / 10; // 10% of the Hand capacity (MedA: 2100 since the v5 economy scaling)
 
-    private static (AiMatch M, GameHost H) Match(int seed, SimpleAiParams p, bool knowHq = false, Side? passive = Side.Alliance)
+    private static (AiMatch M, GameHost H) Match(int seed, SimpleAiParams p, bool knowHq = false, Side? passive = Side.Collective)
     {
         var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = Praedra.Core.Tests.Setup.DealSettings.FileOldVictory });
         var m = new AiMatch(h, p, p, passive);
-        if (knowHq) m.Empire.KnownEnemyHq = h.HqSystem;
+        if (knowHq) m.Hand.KnownEnemyHq = h.HqSystem;
         return (m, h);
     }
 
-    // An army that never launches by itself, so only the Death Star logic can move the Empire's fleets in the scenario tests.
+    // An army that never launches by itself, so only the Death Star logic can move the Hand's fleets in the scenario tests.
     private static SimpleAiParams Quiet(bool useDs = true, double? escort = null) => new()
     {
         UseDeathStar = useDs, DeathStarEscortStrength = escort, UseCharactersAndMissions = false, LaunchStrength = int.MaxValue, WinStrikeStrength = int.MaxValue,
     };
 
     private static List<EconObject> DeathStars(GameHost h) =>
-        h.Economy.Objects.Where(o => o.Class == Ds && h.Economy.OwnerOf(o) == Side.Empire).ToList();
+        h.Economy.Objects.Where(o => o.Class == Ds && h.Economy.OwnerOf(o) == Side.Hand).ToList();
 
     private static void Days(AiMatch m, int n) { for (int i = 0; i < n; i++) m.Step(); }
 
@@ -43,12 +43,12 @@ public class SimpleAiDeathStarTests
     public void Builds_OneWhenItCanAfford()
     {
         var (m, h) = Match(1, Quiet());
-        h.Economy.SetPools(Side.Empire, 0, 2000);
-        Assert.True(h.Economy.Free(Side.Empire) - h.Economy.Costs.Get(Ds).Maintenance >= Margin(h), "the start has no headroom for the test");
+        h.Economy.SetPools(Side.Hand, 0, 2000);
+        Assert.True(h.Economy.Free(Side.Hand) - h.Economy.Costs.Get(Ds).Maintenance >= Margin(h), "the start has no headroom for the test");
         Days(m, 12);
         Assert.Single(DeathStars(h));
-        Assert.Contains(m.Sent.Keys, k => k == "Empire Build");
-        Assert.Empty(h.Economy.Objects.Where(o => o.Class == Ds && h.Economy.OwnerOf(o) == Side.Alliance));
+        Assert.Contains(m.Sent.Keys, k => k == "Hand Build");
+        Assert.Empty(h.Economy.Objects.Where(o => o.Class == Ds && h.Economy.OwnerOf(o) == Side.Collective));
     }
 
     // m5-death-star §6.1 (yard choice DEFAULT, lead 2026-10-13): the system with the most completed shipyards.
@@ -56,8 +56,8 @@ public class SimpleAiDeathStarTests
     public void Builds_AtTheSystemWithTheMostShipyards()
     {
         var (m, h) = Match(1, Quiet());
-        h.Economy.SetPools(Side.Empire, 0, 2000);
-        var yards = h.Economy.Objects.Where(o => o.Completed && o.Class == "Orbital Shipyard" && h.Economy.OwnerOf(o) == Side.Empire && o.System != null)
+        h.Economy.SetPools(Side.Hand, 0, 2000);
+        var yards = h.Economy.Objects.Where(o => o.Completed && o.Class == "Orbital Shipyard" && h.Economy.OwnerOf(o) == Side.Hand && o.System != null)
             .GroupBy(o => o.System!).Select(g => (Sys: g.Key, N: g.Count())).ToList();
         int max = yards.Max(y => y.N);
         var best = yards.Where(y => y.N == max).Select(y => y.Sys).ToHashSet();
@@ -72,11 +72,11 @@ public class SimpleAiDeathStarTests
     public void DoesNotBuild_WhenHeadroomIsShort()
     {
         var (m, h) = Match(1, Quiet());
-        h.Economy.SetPools(Side.Empire, 0, 2000);
-        int cap = h.Economy.Capacity(Side.Empire), upkeep = h.Economy.Costs.Get(Ds).Maintenance;
-        while (h.Economy.Free(Side.Empire) - upkeep >= cap / 10 && h.Economy.Free(Side.Empire) > 0)
-            h.Fleets.AddFleet(Side.Empire, "Filler", new[] { Isd }, ControlModule.CapitalSystem);
-        Assert.True(h.Economy.Free(Side.Empire) >= 0);
+        h.Economy.SetPools(Side.Hand, 0, 2000);
+        int cap = h.Economy.Capacity(Side.Hand), upkeep = h.Economy.Costs.Get(Ds).Maintenance;
+        while (h.Economy.Free(Side.Hand) - upkeep >= cap / 10 && h.Economy.Free(Side.Hand) > 0)
+            h.Fleets.AddFleet(Side.Hand, "Filler", new[] { Isd }, ControlModule.CapitalSystem);
+        Assert.True(h.Economy.Free(Side.Hand) >= 0);
         Days(m, 12);
         Assert.Empty(DeathStars(h));
     }
@@ -86,7 +86,7 @@ public class SimpleAiDeathStarTests
     public void DoesNotBuild_WhenRefinedIsShort()
     {
         var (m, h) = Match(1, Quiet());
-        h.Economy.SetPools(Side.Empire, 0, 100);
+        h.Economy.SetPools(Side.Hand, 0, 100);
         Days(m, 4);
         Assert.Empty(DeathStars(h));
     }
@@ -96,14 +96,14 @@ public class SimpleAiDeathStarTests
     public void NeverTwo_NotWhileOneIsQueuedOrAlive()
     {
         var (m, h) = Match(2, Quiet());
-        h.Economy.SetPools(Side.Empire, 0, 2000);
-        for (int i = 0; i < 40; i++) { Days(m, 1); h.Economy.SetPools(Side.Empire, 0, 2000); Assert.True(DeathStars(h).Count <= 1); }
+        h.Economy.SetPools(Side.Hand, 0, 2000);
+        for (int i = 0; i < 40; i++) { Days(m, 1); h.Economy.SetPools(Side.Hand, 0, 2000); Assert.True(DeathStars(h).Count <= 1); }
         Assert.Single(DeathStars(h));
         // and one alive in a fleet blocks it as well
         var (m2, h2) = Match(2, Quiet());
-        h2.Fleets.AddFleet(Side.Empire, "DS", new[] { Ds }, ControlModule.CapitalSystem);
-        h2.Economy.SetPools(Side.Empire, 0, 2000);
-        for (int i = 0; i < 20; i++) { Days(m2, 1); h2.Economy.SetPools(Side.Empire, 0, 2000); }
+        h2.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds }, ControlModule.CapitalSystem);
+        h2.Economy.SetPools(Side.Hand, 0, 2000);
+        for (int i = 0; i < 20; i++) { Days(m2, 1); h2.Economy.SetPools(Side.Hand, 0, 2000); }
         Assert.Single(DeathStars(h2));
     }
 
@@ -113,18 +113,18 @@ public class SimpleAiDeathStarTests
     {
         var (m, h) = Match(3, Quiet());
         var eco = h.Economy;
-        h.Fleets.AddFleet(Side.Empire, "DS", new[] { Ds }, ControlModule.CapitalSystem);
+        h.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds }, ControlModule.CapitalSystem);
         Days(m, 3);
-        h.Fleets.AddFleet(Side.Empire, "Spare", new[] { Isd, Isd }, ControlModule.CapitalSystem);
-        var mines = eco.Objects.Where(o => o.Completed && o.Class == "Mine" && eco.OwnerOf(o) == Side.Empire).OrderBy(o => o.Id).ToList();
-        int n = Math.Min(mines.Count, Math.Max(0, eco.Free(Side.Empire)) / 50 + 1);
-        for (int i = 0; i < n; i++) { var id = mines[i].Id; h.Game.Submit(seq => new ScrapObjectOrder(seq, Side.Empire, id)); }
+        h.Fleets.AddFleet(Side.Hand, "Spare", new[] { Isd, Isd }, ControlModule.CapitalSystem);
+        var mines = eco.Objects.Where(o => o.Completed && o.Class == "Mine" && eco.OwnerOf(o) == Side.Hand).OrderBy(o => o.Id).ToList();
+        int n = Math.Min(mines.Count, Math.Max(0, eco.Free(Side.Hand)) / 50 + 1);
+        for (int i = 0; i < n; i++) { var id = mines[i].Id; h.Game.Submit(seq => new ScrapObjectOrder(seq, Side.Hand, id)); }
         h.Game.Step();
-        Assert.True(eco.Free(Side.Empire) < 0, "the test did not create an overdraft");
+        Assert.True(eco.Free(Side.Hand) < 0, "the test did not create an overdraft");
         int scraps = 0;
-        for (int d = 0; d < 8 && eco.Free(Side.Empire) < 0; d++) { m.Step(); scraps += m.Empire.Submitted.Count(o => o.Kind == "Scrap"); }
+        for (int d = 0; d < 8 && eco.Free(Side.Hand) < 0; d++) { m.Step(); scraps += m.Hand.Submitted.Count(o => o.Kind == "Scrap"); }
         Assert.True(scraps >= 1, "the AI scrapped nothing");
-        Assert.True(eco.Free(Side.Empire) >= 0);
+        Assert.True(eco.Free(Side.Hand) >= 0);
         Assert.Single(DeathStars(h));
         Assert.DoesNotContain(h.Game.Events.OfType<ObjectScrapped>(), e => e.Class == Ds);
     }
@@ -134,7 +134,7 @@ public class SimpleAiDeathStarTests
     public void WaitsWithoutEscort()
     {
         var (m, h) = Match(1, Quiet(escort: 1e9), knowHq: true);
-        int id = h.Fleets.AddFleet(Side.Empire, "DS", new[] { Ds, Isd }, ControlModule.CapitalSystem);
+        int id = h.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds, Isd }, ControlModule.CapitalSystem);
         Days(m, 90);
         var f = h.Game.State.Fleets[id];
         Assert.Equal(ControlModule.CapitalSystem, f.At);
@@ -144,18 +144,18 @@ public class SimpleAiDeathStarTests
         Assert.True(h.Fleets.Blockade.EconomicStrength(h.Fleets.ShipClasses, h.Fleets.Strength) > 0);
     }
 
-    // m5-death-star §6.3, §6.4: with an escort and a known HQ it goes there and destroys the HQ system; the Empire wins.
+    // m5-death-star §6.3, §6.4: with an escort and a known HQ it goes there and destroys the HQ system; the Hand wins.
     [Fact]
     public void WithEscortAndKnownHq_GoesAndDestroysTheHq()
     {
         var (m, h) = Match(1, Quiet(), knowHq: true);
         string hq = h.HqSystem!;
-        int id = h.Fleets.AddFleet(Side.Empire, "DS", new[] { Ds, Isd, Isd, Isd, Isd, Isd }, ControlModule.CapitalSystem);
+        int id = h.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds, Isd, Isd, Isd, Isd, Isd }, ControlModule.CapitalSystem);
         while (h.Game.Day < 2500 && h.Victory.Winner == null) m.Step();
         var hit = h.Game.Events.OfType<SystemDestroyed>().ToList();
         _out.WriteLine($"day {h.Game.Day} winner {h.Victory.Winner} reason {h.Victory.Reason}; destroyed {string.Join(",", hit.Select(e => e.System + "@" + e.Day))}");
-        Assert.Contains(hit, e => e.System == hq && e.AttackerSide == Side.Empire);
-        Assert.Equal(Side.Empire, h.Victory.Winner);
+        Assert.Contains(hit, e => e.System == hq && e.AttackerSide == Side.Hand);
+        Assert.Equal(Side.Hand, h.Victory.Winner);
     }
 
     // m5-death-star §6.4: no HQ known (and no peeking at the true one): the Death Star stays home, escorted or not.
@@ -163,7 +163,7 @@ public class SimpleAiDeathStarTests
     public void WithNoKnownHq_StaysHome()
     {
         var (m, h) = Match(1, Quiet(), knowHq: false);
-        int id = h.Fleets.AddFleet(Side.Empire, "DS", new[] { Ds, Isd, Isd, Isd, Isd, Isd }, ControlModule.CapitalSystem);
+        int id = h.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds, Isd, Isd, Isd, Isd, Isd }, ControlModule.CapitalSystem);
         Days(m, 120);
         var f = h.Game.State.Fleets[id];
         Assert.Equal(ControlModule.CapitalSystem, f.At);
@@ -177,10 +177,10 @@ public class SimpleAiDeathStarTests
     {
         var p = Quiet() with { UseFog = true };
         var (m, h) = Match(1, p);
-        int id = h.Fleets.AddFleet(Side.Empire, "DS", new[] { Ds, Isd, Isd, Isd, Isd, Isd }, ControlModule.CapitalSystem);
-        m.Empire.KnownEnemyHq = h.HqSystem; // overwritten from the side's picture on the first planning day
+        int id = h.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds, Isd, Isd, Isd, Isd, Isd }, ControlModule.CapitalSystem);
+        m.Hand.KnownEnemyHq = h.HqSystem; // overwritten from the side's picture on the first planning day
         m.Step();
-        Assert.NotEqual(h.HqSystem, m.Empire.KnownEnemyHq);
+        Assert.NotEqual(h.HqSystem, m.Hand.KnownEnemyHq);
         Days(m, 30);
         Assert.Empty(h.Game.Events.OfType<SystemDestroyed>());
     }
@@ -198,29 +198,29 @@ public class SimpleAiDeathStarTests
             var quiet = g.Where(x => h.Fleets.OwnerOf(x) == null && !h.Fleets.FleetsAt(x).Any()).ToList();
             return (quiet.First(), h.HqSystem!);
         }
-        void Align(AiMatch m, GameHost h) { while ((h.Game.Day + (int)Side.Empire) % p.MilitaryEvery != 0) h.Game.Step(); }
+        void Align(AiMatch m, GameHost h) { while ((h.Game.Day + (int)Side.Hand) % p.MilitaryEvery != 0) h.Game.Step(); }
 
         var (m1, h1) = Match(1, p);
         var (n1, hq1) = Pick(h1); Align(m1, h1);
-        int f1 = h1.Fleets.AddFleet(Side.Empire, "DS", new[] { Ds, Isd }, n1);
-        m1.Empire.KnownEnemyHq = n1; m1.Empire.PlanDay();
-        Assert.Contains(m1.Empire.Submitted, o => o.Kind == "DestroySystem" && o.Detail.Contains($"fleet {f1}"));
+        int f1 = h1.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds, Isd }, n1);
+        m1.Hand.KnownEnemyHq = n1; m1.Hand.PlanDay();
+        Assert.Contains(m1.Hand.Submitted, o => o.Kind == "DestroySystem" && o.Detail.Contains($"fleet {f1}"));
 
-        // (b) the same with an Alliance fleet standing there: no strike
+        // (b) the same with a Collective fleet standing there: no strike
         var (m2, h2) = Match(1, p);
         var (n2, _) = Pick(h2); Align(m2, h2);
-        int f2 = h2.Fleets.AddFleet(Side.Empire, "DS", new[] { Ds, Isd }, n2);
-        h2.Fleets.AddFleet(Side.Alliance, "Guard", new[] { Isd }, n2);
-        m2.Empire.KnownEnemyHq = n2; m2.Empire.PlanDay();
-        Assert.DoesNotContain(m2.Empire.Submitted, o => o.Kind == "DestroySystem");
+        int f2 = h2.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds, Isd }, n2);
+        h2.Fleets.AddFleet(Side.Collective, "Guard", new[] { Isd }, n2);
+        m2.Hand.KnownEnemyHq = n2; m2.Hand.PlanDay();
+        Assert.DoesNotContain(m2.Hand.Submitted, o => o.Kind == "DestroySystem");
 
         // (c) the HQ moved (known now elsewhere): it sets out for it
         var (m3, h3) = Match(1, p);
         var (n3, hq3) = Pick(h3); Align(m3, h3);
-        int f3 = h3.Fleets.AddFleet(Side.Empire, "DS", new[] { Ds, Isd }, n3);
-        m3.Empire.KnownEnemyHq = hq3; m3.Empire.PlanDay();
-        Assert.DoesNotContain(m3.Empire.Submitted, o => o.Kind == "DestroySystem");
-        Assert.Contains(m3.Empire.Submitted, o => o.Kind == "Move" && o.Detail.Contains($"fleet {f3}") && o.Detail.EndsWith("-> " + hq3));
+        int f3 = h3.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds, Isd }, n3);
+        m3.Hand.KnownEnemyHq = hq3; m3.Hand.PlanDay();
+        Assert.DoesNotContain(m3.Hand.Submitted, o => o.Kind == "DestroySystem");
+        Assert.Contains(m3.Hand.Submitted, o => o.Kind == "Move" && o.Detail.Contains($"fleet {f3}") && o.Detail.EndsWith("-> " + hq3));
     }
 
     // m5-death-star §6 switch: off = never builds one.
@@ -229,7 +229,7 @@ public class SimpleAiDeathStarTests
     {
         Assert.True(new SimpleAiParams().UseDeathStar);
         var (m, h) = Match(1, Quiet(useDs: false));
-        for (int i = 0; i < 40; i++) { Days(m, 1); h.Economy.SetPools(Side.Empire, 0, 2000); }
+        for (int i = 0; i < 40; i++) { Days(m, 1); h.Economy.SetPools(Side.Hand, 0, 2000); }
         Assert.Empty(DeathStars(h));
         Assert.DoesNotContain(m.Sent.Keys, k => k.Contains("DestroySystem", StringComparison.Ordinal));
     }
@@ -238,7 +238,7 @@ public class SimpleAiDeathStarTests
     private sealed record Run(string Hash, int Day, Side? Winner, int? BuiltDay, int? StruckDay, string? Struck, string Reason);
 
     // funded: the plain AI never meets the §6.1 build condition (it spends its stock and its upkeep room as it goes), so this variant keeps the
-    // Empire's upkeep margin at 760 (SimpleAiParams.MaintenanceMargin) and tops its refined stock up to the Death Star's cost each day.
+    // Hand's upkeep margin at 760 (SimpleAiParams.MaintenanceMargin) and tops its refined stock up to the Death Star's cost each day.
     private static Run Campaign(int seed, int days, bool funded = false)
     {
         var p = new SimpleAiParams { UseFog = true };
@@ -246,11 +246,11 @@ public class SimpleAiDeathStarTests
         var m = new AiMatch(h, funded ? p with { MaintenanceMargin = 760 } : p, p);
         while (h.Game.Day < days && h.Victory.Winner == null)
         {
-            if (funded && h.Economy.Refined(Side.Empire) < 600) h.Economy.SetPools(Side.Empire, h.Economy.Raw(Side.Empire), 600);
+            if (funded && h.Economy.Refined(Side.Hand) < 600) h.Economy.SetPools(Side.Hand, h.Economy.Raw(Side.Hand), 600);
             m.Step();
         }
         var ev = h.Game.Events;
-        int? built = ev.OfType<DeathStarDeployed>().Where(e => e.Side == Side.Empire).Select(e => (int?)e.Day).FirstOrDefault();
+        int? built = ev.OfType<DeathStarDeployed>().Where(e => e.Side == Side.Hand).Select(e => (int?)e.Day).FirstOrDefault();
         var strike = ev.OfType<SystemDestroyed>().FirstOrDefault();
         return new Run(h.StateHash(), h.Game.Day, h.Victory.Winner, built, strike?.Day, strike?.System, h.Victory.Reason ?? "");
     }

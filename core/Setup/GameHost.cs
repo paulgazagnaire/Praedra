@@ -82,10 +82,10 @@ public sealed class GameHost
     /// <summary>Agent missions: teams, decoys, detection, success rolls and effects (slots 2, 3, 5.3). rule: m5-missions.</summary>
     public Praedra.Core.Missions.MissionModule Missions { get; }
 
-    /// <summary>Fog of war (each side's picture, the read API for the AI and UI) and the Rebel HQ. rule: m5-fog-and-hq.</summary>
+    /// <summary>Fog of war (each side's picture, the read API for the AI and UI) and the Hearth. rule: m5-fog-and-hq.</summary>
     public Praedra.Core.Fog.FogModule Fog { get; }
 
-    /// <summary>The Rebel HQ system (where it stands, or stood when destroyed), null in transit or if none. rule: m5-fog-and-hq §F5.</summary>
+    /// <summary>The Hearth system (where it stands, or stood when destroyed), null in transit or if none. rule: m5-fog-and-hq §F5.</summary>
     public string? HqSystem => Game.State.Scenario.HqSystem;
 
     /// <summary>Is the system explored in the side's picture (dealt at setup, then widened by fleets, holdings and reveals)? rule: m5-fog-and-hq §F1.</summary>
@@ -189,7 +189,7 @@ public sealed class GameHost
         // rule: B7-bombardment §4.3: the holder's General standing on the system multiplies the batteries' return fire (the system General post is
         // cleared on a holder change, so its holder is the system's)
         Bombardment.BatteryGeneralLeadership = Characters.SystemGeneralLeadership;
-        Bombardment.IsRebelHq = s => s == HqSystem; // read only with HqBombardable (B7 C9, DEFAULT off)
+        Bombardment.IsHearth = s => s == HqSystem; // read only with HqBombardable (B7 C9, DEFAULT off)
         Assault.FleetGeneralLeadership = Characters.FleetGeneralLeadership;
         Assault.SystemGeneralLeadership = Characters.SystemGeneralLeadership;
         Control.HolderChanged += Characters.OnHolderChanged;

@@ -332,7 +332,7 @@ public class GalaxyDataTests
         var isd = all["Mandate"];
         Assert.True(isd.IsCapital);
         Assert.Equal((80, 100, 0, 480), (isd.Hyperdrive, isd.HyperdriveIfDamaged, isd.GravityWellProjector, isd.OverallAttackStrength));
-        Assert.Equal(ShipSide.Empire, isd.Side);
+        Assert.Equal(ShipSide.Hand, isd.Side);
         Assert.Equal(4, all["Snare"].GravityWellProjector);
         Assert.Equal(4, all["Subpoena"].GravityWellProjector);
         Assert.Equal(0, all["Gleaner"].Hyperdrive);

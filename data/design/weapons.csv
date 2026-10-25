@@ -1,179 +1,179 @@
 name,id,side,kind,arc,weapon,dat_arc_strength,guns,shot_damage,reload_s,dps_per_gun,dps_battery,range_dat,range_band
-Ark,64,Alliance,capital,fore,turbolaser,60,6,40,20,2.0,12.0,50,long
-Ark,64,Alliance,capital,aft,turbolaser,60,6,40,20,2.0,12.0,50,long
-Ark,64,Alliance,capital,port,turbolaser,120,12,40,20,2.0,24.0,50,long
-Ark,64,Alliance,capital,starboard,turbolaser,120,12,40,20,2.0,24.0,50,long
-Ark,64,Alliance,capital,fore,ion_cannon,40,4,20,10,2.0,8.0,35,medium
-Ark,64,Alliance,capital,aft,ion_cannon,40,4,20,10,2.0,8.0,35,medium
-Ark,64,Alliance,capital,port,ion_cannon,60,6,20,10,2.0,12.0,35,medium
-Ark,64,Alliance,capital,starboard,ion_cannon,60,6,20,10,2.0,12.0,35,medium
-Hauler,65,Alliance,capital,fore,turbolaser,15,2,40,20,2.0,4.0,35,medium
-Hauler,65,Alliance,capital,port,turbolaser,30,3,40,20,2.0,6.0,35,medium
-Hauler,65,Alliance,capital,starboard,turbolaser,30,3,40,20,2.0,6.0,35,medium
-Crowbar,66,Alliance,capital,fore,turbolaser,70,7,40,20,2.0,14.0,60,long
-Crowbar,66,Alliance,capital,port,turbolaser,120,12,40,20,2.0,24.0,60,long
-Crowbar,66,Alliance,capital,starboard,turbolaser,120,12,40,20,2.0,24.0,60,long
-Crowbar,66,Alliance,capital,fore,ion_cannon,50,5,20,10,2.0,10.0,35,medium
-Crowbar,66,Alliance,capital,port,ion_cannon,40,4,20,10,2.0,8.0,35,medium
-Crowbar,66,Alliance,capital,starboard,ion_cannon,40,4,20,10,2.0,8.0,35,medium
-Mender,67,Alliance,capital,fore,turbolaser,80,8,40,20,2.0,16.0,60,long
-Mender,67,Alliance,capital,port,turbolaser,40,4,40,20,2.0,8.0,60,long
-Mender,67,Alliance,capital,starboard,turbolaser,40,4,40,20,2.0,8.0,60,long
-Mender,67,Alliance,capital,fore,laser_cannon,60,2,6,1,6.0,12.0,17,close
-Mender,67,Alliance,capital,aft,laser_cannon,60,2,6,1,6.0,12.0,17,close
-Mender,67,Alliance,capital,port,laser_cannon,30,1,6,1,6.0,6.0,17,close
-Mender,67,Alliance,capital,starboard,laser_cannon,30,1,6,1,6.0,6.0,17,close
-Nest,68,Alliance,capital,fore,laser_cannon,30,1,6,1,6.0,6.0,17,close
-Nest,68,Alliance,capital,port,laser_cannon,60,2,6,1,6.0,12.0,17,close
-Nest,68,Alliance,capital,starboard,laser_cannon,60,2,6,1,6.0,12.0,17,close
-Dodger,69,Alliance,capital,fore,laser_cannon,120,4,6,1,6.0,24.0,17,close
-Dodger,69,Alliance,capital,aft,laser_cannon,90,3,6,1,6.0,18.0,17,close
-Dodger,69,Alliance,capital,port,laser_cannon,120,4,6,1,6.0,24.0,17,close
-Dodger,69,Alliance,capital,starboard,laser_cannon,120,4,6,1,6.0,24.0,17,close
-Mule,70,Alliance,capital,port,laser_cannon,30,1,6,1,6.0,6.0,17,close
-Mule,70,Alliance,capital,starboard,laser_cannon,30,1,6,1,6.0,6.0,17,close
-Wasp,72,Alliance,capital,fore,laser_cannon,90,3,6,1,6.0,18.0,25,close
-Wasp,72,Alliance,capital,aft,laser_cannon,90,3,6,1,6.0,18.0,25,close
-Wasp,72,Alliance,capital,port,laser_cannon,150,5,6,1,6.0,30.0,25,close
-Wasp,72,Alliance,capital,starboard,laser_cannon,150,5,6,1,6.0,30.0,25,close
-Grudge,73,Alliance,capital,fore,turbolaser,40,4,40,20,2.0,8.0,60,long
-Grudge,73,Alliance,capital,aft,turbolaser,20,2,40,20,2.0,4.0,60,long
-Grudge,73,Alliance,capital,port,turbolaser,70,7,40,20,2.0,14.0,60,long
-Grudge,73,Alliance,capital,starboard,turbolaser,70,7,40,20,2.0,14.0,60,long
-Snare,74,Alliance,capital,fore,turbolaser,10,1,40,20,2.0,2.0,50,long
-Snare,74,Alliance,capital,port,turbolaser,20,2,40,20,2.0,4.0,50,long
-Snare,74,Alliance,capital,starboard,turbolaser,20,2,40,20,2.0,4.0,50,long
-Snare,74,Alliance,capital,fore,laser_cannon,60,2,6,1,6.0,12.0,17,close
-Snare,74,Alliance,capital,aft,laser_cannon,90,3,6,1,6.0,18.0,17,close
-Snare,74,Alliance,capital,port,laser_cannon,90,3,6,1,6.0,18.0,17,close
-Snare,74,Alliance,capital,starboard,laser_cannon,90,3,6,1,6.0,18.0,17,close
-Barricade,75,Alliance,capital,fore,turbolaser,600,60,40,20,2.0,120.0,70,long
-Barricade,75,Alliance,capital,aft,turbolaser,120,12,40,20,2.0,24.0,70,long
-Barricade,75,Alliance,capital,port,turbolaser,300,30,40,20,2.0,60.0,70,long
-Barricade,75,Alliance,capital,starboard,turbolaser,300,30,40,20,2.0,60.0,70,long
-Barricade,75,Alliance,capital,fore,ion_cannon,200,20,20,10,2.0,40.0,40,medium
-Barricade,75,Alliance,capital,aft,ion_cannon,80,8,20,10,2.0,16.0,40,medium
-Barricade,75,Alliance,capital,port,ion_cannon,150,15,20,10,2.0,30.0,40,medium
-Barricade,75,Alliance,capital,starboard,ion_cannon,150,15,20,10,2.0,30.0,40,medium
-Jubilee,76,Alliance,capital,fore,turbolaser,40,4,40,20,2.0,8.0,60,long
-Jubilee,76,Alliance,capital,aft,turbolaser,40,4,40,20,2.0,8.0,60,long
-Jubilee,76,Alliance,capital,port,turbolaser,80,8,40,20,2.0,16.0,60,long
-Jubilee,76,Alliance,capital,starboard,turbolaser,80,8,40,20,2.0,16.0,60,long
-Jubilee,76,Alliance,capital,fore,ion_cannon,40,4,20,10,2.0,8.0,40,medium
-Jubilee,76,Alliance,capital,port,ion_cannon,80,8,20,10,2.0,16.0,40,medium
-Jubilee,76,Alliance,capital,starboard,ion_cannon,80,8,20,10,2.0,16.0,40,medium
-Picket,77,Alliance,capital,fore,turbolaser,60,6,40,20,2.0,12.0,75,long
-Picket,77,Alliance,capital,aft,turbolaser,40,4,40,20,2.0,8.0,75,long
-Picket,77,Alliance,capital,port,turbolaser,120,12,40,20,2.0,24.0,75,long
-Picket,77,Alliance,capital,starboard,turbolaser,120,12,40,20,2.0,24.0,75,long
-Picket,77,Alliance,capital,fore,ion_cannon,40,4,20,10,2.0,8.0,35,medium
-Picket,77,Alliance,capital,port,ion_cannon,40,4,20,10,2.0,8.0,35,medium
-Picket,77,Alliance,capital,starboard,ion_cannon,40,4,20,10,2.0,8.0,35,medium
-Homeward,78,Alliance,capital,fore,turbolaser,120,12,40,20,2.0,24.0,65,long
-Homeward,78,Alliance,capital,aft,turbolaser,60,6,40,20,2.0,12.0,65,long
-Homeward,78,Alliance,capital,port,turbolaser,200,20,40,20,2.0,40.0,65,long
-Homeward,78,Alliance,capital,starboard,turbolaser,200,20,40,20,2.0,40.0,65,long
-Homeward,78,Alliance,capital,fore,ion_cannon,60,6,20,10,2.0,12.0,40,medium
-Homeward,78,Alliance,capital,aft,ion_cannon,60,6,20,10,2.0,12.0,40,medium
-Homeward,78,Alliance,capital,port,ion_cannon,200,20,20,10,2.0,40.0,40,medium
-Homeward,78,Alliance,capital,starboard,ion_cannon,200,20,20,10,2.0,40.0,40,medium
-Injunction,128,Empire,capital,fore,turbolaser,120,12,40,20,2.0,24.0,60,long
-Injunction,128,Empire,capital,aft,turbolaser,80,8,40,20,2.0,16.0,60,long
-Injunction,128,Empire,capital,port,turbolaser,40,4,40,20,2.0,8.0,60,long
-Injunction,128,Empire,capital,starboard,turbolaser,40,4,40,20,2.0,8.0,60,long
-Injunction,128,Empire,capital,fore,ion_cannon,60,6,20,10,2.0,12.0,60,long
-Injunction,128,Empire,capital,port,ion_cannon,40,4,20,10,2.0,8.0,60,long
-Injunction,128,Empire,capital,starboard,ion_cannon,40,4,20,10,2.0,8.0,60,long
-Writ,129,Empire,capital,fore,laser_cannon,150,5,6,1,6.0,30.0,17,close
-Writ,129,Empire,capital,aft,laser_cannon,150,5,6,1,6.0,30.0,17,close
-Writ,129,Empire,capital,port,laser_cannon,150,5,6,1,6.0,30.0,17,close
-Writ,129,Empire,capital,starboard,laser_cannon,150,5,6,1,6.0,30.0,17,close
-Subpoena,130,Empire,capital,fore,turbolaser,10,1,40,20,2.0,2.0,50,long
-Subpoena,130,Empire,capital,port,turbolaser,20,2,40,20,2.0,4.0,50,long
-Subpoena,130,Empire,capital,starboard,turbolaser,20,2,40,20,2.0,4.0,50,long
-Subpoena,130,Empire,capital,port,ion_cannon,10,1,20,10,2.0,2.0,35,medium
-Subpoena,130,Empire,capital,starboard,ion_cannon,10,1,20,10,2.0,2.0,35,medium
-Subpoena,130,Empire,capital,fore,laser_cannon,90,3,6,1,6.0,18.0,17,close
-Subpoena,130,Empire,capital,port,laser_cannon,60,2,6,1,6.0,12.0,17,close
-Subpoena,130,Empire,capital,starboard,laser_cannon,60,2,6,1,6.0,12.0,17,close
-Warrant,131,Empire,capital,fore,turbolaser,5,1,40,20,2.0,2.0,50,long
-Warrant,131,Empire,capital,aft,turbolaser,5,1,40,20,2.0,2.0,50,long
-Warrant,131,Empire,capital,port,turbolaser,15,2,40,20,2.0,4.0,50,long
-Warrant,131,Empire,capital,starboard,turbolaser,15,2,40,20,2.0,4.0,50,long
-Warrant,131,Empire,capital,fore,laser_cannon,60,2,6,1,6.0,12.0,17,close
-Warrant,131,Empire,capital,aft,laser_cannon,60,2,6,1,6.0,12.0,17,close
-Warrant,131,Empire,capital,port,laser_cannon,90,3,6,1,6.0,18.0,17,close
-Warrant,131,Empire,capital,starboard,laser_cannon,90,3,6,1,6.0,18.0,17,close
-Decree,132,Empire,capital,fore,turbolaser,120,12,40,20,2.0,24.0,50,long
-Decree,132,Empire,capital,port,turbolaser,100,10,40,20,2.0,20.0,50,long
-Decree,132,Empire,capital,starboard,turbolaser,100,10,40,20,2.0,20.0,50,long
-Mandate,133,Empire,capital,fore,turbolaser,100,10,40,20,2.0,20.0,50,long
-Mandate,133,Empire,capital,aft,turbolaser,40,4,40,20,2.0,8.0,50,long
-Mandate,133,Empire,capital,port,turbolaser,60,6,40,20,2.0,12.0,50,long
-Mandate,133,Empire,capital,starboard,turbolaser,60,6,40,20,2.0,12.0,50,long
-Mandate,133,Empire,capital,fore,ion_cannon,100,10,20,10,2.0,20.0,35,medium
-Mandate,133,Empire,capital,aft,ion_cannon,40,4,20,10,2.0,8.0,35,medium
-Mandate,133,Empire,capital,port,ion_cannon,40,4,20,10,2.0,8.0,35,medium
-Mandate,133,Empire,capital,starboard,ion_cannon,40,4,20,10,2.0,8.0,35,medium
-Edict,134,Empire,capital,fore,turbolaser,500,50,40,20,2.0,100.0,70,long
-Edict,134,Empire,capital,aft,turbolaser,150,15,40,20,2.0,30.0,70,long
-Edict,134,Empire,capital,port,turbolaser,300,30,40,20,2.0,60.0,70,long
-Edict,134,Empire,capital,starboard,turbolaser,300,30,40,20,2.0,60.0,70,long
-Edict,134,Empire,capital,fore,ion_cannon,200,20,20,10,2.0,40.0,40,medium
-Edict,134,Empire,capital,aft,ion_cannon,100,10,20,10,2.0,20.0,40,medium
-Edict,134,Empire,capital,port,ion_cannon,200,20,20,10,2.0,40.0,40,medium
-Edict,134,Empire,capital,starboard,ion_cannon,200,20,20,10,2.0,40.0,40,medium
-Indenture,135,Empire,capital,fore,laser_cannon,150,5,6,1,6.0,30.0,25,close
-Indenture,135,Empire,capital,port,laser_cannon,60,2,6,1,6.0,12.0,25,close
-Indenture,135,Empire,capital,starboard,laser_cannon,60,2,6,1,6.0,12.0,25,close
-Death Star,136,Empire,capital,fore,turbolaser,1400,140,40,20,2.0,280.0,60,long
-Death Star,136,Empire,capital,aft,turbolaser,1400,140,40,20,2.0,280.0,60,long
-Death Star,136,Empire,capital,port,turbolaser,1400,140,40,20,2.0,280.0,60,long
-Death Star,136,Empire,capital,starboard,turbolaser,1400,140,40,20,2.0,280.0,60,long
-Death Star,136,Empire,capital,fore,ion_cannon,400,40,20,10,2.0,80.0,40,medium
-Death Star,136,Empire,capital,aft,ion_cannon,400,40,20,10,2.0,80.0,40,medium
-Death Star,136,Empire,capital,port,ion_cannon,400,40,20,10,2.0,80.0,40,medium
-Death Star,136,Empire,capital,starboard,ion_cannon,400,40,20,10,2.0,80.0,40,medium
-Decree II,138,Empire,capital,fore,turbolaser,120,12,40,20,2.0,24.0,60,long
-Decree II,138,Empire,capital,aft,turbolaser,80,8,40,20,2.0,16.0,60,long
-Decree II,138,Empire,capital,port,turbolaser,80,8,40,20,2.0,16.0,60,long
-Decree II,138,Empire,capital,starboard,turbolaser,80,8,40,20,2.0,16.0,60,long
-Decree II,138,Empire,capital,fore,ion_cannon,40,4,20,10,2.0,8.0,35,medium
-Decree II,138,Empire,capital,aft,ion_cannon,40,4,20,10,2.0,8.0,35,medium
-Decree II,138,Empire,capital,port,ion_cannon,40,4,20,10,2.0,8.0,35,medium
-Decree II,138,Empire,capital,starboard,ion_cannon,40,4,20,10,2.0,8.0,35,medium
-Mandate II,139,Empire,capital,fore,turbolaser,200,20,40,20,2.0,40.0,70,long
-Mandate II,139,Empire,capital,aft,turbolaser,60,6,40,20,2.0,12.0,70,long
-Mandate II,139,Empire,capital,port,turbolaser,120,12,40,20,2.0,24.0,70,long
-Mandate II,139,Empire,capital,starboard,turbolaser,120,12,40,20,2.0,24.0,70,long
-Mandate II,139,Empire,capital,fore,ion_cannon,200,20,20,10,2.0,40.0,40,medium
-Mandate II,139,Empire,capital,aft,ion_cannon,20,2,20,10,2.0,4.0,40,medium
-Mandate II,139,Empire,capital,port,ion_cannon,80,8,20,10,2.0,16.0,40,medium
-Mandate II,139,Empire,capital,starboard,ion_cannon,80,8,20,10,2.0,16.0,40,medium
-Bond II,140,Empire,capital,aft,laser_cannon,30,1,6,1,6.0,6.0,17,close
-Bond II,140,Empire,capital,port,laser_cannon,30,1,6,1,6.0,6.0,17,close
-Bond II,140,Empire,capital,starboard,laser_cannon,30,1,6,1,6.0,6.0,17,close
-Tender,141,Empire,capital,fore,laser_cannon,30,1,6,1,6.0,6.0,17,close
-Tender,141,Empire,capital,aft,laser_cannon,30,1,6,1,6.0,6.0,17,close
-Tender,141,Empire,capital,port,laser_cannon,60,2,6,1,6.0,12.0,17,close
-Tender,141,Empire,capital,starboard,laser_cannon,60,2,6,1,6.0,12.0,17,close
-Statute,142,Empire,capital,fore,turbolaser,40,4,40,20,2.0,8.0,60,long
-Statute,142,Empire,capital,aft,turbolaser,20,2,40,20,2.0,4.0,60,long
-Statute,142,Empire,capital,port,turbolaser,70,7,40,20,2.0,14.0,60,long
-Statute,142,Empire,capital,starboard,turbolaser,70,7,40,20,2.0,14.0,60,long
-Needle,1,Alliance,fighter,fore,laser_cannon,5,12,3.75,1,3.75,45.0,12,close
-Maul,2,Alliance,fighter,fore,laser_cannon,8,12,6.0,1,6.0,72.0,20,close
-Maul,2,Alliance,fighter,fore,ion_cannon,6,12,4.5,1,4.5,54.0,18,close
-Maul,2,Alliance,fighter,fore,torpedo,12,12,35,one-shot,,,7,close
-Swift,3,Alliance,fighter,fore,laser_cannon,8,12,6.0,1,6.0,72.0,12,close
-Swift,3,Alliance,fighter,fore,torpedo,4,4,35,one-shot,,,7,close
-Plough,4,Alliance,fighter,fore,laser_cannon,5,12,3.75,1,3.75,45.0,12,close
-Plough,4,Alliance,fighter,fore,ion_cannon,3,12,2.25,1,2.25,27.0,12,close
-Plough,4,Alliance,fighter,fore,torpedo,8,8,35,one-shot,,,7,close
-Gleaner,5,Empire,fighter,fore,laser_cannon,5,12,3.75,1,3.75,45.0,12,close
-Sickle,6,Empire,fighter,fore,laser_cannon,8,12,6.0,1,6.0,72.0,12,close
-Thresher,7,Empire,fighter,fore,laser_cannon,5,12,3.75,1,3.75,45.0,12,close
-Thresher,7,Empire,fighter,fore,ion_cannon,3,12,2.25,1,2.25,27.0,12,close
-Thresher,7,Empire,fighter,fore,torpedo,8,8,35,one-shot,,,7,close
-Winnower,8,Empire,fighter,fore,laser_cannon,10,12,7.5,1,7.5,90.0,12,close
-Winnower,8,Empire,fighter,fore,torpedo,10,10,35,one-shot,,,10,close
+Ark,64,Collective,capital,fore,turbolaser,60,6,40,20,2.0,12.0,50,long
+Ark,64,Collective,capital,aft,turbolaser,60,6,40,20,2.0,12.0,50,long
+Ark,64,Collective,capital,port,turbolaser,120,12,40,20,2.0,24.0,50,long
+Ark,64,Collective,capital,starboard,turbolaser,120,12,40,20,2.0,24.0,50,long
+Ark,64,Collective,capital,fore,ion_cannon,40,4,20,10,2.0,8.0,35,medium
+Ark,64,Collective,capital,aft,ion_cannon,40,4,20,10,2.0,8.0,35,medium
+Ark,64,Collective,capital,port,ion_cannon,60,6,20,10,2.0,12.0,35,medium
+Ark,64,Collective,capital,starboard,ion_cannon,60,6,20,10,2.0,12.0,35,medium
+Hauler,65,Collective,capital,fore,turbolaser,15,2,40,20,2.0,4.0,35,medium
+Hauler,65,Collective,capital,port,turbolaser,30,3,40,20,2.0,6.0,35,medium
+Hauler,65,Collective,capital,starboard,turbolaser,30,3,40,20,2.0,6.0,35,medium
+Crowbar,66,Collective,capital,fore,turbolaser,70,7,40,20,2.0,14.0,60,long
+Crowbar,66,Collective,capital,port,turbolaser,120,12,40,20,2.0,24.0,60,long
+Crowbar,66,Collective,capital,starboard,turbolaser,120,12,40,20,2.0,24.0,60,long
+Crowbar,66,Collective,capital,fore,ion_cannon,50,5,20,10,2.0,10.0,35,medium
+Crowbar,66,Collective,capital,port,ion_cannon,40,4,20,10,2.0,8.0,35,medium
+Crowbar,66,Collective,capital,starboard,ion_cannon,40,4,20,10,2.0,8.0,35,medium
+Mender,67,Collective,capital,fore,turbolaser,80,8,40,20,2.0,16.0,60,long
+Mender,67,Collective,capital,port,turbolaser,40,4,40,20,2.0,8.0,60,long
+Mender,67,Collective,capital,starboard,turbolaser,40,4,40,20,2.0,8.0,60,long
+Mender,67,Collective,capital,fore,laser_cannon,60,2,6,1,6.0,12.0,17,close
+Mender,67,Collective,capital,aft,laser_cannon,60,2,6,1,6.0,12.0,17,close
+Mender,67,Collective,capital,port,laser_cannon,30,1,6,1,6.0,6.0,17,close
+Mender,67,Collective,capital,starboard,laser_cannon,30,1,6,1,6.0,6.0,17,close
+Nest,68,Collective,capital,fore,laser_cannon,30,1,6,1,6.0,6.0,17,close
+Nest,68,Collective,capital,port,laser_cannon,60,2,6,1,6.0,12.0,17,close
+Nest,68,Collective,capital,starboard,laser_cannon,60,2,6,1,6.0,12.0,17,close
+Dodger,69,Collective,capital,fore,laser_cannon,120,4,6,1,6.0,24.0,17,close
+Dodger,69,Collective,capital,aft,laser_cannon,90,3,6,1,6.0,18.0,17,close
+Dodger,69,Collective,capital,port,laser_cannon,120,4,6,1,6.0,24.0,17,close
+Dodger,69,Collective,capital,starboard,laser_cannon,120,4,6,1,6.0,24.0,17,close
+Mule,70,Collective,capital,port,laser_cannon,30,1,6,1,6.0,6.0,17,close
+Mule,70,Collective,capital,starboard,laser_cannon,30,1,6,1,6.0,6.0,17,close
+Wasp,72,Collective,capital,fore,laser_cannon,90,3,6,1,6.0,18.0,25,close
+Wasp,72,Collective,capital,aft,laser_cannon,90,3,6,1,6.0,18.0,25,close
+Wasp,72,Collective,capital,port,laser_cannon,150,5,6,1,6.0,30.0,25,close
+Wasp,72,Collective,capital,starboard,laser_cannon,150,5,6,1,6.0,30.0,25,close
+Grudge,73,Collective,capital,fore,turbolaser,40,4,40,20,2.0,8.0,60,long
+Grudge,73,Collective,capital,aft,turbolaser,20,2,40,20,2.0,4.0,60,long
+Grudge,73,Collective,capital,port,turbolaser,70,7,40,20,2.0,14.0,60,long
+Grudge,73,Collective,capital,starboard,turbolaser,70,7,40,20,2.0,14.0,60,long
+Snare,74,Collective,capital,fore,turbolaser,10,1,40,20,2.0,2.0,50,long
+Snare,74,Collective,capital,port,turbolaser,20,2,40,20,2.0,4.0,50,long
+Snare,74,Collective,capital,starboard,turbolaser,20,2,40,20,2.0,4.0,50,long
+Snare,74,Collective,capital,fore,laser_cannon,60,2,6,1,6.0,12.0,17,close
+Snare,74,Collective,capital,aft,laser_cannon,90,3,6,1,6.0,18.0,17,close
+Snare,74,Collective,capital,port,laser_cannon,90,3,6,1,6.0,18.0,17,close
+Snare,74,Collective,capital,starboard,laser_cannon,90,3,6,1,6.0,18.0,17,close
+Barricade,75,Collective,capital,fore,turbolaser,600,60,40,20,2.0,120.0,70,long
+Barricade,75,Collective,capital,aft,turbolaser,120,12,40,20,2.0,24.0,70,long
+Barricade,75,Collective,capital,port,turbolaser,300,30,40,20,2.0,60.0,70,long
+Barricade,75,Collective,capital,starboard,turbolaser,300,30,40,20,2.0,60.0,70,long
+Barricade,75,Collective,capital,fore,ion_cannon,200,20,20,10,2.0,40.0,40,medium
+Barricade,75,Collective,capital,aft,ion_cannon,80,8,20,10,2.0,16.0,40,medium
+Barricade,75,Collective,capital,port,ion_cannon,150,15,20,10,2.0,30.0,40,medium
+Barricade,75,Collective,capital,starboard,ion_cannon,150,15,20,10,2.0,30.0,40,medium
+Jubilee,76,Collective,capital,fore,turbolaser,40,4,40,20,2.0,8.0,60,long
+Jubilee,76,Collective,capital,aft,turbolaser,40,4,40,20,2.0,8.0,60,long
+Jubilee,76,Collective,capital,port,turbolaser,80,8,40,20,2.0,16.0,60,long
+Jubilee,76,Collective,capital,starboard,turbolaser,80,8,40,20,2.0,16.0,60,long
+Jubilee,76,Collective,capital,fore,ion_cannon,40,4,20,10,2.0,8.0,40,medium
+Jubilee,76,Collective,capital,port,ion_cannon,80,8,20,10,2.0,16.0,40,medium
+Jubilee,76,Collective,capital,starboard,ion_cannon,80,8,20,10,2.0,16.0,40,medium
+Picket,77,Collective,capital,fore,turbolaser,60,6,40,20,2.0,12.0,75,long
+Picket,77,Collective,capital,aft,turbolaser,40,4,40,20,2.0,8.0,75,long
+Picket,77,Collective,capital,port,turbolaser,120,12,40,20,2.0,24.0,75,long
+Picket,77,Collective,capital,starboard,turbolaser,120,12,40,20,2.0,24.0,75,long
+Picket,77,Collective,capital,fore,ion_cannon,40,4,20,10,2.0,8.0,35,medium
+Picket,77,Collective,capital,port,ion_cannon,40,4,20,10,2.0,8.0,35,medium
+Picket,77,Collective,capital,starboard,ion_cannon,40,4,20,10,2.0,8.0,35,medium
+Homeward,78,Collective,capital,fore,turbolaser,120,12,40,20,2.0,24.0,65,long
+Homeward,78,Collective,capital,aft,turbolaser,60,6,40,20,2.0,12.0,65,long
+Homeward,78,Collective,capital,port,turbolaser,200,20,40,20,2.0,40.0,65,long
+Homeward,78,Collective,capital,starboard,turbolaser,200,20,40,20,2.0,40.0,65,long
+Homeward,78,Collective,capital,fore,ion_cannon,60,6,20,10,2.0,12.0,40,medium
+Homeward,78,Collective,capital,aft,ion_cannon,60,6,20,10,2.0,12.0,40,medium
+Homeward,78,Collective,capital,port,ion_cannon,200,20,20,10,2.0,40.0,40,medium
+Homeward,78,Collective,capital,starboard,ion_cannon,200,20,20,10,2.0,40.0,40,medium
+Injunction,128,Hand,capital,fore,turbolaser,120,12,40,20,2.0,24.0,60,long
+Injunction,128,Hand,capital,aft,turbolaser,80,8,40,20,2.0,16.0,60,long
+Injunction,128,Hand,capital,port,turbolaser,40,4,40,20,2.0,8.0,60,long
+Injunction,128,Hand,capital,starboard,turbolaser,40,4,40,20,2.0,8.0,60,long
+Injunction,128,Hand,capital,fore,ion_cannon,60,6,20,10,2.0,12.0,60,long
+Injunction,128,Hand,capital,port,ion_cannon,40,4,20,10,2.0,8.0,60,long
+Injunction,128,Hand,capital,starboard,ion_cannon,40,4,20,10,2.0,8.0,60,long
+Writ,129,Hand,capital,fore,laser_cannon,150,5,6,1,6.0,30.0,17,close
+Writ,129,Hand,capital,aft,laser_cannon,150,5,6,1,6.0,30.0,17,close
+Writ,129,Hand,capital,port,laser_cannon,150,5,6,1,6.0,30.0,17,close
+Writ,129,Hand,capital,starboard,laser_cannon,150,5,6,1,6.0,30.0,17,close
+Subpoena,130,Hand,capital,fore,turbolaser,10,1,40,20,2.0,2.0,50,long
+Subpoena,130,Hand,capital,port,turbolaser,20,2,40,20,2.0,4.0,50,long
+Subpoena,130,Hand,capital,starboard,turbolaser,20,2,40,20,2.0,4.0,50,long
+Subpoena,130,Hand,capital,port,ion_cannon,10,1,20,10,2.0,2.0,35,medium
+Subpoena,130,Hand,capital,starboard,ion_cannon,10,1,20,10,2.0,2.0,35,medium
+Subpoena,130,Hand,capital,fore,laser_cannon,90,3,6,1,6.0,18.0,17,close
+Subpoena,130,Hand,capital,port,laser_cannon,60,2,6,1,6.0,12.0,17,close
+Subpoena,130,Hand,capital,starboard,laser_cannon,60,2,6,1,6.0,12.0,17,close
+Warrant,131,Hand,capital,fore,turbolaser,5,1,40,20,2.0,2.0,50,long
+Warrant,131,Hand,capital,aft,turbolaser,5,1,40,20,2.0,2.0,50,long
+Warrant,131,Hand,capital,port,turbolaser,15,2,40,20,2.0,4.0,50,long
+Warrant,131,Hand,capital,starboard,turbolaser,15,2,40,20,2.0,4.0,50,long
+Warrant,131,Hand,capital,fore,laser_cannon,60,2,6,1,6.0,12.0,17,close
+Warrant,131,Hand,capital,aft,laser_cannon,60,2,6,1,6.0,12.0,17,close
+Warrant,131,Hand,capital,port,laser_cannon,90,3,6,1,6.0,18.0,17,close
+Warrant,131,Hand,capital,starboard,laser_cannon,90,3,6,1,6.0,18.0,17,close
+Decree,132,Hand,capital,fore,turbolaser,120,12,40,20,2.0,24.0,50,long
+Decree,132,Hand,capital,port,turbolaser,100,10,40,20,2.0,20.0,50,long
+Decree,132,Hand,capital,starboard,turbolaser,100,10,40,20,2.0,20.0,50,long
+Mandate,133,Hand,capital,fore,turbolaser,100,10,40,20,2.0,20.0,50,long
+Mandate,133,Hand,capital,aft,turbolaser,40,4,40,20,2.0,8.0,50,long
+Mandate,133,Hand,capital,port,turbolaser,60,6,40,20,2.0,12.0,50,long
+Mandate,133,Hand,capital,starboard,turbolaser,60,6,40,20,2.0,12.0,50,long
+Mandate,133,Hand,capital,fore,ion_cannon,100,10,20,10,2.0,20.0,35,medium
+Mandate,133,Hand,capital,aft,ion_cannon,40,4,20,10,2.0,8.0,35,medium
+Mandate,133,Hand,capital,port,ion_cannon,40,4,20,10,2.0,8.0,35,medium
+Mandate,133,Hand,capital,starboard,ion_cannon,40,4,20,10,2.0,8.0,35,medium
+Edict,134,Hand,capital,fore,turbolaser,500,50,40,20,2.0,100.0,70,long
+Edict,134,Hand,capital,aft,turbolaser,150,15,40,20,2.0,30.0,70,long
+Edict,134,Hand,capital,port,turbolaser,300,30,40,20,2.0,60.0,70,long
+Edict,134,Hand,capital,starboard,turbolaser,300,30,40,20,2.0,60.0,70,long
+Edict,134,Hand,capital,fore,ion_cannon,200,20,20,10,2.0,40.0,40,medium
+Edict,134,Hand,capital,aft,ion_cannon,100,10,20,10,2.0,20.0,40,medium
+Edict,134,Hand,capital,port,ion_cannon,200,20,20,10,2.0,40.0,40,medium
+Edict,134,Hand,capital,starboard,ion_cannon,200,20,20,10,2.0,40.0,40,medium
+Indenture,135,Hand,capital,fore,laser_cannon,150,5,6,1,6.0,30.0,25,close
+Indenture,135,Hand,capital,port,laser_cannon,60,2,6,1,6.0,12.0,25,close
+Indenture,135,Hand,capital,starboard,laser_cannon,60,2,6,1,6.0,12.0,25,close
+Death Star,136,Hand,capital,fore,turbolaser,1400,140,40,20,2.0,280.0,60,long
+Death Star,136,Hand,capital,aft,turbolaser,1400,140,40,20,2.0,280.0,60,long
+Death Star,136,Hand,capital,port,turbolaser,1400,140,40,20,2.0,280.0,60,long
+Death Star,136,Hand,capital,starboard,turbolaser,1400,140,40,20,2.0,280.0,60,long
+Death Star,136,Hand,capital,fore,ion_cannon,400,40,20,10,2.0,80.0,40,medium
+Death Star,136,Hand,capital,aft,ion_cannon,400,40,20,10,2.0,80.0,40,medium
+Death Star,136,Hand,capital,port,ion_cannon,400,40,20,10,2.0,80.0,40,medium
+Death Star,136,Hand,capital,starboard,ion_cannon,400,40,20,10,2.0,80.0,40,medium
+Decree II,138,Hand,capital,fore,turbolaser,120,12,40,20,2.0,24.0,60,long
+Decree II,138,Hand,capital,aft,turbolaser,80,8,40,20,2.0,16.0,60,long
+Decree II,138,Hand,capital,port,turbolaser,80,8,40,20,2.0,16.0,60,long
+Decree II,138,Hand,capital,starboard,turbolaser,80,8,40,20,2.0,16.0,60,long
+Decree II,138,Hand,capital,fore,ion_cannon,40,4,20,10,2.0,8.0,35,medium
+Decree II,138,Hand,capital,aft,ion_cannon,40,4,20,10,2.0,8.0,35,medium
+Decree II,138,Hand,capital,port,ion_cannon,40,4,20,10,2.0,8.0,35,medium
+Decree II,138,Hand,capital,starboard,ion_cannon,40,4,20,10,2.0,8.0,35,medium
+Mandate II,139,Hand,capital,fore,turbolaser,200,20,40,20,2.0,40.0,70,long
+Mandate II,139,Hand,capital,aft,turbolaser,60,6,40,20,2.0,12.0,70,long
+Mandate II,139,Hand,capital,port,turbolaser,120,12,40,20,2.0,24.0,70,long
+Mandate II,139,Hand,capital,starboard,turbolaser,120,12,40,20,2.0,24.0,70,long
+Mandate II,139,Hand,capital,fore,ion_cannon,200,20,20,10,2.0,40.0,40,medium
+Mandate II,139,Hand,capital,aft,ion_cannon,20,2,20,10,2.0,4.0,40,medium
+Mandate II,139,Hand,capital,port,ion_cannon,80,8,20,10,2.0,16.0,40,medium
+Mandate II,139,Hand,capital,starboard,ion_cannon,80,8,20,10,2.0,16.0,40,medium
+Bond II,140,Hand,capital,aft,laser_cannon,30,1,6,1,6.0,6.0,17,close
+Bond II,140,Hand,capital,port,laser_cannon,30,1,6,1,6.0,6.0,17,close
+Bond II,140,Hand,capital,starboard,laser_cannon,30,1,6,1,6.0,6.0,17,close
+Tender,141,Hand,capital,fore,laser_cannon,30,1,6,1,6.0,6.0,17,close
+Tender,141,Hand,capital,aft,laser_cannon,30,1,6,1,6.0,6.0,17,close
+Tender,141,Hand,capital,port,laser_cannon,60,2,6,1,6.0,12.0,17,close
+Tender,141,Hand,capital,starboard,laser_cannon,60,2,6,1,6.0,12.0,17,close
+Statute,142,Hand,capital,fore,turbolaser,40,4,40,20,2.0,8.0,60,long
+Statute,142,Hand,capital,aft,turbolaser,20,2,40,20,2.0,4.0,60,long
+Statute,142,Hand,capital,port,turbolaser,70,7,40,20,2.0,14.0,60,long
+Statute,142,Hand,capital,starboard,turbolaser,70,7,40,20,2.0,14.0,60,long
+Needle,1,Collective,fighter,fore,laser_cannon,5,12,3.75,1,3.75,45.0,12,close
+Maul,2,Collective,fighter,fore,laser_cannon,8,12,6.0,1,6.0,72.0,20,close
+Maul,2,Collective,fighter,fore,ion_cannon,6,12,4.5,1,4.5,54.0,18,close
+Maul,2,Collective,fighter,fore,torpedo,12,12,35,one-shot,,,7,close
+Swift,3,Collective,fighter,fore,laser_cannon,8,12,6.0,1,6.0,72.0,12,close
+Swift,3,Collective,fighter,fore,torpedo,4,4,35,one-shot,,,7,close
+Plough,4,Collective,fighter,fore,laser_cannon,5,12,3.75,1,3.75,45.0,12,close
+Plough,4,Collective,fighter,fore,ion_cannon,3,12,2.25,1,2.25,27.0,12,close
+Plough,4,Collective,fighter,fore,torpedo,8,8,35,one-shot,,,7,close
+Gleaner,5,Hand,fighter,fore,laser_cannon,5,12,3.75,1,3.75,45.0,12,close
+Sickle,6,Hand,fighter,fore,laser_cannon,8,12,6.0,1,6.0,72.0,12,close
+Thresher,7,Hand,fighter,fore,laser_cannon,5,12,3.75,1,3.75,45.0,12,close
+Thresher,7,Hand,fighter,fore,ion_cannon,3,12,2.25,1,2.25,27.0,12,close
+Thresher,7,Hand,fighter,fore,torpedo,8,8,35,one-shot,,,7,close
+Winnower,8,Hand,fighter,fore,laser_cannon,10,12,7.5,1,7.5,90.0,12,close
+Winnower,8,Hand,fighter,fore,torpedo,10,10,35,one-shot,,,10,close

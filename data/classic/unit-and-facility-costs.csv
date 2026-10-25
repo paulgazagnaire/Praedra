@@ -1,4 +1,4 @@
-kind,id,name,alliance,empire,cost,maint,rorder,rdiff
+kind,id,name,collective,hand,cost,maint,rorder,rdiff
 capital ship,64,Ark,1,0,92,70,2,24
 capital ship,65,Hauler,1,0,30,30,0,0
 capital ship,66,Crowbar,1,0,60,60,7,60

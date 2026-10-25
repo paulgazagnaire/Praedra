@@ -30,11 +30,11 @@ public class ShipTests
     {
         var c = Capitals();
         Assert.Equal(30, c.Count);
-        Assert.Equal(15, c.Count(x => x.Side == ShipSide.Alliance));
-        Assert.Equal(15, c.Count(x => x.Side == ShipSide.Empire));
-        Assert.DoesNotContain(c, x => x.Side == (ShipSide.Alliance | ShipSide.Empire) || x.Side == ShipSide.None); // exactly one side flag
-        Assert.Equal(Enumerable.Range(64, 15), c.Where(x => x.Side == ShipSide.Alliance).Select(x => x.Id).OrderBy(i => i));
-        Assert.Equal(Enumerable.Range(128, 15), c.Where(x => x.Side == ShipSide.Empire).Select(x => x.Id).OrderBy(i => i));
+        Assert.Equal(15, c.Count(x => x.Side == ShipSide.Collective));
+        Assert.Equal(15, c.Count(x => x.Side == ShipSide.Hand));
+        Assert.DoesNotContain(c, x => x.Side == (ShipSide.Collective | ShipSide.Hand) || x.Side == ShipSide.None); // exactly one side flag
+        Assert.Equal(Enumerable.Range(64, 15), c.Where(x => x.Side == ShipSide.Collective).Select(x => x.Id).OrderBy(i => i));
+        Assert.Equal(Enumerable.Range(128, 15), c.Where(x => x.Side == ShipSide.Hand).Select(x => x.Id).OrderBy(i => i));
         Assert.All(c, x => Assert.True(x.IsCapital));
     }
 
@@ -46,8 +46,8 @@ public class ShipTests
         Assert.Equal(8, f.Count);
         var t = Csv(ShipData.FightersFile);
         for (int r = 0; r < t.RowCount; r++) Assert.Equal(12, t.GetInt(r, "squadron_size"));
-        Assert.Equal(new[] { 1, 2, 3, 4 }, f.Where(x => x.Side == ShipSide.Alliance).Select(x => x.Id).OrderBy(i => i));
-        Assert.Equal(new[] { 5, 6, 7, 8 }, f.Where(x => x.Side == ShipSide.Empire).Select(x => x.Id).OrderBy(i => i));
+        Assert.Equal(new[] { 1, 2, 3, 4 }, f.Where(x => x.Side == ShipSide.Collective).Select(x => x.Id).OrderBy(i => i));
+        Assert.Equal(new[] { 5, 6, 7, 8 }, f.Where(x => x.Side == ShipSide.Hand).Select(x => x.Id).OrderBy(i => i));
         Assert.All(f, x => Assert.False(x.IsCapital));
         Assert.All(f, x => Assert.Equal((0, 0, 0), (x.Hull, x.FighterCapacity, x.TroopCapacity))); // fighters have no hull and carry nothing
     }
@@ -120,21 +120,21 @@ public class ShipTests
 
     // m3-ships-and-fighters S6
     [Fact]
-    public void S6_TheEmpireCannotOrderAnAllianceClass()
-        => Assert.Equal(RejectReason.NotAvailable, Yard(Side.Empire).TryOrder(Side.Empire, Home, YardFamily.Shipyard, "Ark", 1));
+    public void S6_TheHandCannotOrderAnCollectiveClass()
+        => Assert.Equal(RejectReason.NotAvailable, Yard(Side.Hand).TryOrder(Side.Hand, Home, YardFamily.Shipyard, "Ark", 1));
 
     // m3-ships-and-fighters S7
     [Fact]
-    public void S7_AllAvailableLetsTheAllianceOrderABulwark()
+    public void S7_AllAvailableLetsTheCollectiveOrderABulwark()
     {
-        var w = Yard(Side.Alliance);
+        var w = Yard(Side.Collective);
         w.Build.RespectResearchOrder = false; // AllAvailable (the M3 stub; the default is on since m5-research §Defaults)
-        Assert.Null(w.TryOrder(Side.Alliance, Home, YardFamily.Shipyard, "Barricade", 1)); // research order 11
+        Assert.Null(w.TryOrder(Side.Collective, Home, YardFamily.Shipyard, "Barricade", 1)); // research order 11
         Assert.DoesNotContain(w.Game.Events, e => e is OrderRejected);
         // the same order under RespectResearchOrder
-        var w2 = Yard(Side.Alliance);
+        var w2 = Yard(Side.Collective);
         w2.Build.RespectResearchOrder = true;
-        Assert.Equal(RejectReason.NotResearched, w2.TryOrder(Side.Alliance, Home, YardFamily.Shipyard, "Barricade", 1));
+        Assert.Equal(RejectReason.NotResearched, w2.TryOrder(Side.Collective, Home, YardFamily.Shipyard, "Barricade", 1));
     }
 
     // m3-ships-and-fighters S8
@@ -145,34 +145,34 @@ public class ShipTests
         w.Build.RespectResearchOrder = true;
         var ships = ShipData.LoadAll(TestData.ClassicDir).Values;
         List<string> At(ShipSide side, bool capital) =>
-            ships.Where(c => c.IsCapital == capital && c.Side == side && w.Build.IsResearched(side == ShipSide.Alliance ? Side.Alliance : Side.Empire, c.Name))
+            ships.Where(c => c.IsCapital == capital && c.Side == side && w.Build.IsResearched(side == ShipSide.Collective ? Side.Collective : Side.Hand, c.Name))
                  .Select(c => c.Name).OrderBy(n => n, StringComparer.Ordinal).ToList();
-        Assert.Equal(6, At(ShipSide.Alliance, true).Count);
-        Assert.Equal(7, At(ShipSide.Empire, true).Count);
-        Assert.Equal(new[] { "Barge", "Dodger", "Grudge", "Hauler", "Mule", "Nest" }, At(ShipSide.Alliance, true));
-        Assert.Equal(new[] { "Plough", "Swift" }, At(ShipSide.Alliance, false));
-        Assert.Equal(new[] { "Gleaner" }, At(ShipSide.Empire, false));
+        Assert.Equal(6, At(ShipSide.Collective, true).Count);
+        Assert.Equal(7, At(ShipSide.Hand, true).Count);
+        Assert.Equal(new[] { "Barge", "Dodger", "Grudge", "Hauler", "Mule", "Nest" }, At(ShipSide.Collective, true));
+        Assert.Equal(new[] { "Plough", "Swift" }, At(ShipSide.Collective, false));
+        Assert.Equal(new[] { "Gleaner" }, At(ShipSide.Hand, false));
         // a grant opens one more class
-        w.Build.GrantResearch(Side.Alliance, "Ark");
-        Assert.Equal(7, At(ShipSide.Alliance, true).Count);
+        w.Build.GrantResearch(Side.Collective, "Ark");
+        Assert.Equal(7, At(ShipSide.Collective, true).Count);
     }
 
     // m3-ships-and-fighters S14
     [Fact]
     public void S14_TheDeathStarIsAnOrdinaryRowUnlessTheSwitchIsOff()
     {
-        var on = Yard(Side.Empire);
+        var on = Yard(Side.Hand);
         Assert.True(on.Build.DeathStarClassBuildable);
-        Assert.Null(on.TryOrder(Side.Empire, Home, YardFamily.Shipyard, "Death Star", 1));
+        Assert.Null(on.TryOrder(Side.Hand, Home, YardFamily.Shipyard, "Death Star", 1));
         Assert.Equal(584, on.Eco.Costs.Get("Death Star").Cost);
         Assert.Equal(600, on.Eco.Costs.Get("Death Star").Maintenance);
         var ds = on.Eco.Objects.Single(o => o.Class == "Death Star");
         Assert.False(ds.Completed);
         Assert.Equal(25000, ds.Hull);
 
-        var off = Yard(Side.Empire);
+        var off = Yard(Side.Hand);
         off.Build.DeathStarClassBuildable = false;
-        Assert.Equal(RejectReason.NotAvailable, off.TryOrder(Side.Empire, Home, YardFamily.Shipyard, "Death Star", 1));
+        Assert.Equal(RejectReason.NotAvailable, off.TryOrder(Side.Hand, Home, YardFamily.Shipyard, "Death Star", 1));
         Assert.DoesNotContain(off.Eco.Objects, o => o.Class == "Death Star");
     }
 
@@ -182,13 +182,13 @@ public class ShipTests
     {
         var w = new BuildWorld();
         w.Fleets.DebugOrdersEnabled = true;
-        int f = w.Fleets.AddFleet(Side.Empire, "F", classes, Home);
+        int f = w.Fleets.AddFleet(Side.Hand, "F", classes, Home);
         return (w, f, w.State.Fleets[f].Ships[0]);
     }
 
     private static int DaysTo(BuildWorld w, int fleet, string to)
     {
-        long seq = w.Fleets.SubmitMove(Side.Empire, fleet, to);
+        long seq = w.Fleets.SubmitMove(Side.Hand, fleet, to);
         w.Run(1);
         Assert.Null(w.RejectionOf(seq));
         return w.Events<OrderAccepted>().Last().TotalTicks;
@@ -196,7 +196,7 @@ public class ShipTests
 
     private static void Damage(BuildWorld w, int ship, int hull, params int[] hits)
     {
-        long seq = w.Fleets.SubmitDebugSetDamage(Side.Empire, ship, hull, hits);
+        long seq = w.Fleets.SubmitDebugSetDamage(Side.Hand, ship, hull, hits);
         w.Run(1);
         Assert.Null(w.RejectionOf(seq));
     }
@@ -246,19 +246,19 @@ public class ShipTests
     {
         var (w, _, ship) = Fleet(Isd);
         string before = System.Text.Json.JsonSerializer.Serialize(w.State.Economy.Objects);
-        long seq = w.Fleets.SubmitDebugSetDamage(Side.Empire, ship, 3000, new[] { 0, 0, 0, 0, 0, 0 });
+        long seq = w.Fleets.SubmitDebugSetDamage(Side.Hand, ship, 3000, new[] { 0, 0, 0, 0, 0, 0 });
         w.Run(1);
         Assert.Equal(RejectReason.BadValue, w.RejectionOf(seq));
         Assert.Equal(before, System.Text.Json.JsonSerializer.Serialize(w.State.Economy.Objects));
         // the other bad values
         var seqs = new[]
         {
-            w.Fleets.SubmitDebugSetDamage(Side.Empire, ship, -1, new[] { 0, 0, 0, 0, 0, 0 }),
-            w.Fleets.SubmitDebugSetDamage(Side.Empire, ship, 10, new[] { 0, 0, 0, 0, 0 }),
-            w.Fleets.SubmitDebugSetDamage(Side.Empire, ship, 10, new[] { 0, 0, 0, 0, 16, 0 }),
-            w.Fleets.SubmitDebugSetDamage(Side.Empire, ship, 10, new[] { 0, 0, 0, 0, -1, 0 }),
-            w.Fleets.SubmitDebugSetDamage(Side.Empire, 999, 10, new[] { 0, 0, 0, 0, 0, 0 }),
-            w.Fleets.SubmitDebugSetDamage(Side.Alliance, ship, 10, new[] { 0, 0, 0, 0, 0, 0 }),
+            w.Fleets.SubmitDebugSetDamage(Side.Hand, ship, -1, new[] { 0, 0, 0, 0, 0, 0 }),
+            w.Fleets.SubmitDebugSetDamage(Side.Hand, ship, 10, new[] { 0, 0, 0, 0, 0 }),
+            w.Fleets.SubmitDebugSetDamage(Side.Hand, ship, 10, new[] { 0, 0, 0, 0, 16, 0 }),
+            w.Fleets.SubmitDebugSetDamage(Side.Hand, ship, 10, new[] { 0, 0, 0, 0, -1, 0 }),
+            w.Fleets.SubmitDebugSetDamage(Side.Hand, 999, 10, new[] { 0, 0, 0, 0, 0, 0 }),
+            w.Fleets.SubmitDebugSetDamage(Side.Collective, ship, 10, new[] { 0, 0, 0, 0, 0, 0 }),
         };
         w.Run(1);
         Assert.Equal(new[] { RejectReason.BadValue, RejectReason.BadValue, RejectReason.BadValue, RejectReason.BadValue, RejectReason.UnknownShip, RejectReason.NotYours },
@@ -272,7 +272,7 @@ public class ShipTests
     {
         var (w, _, ship) = Fleet(Isd);
         w.Fleets.DebugOrdersEnabled = false;
-        long seq = w.Fleets.SubmitDebugSetDamage(Side.Empire, ship, 10, new[] { 0, 0, 0, 0, 0, 0 });
+        long seq = w.Fleets.SubmitDebugSetDamage(Side.Hand, ship, 10, new[] { 0, 0, 0, 0, 0, 0 });
         w.Run(1);
         Assert.Equal(RejectReason.DebugDisabled, w.RejectionOf(seq));
     }
@@ -282,9 +282,9 @@ public class ShipTests
     public void S15_OnlyBulkTransportsOrGalleonsAreUnarmedAndOneCorvetteArmsThem()
     {
         var w = new BuildWorld();
-        int bulk = w.Fleets.AddFleet(Side.Alliance, "Bulk", new[] { "Barge" }, Home);
-        int galleon = w.Fleets.AddFleet(Side.Empire, "Bond", new[] { "Bond" }, Home);
-        int mixed = w.Fleets.AddFleet(Side.Alliance, "Mixed", new[] { "Barge", "Dodger" }, Home);
+        int bulk = w.Fleets.AddFleet(Side.Collective, "Bulk", new[] { "Barge" }, Home);
+        int galleon = w.Fleets.AddFleet(Side.Hand, "Bond", new[] { "Bond" }, Home);
+        int mixed = w.Fleets.AddFleet(Side.Collective, "Mixed", new[] { "Barge", "Dodger" }, Home);
         Assert.False(CombatStrength.IsArmed(w.Fleets.Classes(w.State.Fleets[bulk])));
         Assert.False(CombatStrength.IsArmed(w.Fleets.Classes(w.State.Fleets[galleon])));
         Assert.True(CombatStrength.IsArmed(w.Fleets.Classes(w.State.Fleets[mixed])));
@@ -313,10 +313,10 @@ public class ShipTests
         var w = new BuildWorld(7); // a real generator: any draw would be counted
         Capitals(); Fighters(); ShipData.LoadAll(TestData.ClassicDir);
         w.Fleets.DebugOrdersEnabled = true;
-        int f = w.Fleets.AddFleet(Side.Empire, "F", new[] { Isd, "Mule" }, Home, new[] { "Gleaner" });
+        int f = w.Fleets.AddFleet(Side.Hand, "F", new[] { Isd, "Mule" }, Home, new[] { "Gleaner" });
         int ship = w.State.Fleets[f].Ships[0];
-        w.Fleets.SubmitDebugSetDamage(Side.Empire, ship, 1200, new[] { 0, 2, 0, 1, 3, 0 });
-        w.Fleets.SubmitMove(Side.Empire, f, Far);
+        w.Fleets.SubmitDebugSetDamage(Side.Hand, ship, 1200, new[] { 0, 2, 0, 1, 3, 0 });
+        w.Fleets.SubmitMove(Side.Hand, f, Far);
         w.Run(30);
         Assert.Equal(0, w.Game.Rng.Draws);
     }
@@ -328,11 +328,11 @@ public class ShipTests
     public void A_new_ship_starts_at_full_hull_with_six_zero_counters()
     {
         var w = new BuildWorld();
-        int a = w.Eco.AddObject(Side.Empire, Isd, null, true);
-        int b = w.Eco.AddObject(Side.Empire, "Death Star", null, false);
-        int c = w.Eco.AddObject(Side.Empire, "Gleaner", Home, true);
-        int d = w.Eco.AddObject(Side.Empire, "Pacifiers", Home, true);
-        int e = w.Fleets.AddFleet(Side.Alliance, "F", new[] { "Mender" }, Home);
+        int a = w.Eco.AddObject(Side.Hand, Isd, null, true);
+        int b = w.Eco.AddObject(Side.Hand, "Death Star", null, false);
+        int c = w.Eco.AddObject(Side.Hand, "Gleaner", Home, true);
+        int d = w.Eco.AddObject(Side.Hand, "Pacifiers", Home, true);
+        int e = w.Fleets.AddFleet(Side.Collective, "F", new[] { "Mender" }, Home);
         Assert.Equal(2750, w.Obj(a).Hull);
         Assert.Equal(new[] { 0, 0, 0, 0, 0, 0 }, w.Obj(a).Hits!);
         Assert.Equal(25000, w.Obj(b).Hull);
@@ -346,10 +346,10 @@ public class ShipTests
     public void A_built_ship_has_its_class_hull()
     {
         var w = new BuildWorld(wireFleets: true);
-        w.Hold(Home, Side.Empire);
+        w.Hold(Home, Side.Hand);
         w.Yard(Home, FacilityKind.OrbitalShipyard);
-        w.Refined(Side.Empire, 200);
-        Assert.Null(w.TryOrder(Side.Empire, Home, YardFamily.Shipyard, "Decree", 1));
+        w.Refined(Side.Hand, 200);
+        Assert.Null(w.TryOrder(Side.Hand, Home, YardFamily.Shipyard, "Decree", 1));
         var ship = w.Eco.Objects.Single(o => o.Class == "Decree");
         Assert.Equal(1800, ship.Hull);
         Assert.Equal(6, ship.Hits!.Count);

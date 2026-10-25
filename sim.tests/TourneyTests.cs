@@ -2,7 +2,7 @@ using Praedra.Core.AI;
 
 namespace Praedra.Sim.Tests;
 
-// sim tourney (m6 AI trainer, ai/12 P11 headless AI-vs-AI harness): --empire-params / --alliance-params set AI values for whichever level
+// sim tourney (m6 AI trainer, ai/12 P11 headless AI-vs-AI harness): --hand-params / --collective-params set AI values for whichever level
 // plays that side, on top of --a-params / --b-params. A tool, not a game rule (no sheet).
 public class TourneyTests
 {
@@ -12,15 +12,15 @@ public class TourneyTests
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void SideParams_GoToTheSideWhicheverLevelPlaysIt(bool aIsEmpire)
+    public void SideParams_GoToTheSideWhicheverLevelPlaysIt(bool aIsHand)
     {
-        var (e, a) = Tourney.SideParams(A, B, "FleetMemory=true", "MilitaryEvery=5")(aIsEmpire);
+        var (e, a) = Tourney.SideParams(A, B, "FleetMemory=true", "MilitaryEvery=5")(aIsHand);
         Assert.True(e.FleetMemory);
         Assert.False(a.FleetMemory);
         Assert.Equal(5, a.MilitaryEvery);
-        Assert.Equal((aIsEmpire ? A : B).MilitaryEvery, e.MilitaryEvery);
-        Assert.Equal(aIsEmpire ? 7 : 9, e.ScoutCount); // the level's own values and --a-params / --b-params stay
-        Assert.Equal(aIsEmpire ? 9 : 7, a.ScoutCount);
+        Assert.Equal((aIsHand ? A : B).MilitaryEvery, e.MilitaryEvery);
+        Assert.Equal(aIsHand ? 7 : 9, e.ScoutCount); // the level's own values and --a-params / --b-params stay
+        Assert.Equal(aIsHand ? 9 : 7, a.ScoutCount);
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public class TourneyTests
     [Fact]
     public void Run_ABadSideValue_IsAnArgumentErrorBeforeAnyGame()
     {
-        var e = Assert.Throws<ArgumentException>(() => Tourney.Run(new[] { "--seeds", "1", "--days", "1", "--empire-params", "Foo=1" }));
+        var e = Assert.Throws<ArgumentException>(() => Tourney.Run(new[] { "--seeds", "1", "--days", "1", "--hand-params", "Foo=1" }));
         Assert.Equal("SimpleAiParams has no Foo.", e.Message);
     }
 }

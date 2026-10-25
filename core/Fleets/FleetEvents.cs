@@ -22,7 +22,7 @@ public sealed record FleetArrived(int Index, int Day, int Fleet, string System)
     : GameEvent(Index, Day, nameof(FleetArrived));
 
 /// <summary>Step 5. Fields: system, fleets of each side (ids ascending).</summary>
-public sealed record Contact(int Index, int Day, string System, ValueList<int> EmpireFleets, ValueList<int> AllianceFleets)
+public sealed record Contact(int Index, int Day, string System, ValueList<int> HandFleets, ValueList<int> CollectiveFleets)
     : GameEvent(Index, Day, nameof(Contact));
 
 /// <summary>Step 5. Classic blockade flag turned on. Fields: system, side that blockades.</summary>

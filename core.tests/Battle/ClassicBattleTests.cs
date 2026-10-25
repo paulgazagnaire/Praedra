@@ -16,29 +16,29 @@ public class ClassicBattleTests
     private const string Corvette = "Dodger", Isd = "Mandate", Cc7700 = "Snare", Interdictor = "Subpoena";
     private const OnContactMode Fight = OnContactMode.Fight, Retreat = OnContactMode.Retreat;
 
-    private static (ClassicBattleResult R, IReadOnlyList<BattleUnit> U) Run(BattleParams p, (string, int)[] alliance, (string, int)[] empire, ulong seed = 1,
-        bool aCan = true, bool eCan = true, OnContactMode[]? alert = null) => QuickBattle.Run(p, Ships, alliance, empire, seed, aCan, eCan, alert);
+    private static (ClassicBattleResult R, IReadOnlyList<BattleUnit> U) Run(BattleParams p, (string, int)[] collective, (string, int)[] hand, ulong seed = 1,
+        bool aCan = true, bool eCan = true, OnContactMode[]? alert = null) => QuickBattle.Run(p, Ships, collective, hand, seed, aCan, eCan, alert);
 
-    /// <summary>The alert answers, indexed by (int)Side (Empire 0, Alliance 1).</summary>
-    internal static OnContactMode[] Alert(OnContactMode alliance, OnContactMode empire)
+    /// <summary>The alert answers, indexed by (int)Side (Hand 0, Collective 1).</summary>
+    internal static OnContactMode[] Alert(OnContactMode collective, OnContactMode hand)
     {
         var a = new OnContactMode[2];
-        a[(int)Side.Alliance] = alliance; a[(int)Side.Empire] = empire;
+        a[(int)Side.Collective] = collective; a[(int)Side.Hand] = hand;
         return a;
     }
 
-    /// <summary>Units of both sides (Alliance first), optionally changed, and the battle built on them (not run).</summary>
-    private static (ClassicBattle B, List<BattleUnit> A, List<BattleUnit> E) Make(BattleParams p, (string, int)[] alliance, (string, int)[] empire,
+    /// <summary>Units of both sides (Collective first), optionally changed, and the battle built on them (not run).</summary>
+    private static (ClassicBattle B, List<BattleUnit> A, List<BattleUnit> E) Make(BattleParams p, (string, int)[] collective, (string, int)[] hand,
         OnContactMode[]? alert = null, Action<List<BattleUnit>, List<BattleUnit>>? prepare = null, bool[]? ai = null)
     {
         int id = 1;
-        var a = QuickBattle.Units(p, Ships, Side.Alliance, alliance, ref id);
-        var e = QuickBattle.Units(p, Ships, Side.Empire, empire, ref id, a.Count);
+        var a = QuickBattle.Units(p, Ships, Side.Collective, collective, ref id);
+        var e = QuickBattle.Units(p, Ships, Side.Hand, hand, ref id, a.Count);
         prepare?.Invoke(a, e);
         return (new ClassicBattle(p, a.Concat(e).ToList(), new GameRng(1), new[] { true, true }, alert, ai), a, e);
     }
 
-    private static BattleUnit Unit(string cls, Side side = Side.Alliance)
+    private static BattleUnit Unit(string cls, Side side = Side.Collective)
     {
         int id = 1;
         var u = QuickBattle.Units(P, Ships, side, new[] { (cls, 1) }, ref id)[0];
@@ -64,7 +64,7 @@ public class ClassicBattleTests
     [Fact]
     public void BC2_SquadronRatesAgainstAnIsd()
     {
-        var isd = Unit(Isd, Side.Empire);
+        var isd = Unit(Isd, Side.Hand);
         Assert.Equal(5.754, ClassicRates.Rate(P, Unit("Plough"), isd, true), 1e-3);
         isd.Shield = 0;
         Assert.Equal(29.76, ClassicRates.Rate(P, Unit("Plough"), isd, true), 1e-2);
@@ -76,7 +76,7 @@ public class ClassicBattleTests
     [Fact]
     public void BC3_IsdAgainstAYWingSquadron()
     {
-        Assert.Equal(2.0, ClassicRates.Rate(P, Unit(Isd), Unit("Plough", Side.Empire), false), 1e-3);
+        Assert.Equal(2.0, ClassicRates.Rate(P, Unit(Isd), Unit("Plough", Side.Hand), false), 1e-3);
     }
 
     // m4-battle-classic BC4
@@ -105,7 +105,7 @@ public class ClassicBattleTests
     [Fact]
     public void B3_3_RatesAgainstSquadrons()
     {
-        double R(string u, string v) => ClassicRates.Rate(P, Unit(u), Unit(v, Side.Empire), false);
+        double R(string u, string v) => ClassicRates.Rate(P, Unit(u), Unit(v, Side.Hand), false);
         Assert.Equal(2.0, R(Isd, "Plough"), 1e-3);
         Assert.Equal(1.667, R(Isd, "Gleaner"), 1e-3);
         Assert.Equal(5.333, R(Corvette, "Gleaner"), 1e-3);
@@ -117,7 +117,7 @@ public class ClassicBattleTests
     [Fact]
     public void B3_4_YWingAgainstAnIsd()
     {
-        var isd = Unit(Isd, Side.Empire);
+        var isd = Unit(Isd, Side.Hand);
         var y = Unit("Plough");
         Assert.Equal(5.754, ClassicRates.Rate(P, y, isd, true), 1e-3);
         isd.Shield = 0;
@@ -146,16 +146,16 @@ public class ClassicBattleTests
     [Fact]
     public void B3_6_TaskForces()
     {
-        Assert.Equal(new[] { 4, 4, 4 }, Sizes(Make(P, new[] { (Corvette, 12) }, new[] { (Isd, 1) }).B, Side.Alliance));
-        Assert.Equal(new[] { 5, 5, 6 }, Sizes(Make(P, new[] { (Corvette, 16) }, new[] { (Isd, 1) }).B, Side.Alliance));
-        Assert.Equal(new[] { 3, 3, 4 }, Sizes(Make(P, new[] { (Corvette, 1) }, new[] { (Isd, 10) }).B, Side.Empire));
-        var mixed = Make(P, new[] { (Corvette, 1) }, new[] { (Isd, 5), (Corvette, 9), ("Bond", 2) }).B.TaskForcesOf(Side.Empire);
+        Assert.Equal(new[] { 4, 4, 4 }, Sizes(Make(P, new[] { (Corvette, 12) }, new[] { (Isd, 1) }).B, Side.Collective));
+        Assert.Equal(new[] { 5, 5, 6 }, Sizes(Make(P, new[] { (Corvette, 16) }, new[] { (Isd, 1) }).B, Side.Collective));
+        Assert.Equal(new[] { 3, 3, 4 }, Sizes(Make(P, new[] { (Corvette, 1) }, new[] { (Isd, 10) }).B, Side.Hand));
+        var mixed = Make(P, new[] { (Corvette, 1) }, new[] { (Isd, 5), (Corvette, 9), ("Bond", 2) }).B.TaskForcesOf(Side.Hand);
         Assert.Equal(new[] { 2, 3, 3, 3, 3, 2 }, mixed.Select(t => t.Members.Count));
         Assert.Equal(new[] { Isd, Isd, Corvette, Corvette, Corvette, "Bond" }, mixed.Select(t => t.Members[0].Class.Name));
         var big = Make(P, new[] { (Corvette, 1) }, new[] { (Isd, 20), (Corvette, 30), ("Bond", 20) }).B;
-        Assert.Equal(new[] { 6, 6, 8, 7, 7, 7, 9, 20 }, Sizes(big, Side.Empire));
-        Assert.Equal(new[] { 5, 5, 5, 5 }, Sizes(Make(P, new[] { (Corvette, 1) }, new[] { ("Gleaner", 20) }).B, Side.Empire));
-        var fighters = Make(P, new[] { ("Swift", 9), ("Needle", 2) }, new[] { (Isd, 1) }).B.TaskForcesOf(Side.Alliance);
+        Assert.Equal(new[] { 6, 6, 8, 7, 7, 7, 9, 20 }, Sizes(big, Side.Hand));
+        Assert.Equal(new[] { 5, 5, 5, 5 }, Sizes(Make(P, new[] { (Corvette, 1) }, new[] { ("Gleaner", 20) }).B, Side.Hand));
+        var fighters = Make(P, new[] { ("Swift", 9), ("Needle", 2) }, new[] { (Isd, 1) }).B.TaskForcesOf(Side.Collective);
         Assert.Equal(new[] { 2, 5, 4 }, fighters.Select(t => t.Members.Count));
         Assert.Equal(new[] { "Needle", "Swift", "Swift" }, fighters.Select(t => t.Members[0].Class.Name));
     }
@@ -237,17 +237,17 @@ public class ClassicBattleTests
     {
         var (b, a, e) = Make(P, new[] { ("Plough", 1) }, new[] { (Isd, 1) });
         var isd = e[0]; isd.Hull = 1375; isd.Hits[0] = 1; isd.Shield = 200;
-        b.RechargeSide(Side.Empire);
+        b.RechargeSide(Side.Hand);
         Assert.Equal(203.75, isd.Shield, 1e-9);
         isd.Shield = 298;
-        b.RechargeSide(Side.Empire);
+        b.RechargeSide(Side.Hand);
         Assert.Equal(300.0, isd.Shield, 1e-9); // the class shield is the cap
         var y = a[0]; y.Hull = 48; y.Shield = 10;
         Assert.Equal(60.0, y.ShieldMax);
-        b.RechargeSide(Side.Alliance);
+        b.RechargeSide(Side.Collective);
         Assert.Equal(30.0, y.ShieldMax, 1e-9);
         Assert.Equal(10.15, y.Shield, 1e-9);
-        b.RechargeSide(Side.Alliance);
+        b.RechargeSide(Side.Collective);
         Assert.Equal(15.0, y.ShieldMax, 1e-9);
         Assert.Equal(10.30, y.Shield, 1e-9);
     }
@@ -264,8 +264,8 @@ public class ClassicBattleTests
         Assert.Equal(299.98, b.Value(isd), 1e-2);
         Assert.Equal(20.02, b.Value(cor), 1e-2);
         Assert.Equal(86.29, b.Value(y), 1e-2);
-        Assert.Equal(new[] { isd, y, cor, gal }, b.Ranked(Side.Empire));
-        var (l, t) = b.Lists(Side.Empire);
+        Assert.Equal(new[] { isd, y, cor, gal }, b.Ranked(Side.Hand));
+        var (l, t) = b.Lists(Side.Hand);
         Assert.Equal(new[] { y, isd, cor, gal }, l);
         Assert.Equal(new[] { isd, cor, gal, y, isd, cor, gal }, t);
     }
@@ -275,7 +275,7 @@ public class ClassicBattleTests
         var p = new BattleParams { Ruleset = BattleRuleset.Classic, TaskForces = ClassicTaskForces.PerUnit };
         var (b, a, _) = Make(p, new[] { (Corvette, corvettes), ("Bond", 1) }, rates.Select(_ => (Isd, 1)).ToArray(),
             prepare: (_, e) => { for (int i = 0; i < e.Count; i++) e[i].Class = Ships[Isd] with { WeaponRechargeRate = rates[i] }; });
-        return (b, a, b.TaskForcesOf(Side.Empire).ToList());
+        return (b, a, b.TaskForcesOf(Side.Hand).ToList());
     }
 
     // B3-14
@@ -305,8 +305,8 @@ public class ClassicBattleTests
     public void B3_16_StrengthLeavesOutOutShotShips()
     {
         var (b, a, _) = Make(new BattleParams { Ruleset = BattleRuleset.Classic, TaskForces = ClassicTaskForces.PerUnit }, new[] { (Corvette, 2), ("Swift", 1) }, new[] { (Isd, 1) });
-        b.TaskForcesOf(Side.Empire)[0].Target = a[0]; // rate 20 >= its recharge 10
-        Assert.Equal(3.336, b.Strength(Side.Alliance), 1e-2); // 1.336 + 2.0045
+        b.TaskForcesOf(Side.Hand)[0].Target = a[0]; // rate 20 >= its recharge 10
+        Assert.Equal(3.336, b.Strength(Side.Collective), 1e-2); // 1.336 + 2.0045
     }
 
     // B3-17
@@ -320,9 +320,9 @@ public class ClassicBattleTests
         Assert.False(ClassicRates.RetreatWanted(18, 20, 0.9));
         Assert.False(ClassicRates.RetreatWanted(5, 0, 10000.0)); // the enemy's strength is 0: stay
         var (b, _, _) = Make(P, new[] { (Corvette, 4) }, new[] { (Isd, 1), (Interdictor, 1) });
-        Assert.Equal(RetreatRefusal.GravityWell, b.CanRetreat(Side.Alliance));
+        Assert.Equal(RetreatRefusal.GravityWell, b.CanRetreat(Side.Collective));
         var (b2, _, _) = Make(P, new[] { (Corvette, 4) }, new[] { (Isd, 1) });
-        Assert.Null(b2.CanRetreat(Side.Alliance));
+        Assert.Null(b2.CanRetreat(Side.Collective));
     }
 
     // m4-battle-classic §1.3: the per-side thresholds
@@ -330,13 +330,13 @@ public class ClassicBattleTests
     public void ThresholdsComeFromTheController()
     {
         var (b, _, _) = Make(P, new[] { (Corvette, 1) }, new[] { (Isd, 1) }, Alert(Retreat, Fight));
-        Assert.Equal(10000.0, b.ThresholdOf(Side.Alliance));
-        Assert.Equal(0.0, b.ThresholdOf(Side.Empire));
-        var ai = new bool[2]; ai[(int)Side.Empire] = true;
+        Assert.Equal(10000.0, b.ThresholdOf(Side.Collective));
+        Assert.Equal(0.0, b.ThresholdOf(Side.Hand));
+        var ai = new bool[2]; ai[(int)Side.Hand] = true;
         var (c, _, _) = Make(P, new[] { (Corvette, 1) }, new[] { (Isd, 1) }, Alert(Fight, Fight), ai: ai);
-        Assert.Equal(0.9, c.ThresholdOf(Side.Empire));
+        Assert.Equal(0.9, c.ThresholdOf(Side.Hand));
         var (d, _, _) = Make(P, new[] { (Corvette, 1) }, new[] { (Isd, 1) });
-        Assert.Equal(0.3300000131, d.ThresholdOf(Side.Alliance));
+        Assert.Equal(0.3300000131, d.ThresholdOf(Side.Collective));
     }
 
     // ================================================================== whole battles (Classic dice)
@@ -348,25 +348,25 @@ public class ClassicBattleTests
         var (r, u) = Run(P, new[] { (Corvette, 4) }, new[] { (Isd, 1) }, alert: Alert(Retreat, Fight));
         Assert.Equal(1, r.Seconds);
         Assert.Equal(3, r.Draws);
-        var c = u.Where(x => x.Side == Side.Alliance).ToList();
+        var c = u.Where(x => x.Side == Side.Collective).ToList();
         Assert.Equal(180.0, c[0].Shield, 1e-3);
         Assert.Equal(0, c[0].Hits[0]);
-        Assert.Equal(294.66, u.Single(x => x.Side == Side.Empire).Shield, 1e-2);
+        Assert.Equal(294.66, u.Single(x => x.Side == Side.Hand).Shield, 1e-2);
         Assert.All(c, x => Assert.True(x.Left));
-        Assert.True(r.AllianceRetreated);
+        Assert.True(r.CollectiveRetreated);
     }
 
     // B3-19
     [Fact]
-    public void B3_19_IsdVsIsdTheAllianceLeaves()
+    public void B3_19_IsdVsIsdTheCollectiveLeaves()
     {
         var (r, u) = Run(P, new[] { (Isd, 1) }, new[] { (Isd, 1) }, alert: Alert(Fight, Fight));
         Assert.Equal(1, r.Seconds);
         Assert.Equal(2, r.Draws);
-        var a = u.Single(x => x.Side == Side.Alliance);
+        var a = u.Single(x => x.Side == Side.Collective);
         Assert.True(a.Left);
         Assert.Equal(280.0, a.Shield, 1e-3);
-        Assert.True(u.Single(x => x.Side == Side.Empire).Alive);
+        Assert.True(u.Single(x => x.Side == Side.Hand).Alive);
     }
 
     // B3-20
@@ -374,16 +374,16 @@ public class ClassicBattleTests
     public void B3_20_BothRetreat()
     {
         var (r1, _) = Run(P, new[] { (Corvette, 4) }, new[] { (Isd, 1) }, alert: Alert(Retreat, Retreat));
-        Assert.True(r1.EmpireRetreated); Assert.False(r1.AllianceRetreated);
+        Assert.True(r1.HandRetreated); Assert.False(r1.CollectiveRetreated);
         Assert.Equal(1, r1.Draws);
-        Assert.Equal(BattleOutcome.Victorious, r1.AllianceOutcome);
+        Assert.Equal(BattleOutcome.Victorious, r1.CollectiveOutcome);
         var (r2, _) = Run(P, new[] { (Isd, 1) }, new[] { (Isd, 1) }, alert: Alert(Retreat, Retreat));
-        Assert.True(r2.AllianceRetreated); Assert.False(r2.EmpireRetreated);
+        Assert.True(r2.CollectiveRetreated); Assert.False(r2.HandRetreated);
         Assert.Equal(2, r2.Draws);
         var (r3, _) = Run(P, new[] { ("Bond", 1) }, new[] { ("Barge", 1) }, alert: Alert(Fight, Fight));
         Assert.Equal(1, r3.Seconds);
-        Assert.True(r3.AllianceRetreated && r3.EmpireRetreated);
-        Assert.Equal(1, r3.Draws); // the Bulk Transport's (Empire, fires first) zero hit on the Bond still rolls the generator (1 percent minimum); B3-20 as corrected in m4-battle-classic
+        Assert.True(r3.CollectiveRetreated && r3.HandRetreated);
+        Assert.Equal(1, r3.Draws); // the Bulk Transport's (Hand, fires first) zero hit on the Bond still rolls the generator (1 percent minimum); B3-20 as corrected in m4-battle-classic
     }
 
     // B3-21
@@ -392,14 +392,14 @@ public class ClassicBattleTests
     {
         var (r, u) = Run(NoRolls, new[] { ("Injunction", 1) }, new[] { ("Decree II", 1) }, alert: Alert(Fight, Fight));
         Assert.Equal(1201, r.Seconds);
-        Assert.True(r.EmpireRetreated); Assert.False(r.AllianceRetreated);
+        Assert.True(r.HandRetreated); Assert.False(r.CollectiveRetreated);
         Assert.All(u, x => Assert.Equal(x.HullMax, x.Hull));
         var (r2, u2) = Run(NoRolls, new[] { ("Injunction", 1), (Cc7700, 1) }, new[] { ("Decree II", 1) }, alert: Alert(Fight, Fight));
-        var v = u2.Single(x => x.Side == Side.Empire);
+        var v = u2.Single(x => x.Side == Side.Hand);
         Assert.Equal(UnitLossReason.Stalemate, v.Loss);
         Assert.Equal(1200, v.LostAt);
         Assert.Equal(1200, r2.Seconds);
-        Assert.Equal(BattleOutcome.Annihilated, r2.EmpireOutcome);
+        Assert.Equal(BattleOutcome.Annihilated, r2.HandOutcome);
     }
 
     // B3-22
@@ -412,7 +412,7 @@ public class ClassicBattleTests
             foreach (var q in e.Where(x => !x.IsCapital)) q.Carrier = e[0].ObjectId;
         });
         var r = b.Run();
-        Assert.True(r.EmpireRetreated);
+        Assert.True(r.HandRetreated);
         Assert.Equal(UnitLossReason.NoHyperdrive, e[0].Loss);
         Assert.All(e.Where(x => !x.IsCapital), q => Assert.Equal(UnitLossReason.ShipLost, q.Loss));
         Assert.True(e[1].Left);
@@ -450,10 +450,10 @@ public class ClassicBattleTests
     {
         var (r, u) = Run(P, new[] { (Corvette, 12) }, new[] { (Isd, 1) }, alert: Alert(Fight, Fight));
         Assert.Equal(35, r.Seconds);
-        Assert.True(r.EmpireRetreated);
-        Assert.Equal(3, u.Single(x => x.Side == Side.Empire).Hits[0]);
-        Assert.Equal(232.5, u.First(x => x.Side == Side.Alliance).Hull, 0.1);
-        Assert.Equal(0, r.AllianceLosses);
+        Assert.True(r.HandRetreated);
+        Assert.Equal(3, u.Single(x => x.Side == Side.Hand).Hits[0]);
+        Assert.Equal(232.5, u.First(x => x.Side == Side.Collective).Hull, 0.1);
+        Assert.Equal(0, r.CollectiveLosses);
         Assert.Equal(138, r.Draws);
     }
 
@@ -463,7 +463,7 @@ public class ClassicBattleTests
     {
         var (r, _) = Run(P, new[] { ("Plough", 6) }, new[] { (Isd, 1) }, alert: Alert(Fight, Fight));
         Assert.Equal(2, r.Seconds);
-        Assert.True(r.EmpireRetreated);
+        Assert.True(r.HandRetreated);
         Assert.Equal(3, r.Draws);
     }
 
@@ -471,39 +471,39 @@ public class ClassicBattleTests
     [Fact]
     public void ModelScenarios()
     {
-        var ai = new bool[2]; ai[(int)Side.Empire] = true; // the model's 0.9 Empire
+        var ai = new bool[2]; ai[(int)Side.Hand] = true; // the model's 0.9 Hand
         var (r, u) = QuickBattle.Run(P, Ships, new[] { (Corvette, 4) }, new[] { (Isd, 1) }, 1, alert: Alert(Fight, Fight), ai: ai);
         Assert.Equal((31, 94L), (r.Seconds, r.Draws));
-        Assert.True(r.EmpireRetreated);
+        Assert.True(r.HandRetreated);
         Assert.Equal(304.6, u[0].Hull, 0.1);
         (r, u) = QuickBattle.Run(P, Ships, new[] { ("Ark", 2) }, new[] { (Isd, 2) }, 1, alert: Alert(Fight, Fight), ai: ai);
         Assert.Equal((35, 72L), (r.Seconds, r.Draws));
-        Assert.True(r.AllianceRetreated);
+        Assert.True(r.CollectiveRetreated);
         Assert.Equal(1682.8, u[0].Hull, 0.1);
         Assert.Equal(2053.7, u[2].Hull, 0.1);
         (r, u) = QuickBattle.Run(P, Ships, new[] { ("Injunction", 1) }, new[] { ("Decree II", 1) }, 1, alert: Alert(Fight, Fight));
         Assert.Equal((31, 62L), (r.Seconds, r.Draws));
-        Assert.True(r.AllianceRetreated);
+        Assert.True(r.CollectiveRetreated);
         (r, _) = QuickBattle.Run(P, Ships, new[] { ("Plough", 6) }, new[] { (Isd, 1) }, 1, alert: Alert(Fight, Fight), ai: ai);
         Assert.Equal((1, 1L), (r.Seconds, r.Draws));
     }
 
     // ================================================================== the old BC battles under the B3 rules (no controller: threshold 0.33)
 
-    // m4-battle-classic BC5 (moved by B3: squads of 4, Empire first; the ISD out-shoots one Corvette at a time (20 >= recharge 10), so it leaves the
+    // m4-battle-classic BC5 (moved by B3: squads of 4, Hand first; the ISD out-shoots one Corvette at a time (20 >= recharge 10), so it leaves the
     // strength; the Corvettes' three squads of 5.34 never pass the ISD's recharge 15. One Corvette dies every 54 s; at 5 left (5 x 1.336 / 20 < 0.33,
     // the out-shot one not counted) they leave. Was: t = 400, one survivor at hull 468.3. [Model]
     [Fact]
     public void BC5_TwelveCorvettesVsIsdRollsOff()
     {
         var (r, u) = Run(NoRolls, new[] { (Corvette, 12) }, new[] { (Isd, 1) });
-        Assert.True(r.AllianceRetreated);
+        Assert.True(r.CollectiveRetreated);
         Assert.Equal(379, r.Seconds);
-        Assert.Equal(5, r.AllianceSurvivors);
-        Assert.Equal(7, r.AllianceLosses);
-        Assert.Equal(2750.0, u.Single(x => x.Side == Side.Empire).Hull);
+        Assert.Equal(5, r.CollectiveSurvivors);
+        Assert.Equal(7, r.CollectiveLosses);
+        Assert.Equal(2750.0, u.Single(x => x.Side == Side.Hand).Hull);
         Assert.Equal(0, r.Draws);
-        Assert.All(u.Where(x => x.Side == Side.Alliance && !x.Destroyed), x => Assert.Equal(500.0, x.Hull));
+        Assert.All(u.Where(x => x.Side == Side.Collective && !x.Destroyed), x => Assert.Equal(500.0, x.Hull));
         Assert.Equal(new[] { 54, 108, 162, 216, 270, 324, 378 }, u.Where(x => x.Destroyed).Select(x => x.LostAt));
     }
 
@@ -512,18 +512,18 @@ public class ClassicBattleTests
     public void BC6_ElevenCorvettesVsIsdRollsOff()
     {
         var (r, u) = Run(NoRolls, new[] { (Corvette, 11) }, new[] { (Isd, 1) });
-        Assert.True(r.AllianceRetreated);
+        Assert.True(r.CollectiveRetreated);
         Assert.Equal(325, r.Seconds);
-        Assert.Equal(5, r.AllianceSurvivors);
-        Assert.Equal(2750.0, u.Single(x => x.Side == Side.Empire).Hull);
+        Assert.Equal(5, r.CollectiveSurvivors);
+        Assert.Equal(2750.0, u.Single(x => x.Side == Side.Hand).Hull);
     }
 
-    // m4-battle-classic BC7 (moved by B3: 4 Corvettes at 0.267 of the ISD still leave in second 1, but only after the Empire's volley)
+    // m4-battle-classic BC7 (moved by B3: 4 Corvettes at 0.267 of the ISD still leave in second 1, but only after the Hand's volley)
     [Fact]
     public void BC7_FourCorvettesRetreatAtOnce()
     {
         var (r, u) = Run(NoRolls, new[] { (Corvette, 4) }, new[] { (Isd, 1) });
-        Assert.True(r.AllianceRetreated);
+        Assert.True(r.CollectiveRetreated);
         Assert.Equal(1, r.Seconds);
         Assert.All(u, x => Assert.Equal(x.HullMax, x.Hull));
         Assert.Equal(180.0, u[0].Shield, 1e-3); // the ISD's 20 hit Corvette 1 first
@@ -535,10 +535,10 @@ public class ClassicBattleTests
     public void BC8_ThirtyCorvettesBeatTheIsdRollsOff()
     {
         var (r, u) = Run(NoRolls, new[] { (Corvette, 30) }, new[] { (Isd, 1) });
-        Assert.True(r.EmpireRetreated);
+        Assert.True(r.HandRetreated);
         Assert.Equal(25, r.Seconds);
-        Assert.Equal(2423.1, u.Single(x => x.Side == Side.Empire).Hull, 0.1);
-        Assert.Equal(0, r.AllianceLosses);
+        Assert.Equal(2423.1, u.Single(x => x.Side == Side.Hand).Hull, 0.1);
+        Assert.Equal(0, r.CollectiveLosses);
     }
 
     // m4-battle-classic BC10, m4-retreat-damage-repair RT4 (pure part)
@@ -546,10 +546,10 @@ public class ClassicBattleTests
     public void BC10_GravityWellStopsTheRetreat()
     {
         var (r, u) = Run(NoRolls, new[] { (Corvette, 4) }, new[] { (Isd, 1), (Interdictor, 1) });
-        Assert.False(r.AllianceRetreated);
-        Assert.Equal(BattleOutcome.Annihilated, r.AllianceOutcome);
-        Assert.Equal(BattleOutcome.Victorious, r.EmpireOutcome);
-        Assert.All(u.Where(x => x.Side == Side.Empire), x => Assert.Equal(x.HullMax, x.Hull));
+        Assert.False(r.CollectiveRetreated);
+        Assert.Equal(BattleOutcome.Annihilated, r.CollectiveOutcome);
+        Assert.Equal(BattleOutcome.Victorious, r.HandOutcome);
+        Assert.All(u.Where(x => x.Side == Side.Hand), x => Assert.Equal(x.HullMax, x.Hull));
         Assert.Equal(RetreatRefusal.GravityWell, r.Steps.OfType<RetreatRefusedStep>().Single().Reason);
     }
 
@@ -559,21 +559,21 @@ public class ClassicBattleTests
     public void BC11_SixYWingsVsIsd()
     {
         var (r, u) = Run(NoRolls, new[] { ("Plough", 6) }, new[] { (Isd, 1) });
-        Assert.True(r.EmpireRetreated);
+        Assert.True(r.HandRetreated);
         Assert.Equal(2, r.Seconds);
-        Assert.Equal(2750.0, u.Single(x => x.Side == Side.Empire).Hull);
-        Assert.All(u.Where(x => x.Side == Side.Alliance), x => Assert.Equal(96.0, x.Hull));
+        Assert.Equal(2750.0, u.Single(x => x.Side == Side.Hand).Hull);
+        Assert.All(u.Where(x => x.Side == Side.Collective), x => Assert.Equal(96.0, x.Hull));
     }
 
-    // m4-battle-classic BC12 (moved by B3: the Empire ISD fires first and out-shoots the Alliance ISD (20 >= 15), whose strength is 0: it leaves in second 1.
+    // m4-battle-classic BC12 (moved by B3: the Hand ISD fires first and out-shoots the Collective ISD (20 >= 15), whose strength is 0: it leaves in second 1.
     // Was: both destroyed at t = 1492) [Model]
     [Fact]
     public void BC12_IsdVsIsd()
     {
         var (r, u) = Run(NoRolls, new[] { (Isd, 1) }, new[] { (Isd, 1) });
         Assert.Equal(1, r.Seconds);
-        Assert.True(r.AllianceRetreated);
-        Assert.Equal(BattleOutcome.Victorious, r.EmpireOutcome);
+        Assert.True(r.CollectiveRetreated);
+        Assert.Equal(BattleOutcome.Victorious, r.HandOutcome);
         Assert.All(u, x => Assert.Equal(2750.0, x.Hull));
     }
 
@@ -583,8 +583,8 @@ public class ClassicBattleTests
     {
         var (r, u) = Run(NoRolls, new[] { ("Injunction", 1) }, new[] { ("Decree II", 1) });
         Assert.Equal(1201, r.Seconds);
-        Assert.True(r.EmpireRetreated);
-        Assert.False(r.AllianceRetreated);
+        Assert.True(r.HandRetreated);
+        Assert.False(r.CollectiveRetreated);
         Assert.All(u, x => Assert.Equal(x.HullMax, x.Hull));
     }
 
@@ -594,9 +594,9 @@ public class ClassicBattleTests
     {
         var (r, u) = Run(NoRolls, new[] { ("Injunction", 1), (Cc7700, 1) }, new[] { ("Decree II", 1) });
         Assert.Equal(1200, r.Seconds);
-        var v = u.Single(x => x.Side == Side.Empire);
+        var v = u.Single(x => x.Side == Side.Hand);
         Assert.Equal(UnitLossReason.Stalemate, v.Loss);
-        Assert.Equal(BattleOutcome.Annihilated, r.EmpireOutcome);
+        Assert.Equal(BattleOutcome.Annihilated, r.HandOutcome);
     }
 
     // m4-battle-classic BC15 (B3: with the Classic dice the seed is not used at all)
@@ -605,7 +605,7 @@ public class ClassicBattleTests
     {
         var (a, ua) = Run(P, new[] { (Corvette, 8) }, new[] { (Isd, 1) }, 77);
         var (b, ub) = Run(P, new[] { (Corvette, 8) }, new[] { (Isd, 1) }, 77);
-        Assert.Equal((a.Seconds, a.Draws, a.AllianceOutcome), (b.Seconds, b.Draws, b.AllianceOutcome));
+        Assert.Equal((a.Seconds, a.Draws, a.CollectiveOutcome), (b.Seconds, b.Draws, b.CollectiveOutcome));
         Assert.Equal(ua.Select(x => (x.Hull, string.Join(",", x.Hits))), ub.Select(x => (x.Hull, string.Join(",", x.Hits))));
         Assert.True(a.Draws > 0);
     }
@@ -617,28 +617,28 @@ public class ClassicBattleTests
         var (r, u) = Run(P, new[] { (Corvette, 12) }, new[] { (Isd, 1) });
         var (r2, _) = Run(P, new[] { (Corvette, 12) }, new[] { (Isd, 1) }, 400);
         Assert.Equal((r.Seconds, r.Draws), (r2.Seconds, r2.Draws));
-        Console.WriteLine($"BC9 12 CR90 vs ISD, rolls on, Classic dice: t = {r.Seconds}, draws {r.Draws}, Alliance {r.AllianceOutcome} (lost {r.AllianceLosses}), Empire {r.EmpireOutcome}, ISD hull {u.Single(x => x.Side == Side.Empire).Hull:0.0}");
+        Console.WriteLine($"BC9 12 CR90 vs ISD, rolls on, Classic dice: t = {r.Seconds}, draws {r.Draws}, Collective {r.CollectiveOutcome} (lost {r.CollectiveLosses}), Hand {r.HandOutcome}, ISD hull {u.Single(x => x.Side == Side.Hand).Hull:0.0}");
     }
 
-    // m4-battle-classic BC17 (moved by B3: the Empire's step comes first; the Bulk Transport's zero hit draws nothing with rolls off; both leave in second 1)
+    // m4-battle-classic BC17 (moved by B3: the Hand's step comes first; the Bulk Transport's zero hit draws nothing with rolls off; both leave in second 1)
     [Fact]
     public void BC17_UnarmedFleetsBothRetreatAtOnce()
     {
         var (r, _) = Run(NoRolls, new[] { ("Bond", 1) }, new[] { ("Barge", 1) });
         Assert.Equal(1, r.Seconds);
-        Assert.True(r.AllianceRetreated && r.EmpireRetreated);
-        Assert.Equal(BattleOutcome.Indecisive, r.AllianceOutcome);
+        Assert.True(r.CollectiveRetreated && r.HandRetreated);
+        Assert.Equal(BattleOutcome.Indecisive, r.CollectiveOutcome);
     }
 
-    // m4-battle-classic BC18 (moved by B3: an alert Retreat is a threshold of 10000 inside the loop, not a skip at second 0: the Corvettes take the Empire's
+    // m4-battle-classic BC18 (moved by B3: an alert Retreat is a threshold of 10000 inside the loop, not a skip at second 0: the Corvettes take the Hand's
     // volley, fire once and leave in second 1; the battle draws from its own dice only)
     [Fact]
     public void BC18_AlertRetreatLeavesInSecondOne()
     {
         var (r, _) = Run(P, new[] { (Corvette, 12) }, new[] { (Isd, 1) }, 5, alert: Alert(Retreat, Fight));
         Assert.Equal(1, r.Seconds);
-        Assert.True(r.AllianceRetreated);
-        Assert.Equal(BattleOutcome.Victorious, r.EmpireOutcome);
+        Assert.True(r.CollectiveRetreated);
+        Assert.Equal(BattleOutcome.Victorious, r.HandOutcome);
         Assert.True(r.Draws > 0);
     }
 
@@ -648,8 +648,8 @@ public class ClassicBattleTests
     {
         var ion = Unit(Isd);
         ion.Class = Ships[Isd] with { Arcs = new ShipArcs(new ArcCounts(0, 100, 0), default, default, default) };
-        Assert.Equal(0.0, ClassicRates.Rate(P, ion, Unit("Swift", Side.Empire), false));
-        Assert.True(ClassicRates.Rate(P, Unit(Corvette), Unit("Swift", Side.Empire), false) > 0);
+        Assert.Equal(0.0, ClassicRates.Rate(P, ion, Unit("Swift", Side.Hand), false));
+        Assert.True(ClassicRates.Rate(P, Unit(Corvette), Unit("Swift", Side.Hand), false) > 0);
     }
 
     // ================================================================== retreat execution (m4-retreat-damage-repair §1, §2)
@@ -661,7 +661,7 @@ public class ClassicBattleTests
         var (b, _, e) = Make(NoRolls, new[] { (Corvette, 4) }, new[] { (Isd, 1), ("Warrant", 1) }, Alert(Fight, Retreat),
             prepare: (_, e) => e[0].Hits[4] = 2);
         var r = b.Run();
-        Assert.True(r.EmpireRetreated);
+        Assert.True(r.HandRetreated);
         Assert.Equal(UnitLossReason.NoHyperdrive, e[0].Loss);
         Assert.True(e[1].Left);
     }
@@ -673,7 +673,7 @@ public class ClassicBattleTests
         var (b, _, _) = Make(NoRolls, new[] { (Corvette, 4) }, new[] { (Isd, 1) }, Alert(Fight, Retreat), prepare: (_, e) => e[0].Hits[4] = 2);
         var r = b.Run();
         Assert.Equal(RetreatRefusal.NoHyperdrive, r.Steps.OfType<RetreatRefusedStep>().First().Reason);
-        Assert.False(r.EmpireRetreated);
+        Assert.False(r.HandRetreated);
     }
 
     // m4-retreat-damage-repair §1.3 (B3): four sub-light hits stop a jump too
@@ -681,7 +681,7 @@ public class ClassicBattleTests
     public void SubLightHitsStopAJump()
     {
         var (b, _, _) = Make(NoRolls, new[] { (Corvette, 1) }, new[] { (Isd, 1) }, Alert(Fight, Retreat), prepare: (_, e) => e[0].Hits[3] = 4);
-        Assert.Equal(RetreatRefusal.NoHyperdrive, b.CanRetreat(Side.Empire));
+        Assert.Equal(RetreatRefusal.NoHyperdrive, b.CanRetreat(Side.Hand));
     }
 
     // m4-retreat-damage-repair RT7
@@ -691,7 +691,7 @@ public class ClassicBattleTests
         var (b, _, e) = Make(NoRolls, new[] { (Corvette, 4) }, new[] { (Isd, 1), ("Death Star", 1) }, Alert(Fight, Retreat),
             prepare: (_, e) => { foreach (var u in e) u.Hits[4] = 2; });
         var r = b.Run();
-        Assert.True(r.EmpireRetreated);
+        Assert.True(r.HandRetreated);
         Assert.True(e[1].Left);
         Assert.Equal(UnitLossReason.NoHyperdrive, e[0].Loss);
     }
@@ -742,7 +742,7 @@ public class ClassicBattleTests
         // no Death Star in the battle: the switch changes nothing
         var (r, _) = Run(NoRolls, new[] { ("Injunction", 1) }, new[] { ("Decree II", 1) }, alert: Alert(Fight, Fight));
         Assert.Equal(1201, r.Seconds);
-        Assert.True(r.EmpireRetreated);
+        Assert.True(r.HandRetreated);
     }
 
     // ================================================================== the battle dice (§1.4, §11)
@@ -773,15 +773,15 @@ public class ClassicBattleTests
 
     // m4-battle-classic §2, §3, §6: the switches run to an end
     [Theory]
-    [InlineData(BattleTactic.Surround, ClassicTaskForces.Classic, ClassicFireOrder.EmpireFirst)]
-    [InlineData(BattleTactic.StandOff, ClassicTaskForces.PerSide, ClassicFireOrder.EmpireFirst)]
+    [InlineData(BattleTactic.Surround, ClassicTaskForces.Classic, ClassicFireOrder.HandFirst)]
+    [InlineData(BattleTactic.StandOff, ClassicTaskForces.PerSide, ClassicFireOrder.HandFirst)]
     [InlineData(BattleTactic.StandOff, ClassicTaskForces.PerUnit, ClassicFireOrder.Simultaneous)]
     public void SwitchesRunToAnEnd(BattleTactic t, ClassicTaskForces f, ClassicFireOrder o)
     {
         var p = new BattleParams { Ruleset = BattleRuleset.Classic, Tactic = t, TaskForces = f, FireOrder = o };
         var (r, _) = Run(p, new[] { (Corvette, 12) }, new[] { (Isd, 1) }, 9, alert: Alert(Fight, Fight));
         Assert.True(r.Seconds > 0);
-        Assert.True(r.AllianceRetreated || r.EmpireRetreated || r.AllianceLosses + r.EmpireLosses > 0);
+        Assert.True(r.CollectiveRetreated || r.HandRetreated || r.CollectiveLosses + r.HandLosses > 0);
     }
 
     // Corvettes against an ISD with the Game dice: a spread over seeds, only determinism asserted.
@@ -793,19 +793,19 @@ public class ClassicBattleTests
         Assert.Equal(Rates(n, 100), Rates(n, 100));
     }
 
-    internal static (int AllianceWins, int EmpireWins, int Draws, int AllianceRetreats, int EmpireRetreats, int Survivors) Rates(int corvettes, int battles)
+    internal static (int CollectiveWins, int HandWins, int Draws, int CollectiveRetreats, int HandRetreats, int Survivors) Rates(int corvettes, int battles)
     {
         int aw = 0, ew = 0, dr = 0, ar = 0, er = 0, surv = 0;
         var p = new BattleParams { Ruleset = BattleRuleset.Classic, BattleRng = ClassicBattleRng.Game };
         for (int s = 1; s <= battles; s++)
         {
             var (r, _) = QuickBattle.Run(p, Ships, new[] { (Corvette, corvettes) }, new[] { (Isd, 1) }, (ulong)s, alert: Alert(Fight, Fight));
-            if (r.AllianceOutcome == BattleOutcome.Victorious) aw++;
-            else if (r.EmpireOutcome == BattleOutcome.Victorious) ew++;
+            if (r.CollectiveOutcome == BattleOutcome.Victorious) aw++;
+            else if (r.HandOutcome == BattleOutcome.Victorious) ew++;
             else dr++;
-            if (r.AllianceRetreated) ar++;
-            if (r.EmpireRetreated) er++;
-            surv += r.AllianceSurvivors;
+            if (r.CollectiveRetreated) ar++;
+            if (r.HandRetreated) er++;
+            surv += r.CollectiveSurvivors;
         }
         return (aw, ew, dr, ar, er, surv);
     }

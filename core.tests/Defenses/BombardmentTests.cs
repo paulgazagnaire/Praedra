@@ -14,7 +14,7 @@ namespace Praedra.Core.Tests.Defenses;
 public class BombardmentTests
 {
     private const string Sys = BombWorld.Sys;
-    private static readonly Side Emp = Side.Empire, All = Side.Alliance;
+    private static readonly Side Emp = Side.Hand, All = Side.Collective;
     private const BombardCategory Mil = BombardCategory.Military, Civ = BombardCategory.Civilian, Gen = BombardCategory.General;
 
     private static BombardmentStarted Started(BombWorld w) => Assert.Single(w.Events<BombardmentStarted>());
@@ -129,8 +129,8 @@ public class BombardmentTests
             (Emp, "Tranches", 50), (Emp, "Proxies", 80), (Emp, "Lictors", 40),
         };
         var w = new BombWorld();
-        w.Hold(All);                                  // Fiducia: Alliance regiments, bombed by the Empire
-        w.Hold(Emp, 100, BombWorld.Imp);              // Charter: Empire regiments, bombed by the Alliance
+        w.Hold(All);                                  // Fiducia: Collective regiments, bombed by the Hand
+        w.Hold(Emp, 100, BombWorld.Imp);              // Charter: Hand regiments, bombed by the Collective
         int empFleet = w.Fleet(Emp, Sys, "Warrant");
         int allFleet = w.Fleet(All, BombWorld.Imp, "Dodger");
         foreach (var (side, cls, percent) in expect)
@@ -189,7 +189,7 @@ public class BombardmentTests
     public void B13_CivilianHitMovesSupportByMinus20()
     {
         var w = new BombWorld();
-        w.Hold(All, 45);                                   // Alliance 45, Empire 55
+        w.Hold(All, 45);                                   // Collective 45, Hand 55
         w.Eco.SetSlots(Sys, 2, 1);
         int mine = w.Eco.AddFacility(Sys, FacilityKind.Mine);
         int f = w.Fleet(Emp, Sys, "Warrant"); // P = 1
@@ -197,7 +197,7 @@ public class BombardmentTests
         Assert.Null(w.TryBombard(Emp, f, Sys, Civ));
         Assert.Null(w.Eco.Find(mine));
         var sc = Assert.Single(w.Events<SupportChanged>());
-        Assert.Equal((45, 65, SupportCause.Bombardment), (sc.Old, sc.New, sc.Cause)); // Empire 55 to 35
+        Assert.Equal((45, 65, SupportCause.Bombardment), (sc.Old, sc.New, sc.Cause)); // Hand 55 to 35
         Assert.Equal(35, w.Eco.SupportOf(Sys, Emp));
         var r = Assert.Single(w.Events<BombardmentResolved>());
         Assert.Equal((1, 0, 1, 0, 0), (r.Hits, r.Regiments, r.Facilities, r.Energy, r.Raw));
@@ -273,7 +273,7 @@ public class BombardmentTests
         Assert.Null(w.TryBombard(Emp, f, Sys, Civ));
         Assert.Null(w.Eco.Find(yard));
         var sc = Assert.Single(w.Events<SupportChanged>());
-        Assert.Equal(sc.Old + 20, sc.New);                 // the Empire loses 20: the Alliance share rises
+        Assert.Equal(sc.Old + 20, sc.New);                 // the Hand loses 20: the Collective share rises
         Assert.Null(w.Fleets.OwnerOf(Sys));
     }
 
@@ -292,7 +292,7 @@ public class BombardmentTests
         w.Run(1);
         Assert.Equal(RejectReason.InTransit, w.TryBombard(Emp, fl, Sys, Mil));
 
-        int a = w.Fleet(Emp, Sys, "Decree");                           // the Alliance fleet is at Fiducia too
+        int a = w.Fleet(Emp, Sys, "Decree");                           // the Collective fleet is at Fiducia too
         Assert.Equal(BombardReject.EnemyFleetPresent, w.TryBombard(Emp, a, Sys, Mil));
 
         var w2 = new BombWorld();

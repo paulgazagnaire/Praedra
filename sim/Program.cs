@@ -18,33 +18,33 @@ internal static class SimCli
 {
     private const string Usage = """
         Usage:
-          dotnet run --project sim -- move --fleet <name> --side <Alliance|Empire> --ships "<Class>:<n>[,<Class>:<n>...]"
+          dotnet run --project sim -- move --fleet <name> --side <Collective|Hand> --ships "<Class>:<n>[,<Class>:<n>...]"
                                            --from <System> --to <System>
                                            [--enemy "<Class>:<n>[,...]@<System>"]...   stationary fleets of the other side
-                                           [--owner "<System>=<Alliance|Empire>"]...   system owners (default: all neutral)
+                                           [--owner "<System>=<Collective|Hand>"]...   system owners (default: all neutral)
                                            [--trigger PaulRule|AnyArmedFleet|GravityWellShip]   (default PaulRule)
                                            [--days 40] [--seed 1]
           dotnet run --project sim -- economy [--days 360] [--seed 1] [--no-incidents]
           dotnet run --project sim -- build [--days 150] [--seed 1] [--picket-leaves <day>|never] [--no-forced-stop]
           dotnet run --project sim -- support [--days 360] [--seed 1] [--ruleset classic|new] [--reinforce-day 120]
-          dotnet run --project sim -- battle --alliance "<Class>:<n>[,...]" --empire "<Class>:<n>[,...]" [--battles 1000] [--seed 1] [--no-rolls] [--ruleset classic|new] [--carry]
-          dotnet run --project sim -- mission --kind <MissionKind> --agent "<Name>" [--agent ...] [--side Alliance|Empire] [--skills "esp=60,com=50,..."]
+          dotnet run --project sim -- battle --collective "<Class>:<n>[,...]" --hand "<Class>:<n>[,...]" [--battles 1000] [--seed 1] [--no-rolls] [--ruleset classic|new] [--carry]
+          dotnet run --project sim -- mission --kind <MissionKind> --agent "<Name>" [--agent ...] [--side Collective|Hand] [--skills "esp=60,com=50,..."]
                                               [--sf "<Class>:<n>[,...]"] [--ships "<Class>:<n>[,...]"] [--troops "<Class>:<n>[,...]"]
                                               [--officer "<Name>" [--officer-esp <n>]] [--target-agent "<Name>"] [--facility <Kind>[,<Kind>...]]
-                                              [--at Charter] [--owner Alliance|Empire|neutral] [--support 50] [--missions 1000] [--seed 1]
+                                              [--at Charter] [--owner Collective|Hand|neutral] [--support 50] [--missions 1000] [--seed 1]
           dotnet run --project sim -- campaign [--days 1000] [--seed 1] [--ruleset Classic|New]
-          dotnet run --project sim -- aivai [--days 730] [--seed 1] [--start meda|campaign] [--passive empire|alliance] [--trace] [--hq-unknown] [--fog] [--no-agents] [--empire-level L] [--alliance-level L] [--empire-params K=V,..] [--alliance-params K=V,..] [--hunt-log]
+          dotnet run --project sim -- aivai [--days 730] [--seed 1] [--start meda|campaign] [--passive hand|collective] [--trace] [--hq-unknown] [--fog] [--no-agents] [--hand-level L] [--collective-level L] [--hand-params K=V,..] [--collective-params K=V,..] [--hunt-log]
         aivai plays the simple AI (core/AI) on both sides from the new-game start (MedA, DEFAULT) or the test campaign, printing a yearly summary,
         battle, assault and capture counts, the winner (if any) and the AI's order and rejection counts. Without --fog the AIs see everything and
-        the Empire is told the Rebel HQ (unless --hq-unknown). --fog turns SimpleAiParams.UseFog on for both AIs: each reads only its side's
-        KnowledgeView (m5-fog-and-hq), and the Empire knows the HQ only once its own picture shows it. With fog the AIs scout, attack from
-        their last-seen pictures, the Empire hunts the HQ with a belief map and the Alliance moves it when it is at risk. --passive works with
-        --fog (e.g. --fog --passive alliance: the fogged Empire hunts a passive Alliance). --trace with --fog also prints the Empire's HQ belief.
+        the Hand is told the Hearth (unless --hq-unknown). --fog turns SimpleAiParams.UseFog on for both AIs: each reads only its side's
+        KnowledgeView (m5-fog-and-hq), and the Hand knows the HQ only once its own picture shows it. With fog the AIs scout, attack from
+        their last-seen pictures, the Hand hunts the HQ with a belief map and the Collective moves it when it is at risk. --passive works with
+        --fog (e.g. --fog --passive collective: the fogged Hand hunts a passive Collective). --trace with --fog also prints the Hand's HQ belief.
         The AIs use characters (fleet and system posts) and missions (SimpleAiParams.UseCharactersAndMissions, DEFAULT on); --no-agents turns
-        that off (the AI of before, byte for byte). --empire-level / --alliance-level (easy, medium, hard; core/AI/AiLevel.cs) play that side at a
-        difficulty level, fog on (AiLevels.For); --empire-params / --alliance-params set SimpleAiParams values on top (as in tourney; they turn --fog on). --hunt-log prints every Espionage and Reconnaissance the Empire starts and how it ends, next to the
-        true Rebel HQ of that day (a trainer's log; the AI never reads the truth). The report adds missions started and succeeded by side and kind, posts given, and the days
-        the Empire's own picture first showed (and later re-found) the Rebel HQ.
+        that off (the AI of before, byte for byte). --hand-level / --collective-level (easy, medium, hard; core/AI/AiLevel.cs) play that side at a
+        difficulty level, fog on (AiLevels.For); --hand-params / --collective-params set SimpleAiParams values on top (as in tourney; they turn --fog on). --hunt-log prints every Espionage and Reconnaissance the Hand starts and how it ends, next to the
+        true Hearth of that day (a trainer's log; the AI never reads the truth). The report adds missions started and succeeded by side and kind, posts given, and the days
+        the Hand's own picture first showed (and later re-found) the Hearth.
         battle runs N seeded battles (Classic: m4-battle-classic, New: m4-battle-new; --ruleset, DEFAULT new, Paul 2026-10-18) at a synthetic system where every retreat has a destination, and prints how often each
         side won or retreated, and the mean survivors. Battle k uses seed (seed + k - 1). --no-rolls turns the subsystem rolls off. --carry (New) puts squadrons aboard their side's carriers instead of basing them.
         mission runs N seeded missions (m5-missions) of one kind against a defended system and prints how often the first iteration succeeded,
@@ -52,12 +52,12 @@ internal static class SimCli
         incidents off. The team (--agent, --sf) stands at the target (--at), so it lands at once (no travel). Agents use their record's base skills
         (no variance) unless --skills sets them (keys dip, esp, ship, troop, fac, com, lead). Defenders belong to the other side: --ships form one
         fleet at the target (--officer is its Admiral, espionage --officer-esp), --troops are landed regiments, fighters or special forces.
-        --owner holds the target (DEFAULT the other side); --support is the Alliance popular support there. --target-agent places that enemy
+        --owner holds the target (DEFAULT the other side); --support is the Collective popular support there. --target-agent places that enemy
         character at the target (Rescue, Abduction, Assassination); --facility adds facilities (Sabotage).
         campaign runs the scripted two-sided TEST campaign (core/Setup/TestCampaign.cs, built through GameHost) and prints a yearly summary per side,
         the final state hash, the random draws and how long the run took.
         support runs the same demo with popular support, garrisons and uprisings on and prints the support events and a table every 30 days.
-        build runs a fixed demo: an Empire yard builds two fighters, a mine and two regiments; the regiments' delivery is held at a Rebel picket
+        build runs a fixed demo: a Hand yard builds two fighters, a mine and two regiments; the regiments' delivery is held at a Collective picket
         until the picket moves away (--picket-leaves <day>, default 100; "never" keeps it there). --no-forced-stop sets DeliveryForcedStop off.
         economy runs a fixed demo setup (four systems per side with mines and refineries) and prints each side's pools every 30 days.
         Ship classes are matched ignoring case; "CR90" and "CR90 Corvette" mean the Dodger, "ISD" the Mandate.
@@ -128,7 +128,7 @@ internal static class SimCli
                     if (p.Diverted) smuggled[p.Controller] = smuggled.GetValueOrDefault(p.Controller) + 1;
                 }
             if (day % 30 != 0 && day != days) continue;
-            foreach (var side in new[] { Side.Alliance, Side.Empire })
+            foreach (var side in new[] { Side.Collective, Side.Hand })
             {
                 int mines = eco.Objects.Count(o => o.Completed && o.Class == "Mine" && eco.OwnerOf(o) == side);
                 int refs = eco.Objects.Count(o => o.Completed && o.Class == "Refinery" && eco.OwnerOf(o) == side);
@@ -167,7 +167,7 @@ internal static class SimCli
         void Summary()
         {
             Console.WriteLine($"-- day {host.Game.Day}");
-            foreach (var side in new[] { Side.Empire, Side.Alliance }) Console.WriteLine("  " + SideStats.Of(host, side));
+            foreach (var side in new[] { Side.Hand, Side.Collective }) Console.WriteLine("  " + SideStats.Of(host, side));
         }
         Summary();
         while (host.Game.Day < days)
@@ -203,12 +203,12 @@ internal static class SimCli
             }
         }
         var host = NewGame.Create(GameData.Default, new NewGameOptions { Seed = seed, Preset = preset });
-        Console.WriteLine($"New game: preset {StartPresets.Key(preset)} (player {StartPresets.PlayerSide(preset)}), seed {seed}, {days} days. Rebel HQ: {host.HqSystem}.");
+        Console.WriteLine($"New game: preset {StartPresets.Key(preset)} (player {StartPresets.PlayerSide(preset)}), seed {seed}, {days} days. Hearth: {host.HqSystem}.");
         PrintCast(host);
         void Summary()
         {
             Console.WriteLine($"-- day {host.Game.Day}");
-            foreach (var side in new[] { Side.Empire, Side.Alliance }) Console.WriteLine("  " + SideStats.Of(host, side));
+            foreach (var side in new[] { Side.Hand, Side.Collective }) Console.WriteLine("  " + SideStats.Of(host, side));
         }
         Summary();
         while (host.Game.Day < days && host.Victory.Winner == null)
@@ -227,7 +227,7 @@ internal static class SimCli
     private static void PrintCast(GameHost host)
     {
         var ch = host.Characters;
-        foreach (var side in new[] { Side.Empire, Side.Alliance })
+        foreach (var side in new[] { Side.Hand, Side.Collective })
         {
             var placed = ch.InPlay.Where(c => c.Side == side).Select(c =>
             {
@@ -245,7 +245,7 @@ internal static class SimCli
         var r = host.Research;
         string Of(Side s) => $"{s} " + string.Join(", ", Praedra.Core.Research.ResearchModule.Kinds.Select(k =>
             $"{k} {r.Level(s, k)}{(r.Exhausted(s, k) ? " (done)" : "")} +{r.Points(s, k)}"));
-        return $"Research (level +points): {Of(Side.Alliance)}; {Of(Side.Empire)}. Unlocks: {host.Game.Events.OfType<Praedra.Core.Research.ResearchLevelReached>().Count()}.";
+        return $"Research (level +points): {Of(Side.Collective)}; {Of(Side.Hand)}. Unlocks: {host.Game.Events.OfType<Praedra.Core.Research.ResearchLevelReached>().Count()}.";
     }
 
     // AI vs AI: the simple AI on both sides. Reads state and events; the AIs draw nothing from the game generator. Runtime is the runner's own clock.
@@ -263,14 +263,14 @@ internal static class SimCli
                 case "--seed": seed = ulong.TryParse(Next(), out var s) ? s : throw new ArgumentException("--seed must be a non-negative integer."); break;
                 case "--trace": trace = true; break;
                 case "--hunt-log": huntLog = true; break;
-                case "--empire-params": empParams = Next(); fog = true; break;
-                case "--alliance-params": allParams = Next(); fog = true; break;
+                case "--hand-params": empParams = Next(); fog = true; break;
+                case "--collective-params": allParams = Next(); fog = true; break;
                 case "--hq-unknown": hqKnown = false; break;
                 case "--fog": fog = true; break;
                 case "--no-agents": agents = false; break;
-                case "--empire-level": empLevel = Praedra.Core.AI.AiLevels.Parse(Next()) ?? throw new ArgumentException("--empire-level must be easy, medium or hard."); fog = true; break;
-                case "--alliance-level": allLevel = Praedra.Core.AI.AiLevels.Parse(Next()) ?? throw new ArgumentException("--alliance-level must be easy, medium or hard."); fog = true; break;
-                case "--passive": passive = Next().ToLowerInvariant() switch { "empire" => Side.Empire, "alliance" => Side.Alliance, "none" => null, _ => throw new ArgumentException("--passive must be empire, alliance or none.") }; break;
+                case "--hand-level": empLevel = Praedra.Core.AI.AiLevels.Parse(Next()) ?? throw new ArgumentException("--hand-level must be easy, medium or hard."); fog = true; break;
+                case "--collective-level": allLevel = Praedra.Core.AI.AiLevels.Parse(Next()) ?? throw new ArgumentException("--collective-level must be easy, medium or hard."); fog = true; break;
+                case "--passive": passive = Next().ToLowerInvariant() switch { "hand" => Side.Hand, "collective" => Side.Collective, "none" => null, _ => throw new ArgumentException("--passive must be hand, collective or none.") }; break;
                 case "--start": start = Next().ToLowerInvariant(); if (start is not ("meda" or "campaign")) throw new ArgumentException("--start must be meda or campaign."); break;
                 default: throw new ArgumentException($"Unknown option '{key}'.");
             }
@@ -281,49 +281,49 @@ internal static class SimCli
         Praedra.Core.AI.SimpleAiParams? Level(Praedra.Core.AI.AiLevel? l) => l is { } v ? Praedra.Core.AI.AiLevels.For(v, aiParams) : aiParams;
         var match = new Praedra.Core.AI.AiMatch(host, Tourney.WithOverrides(Level(empLevel) ?? new() { UseFog = fog, UseCharactersAndMissions = agents }, empParams),
                                                   Tourney.WithOverrides(Level(allLevel) ?? new() { UseFog = fog, UseCharactersAndMissions = agents }, allParams), passive: passive);
-        if (!fog && hqKnown && start == "meda" && host.HqSystem != null) match.Empire.KnownEnemyHq = host.HqSystem; // without fog the Empire is told the Rebel HQ (DEFAULT)
+        if (!fog && hqKnown && start == "meda" && host.HqSystem != null) match.Hand.KnownEnemyHq = host.HqSystem; // without fog the Hand is told the Hearth (DEFAULT)
         Console.WriteLine($"AI vs AI: {days} days, seed {seed}, start {start}{(passive is Side ps ? $", {ps} passive (gives no orders)" : "")}. " +
                           (fog ? "Fog of war: each AI reads only its side's knowledge." : "The AIs see everything (fog off)."));
         void Summary()
         {
             Console.WriteLine($"-- day {host.Game.Day}");
-            foreach (var side in new[] { Side.Empire, Side.Alliance }) Console.WriteLine("  " + SideStats.Of(host, side));
+            foreach (var side in new[] { Side.Hand, Side.Collective }) Console.WriteLine("  " + SideStats.Of(host, side));
         }
         Summary();
         // battles by the holder of the system right after the Step that fought them (the attacker is the other side; neutral = open space)
-        int battlesAtEmpire = 0, battlesAtAlliance = 0, battlesAtNeutral = 0, scanned = host.Game.Events.Count;
-        // the Empire's own picture of the HQ, day by day: the first day it showed the HQ, and every later day it showed another (moved) HQ system
+        int battlesAtHand = 0, battlesAtCollective = 0, battlesAtNeutral = 0, scanned = host.Game.Events.Count;
+        // the Hand's own picture of the HQ, day by day: the first day it showed the HQ, and every later day it showed another (moved) HQ system
         int traced = host.Game.Events.Count;
-        var hqFinds = new List<string>(); string? lastKnown = host.Fog.KnownHq(Side.Empire)?.System;
+        var hqFinds = new List<string>(); string? lastKnown = host.Fog.KnownHq(Side.Hand)?.System;
         while (host.Game.Day < days && host.Victory.Winner == null)
         {
             match.Step();
-            if (host.Fog.KnownHq(Side.Empire)?.System is { } kh && kh != lastKnown) hqFinds.Add($"day {host.Game.Day} {kh}{(kh == host.HqSystem ? "" : " (stale)")}");
-            lastKnown = host.Fog.KnownHq(Side.Empire)?.System;
+            if (host.Fog.KnownHq(Side.Hand)?.System is { } kh && kh != lastKnown) hqFinds.Add($"day {host.Game.Day} {kh}{(kh == host.HqSystem ? "" : " (stale)")}");
+            lastKnown = host.Fog.KnownHq(Side.Hand)?.System;
             for (var evs = host.Game.Events; scanned < evs.Count; scanned++)
                 if (evs[scanned] is Praedra.Core.Battle.BattleEnded be)
-                    switch (host.Fleets.OwnerOf(be.Result.System)) { case Side.Empire: battlesAtEmpire++; break; case Side.Alliance: battlesAtAlliance++; break; default: battlesAtNeutral++; break; }
-            if (trace && host.Game.Day % 50 == 0) foreach (var ai in new[] { match.Empire, match.Alliance }) if (ai.Side != passive) Console.WriteLine("  d" + host.Game.Day + " " + ai.Status());
-            if (trace && fog && host.Game.Day % 50 == 0 && passive != Side.Empire)
+                    switch (host.Fleets.OwnerOf(be.Result.System)) { case Side.Hand: battlesAtHand++; break; case Side.Collective: battlesAtCollective++; break; default: battlesAtNeutral++; break; }
+            if (trace && host.Game.Day % 50 == 0) foreach (var ai in new[] { match.Hand, match.Collective }) if (ai.Side != passive) Console.WriteLine("  d" + host.Game.Day + " " + ai.Status());
+            if (trace && fog && host.Game.Day % 50 == 0 && passive != Side.Hand)
             {
-                var b = match.Empire.HqBelief();
-                Console.WriteLine($"  d{host.Game.Day} Empire HQ belief ({b.Count} candidates): " + string.Join(", ", b.Take(8).Select(t => $"{t.System} {t.Weight}")) +
-                                  (host.HqSystem is { } hq ? $"; true HQ {hq} rank {b.ToList().FindIndex(t => t.System == hq) + 1}, search rank {match.Empire.HqSearchRank(hq)}" : ""));
+                var b = match.Hand.HqBelief();
+                Console.WriteLine($"  d{host.Game.Day} Hand HQ belief ({b.Count} candidates): " + string.Join(", ", b.Take(8).Select(t => $"{t.System} {t.Weight}")) +
+                                  (host.HqSystem is { } hq ? $"; true HQ {hq} rank {b.ToList().FindIndex(t => t.System == hq) + 1}, search rank {match.Hand.HqSearchRank(hq)}" : ""));
             }
             if (trace) for (int k = traced; k < host.Game.Events.Count; k++)
-                if (host.Game.Events[k] is Praedra.Core.Battle.BattleEnded tb) Console.WriteLine($"  d{tb.Day} battle at {tb.Result.System}: Alliance {tb.Result.Alliance} (lost {tb.Result.AllianceLosses}), Empire {tb.Result.Empire} (lost {tb.Result.EmpireLosses})");
+                if (host.Game.Events[k] is Praedra.Core.Battle.BattleEnded tb) Console.WriteLine($"  d{tb.Day} battle at {tb.Result.System}: Collective {tb.Result.Collective} (lost {tb.Result.CollectiveLosses}), Hand {tb.Result.Hand} (lost {tb.Result.HandLosses})");
                 else if (host.Game.Events[k] is Praedra.Core.Battle.FleetRetreated tr) Console.WriteLine($"  d{tr.Day} fleet {tr.Fleet} retreats {tr.From} -> {tr.To}");
             traced = host.Game.Events.Count;
-            if (trace) foreach (var ai in new[] { match.Empire, match.Alliance }) foreach (var o in ai.Submitted) Console.WriteLine($"  d{host.Game.Day - 1} {ai.Side} {o.Kind}: {o.Detail}");
+            if (trace) foreach (var ai in new[] { match.Hand, match.Collective }) foreach (var o in ai.Submitted) Console.WriteLine($"  d{host.Game.Day - 1} {ai.Side} {o.Kind}: {o.Detail}");
             if (huntLog)
             {
-                // the Empire's HQ looks: every Espionage or Reconnaissance it starts and how it ends, against the true HQ of that day (truth: a log only)
+                // the Hand's HQ looks: every Espionage or Reconnaissance it starts and how it ends, against the true HQ of that day (truth: a log only)
                 for (var evs = host.Game.Events; hunted < evs.Count; hunted++)
                 {
                     string hq = host.HqSystem ?? "(moving)";
-                    if (evs[hunted] is Praedra.Core.Missions.MissionStarted ms && ms.Side == Side.Empire && ms.MissionKind is Praedra.Core.Missions.MissionKind.Espionage or Praedra.Core.Missions.MissionKind.Reconnaissance)
+                    if (evs[hunted] is Praedra.Core.Missions.MissionStarted ms && ms.Side == Side.Hand && ms.MissionKind is Praedra.Core.Missions.MissionKind.Espionage or Praedra.Core.Missions.MissionKind.Reconnaissance)
                         Console.WriteLine($"  hunt d{ms.Day} start {ms.MissionKind} {ms.Home} -> {ms.Target} (arrives d{ms.ArrivalDay}; {ms.Characters.Items.Count} characters, {ms.SpecialForces.Items.Count} special forces); true HQ {hq}{(ms.Target == hq ? " <== HQ" : "")}");
-                    else if (evs[hunted] is Praedra.Core.Missions.MissionEnded me && me.Side == Side.Empire && me.MissionKind is Praedra.Core.Missions.MissionKind.Espionage or Praedra.Core.Missions.MissionKind.Reconnaissance)
+                    else if (evs[hunted] is Praedra.Core.Missions.MissionEnded me && me.Side == Side.Hand && me.MissionKind is Praedra.Core.Missions.MissionKind.Espionage or Praedra.Core.Missions.MissionKind.Reconnaissance)
                         Console.WriteLine($"  hunt d{me.Day} end {me.MissionKind} at {me.Target}: {me.Outcome}; true HQ {hq}{(me.Target == hq ? " <== HQ" : "")}; regiments there {host.Troops.RegimentsOnSystem(me.Target).Count}");
                     else if (evs[hunted] is Praedra.Core.Fog.HqDeparted hd) Console.WriteLine($"  hunt d{hd.Day} HQ leaves {hd.From} for {hd.Path.Items[^1]}");
                 }
@@ -335,13 +335,13 @@ internal static class SimCli
         var ev = host.Game.Events;
         Console.WriteLine($"Battles: {ev.OfType<Praedra.Core.Battle.BattleEnded>().Count()}. Bombardments: {ev.OfType<Praedra.Core.Defenses.BombardmentResolved>().Count()}. " +
                           $"Assaults: {ev.OfType<Praedra.Core.Assault.AssaultResolved>().Count()} (won {ev.OfType<Praedra.Core.Assault.AssaultResolved>().Count(e => e.Result == "Won")}). " +
-                          $"Captures: {ev.OfType<Praedra.Core.Control.SystemCaptured>().Count()} (Empire {ev.OfType<Praedra.Core.Control.SystemCaptured>().Count(e => e.To == Side.Empire)}, Alliance {ev.OfType<Praedra.Core.Control.SystemCaptured>().Count(e => e.To == Side.Alliance)}).");
+                          $"Captures: {ev.OfType<Praedra.Core.Control.SystemCaptured>().Count()} (Hand {ev.OfType<Praedra.Core.Control.SystemCaptured>().Count(e => e.To == Side.Hand)}, Collective {ev.OfType<Praedra.Core.Control.SystemCaptured>().Count(e => e.To == Side.Collective)}).");
         {
             var be = ev.OfType<Praedra.Core.Battle.BattleEnded>().ToList();
-            Console.WriteLine($"Battles by place: at Empire-held systems (Alliance attacking) {battlesAtEmpire}, at Alliance-held (Empire attacking) {battlesAtAlliance}, " +
-                              $"at neutral {battlesAtNeutral}. Ships lost in battle: Empire {be.Sum(b => b.Result.EmpireLosses)}, Alliance {be.Sum(b => b.Result.AllianceLosses)}. " +
-                              $"Alliance systems taken by the Empire {ev.OfType<Praedra.Core.Control.SystemCaptured>().Count(e => e.From == Side.Alliance && e.To == Side.Empire)}, " +
-                              $"Empire systems taken by the Alliance {ev.OfType<Praedra.Core.Control.SystemCaptured>().Count(e => e.From == Side.Empire && e.To == Side.Alliance)}. " +
+            Console.WriteLine($"Battles by place: at Hand-held systems (Collective attacking) {battlesAtHand}, at Collective-held (Hand attacking) {battlesAtCollective}, " +
+                              $"at neutral {battlesAtNeutral}. Ships lost in battle: Hand {be.Sum(b => b.Result.HandLosses)}, Collective {be.Sum(b => b.Result.CollectiveLosses)}. " +
+                              $"Collective systems taken by the Hand {ev.OfType<Praedra.Core.Control.SystemCaptured>().Count(e => e.From == Side.Collective && e.To == Side.Hand)}, " +
+                              $"Hand systems taken by the Collective {ev.OfType<Praedra.Core.Control.SystemCaptured>().Count(e => e.From == Side.Hand && e.To == Side.Collective)}. " +
                               $"HQ moves: {ev.OfType<Praedra.Core.Fog.HqDeparted>().Count()}.");
         }
         {
@@ -353,15 +353,15 @@ internal static class SimCli
                 if (e is Praedra.Core.Battle.FleetRetreated fr) pending.Add(fr);
                 else if (e is Praedra.Core.Battle.BattleEnded b2)
                 {
-                    bool noLoss = b2.Result.AllianceLosses == 0 && b2.Result.EmpireLosses == 0;
+                    bool noLoss = b2.Result.CollectiveLosses == 0 && b2.Result.HandLosses == 0;
                     foreach (var fr2 in pending)
                     {
-                        var rs = b2.Result.Alliance == Praedra.Core.Battle.BattleOutcome.Retreated ? Side.Alliance : Side.Empire;
+                        var rs = b2.Result.Collective == Praedra.Core.Battle.BattleOutcome.Retreated ? Side.Collective : Side.Hand;
                         if (noLoss) lossless.Add((b2.Day, fr2.Fleet, rs));
                     }
                     pending.Clear();
                 }
-            foreach (var side in new[] { Side.Empire, Side.Alliance })
+            foreach (var side in new[] { Side.Hand, Side.Collective })
             {
                 var mine = lossless.Where(t => t.Side == side).ToList();
                 int chaseDays = 0, longest = 0;
@@ -378,11 +378,11 @@ internal static class SimCli
             }
         }
         Console.WriteLine(host.Victory.Winner is Side w ? $"Winner: {w} on day {host.Game.Day} ({host.Victory.Reason})." : $"No winner after {host.Game.Day} days.");
-        var known = host.Fog.KnownHq(Side.Empire);
-        Console.WriteLine($"Rebel HQ: {host.HqSystem ?? "none"}; Empire's picture of it: {(known == null ? "unknown" : $"{known.System} (seen day {known.Stamp})")}. " +
-                          $"Explored systems: Empire {host.Data.Galaxy.Systems.Count(s => host.Fog.IsExplored(Side.Empire, s.Name))}, Alliance {host.Data.Galaxy.Systems.Count(s => host.Fog.IsExplored(Side.Alliance, s.Name))}.");
-        Console.WriteLine($"Empire learned the HQ: {(hqFinds.Count == 0 ? "never" : string.Join("; ", hqFinds))}.");
-        foreach (var side in new[] { Side.Empire, Side.Alliance })
+        var known = host.Fog.KnownHq(Side.Hand);
+        Console.WriteLine($"Hearth: {host.HqSystem ?? "none"}; Hand's picture of it: {(known == null ? "unknown" : $"{known.System} (seen day {known.Stamp})")}. " +
+                          $"Explored systems: Hand {host.Data.Galaxy.Systems.Count(s => host.Fog.IsExplored(Side.Hand, s.Name))}, Collective {host.Data.Galaxy.Systems.Count(s => host.Fog.IsExplored(Side.Collective, s.Name))}.");
+        Console.WriteLine($"Hand learned the HQ: {(hqFinds.Count == 0 ? "never" : string.Join("; ", hqFinds))}.");
+        foreach (var side in new[] { Side.Hand, Side.Collective })
         {
             var parts = ev.OfType<MissionStarted>().Where(e => e.Side == side && e.MissionKind != MissionKind.Move).GroupBy(e => e.MissionKind).OrderBy(g => g.Key).Select(g =>
             {
@@ -410,7 +410,7 @@ internal static class SimCli
         return 0;
     }
 
-    // Support demo (engine/04, package P2.3). Reads state and events; draws nothing itself. At --reinforce-day eight Alliance
+    // Support demo (engine/04, package P2.3). Reads state and events; draws nothing itself. At --reinforce-day eight Collective
     // regiments land on The Moorings (a setup-time action between Steps, as the construction package will do through orders later).
     private static int Support(string[] a)
     {
@@ -433,19 +433,19 @@ internal static class SimCli
         sup.Ruleset = ruleset;
         string[] watch = { "The Moorings", "Drift Harbour", "Classis", "Incus", "Charter" };
         Console.WriteLine($"Support demo: {days} days, seed {seed}, ruleset {ruleset}, reinforcements on day {reinforce}. Economy incidents off.");
-        Console.WriteLine("Support is the Alliance share (0..100); N = required garrison, G = regiments there (tenths in New).");
+        Console.WriteLine("Support is the Collective share (0..100); N = required garrison, G = regiments there (tenths in New).");
         Console.WriteLine();
         int printed = 0;
         void Table()
         {
             Console.WriteLine($"-- day {game.Day}");
-            Console.WriteLine("   system        holder    Alliance  holder  N   G     uprising");
+            Console.WriteLine("   system        holder    Collective  holder  N   G     uprising");
             foreach (var sys in watch)
             {
                 var holder = fleets.OwnerOf(sys)!.Value;
                 int n = sup.RequiredGarrison(sys);
                 string g = ruleset == GarrisonRuleset.New ? $"{sup.Garrison10(sys) / 10}.{sup.Garrison10(sys) % 10}" : $"{sup.RegimentCount(sys)}";
-                Console.WriteLine($"   {sys,-13} {holder,-9} {eco.SupportOf(sys, Side.Alliance),8} {eco.SupportOf(sys, holder),7} {n,2}  {g,-4}  {(sup.IsUprising(sys) ? "ON" : "-")}");
+                Console.WriteLine($"   {sys,-13} {holder,-9} {eco.SupportOf(sys, Side.Collective),8} {eco.SupportOf(sys, holder),7} {n,2}  {g,-4}  {(sup.IsUprising(sys) ? "ON" : "-")}");
             }
         }
         Table();
@@ -453,8 +453,8 @@ internal static class SimCli
         {
             if (day == reinforce)
             {
-                for (int k = 0; k < 8; k++) eco.AddObject(Side.Alliance, "Militia", "The Moorings");
-                Console.WriteLine($"Day {game.Day}: 8 Alliance Army Regiments land on The Moorings.");
+                for (int k = 0; k < 8; k++) eco.AddObject(Side.Collective, "Militia", "The Moorings");
+                Console.WriteLine($"Day {game.Day}: 8 Collective Army Regiments land on The Moorings.");
             }
             game.Step();
             for (; printed < game.Events.Count; printed++)
@@ -502,13 +502,13 @@ internal static class SimCli
         demo.Construction.DeliveryForcedStop = forcedStop;
         var game = demo.Game; var eco = demo.Economy;
         Console.WriteLine($"Build demo: {days} days, seed {seed}, DeliveryForcedStop {(forcedStop ? "on" : "off")}.");
-        Console.WriteLine($"Empire yards at {BuildDemo.HomeSystem}: Orbital Shipyard, Training Facility, 2 Construction Yards; refined 1000 and two mine and refinery pairs.");
-        Console.WriteLine($"Regiments go {string.Join(" -> ", demo.RegimentPath)}; a Rebel picket waits at {demo.PicketAt}{(leaves is int l2 ? $" and moves to {demo.PicketMovesTo} on day {l2}" : " and stays")}.");
+        Console.WriteLine($"Hand yards at {BuildDemo.HomeSystem}: Orbital Shipyard, Training Facility, 2 Construction Yards; refined 1000 and two mine and refinery pairs.");
+        Console.WriteLine($"Regiments go {string.Join(" -> ", demo.RegimentPath)}; a Collective picket waits at {demo.PicketAt}{(leaves is int l2 ? $" and moves to {demo.PicketMovesTo} on day {l2}" : " and stays")}.");
         Console.WriteLine();
         int printed = 0;
         for (int day = 0; day < days; day++)
         {
-            if (leaves == day) demo.Fleets.SubmitMove(Side.Alliance, demo.Picket, demo.PicketMovesTo);
+            if (leaves == day) demo.Fleets.SubmitMove(Side.Collective, demo.Picket, demo.PicketMovesTo);
             game.Step();
             for (; printed < game.Events.Count; printed++)
             {
@@ -526,13 +526,13 @@ internal static class SimCli
                     DeliveryArrived x => $"delivery {x.Delivery}: {x.Class} (object {x.Object}) arrives at {x.System}",
                     DeliveryRefused x => $"delivery {x.Delivery}: {x.Class} refused at {x.System}, refund {x.Refund}",
                     ObjectScrapped s => $"object {s.Object} ({s.Class}) scrapped ({s.Reason}), refund {s.Refund}",
-                    FleetDeparted f => $"Rebel picket leaves {f.From}",
+                    FleetDeparted f => $"Collective picket leaves {f.From}",
                     _ => null,
                 };
                 if (line != null) Console.WriteLine($"Day {e.Day}: {line}");
             }
             if ((game.Day % 30 == 0 && game.Day > 0) || game.Day == days)
-                Console.WriteLine($"  -- day {game.Day}: Empire refined {eco.Refined(Side.Empire)}, load {eco.Load(Side.Empire)}, capacity {eco.Capacity(Side.Empire)}, projects {game.State.Construction.AllProjects().Count}, deliveries {game.State.Construction.Deliveries.Count}, refined line {demo.Construction.RefinedLine(Side.Empire).Count}");
+                Console.WriteLine($"  -- day {game.Day}: Hand refined {eco.Refined(Side.Hand)}, load {eco.Load(Side.Hand)}, capacity {eco.Capacity(Side.Hand)}, projects {game.State.Construction.AllProjects().Count}, deliveries {game.State.Construction.Deliveries.Count}, refined line {demo.Construction.RefinedLine(Side.Hand).Count}");
         }
         Console.WriteLine();
         int built = game.Events.OfType<UnitCompleted>().Count();
@@ -557,7 +557,7 @@ internal static class SimCli
         var fleets = FleetModule.Attach(game, galaxy, ships, blockade, o.Trigger);
         foreach (var (system, side) in o.Owners) fleets.SetOwner(Canonical(galaxy, system), side);
 
-        Side enemySide = o.Side == Side.Empire ? Side.Alliance : Side.Empire;
+        Side enemySide = o.Side == Side.Hand ? Side.Collective : Side.Hand;
         string from = Canonical(galaxy, o.From), to = Canonical(galaxy, o.To);
         int mover = AddFleet(fleets, ships, o.Side, o.FleetName, o.Ships, from);
         int n = 0;
@@ -605,15 +605,15 @@ internal static class SimCli
     private static int Battle(string[] a)
     {
         int battles = 1000; ulong seed = 1; bool rolls = true, carry = false; var ruleset = new BattleParams().Ruleset; // DEFAULT New (m4-battle-new; Paul 2026-10-18)
-        List<(string, int)>? alliance = null, empire = null;
+        List<(string, int)>? collective = null, hand = null;
         for (int i = 0; i < a.Length; i++)
         {
             string key = a[i];
             string Next() => ++i < a.Length ? a[i] : throw new ArgumentException($"{key} needs a value.");
             switch (key)
             {
-                case "--alliance": alliance = Options.ParseShipList(Next()); break;
-                case "--empire": empire = Options.ParseShipList(Next()); break;
+                case "--collective": collective = Options.ParseShipList(Next()); break;
+                case "--hand": hand = Options.ParseShipList(Next()); break;
                 case "--battles": battles = int.TryParse(Next(), out var n) && n > 0 ? n : throw new ArgumentException("--battles must be a positive integer."); break;
                 case "--seed": seed = ulong.TryParse(Next(), out var s) ? s : throw new ArgumentException("--seed must be a non-negative integer."); break;
                 case "--no-rolls": rolls = false; break;
@@ -622,28 +622,28 @@ internal static class SimCli
                 default: throw new ArgumentException($"Unknown option '{key}'.");
             }
         }
-        if (alliance == null || empire == null) throw new ArgumentException("--alliance and --empire are required.");
+        if (collective == null || hand == null) throw new ArgumentException("--collective and --hand are required.");
         var ships = GameData.Default.Ships;
-        var al = alliance.Select(x => (ResolveClass(ships, x.Item1), x.Item2)).ToList();
-        var em = empire.Select(x => (ResolveClass(ships, x.Item1), x.Item2)).ToList();
+        var al = collective.Select(x => (ResolveClass(ships, x.Item1), x.Item2)).ToList();
+        var em = hand.Select(x => (ResolveClass(ships, x.Item1), x.Item2)).ToList();
         var p = new BattleParams { SubsystemRolls = rolls, Ruleset = ruleset };
         int aWin = 0, eWin = 0, none = 0, aRet = 0, eRet = 0; long aSurv = 0, eSurv = 0, secs = 0;
         for (int k = 0; k < battles; k++)
         {
             var (r, _) = QuickBattle.Run(p, ships, al, em, seed + (ulong)k, carry: carry);
-            if (r.AllianceOutcome == BattleOutcome.Victorious) aWin++; else if (r.EmpireOutcome == BattleOutcome.Victorious) eWin++; else none++;
-            if (r.AllianceRetreated) aRet++;
-            if (r.EmpireRetreated) eRet++;
-            aSurv += r.AllianceSurvivors; eSurv += r.EmpireSurvivors; secs += r.Seconds;
+            if (r.CollectiveOutcome == BattleOutcome.Victorious) aWin++; else if (r.HandOutcome == BattleOutcome.Victorious) eWin++; else none++;
+            if (r.CollectiveRetreated) aRet++;
+            if (r.HandRetreated) eRet++;
+            aSurv += r.CollectiveSurvivors; eSurv += r.HandSurvivors; secs += r.Seconds;
         }
         string Pct(int n) => (100.0 * n / battles).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + "%";
         string Mean(long n) => ((double)n / battles).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
         Console.WriteLine($"{battles} {ruleset} battles, seeds {seed}..{seed + (ulong)battles - 1}, subsystem rolls {(rolls ? "on" : "off")}");
-        Console.WriteLine($"Alliance ({string.Join(", ", al.Select(x => $"{x.Item2} x {x.Item1}"))})");
-        Console.WriteLine($"Empire   ({string.Join(", ", em.Select(x => $"{x.Item2} x {x.Item1}"))})");
-        Console.WriteLine($"  Alliance wins {aWin} ({Pct(aWin)}), Empire wins {eWin} ({Pct(eWin)}), no winner {none} ({Pct(none)})");
-        Console.WriteLine($"  Alliance retreated {aRet} ({Pct(aRet)}), Empire retreated {eRet} ({Pct(eRet)})");
-        Console.WriteLine($"  mean survivors: Alliance {Mean(aSurv)}, Empire {Mean(eSurv)}; mean length {Mean(secs)} s");
+        Console.WriteLine($"Collective ({string.Join(", ", al.Select(x => $"{x.Item2} x {x.Item1}"))})");
+        Console.WriteLine($"Hand   ({string.Join(", ", em.Select(x => $"{x.Item2} x {x.Item1}"))})");
+        Console.WriteLine($"  Collective wins {aWin} ({Pct(aWin)}), Hand wins {eWin} ({Pct(eWin)}), no winner {none} ({Pct(none)})");
+        Console.WriteLine($"  Collective retreated {aRet} ({Pct(aRet)}), Hand retreated {eRet} ({Pct(eRet)})");
+        Console.WriteLine($"  mean survivors: Collective {Mean(aSurv)}, Hand {Mean(eSurv)}; mean length {Mean(secs)} s");
         return 0;
     }
 
@@ -652,7 +652,7 @@ internal static class SimCli
     private static int MissionCmd(string[] a)
     {
         int missions = 1000, support = 50; ulong seed = 1; int? officerEsp = null;
-        MissionKind? kind = null; Side side = Side.Alliance; string at = "Charter", ownerArg = "";
+        MissionKind? kind = null; Side side = Side.Collective; string at = "Charter", ownerArg = "";
         var agents = new List<string>(); var skills = new SortedDictionary<Skill, int>();
         List<(string, int)> sfs = new(), ships = new(), troops = new(); string? officer = null, targetAgent = null; var facilities = new List<FacilityKind>();
         for (int i = 0; i < a.Length; i++)
@@ -662,7 +662,7 @@ internal static class SimCli
             switch (key)
             {
                 case "--kind": kind = Enum.TryParse<MissionKind>(Next(), true, out var k) && Enum.IsDefined(k) ? k : throw new ArgumentException($"--kind must be one of {string.Join(", ", Enum.GetNames<MissionKind>())}."); break;
-                case "--side": side = Enum.TryParse<Side>(Next(), true, out var sd) && Enum.IsDefined(sd) ? sd : throw new ArgumentException("--side must be Alliance or Empire."); break;
+                case "--side": side = Enum.TryParse<Side>(Next(), true, out var sd) && Enum.IsDefined(sd) ? sd : throw new ArgumentException("--side must be Collective or Hand."); break;
                 case "--agent": agents.Add(Next()); break;
                 case "--skills":
                     foreach (var part in Next().Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
@@ -700,11 +700,11 @@ internal static class SimCli
         if (officer != null && ships.Count == 0) throw new ArgumentException("--officer needs --ships (the officer is the defending fleet's Admiral).");
         var data = GameData.Default;
         at = Canonical(data.Galaxy, at);
-        Side enemy = side == Side.Alliance ? Side.Empire : Side.Alliance;
+        Side enemy = side == Side.Collective ? Side.Hand : Side.Collective;
         Side? owner = ownerArg.ToLowerInvariant() switch
         {
-            "" => enemy, "alliance" => Side.Alliance, "empire" => Side.Empire, "neutral" or "none" => null,
-            _ => throw new ArgumentException("--owner must be Alliance, Empire or neutral."),
+            "" => enemy, "collective" => Side.Collective, "hand" => Side.Hand, "neutral" or "none" => null,
+            _ => throw new ArgumentException("--owner must be Collective, Hand or neutral."),
         };
         CharacterClass Char(string name, Side want)
         {
@@ -727,7 +727,7 @@ internal static class SimCli
             var host = GameHost.New(seed + (ulong)r, settings, data);
             var ch = host.Characters;
             host.Fleets.SetOwner(at, owner);
-            host.Economy.SetAllianceSupport(at, support);
+            host.Economy.SetCollectiveSupport(at, support);
             CharacterRecord Make(CharacterClass cls)
             {
                 var c = ch.Get(cls.Id) ?? ch.Create(cls, new GameRng(0));
@@ -780,7 +780,7 @@ internal static class SimCli
         if (rejected != null) { Console.WriteLine($"StartMission was refused: {rejected}"); return 3; }
         string Pct(int x) => (100.0 * x / missions).ToString("0.0", inv) + "%";
         string Avg(long sum, int count) => count == 0 ? "-" : ((double)sum / count).ToString("0.0", inv) + "%";
-        Console.WriteLine($"{missions} {kind} missions by the {side} at {at} (owner {(owner?.ToString() ?? "neutral")}, Alliance support {support}), seeds {seed}..{seed + (ulong)missions - 1}");
+        Console.WriteLine($"{missions} {kind} missions by the {side} at {at} (owner {(owner?.ToString() ?? "neutral")}, Collective support {support}), seeds {seed}..{seed + (ulong)missions - 1}");
         Console.WriteLine($"  team: {string.Join(", ", team.Select(c => c.Name).Concat(sfs.Select(x => $"{x.Item2} x {x.Item1}")))}");
         Console.WriteLine($"  defenders: {(ships.Count + troops.Count == 0 ? "none" : string.Join(", ", ships.Concat(troops).Select(x => $"{x.Item2} x {x.Item1}")))}{(officerClass != null ? $"; Admiral {officerClass.Name}" : "")}");
         Console.WriteLine($"  first iteration: succeeded {ok} ({Pct(ok)}), failed {failed} ({Pct(failed)}), foiled {foiled} ({Pct(foiled)}){(ended > 0 ? $", ended without a roll {ended} ({Pct(ended)})" : "")}");
@@ -803,7 +803,7 @@ internal static class SimCli
         return hit?.Name ?? throw new ArgumentException($"Unknown system '{name}'.");
     }
 
-    private static string Describe(Fleet f) => $"{(f.Side == Side.Empire ? "Imperial" : "Rebel")} fleet {f.Name}";
+    private static string Describe(Fleet f) => $"{(f.Side == Side.Hand ? "Hand" : "Collective")} fleet {f.Name}";
 
     private static string Describe(GameState s, int id) => s.Fleets.TryGetValue(id, out var f) ? Describe(f) : $"fleet {id}";
 
@@ -832,10 +832,10 @@ internal static class SimCli
     // A Contact is raised every day while both sides are present; the log shows it once until the set of fleets changes.
     private static string? ContactLine(GameState s, Contact c, ref string? last)
     {
-        string key = $"{c.System}|{c.EmpireFleets}|{c.AllianceFleets}";
+        string key = $"{c.System}|{c.HandFleets}|{c.CollectiveFleets}";
         if (key == last) return null;
         last = key;
-        return $"contact at {c.System}: {Describe(s, c.AllianceFleets.Items)} meets {Describe(s, c.EmpireFleets.Items)}";
+        return $"contact at {c.System}: {Describe(s, c.CollectiveFleets.Items)} meets {Describe(s, c.HandFleets.Items)}";
     }
 
     private static string FindRoot() => GameData.FindRepoRoot(); // the composition root's data folder lookup
@@ -843,7 +843,7 @@ internal static class SimCli
     private sealed class Options
     {
         public string FleetName = "Red";
-        public Side Side = Side.Alliance;
+        public Side Side = Side.Collective;
         public List<(string, int)> Ships = new();
         public string From = "", To = "";
         public List<(List<(string, int)> spec, string at)> Enemies = new();
@@ -895,7 +895,7 @@ internal static class SimCli
         }
 
         private static Side ParseSide(string v) =>
-            Enum.TryParse<Side>(v, ignoreCase: true, out var s) && Enum.IsDefined(s) ? s : throw new ArgumentException($"Side must be Alliance or Empire, got '{v}'.");
+            Enum.TryParse<Side>(v, ignoreCase: true, out var s) && Enum.IsDefined(s) ? s : throw new ArgumentException($"Side must be Collective or Hand, got '{v}'.");
 
         public static List<(string, int)> ParseShipList(string v) => ParseShips(v);
 
