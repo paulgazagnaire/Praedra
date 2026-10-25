@@ -1,13 +1,14 @@
 using Praedra.Core.Clock;
+using Praedra.Core.Economy;
 using Praedra.Core.Fleets;
 using Praedra.Core.Map;
 using Praedra.Core.Ships;
 using Praedra.Core.Support;
 
-namespace Praedra.Core.Economy;
+namespace Praedra.Core.Tests.Economy;
 
 /// <summary>
-/// A small deterministic economy on the real galaxy, for the headless runner and the soak tests: four owned systems per side
+/// A small deterministic economy on the real galaxy, for the soak tests: four owned systems per side
 /// with mines and refineries, some yards, troops and ships for load, two fleets (one passing, one blockading) and varied
 /// support so smuggling and the load brake show. Not a rule and not a starting position; M5 deals the real game.
 /// Setup draws no random numbers except what <see cref="EconomyModule.SetupNewGame"/> draws (the two incident timers).
@@ -33,7 +34,7 @@ public sealed class DemoScenario
 
     public static DemoScenario Create(string repoRoot, ulong seed, bool incidents = true, bool support = false)
     {
-        var d = Setup.GameData.Load(repoRoot); // the composition root's data loader
+        var d = Praedra.Core.Setup.GameData.Load(repoRoot); // the composition root's data loader
         var (galaxy, ships, blockade, slots, costs, weights) = (d.Galaxy, d.Ships, d.Blockade, d.Slots, d.Costs, d.Weights);
         return Create(new Game(seed), galaxy, ships, blockade, slots, costs, incidents, support, weights);
     }
