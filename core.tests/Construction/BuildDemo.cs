@@ -1,13 +1,14 @@
 using Praedra.Core.Clock;
+using Praedra.Core.Construction;
 using Praedra.Core.Economy;
 using Praedra.Core.Fleets;
 using Praedra.Core.Map;
 using Praedra.Core.Ships;
 
-namespace Praedra.Core.Construction;
+namespace Praedra.Core.Tests.Construction;
 
 /// <summary>
-/// A small deterministic build scenario on the real galaxy, for the headless runner and the soak test: a Hand home with a
+/// A small deterministic build scenario on the real galaxy, for the soak test: a Hand home with a
 /// shipyard, a training facility, two construction yards and two mine and refinery pairs builds fighters, a mine and regiments;
 /// the regiments are sent to a far system along a path that passes a Collective picket, which holds them (D2) until it moves away.
 /// Not a rule and not a starting position. Setup draws no random numbers; the home's four mines and refineries draw their first cycles.
@@ -31,7 +32,7 @@ public sealed class BuildDemo
 
     public static BuildDemo Create(string repoRoot, ulong seed)
     {
-        var d = Setup.GameData.Load(repoRoot); // the composition root's data loader
+        var d = Praedra.Core.Setup.GameData.Load(repoRoot); // the composition root's data loader
         var (galaxy, ships, blockade, slots, costs) = (d.Galaxy, d.Ships, d.Blockade, d.Slots, d.Costs);
         var game = new Game(seed);
         // The demo shows a delivery held by an enemy fleet on its path. The Collective has no gravity-well ship, so the demo keeps the retired
