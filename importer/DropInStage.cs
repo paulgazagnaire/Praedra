@@ -160,7 +160,7 @@ public static class DropInStage
     {
         var header = new[] { "kind", "name", "id", "field2", "pf", "npf", "family", "textid", "f7", "collective", "hand", "cost", "maint", "rorder", "rdiff",
             "dip", "dipv", "esp", "espv", "ship", "shipv", "troop", "troopv", "fac", "facv", "com", "comv", "lead", "leadv", "loy", "loyv",
-            "jprob", "knownjedi", "jlvl", "jlvlv", "admiral", "commander", "general", "nobetray", "trainer" };
+            "tprob", "knowntalent", "tlvl", "tlvlv", "admiral", "commander", "general", "nobetray", "trainer" };
         var rows = new List<IEnumerable<string>>();
         foreach (var (file, kind) in new[] { ("MJCHARSD", "major"), ("MNCHARSD", "minor") })
         {

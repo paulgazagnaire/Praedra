@@ -100,32 +100,32 @@ public sealed partial class SimpleAi
     // ================================================================== what the AI may see (fog goes here)
 
     private Praedra.Core.Fog.KnowledgeView? _view;
-    private readonly Dictionary<string, List<Force>> _seenForces = new(StringComparer.Ordinal); // lookup only
+    private readonly Dictionary<string, List<ArmedForce>> _seenForces = new(StringComparer.Ordinal); // lookup only
 
     /// <summary>
     /// One enemy fleet as the AI weighs it: its capital ships as combat units. Without fog: the real fleet (FleetId set, hull and damage read).
     /// With fog: a fleet of the side's picture (class counts at full hull, FleetId null). At = the system it stands at, null on a lane.
     /// </summary>
     /// Gravity: a ship of the fleet has a gravity-well projector (it can pull passing fleets out of hyperspace).
-    private sealed record Force(int? FleetId, string? At, List<Combatant> Units, bool Gravity = false);
+    private sealed record ArmedForce(int? FleetId, string? At, List<Combatant> Units, bool Gravity = false);
 
-    private Force ForceOf(Fleet f) => new(f.Id, f.At, ShipUnits(f),
+    private ArmedForce ForceOf(Fleet f) => new(f.Id, f.At, ShipUnits(f),
         f.Ships.Any(id => _h.Economy.Find(id) is { } o && _h.Fleets.ShipClasses.TryGetValue(o.Class, out var c) && c.GravityWellProjector > 0));
 
-    private Force ForceOf(string at, Praedra.Core.Fog.FleetPicture p)
+    private ArmedForce ForceOf(string at, Praedra.Core.Fog.FleetPicture p)
     {
         var units = new List<Combatant>(); bool gravity = false;
         foreach (var (cls, n) in p.Ships) // ordinal class order
             if (_h.Fleets.ShipClasses.TryGetValue(cls, out var c)) { for (int i = 0; i < n; i++) units.Add(_h.Fleets.Strength.Unit(c)); gravity |= n > 0 && c.GravityWellProjector > 0; }
-        return new Force(null, at, units, gravity);
+        return new ArmedForce(null, at, units, gravity);
     }
 
     /// <summary>Enemy fleets standing at a system. No fog: sees all. Fog: group E of the side's picture, unless the look is only Charted (too old).</summary>
-    private List<Force> EnemyFleetsAt(string system)
+    private List<ArmedForce> EnemyFleetsAt(string system)
     {
         if (_view == null) return _h.Fleets.FleetsAt(system).Where(f => f.Side != _side).Select(ForceOf).ToList();
         if (_seenForces.TryGetValue(system, out var cached)) return cached;
-        var list = new List<Force>();
+        var list = new List<ArmedForce>();
         var pic = _view.Picture(system);
         if (pic?.Fleets is { } e && _view.Level(system) is Praedra.Core.Fog.KnowledgeLevel.Held or Praedra.Core.Fog.KnowledgeLevel.Observed)
             foreach (var fp in e.Value) if (fp.Side != _side) list.Add(ForceOf(system, fp));
@@ -793,15 +793,15 @@ public sealed partial class SimpleAi
 
     // ================================================================== military
 
-    private Dictionary<string, List<Force>>? _threats;
+    private Dictionary<string, List<ArmedForce>>? _threats;
     private HashSet<string>? _lost;
 
     /// <summary>Held systems with enemy fleets standing on them or flying toward them (a stop on their path), by system. Fleets in id order.</summary>
-    private Dictionary<string, List<Force>> Threats()
+    private Dictionary<string, List<ArmedForce>> Threats()
     {
         if (_threats != null) return _threats;
-        var d = new Dictionary<string, List<Force>>(StringComparer.Ordinal);
-        void Add(string sys, Force f) { if (!d.TryGetValue(sys, out var l)) d[sys] = l = new List<Force>(); l.Add(f); }
+        var d = new Dictionary<string, List<ArmedForce>>(StringComparer.Ordinal);
+        void Add(string sys, ArmedForce f) { if (!d.TryGetValue(sys, out var l)) d[sys] = l = new List<ArmedForce>(); l.Add(f); }
         if (_view != null)
         {
             // Fog: only the enemy fleets the side sees standing on its own systems (a fleet on a lane is invisible). rule: m5-fog-and-hq §F3
@@ -822,7 +822,7 @@ public sealed partial class SimpleAi
     private double IncomingEnemyStrength(string system) => Threats().TryGetValue(system, out var l) ? l.Sum(Str) : 0;
 
     /// <summary>An enemy force's strength against REF (capital ships only), as <see cref="Str(Fleet)"/>.</summary>
-    private double Str(Force x) => x.FleetId is int id && S.Fleets.TryGetValue(id, out var f) ? Str(f) : _h.Fleets.Strength.Of(x.Units, RefUnits());
+    private double Str(ArmedForce x) => x.FleetId is int id && S.Fleets.TryGetValue(id, out var f) ? Str(f) : _h.Fleets.Strength.Of(x.Units, RefUnits());
 
     private Dictionary<string, int>? _lostBattles;
     /// <summary>
@@ -917,7 +917,7 @@ public sealed partial class SimpleAi
     /// Own power as a percent of the other force's: CombatStrength(own, enemy) over CombatStrength(enemy, own), shields full (m4-battle-new §12).
     /// A huge number when the enemy cannot hurt us, 0 when we cannot hurt it, 100 when nobody can.
     /// </summary>
-    private double Duel(IEnumerable<Fleet> own, IEnumerable<Force> enemy)
+    private double Duel(IEnumerable<Fleet> own, IEnumerable<ArmedForce> enemy)
     {
         var o = own.SelectMany(ShipUnits).ToList();
         var e = enemy.SelectMany(x => x.Units).ToList();

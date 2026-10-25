@@ -191,13 +191,13 @@ public sealed class MissionModule
 
     /// <summary>A team or decoy unit with the three skills the rules read (a special force uses its class columns). rule: §Special forces.</summary>
     /// <remarks>
-    /// Force is the current Force (+0x8c, our EffectiveForce), 0 for a character who is not a Force user and for a special force; Loyalty is the
-    /// character's loyalty, or the special-force class's (SPECFCSD word 26, 100, variance 0). rule: §3 Force sensing, Betrayal (Traced B2b).
+    /// Talent is the current Talent (+0x8c, our EffectiveTalent), 0 for a character who is not a talented character and for a special force; Loyalty is the
+    /// character's loyalty, or the special-force class's (SPECFCSD word 26, 100, variance 0). rule: §3 Talent sensing, Betrayal (Traced B2b).
     /// </remarks>
-    private readonly record struct Agent(bool IsCharacter, int Id, int Espionage, int Combat, int Leadership, CharacterRecord? C, int Force = 0, int Loyalty = 0);
+    private readonly record struct Agent(bool IsCharacter, int Id, int Espionage, int Combat, int Leadership, CharacterRecord? C, int Talent = 0, int Loyalty = 0);
 
     private Agent? CharAgent(int id) => _ch.Get(id) is { } c
-        ? new Agent(true, id, _ch.EffectiveSkill(c, Skill.Espionage), _ch.EffectiveSkill(c, Skill.Combat), _ch.EffectiveSkill(c, Skill.Leadership), c, c.EffectiveForce, c.Loyalty) : null; // B2e §1: effective skills
+        ? new Agent(true, id, _ch.EffectiveSkill(c, Skill.Espionage), _ch.EffectiveSkill(c, Skill.Combat), _ch.EffectiveSkill(c, Skill.Leadership), c, c.EffectiveTalent, c.Loyalty) : null; // B2e §1: effective skills
 
     private Agent? SfAgent(int id) => E.Objects.TryGetValue(id, out var o) && _troops.Data.SpecialForce(o.Class) is { } k
         ? new Agent(false, id, k.Espionage, k.Combat, k.Leadership, null, 0, k.LoyaltyBase) : null;
@@ -508,7 +508,7 @@ public sealed class MissionModule
     }
 
     // rule: m5-missions §3, §6a (Key-target protections, 2026-10-18): with KeyTargetBaseSkills (DEFAULT on) a key-target mission reads its
-    // characters' espionage and combat without the Force term of B2e §1 (espionage B, combat max(0, B - Injury)); special forces, other missions
+    // characters' espionage and combat without Talent term of B2e §1 (espionage B, combat max(0, B - Injury)); special forces, other missions
     // and the switch off read the Agent's effective skills.
     private bool KeyBase(MissionGroup m, Agent a) => a.IsCharacter && Params.KeyTargetBaseSkills && IsKeyTarget(m.Kind, m.TargetCharacter, out _);
     private int KeyEsp(MissionGroup m, Agent a) => KeyBase(m, a) ? a.C!.BaseSkill(Skill.Espionage) : a.Espionage;
@@ -858,7 +858,7 @@ public sealed class MissionModule
         if (TargetReason(m) != null || KeyGate(m.Kind, m.TargetCharacter) != null) { End(ctx, m, MissionOutcome.TargetInvalid, t); return; } // rule: m5-missions §6a.1
         var rec = Data.Get(m.Kind);
         bool key = IsKeyTarget(m.Kind, m.TargetCharacter, out int keyCap);
-        // 1. the job check (phase 9, next to the target): Force sensing, betrayal, decoys, detection, foiled handling. rule: m5-missions §1, §3
+        // 1. the job check (phase 9, next to the target): Talent sensing, betrayal, decoys, detection, foiled handling. rule: m5-missions §1, §3
         // (Traced B2b: 0x589970; B2d §1, §2)
         if (RunCheck(ctx, m, t, CheckPoint.Job, rec)) return;
         if (!m.HasTeam) { End(ctx, m, MissionOutcome.Cancelled, t); return; }
@@ -976,7 +976,7 @@ public sealed class MissionModule
     }
 
     /// <summary>
-    /// One pass (0x589970): scopes, Force sensing, betrayal (the job check only: 0x592500), then if not foiled the decoy pass and the detection walk
+    /// One pass (0x589970): scopes, Talent sensing, betrayal (the job check only: 0x592500), then if not foiled the decoy pass and the detection walk
     /// over the guards in scope, then the foiled handling. rule: §3, §3a, §4 (Traced B2b, B2d).
     /// </summary>
     private bool CheckPass(StepContext ctx, MissionGroup m, int t, CheckPoint point, CheckKind kind, string place, bool atOrigin, MissionRecord rec)
@@ -1012,7 +1012,7 @@ public sealed class MissionModule
     private Defender? DecoyAndWalk(StepContext ctx, MissionGroup m, int t, List<Defender> guards, Scope sc, bool atOrigin, HashSet<int> decoyed,
         string place, MissionRecord rec)
     {
-        // rule: B2e §4 (0x587fa0 -> 0x5892a0): before the decoy pass, each decoy with a mutual Force discovery meets that Force user
+        // rule: B2e §4 (0x587fa0 -> 0x5892a0): before the decoy pass, each decoy with a mutual Talent discovery meets that talented character
         foreach (var a in Decoys(m).Where(a => Counts(a, atOrigin, sc)).ToList()) Encounter(ctx, m, t, a, place, rec, decoy: true);
         if (guards.Count == 0) return null;
         var decoys = Decoys(m).Where(a => Counts(a, atOrigin, sc)).ToList();
@@ -1059,7 +1059,7 @@ public sealed class MissionModule
         DuelWith(ctx, m, t, a, g.OfficerCombat, g.Unit.Id, g.Unit.Side ?? Other(m.Side), place, rec, decoy, new CaptorUnit(g.Fleet, place, 0, MissionInvolved: true, Ship: g.Ship));
 
     /// <summary>
-    /// The duel against a captor of combat <paramref name="captorCombat"/> (a guard's commander, or the enemy Force user of an encounter). Escaped:
+    /// The duel against a captor of combat <paramref name="captorCombat"/> (a guard's commander, or the enemy talented character of an encounter). Escaped:
     /// the member leaves the group if its record lets it resign (MISSNSD word 15), then a character rolls Hurt (0x4ef450). Caught: a character rolls
     /// Hurt and, if he did not die of it, is captured by <paramref name="captor"/> at the place of the check (0x4ef480; Capture refuses an own-side
     /// captor: the member just leaves; a key character under KeyDuelCapture.Capped is captured only if his cap roll passes, see
@@ -1119,9 +1119,9 @@ public sealed class MissionModule
     }
 
     /// <summary>
-    /// The Force-user encounter in place of a guard duel (0x5892a0 -> 0x588d30 -> 0x560200): a character member whose discovered Force user names
+    /// The Talent encounter in place of a guard duel (0x5892a0 -> 0x588d30 -> 0x560200): a character member whose discovered talented character names
     /// him back with the same pair id duels that character (his location is not checked) and the character module does the rest (hurt rolls,
-    /// combat gain, keys cleared, Jedi effects). Returns false, with no draw, when the precondition fails. rule: §4 (Traced B2e §4).
+    /// combat gain, keys cleared, Talent effects). Returns false, with no draw, when the precondition fails. rule: §4 (Traced B2e §4).
     /// </summary>
     private bool Encounter(StepContext ctx, MissionGroup m, int t, Agent a, string place, MissionRecord rec, bool decoy)
     {
@@ -1129,7 +1129,7 @@ public sealed class MissionModule
         int xm = MissionOf(x.Id); // QA-7: the captor is X himself: his fleet, else where he stands; his mission takes the prisoner as a captive
         var unit = new CaptorUnit(x.AttachedFleet, _ch.LocationOf(x), xm, MissionInvolved: true);
         var (escaped, hurt) = DuelWith(ctx, m, t, a, _ch.EffectiveSkill(x, Skill.Combat), x.Id, x.Side, place, rec, decoy, unit);
-        _ch.ForceEncounter(ctx, t, m.Id, a.C!, x, hurt, escaped);
+        _ch.TalentEncounter(ctx, t, m.Id, a.C!, x, hurt, escaped);
         return true;
     }
 
@@ -1160,7 +1160,7 @@ public sealed class MissionModule
     /// The foiled handling (0x58a1c0): if the record's word 15 is set the mission ends with code 3 (caught at the origin) or 4 (at the target), event
     /// MissionFoiled; then each counted non-decoy member, characters first, then special forces, picks one guard among those in scope and not decoyed
     /// (k = rand(0..n-1), no draw when n = 1; no guard left, no duel) and fights the escape duel. With word 15 = 0 the mission goes on. A member
-    /// with a mutual Force discovery meets that Force user instead (no guard pick; B2e §4). rule: §4 (Traced B2d §6, B2e §4).
+    /// with a mutual Talent discovery meets that talented character instead (no guard pick; B2e §4). rule: §4 (Traced B2d §6, B2e §4).
     /// </summary>
     private bool Foiled(StepContext ctx, MissionGroup m, int t, FoilBy f, CheckPoint point, List<Defender> guards, HashSet<int> decoyed, Scope sc,
         bool atOrigin, string place, MissionRecord rec)
@@ -1176,7 +1176,7 @@ public sealed class MissionModule
         var pool = guards.Where(g => !decoyed.Contains(g.Unit.Id)).ToList();
         foreach (var a in Team(m).Where(a => Counts(a, atOrigin, sc)).ToList())
         {
-            if (Encounter(ctx, m, t, a, place, rec, decoy: false)) continue; // rule: B2e §4 (0x589360: a mutual discovery meets his Force user)
+            if (Encounter(ctx, m, t, a, place, rec, decoy: false)) continue; // rule: B2e §4 (0x589360: a mutual discovery meets his talented character)
             if (pool.Count == 0) continue;
             var g = pool.Count == 1 ? pool[0] : pool[ctx.Rng.NextInt(0, pool.Count - 1)]; // 0x588650
             Duel(ctx, m, t, a, g, place, rec, decoy: false);
@@ -1210,36 +1210,36 @@ public sealed class MissionModule
     /// <summary>What foiled the mission: the detecting defender (Detected), or the senser or traitor (Character).</summary>
     private sealed record FoilBy(MissionFoilCause Cause, Defender? Defender, int Character);
 
-    // ================================================================== Force sensing (B2b)
+    // ================================================================== Talent sensing (B2b)
 
     /// <summary>
-    /// <c>p = Force(member) + Force(senser) + GNPRTB 3587</c>, 0 when either Force is 0. A draw is made only when p &gt; 0. rule: §3 Force sensing
+    /// <c>p = Talent(member) + Talent(senser) + GNPRTB 3587</c>, 0 when either Talent is 0. A draw is made only when p &gt; 0. rule: §3 Talent sensing
     /// step 3 (Traced B2b: 0x55e4d0).
     /// </summary>
-    public int SenseChance(int memberForce, int senserForce) =>
-        memberForce == 0 || senserForce == 0 ? 0 : memberForce + senserForce + Params.SenseConstant;
+    public int SenseChance(int memberTalent, int senserTalent) =>
+        memberTalent == 0 || senserTalent == 0 ? 0 : memberTalent + senserTalent + Params.SenseConstant;
 
     /// <summary>
-    /// The sensers of a check: characters of the other side, placed and not captured or dead, with Force at least GNPRTB 3586, standing at the place
-    /// of the check, by id. ForceSenseScope CheckScope (DEFAULT): on the planet when the pass guards the planet, aboard a fleet there when it guards
-    /// the orbit (B2b §2 "Where" with the scopes of B2d §3); Both, Planet, Fleets ignore the pass's scopes. rule: §3 Force sensing, Sensers
+    /// The sensers of a check: characters of the other side, placed and not captured or dead, with Talent at least GNPRTB 3586, standing at the place
+    /// of the check, by id. TalentSenseScope CheckScope (DEFAULT): on the planet when the pass guards the planet, aboard a fleet there when it guards
+    /// the orbit (B2b §2 "Where" with the scopes of B2d §3); Both, Planet, Fleets ignore the pass's scopes. rule: §3 Talent sensing, Sensers
     /// (Traced B2b: 0x588840).
     /// </summary>
     public List<CharacterRecord> Sensers(MissionGroup m, string place, Scope sc) =>
         _ch.InPlay.Where(c => c.Side != m.Side && c.Status is not (CharacterStatus.Captured or CharacterStatus.Dead)
-            && (c.ForceUser ? c.EffectiveForce : 0) >= Params.SenserMinForce && _ch.LocationOf(c) == place
-            && Params.ForceSenseScope switch
+            && (c.TalentHolder ? c.EffectiveTalent : 0) >= Params.SenserMinTalent && _ch.LocationOf(c) == place
+            && Params.TalentSenseScope switch
             {
-                ForceSenseScope.CheckScope => c.AttachedFleet == 0 ? sc.PlanetGuards : sc.OrbitGuards,
-                ForceSenseScope.Planet => c.AttachedFleet == 0, ForceSenseScope.Fleets => c.AttachedFleet != 0, _ => true,
+                TalentSenseScope.CheckScope => c.AttachedFleet == 0 ? sc.PlanetGuards : sc.OrbitGuards,
+                TalentSenseScope.Planet => c.AttachedFleet == 0, TalentSenseScope.Fleets => c.AttachedFleet != 0, _ => true,
             })
         .ToList();
 
-    /// <summary>The sensers of the job check at the mission's target. rule: §3 Force sensing.</summary>
+    /// <summary>The sensers of the job check at the mission's target. rule: §3 Talent sensing.</summary>
     public List<CharacterRecord> Sensers(MissionGroup m) => Sensers(m, m.Target, ScopeOf(m, CheckKind.NextToTarget, m.Target));
 
     // Luke first, then Vader, then the rest one at a time, each picked k = rand(0..n-1) among those left (no draw when one is left). Lazy: a pick
-    // is drawn only when the next one is taken. rule: §3 Force sensing steps 1 and 2 (Traced B2b: 0x58a9e0, 0x58ac50, 0x58aca0).
+    // is drawn only when the next one is taken. rule: §3 Talent sensing steps 1 and 2 (Traced B2b: 0x58a9e0, 0x58ac50, 0x58aca0).
     private IEnumerable<T> SenseOrder<T>(StepContext ctx, List<T> items, Func<T, int> id)
     {
         var rest = new List<T>(items);
@@ -1259,17 +1259,17 @@ public sealed class MissionModule
     }
 
     /// <summary>
-    /// Force sensing (0x589e40): for each senser in order, the group's Force users (team and decoys, Force at least GNPRTB 3585) in order, one draw
-    /// per pair with p &gt; 0. A hit on a team member foils the mission (a sensed decoy foils nothing); every hit gives the discovered-Force-user
-    /// notice. A senser takes members until his own discovered Force user is set, so he stops at his first hit, and one who already has one gets a
-    /// single try per check. Every senser is processed; sensing never stops at a foil. Returns the first foiling hit, or null. rule: §3 Force sensing
+    /// Talent sensing (0x589e40): for each senser in order, the group's talented characters (team and decoys, Talent at least GNPRTB 3585) in order, one draw
+    /// per pair with p &gt; 0. A hit on a team member foils the mission (a sensed decoy foils nothing); every hit gives the discovered-talented
+    /// notice. A senser takes members until his own discovered talented character is set, so he stops at his first hit, and one who already has one gets a
+    /// single try per check. Every senser is processed; sensing never stops at a foil. Returns the first foiling hit, or null. rule: §3 Talent sensing
     /// (Traced B2b).
     /// </summary>
     private FoilBy? Sense(StepContext ctx, MissionGroup m, int t, string place, Scope sc)
     {
-        if (!Params.ForceSensing) return null;
+        if (!Params.TalentSensing) return null;
         var members = Team(m).Select(a => (a, decoy: false)).Concat(Decoys(m).Select(a => (a, decoy: true)))
-            .Where(x => x.a.IsCharacter && x.a.Force >= Params.SensedMinForce && x.a.C!.Status != CharacterStatus.Captured).ToList();
+            .Where(x => x.a.IsCharacter && x.a.Talent >= Params.SensedMinTalent && x.a.C!.Status != CharacterStatus.Captured).ToList();
         if (members.Count == 0) return null;
         var sensers = Sensers(m, place, sc);
         FoilBy? foil = null;
@@ -1278,36 +1278,36 @@ public sealed class MissionModule
         {
             foreach (var (a, decoy) in SenseOrder(ctx, members, x => x.a.Id))
             {
-                int p = SenseChance(a.Force, s.ForceUser ? s.EffectiveForce : 0);
+                int p = SenseChance(a.Talent, s.TalentHolder ? s.EffectiveTalent : 0);
                 if (p > 0)
                 {
                     int r = ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1);
                     bool hit = r < p;
                     int mid = a.Id, sid = s.Id;
-                    ctx.Emit((i, _) => new MissionForceSenseRoll(i, t, id, side, target, mid, sid, p, r, hit));
+                    ctx.Emit((i, _) => new MissionTalentSenseRoll(i, t, id, side, target, mid, sid, p, r, hit));
                     if (hit)
                     {
                         bool foils = !decoy;
-                        if (foils && foil == null) foil = new FoilBy(MissionFoilCause.ForceSensed, null, s.Id);
-                        ctx.Emit((i, _) => new MissionForceSensed(i, t, id, side, target, mid, decoy, sid, foils));
+                        if (foils && foil == null) foil = new FoilBy(MissionFoilCause.TalentSensed, null, s.Id);
+                        ctx.Emit((i, _) => new MissionTalentSensed(i, t, id, side, target, mid, decoy, sid, foils));
                         DiscoverEachOther(ctx, m, a.C!, s, t);
                     }
                 }
-                if (s.DiscoveredForceUser != 0) break; // rule: §3 Force sensing step 5 (0x58a370)
+                if (s.DiscoveredTalentHolder != 0) break; // rule: §3 Talent sensing step 5 (0x58a370)
             }
         }
         return foil;
     }
 
-    // rule: §3 Force sensing step 4 (0x55ff60 -> 0x4ee500): only if neither already has a discovered Force user (B2e §8 corrects B2b's "unless
+    // rule: §3 Talent sensing step 4 (0x55ff60 -> 0x4ee500): only if neither already has a discovered talented character (B2e §8 corrects B2b's "unless
     // both"), each records the other, both get the same new pair id (the game-wide counter, B2e §4) and both sides are told.
     private void DiscoverEachOther(StepContext ctx, MissionGroup m, CharacterRecord member, CharacterRecord senser, int t)
     {
-        if (member.DiscoveredForceUser != 0 || senser.DiscoveredForceUser != 0) return;
-        member.DiscoveredForceUser = senser.Id; senser.DiscoveredForceUser = member.Id;
+        if (member.DiscoveredTalentHolder != 0 || senser.DiscoveredTalentHolder != 0) return;
+        member.DiscoveredTalentHolder = senser.Id; senser.DiscoveredTalentHolder = member.Id;
         member.PairId = senser.PairId = _ch.NewPairId();
         int id = m.Id, mid = member.Id, sid = senser.Id; var ms = member.Side; var ss = senser.Side;
-        ctx.Emit((i, _) => new ForceUserDiscovered(i, t, id, mid, ms, sid, ss));
+        ctx.Emit((i, _) => new TalentHolderDiscovered(i, t, id, mid, ms, sid, ss));
     }
 
     // ================================================================== betrayal (B2b)
@@ -1317,8 +1317,8 @@ public sealed class MissionModule
 
     /// <summary>
     /// Betrayal (0x589f10): every member, team then decoys (B2a's order), draws once even at chance 0: betrays if rand(0..99) &lt; 100 - loyalty; the
-    /// walk stops at the first traitor, who foils the mission. Then every other member draws once even at Force 0: identifies the traitor if
-    /// rand(0..99) &lt; his Force; that walk stops at the first identification. rule: §3 Betrayal (Traced B2b: 0x55e520, 0x55e550, 0x4ee5c0).
+    /// walk stops at the first traitor, who foils the mission. Then every other member draws once even at Talent 0: identifies the traitor if
+    /// rand(0..99) &lt; his Talent; that walk stops at the first identification. rule: §3 Betrayal (Traced B2b: 0x55e520, 0x55e550, 0x4ee5c0).
     /// </summary>
     private FoilBy? Betray(StepContext ctx, MissionGroup m, int t)
     {
@@ -1342,7 +1342,7 @@ public sealed class MissionModule
         {
             if (o.IsCharacter == tr.IsCharacter && o.Id == tr.Id) continue;
             int r = ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1);
-            if (r >= o.Force) continue;
+            if (r >= o.Talent) continue;
             if (o.C != null && tr.IsCharacter) o.C.IdentifiedTraitor = tr.Id;
             int oid = o.Id, tid = tr.Id; bool tc = tr.IsCharacter;
             ctx.Emit((i, _) => new TraitorIdentified(i, t, id, oid, tid, tc, side));
@@ -1429,7 +1429,7 @@ public sealed class MissionModule
                 if (!IsKeyTarget(m.Kind, m.TargetCharacter, out _)) { _ch.Kill(ctx, tc, CauseAssassination); break; }
                 // rule: m5-missions §6a.4: a qualified team (one character with combat and espionage both at the minimum) draws k: kidnap or kill
                 // (death allowed for this target whatever MajorsCanDie says); an unqualified team injures the target, no k draw.
-                // (Key-target protections, 2026-10-18: KeyTargetBaseSkills reads the skills without the Force term)
+                // (Key-target protections, 2026-10-18: KeyTargetBaseSkills reads the skills without Talent term)
                 if (!Team(m).Any(a => a.IsCharacter && KeyCom(m, a) >= Params.KeyTeamMinCombat && KeyEsp(m, a) >= Params.KeyTeamMinEspionage))
                     _ch.Injure(ctx, tc, CauseAssassination);
                 else if (ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1) < Params.KeyKidnapPercent) _ch.Capture(ctx, tc, side, null, CauseKidnap, unit: TeamCaptor(m));

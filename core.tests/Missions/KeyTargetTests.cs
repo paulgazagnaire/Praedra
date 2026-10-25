@@ -17,7 +17,7 @@ public class KeyTargetTests
     // Vader qualified for a kill or kidnap: combat 100 and espionage 60. Luke or Mon stands at T (Collective), HQ placed at T when asked.
     private static MissionWorld Assassin(int target, int vaderCombat = 100, int vaderEsp = 60, int regiments = -1, bool hq = false)
     {
-        var w = new MissionWorld(characters: Praedra.Core.Tests.Characters.CharWorld.ClassicForce()); // the Classic Force (100 / 100 / 50): m5-characters-and-force §Force CH37
+        var w = new MissionWorld(characters: Praedra.Core.Tests.Characters.CharWorld.ClassicTalent()); // the Classic Talent (100 / 100 / 50): m5-characters-and-force §Talent CH37
         w.Hold(T, Side.Collective, 30); // N = ceil(30 / 10) = 3 regiments
         for (int i = 0; i < Math.Max(regiments, 0); i++) w.Unit(Side.Collective, RebArmy, T);
         w.Agent(Vader, T, esp: vaderEsp, com: vaderCombat);
@@ -154,7 +154,7 @@ public class KeyTargetTests
     public void KT8_UnqualifiedTeamInjures(int combat, int esp)
     {
         var w = Assassin(Luke, vaderCombat: combat, vaderEsp: esp);
-        w.Ch.Get(Vader)!.ForceExperience = 0; // B2e: without his Force so the skills given are the effective ones
+        w.Ch.Get(Vader)!.TalentExperience = 0; // B2e: without his Talent so the skills given are the effective ones
         w.Stub!.Expect(0, 99, Bt(1, 0, 0)); // B2b: the betrayal draws come first
         Assert.Null(StartReason(w, MissionKind.Assassination, Vader, Luke));
         w.RunIteration(w.LastMission);
@@ -247,7 +247,7 @@ public class KeyTargetTests
         w.Hold(T, Side.Hand, 20);
         w.Agent(Han, T, com: 100);
         w.Agent(target, T);
-        w.Stub!.Expect(0, 99, Bt(1, roll, 50)); // B2b: the betrayal draws come first (Han has no Force: no sensing draw)
+        w.Stub!.Expect(0, 99, Bt(1, roll, 50)); // B2b: the betrayal draws come first (Han has no Talent: no sensing draw)
         Assert.Null(StartReason(w, MissionKind.Abduction, Han, target, Side.Collective));
         w.RunIteration(w.LastMission);
         var r = w.Events<MissionMemberRoll>().Single();
@@ -267,14 +267,14 @@ public class KeyTargetTests
         w.Agent(Leia, H, com: 50);
         w.Agent(Wedge, H, com: 50);
         w.Agent(Vader, T);
-        // B2e moved: Leia and Wedge are Force users who are not aware, so their Force is 0 and Vader senses nobody (was two sense rolls); three
+        // B2e moved: Leia and Wedge are talented characters who are not aware, so their Talent is 0 and Vader senses nobody (was two sense rolls); three
         // betrayal draws, then the roll
         w.Stub!.Expect(0, 99, 99, 99, 99, 50);
         w.Start(Side.Collective, MissionKind.Abduction, new[] { Han, Leia, Wedge }, null, targetChar: Vader);
         w.Game.Step();
         w.RunIteration(w.LastMission);
         Assert.Single(w.Events<MissionMemberRoll>());
-        Assert.Empty(w.Events<MissionForceSenseRoll>());
+        Assert.Empty(w.Events<MissionTalentSenseRoll>());
 
         var g = Assassin(Luke);
         RideFleet(g, Luke, Side.Collective);

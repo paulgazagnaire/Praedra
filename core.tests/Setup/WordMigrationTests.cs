@@ -16,6 +16,12 @@ public class WordMigrationTests
     [InlineData("allianceSupport", "collectiveSupport")]
     [InlineData("Empires", "Empires")] // a word followed by a lower-case letter is not the word
     [InlineData("Charter", "Charter")]
+    [InlineData("ForceExperience", "TalentExperience")] // stage 3d: the Force words
+    [InlineData("DiscoveredForceUser", "DiscoveredTalentHolder")]
+    [InlineData("TalentedForceMin", "TalentedMin")]
+    [InlineData("SpecialForces", "SpecialForces")] // military forces keep their word
+    [InlineData("SpecialForce", "SpecialForce")]
+    [InlineData("ForcedStop", "ForcedStop")]
     [InlineData("Imperial Star", "Imperial Star")] // not an identifier: names go through the name table only
     public void IdentifiersAreRenamedWordByWord(string old, string expected) =>
         Assert.Equal(expected, GameData.Default.Names.CurrentIdentifier(old));

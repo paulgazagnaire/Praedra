@@ -28,6 +28,7 @@ import sys
 ROOT = os.getcwd()
 TABLE = os.path.join("data", "design", "word-migrations.csv")
 NAMES = os.path.join("data", "design", "name-migrations.csv")
+CUT = os.path.join("data", "design", "cut-classes.csv")  # lists cut classes by their old names on purpose
 RAW = os.path.join("data", "classic", "raw") + os.sep
 CODE_DIRS = ["core", "core.tests", "sim", "sim.tests", "importer", "importer.tests", os.path.join("godot", "Scripts")]
 DOCS = [os.path.join("sim", "README.md"), os.path.join("data", "README.md"), os.path.join("godot", "README.md"), "README.md", "CLAUDE.md"]
@@ -35,7 +36,7 @@ DOCS = [os.path.join("sim", "README.md"), os.path.join("data", "README.md"), os.
 SKIP_FILES = {os.path.join("core.tests", "Setup", "NameMigrationTests.cs"), os.path.join("core.tests", "Setup", "WordMigrationTests.cs")}
 # Classic's raw column names the importer reads (data/classic/raw keeps Classic's headers word for word); kept in importer/ only, which
 # writes them out under the new words (DropInStage.OutHeader).
-RAW_KEEP = ["is_alliance", "is_empire", "tractor_beam"]
+RAW_KEEP = ["is_alliance", "is_empire", "tractor_beam", "jedi_", "known_jedi"]
 RAW_KEEP_DIRS = ("importer" + os.sep,)
 
 
@@ -106,7 +107,7 @@ def files():
             for f in sorted(fn):
                 p = os.path.join(dp, f)
                 rel = os.path.relpath(p, ROOT)
-                if f.endswith(".csv") and rel not in (TABLE, NAMES) and not rel.startswith(RAW):
+                if f.endswith(".csv") and rel not in (TABLE, NAMES, CUT) and not rel.startswith(RAW):
                     yield p
     for d in DOCS:
         if os.path.exists(os.path.join(ROOT, d)):

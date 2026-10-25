@@ -106,10 +106,10 @@ public class ParamsPinTests
         yield return ("BombardParams.CriticalTableMax", bomb.CriticalTableMax, G, 2051, 1);
         // m5 characters
         yield return ("CharacterParams.HarvesterHitPercent", ch.HarvesterHitPercent, G, 0x606, 1);
-        yield return ("CharacterParams.ClassicTrainingGainPercent", CharacterParams.ClassicTrainingGainPercent, G, 6173, 1); // the New DEFAULT ForceTrainingGainPercent is 25 (Paul 2026-10-18)
-        yield return ("CharacterParams.ForceKnightMin (2560)", ch.ForceKnightMin, G, 2560, 1);
-        yield return ("CharacterParams.ForceKnightMin (2580)", ch.ForceKnightMin, G, 2580, 1);
-        yield return ("CharacterParams.ForceMasterMin", ch.ForceMasterMin, G, 2581, 1);
+        yield return ("CharacterParams.ClassicTrainingGainPercent", CharacterParams.ClassicTrainingGainPercent, G, 6173, 1); // the New DEFAULT TalentTrainingGainPercent is 25 (Paul 2026-10-18)
+        yield return ("CharacterParams.TalentAnomalyMin (2560)", ch.TalentAnomalyMin, G, 2560, 1);
+        yield return ("CharacterParams.TalentAnomalyMin (2580)", ch.TalentAnomalyMin, G, 2580, 1);
+        yield return ("CharacterParams.TalentUnforecastableMin", ch.TalentUnforecastableMin, G, 2581, 1);
         // m5 fog and HQ
         yield return ("FogParams.EspionageRichSpread", fog.EspionageRichSpread, G, 6181, 1);
         yield return ("FogParams.EspionageRichBase", fog.EspionageRichBase, G, 6180, 1);
@@ -126,10 +126,10 @@ public class ParamsPinTests
         yield return ("DealParams.BandSpread (0x1e03)", deal.BandSpread, S, 0x1e03, 1);
         yield return ("DealParams.WeakBase", deal.WeakBase, S, 0x1e04, 1);
         yield return ("DealParams.BandSpread (0x1e05)", deal.BandSpread, S, 0x1e05, 1);
-        // m5-missions §3 Force sensing (B2b)
+        // m5-missions §3 Talent sensing (B2b)
         var mis = new Praedra.Core.Missions.MissionParams();
-        yield return ("MissionParams.SensedMinForce", mis.SensedMinForce, G, 3585, 1);
-        yield return ("MissionParams.SenserMinForce", mis.SenserMinForce, G, 3586, 1);
+        yield return ("MissionParams.SensedMinTalent", mis.SensedMinTalent, G, 3585, 1);
+        yield return ("MissionParams.SenserMinTalent", mis.SenserMinTalent, G, 3586, 1);
         yield return ("MissionParams.SenseConstant", mis.SenseConstant, G, 3587, 1);
         // m5-characters-and-force §Loyalty and betrayal (B2c)
         yield return ("CharacterParams.LossShiftDivisor", ch.LossShiftDivisor, S, 2560, 1);

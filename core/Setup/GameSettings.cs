@@ -132,7 +132,7 @@ public sealed record GameSettings
     public Praedra.Core.Research.ResearchParams? Research { get; init; }
 
     // ---- characters. rule: m5-characters-and-force §Defaults for undecided items
-    /// <summary>Character switches and numbers (Navigator, ride fleet, death, injury days, escape, Force ranks, start extras...). Null = the sheet's DEFAULTs. Refused values throw at attach.</summary>
+    /// <summary>Character switches and numbers (Navigator, ride fleet, death, injury days, escape, Talent ranks, start extras...). Null = the sheet's DEFAULTs. Refused values throw at attach.</summary>
     public Praedra.Core.Characters.CharacterParams? Characters { get; init; }
 
     // ---- missions. rule: m5-missions §Defaults for undecided items

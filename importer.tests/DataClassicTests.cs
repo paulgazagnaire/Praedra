@@ -72,14 +72,14 @@ public class DataClassicTests
         finally { if (Directory.Exists(tmp)) Directory.Delete(tmp, recursive: true); }
     }
 
-    // B1-own-importer QA Q3 / Q4: the Force values of records 918 and 919 (Senior Auditor Mantis Doran, Lucrio Vance), and every mission table complete
+    // B1-own-importer QA Q3 / Q4: Talent values of records 918 and 919 (Senior Auditor Mantis Doran, Lucrio Vance), and every mission table complete
     [Fact]
     public void RixGaraintAndTableRowCounts()
     {
         var c = Csv.Load(Path.Combine(ClassicDir, "characters.csv"));
         int Row(string name) => Enumerable.Range(0, c.Rows.Count).Single(r => c.Get(r, "name") == name);
-        Assert.Equal((918, 10, 40), (c.Int(Row("Senior Auditor Mantis Doran"), "id"), c.Int(Row("Senior Auditor Mantis Doran"), "jlvl"), c.Int(Row("Senior Auditor Mantis Doran"), "jlvlv")));
-        Assert.Equal((919, 30, 20), (c.Int(Row("Lucrio Vance"), "id"), c.Int(Row("Lucrio Vance"), "jlvl"), c.Int(Row("Lucrio Vance"), "jlvlv")));
+        Assert.Equal((918, 10, 40), (c.Int(Row("Senior Auditor Mantis Doran"), "id"), c.Int(Row("Senior Auditor Mantis Doran"), "tlvl"), c.Int(Row("Senior Auditor Mantis Doran"), "tlvlv")));
+        Assert.Equal((919, 30, 20), (c.Int(Row("Lucrio Vance"), "id"), c.Int(Row("Lucrio Vance"), "tlvl"), c.Int(Row("Lucrio Vance"), "tlvlv")));
 
         var t = Csv.Load(Path.Combine(ClassicDir, "mission-tables.csv"));
         var counts = t.Rows.GroupBy(r => r[0]).ToDictionary(g => g.Key, g => g.Count());

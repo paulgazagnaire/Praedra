@@ -89,7 +89,7 @@ public class RecruitmentPickTests
         Assert.True(c.Placed);
         Assert.Equal((CharacterStatus.Free, T, 0), (c.Status, c.System, c.AttachedFleet));
         Assert.Equal(new[] { 70 + 5, 70 + 6, 0, 0, 40 + 7, 70 + 8, 80 + 9 }, c.Skills);
-        Assert.False(c.ForceUser);
+        Assert.False(c.TalentHolder);
         Assert.Equal(Lando, w.M.Get(id)!.RecruitedCharacterKey);
         var ev = w.Events<CharacterRecruited>().Single();
         Assert.Equal((Lando, T, Side.Collective, id), (ev.Character, ev.Target, ev.Side, ev.Mission));

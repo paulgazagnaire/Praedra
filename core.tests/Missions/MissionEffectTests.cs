@@ -205,7 +205,7 @@ public class MissionEffectTests
     [Fact]
     public void MI37_HarvesterSabotage()
     {
-        var w = new MissionWorld(characters: Praedra.Core.Tests.Characters.CharWorld.ClassicForce()); // the Classic Force (m5-characters-and-force §Force CH37)
+        var w = new MissionWorld(characters: Praedra.Core.Tests.Characters.CharWorld.ClassicTalent()); // the Classic Talent (m5-characters-and-force §Talent CH37)
         w.Hold(T, Side.Hand, 0);
         w.Agent(Luke, T, esp: 100, com: 100);
         var calls = new List<(string, Side)>();
@@ -214,7 +214,7 @@ public class MissionEffectTests
         w.Start(Side.Collective, MissionKind.SpikeTheHarvester, new[] { Luke }, T);
         w.Game.Step();
         w.RunIteration(w.LastMission);
-        Assert.Equal((150, 99), (w.Events<MissionMemberRoll>().Single().Input, w.Events<MissionMemberRoll>().Single().Chance)); // B2e moved: Luke's Force 50 raises both skills to 150
+        Assert.Equal((150, 99), (w.Events<MissionMemberRoll>().Single().Input, w.Events<MissionMemberRoll>().Single().Chance)); // B2e moved: Luke's Talent 50 raises both skills to 150
         Assert.Equal(new[] { (T, Side.Hand) }, calls);
     }
 

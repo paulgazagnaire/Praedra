@@ -270,7 +270,7 @@ public class MissionRollTests
     public void MI15_AssassinationTable(int draw, bool ok)
     {
         var w = new MissionWorld();
-        w.Agent(Vader, T, com: 70).ForceExperience = 0; // B2e: without his Force, so 70 is his effective combat
+        w.Agent(Vader, T, com: 70).TalentExperience = 0; // B2e: without his Talent, so 70 is his effective combat
         w.Agent(Wedge, T, com: 70);
         w.Stub!.Expect(0, 99, Bt(1, draw)); // B2b: Vader's betrayal draw first
         w.Start(Side.Hand, MissionKind.Assassination, new[] { Vader }, null, targetChar: Wedge);

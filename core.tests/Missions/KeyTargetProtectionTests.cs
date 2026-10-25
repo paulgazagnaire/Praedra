@@ -66,19 +66,19 @@ public class KeyTargetProtectionTests
         Assert.Equal(MissionModule.CauseMissionDuel, w.Events<CharacterCaptured>().Single().Cause);
     }
 
-    // m5-missions MI69: the Force-user encounter is a duel too: Luke loses to Vader (draw 99); under Capped his cap roll (4) decides; Classic
+    // m5-missions MI69: the Talent encounter is a duel too: Luke loses to Vader (draw 99); under Capped his cap roll (4) decides; Classic
     // captures him outright
     [Theory]
     [InlineData(KeyDuelCapture.Capped, 3, true)]
     [InlineData(KeyDuelCapture.Capped, 4, false)]
     [InlineData(KeyDuelCapture.Classic, -1, true)]
-    public void MI69_ForceEncounterDuel(KeyDuelCapture mode, int roll, bool captured)
+    public void MI69_TalentEncounterDuel(KeyDuelCapture mode, int roll, bool captured)
     {
         var w = new MissionWorld(new MissionParams { KeyDuelCapture = mode });
         w.Hold(T, Side.Hand, 0);
         var luke = w.Agent(Luke, H, esp: 50, com: 90);
         var vader = w.Agent(Vader, T, com: 100);
-        luke.DiscoveredForceUser = Vader; vader.DiscoveredForceUser = Luke; luke.PairId = vader.PairId = 1;
+        luke.DiscoveredTalentHolder = Vader; vader.DiscoveredTalentHolder = Luke; luke.PairId = vader.PairId = 1;
         w.Start(Side.Collective, MissionKind.Espionage, new[] { Luke }, T);
         w.Game.Step();
         w.RunUntilWorking(w.LastMission);
@@ -91,7 +91,7 @@ public class KeyTargetProtectionTests
         Assert.False(w.Events<MissionDuel>().Single().Escaped);
         Assert.Equal(roll >= 0 ? 1 : 0, w.Events<MissionKeyDuelCaptureRoll>().Count);
         Assert.Equal(captured, luke.Status == CharacterStatus.Captured);
-        Assert.False(w.Events<ForceEncounterResolved>().Single().MemberEscaped);
+        Assert.False(w.Events<TalentEncounterResolved>().Single().MemberEscaped);
     }
 
     // m5-missions MI70: save and load after a Capped duel that did not capture: same state hash
@@ -109,7 +109,7 @@ public class KeyTargetProtectionTests
     // Vader on Assassination of a target standing at Collective T with one landed Collective Army regiment.
     private static MissionWorld KeyJob(int target, MissionParams? p, int vaderEsp = 60, int regiments = 1)
     {
-        var w = new MissionWorld(p, characters: Praedra.Core.Tests.Characters.CharWorld.ClassicForce()); // the Classic Force (100 / 100 / 50): m5-characters-and-force §Force CH37
+        var w = new MissionWorld(p, characters: Praedra.Core.Tests.Characters.CharWorld.ClassicTalent()); // the Classic Talent (100 / 100 / 50): m5-characters-and-force §Talent CH37
         w.Hold(T, Side.Collective, 30);
         for (int i = 0; i < regiments; i++) w.Unit(Side.Collective, RebArmy, T);
         w.Agent(Vader, T, esp: vaderEsp, com: 100);
@@ -136,8 +136,8 @@ public class KeyTargetProtectionTests
         Assert.Equal(walked ? new[] { regiment } : Array.Empty<int>(), job);
     }
 
-    // m5-missions MI72: KeyTargetBaseSkills: Vader (espionage 50, Force 120: effective 110). On (DEFAULT): the detection walk reads 50, and he does
-    // not qualify for a kill (espionage below 60): the target is injured, no k draw. Off (Classic Force boost): the walk reads 110 (x 60 higher) and a
+    // m5-missions MI72: KeyTargetBaseSkills: Vader (espionage 50, Talent 120: effective 110). On (DEFAULT): the detection walk reads 50, and he does
+    // not qualify for a kill (espionage below 60): the target is injured, no k draw. Off (Classic Talent boost): the walk reads 110 (x 60 higher) and a
     // qualified success draws k (50: kill)
     [Theory]
     [InlineData(true)]

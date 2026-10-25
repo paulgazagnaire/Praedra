@@ -7,13 +7,13 @@ namespace Praedra.Core.Characters;
 /// <summary>
 /// Characters: the roster rolled at creation, posts (fleet Admiral, Commander, General; system General) and the three leadership hooks, riding a
 /// fleet and moving alone, the New-rule Navigator, the state machine (free, injured, captured, dead) with its six functions, the harvester's
-/// roll on characters, uprising incident effects 3 to 5, the Force score, rank and the Train Talent roll. Holds data and settings only; the state
+/// roll on characters, uprising incident effects 3 to 5, Talent score, rank and the Train Talent roll. Holds data and settings only; the state
 /// lives in <see cref="GameState.Characters"/>. After <see cref="GameSave.Load"/>, attach again. Every loop is in ascending character id
 /// (m1-clock rule 5). rule: m5-characters-and-force (module CharacterModule, core/Characters/).
 ///
-/// Missing rules are not invented: Force detection, Force and skill growth outside training and the encounter, assault harm and blockade escape
-/// risk are switches whose "on" is refused (<see cref="CharacterParams.Validate"/>). Injury points, healing, escape, liberation, the Force-user
-/// encounter, Force awakening and the Seat of Power are Traced (B2e).
+/// Missing rules are not invented: Talent detection, Talent and skill growth outside training and the encounter, assault harm and blockade escape
+/// risk are switches whose "on" is refused (<see cref="CharacterParams.Validate"/>). Injury points, healing, escape, liberation, the talented
+/// encounter, Talent awakening and the Seat of Power are Traced (B2e).
 /// </summary>
 public sealed class CharacterModule
 {
@@ -108,7 +108,7 @@ public sealed class CharacterModule
     /// <summary>
     /// The character sheet's <c>Recruit(side, system)</c>, the setup extras pick (m5-setup-and-victory §P9 "An extra") with the place given:
     /// the mission's own target system (it must be a system). <c>m</c> = <see cref="RecruitPoolOf"/> size; <c>m = 0</c>: nobody, no draw.
-    /// Else one draw <c>r = rand(0..m-1)</c> and pool member <c>r</c> is placed free at the system, his skills and Force as the extras have them
+    /// Else one draw <c>r = rand(0..m-1)</c> and pool member <c>r</c> is placed free at the system, his skills and Talent as the extras have them
     /// (rolled by the creation rule, m5-characters-and-force §Rolling the stats). If <c>m</c> was 1 the side's pool-empty flag is set.
     /// rule: m5-missions §6 Recruitment (Recruitment pick, 2026-10-18; [EXE-own] 0x56b9a0, 0x55fc80).
     /// </summary>
@@ -154,9 +154,9 @@ public sealed class CharacterModule
     /// <summary>Effective leadership <c>B + B * LeadershipAdjustment / 100</c> (the Seat of Power). rule: §Posts (the three hooks); B2e §1, §6.</summary>
     public int EffectiveLeadership(CharacterRecord c) => EffectiveSkill(c, Skill.Leadership);
 
-    /// <summary>The one reader of a skill for every rule (missions, duels, B2b, the AI). rule: §Force (effects; Traced B2e §1).</summary>
-    // rule: m5-characters-and-force §Force (New, Paul 2026-10-18; Classic = 100): the Force share is <see cref="CharacterParams.ForceSkillPercent"/>.
-    public int EffectiveSkill(CharacterRecord c, Skill s) => c.EffectiveSkill(s, Params.ForceSkillPercent);
+    /// <summary>The one reader of a skill for every rule (missions, duels, B2b, the AI). rule: §Talent (effects; Traced B2e §1).</summary>
+    // rule: m5-characters-and-force §Talent (New, Paul 2026-10-18; Classic = 100): Talent share is <see cref="CharacterParams.TalentSkillPercent"/>.
+    public int EffectiveSkill(CharacterRecord c, Skill s) => c.EffectiveSkill(s, Params.TalentSkillPercent);
 
     private CharacterRecord? PostHolder(int fleetId, CharacterPost post) =>
         S.Characters.Values.FirstOrDefault(c => c.AttachedFleet == fleetId && c.Post == post && post != CharacterPost.None);
@@ -179,45 +179,45 @@ public sealed class CharacterModule
     public CharacterRecord? SystemGeneralOf(string system) => S.SystemGenerals.TryGetValue(system, out var id) ? Get(id) : null;
     public IEnumerable<CharacterRecord> AttachedTo(int fleetId) => S.Characters.Values.Where(c => c.AttachedFleet == fleetId);
 
-    // ---- Force. rule: §Force
+    // ---- Talent. rule: §Talent
 
-    /// <summary>Rank from the effective Force (null = not a Force user). rule: §Force (Rank), CH7.</summary>
-    public ForceRank? RankOf(CharacterRecord c) => RankFor(c.ForceUser, c.EffectiveForce);
+    /// <summary>Rank from the effective Talent (null = not a talented character). rule: §Talent (Rank), CH7.</summary>
+    public TalentRank? RankOf(CharacterRecord c) => RankFor(c.TalentHolder, c.EffectiveTalent);
 
-    public ForceRank? RankFor(bool forceUser, int effectiveForce)
+    public TalentRank? RankFor(bool forceUser, int effectiveTalent)
     {
         if (!forceUser) return null;
-        if (effectiveForce >= Params.ForceMasterMin) return ForceRank.Master;
-        if (effectiveForce >= Params.ForceKnightMin) return ForceRank.Knight;
-        if (effectiveForce >= Params.ForceStudentMin) return ForceRank.Student;
-        return ForceRank.Trainee;
+        if (effectiveTalent >= Params.TalentUnforecastableMin) return TalentRank.Unforecastable;
+        if (effectiveTalent >= Params.TalentAnomalyMin) return TalentRank.Anomaly;
+        if (effectiveTalent >= Params.TalentDeviationMin) return TalentRank.Deviation;
+        return TalentRank.Latent;
     }
 
     /// <summary>
     /// The eligibility the Train Talent mission checks: the trainer has the trainer flag, is Free and available (and a Knight with
-    /// <see cref="CharacterParams.TrainerNeedsKnight"/>); the student is a discovered Force user, Free, same side, at the trainer's system.
-    /// rule: §Force (Eligibility).
+    /// <see cref="CharacterParams.TrainerNeedsAnomaly"/>); the student is a discovered talented character, Free, same side, at the trainer's system.
+    /// rule: §Talent (Eligibility).
     /// </summary>
     public bool CanTrain(CharacterRecord trainer, CharacterRecord student)
     {
         if (!IsTrainer(trainer) || !IsAvailable(trainer)) return false;
-        if (Params.TrainerNeedsKnight && trainer.EffectiveForce < Params.ForceKnightMin) return false;
-        return student.Id != trainer.Id && student.Placed && student.ForceUser && student.ForceDiscovered && student.Status == CharacterStatus.Free
+        if (Params.TrainerNeedsAnomaly && trainer.EffectiveTalent < Params.TalentAnomalyMin) return false;
+        return student.Id != trainer.Id && student.Placed && student.TalentHolder && student.TalentDiscovered && student.Status == CharacterStatus.Free
             && student.Side == trainer.Side && LocationOf(student) != null && LocationOf(student) == LocationOf(trainer);
     }
 
     /// <summary>
-    /// Can train and awaken: the data flag <c>jedi_trainer</c> under <see cref="TrainerPick.Fixed"/> (Classic), the setup draw under Random (New).
-    /// rule: §Force (Eligibility); §Rule (New) 4.
+    /// Can train and awaken: the data flag <c>trainer</c> under <see cref="TrainerPick.Fixed"/> (Classic), the setup draw under Random (New).
+    /// rule: §Talent (Eligibility); §Rule (New) 4.
     /// </summary>
-    public bool IsTrainer(CharacterRecord c) => Params.TrainerPick == TrainerPick.Random ? c.Talented : ClassOf(c).JediTrainer;
+    public bool IsTrainer(CharacterRecord c) => Params.TrainerPick == TrainerPick.Random ? c.Talented : ClassOf(c).TalentTrainer;
 
     // ================================================================== creation and setup (outside a Step)
 
     /// <summary>
     /// Roll one character from its record with the game generator, in the fixed draw order: the seven skills (each only if its variance is above
-    /// 0), loyalty (same), the awakening (no draw for known Jedi, probability 0 or 100+), then the Force level (draw only if its variance is above
-    /// 0). No clamp. The character is created unplaced. rule: §Rolling the stats (Traced for Force, DEFAULT for skills), CH1, CH2.
+    /// 0), loyalty (same), the awakening (no draw for known Talent, probability 0 or 100+), then Talent level (draw only if its variance is above
+    /// 0). No clamp. The character is created unplaced. rule: §Rolling the stats (Traced for Talent, DEFAULT for skills), CH1, CH2.
     /// </summary>
     public CharacterRecord Create(CharacterClass cls, GameRng rng)
     {
@@ -226,27 +226,27 @@ public sealed class CharacterModule
             c.Skills.Add(cls.SkillBase[i] + (cls.SkillVariance[i] > 0 ? rng.NextInt(0, cls.SkillVariance[i]) : 0));
         c.Loyalty = cls.LoyaltyBase + (cls.LoyaltyVariance > 0 ? rng.NextInt(0, cls.LoyaltyVariance) : 0);
         bool user;
-        if (cls.KnownJedi) user = true;
-        else if (cls.ForceProbability <= 0) user = false;
-        else if (cls.ForceProbability >= 100) user = true;
-        else user = rng.NextInt(0, 99) < cls.ForceProbability; // flagging roll's form [inferred]
-        c.ForceUser = user;
-        c.ForceDiscovered = cls.KnownJedi; // Classic text: Luke, Vader and the Emperor are public Force users
-        c.ForceExperience = 0; c.ForceTraining = 0;
-        if (c.ForceUser && c.ForceDiscovered) RollForceExperience(c, rng); // B2e §5: only once aware (known Jedi: at creation, inferred)
+        if (cls.KnownTalent) user = true;
+        else if (cls.TalentProbability <= 0) user = false;
+        else if (cls.TalentProbability >= 100) user = true;
+        else user = rng.NextInt(0, 99) < cls.TalentProbability; // flagging roll's form [inferred]
+        c.TalentHolder = user;
+        c.TalentDiscovered = cls.KnownTalent; // Classic text: Luke, Vader and the Emperor are public talented characters
+        c.TalentExperience = 0; c.TalentTraining = 0;
+        if (c.TalentHolder && c.TalentDiscovered) RollTalentExperience(c, rng); // B2e §5: only once aware (known Talent: at creation, inferred)
         S.Characters[c.Id] = c;
         return c;
     }
 
     /// <summary>
-    /// ForcePotential and ForceAware both set with ForceExperience still 0: <c>ForceExperience := jedi_level + rand(0..jedi_level_variance)</c>
-    /// (record words 30, 31), the draw only when the variance is above 0. rule: §Force (Traced B2e §5, 0x4eee60).
+    /// TalentPotential and TalentAware both set with TalentExperience still 0: <c>TalentExperience := tlvl + rand(0..tlvlv)</c>
+    /// (record words 30, 31), the draw only when the variance is above 0. rule: §Talent (Traced B2e §5, 0x4eee60).
     /// </summary>
-    private void RollForceExperience(CharacterRecord c, GameRng rng)
+    private void RollTalentExperience(CharacterRecord c, GameRng rng)
     {
-        if (!c.ForceUser || !c.ForceDiscovered || c.ForceExperience != 0) return;
+        if (!c.TalentHolder || !c.TalentDiscovered || c.TalentExperience != 0) return;
         var cls = ClassOf(c);
-        c.ForceExperience = cls.ForceLevelBase + (cls.ForceLevelVariance > 0 ? rng.NextInt(0, cls.ForceLevelVariance) : 0);
+        c.TalentExperience = cls.TalentLevelBase + (cls.TalentLevelVariance > 0 ? rng.NextInt(0, cls.TalentLevelVariance) : 0);
     }
 
     /// <summary>Create every roster character (in_game) in ascending id, from the game generator. rule: §Rolling the stats (creation draw order).</summary>
@@ -318,24 +318,24 @@ public sealed class CharacterModule
 
     /// <summary>
     /// Random trainers (New, Paul 2026-10-18), after the start cast: for the Collective then the Hand (DEFAULT order), up to TalentedPerSide draws
-    /// k = rand(0..n-1) over that side's placed characters in id order, without replacement; each drawn one is Talented, a Force user and aware,
-    /// with Force = rand(TalentedForceMin..TalentedForceMax) unless his own is higher (Q16 DEFAULT): one more draw each. The pool leaves out the already
-    /// strong (own Force at TalentedForceMin or more) and the never_talented characters (Q17, Paul 2026-10-18). rule: §Rule (New) 4.
+    /// k = rand(0..n-1) over that side's placed characters in id order, without replacement; each drawn one is Talented, a talented character and aware,
+    /// with Talent = rand(TalentedMin..TalentedMax) unless his own is higher (Q16 DEFAULT): one more draw each. The pool leaves out the already
+    /// strong (own Talent at TalentedMin or more) and the never_talented characters (Q17, Paul 2026-10-18). rule: §Rule (New) 4.
     /// </summary>
     private void PickTalented(GameRng rng)
     {
         foreach (var side in new[] { Side.Collective, Side.Hand })
         {
             var pool = S.Characters.Values.Where(c => c.Placed && c.Side == side
-                && !(Params.TalentedSkipStrong && c.EffectiveForce >= Params.TalentedForceMin)   // Q17 (Paul 2026-10-18): never the already strong
+                && !(Params.TalentedSkipStrong && c.EffectiveTalent >= Params.TalentedMin)   // Q17 (Paul 2026-10-18): never the already strong
                 && !(Params.TalentedSkipFlagged && ClassOf(c).NeverTalented)).ToList();          // Q17 (Paul 2026-10-18): never the Repossessors; id order
             for (int k = 0; k < Params.TalentedPerSide && pool.Count > 0; k++)
             {
                 var c = pool[rng.NextInt(0, pool.Count - 1)];
                 pool.Remove(c);
-                int f = Params.TalentedForceMin + (Params.TalentedForceMax > Params.TalentedForceMin ? rng.NextInt(0, Params.TalentedForceMax - Params.TalentedForceMin) : 0);
-                c.Talented = true; c.ForceUser = true; c.ForceDiscovered = true;
-                c.ForceExperience = Math.Max(c.ForceExperience, f - c.ForceTraining);
+                int f = Params.TalentedMin + (Params.TalentedMax > Params.TalentedMin ? rng.NextInt(0, Params.TalentedMax - Params.TalentedMin) : 0);
+                c.Talented = true; c.TalentHolder = true; c.TalentDiscovered = true;
+                c.TalentExperience = Math.Max(c.TalentExperience, f - c.TalentTraining);
             }
         }
     }
@@ -469,7 +469,7 @@ public sealed class CharacterModule
     public int HurtRoll(GameRng rng, int v) => InjuryRoll(rng, Math.Max(Params.HurtMinChance, PercentDieMax + 1 - v), Params.HurtSizeBase, Params.HurtSizeSpread);
     /// <summary>Hurt2(v) (vtable +0x2e8; its caller 0x502840 is not read, so nothing calls it yet): GNPRTB 2568-2570. 0x53ea00. rule: B2e §2.</summary>
     public int Hurt2Roll(GameRng rng, int v) => InjuryRoll(rng, Math.Max(Params.Hurt2MinChance, PercentDieMax + 1 - v), Params.Hurt2SizeBase, Params.Hurt2SizeSpread);
-    /// <summary>HurtBy(a, b): p = max(GNPRTB 2571, b - a), GNPRTB 2572, 2573. 0x53ea70 (the Force-user encounter). rule: B2e §2, §4.</summary>
+    /// <summary>HurtBy(a, b): p = max(GNPRTB 2571, b - a), GNPRTB 2572, 2573. 0x53ea70 (the Talent encounter). rule: B2e §2, §4.</summary>
     public int HurtByRoll(GameRng rng, int a, int b) => InjuryRoll(rng, Math.Max(Params.HurtByMinChance, b - a), Params.HurtBySizeBase, Params.HurtBySizeSpread);
     /// <summary>HurtFixed (vtable +0x2ec, reason 7; its caller 0x576620 is not read): p = GNPRTB 2574 (100), 2575, 2576. 0x53eae0. rule: B2e §2.</summary>
     public int HurtFixedRoll(GameRng rng) => InjuryRoll(rng, Params.HurtFixedChance, Params.HurtFixedSizeBase, Params.HurtFixedSizeSpread);
@@ -838,98 +838,98 @@ public sealed class CharacterModule
         foreach (var c in leaving) Autoroute(ctx, c); // B2e §3 / QA-9: Autoroute keeps its own tests (free or injured, no fleet, not travelling, no mission)
     }
 
-    // ================================================================== Force (§Force)
+    // ================================================================== Talent (§Talent)
 
     /// <summary>
     /// One Train Talent round (the mission calls it at the end of its timer): for each student in id order, gap = trainer - student (effective);
-    /// draw r = rand(0..99) always; success if gap &gt; 0 and r &lt; min(gap, 100) * ForceTrainingChancePercent / 100; on success draw
-    /// g = rand(0..gap * ForceTrainingGainPercent / 100) (New DEFAULTs 50 and 25; Classic 100 and 50) and add it to the
-    /// student's acquired Force. Events ForceTrainingResult, then ForceRankChanged if the rank changed. No student reaches the trainer.
-    /// rule: §Force (Train Talent: the roll), Traced 0x55c7c0, 0x53e2f0, 0x55ca20 (chance reading [inferred]); CH3 to CH6.
+    /// draw r = rand(0..99) always; success if gap &gt; 0 and r &lt; min(gap, 100) * TalentTrainingChancePercent / 100; on success draw
+    /// g = rand(0..gap * TalentTrainingGainPercent / 100) (New DEFAULTs 50 and 25; Classic 100 and 50) and add it to the
+    /// student's acquired Talent. Events TalentTrainingResult, then TalentRankChanged if the rank changed. No student reaches the trainer.
+    /// rule: §Talent (Train Talent: the roll), Traced 0x55c7c0, 0x53e2f0, 0x55ca20 (chance reading [inferred]); CH3 to CH6.
     /// </summary>
-    public void ForceTrainingRound(StepContext ctx, CharacterRecord trainer, IEnumerable<CharacterRecord> students)
+    public void TalentTrainingRound(StepContext ctx, CharacterRecord trainer, IEnumerable<CharacterRecord> students)
     {
         int day = ctx.Day + 1;
         foreach (var s in students.OrderBy(x => x.Id).ToList())
         {
             var before = RankOf(s);
-            int gap = trainer.EffectiveForce - s.EffectiveForce;
+            int gap = trainer.EffectiveTalent - s.EffectiveTalent;
             int r = ctx.Rng.NextInt(0, 99);
-            // rule: m5-characters-and-force §Force (Train Talent: the roll; New, Paul 2026-10-18; Classic = 100 / 50)
-            int chance = Math.Min(gap, Params.TrainingChanceCap) * Params.ForceTrainingChancePercent / CharacterRecord.PercentDivisor;
+            // rule: m5-characters-and-force §Talent (Train Talent: the roll; New, Paul 2026-10-18; Classic = 100 / 50)
+            int chance = Math.Min(gap, Params.TrainingChanceCap) * Params.TalentTrainingChancePercent / CharacterRecord.PercentDivisor;
             bool success = gap > 0 && r < chance;
             int gain = 0;
             if (success)
             {
-                gain = ctx.Rng.NextInt(0, gap * Params.ForceTrainingGainPercent / CharacterRecord.PercentDivisor);
-                s.ForceTraining += gain;
+                gain = ctx.Rng.NextInt(0, gap * Params.TalentTrainingGainPercent / CharacterRecord.PercentDivisor);
+                s.TalentTraining += gain;
             }
-            int sid = s.Id, tid = trainer.Id, nf = s.EffectiveForce, g2 = gain; var side = s.Side;
-            ctx.Emit((i, _) => new ForceTrainingResult(i, day, tid, sid, side, gap, r, success, g2, nf));
+            int sid = s.Id, tid = trainer.Id, nf = s.EffectiveTalent, g2 = gain; var side = s.Side;
+            ctx.Emit((i, _) => new TalentTrainingResult(i, day, tid, sid, side, gap, r, success, g2, nf));
             var after = RankOf(s);
-            if (after != before) ctx.Emit((i, _) => new ForceRankChanged(i, day, sid, side, before, after));
+            if (after != before) ctx.Emit((i, _) => new TalentRankChanged(i, day, sid, side, before, after));
         }
     }
 
     /// <summary>
-    /// A story discovery (Classic's film story missions called it; they are cut, data/design/cut-classes.csv, so only tests do now): a hidden Force user becomes discovered. Event ForceDiscovered.
-    /// With <see cref="ForceDiscoveryMode.Story"/> (DEFAULT) this and the known Jedi at creation are the only discoveries. rule: §Force (Force discovery).
+    /// A story discovery (Classic's film story missions called it; they are cut, data/design/cut-classes.csv, so only tests do now): a hidden talented character becomes discovered. Event TalentDiscovered.
+    /// With <see cref="TalentDiscoveryMode.Story"/> (DEFAULT) this and the known Talent at creation are the only discoveries. rule: §Talent (Talent discovery).
     /// </summary>
-    public bool DiscoverForce(StepContext? ctx, CharacterRecord c, string cause)
+    public bool DiscoverTalent(StepContext? ctx, CharacterRecord c, string cause)
     {
-        if (!c.ForceUser || c.ForceDiscovered) return false;
+        if (!c.TalentHolder || c.TalentDiscovered) return false;
         var before = RankOf(c);
-        c.ForceDiscovered = true;
-        RollForceExperience(c, ctx?.Rng ?? _game.Rng); // rule: §Force (B2e §5: the Force is rolled when he becomes aware)
+        c.TalentDiscovered = true;
+        RollTalentExperience(c, ctx?.Rng ?? _game.Rng); // rule: §Talent (B2e §5: Talent is rolled when he becomes aware)
         int day = (ctx?.Day ?? _game.Day) + 1;
-        Emit(ctx, (i, _) => new ForceDiscovered(i, day, c.Id, c.Side, cause));
+        Emit(ctx, (i, _) => new TalentDiscovered(i, day, c.Id, c.Side, cause));
         RankEvent(ctx, day, c, before);
         return true;
     }
 
-    private void RankEvent(StepContext? ctx, int day, CharacterRecord c, ForceRank? before)
+    private void RankEvent(StepContext? ctx, int day, CharacterRecord c, TalentRank? before)
     {
         var after = RankOf(c);
         if (after == before) return;
         int id = c.Id; var side = c.Side;
-        Emit(ctx, (i, _) => new ForceRankChanged(i, day, id, side, before, after));
+        Emit(ctx, (i, _) => new TalentRankChanged(i, day, id, side, before, after));
     }
 
-    /// <summary>The next pair id from the game-wide counter (0x55ff60 stamps both characters of a discovery). rule: §Force (B2e §4).</summary>
+    /// <summary>The next pair id from the game-wide counter (0x55ff60 stamps both characters of a discovery). rule: §Talent (B2e §4).</summary>
     public int NewPairId() => ++S.NextPairId;
 
     /// <summary>
-    /// Do <paramref name="m"/> and <paramref name="x"/> meet in a Force-user encounter: each names the other as discovered Force user and both
-    /// carry the same non-zero pair id. Else nothing happens and nothing is drawn. rule: §Force (Traced B2e §4 "Preconditions").
+    /// Do <paramref name="m"/> and <paramref name="x"/> meet in a Talent encounter: each names the other as discovered talented character and both
+    /// carry the same non-zero pair id. Else nothing happens and nothing is drawn. rule: §Talent (Traced B2e §4 "Preconditions").
     /// </summary>
     public bool MutualDiscovery(CharacterRecord m, out CharacterRecord? x)
     {
-        x = m.DiscoveredForceUser != 0 ? Get(m.DiscoveredForceUser) : null;
-        return x != null && x.DiscoveredForceUser == m.Id && m.PairId != 0 && m.PairId == x.PairId;
+        x = m.DiscoveredTalentHolder != 0 ? Get(m.DiscoveredTalentHolder) : null;
+        return x != null && x.DiscoveredTalentHolder == m.Id && m.PairId != 0 && m.PairId == x.PairId;
     }
 
     /// <summary>
-    /// Steps 2 to 7 of the Force-user encounter (0x560200), after the mission module's duel (step 1) with <paramref name="x"/> as the captor:
+    /// Steps 2 to 7 of the Talent encounter (0x560200), after the mission module's duel (step 1) with <paramref name="x"/> as the captor:
     /// read both effective combats; if <paramref name="m"/> was not hurt in the duel, HurtBy(m, x) on m (p = max(1, x - m)); HurtBy(x, m) on x;
-    /// whoever hurt the other gains GNPRTB 2578 base combat; both keys and pair ids cleared, both sides told; then the Jedi effects by key (Luke
-    /// and Vader: Luke learns his heritage, the hand injury below Force 80, Force +max(1, gap x 25%); Luke and the Emperor +20%; Leia, once aware,
+    /// whoever hurt the other gains GNPRTB 2578 base combat; both keys and pair ids cleared, both sides told; then the Talent effects by key (Luke
+    /// and Vader: Luke learns his heritage, the hand injury below Talent 80, Talent +max(1, gap x 25%); Luke and the Emperor +20%; Leia, once aware,
     /// with Vader or the Emperor +20%). "Free" = not captured after the duel. Draws in order: m's HurtBy (unless hurt in the duel), x's HurtBy,
-    /// Luke's hand draw. rule: §Force (Traced B2e §4, Work 11).
+    /// Luke's hand draw. rule: §Talent (Traced B2e §4, Work 11).
     /// </summary>
-    public void ForceEncounter(StepContext ctx, int day, int mission, CharacterRecord m, CharacterRecord x, bool mHurtInDuel, bool mEscaped)
+    public void TalentEncounter(StepContext ctx, int day, int mission, CharacterRecord m, CharacterRecord x, bool mHurtInDuel, bool mEscaped)
     {
         int mc = EffectiveSkill(m, Skill.Combat), xc = EffectiveSkill(x, Skill.Combat); // step 2
         bool mHurt = mHurtInDuel, xHurt;
-        if (!mHurtInDuel) mHurt = AddInjury(ctx, m, HurtByRoll(ctx.Rng, mc, xc), CharacterCause.ForceEncounter); // step 3
-        xHurt = AddInjury(ctx, x, HurtByRoll(ctx.Rng, xc, mc), CharacterCause.ForceEncounter); // step 4
+        if (!mHurtInDuel) mHurt = AddInjury(ctx, m, HurtByRoll(ctx.Rng, mc, xc), CharacterCause.TalentEncounter); // step 3
+        xHurt = AddInjury(ctx, x, HurtByRoll(ctx.Rng, xc, mc), CharacterCause.TalentEncounter); // step 4
         if (xHurt) GainSkill(m, Skill.Combat, Params.EncounterCombatGain); // step 5
         if (mHurt) GainSkill(x, Skill.Combat, Params.EncounterCombatGain);
-        m.DiscoveredForceUser = 0; x.DiscoveredForceUser = 0; m.PairId = 0; x.PairId = 0; // step 6 (0x4ee500, 0x4ef1c0)
+        m.DiscoveredTalentHolder = 0; x.DiscoveredTalentHolder = 0; m.PairId = 0; x.PairId = 0; // step 6 (0x4ee500, 0x4ef1c0)
         {
             int mid = m.Id, xid = x.Id; var ms = m.Side; var xs = x.Side; bool mh = mHurt, xh = xHurt, esc = mEscaped;
-            ctx.Emit((i, _) => new ForceEncounterResolved(i, day, mission, mid, ms, xid, xs, esc, mh, xh));
+            ctx.Emit((i, _) => new TalentEncounterResolved(i, day, mission, mid, ms, xid, xs, esc, mh, xh));
         }
-        // step 7: the Jedi effects, by the keys of m and x
+        // step 7: the Talent effects, by the keys of m and x
         bool Is(CharacterRecord c, int id) => c.Id == id;
         bool Free(CharacterRecord c) => c.Status is not (CharacterStatus.Captured or CharacterStatus.Dead);
         CharacterRecord? Pair(int a, int b) => Is(m, a) && Is(x, b) ? m : Is(x, a) && Is(m, b) ? x : null;
@@ -938,34 +938,34 @@ public sealed class CharacterModule
         {
             var vader = luke == m ? x : m;
             if (!luke.KnowsHeritage) { luke.KnowsHeritage = true; Heritage(ctx, day, luke); }
-            if (Free(luke) && luke.EffectiveForce < p.LukeHandMaxForce) // the lost hand (0x561b60)
-                AddInjury(ctx, luke, ctx.Rng.NextInt(0, p.LukeHandSpread) + p.LukeHandBase, CharacterCause.ForceEncounter);
-            if (Free(luke)) GainForce(ctx, day, luke, vader, p.LukeVaderGainPercent, p.LukeVaderMinGain);
+            if (Free(luke) && luke.EffectiveTalent < p.LukeHandMaxTalent) // the lost hand (0x561b60)
+                AddInjury(ctx, luke, ctx.Rng.NextInt(0, p.LukeHandSpread) + p.LukeHandBase, CharacterCause.TalentEncounter);
+            if (Free(luke)) GainTalent(ctx, day, luke, vader, p.LukeVaderGainPercent, p.LukeVaderMinGain);
         }
         else if (Pair(p.Luke, p.Emperor) is { } luke2)
         {
-            if (Free(luke2)) GainForce(ctx, day, luke2, luke2 == m ? x : m, p.LukeEmperorGainPercent, p.LukeEmperorMinGain);
+            if (Free(luke2)) GainTalent(ctx, day, luke2, luke2 == m ? x : m, p.LukeEmperorGainPercent, p.LukeEmperorMinGain);
         }
         else if (Pair(p.Leia, p.Vader) is { } leia)
         {
-            if (Free(leia) && leia.ForceDiscovered) GainForce(ctx, day, leia, leia == m ? x : m, p.LeiaVaderGainPercent, p.LeiaVaderMinGain);
+            if (Free(leia) && leia.TalentDiscovered) GainTalent(ctx, day, leia, leia == m ? x : m, p.LeiaVaderGainPercent, p.LeiaVaderMinGain);
         }
         else if (Pair(p.Leia, p.Emperor) is { } leia2)
         {
-            if (Free(leia2) && leia2.ForceDiscovered) GainForce(ctx, day, leia2, leia2 == m ? x : m, p.LeiaEmperorGainPercent, p.LeiaEmperorMinGain);
+            if (Free(leia2) && leia2.TalentDiscovered) GainTalent(ctx, day, leia2, leia2 == m ? x : m, p.LeiaEmperorGainPercent, p.LeiaEmperorMinGain);
         }
     }
 
-    // ForceExperience += g, g = max(min, gap * percent / 100) when the gap is positive, else min (GNPRTB 3072-3075, 3084-3087). rule: B2e §4 step 7.
-    private void GainForce(StepContext ctx, int day, CharacterRecord jedi, CharacterRecord other, int percent, int min)
+    // TalentExperience += g, g = max(min, gap * percent / 100) when the gap is positive, else min (GNPRTB 3072-3075, 3084-3087). rule: B2e §4 step 7.
+    private void GainTalent(StepContext ctx, int day, CharacterRecord talented, CharacterRecord other, int percent, int min)
     {
-        int gap = other.EffectiveForce - jedi.EffectiveForce;
+        int gap = other.EffectiveTalent - talented.EffectiveTalent;
         int g = gap > 0 ? Math.Max(min, gap * percent / CharacterRecord.PercentDivisor) : min;
-        var before = RankOf(jedi);
-        jedi.ForceExperience += g;
-        int id = jedi.Id, nf = jedi.EffectiveForce; var side = jedi.Side;
-        ctx.Emit((i, _) => new ForceGained(i, day, id, side, g, nf, CharacterCause.ForceEncounter));
-        RankEvent(ctx, day, jedi, before);
+        var before = RankOf(talented);
+        talented.TalentExperience += g;
+        int id = talented.Id, nf = talented.EffectiveTalent; var side = talented.Side;
+        ctx.Emit((i, _) => new TalentGained(i, day, id, side, g, nf, CharacterCause.TalentEncounter));
+        RankEvent(ctx, day, talented, before);
     }
 
     private static void Heritage(StepContext ctx, int day, CharacterRecord c)
@@ -1198,7 +1198,7 @@ public sealed class CharacterModule
 
     /// <summary>
     /// Slot 6.10, the character timers (B2e §7), each in character id order: healing (no draws), escape attempts (the attempt draw, then the next
-    /// delay draw), Force awakening (the Force roll of each awakened character), then the Seat of Power. A timer acts only the day after its
+    /// delay draw), Talent awakening (Talent roll of each awakened character), then the Seat of Power. A timer acts only the day after its
     /// flag turned on (DEFAULT day alignment) and only while the flag stays on; a spread of 0 makes no draw. rule: §Where it runs (6.10).
     /// </summary>
     private void DayEnd(StepContext ctx)
@@ -1214,7 +1214,7 @@ public sealed class CharacterModule
                 int delay = EscapeDelay(ctx.Rng); // the next delay, drawn right after the attempt (B2e §3, Work 11 item 4)
                 c.NextEscapeDay = c.Status == CharacterStatus.Captured ? k + delay : 0;
             }
-        if (Params.ForceDiscovery == ForceDiscoveryMode.Trainer)
+        if (Params.TalentDiscovery == TalentDiscoveryMode.Trainer)
             foreach (var t in S.Characters.Values.Where(c => c.Placed).ToList()) AwakenTick(ctx, t, k);
         // QA-9 (B2e §3): a character who waited for a pending battle is routed again (DEFAULT: at slot 6.10 of each later day)
         foreach (var c in S.Characters.Values.Where(c => c.AutoroutePending).ToList()) Autoroute(ctx, c);
@@ -1238,11 +1238,11 @@ public sealed class CharacterModule
     /// <summary>
     /// Healing (+0xac): CanHeal = the character's place belongs to his side (his fleet when he rides one, else the system's holder), not captured,
     /// not dead; Healing = CanHeal, not travelling, Injury &gt; 0. While Healing, every GNPRTB 2561 / 2562 (1) days: Injury -= 2 with FastHeal
-    /// (Force &gt;= GNPRTB 2560 = 80; GNPRTB 2563) else 1 (2564), not below 0; at 0 he is healed. rule: §Capture, injury (Traced B2e §2, 0x4ef030, 0x4ef100).
+    /// (Talent &gt;= GNPRTB 2560 = 80; GNPRTB 2563) else 1 (2564), not below 0; at 0 he is healed. rule: §Capture, injury (Traced B2e §2, 0x4ef030, 0x4ef100).
     /// </summary>
     private void HealTick(StepContext ctx, CharacterRecord c, int k)
     {
-        bool fast = c.EffectiveForce >= Params.FastHealMinForce;
+        bool fast = c.EffectiveTalent >= Params.FastHealMinTalent;
         if (!(c.Injury > 0 && CanHeal(c))) { c.NextHealDay = 0; return; }
         if (c.NextHealDay == 0) { c.NextHealDay = k + (fast ? Params.HealPeriodFast : Params.HealPeriod); return; } // the flag turned on
         if (k < c.NextHealDay) return;
@@ -1291,15 +1291,15 @@ public sealed class CharacterModule
     public Func<Side, string, int> SpecialForcesOnPlanet { get; set; } = (_, _) => 0;
 
     /// <summary>
-    /// The awakening timer of a trainer (DiscoveringForceUser = the record's jedi_trainer, Force &gt;= GNPRTB 2580 = 80, not on a mission, alive,
+    /// The awakening timer of a trainer (DiscoveringTalentHolder = the record's trainer, Talent &gt;= GNPRTB 2580 = 80, not on a mission, alive,
     /// not captured; 0x4ef070), firing every GNPRTB 2582 (1) days: each character of the trainer's side directly on the trainer's place (the same
-    /// fleet when he rides one), alive, not captured, not on a mission, not the trainer, with ForcePotential and not ForceAware, in id order: Leia
-    /// only when the trainer is Luke and Luke knows his heritage (she then learns hers); then aware, awakened by the trainer, Force rolled. No draw
-    /// but the Force roll. rule: §Force (Traced B2e §5, 0x560a30).
+    /// fleet when he rides one), alive, not captured, not on a mission, not the trainer, with TalentPotential and not TalentAware, in id order: Leia
+    /// only when the trainer is Luke and Luke knows his heritage (she then learns hers); then aware, awakened by the trainer, Talent rolled. No draw
+    /// but Talent roll. rule: §Talent (Traced B2e §5, 0x560a30).
     /// </summary>
     private void AwakenTick(StepContext ctx, CharacterRecord t, int k)
     {
-        bool on = IsTrainer(t) && t.EffectiveForce >= Params.TrainerMinForce && !IsOnMission(t.Id)
+        bool on = IsTrainer(t) && t.EffectiveTalent >= Params.TrainerMinTalent && !IsOnMission(t.Id)
             && t.Status is CharacterStatus.Free or CharacterStatus.Injured;
         if (!on) { t.NextAwakenDay = 0; return; }
         int Delay() => Params.AwakenPeriod + (Params.AwakenSpread > 0 ? ctx.Rng.NextInt(0, Params.AwakenSpread) : 0);
@@ -1308,7 +1308,7 @@ public sealed class CharacterModule
         t.NextAwakenDay = k + Delay();
         int day = k + 1;
         foreach (var y in S.Characters.Values.Where(y => y.Placed && y.Id != t.Id && y.Side == t.Side
-            && y.Status is CharacterStatus.Free or CharacterStatus.Injured && !IsOnMission(y.Id) && y.ForceUser && !y.ForceDiscovered
+            && y.Status is CharacterStatus.Free or CharacterStatus.Injured && !IsOnMission(y.Id) && y.TalentHolder && !y.TalentDiscovered
             && (t.AttachedFleet != 0 ? y.AttachedFleet == t.AttachedFleet : y.AttachedFleet == 0 && y.Transit == null && t.Transit == null && t.System != null && y.System == t.System)).ToList())
         {
             if (y.Id == Params.Leia)
@@ -1317,10 +1317,10 @@ public sealed class CharacterModule
                 if (!y.KnowsHeritage) { y.KnowsHeritage = true; Heritage(ctx, day, y); } // 0x56fe90
             }
             var before = RankOf(y);
-            y.ForceDiscovered = true; y.AwakenedBy = t.Id;
-            RollForceExperience(y, ctx.Rng);
+            y.TalentDiscovered = true; y.AwakenedBy = t.Id;
+            RollTalentExperience(y, ctx.Rng);
             int yid = y.Id; var ys = y.Side;
-            ctx.Emit((i, _) => new ForceDiscovered(i, day, yid, ys, CharacterCause.Awakened));
+            ctx.Emit((i, _) => new TalentDiscovered(i, day, yid, ys, CharacterCause.Awakened));
             RankEvent(ctx, day, y, before);
         }
     }

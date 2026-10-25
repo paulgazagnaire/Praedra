@@ -9,7 +9,7 @@ public enum CharacterKind { Major, Minor }
 public enum Skill { Diplomacy = 0, Espionage = 1, ShipDesign = 2, TroopTraining = 3, FacilityDesign = 4, Combat = 5, Leadership = 6 }
 
 /// <summary>
-/// One character record (data, never changes): identity, skill bases and variances, loyalty, Force odds and level, the capability flags and the
+/// One character record (data, never changes): identity, skill bases and variances, loyalty, Talent odds and level, the capability flags and the
 /// navigator speed. rule: m5-characters-and-force §The character object. Classic values come from MJCHARSD / MNCHARSD (data/classic/characters.csv,
 /// column meaning unverified vs Classic); added heroes from data/design/added-heroes.csv (Proposal stats).
 /// </summary>
@@ -17,8 +17,8 @@ public sealed record CharacterClass(
     int Id, string Name, Side Side, CharacterKind Kind,
     IReadOnlyList<int> SkillBase, IReadOnlyList<int> SkillVariance,
     int LoyaltyBase, int LoyaltyVariance,
-    int ForceProbability, bool KnownJedi, int ForceLevelBase, int ForceLevelVariance,
-    bool CanAdmiral, bool CanCommander, bool CanGeneral, bool UnableToBetray, bool JediTrainer,
+    int TalentProbability, bool KnownTalent, int TalentLevelBase, int TalentLevelVariance,
+    bool CanAdmiral, bool CanCommander, bool CanGeneral, bool UnableToBetray, bool TalentTrainer,
     int NavigatorSpeed, bool Added, bool InGame, bool NeverTalented = false)
 {
     public const int SkillCount = 7;
@@ -127,7 +127,7 @@ public sealed class CharacterData
 
     private static IEnumerable<CharacterClass> Rows(CsvTable t, bool added, Dictionary<int, int> nav, Dictionary<int, bool> inGame, HashSet<int> neverTalented)
     {
-        t.Require("kind", "name", "id", "collective", "hand", "loy", "loyv", "jprob", "knownjedi", "jlvl", "jlvlv", "admiral", "commander", "general", "nobetray", "trainer");
+        t.Require("kind", "name", "id", "collective", "hand", "loy", "loyv", "tprob", "knowntalent", "tlvl", "tlvlv", "admiral", "commander", "general", "nobetray", "trainer");
         for (int r = 0; r < t.RowCount; r++)
         {
             int id = t.GetInt(r, "id");
@@ -140,7 +140,7 @@ public sealed class CharacterData
             yield return new CharacterClass(id, t.Get(r, "name").Trim(), all ? Side.Collective : Side.Hand, kind,
                 SkillColumns.Select(c => t.GetInt(r, c)).ToList(), SkillColumns.Select(c => t.GetInt(r, c + "v")).ToList(),
                 t.GetInt(r, "loy"), t.GetInt(r, "loyv"),
-                t.GetInt(r, "jprob"), t.GetInt(r, "knownjedi") == 1, t.GetInt(r, "jlvl"), t.GetInt(r, "jlvlv"),
+                t.GetInt(r, "tprob"), t.GetInt(r, "knowntalent") == 1, t.GetInt(r, "tlvl"), t.GetInt(r, "tlvlv"),
                 t.GetInt(r, "admiral") == 1, t.GetInt(r, "commander") == 1, t.GetInt(r, "general") == 1, t.GetInt(r, "nobetray") == 1, t.GetInt(r, "trainer") == 1,
                 nav.TryGetValue(id, out var s) ? s : Travel.TravelFormula.DefaultSpeed, // 100 unless listed (Proposal)
                 added, inGame.TryGetValue(id, out var g) && g, neverTalented.Contains(id));
@@ -150,12 +150,12 @@ public sealed class CharacterData
     // ------------------------------------------------------------------ AddedHeroLimits (import check, not a game rule)
 
     /// <summary>Stat-ceiling numbers (heroes/stat-ceiling, Proposal).</summary>
-    public const int CeilingLeadership = 89, CeilingOther = 80, CeilingCombat = 95, CeilingForceProbability = 50, CeilingForceLevel = 40;
+    public const int CeilingLeadership = 89, CeilingOther = 80, CeilingCombat = 95, CeilingTalentProbability = 50, CeilingTalentLevel = 40;
 
     /// <summary>
     /// The AddedHeroLimits check (DEFAULT on, an import check only): every added record against heroes/stat-ceiling rules 1 (leadership at most 89),
-    /// 2 (one signature skill may reach 90 or more, every other at most 80), 3 (combat at most 95), 4 (Force probability at most 50, level at most
-    /// 40, never known Jedi, never trainer), 6 (at most two of the three roles) and 7 (some variance). Values are base + variance. The original
+    /// 2 (one signature skill may reach 90 or more, every other at most 80), 3 (combat at most 95), 4 (Talent probability at most 50, level at most
+    /// 40, never known Talent, never trainer), 6 (at most two of the three roles) and 7 (some variance). Values are base + variance. The original
     /// records are exempt. rule: m5-characters-and-force §Rolling the stats, CH32.
     /// </summary>
     public IReadOnlyList<HeroLimitViolation> AddedHeroLimitViolations()
@@ -168,8 +168,8 @@ public sealed class CharacterData
             var high = Enumerable.Range(0, CharacterClass.SkillCount).Select(i => (Skill)i).Where(s => Max(s) > CeilingOther).ToList();
             if (high.Count > 1) res.Add(new(c.Id, c.Name, 2, string.Join(", ", high.Select(s => $"{s} {Max(s)}"))));
             if (Max(Skill.Combat) > CeilingCombat) res.Add(new(c.Id, c.Name, 3, $"combat {Max(Skill.Combat)}"));
-            if (c.ForceProbability > CeilingForceProbability || c.ForceLevelBase + c.ForceLevelVariance > CeilingForceLevel || c.KnownJedi || c.JediTrainer)
-                res.Add(new(c.Id, c.Name, 4, "Force"));
+            if (c.TalentProbability > CeilingTalentProbability || c.TalentLevelBase + c.TalentLevelVariance > CeilingTalentLevel || c.KnownTalent || c.TalentTrainer)
+                res.Add(new(c.Id, c.Name, 4, "Talent"));
             if ((c.CanAdmiral ? 1 : 0) + (c.CanCommander ? 1 : 0) + (c.CanGeneral ? 1 : 0) > 2) res.Add(new(c.Id, c.Name, 6, "three roles"));
             if (c.SkillVariance.All(v => v == 0)) res.Add(new(c.Id, c.Name, 7, "no variance"));
         }

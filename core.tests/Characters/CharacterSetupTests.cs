@@ -29,7 +29,7 @@ public class CharacterSetupTests
         }
         Assert.Equal(50, d.Get(Han).NavigatorSpeed);
         Assert.Equal(100, d.Get(Luke).NavigatorSpeed);
-        Assert.True(d.Get(Luke).JediTrainer && d.Get(Vader).JediTrainer);
+        Assert.True(d.Get(Luke).TalentTrainer && d.Get(Vader).TalentTrainer);
         Assert.All(d.All.Where(c => !c.Added), c => Assert.Equal((100, 0), (c.LoyaltyBase, c.LoyaltyVariance)));
     }
 
@@ -57,7 +57,7 @@ public class CharacterSetupTests
     }
 
     // m5-characters-and-force CH39 (Rule New 4, Paul 2026-10-18): TrainerPick Random (DEFAULT) draws 3 talented placed characters per side, each an
-    // aware Force user with Force 80..120 (or his own if higher), and only they can train; Fixed (Classic) draws nothing and Luke and Vader train
+    // aware talented character with Talent 80..120 (or his own if higher), and only they can train; Fixed (Classic) draws nothing and Luke and Vader train
     [Fact]
     public void CH39_RandomTalentedTrainers()
     {
@@ -69,7 +69,7 @@ public class CharacterSetupTests
             {
                 var t = ch.InPlay.Where(c => c.Side == side && c.Talented).ToList();
                 Assert.Equal(3, t.Count);
-                Assert.All(t, c => Assert.True(c.ForceUser && c.ForceDiscovered && c.EffectiveForce >= 80 && ch.IsTrainer(c)));
+                Assert.All(t, c => Assert.True(c.TalentHolder && c.TalentDiscovered && c.EffectiveTalent >= 80 && ch.IsTrainer(c)));
             }
             Assert.All(ch.All.Where(c => !c.Talented), c => Assert.False(ch.IsTrainer(c)));
         }
@@ -82,7 +82,7 @@ public class CharacterSetupTests
     }
 
     // m5-characters-and-force CH40 (Q17, Paul 2026-10-18 cards "Skip the strong" and "Leave out hunters"): the draw never takes anyone already at
-    // Force 80+ (the Emperor and Vader keep their Force but never train) nor a character flagged never_talented (the Repossessors); Leia and
+    // Talent 80+ (the Emperor and Vader keep their Talent but never train) nor a character flagged never_talented (the Repossessors); Leia and
     // Oti stay in the pool. With both switches off the strong can be drawn again.
     [Fact]
     public void CH40_TalentedDrawSkipsTheStrongAndTheHunters()
@@ -96,7 +96,7 @@ public class CharacterSetupTests
             var ch = Make(seed).Characters;
             Assert.All(ch.All.Where(c => c.Talented), c => Assert.DoesNotContain(c.Id, hunters.Append(Palpatine).Append(Vader)));
             Assert.Equal(3, ch.InPlay.Count(c => c.Side == Side.Hand && c.Talented));
-            Assert.True(ch.Get(Vader)!.EffectiveForce >= 80);
+            Assert.True(ch.Get(Vader)!.EffectiveTalent >= 80);
             Assert.False(ch.IsTrainer(ch.Get(Vader)!));
         }
         var open = new CharacterParams { TalentedSkipStrong = false, TalentedSkipFlagged = false };
@@ -108,7 +108,7 @@ public class CharacterSetupTests
     [Fact]
     public void P9_Deterministic()
     {
-        string Cast(GameHost h) => string.Join(";", h.Characters.InPlay.Select(c => $"{c.Id}@{c.System}/{c.AttachedFleet}:{string.Join(",", c.Skills)}:{c.EffectiveForce}"));
+        string Cast(GameHost h) => string.Join(";", h.Characters.InPlay.Select(c => $"{c.Id}@{c.System}/{c.AttachedFleet}:{string.Join(",", c.Skills)}:{c.EffectiveTalent}"));
         Assert.Equal(Cast(Make(5)), Cast(Make(5)));
         Assert.Equal(Make(5).StateHash(), Make(5).StateHash());
         Assert.NotEqual(Cast(Make(5)), Cast(Make(6)));

@@ -74,7 +74,7 @@ public sealed class GameHost
     /// <summary>Victory check (slot 6.11, last; runs only in a game made by <see cref="NewGame"/>): <c>Victory.Winner</c> is null while the game runs. rule: setup-victory/04.</summary>
     public Praedra.Core.Victory.VictoryModule Victory { get; }
 
-    /// <summary>Characters, posts, leadership, capture and death, the Force (slots 2, 3, 6.10). rule: m5-characters-and-force.</summary>
+    /// <summary>Characters, posts, leadership, capture and death, Talent (slots 2, 3, 6.10). rule: m5-characters-and-force.</summary>
     public Praedra.Core.Characters.CharacterModule Characters { get; }
     /// <summary>What moves loyalty (B2c).</summary>
     public Praedra.Core.Characters.LoyaltyModule Loyalty { get; }
