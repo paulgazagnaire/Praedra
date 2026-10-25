@@ -49,11 +49,11 @@ public class BombardmentTests
 
     // m3-bombardment B3
     [Fact]
-    public void B3_OneDeathStarIs15HitsAgainstNoShields()
+    public void B3_OneHarvesterIs15HitsAgainstNoShields()
     {
         var w = new BombWorld();
         w.Hold(All);
-        int f = w.Fleet(Emp, Sys, "Death Star");
+        int f = w.Fleet(Emp, Sys, "harvester");
         w.Stub.Expect(1, 10, 1); // B7-bombardment §5.3: no target (m0 = 0): the collateral die only
         Assert.Null(w.TryBombard(Emp, f, Sys, Mil));
         var s = Started(w);
@@ -74,8 +74,8 @@ public class BombardmentTests
     // m3-bombardment B5 (hits = max(0, P - S)): the powers are built from ships and an injected admiral
     [Theory]
     [InlineData("3", "VD6", 0, 24, 40, 0)]                     // 6 Victory Destroyers (4 each) against GenCore I
-    [InlineData("3,6", "DS4+V2", 40, 130, 120, 10)]            // (4 Death Stars + a Victory II = 65) x 2 against GenCore I + II
-    [InlineData("3,6", "DS3+V2", 40, 100, 120, 0)]             // (3 Death Stars + a Victory II = 50) x 2
+    [InlineData("3,6", "DS4+V2", 40, 130, 120, 10)]            // (4 harvesters + a Victory II = 65) x 2 against GenCore I + II
+    [InlineData("3,6", "DS3+V2", 40, 100, 120, 0)]             // (3 harvesters + a Victory II = 50) x 2
     public void B5_ShieldsAbsorbPower(string gens, string ships, int leadership, int power, int shield, int hits)
     {
         var w = new BombWorld();
@@ -84,8 +84,8 @@ public class BombardmentTests
         var list = ships switch
         {
             "VD6" => Enumerable.Repeat("Decree", 6),
-            "DS4+V2" => Enumerable.Repeat("Death Star", 4).Append("Decree II"),
-            _ => Enumerable.Repeat("Death Star", 3).Append("Decree II"),
+            "DS4+V2" => Enumerable.Repeat("harvester", 4).Append("Decree II"),
+            _ => Enumerable.Repeat("harvester", 3).Append("Decree II"),
         };
         int fleet = w.Fleet(Emp, Sys, list.ToArray());
         w.Bomb.AdmiralLeadership = _ => leadership;
@@ -174,7 +174,7 @@ public class BombardmentTests
         w.Eco.SetSlots(Sys, 4, 2);
         int m1 = w.Eco.AddFacility(Sys, FacilityKind.Mine), m2 = w.Eco.AddFacility(Sys, FacilityKind.Mine);
         for (int i = 0; i < 4; i++) w.Regiment(All, BombWorld.Army);
-        int f = w.Fleet(Emp, Sys, "Death Star", 2); // 30 hits
+        int f = w.Fleet(Emp, Sys, "harvester", 2); // 30 hits
         Assert.Null(w.TryBombard(Emp, f, Sys, Mil));
         Assert.Equal(30, Started(w).Hits);
         Assert.NotNull(w.Eco.Find(m1)); Assert.NotNull(w.Eco.Find(m2));
@@ -299,7 +299,7 @@ public class BombardmentTests
         w2.Hold(All);
         int zero = w2.Fleet(Emp, Sys, "Mule");                        // bombardment modifier 0
         Assert.Equal(BombardReject.NoBombardPower, w2.TryBombard(Emp, zero, Sys, Mil));
-        int dsFleet = w2.Fleet(Emp, Sys, "Death Star");                           // power 15, but Destroy System is not available in M3
+        int dsFleet = w2.Fleet(Emp, Sys, "harvester");                           // power 15, but Destroy System is not available in M3
         Assert.Equal(RejectReason.NotAvailable, w2.TryBombard(Emp, dsFleet, Sys, BombardCategory.DestroySystem));
     }
 
@@ -349,7 +349,7 @@ public class BombardmentTests
         var w = new BombWorld();
         w.Hold(All);
         w.Facility(FacilityKind.GenCoreLevelI); w.Facility(FacilityKind.GenCoreLevelI);
-        int f = w.Fleet(Emp, Sys, new[] { "Death Star", "Death Star", "Death Star", "Death Star", "Death Star", "Decree II", "Warrant", "Warrant" }); // P = 82
+        int f = w.Fleet(Emp, Sys, new[] { "harvester", "harvester", "harvester", "harvester", "harvester", "Decree II", "Warrant", "Warrant" }); // P = 82
         w.Stub.Expect(0, 2, 1);  // B7-bombardment §5.3: the collateral x over m0 = 2: none
         w.Dice((0, 10), (0, 1)); // the first shield falls (10 > 2), the second survives its roll (1)
         Assert.Null(w.TryBombard(Emp, f, Sys, Mil));
@@ -504,19 +504,19 @@ public class BombardmentTests
         w.Hold(All);
         w.Eco.SetSlots(Sys, 0, 0);
         w.Regiment(All, BombWorld.Army);
-        int f = w.Fleet(Emp, Sys, "Death Star");
+        int f = w.Fleet(Emp, Sys, "harvester");
         Assert.Null(w.TryBombard(Emp, f, Sys, Civ));
         Assert.Empty(w.Stub.Requests);
         Assert.Equal(15, w.Events<BombardmentResolved>().Single().Hits);
     }
 
-    // m3-bombardment §Resolution 4: a Death Star Shield is a Military target with defense 1; a destroyed defense frees its slot
+    // m3-bombardment §Resolution 4: a Harvester Shield is a Military target with defense 1; a destroyed defense frees its slot
     [Fact]
     public void DefenseFacilitiesAreMilitaryTargets()
     {
         var w = new BombWorld();
         w.Hold(Emp, 100);
-        int dss = w.Facility(FacilityKind.DeathStarShield);
+        int dss = w.Facility(FacilityKind.HarvesterShield);
         int used = w.Eco.EnergyUsed(Sys);
         int f = w.Fleet(All, Sys, "Dodger");
         w.Stub.Expect(0, 1, 1).Expect(1, 10, 2);                                 // collateral x = 1 (none); one target: no pick, then the die 2
@@ -629,7 +629,7 @@ public class BombardmentTests
     public void ShipAndFighterValuesComeFromTheData()
     {
         var d = Praedra.Core.Setup.GameData.Default.Ships;
-        Assert.Equal(new[] { 15, 4, 5, 2, 1, 0, 0 }, new[] { "Death Star", "Barricade", "Decree II", "Mandate",
+        Assert.Equal(new[] { 15, 4, 5, 2, 1, 0, 0 }, new[] { "harvester", "Barricade", "Decree II", "Mandate",
             "Dodger", "Mule", "Tender" }.Select(n => d[n].Bombardment));
         Assert.Equal(new[] { 2, 2, 2, 1, 1, 0 }, new[] { "Plough", "Maul", "Thresher", "Swift", "Winnower", "Needle" }.Select(n => d[n].Bombardment));
     }

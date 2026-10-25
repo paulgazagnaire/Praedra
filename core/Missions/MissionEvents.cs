@@ -24,7 +24,7 @@ public static class MissionReject
     public const string UnknownKind = "UnknownKind", HiddenKind = "HiddenKind", WrongSide = "WrongSide", UnknownMember = "UnknownMember",
         DuplicateMember = "DuplicateMember", NoTeam = "NoTeam", NotFree = "NotFree", NotTogether = "NotTogether", NotAbleToDo = "NotAbleToDo",
         NotEligibleSpecialForce = "NotEligibleSpecialForce", BadDecoy = "BadDecoy", TooManyMembers = "TooManyMembers", BadTarget = "BadTarget",
-        NoDeathStar = "NoDeathStar", TargetProtected = "TargetProtected", UnknownMission = "UnknownMission", RuleMissing = "RuleMissing";
+        NoHarvester = "NoHarvester", TargetProtected = "TargetProtected", UnknownMission = "UnknownMission", RuleMissing = "RuleMissing";
 }
 
 /// <summary>Why the character sheet's exposure hook is called. rule: m5-missions §4.</summary>

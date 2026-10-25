@@ -11,7 +11,7 @@ public enum FacilityKind
     Mine, Refinery,
     OrbitalShipyard, TrainingFacility, ConstructionYard,
     AdvancedShipyard, AdvancedTrainingFacility, AdvancedConstructionYard,
-    Kdy150, LnrSeriesI, GenCoreLevelI, DeathStarShield, LnrSeriesII, GenCoreLevelII,
+    Kdy150, LnrSeriesI, GenCoreLevelI, HarvesterShield, LnrSeriesII, GenCoreLevelII,
     /// <summary>Designed, not in Classic: 1 energy slot, 10 refined, maintenance 5, one per planet. rule: m5-fog-and-hq §N4; economy/15 §2 (Paul 2026-10-16).</summary>
     SensorStation,
 }
@@ -24,7 +24,7 @@ public static class FacilityKinds
         "Mine", "Refinery",
         "Orbital Shipyard", "Training Facility", "Construction Yard",
         "Advanced Shipyard", "Advanced Training Facility", "Advanced Construction Yard",
-        "Mordant Lien-150", "Mordant Covenant I", "Lode Escrow I", "Death Star Shield", "Mordant Covenant II", "Lode Escrow II",
+        "Mordant Lien-150", "Mordant Covenant I", "Lode Escrow I", "Harvester Shield", "Mordant Covenant II", "Lode Escrow II",
         "Sensor Station",
     };
 

@@ -10,7 +10,7 @@ public enum MissionPhase { Outbound, Working, ReturnPending, Returning }
 public enum MissionOutcome
 {
     None, Succeeded, Failed, Foiled, Cancelled, TargetInvalid,
-    /// <summary>The target system was destroyed by the Death Star. rule: m5-death-star §2 effect 3 (cause TargetDestroyed).</summary>
+    /// <summary>The target system was destroyed by the harvester. rule: m5-death-star §2 effect 3 (cause TargetDestroyed).</summary>
     TargetDestroyed,
 }
 

@@ -276,8 +276,8 @@ public class CharacterTests
     public void CH11_AttachRejections_ChewbaccaAsPassenger()
     {
         // The Hand ISD at The Shoal starts a battle on the Step. Ruleset = Classic set explicitly (battle DEFAULT New since 2026-10-18): in Classic
-        // both corvettes retreat together; in New the ISD's tractor beam holds fleet f's corvette and destroys it (m4-retreat-damage-repair
-        // TractorBeamsHoldRetreat), which dissolves the fleet and detaches Oti. This test checks the attach rules, not the battle.
+        // both corvettes retreat together; in New the ISD's Hold beam holds fleet f's corvette and destroys it (m4-retreat-damage-repair
+        // HoldBeamsHoldRetreat), which dissolves the fleet and detaches Oti. This test checks the attach rules, not the battle.
         var w = new CharWorld(settings: new GameSettings { IncidentsEnabled = false, DebugOrdersEnabled = true,
             Economy = new Praedra.Core.Economy.EconomyParams { ScrapPeriod = 1_000_000 },
             Battle = new Praedra.Core.Battle.BattleParams { Ruleset = Praedra.Core.Battle.BattleRuleset.Classic } });
@@ -465,11 +465,11 @@ public class CharacterTests
         Assert.Equal(80, w3.Ch.NavigatorAdjust(f3, 80));
     }
 
-    // ------------------------------------------------------------------ the Death Star (§The Death Star's roll on characters)
+    // ------------------------------------------------------------------ the harvester (§The harvester's roll on characters)
 
     // m5-characters-and-force CH19
     [Fact]
-    public void CH19_DeathStarRollOnMinors()
+    public void CH19_HarvesterRollOnMinors()
     {
         var w = new CharWorld();
         w.Add(Drayson, Hoth); w.Add(Borsk, Hoth); var c = w.Add(Tura, Yavin); w.Add(Vader, Hoth);
@@ -477,7 +477,7 @@ public class CharacterTests
         int before = w.Stub!.Requests.Count, ev = w.Game.Events.Count;
         // The die is rand(1..100), hit at 50 or less (m5-death-star §2 effect 3); the same chance as the characters sheet's rand(0..99) < 50, shifted by one: 50 hits, 51 misses, 11 hits.
         w.Stub.Expect(1, 100, 50, 51, 11);
-        w.StepWith("5.1", ctx => w.Ch.DeathStarStrike(ctx, Hoth, Side.Hand));
+        w.StepWith("5.1", ctx => w.Ch.HarvesterStrike(ctx, Hoth, Side.Hand));
         // B2e moved: the hit on a free minor is the Hurt roll (unqueued draws answer 0: hit, sizes 0 and 0, then the minor's death draw 0 < 25),
         // so Admiral Marta Sobel dies of the injury and the kill is not needed; the prisoner Tura is killed without it. 3 + 4 draws.
         Assert.Equal(7, w.Stub.Requests.Count - before);
@@ -850,11 +850,11 @@ public class CharacterTests
         Assert.True(p.OfficersRideFleet); Assert.False(p.CharactersLostWithFleet); Assert.False(p.CharactersStoppedInTransit);
         Assert.False(p.BlockadeEscapeRisk); Assert.False(p.AssaultHarmsCharacters);
         Assert.False(p.MajorsCanDie); Assert.True(p.MinorsCanDie);
-        Assert.True(p.DeathStarHitsOwnCharacters); Assert.True(p.CaptiveEscape); // B2e: escape is Traced, DEFAULT on
+        Assert.True(p.HarvesterHitsOwnCharacters); Assert.True(p.CaptiveEscape); // B2e: escape is Traced, DEFAULT on
         Assert.True(p.LoyaltyTriggers); Assert.True(p.SeatOfPower); // B2e: Seat of Power Traced, DEFAULT on
         Assert.Equal(ForceDiscoveryMode.Trainer, p.ForceDiscovery); Assert.False(p.ForceGrowth); Assert.False(p.SkillGrowth); // B2e: trainers awaken Force users
         Assert.False(p.TrainerNeedsKnight); Assert.Equal(1, p.ForceStudentMin); Assert.Equal(80, p.ForceKnightMin); Assert.Equal(100, p.ForceMasterMin);
-        Assert.False(p.NavigatorBonus); Assert.Equal(25, p.NavigatorFloor); Assert.Equal(50, p.DeathStarHitPercent); Assert.Equal(25, p.ForceTrainingGainPercent);
+        Assert.False(p.NavigatorBonus); Assert.Equal(25, p.NavigatorFloor); Assert.Equal(50, p.HarvesterHitPercent); Assert.Equal(25, p.ForceTrainingGainPercent);
         Assert.Equal(40, p.ForceSkillPercent); Assert.Equal(50, p.ForceTrainingChancePercent); // m5-characters-and-force §Force (New, Paul 2026-10-18)
         Assert.Equal(100, p.CharacterSpeed); Assert.Equal(4, p.StartExtrasPerSide); Assert.Equal(StartCastOfficers.Classic, p.StartCastOfficers);
     }

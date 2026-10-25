@@ -45,7 +45,7 @@ public sealed record ShipClass(
     int Torpedoes = 0,
     ShipArcs? Arcs = null,
     int Detection = 0,
-    int TractorBeamPower = 0,
+    int HoldBeamPower = 0,
     int SubLight = 0,
     int DamageControl = 0,
     int SquadronSize = 0,
@@ -99,7 +99,7 @@ public static class ShipData
     public static IReadOnlyList<ShipClass> Parse(string text, string source, bool isCapital)
     {
         var t = CsvTable.Parse(text, source);
-        t.Require("name", "is_alliance", "is_empire", "hyperdrive", "hyperdrive_if_damaged", "overall_attack_strength", "refined_material_cost");
+        t.Require("name", "is_collective", "is_hand", "hyperdrive", "hyperdrive_if_damaged", "overall_attack_strength", "refined_material_cost");
         t.Require(HeavyArcs);
         bool hasGw = t.HasColumn("gravity_well_projector"); // fighters.csv has none: 0
         // rule: m3-ships-and-fighters §Class data: hull, fighter_capacity and troop_capacity are ship columns; fighters have none (0).
@@ -109,7 +109,7 @@ public static class ShipData
         string bombCol = isCapital ? "bombardment_modifier" : "bombardment_defense";
         bool hasBomb = t.HasColumn(bombCol);
         // rule: m4-battle-classic §4: the combat columns (recharge rates and torpedoes only where the file has them; fighters have no recharge columns)
-        bool hasTractor = t.HasColumn("tractor_beam_power"); // rule: m4-retreat-damage-repair §6 (capital-ships.csv; fighters have none: 0)
+        bool hasHoldBeam = t.HasColumn("hold_beam_power"); // rule: m4-retreat-damage-repair §6 (capital-ships.csv; fighters have none: 0)
         bool hasDet = t.HasColumn("detection"); // rule: m5-missions §3 Defenders (CAPSHPSD and FIGHTSD carry detection)
         // rule: m4-battle-classic §2, §5 (B3: sub-light speed, gun ranges, squadron size); m4-retreat-damage-repair §5 (damage_control)
         bool hasSub = t.HasColumn("sub_light_engine"), hasDc = t.HasColumn("damage_control"), hasSize = t.HasColumn("squadron_size");
@@ -124,7 +124,7 @@ public static class ShipData
             var name = t.Get(r, "name").Trim();
             if (name.Length == 0) throw new DataLoadException($"{t.Where(r)}: ship class name is empty.");
             if (!seen.Add(name)) throw new DataLoadException($"{t.Where(r)}: duplicate ship class '{name}'.");
-            var side = (t.GetInt(r, "is_alliance") != 0 ? ShipSide.Collective : 0) | (t.GetInt(r, "is_empire") != 0 ? ShipSide.Hand : 0);
+            var side = (t.GetInt(r, "is_collective") != 0 ? ShipSide.Collective : 0) | (t.GetInt(r, "is_hand") != 0 ? ShipSide.Hand : 0);
             int hd = t.GetInt(r, "hyperdrive"), hdd = t.GetInt(r, "hyperdrive_if_damaged");
             if (hd < 0 || hdd < 0) throw new DataLoadException($"{t.Where(r)}: '{name}' has a negative hyperdrive rating.");
             list.Add(new ShipClass(name, isCapital, side, hd, hdd,
@@ -137,7 +137,7 @@ public static class ShipData
                 hasSr ? t.GetInt(r, "shield_recharge_rate") : 0, hasTorp ? t.GetInt(r, "torpedoes") : 0,
                 new ShipArcs(Arc(r, "fore"), Arc(r, "aft"), Arc(r, "port"), Arc(r, "starboard")),
                 hasDet ? t.GetInt(r, "detection") : 0,
-                hasTractor ? t.GetInt(r, "tractor_beam_power") : 0,
+                hasHoldBeam ? t.GetInt(r, "hold_beam_power") : 0,
                 hasSub ? t.GetInt(r, "sub_light_engine") : 0, hasDc ? t.GetInt(r, "damage_control") : 0, hasSize ? t.GetInt(r, "squadron_size") : 0,
                 Cnt(r, "laser_cannon_range"), Cnt(r, "ion_cannon_range"), Cnt(r, "turbolaser_range"),
                 hasUd ? t.GetInt(r, "uprising_defense") : 0));

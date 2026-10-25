@@ -35,7 +35,7 @@ Sources (project folder `praedra/specs/`): `economy/data/slot-values-draft.csv`.
 
 Characters (m5-characters-and-force, m5-setup-and-victory P9), copied 2026-10-12:
 - `original/characters.csv` holds the 60 original records of `MJCHARSD` and `MNCHARSD` (ids 576-579, 640-641, 832-857, 896-923), read by the importer. Since B1 Shenir Rix (918) is Force 10 +- 40 and Noval Garaint (919) 30 +- 20, as in the file (the old spec copy had them swapped).
-- `design/added-heroes.csv` holds the 16 heroes Paul added (heroes/added-heroes: 8 Collective, 4 Hand, 4 Hand bounty hunters), Proposal stats, ids after each side's minor block (858-865, 924-931). Skills the source leaves blank are 0+0 and loyalty is 100+0 (DEFAULT, as the 60 originals); each row says so.
+- `design/added-heroes.csv` holds the 16 heroes Paul added (heroes/added-heroes: 8 Collective, 4 Hand, 4 Hand Repossessors), Proposal stats, ids after each side's minor block (858-865, 924-931). Skills the source leaves blank are 0+0 and loyalty is 100+0 (DEFAULT, as the 60 originals); each row says so.
 - `design/roster.csv` lists the 65 characters in the game, all with `in_game` 1 (Decided, heroes/refined-roster). The 11 cut Classic characters (ids 844, 854, 857, 904-907, 911, 913-915) have no Praedra name, so they are left out of the roster and of `classic/characters.csv` (the importer drops every character not in the roster); only the raw files keep them.
 - `design/navigator_speed.csv` is the Navigator table of m5-characters-and-force (Han 50 Traced, the rest Proposal); unlisted characters are 100.
 - `design/start-cast.csv` is the fixed start cast of m5-setup-and-victory P9 in placement order (Traced, setup-victory/03), with the two extras rows.

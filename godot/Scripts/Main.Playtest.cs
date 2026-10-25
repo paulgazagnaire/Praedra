@@ -288,8 +288,8 @@ public partial class Main
             Expect(gs.Has(">  Ships") && gs.Has(">  Fighters") && gs.Has(">  Troops"), "Build menu has collapsible Ships / Fighters / Troops sections");
             Expect(gs.Click(">  Ships"), "open the Ships section");
             gs.PlayRefresh();
-            if (me == Side.Hand) Expect(gs.ButtonTexts().Any(t => t.StartsWith("Death Star   ", StringComparison.Ordinal)), "the Death Star is in the Hand's Ships build list");
-            else Expect(!gs.ButtonTexts().Any(t => t.StartsWith("Death Star   ", StringComparison.Ordinal)), "the Collective's Ships build list has no Death Star");
+            if (me == Side.Hand) Expect(gs.ButtonTexts().Any(t => t.StartsWith("harvester   ", StringComparison.Ordinal)), "the harvester is in the Hand's Ships build list");
+            else Expect(!gs.ButtonTexts().Any(t => t.StartsWith("harvester   ", StringComparison.Ordinal)), "the Collective's Ships build list has no harvester");
             var shipBtn = gs.ButtonTexts().FirstOrDefault(t => t.Contains("refined, upkeep") && !t.Contains("(not researched)") && t.Contains("   ") && !Praedra.Core.Economy.FacilityKinds.TryParse(t[..t.IndexOf("   ", StringComparison.Ordinal)], out _)); // any researched ship
             Expect(shipBtn != null, "a basic ship can be chosen in the Ships list");
             if (shipBtn != null)
@@ -340,7 +340,7 @@ public partial class Main
         Expect(gs.Click("Menu") && gs.ConfirmVisible, "Menu asks first");
         Expect(gs.Click("Cancel"), "cancel leaving");
 
-        PlaytestDeathStar(gs);
+        PlaytestHarvester(gs);
 
         // Sensor Stations (m5-fog-and-hq N4): finished stations on up to four frontier route systems of the player (setup, test only); over the run below
         // the player must get a plain-words "Sensors:" message for every SensorReport its side was given.

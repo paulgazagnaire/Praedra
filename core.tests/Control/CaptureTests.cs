@@ -67,7 +67,7 @@ public class CaptureTests
     private static List<GameEvent> CaptureEvents(CtlWorld w) =>
         w.Game.Events.Where(e => ControlKinds.Contains(e.GetType())).ToList();
 
-    // m2-control-and-capture C1: Collective captures a Hand system with the full set; only the Death Star Shield is removed
+    // m2-control-and-capture C1: Collective captures a Hand system with the full set; only the harvester shield is removed
     [Fact]
     public void C1_CollectiveCapture_EverythingTransfers_ShieldRemoved()
     {
@@ -77,7 +77,7 @@ public class CaptureTests
         var refs = new[] { w.S.W.Refinery(Emp), w.S.W.Refinery(Emp) };
         int yard = w.Eco.AddFacility(Emp, FacilityKind.OrbitalShipyard);
         int kdy = w.Eco.AddFacility(Emp, FacilityKind.Kdy150);
-        int shield = w.Eco.AddFacility(Emp, FacilityKind.DeathStarShield);
+        int shield = w.Eco.AddFacility(Emp, FacilityKind.HarvesterShield);
         w.Capture(Side.Collective, Emp);
         w.Run(1);
 
@@ -112,11 +112,11 @@ public class CaptureTests
     public void ShieldServesOnlyTheHand()
     {
         var w = new CtlWorld();
-        Assert.True(w.Ctl.ServesSide("Death Star Shield", Side.Hand));
-        Assert.False(w.Ctl.ServesSide("Death Star Shield", Side.Collective));
+        Assert.True(w.Ctl.ServesSide("Harvester Shield", Side.Hand));
+        Assert.False(w.Ctl.ServesSide("Harvester Shield", Side.Collective));
         Assert.True(w.Ctl.ServesSide("Mine", Side.Collective));
         w.Fleets.SetOwner(Emp, null);
-        int shield = w.Eco.AddFacility(Emp, FacilityKind.DeathStarShield);
+        int shield = w.Eco.AddFacility(Emp, FacilityKind.HarvesterShield);
         w.Capture(Side.Hand, Emp);
         w.Run(1);
         Assert.Equal(Side.Hand, w.Eco.OwnerOf(w.Eco.Find(shield)!));
@@ -484,7 +484,7 @@ public class CaptureTests
             var w = new CtlWorld(stub: false, seed: 7);
             w.Hold(Emp, Side.Hand, 80);
             w.Hold(Ally, Side.Collective, 80);
-            w.S.W.Mine(Emp); w.S.W.Refinery(Emp); w.Eco.AddFacility(Emp, FacilityKind.DeathStarShield);
+            w.S.W.Mine(Emp); w.S.W.Refinery(Emp); w.Eco.AddFacility(Emp, FacilityKind.HarvesterShield);
             w.Eco.AddFacility(Emp, FacilityKind.Mine, completed: false);
             w.S.Uprising(Emp, Side.Hand, erosionDue: 10, incidentDue: 12);
             w.Fleets.AddFleet(Side.Collective, "Picket", new[] { "Dodger" }, Emp);

@@ -44,7 +44,7 @@ public partial class GalaxyView : Control
     public Func<int, bool> IsUnknown;
     /// <summary>Set by the owner: returns the system index of an enemy fleet marker under a screen point, or -1 (clicking it selects that system).</summary>
     public Func<Vector2, int> EnemyMarkerPicker;
-    /// <summary>True for a system the player's side knows the Death Star destroyed: drawn dark grey with an X (also if it was never explored).</summary>
+    /// <summary>True for a system the player's side knows the harvester destroyed: drawn dark grey with an X (also if it was never explored).</summary>
     public Func<int, bool> IsDestroyed;
     /// <summary>Is this system drawn as destroyed right now? (what <see cref="_Draw"/> uses; also read by the playtest)</summary>
     public bool DrawsDestroyed(int i) => IsDestroyed?.Invoke(i) == true;
@@ -322,7 +322,7 @@ public partial class GalaxyView : Control
             if (!screenRect.HasPoint(p)) continue;
             if (DrawsDestroyed(i))
             {
-                // destroyed by the Death Star: a dark grey disc with a red-grey X, no owner, no HQ ring; the lanes through it still work
+                // destroyed by the harvester: a dark grey disc with a red-grey X, no owner, no HQ ring; the lanes through it still work
                 DrawCircle(p, radius, new Color(0.16f, 0.16f, 0.18f));
                 DrawArc(p, radius, 0, Mathf.Tau, 20, new Color(0.45f, 0.45f, 0.5f), 1.2f, true);
                 float k = radius * 1.5f;

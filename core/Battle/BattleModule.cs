@@ -328,7 +328,7 @@ public sealed class BattleModule
             {
                 case UnitDestroyedStep d: DestroyUnit(ctx, day, sys, d); break;
                 case RetreatRefusedStep r: { var side = r.Side; var why = r.Reason; ctx.Emit((i, _) => new RetreatRefused(i, day, sys, side, why)); break; }
-                case TractorHeldStep h: { int ship = h.Ship.ObjectId, holder = h.Holder.ObjectId, sec = h.Second; ctx.Emit((i, _) => new RetreatHeldByTractor(i, day, sys, ship, holder, sec)); break; } // rule: m4-retreat-damage-repair §6
+                case HoldBeamHeldStep h: { int ship = h.Ship.ObjectId, holder = h.Holder.ObjectId, sec = h.Second; ctx.Emit((i, _) => new RetreatHeldByHoldBeam(i, day, sys, ship, holder, sec)); break; } // rule: m4-retreat-damage-repair §6
                 case SideRetreatedStep r: left[r.Side] = true; break;
             }
         }
@@ -427,7 +427,7 @@ public sealed class BattleModule
         foreach (var fid in force.Fleets.OrderBy(i => i))
         {
             if (!State.Fleets.TryGetValue(fid, out var f) || f.Side != side || f.At != from) continue;
-            // ships still in the battle at its end (held by a tractor beam, New rules) stay at the system: the whole fleet, or split off. rule: m4-retreat-damage-repair §6
+            // ships still in the battle at its end (held by a Hold beam, New rules) stay at the system: the whole fleet, or split off. rule: m4-retreat-damage-repair §6
             var stay = f.Ships.Where(s => force.Units.Any(u => u.ObjectId == s && u.IsCapital && !u.Destroyed && !u.Left)).ToList();
             if (stay.Count > 0 && stay.Count == f.Ships.Count) continue;
             if (stay.Count > 0) _fleets.SplitOffHeld(ctx, day, f, stay);

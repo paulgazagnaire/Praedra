@@ -42,7 +42,7 @@ public partial class GameScreen
     {
         MissionKind.Espionage, MissionKind.Diplomacy, MissionKind.Reconnaissance, MissionKind.Sabotage, MissionKind.InciteUprising, MissionKind.SubdueUprising,
         MissionKind.Rescue, MissionKind.ShipResearch, MissionKind.FacilityResearch, MissionKind.TroopResearch,
-        MissionKind.Recruitment, MissionKind.Abduction, MissionKind.Assassination, MissionKind.DeathStarSabotage, MissionKind.JediTraining,
+        MissionKind.Recruitment, MissionKind.Abduction, MissionKind.Assassination, MissionKind.SpikeTheHarvester, MissionKind.TrainTalent,
     };
 
     // ================================================================== Missions list (top bar, key M)
@@ -165,7 +165,7 @@ public partial class GameScreen
         new(0, Me, kind, _plan.Chars.ToList(), _plan.Sfs.ToList(), new List<int>(), targetChar == null ? target : null, targetChar);
 
     // Target-stage reasons: everything before the target passed, so the team can do this kind somewhere.
-    static bool TargetStage(string reason) => reason is null or MissionReject.BadTarget or MissionReject.NoDeathStar or Praedra.Core.Clock.RejectReason.Unreachable
+    static bool TargetStage(string reason) => reason is null or MissionReject.BadTarget or MissionReject.NoHarvester or Praedra.Core.Clock.RejectReason.Unreachable
         or Praedra.Core.Clock.RejectReason.NoMatchingYard or Praedra.Core.Clock.RejectReason.NothingToResearch;
 
     /// <summary>Why this team cannot do the kind (plain words, naming the member), or null when it can (the target is picked next).</summary>
@@ -248,7 +248,7 @@ public partial class GameScreen
         if (p.Kind is not MissionKind sel) { CloseRow(); return; }
         Heading("3. Target");
         Line(GameSession.KindHelp(sel), Dim, 13);
-        if (sel == MissionKind.DeathStarSabotage) Line(S.EnemyDeathStarNote, Dim, 13); // rule: m5-death-star §5
+        if (sel == MissionKind.SpikeTheHarvester) Line(S.EnemyHarvesterNote, Dim, 13); // rule: m5-death-star §5
         if (sel == MissionKind.Rescue)
         {
             var prisoners = S.MyCharacters.Where(c => c.Status == CharacterStatus.Captured && c.HeldAt != null).ToList();

@@ -159,21 +159,21 @@ public class ShipTests
 
     // m3-ships-and-fighters S14
     [Fact]
-    public void S14_TheDeathStarIsAnOrdinaryRowUnlessTheSwitchIsOff()
+    public void S14_TheHarvesterIsAnOrdinaryRowUnlessTheSwitchIsOff()
     {
         var on = Yard(Side.Hand);
-        Assert.True(on.Build.DeathStarClassBuildable);
-        Assert.Null(on.TryOrder(Side.Hand, Home, YardFamily.Shipyard, "Death Star", 1));
-        Assert.Equal(584, on.Eco.Costs.Get("Death Star").Cost);
-        Assert.Equal(600, on.Eco.Costs.Get("Death Star").Maintenance);
-        var ds = on.Eco.Objects.Single(o => o.Class == "Death Star");
+        Assert.True(on.Build.HarvesterClassBuildable);
+        Assert.Null(on.TryOrder(Side.Hand, Home, YardFamily.Shipyard, "harvester", 1));
+        Assert.Equal(584, on.Eco.Costs.Get("harvester").Cost);
+        Assert.Equal(600, on.Eco.Costs.Get("harvester").Maintenance);
+        var ds = on.Eco.Objects.Single(o => o.Class == "harvester");
         Assert.False(ds.Completed);
         Assert.Equal(25000, ds.Hull);
 
         var off = Yard(Side.Hand);
-        off.Build.DeathStarClassBuildable = false;
-        Assert.Equal(RejectReason.NotAvailable, off.TryOrder(Side.Hand, Home, YardFamily.Shipyard, "Death Star", 1));
-        Assert.DoesNotContain(off.Eco.Objects, o => o.Class == "Death Star");
+        off.Build.HarvesterClassBuildable = false;
+        Assert.Equal(RejectReason.NotAvailable, off.TryOrder(Side.Hand, Home, YardFamily.Shipyard, "harvester", 1));
+        Assert.DoesNotContain(off.Eco.Objects, o => o.Class == "harvester");
     }
 
     // ---------------------------------------------------------------- damage and speed (S9 to S13, S15, S16)
@@ -329,7 +329,7 @@ public class ShipTests
     {
         var w = new BuildWorld();
         int a = w.Eco.AddObject(Side.Hand, Isd, null, true);
-        int b = w.Eco.AddObject(Side.Hand, "Death Star", null, false);
+        int b = w.Eco.AddObject(Side.Hand, "harvester", null, false);
         int c = w.Eco.AddObject(Side.Hand, "Gleaner", Home, true);
         int d = w.Eco.AddObject(Side.Hand, "Pacifiers", Home, true);
         int e = w.Fleets.AddFleet(Side.Collective, "F", new[] { "Mender" }, Home);

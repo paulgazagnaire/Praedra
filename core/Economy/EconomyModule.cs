@@ -13,8 +13,8 @@ namespace Praedra.Core.Economy;
 /// </summary>
 public sealed class EconomyModule
 {
-    /// <summary>Ship class of the Death Star (name in the costs file; used for the smuggling exception).</summary>
-    public const string DeathStarClass = "Death Star";
+    /// <summary>Ship class of the harvester (name in the costs file; used for the smuggling exception).</summary>
+    public const string HarvesterClass = "harvester";
 
     private readonly Game _game;
     private readonly Galaxy _galaxy;
@@ -53,10 +53,10 @@ public sealed class EconomyModule
     public AutoscrapMode AutoscrapMode { get; set; } = AutoscrapMode.Classic;
     public SlotSource SlotSource { get; set; } = SlotSource.Pinned;
     /// <summary>
-    /// Is the system in a Death Star sector (Hand regiments count double for smuggling)? The flag belongs to the support
-    /// sheet (m2-popular-support §Death Star sector); M2 sets nothing, so the default answers no.
+    /// Is the system in a harvester sector (Hand regiments count double for smuggling)? The flag belongs to the support
+    /// sheet (m2-popular-support §harvester sector); M2 sets nothing, so the default answers no.
     /// </summary>
-    public Func<string, bool> IsDeathStarSector { get; set; } = _ => false;
+    public Func<string, bool> IsHarvesterSector { get; set; } = _ => false;
     /// <summary>
     /// Raised after a side's refined pool grew (a refinery cycle ended or a scrap refund). The construction package serves the
     /// refined line (yards waiting) from here. rule: m2-mines-refineries-pools §Where it runs, step 2.
@@ -68,8 +68,8 @@ public sealed class EconomyModule
     /// </summary>
     public event Action<StepContext, EconObject, int>? ObjectRemoved;
     /// <summary>
-    /// Raised by <see cref="DestroyUnit"/> (a ship, squadron or regiment destroyed in a battle or by the Death Star), before <see cref="ObjectRemoved"/>;
-    /// not for scrapping. The Death Star module listens to report the loss of a Death Star. rule: m5-death-star §4, §5.
+    /// Raised by <see cref="DestroyUnit"/> (a ship, squadron or regiment destroyed in a battle or by the harvester), before <see cref="ObjectRemoved"/>;
+    /// not for scrapping. The harvester module listens to report the loss of a harvester. rule: m5-death-star §4, §5.
     /// </summary>
     public event Action<StepContext, EconObject, int>? UnitLost;
 
@@ -145,8 +145,8 @@ public sealed class EconomyModule
     }
 
     /// <summary>
-    /// The Death Star destroyed the system: no energy and no raw slots, not populated (the stored slot values are replaced). The facilities and units
-    /// on it are removed by the Death Star module. rule: m5-death-star §2 effect 5 (no energy or raw slots, no production).
+    /// The harvester destroyed the system: no energy and no raw slots, not populated (the stored slot values are replaced). The facilities and units
+    /// on it are removed by the harvester module. rule: m5-death-star §2 effect 5 (no energy or raw slots, no production).
     /// </summary>
     public void ClearSlotsForDestroyedSystem(string system)
     {
@@ -236,8 +236,8 @@ public sealed class EconomyModule
         return null;
     }
 
-    /// <summary>Has the Death Star destroyed the system? A destroyed system has no slots, no production and no support value. rule: m5-death-star §2 effect 5.</summary>
-    public bool IsDestroyed(string system) => _game.State.DeathStar.IsDestroyed(system);
+    /// <summary>Has the harvester destroyed the system? A destroyed system has no slots, no production and no support value. rule: m5-death-star §2 effect 5.</summary>
+    public bool IsDestroyed(string system) => _game.State.Harvester.IsDestroyed(system);
 
     /// <summary>Support of a side in a system. Collective share is stored; Hand = 100 - it. rule: m2-popular-support §What it stores. A destroyed system has no support value: 0 for both sides (rule: m5-death-star §2 effect 5).</summary>
     public int SupportOf(string system, Side side)
@@ -334,7 +334,7 @@ public sealed class EconomyModule
 
     /// <summary>
     /// The smuggling chance v in percent for a cycle that ends at a system held by <paramref name="controller"/>:
-    /// clamp(tier(support) - 10 x ships - 5 x fighters - 2 x regiments, 0, 100); 0 if the controller's Death Star is in a fleet
+    /// clamp(tier(support) - 10 x ships - 5 x fighters - 2 x regiments, 0, 100); 0 if the controller's harvester is in a fleet
     /// there. rule: m2-mines-refineries-pools §Diversion (smuggling).
     /// </summary>
     public int DiversionPercent(string system, Side controller)
@@ -349,7 +349,7 @@ public sealed class EconomyModule
             // rule: m3-fleets §Carrying rules (aboard units are not "on the system"); only ships count from a fleet.
             foreach (var id in f.Ships)
             {
-                if (E.Objects.TryGetValue(id, out var ship) && ship.Class == DeathStarClass) return 0;
+                if (E.Objects.TryGetValue(id, out var ship) && ship.Class == HarvesterClass) return 0;
                 ships++;
             }
         }
@@ -360,7 +360,7 @@ public sealed class EconomyModule
             if (o.Category == ObjectCategory.Regiment) regiments++;
             else if (o.Category == ObjectCategory.Fighter) fighters++;
         }
-        int mult = controller == Side.Hand && IsDeathStarSector(system) ? Params.DeathStarRegimentMultiplier : 1;
+        int mult = controller == Side.Hand && IsHarvesterSector(system) ? Params.HarvesterRegimentMultiplier : 1;
         int v = tier - Params.ShipPresence * ships - Params.FighterPresence * fighters - Params.RegimentPresence * mult * regiments;
         return Math.Clamp(v, 0, 100);
     }

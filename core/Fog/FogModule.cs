@@ -198,8 +198,8 @@ public sealed class FogModule
     }
 
     /// <summary>
-    /// The Death Star hook (slot 6, m5 later): a destroyed system is shown to both sides (kind Destroyed: A and B), and an HQ at rest there is
-    /// destroyed with cause SystemDestroyed; an HQ in transit is not. rule: m5-fog-and-hq §F2 Destroyed, §F7 Death Star (Traced, 05 10.2).
+    /// The harvester hook (slot 6, m5 later): a destroyed system is shown to both sides (kind Destroyed: A and B), and an HQ at rest there is
+    /// destroyed with cause SystemDestroyed; an HQ in transit is not. rule: m5-fog-and-hq §F2 Destroyed, §F7 harvester (Traced, 05 10.2).
     /// </summary>
     public void OnSystemDestroyed(StepContext ctx, string system)
     {
@@ -425,7 +425,7 @@ public sealed class FogModule
                 HqLostOnHolderChange.AssaultOnly => info.Cause == CaptureCause.Assault,
                 _ => false,
             };
-            // the cause names how the world was lost (QA-11): by support alone, by its last troops leaving, else captured (assault, debug, Death Star revolt)
+            // the cause names how the world was lost (QA-11): by support alone, by its last troops leaving, else captured (assault, debug, harvester revolt)
             string cause = info.Cause switch { CaptureCause.Support => CauseLostSupport, CaptureCause.TroopsLeft => CauseTroopsLeft, _ => CauseCaptured };
             if (lost) DestroyHq(info.Ctx, cause, info.System);
         }
@@ -695,7 +695,7 @@ public sealed class FogModule
             case HqDeparted or HqArrived: return All;
             case SupportChanged sc when sc.Cause == SupportCause.HqMove: return All;
             case HqDestroyed or Victory.GameWon: return Both;
-            case DeathStar.IDeathStarEvent: return Both; // galaxy notices: "New Death Star Deployed", "Planet Destroyed", ... (m5-death-star §1, §2 effect 6)
+            case Harvester.IHarvesterEvent: return Both; // galaxy notices: "New harvester Deployed", "Planet Destroyed", ... (m5-death-star §1, §2 effect 6)
             case SystemExplored x: return Bit(x.Viewer);
             case OwnerChangeSeen x: return Bit(x.Viewer);
             case FleetSighted x: return Bit(x.Viewer);

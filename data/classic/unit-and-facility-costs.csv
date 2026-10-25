@@ -22,7 +22,7 @@ capital ship,132,Decree,0,1,68,44,0,0
 capital ship,133,Mandate,0,1,112,71,0,0
 capital ship,134,Edict,0,1,282,170,11,100
 capital ship,135,Indenture,0,1,12,29,5,40
-capital ship,136,Death Star,0,1,584,600,0,0
+capital ship,136,harvester,0,1,584,600,0,0
 capital ship,137,Bond,0,1,10,10,0,0
 capital ship,138,Decree II,0,1,72,63,7,80
 capital ship,139,Mandate II,0,1,158,99,10,100
@@ -67,6 +67,6 @@ facility,2,Refinery,1,1,20,0,0,0
 defense,1,Mordant Lien-150,1,1,4,4,0,0
 defense,2,Mordant Covenant I,1,1,7,7,0,0
 defense,3,Lode Escrow I,1,1,12,12,0,0
-defense,4,Death Star Shield,0,1,25,20,3,24
+defense,4,Harvester Shield,0,1,25,20,3,24
 defense,5,Mordant Covenant II,1,1,10,4,4,40
 defense,6,Lode Escrow II,1,1,20,7,6,40

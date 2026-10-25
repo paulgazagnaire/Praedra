@@ -2,7 +2,7 @@ using Praedra.Core.Characters;
 using Praedra.Core.Clock;
 using Praedra.Core.Construction;
 using Praedra.Core.Control;
-using Praedra.Core.DeathStar;
+using Praedra.Core.Harvester;
 using Praedra.Core.Economy;
 using Praedra.Core.Fleets;
 using Praedra.Core.Fog;
@@ -12,13 +12,13 @@ using Praedra.Core.Victory;
 using Praedra.Core.Support;
 using Praedra.Core.Tests.Economy;
 using Praedra.Core.Tests.Missions;
-using static Praedra.Core.Tests.DeathStar.DsWorld;
+using static Praedra.Core.Tests.Harvester.DsWorld;
 using Praedra.Core.Tests.Control;
 
-namespace Praedra.Core.Tests.DeathStar;
+namespace Praedra.Core.Tests.Harvester;
 
 /// <summary>The tests of m5-death-star §Tests (DS1 to DS14), plus the switch defaults and a few cases the table leaves implicit.</summary>
-public class DeathStarTests
+public class HarvesterTests
 {
     // ------------------------------------------------------------------ building it (§1)
 
@@ -30,20 +30,20 @@ public class DeathStarTests
         w.Hold(A1, Side.Hand, 30);
         w.Host.Economy.AddFacility(A1, FacilityKind.OrbitalShipyard);
         w.Host.Economy.SetPools(Side.Hand, 0, 1000);
-        long seq = w.Host.Construction.SubmitBuild(Side.Hand, A1, YardFamily.Shipyard, DeathStarClass, 1);
+        long seq = w.Host.Construction.SubmitBuild(Side.Hand, A1, YardFamily.Shipyard, HarvesterClass, 1);
         w.Game.Step(); // day 1: queued, research order 0 (available from day one)
         Assert.Null(w.Reason(seq));
         var started = Assert.Single(w.Events<ProjectStarted>());
-        Assert.Equal((A1, DeathStarClass, 1), (started.System, started.Class, started.Count));
+        Assert.Equal((A1, HarvesterClass, 1), (started.System, started.Class, started.Count));
         // the cost is 584 points of 4-day cycles; the sheet takes the normal cost-derived time, so start the project one cycle short
         var project = w.Host.Construction.ProjectAt(A1, YardFamily.Shipyard)!;
-        Assert.Equal(584, w.Host.Economy.Costs.Get(DeathStarClass).Cost);
+        Assert.Equal(584, w.Host.Economy.Costs.Get(HarvesterClass).Cost);
         project.Progress = 583;
-        for (int i = 0; i < 12 && !w.Events<DeathStarDeployed>().Any(); i++) w.Game.Step();
-        var ev = Assert.Single(w.Events<DeathStarDeployed>());
+        for (int i = 0; i < 12 && !w.Events<HarvesterDeployed>().Any(); i++) w.Game.Step();
+        var ev = Assert.Single(w.Events<HarvesterDeployed>());
         Assert.Equal((Side.Hand, A1), (ev.Side, ev.System));
         Assert.Equal(3, w.Game.AudienceOf(ev.Index)); // both sides: fog does not hide it
-        Assert.True(w.Ds.HasDeathStar(Side.Hand, A1));
+        Assert.True(w.Ds.HasHarvester(Side.Hand, A1));
     }
 
     // m5-death-star DS2
@@ -53,29 +53,29 @@ public class DeathStarTests
         var w = new DsWorld();
         foreach (var s in new[] { A1, A2 }) { w.Hold(s, Side.Hand, 30); w.Host.Economy.AddFacility(s, FacilityKind.OrbitalShipyard); }
         w.Host.Economy.SetPools(Side.Hand, 0, 1000);
-        w.DeathStar(Side.Hand, A1);
-        long atX = w.Host.Construction.SubmitBuild(Side.Hand, A1, YardFamily.Shipyard, DeathStarClass, 1);
-        long atY = w.Host.Construction.SubmitBuild(Side.Hand, A2, YardFamily.Shipyard, DeathStarClass, 1);
+        w.Harvester(Side.Hand, A1);
+        long atX = w.Host.Construction.SubmitBuild(Side.Hand, A1, YardFamily.Shipyard, HarvesterClass, 1);
+        long atY = w.Host.Construction.SubmitBuild(Side.Hand, A2, YardFamily.Shipyard, HarvesterClass, 1);
         w.Game.Step();
-        Assert.Equal(DeathStarReject.DeathStarLimit, w.Reason(atX));
+        Assert.Equal(HarvesterReject.HarvesterLimit, w.Reason(atX));
         Assert.Null(w.Reason(atY));
         // an order for two at once also exceeds the cap of one
-        Assert.Equal(DeathStarReject.DeathStarLimit, new DsWorld().TryBuild(2));
+        Assert.Equal(HarvesterReject.HarvesterLimit, new DsWorld().TryBuild(2));
     }
 
     // ------------------------------------------------------------------ Destroy System (§2)
 
     // m5-death-star DS3
     [Fact]
-    public void DS3_NoDeathStarInTheFleet()
+    public void DS3_NoHarvesterInTheFleet()
     {
         var w = new DsWorld();
         w.Hold(A1, Side.Collective);
         int f = w.Fleet(Side.Hand, A1, Isd);
-        Assert.Equal(DeathStarReject.NoDeathStar, w.Destroy(Side.Hand, f));
-        Assert.False(w.Game.State.DeathStar.IsDestroyed(A1));
+        Assert.Equal(HarvesterReject.NoHarvester, w.Destroy(Side.Hand, f));
+        Assert.False(w.Game.State.Harvester.IsDestroyed(A1));
         // the other legality codes: unknown fleet, not yours, in hyperspace, already destroyed
-        int ds = w.DeathStar(Side.Hand, A1);
+        int ds = w.Harvester(Side.Hand, A1);
         Assert.Equal(RejectReason.UnknownFleet, w.Destroy(Side.Hand, 9999));
         Assert.Equal(RejectReason.NotYours, w.Destroy(Side.Collective, ds));
     }
@@ -99,27 +99,27 @@ public class DeathStarTests
             w.Host.Economy.Find(aboard)!.AboardShip = w.ShipOf(enemy);
             enemyShips.AddRange(w.Game.State.Fleets[enemy].Ships);
         });
-        int attacker = w.DeathStar(Side.Hand, A3, Isd);
+        int attacker = w.Harvester(Side.Hand, A3, Isd);
         int dsShip = w.ShipOf(attacker);
         int hull = w.Host.Economy.Find(dsShip)!.Hull;
 
         Assert.Null(w.Destroy(Side.Hand, attacker)); // enemy fleets present do not block it (DEFAULT)
 
-        Assert.True(w.Game.State.DeathStar.IsDestroyed(A3));
+        Assert.True(w.Game.State.Harvester.IsDestroyed(A3));
         Assert.Null(w.Host.Fleets.OwnerOf(A3));
         Assert.False(w.FleetExists(enemy));
         foreach (var s in enemyShips) Assert.False(w.Exists(s));
         Assert.False(w.Exists(aboard)); // everything aboard goes with the fleet
         Assert.False(w.Exists(mine));   // the facility is gone, though nobody held the system
         Assert.False(w.Exists(reg));    // and so is the regiment on the planet
-        Assert.Equal(DestroyReason.DeathStar, Assert.Single(w.Events<FacilityDestroyed>()).Reason);
+        Assert.Equal(DestroyReason.Harvester, Assert.Single(w.Events<FacilityDestroyed>()).Reason);
         Assert.True(w.FleetExists(attacker));
         Assert.Equal(2, w.Game.State.Fleets[attacker].Ships.Count); // the attacker's fleet is intact
-        Assert.Equal(hull, w.Host.Economy.Find(dsShip)!.Hull);       // the Death Star is not damaged or consumed
+        Assert.Equal(hull, w.Host.Economy.Find(dsShip)!.Hull);       // the harvester is not damaged or consumed
         var ev = Assert.Single(w.Events<SystemDestroyed>());
         Assert.Equal((A3, Side.Hand, (Side?)null), (ev.System, ev.AttackerSide, ev.PriorHolder));
         Assert.Equal(3, w.Game.AudienceOf(ev.Index));
-        var lost = Assert.Single(w.Events<FleetDestroyedByDeathStar>());
+        var lost = Assert.Single(w.Events<FleetDestroyedByHarvester>());
         Assert.Equal((enemy, Side.Collective), (lost.Fleet, lost.FleetSide));
         Assert.True(w.Host.Fog.IsExplored(Side.Collective, A3) && w.Host.Fog.IsExplored(Side.Hand, A3));
         Assert.True(w.Host.Fog.Picture(Side.Collective, A3)!.Destroyed && w.Host.Fog.Picture(Side.Hand, A3)!.Destroyed); // both views know
@@ -128,7 +128,7 @@ public class DeathStarTests
         Assert.Equal((0, 0), (w.Collective(A3), w.Host.Economy.SupportOf(A3, Side.Hand)));
     }
 
-    /// <summary>The first seed whose Death Star rolls on minors of these combats give exactly <paramref name="hits"/> hits (so the test sees both outcomes).</summary>
+    /// <summary>The first seed whose harvester rolls on minors of these combats give exactly <paramref name="hits"/> hits (so the test sees both outcomes).</summary>
     private static ulong FindSeed(int[] combats, int hits)
     {
         for (ulong seed = 1; ; seed++)
@@ -136,7 +136,7 @@ public class DeathStarTests
     }
 
     /// <summary>
-    /// The draws of the Death Star's roll on free minors, in id order: rand(1..100) &lt;= 50 hits; a hit makes the Hurt roll on the minor's combat
+    /// The draws of the harvester's roll on free minors, in id order: rand(1..100) &lt;= 50 hits; a hit makes the Hurt roll on the minor's combat
     /// (B2e: rand(0..99) &lt; max(1, 100 - combat), then rand(0..p), rand(0..29) and the death draw rand(0..99)), then the kill. Every hit dies.
     /// </summary>
     private static List<bool> Simulate(GameRng rng, int[] combats)
@@ -169,7 +169,7 @@ public class DeathStarTests
         foreach (var n in new[] { A2, A3, A4, A5 }) w.Hold(n, null, 45);
         foreach (var m in minors) w.Person(m, A1);
         w.Person(Luke, A1);
-        int attacker = w.DeathStar(Side.Hand, A1);
+        int attacker = w.Harvester(Side.Hand, A1);
         var replica = new GameRng(seed);
         var kills = Simulate(replica, MinorCombats(minors)); // id order, p = 50; B2e: a hit adds the Hurt draws
 
@@ -202,13 +202,13 @@ public class DeathStarTests
         w.Hold(A1, Side.Collective, 80);
         foreach (var m in minors) w.Person(m, A1);
         w.Person(Luke, A1);
-        int attacker = w.DeathStar(Side.Hand, A1);
+        int attacker = w.Harvester(Side.Hand, A1);
         Assert.Null(w.Destroy(Side.Hand, attacker));
         var luke = w.C(Luke);
         Assert.Equal((CharacterStatus.Captured, Side.Hand, A1), (luke.Status, luke.Captor!.Value, luke.HeldAt));
         Assert.Equal(2, minors.Count(m => w.C(m).Status == CharacterStatus.Captured));
         Assert.Equal(2, minors.Count(m => w.C(m).Status == CharacterStatus.Dead));
-        Assert.All(w.Events<CharacterCaptured>(), e => Assert.Equal("DeathStar", e.Cause));
+        Assert.All(w.Events<CharacterCaptured>(), e => Assert.Equal("Harvester", e.Cause));
     }
 
     [Fact]
@@ -218,8 +218,8 @@ public class DeathStarTests
         var w = new DsWorld();
         w.Hold(A1, Side.Hand, 20); w.Hold(A2, Side.Collective, 80); w.Hold(B1, Side.Collective, 80);
         w.Person(Luke, A1);   // Collective major: A2 and B1 are both one step away; A2 comes first
-        w.Person(Vader, A1);  // Hand major: boards the Death Star's fleet
-        int attacker = w.DeathStar(Side.Hand, A1);
+        w.Person(Vader, A1);  // Hand major: boards the harvester's fleet
+        int attacker = w.Harvester(Side.Hand, A1);
         Assert.Null(w.Destroy(Side.Hand, attacker));
         Assert.Equal(A2, w.C(Luke).Transit!.Path[^1]);
         var vader = w.C(Vader);
@@ -234,7 +234,7 @@ public class DeathStarTests
         w.Hold(A1, Side.Collective, 80); w.Hold(B1, Side.Collective, 80); w.Hold(A2, Side.Hand, 20);
         w.Host.Fog.PlaceHq(A1);
         w.Game.State.Scenario.Active = true;
-        int attacker = w.DeathStar(Side.Hand, A1);
+        int attacker = w.Harvester(Side.Hand, A1);
         Assert.Null(w.Destroy(Side.Hand, attacker));
         var hq = w.Game.State.Scenario.Hq;
         Assert.Equal((HqStatus.Destroyed, FogModule.CauseSystemDestroyed, A1), (hq.Status, hq.DestroyedCause, hq.System));
@@ -256,7 +256,7 @@ public class DeathStarTests
         w.Hold(A1, Side.Collective, 80); w.Hold(A2, Side.Hand, 20);
         w.Host.Fog.PlaceHq(A1);
         w.Game.State.Scenario.Active = true;
-        w.Game.State.DeathStar.Destroyed.Add(VictoryModule.CoruscantName);
+        w.Game.State.Harvester.Destroyed.Add(VictoryModule.CoruscantName);
         w.Game.Step();
         Assert.Equal(collectiveWins ? Side.Collective : null, w.Host.Victory.Winner);
         if (collectiveWins) Assert.Equal("Charter is destroyed", w.Host.Victory.Reason);
@@ -272,16 +272,16 @@ public class DeathStarTests
         w.Hold(A1, Side.Hand, 40);
         w.Hold(A2, Side.Hand, 40); w.Hold(A3, null, 50); w.Hold(A4, Side.Collective, 95); w.Hold(A5, Side.Hand, 0); w.Hold(A6, Side.Collective, 70);
         w.Hold(B1, Side.Hand, 33); w.Hold(B2, Side.Collective, 77); w.Hold(B3, null, 5);
-        int attacker = w.DeathStar(Side.Hand, A1);
+        int attacker = w.Harvester(Side.Hand, A1);
         w.Game.Step(); // slot 5.6 raises the sector flag: its damping must not touch the strike's own change
-        Assert.True(w.Host.Support.IsDeathStarSector(A2));
+        Assert.True(w.Host.Support.IsHarvesterSector(A2));
         Assert.Null(w.Destroy(Side.Hand, attacker));
         Assert.Equal(new[] { 50, 60, 100, 10, 80 }, new[] { A2, A3, A4, A5, A6 }.Select(w.Collective).ToArray()); // +10 each, A4 clamped
         Assert.Equal(new[] { 33, 77, 5 }, new[] { B1, B2, B3 }.Select(w.Collective).ToArray()); // nothing outside the sector changes
-        var changes = w.Events<SupportChanged>().Where(e => e.Cause == SupportCause.DeathStar).ToList();
+        var changes = w.Events<SupportChanged>().Where(e => e.Cause == SupportCause.Harvester).ToList();
         Assert.Equal(new[] { A2, A3, A4, A5, A6 }, changes.Select(e => e.System).ToArray());
         // (B5a, 2026-10-17) under derived control a world the +10 carries across a band changes holder: A2 (Hand, unguarded) 40 -> 50 goes
-        // neutral, A3 (neutral) 50 -> 60 joins the Collective; their sector steps (+1) are halved to 0 in the Death Star sector. AssaultOnly: none.
+        // neutral, A3 (neutral) 50 -> 60 joins the Collective; their sector steps (+1) are halved to 0 in the harvester sector. AssaultOnly: none.
         if (rule == ControlRule.AssaultOnly) Assert.Empty(w.Events<SystemCaptured>());
         else
         {
@@ -304,12 +304,12 @@ public class DeathStarTests
         var w = new DsWorld(rule: rule);
         w.Hold(A1, Side.Hand, 40); w.Hold(A2, Side.Hand, 40);
         w.Hold(A3, null, 50);                 // neutral: becomes Collective-held at 100
-        w.Hold(A4, Side.Hand, 30);          // Hand with a garrison of 5 regiments (the strike-2 requirement is 6: 12 in an uprising, halved in a Death Star sector): stays Hand, at 100, uprising at once
+        w.Hold(A4, Side.Hand, 30);          // Hand with a garrison of 5 regiments (the strike-2 requirement is 6: 12 in an uprising, halved in a harvester sector): stays Hand, at 100, uprising at once
         for (int i = 0; i < 5; i++) w.Host.Economy.AddObject(Side.Hand, "Tranches", A4);
         w.Hold(A5, Side.Collective, 60);        // Collective: just goes to 100
         w.Hold(A6, null, 50);
         w.Hold(B1, Side.Collective, 12);
-        int first = w.DeathStar(Side.Hand, A1), second = w.DeathStar(Side.Hand, A2);
+        int first = w.Harvester(Side.Hand, A1), second = w.Harvester(Side.Hand, A2);
         w.Game.Step();
         Assert.Null(w.Destroy(Side.Hand, first));
         Assert.Equal(1, w.Ds.StrikesIn(Sa));
@@ -320,9 +320,9 @@ public class DeathStarTests
 
         Assert.Equal(Side.Collective, w.Host.Fleets.OwnerOf(A3));
         Assert.Equal(Side.Collective, w.Host.Fleets.OwnerOf(A6));
-        // (B5a, 2026-10-17) under derived control the support change to 100 makes the neutral worlds Collective (cause Support); DeathStarRevolt is the
+        // (B5a, 2026-10-17) under derived control the support change to 100 makes the neutral worlds Collective (cause Support); HarvesterRevolt is the
         // AssaultOnly cause (m5-death-star §2, the B5a note)
-        Assert.Equal(rule == ControlRule.Derived ? CaptureCause.Support : CaptureCause.DeathStarRevolt, w.Events<SystemCaptured>().First(e => e.System == A3).Cause);
+        Assert.Equal(rule == ControlRule.Derived ? CaptureCause.Support : CaptureCause.HarvesterRevolt, w.Events<SystemCaptured>().First(e => e.System == A3).Cause);
         Assert.Equal(Side.Hand, w.Host.Fleets.OwnerOf(A4));
         Assert.True(w.Host.Support.IsUprising(A4));
         Assert.Equal(A4, Assert.Single(w.Events<UprisingStarted>().Where(e => e.System != B1)).System); // B1 (Collective, support 12, no garrison) rises on day 1 by itself
@@ -338,9 +338,9 @@ public class DeathStarTests
         var w = new DsWorld();
         w.Hold(A2, Side.Hand, 20); w.Hold(A4, Side.Hand, 20);
         w.Hold(A3, null, 50);
-        int attacker = w.DeathStar(Side.Hand, A3);
+        int attacker = w.Harvester(Side.Hand, A3);
         Assert.Null(w.Destroy(Side.Hand, attacker));
-        Assert.True(w.Game.State.DeathStar.IsDestroyed(A3));
+        Assert.True(w.Game.State.Harvester.IsDestroyed(A3));
 
         // a fleet flies through it to A4, another stops there
         int through = w.Fleet(Side.Hand, A2, Corvette), stops = w.Fleet(Side.Hand, A2, Corvette);
@@ -369,12 +369,12 @@ public class DeathStarTests
 
     // m5-death-star DS10
     [Fact]
-    public void DS10_TheSectorFlagFollowsTheDeathStar()
+    public void DS10_TheSectorFlagFollowsTheHarvester()
     {
         var w = new DsWorld();
         w.Hold(A1, Side.Hand, 20);
-        int ds = w.DeathStar(Side.Hand, A1);
-        bool Flag(string s) => w.Host.Support.IsDeathStarSector(s);
+        int ds = w.Harvester(Side.Hand, A1);
+        bool Flag(string s) => w.Host.Support.IsHarvesterSector(s);
         w.Game.Step();
         Assert.All(new[] { A1, A2, A3, A4, A5, A6 }, s => Assert.True(Flag(s)));
         Assert.All(new[] { B1, B2, B3 }, s => Assert.False(Flag(s)));
@@ -384,7 +384,7 @@ public class DeathStarTests
         {
             w.Game.Step();
             arrivedStep = w.Game.State.Fleets[ds].At == B1;
-            if (!arrivedStep) Assert.All(new[] { A1, B1 }, s => Assert.False(Flag(s))); // in hyperspace the Death Star is in no sector
+            if (!arrivedStep) Assert.All(new[] { A1, B1 }, s => Assert.False(Flag(s))); // in hyperspace the harvester is in no sector
         }
         Assert.True(arrivedStep);
         Assert.All(new[] { B1, B2, B3 }, s => Assert.True(Flag(s)));   // set at slot 5.6 of the arrival day
@@ -393,27 +393,27 @@ public class DeathStarTests
 
     // m5-death-star DS11
     [Fact]
-    public void DS11_SabotageRemovesTheDeathStarAndTheFleetKeepsTheRest()
+    public void DS11_SabotageRemovesTheHarvesterAndTheFleetKeepsTheRest()
     {
         var w = new MissionWorld();
         w.Hold(MissionWorld.T, Side.Hand, 0);
-        int fleet = w.Host.Fleets.AddFleet(Side.Hand, "F", new[] { DeathStarClass, Isd }, MissionWorld.T);
-        int dsShip = w.Game.State.Fleets[fleet].Ships.First(id => w.Host.Economy.Find(id)!.Class == DeathStarClass);
+        int fleet = w.Host.Fleets.AddFleet(Side.Hand, "F", new[] { HarvesterClass, Isd }, MissionWorld.T);
+        int dsShip = w.Game.State.Fleets[fleet].Ships.First(id => w.Host.Economy.Find(id)!.Class == HarvesterClass);
         int isdShip = w.Game.State.Fleets[fleet].Ships.First(id => id != dsShip);
         w.Agent(MissionWorld.Luke, MissionWorld.T, esp: 100, com: 100);
-        // B2d: the arriving check (orbit) walks the Death Star and the destroyer (99 is not detected); the job check (target in orbit) opens with
+        // B2d: the arriving check (orbit) walks the harvester and the destroyer (99 is not detected); the job check (target in orbit) opens with
         // Luke's betrayal draw (B2b), then walks the same two guards
         w.Stub!.Expect(0, 99, 99, 99).Expect(0, 99, MissionWorld.Bt(1, 99, 99));
-        w.Start(Side.Collective, MissionKind.DeathStarSabotage, new[] { MissionWorld.Luke }, MissionWorld.T);
+        w.Start(Side.Collective, MissionKind.SpikeTheHarvester, new[] { MissionWorld.Luke }, MissionWorld.T);
         w.Game.Step();
         w.RunIteration(w.LastMission);
         Assert.Null(w.Host.Economy.Find(dsShip));
         Assert.NotNull(w.Host.Economy.Find(isdShip));
         Assert.Equal(new[] { isdShip }, w.Game.State.Fleets[fleet].Ships);
-        var ev = Assert.Single(w.Events<DeathStarDestroyed>());
+        var ev = Assert.Single(w.Events<HarvesterDestroyed>());
         Assert.Equal(("Sabotage", Side.Hand, dsShip), (ev.Cause, ev.Side, ev.Ship));
         Assert.Equal(3, w.Game.AudienceOf(ev.Index));
-        Assert.False(w.Host.DeathStar.HasDeathStar(Side.Hand, MissionWorld.T));
+        Assert.False(w.Host.Harvester.HasHarvester(Side.Hand, MissionWorld.T));
     }
 
     // m5-death-star DS12
@@ -422,19 +422,19 @@ public class DeathStarTests
     {
         foreach (bool blocks in new[] { true, false })
         {
-            var w = new DsWorld(new DeathStarParams { ShieldBlocksDestroy = blocks });
+            var w = new DsWorld(new HarvesterParams { ShieldBlocksDestroy = blocks });
             w.Hold(A1, Side.Collective, 80);
-            w.Host.Economy.AddFacility(A1, FacilityKind.DeathStarShield);
-            int attacker = w.DeathStar(Side.Hand, A1);
+            w.Host.Economy.AddFacility(A1, FacilityKind.HarvesterShield);
+            int attacker = w.Harvester(Side.Hand, A1);
             string? reason = w.Destroy(Side.Hand, attacker);
-            if (blocks) { Assert.Equal(DeathStarReject.ShieldProtected, reason); Assert.False(w.Game.State.DeathStar.IsDestroyed(A1)); }
-            else { Assert.Null(reason); Assert.True(w.Game.State.DeathStar.IsDestroyed(A1)); } // DEFAULT: nothing in the destroy path reads the shield
+            if (blocks) { Assert.Equal(HarvesterReject.ShieldProtected, reason); Assert.False(w.Game.State.Harvester.IsDestroyed(A1)); }
+            else { Assert.Null(reason); Assert.True(w.Game.State.Harvester.IsDestroyed(A1)); } // DEFAULT: nothing in the destroy path reads the shield
         }
         // the shield only protects against an enemy: a Hand attacker at a Hand system with its own shield is not stopped
-        var own = new DsWorld(new DeathStarParams { ShieldBlocksDestroy = true });
+        var own = new DsWorld(new HarvesterParams { ShieldBlocksDestroy = true });
         own.Hold(A1, Side.Hand, 20);
-        own.Host.Economy.AddFacility(A1, FacilityKind.DeathStarShield);
-        Assert.Null(own.Destroy(Side.Hand, own.DeathStar(Side.Hand, A1)));
+        own.Host.Economy.AddFacility(A1, FacilityKind.HarvesterShield);
+        Assert.Null(own.Destroy(Side.Hand, own.Harvester(Side.Hand, A1)));
     }
 
     // m5-death-star DS13
@@ -443,13 +443,13 @@ public class DeathStarTests
     {
         var w = new DsWorld();
         w.Hold(A3, null, 50); w.Hold(A2, Side.Hand, 20);
-        int attacker = w.DeathStar(Side.Hand, A3);
+        int attacker = w.Harvester(Side.Hand, A3);
         Assert.Null(w.Destroy(Side.Hand, attacker));
         string hash = w.Host.StateHash();
         string save = w.Host.Save();
-        Assert.Contains("\"DeathStar\":{\"Destroyed\":[\"A3\"],\"StrikesInSector\":{\"SA\":1}}", save);
+        Assert.Contains("\"Harvester\":{\"Destroyed\":[\"A3\"],\"StrikesInSector\":{\"SA\":1}}", save);
         w.Reload();
-        Assert.Equal(new[] { A3 }, w.Game.State.DeathStar.Destroyed.ToArray());
+        Assert.Equal(new[] { A3 }, w.Game.State.Harvester.Destroyed.ToArray());
         Assert.Equal(1, w.Ds.StrikesIn(Sa));
         Assert.Equal(hash, w.Host.StateHash());
         w.Game.Step(); // a loaded game goes on: A3 stays destroyed and cannot be struck twice
@@ -476,7 +476,7 @@ public class DeathStarTests
         w.Fleet(Side.Collective, A3, Corvette, Corvette);
         foreach (var m in new[] { Drayson, Borsk, Tura, Derlin }) w.Person(m, A3);
         w.Person(Luke, A3);
-        int first = w.DeathStar(Side.Hand, A3, Isd), second = w.DeathStar(Side.Hand, A5);
+        int first = w.Harvester(Side.Hand, A3, Isd), second = w.Harvester(Side.Hand, A5);
         w.Game.Step();
         w.Destroy(Side.Hand, first);
         w.Run(3);
@@ -490,10 +490,10 @@ public class DeathStarTests
     [Fact]
     public void Switches_DefaultsAndRefusedValues()
     {
-        var p = new DeathStarParams();
+        var p = new HarvesterParams();
         Assert.Equal((1, false, false, 10, 2, 100), (p.CapPerSystem, p.ShieldBlocksDestroy, p.TrenchRun, p.SectorPenalty, p.RevoltFromStrike, p.RevoltCollectiveSupport));
-        Assert.Equal(50, new CharacterParams().DeathStarHitPercent);
-        Assert.Throws<RuleMissingException>(() => new DsWorld(new DeathStarParams { TrenchRun = true })); // no code until a rule exists
+        Assert.Equal(50, new CharacterParams().HarvesterHitPercent);
+        Assert.Throws<RuleMissingException>(() => new DsWorld(new HarvesterParams { TrenchRun = true })); // no code until a rule exists
         Assert.Contains("5.6", Game.WorkList);
         Assert.True(Game.WorkList.ToList().IndexOf("5.6") > Game.WorkList.ToList().IndexOf("5.4") && Game.WorkList.ToList().IndexOf("5.6") < Game.WorkList.ToList().IndexOf("6.1"));
     }
@@ -503,16 +503,16 @@ public class DeathStarTests
     {
         var w = new DsWorld();
         w.Hold(A1, Side.Collective, 80);
-        int attacker = w.DeathStar(Side.Hand, A1);
+        int attacker = w.Harvester(Side.Hand, A1);
         long order = w.Ds.SubmitDestroySystem(Side.Hand, attacker);
         long dup = w.Ds.SubmitDestroySystem(Side.Hand, attacker);
         long move = w.Host.Fleets.SubmitMove(Side.Hand, attacker, A2); // accepted after the destroy order: the fleet departs in step 2
         w.Game.Step();
         Assert.Null(w.Reason(order));
-        Assert.Equal(DeathStarReject.OrderPending, w.Reason(dup));
+        Assert.Equal(HarvesterReject.OrderPending, w.Reason(dup));
         Assert.Null(w.Reason(move));
         var cancelled = Assert.Single(w.Events<DestroySystemCancelled>());
-        Assert.Equal((attacker, DeathStarReject.NotAtSystem), (cancelled.Fleet, cancelled.Reason));
+        Assert.Equal((attacker, HarvesterReject.NotAtSystem), (cancelled.Fleet, cancelled.Reason));
         Assert.False(w.Ds.IsDestroyed(A1));
     }
 
@@ -521,7 +521,7 @@ public class DeathStarTests
     {
         var w = new DsWorld();
         w.Hold(A1, Side.Collective, 80);
-        int attacker = w.DeathStar(Side.Hand, A1);
+        int attacker = w.Harvester(Side.Hand, A1);
         w.Ds.SubmitDestroySystem(Side.Hand, attacker); // not yet validated: it waits in the queue, and the queue is saved
         w.Reload();
         Assert.IsType<DestroySystemOrder>(Assert.Single(w.Game.Queue));
@@ -530,24 +530,24 @@ public class DeathStarTests
     }
 
     [Fact]
-    public void ADeathStarLostInBattleIsReported_AndOneDestroyedWithTheSystemToo()
+    public void AHarvesterLostInBattleIsReported_AndOneDestroyedWithTheSystemToo()
     {
         var w = new DsWorld();
         w.Hold(A1, Side.Collective, 80);
-        int mine = w.DeathStar(Side.Hand, A1);
+        int mine = w.Harvester(Side.Hand, A1);
         w.Game.RegisterHook("5", ctx => w.Host.Economy.DestroyUnit(ctx, ctx.Day + 1, w.Host.Economy.Find(w.ShipOf(mine))!)); // the loss path of a battle
         w.Game.Step();
-        Assert.Equal("Battle", Assert.Single(w.Events<DeathStarDestroyed>()).Cause);
+        Assert.Equal("Battle", Assert.Single(w.Events<HarvesterDestroyed>()).Cause);
 
-        // an enemy Death Star standing at a destroyed system dies with it
+        // an enemy harvester standing at a destroyed system dies with it
         var v = new DsWorld();
         v.Hold(A1, Side.Collective, 80);
-        int attacker = v.DeathStar(Side.Hand, A1), victim = 0;
-        v.Game.RegisterHook("5", ctx => { if (victim == 0) victim = v.DeathStar(Side.Collective, A1); }); // after the battle of slot 5 (see DS4)
+        int attacker = v.Harvester(Side.Hand, A1), victim = 0;
+        v.Game.RegisterHook("5", ctx => { if (victim == 0) victim = v.Harvester(Side.Collective, A1); }); // after the battle of slot 5 (see DS4)
         Assert.Null(v.Destroy(Side.Hand, attacker));
         Assert.False(v.FleetExists(victim));
-        var lost = Assert.Single(v.Events<DeathStarDestroyed>());
-        Assert.Equal(("DeathStar", Side.Collective), (lost.Cause, lost.Side));
+        var lost = Assert.Single(v.Events<HarvesterDestroyed>());
+        Assert.Equal(("Harvester", Side.Collective), (lost.Cause, lost.Side));
     }
 
     [Fact]
@@ -560,7 +560,7 @@ public class DeathStarTests
         w.Host.Construction.SubmitBuild(Side.Hand, A1, YardFamily.Shipyard, Isd, 2);
         w.Game.Step();
         Assert.NotNull(w.Host.Construction.ProjectAt(A1, YardFamily.Shipyard));
-        int attacker = w.DeathStar(Side.Hand, A1);
+        int attacker = w.Harvester(Side.Hand, A1);
         Assert.Null(w.Destroy(Side.Hand, attacker));
         Assert.Null(w.Host.Construction.ProjectAt(A1, YardFamily.Shipyard));
         Assert.DoesNotContain(w.Host.Economy.Objects, o => o.System == A1 && o.Category == ObjectCategory.Facility);
@@ -580,8 +580,8 @@ public class DeathStarTests
         w.Start(Side.Collective, MissionKind.Espionage, new[] { MissionWorld.Leia }, MissionWorld.T);
         w.Game.Step();
         Assert.Equal(MissionPhase.Working, w.M.Missions.Single().Phase);
-        int attacker = w.Host.Fleets.AddFleet(Side.Hand, "DS", new[] { DeathStarClass }, MissionWorld.T);
-        long seq = w.Host.DeathStar.SubmitDestroySystem(Side.Hand, attacker);
+        int attacker = w.Host.Fleets.AddFleet(Side.Hand, "DS", new[] { HarvesterClass }, MissionWorld.T);
+        long seq = w.Host.Harvester.SubmitDestroySystem(Side.Hand, attacker);
         w.Game.Step();
         Assert.Null(w.Reason(seq));
         Assert.Empty(w.M.Missions);
@@ -591,13 +591,13 @@ public class DeathStarTests
 
 internal static class DsWorldExtensions
 {
-    /// <summary>Order <paramref name="count"/> Death Stars at a fresh Hand yard with no Death Star in sight, and return the rejection reason.</summary>
+    /// <summary>Order <paramref name="count"/> harvesters at a fresh Hand yard with no harvester in sight, and return the rejection reason.</summary>
     public static string? TryBuild(this DsWorld w, int count)
     {
         w.Hold(A1, Side.Hand, 30);
         w.Host.Economy.AddFacility(A1, FacilityKind.OrbitalShipyard);
         w.Host.Economy.SetPools(Side.Hand, 0, 1000);
-        long seq = w.Host.Construction.SubmitBuild(Side.Hand, A1, YardFamily.Shipyard, DsWorld.DeathStarClass, count);
+        long seq = w.Host.Construction.SubmitBuild(Side.Hand, A1, YardFamily.Shipyard, DsWorld.HarvesterClass, count);
         w.Game.Step();
         return w.Reason(seq);
     }

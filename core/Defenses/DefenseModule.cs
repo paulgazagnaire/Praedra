@@ -18,10 +18,10 @@ public sealed record DefenseParams
     /// </summary>
     public int AssaultGateShields { get; init; } = 2;
     /// <summary>
-    /// Does the Death Star Shield count as one of the shields of the gate? DEFAULT no (Open questions 1 and 5; the original UI counts it
+    /// Does the harvester shield count as one of the shields of the gate? DEFAULT no (Open questions 1 and 5; the original UI counts it
     /// separately). rule: m3-planetary-defenses §Defaults for undecided items.
     /// </summary>
-    public bool DeathStarShieldCountsForGate { get; init; }
+    public bool HarvesterShieldCountsForGate { get; init; }
 }
 
 /// <summary>One facility's shot in an assault. rule: m3-planetary-defenses §Queries (BatteryShots).</summary>
@@ -65,7 +65,7 @@ public sealed class DefenseModule
     }
 
     /// <summary>
-    /// Number of completed GenCore generators (family 36). The Death Star Shield (family 37) is not counted. rule: m3-planetary-defenses §Queries
+    /// Number of completed GenCore generators (family 36). The harvester shield (family 37) is not counted. rule: m3-planetary-defenses §Queries
     /// (ShieldGenerators; D2).
     /// </summary>
     public int ShieldGenerators(string system) => DefensesOf(system).Count(d => d.Class.Job == DefenseJob.ShieldGenerator);
@@ -81,7 +81,7 @@ public sealed class DefenseModule
 
     /// <summary>
     /// Every completed defense facility whose side is not <paramref name="attacker"/>, in facility id order, with its attack and shot chance:
-    /// the assault's step 1 list (a shield or Death Star Shield is listed with chance 0, so the draw count is fixed). A neutral system's
+    /// the assault's step 1 list (a shield or Harvester Shield is listed with chance 0, so the draw count is fixed). A neutral system's
     /// facilities are listed too. Empty if the attacker holds the system. rule: m3-planetary-defenses §Queries (BatteryShots; D5, D6, D15).
     /// </summary>
     public IReadOnlyList<DefenseShot> BatteryShots(string system, Side attacker)
@@ -98,11 +98,11 @@ public sealed class DefenseModule
     public int ChancePercent(int attack) => attack / Params.ShotChanceDivisor;
 
     /// <summary>
-    /// Shield generators that count for the assault gate: GenCore, plus the Death Star Shield if the switch says so (DEFAULT no).
+    /// Shield generators that count for the assault gate: GenCore, plus the harvester shield if the switch says so (DEFAULT no).
     /// rule: m3-planetary-defenses §What each class does in M3.
     /// </summary>
     public int GateShields(string system) =>
-        ShieldGenerators(system) + (Params.DeathStarShieldCountsForGate ? DefensesOf(system).Count(d => d.Class.Job == DefenseJob.DeathStarShield) : 0);
+        ShieldGenerators(system) + (Params.HarvesterShieldCountsForGate ? DefensesOf(system).Count(d => d.Class.Job == DefenseJob.HarvesterShield) : 0);
 
     /// <summary>
     /// The assault gate the assault module calls at order validation and again at resolution: true when the system has the required number of
@@ -120,7 +120,7 @@ public sealed class DefenseModule
         if (Params.AssaultGateShields <= 0) return false;
         int n = 0;
         foreach (var (cls, count) in completedFacilities)
-            if (Data.TryGetClass(cls, out var c) && (c.Job == DefenseJob.ShieldGenerator || (Params.DeathStarShieldCountsForGate && c.Job == DefenseJob.DeathStarShield))) n += count;
+            if (Data.TryGetClass(cls, out var c) && (c.Job == DefenseJob.ShieldGenerator || (Params.HarvesterShieldCountsForGate && c.Job == DefenseJob.HarvesterShield))) n += count;
         return n >= Params.AssaultGateShields;
     }
 }

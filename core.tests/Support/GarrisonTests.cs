@@ -22,7 +22,7 @@ public class GarrisonTests
         Assert.Equal(n, s.Select(x => SupportModule.RequiredGarrison(P, x, false, false)).ToArray());
     }
 
-    // G2: s = 40 in uprising / Hand Death Star / both: 4 / 1 / 2
+    // G2: s = 40 in uprising / Hand harvester / both: 4 / 1 / 2
     [Fact]
     public void G2_Flags()
     {
@@ -31,11 +31,11 @@ public class GarrisonTests
         Assert.Equal(2, SupportModule.RequiredGarrison(P, 40, true, true));
     }
 
-    // G3: s = 50, Hand Death Star: N = 0 (1 / 2 truncated)
+    // G3: s = 50, Hand harvester: N = 0 (1 / 2 truncated)
     [Fact]
     public void G3_HalvingTruncates() => Assert.Equal(0, SupportModule.RequiredGarrison(P, 50, false, true));
 
-    // the sheet's table, every row: no flag, uprising, Hand Death Star, both
+    // the sheet's table, every row: no flag, uprising, Hand harvester, both
     [Theory]
     [InlineData(0, 6, 12, 3, 6)]
     [InlineData(9, 6, 12, 3, 6)]
@@ -59,17 +59,17 @@ public class GarrisonTests
         Assert.Equal(both, SupportModule.RequiredGarrison(P, s, true, true));
     }
 
-    // the Death Star halving is the Hand's only; the module reads support of the holder, the flag and the uprising flag
+    // the harvester halving is the Hand's only; the module reads support of the holder, the flag and the uprising flag
     [Fact]
     public void RequiredGarrisonReadsTheSystem()
     {
         var w = new SupWorld();
         w.Hold(Emp, Side.Hand, 40);
         Assert.Equal(2, w.Sup.RequiredGarrison(Emp));
-        w.Sup.SetDeathStarSystem(Emp, true);
+        w.Sup.SetHarvesterSystem(Emp, true);
         Assert.Equal(1, w.Sup.RequiredGarrison(Emp));
         w.Hold(Ally, Side.Collective, 40);
-        w.Sup.SetDeathStarSystem(Ally, true);
+        w.Sup.SetHarvesterSystem(Ally, true);
         Assert.Equal(2, w.Sup.RequiredGarrison(Ally)); // Collective: no halving
         Assert.Equal(0, w.Sup.RequiredGarrison("Navalia")); // neutral
     }
@@ -312,13 +312,13 @@ public class GarrisonTests
         Assert.Equal(c2, SupportModule.Lookup(P.Table2, score));
     }
 
-    // G14 through the module: the Hand in a Death Star sector, a Stormtrooper counts in R and again in T
+    // G14 through the module: the Hand in a harvester sector, a Stormtrooper counts in R and again in T
     [Fact]
     public void G14_ScoreFromTheSystem()
     {
         var w = new SupWorld();
         w.Hold(Emp, Side.Hand, 20);
-        w.Sup.SetDeathStarSystem(Emp, true);
+        w.Sup.SetHarvesterSystem(Emp, true);
         w.Regiments(Emp, Side.Hand, "Pacifiers", 1);
         w.Regiments(Emp, Side.Hand, "Tranches", 1);
         Assert.Equal(9, w.Sup.IncidentScore(Emp, Side.Hand, 5, 5)); // 10 + 4 - 2*2 - 1

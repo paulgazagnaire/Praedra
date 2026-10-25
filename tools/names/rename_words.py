@@ -17,7 +17,7 @@ property renamed here still reads from a save written before.
 What it rewrites: the C# files under core, core.tests, sim, sim.tests, importer, importer.tests and godot/Scripts, the CSVs under
 data/classic and data/design (headers too, not data/classic/raw), and the Markdown files listed in DOCS. It never touches
 data/classic/raw (Classic's own files), the migration tables, or SKIP_FILES. The importer still reads Classic's raw headers
-(is_alliance...): those strings are kept by RAW_KEEP.
+(is_alliance...): those strings are kept in importer/ by RAW_KEEP.
 --check only reports what it would change and exits 1 if anything is left.
 """
 import csv
@@ -33,8 +33,10 @@ CODE_DIRS = ["core", "core.tests", "sim", "sim.tests", "importer", "importer.tes
 DOCS = [os.path.join("sim", "README.md"), os.path.join("data", "README.md"), os.path.join("godot", "README.md"), "README.md", "CLAUDE.md"]
 # Files that must keep old words on purpose (the save-migration tests write an old save).
 SKIP_FILES = {os.path.join("core.tests", "Setup", "NameMigrationTests.cs"), os.path.join("core.tests", "Setup", "WordMigrationTests.cs")}
-# Classic's raw column names the importer reads (data/classic/raw keeps Classic's headers word for word).
-RAW_KEEP = ["is_alliance", "is_empire"]
+# Classic's raw column names the importer reads (data/classic/raw keeps Classic's headers word for word); kept in importer/ only, which
+# writes them out under the new words (DropInStage.OutHeader).
+RAW_KEEP = ["is_alliance", "is_empire", "tractor_beam"]
+RAW_KEEP_DIRS = ("importer" + os.sep,)
 
 
 def load_table():
@@ -70,13 +72,14 @@ def make_rewriter(by):
     words = word_pattern(by["word"])
     keep = re.compile("|".join(re.escape(k) for k in RAW_KEEP))
 
-    def rewrite(text):
+    def rewrite(text, raw_keep=True):
         n = 0
         # protect the raw column names
         held = []
         def hold(m):
             held.append(m.group(0)); return f"\x00{len(held) - 1}\x00"
-        text = keep.sub(hold, text)
+        if raw_keep:
+            text = keep.sub(hold, text)
         for p in phrases:
             c = text.count(p)
             if c:
@@ -117,7 +120,7 @@ def main():
     for p in files():
         with open(p, newline="", encoding="utf-8") as f:
             text = f.read()
-        new, n = rewrite(text)
+        new, n = rewrite(text, os.path.relpath(p, ROOT).startswith(RAW_KEEP_DIRS))
         if n and new != text:
             total += n
             print(f"{os.path.relpath(p, ROOT)}: {n}")

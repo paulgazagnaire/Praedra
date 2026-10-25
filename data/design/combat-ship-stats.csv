@@ -1,4 +1,4 @@
-name,id,side,cost,hull,shield_pool,shield_regen_per_s,shield_deflection,size_class,sublight,maneuver,hyperdrive,fighter_squadrons,troop_capacity,damage_control,tractor,gravity_well
+name,id,side,cost,hull,shield_pool,shield_regen_per_s,shield_deflection,size_class,sublight,maneuver,hyperdrive,fighter_squadrons,troop_capacity,damage_control,Hold beam,gravity_well
 Ark,64,Collective,92,2400,300,15,1.5,large,5,2,60,3,1,50,2,0
 Hauler,65,Collective,30,1200,200,10,1.0,medium,3,1,80,0,0,5,1,0
 Crowbar,66,Collective,60,1400,600,30,3.0,medium,5,2,80,0,0,30,0,0
@@ -22,7 +22,7 @@ Decree,132,Hand,68,1800,200,10,1.0,large,3,1,60,2,2,20,2,0
 Mandate,133,Hand,112,2750,300,15,1.5,large,5,1,80,6,3,30,3,0
 Edict,134,Hand,282,5000,1200,60,6.0,huge,4,1,80,12,9,20,6,0
 Indenture,135,Hand,12,320,300,15,1.5,small,8,3,50,0,1,10,0,0
-Death Star,136,Hand,584,25000,2000,100,10.0,huge,1,0,80,24,18,60,15,0
+harvester,136,Hand,584,25000,2000,100,10.0,huge,1,0,80,24,18,60,15,0
 Bond,137,Hand,10,300,100,5,0.5,small,2,1,80,0,2,5,0,0
 Decree II,138,Hand,72,1800,600,30,3.0,large,4,2,60,2,0,25,2,0
 Mandate II,139,Hand,158,3000,800,20,4.0,large,5,1,60,6,3,35,3,0

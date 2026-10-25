@@ -67,10 +67,10 @@ public sealed record BattleParams
     /// <summary>DEFAULT LaneAdjacent. rule: m4-retreat-damage-repair §3.</summary>
     public RetreatMode RetreatMode { get; init; } = RetreatMode.LaneAdjacent;
     /// <summary>
-    /// While the Hand has a working Death Star in the battle, the Collective's stalemate strength counts as -1, so the Collective is always the flagged side.
+    /// While the Hand has a working harvester in the battle, the Collective's stalemate strength counts as -1, so the Collective is always the flagged side.
     /// DEFAULT on (Traced, B3 §12). rule: m4-retreat-damage-repair §2.
     /// </summary>
-    public bool DeathStarStalemate { get; init; } = true;
+    public bool HarvesterStalemate { get; init; } = true;
     /// <summary>
     /// The Hand side is the AI (no human plays it): it always fights (Simulate) and its threshold is the AI's (B6a §2). Filled from the game's side
     /// controllers (AiMatch sets both, the Godot opponent its side; <see cref="BattleModule.SetControllers"/>). DEFAULT false. rule: B6a §1, m4-battle-classic §1.3.
@@ -107,7 +107,7 @@ public sealed record BattleParams
     /// officer record (the attribute x is not found: DEFAULT no officer, B3 §17). Traced.
     /// </summary>
     public double ManeuverBonus { get; init; } = 1.0;
-    /// <summary>Each weapons hit takes this share of the full rate from the hull-scaled one (also shield generator, tractor, sub-light). Traced.</summary>
+    /// <summary>Each weapons hit takes this share of the full rate from the hull-scaled one (also shield generator, Hold beam, sub-light). Traced.</summary>
     public double HitPenalty { get; init; } = 0.25;
     /// <summary>Squadron torpedo term per torpedo (0x66c4cc); only against a capital ship at shield ratio 0. Traced.</summary>
     public double TorpedoTerm { get; init; } = 0.53333336;
@@ -161,7 +161,7 @@ public sealed record BattleParams
     public int SubsystemScoreAbove { get; init; } = 50;
     public int ShieldGeneratorUpTo { get; init; } = 65;
     public int WeaponsUpTo { get; init; } = 80;
-    public int TractorUpTo { get; init; } = 90;
+    public int HoldBeamUpTo { get; init; } = 90;
     public int SubLightUpTo { get; init; } = 95;
     /// <summary>Cap of each of the four plain counters, in battle and stored (GNPRTB 2048); hyperdrive: its installed components. Traced.</summary>
     public int SubsystemCap { get; init; } = 4;
@@ -183,6 +183,6 @@ public sealed record BattleParams
     public int StalemateSeconds { get; init; } = 1200;
     /// <summary>Engineering guard (not in Classic): a battle that reaches this second is treated as a stalemate. DEFAULT.</summary>
     public int SafetyGuardSeconds { get; init; } = 20000;
-    /// <summary>Ship class id of the Death Star (the retreat-ability exception and the stalemate switch). Traced (data id).</summary>
-    public int DeathStarClassId { get; init; } = 136;
+    /// <summary>Ship class id of the harvester (the retreat-ability exception and the stalemate switch). Traced (data id).</summary>
+    public int HarvesterClassId { get; init; } = 136;
 }

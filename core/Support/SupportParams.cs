@@ -14,7 +14,7 @@ public enum SupportCause
 {
     UprisingErosion, Presence,
     // hooks for later milestones (the function exists; nothing calls it yet)
-    Bombardment, Diplomacy, IncitedUprising, Battle, DeathStar, ControlChange, HqMove, Other,
+    Bombardment, Diplomacy, IncitedUprising, Battle, Harvester, ControlChange, HqMove, Other,
     /// <summary>A Subdue Uprising success (new cause). rule: m5-missions §6 (Lead notes: add SupportCause.Subdue).</summary>
     Subdue,
 }
@@ -29,8 +29,8 @@ public sealed record SupportParams
     // ---- support sheet
     public int SupportMin { get; init; } = 0;     // Traced
     public int SupportMax { get; init; } = 100;   // Traced
-    /// <summary>GNPRTB 7681. Collective gains in a Death Star sector are divided by this, truncating toward zero. Traced; rounding DEFAULT.</summary>
-    public int DeathStarDampingDivisor { get; init; } = 2;
+    /// <summary>GNPRTB 7681. Collective gains in a harvester sector are divided by this, truncating toward zero. Traced; rounding DEFAULT.</summary>
+    public int HarvesterDampingDivisor { get; init; } = 2;
     /// <summary>GNPRTB 7698 (value from economy/05 text). Traced-medium.</summary>
     public int ErosionPeriod { get; init; } = 30;
     /// <summary>GNPRTB 7697. The holder's change per erosion firing. Traced.</summary>
@@ -52,9 +52,9 @@ public sealed record SupportParams
     public int GarrisonStep { get; init; } = 10;
     /// <summary>GNPRTB 7682. Requirement multiplier during an uprising. Traced.</summary>
     public int UprisingMultiplier { get; init; } = 2;
-    /// <summary>GNPRTB 7680. Hand requirement divisor in a Death Star sector (truncating, DEFAULT) and the multiplier on Hand regiments in the incident score. Traced.</summary>
-    public int DeathStarGarrisonDivisor { get; init; } = 2;
-    public int DeathStarScoreMultiplier { get; init; } = 2;
+    /// <summary>GNPRTB 7680. Hand requirement divisor in a harvester sector (truncating, DEFAULT) and the multiplier on Hand regiments in the incident score. Traced.</summary>
+    public int HarvesterGarrisonDivisor { get; init; } = 2;
+    public int HarvesterScoreMultiplier { get; init; } = 2;
     /// <summary>A regiment class without a weight counts this many tenths (1.0). DEFAULT.</summary>
     public int DefaultWeight10 { get; init; } = 10;
     /// <summary>Tenths per regiment in the Classic check (weight 1.0).</summary>

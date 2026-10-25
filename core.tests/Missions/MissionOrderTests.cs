@@ -88,7 +88,7 @@ public class MissionOrderTests
         Assert.Equal(7, d.Events<MissionStarted>().Single().TotalTicks);
     }
 
-    // m5-missions MI48: Assassination as the Collective; Death Star Sabotage as the Hand: WrongSide
+    // m5-missions MI48: Assassination as the Collective; Spike the Harvester as the Hand: WrongSide
     [Fact]
     public void MI48_WrongSide()
     {
@@ -96,7 +96,7 @@ public class MissionOrderTests
         w.Agent(Han, T, com: 100);
         w.Agent(Vader, T, com: 100, esp: 50);
         Assert.Equal(MissionReject.WrongSide, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Assassination, new() { Han }, new(), new(), null, Vader)));
-        Assert.Equal(MissionReject.WrongSide, w.Try(s => new StartMissionOrder(s, Side.Hand, MissionKind.DeathStarSabotage, new() { Vader }, new(), new(), T)));
+        Assert.Equal(MissionReject.WrongSide, w.Try(s => new StartMissionOrder(s, Side.Hand, MissionKind.SpikeTheHarvester, new() { Vader }, new(), new(), T)));
     }
 
     // m5-missions MI49: special forces as team members, checked against the record's mask
@@ -197,13 +197,13 @@ public class MissionOrderTests
         Assert.Empty(w.M.Missions);
     }
 
-    // m5-missions MI53: Death Star Sabotage with no Death Star; a story kind (MissionKind.Dagobah)
+    // m5-missions MI53: Spike the Harvester with no harvester; a story kind (MissionKind.Dagobah)
     [Fact]
-    public void MI53_NoDeathStarAndHiddenKind()
+    public void MI53_NoHarvesterAndHiddenKind()
     {
         var w = new MissionWorld();
         w.Agent(Luke, T, esp: 50, com: 50);
-        Assert.Equal(MissionReject.NoDeathStar, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.DeathStarSabotage, new() { Luke }, new(), new(), T)));
+        Assert.Equal(MissionReject.NoHarvester, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.SpikeTheHarvester, new() { Luke }, new(), new(), T)));
         Assert.Equal(MissionReject.HiddenKind, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Dagobah, new() { Luke }, new(), new(), T)));
         Assert.Equal(MissionReject.HiddenKind, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Move, new() { Luke }, new(), new(), T)));
     }
@@ -355,7 +355,7 @@ public class MissionOrderTests
     }
 
     // Rules with no data or no owner are refused, never invented: decoys while the decoy table is Missing, Recruitment while no recruit hook is
-    // wired (GameHost wires the pick since 2026-10-18), Jedi Training (each sheet names the other as owner).
+    // wired (GameHost wires the pick since 2026-10-18), Train Talent (each sheet names the other as owner).
     [Fact]
     public void RuleMissingRefusals()
     {
@@ -375,7 +375,7 @@ public class MissionOrderTests
         Assert.NotNull(w.M.Recruit); // m5-missions §6 Recruitment (2026-10-18): the host wires the pick
         w.M.Recruit = null;
         Assert.Equal(MissionReject.RuleMissing, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Recruitment, new() { Leia }, new(), new(), T)));
-        Assert.Equal(MissionReject.RuleMissing, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.JediTraining, new() { Luke }, new(), new(), T)));
+        Assert.Equal(MissionReject.RuleMissing, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.TrainTalent, new() { Luke }, new(), new(), T)));
         // with a recruit hook the mission runs (MI21: leadership 80 gives RCRTMSTB(80) = 60 on the full table, step lookup)
         CharacterRecord? recruited = null;
         w.M.Recruit = (ctx, side, sys) => { var c = w.Ch.Get(Wedge) ?? w.Ch.Create(w.Ch.Data.Get(Wedge), new Praedra.Core.Tests.Economy.StubRng()); w.Ch.Place(c.Id, sys, ctx); recruited = c; return c; };
@@ -529,7 +529,7 @@ public class MissionOrderTests
         Assert.Equal((H, T, 3, 3), (ok.Home, ok.Target, ok.Ticks, ok.ArrivalDay));
         Assert.Equal(H, ok.Path![0]); Assert.Equal(T, ok.Path[^1]);
         Assert.Equal(MissionReject.NotTogether, w.M.CheckStart(Order(MissionKind.Espionage, new() { Leia, Luke }, X)).Reason);
-        Assert.Equal(MissionReject.RuleMissing, w.M.CheckStart(Order(MissionKind.JediTraining, new() { Luke }, T)).Reason);
+        Assert.Equal(MissionReject.RuleMissing, w.M.CheckStart(Order(MissionKind.TrainTalent, new() { Luke }, T)).Reason);
         Assert.Equal(MissionReject.BadTarget, w.M.CheckStart(Order(MissionKind.Espionage, new() { Leia }, null)).Reason);
         Assert.Equal((hash, events, draws), (w.Host.StateHash(), w.Game.Events.Count, w.Stub.Requests.Count));
 

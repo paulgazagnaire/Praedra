@@ -18,8 +18,8 @@ namespace Praedra.Core.Missions;
 ///
 /// Not invented (refused or a no-op hook, listed in the sheet's Missing rules): the decoy table values (decoys refused RuleMissing while
 /// <see cref="MissionData.DecoyTable"/> is null), the recruit pick (Recruitment refused RuleMissing while <see cref="Recruit"/> is null; GameHost wires it), the capture
-/// rule for an exposed team (<see cref="OnTeamExposed"/>, null = no-op as the sheet says), the Death Star (<see cref="HasDeathStar"/> false until it
-/// exists), Jedi Training (each sheet says the other owns it: refused RuleMissing), story missions (hidden).
+/// rule for an exposed team (<see cref="OnTeamExposed"/>, null = no-op as the sheet says), the harvester (<see cref="HasHarvester"/> false until it
+/// exists), Train Talent (each sheet says the other owns it: refused RuleMissing), story missions (hidden).
 /// </summary>
 public sealed class MissionModule
 {
@@ -62,12 +62,12 @@ public sealed class MissionModule
     /// </summary>
     public Func<StepContext, Side, string, CharacterRecord?>? Recruit { get; set; }
     /// <summary>
-    /// <c>HasDeathStar(owner, system)</c>: a completed Death Star of <paramref name="owner"/> stands at the system. Null = false until the Death Star
-    /// exists in the core (M4/M6). rule: §Targets ("HasDeathStar returns false").
+    /// <c>HasHarvester(owner, system)</c>: a completed harvester of <paramref name="owner"/> stands at the system. Null = false until the harvester
+    /// exists in the core (M4/M6). rule: §Targets ("HasHarvester returns false").
     /// </summary>
-    public Func<Side, string, bool>? HasDeathStar { get; set; }
-    /// <summary><c>DeathStar.Destroy(system, Sabotage)</c> (owner given). Null = nothing to destroy. rule: §6 Death Star Sabotage.</summary>
-    public Action<StepContext, string, Side>? DestroyDeathStar { get; set; }
+    public Func<Side, string, bool>? HasHarvester { get; set; }
+    /// <summary><c>Harvester.Destroy(system, Sabotage)</c> (owner given). Null = nothing to destroy. rule: §6 Spike the Harvester.</summary>
+    public Action<StepContext, string, Side>? DestroyHarvester { get; set; }
 
     private MissionModule(Game game, FleetModule fleets, EconomyModule eco, SupportModule support, TroopModule troops, ResearchModule research,
         CharacterModule ch, FogModule fog, MissionData data, MissionParams p)
@@ -229,11 +229,11 @@ public sealed class MissionModule
     public static CheckKind KindAt(int word, CheckPoint p) => (CheckKind)((word >> (4 * (int)p)) & 0xF);
 
     /// <summary>
-    /// Kind 4's target position (0x521160, 0x4f6b50): in orbit for Death Star Sabotage and for a target character riding a fleet; else on the planet
+    /// Kind 4's target position (0x521160, 0x4f6b50): in orbit for Spike the Harvester and for a target character riding a fleet; else on the planet
     /// (the system itself, a facility, a character on the surface). rule: §3 (Traced B2d §3).
     /// </summary>
     private bool TargetInOrbit(MissionGroup m) =>
-        m.Kind == MissionKind.DeathStarSabotage || (m.TargetCharacter is int tid && _ch.Get(tid) is { AttachedFleet: not 0 });
+        m.Kind == MissionKind.SpikeTheHarvester || (m.TargetCharacter is int tid && _ch.Get(tid) is { AttachedFleet: not 0 });
 
     /// <summary>
     /// The scopes of one check pass at <paramref name="place"/> (B2d §3): planet (kind 2): members on the planet; guards = the special forces on the
@@ -421,7 +421,7 @@ public sealed class MissionModule
         MissionKind.Diplomacy => _ch.EffectiveSkill(c, Skill.Diplomacy) > 0,
         MissionKind.Rescue or MissionKind.Abduction or MissionKind.Assassination => _ch.EffectiveSkill(c, Skill.Combat) > 0,
         MissionKind.Sabotage => SabotageSkillOf(_ch.EffectiveSkill(c, Skill.Combat), _ch.EffectiveSkill(c, Skill.Espionage)) > 0,
-        MissionKind.DeathStarSabotage => (_ch.EffectiveSkill(c, Skill.Combat) + _ch.EffectiveSkill(c, Skill.Espionage)) / 2 > 0,
+        MissionKind.SpikeTheHarvester => (_ch.EffectiveSkill(c, Skill.Combat) + _ch.EffectiveSkill(c, Skill.Espionage)) / 2 > 0,
         MissionKind.Espionage or MissionKind.Reconnaissance => _ch.EffectiveSkill(c, Skill.Espionage) > 0,
         MissionKind.Recruitment or MissionKind.InciteUprising or MissionKind.SubdueUprising => _ch.EffectiveSkill(c, Skill.Leadership) > 0,
         MissionKind.ShipResearch or MissionKind.FacilityResearch or MissionKind.TroopResearch => _ch.EffectiveSkill(c, ResearchSkill(k)!.Value) > 0,
@@ -495,7 +495,7 @@ public sealed class MissionModule
             case MissionKind.SubdueUprising: return holder == side && _support.IsUprising(system) ? null : MissionReject.BadTarget;
             case MissionKind.ShipResearch or MissionKind.FacilityResearch or MissionKind.TroopResearch:
                 return _research.CanResearch(side, ResearchTrack(k)!.Value, system); // m5-research names
-            case MissionKind.DeathStarSabotage: return HasDeathStar?.Invoke(Other(side), system) == true ? null : MissionReject.NoDeathStar;
+            case MissionKind.SpikeTheHarvester: return HasHarvester?.Invoke(Other(side), system) == true ? null : MissionReject.NoHarvester;
             default: return MissionReject.BadTarget;
         }
     }
@@ -559,14 +559,14 @@ public sealed class MissionModule
         List<int> Chars, List<int> Sfs, List<int> DChars, List<int> DSfs);
 
     // rule: §Orders (StartMission), rejections in the sheet's order. RuleMissing (ours) comes before the target checks: a decoy while the decoy
-    // table is Missing, Recruitment while the recruit pick is Missing; Jedi Training right after WrongSide (the two sheets each name the other as owner).
+    // table is Missing, Recruitment while the recruit pick is Missing; Train Talent right after WrongSide (the two sheets each name the other as owner).
     // Shared by the handler and CheckStart: reads only.
     private (string? Reason, StartPlan? Plan) Validate(StartMissionOrder o)
     {
         if (!Data.TryGet(o.Kind, out var rec)) return (MissionReject.UnknownKind, null);
         if (rec.Hidden) return (MissionReject.HiddenKind, null);
         if (!rec.AvailableTo(o.Side)) return (MissionReject.WrongSide, null);
-        if (o.Kind == MissionKind.JediTraining) return (MissionReject.RuleMissing, null);
+        if (o.Kind == MissionKind.TrainTalent) return (MissionReject.RuleMissing, null);
         var chars = o.Characters ?? new List<int>(); var sfs = o.SpecialForces ?? new List<int>();
         var dSfs = o.Decoys ?? new List<int>(); var dChars = o.DecoyCharacters ?? new List<int>();
         if (CheckMembers(o.Side, chars, sfs, dChars, dSfs, out var home) is { } bad) return (bad, null);
@@ -710,9 +710,9 @@ public sealed class MissionModule
     }
 
     /// <summary>
-    /// The Death Star destroyed <paramref name="system"/>: every group that is working there ends as a failure with cause TargetDestroyed
+    /// The harvester destroyed <paramref name="system"/>: every group that is working there ends as a failure with cause TargetDestroyed
     /// (MissionEnded) and leaves the state; a group about to return from there just leaves the state. Their characters stay on the system as free
-    /// characters for the Death Star's roll on characters (their special forces go with the planet). A group still flying out lands later and ends
+    /// characters for the harvester's roll on characters (their special forces go with the planet). A group still flying out lands later and ends
     /// the same way (<see cref="Land"/>). rule: m5-death-star §2 effect 3 (running missions end as failures with cause TargetDestroyed, team members
     /// handled as characters on the planet).
     /// </summary>
@@ -952,7 +952,7 @@ public sealed class MissionModule
             case MissionKind.InciteUprising:
                 if (Params.InciteInputMode == InciteInputMode.Documented) { int s = Support(); return (a.Leadership - s) - (100 - s); }
                 return a.Leadership - (_fleets.OwnerOf(m.Target) is Side h ? _eco.SupportOf(m.Target, h) : 0);
-            case MissionKind.DeathStarSabotage: return (a.Combat + a.Espionage) / 2;
+            case MissionKind.SpikeTheHarvester: return (a.Combat + a.Espionage) / 2;
             case MissionKind.SubdueUprising: { int s = Support(); return ((100 - s) - s) + a.Leadership; }
             default: return 0;
         }
@@ -1435,7 +1435,7 @@ public sealed class MissionModule
                 else if (ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1) < Params.KeyKidnapPercent) _ch.Capture(ctx, tc, side, null, CauseKidnap, unit: TeamCaptor(m));
                 else _ch.Kill(ctx, tc, CauseAssassination, allowDeath: true);
                 break;
-            case MissionKind.DeathStarSabotage: DestroyDeathStar?.Invoke(ctx, target, Other(side)); break;
+            case MissionKind.SpikeTheHarvester: DestroyHarvester?.Invoke(ctx, target, Other(side)); break;
         }
     }
 

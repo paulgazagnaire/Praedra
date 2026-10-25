@@ -35,7 +35,7 @@ public sealed class CharacterRecord
     /// rule: m5-characters-and-force §Force (Traced B2e §1, §5).
     /// </summary>
     public int ForceExperience { get; set; }
-    /// <summary><c>ForceTraining</c> (+0x90), written only by Jedi Training. Was <c>ForceAcquired</c>. rule: §Force (Traced B2e §1).</summary>
+    /// <summary><c>ForceTraining</c> (+0x90), written only by Train Talent. Was <c>ForceAcquired</c>. rule: §Force (Traced B2e §1).</summary>
     public int ForceTraining { get; set; }
     /// <summary>ForcePotential (+0xac bit 0x20): the character has the Force, known or not. rule: §Rolling the stats (awakening), §Force.</summary>
     public bool ForceUser { get; set; }

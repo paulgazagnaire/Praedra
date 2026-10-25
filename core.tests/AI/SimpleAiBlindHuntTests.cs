@@ -42,7 +42,7 @@ public class SimpleAiBlindHuntTests
             {
                 refreshed = true;
                 foreach (var sys in g.Systems)
-                    if (sys.Name != x && h.Fleets.OwnerOf(sys.Name) != Side.Hand && !h.Game.State.DeathStar.IsDestroyed(sys.Name)) h.Fog.EspionageSuccess(ctx, Side.Hand, sys.Name);
+                    if (sys.Name != x && h.Fleets.OwnerOf(sys.Name) != Side.Hand && !h.Game.State.Harvester.IsDestroyed(sys.Name)) h.Fog.EspionageSuccess(ctx, Side.Hand, sys.Name);
             }
         });
         m.Step();

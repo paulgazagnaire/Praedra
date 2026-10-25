@@ -686,9 +686,9 @@ public class ClassicBattleTests
 
     // m4-retreat-damage-repair RT7
     [Fact]
-    public void RT7_DeathStarJumpsRegardlessOfItsCounters()
+    public void RT7_HarvesterJumpsRegardlessOfItsCounters()
     {
-        var (b, _, e) = Make(NoRolls, new[] { (Corvette, 4) }, new[] { (Isd, 1), ("Death Star", 1) }, Alert(Fight, Retreat),
+        var (b, _, e) = Make(NoRolls, new[] { (Corvette, 4) }, new[] { (Isd, 1), ("harvester", 1) }, Alert(Fight, Retreat),
             prepare: (_, e) => { foreach (var u in e) u.Hits[4] = 2; });
         var r = b.Run();
         Assert.True(r.HandRetreated);
@@ -734,12 +734,12 @@ public class ClassicBattleTests
         Assert.False(ClassicRates.RetreatWanted(5, 0, NoRolls.RetreatThreshold));
     }
 
-    // m4-retreat-damage-repair RT14 (B3 §12: DeathStarStalemate DEFAULT on)
+    // m4-retreat-damage-repair RT14 (B3 §12: HarvesterStalemate DEFAULT on)
     [Fact]
-    public void RT14_DeathStarStalemateSwitch()
+    public void RT14_HarvesterStalemateSwitch()
     {
-        Assert.True(new BattleParams { Ruleset = BattleRuleset.Classic }.DeathStarStalemate);
-        // no Death Star in the battle: the switch changes nothing
+        Assert.True(new BattleParams { Ruleset = BattleRuleset.Classic }.HarvesterStalemate);
+        // no harvester in the battle: the switch changes nothing
         var (r, _) = Run(NoRolls, new[] { ("Injunction", 1) }, new[] { ("Decree II", 1) }, alert: Alert(Fight, Fight));
         Assert.Equal(1201, r.Seconds);
         Assert.True(r.HandRetreated);

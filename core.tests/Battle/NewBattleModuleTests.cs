@@ -11,16 +11,16 @@ public class NewBattleModuleTests
 {
     private const string Corvette = "Dodger", Isd = "Mandate", Interdictor = "Subpoena", MonCal = "Ark";
 
-    // tractors: m4-retreat-damage-repair §6 (DEFAULT on). Tests of the base retreat rules that an ISD's tractor would change pass false.
-    private static BattleWorld World(bool rolls = true, ulong seed = 1, RetreatMode mode = RetreatMode.LaneAdjacent, bool tractors = true) =>
-        new(new BattleParams { Ruleset = BattleRuleset.New, SubsystemRolls = rolls, RetreatMode = mode, New = new NewBattleParams { TractorBeamsHoldRetreat = tractors } }, seed);
+    // Hold beams: m4-retreat-damage-repair §6 (DEFAULT on). Tests of the base retreat rules that an ISD's Hold beam would change pass false.
+    private static BattleWorld World(bool rolls = true, ulong seed = 1, RetreatMode mode = RetreatMode.LaneAdjacent, bool holdBeams = true) =>
+        new(new BattleParams { Ruleset = BattleRuleset.New, SubsystemRolls = rolls, RetreatMode = mode, New = new NewBattleParams { HoldBeamsHoldRetreat = holdBeams } }, seed);
 
     // m4-retreat-damage-repair RT1 under New: the corvettes are flagged at once (strength 0), jump for five seconds and land at the system they came from
-    // (tractors off: with them the ISD holds one corvette, see TB9)
+    // (Hold beams off: with them the ISD holds one corvette, see TB9)
     [Fact]
     public void NM1_CorvettesRetreatToTheSystemTheyCameFrom()
     {
-        var w = World(tractors: false);
+        var w = World(holdBeams: false);
         w.Fleets.SetOwner("A", Side.Collective);
         int rebel = w.Fleet(Side.Collective, "A", Corvette, 4);
         int imp = w.Fleet(Side.Hand, "B", Isd, 1);
@@ -124,7 +124,7 @@ public class NewBattleModuleTests
     [Fact]
     public void NM7_CarriedSquadronsStayAboardTheirCarrier()
     {
-        var w = World(tractors: false); // tractors off: a held corvette would fight on and could shoot the TIEs after launch
+        var w = World(holdBeams: false); // Hold beams off: a held corvette would fight on and could shoot the TIEs after launch
         w.Fleets.SetOwner("A", Side.Collective);
         w.Fleet(Side.Collective, "B", Corvette, 4);
         int imp = w.Fleets.AddFleet(Side.Hand, "imp", new[] { Isd }, "B", new[] { "Gleaner", "Thresher" });
@@ -153,7 +153,7 @@ public class NewBattleModuleTests
     [Fact]
     public void NM9_OnContactRetreat()
     {
-        var w = World(rolls: false, tractors: false); // tractors off: the base alert retreat (5 s)
+        var w = World(rolls: false, holdBeams: false); // Hold beams off: the base alert retreat (5 s)
         w.Fleets.SetOwner("A", Side.Collective);
         int rebel = w.Fleet(Side.Collective, "B", Corvette, 12);
         w.Fleet(Side.Hand, "B", Isd, 1);

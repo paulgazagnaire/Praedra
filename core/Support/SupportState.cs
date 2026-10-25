@@ -30,8 +30,8 @@ public sealed class SystemSupportState
 public sealed class SupportState
 {
     public SortedDictionary<string, SystemSupportState> Systems { get; init; } = new(StringComparer.Ordinal);
-    /// <summary>Systems carrying the Death Star sector flag (every system of the sector). rule: m2-popular-support §Death Star sector flag.</summary>
-    public SortedSet<string> DeathStar { get; init; } = new(StringComparer.Ordinal);
+    /// <summary>Systems carrying the harvester sector flag (every system of the sector). rule: m2-popular-support §harvester sector flag.</summary>
+    public SortedSet<string> Harvester { get; init; } = new(StringComparer.Ordinal);
 
     internal SystemSupportState Touch(string system)
     {
@@ -47,6 +47,6 @@ public sealed class SupportState
     internal void CopyFrom(SupportState o)
     {
         foreach (var kv in o.Systems) Systems[kv.Key] = kv.Value;
-        foreach (var s in o.DeathStar) DeathStar.Add(s);
+        foreach (var s in o.Harvester) Harvester.Add(s);
     }
 }

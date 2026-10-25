@@ -31,7 +31,7 @@ public sealed class EconObject
     // ---- ship state (m3-ships-and-fighters §Damaged state). Capital ships only; no M3 rule changes them except DebugSetDamage.
     /// <summary>Current hull, 0 to the class maximum; starts at the maximum. 0 for everything that is not a capital ship.</summary>
     public int Hull { get; set; }
-    /// <summary>Six damage counters 0 to 15 (shield generator, weapons, tractor, sub-light, hyperdrive, damage control); null for non-ships.</summary>
+    /// <summary>Six damage counters 0 to 15 (shield generator, weapons, Hold beam, sub-light, hyperdrive, damage control); null for non-ships.</summary>
     public List<int>? Hits { get; set; }
     /// <summary>
     /// Squadron: craft lost in Classic battles and not yet repaired (it fights with squadron_size - this, at least 1). Saved and hashed; left out of

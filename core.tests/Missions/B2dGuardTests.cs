@@ -84,17 +84,17 @@ public class B2dGuardTests
         Assert.Empty(w.Events<MissionDetectionRoll>());
     }
 
-    // B2d-4: Death Star Sabotage: the Death Star and 2 ISDs in orbit and a Hand special force on the planet: in the job the 3 ships guard,
+    // B2d-4: Spike the Harvester: the harvester and 2 ISDs in orbit and a Hand special force on the planet: in the job the 3 ships guard,
     // the special force does not (the target is in orbit)
     [Fact]
-    public void B2d4_DeathStarSabotageIsGuardedByShips()
+    public void B2d4_HarvesterSabotageIsGuardedByShips()
     {
         var w = World();
         w.Agent(Luke, H, esp: 100, com: 100);
-        var ships = w.Game.State.Fleets[Fleet(w, Side.Hand, T, "Death Star", Isd, Isd)].Ships.OrderBy(x => x).ToList();
+        var ships = w.Game.State.Fleets[Fleet(w, Side.Hand, T, "harvester", Isd, Isd)].Ships.OrderBy(x => x).ToList();
         int probe = w.Unit(Side.Hand, Probe, T);
         w.Stub!.Expect(0, 99, Enumerable.Repeat(99, 7).ToArray()); // arrival: 3 walks; job: betrayal, 3 walks
-        int id = StartAndLand(w, MissionKind.DeathStarSabotage, new[] { Luke });
+        int id = StartAndLand(w, MissionKind.SpikeTheHarvester, new[] { Luke });
         int from = w.Events<MissionDetectionRoll>().Count;
         Assert.Equal(3, from);
         w.RunIteration(id);
@@ -222,25 +222,25 @@ public class B2dGuardTests
         Assert.Equal(2, w.Events<MissionDetectionRoll>().Count);
     }
 
-    // B2d-11: Jedi Training can be foiled (MISSNSD word 15 = 1); the data's can_resign column replaces the fall-back table
+    // B2d-11: Train Talent can be foiled (MISSNSD word 15 = 1); the data's can_resign column replaces the fall-back table
     [Fact]
-    public void B2d11_JediTrainingIsFoilable()
+    public void B2d11_TrainTalentIsFoilable()
     {
         var d = GameData.Default.Missions;
-        Assert.True(d.Get(MissionKind.JediTraining).Foilable);
-        foreach (var k in new[] { MissionKind.Move, MissionKind.Return, MissionKind.Adrift, MissionKind.Dagobah, MissionKind.Bounty })
+        Assert.True(d.Get(MissionKind.TrainTalent).Foilable);
+        foreach (var k in new[] { MissionKind.Move, MissionKind.Return, MissionKind.Adrift, MissionKind.Dagobah, MissionKind.Repossession })
             Assert.False(d.Get(k).Foilable);
         Assert.Equal(14, d.Evade!.Count);
         Assert.Equal((15, 70, 99), (new MissionWorld().M.Lookup(d.Evade, -50), MissionModule.Lookup(d.Evade, 15, MstbLookupMode.Step, MstbBelowFirstRow.FirstRowValue), MissionModule.Lookup(d.Evade, 101, MstbLookupMode.Step, MstbBelowFirstRow.FirstRowValue)));
     }
 
-    // B2d-12: the Bounty record (word 14 = 0) has no check at any step; every other record has the check; the kind words
+    // B2d-12: the Repossession record (word 14 = 0) has no check at any step; every other record has the check; the kind words
     [Fact]
-    public void B2d12_BountyHasNoCheck()
+    public void B2d12_RepossessionHasNoCheck()
     {
         var d = GameData.Default.Missions;
-        Assert.False(d.Get(MissionKind.Bounty).GuardChecks);
-        Assert.All(d.Records.Where(r => r.Kind != MissionKind.Bounty), r => Assert.True(r.GuardChecks));
+        Assert.False(d.Get(MissionKind.Repossession).GuardChecks);
+        Assert.All(d.Records.Where(r => r.Kind != MissionKind.Repossession), r => Assert.True(r.GuardChecks));
         Assert.Equal(MissionModule.CheckKind.Planet, MissionModule.KindAt(MissionModule.KindWord(MissionKind.Espionage), MissionModule.CheckPoint.LeavePlanet));
         Assert.Equal(MissionModule.CheckKind.Orbit, MissionModule.KindAt(MissionModule.KindWord(MissionKind.Espionage), MissionModule.CheckPoint.LeaveOrbit));
         Assert.Equal(MissionModule.CheckKind.Orbit, MissionModule.KindAt(MissionModule.KindWord(MissionKind.Espionage), MissionModule.CheckPoint.Arrive));

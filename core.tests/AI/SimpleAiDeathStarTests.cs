@@ -2,21 +2,21 @@ using Praedra.Core.AI;
 using Praedra.Core.Clock;
 using Praedra.Core.Construction;
 using Praedra.Core.Control;
-using Praedra.Core.DeathStar;
+using Praedra.Core.Harvester;
 using Praedra.Core.Economy;
 using Praedra.Core.Setup;
 using Xunit.Abstractions;
 
 namespace Praedra.Core.Tests.AI;
 
-// The computer opponent's Death Star (m5-death-star §6, SimpleAiParams.UseDeathStar). The Collective AI is a passive scripted side in the scenario
+// The computer opponent's harvester (m5-death-star §6, SimpleAiParams.UseHarvester). The Collective AI is a passive scripted side in the scenario
 // tests so that only the Hand AI acts; the campaign test lets both AIs play with fog.
-public class SimpleAiDeathStarTests
+public class SimpleAiHarvesterTests
 {
     private readonly ITestOutputHelper _out;
-    public SimpleAiDeathStarTests(ITestOutputHelper o) { _out = o; }
+    public SimpleAiHarvesterTests(ITestOutputHelper o) { _out = o; }
 
-    private const string Ds = EconomyModule.DeathStarClass, Isd = "Mandate";
+    private const string Ds = EconomyModule.HarvesterClass, Isd = "Mandate";
     private static int Margin(GameHost h) => h.Economy.Capacity(Side.Hand) / 10; // 10% of the Hand capacity (MedA: 2100 since the v5 economy scaling)
 
     private static (AiMatch M, GameHost H) Match(int seed, SimpleAiParams p, bool knowHq = false, Side? passive = Side.Collective)
@@ -27,13 +27,13 @@ public class SimpleAiDeathStarTests
         return (m, h);
     }
 
-    // An army that never launches by itself, so only the Death Star logic can move the Hand's fleets in the scenario tests.
+    // An army that never launches by itself, so only the harvester logic can move the Hand's fleets in the scenario tests.
     private static SimpleAiParams Quiet(bool useDs = true, double? escort = null) => new()
     {
-        UseDeathStar = useDs, DeathStarEscortStrength = escort, UseCharactersAndMissions = false, LaunchStrength = int.MaxValue, WinStrikeStrength = int.MaxValue,
+        UseHarvester = useDs, HarvesterEscortStrength = escort, UseCharactersAndMissions = false, LaunchStrength = int.MaxValue, WinStrikeStrength = int.MaxValue,
     };
 
-    private static List<EconObject> DeathStars(GameHost h) =>
+    private static List<EconObject> Harvesters(GameHost h) =>
         h.Economy.Objects.Where(o => o.Class == Ds && h.Economy.OwnerOf(o) == Side.Hand).ToList();
 
     private static void Days(AiMatch m, int n) { for (int i = 0; i < n; i++) m.Step(); }
@@ -46,7 +46,7 @@ public class SimpleAiDeathStarTests
         h.Economy.SetPools(Side.Hand, 0, 2000);
         Assert.True(h.Economy.Free(Side.Hand) - h.Economy.Costs.Get(Ds).Maintenance >= Margin(h), "the start has no headroom for the test");
         Days(m, 12);
-        Assert.Single(DeathStars(h));
+        Assert.Single(Harvesters(h));
         Assert.Contains(m.Sent.Keys, k => k == "Hand Build");
         Assert.Empty(h.Economy.Objects.Where(o => o.Class == Ds && h.Economy.OwnerOf(o) == Side.Collective));
     }
@@ -78,17 +78,17 @@ public class SimpleAiDeathStarTests
             h.Fleets.AddFleet(Side.Hand, "Filler", new[] { Isd }, ControlModule.CapitalSystem);
         Assert.True(h.Economy.Free(Side.Hand) >= 0);
         Days(m, 12);
-        Assert.Empty(DeathStars(h));
+        Assert.Empty(Harvesters(h));
     }
 
-    // m5-death-star §6.1: not enough refined stock, no Death Star.
+    // m5-death-star §6.1: not enough refined stock, no harvester.
     [Fact]
     public void DoesNotBuild_WhenRefinedIsShort()
     {
         var (m, h) = Match(1, Quiet());
         h.Economy.SetPools(Side.Hand, 0, 100);
         Days(m, 4);
-        Assert.Empty(DeathStars(h));
+        Assert.Empty(Harvesters(h));
     }
 
     // m5-death-star §6.1: one at a time (none alive or queued).
@@ -97,17 +97,17 @@ public class SimpleAiDeathStarTests
     {
         var (m, h) = Match(2, Quiet());
         h.Economy.SetPools(Side.Hand, 0, 2000);
-        for (int i = 0; i < 40; i++) { Days(m, 1); h.Economy.SetPools(Side.Hand, 0, 2000); Assert.True(DeathStars(h).Count <= 1); }
-        Assert.Single(DeathStars(h));
+        for (int i = 0; i < 40; i++) { Days(m, 1); h.Economy.SetPools(Side.Hand, 0, 2000); Assert.True(Harvesters(h).Count <= 1); }
+        Assert.Single(Harvesters(h));
         // and one alive in a fleet blocks it as well
         var (m2, h2) = Match(2, Quiet());
         h2.Fleets.AddFleet(Side.Hand, "DS", new[] { Ds }, ControlModule.CapitalSystem);
         h2.Economy.SetPools(Side.Hand, 0, 2000);
         for (int i = 0; i < 20; i++) { Days(m2, 1); h2.Economy.SetPools(Side.Hand, 0, 2000); }
-        Assert.Single(DeathStars(h2));
+        Assert.Single(Harvesters(h2));
     }
 
-    // m5-death-star §6.2: an upkeep crisis scraps other things first; the Death Star stays.
+    // m5-death-star §6.2: an upkeep crisis scraps other things first; the harvester stays.
     [Fact]
     public void NotScrappedInAnUpkeepCrisis_WhileOtherShipsExist()
     {
@@ -125,7 +125,7 @@ public class SimpleAiDeathStarTests
         for (int d = 0; d < 8 && eco.Free(Side.Hand) < 0; d++) { m.Step(); scraps += m.Hand.Submitted.Count(o => o.Kind == "Scrap"); }
         Assert.True(scraps >= 1, "the AI scrapped nothing");
         Assert.True(eco.Free(Side.Hand) >= 0);
-        Assert.Single(DeathStars(h));
+        Assert.Single(Harvesters(h));
         Assert.DoesNotContain(h.Game.Events.OfType<ObjectScrapped>(), e => e.Class == Ds);
     }
 
@@ -158,7 +158,7 @@ public class SimpleAiDeathStarTests
         Assert.Equal(Side.Hand, h.Victory.Winner);
     }
 
-    // m5-death-star §6.4: no HQ known (and no peeking at the true one): the Death Star stays home, escorted or not.
+    // m5-death-star §6.4: no HQ known (and no peeking at the true one): the harvester stays home, escorted or not.
     [Fact]
     public void WithNoKnownHq_StaysHome()
     {
@@ -171,7 +171,7 @@ public class SimpleAiDeathStarTests
         Assert.Empty(h.Game.Events.OfType<SystemDestroyed>());
     }
 
-    // The fog switch: with UseFog the AI knows the HQ only through its own picture, so at the start it has none and the Death Star stays home.
+    // The fog switch: with UseFog the AI knows the HQ only through its own picture, so at the start it has none and the harvester stays home.
     [Fact]
     public void WithFog_TheAiDoesNotUseTheTrueHq()
     {
@@ -227,10 +227,10 @@ public class SimpleAiDeathStarTests
     [Fact]
     public void SwitchOff_NeverBuilds()
     {
-        Assert.True(new SimpleAiParams().UseDeathStar);
+        Assert.True(new SimpleAiParams().UseHarvester);
         var (m, h) = Match(1, Quiet(useDs: false));
         for (int i = 0; i < 40; i++) { Days(m, 1); h.Economy.SetPools(Side.Hand, 0, 2000); }
-        Assert.Empty(DeathStars(h));
+        Assert.Empty(Harvesters(h));
         Assert.DoesNotContain(m.Sent.Keys, k => k.Contains("DestroySystem", StringComparison.Ordinal));
     }
 
@@ -238,7 +238,7 @@ public class SimpleAiDeathStarTests
     private sealed record Run(string Hash, int Day, Side? Winner, int? BuiltDay, int? StruckDay, string? Struck, string Reason);
 
     // funded: the plain AI never meets the §6.1 build condition (it spends its stock and its upkeep room as it goes), so this variant keeps the
-    // Hand's upkeep margin at 760 (SimpleAiParams.MaintenanceMargin) and tops its refined stock up to the Death Star's cost each day.
+    // Hand's upkeep margin at 760 (SimpleAiParams.MaintenanceMargin) and tops its refined stock up to the harvester's cost each day.
     private static Run Campaign(int seed, int days, bool funded = false)
     {
         var p = new SimpleAiParams { UseFog = true };
@@ -250,7 +250,7 @@ public class SimpleAiDeathStarTests
             m.Step();
         }
         var ev = h.Game.Events;
-        int? built = ev.OfType<DeathStarDeployed>().Where(e => e.Side == Side.Hand).Select(e => (int?)e.Day).FirstOrDefault();
+        int? built = ev.OfType<HarvesterDeployed>().Where(e => e.Side == Side.Hand).Select(e => (int?)e.Day).FirstOrDefault();
         var strike = ev.OfType<SystemDestroyed>().FirstOrDefault();
         return new Run(h.StateHash(), h.Game.Day, h.Victory.Winner, built, strike?.Day, strike?.System, h.Victory.Reason ?? "");
     }
@@ -264,7 +264,7 @@ public class SimpleAiDeathStarTests
     public void Campaign_BothAisWithFog_RunsAndReports(int seed)
     {
         var r = Campaign(seed, 1500);
-        _out.WriteLine($"seed {seed}: ended day {r.Day}, winner {r.Winner} ({r.Reason}); Death Star deployed day {r.BuiltDay?.ToString() ?? "never"}; first destroyed system {r.Struck ?? "none"} day {r.StruckDay?.ToString() ?? "-"}");
+        _out.WriteLine($"seed {seed}: ended day {r.Day}, winner {r.Winner} ({r.Reason}); harvester deployed day {r.BuiltDay?.ToString() ?? "never"}; first destroyed system {r.Struck ?? "none"} day {r.StruckDay?.ToString() ?? "-"}");
         Assert.NotEmpty(r.Hash);
     }
 
@@ -274,10 +274,10 @@ public class SimpleAiDeathStarTests
     [InlineData(3)]
     [InlineData(4)]
     [InlineData(5)]
-    public void Campaign_DeathStarFunded_RunsAndReports(int seed)
+    public void Campaign_HarvesterFunded_RunsAndReports(int seed)
     {
         var r = Campaign(seed, 1500, funded: true);
-        _out.WriteLine($"funded seed {seed}: ended day {r.Day}, winner {r.Winner} ({r.Reason}); Death Star deployed day {r.BuiltDay?.ToString() ?? "never"}; first destroyed system {r.Struck ?? "none"} day {r.StruckDay?.ToString() ?? "-"}");
+        _out.WriteLine($"funded seed {seed}: ended day {r.Day}, winner {r.Winner} ({r.Reason}); harvester deployed day {r.BuiltDay?.ToString() ?? "never"}; first destroyed system {r.Struck ?? "none"} day {r.StruckDay?.ToString() ?? "-"}");
         Assert.NotEmpty(r.Hash);
     }
 

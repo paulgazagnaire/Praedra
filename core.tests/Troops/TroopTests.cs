@@ -171,7 +171,7 @@ public class TroopTests
 
     // m3-troops T6
     [Fact]
-    public void T6_BountyHuntersAreNotBuildable()
+    public void T6_RepossessorsAreNotBuildable()
     {
         var w = T(regiments: false);
         Assert.Equal("NotAvailable", w.TryOrder(Emp, Home, YardFamily.Training, "Repossessors", 1));

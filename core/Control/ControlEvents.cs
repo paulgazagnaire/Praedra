@@ -9,14 +9,14 @@ namespace Praedra.Core.Control;
 /// Why a system changed holder. Under the derived control rule (B5a, DEFAULT) the cause is read from the military side before and after
 /// (system +0x84 bits 4-5): Support = no regiments before or after (the world joined a side or declared neutrality by support alone);
 /// TroopsLeft = the holder's regiments left or died and support handed the world over; Assault = regiments now hold it (none or other troops
-/// before). Under <c>ControlRule.AssaultOnly</c> the caller names the cause: Assault (M3), Debug (the test order), DeathStarRevolt.
+/// before). Under <c>ControlRule.AssaultOnly</c> the caller names the cause: Assault (M3), Debug (the test order), HarvesterRevolt.
 /// rule: m2-control-and-capture §How control changes (B5a section 4, Work 8).
 /// </summary>
 public enum CaptureCause
 {
     Debug, Assault,
-    /// <summary>A neutral system of a sector struck twice by the Death Star turns Collective (AssaultOnly only). rule: m5-death-star §2 effect 7.</summary>
-    DeathStarRevolt,
+    /// <summary>A neutral system of a sector struck twice by the harvester turns Collective (AssaultOnly only). rule: m5-death-star §2 effect 7.</summary>
+    HarvesterRevolt,
     /// <summary>Support alone moved the world: no regiments on it before or after. Headlines "Joins", "Joins Enemy", "Declares Neutrality".</summary>
     Support,
     /// <summary>The last regiments of the holder left or died, and support decided the new holder.</summary>
@@ -45,7 +45,7 @@ public sealed record UnitLostAtCapture(int Index, int Day, int Object, string Cl
 public sealed record FacilityTransferred(int Index, int Day, int Facility, string Class, string System, Side? From, Side? To)
     : GameEvent(Index, Day, nameof(FacilityTransferred));
 
-/// <summary>A completed facility whose class cannot serve the new side was removed (Death Star Shield when the Collective takes it or it goes neutral). rule: B5a section 5.</summary>
+/// <summary>A completed facility whose class cannot serve the new side was removed (Harvester Shield when the Collective takes it or it goes neutral). rule: B5a section 5.</summary>
 public sealed record FacilityRemoved(int Index, int Day, int Facility, string Class, string System)
     : GameEvent(Index, Day, nameof(FacilityRemoved));
 

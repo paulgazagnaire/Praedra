@@ -73,7 +73,7 @@ public class ForcedStopTests
     [Theory, MemberData(nameof(AllTriggers))] // B3: Barge has attack 0 in the data, so it is never armed under any trigger
     public void B3_hand_unarmed_transport_at_B_does_not_stop_F(ForcedStopTrigger t)
     {
-        // Note: the ship data lists Barge as Collective-only (is_empire = 0); the sheet calls it a Hand fleet. Side is not
+        // Note: the ship data lists Barge as Collective-only (is_hand = 0); the sheet calls it a Hand fleet. Side is not
         // checked against ship data in M1 (that is M3's CreateFleet), so the sheet's test runs as written.
         var (w, f) = Start(t);
         w.Add(Side.Hand, "E", "B", "Barge");

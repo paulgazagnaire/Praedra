@@ -74,8 +74,8 @@ public sealed partial class GameSession
     {
         MissionKind.InciteUprising => "Incite uprising",
         MissionKind.SubdueUprising => "Subdue uprising",
-        MissionKind.DeathStarSabotage => "Death Star sabotage",
-        MissionKind.JediTraining => "Jedi training",
+        MissionKind.SpikeTheHarvester => "harvester sabotage",
+        MissionKind.TrainTalent => "Train Talent",
         MissionKind.ShipResearch => "Ship research",
         MissionKind.FacilityResearch => "Facility research",
         MissionKind.TroopResearch => "Troop research",
@@ -97,8 +97,8 @@ public sealed partial class GameSession
         MissionKind.Abduction => "Captures an enemy leader. Skill: combat.",
         MissionKind.Assassination => "Kills an enemy leader. Skill: combat.",
         MissionKind.Recruitment => "Brings a new leader to your side at one of your systems.",
-        MissionKind.DeathStarSabotage => "Destroys an enemy Death Star.",
-        MissionKind.JediTraining => "Trains a Force user.",
+        MissionKind.SpikeTheHarvester => "Destroys an enemy harvester.",
+        MissionKind.TrainTalent => "Trains a Force user.",
         _ => "",
     };
 
@@ -109,8 +109,8 @@ public sealed partial class GameSession
     public string KindBlockedReason(MissionKind k) => k switch
     {
         MissionKind.Recruitment when Missions.Recruit == null => "not available yet: the rule book does not say which leader gets recruited",
-        MissionKind.JediTraining => "not available yet: the rule book does not say yet who runs Jedi training",
-        MissionKind.DeathStarSabotage when Missions.HasDeathStar == null => "not available yet: there is no Death Star in this game",
+        MissionKind.TrainTalent => "not available yet: the rule book does not say yet who runs Train Talent",
+        MissionKind.SpikeTheHarvester when Missions.HasHarvester == null => "not available yet: there is no harvester in this game",
         MissionKind.Abduction or MissionKind.Assassination => "not available here: your side cannot see where enemy leaders are",
         _ => null,
     };
@@ -131,7 +131,7 @@ public sealed partial class GameSession
         MissionReject.BadDecoy => "decoys cannot go on this mission",
         MissionReject.TooManyMembers => "the team is too big",
         MissionReject.BadTarget => "that target is not allowed for this mission",
-        MissionReject.NoDeathStar => "there is no enemy Death Star there",
+        MissionReject.NoHarvester => "there is no enemy harvester there",
         MissionReject.UnknownMission => "that mission is already over",
         MissionReject.RuleMissing => "the rule book does not cover this mission yet",
         MissionReject.TargetProtected => "that leader is out of reach: aboard a fleet, or at a capital whose garrison is full",
@@ -236,7 +236,7 @@ public sealed partial class GameSession
                     : $"{KindWords(x.MissionKind)} on {x.Target} called off: the target is no longer valid. The team comes home.", x.Target, MsgKind.Warn);
                 break;
             case MissionEnded x when Mine(x.Side) && x.Outcome == MissionOutcome.TargetDestroyed:
-                yield return new Message(d, $"{KindWords(x.MissionKind)} on {x.Target} failed: the system was destroyed by the Death Star.", x.Target, MsgKind.Bad);
+                yield return new Message(d, $"{KindWords(x.MissionKind)} on {x.Target} failed: the system was destroyed by the harvester.", x.Target, MsgKind.Bad);
                 break;
             case MissionEnded x when Mine(x.Side) && x.Outcome == MissionOutcome.Succeeded:
                 break; // the success line already said it

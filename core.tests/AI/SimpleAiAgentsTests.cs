@@ -40,7 +40,7 @@ public class SimpleAiAgentsTests
             FinishWhenAheadRatio = 0, KeyHunt = false, TaskForces = false });
         m.RunTo(1000);
         Assert.DoesNotContain(m.Sent.Keys, k => k.Contains("Mission", StringComparison.Ordinal) || k.Contains("Character", StringComparison.Ordinal) || k.Contains("General", StringComparison.Ordinal));
-        // The pin moved when the Death Star added saved state (m5-death-star: GameState.DeathStar, SystemKnowledge.Destroyed). The game plays identically:
+        // The pin moved when the harvester added saved state (m5-death-star: GameState.Harvester, SystemKnowledge.Destroyed). The game plays identically:
         // the old hash e8fb3f75...c779 is recovered exactly by removing those new fields from the hashed JSON (checked when the pin was moved).
         // v5 re-pin 2026-10-16: the v5 galaxy (555 systems, routes) changes every game, so the hash now pins this branch's old AI on the
         // v5 map; the new v5 AI fixes (FogAvoidEnemyStops, SplitHomeSurplus) and the AI trainer's fixes (DetourToHeldStop,
@@ -91,9 +91,11 @@ public class SimpleAiAgentsTests
         // Praedra names re-pin 2026-10-25 (Dev lead; Paul's order to remove every Star Wars name): systems are ordered by name, so the
         // renamed systems sort differently and seed 1 plays another game (the v6 pin was ca5216f4...e3be). All switches above unchanged.
         // QA-40 re-pin 2026-10-25 (the fixed v6 links; the rename pin was 48a89624...1270). All switches above unchanged.
-        // Side words re-pin 2026-10-25 (Dev lead, Praedra names stage 3: Side.Empire -> Side.Hand...): the state JSON names its fields, so the hash
+        // Side words re-pin 2026-10-25 (Dev lead, Praedra names stage 3: Side.Hand -> Side.Hand...): the state JSON names its fields, so the hash
         // moved with the field names (QA-40 pin a492bf33...1d2e); the game is the same (a 1000-day campaign and 8 AI games print the same).
-        Assert.Equal("8b911e2bd071c5319f4038e1fe3f0a4829ac38322ba5ced97eb49ce376dd634a", h.StateHash());
+        // Harvester words re-pin 2026-10-25 (stage 3b: DeathStar -> Harvester, Tractor -> HoldBeam in field and class names; side-words pin
+        // 8b911e2b...634a); the game is the same (the campaign and 8 AI games print the same).
+        Assert.Equal("f9bf473a98f332d3fc319ffe869f72cb01e8abc7351b0d3c43fa6add89dc5dad", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"

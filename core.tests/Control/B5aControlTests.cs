@@ -3,7 +3,7 @@ using Praedra.Core.Characters;
 using Praedra.Core.Clock;
 using Praedra.Core.Construction;
 using Praedra.Core.Control;
-using Praedra.Core.DeathStar;
+using Praedra.Core.Harvester;
 using Praedra.Core.Economy;
 using Praedra.Core.Fleets;
 using Praedra.Core.Fog;
@@ -56,9 +56,9 @@ internal sealed class DerivedWorld
         H.Construction.RefuseOverdrawOrders = false; // B5b 2026-10-18 (as CtlWorld): these worlds have no mines (capacity 0); control, not upkeep, is the subject
     }
 
-    public static GameSettings Settings(ControlRule rule = ControlRule.Derived, DeathStarParams? ds = null) => new()
+    public static GameSettings Settings(ControlRule rule = ControlRule.Derived, HarvesterParams? ds = null) => new()
     {
-        IncidentsEnabled = false, DebugOrdersEnabled = true, ControlRule = rule, Economy = new EconomyParams { ScrapPeriod = 1_000_000 }, DeathStar = ds,
+        IncidentsEnabled = false, DebugOrdersEnabled = true, ControlRule = rule, Economy = new EconomyParams { ScrapPeriod = 1_000_000 }, Harvester = ds,
     };
 
     /// <summary>Owner (null = neutral) and Collective support, set up between Steps.</summary>
@@ -90,8 +90,8 @@ internal sealed class DerivedWorld
     }
 }
 
-// B5a, who holds a system: tests B5a-1 to B5a-14 of specs/reverse/batches/B5a-who-holds-a-system.md, plus the Death Star rules the Dev lead
-// decided with it (DeathStarFallout Classic, the strike-2 revolt under derived control) and the AI's last-regiment guard.
+// B5a, who holds a system: tests B5a-1 to B5a-14 of specs/reverse/batches/B5a-who-holds-a-system.md, plus the harvester rules the Dev lead
+// decided with it (HarvesterFallout Classic, the strike-2 revolt under derived control) and the AI's last-regiment guard.
 public class B5aControlTests
 {
     private const string C = DerivedWorld.Corellia, D = DerivedWorld.Drall, T = DerivedWorld.Poderis, V = DerivedWorld.Vagran;
@@ -136,11 +136,11 @@ public class B5aControlTests
     }
 
     // B5a-3 (sections 1, 6): a Hand world with one Hand regiment at Collective support 100 stays Hand; when the regiment boards a ship the
-    // world is Collective at once, and every ever-held populated system of the sector gains 10 Collective support (5 in a Death Star sector).
+    // world is Collective at once, and every ever-held populated system of the sector gains 10 Collective support (5 in a harvester sector).
     [Theory]
     [InlineData(false, 10)]
     [InlineData(true, 5)]
-    public void B5a3_LastRegimentBoards_WorldFlips_SectorPlusTen(bool deathStarSector, int gain)
+    public void B5a3_LastRegimentBoards_WorldFlips_SectorPlusTen(bool harvesterSector, int gain)
     {
         var w = new DerivedWorld();
         w.Hold(C, Side.Hand, 30);
@@ -151,7 +151,7 @@ public class B5aControlTests
         w.Step();
         Assert.Equal(Side.Hand, w.Ctl.HolderOf(C)); // troops hold a world at any support
         Assert.Empty(w.Events<SystemCaptured>());
-        if (deathStarSector) w.H.Support.SetDeathStarSector("Classis Sector", true);
+        if (harvesterSector) w.H.Support.SetHarvesterSector("Classis Sector", true);
         w.H.Troops.SubmitLoad(Side.Hand, fleet, new[] { reg });
         w.Step();
         Assert.Equal(Side.Collective, w.Ctl.HolderOf(C));
@@ -302,7 +302,7 @@ public class B5aControlTests
         }
     }
 
-    // B5a-9 (section 5): the Collective takes a world with a Death Star shield and a Mordant Lien-150: shield destroyed, Mordant Lien-150 Collective. The same world going
+    // B5a-9 (section 5): the Collective takes a world with a harvester shield and a Mordant Lien-150: shield destroyed, Mordant Lien-150 Collective. The same world going
     // neutral instead: shield destroyed, Mordant Lien-150 neutral.
     [Fact]
     public void B5a9_ShieldDestroyed_Kdy150ChangesSideOrGoesNeutral()
@@ -311,7 +311,7 @@ public class B5aControlTests
         {
             var w = new DerivedWorld();
             w.Hold(C, Side.Hand, 35);
-            int shield = w.H.Economy.AddFacility(C, FacilityKind.DeathStarShield);
+            int shield = w.H.Economy.AddFacility(C, FacilityKind.HarvesterShield);
             int kdy = w.H.Economy.AddFacility(C, FacilityKind.Kdy150);
             if (neutral) w.Ctl.SubmitDebugSetSupport(Side.Hand, C, 50);
             else w.Ctl.SubmitDebugSetTroops(Side.Collective, C, Side.Collective, DerivedWorld.RebArmy, 1);
@@ -465,17 +465,17 @@ public class B5aControlTests
             }
     }
 
-    // The Death Star's second strike in a sector under derived control (m5-death-star §2 effect 7, New, B5a section 9): the support change to 100
+    // The harvester's second strike in a sector under derived control (m5-death-star §2 effect 7, New, B5a section 9): the support change to 100
     // alone turns a neutral world and an ungarrisoned Hand world Collective; a garrisoned Hand world stays Hand and riots.
     [Fact]
-    public void B5a_DeathStarRevolt_DerivedControl()
+    public void B5a_HarvesterRevolt_DerivedControl()
     {
         var w = new DerivedWorld();
         w.Hold(C, Side.Hand, 30); w.Hold(D, null, 50); w.Hold(T, Side.Hand, 30);
         w.Regiments(T, Side.Hand, 1);
-        w.Game.State.DeathStar.StrikesInSector["Classis Sector"] = 1;
-        w.InSlot("5.1", ctx => w.H.DeathStar.GetType().GetMethod("SectorReaction", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
-            .Invoke(w.H.DeathStar, new object[] { ctx, ctx.Day + 1, DerivedWorld.Vagran }));
+        w.Game.State.Harvester.StrikesInSector["Classis Sector"] = 1;
+        w.InSlot("5.1", ctx => w.H.Harvester.GetType().GetMethod("SectorReaction", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .Invoke(w.H.Harvester, new object[] { ctx, ctx.Day + 1, DerivedWorld.Vagran }));
         w.Step();
         Assert.Equal(Side.Collective, w.Ctl.HolderOf(C));
         Assert.Equal(Side.Collective, w.Ctl.HolderOf(D));
@@ -483,18 +483,18 @@ public class B5aControlTests
         Assert.True(w.H.Support.IsUprising(T));
     }
 
-    // DeathStarFallout = Classic (; B5c-11's case): a planet destroyed by the Hand costs the Hand 10 on every core world of the galaxy, 2 on a
+    // HarvesterFallout = Classic (; B5c-11's case): a planet destroyed by the Hand costs the Hand 10 on every core world of the galaxy, 2 on a
     // rim world where its support is below 90 (a rim world at 95 is unchanged, at 80 it goes to 78); never-held worlds are unchanged.
     [Fact]
-    public void B5a_DeathStarFalloutClassic_GalaxyWide()
+    public void B5a_HarvesterFalloutClassic_GalaxyWide()
     {
-        var w = new DerivedWorld(settings: DerivedWorld.Settings(ds: new DeathStarParams { Fallout = DeathStarFallout.Classic }));
+        var w = new DerivedWorld(settings: DerivedWorld.Settings(ds: new HarvesterParams { Fallout = HarvesterFallout.Classic }));
         const string rimHigh = "Drift Harbour", rimLow = "The Thaw", coreFar = "Charter", never = "Navalia";
         w.Hold(coreFar, Side.Hand, 10); w.Regiments(coreFar, Side.Hand, 1);
         w.Hold(rimHigh, Side.Hand, 5); w.Hold(rimLow, Side.Hand, 20);
         w.Hold(never, null, 50);
-        w.InSlot("5.1", ctx => w.H.DeathStar.GetType().GetMethod("SectorReaction", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
-            .Invoke(w.H.DeathStar, new object[] { ctx, ctx.Day + 1, DerivedWorld.Vagran }));
+        w.InSlot("5.1", ctx => w.H.Harvester.GetType().GetMethod("SectorReaction", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .Invoke(w.H.Harvester, new object[] { ctx, ctx.Day + 1, DerivedWorld.Vagran }));
         w.Step();
         Assert.Equal(20, w.A(coreFar));
         Assert.Equal(5, w.A(rimHigh));
@@ -503,12 +503,12 @@ public class B5aControlTests
         Assert.Empty(w.Events<SectorStruck>());
     }
 
-    // B5c-11 (corrected 2026-10-18): in the Death Star's own sector the Classic fallout is halved by the damping (a Hand loss raises the Collective
+    // B5c-11 (corrected 2026-10-18): in the harvester's own sector the Classic fallout is halved by the damping (a Hand loss raises the Collective
     // share): a core world -5 instead of -10, a rim world at Hand support 80 goes to 79 instead of 78; full elsewhere.
     [Fact]
-    public void B5c11_DeathStarFalloutClassic_HalvedInTheDeathStarSector()
+    public void B5c11_HarvesterFalloutClassic_HalvedInTheHarvesterSector()
     {
-        var w = new DerivedWorld(settings: DerivedWorld.Settings(ds: new DeathStarParams { Fallout = DeathStarFallout.Classic }));
+        var w = new DerivedWorld(settings: DerivedWorld.Settings(ds: new HarvesterParams { Fallout = HarvesterFallout.Classic }));
         const string rimInSector = "The Thaw", rimElsewhere = "Drift Harbour", coreElsewhere = "Charter";
         const string coreInSector = "Hiberna"; // v6 re-pin 2026-10-24: D (Beryl) is an inner-rim world now; Hiberna is still core (flags are per system)
         w.Hold(coreInSector, Side.Hand, 10); w.Regiments(coreInSector, Side.Hand, 1); // core, in the flagged sector
@@ -516,9 +516,9 @@ public class B5aControlTests
         w.Hold(rimInSector, Side.Hand, 20); w.Hold(rimElsewhere, Side.Hand, 20);
         w.InSlot("5.1", ctx =>
         {
-            w.H.Support.SetDeathStarSystem(coreInSector, true); w.H.Support.SetDeathStarSystem(rimInSector, true); // the Death Star's sector (flags per system)
-            w.H.DeathStar.GetType().GetMethod("SectorReaction", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
-                .Invoke(w.H.DeathStar, new object[] { ctx, ctx.Day + 1, DerivedWorld.Vagran });
+            w.H.Support.SetHarvesterSystem(coreInSector, true); w.H.Support.SetHarvesterSystem(rimInSector, true); // the harvester's sector (flags per system)
+            w.H.Harvester.GetType().GetMethod("SectorReaction", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                .Invoke(w.H.Harvester, new object[] { ctx, ctx.Day + 1, DerivedWorld.Vagran });
         });
         w.Step();
         Assert.Equal((15, 20), (w.A(coreInSector), w.A(coreElsewhere)));

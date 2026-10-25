@@ -36,8 +36,8 @@ public class ResearchTests
         Assert.True(h.Construction.RespectResearchOrder);
         Assert.Equal(new[] { "Barge", "Dodger", "Grudge", "Hauler", "Mule",
             "Nest", "Plough", "Swift" }, BuildableShips(h, A));
-        Assert.Equal(new[] { "Bond", "Death Star", "Decree", "Gleaner", "Mandate",
-            "Statute", "Tender", "Warrant" }, BuildableShips(h, E));
+        Assert.Equal(new[] { "Bond", "Decree", "Gleaner", "Mandate",
+            "Statute", "Tender", "Warrant", "harvester" }, BuildableShips(h, E)); // ordinal order: the lower-case harvester sorts last
         foreach (var c in new[] { "Mender", "Needle" }) Assert.DoesNotContain(c, BuildableShips(h, A));
         Assert.DoesNotContain("Edict", BuildableShips(h, E));
         // every side can build something in every family at the MedA start (troops and facilities at level 0)
@@ -207,20 +207,20 @@ public class ResearchTests
 
     // m5-research RS16
     [Fact]
-    public void RS16_DeathStarShieldIsHandRungThree()
+    public void RS16_HarvesterShieldIsHandRungThree()
     {
         var w = new ResearchWorld();
         w.Add(E, Facility, 24 + 40);
         Assert.Equal(2, w.Research.Level(E, Facility));
-        Assert.False(w.Build.IsResearched(E, "Death Star Shield"));
+        Assert.False(w.Build.IsResearched(E, "Harvester Shield"));
         w.Add(E, Facility, 24);
         Assert.Equal(3, w.Research.Level(E, Facility));
-        Assert.True(w.Build.IsResearched(E, "Death Star Shield"));
+        Assert.True(w.Build.IsResearched(E, "Harvester Shield"));
         w.Hold(Yard1, E); w.Fac(Yard1, FacilityKind.ConstructionYard);
-        Assert.Null(w.TryOrder(E, Yard1, YardFamily.Construction, "Death Star Shield", 1, Yard1));
+        Assert.Null(w.TryOrder(E, Yard1, YardFamily.Construction, "Harvester Shield", 1, Yard1));
         w.Hold(Yard2, A); w.Fac(Yard2, FacilityKind.ConstructionYard);
         w.Research.SetLevel(A, Facility, 6);
-        Assert.Equal(RejectReason.NotAvailable, w.TryOrder(A, Yard2, YardFamily.Construction, "Death Star Shield", 1, Yard2));
+        Assert.Equal(RejectReason.NotAvailable, w.TryOrder(A, Yard2, YardFamily.Construction, "Harvester Shield", 1, Yard2));
     }
 
     // m5-research RS17

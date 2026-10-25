@@ -11,7 +11,7 @@ minor,Commander Terminus Rade,924,0,1,30,20,80,20,0,0,0,0,0,0,40,20,70,15,100,0,
 minor,Clementia Noll,925,0,1,20,20,90,10,0,0,0,0,0,0,90,5,40,20,100,0,50,0,20,20,0,1,0,1,0,"Proposal: heroes/added-heroes (Hand, Legends; unable_to_betray)"
 minor,Director Pythia Kallos,926,0,1,60,30,90,10,0,0,0,0,0,0,20,20,60,20,100,0,0,0,0,0,0,0,0,0,0,"Proposal: heroes/added-heroes (Hand, Legends; betrayable on purpose)"
 minor,Captain Aurelia Quell,927,0,1,30,20,30,20,20,20,0,0,0,0,30,20,70,15,100,0,0,0,0,0,1,0,0,0,0,Proposal: heroes/added-heroes (Hand)
-minor,Usura,928,0,1,0,0,90,10,0,0,0,0,0,0,90,5,0,30,100,0,0,0,0,0,0,0,0,0,0,"Proposal: heroes/added-heroes (Hand bounty hunter, Hand only, Decided); diplomacy and design skills not given: 0+0 DEFAULT"
-minor,Mora,929,0,1,0,0,70,20,0,0,0,0,0,0,80,15,0,30,100,0,0,0,0,0,0,0,0,0,0,"Proposal: heroes/added-heroes (Hand bounty hunter, Hand only, Legends); unlisted skills 0+0 DEFAULT"
-minor,Damnum,930,0,1,0,0,70,20,0,0,0,0,0,0,70,20,0,30,100,0,0,0,0,0,0,0,0,0,0,"Proposal: heroes/added-heroes (Hand bounty hunter, Hand only); unlisted skills 0+0 DEFAULT"
-minor,Pignus,931,0,1,0,0,40,20,0,0,0,0,0,0,90,5,0,30,100,0,0,0,0,0,0,0,0,0,0,"Proposal: heroes/added-heroes (Hand bounty hunter, Hand only); unlisted skills 0+0 DEFAULT"
+minor,Usura,928,0,1,0,0,90,10,0,0,0,0,0,0,90,5,0,30,100,0,0,0,0,0,0,0,0,0,0,"Proposal: heroes/added-heroes (Hand Repossessor, Hand only, Decided); diplomacy and design skills not given: 0+0 DEFAULT"
+minor,Mora,929,0,1,0,0,70,20,0,0,0,0,0,0,80,15,0,30,100,0,0,0,0,0,0,0,0,0,0,"Proposal: heroes/added-heroes (Hand Repossessor, Hand only, Legends); unlisted skills 0+0 DEFAULT"
+minor,Damnum,930,0,1,0,0,70,20,0,0,0,0,0,0,70,20,0,30,100,0,0,0,0,0,0,0,0,0,0,"Proposal: heroes/added-heroes (Hand Repossessor, Hand only); unlisted skills 0+0 DEFAULT"
+minor,Pignus,931,0,1,0,0,40,20,0,0,0,0,0,0,90,5,0,30,100,0,0,0,0,0,0,0,0,0,0,"Proposal: heroes/added-heroes (Hand Repossessor, Hand only); unlisted skills 0+0 DEFAULT"

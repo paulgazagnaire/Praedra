@@ -82,7 +82,7 @@ public class CharacterSetupTests
     }
 
     // m5-characters-and-force CH40 (Q17, Paul 2026-10-18 cards "Skip the strong" and "Leave out hunters"): the draw never takes anyone already at
-    // Force 80+ (the Emperor and Vader keep their Force but never train) nor a character flagged never_talented (the bounty hunters); Leia and
+    // Force 80+ (the Emperor and Vader keep their Force but never train) nor a character flagged never_talented (the Repossessors); Leia and
     // Oti stay in the pool. With both switches off the strong can be drawn again.
     [Fact]
     public void CH40_TalentedDrawSkipsTheStrongAndTheHunters()

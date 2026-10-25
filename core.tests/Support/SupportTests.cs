@@ -67,26 +67,26 @@ public class SupportTests
         Assert.Empty(w.Events<SupportChanged>());
     }
 
-    // S4: Hand holds in a Death Star sector, A = 40: d = +1, damped to 0
+    // S4: Hand holds in a harvester sector, A = 40: d = +1, damped to 0
     [Fact]
-    public void S4_DeathStarDampsTheHandErosion()
+    public void S4_HarvesterDampsTheHandErosion()
     {
         var w = new SupWorld();
         w.Hold(Emp, Side.Hand, 60);
-        w.Sup.SetDeathStarSystem(Emp, true);
+        w.Sup.SetHarvesterSystem(Emp, true);
         w.InStep(ctx => { w.Uprising(Emp, Side.Hand); w.Sup.FireErosion(ctx, 1, Emp); }); // after 6.1, which would end it
         w.Run(1);
         Assert.Equal(40, w.A(Emp));
         Assert.Empty(w.Events<SupportChanged>());
     }
 
-    // S5: Collective holds in a Death Star sector, A = 40: d = -1, not damped
+    // S5: Collective holds in a harvester sector, A = 40: d = -1, not damped
     [Fact]
-    public void S5_DeathStarDoesNotDampTheCollectiveErosion()
+    public void S5_HarvesterDoesNotDampTheCollectiveErosion()
     {
         var w = new SupWorld();
         w.Hold(Ally, Side.Collective, 40);
-        w.Sup.SetDeathStarSystem(Ally, true);
+        w.Sup.SetHarvesterSystem(Ally, true);
         w.Uprising(Ally, Side.Collective, erosionDue: 1);
         w.Run(1);
         Assert.Equal(39, w.A(Ally));
@@ -237,24 +237,24 @@ public class SupportTests
         Assert.Equal(100, w.A(Emp));
     }
 
-    // S13: same as S11 in a Death Star sector: d = +20 damped to +10: A = 55
+    // S13: same as S11 in a harvester sector: d = +20 damped to +10: A = 55
     [Fact]
-    public void S13_DeathStarHalvesTheBombardment()
+    public void S13_HarvesterHalvesTheBombardment()
     {
         var w = new SupWorld();
-        w.Sup.SetDeathStarSystem(Emp, true);
+        w.Sup.SetHarvesterSystem(Emp, true);
         w.W.Eco.SetCollectiveSupport(Emp, 45);
         w.InStep(ctx => w.Sup.ChangeSupport(ctx, Emp, Side.Hand, -20, SupportCause.Bombardment));
         w.Run(1);
         Assert.Equal(55, w.A(Emp));
     }
 
-    // S14: ChangeSupport(system, Collective, +15, Diplomacy) in a Death Star sector, A = 30: damped to 7 (truncating): A = 37
+    // S14: ChangeSupport(system, Collective, +15, Diplomacy) in a harvester sector, A = 30: damped to 7 (truncating): A = 37
     [Fact]
     public void S14_DampingTruncates()
     {
         var w = new SupWorld();
-        w.Sup.SetDeathStarSystem(Ally, true);
+        w.Sup.SetHarvesterSystem(Ally, true);
         w.W.Eco.SetCollectiveSupport(Ally, 30);
         w.InStep(ctx => w.Sup.ChangeSupport(ctx, Ally, Side.Collective, 15, SupportCause.Diplomacy));
         w.Run(1);
@@ -266,7 +266,7 @@ public class SupportTests
     public void DampingOnlyWhenCollectiveSupportRises()
     {
         var w = new SupWorld();
-        w.Sup.SetDeathStarSystem(Ally, true);
+        w.Sup.SetHarvesterSystem(Ally, true);
         w.W.Eco.SetCollectiveSupport(Ally, 50);
         w.InStep(ctx =>
         {
@@ -330,35 +330,35 @@ public class SupportTests
         Assert.Equal(0, r1.Draws);
     }
 
-    // ---------------------------------------------------------------- Death Star flag and state
+    // ---------------------------------------------------------------- harvester flag and state
 
-    // m2-popular-support §Death Star sector flag: a sector flag (every system of the sector), wired into the economy hook
+    // m2-popular-support §harvester sector flag: a sector flag (every system of the sector), wired into the economy hook
     [Fact]
-    public void DeathStarSectorFlagsEverySystemOfTheSector_AndFeedsTheEconomyHook()
+    public void HarvesterSectorFlagsEverySystemOfTheSector_AndFeedsTheEconomyHook()
     {
         var w = new SupWorld();
         var g = TestData.RealGalaxy;
         string sector = g.Get("Charter").Sector;
-        Assert.False(w.W.Eco.IsDeathStarSector("Charter"));
-        w.Sup.SetDeathStarSector(sector, true);
+        Assert.False(w.W.Eco.IsHarvesterSector("Charter"));
+        w.Sup.SetHarvesterSector(sector, true);
         var members = g.Systems.Where(s => s.Sector == sector).Select(s => s.Name).ToList();
         Assert.True(members.Count > 1);
-        Assert.All(members, m => { Assert.True(w.Sup.IsDeathStarSector(m)); Assert.True(w.W.Eco.IsDeathStarSector(m)); });
-        Assert.False(w.W.Eco.IsDeathStarSector(g.Systems.First(s => s.Sector != sector).Name));
-        w.Sup.SetDeathStarSector(sector, false);
-        Assert.All(members, m => Assert.False(w.W.Eco.IsDeathStarSector(m)));
-        Assert.Throws<ArgumentException>(() => w.Sup.SetDeathStarSector("No Such Sector", true));
+        Assert.All(members, m => { Assert.True(w.Sup.IsHarvesterSector(m)); Assert.True(w.W.Eco.IsHarvesterSector(m)); });
+        Assert.False(w.W.Eco.IsHarvesterSector(g.Systems.First(s => s.Sector != sector).Name));
+        w.Sup.SetHarvesterSector(sector, false);
+        Assert.All(members, m => Assert.False(w.W.Eco.IsHarvesterSector(m)));
+        Assert.Throws<ArgumentException>(() => w.Sup.SetHarvesterSector("No Such Sector", true));
     }
 
-    // the Death Star counts Hand regiments double in smuggling (economy hook): flag on lowers the chance more
+    // the harvester counts Hand regiments double in smuggling (economy hook): flag on lowers the chance more
     [Fact]
-    public void DeathStarFlagReachesSmuggling()
+    public void HarvesterFlagReachesSmuggling()
     {
         var w = new SupWorld();
         w.Hold(Emp, Side.Hand, 20);                 // tier 75
         w.Regiments(Emp, Side.Hand, "Tranches", 5);
         Assert.Equal(75 - 2 * 5, w.W.Eco.DiversionPercent(Emp, Side.Hand));
-        w.Sup.SetDeathStarSystem(Emp, true);
+        w.Sup.SetHarvesterSystem(Emp, true);
         Assert.Equal(75 - 2 * 2 * 5, w.W.Eco.DiversionPercent(Emp, Side.Hand));
     }
 
@@ -371,7 +371,7 @@ public class SupportTests
             var w = new SupWorld(stub: false, seed: 5);
             w.Hold(Ally, Side.Collective, 30);
             w.Hold(Emp, Side.Hand, 60);
-            w.Sup.SetDeathStarSystem(Emp, true);
+            w.Sup.SetHarvesterSystem(Emp, true);
             Blockade(w, Ally, Side.Hand);
             return w;
         }
@@ -384,7 +384,7 @@ public class SupportTests
         eco.IncidentsEnabled = false;
         var sup = SupportModule.Attach(loaded, TestData.RealGalaxy, eco, fleets, SupWorld.Weights.Value);
         Assert.Equal(GameSave.StateHash(first.Game), GameSave.StateHash(loaded));
-        Assert.True(eco.IsDeathStarSector(Emp));
+        Assert.True(eco.IsHarvesterSector(Emp));
         loaded.Step(); Assert.Equal(101, loaded.Day);
         for (int i = 1; i < 200; i++) loaded.Step();
         Assert.Equal(GameSave.StateHash(whole.Game), GameSave.StateHash(loaded));

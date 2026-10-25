@@ -28,3 +28,44 @@ word,imperial,hand
 word,alliance,collective
 word,EMPIRE,HAND
 word,ALLIANCE,COLLECTIVE
+phrase,Death Star Sabotage,Spike the Harvester
+phrase,the Death Star Shield,the harvester shield
+phrase,The Death Star Shield,The harvester shield
+phrase,Death Star Shield,Harvester Shield
+phrase,the Death Stars,the harvesters
+phrase,The Death Stars,The harvesters
+phrase,the Death Star,the harvester
+phrase,The Death Star,The harvester
+phrase,a Death Star,a harvester
+phrase,A Death Star,A harvester
+phrase,Death Stars,harvesters
+phrase,Death Star,harvester
+phrase,death stars,harvesters
+phrase,death star,harvester
+phrase,Death star,Harvester
+phrase,Tractor beams,Hold beams
+phrase,Tractor beam,Hold beam
+phrase,tractor beams,Hold beams
+phrase,tractor beam,Hold beam
+phrase,tractor_beam,hold_beam
+phrase,tractors,Hold beams
+phrase,tractor,Hold beam
+phrase,Jedi Training,Train Talent
+phrase,Jedi training,Train Talent
+phrase,Bounty Hunters,Repossessors
+phrase,Bounty Hunter,Repossessor
+phrase,bounty hunters,Repossessors
+phrase,bounty hunter,Repossessor
+identifier,DeathStarSabotage,SpikeTheHarvester
+word,DeathStars,Harvesters
+word,DeathStar,Harvester
+word,deathStar,harvester
+word,TractorBeams,HoldBeams
+word,TractorBeam,HoldBeam
+word,Tractors,HoldBeams
+word,Tractor,HoldBeam
+word,JediTraining,TrainTalent
+word,BountyHunters,Repossessors
+word,Bounty,Repossession
+word,Vacation,Leave
+word,Sabbatical,Retreat

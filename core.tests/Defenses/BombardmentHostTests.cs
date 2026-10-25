@@ -20,7 +20,7 @@ public class BombardmentHostTests
         Assert.Equal(new DefenseParams(), h.Defenses.Params);
         Assert.Equal(new BombardParams(), h.Bombardment.Params);
         Assert.Equal(2, h.Defenses.Params.AssaultGateShields);
-        Assert.False(h.Defenses.Params.DeathStarShieldCountsForGate);
+        Assert.False(h.Defenses.Params.HarvesterShieldCountsForGate);
         Assert.Equal(40, h.Bombardment.Params.AdmiralStep);
         Assert.Equal(-20, h.Bombardment.Params.CivilianSupportChange);
         Assert.Same(GameData.Default.Defenses, h.Defenses.Data);
@@ -31,7 +31,7 @@ public class BombardmentHostTests
     {
         var s = new GameSettings
         {
-            Defense = new DefenseParams { AssaultGateShields = 3, DeathStarShieldCountsForGate = true },
+            Defense = new DefenseParams { AssaultGateShields = 3, HarvesterShieldCountsForGate = true },
             Bombard = new BombardParams { CivilianSupportChange = -5, AdmiralStep = 10 },
         };
         var h = GameHost.New(1, s);
