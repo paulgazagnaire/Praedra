@@ -188,11 +188,13 @@ public class SimpleAiFogPlayTests
 
     // With fog both AIs fight each other: by day 600 each side has attacked the other (battles fought, and each side has taken at least one
     // system from the other). Measured on seed 1: see the report; the asserts are the floor.
+    // QA-40 re-pin 2026-10-25 (the fixed v6 links; Paul's "Re-measure" card the same day): seed 1 now gives the Empire its first capture on
+    // day 646 (the Alliance's on day 420, 10 battles by day 600), so the game runs to day 700 (was 600). Same floors.
     [Fact]
     public void FogVsFog_BothSidesAttack()
     {
         var (m, h) = Match(1);
-        m.RunTo(600);
+        m.RunTo(700);
         var ev = h.Game.Events;
         int battles = ev.OfType<Praedra.Core.Battle.BattleEnded>().Count();
         int eTook = ev.OfType<SystemCaptured>().Count(e => e.From == Side.Alliance && e.To == Side.Empire);

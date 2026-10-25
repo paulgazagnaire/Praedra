@@ -49,7 +49,11 @@ public class SimpleAiTaskForceTests
         // on, the Empire wins on day 1333, 1249, 1141, 1108 (splits 6, 4, 3, 3); off, on day 1369, 1387, 1312, 1087 (0 splits). Floors: on,
         // every seed by day 1350 (was 1275); limit 1400 (was 1300); off, at least 2 seeds still going on day 1250 (unchanged); on ends at
         // least 75 days sooner on average (unchanged; measured 81). Measured with the AI no longer sending load orders that can only bounce.
-        const int limit = 1400, by = 1250, onBy = 1350;
+        // QA-40 re-pin 2026-10-25 (Dev lead; Planets' fixed v6 links, 394 links): on, the Empire wins on day 1354, 1030, 1144, 1288 (splits 3,
+        // 2, 4, 2); off, on day 1372, 1285, 1234, 1195 (0 splits). Floors: on, every seed by day 1375 (was 1350); off, at least 2 seeds still
+        // going on day 1250 (unchanged); on ends at least 60 days sooner on average (was 75; measured 68; seed 4 is slower on, the other three
+        // are 18 to 255 days sooner).
+        const int limit = 1400, by = 1250, onBy = 1375;
         var res = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => (s, On: Play(s, true, limit), Off: Play(s, false, limit)));
         Assert.All(res, r => Assert.True(r.On.End is > 0 and <= onBy, $"seed {r.s}: TaskForces on, the Empire won on day {r.On.End} (0 = not by {limit})"));
         Assert.True(res.Sum(r => r.On.Splits) > 0, "TaskForces on: no task-force split on any seed");
@@ -57,7 +61,7 @@ public class SimpleAiTaskForceTests
         int going = res.Count(r => r.Off.End == 0 || r.Off.End > by);
         Assert.True(going >= 2, $"TaskForces off: only {going} of 4 seeds still going on day {by} (the test no longer measures the switch)");
         double on = res.Average(r => r.On.End), off = res.Average(r => r.Off.End == 0 ? limit : r.Off.End);
-        Assert.True(off - on >= 75, $"TaskForces on ends {off - on:F0} days sooner on average (on {on:F0}, off {off:F0})");
+        Assert.True(off - on >= 60, $"TaskForces on ends {off - on:F0} days sooner on average (on {on:F0}, off {off:F0})");
     }
 
     // QA-20 (QA round 33): sized on the fleets seen within FogFleetMemoryDays only, the task force fell to LaunchStrength once the big enemy fleet

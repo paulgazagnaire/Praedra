@@ -1,4 +1,5 @@
 from,to,kind,routes,tier,speed_factor
+Custodia,Llano Grande,route,Charter Road,major,300
 Meridian,Ergon,route,Charter Road,major,300
 Meridian,Hoshimachi,route,Charter Road,major,300
 Charter,Pyrite,route,Charter Road,major,300
@@ -8,7 +9,7 @@ Las Eras,Ciénaga,route,Charter Road,major,300
 Ergon,Stillwater,route,Charter Road,major,300
 Barro Rojo,Hoshimachi,route,Charter Road,major,300
 Khamsin,Stillwater,route,Charter Road,major,300
-Ilha Verde,Llano Grande,route,Charter Road,major,300
+Ilha Verde,Custodia,route,Charter Road,major,300
 Ilha Verde,Lowlight,route,Charter Road,major,300
 Llano Grande,Nueve Lunas,route,Charter Road,major,300
 Ardlinn,Stibium,route,Charter Road,major,300
@@ -36,6 +37,7 @@ Pyrite,Vigilia,route,Long Haul,major,300
 Pyrite,Las Mieses,route,Long Haul,major,300
 Oionos,Brennhof,route,Long Haul,major,300
 Ellerbeck,Longquay,route,Long Haul,major,300
+Tourmaline,Nutrix,route,Long Haul,major,300
 Vigilia,Nutrix,route,Long Haul,major,300
 Velika Ravan,Blackmire,route,Long Haul,major,300
 Montefosco,Caminus,route,Long Haul,major,300
@@ -44,7 +46,7 @@ Lastwell,Ridgefold,route,Long Haul,major,300
 Icetap,Last Tank,route,Long Haul,major,300
 Icetap,Endline,route,Long Haul,major,300
 Blackmire,Kaldvik,route,Long Haul,major,300
-Cinnabar,Nutrix,route,Long Haul,major,300
+Cinnabar,Tourmaline,route,Long Haul,major,300
 Kreuzweg,Kaldvik,route,Long Haul,major,300
 Last Tank,Feudgrass,route,Long Haul,major,300
 Rubble Sky,The Lantern,route,Long Odds,major,300
@@ -69,8 +71,9 @@ Lastwell,Kreuzweg,route,Salt Lane,major,300
 Statio,Glasshold,route,Salt Lane,major,300
 Clinker,Verdemar,route,Salt Lane,major,300
 Verdemar,Hardscrabble,route,Salt Lane,major,300
-Magnetite III,Nordhaven,route,Trunk Line,major,300
+Lowmarket,Nordhaven,route,Trunk Line,major,300
 Magnetite III,Bina Minor,route,Trunk Line,major,300
+Magnetite III,Nutrix,route,Trunk Line,major,300
 Charter,Bina Major,route,Trunk Line,major,300
 Undergrowth,Seafold,route,Trunk Line,major,300
 Undergrowth,Kelpfast,route,Trunk Line,major,300
@@ -81,13 +84,14 @@ Seldwyn,Overgrowth,route,Trunk Line,major,300
 Longtide,Galeholm,route,Trunk Line,major,300
 Longtide,Overgrowth,route,Trunk Line,major,300
 Seafold,Pronoia,route,Trunk Line,major,300
-Tierra Larga,Nordhaven,route,Trunk Line,major,300
+Tierra Larga,Lowmarket,route,Trunk Line,major,300
 Icetap,Milestone Nine,route,Trunk Line,major,300
 Ashgarden,Towline,route,Trunk Line,major,300
 Ashgarden,Kelpfast,route,Trunk Line,major,300
 Towline,Brokengate,route,Trunk Line,major,300
 Stopgap,Galeholm,route,Trunk Line,major,300
 Bina Minor,Bina Major,route,Trunk Line,major,300
+Nutrix,Nordhaven,route,Trunk Line,major,300
 Milestone Nine,Clove,route,Trunk Line,major,300
 Pronoia,Clove,route,Trunk Line,major,300
 Fusoria,Belavista,route,Yard Road,major,300
@@ -100,11 +104,12 @@ Fiducia,Navalia,route,Yard Road,major,300
 Fiducia,Lesnaya,route,Yard Road,major,300
 Rubble Sky,Belavista,route,Yard Road,major,300
 The Notch,Snowmouth,route,Yard Road,major,300
-The Notch,Long Strand,route,Yard Road,major,300
+Snowmouth,Long Strand,route,Yard Road,major,300
 Mercado Alto,Cutbank,official,,minor,150
 Mercado Alto,Granero,bridge,,minor,150
 Feldspar,Hollowstone,official,,minor,150
 Marl,Porphyry,official,,minor,150
+Marl,Medela,official,,minor,150
 Hundred Lakes,Long Strike,official,,minor,150
 Mesa Roja,Old Salvage,official,,minor,150
 Semeion,Brokengate,official,,minor,150
@@ -126,12 +131,12 @@ Uzun Su,Ashfall,official,,minor,150
 Uzun Su,Agua Mansa,official,,minor,150
 Ashfall,Fabrica,official,,minor,150
 Isbrand,Altamesa,official,,minor,150
+Signum,Amargura,official,,minor,150
 Hollenvale,Oldwatch,official,,minor,150
 Tarrow,Sevenwells,official,,minor,150
 Tarrow,Valle Hondo,official,,minor,150
 Tarrow,Belmare,official,,minor,150
 Tormentum,Porphyry,official,,minor,150
-Lowmarket,Nordhaven,bridge,,minor,150
 Lowmarket,Stabilis,official,,minor,150
 Scaldwell,Clanmoor,official,,minor,150
 Scaldwell,The Flats,official,,minor,150
@@ -201,8 +206,8 @@ Natalis,Kruispunt,official,,minor,150
 Natalis,Voluptas,official,,minor,150
 Sevenwells,Horsemarch,official,,minor,150
 Tinplate,Long Noon,official,,minor,150
+Meridian,Signum,official,,minor,150
 Meridian,Skalna,official,,minor,150
-Meridian,Amargura,official,,minor,150
 Penhallow,Retentio,official,,minor,150
 Penhallow,Lagoa Funda,official,,minor,150
 Porphyry,Oionos,bridge,,minor,150
@@ -213,7 +218,6 @@ Puerto Hierro,Morelle,official,,minor,150
 Classis,Tutela,official,,minor,150
 Classis,Quies,official,,minor,150
 Classis,Loess,official,,minor,150
-Magnetite III,Nutrix,official,,minor,150
 Deadfall,Organon,official,,minor,150
 Deadfall,The Shoal,official,,minor,150
 Tutela,Hundred Falls,official,,minor,150
@@ -284,7 +288,7 @@ Pennygate,Kalmoor,official,,minor,150
 Mwezi,Kalium II,official,,minor,150
 Mwezi,Viridia,official,,minor,150
 Steading,Ninefold,official,,minor,150
-Velika Ravan,Medela,official,,minor,150
+Velika Ravan,Marl,official,,minor,150
 Kairos,Last Platform,official,,minor,150
 Subsidia,Selvagem,official,,minor,150
 Arithmos,Stibium,official,,minor,150
