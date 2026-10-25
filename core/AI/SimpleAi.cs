@@ -739,9 +739,6 @@ public sealed partial class SimpleAi
         }
     }
 
-    /// <summary>True when an enemy fleet sits on or flies toward the system.</summary>
-    private bool UnderThreat(string? system) => system != null && IncomingEnemyStrength(system) > 0;
-
     // ================================================================== upkeep crisis
 
     /// <summary>
@@ -818,8 +815,6 @@ public sealed partial class SimpleAi
         }
         return _threats = d;
     }
-
-    private double IncomingEnemyStrength(string system) => Threats().TryGetValue(system, out var l) ? l.Sum(Str) : 0;
 
     /// <summary>An enemy force's strength against REF (capital ships only), as <see cref="Str(Fleet)"/>.</summary>
     private double Str(ArmedForce x) => x.FleetId is int id && S.Fleets.TryGetValue(id, out var f) ? Str(f) : _h.Fleets.Strength.Of(x.Units, RefUnits());

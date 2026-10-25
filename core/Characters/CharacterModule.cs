@@ -168,8 +168,6 @@ public sealed class CharacterModule
     public int AdmiralLeadership(Fleet f) => HolderLeadership(f.Id, CharacterPost.Admiral);
     /// <summary>Landing regiments' bonus L / 30. rule: §Posts (General of a fleet; m3-assault Resolution 3).</summary>
     public int FleetGeneralLeadership(Fleet f) => HolderLeadership(f.Id, CharacterPost.General);
-    /// <summary>Nothing reads it in the strategic game (DEFAULT no effect; M4 may). rule: §Posts (Commander).</summary>
-    public int CommanderLeadership(Fleet f) => HolderLeadership(f.Id, CharacterPost.Commander);
     /// <summary>Defenders' bonus L / 30. rule: §Posts (General of a system).</summary>
     public int SystemGeneralLeadership(string system) =>
         S.SystemGenerals.TryGetValue(system, out var id) && Get(id) is { Status: CharacterStatus.Free } c ? EffectiveLeadership(c) : 0;
@@ -272,8 +270,6 @@ public sealed class CharacterModule
         c.Placed = true; c.System = f.At; c.AttachedFleet = fleetId; c.Post = CharacterPost.None;
     }
 
-    /// <summary>Setup or tests: make a character General of a system without the order's checks (raises nothing).</summary>
-    public void SetSystemGeneral(int id, string system) => S.SystemGenerals[system] = id;
 
     /// <summary>Setup or tests: give a character a fleet post without the order's checks (raises nothing).</summary>
     public void SetPost(int id, int fleetId, CharacterPost post)
@@ -467,12 +463,8 @@ public sealed class CharacterModule
 
     /// <summary>Hurt(v): p = max(GNPRTB 2565, 100 - v), size GNPRTB 2566 + rand(0..2567). 0x53e990. rule: B2e §2.</summary>
     public int HurtRoll(GameRng rng, int v) => InjuryRoll(rng, Math.Max(Params.HurtMinChance, PercentDieMax + 1 - v), Params.HurtSizeBase, Params.HurtSizeSpread);
-    /// <summary>Hurt2(v) (vtable +0x2e8; its caller 0x502840 is not read, so nothing calls it yet): GNPRTB 2568-2570. 0x53ea00. rule: B2e §2.</summary>
-    public int Hurt2Roll(GameRng rng, int v) => InjuryRoll(rng, Math.Max(Params.Hurt2MinChance, PercentDieMax + 1 - v), Params.Hurt2SizeBase, Params.Hurt2SizeSpread);
     /// <summary>HurtBy(a, b): p = max(GNPRTB 2571, b - a), GNPRTB 2572, 2573. 0x53ea70 (the Talent encounter). rule: B2e §2, §4.</summary>
     public int HurtByRoll(GameRng rng, int a, int b) => InjuryRoll(rng, Math.Max(Params.HurtByMinChance, b - a), Params.HurtBySizeBase, Params.HurtBySizeSpread);
-    /// <summary>HurtFixed (vtable +0x2ec, reason 7; its caller 0x576620 is not read): p = GNPRTB 2574 (100), 2575, 2576. 0x53eae0. rule: B2e §2.</summary>
-    public int HurtFixedRoll(GameRng rng) => InjuryRoll(rng, Params.HurtFixedChance, Params.HurtFixedSizeBase, Params.HurtFixedSizeSpread);
 
     /// <summary>
     /// The Hurt roll on a character with his own effective combat (vtable +0x2e4, reason 10), then AddInjury. Called by both outcomes of the

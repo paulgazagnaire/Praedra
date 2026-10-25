@@ -80,7 +80,6 @@ public partial class GameScreen
     internal bool VictoryVisible => _victoryPanel.Visible;
     internal string VictoryText => string.Join("\n", _victoryPanel.GetChildren().SelectMany(c => c.GetChildren().OfType<Label>()).Select(l => l.Text));
     internal bool Playing => _playing;
-    internal int SpeedIndex => _speedIndex;
     internal int SpeedValue => Speeds[_speedIndex];
     internal string Banner => _banner.Visible ? _banner.Text : "";
     internal string TopText => $"{_dayLabel.Text} | {_rawLabel.Text} | {_refinedLabel.Text} | {_upkeepLabel.Text} | {_ordersLabel.Text}";

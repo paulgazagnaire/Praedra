@@ -33,7 +33,6 @@ public partial class GalaxyView : Control
     public static readonly Color HandColor = new(0.35f, 0.85f, 0.35f);
     public static readonly Color CollectiveColor = new(1.0f, 0.55f, 0.15f);
     public static readonly Color NeutralColor = new(0.55f, 0.57f, 0.62f);
-    public static readonly Color UnknownColor = new(0.22f, 0.23f, 0.27f, 0.8f);
     /// <summary>Owner of a system by index (null = neutral).</summary>
     public Func<int, Side?> OwnerOf;
     /// <summary>True for a headquarters / capital system.</summary>
@@ -153,7 +152,6 @@ public partial class GalaxyView : Control
     public float PxPerUnit => FitScale() * _zoom;
     public Vector2 WorldToScreen(Vector2 w) => Size / 2f + (w - _center) * PxPerUnit;
     public Vector2 ScreenToWorld(Vector2 s) => _center + (s - Size / 2f) / PxPerUnit;
-    public Vector2 SystemWorld(int i) => _pos[i];
     public Vector2 SystemScreen(int i) => WorldToScreen(_pos[i]);
 
     void Changed()

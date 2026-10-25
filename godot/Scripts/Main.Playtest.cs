@@ -64,8 +64,6 @@ public partial class Main
         return done();
     }
 
-    static Fleet FleetNamed(GameSession s, string name) => s.Game.State.Fleets.Values.FirstOrDefault(f => f.Name == name && f.Side == s.Player);
-
     void SelectFleetByList(GameScreen gs, Fleet f)
     {
         gs.PlayRefresh();

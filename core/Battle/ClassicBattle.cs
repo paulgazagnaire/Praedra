@@ -83,8 +83,6 @@ public sealed class ClassicBattleResult
     /// <summary>Numbers the battle generator gave out.</summary>
     public long Draws { get; init; }
     public IReadOnlyList<BattleStep> Steps { get; init; } = Array.Empty<BattleStep>();
-
-    public BattleOutcome OutcomeOf(Side s) => s == Side.Collective ? CollectiveOutcome : HandOutcome;
     public bool Retreated(Side s) => s == Side.Collective ? CollectiveRetreated : HandRetreated;
 }
 

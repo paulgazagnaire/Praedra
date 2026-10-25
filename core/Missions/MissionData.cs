@@ -131,9 +131,6 @@ public sealed class MissionData
     /// <summary>The same data with another decoy table, or none (tests).</summary>
     public MissionData WithDecoyTable(IReadOnlyList<TableRow>? decoy) => new(_records.Values, _tables, Numbers, decoy, KeyTargets);
 
-    /// <summary>The same data with other key targets (tests).</summary>
-    public MissionData WithKeyTargets(IReadOnlyDictionary<int, int> keyTargets) => new(_records.Values, _tables, Numbers, DecoyTable, keyTargets);
-
     /// <summary>Records and tables from data/classic; numbers from data/classic merged with data/design; the rest from data/design. rule: B1-own-importer §Work 3, 4.</summary>
     public static MissionData Load(string original, string design) => Parse(
         CsvTable.Load(Path.Combine(original, RecordsFile)), CsvTable.Load(Path.Combine(original, TablesFile)),
