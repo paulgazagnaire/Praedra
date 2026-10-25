@@ -277,7 +277,7 @@ public class CharacterTests
     {
         // The Empire ISD at The Shoal starts a battle on the Step. Ruleset = Classic set explicitly (battle DEFAULT New since 2026-10-18): in Classic
         // both corvettes retreat together; in New the ISD's tractor beam holds fleet f's corvette and destroys it (m4-retreat-damage-repair
-        // TractorBeamsHoldRetreat), which dissolves the fleet and detaches Chewbacca. This test checks the attach rules, not the battle.
+        // TractorBeamsHoldRetreat), which dissolves the fleet and detaches Oti. This test checks the attach rules, not the battle.
         var w = new CharWorld(settings: new GameSettings { IncidentsEnabled = false, DebugOrdersEnabled = true,
             Economy = new Praedra.Core.Economy.EconomyParams { ScrapPeriod = 1_000_000 },
             Battle = new Praedra.Core.Battle.BattleParams { Ruleset = Praedra.Core.Battle.BattleRuleset.Classic } });
@@ -479,7 +479,7 @@ public class CharacterTests
         w.Stub.Expect(1, 100, 50, 51, 11);
         w.StepWith("5.1", ctx => w.Ch.DeathStarStrike(ctx, Hoth, Side.Empire));
         // B2e moved: the hit on a free minor is the Hurt roll (unqueued draws answer 0: hit, sizes 0 and 0, then the minor's death draw 0 < 25),
-        // so Drayson dies of the injury and the kill is not needed; the prisoner Tura is killed without it. 3 + 4 draws.
+        // so Admiral Marta Sobel dies of the injury and the kill is not needed; the prisoner Tura is killed without it. 3 + 4 draws.
         Assert.Equal(7, w.Stub.Requests.Count - before);
         Assert.Equal(CharacterStatus.Dead, w.C(Drayson).Status);
         Assert.Equal(CharacterStatus.Free, w.C(Borsk).Status);
@@ -751,8 +751,8 @@ public class CharacterTests
     {
         var data = GameData.Default.Characters;
         var v = data.AddedHeroLimitViolations();
-        Assert.Contains(v, x => x.Name == "Hera Syndulla" && x.Rule == 6);
-        foreach (var name in new[] { "Mara Jade", "Kyle Katarn", "Boba Fett", "Bossk", "Dengar", "Ysanne Isard", "Quarrie" })
+        Assert.Contains(v, x => x.Name == "Captain Sunday" && x.Rule == 6);
+        foreach (var name in new[] { "Clementia Noll", "Mateus Kale", "Usura", "Mora", "Damnum", "Director Pythia Kallos", "Ushe" })
             Assert.Contains(v, x => x.Name == name && x.Rule == 2);
         Assert.All(v, x => Assert.True(data.Get(x.Character).Added)); // the original 60 pass (exempt)
         Assert.DoesNotContain(v, x => x.Rule is 1 or 3 or 4 or 7);

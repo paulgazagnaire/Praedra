@@ -140,7 +140,7 @@ public class B2eCharacterTests
         var w = new CharWorld();
         int f = w.Fleet(Side.Alliance, Yavin);
         w.Add(Ackbar, Yavin); w.Ch.SetPost(Ackbar, f, CharacterPost.Admiral);
-        w.Stub!.Expect(0, 99, 99); // Ackbar is a minor: his death draw misses
+        w.Stub!.Expect(0, 99, 99); // Keth is a minor: his death draw misses
         w.StepWith("5.2", ctx => w.Ch.AddInjury(ctx, w.C(Ackbar), 5, CharacterCause.Debug));
         Assert.Equal((f, CharacterPost.None), (w.C(Ackbar).AttachedFleet, w.C(Ackbar).Post));
         Assert.Equal(PostKind.Admiral, w.Events<PostVacated>().Single().Post);

@@ -31,7 +31,7 @@ internal static class SimCli
           dotnet run --project sim -- mission --kind <MissionKind> --agent "<Name>" [--agent ...] [--side Alliance|Empire] [--skills "esp=60,com=50,..."]
                                               [--sf "<Class>:<n>[,...]"] [--ships "<Class>:<n>[,...]"] [--troops "<Class>:<n>[,...]"]
                                               [--officer "<Name>" [--officer-esp <n>]] [--target-agent "<Name>"] [--facility <Kind>[,<Kind>...]]
-                                              [--at Coruscant] [--owner Alliance|Empire|neutral] [--support 50] [--missions 1000] [--seed 1]
+                                              [--at Charter] [--owner Alliance|Empire|neutral] [--support 50] [--missions 1000] [--seed 1]
           dotnet run --project sim -- campaign [--days 1000] [--seed 1] [--ruleset Classic|New]
           dotnet run --project sim -- aivai [--days 730] [--seed 1] [--start meda|campaign] [--passive empire|alliance] [--trace] [--hq-unknown] [--fog] [--no-agents] [--empire-level L] [--alliance-level L] [--empire-params K=V,..] [--alliance-params K=V,..] [--hunt-log]
         aivai plays the simple AI (core/AI) on both sides from the new-game start (MedA, DEFAULT) or the test campaign, printing a yearly summary,
@@ -60,7 +60,7 @@ internal static class SimCli
         build runs a fixed demo: an Empire yard builds two fighters, a mine and two regiments; the regiments' delivery is held at a Rebel picket
         until the picket moves away (--picket-leaves <day>, default 100; "never" keeps it there). --no-forced-stop sets DeliveryForcedStop off.
         economy runs a fixed demo setup (four systems per side with mines and refineries) and prints each side's pools every 30 days.
-        Ship classes are matched ignoring case; "CR90" and "CR90 Corvette" mean the Corellian Corvette, "ISD" the Imperial Star Destroyer.
+        Ship classes are matched ignoring case; "CR90" and "CR90 Corvette" mean the Dodger, "ISD" the Mandate.
         """;
 
     private static readonly Dictionary<string, string> Aliases = new(StringComparer.OrdinalIgnoreCase)

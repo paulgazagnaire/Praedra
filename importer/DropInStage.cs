@@ -88,7 +88,7 @@ public static class DropInStage
             ("troop-regiments.csv", Regiments(raw)),
             ("special-forces.csv", SpecialForces(raw)),
             ("defense-facilities.csv", Defenses(raw)),
-            ("characters.csv", Characters(raw)),
+            ("characters.csv", Characters(raw, PraedraNames.LoadRoster())),
             ("unit-and-facility-costs.csv", Costs(raw)),
             ("research-unlocks.csv", Research(raw)),
             ("mission-records.csv", MissionRecords(raw)),
@@ -155,7 +155,7 @@ public static class DropInStage
     }
 
     /// <summary>characters.csv: kind (major = MJCHARSD, minor = MNCHARSD), name, then words 0..36 with word 5 split. rule: 02-gdata-formats §5.</summary>
-    private static string Characters(Raw raw)
+    private static string Characters(Raw raw, IReadOnlySet<int> roster)
     {
         var header = new[] { "kind", "name", "id", "field2", "pf", "npf", "family", "textid", "f7", "alliance", "empire", "cost", "maint", "rorder", "rdiff",
             "dip", "dipv", "esp", "espv", "ship", "shipv", "troop", "troopv", "fac", "facv", "com", "comv", "lead", "leadv", "loy", "loyv",
@@ -166,11 +166,12 @@ public static class DropInStage
             var t = raw[file];
             rows.AddRange(Rows(t, r =>
             {
+                if (!roster.Contains(t.Int(r, "id"))) return null!; // a cut character (not in roster.csv): left out
                 var row = new List<string> { kind, raw.Name(t, r), S(t, r, "id"), S(t, r, "f1"), S(t, r, "production_family"), S(t, r, "next_production_family"),
                     S(t, r, "family"), Low(t, r), High(t, r) };
                 row.AddRange(t.Header.Skip(t.Col("is_alliance")).Select(c => S(t, r, c)));
                 return row;
-            }));
+            }).Where(row => row != null));
         }
         return Csv.Write(header, rows);
     }

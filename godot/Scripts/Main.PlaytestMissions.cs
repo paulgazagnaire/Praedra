@@ -37,17 +37,17 @@ public partial class Main
 
         if (me == Side.Alliance)
         {
-            // ---------------------------------------------------------------- Mon Mothma: a refused kind, then Diplomacy on a neutral system
+            // ---------------------------------------------------------------- Mae Abara: a refused kind, then Diplomacy on a neutral system
             var mon = cm.Get(576);
-            Expect(mon != null && Free(mon), "Mon Mothma is free to go on a mission");
+            Expect(mon != null && Free(mon), "Mae Abara is free to go on a mission");
             if (mon == null || !Free(mon)) return;
             string neutral = gs.G.Systems.Select(x => x.Name).Where(n => s.OwnerOf(n) == null && s.Picture(n)?.Owner != null
                     && mm.CheckStart(new StartMissionOrder(0, me, MissionKind.Diplomacy, new() { mon.Id }, new(), new(), n)).Reason == null)
                 .OrderBy(n => Ticks(mon.System, n)).ThenBy(n => n, StringComparer.Ordinal).FirstOrDefault();
             Expect(neutral != null, "a known neutral system is in reach for Diplomacy");
             if (neutral == null) return;
-            GD.Print($"  Mon Mothma at {mon.System}: diplomacy on {neutral}");
-            int dipId = SendThroughPlanner(gs, "Send Mon Mothma on a mission...", null, MissionKind.Diplomacy, neutral, checkRefusedKind: true);
+            GD.Print($"  Mae Abara at {mon.System}: diplomacy on {neutral}");
+            int dipId = SendThroughPlanner(gs, "Send Mae Abara on a mission...", null, MissionKind.Diplomacy, neutral, checkRefusedKind: true);
             if (dipId < 0) return;
             var dip = mm.Get(dipId);
             var rec = mm.Data.Get(MissionKind.Diplomacy);
@@ -69,30 +69,30 @@ public partial class Main
                 string own = leia != null && Free(leia) ? leia.System : null;
                 if (own != null && s.OwnerOf(own) == me)
                 {
-                    int id2 = SendThroughPlanner(gs, "Send Leia Organa on a mission...", null, MissionKind.Diplomacy, own, checkRefusedKind: false);
+                    int id2 = SendThroughPlanner(gs, "Send Ledger on a mission...", null, MissionKind.Diplomacy, own, checkRefusedKind: false);
                     if (id2 >= 0) { RunUntil(gs, () => mm.Get(id2)?.Phase == MissionPhase.Working, 30); working = mm.Get(id2); }
                 }
             }
             Expect(working != null, "a mission is working at its target (to cancel it)");
             if (working != null) CancelThroughList(gs, working);
 
-            // ---------------------------------------------------------------- Han Solo: Espionage from the system panel
+            // ---------------------------------------------------------------- Midwife: Espionage from the system panel
             var han = cm.Get(579);
-            Expect(han != null && Free(han), "Han Solo is free to go on a mission");
+            Expect(han != null && Free(han), "Midwife is free to go on a mission");
             if (han != null && Free(han))
             {
                 string enemy = s.Game.State.SystemOwners.Where(kv => kv.Value == s.Enemy).Select(kv => kv.Key)
                     .Where(n => Ticks(han.System, n) < int.MaxValue).OrderBy(n => Ticks(han.System, n)).ThenBy(n => n, StringComparer.Ordinal).First();
-                GD.Print($"  Han Solo at {han.System}: espionage on {enemy}");
+                GD.Print($"  Midwife at {han.System}: espionage on {enemy}");
                 gs.SelectSystem(han.System); gs.PlayRefresh();
                 Expect(gs.Has($"Send a mission from {han.System}..."), "the system panel offers Send a mission from...");
-                SpyAndCheck(gs, $"Send a mission from {han.System}...", "Han Solo", enemy);
+                SpyAndCheck(gs, $"Send a mission from {han.System}...", "Midwife", enemy);
             }
             PlaytestSpecialForces(gs, "Listeners");
         }
         else
         {
-            // ---------------------------------------------------------------- Empire: Darth Vader (or any free spy) on Espionage
+            // ---------------------------------------------------------------- Empire: Cassia Ravilla (or any free spy) on Espionage
             var spy = s.MyCharacters.Where(c => Free(c) && mm.CanDo(c, MissionKind.Espionage)).OrderBy(c => c.Id == 641 ? 0 : 1).ThenByDescending(c => s.Chars.EffectiveSkill(c, Skill.Espionage)).FirstOrDefault();
             Expect(spy != null, "a free Imperial character can spy");
             if (spy == null) return;

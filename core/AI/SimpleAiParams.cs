@@ -260,7 +260,7 @@ public sealed record SimpleAiParams
     public int FogGroundForgetDays { get; init; } = 365;
 
     /// <summary>
-    /// The Classic AI's leader marks (B6c §7): the six story characters (Luke, Mon Mothma, the Emperor, Vader, Leia, Han) are never fleet or army
+    /// The Classic AI's leader marks (B6c §7): the six story characters (Luke, Mae Abara, the Emperor, Vader, Leia, Han) are never fleet or army
     /// commanders, the Emperor is never a diplomat, and the Empire keeps the Emperor at the Seat of Power while it holds it (Emperor home;
     /// SimpleAiAgents.EmperorHome). The leaders' ban from Incite, Rescue, Sabotage and Abduction is already this AI's rule for every major
     /// character (NoKeyKinds). QA-8 (2026-10-18): without it the Emperor stood on Charter 1-7% of days, so the Seat of Power was off ~95%
@@ -408,7 +408,7 @@ public sealed record SimpleAiParams
     public int EspionageOverReconPercent { get; init; } = 125;
     /// <summary>
     /// Recruitment (B6c §7 list item 1): at most this many running while the side has anyone left to recruit (Classic: 2), each by a character of
-    /// leadership at least RecruitMinLeadership (Classic: 80; leaders allowed, so the Emperor, Vader and Mon Mothma recruit), worth RecruitValue
+    /// leadership at least RecruitMinLeadership (Classic: 80; leaders allowed, so the Emperor, Vader and Mae Abara recruit), worth RecruitValue
     /// (DEFAULT: above every other job, as the Classic list checks it first). 0 = no Recruitment (the AI before QA-12).
     /// </summary>
     public int MaxRecruiters { get; init; } = 2;
@@ -475,7 +475,7 @@ public sealed record SimpleAiParams
     public int AbductionInfoDays { get; init; } = 5;
     /// <summary>
     /// The planner reads a key target's Abduction chance as the core rolls it, min(table, cap_percent) (m5-missions §6a.3; the caps are the
-    /// key-target file: Emperor 2, Vader 4, Luke 4, Mon Mothma 2), so it values those jobs honestly and the odds floor (MissionMinOddsPercent)
+    /// key-target file: Emperor 2, Vader 4, Luke 4, Mae Abara 2), so it values those jobs honestly and the odds floor (MissionMinOddsPercent)
     /// applies. false = the AI before (the table alone: 95% believed where 2% is real). DEFAULT true (Dev lead, 2026-10-19).
     /// </summary>
     public bool AbductionKeyCap { get; init; } = true;
@@ -565,7 +565,7 @@ public sealed record SimpleAiParams
     /// </summary>
     public bool FleetMemory { get; init; }
     /// <summary>
-    /// Key characters (the majors: Luke, Leia, Han, Mon Mothma, Vader, Palpatine) count this percent of their mission value (others are
+    /// Key characters (the majors: Luke, Leia, Han, Mae Abara, Vader, Palpatine) count this percent of their mission value (others are
     /// preferred) and never go on Rescue, Abduction, Sabotage or Incite (ai/05 §4: the original keeps its leaders off those). With
     /// m5-characters-and-force MajorsCanDie on (DEFAULT off) they also stay off every mission where any defender is believed. DEFAULT.
     /// </summary>

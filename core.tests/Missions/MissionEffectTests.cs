@@ -306,7 +306,7 @@ public class MissionEffectTests
         int baseScore = SupportModule.IncidentScore(w.Host.Support.Params, 1, 1, 70, 0, 0, false);
         Assert.Equal(baseScore + 12, w.Host.Support.IncidentScore(T, Side.Empire, 1, 1));
 
-        // Subdue: Empire at an Empire system in uprising, Veers (leadership 70) + Closers (50)
+        // Subdue: Empire at an Empire system in uprising, Eighty-Eight (leadership 70) + Closers (50)
         var s = new MissionWorld();
         s.Hold(X, Side.Empire, 80);
         s.Game.Step();

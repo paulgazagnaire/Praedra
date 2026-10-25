@@ -36,7 +36,7 @@ Sources (project folder `praedra/specs/`): `economy/data/slot-values-draft.csv`.
 Characters (m5-characters-and-force, m5-setup-and-victory P9), copied 2026-10-12:
 - `original/characters.csv` holds the 60 original records of `MJCHARSD` and `MNCHARSD` (ids 576-579, 640-641, 832-857, 896-923), read by the importer. Since B1 Shenir Rix (918) is Force 10 +- 40 and Noval Garaint (919) 30 +- 20, as in the file (the old spec copy had them swapped).
 - `design/added-heroes.csv` holds the 16 heroes Paul added (heroes/added-heroes: 8 Alliance, 4 Empire, 4 Imperial bounty hunters), Proposal stats, ids after each side's minor block (858-865, 924-931). Skills the source leaves blank are 0+0 and loyalty is 100+0 (DEFAULT, as the 60 originals); each row says so.
-- `design/roster.csv` lists every record with `in_game` (Decided, heroes/refined-roster: the game starts right after The Shoal with a film-era cast; Thrawn, Pellaeon, Bel Iblis, Daala, Zuggs, Ferrier, Grammel, Griff, Klev, Ma'w'shiye and Kaiya Andrimetrum are 0). 65 characters are in the game.
+- `design/roster.csv` lists the 65 characters in the game, all with `in_game` 1 (Decided, heroes/refined-roster). The 11 cut Classic characters (ids 844, 854, 857, 904-907, 911, 913-915) have no Praedra name, so they are left out of the roster and of `classic/characters.csv` (the importer drops every character not in the roster); only the raw files keep them.
 - `design/navigator_speed.csv` is the Navigator table of m5-characters-and-force (Han 50 Traced, the rest Proposal); unlisted characters are 100.
 - `design/start-cast.csv` is the fixed start cast of m5-setup-and-victory P9 in placement order (Traced, setup-victory/03), with the two extras rows.
 - `design/victory-rules.csv` is the victory rule table of m5-setup-and-victory (subjects by character id); only the `CharacterCaptured` rows are read so far (standard victory is a switch, off by default).
@@ -60,11 +60,11 @@ Loaders read `original/<file>` and, for `unit-and-facility-costs.csv`, `research
 
 ## Praedra names (`design/name-migrations.csv`)
 
-`design/name-migrations.csv` (kind, old, new) lists every Classic placeholder name that has a Praedra name: 555 systems, 65 sectors, 29 capital ships, 10 regiments, 9 special forces, 8 fighters and 5 defenses (Lore Master's table `praedra/specs/engine/names/praedra-names.csv`, approved by Paul 2026-10-25). Three things use it:
+`design/name-migrations.csv` (kind, old, new) lists every Classic placeholder name that has a Praedra name: 555 systems, 65 sectors, 29 capital ships, 10 regiments, 9 special forces, 8 fighters, 5 defenses and 65 characters (characters by their short in-game name: the nickname, else the name without its title or epithet, so "Ines Varga, called Ledger" is Ledger; Lore Master's table `praedra/specs/engine/names/praedra-names.csv`, approved by Paul 2026-10-25). Three things use it:
 - `tools/names/apply_names.py` rewrote the CSVs here and the strings and comments of the C# code. Files copied in later from the shared specs may still carry the old names: run `python3 -I tools/names/apply_names.py` from the repository root after copying (it leaves renamed files alone; `--check` only reports). It skips `classic/raw/` (the Classic files word for word) and every `kind` column (mission kinds are not places).
 - The importer applies the table when it writes `classic/*.csv`, so a re-import gives the same files.
 - A save written before the rename loads with every old name replaced (`core/Setup/NameMigrations.cs`, called by `GameHost.Load`).
 
 The `canon_region`, `canon_x` and `canon_y` columns (the Classic map's regions and coordinates, carried but never used) were dropped from the planets and slot-values files at the same time.
 
-Characters, mission names, the harvester, the Hold beam and the side names come in later changes.
+Mission names, the harvester, the Hold beam and the side names come in a later change.

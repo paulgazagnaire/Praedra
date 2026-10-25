@@ -132,10 +132,10 @@ public class B2bForceAndBetrayalTests
         Assert.Equal(MissionOutcome.Foiled, w.Events<MissionEnded>().Single().Outcome);
     }
 
-    // B2b-6: sensers Vader (120), X = Piett (70), Z = Veers (80); group Force users Luke (50), Y = Wedge (40), W = Lando (45). By hand:
+    // B2b-6: sensers Vader (120), X = Admiral Decimus Varo (70), Z = Eighty-Eight (80); group Force users Luke (50), Y = Wedge (40), W = Lando (45). By hand:
     //   Vader first: Luke p 70 roll 99 (miss); pick (0..1) = 1 takes Lando: p 65 roll 10 (hit, foiled; Vader's discovered user is set: he stops).
-    //   pick (0..1) between Piett and Veers = 0: Piett: Luke p 20 roll 5 (hit: he stops).
-    //   Veers (last, no pick): Luke p 30 roll 99; pick (0..1) = 1 takes Lando: p 25 roll 99; Wedge (last, no pick): p 20 roll 99.
+    //   pick (0..1) between Admiral Decimus Varo and Eighty-Eight = 0: Admiral Decimus Varo: Luke p 20 roll 5 (hit: he stops).
+    //   Eighty-Eight (last, no pick): Luke p 30 roll 99; pick (0..1) = 1 takes Lando: p 25 roll 99; Wedge (last, no pick): p 20 roll 99.
     // Foiled, so no betrayal draw.
     [Fact]
     public void B2b6_SenseOrderAndPicks()
@@ -151,7 +151,7 @@ public class B2bForceAndBetrayalTests
             w.Events<MissionForceSenseRoll>().Select(e => (e.Member, e.Senser, e.Chance, e.Sensed)));
         Assert.Equal((MissionFoilCause.ForceSensed, Vader), (w.Events<MissionFoiled>().Single().Cause, w.Events<MissionFoiled>().Single().Character));
         Assert.Equal(new[] { (Lando, Vader), (Luke, Piett) }, w.Events<ForceUserDiscovered>().Select(e => (e.Member, e.Senser)));
-        // B2e: Luke meets Piett (team order: Luke first, then Lando meets Vader); the encounters clear the keys
+        // B2e: Luke meets Admiral Decimus Varo (team order: Luke first, then Lando meets Vader); the encounters clear the keys
         Assert.Equal(new[] { (Luke, Piett), (Lando, Vader) }, w.Events<Praedra.Core.Characters.ForceEncounterResolved>().Select(e => (e.Member, e.Other)));
         Assert.Equal((0, 0, 0, 0), (w.Ch.Get(Vader)!.DiscoveredForceUser, w.Ch.Get(Lando)!.DiscoveredForceUser,
             w.Ch.Get(Piett)!.DiscoveredForceUser, w.Ch.Get(Luke)!.DiscoveredForceUser));

@@ -9,14 +9,28 @@ public static class PraedraNames
 {
     public const string TableFile = "name-migrations.csv";
 
+    public const string RosterFile = "roster.csv";
+
     /// <summary>Reads the table from data/design of the repository that holds Praedra.sln (searched upwards from the program and the working folder).</summary>
-    public static IReadOnlyDictionary<string, string> Load()
+    public static IReadOnlyDictionary<string, string> Load() => Parse(Csv.Load(DesignFile(TableFile)));
+
+    /// <summary>
+    /// The ids of the characters in the game (data/design/roster.csv). Characters left out of the roster were cut (heroes/refined-roster,
+    /// Decided Paul) and carry no Praedra name, so the drop-in characters.csv leaves them out; the raw files keep them.
+    /// </summary>
+    public static IReadOnlySet<int> LoadRoster()
+    {
+        var t = Csv.Load(DesignFile(RosterFile));
+        return Enumerable.Range(0, t.Rows.Count).Select(r => t.Int(r, "id")).ToHashSet();
+    }
+
+    private static string DesignFile(string file)
     {
         foreach (var start in new[] { AppContext.BaseDirectory, Directory.GetCurrentDirectory() })
             for (var dir = new DirectoryInfo(start); dir != null; dir = dir.Parent)
                 if (File.Exists(Path.Combine(dir.FullName, "Praedra.sln")))
-                    return Parse(Csv.Load(Path.Combine(dir.FullName, "data", "design", TableFile)));
-        throw new ImportException($"Praedra.sln not found above the program or working folder, so data/design/{TableFile} cannot be read.");
+                    return Path.Combine(dir.FullName, "data", "design", file);
+        throw new ImportException($"Praedra.sln not found above the program or working folder, so data/design/{file} cannot be read.");
     }
 
     public static IReadOnlyDictionary<string, string> Parse(CsvFile t)

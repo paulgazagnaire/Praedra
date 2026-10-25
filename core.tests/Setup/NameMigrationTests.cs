@@ -12,7 +12,8 @@ public class NameMigrationTests
     public void TheShippedTableLoadsAndNoNewNameIsAnOldOne()
     {
         var names = GameData.Default.Names;
-        Assert.True(names.Count >= 676, $"{names.Count} renames");
+        Assert.True(names.Count >= 741, $"{names.Count} renames"); // stage 1 (676) + 65 characters
+        Assert.Equal("Ledger", names.Current("Leia Organa"));
         Assert.Equal("Charter", names.Current("Coruscant"));
         Assert.Equal("Mandate", names.Current("Imperial Star Destroyer"));
         Assert.Equal("Charter", names.Current("Charter")); // a new name stays itself
@@ -28,6 +29,7 @@ public class NameMigrationTests
             Assert.Equal(s.Sector, d.Names.Current(s.Sector));
         }
         foreach (var c in d.Ships.Keys) Assert.Equal(c, d.Names.Current(c));
+        foreach (var c in d.Characters.All) Assert.Equal(c.Name, d.Names.Current(c.Name));
     }
 
     [Fact]
@@ -43,6 +45,24 @@ public class NameMigrationTests
         Assert.NotEqual(save, old);
         Assert.Contains("\"Coruscant\"", old);
         var loaded = GameHost.Load(old);
+        Assert.Equal(host.StateHash(), loaded.StateHash());
+    }
+
+    // QA-41 (QA round 72): the settings line of an old save is renamed too (Fog.CapitalSystem said "Coruscant", Support.StormtrooperClass
+    // "Stormtrooper Regiment"), so the loaded game plays the same as the saved one
+    [Fact]
+    public void ASaveWithTheOldNamesGetsItsSettingsRenamed()
+    {
+        var host = GameHost.New(7, new GameSettings { Fog = new Praedra.Core.Fog.FogParams(), Support = new Praedra.Core.Support.SupportParams() });
+        for (int i = 0; i < 5; i++) host.Game.Step();
+        string save = host.SaveWithSettings();
+        string old = save;
+        foreach (var (from, to) in ReadPairs())
+            old = old.Replace("\"" + to + "\"", "\"" + from + "\"", StringComparison.Ordinal);
+        Assert.Contains("\"CapitalSystem\":\"Coruscant\"", old);
+        var loaded = GameHost.Load(old);
+        Assert.Equal("Charter", loaded.Settings.Fog!.CapitalSystem);
+        Assert.Equal("Pacifiers", loaded.Settings.Support!.StormtrooperClass);
         Assert.Equal(host.StateHash(), loaded.StateHash());
     }
 

@@ -239,11 +239,11 @@ public sealed class GameHost
     public static GameHost Load(string saveJson, GameSettings? settings = null, GameData? data = null)
     {
         var (ruleset, afterHeader) = ReadHeader(saveJson);
-        var (saved, body) = ReadSettings(afterHeader);
+        data ??= GameData.Default;
+        var (saved, body) = ReadSettings(afterHeader, data.Names);
         settings ??= saved ?? new GameSettings();
         if (ruleset != null && settings.Battle == null)
             settings = settings with { Battle = new Praedra.Core.Battle.BattleParams { Ruleset = ruleset.Value } };
-        data ??= GameData.Default;
         var (memories, core) = ReadAiMemory(body, data.Names);
         var host = new GameHost(GameSave.Load(data.Names.Apply(core)), data, settings); // a save from before the Praedra names loads renamed
         host._aiMemory.AddRange(memories);
@@ -353,12 +353,14 @@ public sealed class GameHost
         Hq = s.Hq ?? new Praedra.Core.Fog.HqParams(),
     };
 
-    private static (GameSettings? Settings, string Body) ReadSettings(string body)
+    private static (GameSettings? Settings, string Body) ReadSettings(string body, NameMigrations names)
     {
         if (!body.StartsWith(SettingsTag, StringComparison.Ordinal)) return (null, body); // saves made before QA-17: the caller's or the DEFAULT settings
         int nl = body.IndexOf('\n');
         if (nl < 0) throw new InvalidDataException("settings line without a game");
-        var s = System.Text.Json.JsonSerializer.Deserialize<GameSettings>(UpgradeSettingsJson(body[SettingsTag.Length..nl]), SettingsJson)
+        // QA-41: settings name systems and units too (Fog.CapitalSystem, Support.StormtrooperClass...), so a save from before the Praedra names
+        // gets its settings renamed like its state
+        var s = System.Text.Json.JsonSerializer.Deserialize<GameSettings>(names.Apply(UpgradeSettingsJson(body[SettingsTag.Length..nl])), SettingsJson)
             ?? throw new InvalidDataException("empty settings line");
         return (s, body[(nl + 1)..]);
     }

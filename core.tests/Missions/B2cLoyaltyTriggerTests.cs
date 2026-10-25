@@ -11,7 +11,7 @@ using Praedra.Core.Tests.Control;
 namespace Praedra.Core.Tests.Missions;
 
 /// <summary>
-/// B2c: the four triggers that move loyalty and the per-system loss tallies they read. Lando is the Alliance minor, Piett the Imperial minor,
+/// B2c: the four triggers that move loyalty and the per-system loss tallies they read. Lando is the Alliance minor, Admiral Decimus Varo the Imperial minor,
 /// Luke is unable to betray (never moves). Battle and blockade events are emitted as the battle and blockade code emits them, through a
 /// StepContext, so the observer runs exactly as in a Step. rule: m5-characters-and-force §Loyalty and betrayal (Traced, B2c).
 /// </summary>

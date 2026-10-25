@@ -180,7 +180,7 @@ public class NewBattleTests
     [Fact]
     public void N7_ShieldDoesNotRegenerateForFiveSecondsAfterAHit()
     {
-        // space-combat/11 §4 changed the engagement: both ships now fire from the first seconds at D = 21, so the The Moorings is hit again within 5 s on most seeds;
+        // space-combat/11 §4 changed the engagement: both ships now fire from the first seconds at D = 21, so The Moorings is hit again within 5 s on most seeds;
         // look for the first seed with a hit followed by a quiet spell (a regen at +5), instead of fixing seed 3.
         bool found = false;
         for (ulong seed = 1; seed <= 40 && !found; seed++)
