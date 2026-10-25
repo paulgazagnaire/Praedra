@@ -101,7 +101,7 @@ public static class NewGame
 
         // P9 starting characters, after the forces and before the economy timers and the research arming (P10): the roster's creation draws,
         // then The Chair at Charter, Ravilla and the officers at random Hand locations, the Hand extras, Mae Abara at the HQ, The Shoal six,
-        // the Collective extras. rule: m5-setup-and-victory §P9; m5-characters-and-force §Rolling the stats.
+        // the Collective extras. rule: m5-setup-and-victory §P9; m5-characters-and-talent §Rolling the stats.
         host.Characters.SetupNewGame(state.Scenario.HqSystem);
 
         // Stage 0x17: fleets and capital ships get their numbered names, after the characters and before the day-0 pictures. rule: m5-setup-and-victory §P7 Names (B4 §12)

@@ -9,7 +9,7 @@ namespace Praedra.Core.Characters;
 /// fleet and moving alone, the New-rule Navigator, the state machine (free, injured, captured, dead) with its six functions, the harvester's
 /// roll on characters, uprising incident effects 3 to 5, Talent score, rank and the Train Talent roll. Holds data and settings only; the state
 /// lives in <see cref="GameState.Characters"/>. After <see cref="GameSave.Load"/>, attach again. Every loop is in ascending character id
-/// (m1-clock rule 5). rule: m5-characters-and-force (module CharacterModule, core/Characters/).
+/// (m1-clock rule 5). rule: m5-characters-and-talent (module CharacterModule, core/Characters/).
 ///
 /// Missing rules are not invented: Talent detection, Talent and skill growth outside training and the encounter, assault harm and blockade escape
 /// risk are switches whose "on" is refused (<see cref="CharacterParams.Validate"/>). Injury points, healing, escape, liberation, the talented
@@ -109,7 +109,7 @@ public sealed class CharacterModule
     /// The character sheet's <c>Recruit(side, system)</c>, the setup extras pick (m5-setup-and-victory §P9 "An extra") with the place given:
     /// the mission's own target system (it must be a system). <c>m</c> = <see cref="RecruitPoolOf"/> size; <c>m = 0</c>: nobody, no draw.
     /// Else one draw <c>r = rand(0..m-1)</c> and pool member <c>r</c> is placed free at the system, his skills and Talent as the extras have them
-    /// (rolled by the creation rule, m5-characters-and-force §Rolling the stats). If <c>m</c> was 1 the side's pool-empty flag is set.
+    /// (rolled by the creation rule, m5-characters-and-talent §Rolling the stats). If <c>m</c> was 1 the side's pool-empty flag is set.
     /// rule: m5-missions §6 Recruitment (Recruitment pick, 2026-10-18; [EXE-own] 0x56b9a0, 0x55fc80).
     /// </summary>
     public CharacterRecord? Recruit(StepContext ctx, Side side, string system)
@@ -155,7 +155,7 @@ public sealed class CharacterModule
     public int EffectiveLeadership(CharacterRecord c) => EffectiveSkill(c, Skill.Leadership);
 
     /// <summary>The one reader of a skill for every rule (missions, duels, B2b, the AI). rule: §Talent (effects; Traced B2e §1).</summary>
-    // rule: m5-characters-and-force §Talent (New, Paul 2026-10-18; Classic = 100): Talent share is <see cref="CharacterParams.TalentSkillPercent"/>.
+    // rule: m5-characters-and-talent §Talent (New, Paul 2026-10-18; Classic = 100): Talent share is <see cref="CharacterParams.TalentSkillPercent"/>.
     public int EffectiveSkill(CharacterRecord c, Skill s) => c.EffectiveSkill(s, Params.TalentSkillPercent);
 
     private CharacterRecord? PostHolder(int fleetId, CharacterPost post) =>
@@ -596,7 +596,7 @@ public sealed class CharacterModule
     /// is still there); 5. the nearest system his side holds, blockaded; 6. the nearest neutral system; 7. the nearest enemy system. "Nearest" = the
     /// fewest ticks by the m1-travel path at character speed from his system, ties by system index (DEFAULT for the game's precomputed order); a
     /// destroyed system never counts. He leaves now (CharacterDeparted) at normal character travel; with no place found he stays. No draw.
-    /// Returns true when a trip was set. rule: m5-characters-and-force §Capture, injury, death, freeing (Autoroute; QA-9).
+    /// Returns true when a trip was set. rule: m5-characters-and-talent §Capture, injury, death, freeing (Autoroute; QA-9).
     /// </summary>
     public bool Autoroute(StepContext? ctx, CharacterRecord c)
     {
@@ -689,8 +689,8 @@ public sealed class CharacterModule
     /// detached and stand there; riders of the attacker's own fleet stay aboard and are not candidates. In id order each MINOR draws
     /// r = rand(1..100) and is hit if r &lt;= <see cref="CharacterParams.HarvesterHitPercent"/> (50): Injure then Kill (a captive is killed without
     /// the injury). Majors cost no draw. Then the system's General post is cleared.
-    /// rule: m5-death-star §2 effect 3 (rand(1..100) &lt;= HarvesterMinorKillPct, minors only, draw order by id);
-    /// m5-characters-and-force §The harvester's roll on characters (CH19: the same chance, there written rand(0..99) &lt; 50).
+    /// rule: m5-harvester §2 effect 3 (rand(1..100) &lt;= HarvesterMinorKillPct, minors only, draw order by id);
+    /// m5-characters-and-talent §The harvester's roll on characters (CH19: the same chance, there written rand(0..99) &lt; 50).
     /// </summary>
     public void HarvesterStrike(StepContext ctx, string system, Side attacker)
     {
@@ -713,7 +713,7 @@ public sealed class CharacterModule
         }
     }
 
-    /// <summary>The harvester's die is rand(1..100), a percent roll. rule: m5-death-star §2 effect 3 (Traced shape, GNPRTB 0x606).</summary>
+    /// <summary>The harvester's die is rand(1..100), a percent roll. rule: m5-harvester §2 effect 3 (Traced shape, GNPRTB 0x606).</summary>
     private const int HarvesterDieMin = 1, HarvesterDieMax = 100;
 
     /// <summary>
@@ -723,7 +723,7 @@ public sealed class CharacterModule
     /// ties by system index = name order), leaving now and arriving the next day (DEFAULT); with no system left to go to it is captured by the
     /// attacker (DEFAULT). A prisoner stays a prisoner and is held at the nearest system its captor holds at once, or where it is when the captor
     /// holds none (our DEFAULT: the sheet names no rule for prisoners). The destroyed system itself never counts as held.
-    /// rule: m5-death-star §2 effect 3 (every character that survives is moved).
+    /// rule: m5-harvester §2 effect 3 (every character that survives is moved).
     /// </summary>
     public void HarvesterRelocate(StepContext ctx, string system, Side attacker, int attackerFleet)
     {
@@ -754,13 +754,13 @@ public sealed class CharacterModule
         }
     }
 
-    /// <summary>Ticks of the relocation flight of a survivor: it arrives the next day. rule: m5-death-star §2 effect 3 (DEFAULT, "arriving the next day").</summary>
+    /// <summary>Ticks of the relocation flight of a survivor: it arrives the next day. rule: m5-harvester §2 effect 3 (DEFAULT, "arriving the next day").</summary>
     private const int HarvesterFlightTicks = 1;
 
     /// <summary>
     /// The system <paramref name="side"/> holds that is fewest lane steps from <paramref name="from"/> (breadth-first over every lane, through any
     /// system; ties by system index, which is name order); the start itself never counts. Null if the side holds no reachable system.
-    /// rule: m5-death-star §2 effect 3 (nearest system its side holds, fewest lane steps, ties by system id).
+    /// rule: m5-harvester §2 effect 3 (nearest system its side holds, fewest lane steps, ties by system id).
     /// </summary>
     private string? NearestHeldSystem(string from, Side side) => _fleets.NearestHeldSystem(from, side);
 
@@ -855,7 +855,7 @@ public sealed class CharacterModule
             var before = RankOf(s);
             int gap = trainer.EffectiveTalent - s.EffectiveTalent;
             int r = ctx.Rng.NextInt(0, 99);
-            // rule: m5-characters-and-force §Talent (Train Talent: the roll; New, Paul 2026-10-18; Classic = 100 / 50)
+            // rule: m5-characters-and-talent §Talent (Train Talent: the roll; New, Paul 2026-10-18; Classic = 100 / 50)
             int chance = Math.Min(gap, Params.TrainingChanceCap) * Params.TalentTrainingChancePercent / CharacterRecord.PercentDivisor;
             bool success = gap > 0 && r < chance;
             int gain = 0;
@@ -978,7 +978,7 @@ public sealed class CharacterModule
     /// Raise one skill (m5-missions: a successful research member gains GNPRTB 6158 = 1 in that research skill; Classic's character-side check
     /// before the gain is Missing, so no cap). Not the refused SkillGrowth switch (growth outside research missions). rule: m5-missions §6 Research.
     /// </summary>
-    /// <summary>The original's side numbers (1 = Collective, 2 = Hand, 3 = neutral). rule: m5-characters-and-force §Loyalty (B2b §4).</summary>
+    /// <summary>The original's side numbers (1 = Collective, 2 = Hand, 3 = neutral). rule: m5-characters-and-talent §Loyalty (B2b §4).</summary>
     public const int SideNumberCollective = 1, SideNumberHand = 2;
     /// <summary>Loyalty bounds (0x53e0d0 with 0x661a84 = 0 and 0x661a88 = 100). Traced B2b.</summary>
     public const int LoyaltyMin = 0, LoyaltyMax = 100;
@@ -986,7 +986,7 @@ public sealed class CharacterModule
     /// <summary>
     /// <c>ShiftLoyalty(side, amount)</c> (0x561910): nothing when the amount is 0 or the side number is not 1 or 2. Otherwise every character
     /// (pool included, id order; no draws) whose record is not "unable to betray" (word 35) gains the amount if it serves that side and loses it
-    /// otherwise, clamped to 0..100. Event LoyaltyChanged when the value moves. No caller yet (B2c). rule: m5-characters-and-force §Loyalty (Traced B2b).
+    /// otherwise, clamped to 0..100. Event LoyaltyChanged when the value moves. No caller yet (B2c). rule: m5-characters-and-talent §Loyalty (Traced B2b).
     /// </summary>
     public void ShiftLoyalty(StepContext? ctx, int sideNumber, int amount)
     {
@@ -1224,7 +1224,7 @@ public sealed class CharacterModule
     /// <summary>
     /// Prisoners land (New, Paul 2026-10-18): a prisoner held aboard a fleet that stands at a system (not travelling) held by his captor's side and not
     /// blockaded goes ashore there: held on that planet, no draw, escape timer unchanged, event PrisonerLanded. Runs at slot 6.10 before the escape
-    /// attempts, in character id order (DEFAULT timing). Off (Classic): never. rule: m5-characters-and-force §Capture, injury, death, freeing 7.
+    /// attempts, in character id order (DEFAULT timing). Off (Classic): never. rule: m5-characters-and-talent §Capture, injury, death, freeing 7.
     /// </summary>
     private void LandTick(StepContext ctx, CharacterRecord c)
     {

@@ -11,7 +11,7 @@ public class CharacterSetupTests
 {
     private static GameHost Make(int seed = 1, GameSettings? s = null) => NewGame.Create(new NewGameOptions { Seed = seed, Settings = s });
 
-    // m5-characters-and-force §The character object; Decided roster (heroes/refined-roster, added-heroes)
+    // m5-characters-and-talent §The character object; Decided roster (heroes/refined-roster, added-heroes)
     [Fact]
     public void Roster_RefinedFilmEra()
     {
@@ -56,7 +56,7 @@ public class CharacterSetupTests
         Assert.Empty(h.Game.Events); // setup raises no per-object events
     }
 
-    // m5-characters-and-force CH39 (Rule New 4, Paul 2026-10-18): TrainerPick Random (DEFAULT) draws 3 talented placed characters per side, each an
+    // m5-characters-and-talent CH39 (Rule New 4, Paul 2026-10-18): TrainerPick Random (DEFAULT) draws 3 talented placed characters per side, each an
     // aware talented character with Talent 80..120 (or his own if higher), and only they can train; Fixed (Classic) draws nothing and Nobody and Ravilla train
     [Fact]
     public void CH39_RandomTalentedTrainers()
@@ -81,7 +81,7 @@ public class CharacterSetupTests
         Assert.Equal(new[] { Nobody, Ravilla }.OrderBy(x => x), classic.All.Where(classic.IsTrainer).Select(c => c.Id).OrderBy(x => x));
     }
 
-    // m5-characters-and-force CH40 (Q17, Paul 2026-10-18 cards "Skip the strong" and "Leave out hunters"): the draw never takes anyone already at
+    // m5-characters-and-talent CH40 (Q17, Paul 2026-10-18 cards "Skip the strong" and "Leave out hunters"): the draw never takes anyone already at
     // Talent 80+ (The Chair and Ravilla keep their Talent but never train) nor a character flagged never_talented (the Repossessors); Ledger and
     // Oti stay in the pool. With both switches off the strong can be drawn again.
     [Fact]
@@ -192,7 +192,7 @@ public class CharacterSetupTests
         Assert.True(waive.Victory.KeysCaptured(Side.Collective));
     }
 
-    // m5-characters-and-force §Where it runs: the simple AI ignores characters and the game keeps running with them
+    // m5-characters-and-talent §Where it runs: the simple AI ignores characters and the game keeps running with them
     [Fact]
     public void Ai_RunsWithCharacters()
     {

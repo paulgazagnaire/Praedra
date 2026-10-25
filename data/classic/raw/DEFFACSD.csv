@@ -1,7 +1,0 @@
-id,f1,production_family,next_production_family,family,word5,is_alliance,is_empire,cost,maintenance,research_order,research_difficulty,bombard_defense,attack,shield
-1,1,42,43,34,139776,1,1,4,4,0,0,5,2000,0
-2,1,42,43,35,139777,1,1,7,7,0,0,4,800,0
-3,1,42,43,36,139778,1,1,12,12,0,0,2,0,40
-4,1,42,43,37,139904,0,1,25,20,3,24,1,0,0
-5,1,42,43,35,139779,1,1,10,4,4,40,3,5000,0
-6,1,42,43,36,139780,1,1,20,7,6,40,3,0,80

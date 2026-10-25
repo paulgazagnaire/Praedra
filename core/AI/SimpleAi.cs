@@ -258,7 +258,7 @@ public sealed partial class SimpleAi
     // ================================================================== helpers
 
     private bool Held(string s) => _h.Fleets.OwnerOf(s) == _side;
-    /// <summary>Was the system destroyed by the harvester? Public to both sides (the galaxy notice "Planet Destroyed"); the AI never targets or counts one. rule: m5-death-star §2 effect 5.</summary>
+    /// <summary>Was the system destroyed by the harvester? Public to both sides (the galaxy notice "Planet Destroyed"); the AI never targets or counts one. rule: m5-harvester §2 effect 5.</summary>
     private bool Destroyed(string s) => _h.Game.State.Harvester.IsDestroyed(s);
     private IEnumerable<string> HeldSystems() => S.SystemOwners.Where(kv => kv.Value == _side).Select(kv => kv.Key); // sorted ordinal
     private int UnratedSpeed => _h.Construction.Params.UnratedDeliverySpeed;
@@ -468,7 +468,7 @@ public sealed partial class SimpleAi
         PlanGarrison();
         PlanInvasionRegiments();
         PlanAgentForceBuild(); // after the regiments: a training yard goes to the garrisons first
-        PlanHarvesterBuild(); // before the ships: it takes its yard and its budget first (m5-death-star §6.1)
+        PlanHarvesterBuild(); // before the ships: it takes its yard and its budget first (m5-harvester §6.1)
         PlanShips();
     }
 
@@ -761,7 +761,7 @@ public sealed partial class SimpleAi
         {
             if (!o.Completed || eco.OwnerOf(o) != _side || o.Category == ObjectCategory.Facility || o.Category == ObjectCategory.SpecialForce) continue;
             int m = Maint(o.Class);
-            bool keep = _p.UseHarvester && IsHarvesterShip(o); // rule: m5-death-star §6.2: scrapped last, after everything else
+            bool keep = _p.UseHarvester && IsHarvesterShip(o); // rule: m5-harvester §6.2: scrapped last, after everything else
             if (m <= 0) continue;
             double use;
             if (o.Category == ObjectCategory.Regiment)

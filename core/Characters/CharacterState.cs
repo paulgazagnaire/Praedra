@@ -3,20 +3,20 @@ using Praedra.Core.Fleets;
 
 namespace Praedra.Core.Characters;
 
-/// <summary>Traced: captured is +0xac bit 0, destroyed is +0x50 bit 3; injured and captured bar posts and missions. rule: m5-characters-and-force §The character object.</summary>
+/// <summary>Traced: captured is +0xac bit 0, destroyed is +0x50 bit 3; injured and captured bar posts and missions. rule: m5-characters-and-talent §The character object.</summary>
 public enum CharacterStatus { Free, Injured, Captured, Dead }
 
-/// <summary>A fleet post (None = a passenger). rule: m5-characters-and-force §Posts.</summary>
+/// <summary>A fleet post (None = a passenger). rule: m5-characters-and-talent §Posts.</summary>
 public enum CharacterPost { None, Admiral, Commander, General }
 
 /// <summary>Any post, for <see cref="PostVacated"/>: the three fleet posts and the system's General.</summary>
 public enum PostKind { Admiral, Commander, General, SystemGeneral }
 
-/// <summary>Talent rank from the effective Talent (display and eligibility only). rule: m5-characters-and-force §Talent (Rank).</summary>
+/// <summary>Talent rank from the effective Talent (display and eligibility only). rule: m5-characters-and-talent §Talent (Rank).</summary>
 public enum TalentRank { Latent, Deviation, Anomaly, Unforecastable }
 
 /// <summary>
-/// Saved runtime state of one character (all in the state hash). rule: m5-characters-and-force §The character object (saved runtime state).
+/// Saved runtime state of one character (all in the state hash). rule: m5-characters-and-talent §The character object (saved runtime state).
 /// <see cref="System"/> is where a free standing character is; for an attached character the location is its fleet's (see
 /// <see cref="CharacterModule.LocationOf"/>), and for a prisoner it is <see cref="HeldAt"/>.
 /// </summary>
@@ -32,7 +32,7 @@ public sealed class CharacterRecord
     /// <summary>
     /// <c>TalentExperience</c> (+0x8e): rolled <c>tlvl + rand(0..tlvlv)</c> when the character has both TalentPotential and
     /// TalentAware (0x4eee60), and raised by the Talent encounter. 0 until then: a talented character has Talent 0 until he is aware. Was <c>TalentBase</c>.
-    /// rule: m5-characters-and-force §Talent (Traced B2e §1, §5).
+    /// rule: m5-characters-and-talent §Talent (Traced B2e §1, §5).
     /// </summary>
     public int TalentExperience { get; set; }
     /// <summary><c>TalentTraining</c> (+0x90), written only by Train Talent. Was <c>TalentAcquired</c>. rule: §Talent (Traced B2e §1).</summary>
@@ -99,13 +99,13 @@ public sealed class CharacterRecord
     public string? HeldAt { get; set; }
     /// <summary>
     /// The fleet a prisoner is held aboard (0 = on the planet <see cref="HeldAt"/>, or with a mission team). A prisoner aboard has no HeldAt: he is
-    /// located where his fleet is and travels with it. rule: m5-characters-and-force §Capture (B2e §3 "Where a new prisoner is held", Work 12; QA-7).
+    /// located where his fleet is and travels with it. rule: m5-characters-and-talent §Capture (B2e §3 "Where a new prisoner is held", Work 12; QA-7).
     /// </summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public int HeldAboard { get; set; }
     /// <summary>
     /// The ship that caught him with no commander aboard (0 = held by the fleet). His escape place is that ship while it stays in his fleet.
-    /// rule: m5-characters-and-force §Escape (B2e §3 "A prisoner held aboard stays aboard"; Q73).
+    /// rule: m5-characters-and-talent §Escape (B2e §3 "A prisoner held aboard stays aboard"; Q73).
     /// </summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public int HeldAboardShip { get; set; }
@@ -118,7 +118,7 @@ public sealed class CharacterRecord
     /// <summary>The fleet an autorouted character joins on arrival (Autoroute step 4; 0 = none). QA-9.</summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public int JoinFleet { get; set; }
-    /// <summary>A lone character's trip, exactly as a fleet's. rule: m5-characters-and-force §Moving a character alone.</summary>
+    /// <summary>A lone character's trip, exactly as a fleet's. rule: m5-characters-and-talent §Moving a character alone.</summary>
     public FleetTransit? Transit { get; set; }
 
     /// <summary>Talent <c>F</c> (+0x8c) = TalentExperience + TalentTraining (0x4eee40). rule: §Talent (Traced B2e §1).</summary>
@@ -131,12 +131,12 @@ public sealed class CharacterRecord
     /// research skills <c>B</c>; combat <c>max(0, B + B * F * pct / 10000 - Injury)</c>; leadership <c>B + B * LeadershipAdjustment / 100</c>.
     /// Integer division; <paramref name="forceSkillPercent"/> is <see cref="CharacterParams.TalentSkillPercent"/> (100 = Classic, bit-identical to
     /// <c>B + B * F / 100</c>). Callers go through <see cref="CharacterModule.EffectiveSkill"/>.
-    /// rule: m5-characters-and-force §Talent (effects; Traced B2e §1: 0x4eecb0, 0x4eecf0, 0x4eed30..0x4eed70, 0x4eed90, 0x4eede0).
+    /// rule: m5-characters-and-talent §Talent (effects; Traced B2e §1: 0x4eecb0, 0x4eecf0, 0x4eed30..0x4eed70, 0x4eed90, 0x4eede0).
     /// </summary>
     public int EffectiveSkill(Skill s, int forceSkillPercent)
     {
         int b = Skills[(int)s], f = EffectiveTalent;
-        // rule: m5-characters-and-force §Talent (New, Paul 2026-10-18; Classic = 100)
+        // rule: m5-characters-and-talent §Talent (New, Paul 2026-10-18; Classic = 100)
         int force = b * f * forceSkillPercent / (PercentDivisor * PercentDivisor);
         return s switch
         {
@@ -161,13 +161,13 @@ public sealed class CharacterRecord
     };
 }
 
-/// <summary>Every character by id and the system General table. Saved and hashed. rule: m5-characters-and-force §The character object.</summary>
+/// <summary>Every character by id and the system General table. Saved and hashed. rule: m5-characters-and-talent §The character object.</summary>
 public sealed class CharacterState
 {
     public SortedDictionary<int, CharacterRecord> Characters { get; init; } = new();
     /// <summary>System name -> character id of its General (one per system). rule: §The character object (SystemGeneral table).</summary>
     public SortedDictionary<string, int> SystemGenerals { get; init; } = new(StringComparer.Ordinal);
-    /// <summary>The last pair id handed out (the game-wide counter of 0x55ff60); 0 = none yet. rule: m5-characters-and-force §Talent (B2e §4).</summary>
+    /// <summary>The last pair id handed out (the game-wide counter of 0x55ff60); 0 = none yet. rule: m5-characters-and-talent §Talent (B2e §4).</summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public int NextPairId { get; set; }
     /// <summary>

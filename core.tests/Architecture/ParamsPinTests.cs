@@ -12,7 +12,7 @@ using Praedra.Core.Travel;
 namespace Praedra.Core.Tests.Architecture;
 
 /// <summary>
-/// Every named GNPRTB / SDPRTB constant in core pinned to the Classic file (data/classic/gnprtb.csv, sdprtb.csv, written by importer/).
+/// Every named GNPRTB / SDPRTB constant in core pinned to the Classic file (data/classic/gnprtb.csv, sdprtb.csv, copied from the Classic files).
 /// rule: B1-own-importer §Tests ("Pin every GNPRTB / SDPRTB number in core to the file"); CLAUDE.md hard rule 6.
 /// </summary>
 public class ParamsPinTests
@@ -56,17 +56,17 @@ public class ParamsPinTests
         yield return ("EconomyParams.DisasterIntervalMin", eco.DisasterIntervalMin, G, 7717, 1);
         yield return ("EconomyParams.DisasterIntervalSpread", eco.DisasterIntervalSpread, G, 7718, 1);
         yield return ("EconomyParams.DisasterDestroyPercent", eco.DisasterDestroyPercent, G, 7716, 1);
-        yield return ("EconomyParams.CorePopulatedPercent", eco.CorePopulatedPercent, G, 7730, 1);
-        yield return ("EconomyParams.RimPopulatedPercent", eco.RimPopulatedPercent, G, 7731, 1);
-        yield return ("EconomyParams.CoreEnergyBase", eco.CoreEnergyBase, G, 7721, 1);
-        yield return ("EconomyParams.CoreEnergySpread", eco.CoreEnergySpread, G, 7722, 1);
-        yield return ("EconomyParams.CoreRawBase", eco.CoreRawBase, G, 7723, 1);
-        yield return ("EconomyParams.CoreRawSpread", eco.CoreRawSpread, G, 7724, 1);
-        yield return ("EconomyParams.RimRawBase", eco.RimRawBase, G, 7728, 1);
-        yield return ("EconomyParams.RimRawSpread", eco.RimRawSpread, G, 7729, 1);
-        yield return ("EconomyParams.RimEnergyBase", eco.RimEnergyBase, G, 7725, 1);
-        yield return ("EconomyParams.RimEnergySpreadA", eco.RimEnergySpreadA, G, 7726, 1);
-        yield return ("EconomyParams.RimEnergySpreadB", eco.RimEnergySpreadB, G, 7727, 1);
+        yield return ("EconomyParams.HeartlandPopulatedPercent", eco.HeartlandPopulatedPercent, G, 7730, 1);
+        yield return ("EconomyParams.ReachPopulatedPercent", eco.ReachPopulatedPercent, G, 7731, 1);
+        yield return ("EconomyParams.HeartlandEnergyBase", eco.HeartlandEnergyBase, G, 7721, 1);
+        yield return ("EconomyParams.HeartlandEnergySpread", eco.HeartlandEnergySpread, G, 7722, 1);
+        yield return ("EconomyParams.HeartlandRawBase", eco.HeartlandRawBase, G, 7723, 1);
+        yield return ("EconomyParams.HeartlandRawSpread", eco.HeartlandRawSpread, G, 7724, 1);
+        yield return ("EconomyParams.ReachRawBase", eco.ReachRawBase, G, 7728, 1);
+        yield return ("EconomyParams.ReachRawSpread", eco.ReachRawSpread, G, 7729, 1);
+        yield return ("EconomyParams.ReachEnergyBase", eco.ReachEnergyBase, G, 7725, 1);
+        yield return ("EconomyParams.ReachEnergySpreadA", eco.ReachEnergySpreadA, G, 7726, 1);
+        yield return ("EconomyParams.ReachEnergySpreadB", eco.ReachEnergySpreadB, G, 7727, 1);
         yield return ("EconomyParams.ScrapPeriod", eco.ScrapPeriod, G, 7168, 1);
         // m2 support and garrison
         yield return ("SupportParams.HarvesterDampingDivisor", sup.HarvesterDampingDivisor, G, 7681, 1);
@@ -121,7 +121,7 @@ public class ParamsPinTests
         yield return ("HqParams.DepartureFighterWeight", hq.DepartureFighterWeight, G, 7685, 1);
         yield return ("HqParams.ArrivalSupportDelta", hq.ArrivalSupportDelta, G, 5127, 1);
         // m5 setup (Anchored deal)
-        yield return ("DealParams.NeutralCoreSpread", deal.NeutralCoreSpread, G, 7764, 1);
+        yield return ("DealParams.NeutralHeartlandSpread", deal.NeutralHeartlandSpread, G, 7764, 1);
         yield return ("DealParams.StrongBase", deal.StrongBase, S, 0x1e02, 1);
         yield return ("DealParams.BandSpread (0x1e03)", deal.BandSpread, S, 0x1e03, 1);
         yield return ("DealParams.WeakBase", deal.WeakBase, S, 0x1e04, 1);
@@ -131,7 +131,7 @@ public class ParamsPinTests
         yield return ("MissionParams.SensedMinTalent", mis.SensedMinTalent, G, 3585, 1);
         yield return ("MissionParams.SenserMinTalent", mis.SenserMinTalent, G, 3586, 1);
         yield return ("MissionParams.SenseConstant", mis.SenseConstant, G, 3587, 1);
-        // m5-characters-and-force §Loyalty and betrayal (B2c)
+        // m5-characters-and-talent §Loyalty and betrayal (B2c)
         yield return ("CharacterParams.LossShiftDivisor", ch.LossShiftDivisor, S, 2560, 1);
         yield return ("CharacterParams.CaptureShiftSpread", ch.CaptureShiftSpread, S, 2561, 1);
         yield return ("CharacterParams.CaptureShiftBase", ch.CaptureShiftBase, S, 2562, 1);

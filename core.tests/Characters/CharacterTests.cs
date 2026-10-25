@@ -8,12 +8,12 @@ using static Praedra.Core.Tests.Characters.CharWorld;
 
 namespace Praedra.Core.Tests.Characters;
 
-/// <summary>The tests of m5-characters-and-force §Tests (CH1 to CH34), plus the switch defaults.</summary>
+/// <summary>The tests of m5-characters-and-talent §Tests (CH1 to CH34), plus the switch defaults.</summary>
 public class CharacterTests
 {
     // ------------------------------------------------------------------ stats (§Rolling the stats)
 
-    // m5-characters-and-force CH1
+    // m5-characters-and-talent CH1
     [Fact]
     public void CH1_KethCreationDrawsInOrder()
     {
@@ -34,7 +34,7 @@ public class CharacterTests
         Assert.Equal(6, stub2.Requests.Count);
     }
 
-    // m5-characters-and-force CH2
+    // m5-characters-and-talent CH2
     [Fact]
     public void CH2_MajorsCostNoDraws()
     {
@@ -59,7 +59,7 @@ public class CharacterTests
         return (w, t, s);
     }
 
-    // m5-characters-and-force CH3 (the Classic roll: Classic values set explicitly, CH37)
+    // m5-characters-and-talent CH3 (the Classic roll: Classic values set explicitly, CH37)
     [Fact]
     public void CH3_RavillaTrainsAStudentOfTwenty()
     {
@@ -72,7 +72,7 @@ public class CharacterTests
         Assert.Equal(57, s.EffectiveTalent);
     }
 
-    // m5-characters-and-force CH4 (the Classic roll: Classic values set explicitly, CH37)
+    // m5-characters-and-talent CH4 (the Classic roll: Classic values set explicitly, CH37)
     [Fact]
     public void CH4_NobodyTrainsLedger()
     {
@@ -89,7 +89,7 @@ public class CharacterTests
         Assert.Equal(new[] { (0, 99) }, w.Stub.Requests.Skip(before).Select(r => (r.Min, r.Max)));
     }
 
-    // m5-characters-and-force CH5 (the Classic roll: Classic values set explicitly; under New a gap of 1 has chance 1 * 50 / 100 = 0)
+    // m5-characters-and-talent CH5 (the Classic roll: Classic values set explicitly; under New a gap of 1 has chance 1 * 50 / 100 = 0)
     [Fact]
     public void CH5_EqualOrHigherStudentsNeverSucceed_GapOneGainsZero()
     {
@@ -107,7 +107,7 @@ public class CharacterTests
         Assert.Equal((0, 0), (w.Stub.Requests[^1].Min, w.Stub.Requests[^1].Max)); // g = rand(0..0) is drawn
     }
 
-    // m5-characters-and-force CH6
+    // m5-characters-and-talent CH6
     [Fact]
     public void CH6_NoStudentReachesTheTrainer()
     {
@@ -127,7 +127,7 @@ public class CharacterTests
         Assert.True(s.EffectiveTalent > 10);
     }
 
-    // m5-characters-and-force CH35: New TalentSkillPercent 40 (DEFAULT): base 100, Talent 120 gives 148; Nobody (Talent 50) diplomacy 50 → 60,
+    // m5-characters-and-talent CH35: New TalentSkillPercent 40 (DEFAULT): base 100, Talent 120 gives 148; Nobody (Talent 50) diplomacy 50 → 60,
     // espionage 50 → 60, combat 90 → 108, with 40 injury 68; research skills and leadership unchanged
     [Fact]
     public void CH35_NewTalentSkillPercentForty()
@@ -146,7 +146,7 @@ public class CharacterTests
         Assert.Equal(68, w.Ch.EffectiveSkill(nobody, Skill.Combat));
     }
 
-    // m5-characters-and-force CH36: New training (chance percent 50, gain percent 25, DEFAULT): Ravilla 120, student 20 (gap 100): chance 50,
+    // m5-characters-and-talent CH36: New training (chance percent 50, gain percent 25, DEFAULT): Ravilla 120, student 20 (gap 100): chance 50,
     // r = 49 succeeds, g = rand(0..25), g = 25 → 45; r = 50 fails with no g draw. Nobody 50, Ledger 10 (gap 40): chance 20, r = 19 succeeds, max gain 10
     [Fact]
     public void CH36_NewTrainingChanceAndGain()
@@ -177,7 +177,7 @@ public class CharacterTests
         Assert.False(w2.Events<TalentTrainingResult>().Last().Success);
     }
 
-    // m5-characters-and-force CH37: the Classic values (100 / 100 / 50) reproduce CH3 and CH4 (those tests run with them) and B2e-1/B2e-2, and the
+    // m5-characters-and-talent CH37: the Classic values (100 / 100 / 50) reproduce CH3 and CH4 (those tests run with them) and B2e-1/B2e-2, and the
     // skill formula with percent 100 equals B + B * F / 100 for every base 0..120 and Talent 0..200 (bit-identical Classic)
     [Fact]
     public void CH37_ClassicValuesReproduceTheClassicTalent()
@@ -197,7 +197,7 @@ public class CharacterTests
         CH4_NobodyTrainsLedger();
     }
 
-    // m5-characters-and-force CH7
+    // m5-characters-and-talent CH7
     [Theory]
     [InlineData(0, TalentRank.Latent), InlineData(1, TalentRank.Deviation), InlineData(79, TalentRank.Deviation), InlineData(80, TalentRank.Anomaly)]
     [InlineData(99, TalentRank.Anomaly), InlineData(100, TalentRank.Unforecastable), InlineData(150, TalentRank.Unforecastable)]
@@ -210,7 +210,7 @@ public class CharacterTests
 
     // ------------------------------------------------------------------ posts and the leadership hooks (§Posts)
 
-    // m5-characters-and-force CH8
+    // m5-characters-and-talent CH8
     [Fact]
     public void CH8_AdmiralMultipliesBombardment_UntilInjured()
     {
@@ -239,7 +239,7 @@ public class CharacterTests
         Assert.Equal(Shoal, w.Ch.LocationOf(ack));
     }
 
-    // m5-characters-and-force CH9
+    // m5-characters-and-talent CH9
     [Fact]
     public void CH9_MidwifeAsFleetGeneralIsTheAssaultPlusOneRow()
     {
@@ -255,7 +255,7 @@ public class CharacterTests
             Assert.Equal(roll + 1, a.DuelValue(roll, 3, 5, lAtt, lDef));
     }
 
-    // m5-characters-and-force CH10
+    // m5-characters-and-talent CH10
     [Fact]
     public void CH10_SystemGeneralLeadsTheDefenders()
     {
@@ -271,7 +271,7 @@ public class CharacterTests
             Assert.Equal(steps, a.LeadershipSteps(l));
     }
 
-    // m5-characters-and-force CH11
+    // m5-characters-and-talent CH11
     [Fact]
     public void CH11_AttachRejections_OtiAsPassenger()
     {
@@ -317,7 +317,7 @@ public class CharacterTests
         foreach (var id in new[] { Wake, Petrenko, OldDebt, FortyOne }) Assert.Equal(0, w.C(id).AttachedFleet);
     }
 
-    // m5-characters-and-force CH12
+    // m5-characters-and-talent CH12
     [Fact]
     public void CH12_CapturedGeneralInFlight_SpeedFixedAtOrderTime()
     {
@@ -345,7 +345,7 @@ public class CharacterTests
 
     private static GameData LineGalaxy(string kind)
     {
-        var planets = "name,sector,group,map_x,map_y\nA,S,core,0,0\nB,S,core,500,0\nC,S,core,1000,0\n";
+        var planets = "name,sector,group,map_x,map_y\nA,S,heartland,0,0\nB,S,heartland,500,0\nC,S,heartland,1000,0\n";
         string routes = kind == "route" ? "Test Run" : "";
         var lanes = $"from,to,kind,routes\nA,B,{kind},{routes}\nB,C,{kind},{routes}\n";
         var g = GalaxyLoader.Load(planets, lanes, TestData.Tiers);
@@ -353,7 +353,7 @@ public class CharacterTests
         return GameData.Default with { Galaxy = g, Slots = SlotValues.Parse(slots, g) };
     }
 
-    // m5-characters-and-force CH13
+    // m5-characters-and-talent CH13
     [Theory]
     [InlineData("generated", 100)]
     [InlineData("route", 33)]
@@ -371,7 +371,7 @@ public class CharacterTests
         Assert.Equal("B", w.Ch.LocationOf(w.C(FortyOne)));
     }
 
-    // m5-characters-and-force CH13 (not stopped on the way)
+    // m5-characters-and-talent CH13 (not stopped on the way)
     [Fact]
     public void CH13_NotStoppedByAnEnemyFleet()
     {
@@ -385,7 +385,7 @@ public class CharacterTests
         Assert.Equal(CharacterStatus.Free, w.C(FortyOne).Status);
     }
 
-    // m5-characters-and-force CH14
+    // m5-characters-and-talent CH14
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -422,7 +422,7 @@ public class CharacterTests
         return (w, w.Game.State.Fleets[f]);
     }
 
-    // m5-characters-and-force CH15
+    // m5-characters-and-talent CH15
     [Fact]
     public void CH15_MidwifeHalvesTheTrip()
     {
@@ -432,7 +432,7 @@ public class CharacterTests
         Assert.Equal(40, w.Host.Fleets.SpeedAdjust!(f, 80)); // the fleet module reads the character hook at MoveFleet acceptance
     }
 
-    // m5-characters-and-force CH16
+    // m5-characters-and-talent CH16
     [Fact]
     public void CH16_BestSingleNavigator()
     {
@@ -441,7 +441,7 @@ public class CharacterTests
         Assert.Equal(80, Nav(true) is var (w3, f3) ? w3.Ch.NavigatorAdjust(f3, 80) : 0);
     }
 
-    // m5-characters-and-force CH17
+    // m5-characters-and-talent CH17
     [Fact]
     public void CH17_FloorOnlyWithANavigator()
     {
@@ -451,7 +451,7 @@ public class CharacterTests
         Assert.Equal(20, w2.Ch.NavigatorAdjust(f2, 20));
     }
 
-    // m5-characters-and-force CH18
+    // m5-characters-and-talent CH18
     [Fact]
     public void CH18_NoBonusInClassicOrFromANonFreeNavigator()
     {
@@ -467,7 +467,7 @@ public class CharacterTests
 
     // ------------------------------------------------------------------ the harvester (§The harvester's roll on characters)
 
-    // m5-characters-and-force CH19
+    // m5-characters-and-talent CH19
     [Fact]
     public void CH19_HarvesterRollOnMinors()
     {
@@ -475,7 +475,7 @@ public class CharacterTests
         w.Add(Sobel, Thaw); w.Add(DayAfter, Thaw); var c = w.Add(Tura, Shoal); w.Add(Ravilla, Thaw);
         w.StepWith("5.1", ctx => w.Ch.Capture(ctx, c, Side.Hand, Thaw, CharacterCause.Debug));
         int before = w.Stub!.Requests.Count, ev = w.Game.Events.Count;
-        // The die is rand(1..100), hit at 50 or less (m5-death-star §2 effect 3); the same chance as the characters sheet's rand(0..99) < 50, shifted by one: 50 hits, 51 misses, 11 hits.
+        // The die is rand(1..100), hit at 50 or less (m5-harvester §2 effect 3); the same chance as the characters sheet's rand(0..99) < 50, shifted by one: 50 hits, 51 misses, 11 hits.
         w.Stub.Expect(1, 100, 50, 51, 11);
         w.StepWith("5.1", ctx => w.Ch.HarvesterStrike(ctx, Thaw, Side.Hand));
         // B2e moved: the hit on a free minor is the Hurt roll (unqueued draws answer 0: hit, sizes 0 and 0, then the minor's death draw 0 < 25),
@@ -492,7 +492,7 @@ public class CharacterTests
 
     // ------------------------------------------------------------------ the state machine (§Capture, injury, death, freeing)
 
-    // m5-characters-and-force CH20
+    // m5-characters-and-talent CH20
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -518,7 +518,7 @@ public class CharacterTests
         }
     }
 
-    // m5-characters-and-force CH21
+    // m5-characters-and-talent CH21
     [Fact]
     public void CH21_CaptureNobody()
     {
@@ -543,7 +543,7 @@ public class CharacterTests
         Assert.Equal(CharacterStatus.Free, ledger.Status);
     }
 
-    // m5-characters-and-force CH22 (B2e moved: Injure is the Hurt roll on a Free or Injured character; never a captured or dead one)
+    // m5-characters-and-talent CH22 (B2e moved: Injure is the Hurt roll on a Free or Injured character; never a captured or dead one)
     [Fact]
     public void CH22_InjureNotACapturedOrDeadCharacter()
     {
@@ -559,7 +559,7 @@ public class CharacterTests
         Assert.Equal(midwife.Id, Assert.Single(w.Game.Events.Skip(ev).OfType<CharacterInjured>()).Character);
     }
 
-    // m5-characters-and-force CH23 (B2e moved: an injury lasts until its points heal, 1 a day on a planet his side holds)
+    // m5-characters-and-talent CH23 (B2e moved: an injury lasts until its points heal, 1 a day on a planet his side holds)
     [Fact]
     public void CH23_InjuryHealsAtSlot610()
     {
@@ -574,7 +574,7 @@ public class CharacterTests
         Assert.Single(w.Events<CharacterHealed>());
     }
 
-    // m5-characters-and-force CH24 (B2e moved: CaptiveEscape is on by default; off makes no timer and no draw)
+    // m5-characters-and-talent CH24 (B2e moved: CaptiveEscape is on by default; off makes no timer and no draw)
     [Fact]
     public void CH24_NoEscapeDrawsWhenOff_OneDelayDrawWhenOn()
     {
@@ -592,7 +592,7 @@ public class CharacterTests
         Assert.Equal(0 + 100 + 400, l2.NextEscapeDay);
     }
 
-    // m5-characters-and-force CH25 (B2e moved: the input is Traced; a test table (-50, 1), (50, 30); Nobody alone: x = 135 + 75 = 210)
+    // m5-characters-and-talent CH25 (B2e moved: the input is Traced; a test table (-50, 1), (50, 30); Nobody alone: x = 135 + 75 = 210)
     [Theory]
     [InlineData(29, true), InlineData(30, false)]
     public void CH25_EscapeWithATestTable(int r, bool freed)
@@ -611,7 +611,7 @@ public class CharacterTests
 
     // ------------------------------------------------------------------ other sheets' effects
 
-    // m5-characters-and-force CH26
+    // m5-characters-and-talent CH26
     [Fact]
     public void CH26_UprisingInjuresOneFreeCharacterOfTheHolder()
     {
@@ -637,7 +637,7 @@ public class CharacterTests
         Assert.Empty(w2.Stub!.Requests);
     }
 
-    // m5-characters-and-force CH27
+    // m5-characters-and-talent CH27
     [Fact]
     public void CH27_UprisingFreesPrisoners()
     {
@@ -662,7 +662,7 @@ public class CharacterTests
         Assert.Equal(2, w5.Events<CharacterFreed>().Count);
     }
 
-    // m5-characters-and-force CH28
+    // m5-characters-and-talent CH28
     [Fact]
     public void CH28_HolderChangeClearsTheOldGeneral()
     {
@@ -685,7 +685,7 @@ public class CharacterTests
         Assert.Equal(CharacterReject.NotAtSystem, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Hand, Varo, Thaw)));
     }
 
-    // m5-characters-and-force CH29
+    // m5-characters-and-talent CH29
     [Fact]
     public void CH29_MergeKeepsTheReceivingAdmiral()
     {
@@ -700,7 +700,7 @@ public class CharacterTests
         Assert.Equal(CharacterCause.Merged, Assert.Single(w.Events<PostVacated>()).Cause);
     }
 
-    // m5-characters-and-force CH30
+    // m5-characters-and-talent CH30
     [Fact]
     public void CH30_DestroyedFleetLeavesItsRidersFree()
     {
@@ -719,7 +719,7 @@ public class CharacterTests
         Assert.All(w.Events<CharacterDetached>(), e => Assert.Equal(CharacterCause.FleetDissolved, e.Cause));
     }
 
-    // m5-characters-and-force CH31
+    // m5-characters-and-talent CH31
     [Fact]
     public void CH31_MissingRulesAreRefused()
     {
@@ -733,7 +733,7 @@ public class CharacterTests
             Assert.Equal(rule, Assert.Throws<RuleMissingException>(() => GameHost.New(1, new GameSettings { Characters = p })).Rule);
     }
 
-    // m5-characters-and-force CH31 (play leaves loyalty untouched: ShiftLoyalty has no caller yet, so nobody betrays). B2b: betrayal exists now
+    // m5-characters-and-talent CH31 (play leaves loyalty untouched: ShiftLoyalty has no caller yet, so nobody betrays). B2b: betrayal exists now
     // (the rolls run at chance 0), so the old "no betrayal type" check is gone; B2b QA Q16.
     [Fact]
     public void CH31_LoyaltyNeverMoves()
@@ -745,7 +745,7 @@ public class CharacterTests
         Assert.Empty(h.Game.Events.OfType<LoyaltyChanged>());
     }
 
-    // m5-characters-and-force CH32
+    // m5-characters-and-talent CH32
     [Fact]
     public void CH32_AddedHeroLimits()
     {
@@ -758,7 +758,7 @@ public class CharacterTests
         Assert.DoesNotContain(v, x => x.Rule is 1 or 3 or 4 or 7);
     }
 
-    // m5-characters-and-force CH33
+    // m5-characters-and-talent CH33
     [Fact]
     public void CH33_SaveLoadReplayIsIdentical()
     {
@@ -792,7 +792,7 @@ public class CharacterTests
         h.Game.Submit(seq => new MoveCharacterOrder(seq, Side.Hand, Ravilla, "Charter"));
     }
 
-    // m5-characters-and-force CH34
+    // m5-characters-and-talent CH34
     [Fact]
     public void CH34_NoDetachInTransit()
     {
@@ -807,7 +807,7 @@ public class CharacterTests
 
     // ------------------------------------------------------------------ other orders, defaults
 
-    // m5-characters-and-force §Posts (Orders): DetachCharacter, ReleaseSystemGeneral, AssignSystemGeneral and MoveCharacter rejections
+    // m5-characters-and-talent §Posts (Orders): DetachCharacter, ReleaseSystemGeneral, AssignSystemGeneral and MoveCharacter rejections
     [Fact]
     public void Orders_OtherRejections()
     {
@@ -840,7 +840,7 @@ public class CharacterTests
         Assert.Equal(CharacterReject.NotFree, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Sobel, Thaw)));
     }
 
-    // m5-characters-and-force §Defaults for undecided items: GameSettings null = the module's defaults, each the sheet's DEFAULT
+    // m5-characters-and-talent §Defaults for undecided items: GameSettings null = the module's defaults, each the sheet's DEFAULT
     [Fact]
     public void Defaults_AreTheSheetDefaults()
     {
@@ -855,11 +855,11 @@ public class CharacterTests
         Assert.Equal(TalentDiscoveryMode.Trainer, p.TalentDiscovery); Assert.False(p.TalentGrowth); Assert.False(p.SkillGrowth); // B2e: trainers awaken talented characters
         Assert.False(p.TrainerNeedsAnomaly); Assert.Equal(1, p.TalentDeviationMin); Assert.Equal(80, p.TalentAnomalyMin); Assert.Equal(100, p.TalentUnforecastableMin);
         Assert.False(p.NavigatorBonus); Assert.Equal(25, p.NavigatorFloor); Assert.Equal(50, p.HarvesterHitPercent); Assert.Equal(25, p.TalentTrainingGainPercent);
-        Assert.Equal(40, p.TalentSkillPercent); Assert.Equal(50, p.TalentTrainingChancePercent); // m5-characters-and-force §Talent (New, Paul 2026-10-18)
+        Assert.Equal(40, p.TalentSkillPercent); Assert.Equal(50, p.TalentTrainingChancePercent); // m5-characters-and-talent §Talent (New, Paul 2026-10-18)
         Assert.Equal(100, p.CharacterSpeed); Assert.Equal(4, p.StartExtrasPerSide); Assert.Equal(StartCastOfficers.Classic, p.StartCastOfficers);
     }
 
-    // m5-characters-and-force §Where it runs: slot 6.10 sits after research (6.9) and before victory (6.11)
+    // m5-characters-and-talent §Where it runs: slot 6.10 sits after research (6.9) and before victory (6.11)
     [Fact]
     public void Slot610_BetweenResearchAndVictory()
     {
@@ -868,7 +868,7 @@ public class CharacterTests
         Assert.Equal(list.IndexOf("6.10") + 1, list.IndexOf("6.11"));
     }
 
-    // m5-characters-and-force §Talent (Eligibility, Talent discovery)
+    // m5-characters-and-talent §Talent (Eligibility, Talent discovery)
     [Fact]
     public void TrainingEligibility_AndStoryDiscovery()
     {

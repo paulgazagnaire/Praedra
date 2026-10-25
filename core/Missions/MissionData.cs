@@ -19,7 +19,7 @@ public enum MissionKind
 }
 
 /// <summary>
-/// One MISSNSD row (data/classic/mission-records.csv, read from the Classic file by importer/) plus its Foilable flag (data/design/mission-foilable.csv,
+/// One MISSNSD row (data/classic/mission-records.csv, copied from the Classic file) plus its Foilable flag (data/design/mission-foilable.csv,
 /// the sheet's DEFAULT fall-back table). Timer = <c>TimerMin + rand(0..TimerSpread)</c> days. rule: m5-missions §Mission records (data), §3 (Foilable).
 /// </summary>
 /// <remarks>
@@ -65,10 +65,10 @@ public sealed record MissionNumbers(
 }
 
 /// <summary>
-/// Every mission data file, read once and immutable: the MISSNSD records, the Foilable fall-back, the ten *MSTB tables and FOILTB (every row, read
-/// from the Classic files by importer/), the numbers, and the decoy table (FDECOYTB; the importer checks that TDECOYTB is identical). Data without a
+/// Every mission data file, read once and immutable: the MISSNSD records, the Foilable fall-back, the ten *MSTB tables and FOILTB (every row, copied
+/// from the Classic files), the numbers, and the decoy table (FDECOYTB; TDECOYTB was identical). Data without a
 /// decoy table (<see cref="DecoyTable"/> null) refuses a decoy <c>RuleMissing</c>. rule: m5-missions §Mission records, §Mission tables, §3;
-/// B1-own-importer §Work 4 (Missing rules 1 and 2 are filled by the importer).
+/// B1-own-importer §Work 4 (Missing rules 1 and 2 were filled when the files were copied).
 /// </summary>
 public sealed class MissionData
 {
@@ -77,7 +77,7 @@ public sealed class MissionData
     public const string FoilTable = "FOILTB";
     /// <summary>The escape-duel table (B2d §5). rule: m5-missions §4.</summary>
     public const string EvadeTable = "RLEVADTB";
-    /// <summary>ESCAPETB, the prisoner's escape chance (B2e §3 step 5). rule: m5-characters-and-force §Escape.</summary>
+    /// <summary>ESCAPETB, the prisoner's escape chance (B2e §3 step 5). rule: m5-characters-and-talent §Escape.</summary>
     public const string EscapeTableName = "ESCAPETB";
     /// <summary>The decoy table's name in mission-tables.csv (FDECOYTB and TDECOYTB are byte-identical: one table). rule: B1-own-importer §Work 1, 4.</summary>
     public const string DecoyTableName = "FDECOYTB";
@@ -121,7 +121,7 @@ public sealed class MissionData
     public IReadOnlyCollection<MissionRecord> Records => _records.Values;
     /// <summary>RLEVADTB, the escape duel's table; null when the data has none (the duel is then refused RuleMissing). rule: m5-missions §4 (B2d §5).</summary>
     public IReadOnlyList<TableRow>? Evade => _tables.TryGetValue(EvadeTable, out var t) ? t : null;
-    /// <summary>ESCAPETB (B2e §3); null when the data has none (an escape attempt is then refused RuleMissing). rule: m5-characters-and-force §Escape.</summary>
+    /// <summary>ESCAPETB (B2e §3); null when the data has none (an escape attempt is then refused RuleMissing). rule: m5-characters-and-talent §Escape.</summary>
     public IReadOnlyList<TableRow>? Escape => _tables.TryGetValue(EscapeTableName, out var t) ? t : null;
     public bool TryGet(MissionKind kind, out MissionRecord record) => _records.TryGetValue(kind, out record!);
     public MissionRecord Get(MissionKind kind) => _records.TryGetValue(kind, out var r) ? r : throw new KeyNotFoundException($"No mission record {kind}.");

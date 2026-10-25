@@ -1,556 +1,556 @@
 name,sector,group,energy,raw,populated,basis,why
-Rio Lodo,Rio Lodo Sector,outer_rim,6,4,1,region,
-Mercado Alto,Lenitas Sector,inner_rim,12,9,1,formula,
-Feldspar,Feldspar Sector,inner_rim,12,9,1,formula,
-Solheim,Laterite Sector,outer_rim,6,4,1,formula,
-Shirakaba,Fallout Sector,outer_rim,6,4,1,region,
-Sunscald,Ciénaga Sector,outer_rim,6,3,1,keyword,agricultural
-Isfjell,Ilanga Sector,outer_rim,6,4,1,formula,
-Marl,Mechane Sector,inner_rim,6,3,1,formula,
-Bauxite IV,Bauxite IV Sector,outer_rim,6,4,1,formula,
-Hundred Lakes,Hundred Lakes Sector,outer_rim,6,4,1,formula,
-Cairnfell,Mata Alta Sector,outer_rim,6,4,1,region,
-Mesa Roja,Fairhaven Sector,outer_rim,8,5,1,formula,
-Semeion,Semeion Sector,inner_rim,8,5,1,formula,
-Caza Real,Caza Real Sector,inner_rim,6,4,1,formula,
-Ninegates,Lesnaya Sector,inner_rim,8,5,1,formula,
-Hard Winter,Longwire Sector,outer_rim,6,4,1,formula,
-Ilanga,Ilanga Sector,outer_rim,6,5,1,keyword,mining
-Vinculum,Vinculum Sector,inner_rim,8,5,1,formula,
-Paydirt,Longtide Sector,inner_rim,10,7,1,formula,
-Shelter,Shelter Sector,outer_rim,6,4,1,formula,
-Fusoria,Dunmere Sector,outer_rim,12,9,1,formula,
-Skylark,Caminus Sector,outer_rim,6,4,1,formula,
-Halite,Bauxite IV Sector,outer_rim,8,5,1,formula,
-Ferrymoor,Drift Harbour Sector,outer_rim,6,4,1,formula,
-Rustwell,Thaw Sector,outer_rim,6,4,1,formula,
-Ulaan Tal,Ulaan Tal Sector,outer_rim,8,5,1,formula,
-Uzun Su,Mechane Sector,inner_rim,10,7,1,keyword,billions of people
-Sankt Odile,Semeion Sector,inner_rim,6,4,1,region,
-Ashfall,Ashfall Sector,inner_rim,8,5,1,formula,
-Isbrand,Vinculum Sector,inner_rim,10,7,1,formula,
-Signum,Solacia Sector,outer_rim,6,4,1,formula,
-Dry Reef,Lantern Sector,outer_rim,6,4,1,formula,
-Three Lamps,Three Lamps Sector,inner_rim,6,4,1,formula,
-Highfall,Highfall Sector,outer_rim,6,5,1,keyword,mining
-Kaolin,Three Lamps Sector,inner_rim,6,3,1,formula,
-Halvmark,Laterite Sector,outer_rim,6,4,1,region,
-Hollenvale,Thaw Sector,outer_rim,7,6,1,lore,colony world [Wookieepedia-adjusted]
-Tarrow,Tarrow Sector,core,12,11,1,formula,
-Tormentum,Tormentum Sector,inner_rim,12,7,1,lore,arms-manufacturing world
-Lowmarket,Bosque Alto Sector,inner_rim,12,11,1,formula,
-Salitre,Salitre Sector,outer_rim,6,4,1,formula,
-Scaldwell,Fallout Sector,outer_rim,8,7,1,keyword,billions of people; mining
-Quieta,Quieta Sector,inner_rim,12,9,1,formula,
-Lunaria,Ciénaga Sector,outer_rim,6,4,1,region,
-Permit Hill,Moorings Sector,outer_rim,6,4,1,region,
-Scoria,Charter Sector,core,12,11,1,formula,
-Tessera,Mirabel Sector,inner_rim,11,8,1,formula,
-Oldwatch,Fyrholm Sector,outer_rim,6,4,1,formula,
-Los Pozos,Ulaan Tal Sector,outer_rim,6,4,1,formula,
-Port Isolde,Mata Alta Sector,outer_rim,8,5,1,keyword,billions of people
-Nowhere,Zlatna Sector,outer_rim,6,4,1,region,
-Varmdal,Varmdal Sector,outer_rim,6,4,1,formula,
-Grimwall,Ulaan Tal Sector,outer_rim,8,5,1,region,
-Cristalina,Caza Real Sector,inner_rim,10,7,1,formula,
-Grimsholt,Thaw Sector,outer_rim,8,5,1,keyword,billions of people; mining; agricultural
-Drift Harbour,Drift Harbour Sector,outer_rim,8,5,1,lore,"Cloud City, tibanna gas"
-Delicia,Incus Sector,inner_rim,10,7,1,formula,
-Ferraria,Ferraria Sector,inner_rim,11,6,1,lore,"Hand shipyard, Inner Rim fleet base"
-Vinograd,Vinograd Sector,inner_rim,8,5,1,formula,
-Port Sorrel,Tormentum Sector,inner_rim,10,7,1,formula,
-Amoena,Lagoa Funda Sector,inner_rim,9,6,1,region,
-Steeplewater,Vinculum Sector,inner_rim,10,7,1,formula,
-Murkhaven,Cohors Sector,outer_rim,6,4,1,formula,
-Junkhold,Altofen Sector,inner_rim,6,4,1,region,
-Side Gate,Shelter Sector,outer_rim,9,6,1,formula,
-Excubia,Excubia Sector,core,12,11,1,formula,
-Shingle,Semeion Sector,inner_rim,8,5,1,region,
-Las Presas,Caminus Sector,outer_rim,6,4,1,formula,
-Partus,Clearholm Sector,outer_rim,9,6,1,keyword,billions of people; yards/academy
-Akousma,Akousma Sector,inner_rim,8,3,1,lore,information broker world
-Alumen,Ommata Sector,core,12,9,1,region,
-Gemelos,Three Lamps Sector,inner_rim,6,4,1,formula,
-Hulkfield,Vinograd Sector,inner_rim,8,5,1,formula,
-Cambium,Castra Sector,core,14,8,1,keyword,billions of people; agricultural
-Commonhold,Dunmere Sector,outer_rim,8,5,1,region,
-Grauburg,Classis Sector,inner_rim,12,9,1,formula,
-Mirabel,Mirabel Sector,inner_rim,14,13,1,formula,
-Isvik,Cohors Sector,outer_rim,6,4,1,region,
-Rosvik,Charter Sector,core,12,7,1,keyword,agricultural
-Gypsum Minor,Lesnaya Sector,inner_rim,11,8,1,region,
-Wadi Sabr,Cohors Sector,outer_rim,6,4,1,formula,
-Serra Alta,Tarrow Sector,core,12,11,1,formula,
-Malleus,Lenitas Sector,inner_rim,12,9,1,region,
-Marga,Dunmere Sector,outer_rim,6,4,1,formula,
-Custodia,Ferraria Sector,inner_rim,11,10,1,formula,
-Bluesand,Semeion Sector,inner_rim,5,3,1,keyword,harsh climate
-Limonite III,Caza Real Sector,inner_rim,12,11,1,keyword,yards/academy; mining
-Umoya,Highfall Sector,outer_rim,6,4,1,formula,
-Mechane,Mechane Sector,inner_rim,10,5,1,lore,Neimoidian trade world
-Bread Street,Bauxite IV Sector,outer_rim,6,3,1,keyword,agricultural
-Bosque Alto,Bosque Alto Sector,inner_rim,8,5,1,formula,
-Sierra Seca,Semeion Sector,inner_rim,8,5,1,region,
-Warmwell,Quieta Sector,inner_rim,8,5,1,formula,
-Nacar,Vinculum Sector,inner_rim,12,8,1,keyword,billions of people
-Belle Rive,Ilanga Sector,outer_rim,6,4,1,region,
-Lenitas,Lenitas Sector,inner_rim,8,3,1,lore,"wealthy Core world, Mae Abara [Wookieepedia-adjusted]"
-Natalis,Feldspar Sector,inner_rim,11,8,1,keyword,yards/academy
-Sevenwells,Tarrow Sector,core,12,11,1,formula,
-Tinplate,Vinograd Sector,inner_rim,8,5,1,region,
-Nueva Pradera,Caza Real Sector,inner_rim,10,7,1,formula,
-Meridian,Solacia Sector,outer_rim,6,4,1,formula,
-Thesauros,Thesauros Sector,outer_rim,6,3,1,formula,
-Penhallow,Lagoa Funda Sector,inner_rim,9,6,1,region,
-Spindle,Ciénaga Sector,outer_rim,6,3,1,region,
-Old Bench,Mata Alta Sector,outer_rim,6,4,1,region,
-Opsis,Kranholm Sector,outer_rim,6,4,1,formula,
-Porphyry,Mechane Sector,inner_rim,11,10,1,formula,
-Sedova,Tormentum Sector,inner_rim,10,7,1,formula,
-Benigna,Dunmere Sector,outer_rim,9,6,1,formula,
-Puerto Hierro,Three Lamps Sector,inner_rim,11,9,1,keyword,billions of people; yards/academy; mining
-Classis,Classis Sector,inner_rim,14,7,1,lore,Corellian Engineering Corporation; heavy industry
-Magnetite III,Ommata Sector,core,12,11,1,formula,
-Waymeet,Caza Real Sector,inner_rim,9,6,1,formula,
-Deadfall,Bauxite IV Sector,outer_rim,6,4,1,formula,
-Tutela,Lenitas Sector,inner_rim,10,4,1,lore,Hand academy world; Sienar and Aether Hypernautics research
-Charter,Charter Sector,core,15,4,1,lore,"ecumenopolis, capital; almost no ore of its own"
-Riftwood,Moorings Sector,outer_rim,6,4,1,formula,
-Pyrite,Charter Sector,core,12,9,1,region,
-Bellwether,Bellwether Sector,inner_rim,9,6,1,region,
-Saltgreen,Feldspar Sector,inner_rim,8,5,1,formula,
+Rio Lodo,Rio Lodo Sector,farreach,6,4,1,region,
+Mercado Alto,Lenitas Sector,midreach,12,9,1,formula,
+Feldspar,Feldspar Sector,midreach,12,9,1,formula,
+Solheim,Laterite Sector,farreach,6,4,1,formula,
+Shirakaba,Fallout Sector,farreach,6,4,1,region,
+Sunscald,Ciénaga Sector,farreach,6,3,1,keyword,agricultural
+Isfjell,Ilanga Sector,farreach,6,4,1,formula,
+Marl,Mechane Sector,midreach,6,3,1,formula,
+Bauxite IV,Bauxite IV Sector,farreach,6,4,1,formula,
+Hundred Lakes,Hundred Lakes Sector,farreach,6,4,1,formula,
+Cairnfell,Mata Alta Sector,farreach,6,4,1,region,
+Mesa Roja,Fairhaven Sector,farreach,8,5,1,formula,
+Semeion,Semeion Sector,midreach,8,5,1,formula,
+Caza Real,Caza Real Sector,midreach,6,4,1,formula,
+Ninegates,Lesnaya Sector,midreach,8,5,1,formula,
+Hard Winter,Longwire Sector,farreach,6,4,1,formula,
+Ilanga,Ilanga Sector,farreach,6,5,1,keyword,mining
+Vinculum,Vinculum Sector,midreach,8,5,1,formula,
+Paydirt,Longtide Sector,midreach,10,7,1,formula,
+Shelter,Shelter Sector,farreach,6,4,1,formula,
+Fusoria,Dunmere Sector,farreach,12,9,1,formula,
+Skylark,Caminus Sector,farreach,6,4,1,formula,
+Halite,Bauxite IV Sector,farreach,8,5,1,formula,
+Ferrymoor,Drift Harbour Sector,farreach,6,4,1,formula,
+Rustwell,Thaw Sector,farreach,6,4,1,formula,
+Ulaan Tal,Ulaan Tal Sector,farreach,8,5,1,formula,
+Uzun Su,Mechane Sector,midreach,10,7,1,keyword,billions of people
+Sankt Odile,Semeion Sector,midreach,6,4,1,region,
+Ashfall,Ashfall Sector,midreach,8,5,1,formula,
+Isbrand,Vinculum Sector,midreach,10,7,1,formula,
+Signum,Solacia Sector,farreach,6,4,1,formula,
+Dry Reef,Lantern Sector,farreach,6,4,1,formula,
+Three Lamps,Three Lamps Sector,midreach,6,4,1,formula,
+Highfall,Highfall Sector,farreach,6,5,1,keyword,mining
+Kaolin,Three Lamps Sector,midreach,6,3,1,formula,
+Halvmark,Laterite Sector,farreach,6,4,1,region,
+Hollenvale,Thaw Sector,farreach,7,6,1,lore,lore pick (source notes removed 2026-10-25)
+Tarrow,Tarrow Sector,heartland,12,11,1,formula,
+Tormentum,Tormentum Sector,midreach,12,7,1,lore,lore pick (source notes removed 2026-10-25)
+Lowmarket,Bosque Alto Sector,midreach,12,11,1,formula,
+Salitre,Salitre Sector,farreach,6,4,1,formula,
+Scaldwell,Fallout Sector,farreach,8,7,1,keyword,billions of people; mining
+Quieta,Quieta Sector,midreach,12,9,1,formula,
+Lunaria,Ciénaga Sector,farreach,6,4,1,region,
+Permit Hill,Moorings Sector,farreach,6,4,1,region,
+Scoria,Charter Sector,heartland,12,11,1,formula,
+Tessera,Mirabel Sector,midreach,11,8,1,formula,
+Oldwatch,Fyrholm Sector,farreach,6,4,1,formula,
+Los Pozos,Ulaan Tal Sector,farreach,6,4,1,formula,
+Port Isolde,Mata Alta Sector,farreach,8,5,1,keyword,billions of people
+Nowhere,Zlatna Sector,farreach,6,4,1,region,
+Varmdal,Varmdal Sector,farreach,6,4,1,formula,
+Grimwall,Ulaan Tal Sector,farreach,8,5,1,region,
+Cristalina,Caza Real Sector,midreach,10,7,1,formula,
+Grimsholt,Thaw Sector,farreach,8,5,1,keyword,billions of people; mining; agricultural
+Drift Harbour,Drift Harbour Sector,farreach,8,5,1,lore,lore pick (source notes removed 2026-10-25)
+Delicia,Incus Sector,midreach,10,7,1,formula,
+Ferraria,Ferraria Sector,midreach,11,6,1,lore,lore pick (source notes removed 2026-10-25)
+Vinograd,Vinograd Sector,midreach,8,5,1,formula,
+Port Sorrel,Tormentum Sector,midreach,10,7,1,formula,
+Amoena,Lagoa Funda Sector,midreach,9,6,1,region,
+Steeplewater,Vinculum Sector,midreach,10,7,1,formula,
+Murkhaven,Cohors Sector,farreach,6,4,1,formula,
+Junkhold,Altofen Sector,midreach,6,4,1,region,
+Side Gate,Shelter Sector,farreach,9,6,1,formula,
+Excubia,Excubia Sector,heartland,12,11,1,formula,
+Shingle,Semeion Sector,midreach,8,5,1,region,
+Las Presas,Caminus Sector,farreach,6,4,1,formula,
+Partus,Clearholm Sector,farreach,9,6,1,keyword,billions of people; yards/academy
+Akousma,Akousma Sector,midreach,8,3,1,lore,lore pick (source notes removed 2026-10-25)
+Alumen,Ommata Sector,heartland,12,9,1,region,
+Gemelos,Three Lamps Sector,midreach,6,4,1,formula,
+Hulkfield,Vinograd Sector,midreach,8,5,1,formula,
+Cambium,Castra Sector,heartland,14,8,1,keyword,billions of people; agricultural
+Commonhold,Dunmere Sector,farreach,8,5,1,region,
+Grauburg,Classis Sector,midreach,12,9,1,formula,
+Mirabel,Mirabel Sector,midreach,14,13,1,formula,
+Isvik,Cohors Sector,farreach,6,4,1,region,
+Rosvik,Charter Sector,heartland,12,7,1,keyword,agricultural
+Gypsum Minor,Lesnaya Sector,midreach,11,8,1,region,
+Wadi Sabr,Cohors Sector,farreach,6,4,1,formula,
+Serra Alta,Tarrow Sector,heartland,12,11,1,formula,
+Malleus,Lenitas Sector,midreach,12,9,1,region,
+Marga,Dunmere Sector,farreach,6,4,1,formula,
+Custodia,Ferraria Sector,midreach,11,10,1,formula,
+Bluesand,Semeion Sector,midreach,5,3,1,keyword,harsh climate
+Limonite III,Caza Real Sector,midreach,12,11,1,keyword,yards/academy; mining
+Umoya,Highfall Sector,farreach,6,4,1,formula,
+Mechane,Mechane Sector,midreach,10,5,1,lore,lore pick (source notes removed 2026-10-25)
+Bread Street,Bauxite IV Sector,farreach,6,3,1,keyword,agricultural
+Bosque Alto,Bosque Alto Sector,midreach,8,5,1,formula,
+Sierra Seca,Semeion Sector,midreach,8,5,1,region,
+Warmwell,Quieta Sector,midreach,8,5,1,formula,
+Nacar,Vinculum Sector,midreach,12,8,1,keyword,billions of people
+Belle Rive,Ilanga Sector,farreach,6,4,1,region,
+Lenitas,Lenitas Sector,midreach,8,3,1,lore,lore pick (source notes removed 2026-10-25)
+Natalis,Feldspar Sector,midreach,11,8,1,keyword,yards/academy
+Sevenwells,Tarrow Sector,heartland,12,11,1,formula,
+Tinplate,Vinograd Sector,midreach,8,5,1,region,
+Nueva Pradera,Caza Real Sector,midreach,10,7,1,formula,
+Meridian,Solacia Sector,farreach,6,4,1,formula,
+Thesauros,Thesauros Sector,farreach,6,3,1,formula,
+Penhallow,Lagoa Funda Sector,midreach,9,6,1,region,
+Spindle,Ciénaga Sector,farreach,6,3,1,region,
+Old Bench,Mata Alta Sector,farreach,6,4,1,region,
+Opsis,Kranholm Sector,farreach,6,4,1,formula,
+Porphyry,Mechane Sector,midreach,11,10,1,formula,
+Sedova,Tormentum Sector,midreach,10,7,1,formula,
+Benigna,Dunmere Sector,farreach,9,6,1,formula,
+Puerto Hierro,Three Lamps Sector,midreach,11,9,1,keyword,billions of people; yards/academy; mining
+Classis,Classis Sector,midreach,14,7,1,lore,lore pick (source notes removed 2026-10-25)
+Magnetite III,Ommata Sector,heartland,12,11,1,formula,
+Waymeet,Caza Real Sector,midreach,9,6,1,formula,
+Deadfall,Bauxite IV Sector,farreach,6,4,1,formula,
+Tutela,Lenitas Sector,midreach,10,4,1,lore,lore pick (source notes removed 2026-10-25)
+Charter,Charter Sector,heartland,15,4,1,lore,lore pick (source notes removed 2026-10-25)
+Riftwood,Moorings Sector,farreach,6,4,1,formula,
+Pyrite,Charter Sector,heartland,12,9,1,region,
+Bellwether,Bellwether Sector,midreach,9,6,1,region,
+Saltgreen,Feldspar Sector,midreach,8,5,1,formula,
 Frostholm,Outside any sector,,4,2,1,formula,
-Krasny Yar,Rio Lodo Sector,outer_rim,6,4,1,formula,
-Cutbank,Lenitas Sector,inner_rim,9,6,1,keyword,yards/academy
-Altofen,Altofen Sector,inner_rim,9,6,1,region,
-Rauchtal,Rauchtal Sector,outer_rim,6,4,1,formula,
-Ashgrove,Caza Real Sector,inner_rim,10,7,1,region,
-Kanon,Solacia Sector,outer_rim,6,4,1,formula,
-Seven Keys,Ciénaga Sector,outer_rim,8,5,1,formula,
-Kaukomaa,Bellwether Sector,inner_rim,10,7,1,keyword,billions of people
-Eldingar,Eldingar Sector,outer_rim,1,1,1,lore,"swamp, Yoda; a hidden place"
-Dongyu,Tormentum Sector,inner_rim,8,5,1,region,
-Oionos,Mechane Sector,inner_rim,6,5,1,formula,
-Fallow,Mata Alta Sector,outer_rim,5,3,1,lore,"agricultural, old Collective base"
-Lignite,Ilanga Sector,outer_rim,6,4,1,region,
-Vexillum,Thesauros Sector,outer_rim,8,5,1,formula,
-Redfen,Highfall Sector,outer_rim,3,2,1,lore,Nightsister world [Wookieepedia-adjusted]
-Morrowfield,Akousma Sector,inner_rim,6,3,1,formula,
-Tranquilla,Longtide Sector,inner_rim,12,11,1,formula,
-Havdal,Caminus Sector,outer_rim,6,4,1,formula,
-Fiducia,Lesnaya Sector,inner_rim,12,9,1,formula,
-Ribeira,Lenitas Sector,inner_rim,9,6,1,formula,
-Graustadt,Moorings Sector,outer_rim,8,4,1,keyword,billions of people; agricultural
-Las Eras,Nebbia Sector,outer_rim,6,3,1,formula,
-Undergrowth,Mata Alta Sector,outer_rim,6,4,1,formula,
-Weirholm,Fairhaven Sector,outer_rim,6,4,1,formula,
-Uhrwald,Drift Harbour Sector,outer_rim,6,4,1,region,
-Natron,Vinculum Sector,inner_rim,9,6,1,formula,
-Muster Rock,Muster Rock Sector,outer_rim,8,5,1,formula,
-Brannock,Solacia Sector,outer_rim,6,4,1,formula,
-Beryl,Classis Sector,inner_rim,12,11,1,formula,
-Groenveld,Bellwether Sector,inner_rim,10,7,1,keyword,billions of people
-Stormfen,Greenfever Sector,outer_rim,6,4,1,formula,
-Kovarna,Shelter Sector,outer_rim,10,5,1,keyword,billions of people; agricultural
-The Rafts,Thaw Sector,outer_rim,6,4,1,formula,
-Hiberna,Ommata Sector,core,12,4,1,lore,"orbital shipyards, spacer culture"
-Placida,Three Lamps Sector,inner_rim,8,5,1,region,Not in lore sheet; region default
-Fathom,Thaw Sector,outer_rim,6,4,1,region,
-Lockout,Varmdal Sector,outer_rim,6,4,1,formula,
-Bastide,Mirabel Sector,inner_rim,15,11,1,keyword,billions of people; mining; city world
-Fyrholm,Fyrholm Sector,outer_rim,4,2,1,lore,"forest moon, Ewoks"
-Bluefathom,Thesauros Sector,outer_rim,6,4,1,formula,
-Hardwood,Slate Hill Sector,outer_rim,6,4,1,region,
-Ain Tamra,Ulaan Tal Sector,outer_rim,11,8,1,region,
-Ellerbeck,Caza Real Sector,inner_rim,8,5,1,region,
-Cunabula,Varmdal Sector,outer_rim,11,8,1,lore,Outer Rim industrial hub (Tarkin) [Wookieepedia-adjusted]
-Agua Mansa,Mechane Sector,inner_rim,12,9,1,formula,
-Clearholm,Clearholm Sector,outer_rim,6,4,1,region,
-Tourmaline,Ommata Sector,core,10,5,1,lore,"Tourmaline: dense, long-settled Hydian Way world"
-Sweetsea,Nebbia Sector,outer_rim,6,4,1,formula,
-Suavis,Shelter Sector,outer_rim,8,5,1,formula,
-Flarewater,Solacia Sector,outer_rim,10,7,1,keyword,billions of people
-Vigilia,Ommata Sector,core,12,11,1,formula,
-The Stumps,Drift Harbour Sector,outer_rim,6,4,1,formula,
-Birchholm,Vinculum Sector,inner_rim,8,5,1,formula,
-Greenfever,Greenfever Sector,outer_rim,6,4,1,formula,
-Officina,Clearholm Sector,outer_rim,6,4,1,formula,
-Ostwerk,Nebbia Sector,outer_rim,8,5,1,formula,
-Bela Voda,Excubia Sector,core,12,11,1,formula,
-Hollow Fork,Dunmere Sector,outer_rim,6,4,1,region,
-Opifex,Ashfall Sector,inner_rim,9,6,1,formula,
-The Wall,Moorings Sector,outer_rim,8,5,1,keyword,billions of people
-Brimstone,Greenfever Sector,outer_rim,6,4,1,formula,
-Buyback,Ferraria Sector,inner_rim,13,10,1,keyword,billions of people
-Incus,Incus Sector,inner_rim,13,5,1,lore,"Incus shipyards, Hand-run"
-First Morning,Hundred Lakes Sector,outer_rim,6,4,1,formula,
-Bare Acre,Vinograd Sector,inner_rim,8,5,1,formula,
-Holdfast,Fallout Sector,outer_rim,6,4,1,formula,
-Ironbeach,Ironbeach Sector,outer_rim,4,2,1,formula,
-Severitas,Varmdal Sector,outer_rim,6,4,1,region,
-Aozora,Mata Alta Sector,outer_rim,6,4,1,formula,
-Second Spring,Pulau Hijau Sector,outer_rim,8,5,1,formula,
-Clanmoor,Rauchtal Sector,outer_rim,6,4,1,formula,
-Bellglass,Lantern Sector,outer_rim,6,4,1,formula,
-Ferrite IV,Lesnaya Sector,inner_rim,6,3,1,formula,
-Truce Moor,Rauchtal Sector,outer_rim,6,4,1,formula,
-Cafetal,Fyrholm Sector,outer_rim,6,3,1,keyword,agricultural
-Quies,Castra Sector,core,12,9,1,region,
-Morelle,Three Lamps Sector,inner_rim,10,7,1,formula,
-Ostrog,Highfall Sector,outer_rim,6,4,1,formula,
-Longgrass,Ilanga Sector,outer_rim,6,4,1,formula,
-Mudlark,Ironbeach Sector,outer_rim,6,4,1,formula,
-Ergon,Pulau Hijau Sector,outer_rim,6,4,1,formula,
-Waymark,Zlatna Sector,outer_rim,6,4,1,region,
-Seven Gates,Ironbeach Sector,outer_rim,8,4,1,keyword,billions of people; agricultural
-Cidermoor,Fairhaven Sector,outer_rim,6,4,1,region,
-Mollis,Incus Sector,inner_rim,7,4,1,lore,textile world
-Perpetua,Clearholm Sector,outer_rim,5,3,1,keyword,harsh climate
-Techne,Incus Sector,inner_rim,13,7,1,keyword,billions of people; agricultural
-Pennygate,Bosque Alto Sector,inner_rim,8,5,1,region,
-Mwezi,Quieta Sector,inner_rim,8,5,1,formula,
-Stannum,Tormentum Sector,inner_rim,10,7,1,formula,
-Steading,Bellwether Sector,inner_rim,8,5,1,region,
-Old Lens,Laterite Sector,outer_rim,5,4,1,keyword,harsh climate; mining
-Velika Ravan,Mechane Sector,inner_rim,12,8,1,keyword,billions of people; yards/academy
-Kairos,Varmdal Sector,outer_rim,6,4,1,formula,
-Subsidia,Mirabel Sector,inner_rim,11,8,1,region,
-Arithmos,Excubia Sector,core,11,10,1,formula,
-Seldwyn,Longtide Sector,inner_rim,12,4,1,lore,"Seldwyn Consortium: rich, closed"
-Westerholm,Rauchtal Sector,outer_rim,6,4,1,formula,
-Erg Lahmar,Rauchtal Sector,outer_rim,6,4,1,formula,
-Barewood,Muster Rock Sector,outer_rim,5,3,1,lore,"Notaries homeworld, ravaged"
-Fiscus,Classis Sector,inner_rim,12,11,1,formula,
-The Thaw,Thaw Sector,outer_rim,2,1,1,lore,ice world; no one lives there yet
-Farrow,Hundred Lakes Sector,outer_rim,6,4,1,formula,
-Archeion,Incus Sector,inner_rim,11,8,1,formula,
-Probatio,Laterite Sector,outer_rim,6,4,1,formula,
-Unlisted,Rio Lodo Sector,outer_rim,6,4,1,region,
-Rubble Sky,Lantern Sector,outer_rim,6,4,1,formula,
-Skalna,Solacia Sector,outer_rim,8,5,1,formula,
-Pedregal,Ashfall Sector,inner_rim,8,5,1,formula,
+Krasny Yar,Rio Lodo Sector,farreach,6,4,1,formula,
+Cutbank,Lenitas Sector,midreach,9,6,1,keyword,yards/academy
+Altofen,Altofen Sector,midreach,9,6,1,region,
+Rauchtal,Rauchtal Sector,farreach,6,4,1,formula,
+Ashgrove,Caza Real Sector,midreach,10,7,1,region,
+Kanon,Solacia Sector,farreach,6,4,1,formula,
+Seven Keys,Ciénaga Sector,farreach,8,5,1,formula,
+Kaukomaa,Bellwether Sector,midreach,10,7,1,keyword,billions of people
+Eldingar,Eldingar Sector,farreach,1,1,1,lore,lore pick (source notes removed 2026-10-25)
+Dongyu,Tormentum Sector,midreach,8,5,1,region,
+Oionos,Mechane Sector,midreach,6,5,1,formula,
+Fallow,Mata Alta Sector,farreach,5,3,1,lore,lore pick (source notes removed 2026-10-25)
+Lignite,Ilanga Sector,farreach,6,4,1,region,
+Vexillum,Thesauros Sector,farreach,8,5,1,formula,
+Redfen,Highfall Sector,farreach,3,2,1,lore,lore pick (source notes removed 2026-10-25)
+Morrowfield,Akousma Sector,midreach,6,3,1,formula,
+Tranquilla,Longtide Sector,midreach,12,11,1,formula,
+Havdal,Caminus Sector,farreach,6,4,1,formula,
+Fiducia,Lesnaya Sector,midreach,12,9,1,formula,
+Ribeira,Lenitas Sector,midreach,9,6,1,formula,
+Graustadt,Moorings Sector,farreach,8,4,1,keyword,billions of people; agricultural
+Las Eras,Nebbia Sector,farreach,6,3,1,formula,
+Undergrowth,Mata Alta Sector,farreach,6,4,1,formula,
+Weirholm,Fairhaven Sector,farreach,6,4,1,formula,
+Uhrwald,Drift Harbour Sector,farreach,6,4,1,region,
+Natron,Vinculum Sector,midreach,9,6,1,formula,
+Muster Rock,Muster Rock Sector,farreach,8,5,1,formula,
+Brannock,Solacia Sector,farreach,6,4,1,formula,
+Beryl,Classis Sector,midreach,12,11,1,formula,
+Groenveld,Bellwether Sector,midreach,10,7,1,keyword,billions of people
+Stormfen,Greenfever Sector,farreach,6,4,1,formula,
+Kovarna,Shelter Sector,farreach,10,5,1,keyword,billions of people; agricultural
+The Rafts,Thaw Sector,farreach,6,4,1,formula,
+Hiberna,Ommata Sector,heartland,12,4,1,lore,lore pick (source notes removed 2026-10-25)
+Placida,Three Lamps Sector,midreach,8,5,1,region,Not in lore sheet; region default
+Fathom,Thaw Sector,farreach,6,4,1,region,
+Lockout,Varmdal Sector,farreach,6,4,1,formula,
+Bastide,Mirabel Sector,midreach,15,11,1,keyword,billions of people; mining; city world
+Fyrholm,Fyrholm Sector,farreach,4,2,1,lore,lore pick (source notes removed 2026-10-25)
+Bluefathom,Thesauros Sector,farreach,6,4,1,formula,
+Hardwood,Slate Hill Sector,farreach,6,4,1,region,
+Ain Tamra,Ulaan Tal Sector,farreach,11,8,1,region,
+Ellerbeck,Caza Real Sector,midreach,8,5,1,region,
+Cunabula,Varmdal Sector,farreach,11,8,1,lore,lore pick (source notes removed 2026-10-25)
+Agua Mansa,Mechane Sector,midreach,12,9,1,formula,
+Clearholm,Clearholm Sector,farreach,6,4,1,region,
+Tourmaline,Ommata Sector,heartland,10,5,1,lore,lore pick (source notes removed 2026-10-25)
+Sweetsea,Nebbia Sector,farreach,6,4,1,formula,
+Suavis,Shelter Sector,farreach,8,5,1,formula,
+Flarewater,Solacia Sector,farreach,10,7,1,keyword,billions of people
+Vigilia,Ommata Sector,heartland,12,11,1,formula,
+The Stumps,Drift Harbour Sector,farreach,6,4,1,formula,
+Birchholm,Vinculum Sector,midreach,8,5,1,formula,
+Greenfever,Greenfever Sector,farreach,6,4,1,formula,
+Officina,Clearholm Sector,farreach,6,4,1,formula,
+Ostwerk,Nebbia Sector,farreach,8,5,1,formula,
+Bela Voda,Excubia Sector,heartland,12,11,1,formula,
+Hollow Fork,Dunmere Sector,farreach,6,4,1,region,
+Opifex,Ashfall Sector,midreach,9,6,1,formula,
+The Wall,Moorings Sector,farreach,8,5,1,keyword,billions of people
+Brimstone,Greenfever Sector,farreach,6,4,1,formula,
+Buyback,Ferraria Sector,midreach,13,10,1,keyword,billions of people
+Incus,Incus Sector,midreach,13,5,1,lore,lore pick (source notes removed 2026-10-25)
+First Morning,Hundred Lakes Sector,farreach,6,4,1,formula,
+Bare Acre,Vinograd Sector,midreach,8,5,1,formula,
+Holdfast,Fallout Sector,farreach,6,4,1,formula,
+Ironbeach,Ironbeach Sector,farreach,4,2,1,formula,
+Severitas,Varmdal Sector,farreach,6,4,1,region,
+Aozora,Mata Alta Sector,farreach,6,4,1,formula,
+Second Spring,Pulau Hijau Sector,farreach,8,5,1,formula,
+Clanmoor,Rauchtal Sector,farreach,6,4,1,formula,
+Bellglass,Lantern Sector,farreach,6,4,1,formula,
+Ferrite IV,Lesnaya Sector,midreach,6,3,1,formula,
+Truce Moor,Rauchtal Sector,farreach,6,4,1,formula,
+Cafetal,Fyrholm Sector,farreach,6,3,1,keyword,agricultural
+Quies,Castra Sector,heartland,12,9,1,region,
+Morelle,Three Lamps Sector,midreach,10,7,1,formula,
+Ostrog,Highfall Sector,farreach,6,4,1,formula,
+Longgrass,Ilanga Sector,farreach,6,4,1,formula,
+Mudlark,Ironbeach Sector,farreach,6,4,1,formula,
+Ergon,Pulau Hijau Sector,farreach,6,4,1,formula,
+Waymark,Zlatna Sector,farreach,6,4,1,region,
+Seven Gates,Ironbeach Sector,farreach,8,4,1,keyword,billions of people; agricultural
+Cidermoor,Fairhaven Sector,farreach,6,4,1,region,
+Mollis,Incus Sector,midreach,7,4,1,lore,lore pick (source notes removed 2026-10-25)
+Perpetua,Clearholm Sector,farreach,5,3,1,keyword,harsh climate
+Techne,Incus Sector,midreach,13,7,1,keyword,billions of people; agricultural
+Pennygate,Bosque Alto Sector,midreach,8,5,1,region,
+Mwezi,Quieta Sector,midreach,8,5,1,formula,
+Stannum,Tormentum Sector,midreach,10,7,1,formula,
+Steading,Bellwether Sector,midreach,8,5,1,region,
+Old Lens,Laterite Sector,farreach,5,4,1,keyword,harsh climate; mining
+Velika Ravan,Mechane Sector,midreach,12,8,1,keyword,billions of people; yards/academy
+Kairos,Varmdal Sector,farreach,6,4,1,formula,
+Subsidia,Mirabel Sector,midreach,11,8,1,region,
+Arithmos,Excubia Sector,heartland,11,10,1,formula,
+Seldwyn,Longtide Sector,midreach,12,4,1,lore,lore pick (source notes removed 2026-10-25)
+Westerholm,Rauchtal Sector,farreach,6,4,1,formula,
+Erg Lahmar,Rauchtal Sector,farreach,6,4,1,formula,
+Barewood,Muster Rock Sector,farreach,5,3,1,lore,lore pick (source notes removed 2026-10-25)
+Fiscus,Classis Sector,midreach,12,11,1,formula,
+The Thaw,Thaw Sector,farreach,2,1,1,lore,lore pick (source notes removed 2026-10-25)
+Farrow,Hundred Lakes Sector,farreach,6,4,1,formula,
+Archeion,Incus Sector,midreach,11,8,1,formula,
+Probatio,Laterite Sector,farreach,6,4,1,formula,
+Unlisted,Rio Lodo Sector,farreach,6,4,1,region,
+Rubble Sky,Lantern Sector,farreach,6,4,1,formula,
+Skalna,Solacia Sector,farreach,8,5,1,formula,
+Pedregal,Ashfall Sector,midreach,8,5,1,formula,
 Glasswood,Outside any sector,,4,2,1,formula,
-Nadezhda,Thaw Sector,outer_rim,4,3,1,keyword,under 1 million
-Highmere,Pulau Hijau Sector,outer_rim,6,4,1,formula,
-Feriae,Sendero Sector,outer_rim,8,5,1,formula,
-Deep Wells,Ulaan Tal Sector,outer_rim,8,5,1,formula,
-Standstill,Drift Harbour Sector,outer_rim,8,5,1,keyword,billions of people
-Mata Alta,Mata Alta Sector,outer_rim,8,4,1,lore,"lush, agricultural"
-Mokra,Altofen Sector,inner_rim,6,5,1,keyword,mining
-Stepwell,Fyrholm Sector,outer_rim,7,5,1,keyword,yards/academy
-Kalium II,Quieta Sector,inner_rim,3,3,1,lore,"desert wasteland, nothing yet [Wookieepedia-adjusted]"
-Sonnfeld,Moorings Sector,outer_rim,8,5,1,keyword,billions of people
-Felsite III,Clearholm Sector,outer_rim,6,4,1,formula,
-Awlbridge,Hundred Lakes Sector,outer_rim,6,4,1,formula,
-Wrenfield,Ferraria Sector,inner_rim,10,7,1,formula,
-Skerrholm,Thesauros Sector,outer_rim,6,4,1,formula,
-Ilhas Fundas,Kranholm Sector,outer_rim,6,4,1,formula,
-Regrowth,Eldingar Sector,outer_rim,6,4,1,formula,
-Tidewall,Ashfall Sector,inner_rim,8,5,1,formula,
-Timberline,Longwire Sector,outer_rim,6,5,1,keyword,mining
-Valle Hondo,Charter Sector,core,12,11,1,formula,
-Montefosco,Caminus Sector,outer_rim,10,7,1,keyword,billions of people
-Landfall,Ulaan Tal Sector,outer_rim,6,4,1,region,
-Lowmoor,Ciénaga Sector,outer_rim,8,5,1,region,
-Longtide,Longtide Sector,inner_rim,7,5,1,lore,"Kiru Sparks homeworld, timber"
-Supper Hill,Ciénaga Sector,outer_rim,6,4,1,region,
-Sinkwater,Caminus Sector,outer_rim,7,5,1,keyword,yards/academy
-Mbuga,Sendero Sector,outer_rim,8,5,1,formula,
-Rietmoor,Quieta Sector,inner_rim,6,4,1,region,
-The Lantern,Lantern Sector,outer_rim,6,6,1,lore,spice mines; every slot is a mine
-Seafold,Ilanga Sector,outer_rim,6,4,1,formula,
-Horasis,Bosque Alto Sector,inner_rim,12,9,1,formula,
-Agmen,Quieta Sector,inner_rim,6,3,1,formula,
-Retentio,Lagoa Funda Sector,inner_rim,10,7,1,formula,
-Consolatio,Castra Sector,core,10,7,1,formula,
-Tierra Larga,Bosque Alto Sector,inner_rim,9,6,1,formula,
-Kestrel Downs,Feldspar Sector,inner_rim,9,6,1,region,
-Barro Rojo,Rio Lodo Sector,outer_rim,6,4,1,formula,
-Hundred Falls,Lenitas Sector,inner_rim,9,6,1,formula,
-Stonebrake,Castra Sector,core,14,13,1,formula,
-Thornveld,Mirabel Sector,inner_rim,12,9,1,region,
-Khamsin,Nebbia Sector,outer_rim,6,3,1,formula,
-Naphtha,Solacia Sector,outer_rim,4,1,1,keyword,gas giant
-Ilha Verde,Ferraria Sector,inner_rim,10,7,1,formula,
-Lastwell,Highfall Sector,outer_rim,11,8,1,region,
-Breakyard,Greenfever Sector,outer_rim,4,2,1,lore,ancient Sith tomb world
-Plainsong,Fyrholm Sector,outer_rim,6,4,1,formula,
-Statio,Akousma Sector,inner_rim,7,3,1,lore,Collective-leaning frontier [Wookieepedia-adjusted]
-Nordhaven,Bosque Alto Sector,inner_rim,8,5,1,region,
-Vinterby,Clearholm Sector,outer_rim,9,6,1,formula,
-Navalia,Lesnaya Sector,inner_rim,15,6,1,lore,Navalia Drive Yards: the biggest yard complex
-Stewpot,Hundred Lakes Sector,outer_rim,6,4,1,formula,
-Highrime,Tormentum Sector,inner_rim,10,7,1,formula,
-Stepstone,Semeion Sector,inner_rim,8,5,1,formula,
-The Kiln,Ironbeach Sector,outer_rim,6,4,1,region,
-Alvorada,Cohors Sector,outer_rim,6,4,1,formula,
-Two Crowns,Akousma Sector,inner_rim,10,7,1,keyword,billions of people
-Neuwerft,Vinograd Sector,inner_rim,10,7,1,formula,
-Loomhollow,Eldingar Sector,outer_rim,6,4,1,formula,
-Kamenitsa,Mechane Sector,inner_rim,8,5,1,formula,
-Tres Rios,Akousma Sector,inner_rim,8,5,1,keyword,mining; agricultural
-Limes,Tarrow Sector,core,12,9,1,region,
-Dunmere,Dunmere Sector,outer_rim,10,5,1,lore,"Dunmere Shipyards, starship components"
-Kaskela,Ashfall Sector,inner_rim,8,5,1,formula,
-Vaultrock,Drift Harbour Sector,outer_rim,6,4,1,region,
-Icetap,Slate Hill Sector,outer_rim,6,4,1,region,
-Dormilona,Sendero Sector,outer_rim,5,4,1,keyword,small population; mining
-Vallum,Classis Sector,inner_rim,12,5,1,lore,"Vallum Corporation: weapons, ships"
-Kaltwasser,Salitre Sector,outer_rim,6,4,1,formula,
-Campo Alto,Fairhaven Sector,outer_rim,8,5,1,region,
-Llano Grande,Altofen Sector,inner_rim,6,4,1,lore,agricultural frontier
-Midden,Drift Harbour Sector,outer_rim,6,4,1,formula,
-The Flats,Fallout Sector,outer_rim,6,4,1,formula,
-Ochre Wells,Ironbeach Sector,outer_rim,6,4,1,region,
-Terracotta,Nebbia Sector,outer_rim,4,1,1,keyword,gas giant
-Ghostlight,Cohors Sector,outer_rim,6,4,1,formula,
-Wellhead,Altofen Sector,inner_rim,8,5,1,lore,fuel and podracing
-Stillwater,Pulau Hijau Sector,outer_rim,6,4,1,region,Not in lore sheet; region default
-Cohors,Cohors Sector,outer_rim,6,4,1,formula,
-Gumwater,Ironbeach Sector,outer_rim,6,4,1,region,
-Dulcia,Incus Sector,inner_rim,10,7,1,formula,
-Fabrica,Ashfall Sector,inner_rim,10,7,1,region,Not in lore sheet; region default
-Seedbank,Rauchtal Sector,outer_rim,7,5,1,keyword,yards/academy
-Hardpan,Longwire Sector,outer_rim,5,3,1,keyword,harsh climate
-Selvagem,Mirabel Sector,inner_rim,10,7,1,region,
-Vidrio,Nebbia Sector,outer_rim,6,4,1,region,
-Halfwinter,Vinculum Sector,inner_rim,9,8,1,keyword,mining
-Clinker,Ashfall Sector,inner_rim,8,5,1,formula,
-Blackmire,Mechane Sector,inner_rim,9,6,1,formula,
-Plenty,Salitre Sector,outer_rim,6,3,1,keyword,agricultural
-Four Lamps,Akousma Sector,inner_rim,6,3,1,formula,
-Greysand,Salitre Sector,outer_rim,4,3,1,keyword,small population; harsh climate
-Halfsky,Fyrholm Sector,outer_rim,6,4,1,region,
-Tierra Seca,Laterite Sector,outer_rim,5,3,1,keyword,small population
-Ashgarden,Zlatna Sector,outer_rim,6,4,1,formula,
-The Moorings,Moorings Sector,outer_rim,10,5,1,lore,"floating cities, shipyards; ocean world"
-Laetitia,Zlatna Sector,outer_rim,8,7,1,keyword,mining
-Highbarrow,Longtide Sector,inner_rim,10,7,1,formula,
-Long Strike,Hundred Lakes Sector,outer_rim,6,4,1,formula,
-Ardlinn,Excubia Sector,core,11,10,1,formula,
-Towline,Zlatna Sector,outer_rim,8,5,1,region,
-The Notch,Lantern Sector,outer_rim,6,4,1,formula,
-Plage Blanche,Nebbia Sector,outer_rim,6,4,1,formula,
-Blackglass,Longwire Sector,outer_rim,8,8,1,lore,volcanic mining; raw cannot exceed energy
-Zlatna,Zlatna Sector,outer_rim,12,8,1,lore,"Banking Clan: wealth, not ore [Wookieepedia-adjusted]"
-Rimeglass,Fyrholm Sector,outer_rim,6,4,1,formula,
-Oranjeveld,Hundred Lakes Sector,outer_rim,6,4,1,formula,
-Tamarisk,Mirabel Sector,inner_rim,14,11,1,region,
-Solacia,Solacia Sector,outer_rim,9,3,1,lore,prosperous but pastoral [Wookieepedia-adjusted]
-Sourwater,Charter Sector,core,14,11,1,region,
-Wolfram II,Dunmere Sector,outer_rim,6,4,1,region,
-Mica,Three Lamps Sector,inner_rim,5,1,1,keyword,gas giant; yards/academy
-Vrijhaven,Nebbia Sector,outer_rim,8,6,1,lore,"Hutt homeworld, polluted [Wookieepedia-adjusted]"
-The Ladle,Drift Harbour Sector,outer_rim,6,4,1,formula,
-Mill Hollow,Ulaan Tal Sector,outer_rim,7,5,1,keyword,small population
-Lowenna,Tormentum Sector,inner_rim,10,7,1,keyword,billions of people
-Old Amber,Ferraria Sector,inner_rim,11,8,1,region,
-Hartsease,Vinograd Sector,inner_rim,8,5,1,formula,
-Hoogstad,Muster Rock Sector,outer_rim,12,3,1,lore,"vertical city-moon: huge capacity, no ore"
-Stonecrop,Altofen Sector,inner_rim,6,4,1,region,
-Grandmother,Laterite Sector,outer_rim,6,4,1,formula,
-Ardlow,Slate Hill Sector,outer_rim,6,4,1,formula,
-Medela,Tormentum Sector,inner_rim,10,5,1,lore,"Neimoidian homeworld, wealthy, starship exports"
-Alabaster,Incus Sector,inner_rim,8,7,1,formula,
-Cendrine,Ironbeach Sector,outer_rim,6,4,1,formula,
-Verdemar,Ashfall Sector,inner_rim,8,5,1,formula,
-Kruispunt,Feldspar Sector,inner_rim,10,7,1,region,
-Whitecairn,Rio Lodo Sector,outer_rim,5,4,1,keyword,harsh climate; mining
-Sawtooth,Longtide Sector,inner_rim,10,7,1,formula,
-Duskwater,Hundred Lakes Sector,outer_rim,6,4,1,formula,
-Chert,Pulau Hijau Sector,outer_rim,8,5,1,region,
-Ommata,Ommata Sector,core,8,5,1,lore,developed Core world [Wookieepedia-adjusted]
-Thousand Mouths,Akousma Sector,inner_rim,8,5,1,region,
-Black Teeth,Muster Rock Sector,outer_rim,6,5,1,keyword,mining
-Whitmark,Three Lamps Sector,inner_rim,10,7,1,formula,
-Lesnaya,Lesnaya Sector,inner_rim,6,3,1,formula,
-Kilele,Caminus Sector,outer_rim,6,4,1,formula,
-Kronholm,Longtide Sector,inner_rim,6,4,1,lore,"Inner Rim, old kingdom"
-Stopped Line,Salitre Sector,outer_rim,6,4,1,region,
-Last Platform,Varmdal Sector,outer_rim,6,4,1,formula,
-Fairhaven,Fairhaven Sector,outer_rim,8,3,1,lore,smuggler hub [Wookieepedia-adjusted]
-Stopgap,Bellwether Sector,inner_rim,6,3,1,formula,
-Pale Ridge,Zlatna Sector,outer_rim,6,4,1,formula,
-Vysoka,Fyrholm Sector,outer_rim,8,5,1,region,
-Cinnabar,Classis Sector,inner_rim,6,4,1,region,
-Hlubina,Sendero Sector,outer_rim,6,4,1,formula,
-Rockclaim,Hundred Lakes Sector,outer_rim,12,9,1,formula,
-Bilokray,Laterite Sector,outer_rim,6,4,1,formula,
-Puerto Ceniza,Tarrow Sector,core,11,10,1,formula,
-Campus,Kranholm Sector,outer_rim,6,4,1,region,
-Belmare,Charter Sector,core,12,11,1,formula,
-Veenhoven,Kranholm Sector,outer_rim,6,4,1,formula,
-Haematite,Kranholm Sector,outer_rim,6,4,1,region,
-Kreuzweg,Highfall Sector,outer_rim,9,6,1,region,
-Organon,Bauxite IV Sector,outer_rim,5,2,1,keyword,small population; agricultural
-Stibium,Excubia Sector,core,12,11,1,formula,
-Horsemarch,Tarrow Sector,core,12,11,1,formula,
-Last Tank,Slate Hill Sector,outer_rim,6,4,1,formula,
-Stabilis,Bosque Alto Sector,inner_rim,12,9,1,formula,
-Altamesa,Classis Sector,inner_rim,10,7,1,formula,
-Wadi Noor,Fairhaven Sector,outer_rim,5,3,1,keyword,harsh climate
-Longwire,Longwire Sector,outer_rim,6,4,1,formula,
-Fernhollow,Fallout Sector,outer_rim,6,4,1,formula,
-Glassfield,Altofen Sector,inner_rim,9,6,1,formula,
-Lowlight,Lenitas Sector,inner_rim,10,7,1,formula,
-Stochos,Dunmere Sector,outer_rim,6,4,1,region,
-Portelle,Kranholm Sector,outer_rim,6,4,1,region,
-Hortensia,Moorings Sector,outer_rim,6,4,1,region,
-Snowmouth,Lantern Sector,outer_rim,6,4,1,formula,
-Constantia,Lagoa Funda Sector,inner_rim,12,8,1,keyword,yards/academy
-Sunderby,Longtide Sector,inner_rim,8,5,1,keyword,harsh climate
-Disciplina,Excubia Sector,core,12,11,1,formula,
-Galeholm,Bellwether Sector,inner_rim,8,5,1,region,
-Zubets,Fairhaven Sector,outer_rim,6,4,1,formula,
-Slate Hill,Slate Hill Sector,outer_rim,6,4,1,formula,
-Requies,Cohors Sector,outer_rim,6,4,1,region,
-Stonebarrow,Fairhaven Sector,outer_rim,6,4,1,region,
-Kalinov,Lagoa Funda Sector,inner_rim,10,7,1,region,
-Castra,Castra Sector,core,12,5,1,lore,Castra StarDrive
-Remedium,Castra Sector,core,12,7,1,keyword,agricultural
-Fuego Alto,Ciénaga Sector,outer_rim,10,9,1,keyword,billions of people; mining
-Teloneum,Lagoa Funda Sector,inner_rim,8,5,1,formula,
-Mudhaven,Kranholm Sector,outer_rim,6,4,1,region,
-Pulau Hijau,Pulau Hijau Sector,outer_rim,4,3,1,lore,remote listening post [Wookieepedia-adjusted]
-Sendero,Sendero Sector,outer_rim,6,4,1,formula,
-Brushfield,Bosque Alto Sector,inner_rim,8,5,1,region,
-Waypost,Muster Rock Sector,outer_rim,6,3,1,region,
-Kvitberg,Rauchtal Sector,outer_rim,6,4,1,formula,
-Rosenbach,Clearholm Sector,outer_rim,6,4,1,formula,
-Ninefold,Bellwether Sector,inner_rim,10,7,1,formula,
-Laterite,Laterite Sector,outer_rim,6,3,1,lore,"ryll mining, Twi'lek [Wookieepedia-adjusted]"
-Ciénaga,Ciénaga Sector,outer_rim,6,4,1,formula,
-Las Mieses,Charter Sector,core,12,7,1,keyword,agricultural
-Corundum,Thesauros Sector,outer_rim,8,5,1,formula,
-Goldcloud,Zlatna Sector,outer_rim,4,1,1,keyword,gas giant
-Long Strand,Lantern Sector,outer_rim,6,4,1,formula,
-Hagelfeld,Rauchtal Sector,outer_rim,6,3,1,lore,"Tropical vault world, Hand security complex; few mines, no lore sheet row (own knowledge, unchecked)"
-Dry House,Zlatna Sector,outer_rim,6,4,1,formula,
-Holmvik,Kranholm Sector,outer_rim,6,4,1,region,
-Pescadora,Muster Rock Sector,outer_rim,6,4,1,formula,
-Groza,Slate Hill Sector,outer_rim,6,4,1,formula,
-Marmor,Classis Sector,inner_rim,12,11,1,formula,
-Ebbeholm,Shelter Sector,outer_rim,6,4,1,formula,
-Mar Seco,Drift Harbour Sector,outer_rim,6,4,1,keyword,mining; agricultural
-Motu Ahi,Salitre Sector,outer_rim,6,4,1,formula,
-Quebrada Honda,Eldingar Sector,outer_rim,6,4,1,formula,
-Needlepeak,Ciénaga Sector,outer_rim,8,5,1,formula,
-Saffron Downs,Ferraria Sector,inner_rim,9,6,1,formula,
-Gnomon,Excubia Sector,core,11,6,1,lore,Skakoan industrial planet
-Make Do,Longwire Sector,outer_rim,6,4,1,formula,
-Emberhold,Muster Rock Sector,outer_rim,6,3,1,formula,
-Kranholm,Kranholm Sector,outer_rim,11,5,1,lore,major shipyards and trade
-Mirrorfield,Fallout Sector,outer_rim,6,4,1,formula,
-Coldwell,Rio Lodo Sector,outer_rim,6,4,1,formula,
-Long Noon,Ulaan Tal Sector,outer_rim,6,4,1,region,
-Willowmere,Quieta Sector,inner_rim,6,4,1,formula,
-Whetstone,Mata Alta Sector,outer_rim,6,4,1,formula,
-Viridia,Quieta Sector,inner_rim,6,4,1,formula,
-Cinco Lunas,Muster Rock Sector,outer_rim,5,4,1,keyword,harsh climate; mining
-Theorema,Cohors Sector,outer_rim,6,4,1,formula,
-Halfpenny,Feldspar Sector,inner_rim,10,7,1,formula,
-Hardscrabble,Shelter Sector,outer_rim,8,5,1,formula,
-Caminus,Caminus Sector,outer_rim,11,8,1,lore,SoroSuub: volcanic mining and industry
-Blackfen,Thaw Sector,outer_rim,8,5,1,keyword,billions of people
-Kesari,Solacia Sector,outer_rim,6,4,1,region,
-Hoshimachi,Rio Lodo Sector,outer_rim,6,4,1,formula,
-Belavista,Thesauros Sector,outer_rim,6,4,1,formula,
-San Teodor,Fallout Sector,outer_rim,6,4,1,region,
-Granero,Lesnaya Sector,inner_rim,10,7,1,formula,
-Glasshold,Akousma Sector,inner_rim,8,5,1,region,
-Weitfeld,Ironbeach Sector,outer_rim,6,4,1,formula,
-Lagoa Funda,Lagoa Funda Sector,inner_rim,8,5,1,formula,
-Bina Minor,Ommata Sector,core,12,11,1,formula,
-Kloof,Salitre Sector,outer_rim,6,4,1,formula,
-Blind Eye,Varmdal Sector,outer_rim,6,4,1,region,
-Kizil Dala,Clearholm Sector,outer_rim,6,4,1,region,
-Ivyholm,Shelter Sector,outer_rim,6,4,1,formula,
-Amargura,Pulau Hijau Sector,outer_rim,5,3,1,lore,"desert, moisture farms, Hutt-run"
-Old Salvage,Longwire Sector,outer_rim,6,4,1,region,
-Tabularium,Cohors Sector,outer_rim,6,4,1,formula,
-Skopia,Castra Sector,core,14,11,1,keyword,billions of people
-Endline,Slate Hill Sector,outer_rim,6,4,1,formula,
-Backwater,Slate Hill Sector,outer_rim,6,4,1,region,
-Silica Minor,Bauxite IV Sector,outer_rim,6,4,1,formula,
-Nascentia,Bauxite IV Sector,outer_rim,6,4,1,formula,
-Codicil,Tarrow Sector,core,11,8,1,region,
-Kalmoor,Bosque Alto Sector,inner_rim,10,7,1,formula,
-Salus,Incus Sector,inner_rim,9,5,1,lore,bacta monopoly
-Rigwater,Longwire Sector,outer_rim,8,5,1,formula,
-Shiree,Pulau Hijau Sector,outer_rim,6,4,1,formula,
-Specula,Three Lamps Sector,inner_rim,9,6,1,formula,
-Mittelfeld,Longwire Sector,outer_rim,10,7,1,keyword,billions of people
-Nueve Lunas,Lagoa Funda Sector,inner_rim,12,11,1,keyword,billions of people; mining
-Redveld,Vinograd Sector,inner_rim,8,5,1,formula,
-Tyomny Les,Fairhaven Sector,outer_rim,6,4,1,formula,
-Long Winter,Slate Hill Sector,outer_rim,6,4,1,formula,
-Hutan Raya,Bauxite IV Sector,outer_rim,6,4,1,formula,
-Nebbia,Nebbia Sector,outer_rim,8,5,1,formula,
-Bina Major,Castra Sector,core,12,11,1,formula,
-Ventstown,Lantern Sector,outer_rim,6,4,1,formula,
-Brokengate,Bellwether Sector,inner_rim,6,4,1,formula,
-Fallen Keel,Sendero Sector,outer_rim,8,5,1,formula,
-Pinehallow,Shelter Sector,outer_rim,9,6,1,region,
-Dar Sukun,Varmdal Sector,outer_rim,6,4,1,formula,
-Meseta,Feldspar Sector,inner_rim,6,4,1,formula,
-Fallout,Fallout Sector,outer_rim,6,4,1,formula,
-Prognosis,Feldspar Sector,inner_rim,11,7,1,keyword,billions of people
-Old Cairn,Ommata Sector,core,2,1,1,lore,"ancient Talent world, ruins [Wookieepedia-adjusted]"
-Imani Falls,Caza Real Sector,inner_rim,10,7,1,formula,
-Kolokol,Semeion Sector,inner_rim,8,5,1,formula,
-Broadacre,Pulau Hijau Sector,outer_rim,6,4,1,formula,
-Overgrowth,Longtide Sector,inner_rim,9,6,1,formula,
-Voluptas,Lenitas Sector,inner_rim,8,5,1,formula,
-Nordlys,Greenfever Sector,outer_rim,6,4,1,formula,
-Saltreach,Caminus Sector,outer_rim,7,6,1,lore,sinkhole mining
-Mossgarden,Eldingar Sector,outer_rim,6,4,1,formula,
-Hartwell,Charter Sector,core,11,8,1,region,
-Haverland,Vinograd Sector,inner_rim,9,4,1,keyword,yards/academy; agricultural
-Loess,Classis Sector,inner_rim,12,11,1,formula,
-Praesidium,Ferraria Sector,inner_rim,12,11,1,formula,
-Hammada,Semeion Sector,inner_rim,10,8,1,keyword,harsh climate
-Yukihama,Quieta Sector,inner_rim,8,5,1,formula,
-Metsola,Eldingar Sector,outer_rim,6,4,1,region,
-Treaty Wood,Semeion Sector,inner_rim,8,5,1,formula,
-Hollowstone,Feldspar Sector,inner_rim,9,8,1,keyword,yards/academy; mining
-Kaldvik,Highfall Sector,outer_rim,8,5,1,formula,
-Sigillum,Castra Sector,core,12,11,1,formula,
-Longshore,Salitre Sector,outer_rim,6,4,1,formula,
-Hirschwald,Thaw Sector,outer_rim,6,4,1,formula,
-Mirevale,Dunmere Sector,outer_rim,6,4,1,region,
-Feudgrass,Salitre Sector,outer_rim,6,4,1,formula,
-Resin Moon,Clearholm Sector,outer_rim,6,4,1,region,
-Bitterwell,Greenfever Sector,outer_rim,6,4,1,formula,
-Rio Turvo,Thesauros Sector,outer_rim,6,3,1,formula,
-Longquay,Varmdal Sector,outer_rim,8,5,1,region,
-Otium,Vinculum Sector,inner_rim,8,5,1,formula,
-Novy Rynek,Ashfall Sector,inner_rim,9,3,1,lore,"Gambler Paradise: gambling and trade, imports raw goods"
-Kept Faith,Moorings Sector,outer_rim,6,4,1,formula,
-Silberberg,Thesauros Sector,outer_rim,6,4,1,formula,
-Ridgefold,Highfall Sector,outer_rim,5,3,1,lore,The Chair's hidden storehouse
-Tinderland,Ulaan Tal Sector,outer_rim,6,4,1,formula,
-Firmitas,Muster Rock Sector,outer_rim,6,4,1,formula,
-Castellum,Lesnaya Sector,inner_rim,8,5,1,formula,
-Folio,Altofen Sector,inner_rim,9,6,1,formula,
-Saltwood,Excubia Sector,core,12,11,1,formula,
-Skarholm,Rio Lodo Sector,outer_rim,6,4,1,formula,
-Azzurra,Ferraria Sector,inner_rim,11,7,1,keyword,billions of people; yards/academy
-Brandt's Giant,Highfall Sector,outer_rim,4,1,1,keyword,gas giant
-Brennhof,Tarrow Sector,core,12,11,1,formula,
-Deepcut,Eldingar Sector,outer_rim,6,4,1,region,
-Nutrix,Ommata Sector,core,12,11,1,formula,
-Craterhold,Incus Sector,inner_rim,10,7,1,formula,
-Lindenfall,Fyrholm Sector,outer_rim,6,4,1,formula,
-Kinoko,Eldingar Sector,outer_rim,6,4,1,formula,
-The Shoal,Greenfever Sector,outer_rim,7,4,1,lore,Collective base moon; engine adds the start base
-The Cuts,Sendero Sector,outer_rim,6,4,1,formula,
-Sabkha,Mirabel Sector,inner_rim,7,5,1,keyword,harsh climate
-Milestone Nine,Ironbeach Sector,outer_rim,6,4,1,region,
-Nyika,Thesauros Sector,outer_rim,6,4,1,formula,
-Kelpfast,Mata Alta Sector,outer_rim,6,4,1,formula,
-Pronoia,Ilanga Sector,outer_rim,6,4,1,formula,
-Marisol,Bellwether Sector,inner_rim,10,3,1,lore,"Zeltron pleasure world: entertainment and luxury, no heavy industry"
-Clove,Ilanga Sector,outer_rim,6,4,1,region,
-Coldhearth,Greenfever Sector,outer_rim,6,4,1,formula,
-Ashenmark,Sendero Sector,outer_rim,8,5,1,formula,
-Tallow Mesa,Bauxite IV Sector,outer_rim,5,3,1,keyword,small population
+Nadezhda,Thaw Sector,farreach,4,3,1,keyword,under 1 million
+Highmere,Pulau Hijau Sector,farreach,6,4,1,formula,
+Feriae,Sendero Sector,farreach,8,5,1,formula,
+Deep Wells,Ulaan Tal Sector,farreach,8,5,1,formula,
+Standstill,Drift Harbour Sector,farreach,8,5,1,keyword,billions of people
+Mata Alta,Mata Alta Sector,farreach,8,4,1,lore,lore pick (source notes removed 2026-10-25)
+Mokra,Altofen Sector,midreach,6,5,1,keyword,mining
+Stepwell,Fyrholm Sector,farreach,7,5,1,keyword,yards/academy
+Kalium II,Quieta Sector,midreach,3,3,1,lore,lore pick (source notes removed 2026-10-25)
+Sonnfeld,Moorings Sector,farreach,8,5,1,keyword,billions of people
+Felsite III,Clearholm Sector,farreach,6,4,1,formula,
+Awlbridge,Hundred Lakes Sector,farreach,6,4,1,formula,
+Wrenfield,Ferraria Sector,midreach,10,7,1,formula,
+Skerrholm,Thesauros Sector,farreach,6,4,1,formula,
+Ilhas Fundas,Kranholm Sector,farreach,6,4,1,formula,
+Regrowth,Eldingar Sector,farreach,6,4,1,formula,
+Tidewall,Ashfall Sector,midreach,8,5,1,formula,
+Timberline,Longwire Sector,farreach,6,5,1,keyword,mining
+Valle Hondo,Charter Sector,heartland,12,11,1,formula,
+Montefosco,Caminus Sector,farreach,10,7,1,keyword,billions of people
+Landfall,Ulaan Tal Sector,farreach,6,4,1,region,
+Lowmoor,Ciénaga Sector,farreach,8,5,1,region,
+Longtide,Longtide Sector,midreach,7,5,1,lore,lore pick (source notes removed 2026-10-25)
+Supper Hill,Ciénaga Sector,farreach,6,4,1,region,
+Sinkwater,Caminus Sector,farreach,7,5,1,keyword,yards/academy
+Mbuga,Sendero Sector,farreach,8,5,1,formula,
+Rietmoor,Quieta Sector,midreach,6,4,1,region,
+The Lantern,Lantern Sector,farreach,6,6,1,lore,lore pick (source notes removed 2026-10-25)
+Seafold,Ilanga Sector,farreach,6,4,1,formula,
+Horasis,Bosque Alto Sector,midreach,12,9,1,formula,
+Agmen,Quieta Sector,midreach,6,3,1,formula,
+Retentio,Lagoa Funda Sector,midreach,10,7,1,formula,
+Consolatio,Castra Sector,heartland,10,7,1,formula,
+Tierra Larga,Bosque Alto Sector,midreach,9,6,1,formula,
+Kestrel Downs,Feldspar Sector,midreach,9,6,1,region,
+Barro Rojo,Rio Lodo Sector,farreach,6,4,1,formula,
+Hundred Falls,Lenitas Sector,midreach,9,6,1,formula,
+Stonebrake,Castra Sector,heartland,14,13,1,formula,
+Thornveld,Mirabel Sector,midreach,12,9,1,region,
+Khamsin,Nebbia Sector,farreach,6,3,1,formula,
+Naphtha,Solacia Sector,farreach,4,1,1,keyword,gas giant
+Ilha Verde,Ferraria Sector,midreach,10,7,1,formula,
+Lastwell,Highfall Sector,farreach,11,8,1,region,
+Breakyard,Greenfever Sector,farreach,4,2,1,lore,lore pick (source notes removed 2026-10-25)
+Plainsong,Fyrholm Sector,farreach,6,4,1,formula,
+Statio,Akousma Sector,midreach,7,3,1,lore,lore pick (source notes removed 2026-10-25)
+Nordhaven,Bosque Alto Sector,midreach,8,5,1,region,
+Vinterby,Clearholm Sector,farreach,9,6,1,formula,
+Navalia,Lesnaya Sector,midreach,15,6,1,lore,lore pick (source notes removed 2026-10-25)
+Stewpot,Hundred Lakes Sector,farreach,6,4,1,formula,
+Highrime,Tormentum Sector,midreach,10,7,1,formula,
+Stepstone,Semeion Sector,midreach,8,5,1,formula,
+The Kiln,Ironbeach Sector,farreach,6,4,1,region,
+Alvorada,Cohors Sector,farreach,6,4,1,formula,
+Two Crowns,Akousma Sector,midreach,10,7,1,keyword,billions of people
+Neuwerft,Vinograd Sector,midreach,10,7,1,formula,
+Loomhollow,Eldingar Sector,farreach,6,4,1,formula,
+Kamenitsa,Mechane Sector,midreach,8,5,1,formula,
+Tres Rios,Akousma Sector,midreach,8,5,1,keyword,mining; agricultural
+Limes,Tarrow Sector,heartland,12,9,1,region,
+Dunmere,Dunmere Sector,farreach,10,5,1,lore,lore pick (source notes removed 2026-10-25)
+Kaskela,Ashfall Sector,midreach,8,5,1,formula,
+Vaultrock,Drift Harbour Sector,farreach,6,4,1,region,
+Icetap,Slate Hill Sector,farreach,6,4,1,region,
+Dormilona,Sendero Sector,farreach,5,4,1,keyword,small population; mining
+Vallum,Classis Sector,midreach,12,5,1,lore,lore pick (source notes removed 2026-10-25)
+Kaltwasser,Salitre Sector,farreach,6,4,1,formula,
+Campo Alto,Fairhaven Sector,farreach,8,5,1,region,
+Llano Grande,Altofen Sector,midreach,6,4,1,lore,lore pick (source notes removed 2026-10-25)
+Midden,Drift Harbour Sector,farreach,6,4,1,formula,
+The Flats,Fallout Sector,farreach,6,4,1,formula,
+Ochre Wells,Ironbeach Sector,farreach,6,4,1,region,
+Terracotta,Nebbia Sector,farreach,4,1,1,keyword,gas giant
+Ghostlight,Cohors Sector,farreach,6,4,1,formula,
+Wellhead,Altofen Sector,midreach,8,5,1,lore,lore pick (source notes removed 2026-10-25)
+Stillwater,Pulau Hijau Sector,farreach,6,4,1,region,Not in lore sheet; region default
+Cohors,Cohors Sector,farreach,6,4,1,formula,
+Gumwater,Ironbeach Sector,farreach,6,4,1,region,
+Dulcia,Incus Sector,midreach,10,7,1,formula,
+Fabrica,Ashfall Sector,midreach,10,7,1,region,Not in lore sheet; region default
+Seedbank,Rauchtal Sector,farreach,7,5,1,keyword,yards/academy
+Hardpan,Longwire Sector,farreach,5,3,1,keyword,harsh climate
+Selvagem,Mirabel Sector,midreach,10,7,1,region,
+Vidrio,Nebbia Sector,farreach,6,4,1,region,
+Halfwinter,Vinculum Sector,midreach,9,8,1,keyword,mining
+Clinker,Ashfall Sector,midreach,8,5,1,formula,
+Blackmire,Mechane Sector,midreach,9,6,1,formula,
+Plenty,Salitre Sector,farreach,6,3,1,keyword,agricultural
+Four Lamps,Akousma Sector,midreach,6,3,1,formula,
+Greysand,Salitre Sector,farreach,4,3,1,keyword,small population; harsh climate
+Halfsky,Fyrholm Sector,farreach,6,4,1,region,
+Tierra Seca,Laterite Sector,farreach,5,3,1,keyword,small population
+Ashgarden,Zlatna Sector,farreach,6,4,1,formula,
+The Moorings,Moorings Sector,farreach,10,5,1,lore,lore pick (source notes removed 2026-10-25)
+Laetitia,Zlatna Sector,farreach,8,7,1,keyword,mining
+Highbarrow,Longtide Sector,midreach,10,7,1,formula,
+Long Strike,Hundred Lakes Sector,farreach,6,4,1,formula,
+Ardlinn,Excubia Sector,heartland,11,10,1,formula,
+Towline,Zlatna Sector,farreach,8,5,1,region,
+The Notch,Lantern Sector,farreach,6,4,1,formula,
+Plage Blanche,Nebbia Sector,farreach,6,4,1,formula,
+Blackglass,Longwire Sector,farreach,8,8,1,lore,lore pick (source notes removed 2026-10-25)
+Zlatna,Zlatna Sector,farreach,12,8,1,lore,lore pick (source notes removed 2026-10-25)
+Rimeglass,Fyrholm Sector,farreach,6,4,1,formula,
+Oranjeveld,Hundred Lakes Sector,farreach,6,4,1,formula,
+Tamarisk,Mirabel Sector,midreach,14,11,1,region,
+Solacia,Solacia Sector,farreach,9,3,1,lore,lore pick (source notes removed 2026-10-25)
+Sourwater,Charter Sector,heartland,14,11,1,region,
+Wolfram II,Dunmere Sector,farreach,6,4,1,region,
+Mica,Three Lamps Sector,midreach,5,1,1,keyword,gas giant; yards/academy
+Vrijhaven,Nebbia Sector,farreach,8,6,1,lore,lore pick (source notes removed 2026-10-25)
+The Ladle,Drift Harbour Sector,farreach,6,4,1,formula,
+Mill Hollow,Ulaan Tal Sector,farreach,7,5,1,keyword,small population
+Lowenna,Tormentum Sector,midreach,10,7,1,keyword,billions of people
+Old Amber,Ferraria Sector,midreach,11,8,1,region,
+Hartsease,Vinograd Sector,midreach,8,5,1,formula,
+Hoogstad,Muster Rock Sector,farreach,12,3,1,lore,lore pick (source notes removed 2026-10-25)
+Stonecrop,Altofen Sector,midreach,6,4,1,region,
+Grandmother,Laterite Sector,farreach,6,4,1,formula,
+Ardlow,Slate Hill Sector,farreach,6,4,1,formula,
+Medela,Tormentum Sector,midreach,10,5,1,lore,lore pick (source notes removed 2026-10-25)
+Alabaster,Incus Sector,midreach,8,7,1,formula,
+Cendrine,Ironbeach Sector,farreach,6,4,1,formula,
+Verdemar,Ashfall Sector,midreach,8,5,1,formula,
+Kruispunt,Feldspar Sector,midreach,10,7,1,region,
+Whitecairn,Rio Lodo Sector,farreach,5,4,1,keyword,harsh climate; mining
+Sawtooth,Longtide Sector,midreach,10,7,1,formula,
+Duskwater,Hundred Lakes Sector,farreach,6,4,1,formula,
+Chert,Pulau Hijau Sector,farreach,8,5,1,region,
+Ommata,Ommata Sector,heartland,8,5,1,lore,lore pick (source notes removed 2026-10-25)
+Thousand Mouths,Akousma Sector,midreach,8,5,1,region,
+Black Teeth,Muster Rock Sector,farreach,6,5,1,keyword,mining
+Whitmark,Three Lamps Sector,midreach,10,7,1,formula,
+Lesnaya,Lesnaya Sector,midreach,6,3,1,formula,
+Kilele,Caminus Sector,farreach,6,4,1,formula,
+Kronholm,Longtide Sector,midreach,6,4,1,lore,lore pick (source notes removed 2026-10-25)
+Stopped Line,Salitre Sector,farreach,6,4,1,region,
+Last Platform,Varmdal Sector,farreach,6,4,1,formula,
+Fairhaven,Fairhaven Sector,farreach,8,3,1,lore,lore pick (source notes removed 2026-10-25)
+Stopgap,Bellwether Sector,midreach,6,3,1,formula,
+Pale Ridge,Zlatna Sector,farreach,6,4,1,formula,
+Vysoka,Fyrholm Sector,farreach,8,5,1,region,
+Cinnabar,Classis Sector,midreach,6,4,1,region,
+Hlubina,Sendero Sector,farreach,6,4,1,formula,
+Rockclaim,Hundred Lakes Sector,farreach,12,9,1,formula,
+Bilokray,Laterite Sector,farreach,6,4,1,formula,
+Puerto Ceniza,Tarrow Sector,heartland,11,10,1,formula,
+Campus,Kranholm Sector,farreach,6,4,1,region,
+Belmare,Charter Sector,heartland,12,11,1,formula,
+Veenhoven,Kranholm Sector,farreach,6,4,1,formula,
+Haematite,Kranholm Sector,farreach,6,4,1,region,
+Kreuzweg,Highfall Sector,farreach,9,6,1,region,
+Organon,Bauxite IV Sector,farreach,5,2,1,keyword,small population; agricultural
+Stibium,Excubia Sector,heartland,12,11,1,formula,
+Horsemarch,Tarrow Sector,heartland,12,11,1,formula,
+Last Tank,Slate Hill Sector,farreach,6,4,1,formula,
+Stabilis,Bosque Alto Sector,midreach,12,9,1,formula,
+Altamesa,Classis Sector,midreach,10,7,1,formula,
+Wadi Noor,Fairhaven Sector,farreach,5,3,1,keyword,harsh climate
+Longwire,Longwire Sector,farreach,6,4,1,formula,
+Fernhollow,Fallout Sector,farreach,6,4,1,formula,
+Glassfield,Altofen Sector,midreach,9,6,1,formula,
+Lowlight,Lenitas Sector,midreach,10,7,1,formula,
+Stochos,Dunmere Sector,farreach,6,4,1,region,
+Portelle,Kranholm Sector,farreach,6,4,1,region,
+Hortensia,Moorings Sector,farreach,6,4,1,region,
+Snowmouth,Lantern Sector,farreach,6,4,1,formula,
+Constantia,Lagoa Funda Sector,midreach,12,8,1,keyword,yards/academy
+Sunderby,Longtide Sector,midreach,8,5,1,keyword,harsh climate
+Disciplina,Excubia Sector,heartland,12,11,1,formula,
+Galeholm,Bellwether Sector,midreach,8,5,1,region,
+Zubets,Fairhaven Sector,farreach,6,4,1,formula,
+Slate Hill,Slate Hill Sector,farreach,6,4,1,formula,
+Requies,Cohors Sector,farreach,6,4,1,region,
+Stonebarrow,Fairhaven Sector,farreach,6,4,1,region,
+Kalinov,Lagoa Funda Sector,midreach,10,7,1,region,
+Castra,Castra Sector,heartland,12,5,1,lore,lore pick (source notes removed 2026-10-25)
+Remedium,Castra Sector,heartland,12,7,1,keyword,agricultural
+Fuego Alto,Ciénaga Sector,farreach,10,9,1,keyword,billions of people; mining
+Teloneum,Lagoa Funda Sector,midreach,8,5,1,formula,
+Mudhaven,Kranholm Sector,farreach,6,4,1,region,
+Pulau Hijau,Pulau Hijau Sector,farreach,4,3,1,lore,lore pick (source notes removed 2026-10-25)
+Sendero,Sendero Sector,farreach,6,4,1,formula,
+Brushfield,Bosque Alto Sector,midreach,8,5,1,region,
+Waypost,Muster Rock Sector,farreach,6,3,1,region,
+Kvitberg,Rauchtal Sector,farreach,6,4,1,formula,
+Rosenbach,Clearholm Sector,farreach,6,4,1,formula,
+Ninefold,Bellwether Sector,midreach,10,7,1,formula,
+Laterite,Laterite Sector,farreach,6,3,1,lore,lore pick (source notes removed 2026-10-25)
+Ciénaga,Ciénaga Sector,farreach,6,4,1,formula,
+Las Mieses,Charter Sector,heartland,12,7,1,keyword,agricultural
+Corundum,Thesauros Sector,farreach,8,5,1,formula,
+Goldcloud,Zlatna Sector,farreach,4,1,1,keyword,gas giant
+Long Strand,Lantern Sector,farreach,6,4,1,formula,
+Hagelfeld,Rauchtal Sector,farreach,6,3,1,lore,lore pick (source notes removed 2026-10-25)
+Dry House,Zlatna Sector,farreach,6,4,1,formula,
+Holmvik,Kranholm Sector,farreach,6,4,1,region,
+Pescadora,Muster Rock Sector,farreach,6,4,1,formula,
+Groza,Slate Hill Sector,farreach,6,4,1,formula,
+Marmor,Classis Sector,midreach,12,11,1,formula,
+Ebbeholm,Shelter Sector,farreach,6,4,1,formula,
+Mar Seco,Drift Harbour Sector,farreach,6,4,1,keyword,mining; agricultural
+Motu Ahi,Salitre Sector,farreach,6,4,1,formula,
+Quebrada Honda,Eldingar Sector,farreach,6,4,1,formula,
+Needlepeak,Ciénaga Sector,farreach,8,5,1,formula,
+Saffron Downs,Ferraria Sector,midreach,9,6,1,formula,
+Gnomon,Excubia Sector,heartland,11,6,1,lore,lore pick (source notes removed 2026-10-25)
+Make Do,Longwire Sector,farreach,6,4,1,formula,
+Emberhold,Muster Rock Sector,farreach,6,3,1,formula,
+Kranholm,Kranholm Sector,farreach,11,5,1,lore,lore pick (source notes removed 2026-10-25)
+Mirrorfield,Fallout Sector,farreach,6,4,1,formula,
+Coldwell,Rio Lodo Sector,farreach,6,4,1,formula,
+Long Noon,Ulaan Tal Sector,farreach,6,4,1,region,
+Willowmere,Quieta Sector,midreach,6,4,1,formula,
+Whetstone,Mata Alta Sector,farreach,6,4,1,formula,
+Viridia,Quieta Sector,midreach,6,4,1,formula,
+Cinco Lunas,Muster Rock Sector,farreach,5,4,1,keyword,harsh climate; mining
+Theorema,Cohors Sector,farreach,6,4,1,formula,
+Halfpenny,Feldspar Sector,midreach,10,7,1,formula,
+Hardscrabble,Shelter Sector,farreach,8,5,1,formula,
+Caminus,Caminus Sector,farreach,11,8,1,lore,lore pick (source notes removed 2026-10-25)
+Blackfen,Thaw Sector,farreach,8,5,1,keyword,billions of people
+Kesari,Solacia Sector,farreach,6,4,1,region,
+Hoshimachi,Rio Lodo Sector,farreach,6,4,1,formula,
+Belavista,Thesauros Sector,farreach,6,4,1,formula,
+San Teodor,Fallout Sector,farreach,6,4,1,region,
+Granero,Lesnaya Sector,midreach,10,7,1,formula,
+Glasshold,Akousma Sector,midreach,8,5,1,region,
+Weitfeld,Ironbeach Sector,farreach,6,4,1,formula,
+Lagoa Funda,Lagoa Funda Sector,midreach,8,5,1,formula,
+Bina Minor,Ommata Sector,heartland,12,11,1,formula,
+Kloof,Salitre Sector,farreach,6,4,1,formula,
+Blind Eye,Varmdal Sector,farreach,6,4,1,region,
+Kizil Dala,Clearholm Sector,farreach,6,4,1,region,
+Ivyholm,Shelter Sector,farreach,6,4,1,formula,
+Amargura,Pulau Hijau Sector,farreach,5,3,1,lore,lore pick (source notes removed 2026-10-25)
+Old Salvage,Longwire Sector,farreach,6,4,1,region,
+Tabularium,Cohors Sector,farreach,6,4,1,formula,
+Skopia,Castra Sector,heartland,14,11,1,keyword,billions of people
+Endline,Slate Hill Sector,farreach,6,4,1,formula,
+Backwater,Slate Hill Sector,farreach,6,4,1,region,
+Silica Minor,Bauxite IV Sector,farreach,6,4,1,formula,
+Nascentia,Bauxite IV Sector,farreach,6,4,1,formula,
+Codicil,Tarrow Sector,heartland,11,8,1,region,
+Kalmoor,Bosque Alto Sector,midreach,10,7,1,formula,
+Salus,Incus Sector,midreach,9,5,1,lore,lore pick (source notes removed 2026-10-25)
+Rigwater,Longwire Sector,farreach,8,5,1,formula,
+Shiree,Pulau Hijau Sector,farreach,6,4,1,formula,
+Specula,Three Lamps Sector,midreach,9,6,1,formula,
+Mittelfeld,Longwire Sector,farreach,10,7,1,keyword,billions of people
+Nueve Lunas,Lagoa Funda Sector,midreach,12,11,1,keyword,billions of people; mining
+Redveld,Vinograd Sector,midreach,8,5,1,formula,
+Tyomny Les,Fairhaven Sector,farreach,6,4,1,formula,
+Long Winter,Slate Hill Sector,farreach,6,4,1,formula,
+Hutan Raya,Bauxite IV Sector,farreach,6,4,1,formula,
+Nebbia,Nebbia Sector,farreach,8,5,1,formula,
+Bina Major,Castra Sector,heartland,12,11,1,formula,
+Ventstown,Lantern Sector,farreach,6,4,1,formula,
+Brokengate,Bellwether Sector,midreach,6,4,1,formula,
+Fallen Keel,Sendero Sector,farreach,8,5,1,formula,
+Pinehallow,Shelter Sector,farreach,9,6,1,region,
+Dar Sukun,Varmdal Sector,farreach,6,4,1,formula,
+Meseta,Feldspar Sector,midreach,6,4,1,formula,
+Fallout,Fallout Sector,farreach,6,4,1,formula,
+Prognosis,Feldspar Sector,midreach,11,7,1,keyword,billions of people
+Old Cairn,Ommata Sector,heartland,2,1,1,lore,lore pick (source notes removed 2026-10-25)
+Imani Falls,Caza Real Sector,midreach,10,7,1,formula,
+Kolokol,Semeion Sector,midreach,8,5,1,formula,
+Broadacre,Pulau Hijau Sector,farreach,6,4,1,formula,
+Overgrowth,Longtide Sector,midreach,9,6,1,formula,
+Voluptas,Lenitas Sector,midreach,8,5,1,formula,
+Nordlys,Greenfever Sector,farreach,6,4,1,formula,
+Saltreach,Caminus Sector,farreach,7,6,1,lore,lore pick (source notes removed 2026-10-25)
+Mossgarden,Eldingar Sector,farreach,6,4,1,formula,
+Hartwell,Charter Sector,heartland,11,8,1,region,
+Haverland,Vinograd Sector,midreach,9,4,1,keyword,yards/academy; agricultural
+Loess,Classis Sector,midreach,12,11,1,formula,
+Praesidium,Ferraria Sector,midreach,12,11,1,formula,
+Hammada,Semeion Sector,midreach,10,8,1,keyword,harsh climate
+Yukihama,Quieta Sector,midreach,8,5,1,formula,
+Metsola,Eldingar Sector,farreach,6,4,1,region,
+Treaty Wood,Semeion Sector,midreach,8,5,1,formula,
+Hollowstone,Feldspar Sector,midreach,9,8,1,keyword,yards/academy; mining
+Kaldvik,Highfall Sector,farreach,8,5,1,formula,
+Sigillum,Castra Sector,heartland,12,11,1,formula,
+Longshore,Salitre Sector,farreach,6,4,1,formula,
+Hirschwald,Thaw Sector,farreach,6,4,1,formula,
+Mirevale,Dunmere Sector,farreach,6,4,1,region,
+Feudgrass,Salitre Sector,farreach,6,4,1,formula,
+Resin Moon,Clearholm Sector,farreach,6,4,1,region,
+Bitterwell,Greenfever Sector,farreach,6,4,1,formula,
+Rio Turvo,Thesauros Sector,farreach,6,3,1,formula,
+Longquay,Varmdal Sector,farreach,8,5,1,region,
+Otium,Vinculum Sector,midreach,8,5,1,formula,
+Novy Rynek,Ashfall Sector,midreach,9,3,1,lore,lore pick (source notes removed 2026-10-25)
+Kept Faith,Moorings Sector,farreach,6,4,1,formula,
+Silberberg,Thesauros Sector,farreach,6,4,1,formula,
+Ridgefold,Highfall Sector,farreach,5,3,1,lore,lore pick (source notes removed 2026-10-25)
+Tinderland,Ulaan Tal Sector,farreach,6,4,1,formula,
+Firmitas,Muster Rock Sector,farreach,6,4,1,formula,
+Castellum,Lesnaya Sector,midreach,8,5,1,formula,
+Folio,Altofen Sector,midreach,9,6,1,formula,
+Saltwood,Excubia Sector,heartland,12,11,1,formula,
+Skarholm,Rio Lodo Sector,farreach,6,4,1,formula,
+Azzurra,Ferraria Sector,midreach,11,7,1,keyword,billions of people; yards/academy
+Brandt's Giant,Highfall Sector,farreach,4,1,1,keyword,gas giant
+Brennhof,Tarrow Sector,heartland,12,11,1,formula,
+Deepcut,Eldingar Sector,farreach,6,4,1,region,
+Nutrix,Ommata Sector,heartland,12,11,1,formula,
+Craterhold,Incus Sector,midreach,10,7,1,formula,
+Lindenfall,Fyrholm Sector,farreach,6,4,1,formula,
+Kinoko,Eldingar Sector,farreach,6,4,1,formula,
+The Shoal,Greenfever Sector,farreach,7,4,1,lore,lore pick (source notes removed 2026-10-25)
+The Cuts,Sendero Sector,farreach,6,4,1,formula,
+Sabkha,Mirabel Sector,midreach,7,5,1,keyword,harsh climate
+Milestone Nine,Ironbeach Sector,farreach,6,4,1,region,
+Nyika,Thesauros Sector,farreach,6,4,1,formula,
+Kelpfast,Mata Alta Sector,farreach,6,4,1,formula,
+Pronoia,Ilanga Sector,farreach,6,4,1,formula,
+Marisol,Bellwether Sector,midreach,10,3,1,lore,lore pick (source notes removed 2026-10-25)
+Clove,Ilanga Sector,farreach,6,4,1,region,
+Coldhearth,Greenfever Sector,farreach,6,4,1,formula,
+Ashenmark,Sendero Sector,farreach,8,5,1,formula,
+Tallow Mesa,Bauxite IV Sector,farreach,5,3,1,keyword,small population

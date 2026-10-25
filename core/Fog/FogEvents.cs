@@ -6,7 +6,7 @@ namespace Praedra.Core.Fog;
 // like FleetDeparted). rule: m5-fog-and-hq §F8 (slots), §N8 (audience).
 
 /// <summary>How a picture was written. rule: m5-fog-and-hq §F2 (the reveal kinds).</summary>
-public enum RevealKind { Setup, FullCopy, Presence, Recon, Engagement, LossNotice, CoreReport, Destroyed, OwnLive }
+public enum RevealKind { Setup, FullCopy, Presence, Recon, Engagement, LossNotice, HeartlandReport, Destroyed, OwnLive }
 
 /// <summary>Order: move the Hearth to a system. Collective only. Checked in step 1. rule: m5-fog-and-hq §F6.</summary>
 public sealed record MoveHqOrder(long Sequence, Side Side, string Destination) : Order(Sequence, Side);

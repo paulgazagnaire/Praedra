@@ -12,7 +12,7 @@ public class FogSettingsTests
     {
         var p = new FogParams();
         Assert.Equal(FogRuleset.New, p.Ruleset);
-        Assert.True(p.LanesPublic); Assert.True(p.CoreReportsInstantly); Assert.True(p.PassingFleetsExplore); Assert.True(p.AgentPresenceCounts);
+        Assert.True(p.LanesPublic); Assert.True(p.HeartlandReportsInstantly); Assert.True(p.PassingFleetsExplore); Assert.True(p.AgentPresenceCounts);
         Assert.True(p.ReconRevealsFacilities); Assert.False(p.PresenceRevealsHq); Assert.Equal(SectorSuspicion.Off, p.SectorSuspicion);
         Assert.Equal(30, p.ObservedWindowDays); Assert.True(p.SingleHqCleanup);
         Assert.Equal(new[] { "The Shoal" }, p.StartFullCopyHand); Assert.Empty(p.StartFullCopyCollective);

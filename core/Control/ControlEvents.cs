@@ -15,7 +15,7 @@ namespace Praedra.Core.Control;
 public enum CaptureCause
 {
     Debug, Assault,
-    /// <summary>A neutral system of a sector struck twice by the harvester turns Collective (AssaultOnly only). rule: m5-death-star §2 effect 7.</summary>
+    /// <summary>A neutral system of a sector struck twice by the harvester turns Collective (AssaultOnly only). rule: m5-harvester §2 effect 7.</summary>
     HarvesterRevolt,
     /// <summary>Support alone moved the world: no regiments on it before or after. Headlines "Joins", "Joins Enemy", "Declares Neutrality".</summary>
     Support,

@@ -37,7 +37,7 @@ internal static class DerivedCapture
 
 /// <summary>
 /// A full <see cref="GameHost"/> on the real galaxy with the derived control rule (the DEFAULT), debug orders on, incidents off and autoscrap out of
-/// reach. The Classis Sector is the stage. v6 re-pin 2026-10-24: on the spiral map it holds 9 populated inner-rim worlds (Grauburg, Classis,
+/// reach. The Classis Sector is the stage. v6 re-pin 2026-10-24: on the spiral map it holds 9 populated Midreach worlds (Grauburg, Classis,
 /// Beryl, Fiscus, Vallum, Cinnabar, Altamesa, Marmor, Loess); Hiberna and Bina Major moved to other sectors, so Beryl and Altamesa take their parts.
 /// </summary>
 internal sealed class DerivedWorld
@@ -463,7 +463,7 @@ public class B5aControlTests
             }
     }
 
-    // The harvester's second strike in a sector under derived control (m5-death-star §2 effect 7, New, B5a section 9): the support change to 100
+    // The harvester's second strike in a sector under derived control (m5-harvester §2 effect 7, New, B5a section 9): the support change to 100
     // alone turns a neutral world and an ungarrisoned Hand world Collective; a garrisoned Hand world stays Hand and riots.
     [Fact]
     public void B5a_HarvesterRevolt_DerivedControl()
@@ -481,8 +481,8 @@ public class B5aControlTests
         Assert.True(w.H.Support.IsUprising(T));
     }
 
-    // HarvesterFallout = Classic (; B5c-11's case): a planet destroyed by the Hand costs the Hand 10 on every core world of the galaxy, 2 on a
-    // rim world where its support is below 90 (a rim world at 95 is unchanged, at 80 it goes to 78); never-held worlds are unchanged.
+    // HarvesterFallout = Classic (; B5c-11's case): a planet destroyed by the Hand costs the Hand 10 on every Heartland world of the galaxy, 2 on a
+    // outer world where its support is below 90 (a outer world at 95 is unchanged, at 80 it goes to 78); never-held worlds are unchanged.
     [Fact]
     public void B5a_HarvesterFalloutClassic_GalaxyWide()
     {
@@ -502,13 +502,13 @@ public class B5aControlTests
     }
 
     // B5c-11 (corrected 2026-10-18): in the harvester's own sector the Classic fallout is halved by the damping (a Hand loss raises the Collective
-    // share): a core world -5 instead of -10, a rim world at Hand support 80 goes to 79 instead of 78; full elsewhere.
+    // share): a Heartland world -5 instead of -10, a outer world at Hand support 80 goes to 79 instead of 78; full elsewhere.
     [Fact]
     public void B5c11_HarvesterFalloutClassic_HalvedInTheHarvesterSector()
     {
         var w = new DerivedWorld(settings: DerivedWorld.Settings(ds: new HarvesterParams { Fallout = HarvesterFallout.Classic }));
         const string rimInSector = "The Thaw", rimElsewhere = "Drift Harbour", coreElsewhere = "Charter";
-        const string coreInSector = "Hiberna"; // v6 re-pin 2026-10-24: D (Beryl) is an inner-rim world now; Hiberna is still core (flags are per system)
+        const string coreInSector = "Hiberna"; // v6 re-pin 2026-10-24: D (Beryl) is an Midreach world now; Hiberna is still Heartland (flags are per system)
         w.Hold(coreInSector, Side.Hand, 10); w.Regiments(coreInSector, Side.Hand, 1); // core, in the flagged sector
         w.Hold(coreElsewhere, Side.Hand, 10); w.Regiments(coreElsewhere, Side.Hand, 1);
         w.Hold(rimInSector, Side.Hand, 20); w.Hold(rimElsewhere, Side.Hand, 20);

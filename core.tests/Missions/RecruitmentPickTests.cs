@@ -71,7 +71,7 @@ public class RecruitmentPickTests
     }
 
     // m5-missions MI63: pool Keth, Foreman, Wake (id order), draw r = 1: Foreman is placed free at the target system T, with the skills the creation
-    // rule rolled (base + rand(0..variance), m5-characters-and-force §Rolling the stats), the recruit recorded on the mission
+    // rule rolled (base + rand(0..variance), m5-characters-and-talent §Rolling the stats), the recruit recorded on the mission
     [Fact]
     public void MI63_PickAtTargetSystem_WithRolledSkills()
     {

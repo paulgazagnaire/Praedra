@@ -6,13 +6,12 @@ Praedra is our strategy game. It started as a rebuild of a 1990s galactic strate
 - The rule book is in the project folder: `/mnt/project-files/praedra/specs/engine/rules/` (index `README.md`). Code implements those sheets. Do not invent rules. If a sheet is unclear or wrong, stop and report it; do not guess.
 - The plan: `/mnt/project-files/praedra/specs/engine/04-development-plan.md`. Layout and rules: `03-code-layout.md`.
 - For Classic mode, the source of truth is Classic's own data files and our own reading of its executable only. New rules come from the rule sheets.
-- Say "Classic" for the base game in code, comments, tests and UI. The only exceptions are literal file names the importer must open (`GData/*.DAT`, `TEXTSTRA.DLL`).
+- Say "Classic" for the base game in code, comments, tests and UI.
 
 ## Layout
 - `core/` Praedra.Core: all game rules. No Godot. (.NET 8)
 - `core.tests/` xUnit tests. Each test names the rule sheet and test id it checks, e.g. `// m1-travel T9`.
 - `sim/` command-line runner for headless games and battle batches.
-- `importer/` (later) converts the Classic DAT files into `data/classic/`.
 - `data/` see `data/README.md`.
 - `godot/` (later) the Godot 4 .NET project. Screens only.
 

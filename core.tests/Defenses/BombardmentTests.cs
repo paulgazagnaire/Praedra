@@ -74,8 +74,8 @@ public class BombardmentTests
     // m3-bombardment B5 (hits = max(0, P - S)): the powers are built from ships and an injected admiral
     [Theory]
     [InlineData("3", "VD6", 0, 24, 40, 0)]                     // 6 Decrees (4 each) against Escrow I
-    [InlineData("3,6", "DS4+V2", 40, 130, 120, 10)]            // (4 harvesters + a Victory II = 65) x 2 against Escrow I + II
-    [InlineData("3,6", "DS3+V2", 40, 100, 120, 0)]             // (3 harvesters + a Victory II = 50) x 2
+    [InlineData("3,6", "HV4+V2", 40, 130, 120, 10)]            // (4 harvesters + a Victory II = 65) x 2 against Escrow I + II
+    [InlineData("3,6", "HV3+V2", 40, 100, 120, 0)]             // (3 harvesters + a Victory II = 50) x 2
     public void B5_ShieldsAbsorbPower(string gens, string ships, int leadership, int power, int shield, int hits)
     {
         var w = new BombWorld();
@@ -84,7 +84,7 @@ public class BombardmentTests
         var list = ships switch
         {
             "VD6" => Enumerable.Repeat("Decree", 6),
-            "DS4+V2" => Enumerable.Repeat("harvester", 4).Append("Decree II"),
+            "HV4+V2" => Enumerable.Repeat("harvester", 4).Append("Decree II"),
             _ => Enumerable.Repeat("harvester", 3).Append("Decree II"),
         };
         int fleet = w.Fleet(Emp, Sys, list.ToArray());

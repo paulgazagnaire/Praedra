@@ -1,7 +1,0 @@
-id,f1,production_family,next_production_family,family,word5,is_alliance,is_empire,cost,maintenance,research_order,research_difficulty,diplomacy,diplomacy_variance,espionage,espionage_variance,ship_design,ship_design_variance,troop_training,troop_training_variance,facility_design,facility_design_variance,combat,combat_variance,leadership,leadership_variance,loyalty,loyalty_variance,jedi_probability,known_jedi,jedi_level,jedi_level_variance,can_be_admiral,can_be_commander,can_be_general,unable_to_betray,jedi_trainer
-576,1,0,0,48,141376,1,0,0,0,0,0,100,0,10,0,0,0,0,0,0,0,10,0,100,0,100,0,0,0,0,0,0,0,0,1,0
-577,1,0,0,49,141377,1,0,0,0,0,0,120,0,30,0,0,0,0,0,0,0,50,0,70,0,100,0,100,0,10,0,0,0,0,1,0
-578,1,0,0,50,141378,1,0,0,0,0,0,50,0,50,0,0,0,0,0,0,0,90,0,70,0,100,0,100,1,50,0,1,1,1,1,1
-579,1,0,0,51,141379,1,0,0,0,0,0,10,0,100,0,0,0,0,0,0,0,100,0,90,0,100,0,0,0,0,0,1,1,1,1,0
-640,1,0,0,52,141440,0,1,0,0,0,0,30,0,20,0,0,0,0,0,0,0,50,0,100,0,100,0,100,1,150,0,0,0,0,1,0
-641,1,0,0,53,141441,0,1,0,0,0,0,40,0,50,0,0,0,0,0,0,0,100,0,100,0,100,0,100,1,120,0,1,1,1,1,1

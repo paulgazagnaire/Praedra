@@ -1,556 +1,556 @@
 name,start_owner,start_collective_support,start_weak,start_explored_all,start_explored_owner,is_hq,sector,group,on_route
-Feldspar,Hand,28,0,0,1,0,Feldspar Sector,inner_rim,1
-Umoya,neutral,50,0,0,0,0,Highfall Sector,outer_rim,1
-Seven Keys,neutral,50,0,0,0,0,Ciénaga Sector,outer_rim,0
-Second Spring,neutral,50,0,0,0,0,Pulau Hijau Sector,outer_rim,0
-Truce Moor,neutral,50,0,0,0,0,Rauchtal Sector,outer_rim,0
-Westerholm,neutral,50,0,0,0,0,Rauchtal Sector,outer_rim,1
-Erg Lahmar,neutral,50,0,0,0,0,Rauchtal Sector,outer_rim,0
-Highmere,neutral,50,0,0,0,0,Pulau Hijau Sector,outer_rim,1
-Shiree,neutral,50,0,0,0,0,Pulau Hijau Sector,outer_rim,0
-Broadacre,neutral,50,0,0,0,0,Pulau Hijau Sector,outer_rim,0
-Undergrowth,Collective,68,0,0,1,0,Mata Alta Sector,outer_rim,1
-The Stumps,neutral,50,0,0,0,0,Drift Harbour Sector,outer_rim,0
-Longgrass,Hand,26,0,0,1,0,Ilanga Sector,outer_rim,0
-Ashgarden,neutral,50,0,0,0,0,Zlatna Sector,outer_rim,1
-The Ladle,neutral,50,0,0,0,0,Drift Harbour Sector,outer_rim,0
-Whetstone,Collective,68,0,0,1,0,Mata Alta Sector,outer_rim,0
-Rigwater,neutral,50,0,0,0,0,Longwire Sector,outer_rim,1
-Redveld,neutral,50,0,0,0,0,Vinograd Sector,inner_rim,1
-Ventstown,neutral,50,0,0,0,0,Lantern Sector,outer_rim,1
-Kelpfast,neutral,50,0,0,0,0,Mata Alta Sector,outer_rim,1
-Hundred Lakes,neutral,50,0,0,0,0,Hundred Lakes Sector,outer_rim,1
-Sweetsea,neutral,50,0,0,0,0,Nebbia Sector,outer_rim,0
-Holdfast,Collective,85,0,0,1,0,Fallout Sector,outer_rim,0
-Mata Alta,Collective,85,0,0,1,0,Mata Alta Sector,outer_rim,0
-Awlbridge,neutral,50,0,0,0,0,Hundred Lakes Sector,outer_rim,0
-The Lantern,neutral,50,0,0,0,0,Lantern Sector,outer_rim,1
-Stewpot,neutral,50,0,0,0,0,Hundred Lakes Sector,outer_rim,0
-Long Strike,neutral,50,0,0,0,0,Hundred Lakes Sector,outer_rim,1
-Duskwater,Hand,29,0,0,1,0,Hundred Lakes Sector,outer_rim,0
-Make Do,neutral,50,0,0,0,0,Longwire Sector,outer_rim,0
-Hard Winter,Collective,80,0,0,1,0,Longwire Sector,outer_rim,1
-Rustwell,Collective,83,0,0,1,0,Thaw Sector,outer_rim,1
-Drift Harbour,neutral,50,0,0,0,0,Drift Harbour Sector,outer_rim,0
-Weirholm,neutral,50,0,0,0,0,Fairhaven Sector,outer_rim,0
-Mudlark,neutral,50,0,0,0,0,Ironbeach Sector,outer_rim,0
-The Thaw,Collective,87,0,0,1,0,Thaw Sector,outer_rim,0
-Kamenitsa,neutral,50,0,0,0,0,Mechane Sector,inner_rim,1
-Verdemar,neutral,50,0,0,0,0,Ashfall Sector,inner_rim,1
-Hardscrabble,Hand,25,0,0,1,0,Shelter Sector,outer_rim,1
-Tyomny Les,neutral,50,0,0,0,0,Fairhaven Sector,outer_rim,0
-Porphyry,Hand,16,0,0,1,0,Mechane Sector,inner_rim,1
-Classis,Hand,30,0,0,1,0,Classis Sector,inner_rim,1
-Magnetite III,Hand,28,0,1,1,0,Ommata Sector,core,1
-Hiberna,neutral,55,0,1,0,0,Ommata Sector,core,1
-Beryl,Hand,15,0,0,1,0,Classis Sector,inner_rim,1
-Marmor,Hand,37,0,0,1,0,Classis Sector,inner_rim,1
-Bina Minor,neutral,56,0,1,0,0,Ommata Sector,core,1
-Bina Major,Hand,29,0,1,1,0,Castra Sector,core,1
-Loess,Hand,36,0,0,1,0,Classis Sector,inner_rim,1
-Nutrix,neutral,54,0,1,0,0,Ommata Sector,core,1
-Tarrow,neutral,45,0,1,0,0,Tarrow Sector,core,1
-Serra Alta,neutral,41,0,1,0,0,Tarrow Sector,core,1
-Valle Hondo,neutral,46,0,1,0,0,Charter Sector,core,1
-Seafold,Hand,14,0,0,1,0,Ilanga Sector,outer_rim,1
-Kilele,neutral,50,0,0,0,0,Caminus Sector,outer_rim,1
-Belmare,neutral,49,0,1,0,0,Charter Sector,core,1
-Stibium,neutral,52,0,1,0,0,Excubia Sector,core,1
-Corundum,neutral,50,0,0,0,0,Thesauros Sector,outer_rim,0
-Kloof,neutral,50,0,0,0,0,Salitre Sector,outer_rim,1
-Saltwood,neutral,45,0,1,0,0,Excubia Sector,core,1
-Semeion,Collective,78,0,0,1,0,Semeion Sector,inner_rim,1
-Ostwerk,neutral,50,0,0,0,0,Nebbia Sector,outer_rim,1
-Clanmoor,neutral,50,0,0,0,0,Rauchtal Sector,outer_rim,1
-Khamsin,neutral,50,0,0,0,0,Nebbia Sector,outer_rim,1
-Fairhaven,neutral,50,0,0,0,0,Fairhaven Sector,outer_rim,0
-Stopgap,neutral,50,0,0,0,0,Bellwether Sector,inner_rim,1
-Pale Ridge,neutral,50,0,0,0,0,Zlatna Sector,outer_rim,1
-Hutan Raya,neutral,50,0,0,0,0,Bauxite IV Sector,outer_rim,0
-Castellum,Hand,15,0,0,1,0,Lesnaya Sector,inner_rim,1
-Nyika,Collective,69,0,0,1,0,Thesauros Sector,outer_rim,1
-Halite,Hand,10,0,0,1,0,Bauxite IV Sector,outer_rim,1
-Cristalina,neutral,50,0,0,0,0,Caza Real Sector,inner_rim,1
-Vinograd,neutral,50,0,0,0,0,Vinograd Sector,inner_rim,1
-Custodia,Hand,27,0,0,1,0,Ferraria Sector,inner_rim,1
-Tranquilla,neutral,50,0,0,0,0,Longtide Sector,inner_rim,1
-Arithmos,neutral,49,0,1,0,0,Excubia Sector,core,1
-Ardlinn,Hand,10,0,1,1,0,Excubia Sector,core,1
-Whitmark,neutral,50,0,0,0,0,Three Lamps Sector,inner_rim,1
-Puerto Ceniza,neutral,57,0,1,0,0,Tarrow Sector,core,1
-Disciplina,neutral,50,0,1,0,0,Excubia Sector,core,1
-Ferraria,Hand,17,0,0,1,0,Ferraria Sector,inner_rim,1
-Mirabel,neutral,50,0,0,0,0,Mirabel Sector,inner_rim,1
-Sevenwells,neutral,54,0,1,0,0,Tarrow Sector,core,1
-Bela Voda,neutral,49,0,1,0,0,Excubia Sector,core,1
-Horasis,neutral,50,0,0,0,0,Bosque Alto Sector,inner_rim,1
-Tierra Larga,neutral,50,0,0,0,0,Bosque Alto Sector,inner_rim,1
-Horsemarch,neutral,54,0,1,0,0,Tarrow Sector,core,1
-Pulau Hijau,neutral,50,0,0,0,0,Pulau Hijau Sector,outer_rim,0
-Granero,Hand,30,0,0,1,0,Lesnaya Sector,inner_rim,1
-Tinderland,neutral,50,0,0,0,0,Ulaan Tal Sector,outer_rim,0
-Vinculum,neutral,50,0,0,0,0,Vinculum Sector,inner_rim,1
-Isbrand,neutral,50,0,0,0,0,Vinculum Sector,inner_rim,1
-Lockout,neutral,50,0,0,0,0,Varmdal Sector,outer_rim,0
-Birchholm,neutral,50,0,0,0,0,Vinculum Sector,inner_rim,1
-Bare Acre,neutral,50,0,0,0,0,Vinograd Sector,inner_rim,0
-Alabaster,neutral,50,0,0,0,0,Incus Sector,inner_rim,1
-Pescadora,neutral,50,0,0,0,0,Muster Rock Sector,outer_rim,0
-Treaty Wood,Hand,16,0,0,1,0,Semeion Sector,inner_rim,0
-Otium,neutral,50,0,0,0,0,Vinculum Sector,inner_rim,1
-Craterhold,Hand,11,0,0,1,0,Incus Sector,inner_rim,1
-Kaolin,neutral,50,0,0,0,0,Three Lamps Sector,inner_rim,1
-Marga,neutral,50,0,0,0,0,Dunmere Sector,outer_rim,0
-Thesauros,neutral,50,0,0,0,0,Thesauros Sector,outer_rim,0
-Vexillum,neutral,50,0,0,0,0,Thesauros Sector,outer_rim,1
-Brannock,neutral,50,0,0,0,0,Solacia Sector,outer_rim,0
-Bluefathom,Hand,65,1,0,1,0,Thesauros Sector,outer_rim,0
-Skerrholm,neutral,50,0,0,0,0,Thesauros Sector,outer_rim,1
-Retentio,neutral,50,0,0,0,0,Lagoa Funda Sector,inner_rim,1
-Meseta,neutral,50,0,0,0,0,Feldspar Sector,inner_rim,1
-Silberberg,neutral,50,0,0,0,0,Thesauros Sector,outer_rim,0
-Krasny Yar,neutral,50,0,0,0,0,Rio Lodo Sector,outer_rim,0
-Morrowfield,neutral,50,0,0,0,0,Akousma Sector,inner_rim,1
-Ribeira,neutral,50,0,0,0,0,Lenitas Sector,inner_rim,1
-Four Lamps,Hand,34,0,0,1,0,Akousma Sector,inner_rim,1
-The Notch,neutral,50,0,0,0,0,Lantern Sector,outer_rim,1
-Vrijhaven,neutral,50,0,0,0,0,Nebbia Sector,outer_rim,0
-Mirrorfield,Collective,82,0,0,1,0,Fallout Sector,outer_rim,0
-Viridia,neutral,50,0,0,0,0,Quieta Sector,inner_rim,1
-Rio Turvo,neutral,50,0,0,0,0,Thesauros Sector,outer_rim,0
-Brennhof,neutral,56,0,1,0,0,Tarrow Sector,core,1
-Skylark,Hand,10,0,0,1,0,Caminus Sector,outer_rim,1
-Warmwell,neutral,50,0,0,0,0,Quieta Sector,inner_rim,1
-Opsis,neutral,50,0,0,0,0,Kranholm Sector,outer_rim,0
-Sedova,neutral,50,0,0,0,0,Tormentum Sector,inner_rim,1
-Fallow,Collective,72,0,0,1,0,Mata Alta Sector,outer_rim,0
-Kairos,neutral,50,0,0,0,0,Varmdal Sector,outer_rim,1
-Ilhas Fundas,neutral,50,0,0,0,0,Kranholm Sector,outer_rim,1
-Lesnaya,neutral,50,0,0,0,0,Lesnaya Sector,inner_rim,1
-Dar Sukun,neutral,50,0,0,0,0,Varmdal Sector,outer_rim,1
-Nordlys,neutral,50,0,0,0,0,Greenfever Sector,outer_rim,0
-Solheim,neutral,50,0,0,0,0,Laterite Sector,outer_rim,0
-Marl,neutral,50,0,0,0,0,Mechane Sector,inner_rim,1
-Ferrymoor,neutral,50,0,0,0,0,Drift Harbour Sector,outer_rim,0
-Scoria,neutral,54,0,1,0,0,Charter Sector,core,1
-Fyrholm,neutral,50,0,0,0,0,Fyrholm Sector,outer_rim,1
-Ferrite IV,neutral,50,0,0,0,0,Lesnaya Sector,inner_rim,1
-Farrow,neutral,50,0,0,0,0,Hundred Lakes Sector,outer_rim,0
-Agmen,neutral,50,0,0,0,0,Quieta Sector,inner_rim,1
-Fernhollow,neutral,50,0,0,0,0,Fallout Sector,outer_rim,0
-Bitterwell,Collective,62,0,0,1,0,Greenfever Sector,outer_rim,0
-Hollenvale,neutral,50,0,0,0,0,Thaw Sector,outer_rim,1
-Nueva Pradera,neutral,50,0,0,0,0,Caza Real Sector,inner_rim,1
-Oionos,Hand,78,1,0,1,0,Mechane Sector,inner_rim,1
-Wrenfield,Hand,36,0,0,1,0,Ferraria Sector,inner_rim,1
-Alvorada,neutral,50,0,0,0,0,Cohors Sector,outer_rim,0
-Consolatio,Hand,34,0,1,1,0,Castra Sector,core,1
-Dulcia,Hand,10,0,0,1,0,Incus Sector,inner_rim,1
-Altamesa,neutral,50,0,0,0,0,Classis Sector,inner_rim,1
-Laterite,neutral,50,0,0,0,0,Laterite Sector,outer_rim,0
-Amargura,neutral,50,0,0,0,0,Pulau Hijau Sector,outer_rim,1
-Shelter,neutral,50,0,0,0,0,Shelter Sector,outer_rim,1
-Deadfall,neutral,50,0,0,0,0,Bauxite IV Sector,outer_rim,1
-Redfen,neutral,50,0,0,0,0,Highfall Sector,outer_rim,0
-Stonebrake,neutral,45,0,1,0,0,Castra Sector,core,1
-Last Tank,neutral,50,0,0,0,0,Slate Hill Sector,outer_rim,1
-Snowmouth,neutral,50,0,0,0,0,Lantern Sector,outer_rim,1
-Groza,neutral,50,0,0,0,0,Slate Hill Sector,outer_rim,0
-Kalmoor,neutral,50,0,0,0,0,Bosque Alto Sector,inner_rim,1
-Longshore,Collective,67,0,0,1,0,Salitre Sector,outer_rim,0
-Feudgrass,neutral,50,0,0,0,0,Salitre Sector,outer_rim,1
-Three Lamps,neutral,50,0,0,0,0,Three Lamps Sector,inner_rim,0
-Tormentum,neutral,50,0,0,0,0,Tormentum Sector,inner_rim,1
-Las Presas,neutral,50,0,0,0,0,Caminus Sector,outer_rim,0
-Lenitas,Hand,57,0,0,1,0,Lenitas Sector,inner_rim,1
-Waymeet,neutral,50,0,0,0,0,Caza Real Sector,inner_rim,1
-Charter,Hand,0,0,1,1,0,Charter Sector,core,1
-Mollis,neutral,50,0,0,0,0,Incus Sector,inner_rim,1
-Hoshimachi,neutral,50,0,0,0,0,Rio Lodo Sector,outer_rim,1
-Mossgarden,neutral,50,0,0,0,0,Eldingar Sector,outer_rim,0
-Lindenfall,neutral,50,0,0,0,0,Fyrholm Sector,outer_rim,1
-Akousma,Hand,17,0,0,1,0,Akousma Sector,inner_rim,1
-Gemelos,neutral,50,0,0,0,0,Three Lamps Sector,inner_rim,1
-The Moorings,Collective,60,0,0,1,0,Moorings Sector,outer_rim,1
-Havdal,neutral,50,0,0,0,0,Caminus Sector,outer_rim,1
-Statio,neutral,50,0,0,0,0,Akousma Sector,inner_rim,1
-Hlubina,Hand,37,0,0,1,0,Sendero Sector,outer_rim,1
-Longwire,neutral,50,0,0,0,0,Longwire Sector,outer_rim,1
-Kranholm,neutral,50,0,0,0,0,Kranholm Sector,outer_rim,0
-Caminus,Hand,58,0,0,1,0,Caminus Sector,outer_rim,1
-Voluptas,neutral,50,0,0,0,0,Lenitas Sector,inner_rim,1
-Caza Real,neutral,50,0,0,0,0,Caza Real Sector,inner_rim,1
-Side Gate,neutral,50,0,0,0,0,Shelter Sector,outer_rim,0
-Opifex,neutral,50,0,0,0,0,Ashfall Sector,inner_rim,0
-Ostrog,neutral,50,0,0,0,0,Highfall Sector,outer_rim,0
-Longtide,neutral,50,0,0,0,0,Longtide Sector,inner_rim,1
-Kaskela,neutral,50,0,0,0,0,Ashfall Sector,inner_rim,1
-Glassfield,Collective,68,0,0,1,0,Altofen Sector,inner_rim,1
-Specula,neutral,50,0,0,0,0,Three Lamps Sector,inner_rim,1
-Folio,neutral,50,0,0,0,0,Altofen Sector,inner_rim,1
-The Shoal,Collective,100,0,1,1,0,Greenfever Sector,outer_rim,1
-Paydirt,neutral,50,0,0,0,0,Longtide Sector,inner_rim,1
-Ironbeach,neutral,50,0,0,0,0,Ironbeach Sector,outer_rim,0
-Barro Rojo,neutral,50,0,0,0,0,Rio Lodo Sector,outer_rim,1
-Ardlow,neutral,50,0,0,0,0,Slate Hill Sector,outer_rim,0
-Sawtooth,neutral,50,0,0,0,0,Longtide Sector,inner_rim,1
-Rosenbach,neutral,50,0,0,0,0,Clearholm Sector,outer_rim,0
-Theorema,neutral,50,0,0,0,0,Cohors Sector,outer_rim,0
-Silica Minor,Hand,36,0,0,1,0,Bauxite IV Sector,outer_rim,0
-Nascentia,neutral,50,0,0,0,0,Bauxite IV Sector,outer_rim,0
-Fallout,Collective,75,0,0,1,0,Fallout Sector,outer_rim,0
-Navalia,Hand,16,0,0,1,0,Lesnaya Sector,inner_rim,1
-Incus,Hand,10,0,0,1,0,Incus Sector,inner_rim,1
-Castra,Hand,37,0,1,1,0,Castra Sector,core,1
-Tutela,neutral,50,0,0,0,0,Lenitas Sector,inner_rim,1
-Fusoria,Hand,28,0,0,1,0,Dunmere Sector,outer_rim,1
-Fiscus,Hand,20,0,0,1,0,Classis Sector,inner_rim,1
-Mechane,neutral,50,0,0,0,0,Mechane Sector,inner_rim,1
-Salus,neutral,50,0,0,0,0,Incus Sector,inner_rim,1
-Kronholm,neutral,50,0,0,0,0,Longtide Sector,inner_rim,1
-Kalium II,neutral,50,0,0,0,0,Quieta Sector,inner_rim,1
-Solacia,Hand,17,0,0,1,0,Solacia Sector,outer_rim,0
-Wellhead,neutral,50,0,0,0,0,Altofen Sector,inner_rim,1
-Nebbia,neutral,50,0,0,0,0,Nebbia Sector,outer_rim,0
-Lagoa Funda,neutral,50,0,0,0,0,Lagoa Funda Sector,inner_rim,1
-Deep Wells,neutral,50,0,0,0,0,Ulaan Tal Sector,outer_rim,0
-Ulaan Tal,neutral,50,0,0,0,0,Ulaan Tal Sector,outer_rim,0
-Bosque Alto,neutral,50,0,0,0,0,Bosque Alto Sector,inner_rim,1
-Mwezi,neutral,50,0,0,0,0,Quieta Sector,inner_rim,1
-Overgrowth,neutral,50,0,0,0,0,Longtide Sector,inner_rim,1
-Blackmire,neutral,50,0,0,0,0,Mechane Sector,inner_rim,1
-Natron,neutral,50,0,0,0,0,Vinculum Sector,inner_rim,1
-Saffron Downs,Hand,75,1,0,1,0,Ferraria Sector,inner_rim,1
-Hundred Falls,Hand,14,0,0,1,0,Lenitas Sector,inner_rim,1
-Rimeglass,neutral,50,0,0,0,0,Fyrholm Sector,outer_rim,0
-Zlatna,neutral,50,0,0,0,0,Zlatna Sector,outer_rim,1
-Slate Hill,neutral,50,0,0,0,0,Slate Hill Sector,outer_rim,1
-Last Platform,neutral,50,0,0,0,0,Varmdal Sector,outer_rim,1
-Hoogstad,neutral,50,0,0,0,0,Muster Rock Sector,outer_rim,1
-Sendero,Collective,60,0,0,1,0,Sendero Sector,outer_rim,0
-Ciénaga,Hand,38,0,0,1,0,Ciénaga Sector,outer_rim,1
-Saltreach,neutral,50,0,0,0,0,Caminus Sector,outer_rim,1
-Greenfever,neutral,50,0,0,0,0,Greenfever Sector,outer_rim,1
-Cohors,Hand,27,0,0,1,0,Cohors Sector,outer_rim,1
-Llano Grande,Hand,21,0,0,1,0,Altofen Sector,inner_rim,1
-Dry Reef,neutral,50,0,0,0,0,Lantern Sector,outer_rim,1
-Saltgreen,neutral,50,0,0,0,0,Feldspar Sector,inner_rim,1
-Kanon,neutral,50,0,0,0,0,Solacia Sector,outer_rim,0
-Rubble Sky,neutral,50,0,0,0,0,Lantern Sector,outer_rim,1
-Ivyholm,neutral,50,0,0,0,0,Shelter Sector,outer_rim,1
-Tabularium,neutral,50,0,0,0,0,Cohors Sector,outer_rim,0
-Meridian,neutral,50,0,0,0,0,Solacia Sector,outer_rim,1
-Breakyard,neutral,50,0,0,0,0,Greenfever Sector,outer_rim,0
-Coldhearth,neutral,50,0,0,0,0,Greenfever Sector,outer_rim,1
-Stormfen,Collective,90,0,0,1,0,Greenfever Sector,outer_rim,0
-Blackglass,neutral,50,0,0,0,0,Longwire Sector,outer_rim,1
-Eldingar,neutral,50,0,0,0,0,Eldingar Sector,outer_rim,0
-Oldwatch,neutral,50,0,0,0,0,Fyrholm Sector,outer_rim,1
-Ridgefold,neutral,50,0,0,0,0,Highfall Sector,outer_rim,1
-Barewood,neutral,50,0,0,0,0,Muster Rock Sector,outer_rim,0
-Varmdal,neutral,50,0,0,0,0,Varmdal Sector,outer_rim,1
-Kept Faith,Collective,61,0,0,1,0,Moorings Sector,outer_rim,1
-Needlepeak,neutral,50,0,0,0,0,Ciénaga Sector,outer_rim,0
-Benigna,neutral,50,0,0,0,0,Dunmere Sector,outer_rim,0
-Salitre,neutral,50,0,0,0,0,Salitre Sector,outer_rim,1
-Excubia,Hand,23,0,1,1,0,Excubia Sector,core,1
-Hulkfield,neutral,50,0,0,0,0,Vinograd Sector,inner_rim,1
-Praesidium,Hand,74,1,0,1,0,Ferraria Sector,inner_rim,1
-Steeplewater,Hand,23,0,0,1,0,Vinculum Sector,inner_rim,1
-Neuwerft,neutral,50,0,0,0,0,Vinograd Sector,inner_rim,1
-Morelle,neutral,50,0,0,0,0,Three Lamps Sector,inner_rim,1
-Mesa Roja,Collective,73,0,0,1,0,Fairhaven Sector,outer_rim,1
-Gnomon,Hand,29,0,1,1,0,Excubia Sector,core,1
-Imani Falls,neutral,50,0,0,0,0,Caza Real Sector,inner_rim,1
-Aozora,neutral,50,0,0,0,0,Mata Alta Sector,outer_rim,0
-Weitfeld,neutral,50,0,0,0,0,Ironbeach Sector,outer_rim,0
-Highbarrow,neutral,50,0,0,0,0,Longtide Sector,inner_rim,1
-Isfjell,neutral,50,0,0,0,0,Ilanga Sector,outer_rim,0
-Bauxite IV,Hand,39,0,0,1,0,Bauxite IV Sector,outer_rim,0
-Vinterby,neutral,50,0,0,0,0,Clearholm Sector,outer_rim,0
-Seldwyn,neutral,50,0,0,0,0,Longtide Sector,inner_rim,1
-Vallum,neutral,50,0,0,0,0,Classis Sector,inner_rim,1
-Fiducia,Hand,10,0,0,1,0,Lesnaya Sector,inner_rim,1
-Grauburg,Hand,20,0,0,1,0,Classis Sector,inner_rim,1
-Ommata,Hand,11,0,1,1,0,Ommata Sector,core,1
-Ilha Verde,neutral,50,0,0,0,0,Ferraria Sector,inner_rim,1
-Lowlight,neutral,50,0,0,0,0,Lenitas Sector,inner_rim,1
-Lowmarket,neutral,50,0,0,0,0,Bosque Alto Sector,inner_rim,1
-Vigilia,neutral,44,0,1,0,0,Ommata Sector,core,1
-Sigillum,Hand,17,0,1,1,0,Castra Sector,core,1
-Old Cairn,neutral,58,0,1,0,0,Ommata Sector,core,1
-Ninefold,neutral,50,0,0,0,0,Bellwether Sector,inner_rim,1
-Tessera,neutral,50,0,0,0,0,Mirabel Sector,inner_rim,1
-Stabilis,neutral,50,0,0,0,0,Bosque Alto Sector,inner_rim,1
-Agua Mansa,neutral,50,0,0,0,0,Mechane Sector,inner_rim,1
-Port Sorrel,neutral,50,0,0,0,0,Tormentum Sector,inner_rim,1
-Highrime,neutral,50,0,0,0,0,Tormentum Sector,inner_rim,1
-Archeion,Hand,19,0,0,1,0,Incus Sector,inner_rim,1
-Quieta,neutral,50,0,0,0,0,Quieta Sector,inner_rim,1
-Delicia,Hand,27,0,0,1,0,Incus Sector,inner_rim,1
-Mercado Alto,neutral,50,0,0,0,0,Lenitas Sector,inner_rim,1
-Stannum,neutral,50,0,0,0,0,Tormentum Sector,inner_rim,1
-Officina,Hand,14,0,0,1,0,Clearholm Sector,outer_rim,1
-Murkhaven,neutral,50,0,0,0,0,Cohors Sector,outer_rim,1
-Plage Blanche,neutral,50,0,0,0,0,Nebbia Sector,outer_rim,0
-Riftwood,Collective,81,0,0,1,0,Moorings Sector,outer_rim,1
-Ebbeholm,neutral,50,0,0,0,0,Shelter Sector,outer_rim,0
-Brimstone,Collective,83,0,0,1,0,Greenfever Sector,outer_rim,0
-Bellglass,neutral,50,0,0,0,0,Lantern Sector,outer_rim,0
-Pronoia,Hand,37,0,0,1,0,Ilanga Sector,outer_rim,1
-Ghostlight,neutral,50,0,0,0,0,Cohors Sector,outer_rim,1
-Firmitas,Hand,32,0,0,1,0,Muster Rock Sector,outer_rim,0
-Felsite III,Hand,19,0,0,1,0,Clearholm Sector,outer_rim,1
-Wadi Sabr,neutral,50,0,0,0,0,Cohors Sector,outer_rim,1
-Oranjeveld,neutral,50,0,0,0,0,Hundred Lakes Sector,outer_rim,1
-Long Winter,neutral,50,0,0,0,0,Slate Hill Sector,outer_rim,0
-Teloneum,neutral,50,0,0,0,0,Lagoa Funda Sector,inner_rim,1
-Motu Ahi,neutral,50,0,0,0,0,Salitre Sector,outer_rim,0
-Kaltwasser,neutral,50,0,0,0,0,Salitre Sector,outer_rim,0
-Belavista,neutral,50,0,0,0,0,Thesauros Sector,outer_rim,1
-Cunabula,Hand,32,0,0,1,0,Varmdal Sector,outer_rim,0
-Loomhollow,neutral,50,0,0,0,0,Eldingar Sector,outer_rim,0
-Quebrada Honda,neutral,50,0,0,0,0,Eldingar Sector,outer_rim,0
-Ninegates,Hand,35,0,0,1,0,Lesnaya Sector,inner_rim,1
-Veenhoven,Hand,25,0,0,1,0,Kranholm Sector,outer_rim,0
-Pedregal,neutral,50,0,0,0,0,Ashfall Sector,inner_rim,1
-Regrowth,neutral,50,0,0,0,0,Eldingar Sector,outer_rim,0
-Yukihama,neutral,50,0,0,0,0,Quieta Sector,inner_rim,0
-Mbuga,neutral,50,0,0,0,0,Sendero Sector,outer_rim,0
-Feriae,neutral,50,0,0,0,0,Sendero Sector,outer_rim,1
-Skalna,neutral,50,0,0,0,0,Solacia Sector,outer_rim,1
-Kinoko,neutral,50,0,0,0,0,Eldingar Sector,outer_rim,1
-Tidewall,neutral,50,0,0,0,0,Ashfall Sector,inner_rim,1
-Halfpenny,Hand,55,1,0,1,0,Feldspar Sector,inner_rim,1
-Fallen Keel,neutral,50,0,0,0,0,Sendero Sector,outer_rim,0
-Ashfall,neutral,50,0,0,0,0,Ashfall Sector,inner_rim,1
-Ashenmark,neutral,50,0,0,0,0,Sendero Sector,outer_rim,0
-Clinker,neutral,50,0,0,0,0,Ashfall Sector,inner_rim,1
-Ergon,Hand,15,0,0,1,0,Pulau Hijau Sector,outer_rim,1
-Probatio,neutral,50,0,0,0,0,Laterite Sector,outer_rim,0
-Grandmother,neutral,50,0,0,0,0,Laterite Sector,outer_rim,0
-Kaldvik,neutral,50,0,0,0,0,Highfall Sector,outer_rim,1
-Signum,Hand,18,0,0,1,0,Solacia Sector,outer_rim,0
-Kvitberg,neutral,50,0,0,0,0,Rauchtal Sector,outer_rim,0
-Coldwell,neutral,50,0,0,0,0,Rio Lodo Sector,outer_rim,1
-Skarholm,Collective,87,0,0,1,0,Rio Lodo Sector,outer_rim,0
-Kolokol,neutral,50,0,0,0,0,Semeion Sector,inner_rim,1
-First Morning,neutral,50,0,0,0,0,Hundred Lakes Sector,outer_rim,0
-Emberhold,neutral,50,0,0,0,0,Muster Rock Sector,outer_rim,0
-Suavis,neutral,50,0,0,0,0,Shelter Sector,outer_rim,1
-The Flats,Collective,61,0,0,1,0,Fallout Sector,outer_rim,1
-Muster Rock,Hand,15,0,0,1,0,Muster Rock Sector,outer_rim,1
-Rauchtal,neutral,50,0,0,0,0,Rauchtal Sector,outer_rim,0
-The Cuts,neutral,50,0,0,0,0,Sendero Sector,outer_rim,1
-Las Eras,Hand,34,0,0,1,0,Nebbia Sector,outer_rim,1
-Stepstone,neutral,50,0,0,0,0,Semeion Sector,inner_rim,1
-Hartsease,neutral,50,0,0,0,0,Vinograd Sector,inner_rim,1
-Willowmere,Collective,81,0,0,1,0,Quieta Sector,inner_rim,0
-Bilokray,neutral,50,0,0,0,0,Laterite Sector,outer_rim,0
-Los Pozos,neutral,50,0,0,0,0,Ulaan Tal Sector,outer_rim,1
-Cendrine,neutral,50,0,0,0,0,Ironbeach Sector,outer_rim,0
-Dry House,neutral,50,0,0,0,0,Zlatna Sector,outer_rim,0
-The Rafts,neutral,50,0,0,0,0,Thaw Sector,outer_rim,0
-Zubets,neutral,50,0,0,0,0,Fairhaven Sector,outer_rim,1
-Plainsong,neutral,50,0,0,0,0,Fyrholm Sector,outer_rim,0
-Endline,neutral,50,0,0,0,0,Slate Hill Sector,outer_rim,1
-Hirschwald,Collective,80,0,0,1,0,Thaw Sector,outer_rim,0
-Midden,neutral,50,0,0,0,0,Drift Harbour Sector,outer_rim,1
-Brokengate,Collective,62,0,0,1,0,Bellwether Sector,inner_rim,1
-Long Strand,neutral,50,0,0,0,0,Lantern Sector,outer_rim,1
-Rockclaim,neutral,50,0,0,0,0,Hundred Lakes Sector,outer_rim,0
-Halvmark,neutral,50,0,0,0,0,Laterite Sector,outer_rim,0
-Las Mieses,neutral,53,0,1,0,0,Charter Sector,core,1
-Sonnfeld,Collective,63,0,0,1,0,Moorings Sector,outer_rim,1
-Dormilona,neutral,50,0,0,0,0,Sendero Sector,outer_rim,0
-Limes,neutral,55,0,1,0,0,Tarrow Sector,core,1
-Tierra Seca,neutral,50,0,0,0,0,Laterite Sector,outer_rim,1
-Medela,Hand,31,0,0,1,0,Tormentum Sector,inner_rim,1
-Nadezhda,neutral,50,0,0,0,0,Thaw Sector,outer_rim,0
-Marisol,neutral,50,0,0,0,0,Bellwether Sector,inner_rim,1
-Perpetua,Hand,19,0,0,1,0,Clearholm Sector,outer_rim,0
-Novy Rynek,neutral,50,0,0,0,0,Ashfall Sector,inner_rim,1
-Sierra Seca,neutral,50,0,0,0,0,Semeion Sector,inner_rim,1
-Remedium,Hand,24,0,1,1,0,Castra Sector,core,1
-Gypsum Minor,neutral,50,0,0,0,0,Lesnaya Sector,inner_rim,1
-Portelle,neutral,50,0,0,0,0,Kranholm Sector,outer_rim,1
-Tourmaline,neutral,56,0,1,0,0,Ommata Sector,core,1
-Dunmere,neutral,50,0,0,0,0,Dunmere Sector,outer_rim,0
-Subsidia,neutral,50,0,0,0,0,Mirabel Sector,inner_rim,1
-Seedbank,neutral,50,0,0,0,0,Rauchtal Sector,outer_rim,0
-Mica,neutral,50,0,0,0,0,Three Lamps Sector,inner_rim,1
-Vidrio,neutral,50,0,0,0,0,Nebbia Sector,outer_rim,1
-Two Crowns,neutral,50,0,0,0,0,Akousma Sector,inner_rim,1
-Penhallow,neutral,50,0,0,0,0,Lagoa Funda Sector,inner_rim,1
-Pennygate,neutral,50,0,0,0,0,Bosque Alto Sector,inner_rim,1
-Supper Hill,Hand,52,1,0,1,0,Ciénaga Sector,outer_rim,0
-Natalis,neutral,50,0,0,0,0,Feldspar Sector,inner_rim,1
-Campo Alto,Hand,28,0,0,1,0,Fairhaven Sector,outer_rim,0
-Sinkwater,neutral,50,0,0,0,0,Caminus Sector,outer_rim,1
-Whitecairn,neutral,50,0,0,0,0,Rio Lodo Sector,outer_rim,0
-Mittelfeld,Collective,63,0,0,1,0,Longwire Sector,outer_rim,1
-Flarewater,neutral,50,0,0,0,0,Solacia Sector,outer_rim,1
-Groenveld,Collective,79,0,0,1,0,Bellwether Sector,inner_rim,1
-Sabkha,neutral,50,0,0,0,0,Mirabel Sector,inner_rim,1
-Cinnabar,Hand,13,0,0,1,0,Classis Sector,inner_rim,1
-Old Lens,neutral,50,0,0,0,0,Laterite Sector,outer_rim,0
-Mokra,neutral,50,0,0,0,0,Altofen Sector,inner_rim,0
-Belle Rive,Hand,25,0,0,1,0,Ilanga Sector,outer_rim,0
-Campus,neutral,50,0,0,0,0,Kranholm Sector,outer_rim,0
-Organon,neutral,50,0,0,0,0,Bauxite IV Sector,outer_rim,1
-Port Isolde,neutral,50,0,0,0,0,Mata Alta Sector,outer_rim,0
-Nacar,Hand,37,0,0,1,0,Vinculum Sector,inner_rim,1
-Azzurra,Hand,36,0,0,1,0,Ferraria Sector,inner_rim,1
-Longquay,neutral,50,0,0,0,0,Varmdal Sector,outer_rim,1
-Brandt's Giant,neutral,50,0,0,0,0,Highfall Sector,outer_rim,0
-Lunaria,neutral,50,0,0,0,0,Ciénaga Sector,outer_rim,0
-Laetitia,neutral,50,0,0,0,0,Zlatna Sector,outer_rim,1
-Tres Rios,neutral,50,0,0,0,0,Akousma Sector,inner_rim,1
-Hardwood,neutral,50,0,0,0,0,Slate Hill Sector,outer_rim,0
-Sunderby,neutral,50,0,0,0,0,Longtide Sector,inner_rim,1
-Timberline,neutral,50,0,0,0,0,Longwire Sector,outer_rim,0
-Isvik,neutral,50,0,0,0,0,Cohors Sector,outer_rim,0
-Backwater,neutral,50,0,0,0,0,Slate Hill Sector,outer_rim,1
-Resin Moon,neutral,50,0,0,0,0,Clearholm Sector,outer_rim,0
-Hardpan,neutral,50,0,0,0,0,Longwire Sector,outer_rim,1
-Vysoka,neutral,50,0,0,0,0,Fyrholm Sector,outer_rim,0
-Severitas,neutral,50,0,0,0,0,Varmdal Sector,outer_rim,0
-Cutbank,neutral,50,0,0,0,0,Lenitas Sector,inner_rim,1
-Graustadt,neutral,50,0,0,0,0,Moorings Sector,outer_rim,0
-Shirakaba,Collective,72,0,0,1,0,Fallout Sector,outer_rim,0
-Junkhold,Collective,79,0,0,1,0,Altofen Sector,inner_rim,0
-Prognosis,Hand,52,1,0,1,0,Feldspar Sector,inner_rim,1
-Waymark,Collective,82,0,0,1,0,Zlatna Sector,outer_rim,0
-Terracotta,neutral,50,0,0,0,0,Nebbia Sector,outer_rim,0
-Kesari,neutral,50,0,0,0,0,Solacia Sector,outer_rim,0
-Rosvik,neutral,47,0,1,0,0,Charter Sector,core,1
-Goldcloud,neutral,50,0,0,0,0,Zlatna Sector,outer_rim,0
-Selvagem,neutral,50,0,0,0,0,Mirabel Sector,inner_rim,1
-Cinco Lunas,neutral,50,0,0,0,0,Muster Rock Sector,outer_rim,0
-Brushfield,neutral,50,0,0,0,0,Bosque Alto Sector,inner_rim,1
-Sourwater,Hand,35,0,1,1,0,Charter Sector,core,1
-Mill Hollow,neutral,50,0,0,0,0,Ulaan Tal Sector,outer_rim,0
-Dongyu,neutral,50,0,0,0,0,Tormentum Sector,inner_rim,1
-Old Salvage,Collective,76,0,0,1,0,Longwire Sector,outer_rim,1
-Fathom,Collective,68,0,0,1,0,Thaw Sector,outer_rim,0
-Lastwell,neutral,50,0,0,0,0,Highfall Sector,outer_rim,1
-Stonebarrow,Collective,73,0,0,1,0,Fairhaven Sector,outer_rim,0
-The Kiln,Collective,83,0,0,1,0,Ironbeach Sector,outer_rim,0
-Stochos,neutral,50,0,0,0,0,Dunmere Sector,outer_rim,1
-Seven Gates,neutral,50,0,0,0,0,Ironbeach Sector,outer_rim,1
-Fuego Alto,neutral,50,0,0,0,0,Ciénaga Sector,outer_rim,1
-Hammada,neutral,50,0,0,0,0,Semeion Sector,inner_rim,1
-Requies,neutral,50,0,0,0,0,Cohors Sector,outer_rim,0
-Bread Street,neutral,50,0,0,0,0,Bauxite IV Sector,outer_rim,0
-Gumwater,neutral,50,0,0,0,0,Ironbeach Sector,outer_rim,0
-Cambium,neutral,58,0,1,0,0,Castra Sector,core,1
-Vaultrock,neutral,50,0,0,0,0,Drift Harbour Sector,outer_rim,0
-Nowhere,neutral,50,0,0,0,0,Zlatna Sector,outer_rim,0
-Waypost,neutral,50,0,0,0,0,Muster Rock Sector,outer_rim,1
-Halfsky,neutral,50,0,0,0,0,Fyrholm Sector,outer_rim,1
-Montefosco,neutral,50,0,0,0,0,Caminus Sector,outer_rim,1
-Plenty,neutral,50,0,0,0,0,Salitre Sector,outer_rim,1
-Ilanga,Hand,31,0,0,1,0,Ilanga Sector,outer_rim,1
-Stopped Line,neutral,50,0,0,0,0,Salitre Sector,outer_rim,0
-Tallow Mesa,neutral,50,0,0,0,0,Bauxite IV Sector,outer_rim,1
-Holmvik,neutral,50,0,0,0,0,Kranholm Sector,outer_rim,1
-Cafetal,neutral,50,0,0,0,0,Fyrholm Sector,outer_rim,1
-Ellerbeck,neutral,50,0,0,0,0,Caza Real Sector,inner_rim,1
-Pyrite,Hand,13,0,1,1,0,Charter Sector,core,1
-Stepwell,neutral,50,0,0,0,0,Fyrholm Sector,outer_rim,0
-Kizil Dala,neutral,50,0,0,0,0,Clearholm Sector,outer_rim,0
-Wolfram II,neutral,50,0,0,0,0,Dunmere Sector,outer_rim,1
-Tinplate,neutral,50,0,0,0,0,Vinograd Sector,inner_rim,1
-San Teodor,neutral,50,0,0,0,0,Fallout Sector,outer_rim,0
-Blind Eye,neutral,50,0,0,0,0,Varmdal Sector,outer_rim,1
-Deepcut,neutral,50,0,0,0,0,Eldingar Sector,outer_rim,1
-Standstill,neutral,50,0,0,0,0,Drift Harbour Sector,outer_rim,0
-Partus,neutral,50,0,0,0,0,Clearholm Sector,outer_rim,0
-Bastide,neutral,50,0,0,0,0,Mirabel Sector,inner_rim,1
-Metsola,neutral,50,0,0,0,0,Eldingar Sector,outer_rim,0
-Greysand,neutral,50,0,0,0,0,Salitre Sector,outer_rim,0
-Hollowstone,Hand,25,0,0,1,0,Feldspar Sector,inner_rim,1
-Clove,neutral,50,0,0,0,0,Ilanga Sector,outer_rim,1
-Naphtha,neutral,50,0,0,0,0,Solacia Sector,outer_rim,0
-Galeholm,neutral,50,0,0,0,0,Bellwether Sector,inner_rim,1
-Cairnfell,neutral,50,0,0,0,0,Mata Alta Sector,outer_rim,0
-The Wall,Collective,80,0,0,1,0,Moorings Sector,outer_rim,0
-Steading,neutral,50,0,0,0,0,Bellwether Sector,inner_rim,1
-Lowmoor,neutral,50,0,0,0,0,Ciénaga Sector,outer_rim,1
-Uhrwald,neutral,50,0,0,0,0,Drift Harbour Sector,outer_rim,1
-Glasshold,neutral,50,0,0,0,0,Akousma Sector,inner_rim,1
-Limonite III,Hand,12,0,0,1,0,Caza Real Sector,inner_rim,1
-Grimsholt,Collective,85,0,0,1,0,Thaw Sector,outer_rim,0
-Kruispunt,neutral,50,0,0,0,0,Feldspar Sector,inner_rim,1
-Quies,Hand,23,0,1,1,0,Castra Sector,core,1
-Shingle,neutral,50,0,0,0,0,Semeion Sector,inner_rim,0
-Milestone Nine,neutral,50,0,0,0,0,Ironbeach Sector,outer_rim,1
-Stonecrop,neutral,50,0,0,0,0,Altofen Sector,inner_rim,0
-Bluesand,neutral,50,0,0,0,0,Semeion Sector,inner_rim,0
-Nueve Lunas,Collective,89,0,0,1,0,Lagoa Funda Sector,inner_rim,1
-Old Amber,Hand,34,0,0,1,0,Ferraria Sector,inner_rim,1
-Tamarisk,neutral,50,0,0,0,0,Mirabel Sector,inner_rim,1
-Thornveld,neutral,50,0,0,0,0,Mirabel Sector,inner_rim,1
-Altofen,Collective,100,0,0,1,1,Altofen Sector,inner_rim,1
-Kalinov,neutral,50,0,0,0,0,Lagoa Funda Sector,inner_rim,1
-Blackfen,neutral,50,0,0,0,0,Thaw Sector,outer_rim,0
-Alumen,Hand,55,1,1,1,0,Ommata Sector,core,1
-Permit Hill,neutral,50,0,0,0,0,Moorings Sector,outer_rim,1
-Kreuzweg,neutral,50,0,0,0,0,Highfall Sector,outer_rim,1
-Commonhold,neutral,50,0,0,0,0,Dunmere Sector,outer_rim,1
-Ochre Wells,neutral,50,0,0,0,0,Ironbeach Sector,outer_rim,1
-Puerto Hierro,neutral,50,0,0,0,0,Three Lamps Sector,inner_rim,1
-Techne,neutral,50,0,0,0,0,Incus Sector,inner_rim,1
-Lignite,Hand,16,0,0,1,0,Ilanga Sector,outer_rim,0
-Kaukomaa,Hand,21,0,0,1,0,Bellwether Sector,inner_rim,1
-Ashgrove,neutral,50,0,0,0,0,Caza Real Sector,inner_rim,1
-Haverland,neutral,50,0,0,0,0,Vinograd Sector,inner_rim,1
-Buyback,Hand,30,0,0,1,0,Ferraria Sector,inner_rim,1
-Malleus,Hand,13,0,0,1,0,Lenitas Sector,inner_rim,1
-Wadi Noor,neutral,50,0,0,0,0,Fairhaven Sector,outer_rim,0
-Hartwell,neutral,56,0,1,0,0,Charter Sector,core,1
-Hollow Fork,neutral,50,0,0,0,0,Dunmere Sector,outer_rim,0
-Unlisted,neutral,50,0,0,0,0,Rio Lodo Sector,outer_rim,0
-Kestrel Downs,neutral,50,0,0,0,0,Feldspar Sector,inner_rim,1
-Velika Ravan,neutral,50,0,0,0,0,Mechane Sector,inner_rim,1
-Highfall,neutral,50,0,0,0,0,Highfall Sector,outer_rim,0
-Scaldwell,neutral,50,0,0,0,0,Fallout Sector,outer_rim,1
-Constantia,Collective,63,0,0,1,0,Lagoa Funda Sector,inner_rim,1
-Hortensia,Collective,60,0,0,1,0,Moorings Sector,outer_rim,0
-Pinehallow,neutral,50,0,0,0,0,Shelter Sector,outer_rim,1
-Clearholm,Hand,16,0,0,1,0,Clearholm Sector,outer_rim,0
-Mudhaven,neutral,50,0,0,0,0,Kranholm Sector,outer_rim,0
-Skopia,Hand,17,0,1,1,0,Castra Sector,core,1
-Spindle,neutral,50,0,0,0,0,Ciénaga Sector,outer_rim,0
-Thousand Mouths,Collective,81,0,0,1,0,Akousma Sector,inner_rim,0
-Uzun Su,neutral,50,0,0,0,0,Mechane Sector,inner_rim,1
-Kovarna,neutral,50,0,0,0,0,Shelter Sector,outer_rim,1
-Chert,neutral,50,0,0,0,0,Pulau Hijau Sector,outer_rim,0
-Mirevale,neutral,50,0,0,0,0,Dunmere Sector,outer_rim,1
-Landfall,neutral,50,0,0,0,0,Ulaan Tal Sector,outer_rim,1
-Grimwall,neutral,50,0,0,0,0,Ulaan Tal Sector,outer_rim,0
-Bellwether,neutral,50,0,0,0,0,Bellwether Sector,inner_rim,1
-Rio Lodo,neutral,50,0,0,0,0,Rio Lodo Sector,outer_rim,0
-Amoena,neutral,50,0,0,0,0,Lagoa Funda Sector,inner_rim,1
-Old Bench,Hand,29,0,0,1,0,Mata Alta Sector,outer_rim,0
-Sunscald,neutral,50,0,0,0,0,Ciénaga Sector,outer_rim,0
-Ain Tamra,neutral,50,0,0,0,0,Ulaan Tal Sector,outer_rim,0
-Rietmoor,neutral,50,0,0,0,0,Quieta Sector,inner_rim,1
-Cidermoor,neutral,50,0,0,0,0,Fairhaven Sector,outer_rim,0
-Halfwinter,neutral,50,0,0,0,0,Vinculum Sector,inner_rim,1
-Towline,Collective,89,0,0,1,0,Zlatna Sector,outer_rim,1
-Black Teeth,neutral,50,0,0,0,0,Muster Rock Sector,outer_rim,0
-Sankt Odile,neutral,50,0,0,0,0,Semeion Sector,inner_rim,0
-Long Noon,neutral,50,0,0,0,0,Ulaan Tal Sector,outer_rim,1
-Lowenna,neutral,50,0,0,0,0,Tormentum Sector,inner_rim,1
-Icetap,neutral,50,0,0,0,0,Slate Hill Sector,outer_rim,1
-Haematite,neutral,50,0,0,0,0,Kranholm Sector,outer_rim,0
-Mar Seco,neutral,50,0,0,0,0,Drift Harbour Sector,outer_rim,0
-Nordhaven,neutral,50,0,0,0,0,Bosque Alto Sector,inner_rim,1
-Codicil,neutral,49,0,1,0,0,Tarrow Sector,core,1
-Stillwater,neutral,50,0,0,0,0,Pulau Hijau Sector,outer_rim,1
-Placida,neutral,50,0,0,0,0,Three Lamps Sector,inner_rim,1
-Fabrica,neutral,50,0,0,0,0,Ashfall Sector,inner_rim,1
-Hagelfeld,neutral,50,0,0,0,0,Rauchtal Sector,outer_rim,1
+Feldspar,Hand,28,0,0,1,0,Feldspar Sector,midreach,1
+Umoya,neutral,50,0,0,0,0,Highfall Sector,farreach,1
+Seven Keys,neutral,50,0,0,0,0,Ciénaga Sector,farreach,0
+Second Spring,neutral,50,0,0,0,0,Pulau Hijau Sector,farreach,0
+Truce Moor,neutral,50,0,0,0,0,Rauchtal Sector,farreach,0
+Westerholm,neutral,50,0,0,0,0,Rauchtal Sector,farreach,1
+Erg Lahmar,neutral,50,0,0,0,0,Rauchtal Sector,farreach,0
+Highmere,neutral,50,0,0,0,0,Pulau Hijau Sector,farreach,1
+Shiree,neutral,50,0,0,0,0,Pulau Hijau Sector,farreach,0
+Broadacre,neutral,50,0,0,0,0,Pulau Hijau Sector,farreach,0
+Undergrowth,Collective,68,0,0,1,0,Mata Alta Sector,farreach,1
+The Stumps,neutral,50,0,0,0,0,Drift Harbour Sector,farreach,0
+Longgrass,Hand,26,0,0,1,0,Ilanga Sector,farreach,0
+Ashgarden,neutral,50,0,0,0,0,Zlatna Sector,farreach,1
+The Ladle,neutral,50,0,0,0,0,Drift Harbour Sector,farreach,0
+Whetstone,Collective,68,0,0,1,0,Mata Alta Sector,farreach,0
+Rigwater,neutral,50,0,0,0,0,Longwire Sector,farreach,1
+Redveld,neutral,50,0,0,0,0,Vinograd Sector,midreach,1
+Ventstown,neutral,50,0,0,0,0,Lantern Sector,farreach,1
+Kelpfast,neutral,50,0,0,0,0,Mata Alta Sector,farreach,1
+Hundred Lakes,neutral,50,0,0,0,0,Hundred Lakes Sector,farreach,1
+Sweetsea,neutral,50,0,0,0,0,Nebbia Sector,farreach,0
+Holdfast,Collective,85,0,0,1,0,Fallout Sector,farreach,0
+Mata Alta,Collective,85,0,0,1,0,Mata Alta Sector,farreach,0
+Awlbridge,neutral,50,0,0,0,0,Hundred Lakes Sector,farreach,0
+The Lantern,neutral,50,0,0,0,0,Lantern Sector,farreach,1
+Stewpot,neutral,50,0,0,0,0,Hundred Lakes Sector,farreach,0
+Long Strike,neutral,50,0,0,0,0,Hundred Lakes Sector,farreach,1
+Duskwater,Hand,29,0,0,1,0,Hundred Lakes Sector,farreach,0
+Make Do,neutral,50,0,0,0,0,Longwire Sector,farreach,0
+Hard Winter,Collective,80,0,0,1,0,Longwire Sector,farreach,1
+Rustwell,Collective,83,0,0,1,0,Thaw Sector,farreach,1
+Drift Harbour,neutral,50,0,0,0,0,Drift Harbour Sector,farreach,0
+Weirholm,neutral,50,0,0,0,0,Fairhaven Sector,farreach,0
+Mudlark,neutral,50,0,0,0,0,Ironbeach Sector,farreach,0
+The Thaw,Collective,87,0,0,1,0,Thaw Sector,farreach,0
+Kamenitsa,neutral,50,0,0,0,0,Mechane Sector,midreach,1
+Verdemar,neutral,50,0,0,0,0,Ashfall Sector,midreach,1
+Hardscrabble,Hand,25,0,0,1,0,Shelter Sector,farreach,1
+Tyomny Les,neutral,50,0,0,0,0,Fairhaven Sector,farreach,0
+Porphyry,Hand,16,0,0,1,0,Mechane Sector,midreach,1
+Classis,Hand,30,0,0,1,0,Classis Sector,midreach,1
+Magnetite III,Hand,28,0,1,1,0,Ommata Sector,heartland,1
+Hiberna,neutral,55,0,1,0,0,Ommata Sector,heartland,1
+Beryl,Hand,15,0,0,1,0,Classis Sector,midreach,1
+Marmor,Hand,37,0,0,1,0,Classis Sector,midreach,1
+Bina Minor,neutral,56,0,1,0,0,Ommata Sector,heartland,1
+Bina Major,Hand,29,0,1,1,0,Castra Sector,heartland,1
+Loess,Hand,36,0,0,1,0,Classis Sector,midreach,1
+Nutrix,neutral,54,0,1,0,0,Ommata Sector,heartland,1
+Tarrow,neutral,45,0,1,0,0,Tarrow Sector,heartland,1
+Serra Alta,neutral,41,0,1,0,0,Tarrow Sector,heartland,1
+Valle Hondo,neutral,46,0,1,0,0,Charter Sector,heartland,1
+Seafold,Hand,14,0,0,1,0,Ilanga Sector,farreach,1
+Kilele,neutral,50,0,0,0,0,Caminus Sector,farreach,1
+Belmare,neutral,49,0,1,0,0,Charter Sector,heartland,1
+Stibium,neutral,52,0,1,0,0,Excubia Sector,heartland,1
+Corundum,neutral,50,0,0,0,0,Thesauros Sector,farreach,0
+Kloof,neutral,50,0,0,0,0,Salitre Sector,farreach,1
+Saltwood,neutral,45,0,1,0,0,Excubia Sector,heartland,1
+Semeion,Collective,78,0,0,1,0,Semeion Sector,midreach,1
+Ostwerk,neutral,50,0,0,0,0,Nebbia Sector,farreach,1
+Clanmoor,neutral,50,0,0,0,0,Rauchtal Sector,farreach,1
+Khamsin,neutral,50,0,0,0,0,Nebbia Sector,farreach,1
+Fairhaven,neutral,50,0,0,0,0,Fairhaven Sector,farreach,0
+Stopgap,neutral,50,0,0,0,0,Bellwether Sector,midreach,1
+Pale Ridge,neutral,50,0,0,0,0,Zlatna Sector,farreach,1
+Hutan Raya,neutral,50,0,0,0,0,Bauxite IV Sector,farreach,0
+Castellum,Hand,15,0,0,1,0,Lesnaya Sector,midreach,1
+Nyika,Collective,69,0,0,1,0,Thesauros Sector,farreach,1
+Halite,Hand,10,0,0,1,0,Bauxite IV Sector,farreach,1
+Cristalina,neutral,50,0,0,0,0,Caza Real Sector,midreach,1
+Vinograd,neutral,50,0,0,0,0,Vinograd Sector,midreach,1
+Custodia,Hand,27,0,0,1,0,Ferraria Sector,midreach,1
+Tranquilla,neutral,50,0,0,0,0,Longtide Sector,midreach,1
+Arithmos,neutral,49,0,1,0,0,Excubia Sector,heartland,1
+Ardlinn,Hand,10,0,1,1,0,Excubia Sector,heartland,1
+Whitmark,neutral,50,0,0,0,0,Three Lamps Sector,midreach,1
+Puerto Ceniza,neutral,57,0,1,0,0,Tarrow Sector,heartland,1
+Disciplina,neutral,50,0,1,0,0,Excubia Sector,heartland,1
+Ferraria,Hand,17,0,0,1,0,Ferraria Sector,midreach,1
+Mirabel,neutral,50,0,0,0,0,Mirabel Sector,midreach,1
+Sevenwells,neutral,54,0,1,0,0,Tarrow Sector,heartland,1
+Bela Voda,neutral,49,0,1,0,0,Excubia Sector,heartland,1
+Horasis,neutral,50,0,0,0,0,Bosque Alto Sector,midreach,1
+Tierra Larga,neutral,50,0,0,0,0,Bosque Alto Sector,midreach,1
+Horsemarch,neutral,54,0,1,0,0,Tarrow Sector,heartland,1
+Pulau Hijau,neutral,50,0,0,0,0,Pulau Hijau Sector,farreach,0
+Granero,Hand,30,0,0,1,0,Lesnaya Sector,midreach,1
+Tinderland,neutral,50,0,0,0,0,Ulaan Tal Sector,farreach,0
+Vinculum,neutral,50,0,0,0,0,Vinculum Sector,midreach,1
+Isbrand,neutral,50,0,0,0,0,Vinculum Sector,midreach,1
+Lockout,neutral,50,0,0,0,0,Varmdal Sector,farreach,0
+Birchholm,neutral,50,0,0,0,0,Vinculum Sector,midreach,1
+Bare Acre,neutral,50,0,0,0,0,Vinograd Sector,midreach,0
+Alabaster,neutral,50,0,0,0,0,Incus Sector,midreach,1
+Pescadora,neutral,50,0,0,0,0,Muster Rock Sector,farreach,0
+Treaty Wood,Hand,16,0,0,1,0,Semeion Sector,midreach,0
+Otium,neutral,50,0,0,0,0,Vinculum Sector,midreach,1
+Craterhold,Hand,11,0,0,1,0,Incus Sector,midreach,1
+Kaolin,neutral,50,0,0,0,0,Three Lamps Sector,midreach,1
+Marga,neutral,50,0,0,0,0,Dunmere Sector,farreach,0
+Thesauros,neutral,50,0,0,0,0,Thesauros Sector,farreach,0
+Vexillum,neutral,50,0,0,0,0,Thesauros Sector,farreach,1
+Brannock,neutral,50,0,0,0,0,Solacia Sector,farreach,0
+Bluefathom,Hand,65,1,0,1,0,Thesauros Sector,farreach,0
+Skerrholm,neutral,50,0,0,0,0,Thesauros Sector,farreach,1
+Retentio,neutral,50,0,0,0,0,Lagoa Funda Sector,midreach,1
+Meseta,neutral,50,0,0,0,0,Feldspar Sector,midreach,1
+Silberberg,neutral,50,0,0,0,0,Thesauros Sector,farreach,0
+Krasny Yar,neutral,50,0,0,0,0,Rio Lodo Sector,farreach,0
+Morrowfield,neutral,50,0,0,0,0,Akousma Sector,midreach,1
+Ribeira,neutral,50,0,0,0,0,Lenitas Sector,midreach,1
+Four Lamps,Hand,34,0,0,1,0,Akousma Sector,midreach,1
+The Notch,neutral,50,0,0,0,0,Lantern Sector,farreach,1
+Vrijhaven,neutral,50,0,0,0,0,Nebbia Sector,farreach,0
+Mirrorfield,Collective,82,0,0,1,0,Fallout Sector,farreach,0
+Viridia,neutral,50,0,0,0,0,Quieta Sector,midreach,1
+Rio Turvo,neutral,50,0,0,0,0,Thesauros Sector,farreach,0
+Brennhof,neutral,56,0,1,0,0,Tarrow Sector,heartland,1
+Skylark,Hand,10,0,0,1,0,Caminus Sector,farreach,1
+Warmwell,neutral,50,0,0,0,0,Quieta Sector,midreach,1
+Opsis,neutral,50,0,0,0,0,Kranholm Sector,farreach,0
+Sedova,neutral,50,0,0,0,0,Tormentum Sector,midreach,1
+Fallow,Collective,72,0,0,1,0,Mata Alta Sector,farreach,0
+Kairos,neutral,50,0,0,0,0,Varmdal Sector,farreach,1
+Ilhas Fundas,neutral,50,0,0,0,0,Kranholm Sector,farreach,1
+Lesnaya,neutral,50,0,0,0,0,Lesnaya Sector,midreach,1
+Dar Sukun,neutral,50,0,0,0,0,Varmdal Sector,farreach,1
+Nordlys,neutral,50,0,0,0,0,Greenfever Sector,farreach,0
+Solheim,neutral,50,0,0,0,0,Laterite Sector,farreach,0
+Marl,neutral,50,0,0,0,0,Mechane Sector,midreach,1
+Ferrymoor,neutral,50,0,0,0,0,Drift Harbour Sector,farreach,0
+Scoria,neutral,54,0,1,0,0,Charter Sector,heartland,1
+Fyrholm,neutral,50,0,0,0,0,Fyrholm Sector,farreach,1
+Ferrite IV,neutral,50,0,0,0,0,Lesnaya Sector,midreach,1
+Farrow,neutral,50,0,0,0,0,Hundred Lakes Sector,farreach,0
+Agmen,neutral,50,0,0,0,0,Quieta Sector,midreach,1
+Fernhollow,neutral,50,0,0,0,0,Fallout Sector,farreach,0
+Bitterwell,Collective,62,0,0,1,0,Greenfever Sector,farreach,0
+Hollenvale,neutral,50,0,0,0,0,Thaw Sector,farreach,1
+Nueva Pradera,neutral,50,0,0,0,0,Caza Real Sector,midreach,1
+Oionos,Hand,78,1,0,1,0,Mechane Sector,midreach,1
+Wrenfield,Hand,36,0,0,1,0,Ferraria Sector,midreach,1
+Alvorada,neutral,50,0,0,0,0,Cohors Sector,farreach,0
+Consolatio,Hand,34,0,1,1,0,Castra Sector,heartland,1
+Dulcia,Hand,10,0,0,1,0,Incus Sector,midreach,1
+Altamesa,neutral,50,0,0,0,0,Classis Sector,midreach,1
+Laterite,neutral,50,0,0,0,0,Laterite Sector,farreach,0
+Amargura,neutral,50,0,0,0,0,Pulau Hijau Sector,farreach,1
+Shelter,neutral,50,0,0,0,0,Shelter Sector,farreach,1
+Deadfall,neutral,50,0,0,0,0,Bauxite IV Sector,farreach,1
+Redfen,neutral,50,0,0,0,0,Highfall Sector,farreach,0
+Stonebrake,neutral,45,0,1,0,0,Castra Sector,heartland,1
+Last Tank,neutral,50,0,0,0,0,Slate Hill Sector,farreach,1
+Snowmouth,neutral,50,0,0,0,0,Lantern Sector,farreach,1
+Groza,neutral,50,0,0,0,0,Slate Hill Sector,farreach,0
+Kalmoor,neutral,50,0,0,0,0,Bosque Alto Sector,midreach,1
+Longshore,Collective,67,0,0,1,0,Salitre Sector,farreach,0
+Feudgrass,neutral,50,0,0,0,0,Salitre Sector,farreach,1
+Three Lamps,neutral,50,0,0,0,0,Three Lamps Sector,midreach,0
+Tormentum,neutral,50,0,0,0,0,Tormentum Sector,midreach,1
+Las Presas,neutral,50,0,0,0,0,Caminus Sector,farreach,0
+Lenitas,Hand,57,0,0,1,0,Lenitas Sector,midreach,1
+Waymeet,neutral,50,0,0,0,0,Caza Real Sector,midreach,1
+Charter,Hand,0,0,1,1,0,Charter Sector,heartland,1
+Mollis,neutral,50,0,0,0,0,Incus Sector,midreach,1
+Hoshimachi,neutral,50,0,0,0,0,Rio Lodo Sector,farreach,1
+Mossgarden,neutral,50,0,0,0,0,Eldingar Sector,farreach,0
+Lindenfall,neutral,50,0,0,0,0,Fyrholm Sector,farreach,1
+Akousma,Hand,17,0,0,1,0,Akousma Sector,midreach,1
+Gemelos,neutral,50,0,0,0,0,Three Lamps Sector,midreach,1
+The Moorings,Collective,60,0,0,1,0,Moorings Sector,farreach,1
+Havdal,neutral,50,0,0,0,0,Caminus Sector,farreach,1
+Statio,neutral,50,0,0,0,0,Akousma Sector,midreach,1
+Hlubina,Hand,37,0,0,1,0,Sendero Sector,farreach,1
+Longwire,neutral,50,0,0,0,0,Longwire Sector,farreach,1
+Kranholm,neutral,50,0,0,0,0,Kranholm Sector,farreach,0
+Caminus,Hand,58,0,0,1,0,Caminus Sector,farreach,1
+Voluptas,neutral,50,0,0,0,0,Lenitas Sector,midreach,1
+Caza Real,neutral,50,0,0,0,0,Caza Real Sector,midreach,1
+Side Gate,neutral,50,0,0,0,0,Shelter Sector,farreach,0
+Opifex,neutral,50,0,0,0,0,Ashfall Sector,midreach,0
+Ostrog,neutral,50,0,0,0,0,Highfall Sector,farreach,0
+Longtide,neutral,50,0,0,0,0,Longtide Sector,midreach,1
+Kaskela,neutral,50,0,0,0,0,Ashfall Sector,midreach,1
+Glassfield,Collective,68,0,0,1,0,Altofen Sector,midreach,1
+Specula,neutral,50,0,0,0,0,Three Lamps Sector,midreach,1
+Folio,neutral,50,0,0,0,0,Altofen Sector,midreach,1
+The Shoal,Collective,100,0,1,1,0,Greenfever Sector,farreach,1
+Paydirt,neutral,50,0,0,0,0,Longtide Sector,midreach,1
+Ironbeach,neutral,50,0,0,0,0,Ironbeach Sector,farreach,0
+Barro Rojo,neutral,50,0,0,0,0,Rio Lodo Sector,farreach,1
+Ardlow,neutral,50,0,0,0,0,Slate Hill Sector,farreach,0
+Sawtooth,neutral,50,0,0,0,0,Longtide Sector,midreach,1
+Rosenbach,neutral,50,0,0,0,0,Clearholm Sector,farreach,0
+Theorema,neutral,50,0,0,0,0,Cohors Sector,farreach,0
+Silica Minor,Hand,36,0,0,1,0,Bauxite IV Sector,farreach,0
+Nascentia,neutral,50,0,0,0,0,Bauxite IV Sector,farreach,0
+Fallout,Collective,75,0,0,1,0,Fallout Sector,farreach,0
+Navalia,Hand,16,0,0,1,0,Lesnaya Sector,midreach,1
+Incus,Hand,10,0,0,1,0,Incus Sector,midreach,1
+Castra,Hand,37,0,1,1,0,Castra Sector,heartland,1
+Tutela,neutral,50,0,0,0,0,Lenitas Sector,midreach,1
+Fusoria,Hand,28,0,0,1,0,Dunmere Sector,farreach,1
+Fiscus,Hand,20,0,0,1,0,Classis Sector,midreach,1
+Mechane,neutral,50,0,0,0,0,Mechane Sector,midreach,1
+Salus,neutral,50,0,0,0,0,Incus Sector,midreach,1
+Kronholm,neutral,50,0,0,0,0,Longtide Sector,midreach,1
+Kalium II,neutral,50,0,0,0,0,Quieta Sector,midreach,1
+Solacia,Hand,17,0,0,1,0,Solacia Sector,farreach,0
+Wellhead,neutral,50,0,0,0,0,Altofen Sector,midreach,1
+Nebbia,neutral,50,0,0,0,0,Nebbia Sector,farreach,0
+Lagoa Funda,neutral,50,0,0,0,0,Lagoa Funda Sector,midreach,1
+Deep Wells,neutral,50,0,0,0,0,Ulaan Tal Sector,farreach,0
+Ulaan Tal,neutral,50,0,0,0,0,Ulaan Tal Sector,farreach,0
+Bosque Alto,neutral,50,0,0,0,0,Bosque Alto Sector,midreach,1
+Mwezi,neutral,50,0,0,0,0,Quieta Sector,midreach,1
+Overgrowth,neutral,50,0,0,0,0,Longtide Sector,midreach,1
+Blackmire,neutral,50,0,0,0,0,Mechane Sector,midreach,1
+Natron,neutral,50,0,0,0,0,Vinculum Sector,midreach,1
+Saffron Downs,Hand,75,1,0,1,0,Ferraria Sector,midreach,1
+Hundred Falls,Hand,14,0,0,1,0,Lenitas Sector,midreach,1
+Rimeglass,neutral,50,0,0,0,0,Fyrholm Sector,farreach,0
+Zlatna,neutral,50,0,0,0,0,Zlatna Sector,farreach,1
+Slate Hill,neutral,50,0,0,0,0,Slate Hill Sector,farreach,1
+Last Platform,neutral,50,0,0,0,0,Varmdal Sector,farreach,1
+Hoogstad,neutral,50,0,0,0,0,Muster Rock Sector,farreach,1
+Sendero,Collective,60,0,0,1,0,Sendero Sector,farreach,0
+Ciénaga,Hand,38,0,0,1,0,Ciénaga Sector,farreach,1
+Saltreach,neutral,50,0,0,0,0,Caminus Sector,farreach,1
+Greenfever,neutral,50,0,0,0,0,Greenfever Sector,farreach,1
+Cohors,Hand,27,0,0,1,0,Cohors Sector,farreach,1
+Llano Grande,Hand,21,0,0,1,0,Altofen Sector,midreach,1
+Dry Reef,neutral,50,0,0,0,0,Lantern Sector,farreach,1
+Saltgreen,neutral,50,0,0,0,0,Feldspar Sector,midreach,1
+Kanon,neutral,50,0,0,0,0,Solacia Sector,farreach,0
+Rubble Sky,neutral,50,0,0,0,0,Lantern Sector,farreach,1
+Ivyholm,neutral,50,0,0,0,0,Shelter Sector,farreach,1
+Tabularium,neutral,50,0,0,0,0,Cohors Sector,farreach,0
+Meridian,neutral,50,0,0,0,0,Solacia Sector,farreach,1
+Breakyard,neutral,50,0,0,0,0,Greenfever Sector,farreach,0
+Coldhearth,neutral,50,0,0,0,0,Greenfever Sector,farreach,1
+Stormfen,Collective,90,0,0,1,0,Greenfever Sector,farreach,0
+Blackglass,neutral,50,0,0,0,0,Longwire Sector,farreach,1
+Eldingar,neutral,50,0,0,0,0,Eldingar Sector,farreach,0
+Oldwatch,neutral,50,0,0,0,0,Fyrholm Sector,farreach,1
+Ridgefold,neutral,50,0,0,0,0,Highfall Sector,farreach,1
+Barewood,neutral,50,0,0,0,0,Muster Rock Sector,farreach,0
+Varmdal,neutral,50,0,0,0,0,Varmdal Sector,farreach,1
+Kept Faith,Collective,61,0,0,1,0,Moorings Sector,farreach,1
+Needlepeak,neutral,50,0,0,0,0,Ciénaga Sector,farreach,0
+Benigna,neutral,50,0,0,0,0,Dunmere Sector,farreach,0
+Salitre,neutral,50,0,0,0,0,Salitre Sector,farreach,1
+Excubia,Hand,23,0,1,1,0,Excubia Sector,heartland,1
+Hulkfield,neutral,50,0,0,0,0,Vinograd Sector,midreach,1
+Praesidium,Hand,74,1,0,1,0,Ferraria Sector,midreach,1
+Steeplewater,Hand,23,0,0,1,0,Vinculum Sector,midreach,1
+Neuwerft,neutral,50,0,0,0,0,Vinograd Sector,midreach,1
+Morelle,neutral,50,0,0,0,0,Three Lamps Sector,midreach,1
+Mesa Roja,Collective,73,0,0,1,0,Fairhaven Sector,farreach,1
+Gnomon,Hand,29,0,1,1,0,Excubia Sector,heartland,1
+Imani Falls,neutral,50,0,0,0,0,Caza Real Sector,midreach,1
+Aozora,neutral,50,0,0,0,0,Mata Alta Sector,farreach,0
+Weitfeld,neutral,50,0,0,0,0,Ironbeach Sector,farreach,0
+Highbarrow,neutral,50,0,0,0,0,Longtide Sector,midreach,1
+Isfjell,neutral,50,0,0,0,0,Ilanga Sector,farreach,0
+Bauxite IV,Hand,39,0,0,1,0,Bauxite IV Sector,farreach,0
+Vinterby,neutral,50,0,0,0,0,Clearholm Sector,farreach,0
+Seldwyn,neutral,50,0,0,0,0,Longtide Sector,midreach,1
+Vallum,neutral,50,0,0,0,0,Classis Sector,midreach,1
+Fiducia,Hand,10,0,0,1,0,Lesnaya Sector,midreach,1
+Grauburg,Hand,20,0,0,1,0,Classis Sector,midreach,1
+Ommata,Hand,11,0,1,1,0,Ommata Sector,heartland,1
+Ilha Verde,neutral,50,0,0,0,0,Ferraria Sector,midreach,1
+Lowlight,neutral,50,0,0,0,0,Lenitas Sector,midreach,1
+Lowmarket,neutral,50,0,0,0,0,Bosque Alto Sector,midreach,1
+Vigilia,neutral,44,0,1,0,0,Ommata Sector,heartland,1
+Sigillum,Hand,17,0,1,1,0,Castra Sector,heartland,1
+Old Cairn,neutral,58,0,1,0,0,Ommata Sector,heartland,1
+Ninefold,neutral,50,0,0,0,0,Bellwether Sector,midreach,1
+Tessera,neutral,50,0,0,0,0,Mirabel Sector,midreach,1
+Stabilis,neutral,50,0,0,0,0,Bosque Alto Sector,midreach,1
+Agua Mansa,neutral,50,0,0,0,0,Mechane Sector,midreach,1
+Port Sorrel,neutral,50,0,0,0,0,Tormentum Sector,midreach,1
+Highrime,neutral,50,0,0,0,0,Tormentum Sector,midreach,1
+Archeion,Hand,19,0,0,1,0,Incus Sector,midreach,1
+Quieta,neutral,50,0,0,0,0,Quieta Sector,midreach,1
+Delicia,Hand,27,0,0,1,0,Incus Sector,midreach,1
+Mercado Alto,neutral,50,0,0,0,0,Lenitas Sector,midreach,1
+Stannum,neutral,50,0,0,0,0,Tormentum Sector,midreach,1
+Officina,Hand,14,0,0,1,0,Clearholm Sector,farreach,1
+Murkhaven,neutral,50,0,0,0,0,Cohors Sector,farreach,1
+Plage Blanche,neutral,50,0,0,0,0,Nebbia Sector,farreach,0
+Riftwood,Collective,81,0,0,1,0,Moorings Sector,farreach,1
+Ebbeholm,neutral,50,0,0,0,0,Shelter Sector,farreach,0
+Brimstone,Collective,83,0,0,1,0,Greenfever Sector,farreach,0
+Bellglass,neutral,50,0,0,0,0,Lantern Sector,farreach,0
+Pronoia,Hand,37,0,0,1,0,Ilanga Sector,farreach,1
+Ghostlight,neutral,50,0,0,0,0,Cohors Sector,farreach,1
+Firmitas,Hand,32,0,0,1,0,Muster Rock Sector,farreach,0
+Felsite III,Hand,19,0,0,1,0,Clearholm Sector,farreach,1
+Wadi Sabr,neutral,50,0,0,0,0,Cohors Sector,farreach,1
+Oranjeveld,neutral,50,0,0,0,0,Hundred Lakes Sector,farreach,1
+Long Winter,neutral,50,0,0,0,0,Slate Hill Sector,farreach,0
+Teloneum,neutral,50,0,0,0,0,Lagoa Funda Sector,midreach,1
+Motu Ahi,neutral,50,0,0,0,0,Salitre Sector,farreach,0
+Kaltwasser,neutral,50,0,0,0,0,Salitre Sector,farreach,0
+Belavista,neutral,50,0,0,0,0,Thesauros Sector,farreach,1
+Cunabula,Hand,32,0,0,1,0,Varmdal Sector,farreach,0
+Loomhollow,neutral,50,0,0,0,0,Eldingar Sector,farreach,0
+Quebrada Honda,neutral,50,0,0,0,0,Eldingar Sector,farreach,0
+Ninegates,Hand,35,0,0,1,0,Lesnaya Sector,midreach,1
+Veenhoven,Hand,25,0,0,1,0,Kranholm Sector,farreach,0
+Pedregal,neutral,50,0,0,0,0,Ashfall Sector,midreach,1
+Regrowth,neutral,50,0,0,0,0,Eldingar Sector,farreach,0
+Yukihama,neutral,50,0,0,0,0,Quieta Sector,midreach,0
+Mbuga,neutral,50,0,0,0,0,Sendero Sector,farreach,0
+Feriae,neutral,50,0,0,0,0,Sendero Sector,farreach,1
+Skalna,neutral,50,0,0,0,0,Solacia Sector,farreach,1
+Kinoko,neutral,50,0,0,0,0,Eldingar Sector,farreach,1
+Tidewall,neutral,50,0,0,0,0,Ashfall Sector,midreach,1
+Halfpenny,Hand,55,1,0,1,0,Feldspar Sector,midreach,1
+Fallen Keel,neutral,50,0,0,0,0,Sendero Sector,farreach,0
+Ashfall,neutral,50,0,0,0,0,Ashfall Sector,midreach,1
+Ashenmark,neutral,50,0,0,0,0,Sendero Sector,farreach,0
+Clinker,neutral,50,0,0,0,0,Ashfall Sector,midreach,1
+Ergon,Hand,15,0,0,1,0,Pulau Hijau Sector,farreach,1
+Probatio,neutral,50,0,0,0,0,Laterite Sector,farreach,0
+Grandmother,neutral,50,0,0,0,0,Laterite Sector,farreach,0
+Kaldvik,neutral,50,0,0,0,0,Highfall Sector,farreach,1
+Signum,Hand,18,0,0,1,0,Solacia Sector,farreach,0
+Kvitberg,neutral,50,0,0,0,0,Rauchtal Sector,farreach,0
+Coldwell,neutral,50,0,0,0,0,Rio Lodo Sector,farreach,1
+Skarholm,Collective,87,0,0,1,0,Rio Lodo Sector,farreach,0
+Kolokol,neutral,50,0,0,0,0,Semeion Sector,midreach,1
+First Morning,neutral,50,0,0,0,0,Hundred Lakes Sector,farreach,0
+Emberhold,neutral,50,0,0,0,0,Muster Rock Sector,farreach,0
+Suavis,neutral,50,0,0,0,0,Shelter Sector,farreach,1
+The Flats,Collective,61,0,0,1,0,Fallout Sector,farreach,1
+Muster Rock,Hand,15,0,0,1,0,Muster Rock Sector,farreach,1
+Rauchtal,neutral,50,0,0,0,0,Rauchtal Sector,farreach,0
+The Cuts,neutral,50,0,0,0,0,Sendero Sector,farreach,1
+Las Eras,Hand,34,0,0,1,0,Nebbia Sector,farreach,1
+Stepstone,neutral,50,0,0,0,0,Semeion Sector,midreach,1
+Hartsease,neutral,50,0,0,0,0,Vinograd Sector,midreach,1
+Willowmere,Collective,81,0,0,1,0,Quieta Sector,midreach,0
+Bilokray,neutral,50,0,0,0,0,Laterite Sector,farreach,0
+Los Pozos,neutral,50,0,0,0,0,Ulaan Tal Sector,farreach,1
+Cendrine,neutral,50,0,0,0,0,Ironbeach Sector,farreach,0
+Dry House,neutral,50,0,0,0,0,Zlatna Sector,farreach,0
+The Rafts,neutral,50,0,0,0,0,Thaw Sector,farreach,0
+Zubets,neutral,50,0,0,0,0,Fairhaven Sector,farreach,1
+Plainsong,neutral,50,0,0,0,0,Fyrholm Sector,farreach,0
+Endline,neutral,50,0,0,0,0,Slate Hill Sector,farreach,1
+Hirschwald,Collective,80,0,0,1,0,Thaw Sector,farreach,0
+Midden,neutral,50,0,0,0,0,Drift Harbour Sector,farreach,1
+Brokengate,Collective,62,0,0,1,0,Bellwether Sector,midreach,1
+Long Strand,neutral,50,0,0,0,0,Lantern Sector,farreach,1
+Rockclaim,neutral,50,0,0,0,0,Hundred Lakes Sector,farreach,0
+Halvmark,neutral,50,0,0,0,0,Laterite Sector,farreach,0
+Las Mieses,neutral,53,0,1,0,0,Charter Sector,heartland,1
+Sonnfeld,Collective,63,0,0,1,0,Moorings Sector,farreach,1
+Dormilona,neutral,50,0,0,0,0,Sendero Sector,farreach,0
+Limes,neutral,55,0,1,0,0,Tarrow Sector,heartland,1
+Tierra Seca,neutral,50,0,0,0,0,Laterite Sector,farreach,1
+Medela,Hand,31,0,0,1,0,Tormentum Sector,midreach,1
+Nadezhda,neutral,50,0,0,0,0,Thaw Sector,farreach,0
+Marisol,neutral,50,0,0,0,0,Bellwether Sector,midreach,1
+Perpetua,Hand,19,0,0,1,0,Clearholm Sector,farreach,0
+Novy Rynek,neutral,50,0,0,0,0,Ashfall Sector,midreach,1
+Sierra Seca,neutral,50,0,0,0,0,Semeion Sector,midreach,1
+Remedium,Hand,24,0,1,1,0,Castra Sector,heartland,1
+Gypsum Minor,neutral,50,0,0,0,0,Lesnaya Sector,midreach,1
+Portelle,neutral,50,0,0,0,0,Kranholm Sector,farreach,1
+Tourmaline,neutral,56,0,1,0,0,Ommata Sector,heartland,1
+Dunmere,neutral,50,0,0,0,0,Dunmere Sector,farreach,0
+Subsidia,neutral,50,0,0,0,0,Mirabel Sector,midreach,1
+Seedbank,neutral,50,0,0,0,0,Rauchtal Sector,farreach,0
+Mica,neutral,50,0,0,0,0,Three Lamps Sector,midreach,1
+Vidrio,neutral,50,0,0,0,0,Nebbia Sector,farreach,1
+Two Crowns,neutral,50,0,0,0,0,Akousma Sector,midreach,1
+Penhallow,neutral,50,0,0,0,0,Lagoa Funda Sector,midreach,1
+Pennygate,neutral,50,0,0,0,0,Bosque Alto Sector,midreach,1
+Supper Hill,Hand,52,1,0,1,0,Ciénaga Sector,farreach,0
+Natalis,neutral,50,0,0,0,0,Feldspar Sector,midreach,1
+Campo Alto,Hand,28,0,0,1,0,Fairhaven Sector,farreach,0
+Sinkwater,neutral,50,0,0,0,0,Caminus Sector,farreach,1
+Whitecairn,neutral,50,0,0,0,0,Rio Lodo Sector,farreach,0
+Mittelfeld,Collective,63,0,0,1,0,Longwire Sector,farreach,1
+Flarewater,neutral,50,0,0,0,0,Solacia Sector,farreach,1
+Groenveld,Collective,79,0,0,1,0,Bellwether Sector,midreach,1
+Sabkha,neutral,50,0,0,0,0,Mirabel Sector,midreach,1
+Cinnabar,Hand,13,0,0,1,0,Classis Sector,midreach,1
+Old Lens,neutral,50,0,0,0,0,Laterite Sector,farreach,0
+Mokra,neutral,50,0,0,0,0,Altofen Sector,midreach,0
+Belle Rive,Hand,25,0,0,1,0,Ilanga Sector,farreach,0
+Campus,neutral,50,0,0,0,0,Kranholm Sector,farreach,0
+Organon,neutral,50,0,0,0,0,Bauxite IV Sector,farreach,1
+Port Isolde,neutral,50,0,0,0,0,Mata Alta Sector,farreach,0
+Nacar,Hand,37,0,0,1,0,Vinculum Sector,midreach,1
+Azzurra,Hand,36,0,0,1,0,Ferraria Sector,midreach,1
+Longquay,neutral,50,0,0,0,0,Varmdal Sector,farreach,1
+Brandt's Giant,neutral,50,0,0,0,0,Highfall Sector,farreach,0
+Lunaria,neutral,50,0,0,0,0,Ciénaga Sector,farreach,0
+Laetitia,neutral,50,0,0,0,0,Zlatna Sector,farreach,1
+Tres Rios,neutral,50,0,0,0,0,Akousma Sector,midreach,1
+Hardwood,neutral,50,0,0,0,0,Slate Hill Sector,farreach,0
+Sunderby,neutral,50,0,0,0,0,Longtide Sector,midreach,1
+Timberline,neutral,50,0,0,0,0,Longwire Sector,farreach,0
+Isvik,neutral,50,0,0,0,0,Cohors Sector,farreach,0
+Backwater,neutral,50,0,0,0,0,Slate Hill Sector,farreach,1
+Resin Moon,neutral,50,0,0,0,0,Clearholm Sector,farreach,0
+Hardpan,neutral,50,0,0,0,0,Longwire Sector,farreach,1
+Vysoka,neutral,50,0,0,0,0,Fyrholm Sector,farreach,0
+Severitas,neutral,50,0,0,0,0,Varmdal Sector,farreach,0
+Cutbank,neutral,50,0,0,0,0,Lenitas Sector,midreach,1
+Graustadt,neutral,50,0,0,0,0,Moorings Sector,farreach,0
+Shirakaba,Collective,72,0,0,1,0,Fallout Sector,farreach,0
+Junkhold,Collective,79,0,0,1,0,Altofen Sector,midreach,0
+Prognosis,Hand,52,1,0,1,0,Feldspar Sector,midreach,1
+Waymark,Collective,82,0,0,1,0,Zlatna Sector,farreach,0
+Terracotta,neutral,50,0,0,0,0,Nebbia Sector,farreach,0
+Kesari,neutral,50,0,0,0,0,Solacia Sector,farreach,0
+Rosvik,neutral,47,0,1,0,0,Charter Sector,heartland,1
+Goldcloud,neutral,50,0,0,0,0,Zlatna Sector,farreach,0
+Selvagem,neutral,50,0,0,0,0,Mirabel Sector,midreach,1
+Cinco Lunas,neutral,50,0,0,0,0,Muster Rock Sector,farreach,0
+Brushfield,neutral,50,0,0,0,0,Bosque Alto Sector,midreach,1
+Sourwater,Hand,35,0,1,1,0,Charter Sector,heartland,1
+Mill Hollow,neutral,50,0,0,0,0,Ulaan Tal Sector,farreach,0
+Dongyu,neutral,50,0,0,0,0,Tormentum Sector,midreach,1
+Old Salvage,Collective,76,0,0,1,0,Longwire Sector,farreach,1
+Fathom,Collective,68,0,0,1,0,Thaw Sector,farreach,0
+Lastwell,neutral,50,0,0,0,0,Highfall Sector,farreach,1
+Stonebarrow,Collective,73,0,0,1,0,Fairhaven Sector,farreach,0
+The Kiln,Collective,83,0,0,1,0,Ironbeach Sector,farreach,0
+Stochos,neutral,50,0,0,0,0,Dunmere Sector,farreach,1
+Seven Gates,neutral,50,0,0,0,0,Ironbeach Sector,farreach,1
+Fuego Alto,neutral,50,0,0,0,0,Ciénaga Sector,farreach,1
+Hammada,neutral,50,0,0,0,0,Semeion Sector,midreach,1
+Requies,neutral,50,0,0,0,0,Cohors Sector,farreach,0
+Bread Street,neutral,50,0,0,0,0,Bauxite IV Sector,farreach,0
+Gumwater,neutral,50,0,0,0,0,Ironbeach Sector,farreach,0
+Cambium,neutral,58,0,1,0,0,Castra Sector,heartland,1
+Vaultrock,neutral,50,0,0,0,0,Drift Harbour Sector,farreach,0
+Nowhere,neutral,50,0,0,0,0,Zlatna Sector,farreach,0
+Waypost,neutral,50,0,0,0,0,Muster Rock Sector,farreach,1
+Halfsky,neutral,50,0,0,0,0,Fyrholm Sector,farreach,1
+Montefosco,neutral,50,0,0,0,0,Caminus Sector,farreach,1
+Plenty,neutral,50,0,0,0,0,Salitre Sector,farreach,1
+Ilanga,Hand,31,0,0,1,0,Ilanga Sector,farreach,1
+Stopped Line,neutral,50,0,0,0,0,Salitre Sector,farreach,0
+Tallow Mesa,neutral,50,0,0,0,0,Bauxite IV Sector,farreach,1
+Holmvik,neutral,50,0,0,0,0,Kranholm Sector,farreach,1
+Cafetal,neutral,50,0,0,0,0,Fyrholm Sector,farreach,1
+Ellerbeck,neutral,50,0,0,0,0,Caza Real Sector,midreach,1
+Pyrite,Hand,13,0,1,1,0,Charter Sector,heartland,1
+Stepwell,neutral,50,0,0,0,0,Fyrholm Sector,farreach,0
+Kizil Dala,neutral,50,0,0,0,0,Clearholm Sector,farreach,0
+Wolfram II,neutral,50,0,0,0,0,Dunmere Sector,farreach,1
+Tinplate,neutral,50,0,0,0,0,Vinograd Sector,midreach,1
+San Teodor,neutral,50,0,0,0,0,Fallout Sector,farreach,0
+Blind Eye,neutral,50,0,0,0,0,Varmdal Sector,farreach,1
+Deepcut,neutral,50,0,0,0,0,Eldingar Sector,farreach,1
+Standstill,neutral,50,0,0,0,0,Drift Harbour Sector,farreach,0
+Partus,neutral,50,0,0,0,0,Clearholm Sector,farreach,0
+Bastide,neutral,50,0,0,0,0,Mirabel Sector,midreach,1
+Metsola,neutral,50,0,0,0,0,Eldingar Sector,farreach,0
+Greysand,neutral,50,0,0,0,0,Salitre Sector,farreach,0
+Hollowstone,Hand,25,0,0,1,0,Feldspar Sector,midreach,1
+Clove,neutral,50,0,0,0,0,Ilanga Sector,farreach,1
+Naphtha,neutral,50,0,0,0,0,Solacia Sector,farreach,0
+Galeholm,neutral,50,0,0,0,0,Bellwether Sector,midreach,1
+Cairnfell,neutral,50,0,0,0,0,Mata Alta Sector,farreach,0
+The Wall,Collective,80,0,0,1,0,Moorings Sector,farreach,0
+Steading,neutral,50,0,0,0,0,Bellwether Sector,midreach,1
+Lowmoor,neutral,50,0,0,0,0,Ciénaga Sector,farreach,1
+Uhrwald,neutral,50,0,0,0,0,Drift Harbour Sector,farreach,1
+Glasshold,neutral,50,0,0,0,0,Akousma Sector,midreach,1
+Limonite III,Hand,12,0,0,1,0,Caza Real Sector,midreach,1
+Grimsholt,Collective,85,0,0,1,0,Thaw Sector,farreach,0
+Kruispunt,neutral,50,0,0,0,0,Feldspar Sector,midreach,1
+Quies,Hand,23,0,1,1,0,Castra Sector,heartland,1
+Shingle,neutral,50,0,0,0,0,Semeion Sector,midreach,0
+Milestone Nine,neutral,50,0,0,0,0,Ironbeach Sector,farreach,1
+Stonecrop,neutral,50,0,0,0,0,Altofen Sector,midreach,0
+Bluesand,neutral,50,0,0,0,0,Semeion Sector,midreach,0
+Nueve Lunas,Collective,89,0,0,1,0,Lagoa Funda Sector,midreach,1
+Old Amber,Hand,34,0,0,1,0,Ferraria Sector,midreach,1
+Tamarisk,neutral,50,0,0,0,0,Mirabel Sector,midreach,1
+Thornveld,neutral,50,0,0,0,0,Mirabel Sector,midreach,1
+Altofen,Collective,100,0,0,1,1,Altofen Sector,midreach,1
+Kalinov,neutral,50,0,0,0,0,Lagoa Funda Sector,midreach,1
+Blackfen,neutral,50,0,0,0,0,Thaw Sector,farreach,0
+Alumen,Hand,55,1,1,1,0,Ommata Sector,heartland,1
+Permit Hill,neutral,50,0,0,0,0,Moorings Sector,farreach,1
+Kreuzweg,neutral,50,0,0,0,0,Highfall Sector,farreach,1
+Commonhold,neutral,50,0,0,0,0,Dunmere Sector,farreach,1
+Ochre Wells,neutral,50,0,0,0,0,Ironbeach Sector,farreach,1
+Puerto Hierro,neutral,50,0,0,0,0,Three Lamps Sector,midreach,1
+Techne,neutral,50,0,0,0,0,Incus Sector,midreach,1
+Lignite,Hand,16,0,0,1,0,Ilanga Sector,farreach,0
+Kaukomaa,Hand,21,0,0,1,0,Bellwether Sector,midreach,1
+Ashgrove,neutral,50,0,0,0,0,Caza Real Sector,midreach,1
+Haverland,neutral,50,0,0,0,0,Vinograd Sector,midreach,1
+Buyback,Hand,30,0,0,1,0,Ferraria Sector,midreach,1
+Malleus,Hand,13,0,0,1,0,Lenitas Sector,midreach,1
+Wadi Noor,neutral,50,0,0,0,0,Fairhaven Sector,farreach,0
+Hartwell,neutral,56,0,1,0,0,Charter Sector,heartland,1
+Hollow Fork,neutral,50,0,0,0,0,Dunmere Sector,farreach,0
+Unlisted,neutral,50,0,0,0,0,Rio Lodo Sector,farreach,0
+Kestrel Downs,neutral,50,0,0,0,0,Feldspar Sector,midreach,1
+Velika Ravan,neutral,50,0,0,0,0,Mechane Sector,midreach,1
+Highfall,neutral,50,0,0,0,0,Highfall Sector,farreach,0
+Scaldwell,neutral,50,0,0,0,0,Fallout Sector,farreach,1
+Constantia,Collective,63,0,0,1,0,Lagoa Funda Sector,midreach,1
+Hortensia,Collective,60,0,0,1,0,Moorings Sector,farreach,0
+Pinehallow,neutral,50,0,0,0,0,Shelter Sector,farreach,1
+Clearholm,Hand,16,0,0,1,0,Clearholm Sector,farreach,0
+Mudhaven,neutral,50,0,0,0,0,Kranholm Sector,farreach,0
+Skopia,Hand,17,0,1,1,0,Castra Sector,heartland,1
+Spindle,neutral,50,0,0,0,0,Ciénaga Sector,farreach,0
+Thousand Mouths,Collective,81,0,0,1,0,Akousma Sector,midreach,0
+Uzun Su,neutral,50,0,0,0,0,Mechane Sector,midreach,1
+Kovarna,neutral,50,0,0,0,0,Shelter Sector,farreach,1
+Chert,neutral,50,0,0,0,0,Pulau Hijau Sector,farreach,0
+Mirevale,neutral,50,0,0,0,0,Dunmere Sector,farreach,1
+Landfall,neutral,50,0,0,0,0,Ulaan Tal Sector,farreach,1
+Grimwall,neutral,50,0,0,0,0,Ulaan Tal Sector,farreach,0
+Bellwether,neutral,50,0,0,0,0,Bellwether Sector,midreach,1
+Rio Lodo,neutral,50,0,0,0,0,Rio Lodo Sector,farreach,0
+Amoena,neutral,50,0,0,0,0,Lagoa Funda Sector,midreach,1
+Old Bench,Hand,29,0,0,1,0,Mata Alta Sector,farreach,0
+Sunscald,neutral,50,0,0,0,0,Ciénaga Sector,farreach,0
+Ain Tamra,neutral,50,0,0,0,0,Ulaan Tal Sector,farreach,0
+Rietmoor,neutral,50,0,0,0,0,Quieta Sector,midreach,1
+Cidermoor,neutral,50,0,0,0,0,Fairhaven Sector,farreach,0
+Halfwinter,neutral,50,0,0,0,0,Vinculum Sector,midreach,1
+Towline,Collective,89,0,0,1,0,Zlatna Sector,farreach,1
+Black Teeth,neutral,50,0,0,0,0,Muster Rock Sector,farreach,0
+Sankt Odile,neutral,50,0,0,0,0,Semeion Sector,midreach,0
+Long Noon,neutral,50,0,0,0,0,Ulaan Tal Sector,farreach,1
+Lowenna,neutral,50,0,0,0,0,Tormentum Sector,midreach,1
+Icetap,neutral,50,0,0,0,0,Slate Hill Sector,farreach,1
+Haematite,neutral,50,0,0,0,0,Kranholm Sector,farreach,0
+Mar Seco,neutral,50,0,0,0,0,Drift Harbour Sector,farreach,0
+Nordhaven,neutral,50,0,0,0,0,Bosque Alto Sector,midreach,1
+Codicil,neutral,49,0,1,0,0,Tarrow Sector,heartland,1
+Stillwater,neutral,50,0,0,0,0,Pulau Hijau Sector,farreach,1
+Placida,neutral,50,0,0,0,0,Three Lamps Sector,midreach,1
+Fabrica,neutral,50,0,0,0,0,Ashfall Sector,midreach,1
+Hagelfeld,neutral,50,0,0,0,0,Rauchtal Sector,farreach,1
 Glasswood,neutral,50,0,0,0,0,Outside any sector,none,0
 Frostholm,neutral,50,0,0,0,0,Outside any sector,none,0

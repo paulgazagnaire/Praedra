@@ -7,7 +7,7 @@ using static Praedra.Core.Tests.Missions.MissionWorld;
 namespace Praedra.Core.Tests.Characters;
 
 // QA-7 (where a new prisoner is held) and QA-9 (where a freed, escaped or displaced character goes), 2026-10-18.
-// rule: m5-characters-and-force §Capture, injury, death, freeing (B2e §3 "Where a new prisoner is held", "Where a freed, escaped or displaced
+// rule: m5-characters-and-talent §Capture, injury, death, freeing (B2e §3 "Where a new prisoner is held", "Where a freed, escaped or displaced
 // character goes", Work 12, Work 13); m5-missions §4.
 public class CaptorUnitAndAutorouteTests
 {

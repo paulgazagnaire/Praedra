@@ -2,10 +2,10 @@ using Praedra.Core.Data;
 
 namespace Praedra.Core.Ships;
 
-/// <summary>Laser, ion and turbolaser cannon counts of one arc. rule: m4-battle-classic §4 (counts are read only through f / N).</summary>
-public readonly record struct ArcCounts(int Laser, int Ion, int Turbolaser)
+/// <summary>Laser, ion and heavy cannon counts of one arc. rule: m4-battle-classic §4 (counts are read only through f / N).</summary>
+public readonly record struct ArcCounts(int Laser, int Ion, int HeavyCannon)
 {
-    public int Total => Laser + Ion + Turbolaser;
+    public int Total => Laser + Ion + HeavyCannon;
 }
 
 /// <summary>The four arcs in the order the battle sheet scans them: fore, aft, port, starboard. rule: m4-battle-classic §4.</summary>
@@ -20,8 +20,8 @@ public sealed record ShipArcs(ArcCounts Fore, ArcCounts Aft, ArcCounts Port, Arc
 public enum ShipSide { None = 0, Collective = 1, Hand = 2 }
 
 /// <summary>
-/// The ship-class fields the core needs so far (travel, forced stop, ship object, carrying capacity, bombardment power: <c>Bombardment</c> is a capital ship's bombardment_modifier or a squadron's bombardment value). Loaded from data/classic/ (CAPSHPSD and FIGHTSD, read by
-/// importer/). rule: B1-own-importer §Work 3.
+/// The ship-class fields the core needs so far (travel, forced stop, ship object, carrying capacity, bombardment power: <c>Bombardment</c> is a capital ship's bombardment_modifier or a squadron's bombardment value). Loaded from data/classic/ (CAPSHPSD and FIGHTSD, copied from
+/// the Classic files). rule: B1-own-importer §Work 3.
 /// </summary>
 public sealed record ShipClass(
     string Name,
@@ -51,10 +51,10 @@ public sealed record ShipClass(
     int SquadronSize = 0,
     int LaserRange = 0,
     int IonRange = 0,
-    int TurbolaserRange = 0,
+    int HeavyCannonRange = 0,
     int UprisingDefense = 0)
 {
-    /// <summary>The loss value a destroyed unit adds to its side's tally at the system: record word 12 (uprising_defense). rule: m5-characters-and-force §Loyalty (B2c §3, 0x520b60).</summary>
+    /// <summary>The loss value a destroyed unit adds to its side's tally at the system: record word 12 (uprising_defense). rule: m5-characters-and-talent §Loyalty (B2c §3, 0x520b60).</summary>
     public int LossValue => UprisingDefense;
 
     /// <summary>The four gun arcs (a squadron has only the fore arc). Never null: a class built without arcs has none.</summary>
@@ -67,16 +67,16 @@ public sealed record ShipClass(
     public int Speed(bool damaged) => damaged && HyperdriveIfDamaged > 0 ? HyperdriveIfDamaged : Hyperdrive;
 }
 
-/// <summary>Loader for data/classic/capital-ships.csv and fighters.csv (written by importer/ from the Classic files).</summary>
+/// <summary>Loader for data/classic/capital-ships.csv and fighters.csv (copied from the Classic files).</summary>
 public static class ShipData
 {
     public const string CapitalShipsFile = "capital-ships.csv";
     public const string FightersFile = "fighters.csv";
 
-    // Turbolaser and ion cannon arcs (laser cannons are not heavy weapons). rule: space-combat/07 last section.
+    // HeavyCannon and ion cannon arcs (laser cannons are not heavy weapons). rule: space-combat/07 last section.
     private static readonly string[] HeavyArcs =
     {
-        "turbolaser_fore", "turbolaser_aft", "turbolaser_port", "turbolaser_starboard",
+        "heavy_cannon_fore", "heavy_cannon_aft", "heavy_cannon_port", "heavy_cannon_starboard",
         "ion_cannon_fore", "ion_cannon_aft", "ion_cannon_port", "ion_cannon_starboard",
     };
 
@@ -113,10 +113,10 @@ public static class ShipData
         bool hasDet = t.HasColumn("detection"); // rule: m5-missions §3 Defenders (CAPSHPSD and FIGHTSD carry detection)
         // rule: m4-battle-classic §2, §5 (B3: sub-light speed, gun ranges, squadron size); m4-retreat-damage-repair §5 (damage_control)
         bool hasSub = t.HasColumn("sub_light_engine"), hasDc = t.HasColumn("damage_control"), hasSize = t.HasColumn("squadron_size");
-        bool hasUd = t.HasColumn("uprising_defense"); // rule: m5-characters-and-force §Loyalty (B2c §3: the loss value, record word 12)
+        bool hasUd = t.HasColumn("uprising_defense"); // rule: m5-characters-and-talent §Loyalty (B2c §3: the loss value, record word 12)
         bool hasMan = t.HasColumn("maneuverability"), hasWr = t.HasColumn("weapon_recharge_rate"), hasSr = t.HasColumn("shield_recharge_rate"), hasTorp = t.HasColumn("torpedoes");
         int Cnt(int r, string col) => t.HasColumn(col) ? t.GetInt(r, col) : 0;
-        ArcCounts Arc(int r, string arc) => new(Cnt(r, "laser_cannon_" + arc), Cnt(r, "ion_cannon_" + arc), Cnt(r, "turbolaser_" + arc));
+        ArcCounts Arc(int r, string arc) => new(Cnt(r, "laser_cannon_" + arc), Cnt(r, "ion_cannon_" + arc), Cnt(r, "heavy_cannon_" + arc));
         var list = new List<ShipClass>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
         for (int r = 0; r < t.RowCount; r++)
@@ -139,7 +139,7 @@ public static class ShipData
                 hasDet ? t.GetInt(r, "detection") : 0,
                 hasHoldBeam ? t.GetInt(r, "hold_beam_power") : 0,
                 hasSub ? t.GetInt(r, "sub_light_engine") : 0, hasDc ? t.GetInt(r, "damage_control") : 0, hasSize ? t.GetInt(r, "squadron_size") : 0,
-                Cnt(r, "laser_cannon_range"), Cnt(r, "ion_cannon_range"), Cnt(r, "turbolaser_range"),
+                Cnt(r, "laser_cannon_range"), Cnt(r, "ion_cannon_range"), Cnt(r, "heavy_cannon_range"),
                 hasUd ? t.GetInt(r, "uprising_defense") : 0));
         }
         return list;

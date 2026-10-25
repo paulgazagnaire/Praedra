@@ -1,8 +1,9 @@
 # usage: python3 regions.py <07-systems.md> <extended-galaxy-v6-planets.csv> <systems-from-parse.py.json> sector-density.json
 # Star density follows a sector, not a single system. The v6 galaxy data (specs/planets/data) gives every system a depth band
-# (group: core, inner_rim, outer_rim) and every sector holds one band; the band of a sector sets its density.
+# (group: heartland, midreach, farreach) and every sector holds one band; the band of a sector sets its density.
 import json, sys, re, csv, collections
-SD = {'core': 0.8, 'inner_rim': 0.6, 'outer_rim': 0.4}
+SD = {'heartland': 0.8, 'midreach': 0.6, 'farreach': 0.4}
+SD.update({'core': SD['heartland'], 'inner_rim': SD['midreach'], 'outer_rim': SD['farreach']})  # older copies of the planets file
 md, spiral, sysf, out = sys.argv[1:5]
 classic = {}   # new system name -> the Classic placeholder name the spiral file is keyed by
 for l in open(md, encoding='utf8'):

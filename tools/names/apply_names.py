@@ -4,11 +4,10 @@
 Run from the repository root:  python3 -I tools/names/apply_names.py [--check]
 
 What it rewrites:
-- every CSV under data/classic and data/design (not name-migrations.csv itself, not data/classic/raw, which is the Classic files word
-  for word): a cell equal to an old name becomes the new name, and whole old names inside a list or sentence cell are swapped too, except in a "kind" column (mission kinds such as Dagobah are not places);
+- every CSV under data/classic and data/design (not name-migrations.csv itself): a cell equal to an old name becomes the new name, and whole old names inside a list or sentence cell are swapped too, except in a "kind" column (mission kinds such as Dagobah are not places);
 - every C# file under core, core.tests, sim, sim.tests and godot/Scripts: old names inside string literals
   and comments, as whole names (longest first, so "Imperial II Star Destroyer" wins over "Imperial Star Destroyer").
-C# identifiers are never touched (CoruscantName, DeathStarModule...): renaming those is a separate, reviewed change.
+C# identifiers are never touched (old system or ship words inside names): renaming those is a separate, reviewed change.
 --check only reports what it would change and exits 1 if anything is left.
 
 Run it again after copying a new data file from the shared specs (the shared files may still use the old names); it changes nothing
@@ -22,8 +21,8 @@ import sys
 
 ROOT = os.getcwd()
 TABLE = os.path.join("data", "design", "name-migrations.csv")
-# importer/ is left out: it reads the Classic files, and its tests check Classic's own text.
-RAW = os.path.join("data", "classic", "raw") + os.sep
+# The word table and the cut list hold old names on purpose.
+KEEP = {os.path.join("data", "design", "word-migrations.csv"), os.path.join("data", "design", "cut-classes.csv")}
 # Columns whose cells are never names of places or units.
 SKIP_COLUMNS = {"kind"}
 # Files that must keep old names on purpose (the save-migration test writes an old save).
@@ -49,7 +48,7 @@ def csv_files():
             for f in sorted(fn):
                 p = os.path.join(dp, f)
                 rel = os.path.relpath(p, ROOT)
-                if f.endswith(".csv") and rel != TABLE and not rel.startswith(RAW):
+                if f.endswith(".csv") and rel != TABLE and rel not in KEEP:
                     yield p
 
 

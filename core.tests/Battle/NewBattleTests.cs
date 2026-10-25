@@ -319,9 +319,9 @@ public class NewBattleTests
 
     // Lead update 2: D = the longest weapon range present in the battle + 10
     [Theory]
-    [InlineData(Mandate, Mandate, 60)]       // turbolaser 50
+    [InlineData(Mandate, Mandate, 60)]       // heavy cannon 50
     [InlineData(Corvette, Corvette, 27)] // laser 17
-    [InlineData(Corvette, "Mandate II", 80)] // turbolaser 70
+    [InlineData(Corvette, "Mandate II", 80)] // heavy cannon 70
     public void LeadUpdate2_StartDistanceIsTheLongestRangePlusTen(string a, string e, int d)
     {
         var (nb, _) = QuickBattle.PrepareNew(New, Ships, new[] { (a, 1) }, new[] { (e, 1) }, 1);
@@ -366,13 +366,13 @@ public class NewBattleTests
         Assert.Equal(new[] { 10, 7, 5, 2, 0, 0 }, new[] { G(0), G(1), G(2), G(3), G(4), G(9) });
     }
 
-    // m4-battle-new §2: maneuver ratio against a squadron (turbolaser 0.5 x ratio, laser 1.0 x ratio, ion 0)
+    // m4-battle-new §2: maneuver ratio against a squadron (heavy cannon 0.5 x ratio, laser 1.0 x ratio, ion 0)
     [Fact]
     public void FighterMultipliersUseTheManeuverRatio()
     {
         var d = NewBattleData.Default; var m = new CombatModel(d);
         var tie = Combatant.Strategic(d.Class("Gleaner")); // maneuver 5, shield pool 0
-        Assert.Equal(40 * 0.5 * (1.0 / 5), m.ShotValue(WeaponKind.Turbolaser, 40, d.Class(Mandate), tie), 1e-12); // Mandate maneuver 1
+        Assert.Equal(40 * 0.5 * (1.0 / 5), m.ShotValue(WeaponKind.HeavyCannon, 40, d.Class(Mandate), tie), 1e-12); // Mandate maneuver 1
         Assert.Equal(6.0 * 1.0 * (3.0 / 5), m.ShotValue(WeaponKind.LaserCannon, 6, d.Class(Corvette), tie), 1e-12); // Corvette maneuver 3
         Assert.Equal(0.0, m.ShotValue(WeaponKind.IonCannon, 20, d.Class(Mandate), tie));
         Assert.Equal(3.75, m.ShotValue(WeaponKind.LaserCannon, 3.75, d.Class("Needle"), tie), 1e-12); // ratio capped at 1

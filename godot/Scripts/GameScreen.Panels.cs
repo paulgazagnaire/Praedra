@@ -296,7 +296,7 @@ public partial class GameScreen
         Line($"{(sys.IsOutsideSectors ? "Outside the sectors" : sys.Sector)}{hqNote}", Dim);
         Add(new HSeparator());
 
-        // ---- destroyed by the harvester: nothing is left to see, build, invade or target. rule: m5-death-star §2 effect 5
+        // ---- destroyed by the harvester: nothing is left to see, build, invade or target. rule: m5-harvester §2 effect 5
         if (S.IsDestroyed(name)) { DestroyedPanel(name); return; }
 
         // ---- fog of war: anything not yours shows only the side's picture, with its age. rule: m5-fog-and-hq §N2, §N8
@@ -716,7 +716,7 @@ public partial class GameScreen
         }
     }
 
-    // ================================================================== the harvester (rule: m5-death-star §2)
+    // ================================================================== the harvester (rule: m5-harvester §2)
 
     void HarvesterSection(Fleet f)
     {

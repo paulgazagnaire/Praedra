@@ -16,7 +16,7 @@ namespace Praedra.Core.Characters;
 /// 2. HqDestroyed (the Collective HQ, any cause): one draw, ShiftLoyalty(Collective, -k), k in 0..5.
 /// 3. BattleEnded with exactly one side's fleets or regiments left at the system: ShiftLoyalty(winner, loss shift of the battle tallies).
 /// 4. BlockadeLifted: ShiftLoyalty(gaining side, loss shift of the assault and bombardment tallies).
-/// Switch <see cref="CharacterParams.LoyaltyTriggers"/> (DEFAULT on). rule: m5-characters-and-force §Loyalty and betrayal (Traced, B2c).
+/// Switch <see cref="CharacterParams.LoyaltyTriggers"/> (DEFAULT on). rule: m5-characters-and-talent §Loyalty and betrayal (Traced, B2c).
 /// </summary>
 public sealed class LoyaltyModule
 {

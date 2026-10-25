@@ -2,7 +2,7 @@ using Praedra.Core.Clock;
 
 namespace Praedra.Core.Characters;
 
-// ---- orders. rule: m5-characters-and-force §Posts (Orders), §Moving a character alone. All step 1, immediate, in order sequence; a rejected
+// ---- orders. rule: m5-characters-and-talent §Posts (Orders), §Moving a character alone. All step 1, immediate, in order sequence; a rejected
 // order changes nothing; the order's side must be the character's side.
 
 /// <summary>Attach a character to a fleet at its system, with a post (None = a passenger). rule: §Posts (AttachCharacter).</summary>
@@ -20,7 +20,7 @@ public sealed record ReleaseSystemGeneralOrder(long Sequence, Side Side, string 
 /// <summary>Send a lone character to a system at speed 100. rule: §Moving a character alone (MoveCharacter).</summary>
 public sealed record MoveCharacterOrder(long Sequence, Side Side, int Character, string System) : Order(Sequence, Side);
 
-/// <summary>Rejection reasons of the character orders (the sheet's names). rule: m5-characters-and-force §Posts (Orders), §Moving a character alone.</summary>
+/// <summary>Rejection reasons of the character orders (the sheet's names). rule: m5-characters-and-talent §Posts (Orders), §Moving a character alone.</summary>
 public static class CharacterReject
 {
     public const string UnknownCharacter = "UnknownCharacter";
@@ -39,7 +39,7 @@ public static class CharacterReject
     public const string NoPath = "NoPath";
 }
 
-/// <summary>Why a state change happened (callers pass it). rule: m5-characters-and-force §Capture, injury, death, freeing.</summary>
+/// <summary>Why a state change happened (callers pass it). rule: m5-characters-and-talent §Capture, injury, death, freeing.</summary>
 public static class CharacterCause
 {
     public const string Mission = "Mission", Battle = "Battle", Harvester = "Harvester", Uprising = "Uprising", Assault = "Assault",
@@ -56,7 +56,7 @@ public static class CharacterCause
 }
 
 // ---- events. Every event names the character's Side (and a System when it has one) so the fog's audience rule (m5-fog-and-hq §N8) shows it
-// to that side and to a side with live access to the system. rule: m5-characters-and-force §Where it runs in the day Step (Events).
+// to that side and to a side with live access to the system. rule: m5-characters-and-talent §Where it runs in the day Step (Events).
 
 /// <summary>A character came into play outside setup (setup raises no per-object events, m5-setup-and-victory P11).</summary>
 public sealed record CharacterCreated(int Index, int Day, int Character, Side Side, string? System) : GameEvent(Index, Day, nameof(CharacterCreated));
@@ -84,14 +84,14 @@ public sealed record TalentRankChanged(int Index, int Day, int Character, Side S
 public sealed record TalentDiscovered(int Index, int Day, int Character, Side Side, string Cause) : GameEvent(Index, Day, nameof(TalentDiscovered));
 /// <summary>
 /// A character's loyalty moved (ShiftLoyalty; the setter 0x5341a0 tells both sides, so the event has no Side field and goes to both).
-/// rule: m5-characters-and-force §Loyalty.
+/// rule: m5-characters-and-talent §Loyalty.
 /// </summary>
 public sealed record LoyaltyChanged(int Index, int Day, int Character, Side CharacterSide, int From, int To) : GameEvent(Index, Day, nameof(LoyaltyChanged));
 /// <summary>A prisoner's escape attempt (ESCAPETB). rule: §Escape (Traced B2e §3).</summary>
 public sealed record EscapeAttempted(int Index, int Day, int Character, Side Side, string System, int CaptorAverageCombat, int CaptorSpecialForces, int X, int Chance, int Roll, bool Escaped)
     : GameEvent(Index, Day, nameof(EscapeAttempted));
 /// <summary>
-/// A Talent encounter was resolved (0x560200; both sides get the message, so no Side field). rule: m5-characters-and-force §Talent (Traced B2e §4).
+/// A Talent encounter was resolved (0x560200; both sides get the message, so no Side field). rule: m5-characters-and-talent §Talent (Traced B2e §4).
 /// </summary>
 public sealed record TalentEncounterResolved(int Index, int Day, int Mission, int Member, Side MemberSide, int Other, Side OtherSide, bool MemberEscaped,
     bool MemberHurt, bool OtherHurt) : GameEvent(Index, Day, nameof(TalentEncounterResolved));

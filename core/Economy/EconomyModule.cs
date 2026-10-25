@@ -69,7 +69,7 @@ public sealed class EconomyModule
     public event Action<StepContext, EconObject, int>? ObjectRemoved;
     /// <summary>
     /// Raised by <see cref="DestroyUnit"/> (a ship, squadron or regiment destroyed in a battle or by the harvester), before <see cref="ObjectRemoved"/>;
-    /// not for scrapping. The harvester module listens to report the loss of a harvester. rule: m5-death-star §4, §5.
+    /// not for scrapping. The harvester module listens to report the loss of a harvester. rule: m5-harvester §4, §5.
     /// </summary>
     public event Action<StepContext, EconObject, int>? UnitLost;
 
@@ -146,7 +146,7 @@ public sealed class EconomyModule
 
     /// <summary>
     /// The harvester destroyed the system: no energy and no raw slots, not populated (the stored slot values are replaced). The facilities and units
-    /// on it are removed by the harvester module. rule: m5-death-star §2 effect 5 (no energy or raw slots, no production).
+    /// on it are removed by the harvester module. rule: m5-harvester §2 effect 5 (no energy or raw slots, no production).
     /// </summary>
     public void ClearSlotsForDestroyedSystem(string system)
     {
@@ -181,7 +181,7 @@ public sealed class EconomyModule
         SetPools(Side.Collective, Params.StartRaw, Params.StartRefined);
         if (SlotSource == SlotSource.Rolled)
             foreach (var s in _galaxy.Systems) // ordinal name order
-                E.Slots[s.Name] = SlotRoller.Roll(_game.Rng, s.Group == "core", Params);
+                E.Slots[s.Name] = SlotRoller.Roll(_game.Rng, s.Group == "heartland", Params);
         if (IncidentsEnabled)
         {
             int t = _game.Day + 1;
@@ -236,10 +236,10 @@ public sealed class EconomyModule
         return null;
     }
 
-    /// <summary>Has the harvester destroyed the system? A destroyed system has no slots, no production and no support value. rule: m5-death-star §2 effect 5.</summary>
+    /// <summary>Has the harvester destroyed the system? A destroyed system has no slots, no production and no support value. rule: m5-harvester §2 effect 5.</summary>
     public bool IsDestroyed(string system) => _game.State.Harvester.IsDestroyed(system);
 
-    /// <summary>Support of a side in a system. Collective share is stored; Hand = 100 - it. rule: m2-popular-support §What it stores. A destroyed system has no support value: 0 for both sides (rule: m5-death-star §2 effect 5).</summary>
+    /// <summary>Support of a side in a system. Collective share is stored; Hand = 100 - it. rule: m2-popular-support §What it stores. A destroyed system has no support value: 0 for both sides (rule: m5-harvester §2 effect 5).</summary>
     public int SupportOf(string system, Side side)
     {
         if (IsDestroyed(system)) return 0;
@@ -499,7 +499,7 @@ public sealed class EconomyModule
         bool hasMine = Installed(sys).Any(o => IsClass(o, FacilityKind.Mine));
         bool hasFacility = Installed(sys).Count > 0;
         int cap = Params.SlotCap;
-        // rule: m5-death-star §2 effect 5 (a destroyed system has no energy or raw slots): the draws are made, nothing changes
+        // rule: m5-harvester §2 effect 5 (a destroyed system has no energy or raw slots): the draws are made, nothing changes
         if (IsDestroyed(sys)) { before = after = 0; }
         else
         switch (roll / 25) // four equal bands: raw -1, energy -1, raw +1, energy +1

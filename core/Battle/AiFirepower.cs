@@ -8,7 +8,7 @@ namespace Praedra.Core.Battle;
 /// </summary>
 public static class AiFirepower
 {
-    /// <summary>Weapon value per gun type in an arc (100 per turbolaser or ion cannon, 100 / 6 per laser cannon, integer). rule: B6a §3.</summary>
+    /// <summary>Weapon value per gun type in an arc (100 per heavy cannon or ion cannon, 100 / 6 per laser cannon, integer). rule: B6a §3.</summary>
     public const int GunValue = 100;
     /// <summary>The laser cannon divisor. rule: B6a §3.</summary>
     public const int LaserDivisor = 6;
@@ -28,7 +28,7 @@ public static class AiFirepower
         for (int i = 0; i < 4; i++) // ShipArcs index order: fore, aft, port, starboard
         {
             var a = c.GunArcs[i];
-            int v = GunValue * a.Turbolaser + GunValue * a.Ion + GunValue * a.Laser / LaserDivisor;
+            int v = GunValue * a.HeavyCannon + GunValue * a.Ion + GunValue * a.Laser / LaserDivisor;
             if (v > bestV) { bestV = v; bestG = a.Total; }
         }
         if (bestG == 0) return 0;

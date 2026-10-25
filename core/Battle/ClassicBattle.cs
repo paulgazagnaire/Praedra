@@ -161,7 +161,7 @@ public static class ClassicRates
         {
             if (a != 0) return default;
             int n = SquadronSize(p, u.Class);
-            return new ArcCounts(arcs.Fore.Laser * n, arcs.Fore.Ion * n, arcs.Fore.Turbolaser * n);
+            return new ArcCounts(arcs.Fore.Laser * n, arcs.Fore.Ion * n, arcs.Fore.HeavyCannon * n);
         }
         return a switch { 0 => arcs.Fore, 1 => arcs.Starboard, 2 => arcs.Aft, _ => arcs.Port };
     }
@@ -189,11 +189,11 @@ public static class ClassicRates
     public static int LongestRange(BattleParams p, BattleUnit u)
     {
         bool l = false, i = false, t = false;
-        for (int a = 0; a < ArcCount; a++) { var c = ArcOf(p, u, a); l |= c.Laser > 0; i |= c.Ion > 0; t |= c.Turbolaser > 0; }
+        for (int a = 0; a < ArcCount; a++) { var c = ArcOf(p, u, a); l |= c.Laser > 0; i |= c.Ion > 0; t |= c.HeavyCannon > 0; }
         int r = 0;
         if (l) r = Math.Max(r, u.Class.LaserRange);
         if (i) r = Math.Max(r, u.Class.IonRange);
-        if (t) r = Math.Max(r, u.Class.TurbolaserRange);
+        if (t) r = Math.Max(r, u.Class.HeavyCannonRange);
         return r;
     }
 
@@ -223,8 +223,8 @@ public static class ClassicRates
     public static double ShieldRatio(BattleUnit v) => v.ShieldMax > 0 ? v.Shield / v.ShieldMax : 0.0;
 
     private static double ArcF(BattleParams p, ArcCounts a, bool vsCapital) => p.FamilyCoefficient * (vsCapital
-        ? a.Laser * p.LaserVsCapital + a.Ion * p.IonVsCapital + a.Turbolaser * p.TurbolaserVsCapital
-        : a.Laser * p.LaserVsSquadron + a.Ion * p.IonVsSquadron + a.Turbolaser * p.TurbolaserVsSquadron);
+        ? a.Laser * p.LaserVsCapital + a.Ion * p.IonVsCapital + a.HeavyCannon * p.HeavyCannonVsCapital
+        : a.Laser * p.LaserVsSquadron + a.Ion * p.IonVsSquadron + a.HeavyCannon * p.HeavyCannonVsSquadron);
 
     /// <summary>
     /// rate(u, v) (0x5b7780). With <paramref name="full"/> false it is the mode-0 rate F against the capital-ship class: no maneuverability, no torpedoes
@@ -252,8 +252,8 @@ public static class ClassicRates
         if (full && v != null && !vCapital) m = Math.Max(p.ManeuverFloor, Maneuver(p, u) / Maneuver(p, v));
         double k = p.FamilyCoefficient;
         double s = vCapital
-            ? c.Ion * k * p.IonVsCapital + c.Laser * k * p.LaserVsCapital + c.Turbolaser * k * p.TurbolaserVsCapital
-            : c.Ion * k * p.IonVsSquadron + c.Laser * k * p.LaserVsSquadron * m + c.Turbolaser * k * p.TurbolaserVsSquadron * m;
+            ? c.Ion * k * p.IonVsCapital + c.Laser * k * p.LaserVsCapital + c.HeavyCannon * k * p.HeavyCannonVsCapital
+            : c.Ion * k * p.IonVsSquadron + c.Laser * k * p.LaserVsSquadron * m + c.HeavyCannon * k * p.HeavyCannonVsSquadron * m;
         if (!u.IsCapital)
         {
             s *= hr;

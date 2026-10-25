@@ -9,7 +9,7 @@ namespace PraedraViewer;
 
 /// <summary>
 /// Characters on the screen: the Characters list, the officers of a fleet, the General of a system, and moving a character alone. The rules are
-/// the core's (rule: m5-characters-and-force); this only reads the player's own characters and queues the five orders. Characters of the other
+/// the core's (rule: m5-characters-and-talent); this only reads the player's own characters and queues the five orders. Characters of the other
 /// side are never shown in the panels: the fog of war API does not say where they are (rule: m5-fog-and-hq §N8).
 /// </summary>
 public partial class GameScreen
@@ -211,7 +211,7 @@ public partial class GameScreen
         Sent($"release {name} as General of {system}", system);
     }
 
-    // ================================================================== moving a character alone (rule: m5-characters-and-force §Moving a character alone)
+    // ================================================================== moving a character alone (rule: m5-characters-and-talent §Moving a character alone)
 
     void StartCharMove(int id)
     {

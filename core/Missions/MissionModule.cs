@@ -212,7 +212,7 @@ public sealed class MissionModule
     /// <summary>
     /// One guard: the unit, its class detection, and its commander's espionage and combat (0 when none). <see cref="Ship"/>: the ship a prisoner it
     /// catches is held aboard when it has no commander (the capital ship itself, or the ship a unit is aboard; 0 = none). rule: §3 Guards, Officer;
-    /// m5-characters-and-force §Escape (B2e §3, Q73).
+    /// m5-characters-and-talent §Escape (B2e §3, Q73).
     /// </summary>
     public sealed record Defender(EconObject Unit, int Detection, int OfficerEspionage, int OfficerCombat = 0, int Fleet = 0, int Ship = 0);
 
@@ -356,7 +356,7 @@ public sealed class MissionModule
 
     /// <summary>
     /// The usable special forces of <paramref name="side"/> directly on <paramref name="system"/>: completed, not aboard a ship, not in a mission
-    /// group (0x504cc0). The character module's escape attempt reads it. rule: m5-characters-and-force §Escape (Traced B2e §3 step 3).
+    /// group (0x504cc0). The character module's escape attempt reads it. rule: m5-characters-and-talent §Escape (Traced B2e §3 step 3).
     /// </summary>
     public int SpecialForcesOnPlanet(Side side, string system) =>
         E.Objects.Values.Count(o => o.Completed && o.Side == side && o.Category == ObjectCategory.SpecialForce && o.AboardShip == 0 && o.System == system
@@ -364,7 +364,7 @@ public sealed class MissionModule
 
     /// <summary>
     /// The usable special forces of <paramref name="side"/> aboard the ships of fleet <paramref name="fleet"/>: completed, not in a mission group.
-    /// The escape attempt of a prisoner held aboard reads it. rule: m5-characters-and-force §Escape (QA-7 DEFAULT, B2e Work 12).
+    /// The escape attempt of a prisoner held aboard reads it. rule: m5-characters-and-talent §Escape (QA-7 DEFAULT, B2e Work 12).
     /// </summary>
     public int SpecialForcesInFleet(Side side, int fleet)
     {
@@ -376,7 +376,7 @@ public sealed class MissionModule
 
     /// <summary>
     /// The usable special forces of <paramref name="side"/> directly aboard ship <paramref name="ship"/>: completed, not in a mission group (0x504cc0
-    /// on the ship). The escape attempt of a prisoner a ship caught with no commander reads it. rule: m5-characters-and-force §Escape (B2e §3, Q73).
+    /// on the ship). The escape attempt of a prisoner a ship caught with no commander reads it. rule: m5-characters-and-talent §Escape (B2e §3, Q73).
     /// </summary>
     public int SpecialForcesOnShip(Side side, int ship) =>
         E.Objects.Values.Count(o => o.Completed && o.Side == side && o.Category == ObjectCategory.SpecialForce && o.AboardShip == ship && !IsSpecialForceBusy(o.Id));
@@ -480,7 +480,7 @@ public sealed class MissionModule
             return null;
         }
         if (system == null || !_fleets.Galaxy.TryFindSystem(system, out _)) return MissionReject.BadTarget;
-        if (_eco.IsDestroyed(system)) return RejectReason.SystemDestroyed; // rule: m5-death-star §2 effect 5 (cannot be targeted by missions)
+        if (_eco.IsDestroyed(system)) return RejectReason.SystemDestroyed; // rule: m5-harvester §2 effect 5 (cannot be targeted by missions)
         Side? holder = _fleets.OwnerOf(system);
         switch (k)
         {
@@ -698,7 +698,7 @@ public sealed class MissionModule
 
     private static bool Empty(MissionGroup m) => !m.HasTeam && m.DecoyCharacters.Count + m.DecoySpecialForces.Count == 0;
 
-    /// <summary>A capture or death ended a character's membership (the character module calls it). rule: m5-characters-and-force §Capture 2, 3.</summary>
+    /// <summary>A capture or death ended a character's membership (the character module calls it). rule: m5-characters-and-talent §Capture 2, 3.</summary>
     public void OnMembershipEnded(StepContext? ctx, CharacterRecord c)
     {
         foreach (var m in S.Missions.Values)
@@ -713,7 +713,7 @@ public sealed class MissionModule
     /// The harvester destroyed <paramref name="system"/>: every group that is working there ends as a failure with cause TargetDestroyed
     /// (MissionEnded) and leaves the state; a group about to return from there just leaves the state. Their characters stay on the system as free
     /// characters for the harvester's roll on characters (their special forces go with the planet). A group still flying out lands later and ends
-    /// the same way (<see cref="Land"/>). rule: m5-death-star §2 effect 3 (running missions end as failures with cause TargetDestroyed, team members
+    /// the same way (<see cref="Land"/>). rule: m5-harvester §2 effect 3 (running missions end as failures with cause TargetDestroyed, team members
     /// handled as characters on the planet).
     /// </summary>
     public void OnSystemDestroyed(StepContext ctx, string system)
@@ -823,7 +823,7 @@ public sealed class MissionModule
     // timer (phase 8). rule: §1 (Traced B2d §1).
     private void Land(StepContext ctx, MissionGroup m, int t)
     {
-        // rule: m5-death-star §2 effect 3: a mission whose target was destroyed on the way ends as a failure (cause TargetDestroyed)
+        // rule: m5-harvester §2 effect 3: a mission whose target was destroyed on the way ends as a failure (cause TargetDestroyed)
         if (m.Kind != MissionKind.Move && _eco.IsDestroyed(m.Target)) { End(ctx, m, MissionOutcome.TargetDestroyed, t); return; }
         PlaceMembers(m, m.Target);
         if (m.Kind == MissionKind.Move) { Release(ctx, m, m.Target, t); return; }

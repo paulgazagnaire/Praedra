@@ -117,8 +117,8 @@ public sealed class SupportModule
     /// <summary>
     /// The one entry point for every change of support. <paramref name="amount"/> is from the point of view of <paramref name="side"/>.
     /// Collective axis; harvester damping of rises (truncating); clamp 0..100; <see cref="SupportChanged"/> if the value moved. Returns the
-    /// new Collective share. A destroyed system has no support value: nothing changes (rule: m5-death-star §2 effect 5).
-    /// <paramref name="dampen"/> false skips step 2, the harvester damping: the harvester's own sector reaction passes false (rule: m5-death-star §2
+    /// new Collective share. A destroyed system has no support value: nothing changes (rule: m5-harvester §2 effect 5).
+    /// <paramref name="dampen"/> false skips step 2, the harvester damping: the harvester's own sector reaction passes false (rule: m5-harvester §2
     /// effect 7: "The Hand's harvester damping does not apply to these two changes").
     /// rule: m2-popular-support §One entry point for every change (steps 1 to 4).
     /// </summary>
@@ -211,7 +211,7 @@ public sealed class SupportModule
     /// <summary>
     /// Start an uprising at a held system at once, whatever the garrison (the harvester's second strike in a sector, Hand systems). No-op without
     /// a holder or with an uprising already on. The timers are armed as in slot 6.1 (one draw for the incident timer); slot 6.1 later judges it by
-    /// the normal garrison rule. rule: m5-death-star §2 effect 7 (Strike 2 or later); m2-uprisings-and-garrison §Uprising start, keep, end.
+    /// the normal garrison rule. rule: m5-harvester §2 effect 7 (Strike 2 or later); m2-uprisings-and-garrison §Uprising start, keep, end.
     /// </summary>
     public bool StartUprisingNow(StepContext ctx, string system)
     {
@@ -236,7 +236,7 @@ public sealed class SupportModule
 
     /// <summary>
     /// A system was destroyed: its uprising ends (UprisingEnded "SystemDestroyed"), its timers are disarmed and it leaves the harvester sector flag
-    /// table; its support value is dropped. rule: m5-death-star §2 effect 5 (holder none, no support value).
+    /// table; its support value is dropped. rule: m5-harvester §2 effect 5 (holder none, no support value).
     /// </summary>
     public void OnSystemDestroyed(StepContext ctx, string system)
     {
@@ -394,7 +394,7 @@ public sealed class SupportModule
 
     /// <summary>
     /// Incident codes 3 (one free character of the holder injured), 4 (one prisoner freed) and 5 (all prisoners freed), given (ctx, hook time,
-    /// system, holder, code). Null (no character module) = no-op, no draw. The character module sets it. rule: m5-characters-and-force
+    /// system, holder, code). Null (no character module) = no-op, no draw. The character module sets it. rule: m5-characters-and-talent
     /// §What other sheets' effects call; m2-uprisings-and-garrison §Incident.
     /// </summary>
     public Action<StepContext, int, string, Side, int>? CharacterIncident { get; set; }

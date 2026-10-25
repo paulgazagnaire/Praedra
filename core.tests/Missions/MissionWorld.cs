@@ -10,7 +10,7 @@ namespace Praedra.Core.Tests.Missions;
 
 /// <summary>
 /// A full <see cref="GameHost"/> on a small map for the mission tests (m5-missions §Tests): H (0,20), T (15,20), X (50,20), Afar (15,40),
-/// Drift Harbour (15,0), group core; lanes H-T (3 ticks at speed 100), T-X (7 ticks), T-Afar and T-Drift Harbour (4 ticks), all tier 3 (factor 100).
+/// Drift Harbour (15,0), group heartland; lanes H-T (3 ticks at speed 100), T-X (7 ticks), T-Afar and T-Drift Harbour (4 ticks), all tier 3 (factor 100).
 /// No owners unless set. A stub generator answers 0 unless a value is queued for the exact range (<see cref="StubRng.Expect"/>), so the
 /// mission rolls (0..99) and the timers (0..spread) are steered separately. Incidents off and autoscrap out of reach.
 /// </summary>
@@ -37,7 +37,7 @@ internal sealed class MissionWorld
 
     private static readonly Lazy<GameData> _data = new(() =>
     {
-        var planets = "name,sector,group,map_x,map_y\nH,S,core,0,20\nT,S,core,15,20\nX,S,core,50,20\nAfar,S,core,15,40\nDrift Harbour,S,core,15,0\n";
+        var planets = "name,sector,group,map_x,map_y\nH,S,heartland,0,20\nT,S,heartland,15,20\nX,S,heartland,50,20\nAfar,S,heartland,15,40\nDrift Harbour,S,heartland,15,0\n";
         var lanes = "from,to,kind,routes\nH,T,generated,\nT,X,generated,\nT,Afar,generated,\nT,Drift Harbour,generated,\n";
         var g = GalaxyLoader.Load(planets, lanes, TestData.Tiers);
         var slots = "name,sector,group,energy,raw,populated\n" + string.Join("\n", g.Systems.Select(s => $"{s.Name},{s.Sector},{s.Group},9,3,1"));

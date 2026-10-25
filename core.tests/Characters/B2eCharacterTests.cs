@@ -9,7 +9,7 @@ using static Praedra.Core.Tests.Characters.CharWorld;
 
 namespace Praedra.Core.Tests.Characters;
 
-// B2e-escape-injury-and-the-force tests B2e-1 to B2e-19. rule: m5-characters-and-force §Capture, injury, death, freeing; §Escape; §Talent;
+// B2e-escape-injury-and-the-force tests B2e-1 to B2e-19. rule: m5-characters-and-talent §Capture, injury, death, freeing; §Escape; §Talent;
 // §Seat of Power; m5-missions §4 (the Talent encounter).
 public class B2eCharacterTests
 {
@@ -22,7 +22,7 @@ public class B2eCharacterTests
         return c;
     }
 
-    /// <summary>B2e tests the Classic effective skills: TalentSkillPercent 100 set explicitly. rule: m5-characters-and-force §Talent (Classic = 100).</summary>
+    /// <summary>B2e tests the Classic effective skills: TalentSkillPercent 100 set explicitly. rule: m5-characters-and-talent §Talent (Classic = 100).</summary>
     private const int Classic = CharacterParams.ClassicTalentSkillPercent;
 
     private static CharacterRecord Talent(CharacterRecord c, int f)
@@ -209,7 +209,7 @@ public class B2eCharacterTests
     [Fact]
     public void B2e9_EscapeChanceWithGuards()
     {
-        var w = new CharWorld(CharWorld.ClassicTalent()); // the Classic Talent (m5-characters-and-force §Talent CH37)
+        var w = new CharWorld(CharWorld.ClassicTalent()); // the Classic Talent (m5-characters-and-talent §Talent CH37)
         w.Hold(Thaw, Side.Hand);
         Talent(Skills(w.Add(Ravilla, Thaw), com: 100), 120);
         w.Host.Economy.AddObject(Side.Hand, HandCommandos, Thaw, true);
@@ -286,7 +286,7 @@ public class B2eCharacterTests
     [Fact]
     public void B2e13_NobodyMeetsRavilla()
     {
-        var w = new MissionWorld(characters: CharWorld.ClassicTalent()); // the Classic Talent (m5-characters-and-force §Talent CH37)
+        var w = new MissionWorld(characters: CharWorld.ClassicTalent()); // the Classic Talent (m5-characters-and-talent §Talent CH37)
         w.Hold(MissionWorld.T, Side.Hand, 0);
         var nobody = w.Agent(Nobody, MissionWorld.H, esp: 50, com: 90);
         var ravilla = w.Agent(Ravilla, MissionWorld.T, com: 100);

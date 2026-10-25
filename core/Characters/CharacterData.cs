@@ -5,12 +5,12 @@ namespace Praedra.Core.Characters;
 
 public enum CharacterKind { Major, Minor }
 
-/// <summary>The seven skills, in the fixed creation draw order. rule: m5-characters-and-force §Rolling the stats (draw order 1).</summary>
+/// <summary>The seven skills, in the fixed creation draw order. rule: m5-characters-and-talent §Rolling the stats (draw order 1).</summary>
 public enum Skill { Diplomacy = 0, Espionage = 1, ShipDesign = 2, TroopTraining = 3, FacilityDesign = 4, Combat = 5, Leadership = 6 }
 
 /// <summary>
 /// One character record (data, never changes): identity, skill bases and variances, loyalty, Talent odds and level, the capability flags and the
-/// navigator speed. rule: m5-characters-and-force §The character object. Classic values come from MJCHARSD / MNCHARSD (data/classic/characters.csv,
+/// navigator speed. rule: m5-characters-and-talent §The character object. Classic values come from MJCHARSD / MNCHARSD (data/classic/characters.csv,
 /// column meaning unverified vs Classic); added heroes from data/design/added-heroes.csv (Proposal stats).
 /// </summary>
 public sealed record CharacterClass(
@@ -36,12 +36,12 @@ public sealed record StartCastRow(int Character, StartRule Rule, string Place, b
 /// <summary>A victory term naming a character (victory-rules.csv kind CharacterCaptured). rule: m5-setup-and-victory §Victory.</summary>
 public sealed record VictoryKey(bool Standard, Side Side, int Character);
 
-/// <summary>One added hero breaking a stat-ceiling rule (the AddedHeroLimits import check). rule: m5-characters-and-force CH32; heroes/stat-ceiling.</summary>
+/// <summary>One added hero breaking a stat-ceiling rule (the AddedHeroLimits import check). rule: m5-characters-and-talent CH32; heroes/stat-ceiling.</summary>
 public sealed record HeroLimitViolation(int Character, string Name, int Rule, string Detail);
 
 /// <summary>
 /// The character data files: the 60 original records, the added heroes, the roster (which records are in the game), the navigator table, the
-/// start cast and the character terms of the victory rules. Read once, immutable. rule: m5-characters-and-force §The character object.
+/// start cast and the character terms of the victory rules. Read once, immutable. rule: m5-characters-and-talent §The character object.
 /// </summary>
 public sealed class CharacterData
 {
@@ -80,7 +80,7 @@ public sealed class CharacterData
         var neverTalented = new HashSet<int>(); // membership test only
         var rt = CsvTable.Load(Path.Combine(design, RosterFile));
         rt.Require("id", "in_game");
-        bool hasNever = rt.HasColumn("never_talented"); // m5-characters-and-force Q17 (Paul 2026-10-18): 1 = never in the talented draw (the Repossessors)
+        bool hasNever = rt.HasColumn("never_talented"); // m5-characters-and-talent Q17 (Paul 2026-10-18): 1 = never in the talented draw (the Repossessors)
         for (int r = 0; r < rt.RowCount; r++)
         {
             inGame[rt.GetInt(r, "id")] = rt.GetInt(r, "in_game") == 1;
@@ -156,7 +156,7 @@ public sealed class CharacterData
     /// The AddedHeroLimits check (DEFAULT on, an import check only): every added record against heroes/stat-ceiling rules 1 (leadership at most 89),
     /// 2 (one signature skill may reach 90 or more, every other at most 80), 3 (combat at most 95), 4 (Talent probability at most 50, level at most
     /// 40, never known Talent, never trainer), 6 (at most two of the three roles) and 7 (some variance). Values are base + variance. The original
-    /// records are exempt. rule: m5-characters-and-force §Rolling the stats, CH32.
+    /// records are exempt. rule: m5-characters-and-talent §Rolling the stats, CH32.
     /// </summary>
     public IReadOnlyList<HeroLimitViolation> AddedHeroLimitViolations()
     {

@@ -73,7 +73,7 @@ public class ShipTests
         {
             var t = Csv(file);
             for (int r = 0; r < t.RowCount; r++, rows++)
-                Assert.Equal(t.GetInt(r, "turbolaser_attack_strength") + t.GetInt(r, "ion_cannon_attack_strength") + t.GetInt(r, "laser_cannon_attack_strength"),
+                Assert.Equal(t.GetInt(r, "heavy_cannon_attack_strength") + t.GetInt(r, "ion_cannon_attack_strength") + t.GetInt(r, "laser_cannon_attack_strength"),
                     t.GetInt(r, "overall_attack_strength"));
         }
         Assert.Equal(38, rows);

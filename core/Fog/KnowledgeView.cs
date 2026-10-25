@@ -27,7 +27,7 @@ public sealed class SystemPicture
     /// <summary>Group C: completed facilities by class.</summary>
     public Seen<IReadOnlyDictionary<string, int>>? Facilities => G<IReadOnlyDictionary<string, int>>(_k.StampC, _k.Facilities);
     public bool HqHere => _k.HqHere;
-    /// <summary>The side knows the system was destroyed by the harvester. rule: m5-death-star §2 effect 6.</summary>
+    /// <summary>The side knows the system was destroyed by the harvester. rule: m5-harvester §2 effect 6.</summary>
     public bool Destroyed => _k.Destroyed;
     /// <summary>Group D: ground forces by side and class.</summary>
     public Seen<IReadOnlyList<GroundPicture>>? Ground => G<IReadOnlyList<GroundPicture>>(_k.StampD, _k.Ground);

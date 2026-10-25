@@ -299,9 +299,9 @@ public sealed record SimpleAiParams
 
     // ---- fog: the Hand's belief map of the Hearth (ai/07 §7 "Hand: belief-map search", ai/12 D1 Decided YES; m5-fog-and-hq §N7 clues).
     // Weight per system, from the Hand's picture only. A system the picture shows Collective-held (the HQ stands only on Collective systems,
-    // §N7 4) or never explored (rim only) can hold the HQ; signs of a capital (fleets, regiments, facilities seen, Collective sightings) add
+    // §N7 4) or never explored (outer only) can hold the HQ; signs of a capital (fleets, regiments, facilities seen, Collective sightings) add
     // weight; a fresh group C look that showed no HQ (The Shoal's day-0 copy, captures) wipes it out, and the weight returns as that look ages.
-    /// <summary>Weight of a never-explored, non-Core system. DEFAULT.</summary>
+    /// <summary>Weight of a never-explored, non-Heartland system. DEFAULT.</summary>
     public int BeliefUnexplored { get; init; } = 30;
     /// <summary>Weight of a system the picture shows Collective-held. DEFAULT.</summary>
     public int BeliefCollectiveHeld { get; init; } = 100;
@@ -350,7 +350,7 @@ public sealed record SimpleAiParams
     public int HqMinLanes { get; init; } = 2;
 
     // ---- characters and missions (m6 AI; ai/05 §4-5 and §7b, ai/12 P8 and P9). All AI tuning, DEFAULT. The rules they act through are
-    // m5-characters-and-force (posts, MoveCharacter) and m5-missions (StartMission, CancelMission); the odds are the core's own tables
+    // m5-characters-and-talent (posts, MoveCharacter) and m5-missions (StartMission, CancelMission); the odds are the core's own tables
     // (MissionModule.Lookup, FoilChance, DetectionX). With UseFog the AI reads only its side's knowledge for every target and defender count.
     /// <summary>
     /// Use characters (fleet and system posts) and missions. DEFAULT true. False = the AI of before characters and missions, byte for byte
@@ -567,7 +567,7 @@ public sealed record SimpleAiParams
     /// <summary>
     /// Key characters (the majors: Nobody, Ledger, Midwife, Mae Abara, Ravilla, The Chair) count this percent of their mission value (others are
     /// preferred) and never go on Rescue, Abduction, Sabotage or Incite (ai/05 §4: the original keeps its leaders off those). With
-    /// m5-characters-and-force MajorsCanDie on (DEFAULT off) they also stay off every mission where any defender is believed. DEFAULT.
+    /// m5-characters-and-talent MajorsCanDie on (DEFAULT off) they also stay off every mission where any defender is believed. DEFAULT.
     /// </summary>
     public int KeyCharacterValuePercent { get; init; } = 50;
 
@@ -584,17 +584,17 @@ public sealed record SimpleAiParams
     public IReadOnlyList<string> HandHeavy { get; init; } = new[] { "Mandate" };
     public IReadOnlyList<string> CollectiveHeavy { get; init; } = new[] { "Ark" };
 
-    // ---- the harvester. rule: m5-death-star §6 (Computer opponent)
+    // ---- the harvester. rule: m5-harvester §6 (Computer opponent)
     /// <summary>
-    /// The Hand AI builds, keeps, escorts and fires the harvester at the Hearth it knows. DEFAULT true (m5-death-star §6). False = the AI
+    /// The Hand AI builds, keeps, escorts and fires the harvester at the Hearth it knows. DEFAULT true (m5-harvester §6). False = the AI
     /// of before: it never builds one and treats a harvester it happens to own as any ship.
     /// </summary>
     public bool UseHarvester { get; init; } = true;
-    /// <summary>A harvester is queued only when the maintenance headroom left after adding its upkeep is at least this percent of the capacity. DEFAULT 10 (m5-death-star §6.1).</summary>
+    /// <summary>A harvester is queued only when the maintenance headroom left after adding its upkeep is at least this percent of the capacity. DEFAULT 10 (m5-harvester §6.1).</summary>
     public int HarvesterHeadroomMarginPercent { get; init; } = 10;
     /// <summary>
     /// Strength (FleetModule.StrengthOf scale) of the escort that must stand with the harvester before it leaves. Null = the economic blockade
-    /// threshold E from the blockade data (3 Decrees). DEFAULT null (m5-death-star §6.3).
+    /// threshold E from the blockade data (3 Decrees). DEFAULT null (m5-harvester §6.3).
     /// </summary>
     public double? HarvesterEscortStrength { get; init; }
 }

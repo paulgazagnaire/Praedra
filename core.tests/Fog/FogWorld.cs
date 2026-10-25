@@ -6,8 +6,8 @@ using Praedra.Core.Setup;
 namespace Praedra.Core.Tests.Fog;
 
 /// <summary>
-/// Map M of the fog sheet (m5-fog-and-hq §Tests): C0 (0,0) group core, sector SC; R1 (100,0), R2 (200,0), R3 (300,0), R4 (400,0) group
-/// outer_rim, sector SR; lanes C0-R1, R1-R2, R2-R3, R3-R4, tier 3. Glasswood has no lane (an outsider, as in the real data). Day 0: Hand holds
+/// Map M of the fog sheet (m5-fog-and-hq §Tests): C0 (0,0) group heartland, sector SC; R1 (100,0), R2 (200,0), R3 (300,0), R4 (400,0) group
+/// farreach, sector SR; lanes C0-R1, R1-R2, R2-R3, R3-R4, tier 3. Glasswood has no lane (an outsider, as in the real data). Day 0: Hand holds
 /// C0 and R1, Collective holds R2, R3, R4; start_explored_all = C0; HQ at R2 (or as given); Hand fleet E1 of 3 Mandates at
 /// R1; Collective support 70 at R2, R3, R4 (and 30 at C0 and R1). Every system is populated. A full GameHost on this map with debug orders on.
 /// </summary>
@@ -19,7 +19,7 @@ internal sealed class FogWorld
     private static readonly Lazy<GameData> _data = new(() =>
     {
         var planets = "name,sector,group,map_x,map_y\n" +
-                      "C0,SC,core,0,0\nR1,SR,outer_rim,100,0\nR2,SR,outer_rim,200,0\nR3,SR,outer_rim,300,0\nR4,SR,outer_rim,400,0\n" +
+                      "C0,SC,heartland,0,0\nR1,SR,farreach,100,0\nR2,SR,farreach,200,0\nR3,SR,farreach,300,0\nR4,SR,farreach,400,0\n" +
                       $"Glasswood,{Galaxy.OutsideSectorsLabel},,0,300\n";
         var lanes = "from,to,kind,routes\nC0,R1,generated,\nR1,R2,generated,\nR2,R3,generated,\nR3,R4,generated,\n";
         var g = GalaxyLoader.Load(planets, lanes, TestData.Tiers);

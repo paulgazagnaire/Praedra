@@ -90,7 +90,7 @@ public class AnchoredDealTests
         Assert.Equal(Side.Hand, Holder(Make(StartPreset.Easy, 1), "Fiscus"));
     }
 
-    // m5-setup-and-victory AN6: the HQ satisfies the candidate rule (rim, not The Shoal, not an anchor, at least 200 map units from Charter)
+    // m5-setup-and-victory AN6: the HQ satisfies the candidate rule (outer, not The Shoal, not an anchor, at least 200 map units from Charter)
     [Theory, MemberData(nameof(AllPresets))]
     public void AN6_HqSatisfiesCandidateRule(StartPreset p)
     {
@@ -100,20 +100,20 @@ public class AnchoredDealTests
         {
             var hq = Deal(p, seed).Hq;
             var s = G.Get(hq);
-            Assert.Contains(s.Group, new[] { "inner_rim", "outer_rim" });
+            Assert.Contains(s.Group, new[] { "midreach", "farreach" });
             Assert.NotEqual("The Shoal", hq);
             Assert.DoesNotContain(hq, anchors);
             Assert.True(Praedra.Core.Travel.TravelFormula.MapDistance(s.MapX, s.MapY, c.MapX, c.MapY) >= 200);
         }
     }
 
-    // m5-setup-and-victory AN7: Collective systems are never group core (anchors, pockets and scattered cells are all rim)
+    // m5-setup-and-victory AN7: Collective systems are never group heartland (anchors, pockets and scattered cells are all outer)
     [Theory, MemberData(nameof(AllPresets))]
-    public void AN7_CollectiveIsRimOnly(StartPreset p)
+    public void AN7_CollectiveIsReachOnly(StartPreset p)
     {
         for (int seed = 1; seed <= 12; seed++)
             foreach (var r in Deal(p, seed).Rows.Where(r => r.Owner == Side.Collective))
-                Assert.NotEqual("core", G.Get(r.Name).Group);
+                Assert.NotEqual("heartland", G.Get(r.Name).Group);
     }
 
     // m5-setup-and-victory AN8: Lenitas 57, Caminus 58 (Hand-held, Collective sympathy), no draw

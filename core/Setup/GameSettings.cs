@@ -115,7 +115,7 @@ public sealed record GameSettings
     /// </summary>
     public BombardParams? Bombard { get; init; }
 
-    // ---- the harvester. rule: m5-death-star §Interfaces, §2, §4
+    // ---- the harvester. rule: m5-harvester §Interfaces, §2, §4
     /// <summary>harvester switches and numbers (cap per system, ShieldBlocksDestroy, TrenchRun, sector penalty). Null = the sheet's DEFAULTs. Refused values throw at attach.</summary>
     public Praedra.Core.Harvester.HarvesterParams? Harvester { get; init; }
 
@@ -131,7 +131,7 @@ public sealed record GameSettings
     /// <summary>Research switches (facility and mission income, cost and mission scaling, one class per rung, Sensor Station tier 2). Null = the module's defaults.</summary>
     public Praedra.Core.Research.ResearchParams? Research { get; init; }
 
-    // ---- characters. rule: m5-characters-and-force §Defaults for undecided items
+    // ---- characters. rule: m5-characters-and-talent §Defaults for undecided items
     /// <summary>Character switches and numbers (Navigator, ride fleet, death, injury days, escape, Talent ranks, start extras...). Null = the sheet's DEFAULTs. Refused values throw at attach.</summary>
     public Praedra.Core.Characters.CharacterParams? Characters { get; init; }
 
@@ -144,7 +144,7 @@ public sealed record GameSettings
     public Praedra.Core.Victory.VictoryRules? Victory { get; init; }
 
     // ---- fog of war and the Hearth. rule: m5-fog-and-hq §Defaults for undecided items
-    /// <summary>Fog switches (ruleset, Core reports, passing fleets, recon, presence reveals HQ, sector clue, observed window, start full copy). Null = the sheet's DEFAULTs.</summary>
+    /// <summary>Fog switches (ruleset, Heartland reports, passing fleets, recon, presence reveals HQ, sector clue, observed window, start full copy). Null = the sheet's DEFAULTs.</summary>
     public Praedra.Core.Fog.FogParams? Fog { get; init; }
     /// <summary>HQ move and loss switches and numbers (speed, cost, departure refusal, arrival support effect, capture rule). Null = the sheet's DEFAULTs.</summary>
     public Praedra.Core.Fog.HqParams? Hq { get; init; }

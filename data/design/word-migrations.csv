@@ -295,3 +295,43 @@ word,lnr,covenant
 word,dauntless,homeward
 word,stormtroopers,pacifiers
 word,Alderaan,Afar
+phrase,",core,",",heartland,"
+phrase,",inner_rim,",",midreach,"
+phrase,",outer_rim,",",farreach,"
+phrase,inner_rim,midreach
+phrase,outer_rim,farreach
+phrase,Inner Rim,Midreach
+phrase,Outer Rim,Farreach
+phrase,Core Worlds,Heartland
+phrase,"group core","group heartland"
+phrase,Core-group,Heartland
+phrase,Core reports,Heartland reports
+phrase,Core report,Heartland report
+phrase,a Core system,a Heartland system
+phrase,non-Core,non-Heartland
+identifier,CoreReportsInstantly,HeartlandReportsInstantly
+identifier,CoreGroup,HeartlandGroup
+identifier,CoreReport,HeartlandReport
+identifier,NeutralCoreSpread,NeutralHeartlandSpread
+identifier,CoreRawSpread,HeartlandRawSpread
+identifier,CoreRawBase,HeartlandRawBase
+identifier,CorePopulatedPercent,HeartlandPopulatedPercent
+identifier,CoreEnergySpread,HeartlandEnergySpread
+identifier,CoreEnergyBase,HeartlandEnergyBase
+identifier,CollectivePocketsMayEnterCore,CollectivePocketsMayEnterHeartland
+identifier,ClassicCoreThreshold,ClassicHeartlandThreshold
+identifier,ClassicCoreLoss,ClassicHeartlandLoss
+identifier,S15_RolledCoreSystemsMatchTheMonteCarloMeans,S15_RolledHeartlandSystemsMatchTheMonteCarloMeans
+identifier,FW7_CoreReportTellsBothSides,FW7_HeartlandReportTellsBothSides
+identifier,InnerRim,Midreach
+identifier,OuterRim,Farreach
+word,Rim,Reach
+phrase,turbolasers,heavy cannons
+phrase,turbolaser cannon,heavy cannon
+phrase,turbolaser ,heavy cannon 
+phrase,Turbolasers,Heavy cannons
+identifier,IonFirstThenTurbolaserThenHull,IonFirstThenHeavyCannonThenHull
+word,Turbolaser,HeavyCannon
+word,turbolaser,heavy_cannon
+phrase,m5-characters-and-force,m5-characters-and-talent
+phrase,m5-death-star,m5-harvester

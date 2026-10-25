@@ -39,14 +39,14 @@ public sealed class FleetModule
 
     /// <summary>
     /// Adjusts a fleet's speed rating at the moment a MoveFleet is accepted (given the fleet and its data rating). Null = the data rating
-    /// (Classic). The character module sets it for the New-rule Navigator. rule: m5-characters-and-force §Navigator; m1-travel §Rule (New).
+    /// (Classic). The character module sets it for the New-rule Navigator. rule: m5-characters-and-talent §Navigator; m1-travel §Rule (New).
     /// </summary>
     public Func<Fleet, int, int>? SpeedAdjust { get; set; }
-    /// <summary>A MoveFleet was accepted (step 1, after the transit is set). The character module listens (OfficersRideFleet). rule: m5-characters-and-force §Riding.</summary>
+    /// <summary>A MoveFleet was accepted (step 1, after the transit is set). The character module listens (OfficersRideFleet). rule: m5-characters-and-talent §Riding.</summary>
     public event Action<StepContext, Fleet>? MoveAccepted;
     /// <summary>
     /// A fleet is about to leave the state (ctx null = silent: setup or cancelled work). The int? is the fleet that received its ships (a merge or a
-    /// transfer that emptied it), else null. The character module listens. rule: m5-characters-and-force §Riding (fleet operations).
+    /// transfer that emptied it), else null. The character module listens. rule: m5-characters-and-talent §Riding (fleet operations).
     /// </summary>
     public event Action<StepContext?, int, Fleet, DissolveCause, int?>? FleetRemoving;
 
@@ -195,7 +195,7 @@ public sealed class FleetModule
 
     /// <summary>
     /// Speed rating of a fleet (0 = immobile): the largest rating among its ships; squadrons aboard never count; a squadron-only fleet uses
-    /// its squadrons' ratings. rule: m3-fleets §Fleet speed; m1-travel §Rule (Classic); the New-rule Navigator is applied through <see cref="SpeedAdjust"/> (m5-characters-and-force).
+    /// its squadrons' ratings. rule: m3-fleets §Fleet speed; m1-travel §Rule (Classic); the New-rule Navigator is applied through <see cref="SpeedAdjust"/> (m5-characters-and-talent).
     /// </summary>
     public int SpeedOf(Fleet f) =>
         TravelFormula.FleetSpeed(f.Ships.Select(id => SpeedOfShip(E.Objects[id])), f.Squadrons.Select(id => SpeedOfShip(E.Objects[id])));
@@ -215,7 +215,7 @@ public sealed class FleetModule
     {
         if (fleet.Transit != null || fleet.At == null) return PathResult.Rejected(PathStatus.InTransit);
         int speed = SpeedOf(fleet);
-        if (SpeedAdjust != null) speed = SpeedAdjust(fleet, speed); // rule: m5-characters-and-force §Navigator (fixed when the order is accepted)
+        if (SpeedAdjust != null) speed = SpeedAdjust(fleet, speed); // rule: m5-characters-and-talent §Navigator (fixed when the order is accepted)
         return FindVia(fleet.At, waypoints, destination, speed);
     }
 
@@ -315,7 +315,7 @@ public sealed class FleetModule
     /// <summary>
     /// The system <paramref name="side"/> holds that is fewest lane steps from <paramref name="from"/> (breadth-first over every lane, through any
     /// system; ties by system index, which is name order); the start itself never counts. Null if the side holds no reachable system.
-    /// rule: m5-death-star §2 effect 3 (nearest system its side holds, fewest lane steps, ties by system id); used also by the capture (B5a).
+    /// rule: m5-harvester §2 effect 3 (nearest system its side holds, fewest lane steps, ties by system id); used also by the capture (B5a).
     /// </summary>
     public string? NearestHeldSystem(string from, Side side)
     {

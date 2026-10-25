@@ -41,16 +41,16 @@ public sealed record HitWasted(int Index, int Day, string System, int Pick, int 
 public sealed record CollateralHit(int Index, int Day, string System, int Facility, int Defense, int Roll, bool Destroyed)
     : GameEvent(Index, Day, nameof(CollateralHit));
 
-/// <summary>One battery's shot at a bombarding capital ship: Damage = attack x (L / 40 + 1); Ion for a Mordant Lien-150, else turbolaser (Covenant). rule: B7-bombardment §4.</summary>
+/// <summary>One battery's shot at a bombarding capital ship: Damage = attack x (L / 40 + 1); Ion for a Mordant Lien-150, else heavy cannon (Covenant). rule: B7-bombardment §4.</summary>
 public sealed record BatteryShot(int Index, int Day, string System, int Facility, int Ship, int Damage, bool Ion)
     : GameEvent(Index, Day, nameof(BatteryShot));
 
 /// <summary>
-/// The return fire applied to one ship: the ion and turbolaser totals, its current shield S, the hull lost (stays), whether it was destroyed,
+/// The return fire applied to one ship: the ion and heavy cannon totals, its current shield S, the hull lost (stays), whether it was destroyed,
 /// whether it is grounded (ion left after the shields: its own value counts 0 this strike) and the system counter raised by a critical hit
 /// (0 shield recharge, 1 weapons, 2 Hold beam, 3 speed, 4 primary hyperdrive, 5 backup; -1 none). rule: B7-bombardment §4.
 /// </summary>
-public sealed record BombardShipDamaged(int Index, int Day, string System, int Ship, int Ion, int Turbolaser, int Shield, int HullLost, bool Destroyed, bool Grounded, int Critical)
+public sealed record BombardShipDamaged(int Index, int Day, string System, int Ship, int Ion, int HeavyCannon, int Shield, int HullLost, bool Destroyed, bool Grounded, int Critical)
     : GameEvent(Index, Day, nameof(BombardShipDamaged));
 
 /// <summary>One hit. TargetKind is Regiment, Facility, Energy or Raw (Id 0 for the last two). Roll is rand(1..10); destroyed when it is above Defense.</summary>

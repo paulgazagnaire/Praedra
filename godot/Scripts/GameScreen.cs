@@ -80,7 +80,7 @@ public partial class GameScreen : Control
         // and blockades show only where you see live. rule: m5-fog-and-hq §F3, §N2, §N8
         _view.OwnerOf = i => S.KnownOwnerOf(G.Systems[i].Name).Owner;
         _view.IsUnknown = i => { string n = G.Systems[i].Name; return !S.Explored(n) && S.OwnerOf(n) != S.Player; };
-        _view.IsDestroyed = i => S.IsDestroyed(G.Systems[i].Name); // rule: m5-death-star §2 effect 6 (the side's own picture knows)
+        _view.IsDestroyed = i => S.IsDestroyed(G.Systems[i].Name); // rule: m5-harvester §2 effect 6 (the side's own picture knows)
         _view.IsHq = i => HqSideAt(i) != null;
         _view.CapitalTag = CapitalTagOf;
         _view.IsUprising = i => { string n = G.Systems[i].Name; return S.Sees(n) && S.Host.Support.IsUprising(n); };

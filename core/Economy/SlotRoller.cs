@@ -12,16 +12,16 @@ public static class SlotRoller
     public static SlotState Roll(GameRng rng, bool core, EconomyParams p)
     {
         int energy, raw;
-        bool populated = rng.NextInt(0, 99) < (core ? p.CorePopulatedPercent : p.RimPopulatedPercent);
+        bool populated = rng.NextInt(0, 99) < (core ? p.HeartlandPopulatedPercent : p.ReachPopulatedPercent);
         if (core)
         {
-            energy = p.CoreEnergyBase + rng.NextInt(0, p.CoreEnergySpread);
-            raw = rng.NextInt(0, p.CoreRawSpread) + p.CoreRawBase;
+            energy = p.HeartlandEnergyBase + rng.NextInt(0, p.HeartlandEnergySpread);
+            raw = rng.NextInt(0, p.HeartlandRawSpread) + p.HeartlandRawBase;
         }
         else
         {
-            energy = p.RimEnergyBase + rng.NextInt(0, p.RimEnergySpreadA) + rng.NextInt(0, p.RimEnergySpreadB);
-            raw = rng.NextInt(0, p.RimRawSpread) + p.RimRawBase;
+            energy = p.ReachEnergyBase + rng.NextInt(0, p.ReachEnergySpreadA) + rng.NextInt(0, p.ReachEnergySpreadB);
+            raw = rng.NextInt(0, p.ReachRawSpread) + p.ReachRawBase;
         }
         energy = Math.Min(energy, p.SlotCap);
         raw = Math.Min(Math.Min(raw, p.SlotCap), energy); // raw is clamped to energy (Traced)
