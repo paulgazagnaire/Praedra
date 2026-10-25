@@ -142,7 +142,7 @@ public class EspionageTests
 
     // m5-fog-and-hq FE7
     [Fact]
-    public void FE7_HandStartsWithAFullCopyOfYavin()
+    public void FE7_HandStartsWithAFullCopyOfShoal()
     {
         var h = NewGame.Create(new NewGameOptions { Seed = 1 });
         var k = h.Game.State.Fog.Hand.Systems["The Shoal"];

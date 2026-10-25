@@ -5,7 +5,7 @@ namespace Praedra.Core.AI;
 /// <summary>
 /// Every number of the simple computer opponent. These are tuning values of the AI, not rules of the game: no rule sheet fixes them
 /// (the Classic AI notes in specs/ai/ describe the Classic behaviour only in outline), so each is a DEFAULT chosen here and is
-/// overridable per side. Strength numbers are percent of the reference force REF (3 Hand Star Destroyers, m4-battle-new §12),
+/// overridable per side. Strength numbers are percent of the reference force REF (3 Mandates, m4-battle-new §12),
 /// the scale of <see cref="Praedra.Core.Fleets.FleetModule.StrengthOf"/>: 100 = as strong as REF.
 /// </summary>
 public sealed record SimpleAiParams
@@ -260,23 +260,23 @@ public sealed record SimpleAiParams
     public int FogGroundForgetDays { get; init; } = 365;
 
     /// <summary>
-    /// The Classic AI's leader marks (B6c §7): the six story characters (Luke, Mae Abara, the Emperor, Vader, Leia, Han) are never fleet or army
-    /// commanders, the Emperor is never a diplomat, and the Hand keeps the Emperor at the Seat of Power while it holds it (Emperor home;
-    /// SimpleAiAgents.EmperorHome). The leaders' ban from Incite, Rescue, Sabotage and Abduction is already this AI's rule for every major
-    /// character (NoKeyKinds). QA-8 (2026-10-18): without it the Emperor stood on Charter 1-7% of days, so the Seat of Power was off ~95%
+    /// The Classic AI's leader marks (B6c §7): the six story characters (Nobody, Mae Abara, The Chair, Ravilla, Ledger, Midwife) are never fleet or army
+    /// commanders, The Chair is never a diplomat, and the Hand keeps The Chair at the Seat of Power while it holds it (The Chair home;
+    /// SimpleAiAgents.ChairHome). The leaders' ban from Incite, Rescue, Sabotage and Abduction is already this AI's rule for every major
+    /// character (NoKeyKinds). QA-8 (2026-10-18): without it The Chair stood on Charter 1-7% of days, so the Seat of Power was off ~95%
     /// of the game, and he was captured on missions. DEFAULT false (2026-10-18, the Dev lead's audit under Paul's 07:43 rule: Classic AI behaviour
     /// belongs to the Classic AI yardstick, not the default AI; QA-12: on, Medium mirror Hand wins fell from 13/16 to 5/16 and 11 of 16 games
     /// had no winner). No Classic AI level exists yet; until one does, turn it on with `sim tourney --a-params LeaderMarks=true` or in code (QA-15).
     /// </summary>
     public bool LeaderMarks { get; init; }
-    /// <summary>Mon Mothma's character id, one of the B6c §7 leaders: MJCHARSD 576 (data/design/roster.csv).</summary>
-    public int MonMothmaId { get; init; } = 576;
+    /// <summary>Mae Abara's character id, one of the B6c §7 leaders: MJCHARSD 576 (data/design/roster.csv).</summary>
+    public int MaeAbaraId { get; init; } = 576;
     /// <summary>
-    /// B6c §7 Emperor home: the planner starts only once the side has nobody left to recruit (ctrl+0xa4 == 0), so the Emperor recruits and
+    /// B6c §7 The Chair home: the planner starts only once the side has nobody left to recruit (ctrl+0xa4 == 0), so The Chair recruits and
     /// subdues until then (QA-12: kept home from day one he no longer put down uprisings, and Hand wins fell from 13/16 to 5/16). DEFAULT on
     /// (Classic). Off = home from day one (#68).
     /// </summary>
-    public bool EmperorHomeAfterRecruiting { get; init; } = true;
+    public bool ChairHomeAfterRecruiting { get; init; } = true;
     /// <summary>Regiments assumed on the enemy's game-winning system (Charter for the Collective, a known HQ) when its ground was never seen. DEFAULT.</summary>
     public int FogUnknownWinDefenders { get; init; } = 8;
     /// <summary>Bombardments of the game-winning system in 30 days at most (with fog the AI cannot see the shelling work). DEFAULT.</summary>
@@ -300,7 +300,7 @@ public sealed record SimpleAiParams
     // ---- fog: the Hand's belief map of the Hearth (ai/07 §7 "Hand: belief-map search", ai/12 D1 Decided YES; m5-fog-and-hq §N7 clues).
     // Weight per system, from the Hand's picture only. A system the picture shows Collective-held (the HQ stands only on Collective systems,
     // §N7 4) or never explored (rim only) can hold the HQ; signs of a capital (fleets, regiments, facilities seen, Collective sightings) add
-    // weight; a fresh group C look that showed no HQ (Yavin's day-0 copy, captures) wipes it out, and the weight returns as that look ages.
+    // weight; a fresh group C look that showed no HQ (The Shoal's day-0 copy, captures) wipes it out, and the weight returns as that look ages.
     /// <summary>Weight of a never-explored, non-Core system. DEFAULT.</summary>
     public int BeliefUnexplored { get; init; } = 30;
     /// <summary>Weight of a system the picture shows Collective-held. DEFAULT.</summary>
@@ -386,14 +386,14 @@ public sealed record SimpleAiParams
     /// </summary>
     public int HqRecheckFoilDays { get; init; } = 30;
     /// <summary>
-    /// Hand with fog: probe droids (special forces whose mission bit allows Reconnaissance, m5-missions §Special forces) kept for the HQ hunt
+    /// Hand with fog: probe speculators (special forces whose mission bit allows Reconnaissance, m5-missions §Special forces) kept for the HQ hunt
     /// while the HQ is unknown. Each free one goes alone on a Reconnaissance of the best HQ search target not already looked at (the deeper
-    /// list of DroidSearchTargets), so the characters keep the best targets and the droids sweep the rest. A look that succeeds clears the
-    /// system on the belief map; a cheap droid is what a player sends (cost 1, upkeep 1). 0 = none (DEFAULT, the Medium AI).
+    /// list of SpeculatorSearchTargets), so the characters keep the best targets and the speculators sweep the rest. A look that succeeds clears the
+    /// system on the belief map; a cheap speculator is what a player sends (cost 1, upkeep 1). 0 = none (DEFAULT, the Medium AI).
     /// </summary>
-    public int HuntDroids { get; init; }
-    public string HuntDroidClass { get; init; } = "Speculators";
-    public int DroidSearchTargets { get; init; } = 24;
+    public int HuntSpeculators { get; init; }
+    public string HuntSpeculatorClass { get; init; } = "Speculators";
+    public int SpeculatorSearchTargets { get; init; } = 24;
     /// <summary>For the spies a candidate whose owner the side has never seen weighs at least this (the belief map gives it BeliefUnexplored). DEFAULT.</summary>
     public int SpyUnexploredBelief { get; init; } = 120;
     /// <summary>Spies farther than SpyBaseSlackTicks from the held system nearest the SpyBaseTargets best search targets move there first. DEFAULT.</summary>
@@ -408,7 +408,7 @@ public sealed record SimpleAiParams
     public int EspionageOverReconPercent { get; init; } = 125;
     /// <summary>
     /// Recruitment (B6c §7 list item 1): at most this many running while the side has anyone left to recruit (Classic: 2), each by a character of
-    /// leadership at least RecruitMinLeadership (Classic: 80; leaders allowed, so the Emperor, Vader and Mae Abara recruit), worth RecruitValue
+    /// leadership at least RecruitMinLeadership (Classic: 80; leaders allowed, so The Chair, Ravilla and Mae Abara recruit), worth RecruitValue
     /// (DEFAULT: above every other job, as the Classic list checks it first). 0 = no Recruitment (the AI before QA-12).
     /// </summary>
     public int MaxRecruiters { get; init; } = 2;
@@ -475,7 +475,7 @@ public sealed record SimpleAiParams
     public int AbductionInfoDays { get; init; } = 5;
     /// <summary>
     /// The planner reads a key target's Abduction chance as the core rolls it, min(table, cap_percent) (m5-missions §6a.3; the caps are the
-    /// key-target file: Emperor 2, Vader 4, Luke 4, Mae Abara 2), so it values those jobs honestly and the odds floor (MissionMinOddsPercent)
+    /// key-target file: The Chair 2, Ravilla 4, Nobody 4, Mae Abara 2), so it values those jobs honestly and the odds floor (MissionMinOddsPercent)
     /// applies. false = the AI before (the table alone: 95% believed where 2% is real). DEFAULT true (Dev lead, 2026-10-19).
     /// </summary>
     public bool AbductionKeyCap { get; init; } = true;
@@ -493,13 +493,13 @@ public sealed record SimpleAiParams
     public int VictoryKeyValue { get; init; } = 20000;
     /// <summary>
     /// Key hunt (QA round 29, 2026-10-18), the Collective only: with fog, while it is ahead (FinishWhenAheadRatio, or holding or having destroyed
-    /// Charter, its place term) and still needs the Emperor or Vader captured to win (its standard victory keys), it sends spies (Espionage)
+    /// Charter, its place term) and still needs The Chair or Ravilla captured to win (its standard victory keys), it sends spies (Espionage)
     /// to look for them: first where its pictures last showed one (within KeyInfoDays), then across the systems its picture shows Hand-held,
     /// nearest first, skipping one whose ground it saw within KeyLookDays or where a look was foiled within SpyFoilMemoryDays. A look that
     /// finds a key makes him an Abduction target as before. The spies only look: the AI never reads where a key truly is. Without it the
-    /// Collective AI saw the Emperor and Vader on almost no day of 3000 (QA seeds 9 and 13 Medium mirror, 2 and 5 Medium Hand vs Hard Collective:
+    /// Collective AI saw The Chair and Ravilla on almost no day of 3000 (QA seeds 9 and 13 Medium mirror, 2 and 5 Medium Hand vs Hard Collective:
     /// Charter held from day 1250-2250, no key seen after, no capture). With it the keys are found and abducted at, but not captured: the
-    /// key-target caps (2% Emperor, 4% Vader; m5-missions §6a) and the fleet gate (Vader riding a fleet) hold. On the Hand side it cost the
+    /// key-target caps (2% The Chair, 4% Ravilla; m5-missions §6a) and the fleet gate (Ravilla riding a fleet) hold. On the Hand side it cost the
     /// Medium mirror its floor (seeds 1-8: 4 games without a winner instead of 1), so the Hand is left out. New AI rule (no sheet).
     /// false = the AI before. DEFAULT true.
     /// </summary>
@@ -565,7 +565,7 @@ public sealed record SimpleAiParams
     /// </summary>
     public bool FleetMemory { get; init; }
     /// <summary>
-    /// Key characters (the majors: Luke, Leia, Han, Mae Abara, Vader, Palpatine) count this percent of their mission value (others are
+    /// Key characters (the majors: Nobody, Ledger, Midwife, Mae Abara, Ravilla, The Chair) count this percent of their mission value (others are
     /// preferred) and never go on Rescue, Abduction, Sabotage or Incite (ai/05 §4: the original keeps its leaders off those). With
     /// m5-characters-and-force MajorsCanDie on (DEFAULT off) they also stay off every mission where any defender is believed. DEFAULT.
     /// </summary>
@@ -594,7 +594,7 @@ public sealed record SimpleAiParams
     public int HarvesterHeadroomMarginPercent { get; init; } = 10;
     /// <summary>
     /// Strength (FleetModule.StrengthOf scale) of the escort that must stand with the harvester before it leaves. Null = the economic blockade
-    /// threshold E from the blockade data (3 Victory Star Destroyers). DEFAULT null (m5-death-star §6.3).
+    /// threshold E from the blockade data (3 Decrees). DEFAULT null (m5-death-star §6.3).
     /// </summary>
     public double? HarvesterEscortStrength { get; init; }
 }

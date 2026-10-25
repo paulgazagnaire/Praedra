@@ -228,7 +228,7 @@ public class GarrisonTests
         return (w.Sup.Garrison10(Emp), w.Sup.Garrison10(Emp) >= need10);
     }
 
-    // G9: New, s = 40 (N = 2): 3 Stormtroopers (36), 2 Fleet (12), 4 Fleet (24), 5 War Droids (20), 2 Dark Troopers (32), 1 The Moorings (16)
+    // G9: New, s = 40 (N = 2): 3 Pacifiers (36), 2 Fleet (12), 4 Fleet (24), 5 Proxies (20), 2 Lictors (32), 1 The Moorings (16)
     [Theory]
     [InlineData("Pacifiers", 3, 36, true)]
     [InlineData("Ballast", 2, 12, false)]
@@ -247,7 +247,7 @@ public class GarrisonTests
         Assert.Equal(!ok, w.Sup.IsUprising(Emp));
     }
 
-    // G10: New, 6 Fleet regiments (36) versus 3 Stormtroopers (36), N = 3 (s = 30): both satisfied; 5 Fleet (30) satisfied, 4 Fleet (24) not
+    // G10: New, 6 Fleet regiments (36) versus 3 Pacifiers (36), N = 3 (s = 30): both satisfied; 5 Fleet (30) satisfied, 4 Fleet (24) not
     [Theory]
     [InlineData("Ballast", 6, 36, true)]
     [InlineData("Pacifiers", 3, 36, true)]
@@ -312,7 +312,7 @@ public class GarrisonTests
         Assert.Equal(c2, SupportModule.Lookup(P.Table2, score));
     }
 
-    // G14 through the module: the Hand in a harvester sector, a Stormtrooper counts in R and again in T
+    // G14 through the module: the Hand in a harvester sector, a Pacifier counts in R and again in T
     [Fact]
     public void G14_ScoreFromTheSystem()
     {
@@ -376,7 +376,7 @@ public class GarrisonTests
     {
         var w = new SupWorld();
         w.Hold(Ally, Side.Collective, 40);
-        foreach (var k in new[] { FacilityKind.OrbitalShipyard, FacilityKind.TrainingFacility, FacilityKind.ConstructionYard, FacilityKind.Kdy150 })
+        foreach (var k in new[] { FacilityKind.OrbitalShipyard, FacilityKind.TrainingFacility, FacilityKind.ConstructionYard, FacilityKind.Lien150 })
             w.W.Eco.AddFacility(Ally, k);
         var ids = Enumerable.Range(0, 3).Select(_ => w.W.Eco.AddObject(Side.Collective, "Militia", Ally)).ToArray();
         w.Uprising(Ally, Side.Collective, erosionDue: 31, incidentDue: 1);
@@ -466,7 +466,7 @@ public class GarrisonTests
         {
             var w = new SupWorld(stub: false, seed: seed);
             w.Hold(Ally, Side.Collective, 30); w.Hold(Emp, Side.Hand, 35);
-            foreach (var k in new[] { FacilityKind.OrbitalShipyard, FacilityKind.ConstructionYard, FacilityKind.Kdy150 }) { w.W.Eco.AddFacility(Ally, k); w.W.Eco.AddFacility(Emp, k); }
+            foreach (var k in new[] { FacilityKind.OrbitalShipyard, FacilityKind.ConstructionYard, FacilityKind.Lien150 }) { w.W.Eco.AddFacility(Ally, k); w.W.Eco.AddFacility(Emp, k); }
             w.Regiments(Ally, Side.Collective, "Militia", 3);
             w.Regiments(Emp, Side.Hand, "Tranches", 2);
             w.Run(500);

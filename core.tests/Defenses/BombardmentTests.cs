@@ -35,11 +35,11 @@ public class BombardmentTests
     [Theory]
     [InlineData(0, 8)]
     [InlineData(80, 24)]
-    public void B2_FourIsdAtLeadership(int leadership, int power)
+    public void B2_FourMandateAtLeadership(int leadership, int power)
     {
         var w = new BombWorld();
         w.Hold(All);
-        int f = w.Fleet(Emp, Sys, BombWorld.Isd, 4);
+        int f = w.Fleet(Emp, Sys, BombWorld.Mandate, 4);
         w.Bomb.AdmiralLeadership = fl => fl.Id == f ? leadership : 0;
         Assert.Equal(power, w.Bomb.Power(w.Game.State.Fleets[f]));
         w.Stub.Expect(1, 10, 1); // B7-bombardment §5.3: no target (m0 = 0): the collateral die only
@@ -73,14 +73,14 @@ public class BombardmentTests
 
     // m3-bombardment B5 (hits = max(0, P - S)): the powers are built from ships and an injected admiral
     [Theory]
-    [InlineData("3", "VD6", 0, 24, 40, 0)]                     // 6 Victory Destroyers (4 each) against GenCore I
-    [InlineData("3,6", "DS4+V2", 40, 130, 120, 10)]            // (4 harvesters + a Victory II = 65) x 2 against GenCore I + II
+    [InlineData("3", "VD6", 0, 24, 40, 0)]                     // 6 Decrees (4 each) against Escrow I
+    [InlineData("3,6", "DS4+V2", 40, 130, 120, 10)]            // (4 harvesters + a Victory II = 65) x 2 against Escrow I + II
     [InlineData("3,6", "DS3+V2", 40, 100, 120, 0)]             // (3 harvesters + a Victory II = 50) x 2
     public void B5_ShieldsAbsorbPower(string gens, string ships, int leadership, int power, int shield, int hits)
     {
         var w = new BombWorld();
         w.Hold(All);
-        foreach (var c in gens.Split(',')) w.Facility(c == "3" ? FacilityKind.GenCoreLevelI : FacilityKind.GenCoreLevelII);
+        foreach (var c in gens.Split(',')) w.Facility(c == "3" ? FacilityKind.EscrowI : FacilityKind.EscrowII);
         var list = ships switch
         {
             "VD6" => Enumerable.Repeat("Decree", 6),
@@ -148,13 +148,13 @@ public class BombardmentTests
         }
     }
 
-    // m3-bombardment B11: P = 24 against one GenCore I (40): zero hits, zero draws, the events still come
+    // m3-bombardment B11: P = 24 against one Escrow I (40): zero hits, zero draws, the events still come
     [Fact]
     public void B11_NoHitsNoDrawsButStillResolved()
     {
         var w = new BombWorld();
         w.Hold(All);
-        w.Facility(FacilityKind.GenCoreLevelI); w.Regiment(All, BombWorld.Army);
+        w.Facility(FacilityKind.EscrowI); w.Regiment(All, BombWorld.Army);
         int f = w.Fleet(Emp, Sys, "Decree", 6);
         Assert.Null(w.TryBombard(Emp, f, Sys, Gen));
         Assert.Empty(w.Stub.Requests);
@@ -342,13 +342,13 @@ public class BombardmentTests
         Assert.True(kinds.IndexOf(nameof(BombardmentResolved)) < kinds.IndexOf(nameof(UprisingStarted)));
     }
 
-    // m3-bombardment B19: a shield destroyed at Step K lowers S at K + 1, and with one GenCore left the gate is open
+    // m3-bombardment B19: a shield destroyed at Step K lowers S at K + 1, and with one Escrow left the gate is open
     [Fact]
     public void B19_ShieldDestroyedLowersSNextStep()
     {
         var w = new BombWorld();
         w.Hold(All);
-        w.Facility(FacilityKind.GenCoreLevelI); w.Facility(FacilityKind.GenCoreLevelI);
+        w.Facility(FacilityKind.EscrowI); w.Facility(FacilityKind.EscrowI);
         int f = w.Fleet(Emp, Sys, new[] { "harvester", "harvester", "harvester", "harvester", "harvester", "Decree II", "Warrant", "Warrant" }); // P = 82
         w.Stub.Expect(0, 2, 1);  // B7-bombardment §5.3: the collateral x over m0 = 2: none
         w.Dice((0, 10), (0, 1)); // the first shield falls (10 > 2), the second survives its roll (1)
@@ -389,7 +389,7 @@ public class BombardmentTests
             var w = new BombWorld(stub: false, seed: 77);
             w.Hold(All, 45);
             w.Eco.SetSlots(Sys, 4, 2);
-            w.Eco.AddFacility(Sys, FacilityKind.Mine); w.Eco.AddFacility(Sys, FacilityKind.Refinery); w.Facility(FacilityKind.Kdy150);
+            w.Eco.AddFacility(Sys, FacilityKind.Mine); w.Eco.AddFacility(Sys, FacilityKind.Refinery); w.Facility(FacilityKind.Lien150);
             for (int i = 0; i < 5; i++) w.Regiment(All, BombWorld.Army);
             int f = w.Fleet(Emp, Sys, "Decree", 5);
             w.TryBombard(Emp, f, Sys, Gen);
@@ -411,7 +411,7 @@ public class BombardmentTests
     {
         var w = new BombWorld(bp: BombWorld.M3Rule);
         w.Hold(All);
-        int k = w.Facility(FacilityKind.Kdy150); w.Facility(FacilityKind.GenCoreLevelI);
+        int k = w.Facility(FacilityKind.Lien150); w.Facility(FacilityKind.EscrowI);
         int f = w.Fleet(Emp, Sys, "Decree", 11);                 // P = 44, S = 40, 4 hits
         var before = string.Join(";", w.Eco.Objects.Where(o => o.Category == ObjectCategory.CapitalShip).Select(o => $"{o.Hull}:{string.Join(",", o.Hits!)}"));
         w.Dice(Enumerable.Repeat((0, 1), 4).ToArray());
@@ -456,24 +456,24 @@ public class BombardmentTests
     [Fact]
     public void MilitaryPoolContents()
     {
-        var w = new BombWorld(bp: new BombardParams { BatteryReturnFire = false }); // the LNR II would destroy the Carrack (B7 §4): pools only here
+        var w = new BombWorld(bp: new BombardParams { BatteryReturnFire = false }); // the Covenant II would destroy the Warrant (B7 §4): pools only here
         w.Hold(All);
         w.Regiment(All, BombWorld.Army);
-        w.Facility(FacilityKind.Kdy150, completed: false);                          // unfinished: not a target
+        w.Facility(FacilityKind.Lien150, completed: false);                          // unfinished: not a target
         w.Facility(FacilityKind.ConstructionYard);                               // civilian: not in Military
         int aboard = w.Regiment(All, BombWorld.Army); w.Eco.Find(aboard)!.AboardShip = 1;                                      // aboard a ship: not a target
-        int k = w.Facility(FacilityKind.LnrSeriesII);
+        int k = w.Facility(FacilityKind.CovenantII);
         int f = w.Fleet(Emp, Sys, "Warrant");
         w.Stub.Expect(0, 2, 1);                                                  // B7-bombardment §5.3: collateral x over m0 = 2: none
         w.Dice((1, 1));
         Assert.Null(w.TryBombard(Emp, f, Sys, Mil));
         var hit = Assert.Single(w.Events<TargetHit>());
-        Assert.Equal(("Facility", k, 3), (hit.TargetKind, hit.Id, hit.Defense)); // pool = [regiment, LNR II]: index 1
+        Assert.Equal(("Facility", k, 3), (hit.TargetKind, hit.Id, hit.Defense)); // pool = [regiment, Covenant II]: index 1
         Assert.Equal(new[] { (0, 2), (0, 1) }, w.Stub.Requests.Take(2));
     }
 
     // m3-bombardment §Resolution 3 as corrected by B7-bombardment §1 and §3 (C5): Civilian pool = non-defense completed facilities only; General =
-    // Military, then Civilian, then Energy and Raw while above 0. The KDY's return fire is switched off: pools only here
+    // Military, then Civilian, then Energy and Raw while above 0. The Lien's return fire is switched off: pools only here
     [Fact]
     public void CivilianAndGeneralPools()
     {
@@ -481,7 +481,7 @@ public class BombardmentTests
         var w = new BombWorld(bp: off);
         w.Hold(All);
         w.Eco.SetSlots(Sys, 4, 0);                                               // Raw is 0: not in the pool
-        w.Regiment(All, BombWorld.Army); w.Facility(FacilityKind.Kdy150); w.Facility(FacilityKind.ConstructionYard); w.Facility(FacilityKind.Refinery);
+        w.Regiment(All, BombWorld.Army); w.Facility(FacilityKind.Lien150); w.Facility(FacilityKind.ConstructionYard); w.Facility(FacilityKind.Refinery);
         int f = w.Fleet(Emp, Sys, "Warrant");
         w.Dice((0, 1));
         w.TryBombard(Emp, f, Sys, Civ);
@@ -489,11 +489,11 @@ public class BombardmentTests
         var g = new BombWorld(bp: off);
         g.Hold(All);
         g.Eco.SetSlots(Sys, 4, 1);
-        g.Regiment(All, BombWorld.Army); g.Facility(FacilityKind.Kdy150); g.Facility(FacilityKind.ConstructionYard);
+        g.Regiment(All, BombWorld.Army); g.Facility(FacilityKind.Lien150); g.Facility(FacilityKind.ConstructionYard);
         int f2 = g.Fleet(Emp, Sys, "Warrant");
         g.Dice((0, 1));
         g.TryBombard(Emp, f2, Sys, Gen);
-        Assert.Equal((0, 4), g.Stub.Requests[0]);                                // regiment, KDY, yard, Energy, Raw
+        Assert.Equal((0, 4), g.Stub.Requests[0]);                                // regiment, Lien, yard, Energy, Raw
     }
 
     // m3-bombardment §Resolution 3: with no Energy and no Raw and no facility the Civilian pool is empty
@@ -516,7 +516,7 @@ public class BombardmentTests
     {
         var w = new BombWorld(bp: new BombardParams { BatteryReturnFire = false }); // a battery would fire back first (B7 C3); this test checks the target only
         w.Hold(Emp, 100);
-        int dss = w.Facility(FacilityKind.LnrSeriesI);
+        int dss = w.Facility(FacilityKind.CovenantI);
         int used = w.Eco.EnergyUsed(Sys);
         int f = w.Fleet(All, Sys, "Dodger");
         w.Stub.Expect(0, 1, 1).Expect(1, 10, 5);                                 // collateral x = 1 (none); one target: no pick, then the die 5

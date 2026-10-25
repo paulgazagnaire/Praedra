@@ -231,7 +231,7 @@ public sealed class CharacterModule
         else if (cls.TalentProbability >= 100) user = true;
         else user = rng.NextInt(0, 99) < cls.TalentProbability; // flagging roll's form [inferred]
         c.TalentHolder = user;
-        c.TalentDiscovered = cls.KnownTalent; // Classic text: Luke, Vader and the Emperor are public talented characters
+        c.TalentDiscovered = cls.KnownTalent; // Classic text: Nobody, Ravilla and The Chair are public talented characters
         c.TalentExperience = 0; c.TalentTraining = 0;
         if (c.TalentHolder && c.TalentDiscovered) RollTalentExperience(c, rng); // B2e §5: only once aware (known Talent: at creation, inferred)
         S.Characters[c.Id] = c;
@@ -313,7 +313,7 @@ public sealed class CharacterModule
             }
         }
         if (Params.TrainerPick == TrainerPick.Random) PickTalented(rng);
-        RefreshSeatOfPower(); // rule: §Seat of Power (B2e §6), the Emperor's start place
+        RefreshSeatOfPower(); // rule: §Seat of Power (B2e §6), The Chair's start place
     }
 
     /// <summary>
@@ -911,10 +911,10 @@ public sealed class CharacterModule
     /// <summary>
     /// Steps 2 to 7 of the Talent encounter (0x560200), after the mission module's duel (step 1) with <paramref name="x"/> as the captor:
     /// read both effective combats; if <paramref name="m"/> was not hurt in the duel, HurtBy(m, x) on m (p = max(1, x - m)); HurtBy(x, m) on x;
-    /// whoever hurt the other gains GNPRTB 2578 base combat; both keys and pair ids cleared, both sides told; then the Talent effects by key (Luke
-    /// and Vader: Luke learns his heritage, the hand injury below Talent 80, Talent +max(1, gap x 25%); Luke and the Emperor +20%; Leia, once aware,
-    /// with Vader or the Emperor +20%). "Free" = not captured after the duel. Draws in order: m's HurtBy (unless hurt in the duel), x's HurtBy,
-    /// Luke's hand draw. rule: §Talent (Traced B2e §4, Work 11).
+    /// whoever hurt the other gains GNPRTB 2578 base combat; both keys and pair ids cleared, both sides told; then the Talent effects by key (Nobody
+    /// and Ravilla: Nobody learns his heritage, the hand injury below Talent 80, Talent +max(1, gap x 25%); Nobody and The Chair +20%; Ledger, once aware,
+    /// with Ravilla or The Chair +20%). "Free" = not captured after the duel. Draws in order: m's HurtBy (unless hurt in the duel), x's HurtBy,
+    /// Nobody's hand draw. rule: §Talent (Traced B2e §4, Work 11).
     /// </summary>
     public void TalentEncounter(StepContext ctx, int day, int mission, CharacterRecord m, CharacterRecord x, bool mHurtInDuel, bool mEscaped)
     {
@@ -934,25 +934,25 @@ public sealed class CharacterModule
         bool Free(CharacterRecord c) => c.Status is not (CharacterStatus.Captured or CharacterStatus.Dead);
         CharacterRecord? Pair(int a, int b) => Is(m, a) && Is(x, b) ? m : Is(x, a) && Is(m, b) ? x : null;
         var p = Params;
-        if (Pair(p.Luke, p.Vader) is { } luke)
+        if (Pair(p.Nobody, p.Ravilla) is { } nobody)
         {
-            var vader = luke == m ? x : m;
-            if (!luke.KnowsHeritage) { luke.KnowsHeritage = true; Heritage(ctx, day, luke); }
-            if (Free(luke) && luke.EffectiveTalent < p.LukeHandMaxTalent) // the lost hand (0x561b60)
-                AddInjury(ctx, luke, ctx.Rng.NextInt(0, p.LukeHandSpread) + p.LukeHandBase, CharacterCause.TalentEncounter);
-            if (Free(luke)) GainTalent(ctx, day, luke, vader, p.LukeVaderGainPercent, p.LukeVaderMinGain);
+            var ravilla = nobody == m ? x : m;
+            if (!nobody.KnowsHeritage) { nobody.KnowsHeritage = true; Heritage(ctx, day, nobody); }
+            if (Free(nobody) && nobody.EffectiveTalent < p.NobodyHandMaxTalent) // the lost hand (0x561b60)
+                AddInjury(ctx, nobody, ctx.Rng.NextInt(0, p.NobodyHandSpread) + p.NobodyHandBase, CharacterCause.TalentEncounter);
+            if (Free(nobody)) GainTalent(ctx, day, nobody, ravilla, p.NobodyRavillaGainPercent, p.NobodyRavillaMinGain);
         }
-        else if (Pair(p.Luke, p.Emperor) is { } luke2)
+        else if (Pair(p.Nobody, p.Chair) is { } nobody2)
         {
-            if (Free(luke2)) GainTalent(ctx, day, luke2, luke2 == m ? x : m, p.LukeEmperorGainPercent, p.LukeEmperorMinGain);
+            if (Free(nobody2)) GainTalent(ctx, day, nobody2, nobody2 == m ? x : m, p.NobodyChairGainPercent, p.NobodyChairMinGain);
         }
-        else if (Pair(p.Leia, p.Vader) is { } leia)
+        else if (Pair(p.Ledger, p.Ravilla) is { } ledger)
         {
-            if (Free(leia) && leia.TalentDiscovered) GainTalent(ctx, day, leia, leia == m ? x : m, p.LeiaVaderGainPercent, p.LeiaVaderMinGain);
+            if (Free(ledger) && ledger.TalentDiscovered) GainTalent(ctx, day, ledger, ledger == m ? x : m, p.LedgerRavillaGainPercent, p.LedgerRavillaMinGain);
         }
-        else if (Pair(p.Leia, p.Emperor) is { } leia2)
+        else if (Pair(p.Ledger, p.Chair) is { } ledger2)
         {
-            if (Free(leia2) && leia2.TalentDiscovered) GainTalent(ctx, day, leia2, leia2 == m ? x : m, p.LeiaEmperorGainPercent, p.LeiaEmperorMinGain);
+            if (Free(ledger2) && ledger2.TalentDiscovered) GainTalent(ctx, day, ledger2, ledger2 == m ? x : m, p.LedgerChairGainPercent, p.LedgerChairMinGain);
         }
     }
 
@@ -1293,8 +1293,8 @@ public sealed class CharacterModule
     /// <summary>
     /// The awakening timer of a trainer (DiscoveringTalentHolder = the record's trainer, Talent &gt;= GNPRTB 2580 = 80, not on a mission, alive,
     /// not captured; 0x4ef070), firing every GNPRTB 2582 (1) days: each character of the trainer's side directly on the trainer's place (the same
-    /// fleet when he rides one), alive, not captured, not on a mission, not the trainer, with TalentPotential and not TalentAware, in id order: Leia
-    /// only when the trainer is Luke and Luke knows his heritage (she then learns hers); then aware, awakened by the trainer, Talent rolled. No draw
+    /// fleet when he rides one), alive, not captured, not on a mission, not the trainer, with TalentPotential and not TalentAware, in id order: Ledger
+    /// only when the trainer is Nobody and Nobody knows his heritage (she then learns hers); then aware, awakened by the trainer, Talent rolled. No draw
     /// but Talent roll. rule: §Talent (Traced B2e §5, 0x560a30).
     /// </summary>
     private void AwakenTick(StepContext ctx, CharacterRecord t, int k)
@@ -1311,9 +1311,9 @@ public sealed class CharacterModule
             && y.Status is CharacterStatus.Free or CharacterStatus.Injured && !IsOnMission(y.Id) && y.TalentHolder && !y.TalentDiscovered
             && (t.AttachedFleet != 0 ? y.AttachedFleet == t.AttachedFleet : y.AttachedFleet == 0 && y.Transit == null && t.Transit == null && t.System != null && y.System == t.System)).ToList())
         {
-            if (y.Id == Params.Leia)
+            if (y.Id == Params.Ledger)
             {
-                if (t.Id != Params.Luke || !t.KnowsHeritage) continue;
+                if (t.Id != Params.Nobody || !t.KnowsHeritage) continue;
                 if (!y.KnowsHeritage) { y.KnowsHeritage = true; Heritage(ctx, day, y); } // 0x56fe90
             }
             var before = RankOf(y);
@@ -1326,7 +1326,7 @@ public sealed class CharacterModule
     }
 
     /// <summary>
-    /// The Seat of Power (0x5617b0, 0x5618d0): on while the Emperor is placed, alive, not captured, stands (riding no fleet, not travelling) on the
+    /// The Seat of Power (0x5617b0, 0x5618d0): on while The Chair is placed, alive, not captured, stands (riding no fleet, not travelling) on the
     /// Seat of Power system and the Hand holds it, and <see cref="CharacterParams.SeatOfPower"/>. Every Hand-only character's
     /// LeadershipAdjustment is then GNPRTB 3076 (50), else 0. No draws. Recomputed at setup, arrivals, captures, freeings, deaths, holder changes
     /// and day-end. rule: §Seat of Power (Traced B2e §6; Charter inferred).
@@ -1339,7 +1339,7 @@ public sealed class CharacterModule
     }
 
     public bool SeatOfPowerOn =>
-        Params.SeatOfPower && Get(Params.Emperor) is { Placed: true } e && e.Status is CharacterStatus.Free or CharacterStatus.Injured
+        Params.SeatOfPower && Get(Params.Chair) is { Placed: true } e && e.Status is CharacterStatus.Free or CharacterStatus.Injured
         && e.AttachedFleet == 0 && e.Transit == null && e.System == Params.SeatOfPowerSystem && _fleets.OwnerOf(Params.SeatOfPowerSystem) == Side.Hand;
 
     /// <summary>

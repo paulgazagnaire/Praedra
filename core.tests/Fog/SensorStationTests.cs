@@ -12,7 +12,7 @@ namespace Praedra.Core.Tests.Fog;
 
 // Sensor Station tests SS1 to SS22 of m5-fog-and-hq §N4 (route-only, N-day warning: movement-redesign-draft §C; window 10 days Decided by
 // Paul 2026-10-16), on Map M (FogWorld: chain C0 - R1 - R2 - R3 - R4, every one a route system; Glasswood on no route; Hand holds C0 and R1,
-// Collective holds R2, R3, R4; Hand fleet E1 of 3 Hand Star Destroyers at R1). Map M travels hop by hop along its links (TravelMode.Lanes),
+// Collective holds R2, R3, R4; Hand fleet E1 of 3 Mandates at R1). Map M travels hop by hop along its links (TravelMode.Lanes),
 // so every leg is a route leg; SS17 and SS7b use TravelMode.Straight for off-route jumps. The tests read the day a fleet really reaches a
 // system from FleetArrived / FleetPassed, so they do not depend on a link's travel time.
 public class SensorStationTests
@@ -30,7 +30,7 @@ public class SensorStationTests
 
     private static int Send(FogWorld w, Side side, string from, string to, int ships)
     {
-        int f = w.Fleet(side, from, Isd, ships);
+        int f = w.Fleet(side, from, Mandate, ships);
         w.H.Fleets.SubmitMove(side, f, to);
         return f;
     }
@@ -282,7 +282,7 @@ public class SensorStationTests
     public void SS11_WorksUnderBlockadeAndUprising()
     {
         var w = World(null, R3);
-        w.Fleet(Side.Hand, R3, Isd, 1); // a Hand fleet at the station's system blockades it
+        w.Fleet(Side.Hand, R3, Mandate, 1); // a Hand fleet at the station's system blockades it
         w.Step(2);
         Assert.True(w.Game.State.Blockades.TryGetValue(R3, out var by) && by == Side.Hand);
         w.InStep(ctx => w.H.Support.StartUprisingNow(ctx, R3));
@@ -414,18 +414,18 @@ public class SensorStationTests
     public void SS19_RouteOnlyBuild()
     {
         var w = new FogWorld();
-        w.H.Fleets.SetOwner(Ilum, Side.Hand);
+        w.H.Fleets.SetOwner(Glasswood, Side.Hand);
         w.H.Economy.AddFacility(R1, FacilityKind.ConstructionYard);
         w.H.Economy.SetPools(Side.Hand, 0, 500);
         w.H.Construction.RefuseOverdrawOrders = false; // B5b 2026-10-18: Map M has no mines (capacity 0); the upkeep refusal is not what this checks
-        Assert.False(w.H.Data.Galaxy.OnRoute(w.H.Data.Galaxy.Get(Ilum).Index));
-        Assert.Equal("NotOnRoute", w.H.Economy.CheckPlace(Ilum, FacilityKind.SensorStation));
-        Assert.Null(w.H.Economy.CheckPlace(Ilum, FacilityKind.Mine));
-        long seq = w.H.Construction.SubmitBuild(Side.Hand, R1, YardFamily.Construction, Cls, 1, Ilum);
+        Assert.False(w.H.Data.Galaxy.OnRoute(w.H.Data.Galaxy.Get(Glasswood).Index));
+        Assert.Equal("NotOnRoute", w.H.Economy.CheckPlace(Glasswood, FacilityKind.SensorStation));
+        Assert.Null(w.H.Economy.CheckPlace(Glasswood, FacilityKind.Mine));
+        long seq = w.H.Construction.SubmitBuild(Side.Hand, R1, YardFamily.Construction, Cls, 1, Glasswood);
         int from = w.Game.Events.Count;
         w.Step();
         Assert.Equal(RejectReason.NotOnRoute, w.Game.Events.Skip(from).OfType<OrderRejected>().Single(r => r.Sequence == seq).Reason);
-        Assert.Equal(0, w.H.Economy.OfKindAt(Ilum, FacilityKind.SensorStation));
+        Assert.Equal(0, w.H.Economy.OfKindAt(Glasswood, FacilityKind.SensorStation));
         // a route system is fine
         seq = w.H.Construction.SubmitBuild(Side.Hand, R1, YardFamily.Construction, Cls, 1, C0);
         from = w.Game.Events.Count;

@@ -12,8 +12,8 @@ namespace Praedra.Core.Tests.Defenses;
 // m3-planetary-defenses, tests D1 to D15, then extra tests named after the rule they check. Real data files.
 public class DefenseTests
 {
-    private static readonly FacilityKind Kdy = FacilityKind.Kdy150, Lnr1 = FacilityKind.LnrSeriesI, Lnr2 = FacilityKind.LnrSeriesII,
-        Gen1 = FacilityKind.GenCoreLevelI, Gen2 = FacilityKind.GenCoreLevelII;
+    private static readonly FacilityKind Lien = FacilityKind.Lien150, Covenant1 = FacilityKind.CovenantI, Covenant2 = FacilityKind.CovenantII,
+        Gen1 = FacilityKind.EscrowI, Gen2 = FacilityKind.EscrowII;
 
     // m3-planetary-defenses D1: the rows exactly as the table, less class 4 (Classic's planet-killer shield, cut: data/design/cut-classes.csv);
     // none is Hand only now; cost and maintenance agree with the costs file
@@ -60,9 +60,9 @@ public class DefenseTests
         Assert.Equal(expected, w.Def.ShieldGenerators(BombWorld.Sys));
     }
 
-    // m3-planetary-defenses D2 (last case): two GenCore I, one unfinished
+    // m3-planetary-defenses D2 (last case): two Escrow I, one unfinished
     [Fact]
-    public void D2_TwoGenCoreOneUnfinishedCountsOne()
+    public void D2_TwoEscrowOneUnfinishedCountsOne()
     {
         var w = new BombWorld();
         w.Facility(Gen1); w.Facility(Gen1, completed: false);
@@ -98,7 +98,7 @@ public class DefenseTests
     {
         var w = new BombWorld();
         w.Hold(Side.Collective);
-        int g = w.Facility(Gen1), k = w.Facility(Kdy), l = w.Facility(Lnr1);
+        int g = w.Facility(Gen1), k = w.Facility(Lien), l = w.Facility(Covenant1);
         var shots = w.Def.BatteryShots(BombWorld.Sys, Side.Hand);
         Assert.Equal(new[] { g, k, l }, shots.Select(s => s.Facility));
         Assert.Equal(new[] { 0, 2000, 800 }, shots.Select(s => s.Attack));
@@ -108,20 +108,20 @@ public class DefenseTests
 
     // m3-planetary-defenses D6
     [Fact]
-    public void D6_OnlyTheCompletedKdyShoots()
+    public void D6_OnlyTheCompletedLienShoots()
     {
         var w = new BombWorld();
         w.Hold(Side.Collective);
-        int done = w.Facility(Kdy); w.Facility(Kdy, completed: false);
+        int done = w.Facility(Lien); w.Facility(Lien, completed: false);
         Assert.Equal(new[] { done }, w.Def.BatteryShots(BombWorld.Sys, Side.Hand).Select(s => s.Facility));
     }
 
     // m3-planetary-defenses D7
     [Fact]
-    public void D7_BatteriesCountKdyAndBothLnr()
+    public void D7_BatteriesCountLienAndBothCovenant()
     {
         var w = new BombWorld();
-        w.Facility(Kdy); w.Facility(Lnr1); w.Facility(Lnr2); w.Facility(Gen1);
+        w.Facility(Lien); w.Facility(Covenant1); w.Facility(Covenant2); w.Facility(Gen1);
         Assert.Equal(3, w.Def.Batteries(BombWorld.Sys));
     }
 
@@ -130,7 +130,7 @@ public class DefenseTests
     public void D8_ReturnFireSetIsTheBatteriesOnly()
     {
         var w = new BombWorld();
-        int k = w.Facility(Kdy); w.Facility(Gen1);
+        int k = w.Facility(Lien); w.Facility(Gen1);
         Assert.Equal(new[] { k }, w.Def.ReturnFireSet(BombWorld.Sys));
     }
 
@@ -139,7 +139,7 @@ public class DefenseTests
     // m3-planetary-defenses D10 (control sheet C1: the planet-killer shield removed on a Collective capture) is gone with the shield (cut:
     // data/design/cut-classes.csv); CaptureTests C1 checks that every defense transfers.
 
-    // m3-planetary-defenses D11 (links B19, A10): bombardment destroys one of two GenCore at Step K; at K + 1 the gate is open
+    // m3-planetary-defenses D11 (links B19, A10): bombardment destroys one of two Escrow at Step K; at K + 1 the gate is open
     [Fact]
     public void D11_OneOfTwoShieldsDestroyedOpensTheGate()
     {
@@ -163,7 +163,7 @@ public class DefenseTests
         var w = new BombWorld();
         w.Hold(Side.Collective);
         w.Eco.SetSlots(BombWorld.Sys, 3, 0);
-        int a = w.Facility(Kdy), b = w.Facility(Lnr1), c = w.Facility(Gen1);
+        int a = w.Facility(Lien), b = w.Facility(Covenant1), c = w.Facility(Gen1);
         w.Eco.SetSlots(BombWorld.Sys, 2, 0);
         w.S.InStep(ctx => w.Eco.EnforceCapacity(ctx, BombWorld.Sys));
         w.Stub.Queue(1);
@@ -179,7 +179,7 @@ public class DefenseTests
     {
         var w = new BombWorld(stub: false, seed: 5);
         w.Hold(Side.Collective);
-        w.Facility(Gen1); w.Facility(Kdy); w.Facility(Lnr2); w.Facility(Lnr1); w.Facility(Gen2, completed: false);
+        w.Facility(Gen1); w.Facility(Lien); w.Facility(Covenant2); w.Facility(Covenant1); w.Facility(Gen2, completed: false);
         string Snapshot() => string.Join("|", w.Def.ShieldGenerators(BombWorld.Sys), w.Def.ShieldStrength(BombWorld.Sys), w.Def.Batteries(BombWorld.Sys),
             string.Join(",", w.Def.BatteryShots(BombWorld.Sys, Side.Hand).Select(s => $"{s.Facility}:{s.Attack}:{s.ChancePercent}")),
             string.Join(",", w.Def.ReturnFireSet(BombWorld.Sys)), w.Def.AssaultForbidden(BombWorld.Sys), w.Def.GateShields(BombWorld.Sys));
@@ -191,7 +191,7 @@ public class DefenseTests
         Assert.Equal(hash, GameSave.StateHash(w.Game));
     }
 
-    // m3-planetary-defenses D14: bombard a world with an LNR and a KDY: BatteryReturnFire lists both, no ship changes in M3
+    // m3-planetary-defenses D14: bombard a world with an Covenant and a Lien: BatteryReturnFire lists both, no ship changes in M3
     [Fact]
     public void D14_BombardingABatteryWorldListsBothBatteriesAndChangesNoShip()
     {
@@ -199,7 +199,7 @@ public class DefenseTests
         // B7-bombardment §4, tested in B7BombardmentTests.
         var w = new BombWorld(bp: BombWorld.M3Rule);
         w.Hold(Side.Collective);
-        int l = w.Facility(Lnr1), k = w.Facility(Kdy);
+        int l = w.Facility(Covenant1), k = w.Facility(Lien);
         int fleet = w.Fleet(Side.Hand, BombWorld.Sys, "Decree", 2); // P = 8
         var ships = ShipState(w);
         w.Dice(Enumerable.Repeat((0, 1), 8).ToArray()); // every roll is too low to destroy anything
@@ -214,7 +214,7 @@ public class DefenseTests
     public void D15_NeutralFacilitiesShootAtTheHand()
     {
         var w = new BombWorld(); // Fiducia has no holder here: neutral
-        int k = w.Facility(Kdy), g = w.Facility(Gen1);
+        int k = w.Facility(Lien), g = w.Facility(Gen1);
         Assert.Equal(new[] { k, g }, w.Def.BatteryShots(BombWorld.Sys, Side.Hand).Select(s => s.Facility));
         Assert.Equal(new[] { k, g }, w.Def.BatteryShots(BombWorld.Sys, Side.Collective).Select(s => s.Facility));
     }
@@ -240,7 +240,7 @@ public class DefenseTests
     public void FacilitiesOnOtherSystemsDoNotCount()
     {
         var w = new BombWorld();
-        w.Facility(Gen1, system: BombWorld.Other); w.Facility(Kdy, system: BombWorld.Other);
+        w.Facility(Gen1, system: BombWorld.Other); w.Facility(Lien, system: BombWorld.Other);
         Assert.Equal((0, 0, 0), (w.Def.ShieldGenerators(BombWorld.Sys), w.Def.ShieldStrength(BombWorld.Sys), w.Def.Batteries(BombWorld.Sys)));
     }
 
@@ -271,7 +271,7 @@ public class DefenseTests
 
     private static FacilityKind KindOf(int classId) => classId switch
     {
-        1 => Kdy, 2 => Lnr1, 3 => Gen1, 5 => Lnr2, 6 => Gen2, _ => throw new ArgumentOutOfRangeException(nameof(classId)),
+        1 => Lien, 2 => Covenant1, 3 => Gen1, 5 => Covenant2, 6 => Gen2, _ => throw new ArgumentOutOfRangeException(nameof(classId)),
     };
 
     private static string ShipState(BombWorld w) => string.Join(";", w.Eco.Objects.Where(o => o.Category == ObjectCategory.CapitalShip)

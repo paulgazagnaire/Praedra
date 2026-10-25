@@ -147,14 +147,14 @@ public class ConstructionTests
 
     // m2-construction C7 (also m2-maintenance M7)
     [Fact]
-    public void C7_ThreeIsdTakeMaintenanceAtOrderAndFirstFinishesAfter448Days()
+    public void C7_ThreeMandateTakeMaintenanceAtOrderAndFirstFinishesAfter448Days()
     {
         var w = ShipyardWithLoad100();
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Shipyard, "Mandate", 3));
         Assert.Equal(313, w.Eco.Load(Emp));
-        var isds = w.Eco.Objects.Where(o => o.Class == "Mandate").ToList();
-        Assert.Equal(3, isds.Count);
-        Assert.All(isds, o => Assert.False(o.Completed));
+        var mandates = w.Eco.Objects.Where(o => o.Class == "Mandate").ToList();
+        Assert.Equal(3, mandates.Count);
+        Assert.All(mandates, o => Assert.False(o.Completed));
         w.RunTo(449 - 1);
         Assert.Empty(w.Events<UnitCompleted>());
         w.RunTo(449);
@@ -288,7 +288,7 @@ public class ConstructionTests
 
     // m2-construction C12
     [Fact]
-    public void C12_MineDeliveredToRhinnal() // v6 re-pin 2026-10-24: was Classis (7 days); Remedium is 4 days, so every day after departure moves 3 earlier
+    public void C12_MineDeliveredToRemedium() // v6 re-pin 2026-10-24: was Classis (7 days); Remedium is 4 days, so every day after departure moves 3 earlier
     {
         var w = Hand(100, FacilityKind.ConstructionYard);
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, Far));
@@ -313,7 +313,7 @@ public class ConstructionTests
 
     // m2-construction C13
     [Fact]
-    public void C13_IsdDeliveredAtSpeed80()
+    public void C13_MandateDeliveredAtSpeed80()
     {
         var w = Hand(1000, FacilityKind.OrbitalShipyard);
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Shipyard, "Mandate", 1, Far));
@@ -341,7 +341,7 @@ public class ConstructionTests
 
     // m2-construction C15
     [Fact]
-    public void C15_MineOrderToFullKesselRejectedNoSlot()
+    public void C15_MineOrderToFullLanternRejectedNoSlot()
     {
         var w = Hand(100, FacilityKind.ConstructionYard);
         w.Hold("The Lantern", Emp);
@@ -361,7 +361,7 @@ public class ConstructionTests
 
     // m2-construction C17
     [Fact]
-    public void C17_CollectiveCannotBuildIsd()
+    public void C17_CollectiveCannotBuildMandate()
     {
         var w = new BuildWorld();
         w.Hold(Home, Side.Collective); w.Yard(Home, FacilityKind.OrbitalShipyard); w.Refined(Side.Collective, 500);
@@ -467,7 +467,7 @@ public class ConstructionTests
     }
 
     // Path with an intermediate system for the stop tests: Charter to The Thaw at speed 100.
-    private static (BuildWorld w, List<string> path) RegimentToHoth()
+    private static (BuildWorld w, List<string> path) RegimentToThaw()
     {
         var w = Hand(500, FacilityKind.TrainingFacility);
         w.Hold("The Thaw", Emp);
@@ -483,7 +483,7 @@ public class ConstructionTests
     [Fact]
     public void C21_DeliveryHeldAtEnemyFleetAndContinuesWhenItLeaves()
     {
-        var (w, path) = RegimentToHoth();
+        var (w, path) = RegimentToThaw();
         string mid = path[1];
         int picket = w.Fleets.AddFleet(Side.Collective, "Picket", new[] { "Subpoena" }, mid); // only a gravity well stops traffic in flight (DEFAULT GravityWellShip)
         w.RunTo(37); // C 9 x 4 days: complete at hook 37, the delivery leaves
@@ -511,7 +511,7 @@ public class ConstructionTests
     [Fact]
     public void C22_DeliveryForcedStopOffPassesThrough()
     {
-        var (w, path) = RegimentToHoth();
+        var (w, path) = RegimentToThaw();
         w.Build.DeliveryForcedStop = false;
         w.Fleets.AddFleet(Side.Collective, "Picket", new[] { "Mandate" }, path[1]);
         w.RunTo(37);
@@ -528,7 +528,7 @@ public class ConstructionTests
     [Fact]
     public void LostDestinationPausesAtTheLastSystemBeforeIt()
     {
-        var (w, path) = RegimentToHoth();
+        var (w, path) = RegimentToThaw();
         w.RunTo(37);
         w.Fleets.SetOwner("The Thaw", Side.Collective); // lost while the delivery is under way
         w.Run(200);
@@ -641,10 +641,10 @@ public class ConstructionTests
         Assert.Equal(advanced, ConstructionModule.BuildDays(cost, 1, 2));
     }
 
-    // m2-construction §Numbers (Nebulon-B 34: 136 / 68 / 48 days with 1 / 2 / 3 standard yards; run, not just formula)
+    // m2-construction §Numbers (Mender 34: 136 / 68 / 48 days with 1 / 2 / 3 standard yards; run, not just formula)
     [Theory]
     [InlineData(1, 136)] [InlineData(2, 68)] [InlineData(3, 48)]
-    public void NebulonBuildDaysByYardCount(int yards, int days)
+    public void MenderBuildDaysByYardCount(int yards, int days)
     {
         var w = new BuildWorld();
         w.Hold(Home, Side.Collective);

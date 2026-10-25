@@ -5,7 +5,7 @@ namespace Praedra.Core.Characters;
 /// </summary>
 public enum TrainerPick
 {
-    /// <summary>The Classic data flag <c>trainer</c> (Luke, Vader). Classic.</summary>
+    /// <summary>The Classic data flag <c>trainer</c> (Nobody, Ravilla). Classic.</summary>
     Fixed,
     /// <summary>DEFAULT (New): <see cref="CharacterParams.TalentedPerSide"/> characters per side drawn at every game start.</summary>
     Random,
@@ -16,7 +16,7 @@ public enum TalentDiscoveryMode
 {
     /// <summary>
     /// DEFAULT, the original (Traced B2e §5): a talented character trainer with Talent 80+ awakens, every day, the unaware talented characters of his side on his place
-    /// (Leia only by Luke once he knows his heritage). Story calls to <see cref="CharacterModule.DiscoverTalent"/> still work.
+    /// (Ledger only by Nobody once he knows his heritage). Story calls to <see cref="CharacterModule.DiscoverTalent"/> still work.
     /// </summary>
     Trainer,
     /// <summary>Only known Talent at creation and story calls to <see cref="CharacterModule.DiscoverTalent"/> (the sheet's earlier DEFAULT).</summary>
@@ -28,9 +28,9 @@ public enum TalentDiscoveryMode
 /// <summary>Which Hand officers the start cast keeps. rule: m5-setup-and-victory §P9 item 2 (StartCastOfficers).</summary>
 public enum StartCastOfficers
 {
-    /// <summary>DEFAULT: Vader and the five officers (Project Director Cyprian Galena, Admiral Lucan Mordant, Admiral Decimus Varo, Eighty-Eight, Captain Ilian Venia).</summary>
+    /// <summary>DEFAULT: Ravilla and the five officers (Project Director Cyprian Galena, Admiral Lucan Mordant, Admiral Decimus Varo, Eighty-Eight, Captain Ilian Venia).</summary>
     Classic,
-    /// <summary>Vader only; the five officers stay in the Hand pool.</summary>
+    /// <summary>Ravilla only; the five officers stay in the Hand pool.</summary>
     None,
 }
 
@@ -138,7 +138,7 @@ public sealed record CharacterParams
     public int TalentedPerSide { get; init; } = 3;
     /// <summary>
     /// The Talent a drawn talented character gets: rand(min..max), kept if his own is higher (Q16 DEFAULT). PROPOSAL (Dev lead 2026-10-18): 80 =
-    /// <see cref="TrainerMinTalent"/> so he can awaken; 120 = Vader's Classic value. rule: §Rule (New) 4.
+    /// <see cref="TrainerMinTalent"/> so he can awaken; 120 = Ravilla's Classic value. rule: §Rule (New) 4.
     /// </summary>
     public int TalentedMin { get; init; } = 80;
     /// <summary>See <see cref="TalentedMin"/>.</summary>
@@ -155,28 +155,28 @@ public sealed record CharacterParams
     /// <summary>Awakening timer: GNPRTB 2582 = 1 day, spread 2583 = 0 (no draw).</summary>
     public int AwakenPeriod { get; init; } = 1;
     public int AwakenSpread { get; init; }
-    /// <summary>Luke's Talent gain after meeting Vader, percent of the gap: GNPRTB 3072 = 25; at least 3084 = 1.</summary>
-    public int LukeVaderGainPercent { get; init; } = 25;
-    public int LukeVaderMinGain { get; init; } = 1;
-    /// <summary>Luke after the Emperor: GNPRTB 3073 = 20, at least 3085 = 1.</summary>
-    public int LukeEmperorGainPercent { get; init; } = 20;
-    public int LukeEmperorMinGain { get; init; } = 1;
-    /// <summary>Leia after Vader: GNPRTB 3074 = 20, at least 3086 = 1.</summary>
-    public int LeiaVaderGainPercent { get; init; } = 20;
-    public int LeiaVaderMinGain { get; init; } = 1;
-    /// <summary>Leia after the Emperor: GNPRTB 3075 = 20, at least 3087 = 1.</summary>
-    public int LeiaEmperorGainPercent { get; init; } = 20;
-    public int LeiaEmperorMinGain { get; init; } = 1;
-    /// <summary>Luke loses his hand (an injury) only below this Talent. GNPRTB 3077 = 80 (0x561b60).</summary>
-    public int LukeHandMaxTalent { get; init; } = 80;
-    /// <summary>Luke's hand injury <c>rand(0..spread) + base</c>: GNPRTB 3080 = 99, 3079 = 1.</summary>
-    public int LukeHandSpread { get; init; } = 99;
-    public int LukeHandBase { get; init; } = 1;
+    /// <summary>Nobody's Talent gain after meeting Ravilla, percent of the gap: GNPRTB 3072 = 25; at least 3084 = 1.</summary>
+    public int NobodyRavillaGainPercent { get; init; } = 25;
+    public int NobodyRavillaMinGain { get; init; } = 1;
+    /// <summary>Nobody after The Chair: GNPRTB 3073 = 20, at least 3085 = 1.</summary>
+    public int NobodyChairGainPercent { get; init; } = 20;
+    public int NobodyChairMinGain { get; init; } = 1;
+    /// <summary>Ledger after Ravilla: GNPRTB 3074 = 20, at least 3086 = 1.</summary>
+    public int LedgerRavillaGainPercent { get; init; } = 20;
+    public int LedgerRavillaMinGain { get; init; } = 1;
+    /// <summary>Ledger after The Chair: GNPRTB 3075 = 20, at least 3087 = 1.</summary>
+    public int LedgerChairGainPercent { get; init; } = 20;
+    public int LedgerChairMinGain { get; init; } = 1;
+    /// <summary>Nobody loses his hand (an injury) only below this Talent. GNPRTB 3077 = 80 (0x561b60).</summary>
+    public int NobodyHandMaxTalent { get; init; } = 80;
+    /// <summary>Nobody's hand injury <c>rand(0..spread) + base</c>: GNPRTB 3080 = 99, 3079 = 1.</summary>
+    public int NobodyHandSpread { get; init; } = 99;
+    public int NobodyHandBase { get; init; } = 1;
     /// <summary>The four Talent of the encounter effects, by record id (keys 0x32000242, 0x31000241, 0x35000281, 0x34000280). Traced B2e §4.</summary>
-    public int Luke { get; init; } = 0x242;
-    public int Leia { get; init; } = 0x241;
-    public int Vader { get; init; } = 0x281;
-    public int Emperor { get; init; } = 0x280;
+    public int Nobody { get; init; } = 0x242;
+    public int Ledger { get; init; } = 0x241;
+    public int Ravilla { get; init; } = 0x281;
+    public int Chair { get; init; } = 0x280;
 
     // ---- Seat of Power (Traced B2e §6). rule: §Seat of Power
     /// <summary>LeadershipAdjustment of Hand-only characters while the Seat of Power holds. GNPRTB 3076 = 50 (0x5618d0).</summary>
@@ -224,7 +224,7 @@ public sealed record CharacterParams
     /// <summary>GNPRTB 2593 = 0. Traced B2c, 0x561780.</summary>
     public int HqShiftBase { get; init; }
     /// <summary>
-    /// The Hand Seat of Power: while the Emperor is free on Charter and the Hand holds it, Hand-only characters lead x1.5. DEFAULT true
+    /// The Hand Seat of Power: while The Chair is free on Charter and the Hand holds it, Hand-only characters lead x1.5. DEFAULT true
     /// (Traced B2e §6); false: never. rule: §Seat of Power.
     /// </summary>
     public bool SeatOfPower { get; init; } = true;

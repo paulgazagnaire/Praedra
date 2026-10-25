@@ -9,21 +9,21 @@ using Praedra.Core.Tests.Economy;
 namespace Praedra.Core.Tests.Missions;
 
 /// <summary>
-/// A full <see cref="GameHost"/> on a small map for the mission tests (m5-missions §Tests): H (0,20), T (15,20), X (50,20), Alderaan (15,40),
-/// Drift Harbour (15,0), group core; lanes H-T (3 ticks at speed 100), T-X (7 ticks), T-Alderaan and T-Bespin (4 ticks), all tier 3 (factor 100).
+/// A full <see cref="GameHost"/> on a small map for the mission tests (m5-missions §Tests): H (0,20), T (15,20), X (50,20), Afar (15,40),
+/// Drift Harbour (15,0), group core; lanes H-T (3 ticks at speed 100), T-X (7 ticks), T-Afar and T-Drift Harbour (4 ticks), all tier 3 (factor 100).
 /// No owners unless set. A stub generator answers 0 unless a value is queued for the exact range (<see cref="StubRng.Expect"/>), so the
 /// mission rolls (0..99) and the timers (0..spread) are steered separately. Incidents off and autoscrap out of reach.
 /// </summary>
 internal sealed class MissionWorld
 {
-    public const string H = "H", T = "T", X = "X", Alderaan = "Alderaan", Bespin = "Drift Harbour";
+    public const string H = "H", T = "T", X = "X", Afar = "Afar", DriftHarbour = "Drift Harbour";
     // character record ids (data/classic/characters.csv)
-    public const int MonMothma = 576, Leia = 577, Luke = 578, Han = 579, Palpatine = 640, Vader = 641, Wedge = 833, Lando = 834, Piett = 898, Veers = 899;
+    public const int MaeAbara = 576, Ledger = 577, Nobody = 578, Midwife = 579, Chair = 640, Ravilla = 641, FortyOne = 833, Foreman = 834, Varo = 898, EightyEight = 899;
     // regiment classes and their detection (data/classic/troop-regiments.csv)
     public const string ImpArmy = "Tranches" /*15*/, ImpFleet = "Ballast" /*20*/, Storm = "Pacifiers" /*25*/,
-        DarkTrooper = "Lictors" /*30*/, WarDroid = "Proxies" /*5*/, RebArmy = "Militia" /*10*/;
-    public const string Bothan = "Listeners", Infiltrators = "Wreckers", Guerrillas = "Strikers", Longprobe = "Spotters",
-        Probe = "Speculators", Commandos = "Closers", Noghri = "Notaries", Hunters = "Repossessors";
+        Lictor = "Lictors" /*30*/, WarSpeculator = "Proxies" /*5*/, RebArmy = "Militia" /*10*/;
+    public const string Listeners = "Listeners", Infiltrators = "Wreckers", Guerrillas = "Strikers", Longprobe = "Spotters",
+        Probe = "Speculators", Commandos = "Closers", Notaries = "Notaries", Hunters = "Repossessors";
 
     /// <summary>
     /// B2b: every check of a Foilable kind opens with one betrayal draw per member (team, then decoys), made even at chance 0 (loyalty 100). The
@@ -37,8 +37,8 @@ internal sealed class MissionWorld
 
     private static readonly Lazy<GameData> _data = new(() =>
     {
-        var planets = "name,sector,group,map_x,map_y\nH,S,core,0,20\nT,S,core,15,20\nX,S,core,50,20\nAlderaan,S,core,15,40\nDrift Harbour,S,core,15,0\n";
-        var lanes = "from,to,kind,routes\nH,T,generated,\nT,X,generated,\nT,Alderaan,generated,\nT,Drift Harbour,generated,\n";
+        var planets = "name,sector,group,map_x,map_y\nH,S,core,0,20\nT,S,core,15,20\nX,S,core,50,20\nAfar,S,core,15,40\nDrift Harbour,S,core,15,0\n";
+        var lanes = "from,to,kind,routes\nH,T,generated,\nT,X,generated,\nT,Afar,generated,\nT,Drift Harbour,generated,\n";
         var g = GalaxyLoader.Load(planets, lanes, TestData.Tiers);
         var slots = "name,sector,group,energy,raw,populated\n" + string.Join("\n", g.Systems.Select(s => $"{s.Name},{s.Sector},{s.Group},9,3,1"));
         return GameData.Default with { Galaxy = g, Slots = SlotValues.Parse(slots, g) };

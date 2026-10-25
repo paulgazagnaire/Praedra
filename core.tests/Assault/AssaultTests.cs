@@ -147,19 +147,19 @@ public class AssaultTests
 
     // ------------------------------------------------------------------ small assaults with stub draws
 
-    // m3-assault A7: 4 attackers, one KDY, D0 = 0: one attacker destroyed, 3 land, win, duels 0, collateral 0, draws r and v only
+    // m3-assault A7: 4 attackers, one Lien, D0 = 0: one attacker destroyed, 3 land, win, duels 0, collateral 0, draws r and v only
     [Fact]
     public void A7_BatteryThenLanding()
     {
         var w = new AssaultWorld();
         w.Hold(Emp);
-        int kdy = w.B.Facility(FacilityKind.Kdy150);
+        int lien = w.B.Facility(FacilityKind.Lien150);
         int fleet = w.Fleet(All, AssaultWorld.Neb);
         var regs = w.Aboard(fleet, Reb, 4);
         w.Stub.Queue(0, 1); // r = 0 hits (chance 400), v = 1 picks the second attacker
         Assert.Null(w.Try(All, fleet));
         var hit = Assert.Single(w.Events<BatteryHit>());
-        Assert.Equal((kdy, regs[1]), (hit.Facility, hit.Regiment));
+        Assert.Equal((lien, regs[1]), (hit.Facility, hit.Regiment));
         var res = w.LastResolved();
         Assert.Equal(("Won", 4, 3, 0, 0, 0, 0), (res.Result, res.A0, res.A, res.D0, res.D, res.Duels, res.Rounds));
         Assert.Equal(new[] { regs[0], regs[2], regs[3] }, Assert.Single(w.Events<AssaultLanded>()).Regiments.Items);
@@ -224,12 +224,12 @@ public class AssaultTests
 
     private static void Gen(AssaultWorld w, params FacilityKind[] kinds) { foreach (var k in kinds) w.B.Facility(k); }
 
-    // m3-assault A10: two GenCore I, or one I and one II: FullyShielded; one GenCore: accepted (Classic's planet-killer shield, which did not
+    // m3-assault A10: two Escrow I, or one I and one II: FullyShielded; one Escrow: accepted (Classic's planet-killer shield, which did not
     // count, is cut)
     [Theory]
-    [InlineData(new[] { FacilityKind.GenCoreLevelI, FacilityKind.GenCoreLevelI }, AssaultReject.FullyShielded)]
-    [InlineData(new[] { FacilityKind.GenCoreLevelI, FacilityKind.GenCoreLevelII }, AssaultReject.FullyShielded)]
-    [InlineData(new[] { FacilityKind.GenCoreLevelI }, null)]
+    [InlineData(new[] { FacilityKind.EscrowI, FacilityKind.EscrowI }, AssaultReject.FullyShielded)]
+    [InlineData(new[] { FacilityKind.EscrowI, FacilityKind.EscrowII }, AssaultReject.FullyShielded)]
+    [InlineData(new[] { FacilityKind.EscrowI }, null)]
     public void A10_ShieldGate(FacilityKind[] kinds, string? expected)
     {
         var w = new AssaultWorld();
@@ -246,7 +246,7 @@ public class AssaultTests
     public void A10_GateAppliesToNeutralSystemsToo()
     {
         var w = new AssaultWorld();
-        Gen(w, FacilityKind.GenCoreLevelI, FacilityKind.GenCoreLevelII);
+        Gen(w, FacilityKind.EscrowI, FacilityKind.EscrowII);
         int fleet = w.Fleet(All, AssaultWorld.Neb);
         w.Aboard(fleet, Reb, 2);
         Assert.Equal(AssaultReject.FullyShielded, w.Try(All, fleet));
@@ -568,8 +568,8 @@ public class AssaultTests
     {
         var w = new AssaultWorld();
         w.Hold(Emp);
-        w.B.Facility(FacilityKind.GenCoreLevelI);
-        w.B.Facility(FacilityKind.Kdy150, completed: false);
+        w.B.Facility(FacilityKind.EscrowI);
+        w.B.Facility(FacilityKind.Lien150, completed: false);
         int f = w.Fleet(All, AssaultWorld.Neb);
         w.Aboard(f, Reb, 2);
         w.Stub.Queue(0); // the shield's r = 0: 0 < 0 is false, no hit
@@ -585,7 +585,7 @@ public class AssaultTests
     {
         var w = new AssaultWorld();
         w.Hold(Emp);
-        w.B.Facility(FacilityKind.Kdy150); w.B.Facility(FacilityKind.LnrSeriesI);
+        w.B.Facility(FacilityKind.Lien150); w.B.Facility(FacilityKind.CovenantI);
         int f = w.Fleet(All, AssaultWorld.Neb);
         var regs = w.Aboard(f, Reb, 1);
         w.Stub.Queue(0, 0); // first battery kills the only attacker; the second draws nothing

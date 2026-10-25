@@ -452,12 +452,12 @@ public sealed class MissionModule
         return null;
     }
 
-    // Han Solo's 50 when he is in the group, free, and no special force (team or decoy) is in it; else 100. rule: §1 (GNPRTB 3083; planets/11).
+    // Midwife's 50 when he is in the group, free, and no special force (team or decoy) is in it; else 100. rule: §1 (GNPRTB 3083; planets/11).
     private int GroupSpeed(IEnumerable<int> chars, int specialForces)
     {
         var n = Data.Numbers;
-        bool han = specialForces == 0 && chars.Any(id => id == n.HanCharacterId && _ch.Get(id) is { Status: CharacterStatus.Free });
-        return han ? n.HanMissionSpeed : n.GroupSpeed;
+        bool midwife = specialForces == 0 && chars.Any(id => id == n.MidwifeCharacterId && _ch.Get(id) is { Status: CharacterStatus.Free });
+        return midwife ? n.RunnerLines : n.GroupSpeed;
     }
 
     // ================================================================== target legality (§Targets, legality)
@@ -525,7 +525,7 @@ public sealed class MissionModule
         if (tc.AttachedFleet != 0) return MissionReject.TargetProtected;
         // rule: m5-missions §6a (Abduction paragraph): the protected capital is the Hearth system for a Collective target, Charter for a Hand target (Lead DEFAULT)
         var hq = _game.State.Scenario.Hq;
-        string? capital = tc.Side == Side.Collective ? (hq.Status == HqStatus.AtRest ? hq.System : null) : Victory.VictoryModule.CoruscantName;
+        string? capital = tc.Side == Side.Collective ? (hq.Status == HqStatus.AtRest ? hq.System : null) : Victory.VictoryModule.CharterName;
         if (capital != null && _ch.LocationOf(tc) == capital && _fleets.OwnerOf(capital) == tc.Side
             && _support.Garrison10(capital) >= 10 * _support.RequiredGarrison(capital))
             return MissionReject.TargetProtected;
@@ -1238,7 +1238,7 @@ public sealed class MissionModule
     /// <summary>The sensers of the job check at the mission's target. rule: §3 Talent sensing.</summary>
     public List<CharacterRecord> Sensers(MissionGroup m) => Sensers(m, m.Target, ScopeOf(m, CheckKind.NextToTarget, m.Target));
 
-    // Luke first, then Vader, then the rest one at a time, each picked k = rand(0..n-1) among those left (no draw when one is left). Lazy: a pick
+    // Nobody first, then Ravilla, then the rest one at a time, each picked k = rand(0..n-1) among those left (no draw when one is left). Lazy: a pick
     // is drawn only when the next one is taken. rule: §3 Talent sensing steps 1 and 2 (Traced B2b: 0x58a9e0, 0x58ac50, 0x58aca0).
     private IEnumerable<T> SenseOrder<T>(StepContext ctx, List<T> items, Func<T, int> id)
     {

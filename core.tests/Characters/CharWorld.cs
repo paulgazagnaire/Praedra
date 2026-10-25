@@ -11,12 +11,12 @@ namespace Praedra.Core.Tests.Characters;
 /// </summary>
 internal sealed class CharWorld
 {
-    public const string Yavin = "The Shoal", Hoth = "The Thaw", Coruscant = "Charter";
-    public const string Corvette = "Dodger", Isd = "Mandate", MonCal = "Ark";
+    public const string Shoal = "The Shoal", Thaw = "The Thaw", Charter = "Charter";
+    public const string Corvette = "Dodger", Mandate = "Mandate", Ark = "Ark";
     // record ids (data/classic/characters.csv)
-    public const int MonMothma = 576, Leia = 577, Luke = 578, Han = 579, Palpatine = 640, Vader = 641;
-    public const int Ackbar = 832, Wedge = 833, Lando = 834, Chewbacca = 835, Dodonna = 836, Madine = 837, Afyon = 839, Drayson = 840, Borsk = 841, Tura = 842;
-    public const int Piett = 898, Veers = 899;
+    public const int MaeAbara = 576, Ledger = 577, Nobody = 578, Midwife = 579, Chair = 640, Ravilla = 641;
+    public const int Keth = 832, FortyOne = 833, Foreman = 834, Oti = 835, OldDebt = 836, Wake = 837, Petrenko = 839, Sobel = 840, DayAfter = 841, Tura = 842;
+    public const int Varo = 898, EightyEight = 899;
 
     /// <summary>The Classic Talent values (Classic): TalentSkillPercent 100, TalentTrainingChancePercent 100, TalentTrainingGainPercent 50 (GNPRTB 6173).
     /// rule: m5-characters-and-force §Talent (Classic = 100 / 100 / 50).</summary>

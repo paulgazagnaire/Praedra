@@ -44,7 +44,7 @@ public readonly record struct TableRow(int Threshold, int Value);
 public sealed record MissionNumbers(
     int RollDie, int DetectionConstant, int DecoyOfficerPercent, int DetectionOfficerPercent,
     int DiplomacyOwnLow, int DiplomacyOwnHigh, int DiplomacyNeutralLow, int DiplomacyNeutralHigh, int SubdueLow, int SubdueHigh,
-    int InciteSupport, int AgentLeadershipDivisor, int ResearchSkillGain, int GroupSpeed, int HanMissionSpeed, int HanCharacterId)
+    int InciteSupport, int AgentLeadershipDivisor, int ResearchSkillGain, int GroupSpeed, int RunnerLines, int MidwifeCharacterId)
 {
     public const string FileName = "mission-numbers.csv";
 
@@ -60,7 +60,7 @@ public sealed record MissionNumbers(
         int I(string k) => v.TryGetValue(k, out var x) ? x : throw new DataLoadException($"{source}: missing key '{k}'.");
         return new MissionNumbers(I("RollDie"), I("DetectionConstant"), I("DecoyOfficerPercent"), I("DetectionOfficerPercent"),
             I("DiplomacyOwnLow"), I("DiplomacyOwnHigh"), I("DiplomacyNeutralLow"), I("DiplomacyNeutralHigh"), I("SubdueLow"), I("SubdueHigh"),
-            I("InciteSupport"), I("AgentLeadershipDivisor"), I("ResearchSkillGain"), I("GroupSpeed"), I("HanMissionSpeed"), I("HanCharacterId"));
+            I("InciteSupport"), I("AgentLeadershipDivisor"), I("ResearchSkillGain"), I("GroupSpeed"), I("RunnerLines"), I("MidwifeCharacterId"));
     }
 }
 

@@ -87,5 +87,5 @@ internal sealed class BombWorld
     public void Dice(params (int T, int R)[] hits) { foreach (var (t, r) in hits) Stub.Queue(t, r); }
 
     public static readonly string Army = "Militia";
-    public static readonly string Isd = "Mandate";
+    public static readonly string Mandate = "Mandate";
 }

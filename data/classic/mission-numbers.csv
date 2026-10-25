@@ -6,4 +6,4 @@ InciteSupport,-2,"classic: GNPRTB 6145 (importer); Lead: economy/05, reading unv
 AgentLeadershipDivisor,10,classic: GNPRTB 6144 (importer); Lead: incident score incite and subdue terms
 ResearchSkillGain,1,"classic: GNPRTB 6158 (importer); Traced: economy/14, m5-research"
 GroupSpeed,100,classic: GNPRTB 1 (importer); Traced: characters and mission groups use 100; m1-travel
-HanMissionSpeed,50,"classic: GNPRTB 3083 (importer); Traced: planets/11, heroes/mission-speed"
+RunnerLines,50,"classic: GNPRTB 3083 (importer); Traced: planets/11, heroes/mission-speed"

@@ -21,7 +21,7 @@ public class MissionRollTests
         setup(w);
         // B2b: the check opens with one betrayal draw per member
         w.Stub!.Expect(0, 99, Bt((chars?.Length ?? 1) + (sfs?.Length ?? 0) + (decoyIds?.Length ?? 0), rolls));
-        var seq = w.Start(Side.Collective, MissionKind.Espionage, chars ?? new[] { Leia }, T, sfs, decoyIds);
+        var seq = w.Start(Side.Collective, MissionKind.Espionage, chars ?? new[] { Ledger }, T, sfs, decoyIds);
         w.Game.Step();
         Assert.Null(w.Reason(seq));
         int id = w.LastMission;
@@ -42,7 +42,7 @@ public class MissionRollTests
     [InlineData(94, false)]
     public void MI2_EqualSkillDetects94Percent(int draw, bool detected)
     {
-        var (w, id) = EspionageAtT(w => { w.Agent(Leia, H, esp: 1); w.Unit(Side.Hand, Probe, T); }, new[] { draw, 99 });
+        var (w, id) = EspionageAtT(w => { w.Agent(Ledger, H, esp: 1); w.Unit(Side.Hand, Probe, T); }, new[] { draw, 99 });
         var roll = Assert.Single(w.Events<MissionDetectionRoll>());
         Assert.Equal((2, 94, draw, detected), (roll.X, roll.Chance, roll.Roll, roll.Detected));
         Assert.Equal(detected, w.Events<MissionFoiled>().Count == 1);
@@ -50,20 +50,20 @@ public class MissionRollTests
         Assert.Equal(detected ? MissionOutcome.Foiled : MissionOutcome.Failed, w.Events<MissionEnded>().Single().Outcome);
     }
 
-    // m5-missions MI3: Listeners (70) plus a character (50): average 60, one special force, a Probe Droid guard (detection 0, B2d):
+    // m5-missions MI3: Listeners (70) plus a character (50): average 60, one special force, a Speculator guard (detection 0, B2d):
     // x = 60 - 0 - 1 + 1 = 60, p = 50
     [Theory]
     [InlineData(49, true)]
     [InlineData(50, false)]
-    public void MI3_BothanAndCharacter(int draw, bool detected)
+    public void MI3_ListenersAndCharacter(int draw, bool detected)
     {
         var w = new MissionWorld();
         w.Hold(T, Side.Hand, 0);
-        w.Agent(Leia, H, esp: 50);
-        int bothan = w.Unit(Side.Collective, Bothan, H);
+        w.Agent(Ledger, H, esp: 50);
+        int listeners = w.Unit(Side.Collective, Listeners, H);
         w.Unit(Side.Hand, Probe, T);
         w.Stub!.Expect(0, 99, Bt(2, draw, 99, 99)); // B2b: two betrayal draws first
-        w.Start(Side.Collective, MissionKind.Espionage, new[] { Leia }, T, new[] { bothan });
+        w.Start(Side.Collective, MissionKind.Espionage, new[] { Ledger }, T, new[] { listeners });
         w.Game.Step();
         w.RunIteration(w.LastMission);
         var roll = Assert.Single(w.Events<MissionDetectionRoll>());
@@ -91,24 +91,24 @@ public class MissionRollTests
     {
         var w = new MissionWorld();
         w.Hold(T, Side.Hand, 0);
-        w.Agent(Leia, H, esp: 80);
+        w.Agent(Ledger, H, esp: 80);
         int fleet = w.Host.Fleets.AddFleet(Side.Hand, "E", new[] { "Mandate" }, T);
-        w.Agent(Piett, T, esp: 60); w.Ch.SetPost(Piett, fleet, CharacterPost.Admiral);
+        w.Agent(Varo, T, esp: 60); w.Ch.SetPost(Varo, fleet, CharacterPost.Admiral);
         w.Stub!.Expect(0, 99, 99, 99, 99); // the arriving walk, then the job check's betrayal draw and the success roll
-        w.Start(Side.Collective, MissionKind.Espionage, new[] { Leia }, T);
+        w.Start(Side.Collective, MissionKind.Espionage, new[] { Ledger }, T);
         w.Game.Step();
         w.RunIteration(w.LastMission);
         var roll = Assert.Single(w.Events<MissionDetectionRoll>());
         Assert.Equal((50, 60), (roll.X, roll.Chance));
     }
 
-    // m5-missions MI6 in a game: two Listeners (70 each) against a Probe Droid (detection 0, B2d): x = 70 - 0 - 2 + 1 = 69, p = 45
+    // m5-missions MI6 in a game: two Listeners (70 each) against a Speculator (detection 0, B2d): x = 70 - 0 - 2 + 1 = 69, p = 45
     [Fact]
     public void MI6_TwoSpecialForces()
     {
         var w = new MissionWorld();
         w.Hold(T, Side.Hand, 0);
-        int a = w.Unit(Side.Collective, Bothan, H), b = w.Unit(Side.Collective, Bothan, H);
+        int a = w.Unit(Side.Collective, Listeners, H), b = w.Unit(Side.Collective, Listeners, H);
         w.Unit(Side.Hand, Probe, T);
         w.Stub!.Expect(0, 99, Bt(2, 99, 99, 99)); // B2b: two betrayal draws first
         w.Start(Side.Collective, MissionKind.Espionage, Array.Empty<int>(), T, new[] { a, b });
@@ -117,13 +117,13 @@ public class MissionRollTests
         Assert.Equal((69, 45), (w.Events<MissionDetectionRoll>().Single().X, w.Events<MissionDetectionRoll>().Single().Chance));
     }
 
-    // m5-missions MI7: x = 101 (espionage 100 against a Probe Droid, detection 0, B2d), p = 25: draw 24 detects, 25 does not
+    // m5-missions MI7: x = 101 (espionage 100 against a Speculator, detection 0, B2d), p = 25: draw 24 detects, 25 does not
     [Theory]
     [InlineData(24, true)]
     [InlineData(25, false)]
     public void MI7_LastRow(int draw, bool detected)
     {
-        var (w, _) = EspionageAtT(w => { w.Agent(Leia, H, esp: 100); w.Unit(Side.Hand, Probe, T); }, new[] { draw, 99 });
+        var (w, _) = EspionageAtT(w => { w.Agent(Ledger, H, esp: 100); w.Unit(Side.Hand, Probe, T); }, new[] { draw, 99 });
         var roll = w.Events<MissionDetectionRoll>().Single();
         Assert.Equal((101, 25, detected), (roll.X, roll.Chance, roll.Detected));
     }
@@ -135,14 +135,14 @@ public class MissionRollTests
     {
         var w = new MissionWorld();
         w.Hold(T, Side.Hand, 0);
-        w.Agent(Leia, H, esp: 1);
+        w.Agent(Ledger, H, esp: 1);
         w.Host.Fleets.AddFleet(Side.Hand, "E", new[] { "Writ" }, T);
         w.Stub!.Expect(0, 99, 98, 0);
-        w.Start(Side.Collective, MissionKind.Espionage, new[] { Leia }, T);
+        w.Start(Side.Collective, MissionKind.Espionage, new[] { Ledger }, T);
         w.Run(5);
         var roll = w.Events<MissionDetectionRoll>().Single();
         Assert.Equal((-28, 99, 98, true), (roll.X, roll.Chance, roll.Roll, roll.Detected));
-        Assert.Equal(3, Rolls(w)); // detection, duel, and (B2e moved) Leia's Hurt roll after the duel (combat 0: p = 100, a hit; a major: no death draw)
+        Assert.Equal(3, Rolls(w)); // detection, duel, and (B2e moved) Ledger's Hurt roll after the duel (combat 0: p = 100, a hit; a major: no death draw)
         Assert.Equal(MissionFoiledAtArrival, w.Events<MissionFoiled>().Single().EndCode);
     }
 
@@ -154,8 +154,8 @@ public class MissionRollTests
     {
         var w = new MissionWorld();
         w.Hold(T, Side.Collective, 100);
-        w.Agent(Leia, T, dip: 100);
-        w.Start(Side.Collective, MissionKind.Diplomacy, new[] { Leia }, T);
+        w.Agent(Ledger, T, dip: 100);
+        w.Start(Side.Collective, MissionKind.Diplomacy, new[] { Ledger }, T);
         w.Game.Step();
         int from = w.Stub!.Requests.Count;
         w.RunIteration(w.LastMission);
@@ -167,7 +167,7 @@ public class MissionRollTests
     }
 
     // m5-missions MI10: two guards (B2d: Strikers on the Collective planet, detection 0), x = 61, p = 45; draws 70, 44: A not, B detects; draw 10:
-    // one draw, A detects. The foiled handling then makes Piett's escape duel against one of the two guards (a pick draw, then the duel draw).
+    // one draw, A detects. The foiled handling then makes Varo's escape duel against one of the two guards (a pick draw, then the duel draw).
     [Theory]
     [InlineData(new[] { 70, 44 }, 2, 1)]
     [InlineData(new[] { 10 }, 1, 0)]
@@ -175,41 +175,41 @@ public class MissionRollTests
     {
         var w = new MissionWorld();
         w.Hold(T, Side.Collective, 100);
-        w.Agent(Piett, H, esp: 60);
+        w.Agent(Varo, H, esp: 60);
         int a = w.Unit(Side.Collective, Guerrillas, T), b = w.Unit(Side.Collective, Guerrillas, T);
-        w.Stub!.Expect(0, 99, Bt(1, draws)); // B2b: Piett's betrayal draw first
-        w.Start(Side.Hand, MissionKind.Espionage, new[] { Piett }, T);
+        w.Stub!.Expect(0, 99, Bt(1, draws)); // B2b: Varo's betrayal draw first
+        w.Start(Side.Hand, MissionKind.Espionage, new[] { Varo }, T);
         w.Game.Step();
         w.RunIteration(w.LastMission);
         var rolls = w.Events<MissionDetectionRoll>();
         Assert.Equal(expectedDraws, rolls.Count);
         Assert.All(rolls, r => Assert.Equal((61, 45), (r.X, r.Chance)));
         Assert.Equal(new[] { a, b }[detector], w.Events<MissionFoiled>().Single().Defender);
-        // and the betrayal draw and Piett's duel (B2d); B2e moved: his Hurt roll (combat 0: p = 100, a hit) and the minor's death draw
+        // and the betrayal draw and Varo's duel (B2d); B2e moved: his Hurt roll (combat 0: p = 100, a hit) and the minor's death draw
         Assert.Equal(expectedDraws + 4, Rolls(w));
         Assert.Equal(1, w.Stub.Count(0, 1)); // the duel's guard pick among the two guards
         var seen = Assert.Single(w.Events<Praedra.Core.Fog.AgentDetected>()); // the fog's MissionDetected (m5-fog-and-hq HR11)
         Assert.Equal((Side.Collective, T, Side.Hand), (seen.Viewer, seen.System, seen.AgentSide));
     }
 
-    // m5-missions MI11: one guard (a Probe Droid, detection 0, B2d), one decoy (espionage 60), DT: x = 60, p = 50; draw 49: decoyed, no detection draw
+    // m5-missions MI11: one guard (a Speculator, detection 0, B2d), one decoy (espionage 60), DT: x = 60, p = 50; draw 49: decoyed, no detection draw
     [Fact]
     public void MI11_DecoyedDefenderLeavesTheWalk()
     {
         var w = new MissionWorld(decoys: true);
         w.Hold(T, Side.Hand, 0);
-        w.Agent(Leia, H, esp: 50);
+        w.Agent(Ledger, H, esp: 50);
         int inf = w.Unit(Side.Collective, Infiltrators, H);
         w.Unit(Side.Hand, Probe, T);
-        w.Stub!.Expect(0, 99, Bt(2, 49, 99)); // B2b: betrayal draws for Leia and the decoy first
-        w.Start(Side.Collective, MissionKind.Espionage, new[] { Leia }, T, decoys: new[] { inf });
+        w.Stub!.Expect(0, 99, Bt(2, 49, 99)); // B2b: betrayal draws for Ledger and the decoy first
+        w.Start(Side.Collective, MissionKind.Espionage, new[] { Ledger }, T, decoys: new[] { inf });
         w.Game.Step();
         w.RunIteration(w.LastMission);
         var d = Assert.Single(w.Events<MissionDecoyRoll>());
         Assert.Equal((60, 50, 49, true), (d.X, d.Chance, d.Roll, d.Decoyed));
         Assert.Empty(w.Events<MissionDetectionRoll>());
         Assert.Single(w.Events<MissionMemberRoll>()); // the iteration went on to the success rolls
-        Assert.Equal(4, Rolls(w)); // two betrayal draws, the decoy roll, Leia's success roll
+        Assert.Equal(4, Rolls(w)); // two betrayal draws, the decoy roll, Ledger's success roll
     }
 
     // m5-missions MI12: two guards, one decoy; decoy draws 49 (A), 50 (B, failed: its escape duel follows, B2d); then a detection draw for B only
@@ -218,11 +218,11 @@ public class MissionRollTests
     {
         var w = new MissionWorld(decoys: true);
         w.Hold(T, Side.Hand, 0);
-        w.Agent(Leia, H, esp: 50);
+        w.Agent(Ledger, H, esp: 50);
         int inf = w.Unit(Side.Collective, Infiltrators, H);
         int a = w.Unit(Side.Hand, Probe, T), b = w.Unit(Side.Hand, Probe, T);
         w.Stub!.Expect(0, 99, Bt(2, 49, 50, 99, 99, 99)); // B2b: two betrayal draws first; 99 is the failed decoy's duel
-        w.Start(Side.Collective, MissionKind.Espionage, new[] { Leia }, T, decoys: new[] { inf });
+        w.Start(Side.Collective, MissionKind.Espionage, new[] { Ledger }, T, decoys: new[] { inf });
         w.Game.Step();
         w.RunIteration(w.LastMission);
         Assert.Equal(new[] { (a, true), (b, false) }, w.Events<MissionDecoyRoll>().Select(r => (r.Defender, r.Decoyed)));
@@ -230,19 +230,19 @@ public class MissionRollTests
         Assert.Equal((inf, b, false), w.Events<MissionDuel>().Select(e => (e.Member, e.Guard, e.Escaped)).Single());
     }
 
-    // m5-missions MI13 (B2a): one guard (a Probe Droid, B2d), two decoys (60 and 55): one pick k = rand(0..1) = 1 (the second decoy, Strikers), then one roll 10:
+    // m5-missions MI13 (B2a): one guard (a Speculator, B2d), two decoys (60 and 55): one pick k = rand(0..1) = 1 (the second decoy, Strikers), then one roll 10:
     // decoyed after two draws (pick, roll). Before B2a every decoy was tried in turn.
     [Fact]
     public void MI13_SecondDecoySucceeds()
     {
         var w = new MissionWorld(decoys: true);
         w.Hold(T, Side.Hand, 0);
-        w.Agent(Leia, H, esp: 50);
+        w.Agent(Ledger, H, esp: 50);
         int d1 = w.Unit(Side.Collective, Infiltrators, H), d2 = w.Unit(Side.Collective, Guerrillas, H);
         w.Unit(Side.Hand, Probe, T);
         w.Stub!.Expect(0, 1, 1);
         w.Stub!.Expect(0, 99, Bt(3, 10, 99)); // B2b: three betrayal draws first
-        w.Start(Side.Collective, MissionKind.Espionage, new[] { Leia }, T, decoys: new[] { d2, d1 });
+        w.Start(Side.Collective, MissionKind.Espionage, new[] { Ledger }, T, decoys: new[] { d2, d1 });
         w.Game.Step();
         w.RunIteration(w.LastMission);
         Assert.Equal(new[] { (d2, 55, true) }, w.Events<MissionDecoyRoll>().Select(r => (r.Decoy, r.X, r.Decoyed)));
@@ -256,7 +256,7 @@ public class MissionRollTests
     [InlineData(50, false)]
     public void MI14_EspionageTable(int draw, bool ok)
     {
-        var (w, _) = EspionageAtT(w => w.Agent(Leia, T, esp: 50), new[] { draw });
+        var (w, _) = EspionageAtT(w => w.Agent(Ledger, T, esp: 50), new[] { draw });
         var r = w.Events<MissionMemberRoll>().Single();
         Assert.Equal((50, 50, ok), (r.Input, r.Chance, r.Success));
         Assert.Equal(ok ? MissionOutcome.Succeeded : MissionOutcome.Failed, w.Events<MissionEnded>().Single().Outcome);
@@ -270,15 +270,15 @@ public class MissionRollTests
     public void MI15_AssassinationTable(int draw, bool ok)
     {
         var w = new MissionWorld();
-        w.Agent(Vader, T, com: 70).TalentExperience = 0; // B2e: without his Talent, so 70 is his effective combat
-        w.Agent(Wedge, T, com: 70);
-        w.Stub!.Expect(0, 99, Bt(1, draw)); // B2b: Vader's betrayal draw first
-        w.Start(Side.Hand, MissionKind.Assassination, new[] { Vader }, null, targetChar: Wedge);
+        w.Agent(Ravilla, T, com: 70).TalentExperience = 0; // B2e: without his Talent, so 70 is his effective combat
+        w.Agent(FortyOne, T, com: 70);
+        w.Stub!.Expect(0, 99, Bt(1, draw)); // B2b: Ravilla's betrayal draw first
+        w.Start(Side.Hand, MissionKind.Assassination, new[] { Ravilla }, null, targetChar: FortyOne);
         w.Game.Step();
         w.RunIteration(w.LastMission);
         var r = w.Events<MissionMemberRoll>().Single();
         Assert.Equal((0, 25, ok), (r.Input, r.Chance, r.Success));
-        Assert.Equal(ok, w.Ch.IsDead(Wedge)); // a minor dies (MinorsCanDie DEFAULT on)
+        Assert.Equal(ok, w.Ch.IsDead(FortyOne)); // a minor dies (MinorsCanDie DEFAULT on)
     }
 
     // m5-missions MI16, MI17, MI21: table anchors
@@ -303,14 +303,14 @@ public class MissionRollTests
         Assert.Equal(1, MissionModule.Lookup(t, -60, MstbLookupMode.Step, MstbBelowFirstRow.FirstRowValue));
         Assert.Equal(0, MissionModule.Lookup(t, -60, MstbLookupMode.Step, MstbBelowFirstRow.Zero));
         Assert.Equal(100, MissionModule.Lookup(t, -60, MstbLookupMode.Step, MstbBelowFirstRow.Always));
-        // in a game: Leia diplomacy 40 at Collective support 0 (x = -100 + 40 = -60)
+        // in a game: Ledger diplomacy 40 at Collective support 0 (x = -100 + 40 = -60)
         foreach (var (mode, draw, ok) in new[] { (MstbBelowFirstRow.FirstRowValue, 0, true), (MstbBelowFirstRow.FirstRowValue, 1, false), (MstbBelowFirstRow.Zero, 0, false) })
         {
             var w = new MissionWorld(new MissionParams { MstbBelowFirstRow = mode });
             w.Hold(T, null, 0);
-            w.Agent(Leia, T, dip: 40);
-            w.Stub!.Expect(0, 99, Bt(1, draw)); // B2b: Leia's betrayal draw first
-            w.Start(Side.Collective, MissionKind.Diplomacy, new[] { Leia }, T);
+            w.Agent(Ledger, T, dip: 40);
+            w.Stub!.Expect(0, 99, Bt(1, draw)); // B2b: Ledger's betrayal draw first
+            w.Start(Side.Collective, MissionKind.Diplomacy, new[] { Ledger }, T);
             w.Game.Step();
             w.RunIteration(w.LastMission);
             var r = w.Events<MissionMemberRoll>().Single();
@@ -339,9 +339,9 @@ public class MissionRollTests
     {
         var w = new MissionWorld();
         w.Hold(T, null, support); // neutral: no garrison check
-        w.Agent(Leia, T, dip: dip);
-        w.Stub!.Expect(0, 99, Bt(1, draw)); // B2b: Leia's betrayal draw first
-        w.Start(Side.Collective, MissionKind.Diplomacy, new[] { Leia }, T);
+        w.Agent(Ledger, T, dip: dip);
+        w.Stub!.Expect(0, 99, Bt(1, draw)); // B2b: Ledger's betrayal draw first
+        w.Start(Side.Collective, MissionKind.Diplomacy, new[] { Ledger }, T);
         w.Game.Step();
         w.RunIteration(w.LastMission);
         var r = w.Events<MissionMemberRoll>().Single();
@@ -356,8 +356,8 @@ public class MissionRollTests
         w.Hold(T, Side.Hand, 80);
         w.Game.Step(); // 6.1: N = 4, G = 0: the uprising starts
         Assert.True(w.Host.Support.IsUprising(T));
-        w.Agent(Veers, T, lead: 40);
-        w.Start(Side.Hand, MissionKind.SubdueUprising, new[] { Veers }, T);
+        w.Agent(EightyEight, T, lead: 40);
+        w.Start(Side.Hand, MissionKind.SubdueUprising, new[] { EightyEight }, T);
         w.Game.Step();
         w.RunIteration(w.LastMission);
         var r = w.Events<MissionMemberRoll>().Single();
@@ -373,9 +373,9 @@ public class MissionRollTests
     {
         var w = new MissionWorld(new MissionParams { InciteInputMode = mode });
         w.Hold(T, Side.Hand, 50);
-        w.Agent(Leia, T, lead: 30);
-        w.Stub!.Expect(0, 99, Bt(1, draw)); // B2b: Leia's betrayal draw first
-        w.Start(Side.Collective, MissionKind.InciteUprising, new[] { Leia }, T);
+        w.Agent(Ledger, T, lead: 30);
+        w.Stub!.Expect(0, 99, Bt(1, draw)); // B2b: Ledger's betrayal draw first
+        w.Start(Side.Collective, MissionKind.InciteUprising, new[] { Ledger }, T);
         w.Game.Step();
         w.RunIteration(w.LastMission);
         var r = w.Events<MissionMemberRoll>().First();
@@ -397,9 +397,9 @@ public class MissionRollTests
     [InlineData(40, false)]
     public void MI24_ResearchRoll(int draw, bool ok)
     {
-        var w = ResearchWorld((Leia, 40));
-        w.Stub!.Expect(0, 99, Bt(1, draw)); // B2b: Leia's betrayal draw first
-        w.Start(Side.Collective, MissionKind.ShipResearch, new[] { Leia }, T);
+        var w = ResearchWorld((Ledger, 40));
+        w.Stub!.Expect(0, 99, Bt(1, draw)); // B2b: Ledger's betrayal draw first
+        w.Start(Side.Collective, MissionKind.ShipResearch, new[] { Ledger }, T);
         w.Game.Step();
         w.RunIteration(w.LastMission);
         var r = w.Events<MissionMemberRoll>().Single();
@@ -412,14 +412,14 @@ public class MissionRollTests
     [Fact]
     public void MI25_ResearchDrawOrderAndPoints()
     {
-        var w = ResearchWorld((Leia, 40), (Han, 40));
+        var w = ResearchWorld((Ledger, 40), (Midwife, 40));
         w.Stub!.Expect(0, 99, Bt(2, 10, 70)).Expect(0, 6, 3);
-        w.Start(Side.Collective, MissionKind.ShipResearch, new[] { Han, Leia }, T);
+        w.Start(Side.Collective, MissionKind.ShipResearch, new[] { Midwife, Ledger }, T);
         w.Game.Step();
         w.RunIteration(w.LastMission);
         Assert.Equal(new[] { (0, 99), (0, 99), (0, 99), (0, 6), (0, 99) }, w.Stub.Requests.Where(r => r is (0, 99) or (0, 6)));
-        Assert.Equal(41, w.Ch.Get(Leia)!.BaseSkill(Praedra.Core.Characters.Skill.ShipDesign));
-        Assert.Equal(40, w.Ch.Get(Han)!.BaseSkill(Praedra.Core.Characters.Skill.ShipDesign));
+        Assert.Equal(41, w.Ch.Get(Ledger)!.BaseSkill(Praedra.Core.Characters.Skill.ShipDesign));
+        Assert.Equal(40, w.Ch.Get(Midwife)!.BaseSkill(Praedra.Core.Characters.Skill.ShipDesign));
         Assert.Equal(4, w.Host.Research.Points(Side.Collective, Praedra.Core.Research.ResearchKind.Ship));
     }
 
@@ -429,8 +429,8 @@ public class MissionRollTests
     {
         var w = new MissionWorld();
         w.Hold(T, Side.Hand, 0);
-        w.Agent(Leia, T, esp: 10);
-        w.Start(Side.Collective, MissionKind.Reconnaissance, new[] { Leia }, T);
+        w.Agent(Ledger, T, esp: 10);
+        w.Start(Side.Collective, MissionKind.Reconnaissance, new[] { Ledger }, T);
         w.Game.Step();
         int from = w.Stub!.Requests.Count;
         w.RunIteration(w.LastMission);
@@ -440,14 +440,14 @@ public class MissionRollTests
         Assert.True(w.Host.IsExplored(T, Side.Collective)); // the fog's Recon reveal
     }
 
-    // A Sabotage team of Leia and Han (espionage 50, combat 50) flies from H to T, which has three facilities and (B2d) one Speculators on
+    // A Sabotage team of Ledger and Midwife (espionage 50, combat 50) flies from H to T, which has three facilities and (B2d) one Speculators on
     // the planet as its guard (detection 0, no commander).
     private static (MissionWorld W, List<int> Exposed) SabotageWorld(int[] rolls, bool decoy, bool defender = true, bool hooks = true, bool infiltratorMember = false)
     {
         var w = new MissionWorld(new MissionParams { ExposureHooks = hooks }, decoys: decoy);
         w.Hold(T, Side.Hand, 0);
-        w.Agent(Leia, H, esp: 50, com: 50);
-        w.Agent(Han, H, esp: 50, com: 50);
+        w.Agent(Ledger, H, esp: 50, com: 50);
+        w.Agent(Midwife, H, esp: 50, com: 50);
         for (int i = 0; i < 3; i++) w.Host.Economy.AddFacility(T, FacilityKind.Mine);
         if (defender) w.Unit(Side.Hand, Probe, T);
         var decoys = decoy ? new[] { w.Unit(Side.Collective, Infiltrators, H) } : Array.Empty<int>();
@@ -456,13 +456,13 @@ public class MissionRollTests
         w.M.OnTeamExposed = (ctx, c, side, cause) => { Assert.Equal(Side.Hand, side); exposed.Add(c.Id * 10 + (int)cause); };
         // B2b: one betrayal draw per member first; the Sabotage timer (0..2) draws 0, then the facility pick draws 2
         w.Stub!.Expect(0, 99, Bt(2 + decoys.Length + sfs.Length, rolls)).Expect(0, 2, 0, 2);
-        w.Start(Side.Collective, MissionKind.Sabotage, new[] { Han, Leia }, T, sfs, decoys);
+        w.Start(Side.Collective, MissionKind.Sabotage, new[] { Midwife, Ledger }, T, sfs, decoys);
         w.Game.Step();
         return (w, exposed);
     }
 
-    // m5-missions MI39: the full draw log: three betrayal draws (Han, Leia, the decoy; B2b), 50 (decoy fails), 99 (its escape duel, B2d: lost,
-    // the decoy is destroyed), 70 (x = 51, p = 50: not detected), 49 (Leia succeeds), 99 (Han fails), 2 (pick)
+    // m5-missions MI39: the full draw log: three betrayal draws (Midwife, Ledger, the decoy; B2b), 50 (decoy fails), 99 (its escape duel, B2d: lost,
+    // the decoy is destroyed), 70 (x = 51, p = 50: not detected), 49 (Ledger succeeds), 99 (Midwife fails), 2 (pick)
     [Fact]
     public void MI39_FullDrawLog()
     {
@@ -475,7 +475,7 @@ public class MissionRollTests
         Assert.False(w.Events<MissionDecoyRoll>().Single().Decoyed);
         Assert.Single(w.Events<MissionDuel>());
         Assert.Equal((51, 50, false), (w.Events<MissionDetectionRoll>().Single().X, w.Events<MissionDetectionRoll>().Single().Chance, w.Events<MissionDetectionRoll>().Single().Detected));
-        Assert.Equal(new[] { (Leia, 50, true), (Han, 50, false) }, w.Events<MissionMemberRoll>().Select(r => (r.Member, r.Chance, r.Success)));
+        Assert.Equal(new[] { (Ledger, 50, true), (Midwife, 50, false) }, w.Events<MissionMemberRoll>().Select(r => (r.Member, r.Chance, r.Success)));
         var gone = w.Events<FacilityDestroyed>().Single();
         Assert.Equal((facilities[2], DestroyReason.Sabotage), (gone.Facility, gone.Reason));
         Assert.Equal(1, w.Events<MissionSucceeded>().Single().Effects); // AnyMember: once
@@ -484,26 +484,26 @@ public class MissionRollTests
     }
 
     // m5-missions MI40 (B2d): as MI39 with detection draw 49: MissionFoiled (end code 4), no success draws, no exposure hook; each member then
-    // fights the escape duel against the one guard (no pick draw): combat 50 against no commander, x = 50, p = RLEVADTB(50) = 88: Leia draws 87
-    // and escapes (leaves the group, free at T), Han draws 88 and is captured (held at T). Eight draws: three betrayal, the decoy and its duel,
+    // fights the escape duel against the one guard (no pick draw): combat 50 against no commander, x = 50, p = RLEVADTB(50) = 88: Ledger draws 87
+    // and escapes (leaves the group, free at T), Midwife draws 88 and is captured (held at T). Eight draws: three betrayal, the decoy and its duel,
     // the detection, two duels.
     [Fact]
     public void MI40_FoiledTeamDuels()
     {
-        // B2e moved: each character's duel is followed by his Hurt roll (combat 50: p = 50); 99 misses both times; Han's capture draws his escape delay.
+        // B2e moved: each character's duel is followed by his Hurt roll (combat 50: p = 50); 99 misses both times; Midwife's capture draws his escape delay.
         var (w, exposed) = SabotageWorld(new[] { 50, 99, 49, 87, 99, 88, 99 }, decoy: true);
         w.RunUntilWorking(w.LastMission);
         int from = w.Stub!.Requests.Count;
         w.RunIteration(w.LastMission);
-        Assert.Equal(11, w.RequestsSince(from).Count); // B2e: and the escape timer of Han's capture, rand(0..1000)
+        Assert.Equal(11, w.RequestsSince(from).Count); // B2e: and the escape timer of Midwife's capture, rand(0..1000)
         Assert.Equal(MissionModule.FoilCodeAtTarget, w.Events<MissionFoiled>().Single().EndCode);
         Assert.Empty(w.Events<MissionMemberRoll>());
         Assert.Empty(exposed);
-        Assert.Equal(new[] { (Leia, 50, 88, true), (Han, 50, 88, false) },
+        Assert.Equal(new[] { (Ledger, 50, 88, true), (Midwife, 50, 88, false) },
             w.Events<MissionDuel>().Where(e => !e.Decoy).Select(e => (e.Member, e.X, e.Chance, e.Escaped)));
-        Assert.Equal((CharacterStatus.Free, T), (w.Ch.Get(Leia)!.Status, w.Ch.Get(Leia)!.System));
+        Assert.Equal((CharacterStatus.Free, T), (w.Ch.Get(Ledger)!.Status, w.Ch.Get(Ledger)!.System));
         var cap = w.Events<CharacterCaptured>().Single();
-        Assert.Equal((Han, Side.Hand, T, MissionModule.CauseMissionDuel), (cap.Character, cap.Captor, cap.System, cap.Cause));
+        Assert.Equal((Midwife, Side.Hand, T, MissionModule.CauseMissionDuel), (cap.Character, cap.Captor, cap.System, cap.Cause));
         Assert.Equal(3, w.Host.Economy.Objects.Count(o => o.Category == ObjectCategory.Facility));
     }
 
@@ -517,7 +517,7 @@ public class MissionRollTests
         Assert.Equal(3, w.Events<MissionMemberRoll>().Count);
         Assert.Single(w.Events<MissionFailed>());
         Assert.Equal(MissionOutcome.Failed, w.Events<MissionEnded>().Single().Outcome);
-        Assert.Equal(new[] { Leia * 10 + (int)ExposureCause.Failed, Han * 10 + (int)ExposureCause.Failed }, exposed);
+        Assert.Equal(new[] { Ledger * 10 + (int)ExposureCause.Failed, Midwife * 10 + (int)ExposureCause.Failed }, exposed);
         Assert.Equal(sfCount, w.Host.Economy.Objects.Count(o => o.Category == ObjectCategory.SpecialForce));
     }
 
@@ -537,11 +537,11 @@ public class MissionRollTests
     {
         var w = new MissionWorld();
         w.Hold(T, Side.Collective, 100);
-        w.Agent(Leia, T, dip: 100);
+        w.Agent(Ledger, T, dip: 100);
         int calls = 0;
         w.M.OnTeamExposed = (_, _, _, _) => calls++;
-        w.Stub!.Expect(0, 99, Bt(1, 99)); // B2b: Leia's betrayal draw first
-        w.Start(Side.Collective, MissionKind.Diplomacy, new[] { Leia }, T);
+        w.Stub!.Expect(0, 99, Bt(1, 99)); // B2b: Ledger's betrayal draw first
+        w.Start(Side.Collective, MissionKind.Diplomacy, new[] { Ledger }, T);
         w.Game.Step();
         int timers = w.Stub.Count(0, 10);
         w.RunIteration(w.LastMission);
@@ -558,11 +558,11 @@ public class MissionRollTests
     {
         var w = new MissionWorld();
         w.Hold(T, Side.Collective, 100);
-        w.Agent(Leia, H, dip: 100);
+        w.Agent(Ledger, H, dip: 100);
         w.Host.Fleets.AddFleet(Side.Hand, "E", new[] { "Mandate" }, T);
         int calls = 0;
         w.M.OnTeamExposed = (_, _, _, _) => calls++;
-        w.Start(Side.Collective, MissionKind.Diplomacy, new[] { Leia }, T);
+        w.Start(Side.Collective, MissionKind.Diplomacy, new[] { Ledger }, T);
         w.Run(5);
         Assert.Equal(0, calls);
         Assert.Equal(0, w.Stub!.Count(0, 10));
@@ -577,20 +577,20 @@ public class MissionRollTests
     {
         var w = new MissionWorld(new MissionParams { MissionGuardChecks = false });
         w.Hold(T, Side.Hand, 0);
-        w.Agent(Leia, T, esp: 50);
+        w.Agent(Ledger, T, esp: 50);
         w.Host.Fleets.AddFleet(Side.Hand, "E", new[] { "Mandate" }, T);
         int from = w.Stub!.Requests.Count;
-        w.Start(Side.Collective, MissionKind.Espionage, new[] { Leia }, T);
+        w.Start(Side.Collective, MissionKind.Espionage, new[] { Ledger }, T);
         w.Game.Step();
         Assert.Equal(new[] { (0, 20) }, w.RequestsSince(from));
         Assert.Single(w.Events<MissionLanded>());
         var on = new MissionWorld();
         on.Hold(T, Side.Hand, 0);
-        on.Agent(Leia, T, esp: 50);
+        on.Agent(Ledger, T, esp: 50);
         on.Host.Fleets.AddFleet(Side.Hand, "E", new[] { "Mandate" }, T);
         on.Stub!.Expect(0, 99, 99);
         from = on.Stub.Requests.Count;
-        on.Start(Side.Collective, MissionKind.Espionage, new[] { Leia }, T);
+        on.Start(Side.Collective, MissionKind.Espionage, new[] { Ledger }, T);
         on.Game.Step();
         Assert.Equal(new[] { (0, 99), (0, 20) }, on.RequestsSince(from));
         Assert.Single(on.Events<MissionDetectionRoll>());
@@ -603,11 +603,11 @@ public class MissionRollTests
     {
         var w = new MissionWorld(new MissionParams { SuccessRule = SuccessRule.EachMember });
         w.Hold(T, Side.Hand, 0);
-        w.Agent(Leia, T, esp: 50, com: 50);
-        w.Agent(Han, T, esp: 50, com: 50);
+        w.Agent(Ledger, T, esp: 50, com: 50);
+        w.Agent(Midwife, T, esp: 50, com: 50);
         for (int i = 0; i < 3; i++) w.Host.Economy.AddFacility(T, FacilityKind.Mine);
         w.Stub!.Expect(0, 99, 0, 0);
-        w.Start(Side.Collective, MissionKind.Sabotage, new[] { Leia, Han }, T);
+        w.Start(Side.Collective, MissionKind.Sabotage, new[] { Ledger, Midwife }, T);
         w.Game.Step();
         w.RunIteration(w.LastMission);
         Assert.Equal(2, w.Events<MissionSucceeded>().Single().Effects);

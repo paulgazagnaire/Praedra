@@ -46,14 +46,14 @@ public class SlotTests
     public void S3_FullSystemRejectsA16thFacility()
     {
         var w = new EcoWorld();
-        for (int i = 0; i < 15; i++) w.Eco.AddFacility("Navalia", i % 2 == 0 ? FacilityKind.Refinery : FacilityKind.Kdy150);
+        for (int i = 0; i < 15; i++) w.Eco.AddFacility("Navalia", i % 2 == 0 ? FacilityKind.Refinery : FacilityKind.Lien150);
         Assert.Equal("NoSlot", w.Eco.CheckPlace("Navalia", FacilityKind.OrbitalShipyard));
         Assert.Equal("NoSlot", w.Eco.CheckPlace("Navalia", FacilityKind.Mine));
     }
 
     // m2-slots-and-resources S4 (a reserved delivery counts as used)
     [Fact]
-    public void S4_KesselMineNeedsFreeRawAndEnergy()
+    public void S4_LanternMineNeedsFreeRawAndEnergy()
     {
         var w = new EcoWorld();
         for (int i = 0; i < 5; i++) w.Mine("The Lantern");
@@ -74,7 +74,7 @@ public class SlotTests
         w.Eco.SetSlots("The Lantern", 3, 3);
         w.Mine("The Lantern", id: 5); w.Refinery("The Lantern", id: 6);
         w.Eco.AddFacility("The Lantern", FacilityKind.OrbitalShipyard, id: 7);
-        w.Eco.AddFacility("The Lantern", FacilityKind.LnrSeriesI, id: 8);
+        w.Eco.AddFacility("The Lantern", FacilityKind.CovenantI, id: 8);
         w.InStep(ctx => w.Eco.EnforceCapacity(ctx, "The Lantern"));
         w.Run(1);
         Assert.Equal(new[] { (0, 3) }, w.Stub.Requests.Where(r => r.Max == 3).ToArray());
@@ -161,7 +161,7 @@ public class SlotTests
     {
         var w = IncidentWorld("The Lantern", 30, 0, out _);
         w.Eco.SetSlots("The Lantern", 2, 1);
-        w.Refinery("The Lantern", id: 1); w.Eco.AddFacility("The Lantern", FacilityKind.Kdy150, id: 2); w.Eco.AddFacility("The Lantern", FacilityKind.LnrSeriesI, id: 3);
+        w.Refinery("The Lantern", id: 1); w.Eco.AddFacility("The Lantern", FacilityKind.Lien150, id: 2); w.Eco.AddFacility("The Lantern", FacilityKind.CovenantI, id: 3);
         w.Stub!.Expect(0, 2, 0).Expect(0, 1, 0);
         w.Run(1);
         Assert.Equal(1, w.Eco.SlotsOf("The Lantern").Energy);
@@ -179,7 +179,7 @@ public class SlotTests
     {
         var w = new EcoWorld(incidents: true);
         w.Stub!.Expect(0, 554, EcoWorld.IndexOf("The Lantern")).Queue();
-        w.Mine("The Lantern", id: 3); w.Refinery("The Lantern", id: 4); w.Eco.AddFacility("The Lantern", FacilityKind.Kdy150, id: 9);
+        w.Mine("The Lantern", id: 3); w.Refinery("The Lantern", id: 4); w.Eco.AddFacility("The Lantern", FacilityKind.Lien150, id: 9);
         // per-facility rolls are (0,99): 5, 50, 9
         w.Stub.Expect(0, 99, 5, 50, 9);
         w.E.DisasterDue = 1;
@@ -201,7 +201,7 @@ public class SlotTests
     public void S12_ResourceIncidentIsFullyResolvedBeforeTheDisaster()
     {
         var w = new EcoWorld(incidents: true);
-        w.Eco.AddFacility("The Thaw", FacilityKind.Kdy150, id: 1);
+        w.Eco.AddFacility("The Thaw", FacilityKind.Lien150, id: 1);
         w.Stub!.Queue(EcoWorld.IndexOf("Charter"), 62, 10, EcoWorld.IndexOf("The Thaw"), 50, 10);
         w.E.ResourceDue = 1; w.E.DisasterDue = 1;
         w.Run(1);

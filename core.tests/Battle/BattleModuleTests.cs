@@ -9,23 +9,23 @@ namespace Praedra.Core.Tests.Battle;
 // Every BattleParams here sets Ruleset = Classic explicitly: these are Classic-battle tests and the DEFAULT became New (Paul, 2026-10-18).
 public class BattleModuleTests
 {
-    private const string Corvette = "Dodger", Isd = "Mandate", Interdictor = "Subpoena";
+    private const string Corvette = "Dodger", Mandate = "Mandate", Interdictor = "Subpoena";
 
-    // m4-retreat-damage-repair RT1 (moved by B3: the old 0.33 morale rule is gone; the Corvettes answer Retreat at the alert, take the ISD's volley and leave in
+    // m4-retreat-damage-repair RT1 (moved by B3: the old 0.33 morale rule is gone; the Corvettes answer Retreat at the alert, take the Mandate's volley and leave in
     // second 1. With Fight they would leave at second 163, after three of them are destroyed, see RT1b)
     [Fact]
     public void RT1_CorvettesRetreatToTheSystemTheyCameFrom()
     {
         var w = new BattleWorld();
         w.Fleets.SetOwner("A", Side.Collective);
-        int rebel = w.Fleet(Side.Collective, "A", Corvette, 4);
-        int imp = w.Fleet(Side.Hand, "B", Isd, 1);
+        int collective = w.Fleet(Side.Collective, "A", Corvette, 4);
+        int imp = w.Fleet(Side.Hand, "B", Mandate, 1);
         w.Battles.SubmitSetOnContact(Side.Collective, OnContactMode.Retreat);
-        w.Fleets.SubmitMove(Side.Collective, rebel, "B");
+        w.Fleets.SubmitMove(Side.Collective, collective, "B");
         w.Run(40);
         var re = w.Events<FleetRetreated>().Single();
         Assert.Equal(("B", "A"), (re.From, re.To));
-        var f = w.F(rebel);
+        var f = w.F(collective);
         Assert.Equal("A", f.At);
         Assert.Equal("B", f.PreviousSystem);
         Assert.Null(f.Transit);
@@ -41,15 +41,15 @@ public class BattleModuleTests
     {
         var w = new BattleWorld();
         w.Fleets.SetOwner("A", Side.Collective);
-        int rebel = w.Fleet(Side.Collective, "A", Corvette, 4);
-        w.Fleet(Side.Hand, "B", Isd, 1);
-        w.Fleets.SubmitMove(Side.Collective, rebel, "B");
+        int collective = w.Fleet(Side.Collective, "A", Corvette, 4);
+        w.Fleet(Side.Hand, "B", Mandate, 1);
+        w.Fleets.SubmitMove(Side.Collective, collective, "B");
         w.Run(40);
         var end = w.Events<BattleEnded>().Single().Result;
         Assert.Equal(163, end.Seconds);
         Assert.Equal(BattleOutcome.Retreated, end.Collective);
         Assert.Equal(3, end.CollectiveLosses);
-        Assert.Equal("A", w.F(rebel).At);
+        Assert.Equal("A", w.F(collective).At);
     }
 
     // m4-retreat-damage-repair RT2
@@ -58,12 +58,12 @@ public class BattleModuleTests
     {
         var w = new BattleWorld();
         w.Fleets.SetOwner("A", Side.Collective);
-        int rebel = w.Fleet(Side.Collective, "B", Corvette, 4);
-        w.F(rebel).PreviousSystem = "A";
-        w.Fleet(Side.Hand, "B", Isd, 1);
-        w.Fleet(Side.Hand, "A", Isd, 1);
+        int collective = w.Fleet(Side.Collective, "B", Corvette, 4);
+        w.F(collective).PreviousSystem = "A";
+        w.Fleet(Side.Hand, "B", Mandate, 1);
+        w.Fleet(Side.Hand, "A", Mandate, 1);
         w.Run();
-        Assert.Equal("D", w.F(rebel).At);
+        Assert.Equal("D", w.F(collective).At);
     }
 
     // m4-retreat-damage-repair RT3
@@ -72,11 +72,11 @@ public class BattleModuleTests
     {
         var w = new BattleWorld();
         foreach (var s in new[] { "A", "C", "D" }) w.Fleets.SetOwner(s, Side.Hand);
-        int rebel = w.Fleet(Side.Collective, "B", Corvette, 4);
-        int imp = w.Fleet(Side.Hand, "B", Isd, 1);
+        int collective = w.Fleet(Side.Collective, "B", Corvette, 4);
+        int imp = w.Fleet(Side.Hand, "B", Mandate, 1);
         w.Run();
         Assert.Equal(RetreatRefusal.NoDestination, w.Events<RetreatRefused>().Single().Reason);
-        Assert.False(w.Game.State.Fleets.ContainsKey(rebel));
+        Assert.False(w.Game.State.Fleets.ContainsKey(collective));
         Assert.Equal(216, w.Events<BattleEnded>().Single().Result.Seconds);
         Assert.Equal(2750, w.Obj(w.F(imp).Ships[0]).Hull);
     }
@@ -87,12 +87,12 @@ public class BattleModuleTests
     {
         var w = new BattleWorld();
         w.Fleets.SetOwner("A", Side.Collective);
-        int rebel = w.Fleet(Side.Collective, "B", Corvette, 4);
-        w.Fleets.AddFleet(Side.Hand, "imp", new[] { Isd, Interdictor }, "B");
+        int collective = w.Fleet(Side.Collective, "B", Corvette, 4);
+        w.Fleets.AddFleet(Side.Hand, "imp", new[] { Mandate, Interdictor }, "B");
         w.Run();
         Assert.Equal(RetreatRefusal.GravityWell, w.Events<RetreatRefused>().Single().Reason);
         Assert.Equal(176, w.Events<BattleEnded>().Single().Result.Seconds);
-        Assert.False(w.Game.State.Fleets.ContainsKey(rebel));
+        Assert.False(w.Game.State.Fleets.ContainsKey(collective));
         Assert.Equal(4, w.Events<UnitDestroyed>().Count);
     }
 
@@ -102,11 +102,11 @@ public class BattleModuleTests
     {
         var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.Classic, SubsystemRolls = false, RetreatMode = RetreatMode.NoRetreat });
         w.Fleets.SetOwner("A", Side.Collective);
-        int rebel = w.Fleet(Side.Collective, "B", Corvette, 4);
-        w.Fleet(Side.Hand, "B", Isd, 1);
+        int collective = w.Fleet(Side.Collective, "B", Corvette, 4);
+        w.Fleet(Side.Hand, "B", Mandate, 1);
         w.Run();
         Assert.Equal(RetreatRefusal.NoDestination, w.Events<RetreatRefused>().Single().Reason);
-        Assert.False(w.Game.State.Fleets.ContainsKey(rebel));
+        Assert.False(w.Game.State.Fleets.ContainsKey(collective));
     }
 
     // m4-retreat-damage-repair RT16
@@ -118,10 +118,10 @@ public class BattleModuleTests
         var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.Classic, SubsystemRolls = false, RetreatMode = RetreatMode.Nearest }, galaxy: g);
         w.Fleets.SetOwner("A", Side.Hand); w.Fleets.SetOwner("C", Side.Hand); w.Fleets.SetOwner("D", Side.Hand);
         w.Fleets.SetOwner("E", Side.Collective);
-        int rebel = w.Fleet(Side.Collective, "B", Corvette, 4);
-        w.Fleet(Side.Hand, "B", Isd, 1);
+        int collective = w.Fleet(Side.Collective, "B", Corvette, 4);
+        w.Fleet(Side.Hand, "B", Mandate, 1);
         w.Run();
-        Assert.Equal("E", w.F(rebel).At);
+        Assert.Equal("E", w.F(collective).At);
     }
 
     // m4-retreat-damage-repair RT17
@@ -150,8 +150,8 @@ public class BattleModuleTests
     public void BC16_SeedDrawsPerBattleInNameOrder(ClassicBattleRng rng, int draws)
     {
         var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.Classic, BattleRng = rng });
-        w.Fleet(Side.Collective, "C", Corvette, 12); w.Fleet(Side.Hand, "C", Isd, 1);
-        w.Fleet(Side.Collective, "B", Corvette, 12); w.Fleet(Side.Hand, "B", Isd, 1);
+        w.Fleet(Side.Collective, "C", Corvette, 12); w.Fleet(Side.Hand, "C", Mandate, 1);
+        w.Fleet(Side.Collective, "B", Corvette, 12); w.Fleet(Side.Hand, "B", Mandate, 1);
         long before = w.Game.Rng.Draws;
         w.Run();
         Assert.Equal(before + draws, w.Game.Rng.Draws);
@@ -165,7 +165,7 @@ public class BattleModuleTests
         (string, long) Play()
         {
             var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.Classic });
-            w.Fleet(Side.Collective, "B", Corvette, 12); w.Fleet(Side.Hand, "B", Isd, 1);
+            w.Fleet(Side.Collective, "B", Corvette, 12); w.Fleet(Side.Hand, "B", Mandate, 1);
             long before = w.Game.Rng.Draws;
             w.Run();
             Assert.Equal(before, w.Game.Rng.Draws);
@@ -182,8 +182,8 @@ public class BattleModuleTests
     {
         var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.Classic, SubsystemRolls = false, HandIsAi = true });
         w.Fleets.SetOwner("A", Side.Collective);
-        int rebel = w.Fleet(Side.Collective, "B", Corvette, 12);
-        w.Fleet(Side.Hand, "B", Isd, 1);
+        int collective = w.Fleet(Side.Collective, "B", Corvette, 12);
+        w.Fleet(Side.Hand, "B", Mandate, 1);
         long s1 = w.Battles.SubmitSetOnContact(Side.Collective, OnContactMode.Retreat);
         long s2 = w.Battles.SubmitSetOnContact(Side.Hand, OnContactMode.Retreat);
         long draws = w.Game.Rng.Draws;
@@ -191,7 +191,7 @@ public class BattleModuleTests
         Assert.Equal("AiSide", w.Events<OrderRejected>().Single(r => r.Sequence == s2).Reason);
         Assert.Contains(w.Events<OrderAccepted>(), a => a.Sequence == s1);
         Assert.Equal(1, w.Events<BattleEnded>().Single().Result.Seconds);
-        Assert.Equal("D", w.F(rebel).At);
+        Assert.Equal("D", w.F(collective).At);
         Assert.Equal(draws, w.Game.Rng.Draws); // the Classic dice are the battle's own
         var choices = w.Events<BattleChoice>();
         Assert.Equal(OnContactMode.Retreat, choices.Single(c => c.Side == Side.Collective).Mode);
@@ -212,7 +212,7 @@ public class BattleModuleTests
         Assert.Equal(GameSave.StateHash(w.Game), GameSave.StateHash(g));
     }
 
-    // m4-battle-classic BC20 / m4-retreat-damage-repair RT18 (moved by B3: 30 Corvettes in 5 squads; the ISD leaves at second 25 with hull 2423.09, stored
+    // m4-battle-classic BC20 / m4-retreat-damage-repair RT18 (moved by B3: 30 Corvettes in 5 squads; the Mandate leaves at second 25 with hull 2423.09, stored
     // truncated as 2423; was 1790 rounded half up from 1789.95) [Model]
     [Fact]
     public void BC20_WriteBackKeepsHullAndHitsNotShield()
@@ -220,26 +220,26 @@ public class BattleModuleTests
         var w = new BattleWorld();
         w.Fleets.SetOwner("A", Side.Hand);
         int alli = w.Fleet(Side.Collective, "B", Corvette, 30);
-        int imp = w.Fleet(Side.Hand, "B", Isd, 1);
-        int isdId = w.F(imp).Ships[0];
+        int imp = w.Fleet(Side.Hand, "B", Mandate, 1);
+        int mandateId = w.F(imp).Ships[0];
         w.Run();
         Assert.Equal(25, w.Events<BattleEnded>().Single().Result.Seconds);
-        Assert.Equal(2423, w.Obj(isdId).Hull); // 2423.09 truncated
-        Assert.All(w.Obj(isdId).Hits!, h => Assert.Equal(0, h));
-        Assert.Equal("D", w.F(imp).At); // the ISD retreated
+        Assert.Equal(2423, w.Obj(mandateId).Hull); // 2423.09 truncated
+        Assert.All(w.Obj(mandateId).Hits!, h => Assert.Equal(0, h));
+        Assert.Equal("D", w.F(imp).At); // the Mandate retreated
         Assert.Equal("B", w.F(alli).At);
     }
 
-    // m4-retreat-damage-repair RT18 (moved by B3: shields start full, not at the hull-scaled cap: the ISD stored at 1350 hull starts its next battle at 300)
+    // m4-retreat-damage-repair RT18 (moved by B3: shields start full, not at the hull-scaled cap: the Mandate stored at 1350 hull starts its next battle at 300)
     [Fact]
     public void RT18_NextBattleStartsWithAFullShield()
     {
         var w = new BattleWorld();
-        int imp = w.Fleet(Side.Hand, "B", Isd, 1);
+        int imp = w.Fleet(Side.Hand, "B", Mandate, 1);
         w.Obj(w.F(imp).Ships[0]).Hull = 1350;
         var units = new List<BattleUnit>();
         int id = 1;
-        units.AddRange(QuickBattle.Units(new BattleParams { Ruleset = BattleRuleset.Classic }, Fleets.World.Ships.Value, Side.Hand, new[] { (Isd, 1) }, ref id));
+        units.AddRange(QuickBattle.Units(new BattleParams { Ruleset = BattleRuleset.Classic }, Fleets.World.Ships.Value, Side.Hand, new[] { (Mandate, 1) }, ref id));
         units[0].Hull = 1350;
         _ = new ClassicBattle(new BattleParams { Ruleset = BattleRuleset.Classic }, units, null, new[] { true, true });
         Assert.Equal(300.0, units[0].Shield);
@@ -256,7 +256,7 @@ public class BattleModuleTests
         w.Fleets.SetOwner("A", Side.Collective); w.Fleets.SetOwner("C", Side.Hand); w.Fleets.SetOwner("D", Side.Hand);
         // stored hull: trunc(max(1, hull))
         Assert.Equal(1349, (int)Math.Truncate(Math.Max(1.0, 1349.8)));
-        Assert.Equal(new List<int> { 0, 0, 0, 0, 1, 1 }, BattleModule.StoredHits(p, ships[Isd], new[] { 0, 0, 0, 0, 2, 0 }));
+        Assert.Equal(new List<int> { 0, 0, 0, 0, 1, 1 }, BattleModule.StoredHits(p, ships[Mandate], new[] { 0, 0, 0, 0, 2, 0 }));
         Assert.Equal(new List<int> { 4, 4, 0, 0, 1, 0 }, BattleModule.StoredHits(p, ships[Corvette], new[] { 5, 4, 0, 0, 1, 0 }));
         // a game battle: the Plough squadrons of a carrier-less Collective raid; a squadron at hull 17 comes back with 2 craft (10 lost)
         Assert.Equal(2, Math.Max(1, (int)Math.Truncate(17 / p.SquadronCraftHull)));
@@ -271,7 +271,7 @@ public class BattleModuleTests
         w.Fleets.SetOwner("A", Side.Collective);
         int sq = w.Eco.AddObject(Side.Collective, "Swift", "B");
         w.Obj(sq).CraftLost = 4;
-        w.Fleet(Side.Hand, "B", Isd, 1);
+        w.Fleet(Side.Hand, "B", Mandate, 1);
         w.Run();
         var o = w.Game.State.Economy.Objects.GetValueOrDefault(sq);
         Assert.True(o == null || o.CraftLost >= 4); // it fought with 8 craft and lost none back
@@ -283,15 +283,15 @@ public class BattleModuleTests
     public void FoughtThisStepIsTrueOnlyInsideTheBattleStep()
     {
         var w = new BattleWorld();
-        int imp = w.Fleet(Side.Hand, "B", Isd, 1);
+        int imp = w.Fleet(Side.Hand, "B", Mandate, 1);
         w.Fleet(Side.Collective, "B", Corvette, 12);
-        int isdId = w.F(imp).Ships[0];
+        int mandateId = w.F(imp).Ships[0];
         bool inside = false;
-        w.Game.RegisterHook("6.8", _ => inside = w.Battles.FoughtThisStep(isdId));
-        Assert.False(w.Battles.FoughtThisStep(isdId));
+        w.Game.RegisterHook("6.8", _ => inside = w.Battles.FoughtThisStep(mandateId));
+        Assert.False(w.Battles.FoughtThisStep(mandateId));
         w.Run();
         Assert.True(inside);
-        Assert.False(w.Battles.FoughtThisStep(isdId)); // between Steps: false
+        Assert.False(w.Battles.FoughtThisStep(mandateId)); // between Steps: false
         Assert.Equal(GameSave.StateHash(w.Game), GameSave.StateHash(GameSave.Load(GameSave.Save(w.Game)))); // saved state consistent
     }
 
@@ -313,7 +313,7 @@ public class BattleModuleTests
     public void NoBattleWithOneSide()
     {
         var w = new BattleWorld();
-        w.Fleet(Side.Hand, "B", Isd, 1);
+        w.Fleet(Side.Hand, "B", Mandate, 1);
         w.Run(3);
         Assert.Empty(w.Events<BattleStarted>());
     }
@@ -323,14 +323,14 @@ public class BattleModuleTests
     public void DestroyedShipTakesRegimentsAndFleetDissolves()
     {
         var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.Classic, SubsystemRolls = false, RetreatMode = RetreatMode.NoRetreat });
-        int rebel = w.Fleet(Side.Collective, "B", Corvette, 2);
+        int collective = w.Fleet(Side.Collective, "B", Corvette, 2);
         int reg = w.Eco.AddObject(Side.Collective, "Militia", null);
-        w.Obj(reg).AboardShip = w.F(rebel).Ships[0];
-        w.Fleets.AddFleet(Side.Hand, "imp", new[] { Isd }, "B", new[] { "Gleaner" });
+        w.Obj(reg).AboardShip = w.F(collective).Ships[0];
+        w.Fleets.AddFleet(Side.Hand, "imp", new[] { Mandate }, "B", new[] { "Gleaner" });
         w.Run();
-        Assert.False(w.Game.State.Fleets.ContainsKey(rebel));
+        Assert.False(w.Game.State.Fleets.ContainsKey(collective));
         Assert.False(w.Game.State.Economy.Objects.ContainsKey(reg));
-        Assert.Contains(w.Events<FleetDissolved>(), d => d.Fleet == rebel);
+        Assert.Contains(w.Events<FleetDissolved>(), d => d.Fleet == collective);
         Assert.Contains(w.Events<UnitDestroyed>(), d => d.Unit == reg && d.Reason == UnitLossReason.ShipLost);
     }
 
@@ -342,7 +342,7 @@ public class BattleModuleTests
         w.Fleets.SetOwner("B", Side.Collective);
         w.Fleets.SetOwner("A", Side.Collective);
         w.Fleet(Side.Collective, "B", Corvette, 4);
-        w.Fleet(Side.Hand, "B", Isd, 1);
+        w.Fleet(Side.Hand, "B", Mandate, 1);
         w.Run();
         Assert.Equal(Side.Hand, w.Game.State.Blockades["B"]); // the Hand alone at a Collective system
     }
@@ -355,7 +355,7 @@ public class BattleModuleTests
         {
             var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.Classic }, seed: 11);
             w.Fleets.SetOwner("A", Side.Collective);
-            w.Fleet(Side.Collective, "B", Corvette, 8); w.Fleet(Side.Hand, "B", Isd, 1);
+            w.Fleet(Side.Collective, "B", Corvette, 8); w.Fleet(Side.Hand, "B", Mandate, 1);
             w.Run(3);
             return GameSave.StateHash(w.Game);
         }

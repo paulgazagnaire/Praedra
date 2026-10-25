@@ -88,7 +88,7 @@ public sealed class BattleModule
         if (Params.AiRetreat == AiRetreatRule.Fixed) return cap;
         if (_fleets.OwnerOf(system) != side) return cap;                       // record +0x30 bit 1
         if (!_fleets.BasedSquadrons(system, side).Any()) return cap;           // planetSquadrons(P) <= 0 (Usable = completed, on the planet)
-        if (system == Params.CoruscantSystem || system == State.Scenario.HqSystem) return 0.0; // +0x28 bit 31
+        if (system == Params.CharterSystem || system == State.Scenario.HqSystem) return 0.0; // +0x28 bit 31
         long a = 0, b = 0;
         foreach (var f in State.Fleets.Values) // sums: order does not matter
         {

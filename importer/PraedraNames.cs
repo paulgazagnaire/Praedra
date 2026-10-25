@@ -60,7 +60,7 @@ public static class PraedraNames
         return map;
     }
 
-    /// <summary>Columns never renamed: a mission kind such as Dagobah is not a place. Same list as apply_names.py SKIP_COLUMNS.</summary>
+    /// <summary>Columns never renamed: a mission kind is not a place. Same list as apply_names.py SKIP_COLUMNS.</summary>
     public static readonly IReadOnlySet<string> SkipColumns = new HashSet<string>(StringComparer.Ordinal) { "kind" };
 
     /// <summary>The CSV text with every cell that equals an old name replaced by its new name (except in <see cref="SkipColumns"/>).</summary>

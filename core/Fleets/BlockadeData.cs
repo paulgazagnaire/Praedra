@@ -24,7 +24,7 @@ public enum ForcedStopTrigger
 
 /// <summary>
 /// Blockade numbers read from data/design/blockade.csv: T (relative, percent) and E (absolute, built from a ship class and a count).
-/// rule: m1-forced-stop-and-blockade §Update 2026-10-12 (T = 0.5, E = combat strength of 3 Victory Star Destroyers; both are data).
+/// rule: m1-forced-stop-and-blockade §Update 2026-10-12 (T = 0.5, E = combat strength of 3 Decrees; both are data).
 /// </summary>
 public sealed class BlockadeData
 {
@@ -53,7 +53,7 @@ public sealed class BlockadeData
         ReferenceShipClass = referenceShipClass; ReferenceShipCount = referenceShipCount;
     }
 
-    /// <summary>The reference force REF as classes (from ship data). rule: m4-battle-new §12 (REF = 3 ISD, DEFAULT).</summary>
+    /// <summary>The reference force REF as classes (from ship data). rule: m4-battle-new §12 (REF = 3 Mandate, DEFAULT).</summary>
     public IReadOnlyList<ShipClass> Reference(IReadOnlyDictionary<string, ShipClass> ships)
     {
         if (!ships.TryGetValue(ReferenceShipClass, out var cls))
@@ -62,7 +62,7 @@ public sealed class BlockadeData
     }
 
     /// <summary>
-    /// E = CombatStrength(count x the class, REF), computed from ship data, never typed in. rule: m4-battle-new §12 (E = CS(3 Victory Destroyers, 3 ISD) = 64.8).
+    /// E = CombatStrength(count x the class, REF), computed from ship data, never typed in. rule: m4-battle-new §12 (E = CS(3 Decrees, 3 Mandate) = 64.8).
     /// </summary>
     public double EconomicStrength(IReadOnlyDictionary<string, ShipClass> ships, CombatStrength? strength = null)
     {
@@ -91,7 +91,7 @@ public sealed class BlockadeData
             return int.TryParse(s, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var i)
                 ? i : throw new DataLoadException($"{source}: key '{k}' must be an integer, found '{s}'.");
         }
-        // the reference force is optional in the file (DEFAULT 3 Hand Star Destroyers). rule: m4-battle-new §12
+        // the reference force is optional in the file (DEFAULT 3 Mandates). rule: m4-battle-new §12
         string refClass = values.TryGetValue("economic_blockade_reference_class", out var rc) ? rc : "Mandate";
         int refCount = values.ContainsKey("economic_blockade_reference_count") ? Int("economic_blockade_reference_count") : 3;
         return new BlockadeData(Int("forced_stop_threshold_percent"), Need("economic_blockade_ship_class"), Int("economic_blockade_ship_count"), refClass, refCount);

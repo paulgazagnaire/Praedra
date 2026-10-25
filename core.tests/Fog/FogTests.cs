@@ -168,7 +168,7 @@ public class FogTests
         Assert.Equal(d, e.Stamp);
         var fp = Assert.Single(e.Value);
         Assert.Equal(Side.Hand, fp.Side);
-        Assert.Equal(3, fp.Ships[Isd]);
+        Assert.Equal(3, fp.Ships[Mandate]);
         Assert.Single(fp.Ships);
         Assert.Null(p.Facilities);
         Assert.Null(p.Ground);
@@ -181,7 +181,7 @@ public class FogTests
     private static FogWorld Fw10(GameSettings? s = null)
     {
         var w = new FogWorld(s);
-        int g = w.Fleet(Side.Hand, R4, Isd, 2);
+        int g = w.Fleet(Side.Hand, R4, Mandate, 2);
         w.H.Fleets.SubmitMove(Side.Hand, g, R2);
         w.StepTo(16); // placed at R3 on day 16, not stopped (no Collective fleet)
         return w;
@@ -196,7 +196,7 @@ public class FogTests
         Assert.Equal(16, s.Day);
         Assert.Equal(SightingKind.Fleet, s.Kind);
         Assert.Equal(Side.Hand, s.Side);
-        Assert.Equal(2, s.Detail!.Ships[Isd]);
+        Assert.Equal(2, s.Detail!.Ships[Mandate]);
         Assert.Contains(w.Events<FleetPassed>(), e => e.System == R3);
         var e = w.Pic(Side.Collective, R3)!.Fleets!;
         Assert.Equal(16, e.Stamp);
@@ -222,7 +222,7 @@ public class FogTests
     private static List<string> Run(ulong seed)
     {
         var (w, _) = Fw3(new GameSettings());
-        var g = w.Fleet(Side.Hand, R4, Isd, 2);
+        var g = w.Fleet(Side.Hand, R4, Mandate, 2);
         w.H.Fleets.SubmitMove(Side.Hand, g, R2);
         w.StepTo(60);
         return w.Game.Events.Select(e => e.ToString()).Append(w.Fog.KnowledgeHash(Side.Hand)).Append(w.Fog.KnowledgeHash(Side.Collective)).Append(w.H.StateHash()).ToList();
@@ -265,7 +265,7 @@ public class FogTests
         var e = w.Pic(Side.Collective, R1)!.Fleets!;
         Assert.Equal(d, e.Stamp);
         Assert.Equal(30, e.AgeDays);
-        Assert.Equal(3, Assert.Single(e.Value).Ships[Isd]);
+        Assert.Equal(3, Assert.Single(e.Value).Ships[Mandate]);
     }
 
     // m5-fog-and-hq FW15

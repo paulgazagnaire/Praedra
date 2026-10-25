@@ -168,6 +168,6 @@ public class ParamsPinTests
         var m = GameData.Default.Missions.Numbers;
         Assert.Equal((g[3584][0], g[3588][0], g[3589][0], g[6145][0], g[6144][0], g[6158][0], g[1][0], g[3083][0]),
             (m.DetectionConstant, m.DecoyOfficerPercent, m.DetectionOfficerPercent, m.InciteSupport, m.AgentLeadershipDivisor, m.ResearchSkillGain,
-             m.GroupSpeed, m.HanMissionSpeed));
+             m.GroupSpeed, m.RunnerLines));
     }
 }

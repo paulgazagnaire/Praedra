@@ -712,7 +712,7 @@ public sealed partial class GameSession
                 break;
             }
             case UprisingStarted u when u.Holder == Player:
-                yield return new Message(d, $"Uprising on {u.System}! The people rebel against you. Station more regiments there.", u.System, MsgKind.Bad);
+                yield return new Message(d, $"Uprising on {u.System}! The people rise against you. Station more regiments there.", u.System, MsgKind.Bad);
                 break;
             case UprisingStarted u:
                 yield return new Message(d, $"Uprising against the {NameOf(u.Holder)} on {u.System}.", u.System, MsgKind.Info);

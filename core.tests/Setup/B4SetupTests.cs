@@ -70,14 +70,14 @@ public class B4SetupTests
     // The fog picture has no character list (group D holds regiments and special forces only), so the six characters are checked at The Shoal in the
     // state when the copy is taken, and their order in start-cast.csv.
     [Fact]
-    public void B4_2_HandSeesYavinInFullAndNothingOfTheHq()
+    public void B4_2_HandSeesShoalInFullAndNothingOfTheHq()
     {
-        int[] yavinSix = { Luke, Leia, Han, Chewbacca, Dodonna, Wedge };
+        int[] shoalSix = { Nobody, Ledger, Midwife, Oti, OldDebt, FortyOne };
         var cast = GameData.Default.Characters.StartCast.Where(r => r.Rule == StartRule.FixedSystem && r.Place == "The Shoal").Select(r => r.Character);
-        Assert.Equal(yavinSix, cast);
+        Assert.Equal(shoalSix, cast);
         foreach (var h in Games())
         {
-            foreach (var id in yavinSix)
+            foreach (var id in shoalSix)
             {
                 var c = h.Characters.Get(id)!;
                 Assert.True(c.Placed); Assert.Equal("The Shoal", c.System); Assert.Equal(0, c.AttachedFleet);
@@ -188,7 +188,7 @@ public class B4SetupTests
         Assert.DoesNotContain(off.Economy.Objects, o => o.System == off.HqSystem && o.Side == Side.Collective && o.Class is "Deckhands" or "Swift" or "Plough");
     }
 
-    // B4-5: the first fleet of each side is "Fleet 1", fleets count per side in id order; two Corellian Corvettes of one side are "... 1" and
+    // B4-5: the first fleet of each side is "Fleet 1", fleets count per side in id order; two Dodgers of one side are "... 1" and
     // "... 2" (ships count per side and class in id order). rule: m5-setup-and-victory §P7 Names ([EXE-own] 0x51b7f0; B4 §12)
     [Fact]
     public void B4_5_FleetsAndShipsAreNumberedPerSide()

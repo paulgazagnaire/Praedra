@@ -6,7 +6,7 @@ using Xunit.Abstractions;
 namespace Praedra.Core.Tests.AI;
 
 // QA-12: the Medium AI against itself must finish its games. The 8-seed floors passed #68 while 11 of 16 Medium mirrors stopped ending (its
-// leader marks kept the Emperor home from day one, so he no longer put down uprisings, and the Hand never finished the last Collective worlds;
+// leader marks kept The Chair home from day one, so he no longer put down uprisings, and the Hand never finished the last Collective worlds;
 // the marks are DEFAULT off since #75). Same set-up as
 // `sim tourney --a medium --b medium` (MedA start, default settings, fog on both sides). The games end through the playable slice's
 // "the other side holds no system" rule (VictoryRules, DEFAULT; Classic has no such ending, B6c / RE lead 2026-10-18) or the

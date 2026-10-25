@@ -71,7 +71,7 @@ public class HarvesterTests
     {
         var w = new DsWorld();
         w.Hold(A1, Side.Collective);
-        int f = w.Fleet(Side.Hand, A1, Isd);
+        int f = w.Fleet(Side.Hand, A1, Mandate);
         Assert.Equal(HarvesterReject.NoHarvester, w.Destroy(Side.Hand, f));
         Assert.False(w.Game.State.Harvester.IsDestroyed(A1));
         // the other legality codes: unknown fleet, not yours, in hyperspace, already destroyed
@@ -99,7 +99,7 @@ public class HarvesterTests
             w.Host.Economy.Find(aboard)!.AboardShip = w.ShipOf(enemy);
             enemyShips.AddRange(w.Game.State.Fleets[enemy].Ships);
         });
-        int attacker = w.Harvester(Side.Hand, A3, Isd);
+        int attacker = w.Harvester(Side.Hand, A3, Mandate);
         int dsShip = w.ShipOf(attacker);
         int hull = w.Host.Economy.Find(dsShip)!.Hull;
 
@@ -160,7 +160,7 @@ public class HarvesterTests
     [Fact]
     public void DS5_CharactersOnTheDestroyedPlanet()
     {
-        var minors = new[] { Drayson, Borsk, Tura, Derlin };
+        var minors = new[] { Sobel, DayAfter, Tura, Achterberg };
         ulong seed = FindSeed(MinorCombats(minors), hits: 2);
         var w = new DsWorld(seed: seed);
         w.Hold(A1, Side.Collective, 80); w.Hold(B3, Side.Collective, 80); w.Hold(A6, Side.Collective, 80);
@@ -168,7 +168,7 @@ public class HarvesterTests
         // its capture loyalty draw; at 45 they stay neutral (55), so the test still sees only the four character rolls
         foreach (var n in new[] { A2, A3, A4, A5 }) w.Hold(n, null, 45);
         foreach (var m in minors) w.Person(m, A1);
-        w.Person(Luke, A1);
+        w.Person(Nobody, A1);
         int attacker = w.Harvester(Side.Hand, A1);
         var replica = new GameRng(seed);
         var kills = Simulate(replica, MinorCombats(minors)); // id order, p = 50; B2e: a hit adds the Hurt draws
@@ -178,9 +178,9 @@ public class HarvesterTests
         for (int i = 0; i < minors.Length; i++)
             Assert.Equal(kills[i] ? CharacterStatus.Dead : CharacterStatus.Free, w.C(minors[i]).Status);
         Assert.Equal(replica.Export(), w.Game.Rng.Export()); // four rolls plus the Hurt draws of the hits: the major cost none
-        Assert.Equal(CharacterStatus.Free, w.C(Luke).Status);
+        Assert.Equal(CharacterStatus.Free, w.C(Nobody).Status);
         // every survivor, the major included, leaves for the nearest system its side holds (B3 is three steps away, A6 five), arriving the next day
-        var survivors = minors.Where((_, i) => !kills[i]).Append(Luke).ToList();
+        var survivors = minors.Where((_, i) => !kills[i]).Append(Nobody).ToList();
         foreach (var id in survivors)
         {
             var c = w.C(id);
@@ -196,16 +196,16 @@ public class HarvesterTests
     [Fact]
     public void DS5_NoHeldSystemLeftMeansCaptured()
     {
-        var minors = new[] { Drayson, Borsk, Tura, Derlin };
+        var minors = new[] { Sobel, DayAfter, Tura, Achterberg };
         ulong seed = FindSeed(MinorCombats(minors), hits: 2);
         var w = new DsWorld(seed: seed);
         w.Hold(A1, Side.Collective, 80);
         foreach (var m in minors) w.Person(m, A1);
-        w.Person(Luke, A1);
+        w.Person(Nobody, A1);
         int attacker = w.Harvester(Side.Hand, A1);
         Assert.Null(w.Destroy(Side.Hand, attacker));
-        var luke = w.C(Luke);
-        Assert.Equal((CharacterStatus.Captured, Side.Hand, A1), (luke.Status, luke.Captor!.Value, luke.HeldAt));
+        var nobody = w.C(Nobody);
+        Assert.Equal((CharacterStatus.Captured, Side.Hand, A1), (nobody.Status, nobody.Captor!.Value, nobody.HeldAt));
         Assert.Equal(2, minors.Count(m => w.C(m).Status == CharacterStatus.Captured));
         Assert.Equal(2, minors.Count(m => w.C(m).Status == CharacterStatus.Dead));
         Assert.All(w.Events<CharacterCaptured>(), e => Assert.Equal("Harvester", e.Cause));
@@ -217,13 +217,13 @@ public class HarvesterTests
         // m5-death-star §2 effect 3: fewest lane steps, ties by system id; one of the attacker's side boards the attacking fleet
         var w = new DsWorld();
         w.Hold(A1, Side.Hand, 20); w.Hold(A2, Side.Collective, 80); w.Hold(B1, Side.Collective, 80);
-        w.Person(Luke, A1);   // Collective major: A2 and B1 are both one step away; A2 comes first
-        w.Person(Vader, A1);  // Hand major: boards the harvester's fleet
+        w.Person(Nobody, A1);   // Collective major: A2 and B1 are both one step away; A2 comes first
+        w.Person(Ravilla, A1);  // Hand major: boards the harvester's fleet
         int attacker = w.Harvester(Side.Hand, A1);
         Assert.Null(w.Destroy(Side.Hand, attacker));
-        Assert.Equal(A2, w.C(Luke).Transit!.Path[^1]);
-        var vader = w.C(Vader);
-        Assert.Equal((attacker, CharacterPost.None, A1), (vader.AttachedFleet, vader.Post, vader.System));
+        Assert.Equal(A2, w.C(Nobody).Transit!.Path[^1]);
+        var ravilla = w.C(Ravilla);
+        Assert.Equal((attacker, CharacterPost.None, A1), (ravilla.AttachedFleet, ravilla.Post, ravilla.System));
     }
 
     // m5-death-star DS6
@@ -249,14 +249,14 @@ public class HarvesterTests
     [Theory]
     [InlineData(false, true)]
     [InlineData(true, false)]
-    public void SV52_DestroyedCoruscantMeetsTheCollectivePlaceTerm(bool standard, bool collectiveWins)
+    public void SV52_DestroyedCharterMeetsTheCollectivePlaceTerm(bool standard, bool collectiveWins)
     {
         var rules = standard ? new VictoryRules { KeyDeathFallback = KeyDeathFallback.None } : OldVictory.Rules;
         var w = new DsWorld(settings: new GameSettings { IncidentsEnabled = false, DebugOrdersEnabled = true, Economy = new EconomyParams { ScrapPeriod = 1_000_000 }, Victory = rules });
         w.Hold(A1, Side.Collective, 80); w.Hold(A2, Side.Hand, 20);
         w.Host.Fog.PlaceHq(A1);
         w.Game.State.Scenario.Active = true;
-        w.Game.State.Harvester.Destroyed.Add(VictoryModule.CoruscantName);
+        w.Game.State.Harvester.Destroyed.Add(VictoryModule.CharterName);
         w.Game.Step();
         Assert.Equal(collectiveWins ? Side.Collective : null, w.Host.Victory.Winner);
         if (collectiveWins) Assert.Equal("Charter is destroyed", w.Host.Victory.Reason);
@@ -359,9 +359,9 @@ public class HarvesterTests
         long assault = w.Host.Assault.SubmitAssault(Side.Hand, stops, A3);
         long bombard = w.Host.Bombardment.SubmitBombard(Side.Hand, stops, A3, Praedra.Core.Defenses.BombardCategory.General);
         long capture = w.Host.Control.SubmitCapture(Side.Hand, A3); // (B5a, 2026-10-17) under derived control a capture is troops landing
-        var agent = w.Person(Luke, A2);
+        var agent = w.Person(Nobody, A2);
         agent.Skills[(int)Skill.Espionage] = 60;
-        long mission = w.Game.Submit(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new() { Luke }, new(), new(), A3));
+        long mission = w.Game.Submit(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new() { Nobody }, new(), new(), A3));
         w.Game.Step();
         foreach (var seq in new[] { build, assault, bombard, capture, mission })
             Assert.Equal(RejectReason.SystemDestroyed, w.Reason(seq));
@@ -397,19 +397,19 @@ public class HarvesterTests
     {
         var w = new MissionWorld();
         w.Hold(MissionWorld.T, Side.Hand, 0);
-        int fleet = w.Host.Fleets.AddFleet(Side.Hand, "F", new[] { HarvesterClass, Isd }, MissionWorld.T);
+        int fleet = w.Host.Fleets.AddFleet(Side.Hand, "F", new[] { HarvesterClass, Mandate }, MissionWorld.T);
         int dsShip = w.Game.State.Fleets[fleet].Ships.First(id => w.Host.Economy.Find(id)!.Class == HarvesterClass);
-        int isdShip = w.Game.State.Fleets[fleet].Ships.First(id => id != dsShip);
-        w.Agent(MissionWorld.Luke, MissionWorld.T, esp: 100, com: 100);
+        int mandateShip = w.Game.State.Fleets[fleet].Ships.First(id => id != dsShip);
+        w.Agent(MissionWorld.Nobody, MissionWorld.T, esp: 100, com: 100);
         // B2d: the arriving check (orbit) walks the harvester and the destroyer (99 is not detected); the job check (target in orbit) opens with
-        // Luke's betrayal draw (B2b), then walks the same two guards
+        // Nobody's betrayal draw (B2b), then walks the same two guards
         w.Stub!.Expect(0, 99, 99, 99).Expect(0, 99, MissionWorld.Bt(1, 99, 99));
-        w.Start(Side.Collective, MissionKind.SpikeTheHarvester, new[] { MissionWorld.Luke }, MissionWorld.T);
+        w.Start(Side.Collective, MissionKind.SpikeTheHarvester, new[] { MissionWorld.Nobody }, MissionWorld.T);
         w.Game.Step();
         w.RunIteration(w.LastMission);
         Assert.Null(w.Host.Economy.Find(dsShip));
-        Assert.NotNull(w.Host.Economy.Find(isdShip));
-        Assert.Equal(new[] { isdShip }, w.Game.State.Fleets[fleet].Ships);
+        Assert.NotNull(w.Host.Economy.Find(mandateShip));
+        Assert.Equal(new[] { mandateShip }, w.Game.State.Fleets[fleet].Ships);
         var ev = Assert.Single(w.Events<HarvesterDestroyed>());
         Assert.Equal(("Sabotage", Side.Hand, dsShip), (ev.Cause, ev.Side, ev.Ship));
         Assert.Equal(3, w.Game.AudienceOf(ev.Index));
@@ -456,9 +456,9 @@ public class HarvesterTests
         for (int i = 0; i < 5; i++) w.Host.Economy.AddObject(Side.Hand, "Tranches", A4);
         w.Host.Economy.AddFacility(A3, FacilityKind.Mine);
         w.Fleet(Side.Collective, A3, Corvette, Corvette);
-        foreach (var m in new[] { Drayson, Borsk, Tura, Derlin }) w.Person(m, A3);
-        w.Person(Luke, A3);
-        int first = w.Harvester(Side.Hand, A3, Isd), second = w.Harvester(Side.Hand, A5);
+        foreach (var m in new[] { Sobel, DayAfter, Tura, Achterberg }) w.Person(m, A3);
+        w.Person(Nobody, A3);
+        int first = w.Harvester(Side.Hand, A3, Mandate), second = w.Harvester(Side.Hand, A5);
         w.Game.Step();
         w.Destroy(Side.Hand, first);
         w.Run(3);
@@ -539,7 +539,7 @@ public class HarvesterTests
         w.Hold(A1, Side.Hand, 20);
         w.Host.Economy.AddFacility(A1, FacilityKind.OrbitalShipyard);
         w.Host.Economy.SetPools(Side.Hand, 0, 1000);
-        w.Host.Construction.SubmitBuild(Side.Hand, A1, YardFamily.Shipyard, Isd, 2);
+        w.Host.Construction.SubmitBuild(Side.Hand, A1, YardFamily.Shipyard, Mandate, 2);
         w.Game.Step();
         Assert.NotNull(w.Host.Construction.ProjectAt(A1, YardFamily.Shipyard));
         int attacker = w.Harvester(Side.Hand, A1);
@@ -557,9 +557,9 @@ public class HarvesterTests
     {
         var w = new MissionWorld();
         w.Hold(MissionWorld.T, Side.Hand, 20);
-        w.Agent(MissionWorld.Leia, MissionWorld.T, esp: 50);
+        w.Agent(MissionWorld.Ledger, MissionWorld.T, esp: 50);
         w.Stub!.Expect(0, 20, 20); // a long timer: the mission stays working
-        w.Start(Side.Collective, MissionKind.Espionage, new[] { MissionWorld.Leia }, MissionWorld.T);
+        w.Start(Side.Collective, MissionKind.Espionage, new[] { MissionWorld.Ledger }, MissionWorld.T);
         w.Game.Step();
         Assert.Equal(MissionPhase.Working, w.M.Missions.Single().Phase);
         int attacker = w.Host.Fleets.AddFleet(Side.Hand, "DS", new[] { HarvesterClass }, MissionWorld.T);

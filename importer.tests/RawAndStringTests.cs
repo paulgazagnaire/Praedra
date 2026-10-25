@@ -27,10 +27,10 @@ public class RawAndStringTests
     [Fact]
     public void StringTableOfASyntheticDll()
     {
-        var dll = ResourceDll((629, StringBlock((0, "Mon Calamari Cruiser"), (1, "Bulk Cruiser"))), (305, StringBlock((0, "Yes"), (15, "Last"))));
+        var dll = ResourceDll((629, StringBlock((0, "Ark"), (1, "Bulk Cruiser"))), (305, StringBlock((0, "Yes"), (15, "Last"))));
         var s = StringTable.Read("TEXTSTRA.DLL", dll);
         Assert.Equal(new[] { 4864, 4879, 10048, 10049 }, s.Keys);
-        Assert.Equal("Mon Calamari Cruiser", s[10048]);
+        Assert.Equal("Ark", s[10048]);
         Assert.Equal("Last", s[4879]);
     }
 

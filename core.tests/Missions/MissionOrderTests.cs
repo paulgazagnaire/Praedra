@@ -16,20 +16,20 @@ public class MissionOrderTests
     public void MI44_TravelAndTimer()
     {
         var w = new MissionWorld();
-        w.Agent(Leia, H, esp: 50, com: 50);
+        w.Agent(Ledger, H, esp: 50, com: 50);
         w.Stub!.Expect(0, 2, 2);
-        w.Start(Side.Collective, MissionKind.Sabotage, new[] { Leia }, T);
+        w.Start(Side.Collective, MissionKind.Sabotage, new[] { Ledger }, T);
         w.Game.Step();
         var started = w.Events<MissionStarted>().Single();
         Assert.Equal((3, 3), (started.TotalTicks, started.ArrivalDay));
-        Assert.Null(w.Ch.Get(Leia)!.System); // in transit with the group
+        Assert.Null(w.Ch.Get(Ledger)!.System); // in transit with the group
         Assert.Equal(0, w.Events<MissionDeparted>().Single().Day);
         w.Run(1); // Step 1
         Assert.Empty(w.Events<MissionLanded>());
         w.Game.Step(); // Step 2
         var landed = w.Events<MissionLanded>().Single();
         Assert.Equal((3, 6), (landed.Day, landed.Due));
-        Assert.Equal(T, w.Ch.Get(Leia)!.System);
+        Assert.Equal(T, w.Ch.Get(Ledger)!.System);
         w.Run(2); // Steps 3, 4
         Assert.Empty(w.Events<MissionMemberRoll>());
         w.Game.Step(); // Step 5
@@ -43,10 +43,10 @@ public class MissionOrderTests
     {
         var w = new MissionWorld();
         w.Hold(T, Side.Collective, 100);
-        w.Agent(Leia, T, dip: 120);
+        w.Agent(Ledger, T, dip: 120);
         w.Run(9);
         w.Stub!.Expect(0, 10, 4, 0);
-        w.Start(Side.Collective, MissionKind.Diplomacy, new[] { Leia }, T);
+        w.Start(Side.Collective, MissionKind.Diplomacy, new[] { Ledger }, T);
         w.Game.Step(); // Step 9
         Assert.Equal((10, 19), (w.Events<MissionLanded>().Single().Day, w.Events<MissionLanded>().Single().Due));
         w.Run(8); // Steps 10 to 17
@@ -62,28 +62,28 @@ public class MissionOrderTests
     public void MI46_AlreadyThere()
     {
         var w = new MissionWorld();
-        w.Agent(Leia, T, esp: 10);
+        w.Agent(Ledger, T, esp: 10);
         w.Run(7);
-        w.Start(Side.Collective, MissionKind.Reconnaissance, new[] { Leia }, T);
+        w.Start(Side.Collective, MissionKind.Reconnaissance, new[] { Ledger }, T);
         w.Game.Step();
         Assert.Equal(8, w.Events<MissionLanded>().Single().Day);
         Assert.Equal(0, w.Events<MissionStarted>().Single().TotalTicks);
     }
 
-    // m5-missions MI47: Han alone over a 7-tick hop takes 7 * 50 / 100 = 3 ticks; with a decoy (a special force) the normal 7
+    // m5-missions MI47: Midwife alone over a 7-tick hop takes 7 * 50 / 100 = 3 ticks; with a decoy (a special force) the normal 7
     [Fact]
-    public void MI47_HanSpeed()
+    public void MI47_MidwifeSpeed()
     {
         var w = new MissionWorld(decoys: true);
-        w.Agent(Han, T, esp: 100);
-        w.Start(Side.Collective, MissionKind.Espionage, new[] { Han }, X);
+        w.Agent(Midwife, T, esp: 100);
+        w.Start(Side.Collective, MissionKind.Espionage, new[] { Midwife }, X);
         w.Game.Step();
         Assert.Equal(3, w.Events<MissionStarted>().Single().TotalTicks);
 
         var d = new MissionWorld(decoys: true);
-        d.Agent(Han, T, esp: 100);
-        int bothan = d.Unit(Side.Collective, Bothan, T);
-        d.Start(Side.Collective, MissionKind.Espionage, new[] { Han }, X, decoys: new[] { bothan });
+        d.Agent(Midwife, T, esp: 100);
+        int listeners = d.Unit(Side.Collective, Listeners, T);
+        d.Start(Side.Collective, MissionKind.Espionage, new[] { Midwife }, X, decoys: new[] { listeners });
         d.Game.Step();
         Assert.Equal(7, d.Events<MissionStarted>().Single().TotalTicks);
     }
@@ -93,21 +93,21 @@ public class MissionOrderTests
     public void MI48_WrongSide()
     {
         var w = new MissionWorld();
-        w.Agent(Han, T, com: 100);
-        w.Agent(Vader, T, com: 100, esp: 50);
-        Assert.Equal(MissionReject.WrongSide, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Assassination, new() { Han }, new(), new(), null, Vader)));
-        Assert.Equal(MissionReject.WrongSide, w.Try(s => new StartMissionOrder(s, Side.Hand, MissionKind.SpikeTheHarvester, new() { Vader }, new(), new(), T)));
+        w.Agent(Midwife, T, com: 100);
+        w.Agent(Ravilla, T, com: 100, esp: 50);
+        Assert.Equal(MissionReject.WrongSide, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Assassination, new() { Midwife }, new(), new(), null, Ravilla)));
+        Assert.Equal(MissionReject.WrongSide, w.Try(s => new StartMissionOrder(s, Side.Hand, MissionKind.SpikeTheHarvester, new() { Ravilla }, new(), new(), T)));
     }
 
     // m5-missions MI49: special forces as team members, checked against the record's mask
     [Theory]
     [InlineData(Guerrillas, MissionKind.Sabotage, Side.Collective, false)]
     [InlineData(Infiltrators, MissionKind.Sabotage, Side.Collective, true)]
-    [InlineData(Bothan, MissionKind.Espionage, Side.Collective, true)]
+    [InlineData(Listeners, MissionKind.Espionage, Side.Collective, true)]
     [InlineData(Infiltrators, MissionKind.Rescue, Side.Collective, true)]
     [InlineData(Probe, MissionKind.Reconnaissance, Side.Hand, true)]
     [InlineData(Commandos, MissionKind.SubdueUprising, Side.Hand, true)]
-    [InlineData(Bothan, MissionKind.Diplomacy, Side.Collective, false)]
+    [InlineData(Listeners, MissionKind.Diplomacy, Side.Collective, false)]
     public void MI49_SpecialForceEligibility(string cls, MissionKind kind, Side side, bool ok)
     {
         var w = new MissionWorld();
@@ -124,9 +124,9 @@ public class MissionOrderTests
     {
         var w = new MissionWorld();
         w.Hold(T, null, 50);
-        int inf = w.Unit(Side.Collective, Infiltrators, T), bothan = w.Unit(Side.Collective, Bothan, T), probe = w.Unit(Side.Hand, Probe, T);
+        int inf = w.Unit(Side.Collective, Infiltrators, T), listeners = w.Unit(Side.Collective, Listeners, T), probe = w.Unit(Side.Hand, Probe, T);
         Assert.Null(w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Sabotage, new(), new() { inf }, new(), T)));
-        Assert.Null(w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new(), new() { bothan }, new(), T)));
+        Assert.Null(w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new(), new() { listeners }, new(), T)));
         Assert.Null(w.Try(s => new StartMissionOrder(s, Side.Hand, MissionKind.Reconnaissance, new(), new() { probe }, new(), T)));
     }
 
@@ -135,26 +135,26 @@ public class MissionOrderTests
     public void MI50_TeamChecks()
     {
         var w = new MissionWorld(decoys: true);
-        w.Agent(Leia, T, esp: 50);
-        w.Agent(Han, H, esp: 50);
-        int bothan = w.Unit(Side.Collective, Bothan, T);
-        int unfinished = w.Unit(Side.Collective, Bothan, T, completed: false);
-        Assert.Equal(MissionReject.NotTogether, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new() { Leia, Han }, new(), new(), X)));
-        Assert.Equal(MissionReject.NoTeam, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new(), new(), new() { bothan }, X)));
-        Assert.Null(w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new() { Leia }, new(), new(), X)));
-        Assert.Equal(MissionReject.NotFree, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Reconnaissance, new() { Leia }, new(), new(), X)));
+        w.Agent(Ledger, T, esp: 50);
+        w.Agent(Midwife, H, esp: 50);
+        int listeners = w.Unit(Side.Collective, Listeners, T);
+        int unfinished = w.Unit(Side.Collective, Listeners, T, completed: false);
+        Assert.Equal(MissionReject.NotTogether, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new() { Ledger, Midwife }, new(), new(), X)));
+        Assert.Equal(MissionReject.NoTeam, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new(), new(), new() { listeners }, X)));
+        Assert.Null(w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new() { Ledger }, new(), new(), X)));
+        Assert.Equal(MissionReject.NotFree, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Reconnaissance, new() { Ledger }, new(), new(), X)));
         Assert.Equal(RejectReason.NotCompleted, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new(), new() { unfinished }, new(), X)));
         // the other checks of the list, in order
-        Assert.Equal(MissionReject.UnknownKind, w.Try(s => new StartMissionOrder(s, Side.Collective, (MissionKind)0x99, new() { Han }, new(), new(), X)));
+        Assert.Equal(MissionReject.UnknownKind, w.Try(s => new StartMissionOrder(s, Side.Collective, (MissionKind)0x99, new() { Midwife }, new(), new(), X)));
         Assert.Equal(MissionReject.UnknownMember, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new() { 12345 }, new(), new(), X)));
-        w.Agent(Vader, H, esp: 50);
-        Assert.Equal(RejectReason.NotYours, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new() { Vader }, new(), new(), X)));
-        Assert.Equal(MissionReject.DuplicateMember, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new() { Han, Han }, new(), new(), X)));
-        w.Agent(Lando, H); // espionage 0
-        Assert.Equal(MissionReject.NotAbleToDo, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new() { Lando }, new(), new(), X)));
-        int bothanH = w.Unit(Side.Collective, Bothan, H);
-        Assert.Equal(MissionReject.BadDecoy, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new() { Han }, new(), new(), X, null, null, new() { Lando })));
-        Assert.Equal(MissionReject.DuplicateMember, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new() { Han }, new() { bothanH }, new() { bothanH }, X)));
+        w.Agent(Ravilla, H, esp: 50);
+        Assert.Equal(RejectReason.NotYours, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new() { Ravilla }, new(), new(), X)));
+        Assert.Equal(MissionReject.DuplicateMember, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new() { Midwife, Midwife }, new(), new(), X)));
+        w.Agent(Foreman, H); // espionage 0
+        Assert.Equal(MissionReject.NotAbleToDo, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new() { Foreman }, new(), new(), X)));
+        int listenersH = w.Unit(Side.Collective, Listeners, H);
+        Assert.Equal(MissionReject.BadDecoy, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new() { Midwife }, new(), new(), X, null, null, new() { Foreman })));
+        Assert.Equal(MissionReject.DuplicateMember, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new() { Midwife }, new() { listenersH }, new() { listenersH }, X)));
     }
 
     // m5-missions MI51: Diplomacy on an enemy system, a neutral one, an own one in uprising; Incite on an own system; Subdue with no uprising
@@ -162,15 +162,15 @@ public class MissionOrderTests
     public void MI51_Targets()
     {
         var w = new MissionWorld();
-        w.Agent(Leia, T, dip: 100, lead: 100);
-        w.Hold(X, Side.Hand, 0); w.Hold(Alderaan, null, 50); w.Hold(Bespin, Side.Collective, 0); w.Hold(H, Side.Collective, 100);
+        w.Agent(Ledger, T, dip: 100, lead: 100);
+        w.Hold(X, Side.Hand, 0); w.Hold(Afar, null, 50); w.Hold(DriftHarbour, Side.Collective, 0); w.Hold(H, Side.Collective, 100);
         w.Game.Step(); // 6.1: Drift Harbour (support 0, no garrison) rises
-        Assert.True(w.Host.Support.IsUprising(Bespin));
-        Assert.Equal(MissionReject.BadTarget, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Diplomacy, new() { Leia }, new(), new(), X)));
-        Assert.Equal(MissionReject.BadTarget, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Diplomacy, new() { Leia }, new(), new(), Bespin)));
-        Assert.Equal(MissionReject.BadTarget, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.InciteUprising, new() { Leia }, new(), new(), H)));
-        Assert.Equal(MissionReject.BadTarget, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.SubdueUprising, new() { Leia }, new(), new(), H)));
-        Assert.Null(w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Diplomacy, new() { Leia }, new(), new(), Alderaan)));
+        Assert.True(w.Host.Support.IsUprising(DriftHarbour));
+        Assert.Equal(MissionReject.BadTarget, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Diplomacy, new() { Ledger }, new(), new(), X)));
+        Assert.Equal(MissionReject.BadTarget, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Diplomacy, new() { Ledger }, new(), new(), DriftHarbour)));
+        Assert.Equal(MissionReject.BadTarget, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.InciteUprising, new() { Ledger }, new(), new(), H)));
+        Assert.Equal(MissionReject.BadTarget, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.SubdueUprising, new() { Ledger }, new(), new(), H)));
+        Assert.Null(w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Diplomacy, new() { Ledger }, new(), new(), Afar)));
     }
 
     // m5-missions MI52: a Diplomacy mission whose target falls into uprising before its next iteration ends TargetInvalid with no draw and goes home
@@ -180,8 +180,8 @@ public class MissionOrderTests
         var w = new MissionWorld();
         w.Hold(T, Side.Collective, 50);
         int reg = w.Unit(Side.Collective, RebArmy, T); // N = 1: covered
-        w.Agent(Leia, T, dip: 100);
-        w.Start(Side.Collective, MissionKind.Diplomacy, new[] { Leia }, T);
+        w.Agent(Ledger, T, dip: 100);
+        w.Start(Side.Collective, MissionKind.Diplomacy, new[] { Ledger }, T);
         w.Game.Step();
         Assert.False(w.Host.Support.IsUprising(T));
         w.Host.Economy.RemoveObject(reg);
@@ -193,7 +193,7 @@ public class MissionOrderTests
         Assert.Equal(rolls, w.Stub.Count(0, 99));
         w.Run(2);
         Assert.Equal(T, w.Events<MissionReturned>().Single().At);
-        Assert.False(w.M.IsOnMission(Leia));
+        Assert.False(w.M.IsOnMission(Ledger));
         Assert.Empty(w.M.Missions);
     }
 
@@ -202,10 +202,10 @@ public class MissionOrderTests
     public void MI53_NoHarvesterAndHiddenKind()
     {
         var w = new MissionWorld();
-        w.Agent(Luke, T, esp: 50, com: 50);
-        Assert.Equal(MissionReject.NoHarvester, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.SpikeTheHarvester, new() { Luke }, new(), new(), T)));
-        Assert.Equal(MissionReject.HiddenKind, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Leave, new() { Luke }, new(), new(), T)));
-        Assert.Equal(MissionReject.HiddenKind, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Move, new() { Luke }, new(), new(), T)));
+        w.Agent(Nobody, T, esp: 50, com: 50);
+        Assert.Equal(MissionReject.NoHarvester, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.SpikeTheHarvester, new() { Nobody }, new(), new(), T)));
+        Assert.Equal(MissionReject.HiddenKind, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Leave, new() { Nobody }, new(), new(), T)));
+        Assert.Equal(MissionReject.HiddenKind, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Move, new() { Nobody }, new(), new(), T)));
     }
 
     // m5-missions MI54: CancelMission on a working mission: accepted in step 1, no iteration, the group departs home in step 2; while outbound: InTransit
@@ -214,8 +214,8 @@ public class MissionOrderTests
     {
         var w = new MissionWorld();
         w.Hold(H, Side.Collective, 100);
-        w.Agent(Leia, H, esp: 50, com: 50);
-        w.Start(Side.Collective, MissionKind.Sabotage, new[] { Leia }, T);
+        w.Agent(Ledger, H, esp: 50, com: 50);
+        w.Start(Side.Collective, MissionKind.Sabotage, new[] { Ledger }, T);
         w.Game.Step();
         int id = w.LastMission;
         Assert.Equal(RejectReason.InTransit, w.Try(s => new CancelMissionOrder(s, Side.Collective, id))); // Step 1
@@ -233,27 +233,27 @@ public class MissionOrderTests
         Assert.Equal((true, day, H), (dep.Returning, dep.Day, dep.Destination));
         w.Run(3);
         Assert.Equal(H, w.Events<MissionReturned>().Single().At);
-        Assert.Equal(H, w.Ch.Get(Leia)!.System);
+        Assert.Equal(H, w.Ch.Get(Ledger)!.System);
     }
 
-    // m5-missions MI55: the mission ends after HomeSystem was captured; Alderaan and Drift Harbour are both own systems 4 ticks away: the tie goes to Alderaan
+    // m5-missions MI55: the mission ends after HomeSystem was captured; Afar and Drift Harbour are both own systems 4 ticks away: the tie goes to Afar
     [Fact]
     public void MI55_ReturnToNearestOwnSystem()
     {
         var w = new MissionWorld();
-        w.Hold(H, Side.Collective, 100); w.Hold(Alderaan, Side.Collective, 100); w.Hold(Bespin, Side.Collective, 100);
-        w.Agent(Leia, H, esp: 50, com: 50);
-        w.Stub!.Expect(0, 99, Bt(1, 99)); // B2b: Leia's betrayal draw first
-        w.Start(Side.Collective, MissionKind.Sabotage, new[] { Leia }, T);
+        w.Hold(H, Side.Collective, 100); w.Hold(Afar, Side.Collective, 100); w.Hold(DriftHarbour, Side.Collective, 100);
+        w.Agent(Ledger, H, esp: 50, com: 50);
+        w.Stub!.Expect(0, 99, Bt(1, 99)); // B2b: Ledger's betrayal draw first
+        w.Start(Side.Collective, MissionKind.Sabotage, new[] { Ledger }, T);
         w.Game.Step();
         w.Host.Fleets.SetOwner(H, Side.Hand);
         w.RunIteration(w.LastMission);
         Assert.Equal(MissionOutcome.Failed, w.Events<MissionEnded>().Single().Outcome);
         w.Game.Step();
         var dep = w.Events<MissionDeparted>().Last();
-        Assert.Equal((true, Alderaan, 4), (dep.Returning, dep.Destination, dep.TotalTicks));
+        Assert.Equal((true, Afar, 4), (dep.Returning, dep.Destination, dep.TotalTicks));
         w.Run(4);
-        Assert.Equal(Alderaan, w.Events<MissionReturned>().Single().At);
+        Assert.Equal(Afar, w.Events<MissionReturned>().Single().At);
     }
 
     // m5-missions MI58: same seed and orders twice (a mixed game of five missions): identical events, draws and state hash; a save mid-game plays on identically
@@ -263,22 +263,22 @@ public class MissionOrderTests
         static (MissionWorld W, string Hash, List<string> Events) Play(ulong seed, int saveAt = -1)
         {
             var w = new MissionWorld(seed: seed);
-            w.Hold(H, Side.Collective, 100); w.Hold(T, Side.Hand, 20); w.Hold(X, null, 50); w.Hold(Alderaan, Side.Collective, 30);
+            w.Hold(H, Side.Collective, 100); w.Hold(T, Side.Hand, 20); w.Hold(X, null, 50); w.Hold(Afar, Side.Collective, 30);
             w.Host.Economy.AddFacility(T, FacilityKind.Mine);
             w.Host.Economy.AddFacility(H, FacilityKind.OrbitalShipyard);
             w.Unit(Side.Hand, ImpArmy, T);
-            w.Agent(Leia, H, esp: 60, com: 50, dip: 110);
-            w.Agent(Han, H, esp: 90, com: 90);
-            w.Agent(Luke, H, ship: 50);
-            w.Agent(MonMothma, Alderaan, dip: 100);
-            w.Agent(Vader, T, esp: 40, com: 100);
-            int bothan = w.Unit(Side.Collective, Bothan, H);
-            w.Start(Side.Collective, MissionKind.Diplomacy, new[] { Leia }, X);
-            w.Start(Side.Collective, MissionKind.Sabotage, new[] { Han }, T);
-            w.Start(Side.Collective, MissionKind.ShipResearch, new[] { Luke }, H);
-            w.Start(Side.Collective, MissionKind.Diplomacy, new[] { MonMothma }, Alderaan);
-            w.Start(Side.Hand, MissionKind.Espionage, new[] { Vader }, H);
-            w.Start(Side.Collective, MissionKind.Espionage, Array.Empty<int>(), T, new[] { bothan });
+            w.Agent(Ledger, H, esp: 60, com: 50, dip: 110);
+            w.Agent(Midwife, H, esp: 90, com: 90);
+            w.Agent(Nobody, H, ship: 50);
+            w.Agent(MaeAbara, Afar, dip: 100);
+            w.Agent(Ravilla, T, esp: 40, com: 100);
+            int listeners = w.Unit(Side.Collective, Listeners, H);
+            w.Start(Side.Collective, MissionKind.Diplomacy, new[] { Ledger }, X);
+            w.Start(Side.Collective, MissionKind.Sabotage, new[] { Midwife }, T);
+            w.Start(Side.Collective, MissionKind.ShipResearch, new[] { Nobody }, H);
+            w.Start(Side.Collective, MissionKind.Diplomacy, new[] { MaeAbara }, Afar);
+            w.Start(Side.Hand, MissionKind.Espionage, new[] { Ravilla }, H);
+            w.Start(Side.Collective, MissionKind.Espionage, Array.Empty<int>(), T, new[] { listeners });
             for (int d = 0; d < 120; d++)
             {
                 if (d == saveAt) w.Reload();
@@ -302,9 +302,9 @@ public class MissionOrderTests
     {
         var w = new MissionWorld(seed: 3);
         w.Hold(T, Side.Hand, 0);
-        w.Agent(Leia, H, esp: 50, com: 50);
-        int bothan = w.Unit(Side.Collective, Bothan, H);
-        w.Start(Side.Collective, MissionKind.Espionage, new[] { Leia }, T, new[] { bothan });
+        w.Agent(Ledger, H, esp: 50, com: 50);
+        int listeners = w.Unit(Side.Collective, Listeners, H);
+        w.Start(Side.Collective, MissionKind.Espionage, new[] { Ledger }, T, new[] { listeners });
         w.Run(2);
         string hash = w.Host.StateHash();
         var m = w.M.Missions.Single();
@@ -313,7 +313,7 @@ public class MissionOrderTests
         var n = w.M.Missions.Single();
         Assert.Equal((m.Id, m.Kind, m.Phase, m.ArrivalDay, m.Target, m.Home), (n.Id, n.Kind, n.Phase, n.ArrivalDay, n.Target, n.Home));
         Assert.Equal(m.SpecialForces, n.SpecialForces);
-        Assert.True(w.M.IsOnMission(Leia));
+        Assert.True(w.M.IsOnMission(Ledger));
         // a queued mission order survives a save too
         w.Submit(s => new CancelMissionOrder(s, Side.Collective, n.Id));
         w.Reload();
@@ -326,14 +326,14 @@ public class MissionOrderTests
     {
         var w = new MissionWorld();
         w.Host.Fleets.AddFleet(Side.Hand, "Picket", new[] { "Mandate" }, T);
-        w.Agent(Leia, H);
+        w.Agent(Ledger, H);
         int draws = w.Stub!.Requests.Count;
-        w.Submit(s => new MoveGroupOrder(s, Side.Collective, new() { Leia }, new(), X));
+        w.Submit(s => new MoveGroupOrder(s, Side.Collective, new() { Ledger }, new(), X));
         w.Run(10);
         var arrived = w.Events<MissionGroupArrived>().Single();
         Assert.Equal((10, X), (arrived.Day, arrived.At)); // 3 + 7 ticks
-        Assert.Equal(X, w.Ch.Get(Leia)!.System);
-        Assert.False(w.M.IsOnMission(Leia));
+        Assert.Equal(X, w.Ch.Get(Ledger)!.System);
+        Assert.False(w.M.IsOnMission(Ledger));
         Assert.Equal(draws, w.Stub.Requests.Count);
     }
 
@@ -342,16 +342,16 @@ public class MissionOrderTests
     public void MoveGroupChecks()
     {
         var w = new MissionWorld();
-        w.Agent(Vader, T);
+        w.Agent(Ravilla, T);
         int hunters = w.Unit(Side.Hand, Hunters, T), probe = w.Unit(Side.Hand, Probe, T);
-        Assert.Equal(MissionReject.NotEligibleSpecialForce, w.Try(s => new MoveGroupOrder(s, Side.Hand, new() { Vader }, new() { hunters }, H)));
-        Assert.Equal(RejectReason.UnknownSystem, w.Try(s => new MoveGroupOrder(s, Side.Hand, new() { Vader }, new(), "No Such Place")));
-        Assert.Equal(RejectReason.AlreadyThere, w.Try(s => new MoveGroupOrder(s, Side.Hand, new() { Vader }, new(), T)));
-        Assert.Null(w.Try(s => new MoveGroupOrder(s, Side.Hand, new() { Vader }, new() { probe }, H)));
+        Assert.Equal(MissionReject.NotEligibleSpecialForce, w.Try(s => new MoveGroupOrder(s, Side.Hand, new() { Ravilla }, new() { hunters }, H)));
+        Assert.Equal(RejectReason.UnknownSystem, w.Try(s => new MoveGroupOrder(s, Side.Hand, new() { Ravilla }, new(), "No Such Place")));
+        Assert.Equal(RejectReason.AlreadyThere, w.Try(s => new MoveGroupOrder(s, Side.Hand, new() { Ravilla }, new(), T)));
+        Assert.Null(w.Try(s => new MoveGroupOrder(s, Side.Hand, new() { Ravilla }, new() { probe }, H)));
         Assert.Null(w.Host.Economy.Find(probe)!.System);
         w.Run(3);
         Assert.Equal(H, w.Host.Economy.Find(probe)!.System);
-        Assert.Equal(H, w.Ch.Get(Vader)!.System);
+        Assert.Equal(H, w.Ch.Get(Ravilla)!.System);
     }
 
     // Rules with no data or no owner are refused, never invented: decoys while the decoy table is Missing, Recruitment while no recruit hook is
@@ -361,26 +361,26 @@ public class MissionOrderTests
     {
         var w = new MissionWorld();
         w.Hold(T, Side.Collective, 100);
-        w.Agent(Leia, T, esp: 50, lead: 80);
-        w.Agent(Luke, T, esp: 50);
-        int bothan = w.Unit(Side.Collective, Bothan, T);
+        w.Agent(Ledger, T, esp: 50, lead: 80);
+        w.Agent(Nobody, T, esp: 50);
+        int listeners = w.Unit(Side.Collective, Listeners, T);
         // B1: the shipped data has the decoy table (FDECOYTB), so a decoy is accepted; RuleMissing only for data without one
         var w0 = new MissionWorld();
         w0.Hold(T, Side.Collective, 100);
-        w0.Agent(Leia, T, esp: 50);
-        int bothan0 = w0.Unit(Side.Collective, Bothan, T);
+        w0.Agent(Ledger, T, esp: 50);
+        int listeners0 = w0.Unit(Side.Collective, Listeners, T);
         Assert.NotNull(w0.M.Data.DecoyTable);
-        Assert.Null(w0.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new() { Leia }, new(), new() { bothan0 }, X)));
-        _ = bothan;
+        Assert.Null(w0.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new() { Ledger }, new(), new() { listeners0 }, X)));
+        _ = listeners;
         Assert.NotNull(w.M.Recruit); // m5-missions §6 Recruitment (2026-10-18): the host wires the pick
         w.M.Recruit = null;
-        Assert.Equal(MissionReject.RuleMissing, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Recruitment, new() { Leia }, new(), new(), T)));
-        Assert.Equal(MissionReject.RuleMissing, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.TrainTalent, new() { Luke }, new(), new(), T)));
+        Assert.Equal(MissionReject.RuleMissing, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Recruitment, new() { Ledger }, new(), new(), T)));
+        Assert.Equal(MissionReject.RuleMissing, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.TrainTalent, new() { Nobody }, new(), new(), T)));
         // with a recruit hook the mission runs (MI21: leadership 80 gives RCRTMSTB(80) = 60 on the full table, step lookup)
         CharacterRecord? recruited = null;
-        w.M.Recruit = (ctx, side, sys) => { var c = w.Ch.Get(Wedge) ?? w.Ch.Create(w.Ch.Data.Get(Wedge), new Praedra.Core.Tests.Economy.StubRng()); w.Ch.Place(c.Id, sys, ctx); recruited = c; return c; };
+        w.M.Recruit = (ctx, side, sys) => { var c = w.Ch.Get(FortyOne) ?? w.Ch.Create(w.Ch.Data.Get(FortyOne), new Praedra.Core.Tests.Economy.StubRng()); w.Ch.Place(c.Id, sys, ctx); recruited = c; return c; };
         w.Stub!.Expect(0, 99, 0);
-        Assert.Null(w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Recruitment, new() { Leia }, new(), new(), T)));
+        Assert.Null(w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Recruitment, new() { Ledger }, new(), new(), T)));
         w.RunIteration(w.LastMission);
         Assert.NotNull(recruited);
         Assert.Equal(recruited!.Id, w.Events<CharacterRecruited>().Single().Character);
@@ -426,7 +426,7 @@ public class MissionOrderTests
         Assert.Equal(0x802, d.Get(MissionKind.Rescue).SpecialForceMask);
         Assert.True(d.Get(MissionKind.Leave).Hidden);
         Assert.False(d.Get(MissionKind.Assassination).Collective);
-        Assert.Equal((35, 35, -1, 50, 579), (d.Numbers.DecoyOfficerPercent, d.Numbers.DetectionOfficerPercent, d.Numbers.DetectionConstant, d.Numbers.HanMissionSpeed, d.Numbers.HanCharacterId));
+        Assert.Equal((35, 35, -1, 50, 579), (d.Numbers.DecoyOfficerPercent, d.Numbers.DetectionOfficerPercent, d.Numbers.DetectionConstant, d.Numbers.RunnerLines, d.Numbers.MidwifeCharacterId));
         Assert.Equal(10, GameData.Default.Ships["Mandate"].Detection > 0 ? 10 : 0); // ships carry their detection column
         Assert.Contains("5.3", Game.WorkList);
         Assert.True(Game.WorkList.ToList().IndexOf("5.3") > Game.WorkList.ToList().IndexOf("5.2") && Game.WorkList.ToList().IndexOf("5.3") < Game.WorkList.ToList().IndexOf("5.4"));
@@ -449,8 +449,8 @@ public class MissionOrderTests
         int landed = w.Unit(Side.Hand, Storm, T);
         int based = w.Unit(Side.Hand, "Gleaner", T);
         w.Unit(Side.Hand, Probe, T); w.Unit(Side.Collective, RebArmy, T); w.Host.Economy.AddFacility(T, FacilityKind.Mine);
-        w.Agent(Piett, T, esp: 60); w.Ch.SetPost(Piett, fleet, CharacterPost.Admiral);
-        w.Agent(Veers, T, esp: 40); w.Ch.SetPost(Veers, fleet, CharacterPost.General);
+        w.Agent(Varo, T, esp: 60); w.Ch.SetPost(Varo, fleet, CharacterPost.Admiral);
+        w.Agent(EightyEight, T, esp: 40); w.Ch.SetPost(EightyEight, fleet, CharacterPost.General);
         var list = w.M.Defenders(Side.Collective, T);
         int probe = w.Host.Economy.Objects.Single(o => o.Class == Probe).Id;
         var expected = new List<(int, int)> { (ship, 60) };
@@ -468,22 +468,22 @@ public class MissionOrderTests
     {
         var w = new MissionWorld();
         w.Hold(T, Side.Hand, 0);
-        w.Agent(Leia, T, esp: 50);
-        w.Agent(Han, T, esp: 50);
+        w.Agent(Ledger, T, esp: 50);
+        w.Agent(Midwife, T, esp: 50);
         w.Stub!.Expect(0, 20, 20); // a long timer: the mission stays working
-        w.Start(Side.Collective, MissionKind.Espionage, new[] { Leia, Han }, T);
+        w.Start(Side.Collective, MissionKind.Espionage, new[] { Ledger, Midwife }, T);
         w.Game.Step();
-        Assert.True(w.Ch.Get(Leia) is { } l && !w.Ch.IsAvailable(l));
-        Assert.Equal(CharacterReject.OnMission, w.Try(s => new MoveCharacterOrder(s, Side.Collective, Leia, H)));
+        Assert.True(w.Ch.Get(Ledger) is { } l && !w.Ch.IsAvailable(l));
+        Assert.Equal(CharacterReject.OnMission, w.Try(s => new MoveCharacterOrder(s, Side.Collective, Ledger, H)));
         Assert.True(w.M.AgentsAt(Side.Collective, T));
         Assert.True(w.Host.Fog.HasLiveAccess(Side.Collective, T)); // AgentPresenceCounts DEFAULT on
-        // Leia is captured by some other rule: her membership ends; Han carries on
+        // Ledger is captured by some other rule: her membership ends; Midwife carries on
         bool once = false;
-        w.Game.RegisterHook("5.2", ctx => { if (!once) { once = true; w.Ch.Capture(ctx, w.Ch.Get(Leia)!, Side.Hand, null, CharacterCause.Debug); } });
+        w.Game.RegisterHook("5.2", ctx => { if (!once) { once = true; w.Ch.Capture(ctx, w.Ch.Get(Ledger)!, Side.Hand, null, CharacterCause.Debug); } });
         w.Game.Step();
-        Assert.Equal(new[] { Han }, w.M.Missions.Single().Characters);
-        Assert.False(w.M.IsOnMission(Leia));
-        Assert.Equal(T, w.Ch.Get(Leia)!.HeldAt);
+        Assert.Equal(new[] { Midwife }, w.M.Missions.Single().Characters);
+        Assert.False(w.M.IsOnMission(Ledger));
+        Assert.Equal(T, w.Ch.Get(Ledger)!.HeldAt);
     }
 
     // The mission side's own events go to that side only (fog §N7); MissionFoiled is seen by the defender with live access.
@@ -492,9 +492,9 @@ public class MissionOrderTests
     {
         var w = new MissionWorld();
         w.Hold(T, Side.Hand, 0);
-        w.Agent(Leia, H, esp: 15);
+        w.Agent(Ledger, H, esp: 15);
         w.Unit(Side.Hand, Probe, T); // B2d: a special force guards the enemy-held planet
-        w.Start(Side.Collective, MissionKind.Espionage, new[] { Leia }, T);
+        w.Start(Side.Collective, MissionKind.Espionage, new[] { Ledger }, T);
         w.Game.Step();
         w.RunIteration(w.LastMission);
         var hand = w.Host.Fog.EventsFor(Side.Hand);
@@ -508,9 +508,9 @@ public class MissionOrderTests
     public void Caps()
     {
         var w = new MissionWorld(new MissionParams { MaxTeamMembers = 1 });
-        w.Agent(Leia, T, esp: 50); w.Agent(Han, T, esp: 50);
-        Assert.Equal(MissionReject.TooManyMembers, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new() { Leia, Han }, new(), new(), X)));
-        Assert.Null(w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new() { Leia }, new(), new(), X)));
+        w.Agent(Ledger, T, esp: 50); w.Agent(Midwife, T, esp: 50);
+        Assert.Equal(MissionReject.TooManyMembers, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new() { Ledger, Midwife }, new(), new(), X)));
+        Assert.Null(w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Espionage, new() { Ledger }, new(), new(), X)));
     }
 
     // m5-missions §Orders (StartMission): the read-only dry run the screens use gives the handler's verdict (same reason, or the route and the
@@ -519,27 +519,27 @@ public class MissionOrderTests
     public void CheckStartMatchesTheHandlerAndChangesNothing()
     {
         var w = new MissionWorld();
-        w.Agent(Leia, H, esp: 50, com: 50);
-        w.Agent(Luke, T, esp: 50);
+        w.Agent(Ledger, H, esp: 50, com: 50);
+        w.Agent(Nobody, T, esp: 50);
         StartMissionOrder Order(MissionKind k, List<int> team, string? target) => new(0, Side.Collective, k, team, new(), new(), target);
         string hash = w.Host.StateHash(); int events = w.Game.Events.Count, draws = w.Stub!.Requests.Count;
 
-        var ok = w.M.CheckStart(Order(MissionKind.Sabotage, new() { Leia }, T));
+        var ok = w.M.CheckStart(Order(MissionKind.Sabotage, new() { Ledger }, T));
         Assert.Null(ok.Reason);
         Assert.Equal((H, T, 3, 3), (ok.Home, ok.Target, ok.Ticks, ok.ArrivalDay));
         Assert.Equal(H, ok.Path![0]); Assert.Equal(T, ok.Path[^1]);
-        Assert.Equal(MissionReject.NotTogether, w.M.CheckStart(Order(MissionKind.Espionage, new() { Leia, Luke }, X)).Reason);
-        Assert.Equal(MissionReject.RuleMissing, w.M.CheckStart(Order(MissionKind.TrainTalent, new() { Luke }, T)).Reason);
-        Assert.Equal(MissionReject.BadTarget, w.M.CheckStart(Order(MissionKind.Espionage, new() { Leia }, null)).Reason);
+        Assert.Equal(MissionReject.NotTogether, w.M.CheckStart(Order(MissionKind.Espionage, new() { Ledger, Nobody }, X)).Reason);
+        Assert.Equal(MissionReject.RuleMissing, w.M.CheckStart(Order(MissionKind.TrainTalent, new() { Nobody }, T)).Reason);
+        Assert.Equal(MissionReject.BadTarget, w.M.CheckStart(Order(MissionKind.Espionage, new() { Ledger }, null)).Reason);
         Assert.Equal((hash, events, draws), (w.Host.StateHash(), w.Game.Events.Count, w.Stub.Requests.Count));
 
         // the handler agrees: the same refusal, then the same trip
-        Assert.Equal(MissionReject.NotTogether, w.Try(s => Order(MissionKind.Espionage, new() { Leia, Luke }, X) with { Sequence = s }));
-        var check = w.M.CheckStart(Order(MissionKind.Sabotage, new() { Leia }, T));
+        Assert.Equal(MissionReject.NotTogether, w.Try(s => Order(MissionKind.Espionage, new() { Ledger, Nobody }, X) with { Sequence = s }));
+        var check = w.M.CheckStart(Order(MissionKind.Sabotage, new() { Ledger }, T));
         w.Stub.Expect(0, 2, 2);
-        Assert.Null(w.Try(s => Order(MissionKind.Sabotage, new() { Leia }, T) with { Sequence = s }));
+        Assert.Null(w.Try(s => Order(MissionKind.Sabotage, new() { Ledger }, T) with { Sequence = s }));
         var started = w.Events<MissionStarted>().Single();
         Assert.Equal((check.Ticks, check.ArrivalDay), (started.TotalTicks, started.ArrivalDay));
-        Assert.Equal(MissionReject.NotFree, w.M.CheckStart(Order(MissionKind.Sabotage, new() { Leia }, T)).Reason);
+        Assert.Equal(MissionReject.NotFree, w.M.CheckStart(Order(MissionKind.Sabotage, new() { Ledger }, T)).Reason);
     }
 }

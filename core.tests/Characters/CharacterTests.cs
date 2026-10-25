@@ -15,11 +15,11 @@ public class CharacterTests
 
     // m5-characters-and-force CH1
     [Fact]
-    public void CH1_AckbarCreationDrawsInOrder()
+    public void CH1_KethCreationDrawsInOrder()
     {
         var w = new CharWorld();
         var stub = new StubRng().Queue(12, 49, 60, 0, 10, 9, 33);
-        var c = w.Ch.Create(w.Ch.Data.Get(Ackbar), stub);
+        var c = w.Ch.Create(w.Ch.Data.Get(Keth), stub);
         Assert.Equal(new[] { 12, 49, 100, 0, 0, 0, 100 }, c.Skills);
         Assert.True(c.TalentHolder);
         // B2e moved: Talent is rolled only once he is aware (B2e §5), so a hidden user has Talent 0 and the level draw is not made at creation
@@ -28,7 +28,7 @@ public class CharacterTests
         Assert.Equal(new[] { (0, 30), (0, 50), (0, 60), (0, 50), (0, 10), (0, 99) }, stub.Requests.Select(r => (r.Min, r.Max)));
 
         var stub2 = new StubRng().Queue(12, 49, 60, 0, 10, 10);
-        var c2 = w.Ch.Create(w.Ch.Data.Get(Ackbar), stub2);
+        var c2 = w.Ch.Create(w.Ch.Data.Get(Keth), stub2);
         Assert.False(c2.TalentHolder);
         Assert.Equal(0, c2.EffectiveTalent);
         Assert.Equal(6, stub2.Requests.Count);
@@ -40,13 +40,13 @@ public class CharacterTests
     {
         var w = new CharWorld();
         var stub = new StubRng();
-        var han = w.Ch.Create(w.Ch.Data.Get(Han), stub);
-        var luke = w.Ch.Create(w.Ch.Data.Get(Luke), stub);
-        var leia = w.Ch.Create(w.Ch.Data.Get(Leia), stub);
+        var midwife = w.Ch.Create(w.Ch.Data.Get(Midwife), stub);
+        var nobody = w.Ch.Create(w.Ch.Data.Get(Nobody), stub);
+        var ledger = w.Ch.Create(w.Ch.Data.Get(Ledger), stub);
         Assert.Empty(stub.Requests);
-        Assert.Equal(0, han.EffectiveTalent); Assert.False(han.TalentHolder);
-        Assert.Equal(50, luke.EffectiveTalent); Assert.True(luke.TalentDiscovered);
-        Assert.Equal(0, leia.EffectiveTalent); Assert.True(leia.TalentHolder); Assert.False(leia.TalentDiscovered); // B2e moved: Talent 0 until aware
+        Assert.Equal(0, midwife.EffectiveTalent); Assert.False(midwife.TalentHolder);
+        Assert.Equal(50, nobody.EffectiveTalent); Assert.True(nobody.TalentDiscovered);
+        Assert.Equal(0, ledger.EffectiveTalent); Assert.True(ledger.TalentHolder); Assert.False(ledger.TalentDiscovered); // B2e moved: Talent 0 until aware
     }
 
     // ------------------------------------------------------------------ Talent (§Talent)
@@ -54,18 +54,18 @@ public class CharacterTests
     private static (CharWorld W, CharacterRecord T, CharacterRecord S) Training(int trainerId, int trainerTalent, int studentId, int studentTalent, CharacterParams? p = null)
     {
         var w = new CharWorld(p);
-        var t = w.Add(trainerId, Yavin); t.TalentHolder = true; t.TalentExperience = trainerTalent;
-        var s = w.Add(studentId, Yavin); s.TalentHolder = true; s.TalentExperience = studentTalent; s.TalentTraining = 0;
+        var t = w.Add(trainerId, Shoal); t.TalentHolder = true; t.TalentExperience = trainerTalent;
+        var s = w.Add(studentId, Shoal); s.TalentHolder = true; s.TalentExperience = studentTalent; s.TalentTraining = 0;
         return (w, t, s);
     }
 
     // m5-characters-and-force CH3 (the Classic roll: Classic values set explicitly, CH37)
     [Fact]
-    public void CH3_VaderTrainsAStudentOfTwenty()
+    public void CH3_RavillaTrainsAStudentOfTwenty()
     {
-        var (w, vader, s) = Training(Vader, 120, Tura, 20, ClassicTalent());
+        var (w, ravilla, s) = Training(Ravilla, 120, Tura, 20, ClassicTalent());
         w.Stub!.Expect(0, 99, 99).Expect(0, 50, 37);
-        w.StepWith("6.10", ctx => w.Ch.TalentTrainingRound(ctx, vader, new[] { s }));
+        w.StepWith("6.10", ctx => w.Ch.TalentTrainingRound(ctx, ravilla, new[] { s }));
         var e = Assert.Single(w.Events<TalentTrainingResult>());
         Assert.Equal((100, 99, true, 37, 57), (e.Gap, e.R, e.Success, e.Gain, e.NewTalent));
         Assert.Equal(37, s.TalentTraining);
@@ -74,18 +74,18 @@ public class CharacterTests
 
     // m5-characters-and-force CH4 (the Classic roll: Classic values set explicitly, CH37)
     [Fact]
-    public void CH4_LukeTrainsLeia()
+    public void CH4_NobodyTrainsLedger()
     {
-        var (w, luke, leia) = Training(Luke, 50, Leia, 10, ClassicTalent());
+        var (w, nobody, ledger) = Training(Nobody, 50, Ledger, 10, ClassicTalent());
         w.Stub!.Expect(0, 99, 39).Expect(0, 20, 20);
-        w.StepWith("6.10", ctx => w.Ch.TalentTrainingRound(ctx, luke, new[] { leia }));
-        Assert.Equal(30, leia.EffectiveTalent);
+        w.StepWith("6.10", ctx => w.Ch.TalentTrainingRound(ctx, nobody, new[] { ledger }));
+        Assert.Equal(30, ledger.EffectiveTalent);
         int before = w.Stub.Requests.Count;
         w.Stub.Expect(0, 99, 40);
-        w.StepWith("6.10", ctx => w.Ch.TalentTrainingRound(ctx, luke, new[] { leia }));
+        w.StepWith("6.10", ctx => w.Ch.TalentTrainingRound(ctx, nobody, new[] { ledger }));
         var last = w.Events<TalentTrainingResult>().Last();
         Assert.False(last.Success);
-        Assert.Equal(30, leia.EffectiveTalent);
+        Assert.Equal(30, ledger.EffectiveTalent);
         Assert.Equal(new[] { (0, 99) }, w.Stub.Requests.Skip(before).Select(r => (r.Min, r.Max)));
     }
 
@@ -93,7 +93,7 @@ public class CharacterTests
     [Fact]
     public void CH5_EqualOrHigherStudentsNeverSucceed_GapOneGainsZero()
     {
-        var (w, t, s) = Training(Luke, 50, Leia, 50, ClassicTalent());
+        var (w, t, s) = Training(Nobody, 50, Ledger, 50, ClassicTalent());
         w.StepWith("6.10", ctx => w.Ch.TalentTrainingRound(ctx, t, new[] { s }));
         s.TalentExperience = 60;
         w.StepWith("6.10", ctx => w.Ch.TalentTrainingRound(ctx, t, new[] { s }));
@@ -112,8 +112,8 @@ public class CharacterTests
     public void CH6_NoStudentReachesTheTrainer()
     {
         var w = new CharWorld(seed: 6);
-        var t = w.Add(Luke, Yavin);
-        var s = w.Add(Leia, Yavin);
+        var t = w.Add(Nobody, Shoal);
+        var s = w.Add(Ledger, Shoal);
         s.TalentDiscovered = true; s.TalentExperience = 10; // B2e: her Talent is rolled once she is aware (level 10, variance 0)
         Assert.Equal((50, 10), (t.EffectiveTalent, s.EffectiveTalent));
         w.StepWith("6.10", ctx =>
@@ -127,53 +127,53 @@ public class CharacterTests
         Assert.True(s.EffectiveTalent > 10);
     }
 
-    // m5-characters-and-force CH35: New TalentSkillPercent 40 (DEFAULT): base 100, Talent 120 gives 148; Luke (Talent 50) diplomacy 50 → 60,
+    // m5-characters-and-force CH35: New TalentSkillPercent 40 (DEFAULT): base 100, Talent 120 gives 148; Nobody (Talent 50) diplomacy 50 → 60,
     // espionage 50 → 60, combat 90 → 108, with 40 injury 68; research skills and leadership unchanged
     [Fact]
     public void CH35_NewTalentSkillPercentForty()
     {
         var w = new CharWorld();
         Assert.Equal(40, w.Ch.Params.TalentSkillPercent);
-        var vader = w.Add(Vader, Coruscant); vader.TalentHolder = true; vader.TalentExperience = 120; vader.TalentTraining = 0;
-        vader.Skills[(int)Skill.Combat] = 100; vader.Skills[(int)Skill.Espionage] = 100; vader.Skills[(int)Skill.Diplomacy] = 100;
-        vader.Skills[(int)Skill.Leadership] = 70; vader.Skills[(int)Skill.ShipDesign] = 30; vader.Injury = 0; vader.LeadershipAdjustment = 0;
-        Assert.Equal((148, 148, 148), (w.Ch.EffectiveSkill(vader, Skill.Combat), w.Ch.EffectiveSkill(vader, Skill.Espionage), w.Ch.EffectiveSkill(vader, Skill.Diplomacy)));
-        Assert.Equal((70, 30), (w.Ch.EffectiveSkill(vader, Skill.Leadership), w.Ch.EffectiveSkill(vader, Skill.ShipDesign)));
-        var luke = w.Add(Luke, Yavin); luke.TalentHolder = true; luke.TalentExperience = 50; luke.TalentTraining = 0; luke.Injury = 0;
-        luke.Skills[(int)Skill.Diplomacy] = 50; luke.Skills[(int)Skill.Espionage] = 50; luke.Skills[(int)Skill.Combat] = 90;
-        Assert.Equal((60, 60, 108), (w.Ch.EffectiveSkill(luke, Skill.Diplomacy), w.Ch.EffectiveSkill(luke, Skill.Espionage), w.Ch.EffectiveSkill(luke, Skill.Combat)));
-        luke.Injury = 40;
-        Assert.Equal(68, w.Ch.EffectiveSkill(luke, Skill.Combat));
+        var ravilla = w.Add(Ravilla, Charter); ravilla.TalentHolder = true; ravilla.TalentExperience = 120; ravilla.TalentTraining = 0;
+        ravilla.Skills[(int)Skill.Combat] = 100; ravilla.Skills[(int)Skill.Espionage] = 100; ravilla.Skills[(int)Skill.Diplomacy] = 100;
+        ravilla.Skills[(int)Skill.Leadership] = 70; ravilla.Skills[(int)Skill.ShipDesign] = 30; ravilla.Injury = 0; ravilla.LeadershipAdjustment = 0;
+        Assert.Equal((148, 148, 148), (w.Ch.EffectiveSkill(ravilla, Skill.Combat), w.Ch.EffectiveSkill(ravilla, Skill.Espionage), w.Ch.EffectiveSkill(ravilla, Skill.Diplomacy)));
+        Assert.Equal((70, 30), (w.Ch.EffectiveSkill(ravilla, Skill.Leadership), w.Ch.EffectiveSkill(ravilla, Skill.ShipDesign)));
+        var nobody = w.Add(Nobody, Shoal); nobody.TalentHolder = true; nobody.TalentExperience = 50; nobody.TalentTraining = 0; nobody.Injury = 0;
+        nobody.Skills[(int)Skill.Diplomacy] = 50; nobody.Skills[(int)Skill.Espionage] = 50; nobody.Skills[(int)Skill.Combat] = 90;
+        Assert.Equal((60, 60, 108), (w.Ch.EffectiveSkill(nobody, Skill.Diplomacy), w.Ch.EffectiveSkill(nobody, Skill.Espionage), w.Ch.EffectiveSkill(nobody, Skill.Combat)));
+        nobody.Injury = 40;
+        Assert.Equal(68, w.Ch.EffectiveSkill(nobody, Skill.Combat));
     }
 
-    // m5-characters-and-force CH36: New training (chance percent 50, gain percent 25, DEFAULT): Vader 120, student 20 (gap 100): chance 50,
-    // r = 49 succeeds, g = rand(0..25), g = 25 → 45; r = 50 fails with no g draw. Luke 50, Leia 10 (gap 40): chance 20, r = 19 succeeds, max gain 10
+    // m5-characters-and-force CH36: New training (chance percent 50, gain percent 25, DEFAULT): Ravilla 120, student 20 (gap 100): chance 50,
+    // r = 49 succeeds, g = rand(0..25), g = 25 → 45; r = 50 fails with no g draw. Nobody 50, Ledger 10 (gap 40): chance 20, r = 19 succeeds, max gain 10
     [Fact]
     public void CH36_NewTrainingChanceAndGain()
     {
-        var (w, vader, s) = Training(Vader, 120, Tura, 20);
+        var (w, ravilla, s) = Training(Ravilla, 120, Tura, 20);
         w.Stub!.Expect(0, 99, 49).Expect(0, 25, 25);
-        w.StepWith("6.10", ctx => w.Ch.TalentTrainingRound(ctx, vader, new[] { s }));
+        w.StepWith("6.10", ctx => w.Ch.TalentTrainingRound(ctx, ravilla, new[] { s }));
         var e = Assert.Single(w.Events<TalentTrainingResult>());
         Assert.Equal((100, 49, true, 25, 45), (e.Gap, e.R, e.Success, e.Gain, e.NewTalent));
         s.TalentTraining = 0;
         int before = w.Stub.Requests.Count;
         w.Stub.Expect(0, 99, 50);
-        w.StepWith("6.10", ctx => w.Ch.TalentTrainingRound(ctx, vader, new[] { s }));
+        w.StepWith("6.10", ctx => w.Ch.TalentTrainingRound(ctx, ravilla, new[] { s }));
         Assert.False(w.Events<TalentTrainingResult>().Last().Success);
         Assert.Equal(20, s.EffectiveTalent);
         Assert.Equal(new[] { (0, 99) }, w.Stub.Requests.Skip(before).Select(r => (r.Min, r.Max)));
 
-        var (w2, luke, leia) = Training(Luke, 50, Leia, 10);
+        var (w2, nobody, ledger) = Training(Nobody, 50, Ledger, 10);
         w2.Stub!.Expect(0, 99, 19).Expect(0, 10, 10);
-        w2.StepWith("6.10", ctx => w2.Ch.TalentTrainingRound(ctx, luke, new[] { leia }));
-        Assert.Equal(20, leia.EffectiveTalent);
+        w2.StepWith("6.10", ctx => w2.Ch.TalentTrainingRound(ctx, nobody, new[] { ledger }));
+        Assert.Equal(20, ledger.EffectiveTalent);
         w2.Stub.Expect(0, 99, 10); // gap 30 now: chance 15, r = 10 succeeds, max gain 30 * 25 / 100 = 7
         w2.Stub.Expect(0, 7, 7);
-        w2.StepWith("6.10", ctx => w2.Ch.TalentTrainingRound(ctx, luke, new[] { leia }));
-        Assert.Equal(27, leia.EffectiveTalent);
+        w2.StepWith("6.10", ctx => w2.Ch.TalentTrainingRound(ctx, nobody, new[] { ledger }));
+        Assert.Equal(27, ledger.EffectiveTalent);
         w2.Stub.Expect(0, 99, 11); // gap 23: chance 11, r = 11 fails
-        w2.StepWith("6.10", ctx => w2.Ch.TalentTrainingRound(ctx, luke, new[] { leia }));
+        w2.StepWith("6.10", ctx => w2.Ch.TalentTrainingRound(ctx, nobody, new[] { ledger }));
         Assert.False(w2.Events<TalentTrainingResult>().Last().Success);
     }
 
@@ -183,9 +183,9 @@ public class CharacterTests
     public void CH37_ClassicValuesReproduceTheClassicTalent()
     {
         var w = new CharWorld(ClassicTalent());
-        var luke = w.Add(Luke, Yavin); luke.TalentHolder = true; luke.TalentExperience = 50; luke.TalentTraining = 0; luke.Injury = 0;
-        luke.Skills[(int)Skill.Diplomacy] = 50; luke.Skills[(int)Skill.Espionage] = 50; luke.Skills[(int)Skill.Combat] = 90;
-        Assert.Equal((75, 75, 135), (w.Ch.EffectiveSkill(luke, Skill.Diplomacy), w.Ch.EffectiveSkill(luke, Skill.Espionage), w.Ch.EffectiveSkill(luke, Skill.Combat)));
+        var nobody = w.Add(Nobody, Shoal); nobody.TalentHolder = true; nobody.TalentExperience = 50; nobody.TalentTraining = 0; nobody.Injury = 0;
+        nobody.Skills[(int)Skill.Diplomacy] = 50; nobody.Skills[(int)Skill.Espionage] = 50; nobody.Skills[(int)Skill.Combat] = 90;
+        Assert.Equal((75, 75, 135), (w.Ch.EffectiveSkill(nobody, Skill.Diplomacy), w.Ch.EffectiveSkill(nobody, Skill.Espionage), w.Ch.EffectiveSkill(nobody, Skill.Combat)));
         var c = new CharacterRecord { Skills = new List<int>(new int[7]) };
         for (int b = 0; b <= 120; b++)
             for (int f = 0; f <= 200; f++)
@@ -193,8 +193,8 @@ public class CharacterTests
                 c.Skills[(int)Skill.Espionage] = b; c.TalentExperience = f;
                 Assert.Equal(b + b * f / 100, c.EffectiveSkill(Skill.Espionage, CharacterParams.ClassicTalentSkillPercent));
             }
-        CH3_VaderTrainsAStudentOfTwenty();
-        CH4_LukeTrainsLeia();
+        CH3_RavillaTrainsAStudentOfTwenty();
+        CH4_NobodyTrainsLedger();
     }
 
     // m5-characters-and-force CH7
@@ -215,9 +215,9 @@ public class CharacterTests
     public void CH8_AdmiralMultipliesBombardment_UntilInjured()
     {
         var w = new CharWorld();
-        int f = w.Fleet(Side.Collective, Yavin, MonCal);
-        var ack = w.Add(Ackbar, Yavin); ack.Skills[(int)Skill.Leadership] = 100;
-        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, Ackbar, f, CharacterPost.Admiral)));
+        int f = w.Fleet(Side.Collective, Shoal, Ark);
+        var ack = w.Add(Keth, Shoal); ack.Skills[(int)Skill.Leadership] = 100;
+        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, Keth, f, CharacterPost.Admiral)));
         var fleet = w.Game.State.Fleets[f];
         var bomb = w.Host.Bombardment;
         int b = bomb.BaseValue(fleet);
@@ -234,24 +234,24 @@ public class CharacterTests
         Assert.Equal(0, bomb.AdmiralLeadership(fleet));
         Assert.Equal(b, bomb.Power(fleet));
         var pv = Assert.Single(w.Events<PostVacated>());
-        Assert.Equal((Ackbar, PostKind.Admiral), (pv.Character, pv.Post));
+        Assert.Equal((Keth, PostKind.Admiral), (pv.Character, pv.Post));
         Assert.Equal((f, CharacterPost.None), (ack.AttachedFleet, ack.Post));
-        Assert.Equal(Yavin, w.Ch.LocationOf(ack));
+        Assert.Equal(Shoal, w.Ch.LocationOf(ack));
     }
 
     // m5-characters-and-force CH9
     [Fact]
-    public void CH9_HanAsFleetGeneralIsTheAssaultPlusOneRow()
+    public void CH9_MidwifeAsFleetGeneralIsTheAssaultPlusOneRow()
     {
         var w = new CharWorld();
-        int f = w.Fleet(Side.Collective, Hoth);
-        w.Add(Han, Hoth);
-        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, Han, f, CharacterPost.General)));
+        int f = w.Fleet(Side.Collective, Thaw);
+        w.Add(Midwife, Thaw);
+        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, Midwife, f, CharacterPost.General)));
         var a = w.Host.Assault;
-        int lAtt = a.FleetGeneralLeadership(w.Game.State.Fleets[f]), lDef = a.SystemGeneralLeadership(Hoth);
+        int lAtt = a.FleetGeneralLeadership(w.Game.State.Fleets[f]), lDef = a.SystemGeneralLeadership(Thaw);
         Assert.Equal((90, 0), (lAtt, lDef));
         Assert.Equal(3, a.LeadershipSteps(lAtt));
-        for (int roll = 0; roll <= 10; roll++) // Army attack 3 vs Army defense 5 plus Han: net row +1 (A4)
+        for (int roll = 0; roll <= 10; roll++) // Army attack 3 vs Army defense 5 plus Midwife: net row +1 (A4)
             Assert.Equal(roll + 1, a.DuelValue(roll, 3, 5, lAtt, lDef));
     }
 
@@ -260,12 +260,12 @@ public class CharacterTests
     public void CH10_SystemGeneralLeadsTheDefenders()
     {
         var w = new CharWorld();
-        w.Hold(Hoth, Side.Hand);
-        var p = w.Add(Piett, Hoth); p.Skills[(int)Skill.Leadership] = 85;
-        Assert.Null(w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Hand, Piett, Hoth)));
+        w.Hold(Thaw, Side.Hand);
+        var p = w.Add(Varo, Thaw); p.Skills[(int)Skill.Leadership] = 85;
+        Assert.Null(w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Hand, Varo, Thaw)));
         Assert.Single(w.Events<SystemGeneralAssigned>());
         var a = w.Host.Assault;
-        Assert.Equal(85, a.SystemGeneralLeadership(Hoth));
+        Assert.Equal(85, a.SystemGeneralLeadership(Thaw));
         Assert.Equal(2, a.LeadershipSteps(85));
         foreach (var (l, steps) in new[] { (0, 0), (29, 0), (30, 1), (59, 1), (60, 2), (89, 2), (90, 3), (119, 3), (120, 4) })
             Assert.Equal(steps, a.LeadershipSteps(l));
@@ -273,33 +273,33 @@ public class CharacterTests
 
     // m5-characters-and-force CH11
     [Fact]
-    public void CH11_AttachRejections_ChewbaccaAsPassenger()
+    public void CH11_AttachRejections_OtiAsPassenger()
     {
-        // The Hand ISD at The Shoal starts a battle on the Step. Ruleset = Classic set explicitly (battle DEFAULT New since 2026-10-18): in Classic
-        // both corvettes retreat together; in New the ISD's Hold beam holds fleet f's corvette and destroys it (m4-retreat-damage-repair
+        // The Mandate at The Shoal starts a battle on the Step. Ruleset = Classic set explicitly (battle DEFAULT New since 2026-10-18): in Classic
+        // both corvettes retreat together; in New the Mandate's Hold beam holds fleet f's corvette and destroys it (m4-retreat-damage-repair
         // HoldBeamsHoldRetreat), which dissolves the fleet and detaches Oti. This test checks the attach rules, not the battle.
         var w = new CharWorld(settings: new GameSettings { IncidentsEnabled = false, DebugOrdersEnabled = true,
             Economy = new Praedra.Core.Economy.EconomyParams { ScrapPeriod = 1_000_000 },
             Battle = new Praedra.Core.Battle.BattleParams { Ruleset = Praedra.Core.Battle.BattleRuleset.Classic } });
-        int f = w.Fleet(Side.Collective, Yavin);
-        int moving = w.Fleet(Side.Collective, Yavin);
-        int imp = w.Fleet(Side.Hand, Yavin, Isd);
-        w.Add(Ackbar, Yavin); w.Add(Madine, Yavin); w.Add(Chewbacca, Yavin); w.Add(Afyon, Yavin); w.Add(Dodonna, Yavin);
-        w.Add(Wedge, Hoth);
-        w.Ch.IsOnMission = id => id == Dodonna;
+        int f = w.Fleet(Side.Collective, Shoal);
+        int moving = w.Fleet(Side.Collective, Shoal);
+        int imp = w.Fleet(Side.Hand, Shoal, Mandate);
+        w.Add(Keth, Shoal); w.Add(Wake, Shoal); w.Add(Oti, Shoal); w.Add(Petrenko, Shoal); w.Add(OldDebt, Shoal);
+        w.Add(FortyOne, Thaw);
+        w.Ch.IsOnMission = id => id == OldDebt;
         long Attach(Side s, int c, int fleet, CharacterPost p) => w.Submit(seq => new AttachCharacterOrder(seq, s, c, fleet, p));
 
-        long a1 = Attach(Side.Hand, Ackbar, f, CharacterPost.Admiral);
-        long a2 = Attach(Side.Collective, Ackbar, imp, CharacterPost.Admiral);
-        long a3 = Attach(Side.Collective, Wedge, f, CharacterPost.None);
-        long mv = w.Submit(seq => new MoveFleetOrder(seq, Side.Collective, moving, Hoth));
-        long a4 = Attach(Side.Collective, Ackbar, moving, CharacterPost.Admiral);
-        long a5 = Attach(Side.Collective, Madine, f, CharacterPost.Admiral);
-        long a6 = Attach(Side.Collective, Dodonna, f, CharacterPost.None);
-        long ok = Attach(Side.Collective, Ackbar, f, CharacterPost.Admiral);
-        long a7 = Attach(Side.Collective, Afyon, f, CharacterPost.Admiral);
-        long a8 = Attach(Side.Collective, Ackbar, f, CharacterPost.None);
-        long chewie = Attach(Side.Collective, Chewbacca, f, CharacterPost.None);
+        long a1 = Attach(Side.Hand, Keth, f, CharacterPost.Admiral);
+        long a2 = Attach(Side.Collective, Keth, imp, CharacterPost.Admiral);
+        long a3 = Attach(Side.Collective, FortyOne, f, CharacterPost.None);
+        long mv = w.Submit(seq => new MoveFleetOrder(seq, Side.Collective, moving, Thaw));
+        long a4 = Attach(Side.Collective, Keth, moving, CharacterPost.Admiral);
+        long a5 = Attach(Side.Collective, Wake, f, CharacterPost.Admiral);
+        long a6 = Attach(Side.Collective, OldDebt, f, CharacterPost.None);
+        long ok = Attach(Side.Collective, Keth, f, CharacterPost.Admiral);
+        long a7 = Attach(Side.Collective, Petrenko, f, CharacterPost.Admiral);
+        long a8 = Attach(Side.Collective, Keth, f, CharacterPost.None);
+        long chewie = Attach(Side.Collective, Oti, f, CharacterPost.None);
         w.Game.Step();
         Assert.Equal(RejectReason.NotYours, w.Reason(a1));
         Assert.Equal(RejectReason.NotYours, w.Reason(a2));
@@ -312,9 +312,9 @@ public class CharacterTests
         Assert.Equal(CharacterReject.PostTaken, w.Reason(a7));
         Assert.Equal(CharacterReject.AlreadyAttached, w.Reason(a8));
         Assert.Null(w.Reason(chewie));
-        Assert.Equal((f, CharacterPost.None), (w.C(Chewbacca).AttachedFleet, w.C(Chewbacca).Post));
-        Assert.Equal((f, CharacterPost.Admiral), (w.C(Ackbar).AttachedFleet, w.C(Ackbar).Post));
-        foreach (var id in new[] { Madine, Afyon, Dodonna, Wedge }) Assert.Equal(0, w.C(id).AttachedFleet);
+        Assert.Equal((f, CharacterPost.None), (w.C(Oti).AttachedFleet, w.C(Oti).Post));
+        Assert.Equal((f, CharacterPost.Admiral), (w.C(Keth).AttachedFleet, w.C(Keth).Post));
+        foreach (var id in new[] { Wake, Petrenko, OldDebt, FortyOne }) Assert.Equal(0, w.C(id).AttachedFleet);
     }
 
     // m5-characters-and-force CH12
@@ -322,20 +322,20 @@ public class CharacterTests
     public void CH12_CapturedGeneralInFlight_SpeedFixedAtOrderTime()
     {
         var w = new CharWorld(new CharacterParams { NavigatorBonus = true });
-        int f = w.Fleet(Side.Collective, Yavin);
-        w.Add(Han, Yavin);
-        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, Han, f, CharacterPost.General)));
+        int f = w.Fleet(Side.Collective, Shoal);
+        w.Add(Midwife, Shoal);
+        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, Midwife, f, CharacterPost.General)));
         var fleet = w.Game.State.Fleets[f];
-        Assert.Null(w.Try(seq => new MoveFleetOrder(seq, Side.Collective, f, Coruscant)));
+        Assert.Null(w.Try(seq => new MoveFleetOrder(seq, Side.Collective, f, Charter)));
         var accepted = w.Events<OrderAccepted>().Last();
         var ticks = fleet.Transit!.HopTicks.ToList();
-        Assert.Equal(25, w.Ch.NavigatorAdjust(fleet, 50)); // Han rides: the trip was planned at 80 * 50 / 100 = 40
-        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, w.C(Han), Side.Hand, null, CharacterCause.Battle));
-        var han = w.C(Han);
-        Assert.Equal(CharacterStatus.Captured, han.Status);
-        Assert.Equal(0, han.AttachedFleet);
-        Assert.Equal(fleet.Transit!.Path[fleet.Transit.HopIndex], han.HeldAt); // the fleet is on a lane: the system it last left
-        Assert.NotNull(han.HeldAt);
+        Assert.Equal(25, w.Ch.NavigatorAdjust(fleet, 50)); // Midwife rides: the trip was planned at 80 * 50 / 100 = 40
+        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, w.C(Midwife), Side.Hand, null, CharacterCause.Battle));
+        var midwife = w.C(Midwife);
+        Assert.Equal(CharacterStatus.Captured, midwife.Status);
+        Assert.Equal(0, midwife.AttachedFleet);
+        Assert.Equal(fleet.Transit!.Path[fleet.Transit.HopIndex], midwife.HeldAt); // the fleet is on a lane: the system it last left
+        Assert.NotNull(midwife.HeldAt);
         Assert.Equal(0, w.Host.Assault.FleetGeneralLeadership(fleet));
         Assert.Equal(ticks, fleet.Transit!.HopTicks);
         Assert.Equal(accepted.ArrivalDay, accepted.Day + fleet.Transit.HopTicks.Sum());
@@ -360,15 +360,15 @@ public class CharacterTests
     public void CH13_LoneCharacterTravelsAtSpeedHundred(string kind, int days)
     {
         var w = new CharWorld(data: LineGalaxy(kind));
-        w.Add(Wedge, "A");
+        w.Add(FortyOne, "A");
         int k = w.Game.Day;
-        Assert.Null(w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Wedge, "B")));
-        Assert.Null(w.Ch.LocationOf(w.C(Wedge)));
+        Assert.Null(w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, FortyOne, "B")));
+        Assert.Null(w.Ch.LocationOf(w.C(FortyOne)));
         while (w.Events<CharacterArrived>().Count == 0) w.Game.Step();
         var e = Assert.Single(w.Events<CharacterArrived>());
         Assert.Equal(k + days, e.Day); // placed at step 3 of the Step K + days - 1
         Assert.Equal(k + days, w.Game.Day);
-        Assert.Equal("B", w.Ch.LocationOf(w.C(Wedge)));
+        Assert.Equal("B", w.Ch.LocationOf(w.C(FortyOne)));
     }
 
     // m5-characters-and-force CH13 (not stopped on the way)
@@ -376,13 +376,13 @@ public class CharacterTests
     public void CH13_NotStoppedByAnEnemyFleet()
     {
         var w = new CharWorld(data: LineGalaxy("generated"));
-        w.Fleet(Side.Hand, "B", Isd, 3);
-        w.Add(Wedge, "A");
-        Assert.Null(w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Wedge, "C")));
+        w.Fleet(Side.Hand, "B", Mandate, 3);
+        w.Add(FortyOne, "A");
+        Assert.Null(w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, FortyOne, "C")));
         w.Run(250);
         var e = Assert.Single(w.Events<CharacterArrived>());
         Assert.Equal(("C", 200), (e.System, e.Day));
-        Assert.Equal(CharacterStatus.Free, w.C(Wedge).Status);
+        Assert.Equal(CharacterStatus.Free, w.C(FortyOne).Status);
     }
 
     // m5-characters-and-force CH14
@@ -392,22 +392,22 @@ public class CharacterTests
     public void CH14_RidersFollowTheirFleet(bool ride)
     {
         var w = new CharWorld(new CharacterParams { OfficersRideFleet = ride });
-        int f = w.Fleet(Side.Collective, Yavin);
-        w.Add(Ackbar, Yavin);
-        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, Ackbar, f, CharacterPost.Admiral)));
-        Assert.Null(w.Try(seq => new MoveFleetOrder(seq, Side.Collective, f, Hoth)));
-        var ack = w.C(Ackbar);
+        int f = w.Fleet(Side.Collective, Shoal);
+        w.Add(Keth, Shoal);
+        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, Keth, f, CharacterPost.Admiral)));
+        Assert.Null(w.Try(seq => new MoveFleetOrder(seq, Side.Collective, f, Thaw)));
+        var ack = w.C(Keth);
         if (ride)
         {
             Assert.Null(w.Ch.LocationOf(ack));
             while (w.Game.State.Fleets[f].At == null) w.Game.Step();
-            Assert.Equal(Hoth, w.Ch.LocationOf(ack));
+            Assert.Equal(Thaw, w.Ch.LocationOf(ack));
             Assert.Equal(f, ack.AttachedFleet);
         }
         else
         {
             Assert.Equal(0, ack.AttachedFleet);
-            Assert.Equal(Yavin, w.Ch.LocationOf(ack));
+            Assert.Equal(Shoal, w.Ch.LocationOf(ack));
             Assert.Equal(CharacterCause.FleetMoved, Assert.Single(w.Events<CharacterDetached>()).Cause);
         }
     }
@@ -417,16 +417,16 @@ public class CharacterTests
     private static (CharWorld W, Praedra.Core.Fleets.Fleet F) Nav(bool on, params int[] riders)
     {
         var w = new CharWorld(new CharacterParams { NavigatorBonus = on });
-        int f = w.Fleet(Side.Collective, Yavin);
-        foreach (var id in riders) { w.Add(id, Yavin); w.Ch.PlaceInFleet(id, f); }
+        int f = w.Fleet(Side.Collective, Shoal);
+        foreach (var id in riders) { w.Add(id, Shoal); w.Ch.PlaceInFleet(id, f); }
         return (w, w.Game.State.Fleets[f]);
     }
 
     // m5-characters-and-force CH15
     [Fact]
-    public void CH15_HanHalvesTheTrip()
+    public void CH15_MidwifeHalvesTheTrip()
     {
-        var (w, f) = Nav(true, Han);
+        var (w, f) = Nav(true, Midwife);
         Assert.Equal(80, w.Host.Fleets.SpeedOf(f));
         Assert.Equal(40, w.Ch.NavigatorAdjust(f, 80));
         Assert.Equal(40, w.Host.Fleets.SpeedAdjust!(f, 80)); // the fleet module reads the character hook at MoveFleet acceptance
@@ -436,8 +436,8 @@ public class CharacterTests
     [Fact]
     public void CH16_BestSingleNavigator()
     {
-        Assert.Equal(40, Nav(true, Han, Lando) is var (w1, f1) ? w1.Ch.NavigatorAdjust(f1, 80) : 0);
-        Assert.Equal(68, Nav(true, Chewbacca) is var (w2, f2) ? w2.Ch.NavigatorAdjust(f2, 80) : 0);
+        Assert.Equal(40, Nav(true, Midwife, Foreman) is var (w1, f1) ? w1.Ch.NavigatorAdjust(f1, 80) : 0);
+        Assert.Equal(68, Nav(true, Oti) is var (w2, f2) ? w2.Ch.NavigatorAdjust(f2, 80) : 0);
         Assert.Equal(80, Nav(true) is var (w3, f3) ? w3.Ch.NavigatorAdjust(f3, 80) : 0);
     }
 
@@ -445,7 +445,7 @@ public class CharacterTests
     [Fact]
     public void CH17_FloorOnlyWithANavigator()
     {
-        var (w, f) = Nav(true, Han);
+        var (w, f) = Nav(true, Midwife);
         Assert.Equal(25, w.Ch.NavigatorAdjust(f, 40));
         var (w2, f2) = Nav(true);
         Assert.Equal(20, w2.Ch.NavigatorAdjust(f2, 20));
@@ -455,13 +455,13 @@ public class CharacterTests
     [Fact]
     public void CH18_NoBonusInClassicOrFromANonFreeNavigator()
     {
-        var (w, f) = Nav(false, Han);
+        var (w, f) = Nav(false, Midwife);
         Assert.Equal(80, w.Ch.NavigatorAdjust(f, 80));
-        var (w2, f2) = Nav(true, Han);
-        w2.StepWith("5.2", ctx => w2.Ch.Capture(ctx, w2.C(Han), Side.Hand, null, CharacterCause.Debug));
+        var (w2, f2) = Nav(true, Midwife);
+        w2.StepWith("5.2", ctx => w2.Ch.Capture(ctx, w2.C(Midwife), Side.Hand, null, CharacterCause.Debug));
         Assert.Equal(80, w2.Ch.NavigatorAdjust(f2, 80));
-        var (w3, f3) = Nav(true, Han);
-        w3.C(Han).Status = CharacterStatus.Injured; // injured but still riding (state set directly: Injure would detach him)
+        var (w3, f3) = Nav(true, Midwife);
+        w3.C(Midwife).Status = CharacterStatus.Injured; // injured but still riding (state set directly: Injure would detach him)
         Assert.Equal(80, w3.Ch.NavigatorAdjust(f3, 80));
     }
 
@@ -472,22 +472,22 @@ public class CharacterTests
     public void CH19_HarvesterRollOnMinors()
     {
         var w = new CharWorld();
-        w.Add(Drayson, Hoth); w.Add(Borsk, Hoth); var c = w.Add(Tura, Yavin); w.Add(Vader, Hoth);
-        w.StepWith("5.1", ctx => w.Ch.Capture(ctx, c, Side.Hand, Hoth, CharacterCause.Debug));
+        w.Add(Sobel, Thaw); w.Add(DayAfter, Thaw); var c = w.Add(Tura, Shoal); w.Add(Ravilla, Thaw);
+        w.StepWith("5.1", ctx => w.Ch.Capture(ctx, c, Side.Hand, Thaw, CharacterCause.Debug));
         int before = w.Stub!.Requests.Count, ev = w.Game.Events.Count;
         // The die is rand(1..100), hit at 50 or less (m5-death-star §2 effect 3); the same chance as the characters sheet's rand(0..99) < 50, shifted by one: 50 hits, 51 misses, 11 hits.
         w.Stub.Expect(1, 100, 50, 51, 11);
-        w.StepWith("5.1", ctx => w.Ch.HarvesterStrike(ctx, Hoth, Side.Hand));
+        w.StepWith("5.1", ctx => w.Ch.HarvesterStrike(ctx, Thaw, Side.Hand));
         // B2e moved: the hit on a free minor is the Hurt roll (unqueued draws answer 0: hit, sizes 0 and 0, then the minor's death draw 0 < 25),
         // so Admiral Marta Sobel dies of the injury and the kill is not needed; the prisoner Tura is killed without it. 3 + 4 draws.
         Assert.Equal(7, w.Stub.Requests.Count - before);
-        Assert.Equal(CharacterStatus.Dead, w.C(Drayson).Status);
-        Assert.Equal(CharacterStatus.Free, w.C(Borsk).Status);
+        Assert.Equal(CharacterStatus.Dead, w.C(Sobel).Status);
+        Assert.Equal(CharacterStatus.Free, w.C(DayAfter).Status);
         Assert.Equal(CharacterStatus.Dead, w.C(Tura).Status);
-        Assert.Equal(CharacterStatus.Free, w.C(Vader).Status);
+        Assert.Equal(CharacterStatus.Free, w.C(Ravilla).Status);
         var order = w.Game.Events.Skip(ev).Where(e => e is CharacterInjured or CharacterKilled)
             .Select(e => (e.Kind, e is CharacterInjured i ? i.Character : ((CharacterKilled)e).Character)).ToList();
-        Assert.Equal(new[] { ("CharacterInjured", Drayson), ("CharacterKilled", Drayson), ("CharacterKilled", Tura) }, order);
+        Assert.Equal(new[] { ("CharacterInjured", Sobel), ("CharacterKilled", Sobel), ("CharacterKilled", Tura) }, order);
     }
 
     // ------------------------------------------------------------------ the state machine (§Capture, injury, death, freeing)
@@ -499,48 +499,48 @@ public class CharacterTests
     public void CH20_MajorsAreInjuredInsteadOfKilled(bool majorsCanDie)
     {
         var w = new CharWorld(new CharacterParams { MajorsCanDie = majorsCanDie });
-        var luke = w.Add(Luke, Yavin);
-        w.StepWith("5.2", ctx => w.Ch.Kill(ctx, luke, CharacterCause.Mission));
+        var nobody = w.Add(Nobody, Shoal);
+        w.StepWith("5.2", ctx => w.Ch.Kill(ctx, nobody, CharacterCause.Mission));
         if (!majorsCanDie)
         {
             Assert.Single(w.Events<CharacterInjured>());
             Assert.Empty(w.Events<CharacterKilled>());
-            // B2e moved: the Kill becomes the Hurt roll (p = 1 for Luke's effective combat 135; the stub's 0 hits, size 0 + 0 + 1); The Shoal is
+            // B2e moved: the Kill becomes the Hurt roll (p = 1 for Nobody's effective combat 135; the stub's 0 hits, size 0 + 0 + 1); The Shoal is
             // nobody's, so he does not heal
-            Assert.Equal((CharacterStatus.Injured, 1), (luke.Status, luke.Injury));
-            w.StepWith("5.2", ctx => w.Ch.Capture(ctx, luke, Side.Hand, null, CharacterCause.Mission));
-            Assert.True(w.Ch.IsCaptured(Luke)); // the victory term stays reachable
+            Assert.Equal((CharacterStatus.Injured, 1), (nobody.Status, nobody.Injury));
+            w.StepWith("5.2", ctx => w.Ch.Capture(ctx, nobody, Side.Hand, null, CharacterCause.Mission));
+            Assert.True(w.Ch.IsCaptured(Nobody)); // the victory term stays reachable
         }
         else
         {
-            Assert.Equal(CharacterStatus.Dead, luke.Status);
-            Assert.True(w.Ch.IsDead(Luke));
+            Assert.Equal(CharacterStatus.Dead, nobody.Status);
+            Assert.True(w.Ch.IsDead(Nobody));
         }
     }
 
     // m5-characters-and-force CH21
     [Fact]
-    public void CH21_CaptureLuke()
+    public void CH21_CaptureNobody()
     {
         var w = new CharWorld();
-        int f = w.Fleet(Side.Collective, Yavin);
-        var luke = w.Add(Luke, Yavin);
-        w.Ch.SetPost(Luke, f, CharacterPost.General);
+        int f = w.Fleet(Side.Collective, Shoal);
+        var nobody = w.Add(Nobody, Shoal);
+        w.Ch.SetPost(Nobody, f, CharacterPost.General);
         bool first = false, second = true, own = true;
         w.StepWith("5.2", ctx =>
         {
-            first = w.Ch.Capture(ctx, luke, Side.Hand, null, CharacterCause.Mission);
-            second = w.Ch.Capture(ctx, luke, Side.Hand, null, CharacterCause.Mission);
+            first = w.Ch.Capture(ctx, nobody, Side.Hand, null, CharacterCause.Mission);
+            second = w.Ch.Capture(ctx, nobody, Side.Hand, null, CharacterCause.Mission);
         });
         Assert.True(first); Assert.False(second);
-        Assert.Equal((CharacterStatus.Captured, (Side?)Side.Hand, Yavin), (luke.Status, luke.Captor, luke.HeldAt));
-        Assert.Equal((0, CharacterPost.None), (luke.AttachedFleet, luke.Post));
+        Assert.Equal((CharacterStatus.Captured, (Side?)Side.Hand, Shoal), (nobody.Status, nobody.Captor, nobody.HeldAt));
+        Assert.Equal((0, CharacterPost.None), (nobody.AttachedFleet, nobody.Post));
         Assert.Equal(PostKind.General, Assert.Single(w.Events<PostVacated>()).Post);
         Assert.Single(w.Events<CharacterCaptured>());
-        var leia = w.Add(Leia, Yavin);
-        w.StepWith("5.2", ctx => own = w.Ch.Capture(ctx, leia, Side.Collective, null, CharacterCause.Mission));
+        var ledger = w.Add(Ledger, Shoal);
+        w.StepWith("5.2", ctx => own = w.Ch.Capture(ctx, ledger, Side.Collective, null, CharacterCause.Mission));
         Assert.False(own);
-        Assert.Equal(CharacterStatus.Free, leia.Status);
+        Assert.Equal(CharacterStatus.Free, ledger.Status);
     }
 
     // m5-characters-and-force CH22 (B2e moved: Injure is the Hurt roll on a Free or Injured character; never a captured or dead one)
@@ -548,15 +548,15 @@ public class CharacterTests
     public void CH22_InjureNotACapturedOrDeadCharacter()
     {
         var w = new CharWorld();
-        var luke = w.Add(Luke, Yavin); var han = w.Add(Han, Yavin);
-        w.StepWith("5.2", ctx => { w.Ch.Capture(ctx, luke, Side.Hand, null, CharacterCause.Debug); w.Ch.Injure(ctx, han, CharacterCause.Debug); });
-        Assert.Equal(CharacterStatus.Injured, han.Status);
-        int ev = w.Game.Events.Count, pts = han.Injury;
+        var nobody = w.Add(Nobody, Shoal); var midwife = w.Add(Midwife, Shoal);
+        w.StepWith("5.2", ctx => { w.Ch.Capture(ctx, nobody, Side.Hand, null, CharacterCause.Debug); w.Ch.Injure(ctx, midwife, CharacterCause.Debug); });
+        Assert.Equal(CharacterStatus.Injured, midwife.Status);
+        int ev = w.Game.Events.Count, pts = midwife.Injury;
         bool a = true, b = false;
-        w.StepWith("5.2", ctx => { a = w.Ch.Injure(ctx, luke, CharacterCause.Debug); b = w.Ch.Injure(ctx, han, CharacterCause.Debug); });
+        w.StepWith("5.2", ctx => { a = w.Ch.Injure(ctx, nobody, CharacterCause.Debug); b = w.Ch.Injure(ctx, midwife, CharacterCause.Debug); });
         Assert.False(a); Assert.True(b);
-        Assert.True(han.Injury > pts);
-        Assert.Equal(han.Id, Assert.Single(w.Game.Events.Skip(ev).OfType<CharacterInjured>()).Character);
+        Assert.True(midwife.Injury > pts);
+        Assert.Equal(midwife.Id, Assert.Single(w.Game.Events.Skip(ev).OfType<CharacterInjured>()).Character);
     }
 
     // m5-characters-and-force CH23 (B2e moved: an injury lasts until its points heal, 1 a day on a planet his side holds)
@@ -564,12 +564,12 @@ public class CharacterTests
     public void CH23_InjuryHealsAtSlot610()
     {
         var w = new CharWorld();
-        w.Hold(Yavin, Side.Collective);
-        var han = w.Add(Han, Yavin);
-        w.StepWith("5.2", ctx => w.Ch.AddInjury(ctx, han, 3, CharacterCause.Debug));
-        Assert.Equal(CharacterStatus.Injured, han.Status);
+        w.Hold(Shoal, Side.Collective);
+        var midwife = w.Add(Midwife, Shoal);
+        w.StepWith("5.2", ctx => w.Ch.AddInjury(ctx, midwife, 3, CharacterCause.Debug));
+        Assert.Equal(CharacterStatus.Injured, midwife.Status);
         int step = 1;
-        while (han.Status != CharacterStatus.Free) { w.Game.Step(); step++; }
+        while (midwife.Status != CharacterStatus.Free) { w.Game.Step(); step++; }
         Assert.Equal(4, step); // healing starts the day after it turned on: 3, 2, 1, 0
         Assert.Single(w.Events<CharacterHealed>());
     }
@@ -579,33 +579,33 @@ public class CharacterTests
     public void CH24_NoEscapeDrawsWhenOff_OneDelayDrawWhenOn()
     {
         var w = new CharWorld(new CharacterParams { CaptiveEscape = false });
-        var luke = w.Add(Luke, Yavin);
+        var nobody = w.Add(Nobody, Shoal);
         int before = w.Stub!.Requests.Count;
-        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, luke, Side.Hand, null, CharacterCause.Debug));
+        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, nobody, Side.Hand, null, CharacterCause.Debug));
         w.Run(200);
         Assert.Equal(before, w.Stub.Requests.Count);
-        Assert.Equal(0, luke.NextEscapeDay);
+        Assert.Equal(0, nobody.NextEscapeDay);
         var on = new CharWorld();
-        var l2 = on.Add(Luke, Yavin);
+        var l2 = on.Add(Nobody, Shoal);
         on.Stub!.Expect(0, 1000, 400);
         on.StepWith("5.2", ctx => on.Ch.Capture(ctx, l2, Side.Hand, null, CharacterCause.Debug));
         Assert.Equal(0 + 100 + 400, l2.NextEscapeDay);
     }
 
-    // m5-characters-and-force CH25 (B2e moved: the input is Traced; a test table (-50, 1), (50, 30); Luke alone: x = 135 + 75 = 210)
+    // m5-characters-and-force CH25 (B2e moved: the input is Traced; a test table (-50, 1), (50, 30); Nobody alone: x = 135 + 75 = 210)
     [Theory]
     [InlineData(29, true), InlineData(30, false)]
     public void CH25_EscapeWithATestTable(int r, bool freed)
     {
         var w = new CharWorld(new CharacterParams { EscapeTable = new[] { (-50, 1), (50, 30) } });
         Assert.Equal((1, 1, 1, 30, 30), (w.Ch.EscapePercent(-80), w.Ch.EscapePercent(-50), w.Ch.EscapePercent(49), w.Ch.EscapePercent(50), w.Ch.EscapePercent(210)));
-        var luke = w.Add(Luke, Yavin);
-        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, luke, Side.Hand, null, CharacterCause.Debug));
-        luke.NextEscapeDay = w.Game.Day; // the attempt is due at this Step's slot 6.10
+        var nobody = w.Add(Nobody, Shoal);
+        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, nobody, Side.Hand, null, CharacterCause.Debug));
+        nobody.NextEscapeDay = w.Game.Day; // the attempt is due at this Step's slot 6.10
         w.Stub!.Expect(0, 99, r);
         int ev = w.Game.Events.Count;
         w.Game.Step();
-        Assert.Equal(freed, luke.Status == CharacterStatus.Free);
+        Assert.Equal(freed, nobody.Status == CharacterStatus.Free);
         Assert.Equal(freed ? 1 : 0, w.Game.Events.Skip(ev).OfType<CharacterEscaped>().Count());
     }
 
@@ -616,24 +616,24 @@ public class CharacterTests
     public void CH26_UprisingInjuresOneFreeCharacterOfTheHolder()
     {
         var w = new CharWorld();
-        w.Hold(Hoth, Side.Collective);
-        int f = w.Fleet(Side.Collective, Hoth);
-        w.Add(Wedge, Hoth); w.Add(Chewbacca, Hoth); w.Add(Drayson, Hoth); w.Ch.PlaceInFleet(Drayson, f); // attached ones count
-        w.Add(Luke, Yavin); // elsewhere
-        w.Add(Piett, Hoth); // other side
-        var leia = w.Add(Leia, Yavin);
-        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, leia, Side.Hand, Hoth, CharacterCause.Debug)); // captured: not a candidate
+        w.Hold(Thaw, Side.Collective);
+        int f = w.Fleet(Side.Collective, Thaw);
+        w.Add(FortyOne, Thaw); w.Add(Oti, Thaw); w.Add(Sobel, Thaw); w.Ch.PlaceInFleet(Sobel, f); // attached ones count
+        w.Add(Nobody, Shoal); // elsewhere
+        w.Add(Varo, Thaw); // other side
+        var ledger = w.Add(Ledger, Shoal);
+        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, ledger, Side.Hand, Thaw, CharacterCause.Debug)); // captured: not a candidate
         Assert.NotNull(w.Host.Support.CharacterIncident);
         int before = w.Stub!.Requests.Count;
         w.Stub.Expect(0, 2, 1);
         w.Stub.Expect(0, 99, 0, 99); // B2e moved: Injure is the Hurt roll (0 hits), then the minor's death draw (99: he lives)
-        w.StepWith("6.3", ctx => w.Host.Support.CharacterIncident!(ctx, ctx.Day + 1, Hoth, Side.Collective, 3));
+        w.StepWith("6.3", ctx => w.Host.Support.CharacterIncident!(ctx, ctx.Day + 1, Thaw, Side.Collective, 3));
         Assert.Equal(new[] { (0, 2), (0, 99) }, w.Stub.Requests.Skip(before).Take(2).Select(x => (x.Min, x.Max)));
-        Assert.Equal(CharacterStatus.Injured, w.C(Chewbacca).Status);
-        Assert.Equal(Chewbacca, Assert.Single(w.Events<CharacterInjured>()).Character);
+        Assert.Equal(CharacterStatus.Injured, w.C(Oti).Status);
+        Assert.Equal(Oti, Assert.Single(w.Events<CharacterInjured>()).Character);
 
         var w2 = new CharWorld();
-        w2.StepWith("6.3", ctx => w2.Ch.UprisingIncident(ctx, ctx.Day + 1, Hoth, Side.Collective, 3));
+        w2.StepWith("6.3", ctx => w2.Ch.UprisingIncident(ctx, ctx.Day + 1, Thaw, Side.Collective, 3));
         Assert.Empty(w2.Stub!.Requests);
     }
 
@@ -644,21 +644,21 @@ public class CharacterTests
         CharWorld Make()
         {
             var w = new CharWorld();
-            var a = w.Add(Wedge, Hoth); var b = w.Add(Chewbacca, Hoth);
+            var a = w.Add(FortyOne, Thaw); var b = w.Add(Oti, Thaw);
             w.StepWith("5.2", ctx => { w.Ch.Capture(ctx, a, Side.Hand, null, CharacterCause.Debug); w.Ch.Capture(ctx, b, Side.Hand, null, CharacterCause.Debug); });
             return w;
         }
         var w4 = Make();
         w4.Stub!.Expect(0, 1, 0);
-        w4.StepWith("6.3", ctx => w4.Ch.UprisingIncident(ctx, ctx.Day + 1, Hoth, Side.Hand, 4));
-        Assert.Equal(CharacterStatus.Free, w4.C(Wedge).Status);
-        Assert.Equal(CharacterStatus.Captured, w4.C(Chewbacca).Status);
+        w4.StepWith("6.3", ctx => w4.Ch.UprisingIncident(ctx, ctx.Day + 1, Thaw, Side.Hand, 4));
+        Assert.Equal(CharacterStatus.Free, w4.C(FortyOne).Status);
+        Assert.Equal(CharacterStatus.Captured, w4.C(Oti).Status);
 
         var w5 = Make();
         int before = w5.Stub!.Requests.Count;
-        w5.StepWith("6.3", ctx => w5.Ch.UprisingIncident(ctx, ctx.Day + 1, Hoth, Side.Hand, 5));
+        w5.StepWith("6.3", ctx => w5.Ch.UprisingIncident(ctx, ctx.Day + 1, Thaw, Side.Hand, 5));
         Assert.Equal(before, w5.Stub.Requests.Count);
-        Assert.All(new[] { Wedge, Chewbacca }, id => Assert.Equal(CharacterStatus.Free, w5.C(id).Status));
+        Assert.All(new[] { FortyOne, Oti }, id => Assert.Equal(CharacterStatus.Free, w5.C(id).Status));
         Assert.Equal(2, w5.Events<CharacterFreed>().Count);
     }
 
@@ -667,22 +667,22 @@ public class CharacterTests
     public void CH28_HolderChangeClearsTheOldGeneral()
     {
         var w = new CharWorld();
-        w.Hold(Hoth, Side.Hand);
-        w.Hold(Coruscant, Side.Hand); // (B5a, 2026-10-17) somewhere for the old side's officer to go
-        w.Add(Piett, Hoth);
-        Assert.Null(w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Hand, Piett, Hoth)));
+        w.Hold(Thaw, Side.Hand);
+        w.Hold(Charter, Side.Hand); // (B5a, 2026-10-17) somewhere for the old side's officer to go
+        w.Add(Varo, Thaw);
+        Assert.Null(w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Hand, Varo, Thaw)));
         // (B5a, 2026-10-17) under ControlRule = Derived the holder follows the regiments: a Collective regiment lands on the empty world (B5a section 1)
-        w.StepWith("5.2", ctx => w.Host.Control.DebugApplyTroops(ctx, Hoth, Side.Collective, "Militia", 1));
-        Assert.Equal(Side.Collective, w.Host.Control.HolderOf(Hoth));
+        w.StepWith("5.2", ctx => w.Host.Control.DebugApplyTroops(ctx, Thaw, Side.Collective, "Militia", 1));
+        Assert.Equal(Side.Collective, w.Host.Control.HolderOf(Thaw));
         var pv = Assert.Single(w.Events<PostVacated>());
-        Assert.Equal((Piett, PostKind.SystemGeneral, CharacterCause.HolderChanged), (pv.Character, pv.Post, pv.Cause));
-        Assert.Null(w.Ch.SystemGeneralOf(Hoth));
+        Assert.Equal((Varo, PostKind.SystemGeneral, CharacterCause.HolderChanged), (pv.Character, pv.Post, pv.Cause));
+        Assert.Null(w.Ch.SystemGeneralOf(Thaw));
         // (B5a, 2026-10-17) the old side's character is not captured or hurt; he leaves (B5a section 4, 0x4ef260 Autorouting; DEFAULT destination: nearest held system)
-        Assert.Equal(CharacterStatus.Free, w.C(Piett).Status);
-        Assert.Equal(Hoth, Assert.Single(w.Events<CharacterDeparted>(), e => e.Character == Piett).From);
-        Assert.Equal(0, w.Host.Assault.SystemGeneralLeadership(Hoth));
+        Assert.Equal(CharacterStatus.Free, w.C(Varo).Status);
+        Assert.Equal(Thaw, Assert.Single(w.Events<CharacterDeparted>(), e => e.Character == Varo).From);
+        Assert.Equal(0, w.Host.Assault.SystemGeneralLeadership(Thaw));
         // the old holder's officer may not be General there now ((B5a, 2026-10-17) he has left, so the first refusal is NotAtSystem)
-        Assert.Equal(CharacterReject.NotAtSystem, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Hand, Piett, Hoth)));
+        Assert.Equal(CharacterReject.NotAtSystem, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Hand, Varo, Thaw)));
     }
 
     // m5-characters-and-force CH29
@@ -690,13 +690,13 @@ public class CharacterTests
     public void CH29_MergeKeepsTheReceivingAdmiral()
     {
         var w = new CharWorld();
-        int into = w.Fleet(Side.Collective, Yavin), from = w.Fleet(Side.Collective, Yavin);
-        w.Add(Ackbar, Yavin); w.Add(Afyon, Yavin);
-        w.Ch.SetPost(Ackbar, into, CharacterPost.Admiral);
-        w.Ch.SetPost(Afyon, from, CharacterPost.Admiral);
+        int into = w.Fleet(Side.Collective, Shoal), from = w.Fleet(Side.Collective, Shoal);
+        w.Add(Keth, Shoal); w.Add(Petrenko, Shoal);
+        w.Ch.SetPost(Keth, into, CharacterPost.Admiral);
+        w.Ch.SetPost(Petrenko, from, CharacterPost.Admiral);
         Assert.Null(w.Try(seq => new MergeFleetsOrder(seq, Side.Collective, from, into)));
-        Assert.Equal((into, CharacterPost.Admiral), (w.C(Ackbar).AttachedFleet, w.C(Ackbar).Post));
-        Assert.Equal((into, CharacterPost.None), (w.C(Afyon).AttachedFleet, w.C(Afyon).Post));
+        Assert.Equal((into, CharacterPost.Admiral), (w.C(Keth).AttachedFleet, w.C(Keth).Post));
+        Assert.Equal((into, CharacterPost.None), (w.C(Petrenko).AttachedFleet, w.C(Petrenko).Post));
         Assert.Equal(CharacterCause.Merged, Assert.Single(w.Events<PostVacated>()).Cause);
     }
 
@@ -705,16 +705,16 @@ public class CharacterTests
     public void CH30_DestroyedFleetLeavesItsRidersFree()
     {
         var w = new CharWorld();
-        int f = w.Fleet(Side.Collective, Hoth);
-        w.Add(Ackbar, Hoth); w.Ch.SetPost(Ackbar, f, CharacterPost.Admiral);
-        w.Add(Chewbacca, Hoth); w.Ch.PlaceInFleet(Chewbacca, f);
+        int f = w.Fleet(Side.Collective, Thaw);
+        w.Add(Keth, Thaw); w.Ch.SetPost(Keth, f, CharacterPost.Admiral);
+        w.Add(Oti, Thaw); w.Ch.PlaceInFleet(Oti, f);
         int ship = w.Game.State.Fleets[f].Ships[0];
         w.StepWith("5", ctx => w.Host.Economy.DestroyUnit(ctx, ctx.Day + 1, w.Host.Economy.Find(ship)!));
         Assert.False(w.Game.State.Fleets.ContainsKey(f));
-        foreach (var id in new[] { Ackbar, Chewbacca })
+        foreach (var id in new[] { Keth, Oti })
         {
             var c = w.C(id);
-            Assert.Equal((0, CharacterStatus.Free, Hoth), (c.AttachedFleet, c.Status, w.Ch.LocationOf(c)));
+            Assert.Equal((0, CharacterStatus.Free, Thaw), (c.AttachedFleet, c.Status, w.Ch.LocationOf(c)));
         }
         Assert.All(w.Events<CharacterDetached>(), e => Assert.Equal(CharacterCause.FleetDissolved, e.Cause));
     }
@@ -777,19 +777,19 @@ public class CharacterTests
         Assert.Equal(a.StateHash(), b.StateHash());
         Assert.Equal(a.Game.Rng.Draws, b.Game.Rng.Draws);
         Assert.Equal(GameSave.Save(a.Game), GameSave.Save(b.Game));
-        var luke = a.Characters.Get(Luke)!;
-        Assert.Equal(luke.Status, b.Characters.Get(Luke)!.Status);
-        Assert.NotNull(a.Characters.Get(Han)!.System);
+        var nobody = a.Characters.Get(Nobody)!;
+        Assert.Equal(nobody.Status, b.Characters.Get(Nobody)!.Status);
+        Assert.NotNull(a.Characters.Get(Midwife)!.System);
     }
 
     private static void Orders(GameHost h)
     {
         var ch = h.Characters;
-        var han = ch.Get(Han)!;
-        var fleet = h.Game.State.Fleets.Values.FirstOrDefault(f => f.Side == Side.Collective && f.At == ch.LocationOf(han));
-        if (fleet != null) h.Game.Submit(seq => new AttachCharacterOrder(seq, Side.Collective, Han, fleet.Id, CharacterPost.General));
-        h.Game.Submit(seq => new MoveCharacterOrder(seq, Side.Collective, Wedge, "The Thaw"));
-        h.Game.Submit(seq => new MoveCharacterOrder(seq, Side.Hand, Vader, "Charter"));
+        var midwife = ch.Get(Midwife)!;
+        var fleet = h.Game.State.Fleets.Values.FirstOrDefault(f => f.Side == Side.Collective && f.At == ch.LocationOf(midwife));
+        if (fleet != null) h.Game.Submit(seq => new AttachCharacterOrder(seq, Side.Collective, Midwife, fleet.Id, CharacterPost.General));
+        h.Game.Submit(seq => new MoveCharacterOrder(seq, Side.Collective, FortyOne, "The Thaw"));
+        h.Game.Submit(seq => new MoveCharacterOrder(seq, Side.Hand, Ravilla, "Charter"));
     }
 
     // m5-characters-and-force CH34
@@ -797,12 +797,12 @@ public class CharacterTests
     public void CH34_NoDetachInTransit()
     {
         var w = new CharWorld();
-        int f = w.Fleet(Side.Collective, Yavin);
-        w.Add(Ackbar, Yavin);
-        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, Ackbar, f, CharacterPost.Admiral)));
-        Assert.Null(w.Try(seq => new MoveFleetOrder(seq, Side.Collective, f, Coruscant)));
-        Assert.Equal(CharacterReject.FleetInTransit, w.Try(seq => new DetachCharacterOrder(seq, Side.Collective, Ackbar)));
-        Assert.Equal(f, w.C(Ackbar).AttachedFleet);
+        int f = w.Fleet(Side.Collective, Shoal);
+        w.Add(Keth, Shoal);
+        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, Keth, f, CharacterPost.Admiral)));
+        Assert.Null(w.Try(seq => new MoveFleetOrder(seq, Side.Collective, f, Charter)));
+        Assert.Equal(CharacterReject.FleetInTransit, w.Try(seq => new DetachCharacterOrder(seq, Side.Collective, Keth)));
+        Assert.Equal(f, w.C(Keth).AttachedFleet);
     }
 
     // ------------------------------------------------------------------ other orders, defaults
@@ -812,32 +812,32 @@ public class CharacterTests
     public void Orders_OtherRejections()
     {
         var w = new CharWorld();
-        w.Hold(Yavin, Side.Collective);
-        int f = w.Fleet(Side.Collective, Yavin);
-        w.Add(Madine, Yavin); w.Add(Wedge, Yavin); w.Add(Ackbar, Yavin); w.Add(Chewbacca, Yavin);
-        Assert.Equal(CharacterReject.NotAttached, w.Try(seq => new DetachCharacterOrder(seq, Side.Collective, Madine)));
-        Assert.Equal(CharacterReject.NoSystemGeneral, w.Try(seq => new ReleaseSystemGeneralOrder(seq, Side.Collective, Yavin)));
-        Assert.Equal(CharacterReject.NoCapability, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Collective, Chewbacca, Yavin)));
-        Assert.Equal(CharacterReject.NotAtSystem, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Collective, Madine, Hoth)));
-        Assert.Null(w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Collective, Madine, Yavin)));
-        Assert.Equal(CharacterReject.PostTaken, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Collective, Wedge, Yavin)));
-        Assert.Equal(CharacterReject.HoldsSystemPost, w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, Madine, f, CharacterPost.General)));
-        Assert.Equal(RejectReason.NotYours, w.Try(seq => new ReleaseSystemGeneralOrder(seq, Side.Hand, Yavin)));
-        Assert.Null(w.Try(seq => new ReleaseSystemGeneralOrder(seq, Side.Collective, Yavin)));
-        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, Ackbar, f, CharacterPost.Admiral)));
-        Assert.Equal(CharacterReject.Attached, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Ackbar, Hoth)));
-        Assert.Equal(CharacterReject.AlreadyAttached, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Collective, Ackbar, Yavin)));
-        Assert.Equal(RejectReason.AlreadyThere, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Wedge, Yavin)));
-        Assert.Equal(CharacterReject.NoPath, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Wedge, "No Such Place")));
-        Assert.Equal(CharacterReject.UnknownCharacter, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, 999, Hoth)));
-        Assert.Equal(CharacterReject.UnknownCharacter, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Luke, Hoth))); // not placed
-        Assert.Null(w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Wedge, Hoth)));
-        Assert.Equal(RejectReason.InTransit, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Wedge, Coruscant)));
-        Assert.Equal(CharacterReject.NotAtSystem, w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, Wedge, f, CharacterPost.None)));
+        w.Hold(Shoal, Side.Collective);
+        int f = w.Fleet(Side.Collective, Shoal);
+        w.Add(Wake, Shoal); w.Add(FortyOne, Shoal); w.Add(Keth, Shoal); w.Add(Oti, Shoal);
+        Assert.Equal(CharacterReject.NotAttached, w.Try(seq => new DetachCharacterOrder(seq, Side.Collective, Wake)));
+        Assert.Equal(CharacterReject.NoSystemGeneral, w.Try(seq => new ReleaseSystemGeneralOrder(seq, Side.Collective, Shoal)));
+        Assert.Equal(CharacterReject.NoCapability, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Collective, Oti, Shoal)));
+        Assert.Equal(CharacterReject.NotAtSystem, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Collective, Wake, Thaw)));
+        Assert.Null(w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Collective, Wake, Shoal)));
+        Assert.Equal(CharacterReject.PostTaken, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Collective, FortyOne, Shoal)));
+        Assert.Equal(CharacterReject.HoldsSystemPost, w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, Wake, f, CharacterPost.General)));
+        Assert.Equal(RejectReason.NotYours, w.Try(seq => new ReleaseSystemGeneralOrder(seq, Side.Hand, Shoal)));
+        Assert.Null(w.Try(seq => new ReleaseSystemGeneralOrder(seq, Side.Collective, Shoal)));
+        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, Keth, f, CharacterPost.Admiral)));
+        Assert.Equal(CharacterReject.Attached, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Keth, Thaw)));
+        Assert.Equal(CharacterReject.AlreadyAttached, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Collective, Keth, Shoal)));
+        Assert.Equal(RejectReason.AlreadyThere, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, FortyOne, Shoal)));
+        Assert.Equal(CharacterReject.NoPath, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, FortyOne, "No Such Place")));
+        Assert.Equal(CharacterReject.UnknownCharacter, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, 999, Thaw)));
+        Assert.Equal(CharacterReject.UnknownCharacter, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Nobody, Thaw))); // not placed
+        Assert.Null(w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, FortyOne, Thaw)));
+        Assert.Equal(RejectReason.InTransit, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, FortyOne, Charter)));
+        Assert.Equal(CharacterReject.NotAtSystem, w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, FortyOne, f, CharacterPost.None)));
         Assert.Single(w.Events<CharacterDeparted>());
-        var dead = w.Add(Drayson, Yavin);
+        var dead = w.Add(Sobel, Shoal);
         w.StepWith("5.2", ctx => w.Ch.Kill(ctx, dead, CharacterCause.Debug));
-        Assert.Equal(CharacterReject.NotFree, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Drayson, Hoth)));
+        Assert.Equal(CharacterReject.NotFree, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Sobel, Thaw)));
     }
 
     // m5-characters-and-force §Defaults for undecided items: GameSettings null = the module's defaults, each the sheet's DEFAULT
@@ -872,15 +872,15 @@ public class CharacterTests
     [Fact]
     public void TrainingEligibility_AndStoryDiscovery()
     {
-        var w = new CharWorld(new CharacterParams { TrainerPick = TrainerPick.Fixed }); // the Classic trainer flag (Luke, Vader); Random is CH39
-        var luke = w.Add(Luke, Yavin); var leia = w.Add(Leia, Yavin);
-        Assert.False(w.Ch.CanTrain(luke, leia)); // Leia's Talent is hidden
-        w.StepWith("5.2", ctx => Assert.True(w.Ch.DiscoverTalent(ctx, leia, CharacterCause.Story)));
+        var w = new CharWorld(new CharacterParams { TrainerPick = TrainerPick.Fixed }); // the Classic trainer flag (Nobody, Ravilla); Random is CH39
+        var nobody = w.Add(Nobody, Shoal); var ledger = w.Add(Ledger, Shoal);
+        Assert.False(w.Ch.CanTrain(nobody, ledger)); // Ledger's Talent is hidden
+        w.StepWith("5.2", ctx => Assert.True(w.Ch.DiscoverTalent(ctx, ledger, CharacterCause.Story)));
         Assert.Single(w.Events<TalentDiscovered>());
-        Assert.True(w.Ch.CanTrain(luke, leia));
-        Assert.False(w.Ch.CanTrain(leia, luke)); // no trainer flag
+        Assert.True(w.Ch.CanTrain(nobody, ledger));
+        Assert.False(w.Ch.CanTrain(ledger, nobody)); // no trainer flag
         var knight = new CharWorld(new CharacterParams { TrainerNeedsAnomaly = true });
-        var l2 = knight.Add(Luke, Yavin); var s2 = knight.Add(Leia, Yavin); s2.TalentDiscovered = true;
-        Assert.False(knight.Ch.CanTrain(l2, s2)); // Luke 50 is not a Knight (80)
+        var l2 = knight.Add(Nobody, Shoal); var s2 = knight.Add(Ledger, Shoal); s2.TalentDiscovered = true;
+        Assert.False(knight.Ch.CanTrain(l2, s2)); // Nobody 50 is not a Knight (80)
     }
 }

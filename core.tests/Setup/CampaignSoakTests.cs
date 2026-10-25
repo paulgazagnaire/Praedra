@@ -177,7 +177,7 @@ public class CampaignSoakTests
     // m2-uprisings-and-garrison §Garrison G and the check: Granero holds 2 Hand Fleet Regiments for a requirement of 2.
     // Classic counts 1.0 each (enough); New weighs them 0.6 each (1.2 < 2: an uprising on the first day).
     [Fact]
-    public void RulesetSettingChangesTheOutcomeAtTaanab()
+    public void RulesetSettingChangesTheOutcomeAtGranero()
     {
         bool Rises(GarrisonRuleset r)
         {
@@ -208,7 +208,7 @@ public class CampaignSoakTests
     // m4-battle-classic §1: the relief fleet arriving at Tierra Larga on day 300 meets the Hand's interdiction fleet and the contact is a real
     // Classic battle (invariants stay green on every day of the checked run). The Interdictor's gravity well forbids a retreat.
     [Theory, MemberData(nameof(Rulesets))]
-    public void KinyenContactIsARealClassicBattle(GarrisonRuleset r)
+    public void TierraLargaContactIsARealClassicBattle(GarrisonRuleset r)
     {
         var run = CampaignHarness.Checked(1, r);
         var started = run.Events.OfType<Praedra.Core.Battle.BattleStarted>().Where(b => b.System == TestCampaign.BlockadedSystem).ToList();
@@ -237,7 +237,7 @@ public class CampaignSoakTests
     // draws as before B7, so the day-313 Tierra Larga battle is the one this test was written for: the Interdictor's gravity well refuses the Collective's
     // retreat and it is Annihilated. Keeps that check on the New ruleset after B7 re-routed the seeded game (Dev lead, 2026-10-19).
     [Fact]
-    public void KinyenContactNewRulesetGravityWellWithPreB7Bombardment()
+    public void TierraLargaContactNewRulesetGravityWellWithPreB7Bombardment()
     {
         var off = new Praedra.Core.Defenses.BombardParams { BombardWastedHits = false, BatteryReturnFire = false, BombardFleetsTogether = false,
             BombardDamageScales = false, MilitaryCollateral = false };

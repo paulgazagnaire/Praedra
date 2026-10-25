@@ -51,7 +51,7 @@ public class ResearchTests
 
     // m5-research RS2
     [Fact]
-    public void RS2_NebulonBAtLevelZeroIsNotResearched() =>
+    public void RS2_MenderBAtLevelZeroIsNotResearched() =>
         Assert.Equal(RejectReason.NotResearched, CollectiveShipyard().TryOrder(A, Yard1, YardFamily.Shipyard, "Mender"));
 
     // m5-research RS3
@@ -65,7 +65,7 @@ public class ResearchTests
 
     // m5-research RS4
     [Fact]
-    public void RS4_LevelOneOpensNebulonBButNotMonCalamari()
+    public void RS4_LevelOneOpensMenderBButNotMonCalamari()
     {
         var w = CollectiveShipyard();
         w.Research.SetLevel(A, Ship, 1);

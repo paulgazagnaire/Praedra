@@ -60,9 +60,9 @@ public class AssaultStatTests
 
     // m3-assault A14: the same plus one Mordant Lien-150: win 32.2 percent
     [Fact]
-    public void A14_WithAKdy()
+    public void A14_WithALien()
     {
-        var r = Run(14, 20_000, "Deckhands", 4, AssaultWorld.Imp, 2, 0, FacilityKind.Kdy150);
+        var r = Run(14, 20_000, "Deckhands", 4, AssaultWorld.Imp, 2, 0, FacilityKind.Lien150);
         Assert.True(Math.Abs(r.Win - 32.2) <= 2.0, $"win {r.Win:F2} percent");
     }
 
@@ -74,9 +74,9 @@ public class AssaultStatTests
         Assert.True(Math.Abs(r.Win - 0.5) <= 2.0, $"win {r.Win:F2} percent");
     }
 
-    // m3-assault A16: 8 Wookiee vs 6 Dark Trooper: win 2.7 percent with L_att 90, 0.2 percent without
+    // m3-assault A16: 8 Kiru Sparks vs 6 Lictor: win 2.7 percent with L_att 90, 0.2 percent without
     [Fact]
-    public void A16_WookieeAgainstDarkTrooper()
+    public void A16_KiruSparksAgainstLictor()
     {
         var withGeneral = Run(16, 20_000, "Kiru Sparks", 8, "Lictors", 6, attackerLeadership: 90);
         var without = Run(17, 20_000, "Kiru Sparks", 8, "Lictors", 6);

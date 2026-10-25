@@ -8,7 +8,7 @@ namespace Praedra.Core.Tests.Battle;
 // The battles here are Classic (B6a is the Classic AI threshold): Ruleset = Classic is set explicitly since the DEFAULT became New (2026-10-18).
 public class AiThresholdTests
 {
-    private const string Victory = "Decree", MonCal = "Ark", Isd = "Mandate";
+    private const string Victory = "Decree", Ark = "Ark", Mandate = "Mandate";
 
     // B6a-1 set-up: Hand AI at its own non-HQ world B; its fleet 1 Victory; enemy 2 Mon Cal carrying 1 completed Swift squadron each
     private static BattleWorld World1(bool owned = true, bool planetSquadron = true, BattleParams? p = null)
@@ -17,7 +17,7 @@ public class AiThresholdTests
         if (owned) w.Fleets.SetOwner("B", Side.Hand);
         if (planetSquadron) w.Eco.AddObject(Side.Hand, "Gleaner", "B");
         w.Fleet(Side.Hand, "B", Victory, 1);
-        w.Fleets.AddFleet(Side.Collective, "Collective", new[] { MonCal, MonCal }, "B", new[] { "Swift", "Swift" });
+        w.Fleets.AddFleet(Side.Collective, "Collective", new[] { Ark, Ark }, "B", new[] { "Swift", "Swift" });
         return w;
     }
 
@@ -26,24 +26,24 @@ public class AiThresholdTests
     public void B6a_7_Firepower()
     {
         var s = World.Ships.Value;
-        Assert.Equal(2000, AiFirepower.Ship(s[Isd], 0, true));
+        Assert.Equal(2000, AiFirepower.Ship(s[Mandate], 0, true));
         Assert.Equal(4000, AiFirepower.Ship(s["Mandate II"], 0, true));
         Assert.Equal(1200, AiFirepower.Ship(s[Victory], 0, true));
-        Assert.Equal(1800, AiFirepower.Ship(s[MonCal], 0, true));
+        Assert.Equal(1800, AiFirepower.Ship(s[Ark], 0, true));
         Assert.Equal(771, AiFirepower.Ship(s["Mender"], 0, true));
         Assert.Equal(133, AiFirepower.Ship(s["Dodger"], 0, true));
-        Assert.Equal(1000, AiFirepower.Ship(s[Isd], 2, true));       // w = 20 - 10
-        Assert.Equal(0, AiFirepower.Ship(s[Isd], 0, false));         // under construction
+        Assert.Equal(1000, AiFirepower.Ship(s[Mandate], 2, true));       // w = 20 - 10
+        Assert.Equal(0, AiFirepower.Ship(s[Mandate], 0, false));         // under construction
         foreach (var f in new[] { "Swift", "Needle", "Gleaner", "Sickle", "Winnower" }) Assert.Equal(199, AiFirepower.FighterValue(s[f], 12));
         foreach (var f in new[] { "Plough", "Thresher" }) Assert.Equal(574, AiFirepower.FighterValue(s[f], 12));
         Assert.Equal(628, AiFirepower.FighterValue(s["Maul"], 12));
         Assert.Equal(287, AiFirepower.Squadron(s["Plough"], 12, 6, true));
-        // ISD at half hull: 2000 (hull is not in it); Mon Cal carrying 6 of 12 Y-wings: 1800 + 287
+        // Mandate at half hull: 2000 (hull is not in it); Mon Cal carrying 6 of 12 Ploughs: 1800 + 287
         var w = new BattleWorld();
-        int isd = w.Fleet(Side.Hand, "B", Isd, 1);
-        w.Obj(w.F(isd).Ships[0]).Hull = 1375;
-        Assert.Equal(2000, w.Battles.FleetFirepower(w.F(isd)));
-        int mc = w.Fleets.AddFleet(Side.Collective, "MC", new[] { MonCal }, "B", new[] { "Plough" });
+        int mandate = w.Fleet(Side.Hand, "B", Mandate, 1);
+        w.Obj(w.F(mandate).Ships[0]).Hull = 1375;
+        Assert.Equal(2000, w.Battles.FleetFirepower(w.F(mandate)));
+        int mc = w.Fleets.AddFleet(Side.Collective, "MC", new[] { Ark }, "B", new[] { "Plough" });
         w.Game.State.Economy.Objects.Values.Single(o => o.Class == "Plough").CraftLost = 6;
         Assert.Equal(2087, w.Battles.FleetFirepower(w.F(mc)));
     }
@@ -72,24 +72,24 @@ public class AiThresholdTests
 
     // B6a-4: at Charter (or an HQ world) held with a planet squadron: 0, it fights on (the data value names the system)
     [Fact]
-    public void B6a_4_CoruscantFightsToTheEnd()
+    public void B6a_4_CharterFightsToTheEnd()
     {
-        var w = World1(p: new BattleParams { Ruleset = BattleRuleset.Classic, SubsystemRolls = false, HandIsAi = true, CoruscantSystem = "B" });
+        var w = World1(p: new BattleParams { Ruleset = BattleRuleset.Classic, SubsystemRolls = false, HandIsAi = true, CharterSystem = "B" });
         Assert.Equal(0.0, w.Battles.AiThreshold("B", Side.Hand));
         w.Run();
         Assert.NotEqual(1, w.Events<BattleEnded>().Single().Result.Seconds);
     }
 
-    // B6a-5 and B6a-6: r above the cap (2 ISD vs 1 Mon Cal: 4000 / 1800) or no enemy fleet (B = 0: r = A = 1200): 0.9
+    // B6a-5 and B6a-6: r above the cap (2 Mandate vs 1 Mon Cal: 4000 / 1800) or no enemy fleet (B = 0: r = A = 1200): 0.9
     [Fact]
     public void B6a_5_6_CappedAt09()
     {
         var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.Classic, SubsystemRolls = false, HandIsAi = true });
         w.Fleets.SetOwner("B", Side.Hand);
         w.Eco.AddObject(Side.Hand, "Gleaner", "B");
-        w.Fleet(Side.Hand, "B", Isd, 2);
+        w.Fleet(Side.Hand, "B", Mandate, 2);
         Assert.Equal(0.9, w.Battles.AiThreshold("B", Side.Hand)); // B = 0
-        w.Fleet(Side.Collective, "B", MonCal, 1);
+        w.Fleet(Side.Collective, "B", Ark, 1);
         Assert.Equal(0.9, w.Battles.AiThreshold("B", Side.Hand));
     }
 

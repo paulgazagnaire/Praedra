@@ -40,7 +40,7 @@ public class AiLevelTests
         Assert.Equal(m.UseFog, e.UseFog);
     }
 
-    // ai/12 D3 (Paul 2026-10-12: Hard is smarter, never a cheat): Hard changes only judgment, a military review every day and probe droids on
+    // ai/12 D3 (Paul 2026-10-12: Hard is smarter, never a cheat): Hard changes only judgment, a military review every day and probe speculators on
     // the HQ hunt (bought at the normal price); every other parameter, the view included, is Medium's. (Finishing the war when far ahead was
     // Hard only until 2026-10-18; it is now every level's DEFAULT, see SimpleAiParams.FinishWhenAheadRatio.)
     [Fact]
@@ -48,8 +48,8 @@ public class AiLevelTests
     {
         var m = AiLevels.For(AiLevel.Medium); var h = AiLevels.For(AiLevel.Hard);
         Assert.True(h.MilitaryEvery < m.MilitaryEvery);
-        Assert.True(h.HuntDroids > 0 && m.HuntDroids == 0);
-        var changed = new HashSet<string> { nameof(SimpleAiParams.MilitaryEvery), nameof(SimpleAiParams.HuntDroids) };
+        Assert.True(h.HuntSpeculators > 0 && m.HuntSpeculators == 0);
+        var changed = new HashSet<string> { nameof(SimpleAiParams.MilitaryEvery), nameof(SimpleAiParams.HuntSpeculators) };
         foreach (var prop in typeof(SimpleAiParams).GetProperties().Where(p => !changed.Contains(p.Name) && (p.PropertyType.IsValueType || p.PropertyType == typeof(string))))
             Assert.True(Equals(prop.GetValue(m), prop.GetValue(h)), $"{prop.Name}: Medium {prop.GetValue(m)}, Hard {prop.GetValue(h)}");
     }

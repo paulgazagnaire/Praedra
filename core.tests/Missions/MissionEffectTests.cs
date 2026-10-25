@@ -20,7 +20,7 @@ public class MissionEffectTests
         // The sector flag is recomputed every day at slot 5.6 from the harvesters in fleets (m5-death-star §3), so a hand-set flag would be cleared:
         // a Hand harvester at H (same sector as T) raises it the honest way.
         if (harvester) w.Host.Fleets.AddFleet(Side.Hand, "harvester", new[] { "harvester" }, H);
-        int agent = side == Side.Collective ? Leia : Piett;
+        int agent = side == Side.Collective ? Ledger : Varo;
         w.Agent(agent, T, dip: dip);
         w.Stub!.Expect(0, 99, 0).Expect(0, gainMax, gainDraw);
         w.Start(side, MissionKind.Diplomacy, new[] { agent }, T);
@@ -76,9 +76,9 @@ public class MissionEffectTests
         w.Game.Step();
         Assert.True(w.Host.Support.IsUprising(T));
         for (int i = 0; i < 5; i++) w.Unit(Side.Hand, ImpArmy, T);
-        w.Agent(Veers, T, lead: 40);
+        w.Agent(EightyEight, T, lead: 40);
         w.Stub!.Expect(0, 99, 0).Expect(0, 19, gainDraw);
-        w.Start(Side.Hand, MissionKind.SubdueUprising, new[] { Veers }, T);
+        w.Start(Side.Hand, MissionKind.SubdueUprising, new[] { EightyEight }, T);
         w.Game.Step();
         Assert.True(w.Host.Support.IsUprising(T)); // doubled requirement 8 > 5
         w.RunIteration(w.LastMission);
@@ -129,9 +129,9 @@ public class MissionEffectTests
     {
         var w = new MissionWorld();
         w.Hold(T, Side.Hand, 30);
-        w.Agent(Leia, T, lead: 100); // x = 100 - 70 = 30: INCTMSTB step gives 1; draw 0 succeeds
+        w.Agent(Ledger, T, lead: 100); // x = 100 - 70 = 30: INCTMSTB step gives 1; draw 0 succeeds
         w.Stub!.Expect(0, 99, 0);
-        w.Start(Side.Collective, MissionKind.InciteUprising, new[] { Leia }, T);
+        w.Start(Side.Collective, MissionKind.InciteUprising, new[] { Ledger }, T);
         w.Game.Step();
         w.RunIteration(w.LastMission);
         Assert.Equal(32, A(w));
@@ -145,9 +145,9 @@ public class MissionEffectTests
     {
         var w = new MissionWorld(new MissionParams { InciteSupportTiming = InciteSupportTiming.PerIncident });
         w.Hold(T, Side.Hand, 30);
-        w.Agent(Leia, T, lead: 100);
+        w.Agent(Ledger, T, lead: 100);
         w.Stub!.Expect(0, 99, 0);
-        w.Start(Side.Collective, MissionKind.InciteUprising, new[] { Leia }, T);
+        w.Start(Side.Collective, MissionKind.InciteUprising, new[] { Ledger }, T);
         w.Game.Step();
         w.RunIteration(w.LastMission);
         Assert.Empty(w.Events<SupportChanged>());
@@ -168,9 +168,9 @@ public class MissionEffectTests
         var w = new MissionWorld();
         w.Hold(T, Side.Hand, 0);
         var ids = Enumerable.Range(0, facilities).Select(_ => w.Host.Economy.AddFacility(T, FacilityKind.Mine)).ToList();
-        w.Agent(Leia, T, esp: 50, com: 50);
+        w.Agent(Ledger, T, esp: 50, com: 50);
         w.Stub!.Expect(0, 99, 0).Expect(0, 2, 0, 2);
-        w.Start(Side.Collective, MissionKind.Sabotage, new[] { Leia }, T);
+        w.Start(Side.Collective, MissionKind.Sabotage, new[] { Ledger }, T);
         w.Game.Step();
         w.RunIteration(w.LastMission);
         if (facilities == 0)
@@ -190,10 +190,10 @@ public class MissionEffectTests
         var w = new MissionWorld(new MissionParams { SabotageTargetMode = SabotageTargetMode.Chosen });
         w.Hold(T, Side.Hand, 0);
         int a = w.Host.Economy.AddFacility(T, FacilityKind.Mine), b = w.Host.Economy.AddFacility(T, FacilityKind.Refinery);
-        w.Agent(Leia, T, esp: 50, com: 50);
+        w.Agent(Ledger, T, esp: 50, com: 50);
         w.Stub!.Expect(0, 99, 0);
-        Assert.Equal(MissionReject.BadTarget, w.Try(seq => new StartMissionOrder(seq, Side.Collective, MissionKind.Sabotage, new() { Leia }, new(), new(), T, null, 999)));
-        w.Start(Side.Collective, MissionKind.Sabotage, new[] { Leia }, T, facility: a);
+        Assert.Equal(MissionReject.BadTarget, w.Try(seq => new StartMissionOrder(seq, Side.Collective, MissionKind.Sabotage, new() { Ledger }, new(), new(), T, null, 999)));
+        w.Start(Side.Collective, MissionKind.Sabotage, new[] { Ledger }, T, facility: a);
         w.Game.Step();
         w.RunIteration(w.LastMission);
         Assert.Equal(a, w.Events<FacilityDestroyed>().Single().Facility);
@@ -207,14 +207,14 @@ public class MissionEffectTests
     {
         var w = new MissionWorld(characters: Praedra.Core.Tests.Characters.CharWorld.ClassicTalent()); // the Classic Talent (m5-characters-and-force §Talent CH37)
         w.Hold(T, Side.Hand, 0);
-        w.Agent(Luke, T, esp: 100, com: 100);
+        w.Agent(Nobody, T, esp: 100, com: 100);
         var calls = new List<(string, Side)>();
         w.M.HasHarvester = (owner, sys) => owner == Side.Hand && sys == T;
         w.M.DestroyHarvester = (_, sys, owner) => calls.Add((sys, owner));
-        w.Start(Side.Collective, MissionKind.SpikeTheHarvester, new[] { Luke }, T);
+        w.Start(Side.Collective, MissionKind.SpikeTheHarvester, new[] { Nobody }, T);
         w.Game.Step();
         w.RunIteration(w.LastMission);
-        Assert.Equal((150, 99), (w.Events<MissionMemberRoll>().Single().Input, w.Events<MissionMemberRoll>().Single().Chance)); // B2e moved: Luke's Talent 50 raises both skills to 150
+        Assert.Equal((150, 99), (w.Events<MissionMemberRoll>().Single().Input, w.Events<MissionMemberRoll>().Single().Chance)); // B2e moved: Nobody's Talent 50 raises both skills to 150
         Assert.Equal(new[] { (T, Side.Hand) }, calls);
     }
 
@@ -222,41 +222,41 @@ public class MissionEffectTests
     [Fact]
     public void MI38_CharacterEffects()
     {
-        // Abduction: Han (combat 100) takes Vader (combat 0): ABDCMSTB(100) = 99
+        // Abduction: Midwife (combat 100) takes Ravilla (combat 0): ABDCMSTB(100) = 99
         var w = new MissionWorld();
-        w.Agent(Han, T, com: 100);
-        w.Agent(Vader, T);
-        w.Start(Side.Collective, MissionKind.Abduction, new[] { Han }, null, targetChar: Vader);
+        w.Agent(Midwife, T, com: 100);
+        w.Agent(Ravilla, T);
+        w.Start(Side.Collective, MissionKind.Abduction, new[] { Midwife }, null, targetChar: Ravilla);
         w.Game.Step();
         w.RunIteration(w.LastMission);
-        var vader = w.Ch.Get(Vader)!;
-        // QA-7 moved (B2e §3 step 4, B2e-22): the captor is a team member, so Vader is the team's captive (no planet yet), not held at T
-        Assert.Equal((CharacterStatus.Captured, Side.Collective, (string?)null), (vader.Status, vader.Captor!.Value, vader.HeldAt));
-        Assert.Contains(Vader, w.M.Get(w.LastMission)!.Captives!);
-        Assert.True(w.M.IsOnMission(Vader));
+        var ravilla = w.Ch.Get(Ravilla)!;
+        // QA-7 moved (B2e §3 step 4, B2e-22): the captor is a team member, so Ravilla is the team's captive (no planet yet), not held at T
+        Assert.Equal((CharacterStatus.Captured, Side.Collective, (string?)null), (ravilla.Status, ravilla.Captor!.Value, ravilla.HeldAt));
+        Assert.Contains(Ravilla, w.M.Get(w.LastMission)!.Captives!);
+        Assert.True(w.M.IsOnMission(Ravilla));
         Assert.Equal(MissionModule.CauseAbduction, w.Events<CharacterCaptured>().Single().Cause);
 
-        // Rescue: Leia held by the Hand at T; Han frees her
+        // Rescue: Ledger held by the Hand at T; Midwife frees her
         w = new MissionWorld();
-        w.Agent(Han, T, com: 100);
-        var leia = w.Agent(Leia, T);
-        w.Ch.Capture(null, leia, Side.Hand, T, CharacterCause.Debug);
-        w.Start(Side.Collective, MissionKind.Rescue, new[] { Han }, null, targetChar: Leia);
+        w.Agent(Midwife, T, com: 100);
+        var ledger = w.Agent(Ledger, T);
+        w.Ch.Capture(null, ledger, Side.Hand, T, CharacterCause.Debug);
+        w.Start(Side.Collective, MissionKind.Rescue, new[] { Midwife }, null, targetChar: Ledger);
         w.Game.Step();
         w.RunIteration(w.LastMission);
         // QA-9 moved (B2e §3 Autoroute): freed on T (no holder), she sets off at once for the nearest neutral world (step 6; the Collective holds none)
-        Assert.Equal((CharacterStatus.Free, T), (leia.Status, leia.Transit!.Path[0]));
+        Assert.Equal((CharacterStatus.Free, T), (ledger.Status, ledger.Transit!.Path[0]));
         Assert.Equal(MissionModule.CauseRescue, w.Events<CharacterFreed>().Single().Cause);
-        Assert.False(w.M.IsOnMission(Leia)); // not travelling with the team
+        Assert.False(w.M.IsOnMission(Ledger)); // not travelling with the team
 
-        // Assassination: Vader kills Wedge (a minor)
+        // Assassination: Ravilla kills Forty-One (a minor)
         w = new MissionWorld();
-        w.Agent(Vader, T, com: 100);
-        w.Agent(Wedge, T);
-        w.Start(Side.Hand, MissionKind.Assassination, new[] { Vader }, null, targetChar: Wedge);
+        w.Agent(Ravilla, T, com: 100);
+        w.Agent(FortyOne, T);
+        w.Start(Side.Hand, MissionKind.Assassination, new[] { Ravilla }, null, targetChar: FortyOne);
         w.Game.Step();
         w.RunIteration(w.LastMission);
-        Assert.True(w.Ch.IsDead(Wedge));
+        Assert.True(w.Ch.IsDead(FortyOne));
         Assert.Equal(MissionModule.CauseAssassination, w.Events<CharacterKilled>().Single().Cause);
     }
 
@@ -265,26 +265,26 @@ public class MissionEffectTests
     public void AssassinationOfAMajorInjures()
     {
         var w = new MissionWorld();
-        w.Agent(Vader, T, com: 100);
-        w.Agent(Luke, T);
-        w.Start(Side.Hand, MissionKind.Assassination, new[] { Vader }, null, targetChar: Luke);
+        w.Agent(Ravilla, T, com: 100);
+        w.Agent(Nobody, T);
+        w.Start(Side.Hand, MissionKind.Assassination, new[] { Ravilla }, null, targetChar: Nobody);
         w.Game.Step();
         w.RunIteration(w.LastMission);
-        Assert.False(w.Ch.IsDead(Luke));
+        Assert.False(w.Ch.IsDead(Nobody));
         Assert.Single(w.Events<CharacterInjured>());
     }
 
-    // Standard victory needs a capture: an Abduction makes Luke "captured" for the victory module (StandardVictory is on by default since 2026-10-16).
+    // Standard victory needs a capture: an Abduction makes Nobody "captured" for the victory module (StandardVictory is on by default since 2026-10-16).
     [Fact]
     public void AbductionMakesAKeyCharacterCaptured()
     {
         var w = new MissionWorld();
-        w.Agent(Vader, T, com: 100);
-        w.Agent(Luke, T, com: 0);
-        w.Start(Side.Hand, MissionKind.Abduction, new[] { Vader }, null, targetChar: Luke);
+        w.Agent(Ravilla, T, com: 100);
+        w.Agent(Nobody, T, com: 0);
+        w.Start(Side.Hand, MissionKind.Abduction, new[] { Ravilla }, null, targetChar: Nobody);
         w.Game.Step();
         w.RunIteration(w.LastMission);
-        Assert.True(w.Ch.IsCaptured(Luke));
+        Assert.True(w.Ch.IsCaptured(Nobody));
         Assert.True(w.Host.Victory.Rules.StandardVictory); // re-pinned 2026-10-16: standard victory default
     }
 
@@ -294,11 +294,11 @@ public class MissionEffectTests
     {
         var w = new MissionWorld();
         w.Hold(T, Side.Hand, 30);
-        w.Agent(Leia, T, lead: 70);
+        w.Agent(Ledger, T, lead: 70);
         int g = w.Unit(Side.Collective, Guerrillas, T);
         Assert.Equal(0, w.M.IncidentTerm(T));
         w.Stub!.Expect(0, 99, 99, 99);
-        w.Start(Side.Collective, MissionKind.InciteUprising, new[] { Leia }, T, new[] { g });
+        w.Start(Side.Collective, MissionKind.InciteUprising, new[] { Ledger }, T, new[] { g });
         w.Game.Step();
         Assert.Equal(12, w.M.InciteTerm(T));
         Assert.Equal(12, w.M.IncidentTerm(T));
@@ -310,9 +310,9 @@ public class MissionEffectTests
         var s = new MissionWorld();
         s.Hold(X, Side.Hand, 80);
         s.Game.Step();
-        s.Agent(Veers, X, lead: 70);
+        s.Agent(EightyEight, X, lead: 70);
         int c = s.Unit(Side.Hand, Commandos, X);
-        s.Start(Side.Hand, MissionKind.SubdueUprising, new[] { Veers }, X, new[] { c });
+        s.Start(Side.Hand, MissionKind.SubdueUprising, new[] { EightyEight }, X, new[] { c });
         s.Game.Step();
         Assert.Equal(-12, s.M.SubdueTerm(X));
         Assert.Equal(0, s.M.IncidentTerm(T));

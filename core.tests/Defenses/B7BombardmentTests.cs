@@ -18,18 +18,18 @@ public class B7BombardmentTests
 
     private static EconObject Ship(BombWorld w, int fleet, int index = 0) => w.Eco.Find(w.Game.State.Fleets[fleet].Ships[index])!;
 
-    // B7-bombardment Q74: one LNR I, no General, against one Nebulon-B (shield 300, hull 600): 100 hull left; two LNR I destroy it and, as it was
+    // B7-bombardment Q74: one Covenant I, no General, against one Mender (shield 300, hull 600): 100 hull left; two Covenant I destroy it and, as it was
     // the only ship, nothing is bombed
     [Fact]
-    public void Q74_LnrShotDamagesHullAndTwoDestroyTheOnlyShip()
+    public void Q74_CovenantShotDamagesHullAndTwoDestroyTheOnlyShip()
     {
         var w = new BombWorld();
         w.Hold(Emp);
-        w.Facility(FacilityKind.LnrSeriesI);
+        w.Facility(FacilityKind.CovenantI);
         int reg = w.Regiment(Emp, ImpArmy);
         int f = w.Fleet(All, Sys, Neb);
         w.Stub.Expect(0, 50, 0, 0);                // the critical roll (0 + pct(500, 600) = 83: a hit) and the CSCRHTTB roll 0 (shield recharge)
-        w.Stub.Expect(0, 2, 1);                    // collateral x over m0 = 2 (the regiment and the LNR): none
+        w.Stub.Expect(0, 2, 1);                    // collateral x over m0 = 2 (the regiment and the Covenant): none
         w.Stub.Expect(0, 1, 0);                    // the pick: the regiment
         w.Stub.Expect(1, 10, 1);                   // the hit's die: the regiment survives
         Assert.Null(w.TryBombard(All, f, Sys, Mil));
@@ -43,7 +43,7 @@ public class B7BombardmentTests
 
         var w2 = new BombWorld();
         w2.Hold(Emp);
-        w2.Facility(FacilityKind.LnrSeriesI); w2.Facility(FacilityKind.LnrSeriesI);
+        w2.Facility(FacilityKind.CovenantI); w2.Facility(FacilityKind.CovenantI);
         int reg2 = w2.Regiment(Emp, ImpArmy);
         int f2 = w2.Fleet(All, Sys, Neb);
         int shipId = w2.Game.State.Fleets[f2].Ships[0];
@@ -57,15 +57,15 @@ public class B7BombardmentTests
         Assert.Empty(w2.Stub.Requests);           // one ship: no target draw; destroyed: no critical roll; no hits: no collateral
     }
 
-    // B7-bombardment Q75: one Mordant Lien-150 against a Nebulon-B carrying 2 Maul squadrons: the frigate's 1 does not count; P = 4 (the B-wings) x admiral
+    // B7-bombardment Q75: one Mordant Lien-150 against a Mender carrying 2 Maul squadrons: the frigate's 1 does not count; P = 4 (the Mauls) x admiral
     [Theory]
     [InlineData(0, 4)]
     [InlineData(40, 8)]
-    public void Q75_KdyGroundsTheShipButNotItsFighters(int leadership, int power)
+    public void Q75_LienGroundsTheShipButNotItsFighters(int leadership, int power)
     {
         var w = new BombWorld();
         w.Hold(Emp);
-        w.Facility(FacilityKind.Kdy150);
+        w.Facility(FacilityKind.Lien150);
         int f = w.Fleets.AddFleet(All, "Neb", new[] { Neb }, Sys, new[] { "Maul", "Maul" });
         w.Bomb.AdmiralLeadership = _ => leadership;
         Assert.Equal(1 * (leadership / 40 + 1) + power, w.Bomb.Power(w.Game.State.Fleets[f])); // outside a strike the frigate counts
@@ -73,7 +73,7 @@ public class B7BombardmentTests
         var d = Assert.Single(w.Events<BombardShipDamaged>());
         Assert.Equal((2000, 300, 0, true), (d.Ion, d.Shield, d.HullLost, d.Grounded));
         Assert.Equal(power, w.Events<BombardmentStarted>().Single().P);
-        Assert.Equal(600, Ship(w, f).Hull);       // a KDY shot only drains shields
+        Assert.Equal(600, Ship(w, f).Hull);       // a Lien shot only drains shields
     }
 
     // B7-bombardment Q76: two regiments of defence 0, 2 hits, Military: mean kills 1.50 (the second hit is wasted half the time); the m3 rule 2.00
@@ -117,7 +117,7 @@ public class B7BombardmentTests
         Assert.Equal(new[] { (0, 2), (0, 1), (1, 10), (0, 1) }, w.Stub.Requests);
     }
 
-    // B7-bombardment Q77: two Collective fleets of base 30, both ordered, one GenCore I: one strike, 20 hits; the m3 rule (C3 off) 0 and 0
+    // B7-bombardment Q77: two Collective fleets of base 30, both ordered, one Escrow I: one strike, 20 hits; the m3 rule (C3 off) 0 and 0
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -125,7 +125,7 @@ public class B7BombardmentTests
     {
         var w = new BombWorld(stub: false, seed: 77, bp: new BombardParams { BombardFleetsTogether = together });
         w.Hold(Emp);
-        w.Facility(FacilityKind.GenCoreLevelI);
+        w.Facility(FacilityKind.EscrowI);
         var ships = Enumerable.Repeat("Barricade", 7).Concat(Enumerable.Repeat("Dodger", 2)).ToArray(); // 7 x 4 + 2 x 1 = 30
         int a = w.Fleet(All, Sys, ships), b = w.Fleet(All, Sys, ships);
         w.Bombard(All, a, Sys, Mil); w.Bombard(All, b, Sys, Mil);
@@ -257,21 +257,21 @@ public class B7BombardmentTests
 
         var g = new BombWorld();
         g.Hold(All);
-        g.Facility(FacilityKind.GenCoreLevelI);
+        g.Facility(FacilityKind.EscrowI);
         int f2 = g.Fleet(Emp, Sys, "Warrant");
         Assert.Null(g.TryBombard(Emp, f2, Sys, Mil)); // P 1 < S 40: no hits
         Assert.Empty(g.Events<CollateralHit>());
         Assert.Empty(g.Stub.Requests);
     }
 
-    // B7-bombardment Q81: an ISD with 1500 of 2750 hull lost, no admiral: P = 1 (C4); full value with the switch off
+    // B7-bombardment Q81: an Mandate with 1500 of 2750 hull lost, no admiral: P = 1 (C4); full value with the switch off
     [Theory]
     [InlineData(true, 1)]
     [InlineData(false, 2)]
     public void Q81_DamagedShipBombsLess(bool scales, int power)
     {
         var w = new BombWorld(bp: new BombardParams { BombardDamageScales = scales });
-        int f = w.Fleet(Emp, Sys, BombWorld.Isd);
+        int f = w.Fleet(Emp, Sys, BombWorld.Mandate);
         Ship(w, f).Hull = 2750 - 1500;
         Assert.Equal(power, w.Bomb.Power(w.Game.State.Fleets[f]));
     }
@@ -382,7 +382,7 @@ public class B7BombardmentTests
     {
         var w = new BombWorld();
         w.Hold(Emp);
-        w.Facility(FacilityKind.LnrSeriesI);
+        w.Facility(FacilityKind.CovenantI);
         int f = w.Fleet(All, Sys, Neb);
         Ship(w, f).Hits![4] = primaryBefore;
         w.Stub.Expect(0, 50, 0, roll);           // score 0 + pct(500, 600) = 83 >= 50, then the table roll
@@ -400,7 +400,7 @@ public class B7BombardmentTests
     {
         var w = new BombWorld();
         w.Hold(Emp);
-        w.Facility(FacilityKind.LnrSeriesI);
+        w.Facility(FacilityKind.CovenantI);
         int f = w.Fleet(All, Sys, "Barricade");         // shield 1100, hull 3000: 800 is absorbed, no hull lost, no roll
         Assert.Null(w.TryBombard(All, f, Sys, Civ));
         Assert.Equal(0, w.Stub.Count(0, 50));
@@ -408,10 +408,10 @@ public class B7BombardmentTests
 
         var g = new BombWorld();
         g.Hold(Emp);
-        g.Facility(FacilityKind.LnrSeriesII);                         // fires first (both LNR: id order)
-        g.Facility(FacilityKind.LnrSeriesI);
+        g.Facility(FacilityKind.CovenantII);                         // fires first (both Covenant: id order)
+        g.Facility(FacilityKind.CovenantI);
         int f2 = g.Fleet(All, Sys, "Ark", "Ark"); // shield 300, hull 2400
-        g.Stub.Expect(0, 1, 0, 1);                                    // LNR II at ship 0 (destroyed: 300 + 2400 < 5000), LNR I at ship 1
+        g.Stub.Expect(0, 1, 0, 1);                                    // Covenant II at ship 0 (destroyed: 300 + 2400 < 5000), Covenant I at ship 1
         g.Stub.Expect(0, 50, 0);                                      // ship 1: 800 lost, 1600 left: 0 + pct(800, 2400) = 33 < 50: no hit
         var ship1 = Ship(g, f2, 1);
         ship1.Hits![0] = 4;                                           // shield recharge at the cap: S = 300 x 0 / 4 = 0
@@ -430,7 +430,7 @@ public class B7BombardmentTests
     {
         var w = new BombWorld();
         w.Hold(Emp);
-        w.Facility(FacilityKind.Kdy150);
+        w.Facility(FacilityKind.Lien150);
         int f = w.Fleet(All, Sys, "Crowbar");                // shield 600, hull 1400
         var ship = Ship(w, f);
         ship.Hull = 700; ship.Hits![0] = 1;                           // 600 x 3 / 4 = 450, x 700 / 1400 = 225
@@ -445,35 +445,35 @@ public class B7BombardmentTests
     {
         var w = new BombWorld();
         w.Hold(Emp);
-        w.Facility(FacilityKind.Kdy150); w.Facility(FacilityKind.LnrSeriesI);
-        int f = w.Fleet(All, Sys, "Barricade");         // shield 1100, hull 3000: KDY 2000 takes all 1100, LNR 800 all to hull
+        w.Facility(FacilityKind.Lien150); w.Facility(FacilityKind.CovenantI);
+        int f = w.Fleet(All, Sys, "Barricade");         // shield 1100, hull 3000: Lien 2000 takes all 1100, Covenant 800 all to hull
         w.Stub.Expect(0, 50, 50, 0);
         Assert.Null(w.TryBombard(All, f, Sys, Civ));
         var d = Assert.Single(w.Events<BombardShipDamaged>());
         Assert.Equal((1100, 800, true, 0), (d.Shield, d.HullLost, d.Grounded, d.Critical)); // 50 + pct(800, 3000) = 76: a hit on shield recharge
         Assert.Equal(2200, Ship(w, f).Hull);
-        Assert.Equal(0, w.Events<BombardmentStarted>().Single().P); // grounded: the Bulwark's 4 does not count
+        Assert.Equal(0, w.Events<BombardmentStarted>().Single().P); // grounded: the Barricade's 4 does not count
         var shots = w.Events<BatteryShot>();
-        Assert.Equal(new[] { true, false }, shots.Select(s => s.Ion)); // KDY first, then LNR
+        Assert.Equal(new[] { true, false }, shots.Select(s => s.Ion)); // Lien first, then Covenant
     }
 
-    // B7-bombardment §4.2, §4.3, §8: each battery draws rand(0..n - 1) (KDY first, then LNR); a General multiplies the damage by L / 40 + 1
+    // B7-bombardment §4.2, §4.3, §8: each battery draws rand(0..n - 1) (Lien first, then Covenant); a General multiplies the damage by L / 40 + 1
     [Fact]
     public void ShotsPickRandomShipsAndTheGeneralMultiplies()
     {
         var w = new BombWorld();
         w.Hold(Emp);
-        int lnr = w.Facility(FacilityKind.LnrSeriesI);
-        int kdy = w.Facility(FacilityKind.Kdy150);
+        int covenant = w.Facility(FacilityKind.CovenantI);
+        int lien = w.Facility(FacilityKind.Lien150);
         int f = w.Fleet(All, Sys, Neb, Neb, Neb);
         var ids = w.Game.State.Fleets[f].Ships.ToArray();
         w.Bomb.BatteryGeneralLeadership = s => s == Sys ? 45 : 0;    // x2
-        w.Stub.Expect(0, 2, 2, 1);                                    // the KDY (higher id, but KDY fire first) at ship 2, the LNR at ship 1
+        w.Stub.Expect(0, 2, 2, 1);                                    // the Lien (higher id, but Lien fire first) at ship 2, the Covenant at ship 1
         Assert.Null(w.TryBombard(All, f, Sys, Civ));
         var shots = w.Events<BatteryShot>();
-        Assert.Equal(new[] { (kdy, ids[2], 4000), (lnr, ids[1], 1600) },
+        Assert.Equal(new[] { (lien, ids[2], 4000), (covenant, ids[1], 1600) },
             shots.Select(s => (s.Facility, s.Ship, s.Damage)));       // ship 1 is destroyed: 1600 > 300 + 600
-        Assert.Equal(new[] { kdy, lnr }, w.Events<BatteryReturnFire>().Single().Facilities.Items);
+        Assert.Equal(new[] { lien, covenant }, w.Events<BatteryReturnFire>().Single().Facilities.Items);
         Assert.Equal(2, w.Game.State.Fleets[f].Ships.Count);
         Assert.Equal(1, w.Events<BombardmentStarted>().Single().P); // ship 0 counts 1; ship 2 is grounded by 4000 ion
     }
@@ -484,7 +484,7 @@ public class B7BombardmentTests
     {
         var w = new BombWorld();
         w.Hold(Emp);
-        w.Facility(FacilityKind.LnrSeriesII);
+        w.Facility(FacilityKind.CovenantII);
         int f = w.Fleets.AddFleet(All, "Neb", new[] { Neb }, Sys, new[] { "Maul" });
         int ship = w.Game.State.Fleets[f].Ships[0];
         int reg = w.Regiment(All, BombWorld.Army); var r = w.Eco.Find(reg)!; r.System = null; r.AboardShip = ship;
@@ -502,8 +502,8 @@ public class B7BombardmentTests
     {
         var w = new BombWorld(bp: new BombardParams { BatteryReturnFire = false });
         w.Hold(Emp);
-        int k = w.Facility(FacilityKind.LnrSeriesII);
-        w.Facility(FacilityKind.GenCoreLevelII);
+        int k = w.Facility(FacilityKind.CovenantII);
+        w.Facility(FacilityKind.EscrowII);
         int f = w.Fleet(All, Sys, Neb);
         Assert.Null(w.TryBombard(All, f, Sys, Mil));
         Assert.Equal(600, Ship(w, f).Hull);
@@ -528,12 +528,12 @@ public class B7BombardmentTests
         var g = new BombWorld();
         g.Hold(All, 70);
         g.Eco.SetSlots(Sys, 4, 1);
-        g.Regiment(All, BombWorld.Army); g.Facility(FacilityKind.GenCoreLevelI); g.Facility(FacilityKind.ConstructionYard);
+        g.Regiment(All, BombWorld.Army); g.Facility(FacilityKind.EscrowI); g.Facility(FacilityKind.ConstructionYard);
         int f2 = g.Fleet(Emp, Sys, "harvester", 3);           // 45 - 40 = 5 hits
         g.Stub.Expect(0, 4, 4, 0, 0, 0, 0);
         g.Stub.Expect(1, 10, 10, 1, 1, 1, 1);
         g.TryBombard(Emp, f2, Sys, Gen);
-        Assert.Equal((0, 4), g.Stub.Requests[0]);              // regiment, GenCore, yard, Energy, Raw
+        Assert.Equal((0, 4), g.Stub.Requests[0]);              // regiment, Escrow, yard, Energy, Raw
         Assert.Equal("Raw", g.Events<TargetHit>().First().TargetKind);
         Assert.Single(g.Events<SupportChanged>());             // C7: a raw loss costs -20 too
     }
@@ -579,7 +579,7 @@ public class B7BombardmentTests
             var w = new BombWorld(stub: false, seed: 707);
             w.Hold(Emp, 45);
             w.Eco.SetSlots(Sys, 6, 2);
-            w.Eco.AddFacility(Sys, FacilityKind.Mine); w.Facility(FacilityKind.Kdy150); w.Facility(FacilityKind.LnrSeriesI); w.Facility(FacilityKind.LnrSeriesI);
+            w.Eco.AddFacility(Sys, FacilityKind.Mine); w.Facility(FacilityKind.Lien150); w.Facility(FacilityKind.CovenantI); w.Facility(FacilityKind.CovenantI);
             for (int i = 0; i < 6; i++) w.Regiment(Emp, ImpArmy);
             int a = w.Fleet(All, Sys, Neb, Neb, "Jubilee"), b = w.Fleets.AddFleet(All, "B", new[] { Neb }, Sys, new[] { "Maul", "Plough" });
             w.Bombard(All, a, Sys, Mil); w.Bombard(All, b, Sys, Mil);

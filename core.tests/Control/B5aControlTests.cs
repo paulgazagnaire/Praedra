@@ -42,9 +42,9 @@ internal static class DerivedCapture
 /// </summary>
 internal sealed class DerivedWorld
 {
-    public const string Corellia = "Classis", Drall = "Beryl", Poderis = "Altamesa", Vagran = "Loess", Selonia = "Marmor";
+    public const string Classis = "Classis", Beryl = "Beryl", Altamesa = "Altamesa", Loess = "Loess", Marmor = "Marmor";
     public const string ImpArmy = "Tranches", RebArmy = "Militia";
-    public const int Lando = 834, Piett = 898;
+    public const int Foreman = 834, Varo = 898;
 
     public GameHost H { get; }
     public Game Game => H.Game;
@@ -94,7 +94,7 @@ internal sealed class DerivedWorld
 // decided with it (HarvesterFallout Classic, the strike-2 revolt under derived control) and the AI's last-regiment guard.
 public class B5aControlTests
 {
-    private const string C = DerivedWorld.Corellia, D = DerivedWorld.Drall, T = DerivedWorld.Poderis, V = DerivedWorld.Vagran;
+    private const string C = DerivedWorld.Classis, D = DerivedWorld.Beryl, T = DerivedWorld.Altamesa, V = DerivedWorld.Loess;
 
     // B5a-1 (sections 1, 6): a neutral world with no regiments at Collective support 59; one support change of +1 makes it Collective in the same call,
     // cause Support; the sector step gives +1 to the Collective in every ever-held populated system of the sector, the world itself included.
@@ -305,30 +305,30 @@ public class B5aControlTests
     // B5a-9 (section 5): the Collective takes a world with a Mordant Lien-150: it becomes the Collective's. The same world going neutral instead:
     // it goes neutral. (The sheet's planet-killer shield, destroyed in both cases, is cut: data/design/cut-classes.csv.)
     [Fact]
-    public void B5a9_Kdy150ChangesSideOrGoesNeutral()
+    public void B5a9_Lien150ChangesSideOrGoesNeutral()
     {
         foreach (var neutral in new[] { false, true })
         {
             var w = new DerivedWorld();
             w.Hold(C, Side.Hand, 35);
-            int kdy = w.H.Economy.AddFacility(C, FacilityKind.Kdy150);
+            int lien = w.H.Economy.AddFacility(C, FacilityKind.Lien150);
             if (neutral) w.Ctl.SubmitDebugSetSupport(Side.Hand, C, 50);
             else w.Ctl.SubmitDebugSetTroops(Side.Collective, C, Side.Collective, DerivedWorld.RebArmy, 1);
             w.Step();
             Side? to = neutral ? null : Side.Collective;
             Assert.Equal(to, w.Ctl.HolderOf(C));
             Assert.Empty(w.Events<FacilityRemoved>());
-            Assert.Equal(to, w.H.Economy.OwnerOf(w.H.Economy.Find(kdy)!));
+            Assert.Equal(to, w.H.Economy.OwnerOf(w.H.Economy.Find(lien)!));
             var t = Assert.Single(w.Events<FacilityTransferred>());
-            Assert.Equal((kdy, (Side?)Side.Hand, to), (t.Facility, t.From, t.To));
+            Assert.Equal((lien, (Side?)Side.Hand, to), (t.Facility, t.From, t.To));
         }
     }
 
-    // B5a-10 (section 5): a capture with an ISD queued at the world's shipyard: the ISD is destroyed, no refund; the yard and its queue are the new
+    // B5a-10 (section 5): a capture with an Mandate queued at the world's shipyard: the Mandate is destroyed, no refund; the yard and its queue are the new
     // holder's, empty. A busy queue elsewhere whose destination is the captured world keeps its target. (The "idle queue elsewhere pointing at the
     // world" has no counterpart here: an idle queue keeps no destination in the rebuild.)
     [Fact]
-    public void B5a10_QueuedIsdDestroyed_NoRefund_YardEmptyForNewHolder()
+    public void B5a10_QueuedMandateDestroyed_NoRefund_YardEmptyForNewHolder()
     {
         var w = new DerivedWorld();
         w.Hold(C, Side.Hand, 30); w.Hold(D, Side.Hand, 30);
@@ -339,12 +339,12 @@ public class B5aControlTests
         w.H.Construction.SubmitBuild(Side.Hand, C, YardFamily.Shipyard, "Mandate", 1);
         w.H.Construction.SubmitBuild(Side.Hand, D, YardFamily.Training, DerivedWorld.ImpArmy, 2, C);
         w.Step();
-        int isd = w.H.Economy.Objects.Single(o => o.Class == "Mandate").Id;
+        int mandate = w.H.Economy.Objects.Single(o => o.Class == "Mandate").Id;
         int refined = w.H.Economy.Refined(Side.Hand);
         w.Ctl.SubmitDebugSetTroops(Side.Collective, C, Side.Collective, DerivedWorld.RebArmy, 1);
         w.Step();
         Assert.Equal(Side.Collective, w.Ctl.HolderOf(C));
-        Assert.Null(w.H.Economy.Find(isd));
+        Assert.Null(w.H.Economy.Find(mandate));
         Assert.Null(w.H.Construction.ProjectAt(C, YardFamily.Shipyard));
         Assert.True(w.H.Economy.Refined(Side.Hand) <= refined); // no refund
         Assert.Equal(Side.Collective, w.H.Economy.OwnerOf(w.H.Economy.Find(yard)!));
@@ -366,26 +366,26 @@ public class B5aControlTests
             Id = 9000, Kind = MissionKind.Sabotage, Side = Side.Collective, SpecialForces = new() { working }, Home = T, Target = C,
             Phase = MissionPhase.Working, Departed = true, Path = new() { C }, Due = 100_000,
         };
-        var lando = w.Character(DerivedWorld.Lando, C);
-        var piett = w.Character(DerivedWorld.Piett, C);
-        w.H.Characters.Capture(null, piett, Side.Collective, C, CharacterCause.Debug);
+        var foreman = w.Character(DerivedWorld.Foreman, C);
+        var varo = w.Character(DerivedWorld.Varo, C);
+        w.H.Characters.Capture(null, varo, Side.Collective, C, CharacterCause.Debug);
         w.Ctl.SubmitDebugSetTroops(Side.Hand, C, Side.Hand, DerivedWorld.ImpArmy, 1);
         w.Step();
         Assert.Equal(Side.Hand, w.Ctl.HolderOf(C));
         Assert.Null(w.H.Economy.Find(idle));
         Assert.NotNull(w.H.Economy.Find(working));
         Assert.Equal(idle, Assert.Single(w.Events<UnitLostAtCapture>()).Object);
-        Assert.Equal(CharacterStatus.Free, lando.Status);
-        Assert.NotEqual(C, lando.System);
-        Assert.Contains(w.Events<CharacterDeparted>(), e => e.Character == DerivedWorld.Lando);
-        Assert.Equal(CharacterStatus.Free, piett.Status);
-        Assert.Contains(w.Events<CharacterFreed>(), e => e.Character == DerivedWorld.Piett);
-        Assert.Equal(C, w.H.Characters.LocationOf(piett)); // of the new holder's side: stays
+        Assert.Equal(CharacterStatus.Free, foreman.Status);
+        Assert.NotEqual(C, foreman.System);
+        Assert.Contains(w.Events<CharacterDeparted>(), e => e.Character == DerivedWorld.Foreman);
+        Assert.Equal(CharacterStatus.Free, varo.Status);
+        Assert.Contains(w.Events<CharacterFreed>(), e => e.Character == DerivedWorld.Varo);
+        Assert.Equal(C, w.H.Characters.LocationOf(varo)); // of the new holder's side: stays
         // (B5a, 2026-10-18, Dev lead) the leaving character now uses Autoroute (QA-9, #69): step 3, the nearest Collective world, at character
         // travel speed, so he arrives when his trip ends instead of "the next day".
-        Assert.Equal(T, lando.Transit!.Path[^1]);
-        for (int d = 0; d < 400 && lando.Transit != null; d++) w.Step();
-        Assert.Equal(T, lando.System);
+        Assert.Equal(T, foreman.Transit!.Path[^1]);
+        for (int d = 0; d < 400 && foreman.Transit != null; d++) w.Step();
+        Assert.Equal(T, foreman.System);
     }
 
     // B5a-12 (section 6, as reworded after the RE lead's correction 2026-10-17: the limiter resets per tick, not per day). Two Collective worlds of
@@ -395,7 +395,7 @@ public class B5aControlTests
     [Fact]
     public void B5a12_SupportOnlyStep_OncePerTickPerLosingSide()
     {
-        const string S = DerivedWorld.Selonia;
+        const string S = DerivedWorld.Marmor;
         var w = new DerivedWorld();
         foreach (var s in new[] { C, D, T, V, S }) w.Hold(s, Side.Collective, 70);
         w.InSlot("6.2", ctx =>
@@ -405,7 +405,7 @@ public class B5aControlTests
         });
         w.Step();
         Assert.Equal(new[] { C, D }, w.Events<SystemCaptured>().Where(e => e.To == null && e.Cause == CaptureCause.Support).Select(e => e.System).ToArray());
-        // Corellia's step only (Beryl is still at 70 when it comes; its own flip in the same tick gives none). Steps come in name order:
+        // Classis's step only (Beryl is still at 70 when it comes; its own flip in the same tick gives none). Steps come in name order:
         // Praedra names 2026-10-25: Altamesa (T), Beryl (D), Classis (C), Loess (V), Marmor (S).
         Assert.Equal(new[] { (T, 69), (D, 69), (C, 57), (V, 69), (S, 69) }, w.SectorSteps().Select(s => (s.System, s.New)).ToArray());
         Assert.Equal(57, w.A(D));
@@ -438,8 +438,8 @@ public class B5aControlTests
         w.H.Support.StartUprisingNow(new StepContext(w.Game, w.Game.Day), D);
         Assert.True(w.H.Support.IsUprising(D));
         int refined = w.H.Economy.Refined(Side.Hand);
-        var piett = w.Character(DerivedWorld.Piett, D);
-        foreach (var id in new[] { mine, reg, sf, piett.Id }) w.Game.Submit(seq => new ScrapObjectOrder(seq, Side.Hand, id));
+        var varo = w.Character(DerivedWorld.Varo, D);
+        foreach (var id in new[] { mine, reg, sf, varo.Id }) w.Game.Submit(seq => new ScrapObjectOrder(seq, Side.Hand, id));
         w.Step();
         var scrapped = w.Events<ObjectScrapped>();
         Assert.Equal(new[] { (mine, 10), (reg, w.H.Economy.Costs.Get(DerivedWorld.ImpArmy).Cost / 2) }, scrapped.Select(s => (s.Object, s.Refund)).ToArray());
@@ -473,7 +473,7 @@ public class B5aControlTests
         w.Regiments(T, Side.Hand, 1);
         w.Game.State.Harvester.StrikesInSector["Classis Sector"] = 1;
         w.InSlot("5.1", ctx => w.H.Harvester.GetType().GetMethod("SectorReaction", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
-            .Invoke(w.H.Harvester, new object[] { ctx, ctx.Day + 1, DerivedWorld.Vagran }));
+            .Invoke(w.H.Harvester, new object[] { ctx, ctx.Day + 1, DerivedWorld.Loess }));
         w.Step();
         Assert.Equal(Side.Collective, w.Ctl.HolderOf(C));
         Assert.Equal(Side.Collective, w.Ctl.HolderOf(D));
@@ -492,7 +492,7 @@ public class B5aControlTests
         w.Hold(rimHigh, Side.Hand, 5); w.Hold(rimLow, Side.Hand, 20);
         w.Hold(never, null, 50);
         w.InSlot("5.1", ctx => w.H.Harvester.GetType().GetMethod("SectorReaction", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
-            .Invoke(w.H.Harvester, new object[] { ctx, ctx.Day + 1, DerivedWorld.Vagran }));
+            .Invoke(w.H.Harvester, new object[] { ctx, ctx.Day + 1, DerivedWorld.Loess }));
         w.Step();
         Assert.Equal(20, w.A(coreFar));
         Assert.Equal(5, w.A(rimHigh));
@@ -516,7 +516,7 @@ public class B5aControlTests
         {
             w.H.Support.SetHarvesterSystem(coreInSector, true); w.H.Support.SetHarvesterSystem(rimInSector, true); // the harvester's sector (flags per system)
             w.H.Harvester.GetType().GetMethod("SectorReaction", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
-                .Invoke(w.H.Harvester, new object[] { ctx, ctx.Day + 1, DerivedWorld.Vagran });
+                .Invoke(w.H.Harvester, new object[] { ctx, ctx.Day + 1, DerivedWorld.Loess });
         });
         w.Step();
         Assert.Equal((15, 20), (w.A(coreInSector), w.A(coreElsewhere)));
@@ -587,7 +587,7 @@ public class B5aControlTests
         Assert.Equal(1, Target(D, 65));
         Assert.Equal(2, Target(T, 55));
         Assert.Equal(4, Target(V, 30));
-        Assert.Equal(8, Target(DerivedWorld.Selonia, 30, uprising: true));
+        Assert.Equal(8, Target(DerivedWorld.Marmor, 30, uprising: true));
         Assert.Equal(12, Target("Magnetite III", 5, uprising: true)); // B6b-4: min(7, 6) x 2
         var hq = w.H.HqSystem ?? "The Shoal";
         if (w.H.HqSystem == null) w.H.Game.State.Scenario.HqSystem = hq;

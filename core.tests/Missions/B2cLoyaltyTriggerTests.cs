@@ -11,18 +11,18 @@ using Praedra.Core.Tests.Control;
 namespace Praedra.Core.Tests.Missions;
 
 /// <summary>
-/// B2c: the four triggers that move loyalty and the per-system loss tallies they read. Lando is the Collective minor, Admiral Decimus Varo the Hand minor,
-/// Luke is unable to betray (never moves). Battle and blockade events are emitted as the battle and blockade code emits them, through a
+/// B2c: the four triggers that move loyalty and the per-system loss tallies they read. Foreman is the Collective minor, Admiral Decimus Varo the Hand minor,
+/// Nobody is unable to betray (never moves). Battle and blockade events are emitted as the battle and blockade code emits them, through a
 /// StepContext, so the observer runs exactly as in a Step. rule: m5-characters-and-force §Loyalty and betrayal (Traced, B2c).
 /// </summary>
 public class B2cLoyaltyTriggerTests
 {
-    private static MissionWorld World(CharacterParams? ch = null, int lando = 100, int piett = 100)
+    private static MissionWorld World(CharacterParams? ch = null, int foreman = 100, int varo = 100)
     {
         var w = new MissionWorld(characters: ch);
-        w.Agent(Lando, H).Loyalty = lando;
-        w.Agent(Piett, X).Loyalty = piett;
-        w.Agent(Luke, H).Loyalty = 100;
+        w.Agent(Foreman, H).Loyalty = foreman;
+        w.Agent(Varo, X).Loyalty = varo;
+        w.Agent(Nobody, H).Loyalty = 100;
         return w;
     }
 
@@ -57,9 +57,9 @@ public class B2cLoyaltyTriggerTests
         w.Game.Step();
         Assert.Single(w.Events<SystemCaptured>());
         Assert.Equal(1, w.Stub.Count(0, 5) - before);
-        Assert.Equal(97, Loy(w, Lando));
-        Assert.Equal(100, Loy(w, Piett)); // clamped
-        Assert.Equal(100, Loy(w, Luke));
+        Assert.Equal(97, Loy(w, Foreman));
+        Assert.Equal(100, Loy(w, Varo)); // clamped
+        Assert.Equal(100, Loy(w, Nobody));
         Assert.Single(w.Events<LoyaltyChanged>());
     }
 
@@ -78,21 +78,21 @@ public class B2cLoyaltyTriggerTests
         w.Game.Step();
         Assert.Equal(before, w.Stub.Count(0, 5));
         Assert.Empty(w.Events<LoyaltyChanged>());
-        Assert.Equal(100, Loy(w, Lando));
+        Assert.Equal(100, Loy(w, Foreman));
     }
 
     // B2c-3
     [Fact]
     public void B2c3_HqDestroyed_CollectiveLosesK()
     {
-        var w = World(piett: 97);
+        var w = World(varo: 97);
         w.Stub!.Expect(0, 5, 2);
         int before = w.Stub.Count(0, 5);
         Emit(w, (i, d) => new HqDestroyed(i, d, "Test", H));
         Assert.Equal(1, w.Stub.Count(0, 5) - before);
-        Assert.Equal(98, Loy(w, Lando));
-        Assert.Equal(99, Loy(w, Piett));
-        Assert.Equal(100, Loy(w, Luke));
+        Assert.Equal(98, Loy(w, Foreman));
+        Assert.Equal(99, Loy(w, Varo));
+        Assert.Equal(100, Loy(w, Nobody));
     }
 
     // B2c-4
@@ -106,8 +106,8 @@ public class B2cLoyaltyTriggerTests
         Assert.Equal(6, w.Host.Loyalty.LossShift(LoyaltyModule.SideNumberHand, 194, 30));
         Battle(w, lost);
         Assert.Equal(new[] { 194, 30, 0 }, w.Host.Loyalty.TallyOf(T)!.Battle);
-        Assert.Equal(94, Loy(w, Lando));
-        Assert.Equal(100, Loy(w, Piett));
+        Assert.Equal(94, Loy(w, Foreman));
+        Assert.Equal(100, Loy(w, Varo));
     }
 
     // B2c-5
@@ -120,8 +120,8 @@ public class B2cLoyaltyTriggerTests
             .Concat(Ships(w, Side.Hand, "Injunction", "Bond", "Bond")).ToArray();
         Battle(w, lost);
         Assert.Equal(new[] { 150, 40, 0 }, w.Host.Loyalty.TallyOf(T)!.Battle);
-        Assert.Equal(98, Loy(w, Lando));
-        Assert.Equal(100, Loy(w, Piett));
+        Assert.Equal(98, Loy(w, Foreman));
+        Assert.Equal(100, Loy(w, Varo));
     }
 
     // B2c-6
@@ -138,7 +138,7 @@ public class B2cLoyaltyTriggerTests
         }
         Battle(w, Ships(w, Side.Collective, "Barricade", "Barricade"));
         Assert.Empty(w.Events<LoyaltyChanged>());
-        Assert.Equal(100, Loy(w, Lando));
+        Assert.Equal(100, Loy(w, Foreman));
     }
 
     // B2c-7
@@ -172,7 +172,7 @@ public class B2cLoyaltyTriggerTests
     [Theory]
     [InlineData(4, 100)]
     [InlineData(20, 97)]
-    public void B2c9_BlockaderTakesTheSystem_BlockaderGains(int collectiveRegiments, int lando)
+    public void B2c9_BlockaderTakesTheSystem_BlockaderGains(int collectiveRegiments, int foreman)
     {
         var w = World();
         w.Hold(T, Side.Collective, 60);
@@ -182,8 +182,8 @@ public class B2cLoyaltyTriggerTests
         Assert.Equal(new[] { 5 * collectiveRegiments, 6, 0 }, w.Host.Loyalty.TallyOf(T)!.Assault);
         w.Host.Fleets.SetOwner(T, Side.Hand);
         Emit(w, (i, d) => new BlockadeLifted(i, d, T, Side.Hand));
-        Assert.Equal(lando, Loy(w, Lando));
-        Assert.Equal(100, Loy(w, Piett));
+        Assert.Equal(foreman, Loy(w, Foreman));
+        Assert.Equal(100, Loy(w, Varo));
     }
 
     // B2c-10
@@ -198,7 +198,7 @@ public class B2cLoyaltyTriggerTests
         Assert.Equal(110, w.Host.Loyalty.TallyOf(T)!.Battle[0]);
         Battle(w, Ships(w, Side.Collective, "Ark", "Ark"));
         Assert.Equal(new[] { 84, 0, 0 }, w.Host.Loyalty.TallyOf(T)!.Battle);
-        Assert.Equal(98, Loy(w, Lando)); // 84 / 50 + 84 / 50 = 2, not the 6 of 194
+        Assert.Equal(98, Loy(w, Foreman)); // 84 / 50 + 84 / 50 = 2, not the 6 of 194
     }
 
     // B2c-11
@@ -221,7 +221,7 @@ public class B2cLoyaltyTriggerTests
         Emit(w, (i, d) => new BlockadeLifted(i, d, T, Side.Hand));
         Assert.Empty(w.Events<LoyaltyChanged>());
         Assert.Null(w.Host.Loyalty.TallyOf(T));
-        Assert.Equal(100, Loy(w, Lando));
+        Assert.Equal(100, Loy(w, Foreman));
     }
 
     // B2c §Work: the tallies are saved and in the state hash

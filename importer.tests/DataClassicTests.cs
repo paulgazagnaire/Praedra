@@ -74,7 +74,7 @@ public class DataClassicTests
 
     // B1-own-importer QA Q3 / Q4: Talent values of records 918 and 919 (Senior Auditor Mantis Doran, Lucrio Vance), and every mission table complete
     [Fact]
-    public void RixGaraintAndTableRowCounts()
+    public void DoranVanceAndTableRowCounts()
     {
         var c = Csv.Load(Path.Combine(ClassicDir, "characters.csv"));
         int Row(string name) => Enumerable.Range(0, c.Rows.Count).Single(r => c.Get(r, "name") == name);

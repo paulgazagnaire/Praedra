@@ -9,22 +9,22 @@ namespace Praedra.Core.Tests.Fleets;
 // blockade (m1-forced-stop-and-blockade, 2026-10-12 update). Ids N8 to N12 as in m4-battle-new. All with the real CSVs.
 public class CombatStrengthTests
 {
-    private const string Isd = "Mandate", Corvette = "Dodger", Victory = "Decree";
+    private const string Mandate = "Mandate", Corvette = "Dodger", Victory = "Decree";
     private static readonly IReadOnlyDictionary<string, ShipClass> Ships = World.Ships.Value;
     private static readonly CombatStrength Cs = new(NewBattleData.Default);
 
     private static List<ShipClass> Of(string cls, int n) => Enumerable.Repeat(Ships[cls], n).ToList();
-    private static List<ShipClass> Ref => Of(Isd, 3);
+    private static List<ShipClass> Ref => Of(Mandate, 3);
 
     // m4-battle-new N8
     [Fact]
     public void N8_StrengthValuesAtTheStrategicLayer()
     {
-        Assert.Equal(45.0, Cs.Of(Of(Isd, 1), Of(Isd, 1)), 1e-9);
-        Assert.Equal(135.0, Cs.Of(Of(Isd, 3), Of(Isd, 3)), 1e-9);
+        Assert.Equal(45.0, Cs.Of(Of(Mandate, 1), Of(Mandate, 1)), 1e-9);
+        Assert.Equal(135.0, Cs.Of(Of(Mandate, 3), Of(Mandate, 3)), 1e-9);
         Assert.Equal(64.8, Cs.Of(Of(Victory, 3), Ref), 1e-9); // = E
-        Assert.Equal(45.0, Cs.Of(Of(Isd, 1), Ref), 1e-9);     // < E
-        Assert.Equal(90.0, Cs.Of(Of(Isd, 2), Ref), 1e-9);     // >= E
+        Assert.Equal(45.0, Cs.Of(Of(Mandate, 1), Ref), 1e-9);     // < E
+        Assert.Equal(90.0, Cs.Of(Of(Mandate, 2), Ref), 1e-9);     // >= E
         Assert.Equal(37.8, Cs.Of(Of("Injunction", 1), Ref), 1e-9);
         Assert.Equal(6.3, Cs.Of(Of("Subpoena", 1), Ref), 1e-9);
         Assert.Equal(0.0, Cs.Of(Of("Writ", 1), Ref), 1e-9);
@@ -43,30 +43,30 @@ public class CombatStrengthTests
 
     // m4-battle-new §12: versus empty gives 0
     [Fact]
-    public void VersusEmptyIsZero() => Assert.Equal(0.0, Cs.Of(Of(Isd, 3), new List<ShipClass>()));
+    public void VersusEmptyIsZero() => Assert.Equal(0.0, Cs.Of(Of(Mandate, 3), new List<ShipClass>()));
 
     // m4-battle-new N9
     [Fact]
     public void N9_TwentyCheapestArmedShipsAreWorthNothingAgainstShieldedShips()
     {
         var mix = Of("Wasp", 12).Concat(Of("Mule", 8)).ToList();
-        Assert.Equal(0.0, Cs.Of(mix, Of(Isd, 3)));
-        Assert.Equal(0.0, Cs.Of(Of(Corvette, 30), Of(Isd, 3)));
+        Assert.Equal(0.0, Cs.Of(mix, Of(Mandate, 3)));
+        Assert.Equal(0.0, Cs.Of(Of(Corvette, 30), Of(Mandate, 3)));
         var blockade = World.Blockade;
         Assert.True(Cs.Of(mix, Ref) < blockade.EconomicStrength(Ships, Cs)); // no economic blockade (0 < E)
     }
 
     // m4-battle-new N9: no forced stop (0 is not > 0), through the fleet module
     [Fact]
-    public void N9_TwentyCheapShipsDoNotStopThreeIsds()
+    public void N9_TwentyCheapShipsDoNotStopThreeMandates()
     {
         var w = new World(World.BCMap());
-        int isds = w.Add(Side.Hand, "Isds", "A", Isd, Isd, Isd);
+        int mandates = w.Add(Side.Hand, "Mandates", "A", Mandate, Mandate, Mandate);
         w.Add(Side.Collective, "Cheap", "B", Enumerable.Repeat("Wasp", 12).Concat(Enumerable.Repeat("Mule", 8)).ToArray());
-        w.Move(Side.Hand, isds, "C");
+        w.Move(Side.Hand, mandates, "C");
         w.Run(40);
         Assert.Empty(w.Events<ForcedStop>());
-        Assert.Equal("C", w.Fleet(isds).At);
+        Assert.Equal("C", w.Fleet(mandates).At);
         Assert.False(w.Fleets.IsEconomicBlockade("B", Side.Hand));
     }
 
@@ -74,11 +74,11 @@ public class CombatStrengthTests
     [Theory]
     [InlineData(1, false)] // 45 < 0.5 x 135 = 67.5
     [InlineData(2, true)]  // 90 >= 67.5
-    public void N10_ThreeIsdsPassing_OneOrTwoIsdsBlock(int blockers, bool stops)
+    public void N10_ThreeMandatesPassing_OneOrTwoMandatesBlock(int blockers, bool stops)
     {
         var w = new World(World.BCMap());
-        int passing = w.Add(Side.Collective, "Passing", "A", Isd, Isd, Isd);
-        w.Add(Side.Hand, "Block", "B", Enumerable.Repeat(Isd, blockers).ToArray());
+        int passing = w.Add(Side.Collective, "Passing", "A", Mandate, Mandate, Mandate);
+        w.Add(Side.Hand, "Block", "B", Enumerable.Repeat(Mandate, blockers).ToArray());
         w.Move(Side.Collective, passing, "C");
         w.Run(40);
         Assert.Equal(stops, w.Events<ForcedStop>().Count == 1);
@@ -116,15 +116,15 @@ public class CombatStrengthTests
     [Fact]
     public void HullRatioAndWeaponsHitsScaleTheStrength()
     {
-        var isd = Cs.Unit(Ships[Isd]);
-        var half = Cs.Unit(Ships[Isd], 0.5);
-        var weaponsHit2 = Cs.Unit(Ships[Isd], 1.0, 2);
-        var target = new[] { Cs.Unit(Ships[Isd]) };
+        var mandate = Cs.Unit(Ships[Mandate]);
+        var half = Cs.Unit(Ships[Mandate], 0.5);
+        var weaponsHit2 = Cs.Unit(Ships[Mandate], 1.0, 2);
+        var target = new[] { Cs.Unit(Ships[Mandate]) };
         Assert.Equal(22.5, Cs.Of(new[] { half }, target), 1e-9);
         // two weapons hits: floor(10 x 0.5) = 5 guns of each type: half of 45
         Assert.Equal(22.5, Cs.Of(new[] { weaponsHit2 }, target), 1e-9);
-        Assert.Equal(0.0, Cs.Of(new[] { Cs.Unit(Ships[Isd], 1.0, 4) }, target)); // four hits: no guns
-        Assert.Equal(45.0, Cs.Of(new[] { isd }, target), 1e-9);
+        Assert.Equal(0.0, Cs.Of(new[] { Cs.Unit(Ships[Mandate], 1.0, 4) }, target)); // four hits: no guns
+        Assert.Equal(45.0, Cs.Of(new[] { mandate }, target), 1e-9);
     }
 
     // m4-battle-new §12 (squadrons aboard count at the strategic layer as if launched; torpedoes enter as damage over 180 s, only against shield-0 capitals by default)
@@ -132,23 +132,23 @@ public class CombatStrengthTests
     public void SquadronsCountAndTorpedoesNeedDroppedShields()
     {
         var bomber = Cs.Unit(Ships["Thresher"]);
-        var isd = Cs.Unit(Ships[Isd]);
-        double alone = Cs.Of(new[] { isd }, new[] { isd });
-        double carrying = Cs.Of(new[] { isd, bomber, bomber, bomber, bomber, bomber, bomber }, new[] { isd });
+        var mandate = Cs.Unit(Ships[Mandate]);
+        double alone = Cs.Of(new[] { mandate }, new[] { mandate });
+        double carrying = Cs.Of(new[] { mandate, bomber, bomber, bomber, bomber, bomber, bomber }, new[] { mandate });
         Assert.True(carrying > alone);
-        // a bomber's ions: 12 guns x 2.25 x 1.5 x 0.90 / 1 s = 36.45 against a shielded ISD; torpedoes add nothing against shields by default
-        Assert.Equal(36.45, Cs.Of(new[] { bomber }, new[] { isd }), 1e-9);
+        // a bomber's ions: 12 guns x 2.25 x 1.5 x 0.90 / 1 s = 36.45 against a shielded Mandate; torpedoes add nothing against shields by default
+        Assert.Equal(36.45, Cs.Of(new[] { bomber }, new[] { mandate }), 1e-9);
         var on = new CombatStrength(NewBattleData.Default, new NewBattleParams { TorpedoesVsShields = true });
         // 8 torpedoes x 35 x 0.5 x 0.90 / 180 = 0.7
-        Assert.Equal(36.45 + 0.7, on.Of(new[] { on.Unit(Ships["Thresher"]) }, new[] { on.Unit(Ships[Isd]) }), 1e-9);
+        Assert.Equal(36.45 + 0.7, on.Of(new[] { on.Unit(Ships["Thresher"]) }, new[] { on.Unit(Ships[Mandate]) }), 1e-9);
     }
 
-    // m4-battle-new §12 notes: cost weighting keeps cheap squadrons from diluting an ISD in the versus list
+    // m4-battle-new §12 notes: cost weighting keeps cheap squadrons from diluting an Mandate in the versus list
     [Fact]
-    public void CostWeightingKeepsCheapSquadronsFromDilutingAnIsd()
+    public void CostWeightingKeepsCheapSquadronsFromDilutingAnMandate()
     {
-        var versus = new List<ShipClass>(Of(Isd, 1)); versus.AddRange(Of("Gleaner", 6));
-        // corvettes cannot hurt the ISD; a TIE squadron (cost 3, maneuver 5) takes laser 4 x 6 x ratio 0.6 x 0.70 = 10.08 per corvette
+        var versus = new List<ShipClass>(Of(Mandate, 1)); versus.AddRange(Of("Gleaner", 6));
+        // corvettes cannot hurt the Mandate; a Gleaner squadron (cost 3, maneuver 5) takes laser 4 x 6 x ratio 0.6 x 0.70 = 10.08 per corvette
         double v = Cs.Of(Of(Corvette, 1), versus);
         Assert.Equal(18.0 * 10.08 / 130.0, v, 1e-9);
         Assert.True(v < 10.08 * 6 / 7); // a plain mean over seven units would say 8.64
@@ -167,10 +167,10 @@ public class CombatStrengthTests
             Assert.Equal(cls.RefinedMaterialCost, c.Cost);
             Assert.Equal(cls.GravityWellProjector > 0, c.GravityWell > 0);
         }
-        var isd = data.Class(Isd);
-        Assert.Equal(8, isd.Batteries.Count);
-        Assert.Equal((Arc.Fore, WeaponKind.Turbolaser, 10, 40.0, 20, 50), (isd.Batteries[0].Arc, isd.Batteries[0].Weapon, isd.Batteries[0].Guns, isd.Batteries[0].ShotDamage, isd.Batteries[0].Reload, isd.Batteries[0].Range));
-        Assert.Equal((2750, 300, 15.0, 1.5, SizeClass.Large), (isd.Hull, isd.ShieldPool, isd.ShieldRegen, isd.Deflection, isd.Size));
+        var mandate = data.Class(Mandate);
+        Assert.Equal(8, mandate.Batteries.Count);
+        Assert.Equal((Arc.Fore, WeaponKind.Turbolaser, 10, 40.0, 20, 50), (mandate.Batteries[0].Arc, mandate.Batteries[0].Weapon, mandate.Batteries[0].Guns, mandate.Batteries[0].ShotDamage, mandate.Batteries[0].Reload, mandate.Batteries[0].Range));
+        Assert.Equal((2750, 300, 15.0, 1.5, SizeClass.Large), (mandate.Hull, mandate.ShieldPool, mandate.ShieldRegen, mandate.Deflection, mandate.Size));
         var bomber = data.Class("Thresher");
         Assert.Equal((8, 35.0, 7), (bomber.Torpedoes, bomber.TorpedoDamage, bomber.TorpedoRange));
         Assert.Equal(2, bomber.Batteries.Count); // laser and ion; torpedoes are not a battery

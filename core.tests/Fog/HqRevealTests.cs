@@ -23,7 +23,7 @@ public class HqRevealTests
     [Fact]
     public void HR1_PresenceDoesNotRevealTheHq()
     {
-        var w = new FogWorld(beforeSetup: x => x.Fleet(Side.Hand, R2, Isd, 1));
+        var w = new FogWorld(beforeSetup: x => x.Fleet(Side.Hand, R2, Mandate, 1));
         w.Step(100);
         var p = w.Pic(Side.Hand, R2)!;
         Assert.Equal(Side.Collective, p.Owner!.Value.Owner);
@@ -137,7 +137,7 @@ public class HqRevealTests
     [Fact]
     public void HR9_HR10_SupportDropIsSeenOnlyWithLiveAccess()
     {
-        var w = new FogWorld(beforeSetup: x => x.Fleet(Side.Hand, R4, Isd, 1));
+        var w = new FogWorld(beforeSetup: x => x.Fleet(Side.Hand, R4, Mandate, 1));
         w.Fog.SubmitMoveHq(Side.Collective, R3); // arrives day 20
         w.StepTo(5);
         Assert.Equal(70, w.Pic(Side.Hand, R4)!.Owner!.Value.CollectiveSupport);
@@ -206,7 +206,7 @@ public class HqRevealTests
     public void FN5_NoEnemyFleetIdsInTheCollectiveKnowledge()
     {
         var w = new FogWorld();
-        int g = w.Fleet(Side.Hand, R4, Isd, 2);
+        int g = w.Fleet(Side.Hand, R4, Mandate, 2);
         w.H.Fleets.SubmitMove(Side.Hand, g, R2);
         int f = w.Fleet(Side.Collective, R2, Corvette, 1);
         w.H.Fleets.SubmitMove(Side.Collective, f, R1);

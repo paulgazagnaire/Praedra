@@ -46,7 +46,7 @@ public static class DropInStage
 
     /// <summary>
     /// The rows of mission-numbers.csv that are one GNPRTB value: (key, GNPRTB key, the reading's tag). The other rows (RollDie, the diplomacy
-    /// and subdue ranges, HanCharacterId, ...) are not a file value and live in data/design/mission-numbers.csv. rule: m5-missions §Numbers.
+    /// and subdue ranges, MidwifeCharacterId, ...) are not a file value and live in data/design/mission-numbers.csv. rule: m5-missions §Numbers.
     /// </summary>
     private static readonly (string Key, int Gnprtb, string Reading)[] MissionNumberKeys =
     {
@@ -57,7 +57,7 @@ public static class DropInStage
         ("AgentLeadershipDivisor", 6144, "Lead: incident score incite and subdue terms"),
         ("ResearchSkillGain", 6158, "Traced: economy/14, m5-research"),
         ("GroupSpeed", 1, "Traced: characters and mission groups use 100; m1-travel"),
-        ("HanMissionSpeed", 3083, "Traced: planets/11, heroes/mission-speed"),
+        ("RunnerLines", 3083, "Traced: planets/11, heroes/mission-speed"),
     };
 
     /// <summary>DEFFACSD family to the defense kind (the interim's derivation, m3-planetary-defenses §The six classes).</summary>

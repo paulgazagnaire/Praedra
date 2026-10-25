@@ -8,13 +8,13 @@ namespace Praedra.Core.Tests.Fog;
 /// <summary>
 /// Map M of the fog sheet (m5-fog-and-hq §Tests): C0 (0,0) group core, sector SC; R1 (100,0), R2 (200,0), R3 (300,0), R4 (400,0) group
 /// outer_rim, sector SR; lanes C0-R1, R1-R2, R2-R3, R3-R4, tier 3. Glasswood has no lane (an outsider, as in the real data). Day 0: Hand holds
-/// C0 and R1, Collective holds R2, R3, R4; start_explored_all = C0; HQ at R2 (or as given); Hand fleet E1 of 3 Hand Star Destroyers at
+/// C0 and R1, Collective holds R2, R3, R4; start_explored_all = C0; HQ at R2 (or as given); Hand fleet E1 of 3 Mandates at
 /// R1; Collective support 70 at R2, R3, R4 (and 30 at C0 and R1). Every system is populated. A full GameHost on this map with debug orders on.
 /// </summary>
 internal sealed class FogWorld
 {
-    public const string C0 = "C0", R1 = "R1", R2 = "R2", R3 = "R3", R4 = "R4", Ilum = "Glasswood";
-    public const string Isd = "Mandate", Corvette = "Dodger", Tie = "Gleaner";
+    public const string C0 = "C0", R1 = "R1", R2 = "R2", R3 = "R3", R4 = "R4", Glasswood = "Glasswood";
+    public const string Mandate = "Mandate", Corvette = "Dodger", Gleaner = "Gleaner";
 
     private static readonly Lazy<GameData> _data = new(() =>
     {
@@ -46,7 +46,7 @@ internal sealed class FogWorld
         if (!r3Neutral) Hold(R3, Side.Collective); else H.Economy.SetCollectiveSupport(R3, 50);
         if (!r4Neutral) Hold(R4, Side.Collective); else H.Economy.SetCollectiveSupport(R4, 50);
         Fog.PlaceHq(hq);
-        E1 = H.Fleets.AddFleet(Side.Hand, "E1", new[] { Isd, Isd, Isd }, R1);
+        E1 = H.Fleets.AddFleet(Side.Hand, "E1", new[] { Mandate, Mandate, Mandate }, R1);
         beforeSetup?.Invoke(this);
         Fog.SetupNewGame(new[] { C0 });
     }
@@ -58,7 +58,7 @@ internal sealed class FogWorld
     }
 
     public int Fleet(Side side, string system, string cls, int n, int squadrons = 0) =>
-        H.Fleets.AddFleet(side, $"{side} {cls} x{n}", Enumerable.Repeat(cls, n), system, squadrons > 0 ? Enumerable.Repeat(Tie, squadrons) : null);
+        H.Fleets.AddFleet(side, $"{side} {cls} x{n}", Enumerable.Repeat(cls, n), system, squadrons > 0 ? Enumerable.Repeat(Gleaner, squadrons) : null);
 
     public void Step(int n = 1) { for (int i = 0; i < n; i++) Game.Step(); }
     public void StepTo(int day) { while (Game.Day < day) Game.Step(); }

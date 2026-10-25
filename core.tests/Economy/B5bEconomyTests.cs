@@ -12,21 +12,21 @@ namespace Praedra.Core.Tests.Economy;
 public class B5bEconomyTests
 {
     private const string Home = "Charter";
-    private const string Kuat = "Navalia";
-    private const string Sullust = "Caminus";
+    private const string Navalia = "Navalia";
+    private const string Caminus = "Caminus";
 
     private static int Interdictor(EcoWorld w, Side side, string system) =>
         w.Fleets.AddFleet(side, "Blockade", new[] { "Subpoena" }, system);
 
-    // B5b-1: capacity 350, load 300: 1 ISD (71) refused whole, nothing created; 2 Corellian Corvettes (46) accepted; 3 (69) refused whole.
+    // B5b-1: capacity 350, load 300: 1 Mandate (71) refused whole, nothing created; 2 Dodgers (46) accepted; 3 (69) refused whole.
     // rule: m2-maintenance §Overdraft (B5b §7, [EXE-own] 0x52e970)
     [Fact]
     public void B5b_1_AnOrderAboveTheFreeCapacityIsRefusedWhole()
     {
         var w = new BuildWorld();
         w.Build.RefuseOverdrawOrders = true; // the DEFAULT (Dev lead 2026-10-18); BuildWorld turns it off for the construction sheet
-        w.Hold(Home, Side.Hand); w.Hold(Sullust, Side.Collective);
-        foreach (var (sys, side) in new[] { (Home, Side.Hand), (Sullust, Side.Collective) })
+        w.Hold(Home, Side.Hand); w.Hold(Caminus, Side.Collective);
+        foreach (var (sys, side) in new[] { (Home, Side.Hand), (Caminus, Side.Collective) })
         {
             for (int i = 0; i < 7; i++) { w.Eco.AddFacility(sys, FacilityKind.Mine); w.Eco.AddFacility(sys, FacilityKind.Refinery); }
             w.Yard(sys, FacilityKind.OrbitalShipyard); // 13
@@ -34,9 +34,9 @@ public class B5bEconomyTests
         }
         for (int i = 0; i < 4; i++) w.Eco.AddObject(Side.Hand, "Mandate", Home); // 284
         w.Eco.AddObject(Side.Hand, "Gleaner", Home); // 3
-        for (int i = 0; i < 8; i++) w.Eco.AddObject(Side.Collective, "Mender", Sullust); // 280
-        for (int i = 0; i < 2; i++) w.Eco.AddObject(Side.Collective, "Militia", Sullust); // 6
-        w.Eco.AddObject(Side.Collective, "Strikers", Sullust); // 1
+        for (int i = 0; i < 8; i++) w.Eco.AddObject(Side.Collective, "Mender", Caminus); // 280
+        for (int i = 0; i < 2; i++) w.Eco.AddObject(Side.Collective, "Militia", Caminus); // 6
+        w.Eco.AddObject(Side.Collective, "Strikers", Caminus); // 1
         foreach (var side in new[] { Side.Hand, Side.Collective })
         {
             Assert.Equal(350, w.Eco.Capacity(side));
@@ -45,12 +45,12 @@ public class B5bEconomyTests
         int objects = w.Eco.Objects.Count();
 
         Assert.Equal(RejectReason.NoUpkeep, w.TryOrder(Side.Hand, Home, YardFamily.Shipyard, "Mandate", 1));
-        Assert.Equal(RejectReason.NoUpkeep, w.TryOrder(Side.Collective, Sullust, YardFamily.Shipyard, "Dodger", 3));
+        Assert.Equal(RejectReason.NoUpkeep, w.TryOrder(Side.Collective, Caminus, YardFamily.Shipyard, "Dodger", 3));
         Assert.Equal(objects, w.Eco.Objects.Count()); // nothing created, no partial order
         Assert.Empty(w.Events<ProjectStarted>());
         Assert.Equal((300, 300), (w.Eco.Load(Side.Hand), w.Eco.Load(Side.Collective)));
 
-        Assert.Null(w.TryOrder(Side.Collective, Sullust, YardFamily.Shipyard, "Dodger", 2));
+        Assert.Null(w.TryOrder(Side.Collective, Caminus, YardFamily.Shipyard, "Dodger", 2));
         Assert.Equal(346, w.Eco.Load(Side.Collective));
         Assert.Equal(2, Assert.Single(w.Events<ProjectStarted>()).Count);
     }
@@ -58,11 +58,11 @@ public class B5bEconomyTests
     private static EcoWorld TwoMiningWorlds()
     {
         var w = new EcoWorld(freeShips: true); // the blockading Interdictor pays no upkeep, so it cannot be autoscrapped
-        w.Hold(Home, Side.Hand, 100); w.Hold(Kuat, Side.Hand, 100);
+        w.Hold(Home, Side.Hand, 100); w.Hold(Navalia, Side.Hand, 100);
         for (int i = 0; i < 2; i++) w.Mine(Home);
         for (int i = 0; i < 2; i++) w.Refinery(Home);
-        for (int i = 0; i < 5; i++) w.Mine(Kuat);
-        for (int i = 0; i < 5; i++) w.Refinery(Kuat);
+        for (int i = 0; i < 5; i++) w.Mine(Navalia);
+        for (int i = 0; i < 5; i++) w.Refinery(Navalia);
         return w;
     }
 
@@ -82,7 +82,7 @@ public class B5bEconomyTests
             w.Events<FacilityStopped>().Where(e => e.Day == 2 && e.Reason == reason).Select(e => e.Facility).OrderBy(i => i).ToArray());
         w.Run(10);
         Assert.DoesNotContain(w.Events<ResourceProduced>(), e => all.Contains(e.Facility)); // the abandoned cycles paid nothing
-        Assert.Contains(w.Events<ResourceProduced>(), e => e.System == Kuat);
+        Assert.Contains(w.Events<ResourceProduced>(), e => e.System == Navalia);
         Assert.Empty(w.Eco.RawLine(Side.Hand).Intersect(all));
     }
 
@@ -232,15 +232,15 @@ public class B5bEconomyTests
     public void B5b_6_SharesAreDealtIncrementally()
     {
         var w = new EcoWorld();
-        w.Hold(Kuat, Side.Collective, 100);
-        for (int i = 0; i < 3; i++) w.Mine(Kuat);
+        w.Hold(Navalia, Side.Collective, 100);
+        for (int i = 0; i < 3; i++) w.Mine(Navalia);
         int[] Shares() => w.Eco.Objects.Where(o => o.Class == "Mine").Select(o => w.Eco.ShareOf(o.Id)).ToArray();
         w.Run(1);
         Assert.Equal(new[] { 0, 0, 0 }, Shares());
         for (int i = 0; i < 10; i++) w.Eco.AddObject(Side.Collective, "Strikers"); // maintenance 1 each
         w.Run(1);
         Assert.Equal(new[] { 4, 3, 3 }, Shares());
-        w.Mine(Kuat);
+        w.Mine(Navalia);
         w.Run(1);
         Assert.Equal(new[] { 4, 3, 3, 0 }, Shares()); // existing shares are kept; the newcomer has none
         for (int i = 0; i < 2; i++) w.Eco.AddObject(Side.Collective, "Strikers");
@@ -248,7 +248,7 @@ public class B5bEconomyTests
         Assert.Equal(new[] { 4, 3, 3, 2 }, Shares());
     }
 
-    /// <summary>Capacity 100 (2 mines, 2 refineries), load 90 (15 Stormtrooper Regiments): under. Mine id 1 is the one taken away.</summary>
+    /// <summary>Capacity 100 (2 mines, 2 refineries), load 90 (15 Pacifier Regiments): under. Mine id 1 is the one taken away.</summary>
     private static EcoWorld UpkeepWorld()
     {
         var w = new EcoWorld();
@@ -359,20 +359,20 @@ public class B5bEconomyTests
         Assert.Null(w.TryOrder(Side.Hand, Home, YardFamily.Shipyard, "Mandate", 1));
         Assert.Empty(w.Events<ProjectCancelled>());
         var started = w.Events<ProjectStarted>();
-        int tie = started[0].Units.Items[0], isd = started[1].Units.Items[0];
+        int tie = started[0].Units.Items[0], mandate = started[1].Units.Items[0];
         var p = w.Build.ProjectAt(Home, YardFamily.Shipyard)!;
-        Assert.Equal(new[] { tie, isd }, p.AllUnits().ToArray()); // the ISD waits behind the Gleaner
+        Assert.Equal(new[] { tie, mandate }, p.AllUnits().ToArray()); // the Mandate waits behind the Gleaner
         while (!w.Events<UnitCompleted>().Any() && w.Game.Day < 200) w.Run(1);
         Assert.Equal(tie, Assert.Single(w.Events<UnitCompleted>()).Object); // the first order finished first
-        Assert.Equal(new[] { isd }, w.Build.ProjectAt(Home, YardFamily.Shipyard)!.AllUnits().ToArray());
+        Assert.Equal(new[] { mandate }, w.Build.ProjectAt(Home, YardFamily.Shipyard)!.AllUnits().ToArray());
         w.Run(3);
         int refined = w.Eco.Refined(Side.Hand);
         w.Game.Submit(seq => new StopBuildOrder(seq, Side.Hand, Home, YardFamily.Shipyard));
         w.Run(1);
         var c = Assert.Single(w.Events<ProjectCancelled>());
-        Assert.Equal(new[] { isd }, c.Units.Items.ToArray());
-        Assert.Equal(refined, w.Eco.Refined(Side.Hand)); // nothing back for the unfinished ISD
-        Assert.Null(w.Eco.Find(isd));
+        Assert.Equal(new[] { mandate }, c.Units.Items.ToArray());
+        Assert.Equal(refined, w.Eco.Refined(Side.Hand)); // nothing back for the unfinished Mandate
+        Assert.Null(w.Eco.Find(mandate));
         Assert.NotNull(w.Eco.Find(tie)); // the finished unit stays
     }
 
@@ -382,16 +382,16 @@ public class B5bEconomyTests
     public void B5b_10_EachQueuedOrderKeepsItsOwnDestination()
     {
         var w = new BuildWorld();
-        w.Hold(Home, Side.Hand); w.Hold(Kuat, Side.Hand);
+        w.Hold(Home, Side.Hand); w.Hold(Navalia, Side.Hand);
         w.Yard(Home, FacilityKind.OrbitalShipyard);
         w.Refined(Side.Hand, 1000);
-        Assert.Null(w.TryOrder(Side.Hand, Home, YardFamily.Shipyard, "Gleaner", 1, Kuat));
+        Assert.Null(w.TryOrder(Side.Hand, Home, YardFamily.Shipyard, "Gleaner", 1, Navalia));
         Assert.Null(w.TryOrder(Side.Hand, Home, YardFamily.Shipyard, "Gleaner", 1));
         while (w.Events<UnitCompleted>().Count < 2 && w.Game.Day < 200) w.Run(1);
         var done = w.Events<UnitCompleted>();
-        Assert.Equal(("Gleaner", Kuat), (done[0].Class, done[0].Destination));
+        Assert.Equal(("Gleaner", Navalia), (done[0].Class, done[0].Destination));
         Assert.NotEqual(0, done[0].DeliveryId);
-        Assert.Equal(Kuat, Assert.Single(w.Events<DeliveryDeparted>()).To);
+        Assert.Equal(Navalia, Assert.Single(w.Events<DeliveryDeparted>()).To);
         Assert.Equal(("Gleaner", Home, 0), (done[1].Class, done[1].Destination, done[1].DeliveryId));
     }
 

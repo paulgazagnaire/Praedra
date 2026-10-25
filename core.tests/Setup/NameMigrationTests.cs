@@ -62,7 +62,7 @@ public class NameMigrationTests
         Assert.Contains("\"CapitalSystem\":\"Coruscant\"", old);
         var loaded = GameHost.Load(old);
         Assert.Equal("Charter", loaded.Settings.Fog!.CapitalSystem);
-        Assert.Equal("Pacifiers", loaded.Settings.Support!.StormtrooperClass);
+        Assert.Equal("Pacifiers", loaded.Settings.Support!.PacifierClass);
         Assert.Equal(host.StateHash(), loaded.StateHash());
     }
 
@@ -95,4 +95,14 @@ public class NameMigrationTests
         var t = CsvTable.Parse(File.ReadAllText(Path.Combine(GameData.FindRepoRoot(), "data", "design", NameMigrations.FileName)), NameMigrations.FileName);
         for (int r = 0; r < t.RowCount; r++) yield return (t.Get(r, "old"), t.Get(r, "new"));
     }
+
+    // QA-44: a ship named from its old class ("<class> <n>", NewGame) gets the new class name; other names keep theirs.
+    [Theory]
+    [InlineData("Mon Calamari Cruiser 1", "Ark 1")]
+    [InlineData("Imperial Star Destroyer 12", "Mandate 12")]
+    [InlineData("Fleet 1", "Fleet 1")]
+    [InlineData("Mon Calamari Cruiser", "Ark")]
+    [InlineData("Mon Calamari Cruiser x", "Mon Calamari Cruiser x")]
+    public void AShipNamedFromItsOldClassGetsTheNewClass(string old, string expected) =>
+        Assert.Equal("{\"Name\":\"" + expected + "\"}", GameData.Default.Names.Apply("{\"Name\":\"" + old + "\"}"));
 }

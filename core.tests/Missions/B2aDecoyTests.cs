@@ -5,7 +5,7 @@ using static Praedra.Core.Tests.Missions.MissionWorld;
 namespace Praedra.Core.Tests.Missions;
 
 // B2a-decoys-and-detection tests B2a-1 to B2a-4 (B2a-5: the existing detection tests MI2 to MI10 run unchanged except MI8's below-row value).
-// B2d: the team flies in from H and the guards are Hand Probe Droids on the planet (special forces guard a planet target; detection 0).
+// B2d: the team flies in from H and the guards are Hand Speculators on the planet (special forces guard a planet target; detection 0).
 // rule: m5-missions §3 decoy pass and detection walk, §Mission tables (Lookup).
 public class B2aDecoyTests
 {
@@ -15,18 +15,18 @@ public class B2aDecoyTests
     [InlineData(-100)]
     public void B2a1_FoilBelowFirstRowIs99(int x) => Assert.Equal(99, new MissionWorld().M.FoilChance(x));
 
-    // B2a-2: one guard (a Probe Droid, detection 0), two decoys each with p = 50 (synthetic decoy table: 50 from x = 0; Wreckers espionage 60
+    // B2a-2: one guard (a Speculator, detection 0), two decoys each with p = 50 (synthetic decoy table: 50 from x = 0; Wreckers espionage 60
     // and Listeners espionage 70 give x = 60 and 70): exactly two draws, the pick then the roll
     [Fact]
     public void B2a2_TwoDecoysOnePickOneRoll()
     {
         var w = new MissionWorld(decoys: true);
         w.Hold(T, Side.Hand, 0);
-        w.Agent(Leia, H, esp: 50);
-        int d1 = w.Unit(Side.Collective, Infiltrators, H), d2 = w.Unit(Side.Collective, Bothan, H);
+        w.Agent(Ledger, H, esp: 50);
+        int d1 = w.Unit(Side.Collective, Infiltrators, H), d2 = w.Unit(Side.Collective, Listeners, H);
         w.Unit(Side.Hand, Probe, T);
-        w.Stub!.Expect(0, 99, Bt(3, 50, 99, 99)); // B2b: three betrayal draws (Leia and the two decoys) open the check; then the roll, the duel (B2d), the walk
-        w.Start(Side.Collective, MissionKind.Espionage, new[] { Leia }, T, decoys: new[] { d1, d2 });
+        w.Stub!.Expect(0, 99, Bt(3, 50, 99, 99)); // B2b: three betrayal draws (Ledger and the two decoys) open the check; then the roll, the duel (B2d), the walk
+        w.Start(Side.Collective, MissionKind.Espionage, new[] { Ledger }, T, decoys: new[] { d1, d2 });
         w.Game.Step();
         w.RunUntilWorking(w.LastMission);
         int from = w.Stub.Requests.Count;
@@ -49,10 +49,10 @@ public class B2aDecoyTests
         {
             var w = new MissionWorld(decoys: true, seed: (ulong)s);
             w.Hold(T, Side.Hand, 0);
-            w.Agent(Leia, H, esp: 50);
-            int d1 = w.Unit(Side.Collective, Infiltrators, H), d2 = w.Unit(Side.Collective, Bothan, H);
+            w.Agent(Ledger, H, esp: 50);
+            int d1 = w.Unit(Side.Collective, Infiltrators, H), d2 = w.Unit(Side.Collective, Listeners, H);
             w.Unit(Side.Hand, Probe, T);
-            w.Start(Side.Collective, MissionKind.Espionage, new[] { Leia }, T, decoys: new[] { d1, d2 });
+            w.Start(Side.Collective, MissionKind.Espionage, new[] { Ledger }, T, decoys: new[] { d1, d2 });
             w.Game.Step();
             w.RunIteration(w.LastMission);
             var rolls = w.Events<MissionDecoyRoll>();
@@ -69,11 +69,11 @@ public class B2aDecoyTests
     {
         var w = new MissionWorld(decoyTable: new[] { new TableRow(-1000, 100) });
         w.Hold(T, Side.Hand, 0);
-        w.Agent(Leia, H, esp: 50);
+        w.Agent(Ledger, H, esp: 50);
         int inf = w.Unit(Side.Collective, Infiltrators, H);
         w.Unit(Side.Hand, Probe, T); w.Unit(Side.Hand, Probe, T); w.Unit(Side.Hand, Probe, T);
-        w.Stub!.Expect(0, 99, Bt(2, 99, 99, 99, 0)); // B2b: two betrayal draws (Leia, the decoy) open the check
-        w.Start(Side.Collective, MissionKind.Espionage, new[] { Leia }, T, decoys: new[] { inf });
+        w.Stub!.Expect(0, 99, Bt(2, 99, 99, 99, 0)); // B2b: two betrayal draws (Ledger, the decoy) open the check
+        w.Start(Side.Collective, MissionKind.Espionage, new[] { Ledger }, T, decoys: new[] { inf });
         w.Game.Step();
         w.RunUntilWorking(w.LastMission);
         int from = w.Stub.Requests.Count;
@@ -85,7 +85,7 @@ public class B2aDecoyTests
         var req = w.RequestsSince(from);
         Assert.Equal(new[] { (0, 99), (0, 99), (0, 99) }, req.Skip(2).Take(3));
         Assert.Equal(6, req.Count(r => r == (0, 99))); // two betrayal, three decoy, one success roll: the walk makes no draw
-        Assert.Single(w.Events<MissionMemberRoll>()); // the last draw is Leia's success roll, not a detection
+        Assert.Single(w.Events<MissionMemberRoll>()); // the last draw is Ledger's success roll, not a detection
     }
 
     // B2a-4: a working mission whose non-decoy members are all gone (the team's Listeners removed by the test), decoys left, defenders present:
@@ -96,7 +96,7 @@ public class B2aDecoyTests
     {
         var w = new MissionWorld(decoys: true);
         w.Hold(T, Side.Hand, 0);
-        int member = w.Unit(Side.Collective, Bothan, H), dec = w.Unit(Side.Collective, Infiltrators, H);
+        int member = w.Unit(Side.Collective, Listeners, H), dec = w.Unit(Side.Collective, Infiltrators, H);
         w.Unit(Side.Hand, Probe, T); w.Unit(Side.Hand, Probe, T);
         var seq = w.Start(Side.Collective, MissionKind.Espionage, Array.Empty<int>(), T, sfs: new[] { member }, decoys: new[] { dec });
         w.Game.Step();
@@ -122,7 +122,7 @@ public class B2aDecoyTests
     {
         var w = new MissionWorld(decoys: true);
         w.Hold(T, Side.Hand, 0);
-        int member = w.Unit(Side.Collective, Bothan, H), dec = w.Unit(Side.Collective, Infiltrators, H);
+        int member = w.Unit(Side.Collective, Listeners, H), dec = w.Unit(Side.Collective, Infiltrators, H);
         w.Unit(Side.Hand, Probe, T);
         w.Start(Side.Collective, MissionKind.Espionage, Array.Empty<int>(), T, sfs: new[] { member }, decoys: new[] { dec });
         w.Game.Step();

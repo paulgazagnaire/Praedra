@@ -100,7 +100,7 @@ public static class NewGame
         host.Control.SetupNewGame();
 
         // P9 starting characters, after the forces and before the economy timers and the research arming (P10): the roster's creation draws,
-        // then Palpatine at Charter, Vader and the officers at random Hand locations, the Hand extras, Mae Abara at the HQ, The Shoal six,
+        // then The Chair at Charter, Ravilla and the officers at random Hand locations, the Hand extras, Mae Abara at the HQ, The Shoal six,
         // the Collective extras. rule: m5-setup-and-victory §P9; m5-characters-and-force §Rolling the stats.
         host.Characters.SetupNewGame(state.Scenario.HqSystem);
 
@@ -111,7 +111,7 @@ public static class NewGame
         host.Fog.SetupNewGame(rows.Where(r => r.ExploredAll).Select(r => r.Name)
             .Where(n => state.Scenario.Explored.TryGetValue(n, out var m) && m == 3));
 
-        // No research grant: every side starts at level 0 in every track and builds only order-0 classes (the Nebulon-B Frigates of the
+        // No research grant: every side starts at level 0 in every track and builds only order-0 classes (the Mender Frigates of the
         // starting fleet stay unbuildable until Ship level 1). rule: m5-research §State per side (no setup path preloads a level), RS1.
         eco.SetupNewGame(); // stockpile, then the two incident timers
         host.Research.SetupNewGame(); // the research percents, then the two research tick arming draws, Collective then Hand. rule: m5-research §Random draws (a)

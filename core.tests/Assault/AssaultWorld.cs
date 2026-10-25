@@ -19,7 +19,7 @@ internal sealed class AssaultWorld
 {
     public const string Sys = BombWorld.Sys;
     public const string Reb = "Militia", Imp = "Tranches";
-    public const string Isd = "Mandate", Neb = "Mender";
+    public const string Mandate = "Mandate", Neb = "Mender";
 
     public static readonly Lazy<TroopData> Troops = new(() => TroopData.Load(TestData.ClassicDir, TestData.DesignDir));
 
@@ -53,7 +53,7 @@ internal sealed class AssaultWorld
     public void Hold(Side side, int support = 100, string system = Sys) => B.Hold(side, support, system);
 
     /// <summary>A fleet of one capital ship class, <paramref name="n"/> ships, at the system.</summary>
-    public int Fleet(Side side, string ship = Isd, int n = 1, string system = Sys) => B.Fleet(side, system, ship, n);
+    public int Fleet(Side side, string ship = Mandate, int n = 1, string system = Sys) => B.Fleet(side, system, ship, n);
 
     /// <summary>Put <paramref name="n"/> new regiments aboard the first ship of the fleet; returns their ids (ascending).</summary>
     public List<int> Aboard(int fleet, string cls, int n = 1)

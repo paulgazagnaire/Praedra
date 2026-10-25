@@ -74,7 +74,7 @@ public sealed record AnchoredDeal(IReadOnlyList<DayOneRow> Rows, string Hq, IRea
 public static class AnchoredDealer
 {
     private const string Core = "core", InnerRim = "inner_rim", OuterRim = "outer_rim"; // group names, m1-galaxy-data
-    private const string Yavin = "The Shoal", Coruscant = "Charter"; // fixed by the original, m5-setup-and-victory §P1 (Traced: both looked up by id)
+    private const string Shoal = "The Shoal", Charter = "Charter"; // fixed by the original, m5-setup-and-victory §P1 (Traced: both looked up by id)
 
     /// <summary>The checks of the anchors file against the galaxy: every anchor exists, no duplicates, none is Charter or The Shoal. rule: m5-setup-and-victory §Mode Anchored step 1</summary>
     public static void Validate(Galaxy g, IReadOnlyList<AnchorRow> anchors)
@@ -84,7 +84,7 @@ public static class AnchoredDealer
         {
             if (!g.TryFindSystem(a.System, out _)) throw new SetupException($"{AnchorRow.FileName}: anchor '{a.System}' is not a system of the galaxy.");
             if (!seen.Add(a.System)) throw new SetupException($"{AnchorRow.FileName}: anchor '{a.System}' appears twice.");
-            if (a.System == Coruscant || a.System == Yavin) throw new SetupException($"{AnchorRow.FileName}: '{a.System}' is fixed by the sheet and may not be an anchor.");
+            if (a.System == Charter || a.System == Shoal) throw new SetupException($"{AnchorRow.FileName}: '{a.System}' is fixed by the sheet and may not be an anchor.");
         }
     }
 
@@ -100,14 +100,14 @@ public static class AnchoredDealer
         bool InSectors(int i) => !g.Systems[i].IsOutsideSectors; // Glasswood and Frostholm are never dealt
 
         // ---- step 1: fixed
-        g.TryFindSystem(Coruscant, out int coruscant);
-        if (!g.TryFindSystem(Yavin, out int yavin)) throw new SetupException("The galaxy has no The Shoal.");
+        g.TryFindSystem(Charter, out int charter);
+        if (!g.TryFindSystem(Shoal, out int shoal)) throw new SetupException("The galaxy has no The Shoal.");
         var owner = new Side?[n];
         var locked = new bool[n];
         var anchor = new bool[n];
         var anchorSupport = new int?[n];
         var handAnchors = new List<int>(); var collectiveAnchors = new List<int>();
-        owner[coruscant] = Side.Hand; owner[yavin] = Side.Collective;
+        owner[charter] = Side.Hand; owner[shoal] = Side.Collective;
         foreach (var a in anchors) // file order
         {
             g.TryFindSystem(a.System, out int i);
@@ -120,7 +120,7 @@ public static class AnchoredDealer
         // ---- step 2: HQ (1 draw). Candidates: rim, not The Shoal, not an anchor of any kind, far enough from Charter (straight line).
         var candidates = new List<int>();
         for (int i = 0; i < n; i++)
-            if (IsRim(i) && i != yavin && !anchor[i] && MapDistance(g, i, coruscant) >= p.HqMinDistance) candidates.Add(i);
+            if (IsRim(i) && i != shoal && !anchor[i] && MapDistance(g, i, charter) >= p.HqMinDistance) candidates.Add(i);
         if (candidates.Count == 0) throw new SetupException("No system satisfies the HQ candidate rule (rim, not an anchor, far enough from Charter).");
         candidates.Sort((a, b) => string.CompareOrdinal(Name(a), Name(b)));
         int hq = candidates[rng.NextInt(0, candidates.Count - 1)];
@@ -137,7 +137,7 @@ public static class AnchoredDealer
         bool Open(int i) => owner[i] == null && !locked[i] && InSectors(i);
 
         // ---- step 4: Hand bloc
-        var seedsE = new List<int> { coruscant }; seedsE.AddRange(handAnchors);
+        var seedsE = new List<int> { charter }; seedsE.AddRange(handAnchors);
         var dEA = LaneTimes(g, seedsE, p.LaneTimeDivisor);
         var pool = new List<int>();
         for (int i = 0; i < n; i++) if (Open(i)) pool.Add(i);
@@ -180,7 +180,7 @@ public static class AnchoredDealer
         foreach (int i in extras) owner[i] = Side.Collective;
 
         // ---- step 6: grow pockets (Blocs step 5), seeds in order The Shoal, the HQ, the Collective anchors, the extras
-        var seeds = new List<int> { yavin, hq }; seeds.AddRange(collectiveAnchors); seeds.AddRange(extras);
+        var seeds = new List<int> { shoal, hq }; seeds.AddRange(collectiveAnchors); seeds.AddRange(extras);
         var pockets = seeds.Select(s => new List<int> { s }).ToList();
         int placed = extras.Count;
         while (placed < needA)
@@ -220,18 +220,18 @@ public static class AnchoredDealer
 
         // ---- step 8: strong and weak. Anchors, Charter, The Shoal and the HQ are strong; the shuffled lists decide the rest (Hand list first, then Collective).
         var weak = new bool[n];
-        int handExceptCoruscant = 0;
+        int handExceptCharter = 0;
         var ed = new List<int>(); var ad = new List<int>();
         for (int i = 0; i < n; i++)
         {
-            if (owner[i] == Side.Hand && i != coruscant) { handExceptCoruscant++; if (!anchor[i]) ed.Add(i); }
-            if (owner[i] == Side.Collective && i != yavin && i != hq && !anchor[i]) ad.Add(i);
+            if (owner[i] == Side.Hand && i != charter) { handExceptCharter++; if (!anchor[i]) ed.Add(i); }
+            if (owner[i] == Side.Collective && i != shoal && i != hq && !anchor[i]) ad.Add(i);
         }
-        int collectiveExceptYavinHq = ad.Count + collectiveAnchors.Count;
-        int strongE = Math.Max(0, Split(handExceptCoruscant + 1, totals.HandStrong, totals.HandWeak) - 1);
+        int collectiveExceptShoalHq = ad.Count + collectiveAnchors.Count;
+        int strongE = Math.Max(0, Split(handExceptCharter + 1, totals.HandStrong, totals.HandWeak) - 1);
         Shuffle(ed, rng);
         for (int k = 0; k < ed.Count; k++) weak[ed[k]] = k >= Math.Max(0, strongE - handAnchors.Count);
-        int strongA = Split(collectiveExceptYavinHq, totals.CollectiveStrong, totals.CollectiveWeak);
+        int strongA = Split(collectiveExceptShoalHq, totals.CollectiveStrong, totals.CollectiveWeak);
         Shuffle(ad, rng);
         for (int k = 0; k < ad.Count; k++) weak[ad[k]] = k >= Math.Max(0, strongA - collectiveAnchors.Count);
 
@@ -240,14 +240,14 @@ public static class AnchoredDealer
         for (int i = 0; i < n; i++)
         {
             int support;
-            if (i == coruscant) support = 0;
-            else if (i == yavin || i == hq) support = 100;
+            if (i == charter) support = 0;
+            else if (i == shoal || i == hq) support = 100;
             else if (anchorSupport[i] is { } fixedSupport) support = fixedSupport; // no draw
             else if (owner[i] == Side.Collective) support = (weak[i] ? p.WeakBase : p.StrongBase) + rng.NextInt(0, p.BandSpread);
             else if (owner[i] == Side.Hand) support = 100 - ((weak[i] ? p.WeakBase : p.StrongBase) + rng.NextInt(0, p.BandSpread));
             else if (GroupOf(i) == Core) support = rng.NextInt(0, p.NeutralCoreSpread) + p.NeutralRimSupport - p.NeutralCoreSpread / 2;
             else support = p.NeutralRimSupport;
-            bool exploredAll = GroupOf(i) == Core || i == coruscant || i == yavin;
+            bool exploredAll = GroupOf(i) == Core || i == charter || i == shoal;
             rows.Add(new DayOneRow(Name(i), owner[i], support, weak[i], exploredAll, owner[i] != null, i == hq));
         }
         return new AnchoredDeal(rows, Name(hq), shortfalls);

@@ -27,13 +27,13 @@ public class SimpleAiGarrisonsFirstTests
     {
         var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA });
         var m = new AiMatch(h, AiLevels.For(AiLevel.Medium) with { GarrisonsFirst = on }, AiLevels.For(AiLevel.Medium), passive: Side.Collective);
-        var rebel = h.Game.State.SystemOwners.Where(kv => kv.Value == Side.Collective).Select(kv => kv.Key).OrderBy(s => s, StringComparer.Ordinal).ToList();
+        var collective = h.Game.State.SystemOwners.Where(kv => kv.Value == Side.Collective).Select(kv => kv.Key).OrderBy(s => s, StringComparer.Ordinal).ToList();
         bool taken = false;
         h.Game.RegisterHook("5.2", ctx =>
         {
             if (taken) return;
             taken = true;
-            foreach (var s in rebel) if (s != h.HqSystem) h.Control.DebugApplyTroops(ctx, s, Side.Hand, "Tranches", 1);
+            foreach (var s in collective) if (s != h.HqSystem) h.Control.DebugApplyTroops(ctx, s, Side.Hand, "Tranches", 1);
         });
         int ordered = 0;
         while (h.Game.Day < 500 && h.Victory.Winner == null)

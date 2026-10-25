@@ -30,30 +30,30 @@ public class RepairTests
         for (int i = 0; i < 3; i++) h.Economy.AddObject(h.Fleets.OwnerOf(system)!.Value, regiment, system);
     }
 
-    // an ISD at 1790 of 2750 with hits (0,2,0,1,1,0)
-    private static (int fleet, EconObject isd) Damaged(GameHost h, Side side, string system, int[]? hits = null)
+    // an Mandate at 1790 of 2750 with hits (0,2,0,1,1,0)
+    private static (int fleet, EconObject mandate) Damaged(GameHost h, Side side, string system, int[]? hits = null)
     {
         int f = h.Fleets.AddFleet(side, "F", new[] { "Mandate" }, system);
-        var isd = h.Game.State.Economy.Objects[h.Game.State.Fleets[f].Ships[0]];
-        isd.Hull = 1790; isd.Hits = new List<int>(hits ?? StartHits);
-        return (f, isd);
+        var mandate = h.Game.State.Economy.Objects[h.Game.State.Fleets[f].Ships[0]];
+        mandate.Hull = 1790; mandate.Hits = new List<int>(hits ?? StartHits);
+        return (f, mandate);
     }
 
     private static List<ShipRepaired> Repaired(GameHost h) => h.Game.Events.OfType<ShipRepaired>().ToList();
 
     // B3-24 (replaces RT19: every 2 days at an own shipyard, one hit per turn on a damage-control roll)
     [Fact]
-    public void B3_24_IsdAtItsOwnYardRepairsEveryTwoDays()
+    public void B3_24_MandateAtItsOwnYardRepairsEveryTwoDays()
     {
         var h = Host();
         h.Economy.AddFacility(Yard, FacilityKind.OrbitalShipyard);
-        var (_, isd) = Damaged(h, Side.Hand, Yard);
+        var (_, mandate) = Damaged(h, Side.Hand, Yard);
         var hulls = new List<int>(); var sums = new List<int> { StartHits.Sum() };
         for (int day = 1; day <= 8; day++)
         {
             h.Game.Step();
-            if (day % 2 == 0) { hulls.Add(isd.Hull); sums.Add(isd.Hits!.Sum()); }
-            else Assert.Equal(day == 1 ? 1790 : hulls[^1], isd.Hull);
+            if (day % 2 == 0) { hulls.Add(mandate.Hull); sums.Add(mandate.Hits!.Sum()); }
+            else Assert.Equal(day == 1 ? 1790 : hulls[^1], mandate.Hull);
         }
         Assert.Equal(new[] { 2065, 2340, 2615, 2750 }, hulls);
         var ev = Repaired(h);
@@ -86,7 +86,7 @@ public class RepairTests
     {
         var h = Host();
         h.Economy.AddFacility(Yard, FacilityKind.AdvancedShipyard); // Hand yard; the Collective ship there is not at its own yard
-        var ships = new[] { Damaged(h, Side.Hand, Other).isd, Damaged(h, Side.Collective, Yard).isd };
+        var ships = new[] { Damaged(h, Side.Hand, Other).mandate, Damaged(h, Side.Collective, Yard).mandate };
         for (int i = 0; i < 29; i++) h.Game.Step();
         Assert.All(ships, s => Assert.Equal(1790, s.Hull));
         h.Game.Step(); // hook time 30
@@ -102,14 +102,14 @@ public class RepairTests
     {
         var h = Host();
         h.Economy.AddFacility(Yard, FacilityKind.OrbitalShipyard);
-        var (f, isd) = Damaged(h, Side.Hand, Yard);
+        var (f, mandate) = Damaged(h, Side.Hand, Yard);
         var fleet = h.Game.State.Fleets[f];
         fleet.At = null;
         fleet.Transit = new FleetTransit { Path = new() { Yard, Other }, HopTicks = new() { 50 }, HopIndex = 0, DueDay = 50 };
         for (int i = 0; i < 40; i++) h.Game.Step();
-        Assert.Equal(1790, isd.Hull);
+        Assert.Equal(1790, mandate.Hull);
         Assert.Empty(Repaired(h));
-        Assert.Equal(0, isd.RepairMode);
+        Assert.Equal(0, mandate.RepairMode);
     }
 
     // B3-25 (a blockade or an uprising suspends the yard: 30 days); m4-retreat-damage-repair Open question 8
@@ -118,13 +118,13 @@ public class RepairTests
     {
         var h = Host();
         h.Economy.AddFacility(Yard, FacilityKind.OrbitalShipyard);
-        var (_, isd) = Damaged(h, Side.Hand, Yard);
+        var (_, mandate) = Damaged(h, Side.Hand, Yard);
         h.Repair.YardSuspended = s => s == Yard;
         for (int i = 0; i < 29; i++) h.Game.Step();
-        Assert.Equal(1790, isd.Hull);
+        Assert.Equal(1790, mandate.Hull);
         h.Game.Step();
-        Assert.Equal(2065, isd.Hull);
-        Assert.Equal(1, isd.RepairMode);
+        Assert.Equal(2065, mandate.Hull);
+        Assert.Equal(1, mandate.RepairMode);
     }
 
     // m4-retreat-damage-repair section 5: the host wires the construction module's suspension test
@@ -144,14 +144,14 @@ public class RepairTests
     public void ChangeOfPeriodRestartsTheTimer()
     {
         var h = Host();
-        var (_, isd) = Damaged(h, Side.Hand, Yard); // no yard yet: the 30-day timer runs
+        var (_, mandate) = Damaged(h, Side.Hand, Yard); // no yard yet: the 30-day timer runs
         for (int i = 0; i < 10; i++) h.Game.Step();
-        Assert.Equal(1, isd.RepairMode);
+        Assert.Equal(1, mandate.RepairMode);
         h.Economy.AddFacility(Yard, FacilityKind.OrbitalShipyard); // day 10: FastRepair from now
         h.Game.Step();  // hook time 11: restarted, due 12
-        Assert.Equal(1790, isd.Hull);
+        Assert.Equal(1790, mandate.Hull);
         h.Game.Step();  // 12
-        Assert.Equal(2065, isd.Hull);
+        Assert.Equal(2065, mandate.Hull);
     }
 
     // B3-26 (replaces RT22: squadrons keep partial losses and get one craft back per turn)
@@ -193,9 +193,9 @@ public class RepairTests
         Garrison(h, "The Thaw", "Militia");
         h.Economy.AddFacility(Yard, FacilityKind.OrbitalShipyard);
         h.Economy.AddFacility("The Thaw", FacilityKind.OrbitalShipyard);
-        var e1 = Damaged(h, Side.Hand, Yard).isd;
-        var e2 = Damaged(h, Side.Hand, Yard).isd;
-        var a1 = Damaged(h, Side.Collective, "The Thaw").isd;
+        var e1 = Damaged(h, Side.Hand, Yard).mandate;
+        var e2 = Damaged(h, Side.Hand, Yard).mandate;
+        var a1 = Damaged(h, Side.Collective, "The Thaw").mandate;
         h.Game.Step(); h.Game.Step();
         Assert.Equal(new[] { a1.Id, e1.Id, e2.Id }, Repaired(h).Select(e => e.Ship));
         Assert.True(a1.Id > e1.Id); // the Collective ship has the higher id: the side order, not the id, comes first
@@ -207,12 +207,12 @@ public class RepairTests
     {
         var h = Host();
         h.Economy.AddFacility(Yard, FacilityKind.OrbitalShipyard);
-        var (_, isd) = Damaged(h, Side.Hand, Yard, new[] { 0, 0, 0, 0, 1, 0 });
-        isd.Hull = 2750;
-        for (int i = 0; i < 60 && isd.Hits!.Sum() > 0; i++) h.Game.Step();
-        Assert.Equal(2750, isd.Hull);
-        Assert.All(isd.Hits!, x => Assert.Equal(0, x));
-        Assert.Equal(0, isd.RepairMode);
+        var (_, mandate) = Damaged(h, Side.Hand, Yard, new[] { 0, 0, 0, 0, 1, 0 });
+        mandate.Hull = 2750;
+        for (int i = 0; i < 60 && mandate.Hits!.Sum() > 0; i++) h.Game.Step();
+        Assert.Equal(2750, mandate.Hull);
+        Assert.All(mandate.Hits!, x => Assert.Equal(0, x));
+        Assert.Equal(0, mandate.RepairMode);
         int n = Repaired(h).Count;
         h.Game.Step(); h.Game.Step();
         Assert.Equal(n, Repaired(h).Count); // whole: no more turns
@@ -238,8 +238,8 @@ public class RepairTests
         var data = GameData.Default with { Repair = new RepairRules(true, 30, 3, 30, 3, 5) };
         var h = Host(data: data);
         h.Economy.AddFacility(Yard, FacilityKind.OrbitalShipyard);
-        var away = Damaged(h, Side.Hand, Other).isd;
-        var home = Damaged(h, Side.Hand, Yard).isd;
+        var away = Damaged(h, Side.Hand, Other).mandate;
+        var home = Damaged(h, Side.Hand, Yard).mandate;
         for (int i = 0; i < 3; i++) h.Game.Step();
         Assert.Equal(1790 + 550, home.Hull); // divisor 5, period 3
         for (int i = 0; i < 30; i++) h.Game.Step();

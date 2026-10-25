@@ -77,7 +77,7 @@ public class CaptureTests
         var mines = new[] { w.S.W.Mine(Emp), w.S.W.Mine(Emp), w.S.W.Mine(Emp) };
         var refs = new[] { w.S.W.Refinery(Emp), w.S.W.Refinery(Emp) };
         int yard = w.Eco.AddFacility(Emp, FacilityKind.OrbitalShipyard);
-        int kdy = w.Eco.AddFacility(Emp, FacilityKind.Kdy150);
+        int lien = w.Eco.AddFacility(Emp, FacilityKind.Lien150);
         w.Capture(Side.Collective, Emp);
         w.Run(1);
 
@@ -85,7 +85,7 @@ public class CaptureTests
         var cap = Assert.Single(w.Events<SystemCaptured>());
         Assert.Equal((Emp, (Side?)Side.Hand, Side.Collective, CaptureCause.Debug), (cap.System, cap.From, cap.To, cap.Cause));
         var moved = w.Events<FacilityTransferred>().Select(e => e.Facility).ToList();
-        Assert.Equal(mines.Concat(refs).Concat(new[] { yard, kdy }).OrderBy(i => i).ToList(), moved);
+        Assert.Equal(mines.Concat(refs).Concat(new[] { yard, lien }).OrderBy(i => i).ToList(), moved);
         foreach (int id in moved) Assert.Equal(Side.Collective, w.Eco.OwnerOf(w.Eco.Find(id)!));
         Assert.Empty(w.Events<FacilityRemoved>());
     }
@@ -97,7 +97,7 @@ public class CaptureTests
         var w = new CtlWorld();
         w.Hold(Ally, Side.Collective, 80);
         var ids = new List<int> { w.S.W.Mine(Ally), w.S.W.Mine(Ally), w.S.W.Mine(Ally), w.S.W.Refinery(Ally), w.S.W.Refinery(Ally),
-            w.Eco.AddFacility(Ally, FacilityKind.OrbitalShipyard), w.Eco.AddFacility(Ally, FacilityKind.Kdy150) };
+            w.Eco.AddFacility(Ally, FacilityKind.OrbitalShipyard), w.Eco.AddFacility(Ally, FacilityKind.Lien150) };
         w.Capture(Side.Hand, Ally);
         w.Run(1);
         Assert.Equal(ids.OrderBy(i => i).ToList(), w.Events<FacilityTransferred>().Select(e => e.Facility).ToList());
@@ -145,7 +145,7 @@ public class CaptureTests
         Assert.Empty(w.Events<FacilityTransferred>());
     }
 
-    // C5: capture while an ISD is queued at the old holder's yard: the order is cancelled (by the construction module), no refund; the
+    // C5: capture while an Mandate is queued at the old holder's yard: the order is cancelled (by the construction module), no refund; the
     // yard is the new holder's, idle. B5a, 2026-10-17: the old holder's finished regiment on the world is destroyed (section 5; it was untouched).
     [Fact]
     public void C5_QueuedOrderOfOldHolder_Cancelled_YardGoesIdleToNewHolder()
@@ -158,12 +158,12 @@ public class CaptureTests
         w.Build!.GrantResearch(Side.Hand, "Mandate");
         w.Build.SubmitBuild(Side.Hand, Emp, YardFamily.Shipyard, "Mandate", 1);
         w.Run(1);
-        var isd = w.Eco.Objects.Single(o => o.Class == "Mandate").Id;
+        var mandate = w.Eco.Objects.Single(o => o.Class == "Mandate").Id;
         Assert.NotNull(w.Build.ProjectAt(Emp, YardFamily.Shipyard));
         int refinedBefore = w.Eco.Refined(Side.Hand);
         w.Capture(Side.Collective, Emp);
         w.Run(1);
-        Assert.Null(w.Eco.Find(isd));
+        Assert.Null(w.Eco.Find(mandate));
         Assert.Null(w.Build.ProjectAt(Emp, YardFamily.Shipyard));
         Assert.Null(w.Eco.Find(army));
         Assert.Equal(army, Assert.Single(w.Events<UnitLostAtCapture>()).Object);
@@ -174,7 +174,7 @@ public class CaptureTests
         Assert.Equal(0, w.Eco.Find(yard)!.Due);
         var c = Assert.Single(w.Events<Praedra.Core.Construction.ProjectCancelled>()); // one cancellation: 6.6 found nothing left
         Assert.Equal(("SystemLost", Emp), (c.Reason, c.System));
-        Assert.Contains(isd, c.Units.Items);
+        Assert.Contains(mandate, c.Units.Items);
     }
 
     // C6: Hand-held, A = 70 (Hand support 30), no uprising, Collective captures: A unchanged, N = 0, no uprising
@@ -467,7 +467,7 @@ public class CaptureTests
             var w = new CtlWorld(stub: false, seed: 7);
             w.Hold(Emp, Side.Hand, 80);
             w.Hold(Ally, Side.Collective, 80);
-            w.S.W.Mine(Emp); w.S.W.Refinery(Emp); w.Eco.AddFacility(Emp, FacilityKind.Kdy150);
+            w.S.W.Mine(Emp); w.S.W.Refinery(Emp); w.Eco.AddFacility(Emp, FacilityKind.Lien150);
             w.Eco.AddFacility(Emp, FacilityKind.Mine, completed: false);
             w.S.Uprising(Emp, Side.Hand, erosionDue: 10, incidentDue: 12);
             w.Fleets.AddFleet(Side.Collective, "Picket", new[] { "Dodger" }, Emp);
@@ -656,9 +656,9 @@ public class CaptureTests
         var dep = w.Events<DeliveryDeparted>().Single();
         Assert.Equal(Far, dep.To);
         Assert.Equal(Side.Collective, w.Game.State.Blockades[Far]);
-        var isdProject = w.Build!.ProjectAt(Far, YardFamily.Shipyard);
-        Assert.NotNull(isdProject);
-        var isdUnits = isdProject!.Units.ToList();
+        var mandateProject = w.Build!.ProjectAt(Far, YardFamily.Shipyard);
+        Assert.NotNull(mandateProject);
+        var mandateUnits = mandateProject!.Units.ToList();
         int mineId = dep.Object;
         Assert.True(w.Game.Day < dep.DueDay, "the delivery is still flying");
 
@@ -668,9 +668,9 @@ public class CaptureTests
         // construction: the project is gone with its units, once, no refund; the delivery is still alive
         var cancelled = Assert.Single(w.Events<Praedra.Core.Construction.ProjectCancelled>());
         Assert.Equal(("SystemLost", Far, YardFamily.Shipyard), (cancelled.Reason, cancelled.System, cancelled.Family));
-        Assert.Equal(isdUnits, cancelled.Units.Items.ToList());
+        Assert.Equal(mandateUnits, cancelled.Units.Items.ToList());
         Assert.Null(w.Build.ProjectAt(Far, YardFamily.Shipyard));
-        Assert.All(isdUnits, id => Assert.Null(w.Eco.Find(id)));
+        Assert.All(mandateUnits, id => Assert.Null(w.Eco.Find(id)));
         Assert.Single(w.Build.Deliveries);
         Assert.Empty(w.Events<UnfinishedFacilityCancelled>()); // the flying mine is construction's, not a leftover
         Assert.NotNull(w.Eco.Find(mineId));

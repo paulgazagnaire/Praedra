@@ -65,7 +65,7 @@ public class GalaxyDataTests
     public void G5_RouteInferredLaneIsTier1() // m1-galaxy-data G5
     {
         // v6 re-pin 2026-10-24: v6 has no route-inferred links; the kind stays tier 1 in the tier table, and a real great-route
-        // link (Coruscant-Tralus, Trunk Line) is tier 1 with factor 300.
+        // link (Charter-Bina Major, Trunk Line) is tier 1 with factor 300.
         Assert.Equal(1, TestData.Tiers.TierOfKind("route-inferred"));
         var l = G.FindLane("Charter", "Bina Major")!;
         Assert.Equal("route", l.Kind);
@@ -77,11 +77,11 @@ public class GalaxyDataTests
     [Fact]
     public void G6_OfficialLaneIsTier2() // m1-galaxy-data G6
     {
-        var l = G.FindLane("Charter", "Hartwell")!; // v6 re-pin 2026-10-24: Coruscant's minor link (was Tutela)
+        var l = G.FindLane("Charter", "Hartwell")!; // v6 re-pin 2026-10-24: Charter's minor link (was Tutela)
         Assert.Equal("official", l.Kind);
         Assert.Equal(2, l.Tier);
         Assert.Equal(150, l.FactorPercent);
-        Assert.Equal("bridge", G.FindLane("Pennygate", "Tierra Larga")!.Kind); // v6 re-pin 2026-10-24 (was Mirial-Jelucan)
+        Assert.Equal("bridge", G.FindLane("Pennygate", "Tierra Larga")!.Kind); // v6 re-pin 2026-10-24 (was Greysand-Felsite)
         Assert.Equal(2, G.FindLane("Pennygate", "Tierra Larga")!.Tier); // bridge: a minor link
     }
 
@@ -93,10 +93,10 @@ public class GalaxyDataTests
     }
 
     [Fact]
-    public void G8_BaseDistanceCoruscantCorellia() // m1-galaxy-data G8
+    public void G8_BaseDistanceCharterClassis() // m1-galaxy-data G8
     {
         // v6 re-pin 2026-10-24: Charter sits at the centre (500,500); Classis is no longer linked to it, so the stored
-        // lane base distance is checked on Coruscant-Tralus (503,471): 3*3 + 29*29 = 850, isqrt 29, /5 = 5.
+        // lane base distance is checked on Charter-Bina Major (503,471): 3*3 + 29*29 = 850, isqrt 29, /5 = 5.
         var c = G.Get("Charter"); var k = G.Get("Classis"); var t = G.Get("Bina Major");
         Assert.Equal((500, 500), (c.MapX, c.MapY));
         Assert.Equal((454, 424), (k.MapX, k.MapY));
@@ -154,7 +154,7 @@ public class GalaxyDataTests
     [Fact]
     public void G13_NeighboursBothWaysAndSorted() // m1-galaxy-data G13
     {
-        var a = G.Get("Charter"); var b = G.Get("Bina Major"); // v6 re-pin 2026-10-24 (Corellia-Duros is no longer a link)
+        var a = G.Get("Charter"); var b = G.Get("Bina Major"); // v6 re-pin 2026-10-24 (Classis-Hiberna is no longer a link)
         Assert.Contains(G.NeighboursOf(a.Index), n => n.System == b.Index);
         Assert.Contains(G.NeighboursOf(b.Index), n => n.System == a.Index);
         foreach (var s in G.Systems)
@@ -329,10 +329,10 @@ public class GalaxyDataTests
     {
         var all = ShipData.LoadAll(TestData.ClassicDir);
         Assert.Equal(30 + 8, all.Count);
-        var isd = all["Mandate"];
-        Assert.True(isd.IsCapital);
-        Assert.Equal((80, 100, 0, 480), (isd.Hyperdrive, isd.HyperdriveIfDamaged, isd.GravityWellProjector, isd.OverallAttackStrength));
-        Assert.Equal(ShipSide.Hand, isd.Side);
+        var mandate = all["Mandate"];
+        Assert.True(mandate.IsCapital);
+        Assert.Equal((80, 100, 0, 480), (mandate.Hyperdrive, mandate.HyperdriveIfDamaged, mandate.GravityWellProjector, mandate.OverallAttackStrength));
+        Assert.Equal(ShipSide.Hand, mandate.Side);
         Assert.Equal(4, all["Snare"].GravityWellProjector);
         Assert.Equal(4, all["Subpoena"].GravityWellProjector);
         Assert.Equal(0, all["Gleaner"].Hyperdrive);

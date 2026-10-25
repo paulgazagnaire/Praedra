@@ -5,21 +5,21 @@ using Praedra.Core.Ships;
 namespace Praedra.Core.Tests.Fleets;
 
 // rule: m1-forced-stop-and-blockade §Tests B1-B17 on the synthetic map A(0,0) B(100,0) C(200,0): tier 3 lanes, a speed-80
-// fleet needs 16 days per hop. F = a Collective Dodger (the "CR90"; strength 0 (laser-only), speed 80) ordered A to C on day 0.
+// fleet needs 16 days per hop. F = a Collective Dodger (the "Dodger"; strength 0 (laser-only), speed 80) ordered A to C on day 0.
 //
 // TRIGGERS. The sheet wrote B2, B6, B7 for AnyArmedFleet; the lead's override (section "Update 2026-10-12") makes PaulRule the
 // default. Each test says which trigger(s) it runs under. Tests that depend on strength levels carry "M4 re-check":
 // CombatStrength is m4-battle-new §12 (the M1 placeholder, sum of refined_material_cost, is gone).
 public class ForcedStopTests
 {
-    private const string Isd = "Mandate";
-    private const string Corvette = "Dodger"; // "CR90 Corvette" in the lead's brief; the data calls it this
+    private const string Mandate = "Mandate";
+    private const string Corvette = "Dodger"; // "Dodger" in the lead's brief; the data calls it this
 
     public static IEnumerable<object[]> AllTriggers() => new[]
     {
         new object[] { ForcedStopTrigger.PaulRule }, new object[] { ForcedStopTrigger.AnyArmedFleet }, new object[] { ForcedStopTrigger.GravityWellShip },
     };
-    public static IEnumerable<object[]> StopsForArmedIsd() => new[]
+    public static IEnumerable<object[]> StopsForArmedMandate() => new[]
     {
         new object[] { ForcedStopTrigger.PaulRule }, new object[] { ForcedStopTrigger.AnyArmedFleet },
     };
@@ -50,11 +50,11 @@ public class ForcedStopTests
         Assert.Empty(w.Events<Contact>());
     }
 
-    [Theory, MemberData(nameof(StopsForArmedIsd))] // B2, under PaulRule (ISD 112 >= 0.5 x 0; M4 re-check) and AnyArmedFleet
-    public void B2_stationary_hand_ISD_at_B_stops_F_on_day_16_and_cancels_its_order(ForcedStopTrigger t)
+    [Theory, MemberData(nameof(StopsForArmedMandate))] // B2, under PaulRule (Mandate 112 >= 0.5 x 0; M4 re-check) and AnyArmedFleet
+    public void B2_stationary_hand_Mandate_at_B_stops_F_on_day_16_and_cancels_its_order(ForcedStopTrigger t)
     {
         var (w, f) = Start(t);
-        int e = w.Add(Side.Hand, "E", "B", Isd);
+        int e = w.Add(Side.Hand, "E", "B", Mandate);
         w.Move(Side.Collective, f, "C");
         w.Run(16);
         var stop = Assert.Single(w.Events<ForcedStop>());
@@ -84,10 +84,10 @@ public class ForcedStopTests
     }
 
     [Theory, MemberData(nameof(AllTriggers))] // B4
-    public void B4_friendly_ISD_at_B_does_not_stop_F(ForcedStopTrigger t)
+    public void B4_friendly_Mandate_at_B_does_not_stop_F(ForcedStopTrigger t)
     {
         var (w, f) = Start(t);
-        w.Add(Side.Collective, "Friend", "B", Isd);
+        w.Add(Side.Collective, "Friend", "B", Mandate);
         w.Move(Side.Collective, f, "C");
         w.Run(40);
         AssertReaches(w, f, "C", 32);
@@ -96,10 +96,10 @@ public class ForcedStopTests
     }
 
     [Theory, MemberData(nameof(AllTriggers))] // B5: the destination is a normal arrival under every trigger
-    public void B5_hand_ISD_at_C_F_arrives_day_32_with_a_contact_and_no_stop(ForcedStopTrigger t)
+    public void B5_hand_Mandate_at_C_F_arrives_day_32_with_a_contact_and_no_stop(ForcedStopTrigger t)
     {
         var (w, f) = Start(t);
-        int e = w.Add(Side.Hand, "E", "C", Isd);
+        int e = w.Add(Side.Hand, "E", "C", Mandate);
         w.Move(Side.Collective, f, "C");
         w.Run(32);
         AssertReaches(w, f, "C", 32);
@@ -110,11 +110,11 @@ public class ForcedStopTests
         Assert.Equal(new[] { f }, c.CollectiveFleets.Items);
     }
 
-    [Theory, MemberData(nameof(StopsForArmedIsd))] // B6, under PaulRule (M4 re-check) and AnyArmedFleet
-    public void B6_hand_ISD_arriving_at_B_on_day_16_from_elsewhere_stops_F_that_day(ForcedStopTrigger t)
+    [Theory, MemberData(nameof(StopsForArmedMandate))] // B6, under PaulRule (M4 re-check) and AnyArmedFleet
+    public void B6_hand_Mandate_arriving_at_B_on_day_16_from_elsewhere_stops_F_that_day(ForcedStopTrigger t)
     {
         var (w, f) = Start(t);
-        int e = w.Add(Side.Hand, "E", "D", Isd); // lane D-B is also 16 days at speed 80
+        int e = w.Add(Side.Hand, "E", "D", Mandate); // lane D-B is also 16 days at speed 80
         w.Move(Side.Hand, e, "B");
         w.Move(Side.Collective, f, "C");
         w.Run(16);
@@ -124,7 +124,7 @@ public class ForcedStopTests
         Assert.Equal((16, "B"), (Assert.Single(w.Events<FleetArrived>()).Day, "B")); // E itself arrived at B the same day
     }
 
-    [Theory, MemberData(nameof(StopsForArmedIsd))] // m1-forced-stop-and-blockade §When is an enemy "at the system": two passing enemy fleets both stop
+    [Theory, MemberData(nameof(StopsForArmedMandate))] // m1-forced-stop-and-blockade §When is an enemy "at the system": two passing enemy fleets both stop
     public void Two_enemy_fleets_passing_B_on_the_same_day_both_stop(ForcedStopTrigger t)
     {
         var (w, f) = Start(t);
@@ -144,11 +144,11 @@ public class ForcedStopTests
         Assert.Equal(new[] { f, e }.OrderBy(x => x).ToArray(), w.Events<ForcedStop>().Select(s => s.Fleet).ToArray()); // fleet id order
     }
 
-    [Theory, MemberData(nameof(StopsForArmedIsd))] // B7 (and K15), under PaulRule and AnyArmedFleet
-    public void B7_ISD_ordered_away_in_the_step_F_arrives_departs_first_and_F_is_not_stopped(ForcedStopTrigger t)
+    [Theory, MemberData(nameof(StopsForArmedMandate))] // B7 (and K15), under PaulRule and AnyArmedFleet
+    public void B7_Mandate_ordered_away_in_the_step_F_arrives_departs_first_and_F_is_not_stopped(ForcedStopTrigger t)
     {
         var (w, f) = Start(t);
-        int e = w.Add(Side.Hand, "E", "B", Isd);
+        int e = w.Add(Side.Hand, "E", "B", Mandate);
         w.Move(Side.Collective, f, "C");
         w.RunTo(15);
         w.Move(Side.Hand, e, "A");
@@ -159,11 +159,11 @@ public class ForcedStopTests
         AssertReaches(w, f, "C", 32);
     }
 
-    [Fact] // B8: GravityWellShip trigger, a fleet of ISDs has no gravity-well ship
-    public void B8_gravity_well_trigger_ISD_fleet_at_B_does_not_stop_F()
+    [Fact] // B8: GravityWellShip trigger, a fleet of Mandates has no gravity-well ship
+    public void B8_gravity_well_trigger_Mandate_fleet_at_B_does_not_stop_F()
     {
         var (w, f) = Start(ForcedStopTrigger.GravityWellShip);
-        w.Add(Side.Hand, "E", "B", Isd, Isd);
+        w.Add(Side.Hand, "E", "B", Mandate, Mandate);
         w.Move(Side.Collective, f, "C");
         w.Run(40);
         AssertReaches(w, f, "C", 32);
@@ -185,10 +185,10 @@ public class ForcedStopTests
     }
 
     [Theory, MemberData(nameof(AllTriggers))] // B10
-    public void B10_enemy_ISD_at_the_departure_system_does_not_stop_F(ForcedStopTrigger t)
+    public void B10_enemy_Mandate_at_the_departure_system_does_not_stop_F(ForcedStopTrigger t)
     {
         var (w, f) = Start(t);
-        w.Add(Side.Hand, "E", "A", Isd);
+        w.Add(Side.Hand, "E", "A", Mandate);
         w.Move(Side.Collective, f, "C");
         w.Run(40);
         AssertReaches(w, f, "C", 32);
@@ -196,11 +196,11 @@ public class ForcedStopTests
         Assert.Equal(new[] { "B" }, w.Events<FleetPassed>().Select(p => p.System));
     }
 
-    [Theory, MemberData(nameof(StopsForArmedIsd))] // B11, after B2
+    [Theory, MemberData(nameof(StopsForArmedMandate))] // B11, after B2
     public void B11_a_stopped_fleet_can_leave_the_blocked_system_and_is_not_stopped_there_again(ForcedStopTrigger t)
     {
         var (w, f) = Start(t);
-        w.Add(Side.Hand, "E", "B", Isd);
+        w.Add(Side.Hand, "E", "B", Mandate);
         w.Move(Side.Collective, f, "C");
         w.Run(16);
         Assert.Single(w.Events<ForcedStop>());
@@ -217,7 +217,7 @@ public class ForcedStopTests
 
     // ---- Classic blockade flag, B12-B16
 
-    private static (World w, int e) HandAt(string system, Side? owner, string ship = Isd)
+    private static (World w, int e) HandAt(string system, Side? owner, string ship = Mandate)
     {
         var w = new World(World.BCMap());
         w.Fleets.SetOwner(system, owner);
@@ -309,7 +309,7 @@ public class ForcedStopTests
     public void A_contact_is_raised_each_day_while_both_sides_are_present()
     {
         var (w, f) = Start(ForcedStopTrigger.PaulRule);
-        w.Add(Side.Hand, "E", "B", Isd);
+        w.Add(Side.Hand, "E", "B", Mandate);
         w.Move(Side.Collective, f, "C");
         w.Run(19);
         Assert.Equal(new[] { 16, 17, 18, 19 }, w.Events<Contact>().Select(c => c.Day));
@@ -324,13 +324,13 @@ public class ForcedStopTests
         Assert.Equal(0, (int)ForcedStopTrigger.PaulRule);
     }
 
-    [Fact] // PaulRule: one corvette does NOT stop an ISD fleet (M4 re-check: 0 < 0.5 x 224); AnyArmedFleet would
-    public void PaulRule_one_corvette_does_not_stop_an_ISD_fleet_but_AnyArmedFleet_does()
+    [Fact] // PaulRule: one corvette does NOT stop an Mandate fleet (M4 re-check: 0 < 0.5 x 224); AnyArmedFleet would
+    public void PaulRule_one_corvette_does_not_stop_an_Mandate_fleet_but_AnyArmedFleet_does()
     {
         foreach (var (t, stops) in new[] { (ForcedStopTrigger.PaulRule, false), (ForcedStopTrigger.AnyArmedFleet, true) })
         {
             var w = new World(World.BCMap(), t);
-            int mover = w.Add(Side.Hand, "Fleet", "A", Isd, Isd);
+            int mover = w.Add(Side.Hand, "Fleet", "A", Mandate, Mandate);
             w.Add(Side.Collective, "Corvette", "B", Corvette);
             w.Move(Side.Hand, mover, "C");
             w.Run(40);
@@ -339,11 +339,11 @@ public class ForcedStopTests
         }
     }
 
-    [Fact] // PaulRule: an ISD stops a lone corvette (M4 re-check: 112 >= 0.5 x 0); the blocker is listed
-    public void PaulRule_one_ISD_stops_a_lone_corvette()
+    [Fact] // PaulRule: an Mandate stops a lone corvette (M4 re-check: 112 >= 0.5 x 0); the blocker is listed
+    public void PaulRule_one_Mandate_stops_a_lone_corvette()
     {
         var (w, f) = Start(ForcedStopTrigger.PaulRule);
-        int e = w.Add(Side.Hand, "E", "B", Isd);
+        int e = w.Add(Side.Hand, "E", "B", Mandate);
         w.Move(Side.Collective, f, "C");
         w.Run(16);
         Assert.Equal(new[] { e }, Assert.Single(w.Events<ForcedStop>()).Blockers.Items);
@@ -369,7 +369,7 @@ public class ForcedStopTests
     {
         var w = new World(World.BCMap(), ForcedStopTrigger.PaulRule);
         int mover = w.Add(Side.Collective, "Mover", "A", "Snare"); // gravity_well_projector 4, speed 70
-        w.Add(Side.Hand, "E", "B", Isd);
+        w.Add(Side.Hand, "E", "B", Mandate);
         w.Move(Side.Collective, mover, "C");
         w.Run(14);
         Assert.Equal((14, mover, "B"), (w.Events<ForcedStop>().Single().Day, w.Events<ForcedStop>().Single().Fleet, w.Events<ForcedStop>().Single().System));
@@ -378,25 +378,25 @@ public class ForcedStopTests
     [Fact] // PaulRule: T is >= (exactly half stops); enemy fleets at the system add up (one force); M4 re-check
     public void PaulRule_threshold_is_inclusive_and_enemy_fleets_are_pooled()
     {
-        // passing: Decree = 68; enemy Nebulon-B 34 = exactly 0.5 x 68 -> stops
+        // passing: Decree = 68; enemy Mender 34 = exactly 0.5 x 68 -> stops
         var w = new World(World.BCMap());
         int mover = w.Add(Side.Hand, "Mover", "A", "Decree");
-        w.Add(Side.Collective, "Nebulon", "B", "Mender");
+        w.Add(Side.Collective, "Mender", "B", "Mender");
         w.Move(Side.Hand, mover, "C");
         w.Run(16);
         Assert.Single(w.Events<ForcedStop>());
 
-        // passing: 2 ISD = 224, half = 112. A Ark (92) alone passes; with a second fleet, a Nebulon-B (34), 126 stops.
+        // passing: 2 Mandate = 224, half = 112. A Ark (92) alone passes; with a second fleet, a Mender (34), 126 stops.
         var alone = new World(World.BCMap());
-        int m1 = alone.Add(Side.Hand, "Mover", "A", Isd, Isd);
-        alone.Add(Side.Collective, "MonCal", "B", "Ark");
+        int m1 = alone.Add(Side.Hand, "Mover", "A", Mandate, Mandate);
+        alone.Add(Side.Collective, "Ark", "B", "Ark");
         alone.Move(Side.Hand, m1, "C");
         alone.Run(40);
         Assert.Empty(alone.Events<ForcedStop>());
 
         var w2 = new World(World.BCMap());
-        int m2 = w2.Add(Side.Hand, "Mover", "A", Isd, Isd);
-        w2.Add(Side.Collective, "MonCal", "B", "Ark");
+        int m2 = w2.Add(Side.Hand, "Mover", "A", Mandate, Mandate);
+        w2.Add(Side.Collective, "Ark", "B", "Ark");
         w2.Add(Side.Collective, "Helper", "B", "Mender");
         w2.Move(Side.Hand, m2, "C");
         w2.Run(16);
@@ -404,17 +404,17 @@ public class ForcedStopTests
         Assert.Equal(2, w2.Events<ForcedStop>().Single().Blockers.Items.Count);
     }
 
-    [Fact] // space-combat/07 last section: laser-only boats count 0, so 8 corvettes do not stop an ISD (M4 re-check)
-    public void PaulRule_eight_corvettes_do_not_stop_an_ISD_and_are_not_an_economic_blockade()
+    [Fact] // space-combat/07 last section: laser-only boats count 0, so 8 corvettes do not stop an Mandate (M4 re-check)
+    public void PaulRule_eight_corvettes_do_not_stop_an_Mandate_and_are_not_an_economic_blockade()
     {
         var w = new World(World.BCMap());
-        int isd = w.Add(Side.Hand, "Isd", "A", Isd);
+        int mandate = w.Add(Side.Hand, "Mandate", "A", Mandate);
         var eight = Enumerable.Repeat(Corvette, 8).ToArray();
         w.Add(Side.Collective, "Eight", "B", eight);
-        w.Move(Side.Hand, isd, "C");
+        w.Move(Side.Hand, mandate, "C");
         w.Run(40);
         Assert.Empty(w.Events<ForcedStop>());
-        Assert.Equal("C", w.Fleet(isd).At);
+        Assert.Equal("C", w.Fleet(mandate).At);
         Assert.False(w.Fleets.IsEconomicBlockade("B", Side.Hand));
     }
 
@@ -430,20 +430,20 @@ public class ForcedStopTests
         Assert.Equal("C", w.Fleet(t).At);
     }
 
-    [Fact] // PaulRule (lead decision 2026-10-12): one corvette (0, laser-only) does NOT stop a single ISD (112); M4 re-check
-    public void PaulRule_one_corvette_does_not_stop_a_single_ISD_but_an_ISD_stops_a_corvette()
+    [Fact] // PaulRule (lead decision 2026-10-12): one corvette (0, laser-only) does NOT stop a single Mandate (112); M4 re-check
+    public void PaulRule_one_corvette_does_not_stop_a_single_Mandate_but_an_Mandate_stops_a_corvette()
     {
         var w = new World(World.BCMap());
-        int isd = w.Add(Side.Hand, "Isd", "A", Isd);
+        int mandate = w.Add(Side.Hand, "Mandate", "A", Mandate);
         int cor = w.Add(Side.Collective, "Corvette", "B", Corvette);
-        w.Move(Side.Hand, isd, "C");
+        w.Move(Side.Hand, mandate, "C");
         w.Run(40);
         Assert.Empty(w.Events<ForcedStop>());
-        Assert.Equal("C", w.Fleet(isd).At);
+        Assert.Equal("C", w.Fleet(mandate).At);
         Assert.Equal(0, w.Fleets.StrengthOf(w.Fleet(cor)));
-        Assert.Equal(45.0, w.Fleets.StrengthOf(w.Fleet(isd)), 1e-9); // m4-battle-new N8: 1 ISD v REF (was the placeholder 112)
+        Assert.Equal(45.0, w.Fleets.StrengthOf(w.Fleet(mandate)), 1e-9); // m4-battle-new N8: 1 Mandate v REF (was the placeholder 112)
         var (w2, f) = Start(ForcedStopTrigger.PaulRule); // the other way round: stops
-        w2.Add(Side.Hand, "E", "B", Isd);
+        w2.Add(Side.Hand, "E", "B", Mandate);
         w2.Move(Side.Collective, f, "C");
         w2.Run(16);
         Assert.Single(w2.Events<ForcedStop>());
@@ -454,7 +454,7 @@ public class ForcedStopTests
     {
         var w = new World(World.BCMap());
         int t = w.Add(Side.Collective, "Transport", "A", "Barge"); // attack 0, speed 90: 18 days per hop
-        w.Add(Side.Hand, "E", "B", Isd);
+        w.Add(Side.Hand, "E", "B", Mandate);
         w.Move(Side.Collective, t, "C");
         w.Run(18);
         Assert.Equal(t, Assert.Single(w.Events<ForcedStop>()).Fleet);
@@ -466,7 +466,7 @@ public class ForcedStopTests
     {
         var (w, f) = Start(ForcedStopTrigger.PaulRule);
         w.Fleets.SetOwner("B", owner);
-        w.Add(Side.Hand, "E", "B", Isd);
+        w.Add(Side.Hand, "E", "B", Mandate);
         w.Move(Side.Collective, f, "C");
         w.Run(16);
         Assert.Single(w.Events<ForcedStop>());
@@ -476,7 +476,7 @@ public class ForcedStopTests
     public void Gravity_well_trigger_stops_for_a_CC7700_as_well()
     {
         var w = new World(World.BCMap(), ForcedStopTrigger.GravityWellShip);
-        int e = w.Add(Side.Hand, "E", "A", Isd);
+        int e = w.Add(Side.Hand, "E", "A", Mandate);
         w.Add(Side.Collective, "Picket", "B", "Snare");
         w.Move(Side.Hand, e, "C");
         w.Run(16);
@@ -492,7 +492,7 @@ public class ForcedStopTests
         var data = World.Blockade;
         Assert.Equal(3, data.EconomicShipCount);
         Assert.Equal(50, data.ThresholdPercent);
-        Assert.Equal(64.8, w.Fleets.EconomicStrength, 1e-9); // m4-battle-new N8: CS(3 Victory Destroyers, REF = 3 ISD) (was the placeholder 204)
+        Assert.Equal(64.8, w.Fleets.EconomicStrength, 1e-9); // m4-battle-new N8: CS(3 Decrees, REF = 3 Mandate) (was the placeholder 204)
         Assert.Equal(3, data.ReferenceShipCount);
         Assert.Equal("Mandate", data.ReferenceShipClass);
     }
@@ -507,9 +507,9 @@ public class ForcedStopTests
         Assert.True(w.Fleets.IsEconomicBlockade("B", Side.Collective)); // gravity-well ship: always
         Assert.False(w.Fleets.IsEconomicBlockade("B", Side.Hand)); // against the Hand, only Collective ships count
 
-        w.Add(Side.Hand, "One", "C", Isd);
-        Assert.False(w.Fleets.IsEconomicBlockade("C", Side.Collective)); // m4-battle-new N8: 1 ISD v REF = 45 < E (64.8)
-        w.Add(Side.Hand, "Two", "C", Isd); // a second fleet: 45 + 45 = 90 >= E (64.8), pooled
+        w.Add(Side.Hand, "One", "C", Mandate);
+        Assert.False(w.Fleets.IsEconomicBlockade("C", Side.Collective)); // m4-battle-new N8: 1 Mandate v REF = 45 < E (64.8)
+        w.Add(Side.Hand, "Two", "C", Mandate); // a second fleet: 45 + 45 = 90 >= E (64.8), pooled
         Assert.True(w.Fleets.IsEconomicBlockade("C", Side.Collective));
 
         w.Add(Side.Hand, "Three", "A", Vd, Vd, Vd); // three of the E ship: exactly E (64.8)
@@ -527,7 +527,7 @@ public class ForcedStopTests
     {
         var (w, f) = Start(ForcedStopTrigger.PaulRule);
         w.Fleets.SetOwner("B", Side.Collective);
-        w.Add(Side.Hand, "E", "B", Isd);
+        w.Add(Side.Hand, "E", "B", Mandate);
         w.Move(Side.Collective, f, "C");
         w.Run(50);
         Assert.NotEmpty(w.Events<ForcedStop>());
@@ -541,7 +541,7 @@ public class ForcedStopTests
         List<GameEvent> Run()
         {
             var (w, f) = Start(ForcedStopTrigger.PaulRule);
-            int e = w.Add(Side.Hand, "E", "D", Isd);
+            int e = w.Add(Side.Hand, "E", "D", Mandate);
             w.Fleets.SetOwner("B", Side.Collective);
             w.Move(Side.Hand, e, "C");
             w.Move(Side.Collective, f, "C");
@@ -559,7 +559,7 @@ public class ForcedStopTests
         var s = World.Ships.Value;
         Assert.False(CombatStrength.IsArmed(new[] { s["Bond"], s["Barge"] }));
         Assert.True(CombatStrength.IsArmed(new[] { s["Bond"], s["Gleaner"] })); // a squadron arms a fleet
-        Assert.Equal(0, new CombatStrength(Praedra.Core.Battle.NewBattleData.Default).Of(Array.Empty<ShipClass>(), new[] { s[Isd] }));
+        Assert.Equal(0, new CombatStrength(Praedra.Core.Battle.NewBattleData.Default).Of(Array.Empty<ShipClass>(), new[] { s[Mandate] }));
     }
 
     [Fact]

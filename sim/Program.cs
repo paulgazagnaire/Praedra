@@ -60,14 +60,12 @@ internal static class SimCli
         build runs a fixed demo: a Hand yard builds two fighters, a mine and two regiments; the regiments' delivery is held at a Collective picket
         until the picket moves away (--picket-leaves <day>, default 100; "never" keeps it there). --no-forced-stop sets DeliveryForcedStop off.
         economy runs a fixed demo setup (four systems per side with mines and refineries) and prints each side's pools every 30 days.
-        Ship classes are matched ignoring case; "CR90" and "CR90 Corvette" mean the Dodger, "ISD" the Mandate.
+        Ship classes are matched ignoring case; "Corvette" means the Dodger, "Interdictor" the Subpoena.
         """;
 
     private static readonly Dictionary<string, string> Aliases = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["CR90"] = "Dodger", ["CR90 Corvette"] = "Dodger", ["Corvette"] = "Dodger",
-        ["ISD"] = "Mandate", ["Star Destroyer"] = "Mandate",
-        ["VSD"] = "Decree", ["Interdictor"] = "Subpoena",
+        ["Corvette"] = "Dodger", ["Interdictor"] = "Subpoena",
     };
 
     public static int Run(string[] args)
