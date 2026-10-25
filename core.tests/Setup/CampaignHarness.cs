@@ -16,10 +16,10 @@ internal sealed class CampaignRun
     public GameHost Host => Campaign.Host;
     public int Days { get; init; }
     /// <summary>Most completed refineries and mines one side held on any one day (the base of the income bounds).</summary>
-    public Dictionary<Side, int> PeakRefineries { get; } = new() { [Side.Empire] = 0, [Side.Alliance] = 0 };
-    public Dictionary<Side, int> PeakMines { get; } = new() { [Side.Empire] = 0, [Side.Alliance] = 0 };
-    public Dictionary<Side, int> DaysWithRefined { get; } = new() { [Side.Empire] = 0, [Side.Alliance] = 0 };
-    public Dictionary<Side, int> StartObjects { get; } = new() { [Side.Empire] = 0, [Side.Alliance] = 0 };
+    public Dictionary<Side, int> PeakRefineries { get; } = new() { [Side.Hand] = 0, [Side.Collective] = 0 };
+    public Dictionary<Side, int> PeakMines { get; } = new() { [Side.Hand] = 0, [Side.Collective] = 0 };
+    public Dictionary<Side, int> DaysWithRefined { get; } = new() { [Side.Hand] = 0, [Side.Collective] = 0 };
+    public Dictionary<Side, int> StartObjects { get; } = new() { [Side.Hand] = 0, [Side.Collective] = 0 };
     public IReadOnlyList<GameEvent> Events => Host.Game.Events;
 }
 
@@ -42,14 +42,14 @@ internal static class CampaignHarness
     {
         var c = TestCampaign.New(seed, Settings(ruleset));
         var run = new CampaignRun { Campaign = c, Days = days };
-        foreach (var side in new[] { Side.Empire, Side.Alliance }) run.StartObjects[side] = CountOwned(c.Host, side);
+        foreach (var side in new[] { Side.Hand, Side.Collective }) run.StartObjects[side] = CountOwned(c.Host, side);
         if (checkInvariants) CampaignInvariants.Check(c.Host, "day 0");
         for (int i = 0; i < days; i++)
         {
             c.Step();
             if (!checkInvariants) continue;
             CampaignInvariants.Check(c.Host, $"day {c.Game.Day}");
-            foreach (var side in new[] { Side.Empire, Side.Alliance })
+            foreach (var side in new[] { Side.Hand, Side.Collective })
             {
                 var s = SideStats.Of(c.Host, side);
                 run.PeakRefineries[side] = Math.Max(run.PeakRefineries[side], s.Refineries);
@@ -71,8 +71,8 @@ internal static class CampaignHarness
 /// </summary>
 internal static class CampaignInvariants
 {
-    private static readonly Side[] Sides = { Side.Empire, Side.Alliance };
-    private static Side Other(Side s) => s == Side.Empire ? Side.Alliance : Side.Empire;
+    private static readonly Side[] Sides = { Side.Hand, Side.Collective };
+    private static Side Other(Side s) => s == Side.Hand ? Side.Collective : Side.Hand;
 
     public static void Check(GameHost host, string where, bool fixedRegions = true)
     {
@@ -86,7 +86,7 @@ internal static class CampaignInvariants
         }
 
         // ---- support 0..100 everywhere (m2-popular-support §What it stores)
-        foreach (var (sys, a) in state.Economy.AllianceSupport) Assert.True(a is >= 0 and <= 100, $"{where}: support of {sys} is {a}");
+        foreach (var (sys, a) in state.Economy.CollectiveSupport) Assert.True(a is >= 0 and <= 100, $"{where}: support of {sys} is {a}");
 
         // ---- installed facilities within the slots (m2-slots-and-resources §Over-capacity destruction)
         foreach (var g in eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.Completed).GroupBy(o => o.System!))
@@ -139,8 +139,8 @@ internal static class CampaignInvariants
             if (o.Completed && o.Category == ObjectCategory.Regiment) Assert.True((o.System != null || o.AboardShip != 0) && o.Side != null, $"{where}: regiment {o.Id} has no place or side");
         }
         // every waiting refinery or yard is in exactly one line, and every line entry is a waiting, completed object
-        var rawLines = eco.RawLine(Side.Empire).Concat(eco.RawLine(Side.Alliance)).ToList();
-        var refinedLines = c.Empire.RefinedLine.Concat(c.Alliance.RefinedLine).ToList();
+        var rawLines = eco.RawLine(Side.Hand).Concat(eco.RawLine(Side.Collective)).ToList();
+        var refinedLines = c.Hand.RefinedLine.Concat(c.Collective.RefinedLine).ToList();
         Assert.Equal(rawLines.Count, rawLines.Distinct().Count());
         Assert.Equal(refinedLines.Count, refinedLines.Distinct().Count());
         Assert.Empty(rawLines.Intersect(refinedLines));
@@ -248,7 +248,7 @@ internal static class CampaignInvariants
             if (s.Uprising)
             {
                 Assert.True(state.SystemOwners.TryGetValue(sys, out var holder), $"{where}: uprising on neutral {sys}");
-                Assert.Equal(Other(holder), s.Rebels);                       // the rebels are the other side than the holder
+                Assert.Equal(Other(holder), s.Collective);                       // the rebels are the other side than the holder
                 Assert.True(s.ErosionDue > host.Game.Day && s.IncidentDue > host.Game.Day, $"{where}: overdue uprising timer on {sys}");
             }
             if (s.PresenceDue != 0)
@@ -270,7 +270,7 @@ internal static class CampaignInvariants
         {
             // (B5a, 2026-10-17) under derived control (the DEFAULT) a world does go neutral without a capture (its last regiment dies and its support
             // is 41..59), so the count above encodes the old rule. In its place, in every game: at the end of each Step every world's holder is the
-            // one the derivation gives. One side's standing regiments only: that side; none: the support band (Alliance at 60 and over, Empire at 40
+            // one the derivation gives. One side's standing regiments only: that side; none: the support band (Collective at 60 and over, Hand at 40
             // and under, else neutral; unpopulated: neutral); both: one of the two (the previous military side). rule: m2-control-and-capture
             // §Who holds a system (B5a section 1)
             var standing = new Dictionary<string, (bool A, bool E)>(StringComparer.Ordinal);
@@ -278,14 +278,14 @@ internal static class CampaignInvariants
                 if (o.Category == ObjectCategory.Regiment && o.Completed && o.AboardShip == 0 && o.System is { } at && o.Side is Side rs)
                 {
                     var was = standing.GetValueOrDefault(at);
-                    standing[at] = rs == Side.Alliance ? (true, was.E) : (was.A, true);
+                    standing[at] = rs == Side.Collective ? (true, was.E) : (was.A, true);
                 }
             foreach (var star in galaxy.Systems)
             {
                 if (eco.IsDestroyed(star.Name)) continue;
                 var (a, e) = standing.GetValueOrDefault(star.Name);
                 Side? holder = host.Control.HolderOf(star.Name);
-                Side? want = a && e ? holder : a ? Side.Alliance : e ? Side.Empire : host.Control.SupportSide(star.Name);
+                Side? want = a && e ? holder : a ? Side.Collective : e ? Side.Hand : host.Control.SupportSide(star.Name);
                 Assert.True(want == holder, $"{where}: {star.Name} held by {holder?.ToString() ?? "nobody"}, derived {want?.ToString() ?? "nobody"}");
                 if (a && e) Assert.NotNull(holder);
             }

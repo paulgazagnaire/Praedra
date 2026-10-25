@@ -48,7 +48,7 @@ public class SimpleAiAgentsTests
         // B2c re-pin 2026-10-17: the loyalty triggers add saved state (GameState.Loyalty, the per-system loss tallies) and one draw per capture
         // (the new owner's loyalty shift), so this game takes another course from its first capture. Unchanged after merging main (#57, #58).
         // B2e re-pin 2026-10-17: new saved character fields (injury points, leadership_adjustment 50 under the Seat of Power, the escape and
-        // heal timers) and new rules this old AI cannot switch off (the Seat of Power raises Imperial Admirals' and Generals' leadership, escape
+        // heal timers) and new rules this old AI cannot switch off (the Seat of Power raises Hand Admirals' and Generals' leadership, escape
         // delay draws at each capture, the Hurt roll on injuries) change the state and the game's course.
         // B4 re-pin 2026-10-18: setup now names fleets "Fleet n" and capital ships "<class> n" (B4 §12, display only; the ship name is saved
         // state). The game plays identically: with the naming step removed the hash is exactly B2e's 5e54e22f...e007 (checked when re-pinned).
@@ -66,7 +66,7 @@ public class SimpleAiAgentsTests
         // setup. Seed 1, 1000 days, as before (no seed change); re-measured on top of B3. The B6b garrison floor (ClassicGarrisonFloor) is off above
         // with the other AI switches; its off path keeps the B5a last-regiment guard (the hash is unchanged by that switch and by the squadrons
         // leaving a flipped world, checked 2026-10-18). Re-measured on top of B5b (main 682cd31), 2026-10-18.
-        // AssaultOnly re-pin 2026-10-18 (Dev lead): ControlRule is DEFAULT AssaultOnly until the AI copes with Derived (QA 16-seed: 0/16 Empire
+        // AssaultOnly re-pin 2026-10-18 (Dev lead): ControlRule is DEFAULT AssaultOnly until the AI copes with Derived (QA 16-seed: 0/16 Hand
         // wins), so this game no longer runs derived control (the Derived hash was 78d21c94...d3ec). It still differs from main's edab04cb...c500
         // (the branch adds saved state, ControlState, and changes that run under both rules; not separated). Seed 1, 1000 days, on main 5437780 merged.
         // Blockade pause re-pin 2026-10-18 (Dev lead; Paul's economy/02 blockade rule is the DEFAULT, Classic is the switch): SuspendedLeaveCapacity is
@@ -91,7 +91,9 @@ public class SimpleAiAgentsTests
         // Praedra names re-pin 2026-10-25 (Dev lead; Paul's order to remove every Star Wars name): systems are ordered by name, so the
         // renamed systems sort differently and seed 1 plays another game (the v6 pin was ca5216f4...e3be). All switches above unchanged.
         // QA-40 re-pin 2026-10-25 (the fixed v6 links; the rename pin was 48a89624...1270). All switches above unchanged.
-        Assert.Equal("a492bf33dc35ef0a276dd67ee67a7f683caec1f474c215b0d082e50277831d2e", h.StateHash());
+        // Side words re-pin 2026-10-25 (Dev lead, Praedra names stage 3: Side.Empire -> Side.Hand...): the state JSON names its fields, so the hash
+        // moved with the field names (QA-40 pin a492bf33...1d2e); the game is the same (a 1000-day campaign and 8 AI games print the same).
+        Assert.Equal("8b911e2bd071c5319f4038e1fe3f0a4829ac38322ba5ced97eb49ce376dd634a", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"
@@ -106,10 +108,10 @@ public class SimpleAiAgentsTests
             Assert.False(src.Contains(bad, StringComparison.Ordinal), $"SimpleAiAgents.cs mentions {bad}");
     }
 
-    // QA-8, B6c-15 in play (SimpleAiParams.LeaderMarks, DEFAULT off since 2026-10-18, QA-12; on here): while the Empire holds Charter the Emperor is kept there (Emperor home),
+    // QA-8, B6c-15 in play (SimpleAiParams.LeaderMarks, DEFAULT off since 2026-10-18, QA-12; on here): while the Hand holds Charter the Emperor is kept there (Emperor home),
     // so the Seat of Power stays on (m5-characters-and-force §Seat of Power); the six story characters are never commanders and the Emperor
     // is never a diplomat (B6c-14). Fogged Medium mirror, seeds 1 to 8, 1500 days: on 1500 of 1500 days on every seed with the
-    // switch; 15 to 103 days without it, and the Emperor held by the Alliance on seeds 3, 4 and 6 (56, 203 and 84 days).
+    // switch; 15 to 103 days without it, and the Emperor held by the Collective on seeds 3, 4 and 6 (56, 203 and 84 days).
     [Fact]
     public void LeaderMarks_EmperorHome_TheSeatOfPowerStaysOn()
     {
@@ -139,26 +141,26 @@ public class SimpleAiAgentsTests
 
     // QA-7 follow-up (2026-10-18): since #69 a duel prisoner is held aboard the captor's fleet. The AI's Rescue planner looked only at held_at
     // (a planet), so such a prisoner was never rescued; with RescueAboardFleets it targets him where that fleet stands (m5-missions TargetReason:
-    // LocationOf, the prisoner can be rescued only while his fleet stands at a system). An Empire character is captured aboard an Alliance
+    // LocationOf, the prisoner can be rescued only while his fleet stands at a system). A Hand character is captured aboard a Collective
     // fleet (Saltgreen on seed 1) on day 31. QA-13: such tries practically never succeed (8 Medium mirrors: 458 tries, 3 rescues; only at fleets
     // parked on a captor-held world: 205 tries, 0), so the switch is DEFAULT off and the default AI sends none.
     private static int RescuesAboard(SimpleAiParams p, out int prisonerId, out string? at)
     {
-        // a passive Alliance: its fleets stay put; LandPrisoners off, else New puts the prisoner ashore at the Alliance-held system (CH38)
-        var (m, h) = Match(1, p, passive: Side.Alliance, settings: Praedra.Core.Tests.Setup.DealSettings.FileOldVictory with { Characters = new CharacterParams { LandPrisoners = false } });
+        // a passive Collective: its fleets stay put; LandPrisoners off, else New puts the prisoner ashore at the Collective-held system (CH38)
+        var (m, h) = Match(1, p, passive: Side.Collective, settings: Praedra.Core.Tests.Setup.DealSettings.FileOldVictory with { Characters = new CharacterParams { LandPrisoners = false } });
         m.RunTo(30);
         var cp = h.Characters.Params;
-        // the smallest Alliance fleet standing away from the HQ (Saltgreen on seed 1; at the HQ the odds stay below the AI's floor)
-        var fleet = h.Game.State.Fleets.Values.Where(f => f.Side == Side.Alliance && f.At != null && f.At != h.HqSystem && f.Ships.Count > 0)
+        // the smallest Collective fleet standing away from the HQ (Saltgreen on seed 1; at the HQ the odds stay below the AI's floor)
+        var fleet = h.Game.State.Fleets.Values.Where(f => f.Side == Side.Collective && f.At != null && f.At != h.HqSystem && f.Ships.Count > 0)
             .OrderBy(f => f.Ships.Count).ThenBy(f => f.Id).First();
-        var prisoner = h.Characters.InPlay.Where(c => c.Side == Side.Empire && c.Status == CharacterStatus.Free && c.Transit == null && c.Id != cp.Emperor
+        var prisoner = h.Characters.InPlay.Where(c => c.Side == Side.Hand && c.Status == CharacterStatus.Free && c.Transit == null && c.Id != cp.Emperor
                                                       && !h.Missions.IsOnMission(c.Id))
             .OrderBy(c => c.Id).First();
         bool done = false;
         h.Game.RegisterHook("5.2", ctx =>
         {
             if (done) return; done = true;
-            h.Characters.Capture(ctx, prisoner, Side.Alliance, null, "test", canEscape: false, unit: new CaptorUnit(fleet.Id, fleet.At, MissionInvolved: true));
+            h.Characters.Capture(ctx, prisoner, Side.Collective, null, "test", canEscape: false, unit: new CaptorUnit(fleet.Id, fleet.At, MissionInvolved: true));
         });
         m.Step();
         Assert.Equal((CharacterStatus.Captured, fleet.Id, (string?)null), (prisoner.Status, prisoner.HeldAboard, prisoner.HeldAt));
@@ -166,7 +168,7 @@ public class SimpleAiAgentsTests
         for (int d = 0; d < 150 && rescues == 0; d++)
         {
             m.Step();
-            rescues += m.Empire.Submitted.Count(o => o.Kind == "MissionRescue" && o.Detail.Contains($"to {fleet.At} (character {prisoner.Id})", StringComparison.Ordinal));
+            rescues += m.Hand.Submitted.Count(o => o.Kind == "MissionRescue" && o.Detail.Contains($"to {fleet.At} (character {prisoner.Id})", StringComparison.Ordinal));
         }
         prisonerId = prisoner.Id; at = fleet.At;
         return rescues;
@@ -182,10 +184,10 @@ public class SimpleAiAgentsTests
         Assert.True(without == 0, $"DEFAULT (off): {without} Rescue of {id} held aboard a fleet at {at}");
     }
 
-    // ai/07 §7 (Empire: belief-map search with spies), m5-missions (Espionage writes the ground and HqHere), m5-fog-and-hq §N5. Against an
-    // Alliance that gives no orders the fogged Empire sends its spies to the best HQ candidates and takes the HQ. Measured on the 360-system
+    // ai/07 §7 (Hand: belief-map search with spies), m5-missions (Espionage writes the ground and HqHere), m5-fog-and-hq §N5. Against an
+    // Collective that gives no orders the fogged Hand sends its spies to the best HQ candidates and takes the HQ. Measured on the 360-system
     // map (seed 1): KnownHq day 299, won day 352. On v5 the spies never find the HQ (Cutbank, beside Solacia, ranks low on the belief map: the
-    // Alliance would not hide there), on any of seeds 1 to 8, and the HQ falls to conquest; the old target (KnownHq by day 400) stays the
+    // Collective would not hide there), on any of seeds 1 to 8, and the HQ falls to conquest; the old target (KnownHq by day 400) stays the
     // trainer's.
     // Over seeds 1 to 8 (MultiSeed), the day the HQ falls:
     //   8a378a8 (pre-B2e): 508, 634, 811, 514, 514, 616, 796, 787   (looks 15 to 36)
@@ -194,14 +196,14 @@ public class SimpleAiAgentsTests
     // of 20 looks in 1400 days) and at most 1 order in 20 is rejected.
     // Replaces (AI trainer, 2026-10-18, the Dev lead's ask) the seed-1 limit (1400, 700, then 800 on B2e), which moved with every new draw.
     [Fact]
-    public void FoggedEmpire_AgainstPassiveAlliance_SpiesSearchAndTheHqFalls()
+    public void FoggedHand_AgainstPassiveCollective_SpiesSearchAndTheHqFalls()
     {
         var games = MultiSeed.Play(MultiSeed.OneToEight, seed =>
         {
-            var (m, h) = Match(seed, Fog, passive: Side.Alliance);
+            var (m, h) = Match(seed, Fog, passive: Side.Collective);
             while (h.Game.Day < 1000 && h.Victory.Winner == null) m.Step();
-            var looks = h.Game.Events.OfType<MissionStarted>().Count(e => e.Side == Side.Empire && e.MissionKind is MissionKind.Espionage or MissionKind.Reconnaissance);
-            bool fell = h.Victory.Winner == Side.Empire && h.Game.Events.Any(e => e is HqDestroyed);
+            var looks = h.Game.Events.OfType<MissionStarted>().Count(e => e.Side == Side.Hand && e.MissionKind is MissionKind.Espionage or MissionKind.Reconnaissance);
+            bool fell = h.Victory.Winner == Side.Hand && h.Game.Events.Any(e => e is HqDestroyed);
             return (Seed: seed, Fell: fell, h.Game.Day, Looks: looks, m.TotalSent, m.TotalRejected);
         });
         foreach (var g in games) _out.WriteLine($"seed {g.Seed}: HQ fell {g.Fell} day {g.Day}; looks {g.Looks}; orders {g.TotalSent} rejected {g.TotalRejected}");
@@ -213,36 +215,36 @@ public class SimpleAiAgentsTests
         }
     }
 
-    // A moved HQ is found again (ai/07 §7; m5-fog-and-hq §F6 MoveHq, §N5). Against a passive Alliance the test moves the HQ on day 0 (a
-    // MoveHq order for the Alliance) to the held system with HqMinLanes lanes or more that is farthest by travel; the Empire's picture must
-    // later show the HQ at its new system, or the Empire takes it there. On the 360-system map the Empire knew the HQ first (seed 1: known
+    // A moved HQ is found again (ai/07 §7; m5-fog-and-hq §F6 MoveHq, §N5). Against a passive Collective the test moves the HQ on day 0 (a
+    // MoveHq order for the Collective) to the held system with HqMinLanes lanes or more that is farthest by travel; the Hand's picture must
+    // later show the HQ at its new system, or the Hand takes it there. On the 360-system map the Hand knew the HQ first (seed 1: known
     // day 139, The Flats re-found 887 days after the move); on v5 the spies never find the first HQ (above), so the HQ moves before the
-    // Empire knows it.
+    // Hand knows it.
     // Over seeds 1 to 8 (MultiSeed; Cutbank -> The Rafts on every seed), the day the moved HQ is re-found or taken:
     //   8a378a8 (pre-B2e): taken 838, 781, 1480, 1006, 985, 982, 640, 724   (never re-found by a look)
     //   9ec544f (B2e):     taken 637, 886, 724, 682, re-found 1136, re-found 1237, taken 1063, 730
-    // Floor: re-found or taken within 1300 days on at least 6 of 8. The spies seldom re-find it: what this pins is that the Empire gets
+    // Floor: re-found or taken within 1300 days on at least 6 of 8. The spies seldom re-find it: what this pins is that the Hand gets
     // the moved HQ in the end, mostly by conquest.
     // Replaces (AI trainer, 2026-10-18, the Dev lead's ask) the seed-1 limit (1100, then 1200).
     [Fact]
-    public void FoggedEmpire_RefindsAMovedHq()
+    public void FoggedHand_RefindsAMovedHq()
     {
         var games = MultiSeed.Play(MultiSeed.OneToEight, seed =>
         {
-            var (m, h) = Match(seed, Fog, passive: Side.Alliance);
+            var (m, h) = Match(seed, Fog, passive: Side.Collective);
             string from = h.HqSystem!; var g = h.Data.Galaxy;
             string dest = g.Systems.Select(s => s.Name)
-                .Where(n => n != from && h.Fleets.OwnerOf(n) == Side.Alliance && g.NearOf(g.Get(n).Index).Count >= Fog.HqMinLanes)
+                .Where(n => n != from && h.Fleets.OwnerOf(n) == Side.Collective && g.NearOf(g.Get(n).Index).Count >= Fog.HqMinLanes)
                 .Select(n => (n, p: h.Fleets.FindPath(from, n, 100))).Where(t => t.p.Ok)
                 .OrderByDescending(t => t.p.TotalTicks).ThenBy(t => t.n, StringComparer.Ordinal).First().n;
-            h.Fog.SubmitMoveHq(Side.Alliance, dest);
+            h.Fog.SubmitMoveHq(Side.Collective, dest);
             int limit = h.Game.Day + 1300, refound = -1;
             while (h.Game.Day < limit && h.Victory.Winner == null)
             {
                 m.Step();
-                if (refound < 0 && h.HqSystem == dest && h.Fog.KnownHq(Side.Empire)?.System == dest) refound = h.Game.Day;
+                if (refound < 0 && h.HqSystem == dest && h.Fog.KnownHq(Side.Hand)?.System == dest) refound = h.Game.Day;
             }
-            bool tookIt = h.Victory.Winner == Side.Empire && h.Game.Events.OfType<HqDestroyed>().Any();
+            bool tookIt = h.Victory.Winner == Side.Hand && h.Game.Events.OfType<HqDestroyed>().Any();
             bool departed = h.Game.Events.Any(e => e is HqDeparted d && d.From == from);
             return (Seed: seed, From: from, Dest: dest, Departed: departed, Refound: refound, TookIt: tookIt, h.Game.Day, m.TotalSent, m.TotalRejected);
         });
@@ -265,13 +267,13 @@ public class SimpleAiAgentsTests
         var (m, h) = Match(1, Fog);
         var held = new HashSet<Side>();
         // v5 re-pin 2026-10-16 (Paul chose re-pin on the map PR; the AI trainer owns restoring the old target): window 200 -> 700 days. On
-        // the bigger map the Empire's first strike fleet strong enough for an officer (OfficerFleetStrength) forms later than day 200.
+        // the bigger map the Hand's first strike fleet strong enough for an officer (OfficerFleetStrength) forms later than day 200.
         while (h.Game.Day < 700 && h.Victory.Winner == null)
         {
             m.Step();
             foreach (var id in h.Game.State.Characters.SystemGenerals.Values) if (h.Characters.Get(id) is { } c) held.Add(c.Side);
         }
-        foreach (var side in new[] { Side.Empire, Side.Alliance })
+        foreach (var side in new[] { Side.Hand, Side.Collective })
         {
             int attach = Sent(m, $"{side} AttachCharacter"), general = Sent(m, $"{side} AssignSystemGeneral");
             int onPost = h.Characters.InPlay.Count(c => c.Side == side && c.Post != CharacterPost.None);
@@ -295,9 +297,9 @@ public class SimpleAiAgentsTests
     {
         var (m, h) = Match(seed, Fog);
         m.RunTo(600);
-        int eMissions = m.Sent.Where(kv => kv.Key.StartsWith("Empire Mission", StringComparison.Ordinal)).Sum(kv => kv.Value);
-        int aMissions = m.Sent.Where(kv => kv.Key.StartsWith("Alliance Mission", StringComparison.Ordinal)).Sum(kv => kv.Value);
-        _out.WriteLine($"seed {seed} day {h.Game.Day} winner {h.Victory.Winner}; missions Empire {eMissions} Alliance {aMissions}; orders {m.TotalSent} rejected {m.TotalRejected}: " +
+        int eMissions = m.Sent.Where(kv => kv.Key.StartsWith("Hand Mission", StringComparison.Ordinal)).Sum(kv => kv.Value);
+        int aMissions = m.Sent.Where(kv => kv.Key.StartsWith("Collective Mission", StringComparison.Ordinal)).Sum(kv => kv.Value);
+        _out.WriteLine($"seed {seed} day {h.Game.Day} winner {h.Victory.Winner}; missions Hand {eMissions} Collective {aMissions}; orders {m.TotalSent} rejected {m.TotalRejected}: " +
                        string.Join(", ", m.Rejected.Select(kv => kv.Key + " " + kv.Value)));
         Assert.True(eMissions > 0 && aMissions > 0);
         Assert.True(m.TotalRejected * 20 <= m.TotalSent, $"{m.TotalRejected} of {m.TotalSent} orders rejected");
@@ -307,7 +309,7 @@ public class SimpleAiAgentsTests
     // mask), B6b §9 (it keeps at least 8 special forces), m5-missions §Special forces (a special force is a team member only of the kinds whose
     // record mask holds its class bit). With SimpleAiParams.SpecialForceAgents (DEFAULT off) on, each side keeps SpecialForcesWanted special forces
     // of its agent classes and sends them alone on planned missions; off, no special force goes on a mission (the HQ-hunt droids are Hard's).
-    // Measured on 146027a + this change, seeds 1 to 4, fog, 1000 days (special-force missions Empire / Alliance): 12/2, 0/1, 18/3, 16/3;
+    // Measured on 146027a + this change, seeds 1 to 4, fog, 1000 days (special-force missions Hand / Collective): 12/2, 0/1, 18/3, 16/3;
     // kinds Subdue (most), Espionage, Abduction. Floor: both sides send one on at least 3 of 4 seeds; only agent classes go; at most 1
     // order in 20 rejected. Off: none on seed 1. AI Recruitment (QA-12, MaxRecruiters 2) is off here: with it on, the recruited minors take
     // most jobs and the special forces go 0/0, 6/0, 1/0, 4/1 by day 1000 (1c3c353), so this test measures the special forces without it.
@@ -324,15 +326,15 @@ public class SimpleAiAgentsTests
             var built = h.Game.Events.OfType<UnitCompleted>().ToDictionary(e => e.Object, e => e.Class); // a special force on a mission was built in play
             var classes = sf.SelectMany(e => e.SpecialForces.Items).Select(id => built.GetValueOrDefault(id, "start force")).Distinct().OrderBy(c => c, StringComparer.Ordinal).ToList();
             bool agentClassesOnly = sf.All(e => e.SpecialForces.Items.All(id => built.TryGetValue(id, out var c) && p.AgentForceClasses(e.Side).Contains(c)));
-            return (Seed: seed, Empire: sf.Count(e => e.Side == Side.Empire), Alliance: sf.Count(e => e.Side == Side.Alliance),
+            return (Seed: seed, Hand: sf.Count(e => e.Side == Side.Hand), Collective: sf.Count(e => e.Side == Side.Collective),
                 Kinds: string.Join(",", sf.Select(e => e.MissionKind).Distinct().OrderBy(k => k)), Classes: string.Join(",", classes),
                 AgentOnly: agentClassesOnly, m.TotalSent, m.TotalRejected);
         });
         foreach (var g in games)
-            _out.WriteLine($"seed {g.Seed}: special-force missions Empire {g.Empire} Alliance {g.Alliance}; kinds {g.Kinds}; classes {g.Classes}; orders {g.TotalSent} rejected {g.TotalRejected}");
+            _out.WriteLine($"seed {g.Seed}: special-force missions Hand {g.Hand} Collective {g.Collective}; kinds {g.Kinds}; classes {g.Classes}; orders {g.TotalSent} rejected {g.TotalRejected}");
         Assert.All(games, g => Assert.True(g.AgentOnly, $"seed {g.Seed}: a special force outside the agent classes went on a mission"));
         Assert.All(games, g => Assert.True(g.TotalRejected * 20 <= g.TotalSent, $"seed {g.Seed}: {g.TotalRejected} of {g.TotalSent} orders rejected"));
-        Assert.True(games.Count(g => g.Empire > 0 && g.Alliance > 0) >= 3, "both sides send special forces on at least 3 of 4 seeds");
+        Assert.True(games.Count(g => g.Hand > 0 && g.Collective > 0) >= 3, "both sides send special forces on at least 3 of 4 seeds");
 
         var (mo, ho) = Match(1, p with { SpecialForceAgents = false });
         mo.RunTo(1000);
@@ -341,10 +343,10 @@ public class SimpleAiAgentsTests
 
     // QA-12, B6c §7 list item 1 (Recruitment: up to 2 running while the side has anyone left to recruit, leadership at least 80) and the Emperor-
     // home planner's start test (ctrl+0xa4 == 0: nobody left to recruit). m5-missions §6 Recruitment places the recruit at the target system.
-    // Seed 1, fog, leader marks on, by day 700: the Empire's pool (19) empties on day 280, the Alliance's (24) on day 357; at most 2 running per
-    // side; the Seat of Power is on 360 of the 360 days from 60 days after the Empire's pool empties.
+    // Seed 1, fog, leader marks on, by day 700: the Hand's pool (19) empties on day 280, the Collective's (24) on day 357; at most 2 running per
+    // side; the Seat of Power is on 360 of the 360 days from 60 days after the Hand's pool empties.
     // Checked: never more than MaxRecruiters Recruitments running per side; each recruiter has leadership at least RecruitMinLeadership when
-    // sent; both pools empty by day 700; no Recruitment is sent once a side's pool is empty; after the Empire's pool empties the Seat of Power is on.
+    // sent; both pools empty by day 700; no Recruitment is sent once a side's pool is empty; after the Hand's pool empties the Seat of Power is on.
     [Fact]
     public void Recruitment_TwoAtATime_UntilThePoolIsEmpty_ThenTheEmperorGoesHome()
     {
@@ -364,34 +366,34 @@ public class SimpleAiAgentsTests
             {
                 running[e.Mission] = e.Side;
                 if (e.Characters.Items.Any(id => h.Characters.EffectiveSkill(h.Characters.Get(id)!, Skill.Leadership) < p.RecruitMinLeadership)) weak++;
-                if ((e.Side == Side.Empire ? emptyE : emptyA) != null) afterEmpty++;
+                if ((e.Side == Side.Hand ? emptyE : emptyA) != null) afterEmpty++;
             }
             foreach (var e in fresh.OfType<MissionEnded>()) running.Remove(e.Mission);
-            maxE = Math.Max(maxE, running.Values.Count(s => s == Side.Empire));
-            maxA = Math.Max(maxA, running.Values.Count(s => s == Side.Alliance));
-            if (emptyE == null && h.Characters.RecruitPoolOf(Side.Empire).Count == 0) emptyE = today;
-            if (emptyA == null && h.Characters.RecruitPoolOf(Side.Alliance).Count == 0) emptyA = today;
+            maxE = Math.Max(maxE, running.Values.Count(s => s == Side.Hand));
+            maxA = Math.Max(maxA, running.Values.Count(s => s == Side.Collective));
+            if (emptyE == null && h.Characters.RecruitPoolOf(Side.Hand).Count == 0) emptyE = today;
+            if (emptyA == null && h.Characters.RecruitPoolOf(Side.Collective).Count == 0) emptyA = today;
             if (emptyE is int d0 && today > d0 + 60) { seatDays++; if (h.Characters.SeatOfPowerOn) seatOn++; }
         }
-        _out.WriteLine($"pools empty: Empire day {emptyE}, Alliance day {emptyA}; most running {maxE}/{maxA}; weak recruiters {weak}; sent after empty {afterEmpty}; Seat of Power on {seatOn} of {seatDays} days");
+        _out.WriteLine($"pools empty: Hand day {emptyE}, Collective day {emptyA}; most running {maxE}/{maxA}; weak recruiters {weak}; sent after empty {afterEmpty}; Seat of Power on {seatOn} of {seatDays} days");
         Assert.True(maxE <= p.MaxRecruiters && maxA <= p.MaxRecruiters, $"{maxE}/{maxA} Recruitments running at once");
         Assert.Equal(0, weak);
         Assert.Equal(0, afterEmpty);
-        Assert.True(emptyE != null && emptyA != null, $"pools not empty by day 700: Empire {emptyE}, Alliance {emptyA}");
-        Assert.True(seatDays > 0 && seatOn * 20 >= seatDays * 19, $"Seat of Power on {seatOn} of {seatDays} days after the Empire's pool emptied");
+        Assert.True(emptyE != null && emptyA != null, $"pools not empty by day 700: Hand {emptyE}, Collective {emptyA}");
+        Assert.True(seatDays > 0 && seatOn * 20 >= seatDays * 19, $"Seat of Power on {seatOn} of {seatDays} days after the Hand's pool emptied");
     }
 
-    // Key hunt (SimpleAiParams.KeyHunt, DEFAULT on; QA round 29). Fog, the Empire passive, seeds 1 to 4 (MultiSeed). On day 1 a test hook
-    // hands Charter to the Alliance (DebugApplyTroops: its place term; standard victory, the default settings), so the Alliance is ahead and
-    // still needs the Emperor and Vader captured. With the hunt its spies look at systems its own picture shows Imperial-held (or where its
-    // picture last showed a key); the Alliance plans no other Espionage, so without the hunt it sends none. rule: m5-fog-and-hq §N8 (the AI
+    // Key hunt (SimpleAiParams.KeyHunt, DEFAULT on; QA round 29). Fog, the Hand passive, seeds 1 to 4 (MultiSeed). On day 1 a test hook
+    // hands Charter to the Collective (DebugApplyTroops: its place term; standard victory, the default settings), so the Collective is ahead and
+    // still needs the Emperor and Vader captured. With the hunt its spies look at systems its own picture shows Hand-held (or where its
+    // picture last showed a key); the Collective plans no other Espionage, so without the hunt it sends none. rule: m5-fog-and-hq §N8 (the AI
     // reads only its side's knowledge), §F1 group D (an Espionage success writes the characters present).
     // Measured by day 800 (looks / first day a picture showed a key / Abductions at keys), AI trainer 2026-10-18 on main 4774ff7 plus the hunt:
     //   seed 1: 58 / never / 0;  seed 2: 68 / 642 / 5;  seed 3: 53 / 276 / 4;  seed 4: 40 / never / 0.  Off: 0 looks.
-    // The Empire keeps all its ~140 systems here, so the sweep is slow; in a real endgame it holds far fewer.
-    // Floor: at least 20 looks on every seed, none at a system the picture did not show Imperial (or a key at); a key seen on at least 1 of 4.
+    // The Hand keeps all its ~140 systems here, so the sweep is slow; in a real endgame it holds far fewer.
+    // Floor: at least 20 looks on every seed, none at a system the picture did not show Hand (or a key at); a key seen on at least 1 of 4.
     [Fact]
-    public void KeyHunt_AheadTheAllianceLooksForTheEmperorAndVader_WhereItsPictureSays()
+    public void KeyHunt_AheadTheCollectiveLooksForTheEmperorAndVader_WhereItsPictureSays()
     {
         Assert.True(new SimpleAiParams().KeyHunt);
         var on = MultiSeed.Play(new[] { 1, 2, 3, 4 }, seed => Hunt(seed, Fog));
@@ -409,39 +411,39 @@ public class SimpleAiAgentsTests
 
     private static (int Seed, int Looks, int OffTarget, int? KeySeenDay, int Abductions) Hunt(int seed, SimpleAiParams p)
     {
-        var (m, h) = Match(seed, p, passive: Side.Empire, settings: new GameSettings()); // standard victory: Charter alone does not win
+        var (m, h) = Match(seed, p, passive: Side.Hand, settings: new GameSettings()); // standard victory: Charter alone does not win
         var cp = h.Characters.Params; var keys = new[] { cp.Emperor, cp.Vader };
         bool done = false;
-        h.Game.RegisterHook("5.2", ctx => { if (!done) { done = true; h.Control.DebugApplyTroops(ctx, "Charter", Side.Alliance, "Militia", 10); } });
+        h.Game.RegisterHook("5.2", ctx => { if (!done) { done = true; h.Control.DebugApplyTroops(ctx, "Charter", Side.Collective, "Militia", 10); } });
         int looks = 0, offTarget = 0, abductions = 0, seen = 0; int? keySeen = null;
         while (h.Game.Day < 800 && h.Victory.Winner == null)
         {
-            var view = h.Fog.ViewFor(Side.Alliance);
+            var view = h.Fog.ViewFor(Side.Collective);
             var pictured = view.CharactersSeen().Where(x => keys.Contains(x.Character.Id)).Select(x => x.System).ToHashSet(StringComparer.Ordinal); // lookup only
-            var imperial = h.Data.Galaxy.Systems.Select(x => x.Name).Where(n => view.Picture(n)?.Owner?.Value.Owner == Side.Empire).ToHashSet(StringComparer.Ordinal); // lookup only
+            var hand = h.Data.Galaxy.Systems.Select(x => x.Name).Where(n => view.Picture(n)?.Owner?.Value.Owner == Side.Hand).ToHashSet(StringComparer.Ordinal); // lookup only
             m.Step();
             var fresh = h.Game.Events.Skip(seen).ToList(); seen += fresh.Count;
-            foreach (var e in fresh.OfType<MissionStarted>().Where(e => e.Side == Side.Alliance))
+            foreach (var e in fresh.OfType<MissionStarted>().Where(e => e.Side == Side.Collective))
             {
-                if (e.MissionKind == MissionKind.Espionage) { looks++; if (!imperial.Contains(e.Target) && !pictured.Contains(e.Target)) offTarget++; }
+                if (e.MissionKind == MissionKind.Espionage) { looks++; if (!hand.Contains(e.Target) && !pictured.Contains(e.Target)) offTarget++; }
                 if (e.MissionKind == MissionKind.Abduction && e.TargetCharacter is int t && keys.Contains(t)) abductions++;
             }
-            if (keySeen == null && h.Fog.ViewFor(Side.Alliance).CharactersSeen().Any(x => keys.Contains(x.Character.Id))) keySeen = h.Game.Day;
+            if (keySeen == null && h.Fog.ViewFor(Side.Collective).CharactersSeen().Any(x => keys.Contains(x.Character.Id))) keySeen = h.Game.Day;
         }
         return (seed, looks, offTarget, keySeen, abductions);
     }
 
     // rule: m5-missions §6a.3 (a key target's chance is min(table, cap_percent)): with AbductionKeyCap (DEFAULT on) the planner reads the
     // Emperor's and Vader's Abduction chance as the core rolls it, so the odds floor (MissionMinOddsPercent) applies; off, the table alone.
-    // Seed 1, the Alliance's best fighter at day 0 against the Emperor: 95 off, 2 on (the key-target file: Emperor 2, Vader 4).
+    // Seed 1, the Collective's best fighter at day 0 against the Emperor: 95 off, 2 on (the key-target file: Emperor 2, Vader 4).
     [Fact]
     public void AbductionOdds_OfAKeyTarget_ReadTheCap()
     {
         Assert.True(new SimpleAiParams().AbductionKeyCap);
         var (_, h) = Match(1, Fog);
         var cp = h.Characters.Params;
-        var best = h.Characters.InPlay.Where(c => c.Side == Side.Alliance).OrderByDescending(c => h.Characters.EffectiveSkill(c, Skill.Combat)).ThenBy(c => c.Id).First();
-        var on = new SimpleAi(h, Side.Alliance, Fog); var off = new SimpleAi(h, Side.Alliance, Fog with { AbductionKeyCap = false });
+        var best = h.Characters.InPlay.Where(c => c.Side == Side.Collective).OrderByDescending(c => h.Characters.EffectiveSkill(c, Skill.Combat)).ThenBy(c => c.Id).First();
+        var on = new SimpleAi(h, Side.Collective, Fog); var off = new SimpleAi(h, Side.Collective, Fog with { AbductionKeyCap = false });
         Assert.True(h.Missions.IsKeyTarget(MissionKind.Abduction, cp.Emperor, out int capE));
         Assert.True(h.Missions.IsKeyTarget(MissionKind.Abduction, cp.Vader, out int capV));
         int e1 = on.AbductionPercentEstimate(best, cp.Emperor, "Charter"), e0 = off.AbductionPercentEstimate(best, cp.Emperor, "Charter");

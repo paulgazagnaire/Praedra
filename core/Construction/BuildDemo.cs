@@ -7,9 +7,9 @@ using Praedra.Core.Ships;
 namespace Praedra.Core.Construction;
 
 /// <summary>
-/// A small deterministic build scenario on the real galaxy, for the headless runner and the soak test: an Empire home with a
+/// A small deterministic build scenario on the real galaxy, for the headless runner and the soak test: a Hand home with a
 /// shipyard, a training facility, two construction yards and two mine and refinery pairs builds fighters, a mine and regiments;
-/// the regiments are sent to a far system along a path that passes a Rebel picket, which holds them (D2) until it moves away.
+/// the regiments are sent to a far system along a path that passes a Collective picket, which holds them (D2) until it moves away.
 /// Not a rule and not a starting position. Setup draws no random numbers; the home's four mines and refineries draw their first cycles.
 /// </summary>
 public sealed class BuildDemo
@@ -23,7 +23,7 @@ public sealed class BuildDemo
     public required EconomyModule Economy { get; init; }
     public required ConstructionModule Construction { get; init; }
     public required Galaxy Galaxy { get; init; }
-    /// <summary>The Rebel picket (fleet id), the system it sits at, and the system it moves to when released.</summary>
+    /// <summary>The Collective picket (fleet id), the system it sits at, and the system it moves to when released.</summary>
     public required int Picket { get; init; }
     public required string PicketAt { get; init; }
     public required string PicketMovesTo { get; init; }
@@ -34,10 +34,10 @@ public sealed class BuildDemo
         var d = Setup.GameData.Load(repoRoot); // the composition root's data loader
         var (galaxy, ships, blockade, slots, costs) = (d.Galaxy, d.Ships, d.Blockade, d.Slots, d.Costs);
         var game = new Game(seed);
-        // The demo shows a delivery held by an enemy fleet on its path. The Alliance has no gravity-well ship, so the demo keeps the retired
+        // The demo shows a delivery held by an enemy fleet on its path. The Collective has no gravity-well ship, so the demo keeps the retired
         // AnyArmedFleet trigger (m1-forced-stop-and-blockade; the game's DEFAULT is GravityWellShip since 2026-10-16).
         var fleets = FleetModule.Attach(game, galaxy, ships, blockade, ForcedStopTrigger.AnyArmedFleet);
-        // Autoscrap is out of reach: the Rebel picket is a fleet ship and pays upkeep (m3-fleets), but the demo gives the Alliance no mine or
+        // Autoscrap is out of reach: the Collective picket is a fleet ship and pays upkeep (m3-fleets), but the demo gives the Collective no mine or
         // refinery, so its capacity is 0 and the picket would be scrapped on day 10. The demo is about deliveries, not about overdraft.
         var eco = EconomyModule.Attach(game, galaxy, slots, costs, fleets, new EconomyParams { ScrapPeriod = 1_000_000 });
         eco.IncidentsEnabled = false;
@@ -45,8 +45,8 @@ public sealed class BuildDemo
 
         foreach (var s in new[] { HomeSystem, NearSystem, FarSystem })
         {
-            fleets.SetOwner(s, Side.Empire);
-            eco.SetAllianceSupport(s, 0); // Empire support 100
+            fleets.SetOwner(s, Side.Hand);
+            eco.SetCollectiveSupport(s, 0); // Hand support 100
         }
         eco.AddFacility(HomeSystem, FacilityKind.OrbitalShipyard);
         eco.AddFacility(HomeSystem, FacilityKind.TrainingFacility);
@@ -54,17 +54,17 @@ public sealed class BuildDemo
         eco.AddFacility(HomeSystem, FacilityKind.ConstructionYard);
         for (int i = 0; i < 2; i++) { eco.AddFacility(HomeSystem, FacilityKind.Mine); eco.AddFacility(HomeSystem, FacilityKind.Refinery); }
         eco.SetupNewGame();
-        eco.SetPools(Side.Empire, 0, 1000); // after SetupNewGame, which sets the starting stockpile
+        eco.SetPools(Side.Hand, 0, 1000); // after SetupNewGame, which sets the starting stockpile
 
         var path = fleets.FindPath(HomeSystem, FarSystem, 100).Names(galaxy);
         string at = path[1];
         int atIndex = galaxy.Systems.ToList().FindIndex(s => s.Name == at);
         string away = galaxy.NearOf(atIndex).Select(n => galaxy.Systems[n].Name).Where(n => !path.Contains(n)).OrderBy(n => n, StringComparer.Ordinal).First();
-        int picket = fleets.AddFleet(Side.Alliance, "Rebel Picket", new[] { "Dodger" }, at);
+        int picket = fleets.AddFleet(Side.Collective, "Collective Picket", new[] { "Dodger" }, at);
 
-        build.SubmitBuild(Side.Empire, HomeSystem, YardFamily.Shipyard, "Gleaner", 2);
-        build.SubmitBuild(Side.Empire, HomeSystem, YardFamily.Training, "Pacifiers", 2, FarSystem);
-        build.SubmitBuild(Side.Empire, HomeSystem, YardFamily.Construction, "Mine", 1, NearSystem);
+        build.SubmitBuild(Side.Hand, HomeSystem, YardFamily.Shipyard, "Gleaner", 2);
+        build.SubmitBuild(Side.Hand, HomeSystem, YardFamily.Training, "Pacifiers", 2, FarSystem);
+        build.SubmitBuild(Side.Hand, HomeSystem, YardFamily.Construction, "Mine", 1, NearSystem);
         return new BuildDemo
         {
             Game = game, Fleets = fleets, Economy = eco, Construction = build, Galaxy = galaxy,

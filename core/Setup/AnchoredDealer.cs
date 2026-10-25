@@ -17,33 +17,33 @@ public sealed record DealParams
 {
     /// <summary>The HQ is at least this many map units (straight line) from Charter. Proposal, m5-setup-and-victory §P1 HQ pick (HqMinDistance; setup-victory/10 v5 banner, replaces "5 lane hops" and "2 lanes").</summary>
     public int HqMinDistance { get; init; } = 200;
-    /// <summary>The totals table is written for this many systems; totals scale by (systems in sectors) / this, rounded half up. DEFAULT, setup-victory/10 v5 banner (keeps the Classic share; Medium: Empire 90 -> 138, Alliance 25 -> 38 at 553 in sectors).</summary>
+    /// <summary>The totals table is written for this many systems; totals scale by (systems in sectors) / this, rounded half up. DEFAULT, setup-victory/10 v5 banner (keeps the Classic share; Medium: Hand 90 -> 138, Collective 25 -> 38 at 553 in sectors).</summary>
     public int TotalsBaseSystems { get; init; } = 360;
     /// <summary>A pocket grows only into systems within this many map units of one of its systems. Proposal, m5-setup-and-victory §Mode Anchored step 6 (setup-victory/data/deal_day_one.py v5: 90).</summary>
     public int PocketReach { get; init; } = 90;
-    /// <summary>Pocket growth prefers systems far from the Empire: key = distance to the pocket x 100 - this x distance to the Empire. Proposal, deal_day_one.py v5 (0.15).</summary>
+    /// <summary>Pocket growth prefers systems far from the Hand: key = distance to the pocket x 100 - this x distance to the Hand. Proposal, deal_day_one.py v5 (0.15).</summary>
     public int PocketAwayPercent { get; init; } = 15;
-    /// <summary>Score bias of a system whose planets-file affiliation is Empire. Proposal, m5-setup-and-victory §Mode Blocs step 2 (EmpireAffiliationBias).</summary>
-    public int EmpireAffiliationBias { get; init; } = -15;
-    /// <summary>Score bias of a Rebel-friendly system. Proposal, m5-setup-and-victory §Mode Blocs step 2 (RebelFriendlyBias).</summary>
-    public int RebelFriendlyBias { get; init; } = 15;
-    /// <summary>Alliance pockets may grow into group core. Proposal, m5-setup-and-victory §Mode Blocs step 5 (AlliancePocketsMayEnterCore).</summary>
-    public bool AlliancePocketsMayEnterCore { get; init; }
-    /// <summary>One in this many of the Empire's bloc systems is a scattered outpost instead. Decided Paul 2026-10-16, m5-setup-and-victory §Mode Anchored step 3 (needE / 10).</summary>
-    public int EmpireScatterDivisor { get; init; } = 10;
-    /// <summary>One in this many of the Alliance's dealt systems is a scattered rim cell instead. Decided Paul 2026-10-16, m5-setup-and-victory §Mode Anchored step 3 (needA / 6).</summary>
-    public int AllianceScatterDivisor { get; init; } = 6;
-    /// <summary>Alliance extra seeds. Proposal, m5-setup-and-victory §Mode Anchored step 5 (min(3, needA)).</summary>
-    public int AllianceExtraSeeds { get; init; } = 3;
-    /// <summary>Empire bloc jitter j = rand(0..299). Proposal, m5-setup-and-victory §Mode Anchored step 4.</summary>
-    public int EmpireJitterMax { get; init; } = 299;
-    /// <summary>Alliance seed jitter J = rand(0..99). Proposal, m5-setup-and-victory §Mode Anchored step 5.</summary>
-    public int AllianceJitterMax { get; init; } = 99;
+    /// <summary>Score bias of a system whose planets-file affiliation is Hand. Proposal, m5-setup-and-victory §Mode Blocs step 2 (HandAffiliationBias).</summary>
+    public int HandAffiliationBias { get; init; } = -15;
+    /// <summary>Score bias of a Collective-friendly system. Proposal, m5-setup-and-victory §Mode Blocs step 2 (CollectiveFriendlyBias).</summary>
+    public int CollectiveFriendlyBias { get; init; } = 15;
+    /// <summary>Collective pockets may grow into group core. Proposal, m5-setup-and-victory §Mode Blocs step 5 (CollectivePocketsMayEnterCore).</summary>
+    public bool CollectivePocketsMayEnterCore { get; init; }
+    /// <summary>One in this many of the Hand's bloc systems is a scattered outpost instead. Decided Paul 2026-10-16, m5-setup-and-victory §Mode Anchored step 3 (needE / 10).</summary>
+    public int HandScatterDivisor { get; init; } = 10;
+    /// <summary>One in this many of the Collective's dealt systems is a scattered rim cell instead. Decided Paul 2026-10-16, m5-setup-and-victory §Mode Anchored step 3 (needA / 6).</summary>
+    public int CollectiveScatterDivisor { get; init; } = 6;
+    /// <summary>Collective extra seeds. Proposal, m5-setup-and-victory §Mode Anchored step 5 (min(3, needA)).</summary>
+    public int CollectiveExtraSeeds { get; init; } = 3;
+    /// <summary>Hand bloc jitter j = rand(0..299). Proposal, m5-setup-and-victory §Mode Anchored step 4.</summary>
+    public int HandJitterMax { get; init; } = 299;
+    /// <summary>Collective seed jitter J = rand(0..99). Proposal, m5-setup-and-victory §Mode Anchored step 5.</summary>
+    public int CollectiveJitterMax { get; init; } = 99;
     /// <summary>Distance measure for the bloc scores = isqrt(dx*dx + dy*dy) / this (the travel formula's base, no lanes since 2026-10-16). Proposal, m5-setup-and-victory §Mode Anchored.</summary>
     public int LaneTimeDivisor { get; init; } = 5;
-    /// <summary>Strong holder: Alliance support 60 + rand(0..30). Traced, m5-setup-and-victory §P2 (SDPRTB 0x1e02-0x1e05).</summary>
+    /// <summary>Strong holder: Collective support 60 + rand(0..30). Traced, m5-setup-and-victory §P2 (SDPRTB 0x1e02-0x1e05).</summary>
     public int StrongBase { get; init; } = 60;
-    /// <summary>Weak holder: Alliance support 20 + rand(0..30). Traced, m5-setup-and-victory §P2.</summary>
+    /// <summary>Weak holder: Collective support 20 + rand(0..30). Traced, m5-setup-and-victory §P2.</summary>
     public int WeakBase { get; init; } = 20;
     /// <summary>The spread of the two bands above. Traced, m5-setup-and-victory §P2.</summary>
     public int BandSpread { get; init; } = 30;
@@ -67,8 +67,8 @@ public sealed record AnchoredDeal(IReadOnlyList<DayOneRow> Rows, string Hq, IRea
 
 /// <summary>
 /// The Anchored dealer. rule: m5-setup-and-victory §Mode Anchored (steps 1-10); reference prototype setup-victory/data/deal_day_one.py (the sheet wins where they differ).
-/// All draws come from the game's single <see cref="GameRng"/> in this fixed order: 1 (HQ), one j per Empire-pool system (name order), one J per Free system
-/// (name order), the scatter shuffle, the Empire strong/weak shuffle, the Alliance strong/weak shuffle, then the support draws of P2 in name order.
+/// All draws come from the game's single <see cref="GameRng"/> in this fixed order: 1 (HQ), one j per Hand-pool system (name order), one J per Free system
+/// (name order), the scatter shuffle, the Hand strong/weak shuffle, the Collective strong/weak shuffle, then the support draws of P2 in name order.
 /// Integer arithmetic only; nothing depends on dictionary order (systems are indexed in ordinal name order, as <see cref="Galaxy.Systems"/> is).
 /// </summary>
 public static class AnchoredDealer
@@ -106,14 +106,14 @@ public static class AnchoredDealer
         var locked = new bool[n];
         var anchor = new bool[n];
         var anchorSupport = new int?[n];
-        var empireAnchors = new List<int>(); var allianceAnchors = new List<int>();
-        owner[coruscant] = Side.Empire; owner[yavin] = Side.Alliance;
+        var handAnchors = new List<int>(); var collectiveAnchors = new List<int>();
+        owner[coruscant] = Side.Hand; owner[yavin] = Side.Collective;
         foreach (var a in anchors) // file order
         {
             g.TryFindSystem(a.System, out int i);
-            anchor[i] = true; anchorSupport[i] = a.AllianceSupport;
-            if (a.Owner == Side.Empire) { owner[i] = Side.Empire; empireAnchors.Add(i); }
-            else if (a.Owner == Side.Alliance) { owner[i] = Side.Alliance; allianceAnchors.Add(i); }
+            anchor[i] = true; anchorSupport[i] = a.CollectiveSupport;
+            if (a.Owner == Side.Hand) { owner[i] = Side.Hand; handAnchors.Add(i); }
+            else if (a.Owner == Side.Collective) { owner[i] = Side.Collective; collectiveAnchors.Add(i); }
             else locked[i] = true; // locked neutral: never dealt, never scattered
         }
 
@@ -124,47 +124,47 @@ public static class AnchoredDealer
         if (candidates.Count == 0) throw new SetupException("No system satisfies the HQ candidate rule (rim, not an anchor, far enough from Charter).");
         candidates.Sort((a, b) => string.CompareOrdinal(Name(a), Name(b)));
         int hq = candidates[rng.NextInt(0, candidates.Count - 1)];
-        owner[hq] = Side.Alliance;
+        owner[hq] = Side.Collective;
 
         // ---- step 3: counts (totals scaled to the galaxy's size)
         int inSectors = Enumerable.Range(0, n).Count(InSectors);
         int Scale(int total) => (int)(((long)total * inSectors * 2 + p.TotalsBaseSystems) / (2L * p.TotalsBaseSystems));
-        int needE = Math.Max(0, Scale(totals.EmpireTotal) - 1 - empireAnchors.Count);
-        int needA = Math.Max(0, Scale(totals.AllianceTotal) - 2 - allianceAnchors.Count);
-        int scatterE = needE / p.EmpireScatterDivisor, scatterA = needA / p.AllianceScatterDivisor;
+        int needE = Math.Max(0, Scale(totals.HandTotal) - 1 - handAnchors.Count);
+        int needA = Math.Max(0, Scale(totals.CollectiveTotal) - 2 - collectiveAnchors.Count);
+        int scatterE = needE / p.HandScatterDivisor, scatterA = needA / p.CollectiveScatterDivisor;
         needE -= scatterE; needA -= scatterA;
 
         bool Open(int i) => owner[i] == null && !locked[i] && InSectors(i);
 
-        // ---- step 4: Empire bloc
-        var seedsE = new List<int> { coruscant }; seedsE.AddRange(empireAnchors);
+        // ---- step 4: Hand bloc
+        var seedsE = new List<int> { coruscant }; seedsE.AddRange(handAnchors);
         var dEA = LaneTimes(g, seedsE, p.LaneTimeDivisor);
         var pool = new List<int>();
         for (int i = 0; i < n; i++) if (Open(i)) pool.Add(i);
         var score = new long[n];
         foreach (int i in pool) // name order, one draw each
         {
-            int j = rng.NextInt(0, p.EmpireJitterMax);
-            int bias = Affiliation(i) == "Empire" ? p.EmpireAffiliationBias : Affiliation(i) == "Rebel-friendly" ? p.RebelFriendlyBias : 0;
+            int j = rng.NextInt(0, p.HandJitterMax);
+            int bias = Affiliation(i) == "Hand" ? p.HandAffiliationBias : Affiliation(i) == "Collective-friendly" ? p.CollectiveFriendlyBias : 0;
             score[i] = ((long)dEA[i] + bias) * 100 + j;
         }
         pool.Sort((a, b) => score[a] != score[b] ? score[a].CompareTo(score[b]) : a.CompareTo(b)); // index order = ordinal name order
         int takeE = Math.Min(needE, pool.Count);
-        for (int k = 0; k < takeE; k++) owner[pool[k]] = Side.Empire;
-        if (takeE < needE) shortfalls.Add(new DealShortfall(Side.Empire, needE - takeE, "bloc"));
+        for (int k = 0; k < takeE; k++) owner[pool[k]] = Side.Hand;
+        if (takeE < needE) shortfalls.Add(new DealShortfall(Side.Hand, needE - takeE, "bloc"));
 
-        // ---- step 5: Alliance seeds
-        var allEmpire = new List<int>();
-        for (int i = 0; i < n; i++) if (owner[i] == Side.Empire) allEmpire.Add(i);
-        var dE = LaneTimes(g, allEmpire, p.LaneTimeDivisor);
-        var dEmap = LaneTimes(g, allEmpire, 1);
+        // ---- step 5: Collective seeds
+        var allHand = new List<int>();
+        for (int i = 0; i < n; i++) if (owner[i] == Side.Hand) allHand.Add(i);
+        var dE = LaneTimes(g, allHand, p.LaneTimeDivisor);
+        var dEmap = LaneTimes(g, allHand, 1);
         var free = new List<int>();
         for (int i = 0; i < n; i++) if (Open(i) && IsRim(i)) free.Add(i);
         var jitter = new int[n];
-        foreach (int i in free) jitter[i] = rng.NextInt(0, p.AllianceJitterMax); // always drawn, fixed count
-        int wantExtra = Math.Min(p.AllianceExtraSeeds, needA);
+        foreach (int i in free) jitter[i] = rng.NextInt(0, p.CollectiveJitterMax); // always drawn, fixed count
+        int wantExtra = Math.Min(p.CollectiveExtraSeeds, needA);
         var extras = new List<int>();
-        var friendly = free.Where(i => Affiliation(i) == "Rebel-friendly").ToList();
+        var friendly = free.Where(i => Affiliation(i) == "Collective-friendly").ToList();
         friendly.Sort((a, b) => dE[a] != dE[b] ? dE[b].CompareTo(dE[a]) : a.CompareTo(b));
         foreach (int i in friendly) { if (extras.Count >= wantExtra) break; extras.Add(i); }
         if (extras.Count < wantExtra)
@@ -177,10 +177,10 @@ public static class AnchoredDealer
             });
             foreach (int i in rest) { if (extras.Count >= wantExtra) break; extras.Add(i); }
         }
-        foreach (int i in extras) owner[i] = Side.Alliance;
+        foreach (int i in extras) owner[i] = Side.Collective;
 
-        // ---- step 6: grow pockets (Blocs step 5), seeds in order The Shoal, the HQ, the Alliance anchors, the extras
-        var seeds = new List<int> { yavin, hq }; seeds.AddRange(allianceAnchors); seeds.AddRange(extras);
+        // ---- step 6: grow pockets (Blocs step 5), seeds in order The Shoal, the HQ, the Collective anchors, the extras
+        var seeds = new List<int> { yavin, hq }; seeds.AddRange(collectiveAnchors); seeds.AddRange(extras);
         var pockets = seeds.Select(s => new List<int> { s }).ToList();
         int placed = extras.Count;
         while (placed < needA)
@@ -191,49 +191,49 @@ public static class AnchoredDealer
                 int best = -1; long bestKey = 0;
                 for (int v = 0; v < n; v++)
                 {
-                    if (!Open(v) || (!p.AlliancePocketsMayEnterCore && GroupOf(v) == Core)) continue;
+                    if (!Open(v) || (!p.CollectivePocketsMayEnterCore && GroupOf(v) == Core)) continue;
                     int near = int.MaxValue;
                     foreach (int u in pockets[si]) near = Math.Min(near, MapDistance(g, u, v));
                     if (near > p.PocketReach) continue;
-                    // minimise: distance to the pocket x 100 - PocketAwayPercent x distance to the Empire, then ordinal name
+                    // minimise: distance to the pocket x 100 - PocketAwayPercent x distance to the Hand, then ordinal name
                     long key = (long)near * 100 - (long)p.PocketAwayPercent * dEmap[v];
                     if (best < 0 || key < bestKey) { best = v; bestKey = key; }
                 }
                 if (best < 0) continue;
-                owner[best] = Side.Alliance; pockets[si].Add(best); placed++; progressed = true;
+                owner[best] = Side.Collective; pockets[si].Add(best); placed++; progressed = true;
             }
             if (!progressed) break; // a whole round placed nothing
         }
-        if (placed < needA) shortfalls.Add(new DealShortfall(Side.Alliance, needA - placed, "pockets"));
+        if (placed < needA) shortfalls.Add(new DealShortfall(Side.Collective, needA - placed, "pockets"));
 
-        // ---- step 7: scatter (Empire outposts anywhere, then Alliance rim cells, continuing in the shuffled order)
+        // ---- step 7: scatter (Hand outposts anywhere, then Collective rim cells, continuing in the shuffled order)
         var loose = new List<int>();
         for (int i = 0; i < n; i++) if (Open(i)) loose.Add(i);
         Shuffle(loose, rng);
         int ePlaced = Math.Min(scatterE, loose.Count);
-        for (int k = 0; k < ePlaced; k++) owner[loose[k]] = Side.Empire;
-        if (ePlaced < scatterE) shortfalls.Add(new DealShortfall(Side.Empire, scatterE - ePlaced, "scatter"));
+        for (int k = 0; k < ePlaced; k++) owner[loose[k]] = Side.Hand;
+        if (ePlaced < scatterE) shortfalls.Add(new DealShortfall(Side.Hand, scatterE - ePlaced, "scatter"));
         int aPlaced = 0;
         for (int k = ePlaced; k < loose.Count && aPlaced < scatterA; k++)
-            if (IsRim(loose[k])) { owner[loose[k]] = Side.Alliance; aPlaced++; }
-        if (aPlaced < scatterA) shortfalls.Add(new DealShortfall(Side.Alliance, scatterA - aPlaced, "scatter"));
+            if (IsRim(loose[k])) { owner[loose[k]] = Side.Collective; aPlaced++; }
+        if (aPlaced < scatterA) shortfalls.Add(new DealShortfall(Side.Collective, scatterA - aPlaced, "scatter"));
 
-        // ---- step 8: strong and weak. Anchors, Charter, The Shoal and the HQ are strong; the shuffled lists decide the rest (Empire list first, then Alliance).
+        // ---- step 8: strong and weak. Anchors, Charter, The Shoal and the HQ are strong; the shuffled lists decide the rest (Hand list first, then Collective).
         var weak = new bool[n];
-        int empireExceptCoruscant = 0;
+        int handExceptCoruscant = 0;
         var ed = new List<int>(); var ad = new List<int>();
         for (int i = 0; i < n; i++)
         {
-            if (owner[i] == Side.Empire && i != coruscant) { empireExceptCoruscant++; if (!anchor[i]) ed.Add(i); }
-            if (owner[i] == Side.Alliance && i != yavin && i != hq && !anchor[i]) ad.Add(i);
+            if (owner[i] == Side.Hand && i != coruscant) { handExceptCoruscant++; if (!anchor[i]) ed.Add(i); }
+            if (owner[i] == Side.Collective && i != yavin && i != hq && !anchor[i]) ad.Add(i);
         }
-        int allianceExceptYavinHq = ad.Count + allianceAnchors.Count;
-        int strongE = Math.Max(0, Split(empireExceptCoruscant + 1, totals.EmpireStrong, totals.EmpireWeak) - 1);
+        int collectiveExceptYavinHq = ad.Count + collectiveAnchors.Count;
+        int strongE = Math.Max(0, Split(handExceptCoruscant + 1, totals.HandStrong, totals.HandWeak) - 1);
         Shuffle(ed, rng);
-        for (int k = 0; k < ed.Count; k++) weak[ed[k]] = k >= Math.Max(0, strongE - empireAnchors.Count);
-        int strongA = Split(allianceExceptYavinHq, totals.AllianceStrong, totals.AllianceWeak);
+        for (int k = 0; k < ed.Count; k++) weak[ed[k]] = k >= Math.Max(0, strongE - handAnchors.Count);
+        int strongA = Split(collectiveExceptYavinHq, totals.CollectiveStrong, totals.CollectiveWeak);
         Shuffle(ad, rng);
-        for (int k = 0; k < ad.Count; k++) weak[ad[k]] = k >= Math.Max(0, strongA - allianceAnchors.Count);
+        for (int k = 0; k < ad.Count; k++) weak[ad[k]] = k >= Math.Max(0, strongA - collectiveAnchors.Count);
 
         // ---- steps 9-10: support (P2 with the anchor change) and explored
         var rows = new List<DayOneRow>(n);
@@ -243,8 +243,8 @@ public static class AnchoredDealer
             if (i == coruscant) support = 0;
             else if (i == yavin || i == hq) support = 100;
             else if (anchorSupport[i] is { } fixedSupport) support = fixedSupport; // no draw
-            else if (owner[i] == Side.Alliance) support = (weak[i] ? p.WeakBase : p.StrongBase) + rng.NextInt(0, p.BandSpread);
-            else if (owner[i] == Side.Empire) support = 100 - ((weak[i] ? p.WeakBase : p.StrongBase) + rng.NextInt(0, p.BandSpread));
+            else if (owner[i] == Side.Collective) support = (weak[i] ? p.WeakBase : p.StrongBase) + rng.NextInt(0, p.BandSpread);
+            else if (owner[i] == Side.Hand) support = 100 - ((weak[i] ? p.WeakBase : p.StrongBase) + rng.NextInt(0, p.BandSpread));
             else if (GroupOf(i) == Core) support = rng.NextInt(0, p.NeutralCoreSpread) + p.NeutralRimSupport - p.NeutralCoreSpread / 2;
             else support = p.NeutralRimSupport;
             bool exploredAll = GroupOf(i) == Core || i == coruscant || i == yavin;

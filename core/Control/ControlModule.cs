@@ -66,14 +66,14 @@ public sealed class ControlModule
 
     /// <summary>
     /// The capital hook (B5a section 6.3): on every holder change, with true when the system is <see cref="CapitalSystem"/>. The Charter
-    /// amounts are read (SDPRTB 5154: 10 if the Alliance is involved plus 5 if the Empire is; 5155: 100 / 90) but its scope (<c>0x55e010</c>)
+    /// amounts are read (SDPRTB 5154: 10 if the Collective is involved plus 5 if the Hand is; 5155: 100 / 90) but its scope (<c>0x55e010</c>)
     /// and the extra test <c>0x5180e0</c> are not, so DEFAULT: nothing subscribes and no support changes. Open question 4.
     /// </summary>
     public event Action<CaptureInfo, bool>? ControlChangeAftermath;
 
     /// <summary>
     /// Raised inside every flip, after the uprising check and the blockade (the queued object events of the Classic flip). The fog module listens: the
-    /// loser's LossNotice and the Rebel HQ, destroyed when its world goes to the Empire or neutral. rule: m5-fog-and-hq §F2, §F7; B5a section 5.
+    /// loser's LossNotice and the Hearth, destroyed when its world goes to the Hand or neutral. rule: m5-fog-and-hq §F2, §F7; B5a section 5.
     /// </summary>
     public event Action<CaptureInfo>? HolderChanged;
 
@@ -100,14 +100,14 @@ public sealed class ControlModule
         game.RegisterOrderHandler<DebugSetSupportOrder>(m.HandleDebugSetSupport);
         game.RegisterOrderHandler<DebugSetTroopsOrder>(m.HandleDebugSetTroops);
         game.RegisterSettle(m.BeginStep, m.Settle);
-        game.RegisterTickStart(_ => { m._stepUsedAlliance = false; m._stepUsedEmpire = false; });
+        game.RegisterTickStart(_ => { m._stepUsedCollective = false; m._stepUsedHand = false; });
         support.AfterSupportChange = m.OnSupportChanged;
         return m;
     }
 
     private ControlState C => _game.State.Control;
     private EconomyState E => _game.State.Economy;
-    private static Side Other(Side s) => s == Side.Empire ? Side.Alliance : Side.Empire;
+    private static Side Other(Side s) => s == Side.Hand ? Side.Collective : Side.Hand;
 
     // ================================================================== queries and settings
 
@@ -126,46 +126,46 @@ public sealed class ControlModule
     public bool EverHeld(string system) => HolderOf(system) != null || (C.EverHeld?.Contains(system) ?? false);
 
     /// <summary>
-    /// The side a world with no regiments belongs to: Alliance at Alliance support 60 or more, Empire at 40 or less, else neutral (null). An
+    /// The side a world with no regiments belongs to: Collective at Collective support 60 or more, Hand at 40 or less, else neutral (null). An
     /// unpopulated world is neutral. rule: m2-control-and-capture §How control changes (B5a section 1, S(L) <c>0x55a080</c>, GNPRTB 7760).
     /// </summary>
     public Side? SupportSide(string system)
     {
         if (!_eco.SlotsOf(system).Populated) return null;
-        int a = _eco.SupportOf(system, Side.Alliance);
-        if (a >= JoinSupport) return Side.Alliance;
-        if (100 - a >= JoinSupport) return Side.Empire;
+        int a = _eco.SupportOf(system, Side.Collective);
+        if (a >= JoinSupport) return Side.Collective;
+        if (100 - a >= JoinSupport) return Side.Hand;
         return null;
     }
 
     /// <summary>
     /// Can a completed facility of this class serve the side? The class's side flags in the costs file ([DAT-own] MANFACSD, PROFACSD, DEFFACSD):
-    /// the Alliance needs the Alliance flag, the Empire the Empire flag, neutral (null) needs both (<c>0x4f27d0</c>). So the Death Star Shield
-    /// (Empire only) dies when the Alliance takes its world or the world goes neutral; every other class serves both. rule: B5a section 5.
+    /// the Collective needs the Collective flag, the Hand the Hand flag, neutral (null) needs both (<c>0x4f27d0</c>). So the Death Star Shield
+    /// (Hand only) dies when the Collective takes its world or the world goes neutral; every other class serves both. rule: B5a section 5.
     /// </summary>
     public bool ServesSide(string facilityClass, Side? side)
     {
         var row = _eco.Costs.Get(facilityClass);
-        return side switch { Side.Alliance => row.Alliance, Side.Empire => row.Empire, _ => row.Alliance && row.Empire };
+        return side switch { Side.Collective => row.Collective, Side.Hand => row.Hand, _ => row.Collective && row.Hand };
     }
 
     // ================================================================== the regiment watch (B5a section 2)
 
-    // Bits per system of the Usable regiments standing on the planet: 1 = an Alliance one, 2 = an Empire one. "Usable" = finished and not in
+    // Bits per system of the Usable regiments standing on the planet: 1 = a Collective one, 2 = a Hand one. "Usable" = finished and not in
     // transit or aboard: Completed, on the system, not aboard a ship (B5a section 1: 0x4f7b80; regiments aboard ships are children of the ship).
-    private const int AllianceBit = 1, EmpireBit = 2;
+    private const int CollectiveBit = 1, HandBit = 2;
     private Dictionary<string, int> _presence = new(StringComparer.Ordinal); // lookup only; the regiments as control last saw them. Not saved.
     // The limiter of the support-only sector step (0x518040): one per losing side per tick; reset before each player order and at the start of the
     // day's rule pass (Game.RegisterTickStart). Not saved (a save falls between Steps, and each Step starts a fresh tick).
     // rule: m2-control-and-capture §After the flip (B5a section 6; RE lead correction 2026-10-17: per tick, not per day)
-    private bool _stepUsedAlliance, _stepUsedEmpire;
+    private bool _stepUsedCollective, _stepUsedHand;
 
     private Dictionary<string, int> PresenceAll()
     {
         var d = new Dictionary<string, int>(StringComparer.Ordinal); // lookup only, never iterated unsorted
         foreach (var o in E.Objects.Values)
             if (o.Category == ObjectCategory.Regiment && o.Completed && o.AboardShip == 0 && o.System is string s && o.Side is Side side)
-                d[s] = d.GetValueOrDefault(s) | (side == Side.Alliance ? AllianceBit : EmpireBit);
+                d[s] = d.GetValueOrDefault(s) | (side == Side.Collective ? CollectiveBit : HandBit);
         return d;
     }
 
@@ -174,7 +174,7 @@ public sealed class ControlModule
         int bits = 0;
         foreach (var o in E.Objects.Values)
             if (o.Category == ObjectCategory.Regiment && o.Completed && o.AboardShip == 0 && o.System == system && o.Side is Side side)
-                bits |= side == Side.Alliance ? AllianceBit : EmpireBit;
+                bits |= side == Side.Collective ? CollectiveBit : HandBit;
         return bits;
     }
 
@@ -217,9 +217,9 @@ public sealed class ControlModule
         return Recompute(ctx, system, PresenceAt(system));
     }
 
-    private static int SideNumber(Side? s) => s switch { Side.Alliance => 1, Side.Empire => 2, _ => 0 };
-    private static Side? FromNumber(int n) => n switch { 1 => Side.Alliance, 2 => Side.Empire, _ => null };
-    private static int SingleMilitary(int bits) => bits == AllianceBit ? 1 : bits == EmpireBit ? 2 : 0;
+    private static int SideNumber(Side? s) => s switch { Side.Collective => 1, Side.Hand => 2, _ => 0 };
+    private static Side? FromNumber(int n) => n switch { 1 => Side.Collective, 2 => Side.Hand, _ => null };
+    private static int SingleMilitary(int bits) => bits == CollectiveBit ? 1 : bits == HandBit ? 2 : 0;
 
     private int PreviousMilitary(string system) =>
         C.Contested != null && C.Contested.TryGetValue(system, out var v) ? v : SingleMilitary(_presence.GetValueOrDefault(system));
@@ -228,8 +228,8 @@ public sealed class ControlModule
     {
         if (_eco.IsDestroyed(system)) { _presence[system] = bits; return false; } // rule: m5-death-star §2 effect 5: a destroyed system cannot be held
         int prev = PreviousMilitary(system);
-        int mil = bits == (AllianceBit | EmpireBit) ? prev : SingleMilitary(bits); // both present: unchanged
-        if (bits == (AllianceBit | EmpireBit)) { C.Contested ??= new SortedDictionary<string, int>(StringComparer.Ordinal); C.Contested[system] = mil; }
+        int mil = bits == (CollectiveBit | HandBit) ? prev : SingleMilitary(bits); // both present: unchanged
+        if (bits == (CollectiveBit | HandBit)) { C.Contested ??= new SortedDictionary<string, int>(StringComparer.Ordinal); C.Contested[system] = mil; }
         else if (C.Contested != null) { C.Contested.Remove(system); if (C.Contested.Count == 0) C.Contested = null; }
         _presence[system] = bits;
         Side? holder = mil != 0 ? FromNumber(mil) : SupportSide(system);
@@ -258,8 +258,8 @@ public sealed class ControlModule
             string sys = star.Name;
             if (_eco.IsDestroyed(sys)) continue;
             int bits = now.GetValueOrDefault(sys);
-            Side? holder = bits == AllianceBit ? Side.Alliance : bits == EmpireBit ? Side.Empire : bits == 0 ? SupportSide(sys) : HolderOf(sys);
-            if (bits == (AllianceBit | EmpireBit))
+            Side? holder = bits == CollectiveBit ? Side.Collective : bits == HandBit ? Side.Hand : bits == 0 ? SupportSide(sys) : HolderOf(sys);
+            if (bits == (CollectiveBit | HandBit))
             {
                 C.Contested ??= new SortedDictionary<string, int>(StringComparer.Ordinal);
                 C.Contested[sys] = SideNumber(HolderOf(sys));
@@ -333,7 +333,7 @@ public sealed class ControlModule
         _fleets.RefreshBlockadeFlag(ctx, system, day);
         _support.RefreshPresenceNow(ctx, system);
 
-        // The queued object events: the loser's LossNotice, the Rebel HQ (destroyed when its world goes to the Empire or neutral; its loyalty draw).
+        // The queued object events: the loser's LossNotice, the Hearth (destroyed when its world goes to the Hand or neutral; its loyalty draw).
         HolderChanged?.Invoke(info);
 
         // 3. Event 0x31b, queued: character loyalty, the sector step, the capital hook.
@@ -385,8 +385,8 @@ public sealed class ControlModule
             threshold = SectorStepSupportThreshold;
             if (old is Side lost) // one per tick per losing side (0x518040; the counters reset at each tick start); none for a world coming from neutral
             {
-                if (lost == Side.Alliance) { if (_stepUsedAlliance) return; _stepUsedAlliance = true; }
-                else { if (_stepUsedEmpire) return; _stepUsedEmpire = true; }
+                if (lost == Side.Collective) { if (_stepUsedCollective) return; _stepUsedCollective = true; }
+                else { if (_stepUsedHand) return; _stepUsedHand = true; }
             }
         }
         else if (prevMil == 0) { amount = SectorStepTroopsArrive; threshold = SectorStepAlwaysThreshold; }
@@ -421,7 +421,7 @@ public sealed class ControlModule
         if (old == newHolder) return false;
         int bits = PresenceAt(system);
         int prev = SingleMilitary(_presence.GetValueOrDefault(system));
-        int mil = bits == (AllianceBit | EmpireBit) ? SideNumber(newHolder) : SingleMilitary(bits);
+        int mil = bits == (CollectiveBit | HandBit) ? SideNumber(newHolder) : SingleMilitary(bits);
         _presence[system] = bits;
         Flip(ctx, system, old, newHolder, cause, prev, mil);
         Drain(ctx);
@@ -446,9 +446,9 @@ public sealed class ControlModule
     public long SubmitDebugSetHolder(Side side, string system, Side newHolder) =>
         _game.Submit(seq => new DebugSetHolderOrder(seq, side, system, newHolder));
 
-    /// <summary>Queue a DebugSetSupport order: the system's Alliance support becomes the value (through ChangeSupport, undamped), and control follows.</summary>
-    public long SubmitDebugSetSupport(Side side, string system, int allianceSupport) =>
-        _game.Submit(seq => new DebugSetSupportOrder(seq, side, system, allianceSupport));
+    /// <summary>Queue a DebugSetSupport order: the system's Collective support becomes the value (through ChangeSupport, undamped), and control follows.</summary>
+    public long SubmitDebugSetSupport(Side side, string system, int collectiveSupport) =>
+        _game.Submit(seq => new DebugSetSupportOrder(seq, side, system, collectiveSupport));
 
     /// <summary>Queue a DebugSetTroops order: the regiments standing on the system become <paramref name="count"/> of <paramref name="regimentClass"/> for <paramref name="troopSide"/>, and control follows.</summary>
     public long SubmitDebugSetTroops(Side side, string system, Side troopSide, string regimentClass, int count) =>
@@ -459,9 +459,9 @@ public sealed class ControlModule
         if (!DebugOrdersEnabled) return OrderResult.Reject(RejectReason.DebugDisabled);
         if (!_galaxy.TryFindSystem(o.System, out _)) return OrderResult.Reject(RejectReason.UnknownSystem);
         if (_eco.IsDestroyed(o.System)) return OrderResult.Reject(RejectReason.SystemDestroyed);
-        if (o.AllianceSupport is < 0 or > 100) return OrderResult.Reject(RejectReason.BadValue);
-        int now = _eco.SupportOf(o.System, Side.Alliance);
-        if (o.AllianceSupport != now) _support.ChangeSupport(ctx, o.System, Side.Alliance, o.AllianceSupport - now, SupportCause.Other, dampen: false);
+        if (o.CollectiveSupport is < 0 or > 100) return OrderResult.Reject(RejectReason.BadValue);
+        int now = _eco.SupportOf(o.System, Side.Collective);
+        if (o.CollectiveSupport != now) _support.ChangeSupport(ctx, o.System, Side.Collective, o.CollectiveSupport - now, SupportCause.Other, dampen: false);
         return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
     }
 

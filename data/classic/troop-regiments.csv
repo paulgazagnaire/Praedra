@@ -1,11 +1,11 @@
 id,name,side,production_family,cost,maintenance,research_order,research_difficulty,attack,defense,bombardment_defense,detection,uprising_defense
-1,Deckhands,Alliance,41,8,6,0,0,6,3,5,15,5
-2,Militia,Alliance,41,6,3,0,0,3,5,5,10,5
-3,Nhal Lookouts,Alliance,41,3,1,1,12,1,4,2,35,3
-4,Kiru Sparks,Alliance,41,10,8,3,60,8,4,4,20,6
-5,Ilmar Shade Guard,Alliance,41,6,4,2,40,2,8,9,20,5
-6,Pacifiers,Empire,41,9,6,0,0,6,6,6,25,6
-7,Ballast,Empire,41,7,5,0,0,5,3,2,20,5
-8,Tranches,Empire,41,6,3,0,0,3,5,5,15,5
-9,Proxies,Empire,41,9,8,1,46,8,2,2,5,5
-10,Lictors,Empire,41,12,8,2,66,8,8,6,30,8
+1,Deckhands,Collective,41,8,6,0,0,6,3,5,15,5
+2,Militia,Collective,41,6,3,0,0,3,5,5,10,5
+3,Nhal Lookouts,Collective,41,3,1,1,12,1,4,2,35,3
+4,Kiru Sparks,Collective,41,10,8,3,60,8,4,4,20,6
+5,Ilmar Shade Guard,Collective,41,6,4,2,40,2,8,9,20,5
+6,Pacifiers,Hand,41,9,6,0,0,6,6,6,25,6
+7,Ballast,Hand,41,7,5,0,0,5,3,2,20,5
+8,Tranches,Hand,41,6,3,0,0,3,5,5,15,5
+9,Proxies,Hand,41,9,8,1,46,8,2,2,5,5
+10,Lictors,Hand,41,12,8,2,66,8,8,6,30,8

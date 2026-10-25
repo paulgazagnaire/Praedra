@@ -47,12 +47,12 @@ public class ClassicTablesTests
     {
         var w = new MissionWorld();
         Assert.NotNull(w.Host.Data.Missions.DecoyTable);
-        w.Hold(T, Side.Empire, 0);
+        w.Hold(T, Side.Hand, 0);
         w.Agent(Leia, H, esp: 50);
-        int inf = w.Unit(Side.Alliance, Infiltrators, H);
-        w.Unit(Side.Empire, Probe, T);
+        int inf = w.Unit(Side.Collective, Infiltrators, H);
+        w.Unit(Side.Hand, Probe, T);
         w.Stub!.Expect(0, 99, Bt(2, 93, 99)); // B2b: two betrayal draws (Leia, the decoy) first
-        var seq = w.Start(Side.Alliance, MissionKind.Espionage, new[] { Leia }, T, decoys: new[] { inf });
+        var seq = w.Start(Side.Collective, MissionKind.Espionage, new[] { Leia }, T, decoys: new[] { inf });
         w.Game.Step();
         Assert.Null(w.Reason(seq));
         w.RunIteration(w.LastMission);

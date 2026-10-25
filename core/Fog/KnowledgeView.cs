@@ -22,8 +22,8 @@ public sealed class SystemPicture
 
     /// <summary>Group A: populated, energy and raw slots.</summary>
     public Seen<(bool Populated, int Energy, int Raw)>? Status => G(_k.StampA, (_k.Populated, _k.Energy, _k.Raw));
-    /// <summary>Group B: holder (null = neutral) and Alliance support.</summary>
-    public Seen<(Side? Owner, int AllianceSupport)>? Owner => G(_k.StampB, (_k.Owner, _k.AllianceSupport));
+    /// <summary>Group B: holder (null = neutral) and Collective support.</summary>
+    public Seen<(Side? Owner, int CollectiveSupport)>? Owner => G(_k.StampB, (_k.Owner, _k.CollectiveSupport));
     /// <summary>Group C: completed facilities by class.</summary>
     public Seen<IReadOnlyDictionary<string, int>>? Facilities => G<IReadOnlyDictionary<string, int>>(_k.StampC, _k.Facilities);
     public bool HqHere => _k.HqHere;
@@ -41,7 +41,7 @@ public sealed class SystemPicture
 /// <summary>
 /// Everything one side may read (the fairness contract): the day, its own pictures with levels and ages, its sighting log, its HQ belief and
 /// clues, and its filtered event feed. The truth world, the other side's ids, orders and the HQ state are not reachable from here.
-/// Own-side state (own fleets, pools, the Alliance's own HQ) is read from the game as before: it is the side's own. rule: m5-fog-and-hq §N8.
+/// Own-side state (own fleets, pools, the Collective's own HQ) is read from the game as before: it is the side's own. rule: m5-fog-and-hq §N8.
 /// </summary>
 public sealed class KnowledgeView
 {

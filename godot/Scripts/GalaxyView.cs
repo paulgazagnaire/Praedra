@@ -30,8 +30,8 @@ public partial class GalaxyView : Control
     public event Action StateChanged;
 
     // ---- game overlays, set by the owner (the map only draws what it is told)
-    public static readonly Color EmpireColor = new(0.35f, 0.85f, 0.35f);
-    public static readonly Color AllianceColor = new(1.0f, 0.55f, 0.15f);
+    public static readonly Color HandColor = new(0.35f, 0.85f, 0.35f);
+    public static readonly Color CollectiveColor = new(1.0f, 0.55f, 0.15f);
     public static readonly Color NeutralColor = new(0.55f, 0.57f, 0.62f);
     public static readonly Color UnknownColor = new(0.22f, 0.23f, 0.27f, 0.8f);
     /// <summary>Owner of a system by index (null = neutral).</summary>
@@ -241,7 +241,7 @@ public partial class GalaxyView : Control
     }
 
     // ---- drawing ----
-    // Colours of the map itself. Only the owner of a system gets a strong colour (orange Alliance, green Empire);
+    // Colours of the map itself. Only the owner of a system gets a strong colour (orange Collective, green Hand);
     // everything else (lanes, sectors, unexplored systems) is drawn in quiet greys and blues so ownership reads first.
     static readonly Color LaneColor = new(0.55f, 0.62f, 0.78f);
     static readonly Color MajorRouteColor = new(0.62f, 0.80f, 1.0f);
@@ -344,7 +344,7 @@ public partial class GalaxyView : Control
                 DrawCircle(p, radius * 0.72f, NeutralColor);
                 continue;
             }
-            var fill = owner == Side.Empire ? EmpireColor : AllianceColor;
+            var fill = owner == Side.Hand ? HandColor : CollectiveColor;
             DrawCircle(p, radius + 1.2f, DotOutline);
             DrawCircle(p, radius, fill);
             if (IsHq?.Invoke(i) == true)

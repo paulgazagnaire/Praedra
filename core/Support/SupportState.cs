@@ -10,7 +10,7 @@ public sealed class SystemSupportState
 {
     public bool Uprising { get; set; }
     /// <summary>The rebelling side (the other side than the holder when the uprising started). Meaningful while <see cref="Uprising"/>.</summary>
-    public Side Rebels { get; set; }
+    public Side Collective { get; set; }
     /// <summary>Timer 0x384, uprising erosion.</summary>
     public int ErosionDue { get; set; }
     /// <summary>Timer 0x38d, incident.</summary>
@@ -24,7 +24,7 @@ public sealed class SystemSupportState
 }
 
 /// <summary>
-/// Support-package state (the support value itself lives in <see cref="Economy.EconomyState.AllianceSupport"/>). Sorted
+/// Support-package state (the support value itself lives in <see cref="Economy.EconomyState.CollectiveSupport"/>). Sorted
 /// collections only, so the saved and hashed form is canonical. Idle entries are removed.
 /// </summary>
 public sealed class SupportState

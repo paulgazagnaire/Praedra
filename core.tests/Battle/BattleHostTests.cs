@@ -15,13 +15,13 @@ public class BattleHostTests
     {
         var h = GameHost.New(1, new GameSettings { IncidentsEnabled = false, Economy = new EconomyParams { ScrapPeriod = 1_000_000 } });
         const string yard = "Navalia";
-        h.Fleets.SetOwner(yard, Side.Empire);
+        h.Fleets.SetOwner(yard, Side.Hand);
         h.Economy.AddFacility(yard, FacilityKind.OrbitalShipyard);
-        for (int i = 0; i < 3; i++) h.Economy.AddObject(Side.Empire, "Tranches", yard); // no uprising: the yard is usable
-        int f = h.Fleets.AddFleet(Side.Empire, "F", new[] { "Mandate" }, yard);
+        for (int i = 0; i < 3; i++) h.Economy.AddObject(Side.Hand, "Tranches", yard); // no uprising: the yard is usable
+        int f = h.Fleets.AddFleet(Side.Hand, "F", new[] { "Mandate" }, yard);
         var isd = h.Game.State.Economy.Objects[h.Game.State.Fleets[f].Ships[0]];
         isd.Hull = 1790;
-        h.Fleets.AddFleet(Side.Alliance, "Raiders", new[] { "Dodger", "Dodger" }, yard);
+        h.Fleets.AddFleet(Side.Collective, "Raiders", new[] { "Dodger", "Dodger" }, yard);
 
         h.Game.Step(); // the battle day (hook time 1): the timer starts, nothing repaired yet
         Assert.Single(h.Game.Events.OfType<Praedra.Core.Battle.BattleEnded>());
@@ -39,10 +39,10 @@ public class BattleHostTests
     {
         var h = GameHost.New(1);
         Assert.NotNull(h.Battles);
-        h.Battles.SubmitSetOnContact(Side.Alliance, Praedra.Core.Battle.OnContactMode.Retreat);
+        h.Battles.SubmitSetOnContact(Side.Collective, Praedra.Core.Battle.OnContactMode.Retreat);
         h.Game.Step();
         var loaded = GameHost.Load(h.Save());
-        Assert.Equal(Praedra.Core.Battle.OnContactMode.Retreat, loaded.Battles.OnContactOf(Side.Alliance));
+        Assert.Equal(Praedra.Core.Battle.OnContactMode.Retreat, loaded.Battles.OnContactOf(Side.Collective));
         Assert.Equal(h.StateHash(), loaded.StateHash());
     }
 }

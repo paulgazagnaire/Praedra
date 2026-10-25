@@ -10,7 +10,7 @@ namespace PraedraViewer;
 /// <summary>
 /// Playtest of the move preview's trap warning and shift-click waypoints (rule: m1-travel §Path rule (3), (5); Paul 2026-10-16: the game
 /// proposes the fastest path, turns it red when it crosses a known enemy interdictor, never detours on its own, and waypoints force any path).
-/// A fresh Alliance game: an Empire Subpoena is planted, in sight, on the way of a long move; the preview must turn red and name it,
+/// A fresh Collective game: a Hand Subpoena is planted, in sight, on the way of a long move; the preview must turn red and name it,
 /// a waypoint around it must clear the warning, a waypoint onto it must keep the warning, and the order sent must fly the previewed path.
 /// </summary>
 public partial class Main
@@ -20,7 +20,7 @@ public partial class Main
         GD.Print("=== PLAYTEST traps and waypoints ===");
         ShowMenu();
         var menu = _screen as StartMenu;
-        Expect(menu != null && UiTest.Click(menu, "Alliance") && UiTest.Click(menu, "Medium") && UiTest.Click(menu, "New Game"), "a new Alliance game for the trap test");
+        Expect(menu != null && UiTest.Click(menu, "Collective") && UiTest.Click(menu, "Medium") && UiTest.Click(menu, "New Game"), "a new Collective game for the trap test");
         var gs = Gs;
         if (gs == null) return;
         var s = gs.S; var me = s.Player; var fm = s.Host.Fleets; var host = s.Host;
@@ -40,9 +40,9 @@ public partial class Main
         var before = gs.PlanWithWaypoints(mover.Id, Array.Empty<string>(), dest, confirm: false);
         Expect(!before.Red && !before.Banner.Contains("TRAP"), "with no known interdictor the preview is not red: " + before.Banner);
 
-        s.OpponentIdle = true; // the Empire AI would fly the planted ship away before the picture is taken
-        fm.SetOwner(trap, me); // the Alliance holds it, so it sees the fleets there live
-        fm.AddFleet(Side.Empire, "Net", new[] { "Subpoena" }, trap);
+        s.OpponentIdle = true; // the Hand AI would fly the planted ship away before the picture is taken
+        fm.SetOwner(trap, me); // the Collective holds it, so it sees the fleets there live
+        fm.AddFleet(Side.Hand, "Net", new[] { "Subpoena" }, trap);
         gs.PlayDay(); // the side's picture is taken in the day step
         var red = gs.PlanWithWaypoints(mover.Id, Array.Empty<string>(), dest, confirm: false);
         Expect(red.Red && red.Banner.Contains("TRAP") && red.Banner.Contains(trap) && red.Traps.Contains(trap),

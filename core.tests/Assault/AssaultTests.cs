@@ -14,7 +14,7 @@ namespace Praedra.Core.Tests.Assault;
 // Real data files. Stub generator unless a test says seeded. Events of slot 5.2 carry day = K + 1.
 public class AssaultTests
 {
-    private static readonly Side Emp = Side.Empire, All = Side.Alliance;
+    private static readonly Side Emp = Side.Hand, All = Side.Collective;
     private const string Sys = AssaultWorld.Sys, Reb = AssaultWorld.Reb, Imp = AssaultWorld.Imp;
 
     // ------------------------------------------------------------------ the pure rules
@@ -164,15 +164,15 @@ public class AssaultTests
         Assert.Equal(("Won", 4, 3, 0, 0, 0, 0), (res.Result, res.A0, res.A, res.D0, res.D, res.Duels, res.Rounds));
         Assert.Equal(new[] { regs[0], regs[2], regs[3] }, Assert.Single(w.Events<AssaultLanded>()).Regiments.Items);
         Assert.Null(w.Eco.Find(regs[1]));
-        // (B5a, 2026-10-17) the win flips the world inside slot 5.2; at Alliance support 0 the landed regiments are short of N = 6, so the capture starts the uprising at once (its (0,70) draw): B5a section 7, m2-control-and-capture C7
+        // (B5a, 2026-10-17) the win flips the world inside slot 5.2; at Collective support 0 the landed regiments are short of N = 6, so the capture starts the uprising at once (its (0,70) draw): B5a section 7, m2-control-and-capture C7
         Assert.Equal(new[] { (0, 99), (0, 3), (0, 70) }, w.AssaultDraws);
-        Assert.Equal(Alliance(), w.Control.HolderOf(Sys));
+        Assert.Equal(Collective(), w.Control.HolderOf(Sys));
         Assert.Contains(w.Events<RegimentDestroyed>(), e => e.Reason == "AssaultBattery" && e.Object == regs[1]);
     }
 
-    private static Side? Alliance() => All;
+    private static Side? Collective() => All;
 
-    // m3-assault A8: 4 Alliance Fleet regiments against nobody and no facility: win, 4 land, SetHolder, no draw at all
+    // m3-assault A8: 4 Collective Fleet regiments against nobody and no facility: win, 4 land, SetHolder, no draw at all
     [Fact]
     public void A8_EmptyWorldNoDraws()
     {
@@ -181,7 +181,7 @@ public class AssaultTests
         int fleet = w.Fleet(All, AssaultWorld.Neb);
         var regs = w.Aboard(fleet, "Deckhands", 4);
         Assert.Null(w.Try(All, fleet));
-        // (B5a, 2026-10-17) the win flips the world inside slot 5.2; at Alliance support 0 the landed regiments are short of N = 6, so the capture starts the uprising at once (its (0,70) draw): B5a section 7, m2-control-and-capture C7
+        // (B5a, 2026-10-17) the win flips the world inside slot 5.2; at Collective support 0 the landed regiments are short of N = 6, so the capture starts the uprising at once (its (0,70) draw): B5a section 7, m2-control-and-capture C7
         Assert.Equal(new[] { (0, 70) }, w.AssaultDraws); // the assault itself draws nothing
         var res = w.LastResolved();
         Assert.Equal(("Won", 4, 4), (res.Result, res.A0, res.A));
@@ -412,7 +412,7 @@ public class AssaultTests
         w.Aboard(f, Reb, 3);
         w.Try(All, f);
         Assert.Empty(w.Events<DuelResolved>());
-        // (B5a, 2026-10-17) the win flips the world inside slot 5.2; at Alliance support 0 the landed regiments are short of N = 6, so the capture starts the uprising at once (its (0,70) draw): B5a section 7, m2-control-and-capture C7
+        // (B5a, 2026-10-17) the win flips the world inside slot 5.2; at Collective support 0 the landed regiments are short of N = 6, so the capture starts the uprising at once (its (0,70) draw): B5a section 7, m2-control-and-capture C7
         Assert.Equal(new[] { (0, 70) }, w.AssaultDraws); // no engagement draw
     }
 
@@ -424,9 +424,9 @@ public class AssaultTests
         w.Hold(Emp);
         int f = w.Fleet(All, AssaultWorld.Neb);
         w.Aboard(f, Reb, 2);
-        int guard = w.Fleet(Emp, "Decree", 1, "Drift Harbour"); // an Empire fleet elsewhere carries a regiment: not at the system
+        int guard = w.Fleet(Emp, "Decree", 1, "Drift Harbour"); // a Hand fleet elsewhere carries a regiment: not at the system
         w.Aboard(guard, Imp, 1);
-        int landed = w.Defenders(All, Reb, 1).Single(); // an Alliance regiment already on the system (own side): not a defender
+        int landed = w.Defenders(All, Reb, 1).Single(); // a Collective regiment already on the system (own side): not a defender
         w.Try(All, f);
         var started = Assert.Single(w.Events<AssaultStarted>());
         Assert.Equal((2, 0), (started.A0, started.D0));
@@ -574,7 +574,7 @@ public class AssaultTests
         w.Aboard(f, Reb, 2);
         w.Stub.Queue(0); // the shield's r = 0: 0 < 0 is false, no hit
         w.Try(All, f);
-        // (B5a, 2026-10-17) the win flips the world inside slot 5.2; at Alliance support 0 the landed regiments are short of N = 6, so the capture starts the uprising at once (its (0,70) draw): B5a section 7, m2-control-and-capture C7
+        // (B5a, 2026-10-17) the win flips the world inside slot 5.2; at Collective support 0 the landed regiments are short of N = 6, so the capture starts the uprising at once (its (0,70) draw): B5a section 7, m2-control-and-capture C7
         Assert.Equal(new[] { (0, 99), (0, 70) }, w.AssaultDraws);
         Assert.Empty(w.Events<BatteryHit>());
     }
@@ -603,7 +603,7 @@ public class AssaultTests
     public void A19_WinLandsSixAndTheGarrisonCoversN()
     {
         var w = new AssaultWorld();
-        w.Hold(All, support: 80); // Empire support 20
+        w.Hold(All, support: 80); // Hand support 20
         int f = w.Fleet(Emp);
         w.Aboard(f, Imp, 9);
         Assert.Null(w.Try(Emp, f));
@@ -623,14 +623,14 @@ public class AssaultTests
         w.Hold(Emp, support: 90);
         int f = w.Fleet(All, AssaultWorld.Neb);
         w.Aboard(f, Reb, 2);
-        int before = w.Eco.SupportOf(Sys, Side.Alliance);
+        int before = w.Eco.SupportOf(Sys, Side.Collective);
         w.Try(All, f);
         Assert.Equal(All, w.Control.HolderOf(Sys));
-        Assert.Equal(before, w.Eco.SupportOf(Sys, Side.Alliance));
+        Assert.Equal(before, w.Eco.SupportOf(Sys, Side.Collective));
         Assert.Empty(w.Events<SupportChanged>());
     }
 
-    // m3-assault A21: Alliance and Empire both assault one neutral system in one Step: the Alliance (side 1) first; the Empire is re-checked against the new holder
+    // m3-assault A21: Collective and Hand both assault one neutral system in one Step: the Collective (side 1) first; the Hand is re-checked against the new holder
     [Fact]
     public void A21_TwoSidesOneNeutralSystem()
     {
@@ -638,14 +638,14 @@ public class AssaultTests
         int a = w.Fleet(All, AssaultWorld.Neb);
         int e = w.Fleet(Emp);
         var ar = w.Aboard(a, Reb, 3); var er = w.Aboard(e, Imp, 3);
-        long so = w.Submit(Emp, e), sa = w.Submit(All, a); // the Empire's order is queued first on purpose
+        long so = w.Submit(Emp, e), sa = w.Submit(All, a); // the Hand's order is queued first on purpose
         w.Run(1);
         Assert.Null(w.B.RejectionOf(so)); Assert.Null(w.B.RejectionOf(sa));
         var started = w.Events<AssaultStarted>();
         Assert.Equal(new[] { All, Emp }, started.Select(s => s.Side).ToArray());
-        Assert.Equal((3, 0), (started[0].A0, started[0].D0));        // the Alliance lands on the empty neutral system
-        Assert.Equal((3, 3), (started[1].A0, started[1].D0));        // the Empire now faces the three landed Alliance regiments
-        Assert.Equal(new Side?[] { Side.Alliance }, w.Events<SystemCaptured>().Take(1).Select(c => c.To).ToArray());
+        Assert.Equal((3, 0), (started[0].A0, started[0].D0));        // the Collective lands on the empty neutral system
+        Assert.Equal((3, 3), (started[1].A0, started[1].D0));        // the Hand now faces the three landed Collective regiments
+        Assert.Equal(new Side?[] { Side.Collective }, w.Events<SystemCaptured>().Take(1).Select(c => c.To).ToArray());
     }
 
     // m3-assault §Where it runs: systems in name order, each with its own events; Drift Harbour before Fiducia

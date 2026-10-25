@@ -33,10 +33,10 @@ public sealed class ResearchModule
     /// <summary>The fixed track order Ship, Troop, Facility. rule: m5-research §State per side (arrays fixed order).</summary>
     public static readonly IReadOnlyList<ResearchKind> Kinds = new[] { ResearchKind.Ship, ResearchKind.Troop, ResearchKind.Facility };
     /// <summary>
-    /// Side id ascending as the sheet gives it: Alliance then Empire (m5-research §Random draws (a), RS21, RS25). Our <see cref="Side"/> enum
-    /// numbers Empire 0, so the order is written out here.
+    /// Side id ascending as the sheet gives it: Collective then Hand (m5-research §Random draws (a), RS21, RS25). Our <see cref="Side"/> enum
+    /// numbers Hand 0, so the order is written out here.
     /// </summary>
-    public static readonly IReadOnlyList<Side> SideOrder = new[] { Side.Alliance, Side.Empire };
+    public static readonly IReadOnlyList<Side> SideOrder = new[] { Side.Collective, Side.Hand };
 
     private ResearchModule(Game game, EconomyModule eco, FleetModule fleets, ResearchData data, ResearchParams p)
     {
@@ -57,7 +57,7 @@ public sealed class ResearchModule
         foreach (var side in SideOrder)
             foreach (var kind in Kinds)
             {
-                var ladder = rows.Where(r => r.Kind == kind && r.Cost > 0 && (side == Side.Empire ? r.Empire : r.Alliance))
+                var ladder = rows.Where(r => r.Kind == kind && r.Cost > 0 && (side == Side.Hand ? r.Hand : r.Collective))
                     .OrderBy(r => r.Order).ThenBy(r => r.Catalogue).ToList();
                 // rule: m5-research §Rule (New) 1 (OneClassPerRung: a startup data check refuses two classes of one side on one rung)
                 if (p.OneClassPerRung)
@@ -76,14 +76,14 @@ public sealed class ResearchModule
         return m;
     }
 
-    private static int Index(Side side, ResearchKind kind) => (side == Side.Empire ? 0 : 3) + (int)kind;
+    private static int Index(Side side, ResearchKind kind) => (side == Side.Hand ? 0 : 3) + (int)kind;
     private ResearchState R => _game.State.Research;
 
     // ================================================================== setup (between Steps)
 
     /// <summary>
     /// Setup only: fix the two percents (from the scale settings; "systems in play" = every system of the loaded galaxy unless given) and arm
-    /// the facility tick of each side, Alliance then Empire: TickDue = arming day + delay + rand(0..span). Two draws.
+    /// the facility tick of each side, Collective then Hand: TickDue = arming day + delay + rand(0..span). Two draws.
     /// rule: m5-research §Facility income (Arming), §Scaling with galaxy size, §Random draws (a).
     /// </summary>
     public void SetupNewGame(int? systemsInPlay = null)
@@ -148,7 +148,7 @@ public sealed class ResearchModule
 
     // ================================================================== slot 6.9: the facility tick
 
-    // rule: m5-research §Facility income (Firing, Counting); sides Alliance then Empire, tracks Ship, Troop, Facility
+    // rule: m5-research §Facility income (Firing, Counting); sides Collective then Hand, tracks Ship, Troop, Facility
     private void Tick(StepContext ctx)
     {
         int t = ctx.Day + 1;

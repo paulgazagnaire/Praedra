@@ -14,17 +14,17 @@ public sealed record GameWon(int Index, int Day, Side Winner, string Reason) : G
 /// </summary>
 public sealed record VictoryRules
 {
-    /// <summary>Empire wins when the Alliance no longer holds the Rebel HQ system. rule: setup-victory/04 §3 (hqGone), HQ-Only mode.</summary>
-    public bool EmpireWinsOnHqLost { get; init; } = true;
-    /// <summary>Alliance wins when it holds Charter or Charter is destroyed. rule: setup-victory/04 §3 (cor, destroyed bit 0x200), HQ-Only mode; B4 §15 [EXE-own] (bit 3 of +0x50).</summary>
-    public bool AllianceWinsOnCoruscant { get; init; } = true;
-    /// <summary>Empire wins when the Alliance holds no system. New rule, not Classic (B4 §15 [EXE-own]); DEFAULT New on (Decided extension, playable slice 2026-10-12).</summary>
-    public bool EmpireWinsWhenAllianceHasNoSystems { get; init; } = true;
-    /// <summary>Alliance wins when the Empire holds no system. New rule, not Classic (B4 §15 [EXE-own]); DEFAULT New on (Decided extension, playable slice 2026-10-12).</summary>
-    public bool AllianceWinsWhenEmpireHasNoSystems { get; init; } = true;
+    /// <summary>Hand wins when the Collective no longer holds the Hearth system. rule: setup-victory/04 §3 (hqGone), HQ-Only mode.</summary>
+    public bool HandWinsOnHqLost { get; init; } = true;
+    /// <summary>Collective wins when it holds Charter or Charter is destroyed. rule: setup-victory/04 §3 (cor, destroyed bit 0x200), HQ-Only mode; B4 §15 [EXE-own] (bit 3 of +0x50).</summary>
+    public bool CollectiveWinsOnCoruscant { get; init; } = true;
+    /// <summary>Hand wins when the Collective holds no system. New rule, not Classic (B4 §15 [EXE-own]); DEFAULT New on (Decided extension, playable slice 2026-10-12).</summary>
+    public bool HandWinsWhenCollectiveHasNoSystems { get; init; } = true;
+    /// <summary>Collective wins when the Hand holds no system. New rule, not Classic (B4 §15 [EXE-own]); DEFAULT New on (Decided extension, playable slice 2026-10-12).</summary>
+    public bool CollectiveWinsWhenHandHasNoSystems { get; init; } = true;
     /// <summary>
-    /// Standard victory (m5-setup-and-victory: HqOnlyVictory = false): the Empire's HQ term also needs Nobody and Mae Abara captured, the
-    /// Alliance's Charter term needs Cassia Ravilla and The Chair captured (victory-rules.csv, CharacterCaptured rows). The setup sheet's
+    /// Standard victory (m5-setup-and-victory: HqOnlyVictory = false): the Hand's HQ term also needs Nobody and Mae Abara captured, the
+    /// Collective's Charter term needs Cassia Ravilla and The Chair captured (victory-rules.csv, CharacterCaptured rows). The setup sheet's
     /// DEFAULT is standard (on since 2026-10-16): missions that capture characters now exist (Abduction, and the Kidnap of m5-missions §6a).
     /// HQ-only (this switch false) stays a switch but is not shown on the new-game screen (m5-setup-and-victory §Defaults).
     /// </summary>
@@ -38,7 +38,7 @@ public enum KeyDeathFallback { None, WaiveCondition, Immortal }
 
 /// <summary>
 /// Checks the victory conditions at the end of every Step (slot 6.11, last the other day-end hooks). Draws no random numbers. Once a winner
-/// is set it stays and no second GameWon is raised. Tie (both sides satisfied in one check): the Alliance, as in the original
+/// is set it stays and no second GameWon is raised. Tie (both sides satisfied in one check): the Collective, as in the original
 /// (setup-victory/04 §3 "Tie"). After <see cref="GameSave.Load"/>, attach again.
 /// </summary>
 public sealed class VictoryModule
@@ -62,7 +62,7 @@ public sealed class VictoryModule
     /// <summary>The winner, null while the game runs.</summary>
     public Side? Winner => S.Winner;
     public string? Reason => S.WinReason;
-    /// <summary>The Rebel HQ system (saved), null if none.</summary>
+    /// <summary>The Hearth system (saved), null if none.</summary>
     public string? HqSystem => S.HqSystem;
 
     /// <summary>The character terms of standard victory (victory-rules.csv). Set by the host from the character data.</summary>
@@ -85,34 +85,34 @@ public sealed class VictoryModule
         var owners = ctx.State.SystemOwners;
         bool Holds(string sys, Side side) => owners.TryGetValue(sys, out var o) && o == side;
 
-        string? allianceReason = null, empireReason = null;
-        bool keysA = !Rules.StandardVictory || KeysCaptured(Side.Alliance), keysE = !Rules.StandardVictory || KeysCaptured(Side.Empire);
-        // rule: m5-setup-and-victory §Victory: Charter held by the Alliance OR destroyed (B4 §15 [EXE-own], bit 3 of +0x50)
+        string? collectiveReason = null, handReason = null;
+        bool keysA = !Rules.StandardVictory || KeysCaptured(Side.Collective), keysE = !Rules.StandardVictory || KeysCaptured(Side.Hand);
+        // rule: m5-setup-and-victory §Victory: Charter held by the Collective OR destroyed (B4 §15 [EXE-own], bit 3 of +0x50)
         bool corDestroyed = ctx.State.DeathStar.IsDestroyed(CoruscantName);
-        if (Rules.AllianceWinsOnCoruscant && keysA && (Holds(CoruscantName, Side.Alliance) || corDestroyed))
-            allianceReason = corDestroyed
+        if (Rules.CollectiveWinsOnCoruscant && keysA && (Holds(CoruscantName, Side.Collective) || corDestroyed))
+            collectiveReason = corDestroyed
                 ? (Rules.StandardVictory ? "Charter is destroyed with Vader and Palpatine captured" : "Charter is destroyed")
-                : (Rules.StandardVictory ? "Alliance holds Charter with Vader and Palpatine captured" : "Alliance captured Charter");
-        if (allianceReason == null && Rules.AllianceWinsWhenEmpireHasNoSystems && !owners.Values.Any(v => v == Side.Empire)) allianceReason = "Empire holds no system";
+                : (Rules.StandardVictory ? "Collective holds Charter with Vader and Palpatine captured" : "Collective captured Charter");
+        if (collectiveReason == null && Rules.CollectiveWinsWhenHandHasNoSystems && !owners.Values.Any(v => v == Side.Hand)) collectiveReason = "Hand holds no system";
         // rule: setup-victory/04 §3 (the destroyed bit; a missing HQ counts as destroyed); m5-fog-and-hq §F7 (capture destroys it, DEFAULT AnyCause).
-        // An at-rest HQ on a system the Alliance no longer holds also counts (HqLostOnHolderChange = Never leaves it standing there).
+        // An at-rest HQ on a system the Collective no longer holds also counts (HqLostOnHolderChange = Never leaves it standing there).
         var hq = S.Hq;
         if (!keysE) { }
-        else if (Rules.EmpireWinsOnHqLost && hq.Status == Fog.HqStatus.Destroyed)
-            empireReason = hq.DestroyedCause switch
+        else if (Rules.HandWinsOnHqLost && hq.Status == Fog.HqStatus.Destroyed)
+            handReason = hq.DestroyedCause switch
             {
-                Fog.FogModule.CauseCaptured => $"Empire captured the Rebel HQ at {hq.System}",
-                Fog.FogModule.CauseLostSupport => $"The Rebel HQ fell at {hq.System}: the people turned from the Alliance", // QA-11 (B5a)
-                Fog.FogModule.CauseTroopsLeft => $"The Rebel HQ fell at {hq.System}: its last Alliance troops were gone", // QA-11 (B5a)
-                _ => $"The Rebel HQ was destroyed at {hq.System} ({hq.DestroyedCause})",
+                Fog.FogModule.CauseCaptured => $"Hand captured the Hearth at {hq.System}",
+                Fog.FogModule.CauseLostSupport => $"The Hearth fell at {hq.System}: the people turned from the Collective", // QA-11 (B5a)
+                Fog.FogModule.CauseTroopsLeft => $"The Hearth fell at {hq.System}: its last Collective troops were gone", // QA-11 (B5a)
+                _ => $"The Hearth was destroyed at {hq.System} ({hq.DestroyedCause})",
             };
-        else if (Rules.EmpireWinsOnHqLost && hq.Status == Fog.HqStatus.AtRest && hq.System != null && !Holds(hq.System, Side.Alliance))
-            empireReason = $"Empire captured the Rebel HQ at {hq.System}";
-        if (empireReason == null && Rules.EmpireWinsWhenAllianceHasNoSystems && !owners.Values.Any(v => v == Side.Alliance)) empireReason = "Alliance holds no system";
+        else if (Rules.HandWinsOnHqLost && hq.Status == Fog.HqStatus.AtRest && hq.System != null && !Holds(hq.System, Side.Collective))
+            handReason = $"Hand captured the Hearth at {hq.System}";
+        if (handReason == null && Rules.HandWinsWhenCollectiveHasNoSystems && !owners.Values.Any(v => v == Side.Collective)) handReason = "Collective holds no system";
 
         Side winner; string reason;
-        if (allianceReason != null) { winner = Side.Alliance; reason = allianceReason; }
-        else if (empireReason != null) { winner = Side.Empire; reason = empireReason; }
+        if (collectiveReason != null) { winner = Side.Collective; reason = collectiveReason; }
+        else if (handReason != null) { winner = Side.Hand; reason = handReason; }
         else return;
         S.Winner = winner; S.WinReason = reason;
         int day = ctx.Day + 1;

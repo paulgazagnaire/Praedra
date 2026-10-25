@@ -23,17 +23,17 @@ public sealed class SideResearch
 /// <summary>All research state (saved and hashed). The two percents are fixed at setup. rule: m5-research §State per side, §Scaling with galaxy size.</summary>
 public sealed class ResearchState
 {
-    public SideResearch Empire { get; init; } = new();
-    public SideResearch Alliance { get; init; } = new();
+    public SideResearch Hand { get; init; } = new();
+    public SideResearch Collective { get; init; } = new();
     /// <summary>ResearchCostPercent, used in the level check step 5. 100 until setup sets it.</summary>
     public int CostPercent { get; set; } = 100;
     /// <summary>MissionPointsPercent, used in RollMissionPoints. 100 until setup sets it.</summary>
     public int MissionPercent { get; set; } = 100;
 
-    public SideResearch Of(Side s) => s == Side.Empire ? Empire : Alliance;
+    public SideResearch Of(Side s) => s == Side.Hand ? Hand : Collective;
 
     internal void CopyFrom(ResearchState o)
     {
-        Empire.CopyFrom(o.Empire); Alliance.CopyFrom(o.Alliance); CostPercent = o.CostPercent; MissionPercent = o.MissionPercent;
+        Hand.CopyFrom(o.Hand); Collective.CopyFrom(o.Collective); CostPercent = o.CostPercent; MissionPercent = o.MissionPercent;
     }
 }

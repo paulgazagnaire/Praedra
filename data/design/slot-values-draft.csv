@@ -56,7 +56,7 @@ Cristalina,Caza Real Sector,inner_rim,10,7,1,formula,
 Grimsholt,Thaw Sector,outer_rim,8,5,1,keyword,billions of people; mining; agricultural
 Drift Harbour,Drift Harbour Sector,outer_rim,8,5,1,lore,"Cloud City, tibanna gas"
 Delicia,Incus Sector,inner_rim,10,7,1,formula,
-Ferraria,Ferraria Sector,inner_rim,11,6,1,lore,"Imperial shipyard, Inner Rim fleet base"
+Ferraria,Ferraria Sector,inner_rim,11,6,1,lore,"Hand shipyard, Inner Rim fleet base"
 Vinograd,Vinograd Sector,inner_rim,8,5,1,formula,
 Port Sorrel,Tormentum Sector,inner_rim,10,7,1,formula,
 Amoena,Lagoa Funda Sector,inner_rim,9,6,1,region,
@@ -113,7 +113,7 @@ Classis,Classis Sector,inner_rim,14,7,1,lore,Corellian Engineering Corporation; 
 Magnetite III,Ommata Sector,core,12,11,1,formula,
 Waymeet,Caza Real Sector,inner_rim,9,6,1,formula,
 Deadfall,Bauxite IV Sector,outer_rim,6,4,1,formula,
-Tutela,Lenitas Sector,inner_rim,10,4,1,lore,Imperial academy world; Sienar and Aether Hypernautics research
+Tutela,Lenitas Sector,inner_rim,10,4,1,lore,Hand academy world; Sienar and Aether Hypernautics research
 Charter,Charter Sector,core,15,4,1,lore,"ecumenopolis, capital; almost no ore of its own"
 Riftwood,Moorings Sector,outer_rim,6,4,1,formula,
 Pyrite,Charter Sector,core,12,9,1,region,
@@ -131,7 +131,7 @@ Kaukomaa,Bellwether Sector,inner_rim,10,7,1,keyword,billions of people
 Eldingar,Eldingar Sector,outer_rim,1,1,1,lore,"swamp, Yoda; a hidden place"
 Dongyu,Tormentum Sector,inner_rim,8,5,1,region,
 Oionos,Mechane Sector,inner_rim,6,5,1,formula,
-Fallow,Mata Alta Sector,outer_rim,5,3,1,lore,"agricultural, old Rebel base"
+Fallow,Mata Alta Sector,outer_rim,5,3,1,lore,"agricultural, old Collective base"
 Lignite,Ilanga Sector,outer_rim,6,4,1,region,
 Vexillum,Thesauros Sector,outer_rim,8,5,1,formula,
 Redfen,Highfall Sector,outer_rim,3,2,1,lore,Nightsister world [Wookieepedia-adjusted]
@@ -182,7 +182,7 @@ Opifex,Ashfall Sector,inner_rim,9,6,1,formula,
 The Wall,Moorings Sector,outer_rim,8,5,1,keyword,billions of people
 Brimstone,Greenfever Sector,outer_rim,6,4,1,formula,
 Buyback,Ferraria Sector,inner_rim,13,10,1,keyword,billions of people
-Incus,Incus Sector,inner_rim,13,5,1,lore,"Incus shipyards, Imperial-run"
+Incus,Incus Sector,inner_rim,13,5,1,lore,"Incus shipyards, Hand-run"
 First Morning,Hundred Lakes Sector,outer_rim,6,4,1,formula,
 Bare Acre,Vinograd Sector,inner_rim,8,5,1,formula,
 Holdfast,Fallout Sector,outer_rim,6,4,1,formula,
@@ -275,7 +275,7 @@ Ilha Verde,Ferraria Sector,inner_rim,10,7,1,formula,
 Lastwell,Highfall Sector,outer_rim,11,8,1,region,
 Breakyard,Greenfever Sector,outer_rim,4,2,1,lore,ancient Sith tomb world
 Plainsong,Fyrholm Sector,outer_rim,6,4,1,formula,
-Statio,Akousma Sector,inner_rim,7,3,1,lore,Alliance-leaning frontier [Wookieepedia-adjusted]
+Statio,Akousma Sector,inner_rim,7,3,1,lore,Collective-leaning frontier [Wookieepedia-adjusted]
 Nordhaven,Bosque Alto Sector,inner_rim,8,5,1,region,
 Vinterby,Clearholm Sector,outer_rim,9,6,1,formula,
 Navalia,Lesnaya Sector,inner_rim,15,6,1,lore,Navalia Drive Yards: the biggest yard complex
@@ -424,7 +424,7 @@ Las Mieses,Charter Sector,core,12,7,1,keyword,agricultural
 Corundum,Thesauros Sector,outer_rim,8,5,1,formula,
 Goldcloud,Zlatna Sector,outer_rim,4,1,1,keyword,gas giant
 Long Strand,Lantern Sector,outer_rim,6,4,1,formula,
-Hagelfeld,Rauchtal Sector,outer_rim,6,3,1,lore,"Tropical vault world, Imperial security complex; few mines, no lore sheet row (own knowledge, unchecked)"
+Hagelfeld,Rauchtal Sector,outer_rim,6,3,1,lore,"Tropical vault world, Hand security complex; few mines, no lore sheet row (own knowledge, unchecked)"
 Dry House,Zlatna Sector,outer_rim,6,4,1,formula,
 Holmvik,Kranholm Sector,outer_rim,6,4,1,region,
 Pescadora,Muster Rock Sector,outer_rim,6,4,1,formula,
@@ -542,7 +542,7 @@ Nutrix,Ommata Sector,core,12,11,1,formula,
 Craterhold,Incus Sector,inner_rim,10,7,1,formula,
 Lindenfall,Fyrholm Sector,outer_rim,6,4,1,formula,
 Kinoko,Eldingar Sector,outer_rim,6,4,1,formula,
-The Shoal,Greenfever Sector,outer_rim,7,4,1,lore,Rebel base moon; engine adds the start base
+The Shoal,Greenfever Sector,outer_rim,7,4,1,lore,Collective base moon; engine adds the start base
 The Cuts,Sendero Sector,outer_rim,6,4,1,formula,
 Sabkha,Mirabel Sector,inner_rim,7,5,1,keyword,harsh climate
 Milestone Nine,Ironbeach Sector,outer_rim,6,4,1,region,

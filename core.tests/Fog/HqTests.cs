@@ -9,7 +9,7 @@ using Praedra.Core.Tests.Control;
 
 namespace Praedra.Core.Tests.Fog;
 
-// The Rebel HQ, tests HQ1 to HQ28 of m5-fog-and-hq §Tests, on Map M (HQ at R2). The HQ has speed 100: one hop of 100 map units = 20 days.
+// The Hearth, tests HQ1 to HQ28 of m5-fog-and-hq §Tests, on Map M (HQ at R2). The HQ has speed 100: one hop of 100 map units = 20 days.
 public class HqTests
 {
     // m5-fog-and-hq HQ1
@@ -17,8 +17,8 @@ public class HqTests
     public void HQ1_MoveOneHop()
     {
         var w = new FogWorld();
-        int refined = w.Game.State.Economy.Alliance.Refined;
-        long seq = w.Fog.SubmitMoveHq(Side.Alliance, R3);
+        int refined = w.Game.State.Economy.Collective.Refined;
+        long seq = w.Fog.SubmitMoveHq(Side.Collective, R3);
         w.Step();
         var acc = Assert.Single(w.Events<OrderAccepted>(), e => e.Sequence == seq);
         Assert.Equal(new[] { R2, R3 }, acc.Path!.Items);
@@ -38,15 +38,15 @@ public class HqTests
         Assert.Equal((20, R3, "SR"), (arr.Day, arr.System, arr.Sector));
         Assert.Equal(HqStatus.AtRest, w.Hq.Status);
         Assert.Equal(R3, w.H.HqSystem);
-        Assert.Equal(refined, w.Game.State.Economy.Alliance.Refined); // cost 0
+        Assert.Equal(refined, w.Game.State.Economy.Collective.Refined); // cost 0
     }
 
     // m5-fog-and-hq HQ2
     [Fact]
     public void HQ2_TwoHopsNoStopAtAnEnemyFleet()
     {
-        var w = new FogWorld(beforeSetup: x => x.Fleet(Side.Empire, R3, Isd, 14));
-        long seq = w.Fog.SubmitMoveHq(Side.Alliance, R4);
+        var w = new FogWorld(beforeSetup: x => x.Fleet(Side.Hand, R3, Isd, 14));
+        long seq = w.Fog.SubmitMoveHq(Side.Collective, R4);
         w.Step();
         var acc = Assert.Single(w.Events<OrderAccepted>(), e => e.Sequence == seq);
         Assert.Equal(new[] { R2, R3, R4 }, acc.Path!.Items);
@@ -62,29 +62,29 @@ public class HqTests
     [Fact]
     public void HQ3to8_Rejections()
     {
-        Assert.Equal(RejectReason.AlreadyThere, new FogWorld().TryMoveHq(Side.Alliance, R2));                    // HQ3
-        Assert.Equal(HqRejectReason.NotHeld, new FogWorld().TryMoveHq(Side.Alliance, R1));                       // HQ4
-        Assert.Equal(HqRejectReason.NotHeld, new FogWorld(r4Neutral: true).TryMoveHq(Side.Alliance, R4));        // HQ5
+        Assert.Equal(RejectReason.AlreadyThere, new FogWorld().TryMoveHq(Side.Collective, R2));                    // HQ3
+        Assert.Equal(HqRejectReason.NotHeld, new FogWorld().TryMoveHq(Side.Collective, R1));                       // HQ4
+        Assert.Equal(HqRejectReason.NotHeld, new FogWorld(r4Neutral: true).TryMoveHq(Side.Collective, R4));        // HQ5
         var w = new FogWorld();
-        Assert.Null(w.TryMoveHq(Side.Alliance, R3));
-        Assert.Equal(RejectReason.InTransit, w.TryMoveHq(Side.Alliance, R4));                                     // HQ6
+        Assert.Null(w.TryMoveHq(Side.Collective, R3));
+        Assert.Equal(RejectReason.InTransit, w.TryMoveHq(Side.Collective, R4));                                     // HQ6
         Assert.Equal(R3, w.Hq.Path[^1]);
-        Assert.Equal(HqRejectReason.NotAlliance, new FogWorld().TryMoveHq(Side.Empire, R3));                     // HQ7
-        var ilum = new FogWorld(beforeSetup: x => x.H.Fleets.SetOwner(Ilum, Side.Alliance));
-        Assert.Equal(RejectReason.Unreachable, ilum.TryMoveHq(Side.Alliance, Ilum));                             // HQ8
-        Assert.Equal(RejectReason.UnknownSystem, new FogWorld().TryMoveHq(Side.Alliance, "No Such Place"));
-        Assert.Null(new FogWorld().TryMoveHq(Side.Alliance, R3));                                                 // HQ17 (no Empire fleet at R2)
+        Assert.Equal(HqRejectReason.NotCollective, new FogWorld().TryMoveHq(Side.Hand, R3));                     // HQ7
+        var ilum = new FogWorld(beforeSetup: x => x.H.Fleets.SetOwner(Ilum, Side.Collective));
+        Assert.Equal(RejectReason.Unreachable, ilum.TryMoveHq(Side.Collective, Ilum));                             // HQ8
+        Assert.Equal(RejectReason.UnknownSystem, new FogWorld().TryMoveHq(Side.Collective, "No Such Place"));
+        Assert.Null(new FogWorld().TryMoveHq(Side.Collective, R3));                                                 // HQ17 (no Hand fleet at R2)
     }
 
-    /// <summary>A Map M world with an Empire fleet of <paramref name="isd"/> ISDs (and squadrons aboard) at R2 for one Step (flag computed), then MoveHq(R3).</summary>
-    private static string? Pin(int isd, int squadrons = 0, bool allianceFleet = false, GameSettings? s = null)
+    /// <summary>A Map M world with a Hand fleet of <paramref name="isd"/> ISDs (and squadrons aboard) at R2 for one Step (flag computed), then MoveHq(R3).</summary>
+    private static string? Pin(int isd, int squadrons = 0, bool collectiveFleet = false, GameSettings? s = null)
     {
         var w = new FogWorld(s);
-        w.Fleet(Side.Empire, R2, Isd, isd, squadrons);
-        if (allianceFleet) w.Fleet(Side.Alliance, R2, Corvette, 1);
+        w.Fleet(Side.Hand, R2, Isd, isd, squadrons);
+        if (collectiveFleet) w.Fleet(Side.Collective, R2, Corvette, 1);
         w.Game.State.Blockades.Clear();
-        if (!allianceFleet) w.Game.State.Blockades[R2] = Side.Empire; // the flag as step 5 leaves it
-        return w.TryMoveHq(Side.Alliance, R3);
+        if (!collectiveFleet) w.Game.State.Blockades[R2] = Side.Hand; // the flag as step 5 leaves it
+        return w.TryMoveHq(Side.Collective, R3);
     }
 
     // m5-fog-and-hq HQ9 to HQ12, HQ14 to HQ16
@@ -95,8 +95,8 @@ public class HqTests
         Assert.Null(Pin(13));                              // HQ10: 100 - 65 = 35
         Assert.Equal(HqRejectReason.Pinned, Pin(13, 3));   // HQ11: 65 + 6 = 71
         Assert.Null(Pin(13, 2));                           // HQ12: 65 + 4 = 69
-        Assert.Null(Pin(14, allianceFleet: true));         // HQ14: battle bit on, flag off
-        Assert.Null(Pin(14, s: new GameSettings { Hq = new HqParams { DepartureOperands = HqDepartureOperands.Alliance } })); // HQ15
+        Assert.Null(Pin(14, collectiveFleet: true));         // HQ14: battle bit on, flag off
+        Assert.Null(Pin(14, s: new GameSettings { Hq = new HqParams { DepartureOperands = HqDepartureOperands.Collective } })); // HQ15
         Assert.Null(Pin(14, s: new GameSettings { Hq = new HqParams { DepartureOperands = HqDepartureOperands.Off } }));      // HQ16
     }
 
@@ -107,11 +107,11 @@ public class HqTests
         string? Try(int squadrons)
         {
             var w = new FogWorld();
-            var ids = Enumerable.Range(0, squadrons).Select(_ => w.H.Economy.AddObject(Side.Empire, Tie, null)).ToList();
-            int fid = w.H.Economy.AddObject(Side.Empire, Tie, null); w.H.Economy.RemoveObject(fid); // a fresh id for the fleet
-            w.Game.State.Fleets[fid] = new Fleet { Id = fid, Side = Side.Empire, Squadrons = ids, At = R2 };
-            w.Game.State.Blockades[R2] = Side.Empire;
-            return w.TryMoveHq(Side.Alliance, R3);
+            var ids = Enumerable.Range(0, squadrons).Select(_ => w.H.Economy.AddObject(Side.Hand, Tie, null)).ToList();
+            int fid = w.H.Economy.AddObject(Side.Hand, Tie, null); w.H.Economy.RemoveObject(fid); // a fresh id for the fleet
+            w.Game.State.Fleets[fid] = new Fleet { Id = fid, Side = Side.Hand, Squadrons = ids, At = R2 };
+            w.Game.State.Blockades[R2] = Side.Hand;
+            return w.TryMoveHq(Side.Collective, R3);
         }
         Assert.Equal(HqRejectReason.Pinned, Try(35)); // 70
         Assert.Null(Try(34));                          // 68
@@ -122,14 +122,14 @@ public class HqTests
     public void HQ18_CaptureDestroysTheHq()
     {
         var w = new FogWorld();
-        w.H.Control.SubmitCapture(Side.Empire, R2) /* (B5a, 2026-10-17) Derived control: troops take the world */;
+        w.H.Control.SubmitCapture(Side.Hand, R2) /* (B5a, 2026-10-17) Derived control: troops take the world */;
         w.Step();
         var d = Assert.Single(w.Events<HqDestroyed>());
         Assert.Equal((FogModule.CauseCaptured, R2, 1), (d.Cause, d.System, d.Day));
         Assert.Equal(HqStatus.Destroyed, w.Hq.Status);
-        Assert.Contains(d, w.EventsFor(Side.Empire));
-        Assert.Contains(d, w.EventsFor(Side.Alliance));
-        Assert.Equal(HqRejectReason.NoHq, w.TryMoveHq(Side.Alliance, R3));
+        Assert.Contains(d, w.EventsFor(Side.Hand));
+        Assert.Contains(d, w.EventsFor(Side.Collective));
+        Assert.Equal(HqRejectReason.NoHq, w.TryMoveHq(Side.Collective, R3));
     }
 
     // m5-fog-and-hq HQ19
@@ -137,9 +137,9 @@ public class HqTests
     public void HQ19_HqInTransitSurvivesTheLossOfItsOrigin()
     {
         var w = new FogWorld();
-        w.Fog.SubmitMoveHq(Side.Alliance, R3);
+        w.Fog.SubmitMoveHq(Side.Collective, R3);
         w.StepTo(10);
-        w.H.Control.SubmitCapture(Side.Empire, R2) /* (B5a, 2026-10-17) Derived control: troops take the world */;
+        w.H.Control.SubmitCapture(Side.Hand, R2) /* (B5a, 2026-10-17) Derived control: troops take the world */;
         w.StepTo(20);
         Assert.Empty(w.Events<HqDestroyed>());
         Assert.Equal(R3, w.H.HqSystem);
@@ -151,9 +151,9 @@ public class HqTests
     public void HQ20_LostDestinationDestroysTheHqOnArrival()
     {
         var w = new FogWorld();
-        w.Fog.SubmitMoveHq(Side.Alliance, R3);
+        w.Fog.SubmitMoveHq(Side.Collective, R3);
         w.StepTo(10);
-        w.H.Control.SubmitCapture(Side.Empire, R3) /* (B5a, 2026-10-17) Derived control: troops take the world */;
+        w.H.Control.SubmitCapture(Side.Hand, R3) /* (B5a, 2026-10-17) Derived control: troops take the world */;
         w.StepTo(20);
         var d = Assert.Single(w.Events<HqDestroyed>());
         Assert.Equal((FogModule.CauseDestinationLost, R3, 20), (d.Cause, d.System, d.Day));
@@ -172,7 +172,7 @@ public class HqTests
         Assert.Equal(HqStatus.Destroyed, w.Hq.Status);
 
         var moving = new FogWorld();
-        moving.Fog.SubmitMoveHq(Side.Alliance, R3);
+        moving.Fog.SubmitMoveHq(Side.Collective, R3);
         moving.Step(5);
         moving.InStep(ctx => moving.Fog.OnSystemDestroyed(ctx, R2));
         moving.Step();
@@ -182,10 +182,10 @@ public class HqTests
 
     // m5-fog-and-hq HQ22
     [Fact]
-    public void HQ22_NeverLeavesTheHqOnAnEmpireWorld()
+    public void HQ22_NeverLeavesTheHqOnAnHandWorld()
     {
         var w = new FogWorld(new GameSettings { Hq = new HqParams { LostOnHolderChange = HqLostOnHolderChange.Never } });
-        w.H.Control.SubmitCapture(Side.Empire, R2) /* (B5a, 2026-10-17) Derived control: troops take the world */;
+        w.H.Control.SubmitCapture(Side.Hand, R2) /* (B5a, 2026-10-17) Derived control: troops take the world */;
         w.Step();
         Assert.Empty(w.Events<HqDestroyed>());
         Assert.Equal(HqStatus.AtRest, w.Hq.Status);
@@ -194,15 +194,15 @@ public class HqTests
 
     // m5-fog-and-hq HQ23
     [Fact]
-    public void HQ23_ArrivalLowersAllianceSupportInTheSector()
+    public void HQ23_ArrivalLowersCollectiveSupportInTheSector()
     {
         var w = new FogWorld();
-        w.Fog.SubmitMoveHq(Side.Alliance, R3);
+        w.Fog.SubmitMoveHq(Side.Collective, R3);
         w.StepTo(20);
         Assert.Equal((R3, "SR"), (w.Events<HqArrived>()[0].System, w.Events<HqArrived>()[0].Sector));
-        foreach (var s in new[] { R2, R3, R4 }) Assert.Equal(60, w.H.Economy.SupportOf(s, Side.Alliance));
-        Assert.Equal(20, w.H.Economy.SupportOf(R1, Side.Alliance)); // its own value, 30, minus 10
-        Assert.Equal(30, w.H.Economy.SupportOf(C0, Side.Alliance)); // another sector
+        foreach (var s in new[] { R2, R3, R4 }) Assert.Equal(60, w.H.Economy.SupportOf(s, Side.Collective));
+        Assert.Equal(20, w.H.Economy.SupportOf(R1, Side.Collective)); // its own value, 30, minus 10
+        Assert.Equal(30, w.H.Economy.SupportOf(C0, Side.Collective)); // another sector
         Assert.Equal(4, w.Events<SupportChanged>().Count(e => e.Cause == SupportCause.HqMove));
     }
 
@@ -218,7 +218,7 @@ public class HqTests
         });
         string Facilities() => string.Join(",", w.H.Economy.Objects.Where(o => o.System == R2 && o.Category == ObjectCategory.Facility).Select(o => $"{o.Id}:{o.Class}"));
         string before = Facilities();
-        w.Fog.SubmitMoveHq(Side.Alliance, R3);
+        w.Fog.SubmitMoveHq(Side.Collective, R3);
         w.StepTo(21);
         Assert.Equal(before, Facilities());
         Assert.DoesNotContain(w.H.Economy.Objects, o => o.Class.Contains("Headquarters", StringComparison.OrdinalIgnoreCase)); // HQ26: not a registry object
@@ -229,10 +229,10 @@ public class HqTests
     public void HQ27_SaveMidTransit()
     {
         var whole = new FogWorld();
-        whole.Fog.SubmitMoveHq(Side.Alliance, R4);
+        whole.Fog.SubmitMoveHq(Side.Collective, R4);
         whole.StepTo(45);
         var first = new FogWorld();
-        first.Fog.SubmitMoveHq(Side.Alliance, R4);
+        first.Fog.SubmitMoveHq(Side.Collective, R4);
         first.StepTo(7);
         var loaded = GameHost.Load(first.H.Save(), first.H.Settings, FogWorld.Data);
         Assert.Equal(HqStatus.InTransit, loaded.Game.State.Scenario.Hq.Status);
@@ -249,16 +249,16 @@ public class HqTests
         (List<string>, string, long) Run()
         {
             var w = new FogWorld();
-            // (B5a, 2026-10-17) under derived control the two moves' support losses (70 -> 50 at R2) would turn the unguarded Alliance worlds
-            // neutral and destroy the HQ (a capture draw); a regiment on each keeps them the Alliance's, so the test still sees only the HQ's own draws
-            foreach (var sys in new[] { R2, R3, R4 }) w.H.Economy.AddObject(Side.Alliance, "Militia", sys);
+            // (B5a, 2026-10-17) under derived control the two moves' support losses (70 -> 50 at R2) would turn the unguarded Collective worlds
+            // neutral and destroy the HQ (a capture draw); a regiment on each keeps them the Collective's, so the test still sees only the HQ's own draws
+            foreach (var sys in new[] { R2, R3, R4 }) w.H.Economy.AddObject(Side.Collective, "Militia", sys);
             // draws made in slots 1 to 3 (orders, departures, arrivals: the HQ's slots; nothing else there draws on Map M)
             long before = 0, hqDraws = 0;
             w.Game.RegisterHook("3", ctx => hqDraws += ctx.Rng.Draws - before);
             void Step() { before = w.Game.Rng.Draws; w.Step(); }
-            w.Fog.SubmitMoveHq(Side.Alliance, R3);
+            w.Fog.SubmitMoveHq(Side.Collective, R3);
             while (w.Game.Day < 25) Step();
-            w.Fog.SubmitMoveHq(Side.Alliance, R4);
+            w.Fog.SubmitMoveHq(Side.Collective, R4);
             while (w.Game.Day < 50) Step();
             return (w.Game.Events.Select(e => e.ToString()).ToList(), w.H.StateHash(), hqDraws);
         }
@@ -268,24 +268,24 @@ public class HqTests
         Assert.Equal(0, a.Item3);
     }
 
-    // Victory reads the destroyed HQ (setup-victory/04 §3 with m5-fog-and-hq §F7): a capture of the HQ system ends a real game for the Empire.
+    // Victory reads the destroyed HQ (setup-victory/04 §3 with m5-fog-and-hq §F7): a capture of the HQ system ends a real game for the Hand.
     [Fact]
-    public void CaptureOfTheHqSystemWinsTheGameForTheEmpire()
+    public void CaptureOfTheHqSystemWinsTheGameForTheHand()
     {
         var h = NewGame.Create(new NewGameOptions { Seed = 1, Settings = new GameSettings { DebugOrdersEnabled = true, Victory = OldVictory.Rules } });
         string hq = h.HqSystem!;
-        h.Control.SubmitCapture(Side.Empire, hq) /* (B5a, 2026-10-17) Derived control: troops take the world */;
+        h.Control.SubmitCapture(Side.Hand, hq) /* (B5a, 2026-10-17) Derived control: troops take the world */;
         h.Game.Step();
         Assert.Equal(HqStatus.Destroyed, h.Game.State.Scenario.Hq.Status);
-        Assert.Equal(Side.Empire, h.Victory.Winner);
-        Assert.Equal($"Empire captured the Rebel HQ at {hq}", h.Victory.Reason);
+        Assert.Equal(Side.Hand, h.Victory.Winner);
+        Assert.Equal($"Hand captured the Hearth at {hq}", h.Victory.Reason);
     }
 
     [Fact]
     public void MoveHqOrderSavesInTheQueue()
     {
         var w = new FogWorld();
-        w.Fog.SubmitMoveHq(Side.Alliance, R3);
+        w.Fog.SubmitMoveHq(Side.Collective, R3);
         var loaded = GameHost.Load(w.H.Save(), w.H.Settings, FogWorld.Data);
         Assert.IsType<MoveHqOrder>(Assert.Single(loaded.Game.Queue));
         loaded.Game.Step();

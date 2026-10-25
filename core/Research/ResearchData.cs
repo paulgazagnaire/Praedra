@@ -12,7 +12,7 @@ public enum ResearchKind { Ship = 0, Troop = 1, Facility = 2 }
 /// data/design/research-unlocks.csv). <see cref="Catalogue"/> is the row's position in the file: the catalogue order of m5-research §The level check step 4 (DEFAULT).
 /// rule: m5-research §Which track an item belongs to, §Ladders.
 /// </summary>
-public sealed record ResearchRow(int Catalogue, ResearchKind Kind, string Name, bool Alliance, bool Empire, int Cost, int Order, int Difficulty);
+public sealed record ResearchRow(int Catalogue, ResearchKind Kind, string Name, bool Collective, bool Hand, int Cost, int Order, int Difficulty);
 
 /// <summary>
 /// The data table <c>ResearchRules</c> (data/design/research-rules.csv, key,value,source): the facility tick timer, points per yard, the
@@ -78,7 +78,7 @@ public sealed class ResearchData
     public static List<ResearchRow> ParseLadder(CsvTable t, CostData? costs)
     {
         string source = t.Source;
-        t.Require("research_family", "name", "alliance", "empire", "cost", "level", "rdiff");
+        t.Require("research_family", "name", "collective", "hand", "cost", "level", "rdiff");
         var rows = new List<ResearchRow>();
         var seen = new SortedSet<string>(StringComparer.Ordinal);
         for (int r = 0; r < t.RowCount; r++)
@@ -100,7 +100,7 @@ public sealed class ResearchData
                 if (c.ResearchOrder != order)
                     throw new DataLoadException($"{t.Where(r)}: '{name}' has research order {order} but {CostData.FileName} says {c.ResearchOrder}.");
             }
-            rows.Add(new ResearchRow(r, kind, name, t.GetInt(r, "alliance") != 0, t.GetInt(r, "empire") != 0, cost, order, diff));
+            rows.Add(new ResearchRow(r, kind, name, t.GetInt(r, "collective") != 0, t.GetInt(r, "hand") != 0, cost, order, diff));
         }
         if (costs != null)
             foreach (var c in costs.Rows)

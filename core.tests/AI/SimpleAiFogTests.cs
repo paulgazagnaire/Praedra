@@ -25,39 +25,39 @@ public class SimpleAiFogTests
     [Fact]
     public void UseFogIsOffByDefault() => Assert.False(new SimpleAiParams().UseFog);
 
-    // m5-fog-and-hq §N5: KnownEnemyHq is set only when the Empire's own picture shows the HQ.
+    // m5-fog-and-hq §N5: KnownEnemyHq is set only when the Hand's own picture shows the HQ.
     [Fact]
     public void KnownEnemyHqComesOnlyFromTheEmpiresPicture()
     {
         var (m, h) = Match(1);
-        m.Empire.KnownEnemyHq = h.HqSystem; // a caller's hint is ignored with fog
+        m.Hand.KnownEnemyHq = h.HqSystem; // a caller's hint is ignored with fog
         m.Step();
-        Assert.Null(m.Empire.KnownEnemyHq);
+        Assert.Null(m.Hand.KnownEnemyHq);
         string hq = h.HqSystem!;
         bool done = false;
-        h.Game.RegisterHook("6.8", ctx => { if (!done) { done = true; h.Fog.EspionageSuccess(ctx, Side.Empire, hq); } });
+        h.Game.RegisterHook("6.8", ctx => { if (!done) { done = true; h.Fog.EspionageSuccess(ctx, Side.Hand, hq); } });
         m.Step(); // the reveal lands at the end of this Step
         m.Step(); // planned with the new picture
-        Assert.Equal(hq, m.Empire.KnownEnemyHq);
+        Assert.Equal(hq, m.Hand.KnownEnemyHq);
     }
 
-    // m5-fog-and-hq FN1 with the AI: two games that differ only in where the (unseen) HQ stands give the Empire AI the same view, so the
+    // m5-fog-and-hq FN1 with the AI: two games that differ only in where the (unseen) HQ stands give the Hand AI the same view, so the
     // same orders, day after day, as long as its knowledge is the same (its spies may find out, SimpleAiParams.UseCharactersAndMissions:
     // measured, the knowledge parts on day 135 on seed 2, when a look at the HQ candidate Eldingar reports an HQ in one game only).
     [Fact]
-    public void FN1_EmpireAiOrdersDoNotDependOnAnUnseenHq()
+    public void FN1_HandAiOrdersDoNotDependOnAnUnseenHq()
     {
-        var (a, ha) = Match(2, passive: Side.Alliance);
-        string other = ha.Game.State.SystemOwners.Where(kv => kv.Value == Side.Alliance && kv.Key != ha.HqSystem && !ha.Fog.IsExplored(Side.Empire, kv.Key))
+        var (a, ha) = Match(2, passive: Side.Collective);
+        string other = ha.Game.State.SystemOwners.Where(kv => kv.Value == Side.Collective && kv.Key != ha.HqSystem && !ha.Fog.IsExplored(Side.Hand, kv.Key))
             .Select(kv => kv.Key).First();
-        var (b, hb) = Match(2, passive: Side.Alliance, setup: h => h.Fog.PlaceHq(other));
+        var (b, hb) = Match(2, passive: Side.Collective, setup: h => h.Fog.PlaceHq(other));
         Assert.NotEqual(ha.HqSystem, hb.HqSystem);
         int same = 0;
         for (int day = 0; day < 250; day++)
         {
             a.Step(); b.Step();
-            Assert.Equal(a.Empire.Submitted.Select(o => o.Kind + " " + o.Detail), b.Empire.Submitted.Select(o => o.Kind + " " + o.Detail));
-            if (ha.Fog.KnowledgeHash(Side.Empire) != hb.Fog.KnowledgeHash(Side.Empire)) break; // the Empire found out: the games may part now
+            Assert.Equal(a.Hand.Submitted.Select(o => o.Kind + " " + o.Detail), b.Hand.Submitted.Select(o => o.Kind + " " + o.Detail));
+            if (ha.Fog.KnowledgeHash(Side.Hand) != hb.Fog.KnowledgeHash(Side.Hand)) break; // the Hand found out: the games may part now
             same++;
             if (ha.Victory.Winner != null || hb.Victory.Winner != null) break;
         }
@@ -87,7 +87,7 @@ public class SimpleAiFogTests
         var (d, hd) = Match(3);
         d.RunTo(200);
         Assert.Equal(ha.StateHash(), hd.StateHash());
-        _out.WriteLine($"orders {a.TotalSent} rejected {a.TotalRejected}; explored E {ha.Data.Galaxy.Systems.Count(s => ha.Fog.IsExplored(Side.Empire, s.Name))} A {ha.Data.Galaxy.Systems.Count(s => ha.Fog.IsExplored(Side.Alliance, s.Name))}");
+        _out.WriteLine($"orders {a.TotalSent} rejected {a.TotalRejected}; explored E {ha.Data.Galaxy.Systems.Count(s => ha.Fog.IsExplored(Side.Hand, s.Name))} A {ha.Data.Galaxy.Systems.Count(s => ha.Fog.IsExplored(Side.Collective, s.Name))}");
         Assert.True(a.TotalRejected * 20 <= a.TotalSent, $"{a.TotalRejected} of {a.TotalSent} orders rejected");
     }
 }

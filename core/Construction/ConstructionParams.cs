@@ -77,10 +77,10 @@ public static class StartingFacilities
             if (!FacilityKinds.TryParse(facility, out var kind)) throw new DataLoadException($"{t.Where(r)}: unknown facility '{facility}'.");
             Side? s = side switch
             {
-                "Empire" => Side.Empire,
-                "Alliance" => Side.Alliance,
+                "Hand" => Side.Hand,
+                "Collective" => Side.Collective,
                 "Neutral" => null,
-                _ => throw new DataLoadException($"{t.Where(r)}: side must be Empire, Alliance or Neutral, not '{side}'."),
+                _ => throw new DataLoadException($"{t.Where(r)}: side must be Hand, Collective or Neutral, not '{side}'."),
             };
             list.Add(new StartingFacility(t.Get(r, "system").Trim(), kind, s));
         }

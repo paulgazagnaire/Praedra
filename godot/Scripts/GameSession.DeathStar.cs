@@ -92,11 +92,11 @@ public sealed partial class GameSession
                 break;
             case SectorStruck x:
                 if (x.Strike <= 1)
-                    yield return new Message(d, $"The {x.Sector} turns against the Empire: {x.Systems.Items.Count()} system(s) there lose support for it. A second strike in this sector would turn it all to the Alliance.",
-                        null, Player == Side.Empire ? MsgKind.Bad : MsgKind.Good);
+                    yield return new Message(d, $"The {x.Sector} turns against the Hand: {x.Systems.Items.Count()} system(s) there lose support for it. A second strike in this sector would turn it all to the Collective.",
+                        null, Player == Side.Hand ? MsgKind.Bad : MsgKind.Good);
                 else
-                    yield return new Message(d, $"Revolt in the {x.Sector}! Every system left there now backs the Alliance, and the Imperial ones rise up.",
-                        null, Player == Side.Empire ? MsgKind.Bad : MsgKind.Good);
+                    yield return new Message(d, $"Revolt in the {x.Sector}! Every system left there now backs the Collective, and the Hand ones rise up.",
+                        null, Player == Side.Hand ? MsgKind.Bad : MsgKind.Good);
                 break;
             case DestroySystemCancelled x when Mine(x.Side):
                 yield return new Message(d, $"Destroy System at {x.System} by {FleetName(x.Fleet)} was cancelled ({Why(x.Reason)}).", x.System, MsgKind.Warn);

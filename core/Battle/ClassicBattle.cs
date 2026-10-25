@@ -11,7 +11,7 @@ namespace Praedra.Core.Battle;
 /// </summary>
 public sealed class BattleUnit
 {
-    /// <summary>Position in the force: the unit id of the sheet (Alliance first, then Empire; ships by id, then squadrons).</summary>
+    /// <summary>Position in the force: the unit id of the sheet (Collective first, then Hand; ships by id, then squadrons).</summary>
     public int Index { get; set; }
     /// <summary>The registry object id (0 for a synthetic unit).</summary>
     public int ObjectId { get; set; }
@@ -36,7 +36,7 @@ public sealed class BattleUnit
     public int Carrier { get; set; }
     /// <summary>Characters and special-forces units aboard (each adds 1 to the target value). rule: m4-battle-classic §5 (Traced, inferred "aboard").</summary>
     public int Passengers { get; set; }
-    /// <summary>Classic: a squadron in a hangar (state 1): at the start, a hyperdrive-less squadron of the Empire aboard its carrier; on retreat, one that docked.</summary>
+    /// <summary>Classic: a squadron in a hangar (state 1): at the start, a hyperdrive-less squadron of the Hand aboard its carrier; on retreat, one that docked.</summary>
     public bool Docked { get; set; }
     /// <summary>Still in the battle: not destroyed and not gone.</summary>
     public bool Alive { get; set; } = true;
@@ -72,20 +72,20 @@ public sealed record SideRetreatedStep(Side Side, int Second) : BattleStep;
 public sealed class ClassicBattleResult
 {
     public int Seconds { get; init; }
-    public BattleOutcome AllianceOutcome { get; init; }
-    public BattleOutcome EmpireOutcome { get; init; }
-    public int AllianceLosses { get; init; }
-    public int EmpireLosses { get; init; }
-    public int AllianceSurvivors { get; init; }
-    public int EmpireSurvivors { get; init; }
-    public bool AllianceRetreated { get; init; }
-    public bool EmpireRetreated { get; init; }
+    public BattleOutcome CollectiveOutcome { get; init; }
+    public BattleOutcome HandOutcome { get; init; }
+    public int CollectiveLosses { get; init; }
+    public int HandLosses { get; init; }
+    public int CollectiveSurvivors { get; init; }
+    public int HandSurvivors { get; init; }
+    public bool CollectiveRetreated { get; init; }
+    public bool HandRetreated { get; init; }
     /// <summary>Numbers the battle generator gave out.</summary>
     public long Draws { get; init; }
     public IReadOnlyList<BattleStep> Steps { get; init; } = Array.Empty<BattleStep>();
 
-    public BattleOutcome OutcomeOf(Side s) => s == Side.Alliance ? AllianceOutcome : EmpireOutcome;
-    public bool Retreated(Side s) => s == Side.Alliance ? AllianceRetreated : EmpireRetreated;
+    public BattleOutcome OutcomeOf(Side s) => s == Side.Collective ? CollectiveOutcome : HandOutcome;
+    public bool Retreated(Side s) => s == Side.Collective ? CollectiveRetreated : HandRetreated;
 }
 
 /// <summary>The dice of one Classic battle: rand(0..n), inclusive; n &lt;= 1 gives 0 and draws nothing. rule: m4-battle-classic §11 (B3 §13).</summary>
@@ -309,10 +309,10 @@ public sealed class ClassicBattle
     private int _second;
     private int _nextTf;
 
-    // Side order of the result and of Simultaneous fire: Alliance before Empire.
-    private static readonly Side[] Order = { Side.Alliance, Side.Empire };
+    // Side order of the result and of Simultaneous fire: Collective before Hand.
+    private static readonly Side[] Order = { Side.Collective, Side.Hand };
     private static int I(Side s) => (int)s;
-    private static Side Other(Side s) => s == Side.Alliance ? Side.Empire : Side.Alliance;
+    private static Side Other(Side s) => s == Side.Collective ? Side.Hand : Side.Collective;
 
     /// <param name="units">All units; <see cref="BattleUnit.Index"/> must equal the position. Hull, HullMax and Hits as stored; shields are set full here.</param>
     /// <param name="rng">The battle's GameRng, used only with ClassicBattleRng = Game.</param>
@@ -343,9 +343,9 @@ public sealed class ClassicBattle
             u.ShieldMax = u.Shield = ClassicRates.StartShield(p, u.Class, u.IsCapital);
             if (u.IsCapital) u.Hits[ObjectRegistry.HyperdriveCounter] = Math.Min(u.Hits[ObjectRegistry.HyperdriveCounter], ClassicRates.HyperdriveComponents(u.Class));
         }
-        // rule: m4-battle-classic §1 (B3 §1): squadrons of the Empire aboard a carrier in the battle that have no hyperdrive start docked (state 1)
+        // rule: m4-battle-classic §1 (B3 §1): squadrons of the Hand aboard a carrier in the battle that have no hyperdrive start docked (state 1)
         foreach (var q in _units)
-            if (!q.IsCapital && q.Side == Side.Empire && q.Carrier != 0 && q.Class.Hyperdrive == 0)
+            if (!q.IsCapital && q.Side == Side.Hand && q.Carrier != 0 && q.Class.Hyperdrive == 0)
             {
                 var c = _units.FirstOrDefault(x => x.IsCapital && x.Side == q.Side && x.ObjectId == q.Carrier);
                 if (c != null) { q.Docked = true; q.DockedIn = c; }
@@ -373,7 +373,7 @@ public sealed class ClassicBattle
     private bool HasUnits(Side s) => _units.Any(u => u.Alive && u.Side == s);
     private static bool Active(BattleUnit u) => u.Alive && !u.Docked;
     private bool IsDeathStar(BattleUnit u) => u.IsCapital && u.Class.Id == _p.DeathStarClassId;
-    private bool DeathStarWorks(Side s) => s == Side.Empire && AliveOf(s).Any(IsDeathStar);
+    private bool DeathStarWorks(Side s) => s == Side.Hand && AliveOf(s).Any(IsDeathStar);
 
     private double TfRate(ClassicTaskForce tf, BattleUnit v)
     {
@@ -488,7 +488,7 @@ public sealed class ClassicBattle
         if (_retreated[I(side)]) return RetreatRefusal.NoDestination; // already done (never asked in practice)
         // no enemy capital ship in the battle with the gravity-well flag (a static class flag)
         if (AliveOf(Other(side)).Any(u => u.IsCapital && u.Class.GravityWellProjector > 0)) return RetreatRefusal.GravityWell;
-        // some own unit can jump, or the Empire has a working Death Star
+        // some own unit can jump, or the Hand has a working Death Star
         bool able = AliveOf(side).Any(u => !u.Docked && ClassicRates.CanJump(_p, u)) || DeathStarWorks(side);
         if (!able) return RetreatRefusal.NoHyperdrive;
         if (!_hasDestination[I(side)]) return RetreatRefusal.NoDestination; // ours: a destination exists (m4-retreat-damage-repair §1 (5))
@@ -668,7 +668,7 @@ public sealed class ClassicBattle
 
     private void Launch(Side side)
     {
-        if (side != Side.Empire) return;
+        if (side != Side.Hand) return;
         foreach (var q in _units)
             if (q.Side == side && q.Alive && q.Docked && !q.IsCapital) { q.Docked = false; q.DockedIn = null; _squadList[I(side)].Add(q); }
     }
@@ -720,8 +720,8 @@ public sealed class ClassicBattle
     /// <summary>Switch ClassicFireOrder = Simultaneous: both sides aim and fire from the same state, then retreat tests, then recharge.</summary>
     private (bool E, bool A) StepBoth()
     {
-        bool hasE = HasUnits(Side.Empire), hasA = HasUnits(Side.Alliance);
-        Launch(Side.Empire);
+        bool hasE = HasUnits(Side.Hand), hasA = HasUnits(Side.Collective);
+        Launch(Side.Hand);
         foreach (var s in Order) if (HasUnits(s)) Assign(s);
         var shots = new List<(BattleUnit V, double D)>();
         foreach (var s in Order)
@@ -736,7 +736,7 @@ public sealed class ClassicBattle
         var want = Order.Where(s => HasUnits(s) && WantsRetreat(s)).ToList();
         foreach (var s in want) ExecuteRetreat(s);
         foreach (var s in Order) Recharge(s);
-        return (!hasE || !HasUnits(Side.Empire), !hasA || !HasUnits(Side.Alliance));
+        return (!hasE || !HasUnits(Side.Hand), !hasA || !HasUnits(Side.Collective));
     }
 
     // ---------------------------------------------------------------- retreat execution. rule: m4-retreat-damage-repair §2 (B3 §11)
@@ -746,7 +746,7 @@ public sealed class ClassicBattle
 
     /// <summary>
     /// Squadrons first, in the side's list order: one that can jump leaves; else it docks in its own carrier still in the battle (its hyperdrive is not
-    /// checked), else in the first own capital ship with room, else (Empire) in the Death Star; no room: destroyed. Then the Death Star leaves; then
+    /// checked), else in the first own capital ship with room, else (Hand) in the Death Star; no room: destroyed. Then the Death Star leaves; then
     /// capital ships that can jump leave and the others are destroyed with everything docked in them. rule: m4-retreat-damage-repair §2.
     /// </summary>
     private void ExecuteRetreat(Side side)
@@ -760,7 +760,7 @@ public sealed class ClassicBattle
             var own = q.Carrier != 0 ? _units.FirstOrDefault(c => c.IsCapital && c.Side == side && c.ObjectId == q.Carrier && Active(c)) : null;
             if (own != null && HasRoom(own)) ship = own;
             ship ??= _units.FirstOrDefault(c => c.IsCapital && c.Side == side && Active(c) && !IsDeathStar(c) && HasRoom(c));
-            if (ship == null && side == Side.Empire) ship = _units.FirstOrDefault(c => Active(c) && c.Side == side && IsDeathStar(c) && HasRoom(c));
+            if (ship == null && side == Side.Hand) ship = _units.FirstOrDefault(c => Active(c) && c.Side == side && IsDeathStar(c) && HasRoom(c));
             if (ship == null) { Kill(q, UnitLossReason.NoBerth); continue; }
             q.Docked = true; q.DockedIn = ship;
         }
@@ -788,10 +788,10 @@ public sealed class ClassicBattle
     {
         _second++;
         bool overE, overA;
-        if (_p.FireOrder == ClassicFireOrder.EmpireFirst)
+        if (_p.FireOrder == ClassicFireOrder.HandFirst)
         {
-            overE = Step(Side.Empire);   // the Empire's step, then the Alliance's
-            overA = Step(Side.Alliance);
+            overE = Step(Side.Hand);   // the Hand's step, then the Collective's
+            overA = Step(Side.Collective);
         }
         else (overE, overA) = StepBoth();
         double[] str = new double[2];
@@ -801,16 +801,16 @@ public sealed class ClassicBattle
             if (str[I(s)] < _low[I(s)]) { _low[I(s)] = str[I(s)]; _timer[I(s)] = 0; }
             else _timer[I(s)]++;
         }
-        if (overE || overA || !HasUnits(Side.Alliance) || !HasUnits(Side.Empire)) return true;
+        if (overE || overA || !HasUnits(Side.Collective) || !HasUnits(Side.Hand)) return true;
         bool guard = _second >= _p.SafetyGuardSeconds;
         if ((_timer[0] >= _p.StalemateSeconds && _timer[1] >= _p.StalemateSeconds) || guard)
         {
-            // rule: m4-battle-classic §8.3; m4-retreat-damage-repair §2 (DeathStarStalemate: the Alliance's stalemate strength is -1 while the Empire's Death Star works)
-            double a = str[I(Side.Alliance)], e = str[I(Side.Empire)];
-            if (_p.DeathStarStalemate && DeathStarWorks(Side.Empire)) a = -1;
+            // rule: m4-battle-classic §8.3; m4-retreat-damage-repair §2 (DeathStarStalemate: the Collective's stalemate strength is -1 while the Hand's Death Star works)
+            double a = str[I(Side.Collective)], e = str[I(Side.Hand)];
+            if (_p.DeathStarStalemate && DeathStarWorks(Side.Hand)) a = -1;
             var flagged = new List<Side>();
-            if (a >= e) flagged.Add(Side.Empire);
-            if (a <= e) flagged.Add(Side.Alliance);
+            if (a >= e) flagged.Add(Side.Hand);
+            if (a <= e) flagged.Add(Side.Collective);
             var can = flagged.Select(CanRetreat).ToList(); // both read before either changes
             for (int k = 0; k < flagged.Count; k++)
             {
@@ -818,7 +818,7 @@ public sealed class ClassicBattle
                 Refuse(flagged[k], can[k]!.Value);
                 foreach (var u in AliveOf(flagged[k]).ToList()) Kill(u, UnitLossReason.Stalemate);
             }
-            if (!HasUnits(Side.Alliance) || !HasUnits(Side.Empire)) return true;
+            if (!HasUnits(Side.Collective) || !HasUnits(Side.Hand)) return true;
             if (guard) // the engineering guard ends the battle now: the forced sides leave
             {
                 foreach (var s in Order) if (_forced[I(s)] && HasUnits(s)) ExecuteRetreat(s);
@@ -831,14 +831,14 @@ public sealed class ClassicBattle
     /// <summary>Run the battle to its end and return the result. The units keep their final state.</summary>
     public ClassicBattleResult Run()
     {
-        if (HasUnits(Side.Alliance) && HasUnits(Side.Empire))
+        if (HasUnits(Side.Collective) && HasUnits(Side.Hand))
             while (!Tick()) { }
         return Finish();
     }
 
     private ClassicBattleResult Finish()
     {
-        bool aliveA = HasUnits(Side.Alliance), aliveE = HasUnits(Side.Empire);
+        bool aliveA = HasUnits(Side.Collective), aliveE = HasUnits(Side.Hand);
         BattleOutcome Outcome(Side s, bool alive, bool otherAlive) =>
             alive && !otherAlive ? BattleOutcome.Victorious
             : !alive && otherAlive ? (_retreated[I(s)] ? BattleOutcome.Retreated : BattleOutcome.Annihilated)
@@ -848,11 +848,11 @@ public sealed class ClassicBattle
         return new ClassicBattleResult
         {
             Seconds = _second,
-            AllianceOutcome = Outcome(Side.Alliance, aliveA, aliveE),
-            EmpireOutcome = Outcome(Side.Empire, aliveE, aliveA),
-            AllianceLosses = Lost(Side.Alliance), EmpireLosses = Lost(Side.Empire),
-            AllianceSurvivors = Survived(Side.Alliance), EmpireSurvivors = Survived(Side.Empire),
-            AllianceRetreated = _retreated[I(Side.Alliance)], EmpireRetreated = _retreated[I(Side.Empire)],
+            CollectiveOutcome = Outcome(Side.Collective, aliveA, aliveE),
+            HandOutcome = Outcome(Side.Hand, aliveE, aliveA),
+            CollectiveLosses = Lost(Side.Collective), HandLosses = Lost(Side.Hand),
+            CollectiveSurvivors = Survived(Side.Collective), HandSurvivors = Survived(Side.Hand),
+            CollectiveRetreated = _retreated[I(Side.Collective)], HandRetreated = _retreated[I(Side.Hand)],
             Draws = _dice.Draws,
             Steps = _steps,
         };

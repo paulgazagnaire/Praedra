@@ -6,7 +6,7 @@ using Xunit.Abstractions;
 namespace Praedra.Core.Tests.AI;
 
 // QA-12: the Medium AI against itself must finish its games. The 8-seed floors passed #68 while 11 of 16 Medium mirrors stopped ending (its
-// leader marks kept the Emperor home from day one, so he no longer put down uprisings, and the Empire never finished the last Rebel worlds;
+// leader marks kept the Emperor home from day one, so he no longer put down uprisings, and the Hand never finished the last Collective worlds;
 // the marks are DEFAULT off since #75). Same set-up as
 // `sim tourney --a medium --b medium` (MedA start, default settings, fog on both sides). The games end through the playable slice's
 // "the other side holds no system" rule (VictoryRules, DEFAULT; Classic has no such ending, B6c / RE lead 2026-10-18) or the
@@ -33,9 +33,9 @@ public class GamesEndTests
             var m = new AiMatch(host, p, p);
             while (host.Game.Day < 3000 && host.Victory.Winner == null) m.Step();
             int Held(Side s) => host.Data.Galaxy.Systems.Count(x => host.Fleets.OwnerOf(x.Name) == s);
-            return (Seed: seed, host.Victory.Winner, host.Game.Day, Empire: Held(Side.Empire), Alliance: Held(Side.Alliance));
+            return (Seed: seed, host.Victory.Winner, host.Game.Day, Hand: Held(Side.Hand), Collective: Held(Side.Collective));
         });
-        foreach (var g in games) _out.WriteLine($"seed {g.Seed}: winner {g.Winner?.ToString() ?? "none"} day {g.Day}; systems {g.Empire}/{g.Alliance}");
+        foreach (var g in games) _out.WriteLine($"seed {g.Seed}: winner {g.Winner?.ToString() ?? "none"} day {g.Day}; systems {g.Hand}/{g.Collective}");
         int open = games.Count(g => g.Winner == null);
         // v6 re-pin 2026-10-25 (Dev lead; Paul chose "Ship now" on the spiral-map card, re-measure the AI checks on the new map; ai-notes/2026-10-24-spiral-map-v6.md): measured 4 of 8 open on v6 (seeds 1, 2, 3, 4; seeds 2 and 4 end 298/2 and 268/5, the known endgame stall). The bar was 3 on v5;
         // it goes back to 3 when the endgame rule (the dominance-win card) lands.

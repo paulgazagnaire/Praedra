@@ -4,7 +4,7 @@ using Praedra.Core.Economy;
 namespace Praedra.Core.Tests.Economy;
 
 // Tests of m2-maintenance (ids M1 to M22) on the real costs file. Hook time T = K + 1; events carry Day = T.
-// Empire fixture E: 7 mines and 7 refineries (capacity 350); Orbital Shipyard id 100; 4 ISD ids 101 to 104;
+// Hand fixture E: 7 mines and 7 refineries (capacity 350); Orbital Shipyard id 100; 4 ISD ids 101 to 104;
 // 10 Stormtrooper Regiments ids 105 to 114; all completed. Load = 13 + 4 x 71 + 10 x 6 = 357.
 public class MaintenanceTests
 {
@@ -13,19 +13,19 @@ public class MaintenanceTests
     private static EcoWorld FixtureE(EcoWorld? w = null)
     {
         w ??= new EcoWorld();
-        w.Hold(Home, Side.Empire, 100);
+        w.Hold(Home, Side.Hand, 100);
         for (int i = 1; i <= 7; i++) w.Mine(Home, id: i);
         for (int i = 8; i <= 14; i++) w.Refinery(Home, id: i);
         w.Eco.AddFacility(Home, FacilityKind.OrbitalShipyard, id: 100);
-        for (int i = 101; i <= 104; i++) w.Eco.AddObject(Side.Empire, "Mandate", id: i);
-        for (int i = 105; i <= 114; i++) w.Eco.AddObject(Side.Empire, "Pacifiers", id: i);
+        for (int i = 101; i <= 104; i++) w.Eco.AddObject(Side.Hand, "Mandate", id: i);
+        for (int i = 105; i <= 114; i++) w.Eco.AddObject(Side.Hand, "Pacifiers", id: i);
         return w;
     }
 
     private static EcoWorld Pairs(int mines, int refineries, bool extraMineInDelivery = false)
     {
         var w = new EcoWorld();
-        w.Hold(Home, Side.Empire, 100);
+        w.Hold(Home, Side.Hand, 100);
         for (int i = 0; i < mines; i++) w.Mine(Home);
         for (int i = 0; i < refineries; i++) w.Refinery(Home);
         if (extraMineInDelivery) w.Mine(Home, completed: false);
@@ -41,15 +41,15 @@ public class MaintenanceTests
     [InlineData(0, 5, false, 0)]
     [InlineData(7, 7, true, 350)]
     public void M1_to_M4_Capacity(int mines, int refineries, bool inDelivery, int capacity) =>
-        Assert.Equal(capacity, Pairs(mines, refineries, inDelivery).Eco.Capacity(Side.Empire));
+        Assert.Equal(capacity, Pairs(mines, refineries, inDelivery).Eco.Capacity(Side.Hand));
 
     // m2-maintenance M5
     [Fact]
     public void M5_FixtureELoadIs357AndFreeIsMinusSeven()
     {
         var w = FixtureE();
-        Assert.Equal(357, w.Eco.Load(Side.Empire));
-        Assert.Equal(-7, w.Eco.Free(Side.Empire));
+        Assert.Equal(357, w.Eco.Load(Side.Hand));
+        Assert.Equal(-7, w.Eco.Free(Side.Hand));
     }
 
     // m2-maintenance M6
@@ -58,8 +58,8 @@ public class MaintenanceTests
     {
         var w = FixtureE();
         w.Mine(Home); w.Refinery(Home);
-        Assert.Equal(357, w.Eco.Load(Side.Empire));
-        Assert.Equal(400, w.Eco.Capacity(Side.Empire));
+        Assert.Equal(357, w.Eco.Load(Side.Hand));
+        Assert.Equal(400, w.Eco.Capacity(Side.Hand));
     }
 
     // m2-maintenance M7 (the order itself is construction's; the three ISD objects it would create are added here)
@@ -69,12 +69,12 @@ public class MaintenanceTests
         // B5b 2026-10-18: the autoscrap timer is armed when the overdraft is first seen (B5b §6, [EXE-own] 0x5329f0).
         // These worlds are over from Day 0; the 6.7 hook first sees it at T = 1, so the first firing is T = 11 (was 10).
         var w = new EcoWorld();
-        w.Hold(Home, Side.Empire);
-        int a = w.Eco.AddObject(Side.Empire, "Mandate"); // 71
-        int b = w.Eco.AddObject(Side.Empire, "Indenture");       // 29
-        Assert.Equal(100, w.Eco.Load(Side.Empire));
-        for (int i = 0; i < 3; i++) w.Eco.AddObject(Side.Empire, "Mandate", completed: false);
-        Assert.Equal(313, w.Eco.Load(Side.Empire));
+        w.Hold(Home, Side.Hand);
+        int a = w.Eco.AddObject(Side.Hand, "Mandate"); // 71
+        int b = w.Eco.AddObject(Side.Hand, "Indenture");       // 29
+        Assert.Equal(100, w.Eco.Load(Side.Hand));
+        for (int i = 0; i < 3; i++) w.Eco.AddObject(Side.Hand, "Mandate", completed: false);
+        Assert.Equal(313, w.Eco.Load(Side.Hand));
         w.Run(11); // capacity 0: autoscrap fires at hook time 11 over the two completed objects only
         var s = Assert.Single(Scraps(w));
         Assert.Contains(s.Object, new[] { a, b });
@@ -86,12 +86,12 @@ public class MaintenanceTests
     public void M8_CancellingQueuedShipsGivesBackMaintenanceButNoRefined()
     {
         var w = new EcoWorld();
-        w.Hold(Home, Side.Empire);
-        w.Eco.AddObject(Side.Empire, "Mandate"); w.Eco.AddObject(Side.Empire, "Indenture");
-        var queued = Enumerable.Range(0, 3).Select(_ => w.Eco.AddObject(Side.Empire, "Mandate", completed: false)).ToList();
+        w.Hold(Home, Side.Hand);
+        w.Eco.AddObject(Side.Hand, "Mandate"); w.Eco.AddObject(Side.Hand, "Indenture");
+        var queued = Enumerable.Range(0, 3).Select(_ => w.Eco.AddObject(Side.Hand, "Mandate", completed: false)).ToList();
         foreach (var id in queued) w.Eco.RemoveObject(id);
-        Assert.Equal(100, w.Eco.Load(Side.Empire));
-        Assert.Equal(0, w.Eco.Refined(Side.Empire));
+        Assert.Equal(100, w.Eco.Load(Side.Hand));
+        Assert.Equal(0, w.Eco.Refined(Side.Hand));
     }
 
     // m2-maintenance M9 (there is no character object; a zero-maintenance object stands in: Repossessors, cost 0)
@@ -99,8 +99,8 @@ public class MaintenanceTests
     public void M9_ZeroMaintenanceObjectsDoNotChangeLoad()
     {
         var w = FixtureE();
-        w.Eco.AddObject(Side.Empire, "Repossessors");
-        Assert.Equal(357, w.Eco.Load(Side.Empire));
+        w.Eco.AddObject(Side.Hand, "Repossessors");
+        Assert.Equal(357, w.Eco.Load(Side.Hand));
     }
 
     // m2-maintenance M10
@@ -109,8 +109,8 @@ public class MaintenanceTests
     {
         var w = new EcoWorld();
         w.Eco.AddFacility("The Thaw", FacilityKind.OrbitalShipyard);
-        Assert.Equal(0, w.Eco.Load(Side.Empire));
-        Assert.Equal(0, w.Eco.Load(Side.Alliance));
+        Assert.Equal(0, w.Eco.Load(Side.Hand));
+        Assert.Equal(0, w.Eco.Load(Side.Collective));
     }
 
     // m2-maintenance M11
@@ -139,7 +139,7 @@ public class MaintenanceTests
         w.Run(11);
         var s = Assert.Single(Scraps(w));
         Assert.Equal((100, 10, "Autoscrap"), (s.Object, s.Refund, s.Reason));
-        Assert.Equal(344, w.Eco.Load(Side.Empire));
+        Assert.Equal(344, w.Eco.Load(Side.Hand));
         Assert.Equal(1, w.Stub.Count(0, 14)); // eligible = ids 100 to 114, 15 objects
         Assert.Null(w.Eco.Find(100));
     }
@@ -155,7 +155,7 @@ public class MaintenanceTests
         w.Run(11);
         var s = Assert.Single(Scraps(w));
         Assert.Equal((114, 4), (s.Object, s.Refund));
-        Assert.Equal(351, w.Eco.Load(Side.Empire)); // still over capacity 350 by 1
+        Assert.Equal(351, w.Eco.Load(Side.Hand)); // still over capacity 350 by 1
         w.Run(10); // Step 20 (K + 1 = 21)
         Assert.Equal(2, Scraps(w).Count);
         Assert.Equal(21, Scraps(w)[1].Day);
@@ -172,10 +172,10 @@ public class MaintenanceTests
         w.Run(11);
         Assert.Equal(105, Assert.Single(Scraps(w)).Object);
         Assert.Equal(4, Scraps(w)[0].Refund);
-        Assert.Equal(351, w.Eco.Load(Side.Empire));
+        Assert.Equal(351, w.Eco.Load(Side.Hand));
         w.Run(10);
         Assert.Equal(new[] { 105, 106 }, Scraps(w).Select(x => x.Object).ToArray());
-        Assert.Equal(345, w.Eco.Load(Side.Empire));
+        Assert.Equal(345, w.Eco.Load(Side.Hand));
         Assert.DoesNotContain(w.Stub!.Requests, r => r.Max is 13 or 14); // autoscrap made no draw
     }
 
@@ -186,7 +186,7 @@ public class MaintenanceTests
         // B5b 2026-10-18: the autoscrap timer is armed when the overdraft is first seen (B5b §6, [EXE-own] 0x5329f0).
         // These worlds are over from Day 0; the 6.7 hook first sees it at T = 1, so the first firing is T = 11 (was 10).
         var w = new EcoWorld();
-        w.Hold(Home, Side.Empire);
+        w.Hold(Home, Side.Hand);
         w.Mine(Home); w.Refinery(Home); // capacity 50
         w.Eco.AddFacility(Home, FacilityKind.OrbitalShipyard, id: 10);
         w.Eco.AddFacility(Home, FacilityKind.OrbitalShipyard, id: 11);
@@ -205,7 +205,7 @@ public class MaintenanceTests
     public void M16_LoadEqualToCapacityDoesNothingAndDrawsNothing()
     {
         var w = new EcoWorld();
-        w.Hold(Home, Side.Empire);
+        w.Hold(Home, Side.Hand);
         w.Mine(Home); w.Refinery(Home);
         for (int i = 0; i < 5; i++) w.Eco.AddFacility(Home, FacilityKind.ConstructionYard); // load 50 = capacity 50
         w.Run(10);
@@ -213,7 +213,7 @@ public class MaintenanceTests
         Assert.Equal(0, w.Stub!.Count(0, 4));
     }
 
-    private static int Submit(EcoWorld w, int obj, Side side = Side.Empire) =>
+    private static int Submit(EcoWorld w, int obj, Side side = Side.Hand) =>
         (int)w.Game.Submit(seq => new ScrapObjectOrder(seq, side, obj));
 
     // m2-maintenance M17
@@ -224,9 +224,9 @@ public class MaintenanceTests
         Submit(w, 101);
         w.Run(1);
         var s = Assert.Single(Scraps(w));
-        Assert.Equal((101, 56, "Order", Side.Empire), (s.Object, s.Refund, s.Reason, s.Side));
-        Assert.Equal(357 - 71, w.Eco.Load(Side.Empire));
-        Assert.Equal(56, w.Eco.Refined(Side.Empire));
+        Assert.Equal((101, 56, "Order", Side.Hand), (s.Object, s.Refund, s.Reason, s.Side));
+        Assert.Equal(357 - 71, w.Eco.Load(Side.Hand));
+        Assert.Equal(56, w.Eco.Refined(Side.Hand));
         Assert.Single(w.Events<OrderAccepted>());
     }
 
@@ -234,12 +234,12 @@ public class MaintenanceTests
     public void ScrapOrderRejections()
     {
         var w = FixtureE();
-        w.Eco.AddObject(Side.Empire, "Mandate", id: 200, completed: false);
-        Submit(w, 999); Submit(w, 101, Side.Alliance); Submit(w, 200);
+        w.Eco.AddObject(Side.Hand, "Mandate", id: 200, completed: false);
+        Submit(w, 999); Submit(w, 101, Side.Collective); Submit(w, 200);
         w.Run(1);
         Assert.Equal(new[] { RejectReason.UnknownObject, RejectReason.NotYours, RejectReason.NotCompleted },
             w.Events<OrderRejected>().Select(r => r.Reason).ToArray());
-        Assert.Equal(357 + 71, w.Eco.Load(Side.Empire));
+        Assert.Equal(357 + 71, w.Eco.Load(Side.Hand));
     }
 
     // m2-maintenance M18
@@ -250,8 +250,8 @@ public class MaintenanceTests
         Submit(w, 1);
         w.Run(1);
         Assert.Equal(10, Scraps(w)[0].Refund);
-        Assert.Equal(300, w.Eco.Capacity(Side.Empire));
-        Assert.True(w.Eco.Load(Side.Empire) > w.Eco.Capacity(Side.Empire));
+        Assert.Equal(300, w.Eco.Capacity(Side.Hand));
+        Assert.True(w.Eco.Load(Side.Hand) > w.Eco.Capacity(Side.Hand));
     }
 
     // m2-maintenance M19
@@ -267,16 +267,16 @@ public class MaintenanceTests
 
     // m2-maintenance M20
     [Fact]
-    public void M20_AllianceFiresBeforeEmpireOnTheSameDay()
+    public void M20_CollectiveFiresBeforeHandOnTheSameDay()
     {
         // B5b 2026-10-18: the autoscrap timer is armed when the overdraft is first seen (B5b §6, [EXE-own] 0x5329f0).
         // These worlds are over from Day 0; the 6.7 hook first sees it at T = 1, so the first firing is T = 11 (was 10).
         var w = FixtureE();
-        w.Hold("Caminus", Side.Alliance);
+        w.Hold("Caminus", Side.Collective);
         w.Mine("Caminus"); w.Refinery("Caminus");
-        for (int i = 0; i < 3; i++) w.Eco.AddObject(Side.Alliance, "Ark"); // 210 over capacity 50
+        for (int i = 0; i < 3; i++) w.Eco.AddObject(Side.Collective, "Ark"); // 210 over capacity 50
         w.Run(11);
-        Assert.Equal(new[] { Side.Alliance, Side.Empire }, Scraps(w).Select(s => s.Side).ToArray());
+        Assert.Equal(new[] { Side.Collective, Side.Hand }, Scraps(w).Select(s => s.Side).ToArray());
         int a = w.Stub!.Requests.IndexOf((0, 2)), e = w.Stub.Requests.IndexOf((0, 14));
         Assert.True(a >= 0 && e > a);
     }
@@ -288,9 +288,9 @@ public class MaintenanceTests
         // B5b 2026-10-18: the autoscrap timer is armed when the overdraft is first seen (B5b §6, [EXE-own] 0x5329f0).
         // These worlds are over from Day 0; the 6.7 hook first sees it at T = 1, so the first firing is T = 11 (was 10).
         var w = new EcoWorld();
-        w.Hold(Home, Side.Empire);
-        int done = w.Eco.AddObject(Side.Empire, "Pacifiers");
-        w.Eco.AddObject(Side.Empire, "Pacifiers", completed: false);
+        w.Hold(Home, Side.Hand);
+        int done = w.Eco.AddObject(Side.Hand, "Pacifiers");
+        w.Eco.AddObject(Side.Hand, "Pacifiers", completed: false);
         w.Run(11);
         Assert.Equal(done, Assert.Single(Scraps(w)).Object);
         Assert.Equal(1, w.Stub!.Count(0, 0)); // list of one

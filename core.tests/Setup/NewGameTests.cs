@@ -22,26 +22,26 @@ public class NewGameTests
     private static int Held(GameHost h, Side s) => h.Game.State.SystemOwners.Count(kv => kv.Value == s);
 
     // Owners of the day-one CSV with the seven fixed owners on top (m5-setup-and-victory §Fixed owners).
-    private static (int Alliance, int Empire) Expected(StartPreset p)
+    private static (int Collective, int Hand) Expected(StartPreset p)
     {
         var owners = NewGameData.Default.DayOne[p].ToDictionary(r => r.Name, r => r.Owner);
         foreach (var (sys, o) in NewGameData.Default.FixedOwners) owners[sys] = o;
-        return (owners.Values.Count(v => v == Side.Alliance), owners.Values.Count(v => v == Side.Empire));
+        return (owners.Values.Count(v => v == Side.Collective), owners.Values.Count(v => v == Side.Hand));
     }
-    public static IEnumerable<object[]> Totals => Enum.GetValues<StartPreset>().Select(p => new object[] { p, Expected(p).Alliance, Expected(p).Empire });
+    public static IEnumerable<object[]> Totals => Enum.GetValues<StartPreset>().Select(p => new object[] { p, Expected(p).Collective, Expected(p).Hand });
 
     [Theory, MemberData(nameof(Totals))]
-    public void DayOneOwnersMatchTheCsv(StartPreset p, int alliance, int empire)
+    public void DayOneOwnersMatchTheCsv(StartPreset p, int collective, int hand)
     {
         var h = Make(p);
-        Assert.Equal(alliance, Held(h, Side.Alliance));
-        Assert.Equal(empire, Held(h, Side.Empire));
-        Assert.Equal(Side.Empire, h.Control.HolderOf("Charter"));
+        Assert.Equal(collective, Held(h, Side.Collective));
+        Assert.Equal(hand, Held(h, Side.Hand));
+        Assert.Equal(Side.Hand, h.Control.HolderOf("Charter"));
         Assert.Equal(FileHq, h.HqSystem);
-        Assert.Equal(Side.Alliance, h.Control.HolderOf(FileHq));
-        Assert.Equal(100, h.Economy.SupportOf("The Shoal", Side.Alliance));
-        Assert.True(h.IsExplored("Charter", Side.Alliance) && h.IsExplored("Charter", Side.Empire));
-        Assert.True(h.IsExplored(FileHq, Side.Alliance) && !h.IsExplored(FileHq, Side.Empire));
+        Assert.Equal(Side.Collective, h.Control.HolderOf(FileHq));
+        Assert.Equal(100, h.Economy.SupportOf("The Shoal", Side.Collective));
+        Assert.True(h.IsExplored("Charter", Side.Collective) && h.IsExplored("Charter", Side.Hand));
+        Assert.True(h.IsExplored(FileHq, Side.Collective) && !h.IsExplored(FileHq, Side.Hand));
         Assert.Null(h.Victory.Winner);
     }
 
@@ -50,7 +50,7 @@ public class NewGameTests
     public void BothSidesCanPlay(StartPreset p)
     {
         var h = Make(p);
-        foreach (var side in new[] { Side.Empire, Side.Alliance })
+        foreach (var side in new[] { Side.Hand, Side.Collective })
         {
             bool Has(FacilityKind k) => h.Economy.Objects.Any(o => o.Completed && o.Class == FacilityKinds.ClassName(k) && h.Economy.OwnerOf(o) == side);
             Assert.True(Has(FacilityKind.OrbitalShipyard), $"{side} yard");
@@ -65,13 +65,13 @@ public class NewGameTests
     public void FixedOwnersAndSupportBands(StartPreset p, int a, int e)
     {
         var h = Make(p);
-        Assert.Equal(a, Held(h, Side.Alliance)); Assert.Equal(e, Held(h, Side.Empire));
-        foreach (var s in new[] { "Navalia", "Incus", "Classis", "Castra" }) Assert.Equal(Side.Empire, h.Control.HolderOf(s));
+        Assert.Equal(a, Held(h, Side.Collective)); Assert.Equal(e, Held(h, Side.Hand));
+        foreach (var s in new[] { "Navalia", "Incus", "Classis", "Castra" }) Assert.Equal(Side.Hand, h.Control.HolderOf(s));
         foreach (var s in new[] { "Caminus", "The Moorings", "Ferraria" }) Assert.Null(h.Control.HolderOf(s));
-        Assert.Equal(0, h.Economy.SupportOf("Charter", Side.Alliance));
-        Assert.Equal(100, h.Economy.SupportOf(FileHq, Side.Alliance));
-        Assert.Equal(100, h.Economy.SupportOf("The Shoal", Side.Alliance));
-        Assert.Contains(h.Economy.Objects, o => o.Category == ObjectCategory.Regiment && o.System == "Castra" && o.Side == Side.Empire);
+        Assert.Equal(0, h.Economy.SupportOf("Charter", Side.Collective));
+        Assert.Equal(100, h.Economy.SupportOf(FileHq, Side.Collective));
+        Assert.Equal(100, h.Economy.SupportOf("The Shoal", Side.Collective));
+        Assert.Contains(h.Economy.Objects, o => o.Category == ObjectCategory.Regiment && o.System == "Castra" && o.Side == Side.Hand);
         Assert.Contains(h.Economy.Objects, o => o.Class == "Orbital Shipyard" && o.System == "Navalia");
     }
 
@@ -79,13 +79,13 @@ public class NewGameTests
     public void GameOverFreezesStepAndRejectsOrders()
     {
         var h = Make(StartPreset.MedA, 1, OldVictory.Settings);
-        CaptureOnNextStep(h, FileHq, Side.Empire);
+        CaptureOnNextStep(h, FileHq, Side.Hand);
         h.Game.Step();
         Assert.True(h.Game.IsOver);
         int day = h.Game.Day, events = h.Game.Events.Count;
         h.Game.Step();
         Assert.Equal(day, h.Game.Day); Assert.Equal(events, h.Game.Events.Count);
-        long seq = h.Game.Submit(Side.Alliance, "x", 1);
+        long seq = h.Game.Submit(Side.Collective, "x", 1);
         var rej = Assert.Single(h.Game.Events.OfType<OrderRejected>().Where(e => e.Sequence == seq));
         Assert.Equal(RejectReason.GameOver, rej.Reason);
         Assert.Empty(h.Game.Queue);
@@ -125,46 +125,46 @@ public class NewGameTests
     }
 
     [Fact]
-    public void EmpireWinsWhenHqCaptured()
+    public void HandWinsWhenHqCaptured()
     {
         var h = Make(StartPreset.MedA, 1, OldVictory.Settings);
         h.Game.Step(); Assert.Null(h.Victory.Winner);
-        CaptureOnNextStep(h, FileHq, Side.Empire);
+        CaptureOnNextStep(h, FileHq, Side.Hand);
         h.Game.Step();
-        Assert.Equal(Side.Empire, h.Victory.Winner);
+        Assert.Equal(Side.Hand, h.Victory.Winner);
         var won = h.Game.Events.OfType<GameWon>().Single();
-        Assert.Equal(Side.Empire, won.Winner);
+        Assert.Equal(Side.Hand, won.Winner);
         h.Game.Step(); h.Game.Step();
         Assert.Single(h.Game.Events.OfType<GameWon>());
     }
 
     [Fact]
-    public void AllianceWinsWhenCoruscantCaptured()
+    public void CollectiveWinsWhenCoruscantCaptured()
     {
         var h = Make(StartPreset.MedE, 1, OldVictory.Settings);
-        CaptureOnNextStep(h, "Charter", Side.Alliance);
+        CaptureOnNextStep(h, "Charter", Side.Collective);
         h.Game.Step();
-        Assert.Equal(Side.Alliance, h.Victory.Winner);
+        Assert.Equal(Side.Collective, h.Victory.Winner);
         Assert.Single(h.Game.Events.OfType<GameWon>());
     }
 
     [Fact]
     public void SwitchesTurnConditionsOff()
     {
-        var h = Make(StartPreset.MedA, 1, new GameSettings { Victory = new VictoryRules { EmpireWinsOnHqLost = false } });
-        CaptureOnNextStep(h, FileHq, Side.Empire);
+        var h = Make(StartPreset.MedA, 1, new GameSettings { Victory = new VictoryRules { HandWinsOnHqLost = false } });
+        CaptureOnNextStep(h, FileHq, Side.Hand);
         h.Game.Step();
         Assert.Null(h.Victory.Winner);
     }
 
     [Fact]
-    public void EmpireWinsWhenAllianceHoldsNothing()
+    public void HandWinsWhenCollectiveHoldsNothing()
     {
-        var h = Make(StartPreset.Easy, 1, new GameSettings { Victory = new VictoryRules { EmpireWinsOnHqLost = false } });
-        var held = h.Game.State.SystemOwners.Where(kv => kv.Value == Side.Alliance).Select(kv => kv.Key).ToList();
-        h.Game.RegisterHook("5.2", ctx => { foreach (var s in held) h.Control.CaptureNow(ctx, s, Side.Empire) /* (B5a, 2026-10-17) Derived control */; });
+        var h = Make(StartPreset.Easy, 1, new GameSettings { Victory = new VictoryRules { HandWinsOnHqLost = false } });
+        var held = h.Game.State.SystemOwners.Where(kv => kv.Value == Side.Collective).Select(kv => kv.Key).ToList();
+        h.Game.RegisterHook("5.2", ctx => { foreach (var s in held) h.Control.CaptureNow(ctx, s, Side.Hand) /* (B5a, 2026-10-17) Derived control */; });
         h.Game.Step();
-        Assert.Equal(Side.Empire, h.Victory.Winner);
+        Assert.Equal(Side.Hand, h.Victory.Winner);
     }
 
     [Fact]
@@ -179,13 +179,13 @@ public class NewGameTests
     public void SaveLoadKeepsHqExploredAndWinner()
     {
         var h = Make(StartPreset.MedA, 1, OldVictory.Settings);
-        CaptureOnNextStep(h, FileHq, Side.Empire);
+        CaptureOnNextStep(h, FileHq, Side.Hand);
         h.Game.Step();
         string save = h.Save();
         var l = GameHost.Load(save);
         Assert.Equal(FileHq, l.HqSystem);
-        Assert.Equal(Side.Empire, l.Victory.Winner);
-        Assert.True(l.IsExplored(FileHq, Side.Alliance));
+        Assert.Equal(Side.Hand, l.Victory.Winner);
+        Assert.True(l.IsExplored(FileHq, Side.Collective));
         Assert.Equal(h.StateHash(), l.StateHash());
         Assert.Equal(save, l.Save());
     }

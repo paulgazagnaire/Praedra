@@ -9,8 +9,8 @@ using Praedra.Core.Tests.Economy;
 namespace Praedra.Core.Tests.Fleets;
 
 // Tests of m3-fleets (ids F1 to F22 as in the sheet's table, then extra tests named after the rule they check).
-// Fixture F: Empire holds Charter; spare fleet 200 holds ISD 201, ISD 202, Carrack 203 (completed, at Charter); Gleaner squadrons
-// 301 to 307 (the sheet lists 301 to 306; 307 is the "one more" of F11) and Alliance Swift squadrons 310 and 311, all based at Charter;
+// Fixture F: Hand holds Charter; spare fleet 200 holds ISD 201, ISD 202, Carrack 203 (completed, at Charter); Gleaner squadrons
+// 301 to 307 (the sheet lists 301 to 306; 307 is the "one more" of F11) and Collective Swift squadrons 310 and 311, all based at Charter;
 // Stormtrooper regiments 401 to 403 on Charter. The first id the fleet counter hands out is 204, as the sheet's F3 expects.
 // Hook time T = K + 1; events of orders carry Day = K. The real galaxy, ship data and costs files are used.
 public class FleetOrderTests
@@ -24,7 +24,7 @@ public class FleetOrderTests
     private const string OnTheWayToHoth = "Vigilia";
     private const string SquadronWayToHoth = "Las Mieses"; // QA-40 re-pin 2026-10-25: squadrons (speed 60) fly Charter, Pyrite, Las Mieses... to The Thaw
     private const string Isd = "Mandate", Carrack = "Warrant", Tie = "Gleaner", Xwing = "Swift";
-    private static readonly Side Emp = Side.Empire, Reb = Side.Alliance;
+    private static readonly Side Emp = Side.Hand, Reb = Side.Collective;
 
     private static BuildWorld F(bool wireFleets = false)
     {
@@ -391,7 +391,7 @@ public class FleetOrderTests
         {
             w.Fleets.SubmitMoveSquadrons(Reb, new[] { 310, 310 }, Far),      // duplicate
             w.Fleets.SubmitMoveSquadrons(Reb, new[] { 999 }, Far),           // unknown
-            w.Fleets.SubmitMoveSquadrons(Reb, new[] { 301 }, Far),           // the Empire's squadron
+            w.Fleets.SubmitMoveSquadrons(Reb, new[] { 301 }, Far),           // the Hand's squadron
             w.Fleets.SubmitMoveSquadrons(Emp, new[] { 301 }, Far),           // aboard
             w.Fleets.SubmitMoveSquadrons(Reb, new[] { 310 }, "No Such Place"),
             w.Fleets.SubmitMoveSquadrons(Reb, new[] { 310 }, Home),          // already there
@@ -549,9 +549,9 @@ public class FleetOrderTests
         Assert.Equal(0, w.Fleets.FreeBerths(fleet));
         // as an enemy at the middle of a trip it does not stop a passing fleet (m1 B3 with a real fleet)
         var w2 = new World(World.BCMap());
-        w2.Add(Side.Alliance, "Freight", "B", "Barge");
-        int pass = w2.Add(Side.Empire, "Red", "A", Isd);
-        w2.Move(Side.Empire, pass, "C");
+        w2.Add(Side.Collective, "Freight", "B", "Barge");
+        int pass = w2.Add(Side.Hand, "Red", "A", Isd);
+        w2.Move(Side.Hand, pass, "C");
         w2.Run(40);
         Assert.Empty(w2.Events<ForcedStop>());
     }
@@ -561,16 +561,16 @@ public class FleetOrderTests
     public void F21_ABasedSquadronIsNotAFleetForTheForcedStopButCountsAsPresenceForTheBlockadeFlag()
     {
         var w = new BuildWorld();
-        // an Alliance squadron based on the way to The Thaw; no Alliance fleet there
+        // a Collective squadron based on the way to The Thaw; no Collective fleet there
         w.Hold(OnTheWayToHoth, Reb);
         w.Eco.AddObject(Reb, Xwing, OnTheWayToHoth, true);
-        int empire = w.Fleets.AddFleet(Emp, "Red", new[] { Isd }, Home);
-        w.Fleets.SubmitMove(Emp, empire, "The Thaw"); // passes Bina Minor (v6 re-pin 2026-10-24: was Classis)
+        int hand = w.Fleets.AddFleet(Emp, "Red", new[] { Isd }, Home);
+        w.Fleets.SubmitMove(Emp, hand, "The Thaw"); // passes Bina Minor (v6 re-pin 2026-10-24: was Classis)
         w.Run(8);
         Assert.Empty(w.Events<ForcedStop>());
         Assert.Contains(w.Events<FleetPassed>(), e => e.System == OnTheWayToHoth);
 
-        // the Classic blockade flag: an Empire fleet alone at an Alliance system blockades; with a based Alliance squadron the battle bit is on
+        // the Classic blockade flag: a Hand fleet alone at a Collective system blockades; with a based Collective squadron the battle bit is on
         var w2 = new BuildWorld();
         w2.Hold(Far, Reb);
         w2.Fleets.AddFleet(Emp, "Raiders", new[] { Isd }, Far);
@@ -587,7 +587,7 @@ public class FleetOrderTests
     {
         var w = F();
         w.Eco.AddObject(Reb, Isd, null, true, 250); // a foreign ship (any side may own the class in a test)
-        w.Fleets.AddFleetOf(Reb, "Rebels", Home, new[] { 250 }, 251);
+        w.Fleets.AddFleetOf(Reb, "Collective", Home, new[] { 250 }, 251);
         w.E.NextObjectId = 260;
         string before = Snap(w);
         var seqs = new[]
@@ -608,7 +608,7 @@ public class FleetOrderTests
             w.Fleets.SubmitMergeFleets(Emp, 200, 251),                       // NotYours
             w.Fleets.SubmitLoadSquadrons(Emp, 200, new[] { 301, 301 }),      // DuplicateSquadron
             w.Fleets.SubmitLoadSquadrons(Emp, 200, new[] { 999 }),           // UnknownSquadron
-            w.Fleets.SubmitLoadSquadrons(Emp, 200, new[] { 310 }),           // NotYours (Alliance squadron)
+            w.Fleets.SubmitLoadSquadrons(Emp, 200, new[] { 310 }),           // NotYours (Collective squadron)
             w.Fleets.SubmitUnloadSquadrons(Emp, 200, new[] { 301 }),         // NotAboard
             w.Fleets.SubmitSplitFleet(Emp, 200, new[] { 201, 201 }),         // DuplicateShip
             w.Fleets.SubmitSplitFleet(Emp, 251, new[] { 201 }),              // NotYours (fleet checked first)

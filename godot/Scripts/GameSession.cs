@@ -48,7 +48,7 @@ public sealed partial class GameSession
     public Side Player { get; }
     /// <summary>How well the computer opponent plays (kept in the save's first line).</summary>
     public AiLevel Level { get; }
-    public Side Enemy => Player == Side.Empire ? Side.Alliance : Side.Empire;
+    public Side Enemy => Player == Side.Hand ? Side.Collective : Side.Hand;
     public IOpponent Opponent { get; }
     /// <summary>Test only (the headless playtest): the computer side plans nothing, so a test fleet it would scrap or move stays put.</summary>
     public bool OpponentIdle { get; set; }
@@ -75,7 +75,7 @@ public sealed partial class GameSession
 
     sealed class BattleDraft
     {
-        public List<int> Alliance = new(), Empire = new();
+        public List<int> Collective = new(), Hand = new();
         public List<(int Unit, Side Side)> Lost = new();
         public List<string> Retreats = new();
     }
@@ -83,7 +83,7 @@ public sealed partial class GameSession
     public GameSession(GameHost host, Side player, AiLevel level = AiLevel.Medium)
     {
         Host = host; Player = player; Level = level;
-        Opponent = GameBoot.CreateOpponent(host, player == Side.Empire ? Side.Alliance : Side.Empire, level);
+        Opponent = GameBoot.CreateOpponent(host, player == Side.Hand ? Side.Collective : Side.Hand, level);
         _printed = host.Fog.EventsFor(player).Count;
         Snapshot();
     }
@@ -110,7 +110,7 @@ public sealed partial class GameSession
     // ------------------------------------------------------------------ queries the panels use
 
     public Side? OwnerOf(string system) => Host.Fleets.OwnerOf(system);
-    public string NameOf(Side s) => s == Side.Empire ? "Empire" : "Alliance";
+    public string NameOf(Side s) => s == Side.Hand ? "Hand" : "Collective";
     public string You(Side s) => s == Player ? $"{NameOf(s)} (you)" : NameOf(s);
 
     public int QueuedOrders => Game.Queue.Count(o => o.Side == Player);
@@ -156,8 +156,8 @@ public sealed partial class GameSession
     public IReadOnlyList<FleetPicture> VisibleEnemyFleetsAt(string system) =>
         Fog.VisibleFleets(Player).Where(v => v.System == system).Select(v => v.Fleet).ToList();
 
-    /// <summary>The Rebel HQ as the Alliance's own object (status, where, route). Read only for an Alliance player: it is that side's own.</summary>
-    public HqState OwnHq => Player == Side.Alliance ? Game.State.Scenario.Hq : null;
+    /// <summary>The Hearth as the Collective's own object (status, where, route). Read only for a Collective player: it is that side's own.</summary>
+    public HqState OwnHq => Player == Side.Collective ? Game.State.Scenario.Hq : null;
 
     /// <summary>The day the HQ arrives, while it is moving.</summary>
     public static int HqArrivalDay(HqState h)
@@ -168,21 +168,21 @@ public sealed partial class GameSession
     }
 
     /// <summary>
-    /// The player's own headquarters system (Empire: Charter; Alliance: where the HQ stands), or null (the HQ is moving or destroyed).
+    /// The player's own headquarters system (Hand: Charter; Collective: where the HQ stands), or null (the HQ is moving or destroyed).
     /// </summary>
-    public string MyHqSystem => Player == Side.Empire ? GameBoot.EmpireCapital
+    public string MyHqSystem => Player == Side.Hand ? GameBoot.HandCapital
         : (OwnHq.Status == HqStatus.AtRest ? OwnHq.System : null);
 
     /// <summary>
-    /// The enemy's headquarters as the player's side knows it: the Alliance always knows Charter; the Empire only the system its own
-    /// picture shows the Rebel HQ at (KnownHq, rule: m5-fog-and-hq §N5), else null = unknown.
+    /// The enemy's headquarters as the player's side knows it: the Collective always knows Charter; the Hand only the system its own
+    /// picture shows the Hearth at (KnownHq, rule: m5-fog-and-hq §N5), else null = unknown.
     /// </summary>
-    public string EnemyHqSystem => Player == Side.Alliance ? GameBoot.EmpireCapital : Fog.KnownHq(Side.Empire)?.System;
+    public string EnemyHqSystem => Player == Side.Collective ? GameBoot.HandCapital : Fog.KnownHq(Side.Hand)?.System;
 
     /// <summary>A MoveHq order queued and not yet judged (destination), or null.</summary>
     public string PendingHqMove { get; private set; }
 
-    /// <summary>Queue the MoveHq order (Alliance). The core judges it when the next day starts. rule: m5-fog-and-hq §F6.</summary>
+    /// <summary>Queue the MoveHq order (Collective). The core judges it when the next day starts. rule: m5-fog-and-hq §F6.</summary>
     public long SubmitMoveHq(string destination)
     {
         PendingHqMove = destination;
@@ -313,7 +313,7 @@ public sealed partial class GameSession
         BombardReject.EnemyFleetPresent => "an enemy fleet is in the way (win the battle first)",
         BombardReject.NoBombardPower => "this fleet cannot bombard",
         BombardReject.OrderPending => "that fleet already has an attack order",
-        HqRejectReason.NotAlliance => "only the Alliance has a headquarters to move",
+        HqRejectReason.NotCollective => "only the Collective has a headquarters to move",
         HqRejectReason.NoHq => "there is no headquarters any more",
         HqRejectReason.NotHeld => "the headquarters can only move to a system you hold",
         HqRejectReason.Pinned => "a large enemy blockade pins the headquarters where it is (break the blockade first)",
@@ -586,18 +586,18 @@ public sealed partial class GameSession
                 yield return new Message(d, $"Enemy fleet sighted at {x.System}: {x.Detail}.", x.System, MsgKind.Warn);
                 break;
             case SensorReport x: // the core sends it to the station's owner only (rule: m5-fog-and-hq §N4)
-                yield return new Message(d, $"Sensors: {SensorSizeWords(x.Size)} {(x.FleetSide == Side.Empire ? "Imperial" : "Rebel")} fleet heading for {x.System}, expected on day {x.ReachDay}.", x.System, MsgKind.Warn);
+                yield return new Message(d, $"Sensors: {SensorSizeWords(x.Size)} {(x.FleetSide == Side.Hand ? "Hand" : "Collective")} fleet heading for {x.System}, expected on day {x.ReachDay}.", x.System, MsgKind.Warn);
                 break;
             case OwnerChangeSeen x:
                 yield return new Message(d, $"News from {x.System}: now held by {(x.Now is Side n ? "the " + NameOf(n) : "nobody")} (was {(x.Was is Side was ? "the " + NameOf(was) : "nobody")}).", x.System, MsgKind.Info);
                 break;
 
-            // ---- the Rebel HQ (HqArrived reaches the Alliance only; the departure is told by the accepted order above)
+            // ---- the Hearth (HqArrived reaches the Collective only; the departure is told by the accepted order above)
             case HqArrived h:
                 yield return new Message(d, $"Your headquarters arrived at {h.System}.", h.System, MsgKind.Good);
                 break;
             case HqDestroyed h:
-                yield return new Message(d, $"The Rebel headquarters was destroyed at {h.System} ({HqCauseWords(h.Cause)}).", h.System, Player == Side.Empire ? MsgKind.Good : MsgKind.Bad);
+                yield return new Message(d, $"The Collective headquarters was destroyed at {h.System} ({HqCauseWords(h.Cause)}).", h.System, Player == Side.Hand ? MsgKind.Good : MsgKind.Bad);
                 break;
             case ForcedStop x when Mine(FleetSide(x.Fleet)):
                 yield return new Message(d, $"Fleet {FleetName(x.Fleet)} was stopped at {x.System} by an enemy fleet.", x.System, MsgKind.Warn);
@@ -610,7 +610,7 @@ public sealed partial class GameSession
                 break;
             case Contact c:
             {
-                string key = $"{c.System}|{c.EmpireFleets}|{c.AllianceFleets}";
+                string key = $"{c.System}|{c.HandFleets}|{c.CollectiveFleets}";
                 if (key != _lastContact)
                 {
                     _lastContact = key;
@@ -627,11 +627,11 @@ public sealed partial class GameSession
 
             // ---- battle
             case BattleStarted b:
-                _battles[b.System] = new BattleDraft { Alliance = b.AllianceUnits.Items.ToList(), Empire = b.EmpireUnits.Items.ToList() };
+                _battles[b.System] = new BattleDraft { Collective = b.CollectiveUnits.Items.ToList(), Hand = b.HandUnits.Items.ToList() };
                 o.PauseReason ??= "battle";
                 break;
             case UnitDestroyed u when _battles.TryGetValue(u.System, out var bd):
-                bd.Lost.Add((u.Unit, bd.Alliance.Contains(u.Unit) ? Side.Alliance : Side.Empire));
+                bd.Lost.Add((u.Unit, bd.Collective.Contains(u.Unit) ? Side.Collective : Side.Hand));
                 break;
             case BattleEnded be:
                 yield return BattleReport(be, o);
@@ -868,21 +868,21 @@ public sealed partial class GameSession
             BattleOutcome.Retreated => "retreated",
             _ => "no decision",
         };
-        string verdict = r.Alliance == BattleOutcome.Victorious ? "The Alliance won."
-            : r.Empire == BattleOutcome.Victorious ? "The Empire won."
+        string verdict = r.Collective == BattleOutcome.Victorious ? "The Collective won."
+            : r.Hand == BattleOutcome.Victorious ? "The Hand won."
             : "Nobody won.";
-        bool youWon = (Player == Side.Alliance ? r.Alliance : r.Empire) == BattleOutcome.Victorious;
-        bool youLost = (Player == Side.Alliance ? r.Empire : r.Alliance) == BattleOutcome.Victorious;
+        bool youWon = (Player == Side.Collective ? r.Collective : r.Hand) == BattleOutcome.Victorious;
+        bool youLost = (Player == Side.Collective ? r.Hand : r.Collective) == BattleOutcome.Victorious;
         string detail =
             $"Battle of {r.System}, day {e.Day}\n\n" +
-            SideLine(Side.Alliance, draft.Alliance) + "\n" +
-            SideLine(Side.Empire, draft.Empire) + "\n\n" +
+            SideLine(Side.Collective, draft.Collective) + "\n" +
+            SideLine(Side.Hand, draft.Hand) + "\n\n" +
             $"{verdict}\n" +
-            $"Alliance ({Outcome(r.Alliance)}): {Lost(Side.Alliance)}; {r.AllianceSurvivors} survivor(s).\n" +
-            $"Empire ({Outcome(r.Empire)}): {Lost(Side.Empire)}; {r.EmpireSurvivors} survivor(s).";
+            $"Collective ({Outcome(r.Collective)}): {Lost(Side.Collective)}; {r.CollectiveSurvivors} survivor(s).\n" +
+            $"Hand ({Outcome(r.Hand)}): {Lost(Side.Hand)}; {r.HandSurvivors} survivor(s).";
         if (draft.Retreats.Count > 0) detail += "\n\n" + string.Join("\n", draft.Retreats) + ".";
         string line = $"Battle at {r.System}: {(youWon ? "you won" : youLost ? "you lost" : verdict.TrimEnd('.').ToLowerInvariant())}. " +
-                      $"Alliance losses {r.AllianceLosses}, Empire losses {r.EmpireLosses}. (click for the report)";
+                      $"Collective losses {r.CollectiveLosses}, Hand losses {r.HandLosses}. (click for the report)";
         var m = new Message(e.Day, line, r.System, MsgKind.Battle, $"Battle at {r.System}", detail);
         o.Popup = m;
         o.PauseReason = "battle";

@@ -13,8 +13,8 @@ public class GameClockTests
         for (int d = 0; d < days; d++)
         {
             // A fixed order list: a marker order every 3rd day, one rejected order every 10th day.
-            if (d % 3 == 0) g.Submit(Side.Empire, $"m{d % 7}", d);
-            if (d % 10 == 0) g.Submit(Side.Alliance, "bad", -1);
+            if (d % 3 == 0) g.Submit(Side.Hand, $"m{d % 7}", d);
+            if (d % 10 == 0) g.Submit(Side.Collective, "bad", -1);
             g.Step();
         }
         return g;
@@ -60,8 +60,8 @@ public class GameClockTests
         Assert.Equal(GameSave.StateHash(first), GameSave.StateHash(loaded));
         for (int d = 7; d < 30; d++)
         {
-            if (d % 3 == 0) loaded.Submit(Side.Empire, $"m{d % 7}", d);
-            if (d % 10 == 0) loaded.Submit(Side.Alliance, "bad", -1);
+            if (d % 3 == 0) loaded.Submit(Side.Hand, $"m{d % 7}", d);
+            if (d % 10 == 0) loaded.Submit(Side.Collective, "bad", -1);
             loaded.Step();
         }
         Assert.Equal(GameSave.StateHash(whole), GameSave.StateHash(loaded));
@@ -75,7 +75,7 @@ public class GameClockTests
     public void K13_queued_order_survives_save_and_is_processed_in_the_next_step()
     {
         var g = new Game(9);
-        long seq = g.Submit(Side.Empire, "x", 4);
+        long seq = g.Submit(Side.Hand, "x", 4);
         var loaded = GameSave.Load(GameSave.Save(g));
         Assert.Single(loaded.Queue);
         Assert.Equal(seq + 1, loaded.NextSequence);
@@ -83,15 +83,15 @@ public class GameClockTests
         Assert.Empty(loaded.Queue);
         Assert.Equal(4, loaded.State.Markers["x"]);
         Assert.IsType<OrderAccepted>(Assert.Single(loaded.Events));
-        Assert.Equal(seq + 1, loaded.Submit(Side.Empire, "y", 1)); // numbering continues after load
+        Assert.Equal(seq + 1, loaded.Submit(Side.Hand, "y", 1)); // numbering continues after load
     }
 
     [Fact] // m1-clock-and-orders K6 (adapted: same marker twice in one Step)
     public void K6_second_order_for_same_target_in_one_step_is_rejected()
     {
         var g = new Game(1);
-        long s1 = g.Submit(Side.Empire, "a", 1);
-        long s2 = g.Submit(Side.Empire, "a", 2);
+        long s1 = g.Submit(Side.Hand, "a", 1);
+        long s2 = g.Submit(Side.Hand, "a", 2);
         g.Step();
         Assert.Equal(1, g.State.Markers["a"]);
         Assert.Equal(new OrderAccepted(0, 0, s1), g.Events[0]);
@@ -102,10 +102,10 @@ public class GameClockTests
     public void Rejected_order_changes_no_state()
     {
         var g = new Game(1);
-        g.Submit(Side.Empire, "a", 5);
+        g.Submit(Side.Hand, "a", 5);
         g.Step();
         string before = GameSave.StateHash(g);
-        g.Submit(Side.Empire, "a", -1);
+        g.Submit(Side.Hand, "a", -1);
         g.Step();
         Assert.Equal(5, g.State.Markers["a"]);
         Assert.IsType<OrderRejected>(g.Events[^1]);
@@ -117,7 +117,7 @@ public class GameClockTests
     public void Orders_are_processed_in_sequence_order_and_events_are_numbered_from_zero()
     {
         var g = new Game(1);
-        for (int i = 0; i < 5; i++) g.Submit(Side.Alliance, $"k{i}", i);
+        for (int i = 0; i < 5; i++) g.Submit(Side.Collective, $"k{i}", i);
         g.Step();
         Assert.Equal(Enumerable.Range(0, 5), g.Events.Select(e => e.Index));
         Assert.Equal(new long[] { 1, 2, 3, 4, 5 }, g.Events.Cast<OrderAccepted>().Select(e => e.Sequence));
@@ -152,8 +152,8 @@ public class GameClockTests
     [Fact] // m1-clock-and-orders K9 (adapted: two sides, submission order swapped)
     public void K9_submission_order_across_sides_does_not_change_the_final_hash()
     {
-        var a = new Game(1); a.Submit(Side.Empire, "e", 1); a.Submit(Side.Alliance, "r", 2); a.Step();
-        var b = new Game(1); b.Submit(Side.Alliance, "r", 2); b.Submit(Side.Empire, "e", 1); b.Step();
+        var a = new Game(1); a.Submit(Side.Hand, "e", 1); a.Submit(Side.Collective, "r", 2); a.Step();
+        var b = new Game(1); b.Submit(Side.Collective, "r", 2); b.Submit(Side.Hand, "e", 1); b.Step();
         Assert.Equal(GameSave.StateHash(a), GameSave.StateHash(b));
     }
 

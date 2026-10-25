@@ -14,10 +14,10 @@ public class ConstructionTests
     // v6 re-pin 2026-10-24: Far was Classis (one great-route leg, 7 days at speed 100, 5 at 80). On the spiral map no single-hop trip
     // from Charter takes those days; Remedium is the longest one the router flies direct (a 23-unit free jump: 4 days at speed 100, 3 at 80).
     private const string Far = "Remedium";
-    private static readonly Side Emp = Side.Empire;
+    private static readonly Side Emp = Side.Hand;
 
-    /// <summary>Empire at Charter with yards of the given kinds, refined stock, and Remedium held too (support 100 both).</summary>
-    private static BuildWorld Empire(int refined, params FacilityKind[] yards)
+    /// <summary>Hand at Charter with yards of the given kinds, refined stock, and Remedium held too (support 100 both).</summary>
+    private static BuildWorld Hand(int refined, params FacilityKind[] yards)
     {
         var w = new BuildWorld();
         w.Hold(Home, Emp); w.Hold(Far, Emp);
@@ -34,7 +34,7 @@ public class ConstructionTests
     [Fact]
     public void C1_OneStandardYardMineIn80Days()
     {
-        var w = Empire(100, FacilityKind.ConstructionYard);
+        var w = Hand(100, FacilityKind.ConstructionYard);
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, Home));
         w.RunTo(80);
         Assert.Empty(w.Events<UnitCompleted>());
@@ -50,7 +50,7 @@ public class ConstructionTests
     [Fact]
     public void C2_TwoStandardYardsMineIn40Days()
     {
-        var w = Empire(100, FacilityKind.ConstructionYard, FacilityKind.ConstructionYard);
+        var w = Hand(100, FacilityKind.ConstructionYard, FacilityKind.ConstructionYard);
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, Home));
         w.RunTo(41);
         Assert.Equal(41, CompletedDay(w));
@@ -61,7 +61,7 @@ public class ConstructionTests
     [Fact]
     public void C3_ThreeStandardYardsMineIn28Days()
     {
-        var w = Empire(100, FacilityKind.ConstructionYard, FacilityKind.ConstructionYard, FacilityKind.ConstructionYard);
+        var w = Hand(100, FacilityKind.ConstructionYard, FacilityKind.ConstructionYard, FacilityKind.ConstructionYard);
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, Home));
         w.RunTo(29);
         Assert.Equal(29, CompletedDay(w)); // 7 rounds: 3 x 6 = 18, then 2 in round 7
@@ -72,7 +72,7 @@ public class ConstructionTests
     [Fact]
     public void C4_OneAdvancedYardMineIn40Days()
     {
-        var w = Empire(100, FacilityKind.AdvancedConstructionYard);
+        var w = Hand(100, FacilityKind.AdvancedConstructionYard);
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, Home));
         w.RunTo(41);
         Assert.Equal(41, CompletedDay(w));
@@ -84,15 +84,15 @@ public class ConstructionTests
     public void C5_XWingFedByOneMineAndOneRefinery()
     {
         var w = new BuildWorld(BuildWorld.ZeroMaintenance());
-        w.Hold(Home, Side.Alliance, 100);
+        w.Hold(Home, Side.Collective, 100);
         w.Yard(Home, FacilityKind.Mine, 1); w.Yard(Home, FacilityKind.Refinery, 2); // P1 fixture S1
         w.Yard(Home, FacilityKind.OrbitalShipyard, 3);
-        Assert.Null(w.TryOrder(Side.Alliance, Home, YardFamily.Shipyard, "Swift", 1));
+        Assert.Null(w.TryOrder(Side.Collective, Home, YardFamily.Shipyard, "Swift", 1));
         w.RunTo(32);
         Assert.Equal(new[] { 5, 13, 18, 23, 28 },
             w.Events<ResourceProduced>().Where(e => e.Resource == "Refined").Select(e => e.Day).ToArray());
         Assert.Equal(32, CompletedDay(w)); // Step 31
-        Assert.Equal(0, w.Eco.Refined(Side.Alliance)); // each refined was taken at once
+        Assert.Equal(0, w.Eco.Refined(Side.Collective)); // each refined was taken at once
         Assert.Contains(w.Events<YardWaiting>(), e => e.Day == 1); // the yard waited in the line from hook 1
     }
 
@@ -101,10 +101,10 @@ public class ConstructionTests
     public void C5_WithRealMaintenanceTheCyclesAreLonger()
     {
         var w = new BuildWorld();
-        w.Hold(Home, Side.Alliance, 100);
+        w.Hold(Home, Side.Collective, 100);
         w.Yard(Home, FacilityKind.Mine, 1); w.Yard(Home, FacilityKind.Refinery, 2);
         w.Yard(Home, FacilityKind.OrbitalShipyard, 3);
-        Assert.Null(w.TryOrder(Side.Alliance, Home, YardFamily.Shipyard, "Swift", 1));
+        Assert.Null(w.TryOrder(Side.Collective, Home, YardFamily.Shipyard, "Swift", 1));
         w.Run(120);
         Assert.True(CompletedDay(w) > 32);
     }
@@ -114,31 +114,31 @@ public class ConstructionTests
     public void C6_NoRefinedMeansWaitingNotLoss()
     {
         var w = new BuildWorld();
-        w.Hold(Home, Side.Alliance); w.Yard(Home, FacilityKind.OrbitalShipyard);
-        w.Refined(Side.Alliance, 3);
-        Assert.Null(w.TryOrder(Side.Alliance, Home, YardFamily.Shipyard, "Swift", 1));
+        w.Hold(Home, Side.Collective); w.Yard(Home, FacilityKind.OrbitalShipyard);
+        w.Refined(Side.Collective, 3);
+        Assert.Null(w.TryOrder(Side.Collective, Home, YardFamily.Shipyard, "Swift", 1));
         w.RunTo(2);
-        Assert.Equal(2, w.Eco.Refined(Side.Alliance)); // took one at hook 1
+        Assert.Equal(2, w.Eco.Refined(Side.Collective)); // took one at hook 1
         w.RunTo(6);
-        Assert.Equal(1, w.Eco.Refined(Side.Alliance)); // second at hook 5
+        Assert.Equal(1, w.Eco.Refined(Side.Collective)); // second at hook 5
         w.RunTo(10);
-        Assert.Equal(0, w.Eco.Refined(Side.Alliance)); // third at hook 9
+        Assert.Equal(0, w.Eco.Refined(Side.Collective)); // third at hook 9
         w.RunTo(60);
         var p = w.Build.ProjectAt(Home, YardFamily.Shipyard)!;
         Assert.Equal(3, p.Progress);
         Assert.Empty(w.Events<UnitCompleted>());
-        Assert.Single(w.Build.RefinedLine(Side.Alliance)); // waiting in line, nothing lost
-        w.Eco.SetPools(Side.Alliance, 0, 2); // two more arrive later
+        Assert.Single(w.Build.RefinedLine(Side.Collective)); // waiting in line, nothing lost
+        w.Eco.SetPools(Side.Collective, 0, 2); // two more arrive later
         w.RunTo(80);
         Assert.Single(w.Events<UnitCompleted>());
-        Assert.Equal(0, w.Eco.Refined(Side.Alliance));
+        Assert.Equal(0, w.Eco.Refined(Side.Collective));
     }
 
     // ---------------------------------------------------------------- maintenance, cancel (C7 to C9)
 
     private static BuildWorld ShipyardWithLoad100()
     {
-        var w = Empire(1000, FacilityKind.OrbitalShipyard); // 13
+        var w = Hand(1000, FacilityKind.OrbitalShipyard); // 13
         for (int i = 0; i < 14; i++) w.Eco.AddObject(Emp, "Pacifiers", Home); // 14 x 6 = 84
         w.Eco.AddObject(Emp, "Militia", Home); // 3
         Assert.Equal(100, w.Eco.Load(Emp));
@@ -208,11 +208,11 @@ public class ConstructionTests
     [Fact]
     public void C10_BlockadeAbandonsTheRunningCycleAndStopsNewOnes()
     {
-        var w = Empire(100, FacilityKind.ConstructionYard);
+        var w = Hand(100, FacilityKind.ConstructionYard);
         w.Build.YardStopMode = StopMode.Abandon; // Blockade pause, 2026-10-18: this checks the Classic loss (Classic switch); the DEFAULT pauses (C10b)
         w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, Home);
         w.RunTo(6); // cycle 2 runs from hook 5 to 9
-        int blocker = w.Fleets.AddFleet(Side.Alliance, "Blockade", new[] { "Subpoena" }, Home); // gravity well: economic blockade
+        int blocker = w.Fleets.AddFleet(Side.Collective, "Blockade", new[] { "Subpoena" }, Home); // gravity well: economic blockade
         Assert.True(w.Fleets.IsEconomicBlockade(Home, Emp));
         w.RunTo(9);
         var yard = w.Eco.Objects.Single(o => o.Class == "Construction Yard");
@@ -231,12 +231,12 @@ public class ConstructionTests
     [Fact]
     public void C10b_BlockadePausesTheRunningCycleAndResumesIt()
     {
-        var w = Empire(100, FacilityKind.ConstructionYard);
+        var w = Hand(100, FacilityKind.ConstructionYard);
         Assert.Equal(StopMode.Pause, w.Build.YardStopMode);
         w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, Home);
         w.RunTo(6); // cycle 2 runs from hook 5 to 9
         int refined = w.Eco.Refined(Emp);
-        int blocker = w.Fleets.AddFleet(Side.Alliance, "Blockade", new[] { "Subpoena" }, Home);
+        int blocker = w.Fleets.AddFleet(Side.Collective, "Blockade", new[] { "Subpoena" }, Home);
         w.RunTo(18); // hooks 7 to 18 suspended: the due day moved on 12 days
         var yard = w.Eco.Objects.Single(o => o.Class == "Construction Yard");
         Assert.Equal(1, w.Build.ProjectAt(Home, YardFamily.Construction)!.Progress);
@@ -251,7 +251,7 @@ public class ConstructionTests
     [Fact]
     public void C11_UprisingSuspendsAndOrdersStillAccepted()
     {
-        var w = Empire(100, FacilityKind.ConstructionYard);
+        var w = Hand(100, FacilityKind.ConstructionYard);
         bool uprising = true;
         w.Build.IsInUprising = s => uprising && s == Home;
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, Home)); // accepted
@@ -268,7 +268,7 @@ public class ConstructionTests
     public void C11_RealUprisingSuspendsYardsAndResumesWhenItEnds()
     {
         var w = new BuildWorld(withSupport: true);
-        w.Hold(Home, Emp, 10); // Empire support 10 and no garrison: an uprising starts
+        w.Hold(Home, Emp, 10); // Hand support 10 and no garrison: an uprising starts
         w.Yard(Home, FacilityKind.ConstructionYard);
         w.Refined(Emp, 100);
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, Home));
@@ -290,7 +290,7 @@ public class ConstructionTests
     [Fact]
     public void C12_MineDeliveredToRhinnal() // v6 re-pin 2026-10-24: was Classis (7 days); Remedium is 4 days, so every day after departure moves 3 earlier
     {
-        var w = Empire(100, FacilityKind.ConstructionYard);
+        var w = Hand(100, FacilityKind.ConstructionYard);
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, Far));
         Assert.Equal(1, w.Eco.EnergyUsed(Far)); // slot reserved at order time
         w.RunTo(81);
@@ -315,7 +315,7 @@ public class ConstructionTests
     [Fact]
     public void C13_IsdDeliveredAtSpeed80()
     {
-        var w = Empire(1000, FacilityKind.OrbitalShipyard);
+        var w = Hand(1000, FacilityKind.OrbitalShipyard);
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Shipyard, "Mandate", 1, Far));
         w.RunTo(449);
         var dep = w.Events<DeliveryDeparted>().Single();
@@ -329,7 +329,7 @@ public class ConstructionTests
     [Fact]
     public void C14_FighterSquadronDeliveredAtSpeed100()
     {
-        var w = Empire(100, FacilityKind.OrbitalShipyard);
+        var w = Hand(100, FacilityKind.OrbitalShipyard);
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Shipyard, "Gleaner", 1, Far)); // hyperdrive 0 as a fleet, 100 as a delivery
         w.RunTo(13);
         Assert.Equal(4, w.Events<DeliveryDeparted>().Single().FirstHopTicks); // v6 re-pin 2026-10-24 (was 7)
@@ -343,7 +343,7 @@ public class ConstructionTests
     [Fact]
     public void C15_MineOrderToFullKesselRejectedNoSlot()
     {
-        var w = Empire(100, FacilityKind.ConstructionYard);
+        var w = Hand(100, FacilityKind.ConstructionYard);
         w.Hold("The Lantern", Emp);
         w.Eco.SetSlots("The Lantern", 6, 6);
         for (int i = 0; i < 6; i++) w.Eco.AddFacility("The Lantern", FacilityKind.Mine);
@@ -354,25 +354,25 @@ public class ConstructionTests
     [Fact]
     public void C16_FacilityToEnemyHeldDestinationRejectedBadDestination()
     {
-        var w = Empire(100, FacilityKind.ConstructionYard);
-        w.Hold(Far, Side.Alliance);
+        var w = Hand(100, FacilityKind.ConstructionYard);
+        w.Hold(Far, Side.Collective);
         Assert.Equal("BadDestination", w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, Far));
     }
 
     // m2-construction C17
     [Fact]
-    public void C17_AllianceCannotBuildIsd()
+    public void C17_CollectiveCannotBuildIsd()
     {
         var w = new BuildWorld();
-        w.Hold(Home, Side.Alliance); w.Yard(Home, FacilityKind.OrbitalShipyard); w.Refined(Side.Alliance, 500);
-        Assert.Equal("NotAvailable", w.TryOrder(Side.Alliance, Home, YardFamily.Shipyard, "Mandate", 1));
+        w.Hold(Home, Side.Collective); w.Yard(Home, FacilityKind.OrbitalShipyard); w.Refined(Side.Collective, 500);
+        Assert.Equal("NotAvailable", w.TryOrder(Side.Collective, Home, YardFamily.Shipyard, "Mandate", 1));
     }
 
     // m2-construction C18
     [Fact]
     public void C18_AdvancedShipyardNeedsResearch()
     {
-        var w = Empire(500, FacilityKind.ConstructionYard);
+        var w = Hand(500, FacilityKind.ConstructionYard);
         w.Build.RespectResearchOrder = true; // the M3 default is AllAvailable (m3-ships-and-fighters, Contradictions): this sheet's test sets the gate explicitly
         Assert.Equal("NotResearched", w.TryOrder(Emp, Home, YardFamily.Construction, "Advanced Shipyard", 1, Home));
         w.Build.GrantResearch(Emp, "Advanced Shipyard"); // the setup grants it
@@ -384,7 +384,7 @@ public class ConstructionTests
     [Fact]
     public void C19_OffRouteDestinationIsReachableByFreeTravel()
     {
-        var w = Empire(100, FacilityKind.ConstructionYard);
+        var w = Hand(100, FacilityKind.ConstructionYard);
         w.Hold("Glasswood", Emp);
         Assert.Null(w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, "Glasswood"));
     }
@@ -395,11 +395,11 @@ public class ConstructionTests
     [Fact]
     public void C20_RefuseMode_FacilityInTransitRefusedWhenDestinationCaptured()
     {
-        var w = Empire(100, FacilityKind.ConstructionYard);
+        var w = Hand(100, FacilityKind.ConstructionYard);
         w.Build.LostDestination = LostDestinationRule.Refuse;
         w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, Far);
         w.RunTo(81);
-        w.Fleets.SetOwner(Far, Side.Alliance); // captured during the flight
+        w.Fleets.SetOwner(Far, Side.Collective); // captured during the flight
         int before = w.Eco.Refined(Emp);
         w.RunTo(85);
         var refused = w.Events<DeliveryRefused>().Single();
@@ -414,12 +414,12 @@ public class ConstructionTests
     [Fact]
     public void C20_RefuseMode_MaintenanceFreed()
     {
-        var w = Empire(100, FacilityKind.ConstructionYard);
+        var w = Hand(100, FacilityKind.ConstructionYard);
         w.Build.LostDestination = LostDestinationRule.Refuse;
         w.TryOrder(Emp, Home, YardFamily.Construction, "Mordant Covenant I", 1, Far);
         Assert.Equal(10 + 7, w.Eco.Load(Emp));
         w.RunTo(30); // 7 points x 4 days: complete at hook 29, flight 4 days (v6)
-        w.Fleets.SetOwner(Far, Side.Alliance);
+        w.Fleets.SetOwner(Far, Side.Collective);
         w.RunTo(40);
         Assert.Equal(3, w.Events<DeliveryRefused>().Single().Refund); // floor(7 / 2)
         Assert.Equal(10, w.Eco.Load(Emp));
@@ -429,10 +429,10 @@ public class ConstructionTests
     [Fact]
     public void C20_PauseMode_FacilityHeldAtDestinationUntilRegained()
     {
-        var w = Empire(100, FacilityKind.ConstructionYard);
+        var w = Hand(100, FacilityKind.ConstructionYard);
         w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, Far);
         w.RunTo(81);
-        w.Fleets.SetOwner(Far, Side.Alliance); // lost during the flight (one hop)
+        w.Fleets.SetOwner(Far, Side.Collective); // lost during the flight (one hop)
         w.RunTo(90);
         var mine = w.Eco.Objects.Single(o => o.Class == "Mine");
         Assert.False(mine.Completed);
@@ -450,10 +450,10 @@ public class ConstructionTests
     [Fact]
     public void C20_PauseMode_LostBeforeDepartureWaitsAtTheYard()
     {
-        var w = Empire(100, FacilityKind.ConstructionYard);
+        var w = Hand(100, FacilityKind.ConstructionYard);
         w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, Far);
         w.RunTo(60);
-        w.Fleets.SetOwner(Far, Side.Alliance);
+        w.Fleets.SetOwner(Far, Side.Collective);
         w.RunTo(81);
         var held = w.Events<DeliveryHeld>().Single();
         Assert.Equal(Home, held.System); // never leaves
@@ -469,7 +469,7 @@ public class ConstructionTests
     // Path with an intermediate system for the stop tests: Charter to The Thaw at speed 100.
     private static (BuildWorld w, List<string> path) RegimentToHoth()
     {
-        var w = Empire(500, FacilityKind.TrainingFacility);
+        var w = Hand(500, FacilityKind.TrainingFacility);
         w.Hold("The Thaw", Emp);
         var path = w.Fleets.FindPath(Home, "The Thaw", 100);
         Assert.True(path.Ok);
@@ -485,7 +485,7 @@ public class ConstructionTests
     {
         var (w, path) = RegimentToHoth();
         string mid = path[1];
-        int picket = w.Fleets.AddFleet(Side.Alliance, "Picket", new[] { "Subpoena" }, mid); // only a gravity well stops traffic in flight (DEFAULT GravityWellShip)
+        int picket = w.Fleets.AddFleet(Side.Collective, "Picket", new[] { "Subpoena" }, mid); // only a gravity well stops traffic in flight (DEFAULT GravityWellShip)
         w.RunTo(37); // C 9 x 4 days: complete at hook 37, the delivery leaves
         var dep = w.Events<DeliveryDeparted>().Single();
         w.RunTo(dep.DueDay); // arrives at mid in step 3, step 4 holds it
@@ -513,7 +513,7 @@ public class ConstructionTests
     {
         var (w, path) = RegimentToHoth();
         w.Build.DeliveryForcedStop = false;
-        w.Fleets.AddFleet(Side.Alliance, "Picket", new[] { "Mandate" }, path[1]);
+        w.Fleets.AddFleet(Side.Collective, "Picket", new[] { "Mandate" }, path[1]);
         w.RunTo(37);
         var dep = w.Events<DeliveryDeparted>().Single();
         w.Run(200);
@@ -530,7 +530,7 @@ public class ConstructionTests
     {
         var (w, path) = RegimentToHoth();
         w.RunTo(37);
-        w.Fleets.SetOwner("The Thaw", Side.Alliance); // lost while the delivery is under way
+        w.Fleets.SetOwner("The Thaw", Side.Collective); // lost while the delivery is under way
         w.Run(200);
         var held = w.Events<DeliveryHeld>().Single();
         Assert.Equal(path[^2], held.System);
@@ -549,7 +549,7 @@ public class ConstructionTests
     [Fact]
     public void C23_ScrapLastYardMidCycleCancelsProject()
     {
-        var w = Empire(100, FacilityKind.ConstructionYard);
+        var w = Hand(100, FacilityKind.ConstructionYard);
         int yard = w.Eco.Objects.Single().Id;
         w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, Home);
         w.RunTo(10); // cycles taken at hooks 1, 5, 9; the third runs until 13
@@ -577,10 +577,10 @@ public class ConstructionTests
         Assert.Equal(3, list.Count(f => f.Side == null));
         foreach (var f in list) Assert.Equal(1, w.Eco.EnergyUsed(f.System));
         Assert.Equal(52, w.Eco.Load(Emp)); // 4 x 13
-        Assert.Equal(0, w.Eco.Load(Side.Alliance)); // neutral yards add no load
-        w.Refined(Emp, 100); w.Refined(Side.Alliance, 100);
+        Assert.Equal(0, w.Eco.Load(Side.Collective)); // neutral yards add no load
+        w.Refined(Emp, 100); w.Refined(Side.Collective, 100);
         Assert.Equal("NotYours", w.TryOrder(Emp, "Caminus", YardFamily.Shipyard, "Gleaner", 1));
-        Assert.Equal("NotYours", w.TryOrder(Side.Alliance, "Caminus", YardFamily.Shipyard, "Swift", 1));
+        Assert.Equal("NotYours", w.TryOrder(Side.Collective, "Caminus", YardFamily.Shipyard, "Swift", 1));
         Assert.Null(w.TryOrder(Emp, "Navalia", YardFamily.Shipyard, "Gleaner", 1));
     }
 
@@ -590,10 +590,10 @@ public class ConstructionTests
     {
         var w = new BuildWorld();
         w.Yard("Caminus", FacilityKind.OrbitalShipyard);
-        w.Refined(Side.Alliance, 100);
-        w.Hold("Caminus", Side.Alliance);
-        Assert.Equal(13, w.Eco.Load(Side.Alliance));
-        Assert.Null(w.TryOrder(Side.Alliance, "Caminus", YardFamily.Shipyard, "Swift", 1));
+        w.Refined(Side.Collective, 100);
+        w.Hold("Caminus", Side.Collective);
+        Assert.Equal(13, w.Eco.Load(Side.Collective));
+        Assert.Null(w.TryOrder(Side.Collective, "Caminus", YardFamily.Shipyard, "Swift", 1));
     }
 
     private static BuildWorld Busy(ulong seed)
@@ -608,7 +608,7 @@ public class ConstructionTests
         w.Order(Emp, Home, YardFamily.Training, "Pacifiers", 3, "The Thaw");
         w.Run(300);
         w.Order(Emp, Home, YardFamily.Shipyard, "Gleaner", 4, Far); // replaces the Victory project
-        w.Fleets.AddFleet(Side.Alliance, "Picket", new[] { "Mandate" }, w.Fleets.FindPath(Home, "The Thaw", 100).Names(TestData.RealGalaxy)[1]);
+        w.Fleets.AddFleet(Side.Collective, "Picket", new[] { "Mandate" }, w.Fleets.FindPath(Home, "The Thaw", 100).Names(TestData.RealGalaxy)[1]);
         w.Run(1700);
         return w;
     }
@@ -647,20 +647,20 @@ public class ConstructionTests
     public void NebulonBuildDaysByYardCount(int yards, int days)
     {
         var w = new BuildWorld();
-        w.Hold(Home, Side.Alliance);
+        w.Hold(Home, Side.Collective);
         for (int i = 0; i < yards; i++) w.Yard(Home, FacilityKind.OrbitalShipyard);
-        w.Refined(Side.Alliance, 1000);
-        w.Build.GrantResearch(Side.Alliance, "Mender"); // research order 1: the setup grants it
-        Assert.Null(w.TryOrder(Side.Alliance, Home, YardFamily.Shipyard, "Mender", 1));
+        w.Refined(Side.Collective, 1000);
+        w.Build.GrantResearch(Side.Collective, "Mender"); // research order 1: the setup grants it
+        Assert.Null(w.TryOrder(Side.Collective, Home, YardFamily.Shipyard, "Mender", 1));
         w.Run(days + 5);
         Assert.Equal(days + 1, CompletedDay(w));
-        Assert.Equal(1000 - 34, w.Eco.Refined(Side.Alliance));
+        Assert.Equal(1000 - 34, w.Eco.Refined(Side.Collective));
     }
 
     [Fact]
     public void UnitsOfOneOrderAreBuiltOneAfterAnother()
     {
-        var w = Empire(100, FacilityKind.ConstructionYard);
+        var w = Hand(100, FacilityKind.ConstructionYard);
         w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 2, Home);
         Assert.Equal(2, w.Eco.EnergyUsed(Home) - 1); // both reserved at once
         w.RunTo(161);
@@ -671,7 +671,7 @@ public class ConstructionTests
     [Fact]
     public void ReplacingOrderFreesItsOwnReservations()
     {
-        var w = Empire(500, FacilityKind.ConstructionYard);
+        var w = Hand(500, FacilityKind.ConstructionYard);
         w.Build.NewOrderReplacesProject = true; // B5b 2026-10-18: replacing is now a switch (DEFAULT off, B5b §7)
         w.Hold("The Lantern", Emp);
         w.Eco.SetSlots("The Lantern", 6, 6);
@@ -685,8 +685,8 @@ public class ConstructionTests
     [Fact]
     public void RejectionsChangeNothing()
     {
-        var w = Empire(100, FacilityKind.ConstructionYard, FacilityKind.OrbitalShipyard);
-        w.Hold("The Thaw", Side.Alliance);
+        var w = Hand(100, FacilityKind.ConstructionYard, FacilityKind.OrbitalShipyard);
+        w.Hold("The Thaw", Side.Collective);
         int objects = w.Eco.Objects.Count;
         Assert.Equal("UnknownSystem", w.TryOrder(Emp, "No Such Place", YardFamily.Construction, "Mine", 1, Home));
         Assert.Equal("UnknownItem", w.TryOrder(Emp, Home, YardFamily.Construction, "Mine Mk II", 1, Home));
@@ -697,7 +697,7 @@ public class ConstructionTests
         Assert.Equal("BadCount", w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 0, Home));
         Assert.Equal("BadDestination", w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1)); // a facility needs a destination
         Assert.Equal("BadDestination", w.TryOrder(Emp, Home, YardFamily.Shipyard, "Gleaner", 1, "The Thaw")); // a ship to an enemy system
-        Assert.Equal("NotAvailable", w.TryOrder(Emp, Home, YardFamily.Shipyard, "Swift", 1)); // Alliance only
+        Assert.Equal("NotAvailable", w.TryOrder(Emp, Home, YardFamily.Shipyard, "Swift", 1)); // Collective only
         Assert.Equal(objects, w.Eco.Objects.Count);
         Assert.Empty(w.C.AllProjects());
         long stop = w.Build.SubmitStop(Emp, Home, YardFamily.Training);
@@ -708,17 +708,17 @@ public class ConstructionTests
     [Fact]
     public void ZeroCostClassIsNotBuildable()
     {
-        var w = Empire(100, FacilityKind.TrainingFacility);
+        var w = Hand(100, FacilityKind.TrainingFacility);
         Assert.Equal("NotAvailable", w.TryOrder(Emp, Home, YardFamily.Training, "Repossessors", 1)); // m3-troops: cost 0 is not listed
     }
 
     [Fact]
     public void ResearchGateIsOnByDefaultAndOffIsAllAvailable() // m5-research §Defaults (RespectResearchOrder on); m3-ships-and-fighters §Sides and availability (the stub, off)
     {
-        var w = Empire(500, FacilityKind.ConstructionYard);
+        var w = Hand(500, FacilityKind.ConstructionYard);
         Assert.True(w.Build.RespectResearchOrder);
         Assert.Equal(RejectReason.NotResearched, w.TryOrder(Emp, Home, YardFamily.Construction, "Advanced Shipyard", 1, Home));
-        var off = Empire(500, FacilityKind.ConstructionYard);
+        var off = Hand(500, FacilityKind.ConstructionYard);
         off.Build.RespectResearchOrder = false;
         Assert.Null(off.TryOrder(Emp, Home, YardFamily.Construction, "Advanced Shipyard", 1, Home));
     }
@@ -757,7 +757,7 @@ public class ConstructionTests
         w.Order(Emp, Home, YardFamily.Shipyard, "Gleaner", 1);
         w.Order(Emp, "Navalia", YardFamily.Shipyard, "Gleaner", 1);
         w.Run(3);
-        int blocker = w.Fleets.AddFleet(Side.Alliance, "Blockade", new[] { "Subpoena" }, Home);
+        int blocker = w.Fleets.AddFleet(Side.Collective, "Blockade", new[] { "Subpoena" }, Home);
         w.Eco.SetPools(Emp, 0, 1);
         w.Run(1);
         var yards = w.Eco.Objects.Where(o => o.Class == "Orbital Shipyard").OrderBy(o => o.System, StringComparer.Ordinal).ToList();
@@ -774,7 +774,7 @@ public class ConstructionTests
     [Fact]
     public void ScrappingOneOfTwoYardsKeepsTheProject()
     {
-        var w = Empire(100, FacilityKind.ConstructionYard, FacilityKind.ConstructionYard);
+        var w = Hand(100, FacilityKind.ConstructionYard, FacilityKind.ConstructionYard);
         var ids = w.Eco.Objects.Select(o => o.Id).ToList();
         w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 1, Home);
         w.RunTo(10);
@@ -789,10 +789,10 @@ public class ConstructionTests
     [Fact]
     public void CapturedSystemEndsTheProject()
     {
-        var w = Empire(100, FacilityKind.ConstructionYard);
+        var w = Hand(100, FacilityKind.ConstructionYard);
         w.TryOrder(Emp, Home, YardFamily.Construction, "Mine", 2, Home);
         w.RunTo(10);
-        w.Fleets.SetOwner(Home, Side.Alliance);
+        w.Fleets.SetOwner(Home, Side.Collective);
         w.Run(1);
         Assert.Null(w.Build.ProjectAt(Home, YardFamily.Construction));
         Assert.Equal("SystemLost", w.Events<ProjectCancelled>().Single().Reason);
@@ -804,7 +804,7 @@ public class ConstructionTests
     [Fact]
     public void UnitAppearedFiresForCompletedAndDelivered()
     {
-        var w = Empire(100, FacilityKind.OrbitalShipyard);
+        var w = Hand(100, FacilityKind.OrbitalShipyard);
         var seen = new List<(string cls, UnitAppearance how)>();
         w.Build.UnitAppeared += (_, o, how) => seen.Add((o.Class, how));
         w.Build.NewOrderReplacesProject = true; // B5b 2026-10-18: keeps the replace path this test relies on (switch, DEFAULT off)
@@ -844,7 +844,7 @@ public class ConstructionTests
     [Fact]
     public void OrdersSurviveTheSaveFormat()
     {
-        var w = Empire(100, FacilityKind.ConstructionYard);
+        var w = Hand(100, FacilityKind.ConstructionYard);
         w.Order(Emp, Home, YardFamily.Construction, "Mine", 1, Far);
         w.Build.SubmitStop(Emp, Home, YardFamily.Construction);
         var loaded = GameSave.Load(GameSave.Save(w.Game));

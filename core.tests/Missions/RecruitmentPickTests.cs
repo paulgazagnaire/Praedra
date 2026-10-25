@@ -13,11 +13,11 @@ public class RecruitmentPickTests
 {
     private const int Ackbar = 832, Madine = 837; // characters.csv
 
-    /// <summary>T held by the Alliance, Leia (leadership 80) at T, and the given characters created but not placed (the pool).</summary>
+    /// <summary>T held by the Collective, Leia (leadership 80) at T, and the given characters created but not placed (the pool).</summary>
     private static MissionWorld World(params int[] pool)
     {
         var w = new MissionWorld();
-        w.Hold(T, Side.Alliance, 100);
+        w.Hold(T, Side.Collective, 100);
         w.Agent(Leia, T, lead: 80);
         foreach (int id in pool) w.Ch.Create(w.Ch.Data.Get(id), new StubRng());
         return w;
@@ -27,7 +27,7 @@ public class RecruitmentPickTests
     private static int RunRecruitment(MissionWorld w)
     {
         w.Stub!.Expect(0, 99, 0);
-        Assert.Null(w.Try(s => new StartMissionOrder(s, Side.Alliance, MissionKind.Recruitment, new() { Leia }, new(), new(), T)));
+        Assert.Null(w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Recruitment, new() { Leia }, new(), new(), T)));
         int id = w.LastMission;
         w.RunIteration(id);
         Assert.Equal(MissionOutcome.Succeeded, w.Events<MissionEnded>().Single().Outcome);
@@ -42,7 +42,7 @@ public class RecruitmentPickTests
         int id = RunRecruitment(empty);
         Assert.Empty(empty.Events<CharacterRecruited>());
         Assert.Null(empty.M.Get(id)!.RecruitedCharacterKey);
-        Assert.False(empty.Ch.PoolEmpty(Side.Alliance)); // only m = 1 sets the flag
+        Assert.False(empty.Ch.PoolEmpty(Side.Collective)); // only m = 1 sets the flag
 
         var three = World(Ackbar, Lando, Madine);
         three.Stub!.Expect(0, 2, 1);
@@ -61,13 +61,13 @@ public class RecruitmentPickTests
         int id = RunRecruitment(w);
         Assert.Equal(1, w.Stub!.Count(0, 0));
         Assert.Equal(Lando, w.M.Get(id)!.RecruitedCharacterKey);
-        Assert.True(w.Ch.PoolEmpty(Side.Alliance));
-        Assert.False(w.Ch.PoolEmpty(Side.Empire));
-        Assert.Empty(w.Ch.RecruitPoolOf(Side.Alliance));
+        Assert.True(w.Ch.PoolEmpty(Side.Collective));
+        Assert.False(w.Ch.PoolEmpty(Side.Hand));
+        Assert.Empty(w.Ch.RecruitPoolOf(Side.Collective));
 
         var two = World(Ackbar, Lando);
         RunRecruitment(two);
-        Assert.False(two.Ch.PoolEmpty(Side.Alliance));
+        Assert.False(two.Ch.PoolEmpty(Side.Collective));
     }
 
     // m5-missions MI63: pool Keth, Lando, Madine (id order), draw r = 1: Lando is placed free at the target system T, with the skills the creation
@@ -76,7 +76,7 @@ public class RecruitmentPickTests
     public void MI63_PickAtTargetSystem_WithRolledSkills()
     {
         var w = new MissionWorld();
-        w.Hold(T, Side.Alliance, 100);
+        w.Hold(T, Side.Collective, 100);
         w.Agent(Leia, T, lead: 80);
         w.Ch.Create(w.Ch.Data.Get(Ackbar), new StubRng());
         // Lando: variance draws diplomacy 30, espionage 30, facility 60, combat 30, leadership 20 get 5, 6, 7, 8, 9; then the awakening draw 99 (no user)
@@ -92,7 +92,7 @@ public class RecruitmentPickTests
         Assert.False(c.ForceUser);
         Assert.Equal(Lando, w.M.Get(id)!.RecruitedCharacterKey);
         var ev = w.Events<CharacterRecruited>().Single();
-        Assert.Equal((Lando, T, Side.Alliance, id), (ev.Character, ev.Target, ev.Side, ev.Mission));
+        Assert.Equal((Lando, T, Side.Collective, id), (ev.Character, ev.Target, ev.Side, ev.Mission));
         Assert.Equal(Lando, w.Events<CharacterCreated>().Single().Character);
         Assert.False(w.Ch.Get(Ackbar)!.Placed);
         Assert.False(w.Ch.Get(Madine)!.Placed);
@@ -106,7 +106,7 @@ public class RecruitmentPickTests
     {
         var w = World(Luke);
         Assert.Equal(CharacterKind.Major, w.Ch.Data.Get(Luke).Kind);
-        Assert.Empty(w.Ch.RecruitPoolOf(Side.Alliance));
+        Assert.Empty(w.Ch.RecruitPoolOf(Side.Collective));
         RunRecruitment(w);
         Assert.Empty(w.Events<CharacterRecruited>());
         Assert.False(w.Ch.Get(Luke)!.Placed);
@@ -116,7 +116,7 @@ public class RecruitmentPickTests
         Assert.Equal(1, w2.Stub!.Count(0, 0));
         Assert.Equal(Lando, w2.M.Get(id)!.RecruitedCharacterKey);
         Assert.False(w2.Ch.Get(Luke)!.Placed);
-        Assert.True(w2.Ch.PoolEmpty(Side.Alliance)); // m counted Lando only
+        Assert.True(w2.Ch.PoolEmpty(Side.Collective)); // m counted Lando only
     }
 
     // m5-missions MI65: the recruit, the mission's RecruitedCharacterKey and the pool-empty flag survive save and load (same state hash)
@@ -129,7 +129,7 @@ public class RecruitmentPickTests
         w.Reload();
         Assert.Equal(hash, w.Host.StateHash());
         Assert.Equal(Lando, w.M.Get(id)!.RecruitedCharacterKey);
-        Assert.True(w.Ch.PoolEmpty(Side.Alliance));
+        Assert.True(w.Ch.PoolEmpty(Side.Collective));
         Assert.Equal(T, w.Ch.Get(Lando)!.System);
         Assert.NotNull(w.M.Recruit); // the host wires the pick again after a load
     }

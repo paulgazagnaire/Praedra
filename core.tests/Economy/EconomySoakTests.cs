@@ -14,7 +14,7 @@ public class EconomySoakTests
     private static void CheckInvariants(DemoScenario d)
     {
         var eco = d.Economy;
-        foreach (var side in new[] { Side.Empire, Side.Alliance })
+        foreach (var side in new[] { Side.Hand, Side.Collective })
         {
             Assert.True(eco.Raw(side) >= 0 && eco.Refined(side) >= 0);
             Assert.True(eco.Capacity(side) >= 0 && eco.Load(side) >= 0);
@@ -33,7 +33,7 @@ public class EconomySoakTests
             Assert.InRange(sl.Energy, 0, 15); Assert.InRange(sl.Raw, 0, 15);
         }
         // every waiting refinery is in exactly one line
-        var lines = eco.RawLine(Side.Empire).Concat(eco.RawLine(Side.Alliance)).ToList();
+        var lines = eco.RawLine(Side.Hand).Concat(eco.RawLine(Side.Collective)).ToList();
         Assert.Equal(lines.Count, lines.Distinct().Count());
         Assert.Equal(lines.Count, eco.Objects.Count(o => o.InLine));
     }
@@ -69,7 +69,7 @@ public class EconomySoakTests
         long picks = ev.OfType<ObjectScrapped>().Count(e => e.Reason == "Autoscrap");
         Assert.Equal(startups + smuggleRolls + picks, d.Game.Rng.Draws);
         Assert.True(smuggleRolls > 0, "the demo has low-support systems, so smuggling rolls happen");
-        Assert.True(picks > 0, "the Empire starts over capacity");
+        Assert.True(picks > 0, "the Hand starts over capacity");
         Assert.Contains(ev, e => e is FleetArrived);
     }
 
@@ -103,7 +103,7 @@ public class EconomySoakTests
         Assert.Equal(GameSave.StateHash(first.Game), GameSave.StateHash(loaded));
         for (int i = 0; i < 200; i++) loaded.Step();
         Assert.Equal(GameSave.StateHash(whole.Game), GameSave.StateHash(loaded));
-        Assert.Equal(whole.Economy.Raw(Side.Empire), eco.Raw(Side.Empire));
+        Assert.Equal(whole.Economy.Raw(Side.Hand), eco.Raw(Side.Hand));
     }
 
     // m1-clock-and-orders §Seeded random numbers rule 3 (dice-free rules): the demo with no draw sources gives the same world on any seed
@@ -113,7 +113,7 @@ public class EconomySoakTests
         string Make(ulong seed)
         {
             var w = new EcoWorld(seed);
-            w.Hold("Charter", Side.Empire, 100); // no mine or refinery: no first-cycle draw; incidents off; no load
+            w.Hold("Charter", Side.Hand, 100); // no mine or refinery: no first-cycle draw; incidents off; no load
             w.Eco.AddFacility("Charter", FacilityKind.OrbitalShipyard);
             w.Run(300);
             return GameSave.WorldHash(w.Game);
@@ -127,7 +127,7 @@ public class EconomySoakTests
     {
         var sup = d.Support!; var st = d.Game.State.Support;
         foreach (var sys in d.Galaxy.Systems)
-            Assert.InRange(d.Economy.SupportOf(sys.Name, Side.Alliance), 0, 100);
+            Assert.InRange(d.Economy.SupportOf(sys.Name, Side.Collective), 0, 100);
         foreach (var (name, s) in st.Systems)
         {
             // rule: m2-uprisings-and-garrison: the flag and timers 0x384 and 0x38d live and die together; only held systems rebel
@@ -144,7 +144,7 @@ public class EconomySoakTests
         for (int i = 0; i < days; i++)
         {
             if (reinforce && i == 150) // eight regiments land on The Moorings: the uprising there can end
-                for (int k = 0; k < 8; k++) d.Economy.AddObject(Side.Alliance, "Militia", "The Moorings");
+                for (int k = 0; k < 8; k++) d.Economy.AddObject(Side.Collective, "Militia", "The Moorings");
             d.Game.Step();
             CheckInvariants(d); CheckSupportInvariants(d);
         }

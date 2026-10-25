@@ -4,7 +4,7 @@ using Praedra.Core.Economy;
 namespace Praedra.Core.Tests.Economy;
 
 // Tests of m2-mines-refineries-pools (ids P1 to P22). Hook time T = K + 1; events carry Day = T.
-// Setup "S1": Empire, one system at support 100, one mine (id 1) and one refinery (id 2), both completed and idle at Day 0,
+// Setup "S1": Hand, one system at support 100, one mine (id 1) and one refinery (id 2), both completed and idle at Day 0,
 // load 0, stockpile 0 / 0. Stub draws return 0 unless stated.
 public class PoolTests
 {
@@ -13,7 +13,7 @@ public class PoolTests
     private static EcoWorld SetupS1(int support = 100, bool freeShips = false)
     {
         var w = new EcoWorld(freeShips: freeShips);
-        w.Hold(Home, Side.Empire, support);
+        w.Hold(Home, Side.Hand, support);
         w.Mine(Home, id: 1);
         w.Refinery(Home, id: 2);
         return w;
@@ -34,8 +34,8 @@ public class PoolTests
         w.Run(27);
         Assert.Equal(30, w.Game.Day);
         Assert.Equal(new[] { 5, 13, 18, 23, 28 }, RefinedDays(w));
-        Assert.Equal(5, w.Eco.Refined(Side.Empire));
-        Assert.Equal(0, w.Eco.Raw(Side.Empire));
+        Assert.Equal(5, w.Eco.Refined(Side.Hand));
+        Assert.Equal(0, w.Eco.Raw(Side.Hand));
         Assert.Equal(2, w.Stub!.Requests.Count); // two first-cycle draws and nothing else
     }
 
@@ -80,9 +80,9 @@ public class PoolTests
     public void P4_SupportFiftyFullShareTwentyDays(int draw, int due)
     {
         var w = new EcoWorld();
-        w.Hold(Home, Side.Empire, 50);
+        w.Hold(Home, Side.Hand, 50);
         w.Mine(Home, id: 1);
-        for (int i = 0; i < 9; i++) w.Eco.AddObject(Side.Empire, "Pacifiers"); // load 54: share min(50, 54) = 50
+        for (int i = 0; i < 9; i++) w.Eco.AddObject(Side.Hand, "Pacifiers"); // load 54: share min(50, 54) = 50
         Assert.Equal(20, EconomyModule.CycleDays(new EconomyParams(), 50, 50));
         w.Stub!.Expect(0, 20, draw);
         w.Run(1);
@@ -114,7 +114,7 @@ public class PoolTests
     private static EcoWorld Block(int mines, int refineries)
     {
         var w = new EcoWorld();
-        w.Hold("Navalia", Side.Alliance, 100);
+        w.Hold("Navalia", Side.Collective, 100);
         for (int i = 0; i < mines; i++) w.Mine("Navalia");
         for (int i = 0; i < refineries; i++) w.Refinery("Navalia");
         return w;
@@ -125,8 +125,8 @@ public class PoolTests
     public void P7_SevenPairsAtLoad175ShareTwentyFiveEach()
     {
         var w = Block(7, 7);
-        for (int i = 0; i < 5; i++) w.Eco.AddObject(Side.Alliance, "Mender"); // 5 x 35 = 175
-        Assert.Equal(175, w.Eco.Load(Side.Alliance));
+        for (int i = 0; i < 5; i++) w.Eco.AddObject(Side.Collective, "Mender"); // 5 x 35 = 175
+        Assert.Equal(175, w.Eco.Load(Side.Collective));
         w.Run(1); // B5b 2026-10-18: shares are dealt incrementally at the 6.5 hook (B5b §4), so they are read after the first day.
         foreach (var o in w.Eco.Objects.Where(o => o.Class is "Mine" or "Refinery"))
             Assert.Equal(25, w.Eco.ShareOf(o.Id));
@@ -140,13 +140,13 @@ public class PoolTests
     public void P8_SharesCapAtFiftyAndExtraLoadIsNotDealt(int load)
     {
         var w = Block(7, 0);
-        for (int i = 0; i < 10; i++) w.Eco.AddObject(Side.Alliance, "Mender"); // 350
+        for (int i = 0; i < 10; i++) w.Eco.AddObject(Side.Collective, "Mender"); // 350
         if (load == 400)
         {
-            for (int i = 0; i < 10; i++) w.Eco.AddObject(Side.Alliance, "Militia"); // 30
-            for (int i = 0; i < 5; i++) w.Eco.AddObject(Side.Alliance, "Swift"); // 20
+            for (int i = 0; i < 10; i++) w.Eco.AddObject(Side.Collective, "Militia"); // 30
+            for (int i = 0; i < 5; i++) w.Eco.AddObject(Side.Collective, "Swift"); // 20
         }
-        Assert.Equal(load, w.Eco.Load(Side.Alliance));
+        Assert.Equal(load, w.Eco.Load(Side.Collective));
         w.Run(1); // B5b 2026-10-18: shares are dealt incrementally at the 6.5 hook (B5b §4), so they are read after the first day.
         Assert.All(w.Eco.Objects.Where(o => o.Class == "Mine"), o => Assert.Equal(50, w.Eco.ShareOf(o.Id)));
     }
@@ -156,7 +156,7 @@ public class PoolTests
     public void P9_ThreeMinesLoadTenShareFourThreeThree()
     {
         var w = Block(3, 0);
-        for (int i = 0; i < 10; i++) w.Eco.AddObject(Side.Alliance, "Strikers"); // maintenance 1 each
+        for (int i = 0; i < 10; i++) w.Eco.AddObject(Side.Collective, "Strikers"); // maintenance 1 each
         w.Run(1); // B5b 2026-10-18: shares are dealt incrementally at the 6.5 hook (B5b §4), so they are read after the first day.
         Assert.Equal(new[] { 4, 3, 3 }, w.Eco.Objects.Where(o => o.Class == "Mine").Select(o => w.Eco.ShareOf(o.Id)).ToArray());
     }
@@ -172,9 +172,9 @@ public class PoolTests
     private static EcoWorld Smuggle(int support, int regiments = 0, params string[] ships)
     {
         var w = new EcoWorld(freeShips: true); // fleet ships pay upkeep now; these sheet numbers assume only the regiments do
-        w.Hold(Home, Side.Empire, support);
-        for (int i = 0; i < regiments; i++) w.Eco.AddObject(Side.Empire, "Pacifiers", Home);
-        if (ships.Length > 0) w.Fleets.AddFleet(Side.Empire, "F", ships, Home);
+        w.Hold(Home, Side.Hand, support);
+        for (int i = 0; i < regiments; i++) w.Eco.AddObject(Side.Hand, "Pacifiers", Home);
+        if (ships.Length > 0) w.Fleets.AddFleet(Side.Hand, "F", ships, Home);
         return w;
     }
 
@@ -183,16 +183,16 @@ public class PoolTests
     public void P11_SupportTwentyFiveShipAndThreeRegiments()
     {
         var w = Smuggle(25, 3, "Mandate");
-        Assert.Equal(34, w.Eco.DiversionPercent(Home, Side.Empire)); // 50 - 10 - 6
+        Assert.Equal(34, w.Eco.DiversionPercent(Home, Side.Hand)); // 50 - 10 - 6
     }
 
     // m2-mines-refineries-pools P12
     [Fact]
-    public void P12_DeathStarSectorDoublesEmpireRegiments()
+    public void P12_DeathStarSectorDoublesHandRegiments()
     {
         var w = Smuggle(25, 3, "Mandate");
         w.Eco.IsDeathStarSector = s => s == Home;
-        Assert.Equal(28, w.Eco.DiversionPercent(Home, Side.Empire)); // 50 - 10 - 12
+        Assert.Equal(28, w.Eco.DiversionPercent(Home, Side.Hand)); // 50 - 10 - 12
     }
 
     // m2-mines-refineries-pools P13
@@ -200,7 +200,7 @@ public class PoolTests
     public void P13_OwnDeathStarInAFleetMakesItZeroWithNoDraw()
     {
         var w = Smuggle(25, 3, "Mandate", "Death Star");
-        Assert.Equal(0, w.Eco.DiversionPercent(Home, Side.Empire));
+        Assert.Equal(0, w.Eco.DiversionPercent(Home, Side.Hand));
         w.Mine(Home);
         w.Run(30); // load 18 (three regiments): d = 28, first cycle 14, so it finishes at hook time 15
         Assert.NotEmpty(w.Events<ResourceProduced>());
@@ -216,13 +216,13 @@ public class PoolTests
     {
         var w = Smuggle(15);
         w.Mine(Home, id: 1);
-        Assert.Equal(75, w.Eco.DiversionPercent(Home, Side.Empire));
+        Assert.Equal(75, w.Eco.DiversionPercent(Home, Side.Hand));
         w.Stub!.Expect(0, 99, draw);
         w.Run(20); // support 15: d = 5 x 10000 / 15 / 100 = 33, first cycle 0 + 16, ends at hook time 17
         var e = Assert.Single(w.Events<ResourceProduced>());
         Assert.Equal(diverted, e.Diverted);
-        Assert.Equal(diverted ? 1 : 0, w.Eco.Raw(Side.Alliance));
-        Assert.Equal(diverted ? 0 : 1, w.Eco.Raw(Side.Empire));
+        Assert.Equal(diverted ? 1 : 0, w.Eco.Raw(Side.Collective));
+        Assert.Equal(diverted ? 0 : 1, w.Eco.Raw(Side.Hand));
     }
 
     // m2-mines-refineries-pools P15
@@ -230,7 +230,7 @@ public class PoolTests
     public void P15_SixDestroyersClampToZeroAndMakeNoDraw()
     {
         var w = Smuggle(25, 0, Enumerable.Repeat("Mandate", 6).ToArray());
-        Assert.Equal(0, w.Eco.DiversionPercent(Home, Side.Empire));
+        Assert.Equal(0, w.Eco.DiversionPercent(Home, Side.Hand));
         w.Mine(Home, id: 1);
         w.Run(25); // d = 20, first cycle 10, ends at hook time 11
         Assert.NotEmpty(w.Events<ResourceProduced>());
@@ -241,16 +241,16 @@ public class PoolTests
     [Theory]
     [InlineData(40, 25)] [InlineData(41, 0)] [InlineData(20, 75)] [InlineData(21, 50)] [InlineData(30, 50)] [InlineData(31, 25)]
     public void P16_SupportTiers(int support, int v) =>
-        Assert.Equal(v, Smuggle(support).Eco.DiversionPercent(Home, Side.Empire));
+        Assert.Equal(v, Smuggle(support).Eco.DiversionPercent(Home, Side.Hand));
 
     // m2-mines-refineries-pools §Diversion: a squadron, and an enemy ship, count as the sheet says
     [Fact]
     public void DiversionCountsFightersOfTheControllerOnly()
     {
         var w = Smuggle(25);
-        for (int i = 0; i < 2; i++) w.Eco.AddObject(Side.Empire, "Gleaner", Home); // based squadrons; squadrons aboard are not "on the system"
-        w.Fleets.AddFleet(Side.Alliance, "E", new[] { "Dodger" }, Home);
-        Assert.Equal(40, w.Eco.DiversionPercent(Home, Side.Empire)); // 50 - 2 x 5; the enemy corvette does not count
+        for (int i = 0; i < 2; i++) w.Eco.AddObject(Side.Hand, "Gleaner", Home); // based squadrons; squadrons aboard are not "on the system"
+        w.Fleets.AddFleet(Side.Collective, "E", new[] { "Dodger" }, Home);
+        Assert.Equal(40, w.Eco.DiversionPercent(Home, Side.Hand)); // 50 - 2 x 5; the enemy corvette does not count
     }
 
     // m2-mines-refineries-pools P17
@@ -260,14 +260,14 @@ public class PoolTests
         var w = SetupS1();
         w.Refinery(Home, id: 3);
         w.Run(1);
-        Assert.Equal(new[] { 2, 3 }, w.Eco.RawLine(Side.Empire).ToArray());
+        Assert.Equal(new[] { 2, 3 }, w.Eco.RawLine(Side.Hand).ToArray());
         w.Run(2); // hook time 3: first raw
         Assert.Equal(5, w.E.Objects[2].Due);
         Assert.Equal(0, w.E.Objects[3].Due);
-        Assert.Equal(new[] { 3 }, w.Eco.RawLine(Side.Empire).ToArray());
+        Assert.Equal(new[] { 3 }, w.Eco.RawLine(Side.Hand).ToArray());
         w.Run(5); // hook time 8: second raw
         Assert.Equal(8 + 2, w.E.Objects[3].Due); // its first cycle: 0 + 5 / 2 = 2 days
-        Assert.Equal(new[] { 2 }, w.Eco.RawLine(Side.Empire).ToArray()); // id 2 asked again at hook time 5, behind id 3
+        Assert.Equal(new[] { 2 }, w.Eco.RawLine(Side.Hand).ToArray()); // id 2 asked again at hook time 5, behind id 3
     }
 
     private static int EnemyInterdictor(EcoWorld w, Side enemy, string system) =>
@@ -278,15 +278,15 @@ public class PoolTests
     public void P18_BlockadeAtCycleStartStopsMiningUnlessSwitchedOff()
     {
         var w = SetupS1(freeShips: true); // the Interdictor must not be autoscrapped: the sheet's numbers ignore its upkeep
-        EnemyInterdictor(w, Side.Alliance, Home);
-        Assert.True(w.Fleets.IsEconomicBlockade(Home, Side.Empire));
+        EnemyInterdictor(w, Side.Collective, Home);
+        Assert.True(w.Fleets.IsEconomicBlockade(Home, Side.Hand));
         w.Run(30);
         Assert.Equal(0, w.E.Objects[1].Due);
         Assert.Empty(w.Events<ResourceProduced>());
 
         var off = SetupS1(freeShips: true);
         off.Eco.BlockadeStopsMining = false;
-        EnemyInterdictor(off, Side.Alliance, Home);
+        EnemyInterdictor(off, Side.Collective, Home);
         off.Run(30);
         var free = SetupS1();
         free.Run(30);
@@ -301,13 +301,13 @@ public class PoolTests
     public void P19_BlockadeAbandonsTheRunningCycleThenRestartsOnAStartupCycle()
     {
         var w = new EcoWorld(freeShips: true);
-        w.Hold(Home, Side.Empire, 100);
+        w.Hold(Home, Side.Hand, 100);
         w.Eco.MineStopMode = StopMode.Abandon; // Blockade pause, 2026-10-18: this checks the Classic loss (Classic switch); the DEFAULT pauses (P19b)
         w.Mine(Home, id: 1);
         w.Run(1); // cycle started, due 3
-        int blocker = EnemyInterdictor(w, Side.Alliance, Home);
+        int blocker = EnemyInterdictor(w, Side.Collective, Home);
         w.Run(2); // hook time 2: suspended, the cycle is abandoned with no point
-        Assert.Equal(0, w.Eco.Raw(Side.Empire));
+        Assert.Equal(0, w.Eco.Raw(Side.Hand));
         Assert.Equal(0, w.E.Objects[1].Due);
         w.Run(20); // Day 23: still blockaded, no new cycle
         Assert.Equal(0, w.E.Objects[1].Due);
@@ -326,13 +326,13 @@ public class PoolTests
     {
         var w = new EcoWorld(freeShips: true);
         Assert.Equal(StopMode.Pause, w.Eco.MineStopMode);
-        w.Hold(Home, Side.Empire, 100);
+        w.Hold(Home, Side.Hand, 100);
         w.Mine(Home, id: 1);
         w.Run(1); // cycle started, due 3
-        int blocker = EnemyInterdictor(w, Side.Alliance, Home);
+        int blocker = EnemyInterdictor(w, Side.Collective, Home);
         w.Run(22); // hooks 2 to 23 suspended: the due day moved on 22 days
         Assert.Equal(3 + 22, w.E.Objects[1].Due);
-        Assert.Equal(Side.Empire, w.E.Objects[1].PausedFor);
+        Assert.Equal(Side.Hand, w.E.Objects[1].PausedFor);
         Assert.Empty(w.Events<ResourceProduced>());
         w.State.Fleets.Remove(blocker);
         w.Run(1); // hook 24: resumed, one day still to run
@@ -340,7 +340,7 @@ public class PoolTests
         Assert.Equal(25, w.E.Objects[1].Due);
         Assert.Empty(w.Events<StartupCycle>().Where(e => e.Day == 24));
         w.Run(1); // hook 25: the paused cycle pays
-        Assert.Equal(1, w.Eco.Raw(Side.Empire));
+        Assert.Equal(1, w.Eco.Raw(Side.Hand));
         Assert.Equal(new[] { (0, 5) }, w.Stub!.Requests.ToArray()); // only the first start drew; the resume drew nothing
     }
 
@@ -350,17 +350,17 @@ public class PoolTests
     public void P19c_APausedCycleIsLostWhenTheSystemChangesHands()
     {
         var w = new EcoWorld(freeShips: true);
-        w.Hold(Home, Side.Empire, 100);
+        w.Hold(Home, Side.Hand, 100);
         w.Mine(Home, id: 1);
         w.Run(1);
-        int blocker = EnemyInterdictor(w, Side.Alliance, Home);
+        int blocker = EnemyInterdictor(w, Side.Collective, Home);
         w.Run(3);
-        Assert.Equal(Side.Empire, w.E.Objects[1].PausedFor);
+        Assert.Equal(Side.Hand, w.E.Objects[1].PausedFor);
         w.State.Fleets.Remove(blocker);
-        w.Hold(Home, Side.Alliance, 100);
+        w.Hold(Home, Side.Collective, 100);
         w.Run(1);
         Assert.Null(w.E.Objects[1].PausedFor);
-        Assert.Equal(Side.Alliance, w.E.Objects[1].WorkSide);
+        Assert.Equal(Side.Collective, w.E.Objects[1].WorkSide);
         Assert.Single(w.Events<StartupCycle>().Where(e => e.Day == 5 && e.Facility == 1));
     }
 
@@ -369,12 +369,12 @@ public class PoolTests
     public void P20_TwoSidesDueOnOneDayAreProcessedInIdOrder()
     {
         var w = new EcoWorld();
-        w.Hold("Caminus", Side.Alliance); w.Hold(Home, Side.Empire);
+        w.Hold("Caminus", Side.Collective); w.Hold(Home, Side.Hand);
         w.Mine("Caminus", id: 1); w.Mine(Home, id: 2);
         w.Run(3);
         var e = w.Events<ResourceProduced>();
         Assert.Equal(new[] { 1, 2 }, e.Select(x => x.Facility).ToArray());
-        Assert.Equal((1, 1), (w.Eco.Raw(Side.Alliance), w.Eco.Raw(Side.Empire)));
+        Assert.Equal((1, 1), (w.Eco.Raw(Side.Collective), w.Eco.Raw(Side.Hand)));
     }
 
     private static EcoWorld Pairs(ulong seed, bool incidents)
@@ -383,7 +383,7 @@ public class PoolTests
         var names = TestData.RealGalaxy.Systems.Where(s => s.Name != "Glasswood" && s.Name != "Frostholm").Take(20).Select(s => s.Name).ToArray();
         for (int i = 0; i < names.Length; i++)
         {
-            var side = i % 2 == 0 ? Side.Empire : Side.Alliance;
+            var side = i % 2 == 0 ? Side.Hand : Side.Collective;
             w.Hold(names[i], side, 60);
             w.Mine(names[i]); w.Refinery(names[i]);
         }
@@ -401,7 +401,7 @@ public class PoolTests
             for (int i = 0; i < 1000; i++)
             {
                 w.Run(1);
-                foreach (var s in new[] { Side.Empire, Side.Alliance })
+                foreach (var s in new[] { Side.Hand, Side.Collective })
                     Assert.True(w.Eco.Raw(s) >= 0 && w.Eco.Refined(s) >= 0);
             }
             draws = w.Game.Rng.Draws;
@@ -420,15 +420,15 @@ public class PoolTests
     public void P22_MineChangingSideMidCycleRestartsOnAStartupCycle()
     {
         var w = new EcoWorld();
-        w.Hold(Home, Side.Empire, 100);
+        w.Hold(Home, Side.Hand, 100);
         w.Mine(Home, id: 1);
         w.Run(2);
         Assert.Equal(3, w.E.Objects[1].Due);
-        w.Fleets.SetOwner(Home, Side.Alliance); // capture
-        w.Eco.SetAllianceSupport(Home, 50);
+        w.Fleets.SetOwner(Home, Side.Collective); // capture
+        w.Eco.SetCollectiveSupport(Home, 50);
         w.Run(1); // hook time 3
-        Assert.Equal(0, w.Eco.Raw(Side.Alliance));
-        Assert.Equal(0, w.Eco.Raw(Side.Empire));
+        Assert.Equal(0, w.Eco.Raw(Side.Collective));
+        Assert.Equal(0, w.Eco.Raw(Side.Hand));
         Assert.Equal(3 + 5, w.E.Objects[1].Due); // d = 5 x 200 / 100 = 10, startup rand(0..10) + 5 with the stub at 0
         Assert.Equal(new[] { (0, 5), (0, 10) }, w.Stub!.Requests.ToArray()); // the first start, then the new holder's startup draw
     }
@@ -438,15 +438,15 @@ public class PoolTests
     public void WaitingRefineryMovesToTheNewHoldersLine()
     {
         var w = new EcoWorld();
-        w.Hold(Home, Side.Empire, 100);
+        w.Hold(Home, Side.Hand, 100);
         w.Refinery(Home, id: 2);
-        w.Hold("Caminus", Side.Alliance); w.Refinery("Caminus", id: 5);
+        w.Hold("Caminus", Side.Collective); w.Refinery("Caminus", id: 5);
         w.Run(1);
-        Assert.Equal(new[] { 2 }, w.Eco.RawLine(Side.Empire).ToArray());
-        w.Fleets.SetOwner(Home, Side.Alliance);
+        Assert.Equal(new[] { 2 }, w.Eco.RawLine(Side.Hand).ToArray());
+        w.Fleets.SetOwner(Home, Side.Collective);
         w.Run(1);
-        Assert.Empty(w.Eco.RawLine(Side.Empire));
-        Assert.Equal(new[] { 5, 2 }, w.Eco.RawLine(Side.Alliance).ToArray());
+        Assert.Empty(w.Eco.RawLine(Side.Hand));
+        Assert.Equal(new[] { 5, 2 }, w.Eco.RawLine(Side.Collective).ToArray());
     }
 
     // m2-mines-refineries-pools §Where it runs: neutral systems have no cycles
@@ -465,7 +465,7 @@ public class PoolTests
     public void FacilityInDeliveryDoesNotCycle()
     {
         var w = new EcoWorld();
-        w.Hold(Home, Side.Empire);
+        w.Hold(Home, Side.Hand);
         w.Mine(Home, completed: false);
         w.Run(20);
         Assert.Empty(w.Game.Events);

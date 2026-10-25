@@ -12,15 +12,15 @@ public partial class StartMenu : Control
     public event Action<string> LoadRequested;   // a save path
     public event Action QuitRequested;
 
-    Side _side = Side.Alliance;
+    Side _side = Side.Collective;
     Preset _preset = Preset.Medium;
     Praedra.Core.Battle.BattleRuleset _rules = Praedra.Core.Battle.BattleRuleset.New; // DEFAULT New (m4-battle-new; Paul 2026-10-18)
     Label _sideHint;
 
     static readonly string[] SideBlurb =
     {
-        "The Galactic Empire: strong fleets, and a galaxy to keep in line. Crush the Alliance.",
-        "The Rebel Alliance: few ships, many friends. Win the people over and take down the Empire.",
+        "The Galactic Hand: strong fleets, and a galaxy to keep in line. Crush the Collective.",
+        "The Collective Collective: few ships, many friends. Win the people over and take down the Hand.",
     };
 
     public override void _Ready()
@@ -51,8 +51,8 @@ public partial class StartMenu : Control
         sideRow.AddThemeConstantOverride("separation", 8);
         box.AddChild(sideRow);
         var sideGroup = new ButtonGroup();
-        AddToggle(sideRow, sideGroup, "Alliance", _side == Side.Alliance, () => SetSide(Side.Alliance));
-        AddToggle(sideRow, sideGroup, "Empire", _side == Side.Empire, () => SetSide(Side.Empire));
+        AddToggle(sideRow, sideGroup, "Collective", _side == Side.Collective, () => SetSide(Side.Collective));
+        AddToggle(sideRow, sideGroup, "Hand", _side == Side.Hand, () => SetSide(Side.Hand));
         _sideHint = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(440, 44) };
         _sideHint.Modulate = new Color(1, 1, 1, 0.7f);
         box.AddChild(_sideHint);
@@ -106,7 +106,7 @@ public partial class StartMenu : Control
     void SetSide(Side s)
     {
         _side = s;
-        _sideHint.Text = SideBlurb[s == Side.Empire ? 0 : 1];
+        _sideHint.Text = SideBlurb[s == Side.Hand ? 0 : 1];
     }
 
     static void AddToggle(HBoxContainer row, ButtonGroup group, string text, bool pressed, Action on)

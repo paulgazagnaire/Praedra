@@ -59,67 +59,67 @@ internal sealed class CtlWorld
 // m2-control-and-capture, tests C1 to C19. C16 is an M6 test (the AI); here C14 checks that the switch is stored, saved and on by default.
 public class CaptureTests
 {
-    private const string Emp = "Classis";  // Empire-held in most tests
-    private const string Ally = "Drift Harbour";   // Alliance-held in most tests
+    private const string Emp = "Classis";  // Hand-held in most tests
+    private const string Ally = "Drift Harbour";   // Collective-held in most tests
 
     private static readonly Type[] ControlKinds = { typeof(SystemCaptured), typeof(FacilityTransferred), typeof(FacilityRemoved), typeof(UnfinishedFacilityCancelled), typeof(UprisingEnded) };
 
     private static List<GameEvent> CaptureEvents(CtlWorld w) =>
         w.Game.Events.Where(e => ControlKinds.Contains(e.GetType())).ToList();
 
-    // m2-control-and-capture C1: Alliance captures an Empire system with the full set; only the Death Star Shield is removed
+    // m2-control-and-capture C1: Collective captures a Hand system with the full set; only the Death Star Shield is removed
     [Fact]
-    public void C1_AllianceCapture_EverythingTransfers_ShieldRemoved()
+    public void C1_CollectiveCapture_EverythingTransfers_ShieldRemoved()
     {
         var w = new CtlWorld();
-        w.Hold(Emp, Side.Empire, 80);
+        w.Hold(Emp, Side.Hand, 80);
         var mines = new[] { w.S.W.Mine(Emp), w.S.W.Mine(Emp), w.S.W.Mine(Emp) };
         var refs = new[] { w.S.W.Refinery(Emp), w.S.W.Refinery(Emp) };
         int yard = w.Eco.AddFacility(Emp, FacilityKind.OrbitalShipyard);
         int kdy = w.Eco.AddFacility(Emp, FacilityKind.Kdy150);
         int shield = w.Eco.AddFacility(Emp, FacilityKind.DeathStarShield);
-        w.Capture(Side.Alliance, Emp);
+        w.Capture(Side.Collective, Emp);
         w.Run(1);
 
-        Assert.Equal(Side.Alliance, w.Ctl.HolderOf(Emp));
+        Assert.Equal(Side.Collective, w.Ctl.HolderOf(Emp));
         var cap = Assert.Single(w.Events<SystemCaptured>());
-        Assert.Equal((Emp, (Side?)Side.Empire, Side.Alliance, CaptureCause.Debug), (cap.System, cap.From, cap.To, cap.Cause));
+        Assert.Equal((Emp, (Side?)Side.Hand, Side.Collective, CaptureCause.Debug), (cap.System, cap.From, cap.To, cap.Cause));
         var moved = w.Events<FacilityTransferred>().Select(e => e.Facility).ToList();
         Assert.Equal(mines.Concat(refs).Concat(new[] { yard, kdy }).OrderBy(i => i).ToList(), moved);
-        foreach (int id in moved) Assert.Equal(Side.Alliance, w.Eco.OwnerOf(w.Eco.Find(id)!));
+        foreach (int id in moved) Assert.Equal(Side.Collective, w.Eco.OwnerOf(w.Eco.Find(id)!));
         var removed = Assert.Single(w.Events<FacilityRemoved>());
         Assert.Equal(shield, removed.Facility);
         Assert.Null(w.Eco.Find(shield));
     }
 
-    // C2: the Empire captures an Alliance system with the same set minus the shield; nothing is removed
+    // C2: the Hand captures a Collective system with the same set minus the shield; nothing is removed
     [Fact]
-    public void C2_EmpireCapture_EverythingTransfers_NothingRemoved()
+    public void C2_HandCapture_EverythingTransfers_NothingRemoved()
     {
         var w = new CtlWorld();
-        w.Hold(Ally, Side.Alliance, 80);
+        w.Hold(Ally, Side.Collective, 80);
         var ids = new List<int> { w.S.W.Mine(Ally), w.S.W.Mine(Ally), w.S.W.Mine(Ally), w.S.W.Refinery(Ally), w.S.W.Refinery(Ally),
             w.Eco.AddFacility(Ally, FacilityKind.OrbitalShipyard), w.Eco.AddFacility(Ally, FacilityKind.Kdy150) };
-        w.Capture(Side.Empire, Ally);
+        w.Capture(Side.Hand, Ally);
         w.Run(1);
         Assert.Equal(ids.OrderBy(i => i).ToList(), w.Events<FacilityTransferred>().Select(e => e.Facility).ToList());
         Assert.Empty(w.Events<FacilityRemoved>());
-        Assert.All(ids, id => Assert.Equal(Side.Empire, w.Eco.OwnerOf(w.Eco.Find(id)!)));
+        Assert.All(ids, id => Assert.Equal(Side.Hand, w.Eco.OwnerOf(w.Eco.Find(id)!)));
     }
 
-    // The shield only serves the Empire: an Empire capture of a neutral system keeps one, an Alliance capture removes it (Lead, DEFAULT).
+    // The shield only serves the Hand: a Hand capture of a neutral system keeps one, a Collective capture removes it (Lead, DEFAULT).
     [Fact]
-    public void ShieldServesOnlyTheEmpire()
+    public void ShieldServesOnlyTheHand()
     {
         var w = new CtlWorld();
-        Assert.True(w.Ctl.ServesSide("Death Star Shield", Side.Empire));
-        Assert.False(w.Ctl.ServesSide("Death Star Shield", Side.Alliance));
-        Assert.True(w.Ctl.ServesSide("Mine", Side.Alliance));
+        Assert.True(w.Ctl.ServesSide("Death Star Shield", Side.Hand));
+        Assert.False(w.Ctl.ServesSide("Death Star Shield", Side.Collective));
+        Assert.True(w.Ctl.ServesSide("Mine", Side.Collective));
         w.Fleets.SetOwner(Emp, null);
         int shield = w.Eco.AddFacility(Emp, FacilityKind.DeathStarShield);
-        w.Capture(Side.Empire, Emp);
+        w.Capture(Side.Hand, Emp);
         w.Run(1);
-        Assert.Equal(Side.Empire, w.Eco.OwnerOf(w.Eco.Find(shield)!));
+        Assert.Equal(Side.Hand, w.Eco.OwnerOf(w.Eco.Find(shield)!));
     }
 
     // C3: capture of a neutral system with a shipyard (side 3): the shipyard becomes the capturer's
@@ -130,13 +130,13 @@ public class CaptureTests
         int yard = w.Eco.AddFacility(Emp, FacilityKind.OrbitalShipyard);
         Assert.Null(w.Ctl.HolderOf(Emp));
         Assert.Null(w.Eco.OwnerOf(w.Eco.Find(yard)!)); // serves nobody until then
-        w.Capture(Side.Alliance, Emp);
+        w.Capture(Side.Collective, Emp);
         w.Run(1);
         var cap = Assert.Single(w.Events<SystemCaptured>());
         Assert.Null(cap.From);
-        Assert.Equal(Side.Alliance, w.Eco.OwnerOf(w.Eco.Find(yard)!));
+        Assert.Equal(Side.Collective, w.Eco.OwnerOf(w.Eco.Find(yard)!));
         var t = Assert.Single(w.Events<FacilityTransferred>());
-        Assert.Equal((yard, (Side?)null, Side.Alliance), (t.Facility, t.From, t.To));
+        Assert.Equal((yard, (Side?)null, Side.Collective), (t.Facility, t.From, t.To));
     }
 
     // C4: capture while a mine is under construction: ProjectCancelled, no refund, maintenance freed
@@ -144,21 +144,21 @@ public class CaptureTests
     public void C4_UnfinishedFacility_Cancelled_NoRefund_MaintenanceFreed()
     {
         var w = new CtlWorld();
-        w.Hold(Emp, Side.Empire, 80);
+        w.Hold(Emp, Side.Hand, 80);
         int mine = w.S.W.Mine(Emp, completed: false);
         int yard = w.Eco.AddFacility(Emp, FacilityKind.OrbitalShipyard, completed: false); // maintenance 13 in the costs file
-        w.Eco.SetPools(Side.Empire, 5, 7); w.Eco.SetPools(Side.Alliance, 1, 2);
-        int loadBefore = w.Eco.Load(Side.Empire);
+        w.Eco.SetPools(Side.Hand, 5, 7); w.Eco.SetPools(Side.Collective, 1, 2);
+        int loadBefore = w.Eco.Load(Side.Hand);
         Assert.Equal(13, loadBefore);
-        w.Capture(Side.Alliance, Emp);
+        w.Capture(Side.Collective, Emp);
         w.Run(1);
         var cancelled = w.Events<UnfinishedFacilityCancelled>().Select(e => e.Object).ToList();
         Assert.Equal(new[] { mine, yard }, cancelled);
         Assert.Null(w.Eco.Find(mine)); Assert.Null(w.Eco.Find(yard));
-        Assert.Equal(0, w.Eco.Load(Side.Empire));
-        Assert.Equal(0, w.Eco.Load(Side.Alliance)); // not carried over to the new holder
-        Assert.Equal((5, 7), (w.Eco.Raw(Side.Empire), w.Eco.Refined(Side.Empire)));   // no refund
-        Assert.Equal((1, 2), (w.Eco.Raw(Side.Alliance), w.Eco.Refined(Side.Alliance)));
+        Assert.Equal(0, w.Eco.Load(Side.Hand));
+        Assert.Equal(0, w.Eco.Load(Side.Collective)); // not carried over to the new holder
+        Assert.Equal((5, 7), (w.Eco.Raw(Side.Hand), w.Eco.Refined(Side.Hand)));   // no refund
+        Assert.Equal((1, 2), (w.Eco.Raw(Side.Collective), w.Eco.Refined(Side.Collective)));
         Assert.Empty(w.Events<FacilityTransferred>());
     }
 
@@ -168,24 +168,24 @@ public class CaptureTests
     public void C5_QueuedOrderOfOldHolder_Cancelled_YardGoesIdleToNewHolder()
     {
         var w = new CtlWorld(construction: true);
-        w.Hold(Emp, Side.Empire, 80);
+        w.Hold(Emp, Side.Hand, 80);
         int yard = w.Eco.AddFacility(Emp, FacilityKind.OrbitalShipyard);
-        int army = w.Eco.AddObject(Side.Empire, "Tranches", Emp);                          // completed regiment of the old holder: destroyed (B5a)
-        w.Eco.SetPools(Side.Empire, 0, 1000);
-        w.Build!.GrantResearch(Side.Empire, "Mandate");
-        w.Build.SubmitBuild(Side.Empire, Emp, YardFamily.Shipyard, "Mandate", 1);
+        int army = w.Eco.AddObject(Side.Hand, "Tranches", Emp);                          // completed regiment of the old holder: destroyed (B5a)
+        w.Eco.SetPools(Side.Hand, 0, 1000);
+        w.Build!.GrantResearch(Side.Hand, "Mandate");
+        w.Build.SubmitBuild(Side.Hand, Emp, YardFamily.Shipyard, "Mandate", 1);
         w.Run(1);
         var isd = w.Eco.Objects.Single(o => o.Class == "Mandate").Id;
         Assert.NotNull(w.Build.ProjectAt(Emp, YardFamily.Shipyard));
-        int refinedBefore = w.Eco.Refined(Side.Empire);
-        w.Capture(Side.Alliance, Emp);
+        int refinedBefore = w.Eco.Refined(Side.Hand);
+        w.Capture(Side.Collective, Emp);
         w.Run(1);
         Assert.Null(w.Eco.Find(isd));
         Assert.Null(w.Build.ProjectAt(Emp, YardFamily.Shipyard));
         Assert.Null(w.Eco.Find(army));
         Assert.Equal(army, Assert.Single(w.Events<UnitLostAtCapture>()).Object);
-        Assert.True(w.Eco.Refined(Side.Empire) <= refinedBefore); // no refund
-        Assert.Equal(Side.Alliance, w.Eco.OwnerOf(w.Eco.Find(yard)!));
+        Assert.True(w.Eco.Refined(Side.Hand) <= refinedBefore); // no refund
+        Assert.Equal(Side.Collective, w.Eco.OwnerOf(w.Eco.Find(yard)!));
         Assert.True(w.Eco.Find(yard)!.Completed);
         Assert.False(w.Eco.Find(yard)!.InLine);
         Assert.Equal(0, w.Eco.Find(yard)!.Due);
@@ -194,36 +194,36 @@ public class CaptureTests
         Assert.Contains(isd, c.Units.Items);
     }
 
-    // C6: Empire-held, A = 70 (Empire support 30), no uprising, Alliance captures: A unchanged, N = 0, no uprising
+    // C6: Hand-held, A = 70 (Hand support 30), no uprising, Collective captures: A unchanged, N = 0, no uprising
     [Fact]
     public void C6_SupportUnchanged_NewHolderSupport70_NoUprising()
     {
         var w = new CtlWorld();
-        w.Hold(Emp, Side.Empire, 30);
-        w.Capture(Side.Alliance, Emp);
+        w.Hold(Emp, Side.Hand, 30);
+        w.Capture(Side.Collective, Emp);
         w.Run(1);
-        Assert.Equal(Side.Alliance, w.Ctl.HolderOf(Emp));
+        Assert.Equal(Side.Collective, w.Ctl.HolderOf(Emp));
         Assert.Equal(70, w.A(Emp));
-        Assert.Equal(70, w.Eco.SupportOf(Emp, Side.Alliance));
+        Assert.Equal(70, w.Eco.SupportOf(Emp, Side.Collective));
         Assert.Equal(0, w.S.Sup.RequiredGarrison(Emp));
         Assert.False(w.S.Sup.IsUprising(Emp));
         Assert.Empty(w.Events<UprisingStarted>());
         Assert.Empty(w.Events<SupportChanged>());
     }
 
-    // C7: Empire-held, A = 20; Alliance captures with 0 regiments: N = 4, UprisingStarted at once, inside the capture (B5a, 2026-10-17: was slot 6.1
+    // C7: Hand-held, A = 20; Collective captures with 0 regiments: N = 4, UprisingStarted at once, inside the capture (B5a, 2026-10-17: was slot 6.1
     // of the same Step; section 4 step 2.7), arm draw rand(0..70). Captured in slot 5.2, the way M3's assault calls it.
     [Fact]
     public void C7_FreshlyCapturedHostileWorld_UprisingAtOnce()
     {
         var w = new CtlWorld();
-        w.Hold(Emp, Side.Empire, 80); // A = 20
+        w.Hold(Emp, Side.Hand, 80); // A = 20
         w.Stub.Expect(0, 70, 5);
         int drawsInCapture = -1;
         w.InAssaultSlot(ctx =>
         {
             int before = w.Stub.Requests.Count;
-            Assert.True(w.Ctl.SetHolder(ctx, Emp, Side.Alliance, CaptureCause.Assault));
+            Assert.True(w.Ctl.SetHolder(ctx, Emp, Side.Collective, CaptureCause.Assault));
             drawsInCapture = w.Stub.Requests.Count - before;
         });
         w.Run(1);
@@ -232,7 +232,7 @@ public class CaptureTests
         Assert.Equal(4, SupportModule.RequiredGarrison(w.S.Sup.Params, 20, false, false)); // N before the uprising doubles it
         Assert.Equal(8, w.S.Sup.RequiredGarrison(Emp));
         var up = Assert.Single(w.Events<UprisingStarted>());
-        Assert.Equal((Emp, Side.Alliance, 1), (up.System, up.Holder, up.Day));
+        Assert.Equal((Emp, Side.Collective, 1), (up.System, up.Holder, up.Day));
         Assert.Equal(1, w.Stub.Count(0, 70)); // the arm draw of timer 0x38d
         Assert.Equal(1 + 30 + 5, w.Game.State.Support.Systems[Emp].IncidentDue);
         // order in the Step: the capture event comes before the uprising
@@ -240,15 +240,15 @@ public class CaptureTests
         Assert.Equal(CaptureCause.Assault, Assert.Single(w.Events<SystemCaptured>()).Cause);
     }
 
-    // C8: capture of an Empire system that was in uprising: flag, rebel side and timers cleared; UprisingEnded before the new holder is evaluated
+    // C8: capture of a Hand system that was in uprising: flag, rebel side and timers cleared; UprisingEnded before the new holder is evaluated
     [Fact]
     public void C8_UprisingCleared_UprisingEndedBeforeNewHolderEvaluated()
     {
         var w = new CtlWorld();
-        w.Hold(Emp, Side.Empire, 80); // A = 20: the new holder will need a garrison of 4
-        w.S.Uprising(Emp, Side.Empire, erosionDue: 12, incidentDue: 15);
+        w.Hold(Emp, Side.Hand, 80); // A = 20: the new holder will need a garrison of 4
+        w.S.Uprising(Emp, Side.Hand, erosionDue: 12, incidentDue: 15);
         w.Stub.Expect(0, 70, 9);
-        w.Capture(Side.Alliance, Emp);
+        w.Capture(Side.Collective, Emp);
         w.Run(1);
         var ended = Assert.Single(w.Events<UprisingEnded>());
         Assert.Equal("Captured", ended.Reason);
@@ -257,7 +257,7 @@ public class CaptureTests
         Assert.True(iCap < iEnd && iEnd < iNew);
         var st = w.Game.State.Support.Systems[Emp]; // a fresh uprising of the new holder: new side, new timers
         Assert.True(st.Uprising);
-        Assert.Equal(Side.Empire, st.Rebels);
+        Assert.Equal(Side.Hand, st.Collective);
         Assert.Equal(31, st.ErosionDue); // not the old 12
         Assert.Equal(1 + 30 + 9, st.IncidentDue); // not the old 15
     }
@@ -266,9 +266,9 @@ public class CaptureTests
     public void C8b_UprisingCleared_NewHolderContent_LeavesNoFlagAndNoTimers()
     {
         var w = new CtlWorld();
-        w.Hold(Emp, Side.Empire, 30); // A = 70: the Alliance needs no garrison
-        w.S.Uprising(Emp, Side.Empire, erosionDue: 12, incidentDue: 15);
-        w.Capture(Side.Alliance, Emp);
+        w.Hold(Emp, Side.Hand, 30); // A = 70: the Collective needs no garrison
+        w.S.Uprising(Emp, Side.Hand, erosionDue: 12, incidentDue: 15);
+        w.Capture(Side.Collective, Emp);
         w.Run(1);
         Assert.Equal("Captured", Assert.Single(w.Events<UprisingEnded>()).Reason);
         Assert.False(w.S.Sup.IsUprising(Emp));
@@ -276,17 +276,17 @@ public class CaptureTests
         Assert.Empty(w.Events<UprisingStarted>());
     }
 
-    // C9: support reaches 100 for the Alliance on an Empire-held system: the holder stays Empire
+    // C9: support reaches 100 for the Collective on a Hand-held system: the holder stays Hand
     [Fact]
     public void C9_SupportAt100_NeverFlipsControl()
     {
         var w = new CtlWorld();
-        w.Hold(Emp, Side.Empire, 0); // A = 100
+        w.Hold(Emp, Side.Hand, 0); // A = 100
         w.Run(50);
-        Assert.Equal(Side.Empire, w.Ctl.HolderOf(Emp));
-        w.Eco.SetAllianceSupport(Emp, 0);
+        Assert.Equal(Side.Hand, w.Ctl.HolderOf(Emp));
+        w.Eco.SetCollectiveSupport(Emp, 0);
         w.Run(50);
-        Assert.Equal(Side.Empire, w.Ctl.HolderOf(Emp));
+        Assert.Equal(Side.Hand, w.Ctl.HolderOf(Emp));
         Assert.Empty(w.Events<SystemCaptured>());
     }
 
@@ -296,7 +296,7 @@ public class CaptureTests
     {
         var w = new CtlWorld();
         w.Fleets.SetOwner(Emp, null);
-        w.Eco.SetAllianceSupport(Emp, 90);
+        w.Eco.SetCollectiveSupport(Emp, 90);
         w.Run(1000);
         Assert.Null(w.Ctl.HolderOf(Emp));
         Assert.Equal(90, w.A(Emp));
@@ -309,32 +309,32 @@ public class CaptureTests
     public void C11_CapitalCapture_NoSupportEffect_AftermathHookRaised()
     {
         var w = new CtlWorld();
-        w.Hold(ControlModule.CapitalSystem, Side.Empire, 80);
+        w.Hold(ControlModule.CapitalSystem, Side.Hand, 80);
         var seen = new List<(string, bool)>();
         w.Ctl.ControlChangeAftermath += (c, capital) => seen.Add((c.System, capital));
-        w.Capture(Side.Alliance, ControlModule.CapitalSystem);
-        w.Hold(Emp, Side.Empire, 80);
-        w.Capture(Side.Alliance, Emp);
+        w.Capture(Side.Collective, ControlModule.CapitalSystem);
+        w.Hold(Emp, Side.Hand, 80);
+        w.Capture(Side.Collective, Emp);
         w.Run(1);
         Assert.Equal(new[] { (ControlModule.CapitalSystem, true), (Emp, false) }, seen);
         Assert.Equal(20, w.A(ControlModule.CapitalSystem));
         Assert.Empty(w.Events<SupportChanged>());
     }
 
-    // C12: blockade flag recomputed: an Alliance fleet at the system is no longer a blockader after the Alliance captures it
+    // C12: blockade flag recomputed: a Collective fleet at the system is no longer a blockader after the Collective captures it
     [Fact]
-    public void C12_BlockadeRecomputed_AllianceFleetNoLongerBlockader()
+    public void C12_BlockadeRecomputed_CollectiveFleetNoLongerBlockader()
     {
         var w = new CtlWorld();
-        w.Hold(Emp, Side.Empire, 80);
-        w.Fleets.AddFleet(Side.Alliance, "Picket", new[] { "Dodger" }, Emp);
+        w.Hold(Emp, Side.Hand, 80);
+        w.Fleets.AddFleet(Side.Collective, "Picket", new[] { "Dodger" }, Emp);
         w.Run(1);
-        Assert.Equal(Side.Alliance, w.Game.State.Blockades[Emp]);
-        w.Capture(Side.Alliance, Emp);
+        Assert.Equal(Side.Collective, w.Game.State.Blockades[Emp]);
+        w.Capture(Side.Collective, Emp);
         w.Run(1);
         Assert.False(w.Game.State.Blockades.ContainsKey(Emp));
         var lifted = Assert.Single(w.Events<BlockadeLifted>());
-        Assert.Equal((Emp, Side.Alliance), (lifted.System, lifted.Blockader));
+        Assert.Equal((Emp, Side.Collective), (lifted.System, lifted.Blockader));
         // and it was lifted by the capture itself, before step 5 of that Step: right after the capture event
         var evs = w.Game.Events.ToList();
         Assert.True(evs.FindIndex(e => e is SystemCaptured) < evs.FindIndex(e => e is BlockadeLifted));
@@ -344,30 +344,30 @@ public class CaptureTests
     public void C12b_BlockadeRecomputed_OldHoldersFleetBecomesBlockader()
     {
         var w = new CtlWorld();
-        w.Hold(Emp, Side.Empire, 80);
-        w.Fleets.AddFleet(Side.Empire, "Home", new[] { "Mandate" }, Emp);
+        w.Hold(Emp, Side.Hand, 80);
+        w.Fleets.AddFleet(Side.Hand, "Home", new[] { "Mandate" }, Emp);
         w.Run(1);
         Assert.Empty(w.Game.State.Blockades);
-        w.Capture(Side.Alliance, Emp);
+        w.Capture(Side.Collective, Emp);
         w.Run(1);
-        Assert.Equal(Side.Empire, w.Game.State.Blockades[Emp]);
+        Assert.Equal(Side.Hand, w.Game.State.Blockades[Emp]);
         Assert.Single(w.Events<BlockadeStarted>());
     }
 
-    // C13: pool check: Alliance capture of 3 mines, 2 refineries: capacity rises by the five, Empire's falls by the same, same Step
+    // C13: pool check: Collective capture of 3 mines, 2 refineries: capacity rises by the five, Hand's falls by the same, same Step
     [Fact]
     public void C13_PoolsFollowTheFacilities_SameStep()
     {
         var w = new CtlWorld();
-        w.Hold(Emp, Side.Empire, 80);
+        w.Hold(Emp, Side.Hand, 80);
         for (int i = 0; i < 3; i++) w.S.W.Mine(Emp);
         for (int i = 0; i < 2; i++) w.S.W.Refinery(Emp);
         int shipyard = w.Eco.AddFacility(Emp, FacilityKind.OrbitalShipyard); // maintenance 13 moves with it
-        Assert.Equal((100, 0, 13, 0), (w.Eco.Capacity(Side.Empire), w.Eco.Capacity(Side.Alliance), w.Eco.Load(Side.Empire), w.Eco.Load(Side.Alliance)));
-        w.Capture(Side.Alliance, Emp);
+        Assert.Equal((100, 0, 13, 0), (w.Eco.Capacity(Side.Hand), w.Eco.Capacity(Side.Collective), w.Eco.Load(Side.Hand), w.Eco.Load(Side.Collective)));
+        w.Capture(Side.Collective, Emp);
         w.Run(1);
-        Assert.Equal((0, 100, 0, 13), (w.Eco.Capacity(Side.Empire), w.Eco.Capacity(Side.Alliance), w.Eco.Load(Side.Empire), w.Eco.Load(Side.Alliance)));
-        Assert.Equal(Side.Alliance, w.Eco.OwnerOf(w.Eco.Find(shipyard)!));
+        Assert.Equal((0, 100, 0, 13), (w.Eco.Capacity(Side.Hand), w.Eco.Capacity(Side.Collective), w.Eco.Load(Side.Hand), w.Eco.Load(Side.Collective)));
+        Assert.Equal(Side.Collective, w.Eco.OwnerOf(w.Eco.Find(shipyard)!));
     }
 
     // a refinery waiting in the old holder's raw line moves to the new holder's line in the same Step (slot 6.5, economy sheet)
@@ -375,15 +375,15 @@ public class CaptureTests
     public void RefineryInRawLine_MovesToNewHoldersLine()
     {
         var w = new CtlWorld();
-        w.Hold(Emp, Side.Empire, 80);
+        w.Hold(Emp, Side.Hand, 80);
         w.S.W.Mine(Emp);
         int r = w.S.W.Refinery(Emp);
         w.Run(1); // the refinery asks for raw and waits
-        Assert.Contains(r, w.Eco.RawLine(Side.Empire));
-        w.Capture(Side.Alliance, Emp);
+        Assert.Contains(r, w.Eco.RawLine(Side.Hand));
+        w.Capture(Side.Collective, Emp);
         w.Run(1);
-        Assert.DoesNotContain(r, w.Eco.RawLine(Side.Empire));
-        Assert.Contains(r, w.Eco.RawLine(Side.Alliance));
+        Assert.DoesNotContain(r, w.Eco.RawLine(Side.Hand));
+        Assert.Contains(r, w.Eco.RawLine(Side.Collective));
     }
 
     // C14: scorched_earth setting saved, loaded; default on for a new game
@@ -391,17 +391,17 @@ public class CaptureTests
     public void C14_ScorchedEarth_DefaultOn_SavedAndLoaded()
     {
         var w = new CtlWorld();
-        Assert.True(w.Ctl.ScorchedEarth(Side.Empire));
-        Assert.True(w.Ctl.ScorchedEarth(Side.Alliance));
+        Assert.True(w.Ctl.ScorchedEarth(Side.Hand));
+        Assert.True(w.Ctl.ScorchedEarth(Side.Collective));
         string onHash = GameSave.StateHash(w.Game);
-        w.Ctl.SetScorchedEarth(Side.Empire, false);
+        w.Ctl.SetScorchedEarth(Side.Hand, false);
         Assert.NotEqual(onHash, GameSave.StateHash(w.Game)); // part of the hashed state
 
         var loaded = GameSave.Load(GameSave.Save(w.Game));
-        Assert.False(loaded.State.Control.ScorchedEarth(Side.Empire));
-        Assert.True(loaded.State.Control.ScorchedEarth(Side.Alliance));
+        Assert.False(loaded.State.Control.ScorchedEarth(Side.Hand));
+        Assert.True(loaded.State.Control.ScorchedEarth(Side.Collective));
         Assert.Equal(GameSave.Save(w.Game), GameSave.Save(loaded));
-        Assert.True(new GameState().Control.ScorchedEarth(Side.Empire));
+        Assert.True(new GameState().Control.ScorchedEarth(Side.Hand));
     }
 
     // C15: human Scrap of a mine on its own system, switch off: accepted (economy sheet's refund)
@@ -409,13 +409,13 @@ public class CaptureTests
     public void C15_HumanScrap_SwitchOff_Accepted()
     {
         var w = new CtlWorld();
-        w.Ctl.SetScorchedEarth(Side.Alliance, false);
-        w.Hold(Ally, Side.Alliance, 80);
+        w.Ctl.SetScorchedEarth(Side.Collective, false);
+        w.Hold(Ally, Side.Collective, 80);
         int mine = w.S.W.Mine(Ally);
-        w.Game.Submit(seq => new ScrapObjectOrder(seq, Side.Alliance, mine));
+        w.Game.Submit(seq => new ScrapObjectOrder(seq, Side.Collective, mine));
         w.Run(1);
         Assert.Null(w.Eco.Find(mine));
-        Assert.Equal(10, w.Eco.Refined(Side.Alliance));
+        Assert.Equal(10, w.Eco.Refined(Side.Collective));
         Assert.Empty(w.Game.Events.OfType<OrderRejected>());
     }
 
@@ -424,13 +424,13 @@ public class CaptureTests
     public void C17_ScrapExample_RefundIs70()
     {
         var w = new CtlWorld();
-        w.Hold(Emp, Side.Empire, 80);
+        w.Hold(Emp, Side.Hand, 80);
         var ids = new List<int>();
         for (int i = 0; i < 3; i++) { ids.Add(w.S.W.Mine(Emp)); ids.Add(w.S.W.Refinery(Emp)); }
         ids.Add(w.Eco.AddFacility(Emp, FacilityKind.OrbitalShipyard));
-        foreach (int id in ids) w.Game.Submit(seq => new ScrapObjectOrder(seq, Side.Empire, id));
+        foreach (int id in ids) w.Game.Submit(seq => new ScrapObjectOrder(seq, Side.Hand, id));
         w.Run(1);
-        Assert.Equal(70, w.Eco.Refined(Side.Empire));
+        Assert.Equal(70, w.Eco.Refined(Side.Hand));
         Assert.Equal(7, w.Events<ObjectScrapped>().Count);
     }
 
@@ -439,14 +439,14 @@ public class CaptureTests
     public void ScorchedWorld_GivesTheCapturerNothing()
     {
         var w = new CtlWorld();
-        w.Hold(Emp, Side.Empire, 80);
+        w.Hold(Emp, Side.Hand, 80);
         var ids = new List<int>();
         for (int i = 0; i < 3; i++) { ids.Add(w.S.W.Mine(Emp)); ids.Add(w.S.W.Refinery(Emp)); }
-        foreach (int id in ids) w.Game.Submit(seq => new ScrapObjectOrder(seq, Side.Empire, id));
+        foreach (int id in ids) w.Game.Submit(seq => new ScrapObjectOrder(seq, Side.Hand, id));
         w.Run(1);
-        w.Capture(Side.Alliance, Emp);
+        w.Capture(Side.Collective, Emp);
         w.Run(1);
-        Assert.Equal(0, w.Eco.Capacity(Side.Alliance));
+        Assert.Equal(0, w.Eco.Capacity(Side.Collective));
         Assert.Empty(w.Events<FacilityTransferred>());
     }
 
@@ -455,20 +455,20 @@ public class CaptureTests
     public void C18_CaptureTwice_IdsUnchanged_EventsInOrder()
     {
         var w = new CtlWorld();
-        w.Hold(Emp, Side.Empire, 80);
+        w.Hold(Emp, Side.Hand, 80);
         int mine = w.S.W.Mine(Emp), yard = w.Eco.AddFacility(Emp, FacilityKind.OrbitalShipyard);
-        w.Capture(Side.Alliance, Emp);
+        w.Capture(Side.Collective, Emp);
         w.Run(1);
-        w.Capture(Side.Empire, Emp);
+        w.Capture(Side.Hand, Emp);
         w.Run(1);
         var caps = w.Events<SystemCaptured>();
-        Assert.Equal(new[] { (Side.Empire, Side.Alliance), (Side.Alliance, Side.Empire) }, caps.Select(c => (c.From!.Value, c.To!.Value)).ToArray());
+        Assert.Equal(new[] { (Side.Hand, Side.Collective), (Side.Collective, Side.Hand) }, caps.Select(c => (c.From!.Value, c.To!.Value)).ToArray());
         Assert.Equal(new[] { 0, 1 }, caps.Select(c => c.Day - 1).ToArray());
         var moved = w.Events<FacilityTransferred>();
         Assert.Equal(new[] { mine, yard, mine, yard }, moved.Select(m => m.Facility).ToArray());
-        Assert.Equal(new Side?[] { Side.Alliance, Side.Alliance, Side.Empire, Side.Empire }, moved.Select(m => m.To).ToArray());
-        Assert.Equal(Side.Empire, w.Eco.OwnerOf(w.Eco.Find(mine)!));
-        // per capture: SystemCaptured first, then its facility events; the Alliance held a hostile world with no garrison (A = 20), so its
+        Assert.Equal(new Side?[] { Side.Collective, Side.Collective, Side.Hand, Side.Hand }, moved.Select(m => m.To).ToArray());
+        Assert.Equal(Side.Hand, w.Eco.OwnerOf(w.Eco.Find(mine)!));
+        // per capture: SystemCaptured first, then its facility events; the Collective held a hostile world with no garrison (A = 20), so its
         // uprising (slot 6.1) is ended by the second capture, last
         Assert.Equal("SystemCaptured,FacilityTransferred,FacilityTransferred,SystemCaptured,FacilityTransferred,FacilityTransferred,UprisingEnded",
             CtlWorld.Names(CaptureEvents(w)));
@@ -482,18 +482,18 @@ public class CaptureTests
         List<GameEvent> Play(out int draws)
         {
             var w = new CtlWorld(stub: false, seed: 7);
-            w.Hold(Emp, Side.Empire, 80);
-            w.Hold(Ally, Side.Alliance, 80);
+            w.Hold(Emp, Side.Hand, 80);
+            w.Hold(Ally, Side.Collective, 80);
             w.S.W.Mine(Emp); w.S.W.Refinery(Emp); w.Eco.AddFacility(Emp, FacilityKind.DeathStarShield);
             w.Eco.AddFacility(Emp, FacilityKind.Mine, completed: false);
-            w.S.Uprising(Emp, Side.Empire, erosionDue: 10, incidentDue: 12);
-            w.Fleets.AddFleet(Side.Alliance, "Picket", new[] { "Dodger" }, Emp);
+            w.S.Uprising(Emp, Side.Hand, erosionDue: 10, incidentDue: 12);
+            w.Fleets.AddFleet(Side.Collective, "Picket", new[] { "Dodger" }, Emp);
             int d = 0;
             w.InAssaultSlot(ctx =>
             {
                 var before = w.Game.Rng.Export();
-                w.Ctl.SetHolder(ctx, Emp, Side.Alliance, CaptureCause.Assault);
-                w.Ctl.SetHolder(ctx, Ally, Side.Empire, CaptureCause.Assault);
+                w.Ctl.SetHolder(ctx, Emp, Side.Collective, CaptureCause.Assault);
+                w.Ctl.SetHolder(ctx, Ally, Side.Hand, CaptureCause.Assault);
                 d = w.Game.Rng.Export() == before ? 0 : 1;
             });
             w.Run(3);
@@ -511,9 +511,9 @@ public class CaptureTests
     public void SetHolder_SameHolder_IsANoOp()
     {
         var w = new CtlWorld();
-        w.Hold(Emp, Side.Empire, 80);
+        w.Hold(Emp, Side.Hand, 80);
         w.S.W.Mine(Emp);
-        w.InAssaultSlot(ctx => Assert.False(w.Ctl.SetHolder(ctx, Emp, Side.Empire, CaptureCause.Assault)));
+        w.InAssaultSlot(ctx => Assert.False(w.Ctl.SetHolder(ctx, Emp, Side.Hand, CaptureCause.Assault)));
         w.Run(1);
         Assert.Empty(w.Events<SystemCaptured>());
         Assert.Empty(w.Events<FacilityTransferred>());
@@ -524,16 +524,16 @@ public class CaptureTests
     public void DebugOrder_Rejections()
     {
         var w = new CtlWorld();
-        w.Hold(Emp, Side.Empire, 80);
+        w.Hold(Emp, Side.Hand, 80);
         w.Ctl.DebugOrdersEnabled = false;
-        w.Capture(Side.Alliance, Emp);
+        w.Capture(Side.Collective, Emp);
         w.Run(1);
         Assert.Equal(RejectReason.DebugDisabled, Assert.Single(w.Events<OrderRejected>()).Reason);
-        Assert.Equal(Side.Empire, w.Ctl.HolderOf(Emp));
+        Assert.Equal(Side.Hand, w.Ctl.HolderOf(Emp));
 
         w.Ctl.DebugOrdersEnabled = true;
-        w.Capture(Side.Empire, Emp);
-        w.Ctl.SubmitDebugSetHolder(Side.Empire, "No Such Place", Side.Empire);
+        w.Capture(Side.Hand, Emp);
+        w.Ctl.SubmitDebugSetHolder(Side.Hand, "No Such Place", Side.Hand);
         w.Run(1);
         Assert.Equal(new[] { RejectReason.DebugDisabled, RejectReason.AlreadyHolder, RejectReason.UnknownSystem },
             w.Events<OrderRejected>().Select(r => r.Reason).ToArray());
@@ -543,12 +543,12 @@ public class CaptureTests
     public void DebugOrder_SurvivesSaveAsAQueuedOrder()
     {
         var w = new CtlWorld();
-        w.Hold(Emp, Side.Empire, 80);
-        long seq = w.Ctl.SubmitDebugSetHolder(Side.Alliance, Emp, Side.Alliance);
+        w.Hold(Emp, Side.Hand, 80);
+        long seq = w.Ctl.SubmitDebugSetHolder(Side.Collective, Emp, Side.Collective);
         var json = GameSave.Save(w.Game);
         var loaded = GameSave.Load(json);
         var order = Assert.Single(loaded.Queue);
-        Assert.Equal(new DebugSetHolderOrder(seq, Side.Alliance, Emp, Side.Alliance), order);
+        Assert.Equal(new DebugSetHolderOrder(seq, Side.Collective, Emp, Side.Collective), order);
     }
 
     // ---------------------------------------------------------------- integration: owner change mid-run keeps economy, support and fleets consistent
@@ -556,14 +556,14 @@ public class CaptureTests
     private static CtlWorld Scenario()
     {
         var w = new CtlWorld(stub: false, seed: 11);
-        w.Hold(Emp, Side.Empire, 40);   // A = 60
-        w.Hold(Ally, Side.Alliance, 70);
+        w.Hold(Emp, Side.Hand, 40);   // A = 60
+        w.Hold(Ally, Side.Collective, 70);
         for (int i = 0; i < 2; i++) { w.S.W.Mine(Emp); w.S.W.Refinery(Emp); }
         w.S.W.Mine(Ally); w.S.W.Refinery(Ally);
         w.Eco.AddFacility(Emp, FacilityKind.OrbitalShipyard);
-        w.S.Regiments(Emp, Side.Empire, SupWorld.ArmyOf(Side.Empire), 2);
-        w.Fleets.AddFleet(Side.Alliance, "Raiders", new[] { "Dodger" }, Emp);
-        w.Fleets.AddFleet(Side.Empire, "Hammer", new[] { "Mandate" }, Ally);
+        w.S.Regiments(Emp, Side.Hand, SupWorld.ArmyOf(Side.Hand), 2);
+        w.Fleets.AddFleet(Side.Collective, "Raiders", new[] { "Dodger" }, Emp);
+        w.Fleets.AddFleet(Side.Hand, "Hammer", new[] { "Mandate" }, Ally);
         return w;
     }
 
@@ -587,45 +587,45 @@ public class CaptureTests
     {
         var w = Scenario();
         w.Run(40);
-        int capBefore = w.Eco.Capacity(Side.Empire), allyCapBefore = w.Eco.Capacity(Side.Alliance);
+        int capBefore = w.Eco.Capacity(Side.Hand), allyCapBefore = w.Eco.Capacity(Side.Collective);
         Assert.Equal(100, capBefore);
         Assert.Equal(50, allyCapBefore);
-        Assert.Equal(Side.Alliance, w.Game.State.Blockades[Emp]); // economy: blockaded mines idle
+        Assert.Equal(Side.Collective, w.Game.State.Blockades[Emp]); // economy: blockaded mines idle
         int aAtCapture = w.A(Emp);
-        w.Capture(Side.Alliance, Emp);
+        w.Capture(Side.Collective, Emp);
         w.Run(1);
 
         // fleets: the owner changed, the blockade flag follows, the old holder's fleet at Classis is not there
-        Assert.Equal(Side.Alliance, w.Fleets.OwnerOf(Emp));
+        Assert.Equal(Side.Collective, w.Fleets.OwnerOf(Emp));
         Assert.False(w.Game.State.Blockades.ContainsKey(Emp));
-        // economy: the facilities are the Alliance's, capacity moved, no negative pool
-        Assert.Equal(0, w.Eco.Capacity(Side.Empire));
-        Assert.Equal(150, w.Eco.Capacity(Side.Alliance));
+        // economy: the facilities are the Collective's, capacity moved, no negative pool
+        Assert.Equal(0, w.Eco.Capacity(Side.Hand));
+        Assert.Equal(150, w.Eco.Capacity(Side.Collective));
         foreach (var f in w.Eco.Objects.Where(o => o.System == Emp && o.Category == ObjectCategory.Facility))
-            Assert.Equal(Side.Alliance, w.Eco.OwnerOf(f));
-        Assert.True(w.Eco.Raw(Side.Empire) >= 0 && w.Eco.Refined(Side.Empire) >= 0);
-        // support: stored value untouched (60 Alliance); the Empire's 2 regiments are not the holder's, so N = 0 here and nothing erupts
+            Assert.Equal(Side.Collective, w.Eco.OwnerOf(f));
+        Assert.True(w.Eco.Raw(Side.Hand) >= 0 && w.Eco.Refined(Side.Hand) >= 0);
+        // support: stored value untouched (60 Collective); the Hand's 2 regiments are not the holder's, so N = 0 here and nothing erupts
         Assert.Equal(aAtCapture, w.A(Emp)); // the 40 blockaded days may have moved it; the capture itself does not
         Assert.DoesNotContain(w.Events<SupportChanged>(), e => e.System == Emp && e.Day == 41);
         Assert.False(w.S.Sup.IsUprising(Emp));
-        // the mines now produce for the Alliance: run on and see Alliance-side output from Classis
+        // the mines now produce for the Collective: run on and see Collective-side output from Classis
         w.Run(400);
-        Assert.Contains(w.Events<ResourceProduced>(), e => e.System == Emp && e.Day > 41 && e.Controller == Side.Alliance);
-        Assert.DoesNotContain(w.Events<ResourceProduced>(), e => e.System == Emp && e.Day > 41 && e.Controller == Side.Empire);
+        Assert.Contains(w.Events<ResourceProduced>(), e => e.System == Emp && e.Day > 41 && e.Controller == Side.Collective);
+        Assert.DoesNotContain(w.Events<ResourceProduced>(), e => e.System == Emp && e.Day > 41 && e.Controller == Side.Hand);
         // every refinery stands in at most one line, on the line of its holder
-        foreach (var side in new[] { Side.Empire, Side.Alliance })
+        foreach (var side in new[] { Side.Hand, Side.Collective })
             foreach (int id in w.Eco.RawLine(side)) Assert.Equal(side, w.Eco.OwnerOf(w.Eco.Find(id)!));
     }
 
     [Fact]
     public void Integration_SaveLoadMidRun_CaptureAfterLoadMatchesAnUninterruptedGame()
     {
-        var whole = Scenario(); whole.Run(40); whole.Capture(Side.Alliance, Emp); whole.Run(260);
+        var whole = Scenario(); whole.Run(40); whole.Capture(Side.Collective, Emp); whole.Run(260);
 
         var first = Scenario(); first.Run(40);
         var loaded = Reattach(GameSave.Load(GameSave.Save(first.Game)));
         Assert.Equal(GameSave.StateHash(first.Game), GameSave.StateHash(loaded.Game));
-        loaded.Capture(Side.Alliance, Emp);
+        loaded.Capture(Side.Collective, Emp);
         loaded.Run(260);
         Assert.Equal(GameSave.StateHash(whole.Game), GameSave.StateHash(loaded.Game));
     }
@@ -633,14 +633,14 @@ public class CaptureTests
     [Fact]
     public void Integration_SaveLoadAfterCapture_FutureIsTheSame()
     {
-        var whole = Scenario(); whole.Run(40); whole.Capture(Side.Alliance, Emp); whole.Run(10); whole.Capture(Side.Empire, Emp); whole.Run(250);
+        var whole = Scenario(); whole.Run(40); whole.Capture(Side.Collective, Emp); whole.Run(10); whole.Capture(Side.Hand, Emp); whole.Run(250);
 
-        var first = Scenario(); first.Run(40); first.Capture(Side.Alliance, Emp); first.Run(10);
-        Assert.Equal(Side.Alliance, first.Ctl.HolderOf(Emp));
+        var first = Scenario(); first.Run(40); first.Capture(Side.Collective, Emp); first.Run(10);
+        Assert.Equal(Side.Collective, first.Ctl.HolderOf(Emp));
         var loaded = Reattach(GameSave.Load(GameSave.Save(first.Game)));
-        Assert.Equal(Side.Alliance, loaded.Ctl.HolderOf(Emp));
+        Assert.Equal(Side.Collective, loaded.Ctl.HolderOf(Emp));
         Assert.Equal(GameSave.StateHash(first.Game), GameSave.StateHash(loaded.Game));
-        loaded.Capture(Side.Empire, Emp);
+        loaded.Capture(Side.Hand, Emp);
         loaded.Run(250);
         Assert.Equal(GameSave.StateHash(whole.Game), GameSave.StateHash(loaded.Game));
     }
@@ -654,14 +654,14 @@ public class CaptureTests
     private static CtlWorld BuildScenario()
     {
         var w = new CtlWorld(stub: false, seed: 21, construction: true);
-        w.Hold(Home, Side.Empire, 100); w.Hold(Far, Side.Empire, 100); // A = 0 at Classis: a hostile world for an Alliance holder
+        w.Hold(Home, Side.Hand, 100); w.Hold(Far, Side.Hand, 100); // A = 0 at Classis: a hostile world for a Collective holder
         w.Eco.AddFacility(Home, FacilityKind.ConstructionYard);
         w.Eco.AddFacility(Far, FacilityKind.OrbitalShipyard);
-        w.Eco.SetPools(Side.Empire, 0, 2000);
-        w.Build!.GrantResearch(Side.Empire, "Mandate");
-        w.Build.SubmitBuild(Side.Empire, Home, YardFamily.Construction, "Mine", 1, Far);                // delivery will fly Charter to Classis
-        w.Build.SubmitBuild(Side.Empire, Far, YardFamily.Shipyard, "Mandate", 1);        // running yard project at Classis
-        w.Fleets.AddFleet(Side.Alliance, "Picket", new[] { "Dodger" }, Far);                  // blockades Classis
+        w.Eco.SetPools(Side.Hand, 0, 2000);
+        w.Build!.GrantResearch(Side.Hand, "Mandate");
+        w.Build.SubmitBuild(Side.Hand, Home, YardFamily.Construction, "Mine", 1, Far);                // delivery will fly Charter to Classis
+        w.Build.SubmitBuild(Side.Hand, Far, YardFamily.Shipyard, "Mandate", 1);        // running yard project at Classis
+        w.Fleets.AddFleet(Side.Collective, "Picket", new[] { "Dodger" }, Far);                  // blockades Classis
         return w;
     }
 
@@ -672,14 +672,14 @@ public class CaptureTests
         while (!w.Game.Events.OfType<DeliveryDeparted>().Any()) w.Run(1);
         var dep = w.Events<DeliveryDeparted>().Single();
         Assert.Equal(Far, dep.To);
-        Assert.Equal(Side.Alliance, w.Game.State.Blockades[Far]);
+        Assert.Equal(Side.Collective, w.Game.State.Blockades[Far]);
         var isdProject = w.Build!.ProjectAt(Far, YardFamily.Shipyard);
         Assert.NotNull(isdProject);
         var isdUnits = isdProject!.Units.ToList();
         int mineId = dep.Object;
         Assert.True(w.Game.Day < dep.DueDay, "the delivery is still flying");
 
-        w.Capture(Side.Alliance, Far);
+        w.Capture(Side.Collective, Far);
         w.Run(1);
 
         // construction: the project is gone with its units, once, no refund; the delivery is still alive
@@ -691,16 +691,16 @@ public class CaptureTests
         Assert.Single(w.Build.Deliveries);
         Assert.Empty(w.Events<UnfinishedFacilityCancelled>()); // the flying mine is construction's, not a leftover
         Assert.NotNull(w.Eco.Find(mineId));
-        // economy: the shipyard is the Alliance's and idle
+        // economy: the shipyard is the Collective's and idle
         var yard = w.Eco.Objects.Single(o => o.System == Far && o.Class == "Orbital Shipyard");
-        Assert.Equal(Side.Alliance, w.Eco.OwnerOf(yard));
+        Assert.Equal(Side.Collective, w.Eco.OwnerOf(yard));
         Assert.Equal(0, yard.Due); Assert.False(yard.InLine);
-        Assert.DoesNotContain(yard.Id, w.Build.RefinedLine(Side.Empire));
-        Assert.DoesNotContain(yard.Id, w.Build.RefinedLine(Side.Alliance));
+        Assert.DoesNotContain(yard.Id, w.Build.RefinedLine(Side.Hand));
+        Assert.DoesNotContain(yard.Id, w.Build.RefinedLine(Side.Collective));
         // fleets: owner and blockade flag follow
-        Assert.Equal(Side.Alliance, w.Fleets.OwnerOf(Far));
+        Assert.Equal(Side.Collective, w.Fleets.OwnerOf(Far));
         Assert.False(w.Game.State.Blockades.ContainsKey(Far));
-        // support: stored value untouched; the Alliance, holding a world with A = 0 and no garrison, rises at 6.1 of the same Step
+        // support: stored value untouched; the Collective, holding a world with A = 0 and no garrison, rises at 6.1 of the same Step
         Assert.Equal(0, w.S.A(Far));
         Assert.Single(w.Events<UprisingStarted>());
 
@@ -718,7 +718,7 @@ public class CaptureTests
         CtlWorld RunToCapture(CtlWorld w)
         {
             while (!w.Game.Events.OfType<DeliveryDeparted>().Any()) w.Run(1);
-            w.Capture(Side.Alliance, Far);
+            w.Capture(Side.Collective, Far);
             w.Run(2);
             return w;
         }

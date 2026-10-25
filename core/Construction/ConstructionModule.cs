@@ -209,7 +209,7 @@ public sealed class ConstructionModule
         if (!YardsOf(o.System, o.Family).Any()) return OrderResult.Reject(RejectReason.NoYard);
         if (Yards.BuiltBy(row.Category) != o.Family) return OrderResult.Reject(RejectReason.WrongFamily);
         // rule: m2-construction §Build order (NotAvailable: the file's side flag; cost 0 is not buildable, m3-troops-and-special-forces §Training Facility production)
-        if (!(o.Side == Side.Empire ? row.Empire : row.Alliance) || row.Cost <= 0) return OrderResult.Reject(RejectReason.NotAvailable);
+        if (!(o.Side == Side.Hand ? row.Hand : row.Collective) || row.Cost <= 0) return OrderResult.Reject(RejectReason.NotAvailable);
         if (o.Class == EconomyModule.DeathStarClass && !DeathStarClassBuildable) return OrderResult.Reject(RejectReason.NotAvailable); // rule: m3-ships-and-fighters §Death Star (S14)
         if (!IsResearched(o.Side, o.Class)) return OrderResult.Reject(RejectReason.NotResearched);
         if (o.Count < 1) return OrderResult.Reject(RejectReason.BadCount);
@@ -310,7 +310,7 @@ public sealed class ConstructionModule
         {
             y.Due = 0; y.InLine = false;
             C.Of(p.Side).RefinedLine.Remove(y.Id);
-            C.Empire.RefinedLine.Remove(y.Id); C.Alliance.RefinedLine.Remove(y.Id);
+            C.Hand.RefinedLine.Remove(y.Id); C.Collective.RefinedLine.Remove(y.Id);
         }
         var removed = p.AllUnits().ToList(); // unfinished units only: finished ones have left the project (no refund is due, B5b §8)
         foreach (var id in removed) _eco.RemoveObject(id);
@@ -358,7 +358,7 @@ public sealed class ConstructionModule
     private void OnObjectRemoved(StepContext ctx, EconObject o, int day)
     {
         if (o.Category != ObjectCategory.Facility || !FacilityKinds.TryParse(o.Class, out var k) || !FacilityKinds.IsYard(k)) return;
-        C.Empire.RefinedLine.Remove(o.Id); C.Alliance.RefinedLine.Remove(o.Id);
+        C.Hand.RefinedLine.Remove(o.Id); C.Collective.RefinedLine.Remove(o.Id);
         var fam = Yards.FamilyOf(k);
         var p = o.System == null ? null : C.Find(o.System, fam);
         if (p != null && !YardsOf(o.System!, fam).Any()) CancelProject(ctx, day, p, "YardLost");
@@ -385,7 +385,7 @@ public sealed class ConstructionModule
         foreach (var y in YardObjects().Where(o => (o.Due != 0 || o.InLine) && IsSuspended(o)).ToList())
         {
             if (y.Due != 0) y.Due = YardStopMode == StopMode.Pause ? y.Due + 1 : 0;
-            if (y.InLine) { C.Empire.RefinedLine.Remove(y.Id); C.Alliance.RefinedLine.Remove(y.Id); y.InLine = false; }
+            if (y.InLine) { C.Hand.RefinedLine.Remove(y.Id); C.Collective.RefinedLine.Remove(y.Id); y.InLine = false; }
         }
 
         // 6.6.a: cycles due now add their point; a unit that reaches its cost completes.
@@ -398,9 +398,9 @@ public sealed class ConstructionModule
             if (p.Progress >= CostOf(p.Units[0])) CompleteUnit(ctx, t, p);
         }
 
-        // Refined that arrived without an event (a setup change, a refund served elsewhere) reaches the head of each line now (Alliance, then Empire).
-        ServeRefinedLine(ctx, t, Side.Alliance);
-        ServeRefinedLine(ctx, t, Side.Empire);
+        // Refined that arrived without an event (a setup change, a refund served elsewhere) reaches the head of each line now (Collective, then Hand).
+        ServeRefinedLine(ctx, t, Side.Collective);
+        ServeRefinedLine(ctx, t, Side.Hand);
 
         // 6.6.b: idle yards start cycles, project by project (system name ordinal, then family 0x28, 0x29, 0x2a).
         foreach (var p in C.AllProjects())

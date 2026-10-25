@@ -79,11 +79,11 @@ internal sealed class MissionWorld
 
     public int Unit(Side side, string cls, string system, bool completed = true) => Host.Economy.AddObject(side, cls, system, completed);
 
-    /// <summary>Owner and Alliance support of a system.</summary>
-    public void Hold(string system, Side? side, int allianceSupport)
+    /// <summary>Owner and Collective support of a system.</summary>
+    public void Hold(string system, Side? side, int collectiveSupport)
     {
         Host.Fleets.SetOwner(system, side);
-        Host.Economy.SetAllianceSupport(system, allianceSupport);
+        Host.Economy.SetCollectiveSupport(system, collectiveSupport);
     }
 
     public long Submit(Func<long, Order> make) => Game.Submit(make);

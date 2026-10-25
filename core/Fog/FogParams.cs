@@ -4,19 +4,19 @@ namespace Praedra.Core.Fog;
 public enum FogRuleset { Classic, New }
 
 /// <summary>Which units count in the HQ departure refusal. rule: m5-fog-and-hq §F6 (HqDepartureOperands), Contradictions 2.</summary>
-public enum HqDepartureOperands { Blockaders, Alliance, Off }
+public enum HqDepartureOperands { Blockaders, Collective, Off }
 
 /// <summary>When an at-rest HQ is lost with its system. rule: m5-fog-and-hq §F7 (HqLostOnHolderChange), Open question 1.</summary>
 public enum HqLostOnHolderChange { Never, AssaultOnly, AnyCause }
 
-/// <summary>What happens to an HQ whose destination is no longer Alliance-held on arrival. rule: §F6 (HqLostDestination).</summary>
+/// <summary>What happens to an HQ whose destination is no longer Collective-held on arrival. rule: §F6 (HqLostDestination).</summary>
 public enum HqLostDestination { DestroyOnArrival, Return }
 
 /// <summary>The coarse "HQ is in sector X" clue. rule: §N6 (SectorSuspicion).</summary>
 public enum SectorSuspicion { Off, OnEspionage }
 
 /// <summary>
-/// Every switch and number of the fog-of-war and Rebel HQ sheet, each with the sheet's DEFAULT. Configuration, not saved (pass it again on
+/// Every switch and number of the fog-of-war and Hearth sheet, each with the sheet's DEFAULT. Configuration, not saved (pass it again on
 /// load through <see cref="Setup.GameSettings.Fog"/>). rule: m5-fog-and-hq §Defaults for undecided items; CLAUDE.md hard rule 7.
 /// Not built (the sheet says so, or the data does not exist yet): informants (InformantsEnabled false), intel noise (off), HQ activity
 /// leaks and the plausible-HQ list.
@@ -43,9 +43,9 @@ public sealed record FogParams
     public int ObservedWindowDays { get; init; } = 30;
     /// <summary>One HQ: a reveal that finds it clears the side's other HqHere flags. rule: §N5.</summary>
     public bool SingleHqCleanup { get; init; } = true;
-    /// <summary>Systems each side gets a FullCopy of at setup (matched by name, skipped when not in the galaxy). Traced: The Shoal to the Empire. rule: §F4 3.</summary>
-    public IReadOnlyList<string> StartFullCopyEmpire { get; init; } = new[] { "The Shoal" };
-    public IReadOnlyList<string> StartFullCopyAlliance { get; init; } = Array.Empty<string>();
+    /// <summary>Systems each side gets a FullCopy of at setup (matched by name, skipped when not in the galaxy). Traced: The Shoal to the Hand. rule: §F4 3.</summary>
+    public IReadOnlyList<string> StartFullCopyHand { get; init; } = new[] { "The Shoal" };
+    public IReadOnlyList<string> StartFullCopyCollective { get; init; } = Array.Empty<string>();
     /// <summary>
     /// The Setup reveal also writes group C (facilities) for the start_explored_all systems (never D or E). Classic = on (B4 §11, [EXE-own]
     /// 0x51b990, 0x539ac0). DEFAULT on (Classic); AI measured 2026-10-18: floors pass, Medium mirror 12/16 either way. rule: m5-fog-and-hq §F2 Setup, §F4 1.
@@ -58,7 +58,7 @@ public sealed record FogParams
     /// <summary>Rich target (holds the HQ): N = rand(0..RichSpread) + RichBase. GNPRTB 6181 = 4, 6180 = 1.</summary>
     public int EspionageRichSpread { get; init; } = 4;
     public int EspionageRichBase { get; init; } = 1;
-    /// <summary>Empire-held Charter: GNPRTB 6179 = 4, 6178 = 1.</summary>
+    /// <summary>Hand-held Charter: GNPRTB 6179 = 4, 6178 = 1.</summary>
     public int EspionageCapitalSpread { get; init; } = 4;
     public int EspionageCapitalBase { get; init; } = 1;
     /// <summary>Other targets: GNPRTB 6177 = 0, 6176 = 1.</summary>
@@ -90,7 +90,7 @@ public sealed record FogParams
 }
 
 /// <summary>
-/// The Rebel HQ numbers and switches. rule: m5-fog-and-hq §F6, §F7, §Numbers, §Defaults (HQ line).
+/// The Hearth numbers and switches. rule: m5-fog-and-hq §F6, §F7, §Numbers, §Defaults (HQ line).
 /// </summary>
 public sealed record HqParams
 {
@@ -100,7 +100,7 @@ public sealed record HqParams
     public int MoveCost { get; init; }
     /// <summary>The destination needs a free energy slot (NoSlot). NOT TRACED, DEFAULT off.</summary>
     public bool UsesFacilitySlot { get; init; }
-    /// <summary>The destination must be Alliance-held (NotHeld). DEFAULT; the player rule is NOT TRACED.</summary>
+    /// <summary>The destination must be Collective-held (NotHeld). DEFAULT; the player rule is NOT TRACED.</summary>
     public bool DestinationMustBeHeld { get; init; } = true;
     public HqDepartureOperands DepartureOperands { get; init; } = HqDepartureOperands.Blockaders;
     /// <summary>Departure refusal: Base - ShipWeight x ships - FighterWeight x fighters &lt; Limit. 100 and 31 Traced-medium; 5 and 2 = GNPRTB 7684, 7685.</summary>
@@ -110,7 +110,7 @@ public sealed record HqParams
     public int DepartureLimit { get; init; } = 31;
     /// <summary>The HQ in transit is not stopped by enemy fleets (DEFAULT true; false is not built).</summary>
     public bool IgnoresForcedStop { get; init; } = true;
-    /// <summary>Alliance support change in every populated system of the destination sector on arrival: GNPRTB 5127 = -10 (Traced).</summary>
+    /// <summary>Collective support change in every populated system of the destination sector on arrival: GNPRTB 5127 = -10 (Traced).</summary>
     public int ArrivalSupportDelta { get; init; } = -10;
     public HqLostOnHolderChange LostOnHolderChange { get; init; } = HqLostOnHolderChange.AnyCause;
     /// <summary>Return is a switch value only (not built in the first pass: treated as DestroyOnArrival, see the build notes).</summary>

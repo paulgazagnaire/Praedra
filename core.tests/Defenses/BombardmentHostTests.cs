@@ -49,11 +49,11 @@ public class BombardmentHostTests
         GameHost Make()
         {
             var h = GameHost.New(5, new GameSettings { IncidentsEnabled = false });
-            h.Fleets.SetOwner("Fiducia", Side.Alliance);
-            h.Economy.SetAllianceSupport("Fiducia", 100);
-            for (int i = 0; i < 4; i++) h.Economy.AddObject(Side.Alliance, "Militia", "Fiducia");
-            int f = h.Fleets.AddFleet(Side.Empire, "Raid", new[] { "Decree", "Decree" }, "Fiducia");
-            h.Bombardment.SubmitBombard(Side.Empire, f, "Fiducia", BombardCategory.Military);
+            h.Fleets.SetOwner("Fiducia", Side.Collective);
+            h.Economy.SetCollectiveSupport("Fiducia", 100);
+            for (int i = 0; i < 4; i++) h.Economy.AddObject(Side.Collective, "Militia", "Fiducia");
+            int f = h.Fleets.AddFleet(Side.Hand, "Raid", new[] { "Decree", "Decree" }, "Fiducia");
+            h.Bombardment.SubmitBombard(Side.Hand, f, "Fiducia", BombardCategory.Military);
             return h;
         }
         var whole = Make();
@@ -83,7 +83,7 @@ public class BombardmentHostTests
         var dmg = Assert.Single(run.Events.OfType<BombardShipDamaged>());
         Assert.Equal((shot.Ship, true, 0), (dmg.Ship, dmg.Grounded, dmg.HullLost));
         Assert.Equal("Decree", run.Host.Economy.Find(shot.Ship)?.Class);
-        Assert.Equal((TestCampaign.BlockadedSystem, Side.Empire, BombardCategory.General, 0, 0, 0), (started.System, started.Side, started.Category, started.P, started.S, started.Hits));
+        Assert.Equal((TestCampaign.BlockadedSystem, Side.Hand, BombardCategory.General, 0, 0, 0), (started.System, started.Side, started.Category, started.P, started.S, started.Hits));
         var resolved = Assert.Single(run.Events.OfType<BombardmentResolved>());
         Assert.Equal(started.System, resolved.System);
         Assert.Empty(run.Events.OfType<TargetHit>());

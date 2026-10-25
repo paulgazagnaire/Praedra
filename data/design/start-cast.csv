@@ -6,7 +6,7 @@ character,name,rule,place,officer,source
 898,Admiral Decimus Varo,RandomLocation,,1,Traced: m5-setup-and-victory P9 item 2 (StartCastOfficers Classic keeps him)
 899,Eighty-Eight,RandomLocation,,1,Traced: m5-setup-and-victory P9 item 2 (StartCastOfficers Classic keeps him)
 908,Captain Ilian Venia,RandomLocation,,1,Traced: m5-setup-and-victory P9 item 2 (StartCastOfficers Classic keeps him)
--1,Empire extras,Extras,Empire,0,Traced: m5-setup-and-victory P9 item 3 (StartExtrasPerSide)
+-1,Hand extras,Extras,Hand,0,Traced: m5-setup-and-victory P9 item 3 (StartExtrasPerSide)
 576,Mae Abara,FixedHq,,0,Traced: m5-setup-and-victory P9 item 4
 578,Nobody,FixedSystem,The Shoal,0,"Traced: m5-setup-and-victory P9 item 5; order Luke, Leia, Han, Oti, Dodonna, Wedge (B4 §9, [EXE-own] 0x55f7b0)"
 577,Ledger,FixedSystem,The Shoal,0,"Traced: m5-setup-and-victory P9 item 5; order Luke, Leia, Han, Oti, Dodonna, Wedge (B4 §9, [EXE-own] 0x55f7b0)"
@@ -14,4 +14,4 @@ character,name,rule,place,officer,source
 835,Oti,FixedSystem,The Shoal,0,"Traced: m5-setup-and-victory P9 item 5; order Luke, Leia, Han, Oti, Dodonna, Wedge (B4 §9, [EXE-own] 0x55f7b0)"
 836,Old Debt,FixedSystem,The Shoal,0,"Traced: m5-setup-and-victory P9 item 5; order Luke, Leia, Han, Oti, Dodonna, Wedge (B4 §9, [EXE-own] 0x55f7b0)"
 833,Forty-One,FixedSystem,The Shoal,0,"Traced: m5-setup-and-victory P9 item 5; order Luke, Leia, Han, Oti, Dodonna, Wedge (B4 §9, [EXE-own] 0x55f7b0)"
--1,Alliance extras,Extras,Alliance,0,Traced: m5-setup-and-victory P9 item 6 (StartExtrasPerSide)
+-1,Collective extras,Extras,Collective,0,Traced: m5-setup-and-victory P9 item 6 (StartExtrasPerSide)

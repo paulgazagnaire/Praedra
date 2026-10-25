@@ -50,7 +50,7 @@ public sealed class CharacterRecord
     /// </summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public int Injury { get; set; }
-    /// <summary>LeadershipAdjustment (+0x92, percent): 50 for Empire-only characters while the Seat of Power is on, else 0. rule: §Seat of Power (B2e §6).</summary>
+    /// <summary>LeadershipAdjustment (+0x92, percent): 50 for Hand-only characters while the Seat of Power is on, else 0. rule: §Seat of Power (B2e §6).</summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public int LeadershipAdjustment { get; set; }
     /// <summary>
@@ -175,14 +175,14 @@ public sealed class CharacterState
     /// while false. rule: m5-missions §6 Recruitment (Recruitment pick, 2026-10-18; [EXE-own] 0x56b9a0, 0x55fc80).
     /// </summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
-    public bool AlliancePoolEmpty { get; set; }
-    /// <summary>See <see cref="AlliancePoolEmpty"/>.</summary>
+    public bool CollectivePoolEmpty { get; set; }
+    /// <summary>See <see cref="CollectivePoolEmpty"/>.</summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
-    public bool EmpirePoolEmpty { get; set; }
+    public bool HandPoolEmpty { get; set; }
 
     internal void CopyFrom(CharacterState o)
     {
-        NextPairId = o.NextPairId; AlliancePoolEmpty = o.AlliancePoolEmpty; EmpirePoolEmpty = o.EmpirePoolEmpty;
+        NextPairId = o.NextPairId; CollectivePoolEmpty = o.CollectivePoolEmpty; HandPoolEmpty = o.HandPoolEmpty;
         foreach (var kv in o.Characters) Characters[kv.Key] = kv.Value.Clone();
         foreach (var kv in o.SystemGenerals) SystemGenerals[kv.Key] = kv.Value;
     }

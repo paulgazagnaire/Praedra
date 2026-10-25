@@ -20,8 +20,8 @@ namespace PraedraViewer;
 /// </summary>
 public partial class FleetLayer : Control
 {
-    public static readonly Color EmpireColor = new(0.45f, 0.95f, 0.45f);
-    public static readonly Color AllianceColor = new(1.0f, 0.62f, 0.25f);
+    public static readonly Color HandColor = new(0.45f, 0.95f, 0.45f);
+    public static readonly Color CollectiveColor = new(1.0f, 0.62f, 0.25f);
     /// <summary>The player's side: its fleets get a white outline.</summary>
     public Side? Player { get; set; }
     /// <summary>Move orders given but not started yet (fleet id to plan); drawn as a route so the player sees what is pending.</summary>
@@ -52,7 +52,7 @@ public partial class FleetLayer : Control
 
     public override void _Process(double delta) => QueueRedraw(); // markers move with the real-time fraction
 
-    public static Color ColorOf(Side s) => s == Side.Empire ? EmpireColor : AllianceColor;
+    public static Color ColorOf(Side s) => s == Side.Hand ? HandColor : CollectiveColor;
 
     /// <summary>Visual position (screen) of a fleet and its heading (unit vector), or false if it cannot be placed.</summary>
     bool Place(Fleet f, Dictionary<string, int> slots, out Vector2 pos, out Vector2 heading)

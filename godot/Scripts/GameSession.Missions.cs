@@ -261,7 +261,7 @@ public sealed partial class GameSession
                 break;
             case SupportChanged sc when sc.Cause is SupportCause.Diplomacy or SupportCause.Subdue && _lastSuccess is { } ls2 && ls2.Target == sc.System:
             {
-                int was = Player == Side.Alliance ? sc.Old : 100 - sc.Old, now = Player == Side.Alliance ? sc.New : 100 - sc.New;
+                int was = Player == Side.Collective ? sc.Old : 100 - sc.Old, now = Player == Side.Collective ? sc.New : 100 - sc.New;
                 yield return new Message(d, $"Support for you on {sc.System}: now {now}% (was {was}%).", sc.System, now >= was ? MsgKind.Good : MsgKind.Bad);
                 break;
             }

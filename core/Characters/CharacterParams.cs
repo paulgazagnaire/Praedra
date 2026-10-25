@@ -25,12 +25,12 @@ public enum ForceDiscoveryMode
     Detection,
 }
 
-/// <summary>Which Imperial officers the start cast keeps. rule: m5-setup-and-victory §P9 item 2 (StartCastOfficers).</summary>
+/// <summary>Which Hand officers the start cast keeps. rule: m5-setup-and-victory §P9 item 2 (StartCastOfficers).</summary>
 public enum StartCastOfficers
 {
     /// <summary>DEFAULT: Vader and the five officers (Project Director Cyprian Galena, Admiral Lucan Mordant, Admiral Decimus Varo, Eighty-Eight, Captain Ilian Venia).</summary>
     Classic,
-    /// <summary>Vader only; the five officers stay in the Empire pool.</summary>
+    /// <summary>Vader only; the five officers stay in the Hand pool.</summary>
     None,
 }
 
@@ -179,7 +179,7 @@ public sealed record CharacterParams
     public int Emperor { get; init; } = 0x280;
 
     // ---- Seat of Power (Traced B2e §6). rule: §Seat of Power
-    /// <summary>LeadershipAdjustment of Empire-only characters while the Seat of Power holds. GNPRTB 3076 = 50 (0x5618d0).</summary>
+    /// <summary>LeadershipAdjustment of Hand-only characters while the Seat of Power holds. GNPRTB 3076 = 50 (0x5618d0).</summary>
     public int SeatOfPowerAdjustment { get; init; } = 50;
     /// <summary>The Seat of Power system, key 0x90000009 = SYSTEMSD record 265 (Charter: inferred from the family and id, not by name).</summary>
     public string SeatOfPowerSystem { get; init; } = "Charter";
@@ -209,7 +209,7 @@ public sealed record CharacterParams
     /// <summary>ESCAPETB points (input, percent), ascending input. Null: the game data's ESCAPETB (mission-tables.csv); tests may pass their own. rule: §Escape.</summary>
     public IReadOnlyList<(int Input, int Percent)>? EscapeTable { get; init; }
     /// <summary>
-    /// The four loyalty triggers (a system changes hands, the Alliance HQ destroyed, a battle won, a blockade ended). DEFAULT true (Traced, B2c);
+    /// The four loyalty triggers (a system changes hands, the Collective HQ destroyed, a battle won, a blockade ended). DEFAULT true (Traced, B2c);
     /// false turns all four off together (comparison runs). Was <c>LoyaltyEnabled</c> (refused) before B2c. rule: §Loyalty and betrayal.
     /// </summary>
     public bool LoyaltyTriggers { get; init; } = true;
@@ -219,12 +219,12 @@ public sealed record CharacterParams
     public int CaptureShiftSpread { get; init; } = 5;
     /// <summary>SDPRTB 2562 = 0. Traced B2c, 0x53ec90.</summary>
     public int CaptureShiftBase { get; init; }
-    /// <summary>Alliance HQ destroyed: <c>k = rand(bound) + base</c>; a negative bound draws 0..|bound| and negates (0x53e290). GNPRTB 2592 = -5. Traced B2c, 0x561780.</summary>
+    /// <summary>Collective HQ destroyed: <c>k = rand(bound) + base</c>; a negative bound draws 0..|bound| and negates (0x53e290). GNPRTB 2592 = -5. Traced B2c, 0x561780.</summary>
     public int HqShiftBound { get; init; } = -5;
     /// <summary>GNPRTB 2593 = 0. Traced B2c, 0x561780.</summary>
     public int HqShiftBase { get; init; }
     /// <summary>
-    /// The Imperial Seat of Power: while the Emperor is free on Charter and the Empire holds it, Empire-only characters lead x1.5. DEFAULT true
+    /// The Hand Seat of Power: while the Emperor is free on Charter and the Hand holds it, Hand-only characters lead x1.5. DEFAULT true
     /// (Traced B2e §6); false: never. rule: §Seat of Power.
     /// </summary>
     public bool SeatOfPower { get; init; } = true;

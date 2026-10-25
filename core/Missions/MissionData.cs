@@ -27,10 +27,10 @@ public enum MissionKind
 /// <c>can_resign</c> (0x520b90: the mission ends when foiled; 0x5346b0: a member may leave after a duel), read from the records file when it has the
 /// column; the design fall-back table is used otherwise. rule: m5-missions §1, §3 Foilable, §4 (Traced B2d).
 /// </remarks>
-public sealed record MissionRecord(MissionKind Kind, bool Alliance, bool Empire, int TimerMin, int TimerSpread, bool Hidden, bool Repeats,
+public sealed record MissionRecord(MissionKind Kind, bool Collective, bool Hand, int TimerMin, int TimerSpread, bool Hidden, bool Repeats,
     string? Table, int SpecialForceMask, bool Foilable, bool GuardChecks = true)
 {
-    public bool AvailableTo(Side side) => side == Side.Alliance ? Alliance : Empire;
+    public bool AvailableTo(Side side) => side == Side.Collective ? Collective : Hand;
 }
 
 /// <summary>One row of a lookup table: at or above <see cref="Threshold"/> the value is <see cref="Value"/> (a percent). rule: m5-missions §Mission tables.</summary>
@@ -169,7 +169,7 @@ public sealed class MissionData
         var foil = new Dictionary<MissionKind, bool>(); // lookup only
         for (int r = 0; r < f.RowCount; r++) foil[ParseKind(f, r)] = f.GetInt(r, "foilable") == 1;
 
-        t.Require("dat_id", "kind", "alliance", "empire", "timer_min", "timer_spread", "hidden", "repeats", "table", "special_force_mask");
+        t.Require("dat_id", "kind", "collective", "hand", "timer_min", "timer_spread", "hidden", "repeats", "table", "special_force_mask");
         var recs = new List<MissionRecord>();
         for (int r = 0; r < t.RowCount; r++)
         {
@@ -182,7 +182,7 @@ public sealed class MissionData
             string table = t.Get(r, "table").Trim();
             int min = t.GetInt(r, "timer_min"), spread = t.GetInt(r, "timer_spread");
             if (min < 0 || spread < 0) throw new DataLoadException($"{t.Where(r)}: negative timer.");
-            recs.Add(new MissionRecord(kind, t.GetInt(r, "alliance") == 1, t.GetInt(r, "empire") == 1, min, spread,
+            recs.Add(new MissionRecord(kind, t.GetInt(r, "collective") == 1, t.GetInt(r, "hand") == 1, min, spread,
                 t.GetInt(r, "hidden") == 1, t.GetInt(r, "repeats") == 1, table.Length == 0 ? null : table, Hex(t, r, "special_force_mask"), fo, guards));
         }
 

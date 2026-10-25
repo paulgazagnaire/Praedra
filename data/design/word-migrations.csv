@@ -1,0 +1,30 @@
+kind,old,new
+phrase,an Imperial,a Hand
+phrase,an Empire,a Hand
+phrase,An Empire,A Hand
+phrase,an Hand,a Hand
+phrase,An Hand,A Hand
+phrase,Imperial II,Mandate II
+phrase,Hand II,Mandate II
+phrase,An Imperial,A Hand
+phrase,an Alliance,a Collective
+phrase,An Alliance,A Collective
+phrase,the Rebel HQ,the Hearth
+phrase,The Rebel HQ,The Hearth
+phrase,Rebel HQ,Hearth
+phrase,Collective Headquarters,Hearth
+phrase,Alliance Headquarters,Hearth
+phrase,the Rebels,the Collective
+phrase,The Rebels,The Collective
+word,RebelHq,Hearth
+word,Empire,Hand
+word,Imperials,Hands
+word,Imperial,Hand
+word,Alliance,Collective
+word,Rebels,Collective
+word,Rebel,Collective
+word,empire,hand
+word,imperial,hand
+word,alliance,collective
+word,EMPIRE,HAND
+word,ALLIANCE,COLLECTIVE

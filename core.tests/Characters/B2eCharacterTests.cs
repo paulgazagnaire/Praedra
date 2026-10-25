@@ -13,7 +13,7 @@ namespace Praedra.Core.Tests.Characters;
 // §Seat of Power; m5-missions §4 (the Force-user encounter).
 public class B2eCharacterTests
 {
-    private const string ImperialCommandos = "Closers";
+    private const string HandCommandos = "Closers";
 
     private static CharacterRecord Skills(CharacterRecord c, int dip = 0, int esp = 0, int com = 0, int lead = 0, int ship = 0)
     {
@@ -112,14 +112,14 @@ public class B2eCharacterTests
     public void B2e6_Healing(string where, int days)
     {
         var w = new CharWorld();
-        w.Hold(Yavin, Side.Alliance); w.Hold(Hoth, Side.Empire);
+        w.Hold(Yavin, Side.Collective); w.Hold(Hoth, Side.Hand);
         var han = w.Add(Han, where == "enemy" ? Hoth : Yavin);
         if (where == "fast") Force(han, 80);
-        if (where == "travelling") Assert.Null(w.Try(seq => new MoveCharacterOrder(seq, Side.Alliance, Han, Coruscant)));
+        if (where == "travelling") Assert.Null(w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Han, Coruscant)));
         w.StepWith("5.2", ctx =>
         {
             w.Ch.AddInjury(ctx, han, 5, CharacterCause.Debug);
-            if (where == "captured") w.Ch.Capture(ctx, han, Side.Empire, null, CharacterCause.Debug, canEscape: false);
+            if (where == "captured") w.Ch.Capture(ctx, han, Side.Hand, null, CharacterCause.Debug, canEscape: false);
         });
         int before = w.Stub!.Requests.Count;
         for (int d = 1; d <= 6; d++)
@@ -138,7 +138,7 @@ public class B2eCharacterTests
     public void B2e7_InjuryEndsThePostAndTheMission()
     {
         var w = new CharWorld();
-        int f = w.Fleet(Side.Alliance, Yavin);
+        int f = w.Fleet(Side.Collective, Yavin);
         w.Add(Ackbar, Yavin); w.Ch.SetPost(Ackbar, f, CharacterPost.Admiral);
         w.Stub!.Expect(0, 99, 99); // Keth is a minor: his death draw misses
         w.StepWith("5.2", ctx => w.Ch.AddInjury(ctx, w.C(Ackbar), 5, CharacterCause.Debug));
@@ -146,10 +146,10 @@ public class B2eCharacterTests
         Assert.Equal(PostKind.Admiral, w.Events<PostVacated>().Single().Post);
 
         var m = new MissionWorld();
-        m.Hold(MissionWorld.T, Side.Empire, 0);
+        m.Hold(MissionWorld.T, Side.Hand, 0);
         var leia = m.Agent(Leia, MissionWorld.H, esp: 50);
         m.Agent(Han, MissionWorld.H, esp: 50);
-        m.Start(Side.Alliance, MissionKind.Espionage, new[] { Leia, Han }, MissionWorld.T);
+        m.Start(Side.Collective, MissionKind.Espionage, new[] { Leia, Han }, MissionWorld.T);
         m.Game.Step();
         int id = m.LastMission;
         Assert.True(m.Ch.IsOnMission(Leia));
@@ -167,14 +167,14 @@ public class B2eCharacterTests
     public void B2e8_EscapeTimer()
     {
         var w = new CharWorld();
-        w.Hold(Hoth, Side.Empire);
-        // (B5a, 2026-10-17) under derived control an unguarded world at Alliance support 50 is neutral: the first support change there (day 31)
-        // would turn The Thaw neutral and free Han (Liberation). At Alliance support 0 the Empire holds it by support for the whole test.
-        w.Host.Economy.SetAllianceSupport(Hoth, 0);
+        w.Hold(Hoth, Side.Hand);
+        // (B5a, 2026-10-17) under derived control an unguarded world at Collective support 50 is neutral: the first support change there (day 31)
+        // would turn The Thaw neutral and free Han (Liberation). At Collective support 0 the Hand holds it by support for the whole test.
+        w.Host.Economy.SetCollectiveSupport(Hoth, 0);
         var han = Skills(w.Add(Han, Hoth), esp: 0, com: 0);
         w.Stub!.Expect(0, 1000, 400);
         int d = w.Game.Day;
-        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, han, Side.Empire, null, CharacterCause.Debug));
+        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, han, Side.Hand, null, CharacterCause.Debug));
         Assert.Equal(d + 500, han.NextEscapeDay);
         while (w.Game.Day < d + 500) w.Game.Step();
         Assert.Empty(w.Events<EscapeAttempted>());
@@ -187,16 +187,16 @@ public class B2eCharacterTests
         Assert.Equal(d + 500 + 107, han.NextEscapeDay);
     }
 
-    // B2e-9: Han (100, 100) alone: x = 200 -> 30 (29 escapes, 30 not); with Vader (220) and 2 Imperial special forces: x = -22 -> 3; Leia (50, 30) there: x = -142 -> 1
+    // B2e-9: Han (100, 100) alone: x = 200 -> 30 (29 escapes, 30 not); with Vader (220) and 2 Hand special forces: x = -22 -> 3; Leia (50, 30) there: x = -142 -> 1
     [Theory]
     [InlineData(29, true)]
     [InlineData(30, false)]
     public void B2e9_EscapeChance(int draw, bool escapes)
     {
         var w = new CharWorld();
-        w.Hold(Hoth, Side.Empire);
+        w.Hold(Hoth, Side.Hand);
         var han = Skills(w.Add(Han, Hoth), esp: 100, com: 100);
-        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, han, Side.Empire, null, CharacterCause.Debug));
+        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, han, Side.Hand, null, CharacterCause.Debug));
         han.NextEscapeDay = w.Game.Day;
         w.Stub!.Expect(0, 99, draw);
         w.Game.Step();
@@ -210,13 +210,13 @@ public class B2eCharacterTests
     public void B2e9_EscapeChanceWithGuards()
     {
         var w = new CharWorld(CharWorld.ClassicForce()); // the Classic Force (m5-characters-and-force §Force CH37)
-        w.Hold(Hoth, Side.Empire);
+        w.Hold(Hoth, Side.Hand);
         Force(Skills(w.Add(Vader, Hoth), com: 100), 120);
-        w.Host.Economy.AddObject(Side.Empire, ImperialCommandos, Hoth, true);
-        w.Host.Economy.AddObject(Side.Empire, ImperialCommandos, Hoth, true);
+        w.Host.Economy.AddObject(Side.Hand, HandCommandos, Hoth, true);
+        w.Host.Economy.AddObject(Side.Hand, HandCommandos, Hoth, true);
         var han = Skills(w.Add(Han, Hoth), esp: 100, com: 100);
         var leia = Skills(w.Add(Leia, Hoth), esp: 30, com: 50);
-        w.StepWith("5.2", ctx => { w.Ch.Capture(ctx, han, Side.Empire, null, CharacterCause.Debug); w.Ch.Capture(ctx, leia, Side.Empire, null, CharacterCause.Debug); });
+        w.StepWith("5.2", ctx => { w.Ch.Capture(ctx, han, Side.Hand, null, CharacterCause.Debug); w.Ch.Capture(ctx, leia, Side.Hand, null, CharacterCause.Debug); });
         han.NextEscapeDay = leia.NextEscapeDay = w.Game.Day;
         w.Stub!.Expect(0, 99, 99, 99);
         w.Game.Step();
@@ -224,17 +224,17 @@ public class B2eCharacterTests
             w.Events<EscapeAttempted>().OrderBy(e => e.Character).Select(e => (e.Character, e.CaptorAverageCombat, e.CaptorSpecialForces, e.X, e.Chance)));
     }
 
-    // B2e-10: an Imperial character aboard a fleet in orbit and a second prisoner on the planet do not count in avg
+    // B2e-10: a Hand character aboard a fleet in orbit and a second prisoner on the planet do not count in avg
     [Fact]
     public void B2e10_RidersAndPrisonersDoNotGuard()
     {
         var w = new CharWorld();
-        w.Hold(Hoth, Side.Empire);
-        int f = w.Fleet(Side.Empire, Hoth, Isd);
+        w.Hold(Hoth, Side.Hand);
+        int f = w.Fleet(Side.Hand, Hoth, Isd);
         Skills(w.Add(Piett, Hoth), com: 80); w.Ch.PlaceInFleet(Piett, f);
         var han = Skills(w.Add(Han, Hoth), esp: 10, com: 10);
         var wedge = Skills(w.Add(Wedge, Hoth), com: 90);
-        w.StepWith("5.2", ctx => { w.Ch.Capture(ctx, han, Side.Empire, null, CharacterCause.Debug); w.Ch.Capture(ctx, wedge, Side.Empire, null, CharacterCause.Debug); });
+        w.StepWith("5.2", ctx => { w.Ch.Capture(ctx, han, Side.Hand, null, CharacterCause.Debug); w.Ch.Capture(ctx, wedge, Side.Hand, null, CharacterCause.Debug); });
         han.NextEscapeDay = w.Game.Day; wedge.NextEscapeDay = 0;
         w.Stub!.Expect(0, 99, 99);
         w.Game.Step();
@@ -248,14 +248,14 @@ public class B2eCharacterTests
         var w = new CharWorld();
         var han = w.Add(Han, Hoth);
         int before = w.Stub!.Requests.Count;
-        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, han, Side.Empire, Hoth, CharacterCause.Story));
+        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, han, Side.Hand, Hoth, CharacterCause.Story));
         w.Run(1200);
         Assert.Equal(0, han.NextEscapeDay);
         Assert.Equal(before, w.Stub.Requests.Count);
         Assert.Empty(w.Events<EscapeAttempted>());
     }
 
-    // B2e-12: the Alliance retakes the planet holding Han: freed; the planet turns neutral: freed; a battle that changes nothing: nothing; no draw
+    // B2e-12: the Collective retakes the planet holding Han: freed; the planet turns neutral: freed; a battle that changes nothing: nothing; no draw
     [Theory]
     [InlineData("retaken")]
     [InlineData("neutral")]
@@ -263,20 +263,20 @@ public class B2eCharacterTests
     public void B2e12_Liberation(string how)
     {
         var w = new CharWorld();
-        w.Hold(Hoth, Side.Empire);
+        w.Hold(Hoth, Side.Hand);
         var han = w.Add(Han, Hoth);
-        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, han, Side.Empire, null, CharacterCause.Debug));
+        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, han, Side.Hand, null, CharacterCause.Debug));
         int before = w.Stub!.Requests.Count;
         w.StepWith("5.2", ctx =>
         {
-            if (how == "retaken") { w.Hold(Hoth, Side.Alliance); w.Ch.OnHolderChanged(new CaptureInfo(ctx, Hoth, Side.Empire, Side.Alliance, CaptureCause.Debug)); }
+            if (how == "retaken") { w.Hold(Hoth, Side.Collective); w.Ch.OnHolderChanged(new CaptureInfo(ctx, Hoth, Side.Hand, Side.Collective, CaptureCause.Debug)); }
             else if (how == "neutral") { w.Host.Fleets.SetOwner(Hoth, null); w.Ch.Liberate(ctx, Hoth); }
             else w.Ch.Liberate(ctx, Hoth);
         });
         bool freed = how != "nothing";
         Assert.Equal(freed ? CharacterStatus.Free : CharacterStatus.Captured, han.Status);
         if (freed) Assert.Equal(CharacterCause.Liberation, w.Events<CharacterFreed>().Single().Cause);
-        // the only draw is the support incident timer an Alliance-held planet starts (GNPRTB 7702, m2-popular-support), never a character draw
+        // the only draw is the support incident timer a Collective-held planet starts (GNPRTB 7702, m2-popular-support), never a character draw
         int spread = new Praedra.Core.Support.SupportParams().IncidentIntervalSpread;
         Assert.Empty(w.Stub.Requests.Skip(before).Where(r => r != (0, spread)));
     }
@@ -287,12 +287,12 @@ public class B2eCharacterTests
     public void B2e13_LukeMeetsVader()
     {
         var w = new MissionWorld(characters: CharWorld.ClassicForce()); // the Classic Force (m5-characters-and-force §Force CH37)
-        w.Hold(MissionWorld.T, Side.Empire, 0);
+        w.Hold(MissionWorld.T, Side.Hand, 0);
         var luke = w.Agent(Luke, MissionWorld.H, esp: 50, com: 90);
         var vader = w.Agent(Vader, MissionWorld.T, com: 100);
         Assert.Equal((50, 120), (luke.EffectiveForce, vader.EffectiveForce));
         luke.DiscoveredForceUser = Vader; vader.DiscoveredForceUser = Luke; luke.PairId = vader.PairId = 1;
-        w.Start(Side.Alliance, MissionKind.Espionage, new[] { Luke }, MissionWorld.T);
+        w.Start(Side.Collective, MissionKind.Espionage, new[] { Luke }, MissionWorld.T);
         w.Game.Step();
         w.RunUntilWorking(w.LastMission);
         // Vader senses Luke (p = 70: 0 hits; he has a discovered user, so one try), foiled; then the encounter: duel 0 escapes, Luke's Hurt (p = 1)
@@ -357,13 +357,13 @@ public class B2eCharacterTests
         Assert.Empty(w.Stub!.Requests);
     }
 
-    // B2e-17: Vader awakens an unaware Imperial Force user on his planet the next day, Force rolled then; Luke at 50 awakens nobody; at 80 he awakens
-    // Alliance minors (level 10 + rand(0..40)); Leia only after Luke knows his heritage
+    // B2e-17: Vader awakens an unaware Hand Force user on his planet the next day, Force rolled then; Luke at 50 awakens nobody; at 80 he awakens
+    // Collective minors (level 10 + rand(0..40)); Leia only after Luke knows his heritage
     [Fact]
     public void B2e17_Awakening()
     {
         var w = new CharWorld(new CharacterParams { TrainerPick = TrainerPick.Fixed }); // the Classic trainer flag (Luke, Vader); Random is CH39
-        w.Hold(Yavin, Side.Alliance); w.Hold(Coruscant, Side.Empire);
+        w.Hold(Yavin, Side.Collective); w.Hold(Coruscant, Side.Hand);
         Force(w.Add(Vader, Coruscant), 120);
         var piett = w.Add(Piett, Coruscant); piett.ForceUser = true; // an unaware Force user
         var luke = Force(w.Add(Luke, Yavin), 50);
@@ -388,19 +388,19 @@ public class B2eCharacterTests
         Assert.Equal(10, leia.EffectiveForce);
     }
 
-    // B2e-18: the Emperor on Charter, the Empire holds it: Imperial base leadership 100 -> 150, Alliance unchanged; once he is captured, 100
+    // B2e-18: the Emperor on Charter, the Hand holds it: Hand base leadership 100 -> 150, Collective unchanged; once he is captured, 100
     [Fact]
     public void B2e18_SeatOfPower()
     {
         var w = new CharWorld();
-        w.Hold(Coruscant, Side.Empire);
+        w.Hold(Coruscant, Side.Hand);
         var piett = Skills(w.Add(Piett, Hoth), lead: 100);
         var ackbar = Skills(w.Add(Ackbar, Yavin), lead: 100);
         var emp = w.Add(Palpatine, Coruscant);
         w.Game.Step();
         Assert.True(w.Ch.SeatOfPowerOn);
         Assert.Equal((150, 100), (w.Ch.EffectiveLeadership(piett), w.Ch.EffectiveLeadership(ackbar)));
-        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, emp, Side.Alliance, null, CharacterCause.Debug));
+        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, emp, Side.Collective, null, CharacterCause.Debug));
         Assert.False(w.Ch.SeatOfPowerOn);
         Assert.Equal((100, 100), (w.Ch.EffectiveLeadership(piett), w.Ch.EffectiveLeadership(ackbar)));
     }
@@ -410,11 +410,11 @@ public class B2eCharacterTests
     public void B2e19_SpreadZeroTimersDrawNothing()
     {
         var w = new CharWorld(new CharacterParams { TrainerPick = TrainerPick.Fixed }); // the Classic trainer flag (Luke, Vader); Random is CH39
-        w.Hold(Coruscant, Side.Empire);
+        w.Hold(Coruscant, Side.Hand);
         Force(w.Add(Vader, Coruscant), 120);
         w.Run(30);
         var bare = new CharWorld(); // the same galaxy without Vader: its other timers (support incidents, m2-popular-support) draw the same
-        bare.Hold(Coruscant, Side.Empire);
+        bare.Hold(Coruscant, Side.Hand);
         bare.Run(30);
         Assert.Equal(bare.Stub!.Requests, w.Stub!.Requests);
         Assert.NotEqual(0, w.C(Vader).NextAwakenDay);
@@ -425,9 +425,9 @@ public class B2eCharacterTests
     public void InjuryAndTimersAreSavedAndHashed()
     {
         var w = new CharWorld();
-        w.Hold(Hoth, Side.Empire);
+        w.Hold(Hoth, Side.Hand);
         var han = w.Add(Han, Hoth);
-        w.StepWith("5.2", ctx => { w.Ch.AddInjury(ctx, han, 7, CharacterCause.Debug); w.Ch.Capture(ctx, han, Side.Empire, null, CharacterCause.Debug); });
+        w.StepWith("5.2", ctx => { w.Ch.AddInjury(ctx, han, 7, CharacterCause.Debug); w.Ch.Capture(ctx, han, Side.Hand, null, CharacterCause.Debug); });
         han.PairId = 3; han.KnowsHeritage = true; w.Game.State.Characters.NextPairId = 3;
         string hash = GameSave.StateHash(w.Game);
         w.Reload();

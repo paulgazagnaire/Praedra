@@ -37,7 +37,7 @@ public partial class Main
         GameBoot.SaveSlot = "user://playtest_save1.json";
         GameBoot.AutoSaveSlot = "user://playtest_autosave.json";
         GameBoot.HowToFlag = "user://playtest_howto.txt";
-        foreach (var side in new[] { Side.Alliance, Side.Empire })
+        foreach (var side in new[] { Side.Collective, Side.Hand })
         {
             Forget(GameBoot.SaveSlot); Forget(GameBoot.AutoSaveSlot); Forget(GameBoot.HowToFlag);
             try { PlaytestSide(side); }
@@ -82,8 +82,8 @@ public partial class Main
         Expect(menu != null, "start screen shows");
         Expect(UiTest.Click(menu, side.ToString()), $"pick {side}");
         Expect(UiTest.Click(menu, "Medium"), "pick Medium");
-        // Space battle rules: New is the default (Paul 2026-10-18); the Alliance run picks Classic (m4-battle-new ruleset switch).
-        var wantRules = side == Side.Empire ? Praedra.Core.Battle.BattleRuleset.New : Praedra.Core.Battle.BattleRuleset.Classic;
+        // Space battle rules: New is the default (Paul 2026-10-18); the Collective run picks Classic (m4-battle-new ruleset switch).
+        var wantRules = side == Side.Hand ? Praedra.Core.Battle.BattleRuleset.New : Praedra.Core.Battle.BattleRuleset.Classic;
         if (wantRules == Praedra.Core.Battle.BattleRuleset.Classic) Expect(UiTest.Click(menu, "Classic"), "pick the Classic battle rules");
         Expect(UiTest.Click(menu, "New Game"), "click New Game");
         var gs = Gs;
@@ -112,7 +112,7 @@ public partial class Main
         Expect(gs.Click("2x") && gs.SpeedValue == 2 && gs.Click("5x") && gs.SpeedValue == 5, "speed buttons work");
 
         PlaytestFog(gs);
-        if (side == Side.Empire) PlaytestEmpireHqUnknown(gs);
+        if (side == Side.Hand) PlaytestHandHqUnknown(gs);
         else PlaytestMoveHq(gs);
         PlaytestCharacters(gs);
         PlaytestMissions(gs);
@@ -288,8 +288,8 @@ public partial class Main
             Expect(gs.Has(">  Ships") && gs.Has(">  Fighters") && gs.Has(">  Troops"), "Build menu has collapsible Ships / Fighters / Troops sections");
             Expect(gs.Click(">  Ships"), "open the Ships section");
             gs.PlayRefresh();
-            if (me == Side.Empire) Expect(gs.ButtonTexts().Any(t => t.StartsWith("Death Star   ", StringComparison.Ordinal)), "the Death Star is in the Empire's Ships build list");
-            else Expect(!gs.ButtonTexts().Any(t => t.StartsWith("Death Star   ", StringComparison.Ordinal)), "the Alliance's Ships build list has no Death Star");
+            if (me == Side.Hand) Expect(gs.ButtonTexts().Any(t => t.StartsWith("Death Star   ", StringComparison.Ordinal)), "the Death Star is in the Hand's Ships build list");
+            else Expect(!gs.ButtonTexts().Any(t => t.StartsWith("Death Star   ", StringComparison.Ordinal)), "the Collective's Ships build list has no Death Star");
             var shipBtn = gs.ButtonTexts().FirstOrDefault(t => t.Contains("refined, upkeep") && !t.Contains("(not researched)") && t.Contains("   ") && !Praedra.Core.Economy.FacilityKinds.TryParse(t[..t.IndexOf("   ", StringComparison.Ordinal)], out _)); // any researched ship
             Expect(shipBtn != null, "a basic ship can be chosen in the Ships list");
             if (shipBtn != null)
@@ -448,24 +448,24 @@ public partial class Main
         gs.View.Select(-1);
     }
 
-    /// <summary>Empire: the Rebel HQ is not tagged and the Enemy HQ button says unknown while the Empire's picture has not shown it.</summary>
-    void PlaytestEmpireHqUnknown(GameScreen gs)
+    /// <summary>Hand: the Hearth is not tagged and the Enemy HQ button says unknown while the Hand's picture has not shown it.</summary>
+    void PlaytestHandHqUnknown(GameScreen gs)
     {
         var s = gs.S;
-        Expect(s.Fog.KnownHq(Side.Empire) == null, "the Empire does not know the Rebel HQ at the start");
+        Expect(s.Fog.KnownHq(Side.Hand) == null, "the Hand does not know the Hearth at the start");
         Expect(!gs.MapTags().Any(t => t.Text.Contains("REBEL HQ")), "no REBEL HQ (TARGET) tag on the map");
         Expect(gs.ButtonTexts().Contains("Enemy HQ: unknown"), "the Enemy HQ button says unknown");
         Expect(gs.Click("Enemy HQ: unknown") && gs.ToastText.Contains("unknown"), "pressing it says the HQ location is unknown: " + gs.ToastText);
-        Expect(gs.MapTags().Any(t => t.Text == "YOUR CAPITAL" && t.System == GameBoot.EmpireCapital), "your capital is tagged");
+        Expect(gs.MapTags().Any(t => t.Text == "YOUR CAPITAL" && t.System == GameBoot.HandCapital), "your capital is tagged");
     }
 
-    /// <summary>Alliance: Move HQ... with a refused order (plain reason), then a real move that arrives.</summary>
+    /// <summary>Collective: Move HQ... with a refused order (plain reason), then a real move that arrives.</summary>
     void PlaytestMoveHq(GameScreen gs)
     {
         var s = gs.S; var me = s.Player; var fm = s.Host.Fleets;
         string hq = s.MyHqSystem;
         Expect(hq != null && gs.MapTags().Any(t => t.System == hq && t.Text == "YOUR HQ"), $"your HQ is tagged at {hq}");
-        Expect(gs.ButtonTexts().Contains("Enemy HQ"), "the Alliance knows the enemy capital");
+        Expect(gs.ButtonTexts().Contains("Enemy HQ"), "the Collective knows the enemy capital");
         Expect(gs.Click("My HQ"), "click My HQ");
         gs.PlayRefresh();
         Expect(gs.Has("Move HQ..."), "the HQ system panel offers Move HQ...");
@@ -476,7 +476,7 @@ public partial class Main
             .OrderBy(n => fm.FindPath(hq, n, speed).TotalTicks).ThenBy(n => n, StringComparer.Ordinal).First();
         GD.Print($"HQ at {hq}: refused try {notHeld}, move to {dest}");
 
-        // refused: a system the Alliance does not hold
+        // refused: a system the Collective does not hold
         Expect(gs.Click("Move HQ..."), "click Move HQ...");
         Expect(gs.Banner.Contains("Move HQ"), "banner asks for a destination: " + gs.Banner);
         gs.HoverTextFor(notHeld);
@@ -527,9 +527,9 @@ public partial class Main
         }
         s.Host.Control.DebugOrdersEnabled = true; // test-only path: the core's debug order, off in the real game
         Side winner = playerWins ? me : s.Enemy;
-        string goal = winner == Side.Alliance ? "Charter" : s.Host.HqSystem;
+        string goal = winner == Side.Collective ? "Charter" : s.Host.HqSystem;
         // (B5a) under derived control a world is taken by regiments standing on it: six of the winner's Army regiments replace those there
-        s.Host.Control.SubmitDebugSetTroops(winner, goal, winner, winner == Side.Alliance ? "Militia" : "Tranches", 6);
+        s.Host.Control.SubmitDebugSetTroops(winner, goal, winner, winner == Side.Collective ? "Militia" : "Tranches", 6);
         // Standard victory (the default since 2026-10-16) also needs the two enemy leaders captive: test-only, straight through the character module.
         foreach (var k in s.Host.Victory.Keys.Where(k => k.Standard && k.Side == winner))
             if (s.Host.Characters.Get(k.Character) is { } c) s.Host.Characters.Capture(null, c, winner, null, "Playtest");

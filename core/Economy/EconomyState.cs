@@ -117,27 +117,27 @@ public sealed class EconomyState
     /// <summary>Slot values that differ from the file, by system name.</summary>
     public SortedDictionary<string, SlotState> Slots { get; init; } = new(StringComparer.Ordinal);
     /// <summary>
-    /// Alliance support per system, 0..100 (Empire support = 100 - this). Systems not listed use the default. Read-only for
+    /// Collective support per system, 0..100 (Hand support = 100 - this). Systems not listed use the default. Read-only for
     /// the economy; the support package drives it. rule: m2-popular-support §What it stores.
     /// </summary>
-    public SortedDictionary<string, int> AllianceSupport { get; init; } = new(StringComparer.Ordinal);
-    public SidePool Empire { get; init; } = new();
-    public SidePool Alliance { get; init; } = new();
+    public SortedDictionary<string, int> CollectiveSupport { get; init; } = new(StringComparer.Ordinal);
+    public SidePool Hand { get; init; } = new();
+    public SidePool Collective { get; init; } = new();
     /// <summary>Hook time the resource incident timer fires; 0 = not armed.</summary>
     public int ResourceDue { get; set; }
     /// <summary>Hook time the disaster timer fires; 0 = not armed.</summary>
     public int DisasterDue { get; set; }
 
-    public SidePool Pool(Side s) => s == Side.Empire ? Empire : Alliance;
+    public SidePool Pool(Side s) => s == Side.Hand ? Hand : Collective;
 
     internal void CopyFrom(EconomyState o)
     {
         NextObjectId = o.NextObjectId;
         foreach (var kv in o.Objects) Objects[kv.Key] = kv.Value;
         foreach (var kv in o.Slots) Slots[kv.Key] = kv.Value;
-        foreach (var kv in o.AllianceSupport) AllianceSupport[kv.Key] = kv.Value;
-        Empire.CopyFrom(o.Empire);
-        Alliance.CopyFrom(o.Alliance);
+        foreach (var kv in o.CollectiveSupport) CollectiveSupport[kv.Key] = kv.Value;
+        Hand.CopyFrom(o.Hand);
+        Collective.CopyFrom(o.Collective);
         ResourceDue = o.ResourceDue;
         DisasterDue = o.DisasterDue;
     }

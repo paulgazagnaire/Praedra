@@ -11,7 +11,7 @@ namespace Praedra.Core.Tests.Defenses;
 /// <summary>
 /// A support world (fleets, economy, support, real files) with the defense and bombardment modules attached. Autoscrap is out of reach
 /// and incidents are off. Stub generator unless <c>stub: false</c> (then the seeded game generator). <see cref="Sys"/> is the system
-/// most tests bombard; <see cref="Hold"/> makes it Alliance (or Empire) with the holder's support at 100 (so N = 0 and no uprising).
+/// most tests bombard; <see cref="Hold"/> makes it Collective (or Hand) with the holder's support at 100 (so N = 0 and no uprising).
 /// </summary>
 internal sealed class BombWorld
 {

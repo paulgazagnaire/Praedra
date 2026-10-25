@@ -3,7 +3,7 @@ using Praedra.Core.Data;
 
 namespace Praedra.Core.Setup;
 
-/// <summary>The five day-one start presets (setup-victory/09 §3 totals). Suffix a = player is the Alliance, e = player is the Empire.</summary>
+/// <summary>The five day-one start presets (setup-victory/09 §3 totals). Suffix a = player is the Collective, e = player is the Hand.</summary>
 public enum StartPreset { Easy, MedA, MedE, HardA, HardE }
 
 public static class StartPresets
@@ -21,30 +21,30 @@ public static class StartPresets
         _ => throw new ArgumentException($"Unknown preset '{key}' (easy, med_a, med_e, hard_a, hard_e)."),
     };
 
-    /// <summary>The side the preset is meant for. Easy: Alliance (DEFAULT; the file has no player column).</summary>
-    public static Side PlayerSide(StartPreset p) => p is StartPreset.MedE or StartPreset.HardE ? Side.Empire : Side.Alliance;
+    /// <summary>The side the preset is meant for. Easy: Collective (DEFAULT; the file has no player column).</summary>
+    public static Side PlayerSide(StartPreset p) => p is StartPreset.MedE or StartPreset.HardE ? Side.Hand : Side.Collective;
 }
 
 /// <summary>One row of a day-one file (setup-victory/09 §1).</summary>
-public sealed record DayOneRow(string Name, Side? Owner, int AllianceSupport, bool Weak, bool ExploredAll, bool ExploredOwner, bool IsHq);
+public sealed record DayOneRow(string Name, Side? Owner, int CollectiveSupport, bool Weak, bool ExploredAll, bool ExploredOwner, bool IsHq);
 
-/// <summary>One row of day-one-anchors.csv: a system with a fixed day-one owner (Neutral = locked neutral, null owner) and an optional fixed Alliance support.</summary>
-public sealed record AnchorRow(string System, Side? Owner, int? AllianceSupport, string Source)
+/// <summary>One row of day-one-anchors.csv: a system with a fixed day-one owner (Neutral = locked neutral, null owner) and an optional fixed Collective support.</summary>
+public sealed record AnchorRow(string System, Side? Owner, int? CollectiveSupport, string Source)
 {
     public const string FileName = "day-one-anchors.csv";
 
     public static IReadOnlyList<AnchorRow> Load(string path)
     {
         var t = CsvTable.Load(path);
-        t.Require("system", "owner", "alliance_support", "source");
+        t.Require("system", "owner", "collective_support", "source");
         var rows = new List<AnchorRow>();
         for (int r = 0; r < t.RowCount; r++)
         {
             Side? owner = t.Get(r, "owner").Trim() switch
-            { "Empire" => Side.Empire, "Alliance" => Side.Alliance, "Neutral" => null, var x => throw new DataLoadException($"{t.Where(r)}: owner '{x}' (Empire, Alliance or Neutral).") };
-            string sup = t.Get(r, "alliance_support").Trim();
-            int? support = sup.Length == 0 ? null : t.GetInt(r, "alliance_support");
-            if (support is < 0 or > 100) throw new DataLoadException($"{t.Where(r)}: alliance_support {support} is outside 0..100.");
+            { "Hand" => Side.Hand, "Collective" => Side.Collective, "Neutral" => null, var x => throw new DataLoadException($"{t.Where(r)}: owner '{x}' (Hand, Collective or Neutral).") };
+            string sup = t.Get(r, "collective_support").Trim();
+            int? support = sup.Length == 0 ? null : t.GetInt(r, "collective_support");
+            if (support is < 0 or > 100) throw new DataLoadException($"{t.Where(r)}: collective_support {support} is outside 0..100.");
             rows.Add(new AnchorRow(t.Get(r, "system").Trim(), owner, support, t.Get(r, "source").Trim()));
         }
         return rows;
@@ -52,21 +52,21 @@ public sealed record AnchorRow(string System, Side? Owner, int? AllianceSupport,
 }
 
 /// <summary>One row of blocs-totals.csv: holdings totals (anchors, Charter, The Shoal and the HQ included) and the strong/weak shares of a preset.</summary>
-public sealed record BlocsTotals(int AllianceTotal, int EmpireTotal, int AllianceStrong, int AllianceWeak, int EmpireStrong, int EmpireWeak)
+public sealed record BlocsTotals(int CollectiveTotal, int HandTotal, int CollectiveStrong, int CollectiveWeak, int HandStrong, int HandWeak)
 {
     public const string FileName = "blocs-totals.csv";
 
     public static IReadOnlyDictionary<StartPreset, BlocsTotals> Load(string path)
     {
         var t = CsvTable.Load(path);
-        t.Require("preset", "alliance_total", "empire_total", "alliance_strong", "alliance_weak", "empire_strong", "empire_weak", "source");
+        t.Require("preset", "collective_total", "hand_total", "collective_strong", "collective_weak", "hand_strong", "hand_weak", "source");
         var d = new Dictionary<StartPreset, BlocsTotals>();
         for (int r = 0; r < t.RowCount; r++)
         {
             var p = StartPresets.Parse(t.Get(r, "preset"));
             if (d.ContainsKey(p)) throw new DataLoadException($"{t.Where(r)}: preset '{t.Get(r, "preset")}' appears twice.");
-            d[p] = new BlocsTotals(t.GetInt(r, "alliance_total"), t.GetInt(r, "empire_total"), t.GetInt(r, "alliance_strong"), t.GetInt(r, "alliance_weak"),
-                t.GetInt(r, "empire_strong"), t.GetInt(r, "empire_weak"));
+            d[p] = new BlocsTotals(t.GetInt(r, "collective_total"), t.GetInt(r, "hand_total"), t.GetInt(r, "collective_strong"), t.GetInt(r, "collective_weak"),
+                t.GetInt(r, "hand_strong"), t.GetInt(r, "hand_weak"));
         }
         foreach (StartPreset p in Enum.GetValues<StartPreset>())
             if (!d.ContainsKey(p)) throw new DataLoadException($"{path}: no row for preset '{StartPresets.Key(p)}'.");
@@ -85,7 +85,7 @@ public sealed class ForcesTable
     public List<(Side Side, string Kind, int Count)> BaseFacilities { get; } = new();
     public List<(Side Side, string Kind, int Count)> SiteFacilities { get; } = new();
     public List<ForceFleet> Fleets { get; } = new();
-    /// <summary>The fixed forces of the Rebel HQ system (kind <c>hq_unit</c>): regiments and squadrons placed on the system, not in a fleet. rule: m5-setup-and-victory §P7 (B4 §7 step 2).</summary>
+    /// <summary>The fixed forces of the Hearth system (kind <c>hq_unit</c>): regiments and squadrons placed on the system, not in a fleet. rule: m5-setup-and-victory §P7 (B4 §7 step 2).</summary>
     public List<(Side Side, string Class, int Count)> HqUnits { get; } = new();
 
     public string Str(Side s, string key) => _params.TryGetValue((s, key), out var v) ? v : throw new DataLoadException($"{FileName}: missing param '{key}' for {s}.");
@@ -101,8 +101,8 @@ public sealed class ForcesTable
             string kind = t.Get(r, "kind").Trim(), key = t.Get(r, "key").Trim(), value = t.Get(r, "value").Trim();
             var sides = t.Get(r, "side").Trim() switch
             {
-                "Empire" => new[] { Side.Empire }, "Alliance" => new[] { Side.Alliance }, "*" => new[] { Side.Empire, Side.Alliance },
-                var x => throw new DataLoadException($"{t.Where(r)}: side must be Empire, Alliance or *, not '{x}'."),
+                "Hand" => new[] { Side.Hand }, "Collective" => new[] { Side.Collective }, "*" => new[] { Side.Hand, Side.Collective },
+                var x => throw new DataLoadException($"{t.Where(r)}: side must be Hand, Collective or *, not '{x}'."),
             };
             foreach (var side in sides)
                 switch (kind)
@@ -169,7 +169,7 @@ public sealed class NewGameData
         var fixedOwners = new List<(string, Side?)>();
         for (int r = 0; r < ft.RowCount; r++)
             fixedOwners.Add((ft.Get(r, "system").Trim(), ft.Get(r, "owner").Trim() switch
-            { "Empire" => Side.Empire, "Alliance" => Side.Alliance, "Neutral" => null, var x => throw new DataLoadException($"{ft.Where(r)}: owner '{x}'.") }));
+            { "Hand" => Side.Hand, "Collective" => Side.Collective, "Neutral" => null, var x => throw new DataLoadException($"{ft.Where(r)}: owner '{x}'.") }));
         return new NewGameData(dict, ForcesTable.Load(Path.Combine(design, ForcesTable.FileName)), fixedOwners,
             AnchorRow.Load(Path.Combine(design, AnchorRow.FileName)), BlocsTotals.Load(Path.Combine(design, BlocsTotals.FileName)));
     }
@@ -177,16 +177,16 @@ public sealed class NewGameData
     private static IReadOnlyList<DayOneRow> LoadDayOne(string path)
     {
         var t = CsvTable.Load(path);
-        t.Require("name", "start_owner", "start_alliance_support", "start_weak", "start_explored_all", "start_explored_owner", "is_hq");
+        t.Require("name", "start_owner", "start_collective_support", "start_weak", "start_explored_all", "start_explored_owner", "is_hq");
         var rows = new List<DayOneRow>();
         for (int r = 0; r < t.RowCount; r++)
         {
             Side? owner = t.Get(r, "start_owner").Trim() switch
             {
-                "Empire" => Side.Empire, "Alliance" => Side.Alliance, "neutral" => null,
+                "Hand" => Side.Hand, "Collective" => Side.Collective, "neutral" => null,
                 var x => throw new DataLoadException($"{t.Where(r)}: start_owner '{x}'."),
             };
-            rows.Add(new DayOneRow(t.Get(r, "name").Trim(), owner, t.GetInt(r, "start_alliance_support"), t.GetInt(r, "start_weak") == 1,
+            rows.Add(new DayOneRow(t.Get(r, "name").Trim(), owner, t.GetInt(r, "start_collective_support"), t.GetInt(r, "start_weak") == 1,
                 t.GetInt(r, "start_explored_all") == 1, t.GetInt(r, "start_explored_owner") == 1, t.GetInt(r, "is_hq") == 1));
         }
         return rows;

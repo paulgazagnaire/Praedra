@@ -9,7 +9,7 @@ namespace Praedra.Core.Tests.Fog;
 // Espionage and recon reveals FE1 to FE7 of m5-fog-and-hq §Tests. The success itself is m5-missions'; these call the sheet's Reveal directly.
 public class EspionageTests
 {
-    // Map E: 12 Alliance systems A01..A12 in a chain from the Empire's E0; A01, A02, A03 are start_explored_all. HQ at A01 (= T).
+    // Map E: 12 Collective systems A01..A12 in a chain from the Hand's E0; A01, A02, A03 are start_explored_all. HQ at A01 (= T).
     private static readonly Lazy<GameData> MapE = new(() =>
     {
         var names = Enumerable.Range(1, 12).Select(i => $"A{i:00}").ToList();
@@ -25,8 +25,8 @@ public class EspionageTests
     private static GameHost HostE(ulong seed, string hq = "A01")
     {
         var h = GameHost.New(seed, data: MapE.Value);
-        h.Fleets.SetOwner("E0", Side.Empire);
-        for (int i = 1; i <= 12; i++) h.Fleets.SetOwner($"A{i:00}", Side.Alliance);
+        h.Fleets.SetOwner("E0", Side.Hand);
+        for (int i = 1; i <= 12; i++) h.Fleets.SetOwner($"A{i:00}", Side.Collective);
         h.Fog.PlaceHq(hq);
         h.Fog.SetupNewGame(new[] { "A01", "A02", "A03" });
         return h;
@@ -58,13 +58,13 @@ public class EspionageTests
         var w = new FogWorld();
         w.Step(29);
         int stamp = 0;
-        w.InStep(ctx => { w.Fog.EspionageSuccess(ctx, Side.Empire, R2); stamp = ctx.Day + 1; });
+        w.InStep(ctx => { w.Fog.EspionageSuccess(ctx, Side.Hand, R2); stamp = ctx.Day + 1; });
         w.Step();
-        var k = w.Know(Side.Empire, R2)!;
+        var k = w.Know(Side.Hand, R2)!;
         Assert.True(k.Explored);
         Assert.Equal(stamp, k.StampA); Assert.Equal(stamp, k.StampB); Assert.Equal(stamp, k.StampC); Assert.Equal(stamp, k.StampD); Assert.Equal(stamp, k.StampE);
         Assert.True(k.HqHere);
-        Assert.Equal(new KnownHqInfo(R2, stamp), w.Fog.KnownHq(Side.Empire));
+        Assert.Equal(new KnownHqInfo(R2, stamp), w.Fog.KnownHq(Side.Hand));
     }
 
     // m5-fog-and-hq FE2
@@ -74,17 +74,17 @@ public class EspionageTests
         for (ulong seed = 1; seed <= 50; seed++)
         {
             var h = HostE(seed);
-            var (draws, stamp) = Espionage(h, Side.Empire, "A01");
-            var copies = FullCopies(h, Side.Empire, stamp);
+            var (draws, stamp) = Espionage(h, Side.Hand, "A01");
+            var copies = FullCopies(h, Side.Hand, stamp);
             Assert.Contains("A01", copies);
             var extras = copies.Where(c => c != "A01").ToList();
             int n = extras.Count;
             Assert.InRange(n, 1, 5);
             Assert.Equal(1 + n, draws); // N <= 11 = pool size, so picks = N
-            Assert.All(extras, e => Assert.Equal(Side.Alliance, h.Fleets.OwnerOf(e)));
+            Assert.All(extras, e => Assert.Equal(Side.Collective, h.Fleets.OwnerOf(e)));
             var again = HostE(seed);
-            var (_, stamp2) = Espionage(again, Side.Empire, "A01");
-            Assert.Equal(copies, FullCopies(again, Side.Empire, stamp2)); // same input, same extras
+            var (_, stamp2) = Espionage(again, Side.Hand, "A01");
+            Assert.Equal(copies, FullCopies(again, Side.Hand, stamp2)); // same input, same extras
         }
     }
 
@@ -93,9 +93,9 @@ public class EspionageTests
     public void FE3_OrdinaryTargetGivesOneExtraFromTheExploredClass()
     {
         var h = HostE(7);
-        var (draws, stamp) = Espionage(h, Side.Empire, "A02");
+        var (draws, stamp) = Espionage(h, Side.Hand, "A02");
         Assert.Equal(1, draws); // no draw for N (range 0), one pick
-        var extras = FullCopies(h, Side.Empire, stamp).Where(c => c != "A02").ToList();
+        var extras = FullCopies(h, Side.Hand, stamp).Where(c => c != "A02").ToList();
         var x = Assert.Single(extras);
         Assert.Contains(x, new[] { "A01", "A03" });
     }
@@ -105,10 +105,10 @@ public class EspionageTests
     public void FE4_UnexploredTargetGivesNoExtras()
     {
         var h = HostE(3);
-        Assert.False(h.Fog.IsExplored(Side.Empire, "A05"));
-        var (draws, stamp) = Espionage(h, Side.Empire, "A05");
+        Assert.False(h.Fog.IsExplored(Side.Hand, "A05"));
+        var (draws, stamp) = Espionage(h, Side.Hand, "A05");
         Assert.Equal(0, draws);
-        Assert.Equal(new[] { "A05" }, FullCopies(h, Side.Empire, stamp));
+        Assert.Equal(new[] { "A05" }, FullCopies(h, Side.Hand, stamp));
     }
 
     // m5-fog-and-hq FE5
@@ -117,9 +117,9 @@ public class EspionageTests
     {
         var w = new FogWorld();
         int stamp = 0;
-        w.InStep(ctx => { w.Fog.Reveal(ctx, Side.Empire, R2, RevealKind.Recon); stamp = ctx.Day + 1; });
+        w.InStep(ctx => { w.Fog.Reveal(ctx, Side.Hand, R2, RevealKind.Recon); stamp = ctx.Day + 1; });
         w.Step();
-        var k = w.Know(Side.Empire, R2)!;
+        var k = w.Know(Side.Hand, R2)!;
         Assert.Equal(stamp, k.StampA); Assert.Equal(stamp, k.StampB); Assert.Equal(stamp, k.StampC);
         Assert.True(k.HqHere);
         Assert.Null(k.StampD);
@@ -131,26 +131,26 @@ public class EspionageTests
     {
         var w = new FogWorld(new GameSettings { Fog = new FogParams { ReconRevealsFacilities = false } });
         int stamp = 0;
-        w.InStep(ctx => { w.Fog.Reveal(ctx, Side.Empire, R2, RevealKind.Recon); stamp = ctx.Day + 1; });
+        w.InStep(ctx => { w.Fog.Reveal(ctx, Side.Hand, R2, RevealKind.Recon); stamp = ctx.Day + 1; });
         w.Step();
-        var k = w.Know(Side.Empire, R2)!;
+        var k = w.Know(Side.Hand, R2)!;
         Assert.Equal(stamp, k.StampA); Assert.Equal(stamp, k.StampB);
         Assert.Null(k.StampC); Assert.Null(k.StampD);
         Assert.False(k.HqHere);
-        Assert.Null(w.Fog.KnownHq(Side.Empire));
+        Assert.Null(w.Fog.KnownHq(Side.Hand));
     }
 
     // m5-fog-and-hq FE7
     [Fact]
-    public void FE7_EmpireStartsWithAFullCopyOfYavin()
+    public void FE7_HandStartsWithAFullCopyOfYavin()
     {
         var h = NewGame.Create(new NewGameOptions { Seed = 1 });
-        var k = h.Game.State.Fog.Empire.Systems["The Shoal"];
+        var k = h.Game.State.Fog.Hand.Systems["The Shoal"];
         Assert.True(k.Explored);
         Assert.Equal(0, k.StampC); Assert.Equal(0, k.StampD); Assert.Equal(0, k.StampE);
         Assert.False(k.HqHere); // it is The Shoal, not the HQ system
         Assert.NotEqual("The Shoal", h.HqSystem);
-        Assert.False(h.Fog.IsExplored(Side.Empire, h.HqSystem!)); // nothing reveals the HQ system at start (§F4 4)
-        Assert.Null(h.Fog.KnownHq(Side.Empire));
+        Assert.False(h.Fog.IsExplored(Side.Hand, h.HqSystem!)); // nothing reveals the HQ system at start (§F4 4)
+        Assert.Null(h.Fog.KnownHq(Side.Hand));
     }
 }

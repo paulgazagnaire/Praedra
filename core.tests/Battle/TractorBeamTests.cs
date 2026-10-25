@@ -16,13 +16,13 @@ public class TractorBeamTests
     private const string Corvette = "Dodger", Isd = "Mandate", MonCal = "Ark", Ssd = "Edict",
         Interdictor = "Subpoena", Bulwark = "Barricade";
 
-    // alert indexed by (int)Side: Empire, Alliance. The Alliance answers Retreat: its ships try to jump at second 0.
-    private static readonly OnContactMode[] AllianceRetreats = { OnContactMode.Fight, OnContactMode.Retreat };
+    // alert indexed by (int)Side: Hand, Collective. The Collective answers Retreat: its ships try to jump at second 0.
+    private static readonly OnContactMode[] CollectiveRetreats = { OnContactMode.Fight, OnContactMode.Retreat };
 
-    private static (ClassicBattleResult R, IReadOnlyList<BattleUnit> U, IReadOnlyList<BattleLogEntry> Log) Fight(BattleParams p, (string, int)[] alliance,
-        (string, int)[] empire, ulong seed = 1, bool eCan = true, OnContactMode[]? alert = null, Action<IReadOnlyList<BattleUnit>>? prepare = null)
+    private static (ClassicBattleResult R, IReadOnlyList<BattleUnit> U, IReadOnlyList<BattleLogEntry> Log) Fight(BattleParams p, (string, int)[] collective,
+        (string, int)[] hand, ulong seed = 1, bool eCan = true, OnContactMode[]? alert = null, Action<IReadOnlyList<BattleUnit>>? prepare = null)
     {
-        var (nb, units) = QuickBattle.PrepareNew(p, Ships, alliance, empire, seed, true, eCan, alert, null, false, prepare, logEvents: true);
+        var (nb, units) = QuickBattle.PrepareNew(p, Ships, collective, hand, seed, true, eCan, alert, null, false, prepare, logEvents: true);
         var r = nb.Run();
         return (r, units, nb.Log!);
     }
@@ -46,14 +46,14 @@ public class TractorBeamTests
         for (ulong seed = 1; seed <= 5; seed++)
         {
             var (r, u, log) = Fight(New, new[] { (Corvette, 1) }, new[] { (Isd, 1) }, seed);
-            var cv = Of(u, Side.Alliance, Corvette)[0]; var isd = Of(u, Side.Empire, Isd)[0];
+            var cv = Of(u, Side.Collective, Corvette)[0]; var isd = Of(u, Side.Hand, Isd)[0];
             var held = Assert.Single(r.Steps.OfType<TractorHeldStep>());
             Assert.Equal((cv, isd), (held.Ship, held.Holder));
             Assert.Contains(log, e => e.Kind == "held" && e.Unit == cv.ObjectId && e.Other == isd.ObjectId);
             Assert.False(cv.Left, $"seed {seed}");
             Assert.True(cv.Destroyed, $"seed {seed}");
-            Assert.False(r.AllianceRetreated);
-            Assert.Equal(BattleOutcome.Victorious, r.EmpireOutcome);
+            Assert.False(r.CollectiveRetreated);
+            Assert.Equal(BattleOutcome.Victorious, r.HandOutcome);
             Assert.Equal(2750.0, isd.Hull); // corvette lasers never get through the ISD's shield
         }
     }
@@ -64,33 +64,33 @@ public class TractorBeamTests
     [InlineData(Bulwark)]
     public void TB2_EqualOrLargerHullIsNotHeld(string retreater)
     {
-        var (r, u, _) = Fight(New, new[] { (retreater, 1) }, new[] { (Isd, 1) }, alert: AllianceRetreats);
+        var (r, u, _) = Fight(New, new[] { (retreater, 1) }, new[] { (Isd, 1) }, alert: CollectiveRetreats);
         Assert.Empty(r.Steps.OfType<TractorHeldStep>());
-        Assert.True(Of(u, Side.Alliance, retreater)[0].Left);
-        Assert.Equal(BattleOutcome.Retreated, r.AllianceOutcome);
+        Assert.True(Of(u, Side.Collective, retreater)[0].Left);
+        Assert.Equal(BattleOutcome.Retreated, r.CollectiveOutcome);
     }
 
     // m4-retreat-damage-repair TB3: one ISD, two corvettes retreating together: it holds only the first by unit id; the other leaves
     [Fact]
     public void TB3_OneIsdHoldsOnlyOneOfTwoCorvettes()
     {
-        var (r, u, _) = Fight(New, new[] { (Corvette, 2) }, new[] { (Isd, 1) }, alert: AllianceRetreats);
-        var cv = Of(u, Side.Alliance, Corvette);
+        var (r, u, _) = Fight(New, new[] { (Corvette, 2) }, new[] { (Isd, 1) }, alert: CollectiveRetreats);
+        var cv = Of(u, Side.Collective, Corvette);
         var held = Assert.Single(r.Steps.OfType<TractorHeldStep>());
         Assert.Equal(cv[0], held.Ship);
         Assert.Equal(0, held.Second);
         Assert.False(cv[0].Left);
         Assert.True(cv[1].Left);
-        Assert.True(r.AllianceRetreated);
+        Assert.True(r.CollectiveRetreated);
     }
 
     // m4-retreat-damage-repair TB4: the holder dies (an SSD at hull 1, its side cannot retreat): the held Ark tries again and jumps out
     [Fact]
     public void TB4_HolderDestroyedFreesTheHeldShip()
     {
-        var (r, u, log) = Fight(New, new[] { (MonCal, 1) }, new[] { (Ssd, 1), (Corvette, 1) }, eCan: false, alert: AllianceRetreats,
+        var (r, u, log) = Fight(New, new[] { (MonCal, 1) }, new[] { (Ssd, 1), (Corvette, 1) }, eCan: false, alert: CollectiveRetreats,
             prepare: x => x.First(q => q.Class.Name == Ssd).Hull = 1);
-        var mc = Of(u, Side.Alliance, MonCal)[0]; var ssd = Of(u, Side.Empire, Ssd)[0];
+        var mc = Of(u, Side.Collective, MonCal)[0]; var ssd = Of(u, Side.Hand, Ssd)[0];
         var held = Assert.Single(r.Steps.OfType<TractorHeldStep>());
         Assert.Equal((mc, ssd), (held.Ship, held.Holder));
         Assert.True(ssd.Destroyed);
@@ -99,7 +99,7 @@ public class TractorBeamTests
         Assert.Equal("released", jump.Detail);
         Assert.True(jump.T >= kill.Second); // on its next try: step 7 of the second the holder died in (or later)
         Assert.True(mc.Left);
-        Assert.Equal(BattleOutcome.Retreated, r.AllianceOutcome);
+        Assert.Equal(BattleOutcome.Retreated, r.CollectiveOutcome);
     }
 
     // m4-retreat-damage-repair TB5: Classic battles are unchanged: the switch on or off gives the same Classic battle, and no hold
@@ -113,9 +113,9 @@ public class TractorBeamTests
             var (r1, u1) = QuickBattle.Run(on, Ships, new[] { (Corvette, 4) }, new[] { (Isd, 1) }, seed);
             var (r2, u2) = QuickBattle.Run(off, Ships, new[] { (Corvette, 4) }, new[] { (Isd, 1) }, seed);
             Assert.Empty(r1.Steps.OfType<TractorHeldStep>());
-            Assert.True(r1.AllianceRetreated);
-            Assert.All(u1.Where(x => x.Side == Side.Alliance), x => Assert.True(x.Left));
-            Assert.Equal((r1.Seconds, r1.Draws, r1.AllianceOutcome, r1.EmpireOutcome), (r2.Seconds, r2.Draws, r2.AllianceOutcome, r2.EmpireOutcome));
+            Assert.True(r1.CollectiveRetreated);
+            Assert.All(u1.Where(x => x.Side == Side.Collective), x => Assert.True(x.Left));
+            Assert.Equal((r1.Seconds, r1.Draws, r1.CollectiveOutcome, r1.HandOutcome), (r2.Seconds, r2.Draws, r2.CollectiveOutcome, r2.HandOutcome));
             Assert.Equal(u1.Select(x => (x.Hull, x.Left)), u2.Select(x => (x.Hull, x.Left)));
         }
     }
@@ -124,30 +124,30 @@ public class TractorBeamTests
     [Fact]
     public void TB6_SwitchOffNoHold()
     {
-        var (r, u, _) = Fight(NewNoTractors, new[] { (Corvette, 2) }, new[] { (Isd, 1) }, alert: AllianceRetreats);
+        var (r, u, _) = Fight(NewNoTractors, new[] { (Corvette, 2) }, new[] { (Isd, 1) }, alert: CollectiveRetreats);
         Assert.Empty(r.Steps.OfType<TractorHeldStep>());
-        Assert.All(Of(u, Side.Alliance, Corvette), x => Assert.True(x.Left));
-        Assert.Equal(BattleOutcome.Retreated, r.AllianceOutcome);
+        Assert.All(Of(u, Side.Collective, Corvette), x => Assert.True(x.Left));
+        Assert.Equal(BattleOutcome.Retreated, r.CollectiveOutcome);
     }
 
     // m4-retreat-damage-repair TB7: an Interdictor (tractor power 0) holds nothing by tractor; its gravity well still refuses the whole retreat
     [Fact]
     public void TB7_InterdictorHoldsNoShipByTractorButItsGravityWellStillBlocks()
     {
-        var (r, _, _) = Fight(New, new[] { (Corvette, 2) }, new[] { (Interdictor, 1) }, alert: AllianceRetreats);
+        var (r, _, _) = Fight(New, new[] { (Corvette, 2) }, new[] { (Interdictor, 1) }, alert: CollectiveRetreats);
         Assert.Empty(r.Steps.OfType<TractorHeldStep>());
         Assert.Contains(r.Steps.OfType<RetreatRefusedStep>(), s => s.Reason == RetreatRefusal.GravityWell);
-        Assert.False(r.AllianceRetreated);
+        Assert.False(r.CollectiveRetreated);
     }
 
     // m4-retreat-damage-repair TB8: a holder whose tractor counter is not clear holds nothing
     [Fact]
     public void TB8_DamagedTractorHoldsNothing()
     {
-        var (r, u, _) = Fight(New, new[] { (Corvette, 1) }, new[] { (Isd, 1) }, alert: AllianceRetreats,
+        var (r, u, _) = Fight(New, new[] { (Corvette, 1) }, new[] { (Isd, 1) }, alert: CollectiveRetreats,
             prepare: x => x.First(q => q.Class.Name == Isd).Hits[ObjectRegistry.TractorCounter] = 1);
         Assert.Empty(r.Steps.OfType<TractorHeldStep>());
-        Assert.True(Of(u, Side.Alliance, Corvette)[0].Left);
+        Assert.True(Of(u, Side.Collective, Corvette)[0].Left);
     }
 
     // m4-retreat-damage-repair TB9 (game level): 4 corvettes stopped by an ISD: one is held and dies, three retreat; the event names ship and holder
@@ -155,11 +155,11 @@ public class TractorBeamTests
     public void TB9_InTheGameTheHoldIsAnEventAndTheOthersRetreat()
     {
         var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.New });
-        w.Fleets.SetOwner("A", Side.Alliance);
-        int rebel = w.Fleet(Side.Alliance, "A", Corvette, 4);
-        int imp = w.Fleet(Side.Empire, "B", Isd, 1);
+        w.Fleets.SetOwner("A", Side.Collective);
+        int rebel = w.Fleet(Side.Collective, "A", Corvette, 4);
+        int imp = w.Fleet(Side.Hand, "B", Isd, 1);
         var corvettes = w.F(rebel).Ships.ToList();
-        w.Fleets.SubmitMove(Side.Alliance, rebel, "B");
+        w.Fleets.SubmitMove(Side.Collective, rebel, "B");
         w.Run(40);
         var held = w.Events<RetreatHeldByTractor>().Single();
         Assert.Equal((corvettes[0], w.F(imp).Ships[0], "B"), (held.Ship, held.Holder, held.System));
@@ -175,12 +175,12 @@ public class TractorBeamTests
     public void TB10_HeldShipThatSurvivesStaysInAFleetOfItsOwn()
     {
         var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.New, SubsystemRolls = false });
-        foreach (var s in new[] { "A", "C", "D" }) w.Fleets.SetOwner(s, Side.Alliance); // the Empire has nowhere to go
-        int rebel = w.Fleet(Side.Alliance, "B", Corvette, 2);
-        int imp = w.Fleet(Side.Empire, "B", Isd, 1);
+        foreach (var s in new[] { "A", "C", "D" }) w.Fleets.SetOwner(s, Side.Collective); // the Hand has nowhere to go
+        int rebel = w.Fleet(Side.Collective, "B", Corvette, 2);
+        int imp = w.Fleet(Side.Hand, "B", Isd, 1);
         var corvettes = w.F(rebel).Ships.ToList();
         w.Obj(w.F(imp).Ships[0]).Hits![1] = 4; // weapons out: the ISD cannot kill the held corvette
-        w.Battles.SubmitSetOnContact(Side.Alliance, OnContactMode.Retreat);
+        w.Battles.SubmitSetOnContact(Side.Collective, OnContactMode.Retreat);
         w.Run();
         Assert.Equal(corvettes[0], w.Events<RetreatHeldByTractor>().Single().Ship);
         var created = w.Events<FleetCreated>().Single(c => c.Cause == FleetCreateCause.TractorHeld);
@@ -195,8 +195,8 @@ public class TractorBeamTests
     [Fact]
     public void TB11_Deterministic()
     {
-        var (r1, u1, l1) = Fight(New, new[] { (Corvette, 6), (MonCal, 1) }, new[] { (Isd, 2) }, seed: 3, alert: AllianceRetreats);
-        var (r2, u2, l2) = Fight(New, new[] { (Corvette, 6), (MonCal, 1) }, new[] { (Isd, 2) }, seed: 3, alert: AllianceRetreats);
+        var (r1, u1, l1) = Fight(New, new[] { (Corvette, 6), (MonCal, 1) }, new[] { (Isd, 2) }, seed: 3, alert: CollectiveRetreats);
+        var (r2, u2, l2) = Fight(New, new[] { (Corvette, 6), (MonCal, 1) }, new[] { (Isd, 2) }, seed: 3, alert: CollectiveRetreats);
         Assert.Equal(2, r1.Steps.OfType<TractorHeldStep>().Count()); // each ISD holds one ship
         Assert.Equal(r1.Draws, r2.Draws);
         Assert.Equal(r1.Steps.OfType<TractorHeldStep>().Select(s => (s.Ship.ObjectId, s.Holder.ObjectId, s.Second)),

@@ -73,7 +73,7 @@ public sealed class DeathStarModule
     private DeathStarState S => _game.State.DeathStar;
     private GameState State => _game.State;
     private EconomyState E => _game.State.Economy;
-    private static Side Other(Side s) => s == Side.Empire ? Side.Alliance : Side.Empire;
+    private static Side Other(Side s) => s == Side.Hand ? Side.Collective : Side.Hand;
 
     // ================================================================== queries
 
@@ -238,7 +238,7 @@ public sealed class DeathStarModule
         _fleets.RefreshBlockadeFlag(ctx, system, day);
 
         // 6. The event to both sides; every side's picture learns it, and 4. an HQ at rest there is destroyed (the victory step reads it as the
-        // Empire capturing the HQ: m5-fog-and-hq §F7, m5-setup-and-victory §Victory).
+        // Hand capturing the HQ: m5-fog-and-hq §F7, m5-setup-and-victory §Victory).
         ctx.Emit((i, _) => new SystemDestroyed(i, day, system, side, prior));
         FogNotice?.Invoke(ctx, system);
 
@@ -286,9 +286,9 @@ public sealed class DeathStarModule
 
     // ================================================================== sector reaction (§2 effect 7)
 
-    // Strikes are counted per sector for the whole game. Strike 1: every other non-destroyed system of the sector gets +SectorPenalty Alliance support.
-    // Strike 2 or later: every other non-destroyed system goes to Alliance support 100; a neutral one becomes Alliance-held; an Imperial one starts an
-    // uprising at once; an Alliance one just goes to 100. None of it is damped by the Death Star sector flag. Nothing outside the sector changes.
+    // Strikes are counted per sector for the whole game. Strike 1: every other non-destroyed system of the sector gets +SectorPenalty Collective support.
+    // Strike 2 or later: every other non-destroyed system goes to Collective support 100; a neutral one becomes Collective-held; a Hand one starts an
+    // uprising at once; a Collective one just goes to 100. None of it is damped by the Death Star sector flag. Nothing outside the sector changes.
     // A system outside every sector has no sector: no strike is counted and nothing reacts (DEFAULT, the sheet names no such case).
     private void SectorReaction(StepContext ctx, int day, string system)
     {
@@ -306,14 +306,14 @@ public sealed class DeathStarModule
             changed.Add(name);
             if (strike < Params.RevoltFromStrike)
             {
-                _support.ChangeSupport(ctx, name, Side.Alliance, Params.SectorPenalty, SupportCause.DeathStar, dampen: false);
+                _support.ChangeSupport(ctx, name, Side.Collective, Params.SectorPenalty, SupportCause.DeathStar, dampen: false);
                 continue;
             }
-            _support.ChangeSupport(ctx, name, Side.Alliance, Params.RevoltAllianceSupport, SupportCause.DeathStar, dampen: false); // clamped to the scale: 100
-            // Under derived control (B5a section 9) the support change alone turns a neutral world, and an Imperial world with no regiment, Alliance;
-            // an Imperial world still held (by its garrison) riots. Under AssaultOnly the old explicit capture of a neutral world.
-            if (_control.Rule == ControlRule.AssaultOnly && _fleets.OwnerOf(name) == null) _control.SetHolder(ctx, name, Side.Alliance, CaptureCause.DeathStarRevolt);
-            if (_fleets.OwnerOf(name) == Side.Empire) _support.StartUprisingNow(ctx, name);
+            _support.ChangeSupport(ctx, name, Side.Collective, Params.RevoltCollectiveSupport, SupportCause.DeathStar, dampen: false); // clamped to the scale: 100
+            // Under derived control (B5a section 9) the support change alone turns a neutral world, and a Hand world with no regiment, Collective;
+            // a Hand world still held (by its garrison) riots. Under AssaultOnly the old explicit capture of a neutral world.
+            if (_control.Rule == ControlRule.AssaultOnly && _fleets.OwnerOf(name) == null) _control.SetHolder(ctx, name, Side.Collective, CaptureCause.DeathStarRevolt);
+            if (_fleets.OwnerOf(name) == Side.Hand) _support.StartUprisingNow(ctx, name);
         }
         string sec = star.Sector; var list = new ValueList<string>(changed);
         ctx.Emit((i, _) => new SectorStruck(i, day, sec, strike, list));
@@ -324,7 +324,7 @@ public sealed class DeathStarModule
     // world itself has no support value. No strike count, no revolt. rule: m5-death-star §2 effect 7 (DeathStarFallout = Classic; B5c section 3).
     private void ClassicFallout(StepContext ctx, string destroyed)
     {
-        const Side destroyer = Side.Empire; // only the Empire has a Death Star; the losing side is the destroyer (inferred, B5c)
+        const Side destroyer = Side.Hand; // only the Hand has a Death Star; the losing side is the destroyer (inferred, B5c)
         foreach (var star in _galaxy.Systems)
         {
             string name = star.Name;
@@ -339,13 +339,13 @@ public sealed class DeathStarModule
 
     // ================================================================== the sector flag (§3, slot 5.6)
 
-    // rule: m5-death-star §3 (m2-popular-support §Death Star sector flag): every system of a sector holding one of the Empire's Death Stars (in a fleet at a
+    // rule: m5-death-star §3 (m2-popular-support §Death Star sector flag): every system of a sector holding one of the Hand's Death Stars (in a fleet at a
     // system of that sector) carries the flag; all others are cleared. Recomputed once per day, replacing setup-only SetDeathStarSector calls.
     private void RefreshSectorFlag(StepContext ctx)
     {
         var sectors = new SortedSet<string>(StringComparer.Ordinal);
         foreach (var f in State.Fleets.Values)
-            if (f.Side == Side.Empire && f.At is string at && DeathStarsIn(f).Any() && _galaxy.TryFindSystem(at, out _) && !_galaxy.Get(at).IsOutsideSectors)
+            if (f.Side == Side.Hand && f.At is string at && DeathStarsIn(f).Any() && _galaxy.TryFindSystem(at, out _) && !_galaxy.Get(at).IsOutsideSectors)
                 sectors.Add(_galaxy.Get(at).Sector);
         var want = new SortedSet<string>(StringComparer.Ordinal);
         foreach (var sector in _galaxy.Sectors.Where(s => sectors.Contains(s.Name)))

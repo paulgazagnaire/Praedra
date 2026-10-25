@@ -9,7 +9,7 @@ using static Praedra.Core.Tests.Missions.MissionWorld;
 namespace Praedra.Core.Tests.Missions;
 
 // B2d-who-guards-and-the-escape-duel tests B2d-1 to B2d-13. rule: m5-missions §1 (check points), §3 (guards), §4 (foiled, duel).
-// Unless a test says otherwise, an Alliance team flies from H (neutral) to T (Empire-held): the leaving checks at H meet nobody.
+// Unless a test says otherwise, a Collective team flies from H (neutral) to T (Hand-held): the leaving checks at H meet nobody.
 public class B2dGuardTests
 {
     private const string Isd = "Mandate";
@@ -17,18 +17,18 @@ public class B2dGuardTests
     private static MissionWorld World(MissionParams? p = null, bool decoys = false, CharacterParams? characters = null)
     {
         var w = new MissionWorld(p, decoys, characters: characters);
-        w.Hold(T, Side.Empire, 0);
+        w.Hold(T, Side.Hand, 0);
         return w;
     }
 
-    // A completed Mordant Lien-150 of the Alliance at the system.
-    private static void Ion(MissionWorld w, string system) => w.Host.Economy.Find(w.Host.Economy.AddFacility(system, FacilityKind.Kdy150))!.Side = Side.Alliance;
+    // A completed Mordant Lien-150 of the Collective at the system.
+    private static void Ion(MissionWorld w, string system) => w.Host.Economy.Find(w.Host.Economy.AddFacility(system, FacilityKind.Kdy150))!.Side = Side.Collective;
 
     private static int Fleet(MissionWorld w, Side side, string system, params string[] ships) => w.Host.Fleets.AddFleet(side, "F", ships, system);
 
     private static int StartAndLand(MissionWorld w, MissionKind kind, int[] chars, int[]? sfs = null, int[]? decoys = null, string target = T)
     {
-        long seq = w.Start(Side.Alliance, kind, chars, target, sfs, decoys);
+        long seq = w.Start(Side.Collective, kind, chars, target, sfs, decoys);
         w.Game.Step();
         Assert.Null(w.Reason(seq));
         int id = w.LastMission;
@@ -43,9 +43,9 @@ public class B2dGuardTests
     {
         var w = World();
         w.Agent(Leia, H, esp: 50);
-        for (int i = 0; i < 3; i++) w.Unit(Side.Empire, ImpArmy, T);
-        w.Unit(Side.Empire, "Gleaner", T); w.Unit(Side.Empire, "Gleaner", T);
-        int fleet = Fleet(w, Side.Empire, T, Isd);
+        for (int i = 0; i < 3; i++) w.Unit(Side.Hand, ImpArmy, T);
+        w.Unit(Side.Hand, "Gleaner", T); w.Unit(Side.Hand, "Gleaner", T);
+        int fleet = Fleet(w, Side.Hand, T, Isd);
         int ship = w.Game.State.Fleets[fleet].Ships[0];
         w.Stub!.Expect(0, 99, 99);
         int id = StartAndLand(w, MissionKind.Espionage, new[] { Leia });
@@ -55,44 +55,44 @@ public class B2dGuardTests
         Assert.Empty(w.Events<MissionDecoyRoll>());
     }
 
-    // B2d-2: the same plus one Imperial special force on the planet: one draw at arrival (the ISD), one in the job (the special force)
+    // B2d-2: the same plus one Hand special force on the planet: one draw at arrival (the ISD), one in the job (the special force)
     [Fact]
     public void B2d2_SpecialForceGuardsThePlanet()
     {
         var w = World();
         w.Agent(Leia, H, esp: 50);
-        for (int i = 0; i < 3; i++) w.Unit(Side.Empire, ImpArmy, T);
-        int ship = w.Game.State.Fleets[Fleet(w, Side.Empire, T, Isd)].Ships[0];
-        int probe = w.Unit(Side.Empire, Probe, T);
+        for (int i = 0; i < 3; i++) w.Unit(Side.Hand, ImpArmy, T);
+        int ship = w.Game.State.Fleets[Fleet(w, Side.Hand, T, Isd)].Ships[0];
+        int probe = w.Unit(Side.Hand, Probe, T);
         w.Stub!.Expect(0, 99, 99, 99, 99, 99);
         int id = StartAndLand(w, MissionKind.Espionage, new[] { Leia });
         w.RunIteration(id);
         Assert.Equal(new[] { ship, probe }, w.Events<MissionDetectionRoll>().Select(r => r.Defender));
     }
 
-    // B2d-3: as B2d-1, the Alliance also owns a Mordant Lien-150 there: no draw at arrival, none in the job
+    // B2d-3: as B2d-1, the Collective also owns a Mordant Lien-150 there: no draw at arrival, none in the job
     [Fact]
     public void B2d3_OwnIonCannonShieldsFromFleets()
     {
         var w = World();
         w.Agent(Leia, H, esp: 50);
-        for (int i = 0; i < 3; i++) w.Unit(Side.Empire, ImpArmy, T);
-        Fleet(w, Side.Empire, T, Isd);
+        for (int i = 0; i < 3; i++) w.Unit(Side.Hand, ImpArmy, T);
+        Fleet(w, Side.Hand, T, Isd);
         Ion(w, T);
         int id = StartAndLand(w, MissionKind.Espionage, new[] { Leia });
         w.RunIteration(id);
         Assert.Empty(w.Events<MissionDetectionRoll>());
     }
 
-    // B2d-4: Death Star Sabotage: the Death Star and 2 ISDs in orbit and an Imperial special force on the planet: in the job the 3 ships guard,
+    // B2d-4: Death Star Sabotage: the Death Star and 2 ISDs in orbit and a Hand special force on the planet: in the job the 3 ships guard,
     // the special force does not (the target is in orbit)
     [Fact]
     public void B2d4_DeathStarSabotageIsGuardedByShips()
     {
         var w = World();
         w.Agent(Luke, H, esp: 100, com: 100);
-        var ships = w.Game.State.Fleets[Fleet(w, Side.Empire, T, "Death Star", Isd, Isd)].Ships.OrderBy(x => x).ToList();
-        int probe = w.Unit(Side.Empire, Probe, T);
+        var ships = w.Game.State.Fleets[Fleet(w, Side.Hand, T, "Death Star", Isd, Isd)].Ships.OrderBy(x => x).ToList();
+        int probe = w.Unit(Side.Hand, Probe, T);
         w.Stub!.Expect(0, 99, Enumerable.Repeat(99, 7).ToArray()); // arrival: 3 walks; job: betrayal, 3 walks
         int id = StartAndLand(w, MissionKind.DeathStarSabotage, new[] { Luke });
         int from = w.Events<MissionDetectionRoll>().Count;
@@ -103,7 +103,7 @@ public class B2dGuardTests
         Assert.DoesNotContain(probe, job);
     }
 
-    // B2d-5: a team leaving its own system where an Imperial fleet sits: the leaving orbit check walks the fleet's ship; with an own Mordant Lien-150 there,
+    // B2d-5: a team leaving its own system where a Hand fleet sits: the leaving orbit check walks the fleet's ship; with an own Mordant Lien-150 there,
     // no leaving draw
     [Theory]
     [InlineData(false, 1)]
@@ -111,12 +111,12 @@ public class B2dGuardTests
     public void B2d5_LeavingPastAFleet(bool ion, int draws)
     {
         var w = World();
-        w.Hold(H, Side.Alliance, 100);
+        w.Hold(H, Side.Collective, 100);
         w.Agent(Leia, H, esp: 50);
-        Fleet(w, Side.Empire, H, Isd);
+        Fleet(w, Side.Hand, H, Isd);
         if (ion) Ion(w, H);
         w.Stub!.Expect(0, 99, 99);
-        long seq = w.Start(Side.Alliance, MissionKind.Espionage, new[] { Leia }, T);
+        long seq = w.Start(Side.Collective, MissionKind.Espionage, new[] { Leia }, T);
         w.Game.Step();
         Assert.Null(w.Reason(seq));
         Assert.Equal(draws, w.Events<MissionDetectionRoll>().Count);
@@ -130,7 +130,7 @@ public class B2dGuardTests
         var w = World();
         w.Hold(T, null, 50);
         w.Agent(Leia, H, dip: 80);
-        w.Unit(Side.Empire, Probe, T);
+        w.Unit(Side.Hand, Probe, T);
         int id = StartAndLand(w, MissionKind.Diplomacy, new[] { Leia });
         w.RunIteration(id);
         Assert.Empty(w.Events<MissionDetectionRoll>());
@@ -143,13 +143,13 @@ public class B2dGuardTests
     [InlineData(70, false)]
     public void B2d7_DuelAgainstACommander(int draw, bool escaped)
     {
-        // checks where the capture puts him; LandPrisoners off, else New lands him at Imperial T the same day end (CH38)
+        // checks where the capture puts him; LandPrisoners off, else New lands him at Hand T the same day end (CH38)
         var w = World(characters: new CharacterParams { LandPrisoners = false });
         w.Agent(Han, H, esp: 50, com: 100);
-        int fleet = Fleet(w, Side.Empire, T, Isd);
+        int fleet = Fleet(w, Side.Hand, T, Isd);
         w.Agent(Piett, T, com: 85); w.Ch.SetPost(Piett, fleet, CharacterPost.Admiral);
         w.Stub!.Expect(0, 99, 0, draw, 99); // arrival walk detects, then Han's duel, then (B2e moved) his Hurt roll (p = 1: 99 misses)
-        w.Start(Side.Alliance, MissionKind.Espionage, new[] { Han }, T);
+        w.Start(Side.Collective, MissionKind.Espionage, new[] { Han }, T);
         w.Run(5);
         var d = w.Events<MissionDuel>().Single();
         Assert.Equal((Han, 15, 70, escaped), (d.Member, d.X, d.Chance, d.Escaped));
@@ -165,8 +165,8 @@ public class B2dGuardTests
     public void B2d8_SpecialForceDestroyedInTheDuel()
     {
         var w = World();
-        int bothan = w.Unit(Side.Alliance, Bothan, H);
-        w.Unit(Side.Empire, Probe, T);
+        int bothan = w.Unit(Side.Collective, Bothan, H);
+        w.Unit(Side.Hand, Probe, T);
         w.Stub!.Expect(0, 99, 99, 0, 40); // the job: betrayal, the walk detects, the duel
         int id = StartAndLand(w, MissionKind.Espionage, Array.Empty<int>(), new[] { bothan });
         w.RunIteration(id);
@@ -184,12 +184,12 @@ public class B2dGuardTests
     {
         var w = World(characters: new CharacterParams { LandPrisoners = false }); // as B2d-7: where the capture puts them (CH38 lands them)
         w.Agent(Leia, H, esp: 50); w.Agent(Han, H, esp: 50);
-        if (leaving) w.Hold(H, Side.Alliance, 100);
-        int isd = leaving ? Fleet(w, Side.Empire, H, Isd) : Fleet(w, Side.Empire, T, Isd);
+        if (leaving) w.Hold(H, Side.Collective, 100);
+        int isd = leaving ? Fleet(w, Side.Hand, H, Isd) : Fleet(w, Side.Hand, T, Isd);
         // the walk detects, two duels lost; B2e moved: each duel is followed by the member's Hurt roll (combat 0: p = 100, always a hit; majors
         // make no death draw), then the capture
         w.Stub!.Expect(0, 99, 0, 99, 99, 99, 99);
-        w.Start(Side.Alliance, MissionKind.Espionage, new[] { Leia, Han }, T);
+        w.Start(Side.Collective, MissionKind.Espionage, new[] { Leia, Han }, T);
         w.Run(5);
         Assert.Equal(leaving ? MissionModule.FoilCodeAtOrigin : MissionModule.FoilCodeAtTarget, w.Events<MissionFoiled>().Single().EndCode);
         Assert.Equal(new[] { Leia, Han }, w.Events<MissionDuel>().Select(e => e.Member));
@@ -207,8 +207,8 @@ public class B2dGuardTests
     {
         var w = World(decoys: true);
         w.Agent(Leia, H, esp: 50);
-        int inf = w.Unit(Side.Alliance, Infiltrators, H);
-        w.Unit(Side.Empire, Probe, T); w.Unit(Side.Empire, Probe, T);
+        int inf = w.Unit(Side.Collective, Infiltrators, H);
+        w.Unit(Side.Hand, Probe, T); w.Unit(Side.Hand, Probe, T);
         int id = StartAndLand(w, MissionKind.Espionage, new[] { Leia }, decoys: new[] { inf });
         w.Stub!.Expect(0, 99, 99, 99, 99, 0, 99, 99, 99); // betrayal x2, decoy fails, duel escapes (0), two walks miss, the success roll
         int from = w.Stub.Requests.Count;
@@ -256,12 +256,12 @@ public class B2dGuardTests
     public void B2d13_GuardsAnySide(bool anySide, int guards)
     {
         var w = World(new MissionParams { GuardsAnySide = anySide });
-        Fleet(w, Side.Alliance, T, "Ark");
-        Fleet(w, Side.Empire, T, Isd);
+        Fleet(w, Side.Collective, T, "Ark");
+        Fleet(w, Side.Hand, T, Isd);
         // read between Steps: in a Step the two fleets would fight first
-        var group = new MissionGroup { Side = Side.Alliance, Kind = MissionKind.Espionage, Home = H, Target = T };
+        var group = new MissionGroup { Side = Side.Collective, Kind = MissionKind.Espionage, Home = H, Target = T };
         var scope = w.M.ScopeOf(group, MissionModule.CheckKind.Orbit, T);
         Assert.True(scope.OrbitGuards);
-        Assert.Equal(guards, w.M.Guards(Side.Alliance, T, scope, group).Count);
+        Assert.Equal(guards, w.M.Guards(Side.Collective, T, scope, group).Count);
     }
 }

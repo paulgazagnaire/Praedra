@@ -21,7 +21,7 @@ public sealed record NewGameOptions
 
 /// <summary>
 /// Deals a real day-one position on the 360-system galaxy and returns a <see cref="GameHost"/> ready for <c>Game.Step()</c>.
-/// Owners, Alliance support, explored flags and the Rebel HQ come from the Anchored dealer (DEFAULT, <see cref="GameSettings.DealMode"/>; draws from the
+/// Owners, Collective support, explored flags and the Hearth come from the Anchored dealer (DEFAULT, <see cref="GameSettings.DealMode"/>; draws from the
 /// game's generator, m5-setup-and-victory §Mode Anchored) or, in File mode, from the day-one file of the preset (setup-victory/09 §1-5, PROPOSAL values).
 /// Facilities, garrisons, fleets and stockpile come from <c>new-game-forces.csv</c> and are DEFAULT choices of the playable slice (the
 /// specs give no starting force numbers); placement is a pure function of the data (no random draw: the only draws are the deal's, then the economy's
@@ -53,28 +53,28 @@ public static class NewGame
         {
             if (!galaxy.TryFindSystem(r.Name, out _)) continue;
             if (r.Owner is Side owner) fleets.SetOwner(r.Name, owner);
-            eco.SetAllianceSupport(r.Name, r.AllianceSupport);
+            eco.SetCollectiveSupport(r.Name, r.CollectiveSupport);
             int mask = r.ExploredAll ? 3 : r.ExploredOwner && r.Owner is Side s ? ScenarioState.Bit(s) : 0;
             if (mask != 0) state.Scenario.Explored[r.Name] = mask;
             if (r.IsHq) state.Scenario.HqSystem = r.Name;
         }
 
         // Fixed owners (Decided) on top of the day-one rows, which ignore them. rule: m5-setup-and-victory §Fixed owners: strong holders,
-        // so Empire support 60..90 (Alliance support 25 here when the row was not already Empire); neutral = 50.
+        // so Hand support 60..90 (Collective support 25 here when the row was not already Hand); neutral = 50.
         // File mode only: the anchors file replaces this list in Anchored mode. rule: m5-setup-and-victory §Mode Anchored
         foreach (var (sys, owner) in settings.DealMode == DealMode.File ? nd.FixedOwners : Array.Empty<(string System, Side? Owner)>())
         {
             if (!galaxy.TryFindSystem(sys, out _)) continue;
             if (owner is Side fo)
             {
-                if (fleets.OwnerOf(sys) != fo) { fleets.SetOwner(sys, fo); eco.SetAllianceSupport(sys, fo == Side.Empire ? 25 : 75); }
+                if (fleets.OwnerOf(sys) != fo) { fleets.SetOwner(sys, fo); eco.SetCollectiveSupport(sys, fo == Side.Hand ? 25 : 75); }
             }
-            else { fleets.SetOwner(sys, null); eco.SetAllianceSupport(sys, 50); state.Scenario.Explored.Remove(sys); }
+            else { fleets.SetOwner(sys, null); eco.SetCollectiveSupport(sys, 50); state.Scenario.Explored.Remove(sys); }
         }
         // Support bands that setup fixes (setup-victory/09 §2): Charter 0, The Shoal and the HQ 100.
-        eco.SetAllianceSupport("Charter", 0);
-        eco.SetAllianceSupport("The Shoal", 100);
-        if (state.Scenario.HqSystem is { } hq) eco.SetAllianceSupport(hq, 100);
+        eco.SetCollectiveSupport("Charter", 0);
+        eco.SetCollectiveSupport("The Shoal", 100);
+        if (state.Scenario.HqSystem is { } hq) eco.SetCollectiveSupport(hq, 100);
         state.Scenario.Active = true;
 
         foreach (var f in data.StartingFacilities)
@@ -84,10 +84,10 @@ public static class NewGame
             Place(host, f.System, f.Kind);
         }
 
-        foreach (var side in new[] { Side.Empire, Side.Alliance })
+        foreach (var side in new[] { Side.Hand, Side.Collective })
             DealSide(host, forces, side, settings.MinGarrison);
 
-        // P7 step 2: the fixed HQ forces (CMUNHQTB), completed, standing on the Rebel HQ system (the table's first item is empty, so nothing is a
+        // P7 step 2: the fixed HQ forces (CMUNHQTB), completed, standing on the Hearth system (the table's first item is empty, so nothing is a
         // carrier); no capacity check, no draw. With min_garrison 0 they are the HQ's only troops. rule: m5-setup-and-victory §P7 ([EXE-own] 0x51ad90; B4 §7)
         // Behind HqFixedForces (DEFAULT off until the Classic setup, part B, turns it on together with MinGarrison 0).
         if (settings.HqFixedForces && state.Scenario.HqSystem is { } hqSys)
@@ -100,8 +100,8 @@ public static class NewGame
         host.Control.SetupNewGame();
 
         // P9 starting characters, after the forces and before the economy timers and the research arming (P10): the roster's creation draws,
-        // then Palpatine at Charter, Vader and the officers at random Empire locations, the Empire extras, Mae Abara at the HQ, The Shoal six,
-        // the Alliance extras. rule: m5-setup-and-victory §P9; m5-characters-and-force §Rolling the stats.
+        // then Palpatine at Charter, Vader and the officers at random Hand locations, the Hand extras, Mae Abara at the HQ, The Shoal six,
+        // the Collective extras. rule: m5-setup-and-victory §P9; m5-characters-and-force §Rolling the stats.
         host.Characters.SetupNewGame(state.Scenario.HqSystem);
 
         // Stage 0x17: fleets and capital ships get their numbered names, after the characters and before the day-0 pictures. rule: m5-setup-and-victory §P7 Names (B4 §12)
@@ -114,9 +114,9 @@ public static class NewGame
         // No research grant: every side starts at level 0 in every track and builds only order-0 classes (the Nebulon-B Frigates of the
         // starting fleet stay unbuildable until Ship level 1). rule: m5-research §State per side (no setup path preloads a level), RS1.
         eco.SetupNewGame(); // stockpile, then the two incident timers
-        host.Research.SetupNewGame(); // the research percents, then the two research tick arming draws, Alliance then Empire. rule: m5-research §Random draws (a)
+        host.Research.SetupNewGame(); // the research percents, then the two research tick arming draws, Collective then Hand. rule: m5-research §Random draws (a)
         if (o.Settings?.Economy == null) // DEFAULT starting stockpile of the playable slice (the economy's own default is 0/0)
-            foreach (var side in new[] { Side.Empire, Side.Alliance })
+            foreach (var side in new[] { Side.Hand, Side.Collective })
                 eco.SetPools(side, forces.Int(side, "start_raw"), forces.Int(side, "start_refined"));
         return host;
     }
@@ -140,8 +140,8 @@ public static class NewGame
         foreach (var (s, kind, count) in forces.BaseFacilities)
             if (s == side) for (int i = 0; i < count; i++) PlaceNear(host, held, baseSys, kind);
         var sites = new List<string>();
-        // DEFAULT (2026-10-16, v5 galaxy): never the Rebel HQ. The second fleet starts at the first site, and a fleet parked on the HQ both
-        // gives the HQ away and gets kept there as home defence by the AI (the v5 deal put the richest Alliance system on the HQ).
+        // DEFAULT (2026-10-16, v5 galaxy): never the Hearth. The second fleet starts at the first site, and a fleet parked on the HQ both
+        // gives the HQ away and gets kept there as home defence by the AI (the v5 deal put the richest Collective system on the HQ).
         string? hqSys = host.Game.State.Scenario.HqSystem;
         for (int n = 0, extra = forces.Int(side, "extra_yard_sites"); n < extra; n++)
         {
@@ -217,7 +217,7 @@ public static class NewGame
     /// <summary>
     /// economy_systems scaled to the galaxy's size, rounded half up, like the day-one totals (AnchoredDealer.TotalsBaseSystems): holdings and
     /// garrisons grew with the 555-system v5 galaxy, so the mines and refineries (the upkeep capacity) grow with them. DEFAULT (2026-10-16, v5):
-    /// without it the Empire's 166 garrison regiments ate a third of an unchanged capacity of 1400.
+    /// without it the Hand's 166 garrison regiments ate a third of an unchanged capacity of 1400.
     /// </summary>
     private static int ScaledEconomySystems(GameHost host, int perBase)
     {

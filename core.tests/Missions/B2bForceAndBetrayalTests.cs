@@ -6,11 +6,11 @@ using static Praedra.Core.Tests.Missions.MissionWorld;
 namespace Praedra.Core.Tests.Missions;
 
 // B2b-force-sensing-and-betrayal tests B2b-1 to B2b-11. rule: m5-missions §3 Force sensing, Betrayal; m5-characters-and-force §Loyalty.
-// An Alliance Espionage team flies from H to T (Empire-held) with no guards unless a test adds one: the job check at T is sensing, betrayal, then
+// A Collective Espionage team flies from H to T (Hand-held) with no guards unless a test adds one: the job check at T is sensing, betrayal, then
 // the success rolls. B2d: the team starts at H so the leaving and arriving checks have no sensers (sensers stand in the check's scopes).
 public class B2bForceAndBetrayalTests
 {
-    private const int Crix = 837, Rieekan = 838; // Alliance characters who can betray (nobetray 0)
+    private const int Crix = 837, Rieekan = 838; // Collective characters who can betray (nobetray 0)
 
     private static CharacterRecord Force(MissionWorld w, int id, int force)
     {
@@ -19,18 +19,18 @@ public class B2bForceAndBetrayalTests
         return c;
     }
 
-    // Agents with the given Force (every skill 0 except espionage 50): Alliance characters at H, the others at T.
+    // Agents with the given Force (every skill 0 except espionage 50): Collective characters at H, the others at T.
     private static MissionWorld World(bool decoys = false, MissionParams? p = null, params (int Id, int Force)[] agents)
     {
         var w = new MissionWorld(p, decoys);
-        w.Hold(T, Side.Empire, 0);
-        foreach (var (id, f) in agents) { var c = w.Agent(id, T, esp: 50); if (c.Side == Side.Alliance) w.Ch.Place(id, H); Force(w, id, f); }
+        w.Hold(T, Side.Hand, 0);
+        foreach (var (id, f) in agents) { var c = w.Agent(id, T, esp: 50); if (c.Side == Side.Collective) w.Ch.Place(id, H); Force(w, id, f); }
         return w;
     }
 
     private static int StartEspionage(MissionWorld w, int[] team, int[]? sfs = null, int[]? decoys = null, int[]? decoyChars = null)
     {
-        long seq = w.Start(Side.Alliance, MissionKind.Espionage, team, T, sfs, decoys, decoyChars: decoyChars);
+        long seq = w.Start(Side.Collective, MissionKind.Espionage, team, T, sfs, decoys, decoyChars: decoyChars);
         w.Game.Step();
         Assert.Null(w.Reason(seq));
         w.RunUntilWorking(w.LastMission); // B2d: the team flies in from H; landing (and its timer draw) comes before the job check
@@ -66,7 +66,7 @@ public class B2bForceAndBetrayalTests
     public void B2b2_SenserFilter()
     {
         var w = World(agents: new[] { (Luke, 50), (Piett, 59), (Veers, 60), (MonMothma, 150), (Palpatine, 120) });
-        w.Ch.Capture(null, w.Ch.Get(Palpatine)!, Side.Alliance, T, CharacterCause.Debug);
+        w.Ch.Capture(null, w.Ch.Get(Palpatine)!, Side.Collective, T, CharacterCause.Debug);
         w.Stub!.Expect(0, 99, 99);
         int id = StartEspionage(w, new[] { Luke });
         Assert.Equal(new[] { Veers }, w.M.Sensers(w.M.Get(id)!).Select(c => c.Id));
@@ -80,7 +80,7 @@ public class B2bForceAndBetrayalTests
     {
         var w = World(agents: new[] { (Han, 0), (Lando, 80), (Vader, 120) });
         int id = StartEspionage(w, new[] { Han, Lando });
-        w.Ch.Capture(null, w.Ch.Get(Lando)!, Side.Empire, T, CharacterCause.Debug);
+        w.Ch.Capture(null, w.Ch.Get(Lando)!, Side.Hand, T, CharacterCause.Debug);
         w.RunIteration(id);
         Assert.Empty(w.Events<MissionForceSenseRoll>());
         Assert.Single(w.Events<MissionBetrayalRoll>()); // Han only: Lando left the group
@@ -91,7 +91,7 @@ public class B2bForceAndBetrayalTests
     public void B2b4_SensedDecoyFoilsNothing()
     {
         var w = World(decoys: true, p: new MissionParams { DecoysFromSpecialForcesOnly = false }, agents: new[] { (Leia, 0), (Lando, 80), (Vader, 120) });
-        int guard = w.Unit(Side.Empire, Probe, T); // B2d: a special force on the enemy-held planet guards a planet target
+        int guard = w.Unit(Side.Hand, Probe, T); // B2d: a special force on the enemy-held planet guards a planet target
         // B2e moved: the mutual discovery makes Lando meet Vader in the decoy pre-step (B2e §4) instead of rolling against the guard. Draws:
         // sensed (0 < 100), two betrayal draws, Lando's duel against Vader (x = 0: 0 escapes, he leaves the group), his Hurt roll (combat 0: p = 100,
         // 99 hits; sizes 0 and 0), his death draw 99 (lives), Vader's HurtBy (p = 1: 99 misses), walk misses, success roll fails
@@ -116,8 +116,8 @@ public class B2bForceAndBetrayalTests
     public void B2b5_SensedTeamMemberFoils()
     {
         var w = World(decoys: true, agents: new[] { (Leia, 80), (Vader, 120) });
-        w.Unit(Side.Empire, Probe, T);
-        int inf = w.Unit(Side.Alliance, Infiltrators, H);
+        w.Unit(Side.Hand, Probe, T);
+        int inf = w.Unit(Side.Collective, Infiltrators, H);
         int id = StartEspionage(w, new[] { Leia }, decoys: new[] { inf });
         int from = w.Stub!.Requests.Count;
         w.RunIteration(id);
@@ -207,14 +207,14 @@ public class B2bForceAndBetrayalTests
         Assert.Empty(w.Events<MissionMemberRoll>());
     }
 
-    // B2b-10: ShiftLoyalty(1, -5): an Alliance character at 100 -> 95, an Imperial at 98 -> 100 (clamped), Luke unchanged (unable to betray),
-    // an Alliance character at 3 -> 0 (clamped)
+    // B2b-10: ShiftLoyalty(1, -5): a Collective character at 100 -> 95, a Hand at 98 -> 100 (clamped), Luke unchanged (unable to betray),
+    // a Collective character at 3 -> 0 (clamped)
     [Fact]
     public void B2b10_ShiftLoyalty()
     {
         var w = World(agents: new[] { (Lando, 0), (Piett, 0), (Luke, 50), (Crix, 0) });
         w.Ch.Get(Piett)!.Loyalty = 98; w.Ch.Get(Crix)!.Loyalty = 3;
-        w.Ch.ShiftLoyalty(new StepContext(w.Game, w.Game.Day), CharacterModule.SideNumberAlliance, -5);
+        w.Ch.ShiftLoyalty(new StepContext(w.Game, w.Game.Day), CharacterModule.SideNumberCollective, -5);
         Assert.Equal((95, 100, 100, 0), (w.Ch.Get(Lando)!.Loyalty, w.Ch.Get(Piett)!.Loyalty, w.Ch.Get(Luke)!.Loyalty, w.Ch.Get(Crix)!.Loyalty));
         Assert.Equal(new[] { (Lando, 100, 95), (Piett, 98, 100), (Crix, 3, 0) }, w.Events<LoyaltyChanged>().Select(e => (e.Character, e.From, e.To)).OrderBy(e => e.Character != Lando).ThenBy(e => e.Character != Piett));
     }
@@ -227,7 +227,7 @@ public class B2bForceAndBetrayalTests
         w.Ch.Get(Rieekan)!.Loyalty = 50;
         var ctx = new StepContext(w.Game, w.Game.Day);
         w.Ch.ShiftLoyalty(ctx, 3, 5);
-        w.Ch.ShiftLoyalty(ctx, CharacterModule.SideNumberAlliance, 0);
+        w.Ch.ShiftLoyalty(ctx, CharacterModule.SideNumberCollective, 0);
         Assert.Equal((100, 100, 50), (w.Ch.Get(Lando)!.Loyalty, w.Ch.Get(Piett)!.Loyalty, w.Ch.Get(Rieekan)!.Loyalty));
         Assert.Empty(w.Events<LoyaltyChanged>());
     }

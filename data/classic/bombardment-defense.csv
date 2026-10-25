@@ -17,4 +17,4 @@ facility,Advanced Training Facility,4,classic: MANFACSD word 12 (importer); B7-b
 facility,Advanced Construction Yard,4,classic: MANFACSD word 12 (importer); B7-bombardment §7
 facility,Mine,5,classic: PROFACSD word 12 (importer); B7-bombardment §7
 facility,Refinery,2,classic: PROFACSD word 12 (importer); B7-bombardment §7
-hq,Alliance Headquarters,9,classic: ALLFACSD word 12 (importer); B7-bombardment §3 and §7 (read only with HqBombardable)
+hq,Hearth,9,classic: ALLFACSD word 12 (importer); B7-bombardment §3 and §7 (read only with HqBombardable)

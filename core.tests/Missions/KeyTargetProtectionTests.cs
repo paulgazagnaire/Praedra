@@ -11,17 +11,17 @@ public class KeyTargetProtectionTests
 {
     private const string Corvette = "Dodger";
 
-    // The B2e-20 setup: Imperial member on Diplomacy from H to Imperial T, where an Alliance corvette (Admiral Wedge, combat 80) detects him at
+    // The B2e-20 setup: Hand member on Diplomacy from H to Hand T, where a Collective corvette (Admiral Wedge, combat 80) detects him at
     // the arrival walk (draw 0) and wins the duel (draw 99); the member's Hurt roll misses (99); then, under Capped, the cap roll.
     private static MissionWorld DuelWorld(int member, MissionParams? p, params int[] after)
     {
         var w = new MissionWorld(p);
-        w.Hold(H, Side.Empire, 0); w.Hold(T, Side.Empire, 0);
+        w.Hold(H, Side.Hand, 0); w.Hold(T, Side.Hand, 0);
         w.Agent(member, H, dip: 50);
-        int fleet = w.Host.Fleets.AddFleet(Side.Alliance, "F", new[] { Corvette }, T);
+        int fleet = w.Host.Fleets.AddFleet(Side.Collective, "F", new[] { Corvette }, T);
         w.Agent(Wedge, T, com: 80); w.Ch.SetPost(Wedge, fleet, CharacterPost.Admiral);
         w.Stub!.Expect(0, 99, new[] { 0, 99, 99 }.Concat(after).ToArray());
-        w.Start(Side.Empire, MissionKind.Diplomacy, new[] { member }, T);
+        w.Start(Side.Hand, MissionKind.Diplomacy, new[] { member }, T);
         w.Run(5);
         return w;
     }
@@ -35,7 +35,7 @@ public class KeyTargetProtectionTests
     {
         var w = DuelWorld(Palpatine, null, roll);
         var r = w.Events<MissionKeyDuelCaptureRoll>().Single();
-        Assert.Equal((Palpatine, Side.Alliance, 2, roll, captured), (r.Member, r.Captor, r.Cap, r.Roll, r.Captured));
+        Assert.Equal((Palpatine, Side.Collective, 2, roll, captured), (r.Member, r.Captor, r.Cap, r.Roll, r.Captured));
         var emp = w.Ch.Get(Palpatine)!;
         Assert.Equal(captured, emp.Status == CharacterStatus.Captured);
         Assert.Equal(captured ? 1 : 0, w.Events<CharacterCaptured>().Count);
@@ -75,11 +75,11 @@ public class KeyTargetProtectionTests
     public void MI69_ForceEncounterDuel(KeyDuelCapture mode, int roll, bool captured)
     {
         var w = new MissionWorld(new MissionParams { KeyDuelCapture = mode });
-        w.Hold(T, Side.Empire, 0);
+        w.Hold(T, Side.Hand, 0);
         var luke = w.Agent(Luke, H, esp: 50, com: 90);
         var vader = w.Agent(Vader, T, com: 100);
         luke.DiscoveredForceUser = Vader; vader.DiscoveredForceUser = Luke; luke.PairId = vader.PairId = 1;
-        w.Start(Side.Alliance, MissionKind.Espionage, new[] { Luke }, T);
+        w.Start(Side.Collective, MissionKind.Espionage, new[] { Luke }, T);
         w.Game.Step();
         w.RunUntilWorking(w.LastMission);
         // sensing hits (0), the duel is lost (99), Luke's Hurt misses (99), [the cap roll], the two HurtBy rolls miss (99, 99), the hand draw 39
@@ -106,12 +106,12 @@ public class KeyTargetProtectionTests
         Assert.Equal(CharacterStatus.Free, w.Ch.Get(Palpatine)!.Status);
     }
 
-    // Vader on Assassination of a target standing at Alliance T with one landed Alliance Army regiment.
+    // Vader on Assassination of a target standing at Collective T with one landed Collective Army regiment.
     private static MissionWorld KeyJob(int target, MissionParams? p, int vaderEsp = 60, int regiments = 1)
     {
         var w = new MissionWorld(p, characters: Praedra.Core.Tests.Characters.CharWorld.ClassicForce()); // the Classic Force (100 / 100 / 50): m5-characters-and-force §Force CH37
-        w.Hold(T, Side.Alliance, 30);
-        for (int i = 0; i < regiments; i++) w.Unit(Side.Alliance, RebArmy, T);
+        w.Hold(T, Side.Collective, 30);
+        for (int i = 0; i < regiments; i++) w.Unit(Side.Collective, RebArmy, T);
         w.Agent(Vader, T, esp: vaderEsp, com: 100);
         w.Agent(target, T);
         return w;
@@ -128,7 +128,7 @@ public class KeyTargetProtectionTests
         var w = KeyJob(target, new MissionParams { KeyTargetGuards = mode });
         int regiment = w.Host.Economy.Objects.Single(o => o.Class == RebArmy).Id;
         w.Stub!.Expect(0, 99, Bt(1, 99, 99)); // betrayal, [detection misses], the success roll fails
-        long s = w.Start(Side.Empire, MissionKind.Assassination, new[] { Vader }, null, targetChar: target);
+        long s = w.Start(Side.Hand, MissionKind.Assassination, new[] { Vader }, null, targetChar: target);
         w.Game.Step();
         Assert.Null(w.Reason(s));
         w.RunIteration(w.LastMission);
@@ -147,20 +147,20 @@ public class KeyTargetProtectionTests
         var p = new MissionParams { KeyTargetBaseSkills = baseSkills };
         var walk = KeyJob(Luke, p, vaderEsp: 50);
         walk.Stub!.Expect(0, 99, Bt(1, 99, 99));
-        walk.Start(Side.Empire, MissionKind.Assassination, new[] { Vader }, null, targetChar: Luke);
+        walk.Start(Side.Hand, MissionKind.Assassination, new[] { Vader }, null, targetChar: Luke);
         walk.Game.Step();
         walk.RunIteration(walk.LastMission);
         int x = walk.Events<MissionDetectionRoll>().First().X;
         var reference = KeyJob(Luke, p with { KeyTargetBaseSkills = !baseSkills }, vaderEsp: 50);
         reference.Stub!.Expect(0, 99, Bt(1, 99, 99));
-        reference.Start(Side.Empire, MissionKind.Assassination, new[] { Vader }, null, targetChar: Luke);
+        reference.Start(Side.Hand, MissionKind.Assassination, new[] { Vader }, null, targetChar: Luke);
         reference.Game.Step();
         reference.RunIteration(reference.LastMission);
         Assert.Equal(baseSkills ? -60 : 60, x - reference.Events<MissionDetectionRoll>().First().X);
 
         var w = KeyJob(Luke, p, vaderEsp: 50, regiments: 0);
         w.Stub!.Expect(0, 99, Bt(1, 0, 50)); // betrayal, the success roll passes (0 < 4), [k = 50: kill]
-        w.Start(Side.Empire, MissionKind.Assassination, new[] { Vader }, null, targetChar: Luke);
+        w.Start(Side.Hand, MissionKind.Assassination, new[] { Vader }, null, targetChar: Luke);
         w.Game.Step();
         w.RunIteration(w.LastMission);
         Assert.True(w.Events<MissionMemberRoll>().Single().Success);

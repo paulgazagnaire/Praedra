@@ -70,7 +70,7 @@ public class SlotTests
     {
         var w = new EcoWorld();
         w.Stub!.Expect(0, 3, 2); // the mine's and refinery's first-cycle draws have other ranges
-        w.Hold("The Lantern", Side.Empire);
+        w.Hold("The Lantern", Side.Hand);
         w.Eco.SetSlots("The Lantern", 3, 3);
         w.Mine("The Lantern", id: 5); w.Refinery("The Lantern", id: 6);
         w.Eco.AddFacility("The Lantern", FacilityKind.OrbitalShipyard, id: 7);
@@ -81,7 +81,7 @@ public class SlotTests
         var e = Assert.Single(w.Events<FacilityDestroyed>());
         Assert.Equal((7, "The Lantern", DestroyReason.OverEnergy), (e.Facility, e.System, e.Reason));
         Assert.Null(w.Eco.Find(7));
-        Assert.Equal(0, w.Eco.Refined(Side.Empire)); // no refund
+        Assert.Equal(0, w.Eco.Refined(Side.Hand)); // no refund
     }
 
     // m2-slots-and-resources S6

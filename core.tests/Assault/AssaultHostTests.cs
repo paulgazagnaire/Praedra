@@ -23,18 +23,18 @@ public class AssaultHostTests
     private static GameHost Scenario(ulong seed)
     {
         var h = GameHost.New(seed, new GameSettings { IncidentsEnabled = false });
-        h.Fleets.SetOwner("Fiducia", Side.Alliance);
-        h.Economy.SetAllianceSupport("Fiducia", 100);
-        for (int i = 0; i < 5; i++) h.Economy.AddObject(Side.Alliance, "Militia", "Fiducia");
+        h.Fleets.SetOwner("Fiducia", Side.Collective);
+        h.Economy.SetCollectiveSupport("Fiducia", 100);
+        for (int i = 0; i < 5; i++) h.Economy.AddObject(Side.Collective, "Militia", "Fiducia");
         h.Economy.AddFacility("Fiducia", FacilityKind.Kdy150);
-        int f = h.Fleets.AddFleet(Side.Empire, "Landing", new[] { "Decree", "Decree", "Decree" }, "Fiducia");
+        int f = h.Fleets.AddFleet(Side.Hand, "Landing", new[] { "Decree", "Decree", "Decree" }, "Fiducia");
         var ships = h.Game.State.Fleets[f].Ships;
         for (int i = 0; i < 6; i++)
         {
-            var r = h.Economy.Find(h.Economy.AddObject(Side.Empire, "Pacifiers", null))!;
+            var r = h.Economy.Find(h.Economy.AddObject(Side.Hand, "Pacifiers", null))!;
             r.AboardShip = ships[i / 2]; r.System = null;
         }
-        h.Assault.SubmitAssault(Side.Empire, f, "Fiducia");
+        h.Assault.SubmitAssault(Side.Hand, f, "Fiducia");
         return h;
     }
 
@@ -78,7 +78,7 @@ public class AssaultHostTests
         var json = h.Save();
         Assert.Contains("\"Assault\"", json);
         var l = GameHost.Load(json);
-        Assert.Contains(l.Game.Queue, o => o is AssaultOrder { System: "Fiducia", Side: Side.Empire });
+        Assert.Contains(l.Game.Queue, o => o is AssaultOrder { System: "Fiducia", Side: Side.Hand });
     }
 
     // the test campaign's one scripted assault (day 250, the interdiction fleet lands on Tierra Larga), with every daily invariant green
@@ -88,7 +88,7 @@ public class AssaultHostTests
         var run = CampaignHarness.Checked(1, Praedra.Core.Support.GarrisonRuleset.Classic);
         var started = Assert.Single(run.Events.OfType<AssaultStarted>());
         Assert.Equal(TestCampaign.AssaultDay + 1, started.Day);
-        Assert.Equal((TestCampaign.BlockadedSystem, Side.Empire, TestCampaign.AssaultRegiments), (started.System, started.Side, started.A0));
+        Assert.Equal((TestCampaign.BlockadedSystem, Side.Hand, TestCampaign.AssaultRegiments), (started.System, started.Side, started.A0));
         var res = Assert.Single(run.Events.OfType<AssaultResolved>());
         Assert.Equal(started.System, res.System);
         Assert.Empty(run.Events.OfType<AssaultCancelled>());

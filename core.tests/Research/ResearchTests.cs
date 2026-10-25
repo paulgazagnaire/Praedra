@@ -11,11 +11,11 @@ namespace Praedra.Core.Tests.Research;
 // Rule sheet: m5-research (research and tech unlocks). Each test names its test id (RS1..RS36).
 public class ResearchTests
 {
-    private const Side A = Side.Alliance, E = Side.Empire;
+    private const Side A = Side.Collective, E = Side.Hand;
     private const ResearchKind Ship = ResearchKind.Ship, Troop = ResearchKind.Troop, Facility = ResearchKind.Facility;
     private const string Yard1 = "Charter", Yard2 = "Classis", Yard3 = "Navalia", Yard4 = "Caminus", Enemy = "Salus", Neutral = "Fiscus";
 
-    private static ResearchWorld AllianceShipyard()
+    private static ResearchWorld CollectiveShipyard()
     {
         var w = new ResearchWorld();
         w.Hold(Yard1, A);
@@ -25,7 +25,7 @@ public class ResearchTests
 
     private static List<string> BuildableShips(GameHost h, Side side) =>
         h.Economy.Costs.Rows.Where(r => r.Category is ObjectCategory.CapitalShip or ObjectCategory.Fighter && r.Cost > 0
-                && (side == Side.Empire ? r.Empire : r.Alliance) && h.Construction.IsResearched(side, r.Name))
+                && (side == Side.Hand ? r.Hand : r.Collective) && h.Construction.IsResearched(side, r.Name))
             .Select(r => r.Name).OrderBy(n => n, StringComparer.Ordinal).ToList();
 
     // m5-research RS1
@@ -43,7 +43,7 @@ public class ResearchTests
         // every side can build something in every family at the MedA start (troops and facilities at level 0)
         foreach (var side in new[] { A, E })
         {
-            Assert.Contains(h.Economy.Costs.Rows, r => r.Category is ObjectCategory.Regiment && (side == E ? r.Empire : r.Alliance) && h.Construction.IsResearched(side, r.Name));
+            Assert.Contains(h.Economy.Costs.Rows, r => r.Category is ObjectCategory.Regiment && (side == E ? r.Hand : r.Collective) && h.Construction.IsResearched(side, r.Name));
             Assert.True(h.Construction.IsResearched(side, "Mine"));
             Assert.True(h.Construction.IsResearched(side, "Orbital Shipyard"));
         }
@@ -52,13 +52,13 @@ public class ResearchTests
     // m5-research RS2
     [Fact]
     public void RS2_NebulonBAtLevelZeroIsNotResearched() =>
-        Assert.Equal(RejectReason.NotResearched, AllianceShipyard().TryOrder(A, Yard1, YardFamily.Shipyard, "Mender"));
+        Assert.Equal(RejectReason.NotResearched, CollectiveShipyard().TryOrder(A, Yard1, YardFamily.Shipyard, "Mender"));
 
     // m5-research RS3
     [Fact]
     public void RS3_SwitchOffIsAllAvailable()
     {
-        var w = AllianceShipyard();
+        var w = CollectiveShipyard();
         w.Build.RespectResearchOrder = false;
         Assert.Null(w.TryOrder(A, Yard1, YardFamily.Shipyard, "Mender"));
     }
@@ -67,7 +67,7 @@ public class ResearchTests
     [Fact]
     public void RS4_LevelOneOpensNebulonBButNotMonCalamari()
     {
-        var w = AllianceShipyard();
+        var w = CollectiveShipyard();
         w.Research.SetLevel(A, Ship, 1);
         Assert.Null(w.TryOrder(A, Yard1, YardFamily.Shipyard, "Mender"));
         Assert.Equal(RejectReason.NotResearched, w.TryOrder(A, Yard1, YardFamily.Shipyard, "Ark"));
@@ -77,7 +77,7 @@ public class ResearchTests
     [Fact]
     public void RS5_AGrantOverridesTheLevel()
     {
-        var w = AllianceShipyard();
+        var w = CollectiveShipyard();
         w.Build.GrantResearch(A, "Ark");
         Assert.Null(w.TryOrder(A, Yard1, YardFamily.Shipyard, "Ark"));
         Assert.Equal(RejectReason.NotResearched, w.TryOrder(A, Yard1, YardFamily.Shipyard, "Wasp"));
@@ -144,7 +144,7 @@ public class ResearchTests
 
     // m5-research RS11
     [Fact]
-    public void RS11_EmpireTroopsPayRungOneOnly()
+    public void RS11_HandTroopsPayRungOneOnly()
     {
         var w = new ResearchWorld();
         w.Add(E, Troop, 111);
@@ -155,7 +155,7 @@ public class ResearchTests
 
     // m5-research RS12
     [Fact]
-    public void RS12_EmpireTroopLadderIsExhausted()
+    public void RS12_HandTroopLadderIsExhausted()
     {
         var w = new ResearchWorld();
         w.Add(E, Troop, 112);
@@ -166,7 +166,7 @@ public class ResearchTests
 
     // m5-research RS13
     [Fact]
-    public void RS13_AllianceTroopLadderClimbsThreeRungs()
+    public void RS13_CollectiveTroopLadderClimbsThreeRungs()
     {
         var w = new ResearchWorld();
         Assert.Equal(3, w.Add(A, Troop, 112));
@@ -207,7 +207,7 @@ public class ResearchTests
 
     // m5-research RS16
     [Fact]
-    public void RS16_DeathStarShieldIsEmpireRungThree()
+    public void RS16_DeathStarShieldIsHandRungThree()
     {
         var w = new ResearchWorld();
         w.Add(E, Facility, 24 + 40);
@@ -299,7 +299,7 @@ public class ResearchTests
 
     // m5-research RS21
     [Fact]
-    public void RS21_SetupArmsBothTicksAllianceFirst()
+    public void RS21_SetupArmsBothTicksCollectiveFirst()
     {
         var w = new ResearchWorld();
         w.Stub!.Queue(5, 17);
@@ -330,7 +330,7 @@ public class ResearchTests
         w.Fac(Yard2, FacilityKind.TrainingFacility); w.Fac(Yard3, FacilityKind.TrainingFacility);
         w.Fac(Yard3, FacilityKind.ConstructionYard); w.Fac(Yard4, FacilityKind.AdvancedConstructionYard);
         for (int i = 0; i < 4; i++) w.Fac(Yard4, FacilityKind.Mine);
-        w.Stub!.Expect(0, 30, 0, 30, 7, 9); // arming: Alliance 30, Empire 60; then Alliance re-arms with 7
+        w.Stub!.Expect(0, 30, 0, 30, 7, 9); // arming: Collective 30, Hand 60; then Collective re-arms with 7
         w.Arm();
         return w;
     }
@@ -389,7 +389,7 @@ public class ResearchTests
 
     // m5-research RS25
     [Fact]
-    public void RS25_BothSidesFireInOneStepAllianceFirst()
+    public void RS25_BothSidesFireInOneStepCollectiveFirst()
     {
         var w = new ResearchWorld();
         w.Stub!.Expect(0, 30, 0, 0, 3, 9);
@@ -418,7 +418,7 @@ public class ResearchTests
         var w = new ResearchWorld();
         w.Hold(Yard1, A); w.Hold(Yard2, A);
         for (int i = 0; i < 6; i++) { w.Fac(Yard1, FacilityKind.OrbitalShipyard); w.Fac(Yard2, FacilityKind.OrbitalShipyard); }
-        w.Stub!.Expect(0, 30, 0, 30, 0, 0, 0, 0); // every Alliance tick 30 days apart
+        w.Stub!.Expect(0, 30, 0, 30, 0, 0, 0, 0); // every Collective tick 30 days apart
         w.Arm();
         var expected = new[] { (1, 0), (1, 12), (2, 0), (2, 12) };
         for (int tick = 0; tick < 4; tick++)
@@ -436,12 +436,12 @@ public class ResearchTests
         w.Hold(Yard1, A); w.Hold(Yard2, A);
         w.Fac(Yard1, FacilityKind.OrbitalShipyard); w.Fac(Yard2, FacilityKind.OrbitalShipyard);
         Assert.Equal(2, w.Research.CountYards(A)[(int)Ship]);
-        w.Fleets.AddFleet(Side.Empire, "Picket", new List<string> { "Subpoena" }, Yard1, new List<string>());
+        w.Fleets.AddFleet(Side.Hand, "Picket", new List<string> { "Subpoena" }, Yard1, new List<string>());
         Assert.True(w.Fleets.IsEconomicBlockade(Yard1, A));
         Assert.Equal(1, w.Research.CountYards(A)[(int)Ship]);
         var off = new ResearchWorld(ResearchWorld.Unscaled with { BlockadeStopsResearch = false });
         off.Hold(Yard1, A); off.Fac(Yard1, FacilityKind.OrbitalShipyard);
-        off.Fleets.AddFleet(Side.Empire, "Picket", new List<string> { "Subpoena" }, Yard1, new List<string>());
+        off.Fleets.AddFleet(Side.Hand, "Picket", new List<string> { "Subpoena" }, Yard1, new List<string>());
         Assert.Equal(1, off.Research.CountYards(A)[(int)Ship]);
     }
 
@@ -499,10 +499,10 @@ public class ResearchTests
     [Fact]
     public void RS30_ALevelGainedAtSlot69IsSeenByOrdersFromTheNextStep()
     {
-        var w = AllianceShipyard();
+        var w = CollectiveShipyard();
         w.Research.SetPoints(A, Ship, 11);
         w.Stub!.Expect(0, 30, 0, 30);
-        w.Arm(); // Alliance tick at T = 30, in the Step whose K = 29
+        w.Arm(); // Collective tick at T = 30, in the Step whose K = 29
         w.RunTo(29);
         Assert.Equal(RejectReason.NotResearched, w.TryOrder(A, Yard1, YardFamily.Shipyard, "Mender")); // step 1 runs before 6.9
         Assert.Equal(1, w.Research.Level(A, Ship)); // reached at 6.9 of that same Step
@@ -554,7 +554,7 @@ public class ResearchTests
         Assert.Equal(a.Game.Rng.Draws, b.Game.Rng.Draws);
         Assert.Equal(a.Game.Events.Select(e => e.ToString()), b.Game.Events.Select(e => e.ToString()));
         Assert.Equal(a.Game.Events.OfType<ResearchLevelReached>(), b.Game.Events.OfType<ResearchLevelReached>());
-        Assert.NotEmpty(a.Game.Events.OfType<ResearchLevelReached>()); // the Empire's nine yards climb the ladders
+        Assert.NotEmpty(a.Game.Events.OfType<ResearchLevelReached>()); // the Hand's nine yards climb the ladders
         // ladders are lists sorted by order then catalogue row, never a dictionary order
         foreach (var side in new[] { A, E })
             foreach (var k in ResearchModule.Kinds)
@@ -613,7 +613,7 @@ public class ResearchTests
     [Fact]
     public void RS35_OneClassPerRungDataCheck()
     {
-        // Hauler (an Alliance capital ship listed before the Needle) moved to rung 3 with difficulty 99
+        // Hauler (a Collective capital ship listed before the Needle) moved to rung 3 with difficulty 99
         var data = Modified(l => l.StartsWith("0x28 ship,capital ship,65,Hauler,", StringComparison.Ordinal) ? "0x28 ship,capital ship,65,Hauler,1,0,30,3,99,locked,n/a" : l);
         var ex = Assert.Throws<DataLoadException>(() => new ResearchWorld(data: data));
         Assert.Contains("rung 3", ex.Message);

@@ -215,9 +215,9 @@ public class CharacterTests
     public void CH8_AdmiralMultipliesBombardment_UntilInjured()
     {
         var w = new CharWorld();
-        int f = w.Fleet(Side.Alliance, Yavin, MonCal);
+        int f = w.Fleet(Side.Collective, Yavin, MonCal);
         var ack = w.Add(Ackbar, Yavin); ack.Skills[(int)Skill.Leadership] = 100;
-        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Alliance, Ackbar, f, CharacterPost.Admiral)));
+        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, Ackbar, f, CharacterPost.Admiral)));
         var fleet = w.Game.State.Fleets[f];
         var bomb = w.Host.Bombardment;
         int b = bomb.BaseValue(fleet);
@@ -244,9 +244,9 @@ public class CharacterTests
     public void CH9_HanAsFleetGeneralIsTheAssaultPlusOneRow()
     {
         var w = new CharWorld();
-        int f = w.Fleet(Side.Alliance, Hoth);
+        int f = w.Fleet(Side.Collective, Hoth);
         w.Add(Han, Hoth);
-        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Alliance, Han, f, CharacterPost.General)));
+        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, Han, f, CharacterPost.General)));
         var a = w.Host.Assault;
         int lAtt = a.FleetGeneralLeadership(w.Game.State.Fleets[f]), lDef = a.SystemGeneralLeadership(Hoth);
         Assert.Equal((90, 0), (lAtt, lDef));
@@ -260,9 +260,9 @@ public class CharacterTests
     public void CH10_SystemGeneralLeadsTheDefenders()
     {
         var w = new CharWorld();
-        w.Hold(Hoth, Side.Empire);
+        w.Hold(Hoth, Side.Hand);
         var p = w.Add(Piett, Hoth); p.Skills[(int)Skill.Leadership] = 85;
-        Assert.Null(w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Empire, Piett, Hoth)));
+        Assert.Null(w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Hand, Piett, Hoth)));
         Assert.Single(w.Events<SystemGeneralAssigned>());
         var a = w.Host.Assault;
         Assert.Equal(85, a.SystemGeneralLeadership(Hoth));
@@ -275,31 +275,31 @@ public class CharacterTests
     [Fact]
     public void CH11_AttachRejections_ChewbaccaAsPassenger()
     {
-        // The Empire ISD at The Shoal starts a battle on the Step. Ruleset = Classic set explicitly (battle DEFAULT New since 2026-10-18): in Classic
+        // The Hand ISD at The Shoal starts a battle on the Step. Ruleset = Classic set explicitly (battle DEFAULT New since 2026-10-18): in Classic
         // both corvettes retreat together; in New the ISD's tractor beam holds fleet f's corvette and destroys it (m4-retreat-damage-repair
         // TractorBeamsHoldRetreat), which dissolves the fleet and detaches Oti. This test checks the attach rules, not the battle.
         var w = new CharWorld(settings: new GameSettings { IncidentsEnabled = false, DebugOrdersEnabled = true,
             Economy = new Praedra.Core.Economy.EconomyParams { ScrapPeriod = 1_000_000 },
             Battle = new Praedra.Core.Battle.BattleParams { Ruleset = Praedra.Core.Battle.BattleRuleset.Classic } });
-        int f = w.Fleet(Side.Alliance, Yavin);
-        int moving = w.Fleet(Side.Alliance, Yavin);
-        int imp = w.Fleet(Side.Empire, Yavin, Isd);
+        int f = w.Fleet(Side.Collective, Yavin);
+        int moving = w.Fleet(Side.Collective, Yavin);
+        int imp = w.Fleet(Side.Hand, Yavin, Isd);
         w.Add(Ackbar, Yavin); w.Add(Madine, Yavin); w.Add(Chewbacca, Yavin); w.Add(Afyon, Yavin); w.Add(Dodonna, Yavin);
         w.Add(Wedge, Hoth);
         w.Ch.IsOnMission = id => id == Dodonna;
         long Attach(Side s, int c, int fleet, CharacterPost p) => w.Submit(seq => new AttachCharacterOrder(seq, s, c, fleet, p));
 
-        long a1 = Attach(Side.Empire, Ackbar, f, CharacterPost.Admiral);
-        long a2 = Attach(Side.Alliance, Ackbar, imp, CharacterPost.Admiral);
-        long a3 = Attach(Side.Alliance, Wedge, f, CharacterPost.None);
-        long mv = w.Submit(seq => new MoveFleetOrder(seq, Side.Alliance, moving, Hoth));
-        long a4 = Attach(Side.Alliance, Ackbar, moving, CharacterPost.Admiral);
-        long a5 = Attach(Side.Alliance, Madine, f, CharacterPost.Admiral);
-        long a6 = Attach(Side.Alliance, Dodonna, f, CharacterPost.None);
-        long ok = Attach(Side.Alliance, Ackbar, f, CharacterPost.Admiral);
-        long a7 = Attach(Side.Alliance, Afyon, f, CharacterPost.Admiral);
-        long a8 = Attach(Side.Alliance, Ackbar, f, CharacterPost.None);
-        long chewie = Attach(Side.Alliance, Chewbacca, f, CharacterPost.None);
+        long a1 = Attach(Side.Hand, Ackbar, f, CharacterPost.Admiral);
+        long a2 = Attach(Side.Collective, Ackbar, imp, CharacterPost.Admiral);
+        long a3 = Attach(Side.Collective, Wedge, f, CharacterPost.None);
+        long mv = w.Submit(seq => new MoveFleetOrder(seq, Side.Collective, moving, Hoth));
+        long a4 = Attach(Side.Collective, Ackbar, moving, CharacterPost.Admiral);
+        long a5 = Attach(Side.Collective, Madine, f, CharacterPost.Admiral);
+        long a6 = Attach(Side.Collective, Dodonna, f, CharacterPost.None);
+        long ok = Attach(Side.Collective, Ackbar, f, CharacterPost.Admiral);
+        long a7 = Attach(Side.Collective, Afyon, f, CharacterPost.Admiral);
+        long a8 = Attach(Side.Collective, Ackbar, f, CharacterPost.None);
+        long chewie = Attach(Side.Collective, Chewbacca, f, CharacterPost.None);
         w.Game.Step();
         Assert.Equal(RejectReason.NotYours, w.Reason(a1));
         Assert.Equal(RejectReason.NotYours, w.Reason(a2));
@@ -322,15 +322,15 @@ public class CharacterTests
     public void CH12_CapturedGeneralInFlight_SpeedFixedAtOrderTime()
     {
         var w = new CharWorld(new CharacterParams { NavigatorBonus = true });
-        int f = w.Fleet(Side.Alliance, Yavin);
+        int f = w.Fleet(Side.Collective, Yavin);
         w.Add(Han, Yavin);
-        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Alliance, Han, f, CharacterPost.General)));
+        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, Han, f, CharacterPost.General)));
         var fleet = w.Game.State.Fleets[f];
-        Assert.Null(w.Try(seq => new MoveFleetOrder(seq, Side.Alliance, f, Coruscant)));
+        Assert.Null(w.Try(seq => new MoveFleetOrder(seq, Side.Collective, f, Coruscant)));
         var accepted = w.Events<OrderAccepted>().Last();
         var ticks = fleet.Transit!.HopTicks.ToList();
         Assert.Equal(25, w.Ch.NavigatorAdjust(fleet, 50)); // Han rides: the trip was planned at 80 * 50 / 100 = 40
-        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, w.C(Han), Side.Empire, null, CharacterCause.Battle));
+        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, w.C(Han), Side.Hand, null, CharacterCause.Battle));
         var han = w.C(Han);
         Assert.Equal(CharacterStatus.Captured, han.Status);
         Assert.Equal(0, han.AttachedFleet);
@@ -362,7 +362,7 @@ public class CharacterTests
         var w = new CharWorld(data: LineGalaxy(kind));
         w.Add(Wedge, "A");
         int k = w.Game.Day;
-        Assert.Null(w.Try(seq => new MoveCharacterOrder(seq, Side.Alliance, Wedge, "B")));
+        Assert.Null(w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Wedge, "B")));
         Assert.Null(w.Ch.LocationOf(w.C(Wedge)));
         while (w.Events<CharacterArrived>().Count == 0) w.Game.Step();
         var e = Assert.Single(w.Events<CharacterArrived>());
@@ -376,9 +376,9 @@ public class CharacterTests
     public void CH13_NotStoppedByAnEnemyFleet()
     {
         var w = new CharWorld(data: LineGalaxy("generated"));
-        w.Fleet(Side.Empire, "B", Isd, 3);
+        w.Fleet(Side.Hand, "B", Isd, 3);
         w.Add(Wedge, "A");
-        Assert.Null(w.Try(seq => new MoveCharacterOrder(seq, Side.Alliance, Wedge, "C")));
+        Assert.Null(w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Wedge, "C")));
         w.Run(250);
         var e = Assert.Single(w.Events<CharacterArrived>());
         Assert.Equal(("C", 200), (e.System, e.Day));
@@ -392,10 +392,10 @@ public class CharacterTests
     public void CH14_RidersFollowTheirFleet(bool ride)
     {
         var w = new CharWorld(new CharacterParams { OfficersRideFleet = ride });
-        int f = w.Fleet(Side.Alliance, Yavin);
+        int f = w.Fleet(Side.Collective, Yavin);
         w.Add(Ackbar, Yavin);
-        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Alliance, Ackbar, f, CharacterPost.Admiral)));
-        Assert.Null(w.Try(seq => new MoveFleetOrder(seq, Side.Alliance, f, Hoth)));
+        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, Ackbar, f, CharacterPost.Admiral)));
+        Assert.Null(w.Try(seq => new MoveFleetOrder(seq, Side.Collective, f, Hoth)));
         var ack = w.C(Ackbar);
         if (ride)
         {
@@ -417,7 +417,7 @@ public class CharacterTests
     private static (CharWorld W, Praedra.Core.Fleets.Fleet F) Nav(bool on, params int[] riders)
     {
         var w = new CharWorld(new CharacterParams { NavigatorBonus = on });
-        int f = w.Fleet(Side.Alliance, Yavin);
+        int f = w.Fleet(Side.Collective, Yavin);
         foreach (var id in riders) { w.Add(id, Yavin); w.Ch.PlaceInFleet(id, f); }
         return (w, w.Game.State.Fleets[f]);
     }
@@ -458,7 +458,7 @@ public class CharacterTests
         var (w, f) = Nav(false, Han);
         Assert.Equal(80, w.Ch.NavigatorAdjust(f, 80));
         var (w2, f2) = Nav(true, Han);
-        w2.StepWith("5.2", ctx => w2.Ch.Capture(ctx, w2.C(Han), Side.Empire, null, CharacterCause.Debug));
+        w2.StepWith("5.2", ctx => w2.Ch.Capture(ctx, w2.C(Han), Side.Hand, null, CharacterCause.Debug));
         Assert.Equal(80, w2.Ch.NavigatorAdjust(f2, 80));
         var (w3, f3) = Nav(true, Han);
         w3.C(Han).Status = CharacterStatus.Injured; // injured but still riding (state set directly: Injure would detach him)
@@ -473,11 +473,11 @@ public class CharacterTests
     {
         var w = new CharWorld();
         w.Add(Drayson, Hoth); w.Add(Borsk, Hoth); var c = w.Add(Tura, Yavin); w.Add(Vader, Hoth);
-        w.StepWith("5.1", ctx => w.Ch.Capture(ctx, c, Side.Empire, Hoth, CharacterCause.Debug));
+        w.StepWith("5.1", ctx => w.Ch.Capture(ctx, c, Side.Hand, Hoth, CharacterCause.Debug));
         int before = w.Stub!.Requests.Count, ev = w.Game.Events.Count;
         // The die is rand(1..100), hit at 50 or less (m5-death-star §2 effect 3); the same chance as the characters sheet's rand(0..99) < 50, shifted by one: 50 hits, 51 misses, 11 hits.
         w.Stub.Expect(1, 100, 50, 51, 11);
-        w.StepWith("5.1", ctx => w.Ch.DeathStarStrike(ctx, Hoth, Side.Empire));
+        w.StepWith("5.1", ctx => w.Ch.DeathStarStrike(ctx, Hoth, Side.Hand));
         // B2e moved: the hit on a free minor is the Hurt roll (unqueued draws answer 0: hit, sizes 0 and 0, then the minor's death draw 0 < 25),
         // so Admiral Marta Sobel dies of the injury and the kill is not needed; the prisoner Tura is killed without it. 3 + 4 draws.
         Assert.Equal(7, w.Stub.Requests.Count - before);
@@ -508,7 +508,7 @@ public class CharacterTests
             // B2e moved: the Kill becomes the Hurt roll (p = 1 for Luke's effective combat 135; the stub's 0 hits, size 0 + 0 + 1); The Shoal is
             // nobody's, so he does not heal
             Assert.Equal((CharacterStatus.Injured, 1), (luke.Status, luke.Injury));
-            w.StepWith("5.2", ctx => w.Ch.Capture(ctx, luke, Side.Empire, null, CharacterCause.Mission));
+            w.StepWith("5.2", ctx => w.Ch.Capture(ctx, luke, Side.Hand, null, CharacterCause.Mission));
             Assert.True(w.Ch.IsCaptured(Luke)); // the victory term stays reachable
         }
         else
@@ -523,22 +523,22 @@ public class CharacterTests
     public void CH21_CaptureLuke()
     {
         var w = new CharWorld();
-        int f = w.Fleet(Side.Alliance, Yavin);
+        int f = w.Fleet(Side.Collective, Yavin);
         var luke = w.Add(Luke, Yavin);
         w.Ch.SetPost(Luke, f, CharacterPost.General);
         bool first = false, second = true, own = true;
         w.StepWith("5.2", ctx =>
         {
-            first = w.Ch.Capture(ctx, luke, Side.Empire, null, CharacterCause.Mission);
-            second = w.Ch.Capture(ctx, luke, Side.Empire, null, CharacterCause.Mission);
+            first = w.Ch.Capture(ctx, luke, Side.Hand, null, CharacterCause.Mission);
+            second = w.Ch.Capture(ctx, luke, Side.Hand, null, CharacterCause.Mission);
         });
         Assert.True(first); Assert.False(second);
-        Assert.Equal((CharacterStatus.Captured, (Side?)Side.Empire, Yavin), (luke.Status, luke.Captor, luke.HeldAt));
+        Assert.Equal((CharacterStatus.Captured, (Side?)Side.Hand, Yavin), (luke.Status, luke.Captor, luke.HeldAt));
         Assert.Equal((0, CharacterPost.None), (luke.AttachedFleet, luke.Post));
         Assert.Equal(PostKind.General, Assert.Single(w.Events<PostVacated>()).Post);
         Assert.Single(w.Events<CharacterCaptured>());
         var leia = w.Add(Leia, Yavin);
-        w.StepWith("5.2", ctx => own = w.Ch.Capture(ctx, leia, Side.Alliance, null, CharacterCause.Mission));
+        w.StepWith("5.2", ctx => own = w.Ch.Capture(ctx, leia, Side.Collective, null, CharacterCause.Mission));
         Assert.False(own);
         Assert.Equal(CharacterStatus.Free, leia.Status);
     }
@@ -549,7 +549,7 @@ public class CharacterTests
     {
         var w = new CharWorld();
         var luke = w.Add(Luke, Yavin); var han = w.Add(Han, Yavin);
-        w.StepWith("5.2", ctx => { w.Ch.Capture(ctx, luke, Side.Empire, null, CharacterCause.Debug); w.Ch.Injure(ctx, han, CharacterCause.Debug); });
+        w.StepWith("5.2", ctx => { w.Ch.Capture(ctx, luke, Side.Hand, null, CharacterCause.Debug); w.Ch.Injure(ctx, han, CharacterCause.Debug); });
         Assert.Equal(CharacterStatus.Injured, han.Status);
         int ev = w.Game.Events.Count, pts = han.Injury;
         bool a = true, b = false;
@@ -564,7 +564,7 @@ public class CharacterTests
     public void CH23_InjuryHealsAtSlot610()
     {
         var w = new CharWorld();
-        w.Hold(Yavin, Side.Alliance);
+        w.Hold(Yavin, Side.Collective);
         var han = w.Add(Han, Yavin);
         w.StepWith("5.2", ctx => w.Ch.AddInjury(ctx, han, 3, CharacterCause.Debug));
         Assert.Equal(CharacterStatus.Injured, han.Status);
@@ -581,14 +581,14 @@ public class CharacterTests
         var w = new CharWorld(new CharacterParams { CaptiveEscape = false });
         var luke = w.Add(Luke, Yavin);
         int before = w.Stub!.Requests.Count;
-        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, luke, Side.Empire, null, CharacterCause.Debug));
+        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, luke, Side.Hand, null, CharacterCause.Debug));
         w.Run(200);
         Assert.Equal(before, w.Stub.Requests.Count);
         Assert.Equal(0, luke.NextEscapeDay);
         var on = new CharWorld();
         var l2 = on.Add(Luke, Yavin);
         on.Stub!.Expect(0, 1000, 400);
-        on.StepWith("5.2", ctx => on.Ch.Capture(ctx, l2, Side.Empire, null, CharacterCause.Debug));
+        on.StepWith("5.2", ctx => on.Ch.Capture(ctx, l2, Side.Hand, null, CharacterCause.Debug));
         Assert.Equal(0 + 100 + 400, l2.NextEscapeDay);
     }
 
@@ -600,7 +600,7 @@ public class CharacterTests
         var w = new CharWorld(new CharacterParams { EscapeTable = new[] { (-50, 1), (50, 30) } });
         Assert.Equal((1, 1, 1, 30, 30), (w.Ch.EscapePercent(-80), w.Ch.EscapePercent(-50), w.Ch.EscapePercent(49), w.Ch.EscapePercent(50), w.Ch.EscapePercent(210)));
         var luke = w.Add(Luke, Yavin);
-        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, luke, Side.Empire, null, CharacterCause.Debug));
+        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, luke, Side.Hand, null, CharacterCause.Debug));
         luke.NextEscapeDay = w.Game.Day; // the attempt is due at this Step's slot 6.10
         w.Stub!.Expect(0, 99, r);
         int ev = w.Game.Events.Count;
@@ -616,24 +616,24 @@ public class CharacterTests
     public void CH26_UprisingInjuresOneFreeCharacterOfTheHolder()
     {
         var w = new CharWorld();
-        w.Hold(Hoth, Side.Alliance);
-        int f = w.Fleet(Side.Alliance, Hoth);
+        w.Hold(Hoth, Side.Collective);
+        int f = w.Fleet(Side.Collective, Hoth);
         w.Add(Wedge, Hoth); w.Add(Chewbacca, Hoth); w.Add(Drayson, Hoth); w.Ch.PlaceInFleet(Drayson, f); // attached ones count
         w.Add(Luke, Yavin); // elsewhere
         w.Add(Piett, Hoth); // other side
         var leia = w.Add(Leia, Yavin);
-        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, leia, Side.Empire, Hoth, CharacterCause.Debug)); // captured: not a candidate
+        w.StepWith("5.2", ctx => w.Ch.Capture(ctx, leia, Side.Hand, Hoth, CharacterCause.Debug)); // captured: not a candidate
         Assert.NotNull(w.Host.Support.CharacterIncident);
         int before = w.Stub!.Requests.Count;
         w.Stub.Expect(0, 2, 1);
         w.Stub.Expect(0, 99, 0, 99); // B2e moved: Injure is the Hurt roll (0 hits), then the minor's death draw (99: he lives)
-        w.StepWith("6.3", ctx => w.Host.Support.CharacterIncident!(ctx, ctx.Day + 1, Hoth, Side.Alliance, 3));
+        w.StepWith("6.3", ctx => w.Host.Support.CharacterIncident!(ctx, ctx.Day + 1, Hoth, Side.Collective, 3));
         Assert.Equal(new[] { (0, 2), (0, 99) }, w.Stub.Requests.Skip(before).Take(2).Select(x => (x.Min, x.Max)));
         Assert.Equal(CharacterStatus.Injured, w.C(Chewbacca).Status);
         Assert.Equal(Chewbacca, Assert.Single(w.Events<CharacterInjured>()).Character);
 
         var w2 = new CharWorld();
-        w2.StepWith("6.3", ctx => w2.Ch.UprisingIncident(ctx, ctx.Day + 1, Hoth, Side.Alliance, 3));
+        w2.StepWith("6.3", ctx => w2.Ch.UprisingIncident(ctx, ctx.Day + 1, Hoth, Side.Collective, 3));
         Assert.Empty(w2.Stub!.Requests);
     }
 
@@ -645,18 +645,18 @@ public class CharacterTests
         {
             var w = new CharWorld();
             var a = w.Add(Wedge, Hoth); var b = w.Add(Chewbacca, Hoth);
-            w.StepWith("5.2", ctx => { w.Ch.Capture(ctx, a, Side.Empire, null, CharacterCause.Debug); w.Ch.Capture(ctx, b, Side.Empire, null, CharacterCause.Debug); });
+            w.StepWith("5.2", ctx => { w.Ch.Capture(ctx, a, Side.Hand, null, CharacterCause.Debug); w.Ch.Capture(ctx, b, Side.Hand, null, CharacterCause.Debug); });
             return w;
         }
         var w4 = Make();
         w4.Stub!.Expect(0, 1, 0);
-        w4.StepWith("6.3", ctx => w4.Ch.UprisingIncident(ctx, ctx.Day + 1, Hoth, Side.Empire, 4));
+        w4.StepWith("6.3", ctx => w4.Ch.UprisingIncident(ctx, ctx.Day + 1, Hoth, Side.Hand, 4));
         Assert.Equal(CharacterStatus.Free, w4.C(Wedge).Status);
         Assert.Equal(CharacterStatus.Captured, w4.C(Chewbacca).Status);
 
         var w5 = Make();
         int before = w5.Stub!.Requests.Count;
-        w5.StepWith("6.3", ctx => w5.Ch.UprisingIncident(ctx, ctx.Day + 1, Hoth, Side.Empire, 5));
+        w5.StepWith("6.3", ctx => w5.Ch.UprisingIncident(ctx, ctx.Day + 1, Hoth, Side.Hand, 5));
         Assert.Equal(before, w5.Stub.Requests.Count);
         Assert.All(new[] { Wedge, Chewbacca }, id => Assert.Equal(CharacterStatus.Free, w5.C(id).Status));
         Assert.Equal(2, w5.Events<CharacterFreed>().Count);
@@ -667,13 +667,13 @@ public class CharacterTests
     public void CH28_HolderChangeClearsTheOldGeneral()
     {
         var w = new CharWorld();
-        w.Hold(Hoth, Side.Empire);
-        w.Hold(Coruscant, Side.Empire); // (B5a, 2026-10-17) somewhere for the old side's officer to go
+        w.Hold(Hoth, Side.Hand);
+        w.Hold(Coruscant, Side.Hand); // (B5a, 2026-10-17) somewhere for the old side's officer to go
         w.Add(Piett, Hoth);
-        Assert.Null(w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Empire, Piett, Hoth)));
-        // (B5a, 2026-10-17) under ControlRule = Derived the holder follows the regiments: an Alliance regiment lands on the empty world (B5a section 1)
-        w.StepWith("5.2", ctx => w.Host.Control.DebugApplyTroops(ctx, Hoth, Side.Alliance, "Militia", 1));
-        Assert.Equal(Side.Alliance, w.Host.Control.HolderOf(Hoth));
+        Assert.Null(w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Hand, Piett, Hoth)));
+        // (B5a, 2026-10-17) under ControlRule = Derived the holder follows the regiments: a Collective regiment lands on the empty world (B5a section 1)
+        w.StepWith("5.2", ctx => w.Host.Control.DebugApplyTroops(ctx, Hoth, Side.Collective, "Militia", 1));
+        Assert.Equal(Side.Collective, w.Host.Control.HolderOf(Hoth));
         var pv = Assert.Single(w.Events<PostVacated>());
         Assert.Equal((Piett, PostKind.SystemGeneral, CharacterCause.HolderChanged), (pv.Character, pv.Post, pv.Cause));
         Assert.Null(w.Ch.SystemGeneralOf(Hoth));
@@ -682,7 +682,7 @@ public class CharacterTests
         Assert.Equal(Hoth, Assert.Single(w.Events<CharacterDeparted>(), e => e.Character == Piett).From);
         Assert.Equal(0, w.Host.Assault.SystemGeneralLeadership(Hoth));
         // the old holder's officer may not be General there now ((B5a, 2026-10-17) he has left, so the first refusal is NotAtSystem)
-        Assert.Equal(CharacterReject.NotAtSystem, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Empire, Piett, Hoth)));
+        Assert.Equal(CharacterReject.NotAtSystem, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Hand, Piett, Hoth)));
     }
 
     // m5-characters-and-force CH29
@@ -690,11 +690,11 @@ public class CharacterTests
     public void CH29_MergeKeepsTheReceivingAdmiral()
     {
         var w = new CharWorld();
-        int into = w.Fleet(Side.Alliance, Yavin), from = w.Fleet(Side.Alliance, Yavin);
+        int into = w.Fleet(Side.Collective, Yavin), from = w.Fleet(Side.Collective, Yavin);
         w.Add(Ackbar, Yavin); w.Add(Afyon, Yavin);
         w.Ch.SetPost(Ackbar, into, CharacterPost.Admiral);
         w.Ch.SetPost(Afyon, from, CharacterPost.Admiral);
-        Assert.Null(w.Try(seq => new MergeFleetsOrder(seq, Side.Alliance, from, into)));
+        Assert.Null(w.Try(seq => new MergeFleetsOrder(seq, Side.Collective, from, into)));
         Assert.Equal((into, CharacterPost.Admiral), (w.C(Ackbar).AttachedFleet, w.C(Ackbar).Post));
         Assert.Equal((into, CharacterPost.None), (w.C(Afyon).AttachedFleet, w.C(Afyon).Post));
         Assert.Equal(CharacterCause.Merged, Assert.Single(w.Events<PostVacated>()).Cause);
@@ -705,7 +705,7 @@ public class CharacterTests
     public void CH30_DestroyedFleetLeavesItsRidersFree()
     {
         var w = new CharWorld();
-        int f = w.Fleet(Side.Alliance, Hoth);
+        int f = w.Fleet(Side.Collective, Hoth);
         w.Add(Ackbar, Hoth); w.Ch.SetPost(Ackbar, f, CharacterPost.Admiral);
         w.Add(Chewbacca, Hoth); w.Ch.PlaceInFleet(Chewbacca, f);
         int ship = w.Game.State.Fleets[f].Ships[0];
@@ -786,10 +786,10 @@ public class CharacterTests
     {
         var ch = h.Characters;
         var han = ch.Get(Han)!;
-        var fleet = h.Game.State.Fleets.Values.FirstOrDefault(f => f.Side == Side.Alliance && f.At == ch.LocationOf(han));
-        if (fleet != null) h.Game.Submit(seq => new AttachCharacterOrder(seq, Side.Alliance, Han, fleet.Id, CharacterPost.General));
-        h.Game.Submit(seq => new MoveCharacterOrder(seq, Side.Alliance, Wedge, "The Thaw"));
-        h.Game.Submit(seq => new MoveCharacterOrder(seq, Side.Empire, Vader, "Charter"));
+        var fleet = h.Game.State.Fleets.Values.FirstOrDefault(f => f.Side == Side.Collective && f.At == ch.LocationOf(han));
+        if (fleet != null) h.Game.Submit(seq => new AttachCharacterOrder(seq, Side.Collective, Han, fleet.Id, CharacterPost.General));
+        h.Game.Submit(seq => new MoveCharacterOrder(seq, Side.Collective, Wedge, "The Thaw"));
+        h.Game.Submit(seq => new MoveCharacterOrder(seq, Side.Hand, Vader, "Charter"));
     }
 
     // m5-characters-and-force CH34
@@ -797,11 +797,11 @@ public class CharacterTests
     public void CH34_NoDetachInTransit()
     {
         var w = new CharWorld();
-        int f = w.Fleet(Side.Alliance, Yavin);
+        int f = w.Fleet(Side.Collective, Yavin);
         w.Add(Ackbar, Yavin);
-        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Alliance, Ackbar, f, CharacterPost.Admiral)));
-        Assert.Null(w.Try(seq => new MoveFleetOrder(seq, Side.Alliance, f, Coruscant)));
-        Assert.Equal(CharacterReject.FleetInTransit, w.Try(seq => new DetachCharacterOrder(seq, Side.Alliance, Ackbar)));
+        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, Ackbar, f, CharacterPost.Admiral)));
+        Assert.Null(w.Try(seq => new MoveFleetOrder(seq, Side.Collective, f, Coruscant)));
+        Assert.Equal(CharacterReject.FleetInTransit, w.Try(seq => new DetachCharacterOrder(seq, Side.Collective, Ackbar)));
         Assert.Equal(f, w.C(Ackbar).AttachedFleet);
     }
 
@@ -812,32 +812,32 @@ public class CharacterTests
     public void Orders_OtherRejections()
     {
         var w = new CharWorld();
-        w.Hold(Yavin, Side.Alliance);
-        int f = w.Fleet(Side.Alliance, Yavin);
+        w.Hold(Yavin, Side.Collective);
+        int f = w.Fleet(Side.Collective, Yavin);
         w.Add(Madine, Yavin); w.Add(Wedge, Yavin); w.Add(Ackbar, Yavin); w.Add(Chewbacca, Yavin);
-        Assert.Equal(CharacterReject.NotAttached, w.Try(seq => new DetachCharacterOrder(seq, Side.Alliance, Madine)));
-        Assert.Equal(CharacterReject.NoSystemGeneral, w.Try(seq => new ReleaseSystemGeneralOrder(seq, Side.Alliance, Yavin)));
-        Assert.Equal(CharacterReject.NoCapability, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Alliance, Chewbacca, Yavin)));
-        Assert.Equal(CharacterReject.NotAtSystem, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Alliance, Madine, Hoth)));
-        Assert.Null(w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Alliance, Madine, Yavin)));
-        Assert.Equal(CharacterReject.PostTaken, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Alliance, Wedge, Yavin)));
-        Assert.Equal(CharacterReject.HoldsSystemPost, w.Try(seq => new AttachCharacterOrder(seq, Side.Alliance, Madine, f, CharacterPost.General)));
-        Assert.Equal(RejectReason.NotYours, w.Try(seq => new ReleaseSystemGeneralOrder(seq, Side.Empire, Yavin)));
-        Assert.Null(w.Try(seq => new ReleaseSystemGeneralOrder(seq, Side.Alliance, Yavin)));
-        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Alliance, Ackbar, f, CharacterPost.Admiral)));
-        Assert.Equal(CharacterReject.Attached, w.Try(seq => new MoveCharacterOrder(seq, Side.Alliance, Ackbar, Hoth)));
-        Assert.Equal(CharacterReject.AlreadyAttached, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Alliance, Ackbar, Yavin)));
-        Assert.Equal(RejectReason.AlreadyThere, w.Try(seq => new MoveCharacterOrder(seq, Side.Alliance, Wedge, Yavin)));
-        Assert.Equal(CharacterReject.NoPath, w.Try(seq => new MoveCharacterOrder(seq, Side.Alliance, Wedge, "No Such Place")));
-        Assert.Equal(CharacterReject.UnknownCharacter, w.Try(seq => new MoveCharacterOrder(seq, Side.Alliance, 999, Hoth)));
-        Assert.Equal(CharacterReject.UnknownCharacter, w.Try(seq => new MoveCharacterOrder(seq, Side.Alliance, Luke, Hoth))); // not placed
-        Assert.Null(w.Try(seq => new MoveCharacterOrder(seq, Side.Alliance, Wedge, Hoth)));
-        Assert.Equal(RejectReason.InTransit, w.Try(seq => new MoveCharacterOrder(seq, Side.Alliance, Wedge, Coruscant)));
-        Assert.Equal(CharacterReject.NotAtSystem, w.Try(seq => new AttachCharacterOrder(seq, Side.Alliance, Wedge, f, CharacterPost.None)));
+        Assert.Equal(CharacterReject.NotAttached, w.Try(seq => new DetachCharacterOrder(seq, Side.Collective, Madine)));
+        Assert.Equal(CharacterReject.NoSystemGeneral, w.Try(seq => new ReleaseSystemGeneralOrder(seq, Side.Collective, Yavin)));
+        Assert.Equal(CharacterReject.NoCapability, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Collective, Chewbacca, Yavin)));
+        Assert.Equal(CharacterReject.NotAtSystem, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Collective, Madine, Hoth)));
+        Assert.Null(w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Collective, Madine, Yavin)));
+        Assert.Equal(CharacterReject.PostTaken, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Collective, Wedge, Yavin)));
+        Assert.Equal(CharacterReject.HoldsSystemPost, w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, Madine, f, CharacterPost.General)));
+        Assert.Equal(RejectReason.NotYours, w.Try(seq => new ReleaseSystemGeneralOrder(seq, Side.Hand, Yavin)));
+        Assert.Null(w.Try(seq => new ReleaseSystemGeneralOrder(seq, Side.Collective, Yavin)));
+        Assert.Null(w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, Ackbar, f, CharacterPost.Admiral)));
+        Assert.Equal(CharacterReject.Attached, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Ackbar, Hoth)));
+        Assert.Equal(CharacterReject.AlreadyAttached, w.Try(seq => new AssignSystemGeneralOrder(seq, Side.Collective, Ackbar, Yavin)));
+        Assert.Equal(RejectReason.AlreadyThere, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Wedge, Yavin)));
+        Assert.Equal(CharacterReject.NoPath, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Wedge, "No Such Place")));
+        Assert.Equal(CharacterReject.UnknownCharacter, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, 999, Hoth)));
+        Assert.Equal(CharacterReject.UnknownCharacter, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Luke, Hoth))); // not placed
+        Assert.Null(w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Wedge, Hoth)));
+        Assert.Equal(RejectReason.InTransit, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Wedge, Coruscant)));
+        Assert.Equal(CharacterReject.NotAtSystem, w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, Wedge, f, CharacterPost.None)));
         Assert.Single(w.Events<CharacterDeparted>());
         var dead = w.Add(Drayson, Yavin);
         w.StepWith("5.2", ctx => w.Ch.Kill(ctx, dead, CharacterCause.Debug));
-        Assert.Equal(CharacterReject.NotFree, w.Try(seq => new MoveCharacterOrder(seq, Side.Alliance, Drayson, Hoth)));
+        Assert.Equal(CharacterReject.NotFree, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Drayson, Hoth)));
     }
 
     // m5-characters-and-force §Defaults for undecided items: GameSettings null = the module's defaults, each the sheet's DEFAULT

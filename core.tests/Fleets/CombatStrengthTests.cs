@@ -61,13 +61,13 @@ public class CombatStrengthTests
     public void N9_TwentyCheapShipsDoNotStopThreeIsds()
     {
         var w = new World(World.BCMap());
-        int isds = w.Add(Side.Empire, "Isds", "A", Isd, Isd, Isd);
-        w.Add(Side.Alliance, "Cheap", "B", Enumerable.Repeat("Wasp", 12).Concat(Enumerable.Repeat("Mule", 8)).ToArray());
-        w.Move(Side.Empire, isds, "C");
+        int isds = w.Add(Side.Hand, "Isds", "A", Isd, Isd, Isd);
+        w.Add(Side.Collective, "Cheap", "B", Enumerable.Repeat("Wasp", 12).Concat(Enumerable.Repeat("Mule", 8)).ToArray());
+        w.Move(Side.Hand, isds, "C");
         w.Run(40);
         Assert.Empty(w.Events<ForcedStop>());
         Assert.Equal("C", w.Fleet(isds).At);
-        Assert.False(w.Fleets.IsEconomicBlockade("B", Side.Empire));
+        Assert.False(w.Fleets.IsEconomicBlockade("B", Side.Hand));
     }
 
     // m4-battle-new N10
@@ -77,9 +77,9 @@ public class CombatStrengthTests
     public void N10_ThreeIsdsPassing_OneOrTwoIsdsBlock(int blockers, bool stops)
     {
         var w = new World(World.BCMap());
-        int passing = w.Add(Side.Alliance, "Passing", "A", Isd, Isd, Isd);
-        w.Add(Side.Empire, "Block", "B", Enumerable.Repeat(Isd, blockers).ToArray());
-        w.Move(Side.Alliance, passing, "C");
+        int passing = w.Add(Side.Collective, "Passing", "A", Isd, Isd, Isd);
+        w.Add(Side.Hand, "Block", "B", Enumerable.Repeat(Isd, blockers).ToArray());
+        w.Move(Side.Collective, passing, "C");
         w.Run(40);
         Assert.Equal(stops, w.Events<ForcedStop>().Count == 1);
         Assert.Equal(stops ? "B" : "C", w.Fleet(passing).At);
@@ -93,12 +93,12 @@ public class CombatStrengthTests
         Assert.Equal(65.7, Cs.Of(Of("Injunction", 3), convoy), 1e-9);
         Assert.Equal(0.0, Cs.Of(convoy, Of("Injunction", 3)));
         var w = new World(World.BCMap());
-        int c = w.Add(Side.Alliance, "Convoy", "A", "Mule", "Mule", "Mule");
-        w.Add(Side.Empire, "Strikes", "B", "Injunction", "Injunction", "Injunction");
-        w.Move(Side.Alliance, c, "C");
+        int c = w.Add(Side.Collective, "Convoy", "A", "Mule", "Mule", "Mule");
+        w.Add(Side.Hand, "Strikes", "B", "Injunction", "Injunction", "Injunction");
+        w.Move(Side.Collective, c, "C");
         w.Run(25); // speed rating 100: a hop takes 20 days
         Assert.Equal(c, Assert.Single(w.Events<ForcedStop>()).Fleet);
-        Assert.True(w.Fleets.IsEconomicBlockade("B", Side.Alliance)); // 113.4 >= E: the intended consequence of Lead update 6
+        Assert.True(w.Fleets.IsEconomicBlockade("B", Side.Collective)); // 113.4 >= E: the intended consequence of Lead update 6
     }
 
     // m4-battle-new N12 with the Lead update 3 (switch LaserPenetratesShield, DEFAULT off)

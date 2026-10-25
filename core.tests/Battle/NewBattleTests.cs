@@ -22,9 +22,9 @@ public class NewBattleTests
     private const string Corvette = "Dodger", Isd = "Mandate", MonCal = "Ark", Lancer = "Writ",
         Interdictor = "Subpoena", Bomber = "Thresher";
 
-    internal static (ClassicBattleResult R, IReadOnlyList<BattleUnit> U) Fight(BattleParams p, (string, int)[] alliance, (string, int)[] empire, ulong seed = 1,
+    internal static (ClassicBattleResult R, IReadOnlyList<BattleUnit> U) Fight(BattleParams p, (string, int)[] collective, (string, int)[] hand, ulong seed = 1,
         bool aCan = true, bool eCan = true, bool carry = false, Action<IReadOnlyList<BattleUnit>>? prepare = null, OnContactMode[]? alert = null) =>
-        QuickBattle.Run(p, Ships, alliance, empire, seed, aCan, eCan, alert, null, carry, prepare);
+        QuickBattle.Run(p, Ships, collective, hand, seed, aCan, eCan, alert, null, carry, prepare);
 
     private static BattleUnit First(IReadOnlyList<BattleUnit> u, Side side, string cls) => u.First(x => x.Side == side && x.Class.Name == cls);
 
@@ -38,7 +38,7 @@ public class NewBattleTests
         var (r2, u2) = Fight(New, new[] { (MonCal, 3) }, new[] { (Isd, 2) }, seed: 7);
         Assert.True(r1.Draws > 0);
         Assert.Equal(r1.Draws, r2.Draws);
-        Assert.Equal((r1.Seconds, r1.AllianceOutcome, r1.EmpireOutcome, r1.AllianceLosses, r1.EmpireLosses), (r2.Seconds, r2.AllianceOutcome, r2.EmpireOutcome, r2.AllianceLosses, r2.EmpireLosses));
+        Assert.Equal((r1.Seconds, r1.CollectiveOutcome, r1.HandOutcome, r1.CollectiveLosses, r1.HandLosses), (r2.Seconds, r2.CollectiveOutcome, r2.HandOutcome, r2.CollectiveLosses, r2.HandLosses));
         Assert.Equal(u1.Select(x => (x.Hull, x.Alive, x.Left, string.Join(",", x.Hits))), u2.Select(x => (x.Hull, x.Alive, x.Left, string.Join(",", x.Hits))));
         var (r3, _) = Fight(New, new[] { (MonCal, 3) }, new[] { (Isd, 2) }, seed: 8);
         Assert.NotEqual(r1.Draws, r3.Draws); // another seed, another battle
@@ -54,11 +54,11 @@ public class NewBattleTests
         for (ulong seed = 1; seed <= 20; seed++)
         {
             var (r, u) = Fight(NewNoTractors, new[] { (Corvette, 30) }, new[] { (Isd, 1) }, seed);
-            Assert.True(r.AllianceRetreated, $"seed {seed}");
-            Assert.Equal(BattleOutcome.Retreated, r.AllianceOutcome);
-            Assert.Equal(BattleOutcome.Victorious, r.EmpireOutcome);
+            Assert.True(r.CollectiveRetreated, $"seed {seed}");
+            Assert.Equal(BattleOutcome.Retreated, r.CollectiveOutcome);
+            Assert.Equal(BattleOutcome.Victorious, r.HandOutcome);
             Assert.InRange(r.Seconds, 5, 6); // flagged in the first second (strength 0 against 26.5 or more), five seconds in the jump
-            Assert.Equal(2750.0, First(u, Side.Empire, Isd).Hull);
+            Assert.Equal(2750.0, First(u, Side.Hand, Isd).Hull);
         }
     }
 
@@ -72,7 +72,7 @@ public class NewBattleTests
         for (ulong seed = 1; seed <= 200; seed++)
         {
             var (r, _) = Fight(New, new[] { (Corvette, corvettes) }, new[] { (Isd, 1) }, seed);
-            if (r.EmpireOutcome == BattleOutcome.Victorious) isdWins++;
+            if (r.HandOutcome == BattleOutcome.Victorious) isdWins++;
         }
         _out.WriteLine($"New: {corvettes} CR90 v 1 ISD, ISD wins {isdWins}/200");
         Assert.True(isdWins >= 190, $"ISD won {isdWins}/200");
@@ -87,11 +87,11 @@ public class NewBattleTests
         for (ulong seed = 1; seed <= 20; seed++)
         {
             var (r, u) = Fight(New, new[] { (Corvette, corvettes) }, new[] { (Isd, 1) }, seed, aCan: false);
-            Assert.False(r.AllianceRetreated);
-            Assert.Equal(BattleOutcome.Victorious, r.EmpireOutcome);
-            Assert.Equal(BattleOutcome.Annihilated, r.AllianceOutcome);
-            Assert.Equal(corvettes, r.AllianceLosses);
-            Assert.Equal(2750.0, First(u, Side.Empire, Isd).Hull);
+            Assert.False(r.CollectiveRetreated);
+            Assert.Equal(BattleOutcome.Victorious, r.HandOutcome);
+            Assert.Equal(BattleOutcome.Annihilated, r.CollectiveOutcome);
+            Assert.Equal(corvettes, r.CollectiveLosses);
+            Assert.Equal(2750.0, First(u, Side.Hand, Isd).Hull);
             Assert.Contains(r.Steps.OfType<RetreatRefusedStep>(), s => s.Reason == RetreatRefusal.NoDestination);
         }
     }
@@ -103,36 +103,36 @@ public class NewBattleTests
         for (ulong seed = 1; seed <= 5; seed++)
         {
             var (r, u) = Fight(New, new[] { (Lancer, 20) }, new[] { (Isd, 1) }, seed, aCan: false);
-            Assert.Equal(BattleOutcome.Victorious, r.EmpireOutcome);
-            Assert.Equal(2750.0, First(u, Side.Empire, Isd).Hull);
+            Assert.Equal(BattleOutcome.Victorious, r.HandOutcome);
+            Assert.Equal(2750.0, First(u, Side.Hand, Isd).Hull);
         }
     }
 
     // ---------------------------------------------------------------- N5 gravity wells
 
     // m4-battle-new N5 (changed setup, see the report): the corvettes cannot hurt a hull-1 Interdictor (its shield is up), so a weakened The Moorings
-    // Cruiser (hull 30%, flagged all the same) shoots it. While the Interdictor lives the Alliance cannot retreat; once it is dead the retreat works.
+    // Cruiser (hull 30%, flagged all the same) shoots it. While the Interdictor lives the Collective cannot retreat; once it is dead the retreat works.
     [Fact]
     public void N5_AGravityWellShipBlocksRetreatWhileItLivesAndKillingItFreesTheRetreat()
     {
         void Weaken(IReadOnlyList<BattleUnit> u, int interdictorHull)
         {
-            var mc = First(u, Side.Alliance, MonCal); mc.Hull = 0.3 * mc.HullMax;
-            First(u, Side.Empire, Interdictor).Hull = interdictorHull;
+            var mc = First(u, Side.Collective, MonCal); mc.Hull = 0.3 * mc.HullMax;
+            First(u, Side.Hand, Interdictor).Hull = interdictorHull;
         }
         var fleetA = new[] { (Corvette, 30), (MonCal, 1) };
         var fleetE = new[] { (Isd, 1), (Interdictor, 1) };
         for (ulong seed = 1; seed <= 10; seed++)
         {
             var (r, u) = Fight(New, fleetA, fleetE, seed, prepare: x => Weaken(x, 1200));
-            Assert.False(r.AllianceRetreated, $"seed {seed}");
+            Assert.False(r.CollectiveRetreated, $"seed {seed}");
             Assert.Contains(r.Steps.OfType<RetreatRefusedStep>(), s => s.Reason == RetreatRefusal.GravityWell);
-            Assert.False(First(u, Side.Empire, Interdictor).Destroyed);
+            Assert.False(First(u, Side.Hand, Interdictor).Destroyed);
 
             var (r2, u2) = Fight(New, fleetA, fleetE, seed, prepare: x => Weaken(x, 1));
-            Assert.True(First(u2, Side.Empire, Interdictor).Destroyed, $"seed {seed}");
-            Assert.True(r2.AllianceRetreated, $"seed {seed}");
-            Assert.Equal(BattleOutcome.Retreated, r2.AllianceOutcome);
+            Assert.True(First(u2, Side.Hand, Interdictor).Destroyed, $"seed {seed}");
+            Assert.True(r2.CollectiveRetreated, $"seed {seed}");
+            Assert.Equal(BattleOutcome.Retreated, r2.CollectiveOutcome);
         }
     }
 
@@ -146,9 +146,9 @@ public class NewBattleTests
         for (ulong seed = 1; seed <= 1000; seed++)
         {
             var (r, _) = Fight(New, new[] { (Isd, 2) }, new[] { (Isd, 2) }, seed);
-            if (r.AllianceOutcome == BattleOutcome.Victorious) a++; else if (r.EmpireOutcome == BattleOutcome.Victorious) e++;
+            if (r.CollectiveOutcome == BattleOutcome.Victorious) a++; else if (r.HandOutcome == BattleOutcome.Victorious) e++;
         }
-        _out.WriteLine($"2 ISD v 2 ISD: Alliance {a}, Empire {e} of 1000");
+        _out.WriteLine($"2 ISD v 2 ISD: Collective {a}, Hand {e} of 1000");
         Assert.InRange(a, 450, 550);
         Assert.InRange(e, 450, 550);
     }
@@ -157,21 +157,21 @@ public class NewBattleTests
     [Fact]
     public void N17_IsdVsMonCalamari_RatesAreTheSameWhicheverSideIsWhich()
     {
-        int monCalAsAlliance = 0, monCalAsEmpire = 0;
-        // The Moorings is an Alliance class and the ISD an Empire class, but the engine does not care which side a class is on: swap by listing it on the other side
+        int monCalAsCollective = 0, monCalAsHand = 0;
+        // The Moorings is a Collective class and the ISD a Hand class, but the engine does not care which side a class is on: swap by listing it on the other side
         for (ulong seed = 1; seed <= 100; seed++)
         {
             var (r, _) = Fight(New, new[] { (MonCal, 1) }, new[] { (Isd, 1) }, seed);
-            if (r.AllianceOutcome == BattleOutcome.Victorious) monCalAsAlliance++;
+            if (r.CollectiveOutcome == BattleOutcome.Victorious) monCalAsCollective++;
             var (r2, _) = Fight(New, new[] { (Isd, 1) }, new[] { (MonCal, 1) }, seed);
-            if (r2.EmpireOutcome == BattleOutcome.Victorious) monCalAsEmpire++;
+            if (r2.HandOutcome == BattleOutcome.Victorious) monCalAsHand++;
         }
-        _out.WriteLine($"The Moorings v ISD, 100 seeds: wins as Alliance {monCalAsAlliance}, as Empire {monCalAsEmpire} (sheet model about 2 in 3)");
+        _out.WriteLine($"The Moorings v ISD, 100 seeds: wins as Collective {monCalAsCollective}, as Hand {monCalAsHand} (sheet model about 2 in 3)");
         // N17: recorded, tuneable, not a hard bound. space-combat/11 §4: both close to D = 21 and fight at the ISD's ion range, so the ISD now wins most (The Moorings 18% of 100 seeds
         // against 73% under the old m4-battle-new §5 rule). Balance flag for the Space combat owner.
-        Assert.InRange(monCalAsAlliance, 5, 90);
-        Assert.InRange(monCalAsEmpire, 5, 90);
-        Assert.InRange(Math.Abs(monCalAsAlliance - monCalAsEmpire), 0, 20); // same rates within sampling noise
+        Assert.InRange(monCalAsCollective, 5, 90);
+        Assert.InRange(monCalAsHand, 5, 90);
+        Assert.InRange(Math.Abs(monCalAsCollective - monCalAsHand), 0, 20); // same rates within sampling noise
     }
 
     // ---------------------------------------------------------------- N7 shield regeneration pause
@@ -221,11 +221,11 @@ public class NewBattleTests
         for (ulong seed = 1; seed <= 40; seed++)
         {
             var (r, _) = Fight(New, new[] { (Isd, 1), (Bomber, 6) }, new[] { (Isd, 1) }, seed, carry: true);
-            if (r.AllianceOutcome == BattleOutcome.Victorious) carrierWins++;
+            if (r.CollectiveOutcome == BattleOutcome.Victorious) carrierWins++;
             var (r0, _) = Fight(New, new[] { (Isd, 1) }, new[] { (Isd, 1) }, seed);
-            if (r0.AllianceOutcome == BattleOutcome.Victorious) evenWins++;
+            if (r0.CollectiveOutcome == BattleOutcome.Victorious) evenWins++;
         }
-        _out.WriteLine($"ISD+6 Bombers v ISD: carrier side wins {carrierWins}/40; ISD v ISD: Alliance wins {evenWins}/40");
+        _out.WriteLine($"ISD+6 Bombers v ISD: carrier side wins {carrierWins}/40; ISD v ISD: Collective wins {evenWins}/40");
         Assert.True(carrierWins >= 36);
         Assert.InRange(evenWins, 10, 30);
     }
@@ -235,16 +235,16 @@ public class NewBattleTests
     public void N14_ASquadronWhoseCarrierDiesBeforeLaunchIsLostAndNeverFires()
     {
         var (nb, units) = QuickBattle.PrepareNew(New, Ships, new[] { (Isd, 1), (Bomber, 1) }, new[] { (Isd, 1) }, 1, carry: true,
-            prepare: u => First(u, Side.Alliance, Isd).Hull = 1, logEvents: true);
+            prepare: u => First(u, Side.Collective, Isd).Hull = 1, logEvents: true);
         var r = nb.Run();
-        var carrier = First(units, Side.Alliance, Isd); var sq = First(units, Side.Alliance, Bomber);
+        var carrier = First(units, Side.Collective, Isd); var sq = First(units, Side.Collective, Bomber);
         Assert.True(carrier.Destroyed);
         Assert.Equal(2, carrier.LostAt); // the enemy ISD's first volley (D = 60 closing 7.5 per second, ISD sublight 5, against a range of 50)
         Assert.True(sq.Destroyed);
         Assert.Equal(UnitLossReason.NoBerth, sq.Loss);
         Assert.Equal(2, sq.LostAt);
         Assert.DoesNotContain(nb.Log!, e => e.Unit == sq.ObjectId && (e.Kind == "hit" || e.Kind == "miss" || e.Kind == "launch"));
-        Assert.Equal(BattleOutcome.Annihilated, r.AllianceOutcome);
+        Assert.Equal(BattleOutcome.Annihilated, r.CollectiveOutcome);
     }
 
     // m4-battle-new §10: at the end a squadron of fewer than 6 craft is lost, a whole one is kept
@@ -263,11 +263,11 @@ public class NewBattleTests
     [Fact]
     public void RetreatingCarrierTakesItsSquadronsAndOthersWithoutBerthOrHyperdriveAreLost()
     {
-        // Alliance: an Escort Carrier with 6 berths and 8 TIE-less... use Empire squadrons: ISD (6 berths) carries 6, two more are based
+        // Collective: an Escort Carrier with 6 berths and 8 TIE-less... use Hand squadrons: ISD (6 berths) carries 6, two more are based
         var (r, u) = Fight(New, new[] { (Isd, 1), ("Gleaner", 8) }, new[] { (MonCal, 1), (Isd, 3) }, 1, carry: true,
-            prepare: x => { }, alert: new[] { OnContactMode.Fight, OnContactMode.Retreat }); // indexed by (int)Side: Empire, Alliance
-        Assert.True(r.AllianceRetreated);
-        var sq = u.Where(x => x.Side == Side.Alliance && x.Class.Name == "Gleaner").OrderBy(x => x.ObjectId).ToList();
+            prepare: x => { }, alert: new[] { OnContactMode.Fight, OnContactMode.Retreat }); // indexed by (int)Side: Hand, Collective
+        Assert.True(r.CollectiveRetreated);
+        var sq = u.Where(x => x.Side == Side.Collective && x.Class.Name == "Gleaner").OrderBy(x => x.ObjectId).ToList();
         Assert.Equal(6, sq.Count(x => x.Left)); // the six riding the ISD
         Assert.Equal(2, sq.Count(x => x.Destroyed && x.Loss == UnitLossReason.NoBerth));
     }
@@ -279,7 +279,7 @@ public class NewBattleTests
         int FirstTorpedoTick(NewBattleParams np)
         {
             var (nb, units) = QuickBattle.PrepareNew(new BattleParams { Ruleset = BattleRuleset.New, New = np }, Ships,
-                new[] { ("Nest", 1), ("Plough", 6) }, new[] { (Isd, 1) }, 5, empireCanLand: false, carry: true, logEvents: true); // the ISD cannot run, as it otherwise would (six Plough ion batteries outweigh it)
+                new[] { ("Nest", 1), ("Plough", 6) }, new[] { (Isd, 1) }, 5, handCanLand: false, carry: true, logEvents: true); // the ISD cannot run, as it otherwise would (six Plough ion batteries outweigh it)
             nb.Run();
             var ids = units.Where(x => x.Class.Name == "Plough").Select(x => x.ObjectId).ToHashSet();
             var torp = nb.Log!.Where(e => ids.Contains(e.Unit) && e.Detail == "Torpedo").Select(e => e.T).ToList();
@@ -300,8 +300,8 @@ public class NewBattleTests
         var (r, u) = Fight(New, new[] { (Corvette, 3) }, new[] { (Corvette, 3) }, 1);
         Assert.InRange(r.Seconds, 1200, 1206); // nobody retreated at t = 0; the stalemate at 1200 s ended it (both flagged, equal)
         var (r2, _) = Fight(New, new[] { (Corvette, 3) }, new[] { (Isd, 1) }, 1);
-        Assert.True(r2.AllianceRetreated);
-        Assert.False(r2.EmpireRetreated);
+        Assert.True(r2.CollectiveRetreated);
+        Assert.False(r2.HandRetreated);
     }
 
     // m4-battle-new §11.4: the stalemate flags the side with the lower strength; a side that cannot retreat is destroyed
@@ -310,9 +310,9 @@ public class NewBattleTests
     {
         var (r, _) = Fight(New, new[] { (Corvette, 3) }, new[] { (Corvette, 3) }, 1, aCan: false, eCan: false);
         Assert.InRange(r.Seconds, 1200, 1206);
-        Assert.Equal(BattleOutcome.Indecisive, r.AllianceOutcome); // equal strength: both flagged, both destroyed
-        Assert.Equal(BattleOutcome.Indecisive, r.EmpireOutcome);
-        Assert.All(new[] { r.AllianceLosses, r.EmpireLosses }, n => Assert.Equal(3, n));
+        Assert.Equal(BattleOutcome.Indecisive, r.CollectiveOutcome); // equal strength: both flagged, both destroyed
+        Assert.Equal(BattleOutcome.Indecisive, r.HandOutcome);
+        Assert.All(new[] { r.CollectiveLosses, r.HandLosses }, n => Assert.Equal(3, n));
     }
 
     // ---------------------------------------------------------------- Lead update 2026-10-12
@@ -385,7 +385,7 @@ public class NewBattleTests
         var (so, _) = QuickBattle.PrepareNew(New, Ships, new[] { (Isd, 1) }, new[] { (Isd, 1) }, 4);
         double minStand = 1e9; so.AfterTick = _ => minStand = Math.Min(minStand, so.Distance); so.Run();
         var (su, _) = QuickBattle.PrepareNew(New, Ships, new[] { (Isd, 1) }, new[] { (Isd, 1) }, 4);
-        su.SetTactic(Side.Alliance, BattleTactic.Surround); su.SetTactic(Side.Empire, BattleTactic.Surround);
+        su.SetTactic(Side.Collective, BattleTactic.Surround); su.SetTactic(Side.Hand, BattleTactic.Surround);
         double minSurround = 1e9; su.AfterTick = _ => minSurround = Math.Min(minSurround, su.Distance); su.Run();
         Assert.Equal(21, minStand);      // space-combat/11 §4 (3): min(reach) = 35 - 12 - 2 (was 50 - 16 = 34 under the old m4-battle-new §5)
         Assert.Equal(15, minSurround);   // space-combat/11 §4 (7): Surround closes to 15 (was 0)
@@ -400,7 +400,7 @@ public class NewBattleTests
             var (r, u) = Fight(New, new[] { (MonCal, 2), (Corvette, 4) }, new[] { (Isd, 2), (Lancer, 3) }, seed);
             Assert.True(r.Seconds <= 1800 + 10);
             Assert.All(u, x => Assert.True(x.Destroyed || x.Left || x.Alive));
-            Assert.Equal(u.Count(x => x.Side == Side.Alliance), r.AllianceLosses + r.AllianceSurvivors);
+            Assert.Equal(u.Count(x => x.Side == Side.Collective), r.CollectiveLosses + r.CollectiveSurvivors);
             Assert.All(u.Where(x => x.IsCapital && !x.Destroyed), x => Assert.True(x.Hull > 0 && x.Hull <= x.HullMax));
             Assert.All(u.Where(x => x.IsCapital), x => Assert.All(x.Hits, h => Assert.InRange(h, 0, 4)));
         }
@@ -444,7 +444,7 @@ public class NewBattleTests
                 for (ulong seed = 1; seed <= 200; seed++)
                 {
                     var (r, _) = Fight(p, a, e, seed);
-                    if (r.AllianceOutcome == BattleOutcome.Victorious) aw++; else if (r.EmpireOutcome == BattleOutcome.Victorious) ew++; else none++;
+                    if (r.CollectiveOutcome == BattleOutcome.Victorious) aw++; else if (r.HandOutcome == BattleOutcome.Victorious) ew++; else none++;
                 }
                 return $"A {aw / 2.0:0.0}% E {ew / 2.0:0.0}% none {none / 2.0:0.0}%";
             }

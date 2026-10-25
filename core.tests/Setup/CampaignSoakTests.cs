@@ -81,10 +81,10 @@ public class CampaignSoakTests
     {
         var first = TestCampaign.New(3);
         first.RunTo(TestCampaign.CaptureDay);
-        Assert.Equal(Side.Alliance, first.Host.Fleets.OwnerOf(TestCampaign.CaptureSystem));
+        Assert.Equal(Side.Collective, first.Host.Fleets.OwnerOf(TestCampaign.CaptureSystem));
         var loaded = TestCampaign.Load(first.Host.Save());
         first.Step(); loaded.Step();
-        Assert.Equal(Side.Empire, loaded.Host.Fleets.OwnerOf(TestCampaign.CaptureSystem));
+        Assert.Equal(Side.Hand, loaded.Host.Fleets.OwnerOf(TestCampaign.CaptureSystem));
         Assert.Equal(first.Host.StateHash(), loaded.Host.StateHash());
     }
 
@@ -115,9 +115,9 @@ public class CampaignSoakTests
         var run = CampaignHarness.Checked(1, ruleset);
         var host = run.Host; var ev = run.Events;
         _out.WriteLine($"Ruleset {ruleset}, seed 1, 1000 days.");
-        foreach (var side in new[] { Side.Empire, Side.Alliance }) _out.WriteLine(SideStats.Of(host, side).ToString());
+        foreach (var side in new[] { Side.Hand, Side.Collective }) _out.WriteLine(SideStats.Of(host, side).ToString());
 
-        foreach (var side in new[] { Side.Empire, Side.Alliance })
+        foreach (var side in new[] { Side.Hand, Side.Collective })
         {
             var s = SideStats.Of(host, side);
             int refinedBound = PoolBound(run, side, true), rawBound = PoolBound(run, side, false);
@@ -145,11 +145,11 @@ public class CampaignSoakTests
         Assert.True(ev.OfType<UprisingStarted>().Any(), "no uprising in 1000 days");
         Assert.True(ev.OfType<UnitCompleted>().Any(), "nothing was built");
         Assert.True(ev.OfType<DeliveryArrived>().Any(), "nothing was delivered");
-        Assert.Contains(ev, e => e is SystemCaptured { System: TestCampaign.CaptureSystem, To: Side.Empire, Day: TestCampaign.CaptureDay + 1 });
-        Assert.Contains(ev, e => e is BlockadeStarted { System: TestCampaign.BlockadedSystem, Blockader: Side.Empire });
+        Assert.Contains(ev, e => e is SystemCaptured { System: TestCampaign.CaptureSystem, To: Side.Hand, Day: TestCampaign.CaptureDay + 1 });
+        Assert.Contains(ev, e => e is BlockadeStarted { System: TestCampaign.BlockadedSystem, Blockader: Side.Hand });
         Assert.Contains(ev, e => e is ProjectCancelled { System: TestCampaign.CaptureSystem, Reason: "SystemLost" });
         Assert.Equal(34, host.Game.State.SystemOwners.Count);
-        Assert.Equal(Side.Empire, host.Fleets.OwnerOf(TestCampaign.CaptureSystem));
+        Assert.Equal(Side.Hand, host.Fleets.OwnerOf(TestCampaign.CaptureSystem));
 
         // what the script asked for, and what the modules answered (printed so a run can be read)
         var rejected = ev.OfType<OrderRejected>().GroupBy(e => e.Reason).OrderBy(g => g.Key, StringComparer.Ordinal).Select(g => $"{g.Key} x{g.Count()}");
@@ -174,7 +174,7 @@ public class CampaignSoakTests
 
     // ---------------------------------------------------------------- the settings reach the modules through the host
 
-    // m2-uprisings-and-garrison §Garrison G and the check: Granero holds 2 Imperial Fleet Regiments for a requirement of 2.
+    // m2-uprisings-and-garrison §Garrison G and the check: Granero holds 2 Hand Fleet Regiments for a requirement of 2.
     // Classic counts 1.0 each (enough); New weighs them 0.6 each (1.2 < 2: an uprising on the first day).
     [Fact]
     public void RulesetSettingChangesTheOutcomeAtTaanab()
@@ -205,7 +205,7 @@ public class CampaignSoakTests
         Assert.False(asClassic.Host.Support.IsUprising("Granero"));
     }
 
-    // m4-battle-classic §1: the relief fleet arriving at Tierra Larga on day 300 meets the Empire's interdiction fleet and the contact is a real
+    // m4-battle-classic §1: the relief fleet arriving at Tierra Larga on day 300 meets the Hand's interdiction fleet and the contact is a real
     // Classic battle (invariants stay green on every day of the checked run). The Interdictor's gravity well forbids a retreat.
     [Theory, MemberData(nameof(Rulesets))]
     public void KinyenContactIsARealClassicBattle(GarrisonRuleset r)
@@ -217,24 +217,24 @@ public class CampaignSoakTests
         var end = run.Events.OfType<Praedra.Core.Battle.BattleEnded>().First(b => b.Result.System == TestCampaign.BlockadedSystem);
         if (r == GarrisonRuleset.Classic)
         {
-            Assert.Equal(Praedra.Core.Battle.BattleOutcome.Annihilated, end.Result.Alliance);
+            Assert.Equal(Praedra.Core.Battle.BattleOutcome.Annihilated, end.Result.Collective);
             Assert.Contains(run.Events.OfType<Praedra.Core.Battle.RetreatRefused>(), x => x.Reason == Praedra.Core.Battle.RetreatRefusal.GravityWell);
         }
         else
         {
             // B7 re-expectation 2026-10-19: the day-200 scripted bombardment now draws the Classic way (B7-bombardment §8: one return-fire pick instead of
             // four hits' picks and dice), so on this ruleset the game generator reaches the day-313 battle in another state and the same forces fight
-            // another battle: the Empire retreats (its Decree is lost to NoHyperdrive) and the Alliance holds the field. Before B7 the
-            // Alliance was Annihilated after a GravityWell refusal, as in the Classic row above (which still shows the gravity well).
+            // another battle: the Hand retreats (its Decree is lost to NoHyperdrive) and the Collective holds the field. Before B7 the
+            // Collective was Annihilated after a GravityWell refusal, as in the Classic row above (which still shows the gravity well).
             // v6 re-pin 2026-10-24: on the spiral map the seeded game reaches the Tierra Larga battle in another state again, and it is the battle this test
-            // was written for: the Interdictor's gravity well refuses the Alliance's retreat, the Alliance is Annihilated, the Empire holds the field.
-            Assert.Equal((Praedra.Core.Battle.BattleOutcome.Annihilated, Praedra.Core.Battle.BattleOutcome.Victorious), (end.Result.Alliance, end.Result.Empire));
+            // was written for: the Interdictor's gravity well refuses the Collective's retreat, the Collective is Annihilated, the Hand holds the field.
+            Assert.Equal((Praedra.Core.Battle.BattleOutcome.Annihilated, Praedra.Core.Battle.BattleOutcome.Victorious), (end.Result.Collective, end.Result.Hand));
             Assert.Contains(run.Events.OfType<Praedra.Core.Battle.RetreatRefused>(), x => x.Reason == Praedra.Core.Battle.RetreatRefusal.GravityWell);
         }
     }
 
     // m4-battle-classic §1 (the gravity-well half of the test above, New ruleset): with the five B7 bombardment switches off the day-200 bombardment
-    // draws as before B7, so the day-313 Tierra Larga battle is the one this test was written for: the Interdictor's gravity well refuses the Alliance's
+    // draws as before B7, so the day-313 Tierra Larga battle is the one this test was written for: the Interdictor's gravity well refuses the Collective's
     // retreat and it is Annihilated. Keeps that check on the New ruleset after B7 re-routed the seeded game (Dev lead, 2026-10-19).
     [Fact]
     public void KinyenContactNewRulesetGravityWellWithPreB7Bombardment()
@@ -245,7 +245,7 @@ public class CampaignSoakTests
         while (c.Game.Day < 330) c.Step();
         var events = c.Host.Game.Events;
         var end = events.OfType<Praedra.Core.Battle.BattleEnded>().First(b => b.Result.System == TestCampaign.BlockadedSystem);
-        Assert.Equal(Praedra.Core.Battle.BattleOutcome.Annihilated, end.Result.Alliance);
+        Assert.Equal(Praedra.Core.Battle.BattleOutcome.Annihilated, end.Result.Collective);
         Assert.Contains(events.OfType<Praedra.Core.Battle.RetreatRefused>(), x => x.Reason == Praedra.Core.Battle.RetreatRefusal.GravityWell);
     }
 }

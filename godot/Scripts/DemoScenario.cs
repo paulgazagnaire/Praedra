@@ -18,25 +18,25 @@ public static class DemoScenario
         var fm = FleetModule.Attach(game, galaxy, ships, blockade, ForcedStopTrigger.PaulRule);
 
         // Who owns what (so a blockade flag can fire: an enemy fleet sitting in an owned system).
-        fm.SetOwner("Charter", Side.Empire);
-        fm.SetOwner("The Shoal", Side.Empire);
-        fm.SetOwner("Caminus", Side.Empire);   // Home One arrives here: Rebel fleet in an Imperial system
-        fm.SetOwner("Tierra Larga", Side.Alliance);  // the Imperial picket sits here: blockade on from day 1
-        fm.SetOwner("The Thaw", Side.Alliance);
-        fm.SetOwner("The Moorings", Side.Alliance);
-        fm.SetOwner("Incus", Side.Empire);
+        fm.SetOwner("Charter", Side.Hand);
+        fm.SetOwner("The Shoal", Side.Hand);
+        fm.SetOwner("Caminus", Side.Hand);   // Home One arrives here: Collective fleet in a Hand system
+        fm.SetOwner("Tierra Larga", Side.Collective);  // the Hand picket sits here: blockade on from day 1
+        fm.SetOwner("The Thaw", Side.Collective);
+        fm.SetOwner("The Moorings", Side.Collective);
+        fm.SetOwner("Incus", Side.Hand);
 
         // Moving fleets: (side, name, ships, from, to)
-        Go(fm, Side.Alliance, "Red", new[] { "Dodger", "Dodger" }, "Charter", "The Thaw");        // stopped at Tierra Larga
-        Go(fm, Side.Empire, "Death Squadron", new[] { "Mandate", "Mandate" }, "Charter", "The Shoal");
-        Go(fm, Side.Alliance, "Home One", new[] { "Ark" }, "The Moorings", "Caminus");
-        Go(fm, Side.Alliance, "Blue", new[] { "Mender", "Mender" }, "The Thaw", "Classis");
-        Go(fm, Side.Empire, "Vengeance", new[] { "Decree", "Decree", "Decree" }, "Incus", "Saltreach");
-        Go(fm, Side.Alliance, "Supply Run", new[] { "Mule" }, "Fyrholm", "Solacia");
-        Go(fm, Side.Empire, "Tarkin's Patrol", new[] { "Injunction" }, "Oldwatch", "Eldingar");
+        Go(fm, Side.Collective, "Red", new[] { "Dodger", "Dodger" }, "Charter", "The Thaw");        // stopped at Tierra Larga
+        Go(fm, Side.Hand, "Death Squadron", new[] { "Mandate", "Mandate" }, "Charter", "The Shoal");
+        Go(fm, Side.Collective, "Home One", new[] { "Ark" }, "The Moorings", "Caminus");
+        Go(fm, Side.Collective, "Blue", new[] { "Mender", "Mender" }, "The Thaw", "Classis");
+        Go(fm, Side.Hand, "Vengeance", new[] { "Decree", "Decree", "Decree" }, "Incus", "Saltreach");
+        Go(fm, Side.Collective, "Supply Run", new[] { "Mule" }, "Fyrholm", "Solacia");
+        Go(fm, Side.Hand, "Tarkin's Patrol", new[] { "Injunction" }, "Oldwatch", "Eldingar");
 
-        // Stationary: the Imperial picket at Tierra Larga (an Subpoena has a gravity-well projector).
-        fm.AddFleet(Side.Empire, "Picket-1", new[] { "Subpoena" }, "Tierra Larga");
+        // Stationary: the Hand picket at Tierra Larga (an Subpoena has a gravity-well projector).
+        fm.AddFleet(Side.Hand, "Picket-1", new[] { "Subpoena" }, "Tierra Larga");
         return fm;
     }
 

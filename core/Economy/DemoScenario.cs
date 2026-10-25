@@ -21,12 +21,12 @@ public sealed class DemoScenario
     /// <summary>Present when the scenario was made with support on (popular support, garrisons, uprisings).</summary>
     public SupportModule? Support { get; init; }
 
-    // (system, Alliance support, mines, refineries); mines never exceed the system's raw slots.
-    private static readonly (string System, int AllianceSupport, int Mines, int Refineries)[] EmpireSystems =
+    // (system, Collective support, mines, refineries); mines never exceed the system's raw slots.
+    private static readonly (string System, int CollectiveSupport, int Mines, int Refineries)[] HandSystems =
     {
         ("Charter", 10, 3, 3), ("Navalia", 20, 4, 3), ("Classis", 65, 4, 2), ("Incus", 75, 3, 2),
     };
-    private static readonly (string System, int AllianceSupport, int Mines, int Refineries)[] AllianceSystems =
+    private static readonly (string System, int CollectiveSupport, int Mines, int Refineries)[] CollectiveSystems =
     {
         ("Caminus", 80, 4, 3), ("The Moorings", 25, 3, 2), ("The Shoal", 100, 2, 2), ("Drift Harbour", 30, 3, 2),
     };
@@ -45,48 +45,48 @@ public sealed class DemoScenario
         var eco = EconomyModule.Attach(game, galaxy, slots, costs, fleets);
         eco.IncidentsEnabled = incidents;
 
-        void Place(Side side, (string System, int AllianceSupport, int Mines, int Refineries) s)
+        void Place(Side side, (string System, int CollectiveSupport, int Mines, int Refineries) s)
         {
             fleets.SetOwner(s.System, side);
-            eco.SetAllianceSupport(s.System, s.AllianceSupport);
+            eco.SetCollectiveSupport(s.System, s.CollectiveSupport);
             for (int i = 0; i < s.Mines; i++) eco.AddFacility(s.System, FacilityKind.Mine);
             for (int i = 0; i < s.Refineries; i++) eco.AddFacility(s.System, FacilityKind.Refinery);
         }
-        foreach (var s in EmpireSystems) Place(Side.Empire, s);
-        foreach (var s in AllianceSystems) Place(Side.Alliance, s);
+        foreach (var s in HandSystems) Place(Side.Hand, s);
+        foreach (var s in CollectiveSystems) Place(Side.Collective, s);
 
-        // Load (maintenance): yards, ships and troops as economy objects. The Empire ends up above its capacity so autoscrap runs.
+        // Load (maintenance): yards, ships and troops as economy objects. The Hand ends up above its capacity so autoscrap runs.
         eco.AddFacility("Navalia", FacilityKind.OrbitalShipyard);
         eco.AddFacility("Incus", FacilityKind.OrbitalShipyard);
         eco.AddFacility("Charter", FacilityKind.ConstructionYard);
-        for (int i = 0; i < 5; i++) eco.AddObject(Side.Empire, "Mandate");
-        eco.AddObject(Side.Empire, "Edict");
-        for (int i = 0; i < 10; i++) eco.AddObject(Side.Empire, "Pacifiers", "Charter");
+        for (int i = 0; i < 5; i++) eco.AddObject(Side.Hand, "Mandate");
+        eco.AddObject(Side.Hand, "Edict");
+        for (int i = 0; i < 10; i++) eco.AddObject(Side.Hand, "Pacifiers", "Charter");
         eco.AddFacility("Caminus", FacilityKind.Kdy150);
-        for (int i = 0; i < 3; i++) eco.AddObject(Side.Alliance, "Ark");
-        for (int i = 0; i < 4; i++) eco.AddObject(Side.Alliance, "Mender");
-        for (int i = 0; i < 6; i++) eco.AddObject(Side.Alliance, "Militia", "The Shoal");
+        for (int i = 0; i < 3; i++) eco.AddObject(Side.Collective, "Ark");
+        for (int i = 0; i < 4; i++) eco.AddObject(Side.Collective, "Mender");
+        for (int i = 0; i < 6; i++) eco.AddObject(Side.Collective, "Militia", "The Shoal");
 
-        // Fleets: an Imperial picket at Navalia, a Rebel picket at Caminus, an Interdictor sent to blockade Drift Harbour and a Rebel
+        // Fleets: a Hand picket at Navalia, a Collective picket at Caminus, an Interdictor sent to blockade Drift Harbour and a Collective
         // transport sent from The Thaw to The Shoal. Movement draws no random numbers.
-        fleets.AddFleet(Side.Empire, "Navalia Picket", new[] { "Mandate" }, "Navalia");
-        fleets.AddFleet(Side.Alliance, "Caminus Picket", new[] { "Dodger" }, "Caminus");
-        eco.AddObject(Side.Alliance, "Swift", "Caminus"); // a squadron based at Caminus (a corvette has no berth)
-        int interdictor = fleets.AddFleet(Side.Empire, "Interdiction", new[] { "Subpoena" }, "Tierra Larga");
-        int transport = fleets.AddFleet(Side.Alliance, "Supply", new[] { "Mule" }, "The Thaw");
-        fleets.SubmitMove(Side.Empire, interdictor, "Drift Harbour");
-        fleets.SubmitMove(Side.Alliance, transport, "The Shoal");
+        fleets.AddFleet(Side.Hand, "Navalia Picket", new[] { "Mandate" }, "Navalia");
+        fleets.AddFleet(Side.Collective, "Caminus Picket", new[] { "Dodger" }, "Caminus");
+        eco.AddObject(Side.Collective, "Swift", "Caminus"); // a squadron based at Caminus (a corvette has no berth)
+        int interdictor = fleets.AddFleet(Side.Hand, "Interdiction", new[] { "Subpoena" }, "Tierra Larga");
+        int transport = fleets.AddFleet(Side.Collective, "Supply", new[] { "Mule" }, "The Thaw");
+        fleets.SubmitMove(Side.Hand, interdictor, "Drift Harbour");
+        fleets.SubmitMove(Side.Collective, transport, "The Shoal");
 
         // Support on: garrisons and the support module. The Moorings (support 25, no regiments) is the system that rises; Classis,
-        // Incus and Drift Harbour are garrisoned. Drift Harbour is blockaded by the Interdictor (the Empire has 70 there, a majority, so
-        // Alliance support there drops 1 per 30 days; see m2-popular-support, presence timer). rule: m2-uprisings-and-garrison, m2-popular-support.
+        // Incus and Drift Harbour are garrisoned. Drift Harbour is blockaded by the Interdictor (the Hand has 70 there, a majority, so
+        // Collective support there drops 1 per 30 days; see m2-popular-support, presence timer). rule: m2-uprisings-and-garrison, m2-popular-support.
         SupportModule? sup = null;
         if (support)
         {
             sup = SupportModule.Attach(game, galaxy, eco, fleets, weights);
-            for (int i = 0; i < 3; i++) eco.AddObject(Side.Empire, "Tranches", "Classis");
-            for (int i = 0; i < 4; i++) eco.AddObject(Side.Empire, "Tranches", "Incus");
-            for (int i = 0; i < 4; i++) eco.AddObject(Side.Alliance, "Militia", "Drift Harbour");
+            for (int i = 0; i < 3; i++) eco.AddObject(Side.Hand, "Tranches", "Classis");
+            for (int i = 0; i < 4; i++) eco.AddObject(Side.Hand, "Tranches", "Incus");
+            for (int i = 0; i < 4; i++) eco.AddObject(Side.Collective, "Militia", "Drift Harbour");
         }
 
         eco.SetupNewGame();

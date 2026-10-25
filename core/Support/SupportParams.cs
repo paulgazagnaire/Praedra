@@ -29,7 +29,7 @@ public sealed record SupportParams
     // ---- support sheet
     public int SupportMin { get; init; } = 0;     // Traced
     public int SupportMax { get; init; } = 100;   // Traced
-    /// <summary>GNPRTB 7681. Alliance gains in a Death Star sector are divided by this, truncating toward zero. Traced; rounding DEFAULT.</summary>
+    /// <summary>GNPRTB 7681. Collective gains in a Death Star sector are divided by this, truncating toward zero. Traced; rounding DEFAULT.</summary>
     public int DeathStarDampingDivisor { get; init; } = 2;
     /// <summary>GNPRTB 7698 (value from economy/05 text). Traced-medium.</summary>
     public int ErosionPeriod { get; init; } = 30;
@@ -42,8 +42,8 @@ public sealed record SupportParams
     public int PresenceLoss { get; init; } = -1;
     /// <summary>"Majority" means strictly more than this. DEFAULT.</summary>
     public int PresenceMajorityAbove { get; init; } = 50;
-    /// <summary>GNPRTB 7691 = 0: Empire passive gain. Dead feature, NOT run in M2 whatever the value (needs period values and the meaning of flag bit 8).</summary>
-    public int EmpirePassiveGain { get; init; } = 0;
+    /// <summary>GNPRTB 7691 = 0: Hand passive gain. Dead feature, NOT run in M2 whatever the value (needs period values and the meaning of flag bit 8).</summary>
+    public int HandPassiveGain { get; init; } = 0;
 
     // ---- garrison sheet
     /// <summary>GNPRTB 7761: no garrison is needed at or above this controller support. Traced.</summary>
@@ -52,7 +52,7 @@ public sealed record SupportParams
     public int GarrisonStep { get; init; } = 10;
     /// <summary>GNPRTB 7682. Requirement multiplier during an uprising. Traced.</summary>
     public int UprisingMultiplier { get; init; } = 2;
-    /// <summary>GNPRTB 7680. Empire requirement divisor in a Death Star sector (truncating, DEFAULT) and the multiplier on Empire regiments in the incident score. Traced.</summary>
+    /// <summary>GNPRTB 7680. Hand requirement divisor in a Death Star sector (truncating, DEFAULT) and the multiplier on Hand regiments in the incident score. Traced.</summary>
     public int DeathStarGarrisonDivisor { get; init; } = 2;
     public int DeathStarScoreMultiplier { get; init; } = 2;
     /// <summary>A regiment class without a weight counts this many tenths (1.0). DEFAULT.</summary>

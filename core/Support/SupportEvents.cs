@@ -5,7 +5,7 @@ namespace Praedra.Core.Support;
 // Events of the support package. Day is the hook time T = K + 1, like the economy events.
 // rule: m2-popular-support §One entry point (SupportChanged); m2-uprisings-and-garrison §Uprising start, keep, end; §Incident.
 
-/// <summary>Old and New are the Alliance share (0..100). Emitted only when the value moved.</summary>
+/// <summary>Old and New are the Collective share (0..100). Emitted only when the value moved.</summary>
 public sealed record SupportChanged(int Index, int Day, string System, int Old, int New, SupportCause Cause)
     : GameEvent(Index, Day, nameof(SupportChanged));
 

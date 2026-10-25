@@ -1,30 +1,30 @@
-system,owner,alliance_support,source
-Navalia,Empire,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
-Incus,Empire,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
-Classis,Empire,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
-Castra,Empire,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
-Ferraria,Empire,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
-Custodia,Empire,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
-Cunabula,Empire,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
-Ergon,Empire,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
-Fiducia,Empire,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
-Ommata,Empire,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
-Firmitas,Empire,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
-Pronoia,Empire,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
-Officina,Empire,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
-Fusoria,Empire,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
-Porphyry,Empire,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
-Feldspar,Empire,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
-Solacia,Empire,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
-Lenitas,Empire,57,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
-Caminus,Empire,58,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
-Akousma,Empire,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
-Halite,Empire,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
-Cohors,Empire,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
-Fiscus,Empire,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
-The Thaw,Alliance,,setup-victory/10 §3; m5-setup-and-victory §Mode Anchored step 1
-Fallow,Alliance,,setup-victory/10 §3; m5-setup-and-victory §Mode Anchored step 1
-The Moorings,Alliance,,setup-victory/10 §3; m5-setup-and-victory §Mode Anchored step 1
+system,owner,collective_support,source
+Navalia,Hand,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
+Incus,Hand,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
+Classis,Hand,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
+Castra,Hand,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
+Ferraria,Hand,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
+Custodia,Hand,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
+Cunabula,Hand,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
+Ergon,Hand,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
+Fiducia,Hand,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
+Ommata,Hand,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
+Firmitas,Hand,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
+Pronoia,Hand,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
+Officina,Hand,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
+Fusoria,Hand,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
+Porphyry,Hand,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
+Feldspar,Hand,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
+Solacia,Hand,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
+Lenitas,Hand,57,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
+Caminus,Hand,58,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
+Akousma,Hand,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
+Halite,Hand,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
+Cohors,Hand,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
+Fiscus,Hand,,setup-victory/10 §2; m5-setup-and-victory §Mode Anchored step 1
+The Thaw,Collective,,setup-victory/10 §3; m5-setup-and-victory §Mode Anchored step 1
+Fallow,Collective,,setup-victory/10 §3; m5-setup-and-victory §Mode Anchored step 1
+The Moorings,Collective,,setup-victory/10 §3; m5-setup-and-victory §Mode Anchored step 1
 Amargura,Neutral,,setup-victory/10 §4; m5-setup-and-victory §Mode Anchored step 1 (locked neutral)
 Vrijhaven,Neutral,,setup-victory/10 §4; m5-setup-and-victory §Mode Anchored step 1 (locked neutral)
 Hoogstad,Neutral,,setup-victory/10 §4; m5-setup-and-victory §Mode Anchored step 1 (locked neutral)

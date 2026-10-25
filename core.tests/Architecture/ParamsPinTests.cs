@@ -76,7 +76,7 @@ public class ParamsPinTests
         yield return ("SupportParams.PresencePeriod (7696)", sup.PresencePeriod, G, 7696, 1);
         yield return ("SupportParams.PresenceGain", sup.PresenceGain, G, 7693, 1);
         yield return ("SupportParams.PresenceLoss", sup.PresenceLoss, G, 7695, 1);
-        yield return ("SupportParams.EmpirePassiveGain", sup.EmpirePassiveGain, G, 7691, 1);
+        yield return ("SupportParams.HandPassiveGain", sup.HandPassiveGain, G, 7691, 1);
         yield return ("SupportParams.GarrisonFreeSupport", sup.GarrisonFreeSupport, G, 7761, 1);
         yield return ("SupportParams.GarrisonStep (cited as -10)", sup.GarrisonStep, G, 7762, -1);
         yield return ("SupportParams.UprisingMultiplier", sup.UprisingMultiplier, G, 7682, 1);

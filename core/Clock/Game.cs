@@ -162,7 +162,7 @@ public sealed class Game
     public IReadOnlyList<GameEvent> Events => _events;
 
     /// <summary>
-    /// Decides who may see an event, when it is raised: bit 1 = Empire, bit 2 = Alliance (as Victory.ScenarioState.Bit). Given the
+    /// Decides who may see an event, when it is raised: bit 1 = Hand, bit 2 = Collective (as Victory.ScenarioState.Bit). Given the
     /// event and the order being processed in step 1 (null outside it). Null = everyone sees everything. The fog module sets it.
     /// rule: m5-fog-and-hq §N8 (event audience: "every event gets an audience when it is raised").
     /// </summary>

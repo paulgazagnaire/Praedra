@@ -5,26 +5,26 @@ using Praedra.Core.Clock;
 using Praedra.Core.Control;
 using Praedra.Core.Setup;
 
-// AI tournament (m6 AI trainer, ai/12 P11 "headless AI-vs-AI harness"). Plays every seed twice, A as the Empire against B as the Alliance and
+// AI tournament (m6 AI trainer, ai/12 P11 "headless AI-vs-AI harness"). Plays every seed twice, A as the Hand against B as the Collective and
 // then the other way round, so the side a level plays cancels out. Reads state and events only; draws no random numbers itself.
 internal static class Tourney
 {
     public const string Usage = """
-          dotnet run --project sim -- tourney [--a hard] [--b medium] [--seeds 1-16] [--days 3000] [--jobs 4] [--csv out.csv] [--verbose] [--a-params K=V,...] [--b-params K=V,...] [--empire-params K=V,...] [--alliance-params K=V,...] [--settings K=V,...]
+          dotnet run --project sim -- tourney [--a hard] [--b medium] [--seeds 1-16] [--days 3000] [--jobs 4] [--csv out.csv] [--verbose] [--a-params K=V,...] [--b-params K=V,...] [--hand-params K=V,...] [--collective-params K=V,...] [--settings K=V,...]
         tourney plays the simple AI at level A against level B (easy, medium, hard; core/AI/AiLevel.cs), fog on for both, from the MedA start:
-        every seed once with A as the Empire and once with A as the Alliance. It prints, per level and side, the wins, the median win day, the day
-        the Empire's own picture first showed the true Rebel HQ, and each level's mean share of the systems the two sides hold at the end (a win
+        every seed once with A as the Hand and once with A as the Collective. It prints, per level and side, the wins, the median win day, the day
+        the Hand's own picture first showed the true Hearth, and each level's mean share of the systems the two sides hold at the end (a win
         counts 100%, a loss 0%). --a-params / --b-params set SimpleAiParams values on top of a level (e.g. "MilitaryEvery=1,ScoutCount=8"; ints and
-        bools), to try a knob before it becomes part of a level. --empire-params / --alliance-params do the same for whichever level plays that side,
-        on top of --a-params / --b-params (e.g. only the Empire shields its capital, as a human Empire player would). --seeds takes a range (1-16), a list (1,4,9) or a count (16 = 1-16). --jobs plays that many games at once.
+        bools), to try a knob before it becomes part of a level. --hand-params / --collective-params do the same for whichever level plays that side,
+        on top of --a-params / --b-params (e.g. only the Hand shields its capital, as a huma Hand player would). --seeds takes a range (1-16), a list (1,4,9) or a count (16 = 1-16). --jobs plays that many games at once.
         """;
 
-    private sealed record GameResult(int Seed, bool AIsEmpire, AiLevel EmpireLevel, AiLevel AllianceLevel, Side? Winner, int Day, int EmpireSystems,
-                                     int AllianceSystems, int? HqFoundDay, int EmpireCaptures, int AllianceCaptures)
+    private sealed record GameResult(int Seed, bool AIsHand, AiLevel HandLevel, AiLevel CollectiveLevel, Side? Winner, int Day, int HandSystems,
+                                     int CollectiveSystems, int? HqFoundDay, int HandCaptures, int CollectiveCaptures)
     {
         /// <summary>Share (percent) of the systems the two sides hold at the end for <paramref name="side"/>; a win is 100, a loss 0.</summary>
         public double Share(Side side) => Winner is Side w ? (w == side ? 100 : 0)
-            : 100.0 * (side == Side.Empire ? EmpireSystems : AllianceSystems) / Math.Max(1, EmpireSystems + AllianceSystems);
+            : 100.0 * (side == Side.Hand ? HandSystems : CollectiveSystems) / Math.Max(1, HandSystems + CollectiveSystems);
     }
 
     public static int Run(string[] a)
@@ -45,8 +45,8 @@ internal static class Tourney
                 case "--csv": csv = Next(); break;
                 case "--a-params": pa = Next(); break;
                 case "--b-params": pb = Next(); break;
-                case "--empire-params": pe = Next(); break;
-                case "--alliance-params": pal = Next(); break;
+                case "--hand-params": pe = Next(); break;
+                case "--collective-params": pal = Next(); break;
                 case "--settings": ps = Next(); break;
                 case "--verbose": verbose = true; break;
                 default: throw new ArgumentException($"Unknown option '{key}'.");
@@ -54,9 +54,9 @@ internal static class Tourney
         }
         var clock = System.Diagnostics.Stopwatch.StartNew();
         var paramsA = WithOverrides(AiLevels.For(la), pa); var paramsB = WithOverrides(AiLevels.For(lb), pb);
-        var sides = SideParams(paramsA, paramsB, pe, pal); // checks --empire-params / --alliance-params here, before any game (QA-28)
+        var sides = SideParams(paramsA, paramsB, pe, pal); // checks --hand-params / --collective-params here, before any game (QA-28)
         var settings = SettingsWith(ps);
-        Console.WriteLine($"Tournament: {la}{(pa != null ? " [" + pa + "]" : "")} (A) against {lb}{(pb != null ? " [" + pb + "]" : "")} (B){(pe != null ? ", Empire [" + pe + "]" : "")}{(pal != null ? ", Alliance [" + pal + "]" : "")}, seeds {string.Join(",", seeds)}, up to {days} days, fog on, {jobs} at once{(ps != null ? ", settings " + ps : "")}.");
+        Console.WriteLine($"Tournament: {la}{(pa != null ? " [" + pa + "]" : "")} (A) against {lb}{(pb != null ? " [" + pb + "]" : "")} (B){(pe != null ? ", Hand [" + pe + "]" : "")}{(pal != null ? ", Collective [" + pal + "]" : "")}, seeds {string.Join(",", seeds)}, up to {days} days, fog on, {jobs} at once{(ps != null ? ", settings " + ps : "")}.");
         NewGame.Create(new NewGameOptions { Seed = seeds[0], Preset = StartPreset.MedA }); // loads the shared data once before the parallel games
         var games = seeds.SelectMany(s => new[] { (Seed: s, AEmp: true), (Seed: s, AEmp: false) }).ToList();
         var results = new ConcurrentBag<GameResult>();
@@ -67,34 +67,34 @@ internal static class Tourney
             results.Add(r);
             if (verbose) lock (results) Console.WriteLine("  " + Line(r));
         });
-        var all = results.OrderBy(r => r.Seed).ThenBy(r => !r.AIsEmpire).ToList();
+        var all = results.OrderBy(r => r.Seed).ThenBy(r => !r.AIsHand).ToList();
         if (!verbose) foreach (var r in all) Console.WriteLine("  " + Line(r));
         Console.WriteLine();
         foreach (var (isA, lvl) in new[] { (true, la), (false, lb) })
         {
-            var asE = all.Where(r => r.AIsEmpire == isA).ToList();
-            var asA = all.Where(r => r.AIsEmpire != isA).ToList();
+            var asE = all.Where(r => r.AIsHand == isA).ToList();
+            var asA = all.Where(r => r.AIsHand != isA).ToList();
             Console.WriteLine($"{(isA ? "A" : "B")} = {lvl}:");
-            Console.WriteLine($"  as the Empire:   wins {asE.Count(r => r.Winner == Side.Empire)}/{asE.Count}, losses {asE.Count(r => r.Winner == Side.Alliance)}, " +
-                              $"median win day {Median(asE.Where(r => r.Winner == Side.Empire).Select(r => r.Day))}, HQ found in {asE.Count(r => r.HqFoundDay != null)}/{asE.Count} " +
-                              $"(median day {Median(asE.Where(r => r.HqFoundDay != null).Select(r => r.HqFoundDay!.Value))}), mean share {Mean(asE.Select(r => r.Share(Side.Empire)))}%");
-            Console.WriteLine($"  as the Alliance: wins {asA.Count(r => r.Winner == Side.Alliance)}/{asA.Count}, losses {asA.Count(r => r.Winner == Side.Empire)}, " +
-                              $"median win day {Median(asA.Where(r => r.Winner == Side.Alliance).Select(r => r.Day))}, mean share {Mean(asA.Select(r => r.Share(Side.Alliance)))}%");
-            Console.WriteLine($"  overall mean share {Mean(asE.Select(r => r.Share(Side.Empire)).Concat(asA.Select(r => r.Share(Side.Alliance))))}%");
+            Console.WriteLine($"  as the Hand:   wins {asE.Count(r => r.Winner == Side.Hand)}/{asE.Count}, losses {asE.Count(r => r.Winner == Side.Collective)}, " +
+                              $"median win day {Median(asE.Where(r => r.Winner == Side.Hand).Select(r => r.Day))}, HQ found in {asE.Count(r => r.HqFoundDay != null)}/{asE.Count} " +
+                              $"(median day {Median(asE.Where(r => r.HqFoundDay != null).Select(r => r.HqFoundDay!.Value))}), mean share {Mean(asE.Select(r => r.Share(Side.Hand)))}%");
+            Console.WriteLine($"  as the Collective: wins {asA.Count(r => r.Winner == Side.Collective)}/{asA.Count}, losses {asA.Count(r => r.Winner == Side.Hand)}, " +
+                              $"median win day {Median(asA.Where(r => r.Winner == Side.Collective).Select(r => r.Day))}, mean share {Mean(asA.Select(r => r.Share(Side.Collective)))}%");
+            Console.WriteLine($"  overall mean share {Mean(asE.Select(r => r.Share(Side.Hand)).Concat(asA.Select(r => r.Share(Side.Collective))))}%");
         }
         if (csv != null)
         {
             using var w = new StreamWriter(csv);
-            w.WriteLine("seed,a_is_empire,empire_level,alliance_level,winner,day,empire_systems,alliance_systems,hq_found_day,empire_captures,alliance_captures");
+            w.WriteLine("seed,a_is_empire,hand_level,collective_level,winner,day,hand_systems,collective_systems,hq_found_day,hand_captures,collective_captures");
             foreach (var r in all)
-                w.WriteLine(string.Join(",", r.Seed, r.AIsEmpire, r.EmpireLevel, r.AllianceLevel, r.Winner?.ToString() ?? "", r.Day, r.EmpireSystems, r.AllianceSystems,
-                                        r.HqFoundDay?.ToString(CultureInfo.InvariantCulture) ?? "", r.EmpireCaptures, r.AllianceCaptures));
+                w.WriteLine(string.Join(",", r.Seed, r.AIsHand, r.HandLevel, r.CollectiveLevel, r.Winner?.ToString() ?? "", r.Day, r.HandSystems, r.CollectiveSystems,
+                                        r.HqFoundDay?.ToString(CultureInfo.InvariantCulture) ?? "", r.HandCaptures, r.CollectiveCaptures));
         }
         Console.WriteLine($"Runtime: {games.Count} games in {clock.Elapsed.TotalSeconds:F0} s.");
         return 0;
     }
 
-    private static GameResult Play(int seed, bool aIsEmpire, AiLevel empire, AiLevel alliance, SimpleAiParams pe, SimpleAiParams pa, int days, GameSettings? settings)
+    private static GameResult Play(int seed, bool aIsHand, AiLevel hand, AiLevel collective, SimpleAiParams pe, SimpleAiParams pa, int days, GameSettings? settings)
     {
         var host = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = settings });
         var match = new AiMatch(host, pe, pa);
@@ -102,12 +102,12 @@ internal static class Tourney
         while (host.Game.Day < days && host.Victory.Winner == null)
         {
             match.Step();
-            if (found == null && host.HqSystem != null && host.Fog.KnownHq(Side.Empire)?.System == host.HqSystem) found = host.Game.Day;
+            if (found == null && host.HqSystem != null && host.Fog.KnownHq(Side.Hand)?.System == host.HqSystem) found = host.Game.Day;
         }
         var caps = host.Game.Events.OfType<SystemCaptured>().ToList();
         int Held(Side s) => host.Game.State.SystemOwners.Count(kv => kv.Value == s);
-        return new GameResult(seed, aIsEmpire, empire, alliance, host.Victory.Winner, host.Game.Day, Held(Side.Empire), Held(Side.Alliance), found,
-                              caps.Count(c => c.To == Side.Empire), caps.Count(c => c.To == Side.Alliance));
+        return new GameResult(seed, aIsHand, hand, collective, host.Victory.Winner, host.Game.Day, Held(Side.Hand), Held(Side.Collective), found,
+                              caps.Count(c => c.To == Side.Hand), caps.Count(c => c.To == Side.Collective));
     }
 
     /// <summary>Game settings for every game (--settings K=V,...: int, bool or enum properties of GameSettings, nullable ones too, "null" for
@@ -149,15 +149,15 @@ internal static class Tourney
     }
 
     /// <summary>
-    /// The Empire's and the Alliance's parameters for a game, by whether A plays the Empire: A's and B's (each its level with --a-params /
-    /// --b-params), whichever side each plays, then --empire-params on the Empire's and --alliance-params on the Alliance's. The four sets are
+    /// The Hand's and the Collective's parameters for a game, by whether A plays the Hand: A's and B's (each its level with --a-params /
+    /// --b-params), whichever side each plays, then --hand-params on the Hand's and --collective-params on the Collective's. The four sets are
     /// made here, so a bad value is an ArgumentException before any game starts.
     /// </summary>
-    internal static Func<bool, (SimpleAiParams Empire, SimpleAiParams Alliance)> SideParams(SimpleAiParams a, SimpleAiParams b, string? empire, string? alliance)
+    internal static Func<bool, (SimpleAiParams Hand, SimpleAiParams Collective)> SideParams(SimpleAiParams a, SimpleAiParams b, string? hand, string? collective)
     {
-        var aEmp = WithOverrides(a, empire); var bEmp = WithOverrides(b, empire);
-        var aAll = WithOverrides(a, alliance); var bAll = WithOverrides(b, alliance);
-        return aIsEmpire => aIsEmpire ? (aEmp, bAll) : (bEmp, aAll);
+        var aEmp = WithOverrides(a, hand); var bEmp = WithOverrides(b, hand);
+        var aAll = WithOverrides(a, collective); var bAll = WithOverrides(b, collective);
+        return aIsHand => aIsHand ? (aEmp, bAll) : (bEmp, aAll);
     }
 
     /// <summary>A copy of the parameters with "Name=value" pairs set (int and bool properties of SimpleAiParams).</summary>
@@ -179,8 +179,8 @@ internal static class Tourney
     }
 
     private static string Line(GameResult r) =>
-        $"seed {r.Seed,3}: Empire {r.EmpireLevel,-6} vs Alliance {r.AllianceLevel,-6} -> {(r.Winner is Side w ? $"{w} wins day {r.Day}" : $"no winner by day {r.Day}"),-26} " +
-        $"systems {r.EmpireSystems}/{r.AllianceSystems}, HQ found {(r.HqFoundDay is int h ? "day " + h : "never")}, captures {r.EmpireCaptures}/{r.AllianceCaptures}";
+        $"seed {r.Seed,3}: Hand {r.HandLevel,-6} vs Collective {r.CollectiveLevel,-6} -> {(r.Winner is Side w ? $"{w} wins day {r.Day}" : $"no winner by day {r.Day}"),-26} " +
+        $"systems {r.HandSystems}/{r.CollectiveSystems}, HQ found {(r.HqFoundDay is int h ? "day " + h : "never")}, captures {r.HandCaptures}/{r.CollectiveCaptures}";
 
     private static List<int> ParseSeeds(string s)
     {

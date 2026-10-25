@@ -149,8 +149,8 @@ public sealed class NewBattleData
         {
             string name = st.Get(r, "name").Trim();
             string side = st.Get(r, "side").Trim();
-            var shipSide = side.Equals("Alliance", StringComparison.OrdinalIgnoreCase) ? ShipSide.Alliance
-                : side.Equals("Empire", StringComparison.OrdinalIgnoreCase) ? ShipSide.Empire : ShipSide.Alliance | ShipSide.Empire;
+            var shipSide = side.Equals("Collective", StringComparison.OrdinalIgnoreCase) ? ShipSide.Collective
+                : side.Equals("Hand", StringComparison.OrdinalIgnoreCase) ? ShipSide.Hand : ShipSide.Collective | ShipSide.Hand;
             torp.TryGetValue(name, out var t);
             var c = new CombatClass
             {

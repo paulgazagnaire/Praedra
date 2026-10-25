@@ -14,17 +14,17 @@ namespace Praedra.Core.AI;
 /// byte). Every few days (AgentsEvery) it:
 /// <list type="number">
 /// <item>cancels Diplomacy whose target has reached DiplomacyStopSupport, and takes the passengers (post None riders) off idle fleets;</item>
-/// <item>Empire with fog: keeps its best spies (HqSpies) off the posts while the Rebel HQ is unknown or due a re-check;</item>
-/// <item>posts the best leader as General of the system whose loss ends the game (Charter, the Rebel HQ), moving him or her there first;</item>
+/// <item>Hand with fog: keeps its best spies (HqSpies) off the posts while the Hearth is unknown or due a re-check;</item>
+/// <item>posts the best leader as General of the system whose loss ends the game (Charter, the Hearth), moving him or her there first;</item>
 /// <item>posts leaders as Admiral (fleets that can bombard) and General (fleets that carry troops) of the strongest fleets (OfficerFleets), the
 /// officers waiting at the rally system for their fleet (m5-characters-and-force §Posts; the bonuses are m3-bombardment and m3-assault's);</item>
 /// <item>sends one-member missions by expected value: value x chance / (travel days + MissionTravelBias), chance = P(not detected) x P(success)
 /// from the core's own tables (MissionModule.FoilChance, DetectionX, Lookup: m5-missions §3, §Mission tables) against the defenders the side
-/// believes are there. Kinds: Empire HQ hunt (Espionage or Reconnaissance on the highest HQ-belief systems, then a re-check of a known HQ),
-/// the Alliance's key hunt (Espionage for the Emperor and Vader while it is ahead, KeyHunt),
+/// believes are there. Kinds: Hand HQ hunt (Espionage or Reconnaissance on the highest HQ-belief systems, then a re-check of a known HQ),
+/// the Collective's key hunt (Espionage for the Emperor and Vader while it is ahead, KeyHunt),
 /// the blind hunt (Espionage at the oldest looks while the picture shows no enemy system, BlindHunt),
 /// Subdue on own systems in uprising, Rescue of own prisoners, Abduction of enemy characters the side has seen, Diplomacy on own low-support
-/// systems and neutral border systems, Alliance Incite and Sabotage on enemy systems where no defender is believed, and Research. With
+/// systems and neutral border systems, Collective Incite and Sabotage on enemy systems where no defender is believed, and Research. With
 /// SpecialForceAgents (DEFAULT off, QA-6) its free special forces go alone on the same jobs where their class bit is in the kind's mask.</item>
 /// </list>
 /// It reads the other side only through the "what the AI may see" block of SimpleAi.cs (MissionDefendersAt, SupportSeen, OwnerSeen,
@@ -104,7 +104,7 @@ public sealed partial class SimpleAi
         _p.LeaderMarks && (IsLeader(c) || c.Id == _h.Characters.Params.Leia || c.Id == _h.Missions.Data.Numbers.HanCharacterId);
 
     /// <summary>
-    /// Emperor home (B6c §7, planner kind 6, Empire only): while the Empire holds the Seat of Power system (Charter, which is in its own
+    /// Emperor home (B6c §7, planner kind 6, Hand only): while the Hand holds the Seat of Power system (Charter, which is in its own
     /// sector, so the "holds a system in Coruscant's sector" start test holds too), the Emperor is taken off every other job, brought there and
     /// kept there; the Seat of Power (m5-characters-and-force §Seat of Power) stays on. With EmperorHomeAfterRecruiting the planner, as in Classic,
     /// starts only once the side has nobody left to recruit (the recruitment count ctrl+0xa4 is 0: the pool-empty flag, or an empty pool), so
@@ -114,7 +114,7 @@ public sealed partial class SimpleAi
     private void EmperorHome(List<CharacterRecord> mine, HashSet<int> busy)
     {
         var cp = _h.Characters.Params;
-        if (!_p.LeaderMarks || _side != Side.Empire || !Held(cp.SeatOfPowerSystem)) return;
+        if (!_p.LeaderMarks || _side != Side.Hand || !Held(cp.SeatOfPowerSystem)) return;
         if (_p.EmperorHomeAfterRecruiting && !NobodyToRecruit) return; // B6c §7: starts when ctrl+0xa4 == 0
         var e = mine.FirstOrDefault(c => c.Id == cp.Emperor);
         if (e == null) return;
@@ -131,8 +131,8 @@ public sealed partial class SimpleAi
     /// <summary>The side has nobody left to recruit: its pool-empty flag is set, or its Recruitment pool is empty (m5-missions §6 Recruitment).</summary>
     private bool NobodyToRecruit => _h.Characters.PoolEmpty(_side) || _h.Characters.RecruitPoolOf(_side).Count == 0;
 
-    /// <summary>The Empire hunts the HQ (fog only) while it is unknown, or known with a picture older than HqRecheckDays.</summary>
-    private bool HqHuntOn => _view != null && _side == Side.Empire && (KnownEnemyHq == null || HqRecheckDue);
+    /// <summary>The Hand hunts the HQ (fog only) while it is unknown, or known with a picture older than HqRecheckDays.</summary>
+    private bool HqHuntOn => _view != null && _side == Side.Hand && (KnownEnemyHq == null || HqRecheckDue);
     private bool HqRecheckDue => _view?.KnownHq is { } k && (Today - k.Stamp >= _p.HqRecheckDays || HqGroundDue);
     /// <summary>
     /// The known HQ's ground forces are unseen or older than HqRecheckDays: only Espionage writes them (group D, m5-fog-and-hq §F2), and
@@ -148,7 +148,7 @@ public sealed partial class SimpleAi
         }
     }
 
-    /// <summary>Empire with fog: the best spies (espionage first, keys last) are kept off the posts while the HQ hunt is on; spies already out count.</summary>
+    /// <summary>Hand with fog: the best spies (espionage first, keys last) are kept off the posts while the HQ hunt is on; spies already out count.</summary>
     private HashSet<int> ReserveSpies(List<CharacterRecord> mine, HashSet<int> busy)
     {
         var set = new HashSet<int>();
@@ -175,16 +175,16 @@ public sealed partial class SimpleAi
     private readonly HashSet<string> _looksToday = new(StringComparer.Ordinal); // per review: Espionage / Reconnaissance targets ordered today (lookup only)
     private Dictionary<string, int>? _foiledLooks; // per review (reset in PlanAgents)
 
-    /// <summary>The Empire's HQ search targets as they stand (fog only; empty otherwise), best first: for logs and tests. Rebuilt on each call.</summary>
+    /// <summary>The Hand's HQ search targets as they stand (fog only; empty otherwise), best first: for logs and tests. Rebuilt on each call.</summary>
     public IReadOnlyList<(string System, long Score)> HqSearchTargets()
     {
         _view ??= _p.UseFog ? _h.Fog.ViewFor(_side) : null;
         _spyTargets = null; _foiledLooks = null; _hops = null;
-        if (_view == null || _side != Side.Empire) return Array.Empty<(string, long)>();
+        if (_view == null || _side != Side.Hand) return Array.Empty<(string, long)>();
         return SpyTargets();
     }
 
-    /// <summary>Rank (1 = best) of a system in the Empire's full HQ search list as it stands, 0 when not listed: for logs (sim --trace).</summary>
+    /// <summary>Rank (1 = best) of a system in the Hand's full HQ search list as it stands, 0 when not listed: for logs (sim --trace).</summary>
     public int HqSearchRank(string system)
     {
         HqSearchTargets();
@@ -193,8 +193,8 @@ public sealed partial class SimpleAi
     }
 
     /// <summary>
-    /// Empire with fog: where to look for the Rebel HQ. The belief map (SimpleAiFog) weighted by how the Alliance hides it (ai/07 §7: far from
-    /// the Empire, never in a dead end): with r = min(lanes from the nearest held system, SpyRoomCap), score = belief x (100 + SpyRoomPercent
+    /// Hand with fog: where to look for the Hearth. The belief map (SimpleAiFog) weighted by how the Collective hides it (ai/07 §7: far from
+    /// the Hand, never in a dead end): with r = min(lanes from the nearest held system, SpyRoomCap), score = belief x (100 + SpyRoomPercent
     /// x r x r) / 100, times SpyDeadEndPercent / 100 for a system with fewer than HqMinLanes lanes; a system where an own look was foiled within
     /// SpyFoilMemoryDays is left out (it is defended: the next look would very likely be foiled too). A known HQ due a re-check is the only
     /// target. Best first, at most HqSearchTargets.
@@ -210,7 +210,7 @@ public sealed partial class SimpleAi
         {
             if (!g.TryFindSystem(s, out var i) || FoiledWithin(s, _p.SpyFoilMemoryDays)) continue;
             long r = Math.Min(hops[i], _p.SpyRoomCap);
-            // a system whose owner the side has never seen counts at least SpyUnexploredBelief (deep Alliance space is where nobody looked)
+            // a system whose owner the side has never seen counts at least SpyUnexploredBelief (deep Collective space is where nobody looked)
             long bw = _view!.Picture(s)?.Owner == null ? Math.Max(w, _p.SpyUnexploredBelief) : w;
             long sc = bw * (100 + _p.SpyRoomPercent * r * r) / 100;
             if (g.NearOf(i).Count < _p.HqMinLanes) sc = sc * _p.SpyDeadEndPercent / 100;
@@ -408,8 +408,8 @@ public sealed partial class SimpleAi
         }
         bool Free(MissionKind k, string s) => KindUsable(k) && !taken.Contains((k, s));
 
-        // 1. the Empire's HQ hunt (fog): the highest HQ-belief systems while the HQ is unknown; a known HQ again when its picture is old
-        if (_view != null && _side == Side.Empire)
+        // 1. the Hand's HQ hunt (fog): the highest HQ-belief systems while the HQ is unknown; a known HQ again when its picture is old
+        if (_view != null && _side == Side.Hand)
         {
             bool recon = _h.Fog.Params.ReconRevealsFacilities; // m5-fog-and-hq §F2: a recon success writes HqHere only with this switch on
             var targets = new List<(string Sys, int Value)>();
@@ -489,8 +489,8 @@ public sealed partial class SimpleAi
                 jobs.Add(new Job(MissionKind.Diplomacy, s, null, _p.DiplomacyValue * (stop - sup) / stop * _p.NeutralDiplomacyPercent / 100, "diplomacy " + s));
             }
         }
-        // 7. Alliance subversion: Incite and Sabotage on enemy systems near the border where no defender is believed
-        if (_side == Side.Alliance)
+        // 7. Collective subversion: Incite and Sabotage on enemy systems near the border where no defender is believed
+        if (_side == Side.Collective)
         {
             var hops = Hops();
             foreach (var sys in _h.Data.Galaxy.Systems)

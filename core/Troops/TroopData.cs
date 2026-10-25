@@ -103,9 +103,9 @@ public sealed class TroopData
 
     private static Side ParseSide(CsvTable t, int row) => t.Get(row, "side").Trim() switch
     {
-        "Alliance" => Side.Alliance,
-        "Empire" => Side.Empire,
-        var x => throw new DataLoadException($"{t.Where(row)}: side '{x}' is not Alliance or Empire."),
+        "Collective" => Side.Collective,
+        "Hand" => Side.Hand,
+        var x => throw new DataLoadException($"{t.Where(row)}: side '{x}' is not Collective or Hand."),
     };
 
     private static int ParseHex(CsvTable t, int row, string col)
