@@ -413,10 +413,12 @@ public partial class Main
             Expect(!drawn.Contains(hidden.Id) && !markers.Contains(hidden.At), $"the unseen enemy fleet at {hidden.At} is not drawn");
             gs.SelectSystem(hidden.At); gs.PlayRefresh();
             string panel = gs.PanelText() + "\n" + string.Join("\n", gs.ButtonTexts());
-            Expect(!panel.Contains(hidden.Name) && !panel.Contains("[enemy] "), $"the system panel of {hidden.At} does not list the unseen fleet");
+            // QA-48: both sides name fleets "Fleet n", so the hidden fleet's name can be one of the player's own buttons; the name test only counts when it is not
+            bool ownName = s.Game.State.Fleets.Values.Any(f => f.Side == me && f.Name == hidden.Name);
+            Expect((ownName || !panel.Contains(hidden.Name)) && !panel.Contains("[enemy] "), $"the system panel of {hidden.At} does not list the unseen fleet");
             Expect(panel.Contains("Last seen day") || panel.Contains("Unexplored") || panel.Contains("Not seen since"), $"the panel says how old the picture of {hidden.At} is");
             gs.SelectFleet(hidden.Id, false); gs.PlayRefresh();
-            Expect(!gs.PanelText().Contains(hidden.Name), "an enemy fleet cannot be selected by id");
+            Expect(ownName || !gs.PanelText().Contains(hidden.Name), "an enemy fleet cannot be selected by id");
         }
         string unexplored = gs.G.Systems.Select(x => x.Name).Where(n => !s.Explored(n) && s.OwnerOf(n) != me).OrderBy(n => n, StringComparer.Ordinal).FirstOrDefault();
         Expect(unexplored != null, "some systems are unexplored at the start");
