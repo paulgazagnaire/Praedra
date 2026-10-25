@@ -16,11 +16,8 @@ dat_id,kind,collective,hand,timer_min,timer_spread,hidden,repeats,table,special_
 0x40,InciteUprising,1,1,2,10,0,1,INCTMSTB,0x0401,1,1,classic: MISSNSD record 64 (importer); kind and table: missions/01
 0x41,SpikeTheHarvester,1,0,1,1,0,0,DSSBMSTB,0x0002,1,1,classic: MISSNSD record 65 (importer); kind and table: missions/01
 0x42,TrainTalent,1,1,60,30,0,0,,0x0000,1,1,classic: MISSNSD record 66 (importer); kind and table: missions/01
-0x43,Dagobah,1,0,100,0,1,0,,0x0000,1,0,classic: MISSNSD record 67 (importer); kind and table: missions/01
-0x44,Palace,1,0,5,10,1,0,,0x0000,1,0,classic: MISSNSD record 68 (importer); kind and table: missions/01
 0x45,Leave,1,0,60,0,1,0,,0x0000,1,0,classic: MISSNSD record 69 (importer); kind and table: missions/01
 0x46,Retreat,1,0,1000,0,1,0,,0x0000,1,0,classic: MISSNSD record 70 (importer); kind and table: missions/01
 0x80,SubdueUprising,1,1,2,10,0,1,SUBDMSTB,0x0401,1,1,classic: MISSNSD record 128 (importer); kind and table: missions/01
 0x81,Assassination,0,1,1,1,0,0,ASSNMSTB,0x0800,1,1,classic: MISSNSD record 129 (importer); kind and table: missions/01
-0x82,Pickup,0,1,0,0,1,0,,0x0000,1,0,classic: MISSNSD record 130 (importer); kind and table: missions/01
 0x83,Repossession,0,1,0,0,1,0,,0x1000,0,0,classic: MISSNSD record 131 (importer); kind and table: missions/01

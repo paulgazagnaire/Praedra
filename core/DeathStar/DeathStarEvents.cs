@@ -17,7 +17,6 @@ public static class HarvesterReject
     public const string NotAtSystem = "NotAtSystem";
     public const string NoHarvester = "NoHarvester";
     public const string AlreadyDestroyed = "AlreadyDestroyed";
-    public const string ShieldProtected = "ShieldProtected";
     public const string HarvesterLimit = "HarvesterLimit";
     /// <summary>A second Destroy System of the same fleet in one Step (DEFAULT name, as the bombardment's check 6).</summary>
     public const string OrderPending = "OrderPending";

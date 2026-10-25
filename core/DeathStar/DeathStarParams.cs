@@ -21,9 +21,6 @@ public sealed record HarvesterParams
     /// <summary>harvesters a side may hold at one system (in a fleet there, or queued there) before a yard refuses another: HarvesterCapPerSystem. DEFAULT (from the Traced capacity method, medium confidence on scope). rule: m5-death-star §1.</summary>
     public int CapPerSystem { get; init; } = 1;
 
-    /// <summary>When true an enemy Harvester Shield facility at the target rejects Destroy System (ShieldProtected). DEFAULT false (Traced: nothing in the destroy path reads it; Missing: a play test). rule: m5-death-star §2 legality 6.</summary>
-    public bool ShieldBlocksDestroy { get; init; }
-
     /// <summary>Trench run in auto-resolved battles. DEFAULT off; on has no rule (Missing: ships/12 asks for a design), so it is refused. rule: m5-death-star §4.</summary>
     public bool TrenchRun { get; init; }
 

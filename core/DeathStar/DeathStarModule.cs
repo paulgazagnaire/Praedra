@@ -174,9 +174,8 @@ public sealed class HarvesterModule
         string system = f.At;
         if (!HarvestersIn(f).Any()) return HarvesterReject.NoHarvester;                                            // 2
         if (S.IsDestroyed(system)) return HarvesterReject.AlreadyDestroyed;                                        // 3
-        // 4: no ownership, shield or neutrality check. 5: enemy fleets present do not block it.
-        if (Params.ShieldBlocksDestroy && _fleets.OwnerOf(system) != side                                          // 6
-            && _def.DefensesOf(system).Any(d => d.Class.Job == DefenseJob.HarvesterShield)) return HarvesterReject.ShieldProtected;
+        // 4: no ownership, shield or neutrality check. 5: enemy fleets present do not block it. 6: Classic's shield facility is cut
+        // (data/design/cut-classes.csv; Decided Paul 2026-10-25: the harvester has no shield), so nothing protects a system.
         if (atOrder && _pending.Any(p => p.Fleet == fleetId)) return HarvesterReject.OrderPending;
         return null;
     }

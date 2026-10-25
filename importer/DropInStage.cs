@@ -81,6 +81,7 @@ public static class DropInStage
     {
         var raw = new Raw(rawDir);
         var names = PraedraNames.Load();
+        var cut = PraedraNames.LoadCut();
         return new List<(string File, string Text)>
         {
             ("capital-ships.csv", Ships(raw, "CAPSHPSD", "f49", "field51")),
@@ -97,7 +98,7 @@ public static class DropInStage
             ("bombardment-defense.csv", Bombardment(raw)),
             ("gnprtb.csv", Params(raw, "GNPRTB")),
             ("sdprtb.csv", Params(raw, "SDPRTB")),
-        }.Select(t => (t.File, PraedraNames.Rename(t.File, t.Text, names))).ToList();
+        }.Select(t => (t.File, PraedraNames.Rename(t.File, PraedraNames.DropCut(t.File, t.Text, cut), names))).ToList();
     }
 
     public static void Write(string rawDir, string outDir)

@@ -10,17 +10,26 @@ namespace Praedra.Core.Setup;
 /// </summary>
 public sealed class NameMigrations
 {
-    public const string FileName = "name-migrations.csv", WordsFileName = "word-migrations.csv";
+    public const string FileName = "name-migrations.csv", WordsFileName = "word-migrations.csv", CutFileName = "cut-classes.csv";
+
+    /// <summary>
+    /// Classic classes cut from Praedra (cut-classes.csv, by Classic name, here under today's name). An older save may still hold one: the
+    /// loader removes it (<see cref="GameHost.Load"/>).
+    /// </summary>
+    public IReadOnlySet<string> Cut { get; private init; } = new HashSet<string>(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _map;
     private readonly System.Text.RegularExpressions.Regex? _words; // word-migrations.csv word and identifier rows (tools/names/rename_words.py)
     private readonly Dictionary<string, string> _wordMap = new(StringComparer.Ordinal);
 
+    private readonly List<(string Kind, string Old, string New)> _wordRows;
+
     private NameMigrations(Dictionary<string, string> map, IEnumerable<(string Kind, string Old, string New)>? words = null)
     {
         _map = map;
+        _wordRows = (words ?? Array.Empty<(string, string, string)>()).ToList();
         var parts = new List<string>();
         // Same rules as rename_words.py word_pattern: identifiers whole, words inside identifiers, longest first.
-        foreach (var (kind, from, to) in (words ?? Array.Empty<(string, string, string)>()).Where(w => w.Kind is "word" or "identifier")
+        foreach (var (kind, from, to) in _wordRows.Where(w => w.Kind is "word" or "identifier")
             .OrderByDescending(w => w.Old.Length).ThenBy(w => w.Old, StringComparer.Ordinal))
         {
             if (!_wordMap.TryAdd(from, to)) throw new DataLoadException($"{WordsFileName}: '{from}' appears twice.");
@@ -63,8 +72,14 @@ public sealed class NameMigrations
     /// <summary>The name table, with the word table (<see cref="WordsFileName"/>) from the same folder when it is there.</summary>
     public static NameMigrations Load(string path)
     {
-        string words = Path.Combine(Path.GetDirectoryName(path) ?? ".", WordsFileName);
-        return Parse(File.ReadAllText(path), Path.GetFileName(path), File.Exists(words) ? File.ReadAllText(words) : null);
+        string dir = Path.GetDirectoryName(path) ?? ".", words = Path.Combine(dir, WordsFileName), cut = Path.Combine(dir, CutFileName);
+        var m = Parse(File.ReadAllText(path), Path.GetFileName(path), File.Exists(words) ? File.ReadAllText(words) : null);
+        if (!File.Exists(cut)) return m;
+        var t = CsvTable.Load(cut);
+        t.Require("kind", "name");
+        var set = new HashSet<string>(StringComparer.Ordinal);
+        for (int r = 0; r < t.RowCount; r++) { set.Add(t.Get(r, "name")); set.Add(m.Current(t.Get(r, "name"))); }
+        return new NameMigrations(m._map, m._wordRows) { Cut = set };
     }
 
     /// <summary>

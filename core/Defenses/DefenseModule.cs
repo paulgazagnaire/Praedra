@@ -17,11 +17,6 @@ public sealed record DefenseParams
     /// (nothing is ever forbidden). rule: m3-planetary-defenses §What each class does in M3; m3-assault check 4.
     /// </summary>
     public int AssaultGateShields { get; init; } = 2;
-    /// <summary>
-    /// Does the harvester shield count as one of the shields of the gate? DEFAULT no (Open questions 1 and 5; the original UI counts it
-    /// separately). rule: m3-planetary-defenses §Defaults for undecided items.
-    /// </summary>
-    public bool HarvesterShieldCountsForGate { get; init; }
 }
 
 /// <summary>One facility's shot in an assault. rule: m3-planetary-defenses §Queries (BatteryShots).</summary>
@@ -98,11 +93,10 @@ public sealed class DefenseModule
     public int ChancePercent(int attack) => attack / Params.ShotChanceDivisor;
 
     /// <summary>
-    /// Shield generators that count for the assault gate: GenCore, plus the harvester shield if the switch says so (DEFAULT no).
+    /// Shield generators that count for the assault gate: the Lode Escrow generators (Classic's planet-killer shield, the other candidate, is cut).
     /// rule: m3-planetary-defenses §What each class does in M3.
     /// </summary>
-    public int GateShields(string system) =>
-        ShieldGenerators(system) + (Params.HarvesterShieldCountsForGate ? DefensesOf(system).Count(d => d.Class.Job == DefenseJob.HarvesterShield) : 0);
+    public int GateShields(string system) => ShieldGenerators(system);
 
     /// <summary>
     /// The assault gate the assault module calls at order validation and again at resolution: true when the system has the required number of
@@ -120,7 +114,7 @@ public sealed class DefenseModule
         if (Params.AssaultGateShields <= 0) return false;
         int n = 0;
         foreach (var (cls, count) in completedFacilities)
-            if (Data.TryGetClass(cls, out var c) && (c.Job == DefenseJob.ShieldGenerator || (Params.HarvesterShieldCountsForGate && c.Job == DefenseJob.HarvesterShield))) n += count;
+            if (Data.TryGetClass(cls, out var c) && c.Job == DefenseJob.ShieldGenerator) n += count;
         return n >= Params.AssaultGateShields;
     }
 }

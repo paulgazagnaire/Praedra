@@ -13,31 +13,31 @@ namespace Praedra.Core.Tests.Defenses;
 public class DefenseTests
 {
     private static readonly FacilityKind Kdy = FacilityKind.Kdy150, Lnr1 = FacilityKind.LnrSeriesI, Lnr2 = FacilityKind.LnrSeriesII,
-        Gen1 = FacilityKind.GenCoreLevelI, Gen2 = FacilityKind.GenCoreLevelII, Dss = FacilityKind.HarvesterShield;
+        Gen1 = FacilityKind.GenCoreLevelI, Gen2 = FacilityKind.GenCoreLevelII;
 
-    // m3-planetary-defenses D1: the six rows exactly as the table; only class 4 is Hand only; cost and maintenance agree with the costs file
+    // m3-planetary-defenses D1: the rows exactly as the table, less class 4 (Classic's planet-killer shield, cut: data/design/cut-classes.csv);
+    // none is Hand only now; cost and maintenance agree with the costs file
     [Fact]
-    public void D1_SixRowsAsTheTable()
+    public void D1_FiveRowsAsTheTable()
     {
         var d = DefenseData.Load(TestData.ClassicDir, TestData.DesignDir);
         var rows = d.Classes.ToList();
-        Assert.Equal(new[] { 1, 2, 3, 4, 5, 6 }, rows.Select(r => r.Id));
+        Assert.Equal(new[] { 1, 2, 3, 5, 6 }, rows.Select(r => r.Id));
         var expect = new (string Name, int Family, int Cost, int Maint, int Ro, int Rd, int Attack, int Shield, int Bd, DefenseJob Job)[]
         {
             ("Mordant Lien-150", 34, 4, 4, 0, 0, 2000, 0, 5, DefenseJob.Battery),
             ("Mordant Covenant I", 35, 7, 7, 0, 0, 800, 0, 4, DefenseJob.Battery),
             ("Lode Escrow I", 36, 12, 12, 0, 0, 0, 40, 2, DefenseJob.ShieldGenerator),
-            ("Harvester Shield", 37, 25, 20, 3, 24, 0, 0, 1, DefenseJob.HarvesterShield),
             ("Mordant Covenant II", 35, 10, 4, 4, 40, 5000, 0, 3, DefenseJob.Battery),
             ("Lode Escrow II", 36, 20, 7, 6, 40, 0, 80, 3, DefenseJob.ShieldGenerator),
         };
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < 5; i++)
         {
             var r = rows[i]; var e = expect[i];
             Assert.Equal((e.Name, e.Family, e.Cost, e.Maint, e.Ro, e.Rd, e.Attack, e.Shield, e.Bd, e.Job),
                 (r.Name, r.Family, r.Cost, r.Maintenance, r.ResearchOrder, r.ResearchDifficulty, r.Attack, r.Shield, r.BombardDefense, r.Job));
         }
-        Assert.Equal(new[] { 4 }, rows.Where(r => r.HandOnly).Select(r => r.Id));
+        Assert.Empty(rows.Where(r => r.HandOnly));
         var costs = EcoWorld.Costs.Value;
         foreach (var r in rows) // "Costs and maintenance agree with unit-and-facility-costs.csv"
         {
@@ -53,7 +53,6 @@ public class DefenseTests
     [InlineData(new[] { 3 }, 1)]
     [InlineData(new[] { 3, 6 }, 2)]
     [InlineData(new[] { 6, 6 }, 2)]
-    [InlineData(new[] { 3, 4, 4 }, 1)]
     public void D2_ShieldGenerators(int[] classes, int expected)
     {
         var w = new BombWorld();
@@ -76,7 +75,6 @@ public class DefenseTests
     [InlineData(new[] { 3 }, 40)]
     [InlineData(new[] { 3, 6 }, 120)]
     [InlineData(new[] { 6, 6 }, 160)]
-    [InlineData(new[] { 3, 4 }, 40)]
     public void D3_ShieldStrength(int[] classes, int expected)
     {
         var w = new BombWorld();
@@ -136,31 +134,10 @@ public class DefenseTests
         Assert.Equal(new[] { k }, w.Def.ReturnFireSet(BombWorld.Sys));
     }
 
-    // m3-planetary-defenses D9: the Collective cannot order a Harvester Shield (construction sheet: NotAvailable); the Hand can
-    [Fact]
-    public void D9_CollectiveBuildOrderOfHarvesterShieldIsNotAvailable()
-    {
-        var a = new BuildWorld();
-        a.Hold("Classis", Side.Collective); a.Yard("Classis", FacilityKind.ConstructionYard);
-        Assert.Equal(RejectReason.NotAvailable, a.TryOrder(Side.Collective, "Classis", YardFamily.Construction, "Harvester Shield", 1, "Classis"));
-        var e = new BuildWorld();
-        e.Build.RespectResearchOrder = false; // research gate off = all available (the gate is on by default since m5-research)
-        e.Hold("Classis", Side.Hand); e.Yard("Classis", FacilityKind.ConstructionYard);
-        Assert.Null(e.TryOrder(Side.Hand, "Classis", YardFamily.Construction, "Harvester Shield", 1, "Classis")); // research flag off = all available
-    }
+    // m3-planetary-defenses D9 (the Collective cannot order the planet-killer shield) is gone with the shield (cut: data/design/cut-classes.csv).
 
-    // m3-planetary-defenses D10 (control sheet C1): the harvester shield is removed on a Collective capture, the other defenses transfer
-    [Fact]
-    public void D10_CollectiveCaptureRemovesTheHarvesterShieldOnly()
-    {
-        var w = new CtlWorld();
-        w.Hold("Classis", Side.Hand, 80);
-        int shield = w.Eco.AddFacility("Classis", Dss), gen = w.Eco.AddFacility("Classis", Gen1), kdy = w.Eco.AddFacility("Classis", Kdy);
-        w.Capture(Side.Collective, "Classis");
-        w.Run(1);
-        Assert.Equal(new[] { shield }, w.Events<FacilityRemoved>().Select(e => e.Facility));
-        Assert.Equal(new[] { gen, kdy }, w.Events<FacilityTransferred>().Select(e => e.Facility));
-    }
+    // m3-planetary-defenses D10 (control sheet C1: the planet-killer shield removed on a Collective capture) is gone with the shield (cut:
+    // data/design/cut-classes.csv); CaptureTests C1 checks that every defense transfers.
 
     // m3-planetary-defenses D11 (links B19, A10): bombardment destroys one of two GenCore at Step K; at K + 1 the gate is open
     [Fact]
@@ -202,7 +179,7 @@ public class DefenseTests
     {
         var w = new BombWorld(stub: false, seed: 5);
         w.Hold(Side.Collective);
-        w.Facility(Gen1); w.Facility(Kdy); w.Facility(Lnr2); w.Facility(Dss); w.Facility(Gen2, completed: false);
+        w.Facility(Gen1); w.Facility(Kdy); w.Facility(Lnr2); w.Facility(Lnr1); w.Facility(Gen2, completed: false);
         string Snapshot() => string.Join("|", w.Def.ShieldGenerators(BombWorld.Sys), w.Def.ShieldStrength(BombWorld.Sys), w.Def.Batteries(BombWorld.Sys),
             string.Join(",", w.Def.BatteryShots(BombWorld.Sys, Side.Hand).Select(s => $"{s.Facility}:{s.Attack}:{s.ChancePercent}")),
             string.Join(",", w.Def.ReturnFireSet(BombWorld.Sys)), w.Def.AssaultForbidden(BombWorld.Sys), w.Def.GateShields(BombWorld.Sys));
@@ -243,22 +220,6 @@ public class DefenseTests
     }
 
     // ---------------------------------------------------------------- extra tests
-
-    // m3-planetary-defenses §Defaults (DEFAULT: the harvester shield has no M3 effect): not a generator, subtracts 0, but a switch counts it for the gate
-    [Fact]
-    public void HarvesterShieldIsNotAGateShieldByDefaultAndTheSwitchCountsIt()
-    {
-        var w = new BombWorld();
-        w.Facility(Dss); w.Facility(Dss);
-        Assert.Equal(0, w.Def.ShieldGenerators(BombWorld.Sys));
-        Assert.Equal(0, w.Def.ShieldStrength(BombWorld.Sys));
-        Assert.False(w.Def.AssaultForbidden(BombWorld.Sys)); // m3-assault A10: two Harvester Shields only: accepted
-
-        var s = new BombWorld(dp: new DefenseParams { HarvesterShieldCountsForGate = true });
-        s.Facility(Dss); s.Facility(Dss);
-        Assert.True(s.Def.AssaultForbidden(BombWorld.Sys));
-        Assert.Equal(0, s.Def.ShieldGenerators(BombWorld.Sys)); // the count itself never includes it
-    }
 
     // m3-planetary-defenses §What each class does in M3 (the gate is two or more; 0 switches it off)
     [Fact]
@@ -310,7 +271,7 @@ public class DefenseTests
 
     private static FacilityKind KindOf(int classId) => classId switch
     {
-        1 => Kdy, 2 => Lnr1, 3 => Gen1, 4 => Dss, 5 => Lnr2, 6 => Gen2, _ => throw new ArgumentOutOfRangeException(nameof(classId)),
+        1 => Kdy, 2 => Lnr1, 3 => Gen1, 5 => Lnr2, 6 => Gen2, _ => throw new ArgumentOutOfRangeException(nameof(classId)),
     };
 
     private static string ShipState(BombWorld w) => string.Join(";", w.Eco.Objects.Where(o => o.Category == ObjectCategory.CapitalShip)

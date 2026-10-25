@@ -224,12 +224,12 @@ public class AssaultTests
 
     private static void Gen(AssaultWorld w, params FacilityKind[] kinds) { foreach (var k in kinds) w.B.Facility(k); }
 
-    // m3-assault A10: two GenCore I, or one I and one II: FullyShielded; one GenCore: accepted; two Harvester Shields: accepted
+    // m3-assault A10: two GenCore I, or one I and one II: FullyShielded; one GenCore: accepted (Classic's planet-killer shield, which did not
+    // count, is cut)
     [Theory]
     [InlineData(new[] { FacilityKind.GenCoreLevelI, FacilityKind.GenCoreLevelI }, AssaultReject.FullyShielded)]
     [InlineData(new[] { FacilityKind.GenCoreLevelI, FacilityKind.GenCoreLevelII }, AssaultReject.FullyShielded)]
     [InlineData(new[] { FacilityKind.GenCoreLevelI }, null)]
-    [InlineData(new[] { FacilityKind.HarvesterShield, FacilityKind.HarvesterShield }, null)]
     public void A10_ShieldGate(FacilityKind[] kinds, string? expected)
     {
         var w = new AssaultWorld();

@@ -197,14 +197,14 @@ public class MissionOrderTests
         Assert.Empty(w.M.Missions);
     }
 
-    // m5-missions MI53: Spike the Harvester with no harvester; a story kind (MissionKind.Dagobah)
+    // m5-missions MI53: Spike the Harvester with no harvester; a hidden kind (MissionKind.Leave; the film story kinds are cut)
     [Fact]
     public void MI53_NoHarvesterAndHiddenKind()
     {
         var w = new MissionWorld();
         w.Agent(Luke, T, esp: 50, com: 50);
         Assert.Equal(MissionReject.NoHarvester, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.SpikeTheHarvester, new() { Luke }, new(), new(), T)));
-        Assert.Equal(MissionReject.HiddenKind, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Dagobah, new() { Luke }, new(), new(), T)));
+        Assert.Equal(MissionReject.HiddenKind, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Leave, new() { Luke }, new(), new(), T)));
         Assert.Equal(MissionReject.HiddenKind, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Move, new() { Luke }, new(), new(), T)));
     }
 
@@ -419,12 +419,12 @@ public class MissionOrderTests
         Assert.Equal((InciteInputMode.LeadershipMinusControllerSupport, InciteSupportTiming.PerIteration, false, SabotageSkill.Average, SabotageTargetMode.RandomFacility, true),
             (p.InciteInputMode, p.InciteSupportTiming, p.SubdueEndsUprising, p.SabotageSkill, p.SabotageTargetMode, p.ExposureHooks));
         var d = GameData.Default.Missions;
-        Assert.Equal(25, d.Records.Count);
+        Assert.Equal(22, d.Records.Count); // Classic's 25 less the three cut film story kinds (data/design/cut-classes.csv)
         Assert.Equal(14, d.DecoyTable!.Count); // B1: FDECOYTB read from the Classic files (was null: decoys refused)
         Assert.Equal(14, d.Foil.Count);
         Assert.Equal((5, 10, true, "DIPLMSTB"), (d.Get(MissionKind.Diplomacy).TimerMin, d.Get(MissionKind.Diplomacy).TimerSpread, d.Get(MissionKind.Diplomacy).Repeats, d.Get(MissionKind.Diplomacy).Table));
         Assert.Equal(0x802, d.Get(MissionKind.Rescue).SpecialForceMask);
-        Assert.True(d.Get(MissionKind.Dagobah).Hidden);
+        Assert.True(d.Get(MissionKind.Leave).Hidden);
         Assert.False(d.Get(MissionKind.Assassination).Collective);
         Assert.Equal((35, 35, -1, 50, 579), (d.Numbers.DecoyOfficerPercent, d.Numbers.DetectionOfficerPercent, d.Numbers.DetectionConstant, d.Numbers.HanMissionSpeed, d.Numbers.HanCharacterId));
         Assert.Equal(10, GameData.Default.Ships["Mandate"].Detection > 0 ? 10 : 0); // ships carry their detection column

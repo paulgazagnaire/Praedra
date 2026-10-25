@@ -510,20 +510,20 @@ public class BombardmentTests
         Assert.Equal(15, w.Events<BombardmentResolved>().Single().Hits);
     }
 
-    // m3-bombardment §Resolution 4: a Harvester Shield is a Military target with defense 1; a destroyed defense frees its slot
+    // m3-bombardment §Resolution 4: a defense facility (a Mordant Covenant I, defense 4) is a Military target; a destroyed defense frees its slot
     [Fact]
     public void DefenseFacilitiesAreMilitaryTargets()
     {
-        var w = new BombWorld();
+        var w = new BombWorld(bp: new BombardParams { BatteryReturnFire = false }); // a battery would fire back first (B7 C3); this test checks the target only
         w.Hold(Emp, 100);
-        int dss = w.Facility(FacilityKind.HarvesterShield);
+        int dss = w.Facility(FacilityKind.LnrSeriesI);
         int used = w.Eco.EnergyUsed(Sys);
         int f = w.Fleet(All, Sys, "Dodger");
-        w.Stub.Expect(0, 1, 1).Expect(1, 10, 2);                                 // collateral x = 1 (none); one target: no pick, then the die 2
+        w.Stub.Expect(0, 1, 1).Expect(1, 10, 5);                                 // collateral x = 1 (none); one target: no pick, then the die 5
         Assert.Null(w.TryBombard(All, f, Sys, Mil));
         Assert.Null(w.Eco.Find(dss));
         Assert.Equal(used - 1, w.Eco.EnergyUsed(Sys));
-        Assert.Equal(1, w.Events<TargetHit>().Single().Defense);
+        Assert.Equal(4, w.Events<TargetHit>().Single().Defense);
         Assert.Empty(w.Events<SupportChanged>());                                // a defense facility is not a civilian one
     }
 

@@ -4,10 +4,10 @@ using Praedra.Core.Economy;
 namespace Praedra.Core.Defenses;
 
 /// <summary>What a defense class does. rule: m3-planetary-defenses §The six classes (Kind column).</summary>
-public enum DefenseJob { Battery, ShieldGenerator, HarvesterShield }
+public enum DefenseJob { Battery, ShieldGenerator }
 
 /// <summary>
-/// One row of <c>DEFFACSD</c>. Family 34 = KDY, 35 = LNR, 36 = GenCore, 37 = Harvester Shield. Attack is the Classic attack strength; Shield
+/// One row of <c>DEFFACSD</c>. Family 34 = Mordant Lien, 35 = Mordant Covenant, 36 = Lode Escrow (family 37, Classic's shield for the planet-killer, is cut: data/design/cut-classes.csv). Attack is the Classic attack strength; Shield
 /// is the strength subtracted from a bombardment; BombardDefense is the target's defense in a bombardment.
 /// rule: m3-planetary-defenses §The six classes (Traced, matches [MANUAL] chart pp.132-133).
 /// </summary>
@@ -77,7 +77,6 @@ public sealed class DefenseData
             {
                 "battery" => DefenseJob.Battery,
                 "shield generator" => DefenseJob.ShieldGenerator,
-                "harvester shield" => DefenseJob.HarvesterShield,
                 _ => throw new DataLoadException($"{t.Where(r)}: unknown defense kind '{kind}'."),
             };
             bool handOnly = side switch
