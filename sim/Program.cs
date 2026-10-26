@@ -24,8 +24,8 @@ internal static class SimCli
                                               [--officer "<Name>" [--officer-esp <n>]] [--target-agent "<Name>"] [--facility <Kind>[,<Kind>...]]
                                               [--at Charter] [--owner Collective|Hand|neutral] [--support 50] [--missions 1000] [--seed 1]
           dotnet run --project sim -- campaign [--days 1000] [--seed 1] [--ruleset Classic|New]
-          dotnet run --project sim -- aivai [--days 730] [--seed 1] [--start meda|campaign] [--passive hand|collective] [--trace] [--hq-unknown] [--fog] [--no-agents] [--hand-level L] [--collective-level L] [--hand-params K=V,..] [--collective-params K=V,..] [--hunt-log]
-        aivai plays the simple AI (core/AI) on both sides from the new-game start (MedA, DEFAULT) or the test campaign, printing a yearly summary,
+          dotnet run --project sim -- aivai [--days 730] [--seed 1] [--start meda|campaign] [--passive hand|collective] [--trace] [--hq-unknown] [--fog] [--no-agents] [--hand-level L] [--collective-level L] [--hand-params K=V,..] [--collective-params K=V,..] [--hunt-log] [--every 365]
+        aivai plays the simple AI (core/AI) on both sides from the new-game start (MedA, DEFAULT) or the test campaign, printing a yearly summary (--every N: every N days),
         battle, assault and capture counts, the winner (if any) and the AI's order and rejection counts. Without --fog the AIs see everything and
         the Hand is told the Hearth (unless --hq-unknown). --fog turns SimpleAiParams.UseFog on for both AIs: each reads only its side's
         KnowledgeView (m5-fog-and-hq), and the Hand knows the HQ only once its own picture shows it. With fog the AIs scout, attack from
@@ -59,12 +59,13 @@ internal static class SimCli
     {
         try
         {
-            if (args.Length == 0 || args[0] is "-h" or "--help" or "help") { Console.WriteLine(Usage + Tourney.Usage); return args.Length == 0 ? 1 : 0; }
+            if (args.Length == 0 || args[0] is "-h" or "--help" or "help") { Console.WriteLine(Usage + Tourney.Usage + RouteReport.Usage); return args.Length == 0 ? 1 : 0; }
             if (args[0] == "battle") return Battle(args.Skip(1).ToArray());
             if (args[0] == "mission") return MissionCmd(args.Skip(1).ToArray());
             if (args[0] == "campaign") return Campaign(args.Skip(1).ToArray());
             if (args[0] == "aivai") return AiVsAi(args.Skip(1).ToArray());
             if (args[0] == "tourney") return Tourney.Run(args.Skip(1).ToArray());
+            if (args[0] == "routes") return RouteReport.Run(args.Skip(1).ToArray());
             if (args[0] == "newgame") return NewGameCmd(args.Skip(1).ToArray());
             throw new ArgumentException($"Unknown command '{args[0]}'.");
         }
@@ -72,7 +73,7 @@ internal static class SimCli
         {
             Console.Error.WriteLine($"Error: {e.Message}");
             Console.Error.WriteLine();
-            Console.Error.WriteLine(Usage + Tourney.Usage);
+            Console.Error.WriteLine(Usage + Tourney.Usage + RouteReport.Usage);
             return 2;
         }
     }
@@ -186,7 +187,7 @@ internal static class SimCli
     private static int AiVsAi(string[] a)
     {
         int days = 730; ulong seed = 1; string start = "meda"; Side? passive = null; bool trace = false; bool hqKnown = true; bool fog = false; bool agents = true;
-        Praedra.Core.AI.AiLevel? empLevel = null, allLevel = null; bool huntLog = false; int hunted = 0; string? empParams = null, allParams = null;
+        Praedra.Core.AI.AiLevel? empLevel = null, allLevel = null; bool huntLog = false; int hunted = 0, every = 365; string? empParams = null, allParams = null;
         for (int i = 0; i < a.Length; i++)
         {
             string key = a[i];
@@ -197,6 +198,7 @@ internal static class SimCli
                 case "--seed": seed = ulong.TryParse(Next(), out var s) ? s : throw new ArgumentException("--seed must be a non-negative integer."); break;
                 case "--trace": trace = true; break;
                 case "--hunt-log": huntLog = true; break;
+                case "--every": every = int.TryParse(Next(), out var ne) && ne > 0 ? ne : throw new ArgumentException("--every must be a positive integer."); break;
                 case "--hand-params": empParams = Next(); fog = true; break;
                 case "--collective-params": allParams = Next(); fog = true; break;
                 case "--hq-unknown": hqKnown = false; break;
@@ -229,14 +231,29 @@ internal static class SimCli
         // the Hand's own picture of the HQ, day by day: the first day it showed the HQ, and every later day it showed another (moved) HQ system
         int traced = host.Game.Events.Count;
         var hqFinds = new List<string>(); string? lastKnown = host.Fog.KnownHq(Side.Hand)?.System;
+        var facilityLosses = new SortedDictionary<(Side, string), int>(); var capitalLog = new List<string>();
         while (host.Game.Day < days && host.Victory.Winner == null)
         {
             match.Step();
             if (host.Fog.KnownHq(Side.Hand)?.System is { } kh && kh != lastKnown) hqFinds.Add($"day {host.Game.Day} {kh}{(kh == host.HqSystem ? "" : " (stale)")}");
             lastKnown = host.Fog.KnownHq(Side.Hand)?.System;
             for (var evs = host.Game.Events; scanned < evs.Count; scanned++)
-                if (evs[scanned] is Praedra.Core.Battle.BattleEnded be)
-                    switch (host.Fleets.OwnerOf(be.Result.System)) { case Side.Hand: battlesAtHand++; break; case Side.Collective: battlesAtCollective++; break; default: battlesAtNeutral++; break; }
+                switch (evs[scanned])
+                {
+                    case Praedra.Core.Battle.BattleEnded be:
+                        switch (host.Fleets.OwnerOf(be.Result.System)) { case Side.Hand: battlesAtHand++; break; case Side.Collective: battlesAtCollective++; break; default: battlesAtNeutral++; break; }
+                        break;
+                    // facilities each side lost and how (the holder after the Step that destroyed them: a log only)
+                    case Praedra.Core.Economy.FacilityDestroyed fd when host.Fleets.OwnerOf(fd.System) is Side fs:
+                        facilityLosses[(fs, fd.Reason.ToString())] = facilityLosses.GetValueOrDefault((fs, fd.Reason.ToString())) + 1;
+                        break;
+                    case Praedra.Core.Control.FacilityTransferred ft when ft.From is Side ff:
+                        facilityLosses[(ff, "Capture")] = facilityLosses.GetValueOrDefault((ff, "Capture")) + 1;
+                        break;
+                    case Praedra.Core.Control.SystemCaptured sc when sc.System == Praedra.Core.Control.ControlModule.CapitalSystem:
+                        capitalLog.Add($"day {sc.Day} {sc.From?.ToString() ?? "neutral"} -> {sc.To?.ToString() ?? "neutral"} ({sc.Cause})");
+                        break;
+                }
             if (trace && host.Game.Day % 50 == 0) foreach (var ai in new[] { match.Hand, match.Collective }) if (ai.Side != passive) Console.WriteLine("  d" + host.Game.Day + " " + ai.Status());
             if (trace && fog && host.Game.Day % 50 == 0 && passive != Side.Hand)
             {
@@ -262,7 +279,7 @@ internal static class SimCli
                     else if (evs[hunted] is Praedra.Core.Fog.HqDeparted hd) Console.WriteLine($"  hunt d{hd.Day} HQ leaves {hd.From} for {hd.Path.Items[^1]}");
                 }
             }
-            if (host.Game.Day % 365 == 0 && host.Game.Day != days) Summary();
+            if (host.Game.Day % every == 0 && host.Game.Day != days) Summary();
         }
         Summary();
         clock.Stop();
@@ -277,6 +294,9 @@ internal static class SimCli
                               $"Collective systems taken by the Hand {ev.OfType<Praedra.Core.Control.SystemCaptured>().Count(e => e.From == Side.Collective && e.To == Side.Hand)}, " +
                               $"Hand systems taken by the Collective {ev.OfType<Praedra.Core.Control.SystemCaptured>().Count(e => e.From == Side.Hand && e.To == Side.Collective)}. " +
                               $"HQ moves: {ev.OfType<Praedra.Core.Fog.HqDeparted>().Count()}.");
+        foreach (var side in new[] { Side.Hand, Side.Collective })
+            Console.WriteLine($"Facilities {side} lost: " + (facilityLosses.Any(kv => kv.Key.Item1 == side) ? string.Join(", ", facilityLosses.Where(kv => kv.Key.Item1 == side).Select(kv => $"{kv.Key.Item2} {kv.Value}")) : "none") + ".");
+        Console.WriteLine($"{Praedra.Core.Control.ControlModule.CapitalSystem} changed hands: " + (capitalLog.Count == 0 ? "never" : string.Join("; ", capitalLog)) + ".");
         }
         {
             // retreat-chases: a fleet that retreated from a battle in which neither side lost anything (the morale retreat of m4-battle-classic),
