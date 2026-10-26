@@ -93,7 +93,7 @@ public class DominanceVictoryTests
     }
 
     [Fact] // V27
-    public void AShortLapseKeepsTheRunAndItsDueDay()
+    public void AShortLapseKeepsTheRunButItsDaysBelowDoNotCount()
     {
         var h = Make(StartPreset.MedA, new VictoryRules { DominanceDays = 30 });
         CaptureOnNextStep(h, HeldBy(h, Side.Collective).Where(s => s != FileHq).Where((_, i) => i % 2 == 0).Append(FileHq), Side.Hand);
@@ -103,11 +103,16 @@ public class DominanceVictoryTests
         CaptureOnNextStep(h, lost, Side.Collective);
         h.Game.Step();
         for (int i = 0; i < 3; i++) h.Game.Step();
-        CaptureOnNextStep(h, lost, Side.Hand); // back above the bar inside the grace days
+        CaptureOnNextStep(h, lost, Side.Hand); // back above the bar inside the grace days, after 4 days below
+        h.Game.Step();
+        var changes = h.Game.Events.OfType<DominanceChanged>().ToList();
+        Assert.Equal(2, changes.Count); // the start and the moved due day; no break
+        Assert.Equal((Side?)Side.Hand, changes[1].Leader);
+        Assert.Equal(due + 4, changes[1].DueDay); // the days below do not count
+        Assert.Equal(due + 4, h.Victory.DominanceDueDay);
         while (h.Victory.Winner == null && h.Game.Day < 60) h.Game.Step();
-        Assert.Single(h.Game.Events.OfType<DominanceChanged>());
         Assert.Equal(Side.Hand, h.Victory.Winner);
-        Assert.Equal(due, h.Game.Events.OfType<GameWon>().Single().Day);
+        Assert.Equal(due + 4, h.Game.Events.OfType<GameWon>().Single().Day);
     }
 
     [Fact] // V23
