@@ -326,6 +326,29 @@ public class B5aControlTests
         Assert.Null(w.H.Victory.Winner);
     }
 
+    // m5-fog-and-hq HQ30 (QA-52): a flee set off at day end (support lost after slot 3) over a one-day hop lands the next day. It used to keep a due day
+    // that had already passed, so the HQ stayed in flight forever.
+    [Fact]
+    public void B5a8c_HqFleeingAtDayEndOverAOneDayHopLands()
+    {
+        const string From = "Bina Minor", To = "Bina Major";
+        var w = new DerivedWorld();
+        w.Hold(From, Side.Collective, 60);
+        w.Hold(To, Side.Collective, 90);
+        w.Regiments(To, Side.Collective, 2);
+        w.Game.State.Scenario.Hq.Status = HqStatus.AtRest;
+        w.Game.State.Scenario.Hq.System = From;
+        w.InSlot("6.1", ctx => w.H.Support.ChangeSupport(ctx, From, Side.Collective, -1, SupportCause.Other, dampen: false));
+        w.Step();
+        var dep = Assert.Single(w.Events<HqDeparted>());
+        Assert.Equal((From, To, 1), (dep.From, dep.Path.Items.Last(), dep.TotalTicks));
+        Assert.Equal(w.Game.Day + 1, dep.ArrivalDay);
+        w.Step();
+        var hq = w.Game.State.Scenario.Hq;
+        Assert.Equal((HqStatus.AtRest, To), (hq.Status, hq.System));
+        Assert.Equal(dep.ArrivalDay, Assert.Single(w.Events<HqArrived>()).Day);
+    }
+
     // B5a-9 (section 5): the Collective takes a world with a Mordant Lien-150: it becomes the Collective's. The same world going neutral instead:
     // it goes neutral. (The sheet's planet-killer shield, destroyed in both cases, is cut: data/design/cut-classes.csv.)
     [Fact]
