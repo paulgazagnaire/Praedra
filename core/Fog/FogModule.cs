@@ -370,7 +370,7 @@ public sealed class FogModule
     private void HqArrival(StepContext ctx)
     {
         int day = ctx.Day + 1;
-        if (Hq.Status != HqStatus.InTransit || Hq.DueDay != day) return;
+        if (Hq.Status != HqStatus.InTransit || Hq.DueDay > day) return; // ">": a save made with QA-52 (a due day already past) still lands
         string reached = Hq.Path[Hq.HopIndex + 1];
         if (Hq.HopIndex + 1 < Hq.Path.Count - 1)
         {
@@ -418,8 +418,10 @@ public sealed class FogModule
         Hq.From = from; Hq.System = null; Hq.Status = HqStatus.InTransit;
         Hq.Path = best.Systems.Select(i => _galaxy.Systems[i].Name).ToList();
         Hq.HopTicks = best.HopTicks.ToList(); Hq.HopIndex = 0;
-        Hq.DueDay = ctx.Day + best.HopTicks[0];
-        var path = new ValueList<string>(Hq.Path.ToList()); int total = best.TotalTicks, arrival = ctx.Day + total;
+        // A flee comes from a capture after slot 3 (assaults, support at day end), so this Step's arrival check has run: the first hop counts
+        // from the next day, as a fleet leaving at capture does (FleetModule). With ctx.Day + first a one-day hop never matched (QA-52).
+        Hq.DueDay = ctx.Day + 1 + best.HopTicks[0];
+        var path = new ValueList<string>(Hq.Path.ToList()); int total = best.TotalTicks, arrival = ctx.Day + 1 + total;
         ctx.Emit((i, d) => new HqDeparted(i, d, from, path, total, arrival));
         return true;
     }
