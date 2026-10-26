@@ -215,6 +215,9 @@ public sealed class HqState
     public int HopIndex { get; set; }
     /// <summary>The day the current hop ends; the HQ reaches Path[HopIndex + 1] in the Step whose K is DueDay - 1.</summary>
     public int DueDay { get; set; }
+    /// <summary>This transit is a flee (§F7 Flee), not an ordered move. Left out of the save while false.</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Fleeing { get; set; }
     // ---- destroyed
     public string? DestroyedCause { get; set; }
     public int? DestroyedDay { get; set; }
@@ -222,7 +225,7 @@ public sealed class HqState
     internal void CopyFrom(HqState o)
     {
         Status = o.Status; System = o.System; From = o.From; Path = o.Path.ToList(); HopTicks = o.HopTicks.ToList(); HopIndex = o.HopIndex;
-        DueDay = o.DueDay; DestroyedCause = o.DestroyedCause; DestroyedDay = o.DestroyedDay;
+        DueDay = o.DueDay; Fleeing = o.Fleeing; DestroyedCause = o.DestroyedCause; DestroyedDay = o.DestroyedDay;
     }
 
     /// <summary>Setup: the HQ stands at <paramref name="system"/> (null = no HQ). Raises nothing. rule: §F5 PlaceHq.</summary>

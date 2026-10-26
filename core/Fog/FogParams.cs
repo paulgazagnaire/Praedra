@@ -116,6 +116,11 @@ public sealed record HqParams
     /// <summary>Collective support change in every populated system of the destination sector on arrival: GNPRTB 5127 = -10 (Traced).</summary>
     public int ArrivalSupportDelta { get; init; } = -10;
     public HqLostOnHolderChange LostOnHolderChange { get; init; } = HqLostOnHolderChange.Flee;
+    /// <summary>
+    /// A flee's arrival does not apply <see cref="ArrivalSupportDelta"/> (ordered moves still do). DEFAULT true (Dev lead, QA-53, 2026-10-26: the drop
+    /// turned 12 of 58 worlds a fleeing Hearth reached, and it fled again; Paul's "Hearth escapes" means it reaches safety). rule: §F7 Flee.
+    /// </summary>
+    public bool FleeSkipsArrivalDrop { get; init; } = true;
     /// <summary>Return is a switch value only (not built in the first pass: treated as DestroyOnArrival, see the build notes).</summary>
     public HqLostDestination LostDestination { get; init; } = HqLostDestination.DestroyOnArrival;
 }

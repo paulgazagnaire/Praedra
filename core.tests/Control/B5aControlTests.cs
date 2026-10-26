@@ -326,6 +326,28 @@ public class B5aControlTests
         Assert.Null(w.H.Victory.Winner);
     }
 
+    // m5-fog-and-hq HQ31 (QA-53): a flee's arrival skips the sector support drop (FleeSkipsArrivalDrop, DEFAULT true); with the switch off it
+    // applies, as on an ordered move.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void B5a8d_AFleeArrivalSkipsTheSectorDrop(bool skip)
+    {
+        var w = new DerivedWorld(settings: DerivedWorld.Settings() with { Hq = new HqParams { FleeSkipsArrivalDrop = skip } });
+        w.Hold(C, Side.Collective, 60);
+        w.Hold(D, Side.Collective, 90);
+        w.Regiments(D, Side.Collective, 2);
+        w.Game.State.Scenario.Hq.Status = HqStatus.AtRest;
+        w.Game.State.Scenario.Hq.System = C;
+        w.Ctl.SubmitDebugSetSupport(Side.Collective, C, 59);
+        w.Step();
+        Assert.True(w.Game.State.Scenario.Hq.Fleeing);
+        while (w.Game.State.Scenario.Hq.Status == HqStatus.InTransit && w.Game.Day < 400) w.Step();
+        Assert.Equal((HqStatus.AtRest, D), (w.Game.State.Scenario.Hq.Status, w.Game.State.Scenario.Hq.System));
+        Assert.False(w.Game.State.Scenario.Hq.Fleeing);
+        Assert.Equal(!skip, w.Events<SupportChanged>().Any(e => e.Cause == SupportCause.HqMove));
+    }
+
     // m5-fog-and-hq HQ30 (QA-52): a flee set off at day end (support lost after slot 3) over a one-day hop lands the next day. It used to keep a due day
     // that had already passed, so the HQ stayed in flight forever.
     [Fact]
