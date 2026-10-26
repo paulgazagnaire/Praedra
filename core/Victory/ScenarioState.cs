@@ -28,6 +28,15 @@ public sealed class ScenarioState
     /// <summary>The winner, null while the game runs. Set once.</summary>
     public Side? Winner { get; set; }
     public string? WinReason { get; set; }
+    /// <summary>
+    /// Capital-and-control victory: the side now holding the share with the enemy capital gone, and the day that run began (null and 0 =
+    /// nobody). rule: m5-setup-and-victory §Victory (capital and control, Decided Paul 2026-10-26). Left out of the save while unset, so
+    /// saves and state hashes of games without a run are unchanged.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public Side? DominanceSide { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public int DominanceSince { get; set; }
     /// <summary>Per system: bit 1 = known to the Hand, bit 2 = known to the Collective. A system not listed is known to nobody.</summary>
     public SortedDictionary<string, int> Explored { get; init; } = new(StringComparer.Ordinal);
 
@@ -35,7 +44,7 @@ public sealed class ScenarioState
 
     internal void CopyFrom(ScenarioState o)
     {
-        Active = o.Active; Hq.CopyFrom(o.Hq); Winner = o.Winner; WinReason = o.WinReason;
+        Active = o.Active; Hq.CopyFrom(o.Hq); Winner = o.Winner; WinReason = o.WinReason; DominanceSide = o.DominanceSide; DominanceSince = o.DominanceSince;
         foreach (var kv in o.Explored) Explored[kv.Key] = kv.Value;
     }
 }

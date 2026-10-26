@@ -6,6 +6,13 @@ namespace Praedra.Core.Victory;
 public sealed record GameWon(int Index, int Day, Side Winner, string Reason) : GameEvent(Index, Day, nameof(GameWon));
 
 /// <summary>
+/// The capital-and-control run changed: Leader holds at least the share with the enemy capital gone since StartDay and wins on DueDay if it
+/// keeps both, or (Leader null) the run broke. Goes to both sides, like GameWon, so the player sees the countdown. rule: m5-setup-and-victory
+/// §Victory (capital and control).
+/// </summary>
+public sealed record DominanceChanged(int Index, int Day, Side? Leader, int StartDay, int DueDay) : GameEvent(Index, Day, nameof(DominanceChanged));
+
+/// <summary>
 /// The switches of the simple (HQ-Only flavoured) victory. The four win switches are on by default.
 /// Standard victory (the four key characters captured, setup-victory/04 §3) is behind <see cref="StandardVictory"/>, on by default; with it off only the HQ-Only conditions run (04 §3 HQ-Only mode).
 /// "Holds no system" is a New rule: the Classic victory check (0x5180e0, the only writer of the game-over bit) has no branch for a wiped-out side,
@@ -31,6 +38,14 @@ public sealed record VictoryRules
     public bool StandardVictory { get; init; } = true;
     /// <summary>What a dead key character does to standard victory. DEFAULT WaiveCondition (Decided Paul 2026-10-16; classic: None, the term can never be met). rule: m5-setup-and-victory §Defaults for undecided items (KeyDeathFallback).</summary>
     public KeyDeathFallback KeyDeathFallback { get; init; } = KeyDeathFallback.WaiveCondition;
+    /// <summary>
+    /// Capital and control (New rule, Decided Paul 2026-10-26, "Capital + 70%"): a side wins when the enemy capital is gone (the Hearth
+    /// destroyed for the Hand; Charter not held by the Hand for the Collective) and it holds at least this percent of the systems the two
+    /// sides hold, for <see cref="DominanceDays"/> days running. 0 = off (Classic has no such ending, B4 §15). rule: m5-setup-and-victory §Capital and control.
+    /// </summary>
+    public int DominanceSharePercent { get; init; } = 70;
+    /// <summary>Days the capital-and-control run must last. Decided Paul 2026-10-26. rule: m5-setup-and-victory §Victory.</summary>
+    public int DominanceDays { get; init; } = 180;
 }
 
 /// <summary>rule: m5-setup-and-victory §Victory (KeyDeathFallback). None = original; WaiveCondition and Immortal are Proposals (08 P6 a, b).</summary>
@@ -75,6 +90,10 @@ public sealed class VictoryModule
         .All(k => IsCaptured?.Invoke(k.Character) == true || (Rules.KeyDeathFallback == KeyDeathFallback.WaiveCondition && IsDead?.Invoke(k.Character) == true));
 
     /// <summary>KeyDeathFallback = Immortal: a key character of a live standard rule set cannot die (the character module turns the Kill into an Injure).</summary>
+    /// <summary>The day the running capital-and-control run would win, or null when nobody has one. For the screens.</summary>
+    public int? DominanceDueDay => S.DominanceSide != null ? S.DominanceSince + Rules.DominanceDays : null;
+    public Side? DominanceLeader => S.DominanceSide;
+
     public bool RefusesDeath(Characters.CharacterRecord c) =>
         Rules.StandardVictory && Rules.KeyDeathFallback == KeyDeathFallback.Immortal && S.Winner == null && Keys.Any(k => k.Standard && k.Character == c.Id);
 
@@ -109,12 +128,45 @@ public sealed class VictoryModule
             handReason = $"Hand captured the Hearth at {hq.System}";
         if (handReason == null && Rules.HandWinsWhenCollectiveHasNoSystems && !owners.Values.Any(v => v == Side.Collective)) handReason = "Collective holds no system";
 
+        int day = ctx.Day + 1;
+        if (collectiveReason == null && handReason == null && Rules.DominanceSharePercent > 0)
+            switch (Dominance(ctx, day))
+            {
+                case Side.Collective: collectiveReason = $"Collective held {Rules.DominanceSharePercent}% of the claimed worlds for {Rules.DominanceDays} days after Charter fell"; break;
+                case Side.Hand: handReason = $"Hand held {Rules.DominanceSharePercent}% of the claimed worlds for {Rules.DominanceDays} days after the Hearth fell"; break;
+            }
+
         Side winner; string reason;
         if (collectiveReason != null) { winner = Side.Collective; reason = collectiveReason; }
         else if (handReason != null) { winner = Side.Hand; reason = handReason; }
         else return;
         S.Winner = winner; S.WinReason = reason;
-        int day = ctx.Day + 1;
         ctx.Emit((i, _) => new GameWon(i, day, winner, reason));
+    }
+
+    /// <summary>
+    /// rule: m5-setup-and-victory §Victory (capital and control). Today's leader: the side with the enemy capital gone and at least
+    /// DominanceSharePercent of the systems the two sides hold (integer test, no rounding). A change of leader starts or breaks the run and
+    /// raises DominanceChanged. Returns the side whose run has lasted DominanceDays, else null.
+    /// </summary>
+    private Side? Dominance(StepContext ctx, int day)
+    {
+        int hand = 0, collective = 0;
+        foreach (var o in ctx.State.SystemOwners.Values)
+            if (o == Side.Hand) hand++; else if (o == Side.Collective) collective++;
+        int both = hand + collective, pct = Rules.DominanceSharePercent;
+        bool hearthGone = S.Hq.Status == Fog.HqStatus.Destroyed;
+        bool charterTaken = !(ctx.State.SystemOwners.TryGetValue(Control.ControlModule.CapitalSystem, out var c) && c == Side.Hand);
+        Side? leader = both == 0 ? null
+            : hearthGone && hand * 100 >= pct * both ? Side.Hand
+            : charterTaken && collective * 100 >= pct * both ? Side.Collective
+            : null;
+        if (leader != S.DominanceSide)
+        {
+            S.DominanceSide = leader; S.DominanceSince = leader != null ? day : 0;
+            int start = S.DominanceSince, due = leader != null ? day + Rules.DominanceDays : 0;
+            ctx.Emit((i, _) => new DominanceChanged(i, day, leader, start, due));
+        }
+        return leader != null && day - S.DominanceSince >= Rules.DominanceDays ? leader : null;
     }
 }
