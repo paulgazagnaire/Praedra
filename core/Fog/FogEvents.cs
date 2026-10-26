@@ -6,7 +6,7 @@ namespace Praedra.Core.Fog;
 // like FleetDeparted). rule: m5-fog-and-hq §F8 (slots), §N8 (audience).
 
 /// <summary>How a picture was written. rule: m5-fog-and-hq §F2 (the reveal kinds).</summary>
-public enum RevealKind { Setup, FullCopy, Presence, Recon, Engagement, LossNotice, HeartlandReport, Destroyed, OwnLive }
+public enum RevealKind { Setup, FullCopy, Presence, Recon, Engagement, LossNotice, HeartlandReport, Destroyed, OwnLive, HearthTip }
 
 /// <summary>Order: move the Hearth to a system. Collective only. Checked in step 1. rule: m5-fog-and-hq §F6.</summary>
 public sealed record MoveHqOrder(long Sequence, Side Side, string Destination) : Order(Sequence, Side);
@@ -39,6 +39,9 @@ public sealed record SensorReport(int Index, int Day, Side Viewer, string System
 
 /// <summary>A side received an "HQ is in this sector" clue. Audience: that side. rule: §N6 (SectorSuspicion).</summary>
 public sealed record HqSectorClueGiven(int Index, int Day, Side Viewer, string Sector) : GameEvent(Index, Day, nameof(HqSectorClueGiven));
+
+/// <summary>A spy's success also told the side where the Hearth stands (the Hearth tip). Audience: that side only. rule: §N6a.</summary>
+public sealed record HearthTipGiven(int Index, int Day, Side Viewer, string System) : GameEvent(Index, Day, nameof(HearthTipGiven));
 
 /// <summary>An agent of the other side was detected (from m5-missions' MissionDetected). Audience: the defender. rule: §N7 3.</summary>
 public sealed record AgentDetected(int Index, int Day, Side Viewer, string System, Side AgentSide) : GameEvent(Index, Day, nameof(AgentDetected));

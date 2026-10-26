@@ -94,7 +94,7 @@ public class EspionageTests
     {
         var h = HostE(7);
         var (draws, stamp) = Espionage(h, Side.Hand, "A02");
-        Assert.Equal(1, draws); // no draw for N (range 0), one pick
+        Assert.Equal(2, draws); // no draw for N (range 0), one pick, one Hearth tip draw (§N6a; the Hearth is at A01)
         var extras = FullCopies(h, Side.Hand, stamp).Where(c => c != "A02").ToList();
         var x = Assert.Single(extras);
         Assert.Contains(x, new[] { "A01", "A03" });
@@ -107,7 +107,7 @@ public class EspionageTests
         var h = HostE(3);
         Assert.False(h.Fog.IsExplored(Side.Hand, "A05"));
         var (draws, stamp) = Espionage(h, Side.Hand, "A05");
-        Assert.Equal(0, draws);
+        Assert.Equal(1, draws); // no extras; only the Hearth tip draw (§N6a)
         Assert.Equal(new[] { "A05" }, FullCopies(h, Side.Hand, stamp));
     }
 

@@ -37,7 +37,8 @@ public class SimpleAiGuerrillaTests
 
     private static Run Play(int seed, SimpleAiParams collective, int days)
     {
-        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA });
+        // Hearth tip pinned off (Dev lead 2026-10-26, m5-fog-and-hq §N6a): its draws move the seeds the floors below were measured on
+        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = new GameSettings { Fog = new Praedra.Core.Fog.FogParams { HearthTipPermille = 0, HearthTipSectorPermille = 0 } } });
         var m = new AiMatch(h, Medium, collective);
         int raids = 0, seen = h.Game.Events.Count, badMoves = 0;
         while (h.Game.Day < days && h.Victory.Winner == null)

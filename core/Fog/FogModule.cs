@@ -183,6 +183,27 @@ public sealed class FogModule
             F.Of(side).Clues.Add(new HqSectorClue(sector, stamp));
             ctx.Emit((i, _) => new HqSectorClueGiven(i, stamp, side, sector));
         }
+
+        // §N6a Hearth tip (New, Decided Paul 2026-10-26): a small chance the spy also learns where the Hearth stands now (or, in the next
+        // band of the same draw, its sector); only on a world the spy's side does not hold (else spying at home, never foiled, is a free
+        // roll: AI trainer, 2026-10-26); at the Hearth's
+        // own world the FullCopy above already showed it, and a Hearth in transit stands nowhere, so neither draws
+        if (Params.HearthTipPermille + Params.HearthTipSectorPermille > 0 && side != Side.Collective && holder != side && !hqThere
+            && Hq.Status == HqStatus.AtRest && Hq.System is string hs)
+        {
+            int r = ctx.Rng.NextInt(0, 999);
+            if (r < Params.HearthTipPermille)
+            {
+                Write(ctx, truth, side, hs, RevealKind.HearthTip, stamp);
+                ctx.Emit((i, _) => new HearthTipGiven(i, stamp, side, hs));
+            }
+            else if (r < Params.HearthTipPermille + Params.HearthTipSectorPermille)
+            {
+                string sector = _galaxy.Get(hs).Sector;
+                F.Of(side).Clues.Add(new HqSectorClue(sector, stamp));
+                ctx.Emit((i, _) => new HqSectorClueGiven(i, stamp, side, sector));
+            }
+        }
     }
 
     /// <summary>
@@ -225,6 +246,7 @@ public sealed class FogModule
             case RevealKind.Engagement: b = e = true; d = groundToo; a = c = false; break;
             case RevealKind.LossNotice: case RevealKind.HeartlandReport: b = true; a = c = d = e = false; break;
             case RevealKind.Destroyed: a = b = true; c = d = e = false; break;
+            case RevealKind.HearthTip: a = b = true; c = d = e = false; break; // §N6a: where it is and who holds it, plus HqHere below
             default: throw new ArgumentOutOfRangeException(nameof(kind));
         }
         var know = F.Of(side);
@@ -261,6 +283,7 @@ public sealed class FogModule
             SetHqHere(know, sys, k, stamp);
         }
         else if (kind == RevealKind.Presence && Params.PresenceRevealsHq) SetHqHere(know, sys, k, stamp); // §N6 PresenceRevealsHq (off by default)
+        else if (kind == RevealKind.HearthTip) SetHqHere(know, sys, k, stamp); // §N6a
         if (d)
         {
             var bySide = new SortedDictionary<int, GroundPicture>();
@@ -730,6 +753,7 @@ public sealed class FogModule
             case FleetSighted x: return Bit(x.Viewer);
             case SensorReport x: return Bit(x.Viewer); // rule: §N4 S2 (for the station's owner only)
             case HqSectorClueGiven x: return Bit(x.Viewer);
+            case HearthTipGiven x: return Bit(x.Viewer);
             case AgentDetected x: return Bit(x.Viewer);
             case OrderAccepted or OrderRejected: return order != null ? Bit(order.Side) : Both;
             case SystemCaptured c: return (c.From is Side f ? Bit(f) : 0) | (c.To is Side t ? Bit(t) : 0) | LiveMask(c.System);
