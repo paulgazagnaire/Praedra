@@ -21,7 +21,9 @@ public class SimpleAiBlindHuntTests
     // BlindStaleDays. The day the game ends (the Collective holds no system), or 0 by the day limit.
     private static int EndDay(int seed, bool blind, int days)
     {
-        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = new GameSettings { ControlRule = ControlRule.AssaultOnly } });
+        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = new GameSettings { ControlRule = ControlRule.AssaultOnly,
+            // capital and control pinned off (Dev lead 2026-10-26): the Hearth falls on day 1, so it would end every game on day 181; this test measures the hunt for X
+            Victory = new Praedra.Core.Victory.VictoryRules { DominanceSharePercent = 0 } } });
         var m = new AiMatch(h, AiLevels.For(AiLevel.Medium) with { BlindHunt = blind }, AiLevels.For(AiLevel.Medium), passive: Side.Collective);
         var view = h.Fog.ViewFor(Side.Hand);
         var g = h.Data.Galaxy;

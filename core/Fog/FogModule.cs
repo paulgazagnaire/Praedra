@@ -682,7 +682,7 @@ public sealed class FogModule
 
     // rule: §N8 Event audience. DEFAULT: the side of the event's subject, plus the other side if it has live access (kinds 1 to 3, not the
     // Heartland report) to the event's system at that moment. Exceptions: HqDeparted, HqArrived and an HqMove support change go to the Collective
-    // only (§N7 1: the Hand must never be told "the HQ arrived"); HqDestroyed, GameWon go to both; SystemCaptured to winner, loser and any
+    // only (§N7 1: the Hand must never be told "the HQ arrived"); HqDestroyed, GameWon and DominanceChanged go to both; SystemCaptured to winner, loser and any
     // side with live access. The fog's own per-viewer events go to their viewer. The subject and the system are read from the event's
     // fields named Side, Holder, Owner or Fleet (the fleet's side) and System; an event with neither goes to both (Contradictions 11: the
     // other sheets' events have no audience entry yet).
@@ -694,7 +694,7 @@ public sealed class FogModule
         {
             case HqDeparted or HqArrived: return All;
             case SupportChanged sc when sc.Cause == SupportCause.HqMove: return All;
-            case HqDestroyed or Victory.GameWon: return Both;
+            case HqDestroyed or Victory.GameWon or Victory.DominanceChanged: return Both;
             case Harvester.IHarvesterEvent: return Both; // galaxy notices: "New harvester Deployed", "Planet Destroyed", ... (m5-harvester §1, §2 effect 6)
             case SystemExplored x: return Bit(x.Viewer);
             case OwnerChangeSeen x: return Bit(x.Viewer);
