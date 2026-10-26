@@ -178,11 +178,7 @@ public sealed class FogModule
         // §N6 sector suspicion (Proposal, off by default): an espionage success on a Collective system in the sector that holds the HQ.
         if (Params.SectorSuspicion == SectorSuspicion.OnEspionage && side != Side.Collective && holder == Side.Collective
             && Hq.Status == HqStatus.AtRest && Hq.System != null && _galaxy.Get(Hq.System).Sector == _galaxy.Systems[ti].Sector)
-        {
-            string sector = _galaxy.Systems[ti].Sector;
-            F.Of(side).Clues.Add(new HqSectorClue(sector, stamp));
-            ctx.Emit((i, _) => new HqSectorClueGiven(i, stamp, side, sector));
-        }
+            GiveSectorClue(ctx, side, _galaxy.Systems[ti].Sector, stamp);
 
         // §N6a Hearth tip (New, Decided Paul 2026-10-26): a small chance the spy also learns where the Hearth stands now (or, in the next
         // band of the same draw, its sector); only on a world the spy's side does not hold (else spying at home, never foiled, is a free
@@ -197,13 +193,15 @@ public sealed class FogModule
                 Write(ctx, truth, side, hs, RevealKind.HearthTip, stamp);
                 ctx.Emit((i, _) => new HearthTipGiven(i, stamp, side, hs));
             }
-            else if (r < Params.HearthTipPermille + Params.HearthTipSectorPermille)
-            {
-                string sector = _galaxy.Get(hs).Sector;
-                F.Of(side).Clues.Add(new HqSectorClue(sector, stamp));
-                ctx.Emit((i, _) => new HqSectorClueGiven(i, stamp, side, sector));
-            }
+            else if (r < Params.HearthTipPermille + Params.HearthTipSectorPermille) GiveSectorClue(ctx, side, _galaxy.Get(hs).Sector, stamp);
         }
+    }
+
+    // §N6 "the HQ is in this sector" clue, from SectorSuspicion or the §N6a tip's sector band
+    private void GiveSectorClue(StepContext ctx, Side side, string sector, int stamp)
+    {
+        F.Of(side).Clues.Add(new HqSectorClue(sector, stamp));
+        ctx.Emit((i, _) => new HqSectorClueGiven(i, stamp, side, sector));
     }
 
     /// <summary>
