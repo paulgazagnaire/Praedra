@@ -302,6 +302,30 @@ public class B5aControlTests
         }
     }
 
+    // m5-fog-and-hq HQ29, §F7 Flee (DEFAULT since 2026-10-26, QA-50): the HQ world goes neutral on support alone while another Collective world exists:
+    // the HQ flees there (HqDeparted, in transit, no HqDestroyed) and arrives at rest. With no other Collective world it is destroyed (B5a-8 above).
+    [Fact]
+    public void B5a8b_HqFleesAnUprisingToTheNearestCollectiveWorld()
+    {
+        var w = new DerivedWorld();
+        w.Hold(C, Side.Collective, 60);
+        w.Hold(D, Side.Collective, 90);
+        w.Regiments(D, Side.Collective, 2); // without troops D also went neutral before the HQ arrived (destroyed on arrival, §F6)
+        w.Game.State.Scenario.Hq.Status = HqStatus.AtRest;
+        w.Game.State.Scenario.Hq.System = C;
+        w.Ctl.SubmitDebugSetSupport(Side.Collective, C, 59);
+        w.Step();
+        Assert.Null(w.Ctl.HolderOf(C));
+        Assert.Empty(w.Events<HqDestroyed>());
+        var dep = Assert.Single(w.Events<HqDeparted>());
+        var hq = w.Game.State.Scenario.Hq;
+        Assert.Equal((HqStatus.InTransit, C, D), (hq.Status, dep.From, dep.Path.Items.Last()));
+        while (hq.Status == HqStatus.InTransit && w.Game.Day < 400) w.Step();
+        Assert.Equal((HqStatus.AtRest, D), (hq.Status, hq.System));
+        Assert.Empty(w.Events<HqDestroyed>());
+        Assert.Null(w.H.Victory.Winner);
+    }
+
     // B5a-9 (section 5): the Collective takes a world with a Mordant Lien-150: it becomes the Collective's. The same world going neutral instead:
     // it goes neutral. (The sheet's planet-killer shield, destroyed in both cases, is cut: data/design/cut-classes.csv.)
     [Fact]

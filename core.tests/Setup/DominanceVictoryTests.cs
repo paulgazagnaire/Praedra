@@ -6,7 +6,7 @@ using Praedra.Core.Tests.Control;
 namespace Praedra.Core.Tests.Setup;
 
 // m5-setup-and-victory §Victory, capital and control (Decided Paul 2026-10-26, "Capital + 70%"): with the enemy capital gone, holding at least
-// DominanceSharePercent of the systems the two sides hold for DominanceDays days running wins. Tests V20 to V25.
+// DominanceSharePercent of the systems the two sides hold for DominanceDays days running wins. Tests V20 to V27.
 public class DominanceVictoryTests
 {
     private const string FileHq = "Altofen"; // the day-one files' Hearth (NewGameTests)
@@ -58,7 +58,7 @@ public class DominanceVictoryTests
     }
 
     [Fact] // V22
-    public void FallingBelowTheShareBreaksTheRun()
+    public void FallingBelowTheShareForTheGraceDaysBreaksTheRun()
     {
         var h = Make(StartPreset.MedA, new VictoryRules { DominanceDays = 5 });
         CaptureOnNextStep(h, HeldBy(h, Side.Collective).Where(s => s != FileHq).Where((_, i) => i % 2 == 0).Append(FileHq), Side.Hand);
@@ -67,12 +67,47 @@ public class DominanceVictoryTests
         CaptureOnNextStep(h, HeldBy(h, Side.Hand).Where(s => s != "Charter").Where((_, i) => i % 3 == 0), Side.Collective);
         h.Game.Step();
         Assert.True(Share(h, Side.Hand) < 70, $"Hand share {Share(h, Side.Hand)}%");
+        int lapse = h.Game.Day;
+        // the run lapses silently for DominanceGraceDays (10) and cannot win, even past its due day
+        while (h.Game.Day < lapse + 9) { h.Game.Step(); Assert.Single(h.Game.Events.OfType<DominanceChanged>()); Assert.NotNull(h.Victory.DominanceDueDay); }
+        h.Game.Step();
         var changes = h.Game.Events.OfType<DominanceChanged>().ToList();
         Assert.Equal(2, changes.Count);
         Assert.Null(changes[1].Leader);
         Assert.Null(h.Victory.DominanceDueDay);
         for (int i = 0; i < 10; i++) h.Game.Step();
         Assert.Null(h.Victory.Winner);
+    }
+
+    [Fact] // V26
+    public void ZeroGraceBreaksTheRunAtOnce()
+    {
+        var h = Make(StartPreset.MedA, new VictoryRules { DominanceDays = 5, DominanceGraceDays = 0 });
+        CaptureOnNextStep(h, HeldBy(h, Side.Collective).Where(s => s != FileHq).Where((_, i) => i % 2 == 0).Append(FileHq), Side.Hand);
+        h.Game.Step();
+        CaptureOnNextStep(h, HeldBy(h, Side.Hand).Where(s => s != "Charter").Where((_, i) => i % 3 == 0), Side.Collective);
+        h.Game.Step();
+        var changes = h.Game.Events.OfType<DominanceChanged>().ToList();
+        Assert.Equal(2, changes.Count);
+        Assert.Null(changes[1].Leader);
+    }
+
+    [Fact] // V27
+    public void AShortLapseKeepsTheRunAndItsDueDay()
+    {
+        var h = Make(StartPreset.MedA, new VictoryRules { DominanceDays = 30 });
+        CaptureOnNextStep(h, HeldBy(h, Side.Collective).Where(s => s != FileHq).Where((_, i) => i % 2 == 0).Append(FileHq), Side.Hand);
+        h.Game.Step();
+        int due = h.Victory.DominanceDueDay!.Value;
+        var lost = HeldBy(h, Side.Hand).Where(s => s != "Charter").Where((_, i) => i % 3 == 0).ToList();
+        CaptureOnNextStep(h, lost, Side.Collective);
+        h.Game.Step();
+        for (int i = 0; i < 3; i++) h.Game.Step();
+        CaptureOnNextStep(h, lost, Side.Hand); // back above the bar inside the grace days
+        while (h.Victory.Winner == null && h.Game.Day < 60) h.Game.Step();
+        Assert.Single(h.Game.Events.OfType<DominanceChanged>());
+        Assert.Equal(Side.Hand, h.Victory.Winner);
+        Assert.Equal(due, h.Game.Events.OfType<GameWon>().Single().Day);
     }
 
     [Fact] // V23

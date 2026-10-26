@@ -23,7 +23,7 @@ public class FogSettingsTests
         Assert.Equal((100, 5, 2, 31), (h.DepartureBase, h.DepartureShipWeight, h.DepartureFighterWeight, h.DepartureLimit));
         Assert.True(h.IgnoresForcedStop);
         Assert.Equal(-10, h.ArrivalSupportDelta);
-        Assert.Equal(HqLostOnHolderChange.AnyCause, h.LostOnHolderChange);
+        Assert.Equal(HqLostOnHolderChange.Flee, h.LostOnHolderChange);
         Assert.Equal(HqLostDestination.DestroyOnArrival, h.LostDestination);
         var s = new GameSettings();
         Assert.Null(s.Fog); Assert.Null(s.Hq);

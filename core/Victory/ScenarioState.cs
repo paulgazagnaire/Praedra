@@ -37,6 +37,9 @@ public sealed class ScenarioState
     public Side? DominanceSide { get; set; }
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public int DominanceSince { get; set; }
+    /// <summary>The first day of the current lapse below the bar while a run is kept (0 = none). rule: m5-setup-and-victory §Capital and control (DominanceGraceDays).</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public int DominanceLapse { get; set; }
     /// <summary>Per system: bit 1 = known to the Hand, bit 2 = known to the Collective. A system not listed is known to nobody.</summary>
     public SortedDictionary<string, int> Explored { get; init; } = new(StringComparer.Ordinal);
 
@@ -44,7 +47,7 @@ public sealed class ScenarioState
 
     internal void CopyFrom(ScenarioState o)
     {
-        Active = o.Active; Hq.CopyFrom(o.Hq); Winner = o.Winner; WinReason = o.WinReason; DominanceSide = o.DominanceSide; DominanceSince = o.DominanceSince;
+        Active = o.Active; Hq.CopyFrom(o.Hq); Winner = o.Winner; WinReason = o.WinReason; DominanceSide = o.DominanceSide; DominanceSince = o.DominanceSince; DominanceLapse = o.DominanceLapse;
         foreach (var kv in o.Explored) Explored[kv.Key] = kv.Value;
     }
 }
