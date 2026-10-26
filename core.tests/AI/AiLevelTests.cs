@@ -19,13 +19,13 @@ public class AiLevelTests
     [InlineData(AiLevel.Hard)]
     public void EveryLevel_PlaysWithFog(AiLevel level) => Assert.True(AiLevels.For(level).UseFog);
 
-    // ai/09 §6: Medium is the DEFAULT AI (the SimpleAiParams defaults with fog on), so the play tests of the default AI measure Medium, plus the
-    // Collective's guerrilla switches (AI trainer 2026-10-26, Paul: Medium is balanced). They are DEFAULT off so the play tests pinned on the
-    // default AI keep measuring what they measured; the Hand never reads them.
+    // ai/09 §6: Medium is the SimpleAiParams defaults with fog on, plus the Collective's guerrilla switches (AI trainer 2026-10-26, Paul: Medium
+    // is balanced). The switches are DEFAULT off so the play tests pinned on the default params keep measuring what they measured; so those tests
+    // measure Medium's Hand, and a Collective without the guerrilla. The Hand never reads the switches.
     private static readonly string[] Guerrilla = { nameof(SimpleAiParams.SafeHearth), nameof(SimpleAiParams.Underground), nameof(SimpleAiParams.Guerrilla) };
 
     [Fact]
-    public void Medium_IsTheDefaultAi()
+    public void Medium_IsTheDefaultAiPlusTheGuerrilla()
     {
         var d = new SimpleAiParams { UseFog = true }; var m = AiLevels.For(AiLevel.Medium);
         foreach (var prop in typeof(SimpleAiParams).GetProperties().Where(p => !Guerrilla.Contains(p.Name) && (p.PropertyType.IsValueType || p.PropertyType == typeof(double?))))

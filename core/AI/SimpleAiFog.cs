@@ -488,14 +488,15 @@ public sealed partial class SimpleAi
     }
 
     /// <summary>
-    /// SafeHearth: the Hearth's own world is short today: fewer regiments than its required garrison (m2-uprisings-and-garrison) plus one,
-    /// with Collective support under JoinSupport + 10, so one lost regiment or a small support drop turns it (m2-control-and-capture).
+    /// SafeHearth: the Hearth's own world is short today: fewer regiments than its required garrison (m2-uprisings-and-garrison) plus
+    /// HearthShortRegimentMargin, with Collective support under JoinSupport + HearthShortSupportMargin, so one lost regiment or a small support
+    /// drop turns it (m2-control-and-capture).
     /// </summary>
     private bool HearthShortHere(string at)
     {
         int sup = _h.Economy.SupportOf(at, _side);
-        if (sup >= Praedra.Core.Control.ControlModule.JoinSupport + 10) return false;
-        return _h.Support.RegimentCount(at) < _h.Support.RequiredGarrison(at) + 1;
+        if (sup >= Praedra.Core.Control.ControlModule.JoinSupport + _p.HearthShortSupportMargin) return false;
+        return _h.Support.RegimentCount(at) < _h.Support.RequiredGarrison(at) + _p.HearthShortRegimentMargin;
     }
 
     /// <summary>Lanes from each system to the nearest system the picture shows Hand (int.MaxValue when none is known).</summary>
@@ -523,8 +524,7 @@ public sealed partial class SimpleAi
         if (hq == null) return;
         string at = hq.System;
         var risk = Risk();
-        // SafeHearth: a Hearth on a world about to turn (regiments short of its need now, support under JoinSupport + HearthDiplomacyBelow's margin)
-        // moves as if at risk (m2-control-and-capture: a world with no troops joins whoever its people support)
+        // SafeHearth: a Hearth on a world about to turn (HearthShortHere: HearthShortRegimentMargin, HearthShortSupportMargin) moves as if at risk (m2-control-and-capture: a world with no troops joins whoever its people support)
         bool unsafeHere = _p.SafeHearth && HearthShortHere(at);
         if (risk.GetValueOrDefault(at) < _p.HqMoveRisk && !unsafeHere) return;
         if (NotesSince(AiNoteKind.HqMoved, Today - _p.HqMoveCooldownDays).Any()) return; // the HQ moved lately (own feed, kept in the AI memory)

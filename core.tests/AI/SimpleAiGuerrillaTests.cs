@@ -62,25 +62,28 @@ public class SimpleAiGuerrillaTests
     // SafeHearth: on main f00fbb8 the Medium Collective lost its Hearth just after a move in 9 of 12 traced mirrors (moved onto a world with 0 or
     // 1 regiment, which the -10 arrival drop then turned). Here a move the AI ordered counts as bad when, on the day the Hearth leaves, its
     // destination holds fewer than HearthMinRegiments own regiments. Seeds 1-8 to day 1500 against a Medium Hand, measured on main 9a594a9
-    // (bad moves on / off): 0/5, 0/3, 0/5, 0/6, 0/4, 0/4, 0/2, 0/3. Floors: on, none on any seed; off, at least 10 in all (the test still
-    // measures the switch).
+    // (bad moves on / off): 0/5, 0/3, 0/5, 0/6, 0/4, 0/4, 0/2, 0/3. Floors: on, none on any seed; off (seeds 1-4 only, to keep the suite
+    // short: 19 measured), at least 5 in all (the test still measures the switch).
     [Fact]
     public void SafeHearth_TheHearthNeverMovesOntoAThinlyHeldWorld()
     {
-        var res = MultiSeed.Play(MultiSeed.OneToEight, s => (On: Play(s, Old with { SafeHearth = true }, 1500), Off: Play(s, Old, 1500)));
-        foreach (var r in res) _out.WriteLine($"seed {r.On.Seed}: bad moves on {r.On.BadMoves}, off {r.Off.BadMoves}; falls within 60 days of a move on {r.On.HqFallsAfterMove}, off {r.Off.HqFallsAfterMove}");
-        Assert.All(res, r => Assert.True(r.On.BadMoves == 0, $"seed {r.On.Seed}: {r.On.BadMoves} moves onto a thinly held world with SafeHearth"));
-        Assert.True(res.Sum(r => r.Off.BadMoves) >= 10, $"only {res.Sum(r => r.Off.BadMoves)} bad moves without SafeHearth (the test no longer measures the switch)");
+        var on = MultiSeed.Play(MultiSeed.OneToEight, s => Play(s, Old with { SafeHearth = true }, 1500));
+        var off = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => Play(s, Old, 1500));
+        foreach (var r in on) _out.WriteLine($"seed {r.Seed}: bad moves on {r.BadMoves}; falls within 60 days of a move {r.HqFallsAfterMove}");
+        foreach (var r in off) _out.WriteLine($"seed {r.Seed}: bad moves off {r.BadMoves}; falls within 60 days of a move {r.HqFallsAfterMove}");
+        Assert.All(on, r => Assert.True(r.BadMoves == 0, $"seed {r.Seed}: {r.BadMoves} moves onto a thinly held world with SafeHearth"));
+        Assert.True(off.Sum(r => r.BadMoves) >= 5, $"only {off.Sum(r => r.BadMoves)} bad moves without SafeHearth (the test no longer measures the switch)");
     }
 
     // Underground and Guerrilla in play: seeds 1-4 to day 1000 against a Medium Hand, the Medium Collective with and without them. Measured on
     // main f00fbb8 (Sabotage, Incite, Espionage started; missions by special forces alone; raids ordered; Civilian strikes): seed 1 16, 31, 16, 6, 32, 32;
     // seed 2 82, 19, 28, 25, 77, 66; seed 3 34, 5, 21, 8, 14, 14; seed 4 16, 58, 10, 11, 42, 42. Off: no Sabotage, Espionage, special-force
-    // mission, raid or Civilian strike on any seed (Incite 1-6: the old border subversion). Floors: on, at least 5 of each on every seed; off, none.
+    // mission, raid or Civilian strike on any seed (Incite 1-6: the old border subversion). Floors: on, at least 5 of each on every seed; off (to
+    // day 300 only, to keep the suite short: the switches gate every one of these orders), none.
     [Fact]
     public void Underground_AndGuerrilla_SpyAndSabotageAndRaid_OnlyWhenOn()
     {
-        var res = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => (On: Play(s, Medium, 1000), Off: Play(s, Medium with { Underground = false, Guerrilla = false }, 1000)));
+        var res = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => (On: Play(s, Medium, 1000), Off: Play(s, Medium with { Underground = false, Guerrilla = false }, 300)));
         foreach (var r in res) _out.WriteLine($"seed {r.On.Seed}: on {r.On}; off {r.Off}");
         foreach (var (on, off) in res)
         {

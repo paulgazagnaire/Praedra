@@ -648,7 +648,6 @@ public sealed partial class SimpleAi
             Note(seq, "Assault", $"fleet {f.Id} lands on {at}");
             return;
         }
-
         Leave(f);
     }
 

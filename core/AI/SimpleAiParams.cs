@@ -364,6 +364,11 @@ public sealed record SimpleAiParams
     /// <summary>SafeHearth: Diplomacy on the Hearth's own world while its Collective support is below this, worth HearthDiplomacyValue. DEFAULT.</summary>
     public int HearthDiplomacyBelow { get; init; } = 85;
     public int HearthDiplomacyValue { get; init; } = 1500;
+    /// <summary>SafeHearth: the Hearth's own world counts as about to turn (it moves as if at risk) while its Collective support is under
+    /// JoinSupport (m2-control-and-capture) + HearthShortSupportMargin and its regiments are under its required garrison (m2-uprisings-and-garrison)
+    /// + HearthShortRegimentMargin. DEFAULT.</summary>
+    public int HearthShortSupportMargin { get; init; } = 10;
+    public int HearthShortRegimentMargin { get; init; } = 1;
 
     // ---- characters and missions (m6 AI; ai/05 §4-5 and §7b, ai/12 P8 and P9). All AI tuning, DEFAULT. The rules they act through are
     // m5-characters-and-talent (posts, MoveCharacter) and m5-missions (StartMission, CancelMission); the odds are the core's own tables

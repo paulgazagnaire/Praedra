@@ -42,7 +42,7 @@ public class GamesEndTests
         // Capital-and-control re-pin 2026-10-26 (Dev lead; Paul chose "Capital + 70%"): measured 0 of 8 open (the Hand wins all 8, on day 653 to
         // 2337). Bar 1.
         // Guerrilla Collective 2026-10-26 (AI trainer; Dev lead OK as a stopgap): Medium is now balanced, and balanced wars run longer. Measured 3 of
-        // 8 open (seeds 1, 6, 8: 181/61, 68/177, 110/135); the other 5 are Collective wins on day 2193 to 2895. Bar 3, back to 1 when the wars finish.
+        // 8 open (seeds 1, 6, 8: 181/61, 68/177, 110/135); the other 5 are Collective wins on day 2193 to 2895. Bar 3; the AI trainer owns bringing it back to 1 (the Hearth hunt and the slow wars, next).
         Assert.True(open <= 3, $"{open} of 8 Medium mirrors have no winner by day 3000");
     }
 }
