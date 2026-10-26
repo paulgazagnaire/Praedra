@@ -44,9 +44,11 @@ public class SimpleAiGuerrillaTests
         {
             m.Step();
             raids += m.Collective.Submitted.Count(o => o.Kind == "Raid");
-            // a move onto a world with fewer regiments than SafeHearth asks (counted on the day it leaves)
+            // a move the AI ordered onto a world with fewer regiments than SafeHearth asks (counted on the day it leaves); a flight from a lost
+            // world is the core's own move (m5-fog-and-hq §F7 Flee, to the nearest Collective system), not the AI's choice
+            bool ordered = m.Collective.Submitted.Any(o => o.Kind == "MoveHq");
             for (; seen < h.Game.Events.Count; seen++)
-                if (h.Game.Events[seen] is HqDeparted d && h.Support.RegimentCount(d.Path.Items[^1]) < collective.HearthMinRegiments) badMoves++;
+                if (ordered && h.Game.Events[seen] is HqDeparted d && h.Support.RegimentCount(d.Path.Items[^1]) < collective.HearthMinRegiments) badMoves++;
         }
         var ev = h.Game.Events;
         var arrivals = ev.OfType<HqArrived>().Select(a => a.Day).ToList();
@@ -58,9 +60,10 @@ public class SimpleAiGuerrillaTests
     }
 
     // SafeHearth: on main f00fbb8 the Medium Collective lost its Hearth just after a move in 9 of 12 traced mirrors (moved onto a world with 0 or
-    // 1 regiment, which the -10 arrival drop then turned). Here a move counts as bad when, on the day the Hearth leaves, its destination holds
-    // fewer than HearthMinRegiments own regiments. Seeds 1-8 to day 1500 against a Medium Hand, measured (bad moves on / off): 0/1, 0/3, 0/5, 0/6,
-    // 0/1, 0/4, 0/2, 0/3. Floors: on, none on any seed; off, at least 10 in all (the test still measures the switch).
+    // 1 regiment, which the -10 arrival drop then turned). Here a move the AI ordered counts as bad when, on the day the Hearth leaves, its
+    // destination holds fewer than HearthMinRegiments own regiments. Seeds 1-8 to day 1500 against a Medium Hand, measured on main 9a594a9
+    // (bad moves on / off): 0/5, 0/3, 0/5, 0/6, 0/4, 0/4, 0/2, 0/3. Floors: on, none on any seed; off, at least 10 in all (the test still
+    // measures the switch).
     [Fact]
     public void SafeHearth_TheHearthNeverMovesOntoAThinlyHeldWorld()
     {
@@ -71,7 +74,7 @@ public class SimpleAiGuerrillaTests
     }
 
     // Underground and Guerrilla in play: seeds 1-4 to day 1000 against a Medium Hand, the Medium Collective with and without them. Measured on
-    // (Sabotage, Incite, Espionage started; missions by special forces alone; raids ordered; Civilian strikes): seed 1 16, 31, 16, 6, 32, 32;
+    // main f00fbb8 (Sabotage, Incite, Espionage started; missions by special forces alone; raids ordered; Civilian strikes): seed 1 16, 31, 16, 6, 32, 32;
     // seed 2 82, 19, 28, 25, 77, 66; seed 3 34, 5, 21, 8, 14, 14; seed 4 16, 58, 10, 11, 42, 42. Off: no Sabotage, Espionage, special-force
     // mission, raid or Civilian strike on any seed (Incite 1-6: the old border subversion). Floors: on, at least 5 of each on every seed; off, none.
     [Fact]
