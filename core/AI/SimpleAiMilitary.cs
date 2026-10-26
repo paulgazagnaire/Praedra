@@ -745,8 +745,8 @@ public sealed partial class SimpleAi
                         if (IsEnemyHeld(s)) value += 10 + 2 * FacilitiesAt(s);
                         if (finishing && IsEnemyHeld(s)) value = value * _p.FinishValuePercent / 100;
                         if (lost.Contains(s)) value *= 2;
-                        if (s == KnownEnemyHq) value += 200;
-                        if (isWin) value += 400;
+                        if (s == KnownEnemyHq) value += _p.KnownHqValue;
+                        if (isWin) value += _p.WinTargetValue;
                         if (isSearch) value += _p.SearchValue * belief / Math.Max(1, BeliefMax);
                         value += blindValue;
                         score = Math.Max(score, value * 1000 / (ticks + 20));

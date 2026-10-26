@@ -161,6 +161,10 @@ public sealed record SimpleAiParams
     public bool InvasionBatchesOnly { get; init; } = false;
     /// <summary>A strike pile of WinStrikeStrength fetches the regiments for the game-winning system first when at most this many regiments are believed there (-1 = never). DEFAULT.</summary>
     public int WinRushDefenders { get; init; } = 2;
+    /// <summary>Target value added to the enemy HQ the side knows (KnownEnemyHq), and to the game-winning system for a pile of WinStrikeStrength
+    /// (the Hand's known HQ, the Collective's Charter). AI tuning, the values of before as DEFAULTs.</summary>
+    public int KnownHqValue { get; init; } = 200;
+    public int WinTargetValue { get; init; } = 400;
     /// <summary>
     /// A fleet that has shelled a target lands when it carries what PickTarget asked (Need of half the believed defenders), not the full Need again.
     /// Off = the AI of before (it shelled and left forever when the believed garrison stayed at the unseen guess). DEFAULT true (m6 stall fix).
