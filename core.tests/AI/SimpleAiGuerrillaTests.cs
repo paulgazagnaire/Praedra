@@ -75,6 +75,28 @@ public class SimpleAiGuerrillaTests
         Assert.True(off.Sum(r => r.BadMoves) >= 5, $"only {off.Sum(r => r.BadMoves)} bad moves without SafeHearth (the test no longer measures the switch)");
     }
 
+    // QA-54 (QA round 86): on main 47031bb SafeHearth pinned the Hearth on its start world, the one world with enough regiments, so it never
+    // left and an assault took it with the Hand blind: Hand Hard against the Medium Collective seed 13 (captured day 284), Medium mirror seeds
+    // 14 and 10 (days 247 and 472), each with 0 moves. With Hand warships close and no safe world the Hearth now takes the least-short refuge:
+    // measured alive at day 600 in all three, after 1, 2 and 2 moves. Floor: none captured by day 600 without having moved.
+    [Fact]
+    public void SafeHearth_LeavesForARefugeWhenWarshipsCloseAndNoWorldIsSafe()
+    {
+        var games = new[] { (Seed: 13, Hand: AiLevel.Hard), (Seed: 14, Hand: AiLevel.Medium), (Seed: 10, Hand: AiLevel.Medium) };
+        var res = MultiSeed.Play(games.Select(g => g.Seed).ToArray(), seed =>
+        {
+            var hand = games.First(g => g.Seed == seed).Hand;
+            var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA });
+            var m = new AiMatch(h, AiLevels.For(hand), Medium);
+            while (h.Game.Day < 600 && h.Victory.Winner == null) m.Step();
+            int moves = h.Game.Events.OfType<HqDeparted>().Count();
+            var dead = h.Game.Events.OfType<HqDestroyed>().FirstOrDefault();
+            return (Seed: seed, Moves: moves, Dead: dead);
+        });
+        foreach (var r in res) _out.WriteLine($"seed {r.Seed}: moves {r.Moves}, Hearth {(r.Dead == null ? "alive" : $"lost day {r.Dead.Day} ({r.Dead.Cause})")}");
+        Assert.All(res, r => Assert.False(r.Dead != null && r.Moves == 0, $"seed {r.Seed}: the Hearth never moved and fell on day {r.Dead?.Day}"));
+    }
+
     // Underground and Guerrilla in play: seeds 1-4 to day 1000 against a Medium Hand, the Medium Collective with and without them. Measured on
     // main f00fbb8 (Sabotage, Incite, Espionage started; missions by special forces alone; raids ordered; Civilian strikes): seed 1 16, 31, 16, 6, 32, 32;
     // seed 2 82, 19, 28, 25, 77, 66; seed 3 34, 5, 21, 8, 14, 14; seed 4 16, 58, 10, 11, 42, 42. Off: no Sabotage, Espionage, special-force
