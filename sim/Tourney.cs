@@ -20,7 +20,7 @@ internal static class Tourney
         """;
 
     private sealed record GameResult(int Seed, bool AIsHand, AiLevel HandLevel, AiLevel CollectiveLevel, Side? Winner, int Day, int HandSystems,
-                                     int CollectiveSystems, int? HqFoundDay, int HandCaptures, int CollectiveCaptures)
+                                     int CollectiveSystems, int? HqFoundDay, int HandCaptures, int CollectiveCaptures, EndgameWhatIf WhatIf)
     {
         /// <summary>Share (percent) of the systems the two sides hold at the end for <paramref name="side"/>; a win is 100, a loss 0.</summary>
         public double Share(Side side) => Winner is Side w ? (w == side ? 100 : 0)
@@ -85,11 +85,12 @@ internal static class Tourney
         if (csv != null)
         {
             using var w = new StreamWriter(csv);
-            w.WriteLine("seed,a_is_hand,hand_level,collective_level,winner,day,hand_systems,collective_systems,hq_found_day,hand_captures,collective_captures");
+            w.WriteLine("seed,a_is_hand,hand_level,collective_level,winner,day,hand_systems,collective_systems,hq_found_day,hand_captures,collective_captures," + EndgameWhatIf.CsvHeader);
             foreach (var r in all)
                 w.WriteLine(string.Join(",", r.Seed, r.AIsHand, r.HandLevel, r.CollectiveLevel, r.Winner?.ToString() ?? "", r.Day, r.HandSystems, r.CollectiveSystems,
-                                        r.HqFoundDay?.ToString(CultureInfo.InvariantCulture) ?? "", r.HandCaptures, r.CollectiveCaptures));
+                                        r.HqFoundDay?.ToString(CultureInfo.InvariantCulture) ?? "", r.HandCaptures, r.CollectiveCaptures, r.WhatIf.Csv()));
         }
+        EndgameWhatIf.Print(all.Select(r => (r.Winner, r.Day, r.WhatIf)).ToList());
         Console.WriteLine($"Runtime: {games.Count} games in {clock.Elapsed.TotalSeconds:F0} s.");
         return 0;
     }
@@ -99,15 +100,17 @@ internal static class Tourney
         var host = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = settings });
         var match = new AiMatch(host, pe, pa);
         int? found = null;
+        var whatIf = new EndgameWhatIf();
         while (host.Game.Day < days && host.Victory.Winner == null)
         {
             match.Step();
             if (found == null && host.HqSystem != null && host.Fog.KnownHq(Side.Hand)?.System == host.HqSystem) found = host.Game.Day;
+            whatIf.Observe(host);
         }
         var caps = host.Game.Events.OfType<SystemCaptured>().ToList();
         int Held(Side s) => host.Game.State.SystemOwners.Count(kv => kv.Value == s);
         return new GameResult(seed, aIsHand, hand, collective, host.Victory.Winner, host.Game.Day, Held(Side.Hand), Held(Side.Collective), found,
-                              caps.Count(c => c.To == Side.Hand), caps.Count(c => c.To == Side.Collective));
+                              caps.Count(c => c.To == Side.Hand), caps.Count(c => c.To == Side.Collective), whatIf);
     }
 
     /// <summary>Game settings for every game (--settings K=V,...: int, bool or enum properties of GameSettings, nullable ones too, "null" for
@@ -182,7 +185,7 @@ internal static class Tourney
         $"seed {r.Seed,3}: Hand {r.HandLevel,-6} vs Collective {r.CollectiveLevel,-6} -> {(r.Winner is Side w ? $"{w} wins day {r.Day}" : $"no winner by day {r.Day}"),-26} " +
         $"systems {r.HandSystems}/{r.CollectiveSystems}, HQ found {(r.HqFoundDay is int h ? "day " + h : "never")}, captures {r.HandCaptures}/{r.CollectiveCaptures}";
 
-    private static List<int> ParseSeeds(string s)
+    internal static List<int> ParseSeeds(string s)
     {
         if (s.Contains('-')) { var p = s.Split('-'); int lo = int.Parse(p[0], CultureInfo.InvariantCulture), hi = int.Parse(p[1], CultureInfo.InvariantCulture); return Enumerable.Range(lo, hi - lo + 1).ToList(); }
         if (s.Contains(',')) return s.Split(',').Select(x => int.Parse(x, CultureInfo.InvariantCulture)).ToList();
