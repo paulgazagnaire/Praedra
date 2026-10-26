@@ -16,7 +16,8 @@ public class SimpleAiStallTests
     // from a system the fleet shelled since it last landed there).
     private static (int Landings, int Shellings, int ShelledLeaves) Hand(bool fix, int seed, int days)
     {
-        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = Praedra.Core.Tests.Setup.DealSettings.FileOldVictory });
+        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = Praedra.Core.Tests.Setup.DealSettings.FileOldVictory with { Fog = new Praedra.Core.Fog.FogParams { HearthTipPermille = 0, HearthTipSectorPermille = 0 } } });
+        // Hearth tip pinned off (Dev lead 2026-10-26, m5-fog-and-hq §N6a): its draws move the seeds this test's floors were measured on; it measures landings
         var p = new SimpleAiParams { UseFog = true, ShelledLandingNeed = fix, ExplorerScouts = 0, FogGroundForgetDays = 0 };
         var m = new AiMatch(h, p, p);
         var shelled = new Dictionary<string, string>(StringComparer.Ordinal); // fleet id -> the system it shelled; lookup only

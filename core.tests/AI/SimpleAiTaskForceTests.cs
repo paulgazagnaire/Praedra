@@ -25,7 +25,9 @@ public class SimpleAiTaskForceTests
         var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = new GameSettings { Bombard = preB7,
             // capital and control pinned off (Dev lead 2026-10-26): it ends the TaskForces-off games 180 days after the Hearth falls, so the floors
             // no longer separate the switch (0 of 4 off games still going on day 1250); this test measures task forces
-            Victory = new Praedra.Core.Victory.VictoryRules { DominanceSharePercent = 0 } } });
+            Victory = new Praedra.Core.Victory.VictoryRules { DominanceSharePercent = 0 },
+            // Hearth tip pinned off (Dev lead 2026-10-26, m5-fog-and-hq §N6a): its draws move the seeds the floors were measured on
+            Fog = new Praedra.Core.Fog.FogParams { HearthTipPermille = 0, HearthTipSectorPermille = 0 } } });
         // GarrisonsFirst pinned off (Dev lead 2026-10-19): the passive Collective makes the Hand "far ahead" from the start, and this test
         // measures task forces; SimpleAiGarrisonsFirstTests measures that switch.
         var m = new AiMatch(h, AiLevels.For(AiLevel.Medium) with { TaskForces = taskForces, GarrisonsFirst = false },

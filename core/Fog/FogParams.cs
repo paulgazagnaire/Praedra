@@ -42,6 +42,16 @@ public sealed record FogParams
     public bool PresenceRevealsHq { get; init; }
     /// <summary>rule: §N6, Open question 3.</summary>
     public SectorSuspicion SectorSuspicion { get; init; } = SectorSuspicion.Off;
+    /// <summary>
+    /// Hearth tip: chance in 1000 that a Hand espionage success anywhere the Hearth is not also tells the Hand where the Hearth stands now
+    /// (one draw per such success; none at 0). New, Decided (Paul 2026-10-26: "a (very) small chance"). DEFAULT 20 (2%). rule: §N6a.
+    /// </summary>
+    public int HearthTipPermille { get; init; } = 20;
+    /// <summary>
+    /// The same draw's next band: chance in 1000 that, failing the exact tip, the Hand gets the coarse "the Hearth is in sector X" clue
+    /// (§N6 HqSectorClue). New, Decided with HearthTipPermille (Paul 2026-10-26). DEFAULT 50 (5%), AI trainer's ask. rule: §N6a.
+    /// </summary>
+    public int HearthTipSectorPermille { get; init; } = 50;
     /// <summary>Days a look stays "Observed", and the age at which a sighting is dropped. Proposal. rule: §N1, §N3.</summary>
     public int ObservedWindowDays { get; init; } = 30;
     /// <summary>One HQ: a reveal that finds it clears the side's other HqHere flags. rule: §N5.</summary>

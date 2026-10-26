@@ -96,7 +96,7 @@ public class HqRevealTests
     [Fact]
     public void HR6_NoSectorClueByDefault()
     {
-        var w = new FogWorld();
+        var w = new FogWorld(new GameSettings { Fog = new FogParams { HearthTipPermille = 0, HearthTipSectorPermille = 0 } }); // §N6a tip has its own tests
         Espionage(w, Side.Hand, R3);
         Assert.Empty(w.Fog.Clues(Side.Hand));
         Assert.DoesNotContain(w.Game.State.Fog.Hand.Systems.Values, k => k.HqHere);
@@ -106,13 +106,68 @@ public class HqRevealTests
     [Fact]
     public void HR7_SectorClueWhenSwitchedOn()
     {
-        var w = new FogWorld(new GameSettings { Fog = new FogParams { SectorSuspicion = SectorSuspicion.OnEspionage } });
+        var w = new FogWorld(new GameSettings { Fog = new FogParams { SectorSuspicion = SectorSuspicion.OnEspionage, HearthTipPermille = 0, HearthTipSectorPermille = 0 } });
         int stamp = Espionage(w, Side.Hand, R3);
         Assert.Equal(new HqSectorClue("SR", stamp), Assert.Single(w.Fog.Clues(Side.Hand)));
         Assert.DoesNotContain(w.Game.State.Fog.Hand.Systems.Values, k => k.HqHere);
         Assert.Empty(w.Fog.Clues(Side.Collective));
         Assert.Contains(w.EventsFor(Side.Hand), e => e is HqSectorClueGiven);
         Assert.DoesNotContain(w.EventsFor(Side.Collective), e => e is HqSectorClueGiven);
+    }
+
+    // m5-fog-and-hq HR12
+    [Fact]
+    public void HR12_HearthTipTellsTheHandWhereTheHearthIs()
+    {
+        var w = new FogWorld(new GameSettings { Fog = new FogParams { HearthTipPermille = 1000 } });
+        int stamp = Espionage(w, Side.Hand, R3);
+        Assert.Equal(new KnownHqInfo(R2, stamp), w.Fog.KnownHq(Side.Hand));
+        var p = w.Pic(Side.Hand, R2)!;
+        Assert.Equal(Side.Collective, p.Owner!.Value.Owner);
+        Assert.Null(p.Fleets); // a tip shows where it is and who holds it, nothing more
+        Assert.Contains(w.EventsFor(Side.Hand), e => e is HearthTipGiven t && t.System == R2);
+        Assert.DoesNotContain(w.EventsFor(Side.Collective), e => e is HearthTipGiven);
+    }
+
+    // m5-fog-and-hq HR13
+    [Fact]
+    public void HR13_NoHearthTipAtZeroInTransitOrAtHome()
+    {
+        var off = new FogWorld(new GameSettings { Fog = new FogParams { HearthTipPermille = 0, HearthTipSectorPermille = 0 } });
+        Espionage(off, Side.Hand, R3);
+        Assert.Null(off.Fog.KnownHq(Side.Hand));
+
+        var moving = new FogWorld(new GameSettings { Fog = new FogParams { HearthTipPermille = 1000 } });
+        moving.Fog.SubmitMoveHq(Side.Collective, R3);
+        moving.Step();
+        Assert.Equal(HqStatus.InTransit, moving.Game.State.Scenario.Hq.Status);
+        Espionage(moving, Side.Hand, R4);
+        Assert.Null(moving.Fog.KnownHq(Side.Hand));
+        Assert.DoesNotContain(moving.EventsFor(Side.Hand), e => e is HearthTipGiven);
+
+        var home = new FogWorld(new GameSettings { Fog = new FogParams { HearthTipPermille = 1000 } });
+        Espionage(home, Side.Hand, R1); // the Hand holds R1: spying at home never tips
+        Assert.Null(home.Fog.KnownHq(Side.Hand));
+    }
+
+    // m5-fog-and-hq HR15
+    [Fact]
+    public void HR15_HearthTipSectorBandGivesTheSectorClue()
+    {
+        var w = new FogWorld(new GameSettings { Fog = new FogParams { HearthTipPermille = 0, HearthTipSectorPermille = 1000 } });
+        int stamp = Espionage(w, Side.Hand, R3);
+        Assert.Equal(new HqSectorClue("SR", stamp), Assert.Single(w.Fog.Clues(Side.Hand)));
+        Assert.Null(w.Fog.KnownHq(Side.Hand));
+        Assert.DoesNotContain(w.EventsFor(Side.Collective), e => e is HqSectorClueGiven);
+    }
+
+    // m5-fog-and-hq HR14
+    [Fact]
+    public void HR14_TheCollectiveGetsNoHearthTip()
+    {
+        var w = new FogWorld(new GameSettings { Fog = new FogParams { HearthTipPermille = 1000 } });
+        Espionage(w, Side.Collective, R3);
+        Assert.DoesNotContain(w.Game.Events, e => e is HearthTipGiven);
     }
 
     // m5-fog-and-hq HR8
