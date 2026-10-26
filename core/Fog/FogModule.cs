@@ -383,12 +383,14 @@ public sealed class FogModule
             DestroyHq(ctx, CauseDestinationLost, reached); // HqLostDestination = DestroyOnArrival: no support effect, no HqArrived
             return;
         }
+        bool fled = Hq.Fleeing;
         Hq.Status = HqStatus.AtRest; Hq.System = reached; ClearTransit();
         string sector = _galaxy.Get(reached).Sector;
         ctx.Emit((i, _) => new HqArrived(i, day, reached, sector));
         // Support effect (Traced, 05 10.3, GNPRTB 5127 = -10, threshold 5128 = 101 always true): every populated system of the sector, any
         // holder, through the support module's one entry point with cause HqMove. "Not destroyed": no destroyed systems exist in the core yet.
-        if (HqRules.ArrivalSupportDelta != 0 && _galaxy.TryFindSystem(reached, out var ri))
+        // A flee's arrival skips it (FleeSkipsArrivalDrop, QA-53): the drop turned the world the Hearth ran to, and it fled again.
+        if (HqRules.ArrivalSupportDelta != 0 && !(fled && HqRules.FleeSkipsArrivalDrop) && _galaxy.TryFindSystem(reached, out var ri))
         {
             var sec = _galaxy.Sectors.FirstOrDefault(s => s.Name == sector);
             if (sec != null && !_galaxy.Systems[ri].IsOutsideSectors)
@@ -415,7 +417,7 @@ public sealed class FogModule
             if (p.Ok && (best == null || p.TotalTicks < best.TotalTicks)) best = p;
         }
         if (best == null) return false;
-        Hq.From = from; Hq.System = null; Hq.Status = HqStatus.InTransit;
+        Hq.From = from; Hq.System = null; Hq.Status = HqStatus.InTransit; Hq.Fleeing = true;
         Hq.Path = best.Systems.Select(i => _galaxy.Systems[i].Name).ToList();
         Hq.HopTicks = best.HopTicks.ToList(); Hq.HopIndex = 0;
         // A flee comes from a capture after slot 3 (assaults, support at day end), so this Step's arrival check has run: the first hop counts
@@ -426,7 +428,7 @@ public sealed class FogModule
         return true;
     }
 
-    private void ClearTransit() { Hq.From = null; Hq.Path = new(); Hq.HopTicks = new(); Hq.HopIndex = 0; Hq.DueDay = 0; }
+    private void ClearTransit() { Hq.From = null; Hq.Path = new(); Hq.HopTicks = new(); Hq.HopIndex = 0; Hq.DueDay = 0; Hq.Fleeing = false; }
 
     private void DestroyHq(StepContext ctx, string cause, string system)
     {
