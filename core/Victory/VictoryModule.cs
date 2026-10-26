@@ -89,11 +89,12 @@ public sealed class VictoryModule
     public bool KeysCaptured(Side side) => Keys.Where(k => k.Standard && k.Side == side)
         .All(k => IsCaptured?.Invoke(k.Character) == true || (Rules.KeyDeathFallback == KeyDeathFallback.WaiveCondition && IsDead?.Invoke(k.Character) == true));
 
-    /// <summary>KeyDeathFallback = Immortal: a key character of a live standard rule set cannot die (the character module turns the Kill into an Injure).</summary>
     /// <summary>The day the running capital-and-control run would win, or null when nobody has one. For the screens.</summary>
     public int? DominanceDueDay => S.DominanceSide != null ? S.DominanceSince + Rules.DominanceDays : null;
+    /// <summary>The side on a capital-and-control run, or null.</summary>
     public Side? DominanceLeader => S.DominanceSide;
 
+    /// <summary>KeyDeathFallback = Immortal: a key character of a live standard rule set cannot die (the character module turns the Kill into an Injure).</summary>
     public bool RefusesDeath(Characters.CharacterRecord c) =>
         Rules.StandardVictory && Rules.KeyDeathFallback == KeyDeathFallback.Immortal && S.Winner == null && Keys.Any(k => k.Standard && k.Character == c.Id);
 
