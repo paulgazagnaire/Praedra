@@ -74,7 +74,6 @@ internal static class RouteReport
         var galaxy = probe.Fleets.Galaxy;
         // system kind: 0 = on a great route, 1 = on minor routes only, 2 = open space (no route link)
         var kind = galaxy.Systems.Select(s => galaxy.NeighboursOf(s.Index) is var n && n.Any(x => x.Lane.Tier == 1) ? 0 : n.Count > 0 ? 1 : 2).ToArray();
-        var straight = new Pathfinder(galaxy, TravelMode.Straight);
         var groups = galaxy.Systems.Where(s => !s.IsOutsideSectors).Select(s => s.Group).Distinct().OrderBy(g => g, StringComparer.Ordinal).ToList();
 
         var tallies = new ConcurrentBag<Tally>();
@@ -84,6 +83,7 @@ internal static class RouteReport
             var t = new Tally();
             var host = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = settings });
             var match = new AiMatch(host, AiLevels.For(hand), AiLevels.For(collective));
+            var straight = new Pathfinder(galaxy, TravelMode.Straight); // one per game: Find writes to an unsynchronised cache
             int scanned = host.Game.Events.Count; int? charterLost = null;
             var frames = new List<object>(); var battles = new List<int[]>(); var lanePasses = new Dictionary<string, int>(StringComparer.Ordinal);
             void Frame()
@@ -100,7 +100,7 @@ internal static class RouteReport
                     if (f.Transit is { } tr && tr.HopIndex + 1 < tr.Path.Count) fl.Add(new[] { galaxy.Get(tr.Path[tr.HopIndex]).Index, galaxy.Get(tr.Path[tr.HopIndex + 1]).Index, side, ships });
                     else if (f.At != null) fl.Add(new[] { galaxy.Get(f.At).Index, -1, side, ships });
                 }
-                int hq = host.HqSystem is { } hs && host.Fog != null && galaxy.TryFindSystem(hs, out var hi) ? hi : -1;
+                int hq = host.HqSystem is { } hs && galaxy.TryFindSystem(hs, out var hi) ? hi : -1;
                 frames.Add(new { day = host.Game.Day, owners = new string(owners), fleets = fl, hq });
             }
             Frame();
@@ -204,11 +204,13 @@ internal static class RouteReport
 
     private static void Bump(Tally t, Lane lane)
     {
-        string link = $"{lane.NameA} - {lane.NameB} ({(string.IsNullOrEmpty(lane.Routes) ? "unnamed" : lane.Routes)}, tier {lane.Tier})";
+        string link = LinkKey(lane);
         t.Links[link] = t.Links.GetValueOrDefault(link) + 1;
         foreach (var r in (string.IsNullOrEmpty(lane.Routes) ? $"unnamed tier {lane.Tier}" : lane.Routes).Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             t.Routes[r] = t.Routes.GetValueOrDefault(r) + 1;
     }
+
+    private static string LinkKey(Lane l) => $"{l.NameA} - {l.NameB} ({(string.IsNullOrEmpty(l.Routes) ? "unnamed" : l.Routes)}, tier {l.Tier})";
 
     private static string Pct(long part, long whole) => whole == 0 ? "-" : $"{100.0 * part / whole:F0}%";
 
@@ -240,7 +242,7 @@ internal static class RouteReport
         foreach (var kv in t.Routes.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).Take(12)) Console.WriteLine($"  {kv.Value,7}  {kv.Key}");
         Console.WriteLine("Busiest links (legs flown):");
         foreach (var kv in t.Links.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).Take(15)) Console.WriteLine($"  {kv.Value,7}  {kv.Key}");
-        int unused = galaxy.Lanes.Count(l => !t.Links.ContainsKey($"{l.NameA} - {l.NameB} ({(string.IsNullOrEmpty(l.Routes) ? "unnamed" : l.Routes)}, tier {l.Tier})"));
+        int unused = galaxy.Lanes.Count(l => !t.Links.ContainsKey(LinkKey(l)));
         Console.WriteLine($"Links never flown: {unused} of {galaxy.Lanes.Count}.");
         Console.WriteLine($"Holdings by region, mean over the games still running (every {Window} days; Hand / Collective):");
         Console.WriteLine("  day    " + string.Join("  ", groups.Select(g => $"{g,-16}")) + "  games");

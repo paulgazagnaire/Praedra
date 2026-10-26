@@ -33,7 +33,6 @@ internal sealed class EndgameWhatIf
     private int _scanned;
     private readonly Side?[] _streakSide = new Side?[Rules.Length];
     private readonly int[] _streakStart = new int[Rules.Length];
-    private bool _charterTaken;
 
     public int? HqGoneDay { get; private set; }
     public int? CharterLostDay { get; private set; }
@@ -51,8 +50,8 @@ internal sealed class EndgameWhatIf
         int h = 0, c = 0;
         foreach (var kv in host.Game.State.SystemOwners)
             if (kv.Value == Side.Hand) h++; else if (kv.Value == Side.Collective) c++;
-        _charterTaken = !host.Game.State.SystemOwners.TryGetValue(ControlModule.CapitalSystem, out var ch) || ch != Side.Hand;
-        var snap = new Snapshot(h, c, HqGoneDay != null, _charterTaken);
+        bool charterTaken = !host.Game.State.SystemOwners.TryGetValue(ControlModule.CapitalSystem, out var ch) || ch != Side.Hand;
+        var snap = new Snapshot(h, c, HqGoneDay != null, charterTaken);
         for (int i = 0; i < Rules.Length; i++)
         {
             var leader = Rules[i].Leader(snap);
