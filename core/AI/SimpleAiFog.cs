@@ -65,7 +65,7 @@ public sealed partial class SimpleAi
     /// <summary>The odds asked to attack fleets at a system: <see cref="OddsAt"/>, and with fog raised by the age of the fleet picture.</summary>
     private double TargetOdds(string system)
     {
-        double odds = OddsAt(system, _p.AttackOddsPercent);
+        double odds = OddsAt(system, AttackOdds);
         if (_view?.Picture(system)?.Fleets is { } e) odds = odds * StalePercent(AgeOf(e)) / 100;
         return odds;
     }
@@ -423,27 +423,80 @@ public sealed partial class SimpleAi
         if (_risk != null) return _risk;
         var d = new Dictionary<string, int>(StringComparer.Ordinal);
         var g = _h.Data.Galaxy;
-        void Spread(string at)
+        void Spread(string at, int percent = 100)
         {
-            if (!g.TryFindSystem(at, out var i0)) return;
+            if (percent <= 0 || !g.TryFindSystem(at, out var i0)) return;
             var depth = new Dictionary<int, int> { [i0] = 0 }; var q = new Queue<int>(); q.Enqueue(i0);
             while (q.Count > 0)
             {
                 int c = q.Dequeue(); int dc = depth[c];
                 string n = g.Systems[c].Name;
-                d[n] = d.GetValueOrDefault(n) + (dc == 0 ? _p.HqRiskHere : dc == 1 ? _p.HqRiskNear : _p.HqRiskFar);
+                d[n] = d.GetValueOrDefault(n) + (dc == 0 ? _p.HqRiskHere : dc == 1 ? _p.HqRiskNear : _p.HqRiskFar) * percent / 100;
                 if (dc >= 2) continue;
                 foreach (var nb in g.NearOf(c)) if (!depth.ContainsKey(nb)) { depth[nb] = dc + 1; q.Enqueue(nb); }
             }
         }
-        foreach (var s in _view!.Sightings(Today - _view.ObservedWindowDays)) if (s.Side == Enemy) Spread(s.System);
-        foreach (var (sys, fp) in _view.VisibleFleets()) if (fp.Side == Enemy) Spread(sys);
+        foreach (var s in _view!.Sightings(Today - _view.ObservedWindowDays)) if (s.Side == Enemy) Spread(s.System, SightingRiskPercent(s.Kind, s.Detail));
+        foreach (var (sys, fp) in _view.VisibleFleets()) if (fp.Side == Enemy) Spread(sys, SightingRiskPercent(Praedra.Core.Fog.SightingKind.Fleet, fp));
         foreach (var sys in g.Systems)
         {
             int n = g.NearOf(sys.Index).Count(nb => IsEnemyHeld(g.Systems[nb].Name));
             if (n > 0) d[sys.Name] = d.GetValueOrDefault(sys.Name) + n * _p.HqRiskEnemyNeighbour;
         }
         return _risk = d;
+    }
+
+    /// <summary>
+    /// SafeHearth: how much of the usual risk a sighting carries. A fleet of the enemy's scout classes only (no troops, no warship) cannot
+    /// reveal the HQ (m5-fog-and-hq §F2: only a mission's look does) and weighs HearthScoutRiskPercent; an enemy agent seen weighs
+    /// HearthAgentRiskPercent (a look is how the HQ is found). Off: 100 for every sighting, as before.
+    /// </summary>
+    private int SightingRiskPercent(Praedra.Core.Fog.SightingKind kind, Praedra.Core.Fog.FleetPicture? fleet)
+    {
+        if (!_p.SafeHearth) return 100;
+        if (kind == Praedra.Core.Fog.SightingKind.AgentDetected) return _p.HearthAgentRiskPercent;
+        if (kind != Praedra.Core.Fog.SightingKind.Fleet || fleet == null) return 100;
+        var scouts = _side == Side.Collective ? _p.HandScouts : _p.CollectiveScouts;
+        bool scoutsOnly = fleet.ShipCount > 0 && fleet.SquadronCount == 0 && fleet.Ships.Keys.All(c => scouts.Contains(c));
+        return scoutsOnly ? _p.HearthScoutRiskPercent : 100;
+    }
+
+    /// <summary>
+    /// SafeHearth: can the HQ stand at an own world after its arrival drop (m5-fog-and-hq §F6, HqRules.ArrivalSupportDelta in the sector)? The
+    /// world's own regiments (it is the side's own world: m2-uprisings-and-garrison, Required garrison N at the support it will have) must be at
+    /// least that need plus HearthGarrisonMargin and at least HearthMinRegiments. Also counts the other own worlds of the sector the drop would
+    /// leave short (regiments below their need at the lowered support, or none below JoinSupport): each turns or riots (m2-control-and-capture).
+    /// </summary>
+    private bool HearthSafeAt(string system, out int sectorShort)
+    {
+        sectorShort = 0;
+        var g = _h.Data.Galaxy;
+        if (!g.TryFindSystem(system, out var i)) return false;
+        int delta = _h.Fog.HqRules.ArrivalSupportDelta;
+        int ShortBy(string w)
+        {
+            int after = Math.Max(0, _h.Economy.SupportOf(w, _side) + delta);
+            int need = Praedra.Core.Support.SupportModule.RequiredGarrison(_h.Support.Params, after, _h.Support.IsUprising(w), false);
+            if (after < Praedra.Core.Control.ControlModule.JoinSupport) need = Math.Max(need, 1);
+            return need - _h.Support.RegimentCount(w);
+        }
+        string sector = g.Systems[i].Sector;
+        foreach (var w in HeldSystems())
+            if (w != system && g.TryFindSystem(w, out var j) && g.Systems[j].Sector == sector && _h.Economy.SlotsOf(w).Populated && ShortBy(w) > 0) sectorShort++;
+        int regs = _h.Support.RegimentCount(system);
+        return regs >= _p.HearthMinRegiments && ShortBy(system) + _p.HearthGarrisonMargin <= 0;
+    }
+
+    /// <summary>
+    /// SafeHearth: the Hearth's own world is short today: fewer regiments than its required garrison (m2-uprisings-and-garrison) plus
+    /// HearthShortRegimentMargin, with Collective support under JoinSupport + HearthShortSupportMargin, so one lost regiment or a small support
+    /// drop turns it (m2-control-and-capture).
+    /// </summary>
+    private bool HearthShortHere(string at)
+    {
+        int sup = _h.Economy.SupportOf(at, _side);
+        if (sup >= Praedra.Core.Control.ControlModule.JoinSupport + _p.HearthShortSupportMargin) return false;
+        return _h.Support.RegimentCount(at) < _h.Support.RequiredGarrison(at) + _p.HearthShortRegimentMargin;
     }
 
     /// <summary>Lanes from each system to the nearest system the picture shows Hand (int.MaxValue when none is known).</summary>
@@ -471,7 +524,9 @@ public sealed partial class SimpleAi
         if (hq == null) return;
         string at = hq.System;
         var risk = Risk();
-        if (risk.GetValueOrDefault(at) < _p.HqMoveRisk) return;
+        // SafeHearth: a Hearth on a world about to turn (HearthShortHere: HearthShortRegimentMargin, HearthShortSupportMargin) moves as if at risk (m2-control-and-capture: a world with no troops joins whoever its people support)
+        bool unsafeHere = _p.SafeHearth && HearthShortHere(at);
+        if (risk.GetValueOrDefault(at) < _p.HqMoveRisk && !unsafeHere) return;
         if (NotesSince(AiNoteKind.HqMoved, Today - _p.HqMoveCooldownDays).Any()) return; // the HQ moved lately (own feed, kept in the AI memory)
         if (_h.Fog.IsPinned(at)) return; // its own system: the side sees the blockade there (§F6 departure refusal)
         var g = _h.Data.Galaxy; var room = HopsFromEnemy();
@@ -482,9 +537,11 @@ public sealed partial class SimpleAi
             if (s == at || !g.TryFindSystem(s, out var i) || g.NearOf(i).Count < _p.HqMinLanes) continue;
             int r = risk.GetValueOrDefault(s);
             if (r * 2 >= _p.HqMoveRisk || Threats().ContainsKey(s) || Suspended(s)) continue;
+            int sectorShort = 0;
+            if (_p.SafeHearth && !HearthSafeAt(s, out sectorShort)) continue; // rule: m5-fog-and-hq §F6 arrival drop; m2-control-and-capture
             int ticks = TicksCached(at, s, speed);
             if (ticks == int.MaxValue) continue;
-            long score = Math.Min(room[i], 8) * 1000L - r * 10L - ticks;
+            long score = Math.Min(room[i], 8) * 1000L - r * 10L - ticks - sectorShort * (long)_p.HearthSectorLossScore;
             if (score > bestScore) { bestScore = score; best = s; }
         }
         if (best == null) return;

@@ -24,14 +24,15 @@ namespace Praedra.Core.AI;
 /// the Collective's key hunt (Espionage for The Chair and Ravilla while it is ahead, KeyHunt),
 /// the blind hunt (Espionage at the oldest looks while the picture shows no enemy system, BlindHunt),
 /// Subdue on own systems in uprising, Rescue of own prisoners, Abduction of enemy characters the side has seen, Diplomacy on own low-support
-/// systems and neutral border systems, Collective Incite and Sabotage on enemy systems where no defender is believed, and Research. With
-/// SpecialForceAgents (DEFAULT off, QA-6) its free special forces go alone on the same jobs where their class bit is in the kind's mask.</item>
+/// systems and neutral border systems, Collective Incite and Sabotage on enemy systems where no defender is believed (Underground: farther and
+/// defended too, plus Spike the Harvester and the watch looks), and Research. With SpecialForceAgents (DEFAULT off, QA-6) or Underground
+/// (Collective) its free special forces go alone on the same jobs where their class bit is in the kind's mask.</item>
 /// </list>
 /// It reads the other side only through the "what the AI may see" block of SimpleAi.cs (MissionDefendersAt, SupportSeen, OwnerSeen,
 /// EnemyCharactersSeen, the belief map and the picture), so with UseFog it reads only its side's knowledge (m5-fog-and-hq §N8). Own characters,
 /// own missions and own systems are the side's own state. Like the rest of the AI it keeps no memory between days and draws no random number.
-/// Not used (refused by the core with RuleMissing, or impossible today): decoys (the Classic AI's, B6c §7: the decoy table is Missing), Train Talent,
-/// Spike the Harvester; not planned: Assassination (a kill of a major
+/// Not used (refused by the core with RuleMissing, or impossible today): decoys (the Classic AI's, B6c §7: the decoy table is Missing), Train Talent;
+/// Spike the Harvester only with Underground; not planned: Assassination (a kill of a major
 /// becomes an injury; the AI prefers Abduction).
 /// </summary>
 public sealed partial class SimpleAi
@@ -352,7 +353,7 @@ public sealed partial class SimpleAi
     private void PlanMissions(List<CharacterRecord> mine, HashSet<int> busy)
     {
         var pool = mine.Where(c => Standing(c) && !busy.Contains(c.Id)).ToList();
-        var forces = _p.SpecialForceAgents ? FreeAgentForces() : new List<(EconObject O, SpecialForceClass K)>();
+        var forces = AgentForcesOn ? FreeAgentForces() : new List<(EconObject O, SpecialForceClass K)>();
         if (pool.Count == 0 && forces.Count == 0) return;
         var own = OwnMissions().ToList();
         var jobs = Jobs(own);
@@ -374,7 +375,7 @@ public sealed partial class SimpleAi
         {
             if ((c != null ? usedChar.Contains(c.Id) : usedSf.Contains(f!.Id)) || usedGroup.Contains(j.Group)) continue;
             if (j.Kind == MissionKind.Diplomacy && diplomats >= _p.MaxDiplomats) continue;
-            if (j.Kind is MissionKind.InciteUprising or MissionKind.Sabotage && subversion >= _p.MaxSubversion) continue;
+            if (j.Kind is MissionKind.InciteUprising or MissionKind.Sabotage && subversion >= MaxSubversion) continue;
             var job = j;
             var chars = c != null ? new List<int> { c.Id } : new List<int>();
             var sfs = f != null ? new List<int> { f.Id } : new List<int>();
@@ -392,6 +393,11 @@ public sealed partial class SimpleAi
             if (j.Kind is MissionKind.InciteUprising or MissionKind.Sabotage) subversion++;
         }
     }
+
+    /// <summary>Underground: the Collective's guerrilla agents (SimpleAiParams.Underground). The Hand AI never uses it.</summary>
+    private bool UndergroundOn => _p.Underground && _side == Side.Collective;
+    private bool AgentForcesOn => _p.SpecialForceAgents || UndergroundOn;
+    private int MaxSubversion => UndergroundOn ? _p.UndergroundSubversion : _p.MaxSubversion;
 
     private bool KindUsable(MissionKind k) => _h.Missions.Data.TryGet(k, out var r) && !r.Hidden && r.AvailableTo(_side);
 
@@ -480,6 +486,10 @@ public sealed partial class SimpleAi
             foreach (var s in HeldSystems())
                 if (!OwnUprising(s) && SupportSeen(s) is int sup && sup < _p.DiplomacyOwnBelow && Free(MissionKind.Diplomacy, s) && _h.Economy.SlotsOf(s).Populated)
                     jobs.Add(new Job(MissionKind.Diplomacy, s, null, _p.DiplomacyValue * (stop - sup) / stop, "diplomacy " + s));
+            // SafeHearth: the Hearth's world is kept loyal first (a world below JoinSupport with no troops turns: m2-control-and-capture)
+            if (_p.SafeHearth && OwnHearth() is { } hqw && Held(hqw) && !OwnUprising(hqw) && Free(MissionKind.Diplomacy, hqw)
+                && SupportSeen(hqw) is int hs && hs < _p.HearthDiplomacyBelow && _h.Economy.SlotsOf(hqw).Populated)
+                jobs.Add(new Job(MissionKind.Diplomacy, hqw, null, _p.HearthDiplomacyValue, "diplomacy " + hqw));
             foreach (var sys in g.Systems)
             {
                 string s = sys.Name;
@@ -489,19 +499,40 @@ public sealed partial class SimpleAi
                 jobs.Add(new Job(MissionKind.Diplomacy, s, null, _p.DiplomacyValue * (stop - sup) / stop * _p.NeutralDiplomacyPercent / 100, "diplomacy " + s));
             }
         }
-        // 7. Collective subversion: Incite and Sabotage on enemy systems near the border where no defender is believed
+        // 7. Collective subversion: Incite and Sabotage on enemy systems near the border where no defender is believed; Underground: farther,
+        // defended or not (the expected value weighs the detection), plus Spike the Harvester and the watch looks
         if (_side == Side.Collective)
         {
             var hops = Hops();
+            int reach = UndergroundOn ? Math.Max(_p.TargetHops, _p.UndergroundHops) : _p.TargetHops;
             foreach (var sys in _h.Data.Galaxy.Systems)
             {
                 string s = sys.Name;
-                if (hops[sys.Index] == 0 || hops[sys.Index] > _p.TargetHops || Destroyed(s)) continue;
+                if (hops[sys.Index] == 0 || hops[sys.Index] > reach || Destroyed(s)) continue;
                 if (!OwnerSeen(s, out var owner, out int age) || owner != Enemy || age > _p.MissionOwnerTrustDays) continue;
-                if (MissionDefendersAt(s).Count > 0) continue;
+                if (!UndergroundOn && MissionDefendersAt(s).Count > 0) continue;
                 if (SlotsSeen(s).Populated && Free(MissionKind.InciteUprising, s)) jobs.Add(new Job(MissionKind.InciteUprising, s, null, _p.InciteValue, "subvert " + s));
                 int fac = FacilitiesAt(s);
                 if (fac > 0 && Free(MissionKind.Sabotage, s)) jobs.Add(new Job(MissionKind.Sabotage, s, null, _p.SabotageValuePerFacility * fac, "subvert " + s));
+            }
+            if (UndergroundOn)
+            {
+                // rule: m5-missions §6 Spike the Harvester (target: a system holding a completed harvester of the other side), m5-harvester §5
+                if (KindUsable(MissionKind.SpikeTheHarvester))
+                    foreach (var s in HarvesterSeenAt())
+                        if (Free(MissionKind.SpikeTheHarvester, s)) jobs.Add(new Job(MissionKind.SpikeTheHarvester, s, null, _p.SpikeValue, "spike " + s));
+                // the watch: Espionage writes group C and D (m5-fog-and-hq §F2), so raids and subversion aim at what is there now
+                if (KindUsable(MissionKind.Espionage))
+                {
+                    int want = _p.WatchLooks - own.Count(m => m.Kind == MissionKind.Espionage);
+                    foreach (var s in WatchTargets(hops, reach))
+                    {
+                        if (want <= 0) break;
+                        if (!Free(MissionKind.Espionage, s) || jobs.Any(j => j.Kind == MissionKind.Espionage && j.System == s)) continue;
+                        jobs.Add(new Job(MissionKind.Espionage, s, null, _p.WatchValue, "look " + s));
+                        want--;
+                    }
+                }
             }
         }
         // 8. Research: one mission per track, at a held system with a yard of the track's family (m5-research CanResearch)
@@ -512,6 +543,25 @@ public sealed partial class SimpleAi
             if (site != null) jobs.Add(new Job(kind, site, null, _p.ResearchValue, "research " + kind));
         }
         return jobs;
+    }
+
+    /// <summary>
+    /// Underground watch: enemy-held systems within <paramref name="reach"/> lanes whose ground picture is missing or older than WatchStaleDays,
+    /// most facilities seen first, then nearest, then name. Without fog the side sees everything, so there is nothing to watch.
+    /// </summary>
+    private List<string> WatchTargets(int[] hops, int reach)
+    {
+        if (_view == null) return new List<string>();
+        var list = new List<(string S, int Fac, int Hops)>();
+        foreach (var sys in _h.Data.Galaxy.Systems)
+        {
+            string s = sys.Name;
+            if (hops[sys.Index] == 0 || hops[sys.Index] > reach || !IsEnemyHeld(s) || Destroyed(s)) continue;
+            var g = _view.Picture(s)?.Ground;
+            if (g != null && AgeOf(g) <= _p.WatchStaleDays) continue;
+            list.Add((s, FacilitiesAt(s), hops[sys.Index]));
+        }
+        return list.OrderByDescending(t => t.Fac).ThenBy(t => t.Hops).ThenBy(t => t.S, StringComparer.Ordinal).Select(t => t.S).ToList();
     }
 
     /// <summary>
@@ -554,7 +604,7 @@ public sealed partial class SimpleAi
             case MissionKind.Diplomacy: return Table(sup - (100 - sup) + sk(Characters.Skill.Diplomacy));
             case MissionKind.SubdueUprising: return Table((100 - sup) - sup + sk(Characters.Skill.Leadership));
             case MissionKind.Rescue: return Table(sk(Characters.Skill.Combat));
-            case MissionKind.Sabotage:
+            case MissionKind.Sabotage: case MissionKind.SpikeTheHarvester: // both read (combat + espionage) / 2 (m5-missions §Mission records)
                 {
                     int com = sk(Characters.Skill.Combat), esp = sk(Characters.Skill.Espionage);
                     return Table(mi.Params.SabotageSkill == SabotageSkill.Combat ? com : (com + esp) / 2);
@@ -596,7 +646,7 @@ public sealed partial class SimpleAi
         MissionKind.Diplomacy => (_p.DiplomacyMinSkill, sk(Characters.Skill.Diplomacy)),
         MissionKind.SubdueUprising or MissionKind.InciteUprising => (_p.LeadershipMinSkill, sk(Characters.Skill.Leadership)),
         MissionKind.Recruitment => (_p.RecruitMinLeadership, sk(Characters.Skill.Leadership)),
-        MissionKind.Rescue or MissionKind.Abduction or MissionKind.Sabotage => (_p.CombatMinSkill, sk(Characters.Skill.Combat)),
+        MissionKind.Rescue or MissionKind.Abduction or MissionKind.Sabotage or MissionKind.SpikeTheHarvester => (_p.CombatMinSkill, sk(Characters.Skill.Combat)),
         MissionKind.Espionage or MissionKind.Reconnaissance => (_p.SpyMinEspionage, sk(Characters.Skill.Espionage)),
         _ => (_p.ResearchMinSkill, ResearchSkillOf(k) is Skill rs ? sk(rs) : 0),
     };
@@ -737,13 +787,14 @@ public sealed partial class SimpleAi
     /// </summary>
     private void PlanAgentForceBuild()
     {
-        if (!_p.UseCharactersAndMissions || !_p.SpecialForceAgents || _p.SpecialForcesWanted <= 0) return;
+        int wanted = UndergroundOn ? _p.UndergroundForcesWanted : _p.SpecialForcesWanted;
+        if (!_p.UseCharactersAndMissions || !AgentForcesOn || wanted <= 0) return;
         var classes = _p.AgentForceClasses(_side).Where(Available).ToList();
         if (classes.Count == 0) return;
         var have = classes.ToDictionary(c => c, c => 0, StringComparer.Ordinal);
         foreach (var o in _h.Economy.Objects)
             if (o.Category == ObjectCategory.SpecialForce && o.Side == _side && have.ContainsKey(o.Class)) have[o.Class]++;
-        if (have.Values.Sum() >= _p.SpecialForcesWanted) return;
+        if (have.Values.Sum() >= wanted) return;
         string cls = classes.OrderBy(c => have[c]).First(); // OrderBy is stable: list order on a tie
         if (Budget < Maint(cls)) return;
         string dest = Capital() ?? "";
