@@ -370,7 +370,7 @@ public sealed class FogModule
     private void HqArrival(StepContext ctx)
     {
         int day = ctx.Day + 1;
-        if (Hq.Status != HqStatus.InTransit || Hq.DueDay != day) return;
+        if (Hq.Status != HqStatus.InTransit || Hq.DueDay > day) return; // ">": a save made with QA-52 (a due day already past) still lands
         string reached = Hq.Path[Hq.HopIndex + 1];
         if (Hq.HopIndex + 1 < Hq.Path.Count - 1)
         {
