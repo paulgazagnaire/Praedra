@@ -46,6 +46,11 @@ public sealed record VictoryRules
     public int DominanceSharePercent { get; init; } = 70;
     /// <summary>Days the capital-and-control run must last. Decided Paul 2026-10-26. rule: m5-setup-and-victory §Victory.</summary>
     public int DominanceDays { get; init; } = 180;
+    /// <summary>
+    /// A run survives this many days below the bar before it breaks (no notice while it lapses; it cannot win while below; on recovery its start and due day move on by the days below, with a new DominanceChanged). DEFAULT 10, a Dev
+    /// lead Proposal after QA round 83 (one game started and broke a run 9 times in a year); 0 = break at once. rule: m5-setup-and-victory §Capital and control.
+    /// </summary>
+    public int DominanceGraceDays { get; init; } = 10;
 }
 
 /// <summary>rule: m5-setup-and-victory §Victory (KeyDeathFallback). None = original; WaiveCondition and Immortal are Proposals (08 P6 a, b).</summary>
@@ -162,8 +167,21 @@ public sealed class VictoryModule
             : hearthGone && hand * 100 >= pct * both ? Side.Hand
             : charterTaken && collective * 100 >= pct * both ? Side.Collective
             : null;
+        if (leader == S.DominanceSide && S.DominanceLapse != 0)
+        {
+            // back above inside the grace days: the days below do not count, so the run's start and due day move on by the lapse
+            S.DominanceSince += day - S.DominanceLapse; S.DominanceLapse = 0;
+            int start = S.DominanceSince, due = start + Rules.DominanceDays; var side = leader;
+            ctx.Emit((i, _) => new DominanceChanged(i, day, side, start, due));
+        }
+        else if (leader != S.DominanceSide && S.DominanceSide != null && (S.DominanceLapse == 0 || day - S.DominanceLapse < Rules.DominanceGraceDays))
+        {
+            if (S.DominanceLapse == 0) S.DominanceLapse = day; // the run lapses: kept, silent, cannot win
+            if (day - S.DominanceLapse < Rules.DominanceGraceDays) return null;
+        }
         if (leader != S.DominanceSide)
         {
+            S.DominanceLapse = 0;
             S.DominanceSide = leader; S.DominanceSince = leader != null ? day : 0;
             int start = S.DominanceSince, due = leader != null ? day + Rules.DominanceDays : 0;
             ctx.Emit((i, _) => new DominanceChanged(i, day, leader, start, due));

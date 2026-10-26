@@ -6,8 +6,11 @@ public enum FogRuleset { Classic, New }
 /// <summary>Which units count in the HQ departure refusal. rule: m5-fog-and-hq §F6 (HqDepartureOperands), Contradictions 2.</summary>
 public enum HqDepartureOperands { Blockaders, Collective, Off }
 
-/// <summary>When an at-rest HQ is lost with its system. rule: m5-fog-and-hq §F7 (HqLostOnHolderChange), Open question 1.</summary>
-public enum HqLostOnHolderChange { Never, AssaultOnly, AnyCause }
+/// <summary>
+/// When an at-rest HQ is lost with its system. Flee: a world lost without an attack (support alone, or its last troops gone) sends the HQ to the
+/// nearest Collective world instead; any other cause destroys it. rule: m5-fog-and-hq §F7 (HqLostOnHolderChange), Open question 1.
+/// </summary>
+public enum HqLostOnHolderChange { Never, AssaultOnly, AnyCause, Flee }
 
 /// <summary>What happens to an HQ whose destination is no longer Collective-held on arrival. rule: §F6 (HqLostDestination).</summary>
 public enum HqLostDestination { DestroyOnArrival, Return }
@@ -112,7 +115,7 @@ public sealed record HqParams
     public bool IgnoresForcedStop { get; init; } = true;
     /// <summary>Collective support change in every populated system of the destination sector on arrival: GNPRTB 5127 = -10 (Traced).</summary>
     public int ArrivalSupportDelta { get; init; } = -10;
-    public HqLostOnHolderChange LostOnHolderChange { get; init; } = HqLostOnHolderChange.AnyCause;
+    public HqLostOnHolderChange LostOnHolderChange { get; init; } = HqLostOnHolderChange.Flee;
     /// <summary>Return is a switch value only (not built in the first pass: treated as DestroyOnArrival, see the build notes).</summary>
     public HqLostDestination LostDestination { get; init; } = HqLostDestination.DestroyOnArrival;
 }

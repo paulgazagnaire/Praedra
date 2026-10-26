@@ -400,6 +400,30 @@ public sealed class FogModule
         }
     }
 
+    /// <summary>
+    /// rule: §F7 Flee. The HQ leaves its lost world for the nearest Collective-held system by travel time at HqSpeed (ties by ordinal name), as an
+    /// accepted MoveHq would, and HqDeparted is raised now. False (the HQ stays to be destroyed) when it is pinned or no Collective system is reachable.
+    /// </summary>
+    private bool Flee(StepContext ctx, string from)
+    {
+        if (IsPinned(from)) return false;
+        Travel.PathResult? best = null;
+        foreach (var kv in State.SystemOwners) // SortedDictionary: ordinal names, so the first of equal times wins
+        {
+            if (kv.Value != Side.Collective || kv.Key == from) continue;
+            var p = _fleets.FindPath(from, kv.Key, HqRules.Speed);
+            if (p.Ok && (best == null || p.TotalTicks < best.TotalTicks)) best = p;
+        }
+        if (best == null) return false;
+        Hq.From = from; Hq.System = null; Hq.Status = HqStatus.InTransit;
+        Hq.Path = best.Systems.Select(i => _galaxy.Systems[i].Name).ToList();
+        Hq.HopTicks = best.HopTicks.ToList(); Hq.HopIndex = 0;
+        Hq.DueDay = ctx.Day + best.HopTicks[0];
+        var path = new ValueList<string>(Hq.Path.ToList()); int total = best.TotalTicks, arrival = ctx.Day + total;
+        ctx.Emit((i, d) => new HqDeparted(i, d, from, path, total, arrival));
+        return true;
+    }
+
     private void ClearTransit() { Hq.From = null; Hq.Path = new(); Hq.HopTicks = new(); Hq.HopIndex = 0; Hq.DueDay = 0; }
 
     private void DestroyHq(StepContext ctx, string cause, string system)
@@ -423,6 +447,7 @@ public sealed class FogModule
             {
                 HqLostOnHolderChange.AnyCause => true,
                 HqLostOnHolderChange.AssaultOnly => info.Cause == CaptureCause.Assault,
+                HqLostOnHolderChange.Flee => !(info.Cause is CaptureCause.Support or CaptureCause.TroopsLeft && Flee(info.Ctx, info.System)),
                 _ => false,
             };
             // the cause names how the world was lost (QA-11): by support alone, by its last troops leaving, else captured (assault, debug, harvester revolt)
