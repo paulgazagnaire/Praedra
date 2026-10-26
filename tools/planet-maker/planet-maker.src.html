@@ -1752,8 +1752,8 @@ void shadeMoon(int i, vec2 uv, float px, out vec4 mcOut, out vec3 add) {
 
 #ifdef PM_ORB
 // ---- orbital ring and space elevator: human-made works on an ordinary planet ----
-// The ring is a metal band round the equator with round stations along it. The elevator is one to four cables standing up from the equator.
-uniform vec4 uOrbA;         // orbital ring: x on (0 or 1), y radius to the middle of the band (planet radii), z half its width, w stations
+// The ring is a metal band round the equator. The elevator is one to four cables standing up from the equator.
+uniform vec4 uOrbA;         // orbital ring: x on (0 or 1), y radius to the middle of the band (planet radii), z half its width
 uniform vec4 uOrbB;         // x lights, y cables (0: no elevator), z distance of a cable's top from the centre (planet radii), w angle of the first cable round the axis (radians, spin included)
 uniform vec3 uOrbHull, uOrbAcc;
 
@@ -1796,24 +1796,6 @@ float obBand(vec3 o, vec3 d, float grow, out vec3 n, out float len) {
   return t;
 }
 
-// The stations: a ball on the band at each of the evenly spaced places, drifting slowly round. Gives the height of the nearest one under this pixel.
-float obBeads(vec2 uv, float grow, out vec3 n, out vec3 P) {
-  float zb = -99.0; n = vec3(0.0); P = vec3(0.0);
-  int ns = int(uOrbA.w + 0.5);
-  float rs = uOrbA.z * 2.2 + 0.004;
-  for (int k = 0; k < 16; k++) {
-    if (k >= ns) break;
-    float a = 6.2831853 * float(k) / float(ns) + 0.3 + uTime * 0.03;
-    vec3 C = (uU * cos(a) + uW * sin(a)) * uOrbA.y;
-    float dd = length(uv - C.xy);
-    if (dd < rs + grow) {
-      float zz = C.z + sqrt(max(rs * rs - dd * dd, 0.0));
-      if (zz > zb) { zb = zz; P = vec3(uv, zz); n = normalize(P - C); }
-    }
-  }
-  return zb;
-}
-
 // which face of the band a point is on: 0 the outer wall, 1 a flat side, 2 the inner wall
 int obKind(vec3 P, vec3 n) {
   if (abs(dot(n, uAxis)) > 0.5) return 1;
@@ -1822,16 +1804,15 @@ int obKind(vec3 P, vec3 n) {
 }
 const vec2 ORB_OFF[4] = vec2[4](vec2(-0.375, -0.125), vec2(0.125, -0.375), vec2(0.375, 0.125), vec2(-0.125, 0.375));
 
-// Colour of a bit of the ring: kind 0 the outer wall, 1 a flat side, 2 the inner wall, 3 a station. em is the light it gives off itself.
+// Colour of a bit of the ring: kind 0 the outer wall, 1 a flat side, 2 the inner wall. em is the light it gives off itself.
 vec3 orbColor(vec3 P, vec3 n, int kind, out vec3 em) {
   float sh = orbInShadow(P);
   float H = uOrbA.z, T = H * 0.8;
   float turn = atan(dot(P, uW), dot(P, uU)) * 0.15915494;      // a full turn is 1
   float hgt = dot(P, uAxis);
-  float v = (kind == 3) ? hgt / (H * 2.2) : hgt / H;           // -1..1 up the wall
+  float v = hgt / H;                                           // -1..1 up the wall
   float lit = max(dot(n, uL), 0.0) * (1.0 - sh);
-  float plates = (kind == 3) ? 18.0 : 96.0;
-  float u = turn * plates;
+  float u = turn * 96.0;
   vec3 cell = vec3(floor(u), floor(v * 2.0 + 2.0), float(kind));
   float tone = 0.80 + 0.32 * hash33(cell).x;
   float fu = fract(u);
@@ -1840,13 +1821,11 @@ vec3 orbColor(vec3 P, vec3 n, int kind, out vec3 em) {
   em = vec3(0.0);
   float strip = 0.0;
   if (kind == 0) strip = 1.0 - smoothstep(0.14, 0.20, abs(v));                    // the lit band of windows round the middle of the wall
-  else if (kind == 3) strip = 1.0 - smoothstep(0.10, 0.16, abs(v));
   else if (kind == 1) { float rr = length(P - uAxis * hgt) - uOrbA.y; strip = 1.0 - smoothstep(0.10 * T, 0.2 * T, abs(rr)); }   // the rotor line along a flat side
-  float dash = (kind == 1) ? 1.0 : smoothstep(0.25, 0.35, fract(u * ((kind == 3) ? 1.0 : 2.0))) * smoothstep(0.95, 0.85, fract(u * ((kind == 3) ? 1.0 : 2.0)));
+  float dash = (kind == 1) ? 1.0 : smoothstep(0.25, 0.35, fract(u * 2.0)) * smoothstep(0.95, 0.85, fract(u * 2.0));
   float chase = pow(max(0.5 + 0.5 * sin(turn * 6.2831853 * 5.0 - uTime * 0.9), 0.0), 5.0);
   em = uOrbAcc * strip * dash * (0.22 + 1.5 * sh + 0.5 * chase) * uOrbB.x;
-  if (kind == 3 && dot(n, uAxis) > 0.93) em += uOrbAcc * 1.6 * uOrbB.x * (0.5 + 0.5 * sin(uTime * 2.0 + turn * 40.0));   // a beacon on top of a station
-  vec3 col = hull * seam * (0.13 + 1.25 * lit) * (1.0 - 0.45 * strip) * ((kind == 3) ? 1.25 : 1.0);
+  vec3 col = hull * seam * (0.13 + 1.25 * lit) * (1.0 - 0.45 * strip);
   vec3 hv = normalize(uL + vec3(0.0, 0.0, 1.0));
   col += vec3(1.0, 0.96, 0.9) * pow(max(dot(n, hv), 0.0), 26.0) * 0.38 * (1.0 - sh) * ((kind == 2) ? 0.3 : 1.0);   // metal glints
   col += hull * 0.07;                                                                                                // light thrown back by the planet
@@ -2016,24 +1995,19 @@ void main() {
   // the orbital ring and the cables
   float obA = 0.0; vec3 obC = vec3(0.0); float obZ = -99.0;
   if (uOrbA.x > 0.5) {
-    vec3 dn = vec3(0.0, 0.0, -1.0), n0, bP0;
+    vec3 dn = vec3(0.0, 0.0, -1.0), n0;
     float l0;
-    // most pixels are nowhere near the band or a station: only look closer where one is within a pixel or two
-    if (obBand(vec3(uv, 6.0), dn, 1.5 * px + 0.003, n0, l0) >= 0.0 || obBeads(uv, 1.5 * px, n0, bP0) > -90.0) {
+    // most pixels are nowhere near the band: only look closer where it is within a pixel or two
+    if (obBand(vec3(uv, 6.0), dn, 1.5 * px + 0.003, n0, l0) >= 0.0) {
       float hits = 0.0, bz = -99.0; vec3 bn = vec3(0.0), bP = vec3(0.0); int bkind = 0;
       for (int s = 0; s < 4; s++) {
         vec2 q = uv + ORB_OFF[s] * px;
-        vec3 n1, n2, P2; float l1;
+        vec3 n1; float l1;
         float t = obBand(vec3(q, 6.0), dn, 0.0, n1, l1);
         float z1 = (t >= 0.0) ? 6.0 - t : -99.0;
-        float z2 = obBeads(q, 0.0, n2, P2);
-        float z = max(z1, z2);
-        if (z < -90.0) continue;
+        if (z1 < -90.0) continue;
         hits += 1.0;
-        if (z > bz) {
-          bz = z;
-          if (z1 >= z2) { bP = vec3(q, z1); bn = n1; bkind = obKind(bP, n1); } else { bP = P2; bn = n2; bkind = 3; }
-        }
+        if (z1 > bz) { bz = z1; bP = vec3(q, z1); bn = n1; bkind = obKind(bP, n1); }
       }
       if (hits > 0.0) {
         vec3 em;
@@ -2176,7 +2150,7 @@ const BASE = {
   ring: { on: false, type: 'broad', inner: 1.24, width: 1.03, op: 0.8, gaps: 0.8, struct: 0.6, clump: 0.3, dust: 0.15, feeder: 0, seed: 1, spin: 0.3, c1: '#d8c8a4', c2: '#7a6a55' },
   moons: 1, moonSpeed: 0.6, moonList: [],
   mLayers: 2, mOpen: 0.35, mCap: 1, mWidth: 0.14, mWall: 0.05, mSpan: 0.7, mShade: 0.28, mPlate: 0.6, mLights: 0.5, mStar: 1, mSun: 'star', mPorts: 0.6, mLook: 0, mHull: '#8b9199', mAcc: '#e0a64a',
-  oOn: 0, oHt: 0.12, oWid: 0.045, oStn: 8, oLit: 0.6, oHull: '#8b9199', oAcc: '#e0a64a', eOn: 0, eLon: -20, eHt: 0.9, eN: 1,
+  oOn: 0, oHt: 0.12, oWid: 0.045, oLit: 0.6, oHull: '#8b9199', oAcc: '#e0a64a', eOn: 0, eLon: -20, eHt: 0.9, eN: 1,
 };
 // an old Population slider position (before preset code v2, when the left end was 10 million) as a position on the current scale; 0, "none", stays 0
 const L2N = (v) => v > 0 ? (5 + 6 * v) / 11 : 0;
@@ -2279,7 +2253,6 @@ const CONTROLS = [
   ['Struct', 'mStar', 'Centre glow', 0, 1.5, 0.01, (p) => ISMEGA(p, 'ring', 'shell')],
   ['Orb', 'oHt', 'Ring height', 0.04, 0.3, 0.005, (p) => NOMEGA(p) && !!p.oOn, (v, p) => heightText(v, p)],
   ['Orb', 'oWid', 'Ring width', 0.01, 0.1, 0.005, (p) => NOMEGA(p) && !!p.oOn, (v) => (v * 100).toFixed(1) + '% of a radius'],
-  ['Orb', 'oStn', 'Stations', 0, 16, 1, (p) => NOMEGA(p) && !!p.oOn, (v) => v < 1 ? 'none' : String(Math.round(v))],
   ['Orb', 'eN', 'Cables', 1, 4, 1, (p) => ELEV_OK(p.kind) && !!p.eOn],
   ['Orb', 'eLon', 'Cable position', -180, 180, 1, (p) => ELEV_OK(p.kind) && !!p.eOn, (v) => Math.round(v) + '°'],
   ['Orb', 'eHt', 'Cable height', 0.3, 3, 0.05, (p) => ELEV_OK(p.kind) && !!p.eOn, (v, p) => heightText(v, p)],
@@ -2423,7 +2396,7 @@ function syncMegaUI() {
 }
 
 /* ---------- orbital ring and space elevator ---------- */
-// Human-made works on an ordinary planet, drawn in the shader's orbCable, obBand and obBeads. Colours and lights are shared by both.
+// Human-made works on an ordinary planet, drawn in the shader's orbCable and obBand. Colours and lights are shared by both.
 function buildOrbUI() {
   const sw = $('swOrb');
   [['oHull', 'Hull'], ['oAcc', 'Accent and lights']].forEach(([k, label]) => {
@@ -2439,7 +2412,7 @@ function syncOrbUI() {
   const ok = ELEV_OK(P.kind);
   $('orbOn').checked = !!P.oOn; $('elevOn').checked = !!P.eOn; $('elevOn').disabled = !ok;
   const note = [];
-  if (P.oOn) note.push('Orbital ring: a hoop of metal built round the equator, high enough to clear the air, with stations along it and lit windows on the night side. Its width is exaggerated; a real one would be a hair-thin line from here. It sweeps a clear lane through any natural ring at its height.');
+  if (P.oOn) note.push('Orbital ring: a hoop of metal built round the equator, high enough to clear the air, with lit windows on the night side. Its width is exaggerated; a real one would be a hair-thin line from here. It sweeps a clear lane through any natural ring at its height.');
   if (P.eOn) note.push('Space elevator: a cable from the equator up to a station, with climbers on it. It turns with the ground, so turn Rotation down to keep it still. A cable through a natural ring leaves a clear lane. A real cable reaches 5.6 planet radii up (35,786 km on Earth); this one is shorter so the planet stays big.');
   if (!ok) note.push('No space elevator here: it needs solid ground to stand on and a spin to hang from, so not on a gas giant or a tidally locked world.');
   $('orbNote').textContent = note.join(' ');
@@ -2815,7 +2788,7 @@ function draw(w, h, tmul) {
   }
   if (orb) {
     // a cable stands on the ground, so it turns with the planet: its place in the planet's frame plus the spin the shader applies to the ground
-    gl.uniform4f(loc.uOrbA, orbOn ? 1 : 0, orbR, orbH, Math.round(P.oStn));
+    gl.uniform4f(loc.uOrbA, orbOn ? 1 : 0, orbR, orbH, 0);
     gl.uniform4f(loc.uOrbB, P.oLit, elevOn ? Math.round(P.eN) : 0, elevTop, P.eLon * D + T.spin);
     gl.uniform3fv(loc.uOrbHull, hex2rgb(P.oHull)); gl.uniform3fv(loc.uOrbAcc, hex2rgb(P.oAcc));
   }
@@ -3047,7 +3020,7 @@ const PARAM_RANGE = {
   bands: [3, 20, 1], turb: [0, 1.4], storms: [0, 6, 1], stormSize: [0.2, 1.6], spin: [-1, 1], cloudSpeed: [-1, 1], flow: [0, 1.5], moonSpeed: [0, 2],
   tilt: [6, 85], roll: [-90, 90], sun: [-180, 180], sunH: [-60, 60], zoom: [0.5, 1.8], starDens: [0, 1], moons: [0, 5, 1],
   mLayers: [1, 4, 1], mOpen: [0, 0.9], mCap: [0.12, 1], mWidth: [0.06, 0.6], mWall: [0, 0.12], mSpan: [0.25, 1.3], mShade: [0, 0.6], mPlate: [0, 1], mLights: [0, 1], mStar: [0, 1.5], mPorts: [0, 1], mLook: [0, 1],
-  oOn: [0, 1, 1], oHt: [0.04, 0.3], oWid: [0.01, 0.1], oStn: [0, 16, 1], oLit: [0, 1], eOn: [0, 1, 1], eLon: [-180, 180], eHt: [0.3, 3], eN: [1, 4, 1],
+  oOn: [0, 1, 1], oHt: [0.04, 0.3], oWid: [0.01, 0.1], oLit: [0, 1], eOn: [0, 1, 1], eLon: [-180, 180], eHt: [0.3, 3], eN: [1, 4, 1],
 };
 const RING_RANGE = { inner: [1.1, 2.8], width: [0.04, 2.6], op: [0.1, 1], gaps: [0, 1], struct: [0, 1], clump: [0, 1], dust: [0, 1], feeder: [0, 5, 1], seed: [0, 9999, 1], spin: [-1, 1] };
 const isHex = (c) => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
