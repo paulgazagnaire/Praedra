@@ -187,7 +187,7 @@ internal static class Tourney
 
     internal static List<int> ParseSeeds(string s)
     {
-        if (s.Contains('-')) { var p = s.Split('-'); int lo = int.Parse(p[0], CultureInfo.InvariantCulture), hi = int.Parse(p[1], CultureInfo.InvariantCulture); return Enumerable.Range(lo, hi - lo + 1).ToList(); }
+        if (s.Contains('-')) { var p = s.Split('-'); int lo = int.Parse(p[0], CultureInfo.InvariantCulture), hi = int.Parse(p[1], CultureInfo.InvariantCulture); if (hi < lo) throw new ArgumentException($"--seeds {s}: the range must go up (e.g. 3-5)."); return Enumerable.Range(lo, hi - lo + 1).ToList(); }
         if (s.Contains(',')) return s.Split(',').Select(x => int.Parse(x, CultureInfo.InvariantCulture)).ToList();
         int n = int.Parse(s, CultureInfo.InvariantCulture); return Enumerable.Range(1, n).ToList();
     }

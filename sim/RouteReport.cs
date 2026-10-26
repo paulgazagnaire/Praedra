@@ -69,6 +69,8 @@ internal static class RouteReport
             }
         }
         var settings = Tourney.SettingsWith(ps);
+        if (dump != null && (string.IsNullOrWhiteSpace(dump) || !Directory.Exists(Path.GetDirectoryName(Path.GetFullPath(dump)))))
+            throw new ArgumentException($"--dump: the folder for '{dump}' does not exist."); // checked before the games, so a long run is not lost
         Console.WriteLine($"Route report: Hand {hand} vs Collective {collective}, seeds {string.Join(",", seeds)}, up to {days} days, fog on{(ps != null ? ", settings " + ps : "")}.");
         var probe = NewGame.Create(new NewGameOptions { Seed = seeds[0], Preset = StartPreset.MedA, Settings = settings });
         var galaxy = probe.Fleets.Galaxy;
@@ -86,6 +88,18 @@ internal static class RouteReport
             var straight = new Pathfinder(galaxy, TravelMode.Straight); // one per game: Find writes to an unsynchronised cache
             int scanned = host.Game.Events.Count; int? charterLost = null;
             var frames = new List<object>(); var battles = new List<int[]>(); var lanePasses = new Dictionary<string, int>(StringComparer.Ordinal);
+            var sameDay = new Dictionary<int, (string From, int Ticks)>();
+            void Move(IReadOnlyList<string> path, IReadOnlyList<int> hopTicks, int speed)
+            {
+                CountMove(t, galaxy, straight, path, hopTicks, speed);
+                if (dump == null) return;
+                for (int h = 0; h + 1 < path.Count; h++)
+                {
+                    var (x, y) = (galaxy.Get(path[h]).Index, galaxy.Get(path[h + 1]).Index);
+                    string key = Math.Min(x, y) + "-" + Math.Max(x, y);
+                    lanePasses[key] = lanePasses.GetValueOrDefault(key) + 1;
+                }
+            }
             void Frame()
             {
                 if (dump == null) return;
@@ -117,15 +131,13 @@ internal static class RouteReport
                 for (var evs = host.Game.Events; scanned < evs.Count; scanned++)
                     switch (evs[scanned])
                     {
-                        case FleetDeparted fd when host.Game.State.Fleets.TryGetValue(fd.Fleet, out var f) && f.Transit is { } tr && tr.Path.Count >= 2:
-                            CountMove(t, galaxy, straight, tr.Path, tr.HopTicks, host.Fleets.SpeedOf(f));
-                            if (dump != null)
-                                for (int h = 0; h + 1 < tr.Path.Count; h++)
-                                {
-                                    var (x, y) = (galaxy.Get(tr.Path[h]).Index, galaxy.Get(tr.Path[h + 1]).Index);
-                                    string key = Math.Min(x, y) + "-" + Math.Max(x, y);
-                                    lanePasses[key] = lanePasses.GetValueOrDefault(key) + 1;
-                                }
+                        case FleetDeparted fd when host.Game.State.Fleets.TryGetValue(fd.Fleet, out var f):
+                            // a one-leg, one-day trip has already arrived after the Step (QA-49): its leg is counted on FleetArrived
+                            if (f.Transit is { } tr && tr.Path.Count >= 2) Move(tr.Path, tr.HopTicks, host.Fleets.SpeedOf(f));
+                            else sameDay[fd.Fleet] = (fd.From, fd.FirstHopTicks);
+                            break;
+                        case FleetArrived fa when sameDay.Remove(fa.Fleet, out var sd) && host.Game.State.Fleets.TryGetValue(fa.Fleet, out var af):
+                            Move(new[] { sd.From, fa.System }, new[] { sd.Ticks }, host.Fleets.SpeedOf(af));
                             break;
                         case DeliveryDeparted dd when dd.Path.Items is { Count: >= 2 } dp:
                             t.Deliveries++;
