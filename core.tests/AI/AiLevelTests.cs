@@ -19,13 +19,19 @@ public class AiLevelTests
     [InlineData(AiLevel.Hard)]
     public void EveryLevel_PlaysWithFog(AiLevel level) => Assert.True(AiLevels.For(level).UseFog);
 
-    // ai/09 §6: Medium is the DEFAULT AI (the SimpleAiParams defaults with fog on), so the play tests of the default AI measure Medium.
+    // ai/09 §6: Medium is the DEFAULT AI (the SimpleAiParams defaults with fog on), so the play tests of the default AI measure Medium, plus the
+    // Collective's guerrilla switches (AI trainer 2026-10-26, Paul: Medium is balanced). They are DEFAULT off so the play tests pinned on the
+    // default AI keep measuring what they measured; the Hand never reads them.
+    private static readonly string[] Guerrilla = { nameof(SimpleAiParams.SafeHearth), nameof(SimpleAiParams.Underground), nameof(SimpleAiParams.Guerrilla) };
+
     [Fact]
     public void Medium_IsTheDefaultAi()
     {
         var d = new SimpleAiParams { UseFog = true }; var m = AiLevels.For(AiLevel.Medium);
-        foreach (var prop in typeof(SimpleAiParams).GetProperties().Where(p => p.PropertyType.IsValueType || p.PropertyType == typeof(double?)))
+        foreach (var prop in typeof(SimpleAiParams).GetProperties().Where(p => !Guerrilla.Contains(p.Name) && (p.PropertyType.IsValueType || p.PropertyType == typeof(double?))))
             Assert.True(Equals(prop.GetValue(d), prop.GetValue(m)), $"{prop.Name}: default {prop.GetValue(d)}, Medium {prop.GetValue(m)}");
+        Assert.True(m.SafeHearth && m.Underground && m.Guerrilla);
+        Assert.False(d.SafeHearth || d.Underground || d.Guerrilla);
     }
 
     // ai/09 §6 Easy column: slower reviews, pick noise, one offensive at a time, fewer scouts and spies; nothing that changes the rules or the view.
@@ -49,7 +55,10 @@ public class AiLevelTests
         var m = AiLevels.For(AiLevel.Medium); var h = AiLevels.For(AiLevel.Hard);
         Assert.True(h.MilitaryEvery < m.MilitaryEvery);
         Assert.True(h.HuntSpeculators > 0 && m.HuntSpeculators == 0);
-        var changed = new HashSet<string> { nameof(SimpleAiParams.MilitaryEvery), nameof(SimpleAiParams.HuntSpeculators) };
+        // AI trainer 2026-10-26: the Hard Collective keeps more agents out and raids more (Collective-only values; the Hand never reads them)
+        var changed = new HashSet<string> { nameof(SimpleAiParams.MilitaryEvery), nameof(SimpleAiParams.HuntSpeculators),
+                                            nameof(SimpleAiParams.UndergroundForcesWanted), nameof(SimpleAiParams.UndergroundSubversion),
+                                            nameof(SimpleAiParams.WatchLooks), nameof(SimpleAiParams.RaidStrikes) };
         foreach (var prop in typeof(SimpleAiParams).GetProperties().Where(p => !changed.Contains(p.Name) && (p.PropertyType.IsValueType || p.PropertyType == typeof(string))))
             Assert.True(Equals(prop.GetValue(m), prop.GetValue(h)), $"{prop.Name}: Medium {prop.GetValue(m)}, Hard {prop.GetValue(h)}");
     }
@@ -60,7 +69,7 @@ public class AiLevelTests
     {
         var b = new SimpleAiParams { UseFog = true, UseHarvester = false };
         Assert.False(AiLevels.For(AiLevel.Easy, b).UseHarvester);
-        Assert.Equal(b, AiLevels.For(AiLevel.Medium, b));
+        Assert.Equal(b with { SafeHearth = true, Underground = true, Guerrilla = true }, AiLevels.For(AiLevel.Medium, b));
     }
 
     [Theory]

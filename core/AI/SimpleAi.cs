@@ -138,6 +138,28 @@ public sealed partial class SimpleAi
         return FogDefendersAt(system); // group D with a staleness margin, less own bombardment kills; a guess when never seen
     }
 
+    /// <summary>
+    /// Underground: systems where the side sees an enemy harvester: with fog, group E of a picture at most SpikeSeenDays old (Held or Observed
+    /// look); without fog, the real fleets. Ordinal order.
+    /// </summary>
+    private List<string> HarvesterSeenAt()
+    {
+        var list = new List<string>();
+        const string cls = Praedra.Core.Economy.EconomyModule.HarvesterClass;
+        foreach (var sys in _h.Data.Galaxy.Systems.OrderBy(x => x.Name, StringComparer.Ordinal))
+        {
+            string s = sys.Name;
+            bool seen;
+            if (_view == null) seen = _h.Fleets.FleetsAt(s).Any(f => f.Side == Enemy && f.Ships.Any(id => _h.Economy.Find(id) is { Completed: true } o && o.Class == cls));
+            else seen = _view.Picture(s)?.Fleets is { } e && AgeOf(e) <= _p.SpikeSeenDays && e.Value.Any(fp => fp.Side == Enemy && fp.Ships.ContainsKey(cls));
+            if (seen) list.Add(s);
+        }
+        return list;
+    }
+
+    /// <summary>The Collective's own Hearth world (its own object: m5-fog-and-hq §N5, the Collective always knows it); null for the Hand or when none.</summary>
+    private string? OwnHearth() => _side == Side.Collective ? _h.HqSystem : null;
+
     /// <summary>Systems the other side holds. No fog: sees all. Fog: those its picture shows as enemy-held (ordinal order).</summary>
     private IEnumerable<string> EnemySystems() => _view == null
         ? S.SystemOwners.Where(kv => kv.Value == Enemy).Select(kv => kv.Key)

@@ -1,0 +1,88 @@
+using Praedra.Core.AI;
+using Praedra.Core.Clock;
+using Praedra.Core.Economy;
+using Praedra.Core.Fog;
+using Praedra.Core.Missions;
+using Praedra.Core.Setup;
+using Xunit.Abstractions;
+
+namespace Praedra.Core.Tests.AI;
+
+// The Collective's guerrilla (AI trainer 2026-10-26; Paul 2026-10-26: Easy about today's AI, Medium balanced, Hard really hard, the Collective
+// "always spying and sabotaging"). Three Collective-only switches, DEFAULT off, on in Medium and Hard (AiLevel.cs): SafeHearth (the Hearth no
+// longer moves onto a world that its arrival drop turns, m5-fog-and-hq §F6, m2-control-and-capture), Underground (Incite, Sabotage, Spike the
+// Harvester, Espionage watch, special forces as agents: m5-missions) and Guerrilla (elusive fleets, civilian raids: m3-bombardment §3).
+// rule: ai tuning, SimpleAiParams.SafeHearth / Underground / Guerrilla; notes specs/engine/ai-notes/2026-10-26-guerrilla-collective.md.
+public class SimpleAiGuerrillaTests
+{
+    private readonly ITestOutputHelper _out;
+    public SimpleAiGuerrillaTests(ITestOutputHelper o) { _out = o; }
+
+    private static readonly SimpleAiParams Medium = AiLevels.For(AiLevel.Medium);
+    private static readonly SimpleAiParams Old = Medium with { SafeHearth = false, Underground = false, Guerrilla = false };
+
+    [Fact]
+    public void Switches_AreOffByDefault_OnInMediumAndHard_OffInEasyButTheSafeHearth()
+    {
+        var d = new SimpleAiParams();
+        Assert.False(d.SafeHearth || d.Underground || d.Guerrilla);
+        foreach (var l in new[] { AiLevel.Medium, AiLevel.Hard }) { var p = AiLevels.For(l); Assert.True(p.SafeHearth && p.Underground && p.Guerrilla, l.ToString()); }
+        var e = AiLevels.For(AiLevel.Easy);
+        Assert.True(e.SafeHearth);
+        Assert.False(e.Underground || e.Guerrilla);
+    }
+
+    // One Medium-Hand-against-a-Collective game to the day limit; counts what the Collective did.
+    private sealed record Run(int Seed, int BadMoves, int HqFallsAfterMove, int Sabotage, int Incite, int Espionage, int AgentForces, int Raids, int CivilianStrikes);
+
+    private static Run Play(int seed, SimpleAiParams collective, int days)
+    {
+        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA });
+        var m = new AiMatch(h, Medium, collective);
+        int raids = 0, seen = h.Game.Events.Count, badMoves = 0;
+        while (h.Game.Day < days && h.Victory.Winner == null)
+        {
+            m.Step();
+            raids += m.Collective.Submitted.Count(o => o.Kind == "Raid");
+            // a move onto a world with fewer regiments than SafeHearth asks (counted on the day it leaves)
+            for (; seen < h.Game.Events.Count; seen++)
+                if (h.Game.Events[seen] is HqDeparted d && h.Support.RegimentCount(d.Path.Items[^1]) < collective.HearthMinRegiments) badMoves++;
+        }
+        var ev = h.Game.Events;
+        var arrivals = ev.OfType<HqArrived>().Select(a => a.Day).ToList();
+        int falls = ev.OfType<HqDestroyed>().Count(d => arrivals.Any(a => d.Day >= a && d.Day - a <= 60));
+        int Started(MissionKind k) => ev.OfType<MissionStarted>().Count(s => s.Side == Side.Collective && s.MissionKind == k);
+        int agentForces = ev.OfType<MissionStarted>().Count(s => s.Side == Side.Collective && s.Characters.Items.Count == 0 && s.SpecialForces.Items.Count > 0);
+        int civ = ev.OfType<Praedra.Core.Defenses.BombardmentStarted>().Count(b => b.Side == Side.Collective && b.Category == Praedra.Core.Defenses.BombardCategory.Civilian);
+        return new Run(seed, badMoves, falls, Started(MissionKind.Sabotage), Started(MissionKind.InciteUprising), Started(MissionKind.Espionage), agentForces, raids, civ);
+    }
+
+    // SafeHearth: on main f00fbb8 the Medium Collective lost its Hearth just after a move in 9 of 12 traced mirrors (moved onto a world with 0 or
+    // 1 regiment, which the -10 arrival drop then turned). Here a move counts as bad when, on the day the Hearth leaves, its destination holds
+    // fewer than HearthMinRegiments own regiments. Seeds 1-8 to day 1500 against a Medium Hand, measured (bad moves on / off): 0/1, 0/3, 0/5, 0/6,
+    // 0/1, 0/4, 0/2, 0/3. Floors: on, none on any seed; off, at least 10 in all (the test still measures the switch).
+    [Fact]
+    public void SafeHearth_TheHearthNeverMovesOntoAThinlyHeldWorld()
+    {
+        var res = MultiSeed.Play(MultiSeed.OneToEight, s => (On: Play(s, Old with { SafeHearth = true }, 1500), Off: Play(s, Old, 1500)));
+        foreach (var r in res) _out.WriteLine($"seed {r.On.Seed}: bad moves on {r.On.BadMoves}, off {r.Off.BadMoves}; falls within 60 days of a move on {r.On.HqFallsAfterMove}, off {r.Off.HqFallsAfterMove}");
+        Assert.All(res, r => Assert.True(r.On.BadMoves == 0, $"seed {r.On.Seed}: {r.On.BadMoves} moves onto a thinly held world with SafeHearth"));
+        Assert.True(res.Sum(r => r.Off.BadMoves) >= 10, $"only {res.Sum(r => r.Off.BadMoves)} bad moves without SafeHearth (the test no longer measures the switch)");
+    }
+
+    // Underground and Guerrilla in play: seeds 1-4 to day 1000 against a Medium Hand, the Medium Collective with and without them. Measured on
+    // (Sabotage, Incite, Espionage started; missions by special forces alone; raids ordered; Civilian strikes): seed 1 16, 31, 16, 6, 32, 32;
+    // seed 2 82, 19, 28, 25, 77, 66; seed 3 34, 5, 21, 8, 14, 14; seed 4 16, 58, 10, 11, 42, 42. Off: no Sabotage, Espionage, special-force
+    // mission, raid or Civilian strike on any seed (Incite 1-6: the old border subversion). Floors: on, at least 5 of each on every seed; off, none.
+    [Fact]
+    public void Underground_AndGuerrilla_SpyAndSabotageAndRaid_OnlyWhenOn()
+    {
+        var res = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => (On: Play(s, Medium, 1000), Off: Play(s, Medium with { Underground = false, Guerrilla = false }, 1000)));
+        foreach (var r in res) _out.WriteLine($"seed {r.On.Seed}: on {r.On}; off {r.Off}");
+        foreach (var (on, off) in res)
+        {
+            Assert.True(on.Sabotage >= 5 && on.Espionage >= 5 && on.AgentForces >= 5 && on.Raids >= 5 && on.CivilianStrikes >= 5, $"seed {on.Seed}: on {on}");
+            Assert.True(off.Sabotage == 0 && off.Espionage == 0 && off.AgentForces == 0 && off.Raids == 0 && off.CivilianStrikes == 0, $"seed {off.Seed}: off {off}");
+        }
+    }
+}

@@ -273,7 +273,7 @@ public sealed partial class SimpleAi
             // pulled out by a gravity well, the fleet then fights every enemy fleet there
             if (_h.Fleets.Trigger == ForcedStopTrigger.GravityWellShip && !enemies.Any(e => e.Gravity)) continue;
             own ??= _h.Fleets.FleetsAt(f.At!).Where(x => x.Side == _side).ToList();
-            if (Duel(own, enemies) < _p.RetreatOddsPercent) return n;
+            if (Duel(own, enemies) < RetreatOdds) return n;
         }
         return null;
     }
@@ -287,6 +287,18 @@ public sealed partial class SimpleAi
         public required List<Fleet> Members { get; init; }
         public double Strength; public int Aboard, FreeSlots, Berths; public double HullPct = 100;
     }
+
+    /// <summary>Guerrilla: the Collective's elusive fleets and raids (SimpleAiParams.Guerrilla). The Hand AI never uses it.</summary>
+    private bool GuerrillaOn => _p.Guerrilla && _side == Side.Collective;
+    private int AttackOdds => GuerrillaOn ? _p.GuerrillaAttackOddsPercent : _p.AttackOddsPercent;
+    private int RetreatOdds => GuerrillaOn ? _p.GuerrillaRetreatOddsPercent : _p.RetreatOddsPercent;
+
+    /// <summary>
+    /// Guerrilla raid: the pile can shell (m3-bombardment) a world the side sees enemy-held, with facilities seen, no enemy fleet seen there, and
+    /// fewer than RaidStrikes own strikes there in the last 30 days.
+    /// </summary>
+    private bool RaidTarget(string system, bool canBombard) =>
+        GuerrillaOn && canBombard && IsEnemyHeld(system) && FacilitiesAt(system) > 0 && TargetFleetsAt(system).Count == 0 && RecentBombardments(system) < _p.RaidStrikes;
 
     private void PlanMilitary()
     {
@@ -471,7 +483,7 @@ public sealed partial class SimpleAi
         {
             var friends = _h.Fleets.FleetsAt(at).Where(x => x.Side == _side);
             var enemiesHere = here.Where(x => x.At == at).ToList();
-            if (Duel(friends, enemiesHere) < _p.RetreatOddsPercent)
+            if (Duel(friends, enemiesHere) < RetreatOdds)
             {
                 var safe = YardSystems(YardFamily.Shipyard).Where(sy => sy != at && !Threats().ContainsKey(sy)).OrderBy(sy => Ticks(at, sy, 100)).ThenBy(sy => sy, StringComparer.Ordinal).FirstOrDefault() ?? rally;
                 if (safe != null && safe != at) { foreach (var m in p.Members) Move(m, safe); return; }
@@ -597,7 +609,7 @@ public sealed partial class SimpleAi
         var enemies = EnemyFleetsAt(at);
         if (enemies.Count > 0)
         {
-            if (Duel(mineHere, enemies) < _p.RetreatOddsPercent && rally != null) Move(f, rally); // too strong for us: leave
+            if (Duel(mineHere, enemies) < RetreatOdds && rally != null) Move(f, rally); // too strong for us: leave
             return; // else the battle takes its course
         }
         int aboard = _h.Troops.RegimentsAboard(f).Count;
@@ -611,6 +623,14 @@ public sealed partial class SimpleAi
         int maxShell = _view != null && win ? _p.FogWinBombardmentsPer30Days : _p.MaxBombardmentsPer30Days;
         // NoBlindStrikes (QA-22): a Military strike with nothing to hit wastes every hit and still rolls collateral against the bomber (B7 §5.3)
         bool targetSeen = !_p.NoBlindStrikes || MilitaryTargetSeen(at);
+        // guerrilla raid: a pile that cannot take the world even after shelling its garrison shells the mines, refineries and yards instead
+        // (m3-bombardment §3 Civilian), RaidStrikes times, then moves on (Leave)
+        if (RaidTarget(at, canShell) && !(aboard >= 1 && aboard >= Need(d / 2)))
+        {
+            long seq = _h.Bombardment.SubmitBombard(_side, f.Id, at, BombardCategory.Civilian);
+            Note(seq, "Raid", $"fleet {f.Id} raids {at}");
+            return;
+        }
         if (d > 0 && _h.Bombardment.Power(f) > 0 && targetSeen && ((win && _view == null) || RecentBombardments(at) < maxShell))
         {
             long seq = _h.Bombardment.SubmitBombard(_side, f.Id, at, BombardCategory.Military);
@@ -628,6 +648,7 @@ public sealed partial class SimpleAi
             Note(seq, "Assault", $"fleet {f.Id} lands on {at}");
             return;
         }
+
         Leave(f);
     }
 
@@ -733,6 +754,9 @@ public sealed partial class SimpleAi
                     }
                 }
             }
+            // guerrilla raid: a world it cannot take, shelled for its civilian targets (m3-bombardment §3 Civilian)
+            if (hops[sys.Index] <= reach && RaidTarget(s, canBombard))
+                score = Math.Max(score, (long)_p.RaidValuePerFacility * FacilitiesAt(s) * 1000 / (ticks + 20));
             if (score > 0) scored.Add((s, score));
         }
         if (scored.Count == 0) return null;

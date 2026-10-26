@@ -346,6 +346,24 @@ public sealed record SimpleAiParams
     public int HqMoveCooldownDays { get; init; } = 90;
     /// <summary>A destination needs at least this many lanes (no dead ends: a one-fleet blockade traps the HQ, ai/07 §7). DEFAULT.</summary>
     public int HqMinLanes { get; init; } = 2;
+    /// <summary>
+    /// SafeHearth (AI trainer 2026-10-26): the Collective stops killing its own Hearth. Traced on main f00fbb8, 12 Medium mirrors: the Hand
+    /// never learned the HQ in any of them, yet every Hearth fell, 9 of 12 within days of a move: the arrival costs 10 support
+    /// (m5-fog-and-hq §F6), and the AI moved it to a world with 0 or 1 regiment, which then turned (m2-control-and-capture: JoinSupport 60)
+    /// or lost its last regiment to an uprising. With it on, a destination needs HearthGarrisonMargin regiments above what the world will need
+    /// after the drop (and at least HearthMinRegiments), and each other own world of the sector that the drop would leave short costs
+    /// HearthSectorLossScore; a Hand fleet of scouts only (they cannot reveal the HQ: §F2, PresenceRevealsHq off) weighs HearthScoutRiskPercent of
+    /// a fleet's risk, and a Hand agent seen (AgentDetected) weighs HearthAgentRiskPercent. Off = the AI of before. DEFAULT off (every level turns it on).
+    /// </summary>
+    public bool SafeHearth { get; init; }
+    public int HearthGarrisonMargin { get; init; } = 2;
+    public int HearthMinRegiments { get; init; } = 3;
+    public int HearthSectorLossScore { get; init; } = 2000;
+    public int HearthScoutRiskPercent { get; init; } = 0;
+    public int HearthAgentRiskPercent { get; init; } = 200;
+    /// <summary>SafeHearth: Diplomacy on the Hearth's own world while its Collective support is below this, worth HearthDiplomacyValue. DEFAULT.</summary>
+    public int HearthDiplomacyBelow { get; init; } = 85;
+    public int HearthDiplomacyValue { get; init; } = 1500;
 
     // ---- characters and missions (m6 AI; ai/05 §4-5 and §7b, ai/12 P8 and P9). All AI tuning, DEFAULT. The rules they act through are
     // m5-characters-and-talent (posts, MoveCharacter) and m5-missions (StartMission, CancelMission); the odds are the core's own tables
@@ -450,6 +468,38 @@ public sealed record SimpleAiParams
     /// <summary>Collective: most Incite and Sabotage missions out at once (only on enemy systems where no defender is believed). DEFAULT.</summary>
     public int MaxSubversion { get; init; } = 2;
     /// <summary>
+    /// Guerrilla fleets (AI trainer 2026-10-26, Paul's brief: elusive, hit and run, avoid even fights). Collective only; the Hand AI ignores it. On:
+    /// the fleets attack only at GuerrillaAttackOddsPercent (not AttackOddsPercent), leave a fight below GuerrillaRetreatOddsPercent (not
+    /// RetreatOddsPercent), and raid: a strike pile that can bombard but cannot take a Hand world shells its civilian targets (m3-bombardment
+    /// §3 Civilian: mines, refineries, yards) where no Hand fleet is seen, RaidStrikes times in 30 days, then moves on; a raid is worth
+    /// RaidValuePerFacility per facility seen. The Hand's upkeep room is 50 x min(mines, refineries) (m2-maintenance), so lost mines and
+    /// refineries make it scrap ships. DEFAULT off (Medium and Hard turn it on).
+    /// </summary>
+    public bool Guerrilla { get; init; }
+    public int GuerrillaAttackOddsPercent { get; init; } = 200;
+    public int GuerrillaRetreatOddsPercent { get; init; } = 120;
+    public int RaidStrikes { get; init; } = 2;
+    public int RaidValuePerFacility { get; init; } = 40;
+    /// <summary>
+    /// Underground (AI trainer 2026-10-26; Paul 2026-10-26: the Collective plays guerrilla, "always spying and sabotaging, a real pain"). Collective
+    /// only; the Hand AI ignores it. On: (1) Incite and Sabotage go to enemy worlds up to UndergroundHops lanes out even where defenders are believed,
+    /// the planner's expected value (detection and success from the core's own tables, m5-missions §3) deciding, with up to UndergroundSubversion
+    /// out at once; (2) Spike the Harvester (m5-missions §6, m5-harvester §5) wherever the side's picture shows the harvester, worth SpikeValue;
+    /// (3) WatchLooks Espionage missions keep the pictures of enemy worlds within reach fresh (ground older than WatchStaleDays, most facilities
+    /// first), worth WatchValue; (4) special forces as mission agents (SpecialForceAgents, Collective only), UndergroundForcesWanted of
+    /// UndergroundForces. Uses only missions the rules already have. DEFAULT off (Medium and Hard turn it on).
+    /// </summary>
+    public bool Underground { get; init; }
+    public int UndergroundHops { get; init; } = 4;
+    public int UndergroundSubversion { get; init; } = 6;
+    public int SpikeValue { get; init; } = 3000;
+    public int SpikeSeenDays { get; init; } = 10;
+    public int WatchLooks { get; init; } = 2;
+    public int WatchValue { get; init; } = 250;
+    public int WatchStaleDays { get; init; } = 60;
+    public int UndergroundForcesWanted { get; init; } = 12;
+    public IReadOnlyList<string> UndergroundForces { get; init; } = new[] { "Wreckers", "Strikers", "Listeners" };
+    /// <summary>
     /// Special forces as mission agents (QA-6; B6c §7: the Classic AI's Sabotage, Recon, espionage-team and Abduction/Assassination filters admit
     /// special forces, inferred from the mask; B6b §9: it keeps at least 8 of them). On: the AI keeps SpecialForcesWanted special forces of its
     /// AgentForceClasses and sends each free one alone on any planned mission whose record's mask holds its class bit (m5-missions §Special
@@ -464,7 +514,7 @@ public sealed record SimpleAiParams
     /// Collective: Wreckers (Sabotage, Rescue, Abduction), Strikers (Incite, Subdue). Hand: Auditors (Espionage on the HQ hunt), Notaries
     /// (Rescue, Abduction), Closers (Subdue). The Listeners are left out: the Collective plans no Espionage. DEFAULT.
     /// </summary>
-    public IReadOnlyList<string> AgentForceClasses(Side side) => side == Side.Hand ? HandAgentForces : CollectiveAgentForces;
+    public IReadOnlyList<string> AgentForceClasses(Side side) => side == Side.Hand ? HandAgentForces : Underground ? UndergroundForces : CollectiveAgentForces;
     public IReadOnlyList<string> CollectiveAgentForces { get; init; } = new[] { "Wreckers", "Strikers" };
     public IReadOnlyList<string> HandAgentForces { get; init; } = new[] { "Auditors", "Notaries", "Closers" };
     /// <summary>A picture's owner is trusted for a mission target (Diplomacy on neutral, Incite) when at most this old. DEFAULT.</summary>
