@@ -24,8 +24,9 @@ namespace Praedra.Core.AI;
 /// the Collective's key hunt (Espionage for The Chair and Ravilla while it is ahead, KeyHunt),
 /// the blind hunt (Espionage at the oldest looks while the picture shows no enemy system, BlindHunt),
 /// Subdue on own systems in uprising, Rescue of own prisoners, Abduction of enemy characters the side has seen, Diplomacy on own low-support
-/// systems and neutral border systems, Collective Incite and Sabotage on enemy systems where no defender is believed (Underground: farther and
-/// defended too, plus Spike the Harvester and the watch looks), and Research. With SpecialForceAgents (DEFAULT off, QA-6) or Underground
+/// systems and neutral border systems, Collective Sabotage on a harvester seen under construction (HarvesterYardValue), Collective Incite and
+/// Sabotage on enemy systems where no defender is believed (Underground: farther and defended too, plus Spike the Harvester and the watch
+/// looks), and Research. With SpecialForceAgents (DEFAULT off, QA-6) or Underground
 /// (Collective) its free special forces go alone on the same jobs where their class bit is in the kind's mask.</item>
 /// </list>
 /// It reads the other side only through the "what the AI may see" block of SimpleAi.cs (MissionDefendersAt, SupportSeen, OwnerSeen,
@@ -40,6 +41,7 @@ public sealed partial class SimpleAi
     private static readonly MissionKind[] NoKeyKinds = { MissionKind.Rescue, MissionKind.Abduction, MissionKind.Sabotage, MissionKind.InciteUprising };
 
     private sealed record Job(MissionKind Kind, string System, int? TargetCharacter, int Value, string Group);
+    private const string HarvesterYardGroup = "harvester yard ";
 
     private void PlanAgents()
     {
@@ -375,7 +377,8 @@ public sealed partial class SimpleAi
         {
             if ((c != null ? usedChar.Contains(c.Id) : usedSf.Contains(f!.Id)) || usedGroup.Contains(j.Group)) continue;
             if (j.Kind == MissionKind.Diplomacy && diplomats >= DiplomatsWanted()) continue;
-            if (j.Kind is MissionKind.InciteUprising or MissionKind.Sabotage && subversion >= MaxSubversion) continue;
+            bool yardHunt = j.Group.StartsWith(HarvesterYardGroup, StringComparison.Ordinal); // outside the cap (HarvesterYardValue)
+            if (j.Kind is MissionKind.InciteUprising or MissionKind.Sabotage && !yardHunt && subversion >= MaxSubversion) continue;
             var job = j;
             var chars = c != null ? new List<int> { c.Id } : new List<int>();
             var sfs = f != null ? new List<int> { f.Id } : new List<int>();
@@ -390,7 +393,7 @@ public sealed partial class SimpleAi
             usedGroup.Add(j.Group);
             if (j.Kind is MissionKind.Espionage or MissionKind.Reconnaissance) _looksToday.Add(j.System);
             if (j.Kind == MissionKind.Diplomacy) diplomats++;
-            if (j.Kind is MissionKind.InciteUprising or MissionKind.Sabotage) subversion++;
+            if (j.Kind is MissionKind.InciteUprising or MissionKind.Sabotage && !yardHunt) subversion++;
         }
     }
 
@@ -503,6 +506,11 @@ public sealed partial class SimpleAi
         // defended or not (the expected value weighs the detection), plus Spike the Harvester and the watch looks
         if (_side == Side.Collective)
         {
+            // HarvesterYardValue (Paul 2026-10-27): a harvester seen under construction draws a saboteur, at any distance
+            if (HarvesterYardHuntOn && KindUsable(MissionKind.Sabotage))
+                foreach (var s in HarvesterBuildSeenAt())
+                    for (int k = own.Count(m => m.Kind == MissionKind.Sabotage && m.Target == s); k < _p.HarvesterYardSaboteurs; k++)
+                        jobs.Add(new Job(MissionKind.Sabotage, s, null, _p.HarvesterYardValue, $"{HarvesterYardGroup}{s} #{k}"));
             var hops = Hops();
             int reach = UndergroundOn ? Math.Max(_p.TargetHops, _p.UndergroundHops) : _p.TargetHops;
             foreach (var sys in _h.Data.Galaxy.Systems)
@@ -522,6 +530,19 @@ public sealed partial class SimpleAi
                     foreach (var s in HarvesterSeenAt())
                         if (Free(MissionKind.SpikeTheHarvester, s)) jobs.Add(new Job(MissionKind.SpikeTheHarvester, s, null, _p.SpikeValue, "spike " + s));
                 // the watch: Espionage writes group C and D (m5-fog-and-hq §F2), so raids and subversion aim at what is there now
+                if (KindUsable(MissionKind.Espionage) && HarvesterYardHuntOn)
+                {
+                    // HarvesterYardValue: the spies look for a harvester being built where the Hand stacks its shipyards, at any distance
+                    var forges = HarvesterWatchTargets();
+                    int want = _p.WatchLooks - own.Count(m => m.Kind == MissionKind.Espionage && forges.Contains(m.Target));
+                    foreach (var s in forges)
+                    {
+                        if (want <= 0) break;
+                        if (!Free(MissionKind.Espionage, s)) continue;
+                        jobs.Add(new Job(MissionKind.Espionage, s, null, Math.Max(_p.WatchValue, _p.HarvesterYardValue / 2), "look " + s));
+                        want--;
+                    }
+                }
                 if (KindUsable(MissionKind.Espionage))
                 {
                     int want = _p.WatchLooks - own.Count(m => m.Kind == MissionKind.Espionage);
@@ -562,6 +583,26 @@ public sealed partial class SimpleAi
             list.Add((s, FacilitiesAt(s), hops[sys.Index]));
         }
         return list.OrderByDescending(t => t.Fac).ThenBy(t => t.Hops).ThenBy(t => t.S, StringComparer.Ordinal).Select(t => t.S).ToList();
+    }
+
+    /// <summary>
+    /// HarvesterYardValue: Hand worlds at any distance with at least HarvesterWatchShipyards shipyards seen and a facility picture (group C, which
+    /// carries HarvesterQueued) older than WatchStaleDays; most shipyards first, then name. Fog only.
+    /// </summary>
+    private List<string> HarvesterWatchTargets()
+    {
+        if (_view == null) return new List<string>();
+        var list = new List<(string S, int Yards)>();
+        foreach (var sys in _h.Data.Galaxy.Systems)
+        {
+            string s = sys.Name;
+            if (!IsEnemyHeld(s) || Destroyed(s)) continue;
+            var c = _view.Picture(s)?.Facilities;
+            if (c == null || AgeOf(c) <= _p.WatchStaleDays) continue;
+            int yards = ShipyardsSeenAt(s);
+            if (yards >= _p.HarvesterWatchShipyards) list.Add((s, yards));
+        }
+        return list.OrderByDescending(t => t.Yards).ThenBy(t => t.S, StringComparer.Ordinal).Select(t => t.S).ToList();
     }
 
     /// <summary>

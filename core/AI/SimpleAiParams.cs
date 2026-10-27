@@ -496,6 +496,23 @@ public sealed record SimpleAiParams
     public int RaidStrikes { get; init; } = 2;
     public int RaidValuePerFacility { get; init; } = 40;
     /// <summary>
+    /// Harvester yard hunt (AI trainer 2026-10-27; Paul 2026-10-27: when the Collective's spies spot a harvester being built it goes after
+    /// that shipyard world with raiders and saboteurs, "Obviously"). Collective only; the Hand AI ignores it. A Hand world where the side sees a
+    /// harvester under construction (m5-fog-and-hq §N6b HarvesterQueued, from a picture at most HarvesterBuildSeenDays old; no fog: the truth)
+    /// gets up to HarvesterYardSaboteurs Sabotage missions worth HarvesterYardValue each (m5-missions: one completed facility destroyed, so
+    /// mostly its shipyards; at any distance, defenders or not, outside the subversion cap) and is a raid target worth HarvesterYardValue more
+    /// for the strike piles, at any distance. With Underground, Espionage looks (worth WatchValue, up to WatchLooks more) go to Hand worlds at any
+    /// distance with at least HarvesterWatchShipyards shipyards seen and a facility picture older than WatchStaleDays, most shipyards first:
+    /// a harvester is built where shipyards are stacked (ceil(584 / yards) x 4 days, m2-construction §Build time). DEFAULT 0 = off.
+    /// </summary>
+    public int HarvesterYardValue { get; init; }
+    /// <summary>How old a HarvesterQueued sighting may be for the harvester yard hunt, days (a build takes hundreds). DEFAULT 400.</summary>
+    public int HarvesterBuildSeenDays { get; init; } = 400;
+    /// <summary>Most Sabotage missions out at once at one harvester yard (HarvesterYardValue). DEFAULT 3.</summary>
+    public int HarvesterYardSaboteurs { get; init; } = 3;
+    /// <summary>Shipyards seen that make a Hand world worth a look for a harvester build (HarvesterYardValue). DEFAULT 3.</summary>
+    public int HarvesterWatchShipyards { get; init; } = 3;
+    /// <summary>
     /// Underground (AI trainer 2026-10-26; Paul 2026-10-26: the Collective plays guerrilla, "always spying and sabotaging, a real pain"). Collective
     /// only; the Hand AI ignores it. On: (1) Incite and Sabotage go to enemy worlds up to UndergroundHops lanes out even where defenders are believed,
     /// the planner's expected value (detection and success from the core's own tables, m5-missions §3) deciding, with up to UndergroundSubversion
