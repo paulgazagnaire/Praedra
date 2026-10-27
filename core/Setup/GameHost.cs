@@ -127,7 +127,10 @@ public sealed class GameHost
         Game = game; Data = data; Settings = settings;
         Fleets = FleetModule.Attach(game, data.Galaxy, data.Ships, data.Blockade, settings.ForcedStopTrigger, data.NewBattle, settings.Travel);
 
-        Economy = EconomyModule.Attach(game, data.Galaxy, data.Slots, data.Costs, Fleets, settings.Economy);
+        // rule: m5-harvester §1 Upkeep (Paul 2026-10-27): the harvester's upkeep is a setting over the Classic data value
+        var costs = (settings.Harvester ?? new Praedra.Core.Harvester.HarvesterParams()).Upkeep is int up && data.Costs.TryGet(EconomyModule.HarvesterClass, out _)
+            ? data.Costs.WithMaintenance(EconomyModule.HarvesterClass, up) : data.Costs;
+        Economy = EconomyModule.Attach(game, data.Galaxy, data.Slots, costs, Fleets, settings.Economy);
         Economy.IncidentsEnabled = settings.IncidentsEnabled;
         Economy.BlockadeStopsMining = settings.BlockadeStopsMining;
         Economy.AutoscrapMode = settings.AutoscrapMode;
