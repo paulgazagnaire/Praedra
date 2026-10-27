@@ -24,7 +24,7 @@ namespace Praedra.Core.AI;
 /// the Collective's key hunt (Espionage for The Chair and Ravilla while it is ahead, KeyHunt),
 /// the blind hunt (Espionage at the oldest looks while the picture shows no enemy system, BlindHunt),
 /// Subdue on own systems in uprising, Rescue of own prisoners, Abduction of enemy characters the side has seen, Diplomacy on own low-support
-/// systems and neutral border systems, Collective Sabotage on a harvester seen under construction (HarvesterYardValue), Collective Incite and
+/// systems and neutral border systems, Collective Spike the Harvester on a harvester seen under construction (HarvesterYardValue), Collective Incite and
 /// Sabotage on enemy systems where no defender is believed (Underground: farther and defended too, plus Spike the Harvester and the watch
 /// looks), and Research. With SpecialForceAgents (DEFAULT off, QA-6) or Underground
 /// (Collective) its free special forces go alone on the same jobs where their class bit is in the kind's mask.</item>
@@ -377,8 +377,7 @@ public sealed partial class SimpleAi
         {
             if ((c != null ? usedChar.Contains(c.Id) : usedSf.Contains(f!.Id)) || usedGroup.Contains(j.Group)) continue;
             if (j.Kind == MissionKind.Diplomacy && diplomats >= DiplomatsWanted()) continue;
-            bool yardHunt = j.Group.StartsWith(HarvesterYardGroup, StringComparison.Ordinal); // outside the cap (HarvesterYardValue)
-            if (j.Kind is MissionKind.InciteUprising or MissionKind.Sabotage && !yardHunt && subversion >= MaxSubversion) continue;
+            if (j.Kind is MissionKind.InciteUprising or MissionKind.Sabotage && subversion >= MaxSubversion) continue;
             var job = j;
             var chars = c != null ? new List<int> { c.Id } : new List<int>();
             var sfs = f != null ? new List<int> { f.Id } : new List<int>();
@@ -393,7 +392,7 @@ public sealed partial class SimpleAi
             usedGroup.Add(j.Group);
             if (j.Kind is MissionKind.Espionage or MissionKind.Reconnaissance) _looksToday.Add(j.System);
             if (j.Kind == MissionKind.Diplomacy) diplomats++;
-            if (j.Kind is MissionKind.InciteUprising or MissionKind.Sabotage && !yardHunt) subversion++;
+            if (j.Kind is MissionKind.InciteUprising or MissionKind.Sabotage) subversion++;
         }
     }
 
@@ -506,11 +505,12 @@ public sealed partial class SimpleAi
         // defended or not (the expected value weighs the detection), plus Spike the Harvester and the watch looks
         if (_side == Side.Collective)
         {
-            // HarvesterYardValue (Paul 2026-10-27): a harvester seen under construction draws a saboteur, at any distance
-            if (HarvesterYardHuntOn && KindUsable(MissionKind.Sabotage))
+            // HarvesterYardValue (Paul 2026-10-27): a harvester seen under construction draws Spike teams, at any distance
+            // rule: m5-missions §6 Spike the Harvester, m5-harvester §5 (SpikeInYard: an unfinished harvester in a yard is a target, Paul 2026-10-27)
+            if (HarvesterYardHuntOn && KindUsable(MissionKind.SpikeTheHarvester) && _h.Harvester.Params.SpikeInYard)
                 foreach (var s in HarvesterBuildSeenAt())
-                    for (int k = own.Count(m => m.Kind == MissionKind.Sabotage && m.Target == s); k < _p.HarvesterYardSaboteurs; k++)
-                        jobs.Add(new Job(MissionKind.Sabotage, s, null, _p.HarvesterYardValue, $"{HarvesterYardGroup}{s} #{k}"));
+                    for (int k = own.Count(m => m.Kind == MissionKind.SpikeTheHarvester && m.Target == s); k < _p.HarvesterYardSaboteurs; k++)
+                        jobs.Add(new Job(MissionKind.SpikeTheHarvester, s, null, _p.HarvesterYardValue, $"{HarvesterYardGroup}{s} #{k}"));
             var hops = Hops();
             int reach = UndergroundOn ? Math.Max(_p.TargetHops, _p.UndergroundHops) : _p.TargetHops;
             foreach (var sys in _h.Data.Galaxy.Systems)

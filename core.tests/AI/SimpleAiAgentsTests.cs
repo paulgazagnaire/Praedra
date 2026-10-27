@@ -479,8 +479,8 @@ public class SimpleAiAgentsTests
         Assert.Equal(max, Wanted(Side.Hand, 8, false));
         Assert.Equal(8, AiLevels.For(AiLevel.Medium).AfterCharterDiplomats);
     }
-    // m5-fog-and-hq §N6b + SimpleAiParams.HarvesterYardValue (Paul 2026-10-27: spies spot a harvester being built, saboteurs go at that yard)
-    private static int YardSabotages(int value, out bool seen)
+    // m5-fog-and-hq §N6b + SimpleAiParams.HarvesterYardValue (Paul 2026-10-27: spies spot a harvester being built, Spike teams go at that yard; m5-harvester §5 SpikeInYard)
+    private static int YardSpikes(int value, out bool seen)
     {
         var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA });
         var m = new AiMatch(h, null, AiLevels.For(AiLevel.Medium) with { HarvesterYardValue = value }, passive: Side.Hand);
@@ -492,16 +492,16 @@ public class SimpleAiAgentsTests
         for (int d = 0; d < 60; d++)
         {
             m.Step();
-            n += m.Collective.Submitted.Count(o => o.Kind == "MissionSabotage" && o.Detail.Contains($"to {yard} ", StringComparison.Ordinal));
+            n += m.Collective.Submitted.Count(o => o.Kind == "MissionSpikeTheHarvester" && o.Detail.Contains($"to {yard} ", StringComparison.Ordinal));
         }
         seen = h.Fog.ViewFor(Side.Collective).HarvesterQueued(yard);
         return n;
     }
 
     [Fact]
-    public void HarvesterYardValue_SendsASaboteurToAHarvesterSeenUnderConstruction_OnlyWithTheSwitch()
+    public void HarvesterYardValue_SendsASpikeTeamToAHarvesterSeenUnderConstruction_OnlyWithTheSwitch()
     {
-        int on = YardSabotages(600, out bool seenOn), off = YardSabotages(0, out bool seenOff);
+        int on = YardSpikes(600, out bool seenOn), off = YardSpikes(0, out bool seenOff);
         Assert.True(seenOn && seenOff); // the spy's look shows the harvester in both games
         Assert.True(on > 0, $"on {on}");
         Assert.Equal(0, off);
