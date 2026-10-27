@@ -51,6 +51,7 @@ public sealed partial class GameSession
     {
         "Battle" => "in battle",
         "Sabotage" => "by sabotage",
+        "SabotageInYard" => "sabotaged in the shipyard before it was finished",
         "Harvester" => "with a system another harvester destroyed",
         _ => cause,
     };

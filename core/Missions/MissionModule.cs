@@ -62,8 +62,8 @@ public sealed partial class MissionModule
     /// </summary>
     public Func<StepContext, Side, string, CharacterRecord?>? Recruit { get; set; }
     /// <summary>
-    /// <c>HasHarvester(owner, system)</c>: a completed harvester of <paramref name="owner"/> stands at the system. Null = false until the harvester
-    /// exists in the core (M4/M6). rule: §Targets ("HasHarvester returns false").
+    /// <c>HasHarvester(owner, system)</c>: a Spike the Harvester target of <paramref name="owner"/> is at the system (a completed harvester, or with
+    /// m5-harvester SpikeInYard one still in its yards). Null = false until the harvester exists in the core (M4/M6). rule: §Targets ("HasHarvester returns false").
     /// </summary>
     public Func<Side, string, bool>? HasHarvester { get; set; }
     /// <summary><c>Harvester.Destroy(system, Sabotage)</c> (owner given). Null = nothing to destroy. rule: §6 Spike the Harvester.</summary>
