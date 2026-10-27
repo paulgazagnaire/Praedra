@@ -43,6 +43,8 @@ public class GamesEndTests
         // 2337). Bar 1.
         // Guerrilla Collective 2026-10-26 (AI trainer; Dev lead OK as a stopgap): Medium is now balanced, and balanced wars run longer. Measured 3 of
         // 8 open (seeds 1, 6, 8: 181/61, 68/177, 110/135); the other 5 are Collective wins on day 2193 to 2895. Bar 3; the AI trainer owns bringing it back to 1 (the Hearth hunt and the slow wars, next).
+        // Play to win 2026-10-26 (AI trainer, QA-54 and AiLevels.PlayToWin, with the Hearth tip): measured 3 of 8 open (seeds 1, 7, 8: 208/51, 95/217,
+        // 271/3); the Collective wins 4 (day 1806 to 2484), the Hand 1. Bar 3 still; over 96 seeds the open games fell from 42 to 33.
         Assert.True(open <= 3, $"{open} of 8 Medium mirrors have no winner by day 3000");
     }
 }

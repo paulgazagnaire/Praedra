@@ -467,9 +467,9 @@ public sealed partial class SimpleAi
     /// least that need plus HearthGarrisonMargin and at least HearthMinRegiments. Also counts the other own worlds of the sector the drop would
     /// leave short (regiments below their need at the lowered support, or none below JoinSupport): each turns or riots (m2-control-and-capture).
     /// </summary>
-    private bool HearthSafeAt(string system, out int sectorShort)
+    private bool HearthSafeAt(string system, out int sectorShort, out int shortBy)
     {
-        sectorShort = 0;
+        sectorShort = 0; shortBy = int.MaxValue;
         var g = _h.Data.Galaxy;
         if (!g.TryFindSystem(system, out var i)) return false;
         int delta = _h.Fog.HqRules.ArrivalSupportDelta;
@@ -484,7 +484,8 @@ public sealed partial class SimpleAi
         foreach (var w in HeldSystems())
             if (w != system && g.TryFindSystem(w, out var j) && g.Systems[j].Sector == sector && _h.Economy.SlotsOf(w).Populated && ShortBy(w) > 0) sectorShort++;
         int regs = _h.Support.RegimentCount(system);
-        return regs >= _p.HearthMinRegiments && ShortBy(system) + _p.HearthGarrisonMargin <= 0;
+        shortBy = Math.Max(ShortBy(system) + _p.HearthGarrisonMargin, _p.HearthMinRegiments - regs);
+        return shortBy <= 0;
     }
 
     /// <summary>
@@ -531,22 +532,27 @@ public sealed partial class SimpleAi
         if (_h.Fog.IsPinned(at)) return; // its own system: the side sees the blockade there (§F6 departure refusal)
         var g = _h.Data.Galaxy; var room = HopsFromEnemy();
         int speed = _h.Fog.HqRules.Speed;
-        string? best = null; long bestScore = long.MinValue;
+        string? best = null, refuge = null; long bestScore = long.MinValue, refugeScore = long.MinValue;
         foreach (var s in HeldSystems())
         {
             if (s == at || !g.TryFindSystem(s, out var i) || g.NearOf(i).Count < _p.HqMinLanes) continue;
             int r = risk.GetValueOrDefault(s);
             if (r * 2 >= _p.HqMoveRisk || Threats().ContainsKey(s) || Suspended(s)) continue;
-            int sectorShort = 0;
-            if (_p.SafeHearth && !HearthSafeAt(s, out sectorShort)) continue; // rule: m5-fog-and-hq §F6 arrival drop; m2-control-and-capture
+            int sectorShort = 0, shortBy = 0;
+            bool safe = !_p.SafeHearth || HearthSafeAt(s, out sectorShort, out shortBy); // rule: m5-fog-and-hq §F6 arrival drop; m2-control-and-capture
             int ticks = TicksCached(at, s, speed);
             if (ticks == int.MaxValue) continue;
             long score = Math.Min(room[i], 8) * 1000L - r * 10L - ticks - sectorShort * (long)_p.HearthSectorLossScore;
-            if (score > bestScore) { bestScore = score; best = s; }
+            if (safe) { if (score > bestScore) { bestScore = score; best = s; } }
+            else if (score - shortBy * (long)_p.HearthSectorLossScore > refugeScore) { refugeScore = score - shortBy * (long)_p.HearthSectorLossScore; refuge = s; }
         }
+        // SafeHearth (QA-54): with Hand warships close (risk at HqMoveRisk; scouts weigh HearthScoutRiskPercent) and no world safe enough, the
+        // Hearth takes the least-short refuge rather than stay to be shelled and assaulted
+        bool toRefuge = best == null && _p.SafeHearth && risk.GetValueOrDefault(at) >= _p.HqMoveRisk;
+        if (toRefuge) best = refuge;
         if (best == null) return;
         long seq = _h.Fog.SubmitMoveHq(_side, best);
-        Note(seq, "MoveHq", $"HQ {at} -> {best} (risk {risk.GetValueOrDefault(at)})");
+        Note(seq, "MoveHq", $"HQ {at} -> {best} (risk {risk.GetValueOrDefault(at)}{(toRefuge ? ", refuge" : "")})");
     }
 
     // ================================================================== missions behind the fog (m6 AI: ai/05 §7b, missions/08)

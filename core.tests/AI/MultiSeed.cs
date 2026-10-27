@@ -1,3 +1,4 @@
+using Praedra.Core.AI;
 namespace Praedra.Core.Tests.AI;
 
 // Multi-seed play tests. One seeded AI game is chaotic: any new draw in the game generator (a new original-game rule, a new AI switch)
@@ -7,6 +8,14 @@ namespace Praedra.Core.Tests.AI;
 internal static class MultiSeed
 {
     public static readonly int[] OneToEight = { 1, 2, 3, 4, 5, 6, 7, 8 };
+
+    /// <summary>A level without AiLevels.PlayToWin (2026-10-26), for play tests whose floors were measured before it: its bigger troop wishes
+    /// move every seed, while the tests measure other switches.</summary>
+    public static SimpleAiParams WithoutPlayToWin(SimpleAiParams p)
+    {
+        var d = new SimpleAiParams();
+        return p with { WinRushDefenders = d.WinRushDefenders, InvasionRegimentTarget = d.InvasionRegimentTarget, TroopCapacityTarget = d.TroopCapacityTarget };
+    }
 
     public static T[] Play<T>(IReadOnlyList<int> seeds, Func<int, T> game)
     {
