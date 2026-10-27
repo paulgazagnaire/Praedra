@@ -14,7 +14,7 @@ internal static class MultiSeed
     public static SimpleAiParams WithoutPlayToWin(SimpleAiParams p)
     {
         var d = new SimpleAiParams();
-        return p with { WinRushDefenders = d.WinRushDefenders, InvasionRegimentTarget = d.InvasionRegimentTarget, TroopCapacityTarget = d.TroopCapacityTarget };
+        return p with { WinRushDefenders = d.WinRushDefenders, InvasionRegimentTarget = d.InvasionRegimentTarget, TroopCapacityTarget = d.TroopCapacityTarget, AfterCharterDiplomats = d.AfterCharterDiplomats };
     }
 
     public static T[] Play<T>(IReadOnlyList<int> seeds, Func<int, T> game)
