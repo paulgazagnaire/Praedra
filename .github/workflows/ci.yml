@@ -24,4 +24,4 @@ jobs:
         continue-on-error: true
         run: |
           dotnet build core/Praedra.Core.csproj -c Release --no-incremental -p:GenerateDocumentationFile=true -p:TreatWarningsAsErrors=false "-p:NoWarn=CS1591%3BCS1573" -o "$RUNNER_TEMP/doccheck"
-          python3 tools/doc-check/doc_check.py "$RUNNER_TEMP/doccheck/Praedra.Core.xml"
+          python3 tools/doc-check/doc_check.py "$RUNNER_TEMP/doccheck/Praedra.Core.xml" core
