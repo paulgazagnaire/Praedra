@@ -43,10 +43,18 @@ public sealed record HarvesterParams
     public int ClassicReachLoss { get; init; } = 2;
     public int ClassicReachThreshold { get; init; } = 90;
 
+    /// <summary>
+    /// The harvester's upkeep (maintenance load), replacing the class's Classic value (600, unit-and-facility-costs.csv). New, Decided (Paul
+    /// 2026-10-27: "harvester upkeep cost to 450, let's try with this value", after QA-55: no Hand fits 600 under its upkeep capacity). Null =
+    /// the Classic value. DEFAULT 450. rule: m5-harvester §1 Upkeep.
+    /// </summary>
+    public int? Upkeep { get; init; } = 450;
+
     /// <summary>Throw <see cref="RuleMissingException"/> for every switch value the sheet refuses. rule: m5-harvester §4 (TrenchRun: no code until a rule exists).</summary>
     public void Validate()
     {
         if (TrenchRun) throw new RuleMissingException("TrenchRun", "m5-harvester");
+        if (Upkeep < 0) throw new ArgumentOutOfRangeException(nameof(Upkeep), "Upkeep cannot be negative.");
         if (CapPerSystem < 1) throw new ArgumentOutOfRangeException(nameof(CapPerSystem), "At least one harvester per system must be allowed.");
     }
 }

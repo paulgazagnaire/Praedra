@@ -165,7 +165,7 @@ public class ShipTests
         Assert.True(on.Build.HarvesterClassBuildable);
         Assert.Null(on.TryOrder(Side.Hand, Home, YardFamily.Shipyard, "harvester", 1));
         Assert.Equal(584, on.Eco.Costs.Get("harvester").Cost);
-        Assert.Equal(600, on.Eco.Costs.Get("harvester").Maintenance);
+        Assert.Equal(600, on.Eco.Costs.Get("harvester").Maintenance); // the data value; the game's setting (450) is applied by GameHost: HU1
         var ds = on.Eco.Objects.Single(o => o.Class == "harvester");
         Assert.False(ds.Completed);
         Assert.Equal(25000, ds.Hull);

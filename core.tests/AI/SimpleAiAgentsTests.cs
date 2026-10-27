@@ -96,7 +96,10 @@ public class SimpleAiAgentsTests
         // Harvester words re-pin 2026-10-25 (stage 3b: the harvester and Hold beam words in field and class names; side-words pin
         // 8b911e2b...634a); Talent words re-pin 2026-10-25 (stage 3d: the Talent words in field names; harvester pin f9bf473a...dad);
         // the game is the same each time (the campaign and 8 AI games print the same).
-        Assert.Equal("bec66201564b67f1492bf2abbe75a13bc0140bc2eac3dd9ccd00301e923139a6", h.StateHash());
+        // Harvester upkeep re-pin 2026-10-27 (Dev lead; Paul: upkeep 450, m5-harvester §1 Upkeep): this old AI builds its harvester and its upkeep
+        // is now 450, a core rule it cannot switch off. With HarvesterParams.Upkeep = null (Classic 600) the hash is exactly the previous pin
+        // bec66201...39a6 (checked when re-pinned, main bcce053).
+        Assert.Equal("fc9d696fdbd7f583be706fcda7bea869ee6837cae543c975dc7d355b7dac43ec", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"

@@ -76,6 +76,14 @@ public sealed class CostData
     /// <summary>Every row, by class name (ordinal). Read-only query for the build menu of a UI.</summary>
     public IEnumerable<CostRow> Rows => _rows.Values;
 
+    /// <summary>A copy with one class's maintenance replaced (a settings override of a data value, e.g. HarvesterParams.Upkeep).</summary>
+    public CostData WithMaintenance(string className, int maintenance)
+    {
+        var rows = new SortedDictionary<string, CostRow>(_rows, StringComparer.Ordinal);
+        rows[className] = Get(className) with { Maintenance = maintenance };
+        return new CostData(rows);
+    }
+
     public static CostData Load(string path) => Parse(File.ReadAllText(path), Path.GetFileName(path));
 
     /// <summary>The original file merged with the design file of the same name. rule: B1-own-importer §Work 3.</summary>

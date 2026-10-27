@@ -27,7 +27,10 @@ public class SimpleAiTaskForceTests
             // no longer separate the switch (0 of 4 off games still going on day 1250); this test measures task forces
             Victory = new Praedra.Core.Victory.VictoryRules { DominanceSharePercent = 0 },
             // Hearth tip pinned off (Dev lead 2026-10-26, m5-fog-and-hq §N6a): its draws move the seeds the floors were measured on
-            Fog = new Praedra.Core.Fog.FogParams { HearthTipPermille = 0, HearthTipSectorPermille = 0 } } });
+            Fog = new Praedra.Core.Fog.FogParams { HearthTipPermille = 0, HearthTipSectorPermille = 0 },
+            // harvester upkeep pinned to Classic 600 (Dev lead 2026-10-27, m5-harvester §1 Upkeep): at 450 this default-params Hand builds a
+            // harvester, which moves seed 1 (no win by day 1400 with task forces on); this test measures task forces
+            Harvester = new Praedra.Core.Harvester.HarvesterParams { Upkeep = null } } });
         // GarrisonsFirst pinned off (Dev lead 2026-10-19): the passive Collective makes the Hand "far ahead" from the start, and this test
         // measures task forces; SimpleAiGarrisonsFirstTests measures that switch.
         var m = new AiMatch(h, AiLevels.For(AiLevel.Medium) with { TaskForces = taskForces, GarrisonsFirst = false },
