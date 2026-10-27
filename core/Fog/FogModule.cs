@@ -277,6 +277,9 @@ public sealed class FogModule
                 if (o.Completed) fac[o.Class] = fac.GetValueOrDefault(o.Class) + 1; else queued++;
             }
             k.Facilities = fac; k.FacilitiesQueued = queued; k.StampC = stamp;
+            bool harvester = Params.RevealsHarvesterQueued && HarvesterQueuedAt(side, sys); // rule: §N6b
+            if (harvester && !k.HarvesterQueued && kind != RevealKind.Setup) ctx?.Emit((i, _) => new HarvesterQueuedSeen(i, stamp, side, sys));
+            k.HarvesterQueued = harvester;
             if (kind != RevealKind.Setup) k.LastLookDay = stamp; // rule: m5-fog-and-hq §F4 (the day-0 picture is not a look: LastLookDay stays null)
             SetHqHere(know, sys, k, stamp);
         }
@@ -752,6 +755,7 @@ public sealed class FogModule
             case SensorReport x: return Bit(x.Viewer); // rule: §N4 S2 (for the station's owner only)
             case HqSectorClueGiven x: return Bit(x.Viewer);
             case HearthTipGiven x: return Bit(x.Viewer);
+            case HarvesterQueuedSeen x: return Bit(x.Viewer);
             case AgentDetected x: return Bit(x.Viewer);
             case OrderAccepted or OrderRejected: return order != null ? Bit(order.Side) : Both;
             case SystemCaptured c: return (c.From is Side f ? Bit(f) : 0) | (c.To is Side t ? Bit(t) : 0) | LiveMask(c.System);
@@ -798,6 +802,16 @@ public sealed class FogModule
     // ================================================================== truth index (built per call; lookups only)
 
     /// <summary>One pass over fleets and objects, indexed by system, for the writers. Dictionaries are lookups only, never iterated.</summary>
+    /// <summary>The other side has an unfinished harvester in a yard project on the system (any of its orders). rule: §N6b.</summary>
+    private bool HarvesterQueuedAt(Side viewer, string sys)
+    {
+        if (!State.Construction.Projects.TryGetValue(sys, out var byFamily)) return false;
+        foreach (var p in byFamily.Values)
+            if (p.Side != viewer && p.AllUnits().Any(id => State.Economy.Objects.TryGetValue(id, out var o) && o.Class == EconomyModule.HarvesterClass))
+                return true;
+        return false;
+    }
+
     private sealed class Truth
     {
         private readonly FogModule _m;

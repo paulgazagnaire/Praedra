@@ -43,6 +43,9 @@ public sealed record HqSectorClueGiven(int Index, int Day, Side Viewer, string S
 /// <summary>A spy's success also told the side where the Hearth stands (the Hearth tip). Audience: that side only. rule: §N6a.</summary>
 public sealed record HearthTipGiven(int Index, int Day, Side Viewer, string System) : GameEvent(Index, Day, nameof(HearthTipGiven));
 
+/// <summary>A group C write showed the other side building a harvester at the system, where the picture did not show one. Audience: that side. rule: §N6b.</summary>
+public sealed record HarvesterQueuedSeen(int Index, int Day, Side Viewer, string System) : GameEvent(Index, Day, nameof(HarvesterQueuedSeen));
+
 /// <summary>An agent of the other side was detected (from m5-missions' MissionDetected). Audience: the defender. rule: §N7 3.</summary>
 public sealed record AgentDetected(int Index, int Day, Side Viewer, string System, Side AgentSide) : GameEvent(Index, Day, nameof(AgentDetected));
 

@@ -596,6 +596,9 @@ public sealed partial class GameSession
             case HearthTipGiven x: // the core sends it to the spy's side only (rule: m5-fog-and-hq §N6a)
                 yield return new Message(d, $"A spy heard where the Collective headquarters is: {x.System}.", x.System, MsgKind.Good);
                 break;
+            case HarvesterQueuedSeen x: // the seeing side only (rule: m5-fog-and-hq §N6b)
+                yield return new Message(d, $"Spies report a harvester under construction at {x.System}.", x.System, MsgKind.Bad);
+                break;
             case HqSectorClueGiven x: // the spy's side only (rule: m5-fog-and-hq §N6, §N6a)
                 yield return new Message(d, $"A spy heard the Collective headquarters is somewhere in sector {x.Sector}.", null, MsgKind.Good);
                 break;

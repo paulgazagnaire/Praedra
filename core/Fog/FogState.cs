@@ -99,6 +99,12 @@ public sealed class SystemKnowledge
     public SortedDictionary<string, int> Facilities { get; set; } = new(StringComparer.Ordinal);
     /// <summary>Facilities not yet completed (queued production at the system).</summary>
     public int FacilitiesQueued { get; set; }
+    /// <summary>
+    /// The other side had a harvester under construction here (queued, not finished) at the last group C write; same stamp as group C. Left out of
+    /// the saved form while false, so older pictures save and hash as before. rule: m5-fog-and-hq §N6b.
+    /// </summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool HarvesterQueued { get; set; }
     /// <summary>The picture holds the HQ child. Written only by a reveal that writes group C (or by Presence with PresenceRevealsHq). rule: §N5.</summary>
     public bool HqHere { get; set; }
     /// <summary>The day HqHere was last written (by a group C reveal or a Presence with PresenceRevealsHq). KnownHq reports it.</summary>
@@ -124,7 +130,7 @@ public sealed class SystemKnowledge
         Explored = Explored, LastLookDay = LastLookDay,
         StampA = StampA, Populated = Populated, Destroyed = Destroyed, Energy = Energy, Raw = Raw,
         StampB = StampB, Owner = Owner, CollectiveSupport = CollectiveSupport,
-        StampC = StampC, Facilities = new SortedDictionary<string, int>(Facilities, StringComparer.Ordinal), FacilitiesQueued = FacilitiesQueued, HqHere = HqHere, HqStamp = HqStamp,
+        StampC = StampC, Facilities = new SortedDictionary<string, int>(Facilities, StringComparer.Ordinal), FacilitiesQueued = FacilitiesQueued, HarvesterQueued = HarvesterQueued, HqHere = HqHere, HqStamp = HqStamp,
         StampD = StampD, Ground = Ground.Select(g => g.Clone()).ToList(), Characters = Characters?.Select(c => c.Clone()).ToList(),
         StampE = StampE, Fleets = Fleets.Select(f => f.Clone()).ToList(),
     };

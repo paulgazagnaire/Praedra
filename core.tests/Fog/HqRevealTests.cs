@@ -150,6 +150,40 @@ public class HqRevealTests
         Assert.Null(home.Fog.KnownHq(Side.Hand));
     }
 
+    // A queued harvester of the Hand at R1, put straight into the state (the test needs no yard or refined; fog reads only the project).
+    private static void QueueHarvester(FogWorld w, string sys)
+    {
+        var e = w.Game.State.Economy; int id = e.NextObjectId++;
+        e.Objects[id] = new Praedra.Core.Economy.EconObject { Id = id, Category = Praedra.Core.Economy.ObjectCategory.CapitalShip, Class = Praedra.Core.Economy.EconomyModule.HarvesterClass, Side = Side.Hand, System = sys };
+        w.Game.State.Construction.Set(new Praedra.Core.Construction.Project { Side = Side.Hand, System = sys, Family = Praedra.Core.Construction.YardFamily.Shipyard, Destination = sys, Units = { id } });
+    }
+
+    // m5-fog-and-hq HR16
+    [Fact]
+    public void HR16_AGroupCLookShowsAHarvesterUnderConstruction()
+    {
+        var w = new FogWorld();
+        w.InStep(ctx => { QueueHarvester(w, R1); w.Fog.EspionageSuccess(ctx, Side.Collective, R1); });
+        w.Step();
+        Assert.True(w.Pic(Side.Collective, R1)!.HarvesterQueued!.Value);
+        Assert.True(w.Fog.ViewFor(Side.Collective).HarvesterQueued(R1));
+        Assert.Contains(w.EventsFor(Side.Collective), e => e is HarvesterQueuedSeen h && h.System == R1);
+        Assert.DoesNotContain(w.EventsFor(Side.Hand), e => e is HarvesterQueuedSeen);
+        Assert.False(w.Fog.ViewFor(Side.Hand).HarvesterQueued(R1)); // the builder's own picture never flags its own harvester
+
+        // the project is gone; the old picture keeps the flag until the next group C look clears it
+        foreach (var p in w.Game.State.Construction.AllProjects()) w.Game.State.Construction.Remove(p);
+        Assert.True(w.Fog.ViewFor(Side.Collective).HarvesterQueued(R1));
+        Espionage(w, Side.Collective, R1);
+        Assert.False(w.Fog.ViewFor(Side.Collective).HarvesterQueued(R1));
+
+        var off = new FogWorld(new GameSettings { Fog = new FogParams { RevealsHarvesterQueued = false } });
+        off.InStep(ctx => { QueueHarvester(off, R1); off.Fog.EspionageSuccess(ctx, Side.Collective, R1); });
+        off.Step();
+        Assert.False(off.Fog.ViewFor(Side.Collective).HarvesterQueued(R1));
+        Assert.DoesNotContain(off.EventsFor(Side.Collective), e => e is HarvesterQueuedSeen);
+    }
+
     // m5-fog-and-hq HR15
     [Fact]
     public void HR15_HearthTipSectorBandGivesTheSectorClue()
