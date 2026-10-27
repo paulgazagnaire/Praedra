@@ -27,6 +27,8 @@ public sealed class SystemPicture
     /// <summary>Group C: completed facilities by class.</summary>
     public Seen<IReadOnlyDictionary<string, int>>? Facilities => G<IReadOnlyDictionary<string, int>>(_k.StampC, _k.Facilities);
     public bool HqHere => _k.HqHere;
+    /// <summary>Group C: the other side was building a harvester here at that look. rule: m5-fog-and-hq §N6b.</summary>
+    public Seen<bool>? HarvesterQueued => G(_k.StampC, _k.HarvesterQueued);
     /// <summary>The side knows the system was destroyed by the harvester. rule: m5-harvester §2 effect 6.</summary>
     public bool Destroyed => _k.Destroyed;
     /// <summary>Group D: ground forces by side and class.</summary>
@@ -58,6 +60,8 @@ public sealed class KnowledgeView
     public bool Sees(string system) => _fog.Sees(Side, system);
     public bool IsExplored(string system) => _fog.IsExplored(Side, system);
     public SystemPicture? Picture(string system) => _fog.Picture(Side, system);
+    /// <summary>The side's picture of the system showed the other side building a harvester at its last group C write (possibly out of date). rule: §N6b.</summary>
+    public bool HarvesterQueued(string system) => Picture(system)?.HarvesterQueued?.Value == true;
     public IReadOnlyList<(string System, FleetPicture Fleet)> VisibleFleets() => _fog.VisibleFleets(Side);
     public KnownHqInfo? KnownHq => _fog.KnownHq(Side);
     /// <summary>Every character the side's pictures show in group D (system ordinal, then id), with the stamp; stale entries included. rule: §F1 group D, §N8.</summary>

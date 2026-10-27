@@ -38,6 +38,12 @@ public sealed record FogParams
     public bool AgentPresenceCounts { get; init; } = true;
     /// <summary>A recon success writes group C including HqHere. rule: §F2 Recon (Lead).</summary>
     public bool ReconRevealsFacilities { get; init; } = true;
+    /// <summary>
+    /// A reveal that writes group C also tells whether the other side has a harvester under construction there (queued in a yard project, not
+    /// finished). New (Paul 2026-10-27: the Collective goes after a harvester being built); DEFAULT on, off = Classic (Assumed: no Classic
+    /// screen shows queued production of the enemy, not traced). rule: m5-fog-and-hq §N6b.
+    /// </summary>
+    public bool RevealsHarvesterQueued { get; init; } = true;
     /// <summary>A fleet placed at the HQ system reveals it. rule: §N6, Contradictions 1.</summary>
     public bool PresenceRevealsHq { get; init; }
     /// <summary>rule: §N6, Open question 3.</summary>
