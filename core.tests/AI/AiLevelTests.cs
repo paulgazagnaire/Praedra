@@ -24,7 +24,8 @@ public class AiLevelTests
     // measure Medium's Hand, and a Collective without the guerrilla. The Hand never reads the switches.
     // Since 2026-10-26 Medium also plays to win (AiLevels.PlayToWin: the win rush, three times the invasion troops, and since 2026-10-27 the
     // Collective's diplomats after Charter), for both sides.
-    private static readonly string[] Guerrilla = { nameof(SimpleAiParams.SafeHearth), nameof(SimpleAiParams.Underground), nameof(SimpleAiParams.Guerrilla) };
+    // Since 2026-10-27 the guerrilla also hunts a harvester seen in the yard (HarvesterYardValue, QA-58).
+    private static readonly string[] Guerrilla = { nameof(SimpleAiParams.SafeHearth), nameof(SimpleAiParams.Underground), nameof(SimpleAiParams.Guerrilla), nameof(SimpleAiParams.HarvesterYardValue) };
     private static readonly string[] PlayToWin = { nameof(SimpleAiParams.WinRushDefenders), nameof(SimpleAiParams.InvasionRegimentTarget), nameof(SimpleAiParams.TroopCapacityTarget), nameof(SimpleAiParams.AfterCharterDiplomats) };
 
     [Fact]
@@ -33,8 +34,8 @@ public class AiLevelTests
         var d = new SimpleAiParams { UseFog = true }; var m = AiLevels.For(AiLevel.Medium);
         foreach (var prop in typeof(SimpleAiParams).GetProperties().Where(p => !Guerrilla.Contains(p.Name) && !PlayToWin.Contains(p.Name) && (p.PropertyType.IsValueType || p.PropertyType == typeof(double?))))
             Assert.True(Equals(prop.GetValue(d), prop.GetValue(m)), $"{prop.Name}: default {prop.GetValue(d)}, Medium {prop.GetValue(m)}");
-        Assert.True(m.SafeHearth && m.Underground && m.Guerrilla);
-        Assert.False(d.SafeHearth || d.Underground || d.Guerrilla);
+        Assert.True(m.SafeHearth && m.Underground && m.Guerrilla && m.HarvesterYardValue > 0);
+        Assert.False(d.SafeHearth || d.Underground || d.Guerrilla || d.HarvesterYardValue > 0);
         Assert.True(m.WinRushDefenders > d.WinRushDefenders && m.InvasionRegimentTarget > d.InvasionRegimentTarget && m.TroopCapacityTarget > d.TroopCapacityTarget && m.AfterCharterDiplomats > d.MaxDiplomats);
     }
 
@@ -73,7 +74,7 @@ public class AiLevelTests
     {
         var b = new SimpleAiParams { UseFog = true, UseHarvester = false };
         Assert.False(AiLevels.For(AiLevel.Easy, b).UseHarvester);
-        Assert.Equal(b with { SafeHearth = true, Underground = true, Guerrilla = true, WinRushDefenders = 20, InvasionRegimentTarget = 30, TroopCapacityTarget = 36, AfterCharterDiplomats = 8 }, AiLevels.For(AiLevel.Medium, b));
+        Assert.Equal(b with { SafeHearth = true, Underground = true, Guerrilla = true, HarvesterYardValue = 2000, WinRushDefenders = 20, InvasionRegimentTarget = 30, TroopCapacityTarget = 36, AfterCharterDiplomats = 8 }, AiLevels.For(AiLevel.Medium, b));
     }
 
     [Theory]

@@ -157,6 +157,36 @@ public sealed partial class SimpleAi
         return list;
     }
 
+    /// <summary>
+    /// HarvesterYardValue: Hand worlds where the side sees a harvester under construction: with fog, a HarvesterQueued picture at most
+    /// HarvesterBuildSeenDays old (m5-fog-and-hq §N6b); without fog, the enemy's shipyard projects. Ordinal order.
+    /// </summary>
+    private List<string> HarvesterBuildSeenAt()
+    {
+        var list = new List<string>();
+        foreach (var sys in _h.Data.Galaxy.Systems.OrderBy(x => x.Name, StringComparer.Ordinal))
+        {
+            string s = sys.Name;
+            bool seen;
+            if (_view == null)
+                seen = _h.Construction.ProjectAt(s, YardFamily.Shipyard) is { } p && p.Side == Enemy
+                    && p.AllUnits().Any(id => _h.Economy.Find(id)?.Class == Praedra.Core.Economy.EconomyModule.HarvesterClass);
+            else seen = _view.Picture(s)?.HarvesterQueued is { Value: true } q && AgeOf(q) <= _p.HarvesterBuildSeenDays;
+            if (seen && IsEnemyHeld(s)) list.Add(s);
+        }
+        return list;
+    }
+
+    /// <summary>Completed shipyards (both kinds) at a system: the truth without fog, group C of the picture with fog.</summary>
+    private int ShipyardsSeenAt(string system)
+    {
+        static bool IsShipyard(string cls) => FacilityKinds.TryParse(cls, out var k) && FacilityKinds.IsYard(k) && Yards.FamilyOf(k) == YardFamily.Shipyard;
+        if (_view == null) return _h.Economy.Objects.Count(o => o.Completed && o.Category == ObjectCategory.Facility && o.System == system && IsShipyard(o.Class));
+        return _view.Picture(system)?.Facilities?.Value.Where(kv => IsShipyard(kv.Key)).Sum(kv => kv.Value) ?? 0;
+    }
+
+    private bool HarvesterYardHuntOn => _p.HarvesterYardValue > 0 && _side == Side.Collective;
+
     /// <summary>The Collective's own Hearth world (its own object: m5-fog-and-hq §N5, the Collective always knows it); null for the Hand or when none.</summary>
     private string? OwnHearth() => _side == Side.Collective ? _h.HqSystem : null;
 

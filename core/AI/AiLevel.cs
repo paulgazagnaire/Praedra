@@ -37,7 +37,10 @@ public static class AiLevels
             // switches are Collective-only (both sides play to win, PlayToWin below). Medium Hand against the Collective, 96 seeds (1-96), day 3000, fog, Hand / Collective / no winner,
             // on main 9a594a9 (the Hearth flees, #176): the old Medium (all three off) 83 / 5 / 8; Easy here 94 / 0 / 2; Medium here 28 / 36 / 32
             // (without SafeHearth 33 / 27 / 36); Hard here 13 / 58 / 25. Notes: specs/engine/ai-notes/2026-10-26-guerrilla-collective.md.
-            AiLevel.Medium => PlayToWin(p) with { SafeHearth = true, Underground = true, Guerrilla = true },
+            // AI trainer 2026-10-27 (QA-58; Paul: the Collective goes after a harvester being built): HarvesterYardValue 2000 at Medium and Hard.
+            // 96 seeds against a Hand that builds harvesters (scratch: upkeep once built, 4x build, 8 yards): 18 harvesters spiked in the yard
+            // (0 without), sightings 43 vs 35, Hand / Collective / open 17 / 55 / 24 vs 18 / 53 / 25; Medium mirror 27 / 43 / 26 vs 29 / 43 / 24.
+            AiLevel.Medium => PlayToWin(p) with { SafeHearth = true, Underground = true, Guerrilla = true, HarvesterYardValue = HarvesterYardHunt },
             // AI trainer 2026-10-17 (sim tourney, 16 seeds x both sides, Medium against Medium plus one change; a placebo change scored 55%, so
             // only a gap well above that counts): a military review every day (Medium every 3) took 63% of the systems, the one clear win of 15
             // tried. Probe speculators on the HQ hunt found the Hearth in 13 of 16 games against 8 for Medium without costing systems (51%); kept
@@ -49,11 +52,14 @@ public static class AiLevels
             AiLevel.Hard => PlayToWin(p) with
             {
                 MilitaryEvery = 1, HuntSpeculators = 8, SafeHearth = true, Underground = true, Guerrilla = true,
-                UndergroundForcesWanted = 20, UndergroundSubversion = 10, WatchLooks = 4, RaidStrikes = 3,
+                UndergroundForcesWanted = 20, UndergroundSubversion = 10, WatchLooks = 4, RaidStrikes = 3, HarvesterYardValue = HarvesterYardHunt,
             },
             _ => p,
         };
     }
+
+    /// <summary>HarvesterYardValue at Medium and Hard (AI trainer 2026-10-27, QA-58): a Spike team at a harvester in the yard, below a finished harvester (SpikeValue 3000), above any other mission.</summary>
+    private const int HarvesterYardHunt = 2000;
 
     /// <summary>
     /// Play to win (AI trainer 2026-10-26, QA-56; Paul 2026-10-26: "long, unending wars are no fun, make the AI play to win"). Both sides, Medium

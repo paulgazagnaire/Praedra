@@ -702,10 +702,12 @@ public sealed partial class SimpleAi
         bool search = HqSearchOn && strength >= _p.WinStrikeStrength;
         bool finishing = Finishing();
         bool blind = BlindOn();
+        var harvesterYards = HarvesterYardHuntOn ? HarvesterBuildSeenAt().ToHashSet(StringComparer.Ordinal) : null; // lookups only
         foreach (var sys in g.Systems)
         {
             string s = sys.Name;
             if (s == from || Held(s) || BouncedOff(s) || Destroyed(s)) continue;
+            bool isYard = harvesterYards != null && harvesterYards.Contains(s);
             bool isWin = s == win && strength >= _p.WinStrikeStrength;
             if (_tfClaims != null && !isWin && _tfClaims.Contains(s)) continue; // task forces: another pile of the group took it on
             // fog, blind hunt (QA-19): the picture shows no enemy system, so a system not looked at for long is worth a visit
@@ -716,7 +718,7 @@ public sealed partial class SimpleAi
             int reach = seenEnemy ? Math.Max(_p.TargetHops, _p.FogEnemyTargetHops) : _p.TargetHops;
             int belief = search && seenEnemy ? Belief(s) : 0;
             bool isSearch = belief > 0;
-            if (hops[sys.Index] > reach + 1 && !isWin && !isSearch && !isBlind) continue;
+            if (hops[sys.Index] > reach + 1 && !isWin && !isSearch && !isBlind && !isYard) continue;
             int ticks = _view != null ? TicksCached(from, s, speed) : Ticks(from, s, speed);
             if (ticks == int.MaxValue) continue;
             var enemies = TargetFleetsAt(s);
@@ -754,8 +756,9 @@ public sealed partial class SimpleAi
                 }
             }
             // guerrilla raid: a world it cannot take, shelled for its civilian targets (m3-bombardment §3 Civilian)
-            if (hops[sys.Index] <= reach && RaidTarget(s, canBombard))
-                score = Math.Max(score, (long)_p.RaidValuePerFacility * FacilitiesAt(s) * 1000 / (ticks + 20));
+            // HarvesterYardValue: a harvester seen under construction is raided at any distance, its value on top
+            if ((hops[sys.Index] <= reach || isYard) && RaidTarget(s, canBombard))
+                score = Math.Max(score, ((long)_p.RaidValuePerFacility * FacilitiesAt(s) + (isYard ? _p.HarvesterYardValue : 0)) * 1000 / (ticks + 20));
             if (score > 0) scored.Add((s, score));
         }
         if (scored.Count == 0) return null;
