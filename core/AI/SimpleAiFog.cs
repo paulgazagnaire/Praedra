@@ -548,10 +548,11 @@ public sealed partial class SimpleAi
         }
         // SafeHearth (QA-54): with Hand warships close (risk at HqMoveRisk; scouts weigh HearthScoutRiskPercent) and no world safe enough, the
         // Hearth takes the least-short refuge rather than stay to be shelled and assaulted
-        if (best == null && _p.SafeHearth && risk.GetValueOrDefault(at) >= _p.HqMoveRisk) best = refuge;
+        bool toRefuge = best == null && _p.SafeHearth && risk.GetValueOrDefault(at) >= _p.HqMoveRisk;
+        if (toRefuge) best = refuge;
         if (best == null) return;
         long seq = _h.Fog.SubmitMoveHq(_side, best);
-        Note(seq, "MoveHq", $"HQ {at} -> {best} (risk {risk.GetValueOrDefault(at)})");
+        Note(seq, "MoveHq", $"HQ {at} -> {best} (risk {risk.GetValueOrDefault(at)}{(toRefuge ? ", refuge" : "")})");
     }
 
     // ================================================================== missions behind the fog (m6 AI: ai/05 §7b, missions/08)

@@ -18,7 +18,8 @@ public class SimpleAiGuerrillaTests
     private readonly ITestOutputHelper _out;
     public SimpleAiGuerrillaTests(ITestOutputHelper o) { _out = o; }
 
-    private static readonly SimpleAiParams Medium = AiLevels.For(AiLevel.Medium);
+    // play to win (AiLevels.PlayToWin, 2026-10-26) off: the floors below were measured before it, and it moves every seed
+    private static readonly SimpleAiParams Medium = MultiSeed.WithoutPlayToWin(AiLevels.For(AiLevel.Medium));
     private static readonly SimpleAiParams Old = Medium with { SafeHearth = false, Underground = false, Guerrilla = false };
 
     [Fact]
@@ -46,8 +47,9 @@ public class SimpleAiGuerrillaTests
             m.Step();
             raids += m.Collective.Submitted.Count(o => o.Kind == "Raid");
             // a move the AI ordered onto a world with fewer regiments than SafeHearth asks (counted on the day it leaves); a flight from a lost
-            // world is the core's own move (m5-fog-and-hq §F7 Flee, to the nearest Collective system), not the AI's choice
-            bool ordered = m.Collective.Submitted.Any(o => o.Kind == "MoveHq");
+            // world is the core's own move (m5-fog-and-hq §F7 Flee, to the nearest Collective system), not the AI's choice; nor is a flight to the
+            // least-short refuge with Hand warships close and no safe world (QA-54, tested below)
+            bool ordered = m.Collective.Submitted.Any(o => o.Kind == "MoveHq" && !o.Detail.Contains("refuge"));
             for (; seen < h.Game.Events.Count; seen++)
                 if (ordered && h.Game.Events[seen] is HqDeparted d && h.Support.RegimentCount(d.Path.Items[^1]) < collective.HearthMinRegiments) badMoves++;
         }
@@ -79,7 +81,8 @@ public class SimpleAiGuerrillaTests
     // QA-54 (QA round 86): on main 47031bb SafeHearth pinned the Hearth on its start world, the one world with enough regiments, so it never
     // left and an assault took it with the Hand blind: Hand Hard against the Medium Collective seed 13 (captured day 284), Medium mirror seeds
     // 14 and 10 (days 247 and 472), each with 0 moves. With Hand warships close and no safe world the Hearth now takes the least-short refuge:
-    // measured alive at day 600 in all three, after 1, 2 and 2 moves. Floor: none captured by day 600 without having moved.
+    // measured alive at day 600 in all three, after 1, 2 and 2 moves; with the Hand playing to win (AiLevels.PlayToWin) after 1, 0 and 3 moves.
+    // Floor: none captured by day 600 without having moved.
     [Fact]
     public void SafeHearth_LeavesForARefugeWhenWarshipsCloseAndNoWorldIsSafe()
     {
