@@ -50,6 +50,13 @@ public sealed record HarvesterParams
     /// </summary>
     public int? Upkeep { get; init; } = 450;
 
+    /// <summary>
+    /// Spike the Harvester also targets a harvester still being built: legal when the other side has one unfinished in a yard project at the system,
+    /// and a success with no finished harvester there destroys it (no refund, progress lost). New, Decided (Paul 2026-10-27, "Spike it in the yard");
+    /// DEFAULT on, off = Classic (only a finished harvester). rule: m5-harvester §5 (Spike in the yard).
+    /// </summary>
+    public bool SpikeInYard { get; init; } = true;
+
     /// <summary>Throw <see cref="RuleMissingException"/> for every switch value the sheet refuses. rule: m5-harvester §4 (TrenchRun: no code until a rule exists).</summary>
     public void Validate()
     {

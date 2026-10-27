@@ -350,6 +350,48 @@ public sealed class ConstructionModule
             }
     }
 
+    /// <summary>The first unfinished unit of class <paramref name="cls"/> in <paramref name="owner"/>'s projects on the system (family id order, then build order), or null. rule: m5-harvester §5 (Spike in the yard).</summary>
+    public int? QueuedUnitOf(Side owner, string system, string cls)
+    {
+        if (!C.Projects.TryGetValue(system, out var by)) return null;
+        foreach (var p in by.Values)
+            if (p.Side == owner)
+                foreach (int id in p.AllUnits())
+                    if (E.Objects.TryGetValue(id, out var o) && o.Class == cls) return id;
+        return null;
+    }
+
+    /// <summary>
+    /// Sabotage removes one unfinished unit from its project: no refund, its maintenance (and any slot reservation) leaves at once; if it was the
+    /// current unit, its progress is lost and the yards go on with the next unit. An order left empty is dropped; the last unit of a project
+    /// cancels the project as a stop does (<see cref="ProjectCancelled"/> with the reason). Otherwise <see cref="UnitRemoved"/>.
+    /// rule: m5-harvester §5 (Spike in the yard); m2-construction §Projects and queues.
+    /// </summary>
+    public void RemoveQueuedUnit(StepContext ctx, int id, string reason)
+    {
+        var p = C.AllProjects().FirstOrDefault(x => x.AllUnits().Contains(id));
+        if (p == null) return;
+        int day = ctx.Day + 1;
+        if (p.AllUnits().Count() == 1) { CancelProject(ctx, day, p, reason); return; }
+        int at = p.Units.IndexOf(id);
+        if (at >= 0)
+        {
+            p.Units.RemoveAt(at);
+            if (at == 0) p.Progress = 0;
+            if (p.Units.Count == 0) { var next = p.Next!; p.Units = next[0].Units; p.Destination = next[0].Destination; next.RemoveAt(0); if (next.Count == 0) p.Next = null; }
+        }
+        else
+        {
+            var later = p.Next!;
+            var q = later.First(o => o.Units.Contains(id));
+            q.Units.Remove(id);
+            if (q.Units.Count == 0) { later.Remove(q); if (later.Count == 0) p.Next = null; }
+        }
+        _eco.RemoveObject(id);
+        var side = p.Side; string sys = p.System; var fam = p.Family;
+        ctx.Emit((i, _) => new UnitRemoved(i, day, side, sys, fam, id, reason));
+    }
+
     /// <summary>True if the object is a unit of a project or is travelling as a delivery: construction owns it and decides its fate.</summary>
     public bool OwnsObject(int objectId) =>
         C.Deliveries.Values.Any(d => d.Object == objectId) || C.AllProjects().Any(p => p.AllUnits().Contains(objectId));
