@@ -801,7 +801,6 @@ public sealed class FogModule
 
     // ================================================================== truth index (built per call; lookups only)
 
-    /// <summary>One pass over fleets and objects, indexed by system, for the writers. Dictionaries are lookups only, never iterated.</summary>
     /// <summary>The other side has an unfinished harvester in a yard project on the system (any of its orders). rule: §N6b.</summary>
     private bool HarvesterQueuedAt(Side viewer, string sys)
     {
@@ -812,6 +811,7 @@ public sealed class FogModule
         return false;
     }
 
+    /// <summary>One pass over fleets and objects, indexed by system, for the writers. Dictionaries are lookups only, never iterated.</summary>
     private sealed class Truth
     {
         private readonly FogModule _m;
