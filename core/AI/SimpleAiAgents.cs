@@ -578,7 +578,7 @@ public sealed partial class SimpleAi
     /// Most diplomats out at once: MaxDiplomats, and for the Collective holding Charter at least AfterCharterDiplomats (its fresh conquests need
     /// their people won over to free their garrisons, m2-uprisings-and-garrison §Required garrison N).
     /// </summary>
-    private int DiplomatsWanted() =>
+    internal int DiplomatsWanted() =>
         _side == Side.Collective && Held(Praedra.Core.Control.ControlModule.CapitalSystem) ? Math.Max(_p.MaxDiplomats, _p.AfterCharterDiplomats) : _p.MaxDiplomats;
 
     private static bool Repeats(MissionKind k) => k is MissionKind.Diplomacy or MissionKind.SubdueUprising or MissionKind.InciteUprising
