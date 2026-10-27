@@ -13,11 +13,11 @@ public sealed record ProjectStarted(int Index, int Day, Side Side, string System
 public sealed record ProjectCancelled(int Index, int Day, Side Side, string System, YardFamily Family, string Reason, ValueList<int> Units)
     : GameEvent(Index, Day, nameof(ProjectCancelled));
 
-/// <summary>Slot 6.6.b. A yard found no refined and joined its side's refined line.</summary>
 /// <summary>One unfinished unit left its project (sabotage); the project goes on. rule: m5-harvester §5 (Spike in the yard).</summary>
 public sealed record UnitRemoved(int Index, int Day, Side Side, string System, YardFamily Family, int Object, string Reason)
     : GameEvent(Index, Day, nameof(UnitRemoved));
 
+/// <summary>Slot 6.6.b. A yard found no refined and joined its side's refined line.</summary>
 public sealed record YardWaiting(int Index, int Day, int Yard, string System, Side Side)
     : GameEvent(Index, Day, nameof(YardWaiting));
 
