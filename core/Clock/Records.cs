@@ -80,6 +80,7 @@ public sealed record DebugSetSupportOrder(long Sequence, Side Side, string Syste
 /// <paramref name="TroopSide"/> (every other one there is removed); control follows (B5a section 9). For tests and tools only.
 /// </summary>
 public sealed record DebugSetTroopsOrder(long Sequence, Side Side, string System, Side TroopSide, string RegimentClass, int Count) : Order(Sequence, Side);
+/// <summary>
 /// Build facilities, ships, fighters, regiments or special forces at a yard of the given family. Destination null = the yard's
 /// own system (a facility needs one). Checked in step 1. rule: m2-construction §Build order. The handler lives in
 /// Praedra.Core.Construction.ConstructionModule. Item is a class name of unit-and-facility-costs.csv (DEFAULT: the sheet says (kind, id)).
