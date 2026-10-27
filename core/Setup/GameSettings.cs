@@ -116,7 +116,7 @@ public sealed record GameSettings
     public BombardParams? Bombard { get; init; }
 
     // ---- the harvester. rule: m5-harvester §Interfaces, §2, §4
-    /// <summary>harvester switches and numbers (cap per system, ShieldBlocksDestroy, TrenchRun, sector penalty). Null = the sheet's DEFAULTs. Refused values throw at attach.</summary>
+    /// <summary>harvester switches and numbers (cap per system, TrenchRun, sector penalty). Null = the sheet's DEFAULTs. Refused values throw at attach.</summary>
     public Praedra.Core.Harvester.HarvesterParams? Harvester { get; init; }
 
     // ---- assault. rule: m3-assault §Defaults for undecided items

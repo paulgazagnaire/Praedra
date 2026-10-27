@@ -18,3 +18,10 @@ jobs:
       - run: dotnet test Praedra.sln --no-build -c Release --logger "console;verbosity=normal"
       # The Godot front end is not in Praedra.sln; build it too so a core API change can't silently break the playable game (QA-23).
       - run: dotnet build godot/PraedraViewer.csproj -c Release
+      # Doc comments, warnings only (Ponytail): the XML-doc compiler warnings, and any member carrying two <summary> blocks, which is a doc
+      # comment left behind when code was inserted above its member (the compiler merges both silently). Never fails the run.
+      - name: doc comments (warnings only)
+        continue-on-error: true
+        run: |
+          dotnet build core/Praedra.Core.csproj -c Release --no-incremental -p:GenerateDocumentationFile=true -p:TreatWarningsAsErrors=false "-p:NoWarn=CS1591%3BCS1573" -o "$RUNNER_TEMP/doccheck"
+          python3 tools/doc-check/doc_check.py "$RUNNER_TEMP/doccheck/Praedra.Core.xml" core

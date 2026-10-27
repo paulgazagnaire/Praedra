@@ -142,10 +142,6 @@ public sealed partial class CharacterModule
         ctx.Emit((i, _) => new HeritageLearned(i, day, id, side));
     }
 
-    /// <summary>
-    /// Raise one skill (m5-missions: a successful research member gains GNPRTB 6158 = 1 in that research skill; Classic's character-side check
-    /// before the gain is Missing, so no cap). Not the refused SkillGrowth switch (growth outside research missions). rule: m5-missions §6 Research.
-    /// </summary>
     /// <summary>The original's side numbers (1 = Collective, 2 = Hand, 3 = neutral). rule: m5-characters-and-talent §Loyalty (B2b §4).</summary>
     public const int SideNumberCollective = 1, SideNumberHand = 2;
     /// <summary>Loyalty bounds (0x53e0d0 with 0x661a84 = 0 and 0x661a88 = 100). Traced B2b.</summary>
@@ -176,5 +172,9 @@ public sealed partial class CharacterModule
         }
     }
 
+    /// <summary>
+    /// Raise one skill (m5-missions: a successful research member gains GNPRTB 6158 = 1 in that research skill; Classic's character-side check
+    /// before the gain is Missing, so no cap). Not the refused SkillGrowth switch (growth outside research missions). rule: m5-missions §6 Research.
+    /// </summary>
     public void GainSkill(CharacterRecord c, Skill skill, int amount) => c.Skills[(int)skill] += amount;
 }

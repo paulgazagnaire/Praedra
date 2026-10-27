@@ -178,7 +178,7 @@ public sealed class HarvesterModule
 
     /// <summary>
     /// The legality list, in the sheet's order; null = all hold. Run at step 1 (<paramref name="atOrder"/> adds the pending check) and again at slot 5.1.
-    /// No ownership, shield (unless <see cref="HarvesterParams.ShieldBlocksDestroy"/>) or neutrality check, and enemy fleets present never block it.
+    /// No ownership, shield or neutrality check, and enemy fleets present never block it.
     /// rule: m5-harvester §2 Legality 1 to 6.
     /// </summary>
     private string? Check(Side side, int fleetId, bool atOrder)
