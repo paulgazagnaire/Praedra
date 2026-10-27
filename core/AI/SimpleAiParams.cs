@@ -469,6 +469,12 @@ public sealed record SimpleAiParams
     public int DiplomacyHops { get; init; } = 1;
     /// <summary>Most diplomats out at once. DEFAULT.</summary>
     public int MaxDiplomats { get; init; } = 3;
+    /// <summary>
+    /// The Collective holding Charter keeps up to this many diplomats out (MaxDiplomats otherwise). AI trainer 2026-10-27 (slow wars): after
+    /// Charter falls, each world the Collective takes needs a garrison of about four (its people back the Hand), so its regiments all stand in
+    /// garrisons; Medium mirror seed 16 held 85 worlds against 150 for years. 0 = MaxDiplomats always (DEFAULT; Medium and Hard: 8).
+    /// </summary>
+    public int AfterCharterDiplomats { get; init; }
     /// <summary>Lowest skill sent per kind (ai/05 §4: Classic's floors are diplomacy 69, incite/subdue 49, combat kinds 51, research 10). DEFAULT.</summary>
     public int DiplomacyMinSkill { get; init; } = 60;
     public int LeadershipMinSkill { get; init; } = 49;

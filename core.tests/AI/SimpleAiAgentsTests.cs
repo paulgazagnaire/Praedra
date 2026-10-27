@@ -456,5 +456,24 @@ public class SimpleAiAgentsTests
         Assert.Equal(Math.Min(v0, capV), v1);
         Assert.True(e0 > capE && e1 < new SimpleAiParams().MissionMinOddsPercent, $"Chair {e0} -> {e1}");
     }
-}
 
+    // AfterCharterDiplomats (AI trainer 2026-10-27, slow wars): the Collective holding Charter keeps up to that many diplomats out (the cap the
+    // mission planner applies), MaxDiplomats otherwise; the Hand never reads it. Seed 1 at setup, Charter given to the Collective or left to the
+    // Hand (FleetModule.SetOwner). rule: ai tuning, SimpleAiParams.AfterCharterDiplomats.
+    [Fact]
+    public void AfterCharterDiplomats_MoreDiplomatsOnlyWhileTheCollectiveHoldsCharter()
+    {
+        int Wanted(Side side, int after, bool collectiveHoldsCharter)
+        {
+            var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA });
+            if (collectiveHoldsCharter) h.Fleets.SetOwner(Praedra.Core.Control.ControlModule.CapitalSystem, Side.Collective);
+            return new SimpleAi(h, side, AiLevels.For(AiLevel.Medium) with { AfterCharterDiplomats = after }).DiplomatsWanted();
+        }
+        int max = new SimpleAiParams().MaxDiplomats;
+        Assert.Equal(8, Wanted(Side.Collective, 8, true));
+        Assert.Equal(max, Wanted(Side.Collective, 8, false));
+        Assert.Equal(max, Wanted(Side.Collective, 0, true));
+        Assert.Equal(max, Wanted(Side.Hand, 8, false));
+        Assert.Equal(8, AiLevels.For(AiLevel.Medium).AfterCharterDiplomats);
+    }
+}

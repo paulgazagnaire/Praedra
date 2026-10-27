@@ -374,7 +374,7 @@ public sealed partial class SimpleAi
                      .ThenBy(p => p.J.Kind).ThenBy(p => p.J.System, StringComparer.Ordinal))
         {
             if ((c != null ? usedChar.Contains(c.Id) : usedSf.Contains(f!.Id)) || usedGroup.Contains(j.Group)) continue;
-            if (j.Kind == MissionKind.Diplomacy && diplomats >= _p.MaxDiplomats) continue;
+            if (j.Kind == MissionKind.Diplomacy && diplomats >= DiplomatsWanted()) continue;
             if (j.Kind is MissionKind.InciteUprising or MissionKind.Sabotage && subversion >= MaxSubversion) continue;
             var job = j;
             var chars = c != null ? new List<int> { c.Id } : new List<int>();
@@ -573,6 +573,13 @@ public sealed partial class SimpleAi
         if (_p.VictoryKeyValue > 0 && IsVictoryKey(id) && KeyAhead()) return _p.VictoryKeyValue;
         return _p.AbductionValue * (_h.Characters.Data.Get(id).Kind == CharacterKind.Major ? 2 : 1);
     }
+
+    /// <summary>
+    /// Most diplomats out at once: MaxDiplomats, and for the Collective holding Charter at least AfterCharterDiplomats (its fresh conquests need
+    /// their people won over to free their garrisons, m2-uprisings-and-garrison §Required garrison N).
+    /// </summary>
+    internal int DiplomatsWanted() =>
+        _side == Side.Collective && Held(Praedra.Core.Control.ControlModule.CapitalSystem) ? Math.Max(_p.MaxDiplomats, _p.AfterCharterDiplomats) : _p.MaxDiplomats;
 
     private static bool Repeats(MissionKind k) => k is MissionKind.Diplomacy or MissionKind.SubdueUprising or MissionKind.InciteUprising
         or MissionKind.ShipResearch or MissionKind.TroopResearch or MissionKind.FacilityResearch;

@@ -22,9 +22,10 @@ public class AiLevelTests
     // ai/09 §6: Medium is the SimpleAiParams defaults with fog on, plus the Collective's guerrilla switches (AI trainer 2026-10-26, Paul: Medium
     // is balanced). The switches are DEFAULT off so the play tests pinned on the default params keep measuring what they measured; so those tests
     // measure Medium's Hand, and a Collective without the guerrilla. The Hand never reads the switches.
-    // Since 2026-10-26 Medium also plays to win (AiLevels.PlayToWin: the win rush and three times the invasion troops), for both sides.
+    // Since 2026-10-26 Medium also plays to win (AiLevels.PlayToWin: the win rush, three times the invasion troops, and since 2026-10-27 the
+    // Collective's diplomats after Charter), for both sides.
     private static readonly string[] Guerrilla = { nameof(SimpleAiParams.SafeHearth), nameof(SimpleAiParams.Underground), nameof(SimpleAiParams.Guerrilla) };
-    private static readonly string[] PlayToWin = { nameof(SimpleAiParams.WinRushDefenders), nameof(SimpleAiParams.InvasionRegimentTarget), nameof(SimpleAiParams.TroopCapacityTarget) };
+    private static readonly string[] PlayToWin = { nameof(SimpleAiParams.WinRushDefenders), nameof(SimpleAiParams.InvasionRegimentTarget), nameof(SimpleAiParams.TroopCapacityTarget), nameof(SimpleAiParams.AfterCharterDiplomats) };
 
     [Fact]
     public void Medium_IsTheDefaultAiPlayingToWinPlusTheGuerrilla()
@@ -34,7 +35,7 @@ public class AiLevelTests
             Assert.True(Equals(prop.GetValue(d), prop.GetValue(m)), $"{prop.Name}: default {prop.GetValue(d)}, Medium {prop.GetValue(m)}");
         Assert.True(m.SafeHearth && m.Underground && m.Guerrilla);
         Assert.False(d.SafeHearth || d.Underground || d.Guerrilla);
-        Assert.True(m.WinRushDefenders > d.WinRushDefenders && m.InvasionRegimentTarget > d.InvasionRegimentTarget && m.TroopCapacityTarget > d.TroopCapacityTarget);
+        Assert.True(m.WinRushDefenders > d.WinRushDefenders && m.InvasionRegimentTarget > d.InvasionRegimentTarget && m.TroopCapacityTarget > d.TroopCapacityTarget && m.AfterCharterDiplomats > d.MaxDiplomats);
     }
 
     // ai/09 §6 Easy column: slower reviews, pick noise, one offensive at a time, fewer scouts and spies; nothing that changes the rules or the view.
@@ -72,7 +73,7 @@ public class AiLevelTests
     {
         var b = new SimpleAiParams { UseFog = true, UseHarvester = false };
         Assert.False(AiLevels.For(AiLevel.Easy, b).UseHarvester);
-        Assert.Equal(b with { SafeHearth = true, Underground = true, Guerrilla = true, WinRushDefenders = 20, InvasionRegimentTarget = 30, TroopCapacityTarget = 36 }, AiLevels.For(AiLevel.Medium, b));
+        Assert.Equal(b with { SafeHearth = true, Underground = true, Guerrilla = true, WinRushDefenders = 20, InvasionRegimentTarget = 30, TroopCapacityTarget = 36, AfterCharterDiplomats = 8 }, AiLevels.For(AiLevel.Medium, b));
     }
 
     [Theory]

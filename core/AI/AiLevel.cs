@@ -62,8 +62,11 @@ public static class AiLevels
     /// ships ready: a taken world needs its garrison, so a side that had won the war took four worlds per 250 days. Medium against Medium,
     /// 96 seeds, day 3000, fog, Hand / Collective / no winner, on 30ac893: seeds 1-96 20 / 34 / 42 before, 30 / 33 / 33 with these; seeds
     /// 97-192 19 / 34 / 43 before, 25 / 34 / 37 with these. Medium Hand against the Hard Collective (seeds 1-96): 11 / 60 / 25.
+    /// AI trainer 2026-10-27 (slow wars): the Collective holding Charter keeps 8 diplomats out (AfterCharterDiplomats) to win over the people of
+    /// its fresh conquests, whose garrisons hold all its regiments. On main 0829865, seeds 1-96: 30 / 33 / 33 before, 29 / 43 / 24 with it (16
+    /// diplomats: 29 / 42 / 25; 8 diplomats all game long: 16 / 48 / 32, the Collective stronger but the wars no shorter).
     /// </summary>
-    private static SimpleAiParams PlayToWin(SimpleAiParams p) => p with { WinRushDefenders = 20, InvasionRegimentTarget = 30, TroopCapacityTarget = 36 };
+    private static SimpleAiParams PlayToWin(SimpleAiParams p) => p with { WinRushDefenders = 20, InvasionRegimentTarget = 30, TroopCapacityTarget = 36, AfterCharterDiplomats = 8 };
 
     /// <summary>The level named by a word (easy, medium, normal, hard; any case), or null.</summary>
     public static AiLevel? Parse(string? word) => word?.Trim().ToLowerInvariant() switch
