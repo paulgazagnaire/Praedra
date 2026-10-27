@@ -25,7 +25,7 @@ public static class HarvesterReject
 /// <summary>A harvester was completed (or delivered) and stands at <see cref="System"/>. Both sides. rule: m5-harvester §1 ("New harvester Deployed").</summary>
 public sealed record HarvesterDeployed(int Index, int Day, Side Side, int Ship, string System) : GameEvent(Index, Day, nameof(HarvesterDeployed)), IHarvesterEvent;
 
-/// <summary>A harvester left the game. Cause is "Battle" (normal ship loss), "Sabotage" (Spike the Harvester) or "Harvester" (it stood at a system another harvester destroyed). Both sides. rule: m5-harvester §4, §5.</summary>
+/// <summary>A harvester left the game. Cause is "Battle" (normal ship loss), "Sabotage" (Spike the Harvester), "SabotageInYard" (Spike the Harvester on one still being built, §5) or "Harvester" (it stood at a system another harvester destroyed). Both sides. rule: m5-harvester §4, §5.</summary>
 public sealed record HarvesterDestroyed(int Index, int Day, Side Side, int Ship, string? System, string Cause) : GameEvent(Index, Day, nameof(HarvesterDestroyed)), IHarvesterEvent;
 
 /// <summary>Slot 5.1: an accepted Destroy System no longer held when its turn came. No other change, no draw. Reason as for a rejection. rule: m5-harvester §2.</summary>

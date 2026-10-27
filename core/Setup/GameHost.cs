@@ -214,7 +214,7 @@ public sealed class GameHost
         Harvester.CharacterRoll = Characters.HarvesterStrike;
         Harvester.CharacterRelocate = Characters.HarvesterRelocate;
         Harvester.FogNotice = Fog.OnSystemDestroyed;
-        Missions.HasHarvester = Harvester.HasHarvester;
+        Missions.HasHarvester = Harvester.IsSpikeTarget; // a finished harvester, or one in the yards (m5-harvester §5 SpikeInYard)
         Missions.DestroyHarvester = Harvester.Destroy;
         Victory = Praedra.Core.Victory.VictoryModule.Attach(game, settings.Victory); // slot 6.11, the last day-end slot; must stay last
         Victory.Keys = data.Characters.VictoryKeys;

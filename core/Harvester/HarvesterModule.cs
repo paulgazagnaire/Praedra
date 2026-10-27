@@ -93,6 +93,13 @@ public sealed class HarvesterModule
     public bool HasHarvester(Side owner, string system) =>
         _fleets.FleetsAt(system).Any(f => f.Side == owner && HarvestersIn(f).Any());
 
+    /// <summary>
+    /// The Spike the Harvester target test: a completed harvester of <paramref name="owner"/> at the system, or (with <see cref="HarvesterParams.SpikeInYard"/>)
+    /// an unfinished one in its yard projects there. Wired to <see cref="Missions.MissionModule.HasHarvester"/>. rule: m5-harvester §5.
+    /// </summary>
+    public bool IsSpikeTarget(Side owner, string system) =>
+        HasHarvester(owner, system) || (Params.SpikeInYard && _construction.QueuedUnitOf(owner, system, ShipClass) != null);
+
     // ================================================================== building it (§1)
 
     /// <summary>
@@ -140,7 +147,17 @@ public sealed class HarvesterModule
     public void Destroy(StepContext ctx, string system, Side owner)
     {
         var ship = _fleets.FleetsAt(system).Where(f => f.Side == owner).SelectMany(HarvestersIn).OrderBy(o => o.Id).FirstOrDefault();
-        if (ship == null) return;
+        if (ship == null)
+        {
+            // rule: m5-harvester §5 (Spike in the yard): no finished one here, so the first unfinished one in the yards goes, cause SabotageInYard
+            if (Params.SpikeInYard && _construction.QueuedUnitOf(owner, system, ShipClass) is int queued)
+            {
+                _construction.RemoveQueuedUnit(ctx, queued, "Sabotage");
+                int day = ctx.Day + 1;
+                ctx.Emit((i, _) => new HarvesterDestroyed(i, day, owner, queued, system, "SabotageInYard"));
+            }
+            return;
+        }
         _lossCause = "Sabotage";
         try { LoseShip(ctx, ctx.Day + 1, ship); }
         finally { _lossCause = "Battle"; }

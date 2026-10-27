@@ -416,6 +416,61 @@ public class HarvesterTests
         Assert.False(w.Host.Harvester.HasHarvester(Side.Hand, MissionWorld.T));
     }
 
+    // m5-harvester DS15
+    [Fact]
+    public void DS15_SpikeInTheYardDestroysAHarvesterStillBeingBuilt()
+    {
+        var w = new MissionWorld();
+        w.Hold(MissionWorld.T, Side.Hand, 0);
+        w.Host.Economy.AddFacility(MissionWorld.T, FacilityKind.OrbitalShipyard); // a project with no yard of its family is cancelled at 6.6
+        int ds = w.Unit(Side.Hand, HarvesterClass, MissionWorld.T, completed: false);
+        int next = w.Unit(Side.Hand, Mandate, MissionWorld.T, completed: false);
+        var project = new Project { Side = Side.Hand, System = MissionWorld.T, Family = YardFamily.Shipyard, Destination = MissionWorld.T, Units = { ds, next }, Progress = 40 };
+        w.Game.State.Construction.Set(project);
+        Assert.False(w.Host.Harvester.HasHarvester(Side.Hand, MissionWorld.T));
+        Assert.True(w.Host.Harvester.IsSpikeTarget(Side.Hand, MissionWorld.T));
+        w.Agent(MissionWorld.Nobody, MissionWorld.T, esp: 50, com: 50);
+        Assert.Null(w.M.CheckStart(new StartMissionOrder(0, Side.Collective, MissionKind.SpikeTheHarvester, new() { MissionWorld.Nobody }, new(), new(), MissionWorld.T)).Reason);
+
+        // the success: the unfinished harvester leaves its project with its progress, no refund; the next unit becomes the current one
+        bool done = false;
+        w.Game.RegisterHook("6.8", ctx => { if (!done) { done = true; w.Host.Harvester.Destroy(ctx, MissionWorld.T, Side.Hand); } });
+        w.Game.Step();
+        Assert.Null(w.Host.Economy.Find(ds));
+        var p = w.Game.State.Construction.Find(MissionWorld.T, YardFamily.Shipyard)!;
+        Assert.Equal(new[] { next }, p.Units);
+        Assert.Equal(0, p.Progress);
+        var ev = Assert.Single(w.Events<HarvesterDestroyed>());
+        Assert.Equal(("SabotageInYard", Side.Hand, ds, (string?)MissionWorld.T), (ev.Cause, ev.Side, ev.Ship, ev.System));
+        Assert.Single(w.Events<UnitRemoved>(), e => e.Object == ds);
+        Assert.False(w.Host.Harvester.IsSpikeTarget(Side.Hand, MissionWorld.T));
+
+        // switched off (Classic): only a finished harvester is a target
+        var off = new MissionWorld(harvester: new HarvesterParams { SpikeInYard = false });
+        off.Hold(MissionWorld.T, Side.Hand, 0);
+        int ds2 = off.Unit(Side.Hand, HarvesterClass, MissionWorld.T, completed: false);
+        off.Game.State.Construction.Set(new Project { Side = Side.Hand, System = MissionWorld.T, Family = YardFamily.Shipyard, Destination = MissionWorld.T, Units = { ds2 } });
+        Assert.False(off.Host.Harvester.IsSpikeTarget(Side.Hand, MissionWorld.T));
+    }
+
+    // m5-harvester DS16
+    [Fact]
+    public void DS16_SpikingTheLastUnitCancelsTheProject()
+    {
+        var w = new MissionWorld();
+        w.Hold(MissionWorld.T, Side.Hand, 0);
+        w.Host.Economy.AddFacility(MissionWorld.T, FacilityKind.OrbitalShipyard); // a project with no yard of its family is cancelled at 6.6
+        int ds = w.Unit(Side.Hand, HarvesterClass, MissionWorld.T, completed: false);
+        w.Game.State.Construction.Set(new Project { Side = Side.Hand, System = MissionWorld.T, Family = YardFamily.Shipyard, Destination = MissionWorld.T, Units = { ds } });
+        bool done = false;
+        w.Game.RegisterHook("6.8", ctx => { if (!done) { done = true; w.Host.Harvester.Destroy(ctx, MissionWorld.T, Side.Hand); } });
+        w.Game.Step();
+        Assert.Null(w.Host.Economy.Find(ds));
+        Assert.Null(w.Game.State.Construction.Find(MissionWorld.T, YardFamily.Shipyard));
+        Assert.Single(w.Events<ProjectCancelled>(), e => e.Reason == "Sabotage" && e.Units.Items.Contains(ds));
+        Assert.Equal("SabotageInYard", Assert.Single(w.Events<HarvesterDestroyed>()).Cause);
+    }
+
     // m5-harvester DS12 (legality 6, the planet-killer shield blocking Destroy System) has nothing to test: the shield is cut
     // (data/design/cut-classes.csv; Decided Paul 2026-10-25).
 
