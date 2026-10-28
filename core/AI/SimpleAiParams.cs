@@ -503,7 +503,8 @@ public sealed record SimpleAiParams
     /// 2026-10-27: a success destroys the unfinished harvester; at any distance, defenders or not) and is a raid target worth HarvesterYardValue more
     /// for the strike piles, at any distance. With Underground, Espionage looks (worth WatchValue, up to WatchLooks more) go to Hand worlds at any
     /// distance with at least HarvesterWatchShipyards shipyards seen and a facility picture older than WatchStaleDays, most shipyards first:
-    /// a harvester is built where shipyards are stacked (ceil(584 / yards) x 4 days, m2-construction §Build time). DEFAULT 0 = off.
+    /// a harvester is built where shipyards are stacked (ceil(584 / yards) x 4 days, m2-construction §Build time); a build already seen is looked
+    /// at again first once its sighting is older than WatchStaleDays (QA-60), so the hunt keeps up while it runs. DEFAULT 0 = off.
     /// </summary>
     public int HarvesterYardValue { get; init; }
     /// <summary>How old a HarvesterQueued sighting may be for the harvester yard hunt, days (a build takes hundreds). DEFAULT 400.</summary>
@@ -512,6 +513,14 @@ public sealed record SimpleAiParams
     public int HarvesterYardSaboteurs { get; init; } = 3;
     /// <summary>Shipyards seen that make a Hand world worth a look for a harvester build (HarvesterYardValue). DEFAULT 3.</summary>
     public int HarvesterWatchShipyards { get; init; } = 3;
+    /// <summary>
+    /// The odds floor for the harvester yard hunt's Spike missions and its re-looks at a build already seen, in place of MissionMinOddsPercent
+    /// (QA-60, 2026-10-28: the Hand builds where its yards and defenders are stacked, and at 15% guarded yards drew no Spike and no re-look).
+    /// 96 seeds against a Hand that builds harvesters: 27 spiked in the yard vs 18 at 15%, wins unchanged (17 / 55 / 24); Medium mirror
+    /// 27 / 42 / 27 vs 27 / 43 / 26. At Charter with 16-19 defenders the not-detected chance is under 1% (m5-missions), so even 1 sends no
+    /// Spike there: the any-distance raid is the hunt's tool at a fortress yard. DEFAULT 1 (applies only with HarvesterYardValue on).
+    /// </summary>
+    public int HarvesterYardMinOddsPercent { get; init; } = 1;
     /// <summary>
     /// Underground (AI trainer 2026-10-26; Paul 2026-10-26: the Collective plays guerrilla, "always spying and sabotaging, a real pain"). Collective
     /// only; the Hand AI ignores it. On: (1) Incite and Sabotage go to enemy worlds up to UndergroundHops lanes out even where defenders are believed,
