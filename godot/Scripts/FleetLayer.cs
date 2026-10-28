@@ -20,8 +20,6 @@ namespace PraedraViewer;
 /// </summary>
 public partial class FleetLayer : Control
 {
-    public static readonly Color HandColor = new(0.45f, 0.95f, 0.45f);
-    public static readonly Color CollectiveColor = new(1.0f, 0.62f, 0.25f);
     /// <summary>The player's side: its fleets get a white outline.</summary>
     public Side? Player { get; set; }
     /// <summary>Move orders given but not started yet (fleet id to plan); drawn as a route so the player sees what is pending.</summary>
@@ -52,7 +50,27 @@ public partial class FleetLayer : Control
 
     public override void _Process(double delta) => QueueRedraw(); // markers move with the real-time fraction
 
-    public static Color ColorOf(Side s) => s == Side.Hand ? HandColor : CollectiveColor;
+    /// <summary>Blue for the player's fleets, orange for the enemy's, whichever side the player is.</summary>
+    Color ColorOf(Side s) => Ui.OwnerColor(s, Player ?? Side.Hand);
+
+    /// <summary>Zoomed out, the fleets of one side at a system share one marker with a count (Tab steps through them); zoomed in, each has its own.</summary>
+    bool Stacked => Map.Zoom < LabelZoom;
+
+    // how many fleets share each stacked marker, filled by Layout (looked up by key, never iterated)
+    readonly Dictionary<(string System, bool Own), int> _stack = new();
+
+    int SlotFor(string system, bool own, Dictionary<string, int> slots)
+    {
+        if (Stacked)
+        {
+            var key = (system, own);
+            _stack[key] = (_stack.TryGetValue(key, out int n) ? n : 0) + 1;
+            return own ? 0 : 1;
+        }
+        slots.TryGetValue(system, out int slot);
+        slots[system] = slot + 1;
+        return slot;
+    }
 
     /// <summary>Visual position (screen) of a fleet and its heading (unit vector), or false if it cannot be placed.</summary>
     bool Place(Fleet f, Dictionary<string, int> slots, out Vector2 pos, out Vector2 heading)
@@ -74,8 +92,7 @@ public partial class FleetLayer : Control
         }
         if (f.At != null && _galaxy.TryFindSystem(f.At, out int s))
         {
-            slots.TryGetValue(f.At, out int slot);
-            slots[f.At] = slot + 1;
+            int slot = SlotFor(f.At, f.Side == Player || Player == null, slots);
             // above the dot, stacked upwards one row per fleet (a name label fits beside each marker); after 6 rows a new column
             const int rows = 6;
             float colWidth = map.Zoom >= LabelZoom ? 130f : 14f;
@@ -92,6 +109,7 @@ public partial class FleetLayer : Control
     (List<(Fleet f, Vector2 pos, Vector2 heading)> Own, List<(string System, FleetPicture Fleet, Vector2 pos)> Enemy) Layout()
     {
         var slots = new Dictionary<string, int>(StringComparer.Ordinal); // counts only, never iterated
+        _stack.Clear();
         var own = new List<(Fleet, Vector2, Vector2)>();
         foreach (var f in _game.State.Fleets.Values)               // fleet id order
             if ((EnemyFleets == null || f.Side == Player) && Place(f, slots, out var p, out var h)) own.Add((f, p, h));
@@ -107,8 +125,7 @@ public partial class FleetLayer : Control
         pos = Vector2.Zero;
         if (!_galaxy.TryFindSystem(system, out int s)) return false;
         var map = Map;
-        slots.TryGetValue(system, out int slot);
-        slots[system] = slot + 1;
+        int slot = SlotFor(system, false, slots);
         const int rows = 6;
         float colWidth = map.Zoom >= LabelZoom ? 130f : 14f;
         pos = map.SystemScreen(s) + new Vector2(-6f + colWidth * (slot / rows), -13f - 16f * (slot % rows));
@@ -126,7 +143,7 @@ public partial class FleetLayer : Control
     {
         if (_game == null) yield break;
         var map = Map;
-        var font = ThemeDB.FallbackFont;
+        var font = Ui.Medium ?? ThemeDB.FallbackFont;
         var layout = Layout();
         foreach (var (f, p, _) in layout.Own)
         {
@@ -173,7 +190,7 @@ public partial class FleetLayer : Control
         foreach (var (f, p, _) in Placed())
         {
             float d = p.DistanceSquaredTo(screen);
-            if (d <= bestD) { bestD = d; best = f.Id; }
+            if (d < bestD || (best < 0 && d <= bestD)) { bestD = d; best = f.Id; } // a stack picks its first fleet (lowest id)
         }
         return best;
     }
@@ -191,7 +208,7 @@ public partial class FleetLayer : Control
     {
         if (_game == null) return;
         var map = Map;
-        var font = ThemeDB.FallbackFont;
+        var font = Ui.Medium ?? ThemeDB.FallbackFont;
         var layout = Layout();
         var placed = layout.Own;
 
@@ -266,10 +283,17 @@ public partial class FleetLayer : Control
                 DrawDestination(font, from, $"{hit.f.Name} arrives day {plan.ArrivalDay}", white, map.SelectedFleet == kv.Key || map.Zoom >= LabelZoom);
             }
 
-        foreach (var (f, p, h) in placed)
+        var drawnStacks = new HashSet<string>(StringComparer.Ordinal); // membership only
+        foreach (var (f, p, h) in placed.OrderBy(x => map.SelectedFleet == x.f.Id ? 0 : 1).ThenBy(x => x.f.Id))
         {
             var col = ColorOf(f.Side);
             bool selected = map.SelectedFleet == f.Id;
+            int count = 1;
+            if (Stacked && f.At != null)
+            {
+                if (!drawnStacks.Add(f.At)) continue; // one marker per stack: the selected fleet's, else the first
+                count = _stack.TryGetValue((f.At, f.Side == Player || Player == null), out int n) ? n : 1;
+            }
             float r = selected ? 10f : 8.5f;
             var perp = new Vector2(-h.Y, h.X);
             var tri = new[] { p + h * r, p - h * r * 0.7f + perp * r * 0.7f, p - h * r * 0.7f - perp * r * 0.7f };
@@ -277,19 +301,23 @@ public partial class FleetLayer : Control
             bool own = f.Side == Player;
             DrawPolyline(new[] { tri[0], tri[1], tri[2], tri[0] }, selected ? Colors.White : own ? new Color(1, 1, 1, 0.9f) : new Color(0, 0, 0, 0.85f), selected ? 2.5f : own ? 1.6f : 1.2f, true);
 
+            if (count > 1) Badge(font, p, r, count, col);
             if (map.Zoom >= LabelZoom || selected)
             {
-                var pos = p + new Vector2(r + 3f, -r * 0.6f);
+                var pos = p + new Vector2(r + 3f + (count > 1 ? 14f : 0f), -r * 0.6f);
                 DrawStringOutline(font, pos, f.Name, HorizontalAlignment.Left, -1, 13, 4, new Color(0, 0, 0, 0.9f));
                 DrawString(font, pos, f.Name, HorizontalAlignment.Left, -1, 13, col);
             }
         }
 
         // enemy fleets the player's side sees now: a pointed-down triangle with a dark outline, labelled with what was seen (no name)
+        var drawnEnemy = new HashSet<string>(StringComparer.Ordinal); // membership only
         foreach (var (sys, pic, p) in layout.Enemy)
         {
+            if (Stacked && !drawnEnemy.Add(sys)) continue;
             var col = ColorOf(pic.Side);
             const float r = 8.5f;
+            if (Stacked && _stack.TryGetValue((sys, false), out int ne) && ne > 1) Badge(font, p, r, ne, col);
             var h = Vector2.Down; var perp = new Vector2(-h.Y, h.X);
             var tri = new[] { p + h * r, p - h * r * 0.7f + perp * r * 0.7f, p - h * r * 0.7f - perp * r * 0.7f };
             DrawColoredPolygon(tri, col);
@@ -302,5 +330,16 @@ public partial class FleetLayer : Control
                 DrawString(font, pos, text, HorizontalAlignment.Left, -1, 13, col);
             }
         }
+    }
+
+    /// <summary>The number of fleets in a stacked marker, in a small dark disc at its top right.</summary>
+    void Badge(Font font, Vector2 p, float r, int count, Color col)
+    {
+        var at = p + new Vector2(r * 0.95f, -r * 0.95f);
+        DrawCircle(at, 7.5f, Ui.MapBg);
+        DrawArc(at, 7.5f, 0, Mathf.Tau, 16, col, 1.4f, true);
+        string t = count > 9 ? "9+" : count.ToString();
+        var size = font.GetStringSize(t, HorizontalAlignment.Left, -1, 11);
+        DrawString(font, at + new Vector2(-size.X / 2f, font.GetAscent(11) / 2f - 1f), t, HorizontalAlignment.Left, -1, 11, Colors.White);
     }
 }

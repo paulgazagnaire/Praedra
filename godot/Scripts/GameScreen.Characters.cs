@@ -14,56 +14,102 @@ namespace PraedraViewer;
 /// </summary>
 public partial class GameScreen
 {
-    bool _charTab;     // the right-hand panel shows the Characters list
     int _moveChar = -1; // a character waiting for its destination click
-    Button _charButton;
 
     CharacterModule Cm => S.Host.Characters;
 
-    static readonly Color Pending = new(1f, 0.85f, 0.4f);
-    static readonly Color RouteBlue = new(0.55f, 0.85f, 1f, 0.95f);
+    static readonly Color RouteBlue = Ui.LeaderRoute;
 
     const string LeaderHelp = "Leaders give bonuses: a fleet's Admiral multiplies its bombardment, a fleet's General helps its regiments in an invasion, and a system's General helps the defenders. Commanders have no effect yet.";
 
-    // ================================================================== the Characters list
+    // ================================================================== the Leaders tab
 
+    /// <summary>C: open the Leaders tab, or go back to Needs you when it is open.</summary>
     void ToggleCharacters()
     {
         _plan = null; if (_pickMission) CancelMove();
-        if (!_charTab)
-        {
-            _missionTab = false; RefreshMissionButton();
-            // clear the selection first so the selection change does not close the list again
-            _view.SelectedFleet = -1; _view.Select(-1);
-            _lastSelectedSystem = -1; _lastSelectedFleet = -1;
-        }
-        _charTab = !_charTab;
-        _panelDirty = true; _panelTimer = 0;
-        RefreshCharButton();
-    }
-
-    void RefreshCharButton()
-    {
-        if (_charButton != null) _charButton.SetPressedNoSignal(_charTab);
+        ShowTab(_tab == DrawerTab.Leaders ? DrawerTab.Needs : DrawerTab.Leaders);
     }
 
     void CharactersPanel()
     {
         var list = S.MyCharacters;
-        Line("Your characters", null, 22);
-        Line(LeaderHelp, Dim, 13);
-        Line("Select a fleet to attach a character standing at the same system; select one of your systems to name its General. Enemy leaders are not shown: your side cannot see them.", Dim, 13);
-        Add(new HSeparator());
-        if (list.Count == 0) Line("none", Dim);
-        foreach (var c in list.Where(c => c.Status != CharacterStatus.Dead)) CharacterBlock(c);
+        var alive = list.Where(c => c.Status != CharacterStatus.Dead).ToList();
+        Title("Your leaders", $"{Ui.Count(alive.Count, "leader", "leaders")}. Click a name to find them on the map.");
+        Note(LeaderHelp);
+        Note("To give a leader a post, select a fleet at the same system (Officers) or one of your systems (System General).");
+
+        // the race for the key leaders, both ways (rule: m5-setup-and-victory §Victory)
+        var mineNeeded = EnemyTerms.ToList();
+        if (mineNeeded.Count > 0)
+        {
+            Heading("Keep them free: the enemy needs them to win");
+            using (Card(Ui.Panel, Ui.Line))
+                foreach (int id in mineNeeded)
+                {
+                    var c = Cm.Get(id);
+                    bool caught = c is { Status: CharacterStatus.Captured };
+                    Stat(S.CharName(id), c == null ? "?" : caught ? "PRISONER" : GameSession.StatusWords(c), caught ? Bad : c?.Status == CharacterStatus.Dead ? Dim : Good,
+                        caught ? $"Held{(c.HeldAt != null ? $" at {c.HeldAt}" : "")}. Send a team on a Rescue mission." : "If the enemy captures this leader it is one step from winning.");
+                }
+        }
+
+        Heading($"Your leaders ({alive.Count})");
+        if (alive.Count == 0) Line("none", Dim);
+        foreach (var c in alive.OrderBy(c => c.Status != CharacterStatus.Free).ThenBy(c => S.CharName(c.Id), StringComparer.Ordinal)) CharacterBlock(c);
+
+        EnemyLeadersSection();
+
         var dead = list.Where(c => c.Status == CharacterStatus.Dead).ToList();
         if (dead.Count > 0)
         {
             Heading("Fallen");
-            foreach (var c in dead) Line($"{S.CharName(c.Id)} - dead ({S.WhereIsCharacter(c)})", Dim);
+            foreach (var c in dead) Line($"{S.CharName(c.Id)} - dead ({S.WhereIsCharacter(c)})", Dim, Ui.Small);
         }
-        Add(new Control { CustomMinimumSize = new Vector2(0, 6) });
-        Act("Close the Characters list", ToggleCharacters, "Back to the map panel (C)");
+        Add(Ui.Space(6));
+        Act("Close the Characters list", ToggleCharacters, "Back to Needs you (C)");
+    }
+
+    /// <summary>
+    /// Enemy leaders: the ones you must capture first, then every other one your side has seen, each where it was last seen. Only what the
+    /// pictures show (group D) and your own prisoners (rule: m5-fog-and-hq §N8).
+    /// </summary>
+    void EnemyLeadersSection()
+    {
+        var seen = S.Fog.CharactersSeen(Me).Where(x => x.Character.Side != Me)
+            .GroupBy(x => x.Character.Id).Select(g => g.OrderByDescending(x => x.Stamp).ThenBy(x => x.System, StringComparer.Ordinal).First())
+            .ToDictionary(x => x.Character.Id);
+        var prisoners = Cm.All.Where(c => c.Side != Me && c.Status == CharacterStatus.Captured && c.Captor == Me).Select(c => c.Id).ToHashSet();
+        var keys = MyTerms.ToList();
+        var others = seen.Keys.Concat(prisoners).Where(id => !keys.Contains(id)).Distinct().OrderBy(id => S.CharName(id), StringComparer.Ordinal).ToList();
+
+        Heading("Enemy leaders");
+        using (Card(Ui.Panel, Ui.Line))
+        {
+            foreach (int id in keys.Concat(others))
+            {
+                bool key = keys.Contains(id);
+                string name = S.CharName(id) + (key ? "  (you must capture)" : "");
+                string where; Color color; string sys = null;
+                if (prisoners.Contains(id)) { where = $"in your prison{(Cm.Get(id)?.HeldAt is string at ? $" at {at}" : "")}"; color = Good; sys = Cm.Get(id)?.HeldAt; }
+                else if (KeyDead(id) && key) { where = "dead"; color = Dim; }
+                else if (seen.TryGetValue(id, out var s)) { where = $"seen at {s.System}, day {s.Stamp}"; color = Ui.Enemy; sys = s.System; }
+                else { where = "not seen yet"; color = Dim; }
+                var h = Ui.HBox(8);
+                var n = Ui.Label(name, key ? "Strong" : null, key ? Ui.Gold : Ui.Text, Ui.Small);
+                h.AddChild(n);
+                var w = Ui.Label(where, null, color, Ui.Small, wrap: false);
+                w.HorizontalAlignment = HorizontalAlignment.Right;
+                h.AddChild(w);
+                if (sys != null)
+                {
+                    var target = sys;
+                    h.AddChild(Ui.Button("Show", () => GoTo(target, true), $"Centre the map on {target}", "Link"));
+                }
+                Add(h);
+            }
+            if (keys.Count + others.Count == 0) Line("You have not seen any enemy leader yet. Spies (Espionage) and fleets at enemy systems see who stands there.", Dim, Ui.Small);
+        }
     }
 
     void CharacterBlock(CharacterRecord c)
@@ -71,16 +117,23 @@ public partial class GameScreen
         string name = S.CharName(c.Id);
         var status = c.Status;
         int id = c.Id;
-        Add(new Control { CustomMinimumSize = new Vector2(0, 4) });
-        Act($"{name}  -  {GameSession.StatusWords(c)}", () => GoToCharacter(id), "Centre the map where this character is");
-        Line($"Where: {S.WhereIsCharacter(c)}", status == CharacterStatus.Free ? null : Bad, 13);
-        Line($"Role: {S.RoleOf(c)}", S.RoleOf(c) == "no post" ? Dim : Good, 13);
-        Line(S.SkillsOf(c), Dim, 13);
-        Line(S.CapabilityOf(c), Dim, 12);
-        foreach (var p in S.PendingOfCharacter(id)) Line($"Waiting for the next day: {p}", Pending, 13);
-        if (CanMoveAlone(c)) Act($"Move {name}...", () => StartCharMove(id), "Then click a destination system. The route and the arrival day are shown before you confirm.");
-        if (CanJoin(c)) Act($"Send {name} on a mission...", () => OpenPlanner(c.System, id), "Pick the kind of mission, more team members standing at the same system, and the target.");
-        else if (S.PendingMissionOf(id) is { } pm) Line($"Waiting for the next day: {GameSession.KindWords(pm.Kind)} on {pm.Target}", Pending, 13);
+        bool needed = EnemyTerms.Contains(id);
+        using (Card(Ui.Panel, needed ? new Color(Ui.Gold, 0.5f) : Ui.Line, 3))
+        {
+            var b = Act($"{name}  -  {GameSession.StatusWords(c)}", () => GoToCharacter(id), "Centre the map where this leader is", variation: "Row");
+            b.AddThemeFontOverride("font", Ui.SemiBold);
+            if (status != CharacterStatus.Free) b.AddThemeColorOverride("font_color", Bad);
+            Line($"Where: {S.WhereIsCharacter(c)}", status == CharacterStatus.Free ? Ui.Text2 : Bad, Ui.Small);
+            Line($"Role: {S.RoleOf(c)}", S.RoleOf(c) == "no post" ? Dim : Good, Ui.Small);
+            Line(S.SkillsOf(c), Dim, Ui.Small);
+            Line(S.CapabilityOf(c), Dim, Ui.Tiny);
+            foreach (var p in S.PendingOfCharacter(id)) Line($"Waiting for the next day: {p}", Pending, Ui.Small);
+            var acts = new List<Button>();
+            if (CanMoveAlone(c)) acts.Add(Ui.Button($"Move {name}...", () => StartCharMove(id), Ui.Wrap("Then click a destination system. The route and the arrival day are shown before you confirm.")));
+            if (CanJoin(c)) acts.Add(Ui.Button($"Send {name} on a mission...", () => OpenPlanner(c.System, id), Ui.Wrap("Pick the kind of mission, more team members standing at the same system, and the target.")));
+            else if (S.PendingMissionOf(id) is { } pm) Line($"Waiting for the next day: {GameSession.KindWords(pm.Kind)} on {pm.Target}", Pending, Ui.Small);
+            foreach (var a in acts) { a.ClipText = true; Add(a); a.Alignment = HorizontalAlignment.Left; }
+        }
     }
 
     /// <summary>What the core's MoveCharacter accepts (free or injured, standing alone, not travelling); the core still judges the order.</summary>
@@ -258,7 +311,7 @@ public partial class GameScreen
         S.TrackCharacter(cid, -1, S.Game.Submit(seq => new MoveCharacterOrder(seq, Me, cid, to)), $"Move {name} to {to}");
         if (pr.Ok) S.PlanCharacterMove(cid, new GameSession.PlannedMove(to, pr.Systems.Select(i => G.Systems[i].Name).ToList(), pr.TotalTicks, S.Game.Day + pr.TotalTicks));
         S.Say($"Order sent: move {name} to {to}.", MsgKind.Info, to);
-        AddLogItem(S.Messages[^1]);
+        AddLogItem(S.Messages[^1], false);
         CancelMove();
     }
 

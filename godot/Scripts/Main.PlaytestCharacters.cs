@@ -22,15 +22,21 @@ public partial class Main
         gs.View.Select(-1); gs.PlayRefresh();
 
         // ---------------------------------------------------------------- the Characters list
-        Expect(gs.Click("Characters") && gs.CharactersOpen, "click Characters in the top bar");
+        Expect(gs.Click("Leaders") && gs.CharactersOpen, "click the Leaders tab");
         gs.PlayRefresh();
         string panel = gs.PanelText();
         string all = panel + "\n" + string.Join("\n", gs.ButtonTexts());
-        Expect(panel.Contains("Your characters"), "the Characters list opens");
+        Expect(panel.Contains("Your leaders"), "the Leaders tab opens");
         var mine = me == Side.Collective ? new[] { "Nobody", "Ledger" } : new[] { "Cassia Ravilla" };
-        foreach (var n in mine) Expect(all.Contains(n), $"the Characters list shows {n}");
-        var theirs = me == Side.Collective ? new[] { "Cassia Ravilla", "The Chair" } : new[] { "Nobody", "Ledger", "Mae Abara" };
-        Expect(!theirs.Any(all.Contains), "no enemy leader is listed (the side cannot see them)");
+        foreach (var n in mine) Expect(all.Contains(n), $"the Leaders tab shows {n}");
+        // enemy leaders: only the ones you must capture (named by the win rules) and the ones your side has seen, placed where they were seen
+        // (rule: m5-fog-and-hq §N8)
+        var keys = s.Host.Victory.Keys.Where(k => k.Standard && k.Side == me).Select(k => s.CharName(k.Character)).ToList();
+        foreach (var k in keys) Expect(panel.Contains(k + "  (you must capture)"), $"{k} is listed as a leader you must capture");
+        var seen = s.Fog.CharactersSeen(me).Where(x => x.Character.Side != me).Select(x => x.Character.Id).ToHashSet();
+        var unseen = cm.All.Where(c => c.Side != me && c.Placed && !seen.Contains(c.Id) && !keys.Contains(s.CharName(c.Id))).Select(c => s.CharName(c.Id)).ToList();
+        Expect(unseen.Count > 0 && !unseen.Any(panel.Contains), $"no enemy leader your side has not seen is listed ({unseen.Count} hidden)");
+        Expect(keys.All(k => seen.Contains(cm.All.First(c => s.CharName(c.Id) == k).Id) || panel.Contains("not seen yet")), "an unseen key leader says 'not seen yet', never where it is");
         Expect(panel.Contains("Where: ") && panel.Contains("Role: ") && panel.Contains("Leadership "), "where, role and skills are shown");
         Expect(panel.Contains("; Talent: "), "the Talent rank of the known talented character is shown");
         GD.Print("  characters: " + string.Join(" | ", s.MyCharacters.Select(c => $"{s.CharName(c.Id)} {s.WhereIsCharacter(c)} [{s.RoleOf(c)}] {s.CapabilityOf(c)}")));
@@ -71,7 +77,7 @@ public partial class Main
         SelectFleetByList(gs, fleet);
         string fp = gs.PanelText();
         Expect(post == CharacterPost.None ? fp.Contains("Passengers: ") && fp.Contains(mname) : fp.Contains($"{GameSession.PostWords(post)}: {mname} (leadership"), "the fleet panel shows the character: " + fp.Replace("\n", " / "));
-        Expect(gs.Click("Characters") && gs.CharactersOpen, "open the Characters list again");
+        Expect(gs.Click("Leaders") && gs.CharactersOpen, "open the Leaders tab again");
         gs.PlayRefresh();
         Expect(gs.PanelText().Contains($"aboard fleet {fleet.Name} at {fleet.At}"), "the list says the character is aboard the fleet");
         Expect(gs.Click("Close the Characters list") && !gs.CharactersOpen, "close the Characters list");
@@ -99,6 +105,8 @@ public partial class Main
         string gname = s.CharName(gen.Id), gsys = gen.System;
         GD.Print($"  system General: {gname} at {gsys}");
         gs.SelectSystem(gsys); gs.PlayRefresh();
+        Expect(gs.Click("Forces"), $"open the Forces tab of {gsys}");
+        gs.PlayRefresh();
         Expect(gs.PanelText().Contains("System General: none"), $"the panel of {gsys} says it has no General");
         Expect(gs.Click($"Make {gname} the General of {gsys}"), $"click 'Make {gname} the General of {gsys}'");
         before = s.Messages.Count;
@@ -106,6 +114,7 @@ public partial class Main
         Expect(cm.SystemGeneralOf(gsys)?.Id == gen.Id, $"{gname} is the General of {gsys}");
         Expect(s.Messages.Skip(before).Any(m => m.Text.StartsWith($"{gname} is now the General of {gsys}", StringComparison.Ordinal)), "message: the new General");
         gs.SelectSystem(gsys); gs.PlayRefresh();
+        gs.Click("Forces"); gs.PlayRefresh();
         Expect(gs.PanelText().Contains($"System General: {gname} (leadership"), "the system panel shows the General");
         Expect(gs.Click($"Release {gname} as General of {gsys}"), "click Release");
         before = s.Messages.Count;
@@ -120,9 +129,9 @@ public partial class Main
     {
         var s = gs.S; var cm = s.Host.Characters; var fm = s.Host.Fleets;
         string name = s.CharName(c.Id), from = c.System;
-        if (!gs.CharactersOpen) gs.Click("Characters");
+        if (!gs.CharactersOpen) gs.Click("Leaders");
         gs.PlayRefresh();
-        Expect(gs.Click($"Move {name}..."), $"click 'Move {name}...' in the Characters list");
+        Expect(gs.Click($"Move {name}..."), $"click 'Move {name}...' in the Leaders tab");
         Expect(gs.Banner.Contains("Move " + name), "the banner asks for a destination: " + gs.Banner);
         int arrive = s.Game.Day + fm.FindPath(from, to, cm.Params.CharacterSpeed).TotalTicks;
         gs.HoverTextFor(to);

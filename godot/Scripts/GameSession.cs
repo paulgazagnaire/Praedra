@@ -23,7 +23,16 @@ namespace PraedraViewer;
 public enum MsgKind { Info, Good, Bad, Warn, Battle }
 
 /// <summary>One line of the message log. <see cref="System"/> is the place the click centres the map on; <see cref="Detail"/> is a longer report.</summary>
-public sealed record Message(int Day, string Text, string System, MsgKind Kind, string Title = null, string Detail = null, bool Combat = false);
+public sealed record Message(int Day, string Text, string System, MsgKind Kind, string Title = null, string Detail = null, bool Combat = false)
+{
+    /// <summary>What the message is about, for the log's kinds (user story G4). Set from the event's type, never from its words.</summary>
+    public MsgCat Cat { get; init; } = MsgCat.Orders;
+    /// <summary>The core event's type name ("FleetArrived"), or null for the screen's own notes: lets the player choose what stops the clock.</summary>
+    public string Tag { get; init; }
+}
+
+/// <summary>The kinds of message in the log.</summary>
+public enum MsgCat { Orders, Battles, Fleets, Systems, Build, Leaders, Intel }
 
 /// <summary>What one day did, for the game loop.</summary>
 public sealed class StepOutcome
@@ -538,9 +547,11 @@ public sealed partial class GameSession
             bool combat = events[_printed] is Contact or ForcedStop or FleetRetreated or BattleEnded or SystemCaptured
                 or BombardmentStarted or BombardmentResolved or BombardCancelled or AssaultStarted or AssaultResolved or AssaultCancelled
                 or Praedra.Core.Harvester.SystemDestroyed or Praedra.Core.Harvester.FleetDestroyedByHarvester;
+            var cat = CategoryOf(events[_printed], combat);
+            string tag = events[_printed].GetType().Name;
             foreach (var m0 in Describe(events[_printed], o))
             {
-                var m = combat ? m0 with { Combat = true } : m0;
+                var m = m0 with { Combat = combat || m0.Combat, Cat = cat, Tag = tag };
                 Messages.Add(m);
                 o.New.Add(m);
             }
@@ -549,6 +560,25 @@ public sealed partial class GameSession
     }
 
     bool Mine(Side? s) => s == Player;
+
+    /// <summary>The log kind of an event (user story G4).</summary>
+    static MsgCat CategoryOf(GameEvent e, bool combat)
+    {
+        if (combat) return MsgCat.Battles;
+        switch (e)
+        {
+            case OrderRejected or OrderAccepted: return MsgCat.Orders;
+            case FleetArrived or ForcedStop or FleetRetreated or BlockadeStarted or BlockadeLifted or Contact or RegimentsLoaded or RegimentsUnloaded
+                or SquadronsLoaded or SquadronsUnloaded or HqArrived: return MsgCat.Fleets;
+            case FleetSighted or SensorReport or OwnerChangeSeen or HearthTipGiven or HarvesterQueuedSeen or HqSectorClueGiven: return MsgCat.Intel;
+            case Praedra.Core.Research.ResearchLevelReached or AutoscrapWarning or ObjectScrapped or ProjectStarted or ProjectCancelled or UnitCompleted
+                or DeliveryArrived or DeliveryRefused: return MsgCat.Build;
+        }
+        string ns = e.GetType().Namespace ?? "";
+        if (ns.EndsWith(".Characters", StringComparison.Ordinal) || ns.EndsWith(".Missions", StringComparison.Ordinal)) return MsgCat.Leaders;
+        if (ns.EndsWith(".Harvester", StringComparison.Ordinal)) return MsgCat.Intel;
+        return MsgCat.Systems;
+    }
 
     IEnumerable<Message> Describe(GameEvent e, StepOutcome o)
     {
@@ -630,6 +660,23 @@ public sealed partial class GameSession
                 if (Mine(FleetSide(r.Fleet)))
                     yield return new Message(d, $"Fleet {FleetName(r.Fleet)} retreated from {r.From} to {r.To}.", r.From, MsgKind.Warn);
                 break;
+
+            case SquadronsLoaded q when Mine(FleetSide(q.Fleet)):
+                yield return new Message(d, $"{q.Squadrons.Items.Count()} fighter squadron(s) loaded onto {FleetName(q.Fleet)} at {q.System}.", q.System, MsgKind.Info);
+                break;
+            case SquadronsUnloaded q when Mine(FleetSide(q.Fleet)):
+                yield return new Message(d, $"{q.Squadrons.Items.Count()} fighter squadron(s) unloaded from {FleetName(q.Fleet)} at {q.System}.", q.System, MsgKind.Info);
+                break;
+
+            // ---- the win by control (rule: m5-setup-and-victory §Victory, capital and control): told to both sides
+            case Praedra.Core.Victory.DominanceChanged x:
+            {
+                int pct = Host.Victory.Rules.DominanceSharePercent;
+                if (x.Leader is not Side lead) yield return new Message(d, "Nobody holds enough of the galaxy for a win by control any more.", null, MsgKind.Info);
+                else if (lead == Player) yield return new Message(d, $"You hold {pct}% of the claimed worlds and the enemy capital has fallen: keep it until day {x.DueDay} to win.", null, MsgKind.Good);
+                else yield return new Message(d, $"The {NameOf(lead)} holds {pct}% of the claimed worlds: it wins on day {x.DueDay} unless you break its hold.", null, MsgKind.Bad);
+                break;
+            }
 
             // ---- battle
             case BattleStarted b:

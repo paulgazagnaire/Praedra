@@ -37,18 +37,30 @@ public partial class Main
         GameBoot.SaveSlot = "user://playtest_save1.json";
         GameBoot.AutoSaveSlot = "user://playtest_autosave.json";
         GameBoot.HowToFlag = "user://playtest_howto.txt";
+        UiSettings.Path = "user://playtest_settings.cfg"; // the defaults, whatever the player chose
+        UiSettings.Load();
         foreach (var side in new[] { Side.Collective, Side.Hand })
         {
-            Forget(GameBoot.SaveSlot); Forget(GameBoot.AutoSaveSlot); Forget(GameBoot.HowToFlag);
+            ForgetSaves();
             try { PlaytestSide(side); }
             catch (Exception e) { _fails++; GD.PrintErr($"PLAYTEST CRASH ({side}): {e}"); }
         }
-        Forget(GameBoot.SaveSlot); Forget(GameBoot.AutoSaveSlot); Forget(GameBoot.HowToFlag);
+        ForgetSaves();
         try { PlaytestTrapsAndWaypoints(); }
         catch (Exception e) { _fails++; GD.PrintErr($"PLAYTEST CRASH (traps): {e}"); }
-        Forget(GameBoot.SaveSlot); Forget(GameBoot.AutoSaveSlot); Forget(GameBoot.HowToFlag);
+        ForgetSaves();
+        try { PlaytestScreens(); }
+        catch (Exception e) { _fails++; GD.PrintErr($"PLAYTEST CRASH (screens): {e}"); }
+        ForgetSaves();
         GD.Print(_fails == 0 ? $"PLAYTEST PASSED ({_checks} checks)" : $"PLAYTEST FAILED: {_fails} of {_checks} checks");
         GetTree().Quit(_fails == 0 ? 0 : 1);
+    }
+
+    static void ForgetSaves()
+    {
+        for (int n = 1; n <= GameBoot.Slots; n++) { Forget(GameBoot.SlotPath(n)); Forget(GameBoot.SlotPath(n) + ".meta"); }
+        Forget(GameBoot.AutoSaveSlot); Forget(GameBoot.AutoSaveSlot + ".meta"); Forget(GameBoot.HowToFlag);
+        Forget("user://playtest_settings.cfg");
     }
 
     GameScreen Gs => _screen as GameScreen;
@@ -66,7 +78,7 @@ public partial class Main
 
     void SelectFleetByList(GameScreen gs, Fleet f)
     {
-        gs.PlayRefresh();
+        gs.OpenTab("Fleets");
         Expect(gs.Click(f.Name), $"click '{f.Name}' in the Your fleets list");
         gs.PlayRefresh();
     }
@@ -96,7 +108,7 @@ public partial class Main
         Expect(gs.HowToVisible, "How to play shows at the first new game");
         Expect(gs.Click("Got it"), "close the How to play overlay");
         Expect(!gs.HowToVisible && !GameBoot.HowToUnseen(), "How to play closed and remembered");
-        Expect(gs.Click("How to play"), "How to play button opens it again");
+        Expect(gs.Click("?"), "the ? button opens How to play again");
         Expect(gs.HowToVisible, "overlay visible");
         gs.Click("Got it");
         Expect(gs.SpeedValue == 5, "default speed is 5x");
@@ -282,24 +294,30 @@ public partial class Main
         if (yardSys != null)
         {
             gs.SelectSystem(yardSys); gs.PlayRefresh();
-            Expect(gs.Has("v  Facilities") || gs.Has(">  Facilities"), "Build menu has a Facilities section");
-            Expect(gs.Has(">  Ships") && gs.Has(">  Fighters") && gs.Has(">  Troops"), "Build menu has collapsible Ships / Fighters / Troops sections");
-            Expect(gs.Click(">  Ships"), "open the Ships section");
+            Expect(gs.Click("Build"), "open the Build tab of " + yardSys);
             gs.PlayRefresh();
-            if (me == Side.Hand) Expect(gs.ButtonTexts().Any(t => t.StartsWith("harvester   ", StringComparison.Ordinal)), "the harvester is in the Hand's Ships build list");
-            else Expect(!gs.ButtonTexts().Any(t => t.StartsWith("harvester   ", StringComparison.Ordinal)), "the Collective's Ships build list has no harvester");
-            var shipBtn = gs.ButtonTexts().FirstOrDefault(t => t.Contains("refined, upkeep") && !t.Contains("(not researched)") && t.Contains("   ") && !Praedra.Core.Economy.FacilityKinds.TryParse(t[..t.IndexOf("   ", StringComparison.Ordinal)], out _)); // any researched ship
-            Expect(shipBtn != null, "a basic ship can be chosen in the Ships list");
-            if (shipBtn != null)
+            Expect(gs.Has("Facilities") && gs.Has("Ships") && gs.Has("Fighters") && gs.Has("Troops"), "Build has Facilities / Ships / Fighters / Troops");
+            Expect(gs.Click("Ships"), "open Ships");
+            gs.PlayRefresh();
+            var rows = gs.BuildRowsShown;
+            if (me == Side.Hand) Expect(rows.Any(r => r.Name == "harvester"), "the harvester is in the Hand's Ships build list");
+            else Expect(rows.Count > 0 && !rows.Any(r => r.Name == "harvester"), "the Collective's Ships build list has no harvester");
+            Expect(rows.Where(r => !r.Usable).All(r => r.Why != null && !gs.Enabled(r.Name)), "every row that cannot be ordered is greyed out and says why");
+            var ship = rows.FirstOrDefault(r => r.Usable && r.Name != "harvester");
+            Expect(ship.Name != null, "a basic ship can be chosen in the Ships list");
+            if (ship.Name != null)
             {
                 int before = s.Messages.Count;
-                Expect(gs.Click(shipBtn[..shipBtn.IndexOf("   ", StringComparison.Ordinal)]), "click the ship to build it");
+                Expect(gs.Click(ship.Name), "click the ship to build it");
                 gs.PlayDay();
                 Expect(s.Messages.Skip(before).Any(m => m.Text.StartsWith("Construction started at " + yardSys, StringComparison.Ordinal)), "the shipyard started building it: " + string.Join(" | ", s.Messages.Skip(before).Select(m => m.Text)));
+                gs.SelectSystem(yardSys); gs.Click("Overview"); gs.PlayRefresh();
+                Expect(gs.PanelText().Contains("Shipyard is building") || gs.PanelText().Contains("is building"), "Overview says what the shipyard builds: " + gs.PanelText().Replace("\n", " / "));
             }
-            Expect(gs.Click(">  Troops"), "open the Troops section");
+            gs.Click("Build"); gs.PlayRefresh();
+            Expect(gs.Click("Troops"), "open Troops");
             gs.PlayRefresh();
-            gs.Click(">  Fighters"); gs.PlayRefresh();
+            gs.Click("Fighters"); gs.PlayRefresh();
         }
         // facility: a system I own with a construction yard and a free energy slot
         string facSys = eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.Completed && o.System != null && o.Class.Contains("Construction Yard") && s.OwnerOf(o.System) == me)
@@ -308,35 +326,45 @@ public partial class Main
         if (facSys != null)
         {
             gs.SelectSystem(facSys); gs.PlayRefresh();
-            if (!gs.Has("Refinery")) { gs.Click("v  Facilities"); gs.Click(">  Facilities"); gs.PlayRefresh(); }
-            Expect(gs.Has("Refinery"), "Refinery is offered at " + facSys);
-            Expect(gs.ButtonTexts().Any(t => t.StartsWith("Sensor Station   ", StringComparison.Ordinal)), "the Sensor Station is in the Facilities build list (generated from the facility list)");
+            gs.Click("Build"); gs.PlayRefresh();
+            Expect(gs.Click("Facilities"), "open Facilities");
+            gs.PlayRefresh();
+            Expect(gs.Enabled("Refinery"), "Refinery is offered at " + facSys);
+            Expect(gs.BuildRowsShown.Any(r => r.Name == "Sensor Station"), "the Sensor Station is in the Facilities build list (generated from the facility list)");
             int before = s.Messages.Count;
             Expect(gs.Click("Refinery"), "click Refinery to build it");
             gs.PlayDay();
             Expect(s.Messages.Skip(before).Any(m => m.Text.Contains("Construction started at " + facSys) && m.Text.Contains("Refinery")), "construction of the Refinery started");
+            gs.Click("Overview"); gs.PlayRefresh();
             Expect(gs.PanelText().Contains("is building") || gs.PanelText().Contains("Under construction"), "system panel shows it being built");
         }
 
         // ---------------------------------------------------------------- save, then load with the confirm dialog
         int dayAtSave = s.Game.Day; string hashAtSave = s.Host.StateHash();
-        Expect(gs.Click("Save"), "click Save");
+        Expect(gs.Click("Menu") && gs.MenuVisible, "open the Menu");
+        Expect(gs.Click("Save game...") && gs.SavesVisible, "Menu, Save game... opens the save slots");
+        Expect(gs.Click("Save here") && !gs.SavesVisible, "Save here in slot 1 (empty: no question)");
         Expect(GameBoot.SaveExists(GameBoot.SaveSlot), "save file written");
-        for (int i = 0; i < 12; i++) gs.PlayDay();
-        Expect(gs.Click("Load"), "click Load");
+        Expect(GameBoot.SlotInfo(GameBoot.SaveSlot) is string si && si.Contains(me.ToString()) && si.Contains($"day {dayAtSave}"), "the slot says side and day: " + GameBoot.SlotInfo(GameBoot.SaveSlot));
+        gs.Click("Menu"); gs.Click("Save game...");
+        Expect(gs.Click("Save here") && gs.ConfirmVisible && gs.ConfirmTitle.Contains("Overwrite"), "saving over a used slot asks first");
+        Expect(gs.Click("Yes, overwrite") && !gs.SavesVisible, "overwrite");
+        for (int i = 0; i < 12; i++) { gs.PlayDay(); if (gs.ReportVisible) gs.Click("Close"); }
+        Expect(gs.Click("Menu") && gs.Click("Load game...") && gs.SavesVisible, "Menu, Load game... opens the slots");
+        Expect(gs.Click("Load slot 1"), "click Load slot 1");
         Expect(gs.ConfirmVisible, "Load asks for confirmation first");
         Expect(gs.Click("Cancel") && !gs.ConfirmVisible && gs.S == s && s.Game.Day == dayAtSave + 12, "Cancel keeps the running game");
-        Expect(gs.Click("Load") && gs.ConfirmVisible, "Load again");
-        Expect(gs.Click("Yes, load"), "confirm");
+        Expect(gs.Click("Load slot 1") && gs.ConfirmVisible, "Load again");
+        Expect(gs.Click("Yes, load it"), "confirm");
         var gs2 = Gs;
         Expect(gs2 != null && gs2 != gs, "a fresh game screen replaced the old one");
         Expect(gs2.S.Game.Day == dayAtSave && gs2.S.Host.StateHash() == hashAtSave && gs2.S.Player == me, $"loaded game is the saved one (day {gs2.S.Game.Day})");
         gs = gs2; s = gs.S;
         Expect(s.Rules == wantRules, "the battle rules survive Save and Load: " + s.Rules);
         Expect(!gs.HowToVisible, "loading does not show How to play");
-        // menu: "Menu" asks first
-        Expect(gs.Click("Menu") && gs.ConfirmVisible, "Menu asks first");
-        Expect(gs.Click("Cancel"), "cancel leaving");
+        // leaving asks first
+        Expect(gs.Click("Menu") && gs.Click("Back to the start screen...") && gs.ConfirmVisible, "Back to the start screen asks first");
+        Expect(gs.Click("Cancel") && !gs.AnyModal, "cancel leaving");
 
         PlaytestHarvester(gs);
 
@@ -389,7 +417,7 @@ public partial class Main
         Expect(UiTest.Click(_screen, "Continue"), "Continue (autosave) is enabled on the start screen");
         Expect(Gs != null && Gs.S.Game.Day > 0 && Gs.S.Player == side && !Gs.HowToVisible, $"Continue loads the autosave (day {Gs?.S.Game.Day})");
         ShowMenu();
-        Expect(UiTest.Click(_screen, "Load saved game") && Gs != null && Gs.S.Game.Day > 0, "Load saved game from the start screen");
+        Expect(UiTest.Click(_screen, "Load saved game") && UiTest.Click(_screen, "Load slot 1") && Gs != null && Gs.S.Game.Day > 0, "Load saved game, then a slot, from the start screen");
         ShowMenu();
     }
 
@@ -416,7 +444,7 @@ public partial class Main
             // QA-48: both sides name fleets "Fleet n", so the hidden fleet's name is often one of the player's own buttons: test the panel's enemy line instead
             // no live enemy entry; the panel says "unknown" or shows only an old picture (the Hand's day-0 copy of the Hearth area, m5-fog-and-hq §F4)
             string sysPanel = gs.PanelText();
-            Expect(!panel.Contains("[enemy] ") && (sysPanel.Contains("Enemy fleets: unknown") || sysPanel.Contains("[enemy, seen day")), $"the system panel of {hidden.At} does not list the unseen fleet");
+            Expect(!panel.Contains("Enemy fleet here now") && (sysPanel.Contains("Enemy fleets: unknown") || sysPanel.Contains("Enemy fleet, seen day")), $"the system panel of {hidden.At} does not list the unseen fleet: " + sysPanel.Replace("\n", " / "));
             Expect(panel.Contains("Last seen day") || panel.Contains("Unexplored") || panel.Contains("Not seen since"), $"the panel says how old the picture of {hidden.At} is");
             gs.SelectFleet(hidden.Id, false); gs.PlayRefresh();
             Expect(gs.SelectedFleetId != hidden.Id, "an enemy fleet cannot be selected by id");

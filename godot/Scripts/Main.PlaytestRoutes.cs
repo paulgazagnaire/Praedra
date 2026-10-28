@@ -24,6 +24,7 @@ public partial class Main
         var gs = Gs;
         if (gs == null) return;
         var s = gs.S; var me = s.Player; var fm = s.Host.Fleets; var host = s.Host;
+        if (gs.HowToVisible) gs.Click("Got it");
 
         var mover = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null && fm.SpeedOf(f) > 0).OrderBy(f => f.Id).FirstOrDefault();
         Expect(mover != null, "a fleet that can move");
@@ -64,14 +65,22 @@ public partial class Main
         var into = gs.PlanWithWaypoints(mover.Id, new[] { trap }, dest, confirm: false);
         Expect(into.Red && into.Path.Contains(trap), "a waypoint onto the trap keeps the red warning: " + into.Banner);
 
-        // the order flies the previewed path
-        if (around != null)
-        {
-            var sent = gs.PlanWithWaypoints(mover.Id, new[] { around }, dest, confirm: true);
-            Expect(s.Messages.Any(m => m.Text.StartsWith($"Order sent: move {mover.Name} to {dest} via {around}", StringComparison.Ordinal)), "the order message names the waypoint");
-            gs.PlayDay();
-            var f = s.Game.State.Fleets.GetValueOrDefault(mover.Id);
-            Expect(f?.Transit != null && f.Transit.Path.SequenceEqual(sent.Path), $"the fleet flies the previewed path: {string.Join(", ", f?.Transit?.Path ?? new List<string>())}");
-        }
+        // a plain click on the red path sends nothing: the bar at the bottom offers Go anyway / Go around / Cancel; Go around flies a trap-free path
+        int queued = s.QueuedOrders;
+        SelectFleetByList(gs, mover);
+        Expect(gs.Click("Move..."), "click Move...");
+        gs.HoverTextFor(dest);
+        gs.PickSystem(dest);
+        Expect(s.QueuedOrders == queued, "a click on a red path sends no order");
+        Expect(gs.OrderBarText.Contains("TRAP") && gs.Has("Go anyway") && gs.Has("Go around via") && gs.Has("Cancel (Esc)"),
+            "the order bar names the trap and offers Go anyway, Go around and Cancel: " + gs.OrderBarText.Replace("\n", " / ") + " | " + string.Join(" | ", gs.ButtonTexts().Where(t => t.StartsWith("Go"))));
+        Expect(gs.Click("Go around via"), "click Go around");
+        var planned = s.PlannedMoveOf(mover.Id);
+        var plannedPath = planned?.Path ?? (IReadOnlyList<string>)new List<string>();
+        Expect(s.QueuedOrders == queued + 1 && planned != null && !plannedPath.Contains(trap), "Go around sends the order on a path without the trap: " + string.Join(", ", plannedPath));
+        Expect(s.Messages.Any(m => m.Text.StartsWith($"Order sent: move {mover.Name} to {dest} via ", StringComparison.Ordinal)), "the order message names the waypoint");
+        gs.PlayDay();
+        var f = s.Game.State.Fleets.GetValueOrDefault(mover.Id);
+        Expect(f?.Transit != null && planned != null && f.Transit.Path.SequenceEqual(plannedPath), $"the fleet flies the previewed path: {string.Join(", ", f?.Transit?.Path ?? new List<string>())}");
     }
 }

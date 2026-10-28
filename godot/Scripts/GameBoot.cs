@@ -132,13 +132,46 @@ public static class GameBoot
 
     public static bool SaveExists(string path) => FileAccess.FileExists(path);
 
-    public static void WriteSave(string path, string json, Side player, AiLevel level = AiLevel.Medium)
+    public static void WriteSave(string path, string json, Side player, AiLevel level = AiLevel.Medium, int day = -1)
     {
-        using var f = FileAccess.Open(path, FileAccess.ModeFlags.Write);
-        if (f == null) throw new IOException($"Cannot write {path}: {FileAccess.GetOpenError()}");
-        // First line: who the player is and the opponent's level (the core's save holds the game only). Second line: the core's save.
-        f.StoreLine(PlayerSaveHeader.Write(player, level));
-        f.StoreString(json);
+        using (var f = FileAccess.Open(path, FileAccess.ModeFlags.Write))
+        {
+            if (f == null) throw new IOException($"Cannot write {path}: {FileAccess.GetOpenError()}");
+            // First line: who the player is and the opponent's level (the core's save holds the game only). Second line: the core's save.
+            f.StoreLine(PlayerSaveHeader.Write(player, level));
+            f.StoreString(json);
+        }
+        // A one-line note beside the save, so the save list can show the side, day and time without reading the whole game.
+        using var meta = FileAccess.Open(path + ".meta", FileAccess.ModeFlags.Write);
+        meta?.StoreLine($"{player}|{level}|{day}|{(long)Time.GetUnixTimeFromSystem()}");
+    }
+
+    // ------------------------------------------------------------------ save slots (user story L2)
+
+    public const int Slots = 6;
+
+    /// <summary>Slot 1 is the one save slot of older versions (so their saves show up as slot 1); the others sit beside it.</summary>
+    public static string SlotPath(int n) => n <= 1 ? SaveSlot : SaveSlot.Replace("save1.json", $"save{n}.json");
+
+    /// <summary>What a save list shows for a slot: "Hand, day 120, Medium · 2026-10-28 14:03", or null when the slot is empty.</summary>
+    public static string SlotInfo(string path)
+    {
+        if (!FileAccess.FileExists(path)) return null;
+        string side = null, level = null, day = null; long when = (long)FileAccess.GetModifiedTime(path);
+        if (FileAccess.FileExists(path + ".meta"))
+        {
+            using var m = FileAccess.Open(path + ".meta", FileAccess.ModeFlags.Read);
+            var parts = (m?.GetLine() ?? "").Split('|');
+            if (parts.Length >= 4) { side = parts[0]; level = parts[1]; day = parts[2] == "-1" ? null : parts[2]; if (long.TryParse(parts[3], out long w)) when = w; }
+        }
+        if (side == null)
+        {
+            using var f = FileAccess.Open(path, FileAccess.ModeFlags.Read);
+            if (f != null && PlayerSaveHeader.Read(f.GetLine()) is var (ps, pl)) { side = ps.ToString(); level = pl.ToString(); }
+        }
+        string date = Time.GetDatetimeStringFromUnixTime(when + (long)(Time.GetTimeZoneFromSystem()["bias"].AsInt32() * 60), true).Replace('T', ' ');
+        if (date.Length > 16) date = date[..16];
+        return $"{side ?? "?"}{(day != null ? $", day {day}" : "")}{(level != null ? $", {level}" : "")}  ·  {date}";
     }
 
     /// <summary>A save's player, core save and opponent level (older saves without a level: Medium).</summary>

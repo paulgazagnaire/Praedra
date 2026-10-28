@@ -24,6 +24,9 @@ public partial class Main : Control
     public override void _Ready()
     {
         _args = OS.GetCmdlineUserArgs();
+        Theme = Ui.Theme;
+        UiSettings.Load();
+        if (!_args.Contains("--playtest") && DisplayServer.GetName() != "headless") UiSettings.ApplyScale(GetTree().Root);
         bool smoke = _args.Contains("--smoke") || (DisplayServer.GetName() == "headless" && !_args.Contains("--playtest"));
         GameBoot.LoadData();
         if (_args.Contains("--playtest")) { Playtest(); return; }
@@ -131,6 +134,9 @@ public partial class Main : Control
                 case "--pick" when i + 1 < _args.Length: gs.PickSystem(_args[i + 1]); break;
                 case "--hover" when i + 1 < _args.Length: gs.HoverTextFor(_args[i + 1]); break;
                 case "--missions": gs.ShotMissions(); break;
+                case "--layer" when i + 1 < _args.Length: gs.ShotLayer(_args[i + 1]); break;
+                case "--sectors": gs.ShotSectors(); break;
+                case "--goal": gs.ShotGoal(); break;
                 case "--routes" when i + 1 < _args.Length: gs.SetRoutesShown(_args[i + 1] != "off"); break;
                 case "--deselect": gs.View.Select(-1); break;
                 case "--fleet" when i + 1 < _args.Length:
