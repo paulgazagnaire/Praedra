@@ -16,6 +16,8 @@ public partial class GameScreen
 {
     int _moveFleet = -1;
     bool _moveHq;
+    List<int> _moveFighters;        // based fighters flying on their own (MoveSquadrons), null when not choosing
+    string _moveFightersFrom;
     string _moveBanner;
     bool? _retreatPending;
     int _lastSelectedSystem = -2, _lastSelectedFleet = -2;
@@ -34,6 +36,7 @@ public partial class GameScreen
     {
         if (_moveFleet >= 0 && _lockedTo == null) UpdatePreview();
         if (_moveHq) UpdateHqPreview();
+        if (_moveFighters != null) UpdateFighterPreview();
         if (_moveChar >= 0) UpdateCharPreview();
         if (_pickMission) UpdateMissionPreview();
         int h = _view.Hovered;
@@ -123,7 +126,7 @@ public partial class GameScreen
 
     void CancelMove()
     {
-        _moveFleet = -1; _moveHq = false; _moveChar = -1; _pickMission = false; _view.PickMode = false; _view.PathPreview = null;
+        _moveFleet = -1; _moveHq = false; _moveChar = -1; _pickMission = false; _moveFighters = null; _view.PickMode = false; _view.PathPreview = null;
         _waypoints.Clear(); _view.Waypoints = null; _view.PathTraps = null; _view.PathRouteHop = null; _moveWarn = false;
         _lockedTo = null; _around = null;
         _panelDirty = true; _panelTimer = 0;
@@ -252,6 +255,7 @@ public partial class GameScreen
     void OnSystemPicked(int idx)
     {
         if (_moveHq) { OnHqPicked(idx); return; }
+        if (_moveFighters != null) { OnFightersPicked(idx); return; }
         if (_moveChar >= 0) { OnCharPicked(idx); return; }
         if (_pickMission) { OnMissionPicked(idx); return; }
         if (_moveFleet < 0) return;
@@ -331,5 +335,49 @@ public partial class GameScreen
         S.Say($"Order sent: move the HQ to {to}.", MsgKind.Info, to);
         AddLogItem(S.Messages[^1], false);
         CancelMove();
+    }
+
+    // ================================================================== fighters flying on their own (rule: m3-fleets §Unescorted squadrons)
+
+    void StartFighterMove(string from, List<int> squadrons)
+    {
+        CancelMove();
+        _moveFighters = squadrons;
+        _moveFightersFrom = from;
+        _view.PickMode = true;
+        _moveBanner = $"Fly {Ui.Count(squadrons.Count, "fighter squadron", "fighter squadrons")} from {from}: click a destination system (Esc cancels)";
+        _panelDirty = true; _panelTimer = 0;
+        RefreshTop();
+    }
+
+    /// <summary>The squadrons fly as one group at the speed of the fastest (rule: m3-fleets §Fleet speed, squadron-only fleet).</summary>
+    int FighterSpeed => _moveFighters.Select(S.Host.Economy.Find).Where(o => o != null).Select(o => Fm.ClassOf(o)?.Hyperdrive ?? 0).DefaultIfEmpty(0).Max();
+
+    void UpdateFighterPreview()
+    {
+        int h = _view.Hovered;
+        string from = _moveFightersFrom;
+        if (h < 0 || G.Systems[h].Name == from) { _view.PathPreview = null; return; }
+        string to = G.Systems[h].Name;
+        var pr = Fm.FindPath(from, to, FighterSpeed);
+        if (!pr.Ok) { _view.PathPreview = null; _moveBanner = $"No way from {from} to {to} for these fighters."; }
+        else
+        {
+            _view.PathPreview = pr.Systems;
+            _view.PathColor = new Color(Ui.You, 0.9f);
+            _moveBanner = $"Fighters to {to}: {pr.TotalTicks} days, arrive day {S.Game.Day + pr.TotalTicks}. Click to send. They land and stay based there.";
+        }
+        RefreshTop();
+    }
+
+    void OnFightersPicked(int idx)
+    {
+        string to = G.Systems[idx].Name;
+        if (to == _moveFightersFrom) return;
+        var ids = _moveFighters;
+        S.Track(Fm.SubmitMoveSquadrons(Me, ids, to), $"Fly fighters to {to}");
+        Sent($"fly {Ui.Count(ids.Count, "fighter squadron", "fighter squadrons")} from {_moveFightersFrom} to {to}", to);
+        CancelMove();
+        _fleetListDirty = true;
     }
 }

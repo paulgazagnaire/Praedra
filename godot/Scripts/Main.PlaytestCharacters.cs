@@ -108,6 +108,7 @@ public partial class Main
         Expect(gs.Click("Forces"), $"open the Forces tab of {gsys}");
         gs.PlayRefresh();
         Expect(gs.PanelText().Contains("System General: none"), $"the panel of {gsys} says it has no General");
+        Expect(gs.PanelText().Contains("FIGHTERS BASED HERE") || gs.PanelText().Contains("Fighters based here"), $"the Forces tab of {gsys} lists the fighters based there");
         Expect(gs.Click($"Make {gname} the General of {gsys}"), $"click 'Make {gname} the General of {gsys}'");
         before = s.Messages.Count;
         gs.PlayDay();

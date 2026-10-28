@@ -789,7 +789,9 @@ public sealed partial class GameSession
                 yield return new Message(d, "Maintenance is over the limit: units will be scrapped. Build refineries or scrap ships.", null, MsgKind.Warn);
                 break;
             case ObjectScrapped s when s.Side == Player:
-                yield return new Message(d, $"A {s.Class} was scrapped ({s.Reason}).", null, MsgKind.Warn);
+                yield return s.Reason == "Autoscrap"
+                    ? new Message(d, $"Upkeep over the limit: a {s.Class} was scrapped at random ({s.Refund} refined back).", null, MsgKind.Warn)
+                    : new Message(d, $"You scrapped a {s.Class}: {s.Refund} refined back.", null, MsgKind.Info);
                 break;
 
             // ---- construction

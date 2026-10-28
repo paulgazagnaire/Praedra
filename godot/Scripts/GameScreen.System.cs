@@ -99,6 +99,7 @@ public partial class GameScreen
             case SysTab.Build: BuildMenu(name); break;
             case SysTab.Forces:
                 RegimentsHere(name, true, pic);
+                FightersHere(name);
                 CharactersAtSystem(name, true);
                 SpecialForcesAtSystem(name);
                 if (CanSendFrom(name)) Act($"Send a mission from {name}...", () => OpenPlanner(name), "Pick a team standing here (characters and special forces), the kind of mission and the target.");
@@ -116,7 +117,8 @@ public partial class GameScreen
         BuildQueues(name);
         Heading("Facilities");
         var here = eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.System == name).ToList();
-        Line(here.Count(o => o.Completed) == 0 ? "none" : Counts(here.Where(o => o.Completed).Select(o => o.Class)), Ui.Text2);
+        if (here.Count(o => o.Completed) == 0) Line("none", Ui.Text2);
+        else ScrapRows(here.Where(o => o.Completed), name);
         var building = here.Where(o => !o.Completed).ToList();
         if (building.Count > 0) Line($"Under construction: {Counts(building.Select(o => o.Class))}", Dim, Ui.Small);
         var slots = eco.SlotsOf(name);
@@ -203,7 +205,10 @@ public partial class GameScreen
             var regs = S.Host.Troops.RegimentsOnSystem(name);
             if (regs.Count == 0) Line("none", Dim);
             foreach (var g in regs.GroupBy(r => r.Side).OrderBy(g => g.Key))
+            {
+                if (g.Key == Me) { ScrapRows(g, name); continue; } // yours: one row per class, each can be scrapped (story C9)
                 Line($"{(g.Key == null ? "Neutral" : S.You(g.Key.Value))}: {Counts(g.Select(r => r.Class))}", Ui.Text2);
+            }
         }
         else if (pic?.Ground is { } gr)
         {
@@ -212,6 +217,21 @@ public partial class GameScreen
                 Line($"{S.You(g.Side)}: {string.Join(", ", g.Units.Select(kv => kv.Value == 1 ? kv.Key : $"{kv.Value} x {kv.Key}"))}   (seen day {gr.Stamp})", Ui.Text2);
         }
         else Line("unknown", Dim);
+    }
+
+    /// <summary>Your fighter squadrons based on this planet (not aboard a ship): what they are, scrap, and fly the ones with a hyperdrive.
+    /// rule: m3-fleets §Fighters based at a system, §Unescorted squadrons.</summary>
+    void FightersHere(string name)
+    {
+        Heading("Fighters based here", "Squadrons on the planet, not aboard a ship. A fleet with hangar room can load them; those with a hyperdrive can also fly on their own.");
+        var based = FightersBasedAt(name);
+        if (based.Count == 0) { Line("none", Dim); return; }
+        ScrapRows(based, name);
+        var mobile = based.Where(o => (Fm.ClassOf(o)?.Hyperdrive ?? 0) > 0).Select(o => o.Id).ToList();
+        if (mobile.Count > 0)
+            Act($"Fly {Ui.Count(mobile.Count, "squadron", "squadrons")} to...", () => StartFighterMove(name, mobile),
+                "They fly as one group at the speed of the fastest, then land and stay based where they arrive." + (mobile.Count < based.Count ? " The others have no hyperdrive: a carrier must take them." : ""));
+        else Note("These fighters have no hyperdrive: a fleet with hangar room must carry them.");
     }
 
     void DestroyedPanel(string name)

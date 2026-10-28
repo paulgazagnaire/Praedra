@@ -239,6 +239,7 @@ public partial class Main
                 Expect(s.Game.State.Fleets.Values.Count(f => f.Side == me) == n0, "merge folded it back");
             }
             else Expect(false, "merge button available for the new fleet");
+
         }
 
         // ---------------------------------------------------------------- a battle: send the strongest other fleet onto the nearest enemy fleet
@@ -300,6 +301,7 @@ public partial class Main
             Expect(gs.Has("Facilities") && gs.Has("Ships") && gs.Has("Fighters") && gs.Has("Troops"), "Build has Facilities / Ships / Fighters / Troops");
             Expect(gs.Click("Ships"), "open Ships");
             gs.PlayRefresh();
+            Expect(gs.PanelText().Contains("Research (ship design): level"), "the Ships list says where ship research stands and what comes next");
             var rows = gs.BuildRowsShown;
             if (me == Side.Hand) Expect(rows.Any(r => r.Name == "harvester"), "the harvester is in the Hand's Ships build list");
             else Expect(rows.Count > 0 && !rows.Any(r => r.Name == "harvester"), "the Collective's Ships build list has no harvester");
@@ -368,6 +370,23 @@ public partial class Main
         Expect(gs.Click("Cancel") && !gs.AnyModal, "cancel leaving");
 
         PlaytestHarvester(gs);
+
+        // ---------------------------------------------------------------- scrap one ship (story C9; rule: m2-maintenance §Scrapping and refunds)
+        // after the scripted checks on purpose: it weakens a fleet, and they must not depend on it
+        var scrapFleet = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null && f.Ships.Count > 0 && f.Transit == null).OrderBy(f => f.Id).FirstOrDefault();
+        Expect(scrapFleet != null, "a fleet of mine at a system, to scrap a ship from");
+        if (scrapFleet != null)
+        {
+            int sid = scrapFleet.Id;
+            SelectFleetByList(gs, scrapFleet);
+            int ships0 = s.Game.State.Fleets[sid].Ships.Count; int scrapped = s.Game.State.Fleets[sid].Ships.First();
+            Expect(gs.TickShip(0) && gs.Click("Scrap the ticked") && gs.ConfirmVisible && gs.ConfirmTitle.StartsWith("Scrap"), "Scrap the ticked ships asks first");
+            int scrapMsgs = s.Messages.Count;
+            Expect(gs.Click("Scrap") && !gs.ConfirmVisible, "confirm the scrap");
+            gs.PlayDay();
+            Expect(s.Host.Economy.Find(scrapped) == null && (!s.Game.State.Fleets.TryGetValue(sid, out var sf) || sf.Ships.Count == ships0 - 1), "the ticked ship was scrapped");
+            Expect(s.Messages.Skip(scrapMsgs).Any(m => m.Text.StartsWith("You scrapped a", StringComparison.Ordinal) && m.Text.Contains("refined back")), "the log says what was scrapped and the refund");
+        }
 
         // Sensor Stations (m5-fog-and-hq N4): finished stations on up to four frontier route systems of the player (setup, test only); over the run below
         // the player must get a plain-words "Sensors:" message for every SensorReport its side was given.

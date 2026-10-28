@@ -109,9 +109,17 @@ public partial class GameScreen
         // ---- upkeep (E6)
         int load = eco.Load(Me), cap = eco.Capacity(Me);
         if (load > cap)
-            list.Add(new Item("upkeep-over", Level.Danger, $"Upkeep over the limit: {load} of {cap}", "Units get scrapped until you are back under it. Build mines and refineries (each pair adds 50), or scrap ships.", null, new()));
+            list.Add(new Item("upkeep-over", Level.Danger, $"Upkeep over the limit: {load} of {cap}", "Every 10 days the game scraps one of your units at random until you are back under it. Build mines and refineries (each pair adds 50), or choose what goes yourself: Scrap in a fleet's window or a system's Forces and Overview.", null,
+                new() { ("Fleets", () => ShowTab(DrawerTab.Fleets), null) }));
         else if (cap > 0 && load * 10 >= cap * 9)
             list.Add(new Item("upkeep-near", Level.Warn, $"Upkeep near the limit: {load} of {cap}", "A build order that would pass the limit is refused. Build a mine and a refinery to raise it.", null, new()));
+
+        // ---- yards stopped for lack of refined: they wait in line and resume as refined comes in (rule: m2-mines-refineries-pools, slot 6.6.b)
+        int waitingYards = S.Host.Construction.RefinedLine(Me).Count;
+        if (waitingYards > 0)
+            list.Add(new Item("yards-waiting", Level.Warn, $"{Ui.Count(waitingYards, "yard is", "yards are")} waiting for refined",
+                $"They stopped mid-build because your refined stock ({eco.Refined(Me)}) ran out, and go on as refined comes in. More refineries (with mines to feed them) fix it, or stop builds you need less.", null,
+                new() { ("Show the Yards layer", () => SetLayer(MapLayer.Yards), null) }));
 
         // ---- chances: troops ready at a target, a harvester in place, idle yards, leaders with nothing to do
         foreach (var f in S.Game.State.Fleets.Values.Where(f => f.Side == Me && f.At != null).OrderBy(f => f.Id))
