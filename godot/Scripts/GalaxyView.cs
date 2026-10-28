@@ -94,6 +94,7 @@ public partial class GalaxyView : Control
     bool _dragging, _dragMoved;
     Vector2 _pressAt;
     Font _font;
+    GalaxyBackdrop _backdrop;       // the galaxy picture, drawn behind this control
 
     // Sectors (name, member systems), sorted by name; _sectorOf[system] indexes it, -1 outside the sectors.
     readonly List<(string name, int[] members)> _sectors = new();
@@ -152,6 +153,11 @@ public partial class GalaxyView : Control
             foreach (int m in mem) box = box.Expand(_pos[m]);
             _sectorBox[k] = box;
         }
+        // the galaxy picture behind the map, centred on Charter (the disc's centre in the galaxy data), else on the map's middle
+        var centre = galaxy.TryFindSystem("Charter", out int capital) ? new Vector2(galaxy.Systems[capital].MapX, galaxy.Systems[capital].MapY) : (_min + _max) / 2f;
+        _backdrop?.QueueFree();
+        _backdrop = new GalaxyBackdrop(this, centre, _pos);
+        AddChild(_backdrop);
         ResetView();
     }
 
@@ -189,6 +195,7 @@ public partial class GalaxyView : Control
         return Mathf.Max(0.05f, Mathf.Min(sx, sy));
     }
     public float PxPerUnit => FitScale() * _zoom;
+    public Vector2 ViewCenter => _center;
     public Vector2 WorldToScreen(Vector2 w) => Size / 2f + (w - _center) * PxPerUnit;
     public Vector2 ScreenToWorld(Vector2 s) => _center + (s - Size / 2f) / PxPerUnit;
     public Vector2 SystemScreen(int i) => WorldToScreen(_pos[i]);
@@ -316,7 +323,7 @@ public partial class GalaxyView : Control
     public override void _Draw()
     {
         if (Galaxy == null) return;
-        DrawRect(new Rect2(Vector2.Zero, Size), Ui.MapBg);
+        if (_backdrop == null) DrawRect(new Rect2(Vector2.Zero, Size), Ui.MapBg); // the backdrop paints the background itself
         int focus = Selected >= 0 ? Selected : Hovered;
         var screenRect = new Rect2(Vector2.Zero, Size).Grow(40);
         float radius = SystemRadius;
@@ -336,7 +343,7 @@ public partial class GalaxyView : Control
             var shape = SectorOutline(k, radius + SectorPadPx);
             if (shape == null) continue;
             DrawColoredPolygon(shape, new Color(SectorColor, 0.025f));
-            DrawPolyline(Closed(shape), new Color(SectorColor, 0.13f), 1f, true);
+            DrawPolyline(Closed(shape), new Color(SectorColor, 0.16f), 1f, true);
         }
         Vector2[] sectorShape = hoverSector >= 0 ? SectorOutline(hoverSector, radius + SectorPadPx) : null;
         if (sectorShape != null)
