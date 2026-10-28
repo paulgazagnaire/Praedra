@@ -26,10 +26,32 @@ public partial class Main
         gs.PlayRefresh();
 
         // ---------------------------------------------------------------- the frame
-        foreach (var tab in new[] { "Needs you", "Selected", "Fleets", "Leaders", "Missions", "Log" })
-            Expect(gs.Has(tab), $"the drawer has the {tab} tab");
+        Expect(!gs.WindowOpen, "the map starts with no window open");
+        Expect(gs.PillText.Contains("Play"), "the pill under the search says to press Play: " + gs.PillText);
+        Expect(gs.MessageCornerText.Length > 0, "the message corner shows the latest message: " + gs.MessageCornerText.Replace("\n", " / "));
+        Expect(gs.Click("Menu") && gs.MenuVisible, "the menu button opens the menu");
+        foreach (var item in new[] { "Needs you", "Fleets", "Leaders", "Missions", "Messages", "Sector tables", "Save game...", "Settings..." })
+            Expect(gs.Has(item), $"the menu offers {item}");
+        gs.PressKey(Key.Escape);
+        Expect(!gs.MenuVisible, "Esc closes the menu");
         Expect(gs.View.SideColor(me) == Ui.You && gs.View.SideColor(s.Enemy) == Ui.Enemy, "the map draws you blue and the enemy orange");
-        Expect(gs.TopText.StartsWith("Day 0"), "the top bar shows the day: " + gs.TopText);
+        Expect(gs.TopText.StartsWith("Day 0"), "the clock shows the day: " + gs.TopText);
+
+        // ---------------------------------------------------------------- a click on the map: the card, then the window on demand
+        string cardSys = s.MyHqSystem ?? GameBoot.HandCapital;
+        if (gs.G.TryFindSystem(cardSys, out int cardIdx)) gs.View.Select(cardIdx);
+        gs.PlayRefresh();
+        Expect(gs.SelectionCardOpen && !gs.WindowOpen && gs.SelectionCardText.Contains(cardSys) && gs.SelectionCardText.Contains("SUPPORT"),
+            "a map click shows the selection card, not the window: " + gs.SelectionCardText.Replace("\n", " / "));
+        Expect(gs.Click("Card: Details"), "click Details on the card");
+        gs.PlayRefresh();
+        Expect(gs.WindowOpen && gs.TabName == "Selected" && gs.PanelText().Contains(cardSys), "Details on the card opens the window on that system");
+        Expect(!gs.SelectionCardOpen, "the card steps aside while the window is open");
+        foreach (var tab in new[] { "Needs you", "Selected", "Fleets", "Leaders", "Missions", "Log" })
+            Expect(gs.Has(tab), $"the window has the {tab} tab");
+        Expect(gs.Click("Close window") && !gs.WindowOpen && gs.SelectionCardOpen, "the window's cross closes it and the card comes back");
+        gs.PressKey(Key.Escape); gs.PlayRefresh();
+        Expect(!gs.SelectionCardOpen && gs.View.Selected < 0, "Esc clears the selection");
 
         // ---------------------------------------------------------------- Needs you
         gs.OpenTab("Needs");
@@ -146,11 +168,13 @@ public partial class Main
         Expect(GameBoot.SaveExists(GameBoot.SaveSlot) && gs.ToastText.Contains("Game saved in slot 1"), "Ctrl+S saves to slot 1: " + gs.ToastText);
         gs.SelectSystem(home); gs.PlayRefresh();
         gs.PressKey(Key.Escape); gs.PlayRefresh();
-        Expect(gs.SelectedSystemIndex < 0, "Esc clears the selection");
+        Expect(!gs.WindowOpen && gs.SelectedSystemIndex >= 0, "Esc first closes the window");
+        gs.PressKey(Key.Escape); gs.PlayRefresh();
+        Expect(gs.SelectedSystemIndex < 0, "Esc again clears the selection");
         gs.PressKey(Key.C);
         Expect(gs.CharactersOpen, "C opens Leaders");
         gs.PressKey(Key.C);
-        Expect(gs.TabName == "Needs", "C again goes back to Needs you");
+        Expect(!gs.CharactersOpen && !gs.WindowOpen, "C again closes the window");
         ShowMenu();
     }
 }

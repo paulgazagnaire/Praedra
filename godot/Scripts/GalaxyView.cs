@@ -17,6 +17,9 @@ public partial class GalaxyView : Control
     const float MinZoom = 0.8f, MaxZoom = 16f;
     // Names of systems nobody holds come in only from NeutralNameZoom, unexplored ones from UnknownNameZoom: zoomed out the map names
     // the worlds that matter (yours, the enemy's, the capitals), and hovering any dot still names it.
+    // Paul's mockup (2026-10-28) shows dots and no names at the opening zoom: held systems are named only from OwnedNameZoom, and pointing at
+    // a sector names all its systems.
+    const float OwnedNameZoom = 3.4f;
     const float NeutralNameZoom = 5.0f;
     const float UnknownNameZoom = 7.0f;
     // Room kept free around every name, so two names never touch: space is part of the label.
@@ -305,8 +308,8 @@ public partial class GalaxyView : Control
     // ---- drawing ----
     // Colours of the map itself. Only the owner of a system gets a strong colour (blue you, orange the enemy);
     // everything else (lanes, sectors, unexplored systems) is drawn in quiet greys and blues so ownership reads first.
-    static readonly Color LaneColor = new(0.55f, 0.62f, 0.78f);
-    static readonly Color MajorRouteColor = new(0.62f, 0.80f, 1.0f);
+    static readonly Color LaneColor = new(0.58f, 0.60f, 0.65f);
+    static readonly Color MajorRouteColor = new(0.72f, 0.75f, 0.80f);
     static readonly Color DotOutline = new(0.03f, 0.04f, 0.07f, 0.95f);
     static readonly Color SectorColor = new(0.70f, 0.78f, 0.95f);
 
@@ -349,8 +352,8 @@ public partial class GalaxyView : Control
             var lane = Galaxy.Lanes[_drawOrder[k]];
             var a = SystemScreen(lane.A); var b = SystemScreen(lane.B);
             if (!screenRect.HasPoint(a) && !screenRect.HasPoint(b) && !SegmentMayCross(a, b)) continue;
-            if (lane.Tier == 1) DrawLine(a, b, new Color(MajorRouteColor, 0.55f), 2.4f, true);
-            else DrawLine(a, b, new Color(LaneColor, 0.30f), 1.1f, true);
+            if (lane.Tier == 1) DrawLine(a, b, new Color(MajorRouteColor, 0.34f), 1.8f, true);
+            else DrawLine(a, b, new Color(LaneColor, 0.18f), 1.0f, true);
         }
         // route links of the focused system, drawn on top
         if (_showRoutes && focus >= 0)
@@ -507,9 +510,10 @@ public partial class GalaxyView : Control
             float r = radius + 1.5f;
             taken.Add(new Rect2(p - new Vector2(r, r), new Vector2(2 * r, 2 * r)));
             bool unknown = IsUnknown?.Invoke(i) == true;
-            bool key = i == focus || i == Hovered;
+            bool key = i == focus || i == Hovered || (HoveredSector >= 0 && _sectorOf[i] == HoveredSector);
             if (!key && unknown && _zoom < UnknownNameZoom) continue;
             if (!key && !unknown && OwnerOf?.Invoke(i) == null && _zoom < NeutralNameZoom) continue;
+            if (!key && _zoom < OwnedNameZoom) continue;
             if (CapitalTag?.Invoke(i) != null) continue; // its name is in the tag
             order.Add((i, LabelRank(i, focus, unknown)));
         }

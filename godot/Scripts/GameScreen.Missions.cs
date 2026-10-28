@@ -43,13 +43,13 @@ public partial class GameScreen
         MissionKind.Recruitment, MissionKind.Abduction, MissionKind.Assassination, MissionKind.SpikeTheHarvester, MissionKind.TrainTalent,
     };
 
-    // ================================================================== Missions list (top bar, key M)
+    // ================================================================== Missions list (menu, key M)
 
     /// <summary>M: open the Missions tab, or go back to Needs you when it is open.</summary>
     void ToggleMissions()
     {
         _plan = null; if (_pickMission) CancelMove();
-        ShowTab(_tab == DrawerTab.Missions ? DrawerTab.Needs : DrawerTab.Missions);
+        if (_drawer.Visible && _tab == DrawerTab.Missions) CloseDrawer(); else ShowTab(DrawerTab.Missions);
     }
 
     void MissionsPanel()

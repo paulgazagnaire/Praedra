@@ -9,9 +9,10 @@ using Side = Praedra.Core.Clock.Side;
 namespace PraedraViewer;
 
 /// <summary>
-/// The drawer on the right: one fixed column with tabs (Needs you, Selected, Fleets, Leaders, Missions, Log). It never covers the map, it
-/// keeps its place while the map moves, and a click on the map shows the clicked thing in Selected. The helpers here (Line, Heading, Act,
-/// Card) are what every tab builds with, so the tabs look alike.
+/// The window on the right (it was a fixed drawer until Paul's mockup of 2026-10-28): closed until you ask for something longer than the
+/// floating pieces show (a system's details, Fleets, Leaders, Missions, the log, Needs you), with tabs to step between those, and closed
+/// again with its cross or Esc. A click on the map only fills the selection card; the window follows the selection while it is open.
+/// The helpers here (Line, Heading, Act, Card) are what every tab builds with, so the tabs look alike.
 /// </summary>
 public partial class GameScreen
 {
@@ -28,17 +29,22 @@ public partial class GameScreen
     Side Me => S.Player;
     FleetModule Fm => S.Host.Fleets;
 
+    PanelContainer _drawer;
+
     Control BuildDrawer()
     {
-        var drawer = new PanelContainer { CustomMinimumSize = new Vector2(DrawerWidth, 0), SizeFlagsVertical = SizeFlags.ExpandFill, MouseFilter = MouseFilterEnum.Stop };
-        var st = Ui.Box(Ui.Chrome, 0, null, 0, 0, 0);
-        st.BorderColor = Ui.Line; st.BorderWidthLeft = 1;
-        drawer.AddThemeStyleboxOverride("panel", st);
+        var drawer = _drawer = Ui.Hud(0, 0);
+        drawer.Visible = false;
+        drawer.SetAnchorsPreset(LayoutPreset.RightWide);
+        drawer.GrowHorizontal = GrowDirection.Begin;
+        drawer.OffsetRight = -Edge; drawer.OffsetLeft = -Edge - DrawerWidth;
+        drawer.OffsetTop = Edge + 64; drawer.OffsetBottom = -Edge;
+        drawer.AddThemeStyleboxOverride("panel", Ui.Box(new Color(Ui.HudBg, 0.97f), 10, new Color(1, 1, 1, 0.06f), 1, 0, 0));
         var v = Ui.VBox(0);
         drawer.AddChild(v);
 
         var tabsBox = new PanelContainer();
-        var ts = Ui.Box(Ui.Chrome, 0, null, 0, 8, 2);
+        var ts = Ui.Box(new Color(0, 0, 0, 0), 0, null, 0, 8, 2);
         ts.BorderColor = Ui.Line; ts.BorderWidthBottom = 1;
         tabsBox.AddThemeStyleboxOverride("panel", ts);
         v.AddChild(tabsBox);
@@ -63,10 +69,16 @@ public partial class GameScreen
             b.AddThemeStyleboxOverride("pressed", TabBox(true));
             b.AddThemeStyleboxOverride("hover_pressed", TabBox(true));
             b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            b.AddThemeFontSizeOverride("font_size", 13); // six tabs need air between them
+            b.AddThemeFontSizeOverride("font_size", 12);
             _tabButtons[tab] = b;
             tabs.AddChild(b);
         }
+        var close = Ui.Button("\u2715", CloseDrawer, "Close (Esc)", "Clock");
+        close.SetMeta(UiTest.FullName, "Close window");
+        close.AddThemeFontSizeOverride("font_size", 13);
+        close.CustomMinimumSize = new Vector2(30, 30);
+        close.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        tabs.AddChild(close);
 
         _scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
         v.AddChild(_scroll);
@@ -84,10 +96,17 @@ public partial class GameScreen
         return drawer;
     }
 
+    void CloseDrawer()
+    {
+        if (_plan != null && !_pickMission) _plan = null;
+        _drawer.Visible = false;
+        RefreshTop();
+    }
+
     static StyleBoxFlat TabBox(bool on, Color? hover = null)
     {
-        var s = new StyleBoxFlat { BgColor = new Color(0, 0, 0, 0), BorderColor = on ? Ui.You : hover ?? new Color(0, 0, 0, 0) };
-        s.BorderWidthBottom = 3;
+        var s = new StyleBoxFlat { BgColor = new Color(0, 0, 0, 0), BorderColor = on ? Ui.Text : hover ?? new Color(0, 0, 0, 0) };
+        s.BorderWidthBottom = 2;
         s.ContentMarginLeft = 4; s.ContentMarginRight = 4; s.ContentMarginTop = 9; s.ContentMarginBottom = 7;
         return s;
     }
@@ -96,12 +115,15 @@ public partial class GameScreen
     {
         if (_plan != null && t != DrawerTab.Missions && !_pickMission) _plan = null; // leaving the planner closes it
         _tab = t;
+        bool opening = !_drawer.Visible;
+        _drawer.Visible = true;
         foreach (var (k, b) in _tabButtons) b.SetPressedNoSignal(k == t);
         _scroll.Visible = t != DrawerTab.Log;
         _logHost.Visible = t == DrawerTab.Log;
         if (t == DrawerTab.Log) { ScrollLogToEnd(); _unread = 0; }
         _panelDirty = true; _panelTimer = 0;
         RefreshTabTitles();
+        if (opening) RefreshTop();
     }
 
     void RefreshTabTitles()

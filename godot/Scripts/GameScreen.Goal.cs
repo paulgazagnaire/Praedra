@@ -47,10 +47,13 @@ public partial class GameScreen
             var terms = MyTerms.ToList();
             int met = terms.Count(KeyMet);
             text = Vm.Rules.StandardVictory && terms.Count > 0 ? $"Goal: {met}/{terms.Count} leaders held" : "Goal";
-            tip = "How you win, and how close each side is (G).";
+            tip = text + ". How you win, and how close each side is (G).";
         }
-        _goalButton.Text = text;
-        _goalButton.ThemeTypeVariation = variation ?? "";
+        // the clock card keeps it short (GOAL 0/2, WIN IN 12D); the full words are the tooltip's and the playtest's
+        _goalButton.SetMeta(UiTest.FullName, text);
+        _goalButton.Text = Vm.DominanceDueDay is int d2 && Vm.DominanceLeader is Side l2 ? $"{(l2 == Me ? "WIN" : "LOSE")} IN {Math.Max(0, d2 - S.Game.Day)}D"
+            : text.StartsWith("Goal: ", StringComparison.Ordinal) ? "GOAL " + text[6..].Split(' ')[0] : "GOAL";
+        _goalButton.ThemeTypeVariation = variation ?? "Chip";
         _goalButton.TooltipText = Ui.Wrap(tip);
     }
 
