@@ -42,6 +42,7 @@ public sealed partial class SimpleAi
 
     private sealed record Job(MissionKind Kind, string System, int? TargetCharacter, int Value, string Group);
     private const string HarvesterYardGroup = "harvester yard ";
+    private const string HarvesterLookGroup = "yard look "; // a re-look at a harvester build already seen (HarvesterYardMinOddsPercent)
 
     private void PlanAgents()
     {
@@ -534,12 +535,13 @@ public sealed partial class SimpleAi
                 {
                     // HarvesterYardValue: the spies look for a harvester being built where the Hand stacks its shipyards, at any distance
                     var forges = HarvesterWatchTargets();
+                    var building = HarvesterBuildSeenAt().ToHashSet(StringComparer.Ordinal);
                     int want = _p.WatchLooks - own.Count(m => m.Kind == MissionKind.Espionage && forges.Contains(m.Target));
                     foreach (var s in forges)
                     {
                         if (want <= 0) break;
                         if (!Free(MissionKind.Espionage, s)) continue;
-                        jobs.Add(new Job(MissionKind.Espionage, s, null, Math.Max(_p.WatchValue, _p.HarvesterYardValue / 2), "look " + s));
+                        jobs.Add(new Job(MissionKind.Espionage, s, null, Math.Max(_p.WatchValue, _p.HarvesterYardValue / 2), (building.Contains(s) ? HarvesterLookGroup : "look ") + s));
                         want--;
                     }
                 }
@@ -593,10 +595,16 @@ public sealed partial class SimpleAi
     {
         if (_view == null) return new List<string>();
         var list = new List<(string S, int Yards)>();
+        var building = HarvesterBuildSeenAt().ToHashSet(StringComparer.Ordinal);
         foreach (var sys in _h.Data.Galaxy.Systems)
         {
             string s = sys.Name;
             if (!IsEnemyHeld(s) || Destroyed(s)) continue;
+            if (building.Contains(s)) // QA-60: a build already seen is looked at again once the sighting is stale, first, whatever its shipyards
+            {
+                if (_view.Picture(s)?.HarvesterQueued is { } q && AgeOf(q) > _p.WatchStaleDays) list.Add((s, int.MaxValue));
+                continue;
+            }
             var c = _view.Picture(s)?.Facilities;
             if (c == null || AgeOf(c) <= _p.WatchStaleDays) continue;
             int yards = ShipyardsSeenAt(s);
@@ -743,7 +751,10 @@ public sealed partial class SimpleAi
         int chance = (int)((long)unseen * pct / 10000); // percent
         // a victory key (VictoryKeysSkipOddsFloor): no odds floor; it competes on value x honest chance, in basis points (a 2% cap rounds to 0 in percent)
         bool key = _p.VictoryKeysSkipOddsFloor && j.Kind == MissionKind.Abduction && j.TargetCharacter is int t && IsVictoryKey(t);
-        if (!key && chance < (Repeats(j.Kind) ? _p.RepeatMinOddsPercent : _p.MissionMinOddsPercent)) return null;
+        // HarvesterYardMinOddsPercent (QA-60): a harvester seen in the yard is worth long odds, Spike teams and re-looks alike
+        bool yard = j.Group.StartsWith(HarvesterYardGroup, StringComparison.Ordinal) || j.Group.StartsWith(HarvesterLookGroup, StringComparison.Ordinal);
+        int floor = yard ? _p.HarvesterYardMinOddsPercent : Repeats(j.Kind) ? _p.RepeatMinOddsPercent : _p.MissionMinOddsPercent;
+        if (!key && (chance < floor || chance <= 0)) return null;
         int ticks = TicksCached(at, j.System, speed);
         if (ticks == int.MaxValue) return null;
         long value = j.Value * valuePercent / 100;
