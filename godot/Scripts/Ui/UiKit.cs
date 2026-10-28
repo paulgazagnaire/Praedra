@@ -44,13 +44,12 @@ public static class Ui
     public static Color OwnerColor(Side? owner, Side player) => owner == null ? Neutral : owner == player ? You : Enemy;
 
     // ---------------------------------------------------------------- type
-    static FontFile _regular, _medium, _semibold, _display, _displayMedium;
+    static FontFile _regular, _medium, _semibold, _display;
     public static Font Regular => _regular ??= LoadFont("res://fonts/Inter-Regular.otf");
     public static Font Medium => _medium ??= LoadFont("res://fonts/Inter-Medium.otf");
     public static Font SemiBold => _semibold ??= LoadFont("res://fonts/Inter-SemiBold.otf");
     /// <summary>Barlow Semi Condensed SemiBold: titles, the day, section heads. Condensed so dense panels stay short.</summary>
     public static Font Display => _display ??= LoadFont("res://fonts/BarlowSemiCondensed-SemiBold.ttf");
-    public static Font DisplayMedium => _displayMedium ??= LoadFont("res://fonts/BarlowSemiCondensed-Medium.ttf");
 
     static FontFile LoadFont(string path)
     {
@@ -457,21 +456,21 @@ public partial class Glyph : Control
     public Kind Shape;
     public Color Color = Ui.Text;
     public Color? Fill;
-    public float Size = 12;
+    public float IconSize = 12;
 
     public Glyph() { MouseFilter = MouseFilterEnum.Ignore; }
     public Glyph(Kind k, Color c, float size = 12, Color? fill = null) : this()
     {
-        Shape = k; Color = c; Size = size; Fill = fill;
+        Shape = k; Color = c; IconSize = size; Fill = fill;
         CustomMinimumSize = new Vector2(size + 4, size + 4);
         SizeFlagsVertical = SizeFlags.ShrinkCenter;
     }
 
     public override void _Draw()
     {
-        var c = Size / 2f + 2f;
+        var c = IconSize / 2f + 2f;
         var p = new Vector2(c, CustomMinimumSize.Y / 2f);
-        float r = Size / 2f;
+        float r = IconSize / 2f;
         switch (Shape)
         {
             case Kind.Dot: DrawCircle(p, r, Color); break;
@@ -507,7 +506,7 @@ public partial class Glyph : Control
                 DrawCircle(p + new Vector2(0, r * 0.58f), 1.1f, Ui.MapBg);
                 break;
             }
-            case Kind.Bar: DrawRect(new Rect2(new Vector2(1, p.Y - 2), new Vector2(Size + 2, 4)), Color); break;
+            case Kind.Bar: DrawRect(new Rect2(new Vector2(1, p.Y - 2), new Vector2(IconSize + 2, 4)), Color); break;
         }
     }
 }

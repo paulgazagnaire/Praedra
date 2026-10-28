@@ -58,7 +58,7 @@ public partial class GameScreen
             FleetsHere(name, sees, null);
             return;
         }
-        if (!mine) { ForeignSystem(name, idx, sees, ownerKnown, owner, pic); return; }
+        if (!mine) { ForeignSystem(name, sees, ownerKnown, owner, pic); return; }
 
         // ---- your system: the state that matters first
         int sup = eco.SupportOf(name, Me);
@@ -141,7 +141,7 @@ public partial class GameScreen
             .OrderBy(r => r.Cost).ThenBy(r => r.Name, StringComparer.Ordinal).FirstOrDefault();
 
     /// <summary>A system you don't hold: your picture of it, every part with its age, and how to take it.</summary>
-    void ForeignSystem(string name, int idx, bool sees, bool ownerKnown, Side? owner, Praedra.Core.Fog.SystemPicture pic)
+    void ForeignSystem(string name, bool sees, bool ownerKnown, Side? owner, Praedra.Core.Fog.SystemPicture pic)
     {
         int? last = S.LastSeenDay(name);
         // the age of the picture decides how much to trust it: live (green), recent (plain), old (yellow)
