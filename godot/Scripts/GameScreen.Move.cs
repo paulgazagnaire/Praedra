@@ -351,7 +351,7 @@ public partial class GameScreen
     }
 
     /// <summary>The squadrons fly as one group at the speed of the fastest (rule: m3-fleets §Fleet speed, squadron-only fleet).</summary>
-    int FighterSpeed => _moveFighters.Select(S.Host.Economy.Find).Where(o => o != null).Select(o => Fm.ClassOf(o)?.Hyperdrive ?? 0).DefaultIfEmpty(0).Max();
+    int FighterSpeed => Praedra.Core.Travel.TravelFormula.FleetSpeed(Array.Empty<int>(), _moveFighters.Select(S.Host.Economy.Find).Where(o => o != null).Select(Fm.SpeedOfShip));
 
     void UpdateFighterPreview()
     {

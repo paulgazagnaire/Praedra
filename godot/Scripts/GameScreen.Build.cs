@@ -290,7 +290,7 @@ public partial class GameScreen
             ? $"Research ({track}): level {r.Level(Me, kind)}. Next: {next.Class}, {r.Points(Me, kind)} of {next.Cost} points."
             : $"Research ({track}): level {r.Level(Me, kind)}, everything researched.";
         var l = Add(Ui.Label(text, "Hint"));
-        l.TooltipText = Ui.Wrap($"Every finished yard of this kind adds a point now and then; a Research mission by a skilled leader adds far more. Each level unlocks the next item in the list.");
+        l.TooltipText = Ui.Wrap("Every finished yard of this kind adds a point now and then; a Research mission by a skilled leader adds far more. Each level unlocks the next item in the list.");
         l.MouseFilter = MouseFilterEnum.Stop;
     }
 

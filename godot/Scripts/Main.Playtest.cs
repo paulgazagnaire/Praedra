@@ -239,7 +239,6 @@ public partial class Main
                 Expect(s.Game.State.Fleets.Values.Count(f => f.Side == me) == n0, "merge folded it back");
             }
             else Expect(false, "merge button available for the new fleet");
-
         }
 
         // ---------------------------------------------------------------- a battle: send the strongest other fleet onto the nearest enemy fleet

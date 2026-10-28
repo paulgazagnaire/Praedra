@@ -30,8 +30,7 @@ public partial class GameScreen
         if (list.Any(o => o.Category == ObjectCategory.CapitalShip) && list.Any(o => S.Host.Economy.Objects.Any(x => x.AboardShip == o.Id)))
             body += $" Fighters and regiments aboard stay at {system}.";
         // a mine or a refinery is upkeep room: each pair gives 50 (rule: m2-maintenance §Capacity)
-        int roomLost = list.Count(o => FacilityKinds.TryParse(o.Class, out var k) && k is FacilityKind.Mine or FacilityKind.Refinery);
-        if (roomLost > 0) body += " Mines and refineries are what give you upkeep room: scrapping one lowers your room by 50 when it was part of a pair.";
+        if (list.Any(o => FacilityKinds.TryParse(o.Class, out var k) && k is FacilityKind.Mine or FacilityKind.Refinery)) body += $" Mines and refineries are what give you upkeep room: scrapping one lowers your room by {S.Host.Economy.Params.CapacityPerFacility} when it was part of a pair.";
         // rule: m2-construction §Scrapping (a scrapped yard loses its running cycle; the last yard of a kind cancels the project)
         if (list.Any(o => o.Category == ObjectCategory.Facility && FacilityKinds.TryParse(o.Class, out var k) && FacilityKinds.IsYard(k)))
             body += " A scrapped yard stops what it is building, and the work in progress is lost.";
@@ -49,9 +48,6 @@ public partial class GameScreen
         Sent($"scrap {what}", system);
         _panelDirty = true;
     }
-
-    /// <summary>"3 x Mandate" for a group of objects of one class.</summary>
-    static string CountWords(IReadOnlyCollection<EconObject> g) => g.Count == 1 ? g.First().Class : $"{g.Count} x {g.First().Class}";
 
     /// <summary>One line per class with how many, and a quiet "Scrap one..." on the right.</summary>
     void ScrapRows(IEnumerable<EconObject> objects, string system)
