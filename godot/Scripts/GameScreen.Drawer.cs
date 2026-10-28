@@ -63,6 +63,7 @@ public partial class GameScreen
             b.AddThemeStyleboxOverride("pressed", TabBox(true));
             b.AddThemeStyleboxOverride("hover_pressed", TabBox(true));
             b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            b.AddThemeFontSizeOverride("font_size", 13); // six tabs need air between them
             _tabButtons[tab] = b;
             tabs.AddChild(b);
         }
@@ -70,11 +71,11 @@ public partial class GameScreen
         _scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
         v.AddChild(_scroll);
         var margin = new MarginContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        margin.AddThemeConstantOverride("margin_left", 16); margin.AddThemeConstantOverride("margin_right", 14);
-        margin.AddThemeConstantOverride("margin_top", 14); margin.AddThemeConstantOverride("margin_bottom", 18);
+        margin.AddThemeConstantOverride("margin_left", Ui.Pad + 4); margin.AddThemeConstantOverride("margin_right", Ui.Pad + 4);
+        margin.AddThemeConstantOverride("margin_top", Ui.Pad + 2); margin.AddThemeConstantOverride("margin_bottom", Ui.Group);
         _scroll.AddChild(margin);
-        _pv = Ui.VBox(6);
-        _pv.CustomMinimumSize = new Vector2(DrawerWidth - 34, 0);
+        _pv = Ui.VBox(Ui.Block);
+        _pv.CustomMinimumSize = new Vector2(DrawerWidth - 2 * (Ui.Pad + 4) - 4, 0);
         margin.AddChild(_pv);
 
         _logHost = BuildLogTab();
@@ -98,14 +99,15 @@ public partial class GameScreen
         foreach (var (k, b) in _tabButtons) b.SetPressedNoSignal(k == t);
         _scroll.Visible = t != DrawerTab.Log;
         _logHost.Visible = t == DrawerTab.Log;
-        if (t == DrawerTab.Log) ScrollLogToEnd();
+        if (t == DrawerTab.Log) { ScrollLogToEnd(); _unread = 0; }
         _panelDirty = true; _panelTimer = 0;
         RefreshTabTitles();
     }
 
     void RefreshTabTitles()
     {
-        int n = _attention.Count;
+        // the count is what wants a decision (red and yellow); chances to do better never make the tab shout
+        int n = _attention.Count(a => a.Level != Level.Info);
         var b = _tabButtons[DrawerTab.Needs];
         b.Text = n == 0 ? "Needs you" : $"Needs you {n}";
         bool urgent = _attention.Any(a => a.Level == Level.Danger);
@@ -114,6 +116,7 @@ public partial class GameScreen
         b.AddThemeColorOverride("font_pressed_color", n == 0 ? Ui.Text : urgent ? new Color("ff9a9a") : new Color("ffe08a"));
         int f = S.Game.State.Fleets.Values.Count(x => x.Side == Me);
         _tabButtons[DrawerTab.Fleets].Text = $"Fleets {f}";
+        _tabButtons[DrawerTab.Log].Text = _unread == 0 ? "Log" : $"Log {_unread}";
     }
 
     // ================================================================== the panel switch
@@ -166,10 +169,13 @@ public partial class GameScreen
     /// <summary>A muted explanation line.</summary>
     Label Note(string text) => Add(Ui.Label(text, "Hint"));
 
-    void Heading(string text)
+    /// <summary>A section head: a clear gap above it (a new group starts), then the name in small capitals.</summary>
+    void Heading(string text, string tip = null)
     {
-        Add(Ui.Space(6));
-        Add(Ui.Section(text));
+        // the panel list already puts Block above and below this spacer, so Group - 2*Block makes the gap before a section exactly Group
+        Add(Ui.Space(Ui.Group - Ui.Block * 2));
+        var l = Add(Ui.Section(text));
+        if (tip != null) { l.TooltipText = Ui.Wrap(tip); l.MouseFilter = MouseFilterEnum.Stop; l.MouseDefaultCursorShape = CursorShape.Help; }
     }
 
     Button Act(string text, Action a, string tip = null, bool disabled = false, string variation = null) => Add(Ui.Action(text, a, tip, disabled, variation));
@@ -178,14 +184,14 @@ public partial class GameScreen
     HBoxContainer Buttons(params Button[] buttons)
     {
         var h = Ui.HBox(6);
-        foreach (var b in buttons) { b.SizeFlagsHorizontal = SizeFlags.ExpandFill; b.CustomMinimumSize = new Vector2(0, 34); h.AddChild(b); }
+        foreach (var b in buttons) { b.SizeFlagsHorizontal = SizeFlags.ExpandFill; b.CustomMinimumSize = new Vector2(0, 36); h.AddChild(b); }
         return Add(h);
     }
 
     /// <summary>Lines added inside <c>using (Card(...))</c> go into a framed card.</summary>
-    IDisposable Card(Color? bg = null, Color? border = null, int gap = 4)
+    IDisposable Card(Color? bg = null, Color? border = null, int gap = 6)
     {
-        var card = Ui.Card(bg ?? Ui.Panel, border ?? Ui.Line, 12, 8);
+        var card = Ui.Card(bg ?? Ui.Panel, border ?? Ui.Line, Ui.Pad, 8);
         Add(card);
         var v = Ui.VBox(gap);
         card.AddChild(v);
@@ -290,9 +296,9 @@ public partial class GameScreen
         var stats = Ui.Label($"{f.Ships.Count} ships   {Fm.StrengthOf(f):0}", null, Ui.Text3, Ui.Small, wrap: false);
         stats.HorizontalAlignment = HorizontalAlignment.Right;
         stats.SetAnchorsAndOffsetsPreset(LayoutPreset.TopRight);
-        stats.OffsetLeft = -120; stats.OffsetRight = -8; stats.OffsetTop = 6;
+        stats.OffsetLeft = -120; stats.OffsetRight = -12; stats.OffsetTop = 9;
         b.AddChild(stats);
-        if (_view.SelectedFleet == f.Id) b.AddThemeStyleboxOverride("normal", Ui.Box(Ui.YouDeep, 5, null, 0, 8, 5));
+        if (_view.SelectedFleet == f.Id) b.AddThemeStyleboxOverride("normal", Ui.Box(Ui.YouDeep, 6, Ui.You, 1, 12, 8));
         Add(b);
     }
 

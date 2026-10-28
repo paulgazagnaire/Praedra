@@ -34,7 +34,7 @@ public partial class GameScreen
         if (name == S.MyHqSystem) tags.Add((Me == Side.Hand ? "YOUR CAPITAL" : "YOUR HQ", Ui.Gold));
         if (name == S.EnemyHqSystem) tags.Add((Me == Side.Hand ? "COLLECTIVE HQ" : "ENEMY CAPITAL", Ui.Enemy));
         if (S.IsDestroyed(name)) tags.Add(("DESTROYED", Ui.Danger));
-        else if (mine) tags.Add(("YOURS", Ui.You));
+        else if (mine) { if (name != S.MyHqSystem) tags.Add(("YOURS", Ui.You)); } // the capital tag already says it
         else if (pic == null) tags.Add(("UNEXPLORED", Ui.Text3));
         else if (!ownerKnown) tags.Add(("OWNER ?", Ui.Text3));
         else if (owner == null) tags.Add(("NOBODY'S", Ui.Neutral));

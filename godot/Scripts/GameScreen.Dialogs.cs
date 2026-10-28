@@ -49,7 +49,7 @@ public partial class GameScreen
             ("Back to the start screen...", AskMenu, "Leaves this game (asks first)"),
         })
         {
-            var b = Ui.Button(text, () => { ToggleMenu(); act(); }, tip, "Row");
+            var b = Ui.Button(text, () => { ToggleMenu(); act(); }, tip, "Flat");
             b.Alignment = HorizontalAlignment.Left;
             b.CustomMinimumSize = new Vector2(0, 34);
             mv.AddChild(b);

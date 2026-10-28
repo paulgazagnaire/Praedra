@@ -39,7 +39,7 @@ public partial class SectorWindow : VBoxContainer
     public SectorWindow(GameScreen screen, List<string> sectors)
     {
         _screen = screen; _sectors = sectors;
-        AddThemeConstantOverride("separation", 4);
+        AddThemeConstantOverride("separation", Ui.Block);
         var head = new HBoxContainer();
         head.AddThemeConstantOverride("separation", 8);
         AddChild(head);
@@ -68,7 +68,7 @@ public partial class SectorWindow : VBoxContainer
             _tree.SetColumnTitleAlignment(c, HorizontalAlignment.Left);
             _tree.SetColumnClipContent(c, true);
         }
-        _tree.SetColumnExpand(0, true); _tree.SetColumnExpandRatio(0, 5);
+        _tree.SetColumnExpand(0, true); _tree.SetColumnExpandRatio(0, 7);
         _tree.SetColumnExpand(1, false); _tree.SetColumnCustomMinimumWidth(1, 70);
         _tree.SetColumnExpand(2, false); _tree.SetColumnCustomMinimumWidth(2, 62);
         _tree.SetColumnExpand(3, false); _tree.SetColumnCustomMinimumWidth(3, 62);

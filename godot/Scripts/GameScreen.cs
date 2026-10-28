@@ -71,6 +71,7 @@ public partial class GameScreen : Control
         _view.Mark = LayerMarkOf;
         _view.StateChanged += OnViewChanged;
         _view.SystemPicked += OnSystemPicked;
+        _view.SectorClicked += OpenSector;
         _view.FleetPicker = _fleets.Pick;
         _view.EnemyMarkerPicker = _fleets.PickEnemySystem;
         _fleets.Player = S.Player;
@@ -131,7 +132,7 @@ public partial class GameScreen : Control
     void SetSpeed(int idx)
     {
         _speedIndex = Math.Clamp(idx, 0, Speeds.Length - 1);
-        for (int i = 0; i < _speedButtons.Count; i++) _speedButtons[i].SetPressedNoSignal(i == _speedIndex);
+        if (_speedButton != null) _speedButton.Text = $"{Speeds[_speedIndex]}x";
     }
 
     public void StepOne()

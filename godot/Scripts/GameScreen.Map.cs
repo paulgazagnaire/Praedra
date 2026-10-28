@@ -18,7 +18,6 @@ public partial class GameScreen
     enum MapLayer { Owners, Support, Trouble, Yards, Intel, Slots }
 
     MapLayer _layer = MapLayer.Owners;
-    readonly List<Button> _layerButtons = new();
     Button _routesChip;
     Label _layerKey;
     PanelContainer _layerKeyCard;
@@ -33,22 +32,21 @@ public partial class GameScreen
         (MapLayer.Slots, "Slots", "Energy and raw material slots: the bigger the halo, the more a planet can hold (mines need raw slots)."),
     };
 
-    void BuildLayerChips()
+    OptionButton _layerPick;
+
+    /// <summary>One drop-down for the map layer (V cycles it) and one toggle for the routes: two controls instead of a row of seven.</summary>
+    void BuildMapTools()
     {
-        var group = new ButtonGroup();
-        var lab = Ui.Label("MAP", "StatLabel", wrap: false);
-        lab.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        _layerChips.AddChild(lab);
-        foreach (var (layer, name, tip) in Layers)
-        {
-            var l = layer;
-            var b = Ui.Chip(name, () => SetLayer(l), tip + " (V cycles the layers)", layer == _layer, group);
-            _layerButtons.Add(b);
-            _layerChips.AddChild(b);
-        }
+        _layerPick = new OptionButton { FocusMode = FocusModeEnum.None, MouseDefaultCursorShape = CursorShape.PointingHand };
+        _layerPick.CustomMinimumSize = new Vector2(150, 0);
+        foreach (var (_, name, _) in Layers) _layerPick.AddItem("Map: " + name);
+        for (int i = 0; i < Layers.Length; i++) _layerPick.SetItemTooltip(i, Ui.Wrap(Layers[i].Tip));
+        _layerPick.Select((int)_layer);
+        _layerPick.TooltipText = Ui.Wrap("Colour the map for one question at a time (V cycles the layers).");
+        _layerPick.ItemSelected += i => SetLayer(Layers[(int)i].Layer);
+        _mapTools.AddChild(_layerPick);
         _routesChip = Ui.Chip("Routes", CycleLanes, "Show or hide the hyperspace routes (L)", true);
-        _layerChips.AddChild(new VSeparator());
-        _layerChips.AddChild(_routesChip);
+        _mapTools.AddChild(_routesChip);
         // the key sits on a card so the map's names do not run through it
         _layerKey = Ui.Label("", "Hint", wrap: false);
         _layerKeyCard = Ui.Card(new Color(Ui.Chrome, 0.9f), Ui.Line, 6, 6);
@@ -56,14 +54,14 @@ public partial class GameScreen
         _layerKeyCard.MouseFilter = MouseFilterEnum.Ignore;
         _layerKeyCard.Visible = false;
         _layerKeyCard.AddChild(_layerKey);
-        _layerChips.GetParent().AddChild(_layerKeyCard);
-        _layerChips.GetParent().MoveChild(_layerKeyCard, _layerChips.GetIndex() + 1);
+        _mapTools.GetParent().AddChild(_layerKeyCard);
+        _mapTools.GetParent().MoveChild(_layerKeyCard, _mapTools.GetIndex() + 1);
     }
 
     void SetLayer(MapLayer l)
     {
         _layer = l;
-        for (int i = 0; i < _layerButtons.Count; i++) _layerButtons[i].SetPressedNoSignal(Layers[i].Layer == l);
+        if (_layerPick != null && _layerPick.Selected != (int)l) _layerPick.Select((int)l);
         _layerKey.Text = l switch
         {
             MapLayer.Support => "Support for you:  orange low  ·  grey half  ·  blue high",
@@ -181,7 +179,7 @@ public partial class GameScreen
 
     void BuildSectorDock()
     {
-        var row = Ui.HBox(8);
+        var row = Ui.HBox(Ui.Pad + 2);
         _sectorDock.AddChild(row);
         var sectors = G.Sectors.Select(s => s.Name).OrderBy(n => n, StringComparer.Ordinal).ToList();
         for (int i = 0; i < 2; i++)
@@ -233,6 +231,15 @@ public partial class GameScreen
         if (_sectorWindows.Any(w => w.Sector == sec)) { RefreshSectorWindows(); return; }
         var older = _sectorWindows.OrderBy(w => w.ShownAt).First();
         older.Show(sec);
+        RefreshSectorWindows();
+    }
+
+    /// <summary>A click on a sector of the map: open the sector windows on it (in the window shown longest ago, unless one already shows it).</summary>
+    internal void OpenSector(string sector)
+    {
+        if (sector == null || InMoveMode) return;
+        if (!_sectorDock.Visible) ToggleSectorDock();
+        if (!_sectorWindows.Any(w => w.Sector == sector)) _sectorWindows.OrderBy(w => w.ShownAt).First().Show(sector);
         RefreshSectorWindows();
     }
 

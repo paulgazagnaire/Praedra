@@ -92,8 +92,8 @@ public partial class GameScreen
                 int nSafe = Math.Min(Math.Max(0, avail.Count - need), room);
                 if (nAll == 0 && room > 0) Note($"No regiments at {at} to load.");
                 if (nSafe > 0)
-                    Act($"Load troops: {nSafe} ({avail.Count} here, room for {room}; the garrison stays)", () => LoadTroops(f, avail.Take(nSafe).ToList()),
-                        $"Takes {nSafe} regiment(s) off the planet onto this fleet and leaves enough to keep order.");
+                    Act($"Load troops: {nSafe}, the garrison stays", () => LoadTroops(f, avail.Take(nSafe).ToList()),
+                        $"Takes {nSafe} of the {avail.Count} regiment(s) here onto this fleet (room for {room}) and leaves enough to keep order.");
                 if (nAll > nSafe)
                     Act($"Load every regiment: {nAll} (the planet may revolt)", () => LoadTroops(f, avail.Take(nAll).ToList()),
                         "Takes all the regiments you have room for. Fewer than the garrison the planet needs can make the people rise up (yards and mines stop).", false, "WarnButton");
@@ -115,8 +115,7 @@ public partial class GameScreen
             if (owner != Me)
             {
                 bool attackPending = S.PendingOf(f.Id).Any(p => p.StartsWith("Bombard", StringComparison.Ordinal) || p.StartsWith("Invade", StringComparison.Ordinal));
-                Heading($"Attack {at}");
-                Note("Bombard weakens the defences from orbit. Invade lands the regiments aboard to take the planet: land more than the defenders have.");
+                Heading($"Attack {at}", "Bombard weakens the defences from orbit. Invade lands the regiments aboard to take the planet: land more than the defenders have.");
                 foreach (var (cat, label, tip) in new[]
                 {
                     (BombardCategory.Military, "Bombard: military targets", "Shoots at regiments and defence buildings."),
@@ -147,7 +146,6 @@ public partial class GameScreen
         foreach (var g in fightersAboard.Concat(f.Squadrons.Select(id => eco.Find(id)).Where(o => o != null)).GroupBy(o => o.Class).OrderBy(g => g.Key, StringComparer.Ordinal))
             Add(Ui.Row($"{g.Key} (fighters)", g.Count().ToString(), null, ClassTip(g.Key)));
         if (f.Ships.Count == 0 && fightersAboard.Count == 0 && f.Squadrons.Count == 0) Line("none", Dim);
-        Note("Hover a class for what it is.");
 
         OfficersSection(f);
 
@@ -162,11 +160,10 @@ public partial class GameScreen
         // split, transfer, merge (C6)
         if (atSystem)
         {
-            Heading("Split, transfer or merge");
+            Heading("Split, transfer or merge", "Tick ships, then split them into a new fleet or move them into another fleet here.");
             var others = here.Where(o => o.Id != f.Id).ToList();
             if (f.Ships.Count > 1)
             {
-                Note("Tick ships, then split them into a new fleet or move them into another fleet here.");
                 foreach (int id in f.Ships)
                 {
                     int sid = id;

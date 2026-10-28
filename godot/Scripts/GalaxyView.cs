@@ -13,9 +13,14 @@ namespace PraedraViewer;
 /// </summary>
 public partial class GalaxyView : Control
 {
-    // Zoom (1 = whole galaxy fits). Unexplored systems get names only from NameZoom in.
+    // Zoom (1 = whole galaxy fits).
     const float MinZoom = 0.8f, MaxZoom = 16f;
-    const float NameZoom = 2.0f;
+    // Names of systems nobody holds come in only from NeutralNameZoom, unexplored ones from UnknownNameZoom: zoomed out the map names
+    // the worlds that matter (yours, the enemy's, the capitals), and hovering any dot still names it.
+    const float NeutralNameZoom = 5.0f;
+    const float UnknownNameZoom = 7.0f;
+    // Room kept free around every name, so two names never touch: space is part of the label.
+    static readonly Vector2 NamePad = new(7, 3);
     const float PickRadiusPx = 11f;
     const float Margin = 40f;
 
@@ -90,6 +95,15 @@ public partial class GalaxyView : Control
     // Sectors (name, member systems), sorted by name; _sectorOf[system] indexes it, -1 outside the sectors.
     readonly List<(string name, int[] members)> _sectors = new();
     int[] _sectorOf;
+    Rect2[] _sectorBox;             // world bounds of each sector's systems, to find the sector under the mouse quickly
+    const float SectorPull = 0.7f;  // how tightly a sector is drawn around its centre (1 = as in the galaxy data)
+    const float SectorPadPx = 14f;  // the sector's shape reaches this far past its outer systems on screen
+
+    /// <summary>The sector under the mouse when it is not over a system (-1: none). Its whole shape lights up; a click opens it.</summary>
+    public int HoveredSector { get; private set; } = -1;
+    /// <summary>A click inside a sector, away from its systems: the sector's name.</summary>
+    public event Action<string> SectorClicked;
+    public string SectorName(int k) => k >= 0 && k < _sectors.Count ? _sectors[k].name : null;
 
     public float Zoom => _zoom;
 
@@ -123,6 +137,18 @@ public partial class GalaxyView : Control
             foreach (int m in sec.Members) _sectorOf[m] = _sectors.Count;
             _sectors.Add((sec.Name, sec.Members.ToArray()));
         }
+        // Each sector is drawn a little tighter around its own centre, so open space shows between sectors and every sector reads as one
+        // group (Paul 2026-10-28). Drawing only: travel and distances use the galaxy's own coordinates.
+        _sectorBox = new Rect2[_sectors.Count];
+        for (int k = 0; k < _sectors.Count; k++)
+        {
+            var mem = _sectors[k].members;
+            var c = mem.Aggregate(Vector2.Zero, (a, m) => a + _pos[m]) / Math.Max(1, mem.Length);
+            foreach (int m in mem) _pos[m] = c + (_pos[m] - c) * SectorPull;
+            var box = new Rect2(_pos[mem[0]], Vector2.Zero);
+            foreach (int m in mem) box = box.Expand(_pos[m]);
+            _sectorBox[k] = box;
+        }
         ResetView();
     }
 
@@ -145,6 +171,10 @@ public partial class GalaxyView : Control
     public void SetZoom(float zoom) { _zoom = Mathf.Clamp(zoom, MinZoom, MaxZoom); Changed(); }
     /// <summary>Pretend the mouse is over a system (playtest and screenshots).</summary>
     public void ShotHover(int system) { Hovered = system; QueueRedraw(); }
+    /// <summary>Pretend the mouse is over a sector's open space (playtest and screenshots).</summary>
+    public void ShotHoverSector(string name) { HoveredSector = _sectors.FindIndex(x => x.name == name); Hovered = -1; QueueRedraw(); }
+    /// <summary>Click a sector's open space as the mouse would (playtest).</summary>
+    public void ShotClickSector(string name) => SectorClicked?.Invoke(name);
     public void Select(int system) { SelectedFleet = -1; Selected = system; StateChanged?.Invoke(); QueueRedraw(); }
 
     // ---- transform ----
@@ -192,6 +222,7 @@ public partial class GalaxyView : Control
                         if (fleet < 0 && hit < 0) hit = EnemyMarkerPicker?.Invoke(mb.Position) ?? -1;
                         Selected = hit; // click on empty space clears the selection
                         StateChanged?.Invoke();
+                        if (fleet < 0 && hit < 0 && SectorAt(mb.Position) is int sk and >= 0) SectorClicked?.Invoke(_sectors[sk].name);
                         QueueRedraw();
                     }
                     _dragging = false;
@@ -208,7 +239,13 @@ public partial class GalaxyView : Control
             else
             {
                 int h = Pick(mm.Position);
-                if (h != Hovered) { Hovered = h; StateChanged?.Invoke(); QueueRedraw(); }
+                int hs = h >= 0 ? -1 : SectorAt(mm.Position);
+                if (h != Hovered || hs != HoveredSector)
+                {
+                    Hovered = h; HoveredSector = hs;
+                    MouseDefaultCursorShape = h >= 0 || hs >= 0 ? CursorShape.PointingHand : CursorShape.Arrow;
+                    StateChanged?.Invoke(); QueueRedraw();
+                }
             }
         }
         else if (e is InputEventMagnifyGesture mg) ZoomAt(mg.Position, mg.Factor);
@@ -217,7 +254,7 @@ public partial class GalaxyView : Control
 
     public override void _Notification(int what)
     {
-        if (what == NotificationMouseExit && Hovered != -1) { Hovered = -1; StateChanged?.Invoke(); QueueRedraw(); }
+        if (what == NotificationMouseExit && (Hovered != -1 || HoveredSector != -1)) { Hovered = -1; HoveredSector = -1; StateChanged?.Invoke(); QueueRedraw(); }
         if (what == NotificationResized) Changed();
     }
 
@@ -244,6 +281,27 @@ public partial class GalaxyView : Control
         return best;
     }
 
+    /// <summary>The sector whose shape holds a screen point (-1: open space).</summary>
+    public int SectorAt(Vector2 screen)
+    {
+        if (_sectorBox == null) return -1;
+        var w = ScreenToWorld(screen);
+        float pad = (SectorPadPx + 10f) / PxPerUnit;
+        int best = -1; float bestD = float.MaxValue;
+        for (int k = 0; k < _sectors.Count; k++)
+        {
+            if (!_sectorBox[k].Grow(pad).HasPoint(w)) continue;
+            var shape = SectorOutline(k, SectorPadPx + SystemRadius);
+            if (shape == null || !Geometry2D.IsPointInPolygon(screen, shape)) continue;
+            // two shapes can overlap at their edges: the sector with the nearest system wins
+            float d = _sectors[k].members.Min(m => _pos[m].DistanceSquaredTo(w));
+            if (d < bestD) { bestD = d; best = k; }
+        }
+        return best;
+    }
+
+    float SystemRadius => Mathf.Clamp(3.2f + _zoom * 1.0f, 3.6f, 10f);
+
     // ---- drawing ----
     // Colours of the map itself. Only the owner of a system gets a strong colour (blue you, orange the enemy);
     // everything else (lanes, sectors, unexplored systems) is drawn in quiet greys and blues so ownership reads first.
@@ -258,15 +316,30 @@ public partial class GalaxyView : Control
         DrawRect(new Rect2(Vector2.Zero, Size), Ui.MapBg);
         int focus = Selected >= 0 ? Selected : Hovered;
         var screenRect = new Rect2(Vector2.Zero, Size).Grow(40);
-        float radius = Mathf.Clamp(3.2f + _zoom * 1.0f, 3.6f, 10f);
+        float radius = SystemRadius;
 
-        // the sector of the system under the mouse (else of the selected one): a faint outline around its systems
-        int hoverSector = Hovered >= 0 ? _sectorOf[Hovered] : Selected >= 0 ? _sectorOf[Selected] : -1;
-        Vector2[] sectorShape = hoverSector >= 0 ? SectorOutline(hoverSector, radius + 10f) : null;
+        // the sector under the mouse lights up as one block (fill, edge, name): pointing at its open space, or at one of its systems;
+        // with nothing under the mouse, the selected system's sector keeps a quiet outline
+        bool areaHover = HoveredSector >= 0;
+        int hoverSector = areaHover ? HoveredSector : Hovered >= 0 ? _sectorOf[Hovered] : Selected >= 0 ? _sectorOf[Selected] : -1;
+        bool lit = areaHover || Hovered >= 0;
+        // every sector is a quiet tile of its own (a faint edge, no colour), so the groups read at a glance and the gaps between them show
+        for (int k = 0; k < _sectors.Count; k++)
+        {
+            if (k == hoverSector) continue;
+            var bw = _sectorBox[k];
+            var a = WorldToScreen(bw.Position); var b = WorldToScreen(bw.End);
+            if (!new Rect2(a, b - a).Grow(radius + SectorPadPx).Intersects(screenRect)) continue;
+            var shape = SectorOutline(k, radius + SectorPadPx);
+            if (shape == null) continue;
+            DrawColoredPolygon(shape, new Color(SectorColor, 0.025f));
+            DrawPolyline(Closed(shape), new Color(SectorColor, 0.13f), 1f, true);
+        }
+        Vector2[] sectorShape = hoverSector >= 0 ? SectorOutline(hoverSector, radius + SectorPadPx) : null;
         if (sectorShape != null)
         {
-            DrawColoredPolygon(sectorShape, new Color(SectorColor, 0.06f));
-            DrawPolyline(Closed(sectorShape), new Color(SectorColor, 0.35f), 1.2f, true);
+            DrawColoredPolygon(sectorShape, new Color(SectorColor, lit ? (areaHover ? 0.12f : 0.08f) : 0.05f));
+            DrawPolyline(Closed(sectorShape), new Color(SectorColor, lit ? (areaHover ? 0.75f : 0.5f) : 0.3f), areaHover ? 2f : 1.2f, true);
         }
 
         // hyperspace routes (planets/15, Paul 2026-10-16): ships fly anywhere, the drawn links are the fast stretches.
@@ -327,7 +400,7 @@ public partial class GalaxyView : Control
                 if (!screenRect.HasPoint(p)) continue;
                 float r = radius * m.Size;
                 if (m.Ring) { DrawArc(p, r, 0, Mathf.Tau, 32, m.Color, 2.5f, true); continue; }
-                for (int k = 4; k >= 1; k--) DrawCircle(p, r * k / 4f, new Color(m.Color, m.Color.A * 0.16f));
+                for (int k = 4; k >= 1; k--) DrawCircle(p, r * k / 4f, new Color(m.Color, m.Color.A * 0.24f));
             }
 
         // systems: the whole dot is the owner's colour; neutral = small grey dot; unexplored = faint hollow ring.
@@ -399,7 +472,7 @@ public partial class GalaxyView : Control
             }
 
         // the hovered sector's name, just above its outline (only on hover: for the selected system it would sit on its fleets' names)
-        if (sectorShape != null && Hovered >= 0)
+        if (sectorShape != null && lit)
         {
             string text = _sectors[hoverSector].name.ToUpperInvariant();
             const int fs = 13;
@@ -434,7 +507,9 @@ public partial class GalaxyView : Control
             float r = radius + 1.5f;
             taken.Add(new Rect2(p - new Vector2(r, r), new Vector2(2 * r, 2 * r)));
             bool unknown = IsUnknown?.Invoke(i) == true;
-            if (unknown && _zoom < NameZoom && i != focus && i != Hovered) continue;
+            bool key = i == focus || i == Hovered;
+            if (!key && unknown && _zoom < UnknownNameZoom) continue;
+            if (!key && !unknown && OwnerOf?.Invoke(i) == null && _zoom < NeutralNameZoom) continue;
             if (CapitalTag?.Invoke(i) != null) continue; // its name is in the tag
             order.Add((i, LabelRank(i, focus, unknown)));
         }
@@ -461,7 +536,7 @@ public partial class GalaxyView : Control
             }
             if (spot == null && key) spot = new Rect2(p + new Vector2(gap, -size.Y / 2f), size); // the focused name always shows
             if (spot is not { } at) continue;
-            taken.Add(at);
+            taken.Add(at.GrowIndividual(NamePad.X, NamePad.Y, NamePad.X, NamePad.Y)); // the next name keeps its distance
             var baseLine = at.Position + new Vector2(0, _font.GetAscent(fs));
             bool unknown = IsUnknown?.Invoke(i) == true;
             float a = key ? 1f : unknown ? 0.45f : OwnerOf?.Invoke(i) == null ? 0.72f : 0.92f;
