@@ -1,0 +1,742 @@
+<title>Galaxy Maker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: the galaxy fills the left, one plain control column on the right; stacks on a phone. Same look as the Planet Maker. */
+:root {
+  --bg: #090b10;
+  --panel: #10131a;
+  --panel-2: #171b24;
+  --line: #262c38;
+  --fg: #dde2ec;
+  --dim: #8b94a6;
+  --accent: #ff8f6b;
+  --accent-ink: #1a0d08;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 14px/1.45 var(--font-body);
+  padding-left: max(0px, env(safe-area-inset-left, 0px));
+  padding-right: max(0px, env(safe-area-inset-right, 0px));
+}
+#app { display: grid; grid-template-columns: minmax(0, 1fr) 360px; height: 100%; min-height: 0; }
+.stage { position: relative; min-width: 0; min-height: 0; background: #111214; overflow: hidden; }
+#cv, #ov { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#cv { cursor: grab; touch-action: none; }
+#cv.drag { cursor: grabbing; }
+#cv.dots { image-rendering: pixelated; image-rendering: crisp-edges; }
+#ov { pointer-events: none; }
+.tag { position: absolute; left: 16px; top: 14px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); pointer-events: none; }
+.tag b { display: block; font-family: var(--font-body); font-size: 20px; letter-spacing: 0; text-transform: none; color: var(--fg); font-weight: 600; }
+.hint { position: absolute; left: 16px; bottom: 14px; font-size: 12px; color: var(--dim); pointer-events: none; }
+.stagebtns { position: absolute; right: 14px; top: 12px; display: flex; gap: 8px; }
+.panel { background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; min-height: 0; padding-bottom: max(16px, env(safe-area-inset-bottom, 0px)); }
+.sec { border-bottom: 1px solid var(--line); padding: 14px 16px; }
+details.sec > summary { cursor: pointer; margin: 0; list-style: none; display: flex; justify-content: space-between; align-items: center; padding: 2px 0; font: 500 11px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+details.sec > summary::-webkit-details-marker { display: none; }
+details.sec > summary::after { content: "+"; font-size: 16px; color: var(--dim); }
+details.sec[open] > summary::after { content: "–"; }
+details.sec[open] > summary { margin-bottom: 12px; }
+h2 { margin: 0 0 10px; font: 500 11px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+button {
+  font: 500 13px/1 var(--font-body); color: var(--fg); background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 6px; padding: 9px 10px; cursor: pointer; text-align: left;
+}
+button:hover { border-color: #3a4354; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.chip small { display: block; font-weight: 400; opacity: .7; margin-top: 3px; font-size: 11px; }
+.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); text-align: center; }
+.row2 { display: flex; gap: 8px; }
+.row2 > * { flex: 1; min-width: 0; }
+.stagebtns button { background: rgba(16,19,26,.85); text-align: center; }
+.sub { margin: 14px 0 8px; font: 500 11px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+[hidden] { display: none !important; }
+.ctl { display: grid; grid-template-columns: 112px minmax(0, 1fr) 54px; align-items: center; gap: 8px; margin: 9px 0; }
+.ctl label { color: var(--fg); font-size: 13px; }
+.ctl output { font: 12px var(--font-mono); color: var(--dim); text-align: right; white-space: nowrap; }
+input[type=range] { width: 100%; accent-color: var(--accent); margin: 0; }
+.sw-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 4px; }
+.sw { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: var(--dim); width: 58px; text-align: center; }
+.sw input { width: 44px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 5px; background: none; cursor: pointer; }
+.chk { display: flex; align-items: center; gap: 8px; margin: 6px 0 10px; font-size: 13px; }
+textarea { width: 100%; font: 12px var(--font-mono); color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px; height: 74px; resize: vertical; }
+.note { color: var(--dim); font-size: 12px; margin: 8px 0 0; }
+.toast { position: fixed; left: 50%; bottom: max(18px, env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 9px 14px; border-radius: 6px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 20; max-width: 90vw; }
+.toast.on { opacity: 1; }
+#snap { position: fixed; inset: 0; z-index: 30; background: rgba(5,6,9,.92); display: none; align-items: center; justify-content: center; flex-direction: column; gap: 12px; padding: 16px; }
+#snap.on { display: flex; }
+#snap img { max-width: 100%; max-height: 78%; border: 1px solid var(--line); }
+@media (max-width: 820px) {
+  html, body { height: auto; }
+  #app { display: block; height: auto; }
+  .stage { height: 62vh; }
+  .panel { border-left: 0; border-top: 1px solid var(--line); overflow: visible; }
+  .sec { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .ctl { grid-template-columns: 100px minmax(0, 1fr) 48px; }
+}
+@media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+</style>
+
+<div id="app">
+  <main class="stage">
+    <canvas id="cv" aria-label="Galaxy preview"></canvas>
+    <canvas id="ov" aria-hidden="true"></canvas>
+    <div class="tag">Galaxy<b>The Praedra galaxy</b></div>
+    <div class="stagebtns">
+      <button id="btnFit" type="button">Whole galaxy</button>
+      <button id="btnPause" type="button">Pause</button>
+      <button id="btnSnap" type="button">Save image</button>
+    </div>
+    <div class="hint">Drag to move, scroll or pinch to zoom. The galaxy never turns; only stars and gas stir.</div>
+  </main>
+
+  <aside class="panel">
+    <section class="sec">
+      <h2>Looks</h2>
+      <div class="chips" id="looks"></div>
+      <label class="chk" style="margin-top:12px"><input type="checkbox" id="ovOn"> Show the 555 systems on top</label>
+    </section>
+    <details class="sec" open><summary>Shape</summary><div id="ctlShape"></div></details>
+    <details class="sec" open><summary>Light</summary><div id="ctlLight"></div></details>
+    <details class="sec"><summary>Gas and dust</summary><div id="ctlDust"></div></details>
+    <details class="sec" open><summary>Stars</summary><div id="ctlStars"></div></details>
+    <details class="sec" open><summary>Movement</summary><div id="ctlMove"></div>
+      <p class="note">Nothing turns. Gas drifts out along the arms, star-forming knots breathe, and a few stars flare now and then.</p>
+    </details>
+    <details class="sec"><summary>Colours</summary><div class="sw-row" id="swatches"></div></details>
+    <details class="sec" open>
+      <summary>Art style: dither</summary>
+      <label class="chk"><input type="checkbox" id="diOn"> Draw the picture in dots</label>
+      <div id="diBody" hidden>
+        <div class="sub">Pattern</div>
+        <div class="chips" id="diPat"></div>
+        <div class="sub">Colours</div>
+        <div class="chips" id="diPal"></div>
+        <div id="ctlDither"></div>
+      </div>
+    </details>
+    <details class="sec">
+      <summary>Settings for the game</summary>
+      <p class="note" style="margin-top:0">Copy these to hand the look to the game's map, or paste settings back in.</p>
+      <textarea id="code" spellcheck="false"></textarea>
+      <div class="row2" style="margin-top:8px">
+        <button id="btnCopy" type="button">Copy</button>
+        <button id="btnPaste" type="button">Load pasted</button>
+        <button id="btnReset" type="button">Reset</button>
+      </div>
+    </details>
+  </aside>
+</div>
+<div id="snap"><img id="snapImg" alt="Galaxy snapshot"><div class="row2" style="max-width:420px"><button id="snapSave" type="button" class="primary">Save PNG</button><button id="snapClose" type="button">Close</button></div></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script id="fs" type="x-shader/x-fragment">#version 300 es
+// The galaxy behind the game's map. This is the game's own shader (godot/Scripts/GalaxyBackdrop.gdshader) with every number that
+// shapes the look made a control, plus slow movement and the dither pass. Coordinates are galaxy units: the disc's radius is 1, the
+// centre is Charter, y grows downward as on the game's map.
+precision highp float;
+out vec4 fragColor;
+uniform vec2 uRes;            // canvas pixels
+uniform vec2 uCenter;         // galaxy point at the middle of the canvas
+uniform float uScale;         // canvas pixels per galaxy unit
+uniform float uTime;
+uniform sampler2D uDensity;   // where the systems are, 0..1, over the centre +- 1.15 radii (unit 0)
+uniform sampler2D uBlue;      // 64 x 64 blue noise ranks for the dither (unit 1)
+uniform vec4 uArm;            // x phase (radians), y winding per e-fold of radius, z arm sharpness, w wobble
+uniform vec4 uLight;          // x bulge, y bulge size, z disc, w arms
+uniform vec4 uShape;          // x rim radius, y how much the systems shape the light, z clouds, w star-forming knots
+uniform vec4 uDust;           // x lanes, y filaments, z lane offset, w overall brightness
+uniform vec4 uStar;           // x stars, y foreground stars, z star density, w dimming for the map
+uniform vec4 uMove;           // x gas drift, y knot breathing, z twinkle strength, w share of stars that twinkle
+uniform float uTwSpeed;
+uniform vec3 uCBulge, uCDisc, uCArm, uCKnot, uCDust, uCBg;
+
+float hash12(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+vec2 hash22(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973)); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.xx + p3.yz) * p3.zy); }
+float hash13(vec3 p) { p = fract(p * 0.1031); p += dot(p, p.zyx + 31.32); return fract((p.x + p.y) * p.z); }
+float noise2(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+  float a = hash12(i), b = hash12(i + vec2(1, 0)), c = hash12(i + vec2(0, 1)), d = hash12(i + vec2(1, 1));
+  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+float noise3(vec3 p) {
+  vec3 i = floor(p), f = fract(p);
+  vec3 u = f * f * (3.0 - 2.0 * f);
+  float n000 = hash13(i), n100 = hash13(i + vec3(1, 0, 0)), n010 = hash13(i + vec3(0, 1, 0)), n110 = hash13(i + vec3(1, 1, 0));
+  float n001 = hash13(i + vec3(0, 0, 1)), n101 = hash13(i + vec3(1, 0, 1)), n011 = hash13(i + vec3(0, 1, 1)), n111 = hash13(i + vec3(1, 1, 1));
+  return mix(mix(mix(n000, n100, u.x), mix(n010, n110, u.x), u.y), mix(mix(n001, n101, u.x), mix(n011, n111, u.x), u.y), u.z);
+}
+const mat2 ROT = mat2(0.80, 0.60, -0.60, 0.80);
+// fractal noise; octaves finer than about two pixels are skipped (upp: galaxy units per pixel)
+float fbm2(vec2 p, float upp, int octaves) {
+  float sum = 0.0, amp = 0.5, freq = 1.0, norm = 0.0;
+  for (int k = 0; k < 9; k++) {
+    if (k >= octaves) break;
+    float fade = 1.0 - smoothstep(0.25, 0.5, freq * upp);
+    if (fade <= 0.0) break;
+    sum += amp * fade * noise2(p); norm += amp * fade;
+    p = ROT * p * 2.03 + 17.1; freq *= 2.03; amp *= 0.52;
+  }
+  return norm > 0.0 ? sum / norm : 0.5;
+}
+float ridged2(vec2 p, float upp, int octaves) {
+  float sum = 0.0, amp = 0.5, freq = 1.0, norm = 0.0;
+  for (int k = 0; k < 8; k++) {
+    if (k >= octaves) break;
+    float fade = 1.0 - smoothstep(0.25, 0.5, freq * upp);
+    if (fade <= 0.0) break;
+    float n = 1.0 - abs(noise2(p) * 2.0 - 1.0);
+    sum += amp * fade * n * n; norm += amp * fade;
+    p = ROT * p * 2.11 + 5.3; freq *= 2.11; amp *= 0.55;
+  }
+  return norm > 0.0 ? sum / norm : 0.0;
+}
+// noise laid along the arms: across an arm it changes fast, along it slowly, so dust and star clouds stream with the spiral.
+// 'flow' slides it outward along the arms, which is the gas drift.
+float armNoise(float d, float lr, float flow, float upp, int octaves) {
+  float sum = 0.0, amp = 0.5, norm = 0.0, freq = 1.0;
+  vec3 p = vec3(cos(d) * 3.0, sin(d) * 3.0, lr * 2.2 - flow);
+  for (int k = 0; k < 6; k++) {
+    if (k >= octaves) break;
+    float fade = 1.0 - smoothstep(0.08, 0.2, freq * upp * 3.0);
+    if (fade <= 0.0) break;
+    sum += amp * fade * noise3(p); norm += amp * fade;
+    p = p * 2.07 + vec3(3.1, 7.7, 1.3); freq *= 2.07; amp *= 0.5;
+  }
+  return norm > 0.0 ? sum / norm : 0.5;
+}
+// one layer of point stars on a grid of 'cells' per galaxy radius; stars sit in the brighter parts of the galaxy.
+// A share of them twinkle: a slow breath and, now and then, a short flare, each star on its own clock.
+vec3 stars(vec2 q, float cells, float upp, float light, float seed, float base) {
+  float cellPx = 1.0 / (cells * upp);
+  float vis = smoothstep(3.0, 9.0, cellPx);
+  if (vis <= 0.0) return vec3(0.0);
+  vec2 g = q * cells + seed;
+  vec2 id = floor(g);
+  vec2 h = hash22(id);
+  float pick = hash12(id + 41.7);
+  float chance = clamp((base + light * 0.75) * uStar.z, 0.0, 0.9);
+  if (pick > chance) return vec3(0.0);
+  vec2 at = id + 0.15 + 0.7 * h;
+  float distPx = length(g - at) / cells / upp;
+  float mag = pow(hash12(id + 9.2), 6.0);
+  float size = 0.55 + 1.1 * mag;
+  float core = exp(-distPx * distPx / (size * size));
+  float glow = mag * 0.25 * exp(-distPx / (2.5 + 5.0 * mag)) * (1.0 - smoothstep(0.06, 0.15, length(g - at)));
+  float t = hash12(id + 3.3);
+  vec3 tint = t < 0.15 ? vec3(1.0, 0.78, 0.58) : t < 0.55 ? vec3(1.0, 0.95, 0.88) : vec3(0.74, 0.84, 1.0);
+  float tw = 1.0;
+  if (hash12(id + 77.1) < uMove.w) {
+    float s = 0.5 + 0.5 * sin(uTime * uTwSpeed * (0.5 + h.x) + hash12(id + 5.5) * 6.2832);
+    float s2 = 0.5 + 0.5 * sin(uTime * uTwSpeed * 0.37 * (0.6 + h.y) + hash12(id + 8.8) * 6.2832);
+    tw = 1.0 + uMove.z * (2.2 * pow(s * s2, 14.0) - 0.45 * (1.0 - s));
+  }
+  return tint * (core * (0.35 + 0.9 * mag) + glow) * vis * tw;
+}
+
+#ifdef GM_DITHER
+uniform vec4 uDiA;          // x pattern (0 fine grid, 1 coarse grid, 2 halftone, 3 grain), y colours in the palette (0: own colours), z contrast, w brightness
+uniform float uDiLv;
+uniform vec3 uDiPal[4];
+float bayer(ivec2 p, int bits) {
+  int x = p.x, xy = p.x ^ p.y, v = 0;
+  for (int b = 0; b < 3; b++) { if (b >= bits) break; v = (v << 2) | (((xy >> b) & 1) << 1) | ((x >> b) & 1); }
+  return (float(v) + 0.5) / float(1 << (2 * bits));
+}
+float ditherThr() {
+  ivec2 c = ivec2(gl_FragCoord.xy);
+  int pat = int(uDiA.x + 0.5);
+  if (pat == 0) return bayer(c & 7, 3);
+  if (pat == 1) return bayer(c & 3, 2);
+  if (pat == 2) {
+    vec2 r = mat2(0.7071, 0.7071, -0.7071, 0.7071) * (vec2(c) + 0.5) / 5.0;
+    vec2 g = fract(r) - 0.5;
+    return clamp(1.0 - length(g) * 1.41421, 0.0, 1.0) * 0.98 + 0.01;
+  }
+  return texelFetch(uBlue, c & 63, 0).r * (255.0 / 256.0) + 0.5 / 256.0;
+}
+vec3 ditherCol(vec3 col) {
+  float t = ditherThr();
+  vec3 c = clamp((col - 0.5) * uDiA.z + 0.5 + uDiA.w, 0.0, 1.0);
+  int n = int(uDiA.y + 0.5);
+  if (n < 2) { float lv = uDiLv - 1.0; return min(floor(c * lv + t), lv) / lv; }
+  float L = dot(c, vec3(0.2126, 0.7152, 0.0722)) * float(n - 1);
+  float i = floor(L);
+  if (L - i > t) i += 1.0;
+  return uDiPal[int(min(i, float(n - 1)))];
+}
+#endif
+
+void main() {
+  vec2 sp = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);     // y down, as on the game's map
+  vec2 q = uCenter + (sp - 0.5 * uRes) / uScale;
+  float upp = 1.0 / uScale;
+  float r = length(q);
+  float th = atan(q.y, q.x);
+  float rr = max(r, 0.035);
+  float lr = log(rr / 0.04);
+  float flow = uTime * uMove.x * 0.05;
+
+  float dens = texture(uDensity, q / 2.3 + 0.5).r;
+
+  // spiral arms: two log-spiral arms, an arm's light falls off across it; a little noise bends the arms so they are not perfect curves
+  float wobble = (fbm2(q * 3.0 + 4.0, upp, 3) - 0.5) * uArm.w;
+  float d = th - (uArm.x + uArm.y * lr) + wobble;
+  float across = 0.5 + 0.5 * cos(2.0 * d);
+  float arm = pow(across, uArm.z);
+  float armSharp = pow(across, uArm.z * 3.0);
+  float laneProfile = pow(0.5 + 0.5 * cos(2.0 * (d + uDust.z)), 10.0);
+
+  float streams = armNoise(d, lr, flow, upp, 5);
+  vec2 unwound = mat2(cos(-uArm.y * lr), sin(-uArm.y * lr), -sin(-uArm.y * lr), cos(-uArm.y * lr)) * q;
+  float clumps = fbm2(q * 9.0 + vec2(13.0, 7.0) + (streams - 0.5) * 0.6, upp, 8);
+  float fine = fbm2(unwound * 30.0 + 2.0, upp, 6);
+
+  float edge = 1.0 - smoothstep(0.86 * uShape.x, (1.08 + 0.10 * (clumps - 0.5)) * uShape.x, r);
+  float bs = uLight.y;
+  float bulge = uLight.x * (1.30 * exp(-pow(r / (0.07 * bs), 0.85)) + 0.45 * exp(-r / (0.16 * bs)));
+  float disc = uLight.z * 0.20 * exp(-r / 0.85) * edge;
+  float armLight = (0.06 + 0.95 * uLight.w * arm * smoothstep(0.06, 0.20, r)) * exp(-r / 0.95) * edge;
+  float cloud = smoothstep(0.35, 0.85, clumps * 0.6 + streams * 0.4 + fine * 0.25 - 0.12);
+  armLight *= mix(1.0, 0.35 + 1.25 * cloud, uShape.z);
+  float shape = mix(1.0 - uShape.y, 1.0 + uShape.y, smoothstep(0.02, 0.6, dens));
+  disc *= shape;
+  armLight *= shape;
+
+  vec3 col = uCBulge * bulge + uCDisc * disc + mix(uCDisc, uCArm, smoothstep(0.12, 0.45, r) * (0.4 + 0.6 * armSharp)) * armLight;
+
+  // star-forming knots along the arm spines: small, faint, pinkish; they breathe slowly
+  float knotsN = fbm2(q * 70.0 + 31.0, upp, 4);
+  float breathe = 1.0 + uMove.y * 0.6 * sin(uTime * 0.5 + knotsN * 37.0 + q.x * 9.0);
+  float knots = smoothstep(0.70, 0.86, knotsN) * armSharp * smoothstep(0.15, 0.3, r) * edge;
+  col += uCKnot * knots * 0.22 * uShape.w * breathe;
+  col += uCArm * smoothstep(0.66, 0.80, knotsN) * armSharp * edge * 0.10 * uShape.w;
+
+  // dust: dark lanes on the arms' leading edges, and filaments through the disc and across the bulge
+  float rid = ridged2(unwound * 14.0 + vec2(streams * 1.5, 0.0), upp, 7);
+  float dustLane = laneProfile * smoothstep(0.08, 0.22, r) * (0.45 + 0.75 * rid) * edge;
+  float dustWeb = smoothstep(0.55, 0.95, rid) * (0.25 + 0.5 * arm) * smoothstep(0.03, 0.12, r) * edge;
+  float dust = clamp(dustLane * uDust.x + dustWeb * uDust.y, 0.0, 0.92);
+  col *= mix(vec3(1.0), uCDust, dust);
+
+  col += uCArm * 0.85 * 0.035 * exp(-r / 0.6) * (1.0 - edge * 0.5);
+
+  float light = clamp((bulge * 0.3 + disc + armLight) * 1.6, 0.0, 1.0);
+  col += uCDisc * (fine - 0.45) * 0.08 * light;
+  vec3 st = stars(q, 90.0, upp, light, 0.0, 0.01) + stars(q, 260.0, upp, light, 7.3, 0.0) + stars(q, 760.0, upp, light, 19.1, 0.0) + stars(q, 2200.0, upp, light, 2.9, 0.0);
+  st *= 1.0 - dust * 0.8;
+  st *= uStar.x;
+  st += stars(q, 40.0, upp, 0.0, 51.0, 0.035) * uStar.y;
+
+  // tone: soft shoulder, then kept dim (by 'dimming for the map') so the map on top stays the thing you read
+  vec3 lit = vec3(1.0) - exp(-col * 1.3);
+  vec3 outc = uCBg + uDust.w * (lit * uStar.w + st * 0.45);
+  outc = clamp(outc, 0.0, 1.0);
+#ifdef GM_DITHER
+  outc = ditherCol(outc);
+#endif
+  fragColor = vec4(outc, 1.0);
+}
+</script>
+<script id="vs" type="x-shader/x-vertex">#version 300 es
+in vec2 a;
+void main() { gl_Position = vec4(a, 0.0, 1.0); }
+</script>
+
+<script>
+'use strict';
+const SYSTEMS = /*__SYSTEMS__*/[];   // [name, x, y, region] on the game's 1000 x 1000 map, sectors drawn tighter as the game does
+const $ = (id) => document.getElementById(id);
+const cv = $('cv'), ov = $('ov');
+
+// the approved two-arm spiral the systems were laid out on (specs/creative/galaxy-shape/README.md; same numbers as GalaxyBackdrop.cs)
+const MAP_CENTRE = [500, 500], DISC_R = 480;
+
+/* ---------- settings: every control, its range and the game's own value as the default ---------- */
+const DEF = {
+  phase: 67, pitch: 17, sharp: 3, wobble: 0.35, rim: 1,
+  bulge: 1, bulgeSize: 1, disc: 1, arms: 1, follow: 0.3, bright: 1, dim: 0.32,
+  clouds: 1, knots: 1, lanes: 0.85, web: 0.55, laneOff: 0.42,
+  stars: 1, field: 0.45, starDens: 1,
+  drift: 0.3, breathe: 0.3, twinkle: 0.4, twShare: 0.12, twSpeed: 0.6,
+  cBulge: '#ffd69e', cDisc: '#f5e6d1', cArm: '#99b8ff', cKnot: '#ff7594', cDust: '#4d3d38', cBg: '#111214',
+};
+const CTL = [
+  ['Shape', 'phase', 'Arm start', 0, 360, 1, (v) => v + '°'],
+  ['Shape', 'pitch', 'Arm pitch', 8, 35, 0.5, (v) => v + '°'],
+  ['Shape', 'sharp', 'Arm width', 1, 8, 0.1, (v) => v < 2 ? 'broad' : v < 4.5 ? 'medium' : 'thin'],
+  ['Shape', 'wobble', 'Ragged arms', 0, 1.2, 0.01],
+  ['Shape', 'rim', 'Disc size', 0.8, 1.25, 0.01, (v) => Math.round(v * 100) + '%'],
+  ['Light', 'bright', 'Brightness', 0.2, 2.5, 0.01],
+  ['Light', 'dim', 'Glow', 0.1, 0.9, 0.01, (v) => v < 0.25 ? 'dim, map first' : v < 0.5 ? 'quiet' : 'bright'],
+  ['Light', 'bulge', 'Core light', 0, 2.5, 0.01],
+  ['Light', 'bulgeSize', 'Core size', 0.4, 2.5, 0.01],
+  ['Light', 'disc', 'Disc light', 0, 2.5, 0.01],
+  ['Light', 'arms', 'Arm light', 0, 2.5, 0.01],
+  ['Light', 'follow', 'Follow systems', 0, 0.9, 0.01, (v) => v < 0.05 ? 'off' : Math.round(v * 100) + '%'],
+  ['Dust', 'clouds', 'Star clouds', 0, 1.5, 0.01],
+  ['Dust', 'knots', 'Pink nebulae', 0, 4, 0.01],
+  ['Dust', 'lanes', 'Dust lanes', 0, 1.5, 0.01],
+  ['Dust', 'web', 'Dust filaments', 0, 1.5, 0.01],
+  ['Dust', 'laneOff', 'Lane offset', -1.2, 1.2, 0.01],
+  ['Stars', 'stars', 'Star brightness', 0, 3, 0.01],
+  ['Stars', 'starDens', 'Star density', 0.2, 3, 0.01],
+  ['Stars', 'field', 'Foreground stars', 0, 1.5, 0.01],
+  ['Move', 'drift', 'Gas drift', 0, 2, 0.01, (v) => v < 0.01 ? 'still' : v < 0.5 ? 'very slow' : v < 1.2 ? 'slow' : 'lively'],
+  ['Move', 'breathe', 'Nebulae breathe', 0, 1, 0.01, (v) => v < 0.01 ? 'still' : Math.round(v * 100) + '%'],
+  ['Move', 'twinkle', 'Twinkle strength', 0, 1.5, 0.01, (v) => v < 0.01 ? 'none' : v < 0.5 ? 'subtle' : v < 1 ? 'clear' : 'strong'],
+  ['Move', 'twShare', 'Stars that twinkle', 0, 0.6, 0.01, (v) => Math.round(v * 100) + '%'],
+  ['Move', 'twSpeed', 'Twinkle pace', 0.1, 3, 0.01, (v) => v < 0.4 ? 'very slow' : v < 1 ? 'slow' : v < 2 ? 'steady' : 'quick'],
+];
+const SEC_HOST = { Shape: 'ctlShape', Light: 'ctlLight', Dust: 'ctlDust', Stars: 'ctlStars', Move: 'ctlMove' };
+const SWATCHES = [['cBulge', 'Core'], ['cDisc', 'Disc'], ['cArm', 'Arms'], ['cKnot', 'Nebulae'], ['cDust', 'Dust'], ['cBg', 'Space']];
+// starting points; the first is exactly what the game draws today
+const LOOKS = [
+  { id: 'game', label: 'Game today', sub: 'the map backdrop now', p: {} },
+  { id: 'deep', label: 'Deep and quiet', sub: 'darker, fewer stars', p: { bright: 0.75, dim: 0.24, field: 0.3, stars: 0.8, knots: 0.6, twinkle: 0.3, twShare: 0.08 } },
+  { id: 'rich', label: 'Rich', sub: 'brighter arms, more nebulae', p: { bright: 1.35, dim: 0.42, arms: 1.4, knots: 2.4, clouds: 1.2, stars: 1.3, starDens: 1.4 } },
+  { id: 'ink', label: 'Ink', sub: 'black and white dots', p: { bright: 1.5, dim: 0.5, cBg: '#000000' }, di: { on: true, pat: 'grain', pal: 'mono', dot: 2, contrast: 1.3, bright: -0.05 } },
+];
+let P = Object.assign({}, DEF);
+
+/* ---------- the dither style (as in the Planet Maker) ---------- */
+const DI_PATS = [
+  { id: 'fine', label: 'Fine grid', sub: 'even 8 by 8 pattern' },
+  { id: 'coarse', label: 'Coarse grid', sub: 'bolder 4 by 4' },
+  { id: 'halftone', label: 'Halftone', sub: 'printed round dots' },
+  { id: 'grain', label: 'Grain', sub: 'scattered, no grid' },
+];
+const DI_PALS = {
+  own: { label: 'Own colours', sub: 'its own, in a few steps', cols: [] },
+  mono: { label: 'Black and white', sub: 'two tones', cols: ['#040406', '#f1ede2'] },
+  cold: { label: 'Cold', sub: 'steel blues', cols: ['#04060c', '#1b3350', '#6e9bc0', '#e6eff6'] },
+  warm: { label: 'Warm', sub: 'rust and cream', cols: ['#0b0604', '#5a2913', '#cf7339', '#f6e1bf'] },
+};
+const DI_DEF = { on: false, pat: 'grain', pal: 'mono', dot: 2, contrast: 1.15, bright: 0, levels: 4 };
+let DI = Object.assign({}, DI_DEF);
+const DI_CTL = [
+  ['dot', 'Dot size', 1, 6, 1, () => true, (v) => v + ' px'],
+  ['contrast', 'Contrast', 0.5, 2.5, 0.01, () => true],
+  ['bright', 'Brightness', -0.4, 0.4, 0.01, () => true, (v) => (v > 0 ? '+' : '') + Math.round(v * 100)],
+  ['levels', 'Steps per colour', 2, 6, 1, () => DI.pal === 'own'],
+];
+
+/* ---------- saving: the settings and the dither live in this browser; Copy hands them on ---------- */
+const LKEY = 'gm_state';
+function save() { try { localStorage.setItem(LKEY, JSON.stringify({ p: P, di: DI })); } catch (e) {} }
+const isHex = (c) => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
+// pasted or stored settings are untrusted: keep only known keys, clamp numbers to their slider range, check colours
+function clean(src) {
+  const out = Object.assign({}, DEF);
+  if (!src || typeof src !== 'object') return out;
+  for (const c of CTL) { const v = parseFloat(src[c[1]]); if (isFinite(v)) out[c[1]] = Math.min(c[4], Math.max(c[3], v)); }
+  for (const [k] of SWATCHES) if (isHex(src[k])) out[k] = src[k].toLowerCase();
+  return out;
+}
+function cleanDi(src) {
+  const out = Object.assign({}, DI_DEF);
+  if (!src || typeof src !== 'object') return out;
+  if (typeof src.on === 'boolean') out.on = src.on;
+  if (DI_PATS.some((p) => p.id === src.pat)) out.pat = src.pat;
+  if (DI_PALS[src.pal]) out.pal = src.pal;
+  for (const c of DI_CTL) { const v = parseFloat(src[c[0]]); if (isFinite(v)) out[c[0]] = Math.min(c[3], Math.max(c[2], v)); }
+  return out;
+}
+try { const o = JSON.parse(localStorage.getItem(LKEY) || '{}'); P = clean(o.p); DI = cleanDi(o.di); } catch (e) {}
+const toCode = () => JSON.stringify({ format: 'praedra-galaxy', v: 1, params: P, dither: DI }, null, 1);
+function fromCode(txt) {
+  const o = JSON.parse(txt);
+  if (!o || o.format !== 'praedra-galaxy') throw new Error('not galaxy settings');
+  P = clean(o.params); DI = cleanDi(o.dither);
+}
+
+/* ---------- WebGL ---------- */
+const gl = cv.getContext('webgl2', { antialias: false, alpha: false, preserveDrawingBuffer: false });
+const progs = {};
+let prog, loc = {};
+function makeProgram(dither) {
+  const mk = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error('shader: ' + gl.getShaderInfoLog(s)); return s; };
+  const pr = gl.createProgram();
+  gl.attachShader(pr, mk(gl.VERTEX_SHADER, $('vs').textContent.trim()));
+  gl.attachShader(pr, mk(gl.FRAGMENT_SHADER, $('fs').textContent.trim().replace('#version 300 es', '#version 300 es\n' + (dither ? '#define GM_DITHER\n' : ''))));
+  gl.bindAttribLocation(pr, 0, 'a');
+  gl.linkProgram(pr);
+  if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
+  const l = {};
+  const n = gl.getProgramParameter(pr, gl.ACTIVE_UNIFORMS);
+  for (let i = 0; i < n; i++) { const info = gl.getActiveUniform(pr, i); l[info.name.replace('[0]', '')] = gl.getUniformLocation(pr, info.name); }
+  return { pr, l };
+}
+function useVariant(dither) {
+  const key = dither ? 'D' : '';
+  if (!progs[key]) progs[key] = makeProgram(dither);
+  prog = progs[key].pr; loc = progs[key].l;
+  gl.useProgram(prog);
+}
+const hex2rgb = (h) => [parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255];
+
+// A small greyscale picture of how crowded each part of the map is: every system adds a soft spot (as GalaxyBackdrop.DensityMap).
+function densityMap() {
+  const N = 128, span = 2.3 * DISC_R, sigmaPx = 0.055 * DISC_R / span * N, reach = Math.ceil(sigmaPx * 3);
+  const acc = new Float32Array(N * N);
+  for (const s of SYSTEMS) {
+    const px = ((s[1] - MAP_CENTRE[0]) / span + 0.5) * N, py = ((s[2] - MAP_CENTRE[1]) / span + 0.5) * N;
+    const cx = px | 0, cy = py | 0;
+    for (let y = Math.max(0, cy - reach); y <= Math.min(N - 1, cy + reach); y++)
+      for (let x = Math.max(0, cx - reach); x <= Math.min(N - 1, cx + reach); x++) {
+        const dx = x + 0.5 - px, dy = y + 0.5 - py;
+        acc[y * N + x] += Math.exp(-(dx * dx + dy * dy) / (2 * sigmaPx * sigmaPx));
+      }
+  }
+  const sorted = Array.from(acc).filter((v) => v > 0.01).sort((a, b) => a - b);
+  const top = sorted.length ? sorted[Math.floor(sorted.length * 0.95)] : 1;
+  const out = new Uint8Array(N * N);
+  for (let i = 0; i < N * N; i++) out[i] = Math.round(Math.min(1, acc[i] / top) * 255);
+  return { N, out };
+}
+// Blue noise by void and cluster (Ulichney 1993), for the Grain dither; built once with a fixed seed.
+function makeBlueNoise(N) {
+  const n = N * N, R = 6, sig2 = 2 * 1.9 * 1.9, ker = [];
+  for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) ker.push([dx, dy, Math.exp(-(dx * dx + dy * dy) / sig2)]);
+  const on = new Uint8Array(n), E = new Float32Array(n), rank = new Int32Array(n);
+  const add = (i, sgn) => { const x = i % N, y = (i / N) | 0; for (const [dx, dy, w] of ker) E[((y + dy + N) % N) * N + ((x + dx + N) % N)] += sgn * w; };
+  let seed = 12345; const rnd = () => (seed = (seed * 1103515245 + 12345) >>> 0) / 4294967296;
+  let ones = 0; while (ones < n / 10) { const i = (rnd() * n) | 0; if (!on[i]) { on[i] = 1; add(i, 1); ones++; } }
+  const pick = (want, best) => { let bi = -1, bv = best ? -1e9 : 1e9; for (let i = 0; i < n; i++) if (on[i] === want && (best ? E[i] > bv : E[i] < bv)) { bv = E[i]; bi = i; } return bi; };
+  for (let guard = 0; guard < n; guard++) { const c = pick(1, true); on[c] = 0; add(c, -1); const v = pick(0, false); if (v === c) { on[c] = 1; add(c, 1); break; } on[v] = 1; add(v, 1); }
+  const on0 = on.slice(), E0 = E.slice();
+  for (let r = ones - 1; r >= 0; r--) { const c = pick(1, true); on[c] = 0; add(c, -1); rank[c] = r; }
+  on.set(on0); E.set(E0);
+  for (let r = ones; r < n; r++) { const v = pick(0, false); on[v] = 1; add(v, 1); rank[v] = r; }
+  const out = new Uint8Array(n); for (let i = 0; i < n; i++) out[i] = Math.floor(rank[i] * 256 / n);
+  return out;
+}
+function texR8(unit, N, data, linear, wrap) {
+  const t = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, N, N, 0, gl.RED, gl.UNSIGNED_BYTE, data);
+  const f = linear ? gl.LINEAR : gl.NEAREST, w = wrap ? gl.REPEAT : gl.CLAMP_TO_EDGE;
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, f); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, f);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, w); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, w);
+}
+function initGL() {
+  const dm = densityMap();
+  texR8(0, dm.N, dm.out, true, false);
+  texR8(1, 64, makeBlueNoise(64), false, true);
+  const vb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vb);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+}
+
+/* ---------- the view: pan and zoom only, never a turn ---------- */
+const V = { cx: 0, cy: 0, zoom: 1 };   // centre in galaxy units, zoom 1 = the whole disc fits
+let time = 0, paused = false, frozen = false;
+// canvas pixels per galaxy unit for a canvas of w x h
+const scaleFor = (w, h) => Math.min(w, h) / 2.3 * V.zoom;
+
+function draw(w, h, tm) {
+  useVariant(DI.on);
+  gl.viewport(0, 0, w, h);
+  gl.uniform1i(loc.uDensity, 0); gl.uniform1i(loc.uBlue, 1);
+  gl.uniform2f(loc.uRes, w, h);
+  gl.uniform2f(loc.uCenter, V.cx, V.cy);
+  gl.uniform1f(loc.uScale, scaleFor(w, h));
+  gl.uniform1f(loc.uTime, tm === undefined ? time : tm);
+  const D = Math.PI / 180;
+  // the winding per e-fold of radius, as GalaxyBackdrop.cs: 0.35 / tan(pitch)
+  gl.uniform4f(loc.uArm, P.phase * D, 0.35 / Math.tan(P.pitch * D), P.sharp, P.wobble);
+  gl.uniform4f(loc.uLight, P.bulge, P.bulgeSize, P.disc, P.arms);
+  gl.uniform4f(loc.uShape, P.rim, P.follow, P.clouds, P.knots);
+  gl.uniform4f(loc.uDust, P.lanes, P.web, P.laneOff, P.bright);
+  gl.uniform4f(loc.uStar, P.stars, P.field, P.starDens, P.dim);
+  gl.uniform4f(loc.uMove, P.drift, P.breathe, P.twinkle, P.twShare);
+  gl.uniform1f(loc.uTwSpeed, P.twSpeed);
+  gl.uniform3fv(loc.uCBulge, hex2rgb(P.cBulge)); gl.uniform3fv(loc.uCDisc, hex2rgb(P.cDisc)); gl.uniform3fv(loc.uCArm, hex2rgb(P.cArm));
+  gl.uniform3fv(loc.uCKnot, hex2rgb(P.cKnot)); gl.uniform3fv(loc.uCDust, hex2rgb(P.cDust)); gl.uniform3fv(loc.uCBg, hex2rgb(P.cBg));
+  if (DI.on) {
+    const pal = DI_PALS[DI.pal];
+    gl.uniform4f(loc.uDiA, DI_PATS.findIndex((p) => p.id === DI.pat), pal.cols.length, DI.contrast, DI.bright);
+    gl.uniform1f(loc.uDiLv, DI.levels);
+    const flat = new Float32Array(12); pal.cols.forEach((c, i) => flat.set(hex2rgb(c), i * 3));
+    gl.uniform3fv(loc.uDiPal, flat);
+  }
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+function fit() {
+  const rect = cv.getBoundingClientRect();
+  // with the dither on, one canvas pixel is one dot of Dot size screen pixels, blown up without smoothing
+  const dpr = DI.on ? (window.devicePixelRatio || 1) / DI.dot : Math.min(window.devicePixelRatio || 1, 2);
+  let w = Math.max(2, Math.round(rect.width * dpr)), h = Math.max(2, Math.round(rect.height * dpr));
+  const cap = DI.on ? 1800 : 1400; const s = Math.min(1, cap / Math.max(w, h)); w = Math.round(w * s); h = Math.round(h * s);
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  const odpr = window.devicePixelRatio || 1;
+  const ow = Math.round(rect.width * odpr), oh = Math.round(rect.height * odpr);
+  if (ov.width !== ow || ov.height !== oh) { ov.width = ow; ov.height = oh; }
+}
+// the systems on top, as plain dots by region, to check the light falls where the map is
+const REGION_COL = { heartland: '#ffd28a', midreach: '#9fd0ff', farreach: '#c9b8ff', beyond: '#8b94a6' };
+function drawOverlay() {
+  const g = ov.getContext('2d');
+  g.clearRect(0, 0, ov.width, ov.height);
+  if (!$('ovOn').checked) return;
+  const s = scaleFor(ov.width, ov.height), dpr = window.devicePixelRatio || 1;
+  const rad = Math.max(1.2, 1.6 * dpr);
+  for (const sy of SYSTEMS) {
+    const qx = (sy[1] - MAP_CENTRE[0]) / DISC_R, qy = (sy[2] - MAP_CENTRE[1]) / DISC_R;
+    const x = ov.width / 2 + (qx - V.cx) * s, y = ov.height / 2 + (qy - V.cy) * s;
+    if (x < -4 || y < -4 || x > ov.width + 4 || y > ov.height + 4) continue;
+    g.fillStyle = REGION_COL[sy[3]] || REGION_COL.beyond;
+    g.globalAlpha = sy[0] === 'Charter' ? 1 : 0.75;
+    g.beginPath(); g.arc(x, y, sy[0] === 'Charter' ? rad * 2 : rad, 0, 6.2832); g.fill();
+  }
+  g.globalAlpha = 1;
+}
+
+let last = performance.now(), acc = 0;
+function loop(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  // the picture moves slowly, so 30 frames a second is plenty and halves the work
+  acc += dt;
+  try {
+    if (gl && !frozen && acc >= 1 / 31) {
+      if (!paused) time += acc;
+      acc = 0;
+      fit(); draw(cv.width, cv.height); drawOverlay();
+    }
+  } catch (e) { if (!loop.warned) { loop.warned = true; console.error(e); } }
+  requestAnimationFrame(loop);
+}
+
+/* ---------- controls ---------- */
+const ctlEls = {};
+function slider(host, id, label, min, max, step, onInput) {
+  const row = document.createElement('div'); row.className = 'ctl';
+  row.innerHTML = `<label for="${id}">${label}</label><input type="range" id="${id}" min="${min}" max="${max}" step="${step}"><output></output>`;
+  $(host).appendChild(row);
+  row.querySelector('input').addEventListener('input', (e) => onInput(parseFloat(e.target.value)));
+  return row;
+}
+const fmt = (c, v) => c[6] ? c[6](v) : (Number.isInteger(c[5]) ? String(Math.round(v)) : v.toFixed(2));
+function buildControls() {
+  for (const c of CTL) {
+    const row = slider(SEC_HOST[c[0]], 'c_' + c[1], c[2], c[3], c[4], c[5], (v) => { P[c[1]] = v; row.querySelector('output').textContent = fmt(c, v); changed(); });
+    ctlEls[c[1]] = { row, c };
+  }
+  for (const [k, label] of SWATCHES) {
+    const d = document.createElement('label'); d.className = 'sw';
+    d.innerHTML = `<input type="color" id="s_${k}">${label}`;
+    $('swatches').appendChild(d);
+    d.querySelector('input').addEventListener('input', (e) => { P[k] = e.target.value; changed(); });
+  }
+  for (const L of LOOKS) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.id = L.id;
+    b.innerHTML = `${L.label}<small>${L.sub}</small>`;
+    b.addEventListener('click', () => { P = clean(Object.assign({}, DEF, L.p)); DI = cleanDi(Object.assign({}, DI_DEF, L.di || {})); syncAll(); save(); });
+    $('looks').appendChild(b);
+  }
+  const chips = (host, list, key) => {
+    for (const it of list) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.id = it.id;
+      b.innerHTML = `${it.label}<small>${it.sub}</small>`;
+      b.addEventListener('click', () => { DI[key] = it.id; changed(); });
+      $(host).appendChild(b);
+    }
+  };
+  chips('diPat', DI_PATS, 'pat');
+  chips('diPal', Object.keys(DI_PALS).map((id) => Object.assign({ id }, DI_PALS[id])), 'pal');
+  for (const c of DI_CTL) slider('ctlDither', 'di_' + c[0], c[1], c[2], c[3], c[4], (v) => { DI[c[0]] = v; changed(); });
+  $('diOn').addEventListener('change', () => { DI.on = $('diOn').checked; changed(); });
+  $('ovOn').addEventListener('change', drawOverlay);
+}
+function syncAll() {
+  for (const k in ctlEls) { const e = ctlEls[k]; e.row.querySelector('input').value = P[k]; e.row.querySelector('output').textContent = fmt(e.c, P[k]); }
+  for (const [k] of SWATCHES) $('s_' + k).value = P[k];
+  $('diOn').checked = DI.on; $('diBody').hidden = !DI.on;
+  cv.classList.toggle('dots', DI.on);
+  document.querySelectorAll('#diPat .chip').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === DI.pat)));
+  document.querySelectorAll('#diPal .chip').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === DI.pal)));
+  for (const c of DI_CTL) {
+    const row = $('di_' + c[0]).closest('.ctl'); row.hidden = !c[5]();
+    $('di_' + c[0]).value = DI[c[0]]; row.querySelector('output').textContent = c[6] ? c[6](DI[c[0]]) : DI[c[0]].toFixed(2);
+  }
+  $('code').value = toCode();
+}
+let saveT = 0;
+function changed() { syncAll(); clearTimeout(saveT); saveT = setTimeout(save, 300); }
+
+/* ---------- pan and zoom ---------- */
+const ptrs = new Map(); let pinch0 = 0, zoom0 = 1;
+function panBy(dx, dy) { const s = scaleFor(cv.clientWidth, cv.clientHeight); V.cx -= dx / s; V.cy -= dy / s; clampView(); }
+function clampView() { V.zoom = Math.min(40, Math.max(0.6, V.zoom)); V.cx = Math.max(-1.3, Math.min(1.3, V.cx)); V.cy = Math.max(-1.3, Math.min(1.3, V.cy)); }
+function zoomAt(f, mx, my) {
+  const s0 = scaleFor(cv.clientWidth, cv.clientHeight);
+  const gx = V.cx + (mx - cv.clientWidth / 2) / s0, gy = V.cy + (my - cv.clientHeight / 2) / s0;
+  V.zoom *= f; clampView();
+  const s1 = scaleFor(cv.clientWidth, cv.clientHeight);
+  V.cx = gx - (mx - cv.clientWidth / 2) / s1; V.cy = gy - (my - cv.clientHeight / 2) / s1; clampView();
+}
+cv.addEventListener('pointerdown', (e) => { cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]); cv.classList.add('drag'); if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]); zoom0 = V.zoom; } });
+cv.addEventListener('pointermove', (e) => {
+  if (!ptrs.has(e.pointerId)) return;
+  const p = ptrs.get(e.pointerId);
+  if (ptrs.size === 1) panBy(e.clientX - p[0], e.clientY - p[1]);
+  ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+  if (ptrs.size === 2 && pinch0 > 0) { const [a, b] = [...ptrs.values()]; V.zoom = zoom0 * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch0; clampView(); }
+});
+const up = (e) => { ptrs.delete(e.pointerId); if (!ptrs.size) cv.classList.remove('drag'); pinch0 = 0; };
+cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+cv.addEventListener('wheel', (e) => { e.preventDefault(); const r = cv.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+
+/* ---------- image export ---------- */
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 1800); }
+async function saveFile(filename, data, mime) {
+  try {
+    const dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null;
+    if (dl) { await dl.save({ filename, data }); return true; }
+  } catch (e) { if (e && e.code === 'declined') return false; }
+  try { const a = document.createElement('a'); a.href = URL.createObjectURL(data); a.download = filename; document.body.appendChild(a); a.click(); a.remove(); return true; } catch (e) { return false; }
+}
+// the whole galaxy, square, 2048 pixels; with the dither on, the same dots as on screen enlarged to whole pixels
+function snapshot(size) {
+  const ow = cv.width, oh = cv.height, v0 = Object.assign({}, V);
+  V.cx = 0; V.cy = 0; V.zoom = 1;
+  let blobP;
+  if (DI.on) {
+    const n = Math.max(64, Math.round(size / (DI.dot * 2))), k = Math.max(1, Math.round(size / n));
+    cv.width = n; cv.height = n; draw(n, n);
+    const big = document.createElement('canvas'); big.width = big.height = n * k;
+    const g2 = big.getContext('2d'); g2.imageSmoothingEnabled = false; g2.drawImage(cv, 0, 0, n * k, n * k);
+    blobP = new Promise((res) => big.toBlob(res, 'image/png'));
+  } else {
+    cv.width = size; cv.height = size; draw(size, size);
+    blobP = new Promise((res) => cv.toBlob(res, 'image/png'));
+  }
+  return blobP.then((b) => { cv.width = ow; cv.height = oh; Object.assign(V, v0); return b; });
+}
+let snapBlob = null;
+
+/* ---------- start ---------- */
+buildControls(); syncAll();
+$('btnFit').addEventListener('click', () => { V.cx = 0; V.cy = 0; V.zoom = 1; });
+$('btnPause').addEventListener('click', () => { paused = !paused; $('btnPause').textContent = paused ? 'Play' : 'Pause'; });
+$('btnSnap').addEventListener('click', async () => {
+  snapBlob = await snapshot(2048);
+  $('snapImg').src = URL.createObjectURL(snapBlob); $('snap').classList.add('on');
+});
+$('snapClose').addEventListener('click', () => $('snap').classList.remove('on'));
+$('snapSave').addEventListener('click', async () => { const ok = await saveFile('praedra-galaxy.png', snapBlob, 'image/png'); toast(ok ? 'Image ready' : 'Right-click the image to save it'); });
+$('btnCopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(toCode()); toast('Settings copied'); } catch (e) { $('code').select(); toast('Select the text and copy it'); } });
+$('btnPaste').addEventListener('click', () => { try { fromCode($('code').value); syncAll(); save(); toast('Settings loaded'); } catch (e) { toast('Those are not galaxy settings'); } });
+$('btnReset').addEventListener('click', () => { P = Object.assign({}, DEF); DI = Object.assign({}, DI_DEF); syncAll(); save(); toast('Back to the game\'s look'); });
+if (gl) { initGL(); requestAnimationFrame(loop); } else { document.querySelector('.hint').textContent = 'This browser cannot draw WebGL2, so the galaxy cannot be shown.'; }
+window.__gm = { get P() { return P; }, set P(v) { P = clean(v); syncAll(); }, setDither(o) { DI = cleanDi(Object.assign({}, DI, o)); syncAll(); }, V, draw: (t) => { fit(); draw(cv.width, cv.height, t); drawOverlay(); }, freeze(f) { frozen = f; }, snapshot };
+</script>
