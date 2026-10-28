@@ -73,7 +73,7 @@ public partial class Main
             if (agent != null)
             {
                 string name = s.CharName(agent.Id);
-                gs.Click("Leaders"); gs.PlayRefresh();
+                gs.ClickViaMenu("Leaders"); gs.PlayRefresh();
                 Expect(gs.Has($"Send {name} on a mission..."), $"the Leaders tab offers Send {name} on a mission...");
                 int mid = SendThroughPlanner(gs, $"Send {name} on a mission...", null, MissionKind.SpikeTheHarvester, target, checkRefusedKind: false);
                 Expect(mid >= 0, $"a Spike the Harvester mission to {target} was sent from the planner");

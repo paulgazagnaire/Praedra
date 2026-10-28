@@ -9,7 +9,7 @@ using Side = Praedra.Core.Clock.Side;
 namespace PraedraViewer;
 
 /// <summary>
-/// Map layers (user story A5) and the sector windows under the map (A3). A layer paints a soft halo behind each system for one question
+/// Map layers (user story A5) and the sector tables (A3), a window over the map that a click on a sector opens. A layer paints a soft halo behind each system for one question
 /// (where is support low, which of my systems is in trouble, which yards are idle, how old is my picture of a place, where are the slots).
 /// Every value comes from what the player's side may know: its own systems are read live, the rest from its picture with the picture's age.
 /// </summary>
@@ -32,46 +32,68 @@ public partial class GameScreen
         (MapLayer.Slots, "Slots", "Energy and raw material slots: the bigger the halo, the more a planet can hold (mines need raw slots)."),
     };
 
-    OptionButton _layerPick;
+    PanelContainer _layersCard;
+    readonly List<Button> _layerButtons = new();
 
-    /// <summary>One drop-down for the map layer (V cycles it) and one toggle for the routes: two controls instead of a row of seven.</summary>
+    /// <summary>The map layers as a short list under the menu (Paul's mockup), then Routes and Legend; the Layers switch hides it all.</summary>
     void BuildMapTools()
     {
-        _layerPick = new OptionButton { FocusMode = FocusModeEnum.None, MouseDefaultCursorShape = CursorShape.PointingHand };
-        _layerPick.CustomMinimumSize = new Vector2(150, 0);
-        foreach (var (_, name, _) in Layers) _layerPick.AddItem("Map: " + name);
-        for (int i = 0; i < Layers.Length; i++) _layerPick.SetItemTooltip(i, Ui.Wrap(Layers[i].Tip));
-        _layerPick.Select((int)_layer);
-        _layerPick.TooltipText = Ui.Wrap("Colour the map for one question at a time (V cycles the layers).");
-        _layerPick.ItemSelected += i => SetLayer(Layers[(int)i].Layer);
-        _mapTools.AddChild(_layerPick);
-        _routesChip = Ui.Chip("Routes", CycleLanes, "Show or hide the hyperspace routes (L)", true);
-        _mapTools.AddChild(_routesChip);
-        // the key sits on a card so the map's names do not run through it
-        _layerKey = Ui.Label("", "Hint", wrap: false);
-        _layerKeyCard = Ui.Card(new Color(Ui.Chrome, 0.9f), Ui.Line, 6, 6);
+        var col = Ui.VBox(Ui.Block);
+        col.MouseFilter = MouseFilterEnum.Ignore;
+        col.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+        _topLeft.AddChild(col);
+        _layersCard = Ui.Hud(4, 4);
+        _layersCard.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+        col.AddChild(_layersCard);
+        var v = Ui.VBox(2);
+        _layersCard.AddChild(v);
+        var group = new ButtonGroup();
+        foreach (var (layer, name, tip) in Layers)
+        {
+            var l = layer;
+            var b = Ui.Button(name, () => SetLayer(l), tip + " (V cycles the layers)", "Layer");
+            b.ToggleMode = true; b.ButtonGroup = group; b.ButtonPressed = layer == _layer;
+            b.Alignment = HorizontalAlignment.Left;
+            b.CustomMinimumSize = new Vector2(132, 30);
+            _layerButtons.Add(b);
+            v.AddChild(b);
+        }
+        v.AddChild(new HSeparator());
+        _routesChip = Ui.Button("Routes", CycleLanes, "Show or hide the hyperspace routes (L)", "Layer");
+        _routesChip.ToggleMode = true; _routesChip.ButtonPressed = true;
+        _routesChip.Alignment = HorizontalAlignment.Left;
+        _routesChip.CustomMinimumSize = new Vector2(132, 30);
+        v.AddChild(_routesChip);
+        _legendButton = Ui.Button("Legend", ToggleLegend, "What the dots, rings, lines and triangles on the map mean", "Layer");
+        _legendButton.ToggleMode = true;
+        _legendButton.Alignment = HorizontalAlignment.Left;
+        _legendButton.CustomMinimumSize = new Vector2(132, 30);
+        v.AddChild(_legendButton);
+        // the key of the current layer, on its own small card so the map's names do not run through it
+        _layerKey = Ui.Label("", "Hint", wrap: true);
+        _layerKey.CustomMinimumSize = new Vector2(150, 0);
+        _layerKeyCard = Ui.Hud(10, 7);
         _layerKeyCard.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         _layerKeyCard.MouseFilter = MouseFilterEnum.Ignore;
         _layerKeyCard.Visible = false;
         _layerKeyCard.AddChild(_layerKey);
-        _mapTools.GetParent().AddChild(_layerKeyCard);
-        _mapTools.GetParent().MoveChild(_layerKeyCard, _mapTools.GetIndex() + 1);
+        col.AddChild(_layerKeyCard);
     }
 
     void SetLayer(MapLayer l)
     {
         _layer = l;
-        if (_layerPick != null && _layerPick.Selected != (int)l) _layerPick.Select((int)l);
+        for (int i = 0; i < _layerButtons.Count; i++) _layerButtons[i].SetPressedNoSignal(Layers[i].Layer == l);
         _layerKey.Text = l switch
         {
-            MapLayer.Support => "Support for you:  orange low  ·  grey half  ·  blue high",
-            MapLayer.Trouble => "Red: uprising or enemy fleet  ·  yellow: too few troops or blockade",
-            MapLayer.Yards => "Yellow: yard idle  ·  blue: building",
-            MapLayer.Intel => "Bright: seen now  ·  faded: seen long ago  ·  none: never seen",
+            MapLayer.Support => "Support for you:\norange low · grey half · blue high",
+            MapLayer.Trouble => "Red: uprising or enemy fleet\nYellow: too few troops or blockade",
+            MapLayer.Yards => "Yellow: yard idle\nBlue: building",
+            MapLayer.Intel => "Bright: seen now\nFaded: seen long ago",
             MapLayer.Slots => "Bigger halo: more energy and raw slots",
             _ => "",
         };
-        _layerKeyCard.Visible = l != MapLayer.Owners;
+        _layerKeyCard.Visible = l != MapLayer.Owners && _layersCard.Visible;
         _view.QueueRedraw();
     }
 
@@ -179,8 +201,20 @@ public partial class GameScreen
 
     void BuildSectorDock()
     {
+        var v = Ui.VBox(Ui.Gap);
+        _sectorDock.AddChild(v);
+        var head = Ui.HBox(Ui.Block);
+        head.AddChild(Ui.Section("Sector tables"));
+        head.AddChild(Ui.Grow());
+        var close = Ui.Button("\u2715", ToggleSectorDock, "Close (S or Esc)", "Clock");
+        close.SetMeta(UiTest.FullName, "Close the sector tables");
+        close.AddThemeFontSizeOverride("font_size", 13);
+        close.CustomMinimumSize = new Vector2(28, 26);
+        head.AddChild(close);
+        v.AddChild(head);
         var row = Ui.HBox(Ui.Pad + 2);
-        _sectorDock.AddChild(row);
+        row.SizeFlagsVertical = SizeFlags.ExpandFill;
+        v.AddChild(row);
         var sectors = G.Sectors.Select(s => s.Name).OrderBy(n => n, StringComparer.Ordinal).ToList();
         for (int i = 0; i < 2; i++)
         {
@@ -214,7 +248,6 @@ public partial class GameScreen
     void ToggleSectorDock()
     {
         _sectorDock.Visible = !_sectorDock.Visible;
-        _sectorsButton.SetPressedNoSignal(_sectorDock.Visible);
         if (_sectorDock.Visible) RefreshSectorWindows();
     }
 

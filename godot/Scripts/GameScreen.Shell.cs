@@ -8,29 +8,34 @@ using Side = Praedra.Core.Clock.Side;
 namespace PraedraViewer;
 
 /// <summary>
-/// The frame of the game screen: the top bar, the map and what sits on it (search, headquarters buttons, map layers, legend, the latest
-/// messages, the order bar of a move, the hover card, toasts), the drawer on the right and the dock for the sector windows. Nothing floats
-/// over the middle of the map: the drawer has its own column, and the map's corners hold only small, collapsible things.
+/// The frame of the game screen, after Paul's mockup (2026-10-28): the map fills the window and a few small dark pieces float at its edges.
+/// Top left the menu and the map layers; top centre the search and one pill for whatever needs you; top right the goal, the day and the
+/// clock; bottom left your stocks and the way home; bottom centre the thing you clicked; bottom right the latest message. Everything longer
+/// (a system's details, Build, Fleets, Leaders, Missions, the log, the sector tables) opens as a window on demand and closes with Esc.
 /// </summary>
 public partial class GameScreen
 {
-    // ---- top bar
-    Label _dayLabel, _sideLabel, _rawLabel, _refinedLabel, _upkeepLabel;
+    /// <summary>The margin between the map's edge and the floating pieces.</summary>
+    const int Edge = 20;
+
+    // ---- top right: goal, day, clock
+    Label _dayLabel, _sideLabel, _rawLabel, _refinedLabel, _upkeepLabel, _upkeepCaption;
     Control _upkeepBar;
-    Button _playButton, _goalButton, _sectorsButton, _menuButton;
-    Button _speedButton;
+    Button _playButton, _pauseButton, _goalButton, _menuButton;
+    readonly List<Button> _speedChips = new();
 
     // ---- map and overlays
     Control _mapHolder;
     Label _banner, _ordersLabel, _hoverLabel, _hqStatusLabel;
-    PanelContainer _hoverCard, _orderBar, _legendCard;
+    PanelContainer _hoverCard, _orderBar, _legendCard, _pill;
     Label _orderTitle, _orderBody;
     HBoxContainer _orderActions;
-    VBoxContainer _toastBox, _topRight;
-    Button _myHqButton, _enemyHqButton, _legendButton;
-    HBoxContainer _mapTools;
+    VBoxContainer _toastBox, _topCentre, _topLeft;
+    Button _myHqButton, _enemyHqButton, _legendButton, _layersButton;
+    Control _bottomLeft;
+    PanelContainer _clockCard;
 
-    // ---- column under the map
+    // ---- the sector tables, a window over the map
     PanelContainer _sectorDock;
 
     void BuildUi()
@@ -39,20 +44,9 @@ public partial class GameScreen
         bg.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(bg);
 
-        var root = Ui.VBox(0);
-        root.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        AddChild(root);
-        root.AddChild(BuildTopBar());
-
-        var body = Ui.HBox(0);
-        body.SizeFlagsVertical = SizeFlags.ExpandFill;
-        root.AddChild(body);
-
-        var mapColumn = Ui.VBox(0);
-        mapColumn.SizeFlagsVertical = SizeFlags.ExpandFill;
-        body.AddChild(mapColumn);
-        _mapHolder = new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill, ClipContents = true, MouseFilter = MouseFilterEnum.Pass };
-        mapColumn.AddChild(_mapHolder);
+        _mapHolder = new Control { ClipContents = true, MouseFilter = MouseFilterEnum.Pass };
+        _mapHolder.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        AddChild(_mapHolder);
         _view = new GalaxyView { FocusMode = FocusModeEnum.None };
         _view.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _mapHolder.AddChild(_view);
@@ -60,224 +54,193 @@ public partial class GameScreen
         _view.AddChild(_fleets);
         BuildMapOverlays();
 
-        _sectorDock = new PanelContainer { Visible = false, CustomMinimumSize = new Vector2(0, 304) };
-        var dockStyle = Ui.Box(Ui.Chrome, 0, null, 0, Ui.Pad, Ui.Pad - 2);
-        dockStyle.BorderColor = Ui.Line; dockStyle.BorderWidthTop = 1;
-        _sectorDock.AddThemeStyleboxOverride("panel", dockStyle);
-        mapColumn.AddChild(_sectorDock);
+        _sectorDock = Ui.Hud(Ui.Pad, Ui.Pad - 2);
+        _sectorDock.Visible = false;
+        _sectorDock.SetAnchorsPreset(LayoutPreset.BottomLeft);
+        _sectorDock.GrowVertical = GrowDirection.Begin;
+        _sectorDock.OffsetLeft = Edge; _sectorDock.OffsetBottom = -(Edge + 130); _sectorDock.OffsetTop = -(Edge + 130);
+        _sectorDock.CustomMinimumSize = new Vector2(1060, 300);
+        _mapHolder.AddChild(_sectorDock);
 
-        body.AddChild(BuildDrawer());
+        _mapHolder.AddChild(BuildDrawer());
         BuildModals();
     }
 
-    // ================================================================== top bar
-
-    Control BuildTopBar()
-    {
-        var bar = new PanelContainer { CustomMinimumSize = new Vector2(0, 54) };
-        var st = Ui.Box(Ui.Chrome, 0, null, 0, 14, 5);
-        st.BorderColor = Ui.Line; st.BorderWidthBottom = 1;
-        bar.AddThemeStyleboxOverride("panel", st);
-        var row = Ui.HBox(Ui.Block);
-        bar.AddChild(row);
-
-        // side and day
-        var dayBox = Ui.VBox(-2);
-        dayBox.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
-        dayBox.CustomMinimumSize = new Vector2(104, 0);
-        dayBox.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        _sideLabel = Ui.Label("", "StatLabel", Ui.You, wrap: false);
-        _sideLabel.MouseFilter = MouseFilterEnum.Stop;
-        dayBox.AddChild(_sideLabel);
-        _dayLabel = Ui.Label("Day 0", "Title", wrap: false, size: 22);
-        _dayLabel.MouseFilter = MouseFilterEnum.Stop;
-        _dayLabel.TooltipText = Ui.Wrap("The game day. Each day every order you gave is carried out, fleets fly, yards build. Press Play to let the days run.");
-        dayBox.AddChild(_dayLabel);
-        row.AddChild(dayBox);
-        row.AddChild(new VSeparator());
-
-        // the clock
-        _playButton = Ui.Button("Play", TogglePlay, "Start or stop the clock (Space). It stops by itself after a battle, a capture or an invasion.", "Primary");
-        _playButton.CustomMinimumSize = new Vector2(84, 36);
-        _playButton.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        row.AddChild(_playButton);
-        var step = Ui.Button("+1 day", StepOne, "Advance exactly one day (N).");
-        step.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        step.CustomMinimumSize = new Vector2(0, 36);
-        row.AddChild(step);
-        // one speed button: a click goes to the next speed (keys 1-4 pick one)
-        _speedButton = Ui.Button($"{Speeds[DefaultSpeedIndex]}x", () => SetSpeed((_speedIndex + 1) % Speeds.Length),
-            $"Days per second: {string.Join(", ", Speeds.Select(x => x + "x"))}. Click for the next speed, or press 1 to 4.", "Chip");
-        _speedButton.CustomMinimumSize = new Vector2(48, 36);
-        _speedButton.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        row.AddChild(_speedButton);
-        row.AddChild(new VSeparator());
-
-        // the three numbers of the economy, each explained by its tooltip
-        _rawLabel = StatBlock(row, "RAW", "Raw: ore dug by your mines. It waits for your refineries, which turn it into Refined.", 64);
-        _refinedLabel = StatBlock(row, "REFINED", "Refined: the material you spend on ships, troops and buildings. Each yard takes it as it builds.", 76);
-        _upkeepLabel = StatBlock(row, "UPKEEP", "", 104);
-        _upkeepBar = Ui.Bar(0, Ui.You, 3);
-        _upkeepLabel.GetParent().AddChild(_upkeepBar);
-
-        row.AddChild(Ui.Grow());
-
-        _goalButton = Ui.Button("Goal", ShowGoal, "How you win, and how close each side is (G).");
-        _goalButton.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        _goalButton.CustomMinimumSize = new Vector2(0, 36);
-        row.AddChild(_goalButton);
-        _sectorsButton = Ui.Chip("Sectors", ToggleSectorDock, "Sector windows under the map: every system of a sector in one table, with support, troops, slots and what is being built (S).");
-        _sectorsButton.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        _sectorsButton.CustomMinimumSize = new Vector2(0, 36);
-        row.AddChild(_sectorsButton);
-        var help = Ui.Button("?", ToggleHowTo, "How to play (F1)");
-        help.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        help.CustomMinimumSize = new Vector2(36, 36);
-        row.AddChild(help);
-        _menuButton = Ui.Button("Menu", ToggleMenu, "Save, load, settings, how to play, back to the start screen.");
-        _menuButton.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        _menuButton.CustomMinimumSize = new Vector2(0, 36);
-        row.AddChild(_menuButton);
-        return bar;
-    }
-
-    /// <summary>A small capital caption over a number: the top bar's way to show Raw, Refined and Upkeep.</summary>
-    static Label StatBlock(HBoxContainer row, string caption, string tip, int width)
-    {
-        var box = Ui.VBox(0);
-        box.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
-        box.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        box.CustomMinimumSize = new Vector2(width, 0);
-        box.MouseFilter = MouseFilterEnum.Stop;
-        box.TooltipText = Ui.Wrap(tip);
-        box.AddChild(Ui.Label(caption, "StatLabel", wrap: false));
-        var v = Ui.Label("0", "Number", wrap: false);
-        v.MouseFilter = MouseFilterEnum.Stop; // the tooltip is the number's too
-        v.TooltipText = box.TooltipText;
-        box.AddChild(v);
-        row.AddChild(box);
-        return v;
-    }
-
-    void RefreshTop()
-    {
-        if (_dayLabel == null) return;
-        _dayLabel.Text = $"Day {S.Game.Day}";
-        _sideLabel.Text = (S.Player == Side.Hand ? "THE HAND" : "THE COLLECTIVE") + (S.Rules == Praedra.Core.Battle.BattleRuleset.New ? "" : " · CLASSIC");
-        _sideLabel.TooltipText = Ui.Wrap($"You play the {S.NameOf(S.Player)} against the computer ({S.Level}). Space battle rules: {GameBoot.RulesName(S.Rules)}.");
-        var eco = S.Host.Economy;
-        int load = eco.Load(S.Player), cap = eco.Capacity(S.Player);
-        _rawLabel.Text = eco.Raw(S.Player).ToString();
-        _refinedLabel.Text = eco.Refined(S.Player).ToString();
-        _upkeepLabel.Text = $"{load} / {cap}";
-        bool over = load > cap, near = !over && cap > 0 && load * 10 >= cap * 9;
-        _upkeepLabel.AddThemeColorOverride("font_color", over ? Ui.Danger : near ? Ui.Warn : Ui.Text);
-        if (_upkeepBar is ProgressBar pb)
-        {
-            pb.Value = cap <= 0 ? 1000 : Math.Clamp(load * 1000 / Math.Max(1, cap), 0, 1000);
-            pb.AddThemeStyleboxOverride("fill", Ui.Box(over ? Ui.Danger : near ? Ui.Warn : Ui.You, 2, null, 0, 0, 0));
-        }
-        string upTip = $"Upkeep: {load} used of a limit of {cap}. Everything you own costs upkeep every day. The limit comes from your mines and refineries (50 for each mine-and-refinery pair). "
-            + (over ? "You are OVER the limit: units get scrapped until you are back under it. Build mines and refineries, or scrap ships." : near ? "You are close to the limit: a build order that would pass it is refused." : "");
-        _upkeepLabel.TooltipText = Ui.Wrap(upTip);
-        ((Control)_upkeepLabel.GetParent()).TooltipText = _upkeepLabel.TooltipText;
-
-        int q = S.QueuedOrders;
-        _ordersLabel.Text = q > 0 ? $"{q} {(q == 1 ? "order" : "orders")} waiting for the next day" : "";
-        _ordersLabel.GetParent<Control>().Visible = q > 0;
-        _playButton.Text = _playing ? (_runUntilNeeded ? "Running..." : "Pause") : "Play";
-        _playButton.ThemeTypeVariation = _playing ? "WarnButton" : "Primary";
-        RefreshGoalButton();
-        RefreshHq();
-        RefreshOrderBar();
-        string banner = !_playing && _pauseNote != null && !InMoveMode ? _pauseNote : null;
-        _banner.Text = banner ?? "";
-        _banner.GetParent<Control>().Visible = banner != null;
-    }
-
-    bool InMoveMode => _moveFleet >= 0 || _moveHq || _moveChar >= 0 || _pickMission;
-
-    // ================================================================== map overlays
+    // ================================================================== the floating pieces
 
     void BuildMapOverlays()
     {
-        // ---- top left: one row (search, the map layer, routes), the layer's key under it
-        var tl = Ui.VBox(Ui.Block);
-        tl.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
-        tl.MouseFilter = MouseFilterEnum.Ignore;
-        tl.SetAnchorsPreset(LayoutPreset.TopLeft);
-        tl.Position = new Vector2(Ui.Pad, Ui.Pad);
-        _mapHolder.AddChild(tl);
-        var r1 = Ui.HBox(Ui.Block);
-        r1.MouseFilter = MouseFilterEnum.Ignore;
-        tl.AddChild(r1);
-        BuildSearch(r1);
-        _mapTools = r1;
+        // ---- top left: the menu, then the map layers
+        _topLeft = Ui.VBox(Ui.Group);
+        _topLeft.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+        _topLeft.MouseFilter = MouseFilterEnum.Ignore;
+        _topLeft.SetAnchorsPreset(LayoutPreset.TopLeft);
+        _topLeft.Position = new Vector2(Edge, Edge);
+        _mapHolder.AddChild(_topLeft);
+        _menuButton = Ui.Button("\u2261", ToggleMenu, "Menu: fleets, leaders, missions, goal, sectors, save, load, settings (Esc closes)", "Hud");
+        _menuButton.SetMeta(UiTest.FullName, "Menu");
+        _menuButton.CustomMinimumSize = new Vector2(46, 46);
+        _menuButton.AddThemeFontSizeOverride("font_size", 22);
+        _menuButton.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+        _topLeft.AddChild(_menuButton);
         BuildMapTools();
-        var hqPill = Ui.Card(new Color(Ui.Panel, 0.94f), Ui.Gold, 8, 6);
-        hqPill.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+
+        // ---- top centre: the search with the Layers switch, the pill for what needs you, then short notes
+        _topCentre = Ui.VBox(Ui.Block);
+        _topCentre.MouseFilter = MouseFilterEnum.Ignore;
+        _topCentre.SetAnchorsPreset(LayoutPreset.CenterTop);
+        _topCentre.GrowHorizontal = GrowDirection.Both;
+        _topCentre.OffsetTop = Edge;
+        _topCentre.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        _mapHolder.AddChild(_topCentre);
+        var searchBar = Ui.Hud(10, 4);
+        searchBar.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        _topCentre.AddChild(searchBar);
+        var sr = Ui.HBox(0);
+        searchBar.AddChild(sr);
+        var lens = new Glyph(Glyph.Kind.Ring, Ui.Text3, 13) { CustomMinimumSize = new Vector2(20, 0) };
+        sr.AddChild(lens);
+        BuildSearch(sr);
+        sr.AddChild(new VSeparator());
+        _layersButton = Ui.Button("Layers", ToggleLayers, "Show or hide the map layers (V cycles them)", "Chip");
+        _layersButton.ToggleMode = true;
+        _layersButton.ButtonPressed = true;
+        _layersButton.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        sr.AddChild(_layersButton);
+        BuildSearchResults(_topCentre);
+        ((Control)_searchResults).SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+
+        // the pill: why the clock stopped, or how many things need you; a click opens Needs you
+        _pill = Ui.Hud(14, 7);
+        _pill.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        _pill.MouseFilter = MouseFilterEnum.Stop;
+        _pill.MouseDefaultCursorShape = CursorShape.PointingHand;
+        _pill.TooltipText = "Open Needs you (Q)";
+        _pill.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) ShowTab(DrawerTab.Needs); };
+        var ph = Ui.HBox(Ui.Block);
+        ph.MouseFilter = MouseFilterEnum.Ignore;
+        ph.AddChild(new Glyph(Glyph.Kind.Dot, Ui.Warn, 8) { CustomMinimumSize = new Vector2(10, 0) });
+        _banner = Ui.Label("", null, Ui.Text, Ui.Small, wrap: false);
+        _banner.AddThemeFontOverride("font", Ui.Mono);
+        ph.AddChild(_banner);
+        _pill.AddChild(ph);
+        _pill.Visible = false;
+        _topCentre.AddChild(_pill);
+        var ordersCard = Ui.Hud(12, 5);
+        ordersCard.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        ordersCard.MouseFilter = MouseFilterEnum.Stop;
+        ordersCard.TooltipText = Ui.Wrap("Orders are carried out when the next day begins. Press Play or +1 day. If the game refuses one, the reason appears in Messages.");
+        _ordersLabel = Ui.Label("", null, Ui.Warn, Ui.Small, wrap: false);
+        ordersCard.AddChild(_ordersLabel);
+        ordersCard.Visible = false;
+        _topCentre.AddChild(ordersCard);
+        var hqPill = Ui.Hud(12, 5);
+        hqPill.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         hqPill.Visible = false;
         _hqStatusLabel = Ui.Label("", null, Ui.Gold, Ui.Small, wrap: false);
         hqPill.AddChild(_hqStatusLabel);
-        tl.AddChild(hqPill);
-        BuildSearchResults(tl);
-
-        // ---- top right: pause note, waiting orders, toasts
-        _topRight = Ui.VBox(6);
-        _topRight.MouseFilter = MouseFilterEnum.Ignore;
-        _topRight.SetAnchorsPreset(LayoutPreset.TopRight);
-        _topRight.GrowHorizontal = GrowDirection.Begin;
-        _topRight.OffsetRight = -Ui.Pad; _topRight.OffsetTop = Ui.Pad; _topRight.OffsetLeft = -Ui.Pad;
-        _topRight.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
-        _mapHolder.AddChild(_topRight);
-        var bannerCard = Ui.Card(new Color(Ui.Panel, 0.96f), Ui.Warn, 12, 8);
-        bannerCard.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
-        bannerCard.MouseFilter = MouseFilterEnum.Ignore;
-        _banner = Ui.Label("", "Strong", Ui.Text, 15, wrap: false);
-        bannerCard.AddChild(_banner);
-        bannerCard.Visible = false;
-        _topRight.AddChild(bannerCard);
-        var ordersCard = Ui.Card(new Color(Ui.WarnDeep, 0.95f), new Color(Ui.Warn, 0.6f), 10, 6);
-        ordersCard.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
-        ordersCard.MouseFilter = MouseFilterEnum.Stop;
-        ordersCard.TooltipText = Ui.Wrap("Orders are carried out when the next day begins. Press Play or +1 day. If the game refuses one, the reason appears in Messages.");
-        _ordersLabel = Ui.Label("", null, new Color("ffe7a8"), Ui.Small, wrap: false);
-        ordersCard.AddChild(_ordersLabel);
-        ordersCard.Visible = false;
-        _topRight.AddChild(ordersCard);
+        _topCentre.AddChild(hqPill);
         _toastBox = Ui.VBox(6);
         _toastBox.MouseFilter = MouseFilterEnum.Ignore;
-        _toastBox.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
-        _topRight.AddChild(_toastBox);
+        _toastBox.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        _topCentre.AddChild(_toastBox);
 
-        // ---- bottom right: zoom and the legend
-        var br = Ui.VBox(6);
-        br.SetAnchorsPreset(LayoutPreset.BottomRight);
-        br.GrowHorizontal = GrowDirection.Begin; br.GrowVertical = GrowDirection.Begin;
-        br.OffsetRight = -Ui.Pad; br.OffsetBottom = -Ui.Pad; br.OffsetLeft = -Ui.Pad; br.OffsetTop = -Ui.Pad;
-        br.MouseFilter = MouseFilterEnum.Ignore;
-        _mapHolder.AddChild(br);
+        // ---- top right: the goal, the day, the clock
+        var clock = _clockCard = Ui.Hud(4, 4);
+        clock.SetAnchorsPreset(LayoutPreset.TopRight);
+        clock.GrowHorizontal = GrowDirection.Begin;
+        clock.OffsetRight = -Edge; clock.OffsetLeft = -Edge; clock.OffsetTop = Edge;
+        _mapHolder.AddChild(clock);
+        var cr = Ui.HBox(Ui.Gap);
+        clock.AddChild(cr);
+        _goalButton = Ui.Button("Goal", ShowGoal, "How you win, and how close each side is (G).", "Chip");
+        _goalButton.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        cr.AddChild(_goalButton);
+        cr.AddChild(new VSeparator());
+        var dayBox = Ui.VBox(-3);
+        dayBox.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        dayBox.CustomMinimumSize = new Vector2(52, 0);
+        dayBox.MouseFilter = MouseFilterEnum.Stop;
+        _sideLabel = Ui.Label("DAY", "StatLabel", wrap: false);
+        _sideLabel.MouseFilter = MouseFilterEnum.Stop;
+        dayBox.AddChild(_sideLabel);
+        _dayLabel = Ui.Label("0", "Number", Ui.Text, 18, wrap: false);
+        _dayLabel.MouseFilter = MouseFilterEnum.Stop;
+        _dayLabel.TooltipText = Ui.Wrap("The game day. Each day every order you gave is carried out, fleets fly, yards build. Press Play to let the days run.");
+        dayBox.AddChild(_dayLabel);
+        var dm = new MarginContainer();
+        dm.AddThemeConstantOverride("margin_left", 8); dm.AddThemeConstantOverride("margin_right", 8);
+        dm.AddChild(dayBox);
+        cr.AddChild(dm);
+        _pauseButton = Ui.Button("||", () => { if (_playing) TogglePlay(); }, "Pause (Space)", "Clock");
+        _pauseButton.SetMeta(UiTest.FullName, "Pause");
+        _pauseButton.CustomMinimumSize = new Vector2(44, 44);
+        cr.AddChild(_pauseButton);
+        _playButton = Ui.Button("\u25b6", () => { if (!_playing) TogglePlay(); }, "Play (Space). The clock stops by itself after a battle, a capture or an invasion.", "Clock");
+        _playButton.SetMeta(UiTest.FullName, "Play");
+        _playButton.CustomMinimumSize = new Vector2(44, 44);
+        cr.AddChild(_playButton);
+        var step = Ui.Button("+1", StepOne, "Advance exactly one day (N).", "Chip");
+        step.SetMeta(UiTest.FullName, "+1 day");
+        step.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        cr.AddChild(step);
+        var sg = new ButtonGroup();
+        for (int i = 0; i < Speeds.Length; i++)
+        {
+            int k = i;
+            var c = Ui.Chip($"{Speeds[i]}x", () => SetSpeed(k), $"{Speeds[i]} days per second (key {i + 1})", i == _speedIndex, sg);
+            c.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            _speedChips.Add(c);
+            cr.AddChild(c);
+        }
+        cr.AddChild(Ui.Space(2));
+
+        // ---- bottom left: your stocks, then the way to the headquarters
+        var bl = Ui.VBox(Ui.Block);
+        bl.SetAnchorsPreset(LayoutPreset.BottomLeft);
+        bl.GrowVertical = GrowDirection.Begin;
+        bl.OffsetLeft = Edge; bl.OffsetBottom = -Edge; bl.OffsetTop = -Edge;
+        bl.MouseFilter = MouseFilterEnum.Ignore;
+        bl.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+        _mapHolder.AddChild(bl);
+        _bottomLeft = bl;
         _legendCard = BuildLegend();
         _legendCard.Visible = false;
-        br.AddChild(_legendCard);
-        // the places to go and how to read the map, together in one corner (zoom is the wheel, the trackpad or + and -)
-        var navRow = Ui.HBox(Ui.Block);
-        navRow.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
-        navRow.MouseFilter = MouseFilterEnum.Ignore;
-        br.AddChild(navRow);
-        _myHqButton = Ui.Button("My HQ", () => GoToCapital(S.Player), "Centre the map on your headquarters", "Chip");
+        _legendCard.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+        bl.AddChild(_legendCard);
+        var stocks = Ui.Hud(14, 9);
+        stocks.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+        bl.AddChild(stocks);
+        var row = Ui.HBox(0);
+        stocks.AddChild(row);
+        _rawLabel = StatBlock(row, "RAW", "Raw: ore dug by your mines. It waits for your refineries, which turn it into Refined.", 76);
+        row.AddChild(new VSeparator());
+        _refinedLabel = StatBlock(row, "REFINED", "Refined: the material you spend on ships, troops and buildings. Each yard takes it as it builds.", 84);
+        row.AddChild(new VSeparator());
+        _upkeepLabel = StatBlock(row, "UPKEEP", "", 104);
+        _upkeepCaption = _upkeepLabel.GetParent().GetChild<Label>(0);
+        _upkeepBar = Ui.Bar(0, Ui.You, 2);
+        _upkeepLabel.GetParent().AddChild(_upkeepBar);
+        var nav = Ui.Hud(4, 4);
+        nav.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+        bl.AddChild(nav);
+        var navRow = Ui.HBox(0);
+        nav.AddChild(navRow);
+        _myHqButton = Ui.Button("\u2192 HQ", () => GoToCapital(S.Player), "Centre the map on your headquarters", "Chip");
+        _myHqButton.SetMeta(UiTest.FullName, "My HQ");
         navRow.AddChild(_myHqButton);
-        _enemyHqButton = Ui.Button("Enemy HQ", () => GoToCapital(S.Enemy), null, "Chip");
+        navRow.AddChild(new VSeparator());
+        _enemyHqButton = Ui.Button("\u2192 Enemy HQ", () => GoToCapital(S.Enemy), null, "Chip");
         navRow.AddChild(_enemyHqButton);
+        navRow.AddChild(new VSeparator());
         navRow.AddChild(Ui.Button("Fit", () => _view.ResetView(), "Show the whole galaxy (Home)", "Chip"));
-        _legendButton = Ui.Chip("Legend", ToggleLegend, "What the dots, rings, lines and triangles on the map mean");
-        navRow.AddChild(_legendButton);
 
-        // ---- bottom centre: the order bar of a move
-        _orderBar = Ui.Card(new Color(Ui.Panel, 0.97f), Ui.LineHi, 14, 10);
+        // ---- bottom centre: what you clicked, or the order bar of a move
+        BuildSelectionCard();
+        _orderBar = Ui.Hud(14, 10);
         _orderBar.SetAnchorsPreset(LayoutPreset.CenterBottom);
         _orderBar.GrowHorizontal = GrowDirection.Both; _orderBar.GrowVertical = GrowDirection.Begin;
-        _orderBar.OffsetBottom = -Ui.Pad; _orderBar.OffsetTop = -Ui.Pad;
+        _orderBar.OffsetBottom = -Edge; _orderBar.OffsetTop = -Edge;
         _orderBar.CustomMinimumSize = new Vector2(560, 0);
         _orderBar.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         _orderBar.Visible = false;
@@ -293,8 +256,11 @@ public partial class GameScreen
         _orderActions = Ui.HBox(6);
         ov.AddChild(_orderActions);
 
+        // ---- bottom right: the latest messages
+        BuildMessageCorner();
+
         // ---- the hover card follows the mouse
-        _hoverCard = Ui.Card(new Color("0f141d", 0.96f), Ui.LineHi, 10, 7);
+        _hoverCard = Ui.Card(new Color("0d0e10", 0.97f), Ui.LineHi, 10, 7);
         _hoverCard.MouseFilter = MouseFilterEnum.Ignore;
         _hoverCard.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         _hoverCard.Visible = false;
@@ -304,12 +270,102 @@ public partial class GameScreen
         _mapHolder.AddChild(_hoverCard);
     }
 
+    /// <summary>A small capital caption over a number: how the stocks show Raw, Refined and Upkeep.</summary>
+    static Label StatBlock(HBoxContainer row, string caption, string tip, int width)
+    {
+        var box = Ui.VBox(1);
+        box.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+        box.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        box.CustomMinimumSize = new Vector2(width, 0);
+        box.MouseFilter = MouseFilterEnum.Stop;
+        box.TooltipText = Ui.Wrap(tip);
+        box.AddChild(Ui.Label(caption, "StatLabel", wrap: false));
+        var v = Ui.Label("0", "Number", wrap: false);
+        v.MouseFilter = MouseFilterEnum.Stop; // the tooltip is the number's too
+        v.TooltipText = box.TooltipText;
+        box.AddChild(v);
+        row.AddChild(box);
+        return v;
+    }
+
+    /// <summary>12400 reads 12.4k: the stocks stay short, the exact number is in the tooltip.</summary>
+    static string Short(int n) => n >= 100_000 ? $"{n / 1000}k" : n >= 10_000 ? $"{n / 1000.0:0.0}k" : n.ToString();
+
+    void RefreshTop()
+    {
+        if (_dayLabel == null) return;
+        _dayLabel.Text = S.Game.Day.ToString();
+        _sideLabel.TooltipText = Ui.Wrap($"You play the {S.NameOf(S.Player)} against the computer ({S.Level}). Space battle rules: {GameBoot.RulesName(S.Rules)}.");
+        var eco = S.Host.Economy;
+        int load = eco.Load(S.Player), cap = eco.Capacity(S.Player);
+        int raw = eco.Raw(S.Player), refined = eco.Refined(S.Player);
+        _rawLabel.Text = Short(raw);
+        _refinedLabel.Text = Short(refined);
+        _upkeepLabel.Text = $"{load} / {cap}";
+        bool over = load > cap, near = !over && cap > 0 && load * 10 >= cap * 9;
+        var upColor = over ? Ui.Danger : near ? Ui.Warn : Ui.Text;
+        _upkeepLabel.AddThemeColorOverride("font_color", upColor);
+        _upkeepCaption.AddThemeColorOverride("font_color", over || near ? upColor : Ui.Text3);
+        if (_upkeepBar is ProgressBar pb)
+        {
+            pb.Value = cap <= 0 ? 1000 : Math.Clamp(load * 1000 / Math.Max(1, cap), 0, 1000);
+            pb.AddThemeStyleboxOverride("fill", Ui.Box(over ? Ui.Danger : near ? Ui.Warn : Ui.Text3, 1, null, 0, 0, 0));
+        }
+        string upTip = $"Upkeep: {load} used of a limit of {cap}. Everything you own costs upkeep every day. The limit comes from your mines and refineries (50 for each mine-and-refinery pair). "
+            + (over ? "You are OVER the limit: units get scrapped until you are back under it. Build mines and refineries, or scrap ships." : near ? "You are close to the limit: a build order that would pass it is refused." : "");
+        _upkeepLabel.TooltipText = Ui.Wrap(upTip);
+        ((Control)_upkeepLabel.GetParent()).TooltipText = _upkeepLabel.TooltipText;
+        _rawLabel.TooltipText = ((Control)_rawLabel.GetParent()).TooltipText + (raw >= 10_000 ? $" ({raw})" : "");
+        _refinedLabel.TooltipText = ((Control)_refinedLabel.GetParent()).TooltipText + (refined >= 10_000 ? $" ({refined})" : "");
+
+        int q = S.QueuedOrders;
+        _ordersLabel.Text = q > 0 ? $"{q} {(q == 1 ? "order" : "orders")} waiting for the next day" : "";
+        _ordersLabel.GetParent<Control>().Visible = q > 0 && !InMoveMode;
+        _playButton.ThemeTypeVariation = _playing ? "ClockOn" : "Clock";
+        _pauseButton.ThemeTypeVariation = _playing ? "Clock" : "ClockOn";
+        RefreshGoalButton();
+        RefreshHq();
+        RefreshOrderBar();
+        RefreshPill();
+        RefreshSelectionCard();
+        RefreshMessageCorner();
+    }
+
+    /// <summary>The pill under the search: why the clock stopped, or what needs you; nothing when all is quiet.</summary>
+    void RefreshPill()
+    {
+        if (_pill == null) return;
+        string text = null; Color dot = Ui.Warn;
+        if (InMoveMode) text = null;
+        else if (_playing && _runUntilNeeded) { text = "Running until something needs you"; dot = Ui.Good; }
+        else if (!_playing && _pauseNote != null) text = _pauseNote;
+        else
+        {
+            int urgent = _attention.Count(a => a.Level == Level.Danger), watch = _attention.Count(a => a.Level == Level.Warn);
+            if (urgent + watch > 0) { text = urgent > 0 ? $"{urgent} urgent, {watch} to watch" : $"{Ui.Count(watch, "thing", "things")} to watch"; dot = urgent > 0 ? Ui.Danger : Ui.Warn; }
+        }
+        _banner.Text = text ?? "";
+        var g = (Glyph)_banner.GetParent().GetChild(0);
+        g.Color = dot; g.QueueRedraw();
+        _pill.Visible = text != null;
+    }
+
+    bool InMoveMode => _moveFleet >= 0 || _moveHq || _moveChar >= 0 || _pickMission;
+
+    void ToggleLayers()
+    {
+        _layersCard.Visible = !_layersCard.Visible;
+        _layersButton.SetPressedNoSignal(_layersCard.Visible);
+        _layerKeyCard.Visible = _layersCard.Visible && _layer != MapLayer.Owners;
+        _view.QueueRedraw();
+    }
+
     /// <summary>Where the map must not put system names: fleet markers, and the boxes on the map (a name under a box can't be read).</summary>
     IEnumerable<Rect2> MapLabelObstacles()
     {
         foreach (var r in _fleets.Obstacles()) yield return r;
         var origin = _view.GlobalPosition;
-        foreach (var box in new Control[] { _legendCard, _orderBar, _topRight, _searchResults, _mapTools?.GetParent<Control>(), _myHqButton?.GetParent<Control>() })
+        foreach (var box in new Control[] { _orderBar, _topCentre, _topLeft, _clockCard, _bottomLeft, _selCard, _msgCorner, _drawer, _sectorDock })
         {
             if (box == null || !box.IsVisibleInTree()) continue;
             var g = box.GetGlobalRect();
@@ -338,23 +394,26 @@ public partial class GameScreen
     readonly List<(PanelContainer Card, double Left)> _toasts = new();
     const int MaxToasts = 3;
 
-    /// <summary>A short note at the top right of the map that goes by itself (order sent, saved, something happened).</summary>
+    /// <summary>A short note under the search that goes by itself (order sent, saved, something happened).</summary>
     void Toast(string text, MsgKind kind = MsgKind.Info, string system = null)
     {
-        var (bg, line) = kind switch
+        var dot = kind switch
         {
-            MsgKind.Bad => (Ui.DangerDeep, Ui.Danger),
-            MsgKind.Warn => (Ui.WarnDeep, Ui.Warn),
-            MsgKind.Good => (Ui.GoodDeep, Ui.Good),
-            MsgKind.Battle => (Ui.YouDeep, Ui.You),
-            _ => (Ui.Panel, Ui.LineHi),
+            MsgKind.Bad => Ui.Danger,
+            MsgKind.Warn => Ui.Warn,
+            MsgKind.Good => Ui.Good,
+            MsgKind.Battle => Ui.You,
+            _ => Ui.Text3,
         };
-        var card = Ui.Card(new Color(bg, 0.97f), line, 10, 6);
-        card.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
-        card.CustomMinimumSize = new Vector2(0, 0);
+        var card = Ui.Hud(12, 7);
+        card.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        var h = Ui.HBox(Ui.Block);
+        h.MouseFilter = MouseFilterEnum.Ignore;
+        h.AddChild(new Glyph(Glyph.Kind.Dot, dot, 8) { CustomMinimumSize = new Vector2(10, 0) });
         var l = Ui.Label(text, null, Ui.Text, Ui.Small);
-        l.CustomMinimumSize = new Vector2(Math.Min(380, 9 * text.Length + 10), 0);
-        card.AddChild(l);
+        l.CustomMinimumSize = new Vector2(Math.Min(380, 8 * text.Length + 10), 0);
+        h.AddChild(l);
+        card.AddChild(h);
         if (system != null)
         {
             card.MouseFilter = MouseFilterEnum.Stop;
@@ -407,7 +466,8 @@ public partial class GameScreen
     {
         if (_enemyHqButton == null) return;
         bool known = S.EnemyHqSystem != null;
-        _enemyHqButton.Text = known ? "Enemy HQ" : "Enemy HQ: unknown";
+        _enemyHqButton.SetMeta(UiTest.FullName, known ? "Enemy HQ" : "Enemy HQ: unknown");
+        _enemyHqButton.AddThemeColorOverride("font_color", known ? Ui.Text3 : new Color(Ui.Text3, 0.6f));
         _enemyHqButton.TooltipText = Ui.Wrap(known ? "Centre the map on the enemy headquarters: the system you must take to win" : EnemyHqUnknownText);
         var h = S.OwnHq;
         string line = h == null ? null
@@ -468,7 +528,7 @@ public partial class GameScreen
         Item(new Glyph(Glyph.Kind.DashedRing, Ui.Warn, 14), "Blockade: yards and mines stop");
         Item(new Glyph(Glyph.Kind.Triangle, Colors.White, 11, Ui.You), "Your fleet (a number = several here)");
         Item(new Glyph(Glyph.Kind.TriangleDown, Ui.Enemy, 11), "Enemy fleet you see now");
-        Item(new Glyph(Glyph.Kind.Bar, new Color("9ecbff"), 16), "Major route: 3x speed");
+        Item(new Glyph(Glyph.Kind.Bar, new Color(0.72f, 0.75f, 0.80f), 16), "Major route: 3x speed");
         Item(new Glyph(Glyph.Kind.Bar, new Color(Ui.Text3, 0.7f), 16), "Minor route: 1.5x speed");
         v.AddChild(Ui.Label("Off the routes, ships jump through open space at normal speed. A move preview is solid on a route and dashed off it; red rings mark a known trap. Each sector is drawn a little tighter than it is, so the sectors stand apart: the arrival day in a move preview is the real distance.", "Hint", size: Ui.Tiny));
         v.GetChild<Label>(v.GetChildCount() - 1).CustomMinimumSize = new Vector2(250, 0);

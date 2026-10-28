@@ -15,28 +15,30 @@ namespace PraedraViewer;
 public static class Ui
 {
     // ---------------------------------------------------------------- colour tokens
-    public static readonly Color MapBg = new("0a0d13");
-    public static readonly Color Chrome = new("121721");
-    public static readonly Color Panel = new("171d29");
-    public static readonly Color Panel2 = new("1e2534");
-    public static readonly Color Hover = new("252e40");
-    public static readonly Color Line = new("2a3344");
-    public static readonly Color LineHi = new("3d4a60");
-    public static readonly Color Text = new("e8ecf2");
-    public static readonly Color Text2 = new("b4bdca");
-    public static readonly Color Text3 = new("8592a3");
-    public static readonly Color You = new("4ea3f2");
-    public static readonly Color YouDeep = new("1d3d5e");
-    public static readonly Color Enemy = new("f0904a");
-    public static readonly Color EnemyDeep = new("4a2c18");
-    public static readonly Color Neutral = new("9aa3af");
+    // Paul's mockup (2026-10-28): a near-black, neutral (not blue) ground with small dark pieces floating on the map; colour is kept for
+    // meaning only: blue you, orange the enemy, amber "needs you", red danger. Grey text is a little brighter than the mockup's, for long play.
+    public static readonly Color MapBg = new("111214");
+    public static readonly Color Chrome = new("0b0b0d");
+    public static readonly Color Panel = new("141518");
+    public static readonly Color Panel2 = new("1b1c20");
+    public static readonly Color Hover = new("25272c");
+    public static readonly Color Line = new("232529");
+    public static readonly Color LineHi = new("383b42");
+    public static readonly Color Text = new("ecebe8");
+    public static readonly Color Text2 = new("b0b2b7");
+    public static readonly Color Text3 = new("84878e");
+    public static readonly Color You = new("5aa9f0");
+    public static readonly Color YouDeep = new("1b3149");
+    public static readonly Color Enemy = new("f08047");
+    public static readonly Color EnemyDeep = new("432617");
+    public static readonly Color Neutral = new("9a9ca2");
     public static readonly Color Danger = new("ff6b6b");
-    public static readonly Color DangerDeep = new("3b1a1e");
-    public static readonly Color Warn = new("f2c14e");
-    public static readonly Color WarnDeep = new("3a3016");
+    public static readonly Color DangerDeep = new("361719");
+    public static readonly Color Warn = new("eab04a");
+    public static readonly Color WarnDeep = new("33280f");
     public static readonly Color Good = new("5ccb8a");
-    public static readonly Color GoodDeep = new("173326");
-    public static readonly Color Gold = new("f5d76e");
+    public static readonly Color GoodDeep = new("16301f");
+    public static readonly Color Gold = new("f0d27a");
     public static readonly Color Mission = new("b58cff");
     public static readonly Color LeaderRoute = new("7fd3f7");
 
@@ -44,12 +46,15 @@ public static class Ui
     public static Color OwnerColor(Side? owner, Side player) => owner == null ? Neutral : owner == player ? You : Enemy;
 
     // ---------------------------------------------------------------- type
-    static FontFile _regular, _medium, _semibold, _display;
+    static FontFile _regular, _medium, _semibold, _mono, _monoMedium;
     public static Font Regular => _regular ??= LoadFont("res://fonts/Inter-Regular.otf");
     public static Font Medium => _medium ??= LoadFont("res://fonts/Inter-Medium.otf");
     public static Font SemiBold => _semibold ??= LoadFont("res://fonts/Inter-SemiBold.otf");
-    /// <summary>Barlow Semi Condensed SemiBold: titles, the day, section heads. Condensed so dense panels stay short.</summary>
-    public static Font Display => _display ??= LoadFont("res://fonts/BarlowSemiCondensed-SemiBold.ttf");
+    /// <summary>Titles: Inter SemiBold (the mockup's names are a plain sans).</summary>
+    public static Font Display => SemiBold;
+    /// <summary>JetBrains Mono (OFL): captions, buttons, numbers and the map's HUD, as in Paul's mockup.</summary>
+    public static Font Mono => _mono ??= LoadFont("res://fonts/JetBrainsMono-Regular.ttf");
+    public static Font MonoMedium => _monoMedium ??= LoadFont("res://fonts/JetBrainsMono-Medium.ttf");
 
     static FontFile LoadFont(string path)
     {
@@ -67,11 +72,13 @@ public static class Ui
         return v;
     }
 
-    static Font _num, _numBold, _caps;
-    public static Font Num => _num ??= Tabular(Medium);
-    public static Font NumBold => _numBold ??= Tabular(SemiBold);
-    /// <summary>Small capitals for section heads (Barlow with a little letter spacing).</summary>
-    public static Font Caps => _caps ??= new FontVariation { BaseFont = Display ?? ThemeDB.FallbackFont, SpacingGlyph = 1 };
+    static Font _num, _numBold, _caps, _tableFont;
+    /// <summary>Inter with tabular figures: tables keep a proportional face (the mono one is too wide for eight columns).</summary>
+    public static Font TableFont => _tableFont ??= Tabular(Medium);
+    public static Font Num => _num ??= Mono ?? Tabular(Medium);
+    public static Font NumBold => _numBold ??= MonoMedium ?? Tabular(SemiBold);
+    /// <summary>Small capitals for captions and section heads: the mono face with a little letter spacing.</summary>
+    public static Font Caps => _caps ??= new FontVariation { BaseFont = Mono ?? ThemeDB.FallbackFont, SpacingGlyph = 1 };
 
     // ---------------------------------------------------------------- sizes (at 100 % UI size; the Settings slider scales the whole window)
     public const int Body = 15;
@@ -133,11 +140,11 @@ public static class Ui
             t.SetColor("font_color", "Label", Text);
             t.SetColor("font_outline_color", "Label", new Color(0, 0, 0, 0.9f));
             t.SetTypeVariation("Title", "Label");
-            t.SetFont("font", "Title", Display); t.SetFontSize("font_size", "Title", 24);
+            t.SetFont("font", "Title", Display); t.SetFontSize("font_size", "Title", 22);
             t.SetTypeVariation("Subtitle", "Label");
             t.SetFont("font", "Subtitle", Display); t.SetFontSize("font_size", "Subtitle", 18);
             t.SetTypeVariation("Section", "Label");
-            t.SetFont("font", "Section", Caps); t.SetFontSize("font_size", "Section", 14); t.SetColor("font_color", "Section", Text3);
+            t.SetFont("font", "Section", Caps); t.SetFontSize("font_size", "Section", 12); t.SetColor("font_color", "Section", Text3);
             t.SetTypeVariation("Dim", "Label");
             t.SetColor("font_color", "Dim", Text2);
             t.SetTypeVariation("Hint", "Label");
@@ -145,18 +152,18 @@ public static class Ui
             t.SetTypeVariation("Strong", "Label");
             t.SetFont("font", "Strong", SemiBold);
             t.SetTypeVariation("Number", "Label");
-            t.SetFont("font", "Number", NumBold); t.SetFontSize("font_size", "Number", 17);
+            t.SetFont("font", "Number", NumBold); t.SetFontSize("font_size", "Number", 16);
             t.SetTypeVariation("StatLabel", "Label");
-            t.SetFont("font", "StatLabel", Caps); t.SetFontSize("font_size", "StatLabel", 12); t.SetColor("font_color", "StatLabel", Text3);
+            t.SetFont("font", "StatLabel", Caps); t.SetFontSize("font_size", "StatLabel", 11); t.SetColor("font_color", "StatLabel", Text3);
 
             // buttons
-            t.SetFont("font", "Button", Medium);
-            t.SetFontSize("font_size", "Button", Body);
-            ButtonStyle(t, "Button", Panel2, Line, Hover, LineHi, YouDeep, You, Text, Text);
+            t.SetFont("font", "Button", MonoMedium ?? Medium);
+            t.SetFontSize("font_size", "Button", 14);
+            ButtonStyle(t, "Button", Panel2, Panel2, Hover, LineHi, new Color("2e3036"), new Color("4a4d55"), Text, Colors.White);
             t.SetConstant("h_separation", "Button", 6);
             t.SetTypeVariation("Primary", "Button");
-            ButtonStyle(t, "Primary", new Color("1f4a73"), You, new Color("27598a"), new Color("7cbcf6"), new Color("173a5c"), You, Colors.White, Colors.White);
-            t.SetFont("font", "Primary", SemiBold);
+            // the main action of a piece: a lighter grey block (blue stays the colour of your side, not of buttons)
+            ButtonStyle(t, "Primary", new Color("33363c"), new Color("464950"), new Color("3d4047"), new Color("5a5e66"), new Color("2a2c31"), new Color("5a5e66"), Colors.White, Colors.White);
             t.SetTypeVariation("DangerButton", "Button");
             ButtonStyle(t, "DangerButton", DangerDeep, new Color(Danger, 0.8f), new Color("4a2025"), Danger, new Color("2d1316"), Danger, new Color("ffd2d2"), Colors.White);
             t.SetTypeVariation("WarnButton", "Button");
@@ -164,10 +171,12 @@ public static class Ui
             // a clickable row (a fleet, a system, a leader in a list): a tile with its own edge, so it reads as something to click;
             // hover lifts it (brighter fill and edge), pressed turns it blue
             t.SetTypeVariation("Row", "Button");
-            ButtonStyle(t, "Row", Panel, Line, Hover, new Color("55657f"), YouDeep, You, Text, Colors.White, 6, 12, 8);
+            ButtonStyle(t, "Row", Panel, Line, Hover, new Color("4a4d55"), YouDeep, You, Text, Colors.White, 6, 12, 8);
+            t.SetFont("font", "Row", Regular); t.SetFontSize("font_size", "Row", Body);
             // a row inside a menu or a table (menu items, search hits, the build table): no edge until hovered, the list draws the frame
             t.SetTypeVariation("Flat", "Button");
-            ButtonStyle(t, "Flat", new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), Hover, new Color(0, 0, 0, 0), YouDeep, new Color(0, 0, 0, 0), Text, Colors.White, 5, 10, 6);
+            ButtonStyle(t, "Flat", new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), Hover, new Color(0, 0, 0, 0), new Color("2e3036"), new Color(0, 0, 0, 0), Text2, Colors.White, 5, 10, 6);
+            t.SetFontSize("font_size", "Flat", 13);
             // a tab: underline when chosen
             t.SetTypeVariation("Tab", "Button");
             t.SetStylebox("normal", "Tab", Underline(new Color(0, 0, 0, 0), 3));
@@ -178,15 +187,30 @@ public static class Ui
             t.SetStylebox("focus", "Tab", new StyleBoxEmpty());
             t.SetColor("font_color", "Tab", Text3); t.SetColor("font_hover_color", "Tab", Text); t.SetColor("font_pressed_color", "Tab", Text);
             t.SetColor("font_hover_pressed_color", "Tab", Text); t.SetColor("font_focus_color", "Tab", Text3);
-            t.SetFont("font", "Tab", SemiBold); t.SetFontSize("font_size", "Tab", 14);
+            t.SetFont("font", "Tab", MonoMedium ?? SemiBold); t.SetFontSize("font_size", "Tab", 13);
             // a chip: small toggle (speeds, filters, layers)
             t.SetTypeVariation("Chip", "Button");
-            ButtonStyle(t, "Chip", Panel2, Line, Hover, LineHi, YouDeep, You, Text2, Text, 6, 9, 4);
-            t.SetFontSize("font_size", "Chip", 14);
+            ButtonStyle(t, "Chip", new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), Hover, new Color(0, 0, 0, 0), new Color("2e3036"), new Color(0, 0, 0, 0), Text3, Text, 5, 8, 4);
+            t.SetFontSize("font_size", "Chip", 13);
             // a link-looking button
             t.SetTypeVariation("Link", "Button");
-            ButtonStyle(t, "Link", new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), new Color("8cc4f7"), new Color("b9dbfa"), 4, 2, 1);
+            ButtonStyle(t, "Link", new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), Text3, Text, 4, 2, 1);
             t.SetFontSize("font_size", "Link", Small);
+
+            // the floating pieces on the map: a square dark button (the menu), and the clock's play and pause, lit when they are the state
+            t.SetTypeVariation("Hud", "Button");
+            ButtonStyle(t, "Hud", new Color(HudBg, 0.94f), new Color(1, 1, 1, 0.05f), Panel2, LineHi, Hover, LineHi, Text2, Colors.White, 8, 10, 6);
+            // a row of the layers list: quiet until hovered, a lit block when chosen
+            t.SetTypeVariation("Layer", "Button");
+            ButtonStyle(t, "Layer", new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), Panel2, new Color(0, 0, 0, 0), new Color("2a2c31"), new Color(0, 0, 0, 0), Text3, Text, 6, 10, 5);
+            t.SetColor("font_pressed_color", "Layer", Colors.White); t.SetColor("font_hover_pressed_color", "Layer", Colors.White);
+            t.SetFontSize("font_size", "Layer", 13);
+            t.SetTypeVariation("Clock", "Button");
+            ButtonStyle(t, "Clock", new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), Panel2, new Color(0, 0, 0, 0), Hover, new Color(0, 0, 0, 0), Text3, Text, 7, 6, 4);
+            t.SetFontSize("font_size", "Clock", 16);
+            t.SetTypeVariation("ClockOn", "Button");
+            ButtonStyle(t, "ClockOn", new Color("2e3036"), new Color(0, 0, 0, 0), new Color("383b42"), new Color(0, 0, 0, 0), Hover, new Color(0, 0, 0, 0), Colors.White, Colors.White, 7, 6, 4);
+            t.SetFontSize("font_size", "ClockOn", 16);
 
             // check boxes and switches: drawn here (Godot's default icons are faint on a dark panel)
             t.SetIcon("checked", "CheckButton", SwitchIcon(true, false)); t.SetIcon("unchecked", "CheckButton", SwitchIcon(false, false));
@@ -220,12 +244,13 @@ public static class Ui
                 t.SetStylebox("grabber_highlight", sb, Box(new Color("566580"), 4, null, 0, 3, 3));
                 t.SetStylebox("grabber_pressed", sb, Box(You, 4, null, 0, 3, 3));
             }
-            t.SetStylebox("normal", "LineEdit", Box(new Color("0e121a"), 6, Line, 1, 10, 6));
-            t.SetStylebox("focus", "LineEdit", Box(new Color("0e121a"), 6, You, 1, 10, 6));
+            t.SetStylebox("normal", "LineEdit", Box(new Color(0, 0, 0, 0), 6, null, 0, 10, 6));
+            t.SetStylebox("focus", "LineEdit", Box(new Color(0, 0, 0, 0), 6, null, 0, 10, 6));
+            t.SetFont("font", "LineEdit", Mono ?? Regular); t.SetFontSize("font_size", "LineEdit", 13);
             t.SetColor("font_color", "LineEdit", Text);
             t.SetColor("font_placeholder_color", "LineEdit", Text3);
             t.SetColor("caret_color", "LineEdit", You);
-            t.SetStylebox("panel", "TooltipPanel", Box(new Color("0f141d"), 6, LineHi, 1, 10, 8));
+            t.SetStylebox("panel", "TooltipPanel", Box(new Color("0d0e10"), 6, LineHi, 1, 10, 8));
             t.SetColor("font_color", "TooltipLabel", Text);
             t.SetFont("font", "TooltipLabel", Regular);
             t.SetFontSize("font_size", "TooltipLabel", 14);
@@ -255,7 +280,7 @@ public static class Ui
             t.SetStylebox("title_button_pressed", "Tree", Box(Panel, 0, null, 0, 6, 6));
             t.SetColor("title_button_color", "Tree", Text3);
             t.SetFont("title_button_font", "Tree", Caps);
-            t.SetFontSize("title_button_font_size", "Tree", 13);
+            t.SetFontSize("title_button_font_size", "Tree", 11);
             t.SetColor("font_color", "Tree", Text);
             t.SetColor("font_selected_color", "Tree", Colors.White);
             t.SetColor("guide_color", "Tree", new Color(Line, 0.6f));
@@ -266,18 +291,18 @@ public static class Ui
             t.SetConstant("item_margin", "Tree", 0);
             t.SetConstant("inner_item_margin_left", "Tree", 8);
             t.SetConstant("inner_item_margin_right", "Tree", 6);
-            t.SetFont("font", "Tree", Num);
+            t.SetFont("font", "Tree", TableFont);
             t.SetFontSize("font_size", "Tree", 14);
 
             // drop-down lists (OptionButton popups): the same dark panel, a roomy row, a hover fill
-            t.SetStylebox("panel", "PopupMenu", Box(new Color("0f141d"), 8, LineHi, 1, 6, 6));
+            t.SetStylebox("panel", "PopupMenu", Box(new Color("0d0e10"), 8, LineHi, 1, 6, 6));
             t.SetStylebox("hover", "PopupMenu", Box(Hover, 5, null, 0, 10, 6));
             t.SetConstant("v_separation", "PopupMenu", 10);
             t.SetConstant("item_start_padding", "PopupMenu", 10);
             t.SetConstant("item_end_padding", "PopupMenu", 14);
             t.SetColor("font_color", "PopupMenu", Text2);
             t.SetColor("font_hover_color", "PopupMenu", Colors.White);
-            t.SetFont("font", "PopupMenu", Medium);
+            t.SetFont("font", "PopupMenu", Mono ?? Medium);
             t.SetFontSize("font_size", "PopupMenu", 14);
 
             // progress bars
@@ -387,6 +412,17 @@ public static class Ui
         b.ToggleMode = true; b.ButtonPressed = pressed;
         if (group != null) b.ButtonGroup = group;
         return b;
+    }
+
+    /// <summary>The ground of the pieces that float on the map: almost black, a hair of an edge, round corners.</summary>
+    public static readonly Color HudBg = new("0a0a0b");
+
+    /// <summary>A piece floating on the map (Paul's mockup): dark, quiet edge, no shadow.</summary>
+    public static PanelContainer Hud(int padX = 12, int padY = 8)
+    {
+        var p = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Stop };
+        p.AddThemeStyleboxOverride("panel", Box(new Color(HudBg, 0.97f), 8, new Color(1, 1, 1, 0.06f), 1, padX, padY));
+        return p;
     }
 
     public static PanelContainer Card(Color? bg = null, Color? border = null, int pad = 12, int radius = 8)

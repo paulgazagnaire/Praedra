@@ -33,12 +33,35 @@ public partial class GameScreen
         _menuCatcher.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _menuCatcher.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true }) ToggleMenu(); };
         AddChild(_menuCatcher);
-        _menuPopup = Ui.Card(Ui.Chrome, Ui.LineHi, 8, 8);
+        _menuPopup = Ui.Hud(6, 6);
+        _menuPopup.AddThemeStyleboxOverride("panel", Ui.Box(Ui.HudBg, 8, Ui.LineHi, 1, 6, 6)); // opaque: nothing of the map or the layers shows through
         _menuPopup.Visible = false;
-        _menuPopup.CustomMinimumSize = new Vector2(250, 0);
+        _menuPopup.CustomMinimumSize = new Vector2(260, 0);
         AddChild(_menuPopup);
         var mv = Ui.VBox(2);
         _menuPopup.AddChild(mv);
+        // the windows first (each with its key), then the game itself
+        foreach (var (text, key, act, tip) in new (string, string, Action, string)[]
+        {
+            ("Needs you", "Q", () => ShowTab(DrawerTab.Needs), "Everything that needs a decision from you, worst first"),
+            ("Fleets", "F", () => ShowTab(DrawerTab.Fleets), "All your fleets: where they are and where they go"),
+            ("Leaders", "C", () => ShowTab(DrawerTab.Leaders), "Your leaders, and the enemy leaders you have seen"),
+            ("Missions", "M", () => ShowTab(DrawerTab.Missions), "Your agents' missions"),
+            ("Messages", "E", () => ShowTab(DrawerTab.Log), "Every message, by kind"),
+            ("Sector tables", "S", ToggleSectorDock, "Every system of a sector in one table, two sectors side by side"),
+        })
+        {
+            var b = Ui.Button(text, () => { ToggleMenu(); act(); }, tip, "Flat");
+            b.Alignment = HorizontalAlignment.Left;
+            b.CustomMinimumSize = new Vector2(0, 34);
+            var k = Ui.Label(key, "StatLabel", wrap: false);
+            k.SetAnchorsPreset(LayoutPreset.RightWide);
+            k.OffsetLeft = -28; k.OffsetRight = -10;
+            k.HorizontalAlignment = HorizontalAlignment.Right; k.VerticalAlignment = VerticalAlignment.Center;
+            b.AddChild(k);
+            mv.AddChild(b);
+        }
+        mv.AddChild(new HSeparator());
         foreach (var (text, act, tip) in new (string, Action, string)[]
         {
             ("Save game...", () => ShowSaves(true), "Six save slots. Ctrl/Cmd+S saves to the last slot you used."),
@@ -168,7 +191,7 @@ public partial class GameScreen
         if (!show) return;
         var r = _menuButton.GetGlobalRect();
         _menuPopup.ResetSize();
-        _menuPopup.Position = new Vector2(Math.Max(8, r.End.X - _menuPopup.GetCombinedMinimumSize().X), r.End.Y + 6);
+        _menuPopup.Position = new Vector2(r.Position.X, r.End.Y + 6); // under the menu button, at the top left
         MoveChild(_menuCatcher, GetChildCount() - 1);
         MoveChild(_menuPopup, GetChildCount() - 1);
     }
@@ -211,13 +234,13 @@ public partial class GameScreen
         ("Time", new[]
         {
             "Press Play (Space) to run the clock, again to stop it. Keys 1-4 set the speed; N or +1 day moves one day. The clock stops by itself after a battle, a capture or an invasion (Settings can add more).",
-            "Everything you order starts when the next day begins. The note at the top right counts the orders waiting.",
-            "Needs you (Q) lists what wants a decision, worst first, each with its button. Run until something needs me plays until a new problem appears.",
+            "Everything you order starts when the next day begins. A note under the search counts the orders waiting.",
+            "The pill under the search says why the clock stopped or how many things need you; click it for Needs you (Q), the list worst first, each with its button. Run until something needs me plays until a new problem appears.",
         }),
         ("The screen", new[]
         {
-            "The map fills the screen; blue is always you, orange the enemy, grey nobody, a hollow ring a place you never explored. The drawer on the right shows what you clicked (Selected) and your lists: Fleets (F), Leaders (C), Missions (M), Log (E).",
-            "Map layers (V) colour the map for one question: support, trouble, idle yards, how old your picture is, slots. Sectors (S) opens tables of every system in a sector under the map. Search (/) finds systems, fleets and leaders. Legend explains the marks.",
+            "The map fills the screen; blue is always you, orange the enemy, grey nobody, a hollow ring a place you never explored. A click shows a small card at the bottom; Details opens the window on the right. The menu (top left) opens your lists: Fleets (F), Leaders (C), Missions (M), Messages (E). Esc closes the window.",
+            "Map layers (top left, V) colour the map for one question: support, trouble, idle yards, how old your picture is, slots. Point at a sector to name its systems; click it for its table (S). Search (/) finds systems, fleets and leaders. Legend explains the marks.",
             "Fog of war: you see live only the systems you hold or have a fleet at. Everything else shows what you saw last, with the day.",
         }),
         ("Fleets", new[]

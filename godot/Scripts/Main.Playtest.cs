@@ -108,7 +108,7 @@ public partial class Main
         Expect(gs.HowToVisible, "How to play shows at the first new game");
         Expect(gs.Click("Got it"), "close the How to play overlay");
         Expect(!gs.HowToVisible && !GameBoot.HowToUnseen(), "How to play closed and remembered");
-        Expect(gs.Click("?"), "the ? button opens How to play again");
+        Expect(gs.Click("Menu") && gs.Click("How to play"), "Menu, How to play opens it again");
         Expect(gs.HowToVisible, "overlay visible");
         gs.Click("Got it");
         Expect(gs.SpeedValue == 5, "default speed is 5x");
@@ -119,8 +119,8 @@ public partial class Main
         Expect(s.Game.Day == 5, $"one second at 5x = 5 days (day {s.Game.Day})");
         Expect(gs.Click("Pause"), "press Pause");
         Expect(!gs.Playing, "paused");
-        Expect(gs.Click("5x") && gs.SpeedValue == 10 && gs.Click("10x") && gs.SpeedValue == 1 && gs.Click("1x") && gs.Click("2x") && gs.SpeedValue == 5,
-            "the speed button steps through 1x, 2x, 5x, 10x");
+        Expect(gs.Click("10x") && gs.SpeedValue == 10 && gs.Click("1x") && gs.SpeedValue == 1 && gs.Click("2x") && gs.SpeedValue == 2 && gs.Click("5x") && gs.SpeedValue == 5,
+            "the speed chips set 10x, 1x, 2x and 5x");
 
         PlaytestFog(gs);
         if (side == Side.Hand) PlaytestHandHqUnknown(gs);
