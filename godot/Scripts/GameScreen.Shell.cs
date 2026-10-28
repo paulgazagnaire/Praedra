@@ -18,15 +18,15 @@ public partial class GameScreen
     Label _dayLabel, _sideLabel, _rawLabel, _refinedLabel, _upkeepLabel;
     Control _upkeepBar;
     Button _playButton, _goalButton, _sectorsButton, _menuButton;
-    readonly List<Button> _speedButtons = new();
+    Button _speedButton;
 
     // ---- map and overlays
     Control _mapHolder;
     Label _banner, _ordersLabel, _hoverLabel, _hqStatusLabel;
-    PanelContainer _hoverCard, _orderBar, _legendCard, _tickerCard;
+    PanelContainer _hoverCard, _orderBar, _legendCard;
     Label _orderTitle, _orderBody;
     HBoxContainer _orderActions;
-    VBoxContainer _toastBox, _ticker, _topRight;
+    VBoxContainer _toastBox, _topRight;
     Button _myHqButton, _enemyHqButton, _legendButton;
     HBoxContainer _layerChips;
 
@@ -60,8 +60,8 @@ public partial class GameScreen
         _view.AddChild(_fleets);
         BuildMapOverlays();
 
-        _sectorDock = new PanelContainer { Visible = false, CustomMinimumSize = new Vector2(0, 250) };
-        var dockStyle = Ui.Box(Ui.Chrome, 0, null, 0, 8, 8);
+        _sectorDock = new PanelContainer { Visible = false, CustomMinimumSize = new Vector2(0, 304) };
+        var dockStyle = Ui.Box(Ui.Chrome, 0, null, 0, Ui.Pad, Ui.Pad - 2);
         dockStyle.BorderColor = Ui.Line; dockStyle.BorderWidthTop = 1;
         _sectorDock.AddThemeStyleboxOverride("panel", dockStyle);
         mapColumn.AddChild(_sectorDock);
@@ -78,7 +78,7 @@ public partial class GameScreen
         var st = Ui.Box(Ui.Chrome, 0, null, 0, 14, 5);
         st.BorderColor = Ui.Line; st.BorderWidthBottom = 1;
         bar.AddThemeStyleboxOverride("panel", st);
-        var row = Ui.HBox(8);
+        var row = Ui.HBox(Ui.Block);
         bar.AddChild(row);
 
         // side and day
@@ -105,18 +105,12 @@ public partial class GameScreen
         step.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         step.CustomMinimumSize = new Vector2(0, 36);
         row.AddChild(step);
-        var speeds = Ui.HBox(3);
-        speeds.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        var group = new ButtonGroup();
-        for (int i = 0; i < Speeds.Length; i++)
-        {
-            int idx = i;
-            var b = Ui.Chip($"{Speeds[i]}x", () => SetSpeed(idx), $"{Speeds[i]} days per second (key {i + 1})", i == DefaultSpeedIndex, group);
-            b.CustomMinimumSize = new Vector2(38, 30);
-            _speedButtons.Add(b);
-            speeds.AddChild(b);
-        }
-        row.AddChild(speeds);
+        // one speed button: a click goes to the next speed (keys 1-4 pick one)
+        _speedButton = Ui.Button($"{Speeds[DefaultSpeedIndex]}x", () => SetSpeed((_speedIndex + 1) % Speeds.Length),
+            $"Days per second: {string.Join(", ", Speeds.Select(x => x + "x"))}. Click for the next speed, or press 1 to 4.", "Chip");
+        _speedButton.CustomMinimumSize = new Vector2(48, 36);
+        _speedButton.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        row.AddChild(_speedButton);
         row.AddChild(new VSeparator());
 
         // the three numbers of the economy, each explained by its tooltip
@@ -207,24 +201,18 @@ public partial class GameScreen
 
     void BuildMapOverlays()
     {
-        // ---- top left: search, headquarters, map layers
-        var tl = Ui.VBox(6);
+        // ---- top left: one row (search, the map layer, routes), the layer's key under it
+        var tl = Ui.VBox(Ui.Block);
         tl.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         tl.MouseFilter = MouseFilterEnum.Ignore;
         tl.SetAnchorsPreset(LayoutPreset.TopLeft);
-        tl.Position = new Vector2(12, 12);
+        tl.Position = new Vector2(Ui.Pad, Ui.Pad);
         _mapHolder.AddChild(tl);
-        var r1 = Ui.HBox(6);
+        var r1 = Ui.HBox(Ui.Block);
         r1.MouseFilter = MouseFilterEnum.Ignore;
         tl.AddChild(r1);
         BuildSearch(r1);
-        _myHqButton = Ui.Button("My HQ", () => GoToCapital(S.Player), "Centre the map on your headquarters", "Chip");
-        r1.AddChild(_myHqButton);
-        _enemyHqButton = Ui.Button("Enemy HQ", () => GoToCapital(S.Enemy), null, "Chip");
-        r1.AddChild(_enemyHqButton);
-        _layerChips = Ui.HBox(4);
-        _layerChips.MouseFilter = MouseFilterEnum.Ignore;
-        tl.AddChild(_layerChips);
+        _layerChips = r1;
         BuildLayerChips();
         var hqPill = Ui.Card(new Color(Ui.Panel, 0.94f), Ui.Gold, 8, 6);
         hqPill.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
@@ -239,7 +227,7 @@ public partial class GameScreen
         _topRight.MouseFilter = MouseFilterEnum.Ignore;
         _topRight.SetAnchorsPreset(LayoutPreset.TopRight);
         _topRight.GrowHorizontal = GrowDirection.Begin;
-        _topRight.OffsetRight = -12; _topRight.OffsetTop = 12; _topRight.OffsetLeft = -12;
+        _topRight.OffsetRight = -Ui.Pad; _topRight.OffsetTop = Ui.Pad; _topRight.OffsetLeft = -Ui.Pad;
         _topRight.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
         _mapHolder.AddChild(_topRight);
         var bannerCard = Ui.Card(new Color(Ui.Panel, 0.96f), Ui.Warn, 12, 8);
@@ -262,49 +250,34 @@ public partial class GameScreen
         _toastBox.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
         _topRight.AddChild(_toastBox);
 
-        // ---- bottom left: the latest messages
-        _tickerCard = Ui.Card(new Color(Ui.Chrome, 0.9f), Ui.Line, 10, 8);
-        _tickerCard.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
-        _tickerCard.SetAnchorsPreset(LayoutPreset.BottomLeft);
-        _tickerCard.GrowVertical = GrowDirection.Begin;
-        _tickerCard.OffsetLeft = 12; _tickerCard.OffsetBottom = -12; _tickerCard.OffsetTop = -12;
-        _tickerCard.CustomMinimumSize = new Vector2(460, 0);
-        _mapHolder.AddChild(_tickerCard);
-        var tv = Ui.VBox(2);
-        _tickerCard.AddChild(tv);
-        var th = Ui.HBox(6);
-        th.AddChild(Ui.Section("Latest"));
-        th.AddChild(Ui.Grow());
-        th.AddChild(Ui.Button("All messages (E)", () => ShowTab(DrawerTab.Log), "The full message history, by kind", "Link"));
-        tv.AddChild(th);
-        _ticker = Ui.VBox(0);
-        tv.AddChild(_ticker);
-
         // ---- bottom right: zoom and the legend
         var br = Ui.VBox(6);
         br.SetAnchorsPreset(LayoutPreset.BottomRight);
         br.GrowHorizontal = GrowDirection.Begin; br.GrowVertical = GrowDirection.Begin;
-        br.OffsetRight = -12; br.OffsetBottom = -12; br.OffsetLeft = -12; br.OffsetTop = -12;
+        br.OffsetRight = -Ui.Pad; br.OffsetBottom = -Ui.Pad; br.OffsetLeft = -Ui.Pad; br.OffsetTop = -Ui.Pad;
         br.MouseFilter = MouseFilterEnum.Ignore;
         _mapHolder.AddChild(br);
         _legendCard = BuildLegend();
         _legendCard.Visible = false;
         br.AddChild(_legendCard);
-        var zoomRow = Ui.HBox(4);
-        zoomRow.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
-        zoomRow.MouseFilter = MouseFilterEnum.Ignore;
-        br.AddChild(zoomRow);
+        // the places to go and how to read the map, together in one corner (zoom is the wheel, the trackpad or + and -)
+        var navRow = Ui.HBox(Ui.Block);
+        navRow.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
+        navRow.MouseFilter = MouseFilterEnum.Ignore;
+        br.AddChild(navRow);
+        _myHqButton = Ui.Button("My HQ", () => GoToCapital(S.Player), "Centre the map on your headquarters", "Chip");
+        navRow.AddChild(_myHqButton);
+        _enemyHqButton = Ui.Button("Enemy HQ", () => GoToCapital(S.Enemy), null, "Chip");
+        navRow.AddChild(_enemyHqButton);
+        navRow.AddChild(Ui.Button("Fit", () => _view.ResetView(), "Show the whole galaxy (Home)", "Chip"));
         _legendButton = Ui.Chip("Legend", ToggleLegend, "What the dots, rings, lines and triangles on the map mean");
-        zoomRow.AddChild(_legendButton);
-        zoomRow.AddChild(Ui.Button("+", () => _view.ZoomCentre(1.25f), "Zoom in (wheel, or +)", "Chip"));
-        zoomRow.AddChild(Ui.Button("-", () => _view.ZoomCentre(1f / 1.25f), "Zoom out (wheel, or -)", "Chip"));
-        zoomRow.AddChild(Ui.Button("Fit", () => _view.ResetView(), "Show the whole galaxy (Home)", "Chip"));
+        navRow.AddChild(_legendButton);
 
         // ---- bottom centre: the order bar of a move
         _orderBar = Ui.Card(new Color(Ui.Panel, 0.97f), Ui.LineHi, 14, 10);
         _orderBar.SetAnchorsPreset(LayoutPreset.CenterBottom);
         _orderBar.GrowHorizontal = GrowDirection.Both; _orderBar.GrowVertical = GrowDirection.Begin;
-        _orderBar.OffsetBottom = -12; _orderBar.OffsetTop = -12;
+        _orderBar.OffsetBottom = -Ui.Pad; _orderBar.OffsetTop = -Ui.Pad;
         _orderBar.CustomMinimumSize = new Vector2(560, 0);
         _orderBar.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         _orderBar.Visible = false;
@@ -336,7 +309,7 @@ public partial class GameScreen
     {
         foreach (var r in _fleets.Obstacles()) yield return r;
         var origin = _view.GlobalPosition;
-        foreach (var box in new Control[] { _tickerCard, _legendCard, _orderBar, _topRight, _searchResults, _layerChips?.GetParent<Control>() })
+        foreach (var box in new Control[] { _legendCard, _orderBar, _topRight, _searchResults, _layerChips?.GetParent<Control>(), _myHqButton?.GetParent<Control>() })
         {
             if (box == null || !box.IsVisibleInTree()) continue;
             var g = box.GetGlobalRect();
@@ -363,7 +336,7 @@ public partial class GameScreen
     // ================================================================== toasts
 
     readonly List<(PanelContainer Card, double Left)> _toasts = new();
-    const int MaxToasts = 4;
+    const int MaxToasts = 3;
 
     /// <summary>A short note at the top right of the map that goes by itself (order sent, saved, something happened).</summary>
     void Toast(string text, MsgKind kind = MsgKind.Info, string system = null)

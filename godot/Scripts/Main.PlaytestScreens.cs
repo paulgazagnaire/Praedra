@@ -108,6 +108,19 @@ public partial class Main
         gs.PressKey(Key.S);
         Expect(!gs.SectorDockOpen, "S closes them");
 
+        // ---------------------------------------------------------------- sectors on the map
+        var homeSys = gs.G.Systems.First(x => x.Name == home);
+        string sec = homeSys.IsOutsideSectors ? gs.G.Systems.First(x => !x.IsOutsideSectors).Sector : homeSys.Sector;
+        string inSec = gs.G.Systems.First(x => !x.IsOutsideSectors && x.Sector == sec).Name;
+        Expect(gs.SectorUnder(inSec) == sec, $"pointing inside {sec} finds that sector: {gs.SectorUnder(inSec)}");
+        Expect(gs.SectorUnderScreen(new Vector2(-5000, -5000)) == null, "pointing at empty space far off the map finds no sector");
+        gs.ShotSectorHover(sec.Replace(' ', '_'));
+        Expect(gs.HoverCardText.Contains(sec) && gs.HoverCardText.Contains("Click to open"), "hovering a sector names it and says a click opens it: " + gs.HoverCardText.Replace("\n", " / "));
+        gs.ClickSector(sec);
+        Expect(gs.SectorDockOpen && gs.SectorWindows.Any(w => w.Sector == sec), $"clicking {sec} on the map opens its sector table");
+        gs.PressKey(Key.S);
+        Expect(!gs.SectorDockOpen, "S closes it again");
+
         // ---------------------------------------------------------------- the goal
         Expect(gs.GoalButtonText.StartsWith("Goal: 0/2 leaders held", StringComparison.Ordinal), "the Goal button counts the leaders you hold: " + gs.GoalButtonText);
         Expect(gs.Click("Goal") && gs.GoalVisible, "the Goal button opens the goal");

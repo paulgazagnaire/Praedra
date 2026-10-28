@@ -35,9 +35,7 @@ public partial class GameScreen
     {
         var list = S.MyCharacters;
         var alive = list.Where(c => c.Status != CharacterStatus.Dead).ToList();
-        Title("Your leaders", $"{Ui.Count(alive.Count, "leader", "leaders")}. Click a name to find them on the map.");
-        Note(LeaderHelp);
-        Note("To give a leader a post, select a fleet at the same system (Officers) or one of your systems (System General).");
+        Title("Your leaders", $"{Ui.Count(alive.Count, "leader", "leaders")}. Hover their skills for what each post does.");
 
         // the race for the key leaders, both ways (rule: m5-setup-and-victory §Victory)
         var mineNeeded = EnemyTerms.ToList();
@@ -112,27 +110,38 @@ public partial class GameScreen
         }
     }
 
+    /// <summary>Gives a short button its full words (what it does to whom), which the playtest clicks by.</summary>
+    static Button Small(Button b) { b.CustomMinimumSize = new Vector2(96, 30); b.AddThemeFontSizeOverride("font_size", Ui.Small); return b; }
+    static Button Named(Button b, string full) { b.SetMeta(UiTest.FullName, full); return b; }
+
     void CharacterBlock(CharacterRecord c)
     {
         string name = S.CharName(c.Id);
         var status = c.Status;
         int id = c.Id;
         bool needed = EnemyTerms.Contains(id);
-        using (Card(Ui.Panel, needed ? new Color(Ui.Gold, 0.5f) : Ui.Line, 3))
+        using (Card(Ui.Panel, needed ? new Color(Ui.Gold, 0.5f) : Ui.Line, Ui.Gap))
         {
-            var b = Act($"{name}  -  {GameSession.StatusWords(c)}", () => GoToCharacter(id), "Centre the map where this leader is", variation: "Row");
-            b.AddThemeFontOverride("font", Ui.SemiBold);
-            if (status != CharacterStatus.Free) b.AddThemeColorOverride("font_color", Bad);
-            Line($"Where: {S.WhereIsCharacter(c)}", status == CharacterStatus.Free ? Ui.Text2 : Bad, Ui.Small);
-            Line($"Role: {S.RoleOf(c)}", S.RoleOf(c) == "no post" ? Dim : Good, Ui.Small);
-            Line(S.SkillsOf(c), Dim, Ui.Small);
-            Line(S.CapabilityOf(c), Dim, Ui.Tiny);
+            // the name, its state and a way to find it on the map; then where and what, one line each
+            var h = Ui.HBox(Ui.Block);
+            var n = Ui.Label(name, "Strong", status != CharacterStatus.Free ? Bad : null, wrap: false);
+            n.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            n.ClipText = true;
+            h.AddChild(n);
+            if (status != CharacterStatus.Free) h.AddChild(Ui.Tag(GameSession.StatusWords(c).ToUpperInvariant(), Bad)); // free is the normal case: no tag
+            h.AddChild(Ui.Button("Show", () => GoToCharacter(id), "Centre the map where this leader is", "Link"));
+            Add(h);
+            Line($"Where: {S.WhereIsCharacter(c)}   ·   Role: {S.RoleOf(c)}", status == CharacterStatus.Free ? Ui.Text2 : Bad, Ui.Small);
+            var skills = Line(S.SkillsOf(c), Dim, Ui.Small);
+            skills.TooltipText = Ui.Wrap(S.CapabilityOf(c) + "\n" + LeaderHelp);
+            skills.MouseFilter = MouseFilterEnum.Stop;
             foreach (var p in S.PendingOfCharacter(id)) Line($"Waiting for the next day: {p}", Pending, Ui.Small);
-            var acts = new List<Button>();
-            if (CanMoveAlone(c)) acts.Add(Ui.Button($"Move {name}...", () => StartCharMove(id), Ui.Wrap("Then click a destination system. The route and the arrival day are shown before you confirm.")));
-            if (CanJoin(c)) acts.Add(Ui.Button($"Send {name} on a mission...", () => OpenPlanner(c.System, id), Ui.Wrap("Pick the kind of mission, more team members standing at the same system, and the target.")));
+            // two small buttons on one line; the card already names the leader (the full words stay on the button for the playtest)
+            var acts = Ui.HBox(Ui.Block);
+            if (CanMoveAlone(c)) acts.AddChild(Small(Named(Ui.Button("Move...", () => StartCharMove(id), $"Move {name} alone: then click a destination system. The route and the arrival day are shown before you confirm."), $"Move {name}...")));
+            if (CanJoin(c)) acts.AddChild(Small(Named(Ui.Button("Mission...", () => OpenPlanner(c.System, id), $"Send {name} on a mission: pick the kind, more team members at the same system, and the target."), $"Send {name} on a mission...")));
             else if (S.PendingMissionOf(id) is { } pm) Line($"Waiting for the next day: {GameSession.KindWords(pm.Kind)} on {pm.Target}", Pending, Ui.Small);
-            foreach (var a in acts) { a.ClipText = true; Add(a); a.Alignment = HorizontalAlignment.Left; }
+            if (acts.GetChildCount() > 0) { Add(Ui.Space(Ui.Gap)); Add(acts); }
         }
     }
 
@@ -154,8 +163,7 @@ public partial class GameScreen
 
     void OfficersSection(Fleet f)
     {
-        Heading("Officers");
-        Line("The Admiral's leadership multiplies the fleet's bombardment; the fleet General helps its regiments in an invasion; Commanders have no effect yet.", Dim, 13);
+        Heading("Officers", "The Admiral's leadership multiplies the fleet's bombardment; the fleet General helps its regiments in an invasion; Commanders have no effect yet.");
         foreach (var post in new[] { CharacterPost.Admiral, CharacterPost.Commander, CharacterPost.General })
             Line($"{GameSession.PostWords(post)}: {LeaderLine(Cm.HolderOf(f.Id, post))}");
         var riders = Cm.AttachedTo(f.Id).OrderBy(c => c.Id).ToList();
@@ -174,7 +182,7 @@ public partial class GameScreen
         // own characters standing free at this system (the core's AttachCharacter checks the rest)
         var here = S.MyCharacters.Where(c => c.Status == CharacterStatus.Free && c.AttachedFleet == 0 && c.Transit == null && c.System == f.At).ToList();
         if (here.Count == 0) { Line($"No other character of yours is at {f.At}.", Dim, 13); return; }
-        Line($"Your characters at {f.At} can join this fleet:", Dim, 13);
+        Line($"Your leaders at {f.At} can join this fleet:", Dim, 13);
         foreach (var c in here)
         {
             var rc = c;
@@ -226,8 +234,7 @@ public partial class GameScreen
         if (mine || gen != null)
         {
             Line($"System General: {LeaderLine(gen)}", gen == null ? Dim : Good);
-            if (gen == null) Line("A system General's leadership helps the defenders when this planet is invaded.", Dim, 13);
-            else
+            if (gen != null)
             {
                 var g = gen;
                 foreach (var p in S.PendingOfCharacter(g.Id)) Line($"Waiting for the next day: {p}", Pending, 13);

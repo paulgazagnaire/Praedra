@@ -78,6 +78,14 @@ public static class Ui
     public const int Small = 13;
     public const int Tiny = 12;
 
+    // ---------------------------------------------------------------- spacing: one scale, so every gap means something
+    // Gap = between the lines of one thing; Block = between two things you can tell apart (two rows, two cards);
+    // Group = before a new section; Pad = inside a card or a tile.
+    public const int Gap = 4;
+    public const int Block = 8;
+    public const int Group = 20;
+    public const int Pad = 14;
+
     // ---------------------------------------------------------------- the theme
     static Theme _theme;
 
@@ -153,9 +161,13 @@ public static class Ui
             ButtonStyle(t, "DangerButton", DangerDeep, new Color(Danger, 0.8f), new Color("4a2025"), Danger, new Color("2d1316"), Danger, new Color("ffd2d2"), Colors.White);
             t.SetTypeVariation("WarnButton", "Button");
             ButtonStyle(t, "WarnButton", WarnDeep, new Color(Warn, 0.7f), new Color("4a3d1b"), Warn, new Color("2d2611"), Warn, new Color("ffeeb8"), Colors.White);
-            // a list row: no frame until hovered, text on the left
+            // a clickable row (a fleet, a system, a leader in a list): a tile with its own edge, so it reads as something to click;
+            // hover lifts it (brighter fill and edge), pressed turns it blue
             t.SetTypeVariation("Row", "Button");
-            ButtonStyle(t, "Row", new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), Hover, new Color(0, 0, 0, 0), YouDeep, new Color(0, 0, 0, 0), Text, Colors.White, 5, 8, 5);
+            ButtonStyle(t, "Row", Panel, Line, Hover, new Color("55657f"), YouDeep, You, Text, Colors.White, 6, 12, 8);
+            // a row inside a menu or a table (menu items, search hits, the build table): no edge until hovered, the list draws the frame
+            t.SetTypeVariation("Flat", "Button");
+            ButtonStyle(t, "Flat", new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), Hover, new Color(0, 0, 0, 0), YouDeep, new Color(0, 0, 0, 0), Text, Colors.White, 5, 10, 6);
             // a tab: underline when chosen
             t.SetTypeVariation("Tab", "Button");
             t.SetStylebox("normal", "Tab", Underline(new Color(0, 0, 0, 0), 3));
@@ -232,14 +244,15 @@ public static class Ui
             // Tree (sector windows)
             t.SetStylebox("panel", "Tree", new StyleBoxEmpty());
             t.SetStylebox("focus", "Tree", new StyleBoxEmpty());
-            t.SetStylebox("selected", "Tree", Box(YouDeep, 0, null, 0, 0, 0));
-            t.SetStylebox("selected_focus", "Tree", Box(YouDeep, 0, null, 0, 0, 0));
-            t.SetStylebox("hovered", "Tree", Box(Hover, 0, null, 0, 0, 0));
+            t.SetStylebox("selected", "Tree", Box(YouDeep, 4, null, 0, 0, 0));
+            t.SetStylebox("selected_focus", "Tree", Box(YouDeep, 4, null, 0, 0, 0));
+            t.SetStylebox("hovered", "Tree", Box(Hover, 4, null, 0, 0, 0));
+            t.SetStylebox("hovered_dimmed", "Tree", Box(Hover, 4, null, 0, 0, 0));
             t.SetStylebox("cursor", "Tree", new StyleBoxEmpty());
             t.SetStylebox("cursor_unfocused", "Tree", new StyleBoxEmpty());
-            t.SetStylebox("title_button_normal", "Tree", Box(Panel, 0, null, 0, 6, 3));
-            t.SetStylebox("title_button_hover", "Tree", Box(Panel, 0, null, 0, 6, 3));
-            t.SetStylebox("title_button_pressed", "Tree", Box(Panel, 0, null, 0, 6, 3));
+            t.SetStylebox("title_button_normal", "Tree", Box(Panel, 0, null, 0, 6, 6));
+            t.SetStylebox("title_button_hover", "Tree", Box(Panel, 0, null, 0, 6, 6));
+            t.SetStylebox("title_button_pressed", "Tree", Box(Panel, 0, null, 0, 6, 6));
             t.SetColor("title_button_color", "Tree", Text3);
             t.SetFont("title_button_font", "Tree", Caps);
             t.SetFontSize("title_button_font_size", "Tree", 13);
@@ -249,12 +262,23 @@ public static class Ui
             t.SetColor("relationship_line_color", "Tree", new Color(0, 0, 0, 0));
             t.SetConstant("draw_guides", "Tree", 1);
             t.SetConstant("draw_relationship_lines", "Tree", 0);
-            t.SetConstant("v_separation", "Tree", 3);
+            t.SetConstant("v_separation", "Tree", 8);
             t.SetConstant("item_margin", "Tree", 0);
-            t.SetConstant("inner_item_margin_left", "Tree", 6);
-            t.SetConstant("inner_item_margin_right", "Tree", 4);
+            t.SetConstant("inner_item_margin_left", "Tree", 8);
+            t.SetConstant("inner_item_margin_right", "Tree", 6);
             t.SetFont("font", "Tree", Num);
             t.SetFontSize("font_size", "Tree", 14);
+
+            // drop-down lists (OptionButton popups): the same dark panel, a roomy row, a hover fill
+            t.SetStylebox("panel", "PopupMenu", Box(new Color("0f141d"), 8, LineHi, 1, 6, 6));
+            t.SetStylebox("hover", "PopupMenu", Box(Hover, 5, null, 0, 10, 6));
+            t.SetConstant("v_separation", "PopupMenu", 10);
+            t.SetConstant("item_start_padding", "PopupMenu", 10);
+            t.SetConstant("item_end_padding", "PopupMenu", 14);
+            t.SetColor("font_color", "PopupMenu", Text2);
+            t.SetColor("font_hover_color", "PopupMenu", Colors.White);
+            t.SetFont("font", "PopupMenu", Medium);
+            t.SetFontSize("font_size", "PopupMenu", 14);
 
             // progress bars
             t.SetStylebox("background", "ProgressBar", Box(Panel2, 3, null, 0, 0, 0));
@@ -353,7 +377,7 @@ public static class Ui
         b.Alignment = HorizontalAlignment.Left;
         b.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         b.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        b.CustomMinimumSize = new Vector2(0, 34);
+        b.CustomMinimumSize = new Vector2(0, 36);
         return b;
     }
 

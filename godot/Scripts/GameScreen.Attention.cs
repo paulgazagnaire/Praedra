@@ -28,7 +28,7 @@ public partial class GameScreen
     List<Item> _attention = new();
     bool _runUntilNeeded;
     HashSet<string> _runBaseline = new();
-    const int MaxRows = 8;
+    const int MaxRows = 3; // a chance lists a few examples; the map layer shows the rest
 
     void RefreshAttention()
     {
@@ -165,17 +165,15 @@ public partial class GameScreen
     void NeedsPanel()
     {
         var items = _attention;
-        Title("Needs you", items.Count == 0 ? "Nothing needs a decision right now." : $"{items.Count(i => i.Level == Level.Danger)} urgent, {items.Count(i => i.Level == Level.Warn)} to watch, {items.Count(i => i.Level == Level.Info)} chances. Worst first.");
+        int urgent = items.Count(i => i.Level == Level.Danger), watch = items.Count(i => i.Level == Level.Warn);
+        Title("Needs you", items.Count == 0 ? "Nothing needs a decision right now."
+            : urgent + watch == 0 ? "Nothing urgent." : string.Join(", ", new[] { urgent > 0 ? $"{urgent} urgent" : null, watch > 0 ? $"{watch} to watch" : null }.Where(x => x != null)) + ".");
         var run = Act(_runUntilNeeded ? "Running until something needs you... (Space stops)" : "Run until something needs me", () => { if (_runUntilNeeded) Pause(); else RunUntilNeeded(); },
             "Plays the days at the chosen speed and stops as soon as a new red or yellow item appears here (and on battles, captures and invasions, as always).", S.Winner != null, "Primary");
         run.Alignment = HorizontalAlignment.Center;
         if (items.Count == 0)
         {
-            using (Card())
-            {
-                Line("All quiet. Your systems have their troops, no enemy fleet is at them, and your yards are busy.", Ui.Text2);
-                Note("Press Play, or Run until something needs me. The game also stops by itself after a battle, a capture or an invasion.");
-            }
+            Note("All quiet: your systems have their troops, no enemy fleet is at them, and your yards are busy.");
             return;
         }
         Level? shown = null;
@@ -184,7 +182,7 @@ public partial class GameScreen
             if (it.Level != shown)
             {
                 shown = it.Level;
-                Heading(it.Level switch { Level.Danger => "Urgent", Level.Warn => "To watch", _ => "Chances and idle things" });
+                Heading(it.Level switch { Level.Danger => "Urgent", Level.Warn => "To watch", _ => "Could do better" });
             }
             ItemCard(it);
         }
@@ -198,34 +196,40 @@ public partial class GameScreen
             Level.Warn => (Ui.WarnDeep, Ui.Warn, Glyph.Kind.Warn),
             _ => (Ui.Panel, Ui.Line, Glyph.Kind.Dot),
         };
-        using (Card(bg, new Color(line, it.Level == Level.Info ? 1f : 0.55f), 5))
+        using (Card(bg, new Color(line, it.Level == Level.Info ? 1f : 0.55f), Ui.Block))
         {
-            var h = Ui.HBox(8);
+            var h = Ui.HBox(Ui.Block);
             h.AddChild(new Glyph(glyph, it.Level == Level.Info ? Ui.You : line, 13));
             var t = Ui.Label(it.Title, "Strong", it.Level == Level.Danger ? new Color("ffc9c9") : it.Level == Level.Warn ? new Color("ffe7a8") : Ui.Text);
             h.AddChild(t);
             Add(h);
-            if (!string.IsNullOrEmpty(it.Why)) Add(Ui.Label(it.Why, null, Ui.Text2, Ui.Small));
+            // a problem says what is wrong; for a chance the title and the buttons say enough, and the explanation is on hover
+            if (!string.IsNullOrEmpty(it.Why))
+            {
+                if (it.Level == Level.Info) { h.TooltipText = Ui.Wrap(it.Why); h.MouseFilter = MouseFilterEnum.Stop; }
+                else Add(Ui.Label(it.Why, null, Ui.Text2, Ui.Small));
+            }
             if (it.Rows != null)
             {
+                var list = Ui.VBox(Ui.Gap + 2);
                 foreach (var (text, act) in it.Rows.Take(MaxRows))
                 {
-                    var r = Ui.Button(text, act, null, "Row");
+                    var r = Ui.Button(text, act, "Show it on the map", "Row");
                     r.Alignment = HorizontalAlignment.Left;
                     r.ClipText = true;
-                    r.CustomMinimumSize = new Vector2(0, 28);
                     r.AddThemeFontSizeOverride("font_size", Ui.Small);
-                    Add(r);
+                    list.AddChild(r);
                 }
-                if (it.Rows.Count > MaxRows) Add(Ui.Label($"and {it.Rows.Count - MaxRows} more: the Yards layer shows them all.", "Hint"));
+                Add(list);
+                if (it.Rows.Count > MaxRows) Add(Ui.Label($"and {it.Rows.Count - MaxRows} more", "Hint"));
             }
             if (it.Actions.Count > 0)
             {
-                var row = Ui.HBox(6);
+                var row = Ui.HBox(Ui.Block);
                 foreach (var (label, act, variation) in it.Actions)
                 {
                     var b = Ui.Button(label, act, null, variation);
-                    b.CustomMinimumSize = new Vector2(0, 30);
+                    b.CustomMinimumSize = new Vector2(0, 32);
                     row.AddChild(b);
                 }
                 Add(row);

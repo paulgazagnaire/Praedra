@@ -82,7 +82,7 @@ public partial class GameScreen
         for (int i = 0; i < _hits.Count; i++)
         {
             int k = i;
-            var b = Ui.Button(_hits[i].Text, () => PickHit(k), null, "Row");
+            var b = Ui.Button(_hits[i].Text, () => PickHit(k), null, "Flat");
             b.FocusMode = FocusModeEnum.All; // arrow keys walk the list
             b.Alignment = HorizontalAlignment.Left;
             b.CustomMinimumSize = new Vector2(0, 30);

@@ -16,7 +16,8 @@ public partial class GameScreen
     readonly List<Message> _logMessages = new();      // what the list shows under the current filter
     readonly List<Button> _filterButtons = new();
     string _logFilter = "All";
-    const int TickerRows = 4;
+    /// <summary>Messages the player has not seen yet: the Log tab counts them (the map keeps no message box of its own).</summary>
+    int _unread;
 
     static readonly (string Name, string Tip)[] Filters =
     {
@@ -96,7 +97,7 @@ public partial class GameScreen
         if (_allMessages.Count > MaxLogItems) _allMessages.RemoveAt(0);
         if (PassesFilter(m)) { AppendLogRow(m); if (_logHost.Visible) ScrollLogToEnd(); }
         if (fresh && ToastWorthy(m)) Toast(m.Text, m.Kind, m.System);
-        RefreshTicker();
+        if (fresh && _tab != DrawerTab.Log) _unread++;
     }
 
     static readonly HashSet<string> GoodNews = new(StringComparer.Ordinal)
@@ -130,25 +131,5 @@ public partial class GameScreen
     {
         if (m.System != null && G.TryFindSystem(m.System, out int idx)) { _view.Centre(idx); _view.Select(idx); }
         if (m.Detail != null) ShowReport(m);
-    }
-
-    /// <summary>The latest messages on the map's bottom-left corner.</summary>
-    void RefreshTicker()
-    {
-        if (_ticker == null) return;
-        Ui.Clear(_ticker);
-        foreach (var m in _allMessages.Skip(Math.Max(0, _allMessages.Count - TickerRows)))
-        {
-            var mm = m;
-            var b = Ui.Button($"Day {m.Day}   {m.Text}", () => OpenMessage(mm), null, "Row");
-            b.Alignment = HorizontalAlignment.Left;
-            b.ClipText = true;
-            b.CustomMinimumSize = new Vector2(440, 24);
-            b.AddThemeFontSizeOverride("font_size", Ui.Small);
-            b.AddThemeColorOverride("font_color", KindColor(m.Kind));
-            b.TooltipText = Ui.Wrap(m.Text);
-            _ticker.AddChild(b);
-        }
-        _tickerCard.Visible = !InMoveMode && _ticker.GetChildCount() > 0;
     }
 }

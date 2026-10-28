@@ -38,6 +38,7 @@ public partial class GameScreen
         if (_pickMission) UpdateMissionPreview();
         int h = _view.Hovered;
         if (h >= 0 && !InMoveMode) ShowHover(HoverText(h));
+        else if (_view.HoveredSector >= 0 && !InMoveMode) ShowHover(SectorHoverText(_view.SectorName(_view.HoveredSector)));
         else ShowHover(null);
 
         if (_view.Selected != _lastSelectedSystem || _view.SelectedFleet != _lastSelectedFleet)
@@ -55,6 +56,15 @@ public partial class GameScreen
             }
             _panelDirty = true; _panelTimer = 0;
         }
+    }
+
+    /// <summary>Pointing at a sector: its name, how much of it is yours, and what a click does.</summary>
+    string SectorHoverText(string sector)
+    {
+        var sec = G.Sectors.FirstOrDefault(x => x.Name == sector);
+        if (sec == null) return null;
+        int mine = sec.Members.Count(m => S.OwnerOf(G.Systems[m].Name) == Me);
+        return $"{sector}: {mine} of {sec.Members.Count} systems yours\nClick to open its table";
     }
 
     string HoverText(int h)
@@ -191,7 +201,7 @@ public partial class GameScreen
         if (_orderBar == null) return;
         bool show = InMoveMode;
         _orderBar.Visible = show;
-        _tickerCard.Visible = !show && _ticker.GetChildCount() > 0;
+        if (_myHqButton?.GetParent() is Control nav) nav.Visible = !show; // the order bar takes the bottom of the map while a move is planned
         if (!show) return;
         string text = _moveBanner ?? "";
         int nl = text.IndexOf('\n');

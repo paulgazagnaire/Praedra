@@ -54,12 +54,10 @@ public partial class GameScreen
 
     void MissionsPanel()
     {
-        Title("Your missions", "Only your own missions are listed.");
-        Note(MissionAdvice);
-        Note("Send a team from Leaders (Send NAME on a mission...) or from the system where it stands.");
+        Title("Your missions", "Send a team from Leaders, or from the system where it stands.");
         var pending = S.PendingMissions.ToList();
         var list = S.MyMissions;
-        if (pending.Count == 0 && list.Count == 0) Line("No mission under way.", Dim);
+        if (pending.Count == 0 && list.Count == 0) { Line("No mission under way.", Dim); Note(MissionAdvice); } // the empty list says what is worth trying
         foreach (var p in pending)
         {
             Line($"{GameSession.KindWords(p.Kind)} on {p.Target}", Pending, 16);

@@ -89,7 +89,6 @@ public partial class GameScreen
                     h.AddChild(b);
                     Add(h);
                 }
-                Note(Plural(idle.Count, "An idle yard builds nothing. Give it work, or keep the refined for something else.", "Idle yards build nothing. Give them work, or keep the refined for something else."));
             }
         foreach (var fam in fams.Except(idle))
         {
@@ -199,18 +198,13 @@ public partial class GameScreen
         var qty = Ui.HBox(6);
         qty.AddChild(Ui.Label("How many", "Dim", wrap: false));
         qty.AddChild(Ui.Grow());
-        foreach (int n in new[] { 1, 2, 5, 10 })
-        {
-            int nn = n;
-            var c = Ui.Chip(n.ToString(), () => { _buildQty = nn; _panelDirty = true; _panelTimer = 0; }, $"Order {n} at a time", _buildQty == n);
-            c.CustomMinimumSize = new Vector2(38, 28);
-            qty.AddChild(c);
-        }
         qty.AddChild(Ui.Button("-", () => { _buildQty = Math.Max(1, _buildQty - 1); _panelDirty = true; _panelTimer = 0; }, "One fewer", "Chip"));
+        qty.GetChild<Button>(qty.GetChildCount() - 1).CustomMinimumSize = new Vector2(32, 30);
         var ql = Ui.Label(_buildQty.ToString(), "Number", wrap: false);
         ql.CustomMinimumSize = new Vector2(28, 0); ql.HorizontalAlignment = HorizontalAlignment.Center;
         qty.AddChild(ql);
-        qty.AddChild(Ui.Button("+", () => { _buildQty = Math.Min(20, _buildQty + 1); _panelDirty = true; _panelTimer = 0; }, "One more", "Chip"));
+        qty.AddChild(Ui.Button("+", () => { _buildQty = Math.Min(20, _buildQty + 1); _panelDirty = true; _panelTimer = 0; }, "One more (up to 20)", "Chip"));
+        qty.GetChild<Button>(qty.GetChildCount() - 1).CustomMinimumSize = new Vector2(32, 30);
         Add(qty);
 
         // the table
@@ -235,7 +229,7 @@ public partial class GameScreen
             if (!b.Usable && !shownLocked) { shownLocked = true; Add(Ui.Space(4)); Add(Ui.Label("Not possible here now", "StatLabel", wrap: false)); }
             BuildRowButton(system, b);
         }
-        Note($"Click a row to order {_buildQty}. It starts when the next day begins; the yard takes refined as it builds. Days are for one unit with the yards here.");
+        Note($"Click a row to order {_buildQty}. Days are for one unit with the yards here.");
     }
 
     void BuildRowButton(string system, BuildRow b)
@@ -243,10 +237,10 @@ public partial class GameScreen
         var r = b.Row;
         var btn = Ui.Button(r.Name, () => SubmitBuild(system, b.Family, r, _buildQty),
             $"{r.Name}: costs {r.Cost} refined each and {r.Maintenance} upkeep each, about {b.Days} days per unit here once the refined is there." +
-            (b.Why != null ? $"\n{char.ToUpperInvariant(b.Why[0])}{b.Why[1..]}." : "") + (ClassTip(r.Name) is string ct ? "\n" + ct : ""), "Row", !b.Usable);
+            (b.Why != null ? $"\n{char.ToUpperInvariant(b.Why[0])}{b.Why[1..]}." : "") + (ClassTip(r.Name) is string ct ? "\n" + ct : ""), "Flat", !b.Usable);
         btn.Alignment = HorizontalAlignment.Left;
         btn.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        btn.CustomMinimumSize = new Vector2(0, 30);
+        btn.CustomMinimumSize = new Vector2(0, 34);
         var cols = Ui.HBox(0);
         cols.MouseFilter = MouseFilterEnum.Ignore;
         cols.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);

@@ -19,7 +19,10 @@ public static class UiTest
         return null;
     }
 
-    static string TextOf(BaseButton b) => b switch { Button x => x.Text ?? "", _ => "" };
+    /// <summary>Meta key for a short button's full words ("Move..." on a leader's card is "Move Nobody..."); the finder matches either.</summary>
+    public const string FullName = "full_name";
+
+    static string TextOf(BaseButton b) => b.HasMeta(FullName) ? b.GetMeta(FullName).AsString() : b switch { Button x => x.Text ?? "", _ => "" };
 
     public static bool Has(Node root, string prefix) => Find<Button>(root, prefix) != null;
 
@@ -102,7 +105,7 @@ public partial class GameScreen
     internal void Frame(double seconds) => _Process(seconds);
     internal int LogRows => _log.ItemCount;
     internal string ToastText => string.Join("\n", _toasts.SelectMany(t => AllNodes(t.Card).OfType<Label>()).Select(l => l.Text));
-    internal string TickerText => string.Join("\n", _ticker.GetChildren().OfType<Button>().Select(b => b.Text));
+    internal int UnreadMessages => _unread;
     internal string HqStatusText => _hqStatusLabel.GetParent<Control>().Visible ? _hqStatusLabel.Text : "";
     internal IReadOnlyList<string> AttentionTitles => _attention.Select(a => a.Title).ToList();
     internal string OrderBarText => _orderBar.Visible ? _orderTitle.Text + "\n" + _orderBody.Text : "";
@@ -236,6 +239,13 @@ public partial class GameScreen
     public void ShotFilter(string name) => SetFilter(name);
     public void ShotCharacters() { ShowTab(DrawerTab.Leaders); PlayRefresh(); }
     public void ShotMissions() { ShowTab(DrawerTab.Missions); PlayRefresh(); }
+    public void ShotSectorHover(string name) { _view.ShotHoverSector(name.Replace('_', ' ')); OnViewChanged(); }
+    internal string HoverCardText => _hoverCard.Visible ? _hoverLabel.Text : "";
+    internal void ClickSector(string name) => _view.ShotClickSector(name);
+    /// <summary>The sector the mouse finds when it points at this system's spot on the map (the real hit test).</summary>
+    internal string SectorUnder(string system) =>
+        G.TryFindSystem(system, out int i) ? _view.SectorName(_view.SectorAt(_view.SystemScreen(i))) : null;
+    internal string SectorUnderScreen(Vector2 p) => _view.SectorName(_view.SectorAt(p));
     public void ShotLayer(string name) { if (Enum.TryParse<MapLayer>(name, out var l)) SetLayer(l); }
     public void ShotSectors() { if (!_sectorDock.Visible) ToggleSectorDock(); }
     public void ShotGoal() => ShowGoal();
