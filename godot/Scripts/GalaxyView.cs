@@ -398,8 +398,8 @@ public partial class GalaxyView : Control
                 taken.Add(box);
             }
 
-        // the hovered sector's name, just above its outline
-        if (sectorShape != null)
+        // the hovered sector's name, just above its outline (only on hover: for the selected system it would sit on its fleets' names)
+        if (sectorShape != null && Hovered >= 0)
         {
             string text = _sectors[hoverSector].name.ToUpperInvariant();
             const int fs = 13;

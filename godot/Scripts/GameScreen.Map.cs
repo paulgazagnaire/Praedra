@@ -21,6 +21,7 @@ public partial class GameScreen
     readonly List<Button> _layerButtons = new();
     Button _routesChip;
     Label _layerKey;
+    PanelContainer _layerKeyCard;
 
     static readonly (MapLayer Layer, string Name, string Tip)[] Layers =
     {
@@ -48,10 +49,15 @@ public partial class GameScreen
         _routesChip = Ui.Chip("Routes", CycleLanes, "Show or hide the hyperspace routes (L)", true);
         _layerChips.AddChild(new VSeparator());
         _layerChips.AddChild(_routesChip);
+        // the key sits on a card so the map's names do not run through it
         _layerKey = Ui.Label("", "Hint", wrap: false);
-        _layerKey.Visible = false;
-        _layerChips.GetParent().AddChild(_layerKey);
-        _layerChips.GetParent().MoveChild(_layerKey, _layerChips.GetIndex() + 1);
+        _layerKeyCard = Ui.Card(new Color(Ui.Chrome, 0.9f), Ui.Line, 6, 6);
+        _layerKeyCard.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+        _layerKeyCard.MouseFilter = MouseFilterEnum.Ignore;
+        _layerKeyCard.Visible = false;
+        _layerKeyCard.AddChild(_layerKey);
+        _layerChips.GetParent().AddChild(_layerKeyCard);
+        _layerChips.GetParent().MoveChild(_layerKeyCard, _layerChips.GetIndex() + 1);
     }
 
     void SetLayer(MapLayer l)
@@ -67,7 +73,7 @@ public partial class GameScreen
             MapLayer.Slots => "Bigger halo: more energy and raw slots",
             _ => "",
         };
-        _layerKey.Visible = l != MapLayer.Owners;
+        _layerKeyCard.Visible = l != MapLayer.Owners;
         _view.QueueRedraw();
     }
 
@@ -275,7 +281,7 @@ public partial class GameScreen
             else if (S.Game.State.Blockades.ContainsKey(n)) { info.Add("blockade"); row.InfoColor = Ui.Warn; }
             else if (have < need) { info.Add($"{need - have} short"); row.InfoColor = Ui.Warn; }
             if (n == S.MyHqSystem) info.Insert(0, "HQ");
-            row.Info = info.Count == 0 ? "yours, live" : string.Join(", ", info);
+            row.Info = info.Count == 0 ? "live" : string.Join(", ", info);
             return row;
         }
         var pic = S.Picture(n);
@@ -292,10 +298,11 @@ public partial class GameScreen
         row.Slots = pic.Status is { } st ? $"? / {st.Value.Energy}" : "?";
         bool live = S.Sees(n);
         var seen = live ? S.VisibleEnemyFleetsAt(n).Select(f => f.ToString()).ToList() : pic.Fleets?.Value.Select(f => f.ToString()).ToList();
-        row.Activity = seen == null ? "fleets unknown" : seen.Count == 0 ? "no fleets seen" : string.Join("; ", seen);
+        row.Activity = seen == null ? "?" : seen.Count == 0 ? "none seen" : string.Join("; ", seen);
         if (seen is { Count: > 0 }) row.ActivityColor = Ui.Enemy;
-        string who = !known ? "owner ?" : owner == null ? "nobody's" : "enemy";
-        row.Info = live ? $"{who}, live" : S.LastSeenDay(n) is int d ? $"{who}, day {d}" : who;
+        // the name's colour says who holds it (blue you, orange the enemy, grey nobody); the column says how fresh that is
+        string fresh = live ? "live" : S.LastSeenDay(n) is int d ? $"day {d}" : "old";
+        row.Info = known ? fresh : $"owner ?, {fresh}";
         row.InfoColor = live ? Ui.Text2 : Ui.Text3;
         if (n == S.EnemyHqSystem) row.Info = "ENEMY HQ, " + row.Info;
         return row;

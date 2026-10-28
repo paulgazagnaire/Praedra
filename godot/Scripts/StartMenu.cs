@@ -88,6 +88,7 @@ public partial class StartMenu : Control
         for (int n = 1; n <= GameBoot.Slots; n++) any |= GameBoot.SaveExists(GameBoot.SlotPath(n));
         var load = Big("Load saved game", ToggleSlots);
         load.Disabled = !any;
+        if (!any) load.TooltipText = "No saved games yet. In a game, press Ctrl+S or use Menu, Save game.";
         box.AddChild(load);
         _slots = Ui.VBox(2);
         _slots.Visible = false;

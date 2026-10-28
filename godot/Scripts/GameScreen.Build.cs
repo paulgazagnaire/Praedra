@@ -70,26 +70,30 @@ public partial class GameScreen
     void BuildQueues(string name)
     {
         var eco = S.Host.Economy;
-        bool any = false;
-        foreach (var fam in new[] { YardFamily.Shipyard, YardFamily.Construction, YardFamily.Training })
-        {
-            if (!HasYard(name, fam)) continue;
-            any = true;
-            var p = S.Host.Construction.ProjectAt(name, fam);
-            if (p == null || p.Units.Count == 0)
+        var fams = new[] { YardFamily.Shipyard, YardFamily.Construction, YardFamily.Training }.Where(f => HasYard(name, f)).ToList();
+        if (fams.Count == 0) { Note("No yard here. A Construction yard builds facilities, a Shipyard ships and fighters, a Training facility troops. Build a Construction yard from a planet that has one."); return; }
+        // idle yards first, in one quiet card: a row each with its button (an idle yard is a chance, not an alarm)
+        var idle = fams.Where(f => S.Host.Construction.ProjectAt(name, f) is not { Units.Count: > 0 }).ToList();
+        if (idle.Count > 0)
+            using (Card(Ui.Panel, new Color(Ui.Warn, 0.45f)))
             {
-                using (Card(Ui.WarnDeep, new Color(Ui.Warn, 0.5f)))
+                foreach (var fam in idle)
                 {
                     var h = Ui.HBox(8);
+                    h.AddChild(new Glyph(Glyph.Kind.Dot, Ui.Warn, 9));
                     h.AddChild(Ui.Label($"{FamilyName(fam)}: idle", "Strong", new Color("ffe7a8"), wrap: false));
                     h.AddChild(Ui.Grow());
                     string sec = fam switch { YardFamily.Shipyard => "Ships", YardFamily.Training => "Troops", _ => "Facilities" };
-                    h.AddChild(Ui.Button("Choose what to build", () => { _sysTab = SysTab.Build; _buildSection = sec; _panelDirty = true; _panelTimer = 0; }, "Opens the build table for this yard"));
+                    var b = Ui.Button("Choose what to build", () => { _sysTab = SysTab.Build; _buildSection = sec; _panelDirty = true; _panelTimer = 0; }, "Opens the build table for this yard");
+                    b.CustomMinimumSize = new Vector2(0, 30);
+                    h.AddChild(b);
                     Add(h);
-                    Note("An idle yard does nothing for you. Give it work, or leave it if you need the refined for something else.");
                 }
-                continue;
+                Note(Plural(idle.Count, "An idle yard builds nothing. Give it work, or keep the refined for something else.", "Idle yards build nothing. Give them work, or keep the refined for something else."));
             }
+        foreach (var fam in fams.Except(idle))
+        {
+            var p = S.Host.Construction.ProjectAt(name, fam);
             var cur = eco.Find(p.Units[0]);
             string curName = cur?.Class ?? "?";
             int cost = CostOf(curName);
@@ -113,7 +117,6 @@ public partial class GameScreen
                 if (all.Count > 1) Note($"The whole queue: about {totalLeft} days. New orders join the end of the queue.");
             }
         }
-        if (!any) Note("No yard here. A Construction yard builds facilities, a Shipyard ships and fighters, a Training facility troops. Build a Construction yard from a planet that has one.");
     }
 
     void AskStopBuild(string system, YardFamily fam)

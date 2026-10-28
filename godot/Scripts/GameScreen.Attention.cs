@@ -19,12 +19,16 @@ public partial class GameScreen
 {
     enum Level { Danger, Warn, Info }
 
-    sealed record Item(string Key, Level Level, string Title, string Why, string System, List<(string Label, Action Do, string Variation)> Actions);
+    sealed record Item(string Key, Level Level, string Title, string Why, string System, List<(string Label, Action Do, string Variation)> Actions)
+    {
+        /// <summary>Optional list rows under the text (one per system for grouped items), each a click target.</summary>
+        public List<(string Text, Action Do)> Rows { get; init; }
+    }
 
     List<Item> _attention = new();
     bool _runUntilNeeded;
     HashSet<string> _runBaseline = new();
-    const int MaxInfoItems = 6;
+    const int MaxRows = 8;
 
     void RefreshAttention()
     {
@@ -122,25 +126,26 @@ public partial class GameScreen
                 list.Add(new Item($"harvest-{f.Id}-{at}", Level.Info, $"Your harvester is at {at}", "It can destroy the system (asks first).", at, new() { ("Select the fleet", () => SelectFleet(fl.Id, true), null) }));
         }
         var infos = new List<Item>();
+        // idle yards: one item for all of them, a row per system (a long list of the same card buries what matters)
+        var idleRows = new List<(string, Action)>();
         foreach (var n in mine)
         {
             var idle = new[] { YardFamily.Shipyard, YardFamily.Construction, YardFamily.Training }.Where(fam => HasYard(n, fam) && S.Host.Construction.ProjectAt(n, fam) is not { Units.Count: > 0 }).ToList();
             if (idle.Count == 0 || S.Host.Support.IsUprising(n)) continue;
             string sys = n;
             string sec = idle[0] switch { YardFamily.Shipyard => "Ships", YardFamily.Training => "Troops", _ => "Facilities" };
-            infos.Add(new Item($"idle-{n}", Level.Info, $"Idle at {n}: {string.Join(", ", idle.Select(FamilyName))}", "An idle yard builds nothing. Give it work, or keep the refined for something else.", n,
-                new() { ("Build here", () => { GoTo(sys, true); _sysTab = SysTab.Build; _buildSection = sec; _panelDirty = true; _panelTimer = 0; }, null) }));
+            idleRows.Add(($"{n}: {string.Join(", ", idle.Select(FamilyName))}", () => { GoTo(sys, true); _sysTab = SysTab.Build; _buildSection = sec; _panelDirty = true; _panelTimer = 0; }));
         }
+        if (idleRows.Count > 0)
+            infos.Add(new Item("idle-yards", Level.Info, $"Idle yards at {Ui.Count(idleRows.Count, "system", "systems")}", "An idle yard builds nothing. Click a system to give it work, or keep the refined for something else.", null,
+                new() { ("Show the Yards layer", () => SetLayer(MapLayer.Yards), null) }) { Rows = idleRows });
         var idleLeaders = S.MyCharacters.Where(c => c.Status == CharacterStatus.Free && c.AttachedFleet == 0 && c.Transit == null && S.SystemPostOf(c) == null
             && S.MissionOf(c.Id) == null && S.PendingMissionOf(c.Id) == null && S.PendingOfCharacter(c.Id).FirstOrDefault() == null).ToList();
         if (idleLeaders.Count > 0)
             infos.Add(new Item("idle-leaders", Level.Info, $"{Ui.Count(idleLeaders.Count, "leader has", "leaders have")} nothing to do",
                 string.Join(", ", idleLeaders.Take(5).Select(c => S.CharName(c.Id))) + (idleLeaders.Count > 5 ? ", ..." : "") + ". Give them a fleet post, a General post or a mission.", null,
                 new() { ("Leaders", () => ShowTab(DrawerTab.Leaders), null) }));
-        list.AddRange(infos.Take(MaxInfoItems));
-        if (infos.Count > MaxInfoItems)
-            list.Add(new Item("more-idle", Level.Info, $"{infos.Count - MaxInfoItems} more systems with idle yards", "Turn on the Yards map layer (V) to see them all.", null,
-                new() { ("Show the Yards layer", () => SetLayer(MapLayer.Yards), null) }));
+        list.AddRange(infos);
 
         return list.OrderBy(i => i.Level).ToList(); // stable: the order above within a level
     }
@@ -201,6 +206,19 @@ public partial class GameScreen
             h.AddChild(t);
             Add(h);
             if (!string.IsNullOrEmpty(it.Why)) Add(Ui.Label(it.Why, null, Ui.Text2, Ui.Small));
+            if (it.Rows != null)
+            {
+                foreach (var (text, act) in it.Rows.Take(MaxRows))
+                {
+                    var r = Ui.Button(text, act, null, "Row");
+                    r.Alignment = HorizontalAlignment.Left;
+                    r.ClipText = true;
+                    r.CustomMinimumSize = new Vector2(0, 28);
+                    r.AddThemeFontSizeOverride("font_size", Ui.Small);
+                    Add(r);
+                }
+                if (it.Rows.Count > MaxRows) Add(Ui.Label($"and {it.Rows.Count - MaxRows} more: the Yards layer shows them all.", "Hint"));
+            }
             if (it.Actions.Count > 0)
             {
                 var row = Ui.HBox(6);

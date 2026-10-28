@@ -68,7 +68,7 @@ public partial class GameScreen
             var supRow = Stat("Support for you", $"{sup}%", sup < 40 ? Ui.Enemy : sup >= 60 ? Ui.You : Ui.Text,
                 $"How much the people here back you (the {S.NameOf(S.Enemy)} has {100 - sup}%). Low support needs more troops to keep order, and below a point the planet may go over to the other side.");
             Add(Ui.Bar(sup / 100f, sup < 40 ? Ui.Enemy : Ui.You, 6));
-            Stat("Garrison", $"{have} of {need} regiments needed", have < need ? Ui.Warn : Ui.Text,
+            Stat("Garrison", need == 0 ? $"{Ui.Count(have, "regiment", "regiments")}, none needed" : $"{have} of {need} regiments needed", have < need ? Ui.Warn : Ui.Text,
                 "Below 60% support a system needs troops to stay calm: one regiment for every 10 points under 60. Too few and it revolts: its yards and mines stop.");
             if (have < need) GarrisonFix(name, need - have);
             if (S.Host.Support.IsUprising(name)) Line("UPRISING! The people are in revolt here: yards and mines stop until it ends. Station more regiments, or send a leader on Subdue Uprising.", Bad);
@@ -144,9 +144,13 @@ public partial class GameScreen
     void ForeignSystem(string name, int idx, bool sees, bool ownerKnown, Side? owner, Praedra.Core.Fog.SystemPicture pic)
     {
         int? last = S.LastSeenDay(name);
-        using (Card(sees ? Ui.GoodDeep : Ui.WarnDeep, sees ? new Color(Ui.Good, 0.6f) : new Color(Ui.Warn, 0.6f)))
-            Line(sees ? "Seen live now (you have a fleet here)." : last is int ld ? $"Last seen day {ld} ({S.Game.Day - ld} days ago). It may have changed since." : "Not seen since the start of the war.",
-                sees ? new Color("bff0d2") : new Color("ffe7a8"));
+        // the age of the picture decides how much to trust it: live (green), recent (plain), old (yellow)
+        int age = last is int l0 ? S.Game.Day - l0 : int.MaxValue;
+        bool old = !sees && age > 10;
+        using (Card(sees ? Ui.GoodDeep : old ? Ui.WarnDeep : Ui.Panel, sees ? new Color(Ui.Good, 0.6f) : old ? new Color(Ui.Warn, 0.6f) : Ui.Line))
+            Line(sees ? "Seen live now (you have a fleet here)."
+                : last is int ld ? $"Last seen day {ld} ({Ui.DaysAgo(age)}). Fleets there are not seen: it may have changed since." : "Not seen since the start of the war.",
+                sees ? new Color("bff0d2") : old ? new Color("ffe7a8") : Ui.Text2);
         Line(!ownerKnown ? "Owner: unknown" : owner == null ? "Owner: nobody (neutral)" : $"Owner: {S.You(owner.Value)}", !ownerKnown || owner == null ? Ui.Text2 : Ui.Enemy);
         if (pic.Owner is { } po)
         {

@@ -177,7 +177,12 @@ public static class Ui
             ButtonStyle(t, "Link", new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), new Color("8cc4f7"), new Color("b9dbfa"), 4, 2, 1);
             t.SetFontSize("font_size", "Link", Small);
 
-            // check boxes and switches
+            // check boxes and switches: drawn here (Godot's default icons are faint on a dark panel)
+            t.SetIcon("checked", "CheckButton", SwitchIcon(true, false)); t.SetIcon("unchecked", "CheckButton", SwitchIcon(false, false));
+            t.SetIcon("checked_disabled", "CheckButton", SwitchIcon(true, true)); t.SetIcon("unchecked_disabled", "CheckButton", SwitchIcon(false, true));
+            t.SetIcon("checked", "CheckBox", TickIcon(true, false)); t.SetIcon("unchecked", "CheckBox", TickIcon(false, false));
+            t.SetIcon("checked_disabled", "CheckBox", TickIcon(true, true)); t.SetIcon("unchecked_disabled", "CheckBox", TickIcon(false, true));
+            t.SetConstant("h_separation", "CheckBox", 8); t.SetConstant("h_separation", "CheckButton", 10);
             foreach (var cb in new[] { "CheckBox", "CheckButton" })
             {
                 t.SetStylebox("normal", cb, Box(new Color(0, 0, 0, 0), 5, null, 0, 6, 4));
@@ -261,6 +266,64 @@ public static class Ui
             t.SetFont("font", "SpinBox", Num);
             return _theme = t;
         }
+    }
+
+    // ---------------------------------------------------------------- drawn icons (switch, tick box): pixels with soft edges, no art files
+
+    static ImageTexture Paint(int w, int h, Func<float, float, Color> shade)
+    {
+        var img = Image.CreateEmpty(w, h, false, Image.Format.Rgba8);
+        for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) img.SetPixel(x, y, shade(x + 0.5f, y + 0.5f));
+        return ImageTexture.CreateFromImage(img);
+    }
+
+    /// <summary>0..1 coverage of a pixel by a shape whose signed distance is d (negative inside).</summary>
+    static float Cover(float d) => Math.Clamp(0.5f - d, 0f, 1f);
+
+    /// <summary>"top" painted over "under" with coverage a (straight alpha).</summary>
+    static Color Over(Color under, Color top, float a)
+    {
+        float at = a * top.A, ao = at + under.A * (1 - at);
+        if (ao <= 0) return new Color(0, 0, 0, 0);
+        return new Color((top.R * at + under.R * under.A * (1 - at)) / ao, (top.G * at + under.G * under.A * (1 - at)) / ao, (top.B * at + under.B * under.A * (1 - at)) / ao, ao);
+    }
+
+    static ImageTexture SwitchIcon(bool on, bool disabled)
+    {
+        const int w = 34, h = 18;
+        var track = on ? You : LineHi; var knob = on ? Colors.White : Text2;
+        if (disabled) { track = new Color(track, 0.4f); knob = new Color(knob, 0.5f); }
+        return Paint(w, h, (x, y) =>
+        {
+            // a pill: distance to the segment between the two end centres, minus the radius
+            float cx = Math.Clamp(x, h / 2f, w - h / 2f), dt = MathF.Sqrt((x - cx) * (x - cx) + (y - h / 2f) * (y - h / 2f)) - h / 2f;
+            float kx = on ? w - h / 2f : h / 2f, dk = MathF.Sqrt((x - kx) * (x - kx) + (y - h / 2f) * (y - h / 2f)) - (h / 2f - 3f);
+            var c = Over(new Color(0, 0, 0, 0), track, Cover(dt));
+            return Over(c, knob, Cover(dk));
+        });
+    }
+
+    static ImageTexture TickIcon(bool on, bool disabled)
+    {
+        const int n = 18;
+        var edge = on ? You : LineHi; var fill = on ? You : new Color(0, 0, 0, 0);
+        if (disabled) { edge = new Color(edge, 0.4f); fill = new Color(fill, fill.A * 0.4f); }
+        static float Seg(float x, float y, float ax, float ay, float bx, float by)
+        {
+            float vx = bx - ax, vy = by - ay, t = Math.Clamp(((x - ax) * vx + (y - ay) * vy) / (vx * vx + vy * vy), 0, 1);
+            float dx = x - (ax + t * vx), dy = y - (ay + t * vy);
+            return MathF.Sqrt(dx * dx + dy * dy);
+        }
+        return Paint(n, n, (x, y) =>
+        {
+            // a rounded square (radius 4) inset by 1
+            float qx = MathF.Abs(x - n / 2f) - (n / 2f - 5f), qy = MathF.Abs(y - n / 2f) - (n / 2f - 5f);
+            float d = MathF.Sqrt(MathF.Max(qx, 0) * MathF.Max(qx, 0) + MathF.Max(qy, 0) * MathF.Max(qy, 0)) + MathF.Min(MathF.Max(qx, qy), 0) - 4f;
+            var c = Over(new Color(0, 0, 0, 0), fill, Cover(d));
+            c = Over(c, edge, Cover(MathF.Abs(d + 0.75f) - 0.75f));
+            if (on) c = Over(c, Colors.White, Cover(MathF.Min(Seg(x, y, 4.5f, 9.5f, 7.5f, 12.5f), Seg(x, y, 7.5f, 12.5f, 13.5f, 5.5f)) - 1.1f));
+            return c;
+        });
     }
 
     // ---------------------------------------------------------------- factories

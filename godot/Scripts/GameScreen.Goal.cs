@@ -107,15 +107,21 @@ public partial class GameScreen
         var c2 = GoalCard(v, "Or: hold the galaxy", $"Once the enemy capital has fallen, hold {pct}% of the systems the two sides hold, for {Vm.Rules.DominanceDays} days.");
         if (pct > 0)
         {
-            int share = mine + theirs == 0 ? 0 : mine * 100 / (mine + theirs);
-            c2.AddChild(Ui.Row("Systems you hold", mine.ToString()));
-            c2.AddChild(Ui.Row("Systems you saw the enemy hold", $"{theirs}  (+{unknown} you know nothing about)"));
-            var bar = Ui.Bar(share / 100f, Ui.You, 8, new Color(Ui.Enemy, 0.55f));
-            c2.AddChild(bar);
-            c2.AddChild(Ui.Label($"Your share by what you know: {share}% (need {pct}%).", "Hint"));
+            // the run counts only once the enemy capital is gone (rule: m5-setup-and-victory §Victory, capital and control)
+            bool capitalGone = hand ? S.Game.State.Scenario.Hq.Status == Praedra.Core.Fog.HqStatus.Destroyed : S.KnownOwnerOf(GameBoot.HandCapital) is (true, var co) && co != S.Enemy;
+            c2.AddChild(Ui.Row("Systems you hold", $"{mine} of {G.Systems.Count}"));
+            c2.AddChild(Ui.Row("Enemy systems you know of", theirs.ToString(), null, $"Only what your side has seen: {unknown} systems you have never explored or whose owner you do not know."));
             if (Vm.DominanceDueDay is int due && Vm.DominanceLeader is Side lead)
                 c2.AddChild(Ui.Label(lead == Me ? $"Running: you win on day {due} ({Ui.InDays(due - S.Game.Day)}) if you keep it."
                     : $"DANGER: the {S.NameOf(lead)} wins on day {due} ({Ui.InDays(due - S.Game.Day)}). Take systems back to break its hold.", "Strong", lead == Me ? Ui.Good : Ui.Danger));
+            else if (!capitalGone)
+                c2.AddChild(Ui.Label(hand ? "Not running yet: the Hearth still stands." : "Not running yet: the Hand still holds Charter.", "Hint"));
+            else
+            {
+                int share = mine + theirs == 0 ? 0 : mine * 100 / (mine + theirs);
+                c2.AddChild(Ui.Bar(share / 100f, Ui.You, 8, new Color(Ui.Enemy, 0.55f)));
+                c2.AddChild(Ui.Label($"Your share by what you know: about {share}% (need {pct}%). The count that decides is the true one, so take more than you need.", "Hint"));
+            }
         }
         else c2.AddChild(Ui.Label("Off in this game.", "Hint"));
         c2.AddChild(Ui.Label("Either side also wins at once when the other holds no system.", "Hint"));
@@ -136,7 +142,7 @@ public partial class GameScreen
         {
             var c = Cm.Get(id);
             bool caught = c is { Status: CharacterStatus.Captured };
-            string how = caught ? $"Prisoner{(c.HeldAt != null ? $" at {c.HeldAt}" : "")}. Send a Rescue mission." : c is { Status: CharacterStatus.Dead } ? "Dead: no longer counts." : $"Free. {S.WhereIsCharacter(c)}.";
+            string how = caught ? $"Prisoner{(c.HeldAt != null ? $" at {c.HeldAt}" : "")}. Send a Rescue mission." : c is { Status: CharacterStatus.Dead } ? "Dead: no longer counts." : $"Free, {S.WhereIsCharacter(c)}.";
             Check(c3, caught, S.CharName(id), how, caught ? c.HeldAt : S.MapPlaceOf(c), danger: true);
         }
 

@@ -34,7 +34,7 @@ public partial class SectorWindow : VBoxContainer
     public long ShownAt { get; private set; }
     static long _clock;
 
-    static readonly string[] Columns = { "System", "Support", "Troops", "Slots", "Building / fleets", "Info" };
+    static readonly string[] Columns = { "System", "Support", "Troops", "Slots", "Building / fleets", "Seen" };
 
     public SectorWindow(GameScreen screen, List<string> sectors)
     {
@@ -68,12 +68,12 @@ public partial class SectorWindow : VBoxContainer
             _tree.SetColumnTitleAlignment(c, HorizontalAlignment.Left);
             _tree.SetColumnClipContent(c, true);
         }
-        _tree.SetColumnExpand(0, true); _tree.SetColumnExpandRatio(0, 3);
-        _tree.SetColumnExpand(1, false); _tree.SetColumnCustomMinimumWidth(1, 62);
-        _tree.SetColumnExpand(2, false); _tree.SetColumnCustomMinimumWidth(2, 58);
-        _tree.SetColumnExpand(3, false); _tree.SetColumnCustomMinimumWidth(3, 50);
-        _tree.SetColumnExpand(4, true); _tree.SetColumnExpandRatio(4, 4);
-        _tree.SetColumnExpand(5, true); _tree.SetColumnExpandRatio(5, 3);
+        _tree.SetColumnExpand(0, true); _tree.SetColumnExpandRatio(0, 5);
+        _tree.SetColumnExpand(1, false); _tree.SetColumnCustomMinimumWidth(1, 70);
+        _tree.SetColumnExpand(2, false); _tree.SetColumnCustomMinimumWidth(2, 62);
+        _tree.SetColumnExpand(3, false); _tree.SetColumnCustomMinimumWidth(3, 62);
+        _tree.SetColumnExpand(4, true); _tree.SetColumnExpandRatio(4, 3);
+        _tree.SetColumnExpand(5, false); _tree.SetColumnCustomMinimumWidth(5, 58);
         _tree.ItemSelected += OnPicked;
         frame.AddChild(_tree);
     }
@@ -121,8 +121,10 @@ public partial class SectorWindow : VBoxContainer
         _summary.Text = string.Join("  ·  ", parts);
     }
 
-    static string RowTip(RowData r) =>
-        $"{r.System}: support for you {r.Support}, troops {r.Troops} (have / need), energy slots {r.Slots} (used / total). {r.Activity}. {r.Info}.\nClick to select it; during a move, click to send the fleet there.";
+    static string RowTip(RowData r) => Ui.Wrap(r.Info == "unexplored"
+        ? $"{r.System}: unexplored. You know nothing about it yet.\nClick to select it; during a move, click to send the fleet there."
+        : $"{r.System}: support for you {r.Support}, troops {r.Troops} (yours: have / need; others: what you saw), energy slots {r.Slots} (used / total). "
+          + $"Building / fleets: {(r.Activity == "?" ? "unknown, you have no eyes there" : r.Activity)}. Seen: {r.Info}.\nClick to select it; during a move, click to send the fleet there.");
 
     void OnPicked()
     {

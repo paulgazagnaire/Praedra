@@ -66,8 +66,10 @@ public partial class GameScreen
             Stat("Strength", $"{Fm.StrengthOf(f):0.0}", null, "How hard the fleet hits, measured against a reference force of three Mandates (1.0 = as strong as that). It counts ships and fighters with their damage.");
             Stat("Speed rating", $"{Fm.SpeedOf(f)}  (lower is faster)", null, "The slowest ship sets the fleet's speed. Routes multiply it: major routes 3x, minor 1.5x.");
             Stat("Ships", f.Ships.Count.ToString());
-            Stat("Fighter squadrons", $"{fightersAboard.Count + f.Squadrons.Count}  (room for {Fm.FreeBerths(f)} more aboard)");
-            Line($"Regiments aboard: {(aboard.Count == 0 ? "none" : Counts(aboard.Select(a => a.Regiment.Class)))}   (room for {Fm.FreeTroopSlots(f)} more)", Ui.Text2, Ui.Small);
+            int sq = fightersAboard.Count + f.Squadrons.Count, berths0 = Fm.FreeBerths(f), room0 = Fm.FreeTroopSlots(f);
+            Stat("Fighter squadrons", sq == 0 && berths0 == 0 ? "none (no hangar)" : berths0 > 0 ? $"{sq}  (room for {berths0} more)" : sq.ToString());
+            if (aboard.Count == 0 && room0 == 0) Line("No troop room: transports carry regiments.", Ui.Text3, Ui.Small);
+            else Line($"Regiments aboard: {(aboard.Count == 0 ? "none" : Counts(aboard.Select(a => a.Regiment.Class)))}   (room for {room0} more)", Ui.Text2, Ui.Small);
         }
 
         // ---- orders
@@ -88,8 +90,7 @@ public partial class GameScreen
                 int nAll = Math.Min(avail.Count, room);
                 int need = S.Host.Support.RequiredGarrison(at!); // rule: m2-support (garrison); taking regiments below it risks a revolt
                 int nSafe = Math.Min(Math.Max(0, avail.Count - need), room);
-                if (nAll == 0)
-                    Act($"Load troops from {at} ({avail.Count} here, room for {room})", () => { }, "Needs regiments on the planet and free troop room on the fleet (transports have it).", true);
+                if (nAll == 0 && room > 0) Note($"No regiments at {at} to load.");
                 if (nSafe > 0)
                     Act($"Load troops: {nSafe} ({avail.Count} here, room for {room}; the garrison stays)", () => LoadTroops(f, avail.Take(nSafe).ToList()),
                         $"Takes {nSafe} regiment(s) off the planet onto this fleet and leaves enough to keep order.");
@@ -146,7 +147,7 @@ public partial class GameScreen
         foreach (var g in fightersAboard.Concat(f.Squadrons.Select(id => eco.Find(id)).Where(o => o != null)).GroupBy(o => o.Class).OrderBy(g => g.Key, StringComparer.Ordinal))
             Add(Ui.Row($"{g.Key} (fighters)", g.Count().ToString(), null, ClassTip(g.Key)));
         if (f.Ships.Count == 0 && fightersAboard.Count == 0 && f.Squadrons.Count == 0) Line("none", Dim);
-        Line($"Ships: {Counts(f.Ships.Select(id => eco.Find(id)?.Class ?? "?"))}", Ui.Text3, Ui.Tiny);
+        Note("Hover a class for what it is.");
 
         OfficersSection(f);
 
