@@ -29,6 +29,7 @@ body {
 .stage { position: relative; min-width: 0; min-height: 0; background: radial-gradient(ellipse at 50% 40%, #0d1019, #06070a 70%); }
 #cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
 #cv.drag { cursor: grabbing; }
+#cv.dots { image-rendering: pixelated; image-rendering: crisp-edges; }
 .tag { position: absolute; left: 16px; top: 14px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); pointer-events: none; }
 .tag .sz { display: block; max-width: 340px; margin-top: 3px; font-size: 11px; letter-spacing: .04em; text-transform: none; line-height: 1.35; }
 .tag b { display: block; font-family: var(--font-body); font-size: 20px; letter-spacing: 0; text-transform: none; color: var(--fg); font-weight: 600; }
@@ -125,6 +126,19 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
       </div>
       <p class="sysinfo" id="sysInfo">Pick a system to see its planet as the lore sheet describes it. Tweak it, then save it.</p>
     </section>
+
+    <details class="sec" id="secDither" open>
+      <summary>Art style: dither</summary>
+      <label class="chk"><input type="checkbox" id="diOn"> Draw the picture in dots</label>
+      <div id="diBody" hidden>
+        <div class="sub">Pattern</div>
+        <div class="chips" id="diPat"></div>
+        <div class="sub">Colours</div>
+        <div class="chips" id="diPal"></div>
+        <div id="ctlDither"></div>
+        <p class="note">One look for every planet: it stays as you load other systems and is not saved in a preset.</p>
+      </div>
+    </details>
 
     <details class="sec" id="secMega" open hidden>
       <summary>Structure</summary>
@@ -1917,6 +1931,55 @@ vec3 stars(vec2 fc) {
   return c;
 }
 
+#ifdef PM_DITHER
+// The dither pass: every canvas pixel is one dot (the canvas is drawn small and blown up without smoothing). Each dot is
+// compared with a threshold from a fixed pattern, so the dots stay put while the planet turns under them.
+uniform vec4 uDiA;          // x pattern (0 fine grid, 1 coarse grid, 2 halftone, 3 grain), y colours in the palette (0: the planet's own colours), z contrast, w brightness
+uniform float uDiLv;        // levels per colour channel when the planet keeps its own colours
+uniform vec3 uDiPal[4];     // the palette, darkest first
+uniform sampler2D uBlue;    // 64 x 64 blue noise ranks, made once at start-up
+float bayer(ivec2 p, int bits) {
+  // a Bayer matrix entry from its two coordinates' bits, interleaved and reversed
+  int x = p.x, xy = p.x ^ p.y, v = 0;
+  for (int b = 0; b < 3; b++) { if (b >= bits) break; v = (v << 2) | (((xy >> b) & 1) << 1) | ((x >> b) & 1); }
+  return (float(v) + 0.5) / float(1 << (2 * bits));
+}
+float ditherThr() {
+  ivec2 c = ivec2(gl_FragCoord.xy);
+  int pat = int(uDiA.x + 0.5);
+  if (pat == 0) return bayer(c & 7, 3);
+  if (pat == 1) return bayer(c & 3, 2);
+  if (pat == 2) {
+    // printers' halftone: round dots on a grid turned 45 degrees, growing with the dark
+    vec2 r = mat2(0.7071, 0.7071, -0.7071, 0.7071) * (vec2(c) + 0.5) / 5.0;
+    vec2 g = fract(r) - 0.5;
+    return clamp(1.0 - length(g) * 1.41421, 0.0, 1.0) * 0.98 + 0.01;
+  }
+  return texelFetch(uBlue, c & 63, 0).r * (255.0 / 256.0) + 0.5 / 256.0;
+}
+vec3 ditherCol(vec3 col) {
+  float t = ditherThr();
+  vec3 c = clamp((col - 0.5) * uDiA.z + 0.5 + uDiA.w, 0.0, 1.0);
+  int n = int(uDiA.y + 0.5);
+  if (n < 2) { float lv = uDiLv - 1.0; return min(floor(c * lv + t), lv) / lv; }
+  float L = dot(c, vec3(0.2126, 0.7152, 0.0722)) * float(n - 1);
+  float i = floor(L);
+  if (L - i > t) i += 1.0;
+  int k = int(min(i, float(n - 1)));
+  return uDiPal[k];
+}
+#endif
+
+// tone, gamma and (when on) the dither: the last step before a pixel is written
+vec3 finish(vec3 col) {
+  col = col / (1.0 + col * 0.08);
+  col = pow(clamp(col, 0.0, 1.0), vec3(0.96));
+#ifdef PM_DITHER
+  col = ditherCol(col);
+#endif
+  return col;
+}
+
 void main() {
   vec2 fc = gl_FragCoord.xy;
   vec2 uv = (fc - 0.5 * uRes) / (0.5 * uRes.y) / uZoom + uShift;
@@ -1930,8 +1993,7 @@ void main() {
     col += megaCentre(uv, px);
     vec4 mg = shadeMega(uv, px);
     col = mix(col, mg.rgb, mg.a);
-    col = col / (1.0 + col * 0.08);
-    fragColor = vec4(pow(clamp(col, 0.0, 1.0), vec3(0.96)), 1.0);
+    fragColor = vec4(finish(col), 1.0);
     return;
   }
 #endif
@@ -2076,8 +2138,7 @@ void main() {
   for (int i = 0; i < 5; i++) { if (i >= uMoonN) break; if (uMoon[i].z >= 0.0) { col += MA[i]; col = mix(col, MC[i].rgb, MC[i].a); } }
 #endif
 
-  col = col / (1.0 + col * 0.08);
-  fragColor = vec4(pow(clamp(col, 0.0, 1.0), vec3(0.96)), 1.0);
+  fragColor = vec4(finish(col), 1.0);
 }
 </script>
 
@@ -2698,12 +2759,12 @@ const gl = cv.getContext('webgl2', { antialias: false, alpha: false, preserveDra
 let prog, loc = {}, glOK = !!gl;
 // The fragment shader is compiled in variants so work a planet does not use costs nothing: PM_CLOUDS only when the planet
 // draws clouds (not gas giants, not Clouds = 0), PM_HIQ only in High detail (high cirrus deck, small cells, streaks, relief),
-// PM_MOONS only when at least one moon is on, PM_RINGS only when the planet has rings, PM_MEGA only for a ring or a shell world, PM_ORB only with an orbital ring or a space elevator.
+// PM_MOONS only when at least one moon is on, PM_RINGS only when the planet has rings, PM_MEGA only for a ring or a shell world, PM_ORB only with an orbital ring or a space elevator, PM_DITHER only with the dither style on.
 const progs = {};
 let vbuf = null;
 function makeProgram(key) {
   const mk = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(s)); throw new Error('shader: ' + gl.getShaderInfoLog(s)); } return s; };
-  const defs = (key.indexOf('C') >= 0 ? '#define PM_CLOUDS\n' : '') + (key.indexOf('H') >= 0 ? '#define PM_HIQ\n' : '') + (key.indexOf('M') >= 0 ? '#define PM_MOONS\n' : '') + (key.indexOf('R') >= 0 ? '#define PM_RINGS\n' : '') + (key.indexOf('G') >= 0 ? '#define PM_MEGA\n' : '') + (key.indexOf('O') >= 0 ? '#define PM_ORB\n' : '');
+  const defs = (key.indexOf('C') >= 0 ? '#define PM_CLOUDS\n' : '') + (key.indexOf('H') >= 0 ? '#define PM_HIQ\n' : '') + (key.indexOf('M') >= 0 ? '#define PM_MOONS\n' : '') + (key.indexOf('R') >= 0 ? '#define PM_RINGS\n' : '') + (key.indexOf('G') >= 0 ? '#define PM_MEGA\n' : '') + (key.indexOf('O') >= 0 ? '#define PM_ORB\n' : '') + (key.indexOf('D') >= 0 ? '#define PM_DITHER\n' : '');
   const pr = gl.createProgram();
   gl.attachShader(pr, mk(gl.VERTEX_SHADER, $('vs').textContent.trim()));
   gl.attachShader(pr, mk(gl.FRAGMENT_SHADER, $('fs').textContent.trim().replace('#version 300 es', '#version 300 es\n' + defs)));
@@ -2723,6 +2784,7 @@ function useVariant(key) {
 function initGL() {
   if (!gl) return;
   useVariant('H');
+  initBlueNoise();
   vbuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vbuf);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
   gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
@@ -2763,7 +2825,7 @@ function draw(w, h, tmul) {
   if (look > 0) { const Wv = vec3(U, A), sg = Wv[2] > 0 ? -1 : 1; farS[0] = sg * Wv[0] * look; farS[1] = sg * Wv[1] * look; }
   const zoom = Math.min(aspect * 0.92 / extent, 0.92 / extentV) * P.zoom * (1 + 3.0 * look);
   const clouds = P.kind === 'rock' ? 0 : P.clouds;   // an airless world has no weather, whatever the slider says
-  useVariant((P.kind !== 'gas' && clouds > 0.01 ? 'C' : '') + (quality ? 'H' : '') + (mm.length ? 'M' : '') + (P.ring.on && !mega ? 'R' : '') + (mega ? 'G' : '') + (orb ? 'O' : ''));
+  useVariant((P.kind !== 'gas' && clouds > 0.01 ? 'C' : '') + (quality ? 'H' : '') + (mm.length ? 'M' : '') + (P.ring.on && !mega ? 'R' : '') + (mega ? 'G' : '') + (orb ? 'O' : '') + (DI.on ? 'D' : ''));
   gl.viewport(0, 0, w, h);
   gl.uniform2f(loc.uRes, w, h); gl.uniform1f(loc.uZoom, zoom); gl.uniform2f(loc.uShift, farS[0], farS[1]);
   gl.uniform1i(loc.uType, KIND_TYPE(P.kind));
@@ -2828,14 +2890,104 @@ function draw(w, h, tmul) {
   gl.uniform1i(loc.uMoonN, ms.length);
   gl.uniform4fv(loc['uMoon'], mv); gl.uniform4fv(loc['uMoonP'], mp); gl.uniform4fv(loc['uMoonQ'], mq);
   gl.uniform3fv(loc['uMoonCol'], mc1); gl.uniform3fv(loc['uMoonCol2'], mc2); gl.uniform3fv(loc['uMoonCol3'], mc3);
+  if (DI.on) {
+    const pal = DI_PALS[DI.pal];
+    gl.uniform4f(loc.uDiA, DI_PATS.findIndex((p) => p.id === DI.pat), pal.cols.length, DI.contrast, DI.bright);
+    gl.uniform1f(loc.uDiLv, DI.levels);
+    const flat = new Float32Array(12); pal.cols.forEach((c, i) => flat.set(hex2rgb(c), i * 3));
+    gl.uniform3fv(loc.uDiPal, flat);
+  }
   gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+
+/* ---------- the dither style: one look for every planet, kept in this browser, never in a preset ---------- */
+const DI_PATS = [
+  { id: 'fine', label: 'Fine grid', sub: 'even 8 by 8 pattern' },
+  { id: 'coarse', label: 'Coarse grid', sub: 'bolder 4 by 4' },
+  { id: 'halftone', label: 'Halftone', sub: 'printed round dots' },
+  { id: 'grain', label: 'Grain', sub: 'scattered, no grid' },
+];
+const DI_PALS = {
+  own: { label: 'Planet colours', sub: 'its own, in a few steps', cols: [] },
+  mono: { label: 'Black and white', sub: 'two tones', cols: ['#040406', '#f1ede2'] },
+  cold: { label: 'Cold', sub: 'steel blues', cols: ['#04060c', '#1b3350', '#6e9bc0', '#e6eff6'] },
+  warm: { label: 'Warm', sub: 'rust and cream', cols: ['#0b0604', '#5a2913', '#cf7339', '#f6e1bf'] },
+};
+const DI_DEF = { on: false, pat: 'grain', pal: 'mono', dot: 2, contrast: 1.15, bright: 0, levels: 4 };
+let DI = Object.assign({}, DI_DEF);
+try { const o = JSON.parse(localStorage.getItem('pm_dither') || '{}'); for (const k in DI_DEF) if (typeof o[k] === typeof DI_DEF[k]) DI[k] = o[k]; } catch (e) {}
+if (!DI_PATS.some((p) => p.id === DI.pat)) DI.pat = DI_DEF.pat;
+if (!DI_PALS[DI.pal]) DI.pal = DI_DEF.pal;
+const DI_CTL = [
+  ['dot', 'Dot size', 1, 6, 1, () => true, (v) => v + ' px'],
+  ['contrast', 'Contrast', 0.5, 2.5, 0.01, () => true],
+  ['bright', 'Brightness', -0.4, 0.4, 0.01, () => true, (v) => (v > 0 ? '+' : '') + Math.round(v * 100)],
+  ['levels', 'Steps per colour', 2, 6, 1, () => DI.pal === 'own'],
+];
+function saveDither() { try { localStorage.setItem('pm_dither', JSON.stringify(DI)); } catch (e) {} }
+function syncDither() {
+  $('diOn').checked = DI.on; $('diBody').hidden = !DI.on;
+  cv.classList.toggle('dots', DI.on);
+  document.querySelectorAll('#diPat .chip').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === DI.pat)));
+  document.querySelectorAll('#diPal .chip').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === DI.pal)));
+  for (const c of DI_CTL) {
+    const row = $('di_' + c[0]).closest('.ctl'); row.hidden = !c[5]();
+    $('di_' + c[0]).value = DI[c[0]]; row.querySelector('output').textContent = c[6] ? c[6](DI[c[0]]) : DI[c[0]].toFixed(2);
+  }
+}
+function buildDither() {
+  const chips = (host, list, key) => {
+    for (const it of list) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.id = it.id;
+      b.innerHTML = `${it.label}<small>${it.sub}</small>`;
+      b.addEventListener('click', () => { DI[key] = it.id; saveDither(); syncDither(); });
+      $(host).appendChild(b);
+    }
+  };
+  chips('diPat', DI_PATS, 'pat');
+  chips('diPal', Object.keys(DI_PALS).map((id) => Object.assign({ id }, DI_PALS[id])), 'pal');
+  for (const c of DI_CTL) {
+    const row = document.createElement('div'); row.className = 'ctl';
+    row.innerHTML = `<label for="di_${c[0]}">${c[1]}</label><input type="range" id="di_${c[0]}" min="${c[2]}" max="${c[3]}" step="${c[4]}"><output></output>`;
+    $('ctlDither').appendChild(row);
+    row.querySelector('input').addEventListener('input', (e) => { DI[c[0]] = parseFloat(e.target.value); saveDither(); syncDither(); });
+  }
+  $('diOn').addEventListener('change', () => { DI.on = $('diOn').checked; saveDither(); syncDither(); });
+  syncDither();
+}
+// Blue noise by void and cluster (Ulichney 1993): a 64 x 64 table of ranks where each next dot lands in the emptiest spot,
+// so any threshold gives evenly scattered dots with no grid. Built once with a fixed seed.
+function makeBlueNoise(N) {
+  const n = N * N, R = 6, sig2 = 2 * 1.9 * 1.9, ker = [];
+  for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) ker.push([dx, dy, Math.exp(-(dx * dx + dy * dy) / sig2)]);
+  const on = new Uint8Array(n), E = new Float32Array(n), rank = new Int32Array(n);
+  const add = (i, sgn) => { const x = i % N, y = (i / N) | 0; for (const [dx, dy, w] of ker) E[((y + dy + N) % N) * N + ((x + dx + N) % N)] += sgn * w; };
+  let seed = 12345; const rnd = () => (seed = (seed * 1103515245 + 12345) >>> 0) / 4294967296;
+  let ones = 0; while (ones < n / 10) { const i = (rnd() * n) | 0; if (!on[i]) { on[i] = 1; add(i, 1); ones++; } }
+  const pick = (want, best) => { let bi = -1, bv = best ? -1e9 : 1e9; for (let i = 0; i < n; i++) if (on[i] === want && (best ? E[i] > bv : E[i] < bv)) { bv = E[i]; bi = i; } return bi; };
+  // spread the starting dots out: move the most crowded dot into the biggest gap until that stops changing anything
+  for (let guard = 0; guard < n; guard++) { const c = pick(1, true); on[c] = 0; add(c, -1); const v = pick(0, false); if (v === c) { on[c] = 1; add(c, 1); break; } on[v] = 1; add(v, 1); }
+  const on0 = on.slice(), E0 = E.slice();
+  for (let r = ones - 1; r >= 0; r--) { const c = pick(1, true); on[c] = 0; add(c, -1); rank[c] = r; }
+  on.set(on0); E.set(E0);
+  for (let r = ones; r < n; r++) { const v = pick(0, false); on[v] = 1; add(v, 1); rank[v] = r; }
+  const out = new Uint8Array(n); for (let i = 0; i < n; i++) out[i] = Math.floor(rank[i] * 256 / n);
+  return out;
+}
+function initBlueNoise() {
+  const N = 64, tex = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, N, N, 0, gl.RED, gl.UNSIGNED_BYTE, makeBlueNoise(N));
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 }
 
 function fit() {
   const rect = cv.getBoundingClientRect();
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  // with the dither on, one canvas pixel is one dot of Dot size screen pixels, blown up without smoothing
+  const dpr = DI.on ? (window.devicePixelRatio || 1) / DI.dot : Math.min(window.devicePixelRatio || 1, 2);
   let w = Math.max(2, Math.round(rect.width * dpr)), h = Math.max(2, Math.round(rect.height * dpr));
-  const cap = 1100; const s = Math.min(1, cap / Math.max(w, h)); w = Math.round(w * s); h = Math.round(h * s);
+  const cap = DI.on ? 1600 : 1100; const s = Math.min(1, cap / Math.max(w, h)); w = Math.round(w * s); h = Math.round(h * s);
   if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
 }
 let last = performance.now();
@@ -3118,6 +3270,15 @@ async function saveFile(filename, data, mime) {
 }
 function snapshot(size) {
   const ow = cv.width, oh = cv.height;
+  if (DI.on) {
+    // the same dots as on screen: draw a square as many dots high as the view, then enlarge each dot to a whole number of pixels
+    const n = Math.max(64, Math.min(ow, oh)), k = Math.max(1, Math.round(size / n));
+    cv.width = n; cv.height = n; const q0 = quality; quality = 1; draw(n, n); quality = q0;
+    const big = document.createElement('canvas'); big.width = big.height = n * k;
+    const g2 = big.getContext('2d'); g2.imageSmoothingEnabled = false; g2.drawImage(cv, 0, 0, n * k, n * k);
+    cv.width = ow; cv.height = oh;
+    return new Promise((res) => big.toBlob(res, 'image/png'));
+  }
   const q0 = quality; quality = 1; cv.width = size; cv.height = size; draw(size, size); quality = q0;
   return new Promise((res) => cv.toBlob((b) => { cv.width = ow; cv.height = oh; res(b); }, 'image/png'));
 }
@@ -3142,6 +3303,7 @@ function boot() {
   buildRingUI();
   buildMegaUI();
   buildOrbUI();
+  buildDither();
   const dl = $('sysList');
   SYSTEMS.forEach((s, i) => { sysByName.set(s.n.toLowerCase(), i); const o = document.createElement('option'); o.value = s.n; o.label = s.sec; dl.appendChild(o); });
   $('sysIn').addEventListener('change', () => { const i = sysByName.get($('sysIn').value.trim().toLowerCase()); if (i !== undefined) loadSystem(i); else toast('No system with that name'); });
@@ -3169,7 +3331,7 @@ function boot() {
   try { initGL(); } catch (e) { glOK = false; document.querySelector('.hint').textContent = 'Shader error: ' + e.message; console.error(e); return; }
   requestAnimationFrame(loop);
 }
-window.__pm = { get P() { return P; }, setP(p) { P = p; syncControls(); }, derive, loadSystem, SYSTEMS, classify, makeDefaults, KINDS, setKind, frame, T, draw: () => draw(cv.width, cv.height), pause(v) { paused = v; }, freeze(v) { frozen = v; }, setQ(v) { quality = v; }, fromCode, MOON_TYPES, RING_TYPES, ringGapList, applyRingType, placeFeeder, syncRingUI, ensureMoons, syncMoonUI, selectMoon(i) { selMoon = i; syncMoonUI(); }, MEGA_TYPES };
+window.__pm = { get P() { return P; }, setDither(o) { Object.assign(DI, o); syncDither(); fit(); }, setP(p) { P = p; syncControls(); }, derive, loadSystem, SYSTEMS, classify, makeDefaults, KINDS, setKind, frame, T, draw: () => draw(cv.width, cv.height), pause(v) { paused = v; }, freeze(v) { frozen = v; }, setQ(v) { quality = v; }, fromCode, MOON_TYPES, RING_TYPES, ringGapList, applyRingType, placeFeeder, syncRingUI, ensureMoons, syncMoonUI, selectMoon(i) { selMoon = i; syncMoonUI(); }, MEGA_TYPES };
 boot();
 })();
 </script>
