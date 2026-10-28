@@ -350,7 +350,7 @@ public partial class GameScreen
         RefreshTop();
     }
 
-    /// <summary>The squadrons fly as one group at the speed of the fastest (rule: m3-fleets §Fleet speed, squadron-only fleet).</summary>
+    /// <summary>The squadrons fly as one group at the speed of the slowest: the largest rating (rule: m3-fleets §Unescorted squadrons, §Fleet speed).</summary>
     int FighterSpeed => Praedra.Core.Travel.TravelFormula.FleetSpeed(Array.Empty<int>(), _moveFighters.Select(S.Host.Economy.Find).Where(o => o != null).Select(Fm.SpeedOfShip));
 
     void UpdateFighterPreview()

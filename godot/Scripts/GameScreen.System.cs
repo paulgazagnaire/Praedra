@@ -230,7 +230,7 @@ public partial class GameScreen
         var mobile = based.Where(o => (Fm.ClassOf(o)?.Hyperdrive ?? 0) > 0).Select(o => o.Id).ToList();
         if (mobile.Count > 0)
             Act($"Fly {Ui.Count(mobile.Count, "squadron", "squadrons")} to...", () => StartFighterMove(name, mobile),
-                "They fly as one group at the speed of the fastest, then land and stay based where they arrive." + (mobile.Count < based.Count ? " The others have no hyperdrive: a carrier must take them." : ""));
+                "They fly as one group at the speed of the slowest, then land and stay based where they arrive." + (mobile.Count < based.Count ? " The others have no hyperdrive: a carrier must take them." : ""));
         else Note("These fighters have no hyperdrive: a fleet with hangar room must carry them.");
     }
 

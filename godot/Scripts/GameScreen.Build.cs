@@ -281,7 +281,7 @@ public partial class GameScreen
     }
 
     /// <summary>Where research stands in the track this build list draws on: the level, and the next thing it unlocks.
-    /// rule: m5-research §Levels and points (points come from finished yards of that kind and from Research missions).</summary>
+    /// rule: m5-research §Facility income, §Mission income, §The level check (points come from finished yards of that kind and from Research missions).</summary>
     void ResearchLine(ResearchKind kind)
     {
         var r = S.Host.Research;
