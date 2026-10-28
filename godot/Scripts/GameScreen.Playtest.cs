@@ -54,10 +54,11 @@ public partial class GameScreen
     Node ClickRoot => _modalStack.Count > 0 ? _modalStack[^1] : this;
     internal bool Has(string prefix) => UiTest.Has(ClickRoot, prefix) || (_menuPopup.Visible && UiTest.Has(_menuPopup, prefix));
     internal bool Enabled(string prefix) => (UiTest.Find<Button>(MenuFirst, prefix) ?? UiTest.Find<Button>(ClickRoot, prefix)) is { Disabled: false };
-    internal bool Click(string prefix) => (_menuPopup.Visible && _modalStack.Count == 0 && UiTest.Click(_menuPopup, prefix)) || UiTest.Click(ClickRoot, prefix) || ClickInMenu(prefix);
+    internal bool Click(string prefix) => (_menuPopup.Visible && _modalStack.Count == 0 && UiTest.Click(_menuPopup, prefix)) || UiTest.Click(ClickRoot, prefix);
 
-    /// <summary>What a player does for a window that is not open: open the menu and click it there (the menu closes itself).</summary>
-    bool ClickInMenu(string prefix)
+    /// <summary>What a player does for a window that is not open: open the menu and click it there (the menu closes itself).
+    /// Kept apart from Click so a button dropped from the screen still fails its check.</summary>
+    internal bool ClickViaMenu(string prefix)
     {
         if (_modalStack.Count > 0 || _menuPopup.Visible) return false;
         ToggleMenu();

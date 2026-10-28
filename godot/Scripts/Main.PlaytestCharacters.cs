@@ -129,7 +129,7 @@ public partial class Main
     {
         var s = gs.S; var cm = s.Host.Characters; var fm = s.Host.Fleets;
         string name = s.CharName(c.Id), from = c.System;
-        if (!gs.CharactersOpen) gs.Click("Leaders");
+        if (!gs.CharactersOpen) gs.ClickViaMenu("Leaders");
         gs.PlayRefresh();
         Expect(gs.Click($"Move {name}..."), $"click 'Move {name}...' in the Leaders tab");
         Expect(gs.Banner.Contains("Move " + name), "the banner asks for a destination: " + gs.Banner);

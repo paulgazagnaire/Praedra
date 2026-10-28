@@ -53,7 +53,7 @@ public partial class Main
             var rec = mm.Data.Get(MissionKind.Diplomacy);
             if (dip.Phase == MissionPhase.Outbound)
             {
-                if (!gs.MissionsOpen) gs.Click("Missions");
+                if (!gs.MissionsOpen) gs.ClickViaMenu("Missions");
                 gs.PlayRefresh();
                 Expect(gs.PanelText().Contains($"Travelling out to {neutral}, arrives day {dip.ArrivalDay}"), "the Missions list shows the trip out and its arrival day: " + gs.PanelText().Replace("\n", " / "));
                 Expect(gs.Has($"Cancel the Diplomacy mission on {neutral}") && !gs.Enabled($"Cancel the Diplomacy mission on {neutral}"), "Cancel is greyed out while the team travels");
@@ -102,7 +102,7 @@ public partial class Main
                 .Concat(gs.G.Systems.Select(x => x.Name).Where(n => s.OwnerOf(n) == null))
                 .Where(n => n != spy.System && Ticks(spy.System, n) < int.MaxValue).OrderBy(n => Ticks(spy.System, n)).ThenBy(n => n, StringComparer.Ordinal).First();
             GD.Print($"  {name} at {spy.System}: espionage on {target}");
-            gs.Click("Leaders"); gs.PlayRefresh();
+            gs.ClickViaMenu("Leaders"); gs.PlayRefresh();
             Expect(gs.Has($"Send {name} on a mission..."), $"the Characters list offers Send {name} on a mission...");
             // the result is checked later (FinishMissions), so the rest of the playtest keeps its usual days
             SpyAndCheck(gs, $"Send {name} on a mission...", null, target, checkRefusedKind: true, defer: true);
@@ -199,7 +199,7 @@ public partial class Main
     {
         var s = gs.S; var mm = s.Missions;
         string kw = GameSession.KindWords(kind);
-        if (!gs.Has(open)) { gs.Click("Leaders"); gs.PlayRefresh(); }
+        if (!gs.Has(open)) { gs.ClickViaMenu("Leaders"); gs.PlayRefresh(); }
         Expect(gs.Click(open) && gs.PlannerOpen, $"click '{open}'");
         gs.PlayRefresh();
         if (tick != null) { Expect(gs.SetTeam(tick, true), $"tick {tick} in the team"); gs.PlayRefresh(); }
@@ -254,7 +254,7 @@ public partial class Main
         var s = gs.S; var mm = s.Missions;
         string kw = GameSession.KindWords(m.Kind), target = m.Target; int id = m.Id;
         gs.View.Select(-1);
-        if (!gs.MissionsOpen) gs.Click("Missions");
+        if (!gs.MissionsOpen) gs.ClickViaMenu("Missions");
         gs.PlayRefresh();
         Expect(gs.PanelText().Contains($"At {target}, next result due day {m.Due}"), "the Missions list shows the team at the target and the next result day");
         Expect(gs.Click($"Cancel the {kw} mission on {target}"), "click Cancel");

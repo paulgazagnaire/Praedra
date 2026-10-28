@@ -231,10 +231,13 @@ public partial class GameScreen
         RefreshMessageCorner();
     }
 
+    /// <summary>The corner's kind for a message: any fight counts as a battle.</summary>
+    static MsgCat CornerCat(Message m) => m.Combat || m.Kind == MsgKind.Battle ? MsgCat.Battles : m.Cat;
+
     /// <summary>A new message lights its kind until the player looks at it.</summary>
     void NoteMessageKind(Message m)
     {
-        var c = m.Combat || m.Kind == MsgKind.Battle ? MsgCat.Battles : m.Cat;
+        var c = CornerCat(m);
         if (_msgChips.ContainsKey(c) && _msgCat != c) _msgNews.Add(c);
     }
 
@@ -251,13 +254,12 @@ public partial class GameScreen
         for (int i = _allMessages.Count - 1; i >= 0 && m == null; i--)
         {
             var x = _allMessages[i];
-            if (_msgCat is not MsgCat want || x.Cat == want || (want == MsgCat.Battles && (x.Combat || x.Kind == MsgKind.Battle))) m = x;
+            if (_msgCat is not MsgCat want || CornerCat(x) == want) m = x;
         }
         _msgShown = m;
         _msgCard.Visible = m != null;
         if (m == null) return;
-        var cat2 = m.Combat || m.Kind == MsgKind.Battle ? MsgCat.Battles : m.Cat;
-        _msgKind.Text = $"{KindWord(cat2)} · D{m.Day}";
+        _msgKind.Text = $"{KindWord(CornerCat(m))} · D{m.Day}";
         _msgKind.AddThemeColorOverride("font_color", m.Kind switch { MsgKind.Bad => Ui.Danger, MsgKind.Warn or MsgKind.Battle => Ui.Warn, MsgKind.Good => Ui.Good, _ => Ui.Text3 });
         _msgOpen.Visible = m.System != null;
         // a message with a report has a short title and a longer text; a plain one is shown as one line
