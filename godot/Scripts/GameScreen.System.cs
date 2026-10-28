@@ -227,11 +227,12 @@ public partial class GameScreen
         var based = FightersBasedAt(name);
         if (based.Count == 0) { Line("none", Dim); return; }
         ScrapRows(based, name);
-        var mobile = based.Where(o => (Fm.ClassOf(o)?.Hyperdrive ?? 0) > 0).Select(o => o.Id).ToList();
+        // the same rating the core flies them at: a damaged hyperdrive can be 0 (rule: m3-ships-and-fighters §Hyperdrive and speed)
+        var mobile = based.Where(o => Fm.ClassOf(o) != null && Fm.SpeedOfShip(o) > 0).Select(o => o.Id).ToList();
         if (mobile.Count > 0)
             Act($"Fly {Ui.Count(mobile.Count, "squadron", "squadrons")} to...", () => StartFighterMove(name, mobile),
-                "They fly as one group at the speed of the fastest, then land and stay based where they arrive." + (mobile.Count < based.Count ? " The others have no hyperdrive: a carrier must take them." : ""));
-        else Note("These fighters have no hyperdrive: a fleet with hangar room must carry them.");
+                "They fly as one group at the speed of the slowest, then land and stay based where they arrive." + (mobile.Count < based.Count ? " The others have no working hyperdrive: a carrier must take them." : ""));
+        else Note("These fighters have no working hyperdrive: a fleet with hangar room must carry them.");
     }
 
     void DestroyedPanel(string name)
