@@ -35,7 +35,7 @@ public partial class GameScreen
     OptionButton _layerPick;
 
     /// <summary>One drop-down for the map layer (V cycles it) and one toggle for the routes: two controls instead of a row of seven.</summary>
-    void BuildLayerChips()
+    void BuildMapTools()
     {
         _layerPick = new OptionButton { FocusMode = FocusModeEnum.None, MouseDefaultCursorShape = CursorShape.PointingHand };
         _layerPick.CustomMinimumSize = new Vector2(150, 0);
@@ -44,9 +44,9 @@ public partial class GameScreen
         _layerPick.Select((int)_layer);
         _layerPick.TooltipText = Ui.Wrap("Colour the map for one question at a time (V cycles the layers).");
         _layerPick.ItemSelected += i => SetLayer(Layers[(int)i].Layer);
-        _layerChips.AddChild(_layerPick);
+        _mapTools.AddChild(_layerPick);
         _routesChip = Ui.Chip("Routes", CycleLanes, "Show or hide the hyperspace routes (L)", true);
-        _layerChips.AddChild(_routesChip);
+        _mapTools.AddChild(_routesChip);
         // the key sits on a card so the map's names do not run through it
         _layerKey = Ui.Label("", "Hint", wrap: false);
         _layerKeyCard = Ui.Card(new Color(Ui.Chrome, 0.9f), Ui.Line, 6, 6);
@@ -54,8 +54,8 @@ public partial class GameScreen
         _layerKeyCard.MouseFilter = MouseFilterEnum.Ignore;
         _layerKeyCard.Visible = false;
         _layerKeyCard.AddChild(_layerKey);
-        _layerChips.GetParent().AddChild(_layerKeyCard);
-        _layerChips.GetParent().MoveChild(_layerKeyCard, _layerChips.GetIndex() + 1);
+        _mapTools.GetParent().AddChild(_layerKeyCard);
+        _mapTools.GetParent().MoveChild(_layerKeyCard, _mapTools.GetIndex() + 1);
     }
 
     void SetLayer(MapLayer l)

@@ -172,6 +172,7 @@ public partial class GameScreen
     /// <summary>A section head: a clear gap above it (a new group starts), then the name in small capitals.</summary>
     void Heading(string text, string tip = null)
     {
+        // the panel list already puts Block above and below this spacer, so Group - 2*Block makes the gap before a section exactly Group
         Add(Ui.Space(Ui.Group - Ui.Block * 2));
         var l = Add(Ui.Section(text));
         if (tip != null) { l.TooltipText = Ui.Wrap(tip); l.MouseFilter = MouseFilterEnum.Stop; l.MouseDefaultCursorShape = CursorShape.Help; }

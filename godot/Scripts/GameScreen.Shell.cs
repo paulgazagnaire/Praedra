@@ -28,7 +28,7 @@ public partial class GameScreen
     HBoxContainer _orderActions;
     VBoxContainer _toastBox, _topRight;
     Button _myHqButton, _enemyHqButton, _legendButton;
-    HBoxContainer _layerChips;
+    HBoxContainer _mapTools;
 
     // ---- column under the map
     PanelContainer _sectorDock;
@@ -212,8 +212,8 @@ public partial class GameScreen
         r1.MouseFilter = MouseFilterEnum.Ignore;
         tl.AddChild(r1);
         BuildSearch(r1);
-        _layerChips = r1;
-        BuildLayerChips();
+        _mapTools = r1;
+        BuildMapTools();
         var hqPill = Ui.Card(new Color(Ui.Panel, 0.94f), Ui.Gold, 8, 6);
         hqPill.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         hqPill.Visible = false;
@@ -309,7 +309,7 @@ public partial class GameScreen
     {
         foreach (var r in _fleets.Obstacles()) yield return r;
         var origin = _view.GlobalPosition;
-        foreach (var box in new Control[] { _legendCard, _orderBar, _topRight, _searchResults, _layerChips?.GetParent<Control>(), _myHqButton?.GetParent<Control>() })
+        foreach (var box in new Control[] { _legendCard, _orderBar, _topRight, _searchResults, _mapTools?.GetParent<Control>(), _myHqButton?.GetParent<Control>() })
         {
             if (box == null || !box.IsVisibleInTree()) continue;
             var g = box.GetGlobalRect();
@@ -470,7 +470,7 @@ public partial class GameScreen
         Item(new Glyph(Glyph.Kind.TriangleDown, Ui.Enemy, 11), "Enemy fleet you see now");
         Item(new Glyph(Glyph.Kind.Bar, new Color("9ecbff"), 16), "Major route: 3x speed");
         Item(new Glyph(Glyph.Kind.Bar, new Color(Ui.Text3, 0.7f), 16), "Minor route: 1.5x speed");
-        v.AddChild(Ui.Label("Off the routes, ships jump through open space at normal speed. A move preview is solid on a route and dashed off it; red rings mark a known trap.", "Hint", size: Ui.Tiny));
+        v.AddChild(Ui.Label("Off the routes, ships jump through open space at normal speed. A move preview is solid on a route and dashed off it; red rings mark a known trap. Each sector is drawn a little tighter than it is, so the sectors stand apart: the arrival day in a move preview is the real distance.", "Hint", size: Ui.Tiny));
         v.GetChild<Label>(v.GetChildCount() - 1).CustomMinimumSize = new Vector2(250, 0);
         return card;
     }
