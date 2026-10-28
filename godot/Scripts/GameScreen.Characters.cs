@@ -28,7 +28,7 @@ public partial class GameScreen
     void ToggleCharacters()
     {
         _plan = null; if (_pickMission) CancelMove();
-        ShowTab(_tab == DrawerTab.Leaders ? DrawerTab.Needs : DrawerTab.Leaders);
+        if (_drawer.Visible && _tab == DrawerTab.Leaders) CloseDrawer(); else ShowTab(DrawerTab.Leaders);
     }
 
     void CharactersPanel()
@@ -64,8 +64,6 @@ public partial class GameScreen
             Heading("Fallen");
             foreach (var c in dead) Line($"{S.CharName(c.Id)} - dead ({S.WhereIsCharacter(c)})", Dim, Ui.Small);
         }
-        Add(Ui.Space(6));
-        Act("Close the Characters list", ToggleCharacters, "Back to Needs you (C)");
     }
 
     /// <summary>

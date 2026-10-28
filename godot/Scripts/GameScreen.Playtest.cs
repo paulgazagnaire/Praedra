@@ -41,7 +41,7 @@ public static class UiTest
     {
         foreach (var c in root.GetChildren())
         {
-            if (c is Button b && b.IsVisibleInTree()) yield return b.Text;
+            if (c is Button b && b.IsVisibleInTree()) yield return TextOf(b);
             foreach (var t in Texts(c)) yield return t;
         }
     }
@@ -55,6 +55,17 @@ public partial class GameScreen
     internal bool Has(string prefix) => UiTest.Has(ClickRoot, prefix) || (_menuPopup.Visible && UiTest.Has(_menuPopup, prefix));
     internal bool Enabled(string prefix) => (UiTest.Find<Button>(MenuFirst, prefix) ?? UiTest.Find<Button>(ClickRoot, prefix)) is { Disabled: false };
     internal bool Click(string prefix) => (_menuPopup.Visible && _modalStack.Count == 0 && UiTest.Click(_menuPopup, prefix)) || UiTest.Click(ClickRoot, prefix);
+
+    /// <summary>What a player does for a window that is not open: open the menu and click it there (the menu closes itself).
+    /// Kept apart from Click so a button dropped from the screen still fails its check.</summary>
+    internal bool ClickViaMenu(string prefix)
+    {
+        if (_modalStack.Count > 0 || _menuPopup.Visible) return false;
+        ToggleMenu();
+        if (UiTest.Click(_menuPopup, prefix)) return true;
+        ToggleMenu();
+        return false;
+    }
     Node MenuFirst => _menuPopup.Visible && _modalStack.Count == 0 ? _menuPopup : ClickRoot;
     internal IEnumerable<string> ButtonTexts() => UiTest.Texts(ClickRoot);
 
@@ -67,8 +78,8 @@ public partial class GameScreen
 
     internal bool PlayDay() { var r = RunDay(); PlayRefresh(); return r; }
     internal bool HowToVisible => _howPanel.Visible;
-    internal bool CharactersOpen => _tab == DrawerTab.Leaders;
-    internal bool MissionsOpen => _tab == DrawerTab.Missions && _plan == null;
+    internal bool CharactersOpen => _drawer.Visible && _tab == DrawerTab.Leaders;
+    internal bool MissionsOpen => _drawer.Visible && _tab == DrawerTab.Missions && _plan == null;
     internal bool PlannerOpen => _plan != null;
     internal string TabName => _tab.ToString();
     internal void OpenTab(string name) { if (Enum.TryParse<DrawerTab>(name, out var t)) ShowTab(t); PlayRefresh(); }
@@ -89,7 +100,7 @@ public partial class GameScreen
     internal string VictoryText => LabelsIn(_victoryPanel);
     internal bool GoalVisible => _goalPanel.Visible;
     internal string GoalText => LabelsIn(_goalPanel);
-    internal string GoalButtonText => _goalButton.Text;
+    internal string GoalButtonText => _goalButton.GetMeta(UiTest.FullName).AsString();
     internal bool SavesVisible => _savePanel.Visible;
     internal bool SettingsVisible => _settingsPanel.Visible;
     internal bool MenuVisible => _menuPopup.Visible;
@@ -97,7 +108,7 @@ public partial class GameScreen
     internal bool Playing => _playing;
     internal int SpeedValue => Speeds[_speedIndex];
     internal string Banner => InMoveMode ? _moveBanner ?? "" : _banner.GetParent<Control>().Visible ? _banner.Text : "";
-    internal string TopText => $"{_dayLabel.Text} | {_rawLabel.Text} | {_refinedLabel.Text} | {_upkeepLabel.Text} | {(_ordersLabel.IsVisibleInTree() ? _ordersLabel.Text : "")}";
+    internal string TopText => $"Day {_dayLabel.Text} | {_rawLabel.Text} | {_refinedLabel.Text} | {_upkeepLabel.Text} | {(_ordersLabel.IsVisibleInTree() ? _ordersLabel.Text : "")}";
     internal string[] TopTips => new[] { _rawLabel.TooltipText, _refinedLabel.TooltipText, _upkeepLabel.TooltipText, _dayLabel.TooltipText };
     internal string PanelText() => LabelsIn(_pv);
     static string LabelsIn(Node n) => string.Join("\n", AllNodes(n).OfType<Label>().Where(l => l.IsVisibleInTree() || !l.IsInsideTree()).Select(l => l.Text));
@@ -242,6 +253,13 @@ public partial class GameScreen
     public void ShotSectorHover(string name) { _view.ShotHoverSector(name.Replace('_', ' ')); OnViewChanged(); }
     internal string HoverCardText => _hoverCard.Visible ? _hoverLabel.Text : "";
     internal void ClickSector(string name) => _view.ShotClickSector(name);
+    public void ShotCloseWindow() => CloseDrawer();
+    public void ShotOpenMenu() => Callable.From(() => { if (!_menuPopup.Visible) ToggleMenu(); }).CallDeferred();
+    internal bool WindowOpen => _drawer.Visible;
+    internal bool SelectionCardOpen => _selCard.Visible;
+    internal string SelectionCardText => _selCard.Visible ? LabelsIn(_selCard) : "";
+    internal string PillText => _pill.Visible ? _banner.Text : "";
+    internal string MessageCornerText => _msgCorner.Visible && _msgCard.Visible ? LabelsIn(_msgCard) : "";
     /// <summary>The sector the mouse finds when it points at this system's spot on the map (the real hit test).</summary>
     internal string SectorUnder(string system) =>
         G.TryFindSystem(system, out int i) ? _view.SectorName(_view.SectorAt(_view.SystemScreen(i))) : null;

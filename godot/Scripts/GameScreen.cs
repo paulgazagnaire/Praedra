@@ -9,10 +9,11 @@ using Side = Praedra.Core.Clock.Side;
 namespace PraedraViewer;
 
 /// <summary>
-/// The game screen. Layout (Paul's canvas, layout D): a top bar; the map filling the rest, with the sector windows docked under it; and a
-/// fixed drawer on the right (Needs you, Selected, Fleets, Leaders, Missions, Log) instead of panels floating over the map. All rules live in
+/// The game screen. Layout (Paul's mockup, 2026-10-28): the map fills the window, small dark pieces float at its edges, and everything longer
+/// (a system's details, Fleets, Leaders, Missions, the log, the sector tables) opens as a window on demand. All rules live in
 /// the core; this reads the state through the <see cref="GameSession"/>, submits orders and calls the session's StepDay (the only thing that
-/// advances the game). The parts live in the GameScreen.*.cs files: Shell (the frame), Drawer, System, Build, Fleet, Move, Attention, Log,
+/// advances the game). The parts live in the GameScreen.*.cs files: Shell (the frame), Hud (the selection card and the message corner),
+/// Drawer (the window), System, Build, Fleet, Move, Attention, Log,
 /// Dialogs, Goal, Search, Characters, Missions.
 /// </summary>
 public partial class GameScreen : Control
@@ -132,7 +133,7 @@ public partial class GameScreen : Control
     void SetSpeed(int idx)
     {
         _speedIndex = Math.Clamp(idx, 0, Speeds.Length - 1);
-        if (_speedButton != null) _speedButton.Text = $"{Speeds[_speedIndex]}x";
+        for (int i = 0; i < _speedChips.Count; i++) _speedChips[i].SetPressedNoSignal(i == _speedIndex);
     }
 
     public void StepOne()
@@ -256,7 +257,8 @@ public partial class GameScreen : Control
         GetViewport().SetInputAsHandled();
     }
 
-    /// <summary>Esc closes the topmost thing: a dialog, the menu, the search, a move being planned, the planner, then the selection.</summary>
+    /// <summary>Esc closes the topmost thing: a dialog, the menu, the search, a move being planned, the planner, the sector tables, the window,
+    /// then the selection.</summary>
     void Escape()
     {
         if (_victoryPanel.Visible) return;
@@ -265,7 +267,8 @@ public partial class GameScreen : Control
         if (_searchResults.Visible) { CloseSearch(); return; }
         if (_moveFleet >= 0 || _moveHq || _moveChar >= 0 || _pickMission) { CancelMove(); return; }
         if (_plan != null) { ClosePlanner(); return; }
+        if (_sectorDock.Visible) { ToggleSectorDock(); return; }
+        if (_drawer.Visible) { CloseDrawer(); return; }
         if (_view.SelectedFleet >= 0 || _view.Selected >= 0) { _view.SelectedFleet = -1; _view.Select(-1); return; }
-        if (_tab != DrawerTab.Needs) ShowTab(DrawerTab.Needs);
     }
 }

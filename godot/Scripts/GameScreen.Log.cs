@@ -6,7 +6,7 @@ using Godot;
 namespace PraedraViewer;
 
 /// <summary>
-/// Messages (user stories G1, G2, G4): the Log tab with every message by kind, the latest four on the map's bottom-left corner, and a toast
+/// Messages (user stories G1, G2, G4): the Log tab with every message by kind, the latest one in the map's bottom-right corner, and a toast
 /// for the ones that matter (a refused order, a loss, a warning, a breakthrough). Clicking a message goes to its system and opens its report.
 /// </summary>
 public partial class GameScreen
@@ -97,7 +97,8 @@ public partial class GameScreen
         if (_allMessages.Count > MaxLogItems) _allMessages.RemoveAt(0);
         if (PassesFilter(m)) { AppendLogRow(m); if (_logHost.Visible) ScrollLogToEnd(); }
         if (fresh && ToastWorthy(m)) Toast(m.Text, m.Kind, m.System);
-        if (fresh && _tab != DrawerTab.Log) _unread++;
+        if (fresh && !(_drawer.Visible && _tab == DrawerTab.Log)) _unread++;
+        if (fresh) NoteMessageKind(m);
     }
 
     static readonly HashSet<string> GoodNews = new(StringComparer.Ordinal)

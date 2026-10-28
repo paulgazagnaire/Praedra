@@ -140,6 +140,9 @@ public partial class Main : Control
                 case "--sectorhover" when i + 1 < _args.Length: gs.ShotSectorHover(_args[i + 1]); break;
                 case "--routes" when i + 1 < _args.Length: gs.SetRoutesShown(_args[i + 1] != "off"); break;
                 case "--deselect": gs.View.Select(-1); break;
+                case "--mapclick" when i + 1 < _args.Length: if (g.TryFindSystem(_args[i + 1], out int mc)) gs.View.Select(mc); break;
+                case "--close": gs.ShotCloseWindow(); break;
+                case "--gamemenu": gs.ShotOpenMenu(); break;
                 case "--fleet" when i + 1 < _args.Length:
                     foreach (var f in gs.S.Game.State.Fleets.Values) if (f.Name == _args[i + 1]) gs.SelectFleet(f.Id, true);
                     break;

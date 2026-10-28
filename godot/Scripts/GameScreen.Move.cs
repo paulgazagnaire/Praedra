@@ -51,10 +51,11 @@ public partial class GameScreen
             {
                 if (_plan != null && !_pickMission) _plan = null; // a map selection closes the planner
                 if (newSystem) _sysTab = SysTab.Overview;
-                ShowTab(DrawerTab.Selected);
+                if (_drawer.Visible) ShowTab(DrawerTab.Selected); // a map click fills the selection card; the window follows only when open
                 if (_view.Selected >= 0) SectorFollowSelection(G.Systems[_view.Selected].Name);
             }
             _panelDirty = true; _panelTimer = 0;
+            RefreshSelectionCard();
         }
     }
 
@@ -201,7 +202,7 @@ public partial class GameScreen
         if (_orderBar == null) return;
         bool show = InMoveMode;
         _orderBar.Visible = show;
-        if (_myHqButton?.GetParent() is Control nav) nav.Visible = !show; // the order bar takes the bottom of the map while a move is planned
+        if (_selCard != null) _selCard.Visible = !show && SelectionCardWanted; // the order bar takes the bottom centre while a move is planned
         if (!show) return;
         string text = _moveBanner ?? "";
         int nl = text.IndexOf('\n');
@@ -209,7 +210,7 @@ public partial class GameScreen
         _orderBody.Text = nl < 0 ? "" : text[(nl + 1)..];
         _orderBody.Visible = _orderBody.Text.Length > 0;
         bool red = _moveFleet >= 0 && _moveWarn;
-        _orderBar.AddThemeStyleboxOverride("panel", Ui.Box(new Color(red ? Ui.DangerDeep : Ui.Panel, 0.97f), 8, red ? Ui.Danger : Ui.LineHi, red ? 2 : 1, 14, 10));
+        _orderBar.AddThemeStyleboxOverride("panel", Ui.Box(new Color(red ? Ui.DangerDeep : Ui.HudBg, 0.97f), 8, red ? Ui.Danger : new Color(1, 1, 1, 0.08f), red ? 2 : 1, 14, 10));
         _orderTitle.AddThemeColorOverride("font_color", red ? new Color("ffb4b4") : Ui.Text);
         Ui.Clear(_orderActions);
         if (_moveFleet >= 0 && _lockedTo != null && red)
