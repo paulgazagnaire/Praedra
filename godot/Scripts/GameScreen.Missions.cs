@@ -18,10 +18,8 @@ namespace PraedraViewer;
 /// </summary>
 public partial class GameScreen
 {
-    bool _missionTab;   // the right-hand panel shows the Missions list
     MissionPlan _plan;  // the "Send on a mission" planner, or null
     bool _pickMission;  // waiting for the target click
-    Button _missionButton;
 
     MissionModule Mm => S.Missions;
 
@@ -47,28 +45,18 @@ public partial class GameScreen
 
     // ================================================================== Missions list (top bar, key M)
 
+    /// <summary>M: open the Missions tab, or go back to Needs you when it is open.</summary>
     void ToggleMissions()
     {
-        if (!_missionTab)
-        {
-            _view.SelectedFleet = -1; _view.Select(-1);
-            _lastSelectedSystem = -1; _lastSelectedFleet = -1;
-            _charTab = false; RefreshCharButton();
-        }
-        _missionTab = !_missionTab;
         _plan = null; if (_pickMission) CancelMove();
-        _panelDirty = true; _panelTimer = 0;
-        RefreshMissionButton();
+        ShowTab(_tab == DrawerTab.Missions ? DrawerTab.Needs : DrawerTab.Missions);
     }
-
-    void RefreshMissionButton() { if (_missionButton != null) _missionButton.SetPressedNoSignal(_missionTab); }
 
     void MissionsPanel()
     {
-        Line("Your missions", null, 22);
-        Line(MissionAdvice, Dim, 13);
-        Line("Send a team from the Characters list (Send NAME on a mission...) or from the panel of the system where it stands. Only your own missions are listed.", Dim, 13);
-        Add(new HSeparator());
+        Title("Your missions", "Only your own missions are listed.");
+        Note(MissionAdvice);
+        Note("Send a team from Leaders (Send NAME on a mission...) or from the system where it stands.");
         var pending = S.PendingMissions.ToList();
         var list = S.MyMissions;
         if (pending.Count == 0 && list.Count == 0) Line("No mission under way.", Dim);
@@ -148,10 +136,7 @@ public partial class GameScreen
         _plan = new MissionPlan { Home = home };
         if (character is int c) _plan.Chars.Add(c);
         if (unit is int u) _plan.Sfs.Add(u);
-        _charTab = false; _missionTab = false; RefreshCharButton(); RefreshMissionButton();
-        _view.SelectedFleet = -1; _view.Select(-1);
-        _lastSelectedSystem = -1; _lastSelectedFleet = -1;
-        _panelDirty = true; _panelTimer = 0;
+        ShowTab(DrawerTab.Missions);
     }
 
     void ClosePlanner()
@@ -207,9 +192,8 @@ public partial class GameScreen
     {
         var p = _plan;
         string home = p.Home;
-        Line($"Send a mission from {home}", null, 22);
-        Line(MissionAdvice, Dim, 13);
-        Add(new HSeparator());
+        Title($"Send a mission from {home}", null);
+        Note(MissionAdvice);
 
         // ---- 1. team: own characters and special forces at the home system
         Heading("1. Team (all at " + home + ")");
@@ -359,7 +343,7 @@ public partial class GameScreen
         S.SubmitMission(k, p.Chars.ToList(), p.Sfs.ToList(), chk.Target, p.TargetChar, p.Home, chk.ArrivalDay);
         string team = S.TeamWords(p.Chars, p.Sfs);
         _plan = null;
-        _missionTab = true; RefreshMissionButton();
+        ShowTab(DrawerTab.Missions);
         Sent($"{GameSession.KindWords(k)} on {chk.Target} by {team}, arrives day {chk.ArrivalDay}", chk.Target);
     }
 }

@@ -47,23 +47,28 @@ public static class UiTest
 /// <summary>Test hooks used by the headless --playtest mode: they click the real buttons of the real panels (the same Pressed signal a mouse click raises).</summary>
 public partial class GameScreen
 {
-    internal bool Has(string prefix) => UiTest.Has(this, prefix);
-    internal bool Enabled(string prefix) => UiTest.Find<Button>(this, prefix) is { Disabled: false };
-    internal bool Click(string prefix) => UiTest.Click(this, prefix);
-    internal IEnumerable<string> ButtonTexts() => UiTest.Texts(this);
+    /// <summary>Where a mouse can click now: only the dialog on top while one is open (the veil blocks the rest), else the whole screen.</summary>
+    Node ClickRoot => _modalStack.Count > 0 ? _modalStack[^1] : this;
+    internal bool Has(string prefix) => UiTest.Has(ClickRoot, prefix) || (_menuPopup.Visible && UiTest.Has(_menuPopup, prefix));
+    internal bool Enabled(string prefix) => (UiTest.Find<Button>(MenuFirst, prefix) ?? UiTest.Find<Button>(ClickRoot, prefix)) is { Disabled: false };
+    internal bool Click(string prefix) => (_menuPopup.Visible && _modalStack.Count == 0 && UiTest.Click(_menuPopup, prefix)) || UiTest.Click(ClickRoot, prefix);
+    Node MenuFirst => _menuPopup.Visible && _modalStack.Count == 0 ? _menuPopup : ClickRoot;
+    internal IEnumerable<string> ButtonTexts() => UiTest.Texts(ClickRoot);
 
     /// <summary>What the frame loop does for a dirty panel, at once.</summary>
     internal void PlayRefresh()
     {
-        _panelDirty = false; _fleetListDirty = false;
-        RebuildPanel(); RefreshTop(); RebuildFleetList();
+        _panelDirty = false; _fleetListDirty = false; _attentionDirty = false;
+        RefreshAttention(); RebuildPanel(); RefreshTop();
     }
 
     internal bool PlayDay() { var r = RunDay(); PlayRefresh(); return r; }
     internal bool HowToVisible => _howPanel.Visible;
-    internal bool CharactersOpen => _charTab;
-    internal bool MissionsOpen => _missionTab;
+    internal bool CharactersOpen => _tab == DrawerTab.Leaders;
+    internal bool MissionsOpen => _tab == DrawerTab.Missions && _plan == null;
     internal bool PlannerOpen => _plan != null;
+    internal string TabName => _tab.ToString();
+    internal void OpenTab(string name) { if (Enum.TryParse<DrawerTab>(name, out var t)) ShowTab(t); PlayRefresh(); }
     internal (System.Collections.Generic.List<int> Chars, System.Collections.Generic.List<int> Sfs) PlanTeam => (_plan?.Chars.ToList() ?? new(), _plan?.Sfs.ToList() ?? new());
     /// <summary>Tick or untick a team member in the mission planner (the CheckBox's toggle, as a click would).</summary>
     internal bool SetTeam(string prefix, bool on)
@@ -71,26 +76,48 @@ public partial class GameScreen
         foreach (var c in AllNodes(_pv)) if (c is CheckBox cb && cb.Text.StartsWith(prefix, StringComparison.Ordinal)) { cb.ButtonPressed = on; return true; }
         return false;
     }
-    internal void PressKey(Key k) { var e = new InputEventKey { Keycode = k, Pressed = true }; _UnhandledKeyInput(e); }
+    internal void PressKey(Key k, bool ctrl = false) { var e = new InputEventKey { Keycode = k, Pressed = true, CtrlPressed = ctrl }; _UnhandledKeyInput(e); }
     internal bool ConfirmVisible => _confirmPanel.Visible;
     internal string ConfirmTitle => _confirmTitle.Text;
     internal string ConfirmText => _confirmBody.Text;
     internal bool ReportVisible => _reportPanel.Visible;
     internal string ReportText => _reportTitle.Text + "\n" + _reportBody.Text;
     internal bool VictoryVisible => _victoryPanel.Visible;
-    internal string VictoryText => string.Join("\n", _victoryPanel.GetChildren().SelectMany(c => c.GetChildren().OfType<Label>()).Select(l => l.Text));
+    internal string VictoryText => LabelsIn(_victoryPanel);
+    internal bool GoalVisible => _goalPanel.Visible;
+    internal string GoalText => LabelsIn(_goalPanel);
+    internal string GoalButtonText => _goalButton.Text;
+    internal bool SavesVisible => _savePanel.Visible;
+    internal bool SettingsVisible => _settingsPanel.Visible;
+    internal bool MenuVisible => _menuPopup.Visible;
+    internal bool AnyModal => OverlayOpen;
     internal bool Playing => _playing;
     internal int SpeedValue => Speeds[_speedIndex];
-    internal string Banner => _banner.Visible ? _banner.Text : "";
-    internal string TopText => $"{_dayLabel.Text} | {_rawLabel.Text} | {_refinedLabel.Text} | {_upkeepLabel.Text} | {_ordersLabel.Text}";
+    internal string Banner => InMoveMode ? _moveBanner ?? "" : _banner.GetParent<Control>().Visible ? _banner.Text : "";
+    internal string TopText => $"{_dayLabel.Text} | {_rawLabel.Text} | {_refinedLabel.Text} | {_upkeepLabel.Text} | {(_ordersLabel.IsVisibleInTree() ? _ordersLabel.Text : "")}";
     internal string[] TopTips => new[] { _rawLabel.TooltipText, _refinedLabel.TooltipText, _upkeepLabel.TooltipText, _dayLabel.TooltipText };
-    internal string PanelText() => string.Join("\n", _pv.GetChildren().OfType<Label>().Select(l => l.Text));
+    internal string PanelText() => LabelsIn(_pv);
+    static string LabelsIn(Node n) => string.Join("\n", AllNodes(n).OfType<Label>().Where(l => l.IsVisibleInTree() || !l.IsInsideTree()).Select(l => l.Text));
     internal void PickSystem(string name) { if (G.TryFindSystem(name, out int i)) OnSystemPicked(i); }
     internal void Frame(double seconds) => _Process(seconds);
-    internal IEnumerable<string> FleetListTexts() => _fleetList.GetChildren().OfType<Button>().Select(b => b.Text);
     internal int LogRows => _log.ItemCount;
-    internal string ToastText => _toast.Visible ? _toast.Text : "";
-    internal string HqStatusText => _hqStatusLabel.Visible ? _hqStatusLabel.Text : "";
+    internal string ToastText => string.Join("\n", _toasts.SelectMany(t => AllNodes(t.Card).OfType<Label>()).Select(l => l.Text));
+    internal string TickerText => string.Join("\n", _ticker.GetChildren().OfType<Button>().Select(b => b.Text));
+    internal string HqStatusText => _hqStatusLabel.GetParent<Control>().Visible ? _hqStatusLabel.Text : "";
+    internal IReadOnlyList<string> AttentionTitles => _attention.Select(a => a.Title).ToList();
+    internal string OrderBarText => _orderBar.Visible ? _orderTitle.Text + "\n" + _orderBody.Text : "";
+    internal bool SectorDockOpen => _sectorDock.Visible;
+    internal IReadOnlyList<SectorWindow> SectorWindows => _sectorWindows;
+    internal string LayerName => _layer.ToString();
+    internal Praedra.Core.Clock.Side Player => S.Player;
+    internal GalaxyView.MapMark? MarkOf(string system) => G.TryFindSystem(system, out int i) ? LayerMarkOf(i) : null;
+    internal void SetSearch(string text) { _search.Text = text; RefreshSearch(); }
+    internal IReadOnlyList<string> SearchHits => _hits.Select(h => h.Text).ToList();
+    internal void SubmitSearch() { if (_hits.Count > 0) PickHit(0); }
+    internal int SelectedSystemIndex => _view.Selected;
+    /// <summary>The rows of the Build tab now: name, can it be ordered here, and the reason shown when not (or the warning when it can).</summary>
+    internal IReadOnlyList<(string Name, bool Usable, string Why)> BuildRowsShown => _tab == DrawerTab.Selected && _sysTab == SysTab.Build ? _shownBuildRows.Select(b => (b.Row.Name, b.Usable, b.Why)).ToList() : new();
+    internal string SelectedSystemName => _view.Selected >= 0 ? G.Systems[_view.Selected].Name : null;
     /// <summary>The tags drawn on the map (system, text), as the map asks for them.</summary>
     internal IEnumerable<(string System, string Text)> MapTags() =>
         Enumerable.Range(0, G.Systems.Count).Select(i => (G.Systems[i].Name, CapitalTagOf(i)?.Text)).Where(t => t.Text != null);
@@ -101,7 +128,8 @@ public partial class GameScreen
     internal string HoverTextFor(string system) { if (!G.TryFindSystem(system, out int i)) return ""; _view.ShotHover(i); OnViewChanged(); return _hoverLabel.Text; }
     internal bool SetCheck(string prefix, bool on)
     {
-        foreach (var c in AllNodes(_pv)) if (c is CheckButton cb && cb.Text.StartsWith(prefix, StringComparison.Ordinal)) { cb.ButtonPressed = on; return true; }
+        foreach (var c in AllNodes(ClickRoot == this ? _pv : ClickRoot))
+            if (c is CheckButton or CheckBox && c is Button cb && cb.Text.StartsWith(prefix, StringComparison.Ordinal)) { cb.ButtonPressed = on; return true; }
         return false;
     }
     internal bool TickShip(int index)
@@ -126,7 +154,13 @@ public partial class GameScreen
 {
     // Screenshot helpers (command-line options of the exporter, see README).
     public void ShotShowHowTo() => ShowHowTo();
-    public void ShotOpenSection(string name) { if (name.StartsWith("-")) _openSections.Remove(name[1..]); else _openSections.Add(name); _panelDirty = true; _panelTimer = 0; }
+    /// <summary>Screenshot helper: open a drawer tab (Needs, Selected, Fleets, Leaders, Missions, Log) or a system sub-tab (Overview, Build, Forces, Fleets here).</summary>
+    public void ShotOpenSection(string name)
+    {
+        if (Enum.TryParse<DrawerTab>(name, out var t)) ShowTab(t);
+        else if (Enum.TryParse<SysTab>(name.Replace(" here", "").Replace("Fleets", "Fleets"), out var st)) { _sysTab = st; ShowTab(DrawerTab.Selected); }
+        _panelDirty = true; _panelTimer = 0;
+    }
     public int SelectedFleetId => _view.SelectedFleet;
     public void ShotMove(string to) { if (_view.SelectedFleet >= 0 && S.Game.State.Fleets.TryGetValue(_view.SelectedFleet, out var f)) { StartMove(f); PickSystem(to); } }
     /// <summary>Screenshot helper: the selected fleet's move preview to a system, as if the mouse were over it (underscores stand for spaces).</summary>
@@ -200,7 +234,10 @@ public partial class GameScreen
     /// <summary>Screenshot helper: centre and zoom the map on a system without selecting it (underscores stand for spaces).</summary>
     public void ShotLookAt(string name, float zoom) { if (G.TryFindSystem(name.Replace('_', ' '), out int i)) _view.FocusOn(i, zoom); }
     public void ShotFilter(string name) => SetFilter(name);
-    public void ShotCharacters() { if (!_charTab) ToggleCharacters(); PlayRefresh(); }
-    public void ShotMissions() { if (!_missionTab) ToggleMissions(); PlayRefresh(); }
+    public void ShotCharacters() { ShowTab(DrawerTab.Leaders); PlayRefresh(); }
+    public void ShotMissions() { ShowTab(DrawerTab.Missions); PlayRefresh(); }
+    public void ShotLayer(string name) { if (Enum.TryParse<MapLayer>(name, out var l)) SetLayer(l); }
+    public void ShotSectors() { if (!_sectorDock.Visible) ToggleSectorDock(); }
+    public void ShotGoal() => ShowGoal();
     public void ShotClick(string prefix) { PlayRefresh(); if (!Click(prefix)) GD.PrintErr("no button " + prefix); PlayRefresh(); }
 }

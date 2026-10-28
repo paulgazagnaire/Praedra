@@ -73,8 +73,8 @@ public partial class Main
             if (agent != null)
             {
                 string name = s.CharName(agent.Id);
-                gs.Click("Characters"); gs.PlayRefresh();
-                Expect(gs.Has($"Send {name} on a mission..."), $"the Characters list offers Send {name} on a mission...");
+                gs.Click("Leaders"); gs.PlayRefresh();
+                Expect(gs.Has($"Send {name} on a mission..."), $"the Leaders tab offers Send {name} on a mission...");
                 int mid = SendThroughPlanner(gs, $"Send {name} on a mission...", null, MissionKind.SpikeTheHarvester, target, checkRefusedKind: false);
                 Expect(mid >= 0, $"a Spike the Harvester mission to {target} was sent from the planner");
                 Expect(gs.ToastText == "" || !gs.ToastText.Contains("no enemy harvester"), "no refusal toast for the target");
@@ -119,12 +119,16 @@ public partial class Main
             if (yard != null)
             {
                 fm.AddFleet(Side.Hand, "DS Guard", new[] { Praedra.Core.Harvester.HarvesterModule.ShipClass }, yard);
+                if (gs.ReportVisible) gs.Click("Close"); // a report of the day may be open over the screen
                 gs.SelectSystem(yard); gs.PlayRefresh();
-                gs.Click(">  Ships"); gs.PlayRefresh();
-                string row = gs.ButtonTexts().FirstOrDefault(t => t.StartsWith("harvester   ", StringComparison.Ordinal));
-                Expect(row != null && row.Contains("one per system"), "the harvester row warns 'one per system' where one already stands: " + row);
+                gs.Click("Build"); gs.PlayRefresh();
+                gs.Click("Ships"); gs.PlayRefresh();
+                var row = gs.BuildRowsShown.FirstOrDefault(r => r.Name == "harvester");
+                Expect(row.Name != null && !row.Usable && row.Why != null && row.Why.Contains("one per system"), "the harvester row says 'one per system' where one already stands: " + row.Why);
+                Expect(!gs.Enabled("harvester"), "and it cannot be ordered there");
+                // the core still refuses it if the order comes anyway (the screen only saves the player a wasted day)
                 int b3 = s.Messages.Count;
-                Expect(gs.Click("harvester   "), "click the harvester to build it anyway");
+                s.Track(s.Host.Construction.SubmitBuild(me, yard, Praedra.Core.Construction.YardFamily.Shipyard, "harvester", 1), "Build a harvester");
                 gs.PlayDay();
                 Expect(s.Messages.Skip(b3).Any(m => m.Text.StartsWith("Order refused:", StringComparison.Ordinal) && m.Text.Contains("only one harvester per system")),
                     "the core's HarvesterLimit shows in plain words: " + string.Join(" | ", s.Messages.Skip(b3).Select(m => m.Text)));

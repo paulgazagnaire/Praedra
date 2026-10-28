@@ -30,9 +30,15 @@ public partial class GalaxyView : Control
     public event Action StateChanged;
 
     // ---- game overlays, set by the owner (the map only draws what it is told)
-    public static readonly Color HandColor = new(0.35f, 0.85f, 0.35f);
-    public static readonly Color CollectiveColor = new(1.0f, 0.55f, 0.15f);
-    public static readonly Color NeutralColor = new(0.55f, 0.57f, 0.62f);
+    // Blue is always the player, orange the enemy, grey nobody (Paul's layout canvas, 2026-10-26): the colour says "mine or theirs", whichever side you play.
+    public static readonly Color NeutralColor = Ui.Neutral;
+    /// <summary>The colour of a side as the player sees it.</summary>
+    public Color SideColor(Side s) => Ui.OwnerColor(s, Player ?? Side.Hand);
+
+    /// <summary>A soft halo behind a system for the map layer being shown (support, trouble, idle yards, intel age, slots). Size is in dot radii.</summary>
+    public readonly record struct MapMark(Color Color, float Size, bool Ring = false);
+    /// <summary>The halo of a system under the current map layer, or null for none. Set by the owner.</summary>
+    public Func<int, MapMark?> Mark;
     /// <summary>Owner of a system by index (null = neutral).</summary>
     public Func<int, Side?> OwnerOf;
     /// <summary>True for a headquarters / capital system.</summary>
@@ -90,7 +96,7 @@ public partial class GalaxyView : Control
     public void Init(Galaxy galaxy)
     {
         Galaxy = galaxy;
-        _font = ThemeDB.FallbackFont;
+        _font = Ui.Medium ?? ThemeDB.FallbackFont;
         ClipContents = true;
         int n = galaxy.Systems.Count;
         _pos = new Vector2[n];
@@ -239,7 +245,7 @@ public partial class GalaxyView : Control
     }
 
     // ---- drawing ----
-    // Colours of the map itself. Only the owner of a system gets a strong colour (orange Collective, green Hand);
+    // Colours of the map itself. Only the owner of a system gets a strong colour (blue you, orange the enemy);
     // everything else (lanes, sectors, unexplored systems) is drawn in quiet greys and blues so ownership reads first.
     static readonly Color LaneColor = new(0.55f, 0.62f, 0.78f);
     static readonly Color MajorRouteColor = new(0.62f, 0.80f, 1.0f);
@@ -249,7 +255,7 @@ public partial class GalaxyView : Control
     public override void _Draw()
     {
         if (Galaxy == null) return;
-        DrawRect(new Rect2(Vector2.Zero, Size), new Color(0.03f, 0.04f, 0.07f));
+        DrawRect(new Rect2(Vector2.Zero, Size), Ui.MapBg);
         int focus = Selected >= 0 ? Selected : Hovered;
         var screenRect = new Rect2(Vector2.Zero, Size).Grow(40);
         float radius = Mathf.Clamp(3.2f + _zoom * 1.0f, 3.6f, 10f);
@@ -312,6 +318,18 @@ public partial class GalaxyView : Control
                 DrawString(_font, p + new Vector2(3.5f, 12.5f), (k + 1).ToString(), HorizontalAlignment.Left, -1, 12, new Color(0.05f, 0.05f, 0.08f));
             }
 
+        // the map layer: a soft halo behind each marked system (drawn under the dots, so the owner colour still reads)
+        if (Mark != null)
+            for (int i = 0; i < _pos.Length; i++)
+            {
+                if (Mark(i) is not { } m) continue;
+                var p = SystemScreen(i);
+                if (!screenRect.HasPoint(p)) continue;
+                float r = radius * m.Size;
+                if (m.Ring) { DrawArc(p, r, 0, Mathf.Tau, 32, m.Color, 2.5f, true); continue; }
+                for (int k = 4; k >= 1; k--) DrawCircle(p, r * k / 4f, new Color(m.Color, m.Color.A * 0.16f));
+            }
+
         // systems: the whole dot is the owner's colour; neutral = small grey dot; unexplored = faint hollow ring.
         // Bigger double ring = headquarters, red ring = uprising, yellow ring = blockade.
         for (int i = 0; i < _pos.Length; i++)
@@ -342,7 +360,7 @@ public partial class GalaxyView : Control
                 DrawCircle(p, radius * 0.72f, NeutralColor);
                 continue;
             }
-            var fill = owner == Side.Hand ? HandColor : CollectiveColor;
+            var fill = SideColor(owner.Value);
             DrawCircle(p, radius + 1.2f, DotOutline);
             DrawCircle(p, radius, fill);
             if (IsHq?.Invoke(i) == true)
@@ -350,8 +368,9 @@ public partial class GalaxyView : Control
                 DrawArc(p, radius + 5f, 0, Mathf.Tau, 28, Colors.White, 2f, true);
                 DrawArc(p, radius + 8f, 0, Mathf.Tau, 32, fill, 2f, true);
             }
-            if (IsUprising?.Invoke(i) == true) DrawArc(p, radius + 11f, 0, Mathf.Tau, 32, new Color(1f, 0.15f, 0.15f), 2.5f, true);
-            if (IsBlockaded?.Invoke(i) == true) DrawArc(p, radius + 14f, 0, Mathf.Tau, 32, new Color(1f, 0.9f, 0.2f, 0.9f), 1.5f, true);
+            if (IsUprising?.Invoke(i) == true) DrawArc(p, radius + 11f, 0, Mathf.Tau, 32, Ui.Danger, 2.5f, true);
+            if (IsBlockaded?.Invoke(i) == true) // dashed, so it differs from the uprising ring by shape too, not only by colour
+                for (int k = 0; k < 12; k++) DrawArc(p, radius + 14f, k * Mathf.Tau / 12f, k * Mathf.Tau / 12f + Mathf.Tau / 24f, 4, Ui.Warn, 2f, true);
         }
         if (focus >= 0) DrawArc(SystemScreen(focus), radius + 4f, 0, Mathf.Tau, 32, Colors.White, 2f, true);
         if (Hovered >= 0 && Hovered != focus) DrawArc(SystemScreen(Hovered), radius + 3f, 0, Mathf.Tau, 32, new Color(1, 1, 1, 0.6f), 1.5f, true);
