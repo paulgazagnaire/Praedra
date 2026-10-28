@@ -1,9 +1,11 @@
 using Praedra.Core.Battle;
 using Praedra.Core.Characters;
 using Praedra.Core.Clock;
+using Praedra.Core.Construction;
 using Praedra.Core.Control;
 using Praedra.Core.Defenses;
 using Praedra.Core.Fog;
+using Praedra.Core.Harvester;
 using Praedra.Core.Missions;
 
 namespace Praedra.Core.AI;
@@ -25,6 +27,11 @@ public enum AiNoteKind
     EnemyCharacterAt,
     /// <summary>The feed took enemy character Value off the map (departed, captured, injured, killed).</summary>
     EnemyCharacterGone,
+    /// <summary>
+    /// An enemy shipyard project at System ended (ProjectCancelled) or its unfinished harvester was spiked (HarvesterDestroyed SabotageInYard):
+    /// a HarvesterQueued sighting there from before is void (QA-61). Not saved before 2026-10-28: an older save loads with none.
+    /// </summary>
+    HarvesterYardGone,
 }
 
 /// <summary>
@@ -54,11 +61,12 @@ public sealed class AiKeepDays
     public int LookFoiled { get; set; }
     public int HqMoved { get; set; }
     public int Character { get; set; }
+    public int HarvesterYardGone { get; set; }
 
     public int For(AiNoteKind k) => k switch
     {
         AiNoteKind.Battle => Battle, AiNoteKind.SystemLost => SystemLost, AiNoteKind.Bombardment => Bombardment,
-        AiNoteKind.LookFoiled => LookFoiled, AiNoteKind.HqMoved => HqMoved, _ => Character,
+        AiNoteKind.LookFoiled => LookFoiled, AiNoteKind.HqMoved => HqMoved, AiNoteKind.HarvesterYardGone => HarvesterYardGone, _ => Character,
     };
 }
 
@@ -127,6 +135,9 @@ public sealed class AiMemory
                 CharacterCaptured x when x.Side == enemy => Gone(x.Character),
                 CharacterInjured x when x.Side == enemy => Gone(x.Character),
                 CharacterKilled x when x.Side == enemy => Gone(x.Character),
+                ProjectCancelled pc when pc.Side == enemy && pc.Family == YardFamily.Shipyard => new AiNote { Kind = AiNoteKind.HarvesterYardGone, System = pc.System },
+                HarvesterDestroyed hd when hd.Side == enemy && hd.Cause == "SabotageInYard" && hd.System != null
+                    => new AiNote { Kind = AiNoteKind.HarvesterYardGone, System = hd.System },
                 _ => null,
             };
             if (n == null) continue;
@@ -163,8 +174,9 @@ public sealed class AiMemory
     private static AiNote Gone(int character) => new() { Kind = AiNoteKind.EnemyCharacterGone, Value = character };
 
     /// <summary>Keep each kind of note in a save for at least these days.</summary>
-    public void KeepAtLeast(int battle, int systemLost, int bombardment, int lookFoiled, int hqMoved, int character)
+    public void KeepAtLeast(int battle, int systemLost, int bombardment, int lookFoiled, int hqMoved, int character, int harvesterYardGone = 0)
     {
+        Keep.HarvesterYardGone = Math.Max(Keep.HarvesterYardGone, harvesterYardGone);
         Keep.Battle = Math.Max(Keep.Battle, battle); Keep.SystemLost = Math.Max(Keep.SystemLost, systemLost);
         Keep.Bombardment = Math.Max(Keep.Bombardment, bombardment); Keep.LookFoiled = Math.Max(Keep.LookFoiled, lookFoiled);
         Keep.HqMoved = Math.Max(Keep.HqMoved, hqMoved); Keep.Character = Math.Max(Keep.Character, character);

@@ -159,7 +159,8 @@ public sealed partial class SimpleAi
 
     /// <summary>
     /// HarvesterYardValue: Hand worlds where the side sees a harvester under construction: with fog, a HarvesterQueued picture at most
-    /// HarvesterBuildSeenDays old (m5-fog-and-hq §N6b); without fog, the enemy's shipyard projects. Ordinal order.
+    /// HarvesterBuildSeenDays old (m5-fog-and-hq §N6b) and no later end of that yard in the side's feed (QA-61: a cancelled project or a build
+    /// spiked in the yard, AiNoteKind.HarvesterYardGone); without fog, the enemy's shipyard projects. Ordinal order.
     /// </summary>
     private List<string> HarvesterBuildSeenAt()
     {
@@ -170,7 +171,8 @@ public sealed partial class SimpleAi
             bool seen;
             if (_view == null)
                 seen = _h.Construction.QueuedUnitOf(Enemy, s, Praedra.Core.Economy.EconomyModule.HarvesterClass) != null;
-            else seen = _view.Picture(s)?.HarvesterQueued is { Value: true } q && AgeOf(q) <= _p.HarvesterBuildSeenDays;
+            else seen = _view.Picture(s)?.HarvesterQueued is { Value: true } q && AgeOf(q) <= _p.HarvesterBuildSeenDays
+                && !NotesSince(AiNoteKind.HarvesterYardGone, q.Stamp).Any(n => n.System == s && n.Day >= q.Stamp);
             if (seen && IsEnemyHeld(s)) list.Add(s);
         }
         return list;
@@ -232,7 +234,8 @@ public sealed partial class SimpleAi
         _mem.KeepAtLeast(
             battle: Math.Max(_p.LossMemoryDays, _p.RunnerMemoryDays), systemLost: _p.RetakeDays,
             bombardment: _p.UseFog ? Math.Max(RecentBombardmentDays, _p.FogKillMemoryDays) : RecentBombardmentDays, // and with fog back to the last ground look (AiMemory.ForSave)
-            lookFoiled: Math.Max(_p.SpyFoilMemoryDays, _p.HqRecheckFoilDays), hqMoved: _p.HqMoveCooldownDays, character: _p.AbductionInfoDays);
+            lookFoiled: Math.Max(_p.SpyFoilMemoryDays, _p.HqRecheckFoilDays), hqMoved: _p.HqMoveCooldownDays, character: _p.AbductionInfoDays,
+            harvesterYardGone: _p.HarvesterYardValue > 0 ? _p.HarvesterBuildSeenDays : 0);
         _mem.Ingest(Events, IsArmedCapital);
         var mem = _mem;
         mem.CatchUp = () => mem.Ingest(_p.UseFog ? _h.Fog.ViewFor(_side).Events : _h.Game.Events, IsArmedCapital); // a save between Steps (AiMemory.CatchUp)

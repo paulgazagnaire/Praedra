@@ -480,7 +480,7 @@ public class SimpleAiAgentsTests
         Assert.Equal(8, AiLevels.For(AiLevel.Medium).AfterCharterDiplomats);
     }
     // m5-fog-and-hq §N6b + SimpleAiParams.HarvesterYardValue (Paul 2026-10-27: spies spot a harvester being built, Spike teams go at that yard; m5-harvester §5 SpikeInYard)
-    private static int YardSpikes(int value, out bool seen, int? floor = null)
+    private static int YardSpikes(int value, out bool seen, int? floor = null, int goneDay = -1, int countFrom = 0)
     {
         var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA });
         var p = AiLevels.For(AiLevel.Medium) with { HarvesterYardValue = value };
@@ -493,8 +493,10 @@ public class SimpleAiAgentsTests
         int n = 0;
         for (int d = 0; d < 60; d++)
         {
+            if (d == goneDay) // as AiMemory.Ingest notes a ProjectCancelled of that yard in the side's feed (QA-61)
+                h.AiMemoryFor(Side.Collective, true).Notes.Add(new AiNote { Kind = AiNoteKind.HarvesterYardGone, System = yard, Day = h.Game.Day, Floor = h.Game.Day });
             m.Step();
-            n += m.Collective.Submitted.Count(o => o.Kind == "MissionSpikeTheHarvester" && o.Detail.Contains($"to {yard} ", StringComparison.Ordinal));
+            if (d >= countFrom) n += m.Collective.Submitted.Count(o => o.Kind == "MissionSpikeTheHarvester" && o.Detail.Contains($"to {yard} ", StringComparison.Ordinal));
         }
         seen = h.Fog.ViewFor(Side.Collective).HarvesterQueued(yard);
         return n;
@@ -518,5 +520,32 @@ public class SimpleAiAgentsTests
         Assert.True(low > 0, $"floor 1: {low}");
         Assert.Equal(0, shut); // no chance reaches 101%
         Assert.Equal(1, new SimpleAiParams().HarvesterYardMinOddsPercent);
+    }
+
+    // AiNoteKind.HarvesterYardGone (QA-61): the end of the yard's build in the feed voids the older sighting, so no Spike goes to an empty yard
+    [Fact]
+    public void HarvesterYardGone_StopsTheSpikesAtThatYard()
+    {
+        int kept = YardSpikes(2000, out _, countFrom: 25), gone = YardSpikes(2000, out bool seen, goneDay: 20, countFrom: 25);
+        Assert.True(seen); // the picture still shows the build: only the note voids it
+        Assert.True(kept > 0, $"kept {kept}");
+        Assert.Equal(0, gone);
+    }
+
+    // AiMemory.Ingest (QA-61): an enemy shipyard project that ends, or its harvester spiked in the yard, is noted; own projects and other yards are not
+    [Fact]
+    public void AiMemory_NotesTheEndOfAnEnemyShipyardProject()
+    {
+        var mem = new AiMemory { Side = Side.Collective, Fog = true };
+        var none = new ValueList<int>(Array.Empty<int>());
+        mem.Ingest(new GameEvent[]
+        {
+            new ProjectCancelled(0, 5, Side.Hand, "Navalia", YardFamily.Shipyard, "YardLost", none),
+            new ProjectCancelled(1, 5, Side.Hand, "Charter", YardFamily.Training, "YardLost", none),
+            new ProjectCancelled(2, 5, Side.Collective, "The Thaw", YardFamily.Shipyard, "Stop", none),
+            new Praedra.Core.Harvester.HarvesterDestroyed(3, 6, Side.Hand, 7, "Charter", "SabotageInYard"),
+            new Praedra.Core.Harvester.HarvesterDestroyed(4, 6, Side.Hand, 8, "Midway", "Battle"),
+        }, _ => false);
+        Assert.Equal(new[] { "Navalia", "Charter" }, mem.Notes.Where(n => n.Kind == AiNoteKind.HarvesterYardGone).Select(n => n.System!).ToArray());
     }
 }
