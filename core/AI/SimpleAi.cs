@@ -169,8 +169,7 @@ public sealed partial class SimpleAi
             string s = sys.Name;
             bool seen;
             if (_view == null)
-                seen = _h.Construction.ProjectAt(s, YardFamily.Shipyard) is { } p && p.Side == Enemy
-                    && p.AllUnits().Any(id => _h.Economy.Find(id)?.Class == Praedra.Core.Economy.EconomyModule.HarvesterClass);
+                seen = _h.Construction.QueuedUnitOf(Enemy, s, Praedra.Core.Economy.EconomyModule.HarvesterClass) != null;
             else seen = _view.Picture(s)?.HarvesterQueued is { Value: true } q && AgeOf(q) <= _p.HarvesterBuildSeenDays;
             if (seen && IsEnemyHeld(s)) list.Add(s);
         }
