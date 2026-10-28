@@ -265,7 +265,7 @@ public partial class GameScreen : Control
         if (_menuPopup.Visible) { ToggleMenu(); return; }
         if (CloseTopModal()) return;
         if (_searchResults.Visible) { CloseSearch(); return; }
-        if (_moveFleet >= 0 || _moveHq || _moveChar >= 0 || _pickMission) { CancelMove(); return; }
+        if (InMoveMode) { CancelMove(); return; }
         if (_plan != null) { ClosePlanner(); return; }
         if (_sectorDock.Visible) { ToggleSectorDock(); return; }
         if (_drawer.Visible) { CloseDrawer(); return; }

@@ -4,6 +4,7 @@ using System.Linq;
 using Godot;
 using Praedra.Core.Construction;
 using Praedra.Core.Economy;
+using Praedra.Core.Research;
 
 using Side = Praedra.Core.Clock.Side;
 
@@ -185,6 +186,7 @@ public partial class GameScreen
         Add(chips);
 
         var famSel = _buildSection switch { "Facilities" => YardFamily.Construction, "Troops" => YardFamily.Training, _ => YardFamily.Shipyard };
+        ResearchLine(_buildSection switch { "Facilities" => ResearchKind.Facility, "Troops" => ResearchKind.Troop, _ => ResearchKind.Ship });
         if (!HasYard(system, famSel))
         {
             using (Card())
@@ -276,6 +278,20 @@ public partial class GameScreen
         if (sc.Bombardment > 0) parts.Add($"bombardment {sc.Bombardment}");
         if (sc.GravityWellProjector > 0) parts.Add("interdictor: pulls enemy fleets out of hyperspace");
         return string.Join(", ", parts) + ".";
+    }
+
+    /// <summary>Where research stands in the track this build list draws on: the level, and the next thing it unlocks.
+    /// rule: m5-research §Levels and points (points come from finished yards of that kind and from Research missions).</summary>
+    void ResearchLine(ResearchKind kind)
+    {
+        var r = S.Host.Research;
+        string track = kind switch { ResearchKind.Ship => "ship design", ResearchKind.Troop => "troop training", _ => "facility design" };
+        string text = r.NextRung(Me, kind) is { } next
+            ? $"Research ({track}): level {r.Level(Me, kind)}. Next: {next.Class}, {r.Points(Me, kind)} of {next.Cost} points."
+            : $"Research ({track}): level {r.Level(Me, kind)}, everything researched.";
+        var l = Add(Ui.Label(text, "Hint"));
+        l.TooltipText = Ui.Wrap("Every finished yard of this kind adds a point now and then; a Research mission by a skilled leader adds far more. Each level unlocks the next item in the list.");
+        l.MouseFilter = MouseFilterEnum.Stop;
     }
 
     void SubmitBuild(string system, YardFamily fam, CostRow row, int count)

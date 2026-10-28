@@ -160,19 +160,19 @@ public partial class GameScreen
         // split, transfer, merge (C6)
         if (atSystem)
         {
-            Heading("Split, transfer or merge", "Tick ships, then split them into a new fleet or move them into another fleet here.");
+            Heading("Split, transfer, merge or scrap", "Tick ships, then split them into a new fleet, move them into another fleet here, or scrap them.");
             var others = here.Where(o => o.Id != f.Id).ToList();
+            foreach (int id in f.Ships)
+            {
+                int sid = id;
+                var o = eco.Find(id);
+                var cbs = new CheckBox { Text = $"{o?.Class ?? "?"} #{id}", ButtonPressed = _splitSel.Contains(id), FocusMode = FocusModeEnum.None };
+                if (o != null && Fm.ClassOf(o) is { } sc) cbs.TooltipText = Ui.Wrap($"Hull {o.Hull} of {sc.Hull}. Upkeep {UpkeepOf(o)}. " + ClassTip(o.Class));
+                cbs.Toggled += on => { if (on) _splitSel.Add(sid); else _splitSel.Remove(sid); };
+                Add(cbs);
+            }
             if (f.Ships.Count > 1)
             {
-                foreach (int id in f.Ships)
-                {
-                    int sid = id;
-                    var o = eco.Find(id);
-                    var cbs = new CheckBox { Text = $"{o?.Class ?? "?"} #{id}", ButtonPressed = _splitSel.Contains(id), FocusMode = FocusModeEnum.None };
-                    if (o != null && Fm.ClassOf(o) is { } sc) cbs.TooltipText = Ui.Wrap($"Hull {o.Hull} of {sc.Hull}. " + ClassTip(o.Class));
-                    cbs.Toggled += on => { if (on) _splitSel.Add(sid); else _splitSel.Remove(sid); };
-                    Add(cbs);
-                }
                 Act("Split the ticked ships into a new fleet", () => Split(f), "The ticked ships form a new fleet at this system.");
                 foreach (var o in others)
                 {
@@ -186,6 +186,11 @@ public partial class GameScreen
                 var other = o;
                 Act($"Merge this fleet into {o.Name}", () => Merge(f, other), "Every ship, fighter, regiment and officer joins that fleet.");
             }
+            // scrapping cuts upkeep (story C9; rule: m2-maintenance §Scrapping and refunds)
+            Act("Scrap the ticked ships...", () => ScrapTicked(f), "Asks first. Half the refined cost comes back and their upkeep is freed.", false, "DangerButton");
+            if (f.Ships.Count > 1)
+                Act($"Scrap the whole fleet ({f.Ships.Count} ships)...", () => AskScrap(f.Ships.Select(eco.Find).Where(o => o != null).ToList(), $"all {f.Ships.Count} ships of {f.Name}", f.At),
+                    "Asks first. Fighters and regiments aboard stay at this system.", false, "DangerButton");
         }
     }
 
@@ -280,6 +285,14 @@ public partial class GameScreen
     }
 
     List<int> Ticked(Fleet f) => _splitSel.Where(f.Ships.Contains).OrderBy(x => x).ToList();
+
+    void ScrapTicked(Fleet f)
+    {
+        var ids = Ticked(f);
+        if (ids.Count == 0) { Toast("Tick at least one ship first.", MsgKind.Warn); return; }
+        var objs = ids.Select(S.Host.Economy.Find).Where(o => o != null).ToList();
+        AskScrap(objs, objs.Count == 1 ? $"the {objs[0].Class} #{objs[0].Id}" : $"{objs.Count} ships of {f.Name}", f.At);
+    }
 
     void Split(Fleet f)
     {

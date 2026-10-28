@@ -350,7 +350,7 @@ public partial class GameScreen
         _pill.Visible = text != null;
     }
 
-    bool InMoveMode => _moveFleet >= 0 || _moveHq || _moveChar >= 0 || _pickMission;
+    bool InMoveMode => _moveFleet >= 0 || _moveHq || _moveChar >= 0 || _pickMission || _moveFighters != null;
 
     void ToggleLayers()
     {
