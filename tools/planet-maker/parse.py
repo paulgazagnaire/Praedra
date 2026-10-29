@@ -4,10 +4,10 @@ rows = []
 for line in open(src, encoding='utf8'):
     if not line.startswith('| ') or '**World:**' not in line: continue
     cells = [c.strip() for c in line.strip().strip('|').split(' | ')]
-    # cells: Classic, **new**, lore, description
-    m = re.match(r'\*\*(.+?)\*\*', cells[1])
+    # cells: **name**, lore, description
+    m = re.match(r'\*\*(.+?)\*\*', cells[0])
     if not m: continue
-    d = cells[3]
+    d = cells[2]
     def f(k):
         mm = re.search(r'\*\*'+k+r':\*\*\s*(.*?)(?:<br>|$)', d)
         return mm.group(1).strip() if mm else ''
