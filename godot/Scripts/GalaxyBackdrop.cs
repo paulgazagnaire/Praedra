@@ -129,8 +129,11 @@ public partial class GalaxyBackdrop : Control
 
     public override void _Draw()
     {
-        // the buffer has one texel per screen pixel (Retina screens have two per point); with the dither, one texel per dot
-        float k = Mathf.Max(1f, GetScreenTransform().Scale.X) / (_look.DitherOn ? _look.Dot : 1);
+        // the buffer has one texel per screen pixel (Retina screens have two per point); with the dither, one texel per dot of Dot screen
+        // pixels, as in the Galaxy Maker. Screen pixels per layout pixel come from the window, which counts real pixels: the screen
+        // transform leaves out the window's stretch, so on a Retina Mac it said 1 and the dots came out twice too big (Paul 2026-10-29).
+        float screenPx = GetWindow().Size.X / Mathf.Max(1f, GetViewportRect().Size.X) * GetGlobalTransformWithCanvas().Scale.X;
+        float k = Mathf.Max(1f, screenPx) / (_look.DitherOn ? _look.Dot : 1);
         var px = new Vector2I(Math.Max(1, (int)Mathf.Ceil(Size.X * k)), Math.Max(1, (int)Mathf.Ceil(Size.Y * k)));
         if (_buffer.Size != px) _buffer.Size = px;
         _canvas.Size = px;
