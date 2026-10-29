@@ -2901,6 +2901,8 @@ function draw(w, h, tmul) {
 }
 
 /* ---------- the dither style: one look for every planet, kept in this browser, never in a preset ---------- */
+/* The same dither code is copied in tools/galaxy-maker/galaxy-maker.src.html and in the game (godot/Scripts/GalaxyLook.cs BlueNoise,
+   GalaxyBackdrop.gdshader). Change one, change all three: the game builds its blue noise exactly as makeBlueNoise does. */
 const DI_PATS = [
   { id: 'fine', label: 'Fine grid', sub: 'even 8 by 8 pattern' },
   { id: 'coarse', label: 'Coarse grid', sub: 'bolder 4 by 4' },
