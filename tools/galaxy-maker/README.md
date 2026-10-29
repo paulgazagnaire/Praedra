@@ -22,6 +22,7 @@ python3 build.py galaxy-maker.src.html ../../data/design/extended-galaxy-v6-plan
 - **Save image** renders the whole galaxy, 2048 pixels square. **Settings for the game** copies the settings as JSON (`format: praedra-galaxy`, `v: 1`) for the game's backdrop to read, and loads pasted settings back (unknown keys are dropped, numbers clamped to the slider ranges).
 
 ## Known limits
-- The game does not read these settings yet, and it redraws its backdrop only when the view moves, so it shows no movement. Taking the settings and the movement into the game is Godot work: the shader takes the same uniforms, and the movement needs the backdrop redrawn every frame (or a cheap separate star layer that is).
+- The game reads these settings from `godot/ui/galaxy-backdrop.json` (`GalaxyLook.cs`) and redraws the backdrop over time when any movement is on. Paste new settings there to change the game's galaxy.
+- The dither code is copied three times: here, in the Planet Maker and in the game (`GalaxyLook.BlueNoise`, `GalaxyBackdrop.gdshader`). Change one, change all three.
 - The outer halo uses the arm colour (the game has its own fixed blue-grey); the difference is very small.
 - Tuned on software rendering only.
