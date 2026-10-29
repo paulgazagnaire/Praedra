@@ -23,6 +23,7 @@ public partial class GameScreen : Control
 
     static readonly int[] Speeds = { 1, 2, 5, 10 };       // the speed chips: 1x, 2x, 5x, 10x
     const double SecondsPerDay = 8.0;                      // a day lasts 8 seconds at 1x (Paul 2026-10-29), 0.8 s at 10x
+    const double RunUntilDaysPerSecond = 10.0;             // "Run until something needs me" skips quiet days at its own speed (QA-63)
     const int DefaultSpeedIndex = 2;                       // 5x when the player presses Play
     const int MaxStepsPerFrame = 30;
     const float PanPixelsPerSecond = 700f;
@@ -188,7 +189,7 @@ public partial class GameScreen : Control
 
         if (_playing)
         {
-            _acc += delta * Speeds[_speedIndex] / SecondsPerDay;
+            _acc += delta * (_runUntilNeeded ? RunUntilDaysPerSecond : Speeds[_speedIndex] / SecondsPerDay);
             int steps = 0;
             while (_acc >= 1.0 && steps < MaxStepsPerFrame && _playing) { _acc -= 1.0; steps++; if (!RunDay()) break; }
             if (_acc > MaxStepsPerFrame || !_playing) _acc = 0;
