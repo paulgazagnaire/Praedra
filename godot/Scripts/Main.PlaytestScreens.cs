@@ -61,7 +61,7 @@ public partial class Main
         Expect(gs.Has("Run until something needs me"), "it offers Run until something needs me");
         int day0 = s.Game.Day;
         Expect(gs.Click("Run until something needs me") && gs.Playing, "Run until something needs me starts the clock");
-        for (int i = 0; i < 400 && gs.Playing && s.Winner == null; i++) gs.Frame(0.25);
+        for (int i = 0; i < 3200 && gs.Playing && s.Winner == null; i++) gs.Frame(0.25);
         Expect(!gs.Playing && s.Game.Day > day0, $"it stopped by itself on day {s.Game.Day}: {gs.Banner}");
         if (gs.ReportVisible) gs.Click("Close");
         gs.PlayRefresh();

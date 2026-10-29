@@ -21,7 +21,8 @@ public partial class GameScreen : Control
     public event Action BackToMenu;
     public event Action<string> LoadRequested;
 
-    static readonly int[] Speeds = { 1, 2, 5, 10 };       // days per second
+    static readonly int[] Speeds = { 1, 2, 5, 10 };       // the speed chips: 1x, 2x, 5x, 10x
+    const double SecondsPerDay = 8.0;                      // a day lasts 8 seconds at 1x (Paul 2026-10-29), 0.8 s at 10x
     const int DefaultSpeedIndex = 2;                       // 5x when the player presses Play
     const int MaxStepsPerFrame = 30;
     const float PanPixelsPerSecond = 700f;
@@ -187,7 +188,7 @@ public partial class GameScreen : Control
 
         if (_playing)
         {
-            _acc += delta * Speeds[_speedIndex];
+            _acc += delta * Speeds[_speedIndex] / SecondsPerDay;
             int steps = 0;
             while (_acc >= 1.0 && steps < MaxStepsPerFrame && _playing) { _acc -= 1.0; steps++; if (!RunDay()) break; }
             if (_acc > MaxStepsPerFrame || !_playing) _acc = 0;

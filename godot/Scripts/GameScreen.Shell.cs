@@ -188,7 +188,7 @@ public partial class GameScreen
         for (int i = 0; i < Speeds.Length; i++)
         {
             int k = i;
-            var c = Ui.Chip($"{Speeds[i]}x", () => SetSpeed(k), $"{Speeds[i]} days per second (key {i + 1})", i == _speedIndex, sg);
+            var c = Ui.Chip($"{Speeds[i]}x", () => SetSpeed(k), $"A day every {SecondsPerDay / Speeds[i]:0.#} seconds (key {i + 1})", i == _speedIndex, sg);
             c.SizeFlagsVertical = SizeFlags.ShrinkCenter;
             _speedChips.Add(c);
             cr.AddChild(c);
