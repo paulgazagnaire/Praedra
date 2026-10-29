@@ -43,7 +43,8 @@ public partial class GalaxyBackdrop : Control
         // the dither's dots are whole buffer pixels shown enlarged, so they must not be smoothed
         if (_look.DitherOn) TextureFilter = TextureFilterEnum.Nearest;
         SetProcess(_look.Moves);
-        // the picture is costly per pixel, so it is drawn into its own buffer only when the view moves, and shown from there every frame
+        // the picture is costly per pixel, so it is drawn into its own buffer when the view moves (and at most 30 times a second while
+        // the gas and stars move), and shown from there every frame
         _canvas = new ColorRect { Material = _material, MouseFilter = MouseFilterEnum.Ignore };
         _buffer = new SubViewport { Disable3D = true, TransparentBg = false, RenderTargetUpdateMode = SubViewport.UpdateMode.Once };
         _buffer.AddChild(_canvas);
@@ -85,6 +86,13 @@ public partial class GalaxyBackdrop : Control
         if (_sinceFrame < FrameSeconds || !IsVisibleInTree()) return;
         _sinceFrame = 0f;
         QueueRedraw();
+    }
+
+    public override void _Notification(int what)
+    {
+        // the movement stops while the game window is in the background, so the shader does not keep the graphics card busy
+        if (what == NotificationApplicationFocusOut) SetProcess(false);
+        else if (what == NotificationApplicationFocusIn) SetProcess(_look.Moves);
     }
 
     /// <summary>A small greyscale picture of how crowded each part of the map is: every system adds a soft spot.</summary>
