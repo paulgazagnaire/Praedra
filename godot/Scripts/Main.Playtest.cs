@@ -115,8 +115,8 @@ public partial class Main
         Expect(gs.TopTips.All(t => !string.IsNullOrEmpty(t)), "top bar numbers have tooltips");
         Expect(gs.Banner.Contains("Play"), "banner tells a new player to press Play");
         Expect(gs.Click("Play"), "press Play");
-        gs.Frame(1.0);
-        Expect(s.Game.Day == 5, $"one second at 5x = 5 days (day {s.Game.Day})");
+        for (int i = 0; i < 8; i++) gs.Frame(1.0);
+        Expect(s.Game.Day == 5, $"eight seconds at 5x = 5 days, a day lasts 8 seconds at 1x (day {s.Game.Day})");
         Expect(gs.Click("Pause"), "press Pause");
         Expect(!gs.Playing, "paused");
         Expect(gs.Click("10x") && gs.SpeedValue == 10 && gs.Click("1x") && gs.SpeedValue == 1 && gs.Click("2x") && gs.SpeedValue == 2 && gs.Click("5x") && gs.SpeedValue == 5,
