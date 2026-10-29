@@ -177,7 +177,7 @@ public partial class GameScreen
         Title("Needs you", items.Count == 0 ? "Nothing needs a decision right now."
             : urgent + watch == 0 ? "Nothing urgent." : string.Join(", ", new[] { urgent > 0 ? $"{urgent} urgent" : null, watch > 0 ? $"{watch} to watch" : null }.Where(x => x != null)) + ".");
         var run = Act(_runUntilNeeded ? "Running until something needs you... (Space stops)" : "Run until something needs me", () => { if (_runUntilNeeded) Pause(); else RunUntilNeeded(); },
-            "Plays the days at the chosen speed and stops as soon as a new red or yellow item appears here (and on battles, captures and invasions, as always).", S.Winner != null, "Primary");
+            $"Plays {RunUntilDaysPerSecond:0} days a second, whatever the speed, and stops as soon as a new red or yellow item appears here (and on battles, captures and invasions, as always).", S.Winner != null, "Primary");
         run.Alignment = HorizontalAlignment.Center;
         if (items.Count == 0)
         {
