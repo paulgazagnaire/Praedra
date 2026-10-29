@@ -13,9 +13,10 @@ rows = {r['n']: r for r in json.load(open(sysf, encoding='utf8'))}
 pre = json.load(open(prf, encoding='utf8'))['systems']
 assert len(pre) == len(rows) and all(p['name'] in rows for p in pre), 'system lists differ'
 dump = lambda v: json.dumps(v, sort_keys=True, separators=(',', ':'))
-params = {p['name']: {k: v for k, v in p['preset']['params'].items() if k != 'name'} for p in pre}
+DROPPED = {'tLanes', 'tFleet', 'tBeacon'}   # ships in orbit, cut 2026-10-29 (Paul: too fast, read as flies); ignored if 08 still sets them
+params = {p['name']: {k: v for k, v in p['preset']['params'].items() if k != 'name' and k not in DROPPED} for p in pre}
 # keys only some presets set: a preset without one means the Planet Maker's default, never the most common value among those set
-OPTIONAL = {'lUnder': 0, 'lSea': 0, 'lDark': 0, 'lCol': '#ff9e47', 'fStyle': 'domes', 'tLanes': 0, 'tFleet': 0, 'tBeacon': 0}
+OPTIONAL = {'lUnder': 0, 'lSea': 0, 'lDark': 0, 'lCol': '#ff9e47', 'fStyle': 'domes'}
 for p in pre:
     pp = params[p['name']]
     for k, v in OPTIONAL.items(): pp.setdefault(k, v)
