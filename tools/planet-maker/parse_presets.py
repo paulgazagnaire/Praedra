@@ -14,8 +14,11 @@ pre = json.load(open(prf, encoding='utf8'))['systems']
 assert len(pre) == len(rows) and all(p['name'] in rows for p in pre), 'system lists differ'
 dump = lambda v: json.dumps(v, sort_keys=True, separators=(',', ':'))
 params = {p['name']: {k: v for k, v in p['preset']['params'].items() if k != 'name'} for p in pre}
+# keys only some presets set: a preset without one means the Planet Maker's default, never the most common value among those set
+OPTIONAL = {'lUnder': 0, 'lSea': 0, 'lDark': 0, 'lCol': '#ff9e47', 'fStyle': 'domes'}
 for p in pre:
     pp = params[p['name']]
+    for k, v in OPTIONAL.items(): pp.setdefault(k, v)
     if p['radiusKm']: pp['rad'] = min(75000 if pp.get('kind') == 'gas' else 15000, max(15000 if pp.get('kind') == 'gas' else 50, p['radiusKm']))   # the real radius
     if pp.get('kind') in ('ring', 'shell'): continue   # a ring's slider is a density, not a head count
     n = p['cloudPopM'] * 1e6 if pp.get('kind') == 'gas' else p['popB'] * 1e9

@@ -257,7 +257,7 @@ uniform float uZoom;
 uniform vec2 uShift;        // moves the view (a ring's close-up on its far floor)
 uniform int uType;            // 0 rocky, 1 gas giant, 2 tidally locked
 uniform vec3 uPal[5];
-uniform vec4 uLights;   // share of people underground, lights at sea, dark districts
+uniform vec4 uLights;   // share of people underground, lights at sea, dark districts, 1 when the light colour was chosen
 uniform vec3 uLCol;     // the colour of city lights (warm sodium by default)
 uniform float uFStyle;  // floating cities: 0 domed platforms, 1 great cities, 2 a line round the equator, 3 rafts, 4 refineries
 uniform vec3 uHazeCol;
@@ -982,7 +982,7 @@ vec3 shadePlanet(vec3 p, out float shine) {
       // white decks with a pale blue dome, their shadow, rims and joints, seen by day
       int st = int(uFStyle + 0.5);
       vec3 deck = st == 3 ? vec3(0.40, 0.34, 0.27) : st == 4 ? vec3(0.30, 0.31, 0.33) : st == 1 ? vec3(1.0, 0.96, 0.86) : vec3(1.0, 1.0, 1.02);
-      vec3 win = (st == 3 || st == 4) ? uLCol : vec3(0.78, 0.90, 1.0);   // rafts and refineries burn warm lamps; the white decks have pale blue windows
+      vec3 win = (st == 3 || st == 4 || uLights.w > 0.5) ? uLCol : vec3(0.78, 0.90, 1.0);   // rafts and refineries burn lamps of the light colour; the white decks have pale blue windows unless a colour was chosen
       albedo = mix(albedo * (1.0 - 0.6 * cs), mix(deck, vec3(0.74, 0.85, 1.0), cd), cb);
       emis += (win * cl * 1.05 + vec3(1.0, 0.72, 0.42) * cg * (st == 4 ? 0.4 : 0.16)) * night;
     }
@@ -2894,7 +2894,7 @@ function draw(w, h, tmul) {
   const f = (n, v) => gl.uniform1f(loc[n], v);
   f('uSeed', (P.seed % 997) * 0.173); f('uSea', P.sea); f('uMount', P.mount); f('uScale', P.scale); f('uIce', P.ice); f('uClouds', clouds); f('uAsh', P.kind === 'lava' ? 1 : 0); f('uLowCl', LOW_CLOUD[P.kind] === undefined ? 1 : LOW_CLOUD[P.kind]); gl.uniform3fv(loc.uCloudCol, CLOUD_COL[P.kind] || CLOUD_COL.water); f('uHaze', P.haze);
   f('uWet', P.wet || 0); f('uBiome', (P.kind === 'rock' || P.kind === 'lava') ? 0 : 1); f('uQ', quality); f('uCities', IS_MEGA(P.kind) ? P.cities : legacyAmt(P.cities)); f('uPopT', IS_MEGA(P.kind) ? 1 : popBelowT(P.cities)); f('uDens', cityStats(P).ld); f('uPlan', P.plan); f('uRad', P.rad); f('uLava', P.lava); f('uCraters', P.craters); f('uScars', P.scars); f('uFStyle', FSTYLES.indexOf(P.fStyle) > 0 ? FSTYLES.indexOf(P.fStyle) : 0);
-  gl.uniform4f(loc.uLights, P.lUnder || 0, HAS_SEA(P.kind) ? (P.lSea || 0) : 0, P.lDark || 0, 0); gl.uniform3fv(loc.uLCol, hex2rgb(isHex(P.lCol) ? P.lCol : BASE.lCol));
+  gl.uniform4f(loc.uLights, P.lUnder || 0, HAS_SEA(P.kind) ? (P.lSea || 0) : 0, P.lDark || 0, isHex(P.lCol) && P.lCol.toLowerCase() !== BASE.lCol ? 1 : 0); gl.uniform3fv(loc.uLCol, hex2rgb(isHex(P.lCol) ? P.lCol : BASE.lCol));
   f('uBands', P.bands); f('uTurb', P.turb); f('uStorms', P.storms); f('uStormSize', P.stormSize);
   f('uSpin', T.spin); f('uCloudAng', T.cloud); f('uFlowT', T.flow); f('uRingAng', T.ring); f('uTime', T.time); f('uStarDens', P.starDens);
   if (mega) {
