@@ -74,6 +74,8 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
 .sysinfo { font-size: 12px; color: var(--dim); margin: 8px 0 0; }
 .sysinfo b { color: var(--fg); font-weight: 500; }
 .sysinfo .lore { display: block; margin-top: 6px; opacity: .85; }
+.sysinfo .hist { margin-top: 6px; }
+.sysinfo .hist summary { cursor: pointer; color: var(--fg); }
 .lib { list-style: none; margin: 10px 0 0; padding: 0; }
 .lib li { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-top: 1px solid var(--line); }
 .lib li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -254,6 +256,8 @@ uniform float uZoom;
 uniform vec2 uShift;        // moves the view (a ring's close-up on its far floor)
 uniform int uType;            // 0 rocky, 1 gas giant, 2 tidally locked
 uniform vec3 uPal[5];
+uniform vec4 uLights;   // share of people underground, lights at sea, dark districts
+uniform vec3 uLCol;     // the colour of city lights (warm sodium by default)
 uniform vec3 uHazeCol;
 uniform float uAsh;           // 1 on a molten world: its clouds are ash and smoke, not water
 uniform float uLowCl;        // how much of the low cloud deck shows: 1 normally, little on a frozen world (too cold and dry for a water deck)
@@ -883,7 +887,8 @@ void gasCities(vec3 q, vec3 lt, out float body, out float shade, out float lit, 
   vec3 r1 = siteC(q * G1, h1, w1);                 // offset to the nearest city site, in site units
   float on = step(h1.x, (0.30 + 0.45 * amt) * (0.08 + 0.92 * smoothstep(0.0, 0.15, amt)) * mix(0.3, 1.0, uPopT)) * inreg;   // below 10 million a world has fewer still
   if (on <= 0.0) return;
-  float R = mix(0.11, 0.16, h1.y) * (1.0 + 0.15 * step(0.86, h1.z));   // the platform; with its pods a city reaches about 0.4, and a site's cell is at least 0.35 wide
+  float R = mix(0.11, 0.16, h1.y) * (1.0 + 0.15 * step(0.86, h1.z))
+    * sqrt(15000.0 / clamp(uRad, 15000.0, 75000.0));   // a city is the same size in km, so it looks smaller on a bigger giant (half as wide at 60,000 km)   // the platform; with its pods a city reaches about 0.4, and a site's cell is at least 0.35 wide
   float Re = max(R, 1.4 * gPxC * G1);              // never thinner than a pixel; the light it loses is taken from its brightness
   float fade = R / Re;
   float px1 = gPxC * G1;                           // site units per pixel
@@ -1074,15 +1079,30 @@ vec3 shadePlanet(vec3 p, out float shine) {
       float urban, streets, halo;
       float Ln = cityField(q, dl, urban, streets, halo);
       float ground = landMask * (1.0 - snow);
-      vec3 netC = mix(vec3(1.0, 0.62, 0.28), vec3(1.0, 0.86, 0.58), clamp(Ln * 0.5, 0.0, 1.0));
-      emis += (netC * Ln * 0.95 + vec3(1.0, 0.55, 0.25) * halo * 0.22) * night * ground;
+      // people underground or under ice show little light and little built-up ground; dark districts are dead or emptied cities
+      float dk = fbm(q * 7.0 + sOff() + 201.0, 3), thr = 0.18 + 0.5 * uLights.z;
+      float dead = (uLights.z > 0.0) ? 1.0 - smoothstep(thr - 0.03, thr + 0.03, dk) : 0.0;
+      float lf = (1.0 - dead) * (1.0 - 0.93 * uLights.x);
+      vec3 netC = mix(uLCol, min(uLCol * vec3(1.0, 1.387, 2.071), vec3(1.0)), clamp(Ln * 0.5, 0.0, 1.0));
+      emis += (netC * Ln * 0.95 + uLCol * vec3(1.0, 0.887, 0.893) * halo * 0.22) * night * ground * lf;
+      urban *= 1.0 - 0.85 * uLights.x; Ln *= 1.0 - 0.85 * uLights.x; halo *= 1.0 - 0.85 * uLights.x;
+      // towns at sea (rigs, rafts, stilt towns), scattered in clusters over open water
+      if (uLights.y > 0.0 && sea > 0.5) {
+        const float GS = 70.0;
+        vec3 hs; float ws;
+        vec3 rs = cellC(q * GS, hs, ws);
+        float cl = smoothstep(0.35, 0.6, fbm(q * 5.0 + sOff() + 233.0, 3) + 0.25 * uLights.y);
+        float rd = max(0.07, 1.3 * gPxC * GS);
+        float pt = smoothstep(rd, rd * 0.4, length(rs)) * step(hs.x, uLights.y * 0.8) * cl * (1.0 - snow) * min(1.0, 0.07 / rd * 1.6);
+        emis += uLCol * pt * (0.7 + 0.6 * hs.y) * night;
+      }
       // daylight: farmland patchwork around the towns, paved grey districts inside, dark streets
       float farm = smoothstep(0.8, 1.9, dl) * (1.0 - smoothstep(2.6, 3.4, dl)) * uBiome;   // no fields on airless rock
       // by day a town is a few km of roofs: invisible from orbit unless the built-up land is drawn wider than the lights. So the day
       // side reads the night field: wherever lights shine, or people are dense enough that they would, the ground is built over
       float area = smoothstep(1.6, 3.2, dl + 0.9 * (fbm(q * (uRad / 260.0) + sOff() + 5.0, 3) - 0.5)) * (0.6 + 0.4 * noise(q * (uRad / 45.0) + sOff()));
       float built = clamp(Ln * 0.8 + halo * 1.1, 0.0, 1.0);
-      float ub = clamp(max(urban, max(built, area)), 0.0, 1.0) * ground;
+      float ub = clamp(max(urban, max(built, area)), 0.0, 1.0) * ground * (1.0 - 0.85 * uLights.x);
       vec3 fc = hash33(floor(M3 * q * 95.0));
       float wetF = smoothstep(0.2, 0.7, habM);
       vec3 wetField = mix(vec3(0.62, 0.55, 0.30), vec3(0.30, 0.44, 0.17), fc.x) * (0.78 + 0.45 * fc.y);
@@ -1755,6 +1775,16 @@ void shadeMoon(int i, vec2 uv, float px, out vec4 mcOut, out vec3 add) {
   float ndl = dot(n, uL);
   float lit = (ty == 4 || ty == 7) ? mix(max(ndl, 0.0), pow(clamp(ndl * 0.5 + 0.5, 0.0, 1.0), 2.2), 0.6 * (ty == 4 ? 1.0 : 0.5)) : max(ndl, 0.0);
   vec3 mc = alb * (lit * 1.15 * shd + 0.02) + emis * (1.0 - 0.6 * lit * shd);
+  if (mq.w > 0.0) {
+    // a settled moon: towns as points of light on its night side, more of them as Lights goes up
+    vec3 hl; float wl;
+    float GL = 9.0 + 9.0 * mq.w;
+    vec3 rl = cellC(q * GL + sd * 3.1, hl, wl);
+    float pxm = px / max(m.w, 1e-4) * GL, rd = max(0.09, 1.2 * pxm);
+    float town = smoothstep(rd, rd * 0.35, length(rl)) * step(hl.x, 0.25 + 0.6 * mq.w) * min(1.0, 0.09 / rd * 1.5) * (0.6 + 0.6 * hl.y)
+      * smoothstep(0.40, 0.62, fbm(q * 3.0 + sd * 5.0 + 17.0, 3) + 0.12 * mq.w);   // towns gather in a few settled regions
+    mc += uLCol * town * (0.5 + 0.7 * mq.w) * (1.0 - smoothstep(-0.05, 0.2, ndl * shd + (shd < 0.5 ? -1.0 : 0.0)));
+  }
   if (ty == 2) mc += vec3(1.0, 0.97, 0.92) * pow(max(dot(n, normalize(uL + vec3(0.0, 0.0, 1.0))), 0.0), 36.0) * 0.18 * shd;   // sheen on ice
   if (haze > 0.0) {   // atmosphere seen edge-on over the limb
     float rim = pow(1.0 - n.z, 2.6) * haze;
@@ -2205,7 +2235,7 @@ const HAS_SEA = (t) => ['terran', 'ocean', 'swamp', 'city', 'ice', 'locked', 'ri
 const IS_ROCKY = (t) => t !== 'gas';
 
 const BASE = {
-  seed: 7, sea: 0.5, mount: 0.5, wet: 0, scale: 1.0, ice: 0.4, clouds: 0.5, haze: 0.6, cities: 0, rad: 6371, plan: 0.5, land: null, lava: 0, craters: 0, scars: 0,
+  seed: 7, sea: 0.5, mount: 0.5, wet: 0, scale: 1.0, ice: 0.4, clouds: 0.5, haze: 0.6, cities: 0, lUnder: 0, lSea: 0, lDark: 0, lCol: '#ff9e47', rad: 6371, plan: 0.5, land: null, lava: 0, craters: 0, scars: 0,
   bands: 9, turb: 0.6, storms: 2, stormSize: 1.0,
   spin: 0.25, cloudSpeed: 0.3, flow: 0.4, tilt: 22, roll: -12, sun: -55, sunH: 12, zoom: 1, starDens: 0.5,
   ring: { on: false, type: 'broad', inner: 1.24, width: 1.03, op: 0.8, gaps: 0.8, struct: 0.6, clump: 0.3, dust: 0.15, feeder: 0, seed: 1, spin: 0.3, c1: '#d8c8a4', c2: '#7a6a55' },
@@ -2282,7 +2312,7 @@ function ringPeople(dens) {
 }
 function updateCityInfo() {
   const el = $('cityInfo'); if (!el) return;
-  const vis = IS_ROCKY(P.kind) && P.kind !== 'lava' && P.cities > 0 && P.kind !== 'shell'; el.hidden = !vis; if (!vis) return;
+  const vis = IS_ROCKY(P.kind) && P.cities > 0 && P.kind !== 'shell'; el.hidden = !vis; if (!vis) return;
   const s = cityStats(P);
   el.textContent = (s.dens < 0.1 ? 'under 0.1' : s.dens < 10 ? s.dens.toFixed(1) : Math.round(s.dens).toLocaleString('en-US')) + ' people per km² of land · ' + s.cls + (P.kind === 'ring' ? ' · about ' + ringPeople(s.dens) + ' on a ring this size' : '');
 }
@@ -2292,6 +2322,8 @@ function updateCityInfo() {
 const IS_MEGA = (k) => k === 'ring' || k === 'shell';
 const ISMEGA = (p, ...ids) => ids.includes(p.kind);
 const NOMEGA = (p) => !IS_MEGA(p.kind);
+// Planet radius: gas giants are 25,000 to 70,000 km in the lore sheet, an asteroid base can be a few tens of km
+const radRange = (k) => { const g = k === 'gas', min = g ? 15000 : 50, max = g ? 75000 : 15000; return { min, max, step: g ? 500 : 50, clamp: (v) => Math.min(max, Math.max(min, v || (g ? 15000 : 6371))) }; };
 // A space elevator needs ground to stand on and a spin to hang from: not a gas giant, not a world that always shows one face to its sun, and not a ring or a shell world.
 const ELEV_OK = (k) => k !== 'gas' && k !== 'locked' && !IS_MEGA(k);
 // Heights are fractions of the planet's radius; show them in kilometres where the planet has a size of its own
@@ -2326,8 +2358,11 @@ const CONTROLS = [
   ['Look', 'ice', 'Ice caps', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'rock' && p.kind !== 'lava' && p.kind !== 'desert'],
   ['Look', 'craters', 'Craters', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && NOMEGA(p)],
   ['Look', 'scars', 'Mining scars', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && NOMEGA(p)],
-  ['Look', 'cities', 'Population', 0, 1, 0.005, (p) => p.kind === 'gas' || (IS_ROCKY(p.kind) && p.kind !== 'lava'), (v, p) => IS_MEGA(p.kind) ? cityStats(p).cls : popText(v)],
-  ['Look', 'rad', 'Planet radius', 1500, 15000, 100, (p) => IS_ROCKY(p.kind) && p.kind !== 'lava' && NOMEGA(p), (v) => Math.round(v) + ' km'],
+  ['Look', 'cities', 'Population', 0, 1, 0.005, (p) => p.kind === 'gas' || IS_ROCKY(p.kind), (v, p) => IS_MEGA(p.kind) ? cityStats(p).cls : popText(v)],
+  ['Look', 'lUnder', 'Living underground', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && NOMEGA(p) && p.cities > 0, (v) => v < 0.01 ? 'nobody' : Math.round(v * 100) + '% of people'],
+  ['Look', 'lSea', 'Towns at sea', 0, 1, 0.01, (p) => HAS_SEA(p.kind) && NOMEGA(p) && p.cities > 0 && p.sea > 0.02, (v) => v < 0.01 ? 'none' : Math.round(v * 100) + '%'],
+  ['Look', 'lDark', 'Dark districts', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && NOMEGA(p) && p.cities > 0, (v) => v < 0.01 ? 'none' : Math.round(v * 100) + '%'],
+  ['Look', 'rad', 'Planet radius', 50, 15000, 50, (p) => p.kind !== 'lava' && NOMEGA(p), (v) => Math.round(v).toLocaleString('en-US') + ' km'],   // range set per kind in syncControls
   ['Look', 'land', 'Land share', 0.02, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'lava' && NOMEGA(p), (v) => Math.round(v * 100) + '%'],
   ['Look', 'plan', 'Grown or planned', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'lava', (v) => v < 0.2 ? 'all grown' : v < 0.4 ? 'mostly grown' : v < 0.6 ? 'mixed' : v < 0.8 ? 'mostly planned' : 'all planned'],
   ['Look', 'lava', 'Lava cracks', 0, 1, 0.01, (p) => IS_ROCKY(p.kind) && NOMEGA(p)],
@@ -2366,7 +2401,7 @@ function buildControls() {
     row.innerHTML = `<label for="${id}">${label}</label><input type="range" id="${id}" min="${min}" max="${max}" step="${step}"><output></output>`;
     $(SEC_HOST[sec]).appendChild(row);
     const inp = row.querySelector('input'), out = row.querySelector('output');
-    inp.addEventListener('input', () => { set(key, parseFloat(inp.value)); refreshOut(c); updateCityInfo(); if (key === 'moons') { const n0 = ensureMoons(); if (n0 > 0 && selMoon >= n0) selMoon = n0 - 1; rebuildMoons(); } if (key === 'tilt' || key === 'roll') {} });
+    inp.addEventListener('input', () => { set(key, parseFloat(inp.value)); refreshOut(c); updateCityInfo(); if (key === 'cities' || key === 'sea') for (const k2 of ['lUnder', 'lSea', 'lDark']) ctlEls[k2].row.hidden = !ctlEls[k2].c[6](P); if (key === 'moons') { const n0 = ensureMoons(); if (n0 > 0 && selMoon >= n0) selMoon = n0 - 1; rebuildMoons(); } if (key === 'tilt' || key === 'roll') {} });
     ctlEls[key] = { row, inp, out, c };
   }
   const info = document.createElement('div'); info.id = 'cityInfo'; info.className = 'note'; info.style.cssText = 'margin:-2px 0 8px;opacity:.75;font-size:12px';
@@ -2379,6 +2414,8 @@ function refreshOut(c) {
 function syncControls() {
   if (!ELEV_OK(P.kind)) P.eOn = 0;
   if (IS_MEGA(P.kind)) P.oOn = 0;
+  const rr = radRange(P.kind), ri = ctlEls.rad.inp;   // a gas giant runs 15,000 to 75,000 km, anything else 50 to 15,000 km
+  ri.min = rr.min; ri.max = rr.max; ri.step = rr.step; P.rad = rr.clamp(P.rad);
   for (const k in ctlEls) {
     const e = ctlEls[k]; e.inp.value = get(k); e.row.hidden = !e.c[6](P); refreshOut(e.c);
   }
@@ -2399,6 +2436,12 @@ function syncControls() {
   dh.innerHTML = `<input type="color" value="${P.hazeCol}" aria-label="Glow colour"><span>Glow</span>`;
   dh.querySelector('input').addEventListener('input', (ev) => { P.hazeCol = ev.target.value; });
   hz.appendChild(dh);
+  if (IS_ROCKY(P.kind) && NOMEGA(P)) {
+    const dl = document.createElement('label'); dl.className = 'sw';
+    dl.innerHTML = `<input type="color" value="${isHex(P.lCol) ? P.lCol : BASE.lCol}" aria-label="City light colour"><span>Lights</span>`;
+    dl.querySelector('input').addEventListener('input', (ev) => { P.lCol = ev.target.value; });
+    hz.appendChild(dl);
+  }
   document.querySelectorAll('#chips .chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kind === P.kind)));
   ctlEls.clouds.row.querySelector('label').textContent = CLOUD_LABEL[P.kind] || 'Clouds';
   $('pName').value = P.name || '';
@@ -2505,7 +2548,7 @@ const MOON_TYPES = [
     c: ['#5e5a55', '#9aa3ab', '#ffffff'], L: ['Mined rock', 'Steel plating', 'Pits and towers', 'Built-over share'], d: { detail: 0.6, feat: 0.6, haze: 0, shape: 0 }, size: [0.06, 0.12] },
 ];
 const MOON_IDX = {}; MOON_TYPES.forEach((t, i) => { MOON_IDX[t.id] = i; });
-const MOON_RANGE = { size: [0.015, 0.5], orbit: [1.3, 7], speed: [-2, 3], tilt: [-60, 60], phase: [0, 360], detail: [0, 1], feat: [0, 1], haze: [0, 1], shape: [0, 1], spin: [-1, 1], seed: [0, 9999, 1] };
+const MOON_RANGE = { lit: [0, 1], size: [0.015, 0.5], orbit: [1.3, 7], speed: [-2, 3], tilt: [-60, 60], phase: [0, 360], detail: [0, 1], feat: [0, 1], haze: [0, 1], shape: [0, 1], spin: [-1, 1], seed: [0, 9999, 1] };
 const moonStart = (ring) => Math.max(1.55, ring && ring.on ? ring.inner + ring.width + 0.3 : 1.55);
 // A first guess for moon number i of a planet; the same seed always gives the same moon.
 function genMoon(seed, kind, i, hint, start) {
@@ -2519,7 +2562,7 @@ function genMoon(seed, kind, i, hint, start) {
   const tint = (c) => shiftHue(tone > 0 ? lighten(c, tone) : darken(c, -tone), hue);
   return {
     type: T.id, size: lerp(T.size[0], T.size[1], r()), orbit: (start || 1.55) + i * (0.3 + r() * 0.14) + r() * 0.1, speed: 1, tilt: (r() - 0.5) * 28, phase: r() * 360,
-    c1: tint(T.c[0]), c2: tint(T.c[1]), c3: T.c[2], detail: T.d.detail, feat: T.d.feat, haze: T.d.haze, shape: T.d.shape, spin: 0, seed: 1 + Math.floor(r() * 9999),
+    c1: tint(T.c[0]), c2: tint(T.c[1]), c3: T.c[2], detail: T.d.detail, feat: T.d.feat, haze: T.d.haze, shape: T.d.shape, spin: 0, lit: 0, seed: 1 + Math.floor(r() * 9999),
   };
 }
 // the description of a system sometimes says what its first moon is like
@@ -2560,6 +2603,7 @@ const MOON_CTL = [
   ['haze', 'Atmosphere', 0, 1, 0.01, (v) => v.toFixed(2)],
   ['shape', 'Lumpy shape', 0, 1, 0.01, (v) => v.toFixed(2)],
   ['spin', 'Own spin', -1, 1, 0.01, (v) => Math.abs(v) < 0.02 ? 'locked' : v.toFixed(2)],
+  ['lit', 'Town lights', 0, 1, 0.01, (v) => v < 0.01 ? 'none' : Math.round(v * 100) + '%'],
 ];
 const moonEls = {};
 function buildMoonUI() {
@@ -2834,6 +2878,7 @@ function draw(w, h, tmul) {
   const f = (n, v) => gl.uniform1f(loc[n], v);
   f('uSeed', (P.seed % 997) * 0.173); f('uSea', P.sea); f('uMount', P.mount); f('uScale', P.scale); f('uIce', P.ice); f('uClouds', clouds); f('uAsh', P.kind === 'lava' ? 1 : 0); f('uLowCl', LOW_CLOUD[P.kind] === undefined ? 1 : LOW_CLOUD[P.kind]); gl.uniform3fv(loc.uCloudCol, CLOUD_COL[P.kind] || CLOUD_COL.water); f('uHaze', P.haze);
   f('uWet', P.wet || 0); f('uBiome', (P.kind === 'rock' || P.kind === 'lava') ? 0 : 1); f('uQ', quality); f('uCities', IS_MEGA(P.kind) ? P.cities : legacyAmt(P.cities)); f('uPopT', IS_MEGA(P.kind) ? 1 : popBelowT(P.cities)); f('uDens', cityStats(P).ld); f('uPlan', P.plan); f('uRad', P.rad); f('uLava', P.lava); f('uCraters', P.craters); f('uScars', P.scars);
+  gl.uniform4f(loc.uLights, P.lUnder || 0, HAS_SEA(P.kind) ? (P.lSea || 0) : 0, P.lDark || 0, 0); gl.uniform3fv(loc.uLCol, hex2rgb(isHex(P.lCol) ? P.lCol : BASE.lCol));
   f('uBands', P.bands); f('uTurb', P.turb); f('uStorms', P.storms); f('uStormSize', P.stormSize);
   f('uSpin', T.spin); f('uCloudAng', T.cloud); f('uFlowT', T.flow); f('uRingAng', T.ring); f('uTime', T.time); f('uStarDens', P.starDens);
   if (mega) {
@@ -2874,7 +2919,7 @@ function draw(w, h, tmul) {
     const m = o.m;
     mv.set([...o.wp, m.size], i * 4);
     mp.set([MOON_IDX[m.type] || 0, m.detail, m.feat, m.haze], i * 4);
-    mq.set([m.shape, m.seed, o.a + T.moon * m.spin * 0.5, 0], i * 4);   // turning with the orbit keeps one face to the planet
+    mq.set([m.shape, m.seed, o.a + T.moon * m.spin * 0.5, m.lit || 0], i * 4);   // turning with the orbit keeps one face to the planet
     mc1.set(hex2rgb(m.c1), i * 3); mc2.set(hex2rgb(m.c2), i * 3); mc3.set(hex2rgb(m.c3), i * 3);
   });
   // the moon a ring belongs to tells the ring where to bunch up (its orbit) and where along the orbit it is now
@@ -3123,7 +3168,7 @@ function derive(s) {
   P2.moons = Math.min(5, nm);
   // real numbers, when a system has them: population in billions, radius in km, land in percent
   if (s.popB > 0) P2.cities = popPos(s.popB);
-  if (s.radiusKm > 0) P2.rad = Math.min(15000, Math.max(1500, s.radiusKm));
+  if (s.radiusKm > 0) P2.rad = radRange(kind).clamp(s.radiusKm);
   if (typeof s.landPct === 'number' && isFinite(s.landPct)) P2.land = Math.min(1, Math.max(0.02, s.landPct / 100));
   const ringTxt = mo + ' ' + sp;
   const RING_RE = /\b(pale|faint|thin|dark|heavy|wide|broken|glittering|debris|dust|dusty|icy|rock|bright)\s+(?:\w+\s+)?ring\b(?!\s+of\s+(?:docks?|stations?|archive|yards?|lights))|ring of (?:rock debris|dumped hulls|stolen haulers)|moonlets in a wide ring/;
@@ -3160,7 +3205,8 @@ function loadSystem(i) {
   $('sysIn').value = s.n;
   const TF = { ongoing: 'being terraformed', done: 'terraformed', failed: 'terraforming failed' };
   $('sysInfo').innerHTML = `<b>${esc(s.n)}</b> · ${esc(s.sec)} sector<br>${esc(s.w)}.<br>From space: ${esc(s.s)}.<br>Moons and rings: ${esc(s.m)}.` +
-    (s.pop ? `<br>People: ${esc(s.pop)}.` : '') + (TF[s.tf] ? `<br>Terraforming: ${TF[s.tf]}.` : '') + (s.lore ? `<br><span class="lore">${esc(s.lore)}</span>` : '');
+    (s.pop ? `<br>People: ${esc(s.pop)}.` : '') + (TF[s.tf] ? `<br>Terraforming: ${TF[s.tf]}.` : '') + (s.lore ? `<br><span class="lore">${esc(s.lore)}</span>` : '') +
+    (s.hist ? `<details class="hist"><summary>History</summary>${esc(s.hist)}</details>` : '');
   syncControls();
 }
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -3170,7 +3216,7 @@ const slug = (t) => (t || 'planet').toLowerCase().replace(/[^a-z0-9]+/g, '-').re
 const toCode = () => JSON.stringify({ format: 'praedra-planet', v: 2, name: P.name, params: Object.assign({}, P, { moonList: P.moonList.slice(0, 5) }) });
 // pasted presets are untrusted: clamp every number to its slider range, check colours, fill gaps from the defaults
 const PARAM_RANGE = {
-  sea: [0, 1], wet: [-1, 1], mount: [0, 1], scale: [0.5, 2.5], ice: [0, 1], clouds: [0, 1], haze: [0, 1.3], cities: [0, 1], rad: [1500, 15000], plan: [0, 1], land: [0.02, 1], lava: [0, 1], craters: [0, 1], scars: [0, 1],
+  sea: [0, 1], wet: [-1, 1], mount: [0, 1], scale: [0.5, 2.5], ice: [0, 1], clouds: [0, 1], haze: [0, 1.3], cities: [0, 1], lUnder: [0, 1], lSea: [0, 1], lDark: [0, 1], rad: [50, 75000], plan: [0, 1], land: [0.02, 1], lava: [0, 1], craters: [0, 1], scars: [0, 1],
   bands: [3, 20, 1], turb: [0, 1.4], storms: [0, 6, 1], stormSize: [0.2, 1.6], spin: [-1, 1], cloudSpeed: [-1, 1], flow: [0, 1.5], moonSpeed: [0, 2],
   tilt: [6, 85], roll: [-90, 90], sun: [-180, 180], sunH: [-60, 60], zoom: [0.5, 1.8], starDens: [0, 1], moons: [0, 5, 1],
   mLayers: [1, 4, 1], mOpen: [0, 0.9], mCap: [0.12, 1], mWidth: [0.06, 0.6], mWall: [0, 0.12], mSpan: [0.25, 1.3], mShade: [0, 0.6], mPlate: [0, 1], mLights: [0, 1], mStar: [0, 1.5], mPorts: [0, 1], mLook: [0, 1],
@@ -3196,7 +3242,7 @@ function sanitize(p, d) {
   const pal = Array.isArray(p.pal) ? p.pal : [];
   out.pal = d.pal.map((c, i) => isHex(pal[i]) ? pal[i] : c);
   if (isHex(p.hazeCol)) out.hazeCol = p.hazeCol;
-  for (const k of ['mHull', 'mAcc', 'oHull', 'oAcc']) if (isHex(p[k])) out[k] = p[k];
+  for (const k of ['mHull', 'mAcc', 'oHull', 'oAcc', 'lCol']) if (isHex(p[k])) out[k] = p[k];
   if (!ELEV_OK(out.kind)) out.eOn = 0;   // a pasted preset cannot put an elevator where none can stand
   if (IS_MEGA(out.kind)) out.oOn = 0;
   out.mSun = CENTRES.some((c) => c.id === p.mSun) ? p.mSun : d.mSun;

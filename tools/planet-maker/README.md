@@ -27,7 +27,7 @@ Picking a system loads the planet the lore sheet describes (its kind, colours, m
     "pal": ["#sea","#low","#mid","#high","#ice|storm|lava glow"],
     "hazeCol": "#aab4c4",
     "sea": 0..1, "wet": -1..1, "mount": 0..1, "scale": 0.5..2.5, "ice": 0..1, "clouds": 0..1, "haze": 0..1.3,
-    "cities": 0..1, "rad": 1500..15000, "plan": 0..1, "land": 0.02..1 or null, "lava": 0..1, "craters": 0..1, "scars": 0..1,
+    "cities": 0..1, "rad": 50..15000 (gas 15000..75000), "lUnder": 0..1, "lSea": 0..1, "lDark": 0..1, "lCol": "#hex", "plan": 0..1, "land": 0.02..1 or null, "lava": 0..1, "craters": 0..1, "scars": 0..1,
     "bands": 3..20, "turb": 0..1.4, "storms": 0..6, "stormSize": 0.2..1.6,
     "spin": -1..1, "cloudSpeed": -1..1, "flow": 0..1.5, "moonSpeed": 0..2,
     "tilt": 6..85, "roll": -90..90, "sun": -180..180, "sunH": -60..60, "zoom": 0.5..1.8, "starDens": 0..1,
@@ -37,7 +37,7 @@ Picking a system loads the planet the lore sheet describes (its kind, colours, m
     "eOn": 0|1, "eLon": -180..180, "eHt": 0.3..3, "eN": 1..4,                                                      // space elevator
     "moons": 0..5,
     "moonList": [ { "type": "rock", "size": 0.015..0.5, "orbit": 1.3..7, "speed": -2..3, "tilt": -60..60, "phase": 0..360,
-                    "detail": 0..1, "feat": 0..1, "haze": 0..1, "shape": 0..1, "spin": -1..1, "seed": 0..9999,
+                    "detail": 0..1, "feat": 0..1, "haze": 0..1, "shape": 0..1, "spin": -1..1, "lit": 0..1, "seed": 0..9999,
                     "c1": "#hex", "c2": "#hex", "c3": "#hex" } ] } }
 ```
 `moonList` holds the moons in order (the `moons` slider shows the first n). A preset without it still loads: the moons are generated from the seed and the world type.
@@ -54,9 +54,15 @@ The page has a Detail: High / Fast button (not part of a preset). High uses more
 ## Inhabited worlds (population and density)
 How a settled world looks from space is set by one number: how many people live on each square kilometre of land. The sliders feed it:
 - **Population**, log scale: 100 people at the left to 10,000 billion (10 trillion) at the right, eleven steps of ten. Stored as `cities` (0..1; 0 = no people); preset codes before v2 used a scale that started at 10 million and are converted when loaded. Earth is about 8 billion.
-- **Planet radius** in km (`rad`, default 6371): sets the land area, and every light pattern is measured in km, so a small moon is not covered by Earth-sized cities.
+- **Planet radius** in km (`rad`, default 6371; 50 to 15,000 km, a gas giant 15,000 to 75,000 km): sets the land area, and every light pattern is measured in km, so a small moon is not covered by Earth-sized cities. On a gas giant it sets the size of the floating cities: they are the same size in km, so they look half as wide on a 60,000 km giant as on a 15,000 km one.
 - **Land share** (`land`): estimated from the Ocean level (about 1 − 1.2 × ocean) until you move it. It only changes the density, not the shape of the continents.
 - **Grown or planned** (`plan`, 0..1, default 0.5): moves the density at which districts turn planned, and how many of them do.
+Three more sliders change how the people show, without changing how many there are:
+- **Living underground** (`lUnder`): the share of people living below ground or under ice. Their lights and built-up land disappear, so at 100% a world of billions shows only a faint trace.
+- **Towns at sea** (`lSea`, worlds with an ocean): rigs, raft and stilt towns as points of light in clusters over open water.
+- **Dark districts** (`lDark`): dead or emptied districts inside lit land; they stay built up by day but go dark at night.
+- **Lights** colour swatch (`lCol`, default `#ff9e47`, warm sodium): the colour of every city light on the planet and its moons.
+Lava worlds can carry people too (a sealed city). Each moon has **Town lights** (`lit`), points of light on its night side gathered in a few regions, for moons where people live.
 The line under Population shows the result, for example "44 people per km² of land · settled". Names by density: empty (< 0.5), frontier (< 5), rural (< 30), settled (< 150), dense (< 600), metropolitan (< 3,000), megalopolis (< 15,000), ecumenopolis (more).
 
 Where people live is still the old settling score (coasts and basins first, then lowlands with a mild climate and some water). The average density lifts or lowers that score into a local density, and the local density picks the look:
@@ -197,7 +203,7 @@ Cost: on software rendering a gas giant in High is about 30 percent slower per f
 
 **Floating cities.** The Population slider becomes "Floating cities" on a gas giant: big white cities floating above the cloud tops, a cluster of white platforms under pale domes that reads like a small archipelago on the clouds. A city is an uneven, lobed white platform with tier rings, small towers and a pale blue dome, tied by thin walkways to a ring of five to eight satellite pods (sometimes one is missing), with a few small rafts drifting beyond; it throws a soft shadow on the cloud. A few cities are a little bigger than the rest. Cities gather in calm mid-latitude regions (none at the poles). More people means more regions and fuller ones. By night the platforms show rings of cool white windows, the pods and walkways are lit, and a warm glow sits on the cloud round them. The slider keeps the rocky worlds' scale (100 people to 10,000 billion), so 5 billion shows about a dozen cities on the visible face; below 10 million a world has only a few, and at a few hundred people one or two at most. Sizes are exaggerated so they read from orbit: a big platform is about 2,000 km across (the planet is a few tens of thousands). The cities stay put while the bands flow past. A new gas giant starts at none.
 
-The 63 lore systems whose people live in the clouds get their population through `CLOUD_M` in `parse_presets.py` (read from each gas giant's World and Population lines and checked by the Lore Master: moon, ring and orbit dwellers are left out, and where the sheet gives one number for cloud and moon people only the cloud share is used). Three of them carry only faint lights. Change that table and rerun the steps under Rebuild to fix one.
+Every system's head count comes from the lore sheet's own numbers in `08-planet-presets.json`: `popB` (everyone, in billions) sets Population on a land world, and `cloudPopM` (millions living in a gas giant's clouds; moon, ring and orbit dwellers are not counted) sets Floating cities on a gas giant. 63 gas giants have people in their clouds. To fix one, change 08 and rerun the steps under Rebuild. Systems with a written history (107) show it under History below the description.
 
 ## Terrain relief
 **Mountains.** They used to be one smooth ridge layer, which read as sand dunes. Now they are long belts (where plates would have collided) with sharp crests: a ridged multifractal, each layer weighted by the one before, so crests carry the fine detail and valleys stay smooth. Between the belts the land is plains and low hills. Steep faces turn bare rock, and the highest crests keep snow even in a warm climate (less on worlds with few ice caps). The Mountains slider still runs from none to everything. It costs about 10 to 20 percent more per frame on software rendering.
