@@ -32,10 +32,11 @@ Picking a system loads the planet the lore sheet describes (its kind, colours, m
     "spin": -1..1, "cloudSpeed": -1..1, "flow": 0..1.5, "moonSpeed": 0..2,
     "tilt": 6..85, "roll": -90..90, "sun": -180..180, "sunH": -60..60, "zoom": 0.5..1.8, "starDens": 0..1,
     "ring": { "on": false, "type": "broad|narrow|dusty|arcs|wreck|moonfed", "inner": 1.1..2.8, "width": 0.04..2.6, "op": 0.1..1, "gaps": 0..1,
-              "struct": 0..1, "clump": 0..1, "dust": 0..1, "feeder": 0..5, "seed": 0..9999, "spin": -1..1, "c1": "#hex", "c2": "#hex" },
+              "struct": 0..1, "clump": 0..1, "dust": 0..1, "feeder": 0..8, "seed": 0..9999, "spin": -1..1, "c1": "#hex", "c2": "#hex" },
+    "tLanes": 0..1, "tFleet": 0..1, "tBeacon": 0..1,   // ships in orbit
     "oOn": 0|1, "oHt": 0.04..0.3, "oWid": 0.01..0.1, "oLit": 0..1, "oHull": "#hex", "oAcc": "#hex",   // orbital ring
     "eOn": 0|1, "eLon": -180..180, "eHt": 0.3..3, "eN": 1..4,                                                      // space elevator
-    "moons": 0..5,
+    "moons": 0..8,
     "moonList": [ { "type": "rock", "size": 0.015..0.5, "orbit": 1.3..7, "speed": -2..3, "tilt": -60..60, "phase": 0..360,
                     "detail": 0..1, "feat": 0..1, "haze": 0..1, "shape": 0..1, "spin": -1..1, "lit": 0..1, "seed": 0..9999,
                     "c1": "#hex", "c2": "#hex", "c3": "#hex" } ] } }
@@ -43,7 +44,7 @@ Picking a system loads the planet the lore sheet describes (its kind, colours, m
 `moonList` holds the moons in order (the `moons` slider shows the first n). A preset without it still loads: the moons are generated from the seed and the world type.
 Speeds: rotation = `spin * 0.5` radians per second (0.25 is one turn in about 50 s).
 
-Pasted presets and library entries are checked on load: numbers are clamped to their slider range (moons 0 to 5, each moon's numbers and colours the same way, an unknown moon type becomes cratered rock, an unknown ring type becomes broad icy rings; presets saved before ring kinds existed load as broad icy rings with their old size and colours; a hand-written ring of another kind starts from that kind's own size, colours and source moon, so only the fields you write override it), bad colours are replaced, and a short palette is filled from the world type's defaults.
+Pasted presets and library entries are checked on load: numbers are clamped to their slider range (moons 0 to 8, each moon's numbers and colours the same way, an unknown moon type becomes cratered rock, an unknown ring type becomes broad icy rings; presets saved before ring kinds existed load as broad icy rings with their old size and colours; a hand-written ring of another kind starts from that kind's own size, colours and source moon, so only the fields you write override it), bad colours are replaced, and a short palette is filled from the world type's defaults.
 
 ## Using it in Godot later
 The shader is GLSL ES 3.00 with no tricks. Porting to a Godot `.gdshader` is a mechanical rename (`uniform` blocks stay, `fragColor` becomes `COLOR`). The preset values map one-to-one onto the shader uniforms, so the game can draw the same planet from the same JSON.
@@ -160,6 +161,12 @@ Two human-made works you can switch on for a planet, in their own box under Ring
 - **With a natural ring** the cable lies in the ring's plane, so the ring is swept clear along it (a narrow lane, drawn as a gap in the ring on the cable's side).
 - It is compiled into the shader only when one of them is on, so planets without them cost nothing.
 
+**Ships in orbit** (same section, any world but rings and shells):
+- **Ship traffic** (`tLanes`): up to 30 ships on 2 to 4 tilted orbits, some going each way, moving with the moon clock.
+- **Parked fleet** (`tFleet`): 4 to 18 ships in rows, nose to tail, on one orbit.
+- **Beacons** (`tBeacon`): 4 to 16 red beacons evenly round the equator, blinking (toll rings, cordons, forts).
+Ships are points of light a couple of pixels wide, in the orbital ring's light colour, hidden while behind the planet. In a still image they can read as stars; they show best moving. At most 48 in all.
+
 ## Stars
 
 The background is plain black with stars and nothing else. One slider, Star density (0 to 1, default 0.5), sets how many: none, sparse, normal, dense, packed. The default is the same star field as before the slider existed. The stars twinkle slowly and sit on the screen, so they do not turn with the planet. It works for every world, Ring and Shell included, and is saved in presets as `starDens`.
@@ -217,7 +224,7 @@ The light and shade on mountains and craters comes from the slope of the height 
 - The system presets are a first guess read from each description (colours, moons, rings). Expect to adjust some by hand.
 - The whole planet is one pass. Moons do not shadow each other, and a moon's shadow is a plain round disc (lumpy outlines are not followed).
 - Rings are flat: no thickness, no braids, no waves. A ring has one source moon at most, and moons never push each other's gaps around beyond the three resonances listed under Rings.
-- At most 5 moons per planet. Moons start small, 2 to 17 percent of the planet's radius (Earth's Moon is 27 percent, Titan about 4 percent of Saturn's, the small captured rocks far less), and they sit much closer than real moons would. The Size slider goes down to 1.5 percent. Orbits are circular.
+- At most 8 moons per planet (a system with more, such as Disciplina with 28, shows its 8 largest). Moons start small, 2 to 17 percent of the planet's radius (Earth's Moon is 27 percent, Titan about 4 percent of Saturn's, the small captured rocks far less), and they sit much closer than real moons would. The Size slider goes down to 1.5 percent. Orbits are circular.
 - City looks are tuned by eye on software rendering, never on a real graphics card, and from the usual viewing size the planned districts read as texture more than as streets. The land share estimate from the Ocean slider is rough (it does not count the land actually drawn), so type the real land share when it matters. Cities are one colour: no tints for different districts yet.
 - Industrial moon: the pits and plating are painted on the surface (nothing is raised), so scaffolding casts no shadow and plates have no relief, and towers are only seen at the edge, so a tower that points at you is invisible. Looks tuned by eye on software rendering only.
 - Ring timing after the spaceports, windows, shade squares and centre machines (software rendering, SwiftShader, 600 x 480, 2 frames after warm-up, same session as the version before): High / Fast, in seconds: terran 1.76 / 0.87; Ring 6.9 / 4.8 against 7.3 / 4.7 before; with Spaceports at none 6.8; a wide ring with tall walls 7.2 against 6.9. So no measurable change on this renderer; the piers only cost anything near the hull. Shell and the terran planet are pixel for pixel unchanged.
