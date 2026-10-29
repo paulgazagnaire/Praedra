@@ -33,7 +33,6 @@ Picking a system loads the planet the lore sheet describes (its kind, colours, m
     "tilt": 6..85, "roll": -90..90, "sun": -180..180, "sunH": -60..60, "zoom": 0.5..1.8, "starDens": 0..1,
     "ring": { "on": false, "type": "broad|narrow|dusty|arcs|wreck|moonfed", "inner": 1.1..2.8, "width": 0.04..2.6, "op": 0.1..1, "gaps": 0..1,
               "struct": 0..1, "clump": 0..1, "dust": 0..1, "feeder": 0..8, "seed": 0..9999, "spin": -1..1, "c1": "#hex", "c2": "#hex" },
-    "tLanes": 0..1, "tFleet": 0..1, "tBeacon": 0..1,   // ships in orbit
     "oOn": 0|1, "oHt": 0.04..0.3, "oWid": 0.01..0.1, "oLit": 0..1, "oHull": "#hex", "oAcc": "#hex",   // orbital ring
     "eOn": 0|1, "eLon": -180..180, "eHt": 0.3..3, "eN": 1..4,                                                      // space elevator
     "moons": 0..8,
@@ -160,12 +159,6 @@ Two human-made works you can switch on for a planet, in their own box under Ring
 - The planet's shadow darkens a cable and its station; the climbers' lights stay on. A cable behind the planet is hidden and shows again past the limb. Looking straight down a cable it is a dot with the nearest end on top.
 - **With a natural ring** the cable lies in the ring's plane, so the ring is swept clear along it (a narrow lane, drawn as a gap in the ring on the cable's side).
 - It is compiled into the shader only when one of them is on, so planets without them cost nothing.
-
-**Ships in orbit** (same section, any world but rings and shells):
-- **Ship traffic** (`tLanes`): up to 30 ships on 2 to 4 tilted orbits, some going each way, moving with the moon clock.
-- **Parked fleet** (`tFleet`): 4 to 18 ships in rows, nose to tail, on one orbit.
-- **Beacons** (`tBeacon`): 4 to 16 red beacons evenly round the equator, blinking (toll rings, cordons, forts).
-Ships are points of light a couple of pixels wide, in the orbital ring's light colour, hidden while behind the planet. In a still image they can read as stars; they show best moving. At most 48 in all.
 
 ## Stars
 
