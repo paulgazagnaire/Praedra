@@ -199,7 +199,7 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
     </details>
 
     <details class="sec" id="secOrbit">
-      <summary>Orbital ring and space elevator</summary>
+      <summary>In orbit: ring, elevator and ships</summary>
       <label class="chk"><input type="checkbox" id="orbOn"> An orbital ring round the equator</label>
       <label class="chk"><input type="checkbox" id="elevOn"> A space elevator</label>
       <p class="note" id="orbNote"></p>
@@ -284,12 +284,15 @@ uniform vec4 uMegaD;        // shells: x latitude bands
 uniform vec4 uMegaE;        // ring: x what hangs at the centre (0 star, 1 fusion lamp, 2 gyro core), y how many spaceport piers stand off the hull
 #endif
 uniform int uMoonN;
-uniform vec4 uMoon[5];      // xyz: position (planet radius = 1), w: radius
-uniform vec4 uMoonP[5];     // kind, detail, feature, atmosphere
-uniform vec4 uMoonQ[5];     // lumpiness, seed, turn about the planet's axis
-uniform vec3 uMoonCol[5];   // colour A
-uniform vec3 uMoonCol2[5];  // colour B
-uniform vec3 uMoonCol3[5];  // atmosphere colour
+uniform vec4 uMoon[8];      // xyz: position (planet radius = 1), w: radius
+uniform vec4 uMoonP[8];     // kind, detail, feature, atmosphere
+uniform vec4 uMoonQ[8];     // lumpiness, seed, turn about the planet's axis
+uniform vec3 uMoonCol[8];   // colour A
+uniform vec3 uMoonCol2[8];  // colour B
+uniform vec3 uMoonCol3[8];  // atmosphere colour
+uniform vec4 uShip[48];     // ships in orbit: xyz position (planet radius = 1), w brightness (below 0: a red beacon)
+uniform int uShipN;
+uniform vec3 uShipCol;      // engine and hull light colour
 
 const float PI = 3.14159265;
 const mat3 M3 = mat3(0.00, 0.80, 0.60, -0.80, 0.36, -0.48, -0.60, -0.48, 0.64);
@@ -2038,12 +2041,12 @@ void main() {
 #endif
 
 #ifdef PM_MOONS
-  vec4 MC[5]; vec3 MA[5];
-  for (int i = 0; i < 5; i++) { MC[i] = vec4(0.0); MA[i] = vec3(0.0); if (i >= uMoonN) break;
+  vec4 MC[8]; vec3 MA[8];
+  for (int i = 0; i < 8; i++) { MC[i] = vec4(0.0); MA[i] = vec3(0.0); if (i >= uMoonN) break;
     // most pixels are nowhere near a moon, so shade it only close by (lumps reach 30% out, the glow 27% further, plus a pixel)
     if (length(uv - uMoon[i].xy) < uMoon[i].w * (1.0 + 0.3 * uMoonQ[i].x + ((uMoonP[i].x > 7.5 && uMoonP[i].x < 8.5) ? 0.3 : 0.0)) * (1.0 + 0.22 * uMoonP[i].w + 0.06) + px) shadeMoon(i, uv, px, MC[i], MA[i]);
   }
-  for (int i = 0; i < 5; i++) { if (i >= uMoonN) break; if (uMoon[i].z < 0.0) { col += MA[i]; col = mix(col, MC[i].rgb, MC[i].a); } }
+  for (int i = 0; i < 8; i++) { if (i >= uMoonN) break; if (uMoon[i].z < 0.0) { col += MA[i]; col = mix(col, MC[i].rgb, MC[i].a); } }
 #endif
 
   float r = length(uv);
@@ -2075,7 +2078,7 @@ void main() {
 #ifdef PM_MOONS
       // a moon between this bit of ring and the sun leaves a shadow on it, as Mimas does on Saturn's rings
       float moonSh = 1.0;
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 8; i++) {
         if (i >= uMoonN) break;
         vec3 dm = uMoon[i].xyz - hp;
         float t0 = dot(dm, uL);
@@ -2147,7 +2150,7 @@ void main() {
 #ifdef PM_MOONS
     // moon shadows: a moon between this point and the sun (anywhere in space, even behind the planet from here) darkens it
     float eclipse = 1.0;
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 8; i++) {
       if (i >= uMoonN) break;
       vec3 dm = uMoon[i].xyz - p;
       float t0 = dot(dm, uL);
@@ -2174,8 +2177,18 @@ void main() {
 #endif
 
 #ifdef PM_MOONS
-  for (int i = 0; i < 5; i++) { if (i >= uMoonN) break; if (uMoon[i].z >= 0.0) { col += MA[i]; col = mix(col, MC[i].rgb, MC[i].a); } }
+  for (int i = 0; i < 8; i++) { if (i >= uMoonN) break; if (uMoon[i].z >= 0.0) { col += MA[i]; col = mix(col, MC[i].rgb, MC[i].a); } }
 #endif
+  // ships in orbit: points of light with a soft halo, hidden while behind the planet
+  for (int i = 0; i < 48; i++) {
+    if (i >= uShipN) break;
+    vec4 s = uShip[i];
+    if (s.z < 0.0 && dot(s.xy, s.xy) < 1.0) continue;
+    float d = length(uv - s.xy);
+    if (d > 9.0 * px) continue;
+    vec3 sc = s.w < 0.0 ? vec3(1.0, 0.25, 0.18) : mix(vec3(1.0), uShipCol, 0.45);
+    col += sc * (smoothstep(2.0 * px, 0.8 * px, d) * 1.4 + 0.35 * exp(-d / (2.2 * px))) * abs(s.w);   // a couple of pixels wide so a ship reads at planet scale
+  }
 
   fragColor = vec4(finish(col), 1.0);
 }
@@ -2242,6 +2255,8 @@ const LABELS = {
 const KIND_LABELS = (t) => t === 'gas' ? LABELS.gas : t === 'locked' ? LABELS.locked : t === 'lava' ? LABELS.lava : (t === 'desert' || t === 'rock') ? LABELS.noSea : LABELS.rocky;
 const HAS_SEA = (t) => ['terran', 'ocean', 'swamp', 'city', 'ice', 'locked', 'ring'].includes(t);
 const IS_ROCKY = (t) => t !== 'gas';
+const MAX_MOONS = 8;   // the shader's moon arrays hold this many
+const MAX_SHIPS = 48;  // and the ship array this many
 
 const BASE = {
   seed: 7, sea: 0.5, mount: 0.5, wet: 0, scale: 1.0, ice: 0.4, clouds: 0.5, haze: 0.6, cities: 0, lUnder: 0, lSea: 0, lDark: 0, lCol: '#ff9e47', fStyle: 'domes', rad: 6371, plan: 0.5, land: null, lava: 0, craters: 0, scars: 0,
@@ -2250,7 +2265,7 @@ const BASE = {
   ring: { on: false, type: 'broad', inner: 1.24, width: 1.03, op: 0.8, gaps: 0.8, struct: 0.6, clump: 0.3, dust: 0.15, feeder: 0, seed: 1, spin: 0.3, c1: '#d8c8a4', c2: '#7a6a55' },
   moons: 1, moonSpeed: 0.6, moonList: [],
   mLayers: 2, mOpen: 0.35, mCap: 1, mWidth: 0.14, mWall: 0.05, mSpan: 0.7, mShade: 0.28, mPlate: 0.6, mLights: 0.5, mStar: 1, mSun: 'star', mPorts: 0.6, mLook: 0, mHull: '#8b9199', mAcc: '#e0a64a',
-  oOn: 0, oHt: 0.12, oWid: 0.045, oLit: 0.6, oHull: '#8b9199', oAcc: '#e0a64a', eOn: 0, eLon: -20, eHt: 0.9, eN: 1,
+  tLanes: 0, tFleet: 0, tBeacon: 0, oOn: 0, oHt: 0.12, oWid: 0.045, oLit: 0.6, oHull: '#8b9199', oAcc: '#e0a64a', eOn: 0, eLon: -20, eHt: 0.9, eN: 1,
 };
 // an old Population slider position (before preset code v2, when the left end was 10 million) as a position on the current scale; 0, "none", stays 0
 const L2N = (v) => v > 0 ? (5 + 6 * v) / 11 : 0;
@@ -2360,6 +2375,9 @@ const CONTROLS = [
   ['Orb', 'eLon', 'Cable position', -180, 180, 1, (p) => ELEV_OK(p.kind) && !!p.eOn, (v) => Math.round(v) + '°'],
   ['Orb', 'eHt', 'Cable height', 0.3, 3, 0.05, (p) => ELEV_OK(p.kind) && !!p.eOn, (v, p) => heightText(v, p)],
   ['Orb', 'oLit', 'Lights', 0, 1, 0.01, (p) => NOMEGA(p) && !!(p.oOn || p.eOn), (v) => v < 0.02 ? 'off' : Math.round(v * 100) + '%'],
+  ['Orb', 'tLanes', 'Ship traffic', 0, 1, 0.01, NOMEGA, (v) => v < 0.01 ? 'none' : Math.round(30 * v) + ' ships'],
+  ['Orb', 'tFleet', 'Parked fleet', 0, 1, 0.01, NOMEGA, (v) => v < 0.01 ? 'none' : Math.round(4 + 14 * v) + ' ships'],
+  ['Orb', 'tBeacon', 'Beacons', 0, 1, 0.01, NOMEGA, (v) => v < 0.01 ? 'none' : Math.round(4 + 12 * v) + ' round the equator'],
   // section, key, label, min, max, step, visible(P), readout
   ['Look', 'sea', 'Ocean level', 0, 1, 0.01, (p) => HAS_SEA(p.kind)],
   ['Look', 'wet', 'Wetness', -1, 1, 0.01, (p) => IS_ROCKY(p.kind) && p.kind !== 'rock' && p.kind !== 'lava'],
@@ -2393,7 +2411,7 @@ const CONTROLS = [
   ['Cam', 'sunH', 'Sun height', -60, 60, 1, () => true, (v) => v + '°'],
   ['Cam', 'zoom', 'Zoom', 0.5, 1.8, 0.01, () => true],
   ['Stars', 'starDens', 'Star density', 0, 1, 0.01, () => true, (v) => v < 0.01 ? 'none' : v < 0.3 ? 'sparse' : v < 0.7 ? 'normal' : v < 0.9 ? 'dense' : 'packed'],
-  ['Moon', 'moons', 'How many', 0, 5, 1, () => true],
+  ['Moon', 'moons', 'How many', 0, 8, 1, () => true],
 ];
 // a drum has no ground, sea or sky to adjust: the terrain, weather and palette controls belong to the ring and the planets
 for (const c of CONTROLS) if (c[0] === 'Look' || c[0] === 'Sky' || c[1] === 'cloudSpeed') { const f = c[6]; c[6] = (p) => f(p) && TERR(p); }
@@ -2594,7 +2612,7 @@ function moonHint(t) {
 // the planet keeps a list of up to 5 moons; the slider decides how many are shown, so lowering and raising it keeps your edits
 function ensureMoons(Q = P) {
   if (!Array.isArray(Q.moonList)) Q.moonList = [];
-  const n = clamp(Math.round(Q.moons) || 0, 0, 5);
+  const n = clamp(Math.round(Q.moons) || 0, 0, MAX_MOONS);
   while (Q.moonList.length < n) Q.moonList.push(genMoon(Q.seed, Q.kind, Q.moonList.length, null, moonStart(Q.ring)));
   return n;
 }
@@ -2801,7 +2819,7 @@ function syncRingUI() {
     const lab = key === 'feeder' ? T.L.feeder : (key in T.L ? T.L[key] : label);
     e.row.hidden = lab === null || (key === 'feeder' && P.moons < 1);
     if (lab) e.label.textContent = lab;
-    if (key === 'feeder') e.inp.max = Math.max(1, Math.min(5, Math.round(P.moons)));
+    if (key === 'feeder') e.inp.max = Math.max(1, Math.min(MAX_MOONS, Math.round(P.moons)));
     e.inp.value = P.ring[key]; e.out.textContent = e.fmt(P.ring[key]);
   }
   const sr = $('swRing'); sr.innerHTML = '';
@@ -2929,8 +2947,8 @@ function draw(w, h, tmul) {
     const wp = [U[0] * x + A[0] * y + W[0] * z, U[1] * x + A[1] * y + W[1] * z, U[2] * x + A[2] * y + W[2] * z];
     return { wp, m, a };
   }).sort((p, q) => p.wp[2] - q.wp[2]);
-  const mv = new Float32Array(20), mp = new Float32Array(20), mq = new Float32Array(20), mc1 = new Float32Array(15), mc2 = new Float32Array(15), mc3 = new Float32Array(15);
-  ms.length = Math.min(ms.length, 5);
+  const mv = new Float32Array(4 * MAX_MOONS), mp = new Float32Array(4 * MAX_MOONS), mq = new Float32Array(4 * MAX_MOONS), mc1 = new Float32Array(3 * MAX_MOONS), mc2 = new Float32Array(3 * MAX_MOONS), mc3 = new Float32Array(3 * MAX_MOONS);
+  ms.length = Math.min(ms.length, MAX_MOONS);
   ms.forEach((o, i) => {
     const m = o.m;
     mv.set([...o.wp, m.size], i * 4);
@@ -2951,6 +2969,31 @@ function draw(w, h, tmul) {
   gl.uniform1i(loc.uMoonN, ms.length);
   gl.uniform4fv(loc['uMoon'], mv); gl.uniform4fv(loc['uMoonP'], mp); gl.uniform4fv(loc['uMoonQ'], mq);
   gl.uniform3fv(loc['uMoonCol'], mc1); gl.uniform3fv(loc['uMoonCol2'], mc2); gl.uniform3fv(loc['uMoonCol3'], mc3);
+  // ships in orbit, in the planet's frame (x along U, y along the axis, z along W): lanes of traffic on tilted orbits, one parked
+  // fleet nose to tail, and toll or cordon beacons round the equator blinking red. The same seed always gives the same traffic.
+  const sv = new Float32Array(4 * MAX_SHIPS); let sn = 0;
+  const put = (x, y, z, w) => { if (sn >= MAX_SHIPS) return; sv.set([U[0] * x + A[0] * y + W[0] * z, U[1] * x + A[1] * y + W[1] * z, U[2] * x + A[2] * y + W[2] * z, w], sn * 4); sn++; };
+  const onOrbit = (rad, inc, node, a, w) => {
+    const x1 = Math.cos(a) * rad, y1 = Math.sin(a) * rad * Math.sin(inc), z1 = Math.sin(a) * rad * Math.cos(inc);
+    put(x1 * Math.cos(node) + z1 * Math.sin(node), y1, -x1 * Math.sin(node) + z1 * Math.cos(node), w);
+  };
+  if (!mega) {
+    const r = rng(hashStr('ships' + P.seed)), tm = T.moon * 0.35;
+    const nb = P.tBeacon > 0 ? Math.round(4 + 12 * P.tBeacon) : 0, nf = P.tFleet > 0 ? Math.round(4 + 14 * P.tFleet) : 0;
+    const nt = Math.min(Math.round(30 * (P.tLanes || 0)), MAX_SHIPS - nb - nf);
+    for (let i = 0; i < nb; i++) onOrbit(1.2, 0, 0, (i / nb) * 2 * Math.PI + tm * 0.2, -(0.35 + 0.65 * ((T.time * 0.6 + i * 0.37) % 1 < 0.5 ? 1 : 0)));
+    if (nf) {
+      const fr = 1.28 + 0.2 * r(), fi = (r() - 0.5) * 0.5, fn = r() * 6.283, fa = r() * 6.283 + tm * 0.5 / Math.pow(fr, 1.5);
+      for (let i = 0; i < nf; i++) onOrbit(fr + 0.022 * (i % 3), fi, fn, fa + 0.03 * Math.floor(i / 3), 0.55);
+    }
+    const nl = 2 + Math.round(2 * (P.tLanes || 0)), lanes = [];
+    for (let k = 0; k < nl; k++) lanes.push([1.1 + 0.4 * r(), (r() - 0.5) * 1.6, r() * 6.283, r() < 0.5 ? 1 : -1]);
+    for (let i = 0; i < nt; i++) {
+      const L = lanes[i % nl], a0 = r() * 6.283, sp = 0.8 + 0.6 * r();
+      onOrbit(L[0], L[1], L[2], a0 + L[3] * sp * tm * 3 / Math.pow(L[0], 1.5), 0.6 + 0.5 * r());
+    }
+  }
+  gl.uniform1i(loc.uShipN, sn); gl.uniform4fv(loc['uShip'], sv); gl.uniform3fv(loc.uShipCol, hex2rgb(P.oAcc));
   if (DI.on) {
     const pal = DI_PALS[DI.pal];
     gl.uniform4f(loc.uDiA, DI_PATS.findIndex((p) => p.id === DI.pat), pal.cols.length, DI.contrast, DI.bright);
@@ -3181,7 +3224,7 @@ function derive(s) {
   // moons and rings
   let nm = 0; const nmw = mo.match(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|many|dozens|\d+)\b/);
   if (/^none/.test(mo)) nm = 0; else if (nmw) nm = WORD_NUM[nmw[1]] || parseInt(nmw[1], 10) || 1; else if (/several|hundreds|moonlets/.test(mo)) nm = 4; else if (/moon/.test(mo)) nm = 1;
-  P2.moons = Math.min(5, nm);
+  P2.moons = Math.min(MAX_MOONS, nm);
   // real numbers, when a system has them: population in billions, radius in km, land in percent
   if (s.popB > 0) P2.cities = popPos(s.popB);
   if (s.radiusKm > 0) P2.rad = radRange(kind).clamp(s.radiusKm);
@@ -3229,16 +3272,16 @@ const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 
 /* ---------- presets: library, code, files ---------- */
 const slug = (t) => (t || 'planet').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48) || 'planet';
-const toCode = () => JSON.stringify({ format: 'praedra-planet', v: 2, name: P.name, params: Object.assign({}, P, { moonList: P.moonList.slice(0, 5) }) });
+const toCode = () => JSON.stringify({ format: 'praedra-planet', v: 2, name: P.name, params: Object.assign({}, P, { moonList: P.moonList.slice(0, MAX_MOONS) }) });
 // pasted presets are untrusted: clamp every number to its slider range, check colours, fill gaps from the defaults
 const PARAM_RANGE = {
   sea: [0, 1], wet: [-1, 1], mount: [0, 1], scale: [0.5, 2.5], ice: [0, 1], clouds: [0, 1], haze: [0, 1.3], cities: [0, 1], lUnder: [0, 1], lSea: [0, 1], lDark: [0, 1], rad: [50, 75000], plan: [0, 1], land: [0.02, 1], lava: [0, 1], craters: [0, 1], scars: [0, 1],
   bands: [3, 20, 1], turb: [0, 1.4], storms: [0, 6, 1], stormSize: [0.2, 1.6], spin: [-1, 1], cloudSpeed: [-1, 1], flow: [0, 1.5], moonSpeed: [0, 2],
-  tilt: [6, 85], roll: [-90, 90], sun: [-180, 180], sunH: [-60, 60], zoom: [0.5, 1.8], starDens: [0, 1], moons: [0, 5, 1],
+  tilt: [6, 85], roll: [-90, 90], sun: [-180, 180], sunH: [-60, 60], zoom: [0.5, 1.8], starDens: [0, 1], moons: [0, 8, 1],
   mLayers: [1, 4, 1], mOpen: [0, 0.9], mCap: [0.12, 1], mWidth: [0.06, 0.6], mWall: [0, 0.12], mSpan: [0.25, 1.3], mShade: [0, 0.6], mPlate: [0, 1], mLights: [0, 1], mStar: [0, 1.5], mPorts: [0, 1], mLook: [0, 1],
-  oOn: [0, 1, 1], oHt: [0.04, 0.3], oWid: [0.01, 0.1], oLit: [0, 1], eOn: [0, 1, 1], eLon: [-180, 180], eHt: [0.3, 3], eN: [1, 4, 1],
+  tLanes: [0, 1], tFleet: [0, 1], tBeacon: [0, 1], oOn: [0, 1, 1], oHt: [0.04, 0.3], oWid: [0.01, 0.1], oLit: [0, 1], eOn: [0, 1, 1], eLon: [-180, 180], eHt: [0.3, 3], eN: [1, 4, 1],
 };
-const RING_RANGE = { inner: [1.1, 2.8], width: [0.04, 2.6], op: [0.1, 1], gaps: [0, 1], struct: [0, 1], clump: [0, 1], dust: [0, 1], feeder: [0, 5, 1], seed: [0, 9999, 1], spin: [-1, 1] };
+const RING_RANGE = { inner: [1.1, 2.8], width: [0.04, 2.6], op: [0.1, 1], gaps: [0, 1], struct: [0, 1], clump: [0, 1], dust: [0, 1], feeder: [0, 8, 1], seed: [0, 9999, 1], spin: [-1, 1] };
 const isHex = (c) => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
 const clampNum = (v, r, dflt) => { v = typeof v === 'string' ? parseFloat(v) : v; if (typeof v !== 'number' || !isFinite(v)) return dflt; v = Math.min(r[1], Math.max(r[0], v)); return r[2] ? Math.round(v) : v; };
 function sanitize(p, d) {
@@ -3264,7 +3307,7 @@ function sanitize(p, d) {
   out.mSun = CENTRES.some((c) => c.id === p.mSun) ? p.mSun : d.mSun;
   out.fStyle = FSTYLES.includes(p.fStyle) ? p.fStyle : d.fStyle;
   if (Array.isArray(p.moonList)) {
-    out.moonList = p.moonList.slice(0, 5).map((m, i) => sanitizeMoon(m && typeof m === 'object' ? m : {}, genMoon(out.seed, out.kind, i, null, moonStart(out.ring))));
+    out.moonList = p.moonList.slice(0, MAX_MOONS).map((m, i) => sanitizeMoon(m && typeof m === 'object' ? m : {}, genMoon(out.seed, out.kind, i, null, moonStart(out.ring))));
     if (p.moons === undefined) out.moons = out.moonList.length;
   }
   out.name = typeof p.name === 'string' ? p.name.slice(0, 60) : '';

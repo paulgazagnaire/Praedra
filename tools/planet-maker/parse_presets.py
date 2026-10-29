@@ -15,7 +15,7 @@ assert len(pre) == len(rows) and all(p['name'] in rows for p in pre), 'system li
 dump = lambda v: json.dumps(v, sort_keys=True, separators=(',', ':'))
 params = {p['name']: {k: v for k, v in p['preset']['params'].items() if k != 'name'} for p in pre}
 # keys only some presets set: a preset without one means the Planet Maker's default, never the most common value among those set
-OPTIONAL = {'lUnder': 0, 'lSea': 0, 'lDark': 0, 'lCol': '#ff9e47', 'fStyle': 'domes'}
+OPTIONAL = {'lUnder': 0, 'lSea': 0, 'lDark': 0, 'lCol': '#ff9e47', 'fStyle': 'domes', 'tLanes': 0, 'tFleet': 0, 'tBeacon': 0}
 for p in pre:
     pp = params[p['name']]
     for k, v in OPTIONAL.items(): pp.setdefault(k, v)
