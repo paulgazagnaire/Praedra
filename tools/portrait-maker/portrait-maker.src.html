@@ -1,0 +1,707 @@
+<title>Portrait Maker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one working screen, settings column on the left, a large stage with view tabs on the right; the game's near-black look (layout E) */
+:root {
+  --bg: #0b0c0e;        /* page */
+  --panel: #131418;     /* settings column and floating pieces */
+  --raise: #1b1d22;     /* inputs, chips, hovered rows */
+  --line: #2a2d34;      /* edges */
+  --fg: #e7e6e1;        /* text */
+  --dim: #8d9099;       /* captions */
+  --accent: #e3a24a;    /* the one warm accent: active chip, focus, primary action */
+  --remove: rgba(214, 64, 52, 0.55);  /* cut-out view: the part that is removed */
+  --font-text: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font: 14px/1.45 var(--font-text); }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app { display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 14px; height: 100%;
+  padding-block: 14px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow-y: auto; min-height: 0; }
+.brand { padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
+.brand h1 { margin: 0; font: 600 16px/1.2 var(--font-text); letter-spacing: 0.01em; }
+.brand p { margin: 4px 0 0; color: var(--dim); font-size: 12.5px; }
+.sec { padding: 12px 16px 14px; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
+.sec:last-child { border-bottom: 0; }
+.sec h2 { margin: 0; font: 500 11px/1 var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
+.row { display: grid; grid-template-columns: 112px minmax(0, 1fr) 46px; align-items: center; gap: 8px; }
+.row > label { color: var(--dim); font-size: 12.5px; }
+.row output { font: 12px var(--font-mono); color: var(--dim); text-align: right; font-variant-numeric: tabular-nums; }
+.row.two { grid-template-columns: 112px minmax(0, 1fr); }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+input[type=text], select { background: var(--raise); border: 1px solid var(--line); border-radius: 5px; padding: 5px 8px; width: 100%; min-width: 0; }
+input[type=color] { width: 100%; height: 28px; background: var(--raise); border: 1px solid var(--line); border-radius: 5px; padding: 2px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { background: var(--raise); border: 1px solid var(--line); border-radius: 5px; padding: 5px 9px; cursor: pointer; font: 12px var(--font-mono); }
+.chip:hover { border-color: #3c4049; }
+.chip[aria-pressed=true] { border-color: var(--accent); color: var(--accent); }
+.btn { background: var(--raise); border: 1px solid var(--line); border-radius: 5px; padding: 7px 10px; cursor: pointer; font: 12px var(--font-mono); text-align: center; }
+.btn:hover { border-color: #3c4049; }
+.btn.primary { border-color: var(--accent); color: var(--accent); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.note { margin: 0; color: var(--dim); font-size: 12px; }
+.note b { color: var(--fg); font-weight: 500; }
+
+.drop { border: 1px dashed #3c4049; border-radius: 6px; padding: 12px; text-align: center; color: var(--dim); font-size: 12.5px; cursor: pointer; }
+.drop:hover, .drop.over { border-color: var(--accent); color: var(--fg); }
+.strip { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.strip button { flex: 0 0 auto; width: 46px; height: 58px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: var(--raise) center/cover no-repeat; cursor: pointer; }
+.strip button[aria-pressed=true] { border-color: var(--accent); }
+
+.stage { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 10px; min-width: 0; min-height: 0; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.view { position: relative; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; display: grid; place-items: center; min-height: 0; }
+.view canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+.view .checker { background: repeating-conic-gradient(#17181c 0% 25%, #101114 0% 50%) 50% / 16px 16px; }
+#cutCv { touch-action: none; cursor: crosshair; }
+.status { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--dim); font: 12px var(--font-mono); min-height: 18px; }
+.status .busy { color: var(--accent); }
+
+/* mock game screens */
+.mock { display: none; }
+.view.mock-on > canvas { display: none; }
+.view.mock-on .mock { display: grid; }
+.report { grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-items: start; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; max-width: min(760px, 94%); }
+.report .eyebrow, .card .eyebrow { font: 500 11px var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+.report h3, .card h3 { margin: 6px 0 4px; font: 600 18px/1.25 var(--font-text); }
+.report p, .card p { margin: 0 0 8px; color: var(--dim); font-size: 13px; max-width: 46ch; }
+.report .sample, .card .sample { font: 11px var(--font-mono); color: #5d616a; }
+.card { grid-template-columns: minmax(0, 1fr); gap: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; width: min(340px, 94%); }
+.mockpic { display: block; border: 1px solid var(--line); border-radius: 4px; image-rendering: pixelated; max-width: 100%; }
+
+@media (max-width: 760px) {
+  .app { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .panel { overflow: visible; }
+  .view { min-height: 70vw; }
+  .report { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="app">
+  <aside class="panel" aria-label="Settings">
+    <div class="brand">
+      <h1>Portrait Maker</h1>
+      <p>Cut a character out of a picture, then dither the character and the background as two separate layers.</p>
+    </div>
+
+    <section class="sec" aria-labelledby="h-pic">
+      <h2 id="h-pic">Picture</h2>
+      <label class="drop" id="drop" for="file">Drop portraits here, paste one, or click to choose. Several at once is fine.</label>
+      <input type="file" id="file" accept="image/*" multiple hidden>
+      <div class="strip" id="strip" aria-label="Loaded pictures"></div>
+      <div class="row two"><label for="name">Name</label><input type="text" id="name" autocomplete="off"></div>
+      <div class="row two"><label for="role">Line under name</label><input type="text" id="role" autocomplete="off"></div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-cut">
+      <h2 id="h-cut">Cut-out</h2>
+      <div class="chips" id="cutMode" role="group" aria-label="How to find the character"></div>
+      <p class="note" id="cutNote"></p>
+      <div class="row" data-for="key"><label for="keyTol">Backdrop match</label><input type="range" id="keyTol" min="0.02" max="0.5" step="0.01"><output for="keyTol"></output></div>
+      <div class="row"><label for="grow">Grow or shrink</label><input type="range" id="grow" min="-8" max="8" step="1"><output for="grow"></output></div>
+      <div class="row"><label for="soft">Edge softness</label><input type="range" id="soft" min="0" max="6" step="0.5"><output for="soft"></output></div>
+      <div class="row two"><label for="edges">Follow hair edges</label><input type="checkbox" id="edges" style="justify-self:start"></div>
+      <div class="chips" id="brushMode" role="group" aria-label="Brush"></div>
+      <div class="row"><label for="brush">Brush size</label><input type="range" id="brush" min="4" max="120" step="1"><output for="brush"></output></div>
+      <div class="btns"><button class="btn" id="undo" type="button">Undo stroke</button><button class="btn" id="clearPaint" type="button">Clear brush</button></div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-di">
+      <h2 id="h-di">Dither</h2>
+      <div class="chips" id="diPat" role="group" aria-label="Pattern"></div>
+      <div class="chips" id="diPal" role="group" aria-label="Colours"></div>
+      <div class="row" data-for="custom"><label for="c0">Custom colours</label>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px"><input type="color" id="c0" aria-label="Darkest"><input type="color" id="c1" aria-label="Dark"><input type="color" id="c2" aria-label="Light"><input type="color" id="c3" aria-label="Lightest"></div><span></span></div>
+      <div class="row" data-for="own"><label for="levels">Steps per colour</label><input type="range" id="levels" min="2" max="6" step="1"><output for="levels"></output></div>
+      <div class="row"><label for="dots">Detail</label><input type="range" id="dots" min="96" max="640" step="8"><output for="dots"></output></div>
+      <div class="row"><label for="dot">Dot size</label><input type="range" id="dot" min="1" max="6" step="1"><output for="dot"></output></div>
+      <div class="row"><label for="contrast">Contrast</label><input type="range" id="contrast" min="0.5" max="2.5" step="0.01"><output for="contrast"></output></div>
+      <div class="row"><label for="bright">Brightness</label><input type="range" id="bright" min="-0.4" max="0.4" step="0.01"><output for="bright"></output></div>
+      <div class="row two"><label for="dEdge">Dithered outline</label><input type="checkbox" id="dEdge" style="justify-self:start"></div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-scene">
+      <h2 id="h-scene">Setting</h2>
+      <div class="chips" id="bgMode" role="group" aria-label="Behind the character"></div>
+      <div class="row" data-for="plain"><label for="plain">Colour</label><input type="color" id="plain"><span></span></div>
+      <div class="row two" data-for="other"><label for="otherFile">Picture</label><button class="btn" type="button" id="otherBtn">Choose a setting picture</button></div>
+      <input type="file" id="otherFile" accept="image/*" hidden>
+      <div class="row"><label for="bgDim">Setting brightness</label><input type="range" id="bgDim" min="-0.5" max="0.2" step="0.01"><output for="bgDim"></output></div>
+      <div class="row"><label for="cScale">Character size</label><input type="range" id="cScale" min="0.5" max="1.6" step="0.01"><output for="cScale"></output></div>
+      <div class="row"><label for="cX">Left or right</label><input type="range" id="cX" min="-0.6" max="0.6" step="0.01"><output for="cX"></output></div>
+      <div class="row"><label for="cY">Up or down</label><input type="range" id="cY" min="-0.4" max="0.6" step="0.01"><output for="cY"></output></div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-save">
+      <h2 id="h-save">Save</h2>
+      <div class="btns">
+        <button class="btn" type="button" data-save="character">Character</button>
+        <button class="btn" type="button" data-save="background">Background</button>
+        <button class="btn" type="button" data-save="scene">Character in setting</button>
+        <button class="btn" type="button" data-save="clean">Clean cut-out</button>
+      </div>
+      <button class="btn primary" type="button" data-save="zip">All four as one zip</button>
+      <p class="note" id="saveNote">Dithered files have one pixel per dot times the dot size. The clean cut-out is not dithered, at full size, for a game that dithers the whole screen itself.</p>
+    </section>
+  </aside>
+
+  <section class="stage" aria-label="Preview">
+    <div class="tabs" id="tabs" role="tablist"></div>
+    <div class="view" id="view">
+      <canvas id="cutCv" aria-label="Cut-out: red is removed. Draw to fix it."></canvas>
+      <canvas id="outCv" aria-label="Dithered preview"></canvas>
+      <div class="mock report" id="mockReport">
+        <canvas class="mockpic" id="repCv"></canvas>
+        <div>
+          <div class="eyebrow">Mission report · Day 214</div>
+          <h3 id="repName"></h3>
+          <p>Reached the yard on Navalia under a crew pass and left a slow fault in the main hoist. The yard loses a month of work. No one followed.</p>
+          <div class="sample">Sample text, for the look only</div>
+        </div>
+      </div>
+      <div class="mock card" id="mockCard">
+        <canvas class="mockpic" id="cardCv"></canvas>
+        <div>
+          <div class="eyebrow">Database</div>
+          <h3 id="cardName"></h3>
+          <p id="cardRole"></p>
+          <div class="sample">Sample layout, for the look only</div>
+        </div>
+      </div>
+    </div>
+    <div class="status" id="status" aria-live="polite"></div>
+  </section>
+</div>
+
+<script type="text/plain" id="sampleData">%%SAMPLE%%</script>
+<script type="text/plain" id="modelData">%%MODEL%%</script>
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+const WORK_MAX = 1024;   // the longest side a picture is worked on at
+
+/* ---------- settings ---------- */
+const DI_PATS = [
+  { id: 'grain', label: 'Grain' }, { id: 'fine', label: 'Fine grid' }, { id: 'coarse', label: 'Coarse grid' },
+  { id: 'halftone', label: 'Halftone' }, { id: 'atkinson', label: 'Atkinson' }, { id: 'floyd', label: 'Floyd' },
+];
+const DI_PALS = {
+  mono: { label: 'Black and white', cols: ['#040406', '#f1ede2'] },
+  cold: { label: 'Cold', cols: ['#04060c', '#1b3350', '#6e9bc0', '#e6eff6'] },
+  warm: { label: 'Warm', cols: ['#0b0604', '#5a2913', '#cf7339', '#f6e1bf'] },
+  own: { label: 'Picture colours', cols: [] },
+  custom: { label: 'Custom', cols: [] },
+};
+const DEF = { pat: 'atkinson', pal: 'cold', custom: ['#06070a', '#2b3a33', '#a8a07a', '#efe9d6'], levels: 3, dots: 320, dot: 2, contrast: 1.2, bright: 0, dEdge: true,
+  bgMode: 'own', plain: '#101318', bgDim: -0.12, cScale: 1, cX: 0, cY: 0, brushSize: 28 };
+const S = Object.assign({}, DEF, { custom: DEF.custom.slice() });
+try { const o = JSON.parse(localStorage.getItem('portrait_maker') || '{}'); for (const k in DEF) if (typeof o[k] === typeof DEF[k]) S[k] = o[k]; } catch (e) {}
+if (!DI_PATS.some((p) => p.id === S.pat)) S.pat = DEF.pat;
+if (!DI_PALS[S.pal]) S.pal = DEF.pal;
+const saveS = () => { try { localStorage.setItem('portrait_maker', JSON.stringify(S)); } catch (e) {} };
+
+const CUT_MODES = [
+  { id: 'auto', label: 'Find the person', note: 'A small model finds the person. It knows people, not aliens or machines; fix what it misses with the brush.' },
+  { id: 'key', label: 'Plain backdrop', note: 'Removes the backdrop colour it sees at the edges of the picture. Best when the portrait was made on a flat backdrop.' },
+  { id: 'alpha', label: 'Already cut out', note: 'Uses the transparency the file already has.' },
+  { id: 'none', label: 'No cut-out', note: 'The whole picture is the character; there is no background layer.' },
+];
+const BRUSH = [{ id: 'keep', label: 'Brush: keep' }, { id: 'remove', label: 'Brush: remove' }];
+const BG_MODES = [{ id: 'own', label: 'Its own background' }, { id: 'plain', label: 'Plain colour' }, { id: 'other', label: 'Another picture' }, { id: 'none', label: 'Nothing' }];
+const TABS = [{ id: 'cut', label: 'Cut-out' }, { id: 'char', label: 'Character' }, { id: 'bg', label: 'Background' }, { id: 'scene', label: 'Character in setting' }, { id: 'report', label: 'Mission report' }, { id: 'card', label: 'Database entry' }];
+let tab = 'scene', brushMode = 'keep';
+
+/* ---------- pictures ---------- */
+// each picture keeps its own cut-out; the dither look is shared so every portrait matches
+const pics = []; let cur = null; let otherPic = null;
+function newPic(img, name) {
+  const s = Math.min(1, WORK_MAX / Math.max(img.naturalWidth, img.naturalHeight));
+  const W = Math.max(8, Math.round(img.naturalWidth * s)), H = Math.max(8, Math.round(img.naturalHeight * s));
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0, W, H);
+  const data = g.getImageData(0, 0, W, H).data;
+  let hasAlpha = false; for (let i = 3; i < data.length; i += 4) if (data[i] < 250) { hasAlpha = true; break; }
+  const thumb = document.createElement('canvas'); thumb.width = 92; thumb.height = Math.round(92 * H / W); thumb.getContext('2d').drawImage(c, 0, 0, thumb.width, thumb.height);
+  return { name: name.replace(/\.[a-z0-9]+$/i, '').replace(/[-_]+/g, ' ').trim(), role: '', img, canvas: c, W, H, data, hasAlpha,
+    mode: hasAlpha ? 'alpha' : 'auto', keyTol: 0.16, grow: 0, soft: 1.5, edges: true,
+    auto: null, paint: new Float32Array(W * H), undo: [], alpha: null, bg: null, thumb: thumb.toDataURL() };
+}
+function loadImageURL(url) { return new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error('That file is not a picture this browser can read.')); im.src = url; }); }
+async function addFiles(files) {
+  let first = null;
+  for (const f of files) {
+    if (!f.type.startsWith('image/')) continue;
+    const url = URL.createObjectURL(f);
+    try { const p = newPic(await loadImageURL(url), f.name || 'portrait'); pics.push(p); first = first || p; }
+    catch (e) { setStatus(e.message); }
+  }
+  if (first) { select(first); renderStrip(); }
+}
+function renderStrip() {
+  const el = $('strip'); el.textContent = '';
+  for (const p of pics) {
+    const b = document.createElement('button'); b.type = 'button'; b.title = p.name; b.setAttribute('aria-label', p.name);
+    b.style.backgroundImage = `url(${p.thumb})`; b.setAttribute('aria-pressed', String(p === cur));
+    b.addEventListener('click', () => { select(p); renderStrip(); });
+    el.appendChild(b);
+  }
+  el.hidden = pics.length < 2;
+}
+function select(p) {
+  cur = p; $('name').value = p.name; $('role').value = p.role;
+  syncCutUI();
+  if (p.mode === 'auto' && !p.auto) runAuto(p); else rebuildMask();
+}
+
+/* ---------- the person finder (MediaPipe selfie segmenter, model inlined, engine fetched next to the page) ---------- */
+let segP = null, segFail = '';
+function getSegmenter() {
+  if (segP) return segP;
+  segP = (async () => {
+    const vision = await import(MP + '/vision_bundle.mjs');
+    const b64 = $('modelData').textContent.trim(), bin = atob(b64), buf = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+    const fileset = { wasmLoaderPath: MP + '/wasm/vision_wasm_internal.js', wasmBinaryPath: new URL('vision_wasm_internal.wasm', location.href).href };
+    return vision.ImageSegmenter.createFromOptions(fileset, { baseOptions: { modelAssetBuffer: buf, delegate: 'CPU' }, runningMode: 'IMAGE', outputConfidenceMasks: true, outputCategoryMask: false });
+  })();
+  segP.catch((e) => { segFail = String(e && e.message || e); });
+  return segP;
+}
+async function runAuto(p) {
+  setStatus('Finding the person…', true);
+  try {
+    const seg = await getSegmenter();
+    const r = seg.segment(p.canvas);
+    const m = r.confidenceMasks[r.confidenceMasks.length - 1];
+    const f = m.getAsFloat32Array(), mw = m.width, mh = m.height;
+    // the mask comes back at the model's or the picture's size: sample it to ours
+    const out = new Float32Array(p.W * p.H);
+    for (let y = 0; y < p.H; y++) for (let x = 0; x < p.W; x++) {
+      const sx = Math.min(mw - 1, (x + 0.5) * mw / p.W - 0.5), sy = Math.min(mh - 1, (y + 0.5) * mh / p.H - 0.5);
+      const x0 = Math.max(0, Math.floor(sx)), y0 = Math.max(0, Math.floor(sy)), x1 = Math.min(mw - 1, x0 + 1), y1 = Math.min(mh - 1, y0 + 1), fx = Math.max(0, sx - x0), fy = Math.max(0, sy - y0);
+      out[y * p.W + x] = (f[y0 * mw + x0] * (1 - fx) + f[y0 * mw + x1] * fx) * (1 - fy) + (f[y1 * mw + x0] * (1 - fx) + f[y1 * mw + x1] * fx) * fy;
+    }
+    r.close && r.close();
+    // some builds return the background as the confidence; the corners must be background
+    const c = (out[0] + out[p.W - 1] + out[(p.H - 1) * p.W] + out[p.W * p.H - 1]) / 4, mid = out[((p.H * 0.45) | 0) * p.W + (p.W >> 1)];
+    if (c > mid) for (let i = 0; i < out.length; i++) out[i] = 1 - out[i];
+    p.auto = out;
+  } catch (e) {
+    p.auto = null; p.mode = 'key';
+    setStatus('The person finder could not start here (' + (segFail || e.message || e) + '). Switched to Plain backdrop; the brush still works.');
+    syncCutUI();
+  }
+  if (p === cur) rebuildMask();
+}
+
+/* ---------- cut-out mask ---------- */
+function boxBlur(src, W, H, r) {
+  if (r < 1) return src.slice();
+  const tmp = new Float32Array(W * H), out = new Float32Array(W * H), d = 2 * r + 1;
+  for (let y = 0; y < H; y++) { let s = 0; const o = y * W;
+    for (let x = -r; x <= r; x++) s += src[o + Math.min(W - 1, Math.max(0, x))];
+    for (let x = 0; x < W; x++) { tmp[o + x] = s / d; s += src[o + Math.min(W - 1, x + r + 1)] - src[o + Math.max(0, x - r)]; } }
+  for (let x = 0; x < W; x++) { let s = 0;
+    for (let y = -r; y <= r; y++) s += tmp[Math.min(H - 1, Math.max(0, y)) * W + x];
+    for (let y = 0; y < H; y++) { out[y * W + x] = s / d; s += tmp[Math.min(H - 1, y + r + 1) * W + x] - tmp[Math.max(0, y - r) * W + x]; } }
+  return out;
+}
+function gray(p) { const g = new Float32Array(p.W * p.H), d = p.data; for (let i = 0; i < g.length; i++) g[i] = (0.299 * d[4 * i] + 0.587 * d[4 * i + 1] + 0.114 * d[4 * i + 2]) / 255; return g; }
+// guided filter: the soft mask snaps to edges in the picture itself, which keeps loose hair
+function guided(I, P, W, H, r, eps) {
+  const n = W * H, IP = new Float32Array(n), II = new Float32Array(n);
+  for (let i = 0; i < n; i++) { IP[i] = I[i] * P[i]; II[i] = I[i] * I[i]; }
+  const mI = boxBlur(I, W, H, r), mP = boxBlur(P, W, H, r), mIP = boxBlur(IP, W, H, r), mII = boxBlur(II, W, H, r);
+  const a = new Float32Array(n), b = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const v = mII[i] - mI[i] * mI[i], cv = mIP[i] - mI[i] * mP[i]; a[i] = cv / (v + eps); b[i] = mP[i] - a[i] * mI[i]; }
+  const ma = boxBlur(a, W, H, r), mb = boxBlur(b, W, H, r), q = new Float32Array(n);
+  for (let i = 0; i < n; i++) q[i] = ma[i] * I[i] + mb[i];
+  return q;
+}
+function keyMask(p) {
+  // the backdrop colour is the median of the picture's border
+  const d = p.data, W = p.W, H = p.H, rs = [], gs = [], bs = [];
+  const take = (x, y) => { const i = 4 * (y * W + x); rs.push(d[i]); gs.push(d[i + 1]); bs.push(d[i + 2]); };
+  for (let x = 0; x < W; x += 2) { take(x, 0); take(x, 1); take(x, H - 1); }
+  for (let y = 0; y < H; y += 2) { take(0, y); take(W - 1, y); take(1, y); take(W - 2, y); }
+  const med = (a) => { a.sort((u, v) => u - v); return a[a.length >> 1]; };
+  const k = [med(rs), med(gs), med(bs)], out = new Float32Array(W * H), t = p.keyTol * 255 * 1.732, sw = 0.06 * 255;
+  for (let i = 0; i < W * H; i++) { const dr = d[4 * i] - k[0], dg = d[4 * i + 1] - k[1], db = d[4 * i + 2] - k[2]; const dist = Math.sqrt(dr * dr + dg * dg + db * db);
+    out[i] = Math.min(1, Math.max(0, (dist - t) / sw)); }
+  return out;
+}
+function rebuildMask() {
+  const p = cur; if (!p) return;
+  const W = p.W, H = p.H, n = W * H, sc = Math.max(W, H) / 1024;
+  let m;
+  if (p.mode === 'none') m = new Float32Array(n).fill(1);
+  else if (p.mode === 'alpha') { m = new Float32Array(n); for (let i = 0; i < n; i++) m[i] = p.data[4 * i + 3] / 255; }
+  else if (p.mode === 'key') m = keyMask(p);
+  else m = p.auto ? p.auto.slice() : new Float32Array(n).fill(1);
+  if (p.mode !== 'none' && p.mode !== 'alpha') {
+    if (p.edges) m = guided(gray(p), m, W, H, Math.max(2, Math.round(6 * sc)), 0.0008);
+    if (p.grow) { const r = Math.round(Math.abs(p.grow) * sc) || 1, bl = boxBlur(m, W, H, r); for (let i = 0; i < n; i++) m[i] = p.grow > 0 ? Math.min(1, bl[i] * 2) : Math.max(0, bl[i] * 2 - 1); }
+    for (let i = 0; i < n; i++) m[i] = Math.min(1, Math.max(0, (m[i] - 0.5) * 2.2 + 0.5));
+    if (p.soft > 0) m = boxBlur(m, W, H, Math.round(p.soft * sc));
+  }
+  p.prePaint = m; m = new Float32Array(n);
+  for (let i = 0; i < n; i++) m[i] = Math.min(1, Math.max(0, p.prePaint[i] + p.paint[i]));
+  p.alpha = m;
+  p.bg = p.mode === 'none' ? null : fillBehind(p);
+  setStatus('');
+  schedule();
+}
+// the background layer: the picture with the character's place filled from the colours around it (push-pull)
+function fillBehind(p) {
+  const W = p.W, H = p.H, n = W * H, grown = boxBlur(p.alpha, W, H, Math.max(2, Math.round(Math.max(W, H) / 170)));
+  const lv = []; let w = W, h = H;
+  let C = new Float32Array(n * 3), K = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const k = Math.max(0, 1 - grown[i] * 2.5); K[i] = k; C[3 * i] = p.data[4 * i] * k; C[3 * i + 1] = p.data[4 * i + 1] * k; C[3 * i + 2] = p.data[4 * i + 2] * k; }
+  lv.push({ w, h, C, K });
+  while (w > 1 || h > 1) {
+    const w2 = Math.max(1, (w + 1) >> 1), h2 = Math.max(1, (h + 1) >> 1), C2 = new Float32Array(w2 * h2 * 3), K2 = new Float32Array(w2 * h2);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const s = y * w + x, t = (y >> 1) * w2 + (x >> 1); K2[t] += K[s]; C2[3 * t] += C[3 * s]; C2[3 * t + 1] += C[3 * s + 1]; C2[3 * t + 2] += C[3 * s + 2]; }
+    for (let t = 0; t < w2 * h2; t++) { const k = K2[t]; if (k > 1) { C2[3 * t] /= k; C2[3 * t + 1] /= k; C2[3 * t + 2] /= k; K2[t] = 1; } }
+    w = w2; h = h2; C = C2; K = K2; lv.push({ w, h, C, K });
+  }
+  // pull: every level fills what it lacks from the coarser level above it, sampled smoothly so no blocks show
+  const bil = (u, fx, fy, c) => {
+    fx = Math.min(u.w - 1, Math.max(0, fx)); fy = Math.min(u.h - 1, Math.max(0, fy));
+    const x0 = Math.floor(fx), y0 = Math.floor(fy), x1 = Math.min(u.w - 1, x0 + 1), y1 = Math.min(u.h - 1, y0 + 1), ax = fx - x0, ay = fy - y0, o = u.out;
+    return (o[3 * (y0 * u.w + x0) + c] * (1 - ax) + o[3 * (y0 * u.w + x1) + c] * ax) * (1 - ay) + (o[3 * (y1 * u.w + x0) + c] * (1 - ax) + o[3 * (y1 * u.w + x1) + c] * ax) * ay;
+  };
+  let up = null;
+  for (let l = lv.length - 1; l >= 0; l--) {
+    const L = lv[l], out = new Float32Array(L.w * L.h * 3);
+    for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) {
+      const i = y * L.w + x, k = Math.min(1, L.K[i]);
+      for (let c = 0; c < 3; c++) {
+        const own = L.K[i] > 1e-6 ? L.C[3 * i + c] / Math.max(L.K[i], 1) : 0;
+        const coarse = up ? bil(up, (x + 0.5) / 2 - 0.5, (y + 0.5) / 2 - 0.5, c) : own;
+        out[3 * i + c] = L.K[i] >= 1 ? L.C[3 * i + c] : L.C[3 * i + c] + (1 - k) * coarse;
+      }
+    }
+    up = { w: L.w, h: L.h, out };
+  }
+  const img = new ImageData(W, H);
+  for (let i = 0; i < n; i++) { img.data[4 * i] = up.out[3 * i]; img.data[4 * i + 1] = up.out[3 * i + 1]; img.data[4 * i + 2] = up.out[3 * i + 2]; img.data[4 * i + 3] = 255; }
+  // soften the filled area so it reads as out of focus rather than smeared
+  const r = Math.max(2, Math.round(Math.max(W, H) / 120)), K0 = lv[0].K;
+  const ch = [0, 1, 2].map((c) => { const a = new Float32Array(n); for (let i = 0; i < n; i++) a[i] = up.out[3 * i + c]; return boxBlur(boxBlur(a, W, H, r), W, H, r); });
+  for (let i = 0; i < n; i++) { const k = Math.min(1, K0[i]); for (let c = 0; c < 3; c++) img.data[4 * i + c] = up.out[3 * i + c] * k + ch[c][i] * (1 - k); }
+  const c = document.createElement('canvas'); c.width = W; c.height = H; c.getContext('2d').putImageData(img, 0, 0);
+  return c;
+}
+
+/* ---------- the dither ---------- */
+/* The blue noise is made exactly as in tools/planet-maker, tools/galaxy-maker and the game (godot/Scripts/GalaxyLook.cs): change one, change all. */
+function makeBlueNoise(N) {
+  const n = N * N, R = 6, sig2 = 2 * 1.9 * 1.9, ker = [];
+  for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) ker.push([dx, dy, Math.exp(-(dx * dx + dy * dy) / sig2)]);
+  const on = new Uint8Array(n), E = new Float32Array(n), rank = new Int32Array(n);
+  const add = (i, sgn) => { const x = i % N, y = (i / N) | 0; for (const [dx, dy, w] of ker) E[((y + dy + N) % N) * N + ((x + dx + N) % N)] += sgn * w; };
+  let seed = 12345; const rnd = () => (seed = (seed * 1103515245 + 12345) >>> 0) / 4294967296;
+  let ones = 0; while (ones < n / 10) { const i = (rnd() * n) | 0; if (!on[i]) { on[i] = 1; add(i, 1); ones++; } }
+  const pick = (want, best) => { let bi = -1, bv = best ? -1e9 : 1e9; for (let i = 0; i < n; i++) if (on[i] === want && (best ? E[i] > bv : E[i] < bv)) { bv = E[i]; bi = i; } return bi; };
+  for (let guard = 0; guard < n; guard++) { const c = pick(1, true); on[c] = 0; add(c, -1); const v = pick(0, false); if (v === c) { on[c] = 1; add(c, 1); break; } on[v] = 1; add(v, 1); }
+  const on0 = on.slice(), E0 = E.slice();
+  for (let r = ones - 1; r >= 0; r--) { const c = pick(1, true); on[c] = 0; add(c, -1); rank[c] = r; }
+  on.set(on0); E.set(E0);
+  for (let r = ones; r < n; r++) { const v = pick(0, false); on[v] = 1; add(v, 1); rank[v] = r; }
+  const out = new Uint8Array(n); for (let i = 0; i < n; i++) out[i] = Math.floor(rank[i] * 256 / n);
+  return out;
+}
+const BLUE = makeBlueNoise(64);
+function bayer(x, y, bits) { let xy = x ^ y, v = 0; for (let b = 0; b < bits; b++) v = (v << 2) | (((xy >> b) & 1) << 1) | ((x >> b) & 1); return (v + 0.5) / (1 << (2 * bits)); }
+function thr(pat, x, y) {
+  if (pat === 'fine') return bayer(x & 7, y & 7, 3);
+  if (pat === 'coarse') return bayer(x & 3, y & 3, 2);
+  if (pat === 'halftone') { const rx = (0.7071 * (x + 0.5) + 0.7071 * (y + 0.5)) / 5, ry = (-0.7071 * (x + 0.5) + 0.7071 * (y + 0.5)) / 5; const gx = rx - Math.floor(rx) - 0.5, gy = ry - Math.floor(ry) - 0.5; return Math.min(1, Math.max(0, 1 - Math.hypot(gx, gy) * 1.41421)) * 0.98 + 0.01; }
+  return BLUE[(y & 63) * 64 + (x & 63)] * (255 / 256) / 255 + 0.5 / 256;
+}
+const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+function palette() { return S.pal === 'custom' ? S.custom.map(hex) : S.pal === 'own' ? null : DI_PALS[S.pal].cols.map(hex); }
+// dither one layer (RGBA image data at dot size, straight alpha) in place; tone shifts the brightness of this layer only
+function dither(img, tone) {
+  const W = img.width, H = img.height, d = img.data, pal = palette(), n = pal ? pal.length : 0, lv = S.levels - 1;
+  const diffuse = S.pat === 'atkinson' || S.pat === 'floyd', edgePat = diffuse ? 'grain' : S.pat;
+  const err = diffuse ? new Float32Array(W * H * 3) : null;
+  const put = (x, y, f, e0, e1, e2) => { if (x < 0 || x >= W || y >= H) return; const j = 3 * (y * W + x); err[j] += e0 * f; err[j + 1] += e1 * f; err[j + 2] += e2 * f; };
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x, a = d[4 * i + 3] / 255;
+    // the outline: either a hard edge at half cover or dithered with the same pattern as the colours
+    const on = S.dEdge ? a > thr(edgePat, x + 17, y + 31) : a > 0.5;
+    if (!on) { d[4 * i + 3] = 0; continue; }
+    d[4 * i + 3] = 255;
+    let c = [0, 1, 2].map((k) => Math.min(1, Math.max(0, (d[4 * i + k] / 255 - 0.5) * S.contrast + 0.5 + S.bright + tone)));
+    if (diffuse) c = c.map((v, k) => v + err[3 * i + k]);
+    let o;
+    if (!pal) {
+      const t = diffuse ? 0.5 : thr(S.pat, x, y);
+      o = c.map((v) => Math.min(lv, Math.max(0, Math.floor(v * lv + t))) / lv);
+    } else {
+      const L = (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) * (n - 1), t = diffuse ? 0.5 : thr(S.pat, x, y);
+      let k = Math.floor(L); if (L - k > t) k++; k = Math.min(n - 1, Math.max(0, k));
+      o = pal[k].map((v) => v / 255);
+      if (diffuse) { const e = (L - k) / (n - 1); c = [c[0] - e, c[1] - e, c[2] - e]; o.e = [e, e, e]; }
+    }
+    if (diffuse) {
+      const e = o.e || c.map((v, k) => v - o[k]);
+      if (S.pat === 'atkinson') { for (const [dx, dy] of [[1, 0], [2, 0], [-1, 1], [0, 1], [1, 1], [0, 2]]) put(x + dx, y + dy, 1 / 8, e[0], e[1], e[2]); }
+      else { put(x + 1, y, 7 / 16, e[0], e[1], e[2]); put(x - 1, y + 1, 3 / 16, e[0], e[1], e[2]); put(x, y + 1, 5 / 16, e[0], e[1], e[2]); put(x + 1, y + 1, 1 / 16, e[0], e[1], e[2]); }
+    }
+    d[4 * i] = Math.round(o[0] * 255); d[4 * i + 1] = Math.round(o[1] * 255); d[4 * i + 2] = Math.round(o[2] * 255);
+  }
+  return img;
+}
+
+/* ---------- building the layers at dot size ---------- */
+function gridSize(p) { const H = S.dots, W = Math.max(8, Math.round(H * p.W / p.H)); return [W, H]; }
+function canvasOf(W, H) { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; }
+function charCanvas(p) {
+  // the character alone at full working size, straight alpha
+  const c = canvasOf(p.W, p.H), g = c.getContext('2d'), img = new ImageData(p.W, p.H);
+  for (let i = 0; i < p.W * p.H; i++) { img.data[4 * i] = p.data[4 * i]; img.data[4 * i + 1] = p.data[4 * i + 1]; img.data[4 * i + 2] = p.data[4 * i + 2]; img.data[4 * i + 3] = Math.round(p.alpha[i] * 255); }
+  g.putImageData(img, 0, 0); return c;
+}
+function down(src, W, H, place) {
+  const c = canvasOf(W, H), g = c.getContext('2d', { willReadFrequently: true });
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+  if (place) place(g); else g.drawImage(src, 0, 0, W, H);
+  return g.getImageData(0, 0, W, H);
+}
+function cover(g, img, W, H) { const s = Math.max(W / img.width, H / img.height), w = img.width * s, h = img.height * s; g.drawImage(img, (W - w) / 2, (H - h) / 2, w, h); }
+let L = null;  // the last built layers
+function build() {
+  const p = cur; if (!p || !p.alpha) return;
+  const [W, H] = gridSize(p), cc = charCanvas(p);
+  const char = dither(down(cc, W, H), 0);
+  const bg = p.bg ? dither(down(p.bg, W, H), 0) : null;
+  // the setting: the backdrop and the placed character are dithered separately on the same grid, so their dots line up
+  let back = null;
+  if (S.bgMode === 'own' && p.bg) back = dither(down(p.bg, W, H), S.bgDim);
+  else if (S.bgMode === 'other' && otherPic) back = dither(down(null, W, H, (g) => cover(g, otherPic, W, H)), S.bgDim);
+  else if (S.bgMode === 'plain' || (S.bgMode === 'own' && !p.bg) || (S.bgMode === 'other' && !otherPic)) { const img = new ImageData(W, H), k = hex(S.plain); for (let i = 0; i < W * H; i++) img.data.set([k[0], k[1], k[2], 255], 4 * i); back = img; }
+  const placed = dither(down(null, W, H, (g) => {
+    const s = S.cScale, w = W * s, h = H * s;
+    g.drawImage(cc, (W - w) / 2 + S.cX * W, H - h + S.cY * H, w, h);
+  }), 0);
+  const scene = canvasOf(W, H), sg = scene.getContext('2d');
+  if (back) sg.putImageData(back, 0, 0);
+  const pc = canvasOf(W, H); pc.getContext('2d').putImageData(placed, 0, 0); sg.drawImage(pc, 0, 0);
+  const toC = (img) => { if (!img) return null; const c = canvasOf(img.width, img.height); c.getContext('2d').putImageData(img, 0, 0); return c; };
+  L = { W, H, char: toC(char), bg: toC(bg), scene, clean: cc };
+}
+
+/* ---------- drawing ---------- */
+let pending = false;
+function schedule() { if (pending) return; pending = true; requestAnimationFrame(() => { pending = false; build(); draw(); }); }
+function fitScale(W, H, box, dotPx) {
+  // whole screen pixels per dot, as large as fits, never smaller than the chosen dot size if it fits
+  const dpr = window.devicePixelRatio || 1;
+  const maxS = Math.max(1, Math.floor(Math.min(box.width * dpr / W, box.height * dpr / H)));
+  return Math.min(Math.max(dotPx, 1), maxS) / dpr;
+}
+function draw() {
+  const p = cur, view = $('view');
+  const cut = $('cutCv'), out = $('outCv');
+  view.classList.toggle('mock-on', tab === 'report' || tab === 'card');
+  $('mockReport').hidden = tab !== 'report'; $('mockCard').hidden = tab !== 'card';
+  cut.hidden = tab !== 'cut'; out.hidden = tab === 'cut' || tab === 'report' || tab === 'card';
+  if (!p) return;
+  const box = { width: view.clientWidth - 24, height: view.clientHeight - 24 };
+  if (tab === 'cut') drawCut(box);
+  else if (L && (tab === 'char' || tab === 'bg' || tab === 'scene')) {
+    const src = tab === 'char' ? L.char : tab === 'bg' ? L.bg : L.scene;
+    out.classList.toggle('checker', tab === 'char');
+    if (!src) { out.width = 1; out.height = 1; setStatus('No cut-out, so there is no background layer.'); return; }
+    out.width = L.W; out.height = L.H; const g = out.getContext('2d'); g.clearRect(0, 0, L.W, L.H); g.drawImage(src, 0, 0);
+    const s = fitScale(L.W, L.H, box, S.dot); out.style.width = L.W * s + 'px'; out.style.height = L.H * s + 'px';
+  } else if (L) {
+    const c = tab === 'report' ? $('repCv') : $('cardCv'), w = tab === 'report' ? 200 : 312;
+    c.width = L.W; c.height = L.H; c.getContext('2d').drawImage(L.scene, 0, 0);
+    const s = Math.max(1, Math.round(w / L.W * 2) / 2); c.style.width = Math.round(L.W * s) + 'px'; c.style.height = Math.round(L.H * s) + 'px';
+    $('repName').textContent = $('cardName').textContent = p.name || 'Unnamed';
+    $('cardRole').textContent = p.role || 'Add a line under the name in the settings.';
+  }
+  info();
+}
+function drawCut(box) {
+  const p = cur, c = $('cutCv');
+  const dpr = window.devicePixelRatio || 1, s = Math.min(box.width / p.W, box.height / p.H);
+  c.width = Math.round(p.W * s * dpr); c.height = Math.round(p.H * s * dpr); c.style.width = p.W * s + 'px'; c.style.height = p.H * s + 'px';
+  const g = c.getContext('2d'); g.imageSmoothingEnabled = true; g.drawImage(p.canvas, 0, 0, c.width, c.height);
+  if (!p.alpha) return;
+  const ov = new ImageData(p.W, p.H), k = [214, 64, 52];
+  for (let i = 0; i < p.W * p.H; i++) { const r = 1 - p.alpha[i]; ov.data[4 * i] = k[0]; ov.data[4 * i + 1] = k[1]; ov.data[4 * i + 2] = k[2]; ov.data[4 * i + 3] = Math.round(r * 150); }
+  const oc = canvasOf(p.W, p.H); oc.getContext('2d').putImageData(ov, 0, 0);
+  g.drawImage(oc, 0, 0, c.width, c.height);
+}
+function info() {
+  if (!L || !cur) return;
+  const parts = [`${L.W} × ${L.H} dots`, `saves at ${L.W * S.dot} × ${L.H * S.dot} px`];
+  if (tab === 'cut') parts.unshift('Red is removed. Draw with the brush to fix it.');
+  setStatus(parts.join('   ·   '));
+}
+let statusBusy = false;
+function setStatus(t, busy) { const el = $('status'); el.textContent = ''; const s = document.createElement('span'); s.textContent = t; if (busy) s.className = 'busy'; el.appendChild(s); statusBusy = !!busy; }
+
+/* ---------- brush ---------- */
+let stroke = null;
+function paintAt(ev) {
+  const p = cur, c = $('cutCv'), r = c.getBoundingClientRect();
+  const x = (ev.clientX - r.left) / r.width * p.W, y = (ev.clientY - r.top) / r.height * p.H, rad = S.brushSize * Math.max(p.W, p.H) / 1024;
+  const v = brushMode === 'keep' ? 1 : -1;
+  for (let yy = Math.max(0, Math.floor(y - rad)); yy <= Math.min(p.H - 1, Math.ceil(y + rad)); yy++)
+    for (let xx = Math.max(0, Math.floor(x - rad)); xx <= Math.min(p.W - 1, Math.ceil(x + rad)); xx++) {
+      const d = Math.hypot(xx - x, yy - y) / rad; if (d > 1) continue;
+      const f = Math.min(1, (1 - d) * 2.5), i = yy * p.W + xx;
+      p.paint[i] = v > 0 ? Math.max(p.paint[i], f) : Math.min(p.paint[i], -f);
+    }
+}
+$('cutCv').addEventListener('pointerdown', (e) => { if (!cur) return; e.preventDefault(); $('cutCv').setPointerCapture(e.pointerId); cur.undo.push(cur.paint.slice()); if (cur.undo.length > 20) cur.undo.shift(); stroke = true; paintAt(e); quickMask(); });
+$('cutCv').addEventListener('pointermove', (e) => { if (!stroke) return; paintAt(e); quickMask(); });
+const endStroke = () => { if (!stroke) return; stroke = null; rebuildMask(); };
+$('cutCv').addEventListener('pointerup', endStroke); $('cutCv').addEventListener('pointercancel', endStroke);
+let qm = false;
+function quickMask() {
+  // while drawing, only the overlay is redrawn; the layers are rebuilt when the stroke ends
+  if (qm) return; qm = true;
+  requestAnimationFrame(() => { qm = false; const p = cur; if (!p || !p.prePaint) return;
+    for (let i = 0; i < p.W * p.H; i++) p.alpha[i] = Math.min(1, Math.max(0, p.prePaint[i] + p.paint[i]));
+    drawCut({ width: $('view').clientWidth - 24, height: $('view').clientHeight - 24 }); });
+}
+$('undo').addEventListener('click', () => { if (!cur || !cur.undo.length) return; cur.paint = cur.undo.pop(); rebuildMask(); });
+$('clearPaint').addEventListener('click', () => { if (!cur) return; cur.undo.push(cur.paint.slice()); cur.paint.fill(0); rebuildMask(); });
+
+/* ---------- controls ---------- */
+function chips(id, items, isOn, onPick) {
+  const el = $(id); el.textContent = '';
+  for (const it of items) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = it.label; b.dataset.id = it.id;
+    b.setAttribute('aria-pressed', String(isOn(it.id)));
+    b.addEventListener('click', () => { onPick(it.id); el.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-pressed', String(isOn(c.dataset.id)))); });
+    el.appendChild(b);
+  }
+}
+const FMT = { contrast: (v) => (+v).toFixed(2), bright: (v) => (v > 0 ? '+' : '') + Math.round(v * 100), bgDim: (v) => (v > 0 ? '+' : '') + Math.round(v * 100),
+  dot: (v) => v + ' px', dots: (v) => v + ' tall', cScale: (v) => Math.round(v * 100) + '%', cX: (v) => Math.round(v * 100), cY: (v) => Math.round(v * 100),
+  keyTol: (v) => Math.round(v * 100), grow: (v) => (v > 0 ? '+' : '') + v + ' px', soft: (v) => v + ' px', brush: (v) => v + ' px', levels: (v) => v };
+function slider(id, get, set) {
+  const el = $(id), o = el.parentElement.querySelector('output');
+  const show = () => { if (o) o.textContent = (FMT[id] || String)(get()); };
+  el.value = get(); show();
+  el.addEventListener('input', () => { set(parseFloat(el.value)); show(); });
+  return () => { el.value = get(); show(); };
+}
+const syncers = [];
+function S_slider(id, key, after) { syncers.push(slider(id, () => S[key], (v) => { S[key] = v; saveS(); (after || schedule)(); })); }
+function P_slider(id, key) { syncers.push(slider(id, () => (cur ? cur[key] : 0), (v) => { if (cur) { cur[key] = v; rebuildMask(); } })); }
+S_slider('levels', 'levels'); S_slider('dots', 'dots'); S_slider('dot', 'dot'); S_slider('contrast', 'contrast'); S_slider('bright', 'bright');
+S_slider('bgDim', 'bgDim'); S_slider('cScale', 'cScale'); S_slider('cX', 'cX'); S_slider('cY', 'cY'); S_slider('brush', 'brushSize', () => {});
+P_slider('keyTol', 'keyTol'); P_slider('grow', 'grow'); P_slider('soft', 'soft');
+$('edges').addEventListener('change', () => { if (cur) { cur.edges = $('edges').checked; rebuildMask(); } });
+$('dEdge').checked = S.dEdge; $('dEdge').addEventListener('change', () => { S.dEdge = $('dEdge').checked; saveS(); schedule(); });
+['c0', 'c1', 'c2', 'c3'].forEach((id, k) => { $(id).value = S.custom[k]; $(id).addEventListener('input', () => { S.custom[k] = $(id).value; saveS(); schedule(); }); });
+$('plain').value = S.plain; $('plain').addEventListener('input', () => { S.plain = $('plain').value; saveS(); schedule(); });
+$('name').addEventListener('input', () => { if (cur) { cur.name = $('name').value; draw(); } });
+$('role').addEventListener('input', () => { if (cur) { cur.role = $('role').value; draw(); } });
+
+function showFor() {
+  document.querySelectorAll('[data-for]').forEach((el) => {
+    const f = el.dataset.for;
+    el.hidden = f === 'key' ? !(cur && cur.mode === 'key') : f === 'custom' ? S.pal !== 'custom' : f === 'own' ? S.pal !== 'own' : f === 'plain' ? S.bgMode !== 'plain' : f === 'other' ? S.bgMode !== 'other' : false;
+  });
+}
+function syncCutUI() {
+  chips('cutMode', CUT_MODES.filter((m) => m.id !== 'alpha' || (cur && cur.hasAlpha)), (id) => cur && cur.mode === id, (id) => {
+    cur.mode = id; syncCutUI(); if (id === 'auto' && !cur.auto) runAuto(cur); else rebuildMask(); });
+  const m = CUT_MODES.find((x) => cur && x.id === cur.mode); $('cutNote').textContent = m ? m.note : '';
+  $('edges').checked = cur ? cur.edges : true;
+  syncers.forEach((f) => f()); showFor();
+}
+chips('brushMode', BRUSH, (id) => brushMode === id, (id) => { brushMode = id; });
+chips('diPat', DI_PATS, (id) => S.pat === id, (id) => { S.pat = id; saveS(); schedule(); });
+chips('diPal', Object.keys(DI_PALS).map((id) => ({ id, label: DI_PALS[id].label })), (id) => S.pal === id, (id) => { S.pal = id; saveS(); showFor(); schedule(); });
+chips('bgMode', BG_MODES, (id) => S.bgMode === id, (id) => { S.bgMode = id; saveS(); showFor(); schedule(); });
+chips('tabs', TABS, (id) => tab === id, (id) => { tab = id; draw(); });
+$('tabs').querySelectorAll('.chip').forEach((b) => b.setAttribute('role', 'tab'));
+
+/* ---------- loading ---------- */
+$('file').addEventListener('change', () => { addFiles([...$('file').files]); $('file').value = ''; });
+const drop = $('drop');
+['dragenter', 'dragover'].forEach((t) => document.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach((t) => document.addEventListener(t, (e) => { e.preventDefault(); if (t === 'drop' || e.target === document.documentElement) drop.classList.remove('over'); }));
+document.addEventListener('drop', (e) => { const f = [...(e.dataTransfer && e.dataTransfer.files || [])]; if (f.length) addFiles(f); else setStatus('Only picture files can be dropped here. Save the picture from Airtable first, then drop the file.'); });
+document.addEventListener('paste', (e) => { const f = [...(e.clipboardData && e.clipboardData.files || [])]; if (f.length) addFiles(f); });
+$('otherBtn').addEventListener('click', () => $('otherFile').click());
+$('otherFile').addEventListener('change', async () => { const f = $('otherFile').files[0]; if (!f) return; try { otherPic = await loadImageURL(URL.createObjectURL(f)); $('otherBtn').textContent = f.name; schedule(); } catch (e) { setStatus(e.message); } });
+window.addEventListener('resize', () => draw());
+
+/* ---------- saving ---------- */
+function pngOf(c, scale) {
+  const o = canvasOf(c.width * scale, c.height * scale), g = o.getContext('2d'); g.imageSmoothingEnabled = scale === 1 ? true : false; g.drawImage(c, 0, 0, o.width, o.height);
+  return new Promise((res) => o.toBlob(res, 'image/png'));
+}
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(b) { let c = 0xffffffff; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
+async function zip(files) {
+  // a plain stored zip: PNGs are already compressed
+  const enc = new TextEncoder(), parts = [], dir = []; let off = 0;
+  for (const f of files) {
+    const name = enc.encode(f.name), data = new Uint8Array(await f.blob.arrayBuffer()), crc = crc32(data);
+    const h = new DataView(new ArrayBuffer(30)); h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, name.length, true);
+    parts.push(h.buffer, name, data);
+    const c = new DataView(new ArrayBuffer(46)); c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, name.length, true); c.setUint32(42, off, true);
+    dir.push(c.buffer, name); off += 30 + name.length + data.length;
+  }
+  const size = dir.reduce((s, b) => s + b.byteLength, 0), e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, size, true); e.setUint32(16, off, true);
+  return new Blob([...parts, ...dir, e.buffer], { type: 'application/zip' });
+}
+const slug = () => ((cur && cur.name) || 'portrait').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'portrait';
+async function fileFor(kind) {
+  if (!L) return null;
+  if (kind === 'clean') return { name: slug() + '-cutout-clean.png', blob: await pngOf(L.clean, 1) };
+  const c = kind === 'character' ? L.char : kind === 'background' ? L.bg : L.scene;
+  if (!c) return null;
+  return { name: `${slug()}-${kind}.png`, blob: await pngOf(c, S.dot) };
+}
+let downloads = null;
+if (window.claude && window.claude.use) window.claude.use('downloads').then((d) => { downloads = d; }).catch(() => {});
+document.querySelectorAll('[data-save]').forEach((b) => b.addEventListener('click', async () => {
+  const kind = b.dataset.save;
+  try {
+    let f;
+    if (kind === 'zip') { const fs = (await Promise.all(['character', 'background', 'scene', 'clean'].map(fileFor))).filter(Boolean); f = { name: slug() + '-portrait.zip', blob: await zip(fs) }; }
+    else f = await fileFor(kind);
+    if (!f) { $('saveNote').textContent = 'There is no background layer without a cut-out.'; return; }
+    if (!downloads) { $('saveNote').textContent = 'Saving files is not available in this view. Right-click the picture in the Character, Background or Character in setting view and choose Save image.'; return; }
+    await downloads.save({ filename: f.name, data: f.blob });
+    $('saveNote').textContent = 'Saved ' + f.name + '.';
+  } catch (e) {
+    $('saveNote').textContent = e && e.code === 'declined' ? 'Not saved.' : 'Could not save: ' + (e && (e.message || e.code) || e) + '.';
+  }
+}));
+
+/* ---------- start with the sample ---------- */
+(async () => {
+  try {
+    const im = await loadImageURL('data:image/jpeg;base64,' + $('sampleData').textContent.trim());
+    const p = newPic(im, 'Sample astronaut'); p.role = 'Sample photo (NASA, public domain): drop your own portraits to replace it'; pics.push(p); select(p); renderStrip();
+  } catch (e) { setStatus(e.message); }
+})();
+window.__pt = { get L() { return L; }, get cur() { return cur; }, S, setTab: (t) => { tab = t; draw(); }, schedule, build, draw, rebuildMask };
+</script>
