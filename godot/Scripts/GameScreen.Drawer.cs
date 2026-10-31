@@ -114,6 +114,7 @@ public partial class GameScreen
     void ShowTab(DrawerTab t)
     {
         if (_plan != null && t != DrawerTab.Missions && !_pickMission) _plan = null; // leaving the planner closes it
+        CloseSectorView(); // the window opens on the map, not under the sector window
         _tab = t;
         bool opening = !_drawer.Visible;
         _drawer.Visible = true;
@@ -167,6 +168,7 @@ public partial class GameScreen
                 break;
         }
         RefreshTabTitles();
+        RefreshSectorView(); // an order given in the sector window shows there too
         // the same thing rebuilt (a new day) keeps its scroll; a new thing starts at the top
         if (key == _lastPanelKey) Callable.From(() => _scroll.ScrollVertical = (int)scroll).CallDeferred();
         else _scroll.ScrollVertical = 0;
@@ -271,7 +273,7 @@ public partial class GameScreen
         foreach (var (k, what) in new[]
         {
             ("Space", "play / pause"), ("N", "one day"), ("1 - 4", "speed"), ("Q  F  C  M  E", "Needs you, Fleets, Leaders, Missions, Log"),
-            ("S", "sector windows"), ("V", "next map layer"), ("L", "routes on / off"), ("/", "search"), ("G", "goal"), ("Ctrl/Cmd + S", "quick save"),
+            ("S", "sector window"), ("V", "next map layer"), ("L", "routes on / off"), ("/", "search"), ("G", "goal"), ("Ctrl/Cmd + S", "quick save"),
             ("Wheel, + -", "zoom"), ("Drag, arrows", "pan"), ("Esc", "cancel / deselect"),
         })
             Stat(k, what);

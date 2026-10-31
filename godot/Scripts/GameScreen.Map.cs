@@ -9,7 +9,7 @@ using Side = Praedra.Core.Clock.Side;
 namespace PraedraViewer;
 
 /// <summary>
-/// Map layers (user story A5) and the sector tables (A3), a window over the map that a click on a sector opens. A layer paints a soft halo behind each system for one question
+/// Map layers (user story A5) and a system in one row for the selection card; the sector window (A3) lives in GameScreen.SectorView.cs. A layer paints a soft halo behind each system for one question
 /// (where is support low, which of my systems is in trouble, which yards are idle, how old is my picture of a place, where are the slots).
 /// Every value comes from what the player's side may know: its own systems are read live, the rest from its picture with the picture's age.
 /// </summary>
@@ -194,105 +194,25 @@ public partial class GameScreen
         return _yardIndex.TryGetValue(system, out int mask) && (mask & (1 << ((int)fam & 15))) != 0;
     }
 
-    // ================================================================== sector windows (A3)
+    // ================================================================== a system in one row (the selection card)
 
-    readonly List<SectorWindow> _sectorWindows = new();
-    Label _sectorHint;
-
-    void BuildSectorDock()
+    /// <summary>A system in a few words, from what the player's side knows: who holds it, support, troops, slots, what is going on, and
+    /// how fresh the picture is. The selection card shows it.</summary>
+    internal sealed class SystemRowData
     {
-        var v = Ui.VBox(Ui.Gap);
-        _sectorDock.AddChild(v);
-        var head = Ui.HBox(Ui.Block);
-        head.AddChild(Ui.Section("Sector tables"));
-        head.AddChild(Ui.Grow());
-        var close = Ui.Button("\u2715", ToggleSectorDock, "Close (S or Esc)", "Clock");
-        close.SetMeta(UiTest.FullName, "Close the sector tables");
-        close.AddThemeFontSizeOverride("font_size", 13);
-        close.CustomMinimumSize = new Vector2(28, 26);
-        head.AddChild(close);
-        v.AddChild(head);
-        var row = Ui.HBox(Ui.Pad + 2);
-        row.SizeFlagsVertical = SizeFlags.ExpandFill;
-        v.AddChild(row);
-        var sectors = G.Sectors.Select(s => s.Name).OrderBy(n => n, StringComparer.Ordinal).ToList();
-        for (int i = 0; i < 2; i++)
-        {
-            var w = new SectorWindow(this, sectors) { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-            _sectorWindows.Add(w);
-            row.AddChild(w);
-        }
-        // start with the sector of the headquarters, and a sector next door
-        string home = S.MyHqSystem ?? GameBoot.HandCapital;
-        string a = SectorOf(home);
-        string b = FrontierSector(a) ?? sectors.FirstOrDefault(x => x != a);
-        _sectorWindows[0].Show(a);
-        _sectorWindows[1].Show(b);
+        public string System;
+        public Side? Owner;
+        public bool Known;
+        public string Support = "", Troops = "", Slots = "", Activity = "", Info = "";
+        public Color? SupportColor, TroopsColor, ActivityColor, InfoColor;
     }
 
-    internal string SectorOf(string system) =>
-        G.TryFindSystem(system, out int i) && !G.Systems[i].IsOutsideSectors ? G.Systems[i].Sector : null;
-
-    /// <summary>The nearest sector to <paramref name="sector"/> where the player does not hold everything (where the war is).</summary>
-    string FrontierSector(string sector)
-    {
-        if (sector == null) return null;
-        var mine = G.Sectors.FirstOrDefault(s => s.Name == sector);
-        if (mine == null) return null;
-        var c = mine.Members.Select(m => new Vector2(G.Systems[m].MapX, G.Systems[m].MapY)).Aggregate(Vector2.Zero, (a, b) => a + b) / Math.Max(1, mine.Members.Count);
-        return G.Sectors.Where(s => s.Name != sector && s.Members.Any(m => S.OwnerOf(G.Systems[m].Name) != Me))
-            .OrderBy(s => c.DistanceSquaredTo(s.Members.Select(m => new Vector2(G.Systems[m].MapX, G.Systems[m].MapY)).Aggregate(Vector2.Zero, (a, b) => a + b) / Math.Max(1, s.Members.Count)))
-            .ThenBy(s => s.Name, StringComparer.Ordinal).Select(s => s.Name).FirstOrDefault();
-    }
-
-    void ToggleSectorDock()
-    {
-        _sectorDock.Visible = !_sectorDock.Visible;
-        if (_sectorDock.Visible) RefreshSectorWindows();
-    }
-
-    void RefreshSectorWindows()
-    {
-        if (_sectorDock == null || !_sectorDock.Visible) return;
-        foreach (var w in _sectorWindows) w.Refresh();
-    }
-
-    /// <summary>A system picked on the map shows its sector in a window: the window that does not already show it, the older one first.</summary>
-    void SectorFollowSelection(string system)
-    {
-        if (_sectorDock == null || !_sectorDock.Visible || SectorOf(system) is not string sec) { RefreshSectorWindows(); return; }
-        if (_sectorWindows.Any(w => w.Sector == sec)) { RefreshSectorWindows(); return; }
-        var older = _sectorWindows.OrderBy(w => w.ShownAt).First();
-        older.Show(sec);
-        RefreshSectorWindows();
-    }
-
-    /// <summary>A click on a sector of the map: open the sector windows on it (in the window shown longest ago, unless one already shows it).</summary>
-    internal void OpenSector(string sector)
-    {
-        if (sector == null || InMoveMode) return;
-        if (!_sectorDock.Visible) ToggleSectorDock();
-        if (!_sectorWindows.Any(w => w.Sector == sector)) _sectorWindows.OrderBy(w => w.ShownAt).First().Show(sector);
-        RefreshSectorWindows();
-    }
-
-    /// <summary>A row of a sector window was clicked: in a move, it is the destination; else it selects the system.</summary>
-    internal void SectorRowPicked(string system)
-    {
-        if (!G.TryFindSystem(system, out int idx)) return;
-        if (InMoveMode) { OnSystemPicked(idx); return; }
-        _view.Centre(idx);
-        _view.Select(idx);
-        ShowTab(DrawerTab.Selected);
-    }
-
-    /// <summary>One row of a sector window, from what the player's side knows.</summary>
-    internal SectorWindow.RowData SectorRow(int i)
+    internal SystemRowData SectorRow(int i)
     {
         var sys = G.Systems[i];
         string n = sys.Name;
         var eco = S.Host.Economy;
-        var row = new SectorWindow.RowData { System = n };
+        var row = new SystemRowData { System = n };
         if (S.IsDestroyed(n)) { row.Owner = null; row.Info = "destroyed"; row.InfoColor = Ui.Danger; row.Support = "-"; row.Troops = "-"; row.Slots = "-"; row.Activity = "debris"; return row; }
         bool mine = S.OwnerOf(n) == Me;
         if (mine)

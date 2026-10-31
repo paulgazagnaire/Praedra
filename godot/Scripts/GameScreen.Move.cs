@@ -55,7 +55,6 @@ public partial class GameScreen
                 if (_plan != null && !_pickMission) _plan = null; // a map selection closes the planner
                 if (newSystem) _sysTab = SysTab.Overview;
                 if (_drawer.Visible) ShowTab(DrawerTab.Selected); // a map click fills the selection card; the window follows only when open
-                if (_view.Selected >= 0) SectorFollowSelection(G.Systems[_view.Selected].Name);
             }
             _panelDirty = true; _panelTimer = 0;
             RefreshSelectionCard();
@@ -68,7 +67,7 @@ public partial class GameScreen
         var sec = G.Sectors.FirstOrDefault(x => x.Name == sector);
         if (sec == null) return null;
         int mine = sec.Members.Count(m => S.OwnerOf(G.Systems[m].Name) == Me);
-        return $"{sector}: {mine} of {sec.Members.Count} systems yours\nClick to open its table";
+        return $"{sector}: {mine} of {sec.Members.Count} systems yours\nClick to open it";
     }
 
     string HoverText(int h)

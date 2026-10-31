@@ -45,6 +45,14 @@ Speeds: rotation = `spin * 0.5` radians per second (0.25 is one turn in about 50
 
 Pasted presets and library entries are checked on load: numbers are clamped to their slider range (moons 0 to 8, each moon's numbers and colours the same way, an unknown moon type becomes cratered rock, an unknown ring type becomes broad icy rings; presets saved before ring kinds existed load as broad icy rings with their old size and colours; a hand-written ring of another kind starts from that kind's own size, colours and source moon, so only the fields you write override it), bad colours are replaced, and a short palette is filled from the world type's defaults.
 
+## Pictures for the game
+The game's sector window shows every system's planet as the Planet Maker draws it, dithered (Grain, the planet's own colours), baked into one sheet: `godot/art/planets/atlas.png` and `atlas.json` (system name -> cell and world kind). `bake-thumbs.js` makes them with the page itself in headless Chromium; rebuild after `systems.json` changes (about 10 s a picture in software GL, so split it in shards):
+```
+SHARD=0/3 node tools/planet-maker/bake-thumbs.js bake /tmp/planet-thumbs & SHARD=1/3 node ... & SHARD=2/3 node ...
+node tools/planet-maker/bake-thumbs.js pack /tmp/planet-thumbs
+```
+Then open the Godot project once (or `--import`) so it imports the new sheet.
+
 ## Using it in Godot later
 The shader is GLSL ES 3.00 with no tricks. Porting to a Godot `.gdshader` is a mechanical rename (`uniform` blocks stay, `fragColor` becomes `COLOR`). The preset values map one-to-one onto the shader uniforms, so the game can draw the same planet from the same JSON.
 
