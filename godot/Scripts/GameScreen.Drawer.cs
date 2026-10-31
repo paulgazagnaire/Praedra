@@ -146,7 +146,7 @@ public partial class GameScreen
 
     void RebuildPanel()
     {
-        if (_tab == DrawerTab.Log) { RefreshTabTitles(); return; }
+        if (_tab == DrawerTab.Log) { RefreshTabTitles(); RefreshSectorView(); return; } // the sector window shows orders given in it whatever tab is open
         float scroll = _scroll.ScrollVertical;
         string key = PanelKey();
         ClearPanel();
