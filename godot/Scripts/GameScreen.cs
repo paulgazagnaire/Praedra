@@ -10,7 +10,7 @@ namespace PraedraViewer;
 
 /// <summary>
 /// The game screen. Layout (Paul's mockup, 2026-10-28): the map fills the window, small dark pieces float at its edges, and everything longer
-/// (a system's details, Fleets, Leaders, Missions, the log, the sector tables) opens as a window on demand. All rules live in
+/// (a system's details, Fleets, Leaders, Missions, the log, a sector's systems) opens as a window on demand. All rules live in
 /// the core; this reads the state through the <see cref="GameSession"/>, submits orders and calls the session's StepDay (the only thing that
 /// advances the game). The parts live in the GameScreen.*.cs files: Shell (the frame), Hud (the selection card and the message corner),
 /// Drawer (the window), System, Build, Fleet, Move, Attention, Log,
@@ -92,7 +92,6 @@ public partial class GameScreen : Control
         S.Say($"You lead the {S.NameOf(S.Player)}. Your headquarters is {home}. Press Play (or Space) to start the clock; How to play (F1) explains the rest.", MsgKind.Good, home);
         foreach (var m in S.Messages) AddLogItem(m, false);
         if (S.Game.Day == 0) _pauseNote = "Press Play (or Space) to start the clock";
-        BuildSectorDock();
         RefreshTop();
         if (_showHowToOnStart && GameBoot.HowToUnseen()) ShowHowTo();
     }
@@ -154,7 +153,7 @@ public partial class GameScreen : Control
         if (S.Game.Day % AutosaveEvery == 0) Autosave();
         _panelDirty = true; _fleetListDirty = true; _attentionDirty = true;
         _view.QueueRedraw(); // owners, blockades and uprisings may have changed
-        RefreshSectorWindows();
+        RefreshSectorView();
         if (oc.Winner is Side w) { ShowVictory(w); Pause(); return false; }
 
         // The core's own pauses (a battle, a capture, an invasion, a harvest), each of which the Settings can switch off; then the events the
@@ -197,9 +196,10 @@ public partial class GameScreen : Control
         _fleets.DayFraction = _playing ? (float)Math.Min(_acc, 0.999) : 0f;
 
         TickToasts(delta);
+        TickSectorView(delta);
 
         var pan = Vector2.Zero;
-        if (!OverlayOpen && GetViewport().GuiGetFocusOwner() is not LineEdit)
+        if (!OverlayOpen && !SectorViewOpen && GetViewport().GuiGetFocusOwner() is not LineEdit)
         {
             if (Input.IsKeyPressed(Key.Left)) pan.X -= 1;
             if (Input.IsKeyPressed(Key.Right)) pan.X += 1;
@@ -239,7 +239,7 @@ public partial class GameScreen : Control
             case Key.C: ToggleCharacters(); break;
             case Key.M: ToggleMissions(); break;
             case Key.E: ShowTab(DrawerTab.Log); break;
-            case Key.S: ToggleSectorDock(); break;
+            case Key.S: ToggleSectorView(); break;
             case Key.L: CycleLanes(); break;
             case Key.V: NextLayer(); break;
             case Key.G: ShowGoal(); break;
@@ -247,6 +247,8 @@ public partial class GameScreen : Control
             case Key.Slash: FocusSearch(); break;
             case Key.Backspace when _moveFleet >= 0: DropWaypoint(); break;
             case Key.Escape: Escape(); break;
+            case Key.Left when SectorViewOpen: StepSector(-1); break;
+            case Key.Right when SectorViewOpen: StepSector(1); break;
             case Key.Home: _view.ResetView(); break;
             case Key.Equal: case Key.Plus: case Key.KpAdd: _view.ZoomCentre(1.25f); break;
             case Key.Minus: case Key.KpSubtract: _view.ZoomCentre(1f / 1.25f); break;
@@ -259,7 +261,7 @@ public partial class GameScreen : Control
         GetViewport().SetInputAsHandled();
     }
 
-    /// <summary>Esc closes the topmost thing: a dialog, the menu, the search, a move being planned, the planner, the sector tables, the window,
+    /// <summary>Esc closes the topmost thing: a dialog, the menu, the search, a move being planned, the planner, the sector window, the window,
     /// then the selection.</summary>
     void Escape()
     {
@@ -267,9 +269,9 @@ public partial class GameScreen : Control
         if (_menuPopup.Visible) { ToggleMenu(); return; }
         if (CloseTopModal()) return;
         if (_searchResults.Visible) { CloseSearch(); return; }
+        if (SectorViewOpen) { if (_secDetail.Visible) CloseSystemPane(); else CloseSectorView(); return; }
         if (InMoveMode) { CancelMove(); return; }
         if (_plan != null) { ClosePlanner(); return; }
-        if (_sectorDock.Visible) { ToggleSectorDock(); return; }
         if (_drawer.Visible) { CloseDrawer(); return; }
         if (_view.SelectedFleet >= 0 || _view.Selected >= 0) { _view.SelectedFleet = -1; _view.Select(-1); return; }
     }

@@ -48,7 +48,7 @@ public partial class GameScreen
             ("Leaders", "C", () => ShowTab(DrawerTab.Leaders), "Your leaders, and the enemy leaders you have seen"),
             ("Missions", "M", () => ShowTab(DrawerTab.Missions), "Your agents' missions"),
             ("Messages", "E", () => ShowTab(DrawerTab.Log), "Every message, by kind"),
-            ("Sector tables", "S", ToggleSectorDock, "Every system of a sector in one table, two sectors side by side"),
+            ("Sector", "S", ToggleSectorView, "Every system of a sector at a glance, with its planet, buildings, fleets and forces (or click a sector on the map)"),
         })
         {
             var b = Ui.Button(text, () => { ToggleMenu(); act(); }, tip, "Flat");
@@ -240,7 +240,7 @@ public partial class GameScreen
         ("The screen", new[]
         {
             "The map fills the screen; blue is always you, orange the enemy, grey nobody, a hollow ring a place you never explored. A click shows a small card at the bottom; Details opens the window on the right. The menu (top left) opens your lists: Fleets (F), Leaders (C), Missions (M), Messages (E). Esc closes the window.",
-            "Map layers (top left, V) colour the map for one question: support, trouble, idle yards, how old your picture is, slots. Point at a sector to name its systems; click it for its table (S). Search (/) finds systems, fleets and leaders. Legend explains the marks.",
+            "Map layers (top left, V) colour the map for one question: support, trouble, idle yards, how old your picture is, slots. Point at a sector to name its systems; click it for its window: every system with its planet, buildings, fleets and forces (S). Search (/) finds systems, fleets and leaders. Legend explains the marks.",
             "Fog of war: you see live only the systems you hold or have a fleet at. Everything else shows what you saw last, with the day.",
         }),
         ("Fleets", new[]

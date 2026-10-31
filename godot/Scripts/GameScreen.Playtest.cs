@@ -114,14 +114,20 @@ public partial class GameScreen
     static string LabelsIn(Node n) => string.Join("\n", AllNodes(n).OfType<Label>().Where(l => l.IsVisibleInTree() || !l.IsInsideTree()).Select(l => l.Text));
     internal void PickSystem(string name) { if (G.TryFindSystem(name, out int i)) OnSystemPicked(i); }
     internal void Frame(double seconds) => _Process(seconds);
+    /// <summary>One frame with no time passing: runs what a click left for the next frame (true, to chain in a check).</summary>
+    internal bool Step0() { _Process(0); return true; }
     internal int LogRows => _log.ItemCount;
     internal string ToastText => string.Join("\n", _toasts.SelectMany(t => AllNodes(t.Card).OfType<Label>()).Select(l => l.Text));
     internal int UnreadMessages => _unread;
     internal string HqStatusText => _hqStatusLabel.GetParent<Control>().Visible ? _hqStatusLabel.Text : "";
     internal IReadOnlyList<string> AttentionTitles => _attention.Select(a => a.Title).ToList();
     internal string OrderBarText => _orderBar.Visible ? _orderTitle.Text + "\n" + _orderBody.Text : "";
-    internal bool SectorDockOpen => _sectorDock.Visible;
-    internal IReadOnlyList<SectorWindow> SectorWindows => _sectorWindows;
+    /// <summary>The systems the sector window shows, in card order.</summary>
+    internal IReadOnlyList<string> SectorViewCards => _secCards.Keys.ToList();
+    /// <summary>The words on one card (owner, numbers, links), for the playtest.</summary>
+    internal string SectorCardText(string system) => _secCards.TryGetValue(system, out var c) ? LabelsIn(c) : null;
+    internal string SectorDetailText => SectorViewFocus == null ? "" : LabelsIn(_secDetailHead) + "\n" + LabelsIn(_secDetailBody);
+    internal string SectorTotalsText => LabelsIn(_secTotals);
     internal string LayerName => _layer.ToString();
     internal Praedra.Core.Clock.Side Player => S.Player;
     internal GalaxyView.MapMark? MarkOf(string system) => G.TryFindSystem(system, out int i) ? LayerMarkOf(i) : null;
@@ -265,7 +271,9 @@ public partial class GameScreen
         G.TryFindSystem(system, out int i) ? _view.SectorName(_view.SectorAt(_view.SystemScreen(i))) : null;
     internal string SectorUnderScreen(Vector2 p) => _view.SectorName(_view.SectorAt(p));
     public void ShotLayer(string name) { if (Enum.TryParse<MapLayer>(name, out var l)) SetLayer(l); }
-    public void ShotSectors() { if (!_sectorDock.Visible) ToggleSectorDock(); }
+    public void ShotSectors() { if (!SectorViewOpen) ToggleSectorView(); }
+    public void ShotSector(string name) => OpenSector(name.Replace('_', ' '));
+    public void ShotSectorPane(string system, string pane) => OpenSystemPane(system.Replace('_', ' '), Enum.TryParse(pane, true, out SecPane p) ? p : SecPane.Buildings);
     public void ShotGoal() => ShowGoal();
     public void ShotClick(string prefix) { PlayRefresh(); if (!Click(prefix)) GD.PrintErr("no button " + prefix); PlayRefresh(); }
 }

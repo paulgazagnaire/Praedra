@@ -9,7 +9,7 @@ namespace PraedraViewer;
 
 /// <summary>
 /// Playtest of the screen itself (the layout of 2026-10-28): the drawer tabs, Needs you and "Run until something needs me", search, the map
-/// layers, the sector windows, the goal, the settings, quick save, Esc, and the colours (blue is you, orange the enemy). A fresh Hand game, as
+/// layers, the sector window, the goal, the settings, quick save, Esc, and the colours (blue is you, orange the enemy). A fresh Hand game, as
 /// Paul plays it. Every action is a click on the real button or a key press; the core is only read to check the result.
 /// </summary>
 public partial class Main
@@ -30,7 +30,7 @@ public partial class Main
         Expect(gs.PillText.Contains("Play"), "the pill under the search says to press Play: " + gs.PillText);
         Expect(gs.MessageCornerText.Length > 0, "the message corner shows the latest message: " + gs.MessageCornerText.Replace("\n", " / "));
         Expect(gs.Click("Menu") && gs.MenuVisible, "the menu button opens the menu");
-        foreach (var item in new[] { "Needs you", "Fleets", "Leaders", "Missions", "Messages", "Sector tables", "Save game...", "Settings..." })
+        foreach (var item in new[] { "Needs you", "Fleets", "Leaders", "Missions", "Messages", "Sector", "Save game...", "Settings..." })
             Expect(gs.Has(item), $"the menu offers {item}");
         gs.PressKey(Key.Escape);
         Expect(!gs.MenuVisible, "Esc closes the menu");
@@ -115,20 +115,37 @@ public partial class Main
         Expect(gs.MarkOf(home) != null && gs.MarkOf(unexplored) == null, "Intel age layer: live where you see, nothing where you never looked");
         gs.ShotLayer("Owners");
 
-        // ---------------------------------------------------------------- sector windows
-        Expect(!gs.SectorDockOpen, "the sector windows start closed");
+        // ---------------------------------------------------------------- the sector window (Paul 2026-10-31)
+        Expect(!gs.SectorViewOpen, "the sector window starts closed");
         gs.PressKey(Key.S);
-        Expect(gs.SectorDockOpen && gs.SectorWindows.Count == 2, "S opens two sector windows under the map");
-        var w0 = gs.SectorWindows[0];
-        var rows = w0.Rows().ToList();
-        GD.Print($"  sector {w0.Sector}: " + string.Join(" / ", rows.Take(6)));
-        Expect(rows.Count > 0 && rows.All(r => gs.G.Systems.Any(x => x.Name == r.Split(" | ")[0] && x.Sector == w0.Sector)), $"the first window lists the systems of {w0.Sector}");
-        var hidden = gs.SectorWindows.SelectMany(w => w.Rows()).FirstOrDefault(r => !s.Explored(r.Split(" | ")[0]) && s.OwnerOf(r.Split(" | ")[0]) != me);
-        if (hidden != null) Expect(hidden.EndsWith("| unexplored", StringComparison.Ordinal), "an unexplored row shows nothing but 'unexplored': " + hidden);
-        string rowSys = rows[0].Split(" | ")[0];
-        Expect(w0.Click(rowSys) && gs.SelectedSystemName == rowSys, $"clicking the row of {rowSys} selects it");
-        gs.PressKey(Key.S);
-        Expect(!gs.SectorDockOpen, "S closes them");
+        string homeSec = gs.SectorOf(home);
+        Expect(gs.SectorViewOpen && gs.SectorViewName == homeSec, $"S opens the sector of the headquarters ({homeSec}): {gs.SectorViewName}");
+        var cards = gs.SectorViewCards.ToList();
+        var members = gs.G.Systems.Where(x => !x.IsOutsideSectors && x.Sector == homeSec).Select(x => x.Name).OrderBy(x => x, StringComparer.Ordinal).ToList();
+        Expect(cards.OrderBy(x => x, StringComparer.Ordinal).SequenceEqual(members), $"one card for each of the {members.Count} systems of {homeSec}");
+        Expect(cards.Count > 0 && cards[0] == home, "the headquarters comes first: " + string.Join(", ", cards));
+        string hc = gs.SectorCardText(home);
+        GD.Print("  card " + home + ": " + hc.Replace("\n", " / "));
+        Expect(hc.Contains("SUPPORT") && hc.Contains("ENERGY") && hc.Contains("TROOPS") && hc.Contains("BUILDINGS") && hc.Contains("FLEETS") && hc.Contains("FORCES"),
+            "the headquarters card shows support, energy, troops and the three links");
+        Expect(PlanetArt.Of(home) != null && PlanetArt.KindOf(home) != null, $"{home} has its Planet Maker picture and a world kind ({PlanetArt.KindOf(home)})");
+        Expect(gs.G.Systems.All(x => PlanetArt.Of(x.Name) != null), "every system of the map has a planet picture");
+        Expect(gs.SectorTotalsText.Contains("YOURS"), "the head of the window counts the systems you hold: " + gs.SectorTotalsText.Replace("\n", " "));
+        var unseen = cards.FirstOrDefault(c => !s.Explored(c) && s.OwnerOf(c) != me);
+        if (unseen != null) Expect(gs.SectorCardText(unseen).Contains("UNEXPLORED") && !gs.SectorCardText(unseen).Contains("SUPPORT"), $"an unexplored card ({unseen}) gives nothing away");
+        Expect(gs.Click($"{home} buildings") && gs.Step0() && gs.SectorViewFocus == home && gs.SectorViewPane == GameScreen.SecPane.Buildings, "a card's Buildings link opens the system window on Buildings");
+        string det = gs.SectorDetailText;
+        Expect(det.Contains("Mines") && det.Contains("Energy slots"), "the Buildings pane shows mines and slots: " + det.Split('\n').Take(8).Aggregate((x, y) => x + " / " + y));
+        Expect(gs.Click($"{home} fleets") && gs.Step0() && gs.SectorViewPane == GameScreen.SecPane.Fleets && gs.SectorDetailText.Contains("Your fleets"), "the Fleets link switches the window to the fleets in orbit");
+        Expect(gs.Click($"{home} forces") && gs.Step0() && gs.SectorViewPane == GameScreen.SecPane.Forces && gs.SectorDetailText.Contains("Garrison"), "the Forces link shows the garrison");
+        gs.PressKey(Key.Escape);
+        Expect(gs.SectorViewOpen && gs.SectorViewFocus == null, "Esc closes the system window first");
+        gs.PressKey(Key.Right);
+        Expect(gs.SectorViewOpen && gs.SectorViewName != homeSec, "the Right arrow steps to the next sector: " + gs.SectorViewName);
+        gs.PressKey(Key.Left);
+        Expect(gs.SectorViewName == homeSec, "and Left steps back");
+        gs.PressKey(Key.Escape);
+        Expect(!gs.SectorViewOpen, "Esc closes the sector window");
 
         // ---------------------------------------------------------------- sectors on the map
         var homeSys = gs.G.Systems.First(x => x.Name == home);
@@ -139,9 +156,9 @@ public partial class Main
         gs.ShotSectorHover(sec.Replace(' ', '_'));
         Expect(gs.HoverCardText.Contains(sec) && gs.HoverCardText.Contains("Click to open"), "hovering a sector names it and says a click opens it: " + gs.HoverCardText.Replace("\n", " / "));
         gs.ClickSector(sec);
-        Expect(gs.SectorDockOpen && gs.SectorWindows.Any(w => w.Sector == sec), $"clicking {sec} on the map opens its sector table");
+        Expect(gs.SectorViewOpen && gs.SectorViewName == sec, $"clicking {sec} on the map opens its sector window");
         gs.PressKey(Key.S);
-        Expect(!gs.SectorDockOpen, "S closes it again");
+        Expect(!gs.SectorViewOpen, "S closes it again");
 
         // ---------------------------------------------------------------- the goal
         Expect(gs.GoalButtonText.StartsWith("Goal: 0/2 leaders held", StringComparison.Ordinal), "the Goal button counts the leaders you hold: " + gs.GoalButtonText);

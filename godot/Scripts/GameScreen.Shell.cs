@@ -11,7 +11,7 @@ namespace PraedraViewer;
 /// The frame of the game screen, after Paul's mockup (2026-10-28): the map fills the window and a few small dark pieces float at its edges.
 /// Top left the menu and the map layers; top centre the search and one pill for whatever needs you; top right the goal, the day and the
 /// clock; bottom left your stocks and the way home; bottom centre the thing you clicked; bottom right the latest message. Everything longer
-/// (a system's details, Build, Fleets, Leaders, Missions, the log, the sector tables) opens as a window on demand and closes with Esc.
+/// (a system's details, Build, Fleets, Leaders, Missions, the log, a sector) opens as a window on demand and closes with Esc.
 /// </summary>
 public partial class GameScreen
 {
@@ -35,9 +35,6 @@ public partial class GameScreen
     Control _bottomLeft;
     PanelContainer _clockCard;
 
-    // ---- the sector tables, a window over the map
-    PanelContainer _sectorDock;
-
     void BuildUi()
     {
         var bg = new ColorRect { Color = Ui.MapBg, MouseFilter = MouseFilterEnum.Ignore };
@@ -54,15 +51,8 @@ public partial class GameScreen
         _view.AddChild(_fleets);
         BuildMapOverlays();
 
-        _sectorDock = Ui.Hud(Ui.Pad, Ui.Pad - 2);
-        _sectorDock.Visible = false;
-        _sectorDock.SetAnchorsPreset(LayoutPreset.BottomLeft);
-        _sectorDock.GrowVertical = GrowDirection.Begin;
-        _sectorDock.OffsetLeft = Edge; _sectorDock.OffsetBottom = -(Edge + 130); _sectorDock.OffsetTop = -(Edge + 130);
-        _sectorDock.CustomMinimumSize = new Vector2(1060, 300);
-        _mapHolder.AddChild(_sectorDock);
-
         _mapHolder.AddChild(BuildDrawer());
+        AddChild(BuildSectorView()); // over the map and the window, under the dialogs
         BuildModals();
     }
 
@@ -365,7 +355,7 @@ public partial class GameScreen
     {
         foreach (var r in _fleets.Obstacles()) yield return r;
         var origin = _view.GlobalPosition;
-        foreach (var box in new Control[] { _orderBar, _topCentre, _topLeft, _clockCard, _bottomLeft, _selCard, _msgCorner, _drawer, _sectorDock })
+        foreach (var box in new Control[] { _orderBar, _topCentre, _topLeft, _clockCard, _bottomLeft, _selCard, _msgCorner, _drawer })
         {
             if (box == null || !box.IsVisibleInTree()) continue;
             var g = box.GetGlobalRect();
@@ -482,6 +472,7 @@ public partial class GameScreen
     void GoTo(string system, bool select)
     {
         if (system == null || !G.TryFindSystem(system, out int idx)) return;
+        CloseSectorView();
         _view.Centre(idx);
         if (select) { _view.Select(idx); ShowTab(DrawerTab.Selected); }
     }
