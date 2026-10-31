@@ -15,6 +15,6 @@ Cuts a character out of a portrait and dithers the character and the background 
 ```
 python3 build.py assets/sample.jpg assets/selfie_segmenter.tflite   # writes index.html
 ```
-`index.html` inlines the sample photo (NASA astronaut portrait, public domain, from scikit-image's data) and the person-finder model (`selfie_segmenter.tflite`, float16, from storage.googleapis.com/mediapipe-models). The MediaPipe code loads from jsDelivr (`@mediapipe/tasks-vision@0.10.14`); its engine `vision_wasm_internal.wasm` (9.4 MB, from that npm package's `wasm/`) is published next to the page with `contentType: application/wasm` and is not kept in git (`npm pack @mediapipe/tasks-vision@0.10.14`).
+`index.html` inlines the sample photo (NASA astronaut portrait, public domain, from scikit-image's data) and the person-finder model (`selfie_segmenter.tflite`, float16, from storage.googleapis.com/mediapipe-models). The MediaPipe code loads from jsDelivr (`@mediapipe/tasks-vision@0.10.14`); its engine `vision_wasm_internal.wasm` (9.4 MB, from that npm package's `wasm/`) is published next to the page with `contentType: application/wasm` and is not kept in git. Run `./fetch-engine.sh` to get it: it downloads https://registry.npmjs.org/@mediapipe/tasks-vision/-/tasks-vision-0.10.14.tgz and extracts `package/wasm/vision_wasm_internal.wasm` (9,423,986 bytes) next to `index.html`. Keep its version in step with the jsDelivr import in `portrait-maker.src.html`.
 
 If the engine cannot start in a view, the page says so and switches to Plain backdrop; the brush still works.
