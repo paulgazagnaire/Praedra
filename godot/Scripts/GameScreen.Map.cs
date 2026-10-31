@@ -181,6 +181,16 @@ public partial class GameScreen
     Dictionary<string, int> _yardIndex;
     int _yardIndexDay = -1;
 
+    static readonly Praedra.Core.Construction.YardFamily[] YardFamilies =
+        { Praedra.Core.Construction.YardFamily.Shipyard, Praedra.Core.Construction.YardFamily.Construction, Praedra.Core.Construction.YardFamily.Training };
+
+    /// <summary>The yard families a system has (shipyard, construction, training, in that order).</summary>
+    IEnumerable<Praedra.Core.Construction.YardFamily> YardFamiliesAt(string system) => YardFamilies.Where(f => HasYard(system, f));
+
+    /// <summary>The yard families here with nothing to build: an idle yard.</summary>
+    List<Praedra.Core.Construction.YardFamily> IdleYardFamilies(string system) =>
+        YardFamiliesAt(system).Where(f => S.Host.Construction.ProjectAt(system, f) is not { Units.Count: > 0 }).ToList();
+
     bool HasYard(string system, Praedra.Core.Construction.YardFamily fam)
     {
         if (_yardIndex == null || _yardIndexDay != S.Game.Day)

@@ -22,6 +22,9 @@ public static class Ui
     public static readonly Color Panel = new("141518");
     public static readonly Color Panel2 = new("1b1c20");
     public static readonly Color Hover = new("25272c");
+    public static readonly Color CardBg = new("121316");      // a card on a window (the sector window's systems)
+    public static readonly Color CardHoverBg = new("17181c");
+    public static readonly Color PlanetSky = new("040405");     // the black behind a planet picture
     public static readonly Color Line = new("232529");
     public static readonly Color LineHi = new("383b42");
     public static readonly Color Text = new("ecebe8");
@@ -438,16 +441,17 @@ public static class Ui
     public static Control Grow() => new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, MouseFilter = Control.MouseFilterEnum.Ignore };
 
     /// <summary>A key and value on one line: the key dim on the left, the value on the right.</summary>
-    public static HBoxContainer Row(string key, string value, Color? valueColor = null, string tip = null)
+    public static HBoxContainer Row(string key, string value, Color? valueColor = null, string tip = null, string keyVariation = "Dim", int valueSize = 0)
     {
         var h = HBox(8);
         h.MouseFilter = tip != null ? Control.MouseFilterEnum.Stop : Control.MouseFilterEnum.Ignore;
         if (tip != null) h.TooltipText = Wrap(tip);
-        var k = Label(key, "Dim", wrap: false);
+        var k = Label(key, keyVariation, wrap: false);
+        k.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
         k.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         k.ClipText = true;
         h.AddChild(k);
-        var v = Label(value, null, valueColor, wrap: false);
+        var v = Label(value, null, valueColor, valueSize, wrap: false);
         v.AddThemeFontOverride("font", NumBold);
         v.HorizontalAlignment = HorizontalAlignment.Right;
         h.AddChild(v);

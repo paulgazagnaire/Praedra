@@ -71,10 +71,10 @@ public partial class GameScreen
     void BuildQueues(string name)
     {
         var eco = S.Host.Economy;
-        var fams = new[] { YardFamily.Shipyard, YardFamily.Construction, YardFamily.Training }.Where(f => HasYard(name, f)).ToList();
+        var fams = YardFamiliesAt(name).ToList();
         if (fams.Count == 0) { Note("No yard here. A Construction yard builds facilities, a Shipyard ships and fighters, a Training facility troops. Build a Construction yard from a planet that has one."); return; }
         // idle yards first, in one quiet card: a row each with its button (an idle yard is a chance, not an alarm)
-        var idle = fams.Where(f => S.Host.Construction.ProjectAt(name, f) is not { Units.Count: > 0 }).ToList();
+        var idle = IdleYardFamilies(name);
         if (idle.Count > 0)
             using (Card(Ui.Panel, new Color(Ui.Warn, 0.45f)))
             {
