@@ -138,7 +138,7 @@ public partial class GameScreen
         var idleRows = new List<(string, Action)>();
         foreach (var n in mine)
         {
-            var idle = new[] { YardFamily.Shipyard, YardFamily.Construction, YardFamily.Training }.Where(fam => HasYard(n, fam) && S.Host.Construction.ProjectAt(n, fam) is not { Units.Count: > 0 }).ToList();
+            var idle = IdleYardFamilies(n);
             if (idle.Count == 0 || S.Host.Support.IsUprising(n)) continue;
             string sys = n;
             string sec = idle[0] switch { YardFamily.Shipyard => "Ships", YardFamily.Training => "Troops", _ => "Facilities" };
