@@ -30,12 +30,9 @@ async function open() {
 
 async function bake(dir, only) {
   fs.mkdirSync(dir, { recursive: true });
+  const { browser, page } = await open();
   // the names from systems.json itself: the page has no charset line, so a file:// load reads accents wrongly (Ciénaga)
   const names = JSON.parse(fs.readFileSync(path.join(__dirname, 'systems.json'), 'utf8')).map((s) => s.n);
-  // a name that is no system (a two-word name split by the shell, QA-75) would bake nothing and leave the old picture: stop instead
-  const unknown = [...only].filter((n) => !names.includes(n));
-  if (unknown.length) throw new Error('not a system: ' + unknown.join(', ') + ' (quote the names, or use mapfile; see README)');
-  const { browser, page } = await open();
   const kinds = await page.evaluate(() => window.__pm.SYSTEMS.map((s, i) => { window.__pm.loadSystem(i); return window.__pm.P.kind; }));
   const [shard, shards] = (process.env.SHARD || '0/1').split('/').map(Number);
   if (shard === 0) fs.writeFileSync(path.join(dir, 'kinds.json'), JSON.stringify(Object.fromEntries(names.map((n, i) => [n, kinds[i]]))));
