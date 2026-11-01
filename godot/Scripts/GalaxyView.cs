@@ -484,6 +484,7 @@ public partial class GalaxyView : Control
 
         // capital tags: always visible, so the player can find the headquarters at any zoom
         var taken = new LabelSpace();
+        var markers = LabelObstacles?.Invoke().ToList() ?? new List<Rect2>(); // fleet markers and the boxes on the map
         if (CapitalTag != null)
             for (int i = 0; i < _pos.Length; i++)
             {
@@ -496,7 +497,19 @@ public partial class GalaxyView : Control
                 var nameSize = _font.GetStringSize(name, HorizontalAlignment.Left, -1, fs + 1);
                 var tagSize = _font.GetStringSize(tag.Text, HorizontalAlignment.Left, -1, fs);
                 var size = new Vector2(nameSize.X + tagSize.X, Mathf.Max(nameSize.Y, tagSize.Y));
-                var box = new Rect2(p + new Vector2(-size.X / 2f - 5f, radius + 12f), size + new Vector2(10f, 4f));
+                var full = size + new Vector2(10f, 4f);
+                // under the dot if that is clear, else above, right or left: never over another system's dot (QA-76: Sourwater by Charter)
+                var spots = new[]
+                {
+                    p + new Vector2(-full.X / 2f, radius + 12f), p + new Vector2(-full.X / 2f, -radius - 12f - full.Y),
+                    p + new Vector2(radius + 12f, -full.Y / 2f), p + new Vector2(-radius - 12f - full.X, -full.Y / 2f),
+                };
+                var box = new Rect2(spots[0], full);
+                foreach (var at in spots)
+                {
+                    var b = new Rect2(at, full);
+                    if (!taken.Hits(b) && !DotUnder(b, i) && !markers.Any(o => o.Intersects(b))) { box = b; break; }
+                }
                 DrawRect(box, new Color(0.03f, 0.04f, 0.07f, 0.9f));
                 DrawRect(box, tag.Color, false, 1.5f);
                 var baseLine = box.Position + new Vector2(5f, 2f + _font.GetAscent(fs + 1));
@@ -506,24 +519,31 @@ public partial class GalaxyView : Control
             }
 
         // the hovered sector's name, just above its outline (only on hover: for the selected system it would sit on its fleets' names)
-        if (markedShape != null) SectorName(markedShape, MarkedSector, taken);
-        if (sectorShape != null && lit) SectorName(sectorShape, hoverSector, taken);
+        if (markedShape != null) SectorName(markedShape, MarkedSector, taken, markers);
+        if (sectorShape != null && lit) SectorName(sectorShape, hoverSector, taken, markers);
 
         DrawSystemNames(focus, radius, screenRect, taken);
     }
 
-    /// <summary>A sector's name, just above its outline.</summary>
+    /// <summary>Whether a system dot other than <paramref name="skip"/> lies under a box on screen.</summary>
+    bool DotUnder(Rect2 box, int skip)
+    {
+        var grown = box.Grow(SystemRadius + 2f);
+        for (int j = 0; j < _pos.Length; j++)
+            if (j != skip && grown.HasPoint(SystemScreen(j))) return true;
+        return false;
+    }
+
     /// <summary>A sector's name beside its outline: above it if that spot is free, else below, else at the top corners. Free means off
     /// the capital tags, the fleet markers, the boxes on the map and the sector's own system dots (QA: "CHARTER SECTOR" sat on Fleet 1).</summary>
-    void SectorName(Vector2[] sectorShape, int sector, LabelSpace taken)
+    void SectorName(Vector2[] sectorShape, int sector, LabelSpace taken, List<Rect2> markers)
     {
         string text = _sectors[sector].name.ToUpperInvariant();
         const int fs = 13;
         var size = _font.GetStringSize(text, HorizontalAlignment.Left, -1, fs);
         float top = sectorShape.Min(v => v.Y), bottom = sectorShape.Max(v => v.Y), cx = sectorShape.Average(v => v.X);
         float minX = sectorShape.Min(v => v.X), maxX = sectorShape.Max(v => v.X);
-        var blocked = new List<Rect2>();
-        if (LabelObstacles != null) blocked.AddRange(LabelObstacles());
+        var blocked = new List<Rect2>(markers);
         float r = SystemRadius + 3f;
         foreach (int m in _sectors[sector].members) blocked.Add(new Rect2(SystemScreen(m) - new Vector2(r, r), new Vector2(2 * r, 2 * r)));
         var spots = new[]
