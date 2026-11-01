@@ -24,6 +24,7 @@ public partial class GameScreen
     public enum SecPane { Buildings, Fleets, Forces }
 
     Control _secLayer;
+    bool _secDense;
     PanelContainer _secWin;
     Label _secTitle, _secSub;
     HBoxContainer _secTotals;
@@ -44,6 +45,7 @@ public partial class GameScreen
     const int CardMinWidth = 430;     // a card: the planet on the left, the numbers on the right
     const int CardArt = 150;          // the width of the planet band; the planet is drawn at two screen pixels per dot and cropped
     const int CardGap = 14;
+    const int HeadHeight = 128;       // the window's head and margins above and below the cards
     const int CardMinHeight = 228;    // every card the same height, so the grid reads as one board whatever each one shows
     const int DetailWidth = 480;      // the system's own window, floating over the right of the cards
     const int MonthDays = 30;         // output is shown per 30 days, a span a player can picture
@@ -70,7 +72,7 @@ public partial class GameScreen
         wb.ShadowColor = new Color(0, 0, 0, 0.55f); wb.ShadowSize = 28;
         _secWin.AddThemeStyleboxOverride("panel", wb);
         _secLayer.AddChild(_secWin);
-        _secLayer.Resized += LayoutSectorView;
+        _secLayer.Resized += () => LayoutSectorView();
 
         var v = Ui.VBox(0);
         _secWin.AddChild(v);
@@ -167,7 +169,7 @@ public partial class GameScreen
 
     /// <summary>The window fills the screen less a margin. The cards take as few rows as the width allows, spread evenly (nine systems
     /// make three rows of three on a laptop, two rows of five on a wide screen), so a whole sector is seen without scrolling.</summary>
-    void LayoutSectorView()
+    void LayoutSectorView(int count = -1)
     {
         if (_secWin == null) return;
         var vp = _secLayer.Size;
@@ -175,10 +177,13 @@ public partial class GameScreen
         _secWin.Position = new Vector2((vp.X - w) / 2, (vp.Y - h) / 2);
         _secWin.Size = new Vector2(w, h);
         _secWin.CustomMinimumSize = new Vector2(w, h);
-        int n = Math.Max(1, _secCards.Count);
+        int n = Math.Max(1, count >= 0 ? count : _secCards.Count);
         int fit = Math.Clamp((int)((w - 44 + CardGap) / (CardMinWidth + CardGap)), 1, 5);
         int rows = (n + fit - 1) / fit;
         _secGrid.Columns = Math.Max(1, (n + rows - 1) / rows);
+        // on a short screen (the game's 810 high at 16:9) the cards close up so three rows still fit without scrolling
+        bool dense = h - HeadHeight < rows * CardMinHeight + (rows - 1) * CardGap;
+        if (dense != _secDense) { _secDense = dense; _secDirty = true; _secTimer = 0; }
         PlaceSystemPane();
     }
 
@@ -278,7 +283,9 @@ public partial class GameScreen
         if (!SectorViewOpen) return;
         if (InMoveMode) { CloseSectorView(); return; } // a move picks its target on the map
         _secTimer -= delta;
-        if (_secDirty && _secTimer <= 0) { _secDirty = false; _secTimer = 0.25; RebuildSectorView(); }
+        // not while a mouse button is held: a click pressed before a new day would land on a card that no longer exists
+        if (_secDirty && _secTimer <= 0 && !Input.IsMouseButtonPressed(MouseButton.Left) && !Input.IsMouseButtonPressed(MouseButton.Right))
+        { _secDirty = false; _secTimer = 0.25; RebuildSectorView(); }
     }
 
     // ================================================================== the content
@@ -310,7 +317,9 @@ public partial class GameScreen
         _secMini.Focus = _secDetail.Visible ? _secFocus : null;
         _secMini.QueueRedraw();
 
-        // ---- cards
+        // ---- cards (laid out first for this sector's count, so the cards are built close or roomy to fit)
+        LayoutSectorView(systems.Count);
+        _secDirty = false;
         Ui.Clear(_secGrid);
         _secCards.Clear();
         foreach (var n in systems) _secGrid.AddChild(_secCards[n] = SystemCardTile(n));

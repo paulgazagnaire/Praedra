@@ -25,7 +25,7 @@ public partial class GameScreen
         Color oc = dead ? Ui.Danger : !explored || (!known && !mine) ? Ui.Text3 : Ui.OwnerColor(holder, Me);
         bool focused = _secDetail.Visible && _secFocus == n;
 
-        var card = new PanelContainer { CustomMinimumSize = new Vector2(CardMinWidth, CardMinHeight), SizeFlagsHorizontal = SizeFlags.ExpandFill, MouseFilter = MouseFilterEnum.Stop, MouseDefaultCursorShape = CursorShape.PointingHand };
+        var card = new PanelContainer { CustomMinimumSize = new Vector2(CardMinWidth, _secDense ? 0 : CardMinHeight), SizeFlagsHorizontal = SizeFlags.ExpandFill, MouseFilter = MouseFilterEnum.Stop, MouseDefaultCursorShape = CursorShape.PointingHand };
         card.SetMeta(UiTest.FullName, "Sector card " + n);
         StyleBoxFlat Style(bool hover) => Ui.Box(hover ? Ui.CardHoverBg : Ui.CardBg, 12, focused ? oc : hover ? new Color(1, 1, 1, 0.24f) : new Color(1, 1, 1, 0.07f), focused ? 2 : 1, 0, 0);
         card.AddThemeStyleboxOverride("panel", Style(false));
@@ -73,9 +73,9 @@ public partial class GameScreen
 
         // ---- the right side: name, owner, the numbers, the three links
         var pad = new MarginContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, MouseFilter = MouseFilterEnum.Ignore };
-        foreach (var (k, px) in new[] { ("margin_left", 14), ("margin_right", 14), ("margin_top", 11), ("margin_bottom", 11) }) pad.AddThemeConstantOverride(k, px);
+        foreach (var (k, px) in new[] { ("margin_left", 14), ("margin_right", 14), ("margin_top", _secDense ? 7 : 11), ("margin_bottom", _secDense ? 7 : 11) }) pad.AddThemeConstantOverride(k, px);
         h.AddChild(pad);
-        var v = Ui.VBox(6);
+        var v = Ui.VBox(_secDense ? 3 : 6);
         v.MouseFilter = MouseFilterEnum.Ignore;
         pad.AddChild(v);
 
@@ -99,9 +99,9 @@ public partial class GameScreen
         sub.AddChild(kl);
         foreach (var (word, c, tip) in Alarms(n, mine)) { var t = Ui.Tag(word, c, true); t.TooltipText = Ui.Wrap(tip); t.MouseFilter = MouseFilterEnum.Pass; sub.AddChild(t); }
         v.AddChild(sub);
-        v.AddChild(Ui.Space(1));
+        if (!_secDense) v.AddChild(Ui.Space(1));
 
-        var st = Ui.VBox(6);
+        var st = Ui.VBox(_secDense ? 3 : 6);
         st.MouseFilter = MouseFilterEnum.Ignore;
         st.SizeFlagsVertical = SizeFlags.ExpandFill;
         v.AddChild(st);
@@ -162,7 +162,7 @@ public partial class GameScreen
         st.AddChild(Pips("RAW", mines, rawSlots, Ui.Gold, $"Raw material slots, where mines can dig: {mines} mines on {rawSlots} slots. A mine takes one raw slot and one energy slot."));
         int raw = RawPerMonth(n), refs = eco.OfKindAt(n, FacilityKind.Refinery), refined = RefinedPerMonth(n);
         int smug = mines + refs > 0 ? eco.DiversionPercent(n, Me) : 0;
-        st.AddChild(Pair("OUTPUT / 30 D", raw == 0 && refined == 0 ? "–" : $"+{raw} raw  +{refined} refined", smug > 0 ? Ui.Warn : raw + refined > 0 ? Ui.Good : Ui.Text3,
+        st.AddChild(Pair("OUTPUT / 30 D", raw == 0 && refined == 0 ? "–" : $"+{raw} raw  +{refined} ref.", smug > 0 ? Ui.Warn : raw + refined > 0 ? Ui.Good : Ui.Text3,
             $"Every 30 days at today's support, about: {raw} raw dug by {Ui.Count(mines, "mine", "mines")}, {refined} refined made by {Ui.Count(refs, "refinery", "refineries")} (when there is raw to refine). Both go to your side's pools."
             + (smug > 0 ? $" Smugglers may take a cycle's output {smug}% of the time here: troops, fighters and ships on the planet scare them off." : "")));
         int have = S.Host.Support.RegimentCount(n), need = S.Host.Support.RequiredGarrison(n);
