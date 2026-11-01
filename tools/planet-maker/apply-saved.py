@@ -5,7 +5,7 @@ or {name, reset: true} (back to the lore sheet). Prints the names whose look cha
 
     python3 apply-saved.py saved.json > /tmp/changed.txt
     python3 build.py planet-maker.src.html systems.json index.html
-    node bake-thumbs.js bake /tmp/planet-thumbs $(cat /tmp/changed.txt)   (needs every picture in the dir: bake all once first)
+    node bake-thumbs.js bake /tmp/planet-thumbs $(cat /tmp/changed.txt)   (unchanged pictures come from the current sheet)
     node bake-thumbs.js pack /tmp/planet-thumbs
 """
 import json, os, sys

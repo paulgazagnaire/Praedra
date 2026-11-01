@@ -2197,10 +2197,10 @@ in vec2 a; void main() { gl_Position = vec4(a, 0.0, 1.0); }
 
 <script>
 const SYSTEMS = /*__SYSTEMS__*/[];
-const PRESET_BASE = /*__PRESET_BASE__*/{};
+const PRESET_BASE = /*__PRESET_BASE__*/{};   // the setting values most systems share; a system's own `p` holds only what differs
 // Looks saved for the game (system name -> preset params): system-overrides.json, the copy the game's pictures were baked from.
 // In the published page the shared store's "systems" collection adds what was saved since; the bake script sees only this file.
-const IN_GAME = /*__OVERRIDES__*/{};   // the setting values most systems share; a system's own `p` holds only what differs
+const IN_GAME = /*__OVERRIDES__*/{};
 </script>
 
 <script>
