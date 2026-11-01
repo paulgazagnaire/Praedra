@@ -19,14 +19,13 @@ public partial class GameScreen
         bool mine = S.OwnerOf(n) == Me;
         var row = Ui.HBox(Ui.Pad);
         _secDetailHead.AddChild(row);
-        if (PlanetArt.Of(n) is Texture2D tex)
-        {
-            var frame = new PanelContainer { CustomMinimumSize = new Vector2(64, 64), ClipContents = true, MouseFilter = MouseFilterEnum.Ignore };
-            frame.AddThemeStyleboxOverride("panel", Ui.Box(Ui.PlanetSky, 8, new Color(1, 1, 1, 0.08f), 1, 0, 0));
-            var tr = new TextureRect { Texture = tex, TextureFilter = TextureFilterEnum.Nearest, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered, MouseFilter = MouseFilterEnum.Ignore };
-            frame.AddChild(tr);
-            row.AddChild(frame);
-        }
+        // an unexplored system shows an empty frame: what world it is stays hidden until someone looks (Paul, 2026-11-01)
+        bool seen = mine || S.IsDestroyed(n) || S.Picture(n) != null;
+        var frame = new PanelContainer { CustomMinimumSize = new Vector2(64, 64), ClipContents = true, MouseFilter = MouseFilterEnum.Ignore };
+        frame.AddThemeStyleboxOverride("panel", Ui.Box(Ui.PlanetSky, 8, new Color(1, 1, 1, 0.08f), 1, 0, 0));
+        if (seen && PlanetArt.Of(n) is Texture2D tex)
+            frame.AddChild(new TextureRect { Texture = tex, TextureFilter = TextureFilterEnum.Nearest, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered, MouseFilter = MouseFilterEnum.Ignore });
+        row.AddChild(frame);
         var names = Ui.VBox(2);
         names.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         var t = Ui.Label(n, "Title", Ui.Text, 22, wrap: false);
