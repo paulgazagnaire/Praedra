@@ -140,6 +140,7 @@ public partial class GameScreen
             if (CanJoin(c)) acts.AddChild(Small(Named(Ui.Button("Mission...", () => OpenPlanner(c.System, id), $"Send {name} on a mission: pick the kind, more team members at the same system, and the target."), $"Send {name} on a mission...")));
             else if (S.PendingMissionOf(id) is { } pm) Line($"Waiting for the next day: {GameSession.KindWords(pm.Kind)} on {pm.Target}", Pending, Ui.Small);
             if (acts.GetChildCount() > 0) { Add(Ui.Space(Ui.Gap)); Add(acts); }
+            else acts.Free(); // never added to the tree: free it, or it leaks a node on every refresh (QA-70)
         }
     }
 
