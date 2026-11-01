@@ -178,6 +178,20 @@ public partial class GalaxyView : Control
     /// <summary>Centre on a system keeping the zoom (zooms in a little if the map is far out).</summary>
     public void Centre(int system) { _center = _pos[system]; if (_zoom < 2.5f) _zoom = 2.5f; Changed(); }
     public void SetZoom(float zoom) { _zoom = Mathf.Clamp(zoom, MinZoom, MaxZoom); Changed(); }
+    /// <summary>Show these systems in one part of the screen (the sector window covers the rest): pan so they sit in its middle, and
+    /// zoom so they fill it well (out if they would not fit, in if they would be a speck).</summary>
+    public void FrameIn(IReadOnlyList<int> systems, Rect2 area)
+    {
+        if (systems.Count == 0 || area.Size.X < 50 || area.Size.Y < 50) return;
+        Vector2 min = _pos[systems[0]], max = min;
+        foreach (int i in systems) { min = min.Min(_pos[i]); max = max.Max(_pos[i]); }
+        var span = (max - min).Max(Vector2.One);
+        float fit = Mathf.Min((area.Size.X - 120) / span.X, (area.Size.Y - 140) / span.Y);
+        float px = Mathf.Clamp(PxPerUnit, fit * 0.5f, fit);
+        _zoom = Mathf.Clamp(px / FitScale(), MinZoom, MaxZoom);
+        _center = (min + max) / 2f - (area.GetCenter() - Size / 2f) / PxPerUnit;
+        Changed();
+    }
     /// <summary>Pretend the mouse is over a system (playtest and screenshots).</summary>
     public void ShotHover(int system) { Hovered = system; QueueRedraw(); }
     /// <summary>Pretend the mouse is over a sector's open space (playtest and screenshots).</summary>

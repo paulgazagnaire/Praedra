@@ -127,7 +127,10 @@ public partial class GameScreen
     /// <summary>The words on one card (owner, numbers, links), for the playtest.</summary>
     internal string SectorCardText(string system) => _secCards.TryGetValue(system, out var c) ? LabelsIn(c) : null;
     internal string SectorDetailText => SectorViewFocus == null ? "" : LabelsIn(_secDetailHead) + "\n" + LabelsIn(_secDetailBody);
-    internal string SectorTotalsText => LabelsIn(_secTotals);
+    internal string SectorCardTip(string system) => _secCards.TryGetValue(system, out var c) ? c.TooltipText : null;
+    internal bool SectorOnLeft => _secWin != null && _secWin.Position.X < _secLayer.Size.X / 4;
+    internal float SectorWindowWidth => _secWin?.Size.X ?? 0;
+    internal float ScreenWidth => _secLayer?.Size.X ?? 0;
     internal string LayerName => _layer.ToString();
     internal Praedra.Core.Clock.Side Player => S.Player;
     internal GalaxyView.MapMark? MarkOf(string system) => G.TryFindSystem(system, out int i) ? LayerMarkOf(i) : null;
