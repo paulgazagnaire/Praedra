@@ -25,6 +25,7 @@ public partial class GameScreen
 
     Control _secLayer;
     bool _secDense;
+    int _secEvenIn;                   // frames until the close-up cards are evened (0: nothing to do)
     PanelContainer _secWin;
     Label _secTitle, _secSub;
     HBoxContainer _secTotals;
@@ -260,7 +261,8 @@ public partial class GameScreen
         PlaceSystemPane();
         _secDetailScroll.ScrollVertical = 0;
         RebuildSectorView();
-        if (_secCards.TryGetValue(system, out var card)) Callable.From(() => { if (IsInstanceValid(card)) _secScroll.EnsureControlVisible(card); }).CallDeferred();
+        // look the card up when it runs: a rebuild in between replaces it, and the old one is no longer under the scroll
+        Callable.From(() => { if (_secCards.TryGetValue(system, out var card) && IsInstanceValid(card) && _secScroll.IsAncestorOf(card)) _secScroll.EnsureControlVisible(card); }).CallDeferred();
     }
 
     void CloseSystemPane()
@@ -282,6 +284,7 @@ public partial class GameScreen
         if (_secLater is { } later) { _secLater = null; later(); }
         if (!SectorViewOpen) return;
         if (InMoveMode) { CloseSectorView(); return; } // a move picks its target on the map
+        if (_secEvenIn > 0 && --_secEvenIn == 0) EvenCardHeights();
         _secTimer -= delta;
         // not while a mouse button is held: a click pressed before a new day would land on a card that no longer exists
         if (_secDirty && _secTimer <= 0 && !Input.IsMouseButtonPressed(MouseButton.Left) && !Input.IsMouseButtonPressed(MouseButton.Right))
@@ -292,7 +295,6 @@ public partial class GameScreen
     /// tallest one's, so a row of unexplored cards leaves no blank strip under it (QA round 111).</summary>
     void EvenCardHeights()
     {
-        GetTree().ProcessFrame -= EvenCardHeights;
         var cards = _secCards.Values.Where(IsInstanceValid).ToList();
         if (!_secDense || cards.Count == 0) return;
         float tallest = cards.Max(c => c.Size.Y);
@@ -334,8 +336,7 @@ public partial class GameScreen
         Ui.Clear(_secGrid);
         _secCards.Clear();
         foreach (var n in systems) _secGrid.AddChild(_secCards[n] = SystemCardTile(n));
-        GetTree().ProcessFrame -= EvenCardHeights;
-        if (_secDense) GetTree().ProcessFrame += EvenCardHeights;
+        _secEvenIn = _secDense ? 2 : 0; // TickSectorView evens the heights once the cards are laid out
         LayoutSectorView();
 
         // ---- the system's own window
