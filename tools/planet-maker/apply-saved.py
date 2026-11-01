@@ -5,7 +5,8 @@ or {name, reset: true} (back to the lore sheet). Prints the names whose look cha
 
     python3 apply-saved.py saved.json > /tmp/changed.txt
     python3 build.py planet-maker.src.html systems.json index.html
-    node bake-thumbs.js bake /tmp/planet-thumbs $(cat /tmp/changed.txt)   (unchanged pictures come from the current sheet)
+    mapfile -t names < /tmp/changed.txt; node bake-thumbs.js bake /tmp/planet-thumbs "${names[@]}"   (unchanged pictures come from the current sheet)
+    (not $(cat /tmp/changed.txt): it splits two-word names like Serra Alta, QA-75)
     node bake-thumbs.js pack /tmp/planet-thumbs
 """
 import json, os, sys
