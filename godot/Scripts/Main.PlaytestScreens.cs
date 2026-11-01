@@ -124,20 +124,24 @@ public partial class Main
         var members = gs.G.Systems.Where(x => !x.IsOutsideSectors && x.Sector == homeSec).Select(x => x.Name).OrderBy(x => x, StringComparer.Ordinal).ToList();
         Expect(cards.OrderBy(x => x, StringComparer.Ordinal).SequenceEqual(members), $"one card for each of the {members.Count} systems of {homeSec}");
         Expect(cards.Count > 0 && cards[0] == home, "the headquarters comes first: " + string.Join(", ", cards));
-        string hc = gs.SectorCardText(home);
-        GD.Print("  card " + home + ": " + hc.Replace("\n", " / "));
-        Expect(hc.Contains("SUPPORT") && hc.Contains("ENERGY") && hc.Contains("TROOPS") && hc.Contains("BUILDINGS") && hc.Contains("FLEETS") && hc.Contains("FORCES"),
-            "the headquarters card shows support, energy, troops and the three links");
+        Expect(gs.SectorWindowWidth <= gs.ScreenWidth / 2 + 1, $"the sector window takes half the screen at most ({gs.SectorWindowWidth} of {gs.ScreenWidth})");
+        string hc = gs.SectorCardText(home), tip = gs.SectorCardTip(home);
+        GD.Print("  tile " + home + ": " + hc.Replace("\n", " / ") + " | " + tip.Replace("\n", " / "));
+        Expect(hc.Contains(home) && !hc.Any(char.IsDigit), "the headquarters tile shows its name and no numbers: " + hc.Replace("\n", " / "));
+        Expect(tip.Contains("Loyalty") && tip.Contains("Energy") && tip.Contains("Raw") && tip.Contains("Troops"), "its tooltip has the numbers: loyalty, energy, raw, troops");
         Expect(PlanetArt.Of(home) != null && PlanetArt.KindOf(home) != null, $"{home} has its Planet Maker picture and a world kind ({PlanetArt.KindOf(home)})");
         Expect(gs.G.Systems.All(x => PlanetArt.Of(x.Name) != null), "every system of the map has a planet picture");
-        Expect(gs.SectorTotalsText.Contains("YOURS"), "the head of the window counts the systems you hold: " + gs.SectorTotalsText.Replace("\n", " "));
         var unseen = cards.FirstOrDefault(c => !s.Explored(c) && s.OwnerOf(c) != me);
-        if (unseen != null) Expect(gs.SectorCardText(unseen).Contains("UNEXPLORED") && !gs.SectorCardText(unseen).Contains("SUPPORT"), $"an unexplored card ({unseen}) gives nothing away");
-        Expect(gs.Click($"{home} buildings") && gs.Step0() && gs.SectorViewFocus == home && gs.SectorViewPane == GameScreen.SecPane.Buildings, "a card's Buildings link opens the system window on Buildings");
+        if (unseen != null) Expect(gs.SectorCardText(unseen).Trim() == unseen && gs.SectorCardTip(unseen).Contains("unexplored") && !gs.SectorCardTip(unseen).Contains("Loyalty"),
+            $"an unexplored tile ({unseen}) shows its name and planet only");
+        gs.ShotSectorPane(home, "buildings"); gs.Step0();
+        Expect(gs.SectorViewFocus == home && gs.SectorViewPane == GameScreen.SecPane.Buildings, "a tile opens the system window on Buildings");
         string det = gs.SectorDetailText;
         Expect(det.Contains("Mines") && det.Contains("Energy slots"), "the Buildings pane shows mines and slots: " + det.Split('\n').Take(8).Aggregate((x, y) => x + " / " + y));
-        Expect(gs.Click($"{home} fleets") && gs.Step0() && gs.SectorViewPane == GameScreen.SecPane.Fleets && gs.SectorDetailText.Contains("Your fleets"), "the Fleets link switches the window to the fleets in orbit");
-        Expect(gs.Click($"{home} forces") && gs.Step0() && gs.SectorViewPane == GameScreen.SecPane.Forces && gs.SectorDetailText.Contains("Garrison"), "the Forces link shows the garrison");
+        gs.ShotSectorPane(home, "fleets"); gs.Step0();
+        Expect(gs.SectorViewPane == GameScreen.SecPane.Fleets && gs.SectorDetailText.Contains("Your fleets"), "the Fleets pane shows the fleets in orbit");
+        gs.ShotSectorPane(home, "forces"); gs.Step0();
+        Expect(gs.SectorViewPane == GameScreen.SecPane.Forces && gs.SectorDetailText.Contains("Garrison"), "the Forces pane shows the garrison");
         gs.PressKey(Key.Escape);
         Expect(gs.SectorViewOpen && gs.SectorViewFocus == null, "Esc closes the system window first");
         gs.PressKey(Key.Right);

@@ -19,10 +19,9 @@ public partial class GameScreen
         bool mine = S.OwnerOf(n) == Me;
         var row = Ui.HBox(Ui.Pad);
         _secDetailHead.AddChild(row);
-        // an unexplored system shows an empty frame: what world it is stays hidden until someone looks (Paul, 2026-11-01)
         var frame = new PanelContainer { CustomMinimumSize = new Vector2(64, 64), ClipContents = true, MouseFilter = MouseFilterEnum.Ignore };
         frame.AddThemeStyleboxOverride("panel", Ui.Box(Ui.PlanetSky, 8, new Color(1, 1, 1, 0.08f), 1, 0, 0));
-        if (WorldKnown(n) && PlanetArt.Of(n) is Texture2D tex)
+        if (PlanetArt.Of(n) is Texture2D tex)
             frame.AddChild(new TextureRect { Texture = tex, TextureFilter = TextureFilterEnum.Nearest, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered, MouseFilter = MouseFilterEnum.Ignore });
         row.AddChild(frame);
         var names = Ui.VBox(2);
@@ -35,7 +34,7 @@ public partial class GameScreen
         names.AddChild(Ui.Label(who, null, S.IsDestroyed(n) ? Ui.Danger : Ui.OwnerColor(mine ? Me : owner, Me), Ui.Small, wrap: false));
         row.AddChild(names);
         row.AddChild(Ui.Grow());
-        var map = Ui.Button("Map", () => ShowOnMap(n), "Close this window and show the system on the map (double-click a card does the same)", "Chip");
+        var map = Ui.Button("Map", () => ShowOnMap(n), "Close this window and show the system on the map (double-clicking a tile does the same)", "Chip");
         map.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         row.AddChild(map);
         var close = Ui.Button("✕", CloseSystemPane, "Close the system window", "Clock");
