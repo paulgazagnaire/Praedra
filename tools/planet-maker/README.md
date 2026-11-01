@@ -7,8 +7,9 @@ Draws planets purely in code (one WebGL2 fragment shader, no images, no librarie
 - `planet-maker.src.html` — the same page with a placeholder where the system list goes.
 - `systems.json` — the 555 systems: name, sector, world, from-space, moons, people, story, terraforming, star density, and each system's own planet settings (`p`). Built by `parse.py` (text from `specs/creative/07-systems.md`) and `parse_presets.py` (settings from `specs/creative/08-planet-presets.json`).
 - `preset-base.json` — the setting values most systems share; a system's `p` only lists what differs.
+- `system-overrides.json` — the looks Paul saved for the game (system name -> settings), used before the lore sheet's own; see Customising the game's systems. `apply-saved.py` writes it.
 - `build.py` / `parse.py` / `parse_presets.py` — rebuild `index.html` from the files above.
-- `presets/` — named presets exported from the tool (`<name>.planet.json`), one per system once the team has saved them.
+- `presets/` — named presets exported from the tool (`<name>.planet.json`).
 
 ## Rebuild
 ```
@@ -44,6 +45,22 @@ Picking a system loads the planet the lore sheet describes (its kind, colours, m
 Speeds: rotation = `spin * 0.5` radians per second (0.25 is one turn in about 50 s).
 
 Pasted presets and library entries are checked on load: numbers are clamped to their slider range (moons 0 to 8, each moon's numbers and colours the same way, an unknown moon type becomes cratered rock, an unknown ring type becomes broad icy rings; presets saved before ring kinds existed load as broad icy rings with their old size and colours; a hand-written ring of another kind starts from that kind's own size, colours and source moon, so only the fields you write override it), bad colours are replaced, and a short palette is filled from the world type's defaults.
+
+## Customising the game's systems
+The section "The game's 555 systems" is where Paul goes through every system and sets the look the game shows. Pick a system (type its name, or Previous / Next / Next not saved), change it, then press **Save for the game**. The line under the buttons says where that system stands: as the lore sheet describes it, changed but not saved, saved and waiting for the next game update, or saved and in the game; and how many of the 555 are saved. Leaving a changed system without saving asks for a second press. **Back to lore sheet** drops the saved look.
+
+Where the looks live:
+- In the published page, each save is a record in the artifact's shared store, collection `systems` (doc id = the system's slug; `{name, kind, code, updatedAt}`, or `{name, reset: true}` when a look that is already in the game goes back to the lore sheet). Outside claude.ai they stay in that browser.
+- `system-overrides.json` (system name -> preset params) is the copy in the repo. `build.py` puts it into the page as `IN_GAME`; `loadSystem` uses a saved look before the lore sheet's preset, so `bake-thumbs.js` bakes the game's pictures from it with no other change.
+
+To bring saved looks into the game (a Claude thread does this; Paul only presses Save): read every record of the `systems` collection into a JSON list, then
+```
+python3 apply-saved.py saved.json > /tmp/changed.txt          # updates system-overrides.json, prints the changed systems
+python3 build.py planet-maker.src.html systems.json index.html
+mapfile -t names < /tmp/changed.txt; node bake-thumbs.js bake /tmp/planet-thumbs "${names[@]}"
+node bake-thumbs.js pack /tmp/planet-thumbs                    # unchanged pictures are copied from the current sheet
+```
+then republish the page (so its `IN_GAME` matches) and open the PR. A changed world kind changes the kind the sector window names, since the bake records the kind the page loads.
 
 ## Pictures for the game
 The game's sector window shows every system's planet as the Planet Maker draws it, dithered (Grain, the planet's own colours), baked into one sheet: `godot/art/planets/atlas.png` and `atlas.json` (system name -> cell and world kind). `bake-thumbs.js` makes them with the page itself in headless Chromium; rebuild after `systems.json` changes (about 10 s a picture in software GL, so split it in shards):
