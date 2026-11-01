@@ -288,6 +288,17 @@ public partial class GameScreen
         { _secDirty = false; _secTimer = 0.25; RebuildSectorView(); }
     }
 
+    /// <summary>Close-up cards have no fixed height. Once laid out (wrapped text only knows its height then), every card takes the
+    /// tallest one's, so a row of unexplored cards leaves no blank strip under it (QA round 111).</summary>
+    void EvenCardHeights()
+    {
+        GetTree().ProcessFrame -= EvenCardHeights;
+        var cards = _secCards.Values.Where(IsInstanceValid).ToList();
+        if (!_secDense || cards.Count == 0) return;
+        float tallest = cards.Max(c => c.Size.Y);
+        foreach (var c in cards) c.CustomMinimumSize = new Vector2(c.CustomMinimumSize.X, tallest);
+    }
+
     // ================================================================== the content
 
     void RebuildSectorView()
@@ -323,6 +334,8 @@ public partial class GameScreen
         Ui.Clear(_secGrid);
         _secCards.Clear();
         foreach (var n in systems) _secGrid.AddChild(_secCards[n] = SystemCardTile(n));
+        GetTree().ProcessFrame -= EvenCardHeights;
+        if (_secDense) GetTree().ProcessFrame += EvenCardHeights;
         LayoutSectorView();
 
         // ---- the system's own window

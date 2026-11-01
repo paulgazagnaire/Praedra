@@ -54,14 +54,27 @@ public partial class GameScreen
         sky.AddThemeStyleboxOverride("panel", skyBox);
         sky.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         art.AddChild(sky);
-        if (PlanetArt.Of(n) is Texture2D tex)
+        if (!WorldKnown(n))
+        {
+            // unexplored: no planet and no world kind until someone looks (Paul, 2026-11-01), only a faint outline where it would be
+            const float ring = 112;
+            var outline = new Panel { MouseFilter = MouseFilterEnum.Ignore };
+            outline.AddThemeStyleboxOverride("panel", Ui.Box(new Color(0, 0, 0, 0), (int)(ring / 2), new Color(1, 1, 1, 0.07f), 1, 0, 0));
+            outline.SetAnchorsPreset(LayoutPreset.Center);
+            outline.OffsetLeft = -ring / 2; outline.OffsetRight = ring / 2; outline.OffsetTop = -ring / 2; outline.OffsetBottom = ring / 2;
+            art.AddChild(outline);
+            var q = Ui.Label("?", null, new Color(Ui.Text3, 0.5f), 28, wrap: false);
+            q.HorizontalAlignment = HorizontalAlignment.Center; q.VerticalAlignment = VerticalAlignment.Center;
+            q.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+            art.AddChild(q);
+        }
+        else if (PlanetArt.Of(n) is Texture2D tex)
         {
             float px = PlanetArt.Dots * 2; // two screen pixels per dot: the dither stays crisp
             var tr = new TextureRect { Texture = tex, TextureFilter = TextureFilterEnum.Nearest, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.Scale, MouseFilter = MouseFilterEnum.Ignore };
             tr.SetAnchorsPreset(LayoutPreset.Center);
             tr.OffsetLeft = -px / 2; tr.OffsetRight = px / 2; tr.OffsetTop = -px / 2; tr.OffsetBottom = px / 2;
             if (dead) tr.Modulate = new Color(0.6f, 0.22f, 0.2f, 0.5f);
-            else if (!explored) tr.Modulate = new Color(0.26f, 0.27f, 0.3f, 1f);
             art.AddChild(tr);
         }
         var fade = new TextureRect { Texture = FadeTexture, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.Scale, MouseFilter = MouseFilterEnum.Ignore };
@@ -92,7 +105,7 @@ public partial class GameScreen
         v.AddChild(nameRow);
         var sub = Ui.HBox(6);
         sub.MouseFilter = MouseFilterEnum.Ignore;
-        var kl = Ui.Label((PlanetArt.KindOf(n) ?? "").ToUpperInvariant(), null, Ui.Text3, 10, wrap: false);
+        var kl = Ui.Label((WorldKnown(n) ? PlanetArt.KindOf(n) ?? "" : "Unknown world").ToUpperInvariant(), null, Ui.Text3, 10, wrap: false);
         kl.AddThemeFontOverride("font", Ui.Caps);
         kl.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         kl.SizeFlagsVertical = SizeFlags.ShrinkCenter;
@@ -129,6 +142,10 @@ public partial class GameScreen
         Gradient = new Gradient { Colors = new[] { new Color(Ui.CardBg, 0f), Ui.CardBg }, Offsets = new[] { 0f, 1f } },
         FillFrom = new Vector2(0, 0), FillTo = new Vector2(1, 0), Width = 64, Height = 4,
     };
+
+    /// <summary>Whether this side may see what world a system is: the map's own fog test (S.Explored), so the map and the sector window
+    /// never disagree. Unexplored worlds stay hidden until someone looks (Paul, 2026-11-01).</summary>
+    bool WorldKnown(string n) => S.IsDestroyed(n) || S.OwnerOf(n) == Me || S.Explored(n);
 
     Label Quiet(string text)
     {
