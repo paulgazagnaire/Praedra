@@ -34,7 +34,7 @@ public partial class GameScreen
     List<string> _secOrder;
     string _secName, _secFocus;
     SecPane _secPane = SecPane.Buildings;
-    bool _secDirty;
+    bool _secDirty, _secLeft;
     double _secTimer;
     readonly Dictionary<string, PanelContainer> _secCards = new(StringComparer.Ordinal);
 
@@ -43,7 +43,7 @@ public partial class GameScreen
     const int CardGap = 10;
     const int GridPad = 16;           // the margin round the tiles
     const int HeadHeight = 76;        // the window's head and the bar under it
-    const int LegendHeight = 30;      // the key to the marks at its foot
+    const int LegendHeight = 46;      // the key to the marks at its foot (two lines in a narrow window)
     const int TopClear = 72;          // the top bar of the screen (goal, day, clock) stays uncovered
     const int DetailWidth = 480;      // the system's own window at its narrowest
     const int MonthDays = 30;         // output is shown per 30 days, a span a player can picture
@@ -152,9 +152,9 @@ public partial class GameScreen
     /// <summary>The key to the marks: loyalty, energy, raw, troops, defences, fleets, trouble.</summary>
     Control Legend()
     {
-        var h = Ui.HBox(14);
-        h.Alignment = BoxContainer.AlignmentMode.Center;
-        h.MouseFilter = MouseFilterEnum.Ignore;
+        // wraps onto a second line in a narrow (three-column) window
+        var h = new HFlowContainer { Alignment = FlowContainer.AlignmentMode.Center, MouseFilter = MouseFilterEnum.Ignore };
+        h.AddThemeConstantOverride("h_separation", 14); h.AddThemeConstantOverride("v_separation", 4);
         void Item(Control mark, string word)
         {
             var it = Ui.HBox(5);
@@ -200,13 +200,17 @@ public partial class GameScreen
         var vp = _secLayer.Size;
         int n = Math.Max(1, count >= 0 ? count : _secCards.Count);
         float w = Math.Max(Math.Min(vp.X / 2 - 24, 900), Math.Min(vp.X - 32, 2 * (TileWidth + CardGap) + 2 * GridPad));
-        int cols = Math.Clamp((int)((w - 2 * GridPad + CardGap) / (TileWidth + CardGap)), 1, 6);
+        int fit = Math.Clamp((int)((w - 2 * GridPad + CardGap) / (TileWidth + CardGap)), 1, 6);
+        // as square as the width allows (nine systems make 3 x 3, not 4 + 4 + 1): a smaller window leaves more map
+        int cols = Math.Min(fit, Math.Max(2, (int)Math.Ceiling(Math.Sqrt(n))));
+        w = Math.Min(w, cols * (TileWidth + CardGap) - CardGap + 2 * GridPad + 4);
         int rows = (n + cols - 1) / cols;
         _secGrid.Columns = cols;
         float content = HeadHeight + 14 + rows * TileHeight + (rows - 1) * CardGap + 10 + LegendHeight;
         // below the top bar (the clock and the goal stay in sight), as tall as the tiles need
         float h = Math.Min(vp.Y - TopClear - 12, Math.Max(content, _secDetail.Visible ? 560 : 0));
-        bool left = SectorOnRight();
+        w = Math.Max(w, _secWin.GetCombinedMinimumSize().X); // never wider on screen than placed: the right edge stays on screen
+        bool left = _secLeft;
         _secWin.Position = new Vector2(left ? 16 : vp.X - w - 16, TopClear);
         _secWin.Size = new Vector2(w, h);
         _secWin.CustomMinimumSize = new Vector2(w, h);
@@ -220,6 +224,20 @@ public partial class GameScreen
         if (sec == null || sec.Members.Count == 0) return false;
         float x = sec.Members.Average(m => _view.SystemScreen(m).X);
         return x > _view.Size.X / 2;
+    }
+
+    /// <summary>Move the map so the open sector sits in the middle of the half the window leaves free (QA-71: the map beside the window
+    /// must show the sector, also when it was off screen or under the window).</summary>
+    void FrameSector()
+    {
+        var sec = G.Sectors.FirstOrDefault(x => x.Name == _secName);
+        if (sec == null) return;
+        var win = _secWin.GetGlobalRect();
+        var view = _view.GetGlobalRect();
+        float l = _secLeft ? win.End.X : view.Position.X, r = _secLeft ? view.End.X : win.Position.X;
+        var free = new Rect2(l - view.Position.X, TopClear, r - l, view.Size.Y - TopClear - 90); // under the top bar, above the bottom pieces
+        _view.FrameIn(sec.Members, free);
+        OnViewChanged();
     }
 
     /// <summary>The system's own window covers the tiles; closing it shows them again.</summary>
@@ -239,15 +257,17 @@ public partial class GameScreen
         if (sector == null || InMoveMode || !_secOrder.Contains(sector)) return;
         if (_secName != sector) { _secDetail.Visible = false; _secFocus = null; }
         _secName = sector;
-        if (!_secLayer.Visible)
+        bool opening = !_secLayer.Visible;
+        if (opening)
         {
             _secLayer.Modulate = new Color(1, 1, 1, 0);
             _secLayer.CreateTween().TweenProperty(_secLayer, "modulate:a", 1f, 0.14f);
         }
         _secLayer.Visible = true;
         _hoverCard.Visible = false;
-        LayoutSectorView();
+        if (opening) _secLeft = SectorOnRight(); // chosen once per opening: stepping sectors or panning never makes the window jump
         RebuildSectorView();
+        FrameSector();
         _secScroll.ScrollVertical = 0;
     }
 
