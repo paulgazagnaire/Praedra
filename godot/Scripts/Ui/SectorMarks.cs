@@ -18,12 +18,14 @@ public partial class SectorMarks : Control
     public readonly List<Mark> Marks = new();
     public float Side = 6f, Gap = 3f;
     public bool Centered = true;
+    /// <summary>The most marks the row draws, whatever is added; earlier marks win (add yours first, then the enemy's, then old sightings).</summary>
+    public int Cap = int.MaxValue;
 
     public SectorMarks() { MouseFilter = MouseFilterEnum.Ignore; }
 
     public SectorMarks Add(Shape shape, Color color, bool filled, int count = 1)
     {
-        for (int i = 0; i < count; i++) Marks.Add(new Mark(shape, color, filled));
+        for (int i = 0; i < count && Marks.Count < Cap; i++) Marks.Add(new Mark(shape, color, filled));
         UpdateMinimumSize();
         QueueRedraw();
         return this;

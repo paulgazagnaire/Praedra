@@ -84,10 +84,10 @@ public partial class GameScreen
             int seenBefore = !S.Sees(n) && pic?.Fleets is { } pf ? pf.Value.Count : 0;
             if (own + enemy + seenBefore > 0)
             {
-                var fleets = new SectorMarks { Side = 9, Gap = 3, Centered = false }
-                    .Add(SectorMarks.Shape.Triangle, Ui.You, true, Math.Min(own, FleetMarksCap))
-                    .Add(SectorMarks.Shape.Triangle, Ui.Enemy, true, Math.Min(enemy, FleetMarksCap))
-                    .Add(SectorMarks.Shape.Triangle, Ui.Enemy, false, Math.Min(seenBefore, FleetMarksCap));
+                var fleets = new SectorMarks { Side = 9, Gap = 3, Centered = false, Cap = FleetMarksCap }
+                    .Add(SectorMarks.Shape.Triangle, Ui.You, true, own)
+                    .Add(SectorMarks.Shape.Triangle, Ui.Enemy, true, enemy)
+                    .Add(SectorMarks.Shape.Triangle, Ui.Enemy, false, seenBefore);
                 fleets.Position = new Vector2(2, 2);
                 art.AddChild(fleets);
             }
@@ -144,21 +144,21 @@ public partial class GameScreen
             troops = pic.Ground?.Value.Where(g => g.Side != Me).Sum(g => g.Total) ?? 0;
             troopColor = Ui.Enemy;
         }
-        v.AddChild(new SectorMarks { SizeFlagsHorizontal = SizeFlags.ExpandFill }
-            .Add(SectorMarks.Shape.Dot, EnergyColor, true, Math.Min(Math.Min(eUsed, eAll), MarksCap))
-            .Add(SectorMarks.Shape.Dot, EnergyColor, false, Math.Min(Math.Max(0, eAll - eUsed), MarksCap)));
-        v.AddChild(new SectorMarks { SizeFlagsHorizontal = SizeFlags.ExpandFill }
-            .Add(SectorMarks.Shape.Dot, Ui.Gold, true, Math.Min(Math.Min(mines, rAll), MarksCap))
-            .Add(SectorMarks.Shape.Dot, Ui.Gold, false, Math.Min(Math.Max(0, rAll - mines), MarksCap)));
-        var ground = new SectorMarks { SizeFlagsHorizontal = SizeFlags.ExpandFill }
-            .Add(SectorMarks.Shape.Square, troopColor, true, Math.Min(troops, MarksCap))
-            .Add(SectorMarks.Shape.Square, Ui.Danger, false, Math.Min(troopsShort, MarksCap))
-            .Add(SectorMarks.Shape.Diamond, Ui.Text2, true, Math.Min(defences, MarksCap));
+        v.AddChild(new SectorMarks { SizeFlagsHorizontal = SizeFlags.ExpandFill, Cap = MarksCap }
+            .Add(SectorMarks.Shape.Dot, EnergyColor, true, Math.Min(eUsed, eAll))
+            .Add(SectorMarks.Shape.Dot, EnergyColor, false, Math.Max(0, eAll - eUsed)));
+        v.AddChild(new SectorMarks { SizeFlagsHorizontal = SizeFlags.ExpandFill, Cap = MarksCap }
+            .Add(SectorMarks.Shape.Dot, Ui.Gold, true, Math.Min(mines, rAll))
+            .Add(SectorMarks.Shape.Dot, Ui.Gold, false, Math.Max(0, rAll - mines)));
+        var ground = new SectorMarks { SizeFlagsHorizontal = SizeFlags.ExpandFill, Cap = MarksCap }
+            .Add(SectorMarks.Shape.Square, troopColor, true, troops)
+            .Add(SectorMarks.Shape.Square, Ui.Danger, false, troopsShort)
+            .Add(SectorMarks.Shape.Diamond, Ui.Text2, true, defences);
         v.AddChild(ground);
         return tile;
     }
 
-    const int MarksCap = 15;      // one kind of small mark is drawn at most this often (the slot cap; 15 fit a tile); the tooltip has the number
+    const int MarksCap = 15;      // a row of small marks holds at most this many (the slot cap; 15 fit a tile); the tooltip has the number
     const int FleetMarksCap = 8;  // fleet triangles are larger: 8 fit across the planet
 
     /// <summary>Whether your side knows this system beyond its picture and name: yours, or looked at (the map's own fog test, S.Explored).
