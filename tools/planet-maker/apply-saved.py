@@ -30,5 +30,6 @@ changed = sorted(n for n in set(cur) | set(new) if cur.get(n) != new.get(n))
 with open(path, 'w', encoding='utf8') as f:
     json.dump(dict(sorted(new.items())), f, ensure_ascii=False, indent=1)
     f.write('\n')
-print('\n'.join(changed))
+if changed:
+    print('\n'.join(changed))
 print('%d saved looks, %d changed' % (len(new), len(changed)), file=sys.stderr)

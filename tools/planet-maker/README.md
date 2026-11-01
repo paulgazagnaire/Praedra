@@ -46,6 +46,9 @@ Speeds: rotation = `spin * 0.5` radians per second (0.25 is one turn in about 50
 
 Pasted presets and library entries are checked on load: numbers are clamped to their slider range (moons 0 to 8, each moon's numbers and colours the same way, an unknown moon type becomes cratered rock, an unknown ring type becomes broad icy rings; presets saved before ring kinds existed load as broad icy rings with their old size and colours; a hand-written ring of another kind starts from that kind's own size, colours and source moon, so only the fields you write override it), bad colours are replaced, and a short palette is filled from the world type's defaults.
 
+## Save image (see-through PNG)
+**Save image** under the planet opens the picture at 1600 px. **See-through background** (on by default, remembered) drops the sky and the stars and keeps the planet with its rings, moons, orbital ring and halo, as a PNG with transparency. The page draws the picture twice, once on a black sky and once on a white one: where both agree the planet covers the sky, where they differ the difference is how much sky shows through (glow, haze, ring gaps). With the dither on, each dot is either kept or dropped, so the dots stay crisp. Turn the box off for the old picture with the black starry sky.
+
 ## Customising the game's systems
 The section "The game's 555 systems" is where Paul goes through every system and sets the look the game shows. Pick a system (type its name, or Previous / Next / Next not saved), change it, then press **Save for the game**. The line under the buttons says where that system stands: as the lore sheet describes it, changed but not saved, saved and waiting for the next game update, or saved and in the game; and how many of the 555 are saved. Leaving a changed system without saving asks for a second press. **Back to lore sheet** drops the saved look.
 
@@ -57,15 +60,15 @@ To bring saved looks into the game (a Claude thread does this; Paul only presses
 ```
 python3 apply-saved.py saved.json > /tmp/changed.txt          # updates system-overrides.json, prints the changed systems
 python3 build.py planet-maker.src.html systems.json index.html
-mapfile -t names < /tmp/changed.txt; node bake-thumbs.js bake /tmp/planet-thumbs "${names[@]}"
+mapfile -t names < /tmp/changed.txt; node bake-thumbs.js bake /tmp/planet-thumbs "${names[@]}"   # nothing changed: bakes nothing
 node bake-thumbs.js pack /tmp/planet-thumbs                    # unchanged pictures are copied from the current sheet
 ```
 then republish the page (so its `IN_GAME` matches) and open the PR. A changed world kind changes the kind the sector window names, since the bake records the kind the page loads.
 
 ## Pictures for the game
-The game's sector window shows every system's planet as the Planet Maker draws it, dithered (Grain, the planet's own colours), baked into one sheet: `godot/art/planets/atlas.png` and `atlas.json` (system name -> cell and world kind). `bake-thumbs.js` makes them with the page itself in headless Chromium; rebuild after `systems.json` changes (about 10 s a picture in software GL, so split it in shards):
+The game's sector window shows every system's planet as the Planet Maker draws it, dithered (Grain, the planet's own colours), baked into one sheet with a see-through background (same method as Save image): `godot/art/planets/atlas.png` and `atlas.json` (system name -> cell and world kind). `bake-thumbs.js` makes them with the page itself in headless Chromium; rebuild after `systems.json` changes (about 10 s a picture in software GL, so split it in shards):
 ```
-SHARD=0/3 node tools/planet-maker/bake-thumbs.js bake /tmp/planet-thumbs & SHARD=1/3 node ... & SHARD=2/3 node ...
+SHARD=0/3 node tools/planet-maker/bake-thumbs.js bake /tmp/planet-thumbs --all & SHARD=1/3 node ... --all & SHARD=2/3 node ... --all
 node tools/planet-maker/bake-thumbs.js pack /tmp/planet-thumbs
 ```
 Then open the Godot project once (or `--import`) so it imports the new sheet.

@@ -2,15 +2,15 @@
 // into one sheet the game loads (godot/art/planets/atlas.png + atlas.json). The game cannot run the Planet Maker's WebGL shader, so it
 // shows these pictures instead. Rebuild them whenever systems.json (the Lore Master's presets) changes:
 //
-//   node tools/planet-maker/bake-thumbs.js bake /tmp/planet-thumbs        (about 10 s a picture in software GL; 555 systems)
+//   node tools/planet-maker/bake-thumbs.js bake /tmp/planet-thumbs --all  (about 10 s a picture in software GL; 555 systems)
 //   node tools/planet-maker/bake-thumbs.js pack /tmp/planet-thumbs        (writes godot/art/planets/atlas.png and atlas.json)
 //
-// To share the bake between cores, run several at once: SHARD=0/3 node ... bake DIR & SHARD=1/3 ... & SHARD=2/3 ...
+// To share the bake between cores, run several at once: SHARD=0/3 node ... bake DIR --all & SHARD=1/3 ... & SHARD=2/3 ...
 // To redo a few systems only: node ... bake DIR Charter "The Thaw"; then pack again. Pictures missing from DIR are copied from the
 // current sheet, so a fresh DIR with only the redone systems is enough (apply-saved.py prints the names Paul's saved looks changed).
 // Each picture is SIZE (128) dots square, drawn with the dither style on (Grain, the planet's own colours, one canvas pixel per dot), so
-// the game shows it with nearest filtering at a whole number of screen pixels per dot. The sky is left black and the camera frames the
-// planet and its rings; moons further out are cropped. Needs Node and Playwright with Chromium (preinstalled in cloud sessions).
+// the game shows it with nearest filtering at a whole number of screen pixels per dot. The camera frames the
+// planet and its rings; moons further out are cropped. The sky is see-through (alpha), so the game draws its own background. Needs Node and Playwright with Chromium (preinstalled in cloud sessions).
 const path = require('path');
 const fs = require('fs');
 const { chromium } = require('playwright');
@@ -53,11 +53,7 @@ async function bake(dir, only) {
       const moons = (P.moonList || []).slice(0, P.moons).reduce((m, o) => Math.max(m, o.orbit + o.size), 0);
       // the Planet Maker pulls back to fit the farthest moon; a thumbnail frames the planet and its rings instead
       P.zoom = P.zoom * Math.max(1.3, ring, moons * 0.95) / Math.max(1.3, ring);
-      const cv = document.getElementById('cv');
-      cv.width = size; cv.height = size;
-      pm.setQ(1);
-      pm.draw();
-      return cv.toDataURL('image/png');
+      return pm.clearPNG(size);   // see-through: no sky, just the planet and what is around it (Paul 2026-11-01)
     }, { i, size: SIZE });
     fs.writeFileSync(path.join(dir, slug(names[i]) + '.png'), Buffer.from(url.split(',')[1], 'base64'));
     if (i % 30 === shard) console.log(`${i + 1}/${names.length} ${names[i]}`);
@@ -83,12 +79,13 @@ async function pack(dir) {
     const g = c.getContext('2d');
     g.imageSmoothingEnabled = false;
     let sheet = null;
-    if (old) { sheet = new Image(); sheet.src = old.png; await sheet.decode(); }
+    if (pics.some((p) => typeof p === 'number')) { sheet = new Image(); sheet.src = old.png; await sheet.decode(); }
     for (let i = 0; i < pics.length; i++) {
       const x = (i % cols) * size, y = Math.floor(i / cols) * size;
       if (typeof pics[i] === 'number') { const k = pics[i], oc = old.idx.cols; g.drawImage(sheet, (k % oc) * size, Math.floor(k / oc) * size, size, size, x, y, size, size); continue; }
-      const im = new Image(); im.src = pics[i]; await im.decode();
-      g.drawImage(im, x, y);
+      // createImageBitmap rather than <img>.decode(): hundreds of decodes in a row made Chromium fail one now and then
+      const bm = await createImageBitmap(await (await fetch(pics[i])).blob());
+      g.drawImage(bm, x, y); bm.close();
     }
     return c.toDataURL('image/png');
   }, { pics, cols, size: SIZE, old });
@@ -102,7 +99,12 @@ async function pack(dir) {
 
 (async () => {
   const [cmd, dir, ...only] = process.argv.slice(2);
-  if (!dir || (cmd !== 'bake' && cmd !== 'pack')) { console.error('usage: bake-thumbs.js bake|pack DIR [system...]'); process.exit(2); }
-  if (cmd === 'bake') await bake(path.resolve(dir), new Set(only.filter((n) => n.trim())));   // apply-saved prints an empty line when nothing changed
+  if (!dir || (cmd !== 'bake' && cmd !== 'pack')) { console.error('usage: bake-thumbs.js bake DIR (--all | system...) | pack DIR'); process.exit(2); }
+  if (cmd === 'bake') {
+    // a full bake takes half an hour, so it needs --all; names that are all empty (apply-saved found nothing changed) bake nothing
+    const all = only.includes('--all'), names = only.filter((n) => n.trim() && n !== '--all');
+    if (!all && !names.length) { console.log('nothing to bake (name the systems, or pass --all for every one)'); return; }
+    await bake(path.resolve(dir), new Set(all ? [] : names));
+  }
   else await pack(path.resolve(dir));
 })().catch((e) => { console.error(e); process.exit(1); });
