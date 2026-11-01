@@ -72,6 +72,8 @@ input[type=text], select, textarea {
 }
 textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
 .note { color: var(--dim); font-size: 12px; margin: 8px 0 0; }
+.sysstate { font-size: 12px; margin: 8px 0 0; color: var(--fg); }
+.sysstate small { display: block; color: var(--dim); margin-top: 2px; }
 .sysinfo { font-size: 12px; color: var(--dim); margin: 8px 0 0; }
 .sysinfo b { color: var(--fg); font-weight: 500; }
 .sysinfo .lore { display: block; margin-top: 6px; opacity: .85; }
@@ -120,14 +122,22 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
     </section>
 
     <section class="sec">
-      <h2>Or load one of the 555 systems</h2>
+      <h2>The game's 555 systems</h2>
       <input id="sysIn" type="text" list="sysList" placeholder="Type a system name, e.g. Scoria" autocomplete="off" spellcheck="false">
       <datalist id="sysList"></datalist>
       <div class="row2" style="margin-top:8px">
         <button id="btnPrev" type="button">◀ Previous</button>
         <button id="btnNext" type="button">Next ▶</button>
       </div>
-      <p class="sysinfo" id="sysInfo">Pick a system to see its planet as the lore sheet describes it. Tweak it, then save it.</p>
+      <div class="row2" style="margin-top:8px">
+        <button id="btnTodo" type="button">Next not saved ▶</button>
+      </div>
+      <div class="row2" style="margin-top:8px">
+        <button id="btnGame" type="button" class="primary" disabled>Save for the game</button>
+        <button id="btnLore" type="button" disabled>Back to lore sheet</button>
+      </div>
+      <p class="sysstate" id="sysState"></p>
+      <p class="sysinfo" id="sysInfo">Pick a system, change it until it looks right, then press Save for the game. The game shows the saved look.</p>
     </section>
 
     <details class="sec" id="secDither" open>
@@ -2187,7 +2197,10 @@ in vec2 a; void main() { gl_Position = vec4(a, 0.0, 1.0); }
 
 <script>
 const SYSTEMS = /*__SYSTEMS__*/[];
-const PRESET_BASE = /*__PRESET_BASE__*/{};   // the setting values most systems share; a system's own `p` holds only what differs
+const PRESET_BASE = /*__PRESET_BASE__*/{};
+// Looks saved for the game (system name -> preset params): system-overrides.json, the copy the game's pictures were baked from.
+// In the published page the shared store's "systems" collection adds what was saved since; the bake script sees only this file.
+const IN_GAME = /*__OVERRIDES__*/{};   // the setting values most systems share; a system's own `p` holds only what differs
 </script>
 
 <script>
@@ -3214,6 +3227,10 @@ const sysByName = new Map();
 function loadSystem(i) {
   sysIdx = ((i % SYSTEMS.length) + SYSTEMS.length) % SYSTEMS.length;
   const s = SYSTEMS[sysIdx];
+  const saved = sysSaved(s.n);
+  if (saved) {
+    fromCode(JSON.stringify({ format: 'praedra-planet', v: 2, name: s.n, params: Object.assign({}, saved, { name: s.n }) }));
+  } else
   // the lore sheet's own settings when the system has them (08-planet-presets.json), else a first guess from its description
   if (s.p) {
     const sd = typeof s.sd === 'number' ? s.sd : 0.5;   // Heartland 0.8, Midreach 0.6, Farreach 0.4: the star density slider
@@ -3225,6 +3242,91 @@ function loadSystem(i) {
     (s.pop ? `<br>People: ${esc(s.pop)}.` : '') + (TF[s.tf] ? `<br>Terraforming: ${TF[s.tf]}.` : '') + (s.lore ? `<br><span class="lore">${esc(s.lore)}</span>` : '') +
     (s.hist ? `<details class="hist"><summary>History</summary>${esc(s.hist)}</details>` : '');
   syncControls();
+  loadedCode = toCode(); leaveArmed = false;
+  sysUI();
+}
+/* ---------- saving systems for the game ---------- */
+// SAVED: system name -> { params, at }, from the shared store when there is one, else this browser; IN_GAME is what the game shows now
+let SAVED = {}, sysDb = null, loadedCode = '', leaveArmed = false;
+const SKEY = 'pm_systems_v1';
+const paramsKey = (p) => JSON.stringify(p);
+// a saved record with params null means "back to the lore sheet" (it takes the look out of the game at the next update)
+function sysSaved(name) { return SAVED[name] ? SAVED[name].params : IN_GAME[name] || null; }
+function sysStatus(name) {
+  const g = IN_GAME[name], v = SAVED[name];
+  if (!v) return g ? 'game' : 'lore';
+  if (!v.params) return g ? 'waiting' : 'lore';
+  return g && paramsKey(g) === paramsKey(v.params) ? 'game' : 'waiting';
+}
+function sysUI() {
+  const total = SYSTEMS.length;
+  let saved = 0, waiting = 0;
+  for (const n of new Set([...Object.keys(SAVED), ...Object.keys(IN_GAME)])) { if (sysSaved(n)) saved++; if (sysStatus(n) === 'waiting') waiting++; }
+  const prog = `${saved} of ${total} saved` + (waiting ? ` · ${waiting} waiting to go into the game` : '');
+  const st = $('sysState');
+  if (sysIdx < 0) { st.innerHTML = esc(prog); $('btnGame').disabled = $('btnLore').disabled = true; return; }
+  const n = SYSTEMS[sysIdx].n, k = sysStatus(n), dirty = toCode() !== loadedCode;
+  const line = dirty ? 'Changed, not saved yet.' : !sysSaved(n) && k === 'waiting' ? 'Back to the lore sheet at the next game update.'
+    : { game: 'Saved. The game shows this look.', waiting: 'Saved. It goes into the game at the next update.', lore: 'As the lore sheet describes it. Not saved for the game yet.' }[k];
+  st.innerHTML = `<b>${esc(line)}</b><small>${esc(prog)}${sysDb ? '' : ' · saved in this browser only'}</small>`;
+  $('btnGame').disabled = false;
+  $('btnLore').disabled = !sysSaved(n) && !dirty;
+}
+async function saveSystem() {
+  if (sysIdx < 0) return;
+  const n = SYSTEMS[sysIdx].n;
+  P.name = n; $('pName').value = n; $('tagName').textContent = n;
+  const params = JSON.parse(toCode()).params, rec = { name: n, kind: P.kind, code: JSON.stringify({ format: 'praedra-planet', v: 2, name: n, params }), updatedAt: new Date().toISOString() };
+  if (sysDb) { try { await sysDb.collection('systems').doc(slug(n)).set(rec); } catch (e) { toast('Could not save. Try again.'); return; } }
+  SAVED[n] = { params, at: rec.updatedAt };
+  if (!sysDb) writeSys();
+  loadedCode = toCode(); leaveArmed = false;
+  toast('Saved ' + n + ' for the game'); sysUI();
+}
+async function loreSystem() {
+  if (sysIdx < 0) return;
+  const n = SYSTEMS[sysIdx].n;
+  // a look already in the game needs a "reset" record so the next update takes it out; a look only saved here is simply dropped
+  const reset = !!IN_GAME[n];
+  if (sysDb) {
+    try {
+      const doc = sysDb.collection('systems').doc(slug(n));
+      if (reset) await doc.set({ name: n, reset: true, updatedAt: new Date().toISOString() }); else await doc.delete();
+    } catch (e) { toast('Could not reset. Try again.'); return; }
+  }
+  if (reset) SAVED[n] = { params: null, at: new Date().toISOString() }; else delete SAVED[n];
+  if (!sysDb) writeSys();
+  leaveArmed = true;   // the lore look replaces the unsaved edits on purpose
+  loadSystem(sysIdx); toast(n + ' is back to the lore sheet');
+}
+function writeSys() { try { localStorage.setItem(SKEY, JSON.stringify(SAVED)); } catch (e) {} }
+function goSystem(i) {
+  // leaving a changed system: the first press warns, the second leaves without saving
+  if (sysIdx >= 0 && toCode() !== loadedCode && !leaveArmed) { leaveArmed = true; toast('Not saved. Press Save for the game, or press again to leave without saving.'); return; }
+  loadSystem(i);
+}
+function nextTodo() {
+  for (let k = 1; k <= SYSTEMS.length; k++) { const i = (Math.max(sysIdx, -1) + k) % SYSTEMS.length; if (sysStatus(SYSTEMS[i].n) === 'lore') return goSystem(i); }
+  toast('Every system is saved');
+}
+async function initSystems() {
+  try { const o = JSON.parse(localStorage.getItem(SKEY) || '{}'); if (o && typeof o === 'object') SAVED = o; } catch (e) {}
+  sysUI();
+  try {
+    const db = window.claude && window.claude.use ? await window.claude.use('db') : null;
+    if (!db) return;
+    sysDb = db; SAVED = {};
+    db.collection('systems').onSnapshot((snap) => {
+      const next = {};
+      snap.docs.forEach((d) => {
+        const v = d.data() || {};
+        if (typeof v.name !== 'string') return;
+        if (v.reset) { next[v.name] = { params: null, at: v.updatedAt }; return; }
+        try { const o = JSON.parse(v.code); if (o && o.params) next[v.name] = { params: o.params, at: v.updatedAt }; } catch (e) {}
+      });
+      SAVED = next; sysUI();
+    }, () => { sysDb = null; sysUI(); });
+  } catch (e) { sysDb = null; }
 }
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -3372,9 +3474,17 @@ function boot() {
   buildDither();
   const dl = $('sysList');
   SYSTEMS.forEach((s, i) => { sysByName.set(s.n.toLowerCase(), i); const o = document.createElement('option'); o.value = s.n; o.label = s.sec; dl.appendChild(o); });
-  $('sysIn').addEventListener('change', () => { const i = sysByName.get($('sysIn').value.trim().toLowerCase()); if (i !== undefined) loadSystem(i); else toast('No system with that name'); });
-  $('btnPrev').addEventListener('click', () => loadSystem(sysIdx < 0 ? SYSTEMS.length - 1 : sysIdx - 1));
-  $('btnNext').addEventListener('click', () => loadSystem(sysIdx + 1));
+  $('sysIn').addEventListener('change', () => { const i = sysByName.get($('sysIn').value.trim().toLowerCase()); if (i !== undefined) goSystem(i); else toast('No system with that name'); });
+  $('btnPrev').addEventListener('click', () => goSystem(sysIdx < 0 ? SYSTEMS.length - 1 : sysIdx - 1));
+  $('btnNext').addEventListener('click', () => goSystem(sysIdx + 1));
+  $('btnTodo').addEventListener('click', nextTodo);
+  $('btnGame').addEventListener('click', saveSystem);
+  $('btnLore').addEventListener('click', loreSystem);
+  // the status line follows edits: any slider, chip or swatch change marks the system as changed
+  const later = () => { if (sysIdx >= 0) setTimeout(sysUI, 0); };
+  document.addEventListener('input', () => { leaveArmed = false; later(); }, true);
+  document.addEventListener('change', later, true);
+  document.addEventListener('click', later, true);
   $('btnSeed').addEventListener('click', () => { P.seed = 1 + Math.floor(Math.random() * 9999); P.moonList = []; ensureMoons(); placeFeeder(P); rebuildMoons(); });
   $('btnSurprise').addEventListener('click', surprise);
   $('ringOn').addEventListener('change', (e) => { P.ring.on = e.target.checked; syncControls(); });
@@ -3391,6 +3501,7 @@ function boot() {
   $('snapClose').addEventListener('click', () => { $('snap').classList.remove('on'); });
   $('snapSave').addEventListener('click', async () => { const ok = await saveFile(slug(P.name) + '.png', snapBlob, 'image/png'); toast(ok ? 'Image ready' : 'Right-click the image to save it'); });
   initLib();
+  initSystems();
   if (SYSTEMS.length && !location.hash) { /* start on a classic-looking world */ }
   P = makeDefaults('terran', 7); P.name = 'Test world'; P.moons = 2; syncControls();
   if (!glOK) { document.querySelector('.hint').textContent = 'This browser cannot run WebGL 2, so the planet cannot be drawn.'; return; }

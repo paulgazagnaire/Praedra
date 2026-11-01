@@ -6,7 +6,8 @@
 //   node tools/planet-maker/bake-thumbs.js pack /tmp/planet-thumbs        (writes godot/art/planets/atlas.png and atlas.json)
 //
 // To share the bake between cores, run several at once: SHARD=0/3 node ... bake DIR & SHARD=1/3 ... & SHARD=2/3 ...
-// To redo a few systems only: node ... bake DIR Charter "The Thaw"; then pack again.
+// To redo a few systems only: node ... bake DIR Charter "The Thaw"; then pack again. Pictures missing from DIR are copied from the
+// current sheet, so a fresh DIR with only the redone systems is enough (apply-saved.py prints the names Paul's saved looks changed).
 // Each picture is SIZE (128) dots square, drawn with the dither style on (Grain, the planet's own colours, one canvas pixel per dot), so
 // the game shows it with nearest filtering at a whole number of screen pixels per dot. The sky is left black and the camera frames the
 // planet and its rings; moons further out are cropped. Needs Node and Playwright with Chromium (preinstalled in cloud sessions).
@@ -65,23 +66,30 @@ async function pack(dir) {
   const kinds = JSON.parse(fs.readFileSync(path.join(dir, 'kinds.json'), 'utf8'));
   const names = Object.keys(kinds).sort();
   const cols = Math.ceil(Math.sqrt(names.length));
-  const missing = names.filter((n) => !fs.existsSync(path.join(dir, slug(n) + '.png')));
+  const out = path.resolve(__dirname, '..', '..', 'godot', 'art', 'planets');
+  // a picture not baked into DIR comes from its cell in the current sheet
+  let old = null;
+  try { old = { idx: JSON.parse(fs.readFileSync(path.join(out, 'atlas.json'), 'utf8')), png: 'data:image/png;base64,' + fs.readFileSync(path.join(out, 'atlas.png')).toString('base64') }; } catch (e) {}
+  const missing = names.filter((n) => !fs.existsSync(path.join(dir, slug(n) + '.png')) && !(old && old.idx.size === SIZE && old.idx.systems[n]));
   if (missing.length) throw new Error(`${missing.length} pictures missing, e.g. ${missing.slice(0, 5).join(', ')}`);
   const { browser, page } = await open();
-  const pics = names.map((n) => 'data:image/png;base64,' + fs.readFileSync(path.join(dir, slug(n) + '.png')).toString('base64'));
-  const url = await page.evaluate(async ({ pics, cols, size }) => {
+  const pics = names.map((n) => fs.existsSync(path.join(dir, slug(n) + '.png')) ? 'data:image/png;base64,' + fs.readFileSync(path.join(dir, slug(n) + '.png')).toString('base64') : old.idx.systems[n][0]);
+  const url = await page.evaluate(async ({ pics, cols, size, old }) => {
     const c = document.createElement('canvas');
     c.width = cols * size; c.height = Math.ceil(pics.length / cols) * size;
     const g = c.getContext('2d');
     g.imageSmoothingEnabled = false;
+    let sheet = null;
+    if (old) { sheet = new Image(); sheet.src = old.png; await sheet.decode(); }
     for (let i = 0; i < pics.length; i++) {
+      const x = (i % cols) * size, y = Math.floor(i / cols) * size;
+      if (typeof pics[i] === 'number') { const k = pics[i], oc = old.idx.cols; g.drawImage(sheet, (k % oc) * size, Math.floor(k / oc) * size, size, size, x, y, size, size); continue; }
       const im = new Image(); im.src = pics[i]; await im.decode();
-      g.drawImage(im, (i % cols) * size, Math.floor(i / cols) * size);
+      g.drawImage(im, x, y);
     }
     return c.toDataURL('image/png');
-  }, { pics, cols, size: SIZE });
+  }, { pics, cols, size: SIZE, old });
   await browser.close();
-  const out = path.resolve(__dirname, '..', '..', 'godot', 'art', 'planets');
   fs.mkdirSync(out, { recursive: true });
   fs.writeFileSync(path.join(out, 'atlas.png'), Buffer.from(url.split(',')[1], 'base64'));
   const systems = Object.fromEntries(names.map((n, i) => [n, [i, kinds[n]]]));
