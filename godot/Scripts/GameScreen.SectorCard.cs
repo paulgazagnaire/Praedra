@@ -29,7 +29,7 @@ public partial class GameScreen
         bool dead = S.IsDestroyed(n);
         bool mine = !dead && S.OwnerOf(n) == Me;
         var pic = S.Picture(n);
-        bool explored = mine || (!dead && pic != null && S.Explored(n));
+        bool explored = Scouted(n);
         var (known, owner) = S.KnownOwnerOf(n);
         Side? holder = mine ? Me : dead ? null : owner;
         Color oc = dead ? Ui.Danger : !explored || (!known && !mine) ? Ui.Text3 : Ui.OwnerColor(holder, Me);
@@ -85,9 +85,9 @@ public partial class GameScreen
             if (own + enemy + seenBefore > 0)
             {
                 var fleets = new SectorMarks { Side = 9, Gap = 3, Centered = false }
-                    .Add(SectorMarks.Shape.Triangle, Ui.You, true, Math.Min(own, 6))
-                    .Add(SectorMarks.Shape.Triangle, Ui.Enemy, true, Math.Min(enemy, 6))
-                    .Add(SectorMarks.Shape.Triangle, Ui.Enemy, false, Math.Min(seenBefore, 6));
+                    .Add(SectorMarks.Shape.Triangle, Ui.You, true, Math.Min(own, FleetMarksCap))
+                    .Add(SectorMarks.Shape.Triangle, Ui.Enemy, true, Math.Min(enemy, FleetMarksCap))
+                    .Add(SectorMarks.Shape.Triangle, Ui.Enemy, false, Math.Min(seenBefore, FleetMarksCap));
                 fleets.Position = new Vector2(2, 2);
                 art.AddChild(fleets);
             }
@@ -145,20 +145,25 @@ public partial class GameScreen
             troopColor = Ui.Enemy;
         }
         v.AddChild(new SectorMarks { SizeFlagsHorizontal = SizeFlags.ExpandFill }
-            .Add(SectorMarks.Shape.Dot, EnergyColor, true, Math.Min(eUsed, eAll))
-            .Add(SectorMarks.Shape.Dot, EnergyColor, false, Math.Max(0, eAll - eUsed)));
+            .Add(SectorMarks.Shape.Dot, EnergyColor, true, Math.Min(Math.Min(eUsed, eAll), MarksCap))
+            .Add(SectorMarks.Shape.Dot, EnergyColor, false, Math.Min(Math.Max(0, eAll - eUsed), MarksCap)));
         v.AddChild(new SectorMarks { SizeFlagsHorizontal = SizeFlags.ExpandFill }
-            .Add(SectorMarks.Shape.Dot, Ui.Gold, true, Math.Min(mines, rAll))
-            .Add(SectorMarks.Shape.Dot, Ui.Gold, false, Math.Max(0, rAll - mines)));
+            .Add(SectorMarks.Shape.Dot, Ui.Gold, true, Math.Min(Math.Min(mines, rAll), MarksCap))
+            .Add(SectorMarks.Shape.Dot, Ui.Gold, false, Math.Min(Math.Max(0, rAll - mines), MarksCap)));
         var ground = new SectorMarks { SizeFlagsHorizontal = SizeFlags.ExpandFill }
             .Add(SectorMarks.Shape.Square, troopColor, true, Math.Min(troops, MarksCap))
             .Add(SectorMarks.Shape.Square, Ui.Danger, false, Math.Min(troopsShort, MarksCap))
-            .Add(SectorMarks.Shape.Diamond, Ui.Text2, true, Math.Min(defences, 6));
+            .Add(SectorMarks.Shape.Diamond, Ui.Text2, true, Math.Min(defences, MarksCap));
         v.AddChild(ground);
         return tile;
     }
 
-    const int MarksCap = 12; // more marks than this would not fit a tile; the tooltip has the number
+    const int MarksCap = 15;      // one kind of small mark is drawn at most this often (the slot cap; 15 fit a tile); the tooltip has the number
+    const int FleetMarksCap = 8;  // fleet triangles are larger: 8 fit across the planet
+
+    /// <summary>Whether your side knows this system beyond its picture and name: yours, or looked at (the map's own fog test, S.Explored).
+    /// One rule for the tile and the system's window.</summary>
+    bool Scouted(string n) => !S.IsDestroyed(n) && (S.OwnerOf(n) == Me || (S.Picture(n) != null && S.Explored(n)));
 
     /// <summary>The numbers behind the marks, for the tooltip: the tile itself shows none.</summary>
     string TileTip(string n, bool mine, bool explored, bool dead, SystemPicture pic, Side? holder, bool known)

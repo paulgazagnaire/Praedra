@@ -30,7 +30,7 @@ public partial class GameScreen
         t.ClipText = true;
         names.AddChild(t);
         var (known, owner) = S.KnownOwnerOf(n);
-        string who = S.IsDestroyed(n) ? "Destroyed" : mine ? $"Yours · {PlanetArt.KindOf(n) ?? "system"}" : S.Picture(n) == null ? "Unexplored" : !known ? "Owner unknown" : owner == null ? "Nobody's" : $"Held by the {S.NameOf(owner.Value)}";
+        string who = S.IsDestroyed(n) ? "Destroyed" : mine ? $"Yours · {PlanetArt.KindOf(n) ?? "system"}" : !Scouted(n) ? "Unexplored" : !known ? "Owner unknown" : owner == null ? "Nobody's" : $"Held by the {S.NameOf(owner.Value)}";
         names.AddChild(Ui.Label(who, null, S.IsDestroyed(n) ? Ui.Danger : Ui.OwnerColor(mine ? Me : owner, Me), Ui.Small, wrap: false));
         row.AddChild(names);
         row.AddChild(Ui.Grow());
