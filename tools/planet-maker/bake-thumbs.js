@@ -33,6 +33,9 @@ async function bake(dir, only) {
   const { browser, page } = await open();
   // the names from systems.json itself: the page has no charset line, so a file:// load reads accents wrongly (Ciénaga)
   const names = JSON.parse(fs.readFileSync(path.join(__dirname, 'systems.json'), 'utf8')).map((s) => s.n);
+  // a name that is not a system (a two-word name split by the shell, a typo) would bake nothing and keep the old picture: stop instead
+  const unknown = [...only].filter((n) => !names.includes(n));
+  if (unknown.length) { await browser.close(); throw new Error(`not a system: ${unknown.map((n) => JSON.stringify(n)).join(', ')}`); }
   const kinds = await page.evaluate(() => window.__pm.SYSTEMS.map((s, i) => { window.__pm.loadSystem(i); return window.__pm.P.kind; }));
   const [shard, shards] = (process.env.SHARD || '0/1').split('/').map(Number);
   if (shard === 0) fs.writeFileSync(path.join(dir, 'kinds.json'), JSON.stringify(Object.fromEntries(names.map((n, i) => [n, kinds[i]]))));
@@ -100,6 +103,6 @@ async function pack(dir) {
 (async () => {
   const [cmd, dir, ...only] = process.argv.slice(2);
   if (!dir || (cmd !== 'bake' && cmd !== 'pack')) { console.error('usage: bake-thumbs.js bake|pack DIR [system...]'); process.exit(2); }
-  if (cmd === 'bake') await bake(path.resolve(dir), new Set(only));
+  if (cmd === 'bake') await bake(path.resolve(dir), new Set(only.filter((n) => n.trim())));   // apply-saved prints an empty line when nothing changed
   else await pack(path.resolve(dir));
 })().catch((e) => { console.error(e); process.exit(1); });
