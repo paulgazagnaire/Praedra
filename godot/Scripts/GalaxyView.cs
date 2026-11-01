@@ -513,18 +513,34 @@ public partial class GalaxyView : Control
     }
 
     /// <summary>A sector's name, just above its outline.</summary>
+    /// <summary>A sector's name beside its outline: above it if that spot is free, else below, else at the top corners. Free means off
+    /// the capital tags, the fleet markers, the boxes on the map and the sector's own system dots (QA: "CHARTER SECTOR" sat on Fleet 1).</summary>
     void SectorName(Vector2[] sectorShape, int sector, LabelSpace taken)
     {
+        string text = _sectors[sector].name.ToUpperInvariant();
+        const int fs = 13;
+        var size = _font.GetStringSize(text, HorizontalAlignment.Left, -1, fs);
+        float top = sectorShape.Min(v => v.Y), bottom = sectorShape.Max(v => v.Y), cx = sectorShape.Average(v => v.X);
+        float minX = sectorShape.Min(v => v.X), maxX = sectorShape.Max(v => v.X);
+        var blocked = new List<Rect2>();
+        if (LabelObstacles != null) blocked.AddRange(LabelObstacles());
+        float r = SystemRadius + 3f;
+        foreach (int m in _sectors[sector].members) blocked.Add(new Rect2(SystemScreen(m) - new Vector2(r, r), new Vector2(2 * r, 2 * r)));
+        var spots = new[]
         {
-            string text = _sectors[sector].name.ToUpperInvariant();
-            const int fs = 13;
-            var size = _font.GetStringSize(text, HorizontalAlignment.Left, -1, fs);
-            float top = sectorShape.Min(v => v.Y), cx = sectorShape.Average(v => v.X);
-            var box = new Rect2(new Vector2(cx - size.X / 2f, top - size.Y - 2f), size);
-            DrawStringOutline(_font, box.Position + new Vector2(0, _font.GetAscent(fs)), text, HorizontalAlignment.Left, -1, fs, 4, new Color(0, 0, 0, 0.9f));
-            DrawString(_font, box.Position + new Vector2(0, _font.GetAscent(fs)), text, HorizontalAlignment.Left, -1, fs, new Color(SectorColor, 0.95f));
-            taken.Add(box);
+            new Vector2(cx - size.X / 2f, top - size.Y - 2f), new Vector2(cx - size.X / 2f, bottom + 4f),
+            new Vector2(minX, top - size.Y - 2f), new Vector2(maxX - size.X, top - size.Y - 2f),
+            new Vector2(minX, bottom + 4f), new Vector2(maxX - size.X, bottom + 4f),
+        };
+        var box = new Rect2(spots[0], size);
+        foreach (var at in spots)
+        {
+            var b = new Rect2(at, size);
+            if (!taken.Hits(b) && !blocked.Any(o => o.Intersects(b))) { box = b; break; }
         }
+        DrawStringOutline(_font, box.Position + new Vector2(0, _font.GetAscent(fs)), text, HorizontalAlignment.Left, -1, fs, 4, new Color(0, 0, 0, 0.9f));
+        DrawString(_font, box.Position + new Vector2(0, _font.GetAscent(fs)), text, HorizontalAlignment.Left, -1, fs, new Color(SectorColor, 0.95f));
+        taken.Add(box);
     }
 
     // ---- system names ----
