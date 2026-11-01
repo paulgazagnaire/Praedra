@@ -519,8 +519,8 @@ public partial class GalaxyView : Control
             }
 
         // the hovered sector's name, just above its outline (only on hover: for the selected system it would sit on its fleets' names)
-        if (markedShape != null) SectorName(markedShape, MarkedSector, taken);
-        if (sectorShape != null && lit) SectorName(sectorShape, hoverSector, taken);
+        if (markedShape != null) SectorName(markedShape, MarkedSector, taken, markers);
+        if (sectorShape != null && lit) SectorName(sectorShape, hoverSector, taken, markers);
 
         DrawSystemNames(focus, radius, screenRect, taken);
     }
@@ -536,15 +536,14 @@ public partial class GalaxyView : Control
 
     /// <summary>A sector's name beside its outline: above it if that spot is free, else below, else at the top corners. Free means off
     /// the capital tags, the fleet markers, the boxes on the map and the sector's own system dots (QA: "CHARTER SECTOR" sat on Fleet 1).</summary>
-    void SectorName(Vector2[] sectorShape, int sector, LabelSpace taken)
+    void SectorName(Vector2[] sectorShape, int sector, LabelSpace taken, List<Rect2> markers)
     {
         string text = _sectors[sector].name.ToUpperInvariant();
         const int fs = 13;
         var size = _font.GetStringSize(text, HorizontalAlignment.Left, -1, fs);
         float top = sectorShape.Min(v => v.Y), bottom = sectorShape.Max(v => v.Y), cx = sectorShape.Average(v => v.X);
         float minX = sectorShape.Min(v => v.X), maxX = sectorShape.Max(v => v.X);
-        var blocked = new List<Rect2>();
-        if (LabelObstacles != null) blocked.AddRange(LabelObstacles());
+        var blocked = new List<Rect2>(markers);
         float r = SystemRadius + 3f;
         foreach (int m in _sectors[sector].members) blocked.Add(new Rect2(SystemScreen(m) - new Vector2(r, r), new Vector2(2 * r, 2 * r)));
         var spots = new[]
