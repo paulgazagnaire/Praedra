@@ -87,7 +87,7 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
 .toast.on { opacity: 1; }
 #snap { position: fixed; inset: 0; z-index: 30; background: rgba(5,6,9,.92); display: none; align-items: center; justify-content: center; flex-direction: column; gap: 12px; padding: 16px; }
 #snap.on { display: flex; }
-#snap img { max-width: 100%; max-height: 78%; border: 1px solid var(--line); }
+#snap img { max-width: 100%; max-height: 74%; border: 1px solid var(--line); background: repeating-conic-gradient(#2a2d33 0% 25%, #1c1e22 0% 50%) 0 0 / 20px 20px; }
 @media (max-width: 820px) {
   html, body { height: auto; }
   #app { display: block; height: auto; }
@@ -256,7 +256,7 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
   </aside>
 </div>
 
-<div id="snap"><img id="snapImg" alt="Planet snapshot"><div class="row2" style="max-width:420px"><button id="snapSave" type="button" class="primary">Save PNG</button><button id="snapClose" type="button">Close</button></div><p class="note">If Save does nothing, right-click (or long-press) the image and choose Save.</p></div>
+<div id="snap"><img id="snapImg" alt="Planet snapshot"><label class="chk"><input type="checkbox" id="snapClear"> See-through background (no sky, no stars)</label><div class="row2" style="max-width:420px"><button id="snapSave" type="button" class="primary">Save PNG</button><button id="snapClose" type="button">Close</button></div><p class="note">If Save does nothing, right-click (or long-press) the image and choose Save.</p></div>
 <div class="toast" id="toast" role="status"></div>
 
 <script id="fs" type="x-shader/x-fragment">#version 300 es
@@ -277,6 +277,7 @@ uniform vec3 uCloudCol;       // what the clouds are made of: white for water, t
 uniform float uSeed, uSea, uMount, uScale, uIce, uClouds, uHaze, uCities, uPopT, uDens, uPlan, uRad, uLava, uCraters, uScars, uWet, uBiome, uQ;
 uniform float uBands, uTurb, uStorms, uStormSize;
 uniform float uSpin, uCloudAng, uFlowT, uRingAng, uTime, uStarDens;
+uniform vec3 uBg;   // the empty sky behind everything; the see-through export draws it black, then white
 uniform vec3 uAxis, uU, uW, uL;
 uniform float uRingOn, uRingIn, uRingOut, uRingOp, uRingGaps, uRingStruct, uRingClump, uRingDust, uRingSeed;
 uniform int uRingType;      // 0 broad icy, 1 narrow dark, 2 faint dust, 3 clumpy arcs, 4 fresh wreckage, 5 moon-fed dust
@@ -2034,7 +2035,7 @@ void main() {
   vec2 uv = (fc - 0.5 * uRes) / (0.5 * uRes.y) / uZoom + uShift;
   float px = 2.0 / (uRes.y * uZoom);
   gPxC = px;
-  vec3 col = vec3(0.012, 0.014, 0.022) + stars(fc);
+  vec3 col = uBg + stars(fc);
   gL = uL; gFlat = 0.0;
 #ifdef PM_MEGA
   if (uType == 3) {
@@ -6072,6 +6073,8 @@ function syncRingUI() {
 const cv = $('cv');
 const gl = cv.getContext('webgl2', { antialias: false, alpha: false, preserveDrawingBuffer: false });
 let prog, loc = {}, glOK = !!gl;
+const SKY_BG = [0.012, 0.014, 0.022];
+let bgOverride = null;   // set only while the see-through export draws
 // The fragment shader is compiled in variants so work a planet does not use costs nothing: PM_CLOUDS only when the planet
 // draws clouds (not gas giants, not Clouds = 0), PM_HIQ only in High detail (high cirrus deck, small cells, streaks, relief),
 // PM_MOONS only when at least one moon is on, PM_RINGS only when the planet has rings, PM_MEGA only for a ring or a shell world, PM_ORB only with an orbital ring or a space elevator, PM_DITHER only with the dither style on.
@@ -6152,6 +6155,7 @@ function draw(w, h, tmul) {
   gl.uniform4f(loc.uLights, P.lUnder || 0, HAS_SEA(P.kind) ? (P.lSea || 0) : 0, P.lDark || 0, isHex(P.lCol) && P.lCol.toLowerCase() !== BASE.lCol ? 1 : 0); gl.uniform3fv(loc.uLCol, hex2rgb(isHex(P.lCol) ? P.lCol : BASE.lCol));
   f('uBands', P.bands); f('uTurb', P.turb); f('uStorms', P.storms); f('uStormSize', P.stormSize);
   f('uSpin', T.spin); f('uCloudAng', T.cloud); f('uFlowT', T.flow); f('uRingAng', T.ring); f('uTime', T.time); f('uStarDens', P.starDens);
+  gl.uniform3fv(loc.uBg, bgOverride || SKY_BG);
   if (mega) {
     const wd = P.mWidth * 0.5;
     const mt = P.kind === 'shell' ? 1 : 0;
@@ -6691,9 +6695,55 @@ function snapshot(size) {
   const q0 = quality; quality = 1; cv.width = size; cv.height = size; draw(size, size); quality = q0;
   return new Promise((res) => cv.toBlob((b) => { cv.width = ow; cv.height = oh; res(b); }, 'image/png'));
 }
-let snapBlob = null;
+// See-through PNG: draw the picture twice with no stars, once on a black sky and once on a white one. Where both agree the planet
+// covers the sky (opaque); where they differ, the difference says how much sky shows through (glow, haze, ring gaps, the halo).
+// With the dither on, every dot is either kept or dropped so the dots stay crisp.
+function grab(n) {
+  const q0 = quality; quality = 1; cv.width = n; cv.height = n; draw(n, n); quality = q0;
+  const c = document.createElement('canvas'); c.width = c.height = n;
+  const g = c.getContext('2d'); g.drawImage(cv, 0, 0);
+  return g.getImageData(0, 0, n, n);
+}
+function clearSnapshot(size) {
+  const c = clearCanvas(DI.on ? Math.max(64, Math.min(cv.width, cv.height)) : size);
+  const k = DI.on ? Math.max(1, Math.round(size / c.width)) : 1, n = c.width;
+  const big = document.createElement('canvas'); big.width = big.height = n * k;
+  const g2 = big.getContext('2d'); g2.imageSmoothingEnabled = false; g2.drawImage(c, 0, 0, n * k, n * k);
+  return new Promise((res) => big.toBlob(res, 'image/png'));
+}
+// n x n, one canvas pixel per dot; also used by bake-thumbs.js for the game's pictures
+function clearCanvas(n) {
+  const ow = cv.width, oh = cv.height, sd = P.starDens;
+  P.starDens = 0;
+  let A, B;
+  try { bgOverride = [0, 0, 0]; A = grab(n); bgOverride = [1, 1, 1]; B = grab(n); }
+  finally { bgOverride = null; P.starDens = sd; cv.width = ow; cv.height = oh; }
+  const a = A.data, b = B.data, out = new ImageData(n, n), o = out.data;
+  const k0 = [a[0], a[1], a[2]];   // a corner: the black sky as the page writes it (the dither may map black to a palette colour)
+  const white = 255 * Math.pow(1 / 1.08, 0.96);   // finish() of a white sky
+  for (let i = 0; i < a.length; i += 4) {
+    let al;
+    if (DI.on) {
+      const same = a[i] === b[i] && a[i + 1] === b[i + 1] && a[i + 2] === b[i + 2];
+      const sky = a[i] === k0[0] && a[i + 1] === k0[1] && a[i + 2] === k0[2];
+      al = same || !sky ? 1 : 0;
+      o[i] = a[i]; o[i + 1] = a[i + 1]; o[i + 2] = a[i + 2];
+    } else {
+      const d = ((b[i] - a[i]) + (b[i + 1] - a[i + 1]) + (b[i + 2] - a[i + 2])) / 3;
+      al = Math.min(1, Math.max(0, 1 - d / white));
+      for (let c = 0; c < 3; c++) o[i + c] = al > 0.004 ? Math.min(255, Math.round(a[i + c] / al)) : 0;
+    }
+    o[i + 3] = Math.round(al * 255);
+  }
+  const c = document.createElement('canvas');
+  c.width = c.height = n; c.getContext('2d').putImageData(out, 0, 0);
+  return c;
+}
+let snapBlob = null, snapClear = true;
+try { snapClear = localStorage.getItem('pm_snap_clear') !== '0'; } catch (e) {}
 async function openSnap() {
-  snapBlob = await snapshot(1600);
+  $('snapClear').checked = snapClear;
+  snapBlob = await (snapClear ? clearSnapshot(1600) : snapshot(1600));
   if (!snapBlob) { toast('Could not capture the image'); return; }
   $('snapImg').src = URL.createObjectURL(snapBlob); $('snap').classList.add('on');
 }
@@ -6739,6 +6789,7 @@ function boot() {
   const qLabel = () => { $('btnQ').textContent = 'Detail: ' + (quality ? 'High' : 'Fast'); };
   qLabel();
   $('btnQ').addEventListener('click', () => { quality = quality ? 0 : 1; try { localStorage.setItem('pm_quality', String(quality)); } catch (e) {} qLabel(); });
+  $('snapClear').addEventListener('change', (e) => { snapClear = e.target.checked; try { localStorage.setItem('pm_snap_clear', snapClear ? '1' : '0'); } catch (er) {} openSnap(); });
   $('snapClose').addEventListener('click', () => { $('snap').classList.remove('on'); });
   $('snapSave').addEventListener('click', async () => { const ok = await saveFile(slug(P.name) + '.png', snapBlob, 'image/png'); toast(ok ? 'Image ready' : 'Right-click the image to save it'); });
   initLib();
@@ -6749,7 +6800,7 @@ function boot() {
   try { initGL(); } catch (e) { glOK = false; document.querySelector('.hint').textContent = 'Shader error: ' + e.message; console.error(e); return; }
   requestAnimationFrame(loop);
 }
-window.__pm = { get P() { return P; }, setDither(o) { Object.assign(DI, o); syncDither(); fit(); }, setP(p) { P = p; syncControls(); }, derive, loadSystem, SYSTEMS, classify, makeDefaults, KINDS, setKind, frame, T, draw: () => draw(cv.width, cv.height), pause(v) { paused = v; }, freeze(v) { frozen = v; }, setQ(v) { quality = v; }, fromCode, MOON_TYPES, RING_TYPES, ringGapList, applyRingType, placeFeeder, syncRingUI, ensureMoons, syncMoonUI, selectMoon(i) { selMoon = i; syncMoonUI(); }, MEGA_TYPES };
+window.__pm = { get P() { return P; }, clearPNG: (n) => clearCanvas(n).toDataURL('image/png'), setDither(o) { Object.assign(DI, o); syncDither(); fit(); }, setP(p) { P = p; syncControls(); }, derive, loadSystem, SYSTEMS, classify, makeDefaults, KINDS, setKind, frame, T, draw: () => draw(cv.width, cv.height), pause(v) { paused = v; }, freeze(v) { frozen = v; }, setQ(v) { quality = v; }, fromCode, MOON_TYPES, RING_TYPES, ringGapList, applyRingType, placeFeeder, syncRingUI, ensureMoons, syncMoonUI, selectMoon(i) { selMoon = i; syncMoonUI(); }, MEGA_TYPES };
 boot();
 })();
 </script>
