@@ -107,6 +107,9 @@ public partial class GalaxyView : Control
     public int HoveredSector { get; private set; } = -1;
     /// <summary>A click inside a sector, away from its systems: the sector's name.</summary>
     public event Action<string> SectorClicked;
+    /// <summary>The sector whose window is open (QA-74): it stays lit on the map, edge and name, so you can tell which shape the window means.</summary>
+    public int MarkedSector { get; private set; } = -1;
+    public void MarkSector(string name) { int k = name == null ? -1 : _sectors.FindIndex(x => x.name == name); if (k != MarkedSector) { MarkedSector = k; QueueRedraw(); } }
     public string SectorName(int k) => k >= 0 && k < _sectors.Count ? _sectors[k].name : null;
 
     public float Zoom => _zoom;
@@ -350,7 +353,7 @@ public partial class GalaxyView : Control
         // every sector is a quiet tile of its own (a faint edge, no colour), so the groups read at a glance and the gaps between them show
         for (int k = 0; k < _sectors.Count; k++)
         {
-            if (k == hoverSector) continue;
+            if (k == hoverSector || k == MarkedSector) continue;
             var bw = _sectorBox[k];
             var a = WorldToScreen(bw.Position); var b = WorldToScreen(bw.End);
             if (!new Rect2(a, b - a).Grow(radius + SectorPadPx).Intersects(screenRect)) continue;
@@ -359,7 +362,14 @@ public partial class GalaxyView : Control
             DrawColoredPolygon(shape, new Color(SectorColor, 0.025f));
             DrawPolyline(Closed(shape), new Color(SectorColor, 0.16f), 1f, true);
         }
+        Vector2[] markedShape = MarkedSector >= 0 && MarkedSector != hoverSector ? SectorOutline(MarkedSector, radius + SectorPadPx) : null;
+        if (markedShape != null)
+        {
+            DrawColoredPolygon(markedShape, new Color(SectorColor, 0.07f));
+            DrawPolyline(Closed(markedShape), new Color(SectorColor, 0.6f), 1.6f, true);
+        }
         Vector2[] sectorShape = hoverSector >= 0 ? SectorOutline(hoverSector, radius + SectorPadPx) : null;
+        if (hoverSector >= 0 && hoverSector == MarkedSector) lit = true;
         if (sectorShape != null)
         {
             DrawColoredPolygon(sectorShape, new Color(SectorColor, lit ? (areaHover ? 0.12f : 0.08f) : 0.05f));
@@ -496,19 +506,41 @@ public partial class GalaxyView : Control
             }
 
         // the hovered sector's name, just above its outline (only on hover: for the selected system it would sit on its fleets' names)
-        if (sectorShape != null && lit)
-        {
-            string text = _sectors[hoverSector].name.ToUpperInvariant();
-            const int fs = 13;
-            var size = _font.GetStringSize(text, HorizontalAlignment.Left, -1, fs);
-            float top = sectorShape.Min(v => v.Y), cx = sectorShape.Average(v => v.X);
-            var box = new Rect2(new Vector2(cx - size.X / 2f, top - size.Y - 2f), size);
-            DrawStringOutline(_font, box.Position + new Vector2(0, _font.GetAscent(fs)), text, HorizontalAlignment.Left, -1, fs, 4, new Color(0, 0, 0, 0.9f));
-            DrawString(_font, box.Position + new Vector2(0, _font.GetAscent(fs)), text, HorizontalAlignment.Left, -1, fs, new Color(SectorColor, 0.95f));
-            taken.Add(box);
-        }
+        if (markedShape != null) SectorName(markedShape, MarkedSector, taken);
+        if (sectorShape != null && lit) SectorName(sectorShape, hoverSector, taken);
 
         DrawSystemNames(focus, radius, screenRect, taken);
+    }
+
+    /// <summary>A sector's name, just above its outline.</summary>
+    /// <summary>A sector's name beside its outline: above it if that spot is free, else below, else at the top corners. Free means off
+    /// the capital tags, the fleet markers, the boxes on the map and the sector's own system dots (QA: "CHARTER SECTOR" sat on Fleet 1).</summary>
+    void SectorName(Vector2[] sectorShape, int sector, LabelSpace taken)
+    {
+        string text = _sectors[sector].name.ToUpperInvariant();
+        const int fs = 13;
+        var size = _font.GetStringSize(text, HorizontalAlignment.Left, -1, fs);
+        float top = sectorShape.Min(v => v.Y), bottom = sectorShape.Max(v => v.Y), cx = sectorShape.Average(v => v.X);
+        float minX = sectorShape.Min(v => v.X), maxX = sectorShape.Max(v => v.X);
+        var blocked = new List<Rect2>();
+        if (LabelObstacles != null) blocked.AddRange(LabelObstacles());
+        float r = SystemRadius + 3f;
+        foreach (int m in _sectors[sector].members) blocked.Add(new Rect2(SystemScreen(m) - new Vector2(r, r), new Vector2(2 * r, 2 * r)));
+        var spots = new[]
+        {
+            new Vector2(cx - size.X / 2f, top - size.Y - 2f), new Vector2(cx - size.X / 2f, bottom + 4f),
+            new Vector2(minX, top - size.Y - 2f), new Vector2(maxX - size.X, top - size.Y - 2f),
+            new Vector2(minX, bottom + 4f), new Vector2(maxX - size.X, bottom + 4f),
+        };
+        var box = new Rect2(spots[0], size);
+        foreach (var at in spots)
+        {
+            var b = new Rect2(at, size);
+            if (!taken.Hits(b) && !blocked.Any(o => o.Intersects(b))) { box = b; break; }
+        }
+        DrawStringOutline(_font, box.Position + new Vector2(0, _font.GetAscent(fs)), text, HorizontalAlignment.Left, -1, fs, 4, new Color(0, 0, 0, 0.9f));
+        DrawString(_font, box.Position + new Vector2(0, _font.GetAscent(fs)), text, HorizontalAlignment.Left, -1, fs, new Color(SectorColor, 0.95f));
+        taken.Add(box);
     }
 
     // ---- system names ----
