@@ -125,6 +125,8 @@ public partial class Main
         Expect(cards.OrderBy(x => x, StringComparer.Ordinal).SequenceEqual(members), $"one card for each of the {members.Count} systems of {homeSec}");
         Expect(cards.Count > 0 && cards[0] == home, "the headquarters comes first: " + string.Join(", ", cards));
         Expect(gs.SectorWindowWidth <= gs.ScreenWidth / 2 + 1, $"the sector window takes half the screen at most ({gs.SectorWindowWidth} of {gs.ScreenWidth})");
+        Expect(gs.MarkedSectorName == homeSec, $"the map marks the open sector (QA-74): {gs.MarkedSectorName}");
+        Expect(gs.BottomLeftShown != gs.SectorOnLeft, "the bottom-left stocks and HQ buttons hide while the window sits over them (QA-73)");
         string hc = gs.SectorCardText(home), tip = gs.SectorCardTip(home);
         GD.Print("  tile " + home + ": " + hc.Replace("\n", " / ") + " | " + tip.Replace("\n", " / "));
         Expect(hc.Contains(home) && !hc.Any(char.IsDigit), "the headquarters tile shows its name and no numbers: " + hc.Replace("\n", " / "));
@@ -150,6 +152,7 @@ public partial class Main
         Expect(gs.SectorViewName == homeSec, "and Left steps back");
         gs.PressKey(Key.Escape);
         Expect(!gs.SectorViewOpen, "Esc closes the sector window");
+        Expect(gs.MarkedSectorName == null && gs.BottomLeftShown, "closing it unmarks the sector and brings back the bottom-left stocks");
 
         // ---------------------------------------------------------------- sectors on the map
         var homeSys = gs.G.Systems.First(x => x.Name == home);

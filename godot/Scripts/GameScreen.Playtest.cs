@@ -130,6 +130,8 @@ public partial class GameScreen
     internal string SectorCardTip(string system) => _secCards.TryGetValue(system, out var c) ? c.TooltipText : null;
     internal bool SectorOnLeft => _secWin != null && _secWin.Position.X < _secLayer.Size.X / 4;
     internal float SectorWindowWidth => _secWin?.Size.X ?? 0;
+    internal string MarkedSectorName => _view.SectorName(_view.MarkedSector);
+    internal bool BottomLeftShown => _bottomLeft.Visible;
     internal float ScreenWidth => _secLayer?.Size.X ?? 0;
     internal string LayerName => _layer.ToString();
     internal Praedra.Core.Clock.Side Player => S.Player;

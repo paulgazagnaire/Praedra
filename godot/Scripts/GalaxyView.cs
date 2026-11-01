@@ -107,6 +107,9 @@ public partial class GalaxyView : Control
     public int HoveredSector { get; private set; } = -1;
     /// <summary>A click inside a sector, away from its systems: the sector's name.</summary>
     public event Action<string> SectorClicked;
+    /// <summary>The sector whose window is open (QA-74): it stays lit on the map, edge and name, so you can tell which shape the window means.</summary>
+    public int MarkedSector { get; private set; } = -1;
+    public void MarkSector(string name) { int k = name == null ? -1 : _sectors.FindIndex(x => x.name == name); if (k != MarkedSector) { MarkedSector = k; QueueRedraw(); } }
     public string SectorName(int k) => k >= 0 && k < _sectors.Count ? _sectors[k].name : null;
 
     public float Zoom => _zoom;
@@ -350,7 +353,7 @@ public partial class GalaxyView : Control
         // every sector is a quiet tile of its own (a faint edge, no colour), so the groups read at a glance and the gaps between them show
         for (int k = 0; k < _sectors.Count; k++)
         {
-            if (k == hoverSector) continue;
+            if (k == hoverSector || k == MarkedSector) continue;
             var bw = _sectorBox[k];
             var a = WorldToScreen(bw.Position); var b = WorldToScreen(bw.End);
             if (!new Rect2(a, b - a).Grow(radius + SectorPadPx).Intersects(screenRect)) continue;
@@ -359,7 +362,14 @@ public partial class GalaxyView : Control
             DrawColoredPolygon(shape, new Color(SectorColor, 0.025f));
             DrawPolyline(Closed(shape), new Color(SectorColor, 0.16f), 1f, true);
         }
+        Vector2[] markedShape = MarkedSector >= 0 && MarkedSector != hoverSector ? SectorOutline(MarkedSector, radius + SectorPadPx) : null;
+        if (markedShape != null)
+        {
+            DrawColoredPolygon(markedShape, new Color(SectorColor, 0.07f));
+            DrawPolyline(Closed(markedShape), new Color(SectorColor, 0.6f), 1.6f, true);
+        }
         Vector2[] sectorShape = hoverSector >= 0 ? SectorOutline(hoverSector, radius + SectorPadPx) : null;
+        if (hoverSector >= 0 && hoverSector == MarkedSector) lit = true;
         if (sectorShape != null)
         {
             DrawColoredPolygon(sectorShape, new Color(SectorColor, lit ? (areaHover ? 0.12f : 0.08f) : 0.05f));
@@ -496,9 +506,17 @@ public partial class GalaxyView : Control
             }
 
         // the hovered sector's name, just above its outline (only on hover: for the selected system it would sit on its fleets' names)
-        if (sectorShape != null && lit)
+        if (markedShape != null) SectorName(markedShape, MarkedSector, taken);
+        if (sectorShape != null && lit) SectorName(sectorShape, hoverSector, taken);
+
+        DrawSystemNames(focus, radius, screenRect, taken);
+    }
+
+    /// <summary>A sector's name, just above its outline.</summary>
+    void SectorName(Vector2[] sectorShape, int sector, LabelSpace taken)
+    {
         {
-            string text = _sectors[hoverSector].name.ToUpperInvariant();
+            string text = _sectors[sector].name.ToUpperInvariant();
             const int fs = 13;
             var size = _font.GetStringSize(text, HorizontalAlignment.Left, -1, fs);
             float top = sectorShape.Min(v => v.Y), cx = sectorShape.Average(v => v.X);
@@ -507,8 +525,6 @@ public partial class GalaxyView : Control
             DrawString(_font, box.Position + new Vector2(0, _font.GetAscent(fs)), text, HorizontalAlignment.Left, -1, fs, new Color(SectorColor, 0.95f));
             taken.Add(box);
         }
-
-        DrawSystemNames(focus, radius, screenRect, taken);
     }
 
     // ---- system names ----

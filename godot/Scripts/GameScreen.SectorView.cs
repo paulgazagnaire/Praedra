@@ -266,6 +266,9 @@ public partial class GameScreen
         _secLayer.Visible = true;
         _hoverCard.Visible = false;
         if (opening) _secLeft = SectorOnRight(); // chosen once per opening: stepping sectors or panning never makes the window jump
+        // QA-73: on the left the window covers your stocks and the HQ / Fit buttons; hide them rather than leave their edges peeking out
+        _bottomLeft.Visible = !_secLeft;
+        _view.MarkSector(sector);
         RebuildSectorView();
         FrameSector();
         _secScroll.ScrollVertical = 0;
@@ -277,6 +280,8 @@ public partial class GameScreen
         _secLayer.Visible = false;
         _secDetail.Visible = false;
         _secFocus = null;
+        _bottomLeft.Visible = true;
+        _view.MarkSector(null);
     }
 
     /// <summary>S: open the sector of the selected system (or of the headquarters), or close the window.</summary>
