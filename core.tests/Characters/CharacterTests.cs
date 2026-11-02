@@ -389,7 +389,11 @@ public class CharacterTests
             Assert.Equal((f, CharacterPost.Admiral), (c.AttachedFleet, c.Post));
             Assert.Equal(CharacterCause.Order, Assert.Single(w.Events<CharacterAttached>()).Cause);
         }
-        else Assert.Equal((0, "C"), (c.AttachedFleet, w.Ch.LocationOf(c)));
+        else
+        {
+            Assert.Equal((0, "C"), (c.AttachedFleet, w.Ch.LocationOf(c)));
+            Assert.Equal("elsewhere", Assert.Single(w.Events<CharacterJoinFailed>()).Reason);   // QA-83: the player is told
+        }
         Assert.Equal((0, CharacterPost.None, false), (c.JoinFleet, c.JoinPost, c.JoinByOrder));
     }
 

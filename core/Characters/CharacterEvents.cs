@@ -65,6 +65,13 @@ public static class CharacterCause
 public sealed record CharacterCreated(int Index, int Day, int Character, Side Side, string? System) : GameEvent(Index, Day, nameof(CharacterCreated));
 public sealed record CharacterDeparted(int Index, int Day, int Character, Side Side, string From, int FirstHopTicks) : GameEvent(Index, Day, nameof(CharacterDeparted));
 public sealed record CharacterArrived(int Index, int Day, int Character, Side Side, string System) : GameEvent(Index, Day, nameof(CharacterArrived));
+/// <summary>
+/// Step 3: a character sent to join a fleet arrived but did not take what was asked. Reason: <c>gone</c>, <c>elsewhere</c>, <c>moving</c> (he
+/// stays on the ground), <c>not free</c> (captured or hurt on the way), or <c>post taken</c> (he rides as a passenger instead).
+/// rule: m5-characters-and-talent §Moving a character alone (Joining a fleet on arrival; QA-83, 2026-11-02).
+/// </summary>
+public sealed record CharacterJoinFailed(int Index, int Day, int Character, Side Side, int Fleet, string System, string Reason) : GameEvent(Index, Day, nameof(CharacterJoinFailed));
+
 public sealed record CharacterAttached(int Index, int Day, int Character, Side Side, int Fleet, CharacterPost Post, string Cause) : GameEvent(Index, Day, nameof(CharacterAttached));
 public sealed record CharacterDetached(int Index, int Day, int Character, Side Side, int Fleet, string? System, string Cause) : GameEvent(Index, Day, nameof(CharacterDetached));
 public sealed record PostVacated(int Index, int Day, int Character, Side Side, PostKind Post, string Cause) : GameEvent(Index, Day, nameof(PostVacated));

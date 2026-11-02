@@ -95,8 +95,11 @@ public sealed partial class FleetModule
             if (!State.Fleets.ContainsKey(f.Id) || f.Transit != null || f.At == null) continue; // still flying (or already merged away)
             int into = f.JoinFleet;
             f.JoinFleet = 0;
-            if (!State.Fleets.TryGetValue(into, out var t) || t.Side != f.Side || t.At != f.At || Moving(t) || f.Ships.Count == 0 || t.Ships.Count == 0) continue;
-            MergeInto(ctx, day, f, t);
+            State.Fleets.TryGetValue(into, out var t);
+            string? why = t == null || t.Side != f.Side || t.Ships.Count == 0 ? "gone" : t.At != f.At && t.At != null ? "elsewhere" : Moving(t) ? "moving" : null;
+            if (why == null && f.Ships.Count > 0) { MergeInto(ctx, day, f, t!); continue; }
+            int fid = f.Id; var side = f.Side; string at = f.At!; string reason = why ?? "gone";
+            ctx.Emit((i, _) => new FleetJoinFailed(i, day, fid, side, into, at, reason));
         }
     }
 

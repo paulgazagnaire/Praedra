@@ -706,6 +706,15 @@ public sealed partial class CharacterModule
                     var cause = c.JoinByOrder ? CharacterCause.Order : CharacterCause.Autoroute;
                     c.AttachedFleet = jf; c.Post = post;
                     ctx.Emit((i, _) => new CharacterAttached(i, day, c.Id, c.Side, jf, post, cause));
+                    if (c.JoinByOrder && post != c.JoinPost) { int cid = c.Id; var cs = c.Side; ctx.Emit((i, _) => new CharacterJoinFailed(i, day, cid, cs, jf, sys, "post taken")); }
+                }
+                else if (c.JoinFleet is int jf2 and not 0 && c.JoinByOrder)
+                {
+                    // QA-83: an ordered join that could not happen says why (he stays on the ground here)
+                    State.Fleets.TryGetValue(jf2, out var target);
+                    string why = target == null || target.Side != c.Side ? "gone" : c.Status != CharacterStatus.Free ? "not free" : target.At != sys && target.At != null ? "elsewhere" : "moving";
+                    int cid = c.Id; var cs = c.Side;
+                    ctx.Emit((i, _) => new CharacterJoinFailed(i, day, cid, cs, jf2, sys, why));
                 }
                 c.JoinFleet = 0; c.JoinPost = CharacterPost.None; c.JoinByOrder = false;
                 continue;

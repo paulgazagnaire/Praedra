@@ -356,7 +356,7 @@ public partial class GameScreen
             OrbitList(n);
             return;
         }
-        Hint("Drag a leader onto a fleet's post, or troops and fighters onto a fleet, in a fleet window. A drop takes effect at once.");
+        Hint("Drag a leader onto a fleet's post, or troops and fighters onto a fleet, in a fleet window. A drop shows at once; the game makes the change when the next day starts, before anything else moves.");
 
         // the system's General: one post, held by a leader standing here
         var gen = Cm.SystemGeneralOf(n);

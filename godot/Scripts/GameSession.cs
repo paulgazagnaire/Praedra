@@ -576,7 +576,7 @@ public sealed partial class GameSession
         switch (e)
         {
             case OrderRejected or OrderAccepted: return MsgCat.Orders;
-            case FleetArrived or ForcedStop or FleetRetreated or BlockadeStarted or BlockadeLifted or Contact or RegimentsLoaded or RegimentsUnloaded
+            case FleetArrived or FleetJoinFailed or ForcedStop or FleetRetreated or BlockadeStarted or BlockadeLifted or Contact or RegimentsLoaded or RegimentsUnloaded
                 or SquadronsLoaded or SquadronsUnloaded or HqArrived: return MsgCat.Fleets;
             case FleetSighted or SensorReport or OwnerChangeSeen or HearthTipGiven or HarvesterQueuedSeen or HqSectorClueGiven: return MsgCat.Intel;
             case Praedra.Core.Research.ResearchLevelReached or AutoscrapWarning or ObjectScrapped or ProjectStarted or ProjectCancelled or UnitCompleted
@@ -613,6 +613,11 @@ public sealed partial class GameSession
             // ---- fleets
             case FleetArrived f when Mine(FleetSide(f.Fleet)):
                 yield return new Message(d, $"Fleet {FleetName(f.Fleet)} arrived at {f.System}.", f.System, MsgKind.Info);
+                break;
+            case FleetJoinFailed j when Mine(j.Side):
+                yield return new Message(d, j.Reason == "gone"
+                    ? $"{FleetName(j.Fleet)} reached {j.System}, but {FleetName(j.Into)} no longer exists: no merge."
+                    : $"{FleetName(j.Fleet)} reached {j.System}, but {FleetName(j.Into)} {(j.Reason == "moving" ? "is moving" : "had left")}: no merge.", j.System, MsgKind.Warn);
                 break;
             case FleetArrived f when OwnerOf(f.System) == Player:
                 yield return new Message(d, $"Enemy fleet arrived at {f.System}.", f.System, MsgKind.Warn); // no enemy fleet names (§N8)
@@ -704,6 +709,15 @@ public sealed partial class GameSession
                 break;
             case CharacterArrived c:
                 yield return new Message(d, Mine(c.Side) ? $"{CharName(c.Character)} arrived at {c.System}." : $"Enemy leader {CharName(c.Character)} arrived at {c.System}.", c.System, Mine(c.Side) ? MsgKind.Info : MsgKind.Warn);
+                break;
+            case CharacterJoinFailed j when Mine(j.Side):
+                yield return new Message(d, j.Reason switch
+                {
+                    "post taken" => $"{CharName(j.Character)} reached {j.System}, but the post was taken: they ride {FleetName(j.Fleet)} as a passenger.",
+                    "not free" => $"{CharName(j.Character)} reached {j.System} but could not join {FleetName(j.Fleet)}: they are not free.",
+                    "gone" => $"{CharName(j.Character)} reached {j.System}, but {FleetName(j.Fleet)} no longer exists. They wait on the ground.",
+                    _ => $"{CharName(j.Character)} reached {j.System}, but {FleetName(j.Fleet)} had left. They wait on the ground.",
+                }, j.System, MsgKind.Warn);
                 break;
             case CharacterAttached c when Mine(c.Side):
                 yield return new Message(d, c.Cause == CharacterCause.Merged
