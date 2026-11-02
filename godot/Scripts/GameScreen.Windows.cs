@@ -6,6 +6,14 @@ using Praedra.Core.Characters;
 using Praedra.Core.Missions;
 using Praedra.Core.Economy;
 using Praedra.Core.Fleets;
+using RejectReason = Praedra.Core.Clock.RejectReason;
+using UnloadRegimentsOrder = Praedra.Core.Clock.UnloadRegimentsOrder;
+using LoadRegimentsOrder = Praedra.Core.Clock.LoadRegimentsOrder;
+using UnloadSquadronsOrder = Praedra.Core.Clock.UnloadSquadronsOrder;
+using LoadSquadronsOrder = Praedra.Core.Clock.LoadSquadronsOrder;
+using TransferShipsOrder = Praedra.Core.Clock.TransferShipsOrder;
+using MergeFleetsOrder = Praedra.Core.Clock.MergeFleetsOrder;
+using SplitFleetOrder = Praedra.Core.Clock.SplitFleetOrder;
 
 using Side = Praedra.Core.Clock.Side;
 
@@ -771,6 +779,24 @@ public partial class GameScreen
 
     int Promised(int fleet) => _pendingIn.TryGetValue(fleet, out int n) ? n : 0;
 
+    // ------------------------------------------------------------------ the core's own order checks
+    // A drop is refused for the same reasons the core would refuse its order at dawn: each Refuse* below asks the core check for that order
+    // (FleetModule/TroopModule/CharacterModule Check*), then adds only what the core can't know: today's other drops and nicer words.
+
+    /// <summary>The words for a core refusal (null stays null: the order would be accepted).</summary>
+    static string Words(string reason, bool character = false) =>
+        reason == null ? null : "Can't: " + (character ? GameSession.WhyCharacter(reason) : GameSession.Why(reason)) + ".";
+
+    static List<int> One(int id) => new() { id };
+
+    string CheckUnloadOne(char kind, int fleet, int id) => kind == 'R'
+        ? S.Host.Troops.CheckUnloadRegiments(new UnloadRegimentsOrder(0, Me, fleet, One(id)))
+        : Fm.CheckUnloadSquadrons(new UnloadSquadronsOrder(0, Me, fleet, One(id)));
+
+    string CheckLoadOne(char kind, int fleet, int id) => kind == 'R'
+        ? S.Host.Troops.CheckLoadRegiments(new LoadRegimentsOrder(0, Me, fleet, One(id)))
+        : Fm.CheckLoadSquadrons(new LoadSquadronsOrder(0, Me, fleet, One(id)));
+
     string RefuseFleetPost(Drag d, Fleet f, CharacterPost post)
     {
         if (d.Kind != 'L') return "";
@@ -781,7 +807,8 @@ public partial class GameScreen
         if (post != CharacterPost.None && !Cm.ClassOf(c).Can(post)) return $"{S.CharName(c.Id)} can't be {GameSession.PostWords(post)}.";
         var (at, _) = WhereNow(d);
         if (at != f.At) return CanTravel(c, f.At);   // another system: they set off and take the post on arrival
-        return null;
+        // the drop first takes them off their post and lands the post's holder (LeaveCurrentPost, Detach), then attaches
+        return Words(Cm.CheckAttach(new AttachCharacterOrder(0, Me, c.Id, f.Id, post), leavesPostsFirst: true), character: true);
     }
 
     /// <summary>Why a leader can't set off for <paramref name="to"/> now (null: they can). rule: m5-characters-and-talent §Moving a character alone.</summary>
@@ -837,9 +864,9 @@ public partial class GameScreen
         if (c == null || S.SystemPostOf(c) == n) return "";
         var (at, _) = WhereNow(d);
         if (at != n) return $"{S.CharName(c.Id)} is not at {n}: drop them on its leaders to send them there first.";
-        if (c.AttachedFleet != 0 && S.Game.State.Fleets.TryGetValue(c.AttachedFleet, out var f) && !Still(f)) return "Their fleet is travelling.";
         if (!Cm.ClassOf(c).CanGeneral) return $"{S.CharName(c.Id)} can't be a General.";
-        return null;
+        // the drop first frees them and the post (LeaveCurrentPost, ReleaseGeneral), then assigns
+        return Words(Cm.CheckAssign(new AssignSystemGeneralOrder(0, Me, c.Id, n), leavesPostsFirst: true), character: true);
     }
 
     void DropSystemGeneral(Drag d, string n)
@@ -876,11 +903,11 @@ public partial class GameScreen
         }
         else if (fleet == 0) return "";
         if (fleet != 0 && S.Game.State.Fleets.TryGetValue(fleet, out var f) && !Still(f)) return "The fleet is travelling.";
-        // the core refuses these at dawn: rule: m3-troops-and-special-forces §Orders (UnloadRegiments, switch UnloadOnlyAtHeldSystem);
-        // squadrons: FleetModuleSteps UnloadSquadrons (DEFAULT: only where the side holds the system)
-        bool heldOnly = kind != 'R' || S.Host.Troops.UnloadOnlyAtHeldSystem;
-        if (kind != 'L' && heldOnly && S.OwnerOf(n) != Me) return $"Land troops only on a planet you hold. To take {n}, invade from the fleet's page.";
-        return null;
+        if (kind == 'L') return null;
+        // rule: m3-troops-and-special-forces §Orders (UnloadRegiments, switch UnloadOnlyAtHeldSystem); m3-fleets §Orders (UnloadSquadrons)
+        string why = CheckUnloadOne(kind, fleet, d.Id);
+        if (why == RejectReason.NotYourSystem) return $"Land troops only on a planet you hold. To take {n}, invade from the fleet's page.";
+        return Words(why);
     }
 
     /// <summary>Squadrons based at one system fly alone to another (they base there). rule: m3-fleets §Unescorted squadrons (Immobile at speed 0).</summary>
@@ -935,7 +962,10 @@ public partial class GameScreen
         if (fleet == f.Id) return "";
         if (!Still(f)) return $"{f.Name} is travelling.";
         if (at != f.At) return $"{ThingName(d)} is not at {f.At}.";
-        if (fleet != 0 && (kind != 'R' || S.Host.Troops.UnloadOnlyAtHeldSystem) && S.OwnerOf(f.At) != Me) return $"Move it through the planet: only on a planet you hold.";
+        // from another fleet the drop unloads first, then loads (rule: m3-fleets §Orders, m3-troops-and-special-forces §Orders)
+        string why = fleet != 0 ? CheckUnloadOne(kind, fleet, d.Id) : CheckLoadOne(kind, f.Id, d.Id);
+        if (why == RejectReason.NotYourSystem) return "Move it through the planet: only on a planet you hold.";
+        if (why != null && why != RejectReason.NoCapacity) return Words(why);
         int room = (kind == 'R' ? Fm.FreeTroopSlots(f) : Fm.FreeBerths(f)) - Promised(f.Id);
         if (room <= 0) return kind == 'R' ? $"{f.Name} has no troop room left." : $"{f.Name} has no hangar room left.";
         return null;
@@ -974,7 +1004,8 @@ public partial class GameScreen
             return Fm.FindPath(from.At, f.At, Fm.SpeedOf(from)).Ok ? null : $"{from.Name} can't reach {f.At}.";   // it flies there and merges on arrival
         }
         if (d.Kind == 'S' && from.Ships.Count - ShipsLeaving(from) <= 1) return $"It is {from.Name}'s last ship: drag {from.Name} by its grip (⠿) to merge the fleets.";
-        return null;
+        // rule: m3-fleets §Orders (TransferShips, MergeFleets)
+        return Words(d.Kind == 'S' ? Fm.CheckTransferShips(new TransferShipsOrder(0, Me, One(d.Id), f.Id)) : Fm.CheckMergeFleets(new MergeFleetsOrder(0, Me, from.Id, f.Id)));
     }
 
     int ShipsLeaving(Fleet f) => f.Ships.Count(id => _moved.ContainsKey(new Drag('S', id).Key));
@@ -1004,7 +1035,9 @@ public partial class GameScreen
         var (_, fleet) = WhereNow(d);
         if (fleet != f.Id) return "Split ships off their own fleet: drop them on its New fleet.";
         if (f.Ships.Count - ShipsLeaving(f) <= 1) return "A fleet keeps at least one ship.";
-        return null;
+        // the drop withdraws today's split of this fleet and sends one with every ship so far (DropSplit). rule: m3-fleets §Orders (SplitFleet)
+        var ships = _splits.TryGetValue(f.Id, out var prev) ? new List<int>(prev.Ships) { d.Id } : One(d.Id);
+        return Words(Fm.CheckSplitFleet(new SplitFleetOrder(0, Me, f.Id, ships)));
     }
 
     readonly Dictionary<int, (long Seq, List<int> Ships)> _splits = new(); // today's split order per fleet (lookup only)
