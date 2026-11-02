@@ -578,20 +578,36 @@ public sealed partial class CharacterModule
     private bool Known(int id, out CharacterRecord c) => S.Characters.TryGetValue(id, out c!) && c.Placed;
     private static bool Moving(Fleet f) => f.Transit != null || f.At == null;
 
+    /// <summary>
+    /// Why an AttachCharacter order would be refused now (null: it would be accepted). The order handler and the screens both ask this.
+    /// <paramref name="leavesPostsFirst"/>: the same day's orders first take the leader off any fleet or General's post and clear the post asked for
+    /// (the screens' drop does that), so those three refusals are not asked; the leader's own fleet must then stand still (DetachCharacter).
+    /// </summary>
+    public string? CheckAttach(AttachCharacterOrder o, bool leavesPostsFirst = false)
+    {
+        if (!Known(o.Character, out var c)) return CharacterReject.UnknownCharacter;
+        if (!State.Fleets.TryGetValue(o.Fleet, out var f)) return RejectReason.UnknownFleet;
+        if (c.Side != o.Side || f.Side != o.Side) return RejectReason.NotYours;
+        if (c.Status != CharacterStatus.Free) return CharacterReject.NotFree;
+        if (Moving(f)) return CharacterReject.FleetInTransit;
+        if (c.Transit != null || LocationOf(c) != f.At) return CharacterReject.NotAtSystem;
+        if (leavesPostsFirst) { if (OwnFleetMoving(c)) return CharacterReject.FleetInTransit; }
+        else if (c.AttachedFleet != 0) return CharacterReject.AlreadyAttached;
+        if (IsOnMission(c.Id)) return CharacterReject.OnMission;
+        if (!leavesPostsFirst && HeldSystemPost(c) != null) return CharacterReject.HoldsSystemPost;
+        if (!ClassOf(c).Can(o.Post)) return CharacterReject.NoCapability;
+        if (!leavesPostsFirst && o.Post != CharacterPost.None && PostHolder(f.Id, o.Post) != null) return CharacterReject.PostTaken;
+        return null;
+    }
+
+    private bool OwnFleetMoving(CharacterRecord c) => c.AttachedFleet != 0 && State.Fleets.TryGetValue(c.AttachedFleet, out var of) && Moving(of);
+
     // rule: §Posts (AttachCharacter); CH11
     private OrderResult HandleAttach(StepContext ctx, AttachCharacterOrder o)
     {
-        if (!Known(o.Character, out var c)) return OrderResult.Reject(CharacterReject.UnknownCharacter);
-        if (!State.Fleets.TryGetValue(o.Fleet, out var f)) return OrderResult.Reject(RejectReason.UnknownFleet);
-        if (c.Side != o.Side || f.Side != o.Side) return OrderResult.Reject(RejectReason.NotYours);
-        if (c.Status != CharacterStatus.Free) return OrderResult.Reject(CharacterReject.NotFree);
-        if (Moving(f)) return OrderResult.Reject(CharacterReject.FleetInTransit);
-        if (c.Transit != null || LocationOf(c) != f.At) return OrderResult.Reject(CharacterReject.NotAtSystem);
-        if (c.AttachedFleet != 0) return OrderResult.Reject(CharacterReject.AlreadyAttached);
-        if (IsOnMission(c.Id)) return OrderResult.Reject(CharacterReject.OnMission);
-        if (HeldSystemPost(c) != null) return OrderResult.Reject(CharacterReject.HoldsSystemPost);
-        if (!ClassOf(c).Can(o.Post)) return OrderResult.Reject(CharacterReject.NoCapability);
-        if (o.Post != CharacterPost.None && PostHolder(f.Id, o.Post) != null) return OrderResult.Reject(CharacterReject.PostTaken);
+        if (CheckAttach(o) is { } bad) return OrderResult.Reject(bad);
+        var c = S.Characters[o.Character];
+        var f = State.Fleets[o.Fleet];
 
         c.AttachedFleet = f.Id; c.Post = o.Post; c.System = f.At;
         int day = ctx.Day, fid = f.Id; var post = o.Post;
@@ -610,20 +626,33 @@ public sealed partial class CharacterModule
         return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
     }
 
+    /// <summary>
+    /// Why an AssignSystemGeneral order would be refused now (null: it would be accepted). The order handler and the screens both ask this.
+    /// <paramref name="leavesPostsFirst"/>: as in <see cref="CheckAttach"/> (the drop first frees the leader and the post).
+    /// </summary>
+    public string? CheckAssign(AssignSystemGeneralOrder o, bool leavesPostsFirst = false)
+    {
+        if (!Known(o.Character, out var c)) return CharacterReject.UnknownCharacter;
+        if (!_fleets.Galaxy.TryFindSystem(o.System, out _)) return RejectReason.UnknownSystem;
+        if (c.Side != o.Side) return RejectReason.NotYours;
+        if (c.Status != CharacterStatus.Free) return CharacterReject.NotFree;
+        if (c.Transit != null || LocationOf(c) != o.System) return CharacterReject.NotAtSystem;
+        if (leavesPostsFirst) { if (OwnFleetMoving(c)) return CharacterReject.FleetInTransit; }
+        else if (c.AttachedFleet != 0) return CharacterReject.AlreadyAttached;
+        if (IsOnMission(c.Id)) return CharacterReject.OnMission;
+        if (!ClassOf(c).CanGeneral) return CharacterReject.NoCapability;
+        if (!State.SystemOwners.TryGetValue(o.System, out var holder) || holder != c.Side) return RejectReason.NotYourSystem;
+        if (leavesPostsFirst) return null;
+        if (S.SystemGenerals.ContainsKey(o.System)) return CharacterReject.PostTaken;
+        if (HeldSystemPost(c) != null) return CharacterReject.AlreadyHoldsSystemPost;
+        return null;
+    }
+
     // rule: §Posts (AssignSystemGeneral)
     private OrderResult HandleAssign(StepContext ctx, AssignSystemGeneralOrder o)
     {
-        if (!Known(o.Character, out var c)) return OrderResult.Reject(CharacterReject.UnknownCharacter);
-        if (!_fleets.Galaxy.TryFindSystem(o.System, out _)) return OrderResult.Reject(RejectReason.UnknownSystem);
-        if (c.Side != o.Side) return OrderResult.Reject(RejectReason.NotYours);
-        if (c.Status != CharacterStatus.Free) return OrderResult.Reject(CharacterReject.NotFree);
-        if (c.Transit != null || LocationOf(c) != o.System) return OrderResult.Reject(CharacterReject.NotAtSystem);
-        if (c.AttachedFleet != 0) return OrderResult.Reject(CharacterReject.AlreadyAttached);
-        if (IsOnMission(c.Id)) return OrderResult.Reject(CharacterReject.OnMission);
-        if (!ClassOf(c).CanGeneral) return OrderResult.Reject(CharacterReject.NoCapability);
-        if (!State.SystemOwners.TryGetValue(o.System, out var holder) || holder != c.Side) return OrderResult.Reject(RejectReason.NotYourSystem);
-        if (S.SystemGenerals.ContainsKey(o.System)) return OrderResult.Reject(CharacterReject.PostTaken);
-        if (HeldSystemPost(c) != null) return OrderResult.Reject(CharacterReject.AlreadyHoldsSystemPost);
+        if (CheckAssign(o) is { } bad) return OrderResult.Reject(bad);
+        var c = S.Characters[o.Character];
 
         S.SystemGenerals[o.System] = c.Id;
         int day = ctx.Day; string sys = o.System;

@@ -136,13 +136,23 @@ public sealed class TroopModule
 
     // rule: m3-troops-and-special-forces §Orders (LoadRegiments): the fleet is at a system; every regiment is on that same system and of the
     // fleet's side; free troop slots at least the count (all or nothing); listed order to ships by ascending id, first free slot.
+    /// <summary>Why a LoadRegiments order would be refused now (null: it would be accepted). The order handler and the screens both ask this.</summary>
+    public string? CheckLoadRegiments(LoadRegimentsOrder o) => CheckLoad(o, out _, out _);
+
+    private string? CheckLoad(LoadRegimentsOrder o, out Fleet fleet, out List<EconObject> regs)
+    {
+        if (Common(o.Side, o.Fleet, o.Regiments, out fleet, out regs) is { } bad) return bad;
+        string? at = fleet.At;
+        if (regs.Any(r => r.AboardShip != 0)) return RejectReason.AlreadyAboard;
+        if (regs.Any(r => r.System != at)) return RejectReason.NotAtFleetSystem;
+        if (_fleets.FreeTroopSlots(fleet) < regs.Count) return RejectReason.NoCapacity;
+        return null;
+    }
+
     private OrderResult HandleLoad(StepContext ctx, LoadRegimentsOrder o)
     {
-        if (Common(o.Side, o.Fleet, o.Regiments, out var fleet, out var regs) is { } bad) return OrderResult.Reject(bad);
-        if (regs.Any(r => r.AboardShip != 0)) return OrderResult.Reject(RejectReason.AlreadyAboard);
-        if (regs.Any(r => r.System != fleet.At)) return OrderResult.Reject(RejectReason.NotAtFleetSystem);
+        if (CheckLoad(o, out var fleet, out var regs) is { } bad) return OrderResult.Reject(bad);
         var free = _fleets.FreeTroopSlotsByShip(fleet);
-        if (free.Values.Sum() < regs.Count) return OrderResult.Reject(RejectReason.NoCapacity);
 
         int day = ctx.Day;
         string system = fleet.At!;
@@ -162,12 +172,22 @@ public sealed class TroopModule
 
     // rule: m3-troops-and-special-forces §Orders (UnloadRegiments): every regiment is aboard a ship of that fleet; the fleet is at a system,
     // not in transit; the system is held by the side (DEFAULT; a neutral or enemy system is the assault's, m3-assault).
+    /// <summary>Why an UnloadRegiments order would be refused now (null: it would be accepted). The order handler and the screens both ask this.</summary>
+    public string? CheckUnloadRegiments(UnloadRegimentsOrder o) => CheckUnload(o, out _, out _);
+
+    private string? CheckUnload(UnloadRegimentsOrder o, out Fleet fleet, out List<EconObject> regs)
+    {
+        if (Common(o.Side, o.Fleet, o.Regiments, out fleet, out regs) is { } bad) return bad;
+        var f = fleet;
+        if (regs.Any(r => r.AboardShip == 0 || !f.Ships.Contains(r.AboardShip))) return RejectReason.NotAboard;
+        if (UnloadOnlyAtHeldSystem && _fleets.OwnerOf(fleet.At!) != o.Side) return RejectReason.NotYourSystem;
+        return null;
+    }
+
     private OrderResult HandleUnload(StepContext ctx, UnloadRegimentsOrder o)
     {
-        if (Common(o.Side, o.Fleet, o.Regiments, out var fleet, out var regs) is { } bad) return OrderResult.Reject(bad);
-        if (regs.Any(r => r.AboardShip == 0 || !fleet.Ships.Contains(r.AboardShip))) return OrderResult.Reject(RejectReason.NotAboard);
+        if (CheckUnload(o, out var fleet, out var regs) is { } bad) return OrderResult.Reject(bad);
         string system = fleet.At!;
-        if (UnloadOnlyAtHeldSystem && _fleets.OwnerOf(system) != o.Side) return OrderResult.Reject(RejectReason.NotYourSystem);
 
         int day = ctx.Day;
         var ships = regs.Select(r => r.AboardShip).ToList();

@@ -34,15 +34,26 @@ public sealed partial class FleetModule
     }
 
     // rule: m3-fleets §Orders (SplitFleet): UnknownFleet, NotYours, ship checks, InTransit, ShipNotInFleet, EmptySelection, WholeFleet
+    /// <summary>Why a SplitFleet order would be refused now (null: it would be accepted). The order handler and the screens both ask this.</summary>
+    public string? CheckSplitFleet(SplitFleetOrder o) => CheckSplit(o, out _, out _);
+
+    private string? CheckSplit(SplitFleetOrder o, out Fleet fleet, out List<EconObject> ships)
+    {
+        ships = new List<EconObject>();
+        if (!State.Fleets.TryGetValue(o.Fleet, out fleet!)) return RejectReason.UnknownFleet;
+        if (fleet.Side != o.Side) return RejectReason.NotYours;
+        if (CheckShipList(o.Side, o.Ships, out ships) is { } bad) return bad;
+        if (Moving(fleet)) return RejectReason.InTransit;
+        var f = fleet;
+        if (ships.Any(s => !f.Ships.Contains(s.Id))) return RejectReason.ShipNotInFleet;
+        if (ships.Count == 0) return RejectReason.EmptySelection;
+        if (ships.Count == fleet.Ships.Count) return RejectReason.WholeFleet;
+        return null;
+    }
+
     private OrderResult HandleSplitFleet(StepContext ctx, SplitFleetOrder o)
     {
-        if (!State.Fleets.TryGetValue(o.Fleet, out var fleet)) return OrderResult.Reject(RejectReason.UnknownFleet);
-        if (fleet.Side != o.Side) return OrderResult.Reject(RejectReason.NotYours);
-        if (CheckShipList(o.Side, o.Ships, out var ships) is { } bad) return OrderResult.Reject(bad);
-        if (Moving(fleet)) return OrderResult.Reject(RejectReason.InTransit);
-        if (ships.Any(s => !fleet.Ships.Contains(s.Id))) return OrderResult.Reject(RejectReason.ShipNotInFleet);
-        if (ships.Count == 0) return OrderResult.Reject(RejectReason.EmptySelection);
-        if (ships.Count == fleet.Ships.Count) return OrderResult.Reject(RejectReason.WholeFleet);
+        if (CheckSplit(o, out var fleet, out var ships) is { } bad) return OrderResult.Reject(bad);
 
         int day = ctx.Day;
         string system = fleet.At!;
@@ -55,18 +66,30 @@ public sealed partial class FleetModule
 
     // rule: m3-fleets §Orders (TransferShips): UnknownFleet, NotYours, ship checks, EmptySelection (DEFAULT name), InTransit, NotCompleted,
     // NotSameSystem, SameFleet, SquadronFleet
+    /// <summary>Why a TransferShips order would be refused now (null: it would be accepted). The order handler and the screens both ask this.</summary>
+    public string? CheckTransferShips(TransferShipsOrder o) => CheckTransfer(o, out _, out _);
+
+    private string? CheckTransfer(TransferShipsOrder o, out Fleet to, out List<EconObject> ships)
+    {
+        ships = new List<EconObject>();
+        if (!State.Fleets.TryGetValue(o.ToFleet, out to!)) return RejectReason.UnknownFleet;
+        if (to.Side != o.Side) return RejectReason.NotYours;
+        if (CheckShipList(o.Side, o.Ships, out ships) is { } bad) return bad;
+        if (ships.Count == 0) return RejectReason.EmptySelection;
+        var places = ships.Select(PlaceOfShip).ToList();
+        var t = to;
+        if (Moving(to) || places.Any(p => p.Moving)) return RejectReason.InTransit;
+        if (ships.Any(s => !s.Completed)) return RejectReason.NotCompleted;
+        if (places.Any(p => p.System != t.At)) return RejectReason.NotSameSystem;
+        if (places.All(p => p.Fleet == t)) return RejectReason.SameFleet;
+        if (to.Ships.Count == 0) return RejectReason.SquadronFleet;
+        return null;
+    }
+
     private OrderResult HandleTransferShips(StepContext ctx, TransferShipsOrder o)
     {
-        if (!State.Fleets.TryGetValue(o.ToFleet, out var to)) return OrderResult.Reject(RejectReason.UnknownFleet);
-        if (to.Side != o.Side) return OrderResult.Reject(RejectReason.NotYours);
-        if (CheckShipList(o.Side, o.Ships, out var ships) is { } bad) return OrderResult.Reject(bad);
-        if (ships.Count == 0) return OrderResult.Reject(RejectReason.EmptySelection);
+        if (CheckTransfer(o, out var to, out var ships) is { } bad) return OrderResult.Reject(bad);
         var places = ships.Select(PlaceOfShip).ToList();
-        if (Moving(to) || places.Any(p => p.Moving)) return OrderResult.Reject(RejectReason.InTransit);
-        if (ships.Any(s => !s.Completed)) return OrderResult.Reject(RejectReason.NotCompleted);
-        if (places.Any(p => p.System != to.At)) return OrderResult.Reject(RejectReason.NotSameSystem);
-        if (places.All(p => p.Fleet == to)) return OrderResult.Reject(RejectReason.SameFleet);
-        if (to.Ships.Count == 0) return OrderResult.Reject(RejectReason.SquadronFleet);
 
         MoveShips(ctx, ctx.Day, ships.Where((s, i) => places[i].Fleet != to).ToList(), to);
         return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
@@ -112,17 +135,22 @@ public sealed partial class FleetModule
     }
 
     // rule: m3-fleets §Orders (MergeFleets): UnknownFleet, NotYours, SameFleet, InTransit, NotSameSystem, SquadronFleet
+    /// <summary>Why a MergeFleets order would be refused now (null: it would be accepted). The order handler and the screens both ask this.</summary>
+    public string? CheckMergeFleets(MergeFleetsOrder o)
+    {
+        if (!State.Fleets.TryGetValue(o.From, out var from) || !State.Fleets.TryGetValue(o.Into, out var into)) return RejectReason.UnknownFleet;
+        if (from.Side != o.Side || into.Side != o.Side) return RejectReason.NotYours;
+        if (from == into) return RejectReason.SameFleet;
+        if (Moving(from) || Moving(into)) return RejectReason.InTransit;
+        if (from.At != into.At) return RejectReason.NotSameSystem;
+        if (from.Ships.Count == 0 || into.Ships.Count == 0) return RejectReason.SquadronFleet;
+        return null;
+    }
+
     private OrderResult HandleMergeFleets(StepContext ctx, MergeFleetsOrder o)
     {
-        if (!State.Fleets.TryGetValue(o.From, out var from) || !State.Fleets.TryGetValue(o.Into, out var into))
-            return OrderResult.Reject(RejectReason.UnknownFleet);
-        if (from.Side != o.Side || into.Side != o.Side) return OrderResult.Reject(RejectReason.NotYours);
-        if (from == into) return OrderResult.Reject(RejectReason.SameFleet);
-        if (Moving(from) || Moving(into)) return OrderResult.Reject(RejectReason.InTransit);
-        if (from.At != into.At) return OrderResult.Reject(RejectReason.NotSameSystem);
-        if (from.Ships.Count == 0 || into.Ships.Count == 0) return OrderResult.Reject(RejectReason.SquadronFleet);
-
-        MergeInto(ctx, ctx.Day, from, into);
+        if (CheckMergeFleets(o) is { } bad) return OrderResult.Reject(bad);
+        MergeInto(ctx, ctx.Day, State.Fleets[o.From], State.Fleets[o.Into]);
         return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
     }
 
@@ -160,17 +188,28 @@ public sealed partial class FleetModule
     }
 
     // rule: m3-fleets §Orders (LoadSquadrons): UnknownFleet, NotYours, squadron checks, InTransit, NotCompleted, SquadronNotBased, NotAtFleetSystem, NoCapacity
+    /// <summary>Why a LoadSquadrons order would be refused now (null: it would be accepted). The order handler and the screens both ask this.</summary>
+    public string? CheckLoadSquadrons(LoadSquadronsOrder o) => CheckLoad(o, out _, out _);
+
+    private string? CheckLoad(LoadSquadronsOrder o, out Fleet fleet, out List<EconObject> squads)
+    {
+        squads = new List<EconObject>();
+        if (!State.Fleets.TryGetValue(o.Fleet, out fleet!)) return RejectReason.UnknownFleet;
+        if (fleet.Side != o.Side) return RejectReason.NotYours;
+        if (CheckSquadronList(o.Side, o.Squadrons, out squads) is { } bad) return bad;
+        if (Moving(fleet)) return RejectReason.InTransit;
+        string? at = fleet.At;
+        if (squads.Any(s => !s.Completed)) return RejectReason.NotCompleted;
+        if (squads.Any(s => s.AboardShip != 0 || s.System == null)) return RejectReason.SquadronNotBased;
+        if (squads.Any(s => s.System != at)) return RejectReason.NotAtFleetSystem;
+        if (FreeBerths(fleet) < squads.Count) return RejectReason.NoCapacity; // all or nothing
+        return null;
+    }
+
     private OrderResult HandleLoadSquadrons(StepContext ctx, LoadSquadronsOrder o)
     {
-        if (!State.Fleets.TryGetValue(o.Fleet, out var fleet)) return OrderResult.Reject(RejectReason.UnknownFleet);
-        if (fleet.Side != o.Side) return OrderResult.Reject(RejectReason.NotYours);
-        if (CheckSquadronList(o.Side, o.Squadrons, out var squads) is { } bad) return OrderResult.Reject(bad);
-        if (Moving(fleet)) return OrderResult.Reject(RejectReason.InTransit);
-        if (squads.Any(s => !s.Completed)) return OrderResult.Reject(RejectReason.NotCompleted);
-        if (squads.Any(s => s.AboardShip != 0 || s.System == null)) return OrderResult.Reject(RejectReason.SquadronNotBased);
-        if (squads.Any(s => s.System != fleet.At)) return OrderResult.Reject(RejectReason.NotAtFleetSystem);
+        if (CheckLoad(o, out var fleet, out var squads) is { } bad) return OrderResult.Reject(bad);
         var free = FreeBerthsByShip(fleet);
-        if (free.Values.Sum() < squads.Count) return OrderResult.Reject(RejectReason.NoCapacity); // all or nothing
 
         // first free berth by ship id ascending (m3-fleets DEFAULT)
         int day = ctx.Day;
@@ -190,15 +229,26 @@ public sealed partial class FleetModule
     }
 
     // rule: m3-fleets §Orders (UnloadSquadrons): UnknownFleet, NotYours, squadron checks, InTransit, NotAboard, NotYourSystem
+    /// <summary>Why an UnloadSquadrons order would be refused now (null: it would be accepted). The order handler and the screens both ask this.</summary>
+    public string? CheckUnloadSquadrons(UnloadSquadronsOrder o) => CheckUnload(o, out _, out _);
+
+    private string? CheckUnload(UnloadSquadronsOrder o, out Fleet fleet, out List<EconObject> squads)
+    {
+        squads = new List<EconObject>();
+        if (!State.Fleets.TryGetValue(o.Fleet, out fleet!)) return RejectReason.UnknownFleet;
+        if (fleet.Side != o.Side) return RejectReason.NotYours;
+        if (CheckSquadronList(o.Side, o.Squadrons, out squads) is { } bad) return bad;
+        if (Moving(fleet)) return RejectReason.InTransit;
+        var f = fleet;
+        if (squads.Any(s => !f.Ships.Contains(s.AboardShip))) return RejectReason.NotAboard;
+        if (OwnerOf(fleet.At!) != o.Side) return RejectReason.NotYourSystem; // DEFAULT: unload only where the side holds the system
+        return null;
+    }
+
     private OrderResult HandleUnloadSquadrons(StepContext ctx, UnloadSquadronsOrder o)
     {
-        if (!State.Fleets.TryGetValue(o.Fleet, out var fleet)) return OrderResult.Reject(RejectReason.UnknownFleet);
-        if (fleet.Side != o.Side) return OrderResult.Reject(RejectReason.NotYours);
-        if (CheckSquadronList(o.Side, o.Squadrons, out var squads) is { } bad) return OrderResult.Reject(bad);
-        if (Moving(fleet)) return OrderResult.Reject(RejectReason.InTransit);
-        if (squads.Any(s => !fleet.Ships.Contains(s.AboardShip))) return OrderResult.Reject(RejectReason.NotAboard);
+        if (CheckUnload(o, out var fleet, out var squads) is { } bad) return OrderResult.Reject(bad);
         string system = fleet.At!;
-        if (OwnerOf(system) != o.Side) return OrderResult.Reject(RejectReason.NotYourSystem); // DEFAULT: unload only where the side holds the system
 
         int day = ctx.Day;
         var carriers = squads.Select(s => s.AboardShip).ToList();
