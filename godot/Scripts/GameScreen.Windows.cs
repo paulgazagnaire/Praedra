@@ -185,7 +185,6 @@ public partial class GameScreen
         w.Panel.Position = ClampWin(last + new Vector2(28, 28), new Vector2(MgWidth, 200));
     }
 
-    /// <summary>A new day or an order: rebuild the open windows soon, never in the middle of a drag.</summary>
     /// <summary>The drops of yesterday have been judged: forget them.</summary>
     void NewDay()
     {
@@ -795,7 +794,10 @@ public partial class GameScreen
         else if (fleet == 0) return "";
         if (at != n) return $"{ThingName(d)} is not at {n}.";
         if (fleet != 0 && S.Game.State.Fleets.TryGetValue(fleet, out var f) && !Still(f)) return "The fleet is travelling.";
-        if (kind != 'L' && S.OwnerOf(n) != Me) return $"Land troops only on a planet you hold. To take {n}, invade from the fleet's page.";
+        // the core refuses these at dawn: rule: m3-troops-and-special-forces §Orders (UnloadRegiments, switch UnloadOnlyAtHeldSystem);
+        // squadrons: FleetModuleSteps UnloadSquadrons (DEFAULT: only where the side holds the system)
+        bool heldOnly = kind != 'R' || S.Host.Troops.UnloadOnlyAtHeldSystem;
+        if (kind != 'L' && heldOnly && S.OwnerOf(n) != Me) return $"Land troops only on a planet you hold. To take {n}, invade from the fleet's page.";
         return null;
     }
 
@@ -817,7 +819,7 @@ public partial class GameScreen
         if (fleet == f.Id) return "";
         if (!Still(f)) return $"{f.Name} is travelling.";
         if (at != f.At) return $"{ThingName(d)} is not at {f.At}.";
-        if (fleet != 0 && S.OwnerOf(f.At) != Me) return $"Move it through the planet: only on a planet you hold.";
+        if (fleet != 0 && (kind != 'R' || S.Host.Troops.UnloadOnlyAtHeldSystem) && S.OwnerOf(f.At) != Me) return $"Move it through the planet: only on a planet you hold.";
         int room = (kind == 'R' ? Fm.FreeTroopSlots(f) : Fm.FreeBerths(f)) - Promised(f.Id);
         if (room <= 0) return kind == 'R' ? $"{f.Name} has no troop room left." : $"{f.Name} has no hangar room left.";
         return null;
