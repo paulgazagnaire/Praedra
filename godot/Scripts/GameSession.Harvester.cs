@@ -88,7 +88,7 @@ public sealed partial class GameSession
                 break;
             }
             case FleetDestroyedByHarvester x:
-                yield return new Message(d, x.FleetSide == Player ? $"Your fleet {FleetName(x.Fleet)} was destroyed at {x.System} by the harvester."
+                yield return new Message(d, x.FleetSide == Player ? $"Your {FleetName(x.Fleet)} was destroyed at {x.System} by the harvester."
                     : $"The {NameOf(x.FleetSide)} fleet at {x.System} was destroyed with the system.", x.System, x.FleetSide == Player ? MsgKind.Bad : MsgKind.Good);
                 break;
             case SectorStruck x:

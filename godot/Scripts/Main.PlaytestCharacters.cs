@@ -73,7 +73,7 @@ public partial class Main
         Expect(mover.AttachedFleet == fleet.Id && mover.Post == post, $"{mname} is aboard {fleet.Name} as {GameSession.PostWords(post)}");
         Expect(news.Any(t => t.StartsWith($"Order refused: Attach {mname} to {fleet.Name}", StringComparison.Ordinal) && t.Contains("already aboard a fleet")),
             "the second order is refused with a plain reason: " + string.Join(" | ", news));
-        Expect(news.Any(t => t.StartsWith(mname, StringComparison.Ordinal) && (t.Contains("joined fleet " + fleet.Name) || t.Contains("boarded fleet " + fleet.Name))), "message: the character joined the fleet");
+        Expect(news.Any(t => t.StartsWith(mname, StringComparison.Ordinal) && (t.Contains("joined " + fleet.Name) || t.Contains("boarded " + fleet.Name))), "message: the character joined the fleet");
         SelectFleetByList(gs, fleet);
         string fp = gs.PanelText();
         Expect(post == CharacterPost.None ? fp.Contains("Passengers: ") && fp.Contains(mname) : fp.Contains($"{GameSession.PostWords(post)}: {mname} (leadership"), "the fleet panel shows the character: " + fp.Replace("\n", " / "));
