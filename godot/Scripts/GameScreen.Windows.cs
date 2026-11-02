@@ -1034,6 +1034,8 @@ public partial class GameScreen
         if (d.Kind != 'S') return "";
         var (_, fleet) = WhereNow(d);
         if (fleet != f.Id) return "Split ships off their own fleet: drop them on its New fleet.";
+        // QA-82: a split given after today's merge of this fleet would run after it, on a fleet that is gone by then
+        if (_moved.TryGetValue(new Drag('M', f.Id).Key, out var itself)) return $"{f.Name} itself {itself.Words}.";
         if (f.Ships.Count - ShipsLeaving(f) <= 1) return "A fleet keeps at least one ship.";
         // the drop withdraws today's split of this fleet and sends one with every ship so far (DropSplit). rule: m3-fleets §Orders (SplitFleet)
         var ships = _splits.TryGetValue(f.Id, out var prev) ? new List<int>(prev.Ships) { d.Id } : One(d.Id);
