@@ -152,7 +152,7 @@ public sealed partial class CharacterModule
         bool wasOnMission = IsOnMission(c.Id);
         // QA-9 (B2e Work 13): the return place of the mission this capture ends is saved for a later Autoroute (step 2)
         if (wasOnMission && MissionReturnPlace?.Invoke(c.Id) is { } rp) c.ReturnPlace = rp;
-        c.AutoroutePending = false; c.JoinFleet = 0;
+        c.AutoroutePending = false; c.JoinFleet = 0; c.JoinPost = CharacterPost.None; c.JoinByOrder = false;
         string? at = heldAt ?? StandingPlace(c);
         VacateAll(ctx, day, c, CharacterCause.Captured);
         c.Transit = null;
@@ -261,7 +261,7 @@ public sealed partial class CharacterModule
         var path = _fleets.FindPath(sys, dest, Params.CharacterSpeed);
         if (!path.Ok) return false;
         int k = ctx?.Day ?? _game.Day, first = path.HopTicks[0], day = k + 1;
-        c.System = null; c.JoinFleet = join;
+        c.System = null; c.JoinFleet = join; c.JoinPost = CharacterPost.None; c.JoinByOrder = false;
         c.Transit = new FleetTransit { Path = path.Names(_fleets.Galaxy).ToList(), HopTicks = path.HopTicks.ToList(), HopIndex = 0, DueDay = k + 1 + first };
         string from = sys; var side = c.Side;
         Emit(ctx, (i, _) => new CharacterDeparted(i, day, c.Id, side, from, first));

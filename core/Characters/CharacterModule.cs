@@ -652,8 +652,16 @@ public sealed partial class CharacterModule
         if (IsOnMission(c.Id)) return OrderResult.Reject(CharacterReject.OnMission);
         if (c.Transit != null || c.System == null) return OrderResult.Reject(RejectReason.InTransit);
         if (c.System == o.System) return OrderResult.Reject(RejectReason.AlreadyThere);
+        if (o.JoinFleet != 0)
+        {
+            // rule: §Moving a character alone (Joining a fleet on arrival): the fleet is his side's and he can hold the post asked for
+            if (!State.Fleets.TryGetValue(o.JoinFleet, out var jf)) return OrderResult.Reject(RejectReason.UnknownFleet);
+            if (jf.Side != o.Side) return OrderResult.Reject(RejectReason.NotYours);
+            if (!ClassOf(c).Can(o.JoinPost)) return OrderResult.Reject(CharacterReject.NoCapability);
+        }
         var path = _fleets.FindPath(c.System, o.System, Params.CharacterSpeed);
         if (!path.Ok) return OrderResult.Reject(path.Status == Travel.PathStatus.AlreadyThere ? RejectReason.AlreadyThere : CharacterReject.NoPath);
+        c.JoinFleet = o.JoinFleet; c.JoinPost = o.JoinFleet != 0 ? o.JoinPost : CharacterPost.None; c.JoinByOrder = o.JoinFleet != 0;
 
         var names = path.Names(_fleets.Galaxy).ToList();
         c.Transit = new FleetTransit { Path = names, HopTicks = path.HopTicks.ToList(), HopIndex = 0, DueDay = ctx.Day + path.HopTicks[0] };
@@ -689,13 +697,17 @@ public sealed partial class CharacterModule
                 c.Transit = null; c.System = sys;
                 ctx.Emit((i, _) => new CharacterArrived(i, day, c.Id, c.Side, sys));
                 // QA-9 (B2e §3 Autoroute step 4): he joins the fleet he set off for if it is still there (a rider, no post)
+                // rule: §Moving a character alone (Joining a fleet on arrival, Paul 2026-11-02): an ordered join takes the post asked for when
+                // it is free and the fleet stands still there; else he rides as a passenger; a fleet that left is not followed
                 if (c.JoinFleet is int jf and not 0 && State.Fleets.TryGetValue(jf, out var jfl) && jfl.At == sys && jfl.Side == c.Side
-                    && c.Status is CharacterStatus.Free or CharacterStatus.Injured)
+                    && c.Status is CharacterStatus.Free or CharacterStatus.Injured && (!c.JoinByOrder || (!Moving(jfl) && c.Status == CharacterStatus.Free)))
                 {
-                    c.AttachedFleet = jf; c.Post = CharacterPost.None;
-                    ctx.Emit((i, _) => new CharacterAttached(i, day, c.Id, c.Side, jf, CharacterPost.None, CharacterCause.Autoroute));
+                    var post = c.JoinPost != CharacterPost.None && ClassOf(c).Can(c.JoinPost) && PostHolder(jf, c.JoinPost) == null ? c.JoinPost : CharacterPost.None;
+                    var cause = c.JoinByOrder ? CharacterCause.Order : CharacterCause.Autoroute;
+                    c.AttachedFleet = jf; c.Post = post;
+                    ctx.Emit((i, _) => new CharacterAttached(i, day, c.Id, c.Side, jf, post, cause));
                 }
-                c.JoinFleet = 0;
+                c.JoinFleet = 0; c.JoinPost = CharacterPost.None; c.JoinByOrder = false;
                 continue;
             }
             t.HopIndex++;

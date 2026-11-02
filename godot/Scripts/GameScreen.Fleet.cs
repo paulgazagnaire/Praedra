@@ -232,7 +232,7 @@ public partial class GameScreen
     {
         S.Say($"Order sent: {what}.", MsgKind.Info, system);
         AddLogItem(S.Messages[^1], false);
-        Toast($"Order sent: {what}. It starts next day.");
+        if (!MgDropping) Toast($"Order sent: {what}. It starts next day.");   // a window drop shows itself at once
         _panelDirty = true; _panelTimer = 0;
         RefreshMgmt();
         RefreshTop();

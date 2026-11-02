@@ -77,6 +77,7 @@ public sealed partial class FleetModule
         game.RegisterHook("3", m.Arrivals);
         game.RegisterHook("4", m.ForcedStops);
         game.RegisterHook("5", m.ContactsAndBlockades);
+        game.RegisterHook("5.6", m.JoinsOnArrival); // after battles, bombardments, assaults and missions
         return m;
     }
 
@@ -163,8 +164,8 @@ public sealed partial class FleetModule
     public Side? OwnerOf(string system) => State.SystemOwners.TryGetValue(system, out var s) ? s : null;
 
     /// <summary>Queue a MoveFleet order (validated in the next Step). Returns its sequence number.</summary>
-    public long SubmitMove(Side side, int fleetId, string destination, IReadOnlyList<string>? waypoints = null) =>
-        _game.Submit(seq => new MoveFleetOrder(seq, side, fleetId, destination, waypoints is { Count: > 0 } ? new ValueList<string>(waypoints.ToList()) : null));
+    public long SubmitMove(Side side, int fleetId, string destination, IReadOnlyList<string>? waypoints = null, int joinFleet = 0) =>
+        _game.Submit(seq => new MoveFleetOrder(seq, side, fleetId, destination, waypoints is { Count: > 0 } ? new ValueList<string>(waypoints.ToList()) : null, joinFleet));
 
     public long SubmitCreateFleet(Side side, IEnumerable<int> ships) => _game.Submit(seq => new CreateFleetOrder(seq, side, ships.ToList()));
     public long SubmitSplitFleet(Side side, int fleet, IEnumerable<int> ships) => _game.Submit(seq => new SplitFleetOrder(seq, side, fleet, ships.ToList()));

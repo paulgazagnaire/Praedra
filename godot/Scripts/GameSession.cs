@@ -213,6 +213,14 @@ public sealed partial class GameSession
         return Track(sequence, what);
     }
 
+    /// <summary>Withdraw a queued order (it was never given) and forget its tracking. rule: m1-clock-and-orders §Orders in.</summary>
+    public bool Withdraw(long sequence)
+    {
+        if (!Game.Withdraw(sequence)) return false;
+        _pending.Remove(sequence); _pendingFleet.Remove(sequence);
+        return true;
+    }
+
     /// <summary>Plain-language orders given to this fleet that the core will carry out when the next day starts.</summary>
     public IEnumerable<string> PendingOf(int fleet) =>
         _pendingFleet.Where(kv => kv.Value == fleet && _pending.ContainsKey(kv.Key)).OrderBy(kv => kv.Key).Select(kv => _pending[kv.Key]);

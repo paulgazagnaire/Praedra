@@ -216,6 +216,12 @@ public sealed class Game
         return seq;
     }
 
+    /// <summary>
+    /// Take back an order that has not been processed yet (it is still in the queue): as if it had never been given. Returns false when it is
+    /// gone already. rule: m1-clock-and-orders §Orders in (withdrawing a queued order, Paul 2026-11-02).
+    /// </summary>
+    public bool Withdraw(long sequence) => _queue.RemoveAll(o => o.Sequence == sequence) > 0;
+
     public long Submit(Side side, string marker, int value) => Submit(seq => new SetMarkerOrder(seq, side, marker, value));
 
     private readonly List<Action<StepContext>> _stepBegin = new(); // registration order

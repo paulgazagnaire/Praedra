@@ -98,6 +98,20 @@ public class GameClockTests
         Assert.Equal(new OrderRejected(1, 0, s2, RejectReason.AlreadyChanged), g.Events[1]);
     }
 
+    [Fact] // m1-clock-and-orders §Orders in: a withdrawn queued order is as if never given (Paul 2026-11-02)
+    public void Withdrawn_order_is_never_processed()
+    {
+        var g = new Game(1);
+        long s1 = g.Submit(Side.Hand, "a", 1);
+        long s2 = g.Submit(Side.Hand, "a", 2);
+        Assert.True(g.Withdraw(s1));
+        Assert.False(g.Withdraw(s1));
+        g.Step();
+        Assert.Equal(2, g.State.Markers["a"]);
+        Assert.Equal(new OrderAccepted(0, 0, s2), Assert.Single(g.Events));
+        Assert.False(g.Withdraw(s2)); // processed: too late
+    }
+
     [Fact] // m1-clock-and-orders §Orders in: "Rejection never changes any state"
     public void Rejected_order_changes_no_state()
     {

@@ -44,7 +44,7 @@ public partial class Main
         string zone = post == CharacterPost.None ? $"Fleet {fid} Passengers" : $"Fleet {fid} {post}";
         string why = gs.MgDrop($"L:{lead.Id}", zone);
         Expect(why == null, $"drop {lname} on {zone}: {why ?? "sent"}");
-        Expect(gs.MgText($"Ground {sys}").Contains("→ ") && gs.MgText($"Fleet {fid}").Contains("arrives next day"), "until the next day the chip says where it goes, and a faint copy waits where it was dropped");
+        Expect(!gs.MgText($"Ground {sys}").Contains(lname) && gs.MgText($"Fleet {fid}").Contains(lname), "the drop shows at once: the chip leaves the planet and stands in the fleet");
         Expect(gs.MgDrop($"L:{lead.Id}", $"Fleet {fid} Passengers") != null, "a chip already moved today can't be dropped again");
         gs.PlayDay();
         Expect(lead.AttachedFleet == fid && lead.Post == post, $"next day {lname} is aboard {fleet.Name} as {GameSession.PostWords(post)}");
@@ -66,12 +66,17 @@ public partial class Main
             gs.PlayDay();
         }
 
-        // ---------------------------------------------------------------- a refusal says why
-        var far = s.MyCharacters.FirstOrDefault(c => Free(c) && cm.LocationOf(c) != sys && c.AttachedFleet == 0);
+        // ---------------------------------------------------------------- a leader at another system sets off and joins on arrival
+        var far = s.MyCharacters.Where(c => Free(c) && cm.LocationOf(c) != sys && c.AttachedFleet == 0 && s.SystemPostOf(c) == null).OrderBy(c => c.Id)
+            .FirstOrDefault(c => fm.FindPath(cm.LocationOf(c), sys, cm.Params.CharacterSpeed).Ok);
         if (far != null)
         {
+            string fname = s.CharName(far.Id);
             string r = gs.MgDrop($"L:{far.Id}", $"Fleet {fid} Passengers");
-            Expect(r != null && r.Contains("is not at"), $"a leader at another system is refused with a reason: {r}");
+            Expect(r == null, $"drop {fname} from {cm.LocationOf(far)} on {fleet.Name}: {r ?? "sent"}");
+            Expect(gs.MgText($"Fleet {fid}").Contains("on the way"), "the fleet window shows them on the way");
+            gs.PlayDay(); gs.PlayRefresh();
+            Expect(far.Transit != null && far.JoinFleet == fid && gs.MgText($"Fleet {fid}").Contains("ON THE WAY"), $"next day {fname} travels to {sys}, listed under On the way");
         }
 
         // ---------------------------------------------------------------- a regiment aboard and back
@@ -94,24 +99,43 @@ public partial class Main
         else if (reg != null && fm.FreeTroopSlots(fleet) == 0)
             Expect(gs.MgDrop($"R:{reg.Id}", $"Fleet {fid} Troops")?.Contains("no troop room") == true, "a fleet with no troop room refuses regiments");
 
-        // ---------------------------------------------------------------- a ship split off, then the new fleet merged back by its grip
+        // ---------------------------------------------------------------- ships split off (two drops, one new fleet), then merged back by the grip
         if (fleet.Ships.Count > 1)
         {
             int ship = fleet.Ships[^1];
+            int ship2 = fleet.Ships.Count > 2 ? fleet.Ships[^2] : 0;
             var before = s.Game.State.Fleets.Keys.ToHashSet();
             Expect(gs.MgDrop($"S:{ship}", $"Fleet {fid} NewFleet") == null, "drop a ship on New fleet");
+            if (ship2 != 0) Expect(gs.MgDrop($"S:{ship2}", $"Fleet {fid} NewFleet") == null, "drop a second ship on New fleet the same day");
             gs.PlayDay();
             var made = s.Game.State.Fleets.Values.FirstOrDefault(f => !before.Contains(f.Id) && f.Ships.Contains(ship));
             Expect(made != null, "next day the ship is a fleet of its own");
+            if (ship2 != 0) Expect(made != null && made.Ships.Contains(ship2) && s.Game.State.Fleets.Keys.Count(k => !before.Contains(k)) == 1, "two ships dropped the same day make one new fleet (QA)");
             if (made != null)
             {
                 gs.ShotWindow("fleet", made.Id.ToString()); gs.PlayRefresh();
                 Expect(gs.MgDrop($"M:{made.Id}", $"Fleet {fid} Ships") == null, $"drag {made.Name} by its grip onto {fleet.Name}'s ships");
+                Expect(gs.MgDrop($"M:{fid}", $"Fleet {made.Id} Ships") != null, "the other fleet can't be merged back into it the same day (QA)");
                 gs.PlayDay(); gs.PlayRefresh();
                 Expect(!s.Game.State.Fleets.ContainsKey(made.Id) && fleet.Ships.Contains(ship), "next day it has merged back");
                 Expect(!gs.MgmtKeys.Contains($"Fleet {made.Id}"), "the merged fleet's window closes by itself");
             }
         }
+
+        // ---------------------------------------------------------------- two ships dropped on New fleet the same day make one fleet (QA on #227)
+        var big = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null && f.Transit == null && f.Ships.Count >= 3).OrderBy(f => f.Id).FirstOrDefault();
+        if (big != null)
+        {
+            gs.ShotWindow("fleet", big.Id.ToString()); gs.PlayRefresh();
+            int a1 = big.Ships[^1], a2 = big.Ships[^2];
+            var before2 = s.Game.State.Fleets.Keys.ToHashSet();
+            Expect(gs.MgDrop($"S:{a1}", $"Fleet {big.Id} NewFleet") == null && gs.MgDrop($"S:{a2}", $"Fleet {big.Id} NewFleet") == null, $"drop two ships of {big.Name} on New fleet the same day");
+            gs.PlayDay();
+            var two = s.Game.State.Fleets.Values.Where(f => !before2.Contains(f.Id)).ToList();
+            Expect(two.Count == 1 && two[0].Ships.Contains(a1) && two[0].Ships.Contains(a2), $"next day they make one new fleet ({two.Count} made)");
+            if (two.Count == 1) { gs.ShotWindow("fleet", two[0].Id.ToString()); gs.PlayRefresh(); gs.MgDrop($"M:{two[0].Id}", $"Fleet {big.Id} Ships"); gs.PlayDay(); }
+        }
+        else GD.Print("  (no fleet of three ships: the two-ship split is not checked on this side)");
 
         // ---------------------------------------------------------------- Esc closes the top window first
         for (int i = 0; i < 5 && gs.AnyModal; i++) gs.PressKey(Key.Escape);   // a report the days opened goes first

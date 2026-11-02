@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 using Praedra.Core.Characters;
+using Praedra.Core.Missions;
 using Praedra.Core.Economy;
 using Praedra.Core.Fleets;
 
@@ -172,24 +173,32 @@ public partial class GameScreen
         return new Vector2(Mathf.Clamp(at.X, 8, Math.Max(8, vp.X - size.X - 8)), Mathf.Clamp(at.Y, TopClear, Math.Max(TopClear, vp.Y - 60)));
     }
 
-    /// <summary>A new window goes in the first free column beside the sector window (on the map's side), else it cascades.</summary>
+    /// <summary>
+    /// A new window goes in the first free column beside the sector window (on the map's side), then in any free column of the screen, else
+    /// beside the window on top, shifted so its title stays visible (QA on #227: a second fleet window opened right over the first).
+    /// </summary>
     void PlaceNew(MgWin w)
     {
         var vp = _mgLayer.Size;
+        var others = _mgWins.Where(x => x != w).Select(x => new Rect2(x.Panel.Position, new Vector2(MgWidth, Math.Max(200, x.Panel.Size.Y)))).ToList();
+        bool Free(float x) => !others.Any(r => r.Position.X < x + MgWidth && x < r.End.X);
+        IEnumerable<float> Columns(float lo, float hi) { for (float x = lo; x + MgWidth <= hi + 1; x += MgWidth + 12) yield return x; }
         float lo = 16, hi = vp.X - 16;
         if (SectorViewOpen) { var r = _secWin.GetGlobalRect(); if (_secLeft) lo = r.End.X + 12; else hi = r.Position.X - 12; }
-        var taken = _mgWins.Where(x => x != w).Select(x => x.Panel.Position).ToList();
-        for (float x = lo; x + MgWidth <= hi + 1; x += MgWidth + 12)
-            if (!taken.Any(p => Math.Abs(p.X - x) < 40 && Math.Abs(p.Y - TopClear) < 40)) { w.Panel.Position = new Vector2(x, TopClear); return; }
-        var last = _mgWins.Count > 1 ? _mgWins[^2].Panel.Position : new Vector2(lo, TopClear);
-        w.Panel.Position = ClampWin(last + new Vector2(28, 28), new Vector2(MgWidth, 200));
+        foreach (float x in Columns(lo, hi).Concat(Columns(16, vp.X - 16)).Concat(Columns(vp.X - 16 - MgWidth, vp.X).Reverse()))
+            if (Free(x)) { w.Panel.Position = new Vector2(x, TopClear); return; }
+        // no free column: step beside the top window, the other way when that runs off the screen
+        var last = others.Count > 0 ? others[^1].Position : new Vector2(lo, TopClear);
+        float nx = last.X + MgWidth * 0.5f;
+        if (nx + MgWidth > vp.X - 8) nx = last.X - MgWidth * 0.5f;
+        w.Panel.Position = ClampWin(new Vector2(nx, last.Y + 36), new Vector2(MgWidth, 200));
     }
 
     /// <summary>The drops of yesterday have been judged: forget them.</summary>
     void NewDay()
     {
         if (_movedDay == S.Game.Day) return;
-        _moved.Clear(); _pendingIn.Clear(); _movedDay = S.Game.Day;
+        _moved.Clear(); _pendingIn.Clear(); _splits.Clear(); _leaving.Clear(); _movedDay = S.Game.Day;
         if (_mgWins.Count > 0) _mgDirty = true;
     }
 
@@ -238,13 +247,16 @@ public partial class GameScreen
             }
         }
         finally { _into = prev; }
-        // what goes into this window when the next day starts: a faint chip in the place it was dropped
+        // a drop looks done at once (Paul 2026-11-02: "instant"): the chip stands where it was dropped. The core applies the order first thing
+        // next step (rule: m1-clock-and-orders §Order of work, step 1), before anything else moves, so nothing can happen in between.
         foreach (var z in _zones.Where(z => w.Panel.IsAncestorOf(z.Box)))
             foreach (var (key, mv) in _moved.Where(kv => kv.Value.Zone == z.Key).OrderBy(kv => kv.Key, StringComparer.Ordinal))
                 if (Drag.Parse(key) is { } gd)
                 {
                     foreach (var empty in z.Flow.GetChildren().OfType<Label>().ToList()) empty.QueueFree(); // "Empty" gives way
-                    var ghost = Chip(ThingName(gd), "arrives next day", gd.Kind == 'L' ? Initials(ThingName(gd)) : null, Pending, true);
+                    bool travels = mv.Words.StartsWith("on the way", StringComparison.Ordinal) || mv.Words.StartsWith("flies", StringComparison.Ordinal);
+                    var ghost = Chip(ThingName(gd), travels ? mv.Words : gd.Kind == 'L' ? LeaderPosts(Cm.Get(gd.Id)) : null, gd.Kind == 'L' ? Initials(ThingName(gd)) : null, Ui.You, travels);
+                    ghost.TooltipText = Ui.Wrap($"{ThingName(gd)}: {mv.Words}. It can move again tomorrow.");
                     ghost.CustomMinimumSize = new Vector2(ChipWidth, 0);
                     ghost.SetMeta(UiTest.FullName, "Arriving " + key);
                     z.Flow.AddChild(ghost);
@@ -344,7 +356,7 @@ public partial class GameScreen
             OrbitList(n);
             return;
         }
-        Hint("Drag a leader onto a fleet's post, or troops and fighters onto a fleet, in a fleet window. Changes start when the next day begins.");
+        Hint("Drag a leader onto a fleet's post, or troops and fighters onto a fleet, in a fleet window. A drop takes effect at once.");
 
         // the system's General: one post, held by a leader standing here
         var gen = Cm.SystemGeneralOf(n);
@@ -381,15 +393,14 @@ public partial class GameScreen
         if (based.Count == 0) fz.Flow.AddChild(EmptySlot("No squadrons"));
         Add(fz.Box);
 
-        // special forces: they go on missions, not aboard fleets, so they don't drag
+        // special forces: they never ride fleets (m3-troops-and-special-forces); dragged to another system's Ground window they go there (a Move mission)
         var sf = MySpecialForcesAt(n);
-        if (sf.Count > 0)
-        {
-            Section("Special forces", sf.Count.ToString(), "Agents go on missions (with or without leaders); they don't ride fleets.");
-            var box = Ui.VBox(2);
-            foreach (var o in sf) box.AddChild(Ui.Label($"{S.SpecialForceName(o.Id)} · {SpecialForceState(o)}", null, SfReady(o) ? Ui.Text2 : Ui.Text3, Ui.Small));
-            Add(box);
-        }
+        Section("Special forces", sf.Count == 0 ? null : sf.Count.ToString(), "Agents never ride fleets. Drag one onto another system's Ground window to send it there.");
+        var sz = DropZone($"Ground {n} SpecialForces", "send here", d => RefuseToGround(d, n, 'F'), d => DropToGround(d, n));
+        foreach (var o in sf) sz.Flow.AddChild(UnitChip(SfReady(o) ? new Drag('F', o.Id) : null, S.SpecialForceName(o.Id), SpecialForceState(o), Ui.You));
+        if (sf.Count == 0) sz.Flow.AddChild(EmptySlot("No special forces"));
+        Add(sz.Box);
+        OnTheWay(S.MyCharacters.Where(c => c.Transit is { } t && t.Path.Count > 0 && t.Path[^1] == n && c.JoinFleet == 0), n);
         OrbitList(n);
         var links = new List<(string, Action, string)> { ($"Infrastructure at {n}", () => OpenMgmt(MgKind.Infra, n), "Buildings, slots and what the planet builds") };
         if (CanSendFrom(n)) links.Add(("Send a mission...", () => { CloseSectorView(); OpenPlanner(n); }, "Pick a team standing here, the kind of mission and the target."));
@@ -438,7 +449,7 @@ public partial class GameScreen
         grip.TooltipText = Ui.Wrap($"Drag {f.Name} onto another fleet's ships to merge it into that fleet.");
         if (still && !_moved.ContainsKey(new Drag('M', f.Id).Key)) MakeDraggable(grip, new Drag('M', f.Id), f.Name);
         MgHead(w, where, f.Name, Ui.You, $"{Ui.Count(f.Ships.Count, "ship", "ships")} · strength {Fm.StrengthOf(f):0} · speed {Fm.SpeedOf(f)}", grip);
-        if (_moved.TryGetValue(new Drag('M', f.Id).Key, out var mto)) Line($"Next day: {mto.Words}", Pending, Ui.Small);
+        if (_moved.TryGetValue(new Drag('M', f.Id).Key, out var mto)) Line($"This fleet {mto.Words}.", Pending, Ui.Small);
         if (!still) Hint("Travelling: who rides it and what it carries can change when it arrives.");
 
         // the three posts
@@ -468,6 +479,9 @@ public partial class GameScreen
         foreach (var c in riders) pz.Flow.AddChild(LeaderChip(c, null));
         if (riders.Count == 0) pz.Flow.AddChild(EmptySlot("None"));
         Add(pz.Box);
+        // leaders and fleets sent to join it from other systems (m5 §Moving a character alone, m3 §Joining a fleet on arrival)
+        OnTheWay(Cm.All.Where(c => c.Side == Me && c.JoinFleet == f.Id && c.JoinByOrder && c.Transit != null), f.At,
+            S.Game.State.Fleets.Values.Where(x => x.Side == Me && x.JoinFleet == f.Id && x.Transit != null).OrderBy(x => x.Id));
 
         // ships, and a place to split some off
         var eco = S.Host.Economy;
@@ -511,6 +525,30 @@ public partial class GameScreen
         MgLinks(links.ToArray());
     }
 
+    /// <summary>Who is travelling here (leaders, and fleets sent to join): name and arrival day. Not draggable while they travel.</summary>
+    void OnTheWay(IEnumerable<CharacterRecord> leaders, string to, IEnumerable<Fleet> fleets = null)
+    {
+        var rows = leaders.OrderBy(c => c.Id).Select(c => (Name: S.CharName(c.Id), Sub: Arrives(c.Transit, c.JoinPost != CharacterPost.None ? $"to be {GameSession.PostWords(c.JoinPost)}" : null), Badge: Initials(S.CharName(c.Id))))
+            .Concat((fleets ?? Enumerable.Empty<Fleet>()).Select(x => (Name: x.Name, Sub: Arrives(x.Transit, $"{Ui.Count(x.Ships.Count, "ship", "ships")}, to merge"), Badge: (string)null))).ToList();
+        if (rows.Count == 0) return;
+        Section("On the way", rows.Count.ToString(), $"Sent here from other systems. They take their place when they reach {to}.");
+        var flow = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore };
+        flow.AddThemeConstantOverride("h_separation", 6); flow.AddThemeConstantOverride("v_separation", 6);
+        foreach (var r in rows)
+        {
+            var chip = Chip(r.Name, r.Sub, r.Badge, Ui.You, true);
+            chip.CustomMinimumSize = new Vector2(ChipWidth, 0);
+            flow.AddChild(chip);
+        }
+        Add(flow);
+    }
+
+    string Arrives(FleetTransit t, string what)
+    {
+        int left = t == null ? 0 : Math.Max(0, t.DueDay - S.Game.Day) + t.HopTicks.Skip(t.HopIndex + 1).Sum();
+        return (what != null ? what + ", " : "") + (left <= 1 ? "arrives tomorrow" : $"{left} days");
+    }
+
     // ================================================================== chips and zones
 
     /// <summary>A leader as a chip: initials, name, what they lead with. Drags unless an order already moves them today, or they cannot act.</summary>
@@ -519,12 +557,10 @@ public partial class GameScreen
         string name = S.CharName(c.Id);
         var d = new Drag('L', c.Id);
         bool moved = _moved.TryGetValue(d.Key, out var mv);
+        if (moved) return new Control { Visible = false };   // it already stands where it was dropped
         string to = mv.Words;
         bool can = c.Status == CharacterStatus.Free && c.Transit == null && !Cm.IsOnMission(c.Id) && !moved;
-        var cls = Cm.ClassOf(c);
-        var can3 = new[] { cls.CanAdmiral ? "Admiral" : null, cls.CanGeneral ? "General" : null, cls.CanCommander ? "Commander" : null }.Where(x => x != null).ToArray();
-        // the posts they can hold, short enough for the chip (their leadership is in the tooltip)
-        string posts = can3.Length == 3 ? "any post" : can3.Length == 0 ? "passenger only" : string.Join(", ", can3);
+        string posts = LeaderPosts(c);
         string sub = moved ? "→ " + to : c.Status != CharacterStatus.Free ? GameSession.StatusWords(c) : Cm.IsOnMission(c.Id) ? "on a mission" : posts;
         var chip = Chip(name, sub, Initials(name), can ? Ui.You : Ui.Text3, moved);
         chip.CustomMinimumSize = new Vector2(ChipWidth, 0);
@@ -534,11 +570,20 @@ public partial class GameScreen
         return chip;
     }
 
+    /// <summary>The posts a leader can hold, short enough for a chip (their leadership is in the tooltip).</summary>
+    string LeaderPosts(CharacterRecord c)
+    {
+        if (c == null) return null;
+        var cls = Cm.ClassOf(c);
+        var can3 = new[] { cls.CanAdmiral ? "Admiral" : null, cls.CanGeneral ? "General" : null, cls.CanCommander ? "Commander" : null }.Where(x => x != null).ToArray();
+        return can3.Length == 3 ? "any post" : can3.Length == 0 ? "passenger only" : string.Join(", ", can3);
+    }
+
     /// <summary>A regiment, squadron or ship as a chip. A null drag is shown but doesn't move (fighters flying with the fleet).</summary>
     Control UnitChip(Drag? d, string cls, string sub, Color accent)
     {
         bool moved = d is { } dd && _moved.ContainsKey(dd.Key);
-        if (moved) sub = "→ " + _moved[d.Value.Key].Words;
+        if (moved) return new Control { Visible = false };   // it already stands where it was dropped
         var chip = Chip(cls, sub, null, d == null ? Ui.Text3 : accent, moved);
         chip.CustomMinimumSize = new Vector2(ChipWidth, 0);
         chip.TooltipText = Ui.Wrap(ClassTip(cls) + (d != null && !moved ? "\nDrag it to another window." : ""));
@@ -623,7 +668,7 @@ public partial class GameScreen
         box.SetMeta("dashed", dashed);
         box.SetDragForwarding(new Callable(),
             Callable.From((Func<Vector2, Variant, bool>)((_, data) => Drag.Parse(data) is { } d && Judge(zone, d) == null)),
-            Callable.From((Action<Vector2, Variant>)((_, data) => { if (Drag.Parse(data) is { } d && Judge(zone, d) == null) { drop(d); RefreshMgmt(); RefreshSectorView(); } })));
+            Callable.From((Action<Vector2, Variant>)((_, data) => { if (Drag.Parse(data) is { } d && Judge(zone, d) == null) { RunDrop(() => drop(d)); RefreshMgmt(); RefreshSectorView(); } })));
         return (box, flow);
     }
 
@@ -693,6 +738,7 @@ public partial class GameScreen
     {
         'L' => S.CharName(d.Id),
         'M' => S.Game.State.Fleets.TryGetValue(d.Id, out var f) ? f.Name : "fleet",
+        'F' => S.SpecialForceName(d.Id),
         _ => S.Host.Economy.Find(d.Id)?.Class ?? "unit",
     };
 
@@ -721,6 +767,8 @@ public partial class GameScreen
 
     static bool Still(Fleet f) => f.At != null && f.Transit == null;
 
+    readonly Dictionary<string, int> _leaving = new(StringComparer.Ordinal); // regiments boarding from each planet today (lookup only)
+
     int Promised(int fleet) => _pendingIn.TryGetValue(fleet, out int n) ? n : 0;
 
     string RefuseFleetPost(Drag d, Fleet f, CharacterPost post)
@@ -729,16 +777,42 @@ public partial class GameScreen
         var c = Cm.Get(d.Id);
         if (c == null) return "";
         if (c.AttachedFleet == f.Id && c.Post == post) return "";
-        if (!Still(f)) return $"{f.Name} is travelling: leaders join it when it arrives.";
-        var (at, _) = WhereNow(d);
-        if (at != f.At) return $"{S.CharName(c.Id)} is not at {f.At}. Move them there first.";
+        if (!Still(f)) return $"{f.Name} is travelling: send leaders when it stands still.";
         if (post != CharacterPost.None && !Cm.ClassOf(c).Can(post)) return $"{S.CharName(c.Id)} can't be {GameSession.PostWords(post)}.";
+        var (at, _) = WhereNow(d);
+        if (at != f.At) return CanTravel(c, f.At);   // another system: they set off and take the post on arrival
         return null;
+    }
+
+    /// <summary>Why a leader can't set off for <paramref name="to"/> now (null: they can). rule: m5-characters-and-talent §Moving a character alone.</summary>
+    string CanTravel(CharacterRecord c, string to)
+    {
+        string name = S.CharName(c.Id);
+        if (c.Status != CharacterStatus.Free || c.Transit != null || Cm.IsOnMission(c.Id)) return $"{name} is busy.";
+        if (c.AttachedFleet != 0 && S.Game.State.Fleets.TryGetValue(c.AttachedFleet, out var of) && !Still(of)) return $"{name}'s fleet is travelling.";
+        if (Cm.LocationOf(c) is not string from) return $"{name} is busy.";
+        return Fm.FindPath(from, to, Cm.Params.CharacterSpeed).Ok ? null : $"No route from {from} to {to}.";
+    }
+
+    int TravelDays(CharacterRecord c, string to) => Cm.LocationOf(c) is string from && Fm.FindPath(from, to, Cm.Params.CharacterSpeed) is { Ok: true } p ? p.TotalTicks : 0;
+
+    /// <summary>A leader leaves any post and sets off for <paramref name="to"/>, joining <paramref name="f"/> there in <paramref name="post"/> (no fleet: they land).</summary>
+    void SendLeader(CharacterRecord c, string to, Fleet f, CharacterPost post, string zone)
+    {
+        LeaveCurrentPost(c);
+        int cid = c.Id, fid = f?.Id ?? 0, days = TravelDays(c, to);
+        string name = S.CharName(cid);
+        string role = f == null ? $"to {to}" : post == CharacterPost.None ? $"to ride {f.Name}" : $"to be {GameSession.PostWords(post)} of {f.Name}";
+        S.TrackCharacter(cid, -1, S.Game.Submit(seq => new MoveCharacterOrder(seq, Me, cid, to, fid, post)), $"Send {name} {role}");
+        Sent($"send {name} {role} at {to}", to);
+        _moved[new Drag('L', cid).Key] = ($"on the way {role}, {Ui.Count(days, "day", "days")}", zone);
     }
 
     void DropFleetPost(Drag d, Fleet f, CharacterPost post)
     {
         var c = Cm.Get(d.Id);
+        string zone = post == CharacterPost.None ? $"Fleet {f.Id} Passengers" : $"Fleet {f.Id} {post}";
+        if (WhereNow(d).System != f.At) { SendLeader(c, f.At, f, post, zone); return; }
         LeaveCurrentPost(c);
         if (post != CharacterPost.None && Cm.HolderOf(f.Id, post) is { } holder && holder.Id != c.Id)
         {
@@ -746,7 +820,7 @@ public partial class GameScreen
             _moved[new Drag('L', holder.Id).Key] = ($"lands at {f.At}", $"Ground {f.At} Leaders");
         }
         Attach(c, f, post);
-        _moved[d.Key] = (post == CharacterPost.None ? $"{f.Name}, passenger" : $"{GameSession.PostWords(post)} of {f.Name}", post == CharacterPost.None ? $"Fleet {f.Id} Passengers" : $"Fleet {f.Id} {post}");
+        _moved[d.Key] = (post == CharacterPost.None ? $"{f.Name}, passenger" : $"{GameSession.PostWords(post)} of {f.Name}", zone);
     }
 
     /// <summary>A leader leaves the fleet post or the system General's post they hold, so a new post can be given in the same day.</summary>
@@ -762,7 +836,7 @@ public partial class GameScreen
         var c = Cm.Get(d.Id);
         if (c == null || S.SystemPostOf(c) == n) return "";
         var (at, _) = WhereNow(d);
-        if (at != n) return $"{S.CharName(c.Id)} is not at {n}.";
+        if (at != n) return $"{S.CharName(c.Id)} is not at {n}: drop them on its leaders to send them there first.";
         if (c.AttachedFleet != 0 && S.Game.State.Fleets.TryGetValue(c.AttachedFleet, out var f) && !Still(f)) return "Their fleet is travelling.";
         if (!Cm.ClassOf(c).CanGeneral) return $"{S.CharName(c.Id)} can't be a General.";
         return null;
@@ -789,10 +863,18 @@ public partial class GameScreen
         if (kind == 'L')
         {
             var c = Cm.Get(d.Id);
-            if (c == null || (fleet == 0 && S.SystemPostOf(c) == null)) return "";
+            if (c == null) return "";
+            if (at != n) return CanTravel(c, n);   // another system: they set off
+            if (fleet == 0 && S.SystemPostOf(c) == null) return "";
+        }
+        else if (kind == 'F') return at == n ? "" : SfCanTravel(d, n);
+        else if (at != n)
+        {
+            if (kind == 'R') return "Regiments travel only aboard a fleet: load them, move the fleet, land them.";
+            if (fleet != 0) return $"Land it at {at} first, or move its fleet.";
+            return SquadronCanFly(d, n);
         }
         else if (fleet == 0) return "";
-        if (at != n) return $"{ThingName(d)} is not at {n}.";
         if (fleet != 0 && S.Game.State.Fleets.TryGetValue(fleet, out var f) && !Still(f)) return "The fleet is travelling.";
         // the core refuses these at dawn: rule: m3-troops-and-special-forces §Orders (UnloadRegiments, switch UnloadOnlyAtHeldSystem);
         // squadrons: FleetModuleSteps UnloadSquadrons (DEFAULT: only where the side holds the system)
@@ -801,10 +883,44 @@ public partial class GameScreen
         return null;
     }
 
+    /// <summary>Squadrons based at one system fly alone to another (they base there). rule: m3-fleets §Unescorted squadrons (Immobile at speed 0).</summary>
+    string SquadronCanFly(Drag d, string n)
+    {
+        if (S.Host.Economy.Find(d.Id) is not { } o || o.System is not string from) return "";
+        int speed = Fm.SpeedOfShip(o);
+        if (speed <= 0) return $"{o.Class} can't fly without a carrier: load it on a fleet.";
+        return Fm.FindPath(from, n, speed).Ok ? null : $"No route from {from} to {n}.";
+    }
+
+    /// <summary>A special force moves to another system as a Move mission. rule: m5-missions §Orders (MoveGroup).</summary>
+    string SfCanTravel(Drag d, string n)
+    {
+        if (S.Host.Economy.Find(d.Id) is not { } o) return "";
+        return SfReady(o) ? null : $"{S.SpecialForceName(o.Id)} is busy.";
+    }
+
     void DropToGround(Drag d, string n)
     {
-        var (_, fleet) = WhereNow(d);
+        var (at, fleet) = WhereNow(d);
+        if (d.Kind == 'L' && at != n) { SendLeader(Cm.Get(d.Id), n, null, CharacterPost.None, $"Ground {n} Leaders"); return; }
         if (d.Kind == 'L') { LeaveCurrentPost(Cm.Get(d.Id)); _moved[d.Key] = ($"lands at {n}", $"Ground {n} Leaders"); return; }
+        if (d.Kind == 'F')
+        {
+            int id = d.Id;
+            S.Track(S.Game.Submit(seq => new MoveGroupOrder(seq, Me, new List<int>(), new List<int> { id }, n)), $"Send {S.SpecialForceName(id)} to {n}");
+            Sent($"send {S.SpecialForceName(id)} to {n}", n);
+            _moved[d.Key] = ($"on the way to {n}", $"Ground {n} SpecialForces");
+            return;
+        }
+        if (fleet == 0)   // fighters based elsewhere fly over
+        {
+            var o = S.Host.Economy.Find(d.Id);
+            int days = Fm.FindPath(at, n, Fm.SpeedOfShip(o)) is { Ok: true } p ? p.TotalTicks : 0;
+            S.Track(Fm.SubmitMoveSquadrons(Me, new[] { d.Id }, n), $"Fly the {o.Class} to {n}");
+            Sent($"fly the {o.Class} from {at} to {n}", n);
+            _moved[d.Key] = ($"on the way to {n}, {Ui.Count(days, "day", "days")}", $"Ground {n} Fighters");
+            return;
+        }
         var f = S.Game.State.Fleets[fleet];
         if (d.Kind == 'R') UnloadTroops(f, new List<int> { d.Id });
         else UnloadFighters(f, new List<int> { d.Id });
@@ -835,8 +951,12 @@ public partial class GameScreen
         if (d.Kind == 'R') LoadTroops(f, new List<int> { d.Id }); else LoadFighters(f, new List<int> { d.Id });
         _pendingIn[f.Id] = Promised(f.Id) + 1;
         _moved[d.Key] = ($"boards {f.Name}", d.Kind == 'R' ? $"Fleet {f.Id} Troops" : $"Fleet {f.Id} Fighters");
-        if (d.Kind == 'R' && fleet == 0 && S.Host.Support.RegimentCount(f.At) - 1 < S.Host.Support.RequiredGarrison(f.At))
-            Toast($"{f.At} is now short of troops: it may rise up.", MsgKind.Warn);
+        if (d.Kind == 'R' && fleet == 0)
+        {
+            _leaving[f.At] = (_leaving.TryGetValue(f.At, out int gone) ? gone : 0) + 1;
+            if (S.Host.Support.RegimentCount(f.At) - _leaving[f.At] < S.Host.Support.RequiredGarrison(f.At))
+                Toast($"{f.At} is now short of troops: it may rise up.", MsgKind.Warn);
+        }
     }
 
     /// <summary>Ships: from another fleet here (a transfer), or a whole fleet dragged by its grip (a merge).</summary>
@@ -846,7 +966,13 @@ public partial class GameScreen
         var (at, fleet) = WhereNow(d);
         if (fleet == f.Id) return "";
         if (!Still(f)) return $"{f.Name} is travelling.";
-        if (at != f.At || !S.Game.State.Fleets.TryGetValue(fleet, out var from) || !Still(from)) return $"Only between fleets standing at the same system.";
+        if (_moved.TryGetValue(new Drag('M', f.Id).Key, out var itself)) return $"{f.Name} itself {itself.Words}.";
+        if (!S.Game.State.Fleets.TryGetValue(fleet, out var from) || !Still(from)) return $"{ThingName(d)}'s fleet is travelling.";
+        if (at != f.At)
+        {
+            if (d.Kind == 'S') return $"Between systems, whole fleets travel: drop the ship on New fleet, then drag that fleet by its grip (⠿).";
+            return Fm.FindPath(from.At, f.At, Fm.SpeedOf(from)).Ok ? null : $"{from.Name} can't reach {f.At}.";   // it flies there and merges on arrival
+        }
         if (d.Kind == 'S' && from.Ships.Count - ShipsLeaving(from) <= 1) return $"It is {from.Name}'s last ship: drag {from.Name} by its grip (⠿) to merge the fleets.";
         return null;
     }
@@ -857,6 +983,15 @@ public partial class GameScreen
     {
         var (_, fleet) = WhereNow(d);
         var from = S.Game.State.Fleets[fleet];
+        if (d.Kind == 'M' && from.At != f.At)
+        {
+            // rule: m3-fleets §Orders (MoveFleet: joining a fleet on arrival)
+            int days = Fm.FindPath(from.At, f.At, Fm.SpeedOf(from)) is { Ok: true } p ? p.TotalTicks : 0;
+            S.TrackFleet(from.Id, Fm.SubmitMove(Me, from.Id, f.At, null, f.Id), $"Fly {from.Name} to {f.At} and merge into {f.Name}");
+            Sent($"fly {from.Name} to {f.At} to merge into {f.Name}", f.At);
+            _moved[d.Key] = ($"flies to join {f.Name}, {Ui.Count(days, "day", "days")}", $"Fleet {f.Id} Ships");
+            return;
+        }
         if (d.Kind == 'M') { Merge(from, f); _moved[d.Key] = ($"merges into {f.Name}", $"Fleet {f.Id} Ships"); return; }
         S.TrackFleet(from.Id, Fm.SubmitTransferShips(Me, new[] { d.Id }, f.Id), $"Move a ship from {from.Name} into {f.Name}");
         Sent($"move the {ThingName(d)} from {from.Name} into {f.Name}", f.At);
@@ -872,9 +1007,13 @@ public partial class GameScreen
         return null;
     }
 
+    readonly Dictionary<int, (long Seq, List<int> Ships)> _splits = new(); // today's split order per fleet (lookup only)
+
     void DropSplit(Drag d, Fleet f)
     {
-        S.TrackFleet(f.Id, Fm.SubmitSplitFleet(Me, f.Id, new[] { d.Id }), $"Split a ship off {f.Name}");
+        var ships = new List<int> { d.Id };
+        if (_splits.TryGetValue(f.Id, out var prev) && S.Withdraw(prev.Seq)) ships.InsertRange(0, prev.Ships);   // rule: m1-clock-and-orders §Orders in (withdraw)
+        _splits[f.Id] = (S.TrackFleet(f.Id, Fm.SubmitSplitFleet(Me, f.Id, ships), ships.Count == 1 ? $"Split a ship off {f.Name}" : $"Split {ships.Count} ships off {f.Name}"), ships);
         Sent($"split the {ThingName(d)} off {f.Name} into a new fleet", f.At);
         _moved[d.Key] = ("forms a new fleet", $"Fleet {f.Id} NewFleet");
     }
@@ -887,6 +1026,10 @@ public partial class GameScreen
         return $"{region} · {sec}";
     }
 
+    /// <summary>A drop is its own feedback (the chip moves at once): the "order sent, starts next day" toast stays quiet meanwhile.</summary>
+    internal bool MgDropping { get; private set; }
+    void RunDrop(Action drop) { MgDropping = true; try { drop(); } finally { MgDropping = false; } }
+
     // ================================================================== for the playtest
 
     /// <summary>Drop a chip on a zone as the mouse would: returns null when it was done, else why not.</summary>
@@ -898,7 +1041,7 @@ public partial class GameScreen
         if (Drag.Parse(chipKey) is not { } d) return "bad chip: " + chipKey;
         string why = Judge(z, d);
         if (why != null) return why == "" ? "already there" : why;
-        z.Drop(d);
+        RunDrop(() => z.Drop(d));
         RefreshMgmt();
         foreach (var w in _mgWins.ToList()) RebuildMg(w);
         return null;
@@ -906,7 +1049,12 @@ public partial class GameScreen
 
     internal bool MgHasZone(string zoneKey) => _zones.Any(x => x.Key == zoneKey && IsInstanceValid(x.Box));
 
-    internal string MgText(string key) => _mgWins.FirstOrDefault(w => w.Key == key) is { } w ? LabelsIn(w.Head) + "\n" + LabelsIn(w.Body) : "";
+    internal string MgText(string key)
+    {
+        if (_mgWins.FirstOrDefault(w => w.Key == key) is not { } w) return "";
+        RebuildMg(w);   // as the next frame would
+        return LabelsIn(w.Head) + "\n" + LabelsIn(w.Body);
+    }
 
     /// <summary>For screenshots: show the drop zones lit as if this chip were being dragged.</summary>
     internal void MgShowDrag(string chipKey)
