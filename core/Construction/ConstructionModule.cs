@@ -33,6 +33,9 @@ public sealed class ConstructionModule
 
     /// <summary>Deliveries pause at an armed enemy fleet on an intermediate system. Decided yes (Paul 2026-10-12, D2), default on. rule: m2-construction §Completion and delivery.</summary>
     public bool DeliveryForcedStop { get; set; } = true;
+    /// <summary>A regiment travelling alone (sent, or delivered from its yard) that an enemy fleet pulls out on the way is destroyed instead of held.
+    /// Decided Paul 2026-11-02, default on. rule: m3-troops-and-special-forces §Sending a regiment alone.</summary>
+    public bool LoneRegimentsDie { get; set; } = true;
     /// <summary>What happens when a delivery's destination is lost on the way. DEFAULT Pause (lead note); Refuse is the sheet body (C20).</summary>
     public LostDestinationRule LostDestination { get; set; } = LostDestinationRule.Pause;
     /// <summary>Ships, squadrons, regiments and special forces may only be ordered to a system the side controls (same rule as facilities). DEFAULT on (m3-troops-and-special-forces; the lead note says a delivery never lands on a foreign system). Off: any reachable system.</summary>
@@ -664,6 +667,15 @@ public sealed class ConstructionModule
                 var blockers = BlockersAt(d, sys);
                 if (blockers.Count > 0)
                 {
+                    // Paul 2026-11-02: "An unescorted regiment caught by an enemy fleet should be dead." rule: m3-troops-and-special-forces §Sending a regiment alone
+                    if (LoneRegimentsDie && E.Objects[d.Object] is { Category: ObjectCategory.Regiment } reg)
+                    {
+                        C.Deliveries.Remove(d.Id);
+                        int rid = reg.Id; string rcls = reg.Class; var rside = d.Side;
+                        ctx.Emit((i, _) => new Praedra.Core.Support.RegimentDestroyed(i, day, rid, rcls, sys, rside, "CaughtAlone"));
+                        _eco.DestroyUnit(ctx, day, reg);
+                        continue;
+                    }
                     if (!d.Held) { d.Held = true; EmitHeld(ctx, day, d, "FleetPresent", blockers.Select(b => b.Id).ToList()); }
                     continue;
                 }
