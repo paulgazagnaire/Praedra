@@ -93,6 +93,9 @@ public sealed record GameSettings
     // ---- troops. rule: m3-troops-and-special-forces §Defaults
     /// <summary>UnloadRegiments only at a system the side holds (a neutral or enemy system is the assault's). rule: m3-troops-and-special-forces §Defaults (DEFAULT).</summary>
     public bool UnloadOnlyAtHeldSystem { get; init; } = true;
+    /// <summary>A regiment travelling alone that the forced stop would hold is destroyed instead. Decided Paul 2026-11-02, default on (QA-85).
+    /// rule: m3-troops-and-special-forces §Sending a regiment alone.</summary>
+    public bool LoneRegimentsDie { get; init; } = true;
 
     // ---- control. rule: m2-control-and-capture
     /// <summary>

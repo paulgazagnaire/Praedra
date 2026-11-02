@@ -168,6 +168,7 @@ public partial class Main
             }
         }
 
+        (int Fly, Praedra.Core.Fleets.Fleet Dst, int One)? joinCheck = null;
         // ---------------------------------------------------------------- one capital ship flies alone to a fleet in another system and joins it
         var mine = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null && f.Transit == null && f.Ships.Count > 0).OrderBy(f => f.Id).ToList();
         var send = mine.Where(f => f.Ships.Count >= 2)
@@ -184,6 +185,7 @@ public partial class Main
             var flying = s.Game.State.Fleets.Values.FirstOrDefault(f => f.Ships.Contains(one));
             Expect(flying != null && flying.Id != src.Id && flying.JoinFleet == dst.Id && (flying.Transit != null || flying.At == dst.At),
                 $"next day it has split off and flies to join {dst.Name}");
+            if (flying != null && flying.Id != src.Id) joinCheck = (flying.Id, dst, one);
         }
         else GD.Print("  (no fleet of two ships with another fleet elsewhere: the lone-ship send is not checked on this side)");
 
@@ -202,5 +204,15 @@ public partial class Main
         gs.TileClick(sys, "ground"); gs.PlayRefresh();
         Expect(gs.MgmtKeys.Contains($"Ground {sys}"), "a click elsewhere on the tile opens the Ground window");
         while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+
+        // ---------------------------------------------------------------- the lone ship's arrival is told as a join (QA-86); last, as it plays days
+        if (joinCheck is var (jFly, jDst, jOne))
+        {
+            for (int k = 0; k < 80 && s.Game.State.Fleets.TryGetValue(jFly, out var fl) && fl.Transit != null; k++) gs.PlayDay();
+            gs.PlayDay();
+            if (!s.Game.State.Fleets.ContainsKey(jFly) && jDst.Ships.Contains(jOne))   // QA-86: told as a join, not as a strange fleet arriving
+                Expect(s.Messages.Any(m => m.Text.Contains($"joined {jDst.Name} at {jDst.At}")) && !s.Messages.Any(m => m.Text == $"Fleet {jFly} arrived at {jDst.At}."),
+                    $"the log says the ship joined {jDst.Name}, not that Fleet {jFly} arrived");
+        }
     }
 }

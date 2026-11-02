@@ -550,6 +550,9 @@ public sealed partial class GameSession
     void ReadEvents(StepOutcome o)
     {
         var events = Fog.EventsFor(Player);
+        // QA-86: a fleet that merges on arrival is told once, as "joined", not as a fleet arriving
+        _joinedNow.Clear();
+        for (int k = _printed; k < events.Count; k++) if (events[k] is FleetJoined fj) _joinedNow.Add(fj.Fleet);
         for (; _printed < events.Count; _printed++)
         {
             bool combat = events[_printed] is Contact or ForcedStop or FleetRetreated or BattleEnded or SystemCaptured
@@ -567,6 +570,8 @@ public sealed partial class GameSession
         if (Messages.Count > 3000) Messages.RemoveRange(0, Messages.Count - 2000);
     }
 
+    readonly HashSet<int> _joinedNow = new();
+
     bool Mine(Side? s) => s == Player;
 
     /// <summary>The log kind of an event (user story G4).</summary>
@@ -576,7 +581,7 @@ public sealed partial class GameSession
         switch (e)
         {
             case OrderRejected or OrderAccepted: return MsgCat.Orders;
-            case FleetArrived or FleetJoinFailed or ForcedStop or FleetRetreated or BlockadeStarted or BlockadeLifted or Contact or RegimentsLoaded or RegimentsUnloaded
+            case FleetArrived or FleetJoined or FleetJoinFailed or ForcedStop or FleetRetreated or BlockadeStarted or BlockadeLifted or Contact or RegimentsLoaded or RegimentsUnloaded
                 or SquadronsLoaded or SquadronsUnloaded or HqArrived: return MsgCat.Fleets;
             case FleetSighted or SensorReport or OwnerChangeSeen or HearthTipGiven or HarvesterQueuedSeen or HqSectorClueGiven: return MsgCat.Intel;
             case Praedra.Core.Research.ResearchLevelReached or AutoscrapWarning or ObjectScrapped or ProjectStarted or ProjectCancelled or UnitCompleted
@@ -611,6 +616,14 @@ public sealed partial class GameSession
                 break;
 
             // ---- fleets
+            case FleetArrived f when _joinedNow.Contains(f.Fleet):
+                break;
+            case FleetJoined j when Mine(j.Side):
+            {
+                string who = j.Ships.Items.Count() == 1 && Host.Economy.Find(j.Ships.Items.First()) is { } ship ? (ship.Name ?? ship.Class) : FleetName(j.Fleet);
+                yield return new Message(d, $"{who} joined {FleetName(j.Into)} at {j.System}.", j.System, MsgKind.Good);
+                break;
+            }
             case FleetArrived f when Mine(FleetSide(f.Fleet)):
                 yield return new Message(d, $"{FleetName(f.Fleet)} arrived at {f.System}.", f.System, MsgKind.Info);
                 break;

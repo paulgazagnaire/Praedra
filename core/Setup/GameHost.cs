@@ -155,6 +155,7 @@ public sealed class GameHost
         Construction = ConstructionModule.Attach(game, Fleets, Economy, settings.Construction, Support);
         Construction.DeliveryForcedStop = settings.DeliveryForcedStop;
         Construction.LostDestination = settings.LostDestination;
+        Construction.LoneRegimentsDie = settings.LoneRegimentsDie;
         Construction.UnitDestinationMustBeControlled = settings.UnitDestinationMustBeControlled;
         Construction.RespectResearchOrder = settings.RespectResearchOrder;
         Construction.HarvesterClassBuildable = settings.HarvesterClassBuildable;

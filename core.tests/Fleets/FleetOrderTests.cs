@@ -274,6 +274,8 @@ public class FleetOrderTests
         Assert.Equal(Far, w.State.Fleets[200].At);
         var d = w.Events<FleetDissolved>().Single(e => e.Fleet == 204);
         Assert.Equal(DissolveCause.Merged, d.Cause);
+        var joined = w.Events<FleetJoined>().Single();   // QA-86: the join is told as such
+        Assert.Equal((204, Emp, 200, Far, 203), (joined.Fleet, joined.Side, joined.Into, joined.System, joined.Ships.Items.Single()));
     }
 
     // m3-fleets §Orders (MoveFleet: joining a fleet on arrival) J2: a fleet that left is not followed; the join is forgotten
