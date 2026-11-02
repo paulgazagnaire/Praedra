@@ -612,7 +612,7 @@ public sealed partial class GameSession
 
             // ---- fleets
             case FleetArrived f when Mine(FleetSide(f.Fleet)):
-                yield return new Message(d, $"Fleet {FleetName(f.Fleet)} arrived at {f.System}.", f.System, MsgKind.Info);
+                yield return new Message(d, $"{FleetName(f.Fleet)} arrived at {f.System}.", f.System, MsgKind.Info);
                 break;
             case FleetJoinFailed j when Mine(j.Side):
                 yield return new Message(d, j.Reason == "gone"
@@ -649,7 +649,7 @@ public sealed partial class GameSession
                 yield return new Message(d, $"The Collective headquarters was destroyed at {h.System} ({HqCauseWords(h.Cause)}).", h.System, Player == Side.Hand ? MsgKind.Good : MsgKind.Bad);
                 break;
             case ForcedStop x when Mine(FleetSide(x.Fleet)):
-                yield return new Message(d, $"Fleet {FleetName(x.Fleet)} was stopped at {x.System} by an enemy fleet.", x.System, MsgKind.Warn);
+                yield return new Message(d, $"{FleetName(x.Fleet)} was stopped at {x.System} by an enemy fleet.", x.System, MsgKind.Warn);
                 break;
             case BlockadeStarted b when OwnerOf(b.System) == Player && b.Blockader != Player:
                 yield return new Message(d, $"{b.System} is blockaded by the enemy: mines and yards there stop.", b.System, MsgKind.Bad);
@@ -671,7 +671,7 @@ public sealed partial class GameSession
                 if (_battles.TryGetValue(r.From, out var rb))
                     rb.Retreats.Add($"{FleetName(r.Fleet)} retreated to {r.To}");
                 if (Mine(FleetSide(r.Fleet)))
-                    yield return new Message(d, $"Fleet {FleetName(r.Fleet)} retreated from {r.From} to {r.To}.", r.From, MsgKind.Warn);
+                    yield return new Message(d, $"{FleetName(r.Fleet)} retreated from {r.From} to {r.To}.", r.From, MsgKind.Warn);
                 break;
 
             case SquadronsLoaded q when Mine(FleetSide(q.Fleet)):
