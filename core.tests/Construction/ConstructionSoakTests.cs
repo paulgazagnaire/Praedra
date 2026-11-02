@@ -62,7 +62,10 @@ public class ConstructionSoakTests
         Assert.Equal(5, da.Game.Events.OfType<UnitCompleted>().Count());
         // v6 re-pin 2026-10-24 (was 2): the picket sits at Bina Major, the first stop out of Charter on the spiral map, so the mine's delivery to
         // Classis (Charter, Bina Major, Consolatio, Quies, Classis) is held there too, beside the two regiments bound for The Thaw.
-        Assert.Equal(3, da.Game.Events.OfType<DeliveryHeld>().Count(e => e.Reason == "FleetPresent"));
+        // Paul 2026-11-02 (m3-troops-and-special-forces §Sending a regiment alone, LoneRegimentsDie on): the two regiments bound for The Thaw
+        // are caught alone by the picket and destroyed (was: held, 3 in all); only the mine's delivery is held.
+        Assert.Equal(1, da.Game.Events.OfType<DeliveryHeld>().Count(e => e.Reason == "FleetPresent"));
+        Assert.Equal(2, da.Game.Events.OfType<Praedra.Core.Support.RegimentDestroyed>().Count(e => e.Reason == "CaughtAlone"));
         Assert.Empty(da.Game.State.Construction.Deliveries);
     }
 

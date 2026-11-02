@@ -99,7 +99,11 @@ public class SimpleAiAgentsTests
         // Harvester upkeep re-pin 2026-10-27 (Dev lead; Paul: upkeep 450, m5-harvester §1 Upkeep): this old AI builds its harvester and its upkeep
         // is now 450, a core rule it cannot switch off. With HarvesterParams.Upkeep = null (Classic 600) the hash is exactly the previous pin
         // bec66201...39a6 (checked when re-pinned, main bcce053).
-        Assert.Equal("fc9d696fdbd7f583be706fcda7bea869ee6837cae543c975dc7d355b7dac43ec", h.StateHash());
+        // Lone-regiment re-pin 2026-11-02 (Paul: "An unescorted regiment caught by an enemy fleet should be dead"; m3-troops-and-special-forces
+        // §Sending a regiment alone, LoneRegimentsDie DEFAULT on, a core rule this old AI cannot switch off): 3 regiments on their way from the
+        // yard are caught alone and destroyed in this game. With LoneRegimentsDie off the hash is exactly the previous pin fc9d696f...43ec
+        // (checked when re-pinned, main 53bebfa).
+        Assert.Equal("affbf60b36bf8314ab15f97ee8fa1deaf4c16cfa3790574c268a2d1a754aa0c1", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"

@@ -796,6 +796,12 @@ public sealed partial class GameSession
             case UprisingEnded u when OwnerOf(u.System) == Player:
                 yield return new Message(d, $"The uprising on {u.System} is over.", u.System, MsgKind.Good);
                 break;
+            case RegimentDestroyed r when r.Side == Player && r.Reason == "CaughtAlone":
+                yield return new Message(d, $"A {r.Class} travelling alone was caught and destroyed at {r.System} by an enemy interdictor.", r.System, MsgKind.Bad);
+                break;
+            case RegimentDestroyed r when r.Side != Player && r.Reason == "CaughtAlone":
+                yield return new Message(d, $"Your fleet at {r.System} caught an enemy {r.Class} travelling alone and destroyed it.", r.System, MsgKind.Good);
+                break;
             case RegimentDestroyed r when r.Side == Player:
                 yield return new Message(d, $"A {r.Class} was destroyed on {r.System}.", r.System, MsgKind.Bad);
                 break;

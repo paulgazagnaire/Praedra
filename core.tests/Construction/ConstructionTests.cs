@@ -1,3 +1,4 @@
+using Praedra.Core.Support;
 using Praedra.Core.Clock;
 using Praedra.Core.Construction;
 using Praedra.Core.Economy;
@@ -484,6 +485,7 @@ public class ConstructionTests
     public void C21_DeliveryHeldAtEnemyFleetAndContinuesWhenItLeaves()
     {
         var (w, path) = RegimentToThaw();
+        w.Build.LoneRegimentsDie = false; // the hold rule itself (a regiment caught alone dies by default: S4)
         string mid = path[1];
         int picket = w.Fleets.AddFleet(Side.Collective, "Picket", new[] { "Subpoena" }, mid); // only a gravity well stops traffic in flight (DEFAULT GravityWellShip)
         w.RunTo(37); // C 9 x 4 days: complete at hook 37, the delivery leaves
@@ -505,6 +507,23 @@ public class ConstructionTests
         var reg = w.Eco.Find(arrived.Object)!;
         Assert.True(reg.Completed);
         Assert.Equal("The Thaw", reg.System);
+    }
+
+    // m3-troops-and-special-forces §Sending a regiment alone S4 (Paul 2026-11-02): a regiment caught alone by an interdictor is destroyed
+    [Fact]
+    public void S4_ALoneRegimentCaughtByAnInterdictorIsDestroyed()
+    {
+        var (w, path) = RegimentToThaw();
+        string mid = path[1];
+        w.Fleets.AddFleet(Side.Collective, "Picket", new[] { "Subpoena" }, mid);
+        w.RunTo(37);
+        var dep = w.Events<DeliveryDeparted>().Single();
+        w.RunTo(dep.DueDay);
+        Assert.Empty(w.Events<DeliveryHeld>());
+        var dead = w.Events<RegimentDestroyed>().Single();
+        Assert.Equal((dep.Object, mid, Emp, "CaughtAlone"), (dead.Object, dead.System, dead.Side, dead.Reason));
+        Assert.Null(w.Eco.Find(dep.Object));
+        Assert.Empty(w.Build.Deliveries);
     }
 
     // m2-construction C22

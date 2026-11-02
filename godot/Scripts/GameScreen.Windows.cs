@@ -953,6 +953,7 @@ public partial class GameScreen
             int id = d.Id;
             var order = new SendRegimentOrder(0, Me, id, n);
             int days = S.Host.Construction.SendRegimentDays(order);
+            WarnTraps(S.Host.Construction.SendRegimentRoute(order), $"The {ThingName(d)}'s way to {n}");
             S.Track(S.Game.Submit(seq => order with { Sequence = seq }), $"Send the {ThingName(d)} to {n}");
             Sent($"send the {ThingName(d)} from {at} to {n}", n);
             _moved[d.Key] = ($"on the way to {n}, {Ui.Count(days, "day", "days")}", $"Ground {n} Regiments");
@@ -1002,6 +1003,14 @@ public partial class GameScreen
         _pendingIn[f.Id] = Promised(f.Id) + 1;
         _moved[d.Key] = ($"boards {f.Name}", d.Kind == 'R' ? $"Fleet {f.Id} Troops" : $"Fleet {f.Id} Fighters");
         if (d.Kind == 'R' && fleet == 0) WarnGarrison(f.At);
+    }
+
+    /// <summary>A lone traveller's way crosses a known enemy interdictor: say so in red (as the fleet move preview does). rule: m1-travel §Path rule (5).</summary>
+    void WarnTraps(IReadOnlyList<string> route, string what)
+    {
+        var traps = S.Host.KnownTraps(Me, route);
+        if (traps.Count == 0) return;
+        Toast($"{what} passes {string.Join(", ", traps.Select(t => t.System))}, where an enemy interdictor was seen: it may be caught there.", MsgKind.Warn);
     }
 
     /// <summary>One more regiment leaves the planet <paramref name="at"/> today: warn when its garrison drops too low.</summary>
@@ -1058,6 +1067,7 @@ public partial class GameScreen
             int id = d.Id;
             var order = new SplitFleetOrder(0, Me, from.Id, One(id), f.At, f.Id);
             int days = Fm.SplitSendDays(order);
+            WarnTraps(Fm.SplitSendRoute(order), $"The {ThingName(d)}'s way to {f.At}");
             S.TrackFleet(from.Id, S.Game.Submit(seq => order with { Sequence = seq }), $"Send the {ThingName(d)} from {from.Name} to join {f.Name}");
             Sent($"send the {ThingName(d)} from {from.Name} to join {f.Name} at {f.At}", f.At);
             _moved[d.Key] = ($"flies to join {f.Name}, {Ui.Count(days, "day", "days")}", $"Fleet {f.Id} Ships");
