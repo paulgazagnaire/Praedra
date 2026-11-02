@@ -20,20 +20,14 @@ namespace PraedraViewer;
 /// </summary>
 public partial class GameScreen
 {
-    public enum SecPane { Buildings, Fleets, Forces }
-
     Control _secLayer;
     PanelContainer _secWin;
     Label _secTitle, _secSub;
     Control _secOwnBar, _secLegend;
     ScrollContainer _secScroll;
     GridContainer _secGrid;
-    PanelContainer _secDetail;
-    VBoxContainer _secDetailHead, _secDetailBody;
-    ScrollContainer _secDetailScroll;
     List<string> _secOrder;
-    string _secName, _secFocus;
-    SecPane _secPane = SecPane.Buildings;
+    string _secName;
     bool _secDirty, _secLeft;
     double _secTimer;
     readonly Dictionary<string, PanelContainer> _secCards = new(StringComparer.Ordinal);
@@ -45,13 +39,10 @@ public partial class GameScreen
     const int HeadHeight = 76;        // the window's head and the bar under it
     const int LegendHeight = 46;      // the key to the marks at its foot (two lines in a narrow window)
     const int TopClear = 72;          // the top bar of the screen (goal, day, clock) stays uncovered
-    const int DetailWidth = 480;      // the system's own window at its narrowest
     const int MonthDays = 30;         // output is shown per 30 days, a span a player can picture
 
     internal bool SectorViewOpen => _secLayer?.Visible == true;
     internal string SectorViewName => _secName;
-    internal string SectorViewFocus => _secDetail?.Visible == true ? _secFocus : null;
-    internal SecPane SectorViewPane => _secPane;
 
     // ================================================================== the frame
 
@@ -117,28 +108,6 @@ public partial class GameScreen
         _secGrid = new GridContainer { Columns = 4, SizeFlagsHorizontal = SizeFlags.ShrinkCenter };
         _secGrid.AddThemeConstantOverride("h_separation", CardGap); _secGrid.AddThemeConstantOverride("v_separation", CardGap);
         gridPad.AddChild(_secGrid);
-
-        _secDetail = new PanelContainer { Visible = false, MouseFilter = MouseFilterEnum.Stop };
-        _secDetail.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        var db = Ui.Box(Ui.Panel, 12, new Color(1, 1, 1, 0.12f), 1, 0, 0);
-        db.ShadowColor = new Color(0, 0, 0, 0.6f); db.ShadowSize = 20;
-        _secDetail.AddThemeStyleboxOverride("panel", db);
-        body.AddChild(_secDetail);
-        var dv = Ui.VBox(0);
-        _secDetail.AddChild(dv);
-        _secDetailHead = Ui.VBox(Ui.Block);
-        var dhPad = new MarginContainer();
-        foreach (var (k, n) in new[] { ("margin_left", 20), ("margin_right", 16), ("margin_top", 16), ("margin_bottom", 12) }) dhPad.AddThemeConstantOverride(k, n);
-        dhPad.AddChild(_secDetailHead);
-        dv.AddChild(dhPad);
-        _secDetailScroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
-        dv.AddChild(_secDetailScroll);
-        var dbPad = new MarginContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        foreach (var (k, n) in new[] { ("margin_left", 20), ("margin_right", 20), ("margin_top", 4), ("margin_bottom", 20) }) dbPad.AddThemeConstantOverride(k, n);
-        _secDetailScroll.AddChild(dbPad);
-        _secDetailBody = Ui.VBox(Ui.Block);
-        _secDetailBody.CustomMinimumSize = new Vector2(DetailWidth - 44, 0);
-        dbPad.AddChild(_secDetailBody);
 
         // ---- what the marks mean, one quiet line at the foot
         var legPad = new MarginContainer();
@@ -208,13 +177,12 @@ public partial class GameScreen
         _secGrid.Columns = cols;
         float content = HeadHeight + 14 + rows * TileHeight + (rows - 1) * CardGap + 10 + LegendHeight;
         // below the top bar (the clock and the goal stay in sight), as tall as the tiles need
-        float h = Math.Min(vp.Y - TopClear - 12, Math.Max(content, _secDetail.Visible ? 560 : 0));
+        float h = Math.Min(vp.Y - TopClear - 12, content);
         w = Math.Max(w, _secWin.GetCombinedMinimumSize().X); // never wider on screen than placed: the right edge stays on screen
         bool left = _secLeft;
         _secWin.Position = new Vector2(left ? 16 : vp.X - w - 16, TopClear);
         _secWin.Size = new Vector2(w, h);
         _secWin.CustomMinimumSize = new Vector2(w, h);
-        PlaceSystemPane();
     }
 
     /// <summary>Whether the open sector lies on the right half of the screen (then the window goes left).</summary>
@@ -240,22 +208,12 @@ public partial class GameScreen
         OnViewChanged();
     }
 
-    /// <summary>The system's own window covers the tiles; closing it shows them again.</summary>
-    void PlaceSystemPane()
-    {
-        if (_secDetail == null || !_secDetail.Visible) return;
-        _secDetail.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        _secDetail.OffsetLeft = 10; _secDetail.OffsetRight = -10; _secDetail.OffsetTop = 6; _secDetail.OffsetBottom = -4;
-        _secDetailBody.CustomMinimumSize = new Vector2(Math.Max(DetailWidth - 44, _secWin.Size.X - 20 - 42), 0);
-    }
-
     // ================================================================== open, close, step
 
     /// <summary>A click on a sector of the map (or S): open its window.</summary>
     internal void OpenSector(string sector)
     {
         if (sector == null || InMoveMode || !_secOrder.Contains(sector)) return;
-        if (_secName != sector) { _secDetail.Visible = false; _secFocus = null; }
         _secName = sector;
         bool opening = !_secLayer.Visible;
         if (opening)
@@ -278,8 +236,6 @@ public partial class GameScreen
     {
         if (_secLayer == null || !_secLayer.Visible) return;
         _secLayer.Visible = false;
-        _secDetail.Visible = false;
-        _secFocus = null;
         _bottomLeft.Visible = true;
         _view.MarkSector(null);
     }
@@ -301,24 +257,6 @@ public partial class GameScreen
 
     internal string SectorOf(string system) =>
         G.TryFindSystem(system, out int i) && !G.Systems[i].IsOutsideSectors ? G.Systems[i].Sector : null;
-
-    /// <summary>Open a system's own window beside the cards, on one of its three panes.</summary>
-    internal void OpenSystemPane(string system, SecPane pane)
-    {
-        _secFocus = system; _secPane = pane;
-        _secDetail.Visible = true;
-        PlaceSystemPane();
-        _secDetailScroll.ScrollVertical = 0;
-        RebuildSectorView();
-        // look the card up when it runs: a rebuild in between replaces it, and the old one is no longer under the scroll
-        Callable.From(() => { if (_secCards.TryGetValue(system, out var card) && IsInstanceValid(card) && _secScroll.IsAncestorOf(card)) _secScroll.EnsureControlVisible(card); }).CallDeferred();
-    }
-
-    void CloseSystemPane()
-    {
-        _secDetail.Visible = false; _secFocus = null;
-        RebuildSectorView();
-    }
 
     Action _secLater;
     /// <summary>Run after the input event being handled: a click on a card or a link rebuilds that card, which must not happen inside its own
@@ -345,7 +283,6 @@ public partial class GameScreen
     {
         var sec = G.Sectors.FirstOrDefault(s => s.Name == _secName);
         if (sec == null) return;
-        float keep = _secDetailScroll.ScrollVertical;
         var systems = sec.Members.Select(m => G.Systems[m].Name)
             .OrderBy(n => n == S.MyHqSystem ? 0 : S.OwnerOf(n) == Me ? 1 : S.KnownOwnerOf(n).Owner is Side ? 2 : S.Picture(n) != null ? 3 : 4)
             .ThenBy(n => n, StringComparer.Ordinal).ToList();
@@ -362,28 +299,6 @@ public partial class GameScreen
         _secCards.Clear();
         foreach (var n in systems) _secGrid.AddChild(_secCards[n] = SystemCardTile(n));
         LayoutSectorView();
-        _secScroll.Visible = !_secDetail.Visible;
-
-        // ---- the system's own window
-        Ui.Clear(_secDetailHead);
-        Ui.Clear(_secDetailBody);
-        if (_secDetail.Visible && _secFocus != null)
-        {
-            DetailHead(_secFocus);
-            var prev = _into;
-            _into = _secDetailBody;
-            try
-            {
-                switch (_secPane)
-                {
-                    case SecPane.Fleets: PaneFleets(_secFocus); break;
-                    case SecPane.Forces: PaneForces(_secFocus); break;
-                    default: PaneBuildings(_secFocus); break;
-                }
-            }
-            finally { _into = prev; }
-            Callable.From(() => _secDetailScroll.ScrollVertical = (int)keep).CallDeferred();
-        }
     }
 
     /// <summary>Who holds the sector, as one bar under the head: blue yours, orange the enemy, grey nobody, dark not known.</summary>

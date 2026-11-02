@@ -53,6 +53,7 @@ public partial class GameScreen
 
         _mapHolder.AddChild(BuildDrawer());
         AddChild(BuildSectorView()); // over the map and the window, under the dialogs
+        AddChild(BuildMgmtLayer());  // the fleet, ground and infrastructure windows float over the sector window
         BuildModals();
     }
 

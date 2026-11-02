@@ -234,6 +234,7 @@ public partial class GameScreen
         AddLogItem(S.Messages[^1], false);
         Toast($"Order sent: {what}. It starts next day.");
         _panelDirty = true; _panelTimer = 0;
+        RefreshMgmt();
         RefreshTop();
     }
 

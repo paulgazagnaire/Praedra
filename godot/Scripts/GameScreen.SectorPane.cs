@@ -9,54 +9,10 @@ using Praedra.Core.Fleets;
 using Side = Praedra.Core.Clock.Side;
 
 namespace PraedraViewer;
-/// <summary>The sector window, part three: the system's own window (Buildings, Fleets, Forces). See GameScreen.SectorView.cs.</summary>
+/// <summary>A system's buildings (the Infrastructure window) and, for a system you don't hold, what your side knows of its ground (the Ground
+/// window). See GameScreen.Windows.cs.</summary>
 public partial class GameScreen
 {
-    // ================================================================== the system's own window
-
-    void DetailHead(string n)
-    {
-        bool mine = S.OwnerOf(n) == Me;
-        var row = Ui.HBox(Ui.Pad);
-        _secDetailHead.AddChild(row);
-        var frame = new PanelContainer { CustomMinimumSize = new Vector2(64, 64), ClipContents = true, MouseFilter = MouseFilterEnum.Ignore };
-        frame.AddThemeStyleboxOverride("panel", Ui.Box(Ui.PlanetSky, 8, new Color(1, 1, 1, 0.08f), 1, 0, 0));
-        if (PlanetArt.Of(n) is Texture2D tex)
-            frame.AddChild(new TextureRect { Texture = tex, TextureFilter = TextureFilterEnum.Nearest, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered, MouseFilter = MouseFilterEnum.Ignore });
-        row.AddChild(frame);
-        var names = Ui.VBox(2);
-        names.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        var t = Ui.Label(n, "Title", Ui.Text, 22, wrap: false);
-        t.ClipText = true;
-        names.AddChild(t);
-        var (known, owner) = S.KnownOwnerOf(n);
-        string who = S.IsDestroyed(n) ? "Destroyed" : mine ? $"Yours · {PlanetArt.KindOf(n) ?? "system"}" : !Scouted(n) ? "Unexplored" : !known ? "Owner unknown" : owner == null ? "Nobody's" : $"Held by the {S.NameOf(owner.Value)}";
-        names.AddChild(Ui.Label(who, null, S.IsDestroyed(n) ? Ui.Danger : Ui.OwnerColor(mine ? Me : owner, Me), Ui.Small, wrap: false));
-        row.AddChild(names);
-        row.AddChild(Ui.Grow());
-        var map = Ui.Button("Map", () => ShowOnMap(n), "Close this window and show the system on the map (double-clicking a tile does the same)", "Chip");
-        map.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        row.AddChild(map);
-        var close = Ui.Button("✕", CloseSystemPane, "Close the system window", "Clock");
-        close.SetMeta(UiTest.FullName, "Close the system window");
-        close.CustomMinimumSize = new Vector2(30, 30);
-        close.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        row.AddChild(close);
-
-        var tabs = Ui.HBox(4);
-        var group = new ButtonGroup();
-        foreach (var (pane, word) in new[] { (SecPane.Buildings, "Buildings"), (SecPane.Fleets, "Fleets"), (SecPane.Forces, "Forces") })
-        {
-            var p = pane;
-            var b = Ui.Chip(word, () => Later(() => { _secPane = p; _secDetailScroll.ScrollVertical = 0; RebuildSectorView(); }), null, _secPane == pane, group);
-            b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            b.CustomMinimumSize = new Vector2(0, 34);
-            tabs.AddChild(b);
-        }
-        _secDetailHead.AddChild(Ui.Space(2));
-        _secDetailHead.AddChild(tabs);
-    }
-
     void PaneBuildings(string n)
     {
         if (S.IsDestroyed(n)) { Note("The planet and everything on it are gone. Nothing can be built here."); return; }
@@ -109,64 +65,6 @@ public partial class GameScreen
             || _buildSection == "Troops" && !HasYard(n, Praedra.Core.Construction.YardFamily.Training)) _buildSection = "Facilities";
         BuildMenu(n);
         if (Me == Side.Collective && n == S.MyHqSystem) HqSection(n);
-    }
-
-    void PaneFleets(string n)
-    {
-        var pic = S.Picture(n);
-        bool live = S.Sees(n) || S.OwnerOf(n) == Me;
-        var own = S.Game.State.Fleets.Values.Where(f => f.At == n && f.Side == Me).OrderBy(f => f.Id).ToList();
-        Heading(own.Count == 0 ? "Your fleets" : $"Your fleets ({own.Count})");
-        if (own.Count == 0) Line("None in orbit.", Dim);
-        foreach (var f in own) OrbitFleetCard(f);
-        var heading = live ? "Enemy fleets here now" : "Enemy fleets";
-        Heading(heading);
-        if (live)
-        {
-            var enemy = S.VisibleEnemyFleetsAt(n);
-            if (enemy.Count == 0) Line("None.", Dim);
-            foreach (var e in enemy)
-                using (Card(Ui.DangerDeep, new Color(Ui.Danger, 0.5f)))
-                {
-                    Line($"{S.NameOf(e.Side)}: {Ui.Count(e.ShipCount, "ship", "ships")}, {Ui.Count(e.SquadronCount, "squadron", "squadrons")}", Ui.Text);
-                    Line(e.ToString(), Ui.Text2, Ui.Small);
-                }
-        }
-        else if (pic?.Fleets is { } seen)
-        {
-            if (seen.Value.Count == 0) Line($"None seen on day {seen.Stamp}.", Dim);
-            foreach (var e in seen.Value) Line($"{S.NameOf(e.Side)}, seen day {seen.Stamp}: {e}", Ui.Text2, Ui.Small);
-            Note("You have no eyes here now: enemy fleets may have come or gone since.");
-        }
-        else Note("You have no eyes here: send a fleet, or build a Sensor Station on a route nearby.");
-    }
-
-    /// <summary>One of your fleets in orbit: what it is made of, its strength and troops aboard, and a button to command it.</summary>
-    void OrbitFleetCard(Fleet f)
-    {
-        var eco = S.Host.Economy;
-        using (Card(new Color(Ui.YouDeep, 0.55f), new Color(Ui.You, 0.35f)))
-        {
-            var h = Ui.HBox(8);
-            var name = Ui.Label(f.Name, null, Ui.Text, Ui.Body, wrap: false);
-            name.AddThemeFontOverride("font", Ui.SemiBold);
-            name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            h.AddChild(name);
-            var str = Ui.Label($"strength {Fm.StrengthOf(f):0}", null, Ui.Text2, Ui.Small, wrap: false);
-            str.AddThemeFontOverride("font", Ui.Num);
-            h.AddChild(str);
-            Add(h);
-            Line(Counts(f.Ships.Select(id => eco.Find(id)?.Class ?? "?")), Ui.Text2, Ui.Small);
-            if (f.Squadrons.Count > 0) Line("Fighters: " + Counts(f.Squadrons.Select(id => eco.Find(id)?.Class ?? "?")), Ui.Text2, Ui.Small);
-            var aboard = S.Host.Troops.RegimentsAboard(f);
-            if (aboard.Count > 0) Line("Troops aboard: " + Counts(aboard.Select(a => a.Regiment.Class)), Ui.Text2, Ui.Small);
-            if (S.PlannedMoveOf(f.Id) is { } pm) Line($"Leaving for {pm.To}, arrives day {pm.ArrivalDay}", Pending, Ui.Small);
-            var fid = f.Id;
-            var b = Ui.Button("Command this fleet", () => { CloseSectorView(); SelectFleet(fid, true); }, "Close the sector window and select the fleet: move, attack, bombard, invade, load troops.", "Primary");
-            b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            b.CustomMinimumSize = new Vector2(0, 34);
-            Add(b);
-        }
     }
 
     void PaneForces(string n)

@@ -136,16 +136,6 @@ public partial class Main
         var unseen = cards.FirstOrDefault(c => !s.Explored(c) && s.OwnerOf(c) != me);
         if (unseen != null) Expect(gs.SectorCardText(unseen).Trim() == unseen && gs.SectorCardTip(unseen).Contains("unexplored") && !gs.SectorCardTip(unseen).Contains("Loyalty"),
             $"an unexplored tile ({unseen}) shows its name and planet only");
-        gs.ShotSectorPane(home, "buildings"); gs.Step0();
-        Expect(gs.SectorViewFocus == home && gs.SectorViewPane == GameScreen.SecPane.Buildings, "a tile opens the system window on Buildings");
-        string det = gs.SectorDetailText;
-        Expect(det.Contains("Mines") && det.Contains("Energy slots"), "the Buildings pane shows mines and slots: " + det.Split('\n').Take(8).Aggregate((x, y) => x + " / " + y));
-        gs.ShotSectorPane(home, "fleets"); gs.Step0();
-        Expect(gs.SectorViewPane == GameScreen.SecPane.Fleets && gs.SectorDetailText.Contains("Your fleets"), "the Fleets pane shows the fleets in orbit");
-        gs.ShotSectorPane(home, "forces"); gs.Step0();
-        Expect(gs.SectorViewPane == GameScreen.SecPane.Forces && gs.SectorDetailText.Contains("Garrison"), "the Forces pane shows the garrison");
-        gs.PressKey(Key.Escape);
-        Expect(gs.SectorViewOpen && gs.SectorViewFocus == null, "Esc closes the system window first");
         gs.PressKey(Key.Right);
         Expect(gs.SectorViewOpen && gs.SectorViewName != homeSec, "the Right arrow steps to the next sector: " + gs.SectorViewName);
         gs.PressKey(Key.Left);

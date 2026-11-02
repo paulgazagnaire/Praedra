@@ -137,7 +137,8 @@ public partial class Main : Control
                 case "--layer" when i + 1 < _args.Length: gs.ShotLayer(_args[i + 1]); break;
                 case "--sectors": gs.ShotSectors(); break;
                 case "--sector" when i + 1 < _args.Length: gs.ShotSector(_args[i + 1]); break;
-                case "--sectorpane" when i + 2 < _args.Length: gs.ShotSectorPane(_args[i + 1], _args[i + 2]); break;
+                case "--window" when i + 2 < _args.Length: gs.ShotWindow(_args[i + 1], _args[i + 2]); break;
+                case "--drag" when i + 1 < _args.Length: gs.MgShowDrag(_args[i + 1]); break;
                 case "--goal": gs.ShotGoal(); break;
                 case "--sectorhover" when i + 1 < _args.Length: gs.ShotSectorHover(_args[i + 1]); break;
                 case "--routes" when i + 1 < _args.Length: gs.SetRoutesShown(_args[i + 1] != "off"); break;

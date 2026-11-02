@@ -133,6 +133,8 @@ public partial class GameScreen
         if (f.At != null)
             CardButton(_moveFleet == f.Id ? "Cancel move" : "Move...", () => { if (_moveFleet == f.Id) CancelMove(); else StartMove(f); },
                 "Pick a destination on the map: the route and the arrival day show before you confirm", "Primary");
+        int fid = f.Id;
+        CardButton("Window", () => OpenMgmt(MgKind.Fleet, fleet: fid), "The fleet's window: drag leaders onto its posts, troops and fighters aboard, ships between fleets");
         _selActions.AddChild(Ui.Grow());
         CardButton("Details →", () => ShowTab(DrawerTab.Selected), "Ships, troops, officers, split and attack, in the window");
     }

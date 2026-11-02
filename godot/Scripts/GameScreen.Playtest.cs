@@ -126,7 +126,6 @@ public partial class GameScreen
     internal IReadOnlyList<string> SectorViewCards => _secCards.Keys.ToList();
     /// <summary>The words on one card (owner, numbers, links), for the playtest.</summary>
     internal string SectorCardText(string system) => _secCards.TryGetValue(system, out var c) ? LabelsIn(c) : null;
-    internal string SectorDetailText => SectorViewFocus == null ? "" : LabelsIn(_secDetailHead) + "\n" + LabelsIn(_secDetailBody);
     internal string SectorCardTip(string system) => _secCards.TryGetValue(system, out var c) ? c.TooltipText : null;
     internal bool SectorOnLeft => _secWin != null && _secWin.Position.X < _secLayer.Size.X / 4;
     internal float SectorWindowWidth => _secWin?.Size.X ?? 0;
@@ -278,7 +277,33 @@ public partial class GameScreen
     public void ShotLayer(string name) { if (Enum.TryParse<MapLayer>(name, out var l)) SetLayer(l); }
     public void ShotSectors() { if (!SectorViewOpen) ToggleSectorView(); }
     public void ShotSector(string name) => OpenSector(name.Replace('_', ' '));
-    public void ShotSectorPane(string system, string pane) => OpenSystemPane(system.Replace('_', ' '), Enum.TryParse(pane, true, out SecPane p) ? p : SecPane.Buildings);
+    internal void TileClick(string system, string hot) => OpenFromTile(system, hot);
+
+    /// <summary>--window ground|infra Charter, or --window fleet 3: open a management window.</summary>
+    public void ShotWindow(string kind, string what)
+    {
+        if (kind.Equals("pair", StringComparison.OrdinalIgnoreCase))
+        {
+            // a leader who can command and a fleet of yours at the same system: open both and hold the leader as if dragged
+            var cm = S.Host.Characters;
+            var pair = S.Game.State.Fleets.Values.Where(f => f.Side == S.Player && f.At != null && f.Transit == null).OrderBy(f => f.Id)
+                .SelectMany(f => S.MyCharacters.Where(c => c.AttachedFleet == 0 && c.Transit == null && cm.LocationOf(c) == f.At && cm.ClassOf(c).Can(Praedra.Core.Characters.CharacterPost.Admiral))
+                    .OrderBy(c => c.Id).Select(c => (f, c))).FirstOrDefault();
+            if (pair.f == null) { GD.PrintErr("no leader stands with a fleet"); return; }
+            OpenMgmt(MgKind.Ground, pair.f.At); OpenMgmt(MgKind.Fleet, fleet: pair.f.Id);
+            if (what != "-") MgShowDrag($"L:{pair.c.Id}");
+            return;
+        }
+        if (kind.Equals("fleet", StringComparison.OrdinalIgnoreCase)) 
+        {
+            // a fleet id, or a system name: then your first fleet standing there
+            int id = int.TryParse(what, out int n) ? n : S.Game.State.Fleets.Values.Where(f => f.Side == S.Player && f.At == what.Replace('_', ' ') && f.Transit == null)
+                .OrderBy(f => f.Id).Select(f => f.Id).FirstOrDefault();
+            if (id > 0) OpenMgmt(MgKind.Fleet, fleet: id);
+            return;
+        }
+        OpenMgmt(kind.Equals("infra", StringComparison.OrdinalIgnoreCase) ? MgKind.Infra : MgKind.Ground, what.Replace('_', ' '));
+    }
     public void ShotGoal() => ShowGoal();
     public void ShotClick(string prefix) { PlayRefresh(); if (!Click(prefix)) GD.PrintErr("no button " + prefix); PlayRefresh(); }
 }
