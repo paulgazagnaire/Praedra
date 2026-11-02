@@ -109,6 +109,13 @@ public sealed class GameHost
         var route = new List<bool>();
         for (int i = 0; i + 1 < names.Count; i++)
             route.Add(Fleets.Travel != Praedra.Core.Travel.TravelMode.Straight && Fleets.Galaxy.FindLane(names[i], names[i + 1]) != null);
+        return new MovePlan(path.Status, names, path.HopTicks, route, Game.Day + path.TotalTicks, KnownTraps(side, names));
+    }
+
+    /// <summary>The known traps on a path (start and end excluded), from the side's own picture: see <see cref="PlanMove"/>. Used for fleet
+    /// moves and for anything else that travels and can be pulled out (a regiment sent alone, a ship sent to join a fleet).</summary>
+    public List<KnownTrap> KnownTraps(Praedra.Core.Clock.Side side, IReadOnlyList<string> names)
+    {
         var view = Fog.ViewFor(side);
         var traps = new List<KnownTrap>();
         for (int i = 1; i + 1 < names.Count; i++)
@@ -119,7 +126,7 @@ public sealed class GameHost
                 && Fleets.ShipClasses.TryGetValue(kv.Key, out var c) && c.GravityWellProjector > 0));
             if (gravity) traps.Add(new KnownTrap(names[i], seen.Stamp));
         }
-        return new MovePlan(path.Status, names, path.HopTicks, route, Game.Day + path.TotalTicks, traps);
+        return traps;
     }
 
     private GameHost(Game game, GameData data, GameSettings settings)

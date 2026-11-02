@@ -1,3 +1,4 @@
+using Praedra.Core.Travel;
 using Praedra.Core.Clock;
 using Praedra.Core.Economy;
 using Praedra.Core.Fleets;
@@ -298,8 +299,13 @@ public sealed class ConstructionModule
     public string? CheckSendRegiment(SendRegimentOrder o) => CheckSend(o, out _, out _);
 
     /// <summary>Days a SendRegiment order would take if given now (0 when it would be refused).</summary>
-    public int SendRegimentDays(SendRegimentOrder o) =>
-        CheckSend(o, out var obj, out var from) == null ? _fleets.FindPath(from, o.Destination, DeliverySpeed(_eco.Costs.Get(obj.Class))).TotalTicks : 0;
+    public int SendRegimentDays(SendRegimentOrder o) => SendRegimentPath(o) is { Ok: true } p ? p.TotalTicks : 0;
+
+    /// <summary>The systems a SendRegiment order would pass if given now, start and end included (empty when it would be refused).</summary>
+    public IReadOnlyList<string> SendRegimentRoute(SendRegimentOrder o) => SendRegimentPath(o) is { Ok: true } p ? p.Names(_galaxy) : Array.Empty<string>();
+
+    private PathResult SendRegimentPath(SendRegimentOrder o) =>
+        CheckSend(o, out var obj, out var from) == null ? _fleets.FindPath(from, o.Destination, DeliverySpeed(_eco.Costs.Get(obj.Class))) : PathResult.Rejected(PathStatus.Unreachable);
 
     private string? CheckSend(SendRegimentOrder o, out EconObject obj, out string from)
     {

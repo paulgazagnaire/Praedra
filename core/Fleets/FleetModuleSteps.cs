@@ -43,8 +43,13 @@ public sealed partial class FleetModule
         FindPath(from, destination, TravelFormula.FleetSpeed(ships.Select(SpeedOfShip), Array.Empty<int>()));
 
     /// <summary>Days a SplitFleet order with a destination would take if given now (0 when it would be refused).</summary>
-    public int SplitSendDays(SplitFleetOrder o) =>
-        o.Destination != null && CheckSplit(o, out var fleet, out var ships) == null ? SendPath(fleet.At!, ships, o.Destination).TotalTicks : 0;
+    public int SplitSendDays(SplitFleetOrder o) => SplitSendPath(o) is { Ok: true } p ? p.TotalTicks : 0;
+
+    /// <summary>The systems the ships of a SplitFleet order with a destination would pass if given now, start and end included (empty when refused).</summary>
+    public IReadOnlyList<string> SplitSendRoute(SplitFleetOrder o) => SplitSendPath(o) is { Ok: true } p ? p.Names(Galaxy) : Array.Empty<string>();
+
+    private PathResult SplitSendPath(SplitFleetOrder o) =>
+        o.Destination != null && CheckSplit(o, out var fleet, out var ships) == null ? SendPath(fleet.At!, ships, o.Destination) : PathResult.Rejected(PathStatus.Unreachable);
 
     private string? CheckSplit(SplitFleetOrder o, out Fleet fleet, out List<EconObject> ships)
     {
