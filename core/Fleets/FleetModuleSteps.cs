@@ -157,7 +157,13 @@ public sealed partial class FleetModule
             f.JoinFleet = 0;
             State.Fleets.TryGetValue(into, out var t);
             string? why = t == null || t.Side != f.Side || t.Ships.Count == 0 ? "gone" : t.At != f.At && t.At != null ? "elsewhere" : Moving(t) ? "moving" : null;
-            if (why == null && f.Ships.Count > 0) { MergeInto(ctx, day, f, t!); continue; }
+            if (why == null && f.Ships.Count > 0)
+            {
+                int jf = f.Id; var js = f.Side; string jat = f.At!; var ships = new ValueList<int>(f.Ships.ToList());
+                ctx.Emit((i, _) => new FleetJoined(i, day, jf, js, into, jat, ships));
+                MergeInto(ctx, day, f, t!);
+                continue;
+            }
             int fid = f.Id; var side = f.Side; string at = f.At!; string reason = why ?? "gone";
             ctx.Emit((i, _) => new FleetJoinFailed(i, day, fid, side, into, at, reason));
         }

@@ -17,6 +17,11 @@ public sealed record FleetPassed(int Index, int Day, int Fleet, string System)
 public sealed record ForcedStop(int Index, int Day, int Fleet, string System, ValueList<int> Blockers)
     : GameEvent(Index, Day, nameof(ForcedStop));
 
+/// <summary>Slot 5.6: a fleet that arrived with a join merged into its target (the merge's ShipsTransferred and FleetDissolved follow). QA-86.
+/// rule: m3-fleets §Orders (MoveFleet: joining a fleet on arrival).</summary>
+public sealed record FleetJoined(int Index, int Day, int Fleet, Side Side, int Into, string System, ValueList<int> Ships)
+    : GameEvent(Index, Day, nameof(FleetJoined));
+
 /// <summary>
 /// Slot 5.6: a fleet sent to join another arrived but did not merge. Reason: <c>gone</c> (the target no longer exists), <c>elsewhere</c> (it is
 /// at another system), <c>moving</c> (it is under way). rule: m3-fleets §Joining a fleet on arrival (QA-83, 2026-11-02).

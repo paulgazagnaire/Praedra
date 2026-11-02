@@ -50,6 +50,7 @@ public class GameHostTests
         Assert.Equal(sup.BlockadeSupportEffect, s.BlockadeSupportEffect);
         Assert.Equal(con.DeliveryForcedStop, s.DeliveryForcedStop);
         Assert.Equal(con.LostDestination, s.LostDestination);
+        Assert.Equal(con.LoneRegimentsDie, s.LoneRegimentsDie); Assert.True(s.LoneRegimentsDie);
         Assert.Equal(con.UnitDestinationMustBeControlled, s.UnitDestinationMustBeControlled);
         Assert.Equal(con.RespectResearchOrder, s.RespectResearchOrder);
         Assert.Equal(con.UseClassicBlockadeFlag, s.UseClassicBlockadeFlag);
@@ -80,7 +81,7 @@ public class GameHostTests
             AutoscrapMode = AutoscrapMode.Smart, SlotSource = SlotSource.Rolled, SupportRuleset = GarrisonRuleset.New,
             BlockadeSupportEffect = false, DeliveryForcedStop = false, LostDestination = LostDestinationRule.Refuse,
             UnitDestinationMustBeControlled = false, RespectResearchOrder = false, UseClassicBlockadeFlag = true, DebugOrdersEnabled = true,
-            HarvesterClassBuildable = false, UnloadOnlyAtHeldSystem = false,
+            HarvesterClassBuildable = false, UnloadOnlyAtHeldSystem = false, LoneRegimentsDie = false,
             SuspendedLeaveCapacity = true, MineStopMode = StopMode.Abandon, YardStopMode = StopMode.Abandon,
             Economy = new EconomyParams { ScrapPeriod = 7 }, Support = new SupportParams { ErosionPeriod = 11 },
             Construction = new ConstructionParams { StandardCycleDays = 3 },
@@ -97,7 +98,7 @@ public class GameHostTests
             Assert.False(h.Research.Params.FacilityResearch); Assert.Equal(Praedra.Core.Research.ResearchScale.Fixed, h.Research.Params.ResearchCostScale);
             Assert.True(h.Construction.UseClassicBlockadeFlag); Assert.True(h.Control.DebugOrdersEnabled);
             Assert.True(h.Fleets.DebugOrdersEnabled); Assert.False(h.Construction.HarvesterClassBuildable);
-            Assert.False(h.Troops.UnloadOnlyAtHeldSystem);
+            Assert.False(h.Troops.UnloadOnlyAtHeldSystem); Assert.False(h.Construction.LoneRegimentsDie);
             Assert.True(h.Economy.SuspendedLeaveCapacity); Assert.Equal(StopMode.Abandon, h.Economy.MineStopMode); Assert.Equal(StopMode.Abandon, h.Construction.YardStopMode);
             Assert.Equal(7, h.Economy.Params.ScrapPeriod); Assert.Equal(11, h.Support.Params.ErosionPeriod); Assert.Equal(3, h.Construction.Params.StandardCycleDays);
         }
