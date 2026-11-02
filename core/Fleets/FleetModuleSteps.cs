@@ -37,6 +37,15 @@ public sealed partial class FleetModule
     /// <summary>Why a SplitFleet order would be refused now (null: it would be accepted). The order handler and the screens both ask this.</summary>
     public string? CheckSplitFleet(SplitFleetOrder o) => CheckSplit(o, out _, out _);
 
+    /// <summary>The path ships split off with a destination fly: their slowest speed, no navigator (a new fleet has no leaders).
+    /// rule: m3-fleets §Orders (SplitFleet: sending ships).</summary>
+    private PathResult SendPath(string from, IEnumerable<EconObject> ships, string destination) =>
+        FindPath(from, destination, TravelFormula.FleetSpeed(ships.Select(SpeedOfShip), Array.Empty<int>()));
+
+    /// <summary>Days a SplitFleet order with a destination would take if given now (0 when it would be refused).</summary>
+    public int SplitSendDays(SplitFleetOrder o) =>
+        o.Destination != null && CheckSplit(o, out var fleet, out var ships) == null ? SendPath(fleet.At!, ships, o.Destination).TotalTicks : 0;
+
     private string? CheckSplit(SplitFleetOrder o, out Fleet fleet, out List<EconObject> ships)
     {
         ships = new List<EconObject>();
@@ -58,8 +67,7 @@ public sealed partial class FleetModule
                 if (target == fleet) return RejectReason.SameFleet;
                 if (target.Ships.Count == 0) return RejectReason.SquadronFleet;
             }
-            int speed = TravelFormula.FleetSpeed(ships.Select(SpeedOfShip), Array.Empty<int>());
-            var path = FindPath(fleet.At!, o.Destination, speed);
+            var path = SendPath(fleet.At!, ships, o.Destination);
             if (!path.Ok) return RejectStatus(path.Status);
         }
         return null;
@@ -75,7 +83,7 @@ public sealed partial class FleetModule
         var f = NewFleet(o.Side, system, ships.Select(s => s.Id));
         var members = new ValueList<int>(f.Ships.ToList());
         ctx.Emit((i, _) => new FleetCreated(i, day, f.Id, system, members, FleetCreateCause.SplitFleet));
-        if (o.Destination != null && PlanPath(f, o.Destination) is { Ok: true } path)
+        if (o.Destination != null && SendPath(system, ships, o.Destination) is { Ok: true } path)   // checked above: the same path
         {
             // rule: m3-fleets §Orders (SplitFleet: sending ships): the new fleet leaves as if a MoveFleet had been accepted for it
             var names = path.Names(Galaxy).ToList();

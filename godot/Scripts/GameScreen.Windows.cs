@@ -6,7 +6,6 @@ using Praedra.Core.Characters;
 using Praedra.Core.Missions;
 using Praedra.Core.Economy;
 using Praedra.Core.Fleets;
-using Praedra.Core.Travel;
 using RejectReason = Praedra.Core.Clock.RejectReason;
 using UnloadRegimentsOrder = Praedra.Core.Clock.UnloadRegimentsOrder;
 using LoadRegimentsOrder = Praedra.Core.Clock.LoadRegimentsOrder;
@@ -1057,9 +1056,9 @@ public partial class GameScreen
         {
             // rule: m3-fleets §Orders (SplitFleet: sending ships)
             int id = d.Id;
-            int speed = TravelFormula.FleetSpeed(new[] { Fm.SpeedOfShip(S.Host.Economy.Find(id)) }, Array.Empty<int>());
-            int days = Fm.FindPath(from.At, f.At, speed) is { Ok: true } p ? p.TotalTicks : 0;
-            S.TrackFleet(from.Id, S.Game.Submit(seq => new SplitFleetOrder(seq, Me, from.Id, One(id), f.At, f.Id)), $"Send the {ThingName(d)} from {from.Name} to join {f.Name}");
+            var order = new SplitFleetOrder(0, Me, from.Id, One(id), f.At, f.Id);
+            int days = Fm.SplitSendDays(order);
+            S.TrackFleet(from.Id, S.Game.Submit(seq => order with { Sequence = seq }), $"Send the {ThingName(d)} from {from.Name} to join {f.Name}");
             Sent($"send the {ThingName(d)} from {from.Name} to join {f.Name} at {f.At}", f.At);
             _moved[d.Key] = ($"flies to join {f.Name}, {Ui.Count(days, "day", "days")}", $"Fleet {f.Id} Ships");
             return;
