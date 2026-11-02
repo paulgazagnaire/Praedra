@@ -248,6 +248,45 @@ public class FleetOrderTests
         Assert.Equal(before, Snap(w));
     }
 
+    // m3-fleets §Orders (MoveFleet: joining a fleet on arrival, Paul 2026-11-02) J1
+    [Fact]
+    public void J1_AFleetSentToJoinAnotherMergesIntoItOnArrival()
+    {
+        var w = F();
+        Assert.Null(Step(w, w.Fleets.SubmitSplitFleet(Emp, 200, new[] { 203 })));   // 204 = Warrant 203
+        Assert.Null(Step(w, w.Fleets.SubmitMove(Emp, 200, Far)));
+        Assert.Null(Step(w, w.Fleets.SubmitMove(Emp, 204, Far, null, joinFleet: 200)));
+        w.Run(40);
+        Assert.False(w.State.Fleets.ContainsKey(204));
+        Assert.Equal(new[] { 201, 202, 203 }, Ships(w, 200));
+        Assert.Equal(Far, w.State.Fleets[200].At);
+        var d = w.Events<FleetDissolved>().Single(e => e.Fleet == 204);
+        Assert.Equal(DissolveCause.Merged, d.Cause);
+    }
+
+    // m3-fleets §Orders (MoveFleet: joining a fleet on arrival) J2: a fleet that left is not followed; the join is forgotten
+    [Fact]
+    public void J2_ATargetThatLeftIsNotFollowed()
+    {
+        var w = F();
+        Assert.Null(Step(w, w.Fleets.SubmitSplitFleet(Emp, 200, new[] { 203 })));
+        Assert.Null(Step(w, w.Fleets.SubmitMove(Emp, 204, Far, null, joinFleet: 200)));   // 200 stays at Home
+        w.Run(40);
+        Assert.True(w.State.Fleets.ContainsKey(204));
+        Assert.Equal((Far, 0), (w.State.Fleets[204].At, w.State.Fleets[204].JoinFleet));
+        Assert.Equal(new[] { 201, 202 }, Ships(w, 200));
+    }
+
+    // m3-fleets §Orders (MoveFleet: joining a fleet on arrival) J3: the target must be another fleet of the same side
+    [Fact]
+    public void J3_JoiningItselfIsRefused()
+    {
+        var w = F();
+        string before = Snap(w);
+        Assert.Equal(RejectReason.SameFleet, Step(w, w.Fleets.SubmitMove(Emp, 200, Far, null, joinFleet: 200)));
+        Assert.Equal(before, Snap(w));
+    }
+
     // m3-fleets F10
     [Fact]
     public void F10_ASplitAfterAMoveInTheSameStepIsInTransit()

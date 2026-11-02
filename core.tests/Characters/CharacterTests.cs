@@ -371,6 +371,28 @@ public class CharacterTests
         Assert.Equal("B", w.Ch.LocationOf(w.C(FortyOne)));
     }
 
+    // m5-characters-and-talent §Moving a character alone (Joining a fleet on arrival, Paul 2026-11-02) CH13j
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void CH13j_ALeaderSentToAFleetTakesThePostOnArrival(bool fleetStays)
+    {
+        var w = new CharWorld(data: LineGalaxy("route"));
+        int f = w.Fleet(Side.Collective, "C");
+        w.Add(FortyOne, "A");
+        Assert.Null(w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, FortyOne, "C", f, CharacterPost.Admiral)));
+        if (!fleetStays) Assert.Null(w.Try(seq => new MoveFleetOrder(seq, Side.Collective, f, "B")));
+        while (w.Events<CharacterArrived>().Count == 0) w.Game.Step();
+        var c = w.C(FortyOne);
+        if (fleetStays)
+        {
+            Assert.Equal((f, CharacterPost.Admiral), (c.AttachedFleet, c.Post));
+            Assert.Equal(CharacterCause.Order, Assert.Single(w.Events<CharacterAttached>()).Cause);
+        }
+        else Assert.Equal((0, "C"), (c.AttachedFleet, w.Ch.LocationOf(c)));
+        Assert.Equal((0, CharacterPost.None, false), (c.JoinFleet, c.JoinPost, c.JoinByOrder));
+    }
+
     // m5-characters-and-talent CH13 (not stopped on the way)
     [Fact]
     public void CH13_NotStoppedByAnEnemyFleet()

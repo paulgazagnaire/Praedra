@@ -426,6 +426,8 @@ public partial class Main
         Expect(GameBoot.SaveExists(GameBoot.AutoSaveSlot), "autosave written during the run");
         Expect(gs.LogRows > 0 && gs.LogRows <= 400, "log stays capped");
 
+        PlaytestWindows(gs); // late: its drops move leaders, troops and ships, and the days it runs would shift the checks above
+
         // ---------------------------------------------------------------- victory screen (core debug order, test only)
         PlaytestEnding(gs, true);
         // ---------------------------------------------------------------- defeat screen on a fresh game

@@ -118,6 +118,12 @@ public sealed class CharacterRecord
     /// <summary>The fleet an autorouted character joins on arrival (Autoroute step 4; 0 = none). QA-9.</summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public int JoinFleet { get; set; }
+    /// <summary>The post he asked for in that fleet (a MoveCharacter with a fleet; None = passenger). rule: §Moving a character alone (Paul 2026-11-02).</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public CharacterPost JoinPost { get; set; }
+    /// <summary>The join comes from the player's order, not from autorouting.</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool JoinByOrder { get; set; }
     /// <summary>A lone character's trip, exactly as a fleet's. rule: m5-characters-and-talent §Moving a character alone.</summary>
     public FleetTransit? Transit { get; set; }
 
@@ -154,7 +160,7 @@ public sealed class CharacterRecord
     {
         Id = Id, Side = Side, Placed = Placed, Skills = new List<int>(Skills), Loyalty = Loyalty, TalentExperience = TalentExperience, TalentTraining = TalentTraining,
         TalentHolder = TalentHolder, TalentDiscovered = TalentDiscovered, Talented = Talented, DiscoveredTalentHolder = DiscoveredTalentHolder, IdentifiedTraitor = IdentifiedTraitor, Status = Status, System = System, AttachedFleet = AttachedFleet, Post = Post,
-        Captor = Captor, HeldAt = HeldAt, HeldAboard = HeldAboard, HeldAboardShip = HeldAboardShip, ReturnPlace = ReturnPlace, AutoroutePending = AutoroutePending, JoinFleet = JoinFleet, Injury = Injury, LeadershipAdjustment = LeadershipAdjustment, PairId = PairId, KnowsHeritage = KnowsHeritage,
+        Captor = Captor, HeldAt = HeldAt, HeldAboard = HeldAboard, HeldAboardShip = HeldAboardShip, ReturnPlace = ReturnPlace, AutoroutePending = AutoroutePending, JoinFleet = JoinFleet, JoinPost = JoinPost, JoinByOrder = JoinByOrder, Injury = Injury, LeadershipAdjustment = LeadershipAdjustment, PairId = PairId, KnowsHeritage = KnowsHeritage,
         AwakenedBy = AwakenedBy, NextEscapeDay = NextEscapeDay, NextHealDay = NextHealDay, NextAwakenDay = NextAwakenDay,
         Transit = Transit == null ? null : new FleetTransit
         { Path = new List<string>(Transit.Path), HopTicks = new List<int>(Transit.HopTicks), HopIndex = Transit.HopIndex, DueDay = Transit.DueDay },

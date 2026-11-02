@@ -18,7 +18,10 @@ public sealed record AssignSystemGeneralOrder(long Sequence, Side Side, int Char
 public sealed record ReleaseSystemGeneralOrder(long Sequence, Side Side, string System) : Order(Sequence, Side);
 
 /// <summary>Send a lone character to a system at speed 100. rule: §Moving a character alone (MoveCharacter).</summary>
-public sealed record MoveCharacterOrder(long Sequence, Side Side, int Character, string System) : Order(Sequence, Side);
+/// <summary>Move a lone character. With <paramref name="JoinFleet"/> he joins that fleet on arrival, in <paramref name="JoinPost"/> when it is free
+/// and he can hold it, else as a passenger; a fleet gone from the system is not followed. rule: m5-characters-and-talent §Moving a character alone
+/// (Joining a fleet on arrival, Paul 2026-11-02).</summary>
+public sealed record MoveCharacterOrder(long Sequence, Side Side, int Character, string System, int JoinFleet = 0, CharacterPost JoinPost = CharacterPost.None) : Order(Sequence, Side);
 
 /// <summary>Rejection reasons of the character orders (the sheet's names). rule: m5-characters-and-talent §Posts (Orders), §Moving a character alone.</summary>
 public static class CharacterReject

@@ -30,6 +30,10 @@ public sealed class Fleet
     public string? PreviousSystem { get; set; }
     /// <summary>Set while the fleet has an accepted order that has not finished. rule: m1-travel §Orders in transit.</summary>
     public FleetTransit? Transit { get; set; }
+    /// <summary>The fleet this one merges into on arrival (0 = none). Set by a MoveFleet with a fleet to join, cleared by any other accepted
+    /// MoveFleet and when it arrives. rule: m3-fleets §Orders (MoveFleet: joining a fleet on arrival, Paul 2026-11-02).</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public int JoinFleet { get; set; }
 }
 
 /// <summary>

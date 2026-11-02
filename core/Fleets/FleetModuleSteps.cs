@@ -82,6 +82,35 @@ public sealed partial class FleetModule
         ctx.Emit((i, _) => new ShipsTransferred(i, day, ids, from, to.Id));
     }
 
+    /// <summary>
+    /// Fleets sent to join another merge into it once both stand still at the same system, after the day's battles (slot 5.6, fleet id order).
+    /// A fleet that has arrived and finds its target elsewhere, moving or gone forgets the join and stays. No draw.
+    /// rule: m3-fleets §Orders (MoveFleet: joining a fleet on arrival, Paul 2026-11-02).
+    /// </summary>
+    private void JoinsOnArrival(StepContext ctx)
+    {
+        int day = ctx.Day;
+        foreach (var f in State.Fleets.Values.Where(x => x.JoinFleet != 0).OrderBy(x => x.Id).ToList())
+        {
+            if (!State.Fleets.ContainsKey(f.Id) || f.Transit != null || f.At == null) continue; // still flying (or already merged away)
+            int into = f.JoinFleet;
+            f.JoinFleet = 0;
+            if (!State.Fleets.TryGetValue(into, out var t) || t.Side != f.Side || t.At != f.At || Moving(t) || f.Ships.Count == 0 || t.Ships.Count == 0) continue;
+            MergeInto(ctx, day, f, t);
+        }
+    }
+
+    private void MergeInto(StepContext ctx, int day, Fleet from, Fleet into)
+    {
+        var moved = from.Ships.ToList();
+        foreach (var id in moved) { AddSorted(into.Ships, id); }
+        from.Ships.Clear();
+        var ids = new ValueList<int>(moved);
+        var left = new ValueList<int>(new List<int> { from.Id });
+        ctx.Emit((i, _) => new ShipsTransferred(i, day, ids, left, into.Id));
+        RemoveFleet(ctx, day, from, DissolveCause.Merged, into.Id); // the spare flag leaves with the removed fleet (m3-fleets §New ships)
+    }
+
     // rule: m3-fleets §Orders (MergeFleets): UnknownFleet, NotYours, SameFleet, InTransit, NotSameSystem, SquadronFleet
     private OrderResult HandleMergeFleets(StepContext ctx, MergeFleetsOrder o)
     {
@@ -93,14 +122,7 @@ public sealed partial class FleetModule
         if (from.At != into.At) return OrderResult.Reject(RejectReason.NotSameSystem);
         if (from.Ships.Count == 0 || into.Ships.Count == 0) return OrderResult.Reject(RejectReason.SquadronFleet);
 
-        int day = ctx.Day;
-        var moved = from.Ships.ToList();
-        foreach (var id in moved) { AddSorted(into.Ships, id); }
-        from.Ships.Clear();
-        var ids = new ValueList<int>(moved);
-        var left = new ValueList<int>(new List<int> { from.Id });
-        ctx.Emit((i, _) => new ShipsTransferred(i, day, ids, left, into.Id));
-        RemoveFleet(ctx, day, from, DissolveCause.Merged, into.Id); // the spare flag leaves with the removed fleet (m3-fleets §New ships)
+        MergeInto(ctx, ctx.Day, from, into);
         return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
     }
 
@@ -220,8 +242,17 @@ public sealed partial class FleetModule
         // An accepted order marks the fleet in transit at once, so a second order in the same Step lands here (K6, K7).
         if (fleet.Transit != null || fleet.At == null) return OrderResult.Reject(RejectReason.InTransit);
 
+        if (o.JoinFleet != 0)
+        {
+            // rule: m3-fleets §Orders (MoveFleet: joining a fleet on arrival): a fleet of the same side, not itself
+            if (!State.Fleets.TryGetValue(o.JoinFleet, out var target)) return OrderResult.Reject(RejectReason.UnknownFleet);
+            if (target.Side != o.Side) return OrderResult.Reject(RejectReason.NotYours);
+            if (target == fleet) return OrderResult.Reject(RejectReason.SameFleet);
+            if (fleet.Ships.Count == 0) return OrderResult.Reject(RejectReason.SquadronFleet);
+        }
         var path = PlanPath(fleet, o.Destination, o.Waypoints?.Items); // rule: m1-travel §Path rule (3), (5): the same function as the preview
         if (!path.Ok) return OrderResult.Reject(RejectStatus(path.Status));
+        fleet.JoinFleet = o.JoinFleet;
 
         var names = path.Names(Galaxy).ToList();
         fleet.Transit = new FleetTransit

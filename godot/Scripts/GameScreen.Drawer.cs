@@ -146,7 +146,7 @@ public partial class GameScreen
 
     void RebuildPanel()
     {
-        if (_tab == DrawerTab.Log) { RefreshTabTitles(); RefreshSectorView(); return; } // the sector window shows orders given in it whatever tab is open
+        if (_tab == DrawerTab.Log) { RefreshTabTitles(); RefreshSectorView(); RefreshMgmt(); return; } // the sector window shows orders given in it whatever tab is open
         float scroll = _scroll.ScrollVertical;
         string key = PanelKey();
         ClearPanel();
@@ -168,7 +168,7 @@ public partial class GameScreen
                 break;
         }
         RefreshTabTitles();
-        RefreshSectorView(); // an order given in the sector window shows there too
+        RefreshSectorView(); RefreshMgmt(); // an order given in a window shows there too
         // the same thing rebuilt (a new day) keeps its scroll; a new thing starts at the top
         if (key == _lastPanelKey) Callable.From(() => _scroll.ScrollVertical = (int)scroll).CallDeferred();
         else _scroll.ScrollVertical = 0;

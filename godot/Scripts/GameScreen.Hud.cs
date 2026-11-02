@@ -113,10 +113,13 @@ public partial class GameScreen
         Fact("FLEETS", ownFleets + enemy == 0 ? "none" : string.Join(", ", new[] { ownFleets > 0 ? $"{ownFleets} yours" : null, enemy > 0 ? $"{enemy} enemy" : null }.Where(x => x != null)),
             enemy > 0 ? Ui.Enemy : null);
 
+        // the management windows open from any system, with or without its sector window (Paul 2026-11-02: "not tied to a sector")
+        if (!S.IsDestroyed(name))
+            CardButton("Ground", () => OpenMgmt(MgKind.Ground, name), "Leaders, regiments, fighters and agents here: drag them between windows");
         if (mine && !S.IsDestroyed(name))
-            CardButton("Build", () => { _sysTab = SysTab.Build; ShowTab(DrawerTab.Selected); }, "Build ships, troops or buildings here");
+            CardButton("Infra", () => OpenMgmt(MgKind.Infra, name), "Buildings, slots and what this planet builds");
         if (ownFleets > 0)
-            CardButton("Fleets here", () => { _sysTab = SysTab.Fleets; ShowTab(DrawerTab.Selected); }, "Your fleets at this system");
+            CardButton("Fleets", () => OpenFromTile(name, "fleets"), "Open the windows of your fleets here");
         _selActions.AddChild(Ui.Grow());
         CardButton("Details →", () => { _sysTab = SysTab.Overview; ShowTab(DrawerTab.Selected); }, "Everything about this system, in the window");
     }
@@ -133,6 +136,8 @@ public partial class GameScreen
         if (f.At != null)
             CardButton(_moveFleet == f.Id ? "Cancel move" : "Move...", () => { if (_moveFleet == f.Id) CancelMove(); else StartMove(f); },
                 "Pick a destination on the map: the route and the arrival day show before you confirm", "Primary");
+        int fid = f.Id;
+        CardButton("Window", () => OpenMgmt(MgKind.Fleet, fleet: fid), "The fleet's window: drag leaders onto its posts, troops and fighters aboard, ships between fleets");
         _selActions.AddChild(Ui.Grow());
         CardButton("Details →", () => ShowTab(DrawerTab.Selected), "Ships, troops, officers, split and attack, in the window");
     }

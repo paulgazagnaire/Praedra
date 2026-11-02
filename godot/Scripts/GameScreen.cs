@@ -154,6 +154,7 @@ public partial class GameScreen : Control
         _panelDirty = true; _fleetListDirty = true; _attentionDirty = true;
         _view.QueueRedraw(); // owners, blockades and uprisings may have changed
         RefreshSectorView();
+        RefreshMgmt();
         if (oc.Winner is Side w) { ShowVictory(w); Pause(); return false; }
 
         // The core's own pauses (a battle, a capture, an invasion, a harvest), each of which the Settings can switch off; then the events the
@@ -197,6 +198,7 @@ public partial class GameScreen : Control
 
         TickToasts(delta);
         TickSectorView(delta);
+        TickMgmt(delta);
 
         var pan = Vector2.Zero;
         if (!OverlayOpen && !SectorViewOpen && GetViewport().GuiGetFocusOwner() is not LineEdit)
@@ -269,7 +271,8 @@ public partial class GameScreen : Control
         if (_menuPopup.Visible) { ToggleMenu(); return; }
         if (CloseTopModal()) return;
         if (_searchResults.Visible) { CloseSearch(); return; }
-        if (SectorViewOpen) { if (_secDetail.Visible) CloseSystemPane(); else CloseSectorView(); return; }
+        if (CloseTopMgmt()) return;
+        if (SectorViewOpen) { CloseSectorView(); return; }
         if (InMoveMode) { CancelMove(); return; }
         if (_plan != null) { ClosePlanner(); return; }
         if (_drawer.Visible) { CloseDrawer(); return; }
