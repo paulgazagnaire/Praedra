@@ -287,6 +287,8 @@ public class FleetOrderTests
         Assert.True(w.State.Fleets.ContainsKey(204));
         Assert.Equal((Far, 0), (w.State.Fleets[204].At, w.State.Fleets[204].JoinFleet));
         Assert.Equal(new[] { 201, 202 }, Ships(w, 200));
+        var failed = Assert.Single(w.Events<FleetJoinFailed>());   // QA-83: the player is told
+        Assert.Equal((204, 200, Far, "elsewhere"), (failed.Fleet, failed.Into, failed.System, failed.Reason));
     }
 
     // m3-fleets §Orders (MoveFleet: joining a fleet on arrival) J3: the target must be another fleet of the same side
