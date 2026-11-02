@@ -97,6 +97,7 @@ public sealed class ConstructionModule
         if (support != null) m.IsInUprising = support.IsUprising; // yards stop in an uprising (m2-uprisings-and-garrison)
         game.RegisterOrderHandler<BuildOrder>(m.HandleBuild);
         game.RegisterOrderHandler<StopBuildOrder>(m.HandleStop);
+        game.RegisterOrderHandler<SendRegimentOrder>(m.HandleSendRegiment);
         game.RegisterHook("3", m.DeliveryArrivals);
         game.RegisterHook("4", m.DeliveryStops);
         game.RegisterHook("6.6", m.YardsHook);
@@ -289,6 +290,56 @@ public sealed class ConstructionModule
     }
 
     // rule: m2-construction §Projects and queues (StopBuild = cancel without a new order)
+    /// <summary>
+    /// Why a SendRegiment order would be refused now (null: accepted). A regiment travels alone, as a delivery (speed, holds and lost
+    /// destination as m2-construction), only to a system its side holds; to anywhere else it needs a ship. Paul 2026-11-02: "What I cannot do
+    /// is take a regiment alone and send it to a system I do not control." rule: m3-troops-and-special-forces §Orders (SendRegiment).
+    /// </summary>
+    public string? CheckSendRegiment(SendRegimentOrder o) => CheckSend(o, out _, out _);
+
+    /// <summary>Days a SendRegiment order would take if given now (0 when it would be refused).</summary>
+    public int SendRegimentDays(SendRegimentOrder o) =>
+        CheckSend(o, out var obj, out var from) == null ? _fleets.FindPath(from, o.Destination, DeliverySpeed(_eco.Costs.Get(obj.Class))).TotalTicks : 0;
+
+    private string? CheckSend(SendRegimentOrder o, out EconObject obj, out string from)
+    {
+        from = "";
+        if (!E.Objects.TryGetValue(o.Regiment, out obj!) || obj.Category != ObjectCategory.Regiment) return RejectReason.UnknownObject;
+        if (obj.Side != o.Side) return RejectReason.NotYours;
+        if (!obj.Completed) return RejectReason.NotCompleted;
+        if (obj.AboardShip != 0)
+        {
+            int ship = obj.AboardShip;
+            var f = State.Fleets.Values.FirstOrDefault(x => x.Ships.Contains(ship));
+            if (f == null || f.Transit != null || f.At == null) return RejectReason.InTransit;
+            from = f.At;
+        }
+        else if (obj.System is string s) from = s;
+        else return RejectReason.InTransit; // already travelling
+        if (!_galaxy.TryFindSystem(o.Destination, out _)) return RejectReason.UnknownSystem;
+        if (o.Destination == from) return RejectReason.AlreadyThere;
+        if (!Controls(o.Destination, o.Side)) return RejectReason.NotYourSystem;
+        if (!_fleets.FindPath(from, o.Destination, DeliverySpeed(_eco.Costs.Get(obj.Class))).Ok) return RejectReason.Unreachable;
+        return null;
+    }
+
+    private OrderResult HandleSendRegiment(StepContext ctx, SendRegimentOrder o)
+    {
+        if (CheckSend(o, out var obj, out var from) is { } bad) return OrderResult.Reject(bad);
+        var path = _fleets.FindPath(from, o.Destination, DeliverySpeed(_eco.Costs.Get(obj.Class)));
+        obj.AboardShip = 0; obj.System = null;
+        var d = new Delivery
+        {
+            Id = C.NextDeliveryId++, Side = o.Side, Object = obj.Id, From = from, To = o.Destination,
+            Path = path.Names(_galaxy).ToList(), HopTicks = path.HopTicks.ToList(),
+            Index = 0, InFlight = true, DueDay = ctx.Day + path.HopTicks[0], // as a fleet's MoveFleet: first hop due K + ticks
+        };
+        C.Deliveries[d.Id] = d;
+        AnnounceDeparture(ctx, ctx.Day, d);
+        int total = path.TotalTicks, arrival = ctx.Day + total; var names = new ValueList<string>(d.Path.ToList());
+        return OrderResult.Accept((i, dd) => new OrderAccepted(i, dd, o.Sequence, null, names, total, arrival));
+    }
+
     private OrderResult HandleStop(StepContext ctx, StopBuildOrder o)
     {
         if (!_galaxy.TryFindSystem(o.System, out _)) return OrderResult.Reject(RejectReason.UnknownSystem);

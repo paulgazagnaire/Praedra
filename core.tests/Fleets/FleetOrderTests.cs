@@ -291,6 +291,37 @@ public class FleetOrderTests
         Assert.Equal((204, 200, Far, "elsewhere"), (failed.Fleet, failed.Into, failed.System, failed.Reason));
     }
 
+    // m3-fleets §Orders (SplitFleet: sending ships, Paul 2026-11-02) J4: one capital ship splits off, flies alone and joins on arrival
+    [Fact]
+    public void J4_OneShipSentToAFleetElsewhereSplitsFliesAndJoins()
+    {
+        var w = F();
+        Assert.Null(Step(w, w.Fleets.SubmitSplitFleet(Emp, 200, new[] { 202, 203 })));   // 204 = Mandate 202 + Warrant 203
+        Assert.Null(Step(w, w.Fleets.SubmitMove(Emp, 204, Far)));
+        w.Run(40);
+        Assert.Equal(Far, w.State.Fleets[204].At);
+        long seq = w.Game.Submit(q => new SplitFleetOrder(q, Emp, 200, new() { 201 }, Far, 204));
+        Assert.Equal(RejectReason.WholeFleet, Step(w, seq));   // the last ship: the whole fleet moves instead
+        Assert.Null(Step(w, w.Game.Submit(q => new SplitFleetOrder(q, Emp, 204, new() { 203 }, Home, 200))));
+        int sent = w.Events<FleetCreated>().Last().Fleet;
+        Assert.NotNull(w.State.Fleets[sent].Transit);
+        w.Run(40);
+        Assert.False(w.State.Fleets.ContainsKey(sent));
+        Assert.Equal(new[] { 201, 203 }, Ships(w, 200).OrderBy(x => x).ToArray());
+        Assert.Equal(new[] { 202 }, Ships(w, 204));
+    }
+
+    // m3-fleets §Orders (SplitFleet: sending ships) J5: the send is checked as a move; nothing changes on a refusal
+    [Fact]
+    public void J5_ASendToJoinItsOwnFleetIsRefused()
+    {
+        var w = F();
+        string before = Snap(w);
+        Assert.Equal(RejectReason.SameFleet, Step(w, w.Game.Submit(q => new SplitFleetOrder(q, Emp, 200, new() { 203 }, Far, 200))));
+        Assert.Equal(RejectReason.UnknownSystem, w.Fleets.CheckSplitFleet(new SplitFleetOrder(0, Emp, 200, new() { 203 }, "No Such System")));
+        Assert.Equal(before, Snap(w));
+    }
+
     // m3-fleets §Orders (MoveFleet: joining a fleet on arrival) J3: the target must be another fleet of the same side
     [Fact]
     public void J3_JoiningItselfIsRefused()

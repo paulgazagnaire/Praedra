@@ -137,6 +137,56 @@ public partial class Main
         }
         else GD.Print("  (no fleet of three ships: the two-ship split is not checked on this side)");
 
+        // ---------------------------------------------------------------- a regiment goes alone to another system you hold, never to one you don't (Paul 2026-11-02)
+        var cons = s.Host.Construction;
+        var lone = s.Game.State.Economy.Objects.Values.Where(o => o.Side == me && o.Category == ObjectCategory.Regiment && o.Completed && o.System != null && o.AboardShip == 0)
+            .OrderBy(o => o.Id).FirstOrDefault();
+        if (lone != null)
+        {
+            string home = lone.System;
+            string held = s.Data.Galaxy.Systems.Select(x => x.Name).Where(n => n != home && s.OwnerOf(n) == me).OrderBy(n => n)
+                .FirstOrDefault(n => cons.CheckSendRegiment(new Praedra.Core.Clock.SendRegimentOrder(0, me, lone.Id, n)) == null);
+            if (held != null)
+            {
+                gs.ShotWindow("ground", held); gs.PlayRefresh();
+                string r = gs.MgDrop($"R:{lone.Id}", $"Ground {held} Regiments");
+                Expect(r == null, $"drop a regiment from {home} on {held}'s regiments: {r ?? "sent"}");
+                Expect(gs.MgText($"Ground {held}").Contains("on the way"), "the Ground window shows it on the way");
+                gs.PlayDay();
+                Expect(cons.Deliveries.Any(d => d.Object == lone.Id && d.To == held), $"next day it travels alone to {held}");
+            }
+            var other = s.Game.State.Economy.Objects.Values.Where(o => o.Side == me && o.Category == ObjectCategory.Regiment && o.Completed && o.System != null && o.AboardShip == 0)
+                .OrderBy(o => o.Id).FirstOrDefault();
+            string enemy = other == null ? null : s.Data.Galaxy.Systems.Select(x => x.Name).Where(n => n != other.System && s.OwnerOf(n) != me).OrderBy(n => n).FirstOrDefault();
+            if (enemy != null)
+            {
+                gs.ShotWindow("ground", enemy); gs.PlayRefresh();
+                string no = gs.MgDrop($"R:{other.Id}", $"Ground {enemy} Regiments");
+                // a planet you don't hold shows no regiments to drop on; where it does, the drop says why
+                Expect(no != null && (no.Contains("need a ship") || no.StartsWith("no such zone")), $"a regiment alone can't go to {enemy}, not yours: {no}");
+                Expect(cons.CheckSendRegiment(new Praedra.Core.Clock.SendRegimentOrder(0, me, other.Id, enemy)) == Praedra.Core.Clock.RejectReason.NotYourSystem, "the core refuses it too");
+            }
+        }
+
+        // ---------------------------------------------------------------- one capital ship flies alone to a fleet in another system and joins it
+        var mine = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null && f.Transit == null && f.Ships.Count > 0).OrderBy(f => f.Id).ToList();
+        var send = mine.Where(f => f.Ships.Count >= 2)
+            .SelectMany(f => mine.Where(t => t.At != f.At).Select(t => (f, t)))
+            .FirstOrDefault(p => fm.CheckSplitFleet(new Praedra.Core.Clock.SplitFleetOrder(0, me, p.f.Id, new() { p.f.Ships[^1] }, p.t.At, p.t.Id)) == null);
+        if (send.f != null)
+        {
+            var (src, dst) = send;
+            int one = src.Ships[^1];
+            gs.ShotWindow("fleet", dst.Id.ToString()); gs.PlayRefresh();
+            string r = gs.MgDrop($"S:{one}", $"Fleet {dst.Id} Ships");
+            Expect(r == null, $"drop one ship of {src.Name} ({src.At}) on {dst.Name} ({dst.At}): {r ?? "sent"}");
+            gs.PlayDay();
+            var flying = s.Game.State.Fleets.Values.FirstOrDefault(f => f.Ships.Contains(one));
+            Expect(flying != null && flying.Id != src.Id && flying.JoinFleet == dst.Id && (flying.Transit != null || flying.At == dst.At),
+                $"next day it has split off and flies to join {dst.Name}");
+        }
+        else GD.Print("  (no fleet of two ships with another fleet elsewhere: the lone-ship send is not checked on this side)");
+
         // ---------------------------------------------------------------- Esc closes the top window first
         for (int i = 0; i < 5 && gs.AnyModal; i++) gs.PressKey(Key.Escape);   // a report the days opened goes first
         int open = gs.MgmtCount;

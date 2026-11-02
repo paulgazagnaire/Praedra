@@ -654,4 +654,40 @@ public class TroopTests
         TroopModule.Land(w.Obj(403), Home);
         Assert.Equal((Home, 0), (w.Obj(403).System, w.Obj(403).AboardShip));
     }
+
+    // ---------------------------------------------------------------- SendRegiment (Paul 2026-11-02)
+
+    // m3-troops-and-special-forces §Orders (SendRegiment) S1: a regiment on a held planet goes alone to another held system
+    [Fact]
+    public void S1_ARegimentGoesAloneToAHeldSystem()
+    {
+        var w = T();
+        Assert.Null(Step(w, w.Game.Submit(q => new SendRegimentOrder(q, Emp, 401, Far))));
+        Assert.Null(w.Obj(401).System);
+        w.Run(30);
+        Assert.Equal((Far, 0), (w.Obj(401).System, w.Obj(401).AboardShip));
+    }
+
+    // m3-troops-and-special-forces §Orders (SendRegiment) S2: a regiment aboard a still fleet leaves the ship and goes alone
+    [Fact]
+    public void S2_ARegimentAboardAFleetGoesAloneToAHeldSystem()
+    {
+        var w = T();
+        Assert.Null(Load(w, 200, 401));
+        Assert.Null(Step(w, w.Game.Submit(q => new SendRegimentOrder(q, Emp, 401, Far))));
+        Assert.Equal(0, w.Obj(401).AboardShip);
+        w.Run(30);
+        Assert.Equal(Far, w.Obj(401).System);
+    }
+
+    // m3-troops-and-special-forces §Orders (SendRegiment) S3: never alone to a system the side does not hold; nothing changes
+    [Fact]
+    public void S3_ARegimentNeedsAShipToGoWhereTheSideDoesNotHold()
+    {
+        var w = T();
+        string before = Snap(w);
+        Assert.Equal(RejectReason.NotYourSystem, Step(w, w.Game.Submit(q => new SendRegimentOrder(q, Emp, 401, "Cambium"))));
+        Assert.Equal(RejectReason.AlreadyThere, w.Build.CheckSendRegiment(new SendRegimentOrder(0, Emp, 401, Home)));
+        Assert.Equal(before, Snap(w));
+    }
 }

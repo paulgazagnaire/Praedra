@@ -26,6 +26,7 @@ public enum Side { Hand = 0, Collective = 1 }
 [JsonDerivedType(typeof(LoadSquadronsOrder), "LoadSquadrons")]
 [JsonDerivedType(typeof(UnloadSquadronsOrder), "UnloadSquadrons")]
 [JsonDerivedType(typeof(DebugSetDamageOrder), "DebugSetDamage")]
+[JsonDerivedType(typeof(SendRegimentOrder), "SendRegiment")]
 [JsonDerivedType(typeof(Praedra.Core.Defenses.BombardOrder), "Bombard")]
 [JsonDerivedType(typeof(Praedra.Core.Assault.AssaultOrder), "Assault")]
 [JsonDerivedType(typeof(Praedra.Core.Battle.SetOnContactOrder), "SetOnContact")]
@@ -99,8 +100,9 @@ public sealed record StopBuildOrder(long Sequence, Side Side, string System, Yar
 /// <summary>Take the listed ships out of their fleets and form one new fleet at their system. rule: m3-fleets §Orders (CreateFleet).</summary>
 public sealed record CreateFleetOrder(long Sequence, Side Side, List<int> Ships) : Order(Sequence, Side);
 
-/// <summary>Take the listed ships out of one fleet into a new fleet. rule: m3-fleets §Orders (SplitFleet).</summary>
-public sealed record SplitFleetOrder(long Sequence, Side Side, int Fleet, List<int> Ships) : Order(Sequence, Side);
+/// <summary>Take the listed ships out of one fleet into a new fleet. With <paramref name="Destination"/> the new fleet sets off at once (as a MoveFleet), joining
+/// <paramref name="JoinFleet"/> there when it is not 0. rule: m3-fleets §Orders (SplitFleet; SplitFleet: sending ships, Paul 2026-11-02).</summary>
+public sealed record SplitFleetOrder(long Sequence, Side Side, int Fleet, List<int> Ships, string? Destination = null, int JoinFleet = 0) : Order(Sequence, Side);
 
 /// <summary>Move the listed ships into an existing fleet at the same system; aboard units go with their ship. rule: m3-fleets §Orders (TransferShips).</summary>
 public sealed record TransferShipsOrder(long Sequence, Side Side, List<int> Ships, int ToFleet) : Order(Sequence, Side);
@@ -118,6 +120,10 @@ public sealed record LoadSquadronsOrder(long Sequence, Side Side, int Fleet, Lis
 public sealed record UnloadSquadronsOrder(long Sequence, Side Side, int Fleet, List<int> Squadrons) : Order(Sequence, Side);
 
 // ---- troop orders. rule: m3-troops-and-special-forces §Orders (step 1, immediate, in order sequence; rejection changes nothing).
+
+/// <summary>Send one regiment (standing on a system, or aboard a fleet standing still) to a system its side holds, as a delivery.
+/// rule: m3-troops-and-special-forces §Orders (SendRegiment, Paul 2026-11-02).</summary>
+public sealed record SendRegimentOrder(long Sequence, Side Side, int Regiment, string Destination) : Order(Sequence, Side);
 
 /// <summary>Put landed regiments of the fleet's system aboard its ships (first free slot by ship id); all or nothing. rule: m3-troops-and-special-forces §Orders (LoadRegiments).</summary>
 public sealed record LoadRegimentsOrder(long Sequence, Side Side, int Fleet, List<int> Regiments) : Order(Sequence, Side);
