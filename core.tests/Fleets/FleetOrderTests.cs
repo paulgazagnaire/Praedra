@@ -219,6 +219,18 @@ public class FleetOrderTests
         Assert.Equal(before, Snap(w));
     }
 
+    // m3-fleets F7 (the screens ask the same check before they send the order: same answer, nothing changes)
+    [Fact]
+    public void F7_SplitCheckAnswersWhatTheOrderWouldGet()
+    {
+        var w = F();
+        string before = Snap(w);
+        Assert.Equal(RejectReason.WholeFleet, w.Fleets.CheckSplitFleet(new SplitFleetOrder(0, Emp, 200, new() { 201, 202, 203 })));
+        Assert.Null(w.Fleets.CheckSplitFleet(new SplitFleetOrder(0, Emp, 200, new() { 203 })));
+        Assert.Equal(RejectReason.SameFleet, w.Fleets.CheckMergeFleets(new MergeFleetsOrder(0, Emp, 200, 200)));
+        Assert.Equal(before, Snap(w));
+    }
+
     // m3-fleets F8
     [Fact]
     public void F8_MergeMovesEveryShipAndRemovesTheSourceFleet()
