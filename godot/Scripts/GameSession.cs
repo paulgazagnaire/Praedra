@@ -273,7 +273,7 @@ public sealed partial class GameSession
         }
     }
 
-    string FleetName(int id) => _fleetOf.TryGetValue(id, out var f) ? f.Name : (Game.State.Fleets.TryGetValue(id, out var g) ? g.Name : $"fleet {id}");
+    string FleetName(int id) => _fleetOf.TryGetValue(id, out var f) ? f.Name : (Game.State.Fleets.TryGetValue(id, out var g) ? g.Name : $"Fleet {id}");
     Side? FleetSide(int id) => _fleetOf.TryGetValue(id, out var f) ? f.Side : (Game.State.Fleets.TryGetValue(id, out var g) ? g.Side : null);
     string ClassName(int id) => _classOf.TryGetValue(id, out var c) ? c : $"unit {id}";
 
@@ -445,7 +445,7 @@ public sealed partial class GameSession
         if (c.AttachedFleet != 0)
         {
             string fn = FleetName(c.AttachedFleet);
-            return c.Post == CharacterPost.None ? $"passenger on fleet {fn}" : $"fleet {PostWords(c.Post)} of {fn}";
+            return c.Post == CharacterPost.None ? $"passenger on {fn}" : $"fleet {PostWords(c.Post)} of {fn}";
         }
         return "no post";
     }
@@ -721,12 +721,12 @@ public sealed partial class GameSession
                 break;
             case CharacterAttached c when Mine(c.Side):
                 yield return new Message(d, c.Cause == CharacterCause.Merged
-                    ? $"{CharName(c.Character)} moved to fleet {FleetName(c.Fleet)} (the fleets merged){(c.Post == CharacterPost.None ? "" : $" as {PostWords(c.Post)}")}."
-                    : c.Post == CharacterPost.None ? $"{CharName(c.Character)} boarded fleet {FleetName(c.Fleet)} as a passenger."
-                    : $"{CharName(c.Character)} joined fleet {FleetName(c.Fleet)} as {PostWords(c.Post)}.", FleetSystem(c.Fleet), MsgKind.Good);
+                    ? $"{CharName(c.Character)} moved to {FleetName(c.Fleet)} (the fleets merged){(c.Post == CharacterPost.None ? "" : $" as {PostWords(c.Post)}")}."
+                    : c.Post == CharacterPost.None ? $"{CharName(c.Character)} boarded {FleetName(c.Fleet)} as a passenger."
+                    : $"{CharName(c.Character)} joined {FleetName(c.Fleet)} as {PostWords(c.Post)}.", FleetSystem(c.Fleet), MsgKind.Good);
                 break;
             case CharacterDetached c when Mine(c.Side) && c.Cause is not (CharacterCause.Injured or CharacterCause.Captured or CharacterCause.Killed):
-                yield return new Message(d, $"{CharName(c.Character)} left fleet {FleetName(c.Fleet)}{At(c.System)}{CauseWords(c.Cause)}.", c.System, c.Cause == CharacterCause.Order ? MsgKind.Info : MsgKind.Warn);
+                yield return new Message(d, $"{CharName(c.Character)} left {FleetName(c.Fleet)}{At(c.System)}{CauseWords(c.Cause)}.", c.System, c.Cause == CharacterCause.Order ? MsgKind.Info : MsgKind.Warn);
                 break;
             case PostVacated p when Mine(p.Side) && (p.Post == PostKind.SystemGeneral || p.Cause is not (CharacterCause.Order or CharacterCause.Injured or CharacterCause.Captured or CharacterCause.Killed)):
                 // a detach by order, an injury, a capture and a death have their own line; this tells the rest (a release, a merge, a lost system)
