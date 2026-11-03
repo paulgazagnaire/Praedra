@@ -27,13 +27,14 @@ public partial class GameScreen
     void Tabs(MgWin w, VBoxContainer into, params (string Name, int? Count, Action Build)[] tabs)
     {
         if (w.Tab == null || !tabs.Any(t => t.Name == w.Tab)) w.Tab = tabs[0].Name;
-        var bar = Ui.HBox(4);
+        var bar = new HFlowContainer();   // wraps rather than widening a narrow column
+        bar.AddThemeConstantOverride("h_separation", 2); bar.AddThemeConstantOverride("v_separation", 4);
         var group = new ButtonGroup();
         var prev = _into;
         foreach (var (name, count, build) in tabs)
         {
             string tabName = name;
-            var b = Ui.Chip(count is int c && c > 0 ? $"{name}  {c}" : name, () => { w.Tab = tabName; Fit(w); }, null, name == w.Tab, group);
+            var b = Ui.Chip(count is int c && c > 0 ? $"{name} {c}" : name, () => { w.Tab = tabName; Fit(w); }, null, name == w.Tab, group);
             b.SetMeta(UiTest.FullName, $"Tab {w.Key} {name}");
             b.FocusMode = FocusModeEnum.None;
             // spring-loaded: hovering a dragged unit over a tab opens it

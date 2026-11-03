@@ -279,7 +279,7 @@ public partial class GameScreen
     public void ShotSector(string name) => OpenSector(name.Replace('_', ' '));
     internal void TileClick(string system, string hot) => OpenFromTile(system, hot);
 
-    /// <summary>--window ground|troops|fighters|fleets|build Charter, or --window fleet 3[:Ships]: open a management window.</summary>
+    /// <summary>--window ground|troops|fighters|fleets|infra Charter, or --window fleet 3[:Ships]: open a management window.</summary>
     public void ShotWindow(string kind, string what)
     {
         if (kind.Equals("pair", StringComparison.OrdinalIgnoreCase))
@@ -306,7 +306,8 @@ public partial class GameScreen
             return;
         }
         // ground (Leaders), infra or build, troops, fighters, fleets: a system's window on that tab
-        string tab = kind.ToLowerInvariant() switch { "infra" or "build" => "Build", "troops" => "Troops", "fighters" => "Fighters", "fleets" => "Fleets", _ => "Leaders" };
+        if (kind.ToLowerInvariant() is "infra" or "build") { OpenMgmt(MgKind.Infra, what.Replace('_', ' ')); return; }
+        string tab = kind.ToLowerInvariant() switch { "troops" => "Troops", "fighters" => "Fighters", "fleets" => "Fleets", _ => "Leaders" };
         OpenMgmt(MgKind.Ground, what.Replace('_', ' '), tab: tab);
     }
     public void ShotGoal() => ShowGoal();
