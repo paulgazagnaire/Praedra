@@ -18,13 +18,21 @@ public partial class GameScreen
     int RefundOf(EconObject o) => (CostRowOf(o)?.Cost ?? 0) / S.Host.Economy.Params.RefundDivisor;
     int UpkeepOf(EconObject o) => CostRowOf(o)?.Maintenance ?? 0;
 
+    readonly HashSet<int> _scrapped = new();   // units and buildings scrapped today (the order applies next day)
+
     static bool Scrappable(EconObject o) => o.Completed && o.Category != ObjectCategory.SpecialForce;
 
     /// <summary>Ask first, then send one scrap order per object. <paramref name="what"/> names them ("2 x Mandate").</summary>
     void AskScrap(IReadOnlyList<EconObject> objects, string what, string system)
     {
-        var list = objects.Where(Scrappable).ToList();
+        var list = objects.Where(o => Scrappable(o) && !_scrapped.Contains(o.Id)).ToList();   // QA-87: one already scrapped today is not sent twice
         if (list.Count == 0) { Toast("Nothing here can be scrapped.", MsgKind.Warn); return; }
+        Confirm($"Scrap {what}?", ScrapWords(list, what, system), "Scrap", () => Scrap(list, what, system), danger: true);
+    }
+
+    /// <summary>What a scrap costs and changes, said before it is sent.</summary>
+    string ScrapWords(List<EconObject> list, string what, string system)
+    {
         int refund = list.Sum(RefundOf), upkeep = list.Sum(UpkeepOf);
         string body = $"{what} will be taken apart when the next day starts. You get {refund} refined back (half the cost) and {upkeep} upkeep is freed. This cannot be undone.";
         if (list.Any(o => o.Category == ObjectCategory.CapitalShip) && list.Any(o => S.Host.Economy.Objects.Any(x => x.AboardShip == o.Id)))
@@ -34,16 +42,28 @@ public partial class GameScreen
         // rule: m2-construction §Scrapping (a scrapped yard loses its running cycle; the last yard of a kind cancels the project)
         if (list.Any(o => o.Category == ObjectCategory.Facility && FacilityKinds.TryParse(o.Class, out var k) && FacilityKinds.IsYard(k)))
             body += " A scrapped yard stops what it is building, and the work in progress is lost.";
-        Confirm($"Scrap {what}?", body, "Scrap", () => Scrap(list, what, system), danger: true);
+        // QA-88: regiments on the ground count toward its garrison (rule: m2-uprisings-and-garrison), as a drag off the planet warns
+        foreach (var g in list.Where(o => o.Category == ObjectCategory.Regiment && o.AboardShip == 0 && o.System != null).GroupBy(o => o.System).OrderBy(g => g.Key, StringComparer.Ordinal))
+            if (S.Host.Support.RegimentCount(g.Key) - (_leaving.TryGetValue(g.Key, out int gone) ? gone : 0) - g.Count() < S.Host.Support.RequiredGarrison(g.Key))
+                body += $" {g.Key} is then short of troops for its garrison: it may rise up.";
+        return body;
     }
+
+    // for the playtest: the question's words, and the scrap as its Yes button sends it
+    internal string ScrapQuestion(int id) => S.Host.Economy.Find(id) is { } o ? ScrapWords(new() { o }, "one " + o.Class, o.System) : "";
+    internal void ScrapNow(int id) { if (S.Host.Economy.Find(id) is { } o) Scrap(new() { o }, "one " + o.Class, o.System); }
 
     void Scrap(List<EconObject> list, string what, string system)
     {
         foreach (var o in list)
         {
+            if (_scrapped.Contains(o.Id)) continue;   // QA-87: a second click on a card still open sends nothing
             int id = o.Id;
             S.Track(S.Game.Submit(seq => new ScrapObjectOrder(seq, Me, id)), $"Scrap {o.Class}");
+            _scrapped.Add(id);   // QA-87: the tile drops it at once, and nothing can send or drag it again today
+            if (o.Category == ObjectCategory.Regiment && o.AboardShip == 0 && o.System != null) _leaving[o.System] = (_leaving.TryGetValue(o.System, out int gone) ? gone : 0) + 1;
         }
+        RefreshMgmt();
         _splitSel.Clear();
         Sent($"scrap {what}", system);
         _panelDirty = true;
