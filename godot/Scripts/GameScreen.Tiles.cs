@@ -28,7 +28,7 @@ public partial class GameScreen
     {
         if (w.Tab == null || !tabs.Any(t => t.Name == w.Tab)) w.Tab = tabs[0].Name;
         var bar = new HFlowContainer();   // wraps rather than widening a narrow column
-        bar.AddThemeConstantOverride("h_separation", 2); bar.AddThemeConstantOverride("v_separation", 4);
+        bar.AddThemeConstantOverride("h_separation", 0); bar.AddThemeConstantOverride("v_separation", 4);
         var group = new ButtonGroup();
         var prev = _into;
         foreach (var (name, count, build) in tabs)
@@ -36,6 +36,7 @@ public partial class GameScreen
             string tabName = name;
             var b = Ui.Chip(count is int c && c > 0 ? $"{name} {c}" : name, () => { w.Tab = tabName; Fit(w); }, null, name == w.Tab, group);
             b.SetMeta(UiTest.FullName, $"Tab {w.Key} {name}");
+            b.ThemeTypeVariation = "TabChip";
             b.FocusMode = FocusModeEnum.None;
             // spring-loaded: hovering a dragged unit over a tab opens it
             b.SetDragForwarding(new Callable(),
