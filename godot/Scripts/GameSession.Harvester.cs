@@ -47,6 +47,50 @@ public sealed partial class GameSession
             ? $"The last report put the enemy harvester at {at}. It moves slowly, but it may have left: the team must go where it stands now."
             : "No enemy harvester has been reported yet. The team must go to the system where it stands.";
 
+    // ---- the harvest report (rule: m5-harvester §7 Harvest report; wording: specs/creative/02-the-hand.md §5). Screens only.
+
+    static Dictionary<string, long> _people;
+
+    /// <summary>People per system (data/design/system-population.csv, from the lore's popB); 0 for a system not in the file.</summary>
+    static long PeopleOf(string system)
+    {
+        if (_people == null)
+        {
+            var map = new Dictionary<string, long>(StringComparer.Ordinal);
+            string path = System.IO.Path.Combine(Godot.ProjectSettings.GlobalizePath("user://gamedata"), "data", "design", "system-population.csv");
+            if (System.IO.File.Exists(path))
+            {
+                var t = Praedra.Core.Data.CsvTable.Load(path);
+                for (int r = 0; r < t.RowCount; r++) map[t.Get(r, "system")] = long.Parse(t.Get(r, "people"), System.Globalization.CultureInfo.InvariantCulture);
+            }
+            _people = map;
+        }
+        return _people.TryGetValue(system, out long n) ? n : 0;
+    }
+
+    /// <summary>A head count as people read it: from a billion with one decimal, from a million in whole millions, else the plain count. rule: m5-harvester §7.</summary>
+    internal static string PeopleWords(long n)
+    {
+        if (n >= 1_000_000_000) { long t = n / 100_000_000; return (t % 10 == 0 ? $"{t / 10}" : $"{t / 10}.{t % 10}") + " billion"; }
+        if (n >= 1_000_000) return $"{n / 1_000_000} million";
+        return n.ToString("#,0", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// The popup for a destroyed system. The Hand counts only the people with a Hand number (its support share there, before the strike) as
+    /// debt written off; everyone else is "Unregistered", with no unit on purpose. The Collective reads it plainly. rule: m5-harvester §7.
+    /// </summary>
+    internal (string Title, string Detail) HarvestReport(SystemDestroyed x)
+    {
+        long people = x.Populated ? PeopleOf(x.System) : 0;
+        if (Player == Side.Collective)
+            return ($"{x.System} is gone", people > 0 ? $"{x.System} is gone. {PeopleWords(people)} people." : $"{x.System} is gone.");
+        string head = $"HARVEST COMPLETE: {x.System}";
+        if (people == 0) return ("Harvest complete", head);
+        long debt = people * Math.Clamp(x.HandSupport, 0, 100) / 100;
+        return ("Harvest complete", $"{head}\nDebt written off: {PeopleWords(debt)} hands\nUnregistered: {PeopleWords(people - debt)}");
+    }
+
     static string HarvesterLossWords(string cause) => cause switch
     {
         "Battle" => "in battle",
@@ -80,9 +124,8 @@ public sealed partial class GameSession
             case SystemDestroyed x:
             {
                 _destroyedDay[x.System] = d;
-                string text = x.AttackerSide == Player ? $"Your harvester destroyed {x.System}."
-                    : x.PriorHolder == Player ? $"The harvester destroyed {x.System}, one of your systems."
-                    : $"The harvester destroyed {x.System}.";
+                // the log reads the same lines as the report, one after the other (rule: m5-harvester §7)
+                string text = string.Join(". ", HarvestReport(x).Detail.Split('\n').Select(l => l.TrimEnd('.'))) + ".";
                 var kind = x.AttackerSide == Player ? MsgKind.Info : x.PriorHolder == Player ? MsgKind.Bad : MsgKind.Warn;
                 yield return new Message(d, text, x.System, kind);
                 break;

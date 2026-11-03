@@ -91,11 +91,15 @@ public partial class Main
         if (cont is bool c) Expect(!c && gs.Banner.Contains("harvester"), "the clock paused with a note: " + gs.Banner);
         var news = s.Messages.Skip(before).Select(m => m.Text).ToList();
         GD.Print("  messages: " + string.Join(" | ", news));
-        Expect(news.Any(t => t.Contains("destroyed " + target)), "the message log says the harvester destroyed " + target);
+        Expect(news.Any(t => t.Contains(me == Side.Hand ? $"HARVEST COMPLETE: {target}" : $"{target} is gone")), "the message log carries the harvest report for " + target);
         Expect(news.Any(t => t.Contains("Sector") && (t.Contains("turns against") || t.Contains("Revolt")) || star.IsOutsideSectors), "the sector reaction is in the log");
-        if (cont != null) { Expect(gs.ReportVisible && gs.ReportText.Contains("System destroyed"), "a report pops up"); }
+        if (cont != null)
+            Expect(gs.ReportVisible && gs.ReportText.Contains("Harvest complete") && gs.ReportText.Contains($"HARVEST COMPLETE: {target}") && (gs.ReportText.Contains("Debt written off: ") == gs.ReportText.Contains("Unregistered: ")),
+                "the harvest report pops up: " + gs.ReportText.Replace("\n", " / "));
         gs.Click("Close");
         Expect(s.QueuedOrders == 0, "no order left waiting");
+        Expect(GameSession.PeopleWords(4_300_000_000) == "4.3 billion" && GameSession.PeopleWords(2_000_000_000) == "2 billion" && GameSession.PeopleWords(40_000_000) == "40 million"
+            && GameSession.PeopleWords(2_500_000) == "2 million" && GameSession.PeopleWords(600_000) == "600,000", "head counts read as people read them (m5-harvester §7)");
 
         // ---- the map and the panel
         Expect(gs.HoverTextFor(target).Contains("destroyed"), "hovering it says destroyed: " + gs.HoverTextFor(target));

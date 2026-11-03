@@ -915,7 +915,8 @@ public sealed partial class GameSession
                 foreach (var m in DescribeHarvester(e))
                 {
                     o.PauseReason ??= "destroyed";
-                    o.Popup ??= m with { Title = "System destroyed", Detail = m.Text + " The planet and everything on it are gone for good." };
+                    var (title, detail) = HarvestReport((Praedra.Core.Harvester.SystemDestroyed)e); // rule: m5-harvester §7 Harvest report
+                    o.Popup ??= m with { Title = title, Detail = detail };
                     yield return m;
                 }
                 break;

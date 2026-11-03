@@ -157,6 +157,22 @@ public class HarvesterTests
         minors.Select(id => GameData.Default.Characters.Get(id).SkillBase[(int)Skill.Combat]).ToArray();
 
     // m5-harvester DS5
+    // m5-harvester §7 Harvest report: the event carries the Hand's support and the populated flag as they stood before the strike cleared them
+    [Fact]
+    public void DS4_TheEventKeepsTheSupportAndPopulatedFlagOfBeforeTheStrike()
+    {
+        var w = new HarvesterWorld();
+        w.Hold(A3, Side.Collective, 70);
+        bool populated = w.Host.Economy.SlotsOf(A3).Populated;
+        int attacker = w.Harvester(Side.Hand, A3, Mandate);
+
+        Assert.Null(w.Destroy(Side.Hand, attacker));
+
+        var ev = Assert.Single(w.Events<SystemDestroyed>());
+        Assert.Equal((30, populated), (ev.HandSupport, ev.Populated));
+        Assert.Equal((0, false), (w.Host.Economy.SupportOf(A3, Side.Hand), w.Host.Economy.SlotsOf(A3).Populated)); // the strike cleared both
+    }
+
     [Fact]
     public void DS5_CharactersOnTheDestroyedPlanet()
     {
