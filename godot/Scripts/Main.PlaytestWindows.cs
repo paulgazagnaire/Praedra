@@ -224,6 +224,26 @@ public partial class Main
         }
         else GD.Print("  (no fleet with room for two regiments where two stand: the stack drop is not checked on this side)");
 
+        // ---------------------------------------------------------------- scrap from a tile: once only (QA-87), and the garrison warning (QA-88)
+        var scrapAt = s.Data.Galaxy.Systems.Select(x => x.Name).Where(n => s.OwnerOf(n) == me).OrderBy(n => n)
+            .FirstOrDefault(n => s.Host.Troops.RegimentsOnSystem(n).Count(o => o.Side == me && o.AboardShip == 0) >= 2);
+        if (scrapAt != null)
+        {
+            var regsHere = s.Host.Troops.RegimentsOnSystem(scrapAt).Where(o => o.Side == me && o.AboardShip == 0).OrderBy(o => o.Id).ToList();
+            var victim = regsHere[0];
+            bool short1 = s.Host.Support.RegimentCount(scrapAt) - 1 < s.Host.Support.RequiredGarrison(scrapAt);
+            Expect(gs.ScrapQuestion(victim.Id).Contains("short of troops") == short1, $"the scrap question at {scrapAt} warns of the garrison exactly when it falls short ({short1})");
+            gs.ShotWindow("troops", scrapAt); gs.PlayRefresh();
+            gs.ScrapNow(victim.Id);
+            string again = gs.MgDrop($"R:{victim.Id}", $"Ground {scrapAt} Regiments");
+            Expect(again != null && again.Contains("scrapped"), $"a regiment scrapped today can't be moved or scrapped again: {again}");
+            int before = s.Messages.Count(m => m.Text.Contains("unknown object"));
+            gs.ScrapNow(victim.Id);
+            gs.PlayDay();
+            Expect(s.Host.Economy.Find(victim.Id) == null && s.Messages.Count(m => m.Text.Contains("unknown object")) == before, "next day it is gone, with no refused second order (QA-87)");
+            while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+        }
+
         // ---------------------------------------------------------------- the lone ship's arrival is told as a join (QA-86); last, as it plays days
         if (joinCheck is var (jFly, jDst, jOne))
         {

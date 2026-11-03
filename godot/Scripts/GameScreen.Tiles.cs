@@ -174,7 +174,7 @@ public partial class GameScreen
     /// </summary>
     void UnitTiles(HFlowContainer flow, IEnumerable<(Drag? D, EconObject O, string Sub)> units, string system)
     {
-        var list = units.Where(u => !(u.D is { } d && _moved.ContainsKey(d.Key))).ToList();
+        var list = units.Where(u => !(u.D is { } d && _moved.ContainsKey(d.Key)) && !_scrapped.Contains(u.O.Id)).ToList();
         foreach (var g in list.GroupBy(u => (u.O.Class, u.Sub, Can: u.D != null)))
         {
             var objs = g.Select(u => u.O).ToList();

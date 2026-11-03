@@ -272,7 +272,7 @@ public partial class GameScreen
     void NewDay()
     {
         if (_movedDay == S.Game.Day) return;
-        _moved.Clear(); _pendingIn.Clear(); _splits.Clear(); _leaving.Clear(); _movedDay = S.Game.Day;
+        _moved.Clear(); _pendingIn.Clear(); _splits.Clear(); _leaving.Clear(); _scrapped.Clear(); _movedDay = S.Game.Day;
         if (_mgWins.Count > 0) _mgDirty = true;
     }
 
@@ -799,7 +799,7 @@ public partial class GameScreen
     }
 
     /// <summary>Whether a drop may happen here (null), quietly not (""), or not, and why.</summary>
-    string Judge(Zone z, Drag d) => _moved.TryGetValue(d.Key, out var m) ? (z.Refuse(d) == "" ? "" : $"{ThingName(d)} already moves today: {m.Words}.") : z.Refuse(d);
+    string Judge(Zone z, Drag d) => d.Kind is not ('L' or 'M') && _scrapped.Contains(d.Id) ? $"{ThingName(d)} is scrapped next day." : _moved.TryGetValue(d.Key, out var m) ? (z.Refuse(d) == "" ? "" : $"{ThingName(d)} already moves today: {m.Words}.") : z.Refuse(d);
 
     /// <summary>A zone's look: quiet; lit blue where the chip being dragged can go; dim where it can't.</summary>
     static StyleBoxFlat ZoneStyle(bool? ok, bool dashed)
