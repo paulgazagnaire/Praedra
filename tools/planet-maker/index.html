@@ -6836,6 +6836,7 @@ function loadMuxer() {
   return new Promise((res, rej) => {
     const sc = document.createElement('script');
     sc.src = 'https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/build/mp4-muxer.js';
+    sc.integrity = 'sha384-wr0AQH9RBAKio/g7bHM5245MBCU5B/b0Y9u42cTxRYQQJXKEijZvWEJKL9JG26hs'; sc.crossOrigin = 'anonymous';
     sc.onload = res; sc.onerror = () => rej(new Error('Could not load the video writer. Check the connection and try again.'));
     document.head.appendChild(sc);
   });
@@ -6915,6 +6916,8 @@ async function makeVideo() {
       $('vidNote').textContent = 'Getting the video writer ready…';
       await loadMuxer();
       const bitrate = Math.round(clamp(W * W * fps * (DI.on ? 0.5 : 0.25), 2e6, 80e6));
+      // the video is built in memory before it is saved: a huge one would crash the tab after minutes of drawing
+      if (bitrate * L / 8 > 2e9) throw new Error('That video would be about ' + (bitrate * L / 8e9).toFixed(1) + ' GB: make it shorter or smaller');
       const pick = await pickCodec(W, fps, bitrate);
       if (!pick) throw new Error('This browser cannot make MP4 video. Try Chrome, or tick See-through to save PNG frames.');
       const muxer = new Mp4Muxer.Muxer({ target: new Mp4Muxer.ArrayBufferTarget(), video: { codec: pick.mux, width: W, height: W, frameRate: fps }, fastStart: 'in-memory' });
