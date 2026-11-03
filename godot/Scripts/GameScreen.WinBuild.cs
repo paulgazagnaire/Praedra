@@ -11,7 +11,7 @@ using Side = Praedra.Core.Clock.Side;
 namespace PraedraViewer;
 
 /// <summary>
-/// A system window's Build tab (Paul, 2026-11-03, with Classic's system window as the example): slots as dots, one card per yard with what
+/// A system's Infrastructure window (Paul, 2026-11-03, with Classic's system window as the example): slots as dots, one card per yard with what
 /// it builds and a progress bar, what can be built as picture tiles (click one to order it), and the buildings as stacked tiles (right-click
 /// to scrap). The same orders as the drawer's build table (user stories E1-E6); the core judges them when the next day starts.
 /// rule: m2-construction §Build order, §Build time; m2-maintenance §Overdraft, §Scrapping and refunds.
@@ -47,7 +47,9 @@ public partial class GameScreen
         // what can be built here, as tiles
         Section("Build");
         if (_buildSection is "Ships" or "Fighters" && !HasYard(n, YardFamily.Shipyard) || _buildSection == "Troops" && !HasYard(n, YardFamily.Training)) _buildSection = "Facilities";
-        var top = Ui.HBox(4);
+        var chips = new HFlowContainer();   // wraps rather than widening the column
+        chips.AddThemeConstantOverride("h_separation", 2); chips.AddThemeConstantOverride("v_separation", 4);
+        Container top = chips;
         var group = new ButtonGroup();
         foreach (var section in new[] { "Facilities", "Ships", "Fighters", "Troops" })
         {
@@ -59,7 +61,8 @@ public partial class GameScreen
             if (!HasYard(n, fam)) b.AddThemeColorOverride("font_color", Ui.Text3);
             top.AddChild(b);
         }
-        top.AddChild(Ui.Grow());
+        Add(chips);
+        top = Ui.HBox(4);
         top.AddChild(Ui.Label("How many", null, Ui.Text3, Ui.Tiny, wrap: false));
         var less = Ui.Button("-", () => { _buildQty = Math.Max(1, _buildQty - 1); MgRefreshSoon(); }, "One fewer", "Chip");
         less.CustomMinimumSize = new Vector2(28, 26);
@@ -91,7 +94,7 @@ public partial class GameScreen
         Section("Planet");
         // slots and what the planet gives
         var slots = eco.SlotsOf(n);
-        var strip = Ui.HBox(20);
+        var strip = Ui.VBox(8);
         strip.AddChild(SlotStrip("Energy slots", eco.EnergyUsed(n), slots.Energy, "Every building takes one energy slot."));
         strip.AddChild(SlotStrip("Raw material slots", eco.RawUsed(n), eco.EffectiveRaw(n), "A mine also needs a raw material slot. A planet never has more usable raw slots than energy slots."));
         Add(strip);
@@ -129,7 +132,7 @@ public partial class GameScreen
         var eco = S.Host.Economy;
         var p = S.Host.Construction.ProjectAt(n, fam);
         bool idle = p is not { Units.Count: > 0 };
-        var card = new PanelContainer { MouseFilter = MouseFilterEnum.Stop, CustomMinimumSize = new Vector2(170, 0) };
+        var card = new PanelContainer { MouseFilter = MouseFilterEnum.Stop, CustomMinimumSize = new Vector2(150, 0) };
         card.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Panel2, 8, idle ? new Color(Ui.Warn, 0.5f) : new Color(Ui.You, 0.3f), 1, 8, 8));
         card.SetMeta(UiTest.FullName, $"Yard {n} {fam}");
         card.MouseDefaultCursorShape = CursorShape.PointingHand;

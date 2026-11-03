@@ -31,7 +31,7 @@ namespace PraedraViewer;
 /// </summary>
 public partial class GameScreen
 {
-    /// <summary>Infra and Ground both open a system's window (Infra on its Build tab); Fleet opens a fleet's window.</summary>
+    /// <summary>A system has a Ground window (tabs) and an Infrastructure window (Paul 2026-11-03: "Keep separate windows"); a fleet has its own.</summary>
     public enum MgKind { Infra, Ground, Fleet }
 
     sealed class MgWin
@@ -45,7 +45,7 @@ public partial class GameScreen
         public VBoxContainer Head, Body;
         public ScrollContainer Scroll;
         public readonly Dictionary<string, (Control Page, Button Tab)> Pages = new(StringComparer.Ordinal);
-        public string Key => Kind == MgKind.Fleet ? $"Fleet {Fleet}" : $"System {System}";
+        public string Key => Kind == MgKind.Fleet ? $"Fleet {Fleet}" : $"{Kind} {System}";
     }
 
     /// <summary>What is being dragged: a leader (L), a regiment (R), a fighter squadron (Q), a ship (S) or a whole fleet (M), by id.</summary>
@@ -86,8 +86,8 @@ public partial class GameScreen
     PanelContainer _dragHint;
     Label _dragHintText;
 
-    // Landscape windows, two columns of two (Paul 2026-11-03: "3 to 4 windows on the same screen makes sense when managing complex things")
-    const int MgWidth = 560;
+    // Four tall columns side by side (Paul 2026-11-03: "I liked this grid. I think 4 windows side by side could fit"; 1440 wide screen)
+    const int MgWidth = 344;
     const int SlotGap = 10;
 
     static readonly Color ZoneBg = new("0e0f12");
@@ -110,11 +110,10 @@ public partial class GameScreen
         return _mgLayer;
     }
 
-    /// <summary>Open (or bring to the front) a system's window (Infra opens it on the Build tab), or a fleet's window.</summary>
+    /// <summary>Open (or bring to the front) a system's Ground or Infrastructure window, or a fleet's window.</summary>
     internal void OpenMgmt(MgKind kind, string system = null, int fleet = 0, string tab = null)
     {
         if (kind == MgKind.Fleet ? !S.Game.State.Fleets.TryGetValue(fleet, out var f0) || f0.Side != Me : system == null) return;
-        if (kind == MgKind.Infra) { kind = MgKind.Ground; tab ??= "Build"; }
         var w = _mgWins.FirstOrDefault(x => x.Kind == kind && (kind == MgKind.Fleet ? x.Fleet == fleet : x.System == system));
         if (w == null)
         {
@@ -209,16 +208,18 @@ public partial class GameScreen
         return new Vector2(Mathf.Clamp(at.X, 8, Math.Max(8, vp.X - size.X - 8)), Mathf.Clamp(at.Y, TopClear, Math.Max(TopClear, vp.Y - 60)));
     }
 
-    /// <summary>A window is at most half the free height, so two stack in a column.</summary>
-    float SlotHeight => Math.Max(240, (_mgLayer.Size.Y - TopClear - 12 - SlotGap) / 2);
+    /// <summary>A window is at most the full free height of its column.</summary>
+    float SlotHeight => Math.Max(240, _mgLayer.Size.Y - TopClear - 12);
 
-    /// <summary>The four places a window snaps to: two columns (the screen's left and right edges) of two.</summary>
+    /// <summary>The places a window snaps to: tall columns side by side across the screen (four on a 1440 wide screen).</summary>
     List<Vector2> Slots(bool leftFirst = true)
     {
         var vp = _mgLayer.Size;
-        float l = 16, r = Math.Max(16, vp.X - 16 - MgWidth), top = TopClear, low = TopClear + SlotHeight + SlotGap;
-        var cols = leftFirst ? new[] { l, r } : new[] { r, l };
-        return cols.SelectMany(x => new[] { new Vector2(x, top), new Vector2(x, low) }).ToList();
+        var cols = new List<Vector2>();
+        for (float x = 16; x + MgWidth <= vp.X - 8; x += MgWidth + SlotGap) cols.Add(new Vector2(x, TopClear));
+        if (cols.Count == 0) cols.Add(new Vector2(16, TopClear));
+        if (!leftFirst) cols.Reverse();
+        return cols;
     }
 
     void Snap(MgWin w)
@@ -228,7 +229,7 @@ public partial class GameScreen
     }
 
     /// <summary>
-    /// A new window takes the first free place of the four (beside the sector window, on the map's side, first), else steps beside the
+    /// A new window takes the first free column (beside the sector window, on the map's side, first), else steps beside the
     /// window on top, shifted so its title stays visible (QA on #227: a second fleet window opened right over the first).
     /// </summary>
     void PlaceNew(MgWin w)
@@ -257,7 +258,7 @@ public partial class GameScreen
     {
         foreach (var (name, (page, tab)) in w.Pages) { page.Visible = name == w.Tab; tab.SetPressedNoSignal(name == w.Tab); }
         w.Scroll.Visible = !w.Min;
-        Callable.From(() =>
+        void Size()
         {
             if (!IsInstanceValid(w.Panel)) return;
             float head = w.Head.GetParent<Control>().GetCombinedMinimumSize().Y + 1;
@@ -265,7 +266,10 @@ public partial class GameScreen
             float h = Math.Min(want, Math.Min(SlotHeight, _mgLayer.Size.Y - w.Panel.Position.Y - 12));
             w.Panel.Size = new Vector2(MgWidth, Math.Max(w.Min ? 0 : 160, h));
             if (keepScroll >= 0) w.Scroll.ScrollVertical = (int)keepScroll;
-        }).CallDeferred();
+        }
+        // twice: flowing rows of tiles only know their height once the column width has been laid out
+        Callable.From(() => { Size(); Callable.From(Size).CallDeferred(); }).CallDeferred();
+        if (IsInsideTree()) GetTree().CreateTimer(0.05).Timeout += Size;
     }
 
     /// <summary>The drops of yesterday have been judged: forget them.</summary>
@@ -316,6 +320,7 @@ public partial class GameScreen
         try
         {
             if (w.Kind == MgKind.Fleet) FleetWin(w, S.Game.State.Fleets[w.Fleet]);
+            else if (w.Kind == MgKind.Infra) InfraWin(w);
             else SystemWin(w);
         }
         finally { _into = prev; }
@@ -353,6 +358,7 @@ public partial class GameScreen
         var cap = Ui.Label(caption.ToUpperInvariant(), null, Ui.Text3, Ui.Tiny, wrap: false);
         cap.AddThemeFontOverride("font", Ui.Caps);
         cap.MouseFilter = MouseFilterEnum.Ignore;
+        cap.ClipText = true;   // a long caption must not widen the column
         names.AddChild(cap);
         var t = Ui.Label(title, null, titleColor, 20, wrap: false);
         t.AddThemeFontOverride("font", Ui.SemiBold);
@@ -409,19 +415,19 @@ public partial class GameScreen
         if (mine)
         {
             int have = S.Host.Support.RegimentCount(n), need = S.Host.Support.RequiredGarrison(n);
-            sub = $"Loyalty {S.Host.Economy.SupportOf(n, Me)}% · {Ui.Count(have, "regiment", "regiments")}{(need == 0 ? "" : $" of {need} needed")} · {S.Host.Economy.EnergyUsed(n)} of {S.Host.Economy.SlotsOf(n).Energy} energy slots used";
+            sub = $"Loyalty {S.Host.Economy.SupportOf(n, Me)}% · {Ui.Count(have, "regiment", "regiments")}{(need == 0 ? "" : $" of {need} needed")}";
             if (have < need) badge = Ui.Tag("UNDER-GARRISONED", Ui.Warn);
             if (S.Host.Support.IsUprising(n)) badge = Ui.Tag("UPRISING", Ui.Danger, true);
         }
-        MgHead(w, RegionOf(n), n, mine ? Ui.Text : Ui.Text2, sub, badge);
+        MgHead(w, $"Ground · {RegionOf(n)}", n, mine ? Ui.Text : Ui.Text2, sub, badge);
         var own = S.Game.State.Fleets.Values.Where(f => f.Side == Me && f.At == n).OrderBy(f => f.Id).ToList();
         if (!mine)
         {
             // what your side knows of a planet it doesn't hold
             Tabs(w, w.Body,
                 ("Ground", null, () => PaneForces(n)),
-                ("Fleets", own.Count, () => OrbitList(n, own)),
-                ("Build", null, () => PaneBuildings(n)));
+                ("Fleets", own.Count, () => OrbitList(n, own)));
+            InfraLink(n);
             return;
         }
         var gen = Cm.SystemGeneralOf(n);
@@ -435,8 +441,23 @@ public partial class GameScreen
             ("Leaders", here.Count + (gen != null ? 1 : 0), () => LeadersTab(n, gen, here)),
             ("Troops", regs.Count + sf.Count, () => TroopsTab(n, regs, sf)),
             ("Fighters", based.Count, () => FightersTab(n, based)),
-            ("Fleets", own.Count, () => OrbitList(n, own)),
-            ("Build", null, () => BuildTab(n)));
+            ("Fleets", own.Count, () => OrbitList(n, own)));
+        InfraLink(n);
+    }
+
+    void InfraLink(string n) => MgLinks(($"Infrastructure at {n}", () => OpenMgmt(MgKind.Infra, n), "Yards, what the planet builds, slots and buildings"));
+
+    // ---- a system's Infrastructure window (Paul 2026-11-03 chose to keep it a window of its own): yards, build tiles, slots, buildings
+
+    void InfraWin(MgWin w)
+    {
+        string n = w.System;
+        bool mine = !S.IsDestroyed(n) && S.OwnerOf(n) == Me;
+        var eco = S.Host.Economy;
+        MgHead(w, $"Infrastructure · {RegionOf(n)}", n, mine ? Ui.Text : Ui.Text2,
+            mine ? $"{eco.EnergyUsed(n)} of {eco.SlotsOf(n).Energy} energy slots used · {Ui.Count(eco.OfKindAt(n, FacilityKind.Mine), "mine", "mines")} · {Ui.Count(eco.OfKindAt(n, FacilityKind.Refinery), "refinery", "refineries")}" : null);
+        if (mine) BuildTab(n); else PaneBuildings(n);
+        MgLinks(($"Ground at {n}", () => OpenMgmt(MgKind.Ground, n), "Leaders, troops and fighters on the planet, and the fleets in orbit"));
     }
 
     void LeadersTab(string n, CharacterRecord gen, List<CharacterRecord> here)
@@ -564,11 +585,11 @@ public partial class GameScreen
             if (pick != null) pick(); else OpenMgmt(MgKind.Fleet, fleet: fid);
         };
         // the flow would stretch the row's content oddly: let the HBox fill it
-        h.CustomMinimumSize = new Vector2(pick != null ? FleetListW - 20 : MgWidth - 60, 0);
+        h.CustomMinimumSize = new Vector2(pick != null ? FleetListW - 16 : MgWidth - 60, 0);
         return z.Box;
     }
 
-    const int FleetListW = 168;
+    const int FleetListW = 152;
 
     // ---- a fleet's window: your fleets at the same place on the left, the one shown on the right with its tabs (Classic's list and detail)
 
@@ -585,18 +606,20 @@ public partial class GameScreen
         MgHead(w, where, f.Name, Ui.You, $"{Ui.Count(f.Ships.Count, "ship", "ships")} · strength {Fm.StrengthOf(f):0} · speed {Fm.SpeedOf(f)}", grip);
         if (_moved.TryGetValue(new Drag('M', f.Id).Key, out var mto)) Line($"This fleet {mto.Words}.", Pending, Ui.Small);
 
-        var split = Ui.HBox(12);
+        var split = Ui.VBox(Ui.Block);
         split.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        // the list: your fleets standing at the same system (a travelling fleet stands alone)
-        var list = Ui.VBox(6);
-        list.CustomMinimumSize = new Vector2(FleetListW, 0);
-        list.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+        // the list on top: your fleets standing at the same system (a travelling fleet stands alone), two to a row
         var mates = still ? S.Game.State.Fleets.Values.Where(x => x.Side == Me && x.At == f.At && x.Transit == null).OrderBy(x => x.Id).ToList() : new List<Fleet> { f };
-        list.AddChild(Caption(still ? "Fleets here" : "Travelling", mates.Count.ToString()));
+        split.AddChild(Caption(still ? "Fleets here" : "Travelling", mates.Count.ToString()));
+        var list = new HFlowContainer();
+        list.AddThemeConstantOverride("h_separation", 6); list.AddThemeConstantOverride("v_separation", 6);
         foreach (var m in mates)
         {
             int mid = m.Id;
-            list.AddChild(FleetRow(m, m.Id == f.Id, () => ShowFleetIn(w, mid)));
+            var row = FleetRow(m, m.Id == f.Id, () => ShowFleetIn(w, mid));
+            row.SizeFlagsHorizontal = SizeFlags.Fill;
+            row.CustomMinimumSize = new Vector2(FleetListW, 0);
+            list.AddChild(row);
         }
         split.AddChild(list);
         var detail = Ui.VBox(Ui.Block);
