@@ -359,10 +359,12 @@ public partial class GameScreen
         cap.AddThemeFontOverride("font", Ui.Caps);
         cap.MouseFilter = MouseFilterEnum.Ignore;
         cap.ClipText = true;   // a long caption must not widen the column
+        cap.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;   // QA-90: cut with "…", not mid-word
         names.AddChild(cap);
         var t = Ui.Label(title, null, titleColor, 20, wrap: false);
         t.AddThemeFontOverride("font", Ui.SemiBold);
         t.ClipText = true;
+        t.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
         t.MouseFilter = MouseFilterEnum.Ignore;
         names.AddChild(t);
         row.AddChild(names);

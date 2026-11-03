@@ -189,7 +189,7 @@ public partial class GameScreen
             $"{r.Name}: costs {r.Cost} refined each and {r.Maintenance} upkeep each, about {b.Days} days per unit here once the refined is there." +
             (b.Why != null ? $"\n{char.ToUpperInvariant(b.Why[0])}{b.Why[1..]}." : "") + (ClassTip(r.Name) is string ct ? "\n" + ct : "") + (b.Usable ? $"\nClick to order {_buildQty}." : ""), "Flat", !b.Usable);
         btn.SetMeta(UiTest.FullName, $"Build {r.Name}");
-        btn.CustomMinimumSize = new Vector2(TileW, 108);
+        btn.CustomMinimumSize = new Vector2(TileW, 132);
         btn.FocusMode = FocusModeEnum.None;
         btn.AddThemeStyleboxOverride("normal", Ui.Box(Ui.Panel2, 8, new Color(Ui.You, 0.3f), 1, 0, 0));
         btn.AddThemeStyleboxOverride("hover", Ui.Box(Ui.Hover, 8, new Color(Ui.You, 0.8f), 1, 0, 0));
@@ -208,10 +208,13 @@ public partial class GameScreen
         t.MaxLinesVisible = 2;
         t.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
         v.AddChild(t);
-        var c = Ui.Label($"{r.Cost} ref · {b.Days} d", null, b.Usable ? Ui.Text2 : Ui.Text3, Ui.Tiny, wrap: false);
-        c.HorizontalAlignment = HorizontalAlignment.Center;
-        c.ClipText = true;
-        v.AddChild(c);
+        // QA-89: cost and days on their own lines, so a big number is never clipped ("584 ref" read as "84")
+        foreach (var line in new[] { $"{r.Cost} ref", $"{b.Days} d" })
+        {
+            var c = Ui.Label(line, null, b.Usable ? Ui.Text2 : Ui.Text3, Ui.Tiny, wrap: false);
+            c.HorizontalAlignment = HorizontalAlignment.Center;
+            v.AddChild(c);
+        }
         if (b.Why != null)
         {
             var why = Ui.Label(b.Why, null, b.Usable ? Ui.Warn : Ui.Text3, Ui.Tiny, wrap: false);

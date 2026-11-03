@@ -195,6 +195,10 @@ public static class Ui
             t.SetTypeVariation("Chip", "Button");
             ButtonStyle(t, "Chip", new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), Hover, new Color(0, 0, 0, 0), new Color("2e3036"), new Color(0, 0, 0, 0), Text3, Text, 5, 8, 4);
             t.SetFontSize("font_size", "Chip", 13);
+            // a window's tab: a chip with less side padding, so four tabs fit one row of a 344-wide column (QA-90)
+            t.SetTypeVariation("TabChip", "Button");
+            ButtonStyle(t, "TabChip", new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), Hover, new Color(0, 0, 0, 0), new Color("2e3036"), new Color(0, 0, 0, 0), Text3, Text, 5, 5, 4);
+            t.SetFontSize("font_size", "TabChip", 13);
             // a link-looking button
             t.SetTypeVariation("Link", "Button");
             ButtonStyle(t, "Link", new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), Text3, Text, 4, 2, 1);
