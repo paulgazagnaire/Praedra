@@ -32,9 +32,13 @@ public partial class Main
 
         // ---------------------------------------------------------------- open the two windows side by side
         gs.ShotWindow("ground", sys); gs.PlayRefresh();
-        string ground = gs.MgText($"Ground {sys}");
-        Expect(gs.MgmtKeys.Contains($"Ground {sys}") && ground.Contains("LEADERS ON THE PLANET") && ground.Contains("YOUR FLEETS IN ORBIT"), "the Ground window lists the leaders and the fleets in orbit");
-        Expect(gs.Click($"Open {fleet.Name}"), $"the Ground window's Open button opens {fleet.Name}");
+        string ground = gs.MgText($"System {sys}");
+        Expect(gs.MgmtKeys.Contains($"System {sys}") && gs.MgTab($"System {sys}") == "Leaders" && ground.Contains("LEADERS ON THE PLANET") && ground.Contains("YOUR FLEETS IN ORBIT"),
+            "the system window opens on its Leaders tab, and its Fleets tab lists the fleets in orbit");
+        if (s.OwnerOf(sys) == me)
+            Expect(string.Join(",", gs.MgTabs($"System {sys}")) == "Leaders,Troops,Fighters,Fleets,Build", $"its tabs: {string.Join(", ", gs.MgTabs($"System {sys}"))}");
+        Expect(gs.Click($"Tab System {sys} Fleets") && gs.MgTab($"System {sys}") == "Fleets", "a click on the Fleets tab shows it");
+        Expect(gs.Click($"Open {fleet.Name}"), $"the Fleets tab's Open button opens {fleet.Name}");
         gs.PlayRefresh();
         Expect(gs.MgmtCount == 2 && gs.MgHasZone($"Fleet {fid} Admiral") && gs.MgHasZone($"Fleet {fid} Passengers"), "the fleet window opens beside it, with its posts and passengers");
 
@@ -44,7 +48,7 @@ public partial class Main
         string zone = post == CharacterPost.None ? $"Fleet {fid} Passengers" : $"Fleet {fid} {post}";
         string why = gs.MgDrop($"L:{lead.Id}", zone);
         Expect(why == null, $"drop {lname} on {zone}: {why ?? "sent"}");
-        Expect(!gs.MgText($"Ground {sys}").Contains(lname) && gs.MgText($"Fleet {fid}").Contains(lname), "the drop shows at once: the chip leaves the planet and stands in the fleet");
+        Expect(!gs.MgText($"System {sys}").Contains(lname) && gs.MgText($"Fleet {fid}").Contains(lname), "the drop shows at once: the chip leaves the planet and stands in the fleet");
         Expect(gs.MgDrop($"L:{lead.Id}", $"Fleet {fid} Passengers") != null, "a chip already moved today can't be dropped again");
         gs.PlayDay();
         Expect(lead.AttachedFleet == fid && lead.Post == post, $"next day {lname} is aboard {fleet.Name} as {GameSession.PostWords(post)}");
@@ -151,7 +155,7 @@ public partial class Main
                 gs.ShotWindow("ground", held); gs.PlayRefresh();
                 string r = gs.MgDrop($"R:{lone.Id}", $"Ground {held} Regiments");
                 Expect(r == null, $"drop a regiment from {home} on {held}'s regiments: {r ?? "sent"}");
-                Expect(gs.MgText($"Ground {held}").Contains("on the way"), "the Ground window shows it on the way");
+                Expect(gs.MgText($"System {held}").Contains("on the way"), "the system window shows it on the way");
                 gs.PlayDay();
                 Expect(cons.Deliveries.Any(d => d.Object == lone.Id && d.To == held), $"next day it travels alone to {held}");
             }
@@ -198,12 +202,27 @@ public partial class Main
 
         // ---------------------------------------------------------------- the sector tile opens them
         gs.TileClick(sys, "infra"); gs.PlayRefresh();
-        Expect(gs.MgmtKeys.Contains($"Infra {sys}") && gs.MgText($"Infra {sys}").Contains("Energy slots"), "a click on a tile's dots opens its Infrastructure window");
+        Expect(gs.MgmtKeys.Contains($"System {sys}") && gs.MgTab($"System {sys}") == "Build" && gs.MgText($"System {sys}").Contains("Energy slots"), "a click on a tile's dots opens the system window on its Build tab");
         gs.TileClick(sys, "fleets"); gs.PlayRefresh();
         Expect(gs.MgmtKeys.Contains($"Fleet {fid}"), "a click on its triangles opens the fleet windows");
         gs.TileClick(sys, "ground"); gs.PlayRefresh();
-        Expect(gs.MgmtKeys.Contains($"Ground {sys}"), "a click elsewhere on the tile opens the Ground window");
+        Expect(gs.MgmtKeys.Contains($"System {sys}"), "a click elsewhere on the tile opens the system window");
         while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+
+        // ---------------------------------------------------------------- a stack of regiments dragged with Shift: every one boards (Paul 2026-11-03)
+        var stackFleet = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null && f.Transit == null && s.OwnerOf(f.At) == me && fm.FreeTroopSlots(f) >= 2)
+            .OrderBy(f => f.Id).FirstOrDefault(f => s.Host.Troops.RegimentsOnSystem(f.At).Count(o => o.Side == me) >= 2);
+        if (stackFleet != null)
+        {
+            var two = s.Host.Troops.RegimentsOnSystem(stackFleet.At).Where(o => o.Side == me).OrderBy(o => o.Id).Take(2).ToList();
+            gs.ShotWindow("fleet", $"{stackFleet.Id}:Troops"); gs.PlayRefresh();
+            string r = gs.MgDrop($"R:{two[0].Id},{two[1].Id}", $"Fleet {stackFleet.Id} Troops");
+            Expect(r == null, $"drop a stack of two regiments on {stackFleet.Name}'s troops: {r ?? "sent"}");
+            gs.PlayDay();
+            Expect(two.All(o => o.AboardShip != 0 && stackFleet.Ships.Contains(o.AboardShip)), "next day both are aboard");
+            while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+        }
+        else GD.Print("  (no fleet with room for two regiments where two stand: the stack drop is not checked on this side)");
 
         // ---------------------------------------------------------------- the lone ship's arrival is told as a join (QA-86); last, as it plays days
         if (joinCheck is var (jFly, jDst, jOne))
