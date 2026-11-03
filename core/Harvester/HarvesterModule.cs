@@ -229,6 +229,9 @@ public sealed class HarvesterModule
         string system = attacker.At!;
         Side side = attacker.Side;
         Side? prior = _fleets.OwnerOf(system);
+        // The system as it stands before the strike, for the event's harvest report. rule: m5-harvester §7 Harvest report
+        int handSupport = _eco.SupportOf(system, Side.Hand);
+        bool populated = _eco.SlotsOf(system).Populated;
 
         // Running missions at the system end as failures, their characters stay as characters on the planet. rule: effect 3
         MissionsEnded?.Invoke(ctx, system);
@@ -253,7 +256,7 @@ public sealed class HarvesterModule
 
         // 6. The event to both sides; every side's picture learns it, and 4. an HQ at rest there is destroyed (the victory step reads it as the
         // Hand capturing the HQ: m5-fog-and-hq §F7, m5-setup-and-victory §Victory).
-        ctx.Emit((i, _) => new SystemDestroyed(i, day, system, side, prior));
+        ctx.Emit((i, _) => new SystemDestroyed(i, day, system, side, prior, handSupport, populated));
         FogNotice?.Invoke(ctx, system);
 
         // 7. The sector reaction.

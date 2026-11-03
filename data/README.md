@@ -5,6 +5,8 @@
 | `classic/` | Our tables of the Classic numbers, copied once from the Classic files (B1) and since renamed and cut on purpose. See "Classic data" below. | Yes, with the rule sheet that owns the number |
 | `design/` | Our own numbers: the extended galaxy (v6, the two-arm spiral: 555 systems, 553 of them in 64 sectors, plus Glasswood and Frostholm; 394 hyperspace route links), pinned slot values, the blockade numbers T and E (`blockade.csv`, m1-forced-stop-and-blockade), the placeholder garrison weights (`garrison-weights.csv`, m2-uprisings-and-garrison), later per-weapon stats and new content. Each file is copied from the spec that owns it. | Only through the owning spec |
 
+`design/system-population.csv` (system, people, source) holds how many people live in each of the 555 systems, copied from the lore (`specs/creative/08-planet-presets.json` popB, as whole people) on 2026-11-03. Only the harvest report reads it (m5-harvester §7); no rule uses it.
+
 `design/starting-facilities.csv` is the data list of m2-construction §Starting yards (seven Orbital Shipyards: four Hand, three neutral), written from that sheet's table.
 
 Sources (project folder `praedra/specs/`): `economy/data/slot-values-draft.csv`. Copied 2026-10-12.

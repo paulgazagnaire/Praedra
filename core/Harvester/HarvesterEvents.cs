@@ -38,7 +38,9 @@ public sealed record FleetDestroyedByHarvester(int Index, int Day, string System
 public sealed record PlanetUnitDestroyed(int Index, int Day, string System, int Object, string Class, Side? Owner) : GameEvent(Index, Day, nameof(PlanetUnitDestroyed)), IHarvesterEvent;
 
 /// <summary>The system is destroyed. Both sides (the galaxy notice "Planet Destroyed"). rule: m5-harvester §2 effect 6.</summary>
-public sealed record SystemDestroyed(int Index, int Day, string System, Side AttackerSide, Side? PriorHolder) : GameEvent(Index, Day, nameof(SystemDestroyed)), IHarvesterEvent;
+/// <remarks>HandSupport and Populated are the system as it stood just before the strike (the strike clears both), for the harvest report the
+/// screens write: rule: m5-harvester §7 Harvest report.</remarks>
+public sealed record SystemDestroyed(int Index, int Day, string System, Side AttackerSide, Side? PriorHolder, int HandSupport = 0, bool Populated = false) : GameEvent(Index, Day, nameof(SystemDestroyed)), IHarvesterEvent;
 
 /// <summary>The sector reacted to a strike: Strike is the number of strikes in the sector so far (this one included), Systems the other non-destroyed systems that changed (name order). Both sides. rule: m5-harvester §2 effect 7.</summary>
 public sealed record SectorStruck(int Index, int Day, string Sector, int Strike, ValueList<string> Systems) : GameEvent(Index, Day, nameof(SectorStruck)), IHarvesterEvent;
