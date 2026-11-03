@@ -156,10 +156,9 @@ public class HarvesterTests
     private static int[] MinorCombats(int[] minors) =>
         minors.Select(id => GameData.Default.Characters.Get(id).SkillBase[(int)Skill.Combat]).ToArray();
 
-    // m5-harvester DS5
-    // m5-harvester §7 Harvest report: the event carries the Hand's support and the populated flag as they stood before the strike cleared them
+    // m5-harvester DS17 (§7 Harvest report): the event carries the Hand's support and the populated flag as they stood before the strike cleared them
     [Fact]
-    public void DS4_TheEventKeepsTheSupportAndPopulatedFlagOfBeforeTheStrike()
+    public void DS17_TheEventKeepsTheSupportAndPopulatedFlagOfBeforeTheStrike()
     {
         var w = new HarvesterWorld();
         w.Hold(A3, Side.Collective, 70);
@@ -173,6 +172,7 @@ public class HarvesterTests
         Assert.Equal((0, false), (w.Host.Economy.SupportOf(A3, Side.Hand), w.Host.Economy.SlotsOf(A3).Populated)); // the strike cleared both
     }
 
+    // m5-harvester DS5
     [Fact]
     public void DS5_CharactersOnTheDestroyedPlanet()
     {

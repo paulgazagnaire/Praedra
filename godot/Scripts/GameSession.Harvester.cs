@@ -58,7 +58,8 @@ public sealed partial class GameSession
         {
             var map = new Dictionary<string, long>(StringComparer.Ordinal);
             string path = System.IO.Path.Combine(Godot.ProjectSettings.GlobalizePath("user://gamedata"), "data", "design", "system-population.csv");
-            if (System.IO.File.Exists(path))
+            if (!System.IO.File.Exists(path)) Godot.GD.PushWarning($"Harvest report: {path} is missing, so every report shows no people.");
+            else
             {
                 var t = Praedra.Core.Data.CsvTable.Load(path);
                 for (int r = 0; r < t.RowCount; r++) map[t.Get(r, "system")] = long.Parse(t.Get(r, "people"), System.Globalization.CultureInfo.InvariantCulture);
