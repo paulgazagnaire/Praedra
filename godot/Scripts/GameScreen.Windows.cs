@@ -31,17 +31,21 @@ namespace PraedraViewer;
 /// </summary>
 public partial class GameScreen
 {
+    /// <summary>Infra and Ground both open a system's window (Infra on its Build tab); Fleet opens a fleet's window.</summary>
     public enum MgKind { Infra, Ground, Fleet }
 
     sealed class MgWin
     {
-        public MgKind Kind;
-        public string System;   // Infra and Ground
+        public MgKind Kind;     // Ground (a system's window) or Fleet
+        public string System;   // a system's window
         public int Fleet;       // Fleet
+        public string Tab;      // the tab shown
+        public bool Min;        // folded to its head
         public PanelContainer Panel;
         public VBoxContainer Head, Body;
         public ScrollContainer Scroll;
-        public string Key => Kind == MgKind.Fleet ? $"Fleet {Fleet}" : $"{Kind} {System}";
+        public readonly Dictionary<string, (Control Page, Button Tab)> Pages = new(StringComparer.Ordinal);
+        public string Key => Kind == MgKind.Fleet ? $"Fleet {Fleet}" : $"System {System}";
     }
 
     /// <summary>What is being dragged: a leader (L), a regiment (R), a fighter squadron (Q), a ship (S) or a whole fleet (M), by id.</summary>
@@ -52,7 +56,19 @@ public partial class GameScreen
         {
             if (v.VariantType != Variant.Type.String) return null;
             string s = v.AsString();
-            return s.Length > 2 && s[1] == ':' && int.TryParse(s.AsSpan(2), out int id) ? new Drag(s[0], id) : null;
+            return ParseAll(v).FirstOrDefault() is { Kind: not '\0' } d ? d : null;
+        }
+
+        /// <summary>A stack dragged with Shift travels as "R:12,13,14": every unit of it.</summary>
+        public static List<Drag> ParseAll(Variant v)
+        {
+            var list = new List<Drag>();
+            if (v.VariantType != Variant.Type.String) return list;
+            string s = v.AsString();
+            if (s.Length < 3 || s[1] != ':') return list;
+            foreach (var part in s[2..].Split(',', StringSplitOptions.RemoveEmptyEntries))
+                if (int.TryParse(part, out int id)) list.Add(new Drag(s[0], id));
+            return list;
         }
     }
 
@@ -70,8 +86,9 @@ public partial class GameScreen
     PanelContainer _dragHint;
     Label _dragHintText;
 
-    const int MgWidth = 384;
-    const int ChipWidth = 164;
+    // Landscape windows, two columns of two (Paul 2026-11-03: "3 to 4 windows on the same screen makes sense when managing complex things")
+    const int MgWidth = 560;
+    const int SlotGap = 10;
 
     static readonly Color ZoneBg = new("0e0f12");
     static readonly Color ZoneLine = new(1, 1, 1, 0.07f);
@@ -93,19 +110,25 @@ public partial class GameScreen
         return _mgLayer;
     }
 
-    /// <summary>Open (or bring to the front) a system's Infrastructure or Ground window, or a fleet's window.</summary>
-    internal void OpenMgmt(MgKind kind, string system = null, int fleet = 0)
+    /// <summary>Open (or bring to the front) a system's window (Infra opens it on the Build tab), or a fleet's window.</summary>
+    internal void OpenMgmt(MgKind kind, string system = null, int fleet = 0, string tab = null)
     {
         if (kind == MgKind.Fleet ? !S.Game.State.Fleets.TryGetValue(fleet, out var f0) || f0.Side != Me : system == null) return;
+        if (kind == MgKind.Infra) { kind = MgKind.Ground; tab ??= "Build"; }
         var w = _mgWins.FirstOrDefault(x => x.Kind == kind && (kind == MgKind.Fleet ? x.Fleet == fleet : x.System == system));
         if (w == null)
         {
-            w = new MgWin { Kind = kind, System = system, Fleet = fleet };
+            w = new MgWin { Kind = kind, System = system, Fleet = fleet, Tab = tab };
             BuildMgWin(w);
             _mgWins.Add(w);
             PlaceNew(w);
         }
-        else Front(w);
+        else
+        {
+            Front(w);
+            if (tab != null) w.Tab = tab;
+            w.Min = false;
+        }
         RebuildMg(w);
     }
 
@@ -141,24 +164,28 @@ public partial class GameScreen
         w.Panel.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true } && _mgWins.Count > 0 && _mgWins[^1] != w) Front(w); };
         var v = Ui.VBox(0);
         w.Panel.AddChild(v);
-        var headPad = Pad(16, 10, 12, 8);
+        var headPad = Pad(16, 10, 10, 0);
         w.Head = Ui.VBox(Ui.Gap);
         headPad.AddChild(w.Head);
         v.AddChild(headPad);
-        // the head moves the window
+        // the head moves the window; let go near one of the four places and it snaps there
         Vector2? grab = null;
         headPad.MouseFilter = MouseFilterEnum.Stop;
         headPad.MouseDefaultCursorShape = CursorShape.Move;
         headPad.GuiInput += e =>
         {
-            if (e is InputEventMouseButton { ButtonIndex: MouseButton.Left } b) { grab = b.Pressed ? w.Panel.GetGlobalMousePosition() - w.Panel.Position : null; if (b.Pressed) Front(w); }
+            if (e is InputEventMouseButton { ButtonIndex: MouseButton.Left } b)
+            {
+                if (b.Pressed) { grab = w.Panel.GetGlobalMousePosition() - w.Panel.Position; Front(w); if (b.DoubleClick) ToggleMin(w); }
+                else { if (grab != null) Snap(w); grab = null; }
+            }
             else if (e is InputEventMouseMotion && grab is Vector2 g) { w.Panel.Position = ClampWin(w.Panel.GetGlobalMousePosition() - g, w.Panel.Size); }
         };
         var line = new ColorRect { Color = new Color(1, 1, 1, 0.06f), CustomMinimumSize = new Vector2(0, 1), MouseFilter = MouseFilterEnum.Ignore };
         v.AddChild(line);
         w.Scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
         v.AddChild(w.Scroll);
-        var bodyPad = Pad(16, 16, 12, 16);
+        var bodyPad = Pad(16, 16, 12, 14);
         bodyPad.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         w.Scroll.AddChild(bodyPad);
         w.Body = Ui.VBox(Ui.Block);
@@ -182,25 +209,63 @@ public partial class GameScreen
         return new Vector2(Mathf.Clamp(at.X, 8, Math.Max(8, vp.X - size.X - 8)), Mathf.Clamp(at.Y, TopClear, Math.Max(TopClear, vp.Y - 60)));
     }
 
+    /// <summary>A window is at most half the free height, so two stack in a column.</summary>
+    float SlotHeight => Math.Max(240, (_mgLayer.Size.Y - TopClear - 12 - SlotGap) / 2);
+
+    /// <summary>The four places a window snaps to: two columns (the screen's left and right edges) of two.</summary>
+    List<Vector2> Slots(bool leftFirst = true)
+    {
+        var vp = _mgLayer.Size;
+        float l = 16, r = Math.Max(16, vp.X - 16 - MgWidth), top = TopClear, low = TopClear + SlotHeight + SlotGap;
+        var cols = leftFirst ? new[] { l, r } : new[] { r, l };
+        return cols.SelectMany(x => new[] { new Vector2(x, top), new Vector2(x, low) }).ToList();
+    }
+
+    void Snap(MgWin w)
+    {
+        var best = Slots().OrderBy(p => p.DistanceTo(w.Panel.Position)).First();
+        if (best.DistanceTo(w.Panel.Position) < 64) w.Panel.Position = best;
+    }
+
     /// <summary>
-    /// A new window goes in the first free column beside the sector window (on the map's side), then in any free column of the screen, else
-    /// beside the window on top, shifted so its title stays visible (QA on #227: a second fleet window opened right over the first).
+    /// A new window takes the first free place of the four (beside the sector window, on the map's side, first), else steps beside the
+    /// window on top, shifted so its title stays visible (QA on #227: a second fleet window opened right over the first).
     /// </summary>
     void PlaceNew(MgWin w)
     {
-        var vp = _mgLayer.Size;
-        var others = _mgWins.Where(x => x != w).Select(x => new Rect2(x.Panel.Position, new Vector2(MgWidth, Math.Max(200, x.Panel.Size.Y)))).ToList();
-        bool Free(float x) => !others.Any(r => r.Position.X < x + MgWidth && x < r.End.X);
-        IEnumerable<float> Columns(float lo, float hi) { for (float x = lo; x + MgWidth <= hi + 1; x += MgWidth + 12) yield return x; }
-        float lo = 16, hi = vp.X - 16;
-        if (SectorViewOpen) { var r = _secWin.GetGlobalRect(); if (_secLeft) lo = r.End.X + 12; else hi = r.Position.X - 12; }
-        foreach (float x in Columns(lo, hi).Concat(Columns(16, vp.X - 16)).Concat(Columns(vp.X - 16 - MgWidth, vp.X).Reverse()))
-            if (Free(x)) { w.Panel.Position = new Vector2(x, TopClear); return; }
-        // no free column: step beside the top window, the other way when that runs off the screen
-        var last = others.Count > 0 ? others[^1].Position : new Vector2(lo, TopClear);
-        float nx = last.X + MgWidth * 0.5f;
-        if (nx + MgWidth > vp.X - 8) nx = last.X - MgWidth * 0.5f;
-        w.Panel.Position = ClampWin(new Vector2(nx, last.Y + 36), new Vector2(MgWidth, 200));
+        var others = _mgWins.Where(x => x != w).Select(x => new Rect2(x.Panel.Position, new Vector2(MgWidth, Math.Max(120, x.Panel.Size.Y)))).ToList();
+        var sec = SectorViewOpen ? _secWin.GetGlobalRect() : (Rect2?)null;
+        bool Free(Vector2 p)
+        {
+            var r = new Rect2(p + new Vector2(4, 4), new Vector2(MgWidth - 8, 112));
+            return !others.Any(o => o.Intersects(r)) && !(sec is Rect2 s && s.Intersects(r));
+        }
+        foreach (var p in Slots(leftFirst: !(SectorViewOpen && _secLeft)))
+            if (Free(p)) { w.Panel.Position = p; return; }
+        var last = others.Count > 0 ? others[^1].Position : new Vector2(16, TopClear);
+        w.Panel.Position = ClampWin(last + new Vector2(28, 36), new Vector2(MgWidth, 200));
+    }
+
+    void ToggleMin(MgWin w)
+    {
+        w.Min = !w.Min;
+        RebuildMg(w);
+    }
+
+    /// <summary>As tall as the shown tab needs, up to half the screen (or just the head when folded).</summary>
+    void Fit(MgWin w, float keepScroll = -1)
+    {
+        foreach (var (name, (page, tab)) in w.Pages) { page.Visible = name == w.Tab; tab.SetPressedNoSignal(name == w.Tab); }
+        w.Scroll.Visible = !w.Min;
+        Callable.From(() =>
+        {
+            if (!IsInstanceValid(w.Panel)) return;
+            float head = w.Head.GetParent<Control>().GetCombinedMinimumSize().Y + 1;
+            float want = w.Min ? head + 10 : head + w.Body.GetCombinedMinimumSize().Y + 30;
+            float h = Math.Min(want, Math.Min(SlotHeight, _mgLayer.Size.Y - w.Panel.Position.Y - 12));
+            w.Panel.Size = new Vector2(MgWidth, Math.Max(w.Min ? 0 : 160, h));
+            if (keepScroll >= 0) w.Scroll.ScrollVertical = (int)keepScroll;
+        }).CallDeferred();
     }
 
     /// <summary>The drops of yesterday have been judged: forget them.</summary>
@@ -244,44 +309,40 @@ public partial class GameScreen
         _zones.RemoveAll(z => w.Panel.IsAncestorOf(z.Box));
         Ui.Clear(w.Head);
         Ui.Clear(w.Body);
+        w.Pages.Clear();
+        w.Panel.SetMeta(UiTest.FullName, "Window " + w.Key);
         var prev = _into;
         _into = w.Body;
         try
         {
-            switch (w.Kind)
-            {
-                case MgKind.Fleet: FleetWin(w, S.Game.State.Fleets[w.Fleet]); break;
-                case MgKind.Ground: GroundWin(w); break;
-                default: InfraWin(w); break;
-            }
+            if (w.Kind == MgKind.Fleet) FleetWin(w, S.Game.State.Fleets[w.Fleet]);
+            else SystemWin(w);
         }
         finally { _into = prev; }
-        // a drop looks done at once (Paul 2026-11-02: "instant"): the chip stands where it was dropped. The core applies the order first thing
+        // a drop looks done at once (Paul 2026-11-02: "instant"): the unit stands where it was dropped. The core applies the order first thing
         // next step (rule: m1-clock-and-orders §Order of work, step 1), before anything else moves, so nothing can happen in between.
         foreach (var z in _zones.Where(z => w.Panel.IsAncestorOf(z.Box)))
-            foreach (var (key, mv) in _moved.Where(kv => kv.Value.Zone == z.Key).OrderBy(kv => kv.Key, StringComparer.Ordinal))
-                if (Drag.Parse(key) is { } gd)
-                {
-                    foreach (var empty in z.Flow.GetChildren().OfType<Label>().ToList()) empty.QueueFree(); // "Empty" gives way
-                    bool travels = mv.Words.StartsWith("on the way", StringComparison.Ordinal) || mv.Words.StartsWith("flies", StringComparison.Ordinal);
-                    var ghost = Chip(ThingName(gd), travels ? mv.Words : gd.Kind == 'L' ? LeaderPosts(Cm.Get(gd.Id)) : null, gd.Kind == 'L' ? Initials(ThingName(gd)) : null, Ui.You, travels);
-                    ghost.TooltipText = Ui.Wrap($"{ThingName(gd)}: {mv.Words}. It can move again tomorrow.");
-                    ghost.CustomMinimumSize = new Vector2(ChipWidth, 0);
-                    ghost.SetMeta(UiTest.FullName, "Arriving " + key);
-                    z.Flow.AddChild(ghost);
-                }
-        // as tall as the content needs, up to the screen
-        Callable.From(() =>
         {
-            if (!IsInstanceValid(w.Panel)) return;
-            float want = w.Head.GetParent<Control>().GetCombinedMinimumSize().Y + w.Body.GetCombinedMinimumSize().Y + 34;
-            float h = Math.Min(want, _mgLayer.Size.Y - w.Panel.Position.Y - 16);
-            w.Panel.Size = new Vector2(MgWidth, Math.Max(160, h));
-            w.Scroll.ScrollVertical = (int)keep;
-        }).CallDeferred();
+            var arriving = _moved.Where(kv => kv.Value.Zone == z.Key).OrderBy(kv => kv.Key, StringComparer.Ordinal)
+                .Select(kv => (D: Drag.Parse(kv.Key), kv.Value.Words)).Where(x => x.D != null).ToList();
+            if (arriving.Count == 0) continue;
+            foreach (var empty in z.Flow.GetChildren().OfType<Label>().ToList()) empty.QueueFree(); // "Empty" gives way
+            foreach (var g in arriving.GroupBy(x => (ThingName(x.D.Value), x.D.Value.Kind, Travels(x.Words) ? x.Words : null)))
+            {
+                var gd = g.First().D.Value;
+                string words = g.First().Words;
+                var ghost = DragTile(gd, Travels(words) ? words : gd.Kind == 'L' ? LeaderPosts(Cm.Get(gd.Id)) : "moved", g.Count(), ghost: true);
+                ghost.TooltipText = Ui.Wrap($"{(g.Count() > 1 ? $"{g.Count()} × " : "")}{ThingName(gd)}: {words}. It can move again tomorrow.");
+                ghost.SetMeta(UiTest.FullName, "Arriving " + gd.Key);
+                z.Flow.AddChild(ghost);
+            }
+        }
+        Fit(w, keep);
     }
 
-    /// <summary>The head of a window: a caption in small capitals, the title, a close button; then, optionally, a line under it.</summary>
+    static bool Travels(string words) => words.StartsWith("on the way", StringComparison.Ordinal) || words.StartsWith("flies", StringComparison.Ordinal);
+
+    /// <summary>The head of a window: a caption in small capitals, the title, fold and close buttons; then, optionally, a line under it.</summary>
     void MgHead(MgWin w, string caption, string title, Color titleColor, string sub = null, Control extra = null)
     {
         var row = Ui.HBox(Ui.Block);
@@ -291,20 +352,27 @@ public partial class GameScreen
         names.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         var cap = Ui.Label(caption.ToUpperInvariant(), null, Ui.Text3, Ui.Tiny, wrap: false);
         cap.AddThemeFontOverride("font", Ui.Caps);
+        cap.MouseFilter = MouseFilterEnum.Ignore;
         names.AddChild(cap);
         var t = Ui.Label(title, null, titleColor, 20, wrap: false);
         t.AddThemeFontOverride("font", Ui.SemiBold);
         t.ClipText = true;
+        t.MouseFilter = MouseFilterEnum.Ignore;
         names.AddChild(t);
         row.AddChild(names);
         if (extra != null) { extra.SizeFlagsVertical = SizeFlags.ShrinkCenter; row.AddChild(extra); }
+        var fold = Ui.Button(w.Min ? "▢" : "–", () => ToggleMin(w), w.Min ? "Unfold (or double-click the title)" : "Fold to the title (or double-click it)", "Clock");
+        fold.SetMeta(UiTest.FullName, "Fold " + w.Key);
+        fold.CustomMinimumSize = new Vector2(28, 28);
+        fold.SizeFlagsVertical = SizeFlags.ShrinkBegin;
+        row.AddChild(fold);
         var close = Ui.Button("✕", () => CloseMgmt(w), "Close (Esc)", "Clock");
         close.SetMeta(UiTest.FullName, "Close " + w.Key);
         close.CustomMinimumSize = new Vector2(28, 28);
         close.SizeFlagsVertical = SizeFlags.ShrinkBegin;
         row.AddChild(close);
         w.Head.AddChild(row);
-        if (sub != null) w.Head.AddChild(Ui.Label(sub, null, Ui.Text2, Ui.Small));
+        if (sub != null) { var sl = Ui.Label(sub, null, Ui.Text2, Ui.Small, wrap: false); sl.ClipText = true; sl.MouseFilter = MouseFilterEnum.Ignore; w.Head.AddChild(sl); }
     }
 
     /// <summary>Small buttons at the foot of a window that open its neighbours.</summary>
@@ -330,22 +398,9 @@ public partial class GameScreen
         Add(h);
     }
 
-    // ---- the Infrastructure window: the system's buildings, slots and build queues (the old Buildings pane)
+    // ---- a system's window: tabs for its leaders, troops, fighters, fleets in orbit and buildings
 
-    void InfraWin(MgWin w)
-    {
-        string n = w.System;
-        var eco = S.Host.Economy;
-        bool mine = S.OwnerOf(n) == Me;
-        MgHead(w, $"Infrastructure · {RegionOf(n)}", n, mine ? Ui.Text : Ui.Text2,
-            mine ? $"{eco.EnergyUsed(n)} of {eco.SlotsOf(n).Energy} energy slots used · {eco.OfKindAt(n, FacilityKind.Mine)} mines · {eco.OfKindAt(n, FacilityKind.Refinery)} refineries" : null);
-        PaneBuildings(n);
-        MgLinks(($"Ground at {n}", () => OpenMgmt(MgKind.Ground, n), "Leaders, troops and fighters on the planet, and the fleets in orbit"));
-    }
-
-    // ---- the Ground window: who stands on the planet, and the fleets in orbit
-
-    void GroundWin(MgWin w)
+    void SystemWin(MgWin w)
     {
         string n = w.System;
         bool mine = !S.IsDestroyed(n) && S.OwnerOf(n) == Me;
@@ -354,135 +409,253 @@ public partial class GameScreen
         if (mine)
         {
             int have = S.Host.Support.RegimentCount(n), need = S.Host.Support.RequiredGarrison(n);
-            sub = $"Loyalty {S.Host.Economy.SupportOf(n, Me)}% · {Ui.Count(have, "regiment", "regiments")} · {(need == 0 ? "no garrison needed" : $"garrison needs {need}")}";
+            sub = $"Loyalty {S.Host.Economy.SupportOf(n, Me)}% · {Ui.Count(have, "regiment", "regiments")}{(need == 0 ? "" : $" of {need} needed")} · {S.Host.Economy.EnergyUsed(n)} of {S.Host.Economy.SlotsOf(n).Energy} energy slots used";
             if (have < need) badge = Ui.Tag("UNDER-GARRISONED", Ui.Warn);
             if (S.Host.Support.IsUprising(n)) badge = Ui.Tag("UPRISING", Ui.Danger, true);
         }
-        MgHead(w, $"Ground · {RegionOf(n)}", n, mine ? Ui.Text : Ui.Text2, sub, badge);
+        MgHead(w, RegionOf(n), n, mine ? Ui.Text : Ui.Text2, sub, badge);
+        var own = S.Game.State.Fleets.Values.Where(f => f.Side == Me && f.At == n).OrderBy(f => f.Id).ToList();
         if (!mine)
         {
-            PaneForces(n); // what your side knows of a planet it doesn't hold
-            OrbitList(n);
+            // what your side knows of a planet it doesn't hold
+            Tabs(w, w.Body,
+                ("Ground", null, () => PaneForces(n)),
+                ("Fleets", own.Count, () => OrbitList(n, own)),
+                ("Build", null, () => PaneBuildings(n)));
             return;
         }
-        Hint("Drag a leader onto a fleet's post, or troops and fighters onto a fleet, in a fleet window. A drop shows at once; the game makes the change when the next day starts, before anything else moves.");
-
-        // the system's General: one post, held by a leader standing here
         var gen = Cm.SystemGeneralOf(n);
         if (gen != null && gen.Side != Me) gen = null;
-        Section("System General", null, "The system's General adds his leadership to the defenders when the planet is invaded.");
-        var gz = DropZone($"Ground {n} General", "make General", d => RefuseSystemGeneral(d, n), d => DropSystemGeneral(d, n));
-        if (gen != null) gz.Flow.AddChild(LeaderChip(gen, "General of " + n));
-        else gz.Flow.AddChild(EmptySlot("Drop a leader with the General's skill"));
-        Add(gz.Box);
-
-        // leaders standing here (not on a fleet, not the General)
         var here = S.MyCharacters.Where(c => c.Status != CharacterStatus.Dead && c.AttachedFleet == 0 && c.Transit == null && Cm.LocationOf(c) == n && c.Id != gen?.Id)
             .OrderBy(c => S.CharName(c.Id), StringComparer.Ordinal).ToList();
-        Section("Leaders on the planet", here.Count == 0 ? null : here.Count.ToString());
+        var regs = S.Host.Troops.RegimentsOnSystem(n).Where(o => o.Side == Me).OrderBy(o => o.Id).ToList();
+        var sf = MySpecialForcesAt(n);
+        var based = FightersBasedAt(n);
+        Tabs(w, w.Body,
+            ("Leaders", here.Count + (gen != null ? 1 : 0), () => LeadersTab(n, gen, here)),
+            ("Troops", regs.Count + sf.Count, () => TroopsTab(n, regs, sf)),
+            ("Fighters", based.Count, () => FightersTab(n, based)),
+            ("Fleets", own.Count, () => OrbitList(n, own)),
+            ("Build", null, () => BuildTab(n)));
+    }
+
+    void LeadersTab(string n, CharacterRecord gen, List<CharacterRecord> here)
+    {
+        var row = Ui.HBox(Ui.Block);
+        // the system's General: one post, held by a leader standing here
+        var gcol = Ui.VBox(4);
+        gcol.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+        gcol.AddChild(Caption("General", null, "The system's General adds their leadership to the defenders when the planet is invaded."));
+        var gz = DropZone($"Ground {n} General", "make General", d => RefuseSystemGeneral(d, n), d => DropSystemGeneral(d, n));
+        gz.Box.CustomMinimumSize = new Vector2(TileW + 14, 0);
+        if (gen != null) gz.Flow.AddChild(LeaderChip(gen, "General of " + n));
+        else gz.Flow.AddChild(EmptySlot("Empty"));
+        gcol.AddChild(gz.Box);
+        row.AddChild(gcol);
+        // leaders standing here (not on a fleet, not the General)
+        var lcol = Ui.VBox(4);
+        lcol.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        lcol.AddChild(Caption("Leaders on the planet", null));
         var lz = DropZone($"Ground {n} Leaders", "land", d => RefuseToGround(d, n, 'L'), d => DropToGround(d, n));
         foreach (var c in here) lz.Flow.AddChild(LeaderChip(c, null));
         if (here.Count == 0) lz.Flow.AddChild(EmptySlot("No leader of yours stands here"));
-        Add(lz.Box);
-
-        // regiments
-        var regs = S.Host.Troops.RegimentsOnSystem(n).Where(o => o.Side == Me).OrderBy(o => o.Id).ToList();
-        int need0 = S.Host.Support.RequiredGarrison(n);
-        Section("Regiments", need0 > 0 ? $"{regs.Count} / {need0} needed" : regs.Count.ToString(), "Below 60% loyalty a planet needs regiments to stay calm: one for every 10 points under 60. Too few and it rises up.");
-        var rz = DropZone($"Ground {n} Regiments", "land", d => RefuseToGround(d, n, 'R'), d => DropToGround(d, n));
-        foreach (var o in regs) rz.Flow.AddChild(UnitChip(new Drag('R', o.Id), o.Class, null, Ui.You));
-        if (regs.Count == 0) rz.Flow.AddChild(EmptySlot("No regiments"));
-        Add(rz.Box);
-
-        // fighters based here
-        var based = FightersBasedAt(n);
-        Section("Fighters based here", based.Count == 0 ? null : based.Count.ToString());
-        var fz = DropZone($"Ground {n} Fighters", "base here", d => RefuseToGround(d, n, 'Q'), d => DropToGround(d, n));
-        foreach (var o in based) fz.Flow.AddChild(UnitChip(new Drag('Q', o.Id), o.Class, HullWords(o), Ui.You));
-        if (based.Count == 0) fz.Flow.AddChild(EmptySlot("No squadrons"));
-        Add(fz.Box);
-
-        // special forces: they never ride fleets (m3-troops-and-special-forces); dragged to another system's Ground window they go there (a Move mission)
-        var sf = MySpecialForcesAt(n);
-        Section("Special forces", sf.Count == 0 ? null : sf.Count.ToString(), "Agents never ride fleets. Drag one onto another system's Ground window to send it there.");
-        var sz = DropZone($"Ground {n} SpecialForces", "send here", d => RefuseToGround(d, n, 'F'), d => DropToGround(d, n));
-        foreach (var o in sf) sz.Flow.AddChild(UnitChip(SfReady(o) ? new Drag('F', o.Id) : null, S.SpecialForceName(o.Id), SpecialForceState(o), Ui.You));
-        if (sf.Count == 0) sz.Flow.AddChild(EmptySlot("No special forces"));
-        Add(sz.Box);
+        lcol.AddChild(lz.Box);
+        row.AddChild(lcol);
+        Add(row);
         OnTheWay(S.MyCharacters.Where(c => c.Transit is { } t && t.Path.Count > 0 && t.Path[^1] == n && c.JoinFleet == 0), n);
-        OrbitList(n);
-        var links = new List<(string, Action, string)> { ($"Infrastructure at {n}", () => OpenMgmt(MgKind.Infra, n), "Buildings, slots and what the planet builds") };
-        if (CanSendFrom(n)) links.Add(("Send a mission...", () => { CloseSectorView(); OpenPlanner(n); }, "Pick a team standing here, the kind of mission and the target."));
-        MgLinks(links.ToArray());
+        if (CanSendFrom(n)) MgLinks(("Send a mission...", () => { CloseSectorView(); OpenPlanner(n); }, "Pick a team standing here, the kind of mission and the target."));
     }
 
-    /// <summary>Your fleets in orbit, each with a button to open its window (where you drop leaders and troops onto it).</summary>
-    void OrbitList(string n)
+    void TroopsTab(string n, List<EconObject> regs, List<EconObject> sf)
     {
-        var own = S.Game.State.Fleets.Values.Where(f => f.Side == Me && f.At == n).OrderBy(f => f.Id).ToList();
-        Section("Your fleets in orbit", own.Count == 0 ? null : own.Count.ToString());
-        if (own.Count == 0) { Hint("None. Fleets you send here show up in this list."); return; }
-        foreach (var f in own)
+        int need = S.Host.Support.RequiredGarrison(n);
+        Section("Regiments", need > 0 ? $"{regs.Count} / {need} needed" : regs.Count.ToString(), "Below 60% loyalty a planet needs regiments to stay calm: one for every 10 points under 60. Too few and it rises up.");
+        var rz = DropZone($"Ground {n} Regiments", "land", d => RefuseToGround(d, n, 'R'), d => DropToGround(d, n));
+        UnitTiles(rz.Flow, regs.Select(o => ((Drag?)new Drag('R', o.Id), o, (string)null)), n);
+        if (regs.Count == 0) rz.Flow.AddChild(EmptySlot("No regiments"));
+        Add(rz.Box);
+        // special forces: they never ride fleets (m3-troops-and-special-forces); dragged to another system's window they go there (a Move mission)
+        Section("Special forces", sf.Count == 0 ? null : sf.Count.ToString(), "Agents never ride fleets. Drag one onto another system's Troops tab to send it there.");
+        var sz = DropZone($"Ground {n} SpecialForces", "send here", d => RefuseToGround(d, n, 'F'), d => DropToGround(d, n));
+        foreach (var o in sf)
         {
-            var h = Ui.HBox(Ui.Block);
-            var tri = new SectorMarks { Side = 9 }.Add(SectorMarks.Shape.Triangle, Ui.You, true);
-            tri.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-            h.AddChild(tri);
-            var v = Ui.VBox(0);
-            v.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            var nm = Ui.Label(f.Name, null, Ui.Text, Ui.Body, wrap: false);
-            nm.AddThemeFontOverride("font", Ui.SemiBold);
-            v.AddChild(nm);
-            var adm = Cm.HolderOf(f.Id, CharacterPost.Admiral);
-            v.AddChild(Ui.Label($"{Ui.Count(f.Ships.Count, "ship", "ships")} · strength {Fm.StrengthOf(f):0}{(adm != null ? $" · Admiral {S.CharName(adm.Id)}" : "")}", null, Ui.Text3, Ui.Tiny, wrap: false));
-            h.AddChild(v);
-            int fid = f.Id;
-            var open = Ui.Button("Open", () => OpenMgmt(MgKind.Fleet, fleet: fid), $"Open {f.Name}'s window: drag leaders, troops and fighters between it and the planet", "Chip");
+            Drag? d = SfReady(o) ? new Drag('F', o.Id) : null;
+            if (d is { } dd && _moved.ContainsKey(dd.Key)) continue;
+            var t = Tile(UnitIcon.Kind.Agent, Me == Side.Hand, 1, S.SpecialForceName(o.Id), SpecialForceState(o), 1, d == null ? Ui.Text3 : Ui.You);
+            t.TooltipText = Ui.Wrap(S.SpecialForceName(o.Id) + (d != null ? "\nDrag it onto another system to send it there." : ""));
+            if (d is { } drag) { t.SetMeta(UiTest.FullName, drag.Key); MakeDraggable(t, new List<Drag> { drag }, S.SpecialForceName(o.Id)); }
+            sz.Flow.AddChild(t);
+        }
+        if (sf.Count == 0) sz.Flow.AddChild(EmptySlot("No special forces"));
+        Add(sz.Box);
+    }
+
+    void FightersTab(string n, List<EconObject> based)
+    {
+        Section("Fighters based here", based.Count == 0 ? null : based.Count.ToString(), "Squadrons based on the planet defend it. Drag them onto a fleet's Fighters tab to load them on a carrier.");
+        var fz = DropZone($"Ground {n} Fighters", "base here", d => RefuseToGround(d, n, 'Q'), d => DropToGround(d, n));
+        UnitTiles(fz.Flow, based.Select(o => ((Drag?)new Drag('Q', o.Id), o, HullWords(o))), n);
+        if (based.Count == 0) fz.Flow.AddChild(EmptySlot("No squadrons"));
+        Add(fz.Box);
+    }
+
+    /// <summary>Your fleets in orbit: a row each (drop ships, troops, fighters or leaders on it), with a button to open its window.</summary>
+    void OrbitList(string n, List<Fleet> own)
+    {
+        if (own.Count == 0) { Add(EmptySlot("No fleets of yours here. Fleets you send here show up in this list.")); return; }
+        Section("Your fleets in orbit", own.Count.ToString());
+        foreach (var f in own) Add(FleetRow(f, false, null));
+    }
+
+    /// <summary>
+    /// One fleet as a row: its mark, name, ships and strength. A drop zone: ships and whole fleets join it, troops and fighters board it,
+    /// leaders ride it. In a fleet window it picks the fleet shown (<paramref name="pick"/>); elsewhere it has an Open button.
+    /// </summary>
+    Control FleetRow(Fleet f, bool selected, Action pick)
+    {
+        var z = DropZone($"Fleet {f.Id} Row", $"send to {f.Name}", d => d.Kind switch
+        {
+            'S' or 'M' => RefuseShipsInto(d, f),
+            'R' or 'Q' => RefuseOnto(d, f, d.Kind),
+            'L' => RefuseFleetPost(d, f, CharacterPost.None),
+            _ => "",
+        }, d =>
+        {
+            if (d.Kind is 'S' or 'M') DropShipsInto(d, f);
+            else if (d.Kind is 'R' or 'Q') DropOnto(d, f);
+            else if (d.Kind == 'L') DropFleetPost(d, f, CharacterPost.None);
+        });
+        if (selected) z.Box.AddThemeStyleboxOverride("panel", Ui.Box(new Color(Ui.You, 0.12f), 8, new Color(Ui.You, 0.6f), 1, 6, 6));
+        z.Box.SetMeta("selected", selected);
+        var h = Ui.HBox(8);
+        h.MouseFilter = MouseFilterEnum.Ignore;
+        h.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        var size = f.Ships.Select(id => S.Host.Economy.Find(id)?.Class).Where(c => c != null).Select(SizeOfClass).DefaultIfEmpty(1).Max();
+        var icon = UnitIcon.For(UnitIcon.Kind.Ship, Me == Side.Hand, Ui.You, size, new Vector2(46, 26));
+        icon.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        h.AddChild(icon);
+        var v = Ui.VBox(0);
+        v.MouseFilter = MouseFilterEnum.Ignore;
+        v.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        var nm = Ui.Label(f.Name, null, Ui.Text, Ui.Small, wrap: false);
+        nm.AddThemeFontOverride("font", Ui.SemiBold);
+        nm.ClipText = true;
+        v.AddChild(nm);
+        string state = f.Transit is { } t ? $"to {t.Path[^1]}" : pick != null ? $"str {Fm.StrengthOf(f):0}" : $"strength {Fm.StrengthOf(f):0}";
+        var sl = Ui.Label($"{Ui.Count(f.Ships.Count, "ship", "ships")} · {state}", null, Ui.Text3, Ui.Tiny, wrap: false);
+        sl.ClipText = true;
+        v.AddChild(sl);
+        h.AddChild(v);
+        int fid = f.Id;
+        if (pick == null)
+        {
+            var open = Ui.Button("Open", () => OpenMgmt(MgKind.Fleet, fleet: fid), $"Open {f.Name}'s window", "Chip");
             open.SetMeta(UiTest.FullName, $"Open {f.Name}");
             open.SizeFlagsVertical = SizeFlags.ShrinkCenter;
             h.AddChild(open);
-            Add(h);
         }
+        z.Flow.AddChild(h);
+        z.Box.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        z.Box.MouseDefaultCursorShape = CursorShape.PointingHand;
+        z.Box.TooltipText = Ui.Wrap($"{f.Name}. Drop ships, troops, fighters or leaders here to send them to it." + (pick != null && !selected ? " Click to show it." : ""));
+        z.Box.GuiInput += e =>
+        {
+            if (e is not InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true }) return;
+            if (pick != null) pick(); else OpenMgmt(MgKind.Fleet, fleet: fid);
+        };
+        // the flow would stretch the row's content oddly: let the HBox fill it
+        h.CustomMinimumSize = new Vector2(pick != null ? FleetListW - 20 : MgWidth - 60, 0);
+        return z.Box;
     }
 
-    // ---- the Fleet window
+    const int FleetListW = 168;
+
+    // ---- a fleet's window: your fleets at the same place on the left, the one shown on the right with its tabs (Classic's list and detail)
 
     void FleetWin(MgWin w, Fleet f)
     {
         bool still = f.At != null && f.Transit == null;
-        string where = still ? $"Fleet · at {f.At}" : f.Transit is { } t ? $"Fleet · to {t.Path[^1]}, day {GameSession.ArrivalDay(t)}" : "Fleet";
-        // the grip: drag the whole fleet onto another fleet's ships to merge them
+        string where = still ? $"Fleet · at {f.At}" : f.Transit is { } t ? $"Fleet · travelling to {t.Path[^1]}, arrives day {GameSession.ArrivalDay(t)}" : "Fleet";
+        // the grip: drag the whole fleet onto another fleet to merge them
         var grip = Ui.Label("⠿", null, Ui.Text3, 18, wrap: false);
         grip.MouseFilter = MouseFilterEnum.Stop;
         grip.MouseDefaultCursorShape = CursorShape.Drag;
-        grip.TooltipText = Ui.Wrap($"Drag {f.Name} onto another fleet's ships to merge it into that fleet.");
-        if (still && !_moved.ContainsKey(new Drag('M', f.Id).Key)) MakeDraggable(grip, new Drag('M', f.Id), f.Name);
+        grip.TooltipText = Ui.Wrap($"Drag {f.Name} onto another fleet to merge it into that fleet.");
+        if (still && !_moved.ContainsKey(new Drag('M', f.Id).Key)) MakeDraggable(grip, new List<Drag> { new('M', f.Id) }, f.Name);
         MgHead(w, where, f.Name, Ui.You, $"{Ui.Count(f.Ships.Count, "ship", "ships")} · strength {Fm.StrengthOf(f):0} · speed {Fm.SpeedOf(f)}", grip);
         if (_moved.TryGetValue(new Drag('M', f.Id).Key, out var mto)) Line($"This fleet {mto.Words}.", Pending, Ui.Small);
-        if (!still) Hint("Travelling: who rides it and what it carries can change when it arrives.");
 
-        // the three posts
-        Section("Command", null, LeaderHelp);
+        var split = Ui.HBox(12);
+        split.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        // the list: your fleets standing at the same system (a travelling fleet stands alone)
+        var list = Ui.VBox(6);
+        list.CustomMinimumSize = new Vector2(FleetListW, 0);
+        list.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+        var mates = still ? S.Game.State.Fleets.Values.Where(x => x.Side == Me && x.At == f.At && x.Transit == null).OrderBy(x => x.Id).ToList() : new List<Fleet> { f };
+        list.AddChild(Caption(still ? "Fleets here" : "Travelling", mates.Count.ToString()));
+        foreach (var m in mates)
+        {
+            int mid = m.Id;
+            list.AddChild(FleetRow(m, m.Id == f.Id, () => ShowFleetIn(w, mid)));
+        }
+        split.AddChild(list);
+        var detail = Ui.VBox(Ui.Block);
+        detail.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        split.AddChild(detail);
+        Add(split);
+
+        var eco = S.Host.Economy;
+        var riders = Cm.AttachedTo(f.Id).Where(c => c.Post == CharacterPost.None).OrderBy(c => S.CharName(c.Id), StringComparer.Ordinal).ToList();
+        var aboardF = FightersAboard(f);
+        var aboardR = S.Host.Troops.RegimentsAboard(f);
+        int posts = new[] { CharacterPost.Admiral, CharacterPost.General, CharacterPost.Commander }.Count(p => Cm.HolderOf(f.Id, p) != null);
+        Tabs(w, detail,
+            ("Command", posts + riders.Count, () => CommandTab(f, riders)),
+            ("Ships", f.Ships.Count, () => ShipsTab(f, still)),
+            ("Fighters", aboardF.Count + f.Squadrons.Count, () => FightersAboardTab(f, aboardF)),
+            ("Troops", aboardR.Count, () => TroopsAboardTab(f, aboardR.Select(a => a.Regiment).ToList())));
+
+        foreach (var pend in S.PendingOf(f.Id)) Line($"Waiting for the next day: {pend}", Pending, Ui.Small);
+        int fid = f.Id;
+        var links = new List<(string, Action, string)>();
+        if (still) links.Add(($"{f.At}", () => OpenMgmt(MgKind.Ground, f.At), "The planet's window: drag its leaders, troops and fighters onto this fleet"));
+        if (still) links.Add(("Move...", () => { var ff = S.Game.State.Fleets[fid]; CloseSectorView(); StartMove(ff); }, "Pick a destination on the map"));
+        links.Add(("Orders and attack...", () => { CloseSectorView(); SelectFleet(fid, true); ShowTab(DrawerTab.Selected); }, "Bombard, invade, retreat, scrap: the fleet's full page"));
+        MgLinks(links.ToArray());
+    }
+
+    /// <summary>Show another fleet in this window (a click on the list); if a window already shows it, that one comes forward.</summary>
+    void ShowFleetIn(MgWin w, int fid)
+    {
+        if (w.Fleet == fid) return;
+        if (_mgWins.FirstOrDefault(x => x.Kind == MgKind.Fleet && x.Fleet == fid) is { } other) { Front(other); return; }
+        w.Fleet = fid;
+        RebuildMg(w);
+    }
+
+    void CommandTab(Fleet f, List<CharacterRecord> riders)
+    {
+        // the three posts, side by side
+        var row = Ui.HBox(8);
         foreach (var post in new[] { CharacterPost.Admiral, CharacterPost.General, CharacterPost.Commander })
         {
             var p = post;
-            var row = Ui.HBox(Ui.Block);
-            var lab = Ui.VBox(0);
-            lab.CustomMinimumSize = new Vector2(92, 0);
-            lab.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-            var pl = Ui.Label(GameSession.PostWords(post), null, Ui.Text2, Ui.Small, wrap: false);
-            pl.AddThemeFontOverride("font", Ui.SemiBold);
-            lab.AddChild(pl);
-            lab.AddChild(Ui.Label(post switch { CharacterPost.Admiral => "bombardment", CharacterPost.General => "invasions", _ => "no effect yet" }, null, Ui.Text3, Ui.Tiny, wrap: false));
-            row.AddChild(lab);
+            var col = Ui.VBox(4);
+            col.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            col.AddChild(Caption(GameSession.PostWords(post), null, post switch
+            {
+                CharacterPost.Admiral => "The Admiral leads the fleet in space battles and bombardments.",
+                CharacterPost.General => "The General leads the troops when the fleet invades.",
+                _ => "The Commander has no effect yet.",
+            }));
             var z = DropZone($"Fleet {f.Id} {post}", $"make {GameSession.PostWords(post)}", d => RefuseFleetPost(d, f, p), d => DropFleetPost(d, f, p));
             z.Box.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             if (Cm.HolderOf(f.Id, post) is { } holder) z.Flow.AddChild(LeaderChip(holder, null));
             else z.Flow.AddChild(EmptySlot("Empty"));
-            row.AddChild(z.Box);
-            Add(row);
+            col.AddChild(z.Box);
+            row.AddChild(col);
         }
-        var riders = Cm.AttachedTo(f.Id).Where(c => c.Post == CharacterPost.None).OrderBy(c => S.CharName(c.Id), StringComparer.Ordinal).ToList();
+        Add(row);
         Section("Passengers", riders.Count == 0 ? null : riders.Count.ToString(), "Leaders who ride the fleet with no post: they travel with it.");
         var pz = DropZone($"Fleet {f.Id} Passengers", "take aboard", d => RefuseFleetPost(d, f, CharacterPost.None), d => DropFleetPost(d, f, CharacterPost.None));
         foreach (var c in riders) pz.Flow.AddChild(LeaderChip(c, null));
@@ -491,64 +664,65 @@ public partial class GameScreen
         // leaders and fleets sent to join it from other systems (m5 §Moving a character alone, m3 §Joining a fleet on arrival)
         OnTheWay(Cm.All.Where(c => c.Side == Me && c.JoinFleet == f.Id && c.JoinByOrder && c.Transit != null), f.At,
             S.Game.State.Fleets.Values.Where(x => x.Side == Me && x.JoinFleet == f.Id && x.Transit != null).OrderBy(x => x.Id));
+    }
 
-        // ships, and a place to split some off
+    void ShipsTab(Fleet f, bool still)
+    {
         var eco = S.Host.Economy;
-        Section("Ships", f.Ships.Count.ToString(), "Drag a ship onto another fleet here to move it there, or onto New fleet to split it off.");
         var sz = DropZone($"Fleet {f.Id} Ships", "join", d => RefuseShipsInto(d, f), d => DropShipsInto(d, f));
-        foreach (int id in f.Ships) if (eco.Find(id) is { } o) sz.Flow.AddChild(UnitChip(new Drag('S', o.Id), o.Class, HullWords(o), Ui.You));
+        UnitTiles(sz.Flow, f.Ships.Select(id => eco.Find(id)).Where(o => o != null).Select(o => ((Drag?)new Drag('S', o.Id), o, HullWords(o))), f.At);
         if (still && f.Ships.Count > 1)
         {
             var nz = DropZone($"Fleet {f.Id} NewFleet", "split off", d => RefuseSplit(d, f), d => DropSplit(d, f), dashed: true);
-            nz.Box.CustomMinimumSize = new Vector2(ChipWidth, 0);
-            nz.Flow.AddChild(EmptySlot("+ New fleet"));
+            nz.Box.CustomMinimumSize = new Vector2(TileW, TileH);
+            var l = EmptySlot("+ New fleet");
+            l.HorizontalAlignment = HorizontalAlignment.Center;
+            l.CustomMinimumSize = new Vector2(TileW - 12, TileH - 12);
+            nz.Flow.AddChild(l);
+            nz.Box.TooltipText = Ui.Wrap("Drop ships here to split them off into a new fleet.");
             sz.Flow.AddChild(nz.Box);
         }
         Add(sz.Box);
+    }
 
-        // fighters aboard
-        var aboardF = FightersAboard(f);
+    void FightersAboardTab(Fleet f, List<EconObject> aboard)
+    {
+        var eco = S.Host.Economy;
         int berths = Fm.FreeBerths(f);
-        Section("Fighters aboard", berths + aboardF.Count == 0 ? "no hangar" : $"{aboardF.Count} · room for {Math.Max(0, berths - Promised(f.Id))}");
+        Section("Fighters aboard", berths + aboard.Count == 0 ? "no hangar" : $"{aboard.Count} · room for {Math.Max(0, berths - Promised(f.Id))}");
         var qz = DropZone($"Fleet {f.Id} Fighters", "load", d => RefuseOnto(d, f, 'Q'), d => DropOnto(d, f));
-        foreach (var o in aboardF) qz.Flow.AddChild(UnitChip(new Drag('Q', o.Id), o.Class, HullWords(o), Ui.You));
-        foreach (int id in f.Squadrons) if (eco.Find(id) is { } o) qz.Flow.AddChild(UnitChip(null, o.Class, "flies with the fleet", Ui.You));
-        if (aboardF.Count + f.Squadrons.Count == 0) qz.Flow.AddChild(EmptySlot(berths > 0 ? "Drop squadrons here to load them" : "No carrier in this fleet"));
+        UnitTiles(qz.Flow, aboard.Select(o => ((Drag?)new Drag('Q', o.Id), o, HullWords(o)))
+            .Concat(f.Squadrons.Select(id => eco.Find(id)).Where(o => o != null).Select(o => ((Drag?)null, o, "flies along"))), f.At);
+        if (aboard.Count + f.Squadrons.Count == 0) qz.Flow.AddChild(EmptySlot(berths > 0 ? "Drop squadrons here to load them" : "No carrier in this fleet"));
         Add(qz.Box);
+    }
 
-        // troops aboard
-        var aboardR = S.Host.Troops.RegimentsAboard(f);
+    void TroopsAboardTab(Fleet f, List<EconObject> aboard)
+    {
         int room = Fm.FreeTroopSlots(f);
-        Section("Troops aboard", room + aboardR.Count == 0 ? "no transport" : $"{aboardR.Count} · room for {Math.Max(0, room - Promised(f.Id))}");
+        Section("Troops aboard", room + aboard.Count == 0 ? "no transport" : $"{aboard.Count} · room for {Math.Max(0, room - Promised(f.Id))}");
         var tz = DropZone($"Fleet {f.Id} Troops", "load", d => RefuseOnto(d, f, 'R'), d => DropOnto(d, f));
-        foreach (var a in aboardR) tz.Flow.AddChild(UnitChip(new Drag('R', a.Regiment.Id), a.Regiment.Class, null, Ui.You));
-        if (aboardR.Count == 0) tz.Flow.AddChild(EmptySlot(room > 0 ? "Drop regiments here to load them" : "No transport in this fleet"));
+        UnitTiles(tz.Flow, aboard.Select(o => ((Drag?)new Drag('R', o.Id), o, (string)null)), f.At);
+        if (aboard.Count == 0) tz.Flow.AddChild(EmptySlot(room > 0 ? "Drop regiments here to load them" : "No transport in this fleet"));
         Add(tz.Box);
-
-        foreach (var pend in S.PendingOf(f.Id)) Line($"Waiting for the next day: {pend}", Pending, Ui.Small);
-        int fid = f.Id;
-        var links = new List<(string, Action, string)>();
-        if (still) links.Add(($"Ground at {f.At}", () => OpenMgmt(MgKind.Ground, f.At), "The planet's leaders, troops and fighters: drag them onto this fleet"));
-        if (still) links.Add(("Move...", () => { var ff = S.Game.State.Fleets[fid]; CloseSectorView(); StartMove(ff); }, "Pick a destination on the map"));
-        links.Add(("Orders and attack...", () => { CloseSectorView(); SelectFleet(fid, true); ShowTab(DrawerTab.Selected); }, "Bombard, invade, retreat, scrap: the fleet's full page"));
-        MgLinks(links.ToArray());
     }
 
     /// <summary>Who is travelling here (leaders, and fleets sent to join): name and arrival day. Not draggable while they travel.</summary>
     void OnTheWay(IEnumerable<CharacterRecord> leaders, string to, IEnumerable<Fleet> fleets = null)
     {
-        var rows = leaders.OrderBy(c => c.Id).Select(c => (Name: S.CharName(c.Id), Sub: Arrives(c.Transit, c.JoinPost != CharacterPost.None ? $"to be {GameSession.PostWords(c.JoinPost)}" : null), Badge: Initials(S.CharName(c.Id))))
-            .Concat((fleets ?? Enumerable.Empty<Fleet>()).Select(x => (Name: x.Name, Sub: Arrives(x.Transit, $"{Ui.Count(x.Ships.Count, "ship", "ships")}, to merge"), Badge: (string)null))).ToList();
-        if (rows.Count == 0) return;
-        Section("On the way", rows.Count.ToString(), $"Sent here from other systems. They take their place when they reach {to}.");
+        var ls = leaders.OrderBy(c => c.Id).ToList();
+        var fs = (fleets ?? Enumerable.Empty<Fleet>()).ToList();
+        if (ls.Count + fs.Count == 0) return;
+        Section("On the way", (ls.Count + fs.Count).ToString(), $"Sent here from other systems. They take their place when they reach {to}.");
         var flow = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore };
         flow.AddThemeConstantOverride("h_separation", 6); flow.AddThemeConstantOverride("v_separation", 6);
-        foreach (var r in rows)
+        foreach (var c in ls)
         {
-            var chip = Chip(r.Name, r.Sub, r.Badge, Ui.You, true);
-            chip.CustomMinimumSize = new Vector2(ChipWidth, 0);
-            flow.AddChild(chip);
+            string name = S.CharName(c.Id);
+            var t = Tile(null, false, 0, name, Arrives(c.Transit, c.JoinPost != CharacterPost.None ? $"to be {GameSession.PostWords(c.JoinPost)}" : null), 1, Ui.You, ghost: true, avatar: Initials(name));
+            flow.AddChild(t);
         }
+        foreach (var x in fs) flow.AddChild(Tile(UnitIcon.Kind.Ship, Me == Side.Hand, 2, x.Name, Arrives(x.Transit, $"{Ui.Count(x.Ships.Count, "ship", "ships")}, to merge"), 1, Ui.You, ghost: true));
         Add(flow);
     }
 
@@ -560,48 +734,28 @@ public partial class GameScreen
 
     // ================================================================== chips and zones
 
-    /// <summary>A leader as a chip: initials, name, what they lead with. Drags unless an order already moves them today, or they cannot act.</summary>
+    /// <summary>A leader as a tile: initials, name, the posts they can hold. Drags unless an order already moves them today, or they cannot act.</summary>
     Control LeaderChip(CharacterRecord c, string role)
     {
         string name = S.CharName(c.Id);
         var d = new Drag('L', c.Id);
-        bool moved = _moved.TryGetValue(d.Key, out var mv);
-        if (moved) return new Control { Visible = false };   // it already stands where it was dropped
-        string to = mv.Words;
-        bool can = c.Status == CharacterStatus.Free && c.Transit == null && !Cm.IsOnMission(c.Id) && !moved;
-        string posts = LeaderPosts(c);
-        string sub = moved ? "→ " + to : c.Status != CharacterStatus.Free ? GameSession.StatusWords(c) : Cm.IsOnMission(c.Id) ? "on a mission" : posts;
-        var chip = Chip(name, sub, Initials(name), can ? Ui.You : Ui.Text3, moved);
-        chip.CustomMinimumSize = new Vector2(ChipWidth, 0);
-        chip.TooltipText = Ui.Wrap($"{name}. {S.SkillsOf(c)}\n{S.CapabilityOf(c)}{(role != null ? $"\n{role}." : "")}" + (can ? "\nDrag onto a post or a fleet." : moved ? $"\nNext day: {to}." : ""));
-        chip.SetMeta(UiTest.FullName, "Leader " + name);
-        if (can) MakeDraggable(chip, d, name);
-        return chip;
+        if (_moved.ContainsKey(d.Key)) return new Control { Visible = false };   // it already stands where it was dropped
+        bool can = c.Status == CharacterStatus.Free && c.Transit == null && !Cm.IsOnMission(c.Id);
+        string sub = c.Status != CharacterStatus.Free ? GameSession.StatusWords(c) : Cm.IsOnMission(c.Id) ? "on a mission" : LeaderPosts(c);
+        var tile = Tile(null, false, 0, name, sub, 1, can ? Ui.You : Ui.Text3, avatar: Initials(name));
+        tile.TooltipText = Ui.Wrap($"{name}. {S.SkillsOf(c)}\n{S.CapabilityOf(c)}{(role != null ? $"\n{role}." : "")}" + (can ? "\nDrag onto a post or a fleet." : ""));
+        tile.SetMeta(UiTest.FullName, "Leader " + name);
+        if (can) MakeDraggable(tile, new List<Drag> { d }, name);
+        return tile;
     }
 
-    /// <summary>The posts a leader can hold, short enough for a chip (their leadership is in the tooltip).</summary>
+    /// <summary>The posts a leader can hold, short enough for a tile (their leadership is in the tooltip).</summary>
     string LeaderPosts(CharacterRecord c)
     {
         if (c == null) return null;
         var cls = Cm.ClassOf(c);
         var can3 = new[] { cls.CanAdmiral ? "Admiral" : null, cls.CanGeneral ? "General" : null, cls.CanCommander ? "Commander" : null }.Where(x => x != null).ToArray();
-        return can3.Length == 3 ? "any post" : can3.Length == 0 ? "passenger only" : string.Join(", ", can3);
-    }
-
-    /// <summary>A regiment, squadron or ship as a chip. A null drag is shown but doesn't move (fighters flying with the fleet).</summary>
-    Control UnitChip(Drag? d, string cls, string sub, Color accent)
-    {
-        bool moved = d is { } dd && _moved.ContainsKey(dd.Key);
-        if (moved) return new Control { Visible = false };   // it already stands where it was dropped
-        var chip = Chip(cls, sub, null, d == null ? Ui.Text3 : accent, moved);
-        chip.CustomMinimumSize = new Vector2(ChipWidth, 0);
-        chip.TooltipText = Ui.Wrap(ClassTip(cls) + (d != null && !moved ? "\nDrag it to another window." : ""));
-        if (d is { } drag)
-        {
-            chip.SetMeta(UiTest.FullName, $"{drag.Kind}:{drag.Id}");
-            if (!moved) MakeDraggable(chip, drag, cls);
-        }
-        return chip;
+        return can3.Length == 3 ? "any post" : can3.Length == 0 ? "passenger" : string.Join(", ", can3);
     }
 
     static string Initials(string name)
@@ -612,57 +766,14 @@ public partial class GameScreen
 
     string HullWords(EconObject o) => Fm.ClassOf(o) is { } sc && o.Hull < sc.Hull ? $"hull {o.Hull * 100 / Math.Max(1, sc.Hull)}%" : null;
 
-    PanelContainer Chip(string title, string sub, string badge, Color accent, bool ghost)
-    {
-        var p = new PanelContainer { MouseFilter = MouseFilterEnum.Pass };
-        p.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Panel2, 6, new Color(accent, ghost ? 0.25f : 0.32f), 1, 8, 5));
-        var h = Ui.HBox(7);
-        h.MouseFilter = MouseFilterEnum.Ignore;
-        p.AddChild(h);
-        if (badge != null)
-        {
-            var b = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(26, 26) };
-            b.AddThemeStyleboxOverride("panel", Ui.Box(new Color(accent, 0.18f), 13, new Color(accent, 0.6f), 1, 0, 0));
-            var bl = Ui.Label(badge, null, accent, 10, wrap: false);
-            bl.AddThemeFontOverride("font", Ui.SemiBold);
-            bl.HorizontalAlignment = HorizontalAlignment.Center; bl.VerticalAlignment = VerticalAlignment.Center;
-            b.AddChild(bl);
-            b.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-            h.AddChild(b);
-        }
-        else
-        {
-            var bar = new ColorRect { Color = accent, CustomMinimumSize = new Vector2(3, 0), MouseFilter = MouseFilterEnum.Ignore };
-            h.AddChild(bar);
-        }
-        var v = Ui.VBox(0);
-        v.MouseFilter = MouseFilterEnum.Ignore;
-        v.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        var t = Ui.Label(title, null, Ui.Text, Ui.Small, wrap: false);
-        t.AddThemeFontOverride("font", Ui.Medium);
-        t.ClipText = true; t.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-        v.AddChild(t);
-        if (sub != null)
-        {
-            var s = Ui.Label(sub, null, ghost ? Pending : Ui.Text3, Ui.Tiny, wrap: false);
-            s.ClipText = true; s.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-            v.AddChild(s);
-        }
-        h.AddChild(v);
-        if (ghost) p.Modulate = new Color(1, 1, 1, 0.6f);
-        return p;
-    }
-
-    Control EmptySlot(string text)
+    Label EmptySlot(string text)
     {
         var l = Ui.Label(text, null, Ui.Text3, Ui.Tiny, wrap: false);
-        l.CustomMinimumSize = new Vector2(0, 30);
+        l.CustomMinimumSize = new Vector2(0, 34);
         l.VerticalAlignment = VerticalAlignment.Center;
         l.MouseFilter = MouseFilterEnum.Ignore;
         return l;
     }
-
-    void Hint(string text) => Add(Ui.Label(text, null, Ui.Text3, Ui.Tiny));
 
     (PanelContainer Box, HFlowContainer Flow) DropZone(string key, string verb, Func<Drag, string> refuse, Action<Drag> drop, bool dashed = false)
     {
@@ -677,7 +788,13 @@ public partial class GameScreen
         box.SetMeta("dashed", dashed);
         box.SetDragForwarding(new Callable(),
             Callable.From((Func<Vector2, Variant, bool>)((_, data) => Drag.Parse(data) is { } d && Judge(zone, d) == null)),
-            Callable.From((Action<Vector2, Variant>)((_, data) => { if (Drag.Parse(data) is { } d && Judge(zone, d) == null) { RunDrop(() => drop(d)); RefreshMgmt(); RefreshSectorView(); } })));
+            Callable.From((Action<Vector2, Variant>)((_, data) =>
+            {
+                // a stack drops unit by unit, each judged after the ones before it (room fills up)
+                bool any = false;
+                foreach (var d in Drag.ParseAll(data)) if (Judge(zone, d) == null) { RunDrop(() => drop(d)); any = true; }
+                if (any) { RefreshMgmt(); RefreshSectorView(); }
+            })));
         return (box, flow);
     }
 
@@ -711,18 +828,26 @@ public partial class GameScreen
 
     Drag? _dragging;
 
-    void MakeDraggable(Control c, Drag d, string label)
+    int _dragCount = 1;
+
+    /// <summary>
+    /// A tile drags one unit; with Shift held when the drag starts, the whole stack (every unit the tile counts). The preview is the tile's
+    /// picture with the count.
+    /// </summary>
+    void MakeDraggable(Control c, IReadOnlyList<Drag> ds, string label)
     {
+        if (ds.Count == 0) return;
         c.MouseDefaultCursorShape = CursorShape.Drag;
         c.SetDragForwarding(Callable.From((Func<Vector2, Variant>)(_ =>
         {
-            _dragging = d;
-            var prev = Chip(label, null, d.Kind == 'L' ? Initials(label) : null, Ui.You, false);
-            prev.CustomMinimumSize = new Vector2(ChipWidth, 0);
+            var take = Input.IsKeyPressed(Key.Shift) ? ds : ds.Take(1).ToList();
+            _dragging = take[0];
+            _dragCount = take.Count;
+            var prev = DragTile(take[0], take.Count > 1 ? "all of them" : null, take.Count, ghost: false);
             prev.Modulate = new Color(1, 1, 1, 0.9f);
             prev.Rotation = -0.03f;
             c.SetDragPreview(prev);
-            return d.Key;
+            return $"{take[0].Kind}:{string.Join(",", take.Select(x => x.Id))}";
         })), new Callable(), new Callable());
     }
 
@@ -741,7 +866,7 @@ public partial class GameScreen
         _dragHint.Position = ClampWin(mouse + new Vector2(18, 22), _dragHint.Size) with { Y = Math.Min(mouse.Y + 22, _mgLayer.Size.Y - 40) };
     }
 
-    string DropWords(Drag d, Zone z) => $"Drop to {z.Verb}: {ThingName(d)}";
+    string DropWords(Drag d, Zone z) => $"Drop to {z.Verb}: {(_dragCount > 1 ? $"{_dragCount} × " : "")}{ThingName(d)}";
 
     string ThingName(Drag d) => d.Kind switch
     {
@@ -1123,10 +1248,11 @@ public partial class GameScreen
         NewDay();
         var z = _zones.FirstOrDefault(x => x.Key == zoneKey && IsInstanceValid(x.Box));
         if (z == null) return "no such zone: " + zoneKey;
-        if (Drag.Parse(chipKey) is not { } d) return "bad chip: " + chipKey;
-        string why = Judge(z, d);
+        var all = Drag.ParseAll(chipKey);
+        if (all.Count == 0) return "bad chip: " + chipKey;
+        string why = Judge(z, all[0]);
         if (why != null) return why == "" ? "already there" : why;
-        RunDrop(() => z.Drop(d));
+        foreach (var d in all) if (Judge(z, d) == null) RunDrop(() => z.Drop(d));
         RefreshMgmt();
         foreach (var w in _mgWins.ToList()) RebuildMg(w);
         return null;
@@ -1138,8 +1264,21 @@ public partial class GameScreen
     {
         if (_mgWins.FirstOrDefault(w => w.Key == key) is not { } w) return "";
         RebuildMg(w);   // as the next frame would
-        return LabelsIn(w.Head) + "\n" + LabelsIn(w.Body);
+        return LabelsIn(w.Head) + "\n" + string.Join("\n", w.Pages.Values.Select(p => PageLabels(p.Page))) + "\n" + LabelsIn(w.Body);
     }
+
+    /// <summary>Every label of a tab, shown or not (the playtest reads tabs that are not in front).</summary>
+    static string PageLabels(Control page)
+    {
+        bool was = page.Visible;
+        page.Visible = true;
+        string text = LabelsIn(page);
+        page.Visible = was;
+        return text;
+    }
+
+    internal string MgTab(string key) => _mgWins.FirstOrDefault(w => w.Key == key)?.Tab;
+    internal IReadOnlyList<string> MgTabs(string key) => _mgWins.FirstOrDefault(w => w.Key == key)?.Pages.Keys.ToList() ?? new List<string>();
 
     /// <summary>For screenshots: show the drop zones lit as if this chip were being dragged.</summary>
     internal void MgShowDrag(string chipKey)
@@ -1147,7 +1286,7 @@ public partial class GameScreen
         // "L:?" picks the first leader of yours standing where the first window is (screenshots don't know ids)
         if (chipKey == "L:?" && _mgWins.FirstOrDefault(x => x.System != null) is { } w)
             chipKey = S.MyCharacters.Where(c => S.Host.Characters.LocationOf(c) == w.System && c.AttachedFleet == 0).OrderBy(c => c.Id).Select(c => $"L:{c.Id}").FirstOrDefault() ?? chipKey;
-        if (Drag.Parse(chipKey) is { } d) { _dragging = d; _shotDrag = d; LightZones(d); }
+        if (Drag.Parse(chipKey) is { } d) { _dragging = d; _dragCount = Drag.ParseAll(chipKey).Count; _shotDrag = d; LightZones(d); }
     }
     Drag? _shotDrag;   // a screenshot holds a drag without a mouse
 }

@@ -279,7 +279,7 @@ public partial class GameScreen
     public void ShotSector(string name) => OpenSector(name.Replace('_', ' '));
     internal void TileClick(string system, string hot) => OpenFromTile(system, hot);
 
-    /// <summary>--window ground|infra Charter, or --window fleet 3: open a management window.</summary>
+    /// <summary>--window ground|troops|fighters|fleets|build Charter, or --window fleet 3[:Ships]: open a management window.</summary>
     public void ShotWindow(string kind, string what)
     {
         if (kind.Equals("pair", StringComparison.OrdinalIgnoreCase))
@@ -297,12 +297,17 @@ public partial class GameScreen
         if (kind.Equals("fleet", StringComparison.OrdinalIgnoreCase)) 
         {
             // a fleet id, or a system name: then your first fleet standing there
+            // "3" or "Charter", optionally ":Ships" for the tab
+            string ftab = what.Contains(':') ? what[(what.IndexOf(':') + 1)..] : null;
+            if (ftab != null) what = what[..what.IndexOf(':')];
             int id = int.TryParse(what, out int n) ? n : S.Game.State.Fleets.Values.Where(f => f.Side == S.Player && f.At == what.Replace('_', ' ') && f.Transit == null)
                 .OrderBy(f => f.Id).Select(f => f.Id).FirstOrDefault();
-            if (id > 0) OpenMgmt(MgKind.Fleet, fleet: id);
+            if (id > 0) OpenMgmt(MgKind.Fleet, fleet: id, tab: ftab);
             return;
         }
-        OpenMgmt(kind.Equals("infra", StringComparison.OrdinalIgnoreCase) ? MgKind.Infra : MgKind.Ground, what.Replace('_', ' '));
+        // ground (Leaders), infra or build, troops, fighters, fleets: a system's window on that tab
+        string tab = kind.ToLowerInvariant() switch { "infra" or "build" => "Build", "troops" => "Troops", "fighters" => "Fighters", "fleets" => "Fleets", _ => "Leaders" };
+        OpenMgmt(MgKind.Ground, what.Replace('_', ' '), tab: tab);
     }
     public void ShotGoal() => ShowGoal();
     public void ShotClick(string prefix) { PlayRefresh(); if (!Click(prefix)) GD.PrintErr("no button " + prefix); PlayRefresh(); }
