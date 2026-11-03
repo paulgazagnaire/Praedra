@@ -49,6 +49,14 @@ Pasted presets and library entries are checked on load: numbers are clamped to t
 ## Save image (see-through PNG)
 **Save image** under the planet opens the picture at 1600 px. **See-through background** (on by default, remembered) drops the sky and the stars and keeps the planet with its rings, moons, orbital ring and halo, as a PNG with transparency. The page draws the picture twice, once on a black sky and once on a white one: where both agree the planet covers the sky, where they differ the difference is how much sky shows through (glow, haze, ring gaps). With the dither on, each dot is either kept or dropped, so the dots stay crisp. Turn the box off for the old picture with the black starry sky.
 
+## Save video (perfect loop)
+
+**Save video** makes an MP4 that loops with no jump. Pick a length (default: the time the planet takes to turn once), a size and 30 or 60 frames a second. Every motion (spin, clouds, gas bands and storms, rings, moon orbits, city and cable lights, twinkle) is nudged to a whole number of cycles in that length, so the frame after the last is the first. The planet always turns at least once; anything too slow to make half a cycle stands still, and the dialog names it (a longer video keeps it moving). Sea glints fade back to where they began. Frames are drawn one by one at full detail, not recorded live, so a long 2160 video takes a while; Stop ends it.
+
+- Encoding uses the browser's WebCodecs (H.264; VP9 when the browser has no H.264 encoder) and mp4-muxer 5.2.2 from jsdelivr, loaded on first use.
+- **See-through background** saves each frame as a see-through PNG (as Save image does) in one zip instead of a video. Use 512 or 720: 1500 frames at 1080 is gigabytes.
+- Godot cannot play MP4. In the game use the PNG frames (or convert to Ogg Theora).
+
 ## Customising the game's systems
 The section "The game's 555 systems" is where Paul goes through every system and sets the look the game shows. Pick a system (type its name, or Previous / Next / Next not saved), change it, then press **Save for the game**. The line under the buttons says where that system stands: as the lore sheet describes it, changed but not saved, saved and waiting for the next game update, or saved and in the game; and how many of the 555 are saved. Leaving a changed system without saving asks for a second press. **Back to lore sheet** drops the saved look.
 
