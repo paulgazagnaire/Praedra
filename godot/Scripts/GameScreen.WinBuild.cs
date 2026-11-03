@@ -189,7 +189,7 @@ public partial class GameScreen
             $"{r.Name}: costs {r.Cost} refined each and {r.Maintenance} upkeep each, about {b.Days} days per unit here once the refined is there." +
             (b.Why != null ? $"\n{char.ToUpperInvariant(b.Why[0])}{b.Why[1..]}." : "") + (ClassTip(r.Name) is string ct ? "\n" + ct : "") + (b.Usable ? $"\nClick to order {_buildQty}." : ""), "Flat", !b.Usable);
         btn.SetMeta(UiTest.FullName, $"Build {r.Name}");
-        btn.CustomMinimumSize = new Vector2(TileW, 132);
+        btn.CustomMinimumSize = new Vector2(TileW, 146);
         btn.FocusMode = FocusModeEnum.None;
         btn.AddThemeStyleboxOverride("normal", Ui.Box(Ui.Panel2, 8, new Color(Ui.You, 0.3f), 1, 0, 0));
         btn.AddThemeStyleboxOverride("hover", Ui.Box(Ui.Hover, 8, new Color(Ui.You, 0.8f), 1, 0, 0));
@@ -217,9 +217,10 @@ public partial class GameScreen
         }
         if (b.Why != null)
         {
-            var why = Ui.Label(b.Why, null, b.Usable ? Ui.Warn : Ui.Text3, Ui.Tiny, wrap: false);
+            // wraps to two lines so "waits for refined" or "not researched" reads in full (QA round 126)
+            var why = Ui.Label(b.Why, null, b.Usable ? Ui.Warn : Ui.Text3, Ui.Tiny, wrap: true);
             why.HorizontalAlignment = HorizontalAlignment.Center;
-            why.ClipText = true; why.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+            why.MaxLinesVisible = 2; why.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
             v.AddChild(why);
         }
         btn.AddChild(v);
