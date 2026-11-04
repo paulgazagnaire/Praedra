@@ -7,7 +7,7 @@
 
 `design/system-population.csv` (system, people, source) holds how many people live in each of the 555 systems, copied from the lore (`specs/creative/08-planet-presets.json` popB, as whole people) on 2026-11-03. Only the harvest report reads it (m5-harvester §7); no rule uses it.
 
-`design/system-lore.csv` (system, world, from_space, moons, people, resources, story, history, source) holds each of the 555 systems' lore text, copied from `specs/creative/08-planet-presets.json` (text) on 2026-11-04. Only the Lore tab of a system window reads it (screens only); no rule uses it. history is empty where the Lore Master has not written one yet. When the lore changes, re-copy it.
+`design/system-lore.csv` (system, world, from_space, moons, people, resources, story, history, source) holds each of the 555 systems' lore text, copied from `specs/creative/08-planet-presets.json` (text) on 2026-11-04. Only the Lore tab of a system window reads it (screens only); no rule uses it. history is empty where the Lore Master has not written one yet. When the lore changes, run `python3 tools/lore/copy-system-lore.py` (it rewrites this file and system-population.csv from 08) and commit both.
 
 `design/starting-facilities.csv` is the data list of m2-construction §Starting yards (seven Orbital Shipyards: four Hand, three neutral), written from that sheet's table.
 
