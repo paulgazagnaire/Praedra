@@ -111,7 +111,7 @@ public partial class Main
         gs.TileClick(target, "infra"); gs.PlayRefresh();
         string card = gs.MgText($"Ground {target}");
         Expect(gs.MgmtKeys.Contains($"Ground {target}") && !gs.MgmtKeys.Contains($"Infra {target}") && gs.MgTabs($"Ground {target}").Count() == 0
-            && card.Contains("HARVESTED") && card.Contains($"on day {s.Game.State.Harvester.DestroyedDay(target)}") && !card.Contains("Infrastructure at"),
+            && card.Contains("HARVESTED") && card.Contains($"on day {s.Game.State.Harvester.DestroyedDay(target)}") && !card.Contains("Infrastructure at") && card.Contains("BEFORE THE HARVEST") && !card.Contains("FROM SPACE"),
             "a harvested tile opens one plain card with the day: " + card.Replace("\n", " / "));
         while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
         Expect(GameSession.PeopleWords(4_300_000_000) == "4.3 billion" && GameSession.PeopleWords(2_000_000_000) == "2 billion" && GameSession.PeopleWords(40_000_000) == "40 million"

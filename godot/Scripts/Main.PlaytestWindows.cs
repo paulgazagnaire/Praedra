@@ -36,7 +36,12 @@ public partial class Main
         Expect(gs.MgmtKeys.Contains($"Ground {sys}") && gs.MgTab($"Ground {sys}") == "Leaders" && ground.Contains("LEADERS ON THE PLANET") && ground.Contains("YOUR FLEETS IN ORBIT"),
             "the system window opens on its Leaders tab, and its Fleets tab lists the fleets in orbit");
         if (s.OwnerOf(sys) == me)
-            Expect(string.Join(",", gs.MgTabs($"Ground {sys}")) == "Leaders,Troops,Fighters,Fleets", $"its tabs: {string.Join(", ", gs.MgTabs($"Ground {sys}"))}");
+            Expect(string.Join(",", gs.MgTabs($"Ground {sys}")) == "Leaders,Troops,Fighters,Fleets,Lore", $"its tabs: {string.Join(", ", gs.MgTabs($"Ground {sys}"))}");
+        // the Lore tab (Paul 2026-11-04): the Lore Master's text for this system
+        var lore = SystemLore.Of(sys);
+        Expect(lore != null && gs.Click($"Tab Ground {sys} Lore") && gs.MgTab($"Ground {sys}") == "Lore"
+            && gs.MgText($"Ground {sys}") is var lt && lt.Contains("THE WORLD") && lt.Contains(lore.World) && lt.Contains(lore.Story),
+            $"the Lore tab shows {sys}'s world and story");
         Expect(gs.Click($"Tab Ground {sys} Fleets") && gs.MgTab($"Ground {sys}") == "Fleets", "a click on the Fleets tab shows it");
         Expect(gs.Click($"Open {fleet.Name}"), $"the Fleets tab's Open button opens {fleet.Name}");
         gs.PlayRefresh();
