@@ -73,11 +73,11 @@ public partial class GameScreen
         // ---- the planet, one screen pixel per dot so the dither stays crisp; fleets as triangles in its corner; trouble as a red ring
         var art = new Control { CustomMinimumSize = new Vector2(PlanetArt.Dots, PlanetArt.Dots), SizeFlagsHorizontal = SizeFlags.ShrinkCenter, MouseFilter = MouseFilterEnum.Ignore };
         v.AddChild(art);
-        if (PlanetArt.Of(n) is Texture2D tex)
+        if ((dead ? PlanetArt.HarvestedOf(n) ?? PlanetArt.Of(n) : PlanetArt.Of(n)) is Texture2D tex)
         {
             var tr = new TextureRect { Texture = tex, TextureFilter = TextureFilterEnum.Nearest, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.Scale, MouseFilter = MouseFilterEnum.Ignore };
             tr.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-            if (dead) tr.Modulate = new Color(0.6f, 0.22f, 0.2f, 0.55f);
+            if (dead && PlanetArt.HarvestedOf(n) == null) tr.Modulate = new Color(0.6f, 0.22f, 0.2f, 0.55f); // no remnant picture: tint the old one
             else if (!explored) tr.Modulate = new Color(0.7f, 0.72f, 0.78f, 0.8f);
             art.AddChild(tr);
         }

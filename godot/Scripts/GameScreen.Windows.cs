@@ -454,6 +454,9 @@ public partial class GameScreen
     void HarvestedWin(MgWin w, string n)
     {
         MgHead(w, $"Harvested · {RegionOf(n)}", n, Ui.Danger, S.DestroyedWords(n), Ui.Tag("HARVESTED", Ui.Danger, true));
+        if (PlanetArt.HarvestedOf(n) is Texture2D rem)
+            Add(new TextureRect { Texture = rem, TextureFilter = TextureFilterEnum.Nearest, CustomMinimumSize = new Vector2(PlanetArt.Dots, PlanetArt.Dots),
+                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.Scale, SizeFlagsHorizontal = SizeFlags.ShrinkCenter, MouseFilter = MouseFilterEnum.Ignore });
         Line("The planet and everything on it are gone for good: no people, buildings or troops. Nobody holds it, and nobody can build, invade or send missions here.", Ui.Text2, Ui.Small);
         Line("It stays on the map as a field of debris. Fleets can still pass through it and stop here.", Ui.Text3, Ui.Small);
         var own = S.Game.State.Fleets.Values.Where(f => f.Side == Me && f.At == n).OrderBy(f => f.Id).ToList();
@@ -467,7 +470,8 @@ public partial class GameScreen
     void InfraWin(MgWin w)
     {
         string n = w.System;
-        bool mine = !S.IsDestroyed(n) && S.OwnerOf(n) == Me;
+        if (S.IsDestroyed(n)) { HarvestedWin(w, n); return; } // already open when the harvester struck: no dead slots (Ponytail on #241)
+        bool mine = S.OwnerOf(n) == Me;
         var eco = S.Host.Economy;
         MgHead(w, $"Infrastructure · {RegionOf(n)}", n, mine ? Ui.Text : Ui.Text2,
             mine ? $"{eco.EnergyUsed(n)} of {eco.SlotsOf(n).Energy} energy slots used · {Ui.Count(eco.OfKindAt(n, FacilityKind.Mine), "mine", "mines")} · {Ui.Count(eco.OfKindAt(n, FacilityKind.Refinery), "refinery", "refineries")}" : null);
