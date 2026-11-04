@@ -526,7 +526,7 @@ public class SimpleAiAgentsTests
     private static int YardSpikes(int value, out bool seen, int? floor = null, int goneDay = -1, int countFrom = 0)
     {
         var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA });
-        var p = AiLevels.For(AiLevel.Medium) with { HarvesterYardValue = value };
+        var p = AiLevels.For(AiLevel.Medium) with { HarvesterYardValue = value, BurnTheBooks = false }; // Burn the Books off: it would take the free Sabotage-capable agents this test counts
         if (floor is int f) p = p with { HarvesterYardMinOddsPercent = f };
         var m = new AiMatch(h, null, p, passive: Side.Hand);
         const string yard = "Navalia";
