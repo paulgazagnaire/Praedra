@@ -466,25 +466,36 @@ public class SimpleAiAgentsTests
         Assert.True(e0 > capE && e1 < new SimpleAiParams().MissionMinOddsPercent, $"Chair {e0} -> {e1}");
     }
 
-    // m5-missions §6b AI (SimpleAiParams.BurnTheBooks, DEFAULT on): seed 1, the Collective AI with fog sends one free non-major character on
-    // Burn the Books to the Hand-held Charter on its first agents day; with the switch off it sends none.
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void BurnTheBooks_CollectiveAiSendsOneTeam(bool on)
+    // Make every Collective non-major character a talented character (m5-missions §6b BooksNeedsTalent: the planner gives an untalented one 0).
+    private static void TalentedCollective(GameHost h)
     {
-        Assert.True(new SimpleAiParams().BurnTheBooks);
+        foreach (var c in h.Game.State.Characters.Characters.Values.Where(c => c.Side == Side.Collective && h.Characters.ClassOf(c).Kind != CharacterKind.Major))
+            c.TalentHolder = true;
+    }
+
+    // m5-missions §6b AI (SimpleAiParams.BurnTheBooks): seed 1, the Collective AI with fog sends one free non-major talented character on Burn the
+    // Books to the Hand-held Charter on its first agents day; with the switch off it sends none; with no talented character it sends none
+    // (BooksNeedsTalent, Decided by Paul 2026-11-04 20:47: the side knows its own characters).
+    [Theory]
+    [InlineData(true, true, 1)]
+    [InlineData(false, true, 0)]
+    [InlineData(true, false, 0)]
+    public void BurnTheBooks_CollectiveAiSendsOneTeam(bool on, bool talented, int expected)
+    {
         var (_, h) = Match(1, Fog);
         Assert.Equal(Side.Hand, h.Fleets.OwnerOf(Praedra.Core.Control.ControlModule.CapitalSystem));
+        if (talented) TalentedCollective(h);
         var ai = new SimpleAi(h, Side.Collective, Fog with { BurnTheBooks = on });
         List<StartMissionOrder> Books() => h.Game.Queue.OfType<StartMissionOrder>().Where(o => o.Kind == MissionKind.BurnTheBooks).ToList();
         for (int d = 0; d < 2 && Books().Count == 0; d++) { ai.PlanDay(); if (Books().Count == 0) h.Game.Step(); }
         var orders = Books();
-        Assert.Equal(on ? 1 : 0, orders.Count);
-        if (!on) return;
+        Assert.Equal(expected, orders.Count);
+        if (expected == 0) return;
         var o = orders.Single();
         Assert.Equal((Side.Collective, Praedra.Core.Control.ControlModule.CapitalSystem, 1), (o.Side, o.TargetSystem, o.Characters.Count));
-        Assert.NotEqual(CharacterKind.Major, h.Characters.ClassOf(h.Characters.Get(o.Characters[0])!).Kind);
+        var sent = h.Characters.Get(o.Characters[0])!;
+        Assert.NotEqual(CharacterKind.Major, h.Characters.ClassOf(sent).Kind);
+        Assert.True(sent.TalentHolder);
     }
 
     // m5-missions §6b AI (SimpleAiParams.BooksRetryDays, DEFAULT 180): a failed Burn the Books in the AI memory inside the window stops a new
@@ -498,8 +509,9 @@ public class SimpleAiAgentsTests
         Assert.Equal(180, new SimpleAiParams().BooksRetryDays);
         var (_, h) = Match(1, Fog);
         int day = h.Game.Day + ageDays;
+        TalentedCollective(h);
         h.AiMemoryFor(Side.Collective, true).Notes.Add(new AiNote { Kind = AiNoteKind.BooksFailed, Day = day, Floor = day, System = Praedra.Core.Control.ControlModule.CapitalSystem });
-        var ai = new SimpleAi(h, Side.Collective, Fog);
+        var ai = new SimpleAi(h, Side.Collective, Fog with { BurnTheBooks = true });
         List<StartMissionOrder> Books() => h.Game.Queue.OfType<StartMissionOrder>().Where(o => o.Kind == MissionKind.BurnTheBooks).ToList();
         for (int d = 0; d < 2 && Books().Count == 0; d++) { ai.PlanDay(); if (Books().Count == 0) h.Game.Step(); } // as BurnTheBooks_CollectiveAiSendsOneTeam
         Assert.Equal(expected, Books().Count);

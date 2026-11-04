@@ -9,7 +9,7 @@ using static Praedra.Core.Tests.Missions.MissionWorld;
 
 namespace Praedra.Core.Tests.Missions;
 
-// m5-missions §6b (Burn the Books), tests BB1 to BB5, and the §6b guard set.
+// m5-missions §6b (Burn the Books), tests BB1 to BB7, and the §6b guard set (BooksSkipDetection off).
 public class BurnTheBooksTests
 {
     private const string Charter = Praedra.Core.Control.ControlModule.CapitalSystem;
@@ -25,8 +25,11 @@ public class BurnTheBooksTests
         return MissionWorld.Data with { Galaxy = g, Slots = SlotValues.Parse(slots, g) };
     });
 
-    /// <summary>Charter held by the Hand; Mae Abara (Collective, no Talent) at Charter with espionage 80 and combat 60.</summary>
-    private static MissionWorld World(MissionParams? p = null, Side charterHolder = Side.Hand)
+    /// <summary>
+    /// Charter held by the Hand; Mae Abara (Collective) at Charter with espionage 80 and combat 60, a talented character (TalentHolder, Talent 0 so
+    /// nobody senses her) unless <paramref name="talented"/> is false (§6b BooksNeedsTalent).
+    /// </summary>
+    private static MissionWorld World(MissionParams? p = null, Side charterHolder = Side.Hand, bool talented = true)
     {
         var w = new MissionWorld(p, data: _data.Value);
         w.Hold(Charter, charterHolder, 20);
@@ -34,7 +37,7 @@ public class BurnTheBooksTests
         w.Hold(B, Side.Hand, 60);
         w.Hold(C, null, 98);
         w.Hold(D, Side.Hand, 50);
-        w.Agent(MaeAbara, Charter, esp: 80, com: 60);
+        w.Agent(MaeAbara, Charter, esp: 80, com: 60).TalentHolder = talented;
         return w;
     }
 
@@ -88,11 +91,11 @@ public class BurnTheBooksTests
         Assert.Equal(MissionReject.BooksGone, Order(w, Side.Collective, Midwife, Charter));
     }
 
-    // m5-missions BB4: best member esp 80, combat 60, 2 Hand defence facilities at Charter: input 70 - 10 = 60, capped to 3; draw 2 succeeds, 3 fails
-    // (SBTGMSTB at 60 is 60 in data/classic/mission-tables.csv, not the sheet's 50; the cap gives 3 either way)
+    // m5-missions BB4: best member esp 80, combat 60, 2 Hand defence facilities at Charter: input 70 - 10 = 60, capped to 1 (BooksCapPercent, Decided
+    // by Paul 2026-11-04 20:47); draw 0 succeeds, 1 fails (SBTGMSTB at 60 is 60 in data/classic/mission-tables.csv; the cap gives 1 either way)
     [Theory]
-    [InlineData(2, true)]
-    [InlineData(3, false)]
+    [InlineData(0, true)]
+    [InlineData(1, false)]
     public void BB4_InputAndCap(int roll, bool success)
     {
         var w = World();
@@ -102,13 +105,14 @@ public class BurnTheBooksTests
         w.Agent(Midwife, Charter, esp: 10, com: 10); // a weaker second member: the one roll uses the best input
         Assert.Equal(2, w.M.BooksDefences(Charter));
         Assert.Equal(60, w.M.Lookup(w.M.Data.Table("SBTGMSTB"), 60));
+        Assert.Equal(1, new MissionParams().BooksCapPercent);
         w.Stub!.Expect(0, 99, Bt(2, roll));
         long s = w.Start(Side.Collective, MissionKind.BurnTheBooks, new[] { MaeAbara, Midwife }, Charter);
         w.Game.Step();
         Assert.Null(w.Reason(s));
         w.RunIteration(w.LastMission);
         var r = w.Events<MissionMemberRoll>().Single();
-        Assert.Equal((MaeAbara, 60, 3, roll, success), (r.Member, r.Input, r.Chance, r.Roll, r.Success));
+        Assert.Equal((MaeAbara, 60, 1, roll, success), (r.Member, r.Input, r.Chance, r.Roll, r.Success));
         Assert.Equal(success, w.Game.State.Missions.BooksBurned);
         Assert.Equal(success ? MissionOutcome.Succeeded : MissionOutcome.Failed, w.Events<MissionEnded>().Single().Outcome); // not repeating
     }
@@ -130,15 +134,74 @@ public class BurnTheBooksTests
         Assert.Equal(hash, w.Host.StateHash());
     }
 
-    // m5-missions §6b Guards: the job check meets the §6a Full set (a landed Hand regiment guards, which the B2d set leaves out)
+    // m5-missions §6b Guards, BooksSkipDetection off: the job check meets the §6a Full set (a landed Hand regiment guards, which the B2d set leaves out)
     [Fact]
     public void BB_Guards_LandedRegimentGuardsTheJobCheck()
     {
-        var w = World();
+        var w = World(new MissionParams { BooksSkipDetection = false });
         int reg = w.Unit(Side.Hand, ImpArmy, Charter);
         w.Stub!.Expect(0, 99, Bt(1, 99)); // betrayal, then the regiment's detection roll (99: not detected); the success roll then draws 0
         Assert.Null(Order(w, Side.Collective, MaeAbara, Charter));
         w.RunIteration(w.LastMission);
         Assert.Equal(reg, w.Events<MissionDetectionRoll>().Single().Defender);
+    }
+
+    // A Charter under heavy guard: a Hand fleet of two capital ships and four landed regiments.
+    private static void Garrison(MissionWorld w)
+    {
+        w.Host.Fleets.AddFleet(Side.Hand, "F", new[] { "Decree", "Decree" }, Charter);
+        for (int k = 0; k < 4; k++) w.Unit(Side.Hand, k % 2 == 0 ? Lictor : Storm, Charter);
+    }
+
+    // m5-missions BB6 (BooksSkipDetection DEFAULT on, Decided by Paul 2026-11-04 20:47): a heavily guarded Charter never foils the team: no
+    // detection or decoy draw at all (the stub's unqueued draws are 0, which would detect at once), the one roll succeeds. Off: the first guard detects.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void BB6_NoDetectionAtAGuardedCharter(bool skip)
+    {
+        Assert.True(new MissionParams().BooksSkipDetection);
+        var w = World(new MissionParams { BooksSkipDetection = skip });
+        Garrison(w);
+        w.Stub!.Expect(0, 99, Bt(1, 0)); // the betrayal draw, then the success roll 0 < 1 (only reached when nothing detects)
+        Assert.Null(Order(w, Side.Collective, MaeAbara, Charter));
+        w.RunIteration(w.LastMission);
+        if (skip)
+        {
+            Assert.Empty(w.Events<MissionDetectionRoll>());
+            Assert.Empty(w.Events<MissionFoiled>());
+            Assert.True(w.Game.State.Missions.BooksBurned);
+        }
+        else
+        {
+            Assert.Contains(w.Events<MissionDetectionRoll>(), e => e.Detected);
+            Assert.Single(w.Events<MissionFoiled>());
+            Assert.False(w.Game.State.Missions.BooksBurned);
+        }
+    }
+
+    // m5-missions BB7 (BooksNeedsTalent DEFAULT on, Decided by Paul 2026-11-04 20:47): with no talented member the success roll is not made (no
+    // draw, no MissionMemberRoll) and the iteration fails though a roll of 0 was ready; with one talented member (the weaker one) the roll is made
+    // and succeeds. Off: the untalented team rolls and succeeds.
+    [Theory]
+    [InlineData(true, false, false)]
+    [InlineData(true, true, true)]
+    [InlineData(false, false, true)]
+    public void BB7_HiddenTalentRequirement(bool needs, bool talentedSecond, bool success)
+    {
+        Assert.True(new MissionParams().BooksNeedsTalent);
+        var w = World(new MissionParams { BooksNeedsTalent = needs }, talented: false);
+        w.Agent(Midwife, Charter, esp: 10, com: 10).TalentHolder = talentedSecond;
+        Assert.False(w.Ch.Get(Midwife)!.TalentDiscovered); // hidden Talent counts too
+        w.Stub!.Expect(0, 99, Bt(2, 0));
+        long s = w.Start(Side.Collective, MissionKind.BurnTheBooks, new[] { MaeAbara, Midwife }, Charter);
+        w.Game.Step();
+        Assert.Null(w.Reason(s));
+        w.RunIteration(w.LastMission);
+        Assert.Equal(success ? 1 : 0, w.Events<MissionMemberRoll>().Count);
+        if (success) Assert.Equal(MaeAbara, w.Events<MissionMemberRoll>().Single().Member); // the best input rolls, talented or not
+        Assert.Equal(success, w.Game.State.Missions.BooksBurned);
+        Assert.Equal(success ? MissionOutcome.Succeeded : MissionOutcome.Failed, w.Events<MissionEnded>().Single().Outcome);
+        Assert.Equal(success ? 3 : 2, w.Stub.Count(0, 99)); // two betrayal draws, plus the roll only when made
     }
 }

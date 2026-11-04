@@ -45,13 +45,18 @@ public sealed partial class MissionModule
             // rule: m5-missions §6b Success roll: the same one roll; input = the best member's (combat + espionage) / 2 - BooksDefencePenalty x
             // defences at Charter; chance = min(SBTGMSTB(input), BooksCapPercent).
             var table = Data.Table(rec.Table!);
-            var best = Team(m).Select(a => (a, x: Input(m, a))).OrderByDescending(p => p.x).First(); // stable: ties keep the first (characters by id, then special forces)
-            int chance = Math.Min(Lookup(table, best.x), books ? Params.BooksCapPercent : keyCap);
-            int r = ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1);
-            bool ok = r < chance;
-            int id = m.Id, member = best.a.Id, input = best.x; var side = m.Side; bool isChar = best.a.IsCharacter;
-            ctx.Emit((i, _) => new MissionMemberRoll(i, t, id, side, member, isChar, input, chance, r, ok));
-            if (ok) successes = 1;
+            // rule: m5-missions §6b Success roll (BooksNeedsTalent, Decided by Paul 2026-11-04 20:47): no talented non-decoy member, no roll and no
+            // draw: the iteration fails (no MissionMemberRoll, no special message)
+            if (!books || BooksTalentMet(Team(m)))
+            {
+                var best = Team(m).Select(a => (a, x: Input(m, a))).OrderByDescending(p => p.x).First(); // stable: ties keep the first (characters by id, then special forces)
+                int chance = Math.Min(Lookup(table, best.x), books ? Params.BooksCapPercent : keyCap);
+                int r = ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1);
+                bool ok = r < chance;
+                int id = m.Id, member = best.a.Id, input = best.x; var side = m.Side; bool isChar = best.a.IsCharacter;
+                ctx.Emit((i, _) => new MissionMemberRoll(i, t, id, side, member, isChar, input, chance, r, ok));
+                if (ok) successes = 1;
+            }
         }
         else
         {
@@ -156,7 +161,9 @@ public sealed partial class MissionModule
     private bool CheckPass(StepContext ctx, MissionGroup m, int t, CheckPoint point, CheckKind kind, string place, bool atOrigin, MissionRecord rec)
     {
         var sc = ScopeOf(m, kind, place);
-        var guards = CheckGuards(m, kind, place, sc); // rule: §6a (Key-target protections, 2026-10-18: KeyTargetGuards)
+        // rule: §6a (Key-target protections, 2026-10-18: KeyTargetGuards); m5-missions §6b Guards: BooksSkipDetection meets no guards (no decoy
+        // pass, no walk, no guard duel: no draws), Talent sensing and betrayal unchanged
+        var guards = BooksSkipsGuards(m) ? new List<Defender>() : CheckGuards(m, kind, place, sc);
         var foil = Sense(ctx, m, t, place, sc);
         if (foil == null && point == CheckPoint.Job && BetrayalRuns(rec)) foil = Betray(ctx, m, t);
         var decoyed = new HashSet<int>(); // guard ids; lookup only, never iterated

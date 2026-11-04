@@ -301,7 +301,7 @@ public sealed partial class MissionModule
     private List<Defender> CheckGuards(MissionGroup m, CheckKind kind, string place, Scope sc)
     {
         var list = Guards(m.Side, place, sc, m);
-        // rule: m5-missions §6b Guards: Burn the Books always meets the §6a Full set at its job check
+        // rule: m5-missions §6b Guards: with BooksSkipDetection off, Burn the Books meets the §6a Full set at its job check (on: CheckPass gives it none)
         bool books = m.Kind == MissionKind.BurnTheBooks;
         if (kind != CheckKind.NextToTarget || (!books && (Params.KeyTargetGuards != KeyTargetGuards.Full || !IsKeyTarget(m.Kind, m.TargetCharacter, out _)))) return list;
         var have = new HashSet<int>(list.Select(d => d.Unit.Id)); // membership only, never iterated
@@ -526,6 +526,18 @@ public sealed partial class MissionModule
 
     /// <summary>The Burn the Books chance for an input: min(SBTGMSTB(input), BooksCapPercent). rule: m5-missions §6b Success roll.</summary>
     public int BooksChance(int input) => Math.Min(Lookup(Data.Table(Data.Get(MissionKind.BurnTheBooks).Table!), input), Params.BooksCapPercent);
+
+    /// <summary>Does this mission meet no guards? Burn the Books with BooksSkipDetection (DEFAULT on). rule: m5-missions §6b Guards (Decided by Paul 2026-11-04 20:47).</summary>
+    private bool BooksSkipsGuards(MissionGroup m) => m.Kind == MissionKind.BurnTheBooks && Params.BooksSkipDetection;
+
+    /// <summary>
+    /// The hidden Talent requirement of Burn the Books: met when BooksNeedsTalent is off, or when at least one of <paramref name="characters"/> is
+    /// a talented character (TalentHolder: any rank, aware or not). The AI reads it for its own characters. rule: m5-missions §6b Success roll
+    /// (Decided by Paul 2026-11-04 20:47).
+    /// </summary>
+    public bool BooksTalentMet(IEnumerable<CharacterRecord> characters) => !Params.BooksNeedsTalent || characters.Any(c => c.TalentHolder);
+
+    private bool BooksTalentMet(List<Agent> team) => BooksTalentMet(team.Where(a => a.C != null).Select(a => a.C!));
 
     // rule: m5-missions §3, §6a (Key-target protections, 2026-10-18): with KeyTargetBaseSkills (DEFAULT on) a key-target mission reads its
     // characters' espionage and combat without Talent term of B2e §1 (espionage B, combat max(0, B - Injury)); special forces, other missions
