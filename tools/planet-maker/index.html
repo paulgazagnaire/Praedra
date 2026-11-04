@@ -115,6 +115,7 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
       <button id="btnPause" type="button">Pause</button>
       <button id="btnSnap" type="button">Save image</button>
       <button id="btnVid" type="button">Save video</button>
+      <button id="btnHarv" type="button" aria-pressed="false" title="Show what is left of this world after a harvest">Harvested: off</button>
     </div>
     <div class="hint">Drag the planet to turn it.</div>
   </main>
@@ -7111,7 +7112,9 @@ function boot() {
   $('snapClear').addEventListener('change', (e) => { snapClear = e.target.checked; try { localStorage.setItem('pm_snap_clear', snapClear ? '1' : '0'); } catch (er) {} openSnap(); });
   $('snapClose').addEventListener('click', () => { $('snap').classList.remove('on'); });
   $('btnVid').addEventListener('click', openVid);
-  $('harvOn').addEventListener('change', (e) => { HARVV = e.target.checked; });
+  const harvUI = () => { $('harvOn').checked = HARVV; $('btnHarv').textContent = 'Harvested: ' + (HARVV ? 'on' : 'off'); $('btnHarv').setAttribute('aria-pressed', String(HARVV)); };
+  $('harvOn').addEventListener('change', (e) => { HARVV = e.target.checked; harvUI(); });
+  $('btnHarv').addEventListener('click', () => { HARVV = !HARVV; harvUI(); });
   $('vidTurn').addEventListener('click', () => { $('vidLen').value = turnSecs(); vidNote(); });
   ['vidLen', 'vidFps', 'vidClear', 'vidSize'].forEach((id) => $(id).addEventListener('input', () => { if (!vidBusy) vidNote(); }));
   $('vidGo').addEventListener('click', () => { if (vidBusy) vidStop = true; else makeVideo(); });
@@ -7125,7 +7128,7 @@ function boot() {
   try { initGL(); } catch (e) { glOK = false; document.querySelector('.hint').textContent = 'Shader error: ' + e.message; console.error(e); return; }
   requestAnimationFrame(loop);
 }
-window.__pm = { get P() { return P; }, setHarvest(v) { HARVV = !!v; $('harvOn').checked = HARVV; }, loopPlan, loopAt, makeVideo, vidFrame, endLoop() { LOOPV = null; }, clearPNG: (n) => clearCanvas(n).toDataURL('image/png'), setDither(o) { Object.assign(DI, o); syncDither(); fit(); }, setP(p) { P = p; syncControls(); }, derive, loadSystem, SYSTEMS, classify, makeDefaults, KINDS, setKind, frame, T, draw: () => draw(cv.width, cv.height), pause(v) { paused = v; }, freeze(v) { frozen = v; }, setQ(v) { quality = v; }, fromCode, MOON_TYPES, RING_TYPES, ringGapList, applyRingType, placeFeeder, syncRingUI, ensureMoons, syncMoonUI, selectMoon(i) { selMoon = i; syncMoonUI(); }, MEGA_TYPES };
+window.__pm = { get P() { return P; }, setHarvest(v) { HARVV = !!v; $('harvOn').checked = HARVV; $('btnHarv').textContent = 'Harvested: ' + (HARVV ? 'on' : 'off'); }, loopPlan, loopAt, makeVideo, vidFrame, endLoop() { LOOPV = null; }, clearPNG: (n) => clearCanvas(n).toDataURL('image/png'), setDither(o) { Object.assign(DI, o); syncDither(); fit(); }, setP(p) { P = p; syncControls(); }, derive, loadSystem, SYSTEMS, classify, makeDefaults, KINDS, setKind, frame, T, draw: () => draw(cv.width, cv.height), pause(v) { paused = v; }, freeze(v) { frozen = v; }, setQ(v) { quality = v; }, fromCode, MOON_TYPES, RING_TYPES, ringGapList, applyRingType, placeFeeder, syncRingUI, ensureMoons, syncMoonUI, selectMoon(i) { selMoon = i; syncMoonUI(); }, MEGA_TYPES };
 boot();
 })();
 </script>
