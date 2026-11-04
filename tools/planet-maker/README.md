@@ -81,6 +81,12 @@ node tools/planet-maker/bake-thumbs.js pack /tmp/planet-thumbs
 ```
 Then open the Godot project once (or `--import`) so it imports the new sheet.
 
+## Harvested worlds
+
+**Show it harvested** (under the game's systems) draws what a harvester leaves of the current world: a small gutted core with one huge quarried bite (terraced like an open pit) and sliced faces, the heart still glowing where the bite reaches it, glowing cracks in the crust, big broken pieces drifting off, and a rubble belt. No air, clouds, lights, moons, orbital ring or elevator. It keeps the world's own seed and colours, and it is a view, never saved in a preset. Save image and Save video work on it too.
+
+The game's harvested tiles come from it: `HARVESTED=1 node bake-thumbs.js bake DIR --all` then `HARVESTED=1 node bake-thumbs.js pack DIR` writes `godot/art/planets/atlas-harvested.png`, with the same cells as `atlas.png`; `atlas.json` names it under `"harvested"`. Pack the main sheet first. Harvested pictures are drawn at no turn, so the bite faces the sun.
+
 ## Using it in Godot later
 The shader is GLSL ES 3.00 with no tricks. Porting to a Godot `.gdshader` is a mechanical rename (`uniform` blocks stay, `fragColor` becomes `COLOR`). The preset values map one-to-one onto the shader uniforms, so the game can draw the same planet from the same JSON.
 

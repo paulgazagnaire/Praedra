@@ -11,11 +11,17 @@
 // Each picture is SIZE (128) dots square, drawn with the dither style on (Grain, the planet's own colours, one canvas pixel per dot), so
 // the game shows it with nearest filtering at a whole number of screen pixels per dot. The camera frames the
 // planet and its rings; moons further out are cropped. The sky is see-through (alpha), so the game draws its own background. Needs Node and Playwright with Chromium (preinstalled in cloud sessions).
+//
+// HARVESTED=1 bakes and packs what each system looks like after a harvest instead (the Planet Maker's "Show it harvested" view, drawn
+// at no turn so the bite faces the sun) into godot/art/planets/atlas-harvested.png: the same cells as atlas.png, so the game reads a
+// harvested system's tile from the same cell of the second sheet. atlas.json names it under "harvested". Use a separate DIR.
 const path = require('path');
 const fs = require('fs');
 const { chromium } = require('playwright');
 
 const SIZE = 128;
+const HARV = process.env.HARVESTED === '1';
+const SHEET = HARV ? 'atlas-harvested.png' : 'atlas.png';
 const slug = (t) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 async function open() {
@@ -41,20 +47,22 @@ async function bake(dir, only) {
   if (shard === 0) fs.writeFileSync(path.join(dir, 'kinds.json'), JSON.stringify(Object.fromEntries(names.map((n, i) => [n, kinds[i]]))));
   for (let i = 0; i < names.length; i++) {
     if (only.size ? !only.has(names[i]) : i % shards !== shard) continue;
-    const url = await page.evaluate(({ i, size }) => {
+    const url = await page.evaluate(({ i, size, harv }) => {
       const pm = window.__pm;
       pm.freeze(true);
       pm.setDither({ on: true, pat: 'grain', pal: 'own', dot: 1, contrast: 1.15, bright: 0.02, levels: 4 });
       pm.loadSystem(i);
+      pm.setHarvest(harv);
+      if (harv) Object.assign(pm.T, { spin: 0, cloud: 0, flow: 0, ring: 0, moon: 0, time: 0 });
       const P = pm.P;
       P.starDens = 0;
       const mega = P.kind === 'ring' || P.kind === 'shell';
       const ring = P.ring.on && !mega ? (P.ring.inner + P.ring.width) * 1.04 : 0;
-      const moons = (P.moonList || []).slice(0, P.moons).reduce((m, o) => Math.max(m, o.orbit + o.size), 0);
+      const moons = harv ? 0 : (P.moonList || []).slice(0, P.moons).reduce((m, o) => Math.max(m, o.orbit + o.size), 0);
       // the Planet Maker pulls back to fit the farthest moon; a thumbnail frames the planet and its rings instead
       P.zoom = P.zoom * Math.max(1.3, ring, moons * 0.95) / Math.max(1.3, ring);
       return pm.clearPNG(size);   // see-through: no sky, just the planet and what is around it (Paul 2026-11-01)
-    }, { i, size: SIZE });
+    }, { i, size: SIZE, harv: HARV });
     fs.writeFileSync(path.join(dir, slug(names[i]) + '.png'), Buffer.from(url.split(',')[1], 'base64'));
     if (i % 30 === shard) console.log(`${i + 1}/${names.length} ${names[i]}`);
   }
@@ -68,7 +76,7 @@ async function pack(dir) {
   const out = path.resolve(__dirname, '..', '..', 'godot', 'art', 'planets');
   // a picture not baked into DIR comes from its cell in the current sheet
   let old = null;
-  try { old = { idx: JSON.parse(fs.readFileSync(path.join(out, 'atlas.json'), 'utf8')), png: 'data:image/png;base64,' + fs.readFileSync(path.join(out, 'atlas.png')).toString('base64') }; } catch (e) {}
+  try { old = { idx: JSON.parse(fs.readFileSync(path.join(out, 'atlas.json'), 'utf8')), png: 'data:image/png;base64,' + fs.readFileSync(path.join(out, SHEET)).toString('base64') }; } catch (e) {}
   const missing = names.filter((n) => !fs.existsSync(path.join(dir, slug(n) + '.png')) && !(old && old.idx.size === SIZE && old.idx.systems[n]));
   if (missing.length) throw new Error(`${missing.length} pictures missing, e.g. ${missing.slice(0, 5).join(', ')}`);
   const { browser, page } = await open();
@@ -91,9 +99,14 @@ async function pack(dir) {
   }, { pics, cols, size: SIZE, old });
   await browser.close();
   fs.mkdirSync(out, { recursive: true });
-  fs.writeFileSync(path.join(out, 'atlas.png'), Buffer.from(url.split(',')[1], 'base64'));
+  fs.writeFileSync(path.join(out, SHEET), Buffer.from(url.split(',')[1], 'base64'));
   const systems = Object.fromEntries(names.map((n, i) => [n, [i, kinds[n]]]));
-  fs.writeFileSync(path.join(out, 'atlas.json'), JSON.stringify({ size: SIZE, cols, source: 'tools/planet-maker/bake-thumbs.js', systems }) + '\n');
+  // both sheets share one index: the cells must stay the same, and the other sheet's name is kept
+  const prev = old ? old.idx : {};
+  if (HARV && prev.systems && JSON.stringify(prev.systems) !== JSON.stringify(systems)) throw new Error('the harvested sheet must use the cells of atlas.png: pack the main sheet first');
+  const idx = { size: SIZE, cols, source: 'tools/planet-maker/bake-thumbs.js', systems };
+  if (HARV || prev.harvested) idx.harvested = 'atlas-harvested.png';
+  fs.writeFileSync(path.join(out, 'atlas.json'), JSON.stringify(idx) + '\n');
   console.log(`packed ${names.length} pictures, ${cols} a row, into ${out}`);
 }
 
