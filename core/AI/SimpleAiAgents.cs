@@ -413,6 +413,7 @@ public sealed partial class SimpleAi
         var mi = _h.Missions;
         if (!_p.BurnTheBooks || _side != Side.Collective || !mi.Params.BurnTheBooks || !KindUsable(k) || _h.Game.State.Missions.BooksBurned) return;
         if (!IsEnemyHeld(charter) || OwnMissions().Any(m => m.Kind == k)) return;
+        if (NotesSince(AiNoteKind.BooksFailed, Today - _p.BooksRetryDays).Any()) return; // BooksRetryDays: a failed try lately
         int defences = DefencesSeenAt(charter);
         CharacterRecord? best = null; int bestChance = 0;
         foreach (var c in mine) // id order

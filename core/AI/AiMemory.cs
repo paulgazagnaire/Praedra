@@ -32,6 +32,8 @@ public enum AiNoteKind
     /// a HarvesterQueued sighting there from before is void (QA-61). Not saved before 2026-10-28: an older save loads with none.
     /// </summary>
     HarvesterYardGone,
+    /// <summary>An own Burn the Books ended without success (MissionEnded Failed or Foiled): the AI waits before trying again. Not saved before 2026-11-04.</summary>
+    BooksFailed,
 }
 
 /// <summary>
@@ -62,11 +64,12 @@ public sealed class AiKeepDays
     public int HqMoved { get; set; }
     public int Character { get; set; }
     public int HarvesterYardGone { get; set; }
+    public int BooksFailed { get; set; }
 
     public int For(AiNoteKind k) => k switch
     {
         AiNoteKind.Battle => Battle, AiNoteKind.SystemLost => SystemLost, AiNoteKind.Bombardment => Bombardment,
-        AiNoteKind.LookFoiled => LookFoiled, AiNoteKind.HqMoved => HqMoved, AiNoteKind.HarvesterYardGone => HarvesterYardGone, _ => Character,
+        AiNoteKind.LookFoiled => LookFoiled, AiNoteKind.HqMoved => HqMoved, AiNoteKind.HarvesterYardGone => HarvesterYardGone, AiNoteKind.BooksFailed => BooksFailed, _ => Character,
     };
 }
 
@@ -126,6 +129,8 @@ public sealed class AiMemory
                 BombardmentResolved b => new AiNote { Kind = AiNoteKind.Bombardment, System = b.System, Value = b.Regiments },
                 MissionEnded me when me.Side == Side && me.Outcome == MissionOutcome.Foiled && me.MissionKind is MissionKind.Espionage or MissionKind.Reconnaissance
                     => new AiNote { Kind = AiNoteKind.LookFoiled, System = me.Target },
+                MissionEnded me when me.Side == Side && me.MissionKind == MissionKind.BurnTheBooks && me.Outcome is MissionOutcome.Failed or MissionOutcome.Foiled
+                    => new AiNote { Kind = AiNoteKind.BooksFailed, System = me.Target },
                 HqArrived or HqDeparted => new AiNote { Kind = AiNoteKind.HqMoved },
                 CharacterArrived a when a.Side == enemy => At(a.Character, a.System),
                 CharacterDetached d when d.Side == enemy => At(d.Character, d.System),
@@ -174,9 +179,10 @@ public sealed class AiMemory
     private static AiNote Gone(int character) => new() { Kind = AiNoteKind.EnemyCharacterGone, Value = character };
 
     /// <summary>Keep each kind of note in a save for at least these days.</summary>
-    public void KeepAtLeast(int battle, int systemLost, int bombardment, int lookFoiled, int hqMoved, int character, int harvesterYardGone = 0)
+    public void KeepAtLeast(int battle, int systemLost, int bombardment, int lookFoiled, int hqMoved, int character, int harvesterYardGone = 0, int booksFailed = 0)
     {
         Keep.HarvesterYardGone = Math.Max(Keep.HarvesterYardGone, harvesterYardGone);
+        Keep.BooksFailed = Math.Max(Keep.BooksFailed, booksFailed);
         Keep.Battle = Math.Max(Keep.Battle, battle); Keep.SystemLost = Math.Max(Keep.SystemLost, systemLost);
         Keep.Bombardment = Math.Max(Keep.Bombardment, bombardment); Keep.LookFoiled = Math.Max(Keep.LookFoiled, lookFoiled);
         Keep.HqMoved = Math.Max(Keep.HqMoved, hqMoved); Keep.Character = Math.Max(Keep.Character, character);

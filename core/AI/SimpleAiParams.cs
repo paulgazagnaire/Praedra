@@ -666,6 +666,11 @@ public sealed record SimpleAiParams
     /// DEFAULT true (m5-missions §6b); the AI trainer owns the tuning.
     /// </summary>
     public bool BurnTheBooks { get; init; } = true;
+    /// <summary>
+    /// Days the Collective waits after its own Burn the Books fails or is foiled before it tries again (without it, seed 1 sent 54 attempts in
+    /// 700 days, all foiled, and an escaped character went again two days later). DEFAULT 180 (Dev lead 2026-11-04); the AI trainer owns the tuning.
+    /// </summary>
+    public int BooksRetryDays { get; init; } = 180;
 
     // ---- what to build, by side (first class that is buildable, researched and affordable wins). Class names of unit-and-facility-costs.csv. DEFAULT.
     public string Transport(Side side) => side == Side.Hand ? "Bond II" : "Barge";
