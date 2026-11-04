@@ -430,7 +430,8 @@ public partial class GameScreen
             // what your side knows of a planet it doesn't hold
             Tabs(w, w.Body,
                 ("Ground", null, () => PaneForces(n)),
-                ("Fleets", own.Count, () => OrbitList(n, own)));
+                ("Fleets", own.Count, () => OrbitList(n, own)),
+                ("Lore", null, () => LoreTab(n)));
             InfraLink(n);
             return;
         }
@@ -445,8 +446,38 @@ public partial class GameScreen
             ("Leaders", here.Count + (gen != null ? 1 : 0), () => LeadersTab(n, gen, here)),
             ("Troops", regs.Count + sf.Count, () => TroopsTab(n, regs, sf)),
             ("Fighters", based.Count, () => FightersTab(n, based)),
-            ("Fleets", own.Count, () => OrbitList(n, own)));
+            ("Fleets", own.Count, () => OrbitList(n, own)),
+            ("Lore", null, () => LoreTab(n)));
         InfraLink(n);
+    }
+
+    // ---- a system's Lore tab (Paul 2026-11-04: "a lore tab for each system... we'll have the content later"): the Lore Master's text,
+    // from data/design/system-lore.csv. Lore is common knowledge, so every side reads it, fog or not; a system without any says so.
+    void LoreTab(string n, bool harvested = false)
+    {
+        var e = SystemLore.Of(n);
+        if (e == null) { Note("The story of this system is still to be written."); return; }
+        void Part(string head, string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return;
+            Section(head);
+            Line(text, Ui.Text2, Ui.Small);
+        }
+        if (harvested)
+        {
+            // the record of what the harvest took: the world as it was and its story, no living people, moons or trade
+            Part("Before the harvest", e.World);
+            Part("Story", e.Story);
+            Part("History", e.History);
+            return;
+        }
+        Part("The world", e.World);
+        Part("From space", e.FromSpace);
+        Part("People", e.People);
+        Part("Moons", e.Moons);
+        Part("Resources", e.Resources);
+        Part("Story", e.Story);
+        Part("History", e.History);
     }
 
     // A harvested world (Paul 2026-11-04: "what happens to the system after being harvested?"): no tabs, no buildings, no Infrastructure link;
@@ -461,6 +492,7 @@ public partial class GameScreen
         Line("It stays on the map as a field of debris. Fleets can still pass through it and stop here.", Ui.Text3, Ui.Small);
         var own = S.Game.State.Fleets.Values.Where(f => f.Side == Me && f.At == n).OrderBy(f => f.Id).ToList();
         if (own.Count > 0) OrbitList(n, own);
+        LoreTab(n, harvested: true);
     }
 
     void InfraLink(string n) => MgLinks(($"Infrastructure at {n}", () => OpenMgmt(MgKind.Infra, n), "Yards, what the planet builds, slots and buildings"));
