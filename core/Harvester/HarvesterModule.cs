@@ -255,10 +255,7 @@ public sealed class HarvesterModule
         _support.OnSystemDestroyed(ctx, system);
         _fleets.RefreshBlockadeFlag(ctx, system, day);
 
-        // 8. The harvest yield: the attacker's refined pool gains about a year of income at once. rule: m5-harvester §2 effect 8 (Paul 2026-11-04)
-        int yield = Params.YieldRefined;
-        _eco.GrantRefined(ctx, side, yield);
-
+        int yield = Params.YieldRefined; // paid after the sector reaction (effect 8), told in the event now
         // 6. The event to both sides; every side's picture learns it, and 4. an HQ at rest there is destroyed (the victory step reads it as the
         // Hand capturing the HQ: m5-fog-and-hq §F7, m5-setup-and-victory §Victory).
         ctx.Emit((i, _) => new SystemDestroyed(i, day, system, side, prior, handSupport, populated, yield));
@@ -266,6 +263,10 @@ public sealed class HarvesterModule
 
         // 7. The sector reaction.
         SectorReaction(ctx, day, system);
+
+        // 8. The harvest yield: the attacker's refined pool gains about a year of income at once, last, so yards it wakes log after the strike.
+        // rule: m5-harvester §2 effect 8 (Paul 2026-11-04)
+        _eco.GrantRefined(ctx, side, yield);
     }
 
     // rule: effect 1. Fleets in id order; aboard units (squadrons, regiments) first, then the ships, then a squadron-only fleet's squadrons.
