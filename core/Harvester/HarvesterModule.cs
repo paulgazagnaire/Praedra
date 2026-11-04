@@ -103,17 +103,23 @@ public sealed class HarvesterModule
     /// </summary>
     public int? FleetReadyDay(Fleet f)
     {
+        if (Params.CooldownPerSide) return HarvestersIn(f).Any() ? SideReadyDay(f.Side) : null;
         int? best = null;
         foreach (var o in HarvestersIn(f)) { int d = ReadyDay(o.Id); if (best == null || d < best) best = d; }
         return best;
     }
 
+    /// <summary>The first day a strike by this side may land under the per-side cooldown (0 = never struck). rule: m5-harvester §2 legality 3a.</summary>
+    public int SideReadyDay(Side side) =>
+        S.SideStruckOn != null && S.SideStruckOn.TryGetValue(side.ToString(), out int struck) ? struck + Params.CooldownDays : 0;
+
     /// <summary>Can a Destroy System order given today by this fleet strike as far as the cooldown goes? (False with no harvester.) rule: m5-harvester §2 legality 3a.</summary>
     public bool IsReady(Fleet f) => FleetReadyDay(f) is int d && d <= _game.Day + 1;
 
     // The ready harvester a strike uses: the lowest ship id whose cooldown has passed by the strike day. rule: m5-harvester §2 legality 3a.
-    private EconObject? ReadyHarvester(Fleet f, int strikeDay) =>
-        HarvestersIn(f).Where(o => ReadyDay(o.Id) <= strikeDay).OrderBy(o => o.Id).FirstOrDefault();
+    private EconObject? ReadyHarvester(Fleet f, int strikeDay) => Params.CooldownPerSide
+        ? (SideReadyDay(f.Side) <= strikeDay ? HarvestersIn(f).OrderBy(o => o.Id).FirstOrDefault() : null)
+        : HarvestersIn(f).Where(o => ReadyDay(o.Id) <= strikeDay).OrderBy(o => o.Id).FirstOrDefault();
 
     /// <summary>
     /// The harvest yield for a system: <see cref="HarvesterParams.YieldRefined"/> scaled by the number of decimal digits d of its people,
@@ -122,6 +128,7 @@ public sealed class HarvesterModule
     /// </summary>
     public int YieldFor(string system, bool populated)
     {
+        if (!Params.YieldByPopulation) return Params.YieldRefined; // pay in full (Paul 2026-11-04)
         if (!populated) return 0;
         long people = _population.PeopleOf(system);
         if (people <= 0) return 0;
@@ -282,7 +289,8 @@ public sealed class HarvesterModule
         bool populated = _eco.SlotsOf(system).Populated;
         // The harvester that strikes (the ready one with the lowest id) starts its cooldown. rule: m5-harvester §2 legality 3a
         var harvester = ReadyHarvester(attacker, day)!;
-        if (Params.CooldownDays > 0) (S.StruckOn ??= new SortedDictionary<int, int>())[harvester.Id] = day;
+        if (Params.CooldownDays > 0 && Params.CooldownPerSide) (S.SideStruckOn ??= new SortedDictionary<string, int>(StringComparer.Ordinal))[side.ToString()] = day;
+        else if (Params.CooldownDays > 0) (S.StruckOn ??= new SortedDictionary<int, int>())[harvester.Id] = day;
 
         // Running missions at the system end as failures, their characters stay as characters on the planet. rule: effect 3
         MissionsEnded?.Invoke(ctx, system);
