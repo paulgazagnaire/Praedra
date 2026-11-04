@@ -44,6 +44,14 @@ public sealed partial class GameSession
     public int? HarvesterRechargingUntil(Fleet f) =>
         Host.Harvester.FleetReadyDay(f) is int d && !Host.Harvester.IsReady(f) ? d : null;
 
+    /// <summary>
+    /// The plain line for a harvest the cooldown holds back: with the per-side clock (DEFAULT) it names the side's last harvest, so a new harvester
+    /// that never struck does not read as "recharging". rule: m5-harvester §2 legality 3a (Ponytail on #250).
+    /// </summary>
+    public string HarvestWaitText(int readyDay) => Host.Harvester.Params.CooldownPerSide
+        ? $"One harvest a year: your next harvest can land on day {readyDay}."
+        : $"Harvester recharging: ready on day {readyDay}.";
+
     /// <summary>Queue Destroy System for the fleet. The core judges it when the next day starts; a refusal comes back in the messages.</summary>
     public long SubmitDestroySystem(Fleet f) =>
         TrackFleet(f.Id, Host.Harvester.SubmitDestroySystem(Player, f.Id), $"Destroy System {f.At} with {f.Name}");

@@ -482,6 +482,7 @@ public class SimpleAiAgentsTests
     [InlineData(true, false, 0)]
     public void BurnTheBooks_CollectiveAiSendsOneTeam(bool on, bool talented, int expected)
     {
+        Assert.False(new SimpleAiParams().BurnTheBooks); // DEFAULT off since the AI trainer's 2026-11-04 batch; the test passes the switch
         var (_, h) = Match(1, Fog);
         Assert.Equal(Side.Hand, h.Fleets.OwnerOf(Praedra.Core.Control.ControlModule.CapitalSystem));
         if (talented) TalentedCollective(h);

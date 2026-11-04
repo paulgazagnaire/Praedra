@@ -66,7 +66,14 @@ public sealed record HarvesterParams
     public int YieldRefined { get; init; } = 900;
 
     /// <summary>
-    /// The harvest yield scales with the target's people: with d = the number of decimal digits of its people,
+    /// Scale the harvest yield by the target's people (YieldZeroDigits, YieldFullDigits)? DEFAULT false: every harvest pays YieldRefined in
+    /// full, whatever the world (Paul 2026-11-04: "Limit harvests to one per year. Pay in full. So it can become a real financial strategy").
+    /// true = the population bands of the 2026-11-04 card (Population + cooldown). rule: m5-harvester §2 effect 8.
+    /// </summary>
+    public bool YieldByPopulation { get; init; }
+
+    /// <summary>
+    /// With YieldByPopulation, the harvest yield scales with the target's people: with d = the number of decimal digits of its people,
     /// yield = YieldRefined x clamp(d - YieldZeroDigits, 0, YieldFullDigits - YieldZeroDigits) / (YieldFullDigits - YieldZeroDigits), rounded down.
     /// Fewer than YieldZeroDigits + 1 digits (under 1 million people) pays 0; YieldFullDigits digits or more (1 billion or more) pays all of it.
     /// New, Paul 2026-11-04 card (Population + cooldown), DEFAULT 6 and 10. rule: m5-harvester §2 effect 8.
@@ -76,11 +83,18 @@ public sealed record HarvesterParams
     public int YieldFullDigits { get; init; } = 10;
 
     /// <summary>
-    /// Days a harvester must wait after a strike before it can strike again: a harvester that struck on day S cannot strike before day
-    /// S + CooldownDays (reject <c>Recharging</c>). 0 = no cooldown (as before). New, Paul 2026-11-04 card (Population + cooldown), DEFAULT 180.
+    /// Days to wait after a strike before the next one: after a strike on day S, no strike lands before day S + CooldownDays (reject
+    /// <c>Recharging</c>). 0 = no cooldown. New, Decided (Paul 2026-11-04: "Limit harvests to one per year"), DEFAULT 365.
     /// rule: m5-harvester §2 legality 3a.
     /// </summary>
-    public int CooldownDays { get; init; } = 180;
+    public int CooldownDays { get; init; } = 365;
+
+    /// <summary>
+    /// Whose clock the cooldown runs on: true = the side (one harvest per side per CooldownDays, however many harvesters it has), false = each
+    /// harvester on its own (the 2026-11-04 card's 180-day reading). New, Decided (Paul 2026-11-04: "one per year"), DEFAULT true.
+    /// rule: m5-harvester §2 legality 3a.
+    /// </summary>
+    public bool CooldownPerSide { get; init; } = true;
 
     /// <summary>Throw <see cref="RuleMissingException"/> for every switch value the sheet refuses. rule: m5-harvester §4 (TrenchRun: no code until a rule exists).</summary>
     public void Validate()

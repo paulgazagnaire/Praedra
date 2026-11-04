@@ -114,11 +114,8 @@ public partial class GameScreen
     static string LabelsIn(Node n) => string.Join("\n", AllNodes(n).OfType<Label>().Where(l => l.IsVisibleInTree() || !l.IsInsideTree()).Select(l => l.Text));
     internal void PickSystem(string name) { if (G.TryFindSystem(name, out int i)) OnSystemPicked(i); }
     internal void Frame(double seconds) => _Process(seconds);
-    /// <summary>One frame with no time passing: runs what a click left for the next frame (true, to chain in a check).</summary>
-    internal bool Step0() { _Process(0); return true; }
     internal int LogRows => _log.ItemCount;
     internal string ToastText => string.Join("\n", _toasts.SelectMany(t => AllNodes(t.Card).OfType<Label>()).Select(l => l.Text));
-    internal int UnreadMessages => _unread;
     internal string HqStatusText => _hqStatusLabel.GetParent<Control>().Visible ? _hqStatusLabel.Text : "";
     internal IReadOnlyList<string> AttentionTitles => _attention.Select(a => a.Title).ToList();
     internal string OrderBarText => _orderBar.Visible ? _orderTitle.Text + "\n" + _orderBody.Text : "";

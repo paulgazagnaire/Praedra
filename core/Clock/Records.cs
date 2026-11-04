@@ -52,10 +52,9 @@ public sealed record SetMarkerOrder(long Sequence, Side Side, string Marker, int
 /// <summary>
 /// Send a fleet to a system by the fastest path, through the waypoints in order when there are any (null or empty = none).
 /// Checked in step 1 (when processed, not when submitted). rule: m1-clock-and-orders §Orders in (MoveFleet); m1-travel §Path rule (3) (waypoints).
-/// The handler lives in Praedra.Core.Fleets.FleetModule.
+/// With <paramref name="JoinFleet"/> it merges into that fleet when both stand still at the same system after the day's battles; a fleet gone
+/// from there is not followed (m3-fleets §Orders, MoveFleet: joining a fleet on arrival, Paul 2026-11-02). The handler lives in Praedra.Core.Fleets.FleetModule.
 /// </summary>
-/// <summary>Move a fleet. With <paramref name="JoinFleet"/> it merges into that fleet when both stand still at the same system after the day's
-/// battles; a fleet gone from there is not followed. rule: m3-fleets §Orders (MoveFleet: joining a fleet on arrival, Paul 2026-11-02).</summary>
 public sealed record MoveFleetOrder(long Sequence, Side Side, int FleetId, string Destination, ValueList<string>? Waypoints = null, int JoinFleet = 0) : Order(Sequence, Side);
 
 /// <summary>
