@@ -172,7 +172,8 @@ public class HarvesterTests
         Assert.Equal((0, false), (w.Host.Economy.SupportOf(A3, Side.Hand), w.Host.Economy.SlotsOf(A3).Populated)); // the strike cleared both
     }
 
-    // m5-harvester DS18 (§2 effect 8 Harvest yield): the attacker's refined pool gains YieldRefined at once, and the event says how much; 0 = no yield
+    // m5-harvester DS18 (§2 effect 8 Harvest yield): the attacker's refined pool gains YieldRefined at once, and the event says how much; 0 = no yield.
+    // A3 has 2 billion people (HarvesterWorld.People), so it pays the full YieldRefined (DS19 covers the bands)
     [Theory]
     [InlineData(null, 900)]
     [InlineData(0, 0)]
@@ -189,6 +190,139 @@ public class HarvesterTests
         Assert.Equal(expected, Assert.Single(w.Events<SystemDestroyed>()).YieldRefined);
         Assert.Equal(hand + expected, w.Host.Game.State.Economy.Pool(Side.Hand).Refined);
         Assert.Equal(collective, w.Host.Game.State.Economy.Pool(Side.Collective).Refined);
+    }
+
+    // m5-harvester DS19 (§2 effect 8, population scaling, Paul 2026-11-04 card): yield = YieldRefined x clamp(digits - 6, 0, 4) / 4 by the target's
+    // people; under 1 million pays 0, 1 billion or more pays all; a system missing from the file pays 0
+    [Theory]
+    [InlineData(A1, 0)]     // 999,999 people: 6 digits
+    [InlineData(A2, 225)]   // 1,000,000: 7 digits
+    [InlineData(B3, 450)]   // 12 million: 8 digits
+    [InlineData(A4, 450)]   // 99,999,999: 8 digits
+    [InlineData(A5, 675)]   // 100 million: 9 digits
+    [InlineData(A3, 900)]   // 2 billion: 10 digits
+    [InlineData(B1, 900)]   // 9 billion
+    [InlineData(B2, 900)]   // 450 billion: capped at the full yield
+    [InlineData(A6, 0)]     // no row in the population file
+    public void DS19_TheYieldScalesWithTheTargetsPeople(string target, int expected)
+    {
+        var w = new HarvesterWorld();
+        w.Hold(target, Side.Collective, 70);
+        int attacker = w.Harvester(Side.Hand, target);
+        int hand = w.Game.State.Economy.Pool(Side.Hand).Refined;
+
+        Assert.Null(w.Destroy(Side.Hand, attacker));
+
+        Assert.Equal(expected, Assert.Single(w.Events<SystemDestroyed>()).YieldRefined);
+        Assert.Equal(hand + expected, w.Game.State.Economy.Pool(Side.Hand).Refined);
+    }
+
+    // m5-harvester DS19 (§2 effect 8): a system the core marks unpopulated pays 0 whatever its people; YieldRefined 0 pays 0 everywhere;
+    // the bands follow YieldZeroDigits and YieldFullDigits
+    [Fact]
+    public void DS19_UnpopulatedPaysNothing_AndTheBandsAreParams()
+    {
+        var w = new HarvesterWorld();
+        w.Game.State.Economy.Slots[A3] = new SlotState { Energy = 9, Raw = 3, Populated = false };
+        w.Hold(A3, Side.Collective, 70);
+        int attacker = w.Harvester(Side.Hand, A3);
+        int hand = w.Game.State.Economy.Pool(Side.Hand).Refined;
+        Assert.Null(w.Destroy(Side.Hand, attacker));
+        Assert.Equal(0, Assert.Single(w.Events<SystemDestroyed>()).YieldRefined);
+        Assert.Equal(hand, w.Game.State.Economy.Pool(Side.Hand).Refined);
+
+        Assert.Equal(0, new HarvesterWorld(new HarvesterParams { YieldRefined = 0 }).Ds.YieldFor(B2, populated: true));
+        var wide = new HarvesterWorld(new HarvesterParams { YieldZeroDigits = 5, YieldFullDigits = 8 }).Ds;
+        Assert.Equal((300, 600, 900, 900), (wide.YieldFor(A1, true), wide.YieldFor(A2, true), wide.YieldFor(B3, true), wide.YieldFor(A3, true)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new HarvesterParams { YieldZeroDigits = 6, YieldFullDigits = 6 }.Validate());
+        Assert.Throws<ArgumentOutOfRangeException>(() => new HarvesterParams { CooldownDays = -1 }.Validate());
+    }
+
+    // m5-harvester DS20 (§2 legality 3a, Paul 2026-11-04 card): a harvester that struck on day S cannot strike before day S + CooldownDays (180):
+    // an order whose strike would land earlier is refused Recharging; the order given on day S + 179 lands on day S + 180 and is accepted
+    [Fact]
+    public void DS20_TheCooldownRefusesASecondStrikeUntil180DaysHavePassed()
+    {
+        var w = new HarvesterWorld();
+        w.Hold(A3, Side.Collective, 70); w.Hold(B3, Side.Collective, 70);
+        int attacker = w.Harvester(Side.Hand, A3);
+        int ship = w.ShipOf(attacker);
+        var fleet = w.Game.State.Fleets[attacker];
+        Assert.True(w.Ds.IsReady(fleet));
+        Assert.Null(w.Destroy(Side.Hand, attacker));
+        int struck = w.Game.State.Harvester.DestroyedDay(A3)!.Value;
+        Assert.Equal(struck, w.Game.State.Harvester.StruckOn![ship]);
+        Assert.Equal(struck + 180, w.Ds.ReadyDay(ship));
+        Assert.Equal(struck + 180, w.Ds.FleetReadyDay(fleet));
+
+        fleet.At = B3; // test setup: the harvester is at another system at once
+        Assert.False(w.Ds.IsReady(fleet));
+        Assert.Equal(HarvesterReject.Recharging, w.Destroy(Side.Hand, attacker));
+        Assert.False(w.Ds.IsDestroyed(B3));
+        while (w.Game.Day < struck + 178) w.Game.Step();
+        Assert.Equal(HarvesterReject.Recharging, w.Destroy(Side.Hand, attacker)); // given on day S + 178, it would land on S + 179
+        Assert.Equal(struck + 179, w.Game.Day);
+        Assert.True(w.Ds.IsReady(fleet));
+        Assert.Null(w.Destroy(Side.Hand, attacker)); // given on day S + 179, it lands on S + 180
+        Assert.True(w.Ds.IsDestroyed(B3));
+        Assert.Equal(struck + 180, w.Game.State.Harvester.DestroyedDay(B3));
+        Assert.Equal(struck + 180, w.Game.State.Harvester.StruckOn[ship]);
+    }
+
+    // m5-harvester DS21 (§2 legality 3a): CooldownDays 0 = no cooldown, as before: the harvester strikes again the next day, and nothing is saved
+    [Fact]
+    public void DS21_CooldownZeroAllowsAnImmediateSecondStrike()
+    {
+        var w = new HarvesterWorld(new HarvesterParams { CooldownDays = 0 });
+        w.Hold(A3, Side.Collective, 70); w.Hold(B3, Side.Collective, 70);
+        int attacker = w.Harvester(Side.Hand, A3);
+        Assert.Null(w.Destroy(Side.Hand, attacker));
+        w.Game.State.Fleets[attacker].At = B3;
+        Assert.True(w.Ds.IsReady(w.Game.State.Fleets[attacker]));
+        Assert.Null(w.Destroy(Side.Hand, attacker));
+        Assert.True(w.Ds.IsDestroyed(B3));
+        Assert.Null(w.Game.State.Harvester.StruckOn);
+        Assert.DoesNotContain("StruckOn", w.Host.Save());
+    }
+
+    // m5-harvester DS22 (§2 legality 3a): a fleet of two harvesters strikes with the ready one with the lowest id; the other is still ready, so
+    // the fleet may strike again at once; then both recharge
+    [Fact]
+    public void DS22_TwoHarvestersInAFleet_TheReadyOneWithTheLowestIdStrikes()
+    {
+        var w = new HarvesterWorld();
+        w.Hold(A3, Side.Collective, 70); w.Hold(A5, Side.Collective, 70); w.Hold(B3, Side.Collective, 70);
+        int attacker = w.Fleet(Side.Hand, A3, HarvesterClass, HarvesterClass);
+        var fleet = w.Game.State.Fleets[attacker];
+        var ships = fleet.Ships.OrderBy(id => id).ToArray();
+        Assert.Null(w.Destroy(Side.Hand, attacker));
+        Assert.Equal(new[] { ships[0] }, w.Game.State.Harvester.StruckOn!.Keys.ToArray());
+        fleet.At = A5;
+        Assert.True(w.Ds.IsReady(fleet));
+        Assert.Null(w.Destroy(Side.Hand, attacker));
+        Assert.Equal(ships, w.Game.State.Harvester.StruckOn.Keys.ToArray());
+        fleet.At = B3;
+        Assert.False(w.Ds.IsReady(fleet));
+        Assert.Equal(HarvesterReject.Recharging, w.Destroy(Side.Hand, attacker));
+    }
+
+    // m5-harvester DS23 (§2 legality 3a): a game with no strike saves and hashes as before (no StruckOn); after a strike the cooldown day is saved,
+    // survives a load with the same hash, and still refuses a strike
+    [Fact]
+    public void DS23_TheCooldownIsSavedOnlyAfterAStrike()
+    {
+        var w = new HarvesterWorld();
+        w.Hold(A3, Side.Collective, 70); w.Hold(B3, Side.Collective, 70);
+        int attacker = w.Harvester(Side.Hand, A3);
+        w.Game.Step();
+        Assert.DoesNotContain("StruckOn", w.Host.Save());
+        Assert.Null(w.Destroy(Side.Hand, attacker));
+        string hash = w.Host.StateHash();
+        Assert.Contains($"\"StruckOn\":{{\"{w.ShipOf(attacker)}\":{w.Game.State.Harvester.DestroyedDay(A3)}}}", w.Host.Save());
+        w.Reload();
+        Assert.Equal(hash, w.Host.StateHash());
+        w.Game.State.Fleets[attacker].At = B3;
+        Assert.Equal(HarvesterReject.Recharging, w.Destroy(Side.Hand, attacker));
     }
 
     // m5-harvester DS5
@@ -520,7 +654,7 @@ public class HarvesterTests
         string hash = w.Host.StateHash();
         string save = w.Host.Save();
         int day = w.Game.State.Harvester.DestroyedDay(A3)!.Value;
-        Assert.Contains($"\"Harvester\":{{\"Destroyed\":[\"A3\"],\"StrikesInSector\":{{\"SA\":1}},\"DestroyedOn\":{{\"A3\":{day}}}}}", save);
+        Assert.Contains($"\"Harvester\":{{\"Destroyed\":[\"A3\"],\"StrikesInSector\":{{\"SA\":1}},\"DestroyedOn\":{{\"A3\":{day}}},\"StruckOn\":{{\"{w.ShipOf(attacker)}\":{day}}}}}", save);
         w.Reload();
         Assert.Equal(new[] { A3 }, w.Game.State.Harvester.Destroyed.ToArray());
         Assert.Equal(day, w.Game.State.Harvester.DestroyedDay(A3)); // the day survives the load (m5-harvester §7)

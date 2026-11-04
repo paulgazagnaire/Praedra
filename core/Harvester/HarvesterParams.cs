@@ -14,7 +14,7 @@ public enum HarvesterFallout { Classic, New }
 /// The switches and numbers of m5-harvester, each with the sheet's DEFAULT and tag. Settings, not saved. A switch whose "on" has no rule is
 /// refused at attach with <see cref="RuleMissingException"/> (CLAUDE.md hard rule 7). The 50 percent minor-character kill chance
 /// (<c>HarvesterMinorKillPct</c>) is <see cref="CharacterParams.HarvesterHitPercent"/>, where the characters sheet keeps it.
-/// rule: m5-harvester §1, §2 legality and effect 7, §4 (TrenchRun).
+/// rule: m5-harvester §1, §2 legality and effects 7 and 8, §4 (TrenchRun).
 /// </summary>
 public sealed record HarvesterParams
 {
@@ -65,12 +65,31 @@ public sealed record HarvesterParams
     /// </summary>
     public int YieldRefined { get; init; } = 900;
 
+    /// <summary>
+    /// The harvest yield scales with the target's people: with d = the number of decimal digits of its people,
+    /// yield = YieldRefined x clamp(d - YieldZeroDigits, 0, YieldFullDigits - YieldZeroDigits) / (YieldFullDigits - YieldZeroDigits), rounded down.
+    /// Fewer than YieldZeroDigits + 1 digits (under 1 million people) pays 0; YieldFullDigits digits or more (1 billion or more) pays all of it.
+    /// New, Paul 2026-11-04 card (Population + cooldown), DEFAULT 6 and 10. rule: m5-harvester §2 effect 8.
+    /// </summary>
+    public int YieldZeroDigits { get; init; } = 6;
+    /// <inheritdoc cref="YieldZeroDigits"/>
+    public int YieldFullDigits { get; init; } = 10;
+
+    /// <summary>
+    /// Days a harvester must wait after a strike before it can strike again: a harvester that struck on day S cannot strike before day
+    /// S + CooldownDays (reject <c>Recharging</c>). 0 = no cooldown (as before). New, Paul 2026-11-04 card (Population + cooldown), DEFAULT 180.
+    /// rule: m5-harvester §2 legality 3a.
+    /// </summary>
+    public int CooldownDays { get; init; } = 180;
+
     /// <summary>Throw <see cref="RuleMissingException"/> for every switch value the sheet refuses. rule: m5-harvester §4 (TrenchRun: no code until a rule exists).</summary>
     public void Validate()
     {
         if (TrenchRun) throw new RuleMissingException("TrenchRun", "m5-harvester");
         if (Upkeep < 0) throw new ArgumentOutOfRangeException(nameof(Upkeep), "Upkeep cannot be negative.");
         if (YieldRefined < 0) throw new ArgumentOutOfRangeException(nameof(YieldRefined), "The harvest yield cannot be negative.");
+        if (YieldZeroDigits < 0 || YieldFullDigits <= YieldZeroDigits) throw new ArgumentOutOfRangeException(nameof(YieldFullDigits), "The full-yield digit count must be above the zero-yield digit count, and both 0 or more.");
+        if (CooldownDays < 0) throw new ArgumentOutOfRangeException(nameof(CooldownDays), "The harvester cooldown cannot be negative.");
         if (CapPerSystem < 1) throw new ArgumentOutOfRangeException(nameof(CapPerSystem), "At least one harvester per system must be allowed.");
     }
 }

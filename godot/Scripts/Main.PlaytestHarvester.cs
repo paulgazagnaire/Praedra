@@ -89,8 +89,12 @@ public partial class Main
 
         // ---- the day: the system is destroyed in the core, drawn as destroyed, the clock pauses, the message appears
         Expect(s.Game.State.Harvester.IsDestroyed(target) && ds.IsDestroyed(target), $"the core says {target} is destroyed");
-        Expect(s.Game.Events.OfType<Praedra.Core.Harvester.SystemDestroyed>().LastOrDefault(e => e.System == target)?.YieldRefined == 900,
-            $"the strike paid the Hand the harvest yield, 900 refined (pool {handRefinedBefore} -> {s.Game.State.Economy.Pool(Side.Hand).Refined})");
+        // the yield scales with the target's people (m5-harvester §2 effect 8, Paul 2026-11-04 card): 0, 225, 450, 675 or 900
+        var struck = s.Game.Events.OfType<Praedra.Core.Harvester.SystemDestroyed>().LastOrDefault(e => e.System == target);
+        int expectYield = struck == null ? -1 : ds.YieldFor(target, struck.Populated);
+        Expect(struck != null && struck.YieldRefined == expectYield && expectYield % 225 == 0,
+            $"the strike paid the Hand the harvest yield for {target}'s people, {expectYield} refined (pool {handRefinedBefore} -> {s.Game.State.Economy.Pool(Side.Hand).Refined})");
+        string recovered = expectYield > 0 ? $"Recovered: {expectYield} refined" : "Recovered: nothing (too few people)";
         Expect(ds.StrikesIn(star.Sector) == strikesBefore + 1, "the sector strike was counted");
         Expect(gs.DrawnDestroyed(target), $"{target} is drawn as destroyed");
         if (cont is bool c) Expect(!c && gs.Banner.Contains("harvester"), "the clock paused with a note: " + gs.Banner);
@@ -99,7 +103,7 @@ public partial class Main
         Expect(news.Any(t => t.Contains(me == Side.Hand ? $"HARVEST COMPLETE: {target}" : $"{target} is gone")), "the message log carries the harvest report for " + target);
         Expect(news.Any(t => t.Contains("Sector") && (t.Contains("turns against") || t.Contains("Revolt")) || star.IsOutsideSectors), "the sector reaction is in the log");
         if (cont != null)
-            Expect(gs.ReportVisible && gs.ReportText.Contains("Harvest complete") && gs.ReportText.Contains($"HARVEST COMPLETE: {target}") && gs.ReportText.Contains("Recovered: 900 refined") && (gs.ReportText.Contains("Debt written off: ") == gs.ReportText.Contains("Unregistered: ")),
+            Expect(gs.ReportVisible && gs.ReportText.Contains("Harvest complete") && gs.ReportText.Contains($"HARVEST COMPLETE: {target}") && gs.ReportText.Contains(recovered) && (gs.ReportText.Contains("Debt written off: ") == gs.ReportText.Contains("Unregistered: ")),
                 "the harvest report pops up: " + gs.ReportText.Replace("\n", " / "));
         gs.Click("Close");
         Expect(s.QueuedOrders == 0, "no order left waiting");
@@ -142,6 +146,10 @@ public partial class Main
         {
             SelectFleetByList(gs, fleet);
             Expect(gs.Has("Destroy System") && !gs.Enabled("Destroy System") && gs.PanelText().Contains("already destroyed"), "Destroy System is greyed out at a destroyed system");
+            // the cooldown (m5-harvester §2 legality 3a): the harvester that struck recharges for 180 days and the panel says until when
+            int readyOn = s.Game.State.Harvester.DestroyedDay(target).GetValueOrDefault() + ds.Params.CooldownDays;
+            Expect(s.HarvesterRechargingUntil(fleet) == readyOn && gs.PanelText().Contains($"Harvester recharging: ready on day {readyOn}"),
+                $"the panel says the harvester recharges until day {readyOn}: " + gs.PanelText().Replace("\n", " / "));
             // a second order: the core refuses it and the plain reason shows in the messages
             int b2 = s.Messages.Count;
             s.SubmitDestroySystem(fleet);

@@ -37,6 +37,13 @@ public sealed partial class GameSession
     /// <summary>Is one of the player's harvesters in a fleet at the system?</summary>
     public bool HasOwnHarvesterAt(string system) => Host.Harvester.HasHarvester(Player, system);
 
+    /// <summary>
+    /// While every harvester of the fleet is recharging after a strike: the day a strike can land again (the core's cooldown); null when it
+    /// can strike now (or holds no harvester). rule: m5-harvester §2 legality 3a.
+    /// </summary>
+    public int? HarvesterRechargingUntil(Fleet f) =>
+        Host.Harvester.FleetReadyDay(f) is int d && !Host.Harvester.IsReady(f) ? d : null;
+
     /// <summary>Queue Destroy System for the fleet. The core judges it when the next day starts; a refusal comes back in the messages.</summary>
     public long SubmitDestroySystem(Fleet f) =>
         TrackFleet(f.Id, Host.Harvester.SubmitDestroySystem(Player, f.Id), $"Destroy System {f.At} with {f.Name}");
@@ -48,26 +55,6 @@ public sealed partial class GameSession
             : "No enemy harvester has been reported yet. The team must go to the system where it stands.";
 
     // ---- the harvest report (rule: m5-harvester §7 Harvest report; wording: specs/creative/02-the-hand.md §5). Screens only.
-
-    static Dictionary<string, long> _people;
-
-    /// <summary>People per system (data/design/system-population.csv, from the lore's popB); 0 for a system not in the file.</summary>
-    static long PeopleOf(string system)
-    {
-        if (_people == null)
-        {
-            var map = new Dictionary<string, long>(StringComparer.Ordinal);
-            string path = System.IO.Path.Combine(Godot.ProjectSettings.GlobalizePath("user://gamedata"), "data", "design", "system-population.csv");
-            if (!System.IO.File.Exists(path)) Godot.GD.PushWarning($"Harvest report: {path} is missing, so every report shows no people.");
-            else
-            {
-                var t = Praedra.Core.Data.CsvTable.Load(path);
-                for (int r = 0; r < t.RowCount; r++) map[t.Get(r, "system")] = long.Parse(t.Get(r, "people"), System.Globalization.CultureInfo.InvariantCulture);
-            }
-            _people = map;
-        }
-        return _people.TryGetValue(system, out long n) ? n : 0;
-    }
 
     /// <summary>A head count as people read it: from a billion with one decimal, from a million in whole millions, else the plain count. rule: m5-harvester §7.</summary>
     internal static string PeopleWords(long n)
@@ -83,12 +70,15 @@ public sealed partial class GameSession
     /// </summary>
     internal (string Title, string Detail) HarvestReport(SystemDestroyed x)
     {
-        long people = x.Populated ? PeopleOf(x.System) : 0;
+        long people = x.Populated ? Host.Data.Population.PeopleOf(x.System) : 0; // data/design/system-population.csv, through the core
         if (Player == Side.Collective)
             return ($"{x.System} is gone", people > 0 ? $"{x.System} is gone. {PeopleWords(people)} people." : $"{x.System} is gone.");
         string head = $"HARVEST COMPLETE: {x.System}";
         // the yield to the Hand's pool, last (m5-harvester §2 effect 8; only the harvesting side sees its own pool)
-        string yield = x.YieldRefined > 0 && x.AttackerSide == Player ? $"\nRecovered: {x.YieldRefined} refined" : "";
+        // a strike with no yield (too few people, m5-harvester §2 effect 8 population scaling) says so plainly, unless yields are off (YieldRefined 0)
+        string yield = x.AttackerSide != Player ? ""
+            : x.YieldRefined > 0 ? $"\nRecovered: {x.YieldRefined} refined"
+            : Host.Harvester.Params.YieldRefined > 0 ? "\nRecovered: nothing (too few people)" : "";
         if (people == 0) return ("Harvest complete", head + yield);
         long debt = people * Math.Clamp(x.HandSupport, 0, 100) / 100;
         // rule: m5-missions §6b Effect 3: once the books are burned the debt is not on record (a strike earlier the same day, slot 5.1, came before the burn, slot 5.3)
