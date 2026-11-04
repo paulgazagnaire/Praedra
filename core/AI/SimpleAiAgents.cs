@@ -725,14 +725,14 @@ public sealed partial class SimpleAi
         }
     }
 
+    /// <summary>A sure thing in basis points (the planner's unit for P(not detected)).</summary>
+    private const int BasisPointsWhole = 10000;
+
     /// <summary>
     /// P(not detected) in basis points (10000 = sure) for a one-member team of this espionage against the defenders the side believes are at
     /// the system: the product over the defenders of (100 - FOILTB(x)) / 100, x = DetectionX with the team's special forces (0 or 1) (m5-missions
     /// §3; no decoys).
     /// </summary>
-    /// <summary>A sure thing in basis points (the planner's unit for P(not detected)).</summary>
-    private const int BasisPointsWhole = 10000;
-
     private int UnseenBasisPoints(int espionage, string system, int specialForces = 0)
     {
         long p = BasisPointsWhole;
