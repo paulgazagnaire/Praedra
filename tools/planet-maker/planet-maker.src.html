@@ -3026,6 +3026,7 @@ function frame(dt) {
 function vec3(a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; }
 // a harvested world is drawn from its own look: same colours and seed, but only the gutted core and a rubble belt are left
 let HARVV = false;
+const harvUI = () => { $('harvOn').checked = HARVV; $('btnHarv').textContent = 'Harvested: ' + (HARVV ? 'on' : 'off'); $('btnHarv').setAttribute('aria-pressed', String(HARVV)); };
 function harvestedP(p) {
   const RT = RING_TYPES[RING_IDX.wreck];
   const ring = Object.assign({}, p.ring, RT.d, { on: true, type: 'wreck', c1: RT.c[0], c2: RT.c[1], feeder: 0, inner: 0.6, width: 0.55, op: 0.4, gaps: 0.6, struct: 0.9, clump: 1, dust: 0.15, seed: p.seed, spin: p.ring.spin || 0.3 });
@@ -3871,7 +3872,6 @@ function boot() {
   $('snapClear').addEventListener('change', (e) => { snapClear = e.target.checked; try { localStorage.setItem('pm_snap_clear', snapClear ? '1' : '0'); } catch (er) {} openSnap(); });
   $('snapClose').addEventListener('click', () => { $('snap').classList.remove('on'); });
   $('btnVid').addEventListener('click', openVid);
-  const harvUI = () => { $('harvOn').checked = HARVV; $('btnHarv').textContent = 'Harvested: ' + (HARVV ? 'on' : 'off'); $('btnHarv').setAttribute('aria-pressed', String(HARVV)); };
   $('harvOn').addEventListener('change', (e) => { HARVV = e.target.checked; harvUI(); });
   $('btnHarv').addEventListener('click', () => { HARVV = !HARVV; harvUI(); });
   $('vidTurn').addEventListener('click', () => { $('vidLen').value = turnSecs(); vidNote(); });
@@ -3887,7 +3887,7 @@ function boot() {
   try { initGL(); } catch (e) { glOK = false; document.querySelector('.hint').textContent = 'Shader error: ' + e.message; console.error(e); return; }
   requestAnimationFrame(loop);
 }
-window.__pm = { get P() { return P; }, setHarvest(v) { HARVV = !!v; $('harvOn').checked = HARVV; $('btnHarv').textContent = 'Harvested: ' + (HARVV ? 'on' : 'off'); }, loopPlan, loopAt, makeVideo, vidFrame, endLoop() { LOOPV = null; }, clearPNG: (n) => clearCanvas(n).toDataURL('image/png'), setDither(o) { Object.assign(DI, o); syncDither(); fit(); }, setP(p) { P = p; syncControls(); }, derive, loadSystem, SYSTEMS, classify, makeDefaults, KINDS, setKind, frame, T, draw: () => draw(cv.width, cv.height), pause(v) { paused = v; }, freeze(v) { frozen = v; }, setQ(v) { quality = v; }, fromCode, MOON_TYPES, RING_TYPES, ringGapList, applyRingType, placeFeeder, syncRingUI, ensureMoons, syncMoonUI, selectMoon(i) { selMoon = i; syncMoonUI(); }, MEGA_TYPES };
+window.__pm = { get P() { return P; }, setHarvest(v) { HARVV = !!v; harvUI(); }, loopPlan, loopAt, makeVideo, vidFrame, endLoop() { LOOPV = null; }, clearPNG: (n) => clearCanvas(n).toDataURL('image/png'), setDither(o) { Object.assign(DI, o); syncDither(); fit(); }, setP(p) { P = p; syncControls(); }, derive, loadSystem, SYSTEMS, classify, makeDefaults, KINDS, setKind, frame, T, draw: () => draw(cv.width, cv.height), pause(v) { paused = v; }, freeze(v) { frozen = v; }, setQ(v) { quality = v; }, fromCode, MOON_TYPES, RING_TYPES, ringGapList, applyRingType, placeFeeder, syncRingUI, ensureMoons, syncMoonUI, selectMoon(i) { selMoon = i; syncMoonUI(); }, MEGA_TYPES };
 boot();
 })();
 </script>
