@@ -105,11 +105,14 @@ public class SimpleAiGuerrillaTests
     // main f00fbb8 (Sabotage, Incite, Espionage started; missions by special forces alone; raids ordered; Civilian strikes): seed 1 16, 31, 16, 6, 32, 32;
     // seed 2 82, 19, 28, 25, 77, 66; seed 3 34, 5, 21, 8, 14, 14; seed 4 16, 58, 10, 11, 42, 42. Off: no Sabotage, Espionage, special-force
     // mission, raid or Civilian strike on any seed (Incite 1-6: the old border subversion). Floors: on, at least 5 of each on every seed; off (to
-    // day 300 only, to keep the suite short: the switches gate every one of these orders), none.
+    // day 300 only, to keep the suite short: the switches gate every one of these orders), none. The AI's Burn the Books is off here, as its sheet
+    // DEFAULT (m5-missions §6b AI, DEFAULT off): with the no-guards, talented-only rule of 2026-11-04 20:47 the planner sends a talented agent every
+    // BooksRetryDays and seed 1 then ends with 4 special-force missions instead of 6 (measured on m5/books-talent).
     [Fact]
     public void Underground_AndGuerrilla_SpyAndSabotageAndRaid_OnlyWhenOn()
     {
-        var res = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => (On: Play(s, Medium, 1000), Off: Play(s, Medium with { Underground = false, Guerrilla = false }, 300)));
+        var medium = Medium with { BurnTheBooks = false };
+        var res = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => (On: Play(s, medium, 1000), Off: Play(s, medium with { Underground = false, Guerrilla = false }, 300)));
         foreach (var r in res) _out.WriteLine($"seed {r.On.Seed}: on {r.On}; off {r.Off}");
         foreach (var (on, off) in res)
         {

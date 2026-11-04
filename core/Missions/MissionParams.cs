@@ -178,8 +178,20 @@ public sealed record MissionParams
     /// Source: New, m5-missions §6b (Paul picked the mission 2026-11-04; numbers DEFAULT).
     /// </summary>
     public bool BurnTheBooks { get; init; } = true;
-    /// <summary>The cap of the one success roll: chance = min(SBTGMSTB(input), this). DEFAULT 3. Source: New, m5-missions §6b (Paul picked the mission 2026-11-04; numbers DEFAULT).</summary>
-    public int BooksCapPercent { get; init; } = 3;
+    /// <summary>The cap of the one success roll: chance = min(SBTGMSTB(input), this). DEFAULT 1 (was 3). Source: New, m5-missions §6b (Decided by Paul 2026-11-04 20:47: "make it more like 1%").</summary>
+    public int BooksCapPercent { get; init; } = 1;
+    /// <summary>
+    /// Burn the Books meets no guards: every check pass of the mission has an empty guard set, so no decoy pass, no detection walk and no guard duel
+    /// (Talent sensing, betrayal and the Talent encounter still run). DEFAULT true. Off: the §6a Full guard set at the job check and the §3 walk.
+    /// Source: New, m5-missions §6b (Decided by Paul 2026-11-04 20:47: "Skip the guards").
+    /// </summary>
+    public bool BooksSkipDetection { get; init; } = true;
+    /// <summary>
+    /// The hidden requirement: the success roll is made only when at least one non-decoy team member is a talented character (TalentHolder, any
+    /// rank, aware or not); otherwise the iteration fails with no draw. No screen text reveals it. DEFAULT true. Off: the roll is always made.
+    /// Source: New, m5-missions §6b (Decided by Paul 2026-11-04 20:47: "needs to be lead by someone talented").
+    /// </summary>
+    public bool BooksNeedsTalent { get; init; } = true;
     /// <summary>Taken from the input per completed Hand defence facility or shield at Charter. DEFAULT 5. Source: New, m5-missions §6b (Paul picked the mission 2026-11-04; numbers DEFAULT).</summary>
     public int BooksDefencePenalty { get; init; } = 5;
     /// <summary>Collective support added on every non-destroyed populated system by a success. DEFAULT 5 (Paul to confirm the size). Source: New, m5-missions §6b (Paul picked the mission 2026-11-04; numbers DEFAULT).</summary>

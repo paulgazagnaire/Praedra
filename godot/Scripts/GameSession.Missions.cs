@@ -99,7 +99,7 @@ public sealed partial class GameSession
         MissionKind.Assassination => "Kills an enemy leader. Skill: combat.",
         MissionKind.Recruitment => "Brings a new leader to your side at one of your systems.",
         MissionKind.SpikeTheHarvester => "Destroys an enemy harvester.",
-        MissionKind.BurnTheBooks => "Charter only, while the Hand holds it: burn the debt books on the Tabularium. Once per game; every populated world leans to you. Charter's whole garrison stands guard: the hardest mission there is. Skill: combat and espionage.",
+        MissionKind.BurnTheBooks => "Charter only, while the Hand holds it: burn the debt books on the Tabularium. Once per game; every populated world leans to you. The hardest mission there is. Skill: combat and espionage.",
         MissionKind.TrainTalent => "Trains a talented character.",
         _ => "",
     };

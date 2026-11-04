@@ -402,8 +402,8 @@ public sealed partial class SimpleAi
     /// <summary>
     /// rule: m5-missions §6b AI (SimpleAiParams.BurnTheBooks, DEFAULT off, AI trainer 2026-11-04: it never paid): the Collective tries Burn the Books when it has a free team whose input
     /// gives a non-zero chance and Charter is Hand-held. The chance is the whole mission's, in basis points: P(not detected) by the guards the
-    /// side believes are at Charter (UnseenBasisPoints, as every other mission the planner weighs) times min(SBTGMSTB(input), BooksCapPercent),
-    /// so a fully garrisoned Charter draws no team. One mission at a time; one character, the best chance first, then the lowest id; majors
+    /// side believes are at Charter (UnseenBasisPoints, as every other mission the planner weighs; 10000 with BooksSkipDetection) times
+    /// min(SBTGMSTB(input), BooksCapPercent), and 0 for a character with no Talent under BooksNeedsTalent. One mission at a time; one character, the best chance first, then the lowest id; majors
     /// never go. It plans after every other mission, with the characters left free. The defence facilities and shields at Charter are the ones the side sees (fog) or the truth (no fog). The core judges the order.
     /// </summary>
     private void PlanBurnTheBooks(List<CharacterRecord> mine, HashSet<int> busy)
@@ -420,8 +420,11 @@ public sealed partial class SimpleAi
         {
             if (!Standing(c) || busy.Contains(c.Id) || IsKey(c) || !mi.CanDo(c, k)) continue;
             int esp = Skill(c, Characters.Skill.Espionage);
-            int pct = mi.BooksChance(mi.BooksInput(Skill(c, Characters.Skill.Combat), esp, defences));
-            int chance = pct == 0 ? 0 : (int)((long)UnseenBasisPoints(esp, charter) * pct / 100); // basis points
+            // rule: m5-missions §6b (Decided by Paul 2026-11-04 20:47): a one-character team with no Talent never succeeds (BooksNeedsTalent; the
+            // side knows its own characters); with BooksSkipDetection no guard can stop it, so no detection factor (10000 bp unseen)
+            int pct = mi.BooksTalentMet(new[] { c }) ? mi.BooksChance(mi.BooksInput(Skill(c, Characters.Skill.Combat), esp, defences)) : 0;
+            int unseen = mi.Params.BooksSkipDetection ? BasisPointsWhole : UnseenBasisPoints(esp, charter);
+            int chance = pct == 0 ? 0 : (int)((long)unseen * pct / 100); // basis points
             if (chance > bestChance) { bestChance = chance; best = c; }
         }
         if (best == null) return;
@@ -722,6 +725,9 @@ public sealed partial class SimpleAi
         }
     }
 
+    /// <summary>A sure thing in basis points (the planner's unit for P(not detected)).</summary>
+    private const int BasisPointsWhole = 10000;
+
     /// <summary>
     /// P(not detected) in basis points (10000 = sure) for a one-member team of this espionage against the defenders the side believes are at
     /// the system: the product over the defenders of (100 - FOILTB(x)) / 100, x = DetectionX with the team's special forces (0 or 1) (m5-missions
@@ -729,7 +735,7 @@ public sealed partial class SimpleAi
     /// </summary>
     private int UnseenBasisPoints(int espionage, string system, int specialForces = 0)
     {
-        long p = 10000;
+        long p = BasisPointsWhole;
         foreach (var d in MissionDefendersAt(system))
         {
             int chance = _h.Missions.FoilChance(_h.Missions.DetectionX(espionage, d.Detection, specialForces, d.OfficerEspionage));
