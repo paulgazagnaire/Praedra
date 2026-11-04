@@ -485,6 +485,24 @@ public class SimpleAiAgentsTests
         Assert.NotEqual(CharacterKind.Major, h.Characters.ClassOf(h.Characters.Get(o.Characters[0])!).Kind);
     }
 
+    // m5-missions §6b AI (SimpleAiParams.BooksRetryDays, DEFAULT 180): a failed Burn the Books in the AI memory inside the window stops a new
+    // try; one older than the window does not. Seed 1, fog, the note put straight into the Collective's memory.
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(-179, 0)]
+    [InlineData(-181, 1)]
+    public void BurnTheBooks_AiWaitsAfterAFailedTry(int ageDays, int expected)
+    {
+        Assert.Equal(180, new SimpleAiParams().BooksRetryDays);
+        var (_, h) = Match(1, Fog);
+        int day = h.Game.Day + ageDays;
+        h.AiMemoryFor(Side.Collective, true).Notes.Add(new AiNote { Kind = AiNoteKind.BooksFailed, Day = day, Floor = day, System = Praedra.Core.Control.ControlModule.CapitalSystem });
+        var ai = new SimpleAi(h, Side.Collective, Fog);
+        List<StartMissionOrder> Books() => h.Game.Queue.OfType<StartMissionOrder>().Where(o => o.Kind == MissionKind.BurnTheBooks).ToList();
+        for (int d = 0; d < 2 && Books().Count == 0; d++) { ai.PlanDay(); if (Books().Count == 0) h.Game.Step(); } // as BurnTheBooks_CollectiveAiSendsOneTeam
+        Assert.Equal(expected, Books().Count);
+    }
+
     // AfterCharterDiplomats (AI trainer 2026-10-27, slow wars): the Collective holding Charter keeps up to that many diplomats out (the cap the
     // mission planner applies), MaxDiplomats otherwise; the Hand never reads it. Seed 1 at setup, Charter given to the Collective or left to the
     // Hand (FleetModule.SetOwner). rule: ai tuning, SimpleAiParams.AfterCharterDiplomats.
