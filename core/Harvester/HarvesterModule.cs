@@ -30,6 +30,7 @@ public sealed class HarvesterModule
     private readonly SupportModule _support;
     private readonly ControlModule _control;
     private readonly ConstructionModule _construction;
+    private readonly SystemPopulation _population;
     private readonly List<DestroySystemOrder> _pending = new(); // accepted this Step; consumed at slot 5.1
     private string _lossCause = "Battle"; // why a harvester is leaving the game while a unit is lost (set around our own removals)
 
@@ -45,22 +46,24 @@ public sealed class HarvesterModule
     public Action<StepContext, string>? FogNotice { get; set; }
 
     private HarvesterModule(Game game, Galaxy galaxy, FleetModule fleets, EconomyModule eco, SupportModule support, ControlModule control,
-        ConstructionModule construction, HarvesterParams p)
+        ConstructionModule construction, HarvesterParams p, SystemPopulation population)
     {
         _game = game; _galaxy = galaxy; _fleets = fleets; _eco = eco; _support = support; _control = control; _construction = construction; Params = p;
+        _population = population;
     }
 
     /// <summary>
     /// Register the Destroy System handler (step 1), the slot 5.1 hook (after the bombardment's, registered earlier) and the slot 5.6 flag hook, put the
     /// build cap on the construction module and listen for lost units. Throws <see cref="Characters.RuleMissingException"/> for a refused switch.
+    /// <paramref name="population"/> gives the people per system for the harvest yield (null = nobody anywhere: every yield is 0).
     /// rule: m5-harvester §1, §2, §3.
     /// </summary>
     public static HarvesterModule Attach(Game game, Galaxy galaxy, FleetModule fleets, EconomyModule eco, SupportModule support, ControlModule control,
-        ConstructionModule construction, HarvesterParams? p = null)
+        ConstructionModule construction, HarvesterParams? p = null, SystemPopulation? population = null)
     {
         p ??= new HarvesterParams();
         p.Validate();
-        var m = new HarvesterModule(game, galaxy, fleets, eco, support, control, construction, p);
+        var m = new HarvesterModule(game, galaxy, fleets, eco, support, control, construction, p, population ?? SystemPopulation.Empty);
         game.RegisterOrderHandler<DestroySystemOrder>(m.HandleOrder);
         game.RegisterHook("5.1", m.Resolve);
         game.RegisterHook("5.6", m.RefreshSectorFlag);
@@ -85,6 +88,49 @@ public sealed class HarvesterModule
     /// <summary>The completed harvesters of a fleet, ship id order. A fleet member is always completed. rule: m5-harvester §2 legality 2.</summary>
     private IEnumerable<EconObject> HarvestersIn(Fleet f) =>
         f.Ships.Select(id => E.Objects.TryGetValue(id, out var o) ? o : null).Where(o => o != null && o.Completed && IsHarvester(o)).Select(o => o!);
+
+    /// <summary>
+    /// The first day a harvester (by unit id) may strike again: the day of its last strike plus <see cref="HarvesterParams.CooldownDays"/>;
+    /// 0 when it never struck. A strike lands on the day after the order is given, so an order is legal when the game's day + 1 has reached it.
+    /// rule: m5-harvester §2 legality 3a (Paul 2026-11-04 card, Population + cooldown).
+    /// </summary>
+    public int ReadyDay(int harvesterId) =>
+        S.StruckOn != null && S.StruckOn.TryGetValue(harvesterId, out int struck) ? struck + Params.CooldownDays : 0;
+
+    /// <summary>
+    /// The first day a strike by this fleet may land: the earliest <see cref="ReadyDay"/> of its completed harvesters (0 = ready now or never
+    /// struck); null when the fleet holds no completed harvester. rule: m5-harvester §2 legality 3a.
+    /// </summary>
+    public int? FleetReadyDay(Fleet f)
+    {
+        int? best = null;
+        foreach (var o in HarvestersIn(f)) { int d = ReadyDay(o.Id); if (best == null || d < best) best = d; }
+        return best;
+    }
+
+    /// <summary>Can a Destroy System order given today by this fleet strike as far as the cooldown goes? (False with no harvester.) rule: m5-harvester §2 legality 3a.</summary>
+    public bool IsReady(Fleet f) => FleetReadyDay(f) is int d && d <= _game.Day + 1;
+
+    // The ready harvester a strike uses: the lowest ship id whose cooldown has passed by the strike day. rule: m5-harvester §2 legality 3a.
+    private EconObject? ReadyHarvester(Fleet f, int strikeDay) =>
+        HarvestersIn(f).Where(o => ReadyDay(o.Id) <= strikeDay).OrderBy(o => o.Id).FirstOrDefault();
+
+    /// <summary>
+    /// The harvest yield for a system: <see cref="HarvesterParams.YieldRefined"/> scaled by the number of decimal digits d of its people,
+    /// YieldRefined x clamp(d - YieldZeroDigits, 0, span) / span with span = YieldFullDigits - YieldZeroDigits, in integers (rounded down).
+    /// A system not populated, or missing from the population file, pays 0. rule: m5-harvester §2 effect 8 (Paul 2026-11-04 card).
+    /// </summary>
+    public int YieldFor(string system, bool populated)
+    {
+        if (!populated) return 0;
+        long people = _population.PeopleOf(system);
+        if (people <= 0) return 0;
+        int digits = 0;
+        for (long n = people; n > 0; n /= 10) digits++;
+        int span = Params.YieldFullDigits - Params.YieldZeroDigits;
+        int steps = Math.Clamp(digits - Params.YieldZeroDigits, 0, span);
+        return (int)((long)Params.YieldRefined * steps / span);
+    }
 
     /// <summary>
     /// <c>HasHarvester(owner, system)</c>: true when a completed harvester of <paramref name="owner"/> is in a fleet at the system (not in hyperspace).
@@ -179,9 +225,10 @@ public sealed class HarvesterModule
     /// <summary>
     /// The legality list, in the sheet's order; null = all hold. Run at step 1 (<paramref name="atOrder"/> adds the pending check) and again at slot 5.1.
     /// No ownership, shield or neutrality check, and enemy fleets present never block it.
-    /// rule: m5-harvester §2 Legality 1 to 6.
+    /// <paramref name="strikeDay"/> is the day the strike would land (the Step's K + 1), for the cooldown.
+    /// rule: m5-harvester §2 Legality 1 to 6 (3a: the cooldown).
     /// </summary>
-    private string? Check(Side side, int fleetId, bool atOrder)
+    private string? Check(Side side, int fleetId, bool atOrder, int strikeDay)
     {
         if (!State.Fleets.TryGetValue(fleetId, out var f)) return RejectReason.UnknownFleet;                       // 1
         if (f.Side != side) return RejectReason.NotYours;
@@ -189,6 +236,7 @@ public sealed class HarvesterModule
         string system = f.At;
         if (!HarvestersIn(f).Any()) return HarvesterReject.NoHarvester;                                            // 2
         if (S.IsDestroyed(system)) return HarvesterReject.AlreadyDestroyed;                                        // 3
+        if (ReadyHarvester(f, strikeDay) == null) return HarvesterReject.Recharging;                               // 3a (Paul 2026-11-04 card)
         // 4: no ownership, shield or neutrality check. 5: enemy fleets present do not block it. 6: Classic's shield facility is cut
         // (data/design/cut-classes.csv; Decided Paul 2026-10-25: the harvester has no shield), so nothing protects a system.
         if (atOrder && _pending.Any(p => p.Fleet == fleetId)) return HarvesterReject.OrderPending;
@@ -197,7 +245,7 @@ public sealed class HarvesterModule
 
     private OrderResult HandleOrder(StepContext ctx, DestroySystemOrder o)
     {
-        var reason = Check(o.Side, o.Fleet, atOrder: true);
+        var reason = Check(o.Side, o.Fleet, atOrder: true, ctx.Day + 1);
         if (reason != null) return OrderResult.Reject(reason);
         _pending.Add(o);
         return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence, Fleet: o.Fleet));
@@ -212,7 +260,7 @@ public sealed class HarvesterModule
         int day = ctx.Day + 1;
         foreach (var o in batch)
         {
-            var reason = Check(o.Side, o.Fleet, atOrder: false);
+            var reason = Check(o.Side, o.Fleet, atOrder: false, day);
             if (reason != null)
             {
                 string at = State.Fleets.TryGetValue(o.Fleet, out var cf) ? cf.At ?? "" : "";
@@ -232,6 +280,9 @@ public sealed class HarvesterModule
         // The system as it stands before the strike, for the event's harvest report. rule: m5-harvester §7 Harvest report
         int handSupport = _eco.SupportOf(system, Side.Hand);
         bool populated = _eco.SlotsOf(system).Populated;
+        // The harvester that strikes (the ready one with the lowest id) starts its cooldown. rule: m5-harvester §2 legality 3a
+        var harvester = ReadyHarvester(attacker, day)!;
+        if (Params.CooldownDays > 0) (S.StruckOn ??= new SortedDictionary<int, int>())[harvester.Id] = day;
 
         // Running missions at the system end as failures, their characters stay as characters on the planet. rule: effect 3
         MissionsEnded?.Invoke(ctx, system);
@@ -255,7 +306,7 @@ public sealed class HarvesterModule
         _support.OnSystemDestroyed(ctx, system);
         _fleets.RefreshBlockadeFlag(ctx, system, day);
 
-        int yield = Params.YieldRefined; // paid after the sector reaction (effect 8), told in the event now
+        int yield = YieldFor(system, populated); // by the people as they stood before the strike; paid after the sector reaction (effect 8), told in the event now
         // 6. The event to both sides; every side's picture learns it, and 4. an HQ at rest there is destroyed (the victory step reads it as the
         // Hand capturing the HQ: m5-fog-and-hq §F7, m5-setup-and-victory §Victory).
         ctx.Emit((i, _) => new SystemDestroyed(i, day, system, side, prior, handSupport, populated, yield));
@@ -264,8 +315,8 @@ public sealed class HarvesterModule
         // 7. The sector reaction.
         SectorReaction(ctx, day, system);
 
-        // 8. The harvest yield: the attacker's refined pool gains about a year of income at once, last, so yards it wakes log after the strike.
-        // rule: m5-harvester §2 effect 8 (Paul 2026-11-04)
+        // 8. The harvest yield: the attacker's refined pool gains up to about a year of income at once, scaled by the system's people, last, so
+        // yards it wakes log after the strike. rule: m5-harvester §2 effect 8 (Paul 2026-11-04; population scaling: Paul 2026-11-04 card)
         _eco.GrantRefined(ctx, side, yield);
     }
 

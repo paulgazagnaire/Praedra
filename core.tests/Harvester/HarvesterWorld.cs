@@ -11,7 +11,7 @@ namespace Praedra.Core.Tests.Harvester;
 /// <summary>
 /// A full <see cref="GameHost"/> on a small map for the harvester tests (m5-harvester §Tests). Sector SA has six systems on a line, A1 to A6
 /// (lanes A1-A2 ... A5-A6); sector SB has B1, B2, B3 (lanes A1-B1, B1-B2, B2-B3). All populated, 9 energy and 3 raw. No owners unless set; every
-/// support value is the data default until set. Incidents off, autoscrap out of reach, debug orders on. A stub generator unless a seed is given.
+/// support value is the data default until set. People per system: <see cref="People"/>. Incidents off, autoscrap out of reach, debug orders on. A stub generator unless a seed is given.
 /// </summary>
 internal sealed class HarvesterWorld
 {
@@ -30,8 +30,15 @@ internal sealed class HarvesterWorld
                     "A1,B1,generated,\nB1,B2,generated,\nB2,B3,generated,\n";
         var g = GalaxyLoader.Load(planets, lanes, TestData.Tiers);
         var slots = "name,sector,group,energy,raw,populated\n" + string.Join("\n", g.Systems.Select(s => $"{s.Name},{s.Sector},{s.Group},9,3,1"));
-        return GameData.Default with { Galaxy = g, Slots = SlotValues.Parse(slots, g) };
+        return GameData.Default with { Galaxy = g, Slots = SlotValues.Parse(slots, g), Population = SystemPopulation.Parse(People) };
     });
+
+    /// <summary>
+    /// People per system for the harvest yield (m5-harvester §2 effect 8): one system per yield band; A6 has no row. A3 holds 2 billion, so a strike
+    /// there pays the full yield.
+    /// </summary>
+    public const string People = "system,people,source\nA1,999999,test\nA2,1000000,test\nA3,2000000000,test\nA4,99999999,test\nA5,100000000,test\n" +
+                                 "B1,9000000000,test\nB2,450000000000,test\nB3,12000000,test\n";
 
     public static GameData Data => _data.Value;
 

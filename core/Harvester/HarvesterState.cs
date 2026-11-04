@@ -23,6 +23,13 @@ public sealed class HarvesterState
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public SortedDictionary<string, int>? DestroyedOn { get; set; }
 
+    /// <summary>
+    /// The day each harvester (by unit id) last struck, for the cooldown. Null until the first strike, and then omitted from the save and the
+    /// hash while null, so games without a strike keep their hash. rule: m5-harvester §2 legality 3a.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public SortedDictionary<int, int>? StruckOn { get; set; }
+
     public bool IsDestroyed(string system) => Destroyed.Contains(system);
 
     /// <summary>The day the system was destroyed; null when intact (or destroyed in a save written before the day was kept).</summary>
@@ -33,5 +40,6 @@ public sealed class HarvesterState
         foreach (var s in o.Destroyed) Destroyed.Add(s);
         foreach (var kv in o.StrikesInSector) StrikesInSector[kv.Key] = kv.Value;
         DestroyedOn = o.DestroyedOn == null ? null : new SortedDictionary<string, int>(o.DestroyedOn, StringComparer.Ordinal);
+        StruckOn = o.StruckOn == null ? null : new SortedDictionary<int, int>(o.StruckOn);
     }
 }

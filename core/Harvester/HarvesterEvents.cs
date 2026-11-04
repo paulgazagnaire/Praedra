@@ -20,6 +20,8 @@ public static class HarvesterReject
     public const string HarvesterLimit = "HarvesterLimit";
     /// <summary>A second Destroy System of the same fleet in one Step (DEFAULT name, as the bombardment's check 6).</summary>
     public const string OrderPending = "OrderPending";
+    /// <summary>Every harvester of the fleet struck less than <see cref="HarvesterParams.CooldownDays"/> ago. rule: m5-harvester §2 legality 3a (Paul 2026-11-04 card).</summary>
+    public const string Recharging = "Recharging";
 }
 
 /// <summary>A harvester was completed (or delivered) and stands at <see cref="System"/>. Both sides. rule: m5-harvester §1 ("New harvester Deployed").</summary>
