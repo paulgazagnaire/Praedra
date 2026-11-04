@@ -87,9 +87,11 @@ public sealed partial class GameSession
         if (Player == Side.Collective)
             return ($"{x.System} is gone", people > 0 ? $"{x.System} is gone. {PeopleWords(people)} people." : $"{x.System} is gone.");
         string head = $"HARVEST COMPLETE: {x.System}";
-        if (people == 0) return ("Harvest complete", head);
+        // the yield to the Hand's pool, last (m5-harvester §2 effect 8; only the harvesting side sees its own pool)
+        string yield = x.YieldRefined > 0 && x.AttackerSide == Player ? $"\nRecovered: {x.YieldRefined} refined" : "";
+        if (people == 0) return ("Harvest complete", head + yield);
         long debt = people * Math.Clamp(x.HandSupport, 0, 100) / 100;
-        return ("Harvest complete", $"{head}\nDebt written off: {PeopleWords(debt)} hands\nUnregistered: {PeopleWords(people - debt)}");
+        return ("Harvest complete", $"{head}\nDebt written off: {PeopleWords(debt)} hands\nUnregistered: {PeopleWords(people - debt)}{yield}");
     }
 
     static string HarvesterLossWords(string cause) => cause switch

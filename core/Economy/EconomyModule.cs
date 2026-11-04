@@ -450,6 +450,14 @@ public sealed class EconomyModule
         }
     }
 
+    /// <summary>Add refined to a side's pool from outside production (the harvest yield, m5-harvester §2 effect 8), waking yards that wait for refined.</summary>
+    internal void GrantRefined(StepContext ctx, Side side, int amount)
+    {
+        if (amount <= 0) return;
+        E.Pool(side).Refined += amount;
+        RefinedPoolGrew?.Invoke(ctx, side);
+    }
+
     /// <summary>Scrap one completed object: removed at once, side's refined +floor(cost / 2). rule: m2-maintenance §Scrapping and refunds.</summary>
     internal void Scrap(StepContext ctx, int day, EconObject o, Side side, string reason)
     {
