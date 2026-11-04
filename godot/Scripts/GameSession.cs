@@ -338,7 +338,7 @@ public sealed partial class GameSession
         AssaultReject.FullyShielded => "the planet's shields are too strong (bombard the shield generators first)",
         Praedra.Core.Harvester.HarvesterReject.NoHarvester => "the fleet holds no finished harvester",
         Praedra.Core.Harvester.HarvesterReject.AlreadyDestroyed => "that system is already destroyed",
-        Praedra.Core.Harvester.HarvesterReject.Recharging => "the harvester is still recharging after its last strike",
+        Praedra.Core.Harvester.HarvesterReject.Recharging => "it is too soon after the last harvest (one harvest a year)",
         Praedra.Core.Harvester.HarvesterReject.HarvesterLimit => "only one harvester per system: this system already has one (build it at another shipyard)",
         "SystemDestroyed" => "that system was destroyed by the harvester",
         _ => reason,

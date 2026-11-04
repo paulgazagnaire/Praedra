@@ -146,9 +146,9 @@ public partial class Main
         {
             SelectFleetByList(gs, fleet);
             Expect(gs.Has("Destroy System") && !gs.Enabled("Destroy System") && gs.PanelText().Contains("already destroyed"), "Destroy System is greyed out at a destroyed system");
-            // the cooldown (m5-harvester §2 legality 3a): the harvester that struck recharges for 180 days and the panel says until when
+            // the cooldown (m5-harvester §2 legality 3a): one harvest a year per side (DEFAULT) and the panel says until when
             int readyOn = s.Game.State.Harvester.DestroyedDay(target).GetValueOrDefault() + ds.Params.CooldownDays;
-            Expect(s.HarvesterRechargingUntil(fleet) == readyOn && gs.PanelText().Contains($"Harvester recharging: ready on day {readyOn}"),
+            Expect(s.HarvesterRechargingUntil(fleet) == readyOn && gs.PanelText().Contains($"your next harvest can land on day {readyOn}"),
                 $"the panel says the harvester recharges until day {readyOn}: " + gs.PanelText().Replace("\n", " / "));
             // a second order: the core refuses it and the plain reason shows in the messages
             int b2 = s.Messages.Count;
