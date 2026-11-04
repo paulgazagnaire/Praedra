@@ -57,11 +57,20 @@ public sealed record HarvesterParams
     /// </summary>
     public bool SpikeInYard { get; init; } = true;
 
+    /// <summary>
+    /// The harvest yield: refined added at once to the attacker's pool when a system is destroyed, about a year of a side's refined income.
+    /// New, Decided (Paul 2026-11-04: "a Huge spike of resources. Like a year worth of resources... you do the math"). 900 = the Hand's
+    /// yearly refined income in Medium AI games (aivai seeds 1-3, years 1-3: 776 to 1,251, median about 870), rounded. 0 = Classic (no yield).
+    /// DEFAULT 900. rule: m5-harvester §2 effect 8.
+    /// </summary>
+    public int YieldRefined { get; init; } = 900;
+
     /// <summary>Throw <see cref="RuleMissingException"/> for every switch value the sheet refuses. rule: m5-harvester §4 (TrenchRun: no code until a rule exists).</summary>
     public void Validate()
     {
         if (TrenchRun) throw new RuleMissingException("TrenchRun", "m5-harvester");
         if (Upkeep < 0) throw new ArgumentOutOfRangeException(nameof(Upkeep), "Upkeep cannot be negative.");
+        if (YieldRefined < 0) throw new ArgumentOutOfRangeException(nameof(YieldRefined), "The harvest yield cannot be negative.");
         if (CapPerSystem < 1) throw new ArgumentOutOfRangeException(nameof(CapPerSystem), "At least one harvester per system must be allowed.");
     }
 }
