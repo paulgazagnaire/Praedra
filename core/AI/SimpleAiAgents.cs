@@ -400,7 +400,7 @@ public sealed partial class SimpleAi
     }
 
     /// <summary>
-    /// rule: m5-missions §6b AI (SimpleAiParams.BurnTheBooks, DEFAULT on): the Collective tries Burn the Books when it has a free team whose input
+    /// rule: m5-missions §6b AI (SimpleAiParams.BurnTheBooks, DEFAULT off, AI trainer 2026-11-04: it never paid): the Collective tries Burn the Books when it has a free team whose input
     /// gives a non-zero chance and Charter is Hand-held. The chance is the whole mission's, in basis points: P(not detected) by the guards the
     /// side believes are at Charter (UnseenBasisPoints, as every other mission the planner weighs) times min(SBTGMSTB(input), BooksCapPercent),
     /// so a fully garrisoned Charter draws no team. One mission at a time; one character, the best chance first, then the lowest id; majors
