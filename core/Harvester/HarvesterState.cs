@@ -30,6 +30,13 @@ public sealed class HarvesterState
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public SortedDictionary<int, int>? StruckOn { get; set; }
 
+    /// <summary>
+    /// The day each side (by name) last struck, for the per-side cooldown (HarvesterParams.CooldownPerSide). Null until the first strike, and
+    /// then omitted from the save and the hash while null. rule: m5-harvester §2 legality 3a.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public SortedDictionary<string, int>? SideStruckOn { get; set; }
+
     public bool IsDestroyed(string system) => Destroyed.Contains(system);
 
     /// <summary>The day the system was destroyed; null when intact (or destroyed in a save written before the day was kept).</summary>
@@ -41,5 +48,6 @@ public sealed class HarvesterState
         foreach (var kv in o.StrikesInSector) StrikesInSector[kv.Key] = kv.Value;
         DestroyedOn = o.DestroyedOn == null ? null : new SortedDictionary<string, int>(o.DestroyedOn, StringComparer.Ordinal);
         StruckOn = o.StruckOn == null ? null : new SortedDictionary<int, int>(o.StruckOn);
+        SideStruckOn = o.SideStruckOn == null ? null : new SortedDictionary<string, int>(o.SideStruckOn, StringComparer.Ordinal);
     }
 }
