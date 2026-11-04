@@ -249,6 +249,7 @@ public sealed class HarvesterModule
 
         // 5. The system itself becomes Destroyed: holder none, no support value, no slots, no production. It stays on the map as passable debris.
         S.Destroyed.Add(system);
+        (S.DestroyedOn ??= new SortedDictionary<string, int>(StringComparer.Ordinal))[system] = day; // rule: m5-harvester §7 (the day, for the screens)
         _fleets.SetOwner(system, null);
         _eco.ClearSlotsForDestroyedSystem(system);
         _support.OnSystemDestroyed(ctx, system);

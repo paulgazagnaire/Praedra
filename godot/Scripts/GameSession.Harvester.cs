@@ -23,8 +23,8 @@ public sealed partial class GameSession
     /// <summary>Does the player's side know the system was destroyed by the harvester? From the side's own picture (both sides are told at once). rule: m5-harvester §2 effect 6.</summary>
     public bool IsDestroyed(string system) => Picture(system)?.Destroyed == true;
 
-    /// <summary>The day the system was destroyed, when this session saw the notice; null otherwise (a loaded game).</summary>
-    public int? DestroyedDay(string system) => _destroyedDay.TryGetValue(system, out int d) ? d : null;
+    /// <summary>The day the system was destroyed: from this session's notice, else from the core (kept in saves since m5-harvester §7); null for an older save.</summary>
+    public int? DestroyedDay(string system) => _destroyedDay.TryGetValue(system, out int d) ? d : Game.State.Harvester.DestroyedDay(system);
 
     /// <summary>The words for the panel and the hover line.</summary>
     public string DestroyedWords(string system) =>

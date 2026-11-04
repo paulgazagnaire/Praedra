@@ -114,6 +114,7 @@ public partial class GameScreen
     internal void OpenMgmt(MgKind kind, string system = null, int fleet = 0, string tab = null)
     {
         if (kind == MgKind.Fleet ? !S.Game.State.Fleets.TryGetValue(fleet, out var f0) || f0.Side != Me : system == null) return;
+        if (kind == MgKind.Infra && S.IsDestroyed(system)) kind = MgKind.Ground; // a harvested world has one plain card, not two windows
         var w = _mgWins.FirstOrDefault(x => x.Kind == kind && (kind == MgKind.Fleet ? x.Fleet == fleet : x.System == system));
         if (w == null)
         {
@@ -411,6 +412,7 @@ public partial class GameScreen
     void SystemWin(MgWin w)
     {
         string n = w.System;
+        if (S.IsDestroyed(n)) { HarvestedWin(w, n); return; }
         bool mine = !S.IsDestroyed(n) && S.OwnerOf(n) == Me;
         string sub = null;
         PanelContainer badge = null;
@@ -445,6 +447,17 @@ public partial class GameScreen
             ("Fighters", based.Count, () => FightersTab(n, based)),
             ("Fleets", own.Count, () => OrbitList(n, own)));
         InfraLink(n);
+    }
+
+    // A harvested world (Paul 2026-11-04: "what happens to the system after being harvested?"): no tabs, no buildings, no Infrastructure link;
+    // its name, the day, what it means, and your fleets standing in the debris. rule: m5-harvester §2 effect 5.
+    void HarvestedWin(MgWin w, string n)
+    {
+        MgHead(w, $"Harvested · {RegionOf(n)}", n, Ui.Danger, S.DestroyedWords(n), Ui.Tag("HARVESTED", Ui.Danger, true));
+        Line("The planet and everything on it are gone for good: no people, buildings or troops. Nobody holds it, and nobody can build, invade or send missions here.", Ui.Text2, Ui.Small);
+        Line("It stays on the map as a field of debris. Fleets can still pass through it and stop here.", Ui.Text3, Ui.Small);
+        var own = S.Game.State.Fleets.Values.Where(f => f.Side == Me && f.At == n).OrderBy(f => f.Id).ToList();
+        if (own.Count > 0) OrbitList(n, own);
     }
 
     void InfraLink(string n) => MgLinks(($"Infrastructure at {n}", () => OpenMgmt(MgKind.Infra, n), "Yards, what the planet builds, slots and buildings"));
