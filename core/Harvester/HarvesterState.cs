@@ -16,11 +16,22 @@ public sealed class HarvesterState
     /// </summary>
     public SortedDictionary<string, int> StrikesInSector { get; init; } = new(StringComparer.Ordinal);
 
+    /// <summary>
+    /// The day each system was destroyed, so the screens can still say when after a load. Null until the first strike, and then omitted from the
+    /// save and the hash while null, so games without a strike keep their hash. rule: m5-harvester §7 Harvest report.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public SortedDictionary<string, int>? DestroyedOn { get; set; }
+
     public bool IsDestroyed(string system) => Destroyed.Contains(system);
+
+    /// <summary>The day the system was destroyed; null when intact (or destroyed in a save written before the day was kept).</summary>
+    public int? DestroyedDay(string system) => DestroyedOn != null && DestroyedOn.TryGetValue(system, out int d) ? d : null;
 
     internal void CopyFrom(HarvesterState o)
     {
         foreach (var s in o.Destroyed) Destroyed.Add(s);
         foreach (var kv in o.StrikesInSector) StrikesInSector[kv.Key] = kv.Value;
+        DestroyedOn = o.DestroyedOn == null ? null : new SortedDictionary<string, int>(o.DestroyedOn, StringComparer.Ordinal);
     }
 }
