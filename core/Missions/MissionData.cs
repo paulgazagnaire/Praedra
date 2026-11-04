@@ -16,6 +16,11 @@ public enum MissionKind
     ShipResearch = 0x20, FacilityResearch = 0x21, TroopResearch = 0x22,
     InciteUprising = 0x40, SpikeTheHarvester = 0x41, TrainTalent = 0x42, Leave = 0x45, Retreat = 0x46,
     SubdueUprising = 0x80, Assassination = 0x81, Repossession = 0x83,
+    /// <summary>
+    /// Burn the Books: not a Classic record (MISSNSD ids end at 0x83), a design row in data/design/mission-records.csv. Design kinds take ids from
+    /// 0x100 up so they never meet a Classic DAT id. rule: m5-missions §6b (New, Paul picked the mission 2026-11-04).
+    /// </summary>
+    BurnTheBooks = 0x100,
 }
 
 /// <summary>
@@ -131,9 +136,12 @@ public sealed class MissionData
     /// <summary>The same data with another decoy table, or none (tests).</summary>
     public MissionData WithDecoyTable(IReadOnlyList<TableRow>? decoy) => new(_records.Values, _tables, Numbers, decoy, KeyTargets);
 
-    /// <summary>Records and tables from data/classic; numbers from data/classic merged with data/design; the rest from data/design. rule: B1-own-importer §Work 3, 4.</summary>
+    /// <summary>
+    /// Records from data/classic merged with data/design (the design rows: Burn the Books, m5-missions §6b); tables from data/classic; numbers from
+    /// data/classic merged with data/design; the rest from data/design. rule: B1-own-importer §Work 3, 4.
+    /// </summary>
     public static MissionData Load(string original, string design) => Parse(
-        CsvTable.Load(Path.Combine(original, RecordsFile)), CsvTable.Load(Path.Combine(original, TablesFile)),
+        CsvTable.LoadMerged(original, design, RecordsFile), CsvTable.Load(Path.Combine(original, TablesFile)),
         CsvTable.LoadMerged(original, design, MissionNumbers.FileName), CsvTable.Load(Path.Combine(design, FoilableFile)),
         File.ReadAllText(Path.Combine(design, KeyTargetsFile)));
 

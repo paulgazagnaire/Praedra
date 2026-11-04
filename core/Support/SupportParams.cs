@@ -17,6 +17,8 @@ public enum SupportCause
     Bombardment, Diplomacy, IncitedUprising, Battle, Harvester, ControlChange, HqMove, Other,
     /// <summary>A Subdue Uprising success (new cause). rule: m5-missions §6 (Lead notes: add SupportCause.Subdue).</summary>
     Subdue,
+    /// <summary>Burn the Books succeeded: +BooksSupportSwing Collective everywhere (new cause). rule: m5-missions §6b Effect 1.</summary>
+    BooksBurned,
 }
 
 /// <summary>

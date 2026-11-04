@@ -123,6 +123,18 @@ public partial class Main
         while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
         Expect(GameSession.PeopleWords(4_300_000_000) == "4.3 billion" && GameSession.PeopleWords(2_000_000_000) == "2 billion" && GameSession.PeopleWords(40_000_000) == "40 million"
             && GameSession.PeopleWords(2_500_000) == "2 million" && GameSession.PeopleWords(600_000) == "600,000", "head counts read as people read them (m5-harvester §7)");
+        // m5-missions §6b: Burn the Books is offered while the books stand and the Hand holds Charter; once burned the Hand's report has no debt figure
+        if (me == Side.Collective && s.OwnerOf("Charter") == Side.Hand)
+            Expect(s.BooksOffered && s.KindBlockedReason(MissionKind.BurnTheBooks) == null, "Burn the Books is offered to the Collective while the Hand holds Charter");
+        if (me == Side.Hand && !s.Game.State.Missions.BooksBurned)
+        {
+            var strike = new Praedra.Core.Harvester.SystemDestroyed(0, s.Game.Day + 1, "Charter", Side.Hand, Side.Hand, 50, true); // a report only, no state
+            Expect(!s.HarvestReport(strike).Detail.Contains("not on record"), "before the burn the Hand's report counts the debt: " + s.HarvestReport(strike).Detail.Replace("\n", " / "));
+            s.Game.State.Missions.BooksBurnedOn = s.Game.Day; // test only, put back at once
+            string burned = s.HarvestReport(strike).Detail;
+            s.Game.State.Missions.BooksBurnedOn = null;
+            Expect(burned.Contains("Debt written off: not on record") || !burned.Contains("Unregistered"), "after the burn it reads Debt written off: not on record: " + burned.Replace("\n", " / "));
+        }
 
         // ---- the map and the panel
         Expect(gs.HoverTextFor(target).Contains("destroyed"), "hovering it says destroyed: " + gs.HoverTextFor(target));

@@ -143,7 +143,9 @@ public class SimpleAiAgentsTests
         foreach (var g in games)
         {
             _out.WriteLine($"seed {g.Seed}: Seat of Power on {g.On} of {g.Days} days; story commanders {g.Commands}; Chair diplomacy {g.ChairDiplomacy}");
-            Assert.True(g.On * 20 >= g.Days * 19, $"seed {g.Seed}: Seat of Power on only {g.On} of {g.Days} days");
+            // 90%, not 95%: with ChairHomeAfterRecruiting (DEFAULT on) The Chair still recruits and subdues until the recruit pool is empty, so
+            // one Subdue trip can take it away for weeks (seed 3 after Burn the Books, #248: a 48-day Subdue Uprising from day 362, 652 of 700 days)
+            Assert.True(g.On * 10 >= g.Days * 9, $"seed {g.Seed}: Seat of Power on only {g.On} of {g.Days} days");
             Assert.Equal(0, g.Commands);
             Assert.Equal(0, g.ChairDiplomacy);
         }
@@ -464,6 +466,45 @@ public class SimpleAiAgentsTests
         Assert.True(e0 > capE && e1 < new SimpleAiParams().MissionMinOddsPercent, $"Chair {e0} -> {e1}");
     }
 
+    // m5-missions §6b AI (SimpleAiParams.BurnTheBooks, DEFAULT on): seed 1, the Collective AI with fog sends one free non-major character on
+    // Burn the Books to the Hand-held Charter on its first agents day; with the switch off it sends none.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void BurnTheBooks_CollectiveAiSendsOneTeam(bool on)
+    {
+        Assert.True(new SimpleAiParams().BurnTheBooks);
+        var (_, h) = Match(1, Fog);
+        Assert.Equal(Side.Hand, h.Fleets.OwnerOf(Praedra.Core.Control.ControlModule.CapitalSystem));
+        var ai = new SimpleAi(h, Side.Collective, Fog with { BurnTheBooks = on });
+        List<StartMissionOrder> Books() => h.Game.Queue.OfType<StartMissionOrder>().Where(o => o.Kind == MissionKind.BurnTheBooks).ToList();
+        for (int d = 0; d < 2 && Books().Count == 0; d++) { ai.PlanDay(); if (Books().Count == 0) h.Game.Step(); }
+        var orders = Books();
+        Assert.Equal(on ? 1 : 0, orders.Count);
+        if (!on) return;
+        var o = orders.Single();
+        Assert.Equal((Side.Collective, Praedra.Core.Control.ControlModule.CapitalSystem, 1), (o.Side, o.TargetSystem, o.Characters.Count));
+        Assert.NotEqual(CharacterKind.Major, h.Characters.ClassOf(h.Characters.Get(o.Characters[0])!).Kind);
+    }
+
+    // m5-missions §6b AI (SimpleAiParams.BooksRetryDays, DEFAULT 180): a failed Burn the Books in the AI memory inside the window stops a new
+    // try; one older than the window does not. Seed 1, fog, the note put straight into the Collective's memory.
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(-179, 0)]
+    [InlineData(-181, 1)]
+    public void BurnTheBooks_AiWaitsAfterAFailedTry(int ageDays, int expected)
+    {
+        Assert.Equal(180, new SimpleAiParams().BooksRetryDays);
+        var (_, h) = Match(1, Fog);
+        int day = h.Game.Day + ageDays;
+        h.AiMemoryFor(Side.Collective, true).Notes.Add(new AiNote { Kind = AiNoteKind.BooksFailed, Day = day, Floor = day, System = Praedra.Core.Control.ControlModule.CapitalSystem });
+        var ai = new SimpleAi(h, Side.Collective, Fog);
+        List<StartMissionOrder> Books() => h.Game.Queue.OfType<StartMissionOrder>().Where(o => o.Kind == MissionKind.BurnTheBooks).ToList();
+        for (int d = 0; d < 2 && Books().Count == 0; d++) { ai.PlanDay(); if (Books().Count == 0) h.Game.Step(); } // as BurnTheBooks_CollectiveAiSendsOneTeam
+        Assert.Equal(expected, Books().Count);
+    }
+
     // AfterCharterDiplomats (AI trainer 2026-10-27, slow wars): the Collective holding Charter keeps up to that many diplomats out (the cap the
     // mission planner applies), MaxDiplomats otherwise; the Hand never reads it. Seed 1 at setup, Charter given to the Collective or left to the
     // Hand (FleetModule.SetOwner). rule: ai tuning, SimpleAiParams.AfterCharterDiplomats.
@@ -487,7 +528,7 @@ public class SimpleAiAgentsTests
     private static int YardSpikes(int value, out bool seen, int? floor = null, int goneDay = -1, int countFrom = 0)
     {
         var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA });
-        var p = AiLevels.For(AiLevel.Medium) with { HarvesterYardValue = value };
+        var p = AiLevels.For(AiLevel.Medium) with { HarvesterYardValue = value, BurnTheBooks = false }; // Burn the Books off: it would take the free Sabotage-capable agents this test counts
         if (floor is int f) p = p with { HarvesterYardMinOddsPercent = f };
         var m = new AiMatch(h, null, p, passive: Side.Hand);
         const string yard = "Navalia";

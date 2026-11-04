@@ -28,6 +28,7 @@ public sealed partial class MissionModule
         if (TargetReason(m) != null || KeyGate(m.Kind, m.TargetCharacter) != null) { End(ctx, m, MissionOutcome.TargetInvalid, t); return; } // rule: m5-missions §6a.1
         var rec = Data.Get(m.Kind);
         bool key = IsKeyTarget(m.Kind, m.TargetCharacter, out int keyCap);
+        bool books = m.Kind == MissionKind.BurnTheBooks; // rule: m5-missions §6b (one roll per iteration, as §6a step 3)
         // 1. the job check (phase 9, next to the target): Talent sensing, betrayal, decoys, detection, foiled handling. rule: m5-missions §1, §3
         // (Traced B2b: 0x589970; B2d §1, §2)
         if (RunCheck(ctx, m, t, CheckPoint.Job, rec)) return;
@@ -38,12 +39,14 @@ public sealed partial class MissionModule
         var research = ResearchSkill(m.Kind);
         int successes = 0, points = 0;
         if (recon) successes = 1; // automatic success, no draw (DEFAULT, Missing: no table)
-        else if (key)
+        else if (key || books)
         {
             // rule: m5-missions §6a.3: ONE roll per iteration; input = the best member's (combat minus target combat); chance = min(table, cap_percent).
+            // rule: m5-missions §6b Success roll: the same one roll; input = the best member's (combat + espionage) / 2 - BooksDefencePenalty x
+            // defences at Charter; chance = min(SBTGMSTB(input), BooksCapPercent).
             var table = Data.Table(rec.Table!);
             var best = Team(m).Select(a => (a, x: Input(m, a))).OrderByDescending(p => p.x).First(); // stable: ties keep the first (characters by id, then special forces)
-            int chance = Math.Min(Lookup(table, best.x), keyCap);
+            int chance = Math.Min(Lookup(table, best.x), books ? Params.BooksCapPercent : keyCap);
             int r = ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1);
             bool ok = r < chance;
             int id = m.Id, member = best.a.Id, input = best.x; var side = m.Side; bool isChar = best.a.IsCharacter;
@@ -77,7 +80,7 @@ public sealed partial class MissionModule
         bool success = successes > 0;
         if (success)
         {
-            int effects = recon || research != null || key ? 1 : Params.SuccessRule == SuccessRule.EachMember ? successes : 1;
+            int effects = recon || research != null || key || books ? 1 : Params.SuccessRule == SuccessRule.EachMember ? successes : 1;
             int id = m.Id; var side = m.Side; var kind = m.Kind; string target = m.Target;
             ctx.Emit((i, _) => new MissionSucceeded(i, t, id, side, kind, target, research != null ? successes : effects));
             if (research != null) { if (points > 0) _research.AddMissionPoints(ctx, m.Side, ResearchTrack(m.Kind)!.Value, points); }
@@ -123,6 +126,7 @@ public sealed partial class MissionModule
                 if (Params.InciteInputMode == InciteInputMode.Documented) { int s = Support(); return (a.Leadership - s) - (100 - s); }
                 return a.Leadership - (_fleets.OwnerOf(m.Target) is Side h ? _eco.SupportOf(m.Target, h) : 0);
             case MissionKind.SpikeTheHarvester: return (a.Combat + a.Espionage) / 2;
+            case MissionKind.BurnTheBooks: return BooksInput(a.Combat, a.Espionage, BooksDefences(m.Target)); // rule: m5-missions §6b Success roll
             case MissionKind.SubdueUprising: { int s = Support(); return ((100 - s) - s) + a.Leadership; }
             default: return 0;
         }
@@ -606,7 +610,23 @@ public sealed partial class MissionModule
                 else _ch.Kill(ctx, tc, CauseAssassination, allowDeath: true);
                 break;
             case MissionKind.SpikeTheHarvester: DestroyHarvester?.Invoke(ctx, target, Other(side)); break;
+            case MissionKind.BurnTheBooks: BurnTheBooks(ctx, target, t); break;
         }
+    }
+
+    /// <summary>
+    /// rule: m5-missions §6b Effect (once per game): set the saved flag and its day; 1. +BooksSupportSwing Collective on every non-destroyed populated
+    /// system, in system id order, cause BooksBurned, through ChangeSupport (damping and clamp, m2-popular-support); 2. the news to both sides
+    /// (<see cref="BooksBurned"/>). 3. (the harvest report) is the screens'; 4. no victory effect.
+    /// </summary>
+    private void BurnTheBooks(StepContext ctx, string target, int t)
+    {
+        if (S.BooksBurned) return; // once per game (the legality check refuses a second one BooksGone)
+        S.BooksBurnedOn = t;
+        foreach (var sys in _fleets.Galaxy.Systems) // system id order
+            if (!_eco.IsDestroyed(sys.Name) && _eco.SlotsOf(sys.Name).Populated)
+                _support.ChangeSupport(ctx, sys.Name, Side.Collective, Params.BooksSupportSwing, SupportCause.BooksBurned);
+        ctx.Emit((i, _) => new BooksBurned(i, t, target));
     }
 
     // The team as captor (Abduction, the kidnap): a member on this mission at the target. rule: §6 (B2e §3 step 4, B2e-22; QA-7).

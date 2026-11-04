@@ -81,8 +81,13 @@ public sealed partial class GameSession
             : Host.Harvester.Params.YieldRefined > 0 ? "\nRecovered: nothing (too few people)" : "";
         if (people == 0) return ("Harvest complete", head + yield);
         long debt = people * Math.Clamp(x.HandSupport, 0, 100) / 100;
-        return ("Harvest complete", $"{head}\nDebt written off: {PeopleWords(debt)} hands\nUnregistered: {PeopleWords(people - debt)}{yield}");
+        // rule: m5-missions §6b Effect 3: once the books are burned the debt is not on record (a strike earlier the same day, slot 5.1, came before the burn, slot 5.3)
+        string written = BooksBurnedBefore(x.Day) ? "not on record" : $"{PeopleWords(debt)} hands";
+        return ("Harvest complete", $"{head}\nDebt written off: {written}\nUnregistered: {PeopleWords(people - debt)}{yield}");
     }
+
+    /// <summary>Were the books burned before a strike on <paramref name="day"/>? rule: m5-missions §6b Effect 3.</summary>
+    bool BooksBurnedBefore(int day) => Game.State.Missions.BooksBurnedOn is int b && b < day;
 
     static string HarvesterLossWords(string cause) => cause switch
     {

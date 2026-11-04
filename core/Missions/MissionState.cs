@@ -75,8 +75,20 @@ public sealed class MissionState
 {
     public SortedDictionary<int, MissionGroup> Missions { get; init; } = new();
 
+    /// <summary>
+    /// The saved flag <c>BooksBurned</c> plus its day: the day (hook time K + 1) Burn the Books succeeded, null while the books stand. Omitted from
+    /// the save and the hash while null, so old saves load and a game that never burns the books keeps its hash. rule: m5-missions §6b (Effect).
+    /// </summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public int? BooksBurnedOn { get; set; }
+
+    /// <summary>Have the books been burned? rule: m5-missions §6b.</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore]
+    public bool BooksBurned => BooksBurnedOn != null;
+
     internal void CopyFrom(MissionState o)
     {
         foreach (var kv in o.Missions) Missions[kv.Key] = kv.Value.Clone();
+        BooksBurnedOn = o.BooksBurnedOn;
     }
 }

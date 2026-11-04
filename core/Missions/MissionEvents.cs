@@ -24,7 +24,8 @@ public static class MissionReject
     public const string UnknownKind = "UnknownKind", HiddenKind = "HiddenKind", WrongSide = "WrongSide", UnknownMember = "UnknownMember",
         DuplicateMember = "DuplicateMember", NoTeam = "NoTeam", NotFree = "NotFree", NotTogether = "NotTogether", NotAbleToDo = "NotAbleToDo",
         NotEligibleSpecialForce = "NotEligibleSpecialForce", BadDecoy = "BadDecoy", TooManyMembers = "TooManyMembers", BadTarget = "BadTarget",
-        NoHarvester = "NoHarvester", TargetProtected = "TargetProtected", UnknownMission = "UnknownMission", RuleMissing = "RuleMissing";
+        NoHarvester = "NoHarvester", TargetProtected = "TargetProtected", UnknownMission = "UnknownMission", RuleMissing = "RuleMissing",
+        BooksGone = "BooksGone"; // rule: m5-missions §6b (Target: the books not yet burned)
 }
 
 /// <summary>Why the character sheet's exposure hook is called. rule: m5-missions §4.</summary>
@@ -146,3 +147,9 @@ public sealed record CharacterRecruited(int Index, int Day, int Mission, Side Si
 /// <summary>A research member's skill rose (GNPRTB 6158). rule: §6 Research.</summary>
 public sealed record MissionSkillGained(int Index, int Day, int Mission, Side Side, int Character, Characters.Skill Skill, int NewValue)
     : GameEvent(Index, Day, nameof(MissionSkillGained));
+
+/// <summary>
+/// Burn the Books succeeded at <see cref="System"/> (Charter): the books are burned (once per game). Both sides are told: the Hand reads "Records
+/// incident at the Tabularium.", the Collective "The books are burning." rule: m5-missions §6b Effect 2.
+/// </summary>
+public sealed record BooksBurned(int Index, int Day, string System) : GameEvent(Index, Day, nameof(BooksBurned));

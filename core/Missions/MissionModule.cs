@@ -301,7 +301,9 @@ public sealed partial class MissionModule
     private List<Defender> CheckGuards(MissionGroup m, CheckKind kind, string place, Scope sc)
     {
         var list = Guards(m.Side, place, sc, m);
-        if (kind != CheckKind.NextToTarget || Params.KeyTargetGuards != KeyTargetGuards.Full || !IsKeyTarget(m.Kind, m.TargetCharacter, out _)) return list;
+        // rule: m5-missions §6b Guards: Burn the Books always meets the §6a Full set at its job check
+        bool books = m.Kind == MissionKind.BurnTheBooks;
+        if (kind != CheckKind.NextToTarget || (!books && (Params.KeyTargetGuards != KeyTargetGuards.Full || !IsKeyTarget(m.Kind, m.TargetCharacter, out _)))) return list;
         var have = new HashSet<int>(list.Select(d => d.Unit.Id)); // membership only, never iterated
         list.AddRange(FullGuards(m.Side, place).Where(d => have.Add(d.Unit.Id)));
         return list.OrderBy(d => d.Unit.Id).ToList();
@@ -422,6 +424,7 @@ public sealed partial class MissionModule
         MissionKind.Rescue or MissionKind.Abduction or MissionKind.Assassination => _ch.EffectiveSkill(c, Skill.Combat) > 0,
         MissionKind.Sabotage => SabotageSkillOf(_ch.EffectiveSkill(c, Skill.Combat), _ch.EffectiveSkill(c, Skill.Espionage)) > 0,
         MissionKind.SpikeTheHarvester => (_ch.EffectiveSkill(c, Skill.Combat) + _ch.EffectiveSkill(c, Skill.Espionage)) / 2 > 0,
+        MissionKind.BurnTheBooks => (_ch.EffectiveSkill(c, Skill.Combat) + _ch.EffectiveSkill(c, Skill.Espionage)) / 2 > 0, // rule: m5-missions §6b (the input's skill term)
         MissionKind.Espionage or MissionKind.Reconnaissance => _ch.EffectiveSkill(c, Skill.Espionage) > 0,
         MissionKind.Recruitment or MissionKind.InciteUprising or MissionKind.SubdueUprising => _ch.EffectiveSkill(c, Skill.Leadership) > 0,
         MissionKind.ShipResearch or MissionKind.FacilityResearch or MissionKind.TroopResearch => _ch.EffectiveSkill(c, ResearchSkill(k)!.Value) > 0,
@@ -496,6 +499,10 @@ public sealed partial class MissionModule
             case MissionKind.ShipResearch or MissionKind.FacilityResearch or MissionKind.TroopResearch:
                 return _research.CanResearch(side, ResearchTrack(k)!.Value, system); // m5-research names
             case MissionKind.SpikeTheHarvester: return HasHarvester?.Invoke(Other(side), system) == true ? null : MissionReject.NoHarvester;
+            case MissionKind.BurnTheBooks:
+                // rule: m5-missions §6b Target: Charter only, and only while the Hand holds it [BadTarget]; the books not yet burned [BooksGone]
+                if (system != Control.ControlModule.CapitalSystem || holder != Side.Hand) return MissionReject.BadTarget;
+                return S.BooksBurned ? MissionReject.BooksGone : null;
             default: return MissionReject.BadTarget;
         }
     }
@@ -506,6 +513,19 @@ public sealed partial class MissionModule
         cap = 0;
         return k is MissionKind.Assassination or MissionKind.Abduction && Params.KeyTargetRules && targetChar is int id && Data.KeyTargets.TryGetValue(id, out cap);
     }
+
+    /// <summary>
+    /// The completed defence facilities and shields (DEFFACSD classes: <see cref="FacilityFamily"/> not 0) of the Hand at <paramref name="system"/>.
+    /// Null FacilityFamily = none. rule: m5-missions §6b Success roll.
+    /// </summary>
+    public int BooksDefences(string system) => FacilityFamily == null ? 0 : E.Objects.Values.Count(o => o.Category == ObjectCategory.Facility && o.Completed
+        && o.System == system && _eco.OwnerOf(o) == Side.Hand && FacilityFamily(o.Class) != 0); // a facility's side is its system's holder unless set
+
+    /// <summary>The Burn the Books input of one member: (combat + espionage) / 2 - BooksDefencePenalty x defences (C# division truncates). rule: m5-missions §6b Success roll.</summary>
+    public int BooksInput(int combat, int espionage, int defences) => (combat + espionage) / 2 - Params.BooksDefencePenalty * defences;
+
+    /// <summary>The Burn the Books chance for an input: min(SBTGMSTB(input), BooksCapPercent). rule: m5-missions §6b Success roll.</summary>
+    public int BooksChance(int input) => Math.Min(Lookup(Data.Table(Data.Get(MissionKind.BurnTheBooks).Table!), input), Params.BooksCapPercent);
 
     // rule: m5-missions §3, §6a (Key-target protections, 2026-10-18): with KeyTargetBaseSkills (DEFAULT on) a key-target mission reads its
     // characters' espionage and combat without Talent term of B2e §1 (espionage B, combat max(0, B - Injury)); special forces, other missions
@@ -564,6 +584,7 @@ public sealed partial class MissionModule
     private (string? Reason, StartPlan? Plan) Validate(StartMissionOrder o)
     {
         if (!Data.TryGet(o.Kind, out var rec)) return (MissionReject.UnknownKind, null);
+        if (o.Kind == MissionKind.BurnTheBooks && !Params.BurnTheBooks) return (MissionReject.UnknownKind, null); // rule: m5-missions §6b (switch BurnTheBooks off: no such kind)
         if (rec.Hidden) return (MissionReject.HiddenKind, null);
         if (!rec.AvailableTo(o.Side)) return (MissionReject.WrongSide, null);
         if (o.Kind == MissionKind.TrainTalent) return (MissionReject.RuleMissing, null);

@@ -58,11 +58,11 @@ internal sealed class MissionWorld
 
     public MissionWorld(MissionParams? p = null, bool decoys = false, ulong? seed = null, IReadOnlyList<TableRow>? decoyTable = null,
         CharacterParams? characters = null, Praedra.Core.Control.ControlRule rule = Praedra.Core.Control.ControlRule.AssaultOnly,
-        Praedra.Core.Harvester.HarvesterParams? harvester = null)
+        Praedra.Core.Harvester.HarvesterParams? harvester = null, GameData? data = null)
     {
         _settings = new GameSettings { IncidentsEnabled = false, DebugOrdersEnabled = true, Economy = new EconomyParams { ScrapPeriod = 1_000_000 }, Missions = p,
             Characters = characters, ControlRule = rule, Harvester = harvester }; // rule: B5a tests set Derived explicitly (DEFAULT AssaultOnly, 2026-10-18)
-        _gd = decoyTable != null ? Data with { Missions = Data.Missions.WithDecoyTable(decoyTable) } : decoys ? DecoyData : Data;
+        _gd = data != null ? data : decoyTable != null ? Data with { Missions = Data.Missions.WithDecoyTable(decoyTable) } : decoys ? DecoyData : Data;
         if (seed is ulong s) Host = GameHost.New(s, _settings, _gd);
         else { Stub = new StubRng(); Host = GameHost.New(Stub, _settings, _gd); }
     }

@@ -1,0 +1,2 @@
+dat_id,kind,collective,hand,timer_min,timer_spread,hidden,repeats,table,special_force_mask,guard_checks,can_resign,source
+0x100,BurnTheBooks,1,0,5,10,0,0,SBTGMSTB,0x0402,1,1,"New, m5-missions §6b (Paul picked the mission 2026-11-04; numbers DEFAULT): Collective only, timer 5 + rand(0..10), not hidden, not repeating, foilable like Sabotage; table SBTGMSTB (§6b success roll); special-force mask Sabotage's 0x0402 (DEFAULT, the sheet names none)"
