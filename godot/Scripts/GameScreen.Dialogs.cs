@@ -367,9 +367,6 @@ public partial class GameScreen
     /// <summary>Ctrl/Cmd+S: save to the slot used last (slot 1 at first).</summary>
     public void QuickSave() => SaveTo(GameBoot.SlotPath(_lastSlot), _lastSlot);
 
-    /// <summary>The old one-slot Save, kept for the screenshot helpers and the playtest.</summary>
-    public void SaveGame() => QuickSave();
-
     // ================================================================== settings (G3, L4)
 
     void ShowSettings()

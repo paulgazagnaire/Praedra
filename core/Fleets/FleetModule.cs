@@ -279,15 +279,6 @@ public sealed partial class FleetModule
     public IEnumerable<ShipClass> Classes(Fleet f) => f.Ships.Concat(f.Squadrons).Select(id => ClassOf(E.Objects[id])!);
     private IEnumerable<ShipClass> Classes(IEnumerable<Fleet> fs) => fs.SelectMany(Classes);
 
-    /// <summary>The class names of everything in a fleet and aboard its ships (ships, squadrons aboard or flying), for display. Ships first, ids ascending.</summary>
-    public IEnumerable<string> ClassNamesOf(Fleet f)
-    {
-        foreach (var id in f.Ships) yield return E.Objects[id].Class;
-        foreach (var id in f.Squadrons) yield return E.Objects[id].Class;
-        foreach (var u in E.Objects.Values)
-            if (u.Category == ObjectCategory.Fighter && u.AboardShip != 0 && f.Ships.Contains(u.AboardShip)) yield return u.Class;
-    }
-
     // ---- carrying (m3-fleets §Carrying rules). The troop side (LoadRegiments, UnloadRegiments, RegimentsLoaded...) is the
     // troops sheet's package (m3-troops-and-special-forces); it uses these queries and sets EconObject.AboardShip / System itself.
 
