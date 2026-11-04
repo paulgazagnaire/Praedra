@@ -172,6 +172,25 @@ public class HarvesterTests
         Assert.Equal((0, false), (w.Host.Economy.SupportOf(A3, Side.Hand), w.Host.Economy.SlotsOf(A3).Populated)); // the strike cleared both
     }
 
+    // m5-harvester DS18 (§2 effect 8 Harvest yield): the attacker's refined pool gains YieldRefined at once, and the event says how much; 0 = no yield
+    [Theory]
+    [InlineData(null, 900)]
+    [InlineData(0, 0)]
+    [InlineData(250, 250)]
+    public void DS18_TheHarvestYieldGoesToTheAttackersRefinedPool(int? yieldRefined, int expected)
+    {
+        var w = new HarvesterWorld(yieldRefined is int y ? new HarvesterParams { YieldRefined = y } : null);
+        w.Hold(A3, Side.Collective, 70);
+        int attacker = w.Harvester(Side.Hand, A3, Mandate);
+        int hand = w.Host.Game.State.Economy.Pool(Side.Hand).Refined, collective = w.Host.Game.State.Economy.Pool(Side.Collective).Refined;
+
+        Assert.Null(w.Destroy(Side.Hand, attacker));
+
+        Assert.Equal(expected, Assert.Single(w.Events<SystemDestroyed>()).YieldRefined);
+        Assert.Equal(hand + expected, w.Host.Game.State.Economy.Pool(Side.Hand).Refined);
+        Assert.Equal(collective, w.Host.Game.State.Economy.Pool(Side.Collective).Refined);
+    }
+
     // m5-harvester DS5
     [Fact]
     public void DS5_CharactersOnTheDestroyedPlanet()

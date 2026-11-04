@@ -61,6 +61,7 @@ public partial class Main
         // an Infrastructure window left open over the target must not keep drawing its slots after the strike (Ponytail on #241)
         if (me == Side.Hand) { gs.TileClick(target, "infra"); gs.PlayRefresh(); Expect(gs.MgmtKeys.Contains($"Infra {target}"), $"the Infrastructure window of {target} is open before the strike"); }
         var strikesBefore = ds.StrikesIn(star.Sector);
+        int handRefinedBefore = s.Game.State.Economy.Pool(Side.Hand).Refined;
         int before = s.Messages.Count;
         bool? cont = null;
         if (me == Side.Collective)
@@ -88,6 +89,8 @@ public partial class Main
 
         // ---- the day: the system is destroyed in the core, drawn as destroyed, the clock pauses, the message appears
         Expect(s.Game.State.Harvester.IsDestroyed(target) && ds.IsDestroyed(target), $"the core says {target} is destroyed");
+        Expect(s.Game.Events.OfType<Praedra.Core.Harvester.SystemDestroyed>().LastOrDefault(e => e.System == target)?.YieldRefined == 900,
+            $"the strike paid the Hand the harvest yield, 900 refined (pool {handRefinedBefore} -> {s.Game.State.Economy.Pool(Side.Hand).Refined})");
         Expect(ds.StrikesIn(star.Sector) == strikesBefore + 1, "the sector strike was counted");
         Expect(gs.DrawnDestroyed(target), $"{target} is drawn as destroyed");
         if (cont is bool c) Expect(!c && gs.Banner.Contains("harvester"), "the clock paused with a note: " + gs.Banner);
@@ -96,7 +99,7 @@ public partial class Main
         Expect(news.Any(t => t.Contains(me == Side.Hand ? $"HARVEST COMPLETE: {target}" : $"{target} is gone")), "the message log carries the harvest report for " + target);
         Expect(news.Any(t => t.Contains("Sector") && (t.Contains("turns against") || t.Contains("Revolt")) || star.IsOutsideSectors), "the sector reaction is in the log");
         if (cont != null)
-            Expect(gs.ReportVisible && gs.ReportText.Contains("Harvest complete") && gs.ReportText.Contains($"HARVEST COMPLETE: {target}") && (gs.ReportText.Contains("Debt written off: ") == gs.ReportText.Contains("Unregistered: ")),
+            Expect(gs.ReportVisible && gs.ReportText.Contains("Harvest complete") && gs.ReportText.Contains($"HARVEST COMPLETE: {target}") && gs.ReportText.Contains("Recovered: 900 refined") && (gs.ReportText.Contains("Debt written off: ") == gs.ReportText.Contains("Unregistered: ")),
                 "the harvest report pops up: " + gs.ReportText.Replace("\n", " / "));
         gs.Click("Close");
         Expect(s.QueuedOrders == 0, "no order left waiting");
