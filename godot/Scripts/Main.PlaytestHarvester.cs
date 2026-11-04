@@ -58,6 +58,8 @@ public partial class Main
             Expect(s.PendingOf(dsFleet).Any(p => p.StartsWith("Destroy System", StringComparison.Ordinal)) && s.QueuedOrders >= 1, "the Destroy System order is queued");
             Expect(!gs.Enabled("Destroy System") && gs.PanelText().Contains("waiting for the next day"), "the button is greyed while the order waits");
         }
+        // an Infrastructure window left open over the target must not keep drawing its slots after the strike (Ponytail on #241)
+        if (me == Side.Hand) { gs.TileClick(target, "infra"); gs.PlayRefresh(); Expect(gs.MgmtKeys.Contains($"Infra {target}"), $"the Infrastructure window of {target} is open before the strike"); }
         var strikesBefore = ds.StrikesIn(star.Sector);
         int before = s.Messages.Count;
         bool? cont = null;
@@ -98,6 +100,13 @@ public partial class Main
                 "the harvest report pops up: " + gs.ReportText.Replace("\n", " / "));
         gs.Click("Close");
         Expect(s.QueuedOrders == 0, "no order left waiting");
+        if (me == Side.Hand)
+        {
+            string inf = gs.MgText($"Infra {target}");
+            Expect(inf.Contains("HARVESTED") && !inf.Contains("energy slots") && !inf.Contains("Ground at"), "the open Infrastructure window turns into the harvested card: " + inf.Replace("\n", " / "));
+        }
+        while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+        Expect(PlanetArt.HarvestedOf(target) != null && PlanetArt.HarvestedOf(target) != PlanetArt.Of(target), $"{target} has its harvested remnant picture");
         // the harvested world's tile opens one plain card: no tabs, no Infrastructure window (Paul 2026-11-04)
         gs.TileClick(target, "infra"); gs.PlayRefresh();
         string card = gs.MgText($"Ground {target}");
