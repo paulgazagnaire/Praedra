@@ -40,7 +40,7 @@ public partial class GameScreen
     {
         MissionKind.Espionage, MissionKind.Diplomacy, MissionKind.Reconnaissance, MissionKind.Sabotage, MissionKind.InciteUprising, MissionKind.SubdueUprising,
         MissionKind.Rescue, MissionKind.ShipResearch, MissionKind.FacilityResearch, MissionKind.TroopResearch,
-        MissionKind.Recruitment, MissionKind.Abduction, MissionKind.Assassination, MissionKind.SpikeTheHarvester, MissionKind.TrainTalent,
+        MissionKind.Recruitment, MissionKind.Abduction, MissionKind.Assassination, MissionKind.SpikeTheHarvester, MissionKind.BurnTheBooks, MissionKind.TrainTalent,
     };
 
     // ================================================================== Missions list (menu, key M)
@@ -177,7 +177,7 @@ public partial class GameScreen
     {
         MissionKind.Diplomacy => "needs diplomacy",
         MissionKind.Espionage or MissionKind.Reconnaissance => "needs espionage",
-        MissionKind.Sabotage => "needs combat and espionage",
+        MissionKind.Sabotage or MissionKind.SpikeTheHarvester or MissionKind.BurnTheBooks => "needs combat and espionage",
         MissionKind.Rescue or MissionKind.Abduction or MissionKind.Assassination => "needs combat",
         MissionKind.InciteUprising or MissionKind.SubdueUprising or MissionKind.Recruitment => "needs leadership",
         MissionKind.ShipResearch => "needs ship design",
@@ -218,6 +218,7 @@ public partial class GameScreen
         foreach (var k in OfferedKinds)
         {
             if (!Mm.Data.TryGet(k, out var rec) || rec.Hidden || !rec.AvailableTo(Me)) continue; // other side's kinds are not shown
+            if (k == MissionKind.BurnTheBooks && !S.BooksOffered) continue; // rule: m5-missions §6b: once burned (or switched off) the planner hides it
             var kk = k;
             string why = KindRefusal(k);
             bool chosen = p.Kind == k;
@@ -231,6 +232,7 @@ public partial class GameScreen
         Heading("3. Target");
         Line(GameSession.KindHelp(sel), Dim, 13);
         if (sel == MissionKind.SpikeTheHarvester) Line(S.EnemyHarvesterNote, Dim, 13); // rule: m5-harvester §5
+        if (sel == MissionKind.BurnTheBooks) Line("The target is Charter.", Dim, 13); // rule: m5-missions §6b Target
         if (sel == MissionKind.Rescue)
         {
             var prisoners = S.MyCharacters.Where(c => c.Status == CharacterStatus.Captured && c.HeldAt != null).ToList();

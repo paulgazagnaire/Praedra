@@ -172,6 +172,19 @@ public sealed record MissionParams
     /// </summary>
     public bool KeyTargetBaseSkills { get; init; } = true;
 
+    // ---- Burn the Books. rule: m5-missions §6b. Source of each: New, m5-missions §6b (Paul picked the mission 2026-11-04; numbers DEFAULT).
+    /// <summary>
+    /// The Collective can order Burn the Books against Charter. DEFAULT true. Off: the kind is refused UnknownKind and never offered.
+    /// Source: New, m5-missions §6b (Paul picked the mission 2026-11-04; numbers DEFAULT).
+    /// </summary>
+    public bool BurnTheBooks { get; init; } = true;
+    /// <summary>The cap of the one success roll: chance = min(SBTGMSTB(input), this). DEFAULT 3. Source: New, m5-missions §6b (Paul picked the mission 2026-11-04; numbers DEFAULT).</summary>
+    public int BooksCapPercent { get; init; } = 3;
+    /// <summary>Taken from the input per completed Hand defence facility or shield at Charter. DEFAULT 5. Source: New, m5-missions §6b (Paul picked the mission 2026-11-04; numbers DEFAULT).</summary>
+    public int BooksDefencePenalty { get; init; } = 5;
+    /// <summary>Collective support added on every non-destroyed populated system by a success. DEFAULT 5 (Paul to confirm the size). Source: New, m5-missions §6b (Paul picked the mission 2026-11-04; numbers DEFAULT).</summary>
+    public int BooksSupportSwing { get; init; } = 5;
+
     // ---- Talent sensing and betrayal (B2b). rule: m5-missions §3 Talent sensing, Betrayal.
     /// <summary>Enemy talented characters at the target can sense the group (0x589e40). DEFAULT true (Traced B2b).</summary>
     public bool TalentSensing { get; init; } = true;

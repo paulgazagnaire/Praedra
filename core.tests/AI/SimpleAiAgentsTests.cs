@@ -464,6 +464,27 @@ public class SimpleAiAgentsTests
         Assert.True(e0 > capE && e1 < new SimpleAiParams().MissionMinOddsPercent, $"Chair {e0} -> {e1}");
     }
 
+    // m5-missions §6b AI (SimpleAiParams.BurnTheBooks, DEFAULT on): seed 1, the Collective AI with fog sends one free non-major character on
+    // Burn the Books to the Hand-held Charter on its first agents day; with the switch off it sends none.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void BurnTheBooks_CollectiveAiSendsOneTeam(bool on)
+    {
+        Assert.True(new SimpleAiParams().BurnTheBooks);
+        var (_, h) = Match(1, Fog);
+        Assert.Equal(Side.Hand, h.Fleets.OwnerOf(Praedra.Core.Control.ControlModule.CapitalSystem));
+        var ai = new SimpleAi(h, Side.Collective, Fog with { BurnTheBooks = on });
+        List<StartMissionOrder> Books() => h.Game.Queue.OfType<StartMissionOrder>().Where(o => o.Kind == MissionKind.BurnTheBooks).ToList();
+        for (int d = 0; d < 2 && Books().Count == 0; d++) { ai.PlanDay(); if (Books().Count == 0) h.Game.Step(); }
+        var orders = Books();
+        Assert.Equal(on ? 1 : 0, orders.Count);
+        if (!on) return;
+        var o = orders.Single();
+        Assert.Equal((Side.Collective, Praedra.Core.Control.ControlModule.CapitalSystem, 1), (o.Side, o.TargetSystem, o.Characters.Count));
+        Assert.NotEqual(CharacterKind.Major, h.Characters.ClassOf(h.Characters.Get(o.Characters[0])!).Kind);
+    }
+
     // AfterCharterDiplomats (AI trainer 2026-10-27, slow wars): the Collective holding Charter keeps up to that many diplomats out (the cap the
     // mission planner applies), MaxDiplomats otherwise; the Hand never reads it. Seed 1 at setup, Charter given to the Collective or left to the
     // Hand (FleetModule.SetOwner). rule: ai tuning, SimpleAiParams.AfterCharterDiplomats.

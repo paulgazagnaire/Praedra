@@ -56,6 +56,7 @@ public sealed partial class SimpleAi
         PlanSystemGeneral(mine, busy, spies);
         PlanFleetOfficers(mine, busy, spies);
         PlanMissions(mine, busy);
+        PlanBurnTheBooks(mine, busy); // last: only characters no other mission wanted today
         if (_p.HuntSpeculators > 0) PlanSpeculatorLooks();
     }
 
@@ -395,6 +396,47 @@ public sealed partial class SimpleAi
             if (j.Kind == MissionKind.Diplomacy) diplomats++;
             if (j.Kind is MissionKind.InciteUprising or MissionKind.Sabotage) subversion++;
         }
+        busy.UnionWith(usedChar); // the characters sent today (Burn the Books plans after this)
+    }
+
+    /// <summary>
+    /// rule: m5-missions §6b AI (SimpleAiParams.BurnTheBooks, DEFAULT on): the Collective tries Burn the Books when it has a free team whose input
+    /// gives a non-zero chance and Charter is Hand-held. The chance is the whole mission's, in basis points: P(not detected) by the guards the
+    /// side believes are at Charter (UnseenBasisPoints, as every other mission the planner weighs) times min(SBTGMSTB(input), BooksCapPercent),
+    /// so a fully garrisoned Charter draws no team. One mission at a time; one character, the best chance first, then the lowest id; majors
+    /// never go. It plans after every other mission, with the characters left free. The defence facilities and shields at Charter are the ones the side sees (fog) or the truth (no fog). The core judges the order.
+    /// </summary>
+    private void PlanBurnTheBooks(List<CharacterRecord> mine, HashSet<int> busy)
+    {
+        const MissionKind k = MissionKind.BurnTheBooks;
+        const string charter = Praedra.Core.Control.ControlModule.CapitalSystem;
+        var mi = _h.Missions;
+        if (!_p.BurnTheBooks || _side != Side.Collective || !mi.Params.BurnTheBooks || !KindUsable(k) || _h.Game.State.Missions.BooksBurned) return;
+        if (!IsEnemyHeld(charter) || OwnMissions().Any(m => m.Kind == k)) return;
+        int defences = DefencesSeenAt(charter);
+        CharacterRecord? best = null; int bestChance = 0;
+        foreach (var c in mine) // id order
+        {
+            if (!Standing(c) || busy.Contains(c.Id) || IsKey(c) || !mi.CanDo(c, k)) continue;
+            int esp = Skill(c, Characters.Skill.Espionage);
+            int pct = mi.BooksChance(mi.BooksInput(Skill(c, Characters.Skill.Combat), esp, defences));
+            int chance = pct == 0 ? 0 : (int)((long)UnseenBasisPoints(esp, charter) * pct / 100); // basis points
+            if (chance > bestChance) { bestChance = chance; best = c; }
+        }
+        if (best == null) return;
+        var chars = new List<int> { best.Id };
+        if (mi.CheckStart(new StartMissionOrder(0, _side, k, chars, new List<int>(), new List<int>(), charter)).Reason != null) return;
+        long seq = _h.Game.Submit(sq => new StartMissionOrder(sq, _side, k, chars, new List<int>(), new List<int>(), charter));
+        Note(seq, "Mission" + k, $"{_h.Characters.ClassOf(best).Name} from {best.System} to {charter} chance {bestChance} bp");
+        busy.Add(best.Id);
+    }
+
+    /// <summary>Completed defence facilities and shields (the DEFFACSD classes) at the system: the truth without fog, the side's picture with it.</summary>
+    private int DefencesSeenAt(string system)
+    {
+        var def = _h.Data.Defenses;
+        if (_view == null) return _h.Missions.BooksDefences(system);
+        return _view.Picture(system)?.Facilities?.Value.Where(kv => def.IsDefense(kv.Key)).Sum(kv => kv.Value) ?? 0;
     }
 
     /// <summary>Underground: the Collective's guerrilla agents (SimpleAiParams.Underground). The Hand AI never uses it.</summary>

@@ -748,6 +748,7 @@ public sealed class FogModule
             case HqDeparted or HqArrived: return All;
             case SupportChanged sc when sc.Cause == SupportCause.HqMove: return All;
             case HqDestroyed or Victory.GameWon or Victory.DominanceChanged: return Both;
+            case Praedra.Core.Missions.BooksBurned: return Both; // rule: m5-missions §6b Effect 2 (news to both sides)
             case Harvester.IHarvesterEvent: return Both; // galaxy notices: "New harvester Deployed", "Planet Destroyed", ... (m5-harvester §1, §2 effect 6)
             case SystemExplored x: return Bit(x.Viewer);
             case OwnerChangeSeen x: return Bit(x.Viewer);

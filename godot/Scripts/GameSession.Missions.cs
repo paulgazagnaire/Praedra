@@ -75,6 +75,7 @@ public sealed partial class GameSession
         MissionKind.InciteUprising => "Incite uprising",
         MissionKind.SubdueUprising => "Subdue uprising",
         MissionKind.SpikeTheHarvester => "harvester sabotage",
+        MissionKind.BurnTheBooks => "Burn the Books",
         MissionKind.TrainTalent => "Train Talent",
         MissionKind.ShipResearch => "Ship research",
         MissionKind.FacilityResearch => "Facility research",
@@ -98,6 +99,7 @@ public sealed partial class GameSession
         MissionKind.Assassination => "Kills an enemy leader. Skill: combat.",
         MissionKind.Recruitment => "Brings a new leader to your side at one of your systems.",
         MissionKind.SpikeTheHarvester => "Destroys an enemy harvester.",
+        MissionKind.BurnTheBooks => "Charter only, while the Hand holds it: burn the debt books on the Tabularium. Once per game; every populated world leans to you. Charter's whole garrison stands guard: the hardest mission there is. Skill: combat and espionage.",
         MissionKind.TrainTalent => "Trains a talented character.",
         _ => "",
     };
@@ -112,8 +114,13 @@ public sealed partial class GameSession
         MissionKind.TrainTalent => "not available yet: the rule book does not say yet who runs Train Talent",
         MissionKind.SpikeTheHarvester when Missions.HasHarvester == null => "not available yet: there is no harvester in this game",
         MissionKind.Abduction or MissionKind.Assassination => "not available here: your side cannot see where enemy leaders are",
+        // rule: m5-missions §6b Target: Charter only, while the Hand holds it
+        MissionKind.BurnTheBooks when OwnerOf(Praedra.Core.Control.ControlModule.CapitalSystem) != Side.Hand => "only while the Hand holds Charter",
         _ => null,
     };
+
+    /// <summary>Is Burn the Books still a mission the player can be offered? Off, or the books already burned: the planner hides it. rule: m5-missions §6b Target.</summary>
+    public bool BooksOffered => Missions.Params.BurnTheBooks && !Game.State.Missions.BooksBurned;
 
     /// <summary>The words for a refused mission order (every MissionReject code, and the shared reasons the mission orders use). rule: m5-missions §Orders.</summary>
     public static string WhyMission(string reason) => reason switch
@@ -135,6 +142,7 @@ public sealed partial class GameSession
         MissionReject.UnknownMission => "that mission is already over",
         MissionReject.RuleMissing => "the rule book does not cover this mission yet",
         MissionReject.TargetProtected => "that leader is out of reach: aboard a fleet, or at a capital whose garrison is full",
+        MissionReject.BooksGone => "the books are already burned",
         RejectReason.NotYours => "a team member is not yours",
         RejectReason.NotCompleted => "a special forces unit is still in training",
         RejectReason.Unreachable => "there is no route to the target",
@@ -253,6 +261,11 @@ public sealed partial class GameSession
             case MissionSkillGained g when Mine(g.Side):
                 yield return new Message(d, $"{CharName(g.Character)} learned from the research: {SkillWords(g.Skill)} now {g.NewValue}.", null, MsgKind.Good);
                 break;
+            case BooksBurned b: // rule: m5-missions §6b Effect 2: news to both sides
+                yield return Player == Side.Hand
+                    ? new Message(d, "Records incident at the Tabularium.", b.System, MsgKind.Bad)
+                    : new Message(d, "The books are burning.", b.System, MsgKind.Good);
+                break;
             case AgentDetected a when a.Viewer == Player:
                 yield return new Message(d, $"Enemy agents detected at {a.System}! Your forces there foiled their mission.", a.System, MsgKind.Warn);
                 break;
@@ -284,6 +297,7 @@ public sealed partial class GameSession
         MissionKind.SubdueUprising => $"Subdue uprising on {s.Target} succeeded: the people calm down.",
         MissionKind.ShipResearch or MissionKind.FacilityResearch or MissionKind.TroopResearch => $"{KindWords(s.MissionKind)} at {s.Target} succeeded: research points gained.",
         MissionKind.Rescue => $"Rescue at {s.Target} succeeded: your character is free.",
+        MissionKind.BurnTheBooks => $"Burn the Books on {s.Target} succeeded.",
         _ => $"{KindWords(s.MissionKind)} on {s.Target} succeeded.",
     };
 }

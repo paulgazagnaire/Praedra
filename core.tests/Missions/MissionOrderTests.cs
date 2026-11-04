@@ -419,7 +419,7 @@ public class MissionOrderTests
         Assert.Equal((InciteInputMode.LeadershipMinusControllerSupport, InciteSupportTiming.PerIteration, false, SabotageSkill.Average, SabotageTargetMode.RandomFacility, true),
             (p.InciteInputMode, p.InciteSupportTiming, p.SubdueEndsUprising, p.SabotageSkill, p.SabotageTargetMode, p.ExposureHooks));
         var d = GameData.Default.Missions;
-        Assert.Equal(22, d.Records.Count); // Classic's 25 less the three cut film story kinds (data/design/cut-classes.csv)
+        Assert.Equal(23, d.Records.Count); // Classic's 25 less the three cut film story kinds (data/design/cut-classes.csv), plus the design row Burn the Books (m5-missions §6b)
         Assert.Equal(14, d.DecoyTable!.Count); // B1: FDECOYTB read from the Classic files (was null: decoys refused)
         Assert.Equal(14, d.Foil.Count);
         Assert.Equal((5, 10, true, "DIPLMSTB"), (d.Get(MissionKind.Diplomacy).TimerMin, d.Get(MissionKind.Diplomacy).TimerSpread, d.Get(MissionKind.Diplomacy).Repeats, d.Get(MissionKind.Diplomacy).Table));

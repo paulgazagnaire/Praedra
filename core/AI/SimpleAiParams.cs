@@ -659,6 +659,13 @@ public sealed record SimpleAiParams
     /// m5-characters-and-talent MajorsCanDie on (DEFAULT off) they also stay off every mission where any defender is believed. DEFAULT.
     /// </summary>
     public int KeyCharacterValuePercent { get; init; } = 50;
+    /// <summary>
+    /// Burn the Books (m5-missions §6b AI): the Collective sends one free character on it when Charter is Hand-held (as the side sees it), the
+    /// books still stand, no Burn the Books mission of its own is out, and the character's chance min(SBTGMSTB(input), BooksCapPercent) is above
+    /// 0 with the defence facilities and shields it sees at Charter. Majors never go (KeyCharacterValuePercent: leaders stay off guarded raids).
+    /// DEFAULT true (m5-missions §6b); the AI trainer owns the tuning.
+    /// </summary>
+    public bool BurnTheBooks { get; init; } = true;
 
     // ---- what to build, by side (first class that is buildable, researched and affordable wins). Class names of unit-and-facility-costs.csv. DEFAULT.
     public string Transport(Side side) => side == Side.Hand ? "Bond II" : "Barge";
