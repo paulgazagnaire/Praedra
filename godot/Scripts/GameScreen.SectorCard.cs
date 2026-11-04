@@ -259,9 +259,6 @@ public partial class GameScreen
 
     // ================================================================== numbers the cards share
 
-    /// <summary>Yards here with nothing to build.</summary>
-    int IdleYards(string n) => IdleYardFamilies(n).Count;
-
     (string, Color) YardsWords(string n)
     {
         var eco = S.Host.Economy;

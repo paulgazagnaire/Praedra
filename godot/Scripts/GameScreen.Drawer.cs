@@ -204,14 +204,6 @@ public partial class GameScreen
 
     Button Act(string text, Action a, string tip = null, bool disabled = false, string variation = null) => Add(Ui.Action(text, a, tip, disabled, variation));
 
-    /// <summary>A row of buttons that share the width.</summary>
-    HBoxContainer Buttons(params Button[] buttons)
-    {
-        var h = Ui.HBox(6);
-        foreach (var b in buttons) { b.SizeFlagsHorizontal = SizeFlags.ExpandFill; b.CustomMinimumSize = new Vector2(0, 36); h.AddChild(b); }
-        return Add(h);
-    }
-
     /// <summary>Lines added inside <c>using (Card(...))</c> go into a framed card.</summary>
     IDisposable Card(Color? bg = null, Color? border = null, int gap = 6)
     {

@@ -29,9 +29,6 @@ public partial class UnitIcon : Control
         return i;
     }
 
-    /// <summary>The ship size words of the ship data (small, medium, large, huge) as 0 to 3.</summary>
-    public static int SizeOf(string sizeClass) => sizeClass switch { "small" => 0, "medium" => 1, "large" => 2, "huge" => 3, _ => 1 };
-
     /// <summary>A facility's name (unit-and-facility-costs.csv) as a picture kind.</summary>
     public static Kind ForFacility(string name)
     {
