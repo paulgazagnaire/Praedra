@@ -144,6 +144,7 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
         <button id="btnGame" type="button" class="primary" disabled>Save for the game</button>
         <button id="btnLore" type="button" disabled>Back to lore sheet</button>
       </div>
+      <label class="chk"><input type="checkbox" id="harvOn"> Show it harvested (as the game shows a system after a harvest)</label>
       <p class="sysstate" id="sysState"></p>
       <p class="sysinfo" id="sysInfo">Pick a system, change it until it looks right, then press Save for the game. The game shows the saved look.</p>
     </section>
@@ -280,6 +281,11 @@ textarea { font: 12px var(--font-mono); height: 74px; resize: vertical; }
 <script id="fs" type="x-shader/x-fragment">#version 300 es
 precision highp float;
 out vec4 fragColor;
+#ifdef PM_HARV
+#define PLANET_R2 0.36
+#else
+#define PLANET_R2 1.0
+#endif
 uniform vec2 uRes;
 uniform float uZoom;
 uniform vec2 uShift;        // moves the view (a ring's close-up on its far floor)
@@ -2064,6 +2070,97 @@ vec3 finish(vec3 col) {
   return col;
 }
 
+#ifdef PM_HARV
+// A harvested world: what a harvester leaves after reaping a planet down to its ore. A small gutted core, one huge quarried bite
+// out of its side (terraced like an open pit), flat faces where whole slabs were sliced away, a dull ember where the heart still
+// cools, and the rubble belt (a wreckage ring, set up by the page). No air, no lights, no moons.
+const float HR = 0.5;   // what is left of the radius
+const float HB = 1.12;  // everything (core and the big broken pieces) fits in this radius
+vec3 harvFrame(vec3 p) { return rotY(vec3(dot(p, uU), dot(p, uAxis), dot(p, uW)), uSpin); }
+vec3 harvBite() {
+  vec3 v = normalize(vec3(0.0, 0.25, 1.0) + 0.55 * uL);
+  return normalize(vec3(dot(v, uU), dot(v, uAxis), dot(v, uW)) + 0.25 * (hash33(vec3(uSeed, 3.1, 8.2)) - 0.5));
+}
+vec3 harvDir(float k) { vec3 h = hash33(vec3(uSeed + k * 4.1, 7.7, 3.3)) * 2.0 - 1.0; return normalize(h + vec3(0.0, 0.0, 0.001)); }
+// distance to the remnant (planet frame); id: 0 surviving crust, 1 the bite, 2 a sliced face
+float harvSD(vec3 q, out int id) {
+  vec3 so = vec3(uSeed * 1.3, uSeed * 0.7, uSeed * 1.9);
+  float d = length(q) - HR - 0.05 * gnoise(q * 2.6 + so) - 0.018 * gnoise(q * 8.0 + so);
+  id = 0;
+  vec3 bc = harvBite() * 0.66;
+  float bite = 0.5 - length(q - bc) + 0.012 * gnoise(q * 14.0 + so);
+  if (bite > d) { d = bite; id = 1; }
+  for (int k = 0; k < 2; k++) {
+    vec3 n = harvDir(2.0 + float(k));
+    float cut = dot(q, n) - (0.34 + 0.1 * float(k)) + 0.006 * gnoise(q * 20.0 + so);
+    if (cut > d) { d = cut; id = 2; }
+  }
+  // big broken pieces drifting off and spreading into the belt: lumpy blocks with one sheared face each
+  for (int k = 0; k < 7; k++) {
+    vec3 h = hash33(vec3(uSeed + float(k) * 2.9, 1.7, 9.1));
+    vec3 c = harvDir(10.0 + float(k)) * mix(0.66, 1.0, h.x); c.y *= 0.4;
+    float rk = mix(0.035, 0.11, h.y * h.y);
+    vec3 o = q - c;
+    float dk = length(o) - rk - rk * 0.35 * gnoise(o * (9.0 / rk) * 0.1 + so + float(k));
+    dk = max(dk, dot(o, harvDir(20.0 + float(k))) - rk * 0.3);
+    if (dk < d) { d = dk; id = 3; }
+  }
+  return d;
+}
+float harvD(vec3 q) { int id; return harvSD(q, id); }
+// colour, coverage and depth of the remnant under this pixel (the view looks straight down -z)
+vec4 harvCore(vec2 uv, float px, out float hz) {
+  hz = -99.0;
+  float R = HB, r2 = dot(uv, uv);
+  if (r2 > (R + px) * (R + px)) return vec4(0.0);
+  float z = sqrt(max(R * R - r2, 0.0)), z1 = -z;
+  float dmin = 1e9; bool hit = false;
+  for (int i = 0; i < 90; i++) {
+    float d = harvD(harvFrame(vec3(uv, z)));
+    dmin = min(dmin, d);
+    if (d < 0.0006) { hit = true; break; }
+    z -= max(d * 0.7, 0.0015);
+    if (z < z1) break;
+  }
+  float cov = hit ? 1.0 : clamp(1.0 - dmin / px, 0.0, 1.0);
+  if (cov <= 0.0) return vec4(0.0);
+  vec3 p = vec3(uv, z);
+  vec3 q = harvFrame(p);
+  int id; harvSD(q, id);
+  // normal in view space
+  const vec2 e = vec2(0.0015, -0.0015);
+  vec3 n = normalize(e.xyy * harvD(harvFrame(p + e.xyy)) + e.yyx * harvD(harvFrame(p + e.yyx)) + e.yxy * harvD(harvFrame(p + e.yxy)) + e.xxx * harvD(harvFrame(p + e.xxx)));
+  // the sun: a few steps toward it for shadows in the bite
+  float sh = 1.0, t = 0.01;
+  for (int i = 0; i < 20; i++) { float d = harvD(harvFrame(p + uL * t)); sh = min(sh, clamp(10.0 * d / t, 0.0, 1.0)); t += max(d, 0.01); if (t > 1.2) break; }
+  float dif = max(dot(n, uL), 0.0) * (0.25 + 0.75 * sh);
+  vec3 so = vec3(uSeed * 1.3, uSeed * 0.7, uSeed * 1.9);
+  float lq = length(q);
+  vec3 ash = mix(vec3(0.16, 0.15, 0.14), (uPal[1] + uPal[3]) * 0.5, 0.35);   // the old ground, burnt grey
+  vec3 alb;
+  if (id == 0) alb = ash * (0.7 + 0.45 * noise(q * 30.0 + so));
+  else {
+    // cut rock: strata by depth, from the old crust down to dark red mantle
+    float s = 0.82 + 0.18 * sin(lq * 70.0 + 7.0 * gnoise(q * 4.0 + so));
+    alb = mix(vec3(0.20, 0.07, 0.04), mix(ash, vec3(0.34, 0.29, 0.24), 0.5), smoothstep(0.2, HR, min(lq, HR))) * s;
+    if (id == 3) alb = mix(ash, vec3(0.30, 0.25, 0.21), noise(q * 25.0 + so)) * (0.7 + 0.4 * noise(q * 60.0 + so));
+    if (id == 1) alb *= 0.85 + 0.3 * step(0.5, fract(length(q - harvBite() * 0.66) * 38.0));   // terrace benches round the pit
+  }
+  vec3 col = alb * dif * 1.4 + alb * 0.03;
+  // the heart still cooling where the bite reaches deepest
+  float ember = smoothstep(0.34, 0.12, lq) * ((id == 1 || id == 2) ? 1.0 : 0.0);
+  col += vec3(1.0, 0.32, 0.07) * ember * (0.55 + 0.45 * gnoise(q * 18.0 + so));
+  // the crust split open: glowing cracks, thickest near the bite
+  if (id == 0) {
+    float cr = 1.0 - abs(gnoise(q * 7.0 + so + 5.0));
+    float near = smoothstep(0.75, 0.3, length(q - harvBite() * 0.66));
+    col += vec3(1.0, 0.36, 0.08) * smoothstep(0.95, 0.99, cr) * (0.15 + 0.85 * near) * 0.9;
+  }
+  hz = p.z;
+  return vec4(col, cov);
+}
+#endif
+
 void main() {
   vec2 fc = gl_FragCoord.xy;
   vec2 uv = (fc - 0.5 * uRes) / (0.5 * uRes.y) / uZoom + uShift;
@@ -2093,6 +2190,13 @@ void main() {
 
   float r = length(uv);
   float zp = (r < 1.0) ? sqrt(1.0 - r * r) : -1.0;
+#ifdef PM_HARV
+  float hz; vec4 HV = harvCore(uv, px, hz);
+  bool body = HV.a > 0.0;
+  zp = body ? hz : -1.0;
+#else
+  bool body = r < 1.0;
+#endif
 
 #ifdef PM_RINGS
   float ringA = 0.0; vec3 ringC = vec3(0.0); float zr = -99.0;
@@ -2114,7 +2218,7 @@ void main() {
       float el = 0.3 + 0.7 * smoothstep(0.0, 0.3, abs(sd));
       float litSide = el * (1.0 - 0.5 * uRingDust);       // dust throws light forward, so it looks dull with the sun behind you
       float thru = (0.1 + 1.5 * uRingDust) * exp(-tau * 0.5) * el;   // sun behind the rings: dense parts go dark, thin dusty parts glow
-      float b = dot(hp, uL), c = dot(hp, hp) - 1.0, disc = b * b - c;
+      float b = dot(hp, uL), c = dot(hp, hp) - PLANET_R2, disc = b * b - c;
       float inShade = (c > 0.0 && (-b + sqrt(max(disc, 0.0))) > 0.0) ? smoothstep(-0.02, 0.05, disc) : 0.0;
       ringC = rc * mix(thru, litSide, smoothstep(-0.06, 0.06, sd)) * mix(1.0, 0.07, inShade);
 #ifdef PM_MOONS
@@ -2169,7 +2273,7 @@ void main() {
   bool obHide = (r < 1.0) && (obZ < zp), obFront = obZ >= 0.0;
   bool ecHide = (r < 1.0) && (ez < zp), ecFront = ez >= 0.0;
 #endif
-  bool ringFront = (r < 1.0) && (zr >= zp);
+  bool ringFront = body && (zr >= zp);
   if (ringA > 0.0 && !ringFront) col = mix(col, ringC, ringA);
 #ifdef PM_ORB
   if (obA > 0.0 && !obFront && !obHide) col = mix(col, obC, obA);
@@ -2183,7 +2287,12 @@ void main() {
     vec3 gc = mix(vec3(1.0, 0.42, 0.16), uHazeCol, smoothstep(-0.02, 0.4, lit));
     col += gc * g * smoothstep(-0.3, 0.2, lit) * 0.85;
   }
+#ifdef PM_HARV
+  col = mix(col, HV.rgb, HV.a);
+  if (false) {
+#else
   if (r < 1.0 + px) {
+#endif
     float cov = clamp((1.0 - r) / px + 0.5, 0.0, 1.0);
     vec3 p = vec3(uv / max(r, 1.0), 0.0);
     p.z = sqrt(max(1.0 - dot(p.xy, p.xy), 0.0));
@@ -6117,7 +6226,7 @@ const progs = {};
 let vbuf = null;
 function makeProgram(key) {
   const mk = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(s)); throw new Error('shader: ' + gl.getShaderInfoLog(s)); } return s; };
-  const defs = (key.indexOf('C') >= 0 ? '#define PM_CLOUDS\n' : '') + (key.indexOf('H') >= 0 ? '#define PM_HIQ\n' : '') + (key.indexOf('M') >= 0 ? '#define PM_MOONS\n' : '') + (key.indexOf('R') >= 0 ? '#define PM_RINGS\n' : '') + (key.indexOf('G') >= 0 ? '#define PM_MEGA\n' : '') + (key.indexOf('O') >= 0 ? '#define PM_ORB\n' : '') + (key.indexOf('D') >= 0 ? '#define PM_DITHER\n' : '');
+  const defs = (key.indexOf('C') >= 0 ? '#define PM_CLOUDS\n' : '') + (key.indexOf('H') >= 0 ? '#define PM_HIQ\n' : '') + (key.indexOf('M') >= 0 ? '#define PM_MOONS\n' : '') + (key.indexOf('R') >= 0 ? '#define PM_RINGS\n' : '') + (key.indexOf('G') >= 0 ? '#define PM_MEGA\n' : '') + (key.indexOf('O') >= 0 ? '#define PM_ORB\n' : '') + (key.indexOf('D') >= 0 ? '#define PM_DITHER\n' : '') + (key.indexOf('X') >= 0 ? '#define PM_HARV\n' : '');
   const pr = gl.createProgram();
   gl.attachShader(pr, mk(gl.VERTEX_SHADER, $('vs').textContent.trim()));
   gl.attachShader(pr, mk(gl.FRAGMENT_SHADER, $('fs').textContent.trim().replace('#version 300 es', '#version 300 es\n' + defs)));
@@ -6149,13 +6258,25 @@ const CLOUD_LABEL = { lava: 'Ash and smoke', desert: 'Dust storms', ice: 'Ice cr
 const KIND_TYPE = (k) => k === 'gas' ? 1 : k === 'locked' ? 2 : IS_MEGA(k) ? 3 : 0;   // 3: a ring or a shell, drawn by shadeMega
 
 // how fast each motion runs, per second
-const rates = () => ({ spin: P.kind === 'locked' ? 0 : P.spin * 0.5, cloud: P.cloudSpeed * 0.3, flow: P.flow * 0.25, ring: P.ring.spin * 0.3, moon: P.moonSpeed });
+const rates = () => ({ spin: P.kind === 'locked' ? 0 : P.spin * 0.5, cloud: P.cloudSpeed * 0.3, flow: P.flow * 0.25, ring: (HARVV ? (P.ring.spin || 0.3) : P.ring.spin) * 0.3, moon: P.moonSpeed });
 function frame(dt) {
   const r = rates();
   T.spin += r.spin * dt; T.cloud += r.cloud * dt; T.flow += r.flow * dt; T.ring += r.ring * dt; T.moon += r.moon * dt; T.time += dt;
 }
 function vec3(a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; }
+// a harvested world is drawn from its own look: same colours and seed, but only the gutted core and a rubble belt are left
+let HARVV = false;
+function harvestedP(p) {
+  const RT = RING_TYPES[RING_IDX.wreck];
+  const ring = Object.assign({}, p.ring, RT.d, { on: true, type: 'wreck', c1: RT.c[0], c2: RT.c[1], feeder: 0, inner: 0.6, width: 0.55, op: 0.4, gaps: 0.6, struct: 0.9, clump: 1, dust: 0.15, seed: p.seed, spin: p.ring.spin || 0.3 });
+  return Object.assign({}, p, { kind: 'rock', moons: 0, moonList: [], clouds: 0, haze: 0, cities: 0, oOn: false, eOn: false, ring, lUnder: 0, lSea: 0, lDark: 0 });
+}
 function draw(w, h, tmul) {
+  if (!HARVV) return drawP(w, h, tmul);
+  const keep = P; P = harvestedP(keep);
+  try { return drawP(w, h, tmul); } finally { P = keep; }
+}
+function drawP(w, h, tmul) {
   const D = Math.PI / 180;
   const phi = P.tilt * D, R = P.roll * D;
   const U = [Math.cos(R), Math.sin(R), 0];
@@ -6180,7 +6301,7 @@ function draw(w, h, tmul) {
   if (look > 0) { const Wv = vec3(U, A), sg = Wv[2] > 0 ? -1 : 1; farS[0] = sg * Wv[0] * look; farS[1] = sg * Wv[1] * look; }
   const zoom = Math.min(aspect * 0.92 / extent, 0.92 / extentV) * P.zoom * (1 + 3.0 * look);
   const clouds = P.kind === 'rock' ? 0 : P.clouds;   // an airless world has no weather, whatever the slider says
-  useVariant((P.kind !== 'gas' && clouds > 0.01 ? 'C' : '') + (quality ? 'H' : '') + (mm.length ? 'M' : '') + (P.ring.on && !mega ? 'R' : '') + (mega ? 'G' : '') + (orb ? 'O' : '') + (DI.on ? 'D' : ''));
+  useVariant((P.kind !== 'gas' && clouds > 0.01 ? 'C' : '') + (quality ? 'H' : '') + (mm.length ? 'M' : '') + (P.ring.on && !mega ? 'R' : '') + (mega ? 'G' : '') + (orb ? 'O' : '') + (DI.on ? 'D' : '') + (HARVV ? 'X' : ''));
   gl.viewport(0, 0, w, h);
   gl.uniform2f(loc.uRes, w, h); gl.uniform1f(loc.uZoom, zoom); gl.uniform2f(loc.uShift, farS[0], farS[1]);
   gl.uniform1i(loc.uType, KIND_TYPE(P.kind));
@@ -6803,13 +6924,13 @@ function loopPlan(L) {
   };
   const spin = whole(r.spin, true), F = r.flow * L;
   const orb = new Map(), self = new Map();
-  if (!IS_MEGA(P.kind)) for (const m of activeMoons()) {
+  if (!IS_MEGA(P.kind) && !HARVV) for (const m of activeMoons()) {
     const k = 0.35 * m.speed / Math.pow(m.orbit, 1.5);
     orb.set(m, { b: B.moon * k, v: whole(r.moon * k, false, 'moon orbits') });
     self.set(m, { b: B.moon * m.spin * 0.5, v: whole(r.moon * m.spin * 0.5, false) });
   }
-  const clouds = P.kind !== 'gas' && P.kind !== 'rock' && !IS_MEGA(P.kind) && P.clouds > 0.01;
-  const pl = { L, B, spin, cloud: whole(r.cloud, false, clouds ? 'cloud drift' : ''), cir: whole(r.cloud * 1.8, false), ring: whole(r.ring, false, P.ring.on ? 'ring turn' : ''), flow: r.flow, orb, self, still };
+  const clouds = !HARVV && P.kind !== 'gas' && P.kind !== 'rock' && !IS_MEGA(P.kind) && P.clouds > 0.01;
+  const pl = { L, B, spin, cloud: whole(r.cloud, false, clouds ? 'cloud drift' : ''), cir: whole(r.cloud * 1.8, false), ring: whole(r.ring, false, P.ring.on || HARVV ? 'ring turn' : ''), flow: r.flow, orb, self, still };
   pl.turns = Math.round(Math.abs(spin) * L / TAU);
   pl.u = [L, F, pl.turns, F > 0 ? F / Math.max(1, Math.round(F / 8)) : 0];
   return pl;
@@ -6990,6 +7111,7 @@ function boot() {
   $('snapClear').addEventListener('change', (e) => { snapClear = e.target.checked; try { localStorage.setItem('pm_snap_clear', snapClear ? '1' : '0'); } catch (er) {} openSnap(); });
   $('snapClose').addEventListener('click', () => { $('snap').classList.remove('on'); });
   $('btnVid').addEventListener('click', openVid);
+  $('harvOn').addEventListener('change', (e) => { HARVV = e.target.checked; });
   $('vidTurn').addEventListener('click', () => { $('vidLen').value = turnSecs(); vidNote(); });
   ['vidLen', 'vidFps', 'vidClear', 'vidSize'].forEach((id) => $(id).addEventListener('input', () => { if (!vidBusy) vidNote(); }));
   $('vidGo').addEventListener('click', () => { if (vidBusy) vidStop = true; else makeVideo(); });
@@ -7003,7 +7125,7 @@ function boot() {
   try { initGL(); } catch (e) { glOK = false; document.querySelector('.hint').textContent = 'Shader error: ' + e.message; console.error(e); return; }
   requestAnimationFrame(loop);
 }
-window.__pm = { get P() { return P; }, loopPlan, loopAt, makeVideo, vidFrame, endLoop() { LOOPV = null; }, clearPNG: (n) => clearCanvas(n).toDataURL('image/png'), setDither(o) { Object.assign(DI, o); syncDither(); fit(); }, setP(p) { P = p; syncControls(); }, derive, loadSystem, SYSTEMS, classify, makeDefaults, KINDS, setKind, frame, T, draw: () => draw(cv.width, cv.height), pause(v) { paused = v; }, freeze(v) { frozen = v; }, setQ(v) { quality = v; }, fromCode, MOON_TYPES, RING_TYPES, ringGapList, applyRingType, placeFeeder, syncRingUI, ensureMoons, syncMoonUI, selectMoon(i) { selMoon = i; syncMoonUI(); }, MEGA_TYPES };
+window.__pm = { get P() { return P; }, setHarvest(v) { HARVV = !!v; $('harvOn').checked = HARVV; }, loopPlan, loopAt, makeVideo, vidFrame, endLoop() { LOOPV = null; }, clearPNG: (n) => clearCanvas(n).toDataURL('image/png'), setDither(o) { Object.assign(DI, o); syncDither(); fit(); }, setP(p) { P = p; syncControls(); }, derive, loadSystem, SYSTEMS, classify, makeDefaults, KINDS, setKind, frame, T, draw: () => draw(cv.width, cv.height), pause(v) { paused = v; }, freeze(v) { frozen = v; }, setQ(v) { quality = v; }, fromCode, MOON_TYPES, RING_TYPES, ringGapList, applyRingType, placeFeeder, syncRingUI, ensureMoons, syncMoonUI, selectMoon(i) { selMoon = i; syncMoonUI(); }, MEGA_TYPES };
 boot();
 })();
 </script>
