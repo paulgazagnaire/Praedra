@@ -500,9 +500,11 @@ public class HarvesterTests
         Assert.Null(w.Destroy(Side.Hand, attacker));
         string hash = w.Host.StateHash();
         string save = w.Host.Save();
-        Assert.Contains("\"Harvester\":{\"Destroyed\":[\"A3\"],\"StrikesInSector\":{\"SA\":1}}", save);
+        int day = w.Game.State.Harvester.DestroyedDay(A3)!.Value;
+        Assert.Contains($"\"Harvester\":{{\"Destroyed\":[\"A3\"],\"StrikesInSector\":{{\"SA\":1}},\"DestroyedOn\":{{\"A3\":{day}}}}}", save);
         w.Reload();
         Assert.Equal(new[] { A3 }, w.Game.State.Harvester.Destroyed.ToArray());
+        Assert.Equal(day, w.Game.State.Harvester.DestroyedDay(A3)); // the day survives the load (m5-harvester §7)
         Assert.Equal(1, w.Ds.StrikesIn(Sa));
         Assert.Equal(hash, w.Host.StateHash());
         w.Game.Step(); // a loaded game goes on: A3 stays destroyed and cannot be struck twice

@@ -98,6 +98,13 @@ public partial class Main
                 "the harvest report pops up: " + gs.ReportText.Replace("\n", " / "));
         gs.Click("Close");
         Expect(s.QueuedOrders == 0, "no order left waiting");
+        // the harvested world's tile opens one plain card: no tabs, no Infrastructure window (Paul 2026-11-04)
+        gs.TileClick(target, "infra"); gs.PlayRefresh();
+        string card = gs.MgText($"Ground {target}");
+        Expect(gs.MgmtKeys.Contains($"Ground {target}") && !gs.MgmtKeys.Contains($"Infra {target}") && gs.MgTabs($"Ground {target}").Count() == 0
+            && card.Contains("HARVESTED") && card.Contains($"on day {s.Game.State.Harvester.DestroyedDay(target)}") && !card.Contains("Infrastructure at"),
+            "a harvested tile opens one plain card with the day: " + card.Replace("\n", " / "));
+        while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
         Expect(GameSession.PeopleWords(4_300_000_000) == "4.3 billion" && GameSession.PeopleWords(2_000_000_000) == "2 billion" && GameSession.PeopleWords(40_000_000) == "40 million"
             && GameSession.PeopleWords(2_500_000) == "2 million" && GameSession.PeopleWords(600_000) == "600,000", "head counts read as people read them (m5-harvester §7)");
 
