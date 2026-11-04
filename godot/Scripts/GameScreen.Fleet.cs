@@ -201,11 +201,14 @@ public partial class GameScreen
         string at = f.At;
         bool gone = S.IsDestroyed(at);
         bool pending = S.PendingOf(f.Id).Any(p => p.StartsWith("Destroy System", StringComparison.Ordinal));
+        int? readyDay = S.HarvesterRechargingUntil(f); // the core's cooldown (m5-harvester §2 legality 3a)
         Heading("harvester");
         Note("This fleet holds a harvester. Destroy System wipes out the system it is at.");
-        Act("Destroy System...", () => AskDestroySystem(f.Id), "Opens a question first. The strike happens when the next day starts.", gone || pending, "DangerButton");
+        string tip = readyDay is int rd ? $"Harvester recharging: ready on day {rd}." : "Opens a question first. The strike happens when the next day starts.";
+        Act("Destroy System...", () => AskDestroySystem(f.Id), tip, gone || pending || readyDay != null, "DangerButton");
         if (gone) Line($"{at} is already destroyed.", Dim, Ui.Small);
         else if (pending) Line("The strike is waiting for the next day.", Pending, Ui.Small);
+        if (readyDay is int r) Line($"Harvester recharging: ready on day {r}.", Dim, Ui.Small);
     }
 
     void AskDestroySystem(int fleetId)

@@ -183,7 +183,7 @@ public sealed class GameHost
         Defenses = DefenseModule.Attach(Economy, Fleets, data.Defenses, settings.Defense);
         Bombardment = BombardmentModule.Attach(game, Economy, Fleets, Support, Defenses, settings.Bombard);
         // After the bombardment (its slot 5.1 hook runs first) and before the assault. rule: m5-harvester §2 ("resolved in slot 5.1 after the bombardment hook")
-        Harvester = Praedra.Core.Harvester.HarvesterModule.Attach(game, data.Galaxy, Fleets, Economy, Support, Control, Construction, settings.Harvester);
+        Harvester = Praedra.Core.Harvester.HarvesterModule.Attach(game, data.Galaxy, Fleets, Economy, Support, Control, Construction, settings.Harvester, data.Population);
         Construction.UnitAppeared += Harvester.OnUnitAppeared; // after the fleet module's handler (the ship has joined its fleet): HarvesterDeployed
         Assault = AssaultModule.Attach(game, Economy, Fleets, Troops, Control, Defenses, Bombardment, settings.Assault);
         // Slot 5: registered after the fleet module's contact hook, so it runs after it, and (slot 5 precedes 5.1 and 5.2) before bombardment and assault.

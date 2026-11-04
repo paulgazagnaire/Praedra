@@ -122,7 +122,8 @@ public sealed partial class SimpleAi
         string at = d.At!; string? hq = KnownEnemyHq;
         if (hq == at)
         {
-            if (EnemyFleetsAt(at).Count == 0 && !_h.Harvester.IsDestroyed(at))
+            // a harvester still recharging waits there instead of sending an order the core would refuse (m5-harvester §2 legality 3a)
+            if (EnemyFleetsAt(at).Count == 0 && !_h.Harvester.IsDestroyed(at) && _h.Harvester.IsReady(d))
             {
                 long seq = _h.Harvester.SubmitDestroySystem(_side, d.Id);
                 Note(seq, "DestroySystem", $"fleet {d.Id} destroys {at}");
