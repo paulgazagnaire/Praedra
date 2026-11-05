@@ -420,9 +420,11 @@ public sealed partial class SimpleAi
         {
             if (!Standing(c) || busy.Contains(c.Id) || IsKey(c) || !mi.CanDo(c, k)) continue;
             int esp = Skill(c, Characters.Skill.Espionage);
-            // rule: m5-missions §6b (Decided by Paul 2026-11-04 20:47): a one-character team with no Talent never succeeds (BooksNeedsTalent; the
-            // side knows its own characters); with BooksSkipDetection no guard can stop it, so no detection factor (10000 bp unseen)
-            int pct = mi.BooksTalentMet(new[] { c }) ? mi.BooksChance(mi.BooksInput(Skill(c, Characters.Skill.Combat), esp, defences)) : 0;
+            // rule: m5-missions §6b (Decided by Paul 2026-11-04 20:47): a one-character team with no Talent never succeeds (BooksNeedsTalent).
+            // AI fair fog (QA-93): the side knows only Talent its character has discovered, as a player sees it, so an unaware holder counts as
+            // having none. With BooksSkipDetection no guard can stop it, so no detection factor (10000 bp unseen)
+            bool talentKnown = !mi.Params.BooksNeedsTalent || (c.TalentHolder && c.TalentDiscovered);
+            int pct = talentKnown ? mi.BooksChance(mi.BooksInput(Skill(c, Characters.Skill.Combat), esp, defences)) : 0;
             int unseen = mi.Params.BooksSkipDetection ? BasisPointsWhole : UnseenBasisPoints(esp, charter);
             int chance = pct == 0 ? 0 : (int)((long)unseen * pct / 100); // basis points
             if (chance > bestChance) { bestChance = chance; best = c; }
