@@ -663,12 +663,11 @@ public sealed record SimpleAiParams
     /// Burn the Books (m5-missions §6b AI): the Collective sends one free character on it when Charter is Hand-held (as the side sees it), the
     /// books still stand, no Burn the Books mission of its own is out, and the character's chance min(SBTGMSTB(input), BooksCapPercent) is above
     /// 0 with the defence facilities and shields it sees at Charter. Majors never go (KeyCharacterValuePercent: leaders stay off guarded raids).
-    /// DEFAULT false (AI trainer 2026-11-04, ai tuning): 96 Medium mirrors, 3,000 days, main 3885f31: on, 414 tries in 94 games, 0 burned,
-    /// 32 agents captured in duels, wins Hand 24 / Collective 37 / open 35; off, 28 / 41 / 27. Of 46 tries on seeds 1-16 only 1 reached the
-    /// success roll (3%): the guards and the warships at Charter detect almost every team (34 of 86 detection rolls hit, at 25-70% each), and
-    /// the planner's own estimate (mean 58 basis points) runs well above that. The mission stays legal for a player (MissionParams.BurnTheBooks).
+    /// DEFAULT true (AI trainer 2026-11-05, ai tuning, on the m5-missions §6b rule of #254: no guards, 1% cap, Talent needed): 96 Medium
+    /// mirrors, 3,000 days, main fa2ce12: on, 456 tries, 4 burned, 0 agents lost, wins Hand 28 / Collective 41 / open 27, the same totals as
+    /// off. Under the old rule (main 3885f31: guards, 3% cap) it was 414 tries, 0 burned, 32 agents captured, so it was off from #253 to here.
     /// </summary>
-    public bool BurnTheBooks { get; init; } = false;
+    public bool BurnTheBooks { get; init; } = true;
     /// <summary>
     /// Days the Collective waits after its own Burn the Books fails or is foiled before it tries again (without it, seed 1 sent 54 attempts in
     /// 700 days, all foiled, and an escaped character went again two days later). DEFAULT 180 (Dev lead 2026-11-04); the AI trainer owns the tuning.
