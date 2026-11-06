@@ -143,6 +143,7 @@ public sealed partial class GameSession
         MissionReject.RuleMissing => "the rule book does not cover this mission yet",
         MissionReject.TargetProtected => "that leader is out of reach: aboard a fleet, or at a capital whose garrison is full",
         MissionReject.BooksGone => "the books are already burned",
+        MissionReject.BooksTeamOut => "a team is already out to burn the books",
         RejectReason.NotYours => "a team member is not yours",
         RejectReason.NotCompleted => "a special forces unit is still in training",
         RejectReason.Unreachable => "there is no route to the target",

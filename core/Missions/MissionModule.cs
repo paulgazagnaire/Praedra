@@ -617,6 +617,9 @@ public sealed partial class MissionModule
 
         bool charTarget = o.Kind is MissionKind.Rescue or MissionKind.Abduction or MissionKind.Assassination;
         if (TargetReason(o.Kind, o.Side, o.TargetSystem, o.TargetCharacter, null) is { } tr) return (tr, null);
+        // rule: m5-missions §6b Target (Decided by Paul 2026-11-06): one team at a time per side, checked at order time only [BooksTeamOut]
+        if (o.Kind == MissionKind.BurnTheBooks && Params.BooksOneTeam && S.Missions.Values.Any(g => g.Kind == MissionKind.BurnTheBooks && g.Side == o.Side))
+            return (MissionReject.BooksTeamOut, null);
         if (KeyGate(o.Kind, o.TargetCharacter) is { } protectedReason) return (protectedReason, null); // rule: m5-missions §6a.1
         string target = charTarget ? _ch.LocationOf(_ch.Get(o.TargetCharacter!.Value)!)! : _fleets.Galaxy.Get(o.TargetSystem!).Name;
         int? facility = null;
