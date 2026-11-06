@@ -1,0 +1,4 @@
+{
+  "_doc": "Painted unit pictures. Key = the unit class name as the game shows it. file = picture in this folder; thumb = [x, y, w, h] in picture pixels, the 2:1 crop shown on small tiles.",
+  "Lictors": { "file": "lictors.jpg", "thumb": [40, 40, 720, 360] }
+}

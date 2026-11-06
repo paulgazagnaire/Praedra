@@ -185,9 +185,18 @@ public partial class GameScreen
     Control OptionTile(string n, BuildRow b, bool hand)
     {
         var r = b.Row;
-        var btn = Ui.Button("", () => { SubmitBuild(n, b.Family, r, _buildQty); MgRefreshSoon(); },
+        string tip =
             $"{r.Name}: costs {r.Cost} refined each and {r.Maintenance} upkeep each, about {b.Days} days per unit here once the refined is there." +
-            (b.Why != null ? $"\n{char.ToUpperInvariant(b.Why[0])}{b.Why[1..]}." : "") + (ClassTip(r.Name) is string ct ? "\n" + ct : "") + (b.Usable ? $"\nClick to order {_buildQty}." : ""), "Flat", !b.Usable);
+            (b.Why != null ? $"\n{char.ToUpperInvariant(b.Why[0])}{b.Why[1..]}." : "") + (ClassTip(r.Name) is string ct ? "\n" + ct : "") + (b.Usable ? $"\nClick to order {_buildQty}." : "");
+        Action order = () => { SubmitBuild(n, b.Family, r, _buildQty); MgRefreshSoon(); };
+        Button btn;
+        if (UnitArt.Has(r.Name)) // the painted picture as the hover card too (art/units/units.json)
+        {
+            btn = new ArtButton { Cls = r.Name, FocusMode = FocusModeEnum.None, Disabled = !b.Usable, MouseDefaultCursorShape = CursorShape.PointingHand,
+                TooltipText = Ui.Wrap(tip), ThemeTypeVariation = "Flat" };
+            btn.Pressed += order;
+        }
+        else btn = Ui.Button("", order, tip, "Flat", !b.Usable);
         btn.SetMeta(UiTest.FullName, $"Build {r.Name}");
         btn.CustomMinimumSize = new Vector2(TileW, 146);
         btn.FocusMode = FocusModeEnum.None;
@@ -200,8 +209,14 @@ public partial class GameScreen
         v.MouseFilter = MouseFilterEnum.Ignore;
         v.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         v.OffsetLeft = 6; v.OffsetRight = -6; v.OffsetTop = 6; v.OffsetBottom = -4;
-        var icon = UnitIcon.For(KindOf(r.Category, r.Name), hand, ink, SizeOfClass(r.Name), new Vector2(0, 36));
-        v.AddChild(icon);
+        if (UnitArt.Has(r.Name)) // a painted picture of the class (art/units/units.json)
+        {
+            var pic = UnitArt.Rect(UnitArt.Thumb(r.Name));
+            pic.CustomMinimumSize = new Vector2(0, 40);
+            if (!b.Usable) pic.Modulate = new Color(1, 1, 1, 0.45f);
+            v.AddChild(pic);
+        }
+        else v.AddChild(UnitIcon.For(KindOf(r.Category, r.Name), hand, ink, SizeOfClass(r.Name), new Vector2(0, 36)));
         var t = Ui.Label(r.Name, null, b.Usable ? Ui.Text : Ui.Text3, Ui.Small, wrap: true);
         t.AddThemeFontOverride("font", Ui.Medium);
         t.HorizontalAlignment = HorizontalAlignment.Center;

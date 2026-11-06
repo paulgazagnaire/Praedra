@@ -214,6 +214,16 @@ public partial class Main
         Expect(gs.MgmtKeys.Contains($"Ground {sys}"), "a click elsewhere on the tile opens its Ground window");
         while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
 
+        // ---------------------------------------------------------------- painted unit pictures (art/units/units.json; Lictors first, Paul 2026-11-06)
+        Expect(UnitArt.Has("Lictors") && UnitArt.Thumb("Lictors") != null && UnitArt.Card("Lictors", "tip") != null, "the Lictors have their painted picture, tile crop and hover card");
+        string cap = Praedra.Core.Control.ControlModule.CapitalSystem;
+        if (me == Praedra.Core.Clock.Side.Hand && s.OwnerOf(cap) == Praedra.Core.Clock.Side.Hand)
+        {
+            gs.OpenMgmt(GameScreen.MgKind.Infra, cap); gs.PlayRefresh(); gs.Click("Troops"); gs.PlayRefresh();
+            Expect(UiTest.Find<Button>(gs, "Build Lictors") is ArtButton, "the Lictors' build card shows their picture and its hover card");
+            while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+        }
+
         // ---------------------------------------------------------------- a stack of regiments dragged with Shift: every one boards (Paul 2026-11-03)
         var stackFleet = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null && f.Transit == null && s.OwnerOf(f.At) == me && fm.FreeTroopSlots(f) >= 2)
             .OrderBy(f => f.Id).FirstOrDefault(f => s.Host.Troops.RegimentsOnSystem(f.At).Count(o => o.Side == me) >= 2);
