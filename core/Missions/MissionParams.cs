@@ -192,6 +192,11 @@ public sealed record MissionParams
     /// Source: New, m5-missions §6b (Decided by Paul 2026-11-04 20:47: "needs to be lead by someone talented").
     /// </summary>
     public bool BooksNeedsTalent { get; init; } = true;
+    /// <summary>
+    /// A side may have only one Burn the Books mission out at a time: a second order is refused BooksTeamOut while the first is still out.
+    /// DEFAULT true. Off: no limit on concurrent teams. Source: New, m5-missions §6b (Decided by Paul 2026-11-06, card: "One team at a time").
+    /// </summary>
+    public bool BooksOneTeam { get; init; } = true;
     /// <summary>Taken from the input per completed Hand defence facility or shield at Charter. DEFAULT 5. Source: New, m5-missions §6b (Paul picked the mission 2026-11-04; numbers DEFAULT).</summary>
     public int BooksDefencePenalty { get; init; } = 5;
     /// <summary>Collective support added on every non-destroyed populated system by a success. DEFAULT 5 (Paul to confirm the size). Source: New, m5-missions §6b (Paul picked the mission 2026-11-04; numbers DEFAULT).</summary>

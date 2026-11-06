@@ -25,7 +25,8 @@ public static class MissionReject
         DuplicateMember = "DuplicateMember", NoTeam = "NoTeam", NotFree = "NotFree", NotTogether = "NotTogether", NotAbleToDo = "NotAbleToDo",
         NotEligibleSpecialForce = "NotEligibleSpecialForce", BadDecoy = "BadDecoy", TooManyMembers = "TooManyMembers", BadTarget = "BadTarget",
         NoHarvester = "NoHarvester", TargetProtected = "TargetProtected", UnknownMission = "UnknownMission", RuleMissing = "RuleMissing",
-        BooksGone = "BooksGone"; // rule: m5-missions §6b (Target: the books not yet burned)
+        BooksGone = "BooksGone", // rule: m5-missions §6b (Target: the books not yet burned)
+        BooksTeamOut = "BooksTeamOut"; // rule: m5-missions §6b (Target: one team at a time, BooksOneTeam)
 }
 
 /// <summary>Why the character sheet's exposure hook is called. rule: m5-missions §4.</summary>

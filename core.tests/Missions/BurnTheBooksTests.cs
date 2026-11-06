@@ -9,7 +9,7 @@ using static Praedra.Core.Tests.Missions.MissionWorld;
 
 namespace Praedra.Core.Tests.Missions;
 
-// m5-missions §6b (Burn the Books), tests BB1 to BB7, and the §6b guard set (BooksSkipDetection off).
+// m5-missions §6b (Burn the Books), tests BB1 to BB8, and the §6b guard set (BooksSkipDetection off).
 public class BurnTheBooksTests
 {
     private const string Charter = Praedra.Core.Control.ControlModule.CapitalSystem;
@@ -203,5 +203,19 @@ public class BurnTheBooksTests
         Assert.Equal(success, w.Game.State.Missions.BooksBurned);
         Assert.Equal(success ? MissionOutcome.Succeeded : MissionOutcome.Failed, w.Events<MissionEnded>().Single().Outcome);
         Assert.Equal(success ? 3 : 2, w.Stub.Count(0, 99)); // two betrayal draws, plus the roll only when made
+    }
+
+    // m5-missions BB8: one team at a time (BooksOneTeam, Decided by Paul 2026-11-06): with Mae Abara's team out, a second Collective team is
+    // BooksTeamOut; with the switch off it is accepted
+    [Theory]
+    [InlineData(true, MissionReject.BooksTeamOut)]
+    [InlineData(false, null)]
+    public void BB8_OneTeamAtATime(bool oneTeam, string? second)
+    {
+        Assert.True(new MissionParams().BooksOneTeam);
+        var w = World(new MissionParams { BooksOneTeam = oneTeam });
+        w.Agent(Midwife, Charter, esp: 50, com: 50).TalentHolder = true;
+        Assert.Null(Order(w, Side.Collective, MaeAbara, Charter));
+        Assert.Equal(second, Order(w, Side.Collective, Midwife, Charter));
     }
 }
