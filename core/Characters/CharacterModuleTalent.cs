@@ -76,14 +76,6 @@ public sealed partial class CharacterModule
         return x != null && x.DiscoveredTalentHolder == m.Id && m.PairId != 0 && m.PairId == x.PairId;
     }
 
-    /// <summary>
-    /// Steps 2 to 7 of the Talent encounter (0x560200), after the mission module's duel (step 1) with <paramref name="x"/> as the captor:
-    /// read both effective combats; if <paramref name="m"/> was not hurt in the duel, HurtBy(m, x) on m (p = max(1, x - m)); HurtBy(x, m) on x;
-    /// whoever hurt the other gains GNPRTB 2578 base combat; both keys and pair ids cleared, both sides told; then the Talent effects by key (Nobody
-    /// and Ravilla: Nobody learns his heritage, the hand injury below Talent 80, Talent +max(1, gap x 25%); Nobody and The Chair +20%; Ledger, once aware,
-    /// with Ravilla or The Chair +20%). "Free" = not captured after the duel. Draws in order: m's HurtBy (unless hurt in the duel), x's HurtBy,
-    /// Nobody's hand draw. rule: §Talent (Traced B2e §4, Work 11).
-    /// </summary>
     /// <summary>True while m and x fought each other fewer than EncounterCooldownDays ago (either side's record). rule: m5-missions §4 Talent encounter cooldown.</summary>
     public bool EncounterCooling(CharacterRecord m, CharacterRecord x, int day)
     {
@@ -102,6 +94,14 @@ public sealed partial class CharacterModule
         c.Encounters = keep;
     }
 
+    /// <summary>
+    /// Steps 2 to 7 of the Talent encounter (0x560200), after the mission module's duel (step 1) with <paramref name="x"/> as the captor:
+    /// read both effective combats; if <paramref name="m"/> was not hurt in the duel, HurtBy(m, x) on m (p = max(1, x - m)); HurtBy(x, m) on x;
+    /// whoever hurt the other gains GNPRTB 2578 base combat; both keys and pair ids cleared, both sides told; then the Talent effects by key (Nobody
+    /// and Ravilla: Nobody learns his heritage, the hand injury below Talent 80, Talent +max(1, gap x 25%); Nobody and The Chair +20%; Ledger, once aware,
+    /// with Ravilla or The Chair +20%). "Free" = not captured after the duel. Draws in order: m's HurtBy (unless hurt in the duel), x's HurtBy,
+    /// Nobody's hand draw. rule: §Talent (Traced B2e §4, Work 11).
+    /// </summary>
     public void TalentEncounter(StepContext ctx, int day, int mission, CharacterRecord m, CharacterRecord x, bool mHurtInDuel, bool mEscaped)
     {
         Mark(m, x.Id, day); Mark(x, m.Id, day); // rule: m5-missions §4 Talent encounter cooldown
