@@ -116,6 +116,9 @@ public sealed partial class GameSession
         MissionKind.Abduction or MissionKind.Assassination => "not available here: your side cannot see where enemy leaders are",
         // rule: m5-missions §6b Target: Charter only, while the Hand holds it
         MissionKind.BurnTheBooks when OwnerOf(Praedra.Core.Control.ControlModule.CapitalSystem) != Side.Hand => "only while the Hand holds Charter",
+        // rule: m5-missions §6b Target (BooksOneTeam, Paul 2026-11-06): one team at a time; QA round 137
+        MissionKind.BurnTheBooks when Missions.Params.BooksOneTeam && Missions.Missions.Any(g => g.Kind == MissionKind.BurnTheBooks && g.Side == Player)
+            => "a team is already out to burn the books",
         _ => null,
     };
 
