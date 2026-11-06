@@ -503,6 +503,7 @@ public class SimpleAiAgentsTests
         var sent = h.Characters.Get(o.Characters[0])!;
         Assert.NotEqual(CharacterKind.Major, h.Characters.ClassOf(sent).Kind);
         if (!blind) Assert.True(sent.TalentHolder && sent.TalentDiscovered);
+        if (blind && !talented) Assert.False(sent.TalentHolder); // picked by skill alone
     }
 
     // m5-missions §6b AI (SimpleAiParams.BooksRetryDays, DEFAULT 180): a failed Burn the Books in the AI memory inside the window stops a new

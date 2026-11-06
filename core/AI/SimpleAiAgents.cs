@@ -424,8 +424,8 @@ public sealed partial class SimpleAi
             // hidden rule). BooksBlindPick (Decided by Paul 2026-11-06, QA-95): the AI does not know the hidden rule, as a player does not, and picks
             // by skill alone. Off: only Talent the character has discovered counts (AI fair fog, QA-93), which The Chair at Charter always senses.
             // With BooksSkipDetection no guard can stop it, so no detection factor (10000 bp unseen)
-            bool talentKnown = _p.BooksBlindPick || !mi.Params.BooksNeedsTalent || (c.TalentHolder && c.TalentDiscovered);
-            int pct = talentKnown ? mi.BooksChance(mi.BooksInput(Skill(c, Characters.Skill.Combat), esp, defences)) : 0;
+            bool counted = _p.BooksBlindPick || !mi.Params.BooksNeedsTalent || (c.TalentHolder && c.TalentDiscovered);
+            int pct = counted ? mi.BooksChance(mi.BooksInput(Skill(c, Characters.Skill.Combat), esp, defences)) : 0;
             int unseen = mi.Params.BooksSkipDetection ? BasisPointsWhole : UnseenBasisPoints(esp, charter);
             int chance = pct == 0 ? 0 : (int)((long)unseen * pct / 100); // basis points
             if (chance > bestChance) { bestChance = chance; best = c; }
