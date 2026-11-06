@@ -59,6 +59,13 @@ public sealed class CharacterRecord
     /// </summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public int PairId { get; set; }
+    /// <summary>
+    /// The Talent encounters this character fought within the cooldown: one mark per other character (the latest day), sorted by id. Read by the
+    /// encounter cooldown (<see cref="CharacterParams.EncounterCooldownDays"/>); marks older than the cooldown are dropped at the next encounter.
+    /// Null while empty and omitted from the save, so older saves and hashes are unchanged. rule: m5-missions §4 Talent encounter cooldown (QA-94, QA-96).
+    /// </summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public List<EncounterMark>? Encounters { get; set; }
     /// <summary>KnowsHeritage (Nobody and Ledger, +0xb0 bit 0x1; name inferred from the string order). rule: §Talent (B2e §4, §5).</summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public bool KnowsHeritage { get; set; }
@@ -160,7 +167,7 @@ public sealed class CharacterRecord
     {
         Id = Id, Side = Side, Placed = Placed, Skills = new List<int>(Skills), Loyalty = Loyalty, TalentExperience = TalentExperience, TalentTraining = TalentTraining,
         TalentHolder = TalentHolder, TalentDiscovered = TalentDiscovered, Talented = Talented, DiscoveredTalentHolder = DiscoveredTalentHolder, IdentifiedTraitor = IdentifiedTraitor, Status = Status, System = System, AttachedFleet = AttachedFleet, Post = Post,
-        Captor = Captor, HeldAt = HeldAt, HeldAboard = HeldAboard, HeldAboardShip = HeldAboardShip, ReturnPlace = ReturnPlace, AutoroutePending = AutoroutePending, JoinFleet = JoinFleet, JoinPost = JoinPost, JoinByOrder = JoinByOrder, Injury = Injury, LeadershipAdjustment = LeadershipAdjustment, PairId = PairId, KnowsHeritage = KnowsHeritage,
+        Captor = Captor, HeldAt = HeldAt, HeldAboard = HeldAboard, HeldAboardShip = HeldAboardShip, ReturnPlace = ReturnPlace, AutoroutePending = AutoroutePending, JoinFleet = JoinFleet, JoinPost = JoinPost, JoinByOrder = JoinByOrder, Injury = Injury, LeadershipAdjustment = LeadershipAdjustment, PairId = PairId, KnowsHeritage = KnowsHeritage, Encounters = Encounters?.ToList(),
         AwakenedBy = AwakenedBy, NextEscapeDay = NextEscapeDay, NextHealDay = NextHealDay, NextAwakenDay = NextAwakenDay,
         Transit = Transit == null ? null : new FleetTransit
         { Path = new List<string>(Transit.Path), HopTicks = new List<int>(Transit.HopTicks), HopIndex = Transit.HopIndex, DueDay = Transit.DueDay },
@@ -193,3 +200,6 @@ public sealed class CharacterState
         foreach (var kv in o.SystemGenerals) SystemGenerals[kv.Key] = kv.Value;
     }
 }
+
+/// <summary>One Talent encounter a character fought: the other character's id and the day. rule: m5-missions §4 Talent encounter cooldown.</summary>
+public sealed record EncounterMark(int With, int Day);

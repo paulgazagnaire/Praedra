@@ -307,6 +307,7 @@ public sealed partial class MissionModule
     private bool Encounter(StepContext ctx, MissionGroup m, int t, Agent a, string place, MissionRecord rec, bool decoy)
     {
         if (!a.IsCharacter || !_ch.MutualDiscovery(a.C!, out var x) || x == null) return false;
+        if (_ch.EncounterCooling(a.C!, x, t)) return false; // rule: m5-missions §4 Talent encounter cooldown (QA-94): no encounter, the normal escape duel instead
         int xm = MissionOf(x.Id); // QA-7: the captor is X himself: his fleet, else where he stands; his mission takes the prisoner as a captive
         var unit = new CaptorUnit(x.AttachedFleet, _ch.LocationOf(x), xm, MissionInvolved: true);
         var (escaped, hurt) = DuelWith(ctx, m, t, a, _ch.EffectiveSkill(x, Skill.Combat), x.Id, x.Side, place, rec, decoy, unit);

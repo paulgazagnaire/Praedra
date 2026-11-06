@@ -76,6 +76,24 @@ public sealed partial class CharacterModule
         return x != null && x.DiscoveredTalentHolder == m.Id && m.PairId != 0 && m.PairId == x.PairId;
     }
 
+    /// <summary>True while m and x fought each other fewer than EncounterCooldownDays ago (either side's record). rule: m5-missions §4 Talent encounter cooldown.</summary>
+    public bool EncounterCooling(CharacterRecord m, CharacterRecord x, int day)
+    {
+        int n = Params.EncounterCooldownDays;
+        if (n <= 0) return false;
+        bool Met(CharacterRecord a, CharacterRecord b) => a.Encounters?.Any(e => e.With == b.Id && day - e.Day < n) == true;
+        return Met(m, x) || Met(x, m);
+    }
+
+    // Stamps the pair on c (one mark per other character, latest day, sorted by id) and drops marks the cooldown no longer reads. Off (0): no marks.
+    private void Mark(CharacterRecord c, int other, int day)
+    {
+        int n = Params.EncounterCooldownDays;
+        if (n <= 0) return;
+        var keep = (c.Encounters ?? new()).Where(e => e.With != other && day - e.Day < n).Append(new EncounterMark(other, day)).OrderBy(e => e.With).ToList();
+        c.Encounters = keep;
+    }
+
     /// <summary>
     /// Steps 2 to 7 of the Talent encounter (0x560200), after the mission module's duel (step 1) with <paramref name="x"/> as the captor:
     /// read both effective combats; if <paramref name="m"/> was not hurt in the duel, HurtBy(m, x) on m (p = max(1, x - m)); HurtBy(x, m) on x;
@@ -86,6 +104,7 @@ public sealed partial class CharacterModule
     /// </summary>
     public void TalentEncounter(StepContext ctx, int day, int mission, CharacterRecord m, CharacterRecord x, bool mHurtInDuel, bool mEscaped)
     {
+        Mark(m, x.Id, day); Mark(x, m.Id, day); // rule: m5-missions §4 Talent encounter cooldown
         int mc = EffectiveSkill(m, Skill.Combat), xc = EffectiveSkill(x, Skill.Combat); // step 2
         bool mHurt = mHurtInDuel, xHurt;
         if (!mHurtInDuel) mHurt = AddInjury(ctx, m, HurtByRoll(ctx.Rng, mc, xc), CharacterCause.TalentEncounter); // step 3
