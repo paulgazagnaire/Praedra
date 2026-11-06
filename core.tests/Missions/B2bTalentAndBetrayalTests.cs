@@ -111,6 +111,35 @@ public class B2bTalentAndBetrayalTests
         Assert.True(guard > 0);
     }
 
+    // QA-94: the same pair met fewer than EncounterCooldownDays ago: still sensed and foiled, but no encounter (no injury, no gain, keys kept);
+    // a year later, or with the cooldown off (0 = Classic), they meet again. rule: m5-missions §4 Talent encounter cooldown.
+    [Theory]
+    [InlineData(365, 0, false)]
+    [InlineData(365, 364, false)]
+    [InlineData(365, 365, true)]
+    [InlineData(0, 0, true)]
+    public void QA94_EncounterCooldown(int cooldown, int daysAgo, bool meets)
+    {
+        Assert.Equal(365, new CharacterParams().EncounterCooldownDays);
+        var w = new MissionWorld(characters: new CharacterParams { EncounterCooldownDays = cooldown });
+        w.Hold(T, Side.Hand, 0);
+        foreach (var (id, f) in new[] { (Ledger, 80), (Ravilla, 120) }) { var c = w.Agent(id, T, esp: 50); if (c.Side == Side.Collective) w.Ch.Place(id, H); Talent(w, id, f); }
+        int mid = StartEspionage(w, new[] { Ledger });
+        var ledger = w.Ch.Get(Ledger)!; var ravilla = w.Ch.Get(Ravilla)!;
+        ravilla.LastEncounterWith = Ledger; ravilla.LastEncounterDay = w.Game.Day + 1 - daysAgo; // the check runs on the next day
+        int ravillaTalent = ravilla.TalentExperience, ledgerTalent = ledger.TalentExperience;
+        w.RunIteration(mid);
+        Assert.Equal(MissionFoilCause.TalentSensed, w.Events<MissionFoiled>().Single().Cause);
+        Assert.Equal(meets, w.Events<TalentEncounterResolved>().Any());
+        if (meets) Assert.Equal((Ravilla, Ledger), (ledger.LastEncounterWith, ravilla.LastEncounterWith));
+        else
+        {
+            Assert.Equal((0, 0), (ledger.Injury, ravilla.Injury));
+            Assert.Equal((ledgerTalent, ravillaTalent), (ledger.TalentExperience, ravilla.TalentExperience));
+            Assert.Equal((Ravilla, Ledger), (ledger.DiscoveredTalentHolder, ravilla.DiscoveredTalentHolder)); // keys stay set
+        }
+    }
+
     // B2b-5: a team member sensed (p = 100): foiled, cause TalentSensed; no betrayal, decoy or detection draw in that check
     [Fact]
     public void B2b5_SensedTeamMemberFoils()

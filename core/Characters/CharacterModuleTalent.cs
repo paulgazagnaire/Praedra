@@ -84,8 +84,18 @@ public sealed partial class CharacterModule
     /// with Ravilla or The Chair +20%). "Free" = not captured after the duel. Draws in order: m's HurtBy (unless hurt in the duel), x's HurtBy,
     /// Nobody's hand draw. rule: §Talent (Traced B2e §4, Work 11).
     /// </summary>
+    /// <summary>True while m and x fought each other fewer than EncounterCooldownDays ago (either side's record). rule: m5-missions §4 Talent encounter cooldown.</summary>
+    public bool EncounterCooling(CharacterRecord m, CharacterRecord x, int day)
+    {
+        int n = Params.EncounterCooldownDays;
+        if (n <= 0) return false;
+        bool Met(CharacterRecord a, CharacterRecord b) => a.LastEncounterWith == b.Id && day - a.LastEncounterDay < n;
+        return Met(m, x) || Met(x, m);
+    }
+
     public void TalentEncounter(StepContext ctx, int day, int mission, CharacterRecord m, CharacterRecord x, bool mHurtInDuel, bool mEscaped)
     {
+        m.LastEncounterWith = x.Id; m.LastEncounterDay = day; x.LastEncounterWith = m.Id; x.LastEncounterDay = day; // rule: m5-missions §4 cooldown
         int mc = EffectiveSkill(m, Skill.Combat), xc = EffectiveSkill(x, Skill.Combat); // step 2
         bool mHurt = mHurtInDuel, xHurt;
         if (!mHurtInDuel) mHurt = AddInjury(ctx, m, HurtByRoll(ctx.Rng, mc, xc), CharacterCause.TalentEncounter); // step 3

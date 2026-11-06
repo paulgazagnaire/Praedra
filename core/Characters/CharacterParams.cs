@@ -117,6 +117,13 @@ public sealed record CharacterParams
     public int HealSlow { get; init; } = 1;
     /// <summary>Base combat gained by whoever hurts the other in a Talent encounter. GNPRTB 2578 = 1 (0x560200).</summary>
     public int EncounterCombatGain { get; init; } = 1;
+    /// <summary>
+    /// Days before the same two characters can fight another Talent encounter. While it runs the mission is still sensed and foiled, but no
+    /// encounter happens (no injury, no Talent or combat gain; the discovery keys stay set). Stops a foiled agent who escapes at The Chair's
+    /// world from farming Talent with a free re-order every day. 0 = Classic (no cooldown). DEFAULT 365 (Paul 2026-11-06, QA-94).
+    /// rule: m5-missions §4 Talent encounter cooldown.
+    /// </summary>
+    public int EncounterCooldownDays { get; init; } = 365;
 
     // ---- escape (Traced B2e §3). rule: §Escape
     /// <summary>Escape delay <c>base + rand(0..spread)</c> days: GNPRTB 2584 = 100, 2585 = 1000 (0x4ef754).</summary>
