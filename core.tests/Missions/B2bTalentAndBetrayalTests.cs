@@ -126,12 +126,17 @@ public class B2bTalentAndBetrayalTests
         foreach (var (id, f) in new[] { (Ledger, 80), (Ravilla, 120) }) { var c = w.Agent(id, T, esp: 50); if (c.Side == Side.Collective) w.Ch.Place(id, H); Talent(w, id, f); }
         int mid = StartEspionage(w, new[] { Ledger });
         var ledger = w.Ch.Get(Ledger)!; var ravilla = w.Ch.Get(Ravilla)!;
-        ravilla.LastEncounterWith = Ledger; ravilla.LastEncounterDay = w.Game.Day + 1 - daysAgo; // the check runs on the next day
+        // QA-96: Ravilla met Ledger daysAgo, and someone else since (a later partner must not clear the mark); the check runs on the next day
+        ravilla.Encounters = new() { new EncounterMark(Ledger, w.Game.Day + 1 - daysAgo), new EncounterMark(Varo, w.Game.Day) };
         int ravillaTalent = ravilla.TalentExperience, ledgerTalent = ledger.TalentExperience;
         w.RunIteration(mid);
         Assert.Equal(MissionFoilCause.TalentSensed, w.Events<MissionFoiled>().Single().Cause);
         Assert.Equal(meets, w.Events<TalentEncounterResolved>().Any());
-        if (meets) Assert.Equal((Ravilla, Ledger), (ledger.LastEncounterWith, ravilla.LastEncounterWith));
+        if (meets)
+        {
+            if (cooldown > 0) Assert.Equal((Ravilla, Ledger), (ledger.Encounters!.Single().With, ravilla.Encounters!.Single(e => e.With == Ledger).With));
+            else Assert.Null(ledger.Encounters); // off: no marks
+        }
         else
         {
             Assert.Equal((0, 0), (ledger.Injury, ravilla.Injury));
