@@ -673,6 +673,12 @@ public sealed record SimpleAiParams
     /// 700 days, all foiled, and an escaped character went again two days later). DEFAULT 180 (Dev lead 2026-11-04); the AI trainer owns the tuning.
     /// </summary>
     public int BooksRetryDays { get; init; } = 180;
+    /// <summary>
+    /// Burn the Books (m5-missions §6b AI): the Collective picks its agent by skill alone, blind to the hidden Talent requirement, as a player
+    /// would. DEFAULT true (Decided by Paul 2026-11-06, card "AI gambles blind"; QA-95: agents with discovered Talent were sensed by The Chair
+    /// at Charter on all 223 tries, so the aware-only pick never burned). Off: only characters with discovered Talent are sent (QA-93).
+    /// </summary>
+    public bool BooksBlindPick { get; init; } = true;
 
     // ---- what to build, by side (first class that is buildable, researched and affordable wins). Class names of unit-and-facility-costs.csv. DEFAULT.
     public string Transport(Side side) => side == Side.Hand ? "Bond II" : "Barge";

@@ -477,18 +477,22 @@ public class SimpleAiAgentsTests
     // Books to the Hand-held Charter on its first agents day; with the switch off it sends none; with no talented character it sends none
     // (BooksNeedsTalent, Decided by Paul 2026-11-04 20:47); with talented characters unaware of their Talent it sends none either (AI fair fog,
     // QA-93: a player sees Talent only once discovered).
+    // BooksBlindPick (DEFAULT on, Paul 2026-11-06): the AI picks by skill alone, so it sends one with no talented or only unaware characters too.
     [Theory]
-    [InlineData(true, true, 1, true)]
-    [InlineData(false, true, 0, true)]
-    [InlineData(true, false, 0, true)]
-    [InlineData(true, true, 0, false)]
-    public void BurnTheBooks_CollectiveAiSendsOneTeam(bool on, bool talented, int expected, bool aware)
+    [InlineData(true, true, 1, true, false)]
+    [InlineData(false, true, 0, true, false)]
+    [InlineData(true, false, 0, true, false)]
+    [InlineData(true, true, 0, false, false)]
+    [InlineData(true, false, 1, true, true)]
+    [InlineData(true, true, 1, false, true)]
+    public void BurnTheBooks_CollectiveAiSendsOneTeam(bool on, bool talented, int expected, bool aware, bool blind)
     {
+        Assert.True(new SimpleAiParams().BooksBlindPick);
         Assert.True(new SimpleAiParams().BurnTheBooks); // DEFAULT on again since the AI trainer's 2026-11-05 run on the #254 rule; the test passes the switch
         var (_, h) = Match(1, Fog);
         Assert.Equal(Side.Hand, h.Fleets.OwnerOf(Praedra.Core.Control.ControlModule.CapitalSystem));
         if (talented) TalentedCollective(h, aware);
-        var ai = new SimpleAi(h, Side.Collective, Fog with { BurnTheBooks = on });
+        var ai = new SimpleAi(h, Side.Collective, Fog with { BurnTheBooks = on, BooksBlindPick = blind });
         List<StartMissionOrder> Books() => h.Game.Queue.OfType<StartMissionOrder>().Where(o => o.Kind == MissionKind.BurnTheBooks).ToList();
         for (int d = 0; d < 2 && Books().Count == 0; d++) { ai.PlanDay(); if (Books().Count == 0) h.Game.Step(); }
         var orders = Books();
@@ -498,7 +502,7 @@ public class SimpleAiAgentsTests
         Assert.Equal((Side.Collective, Praedra.Core.Control.ControlModule.CapitalSystem, 1), (o.Side, o.TargetSystem, o.Characters.Count));
         var sent = h.Characters.Get(o.Characters[0])!;
         Assert.NotEqual(CharacterKind.Major, h.Characters.ClassOf(sent).Kind);
-        Assert.True(sent.TalentHolder && sent.TalentDiscovered);
+        if (!blind) Assert.True(sent.TalentHolder && sent.TalentDiscovered);
     }
 
     // m5-missions §6b AI (SimpleAiParams.BooksRetryDays, DEFAULT 180): a failed Burn the Books in the AI memory inside the window stops a new
