@@ -68,7 +68,7 @@ public class BurnTheBooksTests
         Assert.Null(Order(World(), Side.Collective, MaeAbara, Charter)); // the legal order
     }
 
-    // m5-missions BB3: a success adds 5 Collective support on every non-destroyed populated system (40, 60, 98 -> 45, 65, 100 by the clamp;
+    // m5-missions BB3: a success adds 10 Collective support on every non-destroyed populated system (40, 60, 98 -> 50, 70, 100 by the clamp;
     // no harvester sector, so no damping), the destroyed system is untouched, the flag and its day are set, and a second order is BooksGone
     [Fact]
     public void BB3_SuccessSwingsEveryPopulatedSystem()
@@ -84,7 +84,7 @@ public class BurnTheBooksTests
         Assert.True(w.Game.State.Missions.BooksBurned);
         Assert.Equal(burned.Day, w.Game.State.Missions.BooksBurnedOn);
         var eco = w.Host.Economy;
-        Assert.Equal((45, 65, 100), (eco.SupportOf(A, Side.Collective), eco.SupportOf(B, Side.Collective), eco.SupportOf(C, Side.Collective)));
+        Assert.Equal((50, 70, 100), (eco.SupportOf(A, Side.Collective), eco.SupportOf(B, Side.Collective), eco.SupportOf(C, Side.Collective)));
         Assert.Equal(20, eco.SupportOf(Charter, Side.Collective)); // not populated
         var changes = w.Events<SupportChanged>().Where(e => e.Cause == SupportCause.BooksBurned).ToList();
         Assert.Equal(new[] { A, B, C }, changes.Select(e => e.System).ToArray()); // system id order; D destroyed, Charter not populated

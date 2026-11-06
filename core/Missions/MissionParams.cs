@@ -199,8 +199,8 @@ public sealed record MissionParams
     public bool BooksOneTeam { get; init; } = true;
     /// <summary>Taken from the input per completed Hand defence facility or shield at Charter. DEFAULT 5. Source: New, m5-missions §6b (Paul picked the mission 2026-11-04; numbers DEFAULT).</summary>
     public int BooksDefencePenalty { get; init; } = 5;
-    /// <summary>Collective support added on every non-destroyed populated system by a success. DEFAULT 5 (Paul to confirm the size). Source: New, m5-missions §6b (Paul picked the mission 2026-11-04; numbers DEFAULT).</summary>
-    public int BooksSupportSwing { get; init; } = 5;
+    /// <summary>Collective support added on every non-destroyed populated system by a success. DEFAULT 10 (was 5). Source: New, m5-missions §6b (Decided by Paul 2026-11-06: "Raise + 10"; +5 changed no game result in the AI trainer's 2026-11-05 run).</summary>
+    public int BooksSupportSwing { get; init; } = 10;
 
     // ---- Talent sensing and betrayal (B2b). rule: m5-missions §3 Talent sensing, Betrayal.
     /// <summary>Enemy talented characters at the target can sense the group (0x589e40). DEFAULT true (Traced B2b).</summary>
