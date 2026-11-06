@@ -93,7 +93,9 @@ public partial class GameScreen
     /// </summary>
     PanelContainer Tile(UnitIcon.Kind? kind, bool hand, int size4, string name, string sub, int count, Color accent, bool ghost = false, string avatar = null)
     {
-        var p = new PanelContainer { MouseFilter = MouseFilterEnum.Pass, CustomMinimumSize = new Vector2(TileW, TileH) };
+        bool art = kind != null && avatar == null && UnitArt.Has(name); // a painted picture of the class (art/units/units.json)
+        var p = art ? new ArtTile { Cls = name, TooltipText = name } : new PanelContainer();
+        p.MouseFilter = MouseFilterEnum.Pass; p.CustomMinimumSize = new Vector2(TileW, TileH);
         p.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Panel2, 8, new Color(accent, ghost ? 0.22f : 0.3f), 1, 6, 6));
         var v = Ui.VBox(2);
         v.MouseFilter = MouseFilterEnum.Ignore;
@@ -111,6 +113,14 @@ public partial class GameScreen
             center.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
             center.AddChild(ring);
             holder.AddChild(center);
+        }
+        else if (art)
+        {
+            var pic = UnitArt.Rect(UnitArt.Thumb(name));
+            pic.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+            pic.OffsetLeft = 2; pic.OffsetRight = -2; pic.OffsetTop = 0; pic.OffsetBottom = 0;
+            if (accent != Ui.You) pic.Modulate = new Color(1, 1, 1, 0.55f); // a unit that can't move reads dim, as its drawn icon would
+            holder.AddChild(pic);
         }
         else if (kind is UnitIcon.Kind k)
         {
