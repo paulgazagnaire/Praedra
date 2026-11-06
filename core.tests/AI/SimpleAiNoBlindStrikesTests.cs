@@ -24,8 +24,8 @@ public class SimpleAiNoBlindStrikesTests
     {
         var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA });
         // the guerrilla Collective (Underground, Guerrilla: 2026-10-26) shells less and raids instead; off here, so the test keeps measuring the same blind Military strikes
-        // play to win (2026-10-26) off too: it moves the seeds the floors were measured on
-        var p = MultiSeed.WithoutPlayToWin(AiLevels.For(AiLevel.Medium)) with { NoBlindStrikes = on, BlindProbeStrikes = probe, Underground = false, Guerrilla = false };
+        // play to win (2026-10-26) and the blind Books pick (2026-11-06) off too: they move the seeds the floors were measured on
+        var p = MultiSeed.WithoutPlayToWin(AiLevels.For(AiLevel.Medium)) with { NoBlindStrikes = on, BlindProbeStrikes = probe, Underground = false, Guerrilla = false, BooksBlindPick = false };
         var m = new AiMatch(h, p, p);
         int strikes = 0, empty = 0;
         var targets = new Dictionary<string, int>(StringComparer.Ordinal); // lookup only
