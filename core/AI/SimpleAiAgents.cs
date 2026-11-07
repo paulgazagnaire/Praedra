@@ -452,8 +452,9 @@ public sealed partial class SimpleAi
     /// <summary>
     /// BooksTalentWindow: does the side believe a known Talent senser of the enemy stands at the system? Known: a public talented character
     /// (its class's known Talent, m5-characters-and-talent) or one an own character discovered (Talent sensing, m5-missions §3a). Without fog
-    /// the truth. With fog the side's latest word on each within AbductionInfoDays (its event feed: arrived, detached, made General or freed
-    /// there, or gone; its pictures' group D), and a public talented character with no word is believed at Charter, where the Hand's leaders sit.
+    /// the truth. With fog the side's latest word on each within BooksSenserInfoDays: its event feed (arrived, detached, made General or freed
+    /// there, or gone), its pictures' group D showing him somewhere, and its picture of the system itself when it shows him absent. A public
+    /// talented character with no word is believed at Charter, where the Hand's leaders sit.
     /// </summary>
     private bool BooksSenserBelievedAt(string system)
     {
@@ -462,13 +463,17 @@ public sealed partial class SimpleAi
             && (discovered.Contains(e.Id) || _h.Characters.ClassOf(e).KnownTalent)).ToList(); // id order; an own prisoner is own state
         if (_view == null) return sensers.Any(e => e.Status == CharacterStatus.Free && e.System == system);
         var last = new Dictionary<int, (string? System, int Day)>(); // lookup only: the newest word on each enemy character
-        var notes = _mem.Notes; int since = Today - _p.AbductionInfoDays;
+        var notes = _mem.Notes; int since = Today - _p.BooksSenserInfoDays;
         for (int i = notes.Count - 1; i >= 0 && notes[i].Floor >= since; i--)
             if (notes[i].Kind is AiNoteKind.EnemyCharacterAt or AiNoteKind.EnemyCharacterGone)
                 last.TryAdd(notes[i].Value, (notes[i].Kind == AiNoteKind.EnemyCharacterAt ? notes[i].System : null, notes[i].Day));
         foreach (var (sys, c, stamp) in _view.CharactersSeen()) // m5-fog-and-hq §F1 group D; the feed wins on the same day
             if (c.Side == Enemy && stamp >= since && (!last.TryGetValue(c.Id, out var w) || stamp > w.Day))
                 last[c.Id] = (c.Status == CharacterStatus.Free ? sys : null, stamp);
+        // the side's own picture of the system: a senser it does not show was not there on that day (group D lists every character present)
+        if (_view.Picture(system)?.Characters is { } here && here.Stamp >= since)
+            foreach (var e in sensers)
+                if (!here.Value.Any(x => x.Id == e.Id) && (!last.TryGetValue(e.Id, out var w) || here.Stamp > w.Day)) last[e.Id] = (null, here.Stamp);
         const string charter = Praedra.Core.Control.ControlModule.CapitalSystem;
         return sensers.Any(e => last.TryGetValue(e.Id, out var w) ? w.System == system
             : _h.Characters.ClassOf(e).KnownTalent && system == charter);
