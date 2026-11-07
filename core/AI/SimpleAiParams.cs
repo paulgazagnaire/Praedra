@@ -692,12 +692,21 @@ public sealed record SimpleAiParams
     /// <summary>
     /// Burn the Books with Talent at the right moment (AI trainer 2026-11-07; Paul 2026-11-07 "Yep" to the Collective sending Talented agents
     /// on Burn the Books at the right moment): while the Collective believes no known Hand Talent senser stands at Charter (a public talented
-    /// character, or one its own characters discovered: m5-missions §3a; with fog its latest word within AbductionInfoDays, and a public one
+    /// character, or one its own characters discovered: m5-missions §3a; with fog its latest word within BooksSenserInfoDays, and a public one
     /// with no word is believed at Charter), it sends a character whose Talent it knows (aware) before any other job takes him. While one is
     /// believed there it never sends an aware character (the senser would foil the try) and picks the others as before (BooksBlindPick).
     /// Collective only. DEFAULT off.
     /// </summary>
     public bool BooksTalentWindow { get; init; }
+    /// <summary>
+    /// BooksTalentWindow: how long the Collective trusts its last word on where a known Hand senser stands (feed notes, group D sightings, its
+    /// picture of Charter showing him absent). AI trainer 2026-11-07, QA-97: within AbductionInfoDays (5) the window never opened, as the
+    /// Collective rarely has five-day-fresh word on both The Chair and Cassia Ravilla. DEFAULT 180 (ai tuning). Measured, Medium mirror (the
+    /// Hand AI keeps The Chair at Charter), 192 seeds, day 3000, fog, Hand / Collective / open: 5 days 48 / 89 / 55 with 0 known-Talent tries;
+    /// 180 days 49 / 92 / 51 with 45 tries, 21 of them foiled by a senser (stale word), against 127 and 93 with the window off. Medium
+    /// Collective against a passive Hand with The Chair placed off Charter, seeds 1-36 to day 1500: 3 known-Talent tries at 5 days, 8 at 180.
+    /// </summary>
+    public int BooksSenserInfoDays { get; init; } = 180;
 
     // ---- what to build, by side (first class that is buildable, researched and affordable wins). Class names of unit-and-facility-costs.csv. DEFAULT.
     public string Transport(Side side) => side == Side.Hand ? "Bond II" : "Barge";

@@ -234,7 +234,8 @@ public sealed partial class SimpleAi
         _mem.KeepAtLeast(
             battle: Math.Max(_p.LossMemoryDays, _p.RunnerMemoryDays), systemLost: _p.RetakeDays,
             bombardment: _p.UseFog ? Math.Max(RecentBombardmentDays, _p.FogKillMemoryDays) : RecentBombardmentDays, // and with fog back to the last ground look (AiMemory.ForSave)
-            lookFoiled: Math.Max(_p.SpyFoilMemoryDays, _p.HqRecheckFoilDays), hqMoved: _p.HqMoveCooldownDays, character: _p.AbductionInfoDays,
+            lookFoiled: Math.Max(_p.SpyFoilMemoryDays, _p.HqRecheckFoilDays), hqMoved: _p.HqMoveCooldownDays,
+            character: _p.BooksTalentWindow && _side == Side.Collective ? Math.Max(_p.AbductionInfoDays, _p.BooksSenserInfoDays) : _p.AbductionInfoDays,
             harvesterYardGone: _p.HarvesterYardValue > 0 ? _p.HarvesterBuildSeenDays : 0, booksFailed: _p.BurnTheBooks ? _p.BooksRetryDays : 0);
         _mem.Ingest(Events, IsArmedCapital);
         var mem = _mem;

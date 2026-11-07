@@ -535,6 +535,32 @@ public class SimpleAiAgentsTests
         Assert.Equal(awareSent, o.Characters[0] == aware.Id);
     }
 
+    // QA-97 (QA round 144): with fog the window trusted only five-day-fresh word on The Chair and Cassia Ravilla, so it never opened against a
+    // Hand that kept them off Charter. BooksSenserInfoDays (DEFAULT 180): word that both stood elsewhere 30 days ago opens the window; with the
+    // old 5 days it does not. Seed 1, fog, the notes put straight into the Collective's memory, as BurnTheBooks_AiWaitsAfterAFailedTry.
+    [Theory]
+    [InlineData(180, true)]
+    [InlineData(5, false)]
+    public void BurnTheBooks_TalentWindow_TrustsWordOnTheSensersForBooksSenserInfoDays(int infoDays, bool awareSent)
+    {
+        Assert.Equal(180, new SimpleAiParams().BooksSenserInfoDays);
+        const string charter = Praedra.Core.Control.ControlModule.CapitalSystem;
+        var (_, h) = Match(1, Fog);
+        var mine = h.Game.State.Characters.Characters.Values.Where(c => c.Side == Side.Collective && h.Characters.ClassOf(c).Kind != CharacterKind.Major && c.Placed && c.System != null)
+            .OrderBy(c => c.Id).ToList();
+        foreach (var c in mine) (c.TalentHolder, c.TalentDiscovered) = (false, false);
+        var aware = mine.Last(); (aware.TalentHolder, aware.TalentDiscovered) = (true, true);
+        var elsewhere = mine.First().System!;
+        Assert.NotEqual(charter, elsewhere);
+        int day = h.Game.Day - 30;
+        foreach (var e in h.Game.State.Characters.Characters.Values.Where(c => c.Side == Side.Hand && h.Characters.ClassOf(c).KnownTalent).OrderBy(c => c.Id))
+            h.AiMemoryFor(Side.Collective, true).Notes.Add(new AiNote { Kind = AiNoteKind.EnemyCharacterAt, Value = e.Id, Day = day, Floor = day, System = elsewhere });
+        var ai = new SimpleAi(h, Side.Collective, Fog with { BurnTheBooks = true, BooksTalentWindow = true, BooksSenserInfoDays = infoDays });
+        List<StartMissionOrder> Books() => h.Game.Queue.OfType<StartMissionOrder>().Where(o => o.Kind == MissionKind.BurnTheBooks).ToList();
+        for (int d = 0; d < 2 && Books().Count == 0; d++) { ai.PlanDay(); if (Books().Count == 0) h.Game.Step(); } // as BurnTheBooks_CollectiveAiSendsOneTeam
+        Assert.Equal(awareSent, Books().Single().Characters[0] == aware.Id);
+    }
+
     // m5-missions §6b AI (SimpleAiParams.BooksRetryDays, DEFAULT 180): a failed Burn the Books in the AI memory inside the window stops a new
     // try; one older than the window does not. Seed 1, fog, the note put straight into the Collective's memory.
     [Theory]
