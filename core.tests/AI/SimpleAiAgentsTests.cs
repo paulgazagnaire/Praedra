@@ -506,6 +506,35 @@ public class SimpleAiAgentsTests
         if (blind && !talented) Assert.False(sent.TalentHolder); // picked by skill alone
     }
 
+    // m5-missions §6b AI, BooksTalentWindow (AI trainer 2026-11-07; Paul: send Talented agents at the right moment): seed 1, fog on, one
+    // non-major Collective character aware of his Talent (the last by id), the others with none. The Hand's public talented characters (The
+    // Chair, Cassia Ravilla) are left where the setup puts them, with no word on them (so believed at Charter), or made Collective prisoners.
+    // On: with a senser believed at Charter the aware one is never sent (another goes, blind); with none he goes first, before other jobs.
+    [Theory]
+    [InlineData(true, true, false)]
+    [InlineData(true, false, true)]
+    [InlineData(false, false, false)]
+    public void BurnTheBooks_TalentWindow_SendsKnownTalentOnlyWhenNoSenserIsAtCharter(bool on, bool senserThere, bool awareSent)
+    {
+        Assert.False(new SimpleAiParams().BooksTalentWindow);
+        const string charter = Praedra.Core.Control.ControlModule.CapitalSystem;
+        var p = Fog;
+        var (_, h) = Match(1, p);
+        var mine = h.Game.State.Characters.Characters.Values.Where(c => c.Side == Side.Collective && h.Characters.ClassOf(c).Kind != CharacterKind.Major && c.Placed && c.System != null)
+            .OrderBy(c => c.Id).ToList();
+        foreach (var c in mine) (c.TalentHolder, c.TalentDiscovered) = (false, false);
+        var aware = mine.Last(); (aware.TalentHolder, aware.TalentDiscovered) = (true, true);
+        var sensers = h.Game.State.Characters.Characters.Values.Where(c => c.Side == Side.Hand && h.Characters.ClassOf(c).KnownTalent).ToList();
+        Assert.NotEmpty(sensers);
+        if (senserThere) Assert.Contains(sensers, e => e.System == charter && e.Status == CharacterStatus.Free); // where the setup puts The Chair
+        else foreach (var e in sensers) (e.Status, e.Captor) = (CharacterStatus.Captured, Side.Collective); // no free known senser anywhere
+        var ai = new SimpleAi(h, Side.Collective, p with { BurnTheBooks = true, BooksTalentWindow = on });
+        List<StartMissionOrder> Books() => h.Game.Queue.OfType<StartMissionOrder>().Where(o => o.Kind == MissionKind.BurnTheBooks).ToList();
+        for (int d = 0; d < 2 && Books().Count == 0; d++) { ai.PlanDay(); if (Books().Count == 0) h.Game.Step(); } // as BurnTheBooks_CollectiveAiSendsOneTeam
+        var o = Books().Single();
+        Assert.Equal(awareSent, o.Characters[0] == aware.Id);
+    }
+
     // m5-missions §6b AI (SimpleAiParams.BooksRetryDays, DEFAULT 180): a failed Burn the Books in the AI memory inside the window stops a new
     // try; one older than the window does not. Seed 1, fog, the note put straight into the Collective's memory.
     [Theory]

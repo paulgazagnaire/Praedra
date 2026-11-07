@@ -20,7 +20,9 @@ public class SimpleAiGuerrillaTests
 
     // play to win (AiLevels.PlayToWin, 2026-10-26) off: the floors below were measured before it, and it moves every seed
     private static readonly SimpleAiParams Medium = MultiSeed.WithoutPlayToWin(AiLevels.For(AiLevel.Medium));
-    private static readonly SimpleAiParams Old = Medium with { SafeHearth = false, Underground = false, Guerrilla = false };
+    // BooksTalentWindow (AI trainer 2026-11-07) off too: it moves the seeds the floors below were measured on (SafeHearth on, seed 5 then
+    // makes 1 move onto a world below HearthMinRegiments by day 1500)
+    private static readonly SimpleAiParams Old = Medium with { SafeHearth = false, Underground = false, Guerrilla = false, BooksTalentWindow = false };
 
     [Fact]
     public void Switches_AreOffByDefault_OnInMediumAndHard_OffInEasyButTheSafeHearth()
