@@ -215,8 +215,10 @@ public sealed partial class SimpleAi
         string cls = _p.InvasionRegiment(_side);
         if (rally == null || !Available(cls)) return;
         // InvasionBatchesOnly: a lone spare regiment on a far system is not an invasion force (a strike pile does not fly across the map for one)
-        int have = _h.Economy.Objects.Count(o => o.Category == ObjectCategory.Regiment && o.Side == _side && o.AboardShip != 0)
-                   + HeldSystems().Select(SpareRegimentsAt).Where(n => !_p.InvasionBatchesOnly || n >= _p.MinLaunchRegiments).Sum();
+        // InvasionReadyAtRally (Collective): only the spares at the rally system, where the strike piles load, are ready (rule: ai tuning, AI trainer 2026-11-07)
+        int spares = _p.InvasionReadyAtRally && _side == Side.Collective ? SpareRegimentsAt(rally)
+                     : HeldSystems().Select(SpareRegimentsAt).Where(n => !_p.InvasionBatchesOnly || n >= _p.MinLaunchRegiments).Sum();
+        int have = _h.Economy.Objects.Count(o => o.Category == ObjectCategory.Regiment && o.Side == _side && o.AboardShip != 0) + spares;
         have += PendingRegiments().GetValueOrDefault(rally);
         if (have >= _p.InvasionRegimentTarget) return;
         int count = Math.Min(_p.InvasionRegimentTarget - have, _p.GarrisonBatch);

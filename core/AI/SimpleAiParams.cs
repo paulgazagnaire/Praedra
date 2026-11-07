@@ -159,6 +159,16 @@ public sealed record SimpleAiParams
     /// passive Collective's HQ on day 748 instead of 1282 but ended the AI-vs-AI seed 5 game on day 214 with no battle. Off = every spare counts.
     /// </summary>
     public bool InvasionBatchesOnly { get; init; } = false;
+    /// <summary>
+    /// The Collective counts as ready for InvasionRegimentTarget only the regiments aboard its ships and the spares standing at its rally
+    /// system, where the strike piles load; spares left on other worlds no longer stop the training (AI trainer 2026-11-07, Paul "fix" the
+    /// Collective training too few troops). Without it the Collective counted about 45 spares scattered over its worlds as an invasion force,
+    /// built almost nothing more and kept about 900 of its upkeep room unused on day 500, while the Hand's shelling killed those spares (4,431
+    /// Collective regiments lost to bombardment in 96 games). Medium mirror, 96 seeds (1-96), day 3000, fog, main aeb5f12, Hand / Collective /
+    /// no winner: off 26 / 36 / 34, on 19 / 48 / 29; Medium Hand against the Hard Collective: off 15 / 55 / 26, on 11 / 69 / 16. Collective only
+    /// (the Hand never reads it). DEFAULT off (Medium and Hard turn it on; Easy keeps the old count).
+    /// </summary>
+    public bool InvasionReadyAtRally { get; init; }
     /// <summary>A strike pile of WinStrikeStrength fetches the regiments for the game-winning system first when at most this many regiments are believed there (-1 = never). DEFAULT.</summary>
     public int WinRushDefenders { get; init; } = 2;
     /// <summary>Target value added to the enemy HQ the side knows (KnownEnemyHq), and to the game-winning system for a pile of WinStrikeStrength

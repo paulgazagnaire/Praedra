@@ -40,7 +40,8 @@ public static class AiLevels
             // AI trainer 2026-10-27 (QA-58; Paul: the Collective goes after a harvester being built): HarvesterYardValue 2000 at Medium and Hard.
             // 96 seeds against a Hand that builds harvesters (scratch: upkeep once built, 4x build, 8 yards): 18 harvesters spiked in the yard
             // (0 without), sightings 43 vs 35, Hand / Collective / open 17 / 55 / 24 vs 18 / 53 / 25; Medium mirror 27 / 43 / 26 vs 29 / 43 / 24.
-            AiLevel.Medium => PlayToWin(p) with { SafeHearth = true, Underground = true, Guerrilla = true, HarvesterYardValue = HarvesterYardHunt },
+            // AI trainer 2026-11-07 (Paul: fix the Collective training too few troops): InvasionReadyAtRally at Medium and Hard (numbers there).
+            AiLevel.Medium => PlayToWin(p) with { SafeHearth = true, Underground = true, Guerrilla = true, HarvesterYardValue = HarvesterYardHunt, InvasionReadyAtRally = true },
             // AI trainer 2026-10-17 (sim tourney, 16 seeds x both sides, Medium against Medium plus one change; a placebo change scored 55%, so
             // only a gap well above that counts): a military review every day (Medium every 3) took 63% of the systems, the one clear win of 15
             // tried. Probe speculators on the HQ hunt found the Hearth in 13 of 16 games against 8 for Medium without costing systems (51%); kept
@@ -53,6 +54,7 @@ public static class AiLevels
             {
                 MilitaryEvery = 1, HuntSpeculators = 8, SafeHearth = true, Underground = true, Guerrilla = true,
                 UndergroundForcesWanted = 20, UndergroundSubversion = 10, WatchLooks = 4, RaidStrikes = 3, HarvesterYardValue = HarvesterYardHunt,
+                InvasionReadyAtRally = true,
             },
             _ => p,
         };
