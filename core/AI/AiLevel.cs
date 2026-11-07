@@ -41,7 +41,11 @@ public static class AiLevels
             // 96 seeds against a Hand that builds harvesters (scratch: upkeep once built, 4x build, 8 yards): 18 harvesters spiked in the yard
             // (0 without), sightings 43 vs 35, Hand / Collective / open 17 / 55 / 24 vs 18 / 53 / 25; Medium mirror 27 / 43 / 26 vs 29 / 43 / 24.
             // AI trainer 2026-11-07 (Paul: fix the Collective training too few troops): InvasionReadyAtRally at Medium and Hard (numbers there).
-            AiLevel.Medium => PlayToWin(p) with { SafeHearth = true, Underground = true, Guerrilla = true, HarvesterYardValue = HarvesterYardHunt, InvasionReadyAtRally = true },
+            // AI trainer 2026-11-07 (Paul: send Talented agents on Burn the Books at the right moment): BooksTalentWindow at Medium and Hard. Medium
+            // mirror, 192 seeds, day 3000, fog, on main 7765d8a: Hand / Collective / open 45 / 93 / 54 off, 48 / 89 / 55 on (noise). Against the
+            // Hand AI the window never opened (0 known-Talent tries, against 127 off, 93 of them foiled by a senser at Charter); it
+            // matters only against a Hand whose sensers leave Charter where the Collective sees them. No burns in either run.
+            AiLevel.Medium => PlayToWin(p) with { SafeHearth = true, Underground = true, Guerrilla = true, HarvesterYardValue = HarvesterYardHunt, InvasionReadyAtRally = true, BooksTalentWindow = true },
             // AI trainer 2026-10-17 (sim tourney, 16 seeds x both sides, Medium against Medium plus one change; a placebo change scored 55%, so
             // only a gap well above that counts): a military review every day (Medium every 3) took 63% of the systems, the one clear win of 15
             // tried. Probe speculators on the HQ hunt found the Hearth in 13 of 16 games against 8 for Medium without costing systems (51%); kept
@@ -54,7 +58,7 @@ public static class AiLevels
             {
                 MilitaryEvery = 1, HuntSpeculators = 8, SafeHearth = true, Underground = true, Guerrilla = true,
                 UndergroundForcesWanted = 20, UndergroundSubversion = 10, WatchLooks = 4, RaidStrikes = 3, HarvesterYardValue = HarvesterYardHunt,
-                InvasionReadyAtRally = true,
+                InvasionReadyAtRally = true, BooksTalentWindow = true,
             },
             _ => p,
         };

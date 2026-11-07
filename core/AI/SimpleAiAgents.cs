@@ -52,11 +52,13 @@ public sealed partial class SimpleAi
         PlanMissionCancels();
         DetachRiders(busy);
         ChairHome(mine, busy);
+        // BooksTalentWindow (rule: ai tuning, AI trainer 2026-11-07): an agent of known Talent goes on Burn the Books before any other job takes it
+        bool booksSent = _p.BooksTalentWindow && PlanBurnTheBooks(mine, busy, awareOnly: true);
         var spies = ReserveSpies(mine, busy);
         PlanSystemGeneral(mine, busy, spies);
         PlanFleetOfficers(mine, busy, spies);
         PlanMissions(mine, busy);
-        PlanBurnTheBooks(mine, busy); // last: only characters no other mission wanted today
+        if (!booksSent) PlanBurnTheBooks(mine, busy, awareOnly: false); // last: only characters no other mission wanted today
         if (_p.HuntSpeculators > 0) PlanSpeculatorLooks();
     }
 
@@ -404,21 +406,29 @@ public sealed partial class SimpleAi
     /// gives a non-zero chance and Charter is Hand-held. The chance is the whole mission's, in basis points: P(not detected) by the guards the
     /// side believes are at Charter (UnseenBasisPoints, as every other mission the planner weighs; 10000 with BooksSkipDetection) times
     /// min(SBTGMSTB(input), BooksCapPercent), and 0 for a character with no Talent under BooksNeedsTalent. One mission at a time; one character, the best chance first, then the lowest id; majors
-    /// never go. It plans after every other mission, with the characters left free. The defence facilities and shields at Charter are the ones the side sees (fog) or the truth (no fog). The core judges the order.
+    /// never go. It plans after every other mission, with the characters left free; with BooksTalentWindow a first pass (awareOnly) sends an agent
+    /// of known Talent before any other job, while no known senser is believed at Charter. The defence facilities and shields at Charter are the
+    /// ones the side sees (fog) or the truth (no fog). The core judges the order. True when an order went in.
     /// </summary>
-    private void PlanBurnTheBooks(List<CharacterRecord> mine, HashSet<int> busy)
+    private bool PlanBurnTheBooks(List<CharacterRecord> mine, HashSet<int> busy, bool awareOnly)
     {
         const MissionKind k = MissionKind.BurnTheBooks;
         const string charter = Praedra.Core.Control.ControlModule.CapitalSystem;
         var mi = _h.Missions;
-        if (!_p.BurnTheBooks || _side != Side.Collective || !mi.Params.BurnTheBooks || !KindUsable(k) || _h.Game.State.Missions.BooksBurned) return;
-        if (!IsEnemyHeld(charter) || OwnMissions().Any(m => m.Kind == k)) return;
-        if (NotesSince(AiNoteKind.BooksFailed, Today - _p.BooksRetryDays).Any()) return; // BooksRetryDays: a failed try lately
+        if (!_p.BurnTheBooks || _side != Side.Collective || !mi.Params.BurnTheBooks || !KindUsable(k) || _h.Game.State.Missions.BooksBurned) return false;
+        if (!IsEnemyHeld(charter) || OwnMissions().Any(m => m.Kind == k)) return false;
+        if (NotesSince(AiNoteKind.BooksFailed, Today - _p.BooksRetryDays).Any()) return false; // BooksRetryDays: a failed try lately
+        // BooksTalentWindow (rule: ai tuning, AI trainer 2026-11-07): known Talent goes first, but only while no known senser is believed at Charter
+        bool window = _p.BooksTalentWindow && !BooksSenserBelievedAt(charter);
+        if (awareOnly && !window) return false;
         int defences = DefencesSeenAt(charter);
-        CharacterRecord? best = null; int bestChance = 0;
+        CharacterRecord? best = null; int bestChance = 0; bool bestAware = false;
         foreach (var c in mine) // id order
         {
             if (!Standing(c) || busy.Contains(c.Id) || IsKey(c) || !mi.CanDo(c, k)) continue;
+            bool aware = _p.BooksTalentWindow && c.TalentHolder && c.TalentDiscovered;
+            if (aware && !window) continue; // m5-missions §3a: a senser at Charter senses known Talent and foils the try
+            if ((awareOnly || bestAware) && !aware) continue;
             int esp = Skill(c, Characters.Skill.Espionage);
             // rule: m5-missions §6b (Decided by Paul 2026-11-04 20:47): a one-character team with no Talent never succeeds (BooksNeedsTalent, a
             // hidden rule). BooksBlindPick (Decided by Paul 2026-11-06, QA-95): the AI does not know the hidden rule, as a player does not, and picks
@@ -428,14 +438,40 @@ public sealed partial class SimpleAi
             int pct = counted ? mi.BooksChance(mi.BooksInput(Skill(c, Characters.Skill.Combat), esp, defences)) : 0;
             int unseen = mi.Params.BooksSkipDetection ? BasisPointsWhole : UnseenBasisPoints(esp, charter);
             int chance = pct == 0 ? 0 : (int)((long)unseen * pct / 100); // basis points
-            if (chance > bestChance) { bestChance = chance; best = c; }
+            if (chance > 0 && (aware && !bestAware || chance > bestChance)) { bestChance = chance; best = c; bestAware = aware; }
         }
-        if (best == null) return;
+        if (best == null) return false;
         var chars = new List<int> { best.Id };
-        if (mi.CheckStart(new StartMissionOrder(0, _side, k, chars, new List<int>(), new List<int>(), charter)).Reason != null) return;
+        if (mi.CheckStart(new StartMissionOrder(0, _side, k, chars, new List<int>(), new List<int>(), charter)).Reason != null) return false;
         long seq = _h.Game.Submit(sq => new StartMissionOrder(sq, _side, k, chars, new List<int>(), new List<int>(), charter));
         Note(seq, "Mission" + k, $"{_h.Characters.ClassOf(best).Name} from {best.System} to {charter} chance {bestChance} bp");
         busy.Add(best.Id);
+        return true;
+    }
+
+    /// <summary>
+    /// BooksTalentWindow: does the side believe a known Talent senser of the enemy stands at the system? Known: a public talented character
+    /// (its class's known Talent, m5-characters-and-talent) or one an own character discovered (Talent sensing, m5-missions §3a). Without fog
+    /// the truth. With fog the side's latest word on each within AbductionInfoDays (its event feed: arrived, detached, made General or freed
+    /// there, or gone; its pictures' group D), and a public talented character with no word is believed at Charter, where the Hand's leaders sit.
+    /// </summary>
+    private bool BooksSenserBelievedAt(string system)
+    {
+        var discovered = new HashSet<int>(_h.Characters.InPlay.Where(c => c.Side == _side && c.DiscoveredTalentHolder != 0).Select(c => c.DiscoveredTalentHolder));
+        var sensers = _h.Characters.InPlay.Where(e => e.Side != _side && !(e.Status == CharacterStatus.Captured && e.Captor == _side)
+            && (discovered.Contains(e.Id) || _h.Characters.ClassOf(e).KnownTalent)).ToList(); // id order; an own prisoner is own state
+        if (_view == null) return sensers.Any(e => e.Status == CharacterStatus.Free && e.System == system);
+        var last = new Dictionary<int, (string? System, int Day)>(); // lookup only: the newest word on each enemy character
+        var notes = _mem.Notes; int since = Today - _p.AbductionInfoDays;
+        for (int i = notes.Count - 1; i >= 0 && notes[i].Floor >= since; i--)
+            if (notes[i].Kind is AiNoteKind.EnemyCharacterAt or AiNoteKind.EnemyCharacterGone)
+                last.TryAdd(notes[i].Value, (notes[i].Kind == AiNoteKind.EnemyCharacterAt ? notes[i].System : null, notes[i].Day));
+        foreach (var (sys, c, stamp) in _view.CharactersSeen()) // m5-fog-and-hq §F1 group D; the feed wins on the same day
+            if (c.Side == Enemy && stamp >= since && (!last.TryGetValue(c.Id, out var w) || stamp > w.Day))
+                last[c.Id] = (c.Status == CharacterStatus.Free ? sys : null, stamp);
+        const string charter = Praedra.Core.Control.ControlModule.CapitalSystem;
+        return sensers.Any(e => last.TryGetValue(e.Id, out var w) ? w.System == system
+            : _h.Characters.ClassOf(e).KnownTalent && system == charter);
     }
 
     /// <summary>Completed defence facilities and shields (the DEFFACSD classes) at the system: the truth without fog, the side's picture with it.</summary>

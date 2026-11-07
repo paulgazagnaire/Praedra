@@ -689,6 +689,15 @@ public sealed record SimpleAiParams
     /// at Charter on all 223 tries, so the aware-only pick never burned). Off: only characters with discovered Talent are sent (QA-93).
     /// </summary>
     public bool BooksBlindPick { get; init; } = true;
+    /// <summary>
+    /// Burn the Books with Talent at the right moment (AI trainer 2026-11-07; Paul 2026-11-07 "Yep" to the Collective sending Talented agents
+    /// on Burn the Books at the right moment): while the Collective believes no known Hand Talent senser stands at Charter (a public talented
+    /// character, or one its own characters discovered: m5-missions §3a; with fog its latest word within AbductionInfoDays, and a public one
+    /// with no word is believed at Charter), it sends a character whose Talent it knows (aware) before any other job takes him. While one is
+    /// believed there it never sends an aware character (the senser would foil the try) and picks the others as before (BooksBlindPick).
+    /// Collective only. DEFAULT off.
+    /// </summary>
+    public bool BooksTalentWindow { get; init; }
 
     // ---- what to build, by side (first class that is buildable, researched and affordable wins). Class names of unit-and-facility-costs.csv. DEFAULT.
     public string Transport(Side side) => side == Side.Hand ? "Bond II" : "Barge";
