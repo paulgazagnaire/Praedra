@@ -25,3 +25,27 @@ jobs:
         run: |
           dotnet build core/Praedra.Core.csproj -c Release --no-incremental -p:GenerateDocumentationFile=true -p:TreatWarningsAsErrors=false "-p:NoWarn=CS1591%3BCS1573" -o "$RUNNER_TEMP/doccheck"
           python3 tools/doc-check/doc_check.py "$RUNNER_TEMP/doccheck/Praedra.Core.xml" core
+
+  # The screen playtest (godot --playtest, about a minute): plays a Collective and a Hand game through the real buttons. It is the only check
+  # of the screens, and the core tests cannot see a screen regression (QA-98, after #267). Exit code 1 on any failed check.
+  playtest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Godot 4.7.1 mono (headless)
+        run: |
+          curl -sSLf -o "$RUNNER_TEMP/godot.zip" https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_mono_linux_x86_64.zip
+          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP"
+          echo "GODOT=$RUNNER_TEMP/Godot_v4.7.1-stable_mono_linux_x86_64/Godot_v4.7.1-stable_mono_linux.x86_64" >> "$GITHUB_ENV"
+      - run: dotnet build godot/PraedraViewer.csproj
+      - name: import assets
+        working-directory: godot
+        run: timeout 600 "$GODOT" --headless --path . --import || true
+      - name: playtest
+        working-directory: godot
+        run: |
+          timeout 1200 "$GODOT" --headless --path . -- --playtest 2>&1 | tee "$RUNNER_TEMP/playtest.log" | grep -E "PLAYTEST|^===" || true
+          grep -q "PLAYTEST PASSED" "$RUNNER_TEMP/playtest.log" || { grep -E "FAIL" "$RUNNER_TEMP/playtest.log"; exit 1; }
