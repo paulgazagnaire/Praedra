@@ -14,7 +14,7 @@ namespace PraedraViewer;
 /// Building (user stories E1-E6): the yard queues of a system with progress and days left, Stop with a question that says what is lost, and
 /// the build table: pick a kind (Facilities, Ships, Fighters, Troops), set how many, click a row. Each row shows refined cost, upkeep and
 /// about how many days one takes, and says plainly when it cannot be built now (not researched, no free slot, no upkeep room). The core
-/// still judges every order when the next day starts. rule: m2-construction §Build order, §Build time; m2-maintenance §Overdraft.
+/// still judges every order when the clock moves. rule: m2-construction §Build order, §Build time; m2-maintenance §Overdraft.
 /// </summary>
 public partial class GameScreen
 {
@@ -127,7 +127,7 @@ public partial class GameScreen
         var units = p.AllUnits().Select(u => eco.Find(u)?.Class ?? "?").ToList();
         var cur = eco.Find(p.Units[0]);
         Confirm($"Stop the {FamilyName(fam).ToLowerInvariant()} at {system}?",
-            $"These units are not finished and will be removed: {Counts(units)}. The refined already spent on the {cur?.Class ?? "current unit"} ({p.Progress} of {CostOf(cur?.Class ?? "")} points) is lost, nothing is paid back. Units already finished stay. It happens when the next day starts.",
+            $"These units are not finished and will be removed: {Counts(units)}. The refined already spent on the {cur?.Class ?? "current unit"} ({p.Progress} of {CostOf(cur?.Class ?? "")} points) is lost, nothing is paid back. Units already finished stay. It happens as soon as the clock moves.",
             "Yes, stop it", () => StopBuild(system, fam));
     }
 
@@ -303,7 +303,7 @@ public partial class GameScreen
         S.Track(seq, char.ToUpper(what[0]) + what[1..]);
         S.Say($"Order sent: {what}.", MsgKind.Info, system);
         AddLogItem(S.Messages[^1], false);
-        Toast($"Order sent: {what}. It starts next day.");
+        Toast($"Order given: {what}.");
         _panelDirty = true; _panelTimer = 0;
         RefreshTop();
     }

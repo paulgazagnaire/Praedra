@@ -224,7 +224,7 @@ public partial class Main
         Expect(gs.PanelText().Contains($"Target: {target}"), "the planner shows the chosen target: " + gs.PanelText().Replace("\n", " / "));
         Expect(gs.Click($"Send: {kw} on {target}"), "click Send");
         gs.PlayRefresh();
-        Expect(!gs.PlannerOpen && gs.MissionsOpen && gs.PanelText().Contains($"{kw} on {target}") && gs.PanelText().Contains("Waiting for the next day"), "the Missions list shows the waiting mission");
+        Expect(!gs.PlannerOpen && gs.MissionsOpen && gs.PanelText().Contains($"{kw} on {target}") && gs.PanelText().Contains("as soon as the clock moves, arrives day"), "the Missions list shows the mission as given");
         int before = s.Messages.Count;
         gs.PlayDay();
         var news = s.Messages.Skip(before).Select(x => x.Text).ToList();
@@ -259,7 +259,7 @@ public partial class Main
         Expect(gs.PanelText().Contains($"At {target}, next result due day {m.Due}"), "the Missions list shows the team at the target and the next result day");
         Expect(gs.Click($"Cancel the {kw} mission on {target}"), "click Cancel");
         gs.PlayRefresh();
-        Expect(gs.PanelText().Contains("Waiting for the next day: cancel this mission"), "the list shows the waiting cancel");
+        Expect(gs.PanelText().Contains("Ordered: cancel this mission"), "the list shows the cancel as ordered");
         int before = s.Messages.Count;
         gs.PlayDay();
         Expect(s.Messages.Skip(before).Any(x => x.Text.StartsWith($"{kw} on {target} cancelled", StringComparison.Ordinal)), "message: the mission was cancelled: " + string.Join(" | ", s.Messages.Skip(before).Select(x => x.Text)));

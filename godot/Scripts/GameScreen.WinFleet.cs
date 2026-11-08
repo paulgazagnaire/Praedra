@@ -72,7 +72,7 @@ public partial class GameScreen
             ("Fighters", aboardF.Count + f.Squadrons.Count, () => FightersAboardTab(f, aboardF)),
             ("Troops", aboardR.Count, () => TroopsAboardTab(f, aboardR.Select(a => a.Regiment).ToList())));
 
-        foreach (var pend in S.PendingOf(f.Id)) Line($"Waiting for the next day: {pend}", Pending, Ui.Small);
+        foreach (var (seq, pend) in S.PendingOrdersOf(f.Id)) OrderLine(seq, $"Ordered: {pend}", Ui.Small);
         int fid = f.Id;
         var links = new List<(string, Action, string)>();
         if (still) links.Add(($"{f.At}", () => OpenMgmt(MgKind.Ground, f.At), "The planet's window: drag its leaders, troops and fighters onto this fleet"));

@@ -330,7 +330,7 @@ public partial class GameScreen
         string at = S.MyHqSystem;
         string to = G.Systems[idx].Name;
         if (at == null || to == at) return;
-        S.SubmitMoveHq(to); // the core judges it at the next day: refusals come back in Messages with the reason
+        S.SubmitMoveHq(to); // the core judges it when the clock moves: refusals come back in Messages with the reason
         S.Say($"Order sent: move the HQ to {to}.", MsgKind.Info, to);
         AddLogItem(S.Messages[^1], false);
         CancelMove();

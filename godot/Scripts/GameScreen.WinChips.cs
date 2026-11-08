@@ -90,7 +90,7 @@ public partial class GameScreen
     }
 
     /// <summary>Whether a drop may happen here (null), quietly not (""), or not, and why.</summary>
-    string Judge(Zone z, Drag d) => d.Kind is not ('L' or 'M') && _scrapped.Contains(d.Id) ? $"{ThingName(d)} is scrapped next day." : _moved.TryGetValue(d.Key, out var m) ? (z.Refuse(d) == "" ? "" : $"{ThingName(d)} already moves today: {m.Words}.") : z.Refuse(d);
+    string Judge(Zone z, Drag d) => d.Kind is not ('L' or 'M') && _scrapped.Contains(d.Id) ? $"{ThingName(d)} is being scrapped." : _moved.TryGetValue(d.Key, out var m) ? (z.Refuse(d) == "" ? "" : $"{ThingName(d)} already moves today: {m.Words}.") : z.Refuse(d);
 
     /// <summary>A zone's look: quiet; lit blue where the chip being dragged can go; dim where it can't.</summary>
     static StyleBoxFlat ZoneStyle(bool? ok, bool dashed)

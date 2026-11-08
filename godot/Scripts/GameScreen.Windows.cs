@@ -27,7 +27,7 @@ namespace PraedraViewer;
 /// General's post, the leaders, regiments, fighters and special forces standing there, the fleets in orbit) and one Fleet (its three
 /// posts, passengers, ships, fighters and troops aboard). Leaders, regiments, fighter squadrons and ships are chips you drag from one
 /// window to another; each drop sends the order or orders the rules already have (rule: m5-characters-and-talent §Orders, m3-fleets
-/// §Transfer, m3-troops-and-special-forces §Loading), and the core judges them when the next day starts. Screens only: no rule lives here.
+/// §Transfer, m3-troops-and-special-forces §Loading), and the core judges them when the clock moves. Screens only: no rule lives here.
 /// </summary>
 public partial class GameScreen
 {
@@ -78,7 +78,7 @@ public partial class GameScreen
     Control _mgLayer;
     readonly List<MgWin> _mgWins = new();        // bottom to top
     readonly List<Zone> _zones = new();
-    readonly Dictionary<string, (string Words, string Zone)> _moved = new(StringComparer.Ordinal); // a chip's key -> where its drop sends it (words, zone), until the next day
+    readonly Dictionary<string, (string Words, string Zone)> _moved = new(StringComparer.Ordinal); // a chip's key -> where its drop sends it (words, zone), until the clock moves
     readonly Dictionary<int, int> _pendingIn = new();   // fleet -> regiments or squadrons dropped onto it today (room already promised)
     int _movedDay = -1;
     bool _mgDirty, _wasDragging;
@@ -277,7 +277,7 @@ public partial class GameScreen
     void NewDay()
     {
         if (_movedDay == S.Game.Day) return;
-        _moved.Clear(); _pendingIn.Clear(); _splits.Clear(); _leaving.Clear(); _scrapped.Clear(); _movedDay = S.Game.Day;
+        _moved.Clear(); _pendingIn.Clear(); _splits.Clear(); _leaving.Clear(); _scrapped.Clear(); _dropUndo.Clear(); _movedDay = S.Game.Day;
         if (_mgWins.Count > 0) _mgDirty = true;
     }
 

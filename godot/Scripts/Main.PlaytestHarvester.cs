@@ -56,7 +56,7 @@ public partial class Main
             Expect(gs.Click("Yes, destroy it"), "confirm");
             gs.PlayRefresh();
             Expect(s.PendingOf(dsFleet).Any(p => p.StartsWith("Destroy System", StringComparison.Ordinal)) && s.QueuedOrders >= 1, "the Destroy System order is queued");
-            Expect(!gs.Enabled("Destroy System") && gs.PanelText().Contains("waiting for the next day"), "the button is greyed while the order waits");
+            Expect(!gs.Enabled("Destroy System") && gs.PanelText().Contains("The strike is ordered"), "the button is greyed while the order waits");
         }
         // an Infrastructure window left open over the target must not keep drawing its slots after the strike (Ponytail on #241)
         if (me == Side.Hand) { gs.TileClick(target, "infra"); gs.PlayRefresh(); Expect(gs.MgmtKeys.Contains($"Infra {target}"), $"the Infrastructure window of {target} is open before the strike"); }

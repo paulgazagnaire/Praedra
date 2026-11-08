@@ -277,8 +277,8 @@ public partial class GameScreen
     string StatusOf(Fleet f)
     {
         if (f.Transit is { } t && f.At == null) return $"moving to {t.Path[^1]}, arrives day {GameSession.ArrivalDay(t)}";
-        if (S.PlannedMoveOf(f.Id) is { } pm) return $"at {f.At}; moving to {pm.To}, arrives day {pm.ArrivalDay}";
-        if (S.PendingOf(f.Id).Any()) return $"at {f.At}; order waiting";
+        if (S.PlannedMoveOf(f.Id) is { } pm) return $"at {f.At}; leaving for {pm.To}, arrives day {pm.ArrivalDay}";
+        if (S.PendingOf(f.Id).Any()) return $"at {f.At}; order given";
         return $"at {f.At}";
     }
 

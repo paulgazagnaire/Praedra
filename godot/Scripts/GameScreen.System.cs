@@ -273,7 +273,7 @@ public partial class GameScreen
     {
         Heading("Headquarters");
         Note("Your HQ is here. If the Hand takes this system, the HQ is lost (and with the two leaders captured, you lose). The Hand does not know where it is unless its spies find it.");
-        if (S.PendingHqMove is string to) { Line($"Waiting for the next day: move the HQ to {to}.", Pending); return; }
+        if (S.PendingHqMove is string to) { OrderLine(S.PendingHqSeq, $"Ordered: move the HQ to {to}."); return; }
         bool pinned = S.Fog.IsPinned(at);
         Act(_moveHq ? "Cancel HQ move" : "Move HQ...", () => { if (_moveHq) CancelMove(); else StartHqMove(); },
             "Then click one of your systems. The HQ travels on the lanes (it cannot be attacked on the way) and arrives on the day shown.");

@@ -13,7 +13,7 @@ namespace PraedraViewer;
 /// <summary>
 /// Missions on the screen (rule: m5-missions): "Send on a mission..." (pick the team at one system, the kind, the target with its route and
 /// arrival day, confirm), the Missions list with Cancel, and the special forces at a system. What a team may do is asked of the core's read-only
-/// dry run (<see cref="MissionModule.CheckStart"/>); the core still judges the order when the next day starts. Only the player's own missions
+/// dry run (<see cref="MissionModule.CheckStart"/>); the core still judges the order when the clock moves. Only the player's own missions
 /// and units are shown (rule: m5-fog-and-hq §N8).
 /// </summary>
 public partial class GameScreen
@@ -62,7 +62,7 @@ public partial class GameScreen
         {
             Line($"{GameSession.KindWords(p.Kind)} on {p.Target}", Pending, 16);
             Line($"Team: {S.TeamWords(p.Characters, p.SpecialForces)}", null, 13);
-            Line($"Waiting for the next day: leaves {p.Home} then, arrives day {p.ArrivalDay}.", Pending, 13);
+            OrderLine(p.Sequence, $"Leaves {p.Home} as soon as the clock moves, arrives day {p.ArrivalDay}.", 13);
         }
         foreach (var m in list) MissionBlock(m);
         Add(new Control { CustomMinimumSize = new Vector2(0, 6) });
@@ -77,11 +77,11 @@ public partial class GameScreen
         Line($"Team: {S.TeamOf(m)}", null, 13);
         Line(char.ToUpperInvariant(S.PhaseWords(m)[0]) + S.PhaseWords(m)[1..] + ".", m.Phase == MissionPhase.Working ? Good : null, 13);
         if (m.Phase is MissionPhase.ReturnPending or MissionPhase.Returning) return;
-        bool pending = S.CancelPending(m);
-        if (pending) { Line("Waiting for the next day: cancel this mission.", Pending, 13); return; }
+        long cancelSeq = S.CancelSeqOf(m);
+        if (cancelSeq >= 0) { OrderLine(cancelSeq, "Ordered: cancel this mission.", 13); return; }
         var mm = m;
         Act($"Cancel the {GameSession.KindWords(m.Kind)} mission on {target}", () => CancelMission(mm),
-            m.Phase == MissionPhase.Working ? "The team stops and comes home. Starts when the next day begins." : "A mission can be cancelled once the team is at the target.",
+            m.Phase == MissionPhase.Working ? "The team stops and comes home. Starts as soon as the clock moves." : "A mission can be cancelled once the team is at the target.",
             m.Phase != MissionPhase.Working);
     }
 
@@ -110,7 +110,7 @@ public partial class GameScreen
     string SpecialForceState(EconObject o) =>
         !o.Completed ? "in training"
         : S.MissionOfSpecialForce(o.Id) is { } m ? $"on a {GameSession.KindWords(m.Kind)} mission"
-        : S.PendingMissionOfSpecialForce(o.Id) is { } p ? $"leaves on a {GameSession.KindWords(p.Kind)} mission next day"
+        : S.PendingMissionOfSpecialForce(o.Id) is { } p ? $"leaves on a {GameSession.KindWords(p.Kind)} mission"
         : "ready";
 
     string SpecialForceSkills(EconObject o)
@@ -259,7 +259,7 @@ public partial class GameScreen
                      (rec.Foilable ? " Enemy units at the target may catch the team." : ""), Dim, 13);
             }
             Add(new Control { CustomMinimumSize = new Vector2(0, 4) });
-            Act($"Send: {GameSession.KindWords(sel)} on {p.Target}", ConfirmMission, "Starts when the next day begins. The core judges the order then; a refusal comes back in Messages.", chk.Reason != null);
+            Act($"Send: {GameSession.KindWords(sel)} on {p.Target}", ConfirmMission, "Starts as soon as the clock moves. The core judges the order then; a refusal comes back in Messages.", chk.Reason != null);
         }
         CloseRow();
     }
@@ -282,7 +282,7 @@ public partial class GameScreen
     {
         if (c.Status != CharacterStatus.Free) return GameSession.StatusWords(c);
         if (S.MissionOf(c.Id) != null) return "already on a mission";
-        if (S.PendingMissionOf(c.Id) != null) return "already leaves on a mission next day";
+        if (S.PendingMissionOf(c.Id) != null) return "already ordered on a mission";
         if (c.AttachedFleet != 0) return "aboard a fleet (detach first)";
         if (S.SystemPostOf(c) != null) return "system General here (release the post first)";
         if (c.Transit != null) return "about to travel";

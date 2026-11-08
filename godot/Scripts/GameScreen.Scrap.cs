@@ -9,7 +9,7 @@ namespace PraedraViewer;
 
 /// <summary>
 /// Scrapping (story C9): ships from the fleet window, fighters, regiments and buildings from the system window. The order is the core's
-/// ScrapObject, one per object; the core removes it when the next day starts and gives back half its refined cost.
+/// ScrapObject, one per object; the core removes it when the clock moves and gives back half its refined cost.
 /// rule: m2-maintenance §Scrapping and refunds, m2-construction §Scrapping (special forces cannot be scrapped).
 /// </summary>
 public partial class GameScreen
@@ -18,7 +18,7 @@ public partial class GameScreen
     int RefundOf(EconObject o) => (CostRowOf(o)?.Cost ?? 0) / S.Host.Economy.Params.RefundDivisor;
     int UpkeepOf(EconObject o) => CostRowOf(o)?.Maintenance ?? 0;
 
-    readonly HashSet<int> _scrapped = new();   // units and buildings scrapped today (the order applies next day)
+    readonly HashSet<int> _scrapped = new();   // units and buildings scrapped today (the order applies when the clock moves)
 
     static bool Scrappable(EconObject o) => o.Completed && o.Category != ObjectCategory.SpecialForce;
 
@@ -34,7 +34,7 @@ public partial class GameScreen
     string ScrapWords(List<EconObject> list, string what, string system)
     {
         int refund = list.Sum(RefundOf), upkeep = list.Sum(UpkeepOf);
-        string body = $"{what} will be taken apart when the next day starts. You get {refund} refined back (half the cost) and {upkeep} upkeep is freed. This cannot be undone.";
+        string body = $"{what} will be taken apart as soon as the clock moves. You get {refund} refined back (half the cost) and {upkeep} upkeep is freed. This cannot be undone.";
         if (list.Any(o => o.Category == ObjectCategory.CapitalShip) && list.Any(o => S.Host.Economy.Objects.Any(x => x.AboardShip == o.Id)))
             body += $" Fighters and regiments aboard stay at {system}.";
         // a mine or a refinery is upkeep room: each pair gives 50 (rule: m2-maintenance §Capacity)

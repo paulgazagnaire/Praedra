@@ -23,7 +23,7 @@ namespace PraedraViewer;
 /// <summary>What a drop may do, asked of the core's own order checks, and the orders a drop sends. Moved from GameScreen.Windows.cs (Ponytail, moves only).</summary>
 public partial class GameScreen
 {
-    // ================================================================== what a drop may do (the core judges again next day)
+    // ================================================================== what a drop may do (the core judges again when the clock moves)
 
     /// <summary>Where a dragged thing is now: its system, and its fleet (0 when on the ground).</summary>
     (string System, int Fleet) WhereNow(Drag d)
@@ -383,7 +383,7 @@ public partial class GameScreen
         return $"{region} · {sec}";
     }
 
-    /// <summary>A drop is its own feedback (the chip moves at once): the "order sent, starts next day" toast stays quiet meanwhile.</summary>
+    /// <summary>A drop is its own feedback (the chip moves at once): the "order given" toast stays quiet meanwhile.</summary>
     internal bool MgDropping { get; private set; }
-    void RunDrop(Action drop) { MgDropping = true; try { drop(); } finally { MgDropping = false; } }
+    void RunDrop(Action drop) { MgDropping = true; try { RecordDrop(drop); } finally { MgDropping = false; } }
 }
