@@ -237,7 +237,7 @@ public partial class GameScreen
     {
         S.Say($"Order sent: {what}.", MsgKind.Info, system);
         AddLogItem(S.Messages[^1], false);
-        if (!MgDropping) Toast($"Order given: {what}. Cancel it from the panel until the clock moves.");   // a window drop shows itself at once
+        if (!MgDropping) Toast($"Order given: {what}.");   // a window drop shows itself at once
         _panelDirty = true; _panelTimer = 0;
         RefreshMgmt();
         RefreshTop();

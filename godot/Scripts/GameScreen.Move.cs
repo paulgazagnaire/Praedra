@@ -280,7 +280,7 @@ public partial class GameScreen
         var plan = S.Host.PlanMove(Me, f.Id, to, via);
         long seq = Fm.SubmitMove(Me, f.Id, to, via);
         S.TrackFleet(f.Id, seq, $"Move {f.Name} to {to}");
-        if (plan.Ok) S.PlanMove(f.Id, new GameSession.PlannedMove(to, plan.Path.ToList(), plan.HopTicks.Sum(), plan.ArrivalDay));
+        if (plan.Ok) S.PlanMove(f.Id, new GameSession.PlannedMove(to, plan.Path.ToList(), plan.HopTicks.Sum(), plan.ArrivalDay, seq));
         string viaWords = via.Count == 0 ? "" : " via " + string.Join(", ", via);
         string trapWords = plan.Red ? $" (warned: interdictor seen at {string.Join(", ", plan.Traps.Select(t => t.System))})" : "";
         S.Say($"Order sent: move {f.Name} to {to}{viaWords}{trapWords}.", plan.Red ? MsgKind.Warn : MsgKind.Info, to);

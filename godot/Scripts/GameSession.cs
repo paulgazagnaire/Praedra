@@ -72,8 +72,6 @@ public sealed partial class GameSession
     readonly Dictionary<long, int> _pendingChar = new();
     readonly HashSet<long> _charOrders = new();
     readonly Dictionary<int, PlannedMove> _plannedCharMoves = new();
-    readonly Dictionary<long, int> _moveSeqFleet = new();  // the order that planned a fleet's move (cancelling it drops the drawn route)
-    readonly Dictionary<long, int> _moveSeqChar = new();   // the same for a leader travelling alone
     long _hqSeq = -1;
     int _printed; // index into the fog's event feed for the player's side (EventsFor), not the unfiltered list
     // Names as they were before the day ran (a destroyed ship or a dissolved fleet is gone afterwards).
@@ -229,8 +227,8 @@ public sealed partial class GameSession
         _pending.Remove(sequence); _pendingFleet.Remove(sequence);
         _pendingChar.Remove(sequence); _charOrders.Remove(sequence);
         _missionOrders.Remove(sequence); _pendingMissions.Remove(sequence);
-        if (_moveSeqFleet.Remove(sequence, out int fleet)) _plannedMoves.Remove(fleet);
-        if (_moveSeqChar.Remove(sequence, out int ch)) _plannedCharMoves.Remove(ch);
+        foreach (var k in _plannedMoves.Where(kv => kv.Value.Seq == sequence).Select(kv => kv.Key).ToList()) _plannedMoves.Remove(k);
+        foreach (var k in _plannedCharMoves.Where(kv => kv.Value.Seq == sequence).Select(kv => kv.Key).ToList()) _plannedCharMoves.Remove(k);
         if (sequence == _hqSeq) { PendingHqMove = null; _hqSeq = -1; }
         return true;
     }
@@ -252,16 +250,9 @@ public sealed partial class GameSession
         _pendingFleet.Where(kv => kv.Value == fleet && _pending.ContainsKey(kv.Key)).OrderBy(kv => kv.Key).Select(kv => (kv.Key, _pending[kv.Key]));
 
     /// <summary>A move order that was given but not yet started (the fleet leaves as soon as the clock moves).</summary>
-    public readonly record struct PlannedMove(string To, IReadOnlyList<string> Path, int Days, int ArrivalDay);
+    public readonly record struct PlannedMove(string To, IReadOnlyList<string> Path, int Days, int ArrivalDay, long Seq);
 
-    /// <summary>Draw the move of the fleet's newest order (the one just given) until the clock moves.</summary>
-    public void PlanMove(int fleet, PlannedMove m)
-    {
-        _plannedMoves[fleet] = m;
-        foreach (var k in _moveSeqFleet.Where(kv => kv.Value == fleet).Select(kv => kv.Key).ToList()) _moveSeqFleet.Remove(k);
-        var seq = _pendingFleet.Where(kv => kv.Value == fleet).Select(kv => kv.Key).DefaultIfEmpty(-1).Max();
-        if (seq >= 0) _moveSeqFleet[seq] = fleet;
-    }
+    public void PlanMove(int fleet, PlannedMove m) => _plannedMoves[fleet] = m;
     public PlannedMove? PlannedMoveOf(int fleet) => _plannedMoves.TryGetValue(fleet, out var m) ? m : null;
     public IEnumerable<KeyValuePair<int, PlannedMove>> PlannedMoves => _plannedMoves;
 
@@ -280,7 +271,7 @@ public sealed partial class GameSession
         ReadEvents(outcome);
         // Every order given before this day was judged in this Step: nothing is "waiting" any more.
         _pending.Clear(); _pendingFleet.Clear(); _plannedMoves.Clear(); PendingHqMove = null; _hqSeq = -1;
-        _pendingChar.Clear(); _charOrders.Clear(); _plannedCharMoves.Clear(); _moveSeqFleet.Clear(); _moveSeqChar.Clear();
+        _pendingChar.Clear(); _charOrders.Clear(); _plannedCharMoves.Clear();
         _pendingMissions.Clear(); _missionOrders.Clear();
         Winner = GameBoot.WinnerOf(Host);
         if (Winner is Side w)
@@ -441,13 +432,7 @@ public sealed partial class GameSession
     public IEnumerable<(long Seq, string What)> PendingOrdersOfCharacter(int character) =>
         _pendingChar.Where(kv => kv.Value == character && _pending.ContainsKey(kv.Key)).OrderBy(kv => kv.Key).Select(kv => (kv.Key, _pending[kv.Key]));
 
-    public void PlanCharacterMove(int character, PlannedMove m)
-    {
-        _plannedCharMoves[character] = m;
-        foreach (var k in _moveSeqChar.Where(kv => kv.Value == character).Select(kv => kv.Key).ToList()) _moveSeqChar.Remove(k);
-        var seq = _pendingChar.Where(kv => kv.Value == character).Select(kv => kv.Key).DefaultIfEmpty(-1).Max();
-        if (seq >= 0) _moveSeqChar[seq] = character;
-    }
+    public void PlanCharacterMove(int character, PlannedMove m) => _plannedCharMoves[character] = m;
     public PlannedMove? PlannedCharacterMoveOf(int character) => _plannedCharMoves.TryGetValue(character, out var m) ? m : null;
 
     /// <summary>The last day of a trip (the next stop plus the remaining hops).</summary>
