@@ -38,12 +38,13 @@ jobs:
       - name: Godot 4.7.1 mono (headless)
         run: |
           curl -sSLf -o "$RUNNER_TEMP/godot.zip" https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_mono_linux_x86_64.zip
+          echo "6ca7ff0459f1b806900be683c1b0837c607a9c16834c530dc68c81b9fc3ae1f6  $RUNNER_TEMP/godot.zip" | sha256sum -c -
           unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP"
           echo "GODOT=$RUNNER_TEMP/Godot_v4.7.1-stable_mono_linux_x86_64/Godot_v4.7.1-stable_mono_linux.x86_64" >> "$GITHUB_ENV"
       - run: dotnet build godot/PraedraViewer.csproj
       - name: import assets
         working-directory: godot
-        run: timeout 600 "$GODOT" --headless --path . --import || true
+        run: timeout 600 "$GODOT" --headless --path . --import
       - name: playtest
         working-directory: godot
         run: |
