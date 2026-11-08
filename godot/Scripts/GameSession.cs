@@ -915,10 +915,12 @@ public sealed partial class GameSession
             case Praedra.Core.Harvester.SystemDestroyed:
                 foreach (var m in DescribeHarvester(e))
                 {
-                    o.PauseReason ??= "destroyed";
                     var (title, detail) = HarvestReport((Praedra.Core.Harvester.SystemDestroyed)e); // rule: m5-harvester §7 Harvest report
-                    o.Popup ??= m with { Title = title, Detail = detail };
-                    yield return m;
+                    var report = m with { Title = title, Detail = detail };
+                    // QA-98: the harvest report wins the day's popup over a battle or a capture the same day (those stay a click away in the log),
+                    // and the log line carries the report too, so it can be opened again later
+                    if (o.PauseReason != "destroyed") { o.PauseReason = "destroyed"; o.Popup = report; }
+                    yield return report;
                 }
                 break;
             case Praedra.Core.Harvester.IHarvesterEvent or Praedra.Core.Harvester.DestroySystemCancelled:
@@ -987,8 +989,7 @@ public sealed partial class GameSession
         string line = $"Battle at {r.System}: {(youWon ? "you won" : youLost ? "you lost" : verdict.TrimEnd('.').ToLowerInvariant())}. " +
                       $"Collective losses {r.CollectiveLosses}, Hand losses {r.HandLosses}. (click for the report)";
         var m = new Message(e.Day, line, r.System, MsgKind.Battle, $"Battle at {r.System}", detail);
-        o.Popup = m;
-        o.PauseReason = "battle";
+        if (o.PauseReason != "destroyed") { o.Popup = m; o.PauseReason = "battle"; } // QA-98: a harvest the same day keeps the popup
         return m;
     }
 }
