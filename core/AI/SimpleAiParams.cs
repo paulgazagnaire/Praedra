@@ -716,6 +716,7 @@ public sealed record SimpleAiParams
     /// Hand / Collective / open 49 / 92 / 51 -> 51 / 92 / 49, known-Talent tries 45 -> 119 (21 -> 47 foiled by a senser), no burns.
     /// </summary>
     public int BooksCharterLookDays { get; init; } = 30;
+    /// <summary>BooksTalentWindow: the worth of that look at Charter among the spies' jobs (DEFAULT 900, as KeyHuntValue and BlindLookValue; ai tuning).</summary>
     public int BooksCharterLookValue { get; init; } = 900;
 
     // ---- what to build, by side (first class that is buildable, researched and affordable wins). Class names of unit-and-facility-costs.csv. DEFAULT.
