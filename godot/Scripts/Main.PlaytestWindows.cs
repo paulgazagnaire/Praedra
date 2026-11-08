@@ -19,13 +19,18 @@ public partial class Main
         var s = gs.S; var me = s.Player; var cm = s.Host.Characters; var fm = s.Host.Fleets;
         GD.Print("--- management windows");
         bool Free(CharacterRecord c) => c.Status == CharacterStatus.Free && c.Transit == null && !cm.IsOnMission(c.Id) && cm.LocationOf(c) != null;
-        // a fleet standing still with a free leader of yours at the same system (the character playtest leaves one)
-        var pair = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null && f.Transit == null && f.Ships.Count > 0).OrderBy(f => f.Id)
-            .SelectMany(f => s.MyCharacters.Where(c => Free(c) && cm.LocationOf(c) == f.At && c.AttachedFleet != f.Id).OrderBy(c => c.Id).Select(c => (f, c)))
-            .FirstOrDefault();
-        Expect(pair.f != null, "a fleet and a free leader of yours stand at the same system");
-        if (pair.f == null) return;
-        var (fleet, lead) = pair;
+        // a fleet standing still with a free leader of yours at a system you hold. This runs after 400 days against the real AI, which may have
+        // sunk every fleet that stood by a leader (QA-98), so the test plants its own two-transport fleet by the first free leader (test only,
+        // like the harvester fleet): the checks no longer depend on what the AI did.
+        var lead = s.MyCharacters.Where(c => Free(c) && c.AttachedFleet == 0 && s.OwnerOf(cm.LocationOf(c)) == me).OrderBy(c => c.Id).FirstOrDefault();
+        Expect(lead != null, "a free leader of yours stands on a system you hold");
+        if (lead == null) return;
+        string transport = me == Praedra.Core.Clock.Side.Hand ? "Bond II" : "Barge";
+        var fleet = s.Game.State.Fleets[fm.AddFleet(me, "Window Test", new[] { transport, transport }, cm.LocationOf(lead))];
+        // the Lictors' build card below needs a Training facility at Charter, which 400 AI days may have destroyed (QA-98): plant one (test only)
+        string capital = Praedra.Core.Control.ControlModule.CapitalSystem;
+        if (me == Praedra.Core.Clock.Side.Hand && s.OwnerOf(capital) == me && s.Host.Economy.FreeEnergy(capital) > 0)
+            s.Host.Economy.AddFacility(capital, FacilityKind.TrainingFacility);
         string sys = fleet.At, lname = s.CharName(lead.Id);
         int fid = fleet.Id;
         GD.Print($"  {lname} and {fleet.Name} at {sys}");
@@ -192,9 +197,10 @@ public partial class Main
             Expect(r == null, $"drop one ship of {src.Name} ({src.At}) on {dst.Name} ({dst.At}): {r ?? "sent"}");
             gs.PlayDay();
             var flying = s.Game.State.Fleets.Values.FirstOrDefault(f => f.Ships.Contains(one));
-            Expect(flying != null && flying.Id != src.Id && flying.JoinFleet == dst.Id && (flying.Transit != null || flying.At == dst.At),
-                $"next day it has split off and flies to join {dst.Name}");
-            if (flying != null && flying.Id != src.Id) joinCheck = (flying.Id, dst, one);
+            // a one-day trip has already joined by the next day (QA-98: the planted fleet stands next to the target)
+            Expect(flying != null && (flying.Id == dst.Id || flying.Id != src.Id && flying.JoinFleet == dst.Id && (flying.Transit != null || flying.At == dst.At)),
+                $"next day it has split off and flies to join {dst.Name} (or has joined it)");
+            if (flying != null && flying.Id != src.Id && flying.Id != dst.Id) joinCheck = (flying.Id, dst, one);
         }
         else GD.Print("  (no fleet of two ships with another fleet elsewhere: the lone-ship send is not checked on this side)");
 
@@ -220,7 +226,8 @@ public partial class Main
         if (me == Praedra.Core.Clock.Side.Hand && s.OwnerOf(cap) == Praedra.Core.Clock.Side.Hand)
         {
             gs.OpenMgmt(GameScreen.MgKind.Infra, cap); gs.PlayRefresh(); gs.Click("Troops"); gs.PlayRefresh();
-            Expect(UiTest.Find<Button>(gs, "Build Lictors") is ArtButton, "the Lictors' build card shows their picture and its hover card");
+            string troops = gs.MgText($"Infra {cap}"); // rebuilds the window as the next frame would, so the Troops tab's cards exist
+            Expect(UiTest.Find<Button>(gs, "Build Lictors") is ArtButton, "the Lictors' build card shows their picture and its hover card: " + troops.Replace("\n", " / "));
             while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
         }
 
