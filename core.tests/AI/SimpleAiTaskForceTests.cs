@@ -47,6 +47,7 @@ public class SimpleAiTaskForceTests
     // Measured (seeds 1-4, limit 1300): on, the Hand wins on day 1222, 1006, 1087, 934 (task-force splits 3, 0, 7, 2); off, on day 1297,
     // 1006, 1255, 1285. Floors: on, every seed by day 1250 and some split; off, at least 2 seeds still going on day 1250 and none split; on
     // ends at least 100 days sooner on average.
+    [Trait("Category", "Play")]
     [Fact]
     public void TaskForces_AStrongSideTakesSystemsInParallelAndWinsSooner()
     {

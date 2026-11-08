@@ -92,6 +92,7 @@ public class SimpleAiTests
         Assert.Equal(c.Host.StateHash(), c2.Host.StateHash());
     }
 
+    [Trait("Category", "Play")]
     [Fact]
     public void AiVsAi_OnTheNewGameStart_730Days_NoCrash_OrdersMostlyAccepted()
     {

@@ -44,6 +44,7 @@ public class CampaignSoakTests
     // ---------------------------------------------------------------- determinism and saves
 
     // m2-mines-refineries-pools P21, m2-slots-and-resources S14: same seed, same hash; another seed, another game
+    [Trait("Category", "Play")]
     [Theory, MemberData(nameof(Rulesets))]
     public void SameSeedSameHashDifferentSeedDifferentHash(GarrisonRuleset ruleset)
     {

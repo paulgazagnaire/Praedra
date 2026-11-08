@@ -68,6 +68,7 @@ public class SimpleAiStallTests
     // Replaces (AI trainer, 2026-10-18, the Dev lead's ask) the one-seed "the fogged Hand wins with the fix and nobody wins without it",
     // re-pinned six times (seeds 3, 5, 8; limits 1100 to 1900) because every new draw in the game generator sends one game another way.
     // ExplorerScouts and FogGroundForgetDays are off above so the games measure this one switch.
+    [Trait("Category", "Play")]
     [Fact]
     public void FoggedHandLandsAfterShelling_OnMostSeeds()
     {

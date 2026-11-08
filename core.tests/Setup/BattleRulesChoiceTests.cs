@@ -58,6 +58,7 @@ public class BattleRulesChoiceTests
     }
 
     // m4-battle-new: a new game with New fights through the New engine (the same game under Classic plays out differently) and AI vs AI runs clean
+    [Trait("Category", "Play")]
     [Fact]
     public void AiVsAiUnderNewFightsThroughTheNewEngine()
     {

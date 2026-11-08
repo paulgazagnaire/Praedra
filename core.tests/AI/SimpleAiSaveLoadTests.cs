@@ -14,6 +14,7 @@ public class SimpleAiSaveLoadTests
 
     // m1-clock-and-orders K12 (with AI): QA-1 repro. Seed 3, fog AIs to day 400, SaveWithSettings, Load, fresh AIs on both copies: they
     // diverged on day 411 before the fix. Seed 1 saved at day 300 diverged on day 313.
+    [Trait("Category", "Play")]
     [Theory]
     [InlineData(3, 400, 60)]
     [InlineData(1, 300, 60)]
@@ -59,6 +60,7 @@ public class SimpleAiSaveLoadTests
     // m1-clock-and-orders K16: QA-17 repro. The save kept only the battle ruleset; every other setting fell back to the code DEFAULT on load.
     // Seed 12 under ControlRule Derived (AssaultOnly is the code DEFAULT today), fog AIs to day 400: the loaded copy came back AssaultOnly and
     // split on day 448 (Port Isolde changed hands only in Classic).
+    [Trait("Category", "Play")]
     [Fact]
     public void K16_SaveKeepsEveryGameSetting()
     {
