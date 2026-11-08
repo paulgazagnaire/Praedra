@@ -417,7 +417,9 @@ public sealed partial class SimpleAi
         var mi = _h.Missions;
         if (!_p.BurnTheBooks || _side != Side.Collective || !mi.Params.BurnTheBooks || !KindUsable(k) || _h.Game.State.Missions.BooksBurned) return false;
         if (!IsEnemyHeld(charter) || OwnMissions().Any(m => m.Kind == k)) return false;
-        if (NotesSince(AiNoteKind.BooksFailed, Today - _p.BooksRetryDays).Any()) return false; // BooksRetryDays: a failed try lately
+        // BooksRetryDays: a failed try lately. The aware pass (BooksTalentWindow, QA-97) waits only after a foiled one: a failed roll says nothing
+        // about a senser at Charter
+        if (NotesSince(AiNoteKind.BooksFailed, Today - _p.BooksRetryDays).Any(n => !awareOnly || n.Value != 0)) return false;
         // BooksTalentWindow (rule: ai tuning, AI trainer 2026-11-07): known Talent goes first, but only while no known senser is believed at Charter
         bool window = _p.BooksTalentWindow && !BooksSenserBelievedAt(charter);
         if (awareOnly && !window) return false;
@@ -477,6 +479,21 @@ public sealed partial class SimpleAi
         const string charter = Praedra.Core.Control.ControlModule.CapitalSystem;
         return sensers.Any(e => last.TryGetValue(e.Id, out var w) ? w.System == system
             : _h.Characters.ClassOf(e).KnownTalent && system == charter);
+    }
+
+    /// <summary>
+    /// BooksTalentWindow, fog: is a look at Charter due? Burn the Books could start today (on, Charter enemy-held, not burned, no own Books team
+    /// out), an own non-major character of known Talent stands free, and the side's group D picture of Charter is older than BooksCharterLookDays.
+    /// </summary>
+    private bool BooksCharterLookDue()
+    {
+        const string charter = Praedra.Core.Control.ControlModule.CapitalSystem;
+        if (!_p.BooksTalentWindow || _view == null || _side != Side.Collective || _p.BooksCharterLookDays <= 0) return false;
+        if (!_p.BurnTheBooks || !_h.Missions.Params.BurnTheBooks || !KindUsable(MissionKind.BurnTheBooks) || _h.Game.State.Missions.BooksBurned) return false;
+        if (!IsEnemyHeld(charter) || OwnMissions().Any(m => m.Kind == MissionKind.BurnTheBooks)) return false;
+        if (!_h.Characters.InPlay.Any(c => c.Side == _side && c.TalentHolder && c.TalentDiscovered && Standing(c) && !IsKey(c))) return false;
+        var seen = _view.Picture(charter)?.Characters;
+        return seen == null || seen.Stamp < Today - _p.BooksCharterLookDays;
     }
 
     /// <summary>Completed defence facilities and shields (the DEFFACSD classes) at the system: the truth without fog, the side's picture with it.</summary>
@@ -559,6 +576,10 @@ public sealed partial class SimpleAi
                 want--;
             }
         }
+        // 5d. BooksTalentWindow (AI trainer 2026-11-07, QA-97): a known-Talent agent stands free and the Collective's picture of Charter is older
+        // than BooksCharterLookDays, so a spy looks at Charter (group D shows who is there) before the agent goes
+        if (BooksCharterLookDue() && Free(MissionKind.Espionage, Praedra.Core.Control.ControlModule.CapitalSystem))
+            jobs.Add(new Job(MissionKind.Espionage, Praedra.Core.Control.ControlModule.CapitalSystem, null, _p.BooksCharterLookValue, "look " + Praedra.Core.Control.ControlModule.CapitalSystem));
         // 5c. blind hunt (QA-19): the picture shows no enemy system while the game goes on, so spies look where the side looked longest ago
         if (BlindOn() && KindUsable(MissionKind.Espionage))
         {

@@ -561,6 +561,54 @@ public class SimpleAiAgentsTests
         Assert.Equal(awareSent, Books().Single().Characters[0] == aware.Id);
     }
 
+    // QA-97 (QA round 145): a failed roll by a blind agent kept the known-Talent agent home for BooksRetryDays. The aware pass now waits only
+    // after a foiled try (note value 1: betrayed or sensed). Seed 1, fog, the sensers made Collective prisoners (window open), a failed try 10
+    // days ago in the Collective's memory.
+    [Theory]
+    [InlineData(0, true)]
+    [InlineData(1, false)]
+    public void BurnTheBooks_TalentWindow_OnlyAFoiledTryKeepsTheAwareAgentHome(int foiled, bool sent)
+    {
+        var (_, h) = Match(1, Fog);
+        var aware = OneAwareCollective(h);
+        foreach (var e in h.Game.State.Characters.Characters.Values.Where(c => c.Side == Side.Hand && h.Characters.ClassOf(c).KnownTalent))
+            (e.Status, e.Captor) = (CharacterStatus.Captured, Side.Collective);
+        int day = h.Game.Day - 10;
+        h.AiMemoryFor(Side.Collective, true).Notes.Add(new AiNote { Kind = AiNoteKind.BooksFailed, Day = day, Floor = day, Value = foiled, System = Praedra.Core.Control.ControlModule.CapitalSystem });
+        var ai = new SimpleAi(h, Side.Collective, Fog with { BurnTheBooks = true, BooksTalentWindow = true });
+        List<StartMissionOrder> Books() => h.Game.Queue.OfType<StartMissionOrder>().Where(o => o.Kind == MissionKind.BurnTheBooks).ToList();
+        for (int d = 0; d < 2 && Books().Count == 0; d++) { ai.PlanDay(); if (Books().Count == 0) h.Game.Step(); }
+        Assert.Equal(sent, Books().Count == 1 && Books()[0].Characters[0] == aware.Id);
+        if (!sent) Assert.Empty(Books());
+    }
+
+    // QA-97 (QA round 145): the Collective rarely looked at Charter, so its window stayed shut. With a known-Talent agent free and no group D
+    // picture of Charter within BooksCharterLookDays (DEFAULT 30), a spy looks at Charter; with 0 no look goes there. Seed 1, fog, day 0-1.
+    [Theory]
+    [InlineData(30, true)]
+    [InlineData(0, false)]
+    public void BurnTheBooks_TalentWindow_LooksAtCharterWhenItsPictureIsOld(int lookDays, bool look)
+    {
+        Assert.Equal(30, new SimpleAiParams().BooksCharterLookDays);
+        const string charter = Praedra.Core.Control.ControlModule.CapitalSystem;
+        var (_, h) = Match(1, Fog);
+        OneAwareCollective(h);
+        var ai = new SimpleAi(h, Side.Collective, Fog with { BurnTheBooks = true, BooksTalentWindow = true, BooksCharterLookDays = lookDays });
+        bool Looked() => h.Game.Queue.OfType<StartMissionOrder>().Any(o => o.Kind == MissionKind.Espionage && o.TargetSystem == charter);
+        for (int d = 0; d < 2 && !Looked(); d++) { ai.PlanDay(); if (!Looked()) h.Game.Step(); }
+        Assert.Equal(look, Looked());
+    }
+
+    // one non-major Collective character aware of his Talent (the last by id), the others with none
+    private static CharacterRecord OneAwareCollective(GameHost h)
+    {
+        var mine = h.Game.State.Characters.Characters.Values.Where(c => c.Side == Side.Collective && h.Characters.ClassOf(c).Kind != CharacterKind.Major && c.Placed && c.System != null)
+            .OrderBy(c => c.Id).ToList();
+        foreach (var c in mine) (c.TalentHolder, c.TalentDiscovered) = (false, false);
+        var aware = mine.Last(); (aware.TalentHolder, aware.TalentDiscovered) = (true, true);
+        return aware;
+    }
+
     // m5-missions §6b AI (SimpleAiParams.BooksRetryDays, DEFAULT 180): a failed Burn the Books in the AI memory inside the window stops a new
     // try; one older than the window does not. Seed 1, fog, the note put straight into the Collective's memory.
     [Theory]
