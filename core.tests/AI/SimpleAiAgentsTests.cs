@@ -153,10 +153,9 @@ public class SimpleAiAgentsTests
     }
 
     // QA-7 follow-up (2026-10-18): since #69 a duel prisoner is held aboard the captor's fleet. The AI's Rescue planner looked only at held_at
-    // (a planet), so such a prisoner was never rescued; with RescueAboardFleets it targets him where that fleet stands (m5-missions TargetReason:
-    // LocationOf, the prisoner can be rescued only while his fleet stands at a system). A Hand character is captured aboard a Collective
-    // fleet (Saltgreen on seed 1) on day 31. QA-13: such tries practically never succeed (8 Medium mirrors: 458 tries, 3 rescues; only at fleets
-    // parked on a captor-held world: 205 tries, 0), so the switch is DEFAULT off and the default AI sends none.
+    // (a planet). QA-13: Rescue at such a prisoner practically never succeeds (8 Medium mirrors: 458 tries, 3 rescues; only at fleets parked on
+    // a captor-held world: 205 tries, 0), so the AI sends none and waits for that fleet to go (the RescueAboardFleets switch that tried it was
+    // removed 2026-11-08, Ponytail audit). A Hand character is captured aboard a Collective fleet (Saltgreen on seed 1) on day 31.
     private static int RescuesAboard(SimpleAiParams p, out int prisonerId, out string? at)
     {
         // a passive Collective: its fleets stay put; LandPrisoners off, else New puts the prisoner ashore at the Collective-held system (CH38)
@@ -188,13 +187,10 @@ public class SimpleAiAgentsTests
     }
 
     [Fact]
-    public void Rescue_TargetsAPrisonerHeldAboardTheCaptorFleet_OnlyWithTheSwitch()
+    public void Rescue_LeavesAPrisonerHeldAboardTheCaptorFleet()
     {
-        Assert.False(new SimpleAiParams().RescueAboardFleets);
-        int with = RescuesAboard(new SimpleAiParams { RescueAboardFleets = true }, out int id, out var at);
-        Assert.True(with > 0, $"RescueAboardFleets on: no Rescue of {id} held aboard a fleet at {at}");
-        int without = RescuesAboard(new SimpleAiParams(), out id, out at);
-        Assert.True(without == 0, $"DEFAULT (off): {without} Rescue of {id} held aboard a fleet at {at}");
+        int rescues = RescuesAboard(new SimpleAiParams(), out int id, out var at);
+        Assert.True(rescues == 0, $"{rescues} Rescue of {id} held aboard a fleet at {at}");
     }
 
     // ai/07 §7 (Hand: belief-map search with spies), m5-missions (Espionage writes the ground and HqHere), m5-fog-and-hq §N5. Against an

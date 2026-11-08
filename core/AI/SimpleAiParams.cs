@@ -180,22 +180,6 @@ public sealed record SimpleAiParams
     /// Off = the AI of before (it shelled and left forever when the believed garrison stayed at the unseen guess). DEFAULT true (m6 stall fix).
     /// </summary>
     public bool ShelledLandingNeed { get; init; } = true;
-    /// <summary>
-    /// QA-22 (QA round 38): the AI shelled worlds where it saw nothing to hit (Medium mirror seed 3: 401 of 461 strikes had no military target,
-    /// one every 3 days on the same world while the fleet waited for regiments it did not carry). Under B7 an empty Military strike always rolls
-    /// collateral on a civilian facility (m0 = 0 gives a 1-in-1 chance) and the bomber's support falls by 20 when it hits. With it the AI orders
-    /// a Military strike only when it sees a military target there (regiments or defence facilities on its picture, not shown empty by a strike
-    /// since); otherwise it lands on what PickTarget asked, as after a shelling, or moves on. Fog-honest. New AI rule (no sheet). Off = the AI
-    /// before. DEFAULT off: measured on B7 main e12b3da (seeds 1-16, Medium mirror and Medium against Hard both ways): no-winner games 14 of 48
-    /// on, 14 off; Hard Hand wins against Medium Collective 7 on, 8 off; Hard's share against Medium 52.2% on, 64.6% off (the mirror ends more
-    /// often, 2 against 4, and the Hand wins sooner there, median day 2017 against 2215). With BlindProbeStrikes: 15, 6, 53.9%.
-    /// </summary>
-    public bool NoBlindStrikes { get; init; }
-    /// <summary>
-    /// NoBlindStrikes: an enemy-held world whose garrison the side has never seen (or has forgotten) may still be shelled, until a strike there
-    /// in the last FogKillMemoryDays killed nothing. Off = such a world is never shelled. DEFAULT off (measured, see NoBlindStrikes).
-    /// </summary>
-    public bool BlindProbeStrikes { get; init; }
     /// <summary>A fleet whose ships average below this hull percent stays (or goes) to a shipyard instead of launching. DEFAULT.</summary>
     public int RepairBelowPercent { get; init; } = 70;
 
@@ -451,14 +435,6 @@ public sealed record SimpleAiParams
     public int RecruitValue { get; init; } = 1000;
     public int SubdueValue { get; init; } = 900;
     public int RescueValue { get; init; } = 800;
-    /// <summary>
-    /// QA-13: whether the AI sends Rescue at a prisoner held aboard an enemy fleet (our QA-7 rule; the prisoner stays aboard until the fleet
-    /// leaves the state, then he is freed where it stood). Such a team lands only if the fleet is still at that system on arrival and on every
-    /// iteration, and a fleet that stays has ships that foil it. Measured on 8 Medium mirrors (seeds 1-8, 3000 days): 458 tries, 3 rescues;
-    /// aiming only at fleets parked on a world the captor holds: 205 tries, 0 rescues (most fleets had moved on). DEFAULT false: the AI waits
-    /// for that fleet to go, and its characters stay free for other jobs. A prisoner held on a planet is unaffected. New AI rule (no sheet).
-    /// </summary>
-    public bool RescueAboardFleets { get; init; }
     public int AbductionValue { get; init; } = 500;
     /// <summary>Diplomacy on an own system: DiplomacyValue x (DiplomacyStopSupport - support) / DiplomacyStopSupport; neutral: NeutralDiplomacyPercent of that. DEFAULT.</summary>
     public int DiplomacyValue { get; init; } = 400;
@@ -655,14 +631,6 @@ public sealed record SimpleAiParams
     /// 10 with sightings forgotten after 120 days (the #95 rule); Medium mirror seed 12 ends at 25 and 5, not when forgotten.
     /// </summary>
     public int TaskForceFadePercent { get; init; } = 25;
-    /// <summary>
-    /// Task forces (QA-20, QA round 34): with fog, the side also remembers the strongest enemy fleet it has seen in its AI memory (carried by a
-    /// save), fading by TaskForceFadePercent, so a later look that finds that system empty does not make the task force forget it. DEFAULT off:
-    /// measured (seeds 1-16, Medium mirror and Medium against Hard both ways, against GarrisonsFirst main): no-winner games 11 of 48 against 8
-    /// off (Medium Hand against Hard Collective 7 against 3), Hard Hand wins against Medium Collective 14 against 13, share 67.0% both; a
-    /// memory fading 50% per 100 days: 15, 13, 64.1%; 100%: 11, 14, 61.8%.
-    /// </summary>
-    public bool FleetMemory { get; init; }
     /// <summary>
     /// Key characters (the majors: Nobody, Ledger, Midwife, Mae Abara, Ravilla, The Chair) count this percent of their mission value (others are
     /// preferred) and never go on Rescue, Abduction, Sabotage or Incite (ai/05 §4: the original keeps its leaders off those). With

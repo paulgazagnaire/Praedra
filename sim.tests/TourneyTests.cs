@@ -14,9 +14,9 @@ public class TourneyTests
     [InlineData(false)]
     public void SideParams_GoToTheSideWhicheverLevelPlaysIt(bool aIsHand)
     {
-        var (e, a) = Tourney.SideParams(A, B, "FleetMemory=true", "MilitaryEvery=5")(aIsHand);
-        Assert.True(e.FleetMemory);
-        Assert.False(a.FleetMemory);
+        var (e, a) = Tourney.SideParams(A, B, "ClassicGarrisonFloor=true", "MilitaryEvery=5")(aIsHand);
+        Assert.True(e.ClassicGarrisonFloor);
+        Assert.False(a.ClassicGarrisonFloor);
         Assert.Equal(5, a.MilitaryEvery);
         Assert.Equal((aIsHand ? A : B).MilitaryEvery, e.MilitaryEvery);
         Assert.Equal(aIsHand ? 7 : 9, e.ScoutCount); // the level's own values and --a-params / --b-params stay
@@ -38,7 +38,7 @@ public class TourneyTests
     [InlineData("ScoutCount=abc", "ScoutCount must be an integer, not 'abc'.")]
     [InlineData("ScoutCount=", "ScoutCount must be an integer, not ''.")]
     [InlineData("ScoutCount", "ScoutCount needs a value (ScoutCount=...).")]
-    [InlineData("FleetMemory=yes", "FleetMemory must be true or false, not 'yes'.")]
+    [InlineData("ClassicGarrisonFloor=yes", "ClassicGarrisonFloor must be true or false, not 'yes'.")]
     public void SideParams_ABadValue_IsAnArgumentErrorBeforeAnyGame(string spec, string message)
     {
         Assert.Equal(message, Assert.Throws<ArgumentException>(() => Tourney.SideParams(A, B, spec, null)).Message);
