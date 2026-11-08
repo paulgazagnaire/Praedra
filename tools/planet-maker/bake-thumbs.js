@@ -24,7 +24,13 @@ const HARV = process.env.HARVESTED === '1';
 const SHEET = HARV ? 'atlas-harvested.png' : 'atlas.png';
 const slug = (t) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
+// index.html is built output and not kept in git: build it from the source first, so the bake always draws the current page
+function build() {
+  require('child_process').execFileSync('python3', ['build.py', 'planet-maker.src.html', 'systems.json', 'index.html'], { cwd: __dirname, stdio: 'ignore' });
+}
+
 async function open() {
+  build();
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
   const page = await browser.newPage({ viewport: { width: 900, height: 700 } });
   page.setDefaultTimeout(180000);

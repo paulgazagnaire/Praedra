@@ -41,6 +41,7 @@ public class SimpleAiInvasionTroopsTests
 
     // Measured (seeds 1-4, main aeb5f12): on 42, 51, 50, 53 regiments ordered; off 29, 25, 23, 27 (196 against 104). Floors: on orders more on
     // at least 3 seeds and 30% more in all.
+    [Trait("Category", "Play")]
     [Fact]
     public void InvasionReadyAtRally_TheCollectiveTrainsMoreRegiments()
     {

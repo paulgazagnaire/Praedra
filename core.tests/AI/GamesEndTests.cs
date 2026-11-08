@@ -23,6 +23,7 @@ public class GamesEndTests
     private readonly ITestOutputHelper _out;
     public GamesEndTests(ITestOutputHelper o) { _out = o; }
 
+    [Trait("Category", "Play")]
     [Fact]
     public void MediumMirror_MostGamesEndBy3000()
     {

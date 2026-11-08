@@ -761,6 +761,7 @@ public class CharacterTests
 
     // m5-characters-and-talent CH31 (play leaves loyalty untouched: ShiftLoyalty has no caller yet, so nobody betrays). B2b: betrayal exists now
     // (the rolls run at chance 0), so the old "no betrayal type" check is gone; B2b QA Q16.
+    [Trait("Category", "Play")]
     [Fact]
     public void CH31_LoyaltyNeverMoves()
     {

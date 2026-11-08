@@ -44,6 +44,7 @@ public class SimpleAiFogTests
     // m5-fog-and-hq FN1 with the AI: two games that differ only in where the (unseen) HQ stands give the Hand AI the same view, so the
     // same orders, day after day, as long as its knowledge is the same (its spies may find out, SimpleAiParams.UseCharactersAndMissions:
     // measured, the knowledge parts on day 135 on seed 2, when a look at the HQ candidate Eldingar reports an HQ in one game only).
+    [Trait("Category", "Play")]
     [Fact]
     public void FN1_HandAiOrdersDoNotDependOnAnUnseenHq()
     {
@@ -70,6 +71,7 @@ public class SimpleAiFogTests
     // log (bombardments of the last 30 days, retreats, lost battles, foiled looks), and a save keeps no events, so after a load the AI
     // forgets them. On v5 seed 3 a pile that shelled Graustadt before day 100 lands on day 102 in the uninterrupted game and shells again in
     // the loaded one. The test now pins that two loads of the same save play the same; "loaded = uninterrupted" is the trainer's target.
+    [Trait("Category", "Play")]
     [Fact]
     public void FogGamesAreDeterministicAndSurviveSaveLoad()
     {

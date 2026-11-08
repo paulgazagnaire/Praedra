@@ -488,3 +488,6 @@ $RECYCLE.BIN/
 
 # Godot viewer export output
 /build/
+
+# Built tool pages: made by each tool's build.py, published to the artifact, not kept in git
+tools/*/index.html

@@ -122,6 +122,7 @@ public class SimpleAiAgentsTests
     // so the Seat of Power stays on (m5-characters-and-talent §Seat of Power); the six story characters are never commanders and The Chair
     // is never a diplomat (B6c-14). Fogged Medium mirror, seeds 1 to 8, 1500 days: on 1500 of 1500 days on every seed with the
     // switch; 15 to 103 days without it, and The Chair held by the Collective on seeds 3, 4 and 6 (56, 203 and 84 days).
+    [Trait("Category", "Play")]
     [Fact]
     public void LeaderMarks_ChairHome_TheSeatOfPowerStaysOn()
     {
@@ -234,6 +235,7 @@ public class SimpleAiAgentsTests
     // Floor: re-found or taken within 1300 days on at least 6 of 8. The spies seldom re-find it: what this pins is that the Hand gets
     // the moved HQ in the end, mostly by conquest.
     // Replaces (AI trainer, 2026-10-18, the Dev lead's ask) the seed-1 limit (1100, then 1200).
+    [Trait("Category", "Play")]
     [Fact]
     public void FoggedHand_RefindsAMovedHq()
     {
@@ -269,6 +271,7 @@ public class SimpleAiAgentsTests
     // ai/05 (characters): both AIs put their best leaders on posts: fleet Admirals or Generals on strike fleets (AttachCharacter) and a
     // system General on the capital or HQ (AssignSystemGeneral); the core accepts them (m5-characters) and the posts are held (a system
     // General is released when the HQ moves away, so "held" is checked on any day).
+    [Trait("Category", "Play")]
     [Fact]
     public void Leaders_GetPosts()
     {
@@ -297,6 +300,7 @@ public class SimpleAiAgentsTests
 
     // Both fogged AIs with characters and missions: missions are sent by both sides, and at most 5% of all AI orders are rejected, over
     // seeds 1 to 3 at 600 days.
+    [Trait("Category", "Play")]
     [Theory]
     [InlineData(1)]
     [InlineData(2)]
@@ -321,6 +325,7 @@ public class SimpleAiAgentsTests
     // kinds Subdue (most), Espionage, Abduction. Floor: both sides send one on at least 3 of 4 seeds; only agent classes go; at most 1
     // order in 20 rejected. Off: none on seed 1. AI Recruitment (QA-12, MaxRecruiters 2) is off here: with it on, the recruited minors take
     // most jobs and the special forces go 0/0, 6/0, 1/0, 4/1 by day 1000 (1c3c353), so this test measures the special forces without it.
+    [Trait("Category", "Play")]
     [Fact]
     public void SpecialForceAgents_AreBuiltAndGoOnMissionsTheirMaskAllows()
     {
@@ -355,6 +360,7 @@ public class SimpleAiAgentsTests
     // side; the Seat of Power is on 360 of the 360 days from 60 days after the Hand's pool empties.
     // Checked: never more than MaxRecruiters Recruitments running per side; each recruiter has leadership at least RecruitMinLeadership when
     // sent; both pools empty by day 700; no Recruitment is sent once a side's pool is empty; after the Hand's pool empties the Seat of Power is on.
+    [Trait("Category", "Play")]
     [Fact]
     public void Recruitment_TwoAtATime_UntilThePoolIsEmpty_ThenTheChairGoesHome()
     {
@@ -400,6 +406,7 @@ public class SimpleAiAgentsTests
     //   seed 1: 58 / never / 0;  seed 2: 68 / 642 / 5;  seed 3: 53 / 276 / 4;  seed 4: 40 / never / 0.  Off: 0 looks.
     // The Hand keeps all its ~140 systems here, so the sweep is slow; in a real endgame it holds far fewer.
     // Floor: at least 20 looks on every seed, none at a system the picture did not show Hand (or a key at); a key seen on at least 1 of 4.
+    [Trait("Category", "Play")]
     [Fact]
     public void KeyHunt_AheadTheCollectiveLooksForTheChairAndRavilla_WhereItsPictureSays()
     {

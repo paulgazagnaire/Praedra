@@ -3,7 +3,7 @@
 Draws planets purely in code (one WebGL2 fragment shader, no images, no libraries) and animates them. Built for Praedra system illustrations.
 
 ## Files
-- `index.html` — the whole tool, self-contained. Open it in any browser.
+- `index.html` — the whole tool, self-contained, built by `build.py` (not kept in git: build it, then open it in any browser; `bake-thumbs.js` builds it itself).
 - `planet-maker.src.html` — the same page with a placeholder where the system list goes.
 - `systems.json` — the 555 systems: name, sector, world, from-space, moons, people, story, terraforming, star density, and each system's own planet settings (`p`). Built by `parse.py` (text from `specs/creative/07-systems.md`) and `parse_presets.py` (settings from `specs/creative/08-planet-presets.json`).
 - `preset-base.json` — the setting values most systems share; a system's `p` only lists what differs.

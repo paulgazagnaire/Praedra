@@ -191,6 +191,7 @@ public class B7BombardmentTests
     }
 
     // B7-bombardment Q80: Military, 1 regiment and 1 mine (defence 5), 1 hit: the mine is destroyed in about 25 percent of strikes, with -20 when it is
+    [Trait("Category", "Play")]
     [Fact]
     public void Q80_MilitaryCollateralOnTheMine()
     {

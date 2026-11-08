@@ -69,6 +69,7 @@ public class SimpleAiGuerrillaTests
     // destination holds fewer than HearthMinRegiments own regiments. Seeds 1-8 to day 1500 against a Medium Hand, measured on main 9a594a9
     // (bad moves on / off): 0/5, 0/3, 0/5, 0/6, 0/4, 0/4, 0/2, 0/3. Floors: on, none on any seed; off (seeds 1-4 only, to keep the suite
     // short: 19 measured), at least 5 in all (the test still measures the switch).
+    [Trait("Category", "Play")]
     [Fact]
     public void SafeHearth_TheHearthNeverMovesOntoAThinlyHeldWorld()
     {
@@ -85,6 +86,7 @@ public class SimpleAiGuerrillaTests
     // 14 and 10 (days 247 and 472), each with 0 moves. With Hand warships close and no safe world the Hearth now takes the least-short refuge:
     // measured alive at day 600 in all three, after 1, 2 and 2 moves; with the Hand playing to win (AiLevels.PlayToWin) after 1, 0 and 3 moves.
     // Floor: none captured by day 600 without having moved.
+    [Trait("Category", "Play")]
     [Fact]
     public void SafeHearth_LeavesForARefugeWhenWarshipsCloseAndNoWorldIsSafe()
     {
@@ -111,6 +113,7 @@ public class SimpleAiGuerrillaTests
     // DEFAULT (m5-missions §6b AI, DEFAULT off): with the no-guards, talented-only rule of 2026-11-04 20:47 the planner sends a talented agent every
     // BooksRetryDays and seed 1 then ends with 4 special-force missions instead of 6 (measured on m5/books-talent). The Collective's troops
     // ready at the rally (InvasionReadyAtRally, AI trainer 2026-11-07) are off here too: on, seed 1 ends with 4 Sabotage missions.
+    [Trait("Category", "Play")]
     [Fact]
     public void Underground_AndGuerrilla_SpyAndSabotageAndRaid_OnlyWhenOn()
     {

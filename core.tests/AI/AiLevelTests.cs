@@ -92,6 +92,7 @@ public class AiLevelTests
     // sent fleets 329 on day 391 and 557 on day 397 to relieve Ilanga, a held system under threat; the way was blocked, so each order flew the
     // first leg of the way around, to neutral Novy Rynek, and the two were counted as two offensives at once on days 397-398. Relief is allowed
     // at any count, SimpleAiParams.MaxOffensives).
+    [Trait("Category", "Play")]
     [Fact]
     public void Easy_RunsAtMostOneOffensiveAtATime()
     {
