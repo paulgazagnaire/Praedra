@@ -3,7 +3,7 @@
 Tunes the galaxy drawn behind the game's map. It is the game's own backdrop shader (`godot/Scripts/GalaxyBackdrop.gdshader`) ported to one WebGL2 page, with every number that shapes the look made a control, plus slow movement and the dither style from the Planet Maker.
 
 ## Files
-- `index.html`: the whole tool, self-contained. Open it in any browser.
+- `index.html`: the whole tool, self-contained, built by `build.py` below (not kept in git). Open it in any browser.
 - `galaxy-maker.src.html`: the same page with a placeholder where the systems go. Edit this one, never `index.html`.
 - `build.py`: puts the 555 systems' map positions (from `data/design/extended-galaxy-v6-planets.csv`, each sector pulled 0.7 toward its centre as `GalaxyView.SectorPull` does) into the page.
 
