@@ -43,18 +43,7 @@ public partial class GameScreen
     void CancelOrder(long seq)
     {
         string what = S.WhatOf(seq);
-        _dropUndo.TryGetValue(seq, out var u);
-        bool any = false;
-        foreach (var q in u?.Seqs.ToList() ?? new List<long> { seq }) any |= S.Withdraw(q);
-        if (!any) { Toast("Too late: the clock has moved and the order is under way.", MsgKind.Warn); return; }
-        if (u != null)
-        {
-            foreach (var (key, before) in u.Moved) { if (before is { } m) _moved[key] = m; else _moved.Remove(key); }
-            foreach (var (f, n) in u.PendingIn) { int left = (_pendingIn.TryGetValue(f, out int had) ? had : 0) - n; if (left > 0) _pendingIn[f] = left; else _pendingIn.Remove(f); }
-            foreach (var (sys, n) in u.Leaving) { int left = (_leaving.TryGetValue(sys, out int had) ? had : 0) - n; if (left > 0) _leaving[sys] = left; else _leaving.Remove(sys); }
-            foreach (var f in u.Splits) _splits.Remove(f);
-            foreach (var q in u.Seqs) _dropUndo.Remove(q);
-        }
+        if (!TakeBack(seq)) { Toast("Too late: the clock has moved and the order is under way.", MsgKind.Warn); return; }
         S.Say($"Order cancelled: {what ?? "an order"}.", MsgKind.Info);
         AddLogItem(S.Messages[^1], false);
         Toast($"Cancelled: {what ?? "the order"}.");
@@ -63,6 +52,32 @@ public partial class GameScreen
         RefreshMgmt();
         RefreshSectorView();
         RefreshTop();
+    }
+
+    /// <summary>The last move given wins (QA-99, QA-100): take back the move already queued for this fleet, map move or window drop alike.</summary>
+    void ReplaceFleetMove(int fleet) { if (S.PlannedMoveOf(fleet) is { } given) TakeBack(given.Seq); }
+
+    /// <summary>The same for a leader travelling alone.</summary>
+    void ReplaceLeaderMove(int character) { if (S.PlannedCharacterMoveOf(character) is { } given) TakeBack(given.Seq); }
+
+    /// <summary>
+    /// Withdraw an order and, if a drop made it, that drop's other orders, putting its chips back. During a drop the chips stay as they are:
+    /// <see cref="RecordDrop"/> folds the taken-back drop into the new one. False when nothing was still queued.
+    /// </summary>
+    bool TakeBack(long seq)
+    {
+        _dropUndo.TryGetValue(seq, out var u);
+        bool any = false;
+        foreach (var q in u?.Seqs.ToList() ?? new List<long> { seq }) any |= S.Withdraw(q);
+        if (!any || u == null || MgDropping) return any;
+        {
+            foreach (var (key, before) in u.Moved) { if (before is { } m) _moved[key] = m; else _moved.Remove(key); }
+            foreach (var (f, n) in u.PendingIn) { int left = (_pendingIn.TryGetValue(f, out int had) ? had : 0) - n; if (left > 0) _pendingIn[f] = left; else _pendingIn.Remove(f); }
+            foreach (var (sys, n) in u.Leaving) { int left = (_leaving.TryGetValue(sys, out int had) ? had : 0) - n; if (left > 0) _leaving[sys] = left; else _leaving.Remove(sys); }
+            foreach (var f in u.Splits) _splits.Remove(f);
+            foreach (var q in u.Seqs) _dropUndo.Remove(q);
+        }
+        return true;
     }
 
     /// <summary>Run one drop and remember what it changed, so Cancel can put it back. A drop that took back an earlier drop's order
