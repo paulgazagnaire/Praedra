@@ -99,36 +99,6 @@ public sealed partial class SimpleAi
         return Math.Max(0, guess - KillsSince(system, Today - _p.FogKillMemoryDays));
     }
 
-    /// <summary>
-    /// NoBlindStrikes (QA-22): does the side see a military target on the system (m3-bombardment §Targets: regiments, defence facilities)? No fog:
-    /// the truth. Fog: group C of the picture shows a defence facility, or group D shows enemy regiments (not older than FogGroundForgetDays on an
-    /// enemy-held system, as FogDefendersAt) that the side's own strikes since that look have not all killed, and no strike there since that
-    /// look killed nothing (a strike with nothing to hit kills nothing). Never seen (or forgotten) = no target seen, unless BlindProbeStrikes
-    /// allows a probe there.
-    /// </summary>
-    internal bool MilitaryTargetSeen(string system)
-    {
-        if (_view == null) return DefendersAt(system) > 0 || _h.Defenses.DefensesOf(system).Any();
-        var pic = _view.Picture(system);
-        if (pic?.Facilities is { } fac && fac.Value.Keys.Any(_h.Defenses.Data.IsDefense)) return true;
-        var g = pic?.Ground;
-        if (g == null || (_p.FogGroundForgetDays > 0 && AgeOf(g) > _p.FogGroundForgetDays && IsEnemyHeld(system)))
-        {
-            // BlindProbeStrikes: a garrison never seen (or forgotten) may be probed with one strike; one that killed nothing there lately ends it
-            if (!_p.BlindProbeStrikes || !IsEnemyHeld(system)) return false;
-            foreach (var b in NotesSince(AiNoteKind.Bombardment, Today - _p.FogKillMemoryDays))
-                if (b.System == system && b.Day >= Today - _p.FogKillMemoryDays && b.Value == 0) return false;
-            return true;
-        }
-        int seen = g.Value.Where(x => x.Side != _side).Sum(x => x.Total), killed = 0;
-        foreach (var b in NotesSince(AiNoteKind.Bombardment, g.Stamp + 1))
-        {
-            if (b.System != system || b.Day <= g.Stamp) continue;
-            if (b.Value == 0) return false;
-            killed += b.Value;
-        }
-        return seen > killed;
-    }
 
     /// <summary>Tests: the regiments the AI would assume on a system today (DefendersAt as PlanDay sees it).</summary>
     internal int DefendersEstimate(string system)
@@ -751,12 +721,9 @@ public sealed partial class SimpleAi
     {
         if (_view == null) return S.Fleets.Values.Where(f => f.Side == Enemy && f.Ships.Count > 0).Select(Str).DefaultIfEmpty(0).Max();
         double best = PictureStrongestEnemyFleet();
-        if (_p.FleetMemory && _mem.FleetSeen > 0) best = Math.Max(best, RememberedFleet());
         return best;
     }
 
-    /// <summary>FleetMemory: the remembered strongest enemy fleet, faded by its age today (0 = none).</summary>
-    internal double RememberedFleet() => _mem.FleetSeen * FadedPercent(Today - _mem.FleetSeenDay, _p.FogFleetMemoryDays, _p.TaskForceFadePercent) / 100;
 
     /// <summary>With fog: the strongest enemy fleet of the side's picture now, each sighting faded by its age (0 when none).</summary>
     internal double PictureStrongestEnemyFleet()
@@ -774,29 +741,4 @@ public sealed partial class SimpleAi
         return best;
     }
 
-    /// <summary>
-    /// FleetMemory (QA-20, QA round 34): with fog, keep in the side's <see cref="AiMemory"/> the enemy fleet sighting of its picture worth the most
-    /// today after the TaskForceFadePercent fade, so a later look that finds the system empty does not wipe it. Only real sightings (the picture,
-    /// at their stamp day) go in. Systems in galaxy order; a tie keeps the stored one. Called once a day before the plans.
-    /// rule: ai tuning, SimpleAiParams.FleetMemory (New AI rule, no sheet).
-    /// </summary>
-    private void RememberStrongestFleet()
-    {
-        if (!_p.FleetMemory || _view == null) return;
-        double kept = RememberedFleet();
-        foreach (var sys in _h.Data.Galaxy.Systems)
-        {
-            var e = _view.Picture(sys.Name)?.Fleets;
-            if (e == null) continue;
-            int age = AgeOf(e), pct = FadedPercent(age, _p.FogFleetMemoryDays, _p.TaskForceFadePercent);
-            if (pct <= 0) continue;
-            foreach (var fp in e.Value)
-            {
-                if (fp.Side != Enemy) continue;
-                double s = Str(ForceOf(sys.Name, fp));
-                if (s * pct / 100 <= kept) continue;
-                _mem.FleetSeen = s; _mem.FleetSeenDay = Today - age; kept = s * pct / 100;
-            }
-        }
-    }
 }

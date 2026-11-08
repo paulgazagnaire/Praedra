@@ -73,7 +73,6 @@ public sealed partial class SimpleAi
         _view = _p.UseFog ? _h.Fog.ViewFor(_side) : null;
         Remember();
         _seenForces.Clear(); ClearFogScratch();
-        RememberStrongestFleet();
         if (_view != null && _side == Side.Hand) KnownEnemyHq = _view.KnownHq?.System; // only what the Hand's own picture shows
         PlanUpkeepCrisis();
         if (_view != null && _side == Side.Collective) PlanHqHide(); // fog: the HQ hides by risk (ai/07 §7), checked daily
