@@ -707,6 +707,16 @@ public sealed record SimpleAiParams
     /// Collective against a passive Hand with The Chair placed off Charter, seeds 1-36 to day 1500: 3 known-Talent tries at 5 days, 8 at 180.
     /// </summary>
     public int BooksSenserInfoDays { get; init; } = 180;
+    /// <summary>
+    /// BooksTalentWindow, fog (AI trainer 2026-11-07, QA-97 round 145: the Collective rarely looked at Charter, so its window stayed shut): while
+    /// a known-Talent agent stands free and Burn the Books could start, a spy looks at Charter when the Collective's group D picture there is
+    /// older than BooksCharterLookDays, worth BooksCharterLookValue (as KeyHuntValue). DEFAULT 30 days (0 = no look), 900 (ai tuning).
+    /// With it (and the aware pass waiting only after a foiled try, not a failed roll): Medium Collective against a passive Hand with The Chair
+    /// placed off Charter, seeds 1-36 to day 1500, known-Talent tries 8 -> 125 and 3 burns (0 before); Medium mirror, 192 seeds, day 3000, fog,
+    /// Hand / Collective / open 49 / 92 / 51 -> 51 / 92 / 49, known-Talent tries 45 -> 119 (21 -> 47 foiled by a senser), no burns.
+    /// </summary>
+    public int BooksCharterLookDays { get; init; } = 30;
+    public int BooksCharterLookValue { get; init; } = 900;
 
     // ---- what to build, by side (first class that is buildable, researched and affordable wins). Class names of unit-and-facility-costs.csv. DEFAULT.
     public string Transport(Side side) => side == Side.Hand ? "Bond II" : "Barge";

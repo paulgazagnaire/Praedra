@@ -130,7 +130,7 @@ public sealed class AiMemory
                 MissionEnded me when me.Side == Side && me.Outcome == MissionOutcome.Foiled && me.MissionKind is MissionKind.Espionage or MissionKind.Reconnaissance
                     => new AiNote { Kind = AiNoteKind.LookFoiled, System = me.Target },
                 MissionEnded me when me.Side == Side && me.MissionKind == MissionKind.BurnTheBooks && me.Outcome is MissionOutcome.Failed or MissionOutcome.Foiled
-                    => new AiNote { Kind = AiNoteKind.BooksFailed, System = me.Target },
+                    => new AiNote { Kind = AiNoteKind.BooksFailed, System = me.Target, Value = me.Outcome == MissionOutcome.Foiled ? 1 : 0 }, // 1: foiled (betrayed or sensed), 0: the roll failed
                 HqArrived or HqDeparted => new AiNote { Kind = AiNoteKind.HqMoved },
                 CharacterArrived a when a.Side == enemy => At(a.Character, a.System),
                 CharacterDetached d when d.Side == enemy => At(d.Character, d.System),
