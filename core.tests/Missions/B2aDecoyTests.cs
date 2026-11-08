@@ -40,6 +40,7 @@ public class B2aDecoyTests
     }
 
     // B2a-2: over 10,000 seeded trials the guard is distracted 50 percent of the time (+- 1.5), not 75 (every decoy tried)
+    [Trait("Category", "Play")]
     [Fact]
     public void B2a2_DistractionRateIsOneDecoysChance()
     {

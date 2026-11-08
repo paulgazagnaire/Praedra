@@ -51,6 +51,7 @@ public class SimpleAiNoBlindStrikesTests
 
     // Measured (seeds 1-4, strikes / empty ones): on 10/2, 14/3, 12/2, 8/0; off 79/59, 69/48, 84/69, 71/46. Floors: on, at most 5 empty
     // strikes on every seed; off, at least 30 (the test still measures the switch).
+    [Trait("Category", "Play")]
     [Fact]
     public void NoBlindStrikes_TheAiStopsShellingWorldsWithNothingToHit()
     {
@@ -62,6 +63,7 @@ public class SimpleAiNoBlindStrikesTests
 
     // BlindProbeStrikes: a garrison never seen may be probed until a strike there kills nothing. Measured (seeds 1-4, strikes / empty ones):
     // 38/22, 29/12, 30/16, 22/10, between on and off above. Floors: on every seed at most 25 empty strikes, and at least 5 (it does probe).
+    [Trait("Category", "Play")]
     [Fact]
     public void BlindProbeStrikes_ProbesAnUnseenGarrisonAndStopsWhenAStrikeFindsNothing()
     {

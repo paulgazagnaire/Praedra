@@ -255,6 +255,7 @@ public class SimpleAiHarvesterTests
         return new Run(h.StateHash(), h.Game.Day, h.Victory.Winner, built, strike?.Day, strike?.System, h.Victory.Reason ?? "");
     }
 
+    [Trait("Category", "Play")]
     [Theory]
     [InlineData(1)]
     [InlineData(2)]
@@ -268,6 +269,7 @@ public class SimpleAiHarvesterTests
         Assert.NotEmpty(r.Hash);
     }
 
+    [Trait("Category", "Play")]
     [Theory]
     [InlineData(1)]
     [InlineData(2)]
@@ -281,6 +283,7 @@ public class SimpleAiHarvesterTests
         Assert.NotEmpty(r.Hash);
     }
 
+    [Trait("Category", "Play")]
     [Fact]
     public void Campaign_SameSeedTwice_SameHash()
     {

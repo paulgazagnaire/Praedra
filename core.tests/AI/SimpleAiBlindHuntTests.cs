@@ -57,6 +57,7 @@ public class SimpleAiBlindHuntTests
     // Measured on v5 (seeds 1-4, the last Collective system Regrowth on each): BlindHunt on, the game ends on day 352, 352, 361, 364; off, on day 457,
     // 460, 424, 424 (its scouts look at X too, but no pile goes there until X is the nearest neutral target left). Floors: on, every seed by
     // day 400; off, none by day 400.
+    [Trait("Category", "Play")]
     [Fact]
     public void BlindHunt_TheHandTakesTheLastCollectiveSystemItHasNotSeenForLong()
     {

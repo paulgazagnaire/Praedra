@@ -18,6 +18,7 @@ public class SimpleAiFleetMemoryTests
 
     // Fog AIs on both sides, seed 3 to day 400: the remembered fleet outlives the picture's entries (a look that found the fleet gone, or the
     // fade of the picture's own entry), and it only holds what the picture showed (never above the strongest faded sighting seen so far).
+    [Trait("Category", "Play")]
     [Fact]
     public void FleetMemory_KeepsTheStrongestSightingAfterThePictureLosesIt()
     {
@@ -39,6 +40,7 @@ public class SimpleAiFleetMemoryTests
 
     // m1-clock-and-orders K12 with the fleet memory set: the save carries it, the loaded copy reads it back exactly, and both copies play on
     // with the same state hash.
+    [Trait("Category", "Play")]
     [Fact]
     public void FleetMemory_RidesInTheSaveAndTheLoadedGamePlaysTheSame()
     {
@@ -64,6 +66,7 @@ public class SimpleAiFleetMemoryTests
     }
 
     // A save made before the fleet memory existed (AI memory without the two fields) loads with no remembered fleet.
+    [Trait("Category", "Play")]
     [Fact]
     public void FleetMemory_AnOlderSaveLoadsWithNone()
     {

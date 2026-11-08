@@ -53,6 +53,7 @@ public class SimpleAiOpponentTests
     // Over seeds 1 to 8 (MultiSeed), the day the Hand AI takes the Hearth (no fog: it knows where the HQ is):
     //   8a378a8 (pre-B2e): 271, 262, 256, 271, 271, 235, 235, 235;  9ec544f (B2e): 262, 271, 256, 256, 262, 271, 262, 262
     // Floor: the Hand wins by day 400 on at least 7 of 8. Replaces (AI trainer, 2026-10-18, the Dev lead's ask) the seed-1 limit of 700.
+    [Trait("Category", "Play")]
     [Fact]
     public void HandAi_AgainstPassiveCollective_WinsByTakingTheHearth()
     {
@@ -69,6 +70,7 @@ public class SimpleAiOpponentTests
     // steps (v5, B2b, B2d) as each batch sent the one game another way. Earlier measurements on seed 1: day 783 without characters and
     // missions, 813 with them (SimpleAiParams.UseCharactersAndMissions), 795 since the AI stops hunting fleets that only retreat
     // (SimpleAiParams.RunnerRetreats, SimpleAiChaseTests), all on the 360-system map.
+    [Trait("Category", "Play")]
     [Fact]
     public void CollectiveAi_AgainstPassiveHand_MakesSteadyProgress_AndWinsByTakingCharter()
     {
@@ -93,6 +95,7 @@ public class SimpleAiOpponentTests
     // over the upkeep capacity (0 measured everywhere: the AI keeps clear of the autoscrap by scrapping its own least useful items) and at
     // most 1 order in 20 rejected. Replaces (AI trainer, 2026-10-18, the Dev lead's ask) the one-seed floor of 3 battles (seed 5, then 1,
     // then 2 as B2b and B2d moved the games).
+    [Trait("Category", "Play")]
     [Fact]
     public void AiVsAi_FleetsFight_AndNeitherSideGoesOverCapacityForLong()
     {
@@ -147,6 +150,7 @@ public class SimpleAiOpponentTests
             Assert.DoesNotContain(e.Class, new[] { "Orbital Shipyard", "Training Facility", "Construction Yard", "Refinery" });
     }
 
+    [Trait("Category", "Play")]
     [Fact]
     public void SameSeed_SameHash_WithAPassiveSide()
     {
@@ -155,6 +159,7 @@ public class SimpleAiOpponentTests
         Assert.Equal(ha.StateHash(), hb.StateHash());
     }
 
+    [Trait("Category", "Play")]
     [Fact]
     public void LoadedMedAGameContinuesLikeTheUninterruptedOne_WithFreshAis()
     {
@@ -182,6 +187,7 @@ public class SimpleAiOpponentTests
 
     // m5-research §Defaults (the AI uses the same IsResearched through the construction sheet): on the MedA start with the research gate on,
     // the AI never orders an item its side has not researched, and research moves (the yards' tick unlocks rungs).
+    [Trait("Category", "Play")]
     [Fact]
     public void AiVsAi_NeverOrdersUnresearchedItems()
     {

@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: '0 3 * * *' # nightly: the AI play tests on main
 
 jobs:
   test:
@@ -15,7 +17,8 @@ jobs:
           dotnet-version: '8.0.x'
       - run: dotnet restore Praedra.sln
       - run: dotnet build Praedra.sln --no-restore -c Release
-      - run: dotnet test Praedra.sln --no-build -c Release --logger "console;verbosity=normal"
+      # The AI play tests (Category=Play: 44 tests that play whole AI games, about 90% of the test time) run in the play job below.
+      - run: dotnet test Praedra.sln --no-build -c Release --filter "Category!=Play" --logger "console;verbosity=normal"
       # The Godot front end is not in Praedra.sln; build it too so a core API change can't silently break the playable game (QA-23).
       - run: dotnet build godot/PraedraViewer.csproj -c Release
       # Doc comments, warnings only (Ponytail): the XML-doc compiler warnings, and any member carrying two <summary> blocks, which is a doc
@@ -25,6 +28,29 @@ jobs:
         run: |
           dotnet build core/Praedra.Core.csproj -c Release --no-incremental -p:GenerateDocumentationFile=true -p:TreatWarningsAsErrors=false "-p:NoWarn=CS1591%3BCS1573" -o "$RUNNER_TEMP/doccheck"
           python3 tools/doc-check/doc_check.py "$RUNNER_TEMP/doccheck/Praedra.Core.xml" core
+
+  # The AI play tests (Category=Play): whole AI-against-AI games, 10 s to 4 min each. They run on every push to main, nightly, and on a pull
+  # request that changes the rules, the data or the tests (core, data, core.tests) or carries the label "play" (Dev lead 2026-11-08: AI
+  # changes land through core and data). A screen, tool or docs PR skips them. Ponytail audit 2026-11-08: they were 2,330 of 2,602
+  # test-seconds; in their own job they no longer hold up the other tests.
+  play:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: rules, data or tests changed?
+        id: want
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ] || ${{ contains(github.event.pull_request.labels.*.name, 'play') }}; then echo run=true >> "$GITHUB_OUTPUT"
+          elif git diff --quiet "origin/${{ github.base_ref }}...HEAD" -- core data core.tests; then echo run=false >> "$GITHUB_OUTPUT"; echo "No change in core, data or core.tests: the play tests are skipped (add the label 'play' to run them)."
+          else echo run=true >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/setup-dotnet@v4
+        if: steps.want.outputs.run == 'true'
+        with:
+          dotnet-version: '8.0.x'
+      - if: steps.want.outputs.run == 'true'
+        run: dotnet test core.tests -c Release --filter "Category=Play" --logger "console;verbosity=normal"
 
   # The screen playtest (godot --playtest, about a minute): plays a Collective and a Hand game through the real buttons. It is the only check
   # of the screens, and the core tests cannot see a screen regression (QA-98, after #267). Exit code 1 on any failed check.

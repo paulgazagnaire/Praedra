@@ -40,6 +40,7 @@ public class SimpleAiFogPlayTests
     // FN1 for the Collective AI: two games that differ only in Hand forces the Collective has never seen (an extra fleet on a Hand
     // system it has not explored, extra regiments on Charter whose ground it has never seen) give the Collective the same knowledge, and
     // while the knowledge is the same the Collective AI gives the same orders.
+    [Trait("Category", "Play")]
     [Fact]
     public void FN1_CollectiveAiOrdersDoNotDependOnUnseenHandForces()
     {
@@ -104,6 +105,7 @@ public class SimpleAiFogPlayTests
 
     // The fogged Collective against a Hand that gives no orders takes Charter (known to all: a Heartland system), estimating its garrison
     // from what it has seen. Measured: day 702 (seeds 1 to 5: 702 to 705); limit 850.
+    [Trait("Category", "Play")]
     [Fact]
     public void FoggedCollective_AgainstPassiveHand_KeepsCapturing()
     {
@@ -190,6 +192,7 @@ public class SimpleAiFogPlayTests
     // system from the other). Measured on seed 1: see the report; the asserts are the floor.
     // QA-40 re-pin 2026-10-25 (the fixed v6 links; Paul's "Re-measure" card the same day): seed 1 now gives the Hand its first capture on
     // day 646 (the Collective's on day 420, 10 battles by day 600), so the game runs to day 700 (was 600). Same floors.
+    [Trait("Category", "Play")]
     [Fact]
     public void FogVsFog_BothSidesAttack()
     {

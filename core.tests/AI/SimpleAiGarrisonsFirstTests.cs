@@ -48,6 +48,7 @@ public class SimpleAiGarrisonsFirstTests
     // Measured (seeds 1-4): on, 95, 71, 87, 87 regiments ordered and 6, 4, 6, 5 training facilities; off, 75, 75, 69, 68 and 4, 5, 4, 5 (seeds 5
     // and 6: on 91 and 89, off 73 and 71). Floors: on orders more on at least 3 seeds and 10% more in all; on owns more training facilities on
     // at least 2 seeds.
+    [Trait("Category", "Play")]
     [Fact]
     public void GarrisonsFirst_AFarAheadSideTrainsMoreGarrisonTroops()
     {
