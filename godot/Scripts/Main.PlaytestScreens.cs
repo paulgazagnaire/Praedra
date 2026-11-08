@@ -102,6 +102,21 @@ public partial class Main
                 gs.PlayRefresh();
                 Expect(s.QueuedOrders == q && s.PlannedMoveOf(mover.Id) == null && !gs.PanelText().Contains("Ordered: "), "Cancel takes the order back and drops its route");
                 Expect(s.Messages.Any(m => m.Text == $"Order cancelled: Move {mover.Name} to {dest}."), "the log says the order was cancelled");
+                // QA-99: a second move given before the clock moves replaces the first (the core would keep the first)
+                string dest2 = s.Game.State.SystemOwners.Where(kv => kv.Value == me && kv.Key != mover.At && kv.Key != dest).Select(kv => kv.Key).OrderBy(n => n, StringComparer.Ordinal)
+                    .FirstOrDefault(n => s.Host.PlanMove(me, mover.Id, n) is { Ok: true, Red: false });
+                if (dest2 != null)
+                {
+                    gs.SelectFleet(mover.Id, true); gs.PlayRefresh();
+                    Expect(gs.Click("Move..."), "Move... (first)"); gs.SetSearch(dest); gs.SubmitSearch();
+                    gs.SelectFleet(mover.Id, true); gs.PlayRefresh();
+                    Expect(gs.Click("Move..."), "Move... (second)"); gs.SetSearch(dest2); gs.SubmitSearch();
+                    gs.PlayRefresh();
+                    Expect(s.QueuedOrders == q + 1 && s.PendingOf(mover.Id).Single() == $"Move {mover.Name} to {dest2}" && s.PlannedMoveOf(mover.Id)?.To == dest2,
+                        $"the second move replaces the first: one order, to {dest2}");
+                    Expect(gs.Click($"Cancel: Move {mover.Name} to {dest2}"), "cancel it");
+                    Expect(s.QueuedOrders == q, "nothing left queued");
+                }
             }
         }
 

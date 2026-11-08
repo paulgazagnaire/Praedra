@@ -197,6 +197,7 @@ public sealed partial class GameSession
     /// <summary>Queue the MoveHq order (Collective). The core judges it as soon as the clock moves. rule: m5-fog-and-hq §F6.</summary>
     public long SubmitMoveHq(string destination)
     {
+        if (PendingHqMove != null) Withdraw(_hqSeq); // the last HQ move given wins (QA-99)
         PendingHqMove = destination;
         return _hqSeq = Track(Fog.SubmitMoveHq(Player, destination), $"Move the HQ to {destination}");
     }
