@@ -89,6 +89,10 @@ public partial class Main
             string r = gs.MgDrop($"L:{far.Id}", $"Fleet {fid} Passengers");
             Expect(r == null, $"drop {fname} from {cm.LocationOf(far)} on {fleet.Name}: {r ?? "sent"}");
             Expect(gs.MgText($"Fleet {fid}").Contains("on the way"), "the fleet window shows them on the way");
+            // QA-100: a drag that sends a leader travelling is a move like a map move, so a later move replaces it
+            Expect(s.PlannedCharacterMoveOf(far.Id) is { } fp && fp.To == sys && s.WhatOf(fp.Seq) != null, "the drag records the leader's trip, so a later move can replace it");
+            int qd = s.QueuedOrders;
+            Expect(gs.MgDrop($"L:{far.Id}", $"Fleet {fid} Passengers") != null || s.QueuedOrders == qd, "dropping them again does not queue a second trip");
             gs.PlayDay(); gs.PlayRefresh();
             Expect(far.Transit != null && far.JoinFleet == fid && gs.MgText($"Fleet {fid}").Contains("ON THE WAY"), $"next day {fname} travels to {sys}, listed under On the way");
         }

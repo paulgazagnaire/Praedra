@@ -99,11 +99,14 @@ public partial class GameScreen
     /// <summary>A leader leaves any post and sets off for <paramref name="to"/>, joining <paramref name="f"/> there in <paramref name="post"/> (no fleet: they land).</summary>
     void SendLeader(CharacterRecord c, string to, Fleet f, CharacterPost post, string zone)
     {
+        ReplaceLeaderMove(c.Id); // the last move given wins (QA-100)
         LeaveCurrentPost(c);
         int cid = c.Id, fid = f?.Id ?? 0, days = TravelDays(c, to);
         string name = S.CharName(cid);
         string role = f == null ? $"to {to}" : post == CharacterPost.None ? $"to ride {f.Name}" : $"to be {GameSession.PostWords(post)} of {f.Name}";
-        S.TrackCharacter(cid, -1, S.Game.Submit(seq => new MoveCharacterOrder(seq, Me, cid, to, fid, post)), $"Send {name} {role}");
+        long seq = S.TrackCharacter(cid, -1, S.Game.Submit(q => new MoveCharacterOrder(q, Me, cid, to, fid, post)), $"Send {name} {role}");
+        if (Cm.LocationOf(c) is string from && Fm.FindPath(from, to, Cm.Params.CharacterSpeed) is { Ok: true } pr)
+            S.PlanCharacterMove(cid, new GameSession.PlannedMove(to, pr.Systems.Select(i => G.Systems[i].Name).ToList(), pr.TotalTicks, S.Game.Day + pr.TotalTicks, seq));
         Sent($"send {name} {role} at {to}", to);
         _moved[new Drag('L', cid).Key] = ($"on the way {role}, {Ui.Count(days, "day", "days")}", zone);
     }
@@ -328,7 +331,10 @@ public partial class GameScreen
         {
             // rule: m3-fleets §Orders (MoveFleet: joining a fleet on arrival)
             int days = Fm.FindPath(from.At, f.At, Fm.SpeedOf(from)) is { Ok: true } p ? p.TotalTicks : 0;
-            S.TrackFleet(from.Id, Fm.SubmitMove(Me, from.Id, f.At, null, f.Id), $"Fly {from.Name} to {f.At} and merge into {f.Name}");
+            ReplaceFleetMove(from.Id); // the last move given wins (QA-100)
+            var plan = S.Host.PlanMove(Me, from.Id, f.At, null);
+            long seq = S.TrackFleet(from.Id, Fm.SubmitMove(Me, from.Id, f.At, null, f.Id), $"Fly {from.Name} to {f.At} and merge into {f.Name}");
+            if (plan.Ok) S.PlanMove(from.Id, new GameSession.PlannedMove(f.At, plan.Path.ToList(), plan.HopTicks.Sum(), plan.ArrivalDay, seq));
             Sent($"fly {from.Name} to {f.At} to merge into {f.Name}", f.At);
             _moved[d.Key] = ($"flies to join {f.Name}, {Ui.Count(days, "day", "days")}", $"Fleet {f.Id} Ships");
             return;

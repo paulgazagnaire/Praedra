@@ -314,7 +314,7 @@ public partial class GameScreen
         string name = S.CharName(c.Id);
         int cid = c.Id;
         var pr = Fm.FindPath(c.System, to, Cm.Params.CharacterSpeed);
-        if (S.PlannedCharacterMoveOf(cid) is { } given) S.Withdraw(given.Seq); // the last move given wins (QA-99)
+        ReplaceLeaderMove(cid); // the last move given wins (QA-99)
         long moveSeq = S.TrackCharacter(cid, -1, S.Game.Submit(seq => new MoveCharacterOrder(seq, Me, cid, to)), $"Move {name} to {to}");
         if (pr.Ok) S.PlanCharacterMove(cid, new GameSession.PlannedMove(to, pr.Systems.Select(i => G.Systems[i].Name).ToList(), pr.TotalTicks, S.Game.Day + pr.TotalTicks, moveSeq));
         S.Say($"Order sent: move {name} to {to}.", MsgKind.Info, to);

@@ -279,7 +279,7 @@ public partial class GameScreen
         if (!S.Game.State.Fleets.TryGetValue(_moveFleet, out var f) || f.At == null) { CancelMove(); return; }
         var plan = S.Host.PlanMove(Me, f.Id, to, via);
         // the last move given wins: the core would keep the first and refuse the second (QA-99). rule: m1-clock-and-orders §Orders in (withdraw)
-        if (S.PlannedMoveOf(f.Id) is { } given) S.Withdraw(given.Seq);
+        ReplaceFleetMove(f.Id);
         long seq = Fm.SubmitMove(Me, f.Id, to, via);
         S.TrackFleet(f.Id, seq, $"Move {f.Name} to {to}");
         if (plan.Ok) S.PlanMove(f.Id, new GameSession.PlannedMove(to, plan.Path.ToList(), plan.HopTicks.Sum(), plan.ArrivalDay, seq));
