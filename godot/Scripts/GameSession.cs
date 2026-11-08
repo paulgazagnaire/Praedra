@@ -341,8 +341,21 @@ public sealed partial class GameSession
         Praedra.Core.Harvester.HarvesterReject.Recharging => "it is too soon after the last harvest (one harvest a year)",
         Praedra.Core.Harvester.HarvesterReject.HarvesterLimit => "only one harvester per system: this system already has one (build it at another shipyard)",
         "SystemDestroyed" => "that system was destroyed by the harvester",
-        _ => reason,
+        RejectReason.NoUpkeep => "not enough free upkeep for that many (build fewer, or add mines and refineries)",
+        RejectReason.NotOnRoute => "a Sensor Station can only stand on a system on a hyperspace route",
+        RejectReason.CannotScrap => "special forces cannot be scrapped",
+        RejectReason.GameOver => "the game is over",
+        RejectReason.ShipNotInFleet => "that ship is not in the fleet any more",
+        RejectReason.SquadronFleet => "a fleet of fighters alone (with no ships) cannot take part in that",
+        RejectReason.SquadronAboard => "a squadron aboard a ship cannot fly on its own (land it first)",
+        RejectReason.SquadronNotBased => "the squadron must be on the planet first",
+        RejectReason.NotAtFleetSystem => "it is not at the fleet's system",
+        _ => Plain(reason),
     };
+
+    /// <summary>A refusal code with no words of its own, as plain lower-case words ("NoUpkeep" -> "no upkeep"), so no code shows raw.</summary>
+    static string Plain(string reason) =>
+        string.IsNullOrEmpty(reason) ? reason : System.Text.RegularExpressions.Regex.Replace(reason, "(?<=[a-z])(?=[A-Z])", " ").ToLowerInvariant();
 
     /// <summary>The words for a refused character order (the shared reasons read differently for a character). rule: m5-characters-and-talent §Posts (Orders), §Moving a character alone.</summary>
     public static string WhyCharacter(string reason) => reason switch
