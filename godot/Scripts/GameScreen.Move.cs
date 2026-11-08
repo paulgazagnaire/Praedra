@@ -280,7 +280,7 @@ public partial class GameScreen
         var plan = S.Host.PlanMove(Me, f.Id, to, via);
         long seq = Fm.SubmitMove(Me, f.Id, to, via);
         S.TrackFleet(f.Id, seq, $"Move {f.Name} to {to}");
-        if (plan.Ok) S.PlanMove(f.Id, new GameSession.PlannedMove(to, plan.Path.ToList(), plan.HopTicks.Sum(), plan.ArrivalDay));
+        if (plan.Ok) S.PlanMove(f.Id, new GameSession.PlannedMove(to, plan.Path.ToList(), plan.HopTicks.Sum(), plan.ArrivalDay, seq));
         string viaWords = via.Count == 0 ? "" : " via " + string.Join(", ", via);
         string trapWords = plan.Red ? $" (warned: interdictor seen at {string.Join(", ", plan.Traps.Select(t => t.System))})" : "";
         S.Say($"Order sent: move {f.Name} to {to}{viaWords}{trapWords}.", plan.Red ? MsgKind.Warn : MsgKind.Info, to);
@@ -330,7 +330,7 @@ public partial class GameScreen
         string at = S.MyHqSystem;
         string to = G.Systems[idx].Name;
         if (at == null || to == at) return;
-        S.SubmitMoveHq(to); // the core judges it at the next day: refusals come back in Messages with the reason
+        S.SubmitMoveHq(to); // the core judges it when the clock moves: refusals come back in Messages with the reason
         S.Say($"Order sent: move the HQ to {to}.", MsgKind.Info, to);
         AddLogItem(S.Messages[^1], false);
         CancelMove();

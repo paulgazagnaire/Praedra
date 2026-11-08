@@ -15,7 +15,7 @@ namespace PraedraViewer;
 /// <summary>
 /// Missions as the screens see them (rule: m5-missions): the player's own mission groups (own state), the words for the kinds, phases and
 /// refusals, and the mission events of the fog-filtered feed turned into plain messages. It decides no rule: what a team may do is asked of the
-/// core (<see cref="MissionModule.CheckStart"/>), and the orders are judged by the core when the next day starts.
+/// core (<see cref="MissionModule.CheckStart"/>), and the orders are judged by the core as soon as the clock moves.
 /// </summary>
 public sealed partial class GameSession
 {
@@ -47,7 +47,7 @@ public sealed partial class GameSession
     public PendingMission PendingMissionOf(int character) => _pendingMissions.Values.FirstOrDefault(p => p.Characters.Contains(character));
     public PendingMission PendingMissionOfSpecialForce(int unit) => _pendingMissions.Values.FirstOrDefault(p => p.SpecialForces.Contains(unit));
 
-    /// <summary>Queue a StartMission order (the core judges it when the next day starts; a refusal comes back in plain words).</summary>
+    /// <summary>Queue a StartMission order (the core judges it as soon as the clock moves; a refusal comes back in plain words).</summary>
     public long SubmitMission(MissionKind kind, IReadOnlyList<int> chars, IReadOnlyList<int> sfs, string target, int? targetCharacter, string home, int arrivalDay)
     {
         long seq = Game.Submit(s => new StartMissionOrder(s, Player, kind, chars.ToList(), sfs.ToList(), new List<int>(), targetCharacter == null ? target : null, targetCharacter));
@@ -66,7 +66,11 @@ public sealed partial class GameSession
     }
 
     /// <summary>A cancel order is waiting for this mission.</summary>
-    public bool CancelPending(MissionGroup m) => _pending.Values.Any(w => w == $"Cancel the {KindWords(m.Kind)} mission on {m.Target}");
+    public bool CancelPending(MissionGroup m) => CancelSeqOf(m) >= 0;
+
+    /// <summary>The queued cancel order of this mission (to take it back), or -1.</summary>
+    public long CancelSeqOf(MissionGroup m) =>
+        _pending.Where(kv => kv.Value == $"Cancel the {KindWords(m.Kind)} mission on {m.Target}").Select(kv => kv.Key).DefaultIfEmpty(-1).Max();
 
     // ------------------------------------------------------------------ words
 

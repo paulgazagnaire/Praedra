@@ -133,12 +133,12 @@ public partial class GameScreen
             var skills = Line(S.SkillsOf(c), Dim, Ui.Small);
             skills.TooltipText = Ui.Wrap(S.CapabilityOf(c) + "\n" + LeaderHelp);
             skills.MouseFilter = MouseFilterEnum.Stop;
-            foreach (var p in S.PendingOfCharacter(id)) Line($"Waiting for the next day: {p}", Pending, Ui.Small);
+            foreach (var (seq, p) in S.PendingOrdersOfCharacter(id)) OrderLine(seq, $"Ordered: {p}", Ui.Small);
             // two small buttons on one line; the card already names the leader (the full words stay on the button for the playtest)
             var acts = Ui.HBox(Ui.Block);
             if (CanMoveAlone(c)) acts.AddChild(Small(Named(Ui.Button("Move...", () => StartCharMove(id), $"Move {name} alone: then click a destination system. The route and the arrival day are shown before you confirm."), $"Move {name}...")));
             if (CanJoin(c)) acts.AddChild(Small(Named(Ui.Button("Mission...", () => OpenPlanner(c.System, id), $"Send {name} on a mission: pick the kind, more team members at the same system, and the target."), $"Send {name} on a mission...")));
-            else if (S.PendingMissionOf(id) is { } pm) Line($"Waiting for the next day: {GameSession.KindWords(pm.Kind)} on {pm.Target}", Pending, Ui.Small);
+            else if (S.PendingMissionOf(id) is { } pm) OrderLine(pm.Sequence, $"Ordered: {GameSession.KindWords(pm.Kind)} on {pm.Target}", Ui.Small);
             if (acts.GetChildCount() > 0) { Add(Ui.Space(Ui.Gap)); Add(acts); }
             else acts.Free(); // never added to the tree: free it, or it leaks a node on every refresh (QA-70)
         }
@@ -168,7 +168,7 @@ public partial class GameScreen
         var riders = Cm.AttachedTo(f.Id).OrderBy(c => c.Id).ToList();
         var passengers = riders.Where(c => c.Post == CharacterPost.None).ToList();
         if (passengers.Count > 0) Line($"Passengers: {string.Join(", ", passengers.Select(c => S.CharName(c.Id)))}");
-        foreach (var p in riders.SelectMany(c => S.PendingOfCharacter(c.Id))) Line($"Waiting for the next day: {p}", Pending, 13);
+        foreach (var (seq, p) in riders.SelectMany(c => S.PendingOrdersOfCharacter(c.Id))) OrderLine(seq, $"Ordered: {p}", 13);
 
         bool moving = f.At == null || f.Transit != null;
         foreach (var c in riders)
@@ -199,7 +199,7 @@ public partial class GameScreen
                 var holder = post == CharacterPost.None ? null : Cm.HolderOf(f.Id, post);
                 string label = post == CharacterPost.None ? $"Attach {name} as a passenger" : $"Attach {name} as {GameSession.PostWords(post)}";
                 Act(label, () => Attach(rc, f, pp),
-                    holder != null ? $"{S.CharName(holder.Id)} already holds this post." : $"Leadership {Cm.EffectiveSkill(c, Skill.Leadership)}. Starts when the next day begins.", holder != null);
+                    holder != null ? $"{S.CharName(holder.Id)} already holds this post." : $"Leadership {Cm.EffectiveSkill(c, Skill.Leadership)}. Starts as soon as the clock moves.", holder != null);
             }
         }
     }
@@ -236,7 +236,7 @@ public partial class GameScreen
             if (gen != null)
             {
                 var g = gen;
-                foreach (var p in S.PendingOfCharacter(g.Id)) Line($"Waiting for the next day: {p}", Pending, 13);
+                foreach (var (seq, p) in S.PendingOrdersOfCharacter(g.Id)) OrderLine(seq, $"Ordered: {p}", 13);
                 Act($"Release {S.CharName(g.Id)} as General of {name}", () => ReleaseGeneral(g, name), "The post becomes empty; the character stays here.");
             }
         }
@@ -247,10 +247,10 @@ public partial class GameScreen
             string cname = S.CharName(c.Id);
             string where = c.Status == CharacterStatus.Captured ? "prisoner of the enemy" : c.AttachedFleet != 0 ? S.RoleOf(c) : S.RoleOf(c) == "no post" ? "standing here" : S.RoleOf(c);
             Line($"{cname} - {GameSession.StatusWords(c)}, {where}. Leadership {Cm.EffectiveSkill(c, Skill.Leadership)}.", c.Status == CharacterStatus.Free ? null : Bad, 13);
-            if (c.Id != gen?.Id) foreach (var p in S.PendingOfCharacter(c.Id)) Line($"Waiting for the next day: {p}", Pending, 13);
+            if (c.Id != gen?.Id) foreach (var (seq, p) in S.PendingOrdersOfCharacter(c.Id)) OrderLine(seq, $"Ordered: {p}", 13);
             bool standing = c.Status == CharacterStatus.Free && c.AttachedFleet == 0 && c.Transit == null;
             if (mine && gen == null && standing && Cm.ClassOf(c).CanGeneral && S.SystemPostOf(c) == null)
-                Act($"Make {cname} the General of {name}", () => AssignGeneral(rc, name), "Starts when the next day begins.");
+                Act($"Make {cname} the General of {name}", () => AssignGeneral(rc, name), "Starts as soon as the clock moves.");
             if (CanMoveAlone(c)) Act($"Move {cname}...", () => StartCharMove(rc.Id), "Then click a destination system. The route and the arrival day are shown before you confirm.");
         }
     }
@@ -314,14 +314,14 @@ public partial class GameScreen
         string name = S.CharName(c.Id);
         int cid = c.Id;
         var pr = Fm.FindPath(c.System, to, Cm.Params.CharacterSpeed);
-        S.TrackCharacter(cid, -1, S.Game.Submit(seq => new MoveCharacterOrder(seq, Me, cid, to)), $"Move {name} to {to}");
-        if (pr.Ok) S.PlanCharacterMove(cid, new GameSession.PlannedMove(to, pr.Systems.Select(i => G.Systems[i].Name).ToList(), pr.TotalTicks, S.Game.Day + pr.TotalTicks));
+        long moveSeq = S.TrackCharacter(cid, -1, S.Game.Submit(seq => new MoveCharacterOrder(seq, Me, cid, to)), $"Move {name} to {to}");
+        if (pr.Ok) S.PlanCharacterMove(cid, new GameSession.PlannedMove(to, pr.Systems.Select(i => G.Systems[i].Name).ToList(), pr.TotalTicks, S.Game.Day + pr.TotalTicks, moveSeq));
         S.Say($"Order sent: move {name} to {to}.", MsgKind.Info, to);
         AddLogItem(S.Messages[^1], false);
         CancelMove();
     }
 
-    /// <summary>Routes of the player's characters travelling alone (and the trips that start next day), for the map. Own side only.</summary>
+    /// <summary>Routes of the player's characters travelling alone (and the trips just ordered), for the map. Own side only.</summary>
     IEnumerable<(string Label, IReadOnlyList<string> Path, int HopIndex)> CharacterRoutes()
     {
         foreach (var c in S.MyCharacters)

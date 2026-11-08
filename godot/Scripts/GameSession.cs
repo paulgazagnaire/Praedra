@@ -72,6 +72,7 @@ public sealed partial class GameSession
     readonly Dictionary<long, int> _pendingChar = new();
     readonly HashSet<long> _charOrders = new();
     readonly Dictionary<int, PlannedMove> _plannedCharMoves = new();
+    long _hqSeq = -1;
     int _printed; // index into the fog's event feed for the player's side (EventsFor), not the unfiltered list
     // Names as they were before the day ran (a destroyed ship or a dissolved fleet is gone afterwards).
     readonly Dictionary<int, string> _classOf = new();
@@ -190,11 +191,14 @@ public sealed partial class GameSession
     /// <summary>A MoveHq order queued and not yet judged (destination), or null.</summary>
     public string PendingHqMove { get; private set; }
 
-    /// <summary>Queue the MoveHq order (Collective). The core judges it when the next day starts. rule: m5-fog-and-hq §F6.</summary>
+    /// <summary>The MoveHq order queued now (to cancel it), or -1.</summary>
+    public long PendingHqSeq => PendingHqMove == null ? -1 : _hqSeq;
+
+    /// <summary>Queue the MoveHq order (Collective). The core judges it as soon as the clock moves. rule: m5-fog-and-hq §F6.</summary>
     public long SubmitMoveHq(string destination)
     {
         PendingHqMove = destination;
-        return Track(Fog.SubmitMoveHq(Player, destination), $"Move the HQ to {destination}");
+        return _hqSeq = Track(Fog.SubmitMoveHq(Player, destination), $"Move the HQ to {destination}");
     }
 
     // ------------------------------------------------------------------ orders
@@ -206,27 +210,47 @@ public sealed partial class GameSession
         return sequence;
     }
 
-    /// <summary>Like <see cref="Track"/>, and remember which fleet the order belongs to (shown as "waiting for the next day" on the fleet).</summary>
+    /// <summary>Like <see cref="Track"/>, and remember which fleet the order belongs to (shown as "Ordered: ..." on the fleet, with Cancel).</summary>
     public long TrackFleet(int fleet, long sequence, string what)
     {
         _pendingFleet[sequence] = fleet;
         return Track(sequence, what);
     }
 
-    /// <summary>Withdraw a queued order (it was never given) and forget its tracking. rule: m1-clock-and-orders §Orders in.</summary>
+    /// <summary>
+    /// Withdraw a queued order (as if it was never given) and forget everything the screens drew for it: the planned route, the HQ move,
+    /// the waiting mission. False when the core has judged it already. rule: m1-clock-and-orders §Orders in (withdrawing a queued order).
+    /// </summary>
     public bool Withdraw(long sequence)
     {
         if (!Game.Withdraw(sequence)) return false;
         _pending.Remove(sequence); _pendingFleet.Remove(sequence);
+        _pendingChar.Remove(sequence); _charOrders.Remove(sequence);
+        _missionOrders.Remove(sequence); _pendingMissions.Remove(sequence);
+        foreach (var k in _plannedMoves.Where(kv => kv.Value.Seq == sequence).Select(kv => kv.Key).ToList()) _plannedMoves.Remove(k);
+        foreach (var k in _plannedCharMoves.Where(kv => kv.Value.Seq == sequence).Select(kv => kv.Key).ToList()) _plannedCharMoves.Remove(k);
+        if (sequence == _hqSeq) { PendingHqMove = null; _hqSeq = -1; }
         return true;
     }
 
-    /// <summary>Plain-language orders given to this fleet that the core will carry out when the next day starts.</summary>
-    public IEnumerable<string> PendingOf(int fleet) =>
-        _pendingFleet.Where(kv => kv.Value == fleet && _pending.ContainsKey(kv.Key)).OrderBy(kv => kv.Key).Select(kv => _pending[kv.Key]);
+    /// <summary>The plain words of a queued player order, or null.</summary>
+    public string WhatOf(long sequence) => _pending.TryGetValue(sequence, out var w) ? w : null;
 
-    /// <summary>A move order that was given but not yet started (it starts with the next day).</summary>
-    public readonly record struct PlannedMove(string To, IReadOnlyList<string> Path, int Days, int ArrivalDay);
+    /// <summary>The player's orders queued after <paramref name="after"/> (sequence numbers only grow), oldest first.</summary>
+    public List<long> TrackedAfter(long after) => _pending.Keys.Where(k => k > after).OrderBy(k => k).ToList();
+
+    /// <summary>The newest queued player order's sequence, or -1.</summary>
+    public long LastTracked => _pending.Count == 0 ? -1 : _pending.Keys.Max();
+
+    /// <summary>Orders given to this fleet that the core carries out as soon as the clock moves.</summary>
+    public IEnumerable<string> PendingOf(int fleet) => PendingOrdersOf(fleet).Select(o => o.What);
+
+    /// <summary>The same, with each order's sequence (for its Cancel button).</summary>
+    public IEnumerable<(long Seq, string What)> PendingOrdersOf(int fleet) =>
+        _pendingFleet.Where(kv => kv.Value == fleet && _pending.ContainsKey(kv.Key)).OrderBy(kv => kv.Key).Select(kv => (kv.Key, _pending[kv.Key]));
+
+    /// <summary>A move order that was given but not yet started (the fleet leaves as soon as the clock moves).</summary>
+    public readonly record struct PlannedMove(string To, IReadOnlyList<string> Path, int Days, int ArrivalDay, long Seq);
 
     public void PlanMove(int fleet, PlannedMove m) => _plannedMoves[fleet] = m;
     public PlannedMove? PlannedMoveOf(int fleet) => _plannedMoves.TryGetValue(fleet, out var m) ? m : null;
@@ -246,7 +270,7 @@ public sealed partial class GameSession
         var outcome = new StepOutcome();
         ReadEvents(outcome);
         // Every order given before this day was judged in this Step: nothing is "waiting" any more.
-        _pending.Clear(); _pendingFleet.Clear(); _plannedMoves.Clear(); PendingHqMove = null;
+        _pending.Clear(); _pendingFleet.Clear(); _plannedMoves.Clear(); PendingHqMove = null; _hqSeq = -1;
         _pendingChar.Clear(); _charOrders.Clear(); _plannedCharMoves.Clear();
         _pendingMissions.Clear(); _missionOrders.Clear();
         Winner = GameBoot.WinnerOf(Host);
@@ -403,8 +427,10 @@ public sealed partial class GameSession
         return Track(sequence, what);
     }
 
-    public IEnumerable<string> PendingOfCharacter(int character) =>
-        _pendingChar.Where(kv => kv.Value == character && _pending.ContainsKey(kv.Key)).OrderBy(kv => kv.Key).Select(kv => _pending[kv.Key]);
+    public IEnumerable<string> PendingOfCharacter(int character) => PendingOrdersOfCharacter(character).Select(o => o.What);
+
+    public IEnumerable<(long Seq, string What)> PendingOrdersOfCharacter(int character) =>
+        _pendingChar.Where(kv => kv.Value == character && _pending.ContainsKey(kv.Key)).OrderBy(kv => kv.Key).Select(kv => (kv.Key, _pending[kv.Key]));
 
     public void PlanCharacterMove(int character, PlannedMove m) => _plannedCharMoves[character] = m;
     public PlannedMove? PlannedCharacterMoveOf(int character) => _plannedCharMoves.TryGetValue(character, out var m) ? m : null;
@@ -437,7 +463,7 @@ public sealed partial class GameSession
             return $"aboard fleet {f.Name} at {f.At}";
         }
         if (c.Transit is { } t && c.System == null) return $"travelling alone to {t.Path[^1]}, arrives day {ArrivalDay(t)}";
-        if (PlannedCharacterMoveOf(c.Id) is { } pm) return $"at {c.System}; leaves when the next day starts for {pm.To}, arrives day {pm.ArrivalDay}";
+        if (PlannedCharacterMoveOf(c.Id) is { } pm) return $"at {c.System}; leaving for {pm.To}, arrives day {pm.ArrivalDay}";
         if (c.Transit is { } t2) return $"at {c.System}; leaving for {t2.Path[^1]}, arrives day {ArrivalDay(t2)}";
         return $"at {c.System}";
     }

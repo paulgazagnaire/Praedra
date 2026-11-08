@@ -94,6 +94,14 @@ public partial class Main
                 gs.SetSearch(dest); gs.SubmitSearch();
                 Expect(s.QueuedOrders == q + 1 && s.PlannedMoveOf(mover.Id)?.To == dest, $"searching {dest} while moving sends the fleet there");
                 Expect(gs.ToastText.Contains($"{mover.Name} to {dest}: arrives day"), "a toast confirms the order with the arrival day: " + gs.ToastText);
+                // Paul 2026-11-08 ("Fix the screen"): the order looks done at once and can be taken back until the clock moves
+                gs.PlayRefresh();
+                Expect(gs.PanelText().Contains($"Ordered: Move {mover.Name} to {dest}") && gs.PanelText().Contains($"Leaving for {dest}, arrives day"), "the fleet panel shows the move as given: " + gs.PanelText().Replace("\n", " / "));
+                Expect(gs.TopText.Contains("given, cancel until Play"), "the top bar counts the orders given: " + gs.TopText);
+                Expect(gs.Click($"Cancel: Move {mover.Name} to {dest}"), "the order has a Cancel button");
+                gs.PlayRefresh();
+                Expect(s.QueuedOrders == q && s.PlannedMoveOf(mover.Id) == null && !gs.PanelText().Contains("Ordered: "), "Cancel takes the order back and drops its route");
+                Expect(s.Messages.Any(m => m.Text == $"Order cancelled: Move {mover.Name} to {dest}."), "the log says the order was cancelled");
             }
         }
 

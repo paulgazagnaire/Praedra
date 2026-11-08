@@ -144,10 +144,20 @@ public partial class Main
         {
             Expect(gs.Click("Move..."), "click Move...");
             gs.PickSystem(regSys);
-            Expect(s.QueuedOrders == 1 && gs.TopText.Contains("1 order waiting"), "top bar shows the waiting order: " + gs.TopText);
+            Expect(s.QueuedOrders == 1 && gs.TopText.Contains("1 order given"), "top bar shows the order given: " + gs.TopText);
+            gs.PlayRefresh();
+            // Paul 2026-11-08 ("Fix the screen"): an order looks done at once and can be taken back until the clock moves
+            string moveWords = $"Move {troopFleet.Name} to {regSys}";
+            Expect(gs.Click($"Cancel: {moveWords}"), "the fleet panel has a Cancel button on the order just given");
+            gs.PlayRefresh();
+            Expect(s.QueuedOrders == 0 && !s.PlannedMoves.Any() && !gs.PanelText().Contains("Ordered: "), "Cancel takes the order back and drops its route: " + gs.PanelText().Replace("\n", " / "));
+            Expect(s.Messages.Any(m => m.Text == $"Order cancelled: {moveWords}."), "the log says the order was cancelled");
+            Expect(gs.Click("Move..."), "click Move... again");
+            gs.PickSystem(regSys);
+            Expect(s.QueuedOrders == 1, "the move is given again");
             gs.PlayRefresh();
             Expect(gs.FleetListTexts().Any(t => t.Contains(troopFleet.Name) && t.Contains("moving to " + regSys)), "fleet list says 'moving to " + regSys + ", arrives day N'");
-            Expect(gs.PanelText().Contains("Waiting for the next day") || gs.PanelText().Contains("Will leave"), "fleet panel shows the pending move");
+            Expect(gs.PanelText().Contains($"Ordered: Move {troopFleet.Name} to {regSys}") && gs.PanelText().Contains($"Leaving for {regSys}, arrives day"), "fleet panel shows the move as given: leaving, with its arrival day");
             Expect(s.PlannedMoves.Any(), "planned route recorded for drawing");
             gs.PlayDay();
             Expect(troopFleet.Transit != null || troopFleet.At == regSys, "fleet is under way after the day starts");
@@ -195,7 +205,7 @@ public partial class Main
         Expect(gs.Has("Bombard: military"), "Bombard buttons show at an enemy/neutral system");
         Expect(gs.Click("Bombard: military"), "click Bombard");
         gs.PlayRefresh();
-        Expect(gs.PanelText().Contains("Waiting for the next day"), "pending bombard shown on the fleet");
+        Expect(gs.PanelText().Contains("Ordered: Bombard"), "the bombard order shows on the fleet");
         Expect(!gs.Enabled("Invade"), "Invade is greyed out while a bombard order is waiting (the core allows one attack order per fleet)");
         gs.PlayDay();
         Expect(s.Messages.Any(m => m.Text.Contains("ombard") && m.Text.Contains(target)), "bombardment happened or was explained");

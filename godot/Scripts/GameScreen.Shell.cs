@@ -120,7 +120,7 @@ public partial class GameScreen
         var ordersCard = Ui.Hud(12, 5);
         ordersCard.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         ordersCard.MouseFilter = MouseFilterEnum.Stop;
-        ordersCard.TooltipText = Ui.Wrap("Orders are carried out when the next day begins. Press Play or +1 day. If the game refuses one, the reason appears in Messages.");
+        ordersCard.TooltipText = Ui.Wrap("Your orders take effect as soon as the clock moves (Play or +1 day): a fleet leaves at once and arrives on the day shown. Until then each order has a Cancel button. If the game refuses one, the reason appears in Messages.");
         _ordersLabel = Ui.Label("", null, Ui.Warn, Ui.Small, wrap: false);
         ordersCard.AddChild(_ordersLabel);
         ordersCard.Visible = false;
@@ -310,7 +310,7 @@ public partial class GameScreen
         _refinedLabel.TooltipText = ((Control)_refinedLabel.GetParent()).TooltipText + (refined >= 10_000 ? $" ({refined})" : "");
 
         int q = S.QueuedOrders;
-        _ordersLabel.Text = q > 0 ? $"{q} {(q == 1 ? "order" : "orders")} waiting for the next day" : "";
+        _ordersLabel.Text = q > 0 ? $"{q} {(q == 1 ? "order" : "orders")} given, cancel until Play" : "";
         _ordersLabel.GetParent<Control>().Visible = q > 0 && !InMoveMode;
         _playButton.ThemeTypeVariation = _playing ? "ClockOn" : "Clock";
         _pauseButton.ThemeTypeVariation = _playing ? "Clock" : "ClockOn";
@@ -463,7 +463,7 @@ public partial class GameScreen
         var h = S.OwnHq;
         string line = h == null ? null
             : h.Status == Praedra.Core.Fog.HqStatus.InTransit ? HqMovingText(h) + "."
-            : S.PendingHqMove != null ? $"HQ move to {S.PendingHqMove} starts when the next day begins."
+            : S.PendingHqMove != null ? $"HQ move to {S.PendingHqMove} starts as soon as the clock moves."
             : null;
         _hqStatusLabel.Text = line ?? "";
         _hqStatusLabel.GetParent<Control>().Visible = line != null;

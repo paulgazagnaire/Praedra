@@ -234,7 +234,7 @@ public partial class GameScreen
         ("Time", new[]
         {
             "Press Play (Space) to run the clock, again to stop it. Keys 1-4 set the speed; N or +1 day moves one day. The clock stops by itself after a battle, a capture or an invasion (Settings can add more).",
-            "Everything you order starts when the next day begins. A note under the search counts the orders waiting.",
+            "An order takes effect as soon as the clock moves (Play or +1 day): a fleet leaves at once and arrives on the day shown. Until then you can cancel it. A note under the search counts your orders.",
             "The pill under the search says why the clock stopped or how many things need you; click it for Needs you (Q), the list worst first, each with its button. Run until something needs me plays until a new problem appears.",
         }),
         ("The screen", new[]

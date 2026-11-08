@@ -24,7 +24,7 @@ public partial class GameScreen
     {
         if (f.Transit is { } t && f.At == null)
             return $"Travelling {t.Path[t.HopIndex]} -> {t.Path[t.HopIndex + 1]} (next stop day {t.DueDay}). Heading for {t.Path[^1]}, arriving day {GameSession.ArrivalDay(t)}.";
-        if (S.PlannedMoveOf(f.Id) is { } pm) return $"At {f.At}. Will leave when the next day starts: moving to {pm.To}, arrives day {pm.ArrivalDay}.";
+        if (S.PlannedMoveOf(f.Id) is { } pm) return $"At {f.At}. Leaving for {pm.To}, arrives day {pm.ArrivalDay}.";
         return $"At {f.At}.";
     }
 
@@ -43,6 +43,7 @@ public partial class GameScreen
         var owner = at == null ? null : S.OwnerOf(at);
         var tags = new List<(string, Color)> { ("YOUR FLEET", Ui.You) };
         if (!atSystem) tags.Add(("MOVING", Ui.Text2));
+        else if (S.PlannedMoveOf(f.Id) != null) tags.Add(("LEAVING", Ui.Warn));
         if (S.HoldsHarvester(f)) tags.Add(("HARVESTER", Ui.Enemy));
         var here = atSystem ? S.Game.State.Fleets.Values.Where(x => x.Side == Me && x.At == at).OrderBy(x => x.Id).ToList() : new List<Fleet> { f };
         Title(f.Name, WhereIs(f), tags.ToArray());
@@ -56,7 +57,7 @@ public partial class GameScreen
             nav.AddChild(Ui.Button("Next fleet here", () => CycleFleetHere(1), "Tab", "Chip"));
             Add(nav);
         }
-        foreach (var pend in S.PendingOf(f.Id)) Line($"Waiting for the next day: {pend}", Pending, Ui.Small);
+        foreach (var (seq, pend) in S.PendingOrdersOf(f.Id)) OrderLine(seq, $"Ordered: {pend}", Ui.Small);
 
         // ---- numbers
         var aboard = troops.RegimentsAboard(f);
@@ -205,10 +206,10 @@ public partial class GameScreen
         Heading("harvester");
         Note("This fleet holds a harvester. Destroy System wipes out the system it is at.");
         string wait = readyDay is int rd ? S.HarvestWaitText(rd) : "";
-        string tip = readyDay != null ? wait : "Opens a question first. The strike happens when the next day starts.";
+        string tip = readyDay != null ? wait : "Opens a question first. The strike happens as soon as the clock moves.";
         Act("Destroy System...", () => AskDestroySystem(f.Id), tip, gone || pending || readyDay != null, "DangerButton");
         if (gone) Line($"{at} is already destroyed.", Dim, Ui.Small);
-        else if (pending) Line("The strike is waiting for the next day.", Pending, Ui.Small);
+        else if (pending) Line("The strike is ordered: it happens as soon as the clock moves.", Pending, Ui.Small);
         if (readyDay != null) Line(wait, Dim, Ui.Small);
     }
 
@@ -218,7 +219,7 @@ public partial class GameScreen
         string at = f.At;
         Confirm($"Destroy {at}?",
             $"{at} and everything on it (the planet, buildings, troops, and every enemy or neutral ship there) will be destroyed for good, and about half of the minor characters there will die. " +
-            "The rest of the sector turns against the Hand, and a second strike in the same sector turns the whole sector to the Collective. It happens when the next day starts and cannot be undone.",
+            "The rest of the sector turns against the Hand, and a second strike in the same sector turns the whole sector to the Collective. It happens as soon as the clock moves and cannot be undone after that.",
             "Yes, destroy it", () => DestroySystem(fleetId), danger: true);
     }
 
@@ -227,7 +228,7 @@ public partial class GameScreen
         if (!S.Game.State.Fleets.TryGetValue(fleetId, out var f) || f.At == null) return;
         string at = f.At;
         S.SubmitDestroySystem(f);
-        Sent($"{f.Name} destroys {at}", at); // the core judges it at the next day; a refusal comes back in the messages with its reason
+        Sent($"{f.Name} destroys {at}", at); // the core judges it when the clock moves; a refusal comes back in the messages with its reason
     }
 
     // ================================================================== orders
@@ -236,7 +237,7 @@ public partial class GameScreen
     {
         S.Say($"Order sent: {what}.", MsgKind.Info, system);
         AddLogItem(S.Messages[^1], false);
-        if (!MgDropping) Toast($"Order sent: {what}. It starts next day.");   // a window drop shows itself at once
+        if (!MgDropping) Toast($"Order given: {what}.");   // a window drop shows itself at once
         _panelDirty = true; _panelTimer = 0;
         RefreshMgmt();
         RefreshTop();

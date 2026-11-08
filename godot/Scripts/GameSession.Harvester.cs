@@ -52,7 +52,7 @@ public sealed partial class GameSession
         ? $"One harvest a year: your next harvest can land on day {readyDay}."
         : $"Harvester recharging: ready on day {readyDay}.";
 
-    /// <summary>Queue Destroy System for the fleet. The core judges it when the next day starts; a refusal comes back in the messages.</summary>
+    /// <summary>Queue Destroy System for the fleet. The core judges it when the clock moves; a refusal comes back in the messages.</summary>
     public long SubmitDestroySystem(Fleet f) =>
         TrackFleet(f.Id, Host.Harvester.SubmitDestroySystem(Player, f.Id), $"Destroy System {f.At} with {f.Name}");
 

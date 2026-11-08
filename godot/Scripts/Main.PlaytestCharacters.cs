@@ -65,7 +65,7 @@ public partial class Main
         string label = post == CharacterPost.None ? $"Attach {mname} as a passenger" : $"Attach {mname} as {GameSession.PostWords(post)}";
         Expect(gs.Click(label), $"click '{label}'");
         gs.PlayRefresh();
-        Expect(gs.PanelText().Contains($"Waiting for the next day: Attach {mname} to {fleet.Name}"), "the fleet panel shows the waiting attach");
+        Expect(gs.PanelText().Contains($"Ordered: Attach {mname} to {fleet.Name}"), "the fleet panel shows the attach as ordered");
         Expect(gs.Click($"Attach {mname} as a passenger"), "click a second attach for the same character before the day starts");
         int before = s.Messages.Count;
         gs.PlayDay();
@@ -139,7 +139,7 @@ public partial class Main
         Expect(gs.Banner.Contains($"{name} to {to}") && gs.Banner.Contains($"arrives day {arrive}"), "the preview shows the route and the arrival day: " + gs.Banner);
         gs.PickSystem(to);
         gs.PlayRefresh();
-        Expect(gs.PanelText().Contains($"Waiting for the next day: Move {name} to {to}") && gs.PanelText().Contains($"leaves when the next day starts for {to}, arrives day {arrive}"),
+        Expect(gs.PanelText().Contains($"Ordered: Move {name} to {to}") && gs.PanelText().Contains($"leaving for {to}, arrives day {arrive}"),
             "the list shows the waiting move and its arrival day");
         int before = s.Messages.Count;
         gs.PlayDay();

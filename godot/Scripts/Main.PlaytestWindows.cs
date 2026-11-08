@@ -119,7 +119,13 @@ public partial class Main
             int ship = fleet.Ships[^1];
             int ship2 = fleet.Ships.Count > 2 ? fleet.Ships[^2] : 0;
             var before = s.Game.State.Fleets.Keys.ToHashSet();
-            Expect(gs.MgDrop($"S:{ship}", $"Fleet {fid} NewFleet") == null, "drop a ship on New fleet");
+            // Paul 2026-11-08 ("Fix the screen"): a drop's order can be cancelled until the clock moves, and its chip goes back
+            int q0 = s.QueuedOrders;
+            Expect(gs.MgDrop($"S:{ship}", $"Fleet {fid} NewFleet") == null && s.QueuedOrders == q0 + 1, "drop a ship on New fleet: one split order");
+            gs.MgText($"Fleet {fid}");
+            Expect(gs.Click($"Cancel: Split a ship off {fleet.Name}"), "the split shows in the fleet window with a Cancel button");
+            Expect(s.QueuedOrders == q0, "Cancel takes the split back");
+            Expect(gs.MgDrop($"S:{ship}", $"Fleet {fid} NewFleet") == null, "drop a ship on New fleet (the chip is back, so it can be dropped again)");
             if (ship2 != 0) Expect(gs.MgDrop($"S:{ship2}", $"Fleet {fid} NewFleet") == null, "drop a second ship on New fleet the same day");
             gs.PlayDay();
             var made = s.Game.State.Fleets.Values.FirstOrDefault(f => !before.Contains(f.Id) && f.Ships.Contains(ship));

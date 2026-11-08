@@ -13,7 +13,7 @@ namespace PraedraViewer;
 /// <summary>
 /// A system's Infrastructure window (Paul, 2026-11-03, with Classic's system window as the example): slots as dots, one card per yard with what
 /// it builds and a progress bar, what can be built as picture tiles (click one to order it), and the buildings as stacked tiles (right-click
-/// to scrap). The same orders as the drawer's build table (user stories E1-E6); the core judges them when the next day starts.
+/// to scrap). The same orders as the drawer's build table (user stories E1-E6); the core judges them when the clock moves.
 /// rule: m2-construction §Build order, §Build time; m2-maintenance §Overdraft, §Scrapping and refunds.
 /// </summary>
 public partial class GameScreen
