@@ -20,7 +20,7 @@ from PIL import Image
 
 BASE = "appfoPpVnwpVT6kPV"  # Airtable "Praedra Lore"
 GEMINI = "https://generativelanguage.googleapis.com/v1beta"
-MODEL = os.environ.get("ART_MODEL", "gemini-3-pro-image-preview")  # "Nano Banana Pro"
+MODEL = os.environ.get("ART_MODEL", "gemini-3-pro-image")  # "Nano Banana Pro"
 # Google's list price for this model, 1K or 2K picture, checked 2026-11-10. Used for the budget guard only;
 # the real hard limit is the monthly spend cap set in Google AI Studio.
 PRICE_PER_IMAGE = float(os.environ.get("ART_PRICE", "0.14"))

@@ -1,7 +1,7 @@
 # Night art batch
 
 Makes the missing character and unit pictures from the prompts in the Airtable base
-"Praedra Lore", with Google's Gemini image model ("Nano Banana Pro", `gemini-3-pro-image-preview`).
+"Praedra Lore", with Google's Gemini image model ("Nano Banana Pro", `gemini-3-pro-image`).
 
 What it does, in order, for every row of **Characters** and of **Units** (troops and special forces only):
 
