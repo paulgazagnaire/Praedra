@@ -168,6 +168,25 @@ def dither(png_bytes, dots=320, dot=2, contrast=1.2):
     return buf.getvalue()
 
 
+# ---------- approved pictures ----------
+REF_ROOT = "/mnt/project-files/praedra/art/reference"
+APPROVED_NOTE = ("\n\nThe attached picture(s) show the APPROVED design. Match its shapes, proportions, "
+                 "materials and colours exactly; the text above only fills in what the pictures do not show.")
+
+
+def approved_refs(name):
+    """Pictures Paul approved, named <name>-approved-*.png/jpg anywhere under art/reference
+    (plural unit names match the singular file: Proxies -> proxy-approved-...)."""
+    s = slug(name)
+    stems = {s, re.sub(r"ies$", "y", s), re.sub(r"s$", "", s)}
+    found = []
+    for root, _, files in os.walk(REF_ROOT):
+        for f in sorted(files):
+            if any(f.startswith(st + "-approved") for st in stems) and f.lower().endswith((".png", ".jpg", ".jpeg")):
+                found.append(os.path.join(root, f))
+    return found
+
+
 # ---------- the plan ----------
 def slug(s):
     return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")[:60]
@@ -221,6 +240,7 @@ def build_plan():
                 continue
             jobs.append({"table": table, "id": r["id"], "name": name, "slug": slug(name),
                          "sheet": sheet_prompt if need_sheet else None,
+                         "approved": approved_refs(name) if need_sheet else [],
                          "portrait": portrait_prompt if need_portrait else None})
     return jobs, skipped
 
@@ -255,7 +275,7 @@ def main():
     log(f"Plan: {len(jobs)} characters/units, {n} pictures, about ${cost:.2f} at ${PRICE_PER_IMAGE}/picture ({MODEL}).")
     for j in jobs:
         what = " + ".join(w for w, on in (("reference sheet", j["sheet"]), ("portrait", j["portrait"])) if on)
-        log(f"  {j['table']}: {j['name']}: {what}")
+        log(f"  {j['table']}: {j['name']}: {what}" + (f" (from {len(j['approved'])} approved picture(s))" if j.get("approved") else ""))
     for s in skipped:
         log(f"  SKIPPED {s}")
     if a.plan:
@@ -289,7 +309,8 @@ def main():
             sheet = None
             if j["sheet"]:
                 for k in range(1, a.tries + 1):
-                    data = generate(j["sheet"], [], "16:9"); spent += 1
+                    refs = [open(p, "rb").read() for p in j["approved"]]
+                    data = generate(j["sheet"] + (APPROVED_NOTE if refs else ""), refs, "16:9"); spent += 1
                     path = save(j, "sheet", k, data); made.append(path); log(f"  sheet {k}: {path}")
                     if k == 1:
                         sheet = data
