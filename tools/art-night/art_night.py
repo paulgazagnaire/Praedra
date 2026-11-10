@@ -221,7 +221,6 @@ def build_plan():
                 continue
             jobs.append({"table": table, "id": r["id"], "name": name, "slug": slug(name),
                          "sheet": sheet_prompt if need_sheet else None,
-                         "sheet_url": None if need_sheet else f["Reference sheet"][0]["url"],
                          "portrait": portrait_prompt if need_portrait else None})
     return jobs, skipped
 
@@ -297,7 +296,8 @@ def main():
                         if not a.no_airtable and cell_empty(j, "Reference sheet"):
                             at_attach(j["id"], "Reference sheet", data, f"{j['slug']}-sheet-{day}.png")
             else:
-                sheet = download(j["sheet_url"])
+                # attachment URLs expire after a few hours: read a fresh one just before downloading
+                sheet = download(at_record(j["table"], j["id"])["fields"]["Reference sheet"][0]["url"])
             if j["portrait"]:
                 for k in range(1, a.tries + 1):
                     data = generate(j["portrait"], [sheet], "3:4"); spent += 1
