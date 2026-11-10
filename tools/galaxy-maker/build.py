@@ -1,6 +1,6 @@
 # Builds index.html from galaxy-maker.src.html and the v6 galaxy data (the systems' map positions).
 # usage: python3 build.py galaxy-maker.src.html ../../data/design/extended-galaxy-v6-planets.csv index.html
-import sys, csv, json
+import sys, csv, json, os
 src, csvf, out = sys.argv[1:4]
 rows = list(csv.DictReader(open(csvf, encoding='utf8')))
 # the game draws each sector a little tighter round its own centre (GalaxyView.SectorPull = 0.7); do the same so the overlay and
@@ -22,5 +22,9 @@ for sec in sorted(by):
 s = open(src, encoding='utf8').read()
 assert '/*__SYSTEMS__*/[]' in s
 s = s.replace('/*__SYSTEMS__*/[]', json.dumps(sysl, separators=(',', ':')))
+# the look the game draws today, so 'Game today' and Reset in the tool are the game's real numbers
+game = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'godot', 'ui', 'galaxy-backdrop.json'), encoding='utf8'))
+assert '/*__GAME__*/null' in s
+s = s.replace('/*__GAME__*/null', json.dumps({'params': game['params'], 'dither': game['dither']}, separators=(',', ':')))
 open(out, 'w', encoding='utf8').write(s)
 print(len(sysl), 'systems,', len(s), 'bytes')

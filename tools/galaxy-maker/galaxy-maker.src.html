@@ -56,6 +56,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .row2 { display: flex; gap: 8px; }
 .row2 > * { flex: 1; min-width: 0; }
 .stagebtns button { background: rgba(16,19,26,.85); text-align: center; }
+.stagebtns button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .sub { margin: 14px 0 8px; font: 500 11px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
 [hidden] { display: none !important; }
 .ctl { display: grid; grid-template-columns: 112px minmax(0, 1fr) 54px; align-items: center; gap: 8px; margin: 9px 0; }
@@ -91,6 +92,7 @@ textarea { width: 100%; font: 12px var(--font-mono); color: var(--fg); backgroun
     <div class="tag">Galaxy<b>The Praedra galaxy</b></div>
     <div class="stagebtns">
       <button id="btnFit" type="button">Whole galaxy</button>
+      <button id="btnGlitch" type="button" aria-pressed="false">Glitch: off</button>
       <button id="btnPause" type="button">Pause</button>
       <button id="btnSnap" type="button">Save image</button>
     </div>
@@ -108,7 +110,10 @@ textarea { width: 100%; font: 12px var(--font-mono); color: var(--fg); backgroun
     <details class="sec"><summary>Gas and dust</summary><div id="ctlDust"></div></details>
     <details class="sec" open><summary>Stars</summary><div id="ctlStars"></div></details>
     <details class="sec" open><summary>Movement</summary><div id="ctlMove"></div>
-      <p class="note">Nothing turns. Gas drifts out along the arms, star-forming knots breathe, and a few stars flare now and then.</p>
+      <p class="note">Nothing turns. Overall pace speeds or slows everything at once (0 stops it); each line below is one kind of movement with its own amount.</p>
+    </details>
+    <details class="sec"><summary>Depth</summary><div id="ctlDepth"></div>
+      <p class="note">Parallax only shows when you drag or zoom. Relief, contour lines and the mesh are drawn from the galaxy's height: the core is the peak, the arms are ridges.</p>
     </details>
     <details class="sec"><summary>Colours</summary><div class="sw-row" id="swatches"></div></details>
     <details class="sec" open>
@@ -120,6 +125,13 @@ textarea { width: 100%; font: 12px var(--font-mono); color: var(--fg); backgroun
         <div class="sub">Colours</div>
         <div class="chips" id="diPal"></div>
         <div id="ctlDither"></div>
+        <div class="sub">Glitch</div>
+        <label class="chk"><input type="checkbox" id="glOn"> Break the pattern in patches</label>
+        <div id="glBody" hidden>
+          <div id="ctlGlitch"></div>
+          <button id="btnShuffle" type="button">Shuffle the patches</button>
+          <p class="note">A glitch is a patch of tiles drawn in another pattern. Amount at 0% is exactly the plain dither.</p>
+        </div>
       </div>
     </details>
     <details class="sec">
@@ -156,6 +168,12 @@ uniform vec4 uDust;           // x lanes, y filaments, z lane offset, w overall 
 uniform vec4 uStar;           // x stars, y foreground stars, z star density, w dimming for the map
 uniform vec4 uMove;           // x gas drift, y knot breathing, z twinkle strength, w share of stars that twinkle
 uniform float uTwSpeed;
+uniform float uZoom;          // the view's zoom, 1 = the whole disc fits (only the parallax uses it)
+uniform vec4 uDepth;          // x parallax, y distant stars, z drifting motes, w mote size
+uniform vec4 uRelief;         // x relief, y the light's direction (radians), z contour lines, w contour count
+uniform vec4 uMesh;           // x mesh, y mesh squares per galaxy radius, z mesh height, w brightness ceiling
+uniform vec4 uLive;           // x arm waves, y wave pace, z core pulse
+uniform vec3 uCLine;
 uniform vec3 uCBulge, uCDisc, uCArm, uCKnot, uCDust, uCBg;
 
 float hash12(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
@@ -242,6 +260,47 @@ vec3 stars(vec2 q, float cells, float upp, float light, float seed, float base) 
   return tint * (core * (0.35 + 0.9 * mag) + glow) * vis * tw;
 }
 
+// Depth by parallax: a layer nearer than the galaxy (k > 0) slides and grows faster than it when the view moves, a farther one (k < 0)
+// slower. With parallax 0 every layer sits on the galaxy.
+vec2 layerQ(vec2 off, float k, float upp, out float lupp) {
+  float z = pow(uZoom, -0.6 * k * uDepth.x);
+  lupp = upp * z;
+  return uCenter * (1.0 + k * uDepth.x) + off * z;
+}
+// big soft out-of-focus specks floating in front of the galaxy; each drifts a little and fades in and out on its own clock
+vec3 motes(vec2 q) {
+  vec2 g = q * 2.5 + 13.7;
+  vec2 id = floor(g);
+  float pick = hash12(id + 61.3);
+  if (pick > 0.55) return vec3(0.0);
+  vec2 h = hash22(id + 2.9);
+  float ph = hash12(id + 17.1) * 6.2832;
+  vec2 at = id + 0.5 + (h - 0.5) * 0.3 + 0.08 * vec2(sin(uTime * 0.07 + ph), cos(uTime * 0.05 + ph * 1.7));
+  float rad = uDepth.w * (0.08 + 0.18 * hash12(id + 4.4));
+  float dist = length(g - at);
+  float disc = 1.0 - smoothstep(rad * 0.8, rad, dist);
+  float rim = smoothstep(rad * 0.55, rad * 0.92, dist);
+  float fade = 0.6 + 0.4 * sin(uTime * 0.21 + ph * 2.3);
+  return mix(uCArm, uCBulge, hash12(id + 8.1)) * disc * (0.55 + 0.45 * rim) * fade;
+}
+// The galaxy as a landscape: its smooth light as a height (the core is the peak, the arms are ridges). Relief, contour lines and
+// the mesh are all drawn from this one height. It drifts with the gas.
+float heightAt(vec2 q, float upp) {
+  float r = length(q);
+  float lr = log(max(r, 0.035) / 0.04);
+  float wob = (fbm2(q * 3.0 + 4.0, upp, 3) - 0.5) * uArm.w;
+  float d = atan(q.y, q.x) - (uArm.x + uArm.y * lr) + wob;
+  float arm = pow(0.5 + 0.5 * cos(2.0 * d), uArm.z);
+  float streams = armNoise(d, lr, uTime * uMove.x * 0.05, upp, 3);
+  float clumps = fbm2(q * 9.0 + vec2(13.0, 7.0), upp, 4);
+  float edge = 1.0 - smoothstep(0.86 * uShape.x, 1.08 * uShape.x, r);
+  float bs = uLight.y;
+  float bulge = uLight.x * (1.30 * exp(-pow(r / (0.07 * bs), 0.85)) + 0.45 * exp(-r / (0.16 * bs)));
+  float disc = uLight.z * 0.20 * exp(-r / 0.85) * edge;
+  float armLight = (0.06 + 0.95 * uLight.w * arm * smoothstep(0.06, 0.20, r)) * exp(-r / 0.95) * edge;
+  return bulge * 0.6 + disc + armLight * (0.45 + 1.1 * (clumps * 0.6 + streams * 0.4));
+}
+
 #ifdef GM_DITHER
 uniform vec4 uDiA;          // x pattern (0 fine grid, 1 coarse grid, 2 halftone, 3 grain), y colours in the palette (0: own colours), z contrast, w brightness
 uniform float uDiLv;
@@ -263,8 +322,55 @@ float ditherThr() {
   }
   return texelFetch(uBlue, c & 63, 0).r * (255.0 / 256.0) + 0.5 / 256.0;
 }
-vec3 ditherCol(vec3 col) {
-  float t = ditherThr();
+// Glitch: patches of square tiles where the dither changes pattern. Tiles are locked to the map in whole dots, so they travel with
+// it when the view moves. uGlA: x amount (share of the picture), y tile size in dots, z patch size in galaxy units, w how many
+// patterns are in play. uGlB: x change pace, y share of tiles with one flat tone, z share of double-size tiles, w shuffle seed.
+uniform vec4 uGlA, uGlB;
+// A tile is a vec4: xy this dot's place inside its tile, z the pattern's scale (0: this dot is not glitched), w pattern number.
+// sp: this dot on the canvas, y down. Returns where to read the galaxy from: the dot itself, or its tile's centre for a flat tile.
+vec2 glitchFind(vec2 sp, out float flatS, out vec4 gTile) {
+  flatS = 0.0; gTile = vec4(0.0);
+  if (uGlA.x <= 0.0) return sp;
+  vec2 org = floor(uCenter * uScale - 0.5 * uRes);
+  vec2 pw = floor(sp) + org;
+  float seed = uGlB.w;
+  float th = mix(1.1, -0.1, uGlA.x);
+  for (int lv = 0; lv < 2; lv++) {
+    float S = uGlA.y * (lv == 0 ? 2.0 : 1.0);
+    vec2 id = floor(pw / S);
+    vec2 qc = (id + 0.5) * S / uScale;
+    float h0 = hash12(id + seed + float(lv) * 19.7);
+    float ep = floor(uTime * uGlB.x * (0.5 + h0) + h0 * 7.0);
+    float m = noise3(vec3(qc / uGlA.z + seed * 1.37, uTime * uGlB.x * 0.12));
+    m = smoothstep(0.22, 0.78, m);          // spread the noise out evenly, so Amount is close to the share of the picture
+    float prob = smoothstep(th - 0.1, th + 0.1, m) * (lv == 0 ? uGlB.z : 1.0);
+    if (hash12(id * 1.31 + ep * 3.7 + seed + 5.0) >= prob) continue;
+    float n2 = noise2(qc / uGlA.z * 1.9 + 31.0 + seed);
+    float stray = hash12(id + ep + 23.0);
+    float which = fract(n2 * 3.0 + (stray < 0.25 ? stray * 4.0 : 0.0));
+    gTile = vec4(pw - id * S, lv == 0 ? 2.0 : 1.0, min(floor(which * uGlA.w), uGlA.w - 1.0));
+    if (hash12(id + ep * 1.7 + 77.0) < uGlB.y) { flatS = S; return (id + 0.5) * S - (uCenter * uScale - 0.5 * uRes); }   // the tile's own centre on the map, wherever the view sits
+    return sp;
+  }
+  return sp;
+}
+float glitchThr(vec4 gTile) {
+  ivec2 u = ivec2(mod(gTile.xy, 8.0 * gTile.z) / gTile.z) & 7;
+  vec2 f = vec2(u) - 3.5;
+  int p = int(gTile.w + 0.5);
+  float t;
+  if (p == 0) t = (float((u.x + u.y) & 7) + 0.5) / 8.0;                  // slanted lines
+  else if (p == 1) t = max(abs(f.x), abs(f.y)) / 4.0;                     // nested squares
+  else if (p == 2) t = length(f) / 4.95;                                  // one big dot
+  else if (p == 3) t = (float((u.x - u.y) & 7) + 0.5) / 8.0;              // lines slanted the other way
+  else if (p == 4) t = bayer(u >> 1, 2);                                  // chunky grid
+  else if (p == 5) t = min(abs(f.x), abs(f.y)) / 4.0 + 0.0625;            // crosses
+  else if (p == 6) t = (float((u.x + int(abs(f.y))) & 7) + 0.5) / 8.0;    // chevrons
+  else t = abs(f.y) / 4.0;                                                // bars
+  return clamp(t, 0.02, 0.98);
+}
+vec3 ditherCol(vec3 col, vec4 gTile) {
+  float t = gTile.z > 0.0 ? glitchThr(gTile) : ditherThr();
   vec3 c = clamp((col - 0.5) * uDiA.z + 0.5 + uDiA.w, 0.0, 1.0);
   int n = int(uDiA.y + 0.5);
   if (n < 2) { float lv = uDiLv - 1.0; return min(floor(c * lv + t), lv) / lv; }
@@ -277,8 +383,14 @@ vec3 ditherCol(vec3 col) {
 
 void main() {
   vec2 sp = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);     // y down, as on the game's map
-  vec2 q = uCenter + (sp - 0.5 * uRes) / uScale;
   float upp = 1.0 / uScale;
+#ifdef GM_DITHER
+  float flatS; vec4 gTile;
+  sp = glitchFind(sp, flatS, gTile);
+  if (flatS > 0.0) upp *= flatS * 0.5;     // a flat tile shows the tone of its whole square, not of one point
+#endif
+  vec2 off = (sp - 0.5 * uRes) / uScale;
+  vec2 q = uCenter + off;
   float r = length(q);
   float th = atan(q.y, q.x);
   float rr = max(r, 0.035);
@@ -305,13 +417,28 @@ void main() {
   float bulge = uLight.x * (1.30 * exp(-pow(r / (0.07 * bs), 0.85)) + 0.45 * exp(-r / (0.16 * bs)));
   float disc = uLight.z * 0.20 * exp(-r / 0.85) * edge;
   float armLight = (0.06 + 0.95 * uLight.w * arm * smoothstep(0.06, 0.20, r)) * exp(-r / 0.95) * edge;
+  float bulge0 = bulge, armLight0 = armLight;      // the steady light: where stars sit must not follow the waves
+  // liveliness: slow bright waves that run outward along the arms, and a core that swells and settles
+  if (uLive.x > 0.0) { float wv = 0.5 + 0.5 * sin(lr * 5.0 - uTime * uLive.y * 0.6 + streams * 4.0); armLight *= 1.0 + uLive.x * (1.2 * wv * wv * wv - 0.25); }
+  if (uLive.z > 0.0) bulge *= 1.0 + uLive.z * (0.10 * sin(uTime * 0.31) + 0.05 * sin(uTime * 0.83 + 1.3));
   float cloud = smoothstep(0.35, 0.85, clumps * 0.6 + streams * 0.4 + fine * 0.25 - 0.12);
   armLight *= mix(1.0, 0.35 + 1.25 * cloud, uShape.z);
   float shape = mix(1.0 - uShape.y, 1.0 + uShape.y, smoothstep(0.02, 0.6, dens));
   disc *= shape;
   armLight *= shape;
+  armLight0 *= mix(1.0, 0.35 + 1.25 * cloud, uShape.z) * shape;
 
   vec3 col = uCBulge * bulge + uCDisc * disc + mix(uCDisc, uCArm, smoothstep(0.12, 0.45, r) * (0.4 + 0.6 * armSharp)) * armLight;
+
+  // depth drawn from the galaxy's height: relief lights the slopes that face the light; contour lines and the mesh come further down
+  float hgt = 0.0; vec2 slope = vec2(0.0);
+  bool tall = uRelief.x > 0.0 || uRelief.z > 0.0 || uMesh.x > 0.0;
+  if (tall) {
+    float e = max(upp * 2.0, 0.003);
+    hgt = heightAt(q, upp);
+    slope = vec2(heightAt(q + vec2(e, 0.0), upp) - hgt, heightAt(q + vec2(0.0, e), upp) - hgt) / e;
+    col *= max(0.05, 1.0 + uRelief.x * clamp(-dot(slope, vec2(cos(uRelief.y), sin(uRelief.y))) * 0.12, -0.75, 1.6));
+  }
 
   // star-forming knots along the arm spines: small, faint, pinkish; they breathe slowly
   float knotsN = fbm2(q * 70.0 + 31.0, upp, 4);
@@ -329,19 +456,43 @@ void main() {
 
   col += uCArm * 0.85 * 0.035 * exp(-r / 0.6) * (1.0 - edge * 0.5);
 
-  float light = clamp((bulge * 0.3 + disc + armLight) * 1.6, 0.0, 1.0);
+  float light = clamp((bulge0 * 0.3 + disc + armLight0) * 1.6, 0.0, 1.0);
   col += uCDisc * (fine - 0.45) * 0.08 * light;
-  vec3 st = stars(q, 90.0, upp, light, 0.0, 0.01) + stars(q, 260.0, upp, light, 7.3, 0.0) + stars(q, 760.0, upp, light, 19.1, 0.0) + stars(q, 2200.0, upp, light, 2.9, 0.0);
+  // the star layers sit a little above and below the disc, so they slide against each other when the view moves (parallax)
+  float lu; vec2 lq;
+  vec3 st = vec3(0.0);
+  lq = layerQ(off, 0.10, upp, lu); st += stars(lq, 90.0, lu, light, 0.0, 0.01);
+  lq = layerQ(off, -0.08, upp, lu); st += stars(lq, 260.0, lu, light, 7.3, 0.0);
+  lq = layerQ(off, 0.05, upp, lu); st += stars(lq, 760.0, lu, light, 19.1, 0.0);
+  lq = layerQ(off, -0.04, upp, lu); st += stars(lq, 2200.0, lu, light, 2.9, 0.0);
   st *= 1.0 - dust * 0.8;
   st *= uStar.x;
-  st += stars(q, 40.0, upp, 0.0, 51.0, 0.035) * uStar.y;
+  lq = layerQ(off, 0.6, upp, lu); st += stars(lq, 40.0, lu, 0.0, 51.0, 0.035) * uStar.y;
+  if (uDepth.y > 0.0) { lq = layerQ(off, -0.5, upp, lu); st += stars(lq, 150.0, lu, 0.0, 88.0, 0.05) * uDepth.y; }
 
   // tone: soft shoulder, then kept dim (by 'dimming for the map') so the map on top stays the thing you read
   vec3 lit = vec3(1.0) - exp(-col * 1.3);
-  vec3 outc = uCBg + uDust.w * (lit * uStar.w + st * 0.45);
+  vec3 glow = uDust.w * (lit * uStar.w + st * 0.45);
+  if (uDepth.z > 0.0) { lq = layerQ(off, 1.4, upp, lu); glow += motes(lq) * uDepth.z * 0.22; }
+  if (tall) {
+    // contour lines: one line per step of height, about a dot wide; they fade out where they would crowd together
+    float lvl = sqrt(max(hgt, 0.0)) * uRelief.w;
+    float lvlSlope = length(slope) * uRelief.w * 0.5 / max(sqrt(max(hgt, 0.0)), 0.03) * upp;
+    float line = 1.0 - smoothstep(0.6, 1.4, abs(fract(lvl + 0.5) - 0.5) / max(lvlSlope, 1e-5));
+    line *= (1.0 - smoothstep(0.2, 0.45, lvlSlope)) * smoothstep(0.004, 0.03, hgt);
+    // the mesh: a square grid pushed up the screen by the height, as a wireframe landscape seen from a little above
+    vec2 gm = (q + vec2(0.0, hgt * uMesh.z * 0.25)) * uMesh.y;     // y grows downward, so adding the height lifts the line
+    vec2 gd = abs(fract(gm + 0.5) - 0.5) / (uMesh.y * upp);
+    float wire = (1.0 - smoothstep(0.6, 1.4, min(gd.x, gd.y))) * smoothstep(4.0, 8.0, 1.0 / (uMesh.y * upp));
+    wire *= 0.12 + 0.88 * smoothstep(0.0, 0.25, hgt);
+    glow += uCLine * (line * uRelief.z + wire * uMesh.x) * 0.5;
+  }
+  // brightness ceiling: nothing in the backdrop gets brighter than this, whatever the other controls say
+  if (uMesh.w < 0.995) { float top = max(glow.r, max(glow.g, glow.b)); if (top > uMesh.w) glow *= uMesh.w / top; }
+  vec3 outc = uCBg + glow;
   outc = clamp(outc, 0.0, 1.0);
 #ifdef GM_DITHER
-  outc = ditherCol(outc);
+  outc = ditherCol(outc, gTile);
 #endif
   fragColor = vec4(outc, 1.0);
 }
@@ -353,6 +504,7 @@ void main() { gl_Position = vec4(a, 0.0, 1.0); }
 
 <script>
 'use strict';
+const GAME = /*__GAME__*/null;       // the look the game draws today (godot/ui/galaxy-backdrop.json), put in by build.py
 const SYSTEMS = /*__SYSTEMS__*/[];   // [name, x, y, region] on the game's 1000 x 1000 map, sectors drawn tighter as the game does
 const $ = (id) => document.getElementById(id);
 const cv = $('cv'), ov = $('ov');
@@ -367,7 +519,10 @@ const DEF = {
   clouds: 1, knots: 1, lanes: 0.85, web: 0.55, laneOff: 0.42,
   stars: 1, field: 0.45, starDens: 1,
   drift: 0.3, breathe: 0.3, twinkle: 0.4, twShare: 0.12, twSpeed: 0.6,
-  cBulge: '#ffd69e', cDisc: '#f5e6d1', cArm: '#99b8ff', cKnot: '#ff7594', cDust: '#4d3d38', cBg: '#111214',
+  // added 2026-11: everything below is off (or neutral) by default, so older settings draw exactly as before
+  pace: 1, waves: 0, wavePace: 1, pulse: 0, cap: 1,
+  par: 0, far: 0, motes: 0, moteSize: 0.6, relief: 0, sun: 225, contour: 0, contourN: 12, mesh: 0, meshN: 24, lift: 0.6,
+  cBulge: '#ffd69e', cDisc: '#f5e6d1', cArm: '#99b8ff', cKnot: '#ff7594', cDust: '#4d3d38', cBg: '#111214', cLine: '#7ac6ff',
 };
 const CTL = [
   ['Shape', 'phase', 'Arm start', 0, 360, 1, (v) => v + '°'],
@@ -382,6 +537,7 @@ const CTL = [
   ['Light', 'disc', 'Disc light', 0, 2.5, 0.01],
   ['Light', 'arms', 'Arm light', 0, 2.5, 0.01],
   ['Light', 'follow', 'Follow systems', 0, 0.9, 0.01, (v) => v < 0.05 ? 'off' : Math.round(v * 100) + '%'],
+  ['Light', 'cap', 'Brightness ceiling', 0.15, 1, 0.01, (v) => v >= 0.995 ? 'off' : Math.round(v * 100) + '%'],
   ['Dust', 'clouds', 'Star clouds', 0, 1.5, 0.01],
   ['Dust', 'knots', 'Pink nebulae', 0, 4, 0.01],
   ['Dust', 'lanes', 'Dust lanes', 0, 1.5, 0.01],
@@ -390,17 +546,34 @@ const CTL = [
   ['Stars', 'stars', 'Star brightness', 0, 3, 0.01],
   ['Stars', 'starDens', 'Star density', 0.2, 3, 0.01],
   ['Stars', 'field', 'Foreground stars', 0, 1.5, 0.01],
+  ['Move', 'pace', 'Overall pace', 0, 3, 0.01, (v) => v < 0.01 ? 'stopped' : v.toFixed(2) + 'x'],
   ['Move', 'drift', 'Gas drift', 0, 2, 0.01, (v) => v < 0.01 ? 'still' : v < 0.5 ? 'very slow' : v < 1.2 ? 'slow' : 'lively'],
   ['Move', 'breathe', 'Nebulae breathe', 0, 1, 0.01, (v) => v < 0.01 ? 'still' : Math.round(v * 100) + '%'],
   ['Move', 'twinkle', 'Twinkle strength', 0, 1.5, 0.01, (v) => v < 0.01 ? 'none' : v < 0.5 ? 'subtle' : v < 1 ? 'clear' : 'strong'],
   ['Move', 'twShare', 'Stars that twinkle', 0, 0.6, 0.01, (v) => Math.round(v * 100) + '%'],
   ['Move', 'twSpeed', 'Twinkle pace', 0.1, 3, 0.01, (v) => v < 0.4 ? 'very slow' : v < 1 ? 'slow' : v < 2 ? 'steady' : 'quick'],
+  ['Move', 'waves', 'Arm waves', 0, 1.5, 0.01, (v) => v < 0.01 ? 'none' : v.toFixed(2)],
+  ['Move', 'wavePace', 'Wave pace', 0.1, 3, 0.01, (v) => v < 0.5 ? 'very slow' : v < 1.2 ? 'slow' : v < 2 ? 'steady' : 'quick'],
+  ['Move', 'pulse', 'Core pulse', 0, 1.5, 0.01, (v) => v < 0.01 ? 'none' : v.toFixed(2)],
+  ['Depth', 'par', 'Parallax', 0, 1, 0.01, (v) => v < 0.01 ? 'flat' : Math.round(v * 100) + '%'],
+  ['Depth', 'far', 'Distant stars', 0, 1.5, 0.01, (v) => v < 0.01 ? 'none' : v.toFixed(2)],
+  ['Depth', 'motes', 'Drifting motes', 0, 1.5, 0.01, (v) => v < 0.01 ? 'none' : v.toFixed(2)],
+  ['Depth', 'moteSize', 'Mote size', 0.3, 1, 0.01],
+  ['Depth', 'relief', 'Relief', 0, 1.5, 0.01, (v) => v < 0.01 ? 'flat' : v.toFixed(2)],
+  ['Depth', 'sun', 'Light from', 0, 360, 1, (v) => ['right', 'lower right', 'below', 'lower left', 'left', 'upper left', 'above', 'upper right'][Math.round(v / 45) % 8]],
+  ['Depth', 'contour', 'Contour lines', 0, 1, 0.01, (v) => v < 0.01 ? 'none' : v.toFixed(2)],
+  ['Depth', 'contourN', 'Contour count', 3, 30, 1],
+  ['Depth', 'mesh', 'Mesh', 0, 1, 0.01, (v) => v < 0.01 ? 'none' : v.toFixed(2)],
+  ['Depth', 'meshN', 'Mesh squares', 6, 60, 1],
+  ['Depth', 'lift', 'Mesh height', 0, 1.5, 0.01],
 ];
-const SEC_HOST = { Shape: 'ctlShape', Light: 'ctlLight', Dust: 'ctlDust', Stars: 'ctlStars', Move: 'ctlMove' };
-const SWATCHES = [['cBulge', 'Core'], ['cDisc', 'Disc'], ['cArm', 'Arms'], ['cKnot', 'Nebulae'], ['cDust', 'Dust'], ['cBg', 'Space']];
+const SEC_HOST = { Shape: 'ctlShape', Light: 'ctlLight', Dust: 'ctlDust', Stars: 'ctlStars', Move: 'ctlMove', Depth: 'ctlDepth' };
+const SWATCHES = [['cBulge', 'Core'], ['cDisc', 'Disc'], ['cArm', 'Arms'], ['cKnot', 'Nebulae'], ['cDust', 'Dust'], ['cBg', 'Space'], ['cLine', 'Lines']];
 // starting points; the first is exactly what the game draws today
+const GAME_P = GAME ? GAME.params : {}, GAME_DI = GAME ? GAME.dither : {};
 const LOOKS = [
-  { id: 'game', label: 'Game today', sub: 'the map backdrop now', p: {} },
+  { id: 'game', label: 'Game today', sub: 'the map backdrop now', p: GAME_P, di: GAME_DI },
+  { id: 'new', label: 'Depth and glitch', sub: 'game today, new parts on', p: Object.assign({}, GAME_P, { par: 0.6, far: 0.5, motes: 0.6, relief: 0.8, contour: 0.35, waves: 0.6, pulse: 0.5 }), di: Object.assign({}, GAME_DI, { on: true, gOn: true }) },
   { id: 'deep', label: 'Deep and quiet', sub: 'darker, fewer stars', p: { bright: 0.75, dim: 0.24, field: 0.3, stars: 0.8, knots: 0.6, twinkle: 0.3, twShare: 0.08 } },
   { id: 'rich', label: 'Rich', sub: 'brighter arms, more nebulae', p: { bright: 1.35, dim: 0.42, arms: 1.4, knots: 2.4, clouds: 1.2, stars: 1.3, starDens: 1.4 } },
   { id: 'ink', label: 'Ink', sub: 'black and white dots', p: { bright: 1.5, dim: 0.5, cBg: '#000000' }, di: { on: true, pat: 'grain', pal: 'mono', dot: 2, contrast: 1.3, bright: -0.05 } },
@@ -419,16 +592,30 @@ const DI_PATS = [
 const DI_PALS = {
   own: { label: 'Own colours', sub: 'its own, in a few steps', cols: [] },
   mono: { label: 'Black and white', sub: 'two tones', cols: ['#040406', '#f1ede2'] },
+  blue: { label: 'Blue', sub: 'your colour on grey', cols: ['#17181b', '#1f3f6b', '#3d8bf2'] },
+  orange: { label: 'Orange', sub: 'enemy colour on grey', cols: ['#17181b', '#6b3312', '#f2853d'] },
   cold: { label: 'Cold', sub: 'steel blues', cols: ['#04060c', '#1b3350', '#6e9bc0', '#e6eff6'] },
   warm: { label: 'Warm', sub: 'rust and cream', cols: ['#0b0604', '#5a2913', '#cf7339', '#f6e1bf'] },
 };
-const DI_DEF = { on: false, pat: 'grain', pal: 'mono', dot: 2, contrast: 1.15, bright: 0, levels: 4 };
+const DI_DEF = { on: false, pat: 'grain', pal: 'mono', dot: 2, contrast: 1.15, bright: 0, levels: 4,
+  gOn: false, gAmt: 0.25, gPatch: 0.3, gTile: 8, gMix: 0.35, gVar: 8, gFlat: 0.35, gPace: 0.4, gSeed: 1 };
 let DI = Object.assign({}, DI_DEF);
 const DI_CTL = [
   ['dot', 'Dot size', 1, 6, 1, () => true, (v) => v + ' px'],
   ['contrast', 'Contrast', 0.5, 2.5, 0.01, () => true],
   ['bright', 'Brightness', -0.4, 0.4, 0.01, () => true, (v) => (v > 0 ? '+' : '') + Math.round(v * 100)],
   ['levels', 'Steps per colour', 2, 6, 1, () => DI.pal === 'own'],
+];
+// the glitch: patches of tiles drawn in another pattern (the last row has no slider: the Shuffle button changes it)
+const GL_CTL = [
+  ['gAmt', 'Amount', 0, 1, 0.01, (v) => Math.round(v * 100) + '%'],
+  ['gPatch', 'Patch size', 0.05, 1, 0.01, (v) => v < 0.2 ? 'small' : v < 0.5 ? 'medium' : 'large'],
+  ['gTile', 'Tile size', 8, 32, 8, (v) => v + ' dots'],
+  ['gMix', 'Double-size tiles', 0, 1, 0.01, (v) => Math.round(v * 100) + '%'],
+  ['gVar', 'Patterns in play', 1, 8, 1],
+  ['gFlat', 'Flat tiles', 0, 1, 0.01, (v) => Math.round(v * 100) + '%'],
+  ['gPace', 'Change pace', 0, 3, 0.01, (v) => v < 0.01 ? 'frozen' : v < 0.5 ? 'slow' : v < 1.5 ? 'steady' : 'restless'],
+  ['gSeed', '', 0, 999, 1],
 ];
 
 /* ---------- saving: the settings and the dither live in this browser; Copy hands them on ---------- */
@@ -449,10 +636,12 @@ function cleanDi(src) {
   if (typeof src.on === 'boolean') out.on = src.on;
   if (DI_PATS.some((p) => p.id === src.pat)) out.pat = src.pat;
   if (DI_PALS[src.pal]) out.pal = src.pal;
-  for (const c of DI_CTL) { const v = parseFloat(src[c[0]]); if (isFinite(v)) out[c[0]] = Math.min(c[3], Math.max(c[2], v)); }
+  for (const c of DI_CTL.concat(GL_CTL)) { let v = parseFloat(src[c[0]]); if (isFinite(v)) { if (c[4] >= 1) v = Math.round(v / c[4]) * c[4]; out[c[0]] = Math.min(c[3], Math.max(c[2], v)); } }
+  if (typeof src.gOn === 'boolean') out.gOn = src.gOn;
   return out;
 }
-try { const o = JSON.parse(localStorage.getItem(LKEY) || '{}'); P = clean(o.p); DI = cleanDi(o.di); } catch (e) {}
+P = clean(GAME_P); DI = cleanDi(GAME_DI);
+try { const o = JSON.parse(localStorage.getItem(LKEY) || 'null'); if (o) { P = clean(o.p); DI = cleanDi(o.di); } } catch (e) {}
 const toCode = () => JSON.stringify({ format: 'praedra-galaxy', v: 1, params: P, dither: DI }, null, 1);
 function fromCode(txt) {
   const o = JSON.parse(txt);
@@ -562,6 +751,12 @@ function draw(w, h, tm) {
   gl.uniform4f(loc.uStar, P.stars, P.field, P.starDens, P.dim);
   gl.uniform4f(loc.uMove, P.drift, P.breathe, P.twinkle, P.twShare);
   gl.uniform1f(loc.uTwSpeed, P.twSpeed);
+  gl.uniform1f(loc.uZoom, V.zoom);
+  gl.uniform4f(loc.uDepth, P.par, P.far, P.motes, P.moteSize);
+  gl.uniform4f(loc.uRelief, P.relief, P.sun * D, P.contour, P.contourN);
+  gl.uniform4f(loc.uMesh, P.mesh, P.meshN, P.lift, P.cap);
+  gl.uniform4f(loc.uLive, P.waves, P.wavePace, P.pulse, 0);
+  gl.uniform3fv(loc.uCLine, hex2rgb(P.cLine));
   gl.uniform3fv(loc.uCBulge, hex2rgb(P.cBulge)); gl.uniform3fv(loc.uCDisc, hex2rgb(P.cDisc)); gl.uniform3fv(loc.uCArm, hex2rgb(P.cArm));
   gl.uniform3fv(loc.uCKnot, hex2rgb(P.cKnot)); gl.uniform3fv(loc.uCDust, hex2rgb(P.cDust)); gl.uniform3fv(loc.uCBg, hex2rgb(P.cBg));
   if (DI.on) {
@@ -570,6 +765,8 @@ function draw(w, h, tm) {
     gl.uniform1f(loc.uDiLv, DI.levels);
     const flat = new Float32Array(12); pal.cols.forEach((c, i) => flat.set(hex2rgb(c), i * 3));
     gl.uniform3fv(loc.uDiPal, flat);
+    gl.uniform4f(loc.uGlA, DI.gOn ? DI.gAmt : 0, DI.gTile, DI.gPatch, DI.gVar);
+    gl.uniform4f(loc.uGlB, DI.gPace, DI.gFlat, DI.gMix, DI.gSeed);
   }
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 }
@@ -610,7 +807,7 @@ function loop(now) {
   acc += dt;
   try {
     if (gl && !frozen && acc >= 1 / 31) {
-      if (!paused) time += acc;
+      if (!paused) time += acc * P.pace;
       acc = 0;
       fit(); draw(cv.width, cv.height); drawOverlay();
     }
@@ -642,7 +839,7 @@ function buildControls() {
   for (const L of LOOKS) {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.id = L.id;
     b.innerHTML = `${L.label}<small>${L.sub}</small>`;
-    b.addEventListener('click', () => { P = clean(Object.assign({}, DEF, L.p)); DI = cleanDi(Object.assign({}, DI_DEF, L.di || {})); syncAll(); save(); });
+    b.addEventListener('click', () => { P = clean(Object.assign({}, DEF, L.p)); DI = cleanDi(Object.assign({}, DI_DEF, L.di || {})); syncAll(); save(); if (L.id === 'new') toast('Drag and zoom to see the parallax'); });
     $('looks').appendChild(b);
   }
   const chips = (host, list, key) => {
@@ -656,7 +853,17 @@ function buildControls() {
   chips('diPat', DI_PATS, 'pat');
   chips('diPal', Object.keys(DI_PALS).map((id) => Object.assign({ id }, DI_PALS[id])), 'pal');
   for (const c of DI_CTL) slider('ctlDither', 'di_' + c[0], c[1], c[2], c[3], c[4], (v) => { DI[c[0]] = v; changed(); });
+  for (const c of GL_CTL) if (c[1]) slider('ctlGlitch', 'gl_' + c[0], c[1], c[2], c[3], c[4], (v) => { DI[c[0]] = v; changed(); });
   $('diOn').addEventListener('change', () => { DI.on = $('diOn').checked; changed(); });
+  $('glOn').addEventListener('change', () => { DI.gOn = $('glOn').checked; changed(); });
+  $('btnShuffle').addEventListener('click', () => { DI.gSeed = (DI.gSeed * 37 + 101) % 1000; changed(); });
+  // the glitch lives in the dither, so the button on the picture turns the dither on with it
+  let glitchLitDither = false;
+  $('btnGlitch').addEventListener('click', () => {
+    DI.gOn = !(DI.on && DI.gOn);
+    if (DI.gOn) { glitchLitDither = !DI.on; DI.on = true; } else if (glitchLitDither) { DI.on = false; glitchLitDither = false; }
+    changed();
+  });
   $('ovOn').addEventListener('change', drawOverlay);
 }
 function syncAll() {
@@ -670,6 +877,10 @@ function syncAll() {
     const row = $('di_' + c[0]).closest('.ctl'); row.hidden = !c[5]();
     $('di_' + c[0]).value = DI[c[0]]; row.querySelector('output').textContent = c[6] ? c[6](DI[c[0]]) : DI[c[0]].toFixed(2);
   }
+  const glitching = DI.on && DI.gOn;
+  $('glOn').checked = DI.gOn; $('glBody').hidden = !DI.gOn;
+  $('btnGlitch').textContent = 'Glitch: ' + (glitching ? 'on' : 'off'); $('btnGlitch').setAttribute('aria-pressed', String(glitching));
+  for (const c of GL_CTL) if (c[1]) { $('gl_' + c[0]).value = DI[c[0]]; $('gl_' + c[0]).closest('.ctl').querySelector('output').textContent = c[5] ? c[5](DI[c[0]]) : String(DI[c[0]]); }
   $('code').value = toCode();
 }
 let saveT = 0;
@@ -738,7 +949,7 @@ $('snapClose').addEventListener('click', () => $('snap').classList.remove('on'))
 $('snapSave').addEventListener('click', async () => { const ok = await saveFile('praedra-galaxy.png', snapBlob, 'image/png'); toast(ok ? 'Image ready' : 'Right-click the image to save it'); });
 $('btnCopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(toCode()); toast('Settings copied'); } catch (e) { $('code').select(); toast('Select the text and copy it'); } });
 $('btnPaste').addEventListener('click', () => { try { fromCode($('code').value); syncAll(); save(); toast('Settings loaded'); } catch (e) { toast('Those are not galaxy settings'); } });
-$('btnReset').addEventListener('click', () => { P = Object.assign({}, DEF); DI = Object.assign({}, DI_DEF); syncAll(); save(); toast('Back to the game\'s look'); });
+$('btnReset').addEventListener('click', () => { P = clean(GAME_P); DI = cleanDi(GAME_DI); syncAll(); save(); toast('Back to the game\'s look'); });
 if (gl) { initGL(); requestAnimationFrame(loop); } else { document.querySelector('.hint').textContent = 'This browser cannot draw WebGL2, so the galaxy cannot be shown.'; }
 window.__gm = { get P() { return P; }, set P(v) { P = clean(v); syncAll(); }, setDither(o) { DI = cleanDi(Object.assign({}, DI, o)); syncAll(); }, V, draw: (t) => { fit(); draw(cv.width, cv.height, t); drawOverlay(); }, freeze(f) { frozen = f; }, snapshot };
 </script>
