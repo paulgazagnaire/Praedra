@@ -1,6 +1,5 @@
 using System;
 using Godot;
-using Clock = Praedra.Core.Clock;
 
 namespace PraedraViewer;
 
@@ -44,12 +43,8 @@ public partial class SystemTile : Control
     public static readonly Color BracketBottom = new("474747");
     public static readonly Color RawUsed = new("ffa942"), RawFree = new("874300");
     public static readonly Color EnergyUsed = new("a1b1ff"), EnergyFree = new("325697");
-    // faction colours (Paul 2026-11-11: "Green for the Hand, blue for the Collective"): the frame's green for the Hand, a blue for the
-    // Collective kept clear of the energy gauge's lilac blues
-    public static readonly Color HandGreen = new("009126"), HandName = new("03c93b");
-    public static readonly Color CollectiveBlue = new("1e8fe0"), CollectiveName = new("4fb3ff");
-    public static Color Of(Clock.Side side) => side == Clock.Side.Hand ? HandGreen : CollectiveBlue;
-    public static Color NameOf(Clock.Side side) => side == Clock.Side.Hand ? HandName : CollectiveName;
+    // the sides' colours are the game's own, set by the caller (Paul 2026-11-11: "blue for you and orange for the enemy", whichever side
+    // you play; Ui.You and Ui.Enemy, as on the map)
 
     static Font _font;
     /// <summary>BitPotion (Joeb Rogers, CC-BY 4.0; credit in godot/fonts/BitPotion-LICENSE.txt), 16 px, letter spacing 0.1 em as in the frame.</summary>

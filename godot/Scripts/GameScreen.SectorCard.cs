@@ -22,7 +22,7 @@ public partial class GameScreen
     /// planet, a resources gauge and an energy gauge on its left, loyalty on its right, and four corner icons: buildings, fleets, troops,
     /// and the holder's emblem. An icon is lit in its side's colour when there is something there, faint when not; the troops icon turns
     /// red when the planet is short of its garrison, the buildings icon amber when a yard stands idle, the fleets icon orange when an
-    /// enemy fleet is seen there. Colours are the factions' (Paul 2026-11-11): green the Hand, blue the Collective, whichever side you play. An uprising or a harvester circles the planet in red. A system you never looked at shows its planet and
+    /// enemy fleet is seen there. Colours are the game's (Paul 2026-11-11): blue for you, orange for the enemy, whichever side you play. An uprising or a harvester circles the planet in red. A system you never looked at shows its planet and
     /// name only. The numbers are in the tooltip. Clicks: the buildings icon and the gauges open the Infrastructure window, the fleets
     /// icon your fleets there, anywhere else the Ground window; a double-click shows it on the map.
     /// </summary>
@@ -49,10 +49,10 @@ public partial class GameScreen
         tile.AddChild(st);
         var d = st.D;
         d.Name = n;
-        d.You = SystemTile.Of(Me);
-        d.Enemy = SystemTile.Of(S.Enemy);
+        d.You = Ui.You;
+        d.Enemy = Ui.Enemy;
         d.Faint = new Color(Ui.Text3, 0.28f);
-        d.NameColor = dead ? Ui.Danger : !explored ? Ui.Text3 : (known || mine) && holder is Side hs ? SystemTile.NameOf(hs) : Ui.Text2;
+        d.NameColor = dead ? Ui.Danger : !explored ? Ui.Text3 : (known || mine) && holder is Side hs ? Ui.OwnerColor(hs, Me) : Ui.Text2;
         d.Planet = dead ? PlanetArt.HarvestedOf(n) ?? PlanetArt.Of(n) : PlanetArt.Of(n);
         // the planet drawn live by the Planet Maker's shader, turning with its own settings (Paul 2026-11-11: "the planets need to be
         // animated, like in the planet maker tool"); a harvested system shows the tool's harvested view live. A system never looked at
@@ -93,7 +93,7 @@ public partial class GameScreen
                 troops = pic.Ground?.Value.Where(g => g.Side != Me).Sum(g => g.Total) ?? 0;
                 buildings = d.EnergyUsed;
             }
-            Color side = SystemTile.Of(mine ? Me : S.Enemy);
+            Color side = mine ? Ui.You : Ui.Enemy;
             // ---- the corner icons: lit when something is there, in the side's colour; trouble in its own colour
             if (buildings > 0) d.Buildings = mine && IdleYardFamilies(n).Count > 0 ? Ui.Warn : side;
             if (troops < need) d.Troops = Ui.Danger;
@@ -101,12 +101,12 @@ public partial class GameScreen
             int own = S.Game.State.Fleets.Values.Count(f => f.Side == Me && f.At == n);
             int enemy = S.Sees(n) ? S.VisibleEnemyFleetsAt(n).Count : !S.Sees(n) && pic?.Fleets is { } pf ? pf.Value.Count : 0;
             ownFleets = own > 0;
-            if (enemy > 0) d.Fleets = SystemTile.Of(S.Enemy);
-            else if (own > 0) d.Fleets = SystemTile.Of(Me);
+            if (enemy > 0) d.Fleets = Ui.Enemy;
+            else if (own > 0) d.Fleets = Ui.You;
             if (holder is Side h && (mine || known))
             {
                 d.EmblemHand = h == Side.Hand;
-                d.Emblem = hq ? Ui.Gold : SystemTile.Of(h);
+                d.Emblem = hq ? Ui.Gold : Ui.OwnerColor(h, Me);
             }
         }
 
