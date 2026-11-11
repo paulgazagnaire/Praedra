@@ -1,6 +1,7 @@
 // The galaxy drawn behind the map (Paul 2026-10-28: "a galaxy illustration in the back of the sectors... very detailed, just in code").
 // Drawing only: nothing here touches the game. Coordinates are galaxy units (the disc's radius is 1, the centre is Charter).
 // This is the Galaxy Maker's shader (tools/galaxy-maker/galaxy-maker.src.html) line for line, so a look tuned there is the same here
+// (its Depth, Movement and glitch controls of PR #279 included, ported 2026-11-11)
 // (Paul 2026-10-29: "I want the exact same thing I designed in the galaxy maker"). GalaxyBackdrop.cs feeds it the settings from
 // godot/ui/galaxy-backdrop.json; the defaults below are the Galaxy Maker's "Game today" look, without movement.
 // The arms follow the two-arm spiral the systems were laid out on (specs/creative/galaxy-shape/README.md and build_gal.py), and
@@ -30,11 +31,22 @@ uniform vec3 c_arm = vec3(0.600, 0.722, 1.0);
 uniform vec3 c_knot = vec3(1.0, 0.459, 0.580);
 uniform vec3 c_dust = vec3(0.302, 0.239, 0.220);
 uniform vec3 c_bg = vec3(0.067, 0.071, 0.078);
+// added with the Galaxy Maker's Depth and Movement controls (PR #279, 2026-11): all off by default, so an older look draws as before
+uniform vec4 depth_mix = vec4(0.0, 0.0, 0.0, 0.6);    // x parallax, y distant stars, z drifting motes, w mote size
+uniform vec4 relief_mix = vec4(0.0, 3.927, 0.0, 12.0); // x relief, y the light's direction (radians), z contour lines, w contour count
+uniform vec4 mesh_mix = vec4(0.0, 24.0, 0.6, 1.0);    // x mesh, y mesh squares per galaxy radius, z mesh height, w brightness ceiling
+uniform vec4 live_mix = vec4(0.0, 1.0, 0.0, 0.0);     // x arm waves, y wave pace, z core pulse
+uniform vec3 c_line = vec3(0.478, 0.776, 1.0);
+uniform vec2 buffer_px = vec2(1.0);                   // the buffer's size in pixels (the glitch counts in whole dots)
 
 uniform bool dither_on = false;
 uniform vec4 dither_a = vec4(3.0, 2.0, 1.15, 0.0);  // x pattern (0 fine grid, 1 coarse grid, 2 halftone, 3 grain), y colours in the palette (0: own colours), z contrast, w brightness
 uniform float dither_levels = 4.0;                   // steps per colour with its own colours
 uniform vec3 dither_pal[4];
+// the glitch: x amount (share of the picture, 0 = off), y tile size in dots, z patch size in galaxy units, w patterns in play;
+// glitch_b: x change pace, y share of flat tiles, z share of double-size tiles, w shuffle seed
+uniform vec4 glitch_a = vec4(0.0, 8.0, 0.3, 8.0);
+uniform vec4 glitch_b = vec4(0.4, 0.35, 0.35, 1.0);
 
 // ---- noise (hash without sine, value noise with quintic fade) ----
 float hash12(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
@@ -147,6 +159,58 @@ vec3 stars(vec2 q, float cells, float upp, float light, float seed, float base)
     return tint * (core * (0.35 + 0.9 * mag) + glow) * vis * tw;
 }
 
+// The view as the Galaxy Maker's shader sees it: its centre in galaxy units, buffer pixels per galaxy unit, and its zoom (1 = the whole
+// disc fits, as the Galaxy Maker's view; only the parallax uses it)
+vec2 viewCentre() { return (view_center - galaxy_center) / galaxy_radius; }
+float viewScale() { return px_per_unit * pixel_scale * galaxy_radius; }
+float viewZoom() { return px_per_unit * galaxy_radius * 2.3 / min(view_size.x, view_size.y); }
+
+// Depth by parallax: a layer nearer than the galaxy (k > 0) slides and grows faster than it when the view moves, a farther one (k < 0)
+// slower. With parallax 0 every layer sits on the galaxy.
+vec2 layerQ(vec2 off, float k, float upp, out float lupp)
+{
+    float z = pow(viewZoom(), -0.6 * k * depth_mix.x);
+    lupp = upp * z;
+    return viewCentre() * (1.0 + k * depth_mix.x) + off * z;
+}
+
+// big soft out-of-focus specks floating in front of the galaxy; each drifts a little and fades in and out on its own clock
+vec3 motes(vec2 q)
+{
+    vec2 g = q * 2.5 + 13.7;
+    vec2 id = floor(g);
+    float pick = hash12(id + 61.3);
+    if (pick > 0.55) return vec3(0.0);
+    vec2 h = hash22(id + 2.9);
+    float ph = hash12(id + 17.1) * 6.2832;
+    vec2 at = id + 0.5 + (h - 0.5) * 0.3 + 0.08 * vec2(sin(time * 0.07 + ph), cos(time * 0.05 + ph * 1.7));
+    float rad = depth_mix.w * (0.08 + 0.18 * hash12(id + 4.4));
+    float dist = length(g - at);
+    float disc = 1.0 - smoothstep(rad * 0.8, rad, dist);
+    float rim = smoothstep(rad * 0.55, rad * 0.92, dist);
+    float fade = 0.6 + 0.4 * sin(time * 0.21 + ph * 2.3);
+    return mix(c_arm, c_bulge, hash12(id + 8.1)) * disc * (0.55 + 0.45 * rim) * fade;
+}
+
+// The galaxy as a landscape: its smooth light as a height (the core is the peak, the arms are ridges). Relief, contour lines and
+// the mesh are all drawn from this one height. It drifts with the gas.
+float heightAt(vec2 q, float upp)
+{
+    float r = length(q);
+    float lr = log(max(r, 0.035) / 0.04);
+    float wob = (fbm2(q * 3.0 + 4.0, upp, 3) - 0.5) * arm.w;
+    float d = atan(q.y, q.x) - (arm.x + arm.y * lr) + wob;
+    float ridge = pow(0.5 + 0.5 * cos(2.0 * d), arm.z);   // the Galaxy Maker calls this 'arm'; here that is the uniform's name
+    float streams = armNoise(d, lr, time * move.x * 0.05, upp, 3);
+    float clumps = fbm2(q * 9.0 + vec2(13.0, 7.0), upp, 4);
+    float edge = 1.0 - smoothstep(0.86 * shape_mix.x, 1.08 * shape_mix.x, r);
+    float bs = light_mix.y;
+    float bulge = light_mix.x * (1.30 * exp(-pow(r / (0.07 * bs), 0.85)) + 0.45 * exp(-r / (0.16 * bs)));
+    float disc = light_mix.z * 0.20 * exp(-r / 0.85) * edge;
+    float armLight = (0.06 + 0.95 * light_mix.w * ridge * smoothstep(0.06, 0.20, r)) * exp(-r / 0.95) * edge;
+    return bulge * 0.6 + disc + armLight * (0.45 + 1.1 * (clumps * 0.6 + streams * 0.4));
+}
+
 // ---- the dither style (as in the Planet Maker): one buffer pixel is one dot ----
 float bayer(ivec2 p, int bits)
 {
@@ -169,9 +233,60 @@ float ditherThr(ivec2 c)
     return texelFetch(blue_noise, c & ivec2(63), 0).r * (255.0 / 256.0) + 0.5 / 256.0;
 }
 
-vec3 ditherCol(vec3 col, ivec2 c)
+// Glitch: patches of square tiles where the dither changes pattern. Tiles are locked to the map in whole dots, so they travel with
+// it when the view moves. A tile is a vec4: xy this dot's place inside its tile, z the pattern's scale (0: this dot is not glitched),
+// w pattern number. sp: this dot in the buffer, y down. Returns where to read the galaxy from: the dot itself, or its tile's centre
+// for a flat tile.
+vec2 glitchFind(vec2 sp, out float flatS, out vec4 gTile)
 {
-    float t = ditherThr(c);
+    flatS = 0.0; gTile = vec4(0.0);
+    if (glitch_a.x <= 0.0) return sp;
+    float scale = viewScale();
+    vec2 org = floor(viewCentre() * scale - 0.5 * buffer_px);
+    vec2 pw = floor(sp) + org;
+    float seed = glitch_b.w;
+    float th = mix(1.1, -0.1, glitch_a.x);
+    for (int lv = 0; lv < 2; lv++)
+    {
+        float S = glitch_a.y * (lv == 0 ? 2.0 : 1.0);
+        vec2 id = floor(pw / S);
+        vec2 qc = (id + 0.5) * S / scale;
+        float h0 = hash12(id + seed + float(lv) * 19.7);
+        float ep = floor(time * glitch_b.x * (0.5 + h0) + h0 * 7.0);
+        float m = noise3(vec3(qc / glitch_a.z + seed * 1.37, time * glitch_b.x * 0.12));
+        m = smoothstep(0.22, 0.78, m);          // spread the noise out evenly, so Amount is close to the share of the picture
+        float prob = smoothstep(th - 0.1, th + 0.1, m) * (lv == 0 ? glitch_b.z : 1.0);
+        if (hash12(id * 1.31 + ep * 3.7 + seed + 5.0) >= prob) continue;
+        float n2 = noise2(qc / glitch_a.z * 1.9 + 31.0 + seed);
+        float stray = hash12(id + ep + 23.0);
+        float which = fract(n2 * 3.0 + (stray < 0.25 ? stray * 4.0 : 0.0));
+        gTile = vec4(pw - id * S, lv == 0 ? 2.0 : 1.0, min(floor(which * glitch_a.w), glitch_a.w - 1.0));
+        if (hash12(id + ep * 1.7 + 77.0) < glitch_b.y) { flatS = S; return (id + 0.5) * S - (viewCentre() * scale - 0.5 * buffer_px); }
+        return sp;
+    }
+    return sp;
+}
+
+float glitchThr(vec4 gTile)
+{
+    ivec2 u = ivec2(mod(gTile.xy, 8.0 * gTile.z) / gTile.z) & ivec2(7);
+    vec2 f = vec2(u) - 3.5;
+    int p = int(gTile.w + 0.5);
+    float t;
+    if (p == 0) t = (float((u.x + u.y) & 7) + 0.5) / 8.0;                  // slanted lines
+    else if (p == 1) t = max(abs(f.x), abs(f.y)) / 4.0;                     // nested squares
+    else if (p == 2) t = length(f) / 4.95;                                  // one big dot
+    else if (p == 3) t = (float((u.x - u.y) & 7) + 0.5) / 8.0;              // lines slanted the other way
+    else if (p == 4) t = bayer(u >> ivec2(1), 2);                           // chunky grid
+    else if (p == 5) t = min(abs(f.x), abs(f.y)) / 4.0 + 0.0625;            // crosses
+    else if (p == 6) t = (float((u.x + int(abs(f.y))) & 7) + 0.5) / 8.0;    // chevrons
+    else t = abs(f.y) / 4.0;                                                // bars
+    return clamp(t, 0.02, 0.98);
+}
+
+vec3 ditherCol(vec3 col, ivec2 c, vec4 gTile)
+{
+    float t = gTile.z > 0.0 ? glitchThr(gTile) : ditherThr(c);
     vec3 cc = clamp((col - 0.5) * dither_a.z + 0.5 + dither_a.w, 0.0, 1.0);
     int n = int(dither_a.y + 0.5);
     if (n < 2) { float lv = dither_levels - 1.0; return min(floor(cc * lv + t), vec3(lv)) / lv; }
@@ -184,9 +299,17 @@ vec3 ditherCol(vec3 col, ivec2 c)
 void fragment()
 {
     vec2 sp = UV * view_size;
+    float upp = 1.0 / (px_per_unit * pixel_scale * galaxy_radius); // galaxy units per buffer pixel
+    float flatS = 0.0; vec4 gTile = vec4(0.0);
+    if (dither_on && glitch_a.x > 0.0)
+    {
+        // the glitch works in the buffer's dots (FRAGCOORD is y down here, as the Galaxy Maker's sp)
+        vec2 spB = glitchFind(FRAGCOORD.xy, flatS, gTile);
+        if (flatS > 0.0) { upp *= flatS * 0.5; sp = spB * view_size / buffer_px; }   // a flat tile shows the tone of its whole square
+    }
     vec2 w = view_center + (sp - view_size * 0.5) / px_per_unit;
     vec2 q = (w - galaxy_center) / galaxy_radius;
-    float upp = 1.0 / (px_per_unit * pixel_scale * galaxy_radius); // galaxy units per buffer pixel
+    vec2 off = q - viewCentre();     // this point from the middle of the view, in galaxy units
     float r = length(q);
     float th = atan(q.y, q.x);
     float rr = max(r, 0.035);
@@ -217,13 +340,29 @@ void fragment()
     float bulge = light_mix.x * (1.30 * exp(-pow(r / (0.07 * bs), 0.85)) + 0.45 * exp(-r / (0.16 * bs)));
     float disc = light_mix.z * 0.20 * exp(-r / 0.85) * edge;
     float armLight = (0.06 + 0.95 * light_mix.w * onArm * smoothstep(0.06, 0.20, r)) * exp(-r / 0.95) * edge;
+    float bulge0 = bulge, armLight0 = armLight;      // the steady light: where stars sit must not follow the waves
+    // liveliness: slow bright waves that run outward along the arms, and a core that swells and settles
+    if (live_mix.x > 0.0) { float wv = 0.5 + 0.5 * sin(lr * 5.0 - time * live_mix.y * 0.6 + streams * 4.0); armLight *= 1.0 + live_mix.x * (1.2 * wv * wv * wv - 0.25); }
+    if (live_mix.z > 0.0) bulge *= 1.0 + live_mix.z * (0.10 * sin(time * 0.31) + 0.05 * sin(time * 0.83 + 1.3));
     float cloud = smoothstep(0.35, 0.85, clumps * 0.6 + streams * 0.4 + fine * 0.25 - 0.12);
     armLight *= mix(1.0, 0.35 + 1.25 * cloud, shape_mix.z);
     float follow = mix(1.0 - shape_mix.y, 1.0 + shape_mix.y, smoothstep(0.02, 0.6, dens));
     disc *= follow;
     armLight *= follow;
+    armLight0 *= mix(1.0, 0.35 + 1.25 * cloud, shape_mix.z) * follow;
 
     vec3 col = c_bulge * bulge + c_disc * disc + mix(c_disc, c_arm, smoothstep(0.12, 0.45, r) * (0.4 + 0.6 * armSharp)) * armLight;
+
+    // depth drawn from the galaxy's height: relief lights the slopes that face the light; contour lines and the mesh come further down
+    float hgt = 0.0; vec2 slope = vec2(0.0);
+    bool tall = relief_mix.x > 0.0 || relief_mix.z > 0.0 || mesh_mix.x > 0.0;
+    if (tall)
+    {
+        float e = max(upp * 2.0, 0.003);
+        hgt = heightAt(q, upp);
+        slope = vec2(heightAt(q + vec2(e, 0.0), upp) - hgt, heightAt(q + vec2(0.0, e), upp) - hgt) / e;
+        col *= max(0.05, 1.0 + relief_mix.x * clamp(-dot(slope, vec2(cos(relief_mix.y), sin(relief_mix.y))) * 0.12, -0.75, 1.6));
+    }
 
     // star-forming knots along the arm spines: small, faint, pinkish; they breathe slowly
     float knotsN = fbm2(q * 70.0 + 31.0, upp, 4);
@@ -243,17 +382,49 @@ void fragment()
     col += c_arm * 0.85 * 0.035 * exp(-r / 0.6) * (1.0 - edge * 0.5);
 
     // stars: unresolved grain, then single stars that appear as the map is zoomed in
-    float light = clamp((bulge * 0.3 + disc + armLight) * 1.6, 0.0, 1.0);
+    float light = clamp((bulge0 * 0.3 + disc + armLight0) * 1.6, 0.0, 1.0);
     col += c_disc * (fine - 0.45) * 0.08 * light;
-    vec3 st = stars(q, 90.0, upp, light, 0.0, 0.01) + stars(q, 260.0, upp, light, 7.3, 0.0) + stars(q, 760.0, upp, light, 19.1, 0.0) + stars(q, 2200.0, upp, light, 2.9, 0.0);
+    // the star layers sit a little above and below the disc, so they slide against each other when the view moves (parallax);
+    // with parallax 0 they all sit on the galaxy, read at q itself so the picture is the same as before parallax came in
+    bool onDisc = depth_mix.x <= 0.0;
+    float lu = upp; vec2 lq = q;
+    vec3 st = vec3(0.0);
+    if (!onDisc) lq = layerQ(off, 0.10, upp, lu);
+    st += stars(lq, 90.0, lu, light, 0.0, 0.01);
+    if (!onDisc) lq = layerQ(off, -0.08, upp, lu);
+    st += stars(lq, 260.0, lu, light, 7.3, 0.0);
+    if (!onDisc) lq = layerQ(off, 0.05, upp, lu);
+    st += stars(lq, 760.0, lu, light, 19.1, 0.0);
+    if (!onDisc) lq = layerQ(off, -0.04, upp, lu);
+    st += stars(lq, 2200.0, lu, light, 2.9, 0.0);
     st *= 1.0 - dust * 0.8;
     st *= star_mix.x;
     // a sparse field of foreground stars everywhere, so open space is not empty
-    st += stars(q, 40.0, upp, 0.0, 51.0, 0.035) * star_mix.y;
+    if (!onDisc) lq = layerQ(off, 0.6, upp, lu);
+    st += stars(lq, 40.0, lu, 0.0, 51.0, 0.035) * star_mix.y;
+    if (depth_mix.y > 0.0) { lq = layerQ(off, -0.5, upp, lu); st += stars(lq, 150.0, lu, 0.0, 88.0, 0.05) * depth_mix.y; }
 
     // tone: soft shoulder, then kept dim ('dimming for the map') so the map on top stays the thing you read
     vec3 lit = vec3(1.0) - exp(-col * 1.3);
-    vec3 outc = clamp(c_bg + dust_mix.w * (lit * star_mix.w + st * 0.45), 0.0, 1.0);
-    if (dither_on) outc = ditherCol(outc, ivec2(FRAGCOORD.xy));
+    vec3 glow = dust_mix.w * (lit * star_mix.w + st * 0.45);
+    if (depth_mix.z > 0.0) { lq = layerQ(off, 1.4, upp, lu); glow += motes(lq) * depth_mix.z * 0.22; }
+    if (tall)
+    {
+        // contour lines: one line per step of height, about a dot wide; they fade out where they would crowd together
+        float lvl = sqrt(max(hgt, 0.0)) * relief_mix.w;
+        float lvlSlope = length(slope) * relief_mix.w * 0.5 / max(sqrt(max(hgt, 0.0)), 0.03) * upp;
+        float line = 1.0 - smoothstep(0.6, 1.4, abs(fract(lvl + 0.5) - 0.5) / max(lvlSlope, 1e-5));
+        line *= (1.0 - smoothstep(0.2, 0.45, lvlSlope)) * smoothstep(0.004, 0.03, hgt);
+        // the mesh: a square grid pushed up the screen by the height, as a wireframe landscape seen from a little above
+        vec2 gm = (q + vec2(0.0, hgt * mesh_mix.z * 0.25)) * mesh_mix.y;     // y grows downward, so adding the height lifts the line
+        vec2 gd = abs(fract(gm + 0.5) - 0.5) / (mesh_mix.y * upp);
+        float wire = (1.0 - smoothstep(0.6, 1.4, min(gd.x, gd.y))) * smoothstep(4.0, 8.0, 1.0 / (mesh_mix.y * upp));
+        wire *= 0.12 + 0.88 * smoothstep(0.0, 0.25, hgt);
+        glow += c_line * (line * relief_mix.z + wire * mesh_mix.x) * 0.5;
+    }
+    // brightness ceiling: nothing in the backdrop gets brighter than this, whatever the other controls say
+    if (mesh_mix.w < 0.995) { float top = max(glow.r, max(glow.g, glow.b)); if (top > mesh_mix.w) glow *= mesh_mix.w / top; }
+    vec3 outc = clamp(c_bg + glow, 0.0, 1.0);
+    if (dither_on) outc = ditherCol(outc, ivec2(FRAGCOORD.xy), gTile);
     COLOR = vec4(outc, 1.0);
 }

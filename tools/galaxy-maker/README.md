@@ -29,8 +29,7 @@ python3 build.py galaxy-maker.src.html ../../data/design/extended-galaxy-v6-plan
 
 ## Known limits
 - The game reads these settings from `godot/ui/galaxy-backdrop.json` (`GalaxyLook.cs`) and redraws the backdrop over time when any movement is on. Paste new settings there to change the game's galaxy.
-- The depth, movement and glitch parts and the Blue and Orange colour sets added in November 2026 are in this tool only until the game is given the same code; until then the game ignores the new settings (and draws Blue or Orange as black and white).
+- The depth, movement and glitch parts and the Blue and Orange colour sets added in November 2026 are in the game too (ported 2026-11-11). The game works out the view's zoom, centre and scale from its own pan and zoom, and runs its clock at *Overall pace*.
 - Glitch tiles are a whole number of dots, so they stay put when the view pans but reshuffle inside their patches when it zooms; the patches themselves stay on the same part of the galaxy.
 - The dither code is copied three times: here, in the Planet Maker and in the game (`GalaxyLook.BlueNoise`, `GalaxyBackdrop.gdshader`). Change one, change all three.
-- The outer halo uses the arm colour (the game has its own fixed blue-grey); the difference is very small.
 - Tuned on software rendering only.
