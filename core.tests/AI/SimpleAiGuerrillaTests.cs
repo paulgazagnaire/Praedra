@@ -122,14 +122,22 @@ public class SimpleAiGuerrillaTests
     public void Underground_AndGuerrilla_SpyAndSabotageAndRaid_OnlyWhenOn()
     {
         var medium = Medium with { BurnTheBooks = false, InvasionReadyAtRally = false };
-        var res = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => (On: Play(s, medium, 1000), Off: Play(s, medium with { Underground = false, Guerrilla = false }, 300)));
-        foreach (var r in res) _out.WriteLine($"seed {r.On.Seed}: on {r.On}; off {r.Off}");
-        foreach (var (on, off) in res)
-        {
-            Assert.True(on.Sabotage >= 1 && on.Espionage >= 1 && on.AgentForces >= 1 && on.Raids >= 1 && on.CivilianStrikes >= 1, $"seed {on.Seed}: on {on}");
-            Assert.True(off.Sabotage == 0 && off.Espionage == 0 && off.AgentForces == 0 && off.Raids == 0 && off.CivilianStrikes == 0, $"seed {off.Seed}: off {off}");
-        }
-        int busy = res.Count(r => r.On.Sabotage >= 5 && r.On.Espionage >= 5 && r.On.AgentForces >= 5 && r.On.Raids >= 5 && r.On.CivilianStrikes >= 5);
-        Assert.True(busy >= 3, $"on: only {busy} of 4 seeds have at least 5 of each");
+        // Whole-batch floors 2026-11-11 (AI trainer, for the Dev lead: the per-seed floors broke on the route thinning while the switches held).
+        // Seeds 1-16, same AI code: at least 5 of each on 11 of 16 (394 links: 9 of 16); fewer than 5 Sabotage on seeds 3, 8, 9, 10, 11 (394
+        // links: 8, 11, 13, 14, 15, 16), none at all on 2 seeds (1). Seeds 1-8 on the 280 links, in all: Sabotage 109, Espionage 180,
+        // special-force missions 109, raids 241, Civilian strikes 223 (394 links: 183, 253, 174, 346, 307), at least 5 of each on 6 seeds (7);
+        // fewer missions and raids than on 394 links, most likely the slower trips. Floors: on, at least 40 of each in all (5 a seed) and at
+        // least 5 of each on 4 of the 8 seeds; off (seeds 1-4 to day 300), none on any seed (unchanged).
+        var on = MultiSeed.Play(Enumerable.Range(1, 8).ToArray(), s => Play(s, medium, 1000));
+        var off = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => Play(s, medium with { Underground = false, Guerrilla = false }, 300));
+        foreach (var r in on) _out.WriteLine($"seed {r.Seed}: on {r}");
+        foreach (var r in off) _out.WriteLine($"seed {r.Seed}: off {r}");
+        string all = string.Join("; ", on.Select(r => r.ToString()));
+        foreach (var (kind, n) in new[] { ("Sabotage", on.Sum(r => r.Sabotage)), ("Espionage", on.Sum(r => r.Espionage)), ("special-force missions", on.Sum(r => r.AgentForces)),
+                     ("raids", on.Sum(r => r.Raids)), ("Civilian strikes", on.Sum(r => r.CivilianStrikes)) })
+            Assert.True(n >= 40, $"on: only {n} {kind} on 8 seeds (floor 40): {all}");
+        int busy = on.Count(r => r.Sabotage >= 5 && r.Espionage >= 5 && r.AgentForces >= 5 && r.Raids >= 5 && r.CivilianStrikes >= 5);
+        Assert.True(busy >= 4, $"on: only {busy} of 8 seeds have at least 5 of each: {all}");
+        Assert.All(off, r => Assert.True(r.Sabotage == 0 && r.Espionage == 0 && r.AgentForces == 0 && r.Raids == 0 && r.CivilianStrikes == 0, $"seed {r.Seed}: off {r}"));
     }
 }

@@ -56,11 +56,15 @@ public class SimpleAiGarrisonsFirstTests
     [Fact]
     public void GarrisonsFirst_AFarAheadSideTrainsMoreGarrisonTroops()
     {
-        var res = MultiSeed.Play(new[] { 1, 2, 3, 4, 5, 6 }, s => (s, On: Play(s, true), Off: Play(s, false)));
-        Assert.True(res.Count(r => r.On.Ordered > r.Off.Ordered) >= 4,
-            "on ordered more regiments than off on fewer than 4 seeds: " + string.Join(", ", res.Select(r => $"seed {r.s} {r.On.Ordered}/{r.Off.Ordered}")));
+        // Whole-batch floors 2026-11-11 (AI trainer, for the Dev lead: map changes kept breaking the per-seed floors while the switch held). Seeds
+        // 1-24, same AI code: on orders more than off on 22 of 24 (394 links: 21), 122% in all on both maps; seeds 2 and 4 here, 15 and 16 on
+        // the old map, are the misses. Seeds 1-12 on the 280 links: on more on 10 (394 links: 12), 118% in all (128%), more training
+        // facilities on 9 (9). Floors: on orders more on at least 8 of 12, 110% in all, more training facilities on at least 6.
+        var res = MultiSeed.Play(Enumerable.Range(1, 12).ToArray(), s => (s, On: Play(s, true), Off: Play(s, false)));
+        string all = string.Join(", ", res.Select(r => $"seed {r.s} {r.On.Ordered}/{r.Off.Ordered}"));
+        Assert.True(res.Count(r => r.On.Ordered > r.Off.Ordered) >= 8, "on ordered more regiments than off on fewer than 8 of 12 seeds: " + all);
         int on = res.Sum(r => r.On.Ordered), off = res.Sum(r => r.Off.Ordered);
         Assert.True(on * 100 >= off * 110, $"on ordered {on} regiments in all, off {off} (floor 110%)");
-        Assert.True(res.Count(r => r.On.Training > r.Off.Training) >= 2, "on owns more training facilities than off on fewer than 2 seeds");
+        Assert.True(res.Count(r => r.On.Training > r.Off.Training) >= 6, "on owns more training facilities than off on fewer than 6 of 12 seeds");
     }
 }
