@@ -22,10 +22,11 @@ public partial class GameScreen
 {
     Control _secLayer;
     PanelContainer _secWin;
-    Label _secTitle, _secSub;
-    Control _secOwnBar, _secLegend;
+    Label _secTitle;
+    Control _secLegend;
     ScrollContainer _secScroll;
     GridContainer _secGrid;
+    MarginContainer _secGridPad;
     List<string> _secOrder;
     string _secName;
     bool _secDirty, _secLeft;
@@ -36,9 +37,8 @@ public partial class GameScreen
     const int TileHeight = SystemTile.H;
     const int CardGap = 10;
     const int GridPad = 16;           // the margin round the tiles
-    const int HeadHeight = 76;        // the window's head and the bar under it
-    const int LegendHeight = 46;      // the key to the marks at its foot (two lines in a narrow window)
     const int TopClear = 72;          // the top bar of the screen (goal, day, clock) stays uncovered
+    const int BottomClear = 16;       // windows reach down to the foot of the screen, with the same gap as at the side
     const int MonthDays = 30;         // output is shown per 30 days, a span a player can picture
 
     internal bool SectorViewOpen => _secLayer?.Visible == true;
@@ -54,47 +54,35 @@ public partial class GameScreen
         _secLayer.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
 
         _secWin = new PanelContainer { MouseFilter = MouseFilterEnum.Stop };
-        var wb = Ui.Box(Ui.Chrome, 14, new Color(1, 1, 1, 0.09f), 1, 0, 0);
-        wb.ShadowColor = new Color(0, 0, 0, 0.55f); wb.ShadowSize = 28;
-        _secWin.AddThemeStyleboxOverride("panel", wb);
+        // no shadow under the window (Paul 2026-11-11: "Remove the shadows under the windows entirely")
+        _secWin.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Chrome, 14, new Color(1, 1, 1, 0.09f), 1, 0, 0));
         _secLayer.AddChild(_secWin);
         _secLayer.Resized += () => LayoutSectorView();
 
         var v = Ui.VBox(0);
         _secWin.AddChild(v);
 
-        // ---- the head: the region, arrows to step through the sectors, the name, close
+        // ---- the head: arrows to step through the sectors, the name, close. No region and sector-number line above the name and no
+        // who-holds-the-sector bar under it (Paul 2026-11-11: "Remove the top section", "remove the sector-wide loyalty bar").
         var headPad = new MarginContainer();
-        foreach (var (k, n) in new[] { ("margin_left", 20), ("margin_right", 14), ("margin_top", 10), ("margin_bottom", 8) }) headPad.AddThemeConstantOverride(k, n);
+        foreach (var (k, n) in new[] { ("margin_left", 20), ("margin_right", 14), ("margin_top", 10), ("margin_bottom", 4) }) headPad.AddThemeConstantOverride(k, n);
         v.AddChild(headPad);
         var head = Ui.HBox(Ui.Pad);
         headPad.AddChild(head);
-        var names = Ui.VBox(2);
-        names.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        _secSub = Ui.Label("", null, Ui.Text3, Ui.Tiny, wrap: false);
-        _secSub.AddThemeFontOverride("font", Ui.Caps);
-        names.AddChild(_secSub);
         var titleRow = Ui.HBox(8);
+        titleRow.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        titleRow.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         titleRow.AddChild(SecArrow("‹", -1, "The sector before (Left arrow)"));
         _secTitle = Ui.Label("", "Title", Ui.Text, 22, wrap: false);
         _secTitle.AddThemeFontOverride("font", Ui.SemiBold);
         titleRow.AddChild(_secTitle);
         titleRow.AddChild(SecArrow("›", 1, "The sector after (Right arrow)"));
-        names.AddChild(titleRow);
-        head.AddChild(names);
+        head.AddChild(titleRow);
         var close = Ui.Button("✕", CloseSectorView, "Close (S or Esc)", "Clock");
         close.SetMeta(UiTest.FullName, "Close the sector window");
         close.CustomMinimumSize = new Vector2(32, 32);
-        close.SizeFlagsVertical = SizeFlags.ShrinkBegin;
+        close.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         head.AddChild(close);
-
-        // ---- who holds the sector, as one bar: blue yours, orange the enemy, grey nobody, dark unknown
-        var barPad = new MarginContainer();
-        barPad.AddThemeConstantOverride("margin_left", 20); barPad.AddThemeConstantOverride("margin_right", 20); barPad.AddThemeConstantOverride("margin_bottom", 2);
-        _secOwnBar = Ui.HBox(2);
-        _secOwnBar.CustomMinimumSize = new Vector2(0, 3);
-        barPad.AddChild(_secOwnBar);
-        v.AddChild(barPad);
 
         // ---- the body: the cards; the system's own window floats over their right side when one is open
         var body = new Control { SizeFlagsVertical = SizeFlags.ExpandFill, MouseFilter = MouseFilterEnum.Ignore };
@@ -102,7 +90,7 @@ public partial class GameScreen
         _secScroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
         _secScroll.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         body.AddChild(_secScroll);
-        var gridPad = new MarginContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        var gridPad = _secGridPad = new MarginContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         foreach (var (k, n) in new[] { ("margin_left", GridPad), ("margin_right", GridPad), ("margin_top", 14), ("margin_bottom", 10) }) gridPad.AddThemeConstantOverride(k, n);
         _secScroll.AddChild(gridPad);
         _secGrid = new GridContainer { Columns = 4, SizeFlagsHorizontal = SizeFlags.ShrinkCenter };
@@ -164,26 +152,32 @@ public partial class GameScreen
         return b;
     }
 
-    /// <summary>The window takes half the screen, on the side away from the sector so the sector stays in sight on the map. The tiles fill
-    /// as many columns as fit; the window is as tall as its rows need, up to the screen.</summary>
+    /// <summary>The window is two window columns wide (Paul 2026-11-11: "The sector view window can take 2 collumns so we have space between
+    /// the systems"), on the side away from the sector so the sector stays in sight on the map, at most half the screen. The tiles keep their
+    /// square layout (nine systems make 3 x 3) and spread out evenly over the width. It runs from under the top bar down to the foot of the
+    /// screen (Paul 2026-11-11: "filling all of the available vertical space"), the tiles scrolling inside it when they need more.</summary>
     void LayoutSectorView(int count = -1)
     {
         if (_secWin == null) return;
         var vp = _secLayer.Size;
         int n = Math.Max(1, count >= 0 ? count : _secCards.Count);
-        float w = Math.Max(Math.Min(vp.X / 2 - 24, 900), Math.Min(vp.X - 32, 2 * (TileWidth + CardGap) + 2 * GridPad));
+        float w = Math.Min(2 * MgWidth + SlotGap, Math.Max(vp.X / 2 - 24, 2 * (TileWidth + CardGap) + 2 * GridPad));
+        w = Math.Min(w, vp.X - 32);
         int fit = Math.Clamp((int)((w - 2 * GridPad + CardGap) / (TileWidth + CardGap)), 1, 6);
-        // as square as the width allows (nine systems make 3 x 3, not 4 + 4 + 1): a smaller window leaves more map
         int cols = Math.Min(fit, Math.Max(2, (int)Math.Ceiling(Math.Sqrt(n))));
-        w = Math.Min(w, cols * (TileWidth + CardGap) - CardGap + 2 * GridPad + 4);
-        int rows = (n + cols - 1) / cols;
         _secGrid.Columns = cols;
-        float content = HeadHeight + 14 + rows * TileHeight + (rows - 1) * CardGap + 10 + LegendHeight;
-        // below the top bar (the clock and the goal stay in sight), as tall as the tiles need
-        float h = Math.Min(vp.Y - TopClear - 12, content);
+        // the same space between the tiles as on either side of them (the 4 is the scroll bar's room)
+        int gap = Math.Max(CardGap, (int)((w - 4 - cols * TileWidth) / (cols + 1)));
+        _secGrid.AddThemeConstantOverride("h_separation", gap);
+        _secGrid.AddThemeConstantOverride("v_separation", Math.Min(gap, 2 * GridPad));
+        _secGridPad.AddThemeConstantOverride("margin_left", gap); _secGridPad.AddThemeConstantOverride("margin_right", gap);
+        // below the top bar (the clock and the goal stay in sight), down to the foot of the screen
+        float h = vp.Y - TopClear - BottomClear;
         w = Math.Max(w, _secWin.GetCombinedMinimumSize().X); // never wider on screen than placed: the right edge stays on screen
-        bool left = _secLeft;
-        _secWin.Position = new Vector2(left ? 16 : vp.X - w - 16, TopClear);
+        // on the left, the first two window columns; on the right, the last two, so the other windows line up beside it
+        var slots = _mgLayer != null ? Slots() : new List<Vector2>();
+        float x = !_secLeft && slots.Count >= 2 && slots[^2].X + w <= vp.X - 8 ? slots[^2].X : _secLeft ? 16 : vp.X - w - 16;
+        _secWin.Position = new Vector2(x, TopClear);
         _secWin.Size = new Vector2(w, h);
         _secWin.CustomMinimumSize = new Vector2(w, h);
     }
@@ -291,10 +285,7 @@ public partial class GameScreen
             .ThenBy(n => n, StringComparer.Ordinal).ToList();
 
         // ---- head
-        string region = sec.Group switch { "heartland" => "Heartland", "midreach" => "Midreach", "farreach" => "Farreach", var gname => gname };
-        _secSub.Text = $"{region.ToUpperInvariant()}  ·  SECTOR {_secOrder.IndexOf(_secName) + 1} OF {_secOrder.Count}";
         _secTitle.Text = _secName;
-        SectorOwnBar(systems);
 
         // ---- tiles
         _secDirty = false;
@@ -302,25 +293,5 @@ public partial class GameScreen
         _secCards.Clear();
         foreach (var n in systems) _secGrid.AddChild(_secCards[n] = SystemCardTile(n));
         LayoutSectorView();
-    }
-
-    /// <summary>Who holds the sector, as one bar under the head, in the factions' colours like the tiles (green the Hand, blue the Collective), grey nobody, dark not known.</summary>
-    void SectorOwnBar(List<string> systems)
-    {
-        Ui.Clear(_secOwnBar);
-        int mine = 0, enemy = 0, nobody = 0, unknown = 0, dead = 0;
-        foreach (var n in systems)
-        {
-            if (S.IsDestroyed(n)) { dead++; continue; }
-            var (known, owner) = S.KnownOwnerOf(n);
-            if (S.OwnerOf(n) == Me) mine++;
-            else if (S.Picture(n) == null || !known) unknown++;
-            else if (owner == null) nobody++;
-            else enemy++;
-        }
-        void Seg(int count, Color c) { if (count <= 0) return; var r = new ColorRect { Color = c, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = count, MouseFilter = MouseFilterEnum.Ignore }; _secOwnBar.AddChild(r); }
-        Seg(mine, SystemTile.Of(Me)); Seg(enemy, SystemTile.Of(S.Enemy)); Seg(nobody, new Color(Ui.Neutral, 0.55f)); Seg(unknown, Ui.LineHi); Seg(dead, new Color(Ui.Danger, 0.45f));
-        _secOwnBar.TooltipText = $"Who holds the sector: {mine} yours ({(Me == Side.Hand ? "green" : "blue")}), {enemy} the {S.NameOf(S.Enemy)}'s ({(Me == Side.Hand ? "blue" : "green")}), {nobody} nobody's (grey), {unknown} not known (dark){(dead > 0 ? $", {dead} harvested (red)" : "")}.";
-        _secOwnBar.MouseFilter = MouseFilterEnum.Pass;
     }
 }

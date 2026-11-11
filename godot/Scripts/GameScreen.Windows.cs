@@ -158,9 +158,8 @@ public partial class GameScreen
     {
         w.Panel = new PanelContainer { MouseFilter = MouseFilterEnum.Stop, CustomMinimumSize = new Vector2(MgWidth, 0) };
         w.Panel.SetMeta(UiTest.FullName, "Window " + w.Key);
-        var sb = Ui.Box(Ui.Chrome, 12, new Color(1, 1, 1, 0.1f), 1, 0, 0);
-        sb.ShadowColor = new Color(0, 0, 0, 0.55f); sb.ShadowSize = 22;
-        w.Panel.AddThemeStyleboxOverride("panel", sb);
+        // no shadow under the window (Paul 2026-11-11: "Remove the shadows under the windows entirely")
+        w.Panel.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Chrome, 12, new Color(1, 1, 1, 0.1f), 1, 0, 0));
         w.Panel.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true } && _mgWins.Count > 0 && _mgWins[^1] != w) Front(w); };
         var v = Ui.VBox(0);
         w.Panel.AddChild(v);
@@ -210,7 +209,7 @@ public partial class GameScreen
     }
 
     /// <summary>A window is at most the full free height of its column.</summary>
-    float SlotHeight => Math.Max(240, _mgLayer.Size.Y - TopClear - 12);
+    float SlotHeight => Math.Max(240, _mgLayer.Size.Y - TopClear - BottomClear);
 
     /// <summary>The places a window snaps to: tall columns side by side across the screen (four on a 1440 wide screen).</summary>
     List<Vector2> Slots(bool leftFirst = true)
@@ -254,7 +253,8 @@ public partial class GameScreen
         RebuildMg(w);
     }
 
-    /// <summary>As tall as the shown tab needs, up to half the screen (or just the head when folded).</summary>
+    /// <summary>From where it stands down to the foot of the screen, whatever the shown tab holds (Paul 2026-11-11: "Make sure the windows
+    /// extend to the bottom of the screen"); the tab scrolls inside it. Just the head when folded.</summary>
     void Fit(MgWin w, float keepScroll = -1)
     {
         foreach (var (name, (page, tab)) in w.Pages) { page.Visible = name == w.Tab; tab.SetPressedNoSignal(name == w.Tab); }
@@ -263,8 +263,7 @@ public partial class GameScreen
         {
             if (!IsInstanceValid(w.Panel)) return;
             float head = w.Head.GetParent<Control>().GetCombinedMinimumSize().Y + 1;
-            float want = w.Min ? head + 10 : head + w.Body.GetCombinedMinimumSize().Y + 30;
-            float h = Math.Min(want, Math.Min(SlotHeight, _mgLayer.Size.Y - w.Panel.Position.Y - 12));
+            float h = w.Min ? head + 10 : Math.Min(SlotHeight, _mgLayer.Size.Y - w.Panel.Position.Y - BottomClear);
             w.Panel.Size = new Vector2(MgWidth, Math.Max(w.Min ? 0 : 160, h));
             if (keepScroll >= 0) w.Scroll.ScrollVertical = (int)keepScroll;
         }
