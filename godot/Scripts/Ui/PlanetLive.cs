@@ -379,10 +379,18 @@ public partial class PlanetLiveSet : Control
 
     public static string Key(string system, bool harvested) => (harvested ? "x:" : "") + system;
 
+    // redrawn at most 30 times a second, as the galaxy backdrop (GalaxyBackdrop.FrameSeconds): a 120 Hz screen would otherwise run the full
+    // Planet Maker shader for every tile 120 times a second (Ponytail on #286)
+    const double FrameSeconds = 1.0 / 30.0;
+    double _sinceFrame;
+
     public override void _Process(double delta)
     {
         if (!_focused || !IsVisibleInTree()) return;
-        foreach (var pl in _live.Values) pl.Advance(delta);
+        _sinceFrame += delta;
+        if (_sinceFrame < FrameSeconds) return;
+        foreach (var pl in _live.Values) pl.Advance(_sinceFrame);   // the whole time since the last frame, so the speeds stay the tool's
+        _sinceFrame = 0;
     }
 
     public override void _Notification(int what)
