@@ -61,7 +61,11 @@ public partial class GalaxyBackdrop : Control
         _material.SetShaderParameter("star_mix", new Vector4(l["stars"], l["field"], l["starDens"], l["dim"]));
         _material.SetShaderParameter("move", new Vector4(l["drift"], l["breathe"], l["twinkle"], l["twShare"]));
         _material.SetShaderParameter("twinkle_speed", l["twSpeed"]);
-        foreach (var (key, uniform) in new[] { ("cBulge", "c_bulge"), ("cDisc", "c_disc"), ("cArm", "c_arm"), ("cKnot", "c_knot"), ("cDust", "c_dust"), ("cBg", "c_bg") })
+        _material.SetShaderParameter("depth_mix", new Vector4(l["par"], l["far"], l["motes"], l["moteSize"]));
+        _material.SetShaderParameter("relief_mix", new Vector4(l["relief"], Mathf.DegToRad(l["sun"]), l["contour"], l["contourN"]));
+        _material.SetShaderParameter("mesh_mix", new Vector4(l["mesh"], l["meshN"], l["lift"], l["cap"]));
+        _material.SetShaderParameter("live_mix", new Vector4(l["waves"], l["wavePace"], l["pulse"], 0f));
+        foreach (var (key, uniform) in new[] { ("cBulge", "c_bulge"), ("cDisc", "c_disc"), ("cArm", "c_arm"), ("cKnot", "c_knot"), ("cDust", "c_dust"), ("cBg", "c_bg"), ("cLine", "c_line") })
             _material.SetShaderParameter(uniform, l.Colour(key));
         _material.SetShaderParameter("dither_on", l.DitherOn);
         if (!l.DitherOn) return;
@@ -70,6 +74,8 @@ public partial class GalaxyBackdrop : Control
         var pal = new Vector3[4];
         for (int i = 0; i < l.Palette.Length; i++) pal[i] = GalaxyLook.Rgb(l.Palette[i]);
         _material.SetShaderParameter("dither_pal", pal);
+        _material.SetShaderParameter("glitch_a", new Vector4(l.GlitchOn ? l.Glitch("gAmt") : 0f, l.Glitch("gTile"), l.Glitch("gPatch"), l.Glitch("gVar")));
+        _material.SetShaderParameter("glitch_b", new Vector4(l.Glitch("gPace"), l.Glitch("gFlat"), l.Glitch("gMix"), l.Glitch("gSeed")));
         if (l.Pattern == 3) // Grain
         {
             const int N = 64;
@@ -80,8 +86,9 @@ public partial class GalaxyBackdrop : Control
 
     public override void _Process(double delta)
     {
-        // the movement: the clock runs on its own, the picture is redrawn when a frame's worth of it has passed
-        _time += (float)delta;
+        // the movement: the clock runs at the look's overall pace (as the Galaxy Maker's), the picture is redrawn when a frame's worth
+        // of real time has passed
+        _time += (float)delta * _look["pace"];
         _sinceFrame += (float)delta;
         if (_sinceFrame < FrameSeconds || !IsVisibleInTree()) return;
         _sinceFrame = 0f;
@@ -141,6 +148,7 @@ public partial class GalaxyBackdrop : Control
         _material.SetShaderParameter("view_center", _view.ViewCenter);
         _material.SetShaderParameter("px_per_unit", _view.PxPerUnit);
         _material.SetShaderParameter("pixel_scale", px.X / Mathf.Max(1f, Size.X));
+        _material.SetShaderParameter("buffer_px", (Vector2)px);
         _material.SetShaderParameter("time", _time);
         _buffer.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
         DrawTextureRect(_buffer.GetTexture(), new Rect2(Vector2.Zero, Size), false);
