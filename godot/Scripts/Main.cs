@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Godot;
@@ -30,6 +31,7 @@ public partial class Main : Control
         bool smoke = _args.Contains("--smoke") || (DisplayServer.GetName() == "headless" && !_args.Contains("--playtest"));
         GameBoot.LoadData();
         if (_args.Contains("--playtest")) { Playtest(); return; }
+        if (Arg("--planet-shots") is string shotDir) { PlanetShots(shotDir); return; }
         if (smoke) { Smoke(); GetTree().Quit(); return; }
 
         string shot = null; int shotFrames = 30;
@@ -151,6 +153,61 @@ public partial class Main : Control
                     break;
             }
         }
+    }
+
+    /// <summary>
+    /// `--planet-shots DIR [--planets A,B,...] [--at SECONDS] [--frames N]`: draws the sector window's live planets (Ui/PlanetLive.cs) of the named
+    /// systems (default: a few of every kind) into DIR as PNGs, each 96 dots as the tile shows it, and its harvested remnant beside it
+    /// (name-harvested.png), after SECONDS of motion (default 0, the start, as the baked thumbnails). For checking the port against the
+    /// Planet Maker (tools/planet-maker/README.md, "Live planets in the game"). With `--frames N` it then redraws them all N frames in a
+    /// row and prints the time a frame takes, to see what the live tiles cost on a given machine.
+    /// </summary>
+    async void PlanetShots(string dir)
+    {
+        DirAccess.MakeDirRecursiveAbsolute(dir);
+        var names = (Arg("--planets") ?? "Charter,Ardlinn,Consolatio").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        double at = double.TryParse(Arg("--at"), NumberStyles.Float, CultureInfo.InvariantCulture, out double t) ? t : 0;
+        var shots = new List<(string File, PlanetLive Planet)>();
+        foreach (var n in names)
+        {
+            var look = PlanetLook.Of(n);
+            if (look == null) { GD.PrintErr("no live planet settings for " + n); continue; }
+            foreach (bool harv in new[] { false, true })
+            {
+                var pl = new PlanetLive(look, harv, PlanetArt.Dots);
+                AddChild(pl);
+                for (double done = 0; done < at - 1e-9; done += 0.1) pl.Advance(Math.Min(0.1, at - done));
+                shots.Add(($"{dir}/{n.ToLowerInvariant().Replace(' ', '-')}{(harv ? "-harvested" : "")}.png", pl));
+            }
+        }
+        for (int i = 0; i < 4; i++)
+        {
+            foreach (var (_, pl) in shots) pl.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
+            await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+        }
+        foreach (var (file, pl) in shots)
+        {
+            pl.GetTexture().GetImage().SavePng(file);
+            GD.Print("Saved " + file);
+        }
+        // how long a frame takes with every planet above redrawn each frame, against a frame with none (the window's own cost)
+        if (int.TryParse(Arg("--frames"), out int frames) && frames > 0)
+        {
+            double Run(bool draw)
+            {
+                ulong t0 = 0;
+                for (int i = 0; i <= frames; i++)
+                {
+                    if (i == 1) t0 = Time.GetTicksUsec();
+                    if (draw) foreach (var (_, pl) in shots) pl.Advance(1.0 / 60);
+                    RenderingServer.ForceDraw(false);
+                }
+                return (Time.GetTicksUsec() - t0) / 1000.0 / frames;
+            }
+            double none = Run(false), all = Run(true);
+            GD.Print($"{shots.Count} live planets: {all:0.0} ms a frame, {none:0.0} ms without them: {(all - none) / shots.Count:0.00} ms a planet");
+        }
+        GetTree().Quit();
     }
 
     // ================================================================== headless smoke test
