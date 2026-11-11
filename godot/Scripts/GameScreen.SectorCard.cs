@@ -16,13 +16,15 @@ public partial class GameScreen
 
     // the defence buildings (Mordant and Lode guns and shields), shown as diamonds under a system
     static readonly FacilityKind[] DefenceKinds = { FacilityKind.Lien150, FacilityKind.CovenantI, FacilityKind.EscrowI, FacilityKind.CovenantII, FacilityKind.EscrowII };
-    static readonly Color EnergyColor = new("cfe3f7");
 
     /// <summary>
-    /// One system as a small tile (Paul, 2026-11-01: "very simple, a very high point of view"): its planet, its name, then lines of small
-    /// marks with no numbers: loyalty as one line, energy slots and raw slots as dots (filled in use, hollow free), troops as squares and
-    /// defences as diamonds, fleets as triangles on the planet. An uprising or a harvester circles the planet in red. A system you never
-    /// looked at shows its planet and name only. The numbers are in the tooltip; a click opens the system's own window.
+    /// One system as a small tile, drawn from Paul's Paper frame "system-info" (2026-11-11; see Ui/SystemTile.cs): the name on top, the
+    /// planet, a resources gauge and an energy gauge on its left, loyalty on its right, and four corner icons: buildings, fleets, troops,
+    /// and the holder's emblem. An icon is lit in its side's colour when there is something there, faint when not; the troops icon turns
+    /// red when the planet is short of its garrison, the buildings icon amber when a yard stands idle, the fleets icon orange when an
+    /// enemy fleet is seen there. Colours are the factions' (Paul 2026-11-11): green the Hand, blue the Collective, whichever side you play. An uprising or a harvester circles the planet in red. A system you never looked at shows its planet and
+    /// name only. The numbers are in the tooltip. Clicks: the buildings icon and the gauges open the Infrastructure window, the fleets
+    /// icon your fleets there, anywhere else the Ground window; a double-click shows it on the map.
     /// </summary>
     PanelContainer SystemCardTile(string n)
     {
@@ -32,30 +34,88 @@ public partial class GameScreen
         bool explored = Scouted(n);
         var (known, owner) = S.KnownOwnerOf(n);
         Side? holder = mine ? Me : dead ? null : owner;
-        Color oc = dead ? Ui.Danger : !explored || (!known && !mine) ? Ui.Text3 : Ui.OwnerColor(holder, Me);
         bool hq = n == S.MyHqSystem || (n == S.EnemyHqSystem && explored);
 
         var tile = new PanelContainer { CustomMinimumSize = new Vector2(TileWidth, TileHeight), MouseFilter = MouseFilterEnum.Stop, MouseDefaultCursorShape = CursorShape.PointingHand };
         tile.SetMeta(UiTest.FullName, "Sector card " + n);
-        // the tile's ground is the planet's own black, so the picture has no box round it
-        StyleBoxFlat Style(bool hover) => Ui.Box(hover ? Ui.CardBg : Ui.PlanetSky, 10, hover ? new Color(1, 1, 1, 0.22f) : new Color(1, 1, 1, 0.06f), 1, 6, 6);
+        StyleBoxFlat Style(bool hover) => Ui.Box(hover ? new Color("17181c") : SystemTile.Ground, 0, hover ? new Color(1, 1, 1, 0.22f) : new Color(1, 1, 1, 0f), 1, 0, 0);
         tile.AddThemeStyleboxOverride("panel", Style(false));
         // a tile rebuilt under a still mouse (a new day) keeps its hover look
         Callable.From(() => { if (IsInstanceValid(tile) && tile.IsVisibleInTree() && tile.GetGlobalRect().HasPoint(tile.GetGlobalMousePosition())) tile.AddThemeStyleboxOverride("panel", Style(true)); }).CallDeferred();
         tile.MouseEntered += () => tile.AddThemeStyleboxOverride("panel", Style(true));
-        // three places to click (Paul, 2026-10-31: a link per system to its fleets, its infrastructure and its ground forces): the fleet
-        // triangles open the fleets' windows, the energy and raw dots the Infrastructure window, anywhere else the Ground window
-        Control fleetHot = null;
-        PanelContainer infraHot = null, groundHot = null;
-        string HotAt(Vector2 at) =>
-            fleetHot != null && fleetHot.GetGlobalRect().Grow(4).HasPoint(at) ? "fleets" : infraHot != null && infraHot.GetGlobalRect().HasPoint(at) ? "infra" : "ground";
-        tile.MouseExited += () => { tile.AddThemeStyleboxOverride("panel", Style(false)); Hot(infraHot, false); Hot(groundHot, false); };
+        tile.MouseExited += () => tile.AddThemeStyleboxOverride("panel", Style(false));
+
+        var st = new SystemTile();
+        tile.AddChild(st);
+        var d = st.D;
+        d.Name = n;
+        d.You = SystemTile.Of(Me);
+        d.Enemy = SystemTile.Of(S.Enemy);
+        d.Faint = new Color(Ui.Text3, 0.28f);
+        d.NameColor = dead ? Ui.Danger : !explored ? Ui.Text3 : (known || mine) && holder is Side hs ? SystemTile.NameOf(hs) : Ui.Text2;
+        d.Planet = dead ? PlanetArt.HarvestedOf(n) ?? PlanetArt.Of(n) : PlanetArt.Of(n);
+        if (dead && PlanetArt.HarvestedOf(n) == null) d.PlanetTint = new Color(0.6f, 0.22f, 0.2f, 0.55f); // no remnant picture: tint the old one
+        else if (!explored) d.PlanetTint = new Color(0.7f, 0.72f, 0.78f, 0.8f);
+        var alarms = Alarms(n, mine);
+        d.Ring = alarms.Any(a => a.Item2 == Ui.Danger && a.Item1 != "ENEMY FLEET");
+        d.Gauges = explored && !dead;
+
+        bool ownFleets = false;
+        if (d.Gauges)
+        {
+            // ---- the gauges: raw slots and mines, energy slots and buildings
+            var eco = S.Host.Economy;
+            int troops, need = 0, buildings;
+            if (mine)
+            {
+                d.EnergySlots = eco.SlotsOf(n).Energy; d.EnergyUsed = eco.EnergyUsed(n);
+                d.RawSlots = eco.EffectiveRaw(n); d.Mines = eco.OfKindAt(n, FacilityKind.Mine);
+                d.Loyalty = eco.SupportOf(n, Me);
+                troops = S.Host.Support.RegimentCount(n);
+                need = S.Host.Support.RequiredGarrison(n);
+                buildings = eco.Objects.Count(o => o.Category == ObjectCategory.Facility && o.System == n);
+            }
+            else
+            {
+                var fac = pic.Facilities?.Value;
+                d.EnergySlots = pic.Status?.Value.Energy ?? 0; d.RawSlots = pic.Status?.Value.Raw ?? 0;
+                d.EnergyUsed = fac?.Values.Sum() ?? 0;
+                d.Mines = fac != null && fac.TryGetValue(FacilityKinds.ClassName(FacilityKind.Mine), out int m) ? m : 0;
+                d.Loyalty = pic.Owner is { } po ? (Me == Side.Collective ? po.Value.CollectiveSupport : 100 - po.Value.CollectiveSupport) : -1;
+                troops = pic.Ground?.Value.Where(g => g.Side != Me).Sum(g => g.Total) ?? 0;
+                buildings = d.EnergyUsed;
+            }
+            Color side = SystemTile.Of(mine ? Me : S.Enemy);
+            // ---- the corner icons: lit when something is there, in the side's colour; trouble in its own colour
+            if (buildings > 0) d.Buildings = mine && IdleYardFamilies(n).Count > 0 ? Ui.Warn : side;
+            if (troops < need) d.Troops = Ui.Danger;
+            else if (troops > 0) d.Troops = side;
+            int own = S.Game.State.Fleets.Values.Count(f => f.Side == Me && f.At == n);
+            int enemy = S.Sees(n) ? S.VisibleEnemyFleetsAt(n).Count : !S.Sees(n) && pic?.Fleets is { } pf ? pf.Value.Count : 0;
+            ownFleets = own > 0;
+            if (enemy > 0) d.Fleets = SystemTile.Of(S.Enemy);
+            else if (own > 0) d.Fleets = SystemTile.Of(Me);
+            if (holder is Side h && (mine || known))
+            {
+                d.EmblemHand = h == Side.Hand;
+                d.Emblem = hq ? Ui.Gold : SystemTile.Of(h);
+            }
+        }
+
+        // three places to click (Paul, 2026-10-31: a link per system to its fleets, its infrastructure and its ground forces)
+        string HotAt(Vector2 global)
+        {
+            var at = global - st.GetGlobalRect().Position;
+            if (ownFleets && SystemTile.FleetIcon.Grow(3).HasPoint(at)) return "fleets";
+            if (d.Gauges && SystemTile.InfraHot.HasPoint(at)) return "infra";
+            return "ground";
+        }
         tile.GuiInput += e =>
         {
             if (e is InputEventMouseMotion mm)
             {
                 string h = HotAt(mm.GlobalPosition);
-                Hot(infraHot, h == "infra"); Hot(groundHot, h == "ground");
+                tile.TooltipText = Ui.Wrap((h == "infra" ? "Click: the infrastructure window.\n" : h == "fleets" ? "Click: your fleets here.\n" : "") + TileTip(n, mine, explored, dead, pic, holder, known));
                 return;
             }
             if (e is not InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } mb) return;
@@ -65,130 +125,7 @@ public partial class GameScreen
             Later(() => OpenFromTile(n, hot));
         };
         tile.TooltipText = Ui.Wrap(TileTip(n, mine, explored, dead, pic, holder, known));
-
-        var v = Ui.VBox(4);
-        v.MouseFilter = MouseFilterEnum.Ignore;
-        tile.AddChild(v);
-
-        // ---- the planet, one screen pixel per dot so the dither stays crisp; fleets as triangles in its corner; trouble as a red ring
-        var art = new Control { CustomMinimumSize = new Vector2(PlanetArt.Dots, PlanetArt.Dots), SizeFlagsHorizontal = SizeFlags.ShrinkCenter, MouseFilter = MouseFilterEnum.Ignore };
-        v.AddChild(art);
-        if ((dead ? PlanetArt.HarvestedOf(n) ?? PlanetArt.Of(n) : PlanetArt.Of(n)) is Texture2D tex)
-        {
-            var tr = new TextureRect { Texture = tex, TextureFilter = TextureFilterEnum.Nearest, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.Scale, MouseFilter = MouseFilterEnum.Ignore };
-            tr.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-            if (dead && PlanetArt.HarvestedOf(n) == null) tr.Modulate = new Color(0.6f, 0.22f, 0.2f, 0.55f); // no remnant picture: tint the old one
-            else if (!explored) tr.Modulate = new Color(0.7f, 0.72f, 0.78f, 0.8f);
-            art.AddChild(tr);
-        }
-        var alarms = Alarms(n, mine);
-        if (alarms.Any(a => a.Item2 == Ui.Danger && a.Item1 != "ENEMY FLEET"))
-        {
-            var ring = new Panel { MouseFilter = MouseFilterEnum.Ignore };
-            ring.AddThemeStyleboxOverride("panel", Ui.Box(new Color(Ui.Danger, 0.08f), PlanetArt.Dots / 2, Ui.Danger, 2, 0, 0));
-            ring.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-            art.AddChild(ring);
-        }
-        if (!dead)
-        {
-            int own = S.Game.State.Fleets.Values.Count(f => f.Side == Me && f.At == n);
-            int enemy = S.Sees(n) ? S.VisibleEnemyFleetsAt(n).Count : 0;
-            int seenBefore = !S.Sees(n) && pic?.Fleets is { } pf ? pf.Value.Count : 0;
-            if (own + enemy + seenBefore > 0)
-            {
-                var fleets = new SectorMarks { Side = 9, Gap = 3, Centered = false, Cap = FleetMarksCap }
-                    .Add(SectorMarks.Shape.Triangle, Ui.You, true, own)
-                    .Add(SectorMarks.Shape.Triangle, Ui.Enemy, true, enemy)
-                    .Add(SectorMarks.Shape.Triangle, Ui.Enemy, false, seenBefore);
-                fleets.Position = new Vector2(2, 2);
-                art.AddChild(fleets);
-                if (own > 0) fleetHot = fleets;
-            }
-        }
-
-        // ---- the name over the foot of the picture, with a dot in the holder's colour (gold for a capital or headquarters)
-        var nameRow = Ui.HBox(6);
-        nameRow.Alignment = BoxContainer.AlignmentMode.Center;
-        nameRow.MouseFilter = MouseFilterEnum.Ignore;
-        var dot = new SectorMarks { Side = 7 }.Add(SectorMarks.Shape.Dot, hq && !dead ? Ui.Gold : oc, explored || dead);
-        dot.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        nameRow.AddChild(dot);
-        var nm = Ui.Label(n, null, dead ? Ui.Danger : explored ? Ui.Text : Ui.Text2, 13, wrap: false);
-        nm.AddThemeFontOverride("font", Ui.SemiBold);
-        nm.AddThemeConstantOverride("outline_size", 5);
-        nm.AddThemeColorOverride("font_outline_color", new Color(Ui.PlanetSky, 0.9f));
-        // as wide as the name, cut with an ellipsis only when it would not fit the tile
-        float nameW = nm.GetThemeFont("font").GetStringSize(n, HorizontalAlignment.Left, -1, 13).X;
-        nm.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-        nm.ClipText = true;
-        nm.CustomMinimumSize = new Vector2(Math.Min(nameW + 2, TileWidth - 30), 0);
-        nameRow.AddChild(nm);
-        nameRow.SetAnchorsAndOffsetsPreset(LayoutPreset.BottomWide);
-        nameRow.OffsetTop = -18; nameRow.OffsetBottom = 0;
-        art.AddChild(nameRow);
-        if (!explored || dead) return tile; // a world never looked at, or harvested: its picture and its name, nothing more
-
-        // ---- loyalty, one line: your share from the left, theirs on the right
-        int you = mine ? S.Host.Economy.SupportOf(n, Me) : pic?.Owner is { } po ? (Me == Side.Collective ? po.Value.CollectiveSupport : 100 - po.Value.CollectiveSupport) : -1;
-        var loyal = new LoyaltyLine { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        loyal.Set(you, Ui.You, Ui.Enemy);
-        v.AddChild(loyal);
-
-        // ---- the marks: energy slots, raw slots, then troops and defences
-        var eco = S.Host.Economy;
-        int eAll, eUsed, rAll, mines, troops, defences, troopsShort = 0;
-        Color troopColor;
-        if (mine)
-        {
-            eAll = eco.SlotsOf(n).Energy; eUsed = eco.EnergyUsed(n);
-            rAll = eco.EffectiveRaw(n); mines = eco.OfKindAt(n, FacilityKind.Mine);
-            troops = S.Host.Support.RegimentCount(n);
-            troopsShort = Math.Max(0, S.Host.Support.RequiredGarrison(n) - troops);
-            defences = DefenceKinds.Sum(k => eco.OfKindAt(n, k));
-            troopColor = Ui.You;
-        }
-        else
-        {
-            var fac = pic.Facilities?.Value;
-            eAll = pic.Status?.Value.Energy ?? 0; rAll = pic.Status?.Value.Raw ?? 0;
-            eUsed = fac?.Values.Sum() ?? 0;
-            mines = fac != null && fac.TryGetValue(FacilityKinds.ClassName(FacilityKind.Mine), out int m) ? m : 0;
-            defences = fac?.Where(kv => FacilityKinds.TryParse(kv.Key, out var k) && DefenceKinds.Contains(k)).Sum(kv => kv.Value) ?? 0;
-            troops = pic.Ground?.Value.Where(g => g.Side != Me).Sum(g => g.Total) ?? 0;
-            troopColor = Ui.Enemy;
-        }
-        infraHot = HotBox();
-        var infraRows = Ui.VBox(4);
-        infraRows.MouseFilter = MouseFilterEnum.Ignore;
-        infraHot.AddChild(infraRows);
-        infraRows.AddChild(new SectorMarks { SizeFlagsHorizontal = SizeFlags.ExpandFill, Cap = MarksCap }
-            .Add(SectorMarks.Shape.Dot, EnergyColor, true, Math.Min(eUsed, eAll))
-            .Add(SectorMarks.Shape.Dot, EnergyColor, false, Math.Max(0, eAll - eUsed)));
-        infraRows.AddChild(new SectorMarks { SizeFlagsHorizontal = SizeFlags.ExpandFill, Cap = MarksCap }
-            .Add(SectorMarks.Shape.Dot, Ui.Gold, true, Math.Min(mines, rAll))
-            .Add(SectorMarks.Shape.Dot, Ui.Gold, false, Math.Max(0, rAll - mines)));
-        v.AddChild(infraHot);
-        groundHot = HotBox();
-        groundHot.AddChild(new SectorMarks { SizeFlagsHorizontal = SizeFlags.ExpandFill, Cap = MarksCap }
-            .Add(SectorMarks.Shape.Square, troopColor, true, troops)
-            .Add(SectorMarks.Shape.Square, Ui.Danger, false, troopsShort)
-            .Add(SectorMarks.Shape.Diamond, Ui.Text2, true, defences));
-        v.AddChild(groundHot);
         return tile;
-    }
-
-    /// <summary>A row of marks that lights faintly under the mouse, to say it opens its own window.</summary>
-    static PanelContainer HotBox()
-    {
-        var p = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
-        Hot(p, false);
-        return p;
-    }
-
-    static void Hot(PanelContainer p, bool on)
-    {
-        if (p == null || !IsInstanceValid(p)) return;
-        p.AddThemeStyleboxOverride("panel", Ui.Box(on ? new Color(1, 1, 1, 0.07f) : new Color(0, 0, 0, 0), 4, new Color(0, 0, 0, 0), 0, 2, 1));
     }
 
     /// <summary>A click on a tile: the fleets in orbit, the infrastructure, or the ground forces.</summary>
@@ -202,8 +139,6 @@ public partial class GameScreen
         OpenMgmt(hot == "infra" ? MgKind.Infra : MgKind.Ground, n);
     }
 
-    const int MarksCap = 15;      // a row of small marks holds at most this many (the slot cap; 15 fit a tile); the tooltip has the number
-    const int FleetMarksCap = 8;  // fleet triangles are larger: 8 fit across the planet
 
     /// <summary>Whether your side knows this system beyond its picture and name: yours, or looked at (the map's own fog test, S.Explored).
     /// One rule for the tile and the system's window.</summary>
@@ -240,7 +175,7 @@ public partial class GameScreen
             if (pic.Facilities is { } f) lines.Add($"Buildings seen: {f.Value.Values.Sum()}.");
             if (pic.Ground is { } g) lines.Add($"Troops seen: {g.Value.Where(x => x.Side != Me).Sum(x => x.Total)}.");
         }
-        lines.Add("Click: the ground window (leaders, troops, fleets in orbit). Click the dots: infrastructure. Click the blue triangles: your fleets. Double-click: show it on the map.");
+        lines.Add("Click: the ground window (leaders, troops, fleets in orbit). Click the gauges or the buildings icon: infrastructure. Click the fleet icon: your fleets. Double-click: show it on the map.");
         return string.Join("\n", lines);
     }
 

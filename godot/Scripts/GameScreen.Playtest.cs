@@ -122,7 +122,9 @@ public partial class GameScreen
     /// <summary>The systems the sector window shows, in card order.</summary>
     internal IReadOnlyList<string> SectorViewCards => _secCards.Keys.ToList();
     /// <summary>The words on one card (owner, numbers, links), for the playtest.</summary>
-    internal string SectorCardText(string system) => _secCards.TryGetValue(system, out var c) ? LabelsIn(c) : null;
+    // the tile draws its name (Ui/SystemTile.cs): read it from the tile's data, with any labels it still holds
+    internal string SectorCardText(string system) => _secCards.TryGetValue(system, out var c)
+        ? string.Join("\n", c.GetChildren().OfType<SystemTile>().Select(t => t.D.Name).Append(LabelsIn(c)).Where(x => !string.IsNullOrEmpty(x))) : null;
     internal string SectorCardTip(string system) => _secCards.TryGetValue(system, out var c) ? c.TooltipText : null;
     internal bool SectorOnLeft => _secWin != null && _secWin.Position.X < _secLayer.Size.X / 4;
     internal float SectorWindowWidth => _secWin?.Size.X ?? 0;
