@@ -58,7 +58,8 @@ public partial class Main
         string zone = post == CharacterPost.None ? $"Fleet {fid} Passengers" : $"Fleet {fid} {post}";
         string why = gs.MgDrop($"L:{lead.Id}", zone);
         Expect(why == null, $"drop {lname} on {zone}: {why ?? "sent"}");
-        Expect(!gs.MgText($"Ground {sys}").Contains(lname) && gs.MgText($"Fleet {fid}").Contains(lname), "the drop shows at once: the chip leaves the planet and stands in the fleet");
+        // the Leaders tab only: Charter's Lore tab names The Chair (route thinning 2026-11-11 made The Chair the leader picked here)
+        Expect(!gs.MgPageText($"Ground {sys}", "Leaders").Contains(lname) && gs.MgText($"Fleet {fid}").Contains(lname), "the drop shows at once: the chip leaves the planet and stands in the fleet");
         Expect(gs.MgDrop($"L:{lead.Id}", $"Fleet {fid} Passengers") != null, "a chip already moved today can't be dropped again");
         gs.PlayDay();
         Expect(lead.AttachedFleet == fid && lead.Post == post, $"next day {lname} is aboard {fleet.Name} as {GameSession.PostWords(post)}");
@@ -120,6 +121,7 @@ public partial class Main
         // ---------------------------------------------------------------- ships split off (two drops, one new fleet), then merged back by the grip
         if (fleet.Ships.Count > 1)
         {
+            for (int i = 0; i < 5 && gs.AnyModal; i++) gs.PressKey(Key.Escape);   // a report the days opened goes first (a system lost overnight)
             int ship = fleet.Ships[^1];
             int ship2 = fleet.Ships.Count > 2 ? fleet.Ships[^2] : 0;
             var before = s.Game.State.Fleets.Keys.ToHashSet();

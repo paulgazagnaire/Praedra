@@ -17,12 +17,15 @@ public class FleetOrderTests
 {
     // v6 re-pin 2026-10-24: Far was Classis; on the spiral map Cambium takes the same days from Charter (5 at speed 80,
     // 7 at 100, 4 at 60) over two legs (a free jump to Remedium, then a minor-route leg).
-    private const string Home = "Charter", Far = "Cambium";
+    private const string Home = "Charter", Far = "Tarrow"; // route thinning 2026-11-11: Cambium is now a one-leg free jump (4, 6, 8 days); Tarrow, four route legs out (Pyrite, Scoria, Belmare), takes the old days
+    // route thinning 2026-11-11: a trip whose first leg lasts several days, for the tests that act on a fleet still on its first leg (Tarrow's
+    // first leg, to Pyrite, is one day). Cambium is one free jump: 6 days at speed 80.
+    private const string LongJump = "Cambium";
     // v6 re-pin 2026-10-24: Classis was also the first stop on the way to The Thaw (F16, F21); on the spiral map that way leaves along
     // the Trunk Line, and Bina Minor was the second stop on it at every speed. QA-40 re-pin 2026-10-25: fleets now leave along the Charter Road
     // (Pyrite, Vigilia) and squadrons through Pyrite, Las Mieses.
     private const string OnTheWayToThaw = "Vigilia";
-    private const string SquadronWayToThaw = "Las Mieses"; // QA-40 re-pin 2026-10-25: squadrons (speed 60) fly Charter, Pyrite, Las Mieses... to The Thaw
+    private const string SquadronWayToThaw = "Vigilia"; // route thinning 2026-11-11: squadrons now fly Charter, Pyrite, Vigilia like the fleets (Pyrite-Las Mieses-... lost its links). QA-40 re-pin 2026-10-25: squadrons (speed 60) fly Charter, Pyrite, Las Mieses... to The Thaw
     private const string Mandate = "Mandate", Warrant = "Warrant", Gleaner = "Gleaner", Swift = "Swift";
     private static readonly Side Emp = Side.Hand, Reb = Side.Collective;
 
@@ -254,7 +257,7 @@ public class FleetOrderTests
     {
         var w = F();
         Assert.Null(Step(w, w.Fleets.SubmitCreateFleet(Emp, new[] { 201, 203 })));
-        Assert.Null(Step(w, w.Fleets.SubmitMove(Emp, 204, Far)));
+        Assert.Null(Step(w, w.Fleets.SubmitMove(Emp, 204, LongJump)));
         string before = Snap(w);
         Assert.Equal(RejectReason.InTransit, Step(w, w.Fleets.SubmitTransferShips(Emp, new[] { 202 }, 204)));
         Assert.Equal(before, Snap(w));
@@ -459,7 +462,7 @@ public class FleetOrderTests
         int fid = w.Events<OrderAccepted>().Single().Fleet!.Value;
         w.RunTo(4);
         var stop = Assert.Single(w.Events<ForcedStop>());
-        Assert.Equal((fid, SquadronWayToThaw, 2), (stop.Fleet, stop.System, stop.Day)); // QA-40 re-pin 2026-10-25: Pyrite on day 1, Las Mieses on day 2
+        Assert.Equal((fid, SquadronWayToThaw, 3), (stop.Fleet, stop.System, stop.Day)); // route thinning 2026-11-11: Pyrite on day 1, Vigilia on day 3 (QA-40: Las Mieses on day 2)
         Assert.Equal(DissolveCause.SquadronsArrived, Assert.Single(w.Events<FleetDissolved>()).Cause);
         Assert.DoesNotContain(fid, w.State.Fleets.Keys);
         Assert.All(new[] { 310, 311 }, id => Assert.Equal(SquadronWayToThaw, w.Obj(id).System));
@@ -613,7 +616,7 @@ public class FleetOrderTests
         var w = F();
         LoneMandate(w);
         Assert.Null(Step(w, w.Fleets.SubmitLoadSquadrons(Emp, 200, new[] { 301, 302 })));
-        Assert.Null(Step(w, w.Fleets.SubmitMove(Emp, 200, Far)));
+        Assert.Null(Step(w, w.Fleets.SubmitMove(Emp, 200, LongJump)));
         w.Scrap(Emp, 201);
         w.Run(1);
         Assert.Equal((Home, 0), (w.Obj(301).System, w.Obj(301).AboardShip));

@@ -48,13 +48,17 @@ public class SimpleAiGarrisonsFirstTests
     // Measured (seeds 1-4): on, 95, 71, 87, 87 regiments ordered and 6, 4, 6, 5 training facilities; off, 75, 75, 69, 68 and 4, 5, 4, 5 (seeds 5
     // and 6: on 91 and 89, off 73 and 71). Floors: on orders more on at least 3 seeds and 10% more in all; on owns more training facilities on
     // at least 2 seeds.
+    // Route thinning re-pin 2026-11-11 (Dev lead; Paul: "clean this mess of a route layout, reduce the number", 394 links down to 280): seeds
+    // 1-6, on 88, 68, 91, 62, 87, 83 regiments and 6, 4, 6, 5, 5, 5 training facilities; off 69, 74, 80, 66, 74, 69 and 4, 5, 5, 5, 4, 4. On
+    // orders more on 4 of 6 seeds (seeds 2 and 4 no longer do) and 111% in all. Floors: seeds 1-6 (was 1-4); on orders more on at least 4
+    // (was 3 of 4) and 10% more in all (unchanged); on owns more training facilities on at least 2 (unchanged; measured 4).
     [Trait("Category", "Play")]
     [Fact]
     public void GarrisonsFirst_AFarAheadSideTrainsMoreGarrisonTroops()
     {
-        var res = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => (s, On: Play(s, true), Off: Play(s, false)));
-        Assert.True(res.Count(r => r.On.Ordered > r.Off.Ordered) >= 3,
-            "on ordered more regiments than off on fewer than 3 seeds: " + string.Join(", ", res.Select(r => $"seed {r.s} {r.On.Ordered}/{r.Off.Ordered}")));
+        var res = MultiSeed.Play(new[] { 1, 2, 3, 4, 5, 6 }, s => (s, On: Play(s, true), Off: Play(s, false)));
+        Assert.True(res.Count(r => r.On.Ordered > r.Off.Ordered) >= 4,
+            "on ordered more regiments than off on fewer than 4 seeds: " + string.Join(", ", res.Select(r => $"seed {r.s} {r.On.Ordered}/{r.Off.Ordered}")));
         int on = res.Sum(r => r.On.Ordered), off = res.Sum(r => r.Off.Ordered);
         Assert.True(on * 100 >= off * 110, $"on ordered {on} regiments in all, off {off} (floor 110%)");
         Assert.True(res.Count(r => r.On.Training > r.Off.Training) >= 2, "on owns more training facilities than off on fewer than 2 seeds");

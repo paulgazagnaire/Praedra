@@ -103,7 +103,9 @@ public class SimpleAiAgentsTests
         // §Sending a regiment alone, LoneRegimentsDie DEFAULT on, a core rule this old AI cannot switch off): 3 regiments on their way from the
         // yard are caught alone and destroyed in this game. With LoneRegimentsDie off the hash is exactly the previous pin fc9d696f...43ec
         // (checked when re-pinned, main 53bebfa).
-        Assert.Equal("affbf60b36bf8314ab15f97ee8fa1deaf4c16cfa3790574c268a2d1a754aa0c1", h.StateHash());
+        // Route thinning re-pin 2026-11-11 (Paul: "clean this mess of a route layout, reduce the number"; 394 links down to 280): the map
+        // changes every path, so the game changes; the AI code does not. Previous pin affbf60b...a0c1.
+        Assert.Equal("e7b86ea48c86c5321c278014838c4025f47862fa6d835fb96bb127c2f0790b83", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"
