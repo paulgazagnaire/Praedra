@@ -48,13 +48,14 @@ public class TravelTests
     }
 
     [Fact]
-    public void T4_CharterMinorRoute() // m1-travel T4: factor 150
+    public void T4_MinorRouteNearCharter() // m1-travel T4: factor 150
     {
-        // v6 re-pin 2026-10-24: Charter's minor link is Hartwell (was Tutela).
-        int d = MapDist(G, "Charter", "Hartwell");
-        Assert.Equal(150, G.FindLane("Charter", "Hartwell")!.FactorPercent);
-        Assert.Equal((d * 100 * 2 + 750) / 1500, Leg("Charter", "Hartwell", 100));
-        Assert.Equal(Math.Max(1, (d * 80 * 2 + 750) / 1500), Leg("Charter", "Hartwell", 80));
+        // v6 re-pin 2026-10-24: Charter's minor link is Hartwell (was Tutela). Route thinning 2026-11-11: Charter has no minor link left;
+        // Bina Major's, one great-route hop out, takes its place.
+        int d = MapDist(G, "Consolatio", "Bina Major");
+        Assert.Equal(150, G.FindLane("Consolatio", "Bina Major")!.FactorPercent);
+        Assert.Equal((d * 100 * 2 + 750) / 1500, Leg("Consolatio", "Bina Major", 100));
+        Assert.Equal(Math.Max(1, (d * 80 * 2 + 750) / 1500), Leg("Consolatio", "Bina Major", 80));
     }
 
     [Theory]

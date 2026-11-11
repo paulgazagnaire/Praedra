@@ -116,7 +116,7 @@ internal static class CampaignInvariants
             Assert.True(eco.Capacity(side) == eco.Params.CapacityPerFacility * Math.Min(mines, refs), $"{where}: {side} capacity {eco.Capacity(side)}");
             Assert.Equal(eco.Capacity(side) - eco.Load(side), eco.Free(side));
         }
-        int neutralFacilities = eco.Objects.Count(o => o.Category == ObjectCategory.Facility && o.System != null && !state.SystemOwners.ContainsKey(o.System)); // m5: the neutral starting shipyards serve nobody
+        int neutralFacilities = eco.Objects.Count(o => o.Category == ObjectCategory.Facility && o.System != null && !state.SystemOwners.ContainsKey(o.System) && eco.OwnerOf(o) == null); // m5: the neutral starting shipyards serve nobody; a facility still on its way to a system its side has lost is its side's until it lands (LostDestination), so it is counted once, as owned
         Assert.True(owned + neutralFacilities == eco.Objects.Count, $"{where}: {eco.Objects.Count - owned} objects belong to nobody");
 
         // ---- no object in two places (m2-construction §Projects and queues, §Completion and delivery)

@@ -15,7 +15,7 @@ public class ShipTests
 {
     // v6 re-pin 2026-10-24: Far was Classis (one 100-unit great-route leg); on the spiral map it is Cambium, two legs from
     // Charter (a free jump to Remedium, then a minor-route leg) that also take 5 days at speed 80 and 7 at speed 100.
-    private const string Home = "Charter", Far = "Cambium";
+    private const string Home = "Charter", Far = "Tarrow"; // route thinning 2026-11-11: Cambium is now a one-leg free jump (4, 6, 8 days); Tarrow, four route legs out (Pyrite, Scoria, Belmare), takes the old days
     private const string Mandate = "Mandate";
 
     private static IReadOnlyList<ShipClass> Capitals() => ShipData.LoadCapitalShips(Path.Combine(TestData.ClassicDir, ShipData.CapitalShipsFile));

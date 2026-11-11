@@ -60,6 +60,14 @@ public partial class GameScreen
         return text;
     }
 
+    /// <summary>The labels of one tab of a window, shown or not (a window's other tabs, such as a system's Lore, can name the same people).</summary>
+    internal string MgPageText(string key, string page)
+    {
+        if (_mgWins.FirstOrDefault(w => w.Key == key) is not { } w) return "";
+        RebuildMg(w);
+        return w.Pages.TryGetValue(page, out var p) ? PageLabels(p.Page) : "";
+    }
+
     internal string MgTab(string key) => _mgWins.FirstOrDefault(w => w.Key == key)?.Tab;
     internal IReadOnlyList<string> MgTabs(string key) => _mgWins.FirstOrDefault(w => w.Key == key)?.Pages.Keys.ToList() ?? new List<string>();
 
