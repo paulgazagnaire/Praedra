@@ -516,7 +516,7 @@ public partial class Main
         Expect(!gs.MapTags().Any(t => t.Text.Contains("COLLECTIVE HQ")), "no COLLECTIVE HQ (TARGET) tag on the map");
         Expect(gs.ButtonTexts().Contains("Enemy HQ: unknown"), "the Enemy HQ button says unknown");
         Expect(gs.Click("Enemy HQ: unknown") && gs.ToastText.Contains("unknown"), "pressing it says the HQ location is unknown: " + gs.ToastText);
-        Expect(gs.MapTags().Any(t => t.Text == "YOUR CAPITAL" && t.System == GameBoot.HandCapital), "your capital is tagged");
+        Expect(!gs.MapTags().Any(t => t.System == GameBoot.HandCapital), "your capital has no label on the map (Paul 2026-11-11)");
     }
 
     /// <summary>Collective: Move HQ... with a refused order (plain reason), then a real move that arrives.</summary>
@@ -524,7 +524,7 @@ public partial class Main
     {
         var s = gs.S; var me = s.Player; var fm = s.Host.Fleets;
         string hq = s.MyHqSystem;
-        Expect(hq != null && gs.MapTags().Any(t => t.System == hq && t.Text == "YOUR HQ"), $"your HQ is tagged at {hq}");
+        Expect(hq != null && !gs.MapTags().Any(t => t.Text == "YOUR HQ"), $"your HQ at {hq} has no label on the map (Paul 2026-11-11)");
         Expect(gs.ButtonTexts().Contains("Enemy HQ"), "the Collective knows the enemy capital");
         Expect(gs.Click("My HQ"), "click My HQ");
         gs.PlayRefresh();
@@ -566,13 +566,12 @@ public partial class Main
         {
             int arrive = GameSession.HqArrivalDay(h);
             Expect(gs.HqStatusText == $"HQ moving to {dest}, arrives day {arrive}.", "HQ line: " + gs.HqStatusText);
-            Expect(!gs.MapTags().Any(t => t.Text == "YOUR HQ"), "no HQ tag while it travels");
             Expect(gs.Click("My HQ") && gs.ToastText.Contains("HQ moving to " + dest), "My HQ while moving says where it goes: " + gs.ToastText);
             Expect(RunUntil(gs, () => s.MyHqSystem == dest, 200), $"the HQ arrived at {dest} (day {s.Game.Day}, expected {arrive})");
             Expect(s.Game.Day == arrive, $"on the announced day {arrive}");
         }
         Expect(s.Messages.Any(m => m.Text == $"Your headquarters arrived at {dest}."), "arrival message");
-        Expect(gs.MapTags().Any(t => t.System == dest && t.Text == "YOUR HQ") && gs.HqStatusText == "", "the HQ tag moved and the HQ line cleared");
+        Expect(s.MyHqSystem == dest && gs.HqStatusText == "", "the HQ is at its new system and the HQ line cleared");
     }
 
     void PlaytestEnding(GameScreen gs, bool playerWins)

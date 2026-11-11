@@ -100,6 +100,9 @@ public partial class GalaxyView : Control
     readonly List<(string name, int[] members)> _sectors = new();
     int[] _sectorOf;
     Rect2[] _sectorBox;             // world bounds of each sector's systems, to find the sector under the mouse quickly
+    // sector edges are one screen pixel at most, hovered or not (Paul 2026-11-11: "Sector hover state outline is too thick, 1px MAX");
+    // a negative width is Godot's hairline: one real pixel whatever the zoom or the Retina scale
+    const float SectorEdgeWidth = -1f;
     const float SectorPull = 0.7f;  // how tightly a sector is drawn around its centre (1 = as in the galaxy data)
     const float SectorPadPx = 14f;  // the sector's shape reaches this far past its outer systems on screen
 
@@ -360,20 +363,20 @@ public partial class GalaxyView : Control
             var shape = SectorOutline(k, radius + SectorPadPx);
             if (shape == null) continue;
             DrawColoredPolygon(shape, new Color(SectorColor, 0.025f));
-            DrawPolyline(Closed(shape), new Color(SectorColor, 0.16f), 1f, true);
+            DrawPolyline(Closed(shape), new Color(SectorColor, 0.16f), SectorEdgeWidth);
         }
         Vector2[] markedShape = MarkedSector >= 0 && MarkedSector != hoverSector ? SectorOutline(MarkedSector, radius + SectorPadPx) : null;
         if (markedShape != null)
         {
             DrawColoredPolygon(markedShape, new Color(SectorColor, 0.07f));
-            DrawPolyline(Closed(markedShape), new Color(SectorColor, 0.6f), 1.6f, true);
+            DrawPolyline(Closed(markedShape), new Color(SectorColor, 0.6f), SectorEdgeWidth);
         }
         Vector2[] sectorShape = hoverSector >= 0 ? SectorOutline(hoverSector, radius + SectorPadPx) : null;
         if (hoverSector >= 0 && hoverSector == MarkedSector) lit = true;
         if (sectorShape != null)
         {
             DrawColoredPolygon(sectorShape, new Color(SectorColor, lit ? (areaHover ? 0.12f : 0.08f) : 0.05f));
-            DrawPolyline(Closed(sectorShape), new Color(SectorColor, lit ? (areaHover ? 0.75f : 0.5f) : 0.3f), areaHover ? 2f : 1.2f, true);
+            DrawPolyline(Closed(sectorShape), new Color(SectorColor, lit ? (areaHover ? 0.75f : 0.5f) : 0.3f), SectorEdgeWidth);
         }
 
         // hyperspace routes (planets/15, Paul 2026-10-16): ships fly anywhere, the drawn links are the fast stretches.
