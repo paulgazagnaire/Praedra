@@ -107,8 +107,9 @@ public partial class GameScreen : Control
 
     (string Text, Color Color)? CapitalTagOf(int i)
     {
-        if (HqSideAt(i) is not Side side) return null;
-        if (side == S.Player) return (side == Side.Hand ? "YOUR CAPITAL" : "YOUR HQ", Ui.Gold);
+        // your own capital or HQ has no label on the map (Paul 2026-11-11: "Remove this as well"); its ring, its system card and the
+        // HQ button still show it. Only the enemy's, once known, is labelled.
+        if (HqSideAt(i) is not Side side || side == S.Player) return null;
         return (side == Side.Hand ? "ENEMY CAPITAL" : "COLLECTIVE HQ (TARGET)", Ui.Enemy);
     }
 
