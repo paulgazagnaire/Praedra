@@ -8,7 +8,7 @@
 // To share the bake between cores, run several at once: SHARD=0/3 node ... bake DIR --all & SHARD=1/3 ... & SHARD=2/3 ...
 // To redo a few systems only: node ... bake DIR Charter "The Thaw"; then pack again. Pictures missing from DIR are copied from the
 // current sheet, so a fresh DIR with only the redone systems is enough (apply-saved.py prints the names Paul's saved looks changed).
-// Each picture is SIZE (128) dots square, drawn with the dither style on (Grain, the planet's own colours, one canvas pixel per dot), so
+// Each picture is SIZE (96) dots square, drawn with the dither style on (Grain, the planet's own colours, one canvas pixel per dot), so
 // the game shows it with nearest filtering at a whole number of screen pixels per dot. The camera frames the
 // planet and its rings; moons further out are cropped. The sky is see-through (alpha), so the game draws its own background. Needs Node and Playwright with Chromium (preinstalled in cloud sessions).
 //
@@ -19,7 +19,7 @@ const path = require('path');
 const fs = require('fs');
 const { chromium } = require('playwright');
 
-const SIZE = 128;
+const SIZE = Number(process.env.SIZE || 96);  // 96 since the 2026-11-11 system tile (Paul's Paper frame "system-info": a 96 x 96 planet)
 const HARV = process.env.HARVESTED === '1';
 const SHEET = HARV ? 'atlas-harvested.png' : 'atlas.png';
 const slug = (t) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');

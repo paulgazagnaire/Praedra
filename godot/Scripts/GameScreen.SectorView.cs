@@ -32,8 +32,8 @@ public partial class GameScreen
     double _secTimer;
     readonly Dictionary<string, PanelContainer> _secCards = new(StringComparer.Ordinal);
 
-    const int TileWidth = 152;        // a tile: the planet (128 dots, one pixel each) with a margin
-    const int TileHeight = 182;       // every tile the same height, so the board reads as one whatever each shows
+    const int TileWidth = SystemTile.W;   // a tile as Paul's Paper frame "system-info" draws it: 96 x 133
+    const int TileHeight = SystemTile.H;
     const int CardGap = 10;
     const int GridPad = 16;           // the margin round the tiles
     const int HeadHeight = 76;        // the window's head and the bar under it
@@ -136,17 +136,20 @@ public partial class GameScreen
             it.AddChild(l);
             h.AddChild(it);
         }
-        var line = new LoyaltyLine { CustomMinimumSize = new Vector2(22, 4) };
-        line.Set(60, Ui.You, Ui.Enemy);
-        Item(line, "LOYALTY");
-        Item(new SectorMarks().Add(SectorMarks.Shape.Dot, EnergyColor, true).Add(SectorMarks.Shape.Dot, EnergyColor, false), "ENERGY");
-        Item(new SectorMarks().Add(SectorMarks.Shape.Dot, Ui.Gold, true).Add(SectorMarks.Shape.Dot, Ui.Gold, false), "RAW");
-        Item(new SectorMarks().Add(SectorMarks.Shape.Square, Ui.You, true).Add(SectorMarks.Shape.Diamond, Ui.Text2, true), "TROOPS · DEFENCES");
-        Item(new SectorMarks { Side = 8 }.Add(SectorMarks.Shape.Triangle, Ui.You, true).Add(SectorMarks.Shape.Triangle, Ui.Enemy, true), "FLEETS");
-        var ring = new Panel { CustomMinimumSize = new Vector2(10, 10), MouseFilter = MouseFilterEnum.Ignore };
-        ring.AddThemeStyleboxOverride("panel", Ui.Box(new Color(0, 0, 0, 0), 5, Ui.Danger, 2, 0, 0));
-        Item(ring, "UPRISING");
-        h.TooltipText = Ui.Wrap("Filled marks are in use or there, hollow ones free. Energy dots are building slots, raw dots the slots mines dig; a hollow red square is a regiment missing to keep order. Point at a tile for its numbers.");
+        // the key, drawn with the tile's own pixels (Paul's "system-info" frame): a bit of each gauge, the loyalty bar, the four icons
+        static PixelMark Steps(Color on, Color free) => new(new Vector2(5, 15), ci =>
+        {
+            for (int i = 0; i < 4; i++) ci.DrawRect(new Rect2(0, i * 4, 5, 3), i == 0 ? SystemTile.Empty : i == 1 ? free : on);
+        });
+        static PixelMark Icon(string[] map, Color c) => new(new Vector2(16, 16), ci => SystemTile.DrawIcon(ci, map, Vector2.Zero, c));
+        Item(Steps(SystemTile.RawUsed, SystemTile.RawFree), "RESOURCES");
+        Item(Steps(SystemTile.EnergyUsed, SystemTile.EnergyFree), "ENERGY");
+        Item(new PixelMark(new Vector2(2, 15), ci => { ci.DrawRect(new Rect2(0, 0, 2, 5), new Color(SystemTile.Of(S.Enemy), 0.4f)); ci.DrawRect(new Rect2(0, 5, 2, 10), SystemTile.Of(Me)); }), "LOYALTY");
+        Item(Icon(SystemTile.Infrastructure, SystemTile.Of(Me)), "BUILDINGS");
+        Item(Icon(SystemTile.Fleet, SystemTile.Of(Me)), "FLEETS");
+        Item(Icon(SystemTile.Military, SystemTile.Of(Me)), "TROOPS");
+        Item(Icon(Me == Side.Hand ? SystemTile.Hand : SystemTile.Braid, SystemTile.Of(Me)), "HOLDER");
+        h.TooltipText = Ui.Wrap("Gauges fill from the bottom: bright steps are in use, dark ones free, grey ones slots the system lacks. Resources are the raw slots and the mines on them; energy the building slots. Loyalty: yours from the bottom, the enemy's faded on top. Green is the Hand, blue the Collective. Icons are lit when there is something there, in the colour of whose it is; red troops = short of the garrison, amber buildings = a yard stands idle. A red ring = uprising or harvester. Point at a tile for its numbers.");
         h.MouseFilter = MouseFilterEnum.Pass;
         return h;
     }
@@ -301,7 +304,7 @@ public partial class GameScreen
         LayoutSectorView();
     }
 
-    /// <summary>Who holds the sector, as one bar under the head: blue yours, orange the enemy, grey nobody, dark not known.</summary>
+    /// <summary>Who holds the sector, as one bar under the head, in the factions' colours like the tiles (green the Hand, blue the Collective), grey nobody, dark not known.</summary>
     void SectorOwnBar(List<string> systems)
     {
         Ui.Clear(_secOwnBar);
@@ -316,8 +319,8 @@ public partial class GameScreen
             else enemy++;
         }
         void Seg(int count, Color c) { if (count <= 0) return; var r = new ColorRect { Color = c, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = count, MouseFilter = MouseFilterEnum.Ignore }; _secOwnBar.AddChild(r); }
-        Seg(mine, Ui.You); Seg(enemy, Ui.Enemy); Seg(nobody, new Color(Ui.Neutral, 0.55f)); Seg(unknown, Ui.LineHi); Seg(dead, new Color(Ui.Danger, 0.45f));
-        _secOwnBar.TooltipText = $"Who holds the sector: {mine} yours (blue), {enemy} the enemy's (orange), {nobody} nobody's (grey), {unknown} not known (dark){(dead > 0 ? $", {dead} harvested (red)" : "")}.";
+        Seg(mine, SystemTile.Of(Me)); Seg(enemy, SystemTile.Of(S.Enemy)); Seg(nobody, new Color(Ui.Neutral, 0.55f)); Seg(unknown, Ui.LineHi); Seg(dead, new Color(Ui.Danger, 0.45f));
+        _secOwnBar.TooltipText = $"Who holds the sector: {mine} yours ({(Me == Side.Hand ? "green" : "blue")}), {enemy} the {S.NameOf(S.Enemy)}'s ({(Me == Side.Hand ? "blue" : "green")}), {nobody} nobody's (grey), {unknown} not known (dark){(dead > 0 ? $", {dead} harvested (red)" : "")}.";
         _secOwnBar.MouseFilter = MouseFilterEnum.Pass;
     }
 }

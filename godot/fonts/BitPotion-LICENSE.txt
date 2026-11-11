@@ -1,0 +1,5 @@
+BitPotion
+by Joeb Rogers, https://joebrogers.itch.io/bitpotion
+Licence: Creative Commons Attribution 4.0 International (CC BY 4.0), https://creativecommons.org/licenses/by/4.0/
+The game must credit "BitPotion font by Joeb Rogers" (credits screen / store page).
+Used for the system names on the sector window's tiles (Paul's Paper frame "system-info", 2026-11-11).
