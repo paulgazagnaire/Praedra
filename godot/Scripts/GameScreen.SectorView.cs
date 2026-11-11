@@ -137,12 +137,12 @@ public partial class GameScreen
         static PixelMark Icon(string[] map, Color c) => new(new Vector2(16, 16), ci => SystemTile.DrawIcon(ci, map, Vector2.Zero, c));
         Item(Steps(SystemTile.RawUsed, SystemTile.RawFree), "RESOURCES");
         Item(Steps(SystemTile.EnergyUsed, SystemTile.EnergyFree), "ENERGY");
-        Item(new PixelMark(new Vector2(2, 15), ci => { ci.DrawRect(new Rect2(0, 0, 2, 5), new Color(SystemTile.Of(S.Enemy), 0.4f)); ci.DrawRect(new Rect2(0, 5, 2, 10), SystemTile.Of(Me)); }), "LOYALTY");
-        Item(Icon(SystemTile.Infrastructure, SystemTile.Of(Me)), "BUILDINGS");
-        Item(Icon(SystemTile.Fleet, SystemTile.Of(Me)), "FLEETS");
-        Item(Icon(SystemTile.Military, SystemTile.Of(Me)), "TROOPS");
-        Item(Icon(Me == Side.Hand ? SystemTile.Hand : SystemTile.Braid, SystemTile.Of(Me)), "HOLDER");
-        h.TooltipText = Ui.Wrap("Gauges fill from the bottom: bright steps are in use, dark ones free, grey ones slots the system lacks. Resources are the raw slots and the mines on them; energy the building slots. Loyalty: yours from the bottom, the enemy's faded on top. Green is the Hand, blue the Collective. Icons are lit when there is something there, in the colour of whose it is; red troops = short of the garrison, amber buildings = a yard stands idle. A red ring = uprising or harvester. Point at a tile for its numbers.");
+        Item(new PixelMark(new Vector2(2, 15), ci => { ci.DrawRect(new Rect2(0, 0, 2, 5), new Color(Ui.Enemy, 0.4f)); ci.DrawRect(new Rect2(0, 5, 2, 10), Ui.You); }), "LOYALTY");
+        Item(Icon(SystemTile.Infrastructure, Ui.You), "BUILDINGS");
+        Item(Icon(SystemTile.Fleet, Ui.You), "FLEETS");
+        Item(Icon(SystemTile.Military, Ui.You), "TROOPS");
+        Item(Icon(Me == Side.Hand ? SystemTile.Hand : SystemTile.Braid, Ui.You), "HOLDER");
+        h.TooltipText = Ui.Wrap("Gauges fill from the bottom: bright steps are in use, dark ones free, grey ones slots the system lacks. Resources are the raw slots and the mines on them; energy the building slots. Loyalty: yours from the bottom, the enemy's faded on top. Blue is you, orange the enemy. Icons are lit when there is something there, in the colour of whose it is; red troops = short of the garrison, amber buildings = a yard stands idle. A red ring = uprising or harvester. Point at a tile for its numbers.");
         h.MouseFilter = MouseFilterEnum.Pass;
         return h;
     }
