@@ -10,6 +10,7 @@ Draws planets purely in code (one WebGL2 fragment shader, no images, no librarie
 - `system-overrides.json` — the looks Paul saved for the game (system name -> settings), used before the lore sheet's own; see Customising the game's systems. `apply-saved.py` writes it.
 - `build.py` / `parse.py` / `parse_presets.py` — rebuild `index.html` from the files above.
 - `presets/` — named presets exported from the tool (`<name>.planet.json`).
+- `port-godot-shader.py` / `export-game-params.js` — the game's live planets: the shader and every system's settings (see Live planets in the game).
 
 ## Rebuild
 ```
@@ -81,14 +82,26 @@ node tools/planet-maker/bake-thumbs.js pack /tmp/planet-thumbs
 ```
 Then open the Godot project once (or `--import`) so it imports the new sheet.
 
+## Live planets in the game
+The sector window draws its planets live (Paul 2026-11-11: "the planets need to be animated, like in the planet maker tool, and following the parameters of each planets"), with this page's own shader, each in the thumbnails' style (96 dots, dither on, Grain, the planet's own colours, see-through sky, framed on the planet and its rings) and moving as the page moves it. Every other screen keeps the baked sheet above, and so does a sector tile of a system the player has never looked at. Two files come from this folder:
+- `godot/Scripts/Ui/PlanetLive.gdshader`, written by `port-godot-shader.py` from the shader in `planet-maker.src.html` (only what Godot's shading language needs is changed; the script lists each change and stops if the tool's shader no longer has a line it expects).
+- `godot/art/planets/planets-live.json`, every system's settings as the page loads them (`loadSystem`: a saved look, else the lore sheet's preset, with the moons the page fills in), written by `export-game-params.js`. The game (`godot/Scripts/Ui/PlanetLive.cs`) hands them to the shader exactly as `drawP()` does.
+
+**Updating the game planets** (whenever `systems.json`, `system-overrides.json` or the shader changes, with the bake above):
+```
+python3 tools/planet-maker/port-godot-shader.py      # the shader, when planet-maker.src.html changed
+node tools/planet-maker/export-game-params.js        # every system's settings (a few minutes in headless Chromium)
+```
+To check the game against the page, `Godot --path godot -- --planet-shots DIR --planets "Charter,Vigilia" [--at SECONDS]` writes each planet (and its harvested remnant) as the game draws it, 96 dots, after SECONDS of motion, and prints how long each took to draw.
+
 ## Harvested worlds
 
 **Show it harvested** (under the game's systems) draws what a harvester leaves of the current world: a small gutted core with one huge quarried bite (terraced like an open pit) and sliced faces, the heart still glowing where the bite reaches it, glowing cracks in the crust, big broken pieces drifting off, and a rubble belt. No air, clouds, lights, moons, orbital ring or elevator. It keeps the world's own seed and colours, and it is a view, never saved in a preset. Save image and Save video work on it too.
 
 The game's harvested tiles come from it: `HARVESTED=1 node bake-thumbs.js bake DIR --all` then `HARVESTED=1 node bake-thumbs.js pack DIR` writes `godot/art/planets/atlas-harvested.png`, with the same cells as `atlas.png`; `atlas.json` names it under `"harvested"`. Pack the main sheet first. Harvested pictures are drawn at no turn, so the bite faces the sun.
 
-## Using it in Godot later
-The shader is GLSL ES 3.00 with no tricks. Porting to a Godot `.gdshader` is a mechanical rename (`uniform` blocks stay, `fragColor` becomes `COLOR`). The preset values map one-to-one onto the shader uniforms, so the game can draw the same planet from the same JSON.
+## Using it in Godot
+The game's sector window runs this shader: see Live planets in the game. `port-godot-shader.py` does the port, so keep the shader GLSL ES 3.00 with no tricks: no global variable that changes except the ones the script knows (gPx, gPxC, gL, gFlat), every write of the colour in `main()` either an add or a `col = mix(col, x, a)` with a single number `a` (the game's see-through sky depends on it), and `gl_FragCoord` read only in `main()` and the dither.
 
 ## Detail switch
 The page has a Detail: High / Fast button (not part of a preset). High uses more noise layers, cloud shadows and a third crater size; Fast drops them for slower graphics cards.

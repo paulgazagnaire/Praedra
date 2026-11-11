@@ -31,6 +31,8 @@ public partial class GameScreen
     bool _secDirty, _secLeft;
     double _secTimer;
     readonly Dictionary<string, PanelContainer> _secCards = new(StringComparer.Ordinal);
+    PlanetLiveSet _secPlanets;        // the tiles' live planets (Paul 2026-11-11), kept while the tiles are rebuilt
+    readonly List<string> _secPlanetKeys = new();
 
     const int TileWidth = SystemTile.W;   // a tile as Paul's Paper frame "system-info" draws it: 96 x 133
     const int TileHeight = SystemTile.H;
@@ -58,6 +60,9 @@ public partial class GameScreen
         wb.ShadowColor = new Color(0, 0, 0, 0.55f); wb.ShadowSize = 28;
         _secWin.AddThemeStyleboxOverride("panel", wb);
         _secLayer.AddChild(_secWin);
+        // the planets are drawn only while the window shows (closing it stops them)
+        _secPlanets = new PlanetLiveSet();
+        _secLayer.AddChild(_secPlanets);
         _secLayer.Resized += () => LayoutSectorView();
 
         var v = Ui.VBox(0);
@@ -300,7 +305,9 @@ public partial class GameScreen
         _secDirty = false;
         Ui.Clear(_secGrid);
         _secCards.Clear();
+        _secPlanetKeys.Clear();
         foreach (var n in systems) _secGrid.AddChild(_secCards[n] = SystemCardTile(n));
+        _secPlanets.KeepOnly(_secPlanetKeys);
         LayoutSectorView();
     }
 
