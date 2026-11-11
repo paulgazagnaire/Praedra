@@ -18,6 +18,11 @@ from geo import load, pt_seg, dist, ROOT
 
 CAP = int(sys.argv[1]) if len(sys.argv) > 1 else 2
 L, P, raw, D = load()
+# The script rewrites its own input, so a second run would thin the thinned map again (Ponytail on #287: 7 more links, 10 more systems
+# off the routes). It runs only on the map from before the thinning, which still has Lantern Run.
+if not any(l['routes'] == 'Lantern Run' for l in L):
+    sys.exit('the lanes file is already thinned (no Lantern Run left): restore the old lanes and planets files first, e.g. from git '
+             '(git show 4359b9b:data/design/extended-galaxy-v6-lanes.csv), then run again')
 key = lambda l: (l['from'], l['to'])
 sec = lambda n: P[n]['sector']
 drop = {}
