@@ -1,0 +1,96 @@
+# Raw output of Paper get_tree_summary (depth 10) for frame "system-info" (PUB-0). Fetched 2026-11-11.
+# Hidden layers are marked [hidden]. Q1D-0 is unnamed ("Frame") in Paper; it is the vertical control bar on the right.
+Frame "system-info" (PUB-0) 96×133
+  Rectangle "Dark pixel planet" (PUC-0) 56×56 [hidden]
+  Rectangle "Screenshot 2026-11-11 at 15.02.21.png" (PUD-0) 96×96
+  Frame "right" (PXD-0) 10×71
+    Frame "top-corner" (PV9-0) 4×4
+      Rectangle "Rectangle" (PVA-0) 2×2
+      Rectangle "Rectangle" (PVB-0) 2×2
+      Rectangle "Rectangle" (PVC-0) 2×2
+    Frame "energy-scale" (PUF-0) 10×59
+      Frame "energy" (PUG-0) 5×59
+        Frame "Free" (PXC-0) 5×3
+        Frame "Free" (PUH-0) 5×3
+        Frame "Free" (PUI-0) 5×3
+        Frame "Free" (PUJ-0) 5×3
+        Frame "Free" (PUK-0) 5×3
+        Frame "Free" (PUL-0) 5×3
+        Frame "Free" (PUM-0) 5×3
+        Frame "Free" (PUN-0) 5×3
+        Frame "Used" (PUO-0) 5×3
+        Frame "Used" (PUP-0) 5×3
+        Frame "Used" (PUQ-0) 5×3
+        Frame "Used" (PUR-0) 5×3
+        Frame "Used" (PUS-0) 5×3
+        Frame "Used" (PUT-0) 5×3
+        Frame "Used" (PUU-0) 5×3
+      Frame "Frame" (PUV-0) 3×5
+        Rectangle "Rectangle" (PUW-0) 1×1
+        Rectangle "Rectangle" (PUX-0) 1×1
+        Rectangle "Rectangle" (PUY-0) 1×1
+        Rectangle "Rectangle" (PUZ-0) 1×1
+        Rectangle "Rectangle" (PV0-0) 1×1
+        Rectangle "Rectangle" (PV1-0) 1×1
+        Rectangle "Rectangle" (PV2-0) 1×1
+        Rectangle "Rectangle" (PV3-0) 1×1
+        Rectangle "Rectangle" (PV4-0) 1×1
+    Frame "bottom-corner" (PV5-0) 4×4
+      Rectangle "Rectangle" (PV6-0) 2×2
+      Rectangle "Rectangle" (PV7-0) 2×2
+      Rectangle "Rectangle" (PV8-0) 2×2
+  Frame "left" (PXE-0) 10×71
+    Frame "top-corner" (PW4-0) 4×4
+      Rectangle "Rectangle" (PW5-0) 2×2
+      Rectangle "Rectangle" (PW6-0) 2×2
+      Rectangle "Rectangle" (PW7-0) 2×2
+    Frame "ressources-scale" (PVE-0) 10×59
+      Frame "ressources" (PVF-0) 5×59
+        Frame "Free" (PVG-0) 5×3
+        Frame "Free" (PXB-0) 5×3
+        Frame "Free" (PVH-0) 5×3
+        Frame "Free" (PVI-0) 5×3
+        Frame "Free" (PVJ-0) 5×3
+        Frame "Free" (PVK-0) 5×3
+        Frame "Free" (PVL-0) 5×3
+        Frame "Free" (PVM-0) 5×3
+        Frame "Free" (PVN-0) 5×3
+        Frame "Free" (PVO-0) 5×3
+        Frame "Used" (PVP-0) 5×3
+        Frame "Used" (PVQ-0) 5×3
+        Frame "Used" (PVR-0) 5×3
+        Frame "Used" (PVS-0) 5×3
+        Frame "Used" (PVT-0) 5×3
+      Frame "Frame" (PVU-0) 3×5
+        Rectangle "Rectangle" (PVV-0) 1×1
+        Rectangle "Rectangle" (PVW-0) 1×1
+        Rectangle "Rectangle" (PVX-0) 1×1
+        Rectangle "Rectangle" (PVY-0) 1×1
+        Rectangle "Rectangle" (PVZ-0) 1×1
+        Rectangle "Rectangle" (PW0-0) 1×1
+        Rectangle "Rectangle" (PW1-0) 1×1
+        Rectangle "Rectangle" (PW2-0) 1×1
+        Rectangle "Rectangle" (PW3-0) 1×1
+    Frame "bottom-corner" (PW8-0) 4×4
+      Rectangle "Rectangle" (PW9-0) 2×2
+      Rectangle "Rectangle" (PWA-0) 2×2
+      Rectangle "Rectangle" (PWB-0) 2×2
+  Frame "icon-infrastructure-16px" (PWC-0) 16×16
+    (12 Rectangles PWD-0..PWO-0)
+  Frame "icon-fleet-16px" (PWP-0) 16×16
+    (9 Rectangles PWQ-0..PWY-0)
+  Frame "icon-military-16px" (PWZ-0) 16×16
+    (8 Rectangles PX0-0..PX7-0)
+  Frame "icon-hand-16px" (PQC-0) 16×16
+    (10 Rectangles PQD-0..PQM-0)
+  Frame "Frame" (Q1D-0) 8×72
+    Frame "bottom-corner" (PXN-0) 2×4
+      Rectangle "Rectangle" (PXO-0) 2×2
+      Rectangle "Rectangle" (PXP-0) 2×2
+    Frame "Frame" (PXI-0) 59×2
+      Frame "You 70%" (PXJ-0) 41×2
+      Frame "Enemy" (PXK-0) 18×2
+    Frame "bottom-corner" (PXR-0) 2×4
+      Rectangle "Rectangle" (PXS-0) 2×2
+      Rectangle "Rectangle" (PXT-0) 2×2
+  Text "CHARTER" (Q1E-0) 46×20 "CHARTER"
