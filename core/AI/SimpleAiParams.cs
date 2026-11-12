@@ -517,7 +517,20 @@ public sealed record SimpleAiParams
     /// UndergroundForces. Uses only missions the rules already have. DEFAULT off (Medium and Hard turn it on).
     /// </summary>
     public bool Underground { get; init; }
-    public int UndergroundHops { get; init; } = 4;
+    /// <summary>
+    /// Reach of the Underground in Nearby steps from a held world. 4 until the sector spread (#290, 2026-11-12): spreading the outer sectors,
+    /// where the Collective starts, cut the Hand worlds within 4 steps of the Collective's start (seeds 1-8) from 600 (394 links) and 584 (280
+    /// links) to 436; within 5 steps there are 590. DEFAULT 5 (with GuerrillaHops; numbers there).
+    /// </summary>
+    public int UndergroundHops { get; init; } = 5;
+    /// <summary>
+    /// Guerrilla reach (AI trainer 2026-11-12, sector spread #290): with Guerrilla on, the Collective's fleets take enemy worlds the picture shows
+    /// up to this many Nearby steps out as targets (raids and landings), where FogEnemyTargetHops (both sides, 4) would stop them. Medium Hand
+    /// against Medium Collective, seeds 1-192, day 3000, Hand / Collective / no winner: 394 links (main 4359b9b) 51 / 92 / 49; spread map
+    /// (main e2f19d9) 58 / 89 / 45; UndergroundHops 5 alone 59 / 88 / 45; with GuerrillaHops 5 too 40 / 104 / 48 (by day 1000: Sabotage
+    /// 3412 / 3177 / 4196 / 4081, raids 5112 / 5682 / 5490 / 6369). DEFAULT 5 (applies only with Guerrilla on: Medium and Hard).
+    /// </summary>
+    public int GuerrillaHops { get; init; } = 5;
     public int UndergroundSubversion { get; init; } = 6;
     public int SpikeValue { get; init; } = 3000;
     public int SpikeSeenDays { get; init; } = 10;

@@ -712,7 +712,8 @@ public sealed partial class SimpleAi
             bool isBlind = blindValue > 0;
             // fog: systems the picture shows enemy-held reach farther; the Hand's HQ candidates (belief map) from any distance
             bool seenEnemy = _view != null && IsEnemyHeld(s);
-            int reach = seenEnemy ? Math.Max(_p.TargetHops, _p.FogEnemyTargetHops) : _p.TargetHops;
+            // rule: ai tuning, SimpleAiParams.GuerrillaHops (the Collective with Guerrilla on reaches farther, sector spread #290)
+            int reach = seenEnemy ? Math.Max(_p.TargetHops, GuerrillaOn ? Math.Max(_p.FogEnemyTargetHops, _p.GuerrillaHops) : _p.FogEnemyTargetHops) : _p.TargetHops;
             int belief = search && seenEnemy ? Belief(s) : 0;
             bool isSearch = belief > 0;
             if (hops[sys.Index] > reach + 1 && !isWin && !isSearch && !isBlind && !isYard) continue;

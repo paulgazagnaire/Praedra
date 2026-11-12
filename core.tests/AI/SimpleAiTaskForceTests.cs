@@ -74,6 +74,10 @@ public class SimpleAiTaskForceTests
         // 1195, 1306, 1159, 1555, 1300, 1249, 1456, 1408, 1180, 1276, 1165. Sooner on 8 of 12 (394 links: 11), 26 days sooner on average
         // (54), on wins on 11 (12), off still going on day 1250 on 6 (8). Floors: on sooner on a majority (7 of 12), never slower on average,
         // wins on at least 10; off still going on day 1250 on at least 4; some split on, none off.
+        // QA-102 (2026-11-12): "never slower on average" would pass a switch that had lost nearly all its value. Sector spread (#290), seeds 1-12:
+        // on 1270, 1357, 1069, 1576, 1159, 1300, -, 1135, 1093, 1099, 1306, 1261; off 1324, 1318, 1249, 1237, 1231, 1408, 1345, 1321, 1210, 1213,
+        // 1375, 1438: sooner on 9, 37 days sooner on average (280 links 26, 394 links 54), on wins on 11, off still going on day 1250 on 7.
+        // Floor: on at least 10 days sooner on average (was 0).
         const int limit = 1600, by = 1250;
         var res = MultiSeed.Play(Enumerable.Range(1, 12).ToArray(), s => (s, On: Play(s, true, limit), Off: Play(s, false, limit)));
         string all = string.Join(", ", res.Select(r => $"seed {r.s} {r.On.End}/{r.Off.End}"));
@@ -86,7 +90,7 @@ public class SimpleAiTaskForceTests
         int sooner = res.Count(r => End(r.On.End) < End(r.Off.End));
         Assert.True(sooner >= 7, $"TaskForces on ends sooner on only {sooner} of 12 seeds: {all}");
         double on = res.Average(r => End(r.On.End)), off = res.Average(r => End(r.Off.End));
-        Assert.True(off - on >= 0, $"TaskForces on ends {on - off:F0} days later on average (on {on:F0}, off {off:F0})");
+        Assert.True(off - on >= 10, $"TaskForces on ends only {off - on:F0} days sooner on average (on {on:F0}, off {off:F0}; floor 10)");
     }
 
     // QA-20 (QA round 33): sized on the fleets seen within FogFleetMemoryDays only, the task force fell to LaunchStrength once the big enemy fleet
