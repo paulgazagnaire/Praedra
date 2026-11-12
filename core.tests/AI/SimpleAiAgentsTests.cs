@@ -105,7 +105,10 @@ public class SimpleAiAgentsTests
         // (checked when re-pinned, main 53bebfa).
         // Route thinning re-pin 2026-11-11 (Paul: "clean this mess of a route layout, reduce the number"; 394 links down to 280): the map
         // changes every path, so the game changes; the AI code does not. Previous pin affbf60b...a0c1.
-        Assert.Equal("e7b86ea48c86c5321c278014838c4025f47862fa6d835fb96bb127c2f0790b83", h.StateHash());
+        // Sector spread re-pin 2026-11-12 (Paul: "distribute some sectors a bit differently so they're using the galaxy a bit better"; 59 outer
+        // sectors moved as whole blocks, the links unchanged): the sector spread changed the map, so every distance and many paths change and the
+        // game changes; the AI code does not. Previous pin e7b86ea4...0b83.
+        Assert.Equal("8636bbfcb82f45e12cf02ce34abc031844f18dd009a2ee6562b36a303439f01d", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"

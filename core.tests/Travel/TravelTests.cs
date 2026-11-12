@@ -24,17 +24,20 @@ public class TravelTests
     {
         // v6 re-pin 2026-10-24: Charter-Classis is no longer a link; Charter's great-route links are 18 and 29 units, too short
         // to show the rounding, so the leg is the longest great-route link, Ellerbeck-Longquay (Long Haul, 111 units).
+        // Sector spread re-pin 2026-11-12 (Paul: "distribute some sectors a bit differently"): Ellerbeck (638,338), Longquay (724,249):
+        // 86^2 + 89^2 = 15317, isqrt 123; still the longest great-route link (next: Commonhold-Lesnaya, 83).
         Assert.Equal(1, G.FindLane("Ellerbeck", "Longquay")!.Tier);
-        Assert.Equal(111, MapDist(G, "Ellerbeck", "Longquay"));
-        Assert.Equal(new[] { 7, 6, 4, 4 }, new[] { 100, 80, 60, 50 }.Select(s => Leg("Ellerbeck", "Longquay", s))); // 7.4, 5.92, 4.44, 3.7
+        Assert.Equal(123, MapDist(G, "Ellerbeck", "Longquay"));
+        Assert.Equal(new[] { 8, 7, 5, 4 }, new[] { 100, 80, 60, 50 }.Select(s => Leg("Ellerbeck", "Longquay", s))); // 8.2, 6.56, 4.92, 4.1
     }
 
     [Fact]
     public void T2_CharterShoalOffRouteIsTheOriginalFormula() // m1-travel T2: (isqrt / 5) * speed / 100, both divisions floored (Traced)
     {
         // v6 re-pin 2026-10-24: The Shoal is 294 units from Charter (was 240); 58 * 80 / 100 = 46.4, 58 * 50 / 100 = 29.
-        Assert.Equal(58, MapDist(G, "Charter", "The Shoal") / 5);
-        Assert.Equal(new[] { 58, 46, 29 }, new[] { 100, 80, 50 }.Select(s => OffRoute("Charter", "The Shoal", s)));
+        // Sector spread re-pin 2026-11-12: The Shoal (247,737): 253^2 + 237^2 = 120178, isqrt 346, base 69; 69 * 80 / 100 = 55.2, 69 * 50 / 100 = 34.5.
+        Assert.Equal(69, MapDist(G, "Charter", "The Shoal") / 5);
+        Assert.Equal(new[] { 69, 55, 34 }, new[] { 100, 80, 50 }.Select(s => OffRoute("Charter", "The Shoal", s)));
         Assert.Null(G.FindLane("Charter", "The Shoal"));
     }
 
@@ -109,7 +112,9 @@ public class TravelTests
     {
         var r = new Pathfinder(G).Find("Charter", "The Thaw", 80);
         Assert.True(r.Ok);
-        Assert.Equal(45, r.TotalTicks); // v6 re-pin 2026-10-24 (was 32): The Thaw is 432 units out on the spiral rim
+        // v6 re-pin 2026-10-24 (was 32): The Thaw is 432 units out on the spiral rim. Sector spread re-pin 2026-11-12 (was 45): The Thaw
+        // (763,883) is 464 units out; the last leg is now the free jump Zlatna-The Thaw, 132 / 5 = 26, 26 * 80 / 100 = 20 (MovementTests K4).
+        Assert.Equal(50, r.TotalTicks);
         var names = r.Names(G);
         Assert.Equal(new[] { "Charter", "Pyrite", "Vigilia" }, names.Take(3)); // QA-40 re-pin 2026-10-25: out along the Charter Road (v6: the Trunk Line)
         Assert.Equal("The Thaw", names[^1]);
@@ -123,7 +128,7 @@ public class TravelTests
         var pf = new Pathfinder(G, TravelMode.Straight);
         var r = pf.Find("Charter", "The Thaw", 80);
         AssertPath(r, G, new[] { "Charter", "The Thaw" }, new[] { OffRoute("Charter", "The Thaw", 80) }, OffRoute("Charter", "The Thaw", 80));
-        Assert.Equal(68, r.TotalTicks); // v6 re-pin 2026-10-24: 432 / 5 = 86, 86 * 80 / 100 = 68.8
+        Assert.Equal(73, r.TotalTicks); // sector spread re-pin 2026-11-12: 263^2 + 383^2 = 215858, isqrt 464, 464 / 5 = 92, 92 * 80 / 100 = 73.6 (v6: 68)
     }
 
     // S(0,0) and E(500,0) off-route; R1(100,0) - R2(400,0) a major route link; X(250,10) off-route, between them.
@@ -192,7 +197,7 @@ public class TravelTests
         Assert.Equal(80, fleet);
         var nav = TravelFormula.NavigatorSpeed(fleet, 80);
         Assert.Equal(64, nav);
-        Assert.Equal(5, Leg("Ellerbeck", "Longquay", nav)); // v6 re-pin 2026-10-24 (the T1 leg): 111 * 64 / 1500 = 4.74
+        Assert.Equal(5, Leg("Ellerbeck", "Longquay", nav)); // sector spread re-pin 2026-11-12 (the T1 leg): 123 * 64 / 1500 = 5.25 (v6: 111, 4.74)
     }
 
     [Fact]
@@ -204,7 +209,7 @@ public class TravelTests
 
     [Fact]
     public void T18_MidwifeMissionGroupSpeed50() // m1-travel T18
-        => Assert.Equal(4, Leg("Ellerbeck", "Longquay", 50)); // v6 re-pin 2026-10-24 (the T1 leg): 111 * 50 / 1500 = 3.7
+        => Assert.Equal(4, Leg("Ellerbeck", "Longquay", 50)); // sector spread re-pin 2026-11-12 (the T1 leg): 123 * 50 / 1500 = 4.1 (v6: 111, 3.7)
 
     [Fact]
     public void T20_GlasswoodAndFrostholmAreReachable() // m1-travel T20: free travel reaches the two systems outside sectors (no lanes needed)

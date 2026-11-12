@@ -128,8 +128,15 @@ public class SimpleAiGuerrillaTests
         // special-force missions 109, raids 241, Civilian strikes 223 (394 links: 183, 253, 174, 346, 307), at least 5 of each on 6 seeds (7);
         // fewer missions and raids than on 394 links, most likely the slower trips. Floors: on, at least 40 of each in all (5 a seed) and at
         // least 5 of each on 4 of the 8 seeds; off (seeds 1-4 to day 300), none on any seed (unchanged).
+        // Sector spread re-pin 2026-11-12 (Paul: "distribute some sectors a bit differently"): on, seeds 1-8 (Sabotage, Incite, Espionage,
+        // special-force missions, raids, Civilian strikes): 8, 30, 32, 10, 10, 10; 4, 14, 33, 8, 25, 24; 11, 30, 21, 9, 23, 22; 19, 18, 25, 37,
+        // 47, 46; 4, 44, 24, 7, 12, 12; 2, 12, 21, 12, 22, 22; 17, 55, 24, 5, 38, 36; 0, 50, 30, 19, 4, 4 (in all 65, 253, 210, 107, 181, 176; at
+        // least 5 of each on seeds 1, 3, 4 and 7). Off: seed 4 started 6 Espionage missions on day 285 (Azzurra, Buyback, Bina Major, ...), all
+        // from the key hunt (SimpleAiParams.KeyHunt, DEFAULT on: the Collective, ahead, spies for The Chair and Ravilla), an AI rule outside
+        // Underground and Guerrilla; with KeyHunt off seed 4 has none (seeds 1-3 none either way). So the off games run with KeyHunt off too:
+        // what they check is that Underground and Guerrilla gate these orders.
         var on = MultiSeed.Play(Enumerable.Range(1, 8).ToArray(), s => Play(s, medium, 1000));
-        var off = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => Play(s, medium with { Underground = false, Guerrilla = false }, 300));
+        var off = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => Play(s, medium with { Underground = false, Guerrilla = false, KeyHunt = false }, 300));
         foreach (var r in on) _out.WriteLine($"seed {r.Seed}: on {r}");
         foreach (var r in off) _out.WriteLine($"seed {r.Seed}: off {r}");
         string all = string.Join("; ", on.Select(r => r.ToString()));

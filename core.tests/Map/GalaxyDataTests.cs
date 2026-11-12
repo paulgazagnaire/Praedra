@@ -98,11 +98,12 @@ public class GalaxyDataTests
     {
         // v6 re-pin 2026-10-24: Charter sits at the centre (500,500); Classis is no longer linked to it, so the stored
         // lane base distance is checked on Charter-Bina Major (503,471): 3*3 + 29*29 = 850, isqrt 29, /5 = 5.
+        // Sector spread re-pin 2026-11-12: the Classis Sector moved; Classis (467,428) (was (454,424): 46*46 + 76*76 = 7892, isqrt 88).
         var c = G.Get("Charter"); var k = G.Get("Classis"); var t = G.Get("Bina Major");
         Assert.Equal((500, 500), (c.MapX, c.MapY));
-        Assert.Equal((454, 424), (k.MapX, k.MapY));
-        Assert.Equal(7892, 46 * 46 + 76 * 76);
-        Assert.Equal(88, (int)GalaxyLoader.Isqrt(7892));
+        Assert.Equal((467, 428), (k.MapX, k.MapY));
+        Assert.Equal(6273, 33 * 33 + 72 * 72);
+        Assert.Equal(79, (int)GalaxyLoader.Isqrt(6273));
         Assert.Equal((503, 471), (t.MapX, t.MapY));
         Assert.Equal(5, G.FindLane("Charter", "Bina Major")!.BaseDistance);
     }

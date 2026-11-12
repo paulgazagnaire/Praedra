@@ -43,8 +43,11 @@ public class PlanMoveTests
         var via = h.PlanMove(Side.Collective, f, "The Thaw", new[] { "Charter" });
         Assert.True(via.Ok);
         // v6 re-pin 2026-10-24: Classis is no longer linked to Charter; the path flies the router's own way to the waypoint
-        // (Classis, Quies, Consolatio, Charter), then on to The Thaw.
-        Assert.Equal(h.PlanMove(Side.Collective, f, "Charter").Path, via.Path.Take(4));
+        // (Classis, Quies, Consolatio, Charter), then on to The Thaw. Sector spread re-pin 2026-11-12: Classis (467,428) is 79 units from Charter
+        // (was 88) and the router's own way is Classis, Bina Major, Charter; the prefix is that path, whatever its length.
+        var toCharter = h.PlanMove(Side.Collective, f, "Charter").Path;
+        Assert.Equal(new[] { "Classis", "Bina Major", "Charter" }, toCharter);
+        Assert.Equal(toCharter, via.Path.Take(toCharter.Count));
         Assert.Equal("The Thaw", via.Path[^1]);
         Assert.True(via.ArrivalDay >= fast.ArrivalDay); // the fastest path was the router's own choice
         long seq = h.Fleets.SubmitMove(Side.Collective, f, "The Thaw", new[] { "Charter" });
