@@ -84,6 +84,7 @@ public partial class Main
                 string enemy = s.Game.State.SystemOwners.Where(kv => kv.Value == s.Enemy).Select(kv => kv.Key)
                     .Where(n => Ticks(midwife.System, n) < int.MaxValue).OrderBy(n => Ticks(midwife.System, n)).ThenBy(n => n, StringComparer.Ordinal).First();
                 GD.Print($"  Midwife at {midwife.System}: espionage on {enemy}");
+                for (int i = 0; i < 5 && gs.AnyModal; i++) gs.PressKey(Key.Escape);   // a report the days opened goes first
                 gs.SelectSystem(midwife.System); gs.PlayRefresh();
                 gs.Click("Forces"); gs.PlayRefresh();
                 Expect(gs.Has($"Send a mission from {midwife.System}..."), "the system panel offers Send a mission from...");
@@ -121,6 +122,7 @@ public partial class Main
             .Select(o => o.System).OrderBy(x => x, StringComparer.Ordinal).FirstOrDefault();
         Expect(yard != null, "you hold a system with a Training Facility");
         if (yard == null) return;
+        for (int i = 0; i < 5 && gs.AnyModal; i++) gs.PressKey(Key.Escape);   // a report the days opened goes first
         gs.SelectSystem(yard); gs.PlayRefresh();
         gs.Click("Build"); gs.PlayRefresh();
         gs.Click("Troops"); gs.PlayRefresh();
@@ -253,6 +255,8 @@ public partial class Main
     {
         var s = gs.S; var mm = s.Missions;
         string kw = GameSession.KindWords(m.Kind), target = m.Target; int id = m.Id;
+        // the working mission may have just won its target over ("System captured" pop-up): close any pop-up so the list takes the clicks
+        for (int i = 0; i < 5 && gs.AnyModal; i++) gs.PressKey(Key.Escape);
         gs.View.Select(-1);
         if (!gs.MissionsOpen) gs.ClickViaMenu("Missions");
         gs.PlayRefresh();
