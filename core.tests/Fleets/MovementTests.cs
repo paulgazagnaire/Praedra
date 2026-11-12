@@ -15,9 +15,11 @@ public class MovementTests
     // Sector spread re-pin 2026-11-12 (Paul: "distribute some sectors a bit differently"): the Fyrholm Sector (Oldwatch) moved further out than
     // the Zlatna and Thaw sectors, so Zlatna-Oldwatch-Hollenvale-The Thaw (94 / 5 = 18 -> 14, minor 28 -> 3, 35 / 5 = 7 -> 5: 22 days) now loses
     // to the free jump Zlatna-The Thaw (132 / 5 = 26, 26 * 80 / 100 = 20); Nordhaven moved too (Nutrix-Nordhaven 34 units, 2 days, was 1). Day 50.
-    private static readonly string[] CharterThaw = { "Charter", "Pyrite", "Vigilia", "Nutrix", "Nordhaven", "Lowmarket", "Tierra Larga", "Seldwyn", "Overgrowth",
+    private static readonly string[] CharterThaw = { "Charter", "Sourwater", "Vigilia", "Nutrix", "Nordhaven", "Lowmarket", "Tierra Larga", "Seldwyn", "Highbarrow", "Overgrowth",
         "Longtide", "Galeholm", "Stopgap", "Groenveld", "Brokengate", "Towline", "Ashgarden", "Pale Ridge", "Zlatna", "The Thaw" };
-    private static readonly int[] CharterThawHops = { 1, 2, 2, 2, 1, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2, 4, 2, 20 };
+    // Route stops re-pin 2026-11-12 (Paul, "Add the stops"): out by Sourwater, now a Long Haul stop (was Pyrite), and the Trunk Line stops at
+    // Highbarrow between Seldwyn and Overgrowth (Seldwyn-Overgrowth was 2 days, now 1 + 1). Same days to The Thaw.
+    private static readonly int[] CharterThawHops = { 1, 2, 2, 2, 1, 1, 2, 1, 1, 1, 2, 1, 2, 2, 1, 2, 4, 2, 20 };
 
     private static World Real(ForcedStopTrigger t = ForcedStopTrigger.PaulRule, ulong seed = 1) => new(TestData.RealGalaxy, t, seed);
 

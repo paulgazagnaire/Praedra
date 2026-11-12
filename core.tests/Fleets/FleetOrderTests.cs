@@ -462,7 +462,7 @@ public class FleetOrderTests
         int fid = w.Events<OrderAccepted>().Single().Fleet!.Value;
         w.RunTo(4);
         var stop = Assert.Single(w.Events<ForcedStop>());
-        Assert.Equal((fid, SquadronWayToThaw, 3), (stop.Fleet, stop.System, stop.Day)); // route thinning 2026-11-11: Pyrite on day 1, Vigilia on day 3 (QA-40: Las Mieses on day 2)
+        Assert.Equal((fid, SquadronWayToThaw, 2), (stop.Fleet, stop.System, stop.Day)); // route stops 2026-11-12: Sourwater on day 1, Vigilia on day 2 (route thinning: Pyrite on day 1, Vigilia on day 3; QA-40: Las Mieses on day 2)
         Assert.Equal(DissolveCause.SquadronsArrived, Assert.Single(w.Events<FleetDissolved>()).Cause);
         Assert.DoesNotContain(fid, w.State.Fleets.Keys);
         Assert.All(new[] { 310, 311 }, id => Assert.Equal(SquadronWayToThaw, w.Obj(id).System));

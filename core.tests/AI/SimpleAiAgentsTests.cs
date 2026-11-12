@@ -108,7 +108,9 @@ public class SimpleAiAgentsTests
         // Sector spread re-pin 2026-11-12 (Paul: "distribute some sectors a bit differently so they're using the galaxy a bit better"; 59 outer
         // sectors moved as whole blocks, the links unchanged): the sector spread changed the map, so every distance and many paths change and the
         // game changes; the AI code does not. Previous pin e7b86ea4...0b83.
-        Assert.Equal("8636bbfcb82f45e12cf02ce34abc031844f18dd009a2ee6562b36a303439f01d", h.StateHash());
+        // Route stops re-pin 2026-11-12 (Paul, decision card "Add the stops", and Yard Road Fusoria-Commonhold): 8 great-route links now stop at
+        // the system they were drawn through, so some paths change and the game changes; the AI code does not. Previous pin 8636bbfc...f01d.
+        Assert.Equal("8f68c3b59b20dda2d45295a44551706cba022d00eff7671241bf8e445c975732", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"

@@ -55,8 +55,8 @@ public class GalaxyDataTests
     public void G4_ChokepointsAndLaneCounts() // m1-galaxy-data G4 (chokepoints per route network)
     {
         var chokes = GalaxyLoader.Chokepoints(G);
-        Assert.Equal(187, chokes.Count); // route thinning 2026-11-11 (QA-40 174, v6 179, v5 98)
-        Assert.Equal(72, G.Systems.Count(s => G.NeighboursOf(s.Index).Count == 1)); // route thinning 2026-11-11 (QA-40 62, v6 64, v5 45)
+        Assert.Equal(183, chokes.Count); // route stops 2026-11-12 (route thinning 187, QA-40 174, v6 179, v5 98)
+        Assert.Equal(70, G.Systems.Count(s => G.NeighboursOf(s.Index).Count == 1)); // route stops 2026-11-12 (route thinning 72, QA-40 62, v6 64, v5 45)
         foreach (var s in G.Systems)
         {
             Assert.Equal(int.Parse(s.Carried["lane_count"]), G.NeighboursOf(s.Index).Count);
@@ -249,7 +249,7 @@ public class GalaxyDataTests
         var expected = ExpectedGalaxyCounts.Load(Path.Combine(TestData.DesignDir, GalaxyLoader.CountsFile));
         expected.Check(G); // the real data matches
         var ex = Assert.Throws<DataLoadException>(() => (expected with { Lanes = 520 }).Check(G));
-        Assert.Contains("lanes: expected 520, found 280", ex.Message);
+        Assert.Contains("lanes: expected 520, found 284", ex.Message);
     }
 
     [Fact]

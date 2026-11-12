@@ -116,7 +116,7 @@ public class TravelTests
         // (763,883) is 464 units out; the last leg is now the free jump Zlatna-The Thaw, 132 / 5 = 26, 26 * 80 / 100 = 20 (MovementTests K4).
         Assert.Equal(50, r.TotalTicks);
         var names = r.Names(G);
-        Assert.Equal(new[] { "Charter", "Pyrite", "Vigilia" }, names.Take(3)); // QA-40 re-pin 2026-10-25: out along the Charter Road (v6: the Trunk Line)
+        Assert.Equal(new[] { "Charter", "Sourwater", "Vigilia" }, names.Take(3)); // route stops re-pin 2026-11-12: a short jump to Sourwater, now a Long Haul stop, then the Long Haul (was Pyrite; QA-40: the Charter Road; v6: the Trunk Line)
         Assert.Equal("The Thaw", names[^1]);
         foreach (var mid in r.Systems.Skip(1).SkipLast(1)) Assert.True(G.OnRoute(mid)); // never stops at an off-route system on the way
         Assert.False(G.OnRoute(G.Get("The Thaw").Index)); // The Thaw is off every route: the last leg is off-route
