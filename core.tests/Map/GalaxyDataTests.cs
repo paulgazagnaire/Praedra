@@ -15,15 +15,17 @@ public class GalaxyDataTests
         // v6 re-pin 2026-10-24: the spiral map (planets/16) has 390 links, all great-route links of kind route, no route-inferred.
         // QA-40 re-pin 2026-10-25 (Planets fix_v6_qa40.py): 394 links, 106 great-route links, 18 bridges.
         // Route thinning 2026-11-11 (Paul: "clean this mess of a route layout, reduce the number"): 280 links, 103 great-route links (Lantern Run and Long Odds dropped), 15 bridges (tools/routes/thin_routes.py).
+        // Route stops 2026-11-12 (Paul, decision card "Add the stops"): 8 great-route links drawn within 5 units of a system now stop there
+        // (tools/routes/add_stops.py): 284 links, 111 great-route links, 173 minor; 4 minor links gave way to the great route, 3 of them bridges.
         Assert.Equal(555, G.Systems.Count);
-        Assert.Equal(280, G.Lanes.Count);
+        Assert.Equal(284, G.Lanes.Count);
         Assert.Equal(64, G.Sectors.Count);
-        Assert.Equal(103, G.Lanes.Count(l => l.Tier == 1));
-        Assert.Equal(177, G.Lanes.Count(l => l.Tier == 2));
+        Assert.Equal(111, G.Lanes.Count(l => l.Tier == 1));
+        Assert.Equal(173, G.Lanes.Count(l => l.Tier == 2));
         Assert.Equal(0, G.Lanes.Count(l => l.Tier == 3));
-        Assert.Equal(103, G.Lanes.Count(l => l.Kind == "route"));
+        Assert.Equal(111, G.Lanes.Count(l => l.Kind == "route"));
         Assert.Equal(0, G.Lanes.Count(l => l.Kind == "route-inferred"));
-        Assert.Equal(15, G.Lanes.Count(l => l.Kind == "bridge"));
+        Assert.Equal(12, G.Lanes.Count(l => l.Kind == "bridge"));
         Assert.Empty(G.Warnings); // check 10: stored lane_count and chokepoint agree with the recomputed values
     }
 
@@ -38,11 +40,11 @@ public class GalaxyDataTests
     }
 
     [Fact]
-    public void G3_RouteSystems() // m1-galaxy-data G3: 283 systems on a route, the rest reached by free travel only
+    public void G3_RouteSystems() // m1-galaxy-data G3: 285 systems on a route, the rest reached by free travel only
     {
-        // v6 re-pin 2026-10-24: 358 on a route (was 332); The Shoal is on a route now, The Thaw is the off-route example. QA-40 re-pin 2026-10-25: 359. Route thinning 2026-11-11: 283.
-        Assert.Equal(283, G.Systems.Count(s => G.OnRoute(s.Index)));
-        Assert.Equal(283, G.Systems.Count(s => G.NeighboursOf(s.Index).Count > 0));
+        // v6 re-pin 2026-10-24: 358 on a route (was 332); The Shoal is on a route now, The Thaw is the off-route example. QA-40 re-pin 2026-10-25: 359. Route thinning 2026-11-11: 283. Route stops 2026-11-12: 285 (Ribeira and The Notch).
+        Assert.Equal(285, G.Systems.Count(s => G.OnRoute(s.Index)));
+        Assert.Equal(285, G.Systems.Count(s => G.NeighboursOf(s.Index).Count > 0));
         Assert.Empty(G.NeighboursOf(G.Get("Glasswood").Index));
         Assert.Empty(G.NeighboursOf(G.Get("Frostholm").Index));
         Assert.False(G.OnRoute(G.Get("The Thaw").Index));
@@ -53,8 +55,8 @@ public class GalaxyDataTests
     public void G4_ChokepointsAndLaneCounts() // m1-galaxy-data G4 (chokepoints per route network)
     {
         var chokes = GalaxyLoader.Chokepoints(G);
-        Assert.Equal(187, chokes.Count); // route thinning 2026-11-11 (QA-40 174, v6 179, v5 98)
-        Assert.Equal(72, G.Systems.Count(s => G.NeighboursOf(s.Index).Count == 1)); // route thinning 2026-11-11 (QA-40 62, v6 64, v5 45)
+        Assert.Equal(183, chokes.Count); // route stops 2026-11-12 (route thinning 187, QA-40 174, v6 179, v5 98)
+        Assert.Equal(70, G.Systems.Count(s => G.NeighboursOf(s.Index).Count == 1)); // route stops 2026-11-12 (route thinning 72, QA-40 62, v6 64, v5 45)
         foreach (var s in G.Systems)
         {
             Assert.Equal(int.Parse(s.Carried["lane_count"]), G.NeighboursOf(s.Index).Count);
@@ -247,7 +249,7 @@ public class GalaxyDataTests
         var expected = ExpectedGalaxyCounts.Load(Path.Combine(TestData.DesignDir, GalaxyLoader.CountsFile));
         expected.Check(G); // the real data matches
         var ex = Assert.Throws<DataLoadException>(() => (expected with { Lanes = 520 }).Check(G));
-        Assert.Contains("lanes: expected 520, found 280", ex.Message);
+        Assert.Contains("lanes: expected 520, found 284", ex.Message);
     }
 
     [Fact]
