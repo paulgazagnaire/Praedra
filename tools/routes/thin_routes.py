@@ -92,6 +92,6 @@ keep = [l for l in L if key(l) not in drop]
 cols = list(L[0].keys())
 with open(ROOT + 'extended-galaxy-v6-lanes.csv', 'w', newline='') as f:
     w = csv.DictWriter(f, cols, lineterminator='\n'); w.writeheader(); w.writerows(keep)
-write_planets(keep)
-print('kept %d of %d links (%s); systems on a route %d' % (len(keep), len(L), dict(collections.Counter(l['tier'] for l in keep)), len(nb)))
+on = write_planets(keep)
+print('kept %d of %d links (%s); systems on a route %d' % (len(keep), len(L), dict(collections.Counter(l['tier'] for l in keep)), on))
 for k in sorted(drop): print('dropped %s - %s: %s' % (k[0], k[1], drop[k]))
