@@ -1,9 +1,11 @@
 from,to,kind,routes,tier,speed_factor
 Custodia,Llano Grande,route,Charter Road,major,300
-Meridian,Ergon,route,Charter Road,major,300
+Meridian,Signum,route,Charter Road,major,300
+Signum,Ergon,route,Charter Road,major,300
 Meridian,Hoshimachi,route,Charter Road,major,300
 Charter,Pyrite,route,Charter Road,major,300
-Pyrite,Stibium,route,Charter Road,major,300
+Pyrite,Hartwell,route,Charter Road,major,300
+Hartwell,Stibium,route,Charter Road,major,300
 Las Eras,Khamsin,route,Charter Road,major,300
 Las Eras,Ciénaga,route,Charter Road,major,300
 Ergon,Stillwater,route,Charter Road,major,300
@@ -14,7 +16,8 @@ Ilha Verde,Lowlight,route,Charter Road,major,300
 Llano Grande,Nueve Lunas,route,Charter Road,major,300
 Ardlinn,Stibium,route,Charter Road,major,300
 Ardlinn,Granero,route,Charter Road,major,300
-Lowlight,Granero,route,Charter Road,major,300
+Lowlight,Ribeira,route,Charter Road,major,300
+Ribeira,Granero,route,Charter Road,major,300
 Teloneum,Ciénaga,route,Charter Road,major,300
 Teloneum,Nueve Lunas,route,Charter Road,major,300
 Caza Real,Cristalina,route,Long Haul,major,300
@@ -32,7 +35,8 @@ Umoya,Ridgefold,route,Long Haul,major,300
 Mechane,Oionos,route,Long Haul,major,300
 Mechane,Velika Ravan,route,Long Haul,major,300
 Nueva Pradera,Waymeet,route,Long Haul,major,300
-Pyrite,Vigilia,route,Long Haul,major,300
+Pyrite,Sourwater,route,Long Haul,major,300
+Sourwater,Vigilia,route,Long Haul,major,300
 Pyrite,Las Mieses,route,Long Haul,major,300
 Oionos,Brennhof,route,Long Haul,major,300
 Ellerbeck,Longquay,route,Long Haul,major,300
@@ -59,14 +63,16 @@ Sierra Seca,Hartsease,route,Salt Lane,major,300
 Sierra Seca,Kolokol,route,Salt Lane,major,300
 Tinplate,Hartsease,route,Salt Lane,major,300
 Saltgreen,Meseta,route,Salt Lane,major,300
-Groenveld,Glasshold,route,Salt Lane,major,300
+Groenveld,Kaukomaa,route,Salt Lane,major,300
+Kaukomaa,Glasshold,route,Salt Lane,major,300
 Groenveld,Kolokol,route,Salt Lane,major,300
 Suavis,Kreuzweg,route,Salt Lane,major,300
 Suavis,Hardscrabble,route,Salt Lane,major,300
 Tidewall,Clinker,route,Salt Lane,major,300
 Tidewall,Novy Rynek,route,Salt Lane,major,300
 Lastwell,Kreuzweg,route,Salt Lane,major,300
-Statio,Glasshold,route,Salt Lane,major,300
+Statio,Two Crowns,route,Salt Lane,major,300
+Two Crowns,Glasshold,route,Salt Lane,major,300
 Clinker,Verdemar,route,Salt Lane,major,300
 Verdemar,Hardscrabble,route,Salt Lane,major,300
 Lowmarket,Nordhaven,route,Trunk Line,major,300
@@ -78,7 +84,8 @@ Undergrowth,Kelpfast,route,Trunk Line,major,300
 Groenveld,Stopgap,route,Trunk Line,major,300
 Groenveld,Brokengate,route,Trunk Line,major,300
 Seldwyn,Tierra Larga,route,Trunk Line,major,300
-Seldwyn,Overgrowth,route,Trunk Line,major,300
+Seldwyn,Highbarrow,route,Trunk Line,major,300
+Highbarrow,Overgrowth,route,Trunk Line,major,300
 Longtide,Galeholm,route,Trunk Line,major,300
 Longtide,Overgrowth,route,Trunk Line,major,300
 Seafold,Pronoia,route,Trunk Line,major,300
@@ -94,7 +101,8 @@ Milestone Nine,Clove,route,Trunk Line,major,300
 Pronoia,Clove,route,Trunk Line,major,300
 Fusoria,Belavista,route,Yard Road,major,300
 Fusoria,Meseta,route,Yard Road,major,300
-Dry Reef,Rubble Sky,route,Yard Road,major,300
+Dry Reef,The Notch,route,Yard Road,major,300
+The Notch,Rubble Sky,route,Yard Road,major,300
 Dry Reef,Snowmouth,route,Yard Road,major,300
 Commonhold,Lesnaya,route,Yard Road,major,300
 Commonhold,Meseta,route,Yard Road,major,300
@@ -171,7 +179,6 @@ Nacar,Halfwinter,official,,minor,150
 Lenitas,Hundred Falls,official,,minor,150
 Natalis,Voluptas,official,,minor,150
 Tinplate,Long Noon,official,,minor,150
-Meridian,Signum,official,,minor,150
 Meridian,Skalna,official,,minor,150
 Porphyry,Oionos,bridge,,minor,150
 Sedova,Dongyu,official,,minor,150
@@ -189,7 +196,6 @@ Riftwood,Mirevale,official,,minor,150
 Altofen,Llano Grande,official,,minor,150
 Ashgrove,Halfwinter,official,,minor,150
 Kaukomaa,Steading,official,,minor,150
-Kaukomaa,Glasshold,bridge,,minor,150
 Dongyu,Highrime,official,,minor,150
 Morrowfield,Highrime,official,,minor,150
 Havdal,Dar Sukun,official,,minor,150
@@ -222,7 +228,6 @@ Mwezi,Viridia,official,,minor,150
 Steading,Ninefold,official,,minor,150
 Arithmos,Stibium,official,,minor,150
 Arithmos,Gnomon,official,,minor,150
-Seldwyn,Highbarrow,bridge,,minor,150
 Westerholm,Highmere,official,,minor,150
 Westerholm,Hagelfeld,official,,minor,150
 Fiscus,Loess,official,,minor,150
@@ -241,7 +246,6 @@ Khamsin,Vidrio,official,,minor,150
 Ilha Verde,Prognosis,bridge,,minor,150
 Stepstone,Kolokol,official,,minor,150
 Two Crowns,Lowenna,official,,minor,150
-Two Crowns,Glasshold,bridge,,minor,150
 Tres Rios,Laetitia,official,,minor,150
 Icetap,Backwater,official,,minor,150
 Vallum,Altamesa,bridge,,minor,150

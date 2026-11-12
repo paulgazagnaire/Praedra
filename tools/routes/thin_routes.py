@@ -14,7 +14,7 @@ usage: python3 tools/routes/thin_routes.py [CAP]   (run from the repository root
 """
 import sys, os, csv, heapq, collections
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from geo import load, pt_seg, dist, ROOT
+from geo import load, pt_seg, dist, ROOT, write_planets
 
 CAP = int(sys.argv[1]) if len(sys.argv) > 1 else 2
 L, P, raw, D = load()
@@ -92,30 +92,6 @@ keep = [l for l in L if key(l) not in drop]
 cols = list(L[0].keys())
 with open(ROOT + 'extended-galaxy-v6-lanes.csv', 'w', newline='') as f:
     w = csv.DictWriter(f, cols, lineterminator='\n'); w.writeheader(); w.writerows(keep)
-# the planets' route columns, recomputed as the loader does (chokepoint = a system whose loss splits the route links)
-nb = collections.defaultdict(set)
-for l in keep: nb[l['from']].add(l['to']); nb[l['to']].add(l['from'])
-def comps(excl):
-    seen, n = set(), 0
-    for s in nb:
-        if s == excl or s in seen: continue
-        n += 1; st = [s]; seen.add(s)
-        while st:
-            u = st.pop()
-            for v in nb[u]:
-                if v != excl and v not in seen: seen.add(v); st.append(v)
-    return n
-base = comps(None)
-rows = list(csv.DictReader(open(ROOT + 'extended-galaxy-v6-planets.csv', newline='')))
-pc = list(rows[0].keys())
-for r in rows:
-    n = r['name']; ls = [l for l in keep if n in (l['from'], l['to'])]
-    routes = sorted({x for l in ls if l['routes'] for x in l['routes'].split(';')})
-    r['lane_count'] = str(len(ls)); r['on_route'] = '1' if ls else '0'
-    r['major_routes'] = ';'.join(routes)
-    r['best_lane_tier'] = 'major' if any(l['tier'] == 'major' for l in ls) else ('minor' if ls else '')
-    r['chokepoint'] = '1' if ls and comps(n) > base - (1 if len(nb[n]) == 0 else 0) and len(nb[n]) > 1 else '0'
-with open(ROOT + 'extended-galaxy-v6-planets.csv', 'w', newline='') as f:
-    w = csv.DictWriter(f, pc, lineterminator='\n'); w.writeheader(); w.writerows(rows)
+write_planets(keep)
 print('kept %d of %d links (%s); systems on a route %d' % (len(keep), len(L), dict(collections.Counter(l['tier'] for l in keep)), len(nb)))
 for k in sorted(drop): print('dropped %s - %s: %s' % (k[0], k[1], drop[k]))
