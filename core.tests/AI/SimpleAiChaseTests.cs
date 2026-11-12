@@ -21,6 +21,15 @@ public class SimpleAiChaseTests
     private static readonly SimpleAiParams NoChaseMemory = new() { RunnerRetreats = 0, RetreatCountsAsLoss = false, AvoidBlockedPaths = false };
 
     /// <summary>
+    /// System A, the pile's start. Sector spread re-pin 2026-11-12 (Paul: "distribute some sectors a bit differently"): the first system the
+    /// search found, Greenfever (B Wadi Sabr), no longer shows the chase (without memory the Warrant retreated without losses on days 8, 12 and
+    /// 18 only; on the 280 links: 8, 12, 18, 24, 30, 36, 42, 48, 51). Kelpfast, the next system in ordinal order that shows it (Hollenvale before
+    /// it does not: 1 retreat), with B Ashgarden: without memory 40 lossless retreats in 120 days (days 3, 10, 12, 15, ... every 2-5 days to
+    /// 120); with the DEFAULT memory days 3 and 72. The search below still checks every condition on A and picks B.
+    /// </summary>
+    private const string PileSystem = "Kelpfast";
+
+    /// <summary>
     /// MedA seed 1 with the Hand passive. A Collective strike pile (three The Moorings Cruisers, no troops) stands on a Collective-held system
     /// A next to a system B it does not hold; a lone Warrant (armed, far weaker) stands on B, which has another neighbour (Hand or neutral) to
     /// retreat to. Returns the retreats of that Warrant from battles with no losses on either side, by day, over <paramref name="days"/> days.
@@ -33,6 +42,7 @@ public class SimpleAiChaseTests
         string? a = null, b = null;
         foreach (var sys in g.Systems.OrderBy(s => s.Name, StringComparer.Ordinal))
         {
+            if (sys.Name != PileSystem) continue;
             if (!owners.TryGetValue(sys.Name, out var o) || o != Side.Collective || sys.Name == h.HqSystem) continue;
             foreach (var nb in g.NeighboursOf(sys.Index).OrderBy(n => g.Systems[n.System].Name, StringComparer.Ordinal))
             {
@@ -71,7 +81,8 @@ public class SimpleAiChaseTests
     }
 
     // m6 chase fix T2: with the DEFAULT parameters the hunt stops after the first retreat; it may be tried again once the retreat has left the
-    // memory (RunnerMemoryDays, DEFAULT 30). Measured: retreats on days 3, 93 and 99 (without the fix: every 3 days, 36 times). Limits: at
+    // memory (RunnerMemoryDays, DEFAULT 30). Measured: retreats on days 3, 93 and 99 (without the fix: every 3 days, 36 times); sector spread
+    // re-pin 2026-11-12 (Kelpfast and Ashgarden): days 3 and 72 (without the fix: 40 times, every 2-5 days). Limits: at
     // most 2 lossless retreats in any RunnerMemoryDays window, at most 4 in 120 days.
     [Fact]
     public void T2_WithRetreatMemory_TheChaseEndsWithinDays()

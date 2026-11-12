@@ -208,10 +208,16 @@ public class CampaignSoakTests
 
     // m4-battle-classic §1: the relief fleet arriving at Tierra Larga on day 300 meets the Hand's interdiction fleet and the contact is a real
     // Classic battle (invariants stay green on every day of the checked run). The Interdictor's gravity well forbids a retreat.
+    // Sector spread re-pin 2026-11-12 (Paul: "distribute some sectors a bit differently"): the relief fleet's way from Caminus is longer (24 days,
+    // was 21), so the battle is on day 324, and on seed 1 the Classic row's battle goes the other way (the Hand retreats, its Decree lost
+    // to NoHyperdrive; the Collective Victorious). Seed 3 is the lowest seed on which both rows show this test's battle again: the gravity well
+    // refuses the Collective's retreat and it is Annihilated, the Hand Victorious (seeds 1-40 measured; also 6, 7, 20, 24, 29, 33).
+    private const ulong TierraLargaSeed = 3;
+
     [Theory, MemberData(nameof(Rulesets))]
     public void TierraLargaContactIsARealClassicBattle(GarrisonRuleset r)
     {
-        var run = CampaignHarness.Checked(1, r);
+        var run = CampaignHarness.Checked(TierraLargaSeed, r);
         var started = run.Events.OfType<Praedra.Core.Battle.BattleStarted>().Where(b => b.System == TestCampaign.BlockadedSystem).ToList();
         Assert.NotEmpty(started);
         Assert.InRange(started[0].Day, 300, 330);
@@ -235,7 +241,7 @@ public class CampaignSoakTests
     }
 
     // m4-battle-classic §1 (the gravity-well half of the test above, New ruleset): with the five B7 bombardment switches off the day-200 bombardment
-    // draws as before B7, so the day-313 Tierra Larga battle is the one this test was written for: the Interdictor's gravity well refuses the Collective's
+    // draws as before B7, so the day-324 (day 321 before the sector spread of 2026-11-12) Tierra Larga battle is the one this test was written for: the Interdictor's gravity well refuses the Collective's
     // retreat and it is Annihilated. Keeps that check on the New ruleset after B7 re-routed the seeded game (Dev lead, 2026-10-19).
     [Fact]
     public void TierraLargaContactNewRulesetGravityWellWithPreB7Bombardment()

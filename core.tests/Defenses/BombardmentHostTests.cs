@@ -66,13 +66,19 @@ public class BombardmentHostTests
     }
 
     // the test campaign's one scripted bombardment (day 200, the interdiction fleet shells Tierra Larga), with every daily invariant green. Since B7 the
-    // Tierra Larga battery (a Mordant Lien-150) fires back first (B7-bombardment §4, C2 DEFAULT on): on seed 1 its shot falls on the Decree, whose
+    // Tierra Larga battery (a Mordant Lien-150) fires back first (B7-bombardment §4, C2 DEFAULT on): on seed 3 (seed 1 before the sector spread) its shot falls on the Decree, whose
     // shields cannot hold 2000 ion, so the ship is grounded and the fleet (Interdictor 0 + Decree 4) strikes with P = 0, no hits.
     // Before B7 the strike was P = 4, 4 hits, 4 TargetHit events.
+    // Sector spread re-pin 2026-11-12 (Paul: "distribute some sectors a bit differently"): the relief fleet now reaches Tierra Larga on day 324
+    // (was 321), and on seed 1 that Classic battle goes the other way: the Hand retreats and the Decree cannot jump out (NoHyperdrive) and is lost, so it is
+    // gone by day 1000 and its class can no longer be read. Seed 3 plays this test's story again: the shot falls on the Decree, P = 0, no hits,
+    // and the Decree survives the campaign (seed 3 is also the Tierra Larga battle seed of CampaignSoakTests).
+    private const ulong Seed = 3;
+
     [Fact]
     public void CampaignScriptedBombardmentResolvesOnItsDay()
     {
-        var run = CampaignHarness.Checked(1, GarrisonRuleset.Classic);
+        var run = CampaignHarness.Checked(Seed, GarrisonRuleset.Classic);
         var started = Assert.Single(run.Events.OfType<BombardmentStarted>());
         Assert.Equal(TestCampaign.BombardDay + 1, started.Day);
         var fire = Assert.Single(run.Events.OfType<BatteryReturnFire>());
