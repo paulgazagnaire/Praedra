@@ -107,7 +107,7 @@ Brannock,Solacia Sector,farreach,484,144,roster,,,0,0,0,,
 Bluefathom,Thesauros Sector,farreach,195,405,roster,,,0,0,0,,
 Skerrholm,Thesauros Sector,farreach,210,363,roster,,,0,0,0,,
 Retentio,Lagoa Funda Sector,midreach,401,334,roster,,,0,0,0,,
-Meseta,Feldspar Sector,midreach,290,477,roster,,,1,3,1,Salt Lane;Yard Road,major
+Meseta,Feldspar Sector,midreach,290,477,roster,,,1,2,1,Salt Lane;Yard Road,major
 Silberberg,Thesauros Sector,farreach,203,464,roster,,,0,0,0,,
 Krasny Yar,Rio Lodo Sector,farreach,544,9,roster,,,0,0,0,,
 Morrowfield,Akousma Sector,midreach,551,680,roster,,,0,1,1,,minor
@@ -203,7 +203,7 @@ Navalia,Lesnaya Sector,midreach,401,523,roster,,,0,1,1,Yard Road,major
 Incus,Incus Sector,midreach,400,362,roster,,,0,0,0,,
 Castra,Castra Sector,heartland,500,450,roster,,,0,0,0,,
 Tutela,Lenitas Sector,midreach,442,452,roster,,,1,2,1,,minor
-Fusoria,Dunmere Sector,farreach,229,507,roster,,,1,2,1,Yard Road,major
+Fusoria,Dunmere Sector,farreach,229,507,roster,,,1,3,1,Yard Road,major
 Fiscus,Classis Sector,midreach,512,423,roster,,,1,2,1,,minor
 Mechane,Mechane Sector,midreach,505,614,roster,,,0,2,1,Long Haul,major
 Salus,Incus Sector,midreach,349,373,roster,,,0,0,0,,
