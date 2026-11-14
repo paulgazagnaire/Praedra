@@ -100,12 +100,22 @@ def build(raw, out, img_url, stories):
             h, n = w.window_html(key, 0, 0, name="%s - %s" % (wname, cap.split(" · ", 1)[-1]))
             h = h.replace("position:absolute;left:0px;top:0px;", "position:relative;flex-shrink:0;", 1)
             cols.append(column(h, cap))
-        parts = ['<div layer-name="Windows" style="display:flex;flex-direction:row;gap:24px;align-items:start;flex-shrink:0">%s</div>' % "".join(cols)]
+        row = '<div layer-name="Windows" style="display:flex;flex-direction:row;gap:24px;align-items:start;flex-shrink:0">%s</div>'
+        parts = [row % "".join(cols)]
         if stories and wname in stories:
             parts.append(stories_panel(wname, stories[wname]))
         doc = "".join(parts)
-        fn = os.path.join(out, frame.replace(" ", "").replace("-", "_") + ".html")
+        base = frame.replace(" ", "").replace("-", "_")
+        fn = os.path.join(out, base + ".html")
         open(fn, "w").write(doc)
+        # the same frame in pieces, for a write_html call that refuses a big document: the empty row, each column into it, the stories
+        pieces = os.path.join(out, base)
+        os.makedirs(pieces, exist_ok=True)
+        open(os.path.join(pieces, "00_row.html"), "w").write(row % "")
+        for i, c in enumerate(cols, 1):
+            open(os.path.join(pieces, "%02d_column.html" % i), "w").write(c)
+        if len(parts) > 1:
+            open(os.path.join(pieces, "99_stories.html"), "w").write(parts[1])
         made.append((frame, fn))
     # the four windows over the map, as the game shows them
     w = Window(json.load(open(os.path.join(raw, "four.json"))), os.path.join(raw, "four.png"), img_dir, img_url, "four",
