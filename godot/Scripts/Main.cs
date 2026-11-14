@@ -79,7 +79,13 @@ public partial class Main : Control
     void ScreenshotLater(string path, int frames)
     {
         var t = GetTree().CreateTimer(frames / 30.0);
-        t.Timeout += () => { GetViewport().GetTexture().GetImage().SavePng(path); GD.Print("Saved screenshot " + path); GetTree().Quit(); };
+        t.Timeout += () =>
+        {
+            GetViewport().GetTexture().GetImage().SavePng(path); GD.Print("Saved screenshot " + path);
+            // --dump-ui file.json: what each control draws, for rebuilding the screen as layers in Paper (tools/paper-sync/)
+            if (Arg("--dump-ui") is string dump) UiDump.Write(GetTree().Root, dump, (_screen as GameScreen)?.ShotPanels() ?? new List<(string, Control)> { ("Screen", _screen) });
+            GetTree().Quit();
+        };
     }
 
     void LoadSave(string path)
@@ -98,7 +104,7 @@ public partial class Main : Control
         gs.LoadRequested += LoadSave;
         Swap(gs);
         if (applyArgs) ApplyArgs(gs);
-        if (shot != null) { gs.ShotPath = shot; gs.ShotFrames = shotFrames; }
+        if (shot != null) { gs.ShotPath = shot; gs.ShotFrames = shotFrames; gs.DumpPath = Arg("--dump-ui"); }
     }
 
     void ApplyArgs(GameScreen gs)
@@ -142,6 +148,7 @@ public partial class Main : Control
                 case "--window" when i + 2 < _args.Length: gs.ShotWindow(_args[i + 1], _args[i + 2]); break;
                 case "--drag" when i + 1 < _args.Length: gs.MgShowDrag(_args[i + 1]); break;
                 case "--goal": gs.ShotGoal(); break;
+                case "--strike" when i + 1 < _args.Length: gs.ShotStrike(_args[i + 1]); break;
                 case "--sectorhover" when i + 1 < _args.Length: gs.ShotSectorHover(_args[i + 1]); break;
                 case "--routes" when i + 1 < _args.Length: gs.SetRoutesShown(_args[i + 1] != "off"); break;
                 case "--deselect": gs.View.Select(-1); break;

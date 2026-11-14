@@ -48,6 +48,8 @@ public partial class GameScreen : Control
     // Screenshot options (set by Main from the command line).
     public string ShotPath;
     public int ShotFrames = 30;
+    public string DumpPath;   // --dump-ui: also write what each control draws, for the Paper file
+    int _mapShotIn;           // frames until the map-only picture of --dump-ui
     int _frame;
 
     /// <param name="newGame">true for a fresh game from the start screen (the very first one shows the How to play overlay).</param>
@@ -214,6 +216,19 @@ public partial class GameScreen : Control
             GetViewport().GetTexture().GetImage().SavePng(ShotPath);
             GD.Print("Saved screenshot " + ShotPath);
             ShotPath = null;
+            if (DumpPath != null)
+            {
+                // --dump-ui (tools/paper-sync/): what each control draws, then the map alone (every panel hidden) two frames later
+                UiDump.Write(GetTree().Root, DumpPath, ShotPanels());
+                UiDump.HideAllBut(_view);
+                _mapShotIn = 3;
+                return;
+            }
+            GetTree().Quit();
+        }
+        if (_mapShotIn > 0 && --_mapShotIn == 0)
+        {
+            GetViewport().GetTexture().GetImage().SavePng(System.IO.Path.ChangeExtension(DumpPath, ".map.png"));
             GetTree().Quit();
         }
     }

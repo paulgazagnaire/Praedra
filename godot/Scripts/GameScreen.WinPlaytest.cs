@@ -71,6 +71,16 @@ public partial class GameScreen
     /// <summary>Close every management window; their buttons leave the tree now, not at the end of the frame, so a later click can't reach them.</summary>
     internal void MgCloseAll() { foreach (var w in _mgWins.ToList()) { CloseMgmt(w); w.Panel.GetParent()?.RemoveChild(w.Panel); } }
 
+    /// <summary>For --dump-ui: the windows on screen by name (each management window by its key, the sector window, the right-hand panel, the whole screen).</summary>
+    internal List<(string, Control)> ShotPanels()
+    {
+        var l = new List<(string, Control)> { ("Screen", this) };
+        foreach (var w in _mgWins) l.Add((w.Key, w.Panel));
+        if (SectorViewOpen && _secWin != null) l.Add(("Sector", _secWin));
+        if (_drawer.Visible) l.Add(("Panel", _drawer));
+        return l;
+    }
+
     internal string MgTab(string key) => _mgWins.FirstOrDefault(w => w.Key == key)?.Tab;
     internal IReadOnlyList<string> MgTabs(string key) => _mgWins.FirstOrDefault(w => w.Key == key)?.Pages.Keys.ToList() ?? new List<string>();
 
