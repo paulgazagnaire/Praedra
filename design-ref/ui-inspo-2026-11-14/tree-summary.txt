@@ -1,0 +1,14 @@
+{
+  "file": {
+    "id": "01M4XB1NAX45Y7V9FT3DQMTQK1",
+    "name": "Praedra"
+  },
+  "contentHash": {
+    "tokens": "811c9dc5"
+  }
+}
+{
+  "summary": "Frame \"ui-inspo\" (Q33-0) 4815×5766\n  Rectangle \"Computer monitor map\" (PBR-0) 1044×522\n  Rectangle \"Control room monitors\" (PBS-0) 1046×523\n  Rectangle \"Digital display graphic\" (PBT-0) 375×157\n  Rectangle \"Black and white dots grid\" (PBV-0) 368×521\n  Rectangle \"Black and white lines dots\" (PBW-0) 368×376\n  Rectangle \"Black geometric model\" (PC2-0) 535×535\n  Rectangle \"Climbing navigation panel\" (PC3-0) 590×589\n  Rectangle \"Night building lights\" (PCA-0) 368×519\n  Rectangle \"Human silhouette posters\" (PCQ-0) 368×539\n  Rectangle \"Black and white circles\" (PD0-0) 600×600\n  Rectangle \"Black diagonal lines\" (PD1-0) 368×294\n  Rectangle \"Minimalist design elements\" (PD2-0) 587×603\n  Rectangle \"Technical drawing\" (PD3-0) 362×555\n  Rectangle \"Black technical interface\" (PD4-0) 368×417\n  Rectangle \"Futuristic control panel\" (PD6-0) 368×459\n  Rectangle \"Black minimalist design\" (PD8-0) 540×675\n  Rectangle \"Black and white dots sphere\" (PDB-0) 425×600\n  Rectangle \"Financial dashboard\" (PI8-0) 600×450\n  Rectangle \"Black square pattern\" (PIK-0) 540×675\n  Rectangle \"Pink checkered design\" (Q34-0) 600×331\n  Rectangle \"Tech design graphics\" (Q35-0) 450×450\n  Rectangle \"Blue square pattern\" (Q36-0) 368×207\n  Rectangle \"Dark dotted pattern\" (Q37-0) 600×600\n  Rectangle \"Black and white grid\" (Q38-0) 600×750\n  Rectangle \"London scatter plot\" (Q39-0) 600×385\n  Rectangle \"Barcelona city map\" (Q3A-0) 450×229\n  Rectangle \"Black and white graphs\" (Q3B-0) 372×600\n  Rectangle \"Minimalist dot grid poster\" (Q3C-0) 300×337\n  Rectangle \"White geometric patterns\" (Q3D-0) 306×306\n  Rectangle \"Black and white website\" (Q3E-0) 400×300\n  Rectangle \"Dashboard display\" (Q3F-0) 512×384\n  Rectangle \"Black progress bars\" (Q3G-0) 600×600\n  Rectangle \"Credit usage dashboard\" (Q3H-0) 340×255\n  Rectangle \"Financial dashboard\" (Q3I-0) 540×540",
+  "nodeId": "Q33-0",
+  "depth": 10
+}

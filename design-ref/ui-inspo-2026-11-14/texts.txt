@@ -1,0 +1,2 @@
+id	layer name	text (JSON-escaped, verbatim)
+

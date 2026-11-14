@@ -1,0 +1,362 @@
+{
+  "file": {
+    "id": "01M4XB1NAX45Y7V9FT3DQMTQK1",
+    "name": "Praedra"
+  },
+  "contentHash": {
+    "tokens": "811c9dc5"
+  }
+}
+{
+  "styles": {
+    "Q33-0": {
+      "overflow": "clip",
+      "left": -1717,
+      "top": 1073,
+      "width": "4815px",
+      "height": "5766px",
+      "position": "absolute",
+      "backgroundColor": "#FFFFFF"
+    },
+    "PBR-0": {
+      "width": "1044px",
+      "height": "522px",
+      "left": 1237,
+      "top": 4659,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M4Y8DJJ2F4WM7NQPSQ6RRCRH.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "PBS-0": {
+      "width": "1046px",
+      "height": "523px",
+      "left": 1237,
+      "top": 5181,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M4Y88P6YXA18MDZGXCTCBS2W.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "PBT-0": {
+      "width": "375px",
+      "height": "157px",
+      "left": 1237,
+      "top": 4465,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M4Y70GMHNGBQNB8MPWMCVKWF.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "PBV-0": {
+      "width": "368px",
+      "height": "520.5px",
+      "left": 2473,
+      "top": 4465,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M70Z8AQ8Z2BQ3AAZH494SMSC.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "PBW-0": {
+      "width": "368px",
+      "height": "376px",
+      "left": 2877,
+      "top": 4465,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M70ZAXV8JWDWMPZ97K3M3X83.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "PC2-0": {
+      "width": "535px",
+      "height": "535px",
+      "left": 3281,
+      "top": 4465,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M70ZQPD2V5DFN6QEGJYG0110.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "PC3-0": {
+      "width": "589.5px",
+      "height": "588.5px",
+      "left": 3281,
+      "top": 5053,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M70ZR8EGR2SKGJXRZC9CJTSB.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "PCA-0": {
+      "width": "368px",
+      "height": "519px",
+      "left": 1169,
+      "top": 3146,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M70ZXBDBMX0EQ8H30PV9NXW9.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "PCQ-0": {
+      "width": "368px",
+      "height": "538.5px",
+      "left": 612,
+      "top": 3823,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M710CYYX8M9GS0TZ84VCSPQA.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "PD0-0": {
+      "width": "600px",
+      "height": "600px",
+      "left": 2473,
+      "top": 3829,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M710V2Y3FF9NE9Y3KZRC2YFK.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "PD1-0": {
+      "width": "368px",
+      "height": "294px",
+      "left": 3111,
+      "top": 4135,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M710VRAXAC12SP5T4QQW1QF3.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "PD2-0": {
+      "width": "587px",
+      "height": "603px",
+      "left": 3111,
+      "top": 3496,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M710WSG0A768MYVMAJB0T0V5.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "PD3-0": {
+      "width": "362px",
+      "height": "555px",
+      "left": 2711,
+      "top": 3238,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M710X2KVY0ANEZ9900TM1222.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "PD4-0": {
+      "width": "367.5px",
+      "height": "416.5px",
+      "left": 2305,
+      "top": 3376,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M710YPS2VTKNJY957K4VEPFE.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "PD6-0": {
+      "width": "367.5px",
+      "height": "458.5px",
+      "left": 2067,
+      "top": 3829,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M7110CQ9VXDJS5MKH2DAG5GA.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "PD8-0": {
+      "width": "540px",
+      "height": "675px",
+      "left": 3111,
+      "top": 2785,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M71139J3T6C4F6NTE97D441D.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "PDB-0": {
+      "width": "424.5px",
+      "height": "600px",
+      "left": 1604,
+      "top": 3688,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M71163B2R2DA784TBG3B0HZV.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "PI8-0": {
+      "width": "600px",
+      "height": "450px",
+      "left": 1651,
+      "top": 2696,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M75BK5CG20RS4QYV8NE8807R.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "PIK-0": {
+      "width": "540px",
+      "height": "675px",
+      "left": 2337,
+      "top": 2527,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M75CE67KERGAYV2GX4JWSX9X.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "Q34-0": {
+      "width": "600px",
+      "height": "331px",
+      "left": 2007,
+      "top": 1194,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M710GYV587PY1G3MXJMY5VQ9.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "Q35-0": {
+      "width": "450px",
+      "height": "450px",
+      "left": 2666,
+      "top": 1075,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M710H4KVYE0X9Y5C6A5V4HX8.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "Q36-0": {
+      "width": "368px",
+      "height": "207px",
+      "left": 2239,
+      "top": 971,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M710JC3VX99XK3SED3K76CHE.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "Q37-0": {
+      "width": "600px",
+      "height": "600px",
+      "left": 1607,
+      "top": 578,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M710JX1WRD48D2XAFTJ6VVR4.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "Q38-0": {
+      "width": "600px",
+      "height": "750px",
+      "left": 2242,
+      "top": 184,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M7116SK4KHCD162DCEH9405X.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "Q39-0": {
+      "width": "600px",
+      "height": "384.5px",
+      "left": 2891,
+      "top": 632,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M711A6DACSTCQVGEGMXC5GSK.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "Q3A-0": {
+      "width": "450px",
+      "height": "229px",
+      "left": 2891,
+      "top": 375,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M711BZSW3Y7152MX404MYMK0.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "Q3B-0": {
+      "width": "371.5px",
+      "height": "600px",
+      "left": 1186,
+      "top": 578,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M711DJKSQWY0CG9Z3MRRRMGT.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "Q3C-0": {
+      "width": "300px",
+      "height": "336.5px",
+      "left": 1186,
+      "top": 184,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M711GZVGMAF111R995NGT0WT.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "Q3D-0": {
+      "width": "306px",
+      "height": "306px",
+      "left": 3324,
+      "top": 1765,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M75BQ10GXDG6BX22AZRZHZAS.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "Q3E-0": {
+      "width": "400px",
+      "height": "300px",
+      "left": 1558,
+      "top": 221,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M75CF27EE5BT9KPWTKTNAESG.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "Q3F-0": {
+      "width": "512px",
+      "height": "384px",
+      "left": 210,
+      "top": 1815,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M711NVZZB63AAT3FADCXTEV2.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "Q3G-0": {
+      "width": "600px",
+      "height": "600px",
+      "left": 210,
+      "top": 1178,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M711R9YS7KHE1P7WGAQJ5DFZ.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "Q3H-0": {
+      "width": "340px",
+      "height": "255px",
+      "left": 746,
+      "top": 1815,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M711VQ7GM0DQHD9E15ENV6D8.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    },
+    "Q3I-0": {
+      "width": "540px",
+      "height": "540px",
+      "left": 746,
+      "top": 2081,
+      "position": "absolute",
+      "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M75CNGF6DF09H50Z8QXYDN0R.png)",
+      "backgroundSize": "cover",
+      "backgroundPosition": "50%"
+    }
+  }
+}

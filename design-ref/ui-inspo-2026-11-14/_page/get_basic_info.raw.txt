@@ -1,0 +1,96 @@
+{
+  "file": {
+    "id": "01M4XB1NAX45Y7V9FT3DQMTQK1",
+    "name": "Praedra"
+  },
+  "contentHash": {
+    "tokens": "811c9dc5"
+  }
+}
+{
+  "fileName": "Praedra",
+  "pageName": "Art-Direction",
+  "pageId": "p-4-0",
+  "url": "https://app.paper.design/file/01M4XB1NAX45Y7V9FT3DQMTQK1/p-4-0",
+  "rootNodeId": "root_node_p-4-0",
+  "nodeCount": 80,
+  "artboardCount": 1,
+  "artboards": [
+    {
+      "id": "Q33-0",
+      "name": "ui-inspo",
+      "childCount": 34,
+      "width": 4815,
+      "height": 5766,
+      "worldX": -1717,
+      "worldY": 1073
+    }
+  ],
+  "pages": [
+    {
+      "type": "page",
+      "id": "p-1-0",
+      "name": "Page 1",
+      "icon": null,
+      "isActive": false
+    },
+    {
+      "type": "page",
+      "id": "p-4-0",
+      "name": "Art-Direction",
+      "icon": null,
+      "isActive": true
+    },
+    {
+      "type": "page",
+      "id": "p-6-0",
+      "name": "TheCollective",
+      "icon": null,
+      "isActive": false
+    },
+    {
+      "type": "page",
+      "id": "p-5-0",
+      "name": "galaxy",
+      "icon": null,
+      "isActive": false
+    },
+    {
+      "type": "page",
+      "id": "p-2-0",
+      "name": "UIs---V1",
+      "icon": null,
+      "isActive": false
+    },
+    {
+      "type": "page",
+      "id": "p-3-1",
+      "name": "UIs---V2--human",
+      "icon": null,
+      "isActive": false
+    },
+    {
+      "type": "page",
+      "id": "p-7-0",
+      "name": "The Hand",
+      "icon": null,
+      "isActive": false
+    }
+  ],
+  "fontFamilies": [
+    "System Sans-Serif",
+    "Michroma",
+    "Share Tech Mono",
+    "Rajdhani",
+    "Geist Mono",
+    "Space Grotesk",
+    "Inter",
+    "JetBrains Mono",
+    "Geist Pixel",
+    "BitPotion",
+    "Pixelify Sans"
+  ],
+  "tokens": {
+    "items": []
+  }
+}
