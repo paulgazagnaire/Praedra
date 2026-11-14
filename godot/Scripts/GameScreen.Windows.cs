@@ -371,12 +371,12 @@ public partial class GameScreen
                 .Select(kv => (D: Drag.Parse(kv.Key), kv.Value.Words)).Where(x => x.D != null).ToList();
             if (arriving.Count == 0) continue;
             foreach (var empty in z.Flow.GetChildren().OfType<Label>().ToList()) empty.QueueFree(); // "Empty" gives way
-            foreach (var g in arriving.GroupBy(x => (ThingName(x.D.Value), x.D.Value.Kind, Travels(x.Words) ? x.Words : null)))
+            foreach (var x in arriving)   // one tile per unit, never stacked (Paul 2026-11-14)
             {
-                var gd = g.First().D.Value;
-                string words = g.First().Words;
-                var ghost = DragTile(gd, Travels(words) ? words : gd.Kind == 'L' ? LeaderPosts(Cm.Get(gd.Id)) : "moved", g.Count(), ghost: true);
-                ghost.TooltipText = Ui.Wrap($"{(g.Count() > 1 ? $"{g.Count()} × " : "")}{ThingName(gd)}: {words}. It can move again tomorrow.");
+                var gd = x.D.Value;
+                string words = x.Words;
+                var ghost = DragTile(gd, Travels(words) ? words : gd.Kind == 'L' ? LeaderPosts(Cm.Get(gd.Id)) : "moved", 1, ghost: true);
+                ghost.TooltipText = Ui.Wrap($"{ThingName(gd)}: {words}. It can move again tomorrow.");
                 ghost.SetMeta(UiTest.FullName, "Arriving " + gd.Key);
                 z.Flow.AddChild(ghost);
             }
