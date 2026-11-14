@@ -508,15 +508,13 @@ public partial class Main
         gs.View.Select(-1);
     }
 
-    /// <summary>Hand: the Hearth is not tagged and the Enemy HQ button says unknown while the Hand's picture has not shown it.</summary>
+    /// <summary>Hand: the Enemy HQ button says unknown while the Hand's picture has not shown the Hearth.</summary>
     void PlaytestHandHqUnknown(GameScreen gs)
     {
         var s = gs.S;
         Expect(s.Fog.KnownHq(Side.Hand) == null, "the Hand does not know the Hearth at the start");
-        Expect(!gs.MapTags().Any(t => t.Text.Contains("COLLECTIVE HQ")), "no COLLECTIVE HQ (TARGET) tag on the map");
         Expect(gs.ButtonTexts().Contains("Enemy HQ: unknown"), "the Enemy HQ button says unknown");
         Expect(gs.Click("Enemy HQ: unknown") && gs.ToastText.Contains("unknown"), "pressing it says the HQ location is unknown: " + gs.ToastText);
-        Expect(!gs.MapTags().Any(t => t.System == GameBoot.HandCapital), "your capital has no label on the map (Paul 2026-11-11)");
     }
 
     /// <summary>Collective: Move HQ... with a refused order (plain reason), then a real move that arrives.</summary>
@@ -524,7 +522,7 @@ public partial class Main
     {
         var s = gs.S; var me = s.Player; var fm = s.Host.Fleets;
         string hq = s.MyHqSystem;
-        Expect(hq != null && !gs.MapTags().Any(t => t.Text == "YOUR HQ"), $"your HQ at {hq} has no label on the map (Paul 2026-11-11)");
+        Expect(hq != null, "the Collective has an HQ");
         Expect(gs.ButtonTexts().Contains("Enemy HQ"), "the Collective knows the enemy capital");
         Expect(gs.Click("My HQ"), "click My HQ");
         gs.PlayRefresh();

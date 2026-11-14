@@ -143,9 +143,6 @@ public partial class GameScreen
     /// <summary>The rows of the Build tab now: name, can it be ordered here, and the reason shown when not (or the warning when it can).</summary>
     internal IReadOnlyList<(string Name, bool Usable, string Why)> BuildRowsShown => _tab == DrawerTab.Selected && _sysTab == SysTab.Build ? _shownBuildRows.Select(b => (b.Row.Name, b.Usable, b.Why)).ToList() : new();
     internal string SelectedSystemName => _view.Selected >= 0 ? G.Systems[_view.Selected].Name : null;
-    /// <summary>The tags drawn on the map (system, text), as the map asks for them.</summary>
-    internal IEnumerable<(string System, string Text)> MapTags() =>
-        Enumerable.Range(0, G.Systems.Count).Select(i => (G.Systems[i].Name, CapitalTagOf(i)?.Text)).Where(t => t.Text != null);
     internal IReadOnlyList<string> EnemyMarkerSystems() => _fleets.EnemyMarkerSystems();
     internal IReadOnlyList<int> DrawnFleetIds() => _fleets.DrawnFleetIds();
     internal bool DrawnDestroyed(string system) => G.TryFindSystem(system, out int i) && _view.DrawsDestroyed(i);

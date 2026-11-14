@@ -51,8 +51,6 @@ public partial class GalaxyView : Control
     public Func<int, Side?> OwnerOf;
     /// <summary>True for a headquarters / capital system.</summary>
     public Func<int, bool> IsHq;
-    /// <summary>A tag drawn under a system at any zoom ("YOUR HQ", "ENEMY CAPITAL"), or null.</summary>
-    public Func<int, (string Text, Color Color)?> CapitalTag;
     /// <summary>True for a system the player's side has never explored (fog of war): drawn dimmed, owner unknown.</summary>
     public Func<int, bool> IsUnknown;
     /// <summary>Set by the owner: returns the system index of an enemy fleet marker under a screen point, or -1 (clicking it selects that system).</summary>
@@ -485,41 +483,10 @@ public partial class GalaxyView : Control
         if (focus >= 0) DrawArc(SystemScreen(focus), radius + 4f, 0, Mathf.Tau, 32, Colors.White, 2f, true);
         if (Hovered >= 0 && Hovered != focus) DrawArc(SystemScreen(Hovered), radius + 3f, 0, Mathf.Tau, 32, new Color(1, 1, 1, 0.6f), 1.5f, true);
 
-        // capital tags: always visible, so the player can find the headquarters at any zoom
+        // no capital or HQ tags on the map, for either side (Paul 2026-11-11 "Remove this as well" for your own; 2026-11-14 "Remove it" for
+        // the enemy's): the capital ring, the system card and the HQ buttons still show them
         var taken = new LabelSpace();
         var markers = LabelObstacles?.Invoke().ToList() ?? new List<Rect2>(); // fleet markers and the boxes on the map
-        if (CapitalTag != null)
-            for (int i = 0; i < _pos.Length; i++)
-            {
-                if (CapitalTag(i) is not { } tag) continue;
-                var p = SystemScreen(i);
-                if (!screenRect.HasPoint(p)) continue;
-                // the tag carries the system's name too (white), so the name never loses the fight for room next to its own tag
-                int fs = 12;
-                string name = Galaxy.Systems[i].Name + "  ";
-                var nameSize = _font.GetStringSize(name, HorizontalAlignment.Left, -1, fs + 1);
-                var tagSize = _font.GetStringSize(tag.Text, HorizontalAlignment.Left, -1, fs);
-                var size = new Vector2(nameSize.X + tagSize.X, Mathf.Max(nameSize.Y, tagSize.Y));
-                var full = size + new Vector2(10f, 4f);
-                // under the dot if that is clear, else above, right or left: never over another system's dot (QA-76: Sourwater by Charter)
-                var spots = new[]
-                {
-                    p + new Vector2(-full.X / 2f, radius + 12f), p + new Vector2(-full.X / 2f, -radius - 12f - full.Y),
-                    p + new Vector2(radius + 12f, -full.Y / 2f), p + new Vector2(-radius - 12f - full.X, -full.Y / 2f),
-                };
-                var box = new Rect2(spots[0], full);
-                foreach (var at in spots)
-                {
-                    var b = new Rect2(at, full);
-                    if (!taken.Hits(b) && !DotUnder(b, i) && !markers.Any(o => o.Intersects(b))) { box = b; break; }
-                }
-                DrawRect(box, new Color(0.03f, 0.04f, 0.07f, 0.9f));
-                DrawRect(box, tag.Color, false, 1.5f);
-                var baseLine = box.Position + new Vector2(5f, 2f + _font.GetAscent(fs + 1));
-                DrawString(_font, baseLine, name, HorizontalAlignment.Left, -1, fs + 1, Colors.White);
-                DrawString(_font, baseLine + new Vector2(nameSize.X, 0), tag.Text, HorizontalAlignment.Left, -1, fs, tag.Color);
-                taken.Add(box);
-            }
 
         // the hovered sector's name, just above its outline (only on hover: for the selected system it would sit on its fleets' names)
         if (markedShape != null) SectorName(markedShape, MarkedSector, taken, markers);
@@ -528,17 +495,8 @@ public partial class GalaxyView : Control
         DrawSystemNames(focus, radius, screenRect, taken);
     }
 
-    /// <summary>Whether a system dot other than <paramref name="skip"/> lies under a box on screen.</summary>
-    bool DotUnder(Rect2 box, int skip)
-    {
-        var grown = box.Grow(SystemRadius + 2f);
-        for (int j = 0; j < _pos.Length; j++)
-            if (j != skip && grown.HasPoint(SystemScreen(j))) return true;
-        return false;
-    }
-
     /// <summary>A sector's name beside its outline: above it if that spot is free, else below, else at the top corners. Free means off
-    /// the capital tags, the fleet markers, the boxes on the map and the sector's own system dots (QA: "CHARTER SECTOR" sat on Fleet 1).</summary>
+    /// the fleet markers, the boxes on the map and the sector's own system dots (QA: "CHARTER SECTOR" sat on Fleet 1).</summary>
     void SectorName(Vector2[] sectorShape, int sector, LabelSpace taken, List<Rect2> markers)
     {
         string text = _sectors[sector].name.ToUpperInvariant();
@@ -590,7 +548,6 @@ public partial class GalaxyView : Control
             if (!key && unknown && _zoom < UnknownNameZoom) continue;
             if (!key && !unknown && OwnerOf?.Invoke(i) == null && _zoom < NeutralNameZoom) continue;
             if (!key && _zoom < OwnedNameZoom) continue;
-            if (CapitalTag?.Invoke(i) != null) continue; // its name is in the tag
             order.Add((i, LabelRank(i, focus, unknown)));
         }
         if (LabelObstacles != null) foreach (var rect in LabelObstacles()) taken.Add(rect);
