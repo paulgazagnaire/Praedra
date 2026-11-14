@@ -13,7 +13,8 @@ namespace PraedraViewer;
 
 /// <summary>
 /// The fleet panel (user stories C1, C2, C6, C7): where the fleet is and where it goes, its strength and speed, what it is made of (each ship
-/// class explained on hover), its orders (move, troops, fighters, attack), its officers, and split, transfer and merge with the fleets at the
+/// class explained on hover), its orders (move, troops, fighters; attack, the harvester, fight or retreat and scrap are in the Fleet window's Orders tab, one
+/// click away), its officers, and split, transfer and merge with the fleets at the
 /// same system. Only the player's own fleets can be selected.
 /// </summary>
 public partial class GameScreen
@@ -79,6 +80,10 @@ public partial class GameScreen
             "Then click a destination system (or a row of a sector window). The route and arrival day show before anything is sent.", !atSystem, "Primary");
         move.Alignment = HorizontalAlignment.Center;
         if (!atSystem) Note("The fleet is travelling; give orders when it arrives.");
+        // attack, the harvester's strike, fight or retreat and scrap live in the Fleet window's Orders tab only (Paul 2026-11-14, pick 5)
+        Act(S.HoldsHarvester(f) ? "Destroy System, attack, retreat..." : "Attack, retreat, scrap...", () => OpenMgmt(MgKind.Fleet, fleet: f.Id, tab: "Orders"),
+            "Opens the fleet's window on its Orders tab: bombard, invade, the harvester's strike, fight or retreat when an enemy arrives, and scrap the fleet.")
+            .SetMeta(UiTest.FullName, "Fleet orders");
 
         if (atSystem)
         {
@@ -101,7 +106,9 @@ public partial class GameScreen
             }
             if (aboard.Count > 0)
                 Act($"Unload all troops at {at}", () => UnloadTroops(f, aboard.Select(a => a.Regiment.Id).ToList()),
-                    owner == Me ? "Lands the regiments on the planet: they join its garrison." : "Lands the regiments only on a system you hold. To land them here, press Invade.", owner != Me);
+                    owner == Me ? "Lands the regiments on the planet: they join its garrison."
+                    : S.IsDestroyed(at) ? $"Nowhere to land them: {at} is destroyed."
+                    : "Lands the regiments only on a system you hold. To land them here, invade it: Attack, retreat, scrap...", owner != Me);
 
             // fighters (C7)
             var based = FightersBasedAt(at);
@@ -111,29 +118,7 @@ public partial class GameScreen
                     "Puts fighter squadrons based on this planet aboard the fleet's carriers.");
             if (fightersAboard.Count > 0 && owner == Me)
                 Act($"Unload fighters at {at} ({fightersAboard.Count})", () => UnloadFighters(f, fightersAboard.Select(o => o.Id).ToList()), "Bases the squadrons aboard on this planet.");
-
-            // attack
-            if (owner != Me)
-            {
-                bool attackPending = S.PendingOf(f.Id).Any(p => p.StartsWith("Bombard", StringComparison.Ordinal) || p.StartsWith("Invade", StringComparison.Ordinal));
-                Heading($"Attack {at}", "Bombard weakens the defences from orbit. Invade lands the regiments aboard to take the planet: land more than the defenders have.");
-                foreach (var (cat, label, tip) in new[]
-                {
-                    (BombardCategory.Military, "Bombard: military targets", "Shoots at regiments and defence buildings."),
-                    (BombardCategory.Civilian, "Bombard: civilian targets", "Hurts the planet's support for its owner."),
-                    (BombardCategory.General, "Bombard: everything", "Shoots at everything."),
-                })
-                {
-                    var c = cat;
-                    Act(label, () => Bombard(f, c), tip, attackPending);
-                }
-                Act($"Invade {at} with {aboard.Count} regiment(s)", () => Invade(f), aboard.Count == 0 ? "No regiments aboard: load some at one of your planets first." : "Lands the regiments aboard to take the planet.",
-                    aboard.Count == 0 || attackPending, "Primary");
-                if (attackPending) Note("A fleet can carry out one attack order at a time. Press Play (or N for one day) so this one starts, then give the next.");
-            }
         }
-
-        if (atSystem && S.HoldsHarvester(f)) HarvesterSection(f);
 
         // ---- what it is made of (C2)
         Heading("Ships and fighters");
@@ -149,14 +134,6 @@ public partial class GameScreen
         if (f.Ships.Count == 0 && fightersAboard.Count == 0 && f.Squadrons.Count == 0) Line("none", Dim);
 
         OfficersSection(f);
-
-        // battle behaviour
-        Heading("When an enemy fleet arrives");
-        bool retreat = _retreatPending ?? S.Host.Battles.OnContactOf(Me) == OnContactMode.Retreat;
-        var cb = new CheckButton { Text = "Retreat instead of fighting (all your fleets)", ButtonPressed = retreat, FocusMode = FocusModeEnum.None, AutowrapMode = TextServer.AutowrapMode.WordSmart, SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        cb.TooltipText = Ui.Wrap("On: your fleets pull back to a neighbouring system when an enemy arrives, instead of fighting. It applies to every fleet of yours.");
-        cb.Toggled += on => SetRetreat(on);
-        Add(cb);
 
         // split, transfer, merge (C6)
         if (atSystem)
@@ -189,29 +166,10 @@ public partial class GameScreen
             }
             // scrapping cuts upkeep (story C9; rule: m2-maintenance §Scrapping and refunds)
             Act("Scrap the ticked ships...", () => ScrapTicked(f), "Asks first. Half the refined cost comes back and their upkeep is freed.", false, "DangerButton");
-            if (f.Ships.Count > 1)
-                Act($"Scrap the whole fleet ({f.Ships.Count} ships)...", () => AskScrap(f.Ships.Select(eco.Find).Where(o => o != null).ToList(), $"all {f.Ships.Count} ships of {f.Name}", f.At),
-                    "Asks first. Fighters and regiments aboard stay at this system.", false, "DangerButton");
         }
     }
 
     // ================================================================== the harvester (rule: m5-harvester §2)
-
-    void HarvesterSection(Fleet f)
-    {
-        string at = f.At;
-        bool gone = S.IsDestroyed(at);
-        bool pending = S.PendingOf(f.Id).Any(p => p.StartsWith("Destroy System", StringComparison.Ordinal));
-        int? readyDay = S.HarvesterRechargingUntil(f); // the core's cooldown (m5-harvester §2 legality 3a)
-        Heading("harvester");
-        Note("This fleet holds a harvester. Destroy System wipes out the system it is at.");
-        string wait = readyDay is int rd ? S.HarvestWaitText(rd) : "";
-        string tip = readyDay != null ? wait : "Opens a question first. The strike happens as soon as the clock moves.";
-        Act("Destroy System...", () => AskDestroySystem(f.Id), tip, gone || pending || readyDay != null, "DangerButton");
-        if (gone) Line($"{at} is already destroyed.", Dim, Ui.Small);
-        else if (pending) Line("The strike is ordered: it happens as soon as the clock moves.", Pending, Ui.Small);
-        if (readyDay != null) Line(wait, Dim, Ui.Small);
-    }
 
     void AskDestroySystem(int fleetId)
     {
@@ -288,7 +246,7 @@ public partial class GameScreen
         S.Say(on ? "Order sent: your fleets will retreat when an enemy arrives." : "Order sent: your fleets will fight when an enemy arrives.");
         AddLogItem(S.Messages[^1], false);
         RefreshTop();
-        // the setting shows in two places (the panel's box, the Fleet window's Orders tab): both redraw now
+        // the setting shows in the Fleet window's Orders tab; the panel redraws too, so nothing shows the old setting
         _panelDirty = true; _panelTimer = 0;
         MgRefreshSoon();
     }

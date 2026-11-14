@@ -112,7 +112,7 @@ public sealed partial class GameSession
         switch (e)
         {
             case HarvesterDeployed x when Mine(x.Side):
-                yield return new Message(d, $"New harvester ready at {x.System}. Select its fleet and press Destroy System to use it.", x.System, MsgKind.Good);
+                yield return new Message(d, $"New harvester ready at {x.System}. Use Destroy System from Needs you, or from its fleet's Orders tab.", x.System, MsgKind.Good);
                 break;
             case HarvesterDeployed x:
                 _enemyHarvesterAt = x.System;

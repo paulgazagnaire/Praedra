@@ -181,7 +181,8 @@ public partial class GameScreen
 
         Heading("How to take it");
         if (S.Game.State.Fleets.Values.Any(f => f.Side == Me && f.At == name))
-            Note(owner != null ? "Bombard it, then invade with troops aboard your fleet: select your fleet here." : "Nobody holds this planet. Select your fleet here and press Invade with regiments aboard.");
+            Note(owner != null ? "Bombard it, then invade with troops aboard your fleet: both are in the fleet's Orders tab (select your fleet here, then Attack, retreat, scrap...)."
+                : "Nobody holds this planet. Invade with regiments aboard from your fleet's Orders tab (select your fleet here, then Attack, retreat, scrap...).");
         else Note(owner == null && ownerKnown ? "Nobody holds this planet. Send a fleet with regiments aboard, then press Invade; or win the people over with Diplomacy first. You can only build on systems you own."
             : "You can only build on systems you own. To take it, send a fleet with regiments aboard, beat any fleet there, and press Invade.");
     }

@@ -98,9 +98,9 @@ public partial class GameScreen
 
     /// <summary>
     /// The fleet's orders that are not a drag (Paul 2026-11-14: an Orders tab in the Fleet window, rather than only in the right-hand panel):
-    /// bombard and invade the system it is at, the harvester's strike, fight or retreat when an enemy arrives, scrap the fleet. The same
-    /// orders as the panel's (GameScreen.Fleet.cs); the core judges them when the clock moves. rule: m4-bombardment, m4-invasion,
-    /// m5-harvester §2, m2-maintenance §Scrapping and refunds.
+    /// bombard and invade the system it is at, the harvester's strike, fight or retreat when an enemy arrives, scrap the fleet. They live
+    /// here only: the panel's fleet card links to this tab (Ponytail on #297: two copies had drifted). The core judges them when the clock
+    /// moves. rule: m4-bombardment, m4-invasion, m5-harvester §2, m2-maintenance §Scrapping and refunds.
     /// </summary>
     void OrdersTab(Fleet f, bool still, int regiments)
     {
@@ -116,8 +116,10 @@ public partial class GameScreen
         string at = f.At;
 
         // attack the system it is at
-        Section(still && S.OwnerOf(at) != Me ? $"Attack {at}" : "Attack", null, "Bombard weakens the defences from orbit. Invade lands the regiments aboard to take the planet: land more than the defenders have.");
+        bool gone = still && S.IsDestroyed(at);
+        Section(still && !gone && S.OwnerOf(at) != Me ? $"Attack {at}" : "Attack", null, "Bombard weakens the defences from orbit. Invade lands the regiments aboard to take the planet: land more than the defenders have.");
         if (!still) Line($"Travelling: give these orders when it reaches {f.Transit?.Path[^1] ?? "its destination"}.", Ui.Text3, Ui.Small);
+        else if (gone) Line($"{at} is destroyed: there is nothing left to attack.", Ui.Text3, Ui.Small);
         else if (S.OwnerOf(at) == Me) Line($"{at} is yours. Move to a system you don't hold to bombard or invade it.", Ui.Text3, Ui.Small);
         else
         {
@@ -141,14 +143,14 @@ public partial class GameScreen
         // the harvester's strike
         if (still && S.HoldsHarvester(f))
         {
-            bool gone = S.IsDestroyed(at), struck = S.PendingOf(f.Id).Any(p => p.StartsWith("Destroy System", StringComparison.Ordinal));
+            bool struck = S.PendingOf(f.Id).Any(p => p.StartsWith("Destroy System", StringComparison.Ordinal));
             int? readyDay = S.HarvesterRechargingUntil(f);   // the core's cooldown (m5-harvester §2 legality 3a)
             Section("Harvester", null, "Destroy System wipes out the system the harvester is at. It asks first.");
             Order("Destroy System...", () => AskDestroySystem(f.Id), readyDay is int rd0 ? S.HarvestWaitText(rd0) : "Asks first. The strike happens as soon as the clock moves.",
                 gone || struck || readyDay != null, Ui.Danger);
             if (gone) Line($"{at} is already destroyed.", Ui.Text3, Ui.Small);
             else if (struck) Line("The strike is ordered: it happens as soon as the clock moves.", Pending, Ui.Small);
-            else if (readyDay is int rd) Line(S.HarvestWaitText(rd), Ui.Text3, Ui.Small);
+            if (readyDay is int rd) Line(S.HarvestWaitText(rd), Ui.Text3, Ui.Small);   // after a strike too: when the next one can land
         }
 
         // fight or retreat: one setting for every fleet of yours

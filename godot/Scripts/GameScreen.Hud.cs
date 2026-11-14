@@ -139,7 +139,7 @@ public partial class GameScreen
         int fid = f.Id;
         CardButton("Window", () => OpenMgmt(MgKind.Fleet, fleet: fid), "The fleet's window: drag leaders onto its posts, troops and fighters aboard, ships between fleets");
         _selActions.AddChild(Ui.Grow());
-        CardButton("Details →", () => ShowTab(DrawerTab.Selected), "Ships, troops, officers, split and attack, in the window");
+        CardButton("Details →", () => ShowTab(DrawerTab.Selected), "Ships, troops, officers, split and merge in the panel; attack and the other orders one click on");
     }
 
     // ================================================================== the message corner

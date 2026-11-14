@@ -202,17 +202,23 @@ public partial class Main
         gs.PickSystem(target);
         gs.PlayDay();
         Expect(RunUntil(gs, () => troopFleet.At == target, 400), $"fleet reached {target} (day {s.Game.Day})");
+        // the attack orders live in the Fleet window's Orders tab only (Paul 2026-11-14, pick 5); the panel's fleet card opens it
+        gs.MgCloseAll();
         SelectFleetByList(gs, troopFleet);
-        Expect(gs.Has("Bombard: military"), "Bombard buttons show at an enemy/neutral system");
-        Expect(gs.Click("Bombard: military"), "click Bombard");
+        Expect(!gs.Has("Bombard") && !gs.Has("Invade"), "the panel's fleet card has no attack orders of its own");
+        Expect(gs.Click("Fleet orders") && gs.MgTab($"Fleet {troopFleet.Id}") == "Orders", "the fleet card's Attack, retreat, scrap... opens the Fleet window on Orders");
+        Expect(gs.Has("Bombard military"), "Bombard shows in the Orders tab at an enemy/neutral system");
+        Expect(gs.Click("Bombard military"), "click Bombard");
         gs.PlayRefresh();
         Expect(gs.PanelText().Contains("Ordered: Bombard"), "the bombard order shows on the fleet");
-        Expect(!gs.Enabled("Invade"), "Invade is greyed out while a bombard order is waiting (the core allows one attack order per fleet)");
+        Expect(gs.MgText($"Fleet {troopFleet.Id}").Contains("One attack at a time") && !gs.Enabled("Invade"), "Invade is greyed out while a bombard order is waiting (the core allows one attack order per fleet)");
         gs.PlayDay();
         Expect(s.Messages.Any(m => m.Text.Contains("ombard") && m.Text.Contains(target)), "bombardment happened or was explained");
         SelectFleetByList(gs, troopFleet);
+        gs.Click("Fleet orders");
         Expect(gs.Enabled("Invade"), "Invade is enabled with regiments aboard");
         gs.Click("Invade");
+        gs.MgCloseAll();
         int msgBefore = s.Messages.Count;
         for (int i = 0; i < 8; i++) { gs.PlayDay(); if (s.Messages.Skip(msgBefore).Any(m => m.Text.StartsWith("Invasion of", StringComparison.Ordinal))) break; }
         GD.Print("  messages since the invade click: " + string.Join(" | ", s.Messages.Skip(msgBefore).Select(m => $"d{m.Day} {m.Text}")));
@@ -232,7 +238,8 @@ public partial class Main
         if (splitFleet != null)
         {
             SelectFleetByList(gs, splitFleet);
-            Expect(gs.SetCheck("Retreat", true), "tick 'Retreat instead of fighting'");
+            Expect(gs.Click("Fleet orders") && gs.Click("On contact Retreat"), "Retreat from the Orders tab");
+            gs.MgCloseAll();
             int n0 = s.Game.State.Fleets.Values.Count(f => f.Side == me); int sid = splitFleet.Id;
             Expect(gs.TickShip(0), "tick a ship to split off");
             Expect(gs.Click("Split the ticked"), "click Split");
@@ -241,7 +248,8 @@ public partial class Main
             Expect(s.Game.State.Fleets.Values.Count(f => f.Side == me) == n0 + 1, "split made a new fleet");
             Expect(!s.Messages.Skip(refusedBefore).Any(m => m.Text.StartsWith("Order refused: Change the battle", StringComparison.Ordinal)), "retreat switch accepted");
             SelectFleetByList(gs, splitFleet);
-            Expect(gs.SetCheck("Retreat", false), "untick retreat");
+            Expect(gs.Click("Fleet orders") && gs.Click("On contact Fight"), "back to Fight from the Orders tab");
+            gs.MgCloseAll();
             var newest = s.Game.State.Fleets.Values.Where(f => f.Side == me).OrderByDescending(f => f.Id).First();
             SelectFleetByList(gs, newest);
             if (gs.Click("Merge this fleet into"))
