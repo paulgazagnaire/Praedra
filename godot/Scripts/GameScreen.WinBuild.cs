@@ -48,7 +48,7 @@ public partial class GameScreen
         Section("Build");
         if (_buildSection is "Ships" or "Fighters" && !HasYard(n, YardFamily.Shipyard) || _buildSection == "Troops" && !HasYard(n, YardFamily.Training)) _buildSection = "Facilities";
         var chips = new HFlowContainer();   // wraps rather than widening the column
-        chips.AddThemeConstantOverride("h_separation", 2); chips.AddThemeConstantOverride("v_separation", 4);
+        chips.AddThemeConstantOverride("h_separation", 10); chips.AddThemeConstantOverride("v_separation", 4);
         Container top = chips;
         var group = new ButtonGroup();
         foreach (var section in new[] { "Facilities", "Ships", "Fighters", "Troops" })
@@ -58,21 +58,28 @@ public partial class GameScreen
             var b = Ui.Chip(section, () => { _buildSection = sec; MgRefreshSoon(); },
                 HasYard(n, fam) ? $"Built by the {FamilyName(fam).ToLowerInvariant()} here" : $"Needs a {FamilyName(fam).ToLowerInvariant()} on this planet", _buildSection == section, group);
             b.FocusMode = FocusModeEnum.None;
-            if (!HasYard(n, fam)) b.AddThemeColorOverride("font_color", Ui.Text3);
+            b.ThemeTypeVariation = "TabChip";   // drawn exactly like the window's tabs (Paul 2026-11-14)
+            // greyed out with no yard: Ships, Fighters, Troops can't be picked (no hover, no underline; the tooltip says why). Facilities
+            // stays clickable: it is the page shown when there is no yard, and it says so
+            if (!HasYard(n, fam))
+            {
+                if (section == "Facilities") b.AddThemeColorOverride("font_color", Ui.Dimmed);
+                else { b.Disabled = true; b.MouseDefaultCursorShape = CursorShape.Arrow; }
+            }
             top.AddChild(b);
         }
         Add(chips);
         top = Ui.HBox(4);
         top.AddChild(Ui.Label("How many", null, Ui.Text3, Ui.Tiny, wrap: false));
-        var less = Ui.Button("-", () => { _buildQty = Math.Max(1, _buildQty - 1); MgRefreshSoon(); }, "One fewer", "Chip");
-        less.CustomMinimumSize = new Vector2(28, 26);
+        var less = Ui.Button("−", () => { _buildQty = Math.Max(1, _buildQty - 1); MgRefreshSoon(); }, "One fewer", "Step");
+        less.CustomMinimumSize = new Vector2(24, 24);
         top.AddChild(less);
         var ql = Ui.Label(_buildQty.ToString(), null, Ui.Text, Ui.Small, wrap: false);
         ql.AddThemeFontOverride("font", Ui.Num);
         ql.CustomMinimumSize = new Vector2(22, 0); ql.HorizontalAlignment = HorizontalAlignment.Center;
         top.AddChild(ql);
-        var more = Ui.Button("+", () => { _buildQty = Math.Min(20, _buildQty + 1); MgRefreshSoon(); }, "One more (up to 20)", "Chip");
-        more.CustomMinimumSize = new Vector2(28, 26);
+        var more = Ui.Button("+", () => { _buildQty = Math.Min(20, _buildQty + 1); MgRefreshSoon(); }, "One more (up to 20)", "Step");
+        more.CustomMinimumSize = new Vector2(24, 24);
         top.AddChild(more);
         Add(top);
 
@@ -132,8 +139,8 @@ public partial class GameScreen
         var eco = S.Host.Economy;
         var p = S.Host.Construction.ProjectAt(n, fam);
         bool idle = p is not { Units.Count: > 0 };
-        var card = new PanelContainer { MouseFilter = MouseFilterEnum.Stop, CustomMinimumSize = new Vector2(150, 0) };
-        card.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Panel2, 8, idle ? new Color(Ui.Warn, 0.5f) : new Color(Ui.You, 0.3f), 1, 8, 8));
+        var card = new PanelContainer { MouseFilter = MouseFilterEnum.Stop, CustomMinimumSize = new Vector2(148, 0) };   // two to a row in 306 px
+        card.AddThemeStyleboxOverride("panel", Ui.Box(new Color(0, 0, 0, 0), 0, idle ? new Color(Ui.Warn, 0.5f) : new Color(Ui.You, 0.3f), 1, 8, 8));
         card.SetMeta(UiTest.FullName, $"Yard {n} {fam}");
         card.MouseDefaultCursorShape = CursorShape.PointingHand;
         string sec = SectionOf(fam);
@@ -148,7 +155,7 @@ public partial class GameScreen
         var icon = UnitIcon.For(kind, Me == Side.Hand, idle ? Ui.Warn : Ui.You, 1, new Vector2(40, 28));
         icon.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         h.AddChild(icon);
-        var name = Ui.Label(fam == YardFamily.Construction ? "Construction" : FamilyName(fam), null, Ui.Text, Ui.Small, wrap: false);
+        var name = Ui.Label(fam switch { YardFamily.Construction => "Construction", YardFamily.Training => "Training", _ => FamilyName(fam) }, null, Ui.Text, Ui.Small, wrap: false);
         name.AddThemeFontOverride("font", Ui.SemiBold);
         name.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         h.AddChild(name);
@@ -172,7 +179,7 @@ public partial class GameScreen
         foot.AddChild(Ui.Label(left <= 0 ? "done next cycle" : $"~{left} {Plural(left, "day", "days")} left", null, Ui.Text3, Ui.Tiny, wrap: false));
         foot.AddChild(Ui.Grow());
         var f2 = fam;
-        var stop = Ui.Button("Stop...", () => AskStopBuild(n, f2), "Stops all work at this yard: asks first and says what is lost.", "Link");
+        var stop = Ui.Link("Stop...", () => AskStopBuild(n, f2), "Stops all work at this yard: asks first and says what is lost.");
         stop.AddThemeFontSizeOverride("font_size", Ui.Tiny);
         foot.AddChild(stop);
         v.AddChild(foot);
@@ -200,24 +207,27 @@ public partial class GameScreen
         btn.SetMeta(UiTest.FullName, $"Build {r.Name}");
         btn.CustomMinimumSize = new Vector2(TileW, 146);
         btn.FocusMode = FocusModeEnum.None;
-        btn.AddThemeStyleboxOverride("normal", Ui.Box(Ui.Panel2, 8, new Color(Ui.You, 0.3f), 1, 0, 0));
-        btn.AddThemeStyleboxOverride("hover", Ui.Box(Ui.Hover, 8, new Color(Ui.You, 0.8f), 1, 0, 0));
-        btn.AddThemeStyleboxOverride("pressed", Ui.Box(new Color(Ui.You, 0.18f), 8, Ui.You, 1, 0, 0));
-        btn.AddThemeStyleboxOverride("disabled", Ui.Box(new Color(Ui.Panel2, 0.5f), 8, new Color(1, 1, 1, 0.05f), 1, 0, 0));
-        var ink = b.Usable ? Ui.You : Ui.Text3;
+        var clear = new Color(0, 0, 0, 0);
+        // a choice is a plain card like every other (Paul 2026-11-14): grey edge, lighter on hover; blue stays for the units you own
+        btn.AddThemeStyleboxOverride("normal", Ui.Box(clear, 0, Ui.WinLine, 1, 0, 0));
+        btn.AddThemeStyleboxOverride("hover", Ui.Box(clear, 0, Ui.WinText, 1, 0, 0));
+        btn.AddThemeStyleboxOverride("pressed", Ui.Box(clear, 0, Ui.WinActive, 1, 0, 0));
+        btn.AddThemeStyleboxOverride("disabled", Ui.Box(clear, 0, Ui.WinLine, 1, 0, 0));
+        var ink = b.Usable ? Ui.You : Ui.Dimmed;
         var v = Ui.VBox(2);
         v.MouseFilter = MouseFilterEnum.Ignore;
         v.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         v.OffsetLeft = 6; v.OffsetRight = -6; v.OffsetTop = 6; v.OffsetBottom = -4;
-        if (UnitArt.Has(r.Name)) // a painted picture of the class (art/units/units.json)
+        // a painted picture of the class (art/units/units.json); what you can't build yet gets its drawn icon in solid grey instead of a
+        // see-through painting (Paul 2026-11-14); the hover card still shows the painting
+        if (UnitArt.Has(r.Name) && b.Usable)
         {
             var pic = UnitArt.Rect(UnitArt.Thumb(r.Name));
             pic.CustomMinimumSize = new Vector2(0, 40);
-            if (!b.Usable) pic.Modulate = new Color(1, 1, 1, 0.45f);
             v.AddChild(pic);
         }
         else v.AddChild(UnitIcon.For(KindOf(r.Category, r.Name), hand, ink, SizeOfClass(r.Name), new Vector2(0, 36)));
-        var t = Ui.Label(r.Name, null, b.Usable ? Ui.Text : Ui.Text3, Ui.Small, wrap: true);
+        var t = Ui.Label(r.Name, null, b.Usable ? Ui.Text : Ui.Dimmed, Ui.Small, wrap: true);
         t.AddThemeFontOverride("font", Ui.Medium);
         t.HorizontalAlignment = HorizontalAlignment.Center;
         t.MaxLinesVisible = 2;
@@ -226,14 +236,14 @@ public partial class GameScreen
         // QA-89: cost and days on their own lines, so a big number is never clipped ("584 ref" read as "84")
         foreach (var line in new[] { $"{r.Cost} ref", $"{b.Days} d" })
         {
-            var c = Ui.Label(line, null, b.Usable ? Ui.Text2 : Ui.Text3, Ui.Tiny, wrap: false);
+            var c = Ui.Label(line, null, b.Usable ? Ui.Text2 : Ui.Dimmed, Ui.Tiny, wrap: false);
             c.HorizontalAlignment = HorizontalAlignment.Center;
             v.AddChild(c);
         }
         if (b.Why != null)
         {
             // wraps to two lines so "waits for refined" or "not researched" reads in full (QA round 126)
-            var why = Ui.Label(b.Why, null, b.Usable ? Ui.Warn : Ui.Text3, Ui.Tiny, wrap: true);
+            var why = Ui.Label(b.Why, null, b.Usable ? Ui.Warn : Ui.Dimmed, Ui.Tiny, wrap: true);
             why.HorizontalAlignment = HorizontalAlignment.Center;
             why.MaxLinesVisible = 2; why.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
             v.AddChild(why);

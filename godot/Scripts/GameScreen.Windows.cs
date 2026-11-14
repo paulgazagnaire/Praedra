@@ -90,9 +90,6 @@ public partial class GameScreen
     const int MgWidth = 344;
     const int SlotGap = 10;
 
-    static readonly Color ZoneBg = new("0e0f12");
-    static readonly Color ZoneLine = new(1, 1, 1, 0.07f);
-
     internal int MgmtCount => _mgWins.Count;
     internal IEnumerable<string> MgmtKeys => _mgWins.Select(w => w.Key);
 
@@ -102,8 +99,8 @@ public partial class GameScreen
     {
         _mgLayer = new Control { MouseFilter = MouseFilterEnum.Ignore, Name = "Windows" };
         _mgLayer.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        _dragHint = new PanelContainer { Visible = false, MouseFilter = MouseFilterEnum.Ignore, ZIndex = 10 };
-        _dragHint.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Chrome, 6, new Color(1, 1, 1, 0.14f), 1, 10, 6));
+        _dragHint = new PanelContainer { Visible = false, MouseFilter = MouseFilterEnum.Ignore, ZIndex = 10, Theme = Ui.WindowTheme };
+        _dragHint.AddThemeStyleboxOverride("panel", Ui.WindowBox(10, 6));
         _dragHintText = Ui.Label("", null, Ui.Text, Ui.Small, wrap: false);
         _dragHint.AddChild(_dragHintText);
         _mgLayer.AddChild(_dragHint);
@@ -154,17 +151,24 @@ public partial class GameScreen
         _mgLayer.MoveChild(_dragHint, _mgLayer.GetChildCount() - 1);
     }
 
+    // Paul's "styles" frame (2026-11-11, his answers 2026-11-14): 16 px inside the edge, 24 px between the head, the tabs and the content
+    const int WinPad = 16;
+    const int WinGap = 24;
+    const int WinButton = 24;    // a window button is 24 x 24, 4 px apart
+    const int NameGap = 26;      // at least this between the name and the buttons
+
     void BuildMgWin(MgWin w)
     {
-        w.Panel = new PanelContainer { MouseFilter = MouseFilterEnum.Stop, CustomMinimumSize = new Vector2(MgWidth, 0) };
+        using var look = Ui.Window();
+        w.Panel = new PanelContainer { MouseFilter = MouseFilterEnum.Stop, CustomMinimumSize = new Vector2(MgWidth, 0), Theme = Ui.WindowTheme };
         w.Panel.SetMeta(UiTest.FullName, "Window " + w.Key);
-        // no shadow under the window (Paul 2026-11-11: "Remove the shadows under the windows entirely")
-        w.Panel.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Chrome, 12, new Color(1, 1, 1, 0.1f), 1, 0, 0));
+        // square, a thin edge, no shadow (Paul 2026-11-11: "Remove the shadows under the windows entirely")
+        w.Panel.AddThemeStyleboxOverride("panel", Ui.WindowBox());
         w.Panel.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true } && _mgWins.Count > 0 && _mgWins[^1] != w) Front(w); };
         var v = Ui.VBox(0);
         w.Panel.AddChild(v);
-        var headPad = Pad(16, 10, 10, 0);
-        w.Head = Ui.VBox(Ui.Gap);
+        var headPad = Pad(WinPad, WinPad, WinPad, WinGap);   // the 24 px under the head is outside the scroll, so a scrolled page never touches it
+        w.Head = Ui.VBox(WinGap);
         headPad.AddChild(w.Head);
         v.AddChild(headPad);
         // the head moves the window; let go near one of the four places and it snaps there
@@ -180,15 +184,14 @@ public partial class GameScreen
             }
             else if (e is InputEventMouseMotion && grab is Vector2 g) { w.Panel.Position = ClampWin(w.Panel.GetGlobalMousePosition() - g, w.Panel.Size); }
         };
-        var line = new ColorRect { Color = new Color(1, 1, 1, 0.06f), CustomMinimumSize = new Vector2(0, 1), MouseFilter = MouseFilterEnum.Ignore };
-        v.AddChild(line);
+        // no line under the head: the tab's underline closes it (Paul's "styles" frame)
         w.Scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
         v.AddChild(w.Scroll);
-        var bodyPad = Pad(16, 16, 12, 14);
+        var bodyPad = Pad(WinPad, WinPad, 0, WinPad);
         bodyPad.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         w.Scroll.AddChild(bodyPad);
         w.Body = Ui.VBox(Ui.Block);
-        w.Body.CustomMinimumSize = new Vector2(MgWidth - 34, 0);
+        w.Body.CustomMinimumSize = new Vector2(MgWidth - 34 - 4, 0);   // 4 px spare for the scroll grabber, so a long page never widens the window
         bodyPad.AddChild(w.Body);
         _mgLayer.AddChild(w.Panel);
         _mgLayer.MoveChild(_dragHint, _mgLayer.GetChildCount() - 1);
@@ -262,8 +265,8 @@ public partial class GameScreen
         void Size()
         {
             if (!IsInstanceValid(w.Panel)) return;
-            float head = w.Head.GetParent<Control>().GetCombinedMinimumSize().Y + 1;
-            float h = w.Min ? head + 10 : Math.Min(SlotHeight, _mgLayer.Size.Y - w.Panel.Position.Y - BottomClear);
+            float head = w.Head.GetParent<Control>().GetCombinedMinimumSize().Y + 2; // the edge, top and bottom
+            float h = w.Min ? head - WinGap + WinPad : Math.Min(SlotHeight, _mgLayer.Size.Y - w.Panel.Position.Y - BottomClear);
             w.Panel.Size = new Vector2(MgWidth, Math.Max(w.Min ? 0 : 160, h));
             if (keepScroll >= 0) w.Scroll.ScrollVertical = (int)keepScroll;
         }
@@ -291,6 +294,7 @@ public partial class GameScreen
     void TickMgmt(double delta)
     {
         NewDay();
+        HideCoveredNotes();
         bool dragging = GetViewport().GuiIsDragging() || _shotDrag != null;
         if (_shotDrag is { } sd) _dragging = sd;
         if (dragging != _wasDragging) { _wasDragging = dragging; LightZones(dragging ? _dragging : null); }
@@ -307,6 +311,7 @@ public partial class GameScreen
 
     void RebuildMg(MgWin w)
     {
+        using var look = Ui.Window();   // everything built here has the window look
         NewDay();
         if (w.Kind == MgKind.Fleet && (!S.Game.State.Fleets.TryGetValue(w.Fleet, out var gone) || gone.Side != Me)) { CloseMgmt(w); return; } // merged away or lost
         float keep = w.Scroll.ScrollVertical;
@@ -342,53 +347,124 @@ public partial class GameScreen
                 z.Flow.AddChild(ghost);
             }
         }
+        // a zone whose only unit was just dragged away shows "Empty" in its dashed frame, so it keeps its size and can take the unit back
+        foreach (var z in _zones.Where(z => w.Panel.IsAncestorOf(z.Box)))
+        {
+            if (z.Flow.GetChildren().OfType<Control>().Any(c => c.Visible && !c.IsQueuedForDeletion())) continue;
+            bool post = z.Key.EndsWith(" General", StringComparison.Ordinal) || z.Key.EndsWith(" Admiral", StringComparison.Ordinal)
+                || z.Key.EndsWith(" Commander", StringComparison.Ordinal);
+            z.Flow.AddChild(EmptySlot("Empty", slot: post));
+        }
         Fit(w, keep);
+    }
+
+    /// <summary>
+    /// The notes under the search (the pill, the orders card, the toasts) sit under the window columns. A note a window covers even in part
+    /// is hidden whole, so no half note or doubled edge shows between the columns; it comes back when the windows move or close. Alpha and
+    /// no mouse for the note and everything in it, not Visible: the game switches these on and off itself. Runs each frame and right after
+    /// the notes are laid out (so a note the game shows again is never drawn for a frame before it is checked).
+    /// </summary>
+    void HideCoveredNotes()
+    {
+        if (_topCentre == null) return;
+        var wins = new List<Rect2>();
+        foreach (var w in _mgWins) if (IsInstanceValid(w.Panel) && w.Panel.IsVisibleInTree()) wins.Add(w.Panel.GetGlobalRect());
+        if (_secWin != null && IsInstanceValid(_secWin) && _secWin.IsVisibleInTree()) wins.Add(_secWin.GetGlobalRect());
+        foreach (var c in _topCentre.GetChildren().OfType<Control>())
+        {
+            if (c == _searchResults || c.GetIndex() == 0 || !c.Visible) continue;   // the search bar sits above the windows; its results stay
+            bool covered = wins.Any(r => r.Intersects(c.GetGlobalRect()));
+            var want = covered ? new Color(1, 1, 1, 0) : Colors.White;
+            if (c.Modulate == want) continue;
+            c.Modulate = want;
+            c.MouseBehaviorRecursive = covered ? MouseBehaviorRecursiveEnum.Disabled : MouseBehaviorRecursiveEnum.Inherited;
+        }
     }
 
     static bool Travels(string words) => words.StartsWith("on the way", StringComparison.Ordinal) || words.StartsWith("flies", StringComparison.Ordinal);
 
-    /// <summary>The head of a window: a caption in small capitals, the title, fold and close buttons; then, optionally, a line under it.</summary>
-    void MgHead(MgWin w, string caption, string title, Color titleColor, string sub = null, Control extra = null)
+    /// <summary>
+    /// The head of a window (Paul's "styles" frame): on the left the line saying where it is, the name in pixel capitals and a line of key
+    /// numbers under it (Paul kept both lines, 2026-11-14); on the right, pinned to the edge, the window buttons ⋮⋮ – ×. The name is #7D8699
+    /// whoever's it is, red when harvested, darkest grey when unexplored (the caller says which). <paramref name="grip"/> is the fleet's own
+    /// ⋮⋮ (drag it to merge); any other window gets a ⋮⋮ that moves the window (Paul 2026-11-14), as its whole head does.
+    /// </summary>
+    void MgHead(MgWin w, string caption, string title, Color titleColor, string sub = null, Control badge = null, Control grip = null)
     {
-        var row = Ui.HBox(Ui.Block);
-        row.MouseFilter = MouseFilterEnum.Ignore;
-        var names = Ui.VBox(2);
-        names.MouseFilter = MouseFilterEnum.Ignore;
-        names.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        // the caption on its own line across the window, then the name with the buttons beside it, centred on it as in Paul's guide,
+        // then the stats line and the badge, which wrap rather than lose words
+        var block = Ui.VBox(4);
+        block.MouseFilter = MouseFilterEnum.Ignore;
         var cap = Ui.Label(caption.ToUpperInvariant(), null, Ui.Text3, Ui.Tiny, wrap: false);
         cap.AddThemeFontOverride("font", Ui.Caps);
         cap.MouseFilter = MouseFilterEnum.Ignore;
         cap.ClipText = true;   // a long caption must not widen the column
         cap.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;   // QA-90: cut with "…", not mid-word
-        names.AddChild(cap);
-        var t = Ui.Label(title, null, titleColor, 20, wrap: false);
-        t.AddThemeFontOverride("font", Ui.SemiBold);
+        block.AddChild(cap);
+
+        var row = Ui.HBox(NameGap);
+        row.MouseFilter = MouseFilterEnum.Ignore;
+        var buttons = Ui.HBox(4);
+        buttons.MouseFilter = MouseFilterEnum.Ignore;
+        buttons.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        grip ??= MoveGrip();
+        buttons.AddChild(grip);
+        var fold = Ui.Button(w.Min ? "+" : "–", () => ToggleMin(w), w.Min ? "Unfold (or double-click the title)" : "Fold to the title (or double-click it)", "Clock");
+        fold.SetMeta(UiTest.FullName, "Fold " + w.Key);
+        fold.CustomMinimumSize = new Vector2(WinButton, WinButton);
+        buttons.AddChild(fold);
+        var close = Ui.Button("×", () => CloseMgmt(w), "Close (Esc)", "Clock");
+        close.SetMeta(UiTest.FullName, "Close " + w.Key);
+        close.CustomMinimumSize = new Vector2(WinButton, WinButton);
+        buttons.AddChild(close);
+
+        // the name: BitPotion 48 px, or 32 px when it does not fit beside the buttons (Paul 2026-11-14)
+        string upper = title.ToUpperInvariant();
+        float room = MgWidth - 2 - 2 * WinPad - NameGap - 3 * WinButton - 2 * 4;
+        int size = Ui.NameSize(upper, room);
+        var t = Ui.Label(upper, null, titleColor, size, wrap: false);
+        t.AddThemeFontOverride("font", Ui.NameFont(size, upper));
+        t.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        t.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         t.ClipText = true;
         t.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
         t.MouseFilter = MouseFilterEnum.Ignore;
-        names.AddChild(t);
-        row.AddChild(names);
-        if (extra != null) { extra.SizeFlagsVertical = SizeFlags.ShrinkCenter; row.AddChild(extra); }
-        var fold = Ui.Button(w.Min ? "▢" : "–", () => ToggleMin(w), w.Min ? "Unfold (or double-click the title)" : "Fold to the title (or double-click it)", "Clock");
-        fold.SetMeta(UiTest.FullName, "Fold " + w.Key);
-        fold.CustomMinimumSize = new Vector2(28, 28);
-        fold.SizeFlagsVertical = SizeFlags.ShrinkBegin;
-        row.AddChild(fold);
-        var close = Ui.Button("✕", () => CloseMgmt(w), "Close (Esc)", "Clock");
-        close.SetMeta(UiTest.FullName, "Close " + w.Key);
-        close.CustomMinimumSize = new Vector2(28, 28);
-        close.SizeFlagsVertical = SizeFlags.ShrinkBegin;
-        row.AddChild(close);
-        w.Head.AddChild(row);
-        if (sub != null) { var sl = Ui.Label(sub, null, Ui.Text2, Ui.Small, wrap: false); sl.ClipText = true; sl.MouseFilter = MouseFilterEnum.Ignore; w.Head.AddChild(sl); }
+        row.AddChild(t);
+        row.AddChild(buttons);
+        block.AddChild(row);
+
+        if (sub != null) { var sl = Ui.Label(sub, null, Ui.Text2, Ui.Small); sl.MouseFilter = MouseFilterEnum.Ignore; block.AddChild(sl); }
+        if (badge != null) { badge.SizeFlagsHorizontal = SizeFlags.ShrinkBegin; block.AddChild(badge); }
+        w.Head.AddChild(block);
     }
 
-    /// <summary>Small buttons at the foot of a window that open its neighbours.</summary>
+    /// <summary>⋮⋮ on a planet's window: the handle that moves it to another column (Paul 2026-11-14). The events pass on to the head, which
+    /// does the moving and the snapping.</summary>
+    static Label MoveGrip()
+    {
+        var g = WindowGlyph("⋮⋮");
+        g.MouseFilter = MouseFilterEnum.Pass;
+        g.MouseDefaultCursorShape = CursorShape.Move;
+        g.TooltipText = "Drag to move the window to another column";
+        return g;
+    }
+
+    /// <summary>A window button's glyph as a plain label (the grips): 24 x 24, JetBrains Mono 24 px, #909EBD.</summary>
+    static Label WindowGlyph(string glyph)
+    {
+        var g = Ui.Label(glyph, null, Ui.WinActive, 24, wrap: false);
+        g.AddThemeFontOverride("font", Ui.GripFont);
+        g.CustomMinimumSize = new Vector2(WinButton, WinButton);
+        g.HorizontalAlignment = HorizontalAlignment.Center; g.VerticalAlignment = VerticalAlignment.Center;
+        return g;
+    }
+
+    /// <summary>Links at the foot of a window that open its neighbours: underlined words (Paul 2026-11-14), not buttons.</summary>
     void MgLinks(params (string Text, Action Do, string Tip)[] links)
     {
         var h = new HFlowContainer();
-        h.AddThemeConstantOverride("h_separation", 6); h.AddThemeConstantOverride("v_separation", 6);
-        foreach (var (text, act, tip) in links) h.AddChild(Ui.Button(text, act, tip, "Chip"));
+        h.AddThemeConstantOverride("h_separation", 16); h.AddThemeConstantOverride("v_separation", 6);
+        foreach (var (text, act, tip) in links) h.AddChild(Ui.Link(text, act, tip));
         Add(Ui.Space(4));
         Add(h);
     }
@@ -402,7 +478,7 @@ public partial class GameScreen
         h.AddChild(l);
         if (right != null) { var r = Ui.Label(right, null, Ui.Text3, Ui.Tiny, wrap: false); r.AddThemeFontOverride("font", Ui.Num); h.AddChild(r); }
         if (tip != null) { h.TooltipText = Ui.Wrap(tip); h.MouseFilter = MouseFilterEnum.Pass; }
-        Add(Ui.Space(6));
+        if ((_into ?? _pv).GetChildCount() > 0) Add(Ui.Space(6));   // the first part of a page sits on the window's 24 px margin
         Add(h);
     }
 }

@@ -57,10 +57,14 @@ public partial class GameScreen
 
     string HullWords(EconObject o) => Fm.ClassOf(o) is { } sc && o.Hull < sc.Hull ? $"hull {o.Hull * 100 / Math.Max(1, sc.Hull)}%" : null;
 
-    Label EmptySlot(string text)
+    /// <summary>A place nobody fills yet: its words in the darkest grey in a dashed frame (Paul 2026-11-14). <paramref name="slot"/>: one
+    /// post (the General, an Admiral), drawn the size of a tile.</summary>
+    Label EmptySlot(string text, bool slot = false)
     {
-        var l = Ui.Label(text, null, Ui.Text3, Ui.Tiny, wrap: false);
-        l.CustomMinimumSize = new Vector2(0, 34);
+        var l = Ui.Label(text, null, Ui.Dimmed, Ui.Tiny, wrap: false);
+        l.AddThemeStyleboxOverride("normal", Ui.Dashed(8, 6));
+        l.CustomMinimumSize = slot ? new Vector2(TileW, TileH) : new Vector2(0, 34);
+        if (slot) l.HorizontalAlignment = HorizontalAlignment.Center;
         l.VerticalAlignment = VerticalAlignment.Center;
         l.MouseFilter = MouseFilterEnum.Ignore;
         return l;
@@ -70,13 +74,14 @@ public partial class GameScreen
     {
         var box = new PanelContainer { MouseFilter = MouseFilterEnum.Stop };
         box.SetMeta(UiTest.FullName, "Zone " + key);
-        box.AddThemeStyleboxOverride("panel", ZoneStyle(null, dashed));
+        string look = dashed ? "dashed" : "plain";
+        box.SetMeta("look", look);
+        box.AddThemeStyleboxOverride("panel", ZoneStyle(null, look));
         var flow = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore };
         flow.AddThemeConstantOverride("h_separation", 6); flow.AddThemeConstantOverride("v_separation", 6);
         box.AddChild(flow);
         var zone = new Zone(key, box, flow, refuse, drop, verb);
         _zones.Add(zone);
-        box.SetMeta("dashed", dashed);
         box.SetDragForwarding(new Callable(),
             Callable.From((Func<Vector2, Variant, bool>)((_, data) => Drag.Parse(data) is { } d && Judge(zone, d) == null)),
             Callable.From((Action<Vector2, Variant>)((_, data) =>
@@ -92,16 +97,30 @@ public partial class GameScreen
     /// <summary>Whether a drop may happen here (null), quietly not (""), or not, and why.</summary>
     string Judge(Zone z, Drag d) => d.Kind is not ('L' or 'M') && _scrapped.Contains(d.Id) ? $"{ThingName(d)} is being scrapped." : _moved.TryGetValue(d.Key, out var m) ? (z.Refuse(d) == "" ? "" : $"{ThingName(d)} already moves today: {m.Words}.") : z.Refuse(d);
 
-    /// <summary>A zone's look: quiet; lit blue where the chip being dragged can go; dim where it can't.</summary>
-    static StyleBoxFlat ZoneStyle(bool? ok, bool dashed)
+    /// <summary>
+    /// A zone's look (Paul 2026-11-14, kept simple): a plain zone draws nothing, only what stands in it; a fleet's row has a thin line, the
+    /// row shown in a fleet window a #909EBD one; a slot for a new fleet is dashed. While a chip is dragged, the zones it can go to are
+    /// outlined blue, and the ones it can't are dimmed.
+    /// </summary>
+    static StyleBox ZoneStyle(bool? ok, string look)
     {
-        var sb = ok switch
+        var clear = new Color(0, 0, 0, 0);
+        bool plain = look is not ("dashed" or "row" or "selected");
+        if (ok == true)
         {
-            true => Ui.Box(new Color(Ui.You, 0.10f), 8, new Color(Ui.You, 0.85f), 1, 6, 6),
-            false => Ui.Box(new Color(ZoneBg, 0.6f), 8, new Color(1, 1, 1, 0.03f), 1, 6, 6),
-            _ => Ui.Box(dashed ? new Color(0, 0, 0, 0) : ZoneBg, 8, dashed ? new Color(1, 1, 1, 0.14f) : ZoneLine, 1, 6, 6),
+            // a plain zone has no inner margin, so its blue line is drawn 4 px outside it: the tiles don't move
+            var lit = Ui.Box(clear, 0, Ui.You, 1, plain ? 0 : 6, plain ? 0 : 6);
+            if (plain) lit.SetExpandMarginAll(4);
+            return lit;
+        }
+        return look switch
+        {
+            "dashed" => Ui.Dashed(6, 6),
+            // 4 px at the sides: two rows of 150 px fit beside the scroll grabber and "3 ships · str 112" is never cut
+            "row" => Ui.Box(clear, 0, Ui.WinLine, 1, 4, 6),
+            "selected" => Ui.Box(clear, 0, Ui.WinActive, 1, 4, 6),
+            _ => new StyleBoxEmpty(),
         };
-        return sb;
     }
 
     void LightZones(Drag? d)
@@ -109,10 +128,10 @@ public partial class GameScreen
         foreach (var z in _zones)
         {
             if (!IsInstanceValid(z.Box)) continue;
-            bool dashed = z.Box.HasMeta("dashed") && z.Box.GetMeta("dashed").AsBool();
+            string look = z.Box.HasMeta("look") ? z.Box.GetMeta("look").AsString() : "plain";
             string why = d is { } dd ? Judge(z, dd) : "";
             bool? ok = why == null ? true : why == "" ? null : false; // where it already is stays quiet
-            z.Box.AddThemeStyleboxOverride("panel", ZoneStyle(ok, dashed));
+            z.Box.AddThemeStyleboxOverride("panel", ZoneStyle(ok, look));
             z.Box.Modulate = ok == false ? new Color(1, 1, 1, 0.55f) : Colors.White;
         }
     }
@@ -134,7 +153,9 @@ public partial class GameScreen
             var take = Input.IsKeyPressed(Key.Shift) ? ds : ds.Take(1).ToList();
             _dragging = take[0];
             _dragCount = take.Count;
+            using var look = Ui.Window();   // the tile under the mouse looks like the one in the window
             var prev = DragTile(take[0], take.Count > 1 ? "all of them" : null, take.Count, ghost: false);
+            prev.Theme = Ui.WindowTheme;
             prev.Modulate = new Color(1, 1, 1, 0.9f);
             prev.Rotation = -0.03f;
             c.SetDragPreview(prev);
@@ -151,7 +172,7 @@ public partial class GameScreen
         string why = Judge(z, d);
         if (why == "") { _dragHint.Visible = false; return; }
         _dragHintText.Text = why ?? DropWords(d, z);
-        _dragHintText.AddThemeColorOverride("font_color", why == null ? Ui.Text : Ui.Warn);
+        _dragHintText.AddThemeColorOverride("font_color", why == null ? Ui.WinActive : Ui.Warn);
         _dragHint.Visible = true;
         _dragHint.ResetSize();
         _dragHint.Position = ClampWin(mouse + new Vector2(18, 22), _dragHint.Size) with { Y = Math.Min(mouse.Y + 22, _mgLayer.Size.Y - 40) };

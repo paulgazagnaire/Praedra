@@ -197,7 +197,8 @@ public partial class GameScreen
     void Heading(string text, string tip = null)
     {
         // the panel list already puts Block above and below this spacer, so Group - 2*Block makes the gap before a section exactly Group
-        Add(Ui.Space(Ui.Group - Ui.Block * 2));
+        // in a window the first part of a page sits on the window's 24 px margin, with no gap of its own (Paul 2026-11-14)
+        if (!Ui.InWindow || (_into ?? _pv).GetChildCount() > 0) Add(Ui.Space(Ui.Group - Ui.Block * 2));
         var l = Add(Ui.Section(text));
         if (tip != null) { l.TooltipText = Ui.Wrap(tip); l.MouseFilter = MouseFilterEnum.Stop; l.MouseDefaultCursorShape = CursorShape.Help; }
     }
@@ -245,7 +246,7 @@ public partial class GameScreen
 
     static string Plural(int n, string one, string many) => n == 1 ? one : many;
 
-    static readonly Color Dim = Ui.Text3;
+    static Color Dim => Ui.Text3;   // a property: inside a window it gives the window's grey
     static readonly Color Bad = Ui.Danger;
     static readonly Color Good = Ui.Good;
     static readonly Color Pending = Ui.Warn;

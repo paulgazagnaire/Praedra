@@ -39,7 +39,7 @@ public partial class GameScreen
     const int TileHeight = SystemTile.H;
     const int CardGap = 10;
     const int GridPad = 16;           // the margin round the tiles
-    const int TopClear = 72;          // the top bar of the screen (goal, day, clock) stays uncovered
+    const int TopClear = 80;          // the top bar of the screen (goal, day, clock: Edge 20 + 52 px) stays uncovered, with 8 px so a window's edge never sits on the box's
     const int BottomClear = 16;       // windows reach down to the foot of the screen, with the same gap as at the side
     const int MonthDays = 30;         // output is shown per 30 days, a span a player can picture
 
@@ -50,14 +50,15 @@ public partial class GameScreen
 
     Control BuildSectorView()
     {
+        using var look = Ui.Window();   // the window look (Paul's "styles" frame, his answers 2026-11-14)
         _secOrder = G.Sectors.Select(s => s.Name).OrderBy(n => n, StringComparer.Ordinal).ToList();
         // no veil: the window takes half the screen and the map stays live beside it (a click on another sector opens that one)
         _secLayer = new Control { Visible = false, MouseFilter = MouseFilterEnum.Ignore };
         _secLayer.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
 
-        _secWin = new PanelContainer { MouseFilter = MouseFilterEnum.Stop };
-        // no shadow under the window (Paul 2026-11-11: "Remove the shadows under the windows entirely")
-        _secWin.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Chrome, 14, new Color(1, 1, 1, 0.09f), 1, 0, 0));
+        _secWin = new PanelContainer { MouseFilter = MouseFilterEnum.Stop, Theme = Ui.WindowTheme };
+        // square, a thin edge, no shadow (Paul 2026-11-11: "Remove the shadows under the windows entirely")
+        _secWin.AddThemeStyleboxOverride("panel", Ui.WindowBox());
         _secLayer.AddChild(_secWin);
         // the planets are drawn only while the window shows (closing it stops them)
         _secPlanets = new PlanetLiveSet();
@@ -70,22 +71,24 @@ public partial class GameScreen
         // ---- the head: arrows to step through the sectors, the name, close. No region and sector-number line above the name and no
         // who-holds-the-sector bar under it (Paul 2026-11-11: "Remove the top section", "remove the sector-wide loyalty bar").
         var headPad = new MarginContainer();
-        foreach (var (k, n) in new[] { ("margin_left", 20), ("margin_right", 14), ("margin_top", 10), ("margin_bottom", 4) }) headPad.AddThemeConstantOverride(k, n);
+        foreach (var (k, n) in new[] { ("margin_left", WinPad), ("margin_right", WinPad), ("margin_top", WinPad), ("margin_bottom", WinGap) }) headPad.AddThemeConstantOverride(k, n);
         v.AddChild(headPad);
-        var head = Ui.HBox(Ui.Pad);
+        var head = Ui.HBox(NameGap);
         headPad.AddChild(head);
+        // the sector's name in the window's pixel capitals, the arrows either side of it, × pinned to the right edge
         var titleRow = Ui.HBox(8);
         titleRow.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         titleRow.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         titleRow.AddChild(SecArrow("‹", -1, "The sector before (Left arrow)"));
-        _secTitle = Ui.Label("", "Title", Ui.Text, 22, wrap: false);
-        _secTitle.AddThemeFontOverride("font", Ui.SemiBold);
+        _secTitle = Ui.Label("", null, Ui.Text2, Ui.NameBig, wrap: false);
+        _secTitle.AddThemeFontOverride("font", Ui.NameFont(Ui.NameBig));
+        _secTitle.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         titleRow.AddChild(_secTitle);
         titleRow.AddChild(SecArrow("›", 1, "The sector after (Right arrow)"));
         head.AddChild(titleRow);
-        var close = Ui.Button("✕", CloseSectorView, "Close (S or Esc)", "Clock");
+        var close = Ui.Button("×", CloseSectorView, "Close (S or Esc)", "Clock");
         close.SetMeta(UiTest.FullName, "Close the sector window");
-        close.CustomMinimumSize = new Vector2(32, 32);
+        close.CustomMinimumSize = new Vector2(WinButton, WinButton);
         close.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         head.AddChild(close);
 
@@ -96,7 +99,7 @@ public partial class GameScreen
         _secScroll.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         body.AddChild(_secScroll);
         var gridPad = _secGridPad = new MarginContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        foreach (var (k, n) in new[] { ("margin_left", GridPad), ("margin_right", GridPad), ("margin_top", 14), ("margin_bottom", 10) }) gridPad.AddThemeConstantOverride(k, n);
+        foreach (var (k, n) in new[] { ("margin_left", GridPad), ("margin_right", GridPad), ("margin_top", 0), ("margin_bottom", WinPad) }) gridPad.AddThemeConstantOverride(k, n);
         _secScroll.AddChild(gridPad);
         _secGrid = new GridContainer { Columns = 4, SizeFlagsHorizontal = SizeFlags.ShrinkCenter };
         _secGrid.AddThemeConstantOverride("h_separation", CardGap); _secGrid.AddThemeConstantOverride("v_separation", CardGap);
@@ -104,7 +107,7 @@ public partial class GameScreen
 
         // ---- what the marks mean, one quiet line at the foot
         var legPad = new MarginContainer();
-        foreach (var (k, n) in new[] { ("margin_left", 20), ("margin_right", 20), ("margin_top", 2), ("margin_bottom", 12) }) legPad.AddThemeConstantOverride(k, n);
+        foreach (var (k, n) in new[] { ("margin_left", WinPad), ("margin_right", WinPad), ("margin_top", 0), ("margin_bottom", WinPad) }) legPad.AddThemeConstantOverride(k, n);
         v.AddChild(legPad);
         _secLegend = Legend();
         legPad.AddChild(_secLegend);
@@ -123,7 +126,7 @@ public partial class GameScreen
             it.MouseFilter = MouseFilterEnum.Ignore;
             mark.SizeFlagsVertical = SizeFlags.ShrinkCenter;
             it.AddChild(mark);
-            var l = Ui.Label(word, null, Ui.Text3, 10, wrap: false);
+            var l = Ui.Label(word, null, Ui.Text3, Ui.Tiny, wrap: false);   // a small label: Space Grotesk 12, #7D8699
             l.AddThemeFontOverride("font", Ui.Caps);
             l.SizeFlagsVertical = SizeFlags.ShrinkCenter;
             it.AddChild(l);
@@ -149,10 +152,9 @@ public partial class GameScreen
 
     Button SecArrow(string text, int dir, string tip)
     {
-        var b = Ui.Button(text, () => StepSector(dir), tip, "Clock");
+        var b = Ui.Button(text, () => StepSector(dir), tip, "Clock");   // drawn like the window buttons
         b.SetMeta(UiTest.FullName, dir < 0 ? "Sector before" : "Sector after");
-        b.AddThemeFontSizeOverride("font_size", 22);
-        b.CustomMinimumSize = new Vector2(34, 34);
+        b.CustomMinimumSize = new Vector2(WinButton, WinButton);
         b.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         return b;
     }
@@ -283,14 +285,20 @@ public partial class GameScreen
 
     void RebuildSectorView()
     {
+        using var look = Ui.Window();
         var sec = G.Sectors.FirstOrDefault(s => s.Name == _secName);
         if (sec == null) return;
         var systems = sec.Members.Select(m => G.Systems[m].Name)
             .OrderBy(n => n == S.MyHqSystem ? 0 : S.OwnerOf(n) == Me ? 1 : S.KnownOwnerOf(n).Owner is Side ? 2 : S.Picture(n) != null ? 3 : 4)
             .ThenBy(n => n, StringComparer.Ordinal).ToList();
 
-        // ---- head
-        _secTitle.Text = _secName;
+        // ---- head: 48 px capitals, 32 px when the name is too long for the head
+        string upper = _secName.ToUpperInvariant();
+        float width = _secWin.Size.X > 0 ? _secWin.Size.X : 2 * MgWidth + SlotGap;
+        int size = Ui.NameSize(upper, width - 2 - 2 * WinPad - NameGap - 3 * WinButton - 2 * 8);
+        _secTitle.Text = upper;
+        _secTitle.AddThemeFontOverride("font", Ui.NameFont(size, upper));
+        _secTitle.AddThemeFontSizeOverride("font_size", size);
 
         // ---- tiles
         _secDirty = false;

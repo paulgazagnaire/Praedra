@@ -52,7 +52,7 @@ public partial class GameScreen
         d.You = Ui.You;
         d.Enemy = Ui.Enemy;
         d.Faint = new Color(Ui.Text3, 0.28f);
-        d.NameColor = dead ? Ui.Danger : !explored ? Ui.Text3 : (known || mine) && holder is Side hs ? Ui.OwnerColor(hs, Me) : Ui.Text2;
+        d.NameColor = dead ? Ui.Danger : !explored ? Ui.Dimmed : (known || mine) && holder is Side hs ? Ui.OwnerColor(hs, Me) : Ui.Text2;
         d.Planet = dead ? PlanetArt.HarvestedOf(n) ?? PlanetArt.Of(n) : PlanetArt.Of(n);
         // the planet drawn live by the Planet Maker's shader, turning with its own settings (Paul 2026-11-11: "the planets need to be
         // animated, like in the planet maker tool"); a harvested system shows the tool's harvested view live. A system never looked at
